@@ -1,7 +1,7 @@
 # Development — backlog vivo (só trabalho em desenvolvimento)
 
 > **Base:** `0.3.22-beta` · branch `beta-0.4.0` · **atualizado:** 12/09/2026
-> **Suíte medida neste HEAD:** `1577` testes (1405 kof-compiler + 31 kof-script
+> **Suíte medida neste HEAD:** `1579` testes (1407 kof-compiler + 31 kof-script
 > + 5 kof-c-compiler + 136 kof-cli), **0 falhas**, 5 skip (guardas de
 > toolchain/node) — com cross sob qemu real.
 > **Regra dos 3 estados (`AGENTS.md`):** `docs/` = implementado/decidido ·
@@ -26,8 +26,8 @@ paridade com gaps honestos), `docs/language-reference/specification-gaps.md`
 
 | # | Plano | Estado | Por que nesta posição | Próximo passo concreto |
 |---|---|---|---|---|
-| 1 | `PLAN-TREE-SHAKING.md` (#97) | `EM CURSO` — S-1..S-4 ✅ 12/09 | **frente designada pela mantenedora 11/09**; sem colisão na lane | **S-5** (T1b `--gc-sections` cross + proteger root-scan do GC); depois S-6 (T2 JS), S-7 (consolidar p/ `docs/`) |
-| 2 | `refactoring/PLAN-SOLID-500.md` | `EM CURSO` — F2/F3 + resíduo | gate ≤500 virou **ratchet travado no CI** (2652aa45, §140): dívida não cresce, mas 17 violadores seguem acima do baseline | F2 (CompilerDriver, grupo de orquestração) + F3 (NativeBackend); split de ≤500 por commit com suíte verde |
+| 1 | `PLAN-TREE-SHAKING.md` (#97) | `EM CURSO` — S-1..S-4.3 ✅ 12/09 (poda x86+riscv+aarch ligada + hardening) | **frente designada pela mantenedora 11/09**; S-5/S-6 TÊM DONO AGORA (abaixo) — sem item da lane sem dono aqui | **S-5** (T1b) = sessão 9092 viva (NÃO abrir sem ela largar); **S-6** (T2 JS, unidade de topo — design aprovado na #97 12/09) = ViniAguiar1; depois S-7 (consolidar p/ `docs/`) |
+| 2 | `refactoring/PLAN-SOLID-500.md` | `EM CURSO` — F2/F3 + resíduo | gate ≤500 virou **ratchet travado no CI** (2652aa45, §140): dívida não cresce e só encolhe — baseline 17→**14** após os splits de 12/09 (`Parser` c2c4d965, `SemanticAnalyzer`+`StatementLowerer` 48e3cc56) | F2 (CompilerDriver, grupo de orquestração) + F3 (NativeBackend); split de ≤500 por commit com suíte verde |
 | 3 | `native-multiarch.md` (NATIVE002) | `EM CURSO` — ~30 faces cross fechadas sob qemu (39+39) | paridade riscv/aarch = condição de estabilidade do release | GC mark-sweep p/ riscv/aarch (faces restantes da §5; JS é outra frente) |
 | 4 | `planning-otp-supervision.md` (#83) | `EM CURSO` — 1ª fatia 11/09 (JVM+Script; Native=OTP001 §129, JS=OTP002 §132) | **autORIZADO pela mantenedora** (issue #83) | fatia 2 do núcleo (limite de reinícios/shutdown p/ JVM; promover OTP001/002 só com decisão) |
 | 5 | `plan-editor-integration.md` (EDI001) | `EM CURSO` — graus 1-3, 4-10, 11, 12 ✅ | único degrau sem dono pendente é tooling | plugin IntelliJ (DAP/LSP já funcionam via CLI) |
@@ -104,7 +104,7 @@ escalar, §108, §138, MATH001, TIME002.
 | `roadmap-audit.md` | matriz 06/09 + fila P0→P5 (P0 FECHADO 09/09) | re-audit quando algo fecha |
 | `KOFUI-AUDIT.md` | UI001-Native (face R6: no-op silencioso) ABERTO | lane UI |
 | `known-bugs.md` | 14 abertos (triagem §2 acima) | fila viva |
-| `refactoring/PLAN-SOLID-500.md` | F1,4–9 ✅; **F2/F3 em curso**; ratchet `check_500-baseline.txt` (17 dívidas travadas) no CI | F2/F3 fecham o plano |
+| `refactoring/PLAN-SOLID-500.md` | F1,4–9 ✅; **F2/F3 em curso**; ratchet `check_500-baseline.txt` (**14** dívidas travadas; 17→14 nos splits de 12/09) no CI | F2/F3 fecham o plano |
 
 ### 4.3 `future/` — só plano, zero código (não é trabalho atual)
 
