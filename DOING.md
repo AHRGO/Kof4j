@@ -399,18 +399,27 @@ lixo; fix no emit-side (`ExpressionBinaryLowerer` guard único do box+valueOf,
 os 3 dispatchers já desempacotavam o INNER e estavam corretos; o lixo era o
 SEGUNDO valueOf sobre a string já-formatada). Prova: `nullableprint` +`a0/0b`
 4/4; NativeE2ETest 64/64 byte-idêntico; §141 + matriz.
-(2) **B1 (única unidade real restante):** widening-write em coleção pinada →
-JVM VerifyError/CCE vs Native/Script corretos. `listOf(1L).add(2)` → JVM
-VerifyError no get/store; `l.set(0,3L)` idem; `mapOf("a",1L).put("b",2)` →
-ClassCastException no get. Native+Script acertam TODOS (o widening é
-documentado §121/§126 "widening passa"). Causa provável: add/get do JVM
-(`JvmOpCollections`) usa o tipo PINADO no `emitBoxIfPrimitive`/unbox sem o
-widen do IR (I2L/L2I por `emitWideningIfNeeded`) — investigar o caminho do
-KofCall `kof_list_add` p/ primitivos. Travar célula `collwiden` 4/4. NÃO
-rejeitar (§126 deixa widening passar de propósito; rejeitar = regression do
-contrato deles).
-(3) só DEPOIS: triagem `specification-gaps.md`/`backend-parity.md` p/ gaps
-String/encoding/time com oracle claro. Re-disparo desta lane NÃO é estabilidade
+(2) **B1 ✅ FEITA 12/09 (§143 widening + §144 rejeição/§126 extensão +
+literais listOf/mapOf):** widening abençoado (`listOf(1L).add(3)`,
+`mapOf(_,1L).put(_,2)`, `listOf(1L,2)`) → conversão IR `coerceStoreWiden`
+(§121/array-store nas coleções, IR compartilhado 4 targets); narrowing
+(Long→Int, Double→Int) → SEM056 compile-time (Native TRUNCava 5000000000→
+705032704 — R6); caminho LITERAL (bypassava o §126 inteiro) coberto com o
+mesmo par. Extração `CollectionWrites` (gate 500). Prova: células `collwiden`
+4/4 + `mapwiden` 3/4; suíte 1406+31+5+136/0-fail.
+(2b) **§142 ⏳ ABERTO (registrado com menor repro, NÃO corrigido — unidade
+própria):** Native `get` de chave NOVA em `Map<_,Long>` após `put` SIGSEGV,
+PRÉ-existente (Y2d/Y2e medidos com git stash no HEAD; put puro-Long crasha
+igual). Causa provável: tag de VALOR na inserção (família §123 no lado
+valor). Célula `mapwiden` deixa native excluído até lá.
+(3) **Próxima na mesa: §142** — causa raiz no `kof_map_put`/`kof_map_find`
+nativo (asm x86 `NativeX86Collections`/`NativeX86Calls` + fatias riscv
+`NativeRiscvAsmMapset*`): medir o put que cresce o mapa Long-value (a tag do
+slot novo?) e o caminho do get que deref. NÃO confundir com §123 (tag de
+CHAVE, já corrigido) — aqui é VALOR/inserção. Prova esperada: `mapwiden`
+sem exclusão 4/4 + `wrongkey`/`mapint`/`mapgetprim` intactos.
+(4) só DEPOIS: triagem `specification-gaps.md`/`backend-parity.md` p/ gaps
+Re-disparo desta lane NÃO é estabilidade
 (há B1 real + fila #97 nouta lane). NUNCA pushar main sem pedido do humano.
 
 **FEITO (11/09, lane Native cross — §113 FACES riscv64+aarch64 FECHADAS — `kof_multi_alloc` recursivo cross):** o maintainer corrigiu o x86 e deixou "faces riscv/aarch = port p/ sessão c/ toolchain" — a toolchain ESTÁ neste host (`/usr/bin/qemu-riscv64|aarch64` + binutils), então o port é o degrau óbvio da fila. Fatia nova `NativeRiscvAsmRtB37` (0 colisões .L/.globl verificadas vs vencedora): `kof_multi_alloc(a0=dimsBase, a1=n, a2=i, a3=leafStride)` recursivo espelhando o x86 — MESMA fórmula de offset `d_i = base + 8*(n-i)`; ABI própria: o chamador passa o PRÓPRIO sp como base (dimensões já empilhadas, d_n no topo) e sÓ AVANÇA o sp depois (sem pilha dinâmica — frame fixo do helper salva ra+s0..s6, 112B); nó interno = elemSize 8 (ponteiros), folha = stride do baseType com payload ZEROED byte-a-byte via laço `sb` (paridade MULTIANEWARRAY — kof_alloc é bump-pointer sem zero). Roteio `KofNewMultiArray` em `NativeRiscvCrossEmit` (antes caía no default-comentário NATIVE002); aarch herda 100% via tradutor (verificado: `sb zero`→`strb wzr`, `bge`/`bne`/`mul`/`slli` todos cobertos, 0 UNHANDLED). **Prova:** `riscv64MultiDimArray`/`aarch64MultiDimArray` (10 saídas golden = oracle JVM medido: lengths 2/3 + zero-fill + store/load + 3-D completo `2 3 0 7 2 2 9 0`); sabotagem → FAIL com saída real (não-vazio provado). Docs: célula `array2d` da matriz (faces cross ✅) + §113. **PRÓXIMO PASSO (re-dispacho):** (1) §113 PUSHADO `d2a4dc0a`+docs `edb86c34` (suíte do HEAD pré-rebase 1477/0/5skip; gate no HEAD exato rodando `push-gate.log` — se vermelho, é meu para corrigir antes da próxima unidade); (2) fila lane Native com toolchain real: §107 Native println(coleção) — ABERTO, backend-only, sem gate, R6 violada hoje (imprime lixo de ponteiro); fix = helpers toString recursivos dos 3 tipos de coleção (espelho `kofFormat` do JS §107-JS, x86 primeiro + fatia riscv + tradutor); §114 hash/coleção fica ATRELADO à infra storage-box do §104b-ii(i) (grande, avaliar antes); NÃO tocar §101/§94/§44 (congelados), §45/§106/DD-STDLIB (decisão mantenedora), lane §104/interp (outros agentes). NUNCA pushar main sem pedido do humano.

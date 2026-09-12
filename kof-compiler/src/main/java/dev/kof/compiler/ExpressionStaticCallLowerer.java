@@ -154,10 +154,30 @@ if ("listOf".equals(mc.methodName()) && mc.receiver() == null) {
     Type listType = new Type.ClassType("kof", "List", List.of(elemType));
     ops.add(new KofCall(listType, "kof_list_new", List.of(), listType, KofCallKind.FUNCTION));
     for (ExpressionNode arg : mc.arguments()) {
+        Type argType = ExpressionTyper.inferExprType(driver, arg, locals);
+        // §126/§121/§144 (B1c): o caminho literal NÃO passava por
+        // pollutesPinned nem pela coerção → `listOf(1, 2.5)` (Double em
+        // Int-pinado) virava VerifyError no JVM, `listOf(1L, 2)` (widening)
+        // quebrava igual. Mesma disciplina do add: rejeitar o que quebra,
+        // converter o widening abençoado.
+        if (CollectionWrites.pollutesPinned(elemType, argType) && driver.currentDiagnostics != null) {
+            var pos = mc.position();
+            driver.currentDiagnostics.error(pos != null ? pos.file() : "",
+                    pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0,
+                    "listOf: elemento " + CollectionWrites.typeNameFor(argType)
+                            + " não casa com o tipo da lista ("
+                            + CollectionWrites.typeNameFor(elemType)
+                            + ") — coleções Kof são homogêneas", "SEM056");
+            return localIdx;
+        }
         ops.add(new KofDup());
         localIdx = ExpressionLowerer.emitExpression(driver, arg, ops, owner, localIdx, locals);
-        ops.add(new KofCall(listType, "kof_list_add",
-                List.of(ExpressionTyper.inferExprType(driver, arg, locals)), Type.PrimitiveType.VOID, KofCallKind.INSTANCE));
+        Type paramT = argType;
+        if (CompilerEmissionHelpers.coerceStoreWiden(driver, ops, argType, elemType)) {
+            paramT = elemType instanceof Type.NullableType nt ? nt.inner() : elemType;
+        }
+        ops.add(new KofCall(listType, "kof_list_add", List.of(paramT),
+                Type.PrimitiveType.VOID, KofCallKind.INSTANCE));
     }
     return localIdx;
 }
@@ -358,11 +378,29 @@ if ("mapOf".equals(mc.methodName()) && mc.receiver() == null) {
     ops.add(new KofCall(mapType, "kof_map_new", List.of(), mapType, KofCallKind.FUNCTION));
     // pares: (k0,v0), (k1,v1), ...
     for (int ai = 0; ai + 1 < mc.arguments().size(); ai += 2) {
-        ops.add(new KofDup());
         Type kType = ExpressionTyper.inferExprType(driver, mc.arguments().get(ai), locals);
         Type vType = ExpressionTyper.inferExprType(driver, mc.arguments().get(ai + 1), locals);
+        // §126/§144 (B1b-c): literal do mapOf também é escrita — rejeitar o
+        // que quebra (String↔não-String, narrowing numérico; M3 dava mapa
+        // heterogêneo no JVM e truncado no Native).
+        if (CollectionWrites.pollutesPinned(valueType, vType) && driver.currentDiagnostics != null) {
+            var pos = mc.position();
+            driver.currentDiagnostics.error(pos != null ? pos.file() : "",
+                    pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0,
+                    "mapOf: valor " + CollectionWrites.typeNameFor(vType)
+                            + " não casa com o tipo do mapa ("
+                            + CollectionWrites.typeNameFor(valueType)
+                            + ") — coleções Kof são homogêneas", "SEM056");
+            return localIdx;
+        }
+        ops.add(new KofDup());
         localIdx = ExpressionLowerer.emitExpression(driver, mc.arguments().get(ai), ops, owner, localIdx, locals);
         localIdx = ExpressionLowerer.emitExpression(driver, mc.arguments().get(ai + 1), ops, owner, localIdx, locals);
+        // §121/§143 (B1): widening abençoado no VALOR (M1: put(2) em Map<_,Long>
+        // dava CCE no get — Integer salvo sob pin Long).
+        if (CompilerEmissionHelpers.coerceStoreWiden(driver, ops, vType, valueType)) {
+            vType = valueType instanceof Type.NullableType nt2 ? nt2.inner() : valueType;
+        }
         // VOID no put: o map duplicado continua na pilha para o próximo par
         ops.add(new KofCall(mapType, "kof_map_put", List.of(kType, vType),
                 Type.PrimitiveType.VOID, KofCallKind.INSTANCE));

@@ -4369,3 +4369,74 @@ statement-switch na mesma taxa). Reprodução no próprio teste (kof-cli).
   Nullable (linhas 22/46/52/58) — mesmo valor `0` do golden; prova cross sob
   qemu no job `cross-native`.
 - **Prioridade:** média-baixa (lixo ruidoso, workaround `if (x != null)`).
+
+### 142. Native: `get`/`contains` de chave NOVA num `Map<_,Long>` (após `put`) → **SIGSEGV** (JVM/Script/JS acertam) — ⏳ ABERTO 12/09 (achado ao travar `mapwiden`; **pré-existente**, não é regressão do §143)
+
+- **Menor repro (Y2d/Y2e, medido 12/09 com `git stash` no HEAD — o widening
+  NÃO é a causa):** `var m = mapOf("a",1L); m.put("b",2L); println(m.get("b"))`
+  → `put` roda, o `get` da chave recém-inserida **SIGSEGV** no Native x86.
+  Com `put` de valor widening (`2`) dá o mesmo (`m.get("b")` crasha após
+  `p1`); sem o `put` (`println(m.get("a"))`) funciona. A célula `mapwiden`
+  roda JVM/Script/JS verdes e mantém `native` em `Set.of("native")` (PARTIAL)
+  até esta correção.
+- **Causa provável (não investigada até o fim — R6, registrado com menor
+  repro):** o `put` de mapa Long-value não consegue/incorrecta a tag do
+  valor novo (1=String-vs-raw, §123/§126) — o `get` faz `kof_string_equals`
+  sobre um Int/Long cru (ponteiro). Família do §123 (tag de chave no header
+  off 40) mas no lado VALOR / na inserção. Investigar `kof_map_put`/`kof_map_find`
+  nativo com mapa que cresce.
+- **Por que NÃO corrigi agora:** é pré-existente, independente do §143
+  (widening), e a correção toca o runtime nativo de map (asm x86 + fatias
+  riscv) — unidade própria, não misturar com o commit do widening.
+- **Prova do estado:** célula `mapwiden` (native excluído, JVM/Script/JS `2/1`)
+  + sondas Y2d/Y2e neste HEAD.
+- **Prioridade:** média (crash ruidoso; workaround: não crescer mapa de valor
+  primitivo largo, ou usar JVM).
+
+### 143. Widening numérico abençoado (§126 "Int em Long passa") em ESCRITA de coleção pinada → JVM **VerifyError/CCE** (Native/Script acertavam) — ✅ CORRIGIDO 12/09 (B1; o §121/array-store nunca chegou nas coleções)
+
+- **Menor repro (B1a/X2/Y2/M1/L2, medido 12/09):** `listOf(1L,2L).add(3)` →
+  JVM **VerifyError** "integer not assignable to long_2nd" (o add boxeia pelo
+  tipo PINADO `Long` sobre um int cru width-1 na pilha); `mapOf(_,1L).put(_,2)`
+  → **ClassCastException** no `get`; `listOf(1, 2.5)` nem passava (§144).
+  Native/Script já davam `[1,2,3]`/`2` — o widening era o caminho CORRETO, só
+  o JVM quebrava. O §126 (opção ii) **abençoa widening numérico** ("Int em
+  Long passa"), e o §121 criou o precedente (array-store `new Long[4]; c[1]=9`
+  emite I2L). As coleções foram **esquecidas**: só a rejeição (§126) foi ligada,
+  a conversão nunca.
+- **Fix (IR compartilhado → JVM/Native/JS de uma vez):** `CompilerEmissionHelpers.coerceStoreWiden`
+  — aplica `emitWideningIfNeeded` (que SÓ promove I2L/I2F/I2D/L2F/L2D/D2F,
+  nunca trunca) no arg de VALOR ANTES do store. Chamado nos sítios de escrita:
+  `CollectionCallLowerer` (list add arg0 / set arg1, map put arg1) e
+  `ExpressionStaticCallLowerer` (literais `listOf`/`mapOf`, §144 abaixo);
+  `emitArgsCoercingValue` atualiza `argTypes` p/ o tipo pinado (o box JVM é
+  guiado por paramTypes). Native: I2L é no-op semântico (heap já 8-byte); JS:
+  I2L já é identity (`JsCallEmitter:373`). **Rejeição (§144) e widening não
+  numérico (int↔bool/char) intocados** — zero regressão (G1–G11 verdes).
+- **Prova:** células NOVAS `collwiden` (List add/set widening, 4/4 `3/4/3`) e
+  `mapwiden` (Map put widening, JVM/Script/JS `2/1`, native §142 excluído);
+  `ConformanceMatrixTest` 11→13/13, `ConformanceMatrixDocTest` 1/1; suíte
+  compiler 1407/0-fail (13 err node amb). check_500: `CollectionWrites`
+  extraído (433 linhas) mantém `CollectionCallLowerer` < 500.
+
+### 144. Narrowing numérico em escrita de coleção (Long→Int, Double→Int) NÃO rejeitado: JVM **VerifyError**, Native **TRUNCA em silêncio** (`5000000000`→`705032704`), Script preserva — ✅ CORRIGIDO 12/09 (B1b/§126 opção ii: rejeitar em compile-time SEM056) + literais `listOf`/`mapOf` cobertos (B1c)
+
+- **Menor repro (D3/SC3/X1/Y3/G12, medido 12/09):** `listOf(1,2).add(5000000000L)`
+  → JVM VerifyError, Native **`[1, 2, 705032704]`** (truncou o Long p/ Int
+  sem avisar — R6 violada), Script `[1,2,5000000000]`. O `pollutesPinned` do
+  §126 só pegava String↔não-String: `isString(p) == isString(a)` deixava
+  Int↔Long/Double passar. No `listOf(1, 2.5)` o VALOR nem era validado (caminho
+  literal em `ExpressionStaticCallLowerer` pulava o §126 inteiro).
+- **Fix:** `CollectionWrites.pollutesPinned` estende p/ narrowing numérico
+  (ambos `int/long/float/double`, `primWidth(arg) > primWidth(slot)`) →
+  **SEM056** em compile-time (mesma decisão ii do §126 — "coleções Kof são
+  homogêneas"). `int↔bool`/`char↔int` (G2–G5) ficam FORA: medidos consistentes
+  nos 3, o §126 manda rejeitar SÓ o que quebra. Caminho LITERAL
+  (`listOf`/`mapOf` em `ExpressionStaticCallLowerer`) passa a chamar o MESMO
+  `pollutesPinned` + `coerceStoreWiden` (o buraco B1c).
+- **Prova:** `listOf(1, 2.5)`/`listOf(_,Long)`/`mapOf(_,Double)` agora
+  SEM056 nos 3 (sondas L1/M3/X1/SC3/D3); widening continua passando (§143);
+  `SemanticResolutionTest` SEM056 (String) intacto; suíte compiler 1407/0-fail.
+- **Nota de escopo:** `setOf` widening/narrowing NÃO tem `get` observável (só
+  `contains`/`size`), e é coerido igual pelo `coerceStoreWiden` do add nativo
+  quando aplicável; deixado como está (M2 verde nos 3).

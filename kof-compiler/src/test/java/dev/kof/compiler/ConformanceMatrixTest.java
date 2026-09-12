@@ -361,7 +361,37 @@ class ConformanceMatrixTest {
                     println("a" + ni())
                     println(ni() + "b")
                 }
-                """, "0\nfalse\n0\n6\nfalse\nfalse\nfalse\nfalse\nfalse\n7\n0\n0\nfalse\na0\n0b", Set.of(), tempDir);
+                 """, "0\nfalse\n0\n6\nfalse\nfalse\nfalse\nfalse\nfalse\n7\n0\n0\nfalse\na0\n0b", Set.of(), tempDir);
+
+        // §143 (B1, 12/09): widening numérico ABENÇOADO pelo §126 ("Int em
+        // Long passa") em escrita de coleção PINADA dava VerifyError/CCE no
+        // JVM (o box do store era pelo tipo pinado sobre arg cru width-1) —
+        // a conversão do §121 (array-store) nunca chegou nas coleções. Fix:
+        // coerceStoreWiden no lower (emitWideningIfNeeded só promove; rejeição
+        // por SEM056 do §126 intocada). Narrowing NÃO está aqui (família B1b,
+        // §144 aberto).
+        matrix("collwiden", """
+                main() {
+                    var l = listOf(1L, 2L)
+                    l.add(3)
+                    println(l.get(2))
+                    l.set(0, 4)
+                    println(l.get(0))
+                    println(l.size)
+                }
+                """, "3\n4\n3", Set.of(), tempDir);
+        // Map: o put com valor widening (Int em Map<_,Long>) crashava o JVM
+        // igual. Native EXCLUÍDO: `get` de chave NOVA em mapa Long-value dá
+        // SIGSEGV PRÉ-EXISTENTE (medido HEAD com git stash, Y2d/Y2e — bug
+        // separado do widening, §142).
+        matrix("mapwiden", """
+                main() {
+                    var m = mapOf("a", 1L)
+                    m.put("b", 2)
+                    println(m.get("b"))
+                    println(m.get("a"))
+                }
+                """, "2\n1", Set.of("native"), tempDir);
 
         // §112 (paridade absoluta, 3 superfícies novas achadas no sweep de
         // coleções): (a) JVM **VerifyError** em `println(m.put(k,v))` com V
