@@ -328,7 +328,6 @@ class KofSwitchExprE2ETest {
     }
 
     // ── enum: exaustivo sem default (SEM031/SEM032) ─────────────────
-
     @Test
     void enumExhaustiveJvm(@TempDir Path tmp) throws Exception {
         runJvm(tmp, """
@@ -346,6 +345,57 @@ class KofSwitchExprE2ETest {
                     println(cor(Color.Blue))
                 }
                 """, "vermelho\nverde\nazul");
+    }
+
+    // bug 145: `Color.Red` como EXPRESSÃO (enum constante) tipava UNKNOWN → o
+    // switch-expr exaustivo caía no SEM032 genérico quando o scrutinee vinha de
+    // `var` ou era o literal direto. Com o tipo certo, a exaustividade volta a valer.
+
+    @Test
+    void enumExhaustiveVarSubjectJvm(@TempDir Path tmp) throws Exception {
+        runJvm(tmp, """
+                enum Color { Red, Green, Blue }
+                main() {
+                    var c = Color.Blue
+                    var r = switch (c) {
+                        case Color.Red -> "vermelho"
+                        case Color.Green -> "verde"
+                        case Color.Blue -> "azul"
+                    }
+                    println(r)
+                }
+                """, "azul");
+    }
+
+    @Test
+    void enumExhaustiveLiteralSubjectJvm(@TempDir Path tmp) throws Exception {
+        runJvm(tmp, """
+                enum Color { Red, Green, Blue }
+                main() {
+                    var r = switch (Color.Green) {
+                        case Color.Red -> "vermelho"
+                        case Color.Green -> "verde"
+                        case Color.Blue -> "azul"
+                    }
+                    println(r)
+                }
+                """, "verde");
+    }
+
+    @Test
+    void enumExhaustiveVarSubjectNative(@TempDir Path tmp) throws Exception {
+        runNative(tmp, """
+                enum Color { Red, Green, Blue }
+                main() {
+                    var c = Color.Red
+                    var r = switch (c) {
+                        case Color.Red -> "vermelho"
+                        case Color.Green -> "verde"
+                        case Color.Blue -> "azul"
+                    }
+                    println(r)
+                }
+                """, "vermelho");
     }
 
     @Test
@@ -402,7 +452,6 @@ class KofSwitchExprE2ETest {
     }
 
     // ── harness ────────────────────────────────────────────────────
-
     private String runJvm(Path tempDir, String source, String expected) throws Exception {
         Path file = tempDir.resolve("Main-" + System.nanoTime() + ".kf");
         Files.writeString(file, source);

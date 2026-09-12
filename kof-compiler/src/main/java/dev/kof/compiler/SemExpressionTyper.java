@@ -352,10 +352,9 @@ public final class SemExpressionTyper {
                 yield Type.UnknownType.UNKNOWN;
             }
             case FieldAccessExpr fa -> {
-                if (fa.receiver() instanceof IdentifierExpr pId && KofUi.isPalette(pId.name())
-                        && KofUi.paletteColor(fa.fieldName()) != null) {
-                    yield KofUi.COLOR;
-                }
+                if (fa.receiver() instanceof IdentifierExpr pId && KofUi.isPalette(pId.name()) && KofUi.paletteColor(fa.fieldName()) != null) yield KofUi.COLOR;
+                String en = MemberResolver.enumNameOfConstant(sa.unit(), fa);
+                if (en != null) yield new Type.ClassType("", en, List.of());
                 Type recvType = inferType(sa, fa.receiver(), scope);
                 // bug 99 (R6, nunca silencioso): `Int.MAX_VALUE`/`Long.foo` etc.
                 // — acesso a campo num NOME DE TIPO PRIMITIVO. `Int` resolve p/
@@ -413,12 +412,9 @@ public final class SemExpressionTyper {
                     // erro primeiro, depois UNKNOWN p/ error recovery.
                     // Excecoes: constante de enum (Color.Red e FieldAccess)
                     // e metodos de Object (nao sao campos).
-                    boolean isKnownReceiver = sa.allClasses().containsKey(ct.name())
-                            || sa.isExternal(ct);
-                    boolean isEnumConstant = MemberResolver
-                            .enumConstantOfExpr(sa.unit(), fa) != null;
-                    if (sa.diagnostics() != null && isKnownReceiver && !isEnumConstant
-                            && !MemberResolver.isObjectMethod(fa.fieldName(), 0)) {
+                    boolean isKnownReceiver = sa.allClasses().containsKey(ct.name()) || sa.isExternal(ct);
+                    boolean isEnumConstant = MemberResolver.enumConstantOfExpr(sa.unit(), fa) != null;
+                    if (sa.diagnostics() != null && isKnownReceiver && !isEnumConstant && !MemberResolver.isObjectMethod(fa.fieldName(), 0)) {
                         sa.diagnostics().error("", 0, 0, 0,
                                 "Cannot resolve field '" + fa.fieldName()
                                         + "' on type '" + ct.name() + "'",

@@ -160,4 +160,23 @@ public final class MemberResolver {
         }
         return null;
     }
+
+    /**
+     * Nome do enum que declara a constante referenciada por {@code e}, ou null.
+     * Complementa {@link #enumConstantOfExpr}: aquele devolve só a constante,
+     * este o TIPO do enum — necessário para o tipo de `Color.RED` como
+     * expressão (o exhaustiveness de switch-expr sobre enum depende dele).
+     */
+    static String enumNameOfConstant(CompilationUnitNode unit, ExpressionNode e) {
+        if (unit == null) return null;
+        if (e instanceof FieldAccessExpr fa && fa.receiver() instanceof IdentifierExpr rid) {
+            for (AstNode d : unit.declarations()) {
+                if (d instanceof EnumDeclarationNode en && en.name().equals(rid.name())
+                        && en.constants().contains(fa.fieldName())) {
+                    return en.name();
+                }
+            }
+        }
+        return null;
+    }
 }

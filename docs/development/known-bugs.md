@@ -4531,3 +4531,39 @@ statement-switch na mesma taxa). Reprodução no próprio teste (kof-cli).
 - **Workaround em produção hoje (reporter confirmou):** mover o `throw` p/
   função separada. Não documentar como idiom (é bug).
 
+### 148. Frontend: constante de enum qualificada (`Color.RED`) como EXPRESSÃO tipava UNKNOWN → **SEM032 falso** em switch-expr exaustivo sobre enum (`var c = Color.RED` / `switch (Color.RED)`) — ✅ CORRIGIDO 12/09 (achado no sweep de paridade 4-target)
+
+- **Menor repro:** `enum Color { RED, GREEN, BLUE }` +
+  `main() { var c = Color.BLUE; var r = switch (c) { case Color.RED -> "r" case Color.GREEN -> "g" case Color.BLUE -> "b" } }`
+  → **SEM032 falso** ("switch expressão exige 'default' (ou exaustividade de
+  enum)") mesmo cobrindo as 3 constantes. Idem `switch (Color.GREEN)` direto.
+  Com `Color c = Color.BLUE` (tipo DECLARADO) ou `return switch (c)` com
+  parâmetro `Color`, a exaustividade é reconhecida — só o caminho
+  `var`/literal direto quebrava.
+- **Causa raiz:** `SemExpressionTyper` (case `FieldAccessExpr`) não inferia o
+  tipo da constante de enum qualificada — caía no `yield UnknownType` do fim do
+  case (o receiver `Color` não é uma classe com campo `RED`). O
+  `enumConstantOfExpr` já existia, mas só era usado para SUPRIMIR o SEM025 e no
+  lowering; a INFERÊNCIA de tipo da expressão ficava UNKNOWN. Consequência:
+  `var c = Color.RED` infere `c: Unknown` e o `switch(c)` não entra no ramo de
+  exaustividade (`subjectType instanceof ClassType`) → cai no `else` genérico =
+  SEM032. O mesmo `Unknown` poluía `Color.RED` como argumento/slot.
+- **Efeito colateral do bug (teste que passava pelo motivo errado):**
+  `KofSwitchExprE2ETest.enumNonExhaustiveFailsToCompile` (usa `var c = Color.Red`)
+  passava porque QUALQUER switch-expr sobre `var` de enum caía no SEM032
+  genérico — não porque a lista de constantes faltantes era detectada. Com o
+  fix, a mensagem enum-específica ("não cobre: Green, Blue") aparece.
+- **Fix:** `MemberResolver.enumNameOfConstant(unit, e)` (novo) devolve o NOME do
+  enum dono da constante qualificada; o case `FieldAccessExpr` do
+  `SemExpressionTyper` faz `yield new ClassType("", enumName, [])` quando o
+  receiver é o nome do tipo enum e o campo é uma constante — espelhando o que o
+  case `IdentifierExpr` já fazia p/ constante NÃO-qualificada. Sem mudança de
+  contrato (só o tipo inferido, que estava UNKNOWN).
+- **Prova:** `KofSwitchExprE2ETest.enumExhaustiveVarSubjectJvm` /
+  `enumExhaustiveLiteralSubjectJvm` / `enumExhaustiveVarSubjectNative` (novos;
+  vermelhos antes com SEM032, verdes depois) + `enumNonExhaustiveFailsToCompile`
+  agora com a mensagem enum-específica + paridade medida JVM=Native=Script=JS
+  (`var c = Color.GREEN` → `GREEN|GREEN|true|true|3|BLUE`; `switch` por
+  constante não-qualificada `RED/GREEN/BLUE` → `g`). Suíte compiler
+  **1412/0-fail** (13 err = `node` ausente, ambientais), script 31, kof-c 5,
+  cli 136; ratchet ≤500 OK (SemExpressionTyper voltou a 573 < baseline 577).
