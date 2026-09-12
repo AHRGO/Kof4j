@@ -46,7 +46,7 @@
 
 ``` 
 mvn clean package    → PASSA
-mvn test             → 1579 testes (1407 kof-compiler + 31 kof-script + 5 kof-c-compiler + 136 kof-cli), 0 falhas, 5 skip com toolchain cross (guardas de DB externo; sem qemu no host → cross skipa honesto, ~126 skip) — 12/09
+mvn test             → 1580 testes (1408 kof-compiler + 31 kof-script + 5 kof-c-compiler + 136 kof-cli), 0 falhas, 5 skip com toolchain cross (guardas de DB externo; sem qemu no host → cross skipa honesto, ~126 skip) — 12/09
 kof build            → PASS (--target jvm|native|js|native.risc|native.arm) [--release]
 kof run              → PASS (jvm|native|js|native.risc|native.arm) [--release]
 kof serve            → PASS (web.app() nativo + API legada handle())
@@ -535,7 +535,7 @@ main() { /* ignorado pelo kof test */ }
 
 ---
 
-## Testes (1579 = 1407 kof-compiler + 31 kof-script + 5 kof-c-compiler + 136 kof-cli — suíte completa verde, 5 skips condicionais; medição 12/09 **com toolchain cross real neste host** — riscv/aarch EXECUTAM, não skipam: `ArtifactSizeTest` 3/3 + E2E cross 39/39 cada. Host sem qemu: cross → skip honesto, total ~1500)
+## Testes (1580 = 1408 kof-compiler + 31 kof-script + 5 kof-c-compiler + 136 kof-cli — suíte completa verde, 5 skips condicionais; medição 12/09 **com toolchain cross real neste host** — riscv/aarch EXECUTAM, não skipam: `ArtifactSizeTest` 6/6 + E2E cross 39/39 cada. Host sem qemu: cross → skip honesto, total ~1500)
 
 | Suíte | Quantidade | Cobertura |
 |-------|-----------|-----------|
