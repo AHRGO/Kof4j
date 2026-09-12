@@ -67,6 +67,20 @@
 > alloc/free/alloc (free ainda manual, sem GC) reusa o slot — teste riscv
 > E2E novo com memstats (`kof_memstats` port incluído aqui, é a alavanca de
 > observação dos degraus seguintes).
+> ⚠️ **Correção 12/09 ~20:05 (doc-vs-realidade, contagem no fonte — refuta a
+> justificativa "free sem caller = código morto" da recusa de 19:44):** as
+> fatias riscv fazem **57 `call kof_alloc`** (Mapset0 ×4, Rt0 ×3, RtB0-log ×3,
+> B10/B11/B12/B20/B21/B22 ×2, B1/B15 ×1…) e **ZERO `call kof_free`** — enquanto
+> o x86 tem 4 callers reais (`RuntimeChannel:132` nó de channel,
+> `RuntimeLog2:98` nó de log, `RuntimeObservability1:426`/`2:247`). O riscv
+> VAZA em cada nó de log/b64/map-rebuild: o bump nunca devolve (é a razão do
+> `.bss` de ~260KB fixo). O G-1 NÃO é código morto — é o que fecha o vazamento
+> das 57 alocações. **Falta p/ executar: host com toolchain** (o asm novo de
+> free/memstats só é entregável com prova qemu — guard `assumeTrue`, nunca
+> asm não-executado). Ordem do port (proposta): `kof_free` riscv (port 1:1
+> do `RuntimeMemory.emitFree` — header 32B do G-0 já tem size/flags/next) →
+> `kof_memstats` (contadores + print) → ligar o free nos nós do log (RtB0,
+> espelhando `RuntimeLog2:98`) → E2E ciclo alloc/free/alloc reusa slot.
 > **G-2 header flags/mark bits + lista GC** — o bloco aloca com flag=0 e entra
 > na gc-list global (`kof_gc_head` riscv); prova: programa com N allocs e
 > `KOF_GC_DEBUG` dump da lista (syscalls write) com tamanho/flag corretos.
