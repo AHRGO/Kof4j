@@ -8,7 +8,7 @@
 >
 > | | |
 > |---|---|
-> | **Fila ABERTA (varredura 12/09 — todas as seções sem ✅ no próprio cabeçalho)** | **14** — §45 (finally+return: exige mudança de IR 4-backend + decisão DD-01, mantenedora), §65 (UI/Chrome — lane UI), §81 (KofJS Long>2^53 — decisão de precisão/contrato), §89 (n.toDouble()/toInt() cross — contrato de conversão), §94/§101 (congelados regra 6), §104b-ii (record-em-coleção + storage-box asm — **lane bugfixer**, unidade GRANDE), §106 (json.encode Map — decisão mantenedora), §107 🟡 (restam record/aninhado=`?` até §104b-ii + FP-cross=FLT001; face escalar ✅ 12/09 nos 3 nativos `f3b3821c`+B39), §117 (cancelled() colisão — design TLS, congelado), §127-JVM (cast p/ tipo-função → mudança de erasure no `JvmTypeMapper`, **infra de tipos**; workaround interface verificado), §129-TLS (congelado), §131 (sobrecarga de MÉTODO — semântica, mantenedora), §132 (OTP JS gate). **§125 ✅ CORRIGIDO 12/09** (decisão A: return Nullable(primitivo) apaga p/ default — 3 pontos no IR compartilhado, célula `nullableprint` 4/4 sem exclusão). **§139 ✅ CORRIGIDO 12/09** (mesma unidade: JS fold `f()==null` → COMP002 underflow; parser JS ganha o descarte mid-expression com preservação de side-effect). **§140 ✅ CORRIGIDO 12/09** (processual: gate ≤500 virou ratchet com baseline de dívida e entrou no CI — 17 violadores travados de crescer, split continua no PLAN-SOLID-500). **§90 ✅ CORRIGIDO 12/09 (lane web, remoto).** **Conclusão honesta (12/09, atualiza a mesa do bugfixer `4d51defe`): nenhum item de código-puro-sem-decisão na lane restou nesta máquina** — os 14 abertos estão pendurados em decisão da mantenedora, congelamento regra-6, ou lane alheia (UI/bugfixer). O trabalho REAL sem-colisão-aceito da sessão é a **frente #97 tree-shaking** (S-1 ✅ `a3996600`; S-2→ em `docs/development/PLAN-TREE-SHAKING.md`). |
+> | **Fila ABERTA (varredura 12/09 — todas as seções sem ✅ no próprio cabeçalho)** | **17** — §145 (`String.isEmpty()` ausente do registry — 3 targets, só run vê), §146 (Native `Double %` variável → dividendo; `default` do bloco Double no `NativeX86Arith`), §147 (JS `parseIf` engole epílogo quando then termina em throw — dead code/hang), §45 (finally+return: exige mudança de IR 4-backend + decisão DD-01, mantenedora), §65 (UI/Chrome — lane UI), §81 (KofJS Long>2^53 — decisão de precisão/contrato), §89 (n.toDouble()/toInt() cross — contrato de conversão), §94/§101 (congelados regra 6), §104b-ii (record-em-coleção + storage-box asm — **lane bugfixer**, unidade GRANDE), §106 (json.encode Map — decisão mantenedora), §107 🟡 (restam record/aninhado=`?` até §104b-ii + FP-cross=FLT001; face escalar ✅ 12/09 nos 3 nativos `f3b3821c`+B39), §117 (cancelled() colisão — design TLS, congelado), §127-JVM (cast p/ tipo-função → mudança de erasure no `JvmTypeMapper`, **infra de tipos**; workaround interface verificado), §129-TLS (congelado), §131 (sobrecarga de MÉTODO — semântica, mantenedora), §132 (OTP JS gate). **§125 ✅ CORRIGIDO 12/09** (decisão A: return Nullable(primitivo) apaga p/ default — 3 pontos no IR compartilhado, célula `nullableprint` 4/4 sem exclusão). **§139 ✅ CORRIGIDO 12/09** (mesma unidade: JS fold `f()==null` → COMP002 underflow; parser JS ganha o descarte mid-expression com preservação de side-effect). **§140 ✅ CORRIGIDO 12/09** (processual: gate ≤500 virou ratchet com baseline de dívida e entrou no CI — 17 violadores travados de crescer, split continua no PLAN-SOLID-500). **§90 ✅ CORRIGIDO 12/09 (lane web, remoto).** **Conclusão honesta (12/09, atualiza a mesa do bugfixer `4d51defe`): nenhum item de código-puro-sem-decisão na lane restou nesta máquina** — os 14 abertos estão pendurados em decisão da mantenedora, congelamento regra-6, ou lane alheia (UI/bugfixer). O trabalho REAL sem-colisão-aceito da sessão é a **frente #97 tree-shaking** (S-1 ✅ `a3996600`; S-2→ em `docs/development/PLAN-TREE-SHAKING.md`). |
 > | Antiga "varredura 08/09" (apócrifa — corrigida 12/09) | os "abertos" 39/62/63/64/46/48/50/59/61 estão ✅ CORRIGIDO nos próprios cabeçalhos (39/62/63/64 JVM/JS; 46/50/59 Native; 48/61 gap honesto JSN004/FFI001); contagem real na linha acima. |
 > | Paridade interpretador × compilados (semântica `==` congelada — regra 6) | **1** — bug 94 (NaN/±0.0 `==` de Double no SCRIPT) |
 > | Paridade backend-only (regra 5, atacável na lane Native) | **2** — §107 (println coleção → lixo; **face escalar ✅ CORRIGIDA 12/09 nos 3 targets nativos** — x86 `f3b3821c` + cross B39, golden JVM byte-idêntico; restam record/aninhado=`?` honesto até §104b-ii, FP-cross=FLT001; §107-JS 11/09), §104b-ii (equals de conteúdo p/ record + box de primitivo no storage asm; **face char ✅ FECHADA 11/09** — `mapgetprim` 4/4)
@@ -4450,3 +4450,84 @@ statement-switch na mesma taxa). Reprodução no próprio teste (kof-cli).
 - **Nota de escopo:** `setOf` widening/narrowing NÃO tem `get` observável (só
   `contains`/`size`), e é coerido igual pelo `coerceStoreWiden` do add nativo
   quando aplicável; deixado como está (M2 verde nos 3).
+
+## Issue #101 (reporte externo PublioSantos, 12/09) — 3 bugs de calculator, todos REPRODUZIDOS neste HEAD (`356f33b9`, worktree limpo; CLI da release 0.3.22-beta do reporter bate com o do repo)
+
+### 145. `String.isEmpty()` não está no registro de String → JVM `NoSuchMethodError` (descritor `()Ljava/lang/Object;`), Native link-fail `java_lang_String_isEmpty`, JS `t.isEmpty is not a function` — ⏳ ABERTO (3 targets; passes `kof check`/`kof test` — só quebra em runtime)
+
+- **Menor repro (medido 12/09 no worktree):** `main() { var s = "abc"; var t = s.trim(); if (!t.isEmpty()) { println("ok") } }` →
+  JVM: `NoSuchMethodError: 'java.lang.Object java.lang.String.isEmpty()'`;
+  Native: `ld: undefined reference to 'java_lang_String_isEmpty'`;
+  JS: `TypeError: t.isEmpty is not a function`. JVM depende do receiver:
+  `var s="abc"; s.isEmpty()` ✅ (receiver de literal/pilha cai no caminho bom
+  — `javap`: `invokevirtual String.isEmpty:()Z`), mas `var t = s.trim();
+  t.isEmpty()` e `s.trim().isEmpty()` ❌ (receiver de method call com tipo
+  INFERIDO → `()Ljava/lang/Object;`).
+- **Causa raiz:** `StringMethodRegistry.stringMethodSignature` não tem
+  `isEmpty` (tem length/charAt/substring/contains/startsWith/endsWith/equals/
+  indexOf/concat/trim/... — `isEmpty` ficou de fora, mas `type-system.md`
+  documenta `String: isEmpty→Bool` e o `SemMethodCallTyper:98` **tipa**
+  `isEmpty`→BOOL na allow-list geral de member-call). A lacuna registro↔typer
+  faz o JVM emitir o invokevirtual genérico com descritor do fallback
+  (Object) quando o receiver passa pelo lowerer de tipo inferido; no Native o
+  nome vira `java_lang_String_isEmpty` inexistente (link); no JS não há
+  runtime fn (o bloco core não define `isEmpty` para String).
+- **Homologia com §34 (resolvido 06/09):** §34 era método inexistente em
+  BUILTIN → SEM025 honesto. Aqui o método EXISTE na spec da linguagem mas não
+  no registro do compilador — o caminho de diagnóstico correto é completar o
+  registro, não SEM025.
+- **Fix previsto (menor mudança):** adicionar `case "isEmpty" -> argCount == 0
+  ? sig(BOOL, List.of()) : null;` ao `StringMethodRegistry`; Native: o
+  intrinsic `java_lang_String_isEmpty` precisa de corpo (comparar length@16
+  == 0 no header da string — o runtime já tem o layout); JS: alias
+  `isEmpty` no bloco core de String (mesmo `length` path do §107-escalar).
+  Gate: os 4 casos da matriz do reporter + `!t.isEmpty()` em if nos 3 targets.
+- **Nota:** `kof check`/`kof test` passam nos 3 — o bug é de codegen/link em
+  método TIPADO corretamente pelo checker (a verificação não confere
+  registrador de assinatura vs typer: sonda futura §145-bis).
+
+### 146. Native: `Double %` (variáveis) retorna o DIVIDENDO — só o fold de constantes funciona — ⏳ ABERTO (x86; verificar riscv/aarch — mesma shape de dispatcher)
+
+- **Menor repro (medido 12/09):** `println(10.0 % 3.0)` → `1.0` ✅ (fold de
+  constantes no frontend); `var a=7.5; var b=2.0; println(a % b)` → **`7.5`**
+  ❌ (JVM dá `1.5`); `var c=10.0; println(c % 3.0)` → **`10.0`** ❌. Int `%`
+  correto; JS correto.
+- **Causa raiz (exata):** `NativeX86Arith.emitBinary` — o bloco de Double
+  (linha ~120-168) não tem ramo `MOD`: o `default` do switch Double (linha
+  163) faz `movq %xmm0, %rax; pushq` — reempurra o PRIMEIRO operand (xmm0 =
+  dividendo). O `case MOD` só existe no bloco inteiro (linha 189). Ou seja:
+  `a % b` de double cai no default e devolve `a`.
+- **Fix previsto (SSE2 puro, sem libm — precedente `sqrt` B36/RtB36):** sequência
+  `fmod` em SSE2: `cvtsd2si` do quociente truncado + `mulsd/subsd` com
+  ajuste de sinal (IEEE: `fmod(a,b)` tem sinal de `a`, |r|<|b|) — ou o loop
+  de subtração com escala por `ulp2exp` como o x86 já faz em `RuntimeMath`
+  (mesmo padrão que destravou MATH001). riscv: `fdiv.d+fcvt.wl.d+reconstrução`
+  na B-slice seguinte; FLT001 se algo estourar. Gate: golden do oracle JVM
+  medido (regra bug 44: compara Bool/Int, nunca println de double cru).
+- **Nota:** passa `kof check`/`kof test` (value bug, R6 não violada — não é
+  fallback silencioso, é aritmética errada em caminho que existe).
+
+### 147. JS: if-branch terminando em `throw` ENGole o epílogo do método — `return` final cai DENTRO do bloco `if`, statements seguintes viram dead code; em `while` o `else{...}` do loop desaparece (loop infinito) — ⏳ ABERTO (JsBackend/`JsControlFlowParser.parseIf`)
+
+- **Menor repro (medido 12/09):** o `pick()` do reporter; output gerado:
+  `else { if ((n === 3)) { ...; return x; } return 99; } }` — o `return 99`
+  (epílogo do método) foi parar dentro do `else` do encadeamento, após o
+  `if(n==3)`. `pick(7)` → `undefined` (nenhum caminho retorna). JVM/Script ✅
+  (`10 20 30 99`). O reporter também achou o caso em `while`: `else {
+  going = false }` dropado → hang.
+- **Causa raiz (exata):** `JsControlFlowParser.parseIf:145-173` — com throw
+  no then-branch o lowering IR não emite Jump(end) após o throw (o bloco é
+  "unreachable fall-through"), e o parser de JS reconstrói a estrutura a
+  partir dos labels: `parseStatements(ctx, pos, Set.of(), ...)` para o
+  else-branch consome statements ALÉMDO Label(end) do if encadeado — o
+  epílogo (ou o resto do corpo) é absorbido. Sem throw, o Jump(end) fecha o
+  parse; com throw, o label end do aninhado some da stream e o delimitador
+  vira o fim da cadeia.
+- **Fix previsto:** no `parseIf`, o conjunto de stop-labels deve incluir os
+  `end` labels ANCESTRAIS abertos (pilhinha de labels como fazem os parsers
+  de loop com `LoopCtx`), não só `Set.of()`. Provar com os 2 repros do
+  reporter (guard-chain + while-loop) + o caso do parser dele (linhas
+  `s.accept(40)`) — golden JVM-vs-JS `10 20 30 99`.
+- **Workaround em produção hoje (reporter confirmou):** mover o `throw` p/
+  função separada. Não documentar como idiom (é bug).
+
