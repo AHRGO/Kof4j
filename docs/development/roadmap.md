@@ -78,7 +78,7 @@ mark-sweep pendente — auto-GC desativado após hang, memória devolvida só no
 `pthread_join` com allocator thread-safe (futex) — 31/08; FP real em XMM —
 FLT001; JSON objetos/records + arrays FP — JSN001/002/003; SQLite nativo `.so`
 direto; MySQL wire protocol WIP) + `native.risc` (riscv64: codegen real 02/09 — asm puro + qemu, NATIVE002
-parcial) + `native.arm` (aarch64: toolchain + qemu; codegen ainda placeholder)
+parcial) + `native.arm` (aarch64: herda do riscv via tradutor — `NativeArchEmitter.emitAarch64`, 39/39 E2E sob qemu) *(sincronizado 12/09: a linha "codegen ainda placeholder" apodreceu — `NativeAarch64E2ETest` executa sob qemu onde há toolchain; guard honesto pula em host sem cross)*
 
 ### KofJS — Web
 
@@ -207,9 +207,19 @@ targets — 30/08)**, **`kof.http` retry/circuit breaker (JVM+JS — 30/08)**,
 concorrência (`spawn` + `await`/`Handle<T>` — JVM virtual threads, Native
 pthread 31/08, JS sequencial), `List map/filter/reduce`, `Box<T>`, pattern
 matching e `String?` implementados (0.2.6-beta).
-Faltam: HTTP client no Native (HTTP002), RPC (gRPC — ver abaixo),
-tracing (OpenTelemetry), web no Native/JS (WEB002/WEB001),
-MySQL nativo completo, RISC/ARM codegen, GC mark-sweep.
+Faltam (sincronizado 12/09 contra `backend-parity.md` — a lista abaixo era a
+de 31/08; HTTP002/MySQL/cross-codegen FECHARAM desde então):
+~~HTTP client no Native (HTTP002)~~ ✅ fechado (Native HTTP/1.1 asm —
+`backend-parity.md` §kof.http; https→throw declarado), RPC (gRPC — ver
+abaixo), tracing (OpenTelemetry), web residual no Native/JS
+(~~WEB002/WEB001~~ **base real nos dois**: server Native `KofWebNativeE2ETest`
+4/4 + GraalJS HttpServer `bc577aa`; residual TLS/ws/sse/path-params),
+~~MySQL nativo completo~~ ✅ wire protocol + prepared statements binários 03/09
+(`KofDbE2E` `nativeMysqlWireProtocol`/`nativeMysqlPreparedBinary`),
+~~RISC/ARM codegen~~ ✅ core completo (riscv64 real 02/09; aarch64 herda via
+tradutor; 39+39 E2E sob qemu — faces de paridade avançada = NATIVE002),
+GC mark-sweep (G-0 riscv ✅ `356f33b9`; decomposição G-1..G-5 em
+`native-multiarch.md`).
 (kof.mq pub/sub + queue = 3 targets — MQ001 fechado 01/09)
 Ver `docs/plan-spring-independence.md` (Fases 5-14).
 
@@ -819,4 +829,4 @@ ciência) **sem** destruir a simplicidade da linguagem.
 
 **Não implementar nada desta seção antes do estágio SYSTEMS fechar**
 (paridade de gaps, GC mark-sweep, package manager básico — ver
-`docs/plan-platform-completion.md` P0–P5).
+`docs/development/plan-platform-completion.md` P0–P5).
