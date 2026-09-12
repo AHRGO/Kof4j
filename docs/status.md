@@ -46,7 +46,7 @@
 
 ``` 
 mvn clean package    → PASSA
-mvn test             → 1576 testes (1404 kof-compiler + 31 kof-script + 5 kof-c-compiler + 136 kof-cli), 0 falhas, 126 skip (guardas de toolchain/node — 12/09)
+mvn test             → 1579 testes (1407 kof-compiler + 31 kof-script + 5 kof-c-compiler + 136 kof-cli), 0 falhas, 5 skip com toolchain cross (guardas de DB externo; sem qemu no host → cross skipa honesto, ~126 skip) — 12/09
 kof build            → PASS (--target jvm|native|js|native.risc|native.arm) [--release]
 kof run              → PASS (jvm|native|js|native.risc|native.arm) [--release]
 kof serve            → PASS (web.app() nativo + API legada handle())
@@ -535,72 +535,72 @@ main() { /* ignorado pelo kof test */ }
 
 ---
 
-## Testes (1560 = 1388 kof-compiler + 31 kof-script + 5 kof-c-compiler + 136 kof-cli — suíte completa verde, 5 skips condicionais; medição 12/09 **com toolchain cross real neste host** — riscv/aarch EXECUTAM, não skipam: `ArtifactSizeTest` 3/3 + E2E cross 39/39 cada. Host sem qemu: cross → skip honesto, total ~1500)
+## Testes (1579 = 1407 kof-compiler + 31 kof-script + 5 kof-c-compiler + 136 kof-cli — suíte completa verde, 5 skips condicionais; medição 12/09 **com toolchain cross real neste host** — riscv/aarch EXECUTAM, não skipam: `ArtifactSizeTest` 3/3 + E2E cross 39/39 cada. Host sem qemu: cross → skip honesto, total ~1500)
 
 | Suíte | Quantidade | Cobertura |
 |-------|-----------|-----------|
-| CompilerDriverTest | 190 | compilação, semântica, fases, isolamento |
-| NativeE2ETest | 50 | execução real de binários nativos |
-| KofJsE2ETest | 37 | execução real JS (GraalJS) + short-circuit `&&`/`||` vs bitwise |
-| JvmE2ETest | 29 | execução real de bytecode JVM |
-| KofSecurityTest | 25 | kof.security: senhas, crypto, JWT, secrets, adversariais |
-| OptimizerTest | 21 | passes de otimização da IR |
+| CompilerDriverTest | 252 | compilação, semântica, fases, isolamento |
+| NativeE2ETest | 64 | execução real de binários nativos |
+| KofJsE2ETest | 40 | execução real JS (GraalJS) + short-circuit `&&`/`||` vs bitwise |
+| JvmE2ETest | 31 | execução real de bytecode JVM |
+| KofSecurityTest | 28 | kof.security: senhas, crypto, JWT, secrets, adversariais |
+| OptimizerTest | 22 | passes de otimização da IR |
 | KofOrmE2ETest | 22 | kof.orm: entity, CRUD, where (+ORM003 validação de coluna tipada, P3-10), **Query DSL `User.query(db){ where; orderBy; limit }` (nível 3, ORM001)**, migrate, unique, MongoDB (3 skips condicional) |
-| KofConcurrency2Test | 18 | spawn stmt/expr, selectAny, cancel/cancelled, done/poll, awaitTimeout, channel (+`Channel<T>` como parâmetro de função, 3 targets) |
+| KofConcurrency2Test | 33 | spawn stmt/expr, selectAny, cancel/cancelled, done/poll, awaitTimeout, channel (+`Channel<T>` como parâmetro de função, 3 targets) |
 | IoE2ETest | 16 | kof.io multiplatform (+ `readText`/`size` contratos honestos 02/09) |
 
 | ComponentCoreE2ETest | 14 | kof.ui Component: view/onMount/onDispose |
-| CoreRegressionE2ETest | 14 | regressões de uso real (BOM, toInt, ARITH001...) |
-| JsonE2ETest | 14 | JSON JVM + Native |
-| UiE2ETest | 27 | kof.ui: widgets, estilo, bindings, múltiplas janelas, Table/Ul/Ol/Form/Fieldset/Event (link JVM+Native) |
-| AndroidInteropE2ETest | 11 | android: interop Java (external classpath) |
+| CoreRegressionE2ETest | 50 | regressões de uso real (BOM, toInt, ARITH001...) |
+| JsonE2ETest | 15 | JSON JVM + Native |
+| UiE2ETest | 29 | kof.ui: widgets, estilo, bindings, múltiplas janelas, Table/Ul/Ol/Form/Fieldset/Event (link JVM+Native) |
+| AndroidInteropE2ETest | 12 | android: interop Java (external classpath) |
 | KofConfigE2ETest | 11 | kof.config: env, arquivo, profiles, precedência, typed, CONF001 |
 | KofWebWsE2ETest | 11 | WebSocket RFC 6455: handshake + frame + lifecycle |
 | StructuredTestE2ETest | 11 | test "nome" {} nos 3 targets + process.exit |
-| BackendParityTest | 10 | paridade JVM/Native/JS |
-| KofLogE2ETest | 10 | kof.log JVM: níveis, stderr, off, JSON, correlation |
-| KofPatternMatchingTest | 10 | switch case String s / Point(x,y) 3 targets |
-| KofWebE2ETest | 10 | stack web nativa (web.app, rotas, JSON, middleware, `app.health` bypass) |
+| BackendParityTest | 16 | paridade JVM/Native/JS |
+| KofLogE2ETest | 11 | kof.log JVM: níveis, stderr, off, JSON, correlation |
+| KofPatternMatchingTest | 12 | switch case String s / Point(x,y) 3 targets |
+| KofWebE2ETest | 12 | stack web nativa (web.app, rotas, JSON, middleware, `app.health` bypass) |
 | ExceptionsE2ETest | 9 | try/catch/finally JVM + Native |
-| KofDbE2ETest | 11 | kof.db: JDBC, query<T>, transaction, rollback, SQLite nativo, transaction Native (commit+rollback), DB001 |
+| KofDbE2ETest | 16 | kof.db: JDBC, query<T>, transaction, rollback, SQLite nativo, transaction Native (commit+rollback), DB001 |
 | KofHttpServerTest | 8 | serve engine (sockets reais) |
-| KofMediaE2ETest | 12 | kof.media + serveDir: Image/Audio/WAV/Video(MP4), Range 206/416, conteúdo binário (não base64) |
+| KofMediaE2ETest | 15 | kof.media + serveDir: Image/Audio/WAV/Video(MP4), Range 206/416, conteúdo binário (não base64) |
 | NativeConfigE2ETest | 8 | kof.config Native (asm): precedência, typed, comentários |
-| SpawnE2ETest | 8 | spawn (JVM/Native pthread/JS seq) + join implícito + **lambda c/ captura** + **println antes de spawn** + **`spawn→await→spawn`** (alinhamento de stack no `pthread_create`) |
+| SpawnE2ETest | 10 | spawn (JVM/Native pthread/JS seq) + join implícito + **lambda c/ captura** + **println antes de spawn** + **`spawn→await→spawn`** (alinhamento de stack no `pthread_create`) |
 | IdiomaticE2ETest | 7 | idiomas consolidados (chaining, primary ctor) |
 | JsonCompleteE2ETest | 7 | JSON completo: Float/Double, arrays decode (JVM) |
-| KofAwaitTest | 7 | spawn/await Handle<T> tipado (JVM) |
+| KofAwaitTest | 8 | spawn/await Handle<T> tipado (JVM) |
 | KofWebSseE2ETest | 7 | SSE: sse.send/event/close (sockets reais) |
 | KofWsFrameTest | 7 | frame codec RFC 6455: máscara, limites, ping/pong |
 | NativeLogE2ETest | 7 | kof.log Native (asm): níveis, stderr, formato civil, off |
 | IdiomaticCoreE2ETest | 6 | field initializers, \u810810, listOf<T>() |
-| PackagesE2ETest | 6 | pacotes/módulos multi-arquivo (import a.b.C + moduleRoot do LCA, P1-4) |
+| PackagesE2ETest | 12 | pacotes/módulos multi-arquivo (import a.b.C + moduleRoot do LCA, P1-4) |
 | AssertE2ETest | 5 | assert JVM + Native |
 | FloatingPointGapE2ETest | 5 | FP XMM: encode/decode/arrays (FLT001) |
 | KofCacheE2ETest | 5 | suíte E2E/compilação |
 | KofHigherOrderTest | 5 | funções de ordem superior (map/filter/reduce) |
 | KofIntOverflowNativeTest | 5 | aritmética Int 32 bits no Native |
-| KofTimeE2ETest | 5 | time now/sleep/interval (JVM/Native/**JS** — TIME001 fechado 02/09: fila cooperativa bombeada por `time.sleep` no GraalJS) |
+| KofTimeE2ETest | 12 | time now/sleep/interval (JVM/Native/**JS** — TIME001 fechado 02/09: fila cooperativa bombeada por `time.sleep` no GraalJS) |
 | KofWebTlsTest | 5 | TLS/HTTPS: listenSecure + kof.http sobre TLS |
-| KofObservabilityTest | 4 | health/metrics/histogram/requestId/traceId+spanId (W3C) (JVM/Native/JS) |
-| FunctionSyntaxTest | 4 | formas de declaração de função |
+| KofObservabilityTest | 7 | health/metrics/histogram/requestId/traceId+spanId (W3C) (JVM/Native/JS) |
+| FunctionSyntaxTest | 12 | formas de declaração de função |
 | KofEnumSwitchTest | 4 | switch exaustivo sobre enum + SEM031 |
 | KofEnumTest | 4 | enum: values/valueOf/name, SEM030, mapeamento JVM |
-| KofHttpE2ETest | 4 | kof.http client (sockets reais, JVM + JS) |
-| KofMqE2ETest | 4 | kof.mq publish/subscribe/queue (JVM+Native+JS — MQ001 fechado 01/09) |
+| KofHttpE2ETest | 8 | kof.http client (sockets reais, JVM + JS) |
+| KofMqE2ETest | 5 | kof.mq publish/subscribe/queue (JVM+Native+JS — MQ001 fechado 01/09) |
 | KofWebStreamE2ETest | 4 | WebSocket/SSE end-to-end (persistent-conn) |
-| LambdaE2ETest | 4 | lambdas + if-expr |
+| LambdaE2ETest | 17 | lambdas + if-expr |
 | RouterE2ETest | 4 | kof.ui Router Fase 7: go/replace/back/forward |
 | StdlibE2ETest | 4 | now/readFile/writeFile |
-| KofJsBrowserE2ETest | 16 | **KofJS no browser real** (Chrome headless + HTTP + DOM) — kof.ui renderiza de verdade: widgets/Event/canvas/forms (pula se Chrome ausente) |
+| KofJsBrowserE2ETest | 22 | **KofJS no browser real** (Chrome headless + HTTP + DOM) — kof.ui renderiza de verdade: widgets/Event/canvas/forms (pula se Chrome ausente) |
 | KofJsSourceMapTest | 1 | **source map V3 do KofJS** (mappings VLQ reais, nível de linha: função gerada → linha Kof via `KofDebugInfo`; antes era stub `"mappings":""`) |
 | ConfigGenTest | 3 | kof config gen: template kof.config do código |
 | KofHttpResilienceE2ETest | 3 | kof.http timeout/retry/circuit (JVM + JS paridade) |
-| KofMapSetTest | 10 | Map/Set 3 targets (asm próprio no Native) + `Set<T>`/`Map<K,V>` como campo/retorno de classe (JVM: `NoClassDefFoundError` → `HashSet`/`HashMap`; parse de método de classe c/ retorno genérico) + `Map.get` → `V?` (02/09) |
- | KofObservabilityTest | 5 | health/metrics/histogram/requestId/traceId+spanId (W3C) (JVM/Native/JS; Native histogram = gap OBS002) |
+| KofMapSetTest | 11 | Map/Set 3 targets (asm próprio no Native) + `Set<T>`/`Map<K,V>` como campo/retorno de classe (JVM: `NoClassDefFoundError` → `HashSet`/`HashMap`; parse de método de classe c/ retorno genérico) + `Map.get` → `V?` (02/09) |
+ | KofObservabilityTest | 7 | health/metrics/histogram/requestId/traceId+spanId (W3C) (JVM/Native/JS; Native histogram = gap OBS002) |
 
 | KofSecurityG9Test | 3 | web security: rateLimit/session/apiKey |
-| KofValidationTest | 3 | 13 predicados de validação (3 targets) |
+| KofValidationTest | 34 | 13 predicados de validação (3 targets) |
 | TetrisEasterEggTest | 3 | registro easter egg oculto |
 | TuringCompleteE2ETest | 3 | completude de Turing (loops/while/recursão) |
 | WindowE2ETest | 3 | Window: size, close-to-exit |
@@ -613,8 +613,8 @@ main() { /* ignorado pelo kof test */ }
 | NativeDebugTest5 | 1 | harnesses de debug nativo (5) |
  | NativeDwarfLineInfoTest | 1 | **DWARF nativo**: `.debug_line` real no binário (`objdump --dwarf=decodedline` → arquivo Kof + linha por instrução) |
 | NullSafetyE2ETest | 7 | `String?` narrowing JVM + readLine EOF null (02/09) |
-  | NativeRiscv64E2ETest | 26 | **riscv64 real (qemu)**: runtime em **asm puro** (raw syscalls, sem C; `as`+`ld` estático) — core (println, var, if/else, aritmética, classes, arrays, List, switch, try/catch, pattern matching, String methods, recursão) + **stdlib 05/09**: JSON (encode/decode incl. escalares int/long/bool/string), HTTP, spawn/await, cache, time.now, mq (queue/pub-sub), Map/Set, higher-order (map/filter/reduce), String.toInt, metrics `# TYPE`, FP (conversões; `println(double)`→FLT001), gates honestos DB001/SECN000/SCHED001/TIME001 |
-  | NativeAarch64E2ETest | 26 | **aarch64 real (qemu)**: runtime em **asm puro** via tradução riscv→aarch64 (`translateRiscvToAarch64`), raw syscalls — mesmo core + stdlib do riscv64 (tradutor quote-aware p/ strings com `#`) |
+  | NativeRiscv64E2ETest | 39 | **riscv64 real (qemu)**: runtime em **asm puro** (raw syscalls, sem C; `as`+`ld` estático) — core (println, var, if/else, aritmética, classes, arrays, List, switch, try/catch, pattern matching, String methods, recursão) + **stdlib 05/09**: JSON (encode/decode incl. escalares int/long/bool/string), HTTP, spawn/await, cache, time.now, mq (queue/pub-sub), Map/Set, higher-order (map/filter/reduce), String.toInt, metrics `# TYPE`, FP (conversões; `println(double)`→FLT001), gates honestos DB001/SECN000/SCHED001/TIME001 |
+  | NativeAarch64E2ETest | 39 | **aarch64 real (qemu)**: runtime em **asm puro** via tradução riscv→aarch64 (`translateRiscvToAarch64`), raw syscalls — mesmo core + stdlib do riscv64 (tradutor quote-aware p/ strings com `#`) |
  | **Total kof-compiler** | **823** | |
  | kof-script | 8 | KofScriptGlobals / repl / --watch |
  | kof-c-compiler | 5 | KofC C subset → ELF |
