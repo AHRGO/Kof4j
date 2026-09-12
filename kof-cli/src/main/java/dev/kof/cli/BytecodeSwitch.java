@@ -269,9 +269,9 @@ final class BytecodeSwitch {
         if (op == 0xb5) return -2;                                       // putfield
         if (op == 0xbb) return 1;                                        // new
         if (op == 0xb8 || op == 0xb6 || op == 0xb9 || op == 0xb7) {       // invokes (não-dynamic)
-            String[] m = BytecodeDecoder.resolveMethodRef(cp, in.operands().length > 0 ? in.operands()[0] : -1);
+            String[] m = BytecodeCp.resolveMethodRef(cp, in.operands().length > 0 ? in.operands()[0] : -1);
             if (m == null) return null;
-            int argc = BytecodeDecoder.argCount(m[2]);
+            int argc = BytecodeCp.argCount(m[2]);
             boolean isVoid = m[2].indexOf(')') >= 0 && m[2].charAt(m[2].indexOf(')') + 1) == 'V';
             int recv = (op == 0xb8) ? 0 : 1;   // static sem receiver
             return -argc - recv + (isVoid ? 0 : 1);

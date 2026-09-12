@@ -309,12 +309,12 @@ final class BytecodeStatements {
                 case 0x10 -> stack.push(String.valueOf((byte) in.operands()[0]));
                 case 0x11 -> stack.push(String.valueOf((short) in.operands()[0]));
                 case 0x12, 0x13 -> {                            // ldc, ldc_w
-                    String c = BytecodeDecoder.ldc(cp, in.operands()[0]);
+                    String c = BytecodeCp.ldc(cp, in.operands()[0]);
                     if (c == null) return null;
                     stack.push(c);
                 }
                 case 0x14 -> {
-                    String c = BytecodeDecoder.ldc2(cp, in.operands()[0]);
+                    String c = BytecodeCp.ldc2(cp, in.operands()[0]);
                     if (c == null) return null;
                     stack.push(c);
                 }
@@ -377,39 +377,39 @@ final class BytecodeStatements {
                     if (!BytecodeKofTypes.statementOp(op, in, stack, cp, stmts, frame)) return null;
                 }
                 case 0xb8 -> { // invokestatic
-                    String[] m = BytecodeDecoder.resolveMethodRef(cp, in.operands()[0]);
+                    String[] m = BytecodeCp.resolveMethodRef(cp, in.operands()[0]);
                     if (m == null) return null;
-                    String a = BytecodeDecoder.callArgs(stack, BytecodeDecoder.argCount(m[2]));
+                    String a = BytecodeCp.callArgs(stack, BytecodeCp.argCount(m[2]));
                     if (a == null) return null;
                     String mapped = BytecodeStdlib.statics(m[0], m[1], a, m[2]);
-                    if (mapped == null && BytecodeDecoder.isJdkOwner(m[0])) return null;   // R6: owner JDK
-                    String call = mapped != null ? mapped : BytecodeDecoder.simpleOwner(m[0]) + "." + m[1] + "(" + a + ")";
-                    if (BytecodeDecoder.isVoidDesc(m[2])) { stmts.add(call); } else { stack.push(call); }
+                    if (mapped == null && BytecodeCp.isJdkOwner(m[0])) return null;   // R6: owner JDK
+                    String call = mapped != null ? mapped : BytecodeCp.simpleOwner(m[0]) + "." + m[1] + "(" + a + ")";
+                    if (BytecodeCp.isVoidDesc(m[2])) { stmts.add(call); } else { stack.push(call); }
                 }
                 case 0xb6, 0xb9 -> { // invokevirtual / invokeinterface
-                    String[] m = BytecodeDecoder.resolveMethodRef(cp, in.operands()[0]);
+                    String[] m = BytecodeCp.resolveMethodRef(cp, in.operands()[0]);
                     if (m == null) return null;
-                    String a = BytecodeDecoder.callArgs(stack, BytecodeDecoder.argCount(m[2]));
+                    String a = BytecodeCp.callArgs(stack, BytecodeCp.argCount(m[2]));
                     if (a == null || stack.isEmpty()) return null;
                     String recv = stack.pop();
                     String mapped = BytecodeStdlib.virtual(recv, m[0], m[1], a);
                     if (mapped == null && recv.startsWith("⟦new⟧")) return null;  // R6: método em novo Objeto JDK
                     String call = mapped != null ? mapped : recv + "." + m[1] + "(" + a + ")";
-                    if (BytecodeDecoder.isVoidDesc(m[2])) { stmts.add(call); } else { stack.push(call); }
+                    if (BytecodeCp.isVoidDesc(m[2])) { stmts.add(call); } else { stack.push(call); }
                 }
                 case 0xb4 -> { // getfield
-                    String[] f = BytecodeDecoder.resolveMethodRef(cp, in.operands()[0]);
+                    String[] f = BytecodeCp.resolveMethodRef(cp, in.operands()[0]);
                     if (f == null || stack.isEmpty()) return null;
                     String obj = stack.pop();
                     stack.push(obj + "." + f[1]);
                 }
                 case 0xb2 -> { // getstatic
-                    String[] f = BytecodeDecoder.resolveMethodRef(cp, in.operands()[0]);
+                    String[] f = BytecodeCp.resolveMethodRef(cp, in.operands()[0]);
                     if (f == null) return null;
-                    stack.push(BytecodeDecoder.simpleOwner(f[0]) + "." + f[1]);
+                    stack.push(BytecodeCp.simpleOwner(f[0]) + "." + f[1]);
                 }
                 case 0xb5 -> { // putfield
-                    String[] f = BytecodeDecoder.resolveMethodRef(cp, in.operands()[0]);
+                    String[] f = BytecodeCp.resolveMethodRef(cp, in.operands()[0]);
                     if (f == null || stack.isEmpty()) return null;
                     String val = stack.pop();
                     if (stack.isEmpty()) return null;
@@ -417,10 +417,10 @@ final class BytecodeStatements {
                     stmts.add(obj + "." + f[1] + " = " + val);
                 }
                 case 0xb3 -> { // putstatic
-                    String[] f = BytecodeDecoder.resolveMethodRef(cp, in.operands()[0]);
+                    String[] f = BytecodeCp.resolveMethodRef(cp, in.operands()[0]);
                     if (f == null || stack.isEmpty()) return null;
                     String val = stack.pop();
-                    stmts.add(BytecodeDecoder.simpleOwner(f[0]) + "." + f[1] + " = " + val);
+                    stmts.add(BytecodeCp.simpleOwner(f[0]) + "." + f[1] + " = " + val);
                 }
                 case 0xac, 0xad, 0xae, 0xaf -> { if (stack.isEmpty()) return null; stmts.add("return " + stack.pop()); return stmts; }
                 case 0xb0 -> { if (stack.isEmpty()) return null; stmts.add("return " + stack.pop()); return stmts; }
