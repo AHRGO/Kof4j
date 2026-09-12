@@ -288,7 +288,9 @@ tem). NÃO tocar: §101/§94/§44 (congelados), §45/§117/§81/§106/§127-cast
 var-slot primitivo (decisão de contrato, medido: H2 `var x = if(c) 3 else 4.0`
 → VerifyError = status quo documentado, "não fix silencioso"). NUNCA pushar main
 sem pedido do humano.
-**PRÓXIMO PASSO (bugfixer, re-dispacho):** a mesa da lane está VAZIA de unidades
+**PRÓXIMO PASSO (bugfixer, re-dispacho) _(SUPERADO pela 3ª rodada abaixo — a
+re-medição do humano achou trabalho real na mesa; o despacho vivo é o novo
+PRÓXIMO PASSO pós-B1/B2)_ :** a mesa da lane está VAZIA de unidades
 pequenas desbloqueadas neste host. Re-disparo desta lane só assume se: (a) surgir
 REGRESSÃO na suíte (gate: `mvn test -o -pl kof-compiler,kof-script,kof-c-compiler,
 kof-cli -am -Dtest='!UiE2ETest#canvasCreation' -Dsurefire.failIfNoSpecifiedTests=
@@ -298,6 +300,72 @@ false -Dmaven.test.failure.ignore=true -q`; única falha esperada = 13 err `node
 JS cross), ou (d) a lane dev liberar a infra storage-box (destrava §107-record/
 §104b-ii). Caso contrário, o trabalho real sem-colisão está na **frente #97**
 (lane development, S-4 em diante) — NÃO é desta lane.
+
+**FEITO (12/09, lane bugfix — §125 EXTENSÃO: ramo `null` de if/switch em
+retorno/slot primitivo-nullable, dono = lane bugfixer/esta sessão):** o
+"reteste tudo" (humano) re-meDEU a mesa e achou que o fold do §125 (opção A)
+SÓ pegava o `null` LITERAL no topo do `ReturnStmt`/`VarDecl`. As formas em que
+o null mora num **RAMO** (`Int? f() = if(c) x else null`, `Int f() = if(c) x
+else null`, `Int? f() = switch{...default->null}`, `Int? v = if(c) x else null`)
+estavam VIVAS: `branchTypeOrNullAsRef` faz o ramo null ser `Object` → join
+heterogêneo → o ramo PRIMITIVO é boxado (`boxPrimitiveBranch`) → `ireturn`/
+`istore` sobre referência = **VerifyError JVM** + **`Integer.valueOf/1` no
+interpretador**, enquanto Native/JS imprimiam `0`. **É a MESMA doença do §125
+outro sítio — NÃO é decisão nova (a opção A da mantenedora já congela
+null-de-primitivo = default).** Fix (`CompilerComparisons.foldNullablePrimBranches`):
+quando o destino do ReturnStmt OU do VarDecl EXPLÍCITO é primitivo/
+`Nullable(primitivo)`, reescreve cada ramo `null` (profundo, só if/switch) para
+o default do primitivo → join deixa de ser heterogêneo → os 4 targets convergem
+no `0`/`false` congelado. **Não toca (zero regressão, medido V3 idêntico a
+HEAD):** `var`/`val` INFERIDO (V3 `var a = if(c)1 else null` — §68a decisão de
+contrato, segue VerifyError honesto) e if/switch STANDALONE (`println(if(c)1
+else null)` — sem destino tipado). Extração colateral `CapturedVarBox` manteve
+`StatementLowerer` em 499 (abaixo do gate 500; estava 506). **Prova:** célula
+`nullableprint` ampliada (4 saídas novas `en(7)/en(-7)`→`7/0`, slot
+`Int? v = if(false)9 else null`→`0`, `bn(-1)`→`false`; 13 saídas 4/4 sem
+exclusão) + `KofInterpreterParityTest.{expr-body-null-branch,
+expr-body-switch-null-branch, annotated-slot-null-branch}` (3 paridades) +
+`ConformanceMatrixDocTest` 1/1; suíte compiler 1405/0-fail (13 err=node amb),
+script 31/0, kof-c 5/0, cli 136/0. Docs: §125 nota EXTENSÃO + linha da matriz.
+
+**MESA DO BUGFIXER 12/09 (3ª rodada — SUPERADA a "2ª rodada: 0 desbloqueados";
+o re-teste achou 2 famílias novas):** (A) ✅ FEITA acima (§125-extensão).
+(B) **DUAS FAMILHAS NOVAS achadas no sweep, ainda NÃO corrigidas — medir antes
+de tocar:** (B1) **widening-primitive em escrita de coleção PINADA**
+(`listOf(1L).add(2)` / `l.set(0,3L)` / `m.put("b",2)` num `Map<String,Long>`):
+JVM **VerifyError** / `ClassCastException`, mas Native+Script dão o resultado
+CORRETO ([1,2,3]/[3,2]/2) — a widened write passa o guard do §126
+(`pollutesPinned` deixa widening numérico de propósito) mas o add do JVM
+trate o receiver tipo-pinado e faz unbox cru do widening → stack quebrada.
+**Candidato REAL a fix** (JVM-only, alinhar ao oracle que Native/Script já
+batem; a rejeição seria regression do §126 que PASSA widening de propósito).
+(B2) **lixo de ponteiro no Native p/ concatenação `"x" + <Int?-null>`** —
+`ExpressionBinaryLowerer` valueOf-arg ternário (linhas ~156/163) NÃO desempacota
+`Nullable(Int)` (ao contrário do `boxPrimitive:154` e do `dispatchType` do
+`NativeX86Calls:166` que já o fazem) → o arg vai como referência → ramo objeto
+→ lixo (JVM/Script dão `0`/`a0`). **Pré-existente ao §125 (medido HEAD),
+NÃO regressão minha.** Fix cirúrgico: desempacotar Nullable no ternário do
+arg (1 ponto, JVM-neutral). (B1 e B2 são UNIDADES SEPARADAS — uma por commit,
+com prova na matriz/suíte). NÃO tocar: §68a/§68b/§70 var-slot INFERIDO
+(decisão de contrato — V3/H2), §101/§94/§44 (congelados), §45/§106/DD-STDLIB/
+NAT-STR01 (decisão), §104b-ii/interp/S-4 riscv (outros agentes). Gate da suíte:
+`mvn test -o -pl kof-compiler,kof-script,kof-c-compiler,kof-cli -am
+-Dtest='!UiE2ETest#canvasCreation' -Dsurefire.failIfNoSpecifiedTests=false
+-Dmaven.test.failure.ignore=true -q` (única falha esperada = 13 err node +
+skips cross sem toolchain neste host).
+
+**PRÓXIMO PASSO (bugfixer, re-dispacho — a mesa AGORA TEM trabalho real):**
+(1) **B2 (menor, 1 ponto):** `ExpressionBinaryLowerer` concatenação — desempacotar
+`Nullable(primitivo)` no ternário do arg do valueOf NATIVO (linhas ~156 e ~163)
+para bater com `boxPrimitive:154`. Prova: nova célula/parte da `nullableprint`
+com `println("a" + ni())`→`a0` no Native (hoje lixo); suíte verde; commit.
+(2) **B1 (médio):** widening-write em coleção pinada → JVM VerifyError/CCE vs
+Native/Script corretos. Causa no add do JVM (`JvmOpCollections`/`emitBoxIfPrimitive`
+trate o receiver PINADO e não o tipo do arg no store). Travar com célula
+`collwiden` 4/4. NÃO rejeitar (§126 deixa widening passar de propósito).
+(3) só DEPOIS: triagem `specification-gaps.md`/`backend-parity.md` p/ gaps
+String/encoding/time com oracle claro. Re-disparo desta lane NÃO é estabilidade
+(há B1/B2 reais + fila #97 nouta lane). NUNCA pushar main sem pedido do humano.
 
 **FEITO (11/09, lane Native cross — §113 FACES riscv64+aarch64 FECHADAS — `kof_multi_alloc` recursivo cross):** o maintainer corrigiu o x86 e deixou "faces riscv/aarch = port p/ sessão c/ toolchain" — a toolchain ESTÁ neste host (`/usr/bin/qemu-riscv64|aarch64` + binutils), então o port é o degrau óbvio da fila. Fatia nova `NativeRiscvAsmRtB37` (0 colisões .L/.globl verificadas vs vencedora): `kof_multi_alloc(a0=dimsBase, a1=n, a2=i, a3=leafStride)` recursivo espelhando o x86 — MESMA fórmula de offset `d_i = base + 8*(n-i)`; ABI própria: o chamador passa o PRÓPRIO sp como base (dimensões já empilhadas, d_n no topo) e sÓ AVANÇA o sp depois (sem pilha dinâmica — frame fixo do helper salva ra+s0..s6, 112B); nó interno = elemSize 8 (ponteiros), folha = stride do baseType com payload ZEROED byte-a-byte via laço `sb` (paridade MULTIANEWARRAY — kof_alloc é bump-pointer sem zero). Roteio `KofNewMultiArray` em `NativeRiscvCrossEmit` (antes caía no default-comentário NATIVE002); aarch herda 100% via tradutor (verificado: `sb zero`→`strb wzr`, `bge`/`bne`/`mul`/`slli` todos cobertos, 0 UNHANDLED). **Prova:** `riscv64MultiDimArray`/`aarch64MultiDimArray` (10 saídas golden = oracle JVM medido: lengths 2/3 + zero-fill + store/load + 3-D completo `2 3 0 7 2 2 9 0`); sabotagem → FAIL com saída real (não-vazio provado). Docs: célula `array2d` da matriz (faces cross ✅) + §113. **PRÓXIMO PASSO (re-dispacho):** (1) §113 PUSHADO `d2a4dc0a`+docs `edb86c34` (suíte do HEAD pré-rebase 1477/0/5skip; gate no HEAD exato rodando `push-gate.log` — se vermelho, é meu para corrigir antes da próxima unidade); (2) fila lane Native com toolchain real: §107 Native println(coleção) — ABERTO, backend-only, sem gate, R6 violada hoje (imprime lixo de ponteiro); fix = helpers toString recursivos dos 3 tipos de coleção (espelho `kofFormat` do JS §107-JS, x86 primeiro + fatia riscv + tradutor); §114 hash/coleção fica ATRELADO à infra storage-box do §104b-ii(i) (grande, avaliar antes); NÃO tocar §101/§94/§44 (congelados), §45/§106/DD-STDLIB (decisão mantenedora), lane §104/interp (outros agentes). NUNCA pushar main sem pedido do humano.
 

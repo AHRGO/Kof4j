@@ -340,6 +340,8 @@ class ConformanceMatrixTest {
                 Long? nl() { return null }
                 Double? nd() { return null }
                 Int? five() { return 5 }
+                Int? en(Int x) = if (x > 0) x else null
+                Bool? bn(Int x) = if (x > 0) true else null
                 main() {
                     println(ni())
                     println(nb())
@@ -351,8 +353,13 @@ class ConformanceMatrixTest {
                     println(mapOf("a", 1).get("zz") == null)
                     val a = ni()
                     println(a == null)
+                    println(en(7))
+                    println(en(-7))
+                    Int? v = if (false) 9 else null
+                    println(v)
+                    println(bn(-1))
                 }
-                """, "0\nfalse\n0\n6\nfalse\nfalse\nfalse\nfalse\nfalse", Set.of(), tempDir);
+                """, "0\nfalse\n0\n6\nfalse\nfalse\nfalse\nfalse\nfalse\n7\n0\n0\nfalse", Set.of(), tempDir);
 
         // §112 (paridade absoluta, 3 superfícies novas achadas no sweep de
         // coleções): (a) JVM **VerifyError** em `println(m.put(k,v))` com V

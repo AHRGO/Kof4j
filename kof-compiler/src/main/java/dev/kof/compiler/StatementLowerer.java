@@ -16,8 +16,12 @@ public final class StatementLowerer {
         return switch (stmt) {
             case ReturnStmt ret -> {
                 if (ret.value() != null && !CompilerComparisons.isNullablePrimNullReturn(ret, returnType)) {
-                    localIdx = ExpressionLowerer.emitExpression(driver, ret.value(), ops, owner, localIdx, locals);
-                    driver.emitWideningIfNeeded(ops, ExpressionTyper.inferExprType(driver, ret.value(), locals), returnType);
+                    // §125(A) extensão: ramo null de if/switch em retorno
+                    // Nullable(primitivo) colapsa p/ o default (evita o join
+                    // heterogêneo que boxia e quebra o ireturn).
+                    ExpressionNode rv = CompilerComparisons.foldNullablePrimBranches(ret.value(), returnType);
+                    localIdx = ExpressionLowerer.emitExpression(driver, rv, ops, owner, localIdx, locals);
+                    driver.emitWideningIfNeeded(ops, ExpressionTyper.inferExprType(driver, rv, locals), returnType);
                     ops.add(new KofReturn(returnType));
                 } else if (Type.isVoid(returnType)) {
                     ops.add(new KofReturnVoid());
@@ -53,33 +57,22 @@ public final class StatementLowerer {
             }
             case VarDeclStmt vds -> {
                 Type varType = CompilerTypes.toType(vds.type(), driver.currentUnit);
+                // §125(A) extensão: `Int? v = if (c) x else null` — slot
+                // explícito Nullable(primitivo) nunca guarda null (storage é o
+                // inner), então o ramo null colapsa p/ default do primitivo.
+                // `var`/`val` inferido INTocado (§68a: alargar slot = decisão
+                // de contrato).
+                ExpressionNode vdInit = CompilerComparisons.foldNullablePrimBranches(vds.initializer(), varType);
                 // nullable é constraint de compile-time: o storage é o inner
                 // (a referência já pode ser null na JVM/Native/JS)
                 if (varType instanceof Type.NullableType nt) {
                     varType = nt.inner();
                 }
                 if (driver.mutatedCapturedNames.contains(vds.name())) {
-                    Type initType = vds.initializer() == null ? Type.PrimitiveType.INT
-                            : ExpressionTyper.inferExprType(driver, vds.initializer(), locals);
-                    String boxName = driver.boxFactory.createBoxClass(initType, driver.syntheticClasses, driver.lambdaCounter);
-                    Type boxType = new Type.ClassType("", boxName, List.of());
-                    ops.add(new KofNewObject(boxType, List.of()));
-                    ops.add(new KofDup());
-                    ops.add(new KofCall(boxType, "<init>", List.of(),
-                            Type.PrimitiveType.VOID, KofCallKind.CONSTRUCTOR));
-                    ops.add(new KofDup());
-                    if (vds.initializer() != null) {
-                        localIdx = ExpressionLowerer.emitExpression(driver, vds.initializer(), ops, owner, localIdx, locals);
-                    } else {
-                        ops.add(new KofLoadLiteral(initType, 0));
-                    }
-                    ops.add(new KofStoreField(boxType, "value", initType));
-                    ops.add(new KofStoreLocal(boxType, localIdx));
-                    locals.add(new IRLocalVariable(localIdx, vds.name(), boxType));
-                    yield localIdx + 1;
+                    yield CapturedVarBox.emit(driver, vds, vdInit, ops, owner, localIdx, locals);
                 }
-                if (vds.initializer() != null) {
-                    Type initType = ExpressionTyper.inferExprType(driver, vds.initializer(), locals);
+                if (vdInit != null) {
+                    Type initType = ExpressionTyper.inferExprType(driver, vdInit, locals);
                     if (Type.isVoid(initType)) {
                         if (driver.currentDiagnostics != null) {
                             driver.currentDiagnostics.error(vds.position() != null ? vds.position().file() : "",
@@ -91,12 +84,12 @@ public final class StatementLowerer {
                         }
                         yield localIdx;
                     }
-                    localIdx = ExpressionLowerer.emitExpression(driver, vds.initializer(), ops, owner, localIdx, locals);
+                    localIdx = ExpressionLowerer.emitExpression(driver, vdInit, ops, owner, localIdx, locals);
                     if ("var".equals(vds.type()) || "val".equals(vds.type())) {
-                        varType = ExpressionTyper.inferExprType(driver, vds.initializer(), locals);
+                        varType = ExpressionTyper.inferExprType(driver, vdInit, locals);
                         // spawn-expr: pina Handle<T> com T do corpo (a inferência
                         // genérica pode ter perdido o typeArgument)
-                        if (vds.initializer() instanceof MethodCallExpr sm
+                        if (vdInit instanceof MethodCallExpr sm
                                 && "__kof_spawn_expr".equals(sm.methodName())
                                 && varType instanceof Type.ClassType hct
                                 && "kof.concurrent".equals(hct.packageName())
@@ -106,7 +99,7 @@ public final class StatementLowerer {
                                     List.of(ExpressionTyper.inferExprType(driver, sm.arguments().get(0), locals)));
                         }
                     } else {
-                        Type initT = ExpressionTyper.inferExprType(driver, vds.initializer(), locals);
+                        Type initT = ExpressionTyper.inferExprType(driver, vdInit, locals);
                         // bug 8: `var s: (Int) -> Int = (x: Int) -> x * 2` — o
                         // tipo declarado é FunctionType sem className, mas o
                         // valor real é a classe sintética da lambda. Preservar
@@ -129,14 +122,14 @@ public final class StatementLowerer {
                 // int num slot Object invalidava o bytecode.
                 // (#57: IfExpr/switch heterogêneo já boxeou in-branch → pular)
                 if (driver.erasesToReference(varType)
-                        && vds.initializer() != null
-                        && TypeMetrics.isPrimitiveType(ExpressionTyper.inferExprType(driver, vds.initializer(), locals))
-                        && !ExpressionTyper.boxesOwnBranches(driver, vds.initializer(), locals)) {
-                    driver.emitErasureBox(ops, ExpressionTyper.inferExprType(driver, vds.initializer(), locals));
+                        && vdInit != null
+                        && TypeMetrics.isPrimitiveType(ExpressionTyper.inferExprType(driver, vdInit, locals))
+                        && !ExpressionTyper.boxesOwnBranches(driver, vdInit, locals)) {
+                    driver.emitErasureBox(ops, ExpressionTyper.inferExprType(driver, vdInit, locals));
                 }
                 // declaração sem inicializador: default (0 primitivo / null
                 // referência) — antes o store saía de pilha vazia (frame crash)
-                if (vds.initializer() == null) {
+                if (vdInit == null) {
                     ops.add(driver.erasesToReference(varType)
                             ? new KofLoadLiteral(varType, null)
                             : new KofLoadLiteral(varType, 0));

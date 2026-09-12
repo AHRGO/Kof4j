@@ -493,5 +493,28 @@ class KofInterpreterParityTest {
                     println(ni() + 1)
                 }
                 """);
+        // §125(A) extensão (12/09): expression-body e slot anotado — o null
+        // mora num RAMO do if/switch, não no topo do return; o fold colapsa
+        // o ramo p/ default do primitivo (mesmo contrato da forma block).
+        parity("expr-body-null-branch", """
+                Int? en(Int x) = if (x > 0) x else null
+                main() {
+                    println(en(7))
+                    println(en(-7))
+                }
+                """);
+        parity("expr-body-switch-null-branch", """
+                Int? sw(Int x) = switch (x) { case 1 -> 10 default -> null }
+                main() {
+                    println(sw(1))
+                    println(sw(2))
+                }
+                """);
+        parity("annotated-slot-null-branch", """
+                main() {
+                    Int? v = if (false) 9 else null
+                    println(v)
+                }
+                """);
     }
 }

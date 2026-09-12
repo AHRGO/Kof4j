@@ -105,6 +105,63 @@ public final class CompilerComparisons {
     }
 
     /**
+     * §125 (decisão A) extensão: `Int? f() = if (c) x else null`,
+     * `Int? f() = switch { case 1 -> 1 default -> null }` e
+     * `Int? v = if (c) x else null` — o `null` NÃO é literal no topo do
+     * ReturnStmt/VarDecl (é um RAMO do if/switch), então o fold
+     * `isNullablePrimNullReturn` não dispara e o ramo null cai no join
+     * heterogêneo (branchTypeOrNullAsRef → Object) → ramo primitivo é
+     * boxeado → `ireturn`/`istore` sobre referência (VerifyError JVM,
+     * `Integer.valueOf/1` no interpretador) enquanto Native/JS imprimem o
+     * default. Aqui: se o TIPO DE DESTINO é Nullable(primitivo), reescreve
+     * CADA ramo `null` (profundo, só if/switch) p/ o default do primitivo —
+     * o MESMO valor que `defaultValueOp`/map-miss já produzem — de modo que
+     * o join deixe de ser heterogêneo e os 4 targets convirjam no contrato
+     * congelado (opção A: null de primitivo = default). Não dispara p/
+     * destino não-Nullable(prim) (ex.: `println(if (c) 1 else null)` —
+     * semântica de expressão standalone, intocada: zero regressão).
+     */
+    static ExpressionNode foldNullablePrimBranches(ExpressionNode e, Type destType) {
+        if (e == null) return e;
+        Type.PrimitiveType prim = null;
+        if (destType instanceof Type.NullableType nt && nt.inner() instanceof Type.PrimitiveType p) {
+            prim = p;
+        } else if (destType instanceof Type.PrimitiveType p && !Type.isVoid(p)) {
+            prim = p;
+        }
+        if (prim == null) return e;
+        return foldNullBranches(e, prim);
+    }
+
+    private static ExpressionNode foldNullBranches(ExpressionNode e, Type.PrimitiveType prim) {
+        if (isNullLiteral(e)) return defaultLiteral(prim, ((LiteralExpr) e).position());
+        if (e instanceof IfExpr ie) {
+            return new IfExpr(ie.position(), ie.condition(),
+                    foldNullBranches(ie.thenExpr(), prim), foldNullBranches(ie.elseExpr(), prim));
+        }
+        if (e instanceof SwitchExpr se) {
+            List<SwitchExprCase> cs = new ArrayList<>();
+            for (SwitchExprCase c : se.cases()) {
+                cs.add(new SwitchExprCase(c.position(), c.value(),
+                        foldNullBranches(c.body(), prim)));
+            }
+            return new SwitchExpr(se.position(), se.expression(), cs,
+                    foldNullBranches(se.defaultValue(), prim));
+        }
+        return e;
+    }
+
+    static LiteralExpr defaultLiteral(Type.PrimitiveType prim, SourcePosition pos) {
+        return switch (Type.canonicalPrimitiveName(prim.name())) {
+            case "long" -> new LiteralExpr(pos, ConcreteLiteralKind.LONG, "0");
+            case "float" -> new LiteralExpr(pos, ConcreteLiteralKind.FLOAT, "0.0f");
+            case "double" -> new LiteralExpr(pos, ConcreteLiteralKind.DOUBLE, "0.0");
+            case "bool", "boolean" -> new LiteralExpr(pos, ConcreteLiteralKind.BOOLEAN, "false");
+            default -> new LiteralExpr(pos, ConcreteLiteralKind.INT, "0");
+        };
+    }
+
+    /**
      * Emits both operands of a comparison-shortcut condition, widening each
      * to the common numeric type (e.g. `longExpr < 2000` must widen the
      * literal before the compare).

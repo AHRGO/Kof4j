@@ -3578,7 +3578,7 @@ int de índice) — verificados na varredura.
   cobertos (mesmo ramo, agora com `get`).
   no harness JS.
 
-### 125. `println(<primitivo>? null)` (Int?/Bool?/... null): JVM **VerifyError** na carga + Script **NoSuchMethodError `Integer.valueOf/1`**; Native imprime `0` — ✅ CORRIGIDO 12/09 (decisão da mantenedora: opção A — alinhar ao precedente do map-miss, `0`)
+### 125. `println(<primitivo>? null)` (Int?/Bool?/... null): JVM **VerifyError** na carga + Script **NoSuchMethodError `Integer.valueOf/1`**; Native imprime `0` — ✅ CORRIGIDO 12/09 (decisão da mantenedora: opção A — alinhar ao precedente do map-miss, `0`) · **EXTENSÃO 12/09** (ramo null de if/switch em retorno/slot primitivo-nullable: mesma opção A, fold `foldNullablePrimBranches`)
 
 - **Menor repro (PN2, medido 11/09):** `Int? ni() { return null }` +
   `println(ni())` → **JVM**: VerifyError na inicialização da classe
@@ -3671,6 +3671,29 @@ int de índice) — verificados na varredura.
     KofLoadLiteral` dentro de expressão — o parser JS
     (`JsExpressionParser.parseExpressionFragment:311`) quebra no `KofPop`
     sem nunca ter empilhado nada daquela sub-expressão.
+- **EXTENSÃO 12/09 (mesma opção A, caçada da "reteste tudo"):** o fold do
+  `ReturnStmt`/`VarDecl` só pegava o `null` LITERAL no topo. As formas em que
+  o `null` mora num **RAMO** de if/switch (`Int? f() = if (c) x else null`,
+  `Int f() = if (c) x else null`, `Int? f() = switch { default -> null }`,
+  `Int? v = if (c) x else null`) seguiam vivas: o `branchTypeOrNullAsRef` faz
+  o ramo null ser `Object` → join heterogêneo → o ramo PRIMITIVO é boxado →
+  `ireturn`/`istore` sobre referência (**VerifyError JVM** + **`Integer.valueOf/1`
+  no interpretador**), enquanto Native/JS imprimiam `0`. Mesma doença do §125,
+  outro sítio. **Fix (contrato congelado, zero decisão nova):**
+  `CompilerComparisons.foldNullablePrimBranches(e, destType)` — quando o
+  destino do `ReturnStmt` OU do `VarDecl` EXPLÍCITO é primitivo ou
+  `Nullable(primitivo)`, reescreve cada ramo `null` (profundo, só if/switch)
+  para o default do primitivo; o join deixa de ser heterogêneo e os 4 targets
+  convergem no `0`/`false` da opção A. **Não toca**: `var`/`val` INFERIDO
+  (`var a = if(c) 1 else null` — §68a, decisão de contrato, segue VerifyError
+  honesto) e if/switch STANDALONE (`println(if(c)1 else null)` — sem destino
+  tipado, semântica atual preservada; medido V3 = sem regressão). Extração
+  colateral `CapturedVarBox` manteve `StatementLowerer` em 499 (< gate 500).
+  **Prova:** célula `nullableprint` ampliada (+`en(7)`/`en(-7)`, slot `Int? v
+  = if(false)9 else null`, `bn(-1)` → `7/0/0/false`, 4/4 sem exclusão) +
+  `KofInterpreterParityTest.{expr-body-null-branch, expr-body-switch-null-branch,
+  annotated-slot-null-branch}` (3 paridades); suíte compiler 1405/0-fail (13
+  err=`node` ambiente, +1 skip cross), script/kof-c/cli inalterados.
 
 ### 126. Chave do TIPO ERRADO em Map/Set/`contains`-de-List pinados → Native SIGSEGV (JVM tolera com miss/false) — ✅ CORRIGIDO 11/09 (decisão da mantenedora: opção ii — SEM056 em compile-time)
 
