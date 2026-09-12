@@ -95,8 +95,10 @@ Documentação: `docs/stdlib/security.md`; testes: `KofSecurityTest` (22).
   automático (JSON se `{`/`[`); 404/500; middlewares em cadeia.
 - Engine: `WebRoute/WebRequest` gerados no KofRuntime; `KofHttpServer`
   (legado `kof serve`, `ReflectiveHandler`).
-- Targets: JVM ✅ (incl. ws/sse); Native ❌ WEB002 (sem `kof_web_*` no asm);
-  JS ❌ WEB001.
+- Targets: JVM ✅ (incl. ws/sse); Native ✅ base (WEB002 server: `kof_web_*`
+  no asm — `NativeWebCore`/`Listen`/`Responses`/`Runtime`; prova
+  `KofWebNativeE2ETest` 4/4 no gate 12/09; cauda TLS/ws/sse/path-params
+  seguem como WEB002 residual na mesa de abertos do DOING); JS ❌ WEB001.
 - Tests: `KofWebE2ETest` (9, sockets reais), `KofHttpServerTest` (8),
   `KofWebWsE2ETest` (11), `KofWsFrameTest` (7), `KofWebSseE2ETest` (7).
 - Docs: `docs/stdlib/stdlib-web.md`.
