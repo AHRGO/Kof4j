@@ -39,6 +39,40 @@
 > Este doc continua em `development/` (NATIVE002 não fecha enquanto restam
 > (1)–(5)); quando (1)–(5) zerarem → mover para `docs/`.
 >
+> **🪜 DECOMPOSIÇÃO DA FACE (1) — GC mark-sweep cross (12/09, fila para
+> execução por degrau — cada degrau cabe numa sessão e tem prova própria):**
+> o riscv é bump puro (`amoadd.d` em `kof_alloc_ptr`, sem flags/mark/free-list);
+> o port NÃO é copiar o RuntimeGc x86 — o scan conservative exige stack-walk
+> riscv + roots no intervalo de seções. Degraus na ordem:
+> **G-1 free-list riscv** — port da lista de blocos livres do x86 (header
+> 32B: size/flags/gc-list/free-next já existem no layout do objeto kof?
+> CONFERIR contra `kof_alloc` x86 antes de escrever; a prova do degrau:
+> `kof_alloc` recusa bump quando há bloco livre >= size, teste riscv E2E
+> de ciclo alloc/free/alloc (sem GC ainda — API de free manual); byte-idêntico
+> no hello? NÃO: free-list muda o runtime — gate = suíte cross completa +
+> ArtifactSize com meta nova travada.
+> **G-2 header flags/mark bits + lista GC** — o bloco aloca com flag=0 e entra
+> na gc-list global (`kof_gc_head` riscv); prova: programa com N allocs e
+> `KOF_GC_DEBUG` dump da lista (syscalls write) com tamanho/flag corretos.
+> **G-3 mark conservative riscv** — port de `kof_gc_mark`: walk `sp..rbp`
+> (riscv: `sp` até o limite do frame, fallback 4KB como o x86) + scan de
+> raízes estáticas EXPLÍCITO no intervalo `.data..kof_heap_root_end`
+> (o `kof_heap_root_end` da #97 S-5-x86 é PRÉ-REQUISITO compartilhado —
+> coordenar com a fila bugfix, não duplicar o emissor); transitive = walk dos
+> campos por tamanho (size/8). Prova: objeto alcançado só pela stack sobrevive,
+> inalcançado some (teste com `KOF_GC_DEBUG` antes/depois; SEM sweep ainda —
+> mark-only é observável, inofensivo).
+> **G-4 sweep + collect no alloc** — free-list recebe mortos; `kof_gc_collect`
+> portado (tick 4096 como o x86); prova: teste de VASAMENTO que hoje é
+> impossível (loop de alloc que estouraria o bump de 260KB roda e a memória
+> não cresce monotonically — medir via stats).
+> **G-5 aarch64** — herda tudo via tradutor (as diretivas/labels riscv passam
+> ilesas — mesmo caminho da poda S-4); gate: suíte aarch 39/39 sob qemu +
+> o teste de vazamento G-4 também no aarch.
+> Cada degrau: commit com suíte cross completa verde + DOING.md na linha.
+> NÃO misturar com S-5-x86/root_end (fila bugfix) — mas G-3 DEPENDE dele;
+> se a fila bugfix não entregar root_end primeiro, G-1/G-2 adiantam sem ele.
+>
 > **Status:** `EM DESENVOLVIMENTO (parcial)` — **riscv64 + aarch64 com core completo (03/09)**: classes/arrays/List/strings/instanceof/switch/try-catch/FP/recursão em asm puro nos dois; paridade avançada pendente *(ver re-auditoria 12/09 acima — muito do que estava "pendente" já roda sob qemu; o que falta tem código de gap honesto)*.
 > **Versão:** 0.2.6-beta · **Data:** 2026-09-03
 > **Gap:** `NATIVE002` (riscv64 core ✅ 02/09; aarch64 core ✅ 03/09 via tradução riscv→aarch64; paridade total x86 — JSON/DB/HTTP/concorrência/UI/net — pendente nos dois).
