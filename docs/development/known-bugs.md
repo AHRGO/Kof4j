@@ -8,7 +8,7 @@
 >
 > | | |
 > |---|---|
-> | **Fila ABERTA (varredura 12/09 — todas as seções sem ✅ no próprio cabeçalho)** | **14** — §45 (finally+return: exige mudança de IR 4-backend + decisão DD-01, mantenedora), §65 (UI/Chrome — lane UI), §81 (KofJS Long>2^53 — decisão de precisão/contrato), §89 (n.toDouble()/toInt() cross — contrato de conversão), §94/§101 (congelados regra 6), §104b-ii (record-em-coleção + storage-box asm — **lane bugfixer**, unidade GRANDE), §106 (json.encode Map — decisão mantenedora), §107 🟡 (restam record/aninhado=`?` até §104b-ii + FP-cross=FLT001; face escalar ✅ 12/09 nos 3 nativos `f3b3821c`+B39), §117 (cancelled() colisão — design TLS, congelado), §127-JVM (cast p/ tipo-função → mudança de erasure no `JvmTypeMapper`, **infra de tipos**; workaround interface verificado), §129-TLS (congelado), §131 (sobrecarga de MÉTODO — semântica, mantenedora), §132 (OTP JS gate). **§125 ✅ CORRIGIDO 12/09** (decisão A: return Nullable(primitivo) apaga p/ default — 3 pontos no IR compartilhado, célula `nullableprint` 4/4 sem exclusão). **§139 ✅ CORRIGIDO 12/09** (mesma unidade: JS fold `f()==null` → COMP002 underflow; parser JS ganha o descarte mid-expression com preservação de side-effect). **§90 ✅ CORRIGIDO 12/09 (lane web, remoto).** **Conclusão honesta (12/09, atualiza a mesa do bugfixer `4d51defe`): nenhum item de código-puro-sem-decisão na lane restou nesta máquina** — os 14 abertos estão pendurados em decisão da mantenedora, congelamento regra-6, ou lane alheia (UI/bugfixer). O trabalho REAL sem-colisão-aceito da sessão é a **frente #97 tree-shaking** (S-1 ✅ `a3996600`; S-2→ em `docs/development/PLAN-TREE-SHAKING.md`). |
+> | **Fila ABERTA (varredura 12/09 — todas as seções sem ✅ no próprio cabeçalho)** | **14** — §45 (finally+return: exige mudança de IR 4-backend + decisão DD-01, mantenedora), §65 (UI/Chrome — lane UI), §81 (KofJS Long>2^53 — decisão de precisão/contrato), §89 (n.toDouble()/toInt() cross — contrato de conversão), §94/§101 (congelados regra 6), §104b-ii (record-em-coleção + storage-box asm — **lane bugfixer**, unidade GRANDE), §106 (json.encode Map — decisão mantenedora), §107 🟡 (restam record/aninhado=`?` até §104b-ii + FP-cross=FLT001; face escalar ✅ 12/09 nos 3 nativos `f3b3821c`+B39), §117 (cancelled() colisão — design TLS, congelado), §127-JVM (cast p/ tipo-função → mudança de erasure no `JvmTypeMapper`, **infra de tipos**; workaround interface verificado), §129-TLS (congelado), §131 (sobrecarga de MÉTODO — semântica, mantenedora), §132 (OTP JS gate). **§125 ✅ CORRIGIDO 12/09** (decisão A: return Nullable(primitivo) apaga p/ default — 3 pontos no IR compartilhado, célula `nullableprint` 4/4 sem exclusão). **§139 ✅ CORRIGIDO 12/09** (mesma unidade: JS fold `f()==null` → COMP002 underflow; parser JS ganha o descarte mid-expression com preservação de side-effect). **§140 ✅ CORRIGIDO 12/09** (processual: gate ≤500 virou ratchet com baseline de dívida e entrou no CI — 17 violadores travados de crescer, split continua no PLAN-SOLID-500). **§90 ✅ CORRIGIDO 12/09 (lane web, remoto).** **Conclusão honesta (12/09, atualiza a mesa do bugfixer `4d51defe`): nenhum item de código-puro-sem-decisão na lane restou nesta máquina** — os 14 abertos estão pendurados em decisão da mantenedora, congelamento regra-6, ou lane alheia (UI/bugfixer). O trabalho REAL sem-colisão-aceito da sessão é a **frente #97 tree-shaking** (S-1 ✅ `a3996600`; S-2→ em `docs/development/PLAN-TREE-SHAKING.md`). |
 > | Antiga "varredura 08/09" (apócrifa — corrigida 12/09) | os "abertos" 39/62/63/64/46/48/50/59/61 estão ✅ CORRIGIDO nos próprios cabeçalhos (39/62/63/64 JVM/JS; 46/50/59 Native; 48/61 gap honesto JSN004/FFI001); contagem real na linha acima. |
 > | Paridade interpretador × compilados (semântica `==` congelada — regra 6) | **1** — bug 94 (NaN/±0.0 `==` de Double no SCRIPT) |
 > | Paridade backend-only (regra 5, atacável na lane Native) | **2** — §107 (println coleção → lixo; **face escalar ✅ CORRIGIDA 12/09 nos 3 targets nativos** — x86 `f3b3821c` + cross B39, golden JVM byte-idêntico; restam record/aninhado=`?` honesto até §104b-ii, FP-cross=FLT001; §107-JS 11/09), §104b-ii (equals de conteúdo p/ record + box de primitivo no storage asm; **face char ✅ FECHADA 11/09** — `mapgetprim` 4/4)
@@ -4280,3 +4280,37 @@ statement-switch na mesma taxa). Reprodução no próprio teste (kof-cli).
   4 targets) trava os dois repros (`ni() == null`, `mapOf("a",1).get("zz")
   == null` → `false`); `ConformanceMatrixTest` 11/11 medido 12/09.
 - **Prioridade:** baixa (workaround: slot `val v = ...; v == null`).
+
+---
+
+### 140. Gate `check_500.sh` era decorativo: nunca entrou no CI → 17 violadores da regra ≤500 se acumularam em silêncio (SemanticAnalyzer 396→535, Parser 456→513 — classes das Fases 6/7 "✅ FEITA") — ✅ CORRIGIDO 12/09 (ratchet + job no CI)
+
+- **Sintoma (achado 12/09 na triagem da fila dev, ao procurar o próximo item do
+  PLAN-SOLID-500):** `bash scripts/check_500.sh` → FALHOU com **17 classes de
+  produção acima de 500 linhas** (maior: `nat/NativeBackend.java` 664). O gate
+  foi escrito na Fase 9 (06/09, "gate permanente") e NENHUM workflow o chama
+  (`grep -rn check_500 .github/` → vazio). Consequência medida: classes que a
+  tabela de status do plano declara "✅ FEITA ≤500" voltaram a crescer sem que
+  ninguém (humano, agente ou pipeline) percebesse — `SemanticAnalyzer` (Fase 6,
+  "396 + 8 classes") está em 535 hoje; os commits que o incharam (`40abd0ed`
+  SEM047, `b55c24c0` sobrecarga) não rodaram o gate porque só `mvn test` roda
+  no CI e `mvn test` não invoca o script.
+- **Causa raiz:** gate fora do pipeline é opinião, não contrato. A regra ≤500 é
+  de ferro (AGENTS.md), mas o mecanismo de fiscalização vivia só na disciplina
+  de cada agente — e agentes que rodam `mvn -pl` subset nunca veem o script.
+- **Menor repro:** `scripts/check_500.sh` no HEAD `768b26fd` → exit 1, 17 lines.
+- **Correção (12/09, esta unidade):** o gate vira **ratchet com baseline de
+  dívida**: `scripts/check_500-baseline.txt` congela as 17 dívidas existentes
+  (contagem por arquivo); o script falha se (a) arquivo NOVO passa de 500,
+  (b) dívida do baseline CRESCE, (c) baseline some; passa com AVISO quando a
+  dívida diminui (o split feito deve remover a linha — `--update-baseline`).
+  Não é "consertar o teste para passar": a dívida REAL fica documentada e
+  travada de crescer; o plano (Fases 2/3 + varredura) continua devendo os
+  splits, agora com meta-visível no baseline que só encolhe. LIGADO no
+  `build-and-test` do `.github/workflows/ci.yml` (step antes do build).
+- **Prova:** casos sabotados medidos no commit — linha removida do baseline →
+  "NOVA DÍVIDA" exit 1; contagem reduzida 513→450 no baseline → "DÍVIDA
+  CRESCEU" exit 1; estado real → OK exit 0. YAML validado.
+- **Prioridade:** processual (não afeta output do compilador). **Follow-up
+  honesto:** zerar o baseline = as Fases 2/3+resíduos do PLAN-SOLID-500; as 17
+  dívidas listadas são a fila real dessa frente, não a tabela de 9 fases.

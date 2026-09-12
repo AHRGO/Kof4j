@@ -237,3 +237,15 @@ Perda de contexto (por que o código é assim)
 Gate permanente: `scripts/check_500.sh` falha se qualquer classe de produção
 ultrapassar 500 linhas. Exceções documentadas: `static Opcodes.*` (convenção
 ASM). O plano está completo quando Fases 2 e 3 fecharem (lane agente-idiomatic).
+
+> **⚠️ RETIFICADO 12/09 (§140 known-bugs): o gate era decorativo.** Nenhum
+> workflow chamava `check_500.sh` → a medição acima ("todas ≤500") **regrediu
+> em silêncio**: hoje o script reporta **17 classes >500** (maior
+> `nat/NativeBackend.java` 664; `SemanticAnalyzer` voltou de 396 (Fase 6,
+> `6e2ff77`) para **519 em `40abd0ed` (09/09, SEM047) e 535 em `b55c24c0`
+> (11/09, sobrecarga top-level)** — a Fase 6 continua "✅ FEITA" na tabela;
+> `Parser` 456→513 (Fase 7 idem). Correção: o gate virou **ratchet**
+> (baseline `scripts/check_500-baseline.txt` congela as 17 dívidas; dívida nova
+> ou crescente = CI vermelho; só encolhe) e foi **ligado no `build-and-test`**
+> do `.github/workflows/ci.yml`. A fila real desta frente agora é o baseline,
+> não a tabela de 9 fases — cada linha removida = um split feito.
