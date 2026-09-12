@@ -1,11 +1,3 @@
-# Baseline de dívida >500 linhas — 12/09 (§140, ratchet). NÃO adicionar linhas:
-# dívida nova é proibida; ao splitar uma classe, rode scripts/check_500.sh
-# --update-baseline (re-grava o estado atual). Meta: este arquivo vazio
-# (PLAN-SOLID-500 concluído). Splits 12/09: Parser (TypeDeclarations),
-# SemanticAnalyzer (visitor no-op removido), BytecodeDecoder (BytecodeCp),
-# JsControlFlowParser (JsComparisons + isLoopStart->JsLabelParser);
-# StatementLowerer saiu pela mão do bugfixer em 8665e4a8 (506->499).
-554	kof-compiler/src/main/java/dev/kof/compiler/ExpressionInstanceCallLowerer.java
 515	kof-compiler/src/main/java/dev/kof/compiler/ExpressionMethodCallLowerer.java
 520	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeUiLayout.java
 514	kof-compiler/src/main/java/dev/kof/compiler/jvm/JvmOpCollections.java
