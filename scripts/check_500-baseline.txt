@@ -4,7 +4,6 @@
 510	kof-compiler/src/main/java/dev/kof/compiler/jvm/JvmRuntimeUi.java
 539	kof-compiler/src/main/java/dev/kof/compiler/KofUi.java
 550	kof-compiler/src/main/java/dev/kof/compiler/MemberCallTyper.java
-538	kof-compiler/src/main/java/dev/kof/compiler/MethodCallTyper.java
 664	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeBackend.java
 507	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeRiscvAsmMapset0.java
 557	kof-compiler/src/main/java/dev/kof/compiler/runtime/RuntimeUi.java
