@@ -273,6 +273,23 @@ conceitual nem decide arquitetura/rumo. Consequências práticas para o agente:
    sessão: `git config user.email` = o e-mail da identidade ANTES do primeiro
    commit. (Histórico: um comentário na #97 saiu como melmonfre 12/09 e foi
    APAGADO; re-postagem quando a identidade de issue existir.)
+8. **Higiene de identidade do git (12/09, pedido da mantenedora — NUNCA
+   poluir o git dela).** A identidade do AGENTE vive SÓ no `--local` do clone
+   de trabalho (`user.name = temmcode` + `user.email = aminadojava@gmail.com`);
+   o `--global` (`~/.gitconfig`) é DA MANTENEDORA (`mel` +
+   `amelissariver@gmail.com`) e o agente NUNCA o toca: proibido
+   `git config --global user.*`, proibido `git config user.*` fora de um clone
+   de trabalho, proibido qualquer comando que escreva no `~/.gitconfig`.
+   Consequências: (a) commit manual DELA num terminal usa o global dela e sobe
+   pela conta dela — correto, nunca "consertar"; (b) commit do loop autônomo
+   usa o local do clone e sobe como `temmcode` — correto; (c) verificação de
+   sessão é `git config --show-origin --get user.email`: tem que responder
+   `file:.git/config` + o e-mail temmcode; se responder
+   `file:/home/mel/.gitconfig`, o local se perdeu — restaurar SÓ o local
+   (`git config user.email ...` SEM `--global`, dentro do repo) antes do
+   primeiro commit. Scripts (`auto-loop.sh`, `issue-watcher.sh`, CI) NUNCA
+   setam identidade — o `release.yml` usa `kof-release-bot`, identidade de bot
+   própria, nem da mantenedora nem do worker.
 
 > Em resumo: a IA roda **sob as regras estritas da computação de verdade** —
 > documentação cirúrgica, zero alucinação, sem o hype do mercado.
