@@ -43,6 +43,25 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
 > **⚡ PRÓXIMO PASSO (12/09 ~20:10, sessão melissa/dev — G-1 desbloqueado: a justificativa da recusa estava ERRADA):** verificação no fonte (`grep -c` nas fatias): riscv faz **57 `call kof_alloc` e ZERO `call kof_free`** — o x86 tem 4 callers reais de free (Channel `RuntimeChannel:132`, Log `RuntimeLog2:98`, Observability `:426`/`:247`). O riscv **vaza em cada nó de log/b64/map-rebuild** (bump nunca devolve — a razão do `.bss` ~260KB fixo). A recusa de 19:44 ("free sem caller = código morto") partiu de premissa FALSA — corrigida no `native-multiarch.md` G-1 com a contagem + ordem do port proposta (kof_free 1:1 do emitFree → kof_memstats → ligar free no log RtB0 → E2E ciclo reusa). **BLOQUEIO REAL restante: este host não tem qemu/toolchain cross** — asm riscv novo não é entregável daqui (regra: nunca asm não-executado; guard assumeTrue é o mecanismo portável). Quem executa o G-1 = sessão/host COM qemu (a que fez G-0/S-4/S-5). **Fila: (1) G-1 no host com toolchain (dono natural = lane GC, arquivos `RtB0`/`RuntimeMemory`-port); (2) F3 (NativeBackend ≤500) também `nat/` — mesmo bloqueio de host p/ prova byte-idêntica? NÃO: F3 é refactor Java puro com prova .s byte-diff… que também precisa do toolchain cross p/ o byte-diff riscv/aarch. F3 fica para o host com toolchain OU só-x86 parcial (emitCall families); (3) lane bugfix-101 (§145→146→147) viva — não tocar; (4) S-2 OTP = ratificação; (5) re-disparo sem trabalho novo neste host → RECUSAR (estabilidade local: suíte 1582/0 verde aqui, docs sincronizados, tudo com dono). **NUNCA:** `nat/` com lane GC viva; §104b-ii/§45/§106/§101/§94/§145-147; issue `kof_platform`. **Heartbeat ATIVO: cron 5min → 9092/ses_f6857...**
+>
+> **✖ RETIFICAÇÃO MEDIDA do bloco ~20:10 (sessão heartbeat ~20:25):** a
+> premissa "**este host não tem qemu/toolchain cross**" é FALSA AQUI — medido
+> agora: `/usr/bin/qemu-riscv64` + `/usr/bin/qemu-aarch64` +
+> `/usr/bin/riscv64-linux-gnu-as` + `/usr/bin/aarch64-linux-gnu-ld` TODOS
+> presentes; o gate `gateFoldFix.log` (HEAD `360401a4`+fold-fix, esta sessão)
+> rodou as duas suítes cross de verdade: riscv/aarch **40/40 cada,
+> skipped=0** (surefire XML prova). Ou seja: **quem lê isso pode executar
+> asm riscv/aarch neste host** — o bloqueio do G-1 NÃO existe aqui (se a
+> sessão do 20:11 rodou guard/assumeTrue, foi confusão de ambiente, não
+> ausência). Fatos adicionais desta sessão: fold JLS-15.28 do `NativeRiscvAsm`
+> REMOVIDO (`<clinit>` nas 3 irmãs dobráveis — fim do falso split-brain que
+> quase culpou o G-0; anti-pattern novo no corpus), suíte re-medida
+> **1582 = 1410+31+5+136 / 0 falhas / 5 skip-BD** e sincronizada nas 4
+> matrizes; §142/§143/§144/G-0 conferidos sem pendência herdada p/ lane dev.
+> **Executar G-1 continua sendo da lane GC (donos dos arquivos `RtB0`/
+> RuntimeMemory-port, última atividade deles 20:0x com `e76ac80e` — VIVA);
+> re-disparo sem trabalho novo ALÉM do que os donos já têm = RECUSAR com
+> esta medição anexada.**
 
 > **⚡ PRÓXIMO PASSO (12/09 ~20:00, HISTÓRICO — superado pelo bloco ~20:10):** OTP doc-vs-realidade (`d85f0134`). §128-unbox JVM ✅ CORRIGIDO 12/09 (`6e68cb36` 02:22, lane bugfix) — a tabela de impeditivos do plano OTP estava defasada ("S2 exige §128" como se aberto). Sincronizado no plano: **§128 ✅, §129-Native 🔴, §132-JS 🔴** + **buraco de design medido**: `selectAny` JVM (`anyOf().get()`) devolve o VALOR do primeiro pronto, não QUAL handle morreu → wrapper de identidade (id,motivo) = decisão DD-OTP-03 (regra 6, não é port mecânico). README §1 item 4 corrigido (restartLimit/stop JÁ na 1ª fatia — célula "fatia 2 JVM" era dupla-contagem). DDs do OTP continuam aguardando RATIFICAÇÃO da mantenedora — S2 não abre sem isso. **NOVIDADE do remoto (19:55):** issue #101 → §145-147 reproduzidos por outra sessão (lane bugfix-101, EM CURSO declarado no DOING — NÃO tocar: StringMethodRegistry/NativeX86Arith/JsControlFlowParser são deles agora). **PRÓXIMO PASSO (ordem):** (1) F3 (NativeBackend ≤500) quando `nat/` liberar (18:59, <1h — AGUARDAR); (2) S2-OTP só com ratificação da mantenedora (regra 6); (3) lane bugfix-101 (§145→146→147) = DONO DECLARADO, fora da minha lane; (4) re-dispacho: se fila §1 continua owned+suíte verde → RECUSAR (estabilidade). **NUNCA:** `nat/` com lane GC viva; §104b-ii/§45/§106/§101/§94/§145-147; issue `kof_platform` (ViniAguiar1). **Heartbeat ATIVO: cron 5min → 9092/ses_f6857...**
 
