@@ -42,6 +42,30 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **⚡ PRÓXIMO PASSO (12/09 ~17:20, sessão melissa/dev — pós-auditoria da fila
+> `docs/development/README.md` §1 inteira):** UNIDADES DESTA SESSÃO JÁ PUSHADAS
+> (verde no gate 1579/0): S-4.3 testes hardening `e6e76b20`, varredura
+> doc-vs-realidade `backend-parity.md` `708f794b`, sincronia da FILA `cbf639cb`
+> +`96a02d20`. **Auditoria completa da fila §1 feita — TODO item tem dono vivo
+> ou está em decisão (regra 6), NADA de código-puro sem colisão sobrou:**
+> #1 S-5=9092 viva / S-6=ViniAguiar1 viva; #2 F2/F3+§140 splits = agente-idiomatic
+> COMMITTA A MINUTOS (viva); #3 GC cross toca `NativeBackend`/`RiscvSlices` =
+> EXATAMENTE os arquivos do S-5 da 9092 (colisão stop-cond-2); #4 OTP fatia2 =
+> DD-OTP-03/09 ABERTA (regra 6) + §128/§129, lane CONC; #5 EDI001 IntelliJ =
+> tooling; #6 stdlib = tudo §3 (decisão). **PRÓXIMO PASSO (ordem):** (1) se a
+> **9092 largar/fechar o S-5** → resgatar via regra do dono-morto e atacar S-5
+> (T1b `--gc-sections` cross) OU o GC mark-sweep cross (fila §3, NATIVE002);
+> (2) enquanto donos vivos: **continuar doc-vs-realidade** nas matrizes/auditorias
+> que NINGUÉM sincroniza (`KOFUI-AUDIT.md`, `ecosystem-coverage.md`,
+> `roadmap-audit.md`, `docs/status.md`) — células vs código/teste medido, SEMPRE
+> conferindo no HEAD (a coluna de bugs/paridade apodrece a cada merge); (3) ao
+> re-disparo: se fila §1 continua toda-owned+suíte verde → **RECUSAR** (AGENTS
+> estabilidade) e checar se 9092/§140 terminaram (aí GC cross/S-5 ficam livres).
+> **NUNCA:** abrir S-5 ou GC cross enquanto 9092 viva (colisão `NativeBackend`/
+> `RiscvSlices`); tocar §104b-ii/§45/§106/§101/§94 (lane-alheia/congelados);
+> postar issue `kof_platform` (descoberta+pedido de abertura = do ViniAguiar1,
+> e o token `gh` daqui é melmonfre — regra 7).
+
 > **LANE development (humano 11/09, mais recente):** foco **100% nas pendências
 > de `docs/development/` + estabilização da `beta-0.4.0`** (ver AVISO no topo).
 > Ordem da fila dev (sem dono, sem colisão com a lane bugfix §125/§126/§104b-ii):
