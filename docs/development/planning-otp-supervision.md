@@ -388,3 +388,28 @@ Native; pequeno e isolado. Não bloqueia OTP (que usa flag própria).
   6). **S2 do plano (N workers sem bloquear, selectAny)** continua pendente:
   exige §128 (unbox selectAny) e, no Native, §129 (unwind por-thread). O
   documento fica em `docs/development/` até o Native fechar.
+
+## Atualização 12/09 — estado REAL dos impeditivos do S2 (doc-vs-realidade)
+
+- **§128-unbox JVM ✅ CORRIGIDO 12/09** (`6e68cb36`, 02:22 — `JvmOpCollections`
+  estende o unbox de `kof_await` a `kof_select_any`; prova
+  `KofConcurrency2Test#selectAnyPrimitiveJvm` + paridade 4 alvos).
+- **§129-longjmp Native 🔴 segue ABERTO** (impeditivo do S2-Native x86) e
+  **§132 event-loop JS 🔴 segue ABERTO** (impeditivo do S2-JS) — ambos
+  lanes de bugs/UI, regra 6.
+- **Buraco de design que a correção do §128 NÃO fecha (medido, não
+  memória):** o `selectAny` JVM (`JvmRuntimeCore.kof_select_any` →
+  `CompletableFuture.anyOf().get()`) devolve o **valor** do primeiro handle
+  pronto — **não devolve QUAL handle terminou nem distingue término-normal
+  de falha** (uma falha propaga como exceção sem id). Para one_for_one
+  individual o supervisor precisa do par `(id, motivo)` do morto; isso
+  exige um wrapper por filho que reporta a identidade (ex.: task-pair
+  `(id, resultado)`) — **decisão de design na mesa do DD-OTP-03** (regra 6:
+  não é mecânica de port). A alternativa do núcleo atual (1 thread `vigiar`
+  por filho) segue sendo a implementada e coberta pelos 4 gates DD-OTP-11
+  (`KofSupervisorE2ETest` 6/6).
+- **Ratificação:** as DDs fechadas em proposta (01/02/03/08/09/10/11/12/13)
+  continuam **aguardando ratificação da mantenedora** (regra 6) — nenhuma
+  foi ratificada desde a emenda de 11/09; a 1ª fatia ficou entregue e
+  testada, a fatia S2 não abre sem ratificação + decisão do wrapper de
+  identidade.
