@@ -1,5 +1,6 @@
 package dev.kof.compiler.nat;
 import dev.kof.compiler.KofBinary;
+import dev.kof.compiler.KofBinaryOp;
 import dev.kof.compiler.KofUnary;
 import dev.kof.compiler.KofUnaryOp;
 import dev.kof.compiler.Type;
@@ -96,6 +97,17 @@ public final class NativeX86Arith {
         if (NativeTypeKinds.isDoubleType(opTy)) {
             sb.append("    popq %rcx\n");
             sb.append("    popq %rax\n");
+            // §146 (12/09, #101): MOD Double caía no `default` abaixo e
+            // devolvia o dividendo. fmod via kof_double_mod (SSE2, sem libm):
+            // topo=b, abaixo=a — a pilha x86 entrega b em %rcx e a em %rax,
+            // a convenção do helper é rdi=a, rsi=b.
+            if (kb.op() == KofBinaryOp.MOD) {
+                sb.append("    movq %rax, %rdi\n");
+                sb.append("    movq %rcx, %rsi\n");
+                sb.append("    call kof_double_mod\n");
+                sb.append("    pushq %rax\n");
+                return;
+            }
             sb.append("    movq %rax, %xmm0\n");
             sb.append("    movq %rcx, %xmm1\n");
             sb.append("    movq %xmm0, %xmm0\n");

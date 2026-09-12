@@ -232,6 +232,11 @@ void handleStringOp(MethodCtx ctx, List<Object> stack,
             case "charAt" -> stack.add(new JsIr.JsCall(
                     new JsIr.JsMember(receiver, "charCodeAt"), List.of(args.get(0))));
             case "length" -> stack.add(new JsIr.JsMember(receiver, "length"));
+            // §145 (12/09, #101): String.prototype NÃO tem isEmpty (é Java);
+            // o default gerava `t.isEmpty()` = TypeError. length === 0.
+            case "isEmpty" -> stack.add(new JsIr.JsBinary(
+                    new JsIr.JsMember(receiver, "length"), "===",
+                    new JsIr.JsNumber("0")));
             case "equals" -> stack.add(new JsIr.JsBinary(receiver, "===", args.get(0)));
             case "equalsIgnoreCase" -> stack.add(new JsIr.JsBinary(
                     new JsIr.JsCall(new JsIr.JsMember(receiver, "toUpperCase"), List.of()),

@@ -24,6 +24,19 @@ public final class NativeX86StringCalls {
             return true;
         }
         if (kc.kind() == KofCallKind.INSTANCE && BuiltinTypes.isString(kc.ownerType())
+                && "isEmpty".equals(kc.methodName())) {
+            // §145 (12/09, #101): sem ramo caía no fallback genérico →
+            // undefined reference java_lang_String_isEmpty no link.
+            // isEmpty = (length == 0), via o helper existente.
+            sb.append("    popq %rdi\n");
+            sb.append("    call kof_string_length\n");
+            sb.append("    testq %rax, %rax\n");
+            sb.append("    setz %al\n");
+            sb.append("    movzbl %al, %eax\n");
+            sb.append("    pushq %rax\n");
+            return true;
+        }
+        if (kc.kind() == KofCallKind.INSTANCE && BuiltinTypes.isString(kc.ownerType())
                 && "charAt".equals(kc.methodName())) {
             int argCount = kc.parameterTypes().size();
             String[] intRegs = {"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"};

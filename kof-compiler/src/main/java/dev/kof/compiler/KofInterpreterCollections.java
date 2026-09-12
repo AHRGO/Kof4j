@@ -62,6 +62,9 @@ public final class KofInterpreterCollections {
                     : s.lastIndexOf((String) args[0], KofInterpreter.unboxInt(args[1]));
             case "concat" -> s + (String) args[0];
             case "trim" -> s.trim();
+            // §145 (12/09, #101): isEmpty não estava no registry nem aqui —
+            // o SCRIPT devolvia NOT_HANDLED→0 (falso) para string não-vazia.
+            case "isEmpty" -> s.isEmpty() ? 1 : 0;
             case "toUpperCase" -> s.toUpperCase();
             case "toLowerCase" -> s.toLowerCase();
             case "replace" -> {

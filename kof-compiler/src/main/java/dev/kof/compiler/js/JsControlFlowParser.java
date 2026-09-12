@@ -145,8 +145,7 @@ List<JsIr.JsStatement> parseStatement(MethodCtx ctx, int[] pos) {
      * Label(false), (else), Label(end)].
      */
 JsIr.JsStatement parseIfBody(MethodCtx ctx, int[] pos, KofConditionalJump cj,
-                                         JsIr.JsExpression condition, List<Object> stack) {
-        if (!(ctx.ops.get(pos[0]) instanceof KofLabel kl && kl.label().equals(cj.trueLabel()))) {
+                                         JsIr.JsExpression condition, List<Object> stack) {        if (!(ctx.ops.get(pos[0]) instanceof KofLabel kl && kl.label().equals(cj.trueLabel()))) {
             throw new IllegalStateException("KofJS: if pattern expected Label(true)");
         }
         pos[0]++;
@@ -164,7 +163,15 @@ JsIr.JsStatement parseIfBody(MethodCtx ctx, int[] pos, KofConditionalJump cj,
             }
             return new JsIr.JsIf(condition, thenBranch, List.of());
         }
-        List<JsIr.JsStatement> elseBranch = parseStatements(ctx, pos, Set.of(), new ArrayList<>());
+        // §147 (12/09, #101 — detalhe em JsIfThrowElse): IR linear sem
+        // Jump/Label de end; o else pára antes do trailing-return do método
+        // (senão ganha `return` fantasma e o epílogo "some").
+        List<JsIr.JsStatement> elseBranch;
+        if (JsIfThrowElse.thenEndsUnconditional(thenBranch)) {
+            elseBranch = JsIfThrowElse.parseElse(this, ctx, pos);
+        } else {
+            elseBranch = parseStatements(ctx, pos, Set.of(), new ArrayList<>());
+        }
         if (pos[0] < ctx.ops.size() && ctx.ops.get(pos[0]) instanceof KofLabel kl3
                 && !ctx.isLoopLabel(kl3.label())) {
             // Label(end) — end of else branch (loop labels belong to the loop)

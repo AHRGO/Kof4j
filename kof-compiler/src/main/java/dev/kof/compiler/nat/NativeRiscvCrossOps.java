@@ -216,6 +216,15 @@ public final class NativeRiscvCrossOps {
             return;
         }
 
+        // §145 (12/09, #101): isEmpty = (length == 0); sem ramo caía no
+        // fallback genérico (link-fail). seqz zera/nonzero→1, convenção Bool.
+        if (kc.kind() == KofCallKind.INSTANCE && BuiltinTypes.isString(kc.ownerType()) && "isEmpty".equals(mn)) {
+            sb.append("    pop a0\n    call kof_string_length\n");
+            sb.append("    seqz a0, a0\n");
+            other.pushRiscv(sb, "a0");
+            return;
+        }
+
         // métodos String com receiver + args (charAt/substring/contains/...)
         if (kc.kind() == KofCallKind.INSTANCE && BuiltinTypes.isString(kc.ownerType())) {
             String fn = switch (mn) {

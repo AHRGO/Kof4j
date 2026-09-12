@@ -150,6 +150,31 @@ class ConformanceMatrixTest {
                     println(a % 7L)
                 }
                 """, "3333333333\n4", Set.of(), tempDir);
+        // §146 (12/09, #101): Double % com operando VARIÁVEL devolvia o
+        // dividendo no Native x86 (MOD caía no `default` do bloco Double,
+        // que reempurra xmm0; só o fold de literais acertava). fmod em SSE2
+        // (kof_double_mod, sem libm): q=trunc(a/b), resto=a-q*b; NaN/Inf/0
+        // espelham o JVM (bug 101 congela só os RELACIONAIS com NaN).
+        // JS excluído: String(1.0)="1" no JS vs "1.0" no JVM (bug 44,
+        // floatprint/negzero — o resto 1.0 imprime sem o ".0").
+        matrix("doublemod", """
+                main() {
+                    var a = 7.5
+                    var b = 2.0
+                    println(a % b)
+                    println(7.5 % 2.0)
+                    println(10.0 % 3.0)
+                    println(0.5 % 1.0)
+                    println(-7.5 % 2.0)
+                    println(7.5 % -2.0)
+                    var z = 0.0
+                    println(7.5 % z)
+                    var inf = 1.0 / z
+                    println(inf % 2.0)
+                    var nan = z / z
+                    println(nan % 2.0)
+                }
+                """, "1.5\n1.5\n1.0\n0.5\n-1.5\n1.5\nNaN\nNaN\nNaN", Set.of("js"), tempDir);
         matrix("cast", """
                 main() {
                     var d = 9.9
@@ -824,6 +849,19 @@ class ConformanceMatrixTest {
                     println("hello".substring(5).length)
                 }
                 """, "1\n0\n2\n1\n3\n0\nllo\n0", Set.of(), tempDir);
+        // §145 (12/09, #101): `isEmpty` não estava no registro — JVM
+        // `()Object`, Native link-fail, JS TypeError. 4 casos do reporter:
+        // receiver inferido (trim), aninhado, declarado e `!` em if.
+        matrix("strisempty", """
+                main() {
+                    var s = "abc"
+                    var t = s.trim()
+                    println(t.isEmpty())
+                    println(s.trim().isEmpty())
+                    println("".isEmpty())
+                    if (!t.isEmpty()) { println("ok") }
+                }
+                """, "false\nfalse\ntrue\nok", Set.of(), tempDir);
         matrix("concat", """
                 main() {
                     println("n=" + 42)
@@ -1230,6 +1268,23 @@ class ConformanceMatrixTest {
                     println("end")
                 }
                 """, "outer:re:x\nend", Set.of(), tempDir);
+        // §147 (12/09, #101): if/else com then terminando em throw — o
+        // parser JS engolia o epílogo pós-if para dentro do else (com um
+        // `return` fantasma): o ramo else nunca caía no epílogo (dead
+        // code; while→hang no caso do reporter). O IR é linear (sem
+        // Jump/Label de end); o fix pára o else antes do trailing-return
+        // do método. Prova nos dois ramos (throw tomado e não-tomado).
+        matrix("ifthrowelse", """
+                main() {
+                    var n = 2
+                    if (n == 1) {
+                        throw "boom"
+                    } else {
+                        println("else")
+                    }
+                    println("after")
+                }
+                """, "else\nafter", Set.of(), tempDir);
     }
 
     @Test
