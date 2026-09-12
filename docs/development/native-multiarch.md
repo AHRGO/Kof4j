@@ -43,18 +43,34 @@
 > execução por degrau — cada degrau cabe numa sessão e tem prova própria):**
 > o riscv é bump puro (`amoadd.d` em `kof_alloc_ptr`, sem flags/mark/free-list);
 > o port NÃO é copiar o RuntimeGc x86 — o scan conservative exige stack-walk
-> riscv + roots no intervalo de seções. Degraus na ordem:
-> **G-1 free-list riscv** — port da lista de blocos livres do x86 (header
-> 32B: size/flags/gc-list/free-next já existem no layout do objeto kof?
-> CONFERIR contra `kof_alloc` x86 antes de escrever; a prova do degrau:
-> `kof_alloc` recusa bump quando há bloco livre >= size, teste riscv E2E
-> de ciclo alloc/free/alloc (sem GC ainda — API de free manual); byte-idêntico
-> no hello? NÃO: free-list muda o runtime — gate = suíte cross completa +
-> ArtifactSize com meta nova travada.
+> riscv + roots no intervalo de seções. **⚠️ CORRIGIDO 12/09 (lido o código,
+> não memória) — a decomposição original estava ERRADA no G-1:** o riscv não
+> tem NENHUM header de bloco: `kof_alloc` riscv (`NativeRiscvAsmRt0.java:17-22`)
+> retorna o bump cru alinhado a 16 e os usuários escrevem o header do OBJETO
+> (typeId @0, vtable @8, …) no OFFSET 0 do ponteiro retornado (ex.:
+> `string_from_literal`: `sw t0, 0(s3)`), enquanto no x86 o GC vive num bloco
+> de 32B ANTERIOR ao ponteiro retornado (`RuntimeMemory.java:145-150` — size@0,
+> free-next@8, gc-next@16, flags@24; `kof_free:205` lê `-32(%rdi)`). Portar a
+> free-list sem o bloco-header = o coletor ler o typeId como tamanho →
+> corrupção. Por isso entra o **G-0** na frente. Degraus na ordem:
+> **G-0 bloco-header riscv (FEITO 12/09, sessão dev):** `kof_alloc` riscv reserva
+> 32B ANTES do ponteiro (total = 32+align16, retorno base+32; preenchimento
+> size/free_next/gc_next/flags) + guard OOM honesto (`_kof_heap_end`, panic
+> `out of memory` exit 1 — R6: o bump NÃO tinha bounds-check e o header
+> triplica o consumo/bloco, então o estouro ficou mais provável). Prova:
+> suíte riscv 40/40 + aarch 40/40 sob qemu (inclui teste de pressão
+> `riscvHeapExhaustionPanicsHonest`/`aarch64HeapExhaustionPanicsHonest`,
+> sabotagem-sem-guard = zero output FAIL) + GC x86 3/3 + Artifact 6/6 +
+> ratchet ≤500 OK (Rt0 com 500 exatas; prosa de design vive aqui).
+> **G-1 free-list riscv** — port da lista de blocos livres do x86 SOBRE o
+> layout do G-0 (header 32B: size/flags/gc-list/free-next); prova: ciclo
+> alloc/free/alloc (free ainda manual, sem GC) reusa o slot — teste riscv
+> E2E novo com memstats (`kof_memstats` port incluído aqui, é a alavanca de
+> observação dos degraus seguintes).
 > **G-2 header flags/mark bits + lista GC** — o bloco aloca com flag=0 e entra
 > na gc-list global (`kof_gc_head` riscv); prova: programa com N allocs e
 > `KOF_GC_DEBUG` dump da lista (syscalls write) com tamanho/flag corretos.
-> **G-3 mark conservative riscv** — port de `kof_gc_mark`: walk `sp..rbp`
+> **G-3 mark conservative riscv** — port de `kof_gc_mark`: walk `sp..fp`
 > (riscv: `sp` até o limite do frame, fallback 4KB como o x86) + scan de
 > raízes estáticas EXPLÍCITO no intervalo `.data..kof_heap_root_end`
 > (o `kof_heap_root_end` da #97 S-5-x86 é PRÉ-REQUISITO compartilhado —
@@ -65,13 +81,14 @@
 > **G-4 sweep + collect no alloc** — free-list recebe mortos; `kof_gc_collect`
 > portado (tick 4096 como o x86); prova: teste de VASAMENTO que hoje é
 > impossível (loop de alloc que estouraria o bump de 260KB roda e a memória
-> não cresce monotonically — medir via stats).
+> não cresce monotonicamente — medir via memstats do G-1).
 > **G-5 aarch64** — herda tudo via tradutor (as diretivas/labels riscv passam
-> ilesas — mesmo caminho da poda S-4); gate: suíte aarch 39/39 sob qemu +
+> ilesas — mesmo caminho da poda S-4; `amoadd.d`→`ldadd` já traduzido,
+> `NativeAarch64Translator.java:299`); gate: suíte aarch 39/39 sob qemu +
 > o teste de vazamento G-4 também no aarch.
 > Cada degrau: commit com suíte cross completa verde + DOING.md na linha.
 > NÃO misturar com S-5-x86/root_end (fila bugfix) — mas G-3 DEPENDE dele;
-> se a fila bugfix não entregar root_end primeiro, G-1/G-2 adiantam sem ele.
+> G-0/G-1/G-2 adiantam sem root_end.
 >
 > **Status:** `EM DESENVOLVIMENTO (parcial)` — **riscv64 + aarch64 com core completo (03/09)**: classes/arrays/List/strings/instanceof/switch/try-catch/FP/recursão em asm puro nos dois; paridade avançada pendente *(ver re-auditoria 12/09 acima — muito do que estava "pendente" já roda sob qemu; o que falta tem código de gap honesto)*.
 > **Versão:** 0.2.6-beta · **Data:** 2026-09-03

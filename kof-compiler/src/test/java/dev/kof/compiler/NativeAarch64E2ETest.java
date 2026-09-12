@@ -896,4 +896,37 @@ main() {
         assertTrue(result.diagnostics().getDiagnostics().toString().contains("FLT001"),
                 "recusa deve ser FLT001");
     }
+
+    /** G-0 (native-multiarch face 1, 12/09): paridade cross do guard OOM.
+     *  O aarch herda o MESMO runtime riscv (com o cabeçalho de 32B + guard)
+     *  antes do tradutor linha-a-linha; o guard usa bltu/beq/la/add e um label
+     *  no .bss (_kof_heap_end) — todos precisam traduzir corretamente, senão o
+     *  estouro de heap no aarch corre lixo/trava em vez de panicar. */
+    @Test
+    void aarch64HeapExhaustionPanicsHonest(@TempDir Path tempDir) throws IOException, InterruptedException {
+        assumeToolchain();
+        Path src = tempDir.resolve("Main.kf");
+        Files.writeString(src, """
+            main() {
+                val l = listOf("")
+                var i = 0
+                while (true) {
+                    l.add("padding " + i + " xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
+                    i = i + 1
+                }
+            }
+            """);
+        Path outDir = tempDir.resolve("out");
+        CompilationResult result = driver.compile(src, outDir, Target.NATIVE_AARCH64);
+        assertTrue(result.success(), "compilação deve passar: " + result.diagnostics().getDiagnostics());
+        Path binFile = outDir.resolve("Default/Main");
+        ProcessBuilder pb = new ProcessBuilder("qemu-aarch64", binFile.toString());
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String output = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        int ec = p.waitFor();
+        assertNotEquals(0, ec, "esgotar o heap deve terminar com exit != 0, output: " + output);
+        assertTrue(output.contains("out of memory"),
+                "esgotar o heap deve dar o panic honesto 'out of memory', foi: " + output);
+    }
 }

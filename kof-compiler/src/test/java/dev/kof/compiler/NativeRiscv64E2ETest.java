@@ -918,4 +918,38 @@ main() {
         String diags = result.diagnostics().getDiagnostics().toString();
         assertTrue(diags.contains("FLT001"), "recusa deve ser FLT001, foi: " + diags);
     }
+
+    /** G-0 (native-multiarch face 1, 12/09): o guard OOM honesto. O bump riscv
+     *  não tinha bounds-check e o cabeçalho de 32B triplica o consumo por bloco;
+     *  um loop que aloca até estourar os 256KB de _kof_heap deve PANICAR com
+     *  "out of memory" (exit != 0), nunca correr lixo nem travar (R6). Sem o
+     *  guard o topo caminhava para fora do heap e corrompia .Lmq_subs/—. */
+    @Test
+    void riscvHeapExhaustionPanicsHonest(@TempDir Path tempDir) throws IOException, InterruptedException {
+        assumeToolchain();
+        Path src = tempDir.resolve("Main.kf");
+        // sem GC (riscv é bump), a lista retém tudo → o bump estoura os 256KB.
+        Files.writeString(src, """
+            main() {
+                val l = listOf("")
+                var i = 0
+                while (true) {
+                    l.add("padding " + i + " xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
+                    i = i + 1
+                }
+            }
+            """);
+        Path outDir = tempDir.resolve("out");
+        CompilationResult result = driver.compile(src, outDir, Target.NATIVE_RISCV64);
+        assertTrue(result.success(), "compilação deve passar: " + result.diagnostics().getDiagnostics());
+        Path binFile = outDir.resolve("Default/Main");
+        ProcessBuilder pb = new ProcessBuilder("qemu-riscv64", binFile.toString());
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String output = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        int ec = p.waitFor();
+        assertNotEquals(0, ec, "esgotar o heap deve terminar com exit != 0 (não travar/lixo), output: " + output);
+        assertTrue(output.contains("out of memory"),
+                "esgotar o heap deve dar o panic honesto 'out of memory', foi: " + output);
+    }
 }

@@ -384,6 +384,7 @@ public final class NativeRiscvAsmRtB4 {
             kof_exc_chain: .quad 0
             .section .bss
             _kof_heap: .space 262144
+            _kof_heap_end:                 # label do fim (não consome byte) — guard OOM do kof_alloc
             .Lmq_subs:    .space 1024
             .Lmq_queues:  .space 1024
             .Lmq_seq:     .space 8
@@ -406,6 +407,7 @@ public final class NativeRiscvAsmRtB4 {
             .Lstr_null: .asciz "null"
             .Lstr_null_err: .asciz "Runtime error: null pointer access"
             .Lstr_bounds_err: .asciz "Runtime error: array index out of bounds"
+            .Lstr_oom: .asciz "Runtime error: out of memory"
             .Lstr_empty: .asciz ""
             .Lstr_empty_interval: .asciz "interval-0"
             .Lstr_job_prefix: .asciz "job-"
