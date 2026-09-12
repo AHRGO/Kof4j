@@ -56,10 +56,10 @@ List<JsIr.JsStatement> parseStatements(MethodCtx ctx, int[] pos,
                     exits.add(kl.label());
                     return out;
                 }
-                if (ctx.isLoopLabel(kl.label()) || looksLikeContinueLabel(ctx, pos, kl.label())) {
+                if (ctx.isLoopLabel(kl.label()) || JsLabelParser.looksLikeContinueLabel(ctx, pos, kl.label())) {
                     return out;
                 }
-                if (isLoopStart(ctx, pos, kl.label())) {
+                if (JsLabelParser.isLoopStart(ctx, pos, kl.label())) {
                     out.add(parseLoop(ctx, pos, kl.label()));
                     continue;
                 }
@@ -104,15 +104,6 @@ List<JsIr.JsStatement> parseStatements(MethodCtx ctx, int[] pos,
      * A label is a loop start when a later instruction jumps to it (back edge)
      * or conditionally jumps to it (do-while condition).
      */
-boolean isLoopStart(MethodCtx ctx, int[] pos, LabelId label) {
-        for (int i = pos[0] + 1; i < ctx.ops.size(); i++) {
-            KofOperation op = ctx.ops.get(i);
-            if (op instanceof KofJump kj && kj.target().equals(label)) return true;
-            if (op instanceof KofConditionalJump cj && cj.trueLabel().equals(label)) return true;
-        }
-        return false;
-    }
-
 List<JsIr.JsStatement> parseStatement(MethodCtx ctx, int[] pos) {
         KofOperation op = ctx.ops.get(pos[0]);
         if (op instanceof KofReturnVoid) {
@@ -222,32 +213,6 @@ JsIr.JsExpression tryParseIfExpr(MethodCtx ctx, int[] pos, KofConditionalJump cj
         }
     }
 
-JsIr.JsExpression comparisonExpr(KofComparison comp, JsIr.JsExpression left, JsIr.JsExpression right, Type operandType) {
-        if (comp == KofComparison.NE && right instanceof JsIr.JsNumber n && "0".equals(n.text())) {
-            // boolean conditions: (cond, 0) CJump(NE) — truthiness in JS
-            return left;
-        }
-        // §93 paridade: Bool no JS pode chegar como 1/0 (stdlib funcs, instanceof)
-        // ou true/false (literais). === cru faz 1===true ser false. Normaliza
-        // os dois lados com !! para truthiness booleana (JVM/Native usam Z real).
-        // Dispara tanto por tipo (operandType bool) quanto por literal (==true/false),
-        // porque `if (boolExpr == true)` colapsa operandType p/ INT no lowerer.
-        if ((comp == KofComparison.EQ || comp == KofComparison.NE)
-                && (JsTypeMapper.isBoolOperand(operandType)
-                    || JsTypeMapper.isBoolLiteral(left) || JsTypeMapper.isBoolLiteral(right))) {
-            left = new JsIr.JsUnary("!!", left);
-            right = new JsIr.JsUnary("!!", right);
-        }
-        return switch (comp) {
-            case EQ -> new JsIr.JsBinary(left, "===", right);
-            case NE -> new JsIr.JsBinary(left, "!==", right);
-            case LT -> new JsIr.JsBinary(left, "<", right);
-            case LE -> new JsIr.JsBinary(left, "<=", right);
-            case GT -> new JsIr.JsBinary(left, ">", right);
-            case GE -> new JsIr.JsBinary(left, ">=", right);
-        };
-    }
-
 JsIr.JsStatement parseLoop(MethodCtx ctx, int[] pos, LabelId startLabel) {
         pos[0]++;
         // A do-while loop is the only construct whose conditional jump targets
@@ -303,7 +268,7 @@ JsIr.JsStatement parseLoop(MethodCtx ctx, int[] pos, LabelId startLabel) {
         if (!condStack.isEmpty()) {
             throw new IllegalStateException("KofJS: malformed loop condition stack");
         }
-        JsIr.JsExpression condition = comparisonExpr(cj2.comparison(), left, right, cj2.operandType());
+        JsIr.JsExpression condition = JsComparisons.comparisonExpr(cj2.comparison(), left, right, cj2.operandType());
         if (!condPreamble.isEmpty()) {
             condition = new JsIr.JsSequence(condPreamble, condition);
         }
@@ -419,7 +384,7 @@ JsIr.JsStatement parseDoWhile(MethodCtx ctx, int[] pos, LabelId startLabel,
         pos[0]++;
         JsIr.JsExpression right = p.expr.pop(condStack);
         JsIr.JsExpression left = p.expr.pop(condStack);
-        JsIr.JsExpression condition = comparisonExpr(cj.comparison(), left, right, cj.operandType());
+        JsIr.JsExpression condition = JsComparisons.comparisonExpr(cj.comparison(), left, right, cj.operandType());
         while (!condStack.isEmpty()) {
             condition = new JsIr.JsSequence(List.of(p.expr.pop(condStack)), condition);
         }
@@ -522,9 +487,6 @@ JsIr.JsStatement parseTryStatement(MethodCtx ctx, int[] pos) {
             finallyBody = finallyBody.subList(0, finallyBody.size() - 1);
         }
         return new JsIr.JsTry(tryBody, catches, finallyBody);
-    }
-    boolean looksLikeContinueLabel(MethodCtx ctx, int[] pos, LabelId continueLabel) {
-        return JsLabelParser.looksLikeContinueLabel(ctx, pos, continueLabel);
     }
 
 }

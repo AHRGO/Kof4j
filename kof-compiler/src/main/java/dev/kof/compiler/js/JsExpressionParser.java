@@ -287,7 +287,7 @@ void consumeExpressionOp(MethodCtx ctx, int[] pos, List<Object> stack,
             // if-expression: (cond ? then : else)
             JsIr.JsExpression right = pop(stack);
             JsIr.JsExpression left = pop(stack);
-            JsIr.JsExpression condition = p.flow.comparisonExpr(cj.comparison(), left, right, cj.operandType());
+            JsIr.JsExpression condition = JsComparisons.comparisonExpr(cj.comparison(), left, right, cj.operandType());
             JsIr.JsExpression ifExpr = p.flow.tryParseIfExpr(ctx, pos, cj, condition);
             if (ifExpr == null) {
                 throw new IllegalStateException("KofJS: malformed if-expression");
