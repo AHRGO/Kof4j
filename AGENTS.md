@@ -521,7 +521,7 @@ Bool isQuery(String op) {
 > completa) provam. **Nenhum agente pode quebrar comportamento que já funciona.**
 
 1. **Zero regressão.** Nenhum commit pode fazer um teste existente passar a
-   falhar. A suíte completa (`mvn test`, hoje **1580** nos 4 módulos — ver
+   falhar. A suíte completa (`mvn test`, hoje **1582** nos 4 módulos — ver
    §"Loop de verificação" para o comando com o flag de failure.ignore) é **gate de merge** —
    mudança que não mantém tudo verde não entra. Exceção única: mudança de
    contrato **deliberada**, com bump de versão + docs atualizados + migração.
@@ -842,7 +842,7 @@ mvn test -o -pl kof-compiler,kof-script,kof-c-compiler,kof-cli -am \
 > ele, o Maven é fail-fast por módulo: qualquer falha em **kof-compiler aborta
 > o reactor** e **kof-script, kof-c-compiler e kof-cli nunca rodam** — você
 > acha que validou tudo mas só viu o primeiro módulo. O total real com o flag
-> é **1580 testes** (compiler 1408 + script 31 + kof-c 5 + cli 136, medição
+> é **1582 testes** (compiler 1410 + script 31 + kof-c 5 + cli 136, medição
 > 12/09 com qemu — cresce com cada commit): **0 falhas**. As 59 falhas
 > históricas do bug 59 (Native riscv/aarch, `kof_static_java_lang_System_out`
 > no link) foram **CORRIDAS 09/09** — com qemu os cross agora PASSAM
@@ -854,8 +854,8 @@ mvn test -o -pl kof-compiler,kof-script,kof-c-compiler,kof-cli -am \
 >
 > **Os números mudam com qemu no ambiente:** sem qemu, os 78 cross
 > (2×39, `NativeRiscv64/Aarch64E2ETest`) são **skipados** pelo guard
-> (`4408eb6`) + 5 de BD externo → `~1580/0/~83-skip` (estimado — a medição
-> abaixo é de host COM toolchain). Com qemu, **tudo executa** — `1580/0/5-skip`
+> (`4408eb6`) + 5 de BD externo → `~1582/0/~83-skip` (estimado — a medição
+> abaixo é de host COM toolchain). Com qemu, **tudo executa** — `1582/0/5-skip`
 > (os 5 = MySQL/Mongo/Postgres externos; medido 12/09). Estado correto HOJE:
 > 0 falhas nos dois cenários; o que importa continua sendo nenhum FAILURE
 > fora das guardas.

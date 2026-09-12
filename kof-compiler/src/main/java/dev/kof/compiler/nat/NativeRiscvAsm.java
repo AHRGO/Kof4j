@@ -11,8 +11,27 @@ public final class NativeRiscvAsm {
 
     private NativeRiscvAsm() {}
 
-    static final String RISCV_RUNTIME_ASM = NativeRiscvAsmRt0.RISCV_RUNTIME_ASM_0 + NativeRiscvAsmRt1.RISCV_RUNTIME_ASM_1;
-    static final String RISCV_STRN002_ASM = NativeRiscvAsmStrn0.RISCV_STRN002_ASM_0 + NativeRiscvAsmStrn1.RISCV_STRN002_ASM_1;
+    // String concatenação literal = variável-constante (JLS 15.28): o javac
+    // DOBRA o valor no constant pool de quem referencia. Editar só
+    // NativeRiscvAsmRt0 (ex.: G-0 do GC cross) e recompilar incremental deixa
+    // o valor antigo embutido em classes-consumidoras não-recompiladas (test
+    // de slice via getstatic = bytes velhos; RiscvSlices via reflection =
+    // bytes novos) → split-brain FALSO. StringBuilder = mesmo bytes,
+    // resolvido no <clinit> a cada JVM (mesma razão do runtimeB() abaixo).
+    static final String RISCV_RUNTIME_ASM = runtimeRt();
+    private static String runtimeRt() {
+        return new StringBuilder()
+                .append(NativeRiscvAsmRt0.RISCV_RUNTIME_ASM_0)
+                .append(NativeRiscvAsmRt1.RISCV_RUNTIME_ASM_1)
+                .toString();
+    }
+    static final String RISCV_STRN002_ASM = runtimeStrn();
+    private static String runtimeStrn() {
+        return new StringBuilder()
+                .append(NativeRiscvAsmStrn0.RISCV_STRN002_ASM_0)
+                .append(NativeRiscvAsmStrn1.RISCV_STRN002_ASM_1)
+                .toString();
+    }
     // A cadeia B_0..B_9 ultrapassa o limite de 64KB de string-constante do pool
     // quando dobrada em compile-time (javac "constant string too long" no uso).
     // Concatenar via StringBuilder = mesmo bytes, calculado no <clinit>.
@@ -62,5 +81,12 @@ public final class NativeRiscvAsm {
                 .append(NativeRiscvAsmRtB39.RISCV_RUNTIME_ASM_B_39)
                 .toString();
     }
-    static final String RISCV_MAPSET_ASM = NativeRiscvAsmMapset0.RISCV_MAPSET_ASM_0 + NativeRiscvAsmMapset1.RISCV_MAPSET_ASM_1 + NativeRiscvAsmMapset2.RISCV_MAPSET_ASM_2;
+    static final String RISCV_MAPSET_ASM = runtimeMapset();
+    private static String runtimeMapset() {
+        return new StringBuilder()
+                .append(NativeRiscvAsmMapset0.RISCV_MAPSET_ASM_0)
+                .append(NativeRiscvAsmMapset1.RISCV_MAPSET_ASM_1)
+                .append(NativeRiscvAsmMapset2.RISCV_MAPSET_ASM_2)
+                .toString();
+    }
 }

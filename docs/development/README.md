@@ -1,9 +1,12 @@
 # Development — backlog vivo (só trabalho em desenvolvimento)
 
 > **Base:** `0.3.22-beta` · branch `beta-0.4.0` · **atualizado:** 12/09/2026
-> **Suíte medida neste HEAD:** `1580` testes (1408 kof-compiler + 31 kof-script
+> **Suíte medida neste HEAD:** `1582` testes (1410 kof-compiler + 31 kof-script
 > + 5 kof-c-compiler + 136 kof-cli), **0 falhas**, 5 skip (guardas de
-> toolchain/node) — com cross riscv/aarch 39+39 sob qemu real.
+> toolchain/node) — com cross riscv/aarch 40+40 sob qemu real (G-0 somou os
+> testes de header/OOM). Refold da concatenação do `NativeRiscvAsm` para
+> `<clinit>` (anti-pattern novo `constant-folded-runtime-asm.md`) verde no
+> gate `gateFoldFix.log`.
 > **Regra dos 3 estados (`AGENTS.md`):** `docs/` = implementado/decidido ·
 > `development/` = **trabalho técnico pendente** · `development/future/` =
 > **só plano, zero código**. Concluiu → move p/ submódulo de `docs/` no mesmo
