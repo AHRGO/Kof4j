@@ -1,7 +1,9 @@
 # Baseline de dívida >500 linhas — 12/09 (§140, ratchet). NÃO adicionar linhas:
 # dívida nova é proibida; ao splitar uma classe, rode scripts/check_500.sh
 # --update-baseline (re-grava o estado atual). Meta: este arquivo vazio
-# (PLAN-SOLID-500 concluído). Parser.java removida 12/09: split TypeDeclarations.
+# (PLAN-SOLID-500 concluído). Splits: Parser.java (TypeDeclarations) e
+# SemanticAnalyzer.java (visitor no-op removido) 12/09; StatementLowerer
+# saiu pela mão do bugfixer em 8665e4a8 (506->499).
 521	kof-cli/src/main/java/dev/kof/cli/BytecodeDecoder.java
 554	kof-compiler/src/main/java/dev/kof/compiler/ExpressionInstanceCallLowerer.java
 515	kof-compiler/src/main/java/dev/kof/compiler/ExpressionMethodCallLowerer.java
@@ -15,6 +17,4 @@
 664	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeBackend.java
 507	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeRiscvAsmMapset0.java
 557	kof-compiler/src/main/java/dev/kof/compiler/runtime/RuntimeUi.java
-535	kof-compiler/src/main/java/dev/kof/compiler/SemanticAnalyzer.java
 577	kof-compiler/src/main/java/dev/kof/compiler/SemExpressionTyper.java
-506	kof-compiler/src/main/java/dev/kof/compiler/StatementLowerer.java

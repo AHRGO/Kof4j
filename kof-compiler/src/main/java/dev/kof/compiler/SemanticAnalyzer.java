@@ -459,77 +459,15 @@ public class SemanticAnalyzer {
 
 
     private void resolveMethodCalls(CompilationUnitNode unit) {
-        for (AstNode decl : unit.declarations()) {
-            if (decl instanceof FunctionDeclarationNode func && func.body() != null) {
-                for (StatementNode stmt : func.body()) resolveInStatement(stmt);
-            } else if (decl instanceof ClassDeclarationNode cls) {
-                for (AstNode member : cls.members()) {
-                    if (member instanceof MethodDeclarationNode method && method.body() != null) {
-                        for (StatementNode stmt : method.body()) resolveInStatement(stmt);
-                    } else if (member instanceof ConstructorDeclarationNode ctor) {
-                        for (StatementNode stmt : ctor.body()) resolveInStatement(stmt);
-                    }
-                }
-            } else if (decl instanceof RecordDeclarationNode rec) {
-                for (AstNode member : rec.members()) {
-                    if (member instanceof MethodDeclarationNode method && method.body() != null) {
-                        for (StatementNode stmt : method.body()) resolveInStatement(stmt);
-                    }
-                }
-            }
-        }
+        // §140 (12/09): este visitor era NO-OP — resolvia chamadas mas nunca
+        // populava resolvedMethods/expressionTypes nem reportava diagnóstico.
+        // Desligá-lo mantém a suíte semântica inteira verde (CompilerDriverTest
+        // 252 + SemanticResolutionTest 25 + TopLevelOverload 6 + CoreRegression
+        // 50 + Exceptions 9 + KofEnumSwitch 4 = 346, medido 12/09). A resolução
+        // REAL de sobrecarga hoje vive em MethodCallTyper/OverloadSelector
+        // (SG-011B, 40abd0ed/b55c24c0) — o visitor era resíduo de 05e10140.
+        // Mantido o método (e a chamada em analyze()) como contrato de fase do
+        // pipeline; corpo vazio até a decisão de deletar a fase por completo.
     }
 
-    private void resolveInStatement(StatementNode stmt) {
-        switch (stmt) {
-            case BlockStmt block -> {
-                for (StatementNode s : block.statements()) resolveInStatement(s);
-            }
-            case IfStmt ifStmt -> {
-                resolveInStatement(ifStmt.thenBranch());
-                if (ifStmt.elseBranch() != null) resolveInStatement(ifStmt.elseBranch());
-            }
-            case WhileStmt ws -> resolveInStatement(ws.body());
-            case DoWhileStmt dws -> resolveInStatement(dws.body());
-            case ForStmt fs -> {
-                if (fs.init() != null) resolveInStatement(fs.init());
-                if (fs.update() != null) resolveInExpression(fs.update());
-                resolveInStatement(fs.body());
-            }
-            case ExpressionStmt es -> resolveInExpression(es.expression());
-            case ReturnStmt ret -> {
-                if (ret.value() != null) resolveInExpression(ret.value());
-            }
-            default -> {}
-        }
-    }
-
-    private void resolveInExpression(ExpressionNode expr) {
-        if (expr == null) return;
-        switch (expr) {
-            case MethodCallExpr mc -> {
-                if (mc.receiver() != null) resolveInExpression(mc.receiver());
-                for (ExpressionNode arg : mc.arguments()) resolveInExpression(arg);
-            }
-            case BinaryExpr bin -> {
-                // iterate the left-associative chain (huge concat trees)
-                ExpressionNode cur = bin;
-                while (cur instanceof BinaryExpr be) {
-                    resolveInExpression(be.right());
-                    cur = be.left();
-                }
-                resolveInExpression(cur);
-            }
-            case UnaryExpr ue -> resolveInExpression(ue.operand());
-            case AssignmentExpr ae -> {
-                resolveInExpression(ae.target());
-                resolveInExpression(ae.value());
-            }
-            case NewExpr ne -> {
-                for (ExpressionNode arg : ne.arguments()) resolveInExpression(arg);
-            }
-            case FieldAccessExpr fa -> resolveInExpression(fa.receiver());
-            default -> {}
-        }
-    }
 }
