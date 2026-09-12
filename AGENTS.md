@@ -882,6 +882,19 @@ use o harness do projeto ou crie um teste E2E mínimo no pacote da área.
 
 **Nunca** entregue código Kof que você não compilou.
 
+> **Regra do JavaFX (12/09, pedido da mantenedora): a mensagem `Erro: os
+> componentes de runtime do JavaFX não foram encontrados. Eles são obrigatórios
+> para executar este aplicativo` NUNCA é benigna — sempre representa uma
+> regressão ou bug oculto e exige causa raiz + correção.** No JVM o launcher
+> do `java -cp <dir> Default.Main` engole o `VerifyError`/`ExceptionInInitializer`
+> real atrás dessa mensagem (medido: era `VerifyError: Bad type on operand
+> stack`). Para ver o erro de verdade, rode por reflection (contorna o launcher
+> JavaFX): grave um `Run.java` que faz `Class.forName("Default.Main")
+> .getMethod("main", String[].class).invoke(null, (Object) new String[0])`,
+> compile e `java -cp "out:run-dir" Run Default.Main`. A stack trace que sai é
+> o bug; trate-a como qualquer falha (regra 1 do Congelamento). **Proibido**
+> "consertar" o teste aceitando essa mensagem como saída esperada.
+
 ---
 
 ## Corpus (onde aprofundar)
