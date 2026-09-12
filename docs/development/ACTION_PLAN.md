@@ -1,9 +1,14 @@
-# Plano de Ação — Implementação de `docs/future`
+# Plano de Ação — Implementação dos planos da plataforma (tiers 0–12)
+
+> **EM DESENVOLVIMENTO** (caiu de `future/` em 12/09 — Fases A–H da
+> plataforma de migração implementadas com testes; Tiers 6–12 (universal)
+> não iniciados — esses ficam regidos por `future/PLAN-UNIVERSAL-PLATFORM.md`.)
 
 **Criado:** 01/09/2026
-**Escopo:** todos os planos em `docs/future/` — `DECOMPILER.md`,
+**Escopo:** os planos originais de `docs/future/` — `DECOMPILER.md`,
 `DIFFERENTIAL_TESTING.md`, `LEGACY_IR.md`, `LEGACY_MIGRATION.md`,
-`TRANSLATOR.md`, `PLAN-UNIVERSAL-PLATFORM.md`.
+`TRANSLATOR.md` (hoje em `docs/development/`) e `PLAN-UNIVERSAL-PLATFORM.md`
+(hoje em `docs/development/future/`).
 **Dificuldade:** `E` fácil (processo/pouco código) · `M` médio (feature
 contida) · `H` alto (arquitetural) · `R` pesquisa.
 

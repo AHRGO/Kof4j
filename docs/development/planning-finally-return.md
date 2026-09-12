@@ -1,7 +1,10 @@
 # Planning — `finally` no caminho `return` do `try` (DD-01)
 
-> **Status:** `PROPOSED` (aguarda decisão da mantenedora) · **Gap:** bug 45 ·
-> **Lane:** lowerers · **Criado:** 08/09/2026 · **Bump proposto:** 0.3.0 → 0.3.1
+> **Status:** `EM CURSO` — a face **JS do bug 45 já foi corrigida** (`c727fee`,
+> `CoreRegressionE2ETest.finallyReturnJs` verde; colateral fecha §52); a decisão
+> DD-01 para **JVM/Native/interpretador** aguarda a mantenedora · **Gap:** bug 45 ·
+> **Lane:** lowerers · **Criado:** 08/09/2026 · **Bump proposto:** 0.3.0 → 0.3.1 ·
+> **Movido de `future/` p/ `development/` 12/09** (implementação iniciada — regra dos 3 estados)
 
 ## O conflito
 

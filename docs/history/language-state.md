@@ -3,7 +3,7 @@
 > ⚠️ **SNAPSHOT HISTÓRICO (02/09, 0.2.6-beta).** Este doc estava uma versão
 > atrás da implementação; foi mantido como registro do estado naquele dia.
 > Para o estado CORRENTE: `docs/status.md`, `docs/language-reference/`,
-> `docs/development/specification-gaps.md` e a suíte (`mvn test`).
+> `docs/language-reference/specification-gaps.md` e a suíte (`mvn test`).
 
 **Data:** 2 de setembro de 2026
 **Versão:** 0.2.6-beta

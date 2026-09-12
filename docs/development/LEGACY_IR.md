@@ -1,6 +1,11 @@
-# LEGACY_IR.md — Legacy Semantic IR (plano futuro)
+# LEGACY_IR.md — Legacy Semantic IR (plano → EM DESENVOLVIMENTO)
 
-**Status:** Plano futuro — NÃO implementado
+**Status:** EM DESENVOLVIMENTO (caiu de `future/` em 12/09 — Fases B/C/D
+com código: `Confidence.java` (§4, 5 níveis), `BytecodeReader/Decoder/
+Statements/Frame` (IR de bytecode), `Type.fromJvmSignature` + atributo
+`Signature` no `ClassFileParser` (Fase D ✅ `367d6c4`); prova:
+`ClassFileE2ETest.genericSignatureRecovery` + `DecompileTest` 45/45.
+IR de outras plataformas (Native/JS) não iniciada)
 **Data:** 22 de agosto de 2026
 
 ---

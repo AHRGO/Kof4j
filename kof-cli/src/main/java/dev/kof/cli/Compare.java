@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * `kof compare` — differential testing of a migration (docs/development/future/
+ * `kof compare` — differential testing of a migration (docs/development/
  * DIFFERENTIAL_TESTING.md, Fase G).
  *
  * Runs a legacy program (a {@code .class} with a {@code main}, or a

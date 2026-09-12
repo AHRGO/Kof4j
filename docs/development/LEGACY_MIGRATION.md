@@ -1,7 +1,11 @@
 # LEGACY_MIGRATION.md — Plataforma de Migração de Software Legado
 
-**Status:** Plano futuro — NÃO implementado
-**Escopo:** Fora do Kof 0.0.x
+**Status:** EM DESENVOLVIMENTO (caiu de `future/` em 12/09 — a plataforma
+existe: `kof inspect/decompile/translate/compare/migrate` registrados no
+`Main.java`; prova: 63 testes verdes em kof-cli (45+9+6+3 + Inspect).
+Recuperação de corpo de método ainda é parcial — relatório rastreável o
+expõe de forma honesta)
+**Escopo:** plataforma de migração (implementação iniciada na 0.3.x)
 **Data:** 22 de agosto de 2026
 
 ---
@@ -64,16 +68,18 @@ de geração de Java entre o artefato legado e o Kof.
 
 | Comando | Propósito | Status |
 |---------|-----------|--------|
-| `kof inspect <input>` | Análise estrutural de `.class`/`.jar`/binários | Planned |
-| `kof decompile <input>` | Recuperação de código Kof a partir de artefatos compilados | Planned |
-| `kof translate <input>` | Migração de código-fonte (primeiro alvo: Java → Kof) | Planned |
-| `kof migrate <input>` | Migração completa com relatório | Planned |
-| `kof compare <legacy> <kof>` | Teste diferencial entre sistemas | Planned |
+| `kof inspect <input>` | Análise estrutural de `.class`/`.jar`/binários | ✅ `Inspect.java` (Main.java:25) |
+| `kof decompile <input>` | Recuperação de código Kof a partir de artefatos compilados | ✅ `Decompile.java` (Main.java:26; corpo parcial → stub honesto) |
+| `kof translate <input>` | Migração de código-fonte (primeiro alvo: Java → Kof) | ✅ `Translate.java` (Main.java:27; subconjunto Java) |
+| `kof migrate <input>` | Migração completa com relatório | ✅ `Migrate.java` (Main.java:29; relatório rastreável) |
+| `kof compare <legacy> <kof>` | Teste diferencial entre sistemas | ✅ `Compare.java` (Main.java:28; stdout/exit/stderr) |
 
-**Nenhum destes comandos existe no CLI atual.** Não documentá-los como
-disponíveis até que existam.
+**Todos os comandos existem no CLI** (verificados 12/09 — `Main.java:25-29`,
+63 testes kof-cli verdes). O que permanece em desenvolvimento é a
+**cobertura** da recuperação (corpos de método complexos → stub UNKNOWN
+honesto; subconjunto Java do translator).
 
-### 3.1 `kof inspect` (planejado)
+### 3.1 `kof inspect` (implementado)
 
 Análise de sistemas existentes. Responsabilidades:
 identificar formato, plataforma, versão; analisar dependências; identificar
@@ -99,7 +105,7 @@ Local Names            LOW
 Comments               NONE
 ```
 
-### 3.2 `kof decompiler` (planejado)
+### 3.2 `kof decompiler` (implementado)
 
 Destinado à recuperação de código Kof a partir de `.class`/`.jar`/`.war`.
 
@@ -133,7 +139,7 @@ exceptions, annotations, metadata.
 produzir **Kof idiomático equivalente**, não fingir que o fonte original
 foi recuperado.
 
-### 3.3 `kof translate` (planejado)
+### 3.3 `kof translate` (implementado)
 
 Migração de código-fonte (primeiro alvo: Java → Kof).
 

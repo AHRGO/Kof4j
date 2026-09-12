@@ -1,159 +1,449 @@
-// Specification Gaps — Kof 0.3.0-beta
+# Specification Gaps e Divergências
 
-Este documento lista gaps conhecidos na linguagem/Compilador Kof 
-(atualizado em 08/09/2026). Gaps abertos são acompanhados na roadmap 
-e podem bloquear ou limitar funcionalidades em algum target.
+> **CONSOLIDADO — movido de `docs/development/` p/ `docs/language-reference/` em
+> 12/09** (regra dos 3 estados): as 23 entradas SG-001–020 + E1–E3 estão todas
+> resolvidas (APLICADOS 06–12/09, maioria por decisão explícita da mantenedora —
+> fila da 2ª rodada COMPLETA, ver §Resumo). O doc vira **referência da spec**
+> (o que cada SG exige e onde está travado); novos gaps de spec entram aqui com
+> status próprio. Bugs abertos ficam em `docs/development/known-bugs.md`.
 
-## Gap conventions
+**Versão:** 0.3.0-beta · **Data:** 06/09/2026 · **Fonte:** auditoria completa do
+`kof-compiler` + probes de execução + revisão de `docs/`, `training/`, `AGENTS.md`
 
-- **Códigos**: prefixes curtos como `R6`, `HW001`, `CONC001`, etc.
-- **Status**: `aberto`, `fechado`, `parcial`
-- **Targets**: `JVM`, `Native`, `JS`
-- **Referência**: cada gap deve ter issues/referências nos testes e docs
-
----
-
-## Gap R6 — putfield de campos `Int`
-
-**Status**: aberto  
-**Plataforma**: JVM, Native, JS  
-**Desde**: 0.0.4-alpha  
-**Última atualização**: 08/09/2026  
-
-**Descrição**: O compilador Kof gera bytecode incorreto ao fazer atribuição 
-de valor `Int` a campo de classe (`putfield`). Isso causa `VerifyError` em 
-tempo de execução quando o código tenta atribuir um `Int` a um campo de classe 
-de um objeto.
-
-**Exemplo problemático**:
-```kof
-class Foo {
-    Int x = 0
-    void setX(Int v) { x = v }  // Pode gerar VerifyError em runtime
-}
-```
-
-**Impacto**: Qualquer código Kof que tente atribuição de `Int` a campos de 
-classe em tempo de execução pode falhar com `VerifyError`. A maioria do código 
-seguro usa apenas variáveis locais ou `record` (dados imutáveis), que não 
-sofrem desse problema.
-
-**Workaround**: Use `record` para dados imutáveis ou variáveis locais em vez 
-de campos de classe mutáveis.
-
-**Roadmap**: Correção no backend de codegen do compilador Kof para evitar 
-`putfield` de `Int` em campos de classe. Priority: high.
+Este é o relatório de inconsistências encontradas na auditoria. Cada item
+distingue **o que o código faz**, **o que a documentação diz** e **o que os
+testes provam**. **Nenhum item aqui foi "corrigido" na linguagem** — são
+recomendações futuras (regra 14 da tarefa: não alterar comportamento).
 
 ---
 
-## Gap HW001 — Kernel bare-metal
+## Categoria A — Documentação contradiz código
 
-**Status**: documentado como decisão de design  
-**Plataforma**: Native  
-**Descrição**: O backend Native do Kof gera ELF x86-64 que depende do Linux + 
-glibc. O ponto de entrada `_start` usa `SYS_gettid`/`exit_group`, aloca com 
-`mmap`, usa `pthread_create`. Não configura GDT/IDT/paging/ring0 e não expõe 
-primitivos de hardware (`in/out`, `cli/sti`, `lgdt/lidt`, `int 0x80`, IRQ).
+### SG-001 — `fun`/`fn`/`func` existiam no compilador mas o corpus diz que não ✅ RESOLVIDO (06/09)
 
-**A IR do Kof tem 30 ops de alto nível; não há assembly inline nem acesso a 
-hardware.**
+- **Implementação (antes)**: `fn` era prefixo opcional aceito. `fun`/`func`
+  compilavam porque o parser lia a palavra como *tipo de retorno* e o nome da
+  função vinha depois (`fun main()` → função `main`, retorno implícito `void`).
+  `JsonE2ETest.java:223` usava `fun main()` e passava.
+- **Documentação**: `AGENTS.md` ("não existe `fun` nem `func`"),
+  `training/anti-patterns/fake-idioms.md` (lista `fun`/`func`/`let` como fake).
+- **Problema (antes)**: a regra "não existe" era falsa para o compilador real —
+  um agente que escrevesse `fun` não recebia erro.
+- **Resolução (06/09, 2º passo)**: `fun`/`fn`/`func` viraram **palavras
+  reservadas** no lexer (tokens `FUN`/`FN`/`FUNC`, mesmo mecanismo de
+  `sealed`/`permits`) — **não existem** no Kof em nenhuma posição: nem como
+  keyword de declaração, nem como nome de função, variável, parâmetro ou
+  campo. Em posição de declaração o parser dá `PARSE085` (diagnóstico claro —
+  R6); em outra posição, o `expectId` de cada parser já falha (`PARSE037`
+  variável, `PARSE023` parâmetro, …). Alinhado ao corpus (regra 4). KofScript
+  (`.ks`) mantém `fn` como sintaxe própria e traduz na fronteira
+  KofScript (`.ks`) **não** é exceção: é Kof puro (sem `fn`/`let`/`async`).
+  Testes: `FunctionSyntaxTest` (12: fun/fn/func
+  rejeitados como prefixo, `fn calc(): Int` rejeitado, `fn()`/`var fun`/
+  `param fn` rejeitados, membro de classe, `Int calc():Int` idiomático).
+  `let`/`const`/`async` são inexistentes em `.kf` **e** `.ks` (KofScript não
+  é JavaScript — sugar removido 06/09).
 
-**Decisão (design — não silencioso)**: O KofOS é portado como kernel hosted 
-em Kof puro, preservando a arquitetura e funcionalidade do VibeOS (scheduler, 
-processos, IPC, syscalls, serviços microkernel, VFS, AppFS, desktop, terminal, 
-file manager, editor, task manager, jogos) e o mesmo branding e fluxo de boot. 
-A camada de hardware (bootloader BIOS, GDT/IDT real, PIT, PIC, ports de I/O, 
-ring0/ring3 real) é abstraída.
+### SG-002 — Tokens e keywords que a gramática não usa
 
-Quando o compilador Kof ganhar modo freestanding + primitivos de hardware, 
-o kernel pode ser retargetado a x86 real sem reescrever a lógica.
+- **APLICADO (opção 1 da recomendação — tokens REMOVIDOS do lexer; provado
+  12/09):** `~`, `::`, `...`, `=>`, `|>`, `_` isolado e as keywords
+  `sealed`/`permits` não existem mais como tokens — grep 0 em
+  `TokenType.java`/`Token.java`/`parser/Lexer.java` (a lista acima deste
+  parágrafo descrevia o estado PRÉ-fix). `~5` agora é **LEX005** ("Unexpected
+  character", `Lexer.java:467`); `a => b`/`xs |> f`/`A::b` caem no parse com
+  `PARSE041`; `sealed class S {}` vê `sealed` como IDENTIFIER comum →
+  `PARSE010` (declaração sem tipo). Sem diagnóstico de "feature reservada":
+  a gramática simplesmente nunca os usou, e agora o lexer também não.
+- **Prova:** `CompilerDriverTest.deadTokensGiveCleanLexerError` (5 casos com
+  código exato esperado, 1/1 verde 12/09) — o teste que TRAVA a remoção
+  (regressão de qualquer token morto que ressurgir).
 
-**Impacto**: O KofOS preserva a arquitetura VibeOS (boot → scheduler → 
-memória → syscalls → IPC → VFS → userland), mas roda como aplicação hosted 
-no runtime Kof, não como kernel bare-metal.
+### SG-003 — Termos de marketing vs definição técnica
 
----
-
-## Gap CONC001 — Concorrência no Native
-
-**Status**: fechado (31/08)  
-**Plataforma**: Native  
-**Desde**: 0.0.5-alpha  
-**Fechado**: 31/08  
-
-**Descrição**: Native concurrency com `pthread_create` + trampoline + `await`/`pthread_join` + allocator thread-safe futex + join implícito no fim do `main`.
-
-**Estado**: Corrigido. O backend Native agora suporta concorrência via `spawn`/`await` 
-com threads nativas do sistema operacional.
-
----
-
-## Gap CONC003 — Async no JS
-
-**Status**: parcial  
-**Plataforma**: JS  
-**Desde**: 0.2.6-beta  
-
-**Descrição**: Execução sequencial — `spawn`/`await` cobrem statement e expression; 
-async real de event-loop = CONC003 parcial.
-
-**Estado**: Em desenvolvimento. `spawn` e `await` funcionam para tarefas 
-independentes, mas async real de event-loop ainda não está completo.
-
----
-
-## Gap WEB001 — Web handler no Native/JS
-
-**Status**: parcial (JVM: fechado 30/08)  
-**Plataforma**: Native, JS  
-**Desde**: 0.2.6-beta  
-
-**Descrição**: Web handler no JVM (`web.app()`) com rotas `get/post/put/delete/patch/options`, 
-`status(201, body)`, `headerSet`, WebSocket, SSE, `listenSecure` TLS — 30/08. 
-Native/JS: WEB001.
-
-**Estado**: JVM tem implementação completa. Native/JS ainda em desenvolvimento.
+- **APLICADO (09/09, decisão do maintainer — "review and apply" com as
+  checagens novas):** com SEM041–SEM046 aplicados, as garantias de compilação
+  cobrem instancição de abstract, tipo aninhado, cobertura de interface,
+  assinatura de main, throw-clause e visibilidade — o que a README/overview
+  podem afirmar como propriedades concretas. `docs/language-reference/
+  type-system.md` §1 atualizado com a nota de 09/09 e §13 com os 6 códigos
+  novos na tabela SEM0xx. "Fortemente tipada" continua FORA do vocabulário
+  oficial (vago por definição) — o que vale é a lista de checagens, agora
+  completa e testada.
+- **Documentação (histórico)**: `README.md:60` "Kof é uma linguagem
+  **fortemente tipada e estaticamente tipada**"; `docs/architecture/architecture.md`
+  "fortemente tipada".
+- **Implementação (histórico)**: o type checker **não** garante subtipagem
+  (§SG-009), **não** checa elemento de coleção, **não** impõe
+  `private`/`abstract` em compile-time, **não** impede reatribuição de `val`.
+- **Problema**: "strongly typed" é vago e, lido como "o compilador impede
+  operações mal tipadas", é **falso** para Kof hoje.
+- **Recomendação**: substituir por propriedades concretas (já feitas em
+  [language-reference/type-system.md](../language-reference/type-system.md)).
+  Manter "estaticamente tipada" (verdadeiro: tipos resolvidos em compile-time).
 
 ---
 
-## Gap MQ001 — Filas produtor/consumidor
+## Categoria B — Comportamento não especificado (Unspecified)
 
-**Status**: fechado (01/09)  
-**Plataforma**: JVM, Native, JS  
+### SG-004 — (resolvido na auditoria) `bool→numérico`
 
-**Descrição**: Filas produtor/consumidor (`kof.mq`) nos 3 targets.
+- **Implementação**: `bool` é armazenado como `int` 1/0; `var i: Int = true`
+  → `1` (*probe*). `isAssignable` aceita por `primitiveWidth(bool)=0`.
+- **Problema**: a coerção funciona por **acidente de representação**, não por
+  regra. Não há teste dedicado.
+- **Recomendação**: decidir se é regra da linguagem (documentar + testar) ou
+  deve ser rejeitada (SEM002 já pega aritmética, mas não atribuição).
 
-**Estado**: Corrigido. `kof.mq` funciona em todos os targets.
+### SG-005 — Deref de `T?` sem narrowing não é erro ✅ CORRIGIDO 10/09 (SEM049)
+
+- **Implementação anterior**: `var s: String? = "x"; s.length` **compila e roda**.
+  O lowering desembrulha o receiver (`ExpressionTyper.java:143`). Null-safety era
+  **advisory**: o compilador não impede NPE.
+- **Correção (10/09, breaking — regra 6 suspensa, decisão do maintainer no
+  SG-005/008 "o próprio nome já diz")**: deref de `T?` sem narrowing → erro
+  **SEM049** ("receiver is nullable (T?); narrow first").
+  1. **Method call** (`SemMethodCallTyper`, logo após inferir `recv`): receiver
+     `NullableType` → SEM049, antes dos branches de coleções/process/channel.
+  2. **Field/property** (`SemExpressionTyper` case `FieldAccessExpr`): idem —
+     `s.length` em `String?` era o furo (o `Type.isString` desembrulha Nullable).
+  3. **Narrowing estendido** (`StatementAnalyzer.collectNarrowing`): além do
+     `if (x != null)` → THEN (que já existia), agora `if (x == null)` → **ELSE**,
+     e conjunção `x != null && Y` narrowa o THEN inteiro. Disjunção (`||`) NÃO
+     narrowa (o ramo roda se UM valer) — honesto.
+  4. **Narrowing intra-expressão** (`SemExpressionTyper.narrowedScope`): em
+     `if (s != null && s.length > 0)`, o lado DIREITO da `&&` vê `s` narrowed
+     (short-circuit: o lado só é avaliado se o esquerdo passou) — sem isso a
+     PRÓPRIA condição daria SEM049 no `s.length`.
+- **Aritmética sobre `T?`** (`a + 1` com `a: Int?`) **continua verde** — não é
+  deref; o guard-unbox do bug 87 cobre.
+- **Testes migrados**: `KofMapSetTest.memberCallOnNullableInferredFromMapJVM`
+  (deref direto → narrowing `if (v != null)`).
+- **Provas**: `CompilerDriverTest.nullableDerefWithoutNarrowingFails` /
+  `nullableDerefPropertyWithoutNarrowingFails` (SEM049) +
+  `nullableNarrowedIfStaysGreen` / `nullableNarrowedAndStaysGreen` /
+  `nullableNarrowedElseStaysGreen` (246/246). Suíte compiler 1263 run /
+  0 falhas de código (15 errors ambientais: node/javac/javap).
+
+### SG-006 — Short-circuit de `&&`/`||` desligado no JS — ✅ CORRIGIDO 09/09 (paridade OK + teste)
+
+- **Implementação**: `ExpressionBinaryLowerer.java:56-57` — o short-circuit por
+  labels é emitido só quando `target != JS`. No JS, ambos os lados são
+  avaliados.
+- **Problema**: `if (x != null && x.length > 0)` pode NPE no JS mas não no
+  JVM/Native. **Divergência de paridade** (regra 5 de congelamento).
+- **Recomendação**: documentar como Target-specific (feito em
+  [expressions.md](../language-reference/expressions.md) §5) **e** abrir gap de
+  paridade para corrigir o JS.
+- **NOTA 09/09 (análise de código):** o lowering por labels é `target != JS`,
+  mas para `&&`/`||` de bool o JS emite os operadores nativos (`a && b`,
+  `a || b` — `JsCallEmitter.binaryExpr` linhas 274-277), que **já fazem
+  short-circuit** nativamente. Logo `x != null && x.length > 0` NÃO deve NPE no
+  JS (o `x.length > 0` não é avaliado se `x != null` é false). Paridade plausível
+  por leitura de código, mas **sem teste de runtime que trave** — recomenda-se um
+  caso em `BackendParityTest` (`if (x != null && x.length > 0)`) nos 4 targets
+  antes de fechar o gap.
+- **✅ CORRIGIDO 09/09:** `BackendParityTest.parityShortCircuitAndOr` adicionado
+  (`String? s = null` → `vazio` via short-circuit; `String? t = "abc"` →
+  `nao-vazio`). Suíte verde (a única falha da suíte 1163+25+5+109 é o bug 46,
+  pré-existente) → o short-circuit de `&&` no JS/JVM está travado por teste.
+
+### SG-007 — Wildcard de genérico (`? extends T`) compila mas quebra — ✅ CORRIGIDO 06/09 (PARSE086)
+
+- **Implementação (antes)**: `List<? extends Int>` é parseado (o `?` vira sufixo
+  nullable, `extends Int` entra no nome) e **roda com
+  `NoClassDefFoundError: ?extendsInt`** (*probe*).
+- **Correção (06/09, lane bug-fix)**: `TypeParser.parseTypeRef` rejeita `?` wildcard dentro de `<>` com `PARSE086` ("Wildcard types '? extends/super' are not supported; use concrete type or nullable 'T?'"). `List<String?>` (nullable) continua válido. Prova: `TestRepro2` wildcard → `PARSE086`, `TestWild` `String?` → ok.
+- **Problema (antes)**: sintaxe aceita sem significado — pior que erro claro (viola R6
+  "nunca silencioso").
+
+### SG-008 — Null safety: `T?` nunca NPE e literal `null` não é fabricável ✅ CORRIGIDO 10/09 (bug 87 + SEM048)
+
+- **Implementação anterior**: `Int? a = null; a == null` → **NPE em runtime**
+  (*probe*: o unbox do `Integer` null lança). `String? s = null; s == null` →
+  `true` corretamente. Inconsistência entre nullable de primitivo e de referência.
+- **Decisão do maintainer (09/09)**: "o próprio nome já diz" — **NENHUM literal
+  `null` é atribuível** (nem a `T?`): `Int? x = null` → erro; `x = null` → erro.
+  `null` só chega a `T?` via **API** (ex.: `mapOf("k", v).get("missing")`), e
+  `T? == null` é comparação de **referência** (nunca NPE por unbox).
+- **Implementação (10/09):**
+  1. **SEM048** — `StatementAnalyzer` rejeita literal `null` em `VarDeclStmt`
+     (`T? x = null`) e em atribuição (`x = null`); o idioma correto é obter `null`
+     de API. Prova: `CompilerDriverTest.nullInVarDeclFails` /
+     `nullInAssignmentFails` / `nullFromApiStaysGreen` (241/241).
+  2. **`Map.get()` devolve `V?` para TODO `V`** — `CollectionCallLowerer`,
+     `CollectionMethodTyper`, `SemMethodCallTyper`, `MemberCallTyper` deixam de
+     devolver `V` para primitivo e passam a devolver `NullableType(valueType)`
+     sempre (ausência = null comparável, nunca exceção/unbox). O `put()` em
+     `mapOf()` vazio pina os tipos `K,V` no símbolo do local (`SymbolTable.
+     updateLocalType`) para o cache semântico não divergir do emit.
+  3. **Comparação `T? == x` sem NPE** — `CompilerComparisons` desembrulha
+     `NullableType` no tipo de operando; quando um lado é `Unknown`/`Nullable(Unknown)`
+     (get de `mapOf()` sem pin) contra um primitivo, a comparação vira referência
+     (primitivo boxado, `Objects.equals`) espelhando o interpretador, em vez de
+     `if_icmp*` sobre null → VerifyError. `ExpressionBinaryLowerer` faz o box do
+     lado primitivo na ordem correta. O interpretador ganha `eqAllowsNull` /
+     unbox com guard (`KofInterpreterCollections`/`KofInterpreterOps`/
+     `KofInterpreterValues`).
+- **KofScript** migrado para o mesmo idioma (não fabrica null, usa `mapOf().get()`).
+- **Nota (regra 6)**: o programa `m.get(k) == 1` continua compilando — o `1` é
+  boxado e comparado por `if_acmpeq` (paridade cross-target). Provas de paridade em
+  `BackendParityTest`/`ConformanceMatrixTest`/`KofScriptTest`.
+- **Registrado em `known-bugs.md` §87.**
+
+### SG-009 — Subtipagem não é checada pelo type checker — ✅ CORRIGIDO 10/09 (SEM021 nominal)
+
+- **Implementação anterior**: `isAssignable` retornava `true` para **qualquer**
+  par `ClassType→ClassType` (`TypeChecker.isAssignable`). A segurança vinha
+  do `checkcast` do lowering/runtime.
+- **Problema**: `A a = <objeto de classe não-relacionada>` passava na checagem
+  de tipos; falhava só em runtime. `implements` sem cobrir métodos compila
+  (SG-015 — já corrigido). Abstract pode ser instanciado (SG-017 — já
+  corrigido).
+- **CORRIGIDO 10/09 (subtipagem nominal em `isAssignable`):** novo overload
+  `TypeChecker.isAssignable(sa, from, to)` — para referência→referência de
+  classes de domínio, caminha `superClass`/`interfaces` via BFS (mesmo padrão
+  de `MemberResolver.resolveInHierarchy`); não-relacionado → erro compile-time
+  **SEM021** (var-decl tipado; assignment/return mantêm SEM012/SEM010 já
+  existentes). Conservador (true) quando a hierarquia é desconhecida — tipo
+  externo (imports Android/JDK), builtin (String/List/Map, relações próprias
+  do BuiltinTypes) ou classe não declarada no módulo — restringir isso
+  quebraria interop legítima (regra 6: nunca quebrar o que funciona).
+  **Subtipos legítimos continuam verdes**: `Dog extends Animal` → `Animal a =
+  Dog()` compila (superclass BFS); `Cat implements Speaker` → `Speaker s =
+  Cat()` compila (interfaces BFS); `Object` raiz aceita qualquer referência.
+  **Call sites migrados**: `SemExpressionTyper:225` (assignment-expr),
+  `StatementAnalyzer:48` (assignment-stmt), `:147` (var-decl tipado),
+  `:164` (return). **Provas:** 4 testes novos em `CompilerDriverTest`
+  (`unrelatedClassAssignmentFails` = SEM021 no repro `Cat c = Dog()`;
+  `subclassAssignmentStaysGreen`; `interfaceAssignmentStaysGreen`;
+  `externalTypeAssignmentStaysConservative`) — CompilerDriverTest 250/250;
+  suíte compiler **1270 run / 0 falhas de código** (16 errors ambientais =
+  node/javac/javap ausentes); zero falso-positivo no corpus (todos os
+  programas legítimos existentes continuam compilando).
+
+### SG-010 — `val` não impede reatribuição — ✅ CORRIGIDO 09/09 (SEM037)
+
+- **Implementação**: `val x = 1; x = 2` **compila e roda** (imprime 2, *probe*
+  confirmado isoladamente). Não há flag de imutabilidade no `VarDeclStmt`
+  (só `type`/`name`/`initializer` — `AstNodes.java:351`).
+- **Documentação**: `AGENTS.md` "val y = 20 // imutável".
+- **Problema**: `val` é decorativo. A distinção `val`/`var` não tem efeito
+  observável.
+- **Recomendação**: ou implementar rejeição de atribuição a `val` (SEM novo), ou
+  documentar que `val` é convenção (não-garantido). Decisão de design.
+- **CORRIGIDO 09/09 (DD-02, bug 62a):** `val` agora é imutável — reatribuir
+  (incl. compound `+=`) emite **SEM037** ("cannot assign to immutable 'val'"). O
+  parser carrega `type="val"` (antes sempre "var"); `LocalVariableSymbol` ganhou
+  `isVal`; `analyzeAssignmentStatement` checa. Ver `docs/decisions/planning-mutability.md`.
+
+### SG-011 — Função aninhada e sobrecarga top-level
+
+- **APLICADO (09/09, decisão do maintainer, SEM048-lane spec-gaps):** função
+  aninhada funciona — parser captura `Type name(params) { ... }` em statement
+  (`lookaheadNestedFunction`, checado ANTES do typed-var-decl) e o desugar faz
+  hoisting para top-level `outer__inner` inserida ANTES da outer ("inner
+  primeiro"); chamadas `inner(...)` reescritas para `outer__inner(...)`.
+  Semântica: inner definida antes do corpo executar; outer chama e aguarda o
+  retorno. Prova: `JvmE2ETest.execNestedFunction` (42) +
+  `execNestedFunctionWithCondition`.
+- **APLICADO (11/09, parte B — sobrecarga top-level, oracle JVM):** funções
+  homônimas com ASSINATURAS diferentes coexistem e o call site resolve o
+  candidato aplicável mais específico (`TopLevelOverload.pick` — igualdade
+  exata > subtipagem; a JVM é o oráculo). O que continua ERRO: duplicata
+  EXATA de assinatura (SEM047) e colisão só-de-retorno (retorno não é
+  assinatura, como na JVM); chamada ambígua entre candidatos aplicáveis →
+  SEM057 com hint do cast (R6: nunca escolha silenciosa). Paridade por
+  construção: a seleção acontece no frontend e cada backend referencia o
+  candidato pela assinatura — JVM = descritor do `invokestatic` (já levava os
+  `argTypes` do escolhido), Native = símbolo sufixado por tag de assinatura
+  (`Default_Main_g_I` vs `_I_I`; x86/riscv, aarch traduz; wrappers de
+  default-arg param o sufixo próprio — de-duplica colisão latente no `as`),
+  JS = nome sufixado quando há ≥2 assinaturas sob o nome (chave async por
+  assinatura), interpretador = `findKofMethod` casa `KofCall.parameterTypes`
+  com fallback nome+aridade. Programa com um único candidato por nome é
+  byte-idêntico ao antes em todos os targets (invariante de não-regressão).
+  Prova: `TopLevelOverloadE2ETest` (saída idêntica nos 6: JVM/Script/JS/x86/
+  riscv64/aarch64 sob qemu — `5 11 abab 42` + defaults `7 11`),
+  `CompilerDriverTest` (assinaturas distintas compilam; duplicata e
+  só-retorno SEM047).
+- **Implementação (histórico)**: função dentro de função não era parseada como
+  declaração (SG-011); duas funções top-level homônimas colidem sem
+  diagnóstico claro (o `define` sobrescreve).
+
+### SG-012 — Inferência de tipo de parâmetro de lambda
+
+- **APLICADO (09/09, decisão do maintainer):** inferência contextual — param
+  de lambda sem anotação em `map`/`filter`/`reduce` de `List<T>` herda o tipo
+  do ELEMENTO (`MemberCallTyper.contextualLambda` reescreve o param no AST;
+  padrão SSE já usado p/ KofWeb). `nums.map((x) -> x * 2)` compila sem
+  `(x: Int)`. Aritmética sobre param untyped SEM contexto continua SEM001
+  (nunca Object silencioso). Prova: `lambdaParamInferredFromListContext` +
+  regressão `untypedLambdaParamArithmeticIsDiagnosedNotEmitted`.
+
+### SG-013 — `private`/`protected` não são checados em compile-time
+
+- **APLICADO (09/09, decisão do maintainer, SEM046):** causa raiz era
+  `defineMethodSymbol` com accessFlags=1 (PUBLIC) hardcoded — modifiers
+  descartados. Agora o símbolo carrega PRIVATE/PROTECTED reais e
+  `MemberCallTyper.checkMemberAccess` rejeita: private fora da classe
+  declarante, protected fora da hierarquia (transitiva), ambos de contexto
+  top-level. Prova: 4 testes `CompilerDriverTest` (private/protected,
+  dentro/fora).
+
+### SG-014 — Pattern matching sem guardas/aninhamento
+
+- **APLICADO (09/09, decisão do maintainer, parte guardas):** `case T v if
+  (cond):` / `case T(a,b) if (cond) ->` — PatternExpr ganha campo `guard`
+  (ctors antigos preservados), parser consome `if` + expressão, SEM analisa
+  a guard com a var bound, lowering emite nos 2 switch (statement: guard no
+  teste com cast temporário; expressão: guard pós-binding). False → próximo
+  case/braço. Prova: `switchCaseGuardFalseFallsThrough` +
+  `switchCaseGuardTrueRunsGuardedArm`. Aninhamento (`case T(Inner(a,b))`)
+  segue planned (parte B do gap).
+- **Implementação (histórico)**: só `case Type var` e `case Type(a,b)`
+  (top-level).
+
+### SG-015 — `implements` não exige cobrir métodos abstratos
+
+- **APLICADO (09/09, decisão do maintainer, SEM043):** `checkInterfaceImplementation`
+  no fim de `analyzeClass` — método ausente → SEM043 nomeando o método;
+  aridade divergente → SEM043 com esperado/encontrado (paridade de tipo exata
+  aguarda dispatch virtual). Prova: 3 testes `CompilerDriverTest`
+  (missing/wrongArity/complete-green).
+
+### SG-016 — Semântica de classes aninhadas
+
+- **APLICADO (09/09, decisão do maintainer, SEM042):** tipo aninhado não
+  existe em Kof — `class A { class B {} }` é erro de parse imediato SEM042
+  ("declare at top level") em `ClassMemberParser.parseClassMember`;
+  interface/record/entity aninhados idem (mesmo branch). Prova:
+  `nestedClassGivesCleanDiagnostic` + `topLevelClassStaysGreen`.
+
+### SG-017 — `abstract class` instanciável em compile-time
+
+- **APLICADO (09/09, decisão do maintainer, SEM041):** `new A()` e `A()`
+  (construção implícita) de classe abstrata → erro SEM041 compile-time.
+  Registro `abstractClasses` em `SymbolTableBuilder.preDeclareType`; checagem
+  nos 2 caminhos de instanciação (SemExpressionTyper NewExpr +
+  BuiltinCallTyper receiver-null — `Shape()` é MethodCallExpr, não NewExpr).
+  Prova: `abstractClassInstantiationFails` +
+  `abstractClassSubclassInstantiationStaysGreen`.
+
+### SG-018 — Exit code de `Int main()`
+
+- **APLICADO (09/09, decisão do maintainer, SEM044):** a forma `Int main()`
+  foi REMOVIDA — o entry point é SÓ `main()` (sem tipo de retorno, sem
+  modifiers); `Int main()` → erro SEM044. Modifiers em main nem chegam ao SEM
+  (parser sempre passa mods vazios p/ top-level function; SEM044 protege o
+  contrato na camada semântica). O IR já emite public static void. Prova:
+  3 testes `CompilerDriverTest` (typedMain/modifiedMain/plainMain-green).
+
+### SG-019 — Cláusula `throws` é decorativa
+
+- **APLICADO (09/09, decisão do maintainer, SEM045):** descoberta — top-level
+  function NEM CAPTURAVA `throw` (só `parseClassMember` chamava `parseThrows`;
+  o gap dizia "decorativa", na verdade era duplamente morta). Fix:
+  `Parser.parseFunctionDeclaration` captura + `SemanticAnalyzer.checkThrowsClause`
+  valida que cada nome é tipo conhecido (classe/interface do módulo, builtin,
+  ou externa via import) → SEM045. Prova: `throwsUnknownTypeGivesCleanDiagnostic`
+  + `throwsKnownTypeStaysGreen`.
+
+### SG-020 — Modelo de memória concorrente ausente — ✅ CORRIGIDO 09/09 (spec) / validado 10/09
+
+- **Implementação anterior**: `spawn`/`await`/`Channel` funcionavam, mas não
+  havia definição de happens-before/visibilidade/atomicidade.
+- **CORRIGIDO 09/09:** spec completa em
+  `docs/language-reference/concurrency-memory-model.md` — SC em todos os targets,
+  6 regras de happens-before (spawn/await/channel/cancel/locais/race),
+  mapeamento por target (JMM virtual threads / x86-TSO futex / riscv-aarch
+  fence), non-goals (sem volatile/synchronized na superfície — Channel é a
+  abstração), DoD com provas. Interpretador: mapa de statics concorrente
+  (HB por campo).
+- **Validado 10/09 (varredura doc↔código):** as provas §4 do doc — (1)(2)(5)
+  cobertas por `SpawnE2ETest`/`KofConcurrency2Test` (spawn/await/channel
+  cross-target); (3) `staticsAreSequentiallyConsistent` (1998000) e
+  (4) `noWordTearingOnLong` (leitor nunca vê valor inválido) **já
+  implementados** em `KofConcurrency2Test:699/:737` (o doc §4 dizia
+  "(3)(4) a implementar" — desatualizado; corrigido no doc). Gate:
+  `KofConcurrency2Test` 29/0/1-skip (qemu) na suíte 1270/0-código.
 
 ---
 
-## Convenções de gap
+## Categoria C — Divergências entre targets (paridade) — atualizada 10/09
 
-- **Códigos**: prefixes curtos como `R6`, `HW001`, `CONC001`, etc.
-- **Status**: `aberto`, `fechado`, `parcial`
-- **Targets**: `JVM`, `Native`, `JS`
-- **Referência**: cada gap deve ter issues/referências nos testes e docs
-- **Workaround**: documented em cada gap específico
-
----
-
-## Roadmap de gaps pendentes
-
-1. **R6** — Corrigir putfield de Int no compilador (Priority: high)
-2. **CONC003** — Async real no JS (Priority: medium)
-3. **WEB001** — Web handler no Native/JS (Priority: medium)
-4. **HW001** — Kernel bare-metal (depende de freestanding no compilador)
+| # | Divergência | JVM | Native | JS | Gap |
+|---|---|---|---|---|---|
+| SG-C1 | Short-circuit `&&`/`\|\|` | ✅ | ✅ | ✅ CORRIGIDO 09/09 | SG-006 ✅ |
+| SG-C2 | Exceção (representação) | RuntimeException | kof_panic | throw string | Stable efeito |
+| SG-C3 | GC | JVM | free-list/mark-sweep (x86); bump (riscv) | engine | Target-specific |
+| SG-C4 | FP extremo | IEEE | IEEE (FLT001) | IEEE | FLT001 |
+| SG-C5 | Interop tipos host | ✅ | ❌ | ❌ | Target-specific |
+| SG-C6 | `println(null)` | "null" | ✅ (R6) | "null" | — |
+| SG-C7 | Map/Set type-arg classe | ✅ CORRIGIDO 06/09 (era bug#33 — causa real: nullable inferido) | ✅ | ✅ | — |
+| SG-C8 | `spawn{lambda}` handle | ✅ CORRIGIDO 06/09 (bug#29) | ✅ | ✅ | — |
 
 ---
 
-**Fonte**: Análise de bytecode compilado Kof 0.3.0-beta + verificação de runtime 
-`VerifyError` + roadmap da equipe KofLang.
+## Categoria D — Bugs conhecidos (referência cruzada) — atualizada 10/09
 
-**Mantido por**: Equipe KofLang.  
-**Atualizado**: 08/09/2026.
+Não duplicados aqui — ver [known-bugs.md](../development/known-bugs.md):
+- **#29** spawn{lambda}-com-handle — ✅ CORRIGIDO 06/09
+- **#30** decode<Bool> x86_64 — ✅ CORRIGIDO
+- **#31** process.<inexistente> — ✅ CORRIGIDO 06/09
+- **#32** type-arg genérico via import — ✅ CORRIGIDO (`qualifyDeep`)
+- **#33** "Map/Set com type-arg de classe" — ✅ CORRIGIDO 06/09 (causa real: member call em receiver nullable **inferido**; o emit de Map/Set nunca foi o problema)
 
 ---
 
-Estratégia documentada conforme AGENTS.md — regras de modo autônomo, intenção não mecanismo, 
-complexidade pertence à plataforma, represente o domínio, zero cerimônia, null alucinação 
-evitada, multi-target honesto.
+## Categoria E — Documentação desatualizada (docs ≠ código)
+
+### SG-E1 — `docs/architecture/architecture.md` chama riscv64/aarch64 de "placeholder x86_64" — ✅ CORRIGIDO 10/09 (residual)
+
+- **Doc** (`architecture.md:40-46,97-98`): "codegen ainda x86_64 (placeholder)".
+- **Código**: `NativeBackend.emitRiscv` é lowering riscv64 **real**;
+  aarch64 via `translateRiscvToAarch64`.
+- **CORRIGIDO 10/09:** o cabeçalho do doc já tinha a nota de correção de
+  06/09; os residuais ("codegen x86_64 placeholder via qemu" no enum Target
+  e a seção de targets 0.2.6) foram atualizados para lowering real.
+  Verificação: grep "placeholder" em `docs/architecture/architecture.md` agora só
+  aparece na nota histórica de correção (que explica o porquê).
+
+### SG-E2 — `docs/history/language-state.md` data 02/09, versão 0.2.6-beta — ✅ CORRIGIDO 10/09
+
+- Contava 810 testes; hoje são **1270** (kof-compiler só). Versão 0.2.6;
+  hoje 0.3.0.
+- **CORRIGIDO 10/09:** marcado como **SNAPSHOT HISTÓRICO** (nota no topo
+  apontando para `docs/status.md`, `docs/language-reference/` e
+  `specification-gaps.md` como fontes correntes). Regenerar o doc seria
+  duplicar o status.md — snapshot honesto é melhor que cópia derivada que
+  apodrece.
+
+### SG-E3 — `docs/architecture/architecture.md` lista "KofC Backend" como backend da IR — ✅ CORRIGIDO (06/09) / verificado 10/09
+
+- **Doc antigo**: mostrava `KofC Backend` no pipeline consumindo a IR.
+- **Código**: `KofCCompiler` **não** implementa `Backend` nem consome
+  `IRModule` — é um compilador C-subset separado (`kof-c-compiler`).
+- **Verificado 10/09:** o diagrama do pipeline em `docs/architecture/architecture.md`
+  mostra os 3 backends da IR (JvmRuntime/NativeRuntime/JsBackend) e
+  `KofCcompiler` está seção própria, sem relação com a IR;
+  `docs/architecture/compiler-architecture.md` tabela "É / Não é" já diz explicitamente
+  "KofC **não é** backend da IR Kof". Fechado sem código novo.
+
+---
+
+## Resumo
+
+- **20 gaps SG-00x** (A: contradições doc/código; B: comportamento não
+  especificado). **Fila do maintainer (2ª rodada, 10/09) COMPLETA:**
+  SG-008 ✅, SG-005 ✅, SG-009 ✅, SG-020 ✅ — ver histórico em cada seção.
+- **8 divergências de target** (C).
+- **3 docs desatualizados** (E) — **todos ✅** (E1 residual 10/09, E2
+  snapshot 10/09, E3 verificado).
+- **5 bugs** (D, já em known-bugs) — 29/30/31/32/33 ✅ corrigidos.
+
+**Estado 10/09:** a auditoria original foi de documentação, mas a fila
+subsequente de decisões do maintainer corrigiu a linguagem com testes
+(SEM041–SEM049, SG-009 subtipagem nominal, SG-020 spec de memória). Cada
+item B/C que envolve mudança de semântica SEM decisão do maintainer segue
+regra 6: vira gap/plano em `planning-*`, nunca edição silenciosa.

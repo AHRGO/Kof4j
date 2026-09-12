@@ -856,13 +856,13 @@ use o harness do projeto ou crie um teste E2E mínimo no pacote da área.
 | `learn/` | Tutorials passo a passo (00-introduction → 39-stdlib) |
 | `docs/architecture/architecture.md`, `docs/architecture/compiler-architecture.md` etc. | Domínios específicos (estáveis) |
 | `docs/development/` | **Backlog vivo — tudo que NÃO está concluído** (planos, roadmaps, audits, gaps, refactors). Ver `docs/development/README.md` para índice completo. |
-| `docs/development/future/` (plans) | Planos futuros: migração legado (decompiler/translator/IR/differential) + plataforma universal (era `docs/future/`) |
+| `docs/development/future/` (plans) | **só plano sem código**: plataforma universal (visão), RAII TIER 2.4, DD-STDLIB-01. A migração legado (decompiler/translator/IR/differential) **caiu p/ `docs/development/` 12/09** — implementada com testes |
 | `docs/development/roadmap.md`, `docs/development/roadmap-audit.md`, `docs/development/ecosystem-coverage.md` | Roadmaps & auditoria de cobertura (fila P0→P5) |
-| `docs/development/specification-gaps.md`, `docs/development/known-bugs.md` | Gaps de spec (20 SG-00x) + bugs abertos (37–40, CANVAS001) |
-| `docs/development/native-multiarch.md`, `docs/development/DATABASE_VISION.md`, `docs/development/complexity-audit.md` | Native multiarch (NATIVE002) + DB vision + audit ≤500 |
+| `docs/language-reference/specification-gaps.md`, `docs/development/known-bugs.md` | Gaps de spec (SG-00x — fila do maintainer completa, virou referência) + bugs abertos |
+| `docs/development/native-multiarch.md`, `docs/stdlib/DATABASE_VISION.md`, `docs/architecture/complexity-audit.md` | Native multiarch (NATIVE002) + DB vision (realizada → stdlib) + audit ≤500 (snapshot → architecture) |
 | `docs/development/security-plan.md` | Plano de segurança (18 camadas, B/C/D pendentes) |
 | `docs/development/plan-platform-completion.md`, `docs/development/plan-spring-independence.md` | Plans de plataforma & Spring independence (P3–P5) |
-| `docs/development/future/ACTION_PLAN.md` | Ordem de implementação de `docs/development/future` (Tiers 0–12) |
+| `docs/development/ACTION_PLAN.md` | Ordem de implementação dos planos da plataforma (Tiers 0–12) — migração feita, universal não iniciada |
 
 ---
 

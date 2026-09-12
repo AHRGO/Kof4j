@@ -1,4 +1,8 @@
-# IMPLEMENTATION_PLAN.md — Roadmap de Implementação de docs/future
+# IMPLEMENTATION_PLAN.md — Roadmap de Implementação da plataforma de migração + tiers
+
+> **EM DESENVOLVIMENTO** (caiu de `future/` em 12/09 — Fases A–H da
+> plataforma de migração têm código+testes: inspect/decompile/translate/
+> compare/migrate, 63 testes kof-cli verdes; tiers posteriores não iniciados).
 
 **Created:** 2026-09-04  
 **Author:** agente-planning  
@@ -8,7 +12,7 @@
 
 ## Visão Geral
 
-Esta é a versão consolidada do plano de implementação para todos os documentos em `docs/future/`. Cada item é uma etapa pequena, compilável, testável.
+Esta é a versão consolidada do plano de implementação para todos os documentos da plataforma (migração + universal). Cada item é uma etapa pequena, compilável, testável.
 
 ---
 
@@ -222,7 +226,7 @@ corpo recuperado com stub honesto).
 
 | # | Subtarefa | Dificuldade | DoD |
 |---|-----------|-------------|-----|
-| 2.4.1 | `auto-closed`/scope leve para handles (arquivo/GPU/conexão/FFI) sobre `try/finally` | 🟡 M | 🟡 design pronto (`docs/future/scoped-resources-plan.md`); sintaxe `using` gated por bump 0.3.0 ( ) |
+| 2.4.1 | `auto-closed`/scope leve para handles (arquivo/GPU/conexão/FFI) sobre `try/finally` | 🟡 M | 🟡 design pronto (`future/scoped-resources-plan.md`); sintaxe `using` gated por bump 0.3.0 ( ) |
 | 2.4.2 | Fronteira segura de buffer p/ zona sem GC (handles de FFI) | 🟡 M | handle liberado pelo GC na fronteira |
 
 ### 2.5 Variance / sealed (opcional, postergável)

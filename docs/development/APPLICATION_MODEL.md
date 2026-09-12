@@ -1,14 +1,18 @@
 # Kof Application Model — RFC & Plano de Implementação
 
-**Status:** RFC (sem código — regra de `docs/future/`: move para `docs/` quando
-houver código em desenvolvimento, com status real + "como finalizar")
+**Status:** EM DESENVOLVIMENTO (caiu de `future/` em 12/09 — I1/I2 têm
+código: parser + nó + desugar de `application { onStart/onShutdown }`
+(`Parser.java:101-132`, `ApplicationDeclarationNode`, `CompilerDesugar.java:247-254`
+→ `kof_app_on_start`), E2E nos 3 targets (`KofObservabilityTest.applicationLifecycle`),
+`KofProjectConfig.java` lê `[project]/[backend]/[frontend]/[server]`.
+Distribuído (System/packaging) ainda não iniciado → não vai para `docs/`)
 **Criado:** 05/09/2026
 **Versão-alvo:** 0.4.0-beta (a linha 0.3.0 está em curso — ver DOING.md)
 **Gap-codes desta RFC:** `APP001`..`APP003` (convenção R6; matriz em
 `docs/backend-parity.md`)
 **Relacionados:** `docs/roadmap.md` §§8–11 (promessas ❌ de 02/09),
 `docs/stdlib/stdlib-web.md`, `docs/targets/KOFJS.md`,
-`docs/future/PLAN-UNIVERSAL-PLATFORM.md` (R1/R6/R7/R9/R12)
+`docs/development/future/PLAN-UNIVERSAL-PLATFORM.md` (R1/R6/R7/R9/R12)
 
 ---
 

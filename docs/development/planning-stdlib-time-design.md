@@ -1,7 +1,11 @@
-# planning-stdlib-time-design.md — semântica de tempo/calendário na stdlib (PROPOSED)
+# planning-stdlib-time-design.md — semântica de tempo/calendário na stdlib (PARCIALMENTE DECIDIDO)
 
-**Dono:** lane STDLIB · **Status:** PROPOSED (aguarda decisão da mantenedora)
-**Criado:** 10/09 · **Regra:** 6 (proposta de design não é edição de código)
+**Dono:** lane STDLIB · **Status:** EM CURSO — as partes já implementadas saíram do
+limbo de decisão (`addDays`/`diffDays` = o formato D2 do doc, fechados nos 5 alvos
+TIME002 11/09; `isLeapYear`/`daysInMonth`/`dayOfWeek`/`isWeekend`/`daysBetween`
+desde S7); restam `format`/`boundaries` aguardando decisão da mantenedora ·
+**Criado:** 10/09 · **Movido de `future/` p/ `development/` 12/09** (iniciado — regra dos 3 estados) ·
+**Regra:** 6 (proposta de design não é edição de código)
 
 ## Contexto
 

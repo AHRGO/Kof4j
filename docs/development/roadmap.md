@@ -680,7 +680,7 @@ contratos estabilizarem.
 - `Parser.java` / `SemanticAnalyzer.java` / `JvmBackend.java` → sub-parsers.
 
 Critério de aceite: `cloc`/`wc -l` por classe — nenhuma acima de 500.
-Detalhes e tabela de tamanhos: `docs/complexity-audit.md` → "Regra de
+Detalhes e tabela de tamanhos: `docs/architecture/complexity-audit.md` → "Regra de
 arquitetura — limite de 500 linhas por classe".
 
 ---
@@ -801,7 +801,7 @@ Visão de longo prazo — Kof como plataforma universal (uma linguagem para
 aplicações **e** sistemas, infraestrutura, automação, dados, segurança e
 ciência) **sem** destruir a simplicidade da linguagem.
 
-- Documento central: `docs/future/PLAN-UNIVERSAL-PLATFORM.md` (arquitetura,
+- Documento central: `docs/development/future/PLAN-UNIVERSAL-PLATFORM.md` (arquitetura,
   **não** ordem de implementação)
 - Estágios por capacidade/maturidade: `FOUNDATION ✅` → `SYSTEMS` (em
   andamento) → `AUTOMATION` → `INFRAESTRUTURA` → `DATA` → `SECURITY` →

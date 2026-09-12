@@ -1,7 +1,7 @@
 # Conformance Matrix — Feature × Target (Fase 9, plano de plataforma)
 
 > **Criado:** 07/09/2026 · **Dono:** lane KOFSCRIPT (fixes-for-kofagent)
-> **Plano:** `docs/development/future/PLATFORM-PLAN.md` Fase 9 ·
+> **Plano:** `docs/development/PLATFORM-PLAN.md` Fase 9 ·
 > **Roadmap-audit:** linha 12 "Conformance Suite — NOT STARTED (BackendParityTest é proxy)" + fila P4.
 >
 > **Regra:** cada célula é travada por teste em `ConformanceMatrixTest`
@@ -237,7 +237,7 @@ motivo diferente, ambos honestos (R6):
   `Target.WASM`; `TargetMatrix.frontendGapFor` mapeia os nomes pedidos
   (`wasm`, `kofwasm`, `kofwebasm`, `kofwebassembly`, `webassembly`) ao gap
   **WASM001**, planejado na Fase 6 do plano de plataforma
-  (`docs/development/future/PLATFORM-PLAN.md`). Os dois caminhos da CLI
+  (`docs/development/PLATFORM-PLAN.md`). Os dois caminhos da CLI
   diagnosticam igual: `--frontend=wasm`/`kof.toml` →
   `TargetMatrix.parse` com o gap; `--target=wasm` (flag legado) → a mesma
   mensagem via `KofCliSupport.parseTarget`. Nunca compila como JVM por

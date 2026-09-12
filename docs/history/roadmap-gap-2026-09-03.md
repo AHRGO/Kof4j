@@ -1,5 +1,11 @@
 # Roadmap 01 — Gap Report (03/09/2026, 0.2.6-beta)
 
+> **SNAPSHOT HISTÓRICO — movido de `docs/development/` p/ `docs/history/` em
+> 12/09**: gap report datado; as pendências que ele apontava são hoje rastreadas
+> vivas em `roadmap-audit.md`/`known-bugs.md`/`backend-parity.md` (várias já
+> fechadas — ex.: MySQL prepared binário 03/09, `MQ001` Native 02/09). Conservado
+> como registro do estado 0.2.6-beta.
+
 > Gerado ao final do todo NATIVE002 core (riscv64 02/09 + aarch64 03/09, 13/13 cada). Base: `docs/status.md:1`, `docs/native-multiarch.md:1`, `docs/backend-parity.md:1`, `kof-compiler/src/main/java/dev/kof/compiler/nat/NativeBackend.java:1851`, `NativeRiscv64E2ETest.java:1`, `NativeAarch64E2ETest.java:1`.
 
 ## Sumário executivo

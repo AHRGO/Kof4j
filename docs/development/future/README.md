@@ -20,13 +20,20 @@ documento de arquitetura/visão **sem código implementado** (ou com código que
 
 | Doc | Tema | Por que fica em `future/` |
 |-----|------|---------------------------|
-| `APPLICATION_MODEL.md` | Kof Application Model (monólito ↔ distribuído, `kof.toml`, packaging, System) | RFC auditada — implementa nos incrementos I1–I4 (§23); move para `docs/` no I1 |
-| `PLAN-UNIVERSAL-PLATFORM.md` | visão de longo prazo (Kof como plataforma universal) | 100% visão/estratégia — não é ordem de implementação |
-| `DECOMPILER.md` | Kof Decompiler (bytecode/asm → Kof) | não há código de decompiler |
-| `DIFFERENTIAL_TESTING.md` | teste diferencial de migrações | não há código |
-| `LEGACY_IR.md` | Legacy Semantic IR | não há código (o "legacy" no `CompilerDriver` é genérico, não este) |
-| `LEGACY_MIGRATION.md` | plataforma de migração de software legado | fora do escopo 0.0.x, sem código |
-| `TRANSLATOR.md` | Kof Translator (Kof → outra linguagem) | não há código |
+| `PLAN-UNIVERSAL-PLATFORM.md` | visão de longo prazo (Kof como plataforma universal) | 100% visão/estratégia — não é ordem de implementação; nenhum pacote `ml`/`bio`/`hpc`/`infra-*` no código |
+| `scoped-resources-plan.md` | RAII leve (TIER 2.4, `using`/`resource_scope`) | design puro — zero ocorrências de `resource_scope`/`kof_resource`/`using` no lexer/parser/runtime; gated por bump |
+| `planning-stdlib-array-returns.md` | DD-STDLIB-01 (retorno Array/objeto no dispatch stdlib — `randomBytes`/`randomChoice`) | PROPOSED aguardando decisão da mantenedora (regra 6) — `KofRandom` não despacha nenhum dos dois; zero código do plumbing |
+
+## Já caíram para `docs/development/` (iniciados — regra dos 3 estados, 12/09)
+
+| Doc | Gatilho da queda |
+|-----|------------------|
+| `DECOMPILER.md`, `TRANSLATOR.md`, `DIFFERENTIAL_TESTING.md`, `LEGACY_MIGRATION.md`, `LEGACY_IR.md`, `IMPLEMENTATION_PLAN.md`, `ACTION_PLAN.md` | plataforma de migração com código+testes: `kof inspect/decompile/translate/compare/migrate` no `Main.java:25-29`, 63 testes kof-cli, `Confidence.java`, `Type.fromJvmSignature` |
+| `PLATFORM-PLAN.md` | Fases 1–3, 8, 9 com código: `ProjectLocator`, `KofProjectConfig`, `Target.SCRIPT`, PKG006/PKG007, `conformance-matrix.md` travada por 11 testes |
+| `APPLICATION_MODEL.md` | `application { onStart/onShutdown }` parseado+desugared+E2E nos 3 targets; `KofProjectConfig` |
+| `PLANNING-FUTURE-AUDIT.md`, `planning-future-reconcile.md` | auditorias com itens abertos (R2/R5) e tabela defasada — trabalho de doc em curso |
+| `planning-finally-return.md` | face JS do bug 45 corrigida (`c727fee`); decisão DD-01 só p/ JVM/Native/interp |
+| `planning-stdlib-time-design.md` | `addDays`/`diffDays` (o formato D2 do doc) implementados nos 5 alvos (TIME002 11/09) |
 
 ## Quando mover de `future/` para `docs/`
 

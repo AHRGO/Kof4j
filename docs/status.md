@@ -238,7 +238,7 @@ main() {
 - Native/JS reportam `ORM001`.
  - Testes: `KofDbE2ETest` (9), `KofOrmE2ETest` (22; MariaDB/PostgreSQL/MongoDB
    com skip condicional quando o container não está no ar).
- - Docs: `docs/future/DATABASE_VISION.md` (níveis 0-4 implementados, incluindo
+ - Docs: `docs/stdlib/DATABASE_VISION.md` (níveis 0-4 implementados, incluindo
    o nível 3 = query DSL tipada `User.query(db){ where; orderBy; limit }` — 01/09).
 
 ---

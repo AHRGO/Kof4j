@@ -1,6 +1,8 @@
-# DIFFERENTIAL_TESTING.md — Teste Diferencial de Migrações (plano futuro)
+# DIFFERENTIAL_TESTING.md — Teste Diferencial de Migrações (plano → EM DESENVOLVIMENTO)
 
-**Status:** Plano futuro — NÃO implementado
+**Status:** EM DESENVOLVIMENTO (caiu de `future/` em 12/09 — Fase G
+implementada: `Compare.java` (stdout/exit/stderr, `--stdin`/`--arg`);
+prova: `CompareTest` 6/6. Casos além de stdout comparável ainda pendentes)
 **Data:** 22 de agosto de 2026
 
 ---

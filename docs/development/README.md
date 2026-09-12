@@ -13,20 +13,40 @@
 
 ## Índice — o que foi movido de `docs/` para `development/`
 
-### 1. Visão de Futuro (`future/` — Tiers 0–12, plataforma universal)
-| Arquivo | Por que está aqui | Estado | Próximo passo |
-|---|---|---|---|
-| `future/README.md` | visão geral da plataforma futura | `PLANNED` | não iniciar antes de SYSTEMS fechar (R12) |
-| `future/PLAN-UNIVERSAL-PLATFORM.md` | arquitetura universal (R1–R12) | `NOT STARTED` (arquitetura, não ação) | aguardar estágio SYSTEMS |
-| `future/ACTION_PLAN.md` | ordem Tiers 0–12 | `PARTIAL` | Tier 1 pendentes (ver roadmap-audit) |
-| `future/PLATFORM-PLAN.md` | plano de plataforma (F0–F2) | `EM CURSO` (F1 feita, F2 próxima) | F2 Target Architecture (`Target.SCRIPT`, `KofProjectConfig`, `TargetMatrix`) |
-| `future/APPLICATION_MODEL.md` | RFC App Model (monólito ↔ distribuído) | `EM CURSO` / RFC 975 linhas | decisão maintainer Q1/Q2 → I1 (`AppManifest` + `kof new`) |
-| `future/LEGACY_MIGRATION.md` | migração legado (kof inspect/translate) | `PLANNED` | não fazer antes do core estável |
-| `future/LEGACY_IR.md` | IR legado | `PLANNED` | — |
-| `future/DECOMPILER.md` | decompiler | `PLANNED` | — |
-| `future/TRANSLATOR.md` | translator | `PLANNED` | — |
-| `future/DIFFERENTIAL_TESTING.md` | differential testing | `PLANNED` | — |
-| `future/IMPLEMENTATION_PLAN.md` | plano de implementação legado | `PLANNED` | — |
+### 1. Futuro de verdade (`future/` — só plano, zero código)
+
+> **12/09 — varredura da regra dos 3 estados:** dos 17 docs que estavam em
+> `future/`, **13 caíram para `docs/development/`** (todos têm código iniciado —
+> plataforma de migração `kof inspect/decompile/translate/compare/migrate` com
+> 63 testes, `PLATFORM-PLAN` F1–3/8/9 com `KofProjectConfig`+`Target.SCRIPT`+
+> matriz de conformidade, `application {}` com E2E nos 3 targets, `addDays`/
+> `diffDays` implementados, bug 45 com a face JS corrigida). Em `future/` só
+> restam os **3 sem uma linha de código** (ver `future/README.md`).
+
+| Arquivo | Por que está aqui | Estado |
+|---|---|---|
+| `future/README.md` | regra + índice da pasta | — |
+| `future/PLAN-UNIVERSAL-PLATFORM.md` | visão de longo prazo (R1–R12); nenhum `ml`/`bio`/`hpc`/`infra-*` no código | `NOT STARTED` (aguardar SYSTEMS, R12) |
+| `future/scoped-resources-plan.md` | RAII leve TIER 2.4 — zero `resource_scope`/`kof_resource`/`using` | `PLANNED` (gated por bump) |
+| `future/planning-stdlib-array-returns.md` | DD-STDLIB-01 — `randomBytes`/`randomChoice` não existem no `KofRandom` | `PROPOSED` (decisão mantenedora) |
+
+**Docs de plataforma/migração que moravam em `future/` e agora estão aqui (EM CURSO):**
+
+| Arquivo | Por que caiu (evidência no código) | Estado |
+|---|---|---|
+| `PLATFORM-PLAN.md` | F1–3+8+9 com código: `ProjectLocator`, `KofProjectConfig` (+teste), `Target.SCRIPT`, PKG006/PKG007 em `CompilerImports`, conformance travada por 11 testes; F6 (WASM) não iniciada | `EM CURSO` |
+| `APPLICATION_MODEL.md` | `application { onStart/onShutdown }` parseado (`Parser.java:101-132`) + desugared (`CompilerDesugar.java:247-254`) + E2E nos 3 targets; distribuído (System/packaging) não iniciado | `EM CURSO` |
+| `LEGACY_MIGRATION.md` | os 5 comandos existem (`Main.java:25-29`); cobertura de recuperação ainda parcial | `EM CURSO` |
+| `DECOMPILER.md` | `Decompile.java` + decoders (~2.1k linhas), `DecompileTest` 45/45; corpo de método complexo ainda → stub honesto | `EM CURSO` |
+| `TRANSLATOR.md` | `Translate.java` + lexer próprio, `TranslateTest` 9/9 (output compila e roda); subconjunto Java a ampliar | `EM CURSO` |
+| `DIFFERENTIAL_TESTING.md` | `Compare.java`, `CompareTest` 6/6 (stdout/exit/stderr); além de stdout ainda pendente | `EM CURSO` |
+| `LEGACY_IR.md` | `Confidence.java` (§4, 5 níveis), `Type.fromJvmSignature` + atributo `Signature` (`367d6c4`); IR non-JVM não iniciada | `EM CURSO` |
+| `IMPLEMENTATION_PLAN.md` | Fases A–H têm código+testes; tiers 6–12 não iniciados | `EM CURSO` |
+| `ACTION_PLAN.md` | idem — ordem Tiers 0–12; parciais | `EM CURSO` |
+| `PLANNING-FUTURE-AUDIT.md` | auditoria com itens abertos (R2 kof.toml × AppManifest, R5 `inspect --java`/switch-athrow); tabela corrigida 12/09 (Fase D estava defasada) | `ABERTO` |
+| `planning-future-reconcile.md` | reconcile da branch `planning-future` com a beta — partes aplicadas, registro em curso | `ABERTO` |
+| `planning-finally-return.md` | face JS do bug 45 **corrigida** (`c727fee` + `CoreRegressionE2ETest.finallyReturnJs`); DD-01 p/ JVM/Native/interp aguarda decisão | `EM CURSO` (JS feito; decisão pendente) |
+| `planning-stdlib-time-design.md` | `addDays`/`diffDays` (o formato D2 do doc) implementados nos 5 alvos (TIME002 11/09); `format`/`boundaries` aguardam decisão | `EM CURSO` (parcialmente decidido) |
 | `docs/ui/PLAN-CANVAS-WIDGET.md` | Canvas widget (CANVAS001) — **consolidado; movido p/ `docs/ui/` 12/09** (`5a9cac46` CANVAS001 FECHADO; `UiE2ETest` 29/29 sem exclusões medido hoje; UI009 drawImage `6e3181f`) | `FEITO` |
 
 ### 2. Roadmaps & Audits
@@ -34,7 +54,7 @@
 |---|---|---|
 | `roadmap.md` | §§8–11 ❌ não implementado (Frontend, Frontend+Backend same project, Architectura, Monólito→Micro) | `PARTIAL` (Fase 0 ✅, resto 🟡/❌) |
 | `roadmap-audit.md` | matriz 06/09: 13 itens — 5× `PARTIAL`, 4× `NOT STARTED` | `PARTIAL` |
-| `roadmap-gap-2026-09-03.md` | gap report NATIVE002 + discrepâncias | `PARTIAL` |
+| `docs/history/roadmap-gap-2026-09-03.md` | **movido p/ docs/history/ 12/09** — gap report datado 03/09 (0.2.6-beta): números e pendências que o roadmap-audit/known-bugs já carregam vivas; as discrepâncias listadas foram corrigidas nas sessões seguintes — é snapshot, não backlog | `HISTÓRICO` |
 | `ecosystem-coverage.md` | matriz G1–G12: muitos `PARTIAL`/`PLANNED` (events, messaging, OAuth2, batch, AI) | `PARTIAL` |
 | `conformance-matrix.md` | matriz Feature×target (JVM/Native/Script/JS) com exclusões por gap — a célula `collprint` ainda exclui native (record/aninhado = §107/§104b-ii); doc-viva, atualizada a cada gap de paridade | `PARCIAL` (matriz é o registro, não o backlog) |
 | `KOFUI-AUDIT.md` | matriz de gaps `UI00x` do kof.ui — UI001-Native no-op silencioso ABERTO (face R6: kof.ui no Native roda sem diagnóstico); demais UI002–009 ✅/decisão | `ABERTO` (UI001-Native) |
@@ -48,8 +68,8 @@
 | `plan-spring-independence.md` | Fases 5–14: web completa + gRPC planejados, GC pending | `PARTIAL` |
 | `planning-switch-expr.md` | **movido p/ `docs/decisions/planning-switch-expr.md` 10/09** (SYN001 FECHADO — nada pendente; concluído não fica em development/) | `FEITO` |
 | `planning-mutability.md` | **movido p/ `docs/decisions/planning-mutability.md` 10/09** (DD-02/SEM037/SEM038 aplicados, #42 fechada) | `FEITO` |
-| `planning-finally-return.md` | **movido p/ `docs/development/future/` 10/09** (PROPOSED — bug 45, zero código, decisão da mantenedora pendente) | `PLANEJADO` |
-| `planning-stdlib-time-design.md` | **movido p/ `docs/development/future/` 11/09** (DD-STDLIB-02 PROPOSED — zero código em andamento; sem decisão da mantenedora não é trabalho atual) | `PLANEJADO (future)` |
+| `planning-finally-return.md` | **CAIU de `future/` 12/09** (face JS do bug 45 corrigida `c727fee`; decisão DD-01 p/ JVM/Native/interp pendente) | `EM CURSO` |
+| `planning-stdlib-time-design.md` | **CAIU de `future/` 12/09** (DD-STDLIB-02 — `addDays`/`diffDays` implementados nos 5 alvos; `format`/`boundaries` aguardam decisão) | `EM CURSO` |
 | `planning-stdlib-array-returns.md` | **movido p/ `docs/development/future/` 11/09** (DD-STDLIB-01 PROPOSED — zero código; trava de dispatch Array/objeto) | `PLANEJADO (future)` |
 | `plan-stdlib-expansion.md` | STDLIB universal S1–S12: S1–S8+S10–S12 ✅ 09–11/09 (TIME002 fechado 11/09 fatia B33; MATH001 fechado 11/09 fatia B32); pendentes: S10c (DD-STDLIB-01) + S7 `format`/`boundaries` (decisão de superfície) — `pow`/`roundTo`-mode ag. mantenedora | `EM CURSO` |
 | `planning-otp-supervision.md` | DD-OTP-01..13: supervisão OTP one_for_one (issue #83) — recomend. stdlib puro-Kof + fábrica + escalate-callback + flag própria (5 alvos grátis) — decide a mantenedora | `PROPOSED` |
@@ -59,7 +79,7 @@
 ### 4. Gaps & Bugs
 | Arquivo | Por que está aqui | Estado |
 |---|---|---|
- | `specification-gaps.md` | 23 entradas (SG-001–020 + E1–E3) — SG-001/007 resolvidos; demais ABERTOS (a maioria decisão de design, regra 6) | `ABERTO` (~21 gaps) |
+ | `docs/language-reference/specification-gaps.md` | **movido p/ docs/language-reference/ 12/09** — as 23 entradas SG-001–020+E1–E3 estão TODAS resolvidas (SG-001/002/003/005–020 APLICADOS 06–12/09 com decisão da mantenedora; C/D/E ✅) — referência do que a spec exige, não backlog; o resumo do doc confirma a fila do maintainer COMPLETA | `FEITO` (referência) |
  | `known-bugs.md` | fila viva: abertos atacáveis = §45 (finally+return, lowerers) + §104b-ii (Object.equals/record-em-coleção + storage-box de record no asm, Native); 🟡 PARCIAIS-honestos = §107 (println coleção: face escalar ✅ CORRIGIDA 12/09 nos 3 nativos — `f3b3821c`+cross B39, golden JVM byte-idêntico; restam record/aninhado=`?` e FP-cross=FLT001, ambos recusa visível e ambos pendurados no §104b-ii) ; congelados/regra 6 = §94/§96/§98/§101/§106 (json.encode Map); corrigidos 08–12/09: 1–8/10–17/19–20/26 + 39/44/46/48/50/59/62–64/96–105 + §104c (JS) + §107-JS + §107-escalar (Native x86+riscv+aarch) + §108 + §109–§112 (paridade sweep 11/09) + §138 + MATH001/TIME002 | `ABERTO` (fila §45/§104b-ii; §107/§108/§138 FECHADOS 11–12/09) |
 | `security-plan.md` | 18 camadas: A ✅ mas B/C/D com ❌ (cookies, middleware, OAuth2, TLS cert próprio) | `PARTIAL` |
 
@@ -67,8 +87,8 @@
 | Arquivo | Por que está aqui | Estado |
 |---|---|---|
 | `native-multiarch.md` | NATIVE002: core riscv64/aarch64 ✅ 26/26 mas paridade avançada (JSON/DB/HTTP/mq/cache) ❌ + GC riscv/aarch sem | `EM DESENVOLVIMENTO (parcial)` |
-| `DATABASE_VISION.md` | níveis 0–2,4 ✅ mas nível 3 query DSL + pooling + Native/JS ORM ❌ | `PARTIAL` |
-| `complexity-audit.md` | violações ≤500: NativeRuntime 17.3k, CompilerDriver 8.2k, JsBackend 5.7k | `EM CURSO` |
+| `docs/stdlib/DATABASE_VISION.md` | **movido p/ docs/stdlib/ 12/09** — os '❌' da linha antiga estavam FALSOS: nível 3 (query DSL tipada) implementado 01/09 (`KofOrmE2ETest` 22, `User.query(db){...}`→`db.query<T>`), pooling ✅, MySQL prepared binário ✅ 03/09 (`nativeMysqlPreparedBinary`); DB001/ORM001 em riscv/aarch+JS são gaps honestos já na matriz de paridade, não trabalho desta doc | `FEITO` (visão realizada) |
+| `docs/architecture/complexity-audit.md` | **movido p/ docs/architecture/ 12/09** — auditoria fotográfica de 02/09 (0.2.6-beta, 810 testes); os números dela (NativeRuntime 17.7k, CompilerDriver 8.2k) já não existem — as classes foram splitadas pelo PLAN-SOLID-500; o acompanhamento vivo do gate ≤500 é `scripts/check_500.sh` + `refactoring/PLAN-SOLID-500.md`, não esta doc | `HISTÓRICO` (registro) |
 
 ---
 
@@ -102,7 +122,7 @@ Estes **não** foram movidos — são prova ou referência estável:
 ```
 1. LEIA docs/status.md + docs/backend-parity.md          → o que funciona (gate)
 2. LEIA development/roadmap-audit.md + development/roadmap.md
-      + development/specification-gaps.md                → o que falta (fila P0→P5)
+      + language-reference/specification-gaps.md         → o que falta (fila P0→P5)
 3. ESCOLHA o maior valor SEM dono EM CURSO no DOING.md
 4. EXECUTE um escopo → teste → commit → atualize DOING.md
 5. AO FECHAR: mova o doc de development/ de volta para docs/ no mesmo commit

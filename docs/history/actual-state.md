@@ -203,7 +203,7 @@ main() {
   **MongoDB** suportado (driver oficial via reflexão compatível). Native/JS
   reportam ORM001.
 - Testes: `KofDbE2ETest` (9), `KofOrmE2ETest` (10, incluindo MongoDB E2E).
-- Ver `docs/future/DATABASE_VISION.md`.
+- Ver `docs/stdlib/DATABASE_VISION.md`.
 
 ### Feedback de uso real (kof-calculator-lab)
 
@@ -333,7 +333,7 @@ handles no-ops.
 - v1 + G9 implementado (3 targets).
 - Pendente: OAuth2/OIDC client, audit logging, JWT/passwords fora do JVM completos (SECN001/004 em progresso).
 
-### Database (docs/future/DATABASE_VISION.md)
+### Database (docs/stdlib/DATABASE_VISION.md)
 - Nível 0 (conexão + SQL), 2 (ORM básico) e 4 (migrations) implementados; SQLite nativo + MySQL handshake `kof_db_mysql_scramble` 27/08.
 - Pendente: nível 3 query DSL tipada `User.query { where ... }`, connection pooling, MySQL completo (query/prepared), kof.db/kof.orm fora do JVM (DB001/ORM001 — JS).
 

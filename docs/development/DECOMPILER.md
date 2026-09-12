@@ -1,6 +1,9 @@
-# DECOMPILER.md — Kof Decompiler (plano futuro)
+# DECOMPILER.md — Kof Decompiler (plano → EM DESENVOLVIMENTO)
 
-**Status:** Plano futuro — NÃO implementado
+**Status:** EM DESENVOLVIMENTO (caiu de `future/` em 12/09 — implementado:
+`Decompile.java` + decoders de bytecode, Fases A–E com código; prova:
+`DecompileTest` 45/45 verdes. Fases de recuperação de corpo completo ainda
+abertas — por isso não vai para `docs/`)
 **Data:** 22 de agosto de 2026
 
 ---

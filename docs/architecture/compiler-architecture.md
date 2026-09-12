@@ -4,7 +4,7 @@
 
 Este documento descreve **como o compilador Kof implementa a linguagem**. Ele é
 **normativo sobre a implementação**, não sobre a linguagem — as regras da
-linguagem estão em [language-reference/](language-reference/). Se esta
+linguagem estão em [language-reference/](../language-reference/). Se esta
 arquitetura mudar (refatoração, novo backend), a **linguagem não muda**.
 
 ---

@@ -21,7 +21,7 @@
 | A — `kof inspect` | ✅ estrutura de `.class`/`.jar` + estatísticas IR | `Inspect.java` (221) | via MigrateTest |
 | B — Bytecode IR | ✅ decoder com tabela de tamanhos, alvos de branch | `BytecodeReader.java` (206) | DecompileTest |
 | C — Control Flow | ⚠️ PARCIAL: basic blocks, CFG, back-edge/loop, try/catch/finally; **switch/athrow opacos** (javadoc: "por ora") | `BytecodeReader` + `BytecodeDecoder` (763) | `recoversWhileLoop`, try/catch |
-| D — Type Recovery | ❌ **NÃO IMPLEMENTADA** — 0 ocorrências de instanceof/checkcast no decoder | — | — |
+| D — Type Recovery | ❌ NÃO IMPLEMENTADA *(snapshot 07/09; **✅ FEITA 08/09 `367d6c4`** — atributo `Signature` + `Type.fromJvmSignature`/`fromJvmDescriptor`, ver R4 abaixo)* | `ClassFileParser` + `Type.java` | `ClassFileE2ETest.genericSignatureRecovery` |
 | E — Decompiler | ✅ skeleton estrutural + recuperação de corpos (aritmética, comparação, if/else-return, while, try/catch/finally); stub honesto fora do subconjunto ("nunca inventa") | `Decompile.java` (220) | `DecompileTest` **15** |
 | F — Java Translator | ✅ subset real: classes/campos/métodos/records/if/while/for/strings; `equals`→`==`, sem `new`, static→top-level | `Translate.java` (834) | `TranslateTest` **9** |
 | G — Differential | ✅ stdout/exit/stderr + side-effects de arquivo | `Compare.java` (222) | `CompareTest` **6** (inclui `divergenceDetected`) |

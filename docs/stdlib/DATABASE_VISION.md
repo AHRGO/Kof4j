@@ -1,6 +1,14 @@
 # Database Vision — Persistência como Parte da Linguagem
 
-**Última atualização:** 2 de setembro de 2026
+> **CONCLUÍDA — movida de `docs/development/` p/ `docs/stdlib/` em 12/09** (regra
+> dos 3 estados: nada concluído fica em development/). Níveis 0–4 implementados e
+> provados: Nível 3 (Query DSL tipada `User.query(db){...}` → `db.query<T>`) ✅
+> 01/09 (`KofOrmE2ETest` 22); MySQL prepared binário ✅ 03/09
+> (`KofDbE2ETest.nativeMysqlPreparedBinary`); connection pool ✅. DB001/ORM001 em
+> riscv/aarch/JS são gaps honestos R6 trackeados em `docs/backend-parity.md`,
+> não pendência desta visão.
+
+**Última atualização:** 12 de setembro de 2026
 **Versão:** 0.2.6-beta
 **Status:** Nível 0-2 e 4 implementados (`kof.db` + `kof.orm`, 0.2.6-beta):
 `entity` (schema na linguagem), `orm.create/save/saveAll/find/all/where/

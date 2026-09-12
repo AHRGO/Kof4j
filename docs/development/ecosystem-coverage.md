@@ -497,7 +497,7 @@ módulo externo), cloud integrations, provider adapters.
   (`service`/`component` planejados) — ver `docs/philosophy.md`,
   `docs/stdlib/security.md` §2.
 - **Database SQL-first**: `db.query` + prepared statements como base;
-  ORM opcional, nunca obrigatório — `docs/future/DATABASE_VISION.md`.
+  ORM opcional, nunca obrigatório — `docs/stdlib/DATABASE_VISION.md`.
 - **JWT HS256 fixo** no v1 (sem confusão de algoritmo); rotação e
   assinatura flexível ficam para a camada P2 de identity.
 - **`new` aceito por retrocompatibilidade**, não recomendado.

@@ -13,7 +13,7 @@
 > backends, targets, terminologia) está em
 > [`compiler-architecture.md`](compiler-architecture.md). A **especificação da
 > linguagem** (independente desta implementação) está em
-> [`language-reference/`](language-reference/).
+> [`language-reference/`](../language-reference/).
 >
  > **Correções 06/09 (auditoria):** (a) riscv64 e aarch64 **não** são mais
  > "placeholder x86_64" — riscv64 tem lowering real (`NativeBackend.emitRiscv`)

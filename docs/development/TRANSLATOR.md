@@ -1,6 +1,9 @@
-# TRANSLATOR.md — Kof Translator (plano futuro)
+# TRANSLATOR.md — Kof Translator (plano → EM DESENVOLVIMENTO)
 
-**Status:** Plano futuro — NÃO implementado
+**Status:** EM DESENVOLVIMENTO (caiu de `future/` em 12/09 — Fase F
+implementada: `Translate.java` + `TranslateLexer`/`TranslateExpr`;
+prova: `TranslateTest` 9/9 (output compila e roda). Subconjunto Java
+ampliado ainda pendente)
 **Data:** 22 de agosto de 2026
 
 ---
