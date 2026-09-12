@@ -247,9 +247,29 @@ conceitual nem decide arquitetura/rumo. Consequências práticas para o agente:
    `git config user.email "aminadojava@gmail.com"` — o nome `Kof-agent-worker`
    da org fica para quando a org ganhar verificação de e-mail própria; o
    truque hoje é o e-mail. Para issues/PRs via `gh`, o token ativo resolve
-   (`gh api user --jq .login`): sem credencial do worker, **NÃO comentar como
-   melmonfre** — salvar o corpo em `.issue<N>-reply-pending.md` (gitignored),
-   registrar a pendência no `DOING.md` e seguir com o código. Verificação da
+   (`gh api user --jq .login`): enquanto não houver App/worker provisionado,
+   o agente **PODE** comentar/postar pela conta da mantenedora (override
+   dela — diretriz 12/09), **mas TODO comentário assim DEVE abrir com bloco
+   de citação marcando a autoria real**, no padrão:
+
+   ```markdown
+   > _Comentário redigido por **"Kof-agent-worker"** — o agente autônomo da
+   > lane <lane> (<modelo>), postado via conta da mantenedora como proxy até a
+   > identidade App do worker estar provisionada. O conteúdo abaixo é do
+   > agente, não da <mantenedora>._
+
+   ---
+
+   <corpo da resposta>
+   ```
+
+   A aspa em `**"Kof-agent-worker"**` é deliberada: é **apelido de
+   personalidade**, não conta verificada — nunca escrever como se fosse nome
+   de usuário real do GitHub, nunca omitir a marcação. Sem a marcação, um
+   comentário do agente parece a palavra da mantenedora — e isso é o problema
+   que a regra antiga queria evitar. Persistir o corpo em
+   `.issue<N>-reply-pending.md` (gitignored) continua valendo como rascunho
+   antes de postar. Verificação da
    sessão: `git config user.email` = o e-mail da identidade ANTES do primeiro
    commit. (Histórico: um comentário na #97 saiu como melmonfre 12/09 e foi
    APAGADO; re-postagem quando a identidade de issue existir.)
