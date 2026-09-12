@@ -190,7 +190,10 @@ public final class NativeRiscvCrossEmit {
                 pushRiscv(sb, "t0"); pushRiscv(sb, "t2"); pushRiscv(sb, "t1"); pushRiscv(sb, "t0");
             }
             case KofPop pop -> sb.append("    addi sp, sp, 8\n");
-            case KofPop2 pop2 -> sb.append("    addi sp, sp, 16\n");
+            // §142 (12/09): nativo empilha TODO valor como 1 qword (Long/Double
+            // inclusive — ver pushRiscv). O POP2 herdado do JVM (16) desbalanceava
+            // a pilha; descartar 1 qword. aarch64 herda via tradutor.
+            case KofPop2 pop2 -> sb.append("    addi sp, sp, 8\n");
             case KofCheckCast cc -> { }
             case KofInstanceOf io -> {
                 int targetTypeId = 0;

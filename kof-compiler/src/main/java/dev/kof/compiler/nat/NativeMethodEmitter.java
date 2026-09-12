@@ -270,7 +270,13 @@ final class NativeMethodEmitter {
                     pushq %rax
                 """.stripIndent());
             case KofPop pop -> sb.append("    addq $8, %rsp\n");
-            case KofPop2 pop2 -> sb.append("    addq $16, %rsp\n");
+            // §142 (12/09): no nativo TODO valor de pilha é 1 qword — inclusive
+            // Long/Double (o 2º slot da convenção JVM não existe aqui; o frame
+            // de LOCAIS reserva 2 slots, mas o valor empilhado é 1). O POP2
+            // herdado do JVM (addq $16) desbalanceava a pilha e o push seguinte
+            // pisava no local — `mapOf(_,1L).put(_,2L); println(m.size)` dava
+            // SIGSEGV (o mapa lido era o System.out). Descartar 1 qword.
+            case KofPop2 pop2 -> sb.append("    addq $8, %rsp\n");
             case KofGetStatic gs -> {
                 // campo estático (bug 41): slot global no .data, não no objeto.
                 String sym = nb.staticSymbol(nb.staticKey(gs.ownerType()), gs.name());

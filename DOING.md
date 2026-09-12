@@ -387,17 +387,24 @@ literais listOf/mapOf):** widening abençoado (`listOf(1L).add(3)`,
 705032704 — R6); caminho LITERAL (bypassava o §126 inteiro) coberto com o
 mesmo par. Extração `CollectionWrites` (gate 500). Prova: células `collwiden`
 4/4 + `mapwiden` 3/4; suíte 1406+31+5+136/0-fail.
-(2b) **§142 ⏳ ABERTO (registrado com menor repro, NÃO corrigido — unidade
-própria):** Native `get` de chave NOVA em `Map<_,Long>` após `put` SIGSEGV,
-PRÉ-existente (Y2d/Y2e medidos com git stash no HEAD; put puro-Long crasha
-igual). Causa provável: tag de VALOR na inserção (família §123 no lado
-valor). Célula `mapwiden` deixa native excluído até lá.
-(3) **Próxima na mesa: §142** — causa raiz no `kof_map_put`/`kof_map_find`
-nativo (asm x86 `NativeX86Collections`/`NativeX86Calls` + fatias riscv
-`NativeRiscvAsmMapset*`): medir o put que cresce o mapa Long-value (a tag do
-slot novo?) e o caminho do get que deref. NÃO confundir com §123 (tag de
-CHAVE, já corrigido) — aqui é VALOR/inserção. Prova esperada: `mapwiden`
-sem exclusão 4/4 + `wrongkey`/`mapint`/`mapgetprim` intactos.
+(2b) **§142 ✅ FEITA 12/09 (causa raiz NÃO era o map):** o SIGSEGV de
+`mapOf(_,1L).put(_,2L); println(m.size)` era o **POP2 nativo** — `KofPop2`
+(x86 `addq $16`, cross `addi sp,sp,16`) descartava 2 qwords, mas o nativo
+empilha TODO valor como 1 qword → `%rsp` subia 8 além do frame e o push do
+`System.out` do println pisava o local `m` → o "mapa" lido era o PrintStream
+→ deref de lixo. Generaliza: QUALQUER expressão `Long`/`Double` descartada
+(`d == null`, `x == null`). Fix: POP2 nativo = 1 qword (2 emissores;
+aarch64 herda via tradutor). Prova: células `mapwiden` (agora SEM exclusão)
+e `longdiscard` 4/4; suíte compiler 1408/0-fail (13 err node amb);
+`mapint`/`mapgetprim`/`mapmutret`/`wrongkey` intactos. §142 CORRIGIDO.
+(3) **Próxima na mesa: fila P0→P5** — re-varrer `docs/status.md`/
+`backend-parity.md`/`specification-gaps.md` + suíte no HEAD atual (o rebase
+trouxe docs de outras lanes: GC mark-sweep decomposto em G-1..G-5,
+philosophy, README). Escolher o próximo gap REAL na lane do bugfixer sem
+colisão (NÃO tocar §101/§94/§44 congelados, §45/§106/DD-STDLIB decisão,
+§104b-ii/interp, S-4 riscv — outros agentes). Se a varredura não achar nada
+desbloqueado e a suíte estiver verde, avaliar a condição de ESTABILIDADE
+(AGENTS) antes de inventar trabalho.
 (4) só DEPOIS: triagem `specification-gaps.md`/`backend-parity.md` p/ gaps
 Re-disparo desta lane NÃO é estabilidade
 (há B1 real + fila #97 nouta lane). NUNCA pushar main sem pedido do humano.

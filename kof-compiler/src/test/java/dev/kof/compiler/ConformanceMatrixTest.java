@@ -381,9 +381,9 @@ class ConformanceMatrixTest {
                 }
                 """, "3\n4\n3", Set.of(), tempDir);
         // Map: o put com valor widening (Int em Map<_,Long>) crashava o JVM
-        // igual. Native EXCLUÍDO: `get` de chave NOVA em mapa Long-value dá
-        // SIGSEGV PRÉ-EXISTENTE (medido HEAD com git stash, Y2d/Y2e — bug
-        // separado do widening, §142).
+        // igual. O Native também crashava — §142 CORRIGIDO 12/09: o POP2 nativo
+        // (descarte do prev Long do put, expression-statement) fazia addq $16
+        // sobre 1 qword empilhado e pisava o local `m` (SIGSEGV). Agora 4/4.
         matrix("mapwiden", """
                 main() {
                     var m = mapOf("a", 1L)
@@ -391,7 +391,21 @@ class ConformanceMatrixTest {
                     println(m.get("b"))
                     println(m.get("a"))
                 }
-                """, "2\n1", Set.of("native"), tempDir);
+                """, "2\n1", Set.of(), tempDir);
+        // §142 (12/09): descarte de expressão Long/Double (POP2) no nativo
+        // desbalanceava a pilha — `m.put(...)` (prev Long) como statement, e
+        // `d == null`/`x == null` (fold que descarta o primitivo). 4/4.
+        matrix("longdiscard", """
+                main() {
+                    var m = mapOf("a", 1L)
+                    m.put("b", 2L)
+                    println(m.size)
+                    var d = 2.5
+                    println(d == null)
+                    var x = 1L
+                    println(x == null)
+                }
+                """, "2\nfalse\nfalse", Set.of(), tempDir);
 
         // §112 (paridade absoluta, 3 superfícies novas achadas no sweep de
         // coleções): (a) JVM **VerifyError** em `println(m.put(k,v))` com V

@@ -4370,28 +4370,38 @@ statement-switch na mesma taxa). Reprodução no próprio teste (kof-cli).
   qemu no job `cross-native`.
 - **Prioridade:** média-baixa (lixo ruidoso, workaround `if (x != null)`).
 
-### 142. Native: `get`/`contains` de chave NOVA num `Map<_,Long>` (após `put`) → **SIGSEGV** (JVM/Script/JS acertam) — ⏳ ABERTO 12/09 (achado ao travar `mapwiden`; **pré-existente**, não é regressão do §143)
+### 142. Native: descarte de expressão `Long`/`Double` (POP2) desbalanceava a pilha → **SIGSEGV** (`m.put(_,2L)` statement, `d==null`/`x==null`) — ✅ CORRIGIDO 12/09 (achado ao travar `mapwiden`; causa raiz NÃO era o map)
 
-- **Menor repro (Y2d/Y2e, medido 12/09 com `git stash` no HEAD — o widening
-  NÃO é a causa):** `var m = mapOf("a",1L); m.put("b",2L); println(m.get("b"))`
-  → `put` roda, o `get` da chave recém-inserida **SIGSEGV** no Native x86.
-  Com `put` de valor widening (`2`) dá o mesmo (`m.get("b")` crasha após
-  `p1`); sem o `put` (`println(m.get("a"))`) funciona. A célula `mapwiden`
-  roda JVM/Script/JS verdes e mantém `native` em `Set.of("native")` (PARTIAL)
-  até esta correção.
-- **Causa provável (não investigada até o fim — R6, registrado com menor
-  repro):** o `put` de mapa Long-value não consegue/incorrecta a tag do
-  valor novo (1=String-vs-raw, §123/§126) — o `get` faz `kof_string_equals`
-  sobre um Int/Long cru (ponteiro). Família do §123 (tag de chave no header
-  off 40) mas no lado VALOR / na inserção. Investigar `kof_map_put`/`kof_map_find`
-  nativo com mapa que cresce.
-- **Por que NÃO corrigi agora:** é pré-existente, independente do §143
-  (widening), e a correção toca o runtime nativo de map (asm x86 + fatias
-  riscv) — unidade própria, não misturar com o commit do widening.
-- **Prova do estado:** célula `mapwiden` (native excluído, JVM/Script/JS `2/1`)
-  + sondas Y2d/Y2e neste HEAD.
-- **Prioridade:** média (crash ruidoso; workaround: não crescer mapa de valor
-  primitivo largo, ou usar JVM).
+- **Menor repro (Y2d/Y2e/S_a/N2/LD, medido 12/09):**
+  `var m = mapOf("a",1L); m.put("b",2L); println(m.size)` → **SIGSEGV** no
+  Native x86. `m.put("b",2)` (valor Int) NÃO crasha; só com o valor `Long`.
+  O `put` em si completa (um `println("ok")` logo depois sai), mas QUALQUER
+  uso do mapa depois (size/get) crasha. Generaliza para qualquer expressão
+  `Long`/`Double` descartada: `var d = 2.5; println(d == null)` também.
+- **Causa raiz (asm disassembly, `objdump -d`):** no backend nativo **todo
+  valor de pilha é 1 qword** — inclusive `Long`/`Double` (o literal `1L` vira
+  `movq $1,%rax; pushq %rax`; `pushRiscv`/`pushq` sempre 8 bytes). Mas o IR
+  emite `KofPop2` (semântica JVM category-2) para descartar o resultado de
+  uma expressão double-width, e os dois emissores nativos mapeavam
+  `KofPop2 → addq $16` (x86) / `addi sp,sp,16` (cross). Resultado: descarta
+  16 bytes onde só 8 foram empilhados → `%rsp` sobe 8 além do frame → o
+  primeiro `push` seguinte (o `System.out` do `println`) **pisa no slot
+  local `m`** (`-0x10(%rbp)`); o `mov -0x10(%rbp),%rax` lê o `System.out`
+  como se fosse o mapa; `kof_map_size`/`kof_map_get` sobre o objeto errado →
+  deref de lixo → SIGSEGV. Prova no asm: S_a vs S_c diferiam em UMA instrução
+  (`add $0x10` vs `add $0x8`), e a sequência pós-put mostrava o push de
+  `System.out` colidindo com o local.
+- **Fix (IR compartilhado; aarch64 herda via tradutor):**
+  `NativeMethodEmitter` (x86) e `NativeRiscvCrossEmit` (riscv/aarch) passam a
+  mapear `KofPop2 → addq $8` / `addi sp,sp,8` — descarta 1 qword, a
+  convenção real do nativo. O `KofPop` (1 qword) fica igual; `KofDup2`/
+  `DupX1`/`DupX2` NÃO são afetados (duplicam pares de refs/índices de 1 qword
+  cada, corretos).
+- **Prova:** Y2d/Y2e/S_a/N2/LD agora `rc=0` com a saída correta; célula NOVA
+  `longdiscard` (`2/false/false`) 4/4 + `mapwiden` sem exclusão 4/4;
+  suíte compiler 1408/0-fail (13 err node amb); `mapint`/`mapgetprim`/
+  `mapmutret`/`wrongkey` intactos.
+- **Prioridade:** era alta (crash em qualquer descarte Long/Double nativo).
 
 ### 143. Widening numérico abençoado (§126 "Int em Long passa") em ESCRITA de coleção pinada → JVM **VerifyError/CCE** (Native/Script acertavam) — ✅ CORRIGIDO 12/09 (B1; o §121/array-store nunca chegou nas coleções)
 
