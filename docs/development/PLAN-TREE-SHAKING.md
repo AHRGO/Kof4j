@@ -302,9 +302,23 @@ após o aceite dos §T:
    root-scan do GC; gate: suíte cross sob qemu + `ArtifactSizeTest` com
    metas novas (hello x86 ≤ 45 KB — **JÁ BATEU na S-3: 32.520B**; o degrau
    x86 do S-5 agora é opcional/extra, o valor real é o cross).
-6. **S-6 (T2)** JS por família (writer registra famílias usadas no lowering);
-   hello ≤ ~20 KB; `KofJsBrowserE2ETest`/`KofHttpE2ETest`/`SpawnE2ETest` js*
-   verdes.
+6. **S-6 (T2)** JS — **DESIGN APROVADO PELA MANTENEDORA na #97 (12/09):**
+   granularidade é **unidade de topo**, não família (família fecha 89,6% do
+   runtime num hello — não serve como corte semântico). Sementes =
+   `runtimeImports`/`ioRuntimeImports` que o `JsBackend` já acumula (exatas,
+   sem heurística); chunker registra `provides`/`needs` por token (mesmo
+   desenho do `RuntimeSlices` nativo); BFS emite só o fecho **na ordem
+   original**; multi-módulo = **união dos fechamentos + reescrita** do
+   runtime compartilhado (nunca "primeiro módulo vence"); fallback
+   **conservador observável** (unidade não-analisável inteira + motivo no
+   build); **determinístico** (mesma entrada → mesmo conjunto → mesma ordem
+   → mesmo artefato; proibido depender de ordem de HashMap/BFS). Baselines
+   medidos pela proponente: hello 177.125→**6.202 B**, UI (pior caso)
+   13.335 B. Bug pré-existente descoberto no caminho (`kof_platform`
+   cross-module no `-io.mjs`, ReferenceError em uuid/random no Node) vai
+   para issue separada — não misturar no PR do T2. Gate: `ArtifactSize.jsBytes`
+   + ausência por família (hello ⇒ sem `kofSec*`/`kofUi*`; crypto ⇒
+   `kofSecSha256` sem `kofUiWindowNew`), tolerância unilateral.
 7. **S-7** docs consolidadas (`docs/stdlib-loading.md` ou seção em
    `docs/architecture/architecture.md`) + mover este doc para `docs/development/` no
    início da S-1 (regra dos três estados: com código em desenvolvimento,

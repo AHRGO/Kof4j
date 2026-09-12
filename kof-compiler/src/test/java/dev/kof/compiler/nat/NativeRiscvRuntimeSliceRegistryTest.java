@@ -78,4 +78,56 @@ class NativeRiscvRuntimeSliceRegistryTest {
         assertTrue(floor.size() < RiscvSlices.pieces().size() / 2,
                 "piso deveria ser minoria das peças, veio " + floor.size());
     }
+
+    @Test
+    void keepAllSubsetIsByteIdenticalToProduction() {
+        Set<Integer> all = new java.util.LinkedHashSet<>();
+        for (RiscvSlices.Piece p : RiscvSlices.pieces()) all.add(p.index());
+        assertEquals(RiscvSlices.renderRuntime(), RiscvSlices.renderSubset(all),
+                "keep-all não pode injetar NENHUMA diretiva extra (contexto nunca diverge)");
+    }
+
+    /** Trava a injeção de seção que impede o SIGILL de 12/09: ao podar, o
+     *  estado de seção na ENTRADA de cada peça mantida tem de ser o MESMO que
+     *  ela veria na concatenação de produção — senão código cai em .rodata
+     *  (símbolo `R`) → instrução ilegal em tempo de execução. Verificado para
+     *  cada um dos primeiros 12 buracos. Helper próprio p/ não depender do
+     *  formato da string que cada implementação injeta. */
+    @Test
+    void sectionContextIsRestoredAcrossHoles() {
+        List<RiscvSlices.Piece> ps = RiscvSlices.pieces();
+        String prod = RiscvSlices.renderRuntime();
+        for (int hole = 0; hole < 12 && hole < ps.size(); hole++) {
+            final int skip = hole;
+            Set<Integer> keep = new java.util.LinkedHashSet<>();
+            for (int i = 0; i < ps.size(); i++) if (i != skip) keep.add(i);
+            String sub = RiscvSlices.renderSubset(keep);
+            int atSub = 0; // busca SEQUENCIAL (indexOf global acharia subtexto repetido)
+            for (RiscvSlices.Piece p : ps) {
+                if (!keep.contains(p.index())) continue;
+                int at = sub.indexOf(p.text(), atSub);
+                assertTrue(at >= 0, "hole=" + hole + ": texto da peça " + p.index() + " não no subset");
+                assertEquals(sectionStateBefore(prod, prod.indexOf(p.text())),
+                        sectionStateBefore(sub, at),
+                        "hole=" + hole + ": seção de entrada da peça " + p.index()
+                                + " diverge da produção (risco de SIGILL)");
+                atSub = at + p.text().length();
+            }
+        }
+    }
+
+    /** Seção ativa imediatamente antes do offset `at` (normaliza `.text` e
+     *  `.section .text` p/ o MESMO formato, independente da injeção). O estado
+     *  inicial é o do head do NativeArchEmitter: `.section .text`. */
+    private static String sectionStateBefore(String text, int at) {
+        String cur = "text";
+        for (String l : text.substring(0, Math.max(0, at)).lines().toList()) {
+            String t = l.trim();
+            String s = null;
+            if (t.startsWith(".section")) s = t.split("\\s+")[1];
+            else if (t.equals(".text") || t.equals(".data") || t.equals(".bss") || t.equals(".rodata")) s = t.substring(1);
+            if (s != null) cur = s.startsWith(".") ? s.substring(1) : s;
+        }
+        return cur;
+    }
 }
