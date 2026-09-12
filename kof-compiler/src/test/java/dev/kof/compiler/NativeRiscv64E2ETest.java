@@ -952,4 +952,23 @@ main() {
         assertTrue(output.contains("out of memory"),
                 "esgotar o heap deve dar o panic honesto 'out of memory', foi: " + output);
     }
+
+    /** §142 (12/09): paridade cross do fix Pop2. O emissor riscv emitia
+     *  `addi sp,sp,16` p/ KofPop2 mas a pilha cross é 8 bytes/slot — o
+     *  MESMO desbalanceamento do x86 (`m.put("b",2L)` como statement +
+     *  `get` depois = SIGSEGV). Prova: o cenário que crashava no x86 roda
+     *  aqui sob qemu. */
+    @Test
+    void riscvMapPutDiscardedLongValueKeepsStackBalanced(@TempDir Path tempDir) throws IOException, InterruptedException {
+        assumeToolchain();
+        String output = runRiscv64(tempDir, """
+            main() {
+                var m = mapOf("a", 1L)
+                m.put("b", 2L)
+                println(m.get("b"))
+                println(m.get("a"))
+            }
+            """);
+        assertEquals("2\n1", output);
+    }
 }

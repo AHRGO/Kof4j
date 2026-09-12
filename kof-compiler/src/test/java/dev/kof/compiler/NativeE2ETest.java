@@ -1212,4 +1212,23 @@ class NativeE2ETest {
             """);
         runNative(source, tempDir.resolve("out"), "2\n7");
     }
+
+    @Test
+    void nativeMapPutDiscardedLongValueKeepsStackBalanced(@TempDir Path tempDir) throws IOException {
+        // §142: `m.put("b", 2L)` como STATEMENT descartava o valor (Long)
+        // com KofPop2 = `addq $16` — mas a pilha nativa é 8 bytes/slot, então
+        // o cleanup removia 2 slots p/ 1 valor empilhado e TODO código depois
+        // lia lixo (SIGSEGV no `get` seguinte, ec=139). O IR está certo p/ a
+        // JVM categoria-2; o fix é no emissor native (Pop2 = 1 slot).
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            main() {
+                var m = mapOf("a", 1L)
+                m.put("b", 2L)
+                println(m.get("b"))
+                println(m.get("a"))
+            }
+            """);
+        runNative(source, tempDir.resolve("out"), "2\n1");
+    }
 }

@@ -929,4 +929,20 @@ main() {
         assertTrue(output.contains("out of memory"),
                 "esgotar o heap deve dar o panic honesto 'out of memory', foi: " + output);
     }
+
+    /** §142 (12/09): paridade cross do fix Pop2 (idem riscv — o aarch herda
+     *  o emissor cross; `addi sp,sp,16` desbalanceava do mesmo jeito). */
+    @Test
+    void aarch64MapPutDiscardedLongValueKeepsStackBalanced(@TempDir Path tempDir) throws IOException {
+        assumeToolchain();
+        String output = runAarch64(tempDir, """
+            main() {
+                var m = mapOf("a", 1L)
+                m.put("b", 2L)
+                println(m.get("b"))
+                println(m.get("a"))
+            }
+            """);
+        assertEquals("2\n1", output);
+    }
 }
