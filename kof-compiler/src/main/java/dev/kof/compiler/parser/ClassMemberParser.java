@@ -24,7 +24,7 @@ public class ClassMemberParser {
 
     static AstNode parseClassMember(ParseContext ctx) {
         List<AnnotationNode> annos = AnnotationParser.parseAnnotations(ctx);
-        List<String> mods = Parser.parseModifiers(ctx);
+        List<String> mods = TypeDeclarations.parseModifiers(ctx);
         if (ctx.check(TokenType.IDENTIFIER) && ctx.peek().value().equals("constructor") && ctx.checkNext(TokenType.LPAREN)) {
             ConstructorDeclarationNode ctor = parseConstructor(ctx, mods);
             return new ConstructorDeclarationNode(ctor.position(), ctor.modifiers(), ctor.name(),
@@ -90,7 +90,7 @@ public class ClassMemberParser {
             ctx.error("nested type declaration is not supported: declare '" + nested
                     + "' at top level", "SEM042");
             ctx.advance();
-            return Parser.parseTypeDeclaration(ctx, annos);
+            return TypeDeclarations.parseTypeDeclaration(ctx, annos);
         }
         if (ctx.check(TokenType.LBRACE)) {
             ConstructorDeclarationNode ctor = parseConstructor(ctx, mods);

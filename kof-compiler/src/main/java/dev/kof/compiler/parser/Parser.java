@@ -2,19 +2,12 @@ package dev.kof.compiler.parser;
 import dev.kof.compiler.AnnotationNode;
 import dev.kof.compiler.ApplicationDeclarationNode;
 import dev.kof.compiler.AstNode;
-import dev.kof.compiler.ClassDeclarationNode;
 import dev.kof.compiler.CompilationUnitNode;
 import dev.kof.compiler.DiagnosticCollector;
-import dev.kof.compiler.EntityDeclarationNode;
-import dev.kof.compiler.EntityFieldNode;
-import dev.kof.compiler.EnumDeclarationNode;
 import dev.kof.compiler.ExpressionNode;
 import dev.kof.compiler.ExternalFunctionNode;
 import dev.kof.compiler.FormalParameterNode;
 import dev.kof.compiler.FunctionDeclarationNode;
-import dev.kof.compiler.InterfaceDeclarationNode;
-import dev.kof.compiler.RecordComponentNode;
-import dev.kof.compiler.RecordDeclarationNode;
 import dev.kof.compiler.ReturnStmt;
 import dev.kof.compiler.SourcePosition;
 import dev.kof.compiler.StatementNode;
@@ -24,7 +17,6 @@ import dev.kof.compiler.TokenType;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Parser recursivo-descendente (entrada pública) — REFACTOR-500, FASE 7.
@@ -36,16 +28,14 @@ import java.util.Set;
  *   <li>{@link ExpressionParser} / {@link LambdaParser} — expressões e lambdas</li>
  *   <li>{@link TypeParser} — tipos, parâmetros formais e throws</li>
  *   <li>{@link AnnotationParser} / {@link ClassMemberParser} — annotations e membros</li>
+ *   <li>{@link TypeDeclarations} — declarações de tipo (class/interface/
+ *       record/enum/entity) — extraído no ratchet do §140 (Parser 513&gt;500)</li>
  * </ul>
  * Permanecem aqui: entrypoint, package/imports/test/application,
- * declarações de tipo, e os helpers de token compartilhados
+ * e os helpers de token compartilhados
  * ({@code splitShiftRight}, {@code isGenericReturnTypeAhead}).
  */
 public class Parser {
-
-    static final Set<String> PRIMITIVE_TYPE_NAMES = Set.of(
-            "bool", "byte", "short", "int", "long", "float", "double", "char", "string", "void"
-    );
 
     private final ParseContext ctx;
 
@@ -71,13 +61,13 @@ public class Parser {
                 declarations.add(parseApplicationDeclaration(ctx));
             } else if (!annos.isEmpty()
                     && (ctx.check(TokenType.CLASS, TokenType.INTERFACE, TokenType.RECORD, TokenType.ENTITY))) {
-                declarations.add(parseTypeDeclaration(ctx, annos));
+                declarations.add(TypeDeclarations.parseTypeDeclaration(ctx, annos));
             } else if (ctx.check(TokenType.EXTERN)) {
                 declarations.add(parseExternDeclaration(ctx));
             } else if (ctx.check(TokenType.IDENTIFIER) || ctx.check(TokenType.VOID) || TypeParser.isPrimitiveType(ctx)) {
                 declarations.add(parseFunctionDeclaration(ctx, List.of(), annos));
             } else {
-                declarations.add(parseTypeDeclaration(ctx, annos));
+                declarations.add(TypeDeclarations.parseTypeDeclaration(ctx, annos));
             }
         }
         return new CompilationUnitNode(pos0, packageName, imports, List.copyOf(declarations));
@@ -326,188 +316,5 @@ public class Parser {
         return result;
     }
 
-    static AstNode parseTypeDeclaration(ParseContext ctx, List<AnnotationNode> annos) {
-        List<String> mods = parseModifiers(ctx);
-        if (ctx.check(TokenType.CLASS)) return parseClassDeclaration(ctx, mods, annos);
-        if (ctx.check(TokenType.INTERFACE)) return parseInterfaceDeclaration(ctx, mods, annos);
-        if (ctx.check(TokenType.RECORD)) return parseRecordDeclaration(ctx, mods, annos);
-        if (ctx.check(TokenType.ENUM)) return parseEnumDeclaration(ctx, mods, annos);
-        if (ctx.check(TokenType.ENTITY)) return parseEntityDeclaration(ctx, mods, annos);
-        ctx.error("Expected type declaration", "PARSE007");
-        ctx.advance();
-        return new ClassDeclarationNode(ctx.pos(), "error", List.of(), null, List.of(), List.of(), List.of(), annos);
-    }
-
-    static List<String> parseModifiers(ParseContext ctx) {
-        List<String> mods = new ArrayList<>();
-        while (ctx.check(TokenType.PUBLIC, TokenType.PRIVATE, TokenType.PROTECTED, TokenType.STATIC,
-                TokenType.FINAL, TokenType.ABSTRACT, TokenType.TRANSIENT, TokenType.VOLATILE,
-                TokenType.SYNCHRONIZED, TokenType.NATIVE, TokenType.DEFAULT, TokenType.OVERRIDE)) {
-            mods.add(ctx.advance().value());
-        }
-        return mods;
-    }
-
-    /** enum Name { A, B, C } — constantes apenas (MVP P1). */
-    static AstNode parseEnumDeclaration(ParseContext ctx, List<String> mods, List<AnnotationNode> annos) {
-        ctx.expect(TokenType.ENUM, "Expected 'enum'", "PARSE030");
-        String name = ctx.expectId("Expected enum name", "PARSE031");
-        java.util.List<String> constants = new ArrayList<>();
-        if (ctx.check(TokenType.LBRACE)) {
-            ctx.advance();
-            while (!ctx.check(TokenType.RBRACE) && !ctx.check(TokenType.EOF)) {
-                if (ctx.check(TokenType.IDENTIFIER)) {
-                    constants.add(ctx.advance().value());
-                } else {
-                    ctx.error("Expected enum constant", "PARSE032");
-                    ctx.advance();
-                }
-                if (ctx.check(TokenType.COMMA)) ctx.advance();
-            }
-            ctx.expect(TokenType.RBRACE, "Expected '}' after enum body", "PARSE033");
-        }
-        return new EnumDeclarationNode(ctx.pos(), name, mods, constants, annos);
-    }
-
-    static AstNode parseClassDeclaration(ParseContext ctx, List<String> mods, List<AnnotationNode> annos) {
-        ctx.advance();
-        String name = ctx.expectId("Expected class name", "PARSE008");
-        ctx.currentClassName = name;
-        List<String> typeParams = TypeParser.parseTypeParameters(ctx);
-        String superClass = null;
-        if (ctx.check(TokenType.EXTENDS)) {
-            ctx.advance();
-            superClass = TypeParser.parseTypeRef(ctx);
-        }
-        List<String> ifaces = parseImplementedInterfaces(ctx);
-
-        if (ctx.check(TokenType.LPAREN)) {
-            return parseRecordBody(ctx, name, mods, superClass, ifaces, typeParams);
-        }
-        List<AstNode> members = new ArrayList<>();
-        if (ctx.check(TokenType.LBRACE)) {
-            ctx.advance();
-            while (!ctx.check(TokenType.RBRACE) && !ctx.atEnd()) {
-                members.add(ClassMemberParser.parseClassMember(ctx));
-            }
-            ctx.expect(TokenType.RBRACE, "Expected '}' after class body", "PARSE009");
-        }
-        return new ClassDeclarationNode(ctx.pos(), name, mods, superClass, ifaces, typeParams,
-                List.copyOf(members), annos);
-    }
-
-    static InterfaceDeclarationNode parseInterfaceDeclaration(ParseContext ctx, List<String> mods, List<AnnotationNode> annos) {
-        ctx.advance();
-        String name = ctx.expectId("Expected interface name", "PARSE010");
-        List<String> ifaces = new ArrayList<>();
-        if (ctx.check(TokenType.EXTENDS)) {
-            ctx.advance();
-            ifaces.add(TypeParser.parseTypeRef(ctx));
-            while (ctx.check(TokenType.COMMA)) {
-                ctx.advance();
-                ifaces.add(TypeParser.parseTypeRef(ctx));
-            }
-        }
-        List<AstNode> members = new ArrayList<>();
-        if (ctx.check(TokenType.LBRACE)) {
-            ctx.advance();
-            while (!ctx.check(TokenType.RBRACE) && !ctx.atEnd()) {
-                members.add(ClassMemberParser.parseClassMember(ctx));
-            }
-            ctx.expect(TokenType.RBRACE, "Expected '}' after interface body", "PARSE011");
-        }
-        return new InterfaceDeclarationNode(ctx.pos(), name, mods, ifaces, List.copyOf(members), annos);
-    }
-
-    static EntityDeclarationNode parseEntityDeclaration(ParseContext ctx, List<String> mods, List<AnnotationNode> annos) {
-        ctx.advance(); // entity
-        String name = ctx.expectId("Expected entity name", "PARSE024");
-        ctx.entityNames.add(name);
-        List<EntityFieldNode> fields = new ArrayList<>();
-        ctx.expect(TokenType.LBRACE, "Expected '{' after entity name", "PARSE024");
-        while (!ctx.check(TokenType.RBRACE) && !ctx.atEnd()) {
-            SourcePosition fieldPos = ctx.pos();
-            String fieldName = ctx.expectId("Expected field name in entity", "PARSE024");
-            ctx.expect(TokenType.COLON, "Expected ':' after field name", "PARSE024");
-            String fieldType = TypeParser.parseTypeRef(ctx);
-            boolean generated = false;
-            boolean unique = false;
-            while (ctx.check(TokenType.GENERATED, TokenType.UNIQUE)) {
-                if (ctx.check(TokenType.GENERATED)) generated = true;
-                if (ctx.check(TokenType.UNIQUE)) unique = true;
-                ctx.advance();
-            }
-            fields.add(new EntityFieldNode(fieldPos, fieldType, fieldName, generated, unique));
-        }
-        ctx.expect(TokenType.RBRACE, "Expected '}' after entity body", "PARSE024");
-        return new EntityDeclarationNode(ctx.pos(), name, mods, fields, annos);
-    }
-
-    static RecordDeclarationNode parseRecordDeclaration(ParseContext ctx, List<String> mods, List<AnnotationNode> annos) {
-        ctx.advance();
-        String name = ctx.expectId("Expected record name", "PARSE012");
-        List<String> typeParams = TypeParser.parseTypeParameters(ctx);
-        String superClass = null;
-        if (ctx.check(TokenType.EXTENDS)) {
-            ctx.advance();
-            superClass = TypeParser.parseTypeRef(ctx);
-        }
-        List<String> ifaces = parseImplementedInterfaces(ctx);
-        RecordDeclarationNode rec = parseRecordBody(ctx, name, mods, superClass, ifaces, typeParams);
-        return new RecordDeclarationNode(rec.position(), rec.name(), rec.modifiers(), rec.superClass(),
-                rec.interfaces(), typeParams, rec.components(), rec.members(), annos);
-    }
-
-    static RecordDeclarationNode parseRecordBody(ParseContext ctx, String name, List<String> mods, String superClass,
-                                                  List<String> ifaces, List<String> typeParams) {
-        List<RecordComponentNode> components = new ArrayList<>();
-        if (ctx.check(TokenType.LPAREN)) {
-            ctx.advance();
-            if (!ctx.check(TokenType.RPAREN)) {
-                components.add(parseRecordComponent(ctx));
-                while (ctx.check(TokenType.COMMA)) {
-                    ctx.advance();
-                    components.add(parseRecordComponent(ctx));
-                }
-            }
-            ctx.expect(TokenType.RPAREN, "Expected ')' after record components", "PARSE013");
-        }
-        List<AstNode> members = new ArrayList<>();
-        if (ctx.check(TokenType.LBRACE)) {
-            ctx.advance();
-            while (!ctx.check(TokenType.RBRACE) && !ctx.atEnd()) {
-                members.add(ClassMemberParser.parseClassMember(ctx));
-            }
-            ctx.expect(TokenType.RBRACE, "Expected '}' after record body", "PARSE014");
-        }
-        return new RecordDeclarationNode(ctx.pos(), name, mods, superClass, ifaces,
-                typeParams, List.copyOf(components), List.copyOf(members), List.of());
-    }
-
-    static List<String> parseImplementedInterfaces(ParseContext ctx) {
-        List<String> ifaces = new ArrayList<>();
-        if (ctx.check(TokenType.IMPLEMENTS)) {
-            ctx.advance();
-            ifaces.add(TypeParser.parseTypeRef(ctx));
-            while (ctx.check(TokenType.COMMA)) {
-                ctx.advance();
-                ifaces.add(TypeParser.parseTypeRef(ctx));
-            }
-        }
-        return ifaces;
-    }
-
-    static RecordComponentNode parseRecordComponent(ParseContext ctx) {
-        List<AnnotationNode> annos = AnnotationParser.parseAnnotations(ctx);
-        List<String> mods = parseModifiers(ctx);
-        String type = TypeParser.parseTypeRef(ctx);
-        String name = ctx.expectId("Expected component name", "PARSE015");
-        ExpressionNode init = null;
-        if (ctx.check(TokenType.EQUAL)) {
-            ctx.advance();
-            init = ExpressionParser.parseExpression(ctx);
-        }
-        return new RecordComponentNode(ctx.pos(), mods, type, name, init, annos);
-    }
 
 }

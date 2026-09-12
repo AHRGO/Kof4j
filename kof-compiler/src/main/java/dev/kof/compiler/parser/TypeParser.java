@@ -78,7 +78,7 @@ public class TypeParser {
 
     static FormalParameterNode parseFormalParameter(ParseContext ctx) {
         List<AnnotationNode> annos = AnnotationParser.parseAnnotations(ctx);
-        List<String> mods = Parser.parseModifiers(ctx);
+        List<String> mods = TypeDeclarations.parseModifiers(ctx);
         if (ctx.check(TokenType.IDENTIFIER) && ctx.checkNext(TokenType.COLON)) {
             // name: Type — annotation form (idiomatic for main(args: List<String>))
             String name = ctx.advance().value();

@@ -61,7 +61,7 @@ final class ExpressionNewParser {
         }
         if (ctx.check(TokenType.IDENTIFIER)) {
             String name = ctx.peek().value();
-            if (Parser.PRIMITIVE_TYPE_NAMES.contains(name.toLowerCase()) || Parser.PRIMITIVE_TYPE_NAMES.contains(name)) {
+            if (TypeDeclarations.PRIMITIVE_TYPE_NAMES.contains(name.toLowerCase()) || TypeDeclarations.PRIMITIVE_TYPE_NAMES.contains(name)) {
                 ctx.advance();
                 return name;
             }

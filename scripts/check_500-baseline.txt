@@ -1,20 +1,20 @@
-# Baseline de dívida >500 linhas — 12/09 (§140). NÃO adicionar linhas:
-# dívida nova é proibida; ao splitar uma classe, remova a linha e rode
-# scripts/check_500.sh --update-baseline. Meta: este arquivo vazio (PLAN-SOLID-500).
-664	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeBackend.java
-577	kof-compiler/src/main/java/dev/kof/compiler/SemExpressionTyper.java
-557	kof-compiler/src/main/java/dev/kof/compiler/runtime/RuntimeUi.java
-554	kof-compiler/src/main/java/dev/kof/compiler/ExpressionInstanceCallLowerer.java
-550	kof-compiler/src/main/java/dev/kof/compiler/MemberCallTyper.java
-539	kof-compiler/src/main/java/dev/kof/compiler/KofUi.java
-538	kof-compiler/src/main/java/dev/kof/compiler/MethodCallTyper.java
-535	kof-compiler/src/main/java/dev/kof/compiler/SemanticAnalyzer.java
-530	kof-compiler/src/main/java/dev/kof/compiler/js/JsControlFlowParser.java
+# Baseline de dívida >500 linhas — 12/09 (§140, ratchet). NÃO adicionar linhas:
+# dívida nova é proibida; ao splitar uma classe, rode scripts/check_500.sh
+# --update-baseline (re-grava o estado atual). Meta: este arquivo vazio
+# (PLAN-SOLID-500 concluído). Parser.java removida 12/09: split TypeDeclarations.
 521	kof-cli/src/main/java/dev/kof/cli/BytecodeDecoder.java
-520	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeUiLayout.java
+554	kof-compiler/src/main/java/dev/kof/compiler/ExpressionInstanceCallLowerer.java
 515	kof-compiler/src/main/java/dev/kof/compiler/ExpressionMethodCallLowerer.java
+530	kof-compiler/src/main/java/dev/kof/compiler/js/JsControlFlowParser.java
+520	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeUiLayout.java
 514	kof-compiler/src/main/java/dev/kof/compiler/jvm/JvmOpCollections.java
-513	kof-compiler/src/main/java/dev/kof/compiler/parser/Parser.java
 510	kof-compiler/src/main/java/dev/kof/compiler/jvm/JvmRuntimeUi.java
+539	kof-compiler/src/main/java/dev/kof/compiler/KofUi.java
+550	kof-compiler/src/main/java/dev/kof/compiler/MemberCallTyper.java
+538	kof-compiler/src/main/java/dev/kof/compiler/MethodCallTyper.java
+664	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeBackend.java
 507	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeRiscvAsmMapset0.java
+557	kof-compiler/src/main/java/dev/kof/compiler/runtime/RuntimeUi.java
+535	kof-compiler/src/main/java/dev/kof/compiler/SemanticAnalyzer.java
+577	kof-compiler/src/main/java/dev/kof/compiler/SemExpressionTyper.java
 506	kof-compiler/src/main/java/dev/kof/compiler/StatementLowerer.java
