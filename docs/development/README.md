@@ -27,7 +27,7 @@ paridade com gaps honestos), `docs/language-reference/specification-gaps.md`
 | # | Plano | Estado | Por que nesta posição | Próximo passo concreto |
 |---|---|---|---|---|
 | 1 | `PLAN-TREE-SHAKING.md` (#97) | `EM CURSO` — S-1..S-5 ✅ 12/09 (poda x86+riscv+aarch + **gc-sections cross**: riscv 103→18 syms) | **frente designada pela mantenedora 11/09**; só resta S-6 (outra lane) + S-7 (depende dele) | **S-6** (T2 JS, unidade de topo — design aprovado na #97 12/09) = ViniAguiar1; **S-5 parte x86** = Fila bugfix (exige `kof_heap_root_end`+`emitStaticData` no intervalo — conservative-scan); S-7 consolida p/ `docs/` quando S-6 fechar |
-| 2 | `refactoring/PLAN-SOLID-500.md` | `EM CURSO` — F2/F3 + resíduo | gate ≤500 virou **ratchet travado no CI** (2652aa45, §140): dívida não cresce e só encolhe; a contagem autoritativa é `wc -l scripts/check_500-baseline.txt` (12/09: 17→**12** nos splits `c2c4d965`/`48e3cc56`/`84b7b091`/`68b22416` — atualize APONTANDO p/ o arquivo, não gravando nº que apodrece a cada split) | F2 (CompilerDriver, grupo de orquestração) + F3 (NativeBackend); split de ≤500 por commit com suíte verde |
+| 2 | `refactoring/PLAN-SOLID-500.md` | `EM CURSO` — **F2 ✅ FEITA 12/09** (CompilerDriver 487 ≤500 medido, ratchet sem violação — critério autoritativo cumprido, regra do dono-morto); resta **só F3** (NativeBackend 664) | gate ≤500 virou **ratchet travado no CI** (2652aa45, §140): dívida não cresce e só encolhe; a contagem autoritativa é `wc -l scripts/check_500-baseline.txt` (12/09: 17→**12** nos splits `c2c4d965`/`48e3cc56`/`84b7b091`/`68b22416` — atualize APONTANDO p/ o arquivo, não gravando nº que apodrece a cada split) | F3 = extrair ~164 linhas do NativeBackend p/ ≤500 — **BLOQUEADA pela lane GC/tree-shaking viva em `nat/`** (G-0 18:59); abrir quando a fila `nat/` liberar |
 | 3 | `native-multiarch.md` (NATIVE002) | `EM CURSO` — ~30 faces cross fechadas sob qemu (39+39) | paridade riscv/aarch = condição de estabilidade do release | GC mark-sweep p/ riscv/aarch (faces restantes da §5; JS é outra frente) |
 | 4 | `planning-otp-supervision.md` (#83) | `EM CURSO` — 1ª fatia 11/09 (JVM+Script; Native=OTP001 §129, JS=OTP002 §132) | **autORIZADO pela mantenedora** (issue #83) | fatia 2 do núcleo (limite de reinícios/shutdown p/ JVM; promover OTP001/002 só com decisão) |
 | 5 | `plan-editor-integration.md` (EDI001) | `EM CURSO` — graus 1-3, 4-10, 11, 12 ✅ | único degrau sem dono pendente é tooling | plugin IntelliJ (DAP/LSP já funcionam via CLI) |
@@ -104,7 +104,7 @@ escalar, §108, §138, MATH001, TIME002.
 | `roadmap-audit.md` | matriz 06/09 + fila P0→P5 (P0 FECHADO 09/09) | re-audit quando algo fecha |
 | `KOFUI-AUDIT.md` | UI001-Native (face R6: no-op silencioso) ABERTO | lane UI |
 | `known-bugs.md` | 14 abertos (triagem §2 acima) | fila viva |
-| `refactoring/PLAN-SOLID-500.md` | F1,4–9 ✅; **F2/F3 em curso**; ratchet `check_500-baseline.txt` (dívidas travadas — nº autoritativo = `wc -l` do arquivo; 12/09: 17→12 nos splits `c2c4d965`/`48e3cc56`/`84b7b091`/`68b22416`) no CI | F2/F3 fecham o plano |
+| `refactoring/PLAN-SOLID-500.md` | F1–2, 4–9 ✅ (**F2 fechada 12/09** — 487 ≤500 medido); **só F3 em curso** (NativeBackend 664, bloqueada pela lane GC em `nat/`); ratchet `check_500-baseline.txt` (dívidas travadas — nº autoritativo = `wc -l` do arquivo; 12/09: 17→12 nos splits `c2c4d965`/`48e3cc56`/`84b7b091`/`68b22416`) no CI | F3 fecha o plano |
 
 ### 4.3 `future/` — só plano, zero código (não é trabalho atual)
 

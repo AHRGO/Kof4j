@@ -225,8 +225,8 @@ Perda de contexto (por que o código é assim)
 | Fase | Classe-alvo | Status | Prova |
 |---|---|---|---|
 | 1 | NativeRuntime 17726 | ✅ FEITA | 142 + ~60 classes Runtime* ≤500 (agente-idiomatic) |
-| 2 | CompilerDriver 8870 | 🟡 EM CURSO | 1545 (F2.33–F2.44 feitos; grupo de orquestração pendente — agente-idiomatic) |
-| 3 | NativeBackend 6813 | 🟡 EM CURSO | lane agente-idiomatic |
+| 2 | CompilerDriver 8870 | ✅ FEITA (critério ≤500 atingido) | **487 linhas medidas no HEAD 12/09** (`wc -l`), ausente do ratchet `check_500-baseline.txt` (o critério autoritativo da §140), `check_500.sh` OK; extrações reais (não exatamente as 18 nomes do desenho — a forma divergiu, o critério não): `CompilerPipeline` 467, `CompilerImports` 255, `CompilerDesugar` 345, `CompilerTypes` 335, `CompilerDriverState` 422, `CompilerUiEmitter` 241 (F2.51–F2.53), `StatementLowerer` 499, `ExpressionLowerer` 486, `BoxClassFactory`, `StringMethodRegistry` + 12 classes Compiler* auxiliares, todas ≤500. Dono original (agente-idiomatic) mudo em CompilerDriver desde F2.53 06/09 — fechada pela regra do dono-morto com o critério MEDIDO cumprido (DOING 12/09) |
+| 3 | NativeBackend 6813 | 🟡 EM CURSO | 664 (último violador do ratchet junto com 11 resíduos 504–577); **BLOQUEADA por colisão**: lane GC/tree-shaking (sessão irmã) está viva em `nat/` (G-0 `356f33b9` 18:59, §142 `360401a4`) — abrir só quando a fila `nat/` liberar; meta: extrair ~164 linhas p/ ≤500 |
 | 4 | JsBackend 6064 | ✅ FEITA | 334 + 22 classes, JS byte-idêntico (`226994c`) |
 | 5 | JvmRuntime 2526 | ✅ FEITA | 132 + 7 classes, source byte-idêntico (`01af2d5`) |
 | 6 | SemanticAnalyzer 2293 | ✅ FEITA | 396 + 8 classes (`6e2ff77`) |
@@ -236,7 +236,8 @@ Perda de contexto (por que o código é assim)
 
 Gate permanente: `scripts/check_500.sh` falha se qualquer classe de produção
 ultrapassar 500 linhas. Exceções documentadas: `static Opcodes.*` (convenção
-ASM). O plano está completo quando Fases 2 e 3 fecharem (lane agente-idiomatic).
+ASM). O plano está completo quando a Fase 3 fechar (F2 ✅ 12/09 — critério ≤500
+medido cumprido; F3 bloqueada pela lane GC em `nat/`).
 
 > **⚠️ RETIFICADO 12/09 (§140 known-bugs): o gate era decorativo.** Nenhum
 > workflow chamava `check_500.sh` → a medição acima ("todas ≤500") **regrediu
