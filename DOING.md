@@ -359,17 +359,25 @@ NAT-STR01 (decisão), §104b-ii/interp/S-4 riscv (outros agentes). Gate da suít
 skips cross sem toolchain neste host).
 
 **PRÓXIMO PASSO (bugfixer, re-dispacho — a mesa AGORA TEM trabalho real):**
-(1) **B2 (menor, 1 ponto):** `ExpressionBinaryLowerer` concatenação — desempacotar
-`Nullable(primitivo)` no ternário do arg do valueOf NATIVO (linhas ~156 e ~163)
-para bater com `boxPrimitive:154`. Prova: nova célula/parte da `nullableprint`
-com `println("a" + ni())`→`a0` no Native (hoje lixo); suíte verde; commit.
-(2) **B1 (médio):** widening-write em coleção pinada → JVM VerifyError/CCE vs
-Native/Script corretos. Causa no add do JVM (`JvmOpCollections`/`emitBoxIfPrimitive`
-trate o receiver PINADO e não o tipo do arg no store). Travar com célula
-`collwiden` 4/4. NÃO rejeitar (§126 deixa widening passar de propósito).
+(1) **B2 ✅ FEITA 12/09 (registrada como §141):** Native `"a" + <Int?-null>` →
+lixo; fix no emit-side (`ExpressionBinaryLowerer` guard único do box+valueOf,
+1 sítio ×2 lados, IR compartilhado → x86/riscv/aarch corrigidos de uma vez —
+os 3 dispatchers já desempacotavam o INNER e estavam corretos; o lixo era o
+SEGUNDO valueOf sobre a string já-formatada). Prova: `nullableprint` +`a0/0b`
+4/4; NativeE2ETest 64/64 byte-idêntico; §141 + matriz.
+(2) **B1 (única unidade real restante):** widening-write em coleção pinada →
+JVM VerifyError/CCE vs Native/Script corretos. `listOf(1L).add(2)` → JVM
+VerifyError no get/store; `l.set(0,3L)` idem; `mapOf("a",1L).put("b",2)` →
+ClassCastException no get. Native+Script acertam TODOS (o widening é
+documentado §121/§126 "widening passa"). Causa provável: add/get do JVM
+(`JvmOpCollections`) usa o tipo PINADO no `emitBoxIfPrimitive`/unbox sem o
+widen do IR (I2L/L2I por `emitWideningIfNeeded`) — investigar o caminho do
+KofCall `kof_list_add` p/ primitivos. Travar célula `collwiden` 4/4. NÃO
+rejeitar (§126 deixa widening passar de propósito; rejeitar = regression do
+contrato deles).
 (3) só DEPOIS: triagem `specification-gaps.md`/`backend-parity.md` p/ gaps
 String/encoding/time com oracle claro. Re-disparo desta lane NÃO é estabilidade
-(há B1/B2 reais + fila #97 nouta lane). NUNCA pushar main sem pedido do humano.
+(há B1 real + fila #97 nouta lane). NUNCA pushar main sem pedido do humano.
 
 **FEITO (11/09, lane Native cross — §113 FACES riscv64+aarch64 FECHADAS — `kof_multi_alloc` recursivo cross):** o maintainer corrigiu o x86 e deixou "faces riscv/aarch = port p/ sessão c/ toolchain" — a toolchain ESTÁ neste host (`/usr/bin/qemu-riscv64|aarch64` + binutils), então o port é o degrau óbvio da fila. Fatia nova `NativeRiscvAsmRtB37` (0 colisões .L/.globl verificadas vs vencedora): `kof_multi_alloc(a0=dimsBase, a1=n, a2=i, a3=leafStride)` recursivo espelhando o x86 — MESMA fórmula de offset `d_i = base + 8*(n-i)`; ABI própria: o chamador passa o PRÓPRIO sp como base (dimensões já empilhadas, d_n no topo) e sÓ AVANÇA o sp depois (sem pilha dinâmica — frame fixo do helper salva ra+s0..s6, 112B); nó interno = elemSize 8 (ponteiros), folha = stride do baseType com payload ZEROED byte-a-byte via laço `sb` (paridade MULTIANEWARRAY — kof_alloc é bump-pointer sem zero). Roteio `KofNewMultiArray` em `NativeRiscvCrossEmit` (antes caía no default-comentário NATIVE002); aarch herda 100% via tradutor (verificado: `sb zero`→`strb wzr`, `bge`/`bne`/`mul`/`slli` todos cobertos, 0 UNHANDLED). **Prova:** `riscv64MultiDimArray`/`aarch64MultiDimArray` (10 saídas golden = oracle JVM medido: lengths 2/3 + zero-fill + store/load + 3-D completo `2 3 0 7 2 2 9 0`); sabotagem → FAIL com saída real (não-vazio provado). Docs: célula `array2d` da matriz (faces cross ✅) + §113. **PRÓXIMO PASSO (re-dispacho):** (1) §113 PUSHADO `d2a4dc0a`+docs `edb86c34` (suíte do HEAD pré-rebase 1477/0/5skip; gate no HEAD exato rodando `push-gate.log` — se vermelho, é meu para corrigir antes da próxima unidade); (2) fila lane Native com toolchain real: §107 Native println(coleção) — ABERTO, backend-only, sem gate, R6 violada hoje (imprime lixo de ponteiro); fix = helpers toString recursivos dos 3 tipos de coleção (espelho `kofFormat` do JS §107-JS, x86 primeiro + fatia riscv + tradutor); §114 hash/coleção fica ATRELADO à infra storage-box do §104b-ii(i) (grande, avaliar antes); NÃO tocar §101/§94/§44 (congelados), §45/§106/DD-STDLIB (decisão mantenedora), lane §104/interp (outros agentes). NUNCA pushar main sem pedido do humano.
 

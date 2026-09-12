@@ -4337,3 +4337,35 @@ statement-switch na mesma taxa). Reprodução no próprio teste (kof-cli).
 - **Prioridade:** processual (não afeta output do compilador). **Follow-up
   honesto:** zerar o baseline = as Fases 2/3+resíduos do PLAN-SOLID-500; as 17
   dívidas listadas são a fila real dessa frente, não a tabela de 9 fases.
+
+### 141. Native: `"a" + <Int?-null>` (concatenação de primitivo-nullable) → LIXO de ponteiro (JVM/Script dão `a0`) — ✅ CORRIGIDO 12/09 (achado no "reteste tudo", pré-existente ao §125)
+
+- **Menor repro (Q1, medido 12/09):** `Int? ni() { return null }` +
+  `println("a" + ni())` → **Native**: `a1297530912` (lixo — ponteiro formatado
+  como int); **JVM/Script**: `a0` ✅; era INDEPENDENTE do §125 (medido com
+  `git stash` no HEAD: mesmo lixo sem o fold). Concatenação de `Int` não-
+  -nullable (`"a" + five()`) já dava `a5` correto no Native.
+- **Causa raiz:** `ExpressionBinaryLowerer` (lado-esquerdo ~154 e lado-direito
+  ~161) faz DOIS passos por operando não-String: (i) `boxPrimitive(accType)`
+  — que DESEMPACOTA `Nullable(Int)`→Int e, no Native, chama `kof_int_to_string`
+  (deixa uma STRING na pilha); (ii) um `valueOf` externo cujo ternário de
+  escolha-de-param testava `!(accType instanceof Type.PrimitiveType)` (NÃO
+  desempacota) → p/ `Nullable(Int)` o teste passava e o valueOf era emitido com
+  `argType=Nullable(Int)` → o dispatcher nativo (`NativeX86Calls:166` já usa o
+  inner Int) rodava `kof_int_to_string` SOBRE O PONTEIRO DA STRING do passo (i)
+  = lixo. O `NativeX86Calls` estava certo; o BUG era o ternário do emitir NÃO
+  desempacotar, divergindo do `boxPrimitive` logo acima (assimetria
+  `isPrimitiveType` vs `instanceof PrimitiveType` — a MESMA classe de causa do
+  §125).
+- **Fix (1 sítio ×2 lados):** `accStringified = !isString && isPrimitiveType`
+  (o MESMO guard que dispara o `boxPrimitive`) → se o box/stringuificação já
+  rodou, o valueOf externo recebe `UNKNOWN` (no-op). Nullable(primitivo) deixa
+  de cair no caminho duplo. Comportamento inalterado p/ Int/String/record/
+  coleção não-nullable (o guard é idêntico ao antigo nesses casos).
+- **Prova:** célula `nullableprint` ampliada (+`println("a" + ni())`→`a0`,
+  `println(ni() + "b")`→`0b`, 4/4 sem exclusão); `NativeE2ETest` 64/64
+  byte-idêntico (o caminho de print não-regrediu); `ConformanceMatrixTest`
+  11/11. Faces riscv/aarch: o dispatcher `NativeRiscvCrossOps` lê o INNER do
+  Nullable (linhas 22/46/52/58) — mesmo valor `0` do golden; prova cross sob
+  qemu no job `cross-native`.
+- **Prioridade:** média-baixa (lixo ruidoso, workaround `if (x != null)`).

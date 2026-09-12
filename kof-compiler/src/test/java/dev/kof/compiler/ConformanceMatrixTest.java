@@ -358,8 +358,10 @@ class ConformanceMatrixTest {
                     Int? v = if (false) 9 else null
                     println(v)
                     println(bn(-1))
+                    println("a" + ni())
+                    println(ni() + "b")
                 }
-                """, "0\nfalse\n0\n6\nfalse\nfalse\nfalse\nfalse\nfalse\n7\n0\n0\nfalse", Set.of(), tempDir);
+                """, "0\nfalse\n0\n6\nfalse\nfalse\nfalse\nfalse\nfalse\n7\n0\n0\nfalse\na0\n0b", Set.of(), tempDir);
 
         // §112 (paridade absoluta, 3 superfícies novas achadas no sweep de
         // coleções): (a) JVM **VerifyError** em `println(m.put(k,v))` com V

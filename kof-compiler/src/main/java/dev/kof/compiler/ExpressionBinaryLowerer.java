@@ -151,16 +151,26 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
                         be.position())) {
             return localIdx;
         }
-        if (!Type.isString(accType) && TypeMetrics.isPrimitiveType(accType)) TypeEmitter.boxPrimitive(ops, accType);
+        // §125-ext (B2, 12/09): o guard do box usa isPrimitiveType (que
+        // DESEMPACOTA Nullable) mas o ternário do arg do valueOf usava
+        // `instanceof PrimitiveType` (que NÃO desempacota) → p/
+        // `Nullable(Int)` (ex.: `"a" + ni()` c/ Int? ni()) o boxPrimitive já
+        // STRINGUIFICOU o valor (kof_int_to_string) e o valueOf externo
+        // stringuificava DE NOVO o ponteiro da String = lixo. Mesmo guard
+        // nos dois lados: se o box já rodou, o valueOf externo é no-op
+        // (UNKNOWN).
+        boolean accStringified = !Type.isString(accType) && TypeMetrics.isPrimitiveType(accType);
+        if (accStringified) TypeEmitter.boxPrimitive(ops, accType);
         ops.add(new KofCall(BuiltinTypes.STRING, "valueOf",
-                List.of(driver.target.isNative() && !Type.isString(accType)
+                List.of(driver.target.isNative() && !accStringified && !Type.isString(accType)
                         && !(accType instanceof Type.PrimitiveType)
                         ? accType : Type.UnknownType.UNKNOWN),
                 BuiltinTypes.STRING, KofCallKind.STATIC));
         localIdx = ExpressionLowerer.emitExpression(driver, be.right(), ops, owner, localIdx, locals);
-        if (!Type.isString(rightType) && TypeMetrics.isPrimitiveType(rightType)) TypeEmitter.boxPrimitive(ops, rightType);
+        boolean rightStringified = !Type.isString(rightType) && TypeMetrics.isPrimitiveType(rightType);
+        if (rightStringified) TypeEmitter.boxPrimitive(ops, rightType);
         ops.add(new KofCall(BuiltinTypes.STRING, "valueOf",
-                List.of(driver.target.isNative() && !Type.isString(rightType)
+                List.of(driver.target.isNative() && !rightStringified && !Type.isString(rightType)
                         && !(rightType instanceof Type.PrimitiveType)
                         ? rightType : Type.UnknownType.UNKNOWN),
                 BuiltinTypes.STRING, KofCallKind.STATIC));
