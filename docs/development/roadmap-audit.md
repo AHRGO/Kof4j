@@ -3,23 +3,27 @@
 > Fonte: auditoria de código real (3 explorações com evidências file:line) +
 > execução de suíte. Regra: estado REAL, não o que o roadmap diz.
 > Baseline: `0.3.0-beta`, suíte anteriormente declarada 910 testes.
+> **Re-sincronizada 12/09** (doc-vs-realidade, célula a célula contra o HEAD):
+> contagens de teste citadas abaixo = gate 12/09 regenerado dos surefire-reports
+> (`docs/status.md` §Testes, `e2c03812`); células cujo estado mudou desde 06/09
+> foram reescritas com prova (SG-009/WEB001/conformance/LSP/GC — ver cada linha).
 
 ## Matriz de estado
 
 | Item | Estado real | Código | Testes | Gap principal |
 |---|---|---|---|---|
-| 1. Standard Library | **PARTIAL (bom)** | 23 namespaces em `Kof*.java` com gates R6 (`supportedOn`/`gapCode`) | E2E por área (KofCache/Db/Http/Mq/Time/…) | 1 stub silencioso (`kofWebStub` JS, R6 violado); sec sem cross; db/orm JVM-only (gaps honestos); `scheduler.at` cron fake |
-| 2. GC auto-collect | **PARTIAL** | mark-sweep real x86_64 (`RuntimeGc.java`); **SEM safe-points/root-map**; auto-collect desligado (`RuntimeMemory.java:121-133`); riscv/aarch **sem GC** (bump allocator) | `KofGcE2ETest` 3/3 (sweep/keep/reuse) | safe-points + roots por frame; GC no riscv64/aarch64 |
+| 1. Standard Library | **PARTIAL (bom)** | 23 namespaces em `Kof*.java` com gates R6 (`supportedOn`/`gapCode`) | E2E por área (KofCache/Db/Http/Mq/Time/…) | web JS tem base REAL (GraalJS HttpServer, `bc577aa` 03/09 — não é mais stub silencioso; ws/sse = **WEB001 residual declarado**, `kofWebStub` sobra só como fallback para funções web não implementadas); sec sem cross = gap honesto SECN000 (`KofSecurityTest.crossNativeReportsSecn000`); db/orm JVM-only (gaps honestos); `scheduler.at` cron fake |
+| 2. GC auto-collect | **PARTIAL** | mark-sweep real x86_64 (`RuntimeGc.java`); **SEM safe-points/root-map**; auto-collect desligado (`RuntimeMemory.java:121-133`); riscv/aarch bump **sem GC** (12/09: G-0 pousou — bloco-header 32B + guard OOM honesto, `356f33b9`; ainda sem free-list/mark-sweep) | `KofGcE2ETest` 3/3 (sweep/keep/reuse) | face (1) decomposta em **G-1..G-5** (`native-multiarch.md` §decomposição 12/09): G-1 free-list riscv (sem pré-requisito) → G-2 header flags → G-3 mark (depende do `kof_heap_root_end` da S-5-x86, fila bugfix) → G-4 sweep → G-5 aarch herda |
 | 3. Package Manager | **MVP** | `Deps.java` (flat Maven Central, cache `~/.kof/deps`) | `DepsTest` 4/4 | POM/transitivas, lockfile, ranges, publish |
-| 4. Async | **PARTIAL** | JVM vthreads + Handle/await/timeout; JS Promise real (CONC003 ✅); Native pthread | `KofConcurrency2Test` 15/15 | timeout/cancel/select completos; sem select sobre channels |
+| 4. Async | **PARTIAL** | JVM vthreads + Handle/await/timeout; JS Promise real (CONC003 ✅); Native pthread | `KofConcurrency2Test` 33 (gate 12/09) | timeout/cancel/selectAny fechados nos 3 targets (`status.md` §Concorrência); gap restante: select sobre channels |
 | 5. Concurrency G8 | **PARTIAL (bom)** | spawn/await/cancel/selectAny/awaitTimeout/channel/scheduler 3 targets | idem | `scheduler.at` cron = 60s fixo (MVP declarado); cancel por TID%256 |
 | 6. KofAndroid | **DONE (com ressalva)** | `Target.ANDROID`; `--apk` pipeline (d8/aapt2/apksigner); `AndroidProjectWriter` (Maven) | pipeline depende de ANDROID_HOME | lifecycle/ART runtime cobertos na Fase 2; consolidar docs |
-| 7. Debugger | **MVP** | DAP stdio JVM (`KofDebug.java`), breakpoints JDWP reais; DWARF line-only | docs/debugging/debug-adapter.md | **locals = placeholder** (`"line N"`); stepping/evaluate; VS Code ext |
-| 8. KofJS | **PARTIAL (alpha → funcional)** | ESM + source maps V3 + GraalJS + runtimes DOM/UI (9 arquivos) | `KofJsE2ETest`, browser headless | ws/sse stub silencioso no JS (WEB001); serve×JS indireto |
-| 9. LSP | **PARTIAL** | diagnostics reais via CompilerDriver (fonte única); hover/completion/references/rename **textuais** | `LspServerTest` 4/4 | hover/completion/rename devem usar SymbolTable; go-to-definition |
-| 10. KofScript | **PARTIAL (bom)** | interpretador de IR compartilhado (mesma semântica por construção) | `KofScriptTest` 15/15 + gate paridade | globals por regex multiline-fragil; REPL re-avalia tudo |
-| 11. Language Spec | **PARTIAL** | `docs/language-reference/` 11 arquivos extraídos + specification-status | — | 20 gaps SG abertos (SG-009 subtipagem = maior); gramática não-normativa |
-| 12. Conformance Suite | **NOT STARTED** | — (BackendParityTest 11 casos JVM×JS×Nat + golden 16/16 são os proxies) | BackendParityTest | suíte oficial por categoria |
+| 7. Debugger | **MVP** | DAP stdio JVM (`KofDebug.java`), breakpoints JDWP reais; DWARF line-only | docs/debugging/debug-adapter.md | **locals = placeholder** (`"line N"`, `KofDebug.java:197` — verificado no HEAD 12/09); stepping/evaluate; VS Code ext |
+| 8. KofJS | **PARTIAL (alpha → funcional)** | ESM + source maps V3 + GraalJS + runtimes DOM/UI (9 arquivos); web base real (GraalJS HttpServer, `bc577aa`) | `KofJsE2ETest` 40 (gate 12/09) | ws/sse **WEB001 residual declarado** (gap honesto em `backend-parity.md` — não é mais stub silencioso); serve×JS indireto |
+| 9. LSP | **PARTIAL (bom)** | diagnostics reais via CompilerDriver (fonte única); hover/completion/references/rename textuais + **go-to-definition ✅** (`definitionProvider`, `LspServer.java:323`) | `LspServerTest` 4/4 | hover/completion/rename devem usar SymbolTable (hoje textuais) |
+| 10. KofScript | **PARTIAL (bom)** | interpretador de IR compartilhado (mesma semântica por construção) | `KofScriptTest` 31 (gate 12/09) + gate paridade | globals por regex multiline-fragil; REPL re-avalia tudo |
+| 11. Language Spec | **PARTIAL (bom)** | `docs/language-reference/` 16 arquivos + specification-status | — | **fila SG COMPLETA** (23 entradas SG-001–020 + E1–E3 todas resolvidas 06–12/09, maioria por decisão da mantenedora; SG-009 subtipagem ✅ SEM021 `StatementAnalyzer.java:154` — a célula "20 gaps abertos" da auditoria 06/09 apodreceu); gramática não-normativa |
+| 12. Conformance Suite | **PARTIAL** | `conformance-matrix.md` (07/09) — Feature×4 targets, células travadas por `ConformanceMatrixTest` (11) + `ConformanceMatrixDocTest`; BackendParityTest 16 casos JVM×JS×Nat | ConformanceMatrixTest · BackendParityTest | lotes seguintes por categoria (concorrência/tempo ficam nas suítes de E2E) |
 | 13. Full Web Platform | **NOT STARTED** | routing parcial no kof.ui; validação existe | — | declarativo/forms/SSR — depende de 8+9 |
 | gRPC | **NOT STARTED** | — | — | planejado; não iniciar antes de P0-P2 |
 | Auto-hosting | **NOT STARTED** | — | — | documentado como gap |
@@ -55,11 +59,13 @@ inexistente deve falhar.** Estes casos são a prioridade P0.
 
 ## Ordem de execução (ajustada pela auditoria)
 
-- **P0**: fallbacks semânticos (#7/#3/#6/#8 + SEM025 p/ os outros builtins) +
-  reproduzir known-bugs abertos; suíte como gate.
-- **P1**: GC auto-collect (safe-points + root-map por frame x86_64; depois cross).
-- **P2**: `kofWebStub` → gap code (R6); PM lockfile+transitivas; debugger
-  locals via JDWP VariableTable; LSP hover/references via SymbolTable.
+- **P0**: ~~fallbacks semânticos~~ **FECHADO 07/09** (status no bloco acima).
+- **P1**: GC auto-collect — face cross decomposta em **G-1..G-5** (12/09,
+  `native-multiarch.md` §decomposição; G-0 ✅ `356f33b9`, G-1 free-list riscv é
+  o próximo degrau sem pré-requisito; G-3 depende do `kof_heap_root_end` da
+  S-5-x86, fila bugfix).
+- **P2**: PM lockfile+transitivas; debugger locals via JDWP VariableTable;
+  LSP hover/references via SymbolTable (hoje textuais; go-to-definition ✅).
 - **P3**: cron real (`scheduler.at`); KofScript globals via frontend.
 - **P4**: conformance suite estruturada; spec §subtipagem (SG-009).
 - **P5**: web platform, gRPC, auto-hosting (não iniciar antes).
