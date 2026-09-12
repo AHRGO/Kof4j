@@ -38,9 +38,18 @@ class ArtifactSizeTest {
     private static final int HELLO_X86_SYMS = 37;
     // Runtime JS integral copiado no hello (kof-runtime.mjs + io).
     private static final long HELLO_JS_BYTES = 177_412L;
-    // Hello riscv64 (cross — só medido onde há toolchain).
-    private static final long HELLO_RV_BYTES = 136_792L;
-    private static final int HELLO_RV_SYMS = 103;
+    // Hello riscv64 (cross — só medido onde há toolchain). Pós-S-5 (T1b,
+    // 12/09): seções .text.<fn> por função do runtime + `ld --gc-sections`
+    // derrubaram os irmãos mortos DENTRO das peças mantidas pela S-4:
+    // syms 103→18 (a queda dos 103→18 é o gc-sections; 258→103 foi a poda
+    // por peça da S-4). Bytes 136.792→133.288 (−2,6%): o .bss do heap bump
+    // (~260KB reservado) é fixo sem mark-sweep — a queda real é em SÍMBOLOS.
+    private static final long HELLO_RV_BYTES = 133_288L;
+    private static final int HELLO_RV_SYMS = 18;
+    // Hello aarch64 (medido 12/09, mesmo caminho: poda S-4 + gc-sections S-5
+    // no asm riscv ANTES do tradutor).
+    private static final long HELLO_AA_BYTES = 133_112L;
+    private static final int HELLO_AA_SYMS = 18;
 
     private static final double TOL = 0.05; // gate de inchaço >5%
 
@@ -178,6 +187,17 @@ class ArtifactSizeTest {
         // dois). O baseline unilateral abaixo é o guard: re-emitir runtime
         // inteiro leva syms p/ ~258 > 103*1.05 → estoura.
         assertNoBloat(e.fileBytes(), e.kofSymbols(), HELLO_RV_BYTES, HELLO_RV_SYMS, "hello riscv64");
+    }
+
+    /** S-5 (T1b, 12/09): o aarch herda a poda+gc-sections pelo tradutor —
+     *  o mesmo gate unilateral existe p/ ele (a primeira vez que um binário
+     *  aarch64 tem baseline travado; antes, só riscv era medido). */
+    @Test
+    void helloAarch64SizeWithinBaseline(@TempDir Path tmp) throws IOException {
+        assumeCross("aarch64-linux-gnu-as", "aarch64-linux-gnu-ld", "qemu-aarch64");
+        Path bin = helloNative(tmp, Target.NATIVE_AARCH64);
+        ArtifactSize.ElfSizes e = ArtifactSize.elf(bin);
+        assertNoBloat(e.fileBytes(), e.kofSymbols(), HELLO_AA_BYTES, HELLO_AA_SYMS, "hello aarch64");
     }
 
     private static void assumeCross(String... cmds) {

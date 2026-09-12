@@ -1,6 +1,6 @@
 # PLAN-TREE-SHAKING.md — stdlib por alcançabilidade: o compilador inclui só o que o programa usa
 
-**Dono:** lane PLATAFORMA (frente designada pela mantenedora 11/09; execução na lane development) · **Status:** EM CURSO — **S-1 (T0) ✅ 12/09 · S-2/S-2.5 ✅ 12/09 · S-3 (T1a.2, poda x86) ✅ 12/09 · S-4 (T1a.3, poda riscv64 + aarch herda) ✅ 12/09** (`RiscvSlices` 48 peças + `pruneRiscvRuntime` nos 2 write-points; hello riscv 258→103 syms; riscv/aarch 39/39 sob qemu; family-absence cross travado) · restam S-5 (T1b `--gc-sections`) / S-6 (T2 JS) / S-7 (consolidar doc p/ `docs/`) · **Criado:** 12/09 · **Issue:** #97
+**Dono:** lane PLATAFORMA (frente designada pela mantenedora 11/09; execução na lane development) · **Status:** EM CURSO — **S-1 (T0) ✅ 12/09 · S-2/S-2.5 ✅ 12/09 · S-3 (T1a.2, poda x86) ✅ 12/09 · S-4 (T1a.3, poda riscv64 + aarch herda) ✅ 12/09 · S-5 (T1b, gc-sections) ✅ PARTE CROSS 12/09** (riscv 103→18 syms + aarch travado; parte x86 = Fila bugfix, exige `kof_heap_root_end` + `emitStaticData` no intervalo de raízes) · restam S-6 (T2 JS, ViniAguiar1) / S-7 (consolidar doc p/ `docs/`) · **Criado:** 12/09 · **Issue:** #97
 
 > **Regra fundamental:** o desenvolvedor declara o que pretende utilizar; o
 > compilador inclui **somente** o que for realmente necessário para executar
@@ -298,10 +298,24 @@ após o aceite dos §T:
    puxa `kof_json_encode_int` e mq/vk/random ficam PODADOS; SABOTAGEM com poda off
    → FAIL provado, lista real de ~230 syms). Suíte cross + gate 4/4→5/5 verde.
    check_500 sem violador novo (NativeArchEmitter 337, RiscvSlices 375 — ambos <500).
-5. **S-5 (T1b)** seções por função + `--gc-sections` + proteção do
-   root-scan do GC; gate: suíte cross sob qemu + `ArtifactSizeTest` com
-   metas novas (hello x86 ≤ 45 KB — **JÁ BATEU na S-3: 32.520B**; o degrau
-   x86 do S-5 agora é opcional/extra, o valor real é o cross).
+5. **S-5 (T1b)** ✅ **PARTE CROSS FEITA 12/09** — seções por função +
+   `--gc-sections`. `NativeArchEmitter.sectionizeTextFunctions` abre
+   `.section .text.<fn>,"ax"` por função globl do subset mantido (S-4);
+   `ld --gc-sections` ligado SÓ no riscv64+aarch64. **Números medidos:**
+   hello riscv **103→18 syms (−82%)**, 136.792→133.288B (−2,6%); aarch
+   18 syms / 133.112B (baseline aarch64 travado pela 1ª vez). Bytes só
+   caem 2,6% porque o `.bss` do heap bump (~260KB) é fixo sem mark-sweep —
+   a queda REAL é em símbolos. **Segurança:** NÃO há GC no asm cross
+   (bump-pointer), logo nenhuma raiz conservadora oculta pode depender de
+   símbolo sem reloc; o `ArtifactSizeTest` (cross 39/39+39/39 sob qemu +
+   gate de tamanho) é a prova de que nada vivo foi coletado. **PARTE x86
+   ADIADA (neste commit):** o `--gc-sections` no x86 exige `kof_heap_root_end`
+   + mover `emitStaticData` p/ DENTRO do intervalo de raízes (o scan
+   conservative varre `root_start.._end`; uma `.data`/`.bss` de fatia morta
+   deletada fora do intervalo é raiz que o coletor nunca vê) — é a Fila
+   bugfix, não esta lane. gate: `ArtifactSizeTest` riscv/aarch metas novas
+   travadas unilateral (hello x86 ≤ 45 KB — **JÁ BATEU na S-3: 32.520B**; o
+   degrau x86 do S-5 agora é opcional/extra, o valor real era o cross ✔).
 6. **S-6 (T2)** JS — **DESIGN APROVADO PELA MANTENEDORA na #97 (12/09):**
    granularidade é **unidade de topo**, não família (família fecha 89,6% do
    runtime num hello — não serve como corte semântico). Sementes =

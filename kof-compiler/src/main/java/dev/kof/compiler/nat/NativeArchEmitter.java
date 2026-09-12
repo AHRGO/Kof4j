@@ -152,7 +152,14 @@ final class NativeArchEmitter {
             // gp (binário estático, sem C runtime); `la` relaxado vira `addi rd,gp,off`
             // e faulta (gp=0). Forçado PC-relative (auipc+addi) — sempre correto.
             nb.runCommand(new String[]{"riscv64-linux-gnu-as", "-mno-relax", "-o", objFile.toString(), asmFile.toString()}, "riscv64-as");
-            nb.runCommand(new String[]{"riscv64-linux-gnu-ld", "--no-relax", "-o", binFile.toString(), objFile.toString()}, "riscv64-ld");
+            // S-5 (cross): --gc-sections remove as seções .text.<fn> mortas
+            // criadas por sectionizeTextFunctions. Seguro aqui: NÃO existe GC
+            // no asm riscv/aarch (bump-pointer, sem scan conservative) — nada
+            // vivo pode depender de símbolo sem reloc. O x86 continua sem
+            // gc-sections até a fase `kof_heap_root_end` (root-scan varre
+            // root_start.._end; seção deletada fora do intervalo = raiz que
+            // o coletor nunca vê — precisa primeiro o fim explícito).
+            nb.runCommand(new String[]{"riscv64-linux-gnu-ld", "--no-relax", "--gc-sections", "-o", binFile.toString(), objFile.toString()}, "riscv64-ld");
             Files.deleteIfExists(objFile);
             if (System.getenv("KOF_KEEP_ASM") == null) Files.deleteIfExists(asmFile);
             binFile.toFile().setExecutable(true);
@@ -285,7 +292,7 @@ final class NativeArchEmitter {
         try {
             Path objFile = asmFile.resolveSibling("kof.o");
             nb.runCommand(new String[]{"aarch64-linux-gnu-as", "-o", objFile.toString(), asmFile.toString()}, "aarch64-as");
-            nb.runCommand(new String[]{"aarch64-linux-gnu-ld", "-o", binFile.toString(), objFile.toString()}, "aarch64-ld");
+            nb.runCommand(new String[]{"aarch64-linux-gnu-ld", "--gc-sections", "-o", binFile.toString(), objFile.toString()}, "aarch64-ld");
             Files.deleteIfExists(objFile);
             if (System.getenv("KOF_KEEP_ASM") == null) Files.deleteIfExists(asmFile);
             binFile.toFile().setExecutable(true);
@@ -318,7 +325,7 @@ final class NativeArchEmitter {
             java.util.Set<Integer> keep = RiscvSlices.keepForProgramText(programText);
             java.util.List<RiscvSlices.Piece> pieces = RiscvSlices.pieces();
             if (keep.size() >= pieces.size()) return all;
-            String subset = RiscvSlices.renderSubset(keep);
+            String subset = sectionizeTextFunctions(RiscvSlices.renderSubset(keep));
             StringBuilder out = new StringBuilder(all.substring(0, rtStart));
             out.append(subset);
             if (!subset.endsWith("\n")) out.append('\n');
@@ -333,6 +340,54 @@ final class NativeArchEmitter {
                     + ") — emitindo runtime completo (fallback seguro).");
             return all;
         }
+    }
+
+    /** S-5 (issue #97, T1b — parte cross): cada FUNÇÃO do subset mantido do
+     *  runtime abre a própria `.section .text.<nome>,"ax"` para que o
+     *  `ld --gc-sections` (NativeBackend.runCommand) delete os irmãos mortos
+     *  dentro de uma peça mantida — a granularidade fina que faltava à S-4
+     *  (peças inteiras). Transformação puramente textual e determinística:
+     *  padrão `.globl X` → (`type`) → `X:` em seção `.text` anônima; labels
+     *  locais `.L*`, dados (.data/.bss/.rodata) e o programa (fora do subset)
+     *  ficam como estão — o scan conservative existe SÓ no x86 (lá a fase
+     *  exige `kof_heap_root_end` primeiro; cross não tem GC no asm → sem
+     *  raiz oculta, seguro deletar). keep-all continua byte-idêntico (a
+     *  seção-injection só roda no caminho podado). aarch64: a linha passa
+     *  ilesa pelo tradutor (diretiva não-matching → passthrough) e o GAS
+     *  ARMv8 aceita a mesma sintaxe de flags. */
+    static String sectionizeTextFunctions(String text) {
+        String[] lines = text.split("\n", -1);
+        StringBuilder out = new StringBuilder();
+        boolean inText = false;
+        String pendingFn = null;   // último .globl sem label visto ainda
+        for (int i = 0; i < lines.length; i++) {
+            String s = lines[i].strip();
+            if (s.startsWith(".section")) {
+                inText = s.startsWith(".section .text") || s.equals(".section .text");
+                pendingFn = null;
+                out.append(lines[i]).append('\n');
+                continue;
+            }
+            if (inText && s.startsWith(".globl")) {
+                pendingFn = s.substring(".globl".length()).trim();
+                out.append(lines[i]).append('\n');
+                continue;
+            }
+            if (inText && s.endsWith(":") && !s.contains(" ") && !s.startsWith(".L")) {
+                String label = s.substring(0, s.length() - 1);
+                if (pendingFn != null && pendingFn.equals(label) && label.matches("[A-Za-z_][A-Za-z0-9_]*")) {
+                    out.append("    .section .text.").append(label).append(",\"ax\"\n");
+                }
+                pendingFn = null;
+            }
+            out.append(lines[i]).append('\n');
+        }
+        // split(-1) + append('\n') por linha: reconstitui exatamente o
+        // original quando nada é injetado (e o último '' do split vira o
+        // newline final — remove o '\n' sobra se o texto não terminava em \n)
+        String r = out.toString();
+        if (!text.endsWith("\n") && r.endsWith("\n")) r = r.substring(0, r.length() - 1);
+        return r;
     }
 
 }
