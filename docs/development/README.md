@@ -1,12 +1,12 @@
 # Development — backlog vivo (só trabalho em desenvolvimento)
 
 > **Base:** `0.3.22-beta` · branch `beta-0.4.0` · **atualizado:** 12/09/2026
-> **Suíte medida neste HEAD:** `1582` testes (1410 kof-compiler + 31 kof-script
+> **Suíte medida neste HEAD:** `1585` testes (1413 kof-compiler + 31 kof-script
 > + 5 kof-c-compiler + 136 kof-cli), **0 falhas**, 5 skip (guardas de
-> toolchain/node) — com cross riscv/aarch 40+40 sob qemu real (G-0 somou os
+> toolchain/node) — com cross riscv/aarch 41+41 sob qemu real (G-0/§142 somaram os
 > testes de header/OOM). Refold da concatenação do `NativeRiscvAsm` para
 > `<clinit>` (anti-pattern novo `constant-folded-runtime-asm.md`) verde no
-> gate `gateFoldFix.log`.
+> gate `gate1585.log` (HEAD 54da1325).
 > **Regra dos 3 estados (`AGENTS.md`):** `docs/` = implementado/decidido ·
 > `development/` = **trabalho técnico pendente** · `development/future/` =
 > **só plano, zero código**. Concluiu → move p/ submódulo de `docs/` no mesmo
@@ -31,7 +31,7 @@ paridade com gaps honestos), `docs/language-reference/specification-gaps.md`
 |---|---|---|---|---|
 | 1 | `PLAN-TREE-SHAKING.md` (#97) | `EM CURSO` — S-1..S-5 ✅ 12/09 (poda x86+riscv+aarch + **gc-sections cross**: riscv 103→18 syms) | **frente designada pela mantenedora 11/09**; só resta S-6 (outra lane) + S-7 (depende dele) | **S-6** (T2 JS, unidade de topo — design aprovado na #97 12/09) = ViniAguiar1; **S-5 parte x86** = Fila bugfix (exige `kof_heap_root_end`+`emitStaticData` no intervalo — conservative-scan); S-7 consolida p/ `docs/` quando S-6 fechar |
 | 2 | `refactoring/PLAN-SOLID-500.md` | `EM CURSO` — **F2 ✅ FEITA 12/09** (CompilerDriver 487 ≤500 medido, ratchet sem violação — critério autoritativo cumprido, regra do dono-morto); resta **só F3** (NativeBackend 664) | gate ≤500 virou **ratchet travado no CI** (2652aa45, §140): dívida não cresce e só encolhe; a contagem autoritativa é `wc -l scripts/check_500-baseline.txt` (12/09: 17→**12** nos splits `c2c4d965`/`48e3cc56`/`84b7b091`/`68b22416` — atualize APONTANDO p/ o arquivo, não gravando nº que apodrece a cada split) | F3 = extrair ~164 linhas do NativeBackend p/ ≤500 — **BLOQUEADA pela lane GC/tree-shaking viva em `nat/`** (G-0 18:59); abrir quando a fila `nat/` liberar |
-| 3 | `native-multiarch.md` (NATIVE002) | `EM CURSO` — ~30 faces cross fechadas sob qemu (39+39) | paridade riscv/aarch = condição de estabilidade do release | GC mark-sweep p/ riscv/aarch (faces restantes da §5; JS é outra frente) |
+| 3 | `native-multiarch.md` (NATIVE002) | `EM CURSO` — ~30 faces cross fechadas sob qemu (41+41 medidas 12/09) | paridade riscv/aarch = condição de estabilidade do release | GC mark-sweep p/ riscv/aarch (faces restantes da §5; JS é outra frente) |
 | 4 | `planning-otp-supervision.md` (#83) | `EM CURSO` — 1ª fatia ✅ 11/09 (núcleo+`restartLimit`+`stop` testados JVM+Script; `KofSupervisorE2ETest` 6/6; Native=OTP001 §129, JS=OTP002 §132) | **autORIZADO pela mantenedora** (issue #83) | ~~fatia 2 (limite/shutdown JVM)~~ JÁ FEITOS na 1ª fatia (célula defasada — sincronizada 12/09); fatia S2 (selectAny N-workers) = ratificação DD + design do wrapper de identidade (§128 ✅ 12/09, mas selectAny não devolve QUAL handle morreu — ver atualização 12/09 no plano); promover OTP001/002 só com decisão |
 | 5 | `plan-editor-integration.md` (EDI001) | `EM CURSO` — graus 1-3, 4-10, 11, 12 ✅ | único degrau sem dono pendente é tooling | plugin IntelliJ (DAP/LSP já funcionam via CLI) |
 | 6 | `plan-stdlib-expansion.md` | `EM CURSO` — S0–S6, S8–S12 ✅ | só o que NÃO depende de decisão anda | nada de código-puro: `pow`/`-lm`, `format`/`boundaries`, S10c estão TODOS na mesa da mantenedora → ver §3 |

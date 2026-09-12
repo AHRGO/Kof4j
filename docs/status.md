@@ -46,7 +46,7 @@
 
 ``` 
 mvn clean package    → PASSA
-mvn test             → 1582 testes (1410 kof-compiler + 31 kof-script + 5 kof-c-compiler + 136 kof-cli), 0 falhas, 5 skip com toolchain cross (guardas de DB externo; sem qemu no host → cross skipa honesto, ~126 skip) — 12/09
+mvn test             → 1585 testes (1413 kof-compiler + 31 kof-script + 5 kof-c-compiler + 136 kof-cli), 0 falhas, 5 skip com toolchain cross (guardas de DB externo; sem qemu no host → cross skipa honesto, ~126 skip) — 12/09
 kof build            → PASS (--target jvm|native|js|native.risc|native.arm) [--release]
 kof run              → PASS (jvm|native|js|native.risc|native.arm) [--release]
 kof serve            → PASS (web.app() nativo + API legada handle())
@@ -535,12 +535,12 @@ main() { /* ignorado pelo kof test */ }
 
 ---
 
-## Testes (1582 = 1410 kof-compiler + 31 kof-script + 5 kof-c-compiler + 136 kof-cli — suíte completa verde, 5 skips condicionais; medição 12/09 **com toolchain cross real neste host** — riscv/aarch EXECUTAM, não skipam: `ArtifactSizeTest` 6/6 + E2E cross 39/39 cada. Host sem qemu: cross → skip honesto, total ~1500)
+## Testes (1585 = 1413 kof-compiler + 31 kof-script + 5 kof-c-compiler + 136 kof-cli — suíte completa verde, 5 skips condicionais; medição 12/09 **com toolchain cross real neste host** — riscv/aarch EXECUTAM, não skipam: `ArtifactSizeTest` 6/6 + E2E cross 39/39 cada. Host sem qemu: cross → skip honesto, total ~1500)
 
 | Suíte | Quantidade | Cobertura |
 |-------|-----------|-----------|
 | CompilerDriverTest | 252 | compilação, semântica, fases, isolamento |
-| NativeE2ETest | 64 | execução real de binários nativos |
+| NativeE2ETest | 65 | execução real de binários nativos |
 | KofJsE2ETest | 40 | execução real JS (GraalJS) + short-circuit `&&`/`||` vs bitwise |
 | JvmE2ETest | 31 | execução real de bytecode JVM |
 | KofSecurityTest | 28 | kof.security: senhas, crypto, JWT, secrets, adversariais |
@@ -613,8 +613,8 @@ main() { /* ignorado pelo kof test */ }
 | NativeDebugTest5 | 1 | harnesses de debug nativo (5) |
  | NativeDwarfLineInfoTest | 1 | **DWARF nativo**: `.debug_line` real no binário (`objdump --dwarf=decodedline` → arquivo Kof + linha por instrução) |
 | NullSafetyE2ETest | 7 | `String?` narrowing JVM + readLine EOF null (02/09) |
-  | NativeRiscv64E2ETest | 40 | **riscv64 real (qemu)**: runtime em **asm puro** (raw syscalls, sem C; `as`+`ld` estático) — core (println, var, if/else, aritmética, classes, arrays, List, switch, try/catch, pattern matching, String methods, recursão) + **stdlib 05/09**: JSON (encode/decode incl. escalares int/long/bool/string), HTTP, spawn/await, cache, time.now, mq (queue/pub-sub), Map/Set, higher-order (map/filter/reduce), String.toInt, metrics `# TYPE`, FP (conversões; `println(double)`→FLT001), gates honestos DB001/SECN000/SCHED001/TIME001 |
-  | NativeAarch64E2ETest | 40 | **aarch64 real (qemu)**: runtime em **asm puro** via tradução riscv→aarch64 (`translateRiscvToAarch64`), raw syscalls — mesmo core + stdlib do riscv64 (tradutor quote-aware p/ strings com `#`) |
+  | NativeRiscv64E2ETest | 41 | **riscv64 real (qemu)**: runtime em **asm puro** (raw syscalls, sem C; `as`+`ld` estático) — core (println, var, if/else, aritmética, classes, arrays, List, switch, try/catch, pattern matching, String methods, recursão) + **stdlib 05/09**: JSON (encode/decode incl. escalares int/long/bool/string), HTTP, spawn/await, cache, time.now, mq (queue/pub-sub), Map/Set, higher-order (map/filter/reduce), String.toInt, metrics `# TYPE`, FP (conversões; `println(double)`→FLT001), gates honestos DB001/SECN000/SCHED001/TIME001 |
+  | NativeAarch64E2ETest | 41 | **aarch64 real (qemu)**: runtime em **asm puro** via tradução riscv→aarch64 (`translateRiscvToAarch64`), raw syscalls — mesmo core + stdlib do riscv64 (tradutor quote-aware p/ strings com `#`) |
  | **Total kof-compiler** | **823** | |
  | kof-script | 8 | KofScriptGlobals / repl / --watch |
  | kof-c-compiler | 5 | KofC C subset → ELF |
