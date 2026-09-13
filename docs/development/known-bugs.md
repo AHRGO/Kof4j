@@ -4626,7 +4626,7 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   `false` chega ao epílogo).
 - **Prova:** `KofRandomTest.randomStringJs`/`randomShapeJs` **verdes** (antes
   `ReferenceError`); `KofJsE2ETest` 40/40; `ConformanceMatrixTest` 11/11 +
-  `ConformanceMatrixDocTest` 1/1; gate 4-módulos **1610/0 falhas** (13 erros
+  `ConformanceMatrixDocTest` 1/1; gate 4-módulos **1611/0 falhas** (13 erros
   = só `node` ausente). A previsão de que a célula `assertepilogue` seria
   necessária foi cumprida de forma equivalente pelos testes do `KofRandomTest`
   (assert + `while` + epílogo) — ver bloco de prova do commit.

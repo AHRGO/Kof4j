@@ -505,7 +505,7 @@ Bool isQuery(String op) {
 > completa) provam. **Nenhum agente pode quebrar comportamento que já funciona.**
 
 1. **Zero regressão.** Nenhum commit pode fazer um teste existente passar a
-   falhar. A suíte completa (`mvn test`, hoje **1602** nos 4 módulos — ver
+   falhar. A suíte completa (`mvn test`, hoje **1611** nos 4 módulos — ver
    §"Loop de verificação" para o comando com o flag de failure.ignore) é **gate de merge** —
    mudança que não mantém tudo verde não entra. Exceção única: mudança de
    contrato **deliberada**, com bump de versão + docs atualizados + migração.
@@ -826,27 +826,30 @@ mvn test -o -pl kof-compiler,kof-script,kof-c-compiler,kof-cli -am \
 > ele, o Maven é fail-fast por módulo: qualquer falha em **kof-compiler aborta
 > o reactor** e **kof-script, kof-c-compiler e kof-cli nunca rodam** — você
 > acha que validou tudo mas só viu o primeiro módulo. O total real com o flag
-> é **1602 testes** (compiler 1430 + script 31 + kof-c 5 + cli 136, medição
-> 12/09 com qemu — cresce com cada commit): **2 falhas conhecidas**
-> (`KofRandomTest.randomStringJs`/`randomShapeJs` = §149, regressão da lane
-> bugfix-101 viva — NUNCA "conserte" esses dois para passar; o dono fecha).
+> é **1611 testes** (compiler 1439 + script 31 + kof-c 5 + cli 136, medição
+> 13/09 — cresce com cada commit): **0 falhas** (13 erros = só `node` ausente
+> no host, ambientais). O §149 JS (`KofRandomTest.randomStringJs`/`randomShapeJs`,
+> regressão do fix §147 no `JsIfThrowElse`) foi **CORRIGIDO 13/09** — a raiz era
+> o parser consumir o label de início do `while` seguinte a um assert/if-throw
+> como fim do else (ver `known-bugs.md §149`).
 > As 59 falhas históricas do bug 59 (Native riscv/aarch,
 > `kof_static_java_lang_System_out` no link) foram **CORRIDAS 09/09** — com
 > qemu os cross agora PASSAM (`NativeRiscv64E2ETest`/`NativeAarch64E2ETest`
-> 42/42 cada; prova no `known-bugs.md §59` + gate 12/09). Qualquer falha FORA
-> dessas 2 é SUA. Antes de commitar, confira os reports POR MÓDULO
+> 42/42 cada; prova no `known-bugs.md §59` + gate 12/09). Qualquer falha que
+> não seja dos 13 erros de `node` ausente é SUA. Antes de commitar, confira os
+> reports POR MÓDULO
 > (`grep -rl FAILURE */target/surefire-reports/*.txt`).
 > (Lição registrada 08/09: sessões inteiras citaram "suíte 1085/59" sem os
 > módulos finais terem rodado.)
 >
 > **Os números mudam com qemu no ambiente:** sem qemu, os 84 cross
 > (2×42, `NativeRiscv64/Aarch64E2ETest`) são **skipados** pelo guard
-> (`4408eb6`) + 5 de BD externo → `~1602/2/~89-skip` (estimado — a medição
-> abaixo é de host COM toolchain). Com qemu, **tudo executa** — `1602/2/5-skip (KofRandom §149)`
-> (os 5 = MySQL/Mongo/Postgres externos; medido 12/09). Estado correto HOJE:
-> as 2 do §149 nos dois cenários (a §149 é JVM-independente: JS precisa de
-> node E do bug é no emissor); o que importa continua sendo nenhum FAILURE
-> fora delas e das guardas.
+> (`4408eb6`) + 5 de BD externo → `~1611/0/~89-skip` (estimado — a medição
+> abaixo é de host COM toolchain). Com qemu, **tudo executa** — `1611/0/5-skip`
+> (os 5 = MySQL/Mongo/Postgres externos; medido 13/09). Estado correto HOJE:
+> **0 falhas** nos dois cenários (o §149 JS foi corrigido 13/09); os 13 erros
+> são só `node` ausente. O que importa continua sendo nenhum FAILURE fora
+> deles e das guardas.
 
 Para validar um snippet isolado (ex.: confirmar se um idiom compila),
 use o harness do projeto ou crie um teste E2E mínimo no pacote da área.
