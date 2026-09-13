@@ -4,9 +4,16 @@
 > plataforma moderna (checklist derivado do ecossistema Spring, usado como
 > **matriz de capacidades**, não como especificação de API).
 >
-> **Data:** 2 de setembro de 2026 · **Versão:** 0.2.6-beta
+> **Data:** 2 de setembro de 2026 · **Versão do snapshot:** 0.2.6-beta
 > **Método:** auditoria do repositório (código + testes + docs) — ver §2.
-> **Build:** `mvn clean package` PASS, `mvn test` 810 (793 kof-compiler +8 kof-script +5 kof-c-compiler +4 kof-cli), golden 16/16, integration 9/9, `scripts/package.sh` PASS, `VERSION` 0.2.6-beta, `release.yml` 2 jobs (`test-and-bump` → `package-and-release`) × 3 plataformas, Windows SIGPIPE fix.
+> **Build (na data da auditoria):** `mvn clean package` PASS, `mvn test` 810 (793 kof-compiler +8 kof-script +5 kof-c-compiler +4 kof-cli), golden 16/16, integration 9/9, `scripts/package.sh` PASS, `release.yml` 2 jobs (`test-and-bump` → `package-and-release`) × 3 plataformas, Windows SIGPIPE fix.
+>
+> **⚠️ Snapshot 02/09 — números desatualizados (13/09):** o Kof está em
+> **0.3.22-beta** e a suíte tem **~1620 testes** nos 4 módulos (baseline medido
+> 13/09; ver `AGENTS.md`/`docs/status.md`); este documento é **inventário de
+> capacidades**, não o gate atual. A matriz de status (`DONE`/`PARTIAL`/
+> `PLANNED`) reflete 02/09 — confirme contra `docs/stdlib/stdlib.md` e
+> `docs/backend-parity.md` antes de usar uma linha como estado vivo.
 > **Resultado:** nenhuma implementação nova foi feita neste documento —
 > apenas inventário, matriz, gaps, prioridade e estratégia. 0.2.6-beta acrescenta targets `native.risc`/`native.arm`, free-list GC, pattern matching, `String?`, `KofScriptGlobals`, `KofCcompiler`; 30-31/08 acrescenta spawn Native (pthread/CONC001), FP XMM (FLT001), JSON completo no Native (JSN001/002/003), WebSocket/SSE JVM, `kof.cache` 3 targets, `kof.http` retry/circuit (JVM+JS), `kof fmt`/`kof config gen`, UI Fase 7 Router, SQLite nativo `.so` direto.
 

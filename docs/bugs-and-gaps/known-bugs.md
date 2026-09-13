@@ -1,6 +1,6 @@
 # Known Bugs — handoff para o próximo agente
 
-> **Data:** 10/09/2026 · **Versão:** 0.3.1-beta. Este arquivo existe para que
+> **Data:** 10/09/2026 (última varredura em massa; triagens pontuais até 13/09) · **Versão:** 0.3.22-beta (pom `revision`). Este arquivo existe para que
 > um agente (ou humano) pegue os bugs sem precisar redescobri-los. **Não são
 > características** — são bugs reais com reprodução mínima.
 >
@@ -8,7 +8,7 @@
 >
 > | | |
 > |---|---|
-> | **Fila ABERTA (varredura 13/09 — todas as seções sem ✅ no próprio cabeçalho)** | **12** — §149 (regressão JS do fix `isEmpty` `718ae5cf` — `ReferenceError: i/k is not defined` + matriz dessincronizada; lane bugfix-101), §45 (finally+return: exige mudança de IR 4-backend + decisão DD-01, mantenedora), §65 (UI/Chrome — lane UI), §81 (KofJS Long>2^53 — decisão de precisão/contrato), §89 (n.toDouble()/toInt() cross — contrato de conversão), §101 (congelado regra 6), §104b-ii (record-em-coleção + storage-box asm — **lane bugfixer**, unidade GRANDE), §106 (json.encode Map — decisão mantenedora), §107 🟡 (restam record/aninhado=`?` até §104b-ii + FP-cross=FLT001; face escalar ✅ 12/09 nos 3 nativos `f3b3821c`+B39), §117 (cancelled() colisão — design TLS, congelado), §129-TLS (congelado), §131 (sobrecarga de MÉTODO — semântica, mantenedora), §132 (OTP JS gate), §156 (List heterogêneo de lambdas → CCE JVM; **infra de tipos**, pré-existente). **§155 ✅ CORRIGIDO 13/09** (tipo-função como type-arg → `ClassFormatError`; parser preserva os espaços do type-ref). **§127-JVM ✅ CORRIGIDO 13/09** (decisão 9a: o RHS de `as` com lookahead `(`…`)` `->` parseia como type-ref; checkcast de `FunctionType` vai p/ interface SAM sintética — `true`/`7` em JVM+Native, sonda B127 4/4). **§94 ✅ CORRIGIDO 13/09** (paridade interpretador × compilados: EQ/NE de Double/Float agora IEEE — `NaN==NaN`→false, `+0.0==-0.0`→true; `KofInterpreterValues.numEq` + `KofInterpreterOps.compare` + `KofInterpreterObjects.numEq`; célula `stdsqrt` 4/4 sem exclusão). **§125 ✅ CORRIGIDO 12/09** (decisão A: return Nullable(primitivo) apaga p/ default — 3 pontos no IR compartilhado, célula `nullableprint` 4/4 sem exclusão). **§139 ✅ CORRIGIDO 12/09** (mesma unidade: JS fold `f()==null` → COMP002 underflow; parser JS ganha o descarte mid-expression com preservação de side-effect). **§140 ✅ CORRIGIDO 12/09** (processual: gate ≤500 virou ratchet com baseline de dívida e entrou no CI — 17 violadores travados de crescer, split continua no PLAN-SOLID-500). **§90 ✅ CORRIGIDO 12/09 (lane web, remoto).** **§145/§146/§147 ✅ CORRIGIDOS 12/09 (`440730c8`, issue #101: `isEmpty` no registry 3-targets; `kof_double_mod` riscv64 B40 + dispatcher MOD float/double; `JsIfThrowElse` else-pós-throw — prova qemu 42+42).** **Conclusão honesta (13/09): nenhum item de código-puro-sem-decisão na lane restou nesta máquina** — os 12 abertos estão pendurados em decisão da mantenedora, congelamento regra-6, ou lane alheia (UI/bugfixer — §149 é da lane bugfix-101, que continua EM CURSO no `DOING.md:47`). O trabalho REAL sem-colisão-aceito da sessão é a **frente #97 tree-shaking** (S-1..S-6.1 ✅, S-7 ✅ `eabf814b` — plano movido p/ `docs/stdlib/PLAN-TREE-SHAKING.md`). |
+> | **Fila ABERTA (varredura 13/09 — seções sem resolução no próprio cabeçalho)** | **14 itens** (seções/sub-faces sem resolução) — §45 (finally+return no try; JVM/interpretador descartam o efeito do finally — **DECIDIDO 13/09** 4a: FinallyFrame na IR + bump 0.3.1), §65 (UI/Chrome — `Audio`/`Video` no DOM real; **lane UI**), §81 (KofJS `Long` é `Number` 53-bit — **DECIDIDO 13/09** 5b: BigInt no JS, bump+migração), §89 (conversão numérica de primitivo quebra o LINK nos nativos — **DECIDIDO 13/09** 3a: alias do `as` + warning de truncamento), §101 (relacionais de Double com NaN divergem cross — **congelado** regra 6), §104b-ii (record em coleção + storage-box asm — **lane bugfixer**, unidade GRANDE), §106 (`json.encode(Map)` quebra em 3 alvos — **DECIDIDO 13/09** 2b: chaves sorted), §107 🟡 (`println(coleção)` nativo → lixo de ponteiro; **face escalar ✅ CORRIGIDA 12/09** nos 3 nativos `f3b3821c`+B39; restam record/aninhado=`?` até §104b-ii + FP-cross=FLT001), §114 ⏳ (equals de record com campo-referência no Native; sub-face do §104b-ii), §117 (`cancelled()` colide por hash de TID — **DECIDIDO 13/09** 8a: slot por TID no spawn), §129 (throw em worker `spawn` → longjmp cross-thread no Native — **lane nat**; era referido como "§129-TLS"), §131 (sobrecarga de método por aridade — **DECIDIDO 13/09** 10a: implementar), §132 (KofJS: task de task não roda sem ceder o event-loop — gate OTP002; **lane alheia**), §156 (List HETEROGÊNEO de lambdas → CCE JVM; **infra de tipos**, registrado 13/09). **~~§149~~ NÃO está aberto — ✅ CORRIGIDO 12/09** (a linha anterior o listava por engano; a raiz era o `JsIfThrowElse` do §147). **§155 ✅ CORRIGIDO 13/09** (tipo-função em type-args → `ClassFormatError`; parser preserva os espaços do type-ref). **§127-JVM ✅ CORRIGIDO 13/09** (decisão 9a: `as ()->T` parseia como type-ref; checkcast p/ interface SAM sintética). **§94 ✅ CORRIGIDO 13/09** (EQ/NE de Double/Float no interpretador agora IEEE). **§125 ✅ CORRIGIDO 12/09** (return Nullable(primitivo) → default; célula `nullableprint` 4/4). **§139 ✅ CORRIGIDO 12/09** (JS fold `f()==null` → COMP002; parser JS descarta mid-expression). **§140 ✅ CORRIGIDO 12/09** (gate ≤500 virou ratchet com baseline no CI). **§90 ✅ CORRIGIDO 12/09** (lane web). **§145/§146/§147 ✅ CORRIGIDOS 12/09** (`440730c8`, issue #101). **Conclusão honesta (13/09):** os itens abertos estão pendurados em **decisão da mantenedora** (já ratificadas em 13/09 — fila de implementação), **congelamento regra-6** ou **lane alheia**; a maior parte já tem decisão. |
 > | Antiga "varredura 08/09" (apócrifa — corrigida 12/09) | os "abertos" 39/62/63/64/46/48/50/59/61 estão ✅ CORRIGIDO nos próprios cabeçalhos (39/62/63/64 JVM/JS; 46/50/59 Native; 48/61 gap honesto JSN004/FFI001); contagem real na linha acima. |
 > | Paridade interpretador × compilados (semântica `==` congelada — regra 6) | **0** — bug 94 ✅ CORRIGIDO 13/09 (EQ/NE de Double/Float no interpretador agora IEEE; a "decisão" era alinhar ao previsto, que os 3 compilados + corpus já definiam) |
 > | Paridade backend-only (regra 5, atacável na lane Native) | **2** — §107 (println coleção → lixo; **face escalar ✅ CORRIGIDA 12/09 nos 3 targets nativos** — x86 `f3b3821c` + cross B39, golden JVM byte-idêntico; restam record/aninhado=`?` honesto até §104b-ii, FP-cross=FLT001; §107-JS 11/09), §104b-ii (equals de conteúdo p/ record + box de primitivo no storage asm; **face char ✅ FECHADA 11/09** — `mapgetprim` 4/4)
@@ -17,6 +17,7 @@
 > | **Corrigidos na prova cross-arch 11/09 (MATH001/TIME002/B33)** | **3** — bugs 101→registrado (relacional NaN, ABERTO regra 6), MATH001 (Double math B32), TIME002 (ISO add/diff B33), 105 (random.int loop — renumerado de 102, colidiu c/ §102 indexOf) |
 > | Verificados corrigidos em 08/09 | **19** — bugs 1–8, 10–17, 19, 20, 26 |
 > | **Reverificados 13/09 (ambiente com qemu/riscv disponível)** | **5** — bugs 9, 18, 21, 22, 23: ✅ CORRIGIDO nos cabeçalhos CONFIRMADO por teste neste HEAD (`NativeE2ETest` 2/2, `KofJsE2ETest.uiWidgetIdsUseMonotonicCounter`, `PackagesE2ETest` 12/12, `AndroidInteropE2ETest.missingSuperclassOnClasspathWarns` — 16/16, 0 falha)
+> | **⚠️ Colisão de numeração (13/09)** | **§127, §128 e §129 existem DUAS VEZES**, de merges independentes: (a) série *collection/decompile* (11/09) — §127 `map.get`-miss JS, §128 DecompileTest statement-switch, §129 `Set.remove` por índice; (b) série *OTP/spike #83* (11/09, renumerada p/ 127-129 na reconciliação `b114652b` e DEPOIS colidida) — §127 cast p/ tipo-função, §128 unbox de `selectAny`, §129 throw em worker `spawn`. As refs em CÓDIGO apontam para a série OTP (`JvmOpCollections` §128-JVM, `CompilerSupervisor` §129, `ExpressionBinaryLowerer` bug 127); a `conformance-matrix` aponta para a série collection (`bug 129` `setdedup`, `bug 127` `wrongkey`). **NÃO renumerar sem tocar o código** (fora da lane docs): desambigue pelo CONTEXTO (OTP vs collection). Fila futura: renumerar a série OTP p/ 157-159 junto com as refs de código.
 >
 > Os bugs marcados `✅ VERIFICADO CORRIGIDO 08/09` foram reproduzidos contra o
 > build atual e **não** falham mais — parte virou saída correta, parte virou
@@ -495,7 +496,7 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
 
 ---
 
-### 28. FLAKE: `KofWebHardeningTest.ws_connection_counter_increments_and_decrements` — CORRIGIDO 05/09
+### 28. FLAKE: `KofWebHardeningTest.ws_connection_counter_increments_and_decrements` — ✅ CORRIGIDO 05/09
 
 - **Sintoma (histórico):** `expected: <1> but was: <0>` no contador de conexões ws.
   **Intermitente** — passava em execução isolada; falhava esporadicamente na
@@ -596,7 +597,7 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
 
 ---
 
-### 32. Type-argument de import sem package → cast/descritor quebrado (CORRIGIDO 05/09)
+### 32. Type-argument de import sem package → cast/descritor quebrado — ✅ CORRIGIDO 05/09
 
 - **Sintoma:** `List<NodeUI>` com `import com.dev.NodeUI` gerava
   `checkcast // class NodeUI` **sem pacote** → `NoClassDefFoundError: NodeUI`.
@@ -1597,7 +1598,7 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
    CONSTANTE DE FP em asm merece teste de decode no harness — o comentário
    dizia "= 2^53" e o bit não era (confiança no texto, não na máquina).
 
-### 93. JS: valor `Bool` de função stdlib é number 1/0 → `boolExpr == true` sempre `false` (paridade cross-target quebrada) — CORRIGIDO 10/09 (chokepoint `!!` na comparação cobre stdlib + instanceof + coleções)
+### 93. JS: valor `Bool` de função stdlib é number 1/0 → `boolExpr == true` sempre `false` (paridade cross-target quebrada) — ✅ CORRIGIDO 10/09 (chokepoint `!!` na comparação cobre stdlib + instanceof + coleções)
 
 - **Sintoma:** `var b = random.boolean()` (ou `var e = math.isEven(2)`) no
   target JS: `println(e)` mostra `true`, MAS `e == true` e `e == false` são
@@ -3508,7 +3509,7 @@ int de índice) — verificados na varredura.
   → JVM **VerifyError** e Script `Integer.valueOf/1` (NoSuchMethod) —
   §125. `println(char)` congelado numérico (strings.md) continua intocado.
 
-### 129. Native `Set.remove(x)` deletava o elemento no ÍNDICE == tag, não o encontrado — silent data corruption (pior que crash) — ✅ CORRIGIDO 11/09 (x86; riscv já estava certo; aarch traduz)
+### 129. [collection] Native `Set.remove(x)` deletava o elemento no ÍNDICE == tag, não o encontrado — silent data corruption (pior que crash) — ✅ CORRIGIDO 11/09 (x86; riscv já estava certo; aarch traduz)
 
 - **Menor repro (SR1, medido 11/09):** `setOf("a","b","c")`:
   `s.remove("a")` → retornava `true` mas removia **"b"**. `s.contains("b")`
@@ -3529,7 +3530,7 @@ int de índice) — verificados na varredura.
 - **Prova:** SR1/SR2/SR3 nativos = JVM byte-a-byte; célula `setdedup`
   expandida (10 linhas de saída); suíte completa abaixo.
 
-### 128. kof-cli `DecompileTest#recoversStatementSwitchAndRunsIt` VERMELHO — decompilador emite statement-switch com `var` só no 1º case → SEM011 no recompile — ✅ CORRIGIDO 11/09 (consolidado no §135 — fix com hoist de locals + `static` na assinatura + teste executando o decompilado; DecompileTest 45/45)
+### 128. [decompile] kof-cli `DecompileTest#recoversStatementSwitchAndRunsIt` VERMELHO — decompilador emite statement-switch com `var` só no 1º case → SEM011 no recompile — ✅ CORRIGIDO 11/09 (consolidado no §135 — fix com hoist de locals + `static` na assinatura + teste executando o decompilado; DecompileTest 45/45)
 
 - **Reprodução (exata, medida 11/09):** em `94c4a1fb` LIMPO (working tree
   sem nenhuma edição da lane collections): `mvn -o -pl kof-cli -am test
@@ -3554,7 +3555,7 @@ int de índice) — verificados na varredura.
 - **Prioridade:** média (vermelho em teste de gate; sem produto afetado
   além do round-trip switch-statement).
 
-### 127. JS: `map.get/remove` de MISS com VALOR primitivo devolve `null` (JVM/Native/Script devolvem o default `0`/`false`) — ✅ CORRIGIDO 12/09 (célula `wrongkey` 5/5 sem exclusões)
+### 127. [collection] JS: `map.get/remove` de MISS com VALOR primitivo devolve `null` (JVM/Native/Script devolvem o default `0`/`false`) — ✅ CORRIGIDO 12/09 (célula `wrongkey` 5/5 sem exclusões)
 
 - **Menor repro (medido 11/09):** `mapOf("a", 1).get("zz")` → **JS `null`**,
   JVM/Native/Script **`0`**. Célula `wrongkey` divergiu só na última linha
@@ -3804,7 +3805,7 @@ int de índice) — verificados na varredura.
   medido) + sonda `Double as Int` aarch (0→`5`) + suíte completa.
 
 
-### 127. JVM: cast para tipo de função (`x as () -> Int`) gera bytecode inválido (VerifyError) — ✅ CORRIGIDO 13/09 (decisão 9a: parser parseia `as ()->T` como type-ref; checkcast vai p/ interface SAM sintética)
+### 127. [OTP] JVM: cast para tipo de função (`x as () -> Int`) gera bytecode inválido (VerifyError) — ✅ CORRIGIDO 13/09 (decisão 9a: parser parseia `as ()->T` como type-ref; checkcast vai p/ interface SAM sintética)
 - **Reprodução:** `var o: Object = (Object)(() -> 5)`… em Kof puro:
   `fun(Int x) { var g = x as () -> Int; return g() }` — `fun(() -> 9)` →
   **compila ok** mas ao rodar: `VerifyError: Operand stack underflow` /
@@ -3839,7 +3840,7 @@ int de índice) — verificados na varredura.
   cobria) passou de COMPILE-FAIL/VerifyError para verde 4/4.
 
 
-### 128. JVM: resultado de `selectAny`/`await` de Handle<Int> atribuído a var e usado como Int → VerifyError — ✅ CORRIGIDO 12/09 (JVM; await já caía no unbox, selectAny não) (spike OTP #83 11/09)
+### 128. [OTP] JVM: resultado de `selectAny`/`await` de Handle<Int> atribuído a var e usado como Int → VerifyError — ✅ CORRIGIDO 12/09 (JVM; await já caía no unbox, selectAny não) (spike OTP #83 11/09)
 - **Correção (12/09, lane bugfix):** em `JvmOpCollections.emitRuntimeCall`, o
   ramo que chama `emitUnboxIfPrimitive` para `kof_await`/`kof_await_timeout` com
   retorno primitivo foi estendido a `kof_select_any` (mesmo destino `Object` do
@@ -3875,7 +3876,7 @@ int de índice) — verificados na varredura.
   supervisor consegue viver sem selectAny no núcleo 1ª fatia).
 
 
-### 129. Native x86_64: `throw` dentro de worker `spawn` → unwinder faz longjmp no handler da THREAD MAIN (crash/hang cross-thread) — 🟢 ABERTO POR DECISÃO 13/09 (mantenedora mandou abrir — impeditivo do OTP-Native; lane nat implementável)
+### 129. [OTP] Native x86_64: `throw` dentro de worker `spawn` → unwinder faz longjmp no handler da THREAD MAIN (crash/hang cross-thread) — 🟢 ABERTO POR DECISÃO 13/09 (mantenedora mandou abrir — impeditivo do OTP-Native; lane nat implementável)
 - **Reprodução (M2, deterministicamente travado/crashado no native):**
   `main(){ var i=0; while(i<3){ var h=spawn { throw "x" }; try { await h }
   catch(String e){println("cap")} i=i+1 } println("fim3") }` → imprime
