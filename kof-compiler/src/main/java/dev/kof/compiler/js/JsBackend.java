@@ -58,7 +58,7 @@ public class JsBackend implements Backend {
         String fileName = JsArtifactWriter.moduleFileName(module.name());
         JsArtifactWriter artifacts = new JsArtifactWriter();
         artifacts.writeModule(outputDir, fileName, code, debugInfo);
-        artifacts.writeRuntime(outputDir);
+        artifacts.writeRuntime(outputDir, jsModule.runtimeImports(), jsModule.ioRuntimeImports());
         artifacts.writeHtmlEntry(outputDir, module.name());
         if (debugInfo) {
             artifacts.writeSourceMap(module, outputDir, fileName, emitter.functionLines());

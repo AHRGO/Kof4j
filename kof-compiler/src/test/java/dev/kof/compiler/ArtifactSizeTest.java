@@ -36,8 +36,8 @@ class ArtifactSizeTest {
     // volta a proteger de regressão a partir daqui).
     private static final long HELLO_X86_BYTES = 32_520L;
     private static final int HELLO_X86_SYMS = 37;
-    // Runtime JS integral copiado no hello (kof-runtime.mjs + io).
-    private static final long HELLO_JS_BYTES = 177_412L;
+    // T2/S-6: runtime JS por alcançabilidade (era 177_412 com o runtime integral).
+    private static final long HELLO_JS_BYTES = 6_873L;
     // Hello riscv64 (cross — só medido onde há toolchain). Pós-S-5 (T1b,
     // 12/09): seções .text.<fn> por função do runtime + `ld --gc-sections`
     // derrubaram os irmãos mortos DENTRO das peças mantidas pela S-4:
@@ -168,7 +168,8 @@ class ArtifactSizeTest {
         CompilationResult r = driver.compile(src, out, Target.JS);
         assertTrue(r.success(), "hello deve compilar p/ JS: " + r.diagnostics().getDiagnostics());
         long js = ArtifactSize.jsBytes(out);
-        assertTrue(js > 100_000, "hoje o runtime .mjs é copiado integral (meta T2 ~8-20KB) — jsBytes=" + js);
+        assertTrue(js < 30_000,
+                "a poda por alcançabilidade (T2/S-6) tem de estar ativa — jsBytes=" + js);
         long max = Math.round(HELLO_JS_BYTES * (1 + TOL));
         assertTrue(js <= max, "runtime JS inchou: " + js + "B > " + max + "B (baseline " + HELLO_JS_BYTES + "B +5%)");
     }

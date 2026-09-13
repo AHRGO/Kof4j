@@ -1,6 +1,6 @@
 # PLAN-TREE-SHAKING.md — stdlib por alcançabilidade: o compilador inclui só o que o programa usa
 
-**Dono:** lane PLATAFORMA (frente designada pela mantenedora 11/09; execução na lane development) · **Status:** EM CURSO — **S-1 (T0) ✅ 12/09 · S-2/S-2.5 ✅ 12/09 · S-3 (T1a.2, poda x86) ✅ 12/09 · S-4 (T1a.3, poda riscv64 + aarch herda) ✅ 12/09 · S-5 (T1b, gc-sections) ✅ PARTE CROSS 12/09** (riscv 103→18 syms + aarch travado; parte x86 = Fila bugfix, exige `kof_heap_root_end` + `emitStaticData` no intervalo de raízes) · restam S-6 (T2 JS, ViniAguiar1) / S-7 (consolidar doc p/ `docs/`) · **Criado:** 12/09 · **Issue:** #97
+**Dono:** lane PLATAFORMA (frente designada pela mantenedora 11/09; execução na lane development) · **Status:** EM CURSO — **S-1 (T0) ✅ 12/09 · S-2/S-2.5 ✅ 12/09 · S-3 (T1a.2, poda x86) ✅ 12/09 · S-4 (T1a.3, poda riscv64 + aarch herda) ✅ 12/09 · S-5 (T1b, gc-sections) ✅ PARTE CROSS 12/09** (riscv 103→18 syms + aarch travado; parte x86 = Fila bugfix, exige `kof_heap_root_end` + `emitStaticData` no intervalo de raízes) · S-6 (T2 JS, ViniAguiar1) — **S-6.1 ✅ 12/09** (hello JS 177.412→6.873 B, PR p/ `beta-0.4.0`) · resta S-7 (consolidar doc p/ `docs/`) · **Criado:** 12/09 · **Issue:** #97
 
 > **Regra fundamental:** o desenvolvedor declara o que pretende utilizar; o
 > compilador inclui **somente** o que for realmente necessário para executar
@@ -225,13 +225,28 @@ mechanism a preservar: não há mecanismo.
   reais das fatias emitidas (a regra "código+dados solidários" já foi
   implementada na T1a).
 
-### T2 — JS por família
+### T2 — JS por alcançabilidade de unidade de topo
 
-- `JsArtifactWriter`: registrar o uso por família (o lowering JS já roteia
-  por `KofCall` → nome `kofXxx`); emitir `kof-runtime.mjs` só com os blocos
-  `export function` das famílias alcançáveis + o core mínimo (println, alloc,
-  handle). Precedente: `kof-runtime-io.mjs` **já é condicional** por arquivo.
-  Os 173 KB viram ~8–20 KB no hello. Sem bundler novo, sem dependência.
+- **Família não serve como corte** (medido 12/09): o fecho de um
+  `println("hello")` por bloco pega 16 dos 18 blocos (89,6% dos bytes). Os
+  blocos se emaranham (core→ui-layout→ui-widgets→ui-web→io; stdlib→security)
+  porque o corte em 17 constantes veio do limite de 64 KiB do pool do javac,
+  não de fronteira semântica — o mesmo vício do `RtB0..B31` no cross.
+- **Corte = declaração de topo** (`function`/`class`/`const` na coluna 0 depois
+  de desindentar cada bloco): `js/JsRuntimeSlices` inventaria 600 unidades /
+  585 nomes, com `provides`/`needs` por token e fecho transitivo determinístico
+  (saída na ordem do inventário, nunca na da busca). A desindentação serve só
+  para achar a fronteira — o texto emitido é o original, byte a byte.
+- **Sementes = `runtimeImports`/`ioRuntimeImports`** que o `JsBackend` já
+  acumulava para a linha `import { … }` do módulo: exatas, sem heurística.
+- **Multi-módulo:** o runtime compartilhado é a união dos fechos, relida do
+  cabeçalho `// kof:seeds` do artefato e reescrita quando um módulo posterior
+  exige mais (antes, o primeiro módulo decidia o conteúdo dos seguintes).
+- **Fallback conservador observável:** `eval(`, `new Function(`, `import(`
+  dinâmico, `globalThis[`, `window[`, nome de runtime dentro de literal ou
+  unidade desbalanceada fazem o bloco inteiro entrar, com
+  `// kof:fallback <bloco>: <motivo>` no cabeçalho. Hoje nenhuma guarda dispara.
+- **Resultado:** hello 177.412→6.873 B (−96,1%); kof.ui 177.125→13.889 B.
 
 ### T3 — embedded/MCU (documentar a rota, NÃO prometer agora)
 
@@ -333,6 +348,15 @@ após o aceite dos §T:
    para issue separada — não misturar no PR do T2. Gate: `ArtifactSize.jsBytes`
    + ausência por família (hello ⇒ sem `kofSec*`/`kofUi*`; crypto ⇒
    `kofSecSha256` sem `kofUiWindowNew`), tolerância unilateral.
+   - **S-6.1a ✅ 12/09** — `js/JsRuntimeSlices`: inventário por unidade de
+     topo; com todas as sementes vivas a seleção é byte-idêntica à
+     concatenação legada dos 17 blocos (`JsRuntimeSliceRegistryTest` 6/6).
+   - **S-6.1b ✅ 12/09** — writer ligado: união multi-módulo pelo cabeçalho
+     `// kof:seeds`, cabeçalho observável (`kof:units`/`kof:fallback`), hello
+     **177.412 → 6.873 B** travado no `ArtifactSizeTest` (a asserção
+     `js > 100_000` virou `js < 30_000`), `JsRuntimePruneWriterTest` 6/6.
+     `kof_platform` foi para a issue #104 — a poda preserva o comportamento.
+   - **Resta:** S-7 (consolidação em `docs/`).
 7. **S-7** docs consolidadas (`docs/stdlib-loading.md` ou seção em
    `docs/architecture/architecture.md`) + mover este doc para `docs/development/` no
    início da S-1 (regra dos três estados: com código em desenvolvimento,
