@@ -1,6 +1,6 @@
 # Development — backlog vivo (só trabalho em desenvolvimento)
 
-> **Base:** `0.3.22-beta` · branch `beta-0.4.0` · **atualizado:** 13/09/2026
+> **Base:** `0.4.0-beta` · branch `beta-0.4.0` · **atualizado:** 13/09/2026
 > **Suíte medida neste HEAD:** `1611` testes (1439 kof-compiler + 31 kof-script
 > + 5 kof-c-compiler + 136 kof-cli), **0 falhas** (13 erros = só `node` ausente, ambientais; o §149 JS foi corrigido — era `KofRandomTest`), 5 skip (guardas de
 > toolchain/node) — com cross riscv/aarch 42+42 sob qemu real (G-0/§142 somaram os

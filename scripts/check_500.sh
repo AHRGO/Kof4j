@@ -1,30 +1,27 @@
 #!/usr/bin/env bash
-# Gate REFACTOR-500: nenhuma classe de produção acima de 500 linhas.
+# Gate REFACTOR-500: alvo ≤500 linhas/classe, CRÍTICO ≥600 (decisão da
+# mantenedora, 13/09).
 #
-# MODO RATCHET (12/9, §140): um gate que falha e não está no CI é decorativo.
-# A dívida EXISTENTE (17 classes >500 no inventário da Fase 8 + regressões
-# posteriores — SemanticAnalyzer 396->535, Parser 456->513) está congelada em
-# scripts/check_500-baseline.txt. O gate:
-#   - FALHA se um arquivo NOVO passar de 500 (dívida nova é proibida);
-#   - FALHA se uma dívida cresçer acima do travado no baseline;
+# MODO RATCHET (12/9, §140; tolerância atualizada 13/09): um gate que falha e
+# não está no CI é decorativo. A política agora é:
+#   - 500–599 linhas = TOLERADO (dívida viva; o gate AVISA, não falha — o
+#     split continua sendo o caminho, e nenhuma dívida nova entra calada);
+#   - ≥600 linhas = CRÍTICO: falha o build, exige refactor/split antes;
+#   - a dívida travada em scripts/check_500-baseline.txt nunca pode crescer
+#     (crescer em direção a 600 é o caminho do refactor adiado);
 #   - PASSA quando a dívida diminui, mas AVISA (o split feito deve ser
 #     removido do baseline: ./scripts/check_500.sh --update-baseline).
 # Uso: scripts/check_500.sh [--update-baseline]
 set -uo pipefail
 
-LIMIT=500
+LIMIT=500   # alvo da regra — acima disto é dívida (warn ratchet)
+CRITICAL=600 # decisão 13/09: 500–599 tolerado; chegar a 600 = crítico, refactor obrigatório
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BASELINE="$ROOT/scripts/check_500-baseline.txt"
 
 current=$(find "$ROOT"/kof-*/src/main/java -name '*.java' -exec wc -l {} + \
     | awk -v lim="$LIMIT" -v root="$ROOT/" '$1 > lim && $2 != "total" {gsub(root, "", $2); print $1"\t"$2}' \
     | sort -k2)
-
-if [ "${1:-}" = "--update-baseline" ]; then
-    printf '%s\n' "$current" > "$BASELINE"
-    echo "check_500: baseline atualizado ($(printf '%s\n' "$current" | grep -c . || true) dívidas)."
-    exit 0
-fi
 
 if [ ! -f "$BASELINE" ]; then
     echo "check_500: FALHOU — baseline de dívida ausente ($BASELINE)."
