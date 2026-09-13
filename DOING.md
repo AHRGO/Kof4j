@@ -61,15 +61,16 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > com graça, rebase descartou meu commit redundante. Sobrou UM gap real na
 > entrega .15: a recusa riscv/aarch não tinha teste (remover o gate = link
 > cross quebrado silencioso). Fechei com `powCrossArchRefused` (`d736e36e`,
-> aditivo, sem tocar semântica). Sync: README §3 linha pow→FEITO + roundTo
-> marcado APROVADO-NA-7A-pendente-sem-dono. **PRÓXIMO PASSO:** `math.roundTo`
-> (7a: "implementar pow (+ roundTo via floor asm)") — file-alvo
-> `KofMath.java` + `JvmStringMathRuntime` + descritores + JS + shim SSE2
-> (floor = `roundsd $1` — precedent `cvttsd2si` em RuntimeMath), riscv/aarch
-> gate MATH001 igual pow; golden MEDIDO no oracle JVM (2.675-style case é o
-> motivo do roundTo existir); matriz `stdmathroundto` + guard; KofMathTest
-> espelhando powJvm/Native/Js/Refused. Sem dono até agora — REIVINDICAR no
-> próximo commit.
+> aditivo, sem tocar semântica). Sync: README §3 linha pow→FEITO. **ERRO
+> CORREGIDO neste commit:** eu tinha marcado `roundTo` como "APROVADO na 7a,
+> próximo passo" — FALSO. A ratificação da mantenedora (linha 272) diz
+> "(7a) link -lm aprovado → **pow**" só; o "+ roundTo via floor asm" era
+> anotação de agente no plano, não decisão. roundTo = superfície indefinida
+> (assinatura? tie-break 2.675?) → **regra 6, NÃO implementar sem ordem**.
+> README + plano corrigidos. **PRÓXIMO PASSO:** varrer fila §1 do README por
+> `.md` solto com implementação pendente SEM dono e SEM impedimento de
+> decisão (regra de prioridade 13/09); pow/roundTo §106 §89 §117 = fora da
+> minha lane (bugs/decisão). Reavaliar estabilidade a cada re-disparo.
 > **NÃO:** `nat/` (lane GC viva); fila bugs §106/§89/§117 (lane bugs); push
 > main.
 
