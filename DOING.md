@@ -49,6 +49,18 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **⚡ EM CURSO (13/09, lane development/docs — cluster legado + OTP, dono =
+> esta sessão):** (1) `LEGACY_MIGRATION.md`: contradição corrigida ("nada
+> existe" → tabela real §3) + contagem 63→70 testes (Decompile 45 + Translate
+> 9 + Compare 6 + Migrate 3 + CmdCheck 7, medidos 13/09; `inspect` = IR stats
+> sem teste próprio) + refs em IMPLEMENTATION/README/future. TRANSLATOR/
+> DIFFERENTIAL/LEGACY_IR/DECOMPILER sem contradição (status batem com código).
+> (2) OTP: S2-JVM `020be966` sincronizado (`startAll`+laço único, E2E 8/8;
+> "decisão na mesa"→DECIDIDO+IMPLEMENTADO; S2-pendente→S2-Native/JS).
+> **PRÓXIMO PASSO:** push + pull (pedido da mantenedora); depois native/editor/
+> SOLID-500/stdlib-expansion.
+> **NUNCA:** fila §106/§89/§117 (outro agente); `nat/` lane GC viva; push main.
+
 > **⚡ FEITO (13/09, lane development/docs — commit de working-tree pendente,
 > dono = esta sessão, pedido da mantenedora "quando for assim commita tudo"):**
 > `scripts/check_500.sh` tinha edição não-commitada no tree (distingue

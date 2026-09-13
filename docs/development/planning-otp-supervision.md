@@ -387,8 +387,10 @@ Native; pequeno e isolado. Não bloqueia OTP (que usa flag própria).
   §131 contornado (sobrecarga por aridade quebrada → `child` de 3 args único).
 - **Paridade honesta:** JVM + Script rodam o núcleo; Native/JS bloqueiam no
   compile-time (OTP001/OTP002) por §129/§132 — NUNCA binário que trava (regra
-  6). **S2 do plano (N workers sem bloquear, selectAny)** continua pendente:
-  exige §128 (unbox selectAny) e, no Native, §129 (unwind por-thread). O
+  6). **S2-JVM do plano IMPLEMENTADO 13/09** (`020be966`, opção 1a):
+  `Supervisor.startAll()` + laço selectAny único com wrapper de identidade
+  (id/motivo); gates S2 JVM+interpretador; `KofSupervisorE2ETest` 8/8, gate
+  1620/0. **S2-Native/JS** continuam pendentes (§129/§132). O
   documento fica em `docs/development/` até o Native fechar.
 
 ## Atualização 12/09 — estado REAL dos impeditivos do S2 (doc-vs-realidade)
@@ -410,8 +412,7 @@ Native; pequeno e isolado. Não bloqueia OTP (que usa flag própria).
   de falha** (uma falha propaga como exceção sem id). Para one_for_one
   individual o supervisor precisa do par `(id, motivo)` do morto; isso
   exige um wrapper por filho que reporta a identidade (ex.: task-pair
-  `(id, resultado)`) — **decisão de design na mesa do DD-OTP-03** (regra 6:
-  não é mecânica de port). A alternativa do núcleo atual (1 thread `vigiar`
-  por filho) segue sendo a implementada e coberta pelos 4 gates DD-OTP-11
-  (`KofSupervisorE2ETest` 6/6).
+  `(id, resultado)`) — **DECIDIDO 13/09 (opção 1a)** + **IMPLEMENTADO**
+  (`020be966`: `Supervisor.startAll()` + laço selectAny único; 1 thread
+  supervisora; `KofSupervisorE2ETest` 8/8).
 - **Ratificação:** ~~aguardando~~ **✅ RATIFICADAS 13/09** (ver topo do doc). **S2-JVM IMPLEMENTADO 13/09** (opção 1a): `Supervisor.startAll()` + `lacoUnico()` no `supervisor-host.kf` — 1 thread supervisora, `selectAny(handles)` sobre os filhos vivos; **wrapper de identidade** `kofSupRun` devolve o id (término normal) ou lança `"id: motivo"` (falha → parse do par `(id, motivo)` no laço). Gates novos: `KofSupervisorE2ETest.supervisorS2TresFilhosUmLacoSelectAny` + `supervisorS2NoInterpretador` (8/8 verdes). riscv/aarch = PARTIAL (gate OTP001 já bloqueia o pacote — R6 honesto). S2-Native x86 pendente do §129-TLS (ABERTO por decisão 13/09).
