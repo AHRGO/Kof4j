@@ -79,6 +79,17 @@ public final class BuiltinCallTyper {
         if (mc.receiver() == null && "now".equals(mc.methodName()) && mc.arguments().isEmpty()) {
             return Type.PrimitiveType.LONG;
         }
+        // #108 (opção 1, 13/09): `sleep(ms)` sem receiver resolve como
+        // `time.sleep(ms)` — espelha o `now()` sem receiver acima.
+        // Só vale sem receiver E sem local/função `sleep` do usuário
+        // (não sombreia: resolve() acha local, param, função ou classe).
+        if (mc.receiver() == null && "sleep".equals(mc.methodName())
+                && scope.resolve("sleep") == null) {
+            List<Type> sleepArgs = new ArrayList<>();
+            for (ExpressionNode arg : mc.arguments()) sleepArgs.add(SemExpressionTyper.inferType(sa, arg, scope));
+            KofTime.TimeCall sleepCall = KofTime.staticCall("sleep", sleepArgs);
+            if (sleepCall != null) return sleepCall.returnType();
+        }
         if (mc.receiver() == null && "readLine".equals(mc.methodName()) && mc.arguments().isEmpty()) {
             return BuiltinTypes.STRING;
         }

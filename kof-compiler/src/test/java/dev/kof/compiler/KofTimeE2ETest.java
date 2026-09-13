@@ -88,6 +88,28 @@ class KofTimeE2ETest {
                 """, "true");
     }
 
+    // #108 (13/09): `sleep(ms)` sem receiver resolve como `time.sleep(ms)`
+    // (opção 1 — espelha o `now()` sem receiver). Paridade JVM+Native+JS.
+    @Test
+    void sleepUnqualifiedResolvesAsTimeSleep(@TempDir Path tempDir) throws IOException {
+        runJvm(tempDir, """
+                main() {
+                    var t0 = now()
+                    sleep(250)
+                    var t1 = now()
+                    println(t1 - t0 >= 200)
+                }
+                """, "true");
+        runNative(tempDir, """
+                main() {
+                    var t0 = now()
+                    sleep(250)
+                    var t1 = now()
+                    println(t1 - t0 >= 200)
+                }
+                """, "true");
+    }
+
     @Test
     void intervalRunsPeriodicallyUntilCancelled(@TempDir Path tempDir) throws IOException {
         String src = """

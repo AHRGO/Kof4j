@@ -38,4 +38,35 @@ public final class ExpressionTimeCallLowerer {
     }
     return localIdx;
     }
+
+    /**
+     * #108 (opção 1, 13/09): `sleep(ms)` sem receiver — reemite como
+     * `kof_time_sleep` sem precisar de receiver no AST. O caller já validou
+     * a aridade via {@code KofTime.staticCall}; aqui só emite args + call.
+     */
+    static int lowerSleep(CompilerDriver driver, MethodCallExpr mc, List<KofOperation> ops,
+                          String owner, int localIdx, List<IRLocalVariable> locals) {
+        List<Type> argTypes = new ArrayList<>();
+        for (ExpressionNode arg : mc.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
+        KofTime.TimeCall timeCall = KofTime.staticCall("sleep", argTypes);
+        if (timeCall == null) return localIdx;
+        if (!KofTime.supportedOn("sleep", driver.target)) {
+            if (driver.currentDiagnostics != null) {
+                driver.currentDiagnostics.error(mc.position() != null ? mc.position().file() : "",
+                        mc.position() != null ? mc.position().line() : 0,
+                        mc.position() != null ? mc.position().column() : 0,
+                        0,
+                        "sleep" + ": not available on the " + driver.target
+                                + " driver.target yet (" + KofTime.gapCode("sleep") + ")",
+                        KofTime.gapCode("sleep"));
+            }
+            return localIdx;
+        }
+        for (ExpressionNode arg : mc.arguments()) {
+            localIdx = ExpressionLowerer.emitExpression(driver, arg, ops, owner, localIdx, locals);
+        }
+        ops.add(new KofCall(KofTime.TIME, timeCall.function(), timeCall.parameterTypes(),
+                timeCall.returnType(), KofCallKind.FUNCTION));
+        return localIdx;
+    }
 }

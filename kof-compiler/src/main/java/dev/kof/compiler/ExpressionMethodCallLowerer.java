@@ -148,6 +148,18 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
     return localIdx;
 } else if (mc.receiver() == null && KofScheduler.isSchedulerMethod(mc.methodName())) {
     return ExpressionSchedulerCallLowerer.lower(driver, mc, ops, owner, localIdx, locals);
+    // #108 (opção 1, 13/09): `sleep(ms)` sem receiver = `time.sleep(ms)`.
+    // Reusa o lowerer do namespace (emite kof_time_sleep) — espelha o
+    // `now()` sem receiver do ExpressionStaticCallLowerer. Guarda anti-
+    // sombreamento igual à do typer (MethodCallNamespaces).
+} else if (mc.receiver() == null && "sleep".equals(mc.methodName())
+        && driver.findLocalVar("sleep", locals) == null) {
+    List<Type> sleepArgTypes = new ArrayList<>();
+    for (ExpressionNode arg : mc.arguments()) sleepArgTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
+    if (KofTime.staticCall("sleep", sleepArgTypes) != null) {
+        return ExpressionTimeCallLowerer.lowerSleep(driver, mc, ops, owner, localIdx, locals);
+    }
+    // sem match de aridade: cai no fluxo normal (SEM015 honesto)
 } else if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.name(), locals)
             && KofMq.isMqNamespace(rid.name())) {
     return ExpressionMqCallLowerer.lower(driver, mc, ops, owner, localIdx, locals);

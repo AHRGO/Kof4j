@@ -99,6 +99,18 @@ final class MethodCallNamespaces {
             // fall through (original): sem match, o caller segue
             return null;
         }
+        // #108 (opção 1, 13/09): `sleep(ms)` sem receiver resolve como
+        // `time.sleep(ms)` — espelha o `now()` sem receiver que já existe
+        // (MethodCallTyper + BuiltinCallTyper + ExpressionStaticCallLowerer).
+        // Só vale sem receiver E sem local `sleep` (não sombreia usuário).
+        if (mc.receiver() == null && "sleep".equals(mc.methodName())
+                && driver.findLocalVar("sleep", locals) == null) {
+            List<Type> argTypes = new ArrayList<>();
+            for (ExpressionNode arg : mc.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
+            KofTime.TimeCall timeCall = KofTime.staticCall("sleep", argTypes);
+            if (timeCall != null) return timeCall.returnType();
+            return Type.UnknownType.UNKNOWN;
+        }
         if (mc.receiver() instanceof IdentifierExpr rid && KofLog.isLogNamespace(rid.name())) {
             List<Type> argTypes = new ArrayList<>();
             for (ExpressionNode arg : mc.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
