@@ -11,7 +11,7 @@ O modelo pode inventar `users.map(...)`, `Option<T>`, `async/await`,
 porque existem em outras linguagens. Código assim **não compila** ou
 **compila por acidente** com semântica errada.
 
-## Status real (verificado no compilador — 0.3.22-beta, Sep 2026)
+## Status real (verificado no compilador — 0.4.0-beta, Sep 2026)
 
 | Feature | Status |
 |---|---|

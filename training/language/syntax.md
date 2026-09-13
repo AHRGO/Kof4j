@@ -1,6 +1,6 @@
 # Kof Syntax Reference
 
-**Version:** 0.3.22-beta (Sep 2026)
+**Version:**  0.4.0-beta (Sep 2026)
 
 ## Declarations
 

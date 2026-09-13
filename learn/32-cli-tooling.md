@@ -1,6 +1,6 @@
 # 32 — CLI e Tooling
 
-> **Kof 0.3.22-beta — set 2026 — targets jvm/native/native.risc/native.arm/js/android + kofc**
+> **Kof 0.4.0-beta — set 2026 — targets jvm/native/native.risc/native.arm/js/android + kofc**
 
 A CLI é a ferramenta central da plataforma Kof.
 

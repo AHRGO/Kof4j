@@ -1,6 +1,6 @@
 # Idioms — Errors
 
-**Status:** available (JVM, Native, JS) · **Introduced:** 0.0.4-alpha · **Updated:** 0.3.22-beta (Sep 2026)
+**Status:** available (JVM, Native, JS) · **Introduced:** 0.0.4-alpha · **Updated:**  0.4.0-beta (Sep 2026)
 
 ## What it is
 

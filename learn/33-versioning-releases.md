@@ -1,6 +1,6 @@
 # 33 — Versionamento e Releases
 
-> **Kof 0.3.22-beta — set 2026**
+> **Kof 0.4.0-beta — set 2026**
 
 ## Formato
 

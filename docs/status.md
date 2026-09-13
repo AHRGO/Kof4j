@@ -1,7 +1,7 @@
 # Status do Projeto Kof
 
 **Última atualização:** 12 de setembro de 2026
-**Versão:** 0.3.22-beta (pom `revision`)
+**Versão:**  0.4.0-beta (pom `revision`)
 
 > **12/09 — §107 face ESCALAR FECHADA nos 3 alvos nativos** (`println(<coleção>)`
 > imprimia lixo de ponteiro; `kof_{list,set,map}_to_string` + tag compile-time

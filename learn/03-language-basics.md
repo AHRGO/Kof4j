@@ -1,6 +1,6 @@
 # 03 — Fundamentos da Linguagem
 
-> **Kof 0.3.22-beta — `intention->Kof->frontend->IR->backend->runtime`**
+> **Kof 0.4.0-beta — `intention->Kof->frontend->IR->backend->runtime`**
 
 ## O que você vai aprender
 

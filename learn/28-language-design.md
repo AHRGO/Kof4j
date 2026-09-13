@@ -1,6 +1,6 @@
 # 28 — Design da Linguagem
 
-> **Kof 0.3.22-beta — set 2026 — `intention->Kof->frontend->IR->backend->runtime`**
+> **Kof 0.4.0-beta — set 2026 — `intention->Kof->frontend->IR->backend->runtime`**
 
 ## Filosofia
 

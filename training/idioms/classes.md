@@ -1,6 +1,6 @@
 # Idioms — Classes
 
-**Status:** available · **Introduced:** 0.0.4-alpha · **Updated:** 0.3.22-beta (Sep 2026)
+**Status:** available · **Introduced:** 0.0.4-alpha · **Updated:**  0.4.0-beta (Sep 2026)
 
 ## What it is
 

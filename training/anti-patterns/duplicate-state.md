@@ -1,6 +1,6 @@
 # Anti-pattern — Duplicate State
 
-**Updated:** 0.3.22-beta (Sep 2026) (02 Sep 2026) — `List.size` via `kof_list_get` bounds OK; `Box<T>` e `map/filter` não duplicam.
+**Updated:**  0.4.0-beta (Sep 2026) (02 Sep 2026) — `List.size` via `kof_list_get` bounds OK; `Box<T>` e `map/filter` não duplicam.
 
 ## Name
 

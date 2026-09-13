@@ -1,6 +1,6 @@
 # Idioms — Concurrency
 
-**Status:** available (3 targets) · **Introduced:** 0.0.5-alpha · **Updated:** 0.3.22-beta (Sep 2026) (31/08: CONC001 fechado) · **JS:** sequencial (CONC003 parcial)
+**Status:** available (3 targets) · **Introduced:** 0.0.5-alpha · **Updated:**  0.4.0-beta (Sep 2026) (31/08: CONC001 fechado) · **JS:** sequencial (CONC003 parcial)
 
 ## What it is
 
