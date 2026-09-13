@@ -51,10 +51,14 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > (topo + `pow`/S10c/§89 ratificados 7a/6a/3a); `planning-otp-supervision.md`
 > 8× "aguarda ratificação" → "RATIFICADA 13/09"; `docs/development/README.md`
 > item 4 (**S2-JVM ✅ implementado 13/09**, `startAll`/`lacoUnico` + 8/8) e
-> ratchet ≤500 (**9→8**, `wc -l scripts/check_500-baseline.txt`). Gate matriz
-> 1/1. Só doc, zero código. **PRÓXIMO TICK:** varredura contínua
-> docs↔decisão↔matriz; `decision-pending/` (6 docs, todos ainda aguardando);
-> nenhum doc de `development/` concluído p/ mover (todos têm trabalho real).
+> ratchet ≤500 (**9→8**, `wc -l scripts/check_500-baseline.txt`); paths
+> pós-refactor (`complexity-audit`→`docs/audits/`, `docs/history/actual-state.md`
+> →`docs/bugs-and-gaps/known-bugs.md`); OTP §127 ✅/§131 decidido no bloco de
+> atualização. Gate matriz 1/1. Só doc, zero código. **PRÓXIMO TICK:** varredura
+> contínua docs↔decisão↔matriz; `decision-pending/` (6 docs, todos ainda
+> aguardando); nenhum doc de `development/` concluído p/ mover (todos têm
+> trabalho real). Sem regressão e suíte verde ⇒ se a varredura não achar claim
+> stale nova, RECUSAR (estabilidade).
 > **NÃO:** código de lane alheia (pow/S10c = STDLIB; nat/ = GC viva; finally-IR
 > = mesa). **NUNCA:** push main.
 
