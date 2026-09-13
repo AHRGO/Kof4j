@@ -25,6 +25,7 @@
 |---|---|---|---|---|---|---|
 | aritmética int + overflow | `-2147483648` / `-1` / `1` | DONE | DONE | DONE | DONE | `arith` |
 | long div/mod | `3333333333` / `4` | DONE | DONE | DONE | DONE | `longdiv` |
+| `Double %` (mod de variáveis; + NaN/±Inf) | `1.5` / `1.0` / `0.5` / `-1.5` / `NaN` | DONE | DONE (bug 146 ✅ 12/09 `718ae5cf` — `NativeX86Arith` emite o fmod real) | DONE | PARTIAL (test exclui js; §146 shape `JsBackend`) | `doublemod` |
 | cast `d as Int` / `L as Int` / `66 as Char` | `9` / `70000` / `66` | DONE | DONE | DONE | DONE | `cast` |
 | float println | `0.3333333333333333` / `5.0` / `3.5` | DONE | DONE (bug 44 ✅ 10/09 x86) | DONE | PARTIAL (doc: `5` vs `5.0`) | `floatprint` |
 | infinity/NaN println+String.valueOf | `Infinity` / `-Infinity` / `NaN` | DONE | DONE (bug 44 residual ✅ 11/09 x86) | DONE | PARTIAL (doc: `5` vs `5.0`) | `infinityprint` |
@@ -42,6 +43,7 @@
 | string unicode substring (code units, fronteiras bem-formadas) | `afé` / `é` / `😀` / `3` / `b` | DONE | DONE (bug 43 ✅ 10/09 x86) | DONE | DONE | `unicode-substring` |
 | string unicode indexOf/lastIndexOf (code units) | `6` / `-1` / `4` / `3` | DONE | DONE (bug 43 ✅ 10/09 x86) | DONE | DONE | `unicode-indexof` |
 | string ops split/toLowerCase/trim | `4` / `hello world` / `x\|` | DONE | DONE | DONE | DONE | `strops` |
+| `String.isEmpty()` (+ trim-composto, `!isEmpty` em if) | `false` / `false` / `true` / `ok` | DONE (bug 145 ✅ 12/09 `718ae5cf` — `isEmpty` no registro de String) | DONE | DONE | DONE | `strisempty` |
 | map put/get/size | `1` / `2` | DONE | DONE | DONE | DONE | `map` |
 | `Set.remove` por valor (String no índice 0 + Int) | dedup + `true`/`false`/tamanho corretos | DONE | DONE (bug 129 ✅ 11/09 — era silent-corruption: `kof_set_remove` passava a TAG (r13) como índice ao `kof_list_remove`, apagando o vizinho) | DONE | DONE | `setdedup` |
 | `Map<Int,V>` put/get/remove + get-miss `null` | `um`/`dois`/`2`/`um`/`null` | DONE | DONE (bug 123 ✅ 11/09 — era **SIGSEGV**: `kof_map_find` com `kof_string_equals` no chave Int → ponteiro; tag de chave no header off 40, espelhando o Set) | DONE (bug 124 ✅ 11/09 — era NPE "value is null": `println` do miss baixava `valueOf(Unknown)`, o scorer do `invokeExternal` empatava `valueOf(char[])`/`valueOf(Object)` e pegava o array) | DONE | `mapint` |
@@ -60,6 +62,7 @@
 | switch-expr heterogêneo Int/String (issue #57) | `1` | DONE | DONE | DONE | DONE (bug 69 corrigido) | `switchexpr-heterogeneous-direct` |
 | if-expr heterogêneo Int/Long (§70, crash de join) | `1` | DONE | DONE | DONE | DONE (bug 69 corrigido) | `ifexpr-intlong-direct` |
 | if-expr heterogêneo Long/Double (§70) | `2` | DONE | DONE | DONE | DONE (bug 69 corrigido) | `ifexpr-longdouble-direct` |
+| `if` com branch `throw` + `else` (epílogo do método após o if) | `else` / `after` | DONE | DONE | DONE | DONE (bug 147 ✅ 12/09 `718ae5cf` — `JsIfThrowElse` isola o epílogo) | `ifthrowelse` |
 | if-expr heterogêneo Int/null (§70) | `1` | DONE | DONE | DONE | DONE (bug 69 corrigido) | `ifexpr-intnull-direct` |
 | for-in + break/continue | `4` | DONE | DONE | DONE | DONE | `breakcont` |
 | record `==` conteúdo + toString + accessor | `true` / `P[x=1, y=2]` / `1` | DONE | DONE | DONE | DONE | `record` |
