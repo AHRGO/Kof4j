@@ -16,12 +16,14 @@
 > | **Corrigidos na sessão de paridade absoluta 11/09** | **15** — bugs 96 (SEM052), 98 (SEM053), 100 (SEM051+fold), 44-residual, 102 (from-idx), 103 (SEM054), 104a (KofObj equals/hash/toString no interpretador), 104b-i (LINK_FAIL `Object.equals` herdado no Native), 104c (membership de record por conteúdo no JS — `kofValEq`), 107-JS (`kofFormat` no JS), 109 (CRASH JVM no guard do `map.get` primitivo), 110 (`-0.0` colapsado em `+0.0` no literal emitter JVM), 111 (trailing-empties no `split` Native/JS + sentinela `substring` 0→-1; ✅ cross riscv/aarch B36/B37 11/09 — FECHADO nos 5 targets), 112 (prev de `put`/`remove` p/ primitivo: VerifyError/NPE JVM + SIGSEGV Native por pilha desequilibrada + `set.add` do interpretador + **JS fechado na mesma unidade** — `?? default` + `KofPop` preserva side-effect embrulhado; 4/4 targets), **104b-ii FACE CHAR** (SIGSEGV/`a` no `println(char-em-coleção)`; 3 buracos: desembrulhar `Nullable(CHAR)` no print-lowering JVM-coerente `unboxDescriptor` (char→`Integer`, não `Character`/`charValue`) + repair de `as Char` no `SemExpressionTyper` — `mapgetprim` 4/4) — todos com prova na matrix/suíte |
 > | **Corrigidos na prova cross-arch 11/09 (MATH001/TIME002/B33)** | **3** — bugs 101→registrado (relacional NaN, ABERTO regra 6), MATH001 (Double math B32), TIME002 (ISO add/diff B33), 105 (random.int loop — renumerado de 102, colidiu c/ §102 indexOf) |
 > | Verificados corrigidos em 08/09 | **19** — bugs 1–8, 10–17, 19, 20, 26 |
-> | Não reverificados (faltou ambiente/setup) | bugs 9, 18, 21, 22, 23 |
+> | **Reverificados 13/09 (ambiente com qemu/riscv disponível)** | **5** — bugs 9, 18, 21, 22, 23: ✅ CORRIGIDO nos cabeçalhos CONFIRMADO por teste neste HEAD (`NativeE2ETest` 2/2, `KofJsE2ETest.uiWidgetIdsUseMonotonicCounter`, `PackagesE2ETest` 12/12, `AndroidInteropE2ETest.missingSuperclassOnClasspathWarns` — 16/16, 0 falha)
 >
 > Os bugs marcados `✅ VERIFICADO CORRIGIDO 08/09` foram reproduzidos contra o
 > build atual e **não** falham mais — parte virou saída correta, parte virou
-> diagnóstico limpo. O Native não pôde ser reverificado nesta rodada (host
-> arm64/macOS sem toolchain x86_64-linux).
+> diagnóstico limpo. A ressalva de 08/09 ("Native não pôde ser reverificado —
+> host arm64/macOS sem toolchain x86_64-linux") está **superada**: o host
+> atual é x86_64-linux com qemu riscv64/aarch64 + binutils cross, e o Native
+> foi reverificado nas rodadas 11/09–13/09 (cross-arch 42+42; tabela acima).
 >
 > **Como pegar:** reproduza o snippet (`kof run --target=jvm`), fix no CÓDIGO
 > (não no corpus), adicione teste E2E que falha antes/passa depois, atualize
