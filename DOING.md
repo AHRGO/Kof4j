@@ -119,10 +119,19 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > Int/Long). Antes: JVM compilado ClassFormatError owner "" / nativo
 > undefined reference. Prova: `CoreRegressionE2ETest.numericConvert
 > MethodAliasOfAs` JVM+JS verde + nativo x86 medido (repro manual, 5/5).
-> **PRÓXIMO PASSO:** commit+push §89; depois §117 (cancelled() slot por
-> TID, 8a); §131 (sobrecarga método por aridade, 10a); Long=BigInt JS
-> (5b, último, bump+migração). **NUNCA:** `nat/` lane GC viva; UI*; push
-> main; `git config user.*` (regra 7); Co-authored-by.
+> **⚡ FEITO (13/09 ~09:00, §117 implementado — decisão 8a):** tabela de
+> cancel por TID REAL (`kof_cancel_slots` 256×16B [tid,flag], hash phi +
+> probe linear) substitui a tabela por hash truncado (2 TIDs vivos no mesmo
+> slot = cancel perdido/apagado). Trampoline registra (TID,flag=0) e guarda
+> a entry no handle (cancelEntry@32, alloc 32→48); epilogo zera a própria
+> entry (fim do `movb $0` cego). `kof_cancel(h)`/`kof_cancelled()` resolvem
+> a entry pelo TID real — sem mudança de contrato, sem TLS glibc.
+> Prova: `KofConcurrency2Test.cancelDoesNotLeakAcrossWorkersNative` (20
+> iterações colisão forçada) + concorrência 34/0.
+> **PRÓXIMO PASSO:** commit+push §117; depois §131 (sobrecarga método por
+> aridade, 10a); Long=BigInt JS (5b, último, bump+migração). **NUNCA:**
+> `nat/` lane GC viva; UI*; push main; `git config user.*` (regra 7);
+> Co-authored-by.
 
 
 

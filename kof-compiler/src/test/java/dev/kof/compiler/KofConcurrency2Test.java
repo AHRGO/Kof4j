@@ -158,6 +158,56 @@ class KofConcurrency2Test {
         assertEquals("cancelado\nfim", output, "o worker deve ver o cancel e encerrar cedo");
     }
 
+    // §117 (decisão 8a, 13/09): tabela de cancel por TID REAL (probe linear)
+    // — colisão forçada: N workers VIVOS em sequência; o cancel do worker k
+    // NÃO pode afetar o worker k+1 (bug antigo: slot por hash truncado
+    // reutilizado + `movb $0` cego no trampoline apagava flag alheia).
+    @Test
+    void cancelDoesNotLeakAcrossWorkersNative(@TempDir Path tmp) throws Exception {
+        // 30 iterações: worker longo cancelado; após await, novo worker
+        // VERIFICA que a própria flag nasce limpa (cancelled() == false).
+        Path f = tmp.resolve("MC.kf");
+        Files.writeString(f, """
+                Int longo() {
+                    var i = 0
+                    while (i < 100000 && !cancelled()) {
+                        time.sleep(1)
+                        i++
+                    }
+                    return i
+                }
+                Int curto() {
+                    if (cancelled()) { return 999 }
+                    time.sleep(5)
+                    if (cancelled()) { return 999 }
+                    return 1
+                }
+                main() {
+                    var ok = true
+                    var k = 0
+                    while (k < 20) {
+                        val a = spawn longo()
+                        time.sleep(15)
+                        assert(cancel(a))
+                        await a
+                        val b = spawn curto()
+                        val v = await b
+                        if (v == 999) { ok = false }
+                        k++
+                    }
+                    if (ok) { println("sem-vazamento") } else { println("VAZOU") }
+                }
+                """);
+        CompilationResult r = driver.compile(f, tmp.resolve("out"), Target.NATIVE);
+        assertTrue(r.success(), "Native §117 deve compilar: " + r.diagnostics().getDiagnostics());
+        Path bin = tmp.resolve("out").resolve("Default/Main");
+        Process p = new ProcessBuilder(bin.toString()).redirectErrorStream(true).start();
+        String output = new String(p.getInputStream().readAllBytes()).trim();
+        assertEquals(0, p.waitFor(), "exit code, output: " + output);
+        assertEquals("sem-vazamento", output,
+                "cancel do worker k não pode marcar o worker k+1 (§117)");
+    }
+
     @Test
     void awaitTimeoutJvm(@TempDir Path tmp) throws Exception {
         // G8/CONC residual: awaitTimeout(r, ms) -> valor no prazo; lança no estouro

@@ -3387,6 +3387,20 @@ int de índice) — verificados na varredura.
   OU aceitar o risco documentado (colisão exige TID-wrap; 5/5 limpo na sonda).
   riscv/aarch não têm `kof_cancel` exportado (gate CONC001 só no x86) — o
   fix é x86-only, sem efeito paridade nos outros nativos (já diagnosticado).
+- **✅ CORRIGIDO 13/09 (opção 8a implementada — sem mudança de contrato,
+  sem TLS da glibc):** a tabela 256 passou a ser indexada por **TID REAL
+  (pthread_self) com probe linear** (`kof_cancel_slots`: 256 entries de 16B
+  [tid, flag], hash phi + probe; tid=0 = vazio). O trampoline registra
+  `(TID, flag=0)` ANTES da task e guarda a entry no handle novo
+  (`handle->cancelEntry@32`, alloc 32→48); ao terminar, ZERA a própria entry
+  (o `movb $0` cego por hash era o vazamento). `kof_cancel(h)` resolve o
+  TID do handle → `kof_cancel_slot_find` → `flag=1` (só a entry DO TID do
+  handle); `kof_cancelled()` resolve o TID ATUAL → flag. Colisão de hash é
+  inócua: probe resolve por chave real. `RuntimeConcurrency.java` only.
+  Prova: `KofConcurrency2Test.cancelDoesNotLeakAcrossWorkersNative`
+  (20 iterações: worker longo cancelado + worker seguinte verifica flag
+  limpa — o cenário que o hash truncado apagava) + suíte de concorrência
+  34/0 (incl. cancelCooperativeJvm/Native e cancelledOutsideIsFalse).
 
 ### 118. kof.ui: chamadas de instância em `Column`/`Row` eram DROPADAS silenciosamente (compila e não faz nada) — ✅ CORRIGIDO 11/09  *(renumerado de §102 na reconciliação do merge beta-0.3.0→beta-0.4.0 11/09 — colidiu com a série ativa §95–§114)*
 
