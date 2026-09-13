@@ -42,8 +42,18 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **⚡ FEITO (13/09, lane development/docs — DD-01 movido p/ docs/,
+> commit `2ef6ce69` pushado):** `planning-finally-return.md` →
+> `docs/decisions/DD-01-finally-return.md` (IMPLEMENTADO `063ed956`, bug 45
+> FECHADO, suíte 1627/0). Conflito de rebase no README resolvido a favor da
+> minha versão (move 3-estados; conteúdo factual idêntico ao remoto `53126825`).
+> Remoto trouxe PRs #116/#117/#118 mergeados. **PRÓXIMO PASSO:** continuar
+> auditoria `docs/development/` (OTP, native, editor, SOLID-500, legado —
+> todos com trabalho real pendente, nada a mover agora).
+> **NUNCA:** fila §106/§89/§117 (outro agente); `nat/` lane GC viva; push main.
+
 > **⚡ FEITO (13/09, lane development/docs — DD-STDLIB-01 movido p/ docs/,
-> commit `157c5551` pushado):** `planning-stdlib-array-returns.md` →
+> commit `157c5551`):** `planning-stdlib-array-returns.md` →
 > `docs/stdlib/DD-STDLIB-01-array-returns.md`, título FECHADO, 5 refs
 > sincronizadas. **CORREÇÃO DE ROTA 13/09 (aviso da mantenedora):** a fila
 > ratificada 13/09 (§106→§89→§117→§131→pow→Long=BigInt) está com OUTRO AGENTE
