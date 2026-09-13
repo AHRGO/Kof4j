@@ -304,6 +304,28 @@ Fase E  Kof Decompiler          (gerar Kof source)
 > instanceof/checkcast SÓ tratam quando a árvore resolve o nome
 > (statements-path sem escopo = ainda caem — o furo do 09/09).
 >
+> **Fase C — o gargalo REAL medido (13/09, `StoreCat`, dono = 192.168.100.17):**
+> categorizar o drop por MÉTODO (não last-opcode): o `struct()` de
+> `BytecodeStatements` (linha 206) RECUSA re-entrância de join estrutural →
+> stub silencioso (sem opcode registrado). Isso é **2452 métodos** (a causa
+> `ffffffff`/outra do StoreCat) — de longe o MAIOR gargalo do corpus, e é
+> 100% deliberado ("recovery de join estruturado é trabalho futuro"). Os
+> counts de instanceof/STORE/branch (202+267+~240) são SINTOMAS do mesmo
+> join: o bloco pós-if não re-entra. **Plano de ataque (sub-caso estreito
+> primeiro):** `if (cond) { then }` SEM else com join no fim (ex.
+> `CompilerTypeSupport.fieldOk`, `KofUi.themeColor`) — o `struct` hoje trata
+> if-then-else (linha 271) mas não if-then puro com fall-through ao pós-bloco.
+> Tratar SÓ re-entrância que é join de if NÃO-loop (header ainda recusa),
+> emitir `if (cond) { then }` e continuar em `b.succ.get(0)`. **Prova
+> OBRIGATÓRIA antes do commit (R6/Q0):** golden EXECUTANDO — o harness já
+> existe e É o modelo: `DecompileTest` linha 747-791 ("FORTE: não basta
+> compilar — executa os 3 caminhos") faz `java -cp <out> S` e compara stdout;
+> replicar p/ o sub-caso de join (if-then sem else: braço-tomado e
+> braço-pulado devem dar o MESMO output no .kf quanto no .class original,
+> em JVM; cross-target JS/Native/Script = gap diagnosticado se divergir).
+> Um join recuperado errado é compilável mas semanticamente ERRADO = R6
+> (pior bug possível); NUNCA relaxar o `struct` sem o golden de execução.
+>
 > **Estágio 3 (13/09, dono = 192.168.100.17): interna do MESMO pacote.**
 > Categorização reflexiva dos 89 rejeitados (harness `RecCat`): **31** eram
 > só `implements Outer$Inner` do mesmo pacote (cluster `JsIr$*` com 43
