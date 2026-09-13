@@ -44,7 +44,10 @@ class TranslateExpr {
 
         String parseOr() {
             String e = parseAnd();
-            while (p.at(T.OROR)) { p.next(); e = e + " || " + parseAnd(); }
+            while (p.at(T.OROR) || p.at(T.PIPE)) {
+                String op = p.next().text;
+                e = e + " " + op + " " + parseAnd();
+            }
             return e;
         }
 
@@ -114,6 +117,13 @@ class TranslateExpr {
                     String idx = parseExpr();
                     p.expect("]");
                     e = e + "[" + idx + "]";
+                } else if (p.at("(")) {
+                    // bare call: foo(args) — sem receiver. Sem este ramo,
+                    // `boom("x");` caía em parseExprOrDecl → "expected ';'
+                    // but found '('" (descoberto via try/catch 13/09: o corpo
+                    // do try quase sempre chama métodos).
+                    String args = parseCallArgs();
+                    e = e + "(" + args + ")";
                 } else if (p.at(T.INC)) { p.next(); e += "++"; }
                 else if (p.at(T.DEC)) { p.next(); e += "--"; }
                 else break;
@@ -172,6 +182,7 @@ class TranslateExpr {
                     case "null" -> "null";
                     case "new" -> parseNew();
                     case "this" -> "this";
+                    case "throw" -> "throw " + parseExpr();
                     default -> t.text;
                 };
                 case P -> {
@@ -234,6 +245,13 @@ class TranslateExpr {
                 return "new " + kofType(typeName) + "[" + size + "]";
             }
             String args = parseCallArgs();
+            if (typeName.equals("RuntimeException") || typeName.equals("IllegalStateException")
+                    || typeName.equals("IllegalArgumentException") || typeName.equals("Exception")) {
+                // Exceções Java → String Kof (idiom errors.md: `throw "msg"`).
+                // `new RuntimeException("boom " + k)` → `"boom " + k`.
+                // Sem args → string vazia (throw exige String, SEM026).
+                return args.isEmpty() ? "\"\"" : args;
+            }
             return kofType(typeName) + "(" + args + ")";
         }
 

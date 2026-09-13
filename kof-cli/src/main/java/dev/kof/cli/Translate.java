@@ -330,6 +330,15 @@ public final class Translate {
             if (p.at("switch")) {
                 return parseSwitch();
             }
+            if (p.at("try")) {
+                return parseTry();
+            }
+            if (p.at("throw")) {
+                p.next();
+                String e = parseExpr();
+                p.expect(";");
+                return "throw " + e;
+            }
             // local variable declaration or expression statement.
             return parseExprOrDecl();
         }
@@ -441,6 +450,47 @@ public final class Translate {
             }
             p.expect("}");
             sb.append(" }");
+            return sb.toString();
+        }
+
+        private String parseTry() {
+            // try/catch/finally Java → try/catch(String)/finally Kof
+            // (training/idioms/errors.md: exceções são Strings).
+            // `try`/`catch`/`finally`/`throw` são keywords do TranslateLexer
+            // mas nenhum statement as consumia — caía em parseExprOrDecl →
+            // "expected ';' but found '{'" (try) / "found 'new'" (throw).
+            // `catch (Type name)` → `catch (String name)` — Kof só tem
+            // exceção-String (SEM026 rejeita throw não-String em compile-time).
+            // Multi-catch Java `catch (A | B e)` → catch único (Kof não tem
+            // união de tipos em catch). Bloco vazio → `{}`.
+            p.next(); // try
+            List<String> tryBody = parseBlock();
+            String tryStr = tryBody.isEmpty() ? "{}"
+                    : "{ " + String.join(" ", tryBody) + " }";
+            StringBuilder sb = new StringBuilder("try " + tryStr);
+            while (p.at("catch")) {
+                p.next();
+                p.expect("(");
+                // [final] Type [| Type]* name
+                if (p.at("final")) p.next();
+                p.next(); // type (descartado — Kof: String)
+                // union `catch (A | B e)` → catch único (Kof não tem união
+                // de tipos em catch; `|` agora é T.PIPE no lexer).
+                while (p.at(T.PIPE)) { p.next(); p.next(); } // '|' TipoExtra
+                String varName = p.next().text;
+                p.expect(")");
+                List<String> catchBody = parseBlock();
+                String catchStr = catchBody.isEmpty() ? "{}"
+                        : "{ " + String.join(" ", catchBody) + " }";
+                sb.append(" catch (String ").append(varName).append(") ").append(catchStr);
+            }
+            if (p.at("finally")) {
+                p.next();
+                List<String> finBody = parseBlock();
+                String finStr = finBody.isEmpty() ? "{}"
+                        : "{ " + String.join(" ", finBody) + " }";
+                sb.append(" finally ").append(finStr);
+            }
             return sb.toString();
         }
 

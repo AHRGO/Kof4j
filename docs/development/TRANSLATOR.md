@@ -6,8 +6,8 @@
 
 **Status:** EM DESENVOLVIMENTO (caiu de `future/` em 12/09 — Fase F
 implementada: `Translate.java` + `TranslateLexer`/`TranslateExpr`;
-prova: `TranslateTest` 11/11 (output compila e roda; +do-while +switch
-statement 13/09). Subconjunto Java ampliado ainda pendente)
+prova: `TranslateTest` 12/12 (output compila e roda; +do-while +switch
++try/catch/throw 13/09). Subconjunto Java ampliado ainda pendente)
 **Data:** 22 de agosto de 2026
 
 ---
@@ -119,3 +119,23 @@ diferenciais.
 > separados; arrow `case 3 ->` normalizado p/ `:`). Prova:
 > `TranslateTest.switchStatementTranslates` (traduz + compila JVM + roda
 > `one/ab`; Int e String). `Translate.java` 476 ≤500; `TranslateTest` 11/11.
+>
+> **Estado (13/09 ~11:00, dono = 192.168.100.22): try/catch/finally + throw
+> + bare-call traduzidos.** Gap em 3 frentes, todas do mesmo cluster "corpo de
+> método de verdade":
+> 1. `try { ... } catch (RuntimeException e) { ... } finally { ... }` Java →
+>    `try { ... } catch (String e) { ... } finally { ... }` Kof
+>    (`training/idioms/errors.md`: exceções são Strings). Causa: `try`/`catch`/
+>    `finally`/`throw` eram keywords sem ramo no statement parser. Fix:
+>    `parseTry` (multi-catch `catch (A | B e)` → catch único; bloco vazio →
+>    `{}`).
+> 2. `throw new RuntimeException(msg)` → `throw msg` (exceção-String).
+> 3. **Bug latente descoberto:** chamada sem receiver (`boom("x");`) não tinha
+>    ramo em `parsePostfix` → `expected ';' but found '('` — o parser só
+>    tratava `recv.metodo(...)`. Corrigido (bare-call), senão *qualquer* corpo
+>    de try real quebrava.
+> Prova: `TranslateTest.tryCatchFinallyTranslates` (traduz + compila JVM +
+> roda `caught/done/t2`). `Translate.java` **526 linhas — dívida tolerada
+> nova** (faixa 500–599 avisa, não quebra; split planejado: extrair
+> `parseSwitch`/`parseTry` p/ um `TranslateStatements`, ver §gate ≤500);
+> `TranslateTest` 12/12.

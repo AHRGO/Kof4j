@@ -203,6 +203,42 @@ class TranslateTest {
     }
 
     @Test
+    void tryCatchFinallyTranslates(@TempDir Path dir) throws Exception {
+        String kof = Translate.translateJava("""
+                public class ER {
+                    static void boom(String k) {
+                        throw new RuntimeException("boom " + k);
+                    }
+                    public static void main(String[] args) {
+                        try {
+                            boom("x");
+                            System.out.println("no");
+                        } catch (RuntimeException e) {
+                            System.out.println("caught");
+                        } finally {
+                            System.out.println("done");
+                        }
+                        try {
+                            System.out.println("t2");
+                        } catch (IllegalStateException | IllegalArgumentException e) {
+                            System.out.println("multi");
+                        }
+                    }
+                }
+                """);
+
+        assertTrue(kof.contains("try { boom(\"x\") println(\"no\") } catch (String e) { println(\"caught\") } finally { println(\"done\") }"),
+                "try/catch/finally Java deve virar try/catch(String)/finally Kof (antes: expected ';' but found '{'):\n" + kof);
+        assertTrue(kof.contains("throw \"boom \" + k"),
+                "`throw new RuntimeException(msg)` deve virar `throw msg` (exceções são Strings, errors.md; antes: found 'new'):\n" + kof);
+        assertTrue(kof.contains("} catch (String e) { println(\"multi\") }"),
+                "multi-catch `catch (A | B e)` vira catch único (Kof sem união):\n" + kof);
+        assertFalse(kof.contains("RuntimeException("), "sem construtor de exceção no output:\n" + kof);
+
+        assertCompiles(dir, kof, "caught\ndone\nt2");
+    }
+
+    @Test
     void doWhileTranslates(@TempDir Path dir) throws Exception {
         String kof = Translate.translateJava("""
                 public class DW {
