@@ -73,6 +73,7 @@
 | lambda filter/map/reduce | `90` | DONE | DONE | DONE | DONE | `lambdachain` |
 | tipo-função como argumento genérico `List<(Int) -> Int>` (§155) | `6` | DONE | DONE | DONE | DONE | `fntypegeneric` |
 | lista heterogênea de lambdas (mesma assinatura, §156) | `10` / `6` | DONE | DONE | DONE | DONE | `lambdalisthet` |
+| cast para tipo-função `x as () -> Int` (§127-JVM) | `true` | DONE | DONE | DONE | DONE | `castfn` |
 | sobrecarga de método de classe por assinatura (§131, decisão 10a) | `42` / `7` | DONE | DONE | DONE | DONE | `methodoverload` |
 | lambda captura mutável | `3` | DONE | DONE | DONE | DONE | `lambdacapture` |
 | array 2D/3D: alloc + length + store/load + zero-fill | `60`/`3`/`2`/`3`/`0`/`7`/`2`/`2`/`9`/`0` | DONE | DONE (bug 113 ✅ 11/09 x86 — `new Int[a][b]` NÃO alocava nada: `KofNewMultiArray` caía no `default->{}` → SIGSEGV; agora `kof_multi_alloc` recursivo; faces riscv/aarch ✅ 11/09 — fatia B37 + roteio cross, golden JVM sob qemu) | DONE (B37, port 0.3.0→0.4.0 ✅) | DONE (tradutor, ✅) | `array2d` |

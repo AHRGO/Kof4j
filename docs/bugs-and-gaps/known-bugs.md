@@ -3907,6 +3907,10 @@ int de índice) — verificados na varredura.
   do dispatch); (3) `SemExpressionTyper` — o `IdentifierExpr` com type-ref
   `"(...) -> ..."` não dispara SEM011. Prova: `LambdaE2ETest.castToFunctionType`
   (JVM+Native, `true`/`7`); sonda B127 4/4 targets.
+  **Trava automatizada (lane gate, 13/09):** célula de matriz `castfn`
+  (`ConformanceMatrixTest.conformanceCoreFunctions`) roda o repro nos **4
+  targets em CI** (`true` 4/4) — antes a prova automatizada era só JVM+Native;
+  Script/JS eram sonda manual.
 - **Impacto OTP:** DD-OTP-02 propunha `child(id, factory, ...)` com `factory`
   como tipo de função. Com este fix, a forma "Object/qualquer + `as () -> T`"
   RODA nos 4 targets; a alternativa por **interface** (abaixo) segue válida.

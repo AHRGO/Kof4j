@@ -1214,6 +1214,18 @@ class ConformanceMatrixTest {
                     println(m.size)
                 }
                 """, "9000000001\n1", Set.of(), tempDir);
+        // §127-JVM (13/09): `x as () -> Int` — o RHS de `as` era parseado
+        // como LambdaExpr (não type-ref) → checkcast com alvo "?" →
+        // VerifyError no JVM. Fix no parser+lowerer+typer. A prova
+        // automatizada era só JVM+Native (`LambdaE2ETest.castToFunctionType`);
+        // Script/JS eram sonda manual. Esta célula trava 4 targets.
+        matrix("castfn", """
+                main() {
+                    var l = listOf(() -> 5)
+                    var g = l.get(0) as () -> Int
+                    println(g() == 5)
+                }
+                """, "true", Set.of(), tempDir);
     }
 
     @Test
