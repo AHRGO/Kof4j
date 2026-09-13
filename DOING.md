@@ -56,16 +56,13 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 > **⚡ FEITO (13/09 ~05:40, lane 9094 issues — #113 + #97 fechadas + gate ≤500→600, dono = esta sessão):** (a) **#113** corrigida (commit `53b089fd`): `kof_heap_root_start` era emitido no preâmbulo do RUNTIME, abaixo dos `kof_static_*` do programa → heap referido só por campo estático não era marcado (UAF latente). Fix: abrir o intervalo na ABERTURA do `.data` do programa (`NativeBackend.emit`, antes de strings/estáticos/schemas/vtables); mapa de fatias atualizado (`PREAMBLE` espelha o novo prefixo — byte-idêntico passa; `root_start` vira `programSideSymbol`, fatia GC o referencia via `leaq`). **Topo fica `_end`** (medido: `root_end` no tail = 0x422cc0, 33KB ABAIXO do `_end` 0x42b100 — trocar hoje = under-mark; o rótulo explícito entra JUNTO do `--gc-sections` x86 = S-5, documentado no código). Prova: `nm` do Holder da issue — `root_start 0x415098 < kof_static_Holder_label_obj 0x4150c0` (antes: ABAIXO); programa roda (x1/42); `NativeRuntimeSliceRegistryTest` 7/7, ArtifactSize 6/6, KofMath 11/11, suíte compiler **1463/0**. (b) **gate ≤500→faixas** (decisão da mantenedora no turno): 500–599 TOLERADO (avisa, não quebra CI), ≥600 CRÍTICO (falha); `NativeBackend` avô 687→**645** (pruneRuntime movido p/ `RuntimeSlices`, subsistema S-3); baseline re-travado (11 dívidas); sintético provado: novo ≥600 FALHA, avô crescendo FALHA, tolerada NÃO falha. (c) **#97** fechada — S-1..S-7 ✅ no HEAD, números medidos AGORA: hello x86 `--print-sizes` = **32520B/37 syms** (era 138.928B/627 na issue). (d) **discussion #25** — switch-expression `case ->` JÁ EXISTE (PARSE094 honesto no corpo-bloco; matriz `switchexpr` DONE 5/5 targets; learn/15 + training/idioms/control-flow cobrem) — nada a implementar. **PRÓXIMO PASSO:** fila de issues da lane 9094 ZERADA (open: nenhuma na minha frente); re-disparo sem nada novo E suíte verde → **RECUSAR** (estabilidade). **NUNCA:** `nat/` sem aviso (a 9093 trabalha na MESMA árvore — conflito hoje em `NativeBackend`, resolvido preservando os dois lados); pow (dono 100.15); push main.
 
-> **⚡ EM CURSO (13/09, lane infra-tipos — §156, dono = 192.168.100.22):** item
-> código-puro-sem-decisão (`development/README.md` §2: o ÚNICO). Reproduzido
-> (JVM CCE Lambda1→Lambda0; Native OK). Fix em `CompilerTypeSupport.
-> listOfElementType` (elemento sem className quando todos os args são
-> FunctionType mesma assinatura) + espelho `BuiltinCallTyper.listOf` +
-> testes `LambdaE2ETest.heterogeneousLambdaListJvm/Native`. Sondas JVM/Native
-> 13/13 (get, for-in, single, declarado, add, var-refs). Gate 4-módulos
-> **1636/0/156-skip** medido neste turno. Dirty `nat/`+`RuntimeGc` = lane GC
-> viva (NÃO toco, regra 8 — vai no mesmo commit intacto). **PRÓXIMO PASSO:**
-> commit + push; depois re-auditar fila (12 abertos, todos com dono/decisão).
+> **⚡ FEITO (13/09, lane infra-tipos — §156, dono = 192.168.100.22):** item
+> código-puro-sem-decisão fechado (commits da lane 9094 `53b089fd`/`4c31a121`
+> preservaram o fix — verificado no HEAD: `sameLambdaSignature` +
+> `heterogeneousLambdaListJvm/Native` + `§156 ✅` presentes; re-validado
+> neste turno: sonda CCE→`10`, 13/13 sondas JVM/Native, subset 340/0incl.
+> `LambdaE2ETest` 23/23). **PRÓXIMO PASSO:** re-auditar fila (12 abertos,
+> todos com dono/decisão); sem item livre → RECUSAR (estabilidade).
 > **NUNCA:** pow/`usesPow`/roundTo (dono pow); `nat/` lane GC viva; fila
 > §106/§89/§117/§131 (outro agente); push main.
 
