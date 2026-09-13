@@ -6,8 +6,9 @@
 
 **Status:** EM DESENVOLVIMENTO (caiu de `future/` em 12/09 — Fase F
 implementada: `Translate.java` + `TranslateLexer`/`TranslateExpr`;
-prova: `TranslateTest` 14/14 (output compila e roda; +do-while +switch
-+try/catch/throw +arrays 13/09). Subconjunto Java ampliado ainda pendente)
+prova: `TranslateTest` 15/15 (output compila e roda; +do-while +switch
++try/catch/throw +arrays +cast/instanceof 13/09). Subconjunto Java
+ampliado ainda pendente)
 **Data:** 22 de agosto de 2026
 
 ---
@@ -155,3 +156,15 @@ diferenciais.
 > roda `10/0/0`; C-style for preservado) +
 > `TranslateTest.arrayInitializerIsHonestGap` (diagnóstico explícito, R6).
 > `TranslateStatements` 326 ≤500; `TranslateTest` 14/14.
+>
+> **Estado (13/09 ~12:00, dono = 192.168.100.22): cast + instanceof.**
+> `(String) o` → `o as String` (conversão Kof) e `o instanceof String`
+> preservado (Kof tem nativo, `training/language/overview.md`). Causa:
+> `instanceof` não era operador de `parseRel`; `(Type)` era lido como
+> parêntese de agrupamento → `expected ';' but found 'o'` /
+> `expected ')' but found 'instanceof'`. Fix: ramo `instanceof` em
+> `parseRel` + `isCastAhead`/`parseCast` em `parsePrimary` (lookahead
+> `(Type[...]) expr`, inclusive genéricos e arrays). Prova:
+> `TranslateTest.castAndInstanceofTranslate` (traduz + compila JVM + roda
+> `x/is-str/3`; cast de referência e primitivo). `TranslateExpr` 387 ≤500;
+> `TranslateTest` 15/15.

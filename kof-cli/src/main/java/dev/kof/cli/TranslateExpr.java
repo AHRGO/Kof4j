@@ -68,9 +68,16 @@ class TranslateExpr {
 
         String parseRel() {
             String e = parseAdd();
-            while (p.at(T.LT) || p.at(T.LE) || p.at(T.GT) || p.at(T.GE)) {
-                String op = p.next().text;
-                e = e + " " + op + " " + parseAdd();
+            while (p.at(T.LT) || p.at(T.LE) || p.at(T.GT) || p.at(T.GE) || p.at("instanceof")) {
+                if (p.at("instanceof")) {
+                    // `o instanceof String` → `o instanceof String` (Kof tem
+                    // instanceof nativo, training/language/overview.md).
+                    p.next();
+                    e = e + " instanceof " + parseType();
+                } else {
+                    String op = p.next().text;
+                    e = e + " " + op + " " + parseAdd();
+                }
             }
             return e;
         }
@@ -190,6 +197,9 @@ class TranslateExpr {
                         if (isLambdaAhead()) {
                             yield parseLambda();
                         }
+                        if (isCastAhead()) {
+                            yield parseCast();
+                        }
                         String e = parseExpr();
                         p.expect(")");
                         yield e;
@@ -233,6 +243,40 @@ class TranslateExpr {
             p.expect("->");
             String body = parseExpr();
             return "(" + String.join(", ", params) + ") -> " + body;
+        }
+
+        /** Lookahead: `(Type) expr` — cast Java. Kof usa `expr as Type`. */
+        boolean isCastAhead() {
+            // já consumimos '('; olha o próximo token
+            String first = p.peek().text;
+            if (!isPrimitiveOrType(first) && !first.equals("int") && !first.equals("boolean")
+                    && !first.equals("char") && !first.equals("long") && !first.equals("double")) {
+                return false;
+            }
+            int i = p.pos + 1;
+            // genéricos: (List<String>) x
+            if (i < p.toks.size() && p.toks.get(i).text.equals("<")) {
+                int depth = 0;
+                while (i < p.toks.size()) {
+                    String t = p.toks.get(i).text;
+                    if (t.equals("<")) depth++;
+                    else if (t.equals(">")) { depth--; if (depth == 0) { i++; break; } }
+                    i++;
+                }
+            }
+            while (i + 1 < p.toks.size() && p.toks.get(i).text.equals("[")
+                    && p.toks.get(i + 1).text.equals("]")) {
+                i += 2;
+            }
+            return i < p.toks.size() && p.toks.get(i).text.equals(")");
+        }
+
+        /** `(String) o` → `o as String` (cast de conversão Kof). */
+        String parseCast() {
+            String type = parseType();
+            p.expect(")");
+            String operand = parseUnary();
+            return operand + " as " + type;
         }
 
         String parseNew() {

@@ -239,6 +239,34 @@ class TranslateTest {
     }
 
     @Test
+    void castAndInstanceofTranslate(@TempDir Path dir) throws Exception {
+        String kof = Translate.translateJava("""
+                public class CI {
+                    public static void main(String[] args) {
+                        Object o = "x";
+                        String s = (String) o;
+                        System.out.println(s);
+                        if (o instanceof String) {
+                            System.out.println("is-str");
+                        }
+                        double d = 3.5;
+                        int n = (int) d;
+                        System.out.println(n);
+                    }
+                }
+                """);
+
+        assertTrue(kof.contains("var s = o as String"),
+                "`(String) o` deve virar `o as String` (antes: expected ';' but found 'o'):\n" + kof);
+        assertTrue(kof.contains("o instanceof String"),
+                "instanceof preservado (Kof tem nativo; antes: expected ')' but found 'instanceof'):\n" + kof);
+        assertTrue(kof.contains("var n = d as Int"),
+                "cast primitivo `(int) d` → `d as Int`:\n" + kof);
+
+        assertCompiles(dir, kof, "x\nis-str\n3");
+    }
+
+    @Test
     void arrayDeclarationTranslates(@TempDir Path dir) throws Exception {
         String kof = Translate.translateJava("""
                 public class AR {
