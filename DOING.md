@@ -54,7 +54,7 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
-> **⚡ EM CURSO (13/09, lane development/docs — IntelliJ degrau-10 honesto + learn sync, dono = 192.168.100.22):** commit `f2cb92ba` pushado (IntelliJ degrau-10: `KofEditorContent.intellij()` + provider + teste 17/17 + docs `editors/intellij.md` + plan status). Agora: `learn/38-editors.md` linha IntelliJ syncada (install real, não só "detecta"). Working-tree `nat/` GC (#113) preservado no commit (regra 8; `check_500` CRÍTICO-crescente 664→693 é delta alheio, dono GC resolve). Diretriz da mantenedora: `usesPow` quebrado (`7f174a6f`) é do dono pow — NÃO toco. **PRÓXIMO PASSO:** commit + push do learn sync; depois re-auditar `.md` soltos (degrau 13 gate final / roadmap sync) ou RECUSAR se nada sem dono (estabilidade).
+> **⚡ EM CURSO (13/09, lane development/docs — IntelliJ degrau-10 honesto + roadmap sync, dono = 192.168.100.22):** commits `f2cb92ba` (degrau-10: `KofEditorContent.intellij()` + provider + teste 17/17 + docs) e `92b959e4` (`learn/38` sync) pushados. Agora: `roadmap.md` §17 syncado (linha editor support cita degrau-10 + issue #1). Working-tree `nat/` GC (#113) preservado nos commits (regra 8; `check_500` CRÍTICO-crescente 664→693 é delta alheio, dono GC resolve). Diretriz da mantenedora: `usesPow` quebrado (`7f174a6f`) é do dono pow — NÃO toco. **PRÓXIMO PASSO:** commit + push do roadmap sync; depois re-auditar `.md` soltos (degrau 13 gate final) ou RECUSAR se nada sem dono (estabilidade).
 > **NUNCA:** pow/`usesPow`/roundTo (dono pow); `nat/` lane GC viva; fila §106/§89/§117 (outro agente); push main.
 
 > **⚡ EM CURSO (13/09, lane development/docs — .md soltos, dono =
