@@ -105,7 +105,7 @@ escalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 | `LEGACY_MIGRATION.md` + `DECOMPILER.md` + `TRANSLATOR.md` + `DIFFERENTIAL_TESTING.md` + `LEGACY_IR.md` | plataforma completa no CLI: `inspect/decompile/translate/compare/migrate` (`Main.java:25-29`), 63 testes kof-cli + `Confidence`/`Type.fromJvmSignature` | cobertura: switch/athrow opacos, `inspect --java` (R5 do audit), IR non-JVM |
 | `IMPLEMENTATION_PLAN.md` / `ACTION_PLAN.md` | Fases A–H têm código+testes | tiers 6–12 = `future/` (R12) |
 | ~~`PLANNING-FUTURE-AUDIT.md` / `planning-future-reconcile.md`~~ → `docs/audits/` | comparação branch `planning-future`×beta **encerrada 13/09** — nada de código aberto próprio mora nelas: R2 vive em `decision-pending/APPLICATION_MODEL.md`+`PLATFORM-PLAN.md`; R5 no cluster migração (`DECOMPILER.md`/`LEGACY_IR.md` Fase C) | — (fora de `development/`) |
-| `planning-finally-return.md` | JS corrigido (`c727fee` + `finallyReturnJs`) | DD-01 JVM/Native/interp **DECIDIDO 13/09** (4a: FinallyFrame IR + bump 0.3.1) — implementação pendente (§3) |
+| `planning-finally-return.md` | JS corrigido (`c727fee` + `finallyReturnJs`); **DD-01 4-targets ✅ 13/09** (`063ed956`) | ✅ FECHADO — bug 45 corrigido nos 4 targets (FinallyFrame na IR) |
 | ~~`planning-stdlib-time-design.md`~~ → `decision-pending/` | `addDays`/`diffDays` nos 5 alvos | decisão `format`/`boundaries` (§3) |
 
 ### 4.2 Plans & auditorias vivas
