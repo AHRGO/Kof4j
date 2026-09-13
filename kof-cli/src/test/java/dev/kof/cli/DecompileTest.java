@@ -792,6 +792,80 @@ class DecompileTest {
     }
 
     @Test
+    void recoversIfThenJoinAndRunsIt(@TempDir Path dir) throws Exception {
+        // Fase C (join de if-sem-else): `if (x > 5) { r = r + x }` seguida de
+        // sequela — o braço then cai no join (preds {b, then}). O walker atual
+        // PARA o braço no join e o struct recusava re-entrar (linha 206),
+        // stubando o método INTEIRO. Prova FORTE: executa os 2 caminhos
+        // (oracle JVM medido: g(6)=107, g(1)=101) — sem o else o fluxo do
+        // braço falso é justamente o que um join errado quebraria.
+        Path src = dir.resolve("classes");
+        Files.createDirectories(src);
+        Path s = src.resolve("G.java");
+        Files.writeString(s, """
+                public class G {
+                    public static int g(int x) {
+                        int r = 100;
+                        if (x > 5) { r = r + x; }
+                        r = r + 1;
+                        return r;
+                    }
+                    public static void main(String[] a) {
+                        System.out.println(g(6));
+                        System.out.println(g(1));
+                    }
+                }
+                """);
+        runJavac(java.util.List.of(s), src);
+        String kof = Decompile.decompile(src.resolve("G.class"));
+        assertTrue(kof.contains("if (arg0 > 5) {"), "if-sem-else deve recuperar:\n" + kof);
+        assertFalse(kof.contains("} else {"), "sem else (join estruturado):\n" + kof);
+        Path out = dir.resolve("gen");
+        Files.createDirectories(out);
+        Path kf = out.resolve("G.kf");
+        Files.writeString(kf, kof);
+        CompilationResult r = new CompilerDriver().compileSources(java.util.List.of(kf),
+                dir.resolve("o"), Target.JVM, out);
+        assertTrue(r.success(), "if-sem-else decompilado deve compilar:\n" + kof + "\n" + r.diagnostics().getDiagnostics());
+        ProcessBuilder pb = new ProcessBuilder("java", "-cp", dir.resolve("o").toString(), "G");
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String o = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+                .replace("\r\n", "\n").trim();
+        assertEquals(0, p.waitFor(), "run: " + o);
+        assertEquals("107\n101", o, "os 2 caminhos do join devem executar certo:\n" + kof);
+    }
+
+    @Test
+    void nestedIfWithoutElseStaysHonestStub(@TempDir Path dir) throws Exception {
+        // Fase C (Q4): o if-sem-else NAO-puro (then com sequela propria +
+        // join externo) stuba HONESTO. Medido 13/09: a variante ingenua
+        // (borda de stop tambem no braco do else) produzia CODIGO ERRADO
+        // COMPILAVEL — a sequela do pos-if era sugada p/ dentro do else e o
+        // caminho falso pulava statements. Recusar > errar (R6/portao Q0).
+        Path src = dir.resolve("classes");
+        Files.createDirectories(src);
+        Path s = src.resolve("N2.java");
+        Files.writeString(s, """
+                public class N2 {
+                    public static int n(int a, int b) {
+                        int x = 0;
+                        if (a > 0) {
+                            if (b > 0) { x = x + 1; }
+                            x = x + 2;
+                        }
+                        x = x + 3;
+                        return x;
+                    }
+                }
+                """);
+        runJavac(java.util.List.of(s), src);
+        String kof = Decompile.decompile(src.resolve("N2.class"));
+        assertTrue(kof.contains("throw \"body not recovered\""),
+                "if-aninhado sem else deve stubar honesto (nao virar codigo errado):\n" + kof);
+    }
+
+    @Test
     void switchFallthroughStaysHonestStub(@TempDir Path dir) throws Exception {
         // Kof não tem fallthrough: case sem `break` caindo no próximo braço
         // NÃO tem forma válida → stub honesto (nunca código errado).

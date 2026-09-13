@@ -355,6 +355,30 @@ Fase E  Kof Decompiler          (gerar Kof source)
 > mas semanticamente errado = pior bug). Orçamento: thread `stop` por todas
 > as recursões de struct — sessão inteira dedicada, não encaixa no fim desta.
 >
+> **DEGRAU 1 EXECUTADO — if-then puro sem else (13/09, dono = 192.168.100.17):**
+> o caminho do diagnóstico funcionou, em sessão dedicada: `stops` (Set) em
+> `struct`, borda SÓ para `pureIfThen` (join não-loop, preds exatos {if,then},
+> then com succ único == join), emitindo `if (cond) { then }` SEM else e a
+> sequela UMA vez. `recoversIfThenJoinAndRunsIt` executa o .kf decompilado
+> (oracle g(6)=107/g(1)=101; TDD: RED no stub, GREEN com o fix). **Dois traps
+> medidos ANTES do commit:**
+> 1. **Aninhamento vira CÓDIGO ERRADO COMPILÁVEL** se a borda também descer
+>    no braço do else (variante com `withStop(exitStart)` no then+else): em
+>    `if(a){if(b){..} seq1}else{seq2} seq3`, a `seq3` foi sugada p/ dentro do
+>    else. Revertido; o aninhamento fica em STUB honesto e
+>    `nestedIfWithoutElseStaysHonestStub` trava a recusa (R6: recusar > errar).
+> 2. **`emitLinear` retorna PARCIAL em branch** (case 0x99-0xa7/0xaa-0xb1/0xbf
+>    → return): o fallback de prólogo (bloco fundido init+teste, onde
+>    `blockCondition` recusa) ganhou guarda de fluxo — prefixo com desvio →
+>    stub. Foi o que destravou `g` de verdade (javac funde `int r=100;` no
+>    bloco do teste; sem o fallback o join puro não pega NADA no corpus).
+> Medido (A/B stash, mesma árvore 690 classes): stubs 1390 → **1387** (−3; o
+> if-sem-else PURO fundido-simples é raro — `fieldOk`/`themeColor` têm shapes
+> não-compatíveis). DriftCheck = baseline 4; suíte 4-módulos 1691/0/5-skip.
+> **Restante da Fase C:** joins de aninhamento/loop/else exigem pós-dominador
+> real (walker com emissão única de join + sequela por fora do `if-else` —
+> trap 1 mostra que borda ingênua corrompe; não é stop simples).
+>
 > **Estágio 3 (13/09, dono = 192.168.100.17): interna do MESMO pacote.**
 > Categorização reflexiva dos 89 rejeitados (harness `RecCat`): **31** eram
 > só `implements Outer$Inner` do mesmo pacote (cluster `JsIr$*` com 43
