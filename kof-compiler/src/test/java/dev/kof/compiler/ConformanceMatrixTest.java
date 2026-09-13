@@ -1105,6 +1105,24 @@ class ConformanceMatrixTest {
                     println(s - e)
                 }
                 """, "0\n20709\n19782\n-719162\n2932896\n0\n0\n0\n0\n20709", Set.of(), tempDir);
+        // §182: parse ISO com campo de SINAL (`+999`/`+1`). O contrato é
+        // ESTRITO (dígitos) — o próprio comentário/teste dizem "estrito" e o
+        // Native é o único que cumpre. JVM/Script usam Integer.parseInt/
+        // parseInt (aceitam `+`/`-`) e o JS é inconsistente: kofTimeParseIso
+        // (addDays/diffDays) é leniente, kofTimeParseDateIso é estrito.
+        // Golden = consenso estrito (todos devem rejeitar => 0/""). JVM e JS
+        // excluídos (lenientes); Native é a referência. Script também usa
+        // Integer.parseInt → excluído até o fix.
+        matrix("parseisostrict", """
+                main() {
+                    println(time.parseDateIso("+999-01-01"))
+                    println(time.parseDateIso("2026-+1-01"))
+                    println(time.parseDateIso("2026-01-+1"))
+                    println(time.parseDateIso("2026-01-01"))
+                    println(time.addDays("+999-01-01", 1))
+                    println(time.diffDays("+999-01-01", "1000-01-01"))
+                }
+                """, "0\n0\n0\n20454\n\n0", Set.of("jvm", "script", "js"), tempDir);
         // §89 (decisão 3a, 13/09): conversão numérica em receiver PRIMITIVO
         // (`n.toDouble()`/`toInt()`/`toLong()`/`toFloat()`) = alias do cast
         // `as`. Antes: JVM ClassFormatError (owner ""), Native undefined
