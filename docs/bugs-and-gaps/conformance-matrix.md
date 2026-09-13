@@ -29,6 +29,7 @@
 | `Double %` (mod de variáveis; + NaN/±Inf) | `1.5` / `1.0` / `0.5` / `-1.5` / `NaN` | DONE | DONE (bug 146 ✅ 12/09 `718ae5cf` — `NativeX86Arith` emite o fmod real) | DONE | PARTIAL (test exclui js; §146 shape `JsBackend`) | `doublemod` |
 | cast `d as Int` / `L as Int` / `66 as Char` | `9` / `70000` / `66` | DONE | DONE | DONE | DONE | `cast` |
 | float println | `0.3333333333333333` / `5.0` / `3.5` | DONE | DONE (bug 44 ✅ 10/09 x86) | DONE | PARTIAL (doc: `5` vs `5.0`) | `floatprint` |
+| double println shortest-repr + científico | `0.30000000000000004` / `1.0E7` / `1.0E-5` / `33.333333333333336` | DONE | PARTIAL (bug §180 — `%.16g` trunca p/ `0.3`/`10000000.0`/`1e-05`) | DONE | PARTIAL (doc: `Number.toString` não emite `.0`/científico no limiar JDK) | `doubleprint` |
 | infinity/NaN println+String.valueOf | `Infinity` / `-Infinity` / `NaN` | DONE | DONE (bug 44 residual ✅ 11/09 x86) | DONE | PARTIAL (doc: `5` vs `5.0`) | `infinityprint` |
 | String.equals(não-String) → false | `true` / `false` / `false` / `false` | DONE | DONE (bug 100 ✅ 11/09 x86 — era SIGSEGV/vazio) | DONE | DONE (fold `false`) | `equalsfold` |
 | indexOf/lastIndexOf/startsWith `from` | `-1` / `3` / `-1` / `2` / `true` / `false` | DONE | DONE (bug 102 ✅ 11/09 x86 — era ignorado) | DONE | DONE (nativo) | `searchfrom` |

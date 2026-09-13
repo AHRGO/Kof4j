@@ -237,6 +237,21 @@ class ConformanceMatrixTest {
                 }
                 """, "Infinity\n-Infinity\nNaN\nInfinity\nInfinity NaN\nv=NaN",
                 Set.of("js"), tempDir);
+        // §180 (residual/overclaim do bug 44, x86_64): o contrato é JDK
+        // Double.toString — shortest-round-trip (0.1+0.2 = 0.30000000000000004)
+        // + notação científica (|x|>=1e7 ou <1e-3, spelling 1.0E7/1.0E-5). O
+        // glibc %.16g do Native trunca p/ 0.3 e escreve 10000000.0/1e-05.
+        // Native excluído (§180, lane Native); JS excluído (Number.toString
+        // não emite '.0' nem notação científica no mesmo limiar — §44).
+        matrix("doubleprint", """
+                main() {
+                    println(0.1 + 0.2)
+                    println(1e7)
+                    println(1e-5)
+                    println(100.0 / 3.0)
+                }
+                """, "0.30000000000000004\n1.0E7\n1.0E-5\n33.333333333333336",
+                Set.of("native", "js"), tempDir);
         // bug 100 (paridade absoluta): `String.equals(não-String)` é `false` em
         // todo target — o JVM sempre deu false (Objects.equals), mas o Native
         // CRASHAVA (SIGSEGV/vazio) ao ler o Int-boxado como ponteiro-String.

@@ -61,7 +61,7 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
 > **✅ FEITO (13/09 ~18:00, lane bugs-and-gaps, dono = 192.168.100.15):
-> §177 + §178 CORRIGIDOS, §179 CATALOGADO.** Caça Q4 sobre o §173/§174.
+> §177 + §178 CORRIGIDOS, §179 + §180 CATALOGADOS.** Caça Q4 sobre o §173/§174.
 > **Colisão de numeração resolvida no rebase** (o remoto ocupou §176 c/ WEB001
 > e §177 c/ a lambda-local do translator): a unidade virou **§177** (lambda
 > local em bloco — raiz da lane compiler, fechada por mim) + **§178**
@@ -92,10 +92,18 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > não reconhece o builtin (sai `ClassType("", "Label")` → descritor `LLabel;`
 > p/ int). Menor repro nos 4 contextos + fix proposto em `known-bugs.md §179`.
 > **NÃO corrigido** (toca resolução de nomes — regra 6, precisa decisão).
-> **PRÓXIMO PASSO:** fila de `known-bugs.md` só tem itens de outras lanes
-> (§101 congelado; §104b-ii/§107/§114 bugfixer; §129/§161 nat; §132 OTP-JS;
-> §165 não-reproduz; §170 issue-lane; §171 diagnóstico; §175 remoto S13b;
-> §176 WEB001 lane JS/web; §179 UI-declarado — regra 6). **Re-disparo: ler
+> **§180 CATALOGADO (ABERTO — overclaim do bug 44):** `println(double)` no
+> Native x86 não é JDK `Double.toString`: `%.16g` trunca o shortest-round-trip
+> (`0.1+0.2` → `0.3` vs `0.30000000000000004`) e diverge no científico
+> (`1e7` → `10000000.0` vs `1.0E7`). A célula `floatprint` só testava 3 valores
+> que coincidiam (**verde falso, Q5**) — nova célula `doubleprint` (4 targets,
+> Native+JS excluídos) **prova** a divergência. Fix = shortest-round-trip JDK
+> (unidade GRANDE, lane Native).
+> **PRÓXIMO PASSO:** fila de `known-bugs.md` só tem itens de outras lanes ou
+> que precisam de decisão (§101 congelado; §104b-ii/§107/§114 bugfixer;
+> §129/§161 nat; §132 OTP-JS; §165 não-reproduz; §170 issue-lane; §171
+> diagnóstico; §176 WEB001 lane JS/web; §179 UI-declarado — regra 6;
+> §180 double→string Native — unidade GRANDE lane Native). **Re-disparo: ler
 > esta linha + `known-bugs.md:11`; se nada novo e suíte verde → RECUSAR.**
 > **NUNCA:** `nat/` lane GC viva; fila de outras lanes; push main.
 > **Livre para caça Q4:** áreas recém-mexidas por outras lanes (S13a stdlib,
