@@ -47,7 +47,7 @@ package-compiler) abre antes de SYSTEMS fechar (paridade + GC + estabilidade).
 
 ## 2. Bugs abertos (fila em `known-bugs.md`) — triagem 13/09
 
-**14 seções sem ✅ no cabeçalho** — e a conclusão honesta
+**13 seções sem ✅ no cabeçalho** (§9 triado ✅ 13/09 — `nativeLambdaMutableCapture` 1/1) — e a conclusão honesta
 (`known-bugs.md:11`): **nenhum item de código-puro-sem-decisão restou na lane**.
 Todos pendurados em:
 
