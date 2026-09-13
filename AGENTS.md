@@ -322,6 +322,12 @@ intervalo.
 - **A regra ≤500 linhas/classe existe exatamente porque** "fazer tudo de uma
   vez" vira código impossível de carregar/manter. O agente é parte do sistema:
   agir pequeno é seguir a própria regra que aplicamos ao código.
+- **Faixas do gate `check_500` (decisão da mantenedora, 13/09):** ≤500 é alvo;
+  **500–599 é TOLERADO** (dívida viva — o gate avisa, não quebra o CI; split
+  continua sendo o caminho); **≥600 é CRÍTICO** (falha o CI, refactor/split
+  obrigatório antes do merge). Dívida já travada no baseline nunca cresce
+  (aproximar-se de 600 = split agora). Ao splitar, tire a linha do baseline com
+  `./scripts/check_500.sh --update-baseline`.
 
 Isso vale para código, docs, planos e testes: **pequeno é sustentável.**
 
