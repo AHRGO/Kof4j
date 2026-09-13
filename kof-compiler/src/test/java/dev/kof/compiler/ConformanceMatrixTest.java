@@ -1016,6 +1016,33 @@ class ConformanceMatrixTest {
                     println(time.addDays("1700-02-28", 1))
                 }
                 """, "2024-02-29\n2023-03-01\n2025-01-01\n2023-12-31\n\n\n60\n-60\n0\n1000-01-01\n\n1700-03-01", Set.of(), tempDir);
+        // STDLIB S7e (D-STDLIB ratificado 13/09): todayIso/formatDateIso/
+        // isToday — UTC-only (D1), invalidade => "" (D4), isToday = igualdade
+        // com a data UTC de now() (D5). todayIso validado por formato
+        // (len 10, parts 4/2/2) — nunca por valor literal (dia vira).
+        // Asserções isToday determinísticas: só o `false` (independe do
+        // relógio). 5 alvos: JVM/java.time + JS civil + x86 RuntimeTimeIso +
+        // riscv/aarch B33 estendida; cross qemu no KofTimeE2ETest S7e.
+        matrix("stdtime3", """
+                main() {
+                    var today = time.todayIso()
+                    println(today.length)
+                    println(time.formatDateIso(2026, 9, 13))
+                    println(time.formatDateIso(2024, 2, 29))
+                    println(time.formatDateIso(2023, 2, 29))
+                    println(time.formatDateIso(0, 1, 1))
+                    println(time.formatDateIso(10000, 1, 1))
+                    println(time.formatDateIso(2026, 13, 1))
+                    println(time.formatDateIso(2026, 4, 31))
+                    println(time.isToday(2026, 9, 12))
+                    println(time.isToday(2026, 2, 30))
+                    var parts = today.split("-")
+                    println(parts.size)
+                    println(parts.get(0).length)
+                    println(parts.get(1).length)
+                    println(parts.get(2).length)
+                }
+                """, "10\n2026-09-13\n2024-02-29\n\n\n\n\n\nfalse\nfalse\n3\n4\n2\n2", Set.of(), tempDir);
         // §89 (decisão 3a, 13/09): conversão numérica em receiver PRIMITIVO
         // (`n.toDouble()`/`toInt()`/`toLong()`/`toFloat()`) = alias do cast
         // `as`. Antes: JVM ClassFormatError (owner ""), Native undefined

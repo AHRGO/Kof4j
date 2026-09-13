@@ -291,6 +291,47 @@ public final class JsRuntimeUiWeb {
                 return Date.now();
             }
 
+            // ── kof.time (STDLIB S7e) — hoje/formato UTC (D-STDLIB) ──────
+            // D1: UTC-only (getUTC* — Date.now() é epoch UTC). D4: invalidade
+            // => "". D5: isToday = igualdade com a data UTC de now(). Serial =
+            // MESMO epochDay do kofTimeEpochDay acima (addDays/diffDays).
+            export function kofTimeTodayIso() {
+                const ed = Math.floor(Date.now() / 86400000);
+                const c = kofTimeCivilFromEpochDay(ed);
+                return kofTimePut4(c[0]) + "-" + kofTimePut2(c[1]) + "-" + kofTimePut2(c[2]);
+            }
+            export function kofTimeFormatDateIso(year, month, day) {
+                if (year < 1 || year > 9999 || month < 1 || month > 12) return "";
+                if (day < 1 || day > kofTimeDaysInMonth(year, month)) return "";
+                return kofTimePut4(year) + "-" + kofTimePut2(month) + "-" + kofTimePut2(day);
+            }
+            export function kofTimeIsToday(year, month, day) {
+                if (year < 1 || year > 9999 || month < 1 || month > 12) return false;
+                if (day < 1 || day > kofTimeDaysInMonth(year, month)) return false;
+                return kofTimeFormatDateIso(year, month, day) === kofTimeTodayIso();
+            }
+            function kofTimeCivilFromEpochDay(z) {
+                z += 719468;
+                const era = Math.floor(z / 146097);
+                const doe = z - era * 146097;
+                const yoe = Math.floor((doe - Math.floor(doe / 1460) + Math.floor(doe / 36524) - Math.floor(doe / 146096)) / 365);
+                const y = yoe + era * 400;
+                const doy = doe - (365 * yoe + Math.floor(yoe / 4) - Math.floor(yoe / 100));
+                const mp = Math.floor((5 * doy + 2) / 153);
+                const d = doy - Math.floor((153 * mp + 2) / 5) + 1;
+                const m = mp < 10 ? mp + 3 : mp - 9;
+                return [m <= 2 ? y + 1 : y, m, d];
+            }
+            function kofTimePut4(v) {
+                return String(Math.floor(v / 1000) % 10)
+                    + String(Math.floor(v / 100) % 10)
+                    + String(Math.floor(v / 10) % 10)
+                    + String(v % 10);
+            }
+            function kofTimePut2(v) {
+                return String(Math.floor(v / 10) % 10) + String(v % 10);
+            }
+
             // ── kof.time (STDLIB S7-wedge) — calendário civil ─────────────
             export function kofTimeIsLeapYear(year) {
                 if (year < 1) return 0;

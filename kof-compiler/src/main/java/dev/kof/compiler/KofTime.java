@@ -46,7 +46,9 @@ public final class KofTime {
                     // S7-ext: fim de semana (dayOfWeek >= 6)
                     "isWeekend",
                     // STDLIB S7a: add/diff sobre data ISO (STR->STR/Int)
-                    "addDays", "diffDays" -> true;
+                    "addDays", "diffDays",
+                    // S7e (D-STDLIB ratificado 13/09): hoje/formato UTC-only
+                    "todayIso", "formatDateIso", "isToday" -> true;
             default -> false;
         };
     }
@@ -136,6 +138,19 @@ public final class KofTime {
             case "diffDays" -> argTypes.size() == 2 && argTypes.get(0) == STR
                     && argTypes.get(1) == STR
                     ? new TimeCall("kof_time_diffDays", INT, List.of(STR, STR)) : null;
+            // S7e (D-STDLIB ratificado 13/09): hoje/formato UTC-only (D1);
+            // formato zero-DSL (D4: invalidez => ""); isToday = igualdade com
+            // a data UTC de now() (D5). Sem retorno composto (D2).
+            case "todayIso" -> argTypes.isEmpty()
+                    ? new TimeCall("kof_time_todayIso", STR, List.of()) : null;
+            case "formatDateIso" -> argTypes.size() == 3 && argTypes.get(0) == INT
+                    && argTypes.get(1) == INT && argTypes.get(2) == INT
+                    ? new TimeCall("kof_time_formatDateIso", STR,
+                            List.of(INT, INT, INT)) : null;
+            case "isToday" -> argTypes.size() == 3 && argTypes.get(0) == INT
+                    && argTypes.get(1) == INT && argTypes.get(2) == INT
+                    ? new TimeCall("kof_time_isToday", BOOL,
+                            List.of(INT, INT, INT)) : null;
             default -> null;
         };
     }

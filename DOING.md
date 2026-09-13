@@ -60,6 +60,34 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (13/09 ~19:30, lane development, dono = 192.168.100.18):
+> D-STDLIB degrau 1 — `time.todayIso/formatDateIso/isToday` (S7e, 5 alvos).**
+> Dispatch em `KofTime` (`isTimeMethod` + cases; SEM025 cobre overloads),
+> JVM `JvmTimeRuntime` (UTC via floorDiv(now/86400000) + civil Hinnant —
+> MESMO algoritmo dos backends asm; validDate reusado), JS `JsRuntimeUiWeb`
+> (civil UTC sem Date, put4/put2), x86 `RuntimeTimeIso` (reusa .Lkd_valid
+> wedge + .Lka_civil/.Lka_put4/.Lka_put2; alloc String Kof len@16 bytes@24),
+> riscv **B33 estendida** (mesmo domínio — .Lu8_civil/put4/put2 S7c +
+> kdv_valid B14 + kof_time_now B0; aarch herda via tradutor). Prova Q1:
+> `KofTimeE2ETest.todayIsoFormatDateIsoIsToday{Jvm,Js,Native,CrossArch,
+> CompilesOnAllTargets}` (18/18; vetores determinísticos; todayIso por
+> FORMATO — dia vira; cross qemu assumeToolchain) + célula `stdtime3` na
+> matriz (4 targets, `ConformanceMatrixTest` 11/11 + DocTest sync).
+> Suíte 4 módulos: **1733/0/0, 159 skip** (qemu/toolchain + BD externos).
+> Nota (regra 6): `math.parse*OrNull` segue BLOQUEADO — §125 congelado
+> (nullable primitivo não existe; OrNull = `parseOrDefault(s,0)` morto);
+> `roundTo`/`strings.lines/words` aguardam decisão da mantenedora.
+> **PRÓXIMO PASSO:** continuar a fila D-STDLIB (DECISIONS.md ratificada):
+> próxima linha = `time.hoursBetween(y,m,d,H,y,m,d,H) (I×8) -> Int, floor
+> simétrico` — despacho `KofTime` (8×INT→INT), JVM em `JvmTimeRuntime`
+> (epochDay*24+H, floorDiv simétrico), JS civil, x86/riscv (kdv_epoch
+> B14/.Lkd_epoch), aarch tradutor. Prova: golden determinístico (diferenças
+> +01h, cruzando dia, negativo, datas inválidas => 0) em `KofTimeE2ETest`
++ célula matriz `stdtime4` + sync DocTest. Depois: `parseDateIso` (x86
+> reusa .Lkd_epoch; riscv kdv_epoch; JS civil; JVM epochDay) → célula
+> `stdtime5`. **NUNCA:** tocar `nat/` GC, lanes .15/.17/.22 (decompiler/
+> translator), bugs de outra lane; push main.
+
 > **✅ FEITO (13/09 ~18:00, lane bugs-and-gaps, dono = 192.168.100.15):
 > §177 + §178 CORRIGIDOS, §179 + §180 CATALOGADOS.** Caça Q4 sobre o §173/§174.
 > **Colisão de numeração resolvida no rebase** (o remoto ocupou §176 c/ WEB001

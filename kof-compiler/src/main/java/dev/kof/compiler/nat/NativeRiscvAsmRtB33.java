@@ -315,5 +315,176 @@ public final class NativeRiscvAsmRtB33 {
                 ld ra, 40(sp)
                 addi sp, sp, 48
                 ret
+
+            # ── kof.time (STDLIB S7e) — hoje/formato UTC (D-STDLIB) ────────
+            # D1: UTC-only — todayIso = data UTC de kof_time_now (epoch-ms
+            # -> dias floor /86400000). D4: invalidade => "". D5: isToday =
+            # string-eq com todayIso (mesmo len @16 + bytes @24). Reusa
+            # .Lu8_civil/.Lu8_put4/.Lu8_put2 (S7c) + kdv_valid (B14) +
+            # kof_time_now (B0). LIÇÃO B14: nada vivo em s0 entre calls;
+            # slots de pilha; frame 16-align p/ kof_alloc; t0..t5 apenas.
+
+            # kof_time_todayIso() -> String "YYYY-MM-DD" (UTC)
+            .globl kof_time_todayIso
+            kof_time_todayIso:
+                addi sp, sp, -64
+                sd ra, 56(sp)
+                sd s1, 40(sp)
+                sd s2, 32(sp)
+                sd s3, 24(sp)
+                sd s4, 16(sp)
+                call kof_time_now            # a0 = epoch-ms (positivo)
+                li t0, 86400000
+                divu a0, a0, t0              # dias (floor p/ epoch positivo)
+                sext.w a0, a0
+                call .Lu8_civil              # a0=y a1=m a2=d
+                sw a0, 0(sp)
+                sw a1, 4(sp)
+                sw a2, 8(sp)
+                li s2, 10                    # len
+                addi a0, s2, 25
+                addi a0, a0, 15
+                andi a0, a0, -16
+                call kof_alloc
+                mv s4, a0
+                li t0, 1
+                sw t0, 0(s4)
+                li t0, 0
+                sw t0, 4(s4)
+                sd t0, 8(s4)
+                sw s2, 16(s4)
+                sw t0, 20(s4)
+                sb t0, 24(s4)
+                addi a0, s4, 24
+                lw a1, 0(sp)
+                call .Lu8_put4
+                li t0, 45
+                sb t0, 0(a0)
+                addi a0, a0, 1
+                lw a1, 4(sp)
+                call .Lu8_put2
+                li t0, 45
+                sb t0, 0(a0)
+                addi a0, a0, 1
+                lw a1, 8(sp)
+                call .Lu8_put2
+                li t0, 0
+                sb t0, 0(a0)
+                mv a0, s4
+                ld s4, 16(sp)
+                ld s3, 24(sp)
+                ld s2, 32(sp)
+                ld s1, 40(sp)
+                ld ra, 56(sp)
+                addi sp, sp, 64
+                ret
+
+            # kof_time_formatDateIso(a0=y,a1=m,a2=d) -> String ou ""
+            .globl kof_time_formatDateIso
+            kof_time_formatDateIso:
+                addi sp, sp, -48
+                sd ra, 40(sp)
+                sd s1, 32(sp)
+                sd s2, 24(sp)
+                sd s3, 16(sp)
+                sw a0, 0(sp)
+                sw a1, 4(sp)
+                sw a2, 8(sp)
+                call kdv_valid
+                beqz a0, .Lu8_fd0
+                li s2, 10
+                j .Lu8_fda
+            .Lu8_fd0:
+                li s2, 0
+            .Lu8_fda:
+                addi a0, s2, 25
+                addi a0, a0, 15
+                andi a0, a0, -16
+                call kof_alloc
+                mv s3, a0
+                li t0, 1
+                sw t0, 0(s3)
+                li t0, 0
+                sw t0, 4(s3)
+                sd t0, 8(s3)
+                sw s2, 16(s3)
+                sw t0, 20(s3)
+                sb t0, 24(s3)
+                beqz s2, .Lu8_fdd
+                addi a0, s3, 24
+                lw a1, 0(sp)
+                call .Lu8_put4
+                li t0, 45
+                sb t0, 0(a0)
+                addi a0, a0, 1
+                lw a1, 4(sp)
+                call .Lu8_put2
+                li t0, 45
+                sb t0, 0(a0)
+                addi a0, a0, 1
+                lw a1, 8(sp)
+                call .Lu8_put2
+                li t0, 0
+                sb t0, 0(a0)
+            .Lu8_fdd:
+                mv a0, s3
+                ld s3, 16(sp)
+                ld s2, 24(sp)
+                ld s1, 32(sp)
+                ld ra, 40(sp)
+                addi sp, sp, 48
+                ret
+
+            # kof_time_isToday(a0=y,a1=m,a2=d) -> 0/1 (D5: string-eq
+            # com todayIso). Strs vão a slots; nada vivo em s0/s1 entre calls.
+            .globl kof_time_isToday
+            kof_time_isToday:
+                addi sp, sp, -64
+                sd ra, 56(sp)
+                sd s1, 40(sp)
+                sd s2, 32(sp)
+                sd s3, 24(sp)
+                sd s4, 16(sp)
+                sw a0, 0(sp)
+                sw a1, 4(sp)
+                sw a2, 8(sp)
+                call kdv_valid
+                beqz a0, .Lu8_it_no
+                call kof_time_todayIso
+                mv s1, a0                    # today (safe: helpers não tocam s1)
+                lw a0, 0(sp)
+                lw a1, 4(sp)
+                lw a2, 8(sp)
+                call kof_time_formatDateIso
+                mv s2, a0                    # arg
+                lw t0, 16(s1)
+                lw t1, 16(s2)
+                bne t0, t1, .Lu8_it_no
+                beqz t0, .Lu8_it_yes        # len 0 => eq (não ocorre: valid)
+                li s3, 0                     # i
+            .Lu8_it_loop:
+                bge s3, t0, .Lu8_it_yes
+                add t2, s1, s3
+                add t3, s2, s3
+                addi t2, t2, 24
+                addi t3, t3, 24
+                lbu t4, 0(t2)
+                lbu t5, 0(t3)
+                bne t4, t5, .Lu8_it_no
+                addi s3, s3, 1
+                j .Lu8_it_loop
+            .Lu8_it_yes:
+                li a0, 1
+                j .Lu8_it_d
+            .Lu8_it_no:
+                li a0, 0
+            .Lu8_it_d:
+                ld s4, 16(sp)
+                ld s3, 24(sp)
+                ld s2, 32(sp)
+                ld s1, 40(sp)
+                ld ra, 56(sp)
+                addi sp, sp, 64
+                ret
         """;
 }

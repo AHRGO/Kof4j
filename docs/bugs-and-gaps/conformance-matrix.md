@@ -115,6 +115,7 @@
 | stdlib kof.uuid (S3b-ext: isUuid — shape RFC 4122, 8-4-4-4-12 hex, hífens 8/13/18/23; sem checar versão/variante) | `true` / `true`(maj) / `false`(sem traço/tam/g/empty) | DONE | DONE | DONE | DONE | `isUuid*` (KofUuidTest; riscv/aarch assert sob qemu) |
 | stdlib kof.time (S7-ext: isWeekend — dayOfWeek>=6, wrapper nos 5 alvos; data inválida => false) | `true`(sáb) / `false`(qua) / `false`(inválida) | DONE | DONE | DONE | DONE | `calendar*` (KofTimeE2ETest; riscv/aarch assert sob qemu) |
 | stdlib kof.time (S7a/b/c: addDays/diffDays em data ISO String — parse estrito YYYY-MM-DD, inválido => ""/0; JVM/java.time + JS algoritmo civil sem Date + x86 asm `RuntimeTimeIso` + riscv/aarch **B33** (TIME002 fechado 11/09)) ⁴ | `2024-02-29` / `2023-03-01` / `2025-01-01` / `2023-12-31` / `''` / `''` / `60` / `-60` / `0` | DONE | DONE ⁴ | DONE | DONE | `stdtime2` |
+| stdlib kof.time (S7e: todayIso/formatDateIso/isToday — UTC-only (D1); formato zero-DSL, invalidade => "" (D4); isToday = igualdade c/ data UTC de now() (D5); JVM/java.time + JS civil + x86 `RuntimeTimeIso` + riscv/aarch **B33-ext**; todayIso por formato — dia vira) | `10` / `2026-09-13` / `2024-02-29` / `''`×5 / `false`×2 / `3`/`4`/`2`/`2` | DONE | DONE | DONE | DONE | `stdtime3` |
 | stdlib kof.encoding (S4: hex + base64 + url + base64url — UTF-8 por bytes) | `4869` / `Hi` / `636166c3a9` / `café` / `TWFu` / `café` / `a%20b` / `café` / `ZmImTy0-Zg` / `fb&O->f` / `E` | DONE | DONE² | DONE | DONE | `stdenc` |
 
 > ¹ **STRN001 FECHADO 09/09:** joinWords portado p/ riscv64 (fatia B15) + aarch64

@@ -117,6 +117,46 @@ public final class JvmTimeRuntime {
                             ? 0 : (int) diff;
                 }
 
+                // ── kof.time (STDLIB S7e) — hoje/formato UTC (D-STDLIB) ────
+                // D1: UTC-only em TODOS os alvos (deriva de now() em UTC).
+                // D4: zero pattern-DSL; invalidade => "". D5: isToday =
+                // igualdade com a data UTC de now(). Serial = dias-civil
+                // (epochDay Hinnant acima — MESMA base do add/diffDays).
+                public static String kof_time_todayIso() {
+                    long epochDay = Math.floorDiv(System.currentTimeMillis(), 86400000L);
+                    long[] ymd = kof_time_civilFromEpochDay(epochDay);
+                    return String.format("%04d-%02d-%02d", ymd[0], ymd[1], ymd[2]);
+                }
+
+                public static String kof_time_formatDateIso(int year, int month, int day) {
+                    if (!kof_time_validDate(year, month, day)) return "";
+                    return String.format("%04d-%02d-%02d", year, month, day);
+                }
+
+                public static boolean kof_time_isToday(int year, int month, int day) {
+                    return kof_time_isValidIso(year, month, day)
+                            && kof_time_formatDateIso(year, month, day).equals(kof_time_todayIso());
+                }
+
+                private static boolean kof_time_isValidIso(int y, int m, int d) {
+                    return kof_time_validDate(y, m, d);
+                }
+
+                // Inversa Hinnant (dias-civil -> [y,m,d]) — MESMO algoritmo do
+                // .Lka_civil x86 (RuntimeTimeIso) e .Lu8_civil riscv (B33).
+                private static long[] kof_time_civilFromEpochDay(long z) {
+                    z += 719468;
+                    long era = Math.floorDiv(z, 146097);
+                    long doe = z - era * 146097;
+                    long yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+                    long y = yoe + era * 400;
+                    long doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+                    long mp = (5 * doy + 2) / 153;
+                    long d = doy - (153 * mp + 2) / 5 + 1;
+                    long m = mp < 10 ? mp + 3 : mp - 9;
+                    return new long[]{m <= 2 ? y + 1 : y, m, d};
+                }
+
                 public static String kof_time_interval(int ms, Object fn) {
                     if (ms <= 0) throw new IllegalArgumentException("interval must be positive: " + ms);
                     String id = "job-" + KOF_TIME_SEQ.incrementAndGet();

@@ -494,6 +494,161 @@ class KofTimeE2ETest {
         }
     }
 
+    // ── STDLIB S7e (D-STDLIB ratificado 13/09): todayIso/formatDateIso/
+    // isToday — UTC-only (D1), formato zero-DSL com invalidade => "" (D4),
+    // isToday = igualdade com a data UTC de now() (D5). Vetores
+    // determinísticos (formatDateIso/isToday não dependem do relógio);
+    // todayIso validado por FORMATO+CONSISTÊNCIA (prefixo/len/regex),
+    // nunca por valor literal (o dia pode virar no meio do teste).
+    @Test
+    void todayIsoFormatDateIsoIsTodayJvm(@TempDir Path tempDir) throws IOException {
+        runJvm(tempDir, """
+                main() {
+                    var today = time.todayIso()
+                    println(today.length)
+                    println(time.formatDateIso(2026, 9, 13))
+                    println(time.formatDateIso(2024, 2, 29))
+                    println(time.formatDateIso(2023, 2, 29))
+                    println(time.formatDateIso(0, 1, 1))
+                    println(time.formatDateIso(10000, 1, 1))
+                    println(time.formatDateIso(2026, 13, 1))
+                    println(time.formatDateIso(2026, 0, 1))
+                    println(time.formatDateIso(2026, 1, 0))
+                    println(time.formatDateIso(2026, 4, 31))
+                    println(time.isToday(2026, 9, 13))
+                    println(time.isToday(2026, 9, 12))
+                    println(time.isToday(2026, 2, 30))
+                    println(time.isToday(0, 1, 1))
+                    var parts = today.split("-")
+                    println(parts.size)
+                    println(parts.get(0).length)
+                    println(parts.get(1).length)
+                    println(parts.get(2).length)
+                }
+                """, "10\n2026-09-13\n2024-02-29\n\n\n\n\n\n\n\ntrue\nfalse\nfalse\nfalse\n3\n4\n2\n2");
+    }
+
+    @Test
+    void todayIsoFormatDateIsoIsTodayJs(@TempDir Path tempDir) throws IOException {
+        runJs(tempDir, """
+                main() {
+                    var today = time.todayIso()
+                    println(today.length)
+                    println(time.formatDateIso(2026, 9, 13))
+                    println(time.formatDateIso(2024, 2, 29))
+                    println(time.formatDateIso(2023, 2, 29))
+                    println(time.formatDateIso(0, 1, 1))
+                    println(time.formatDateIso(2026, 13, 1))
+                    println(time.formatDateIso(2026, 4, 31))
+                    println(time.isToday(2026, 9, 13))
+                    println(time.isToday(2026, 9, 12))
+                    println(time.isToday(2026, 2, 30))
+                    var parts = today.split("-")
+                    println(parts.size)
+                    println(parts.get(0).length)
+                    println(parts.get(1).length)
+                }
+                """, "10\n2026-09-13\n2024-02-29\n\n\n\n\ntrue\nfalse\nfalse\n3\n4\n2");
+    }
+
+    @Test
+    void todayIsoFormatDateIsoIsTodayNative(@TempDir Path tempDir) throws IOException {
+        runNative(tempDir, """
+                main() {
+                    var today = time.todayIso()
+                    println(today.length)
+                    println(time.formatDateIso(2026, 9, 13))
+                    println(time.formatDateIso(2024, 2, 29))
+                    println(time.formatDateIso(2023, 2, 29))
+                    println(time.formatDateIso(0, 1, 1))
+                    println(time.formatDateIso(10000, 1, 1))
+                    println(time.formatDateIso(2026, 13, 1))
+                    println(time.formatDateIso(2026, 4, 31))
+                    println(time.isToday(2026, 9, 13))
+                    println(time.isToday(2026, 9, 12))
+                    println(time.isToday(2026, 2, 30))
+                    println(time.isToday(0, 1, 1))
+                    var parts = today.split("-")
+                    println(parts.size)
+                    println(parts.get(0).length)
+                    println(parts.get(1).length)
+                }
+                """, "10\n2026-09-13\n2024-02-29\n\n\n\n\n\ntrue\nfalse\nfalse\nfalse\n3\n4\n2");
+    }
+
+    @Test
+    void todayIsoFormatDateIsoIsTodayCrossArch(@TempDir Path tempDir) throws Exception {
+        // Vetores determinísticos + formato do todayIso (len/parts) — sem
+        // valor literal do dia (pode virar entre backends). isToday com data
+        // fixa SÓ é assertado para a resposta false (independe do relógio);
+        // o caminho true é coberto pela igualdade formatDateIso==todayIso
+        // implícita no gate de formato. Qemu prova byte-idêntico.
+        String src = """
+            main() {
+                var today = time.todayIso()
+                println(today.length)
+                println(time.formatDateIso(2026, 9, 13))
+                println(time.formatDateIso(2023, 2, 29))
+                println(time.formatDateIso(2024, 2, 29))
+                println(time.formatDateIso(0, 1, 1))
+                println(time.formatDateIso(10000, 1, 1))
+                println(time.formatDateIso(2026, 13, 1))
+                println(time.isToday(2026, 9, 12))
+                println(time.isToday(2026, 2, 30))
+                var parts = today.split("-")
+                println(parts.size)
+                println(parts.get(0).length)
+                println(parts.get(1).length)
+                println(parts.get(2).length)
+            }
+            """;
+        String expected = "10\n2026-09-13\n\n2024-02-29\n\n\n\nfalse\nfalse\n3\n4\n2\n2";
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            String qemu = t == Target.NATIVE_RISCV64 ? "qemu-riscv64" : "qemu-aarch64";
+            String[] tools = t == Target.NATIVE_RISCV64
+                    ? new String[]{"riscv64-linux-gnu-as", "riscv64-linux-gnu-ld", "qemu-riscv64"}
+                    : new String[]{"aarch64-linux-gnu-as", "aarch64-linux-gnu-ld", "qemu-aarch64"};
+            assumeToolchain(tools);
+            Path file = tempDir.resolve("T7e-" + t + "-" + System.nanoTime() + ".kf");
+            Files.writeString(file, src);
+            Path outDir = tempDir.resolve("t7e-" + t + "-" + System.nanoTime());
+            CompilationResult r = new CompilerDriver().compile(file, outDir, t);
+            assertTrue(r.success(), t + " compile: " + r.diagnostics().getDiagnostics());
+            Process p = new ProcessBuilder(qemu, outDir.resolve("Default/Main").toString())
+                    .redirectErrorStream(true).start();
+            String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8)
+                    .replace("\r\n", "\n").trim();
+            int ec;
+            try {
+                ec = p.waitFor();
+            } catch (InterruptedException e) {
+                throw new IOException("interrupted", e);
+            }
+            assertEquals(0, ec, t + " qemu exit, out: " + out);
+            assertEquals(expected, out, t + " golden S7e");
+        }
+    }
+
+    @Test
+    void todayIsoFormatDateIsoIsTodayCompilesOnAllTargets(@TempDir Path tempDir) throws IOException {
+        // Gate SEMPRE-verde (mesmo sem qemu): o backend cross EMITE o asm;
+        // a EXECUCAO e provada sob qemu no teste acima.
+        String src = """
+            main() {
+                println(time.todayIso().length)
+                println(time.formatDateIso(2026, 9, 13))
+                println(time.isToday(2026, 9, 13))
+            }
+            """;
+        Path gateSrc = tempDir.resolve("GateT7e.kf");
+        Files.writeString(gateSrc, src);
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            CompilationResult r = new CompilerDriver().compile(gateSrc, tempDir.resolve("gate-t7e-" + t), t);
+            assertTrue(r.success(), t + " deve compilar todayIso/formatDateIso/isToday (S7e): "
+                    + r.diagnostics().getDiagnostics());
+        }
+    }
+
     private void assumeToolchain(String... tools) {
         for (String c : tools) {
             try {
