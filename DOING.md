@@ -20,6 +20,10 @@
 >    nem `stash drop`. Conflito de rebase = resolve preservando os dois lados
 >    (fatos idênticos → escolhe uma redação; fatos diferentes → mantém ambos).
 >    Reversão de commit alheio só com causa raiz provada + registro no DOING.
+> 9. **Identificação por IP local (13/09, diretriz da mantenedora):** cada
+>    agente se identifica pelo **IPv4 local da máquina** (`hostname -I`).
+>    Toda reivindicação `EM CURSO`/`FEITO` leva `dono = <IPv4>` (ex. `dono =
+>    192.168.100.22`). Esta sessão = **192.168.100.22** (`mel-optiplex`).
 >    Quem voltar (humano/cron/outra instância) retoma em ≤1 leitura.
 
 Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
@@ -50,7 +54,7 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
 > **⚡ EM CURSO (13/09, lane development/docs — cluster legado + OTP, dono =
-> esta sessão):** (1) `LEGACY_MIGRATION.md`: contradição corrigida ("nada
+> 192.168.100.22):** (1) `LEGACY_MIGRATION.md`: contradição corrigida ("nada
 > existe" → tabela real §3) + contagem 63→70 testes (Decompile 45 + Translate
 > 9 + Compare 6 + Migrate 3 + CmdCheck 7, medidos 13/09; `inspect` = IR stats
 > sem teste próprio) + refs em IMPLEMENTATION/README/future. TRANSLATOR/
