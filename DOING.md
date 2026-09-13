@@ -58,6 +58,9 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **⚡ EM CURSO (13/09 ~09:45, lane development/docs — move PLAN-SOLID-500 p/ docs/, dono = 192.168.100.22):** plano FEITO pela lane .18 (F3 498 ≤500, 12 dívidas) mas doc ainda em `docs/development/refactoring/` = mal-classificada (regra: concluído → `docs/`). Escopo: `git mv` p/ `docs/architecture/` + refs (README §1/§4.2, complexity-audit, AGENTS.md lição) + commit/push. Prova esperada: `check_500` OK + 0 refs `development/refactoring` + dir removido.
+> **NUNCA:** `nat/` lane GC viva; fila §101/§104b-ii/§107/§114/§129/§132/§161/§165 (donos/bloqueios); push main.
+
 > **✅ FEITO (13/09 ~12:40, lane development/.18 — F3 FECHADA, PLAN-SOLID-500
 > COMPLETO):** a F3 estava bloqueada pela "lane GC/tree-shaking viva em
 > `nat/`" — o diretório/refs **não existem mais no repo** (regra do
