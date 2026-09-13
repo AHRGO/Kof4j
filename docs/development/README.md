@@ -1,11 +1,11 @@
 # Development — backlog vivo (só trabalho em desenvolvimento)
 
 > **Base:** `0.4.0-beta` · branch `beta-0.4.0` · **atualizado:** 13/09/2026
-> **Suíte medida neste HEAD:** `1645` testes (1472 kof-compiler + 31 kof-script
-> + 5 kof-c-compiler + 137 kof-cli), **0 falhas** (13 erros = só `node` ausente, ambientais — todos `*Js`; o §149 JS foi corrigido), 157 skip (guardas de
+> **Suíte medida neste HEAD:** `1653` run (1473 kof-compiler + 31 kof-script
+> + 5 kof-c-compiler + 144 kof-cli), **0 falhas** (13 erros = só `node` ausente, ambientais — todos `*Js`), 157 skip (guardas de
 > toolchain/node; sem qemu os 84 cross são skipados) — com cross riscv/aarch
 > 42+42 sob qemu real (G-0/§142 somaram os
-> testes de header/OOM). Gate pós-§89/§106/§117/§131 medido 13/09 (`gate_s106js.log`, BUILD
+> testes de header/OOM). Gate pós-§131/§163 medido 13/09 (`gate_final2.log`, BUILD
 > SUCCESS). Refold da concatenação do `NativeRiscvAsm` para
 > `<clinit>` (anti-pattern novo `constant-folded-runtime-asm.md`) verde no
 > gate `gate1585.log` (HEAD 54da1325).
@@ -54,17 +54,19 @@ package-compiler) abre antes de SYSTEMS fechar (paridade + GC + estabilidade).
 
 ## 2. Bugs abertos (fila em `docs/bugs-and-gaps/known-bugs.md`) — triagem 13/09
 
-**8 itens na fila aberta** (§89, §106, §117, §131, §127-JVM, §155, §94 e §156
-fechados 13/09; §157-160 e §65 fechados/NÃO-REPRODUZ 13/09) — e a conclusão
-honesta (`known-bugs.md:11`): **fila aberta = 8 itens, todos com decisão/dono/
-bloqueio — ZERO item código-puro-sem-decisão nesta lane**.
+**8 itens na fila aberta** (§101, §107 🟡, §104b-ii, §114, §129, §132, §161,
+§165) — e a conclusão honesta (`known-bugs.md:11`): **fila aberta = 8 itens,
+todos com decisão/dono/bloqueio — ZERO item código-puro-sem-decisão nesta
+lane**. Fechados 13/09: §89, §106 (+JS `ab85cfae`), §117, §131 (+residual
+`73ca2d58`), §127-JVM, §155, §94, §156, §81 (BigInt), §163 (interpretador
+2º parâmetro largo); §157-160 e §65 fechados/NÃO-REPRODUZ.
 Todos pendurados em:
 
 | Grupo | Bugs | Quem destrava |
 |---|---|---|
-| Decisão ratificada 13/09 — implementação pendente | §81, §161/NAT-STR01 (§89 ✅ `e33425b5`, §106 ✅ `5b939106`+JS `ab85cfae`, §117 ✅ `3734f2aa`, §131 ✅ `18a64d45`; §45/DD-01 FECHADO 13/09 — ver `docs/decisions/DD-01-finally-return.md`) | fila ratificada / lanes executoras |
+| Decisão ratificada 13/09 — implementação pendente | §161/NAT-STR01 (§89 ✅ `e33425b5`, §106 ✅ `5b939106`+JS `ab85cfae`, §117 ✅ `3734f2aa`, §131 ✅ `18a64d45`, §81 ✅ `839bd73f`, §163 ✅ `d2a8a618`; §45/DD-01 FECHADO 13/09 — ver `docs/decisions/DD-01-finally-return.md`) | fila ratificada / lanes executoras |
 | Congelado regra-6 | §101 | ninguém (contrato) |
-| Lane alheia | §104b-ii + §107 restante + §114 (bugfixer — storage-box de record), §129 (lane nat), §132 (OTP-JS) | donos das lanes |
+| Lane alheia | §104b-ii + §107 restante + §114 (bugfixer — storage-box de record), §129 (lane nat), §132 (OTP-JS), §165 (js-slices — re-verificado 13/09: NÃO reproduz em clean build, provável não-bug) | donos das lanes |
 
 Corrigidos 13/09: **§89** (conversão numérica em primitivo = alias do `as` +
 warning SEM090; 4 alvos — `CoreRegressionE2ETest.numericConvertMethodAliasOfAs`),
@@ -78,7 +80,11 @@ interface SAM sintética; `LambdaE2ETest.castToFunctionTypeJvm/Native`),
 **§155** (tipo-função como type-arg → parser preserva os espaços do type-ref;
 `LambdaE2ETest.declaredFunctionTypeListJvm/Native`), **§156** (lista
 heterogênea de lambdas mesma assinatura → elemento sem className, dispatch
-SAM; `LambdaE2ETest.heterogeneousLambdaListJvm/Native`). Corrigidos 12/09: §90 (web, #98), §125,
+SAM; `LambdaE2ETest.heterogeneousLambdaListJvm/Native`), **§81** (Long=BigInt
+no JS, paridade 64-bit real — `839bd73f`) e **§163** (interpretador: 2º
+parâmetro largo `Long`/`Double` lido como `null` — `KofInterpreterParityTest.
+wideParametersOccupyTwoSlots` + célula `wideparams` 4/4; `d2a8a618`).
+Corrigidos 12/09: §90 (web, #98), §125,
 §139, §140 (gate→ratchet), §107-face
 escalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 `440730c8` — prova qemu 42+42)**.
@@ -136,7 +142,7 @@ escalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 | `roadmap.md` | §§8–11 ❌ (frontend same-project, monólito→micro) | longo prazo |
 | ~~`roadmap-audit.md`~~ → `docs/audits/roadmap-audit.md` | matriz 06/09 + fila P0→P5 (P0 FECHADO 09/09) | re-audit quando algo fecha |
 | ~~`KOFUI-AUDIT.md`~~ → `docs/bugs-and-gaps/` | UI001-Native (face R6: no-op silencioso) ABERTO | lane UI |
-| ~~`known-bugs.md`~~ → `docs/bugs-and-gaps/` | 14 abertos (triagem §2 acima; §127-JVM, §155, §94, §157-160 e §65 fechados/NÃO-REPRODUZ 13/09) | fila viva |
+| ~~`known-bugs.md`~~ → `docs/bugs-and-gaps/` | 8 abertos (triagem §2 acima; §81/§163/§127-JVM, §155, §94, §157-160 e §65 fechados/NÃO-REPRODUZ 13/09) | fila viva |
 | `refactoring/PLAN-SOLID-500.md` | ✅ **FEITO 13/09** (F1–F9 todas fechadas — F3: NativeBackend 498 ≤500 medido, bloqueio da lane GC caducou/regra do dono-morto); ratchet `check_500-baseline.txt` (dívidas travadas — nº autoritativo = `wc -l` do arquivo) no CI | plano FECHADO |
 
 ### 4.3 `future/` — só plano, zero código (não é trabalho atual)
