@@ -6,33 +6,57 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.abort;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
- * KofJS em um browser real (Chrome headless) — o alvo que o KofJS existe para
+ * KofJS em um browser real — o alvo que o KofJS existe para
  * cobrir além do GraalJS embutido. Compila um programa kof.ui para JS, serve o
  * diretório de saída por HTTP local (módulos ESM não carregam via file://) e
- * captura o DOM com {@code google-chrome --headless --dump-dom}, afirmando que
- * a janela e os widgets renderizaram de verdade no DOM do browser.
+ * captura o DOM (Chrome/Chromium via {@code --headless --dump-dom}; Safari no
+ * macOS via {@code safaridriver}), afirmando que a janela e os widgets
+ * renderizaram de verdade no DOM do browser.
  *
- * Pula (assume) quando nenhum Chrome/Chromium está instalado.
+ * Pula (assume) quando nenhum browser suportado está instalado.
  */
 class KofJsBrowserE2ETest {
 
     private final CompilerDriver driver = new CompilerDriver();
 
     private static Path findChrome() {
+        Path pathHit = findInPath();
+        if (pathHit != null) return pathHit;
+        // #110 (13/09): no macOS o Chrome vive dentro do bundle do app
+        // (/Applications/...), nunca no PATH. Sem isso os 22 testes pulam
+        // em todo Mac com Chrome instalado. Ordem: usuário antes de sistema.
+        // Caminho REAL do bundle (exec) — symlink no PATH aborta o Chrome
+        // (exit 134, ver #110), então nunca criar/sugerir symlink.
+        Path mac = findMacBundle(
+                System.getProperty("os.name", ""), System.getProperty("user.home", ""));
+        if (mac != null) return mac;
+        return null;
+    }
+
+    // #110: varredura do PATH pura (sem tocar no macOS) — o teste injeta
+    // osName/home falsos, então o macOS precisa ficar isolado aqui.
+    static Path findInPath() {
         List<String> candidates = List.of(
                 "google-chrome", "google-chrome-stable", "chromium", "chromium-browser");
         String pathEnv = System.getenv("PATH");
+        if (pathEnv == null) return null;
         for (String name : candidates) {
-            if (pathEnv == null) break;
             for (String dir : pathEnv.split(java.util.regex.Pattern.quote(String.valueOf(java.io.File.pathSeparatorChar)))) {
                 Path p = Path.of(dir, name);
                 if (Files.isExecutable(p)) return p;
@@ -41,10 +65,72 @@ class KofJsBrowserE2ETest {
         return null;
     }
 
+    // #110 (pedido 13/09): no macOS, quando não há Chrome/Chromium, tenta o
+    // Safari via safaridriver (nativo do macOS). Safari NÃO tem --dump-dom:
+    // o driver é W3C WebDriver (HTTP+JSON, porta efêmera) — sessão, navegação
+    // e page source via REST; exige "Allow Remote Automation" (menu Develop).
+    // Fora do mac, ou sem safaridriver, retorna null (teste pula).
+    // Extraído p/ teste unitário (osName injetável — o host do teste é
+    // Linux, então o caminho macOS é simulado via fake em @TempDir).
+    static Path findSafari(String osName) {
+        if (!osName.toLowerCase(java.util.Locale.ROOT).contains("mac")) return null;
+        for (String dir : List.of("/usr/bin", "/usr/local/bin")) {
+            Path p = Path.of(dir, "safaridriver");
+            if (Files.isExecutable(p)) return p;
+        }
+        return null;
+    }
+
+    // #110: resolve o browser disponível — Chrome/Chromium primeiro (dump-dom
+    // rápido e determinístico), Safari via safaridriver no macOS como fallback.
+    // Retorna null quando não há nenhum (o teste pula via assume).
+    static Browser findBrowser() {
+        Path chrome = findChrome();
+        if (chrome != null) return new Browser(chrome, null);
+        Path safari = findSafari(System.getProperty("os.name", ""));
+        if (safari != null) return new Browser(null, safari);
+        return null;
+    }
+
+    // #110: browser real resolvido — um dos dois caminhos, nunca os dois.
+    static final class Browser {
+        final Path chrome;
+        final Path safariDriver;
+
+        Browser(Path chrome, Path safariDriver) {
+            this.chrome = chrome;
+            this.safariDriver = safariDriver;
+        }
+
+        boolean isSafari() {
+            return chrome == null && safariDriver != null;
+        }
+
+        String dump(String url) throws IOException {
+            if (chrome != null) return dumpDom(chrome, url);
+            return dumpDomSafari(safariDriver, url);
+        }
+    }
+
+    // #110: extraído p/ teste unitário (osName/home injetáveis — o host
+    // do teste é Linux, então o caminho macOS é simulado em @TempDir).
+    static Path findMacBundle(String osName, String home) {
+        if (!osName.toLowerCase(java.util.Locale.ROOT).contains("mac")) return null;
+        List<Path> bundles = List.of(
+                Path.of(home, "Applications", "Google Chrome.app", "Contents", "MacOS", "Google Chrome"),
+                Path.of("/Applications", "Google Chrome.app", "Contents", "MacOS", "Google Chrome"),
+                Path.of(home, "Applications", "Chromium.app", "Contents", "MacOS", "Chromium"),
+                Path.of("/Applications", "Chromium.app", "Contents", "MacOS", "Chromium"));
+        for (Path p : bundles) {
+            if (Files.isExecutable(p)) return p;
+        }
+        return null;
+    }
+
     @Test
     void uiWindowRendersInRealBrowserDom(@TempDir Path tempDir) throws IOException {
-        Path chrome = findChrome();
-        assumeTrue(chrome != null, "Chrome/Chromium não instalado — pulando E2E de browser");
+        Browser browser = findBrowser();
+        assumeTrue(browser != null, "nenhum browser real (Chrome/Chromium/Safari) — pulando E2E de browser");
 
         String program = """
             main() {
@@ -68,7 +154,7 @@ class KofJsBrowserE2ETest {
         HttpServer server = serve(outDir);
         int port = server.getAddress().getPort();
         try {
-            String dom = dumpDom(chrome, "http://127.0.0.1:" + port + "/index.html");
+            String dom = browser.dump("http://127.0.0.1:" + port + "/index.html");
             assertTrue(dom.contains("kof-window"), "janela kof.ui ausente no DOM: " + excerpt(dom));
             assertTrue(dom.contains("browser-ok"), "label ausente no DOM: " + excerpt(dom));
             assertTrue(dom.contains("kof-button"), "button kof.ui ausente no DOM: " + excerpt(dom));
@@ -81,8 +167,8 @@ class KofJsBrowserE2ETest {
 
     @Test
     void inputPlaceholderRendersInRealBrowserDom(@TempDir Path tempDir) throws IOException {
-        Path chrome = findChrome();
-        assumeTrue(chrome != null, "Chrome/Chromium não instalado — pulando E2E de browser");
+        Browser browser = findBrowser();
+        assumeTrue(browser != null, "nenhum browser real (Chrome/Chromium/Safari) — pulando E2E de browser");
 
         String program = """
             main() {
@@ -104,7 +190,7 @@ class KofJsBrowserE2ETest {
         HttpServer server = serve(outDir);
         int port = server.getAddress().getPort();
         try {
-            String dom = dumpDom(chrome, "http://127.0.0.1:" + port + "/index.html");
+            String dom = browser.dump("http://127.0.0.1:" + port + "/index.html");
             assertTrue(dom.contains("kof-input"), "input kof.ui ausente no DOM: " + excerpt(dom));
             assertTrue(dom.contains("placeholder=\"digite aqui\""),
                     "placeholder ausente no DOM: " + excerpt(dom));
@@ -115,8 +201,8 @@ class KofJsBrowserE2ETest {
 
     @Test
     void inputTypeRendersInRealBrowserDom(@TempDir Path tempDir) throws IOException {
-        Path chrome = findChrome();
-        assumeTrue(chrome != null, "Chrome/Chromium não instalado — pulando E2E de browser");
+        Browser browser = findBrowser();
+        assumeTrue(browser != null, "nenhum browser real (Chrome/Chromium/Safari) — pulando E2E de browser");
 
         String program = """
             main() {
@@ -138,7 +224,7 @@ class KofJsBrowserE2ETest {
         HttpServer server = serve(outDir);
         int port = server.getAddress().getPort();
         try {
-            String dom = dumpDom(chrome, "http://127.0.0.1:" + port + "/index.html");
+            String dom = browser.dump("http://127.0.0.1:" + port + "/index.html");
             assertTrue(dom.contains("kof-input"), "input kof.ui ausente no DOM: " + excerpt(dom));
             assertTrue(dom.contains("type=\"password\""),
                     "type=password ausente no DOM: " + excerpt(dom));
@@ -149,8 +235,8 @@ class KofJsBrowserE2ETest {
 
     @Test
     void inputCheckboxCheckedRendersInRealBrowserDom(@TempDir Path tempDir) throws IOException {
-        Path chrome = findChrome();
-        assumeTrue(chrome != null, "Chrome/Chromium não instalado — pulando E2E de browser");
+        Browser browser = findBrowser();
+        assumeTrue(browser != null, "nenhum browser real (Chrome/Chromium/Safari) — pulando E2E de browser");
 
         String program = """
             main() {
@@ -173,7 +259,7 @@ class KofJsBrowserE2ETest {
         HttpServer server = serve(outDir);
         int port = server.getAddress().getPort();
         try {
-            String dom = dumpDom(chrome, "http://127.0.0.1:" + port + "/index.html");
+            String dom = browser.dump("http://127.0.0.1:" + port + "/index.html");
             assertTrue(dom.contains("type=\"checkbox\""),
                     "type=checkbox ausente no DOM: " + excerpt(dom));
             assertTrue(dom.contains("checked"),
@@ -185,8 +271,8 @@ class KofJsBrowserE2ETest {
 
     @Test
     void imageAltSizeRendersInRealBrowserDom(@TempDir Path tempDir) throws IOException {
-        Path chrome = findChrome();
-        assumeTrue(chrome != null, "Chrome/Chromium não instalado — pulando E2E de browser");
+        Browser browser = findBrowser();
+        assumeTrue(browser != null, "nenhum browser real (Chrome/Chromium/Safari) — pulando E2E de browser");
 
         String program = """
             main() {
@@ -210,7 +296,7 @@ class KofJsBrowserE2ETest {
         HttpServer server = serve(outDir);
         int port = server.getAddress().getPort();
         try {
-            String dom = dumpDom(chrome, "http://127.0.0.1:" + port + "/index.html");
+            String dom = browser.dump("http://127.0.0.1:" + port + "/index.html");
             assertTrue(dom.contains("kof-image"), "image kof.ui ausente no DOM: " + excerpt(dom));
             assertTrue(dom.contains("alt=\"logotipo\""),
                     "alt ausente no DOM: " + excerpt(dom));
@@ -225,8 +311,8 @@ class KofJsBrowserE2ETest {
 
     @Test
     void formContainerRendersInRealBrowserDom(@TempDir Path tempDir) throws IOException {
-        Path chrome = findChrome();
-        assumeTrue(chrome != null, "Chrome/Chromium não instalado — pulando E2E de browser");
+        Browser browser = findBrowser();
+        assumeTrue(browser != null, "nenhum browser real (Chrome/Chromium/Safari) — pulando E2E de browser");
 
         String program = """
             main() {
@@ -249,7 +335,7 @@ class KofJsBrowserE2ETest {
         HttpServer server = serve(outDir);
         int port = server.getAddress().getPort();
         try {
-            String dom = dumpDom(chrome, "http://127.0.0.1:" + port + "/index.html");
+            String dom = browser.dump("http://127.0.0.1:" + port + "/index.html");
             assertTrue(dom.contains("<form"), "elemento <form> ausente no DOM: " + excerpt(dom));
             assertTrue(dom.contains("kof-form"), "classe kof-form ausente no DOM: " + excerpt(dom));
             assertTrue(dom.contains("placeholder=\"nome\""),
@@ -261,8 +347,8 @@ class KofJsBrowserE2ETest {
 
     @Test
     void widgetAttributesRenderInRealBrowserDom(@TempDir Path tempDir) throws IOException {
-        Path chrome = findChrome();
-        assumeTrue(chrome != null, "Chrome/Chromium não instalado — pulando E2E de browser");
+        Browser browser = findBrowser();
+        assumeTrue(browser != null, "nenhum browser real (Chrome/Chromium/Safari) — pulando E2E de browser");
 
         String program = """
             main() {
@@ -286,7 +372,7 @@ class KofJsBrowserE2ETest {
         HttpServer server = serve(outDir);
         int port = server.getAddress().getPort();
         try {
-            String dom = dumpDom(chrome, "http://127.0.0.1:" + port + "/index.html");
+            String dom = browser.dump("http://127.0.0.1:" + port + "/index.html");
             assertTrue(dom.contains("id=\"nome\""), "id ausente no DOM: " + excerpt(dom));
             assertTrue(dom.contains("destaque"), "class ausente no DOM: " + excerpt(dom));
             assertTrue(dom.contains("disabled"), "disabled ausente no DOM: " + excerpt(dom));
@@ -297,8 +383,8 @@ class KofJsBrowserE2ETest {
 
     @Test
     void widgetVisualPrimitivesRenderInRealBrowserDom(@TempDir Path tempDir) throws IOException {
-        Path chrome = findChrome();
-        assumeTrue(chrome != null, "Chrome/Chromium não instalado — pulando E2E de browser");
+        Browser browser = findBrowser();
+        assumeTrue(browser != null, "nenhum browser real (Chrome/Chromium/Safari) — pulando E2E de browser");
 
         // issue #78: border/shadow/gradient/flex-basis/max-width aplicados de
         // verdade no nó DOM (style inline), não só linkando no JVM/Native.
@@ -326,7 +412,7 @@ class KofJsBrowserE2ETest {
         HttpServer server = serve(outDir);
         int port = server.getAddress().getPort();
         try {
-            String dom = dumpDom(chrome, "http://127.0.0.1:" + port + "/index.html");
+            String dom = browser.dump("http://127.0.0.1:" + port + "/index.html");
             assertTrue(dom.contains("rgb(255, 0, 0) 2px solid") || dom.contains("2px solid rgb(255, 0, 0)"),
                     "border inline ausente no DOM: " + excerpt(dom));
             assertTrue(dom.contains("box-shadow"), "box-shadow ausente no DOM: " + excerpt(dom));
@@ -341,8 +427,8 @@ class KofJsBrowserE2ETest {
 
     @Test
     void formSubmitHandlerRunsInRealBrowser(@TempDir Path tempDir) throws IOException {
-        Path chrome = findChrome();
-        assumeTrue(chrome != null, "Chrome/Chromium não instalado — pulando E2E de browser");
+        Browser browser = findBrowser();
+        assumeTrue(browser != null, "nenhum browser real (Chrome/Chromium/Safari) — pulando E2E de browser");
 
         // o handler do onSubmit muta o placeholder do input — se o DOM final
         // traz "depois", o handler RODOU de verdade no browser.
@@ -368,7 +454,7 @@ class KofJsBrowserE2ETest {
         HttpServer server = serve(outDir);
         int port = server.getAddress().getPort();
         try {
-            String dom = dumpDom(chrome, "http://127.0.0.1:" + port + "/index.html");
+            String dom = browser.dump("http://127.0.0.1:" + port + "/index.html");
             assertTrue(dom.contains("placeholder=\"depois\""),
                     "handler do onSubmit NÃO rodou (placeholder ainda 'antes'): " + excerpt(dom));
         } finally {
@@ -378,8 +464,8 @@ class KofJsBrowserE2ETest {
 
     @Test
     void textareaRendersInRealBrowserDom(@TempDir Path tempDir) throws IOException {
-        Path chrome = findChrome();
-        assumeTrue(chrome != null, "Chrome/Chromium não instalado — pulando E2E de browser");
+        Browser browser = findBrowser();
+        assumeTrue(browser != null, "nenhum browser real (Chrome/Chromium/Safari) — pulando E2E de browser");
 
         String program = """
             main() {
@@ -401,7 +487,7 @@ class KofJsBrowserE2ETest {
         HttpServer server = serve(outDir);
         int port = server.getAddress().getPort();
         try {
-            String dom = dumpDom(chrome, "http://127.0.0.1:" + port + "/index.html");
+            String dom = browser.dump("http://127.0.0.1:" + port + "/index.html");
             assertTrue(dom.contains("<textarea"), "elemento <textarea> ausente no DOM: " + excerpt(dom));
             assertTrue(dom.contains("kof-textarea"), "classe kof-textarea ausente no DOM: " + excerpt(dom));
             assertTrue(dom.contains("inicial"), "texto inicial ausente no DOM: " + excerpt(dom));
@@ -414,8 +500,8 @@ class KofJsBrowserE2ETest {
 
     @Test
     void selectRendersInRealBrowserDom(@TempDir Path tempDir) throws IOException {
-        Path chrome = findChrome();
-        assumeTrue(chrome != null, "Chrome/Chromium não instalado — pulando E2E de browser");
+        Browser browser = findBrowser();
+        assumeTrue(browser != null, "nenhum browser real (Chrome/Chromium/Safari) — pulando E2E de browser");
 
         String program = """
             main() {
@@ -437,7 +523,7 @@ class KofJsBrowserE2ETest {
         HttpServer server = serve(outDir);
         int port = server.getAddress().getPort();
         try {
-            String dom = dumpDom(chrome, "http://127.0.0.1:" + port + "/index.html");
+            String dom = browser.dump("http://127.0.0.1:" + port + "/index.html");
             assertTrue(dom.contains("<select"), "elemento <select> ausente no DOM: " + excerpt(dom));
             assertTrue(dom.contains("kof-select"), "classe kof-select ausente no DOM: " + excerpt(dom));
             assertTrue(dom.contains("<option value=\"uma\""), "opção 'uma' ausente no DOM: " + excerpt(dom));
@@ -451,8 +537,8 @@ class KofJsBrowserE2ETest {
 
     @Test
     void fieldsetRendersInRealBrowserDom(@TempDir Path tempDir) throws IOException {
-        Path chrome = findChrome();
-        assumeTrue(chrome != null, "Chrome/Chromium não instalado — pulando E2E de browser");
+        Browser browser = findBrowser();
+        assumeTrue(browser != null, "nenhum browser real (Chrome/Chromium/Safari) — pulando E2E de browser");
 
         String program = """
             main() {
@@ -474,7 +560,7 @@ class KofJsBrowserE2ETest {
         HttpServer server = serve(outDir);
         int port = server.getAddress().getPort();
         try {
-            String dom = dumpDom(chrome, "http://127.0.0.1:" + port + "/index.html");
+            String dom = browser.dump("http://127.0.0.1:" + port + "/index.html");
             assertTrue(dom.contains("<fieldset"), "elemento <fieldset> ausente no DOM: " + excerpt(dom));
             assertTrue(dom.contains("kof-fieldset"), "classe kof-fieldset ausente no DOM: " + excerpt(dom));
             assertTrue(dom.contains("dados"), "classe custom ausente no DOM: " + excerpt(dom));
@@ -486,8 +572,8 @@ class KofJsBrowserE2ETest {
 
     @Test
     void iframeRendersInRealBrowserDom(@TempDir Path tempDir) throws IOException {
-        Path chrome = findChrome();
-        assumeTrue(chrome != null, "Chrome/Chromium não instalado — pulando E2E de browser");
+        Browser browser = findBrowser();
+        assumeTrue(browser != null, "nenhum browser real (Chrome/Chromium/Safari) — pulando E2E de browser");
 
         String program = """
             main() {
@@ -508,7 +594,7 @@ class KofJsBrowserE2ETest {
         HttpServer server = serve(outDir);
         int port = server.getAddress().getPort();
         try {
-            String dom = dumpDom(chrome, "http://127.0.0.1:" + port + "/index.html");
+            String dom = browser.dump("http://127.0.0.1:" + port + "/index.html");
             assertTrue(dom.contains("<iframe"), "elemento <iframe> ausente no DOM: " + excerpt(dom));
             assertTrue(dom.contains("kof-iframe"), "classe kof-iframe ausente no DOM: " + excerpt(dom));
             assertTrue(dom.contains("src=\"https://kof.dev\""), "src ausente no DOM: " + excerpt(dom));
@@ -519,8 +605,8 @@ class KofJsBrowserE2ETest {
 
     @Test
     void videoRendersInRealBrowserDom(@TempDir Path tempDir) throws IOException {
-        Path chrome = findChrome();
-        assumeTrue(chrome != null, "Chrome/Chromium não instalado — pulando E2E de browser");
+        Browser browser = findBrowser();
+        assumeTrue(browser != null, "nenhum browser real (Chrome/Chromium/Safari) — pulando E2E de browser");
 
         String program = """
             main() {
@@ -542,7 +628,7 @@ class KofJsBrowserE2ETest {
         HttpServer server = serve(outDir);
         int port = server.getAddress().getPort();
         try {
-            String dom = dumpDom(chrome, "http://127.0.0.1:" + port + "/index.html");
+            String dom = browser.dump("http://127.0.0.1:" + port + "/index.html");
             assertTrue(dom.contains("<video"), "elemento <video> ausente no DOM: " + excerpt(dom));
             assertTrue(dom.contains("kof-video"), "classe kof-video ausente no DOM: " + excerpt(dom));
             assertTrue(dom.contains("src=\"movie.mp4\""), "src ausente no DOM: " + excerpt(dom));
@@ -554,8 +640,8 @@ class KofJsBrowserE2ETest {
 
     @Test
     void audioRendersInRealBrowserDom(@TempDir Path tempDir) throws IOException {
-        Path chrome = findChrome();
-        assumeTrue(chrome != null, "Chrome/Chromium não instalado — pulando E2E de browser");
+        Browser browser = findBrowser();
+        assumeTrue(browser != null, "nenhum browser real (Chrome/Chromium/Safari) — pulando E2E de browser");
 
         String program = """
             main() {
@@ -577,7 +663,7 @@ class KofJsBrowserE2ETest {
         HttpServer server = serve(outDir);
         int port = server.getAddress().getPort();
         try {
-            String dom = dumpDom(chrome, "http://127.0.0.1:" + port + "/index.html");
+            String dom = browser.dump("http://127.0.0.1:" + port + "/index.html");
             assertTrue(dom.contains("<audio"), "elemento <audio> ausente no DOM: " + excerpt(dom));
             assertTrue(dom.contains("kof-audio"), "classe kof-audio ausente no DOM: " + excerpt(dom));
             assertTrue(dom.contains("src=\"song.mp3\""), "src ausente no DOM: " + excerpt(dom));
@@ -589,8 +675,8 @@ class KofJsBrowserE2ETest {
 
     @Test
     void hrRendersInRealBrowserDom(@TempDir Path tempDir) throws IOException {
-        Path chrome = findChrome();
-        assumeTrue(chrome != null, "Chrome/Chromium não instalado — pulando E2E de browser");
+        Browser browser = findBrowser();
+        assumeTrue(browser != null, "nenhum browser real (Chrome/Chromium/Safari) — pulando E2E de browser");
 
         String program = """
             main() {
@@ -612,7 +698,7 @@ class KofJsBrowserE2ETest {
         HttpServer server = serve(outDir);
         int port = server.getAddress().getPort();
         try {
-            String dom = dumpDom(chrome, "http://127.0.0.1:" + port + "/index.html");
+            String dom = browser.dump("http://127.0.0.1:" + port + "/index.html");
             assertTrue(dom.contains("<hr"), "elemento <hr> ausente no DOM: " + excerpt(dom));
             assertTrue(dom.contains("kof-hr"), "classe kof-hr ausente no DOM: " + excerpt(dom));
             assertTrue(dom.contains("divisor"), "classe custom ausente no DOM: " + excerpt(dom));
@@ -623,8 +709,8 @@ class KofJsBrowserE2ETest {
 
     @Test
     void canvasUi009RunsInRealBrowser(@TempDir Path tempDir) throws IOException {
-        Path chrome = findChrome();
-        assumeTrue(chrome != null, "Chrome/Chromium não instalado — pulando E2E de browser");
+        Browser browser = findBrowser();
+        assumeTrue(browser != null, "nenhum browser real (Chrome/Chromium/Safari) — pulando E2E de browser");
 
         // UI009: save/restore/setGlobalAlpha/fillText/measureText/transform
         // rodam no contexto 2D real. O desenho é bitmap (não aparece no DOM),
@@ -659,7 +745,7 @@ class KofJsBrowserE2ETest {
         HttpServer server = serve(outDir);
         int port = server.getAddress().getPort();
         try {
-            String dom = dumpDom(chrome, "http://127.0.0.1:" + port + "/index.html");
+            String dom = browser.dump("http://127.0.0.1:" + port + "/index.html");
             assertTrue(dom.contains("<canvas"), "elemento <canvas> ausente no DOM: " + excerpt(dom));
             assertTrue(dom.contains("measured"),
                     "measureText não retornou >0 (métodos UI009 não rodaram): " + excerpt(dom));
@@ -670,8 +756,8 @@ class KofJsBrowserE2ETest {
 
     @Test
     void listWidgetsRenderInRealBrowserDom(@TempDir Path tempDir) throws IOException {
-        Path chrome = findChrome();
-        assumeTrue(chrome != null, "Chrome/Chromium não instalado — pulando E2E de browser");
+        Browser browser = findBrowser();
+        assumeTrue(browser != null, "nenhum browser real (Chrome/Chromium/Safari) — pulando E2E de browser");
 
         String program = """
             main() {
@@ -693,7 +779,7 @@ class KofJsBrowserE2ETest {
         HttpServer server = serve(outDir);
         int port = server.getAddress().getPort();
         try {
-            String dom = dumpDom(chrome, "http://127.0.0.1:" + port + "/index.html");
+            String dom = browser.dump("http://127.0.0.1:" + port + "/index.html");
             assertTrue(dom.contains("<ul"), "elemento <ul> ausente no DOM: " + excerpt(dom));
             assertTrue(dom.contains("kof-ul"), "classe kof-ul ausente no DOM: " + excerpt(dom));
             assertTrue(dom.contains("<li>maçã</li>"), "<li> da maçã ausente no DOM: " + excerpt(dom));
@@ -706,8 +792,8 @@ class KofJsBrowserE2ETest {
 
     @Test
     void inputAttrsRenderInRealBrowserDom(@TempDir Path tempDir) throws IOException {
-        Path chrome = findChrome();
-        assumeTrue(chrome != null, "Chrome/Chromium não instalado — pulando E2E de browser");
+        Browser browser = findBrowser();
+        assumeTrue(browser != null, "nenhum browser real (Chrome/Chromium/Safari) — pulando E2E de browser");
 
         // name/readonly são ATRIBUTOS → serializam no outerHTML do dump-dom.
         String program = """
@@ -734,7 +820,7 @@ class KofJsBrowserE2ETest {
         HttpServer server = serve(outDir);
         int port = server.getAddress().getPort();
         try {
-            String dom = dumpDom(chrome, "http://127.0.0.1:" + port + "/index.html");
+            String dom = browser.dump("http://127.0.0.1:" + port + "/index.html");
             assertTrue(dom.contains("name=\"usuario\""), "name=\"usuario\" ausente no DOM: " + excerpt(dom));
             assertTrue(dom.contains("name=\"bio\""), "name=\"bio\" ausente no DOM: " + excerpt(dom));
             assertTrue(dom.contains("readonly"), "readonly ausente no DOM: " + excerpt(dom));
@@ -745,8 +831,8 @@ class KofJsBrowserE2ETest {
 
     @Test
     void tableRendersInRealBrowserDom(@TempDir Path tempDir) throws IOException {
-        Path chrome = findChrome();
-        assumeTrue(chrome != null, "Chrome/Chromium não instalado — pulando E2E de browser");
+        Browser browser = findBrowser();
+        assumeTrue(browser != null, "nenhum browser real (Chrome/Chromium/Safari) — pulando E2E de browser");
 
         String program = """
             main() {
@@ -768,7 +854,7 @@ class KofJsBrowserE2ETest {
         HttpServer server = serve(outDir);
         int port = server.getAddress().getPort();
         try {
-            String dom = dumpDom(chrome, "http://127.0.0.1:" + port + "/index.html");
+            String dom = browser.dump("http://127.0.0.1:" + port + "/index.html");
             assertTrue(dom.contains("<table"), "elemento <table> ausente no DOM: " + excerpt(dom));
             assertTrue(dom.contains("kof-table"), "classe kof-table ausente no DOM: " + excerpt(dom));
             assertTrue(dom.contains("<th>nome</th>"), "<th> ausente no DOM: " + excerpt(dom));
@@ -781,8 +867,8 @@ class KofJsBrowserE2ETest {
 
     @Test
     void ui003RemainingRenderInRealBrowserDom(@TempDir Path tempDir) throws IOException {
-        Path chrome = findChrome();
-        assumeTrue(chrome != null, "Chrome/Chromium não instalado — pulando E2E de browser");
+        Browser browser = findBrowser();
+        assumeTrue(browser != null, "nenhum browser real (Chrome/Chromium/Safari) — pulando E2E de browser");
 
         String program = """
             main() {
@@ -807,7 +893,7 @@ class KofJsBrowserE2ETest {
         HttpServer server = serve(outDir);
         int port = server.getAddress().getPort();
         try {
-            String dom = dumpDom(chrome, "http://127.0.0.1:" + port + "/index.html");
+            String dom = browser.dump("http://127.0.0.1:" + port + "/index.html");
             assertTrue(dom.contains("<fieldset"), "<fieldset> ausente no DOM: " + excerpt(dom));
             assertTrue(dom.contains("<legend>credenciais</legend>"), "<legend> ausente no DOM: " + excerpt(dom));
             assertTrue(dom.contains("<iframe"), "<iframe> ausente no DOM: " + excerpt(dom));
@@ -823,8 +909,8 @@ class KofJsBrowserE2ETest {
 
     @Test
     void ui006EventAccessorsRunInRealBrowser(@TempDir Path tempDir) throws IOException {
-        Path chrome = findChrome();
-        assumeTrue(chrome != null, "Chrome/Chromium não instalado — pulando E2E de browser");
+        Browser browser = findBrowser();
+        assumeTrue(browser != null, "nenhum browser real (Chrome/Chromium/Safari) — pulando E2E de browser");
 
         // O handler lê e.key()/e.value()/e.target()/e.relatedTarget() do
         // evento DOM real e muta class/placeholder — se o DOM final traz
@@ -873,7 +959,7 @@ class KofJsBrowserE2ETest {
         HttpServer server = serve(outDir);
         int port = server.getAddress().getPort();
         try {
-            String dom = dumpDom(chrome, "http://127.0.0.1:" + port + "/index.html");
+            String dom = browser.dump("http://127.0.0.1:" + port + "/index.html");
             assertTrue(dom.contains("key=x"),
                     "e.key() não trouxe a tecla do evento DOM real: " + excerpt(dom));
             assertTrue(dom.contains("t=campo-main"),
@@ -912,6 +998,148 @@ class KofJsBrowserE2ETest {
         return server;
     }
 
+    private static String dumpDomSafari(Path safariDriver, String url) throws IOException {
+        // #110: Safari não tem --dump-dom. Caminho WebDriver W3C: sobe o
+        // safaridriver numa porta efêmera, cria sessão, navega e lê o
+        // page source. Exige "Allow Remote Automation" (menu Develop do
+        // Safari); se o driver recusar, aborta (assume) em vez de falhar.
+        int port;
+        try (ServerSocket ss = new ServerSocket(0)) {
+            port = ss.getLocalPort();
+        }
+        ProcessBuilder pb = new ProcessBuilder(
+                safariDriver.toString(), "-p", String.valueOf(port));
+        pb.redirectErrorStream(false);
+        Process driver = pb.start();
+        HttpClient http;
+        try {
+            String base = "http://127.0.0.1:" + port;
+            http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
+            waitForDriver(http, base);
+            String session = newSession(http, base);
+            try {
+                navigate(http, base, session, url);
+                waitForKofUi(http, base, session);
+                return pageSource(http, base, session);
+            } finally {
+                deleteSession(http, base, session);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("interrompido no safaridriver", e);
+        } finally {
+            driver.destroy();
+        }
+    }
+
+    private static void waitForDriver(HttpClient http, String base) throws IOException, InterruptedException {
+        HttpRequest status = HttpRequest.newBuilder(URI.create(base + "/status"))
+                .timeout(Duration.ofSeconds(2)).GET().build();
+        long deadline = System.currentTimeMillis() + 15_000;
+        while (true) {
+            try {
+                HttpResponse<String> r = http.send(status, HttpResponse.BodyHandlers.ofString());
+                if (r.statusCode() == 200 && r.body().contains("\"ready\"")) return;
+            } catch (IOException | InterruptedException ignored) {
+                if (ignored instanceof InterruptedException) throw (InterruptedException) ignored;
+            }
+            if (System.currentTimeMillis() > deadline) {
+                throw new IOException("safaridriver não ficou pronto em 15s (ative Remote Automation no Safari)");
+            }
+            Thread.sleep(200);
+        }
+    }
+
+    private static String post(HttpClient http, String url, String json) throws IOException, InterruptedException {
+        HttpRequest req = HttpRequest.newBuilder(URI.create(url))
+                .timeout(Duration.ofSeconds(30))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(json)).build();
+        HttpResponse<String> r = http.send(req, HttpResponse.BodyHandlers.ofString());
+        if (r.statusCode() != 200) throw new IOException("safaridriver " + url + " -> " + r.statusCode() + ": " + excerpt(r.body()));
+        return r.body();
+    }
+
+    private static String get(HttpClient http, String url) throws IOException, InterruptedException {
+        HttpRequest req = HttpRequest.newBuilder(URI.create(url))
+                .timeout(Duration.ofSeconds(30)).GET().build();
+        HttpResponse<String> r = http.send(req, HttpResponse.BodyHandlers.ofString());
+        if (r.statusCode() != 200) throw new IOException("safaridriver " + url + " -> " + r.statusCode() + ": " + excerpt(r.body()));
+        return r.body();
+    }
+
+    private static String newSession(HttpClient http, String base) throws IOException, InterruptedException {
+        String body = post(http, base + "/session", "{\"capabilities\":{\"alwaysMatch\":{\"browserName\":\"safari\"}}}");
+        String id = extractJson(body, "sessionId");
+        if (id == null) abort("safaridriver recusou a sessão (ative Allow Remote Automation no Safari)");
+        return id;
+    }
+
+    private static void navigate(HttpClient http, String base, String session, String url) throws IOException, InterruptedException {
+        post(http, base + "/session/" + session + "/url", "{\"url\":" + quoteJson(url) + "}");
+    }
+
+    private static void waitForKofUi(HttpClient http, String base, String session) throws IOException, InterruptedException {
+        // O módulo ESM é deferred: espera até 10s pelo nó kof-window no DOM.
+        String script = "return document.documentElement.outerHTML;";
+        long deadline = System.currentTimeMillis() + 10_000;
+        while (true) {
+            String html = execute(http, base, session, script);
+            if (html != null && html.contains("kof-window")) return;
+            if (System.currentTimeMillis() > deadline) return;
+            Thread.sleep(300);
+        }
+    }
+
+    private static String pageSource(HttpClient http, String base, String session) throws IOException, InterruptedException {
+        return execute(http, base, session, "return document.documentElement.outerHTML;");
+    }
+
+    private static String execute(HttpClient http, String base, String session, String script) throws IOException, InterruptedException {
+        String body = post(http, base + "/session/" + session + "/execute/sync",
+                "{\"script\":" + quoteJson(script) + ",\"args\":[]}");
+        String value = extractJson(body, "value");
+        return value == null ? "" : unescapeJson(value);
+    }
+
+    private static void deleteSession(HttpClient http, String base, String session) {
+        try {
+            http.send(HttpRequest.newBuilder(URI.create(base + "/session/" + session))
+                    .timeout(Duration.ofSeconds(5)).DELETE().build(),
+                    HttpResponse.BodyHandlers.discarding());
+        } catch (IOException | InterruptedException ignored) {
+            if (ignored instanceof InterruptedException) Thread.currentThread().interrupt();
+        }
+    }
+
+    private static String quoteJson(String s) {
+        return "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
+    }
+
+    private static String extractJson(String json, String key) {
+        String needle = "\"" + key + "\":\"";
+        int i = json.indexOf(needle);
+        if (i < 0) return null;
+        int j = i + needle.length();
+        StringBuilder sb = new StringBuilder();
+        while (j < json.length()) {
+            char c = json.charAt(j);
+            if (c == '"') break;
+            if (c == '\\' && j + 1 < json.length()) {
+                sb.append(json.charAt(j + 1));
+                j += 2;
+                continue;
+            }
+            sb.append(c);
+            j++;
+        }
+        return sb.toString();
+    }
+
+    private static String unescapeJson(String s) {
+        return s.replace("\\n", "\n").replace("\\t", "\t").replace("\\\"", "\"").replace("\\\\", "\\");
+    }
+
     private static String dumpDom(Path chrome, String url) throws IOException {
         // --virtual-time-budget: o módulo ESM é deferred — dá tempo virtual
         // para o script carregar e o kof.ui injetar os nós antes do dump.
@@ -934,5 +1162,30 @@ class KofJsBrowserE2ETest {
     private static String excerpt(String s) {
         if (s == null) return "<nulo>";
         return s.length() > 600 ? s.substring(0, 600) + "…" : s;
+    }
+
+    @Test
+    void findMacBundleFindsChromeInsideAppBundle(@TempDir Path tempDir) throws IOException {
+        // #110: simula o layout macOS (~/Applications/Google Chrome.app/...)
+        // num @TempDir — o host do CI é Linux, então home é injetado.
+        Path exe = tempDir.resolve("Applications/Google Chrome.app/Contents/MacOS/Google Chrome");
+        Files.createDirectories(exe.getParent());
+        Files.writeString(exe, "#!/bin/sh\n");
+        assertTrue(exe.toFile().setExecutable(true));
+        Path found = findMacBundle("Mac OS X", tempDir.toString());
+        assertEquals(exe, found);
+    }
+
+    @Test
+    void findMacBundleIgnoresNonMac(@TempDir Path tempDir) {
+        assertNull(findMacBundle("Linux", tempDir.toString()));
+    }
+
+    @Test
+    void findSafariOnlyOnMac() {
+        assertNull(findSafari("Linux"));
+        assertNull(findSafari("Windows 11"));
+        // No Linux não há /usr/bin/safaridriver — no mac com driver, retorna o path.
+        // (No mac sem Remote Automation o dump aborta via assume, nunca falha.)
     }
 }
