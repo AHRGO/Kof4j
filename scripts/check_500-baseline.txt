@@ -1,4 +1,3 @@
-515	kof-compiler/src/main/java/dev/kof/compiler/ExpressionMethodCallLowerer.java
 520	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeUiLayout.java
 514	kof-compiler/src/main/java/dev/kof/compiler/jvm/JvmOpCollections.java
 510	kof-compiler/src/main/java/dev/kof/compiler/jvm/JvmRuntimeUi.java
@@ -7,4 +6,4 @@
 664	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeBackend.java
 507	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeRiscvAsmMapset0.java
 557	kof-compiler/src/main/java/dev/kof/compiler/runtime/RuntimeUi.java
-577	kof-compiler/src/main/java/dev/kof/compiler/SemExpressionTyper.java
+573	kof-compiler/src/main/java/dev/kof/compiler/SemExpressionTyper.java

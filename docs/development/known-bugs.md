@@ -4596,3 +4596,13 @@ statement-switch na mesma taxa). Reprodução no próprio teste (kof-cli).
   constante não-qualificada `RED/GREEN/BLUE` → `g`). Suíte compiler
   **1412/0-fail** (13 err = `node` ausente, ambientais), script 31, kof-c 5,
   cli 136; ratchet ≤500 OK (SemExpressionTyper voltou a 573 < baseline 577).
+
+### 149. JS: regressão do fix `isEmpty` (`718ae5cf`) — código gerado referencia variável não declarada (`ReferenceError: i is not defined` / `k is not defined`) + matriz de conformidade dessincronizada — ⏳ ABERTO (lane bugfix-101, DONO: quem abriu §145-147)
+
+- **Repro (medido 12/09 21:30, HEAD `7a85dd93`):** `mvn -o test -pl kof-compiler -am -Dtest='KofRandomTest,ConformanceMatrixDocTest'` →
+  - `KofRandomTest.randomStringJs`: `JS exit code, output:  err: ReferenceError: i is not defined` (exit 1)
+  - `KofRandomTest.randomShapeJs`: `err: ReferenceError: k is not defined` (exit 1)
+  - `ConformanceMatrixDocTest.matrixDocMatchesTestExclusions`: "casos na matriz ≠ casos no teste" (a matriz passou a esperar casos que o teste não tem — a célula nova de `isEmpty` não foi casada com a lista de exclusões/casos)
+- **Causa raiz (a lane dona confirma):** o commit `718ae5cf` ("feat: add 'isEmpty' method support for strings and fix related issues") mexeu em `JsCallEmitter`/`JsControlFlowParser`/`JsIfThrowElse` + `CollectionMethodTyper`/`KofInterpreterCollections` — a face JS quebrou a declaração de variável de loop/compreensão no codegen JS (sintoma `i`/`k` indefinidos) e a matriz de conformidade (`docs/CONFORMANCE_MATRIX.md` ↔ `ConformanceMatrixDocTest`) não foi atualizada no MESMO commit.
+- **Prova de que NÃO é regressão do split-7 (§140):** mesmo conjunto de testes no HEAD limpo (stash do split aplicado) falha IGUAL (3/3) — `ExpressionMethodCallLowerer` não toca JS nem random.
+- **Não consertei por cima** (regra 3 das condições de parada + DOING: §145-147 são da lane bugfix-101, EM CURSO). Dono fecha aqui com a célula de matriz + codegen JS.

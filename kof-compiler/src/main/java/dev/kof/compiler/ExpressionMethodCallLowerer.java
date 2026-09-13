@@ -10,6 +10,23 @@ public final class ExpressionMethodCallLowerer {
 
     private ExpressionMethodCallLowerer() {}
 
+    /** Diagnóstico de gap (XXX00x) — posição da chamada, mensagem e código prontos. */
+    private static void gapError(CompilerDriver driver, MethodCallExpr mc, String msg, String code) {
+        if (driver.currentDiagnostics == null) return;
+        SourcePosition p = mc.position();
+        driver.currentDiagnostics.error(p != null ? p.file() : "",
+                p != null ? p.line() : 0, p != null ? p.column() : 0, 0, msg, code);
+    }
+
+    /** Emite todos os argumentos da chamada, devolvendo o localIdx atualizado. */
+    private static int emitArgs(CompilerDriver driver, MethodCallExpr mc, List<KofOperation> ops,
+            String owner, int localIdx, List<IRLocalVariable> locals) {
+        for (ExpressionNode arg : mc.arguments()) {
+            localIdx = ExpressionLowerer.emitExpression(driver, arg, ops, owner, localIdx, locals);
+        }
+        return localIdx;
+    }
+
     static int lower(CompilerDriver driver, MethodCallExpr mc, List<KofOperation> ops,
                         String owner, int localIdx, List<IRLocalVariable> locals) {
 // User-defined classes take precedence over builtin helpers
@@ -119,21 +136,12 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
     KofScheduler.SchedulerCall schedCall = KofScheduler.staticCall(mc.methodName(), argTypes);
     if (schedCall != null) {
         if (!KofScheduler.supportedOn(driver.target)) {
-            if (driver.currentDiagnostics != null) {
-                driver.currentDiagnostics.error(mc.position() != null ? mc.position().file() : "",
-                        mc.position() != null ? mc.position().line() : 0,
-                        mc.position() != null ? mc.position().column() : 0,
-                        0,
-                        rid.name() + "." + mc.methodName()
-                                + ": not available on the " + driver.target
-                                + " driver.target yet (SCHED001)",
-                        "SCHED001");
-            }
+            gapError(driver, mc, rid.name() + "." + mc.methodName()
+                    + ": not available on the " + driver.target
+                    + " driver.target yet (SCHED001)", "SCHED001");
             return localIdx;
         }
-        for (ExpressionNode arg : mc.arguments()) {
-            localIdx = ExpressionLowerer.emitExpression(driver, arg, ops, owner, localIdx, locals);
-        }
+        localIdx = emitArgs(driver, mc, ops, owner, localIdx, locals);
         ops.add(new KofCall(KofScheduler.SCHEDULER, schedCall.function(), schedCall.parameterTypes(),
                 schedCall.returnType(), KofCallKind.FUNCTION));
     }
@@ -178,21 +186,12 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
     KofGpu.GpuCall gpuCall = KofGpu.staticCall(mc.methodName(), argTypes);
     if (gpuCall != null) {
         if (!KofGpu.supportedOn(driver.target)) {
-            if (driver.currentDiagnostics != null) {
-                driver.currentDiagnostics.error(mc.position() != null ? mc.position().file() : "",
-                        mc.position() != null ? mc.position().line() : 0,
-                        mc.position() != null ? mc.position().column() : 0,
-                        0,
-                        rid.name() + "." + mc.methodName()
-                                + ": not available on the " + driver.target
-                                + " driver.target yet (GPU001)",
-                        "GPU001");
-            }
+            gapError(driver, mc, rid.name() + "." + mc.methodName()
+                    + ": not available on the " + driver.target
+                    + " driver.target yet (GPU001)", "GPU001");
             return localIdx;
         }
-        for (ExpressionNode arg : mc.arguments()) {
-            localIdx = ExpressionLowerer.emitExpression(driver, arg, ops, owner, localIdx, locals);
-        }
+        localIdx = emitArgs(driver, mc, ops, owner, localIdx, locals);
         ops.add(new KofCall(KofGpu.GPU, gpuCall.function(), gpuCall.parameterTypes(),
                 gpuCall.returnType(), KofCallKind.FUNCTION));
     }
@@ -204,21 +203,13 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
     KofSecurity.SecCall secCall = KofSecurity.staticMethod(rid.name(), mc.methodName(), argTypes);
     if (secCall != null) {
         if (!KofSecurity.supportedOn(secCall.function(), driver.target)) {
-            if (driver.currentDiagnostics != null) {
-                driver.currentDiagnostics.error(mc.position() != null ? mc.position().file() : "",
-                        mc.position() != null ? mc.position().line() : 0,
-                        mc.position() != null ? mc.position().column() : 0,
-                        0,
-                        rid.name() + "." + mc.methodName()
-                                + ": not available on the " + driver.target
-                                + " driver.target yet (" + KofSecurity.gapCode(secCall.function()) + ")",
-                        KofSecurity.gapCode(secCall.function()));
-            }
+            gapError(driver, mc, rid.name() + "." + mc.methodName()
+                    + ": not available on the " + driver.target
+                    + " driver.target yet (" + KofSecurity.gapCode(secCall.function()) + ")",
+                    KofSecurity.gapCode(secCall.function()));
             return localIdx;
         }
-        for (ExpressionNode arg : mc.arguments()) {
-            localIdx = ExpressionLowerer.emitExpression(driver, arg, ops, owner, localIdx, locals);
-        }
+        localIdx = emitArgs(driver, mc, ops, owner, localIdx, locals);
         ops.add(new KofCall(new Type.ClassType("kof.security", "Security", List.of()),
                 secCall.function(), secCall.parameterTypes(), secCall.returnType(),
                 KofCallKind.FUNCTION));
@@ -231,21 +222,13 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
     KofValidation.ValidationCall vCall = KofValidation.staticMethod(rid.name(), mc.methodName(), argTypes);
     if (vCall != null) {
         if (!KofValidation.supportedOn(vCall.function(), driver.target)) {
-            if (driver.currentDiagnostics != null) {
-                driver.currentDiagnostics.error(mc.position() != null ? mc.position().file() : "",
-                        mc.position() != null ? mc.position().line() : 0,
-                        mc.position() != null ? mc.position().column() : 0,
-                        0,
-                        rid.name() + "." + mc.methodName()
-                                + ": not available on the " + driver.target
-                                + " driver.target yet (" + KofValidation.gapCode(vCall.function()) + ")",
-                        KofValidation.gapCode(vCall.function()));
-            }
+            gapError(driver, mc, rid.name() + "." + mc.methodName()
+                    + ": not available on the " + driver.target
+                    + " driver.target yet (" + KofValidation.gapCode(vCall.function()) + ")",
+                    KofValidation.gapCode(vCall.function()));
             return localIdx;
         }
-        for (ExpressionNode arg : mc.arguments()) {
-            localIdx = ExpressionLowerer.emitExpression(driver, arg, ops, owner, localIdx, locals);
-        }
+        localIdx = emitArgs(driver, mc, ops, owner, localIdx, locals);
         ops.add(new KofCall(new Type.ClassType("kof.validation", "Validation", List.of()),
                 vCall.function(), vCall.parameterTypes(), vCall.returnType(),
                 KofCallKind.FUNCTION));
@@ -258,19 +241,12 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
     KofStd.StdCall sCall = KofStd.staticMethod(rid.name(), mc.methodName(), argTypes);
     if (sCall != null) {
         if (!KofStd.supportedOn(sCall, driver.target)) {
-            if (driver.currentDiagnostics != null) {
-                driver.currentDiagnostics.error(mc.position() != null ? mc.position().file() : "",
-                        mc.position() != null ? mc.position().line() : 0,
-                        mc.position() != null ? mc.position().column() : 0, 0,
-                        rid.name() + "." + mc.methodName() + ": not available on the "
-                                + driver.target + " target yet (" + KofStd.gapCode(sCall) + ")",
-                        KofStd.gapCode(sCall));
-            }
+            gapError(driver, mc, rid.name() + "." + mc.methodName() + ": not available on the "
+                    + driver.target + " target yet (" + KofStd.gapCode(sCall) + ")",
+                    KofStd.gapCode(sCall));
             return localIdx;
         }
-        for (ExpressionNode arg : mc.arguments()) {
-            localIdx = ExpressionLowerer.emitExpression(driver, arg, ops, owner, localIdx, locals);
-        }
+        localIdx = emitArgs(driver, mc, ops, owner, localIdx, locals);
         ops.add(new KofCall(new Type.ClassType(sCall.ownerPackage(), sCall.ownerClass(), List.of()),
                 sCall.function(), sCall.parameterTypes(), sCall.returnType(),
                 KofCallKind.FUNCTION));
@@ -283,21 +259,13 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
     KofObservability.ObservabilityCall oCall = KofObservability.staticMethod(rid.name(), mc.methodName(), argTypes);
     if (oCall != null) {
         if (!KofObservability.supportedOn(oCall.function(), driver.target)) {
-            if (driver.currentDiagnostics != null) {
-                driver.currentDiagnostics.error(mc.position() != null ? mc.position().file() : "",
-                        mc.position() != null ? mc.position().line() : 0,
-                        mc.position() != null ? mc.position().column() : 0,
-                        0,
-                        rid.name() + "." + mc.methodName()
-                                + ": not available on the " + driver.target
-                                + " driver.target yet (" + KofObservability.gapCode(oCall.function()) + ")",
-                        KofObservability.gapCode(oCall.function()));
-            }
+            gapError(driver, mc, rid.name() + "." + mc.methodName()
+                    + ": not available on the " + driver.target
+                    + " driver.target yet (" + KofObservability.gapCode(oCall.function()) + ")",
+                    KofObservability.gapCode(oCall.function()));
             return localIdx;
         }
-        for (ExpressionNode arg : mc.arguments()) {
-            localIdx = ExpressionLowerer.emitExpression(driver, arg, ops, owner, localIdx, locals);
-        }
+        localIdx = emitArgs(driver, mc, ops, owner, localIdx, locals);
         ops.add(new KofCall(new Type.ClassType("kof.observability", "Observability", List.of()),
                 oCall.function(), oCall.parameterTypes(), oCall.returnType(),
                 KofCallKind.FUNCTION));
@@ -309,21 +277,13 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
             mc.arguments().size());
     if (tetrisCall != null) {
         if (!KofTetris.supportedOn(driver.target)) {
-            if (driver.currentDiagnostics != null) {
-                driver.currentDiagnostics.error(mc.position() != null ? mc.position().file() : "",
-                        mc.position() != null ? mc.position().line() : 0,
-                        mc.position() != null ? mc.position().column() : 0,
-                        0,
-                        rid.name() + "." + mc.methodName()
-                                + ": not available on the " + driver.target
-                                + " driver.target yet (" + KofTetris.gapCode() + ")",
-                        KofTetris.gapCode());
-            }
+            gapError(driver, mc, rid.name() + "." + mc.methodName()
+                    + ": not available on the " + driver.target
+                    + " driver.target yet (" + KofTetris.gapCode() + ")",
+                    KofTetris.gapCode());
             return localIdx;
         }
-        for (ExpressionNode arg : mc.arguments()) {
-            localIdx = ExpressionLowerer.emitExpression(driver, arg, ops, owner, localIdx, locals);
-        }
+        localIdx = emitArgs(driver, mc, ops, owner, localIdx, locals);
         ops.add(new KofCall(new Type.ClassType("kof.tetris", "Tetris", List.of()),
                 tetrisCall.function(), tetrisCall.parameterTypes(), tetrisCall.returnType(),
                 KofCallKind.FUNCTION));
@@ -336,15 +296,8 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
                 && driver.target != Target.NATIVE
                 && driver.target != Target.NATIVE_RISCV64
                 && driver.target != Target.NATIVE_AARCH64) {
-            if (driver.currentDiagnostics != null) {
-                driver.currentDiagnostics.error(mc.position() != null ? mc.position().file() : "",
-                        mc.position() != null ? mc.position().line() : 0,
-                        mc.position() != null ? mc.position().column() : 0,
-                        0,
-                        "web: not available on the " + driver.target
-                                + " driver.target yet (WEB001)",
-                        "WEB001");
-            }
+            gapError(driver, mc, "web: not available on the " + driver.target
+                    + " driver.target yet (WEB001)", "WEB001");
             return localIdx;
         }
         KofWeb.WebCall appCall = KofWeb.appConstructor();
