@@ -49,8 +49,9 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > NÃO REPRODUZ, §161/NAT-STR01 registrado). Corrigido: §2 (14 seções; grupos =
 > 7 decisão-ratificada + 1 congelado §101 + 5 lane-alheia + 1 infra §156; "há UM
 > item code-pure: §156"), §3 (NAT-STR01→§161; "§129 (unwind cross-thread via TLS)"
-> em vez do alias solto "TLS §129"), §4.2 (14 abertos) e §4.3 (DD-STDLIB-01 já
-> saiu de `future/`). Só doc, zero código. **PRÓXIMO TICK:** manter o padrão
+> em vez do alias solto "TLS §129"), §4.2 (14 abertos), §4.3 (DD-STDLIB-01 já
+> saiu de `future/`) e §1 itens 4/6 (OTP S2 JVM e `pow`/`-lm`/S10c agora
+> **DECIDIDOS 13/09** — não mais "na mesa"). Só doc, zero código. **PRÓXIMO TICK:** manter o padrão
 > (docs/development ↔ bugs-and-gaps ↔ matriz×teste em sincronia quando um item
 > fecha/decide); varredura de `decision-pending/` por item já decidido que deva
 > mover. **NÃO:** bugs/gaps/código de lane alheia (pow/S10c = STDLIB; nat/ = GC
