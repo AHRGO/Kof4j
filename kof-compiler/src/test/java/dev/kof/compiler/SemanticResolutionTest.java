@@ -86,6 +86,58 @@ class SemanticResolutionTest {
     }
 
     @Test
+    void mechanismModifierWarnsButStaysGreen(@TempDir Path tmp) throws IOException {
+        // #125: `synchronized` (e volatile/transient/native) é aceito pelo
+        // parser mas computeAccess o descarta — o programa compilava em
+        // silêncio SEM o efeito pedido (falsa sensação de segurança). O memory
+        // model ratificado (concurrency-memory-model.md §5) os declara
+        // non-goals; a correção é R6 (nunca silencioso): warning SEM091 com a
+        // posição do membro, NÃO-fatal (retrocompat — código que compila hoje
+        // continua compilando, regra 2 do congelamento).
+        CompilationResult r = compile(tmp, "Sync.kf", """
+                class Contador {
+                    Map<String, Int> dados
+                    public constructor() {
+                        this.dados = mapOf()
+                    }
+                    synchronized Int somar(String chave) {
+                        return 1
+                    }
+                }
+                main() { println(Contador().somar("a")) }
+                """);
+        assertTrue(r.success(), "synchronized deve continuar compilando (warning não-fatal)");
+        boolean warned = r.diagnostics().getDiagnostics().stream()
+                .anyMatch(d -> d.severity() == Diagnostic.Severity.WARNING
+                        && "SEM091".equals(d.code())
+                        && d.message().contains("synchronized"));
+        assertTrue(warned, "esperava warning SEM091 sobre 'synchronized', foi: "
+                + r.diagnostics().getDiagnostics());
+        // volatile/transient/native caem na mesma regra
+        CompilationResult v = compile(tmp, "Vol.kf", """
+                class C {
+                    volatile Int x
+                    Int f() { return 1 }
+                }
+                main() { println(0) }
+                """);
+        assertTrue(v.diagnostics().getDiagnostics().stream()
+                .anyMatch(d -> "SEM091".equals(d.code()) && d.message().contains("volatile")),
+                "volatile deve avisar: " + v.diagnostics().getDiagnostics());
+        // sem modificador de mecanismo → NENHUM SEM091 (não polui código limpo)
+        CompilationResult clean = compile(tmp, "Clean.kf", """
+                class C {
+                    Int x
+                    Int f() { return 1 }
+                }
+                main() { println(C().f()) }
+                """);
+        assertTrue(clean.success() && clean.diagnostics().getDiagnostics().stream()
+                .noneMatch(d -> "SEM091".equals(d.code())),
+                "código limpo não deve ter SEM091: " + clean.diagnostics().getDiagnostics());
+    }
+
+    @Test
     void unknownMethodOnWebApp(@TempDir Path tmp) throws IOException {
         CompilationResult r = compile(tmp, "W.kf",
                 "main() { web.app().metodoRuim() }");

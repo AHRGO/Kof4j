@@ -6,11 +6,11 @@
 
 **Status:** EM DESENVOLVIMENTO (caiu de `future/` em 12/09 — Fase F
 implementada: `Translate.java` + `TranslateLexer`/`TranslateExpr`;
-prova: `TranslateTest` 27/27 (output compila e roda; +do-while +switch
+prova: `TranslateTest` 30/30 (output compila e roda; +do-while +switch
 +try/catch/throw +arrays +cast/instanceof +throws +generics +constructor
 +enum-body/multi-decl +interface-extends +bitwise/shift +parênteses
-+tipos qualificados +assert +annotations 13/09). Subconjunto Java ampliado
-ainda pendente)
++tipos qualificados +assert +annotations +var +interface-default 13/09).
+Subconjunto Java ampliado ainda pendente)
 **Data:** 22 de agosto de 2026
 
 ---
@@ -265,3 +265,15 @@ diferenciais.
 > `parseTypeDeclaration` + ramo `@` no `parseMember`. Prova:
 > `TranslateTest.annotationsAreDiscarded` (traduz + compila JVM + roda
 > `x/f`). `Translate.java` 377 ≤500; `TranslateTest` 27/27.
+>
+> **Estado (13/09 ~15:00, dono = 192.168.100.22): `var`, `default` de
+> interface, constante de interface.** (1) `var x = 1;` local Java → `var x =
+> 1` Kof (`var` é reservado idêntico; antes `expected ';' but found 'x'`).
+> (2) interface `default`/corpo de método agora **preserva o corpo** (Kof
+> aceita corpo em interface — verificado; antes dropava → `SEM043` no
+> implementador). (3) constante de interface (`int X = 1;` implícito
+> `static final`) → **gap honesto R6**: Kof aceita declarar mas não resolve
+> (`I.X`/`C.X` → `SEM025`), sem equivalente direto. Prova:
+> `TranslateTest.varLocalTranslates` (roda `1/hi`),
+> `interfaceDefaultMethodKeepsBody`, `interfaceConstantIsHonestGap`.
+> `Translate.java` 396, `TranslateStatements` 404 ≤500; `TranslateTest` 30/30.

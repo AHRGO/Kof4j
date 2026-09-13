@@ -379,6 +379,11 @@ class TranslateStatements extends TranslateExpr {
 
     /** Lookahead: "Type[<...>][[]...] name ..." — declaração local. */
     private boolean isLocalDeclAhead() {
+        // Java `var x = 1` — `var` é o mesmo nome reservado do Kof; a
+        // declaração traduz como ela mesma (`var x = 1`).
+        if (p.peek().text.equals("var")) {
+            return p.peek(1).type == T.IDENT;
+        }
         if (!isPrimitiveOrType(p.peek().text)) return false;
         int i = p.pos + 1;
         if (i < p.toks.size() && p.toks.get(i).text.equals("<")) {

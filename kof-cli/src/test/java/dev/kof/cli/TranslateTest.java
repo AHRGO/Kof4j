@@ -333,6 +333,53 @@ class TranslateTest {
     }
 
     @Test
+    void varLocalTranslates(@TempDir Path dir) throws Exception {
+        String kof = Translate.translateJava("""
+                public class V {
+                    public static void main(String[] args) {
+                        var x = 1;
+                        var s = "hi";
+                        System.out.println(x);
+                        System.out.println(s);
+                    }
+                }
+                """);
+
+        assertTrue(kof.contains("var x = 1"),
+                "`var x = 1` Java → `var x = 1` Kof (antes: expected ';' but found 'x'):\n" + kof);
+
+        assertCompiles(dir, kof, "1\nhi");
+    }
+
+    @Test
+    void interfaceDefaultMethodKeepsBody(@TempDir Path dir) throws Exception {
+        String kof = Translate.translateJava("""
+                public interface I {
+                    default int f() { return 1; }
+                    int g();
+                }
+                """);
+
+        assertTrue(kof.contains("Int f() {") && kof.contains("return 1"),
+                "interface `default` preserva o corpo (antes: corpo dropado → SEM043):\n" + kof);
+        assertTrue(kof.contains("Int g(): Int"),
+                "assinatura abstrata continua `Type m(): Type`:\n" + kof);
+    }
+
+    @Test
+    void interfaceConstantIsHonestGap() {
+        TranslateException e = assertThrows(TranslateException.class, () ->
+                Translate.translateJava("""
+                        public interface I {
+                            int X = 1;
+                            int g();
+                        }
+                        """));
+        assertTrue(e.getMessage().contains("constante de interface") && e.getMessage().contains("revisão manual"),
+                "constante de interface não resolvível em Kof (SEM025) → gap explícito (R6), foi: " + e.getMessage());
+    }
+
+    @Test
     void annotationsAreDiscarded(@TempDir Path dir) throws Exception {
         String kof = Translate.translateJava("""
                 @Deprecated

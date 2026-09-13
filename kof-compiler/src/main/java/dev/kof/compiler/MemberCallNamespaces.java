@@ -28,19 +28,19 @@ final class MemberCallNamespaces {
         // narrowing a jusante e quebraria programas válidos — regressão).
         if (mc.receiver() instanceof IdentifierExpr rid && "json".equals(rid.name())
                 && !SemExpressionTyper.isLocalName(scope, rid.name())) {
-            boolean known = "encode".equals(mc.methodName()) || "decode".equals(mc.methodName());
             boolean valid = ("encode".equals(mc.methodName()) && mc.arguments().size() == 1)
                     || ("decode".equals(mc.methodName()) && mc.arguments().size() == 1
                         && !mc.typeArguments().isEmpty());
-            if (known && !valid && sa.diagnostics() != null) {
+            if (!valid && sa.diagnostics() != null) {
                 sa.diagnostics().error("", 0, 0, 0,
                         "Cannot resolve method '" + mc.methodName() + "' on namespace 'json' — "
                                 + ("decode".equals(mc.methodName())
                                         ? "use json.decode<T>(s) (1 arg + type argument)"
                                         : "use json.encode(x) (1 arg)"),
                         "SEM025");
+                return Type.UnknownType.UNKNOWN;
             }
-            return Type.UnknownType.UNKNOWN;
+            return null;
         }
         if (mc.receiver() instanceof IdentifierExpr rid && !SemExpressionTyper.isLocalName(scope, rid.name()) && KofDb.isDbNamespace(rid.name())) {
             List<Type> argTypes = new ArrayList<>();

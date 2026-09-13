@@ -227,11 +227,30 @@ public final class Translate {
                 while (isModifier(p.peek().text)) { if (p.at("static")) isStatic = true; p.next(); }
                 String ret = parseType();
                 String mname = p.next().text;
+                if (!p.at("(")) {
+                    // Campo/constante de interface Java (`int X = 1;` é
+                    // implicitamente `static final`). Kof aceita declarar, mas
+                    // não resolve o campo (`I.X` → SEM025, verificado 13/09) e
+                    // não há constante top-level → revisão manual (R6).
+                    throw new TranslateException(
+                            "constante de interface (`Type NOME = ...` em interface) não tem "
+                            + "equivalente direto em Kof (campo de interface não é resolvível, "
+                            + "SEM025) — revisão manual");
+                }
                 List<String> params = parseParams();
-                if (p.at("{")) { skipBlock(); }
-                else p.expect(";");
-                out.append("    ").append(ret).append(' ').append(mname).append('(')
-                   .append(paramList(params)).append("): ").append(ret).append('\n');
+                if (p.at("{")) {
+                    // interface `default`/corpo: Kof aceita corpo em interface
+                    // (default method — verificado 13/09). Preserva o corpo.
+                    List<String> body = parseBlock();
+                    out.append("    ").append(ret).append(' ').append(mname).append('(')
+                       .append(paramList(params)).append(") {\n");
+                    for (String stmt : body) out.append("        ").append(stmt).append('\n');
+                    out.append("    }\n");
+                } else {
+                    p.expect(";");
+                    out.append("    ").append(ret).append(' ').append(mname).append('(')
+                       .append(paramList(params)).append("): ").append(ret).append('\n');
+                }
             }
             p.expect("}");
             out.append("}\n");
