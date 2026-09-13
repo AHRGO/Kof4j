@@ -1005,6 +1005,12 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
   - varredura R6 — 8 namespaces stdlib nunca são silenciosos
   - paridade kof-script × JVM compilado da stdlib nova (S10–S12b)
 
+## [0.3.23-beta] - 2026-09-13
+
+### Features
+
+  - adicionar suporte à flag --json no comando kof check
+
 <!-- NEXT-RELEASE -->
 
 ## [0.2.7-beta] - 2026-09-04
