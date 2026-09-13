@@ -234,62 +234,18 @@ conceitual nem decide arquitetura/rumo. Consequências práticas para o agente:
 6. **Toda PR vem acompanhada de uma issue relacionada.** PR "solta" não entra.
    Toda mudança proposta referencia uma issue aberta que a justifica —
    rastreabilidade é lei, não preferência.
-7. **Identidade em commits e issues/PRs (12/09, mecanismo DESVENDADO e
-   medido).** Agente publica pela identidade da organização/agente, **nunca**
-   pelo perfil pessoal visível da mantenedora. **Não é App nem PAT** — é
-   atribuição do GitHub por **e-mail de autor**: commit com
-   `user.email = aminadojava@gmail.com` (e-mail verificado pelo usuário
-   `temmcode`, id 214545180) aparece no painel de contributors como
-   **`temmcode`** — 268 commits no Kof4j provados (`git log | grep -c` ==
-   `contributors API` == 268, zero ocorrências de "temm" em qualquer autor).
-   Por isso nenhuma máquina tem token `temmcode`. Setup por clone (uma vez):
-   `git config user.name "temmcode"` +
-   `git config user.email "aminadojava@gmail.com"` — o nome `Kof-agent-worker`
-   da org fica para quando a org ganhar verificação de e-mail própria; o
-   truque hoje é o e-mail. Para issues/PRs via `gh`, o token ativo resolve
-   (`gh api user --jq .login`): enquanto não houver App/worker provisionado,
-   o agente **PODE** comentar/postar pela conta da mantenedora (override
-   dela — diretriz 12/09), **mas TODO comentário assim DEVE abrir com bloco
-   de citação marcando a autoria real**, no padrão:
-
-   ```markdown
-   > _Comentário redigido por **"Kof-agent-worker"** — o agente autônomo da
-   > lane <lane> (<modelo>), postado via conta da mantenedora como proxy até a
-   > identidade App do worker estar provisionada. O conteúdo abaixo é do
-   > agente, não da <mantenedora>._
-
-   ---
-
-   <corpo da resposta>
-   ```
-
-   A aspa em `**"Kof-agent-worker"**` é deliberada: é **apelido de
-   personalidade**, não conta verificada — nunca escrever como se fosse nome
-   de usuário real do GitHub, nunca omitir a marcação. Sem a marcação, um
-   comentário do agente parece a palavra da mantenedora — e isso é o problema
-   que a regra antiga queria evitar. Persistir o corpo em
-   `.issue<N>-reply-pending.md` (gitignored) continua valendo como rascunho
-   antes de postar. Verificação da
-   sessão: `git config user.email` = o e-mail da identidade ANTES do primeiro
-   commit. (Histórico: um comentário na #97 saiu como melmonfre 12/09 e foi
-   APAGADO; re-postagem quando a identidade de issue existir.)
-8. **Higiene de identidade do git (12/09, pedido da mantenedora — NUNCA
-   poluir o git dela).** A identidade do AGENTE vive SÓ no `--local` do clone
-   de trabalho (`user.name = temmcode` + `user.email = aminadojava@gmail.com`);
-   o `--global` (`~/.gitconfig`) é DA MANTENEDORA (`mel` +
-   `amelissariver@gmail.com`) e o agente NUNCA o toca: proibido
-   `git config --global user.*`, proibido `git config user.*` fora de um clone
-   de trabalho, proibido qualquer comando que escreva no `~/.gitconfig`.
-   Consequências: (a) commit manual DELA num terminal usa o global dela e sobe
-   pela conta dela — correto, nunca "consertar"; (b) commit do loop autônomo
-   usa o local do clone e sobe como `temmcode` — correto; (c) verificação de
-   sessão é `git config --show-origin --get user.email`: tem que responder
-   `file:.git/config` + o e-mail temmcode; se responder
-   `file:/home/mel/.gitconfig`, o local se perdeu — restaurar SÓ o local
-   (`git config user.email ...` SEM `--global`, dentro do repo) antes do
-   primeiro commit. Scripts (`auto-loop.sh`, `issue-watcher.sh`, CI) NUNCA
-   setam identidade — o `release.yml` usa `kof-release-bot`, identidade de bot
-   própria, nem da mantenedora nem do worker.
+7. **Identidade do git (12/09, decisão da mantenedora — identidade única).**
+   A regra antiga do `temmcode` (e-mail `aminadojava@gmail.com` no `--local`
+   para atribuir commits ao worker + bloco `"Kof-agent-worker"` em comentários
+   via proxy) foi **ABANDONADA a pedido da mantenedora** — dava dor de cabeça
+   demais (commit manual dela subindo como `temmcode` pelo `--local` do clone).
+   Vale agora: **uma identidade só, a dela**. O agente NUNCA configura
+   identidade (`git config user.*` com ou sem `--global` é proibido; nunca
+   escreve em `~/.gitconfig` nem no `.git/config`); usa a identidade efetiva
+   do repo/ambiente como está. Sem truque de e-mail, sem bloco de marcação
+   obrigatório em issues/PRs, **sem trailer `Co-authored-by`** (polui o log do
+   repo). Quando ela preparar algo exclusivo para os
+   agentes, essa regra volta numa forma nova.
 
 > Em resumo: a IA roda **sob as regras estritas da computação de verdade** —
 > documentação cirúrgica, zero alucinação, sem o hype do mercado.
