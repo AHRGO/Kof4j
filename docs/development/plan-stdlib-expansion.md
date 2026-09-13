@@ -1,6 +1,6 @@
 # Plano — Universal Standard Library (STDLIB)
 
-**Dono:** lane KOFSCRIPT (fixes-for-kofagent) · **Status:** EM CURSO — **S7d FECHADO 11/09**: `addDays`/`diffDays` nos 5 alvos (JVM/Script S7a, JS S7b, x86 S7c `RuntimeTimeIso`, riscv/aarch **B33** — TIME002 fechado; a spec "bloqueada sem qemu" caiu: toolchain+qemu presentes, goldens byte-idênticos sob qemu). S1b/S1b.1 **MATH001 fechado 11/09** (Double math riscv/aarch B32). Restam no plano só decisões da mantenedora (`format`/`boundaries`, S10c, §89) + itens sem algoritmo no corpus (isNis/ulid/creditCard); S0–S6, S8–S10 FEITOS (auditoria 10/09 vs código) · **Briefing:** maintainer 08/09 (universal stdlib, multitarget, anti-microdependência)
+**Dono:** lane KOFSCRIPT (fixes-for-kofagent) · **Status:** EM CURSO — **S7d FECHADO 11/09**: `addDays`/`diffDays` nos 5 alvos (JVM/Script S7a, JS S7b, x86 S7c `RuntimeTimeIso`, riscv/aarch **B33** — TIME002 fechado; a spec "bloqueada sem qemu" caiu: toolchain+qemu presentes, goldens byte-idênticos sob qemu). S1b/S1b.1 **MATH001 fechado 11/09** (Double math riscv/aarch B32). Restam no plano decisões/implementações ratificadas 13/09 (`pow`/`-lm` 7a, S10c `randomBytesHex` 6a, §89 alias+warning 3a — implementar) + a decisão pendente `format`/`boundaries` + itens sem algoritmo no corpus (isNis/ulid/creditCard); S0–S6, S8–S10 FEITOS (auditoria 10/09 vs código) · **Briefing:** maintainer 08/09 (universal stdlib, multitarget, anti-microdependência)
 
 ## 0. Arquitetura real (mapeada 08/09 — NÃO inventar paralela)
 
@@ -113,8 +113,9 @@ na   (null-safety + throw são o mecanismo).
     kof_platform+crypto fallback, JVM SecureRandom). `randomChoice` NÃO entra:
     idiom `l[randomInt(l.size)]` (a regra — complexidade a quem usa).
     `randomBytes`/`randomChoice` binário = DD-STDLIB-01
-    (`planning-stdlib-array-returns.md`, PROPOSED) — retorno Array
-    na camada de dispatch é decisão de design, não edição.
+    (`planning-stdlib-array-returns.md`) — **DECIDIDO 13/09 (opção 6a):**
+    `randomBytesHex` (String hex) + `randomChoice` = idiom; `randomBytes`
+    binário reservado. Implementação pendente na lane STDLIB.
   - **S10 face main (845284e5 + fix §92, merge beta→main 10/09):**
     `random.double/boolean/int/hex` — as DUAS faces convivem no dispatch
     (`KofRandom.staticMethod` aceita `randomInt` E `int`, etc.; mesma runtime

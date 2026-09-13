@@ -42,6 +42,22 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **⚡ FEITO (13/09, lane development/docs — varredura de claims stale pós-ratificações
+> 13/09, dono = esta sessão):** auditoria doc-vs-decisão em `docs/development/` +
+> `docs/audits/` + matriz. Corrigido: `roadmap-audit.md` P4 (conformance suite +
+> SG-009 subtipagem **já fechados** — contradizia a própria linha 25); matriz
+> `randomBytes`/S10c → nota da decisão 6a; `planning-finally-return.md` (DD-01
+> JVM/Native/interp **decidido 4a**, não "aguarda"); `plan-stdlib-expansion.md`
+> (topo + `pow`/S10c/§89 ratificados 7a/6a/3a); `planning-otp-supervision.md`
+> 8× "aguarda ratificação" → "RATIFICADA 13/09"; `docs/development/README.md`
+> item 4 (**S2-JVM ✅ implementado 13/09**, `startAll`/`lacoUnico` + 8/8) e
+> ratchet ≤500 (**9→8**, `wc -l scripts/check_500-baseline.txt`). Gate matriz
+> 1/1. Só doc, zero código. **PRÓXIMO TICK:** varredura contínua
+> docs↔decisão↔matriz; `decision-pending/` (6 docs, todos ainda aguardando);
+> nenhum doc de `development/` concluído p/ mover (todos têm trabalho real).
+> **NÃO:** código de lane alheia (pow/S10c = STDLIB; nat/ = GC viva; finally-IR
+> = mesa). **NUNCA:** push main.
+
 > **⚡ FEITO (13/09, lane development/docs — sincroniza `docs/development/README.md`
 > com a fila viva de `known-bugs.md`, dono = esta sessão):** o README declarava
 > "**12 seções / 11 abertos / nenhum código-puro**" e listava §65 como lane alheia —

@@ -156,7 +156,7 @@ por filho — aceitável no JVM virtual-threads, pior no x86. Recomendo
 
 ### DD-OTP-04 — O que conta como falha
 
-> **✅ DECIDIDO — proposta de fechamento 11/09, aguarda ratificação (regra 6):**
+> **✅ DECIDIDO — proposta de fechamento 11/09, RATIFICADA 13/09 (ver topo do doc):**
 > falha = exceção (String) não capturada que escapa do corpo do worker.
 > Término normal é falha **apenas** em `permanent`. Heartbeat/hang fica
 > fora, em fila própria (`OTP002`).
@@ -175,7 +175,7 @@ por filho — aceitável no JVM virtual-threads, pior no x86. Recomendo
 
 ### DD-OTP-05 — Plano ou árvore
 
-> **✅ DECIDIDO — proposta de fechamento 11/09, aguarda ratificação (regra 6):**
+> **✅ DECIDIDO — proposta de fechamento 11/09, RATIFICADA 13/09 (ver topo do doc):**
 > supervisor plano, sem aninhamento. A resposta ao estouro do limite é o
 > callback do DD-OTP-07, não um pai. A abstração de filho nasce genérica o
 > bastante para aninhar depois sem quebrar a API. Árvore só com demanda real.
@@ -187,7 +187,7 @@ DD-OTP-07. Reavaliar só com demanda real.
 
 ### DD-OTP-06 — Estado no restart
 
-> **✅ DECIDIDO — proposta de fechamento 11/09, aguarda ratificação (regra 6):**
+> **✅ DECIDIDO — proposta de fechamento 11/09, RATIFICADA 13/09 (ver topo do doc):**
 > o reinício **sempre** recria o worker pela fábrica; nunca reaproveita o
 > estado que levou à falha. Confirmado pela mantenedora na discussão da #83.
 > `.child(id, factory, policy)` documenta na própria assinatura que
@@ -203,7 +203,7 @@ aponta). Documentar no training: "factory nova = estado novo".
 
 ### DD-OTP-07 — Escalonamento (estouro do limite)
 
-> **✅ DECIDIDO — proposta de fechamento 11/09, aguarda ratificação (regra 6):**
+> **✅ DECIDIDO — proposta de fechamento 11/09, RATIFICADA 13/09 (ver topo do doc):**
 > `.escalate(fn)` é **opcional, com default definido** — não obrigatório.
 > Isso resolve uma contradição do texto original, que pedia *"callback
 > obrigatório no start() se há limite"* e na linha seguinte descrevia um
@@ -273,7 +273,7 @@ custo de regime, não de correção.
 
 ### DD-OTP-10 — Relógio injetável
 
-> **✅ DECIDIDO — proposta de fechamento 11/09, aguarda ratificação (regra 6):**
+> **✅ DECIDIDO — proposta de fechamento 11/09, RATIFICADA 13/09 (ver topo do doc):**
 > `.clock(nowFn)`, default `time.now()`. Custo de um campo. É o que torna o
 > gate de limite de reinícios determinístico em todos os alvos, e o que faz
 > um teste cross sob qemu medir o supervisor em vez de medir o emulador.
@@ -284,7 +284,7 @@ janela roda determinístico em todos os alvos, sem esperar wall-clock
 
 ### DD-OTP-11 — Métrica de sucesso
 
-> **✅ DECIDIDO — proposta de fechamento 11/09, aguarda ratificação (regra 6):**
+> **✅ DECIDIDO — proposta de fechamento 11/09, RATIFICADA 13/09 (ver topo do doc):**
 > os **quatro gates** da emenda abaixo são o critério de fechamento do
 > núcleo mínimo. O orçamento de regime normal é **medido, não prometido**.
 > Throughput sob falha fica fora (exigiria harness novo — `kof bench` só
@@ -317,7 +317,7 @@ fila própria se pedido).
 
 ### DD-OTP-12 — Onde os testes moram
 
-> **✅ DECIDIDO — proposta de fechamento 11/09, aguarda ratificação (regra 6):**
+> **✅ DECIDIDO — proposta de fechamento 11/09, RATIFICADA 13/09 (ver topo do doc):**
 > E2E determinístico com `.clock()` injetado, **fora** da matriz de equality
 > — o construto é não-determinístico por natureza, como `random.*`/`uuid`.
 > Paridade por asserts de contrato nos alvos, padrão já estabelecido em
@@ -333,7 +333,7 @@ teste separado e menor, `bench`/long-run são fila própria).
 
 ### DD-OTP-13 — Colisão do `cancelled()` (256 slots)
 
-> **✅ DECIDIDO — proposta de fechamento 11/09, aguarda ratificação (regra 6):**
+> **✅ DECIDIDO — proposta de fechamento 11/09, RATIFICADA 13/09 (ver topo do doc):**
 > bug 101 (flag por `TID % 256`, dois workers podem herdar o cancel um do
 > outro) é trabalho **independente** da lane Native e **não bloqueia**
 > supervisão — **enquanto** o DD-OTP-08 usar flag própria. Se o DD-OTP-08

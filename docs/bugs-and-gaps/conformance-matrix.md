@@ -141,6 +141,10 @@
 > random. As duas faces convivem no dispatch (retrocompat aditiva).
 > `randomBytes`/`randomChoice` ficam S10c (retorno Array/objeto
 > sem precedente na camada de dispatch — DD-STDLIB-01).
+> **DD-STDLIB-01 DECIDIDO 13/09 (opção 6a):** `randomBytesHex` (String hex) +
+> `randomChoice` = idiom (`list.get(randomInt(list.size))`); `randomBytes`
+> binário fica reservado. Implementação pendente na lane STDLIB — ao entrar,
+> ganha caso próprio nesta matriz.
 
 > `uuid.v4()` não entra na matriz equality (entropia): paridade provada por
 > ASSERTS DE SHAPE nos 3 targets testáveis (JVM/Native-x86/JS: length=36,

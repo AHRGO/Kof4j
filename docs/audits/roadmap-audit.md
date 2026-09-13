@@ -67,7 +67,9 @@ inexistente deve falhar.** Estes casos são a prioridade P0.
 - **P2**: PM lockfile+transitivas; debugger locals via JDWP VariableTable;
   LSP hover/references via SymbolTable (hoje textuais; go-to-definition ✅).
 - **P3**: cron real (`scheduler.at`); KofScript globals via frontend.
-- **P4**: conformance suite estruturada; spec §subtipagem (SG-009).
+- **P4**: ~~conformance suite estruturada; spec §subtipagem (SG-009)~~ **FECHADO**
+  (conformance matrix Feature×4 targets + `ConformanceMatrixTest`/`ConformanceMatrixDocTest`
+  como gate de CI — Fase 9; SG-009 subtipagem nominal ✅ SEM021 10/09 — ver linha 25).
 - **P5**: web platform, gRPC, auto-hosting (não iniciar antes).
 
 ## Evidência bruta

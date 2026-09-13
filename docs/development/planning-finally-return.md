@@ -3,8 +3,9 @@
 > **✅ DECIDIDO 13/09 (mantenedora, opção 4a):** aprova a proposta abaixo (lowering único com `FinallyFrame` na IR, espelho do bytecode JVM, parser JS reconstrói) + **bump 0.3.0→0.3.1**. Implementação liberada p/ lane lowerers.
 >
 > **Status:** `EM CURSO` — a face **JS do bug 45 já foi corrigida** (`c727fee`,
-> `CoreRegressionE2ETest.finallyReturnJs` verde; colateral fecha §52); a decisão
-> DD-01 para **JVM/Native/interpretador** aguarda a mantenedora · **Gap:** bug 45 ·
+> `CoreRegressionE2ETest.finallyReturnJs` verde; colateral fecha §52); a face
+> **JVM/Native/interpretador** foi **DECIDIDA 13/09 (opção 4a)** — implementação
+> pendente na lane lowerers (FinallyFrame na IR + bump 0.3.1) · **Gap:** bug 45 ·
 > **Lane:** lowerers · **Criado:** 08/09/2026 · **Bump proposto:** 0.3.0 → 0.3.1 ·
 > **Movido de `future/` p/ `development/` 12/09** (implementação iniciada — regra dos 3 estados)
 
