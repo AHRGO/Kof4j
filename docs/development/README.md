@@ -1,11 +1,11 @@
 # Development — backlog vivo (só trabalho em desenvolvimento)
 
 > **Base:** `0.4.0-beta` · branch `beta-0.4.0` · **atualizado:** 13/09/2026
-> **Suíte medida neste HEAD:** `1644` testes (1471 kof-compiler + 31 kof-script
+> **Suíte medida neste HEAD:** `1645` testes (1472 kof-compiler + 31 kof-script
 > + 5 kof-c-compiler + 137 kof-cli), **0 falhas** (13 erros = só `node` ausente, ambientais — todos `*Js`; o §149 JS foi corrigido), 157 skip (guardas de
 > toolchain/node; sem qemu os 84 cross são skipados) — com cross riscv/aarch
 > 42+42 sob qemu real (G-0/§142 somaram os
-> testes de header/OOM). Gate pós-§89/§117 medido 13/09 (`gate_s117.log`, BUILD
+> testes de header/OOM). Gate pós-§89/§106/§117/§131 medido 13/09 (`gate_s106js.log`, BUILD
 > SUCCESS). Refold da concatenação do `NativeRiscvAsm` para
 > `<clinit>` (anti-pattern novo `constant-folded-runtime-asm.md`) verde no
 > gate `gate1585.log` (HEAD 54da1325).
@@ -54,22 +54,25 @@ package-compiler) abre antes de SYSTEMS fechar (paridade + GC + estabilidade).
 
 ## 2. Bugs abertos (fila em `docs/bugs-and-gaps/known-bugs.md`) — triagem 13/09
 
-**9 itens na fila aberta** (§89, §106, §117, §127-JVM, §155, §94 e §156
+**8 itens na fila aberta** (§89, §106, §117, §131, §127-JVM, §155, §94 e §156
 fechados 13/09; §157-160 e §65 fechados/NÃO-REPRODUZ 13/09) — e a conclusão
-honesta (`known-bugs.md:11`): **fila aberta = 9 itens, todos com decisão/dono/
+honesta (`known-bugs.md:11`): **fila aberta = 8 itens, todos com decisão/dono/
 bloqueio — ZERO item código-puro-sem-decisão nesta lane**.
 Todos pendurados em:
 
 | Grupo | Bugs | Quem destrava |
 |---|---|---|
-| Decisão ratificada 13/09 — implementação pendente | §81, §131, §161/NAT-STR01 (§89 ✅ `e33425b5`, §106 ✅, §117 ✅ `3734f2aa`; §45/DD-01 FECHADO 13/09 — ver `docs/decisions/DD-01-finally-return.md`) | fila ratificada / lanes executoras |
+| Decisão ratificada 13/09 — implementação pendente | §81, §161/NAT-STR01 (§89 ✅ `e33425b5`, §106 ✅ `5b939106`+JS `ab85cfae`, §117 ✅ `3734f2aa`, §131 ✅ `18a64d45`; §45/DD-01 FECHADO 13/09 — ver `docs/decisions/DD-01-finally-return.md`) | fila ratificada / lanes executoras |
 | Congelado regra-6 | §101 | ninguém (contrato) |
 | Lane alheia | §104b-ii + §107 restante + §114 (bugfixer — storage-box de record), §129 (lane nat), §132 (OTP-JS) | donos das lanes |
 
 Corrigidos 13/09: **§89** (conversão numérica em primitivo = alias do `as` +
 warning SEM090; 4 alvos — `CoreRegressionE2ETest.numericConvertMethodAliasOfAs`),
+**§106** (`json.encode(Map)` chaves SORTED nos 4 alvos — `JsonCompleteE2ETest`
++ célula `jsonenc-map` da matriz; residual JS `ab85cfae`),
 **§117** (cancel por TID real + probe linear no Native x86 — `KofConcurrency2Test`
-34/0), **§94** (EQ/NE de Double/Float no interpretador agora IEEE —
+34/0), **§131** (sobrecarga de método por assinatura nos 4 backends —
+`CoreRegressionE2ETest.methodOverloadByArity` + harness 4/4), **§94** (EQ/NE de Double/Float no interpretador agora IEEE —
 célula `stdsqrt` 4/4 sem exclusão), **§127-JVM** (cast p/ tipo-função →
 interface SAM sintética; `LambdaE2ETest.castToFunctionTypeJvm/Native`),
 **§155** (tipo-função como type-arg → parser preserva os espaços do type-ref;

@@ -74,9 +74,10 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > cluster (storage compartilhado; 1 IP = 1 agente = 1 máquina). Fila
 > **12→9** itens. **Gate 4-módulos pós-§89/§117: 1644 run / 0 falhas / 13
 > erros (`*Js` = `node` ausente) / 157 skip — verde** (`gate_s117.log`).
-> **PRÓXIMO PASSO:** (gate/docs) §131 (10a) e §81 (5b) são da **fila
-> ratificada da lane .18/9094** — NÃO tocar (regra 9: outro IP = outro
-> agente). Esta lane (gate/qualidade + docs, dono 192.168.100.15) só age se:
+> **PRÓXIMO PASSO:** (gate/docs) §131 ✅ fechado (`18a64d45`, 4 backends) —
+> resta **§81 (5b, Long=BigInt JS)** da fila ratificada, que é da lane
+> .18/9094 — NÃO tocar (regra 9: outro IP = outro agente). Esta lane
+> (gate/qualidade + docs, dono 192.168.100.15) só age se:
 > (a) regressão na suíte (gate vermelho), (b) header/contagem de
 > `known-bugs.md` divergir do código, (c) doc concluído não movido p/ `docs/`.
 > Se nada disso aparecer, RECUSAR o re-disparo (não inventar trabalho).
