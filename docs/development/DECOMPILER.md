@@ -440,6 +440,17 @@ Fase E  Kof Decompiler          (gerar Kof source)
 > 404+160+228 "default@0xc0/0xc1/0x3a" do `Why0` = stores e checkcast no
 > caminho — shape que nunca é só expressão).
 >
+> **Confirmação do gate (2ª tentativa, mesma sessão):** re-apliquei o fallback
+> COM `if (isLoopHeader(entry)) return null` — e o `diamondJoin...` QUEBROU DE
+> NOVO. A cond `i % 2 == 0` do `for+continue` não está no header do loop: mora
+> num bloco ANINHADO cujo then/else joinam no bloco-de-incremento (que carrega
+> o back-edge). Recupera-la reconstrói o `for` como `while` com o `i++` sugado
+> p/ dentro do else = código errado (exatamente o que a lei diamond trava).
+> **Conclusão firme: nenhuma guarda local basta — o único caminho para teste
+> com cálculo é o walker com pós-dominador (degrau 3 real).** A extração da
+> máquina (`machineRun`) está provada byte-idêntica (DriftCheck baseline 4) e
+> é pré-requisito do degrau 3; guarda-se no histórico da branch, não no tree.
+>
 > **Estágio 3 (13/09, dono = 192.168.100.17): interna do MESMO pacote.**
 > Categorização reflexiva dos 89 rejeitados (harness `RecCat`): **31** eram
 > só `implements Outer$Inner` do mesmo pacote (cluster `JsIr$*` com 43
