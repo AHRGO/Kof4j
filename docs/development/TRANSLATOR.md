@@ -6,10 +6,10 @@
 
 **Status:** EM DESENVOLVIMENTO (caiu de `future/` em 12/09 — Fase F
 implementada: `Translate.java` + `TranslateLexer`/`TranslateExpr`;
-prova: `TranslateTest` 21/21 (output compila e roda; +do-while +switch
+prova: `TranslateTest` 24/24 (output compila e roda; +do-while +switch
 +try/catch/throw +arrays +cast/instanceof +throws +generics +constructor
-+enum-body/multi-decl +interface-extends +varargs/nested 13/09).
-Subconjunto Java ampliado ainda pendente)
++enum-body/multi-decl +interface-extends +bitwise/shift +parênteses
++tipos qualificados 13/09). Subconjunto Java ampliado ainda pendente)
 **Data:** 22 de agosto de 2026
 
 ---
@@ -227,3 +227,22 @@ diferenciais.
 > `TranslateTest.interfaceExtendsTranslates` (traduz + compila JVM + roda
 > `g/f`) + `varargsAndNestedTypeAreHonestGaps` estendido. `Translate.java`
 > 335 ≤500; `TranslateTest` 21/21.
+>
+> **Estado (13/09 ~14:15, dono = 192.168.100.22): 3 bugs de correção
+> latentes (Q4).**
+> 1. **Parênteses eram descartados** — `(1+2)*3` → `1+2*3` (=7, não 9):
+>    Kof gerado compilava com **semântica errada** (o pior bug). Fix:
+>    `parsePrimary` preserva `( ... )` (Kof aceita parênteses redundantes).
+> 2. **`&`/`|`/`^`/`<<`/`>>`/`>>>` dropados silenciosamente** pelo lexer
+>    (só `&&`/`||` emitiam token) → operandos colavam e o parser quebrava.
+>    Fix: tokens `AMP`/`CARET`; shifts combinados de `LT`/`GT` no parser
+>    (evita conflito com generics `List<String>`); `parseBitAnd`/
+>    `parseBitOr`/`parseShift` com a precedência do parser Kof
+>    (`KofFormatter.precOf`).
+> 3. **Tipo qualificado** `java.util.Map<...>` → `Map<...>` (stripa pacote;
+>    `Map`/`List`/`Set` são builtins Kof). `new java.util.ArrayList()` segue
+>    gap honesto (mapear coleção = decisão de design).
+> Prova: `TranslateTest.parenthesesPreservePrecedence` (roda `9/-3`),
+> `bitwiseAndShiftTranslate` (roda `2/7/5/24/3/3/2147483644`),
+> `qualifiedTypeNamesAreStripped`. `TranslateExpr` 471 ≤500;
+> `TranslateTest` 24/24.

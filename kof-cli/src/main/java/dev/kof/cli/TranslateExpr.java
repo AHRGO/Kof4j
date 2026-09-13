@@ -44,16 +44,28 @@ class TranslateExpr {
 
         String parseOr() {
             String e = parseAnd();
-            while (p.at(T.OROR) || p.at(T.PIPE)) {
-                String op = p.next().text;
-                e = e + " " + op + " " + parseAnd();
-            }
+            while (p.at(T.OROR)) { p.next(); e = e + " || " + parseAnd(); }
             return e;
         }
 
         String parseAnd() {
+            String e = parseBitOr();
+            while (p.at(T.ANDAND)) { p.next(); e = e + " && " + parseBitOr(); }
+            return e;
+        }
+
+        String parseBitOr() {
+            String e = parseBitAnd();
+            while (p.at(T.PIPE) || p.at(T.CARET)) {
+                String op = p.next().text;
+                e = e + " " + op + " " + parseBitAnd();
+            }
+            return e;
+        }
+
+        String parseBitAnd() {
             String e = parseEquality();
-            while (p.at(T.ANDAND)) { p.next(); e = e + " && " + parseEquality(); }
+            while (p.at(T.AMP)) { p.next(); e = e + " & " + parseEquality(); }
             return e;
         }
 
@@ -67,7 +79,7 @@ class TranslateExpr {
         }
 
         String parseRel() {
-            String e = parseAdd();
+            String e = parseShift();
             while (p.at(T.LT) || p.at(T.LE) || p.at(T.GT) || p.at(T.GE) || p.at("instanceof")) {
                 if (p.at("instanceof")) {
                     // `o instanceof String` → `o instanceof String` (Kof tem
@@ -76,7 +88,26 @@ class TranslateExpr {
                     e = e + " instanceof " + parseType();
                 } else {
                     String op = p.next().text;
-                    e = e + " " + op + " " + parseAdd();
+                    e = e + " " + op + " " + parseShift();
+                }
+            }
+            return e;
+        }
+
+        String parseShift() {
+            String e = parseAdd();
+            while (true) {
+                if (p.at(T.LT) && p.peek(1).type == T.LT) {
+                    p.next(); p.next();
+                    e = e + " << " + parseAdd();
+                } else if (p.at(T.GT) && p.peek(1).type == T.GT && p.peek(2).type == T.GT) {
+                    p.next(); p.next(); p.next();
+                    e = e + " >>> " + parseAdd();
+                } else if (p.at(T.GT) && p.peek(1).type == T.GT) {
+                    p.next(); p.next();
+                    e = e + " >> " + parseAdd();
+                } else {
+                    break;
                 }
             }
             return e;
@@ -202,7 +233,12 @@ class TranslateExpr {
                         }
                         String e = parseExpr();
                         p.expect(")");
-                        yield e;
+                        // PRESERVAR os parênteses: descartá-los muda a
+                        // semântica (`(1+2)*3` → `1+2*3` = 7, não 9) — bug
+                        // latente de correção achado 13/09 (R6/Q0: compilável
+                        // + semântica errada é o pior bug). Kof aceita
+                        // parênteses redundantes.
+                        yield "(" + e + ")";
                     }
                     yield t.text;
                 }
@@ -342,6 +378,13 @@ class TranslateExpr {
 
         String parseType() {
             String base = p.next().text;
+            // Tipo qualificado `java.util.Map` → `Map` (stripa o pacote; o
+            // translator ignora imports e Kof referencia tipos pelo nome
+            // simples). `Map`/`List`/`Set` são builtins Kof.
+            while (p.at(".") && p.peek(1).type == T.IDENT) {
+                p.next();
+                base = p.next().text;
+            }
             StringBuilder sb = new StringBuilder(kofType(base));
             // generic args <...>
             if (p.at("<")) {

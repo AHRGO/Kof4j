@@ -8,7 +8,7 @@ import java.util.List;
         IDENT, INT, FLOAT, STR, CHAR, P, // { } ( ) [ ] ; , . 
         EQ, EQEQ, NE, LT, LE, GT, GE, PLUS, MINUS, STAR, SLASH, PERCENT,
         ANDAND, OROR, NOT, PLUSEQ, MINUSEQ, STAREQ, SLASHEQ, PERCENTEQ,
-        INC, DEC, ARROW, PIPE, EOF
+        INC, DEC, ARROW, PIPE, AMP, CARET, EOF
     }
 
     final class Tok {
@@ -117,8 +117,9 @@ import java.util.List;
                 case '*' -> { if (i + 1 < n && s.charAt(i + 1) == '=') { out.add(new Tok(T.STAREQ, "*=")); i += 2; continue; } out.add(new Tok(T.STAR, "*")); }
                 case '/' -> { if (i + 1 < n && s.charAt(i + 1) == '=') { out.add(new Tok(T.SLASHEQ, "/=")); i += 2; continue; } out.add(new Tok(T.SLASH, "/")); }
                 case '%' -> { if (i + 1 < n && s.charAt(i + 1) == '=') { out.add(new Tok(T.PERCENTEQ, "%=")); i += 2; continue; } out.add(new Tok(T.PERCENT, "%")); }
-                case '&' -> { if (i + 1 < n && s.charAt(i + 1) == '&') { out.add(new Tok(T.ANDAND, "&&")); i += 2; continue; } }
+                case '&' -> { if (i + 1 < n && s.charAt(i + 1) == '&') { out.add(new Tok(T.ANDAND, "&&")); i += 2; continue; } out.add(new Tok(T.AMP, "&")); }
                 case '|' -> { if (i + 1 < n && s.charAt(i + 1) == '|') { out.add(new Tok(T.OROR, "||")); i += 2; continue; } out.add(new Tok(T.PIPE, "|")); }
+                case '^' -> out.add(new Tok(T.CARET, "^"));
                 default -> i++;
             }
             i = Math.min(i + 1, n); // guarded advance for simple single-char cases

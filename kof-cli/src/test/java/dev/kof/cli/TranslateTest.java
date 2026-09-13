@@ -316,6 +316,71 @@ class TranslateTest {
     }
 
     @Test
+    void qualifiedTypeNamesAreStripped(@TempDir Path dir) throws Exception {
+        String kof = Translate.translateJava("""
+                public class QN {
+                    static void f(java.util.Map<String, java.util.List<Integer>> m) { }
+                    public static void main(String[] args) {
+                        System.out.println("ok");
+                    }
+                }
+                """);
+
+        assertTrue(kof.contains("Map<String, List<Int>>"),
+                "tipo qualificado `java.util.Map` → `Map` (builtin Kof; antes: expected ')' but found 'util'):\n" + kof);
+
+        assertCompiles(dir, kof, "ok");
+    }
+
+    @Test
+    void bitwiseAndShiftTranslate(@TempDir Path dir) throws Exception {
+        String kof = Translate.translateJava("""
+                public class BS {
+                    public static void main(String[] args) {
+                        int x = 6;
+                        int y = 3;
+                        System.out.println(x & y);
+                        System.out.println(x | y);
+                        System.out.println(x ^ y);
+                        System.out.println(x << 2);
+                        System.out.println(x >> 1);
+                        System.out.println(x >>> 1);
+                        System.out.println(-8 >>> 1);
+                    }
+                }
+                """);
+
+        assertTrue(kof.contains("x & y"), "bitwise AND preservado (antes: operador dropado silenciosamente):\n" + kof);
+        assertTrue(kof.contains("x | y"), "bitwise OR preservado:\n" + kof);
+        assertTrue(kof.contains("x ^ y"), "bitwise XOR preservado (antes: dropado):\n" + kof);
+        assertTrue(kof.contains("x << 2"), "shift left preservado (antes: dropado):\n" + kof);
+        assertTrue(kof.contains("x >> 1"), "shift right preservado (antes: dropado):\n" + kof);
+        assertTrue(kof.contains("x >>> 1"), "unsigned shift preservado:\n" + kof);
+
+        assertCompiles(dir, kof, "2\n7\n5\n24\n3\n3\n2147483644");
+    }
+
+    @Test
+    void parenthesesPreservePrecedence(@TempDir Path dir) throws Exception {
+        String kof = Translate.translateJava("""
+                public class P {
+                    public static void main(String[] args) {
+                        int x = (1 + 2) * 3;
+                        System.out.println(x);
+                        System.out.println(-(1 + 2));
+                    }
+                }
+                """);
+
+        assertTrue(kof.contains("var x = (1 + 2) * 3"),
+                "parênteses NÃO podem ser descartados (mudam a semântica: 9 vs 7) — bug latente 13/09:\n" + kof);
+        assertTrue(kof.contains("-(1 + 2)"),
+                "agrupamento sob unário preservado:\n" + kof);
+
+        assertCompiles(dir, kof, "9\n-3");
+    }
+
+    @Test
     void interfaceExtendsTranslates(@TempDir Path dir) throws Exception {
         String kof = Translate.translateJava("""
                 interface A { void g(); }
