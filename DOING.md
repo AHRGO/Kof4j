@@ -223,9 +223,16 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > determinístico, attributed por stash+3 commits + causa raiz `InetSocketAddress.
 > create` via repro isolado; NÃO toquei — regra 6, lane JS/web). **PRÓXIMO
 > PASSO (decompiler/Fase C degrau 2b): pós-dominador real** p/ aninhamento/else
-> PASSO (decompiler/Fase C degrau 3): pós-dominador real p/ corpo com JOIN
-> interno (multi-if no braço) — os 2462 "outra" e o resto dos 308 narrowing
-> estão presas aqui. **DEGRAU 2b FEITO (commit `43fe2834`+doc): narrowing
+> PASSO (decompiler/Fase C degrau 3): **só o walker com pós-dominador** — a
+> hipótese alternativa (fallback de expressão na cond, ROI "816" do Why0) foi
+> TENTADA E MORTA DUAS VEZES hoje com medição, NÃO tentar de novo sem
+> pós-dominador: (1) sem gate → diamond 63/1; (2) COM gate `!isLoopHeader` →
+> diamond quebra de novo (cond do for+continue mora em bloco ANINHADO cujo
+> then/else joinam no incremento-back-edge). Guarda local nenhuma basta.
+> A máquina extraída (`machineRun`, byte-idêntica, DriftCheck=baseline 4) é
+> pré-requisito provado do degrau 3 — extrair de novo + walker + golden de
+> EXECUÇÃO por shape (for, while-bool, &&, ||, ?:) numa sessão dedicada.
+> Os 2462 "outra" e o resto dos 308 narrowing estão presos aqui. **DEGRAU 2b FEITO (commit `43fe2834`+doc): narrowing
 > ifnull/ifnonnull — ROI 308, recuperados −10 (outros ~298 têm JOIN no corpo
 > = gargalo alheio), golden 3/0/5/9, DecompileTest 63/63, DriftCheck
 > baseline, anti-fachada Q7 registrada (contCond revertido).** **NÃO:**
