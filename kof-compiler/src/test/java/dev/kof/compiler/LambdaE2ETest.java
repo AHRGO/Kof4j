@@ -330,4 +330,32 @@ class LambdaE2ETest {
         Files.writeString(source, DECLARED_FN_TYPE_LIST);
         runNative(source, tempDir.resolve("out"), "6\n10");
     }
+
+    // §156: lista HETEROGÊNEA de lambdas com a MESMA assinatura —
+    // o elemento carregava o className da primeira lambda concreta
+    // (Lambda0) e o `kof_list_get` fazia checkcast p/ ela (CCE quando o
+    // elemento era Lambda1). O elemento agora desce sem className
+    // (dispatch pela interface SAM sintética, bug 8).
+    private static final String HETEROGENEOUS_LAMBDA_LIST = """
+            main() {
+                var l = listOf((x: Int) -> x + 1, (x: Int) -> x * 2)
+                println(l.get(1)(5))
+                println(l.get(0)(5))
+                for (var f in l) { println(f(10)) }
+            }
+            """;
+
+    @Test
+    void heterogeneousLambdaListJvm(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, HETEROGENEOUS_LAMBDA_LIST);
+        runJvm(source, tempDir.resolve("out"), "10\n6\n11\n20");
+    }
+
+    @Test
+    void heterogeneousLambdaListNative(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, HETEROGENEOUS_LAMBDA_LIST);
+        runNative(source, tempDir.resolve("out"), "10\n6\n11\n20");
+    }
 }

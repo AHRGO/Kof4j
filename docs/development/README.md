@@ -52,8 +52,10 @@ package-compiler) abre antes de SYSTEMS fechar (paridade + GC + estabilidade).
 
 ## 2. Bugs abertos (fila em `docs/bugs-and-gaps/known-bugs.md`) — triagem 13/09
 
-**14 seções sem ✅ no cabeçalho** (§127-JVM, §155 e §94 fechados 13/09; §156 aberto 13/09 — infra de tipos; §157-160 e §65 fechados/NÃO-REPRODUZ 13/09) — e a conclusão honesta
-(`known-bugs.md:11`): **há UM item de código-puro-sem-decisão: §156**.
+**14 seções sem ✅ no cabeçalho** (§127-JVM, §155, §94 e §156 fechados 13/09;
+§157-160 e §65 fechados/NÃO-REPRODUZ 13/09) — e a conclusão honesta
+(`known-bugs.md:11`): **fila aberta = 12 itens, todos com decisão/dono/
+bloqueio — ZERO item código-puro-sem-decisão nesta lane**.
 Todos pendurados em:
 
 | Grupo | Bugs | Quem destrava |
@@ -61,13 +63,14 @@ Todos pendurados em:
 | Decisão ratificada 13/09 — implementação pendente | §81, §89, §106, §117, §131, §161/NAT-STR01 (§45/DD-01 FECHADO 13/09 — ver `docs/decisions/DD-01-finally-return.md`) | fila ratificada / lanes executoras |
 | Congelado regra-6 | §101 | ninguém (contrato) |
 | Lane alheia | §104b-ii + §107 restante + §114 (bugfixer — storage-box de record), §129 (lane nat), §132 (OTP-JS) | donos das lanes |
-| Infra de tipos (sem dono) | §156 (`List` heterogêneo de lambdas → CCE JVM) | agente de tipos |
 
 Corrigidos 13/09: **§94** (EQ/NE de Double/Float no interpretador agora IEEE —
 célula `stdsqrt` 4/4 sem exclusão), **§127-JVM** (cast p/ tipo-função →
 interface SAM sintética; `LambdaE2ETest.castToFunctionTypeJvm/Native`),
 **§155** (tipo-função como type-arg → parser preserva os espaços do type-ref;
-`LambdaE2ETest.declaredFunctionTypeListJvm/Native`). Corrigidos 12/09: §90 (web, #98), §125,
+`LambdaE2ETest.declaredFunctionTypeListJvm/Native`), **§156** (lista
+heterogênea de lambdas mesma assinatura → elemento sem className, dispatch
+SAM; `LambdaE2ETest.heterogeneousLambdaListJvm/Native`). Corrigidos 12/09: §90 (web, #98), §125,
 §139, §140 (gate→ratchet), §107-face
 escalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 `440730c8` — prova qemu 42+42)**.

@@ -30,6 +30,25 @@ public final class BuiltinCallTyper {
                 elemType = MemberResolver.resolveType(sa, mc.typeArguments().get(0), scope);
             } else if (!mc.arguments().isEmpty()) {
                 elemType = SemExpressionTyper.inferType(sa, mc.arguments().get(0), scope);
+                if (elemType instanceof Type.FunctionType ft) {
+                    // §156: espelho do CompilerTypeSupport — lista de lambdas
+                    // da mesma assinatura desce sem className (o analyzer roda
+                    // antes da síntese, então className é null aqui; a checagem
+                    // é só params+retorno iguais em todos os args).
+                    boolean same = true;
+                    for (int i = 1; i < mc.arguments().size(); i++) {
+                        Type t = SemExpressionTyper.inferType(sa, mc.arguments().get(i), scope);
+                        if (!(t instanceof Type.FunctionType oft)
+                                || !oft.parameterTypes().equals(ft.parameterTypes())
+                                || !oft.returnType().equals(ft.returnType())) {
+                            same = false;
+                            break;
+                        }
+                    }
+                    if (same && mc.arguments().size() > 1) {
+                        elemType = new Type.FunctionType(ft.parameterTypes(), ft.returnType());
+                    }
+                }
             }
             for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
             return new Type.ClassType("kof", "List", List.of(elemType));

@@ -88,7 +88,10 @@ public final class RuntimeSlices {
      *  são candidatos a poda, e um needs que aponta p/ eles não é órfão.
      *  Fonte: grep por rótulos definidos fora do conjunto Runtime*. */
     public static Set<String> programSideSymbols() {
-        return Set.of("kof_super_table", "kof_heap_root_start", "kof_heap_root_end");
+        // #113: o root_start passou a ser emitido na abertura do .data do
+        // PROGRAMA (NativeBackend.emit), nao no preambulo do runtime — a fatia
+        // GC o referencia via leaq e o needs só fecha se ele for extern.
+        return Set.of("kof_super_table", "kof_heap_root_start");
     }
 
     /** Rótulos locais `.L*` definidos pelo CAMINHO DE PROGRAMA (Main.s) e
@@ -422,5 +425,39 @@ public final class RuntimeSlices {
             throw new IllegalStateException("ordem de fatias sub-derivada: " + pairs.size());
         }
         return pairs.toArray(new String[0][]);
+    }
+
+    /** S-3 (issue #97, T1a.2): poda do runtime x86 por alcançabilidade. O texto
+     *  do PROGRAMA (head+tail, sem a região do runtime que vai [rtStart,rtEnd))
+     *  é a FONTE DE SEEDS — varrido por `kof_*`/`.L*` raw (a correção da S-2.5:
+     *  instanceof/array/cast emitem `call kof_...` como TEXTO, não KofCall). O
+     *  keep = piso obrigatório ∪ fecho UNIFICADO (kof∪.L). Se keep == todas as
+     *  fatias (nada podável) retorna o texto BYTE-IDÊNTICO (zero regressão).
+     *  Quando poda, injeta `.section .text` após o subset p/ o tail do backend
+     *  não cair na última seção de um `.data`. Falso-positivo de seed SÓ
+     *  super-inclui; falso-negativo é impossível p/ call sites reais — o pior
+     *  caso nunca é `.s` quebrado, é o runtime-completo de antes. */
+    static String pruneRuntime(StringBuilder sb, int rtStart, int rtEnd) {
+        String all = sb.toString();
+        try {
+            String programText = all.substring(0, rtStart) + all.substring(rtEnd);
+            Set<Integer> keep = keepForProgramText(programText);
+            List<Slice> slices = slices();
+            if (keep.size() >= slices.size()) return all; // nada podável
+            StringBuilder out = new StringBuilder(all.substring(0, rtStart));
+            out.append(renderSubset(keep));
+            out.append("            .section .text\n");
+            out.append(all.substring(rtEnd));
+            System.err.println("NativeBackend: runtime prune " + keep.size() + "/"
+                    + slices.size() + " fatias mantidas (" + (all.length() - out.length())
+                    + " bytes podados)");
+            return out.toString();
+        } catch (RuntimeException e) {
+            // R6: nunca podar silenciosamente errado — se o mapa falhar, emite
+            // o runtime COMPLETO (comportamento pré-S-3). Registra o motivo.
+            System.err.println("NativeBackend: runtime prune DESABILITADO (" + e
+                    + ") — emitindo runtime completo (fallback seguro).");
+            return all;
+        }
     }
 }

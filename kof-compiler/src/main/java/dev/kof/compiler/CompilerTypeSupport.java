@@ -11,12 +11,38 @@ public final class CompilerTypeSupport {
 
     static Type listOfElementType(CompilerDriver driver, MethodCallExpr mc, List<IRLocalVariable> locals) {
         if (!mc.arguments().isEmpty()) {
-            return ExpressionTyper.inferExprType(driver, mc.arguments().get(0), locals);
+            Type first = ExpressionTyper.inferExprType(driver, mc.arguments().get(0), locals);
+            if (first instanceof Type.FunctionType ft) {
+                // §156: lista heterogênea de lambdas com a MESMA assinatura —
+                // o tipo do elemento carregava o className da PRIMEIRA lambda
+                // concreta (Lambda0) e o `kof_list_get` fazia checkcast p/ ela
+                // (CCE quando o elemento era Lambda1). Todas as lambdas da
+                // assinatura implementam a MESMA interface SAM sintética — o
+                // elemento desce sem className (dispatch por interface, bug 8).
+                // Só unifica quando TODOS os args são FunctionType da mesma
+                // assinatura (params+retorno); senão mantém o primeiro (SEM056
+                // barra a poluição heterogênea de verdade no literal).
+                if (sameLambdaSignature(driver, mc, locals, ft)) {
+                    return new Type.FunctionType(ft.parameterTypes(), ft.returnType());
+                }
+            }
+            return first;
         }
         if (!mc.typeArguments().isEmpty()) {
             return CompilerTypes.toType(mc.typeArguments().get(0), driver.currentUnit);
         }
         return Type.UnknownType.UNKNOWN;
+    }
+
+    private static boolean sameLambdaSignature(CompilerDriver driver, MethodCallExpr mc,
+            List<IRLocalVariable> locals, Type.FunctionType first) {
+        for (int i = 1; i < mc.arguments().size(); i++) {
+            Type t = ExpressionTyper.inferExprType(driver, mc.arguments().get(i), locals);
+            if (!(t instanceof Type.FunctionType ft)) return false;
+            if (!ft.parameterTypes().equals(first.parameterTypes())) return false;
+            if (!ft.returnType().equals(first.returnType())) return false;
+        }
+        return true;
     }
 
     static boolean ctorCompatible(CompilerDriver driver, Type formal, Type arg) {

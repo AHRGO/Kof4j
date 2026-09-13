@@ -38,18 +38,26 @@ note=""
 while IFS=$'\t' read -r count file; do
     [ -z "$file" ] && continue
     base=$(awk -F'\t' -v f="$file" '$2==f {print $1}' "$BASELINE")
-    if [ -z "$base" ] && [ "$count" -ge "$CRITICAL" ]; then
-        echo "check_500: CRÍTICO (novo) — $file tem $count linhas (>= $CRITICAL): refactor/split OBRIGATÓRIO antes do merge."
-        fail=1
+    if [ "$count" -ge "$CRITICAL" ]; then
+        if [ -n "$base" ] && [ "$base" -ge "$CRITICAL" ]; then
+            # avô crítico: congelado no número do baseline, não pode crescer
+            if [ "$count" -gt "$base" ]; then
+                echo "check_500: FALHOU — avô crítico $file cresceu $base -> $count (>= $CRITICAL): split obrigatório."
+                fail=1
+            else
+                echo "check_500: avô crítico $file: $count linhas (>= $CRITICAL; congelado em $base, pendência de split planejado)."
+            fi
+        else
+            # novo crítico OU baselizado <600 que cresceu até o crítico
+            if [ -z "$base" ]; then
+                echo "check_500: FALHOU — $file tem $count linhas (>= $CRITICAL): classe NOVA crítica, split antes do merge."
+            else
+                echo "check_500: FALHOU — $file tinha $base (< $CRITICAL) no baseline, agora $count (>= $CRITICAL): cruzou a linha vermelha, split obrigatório."
+            fi
+            fail=1
+        fi
     elif [ -z "$base" ]; then
         echo "check_500: dívida tolerada (nova) — $file tem $count linhas (alvo $LIMIT; tolerado até $((CRITICAL-1)))."
-    elif [ "$count" -ge "$base" ] && [ "$base" -ge "$CRITICAL" ]; then
-        if [ "$count" -gt "$base" ]; then
-            echo "check_500: CRÍTICO-crescente — $file tinha $base (crítico avô congelado), agora $count: split obrigatório, crescimento proibido."
-            fail=1
-        else
-            echo "check_500: CRÍTICO avô (pendência de refactor, congelado em $base) — $file: $count. Split planejado (F3); não cresce."
-        fi
     elif [ "$count" -gt "$base" ]; then
         echo "check_500: aviso — $file cresceu $base -> $count (tolerado até $((CRITICAL-1)); a $((CRITICAL-count)) linhas do crítico — planeje o split)."
     elif [ "$count" -lt "$base" ]; then

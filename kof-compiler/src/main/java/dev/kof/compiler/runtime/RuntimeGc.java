@@ -45,15 +45,16 @@ public final class RuntimeGc {
                 addq $8, %r12
                 jmp .Lgc_mark_stack
             .Lgc_mark_stack_done:
-                # raizes estaticas: varre root_start..root_end -- NAO _end.
-                # kof_heap_root_start e emitido na abertura do .data do PROGRAMA
-                # (NativeBackend.emit), root_end no .bss final: o intervalo cobre
-                # .data merged (estaticos/strings/tabelas do programa + cache/
-                # config/mq do runtime) e .bss. Com --gc-sections o _end do
-                # linker deixa de ser previsivel; rotulos proprios ficam junto
-                # dos dados que protegem (#113 / S-5 x86).
+                # raizes estaticas: varre .data+.bss ate _end -- cache/mq/config
+                # vivem em .data, NAO bss. #113: kof_heap_root_start agora e
+                # emitido na ABERTURA do .data do PROGRAMA (NativeBackend.emit),
+                # nao no preamble do runtime — estaticos/strings do usuario
+                # apontando p/ heap eram raizes ABAIXO do inicio e ficavam
+                # invisiveis ao mark. O topo continua _end (fim do .bss):
+                # kof_heap_root_end explicito so entra JUNTO do --gc-sections
+                # x86 (S-5 #97) — hoje encolheria o intervalo e under-marcaria.
                 leaq kof_heap_root_start(%rip), %r12
-                leaq kof_heap_root_end(%rip), %r13
+                leaq _end(%rip), %r13
             .Lgc_mark_bss:
                 cmpq %r13, %r12
                 jge .Lgc_mark_bss_done
