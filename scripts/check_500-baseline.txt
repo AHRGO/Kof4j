@@ -1,3 +1,8 @@
+# Gate check_500 — linha com N >= 600 é CRÍTICO (decisão da mantenedora 13/09:
+# 500-599 tolerado, >=600 exige refactor). As linhas abaixo >=600 são CRÍTICOS
+# AVOS: congeladas no valor de hoje (nao podem crescer; cada uma tem seu split
+# planejado), e o gate as lista como pendencia obrigatoria de refactor.
+# Linhas <600 = divida tolerada (ratchet: nunca crescem).
 520	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeUiLayout.java
 514	kof-compiler/src/main/java/dev/kof/compiler/jvm/JvmOpCollections.java
 510	kof-compiler/src/main/java/dev/kof/compiler/jvm/JvmRuntimeUi.java

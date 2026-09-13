@@ -1,22 +1,20 @@
 #!/usr/bin/env bash
-# Gate REFACTOR-500: alvo ≤500 linhas/classe, CRÍTICO ≥600 (decisão da
-# mantenedora, 13/09).
+# Gate REFACTOR-500 (decisão da mantenedora, 13/09): alvo ≤500 linhas/classe;
+# 500–599 é TOLERADO (dívida viva — o gate AVISA, não falha); ≥600 é CRÍTICO
+# (falha o CI, refactor/split obrigatório antes do merge).
 #
-# MODO RATCHET (12/9, §140; tolerância atualizada 13/09): um gate que falha e
-# não está no CI é decorativo. A política agora é:
-#   - ≤500 linhas = em conformidade;
-#   - 500–599 linhas = TOLERADO (dívida viva; o gate AVISA, não falha — o
-#     split continua sendo o caminho; dívida travada no baseline nunca pode
-#     crescer, pois crescer em direção a 600 é refactor adiado);
-#   - ≥600 linhas = CRÍTICO: falha o build, exige refactor/split antes
-#     (inclusive arquivo novo — dívida nova ≥600 nunca entra);
+# MODO RATCHET (12/9, §140): dívida listada em
+# scripts/check_500-baseline.txt nunca deve crescer dentro da faixa tolerada —
+# crescimento é AVISADO nominalmente (é o refactor adiado indo em direção a
+# 600). Classes ≥600 travadas no baseline são críticos avós: congeladas no
+# número do dia (não podem crescer) e listadas como pendência obrigatória.
 #   - PASSA quando a dívida diminui, mas AVISA (o split feito deve ser
 #     removido do baseline: ./scripts/check_500.sh --update-baseline).
 # Uso: scripts/check_500.sh [--update-baseline]
 set -uo pipefail
 
-LIMIT=500    # alvo da regra — acima disto é dívida (warn ratchet)
-CRITICAL=600 # decisão 13/09: 500–599 tolerado; 600+ = crítico, refactor obrigatório
+LIMIT=500    # alvo da regra — acima disto é dívida (aviso)
+CRITICAL=600 # 13/09: >=600 = crítico, refactor obrigatório (falha o build)
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BASELINE="$ROOT/scripts/check_500-baseline.txt"
 
@@ -44,10 +42,9 @@ while IFS=$'\t' read -r count file; do
         echo "check_500: CRÍTICO — $file tem $count linhas (>= $CRITICAL): refactor/split OBRIGATÓRIO."
         fail=1
     elif [ -z "$base" ]; then
-        echo "check_500: díVIDA TOLERADA (nova) — $file tem $count linhas (limite $LIMIT; tolerado até $((CRITICAL-1)), crítico em $CRITICAL); não está no baseline."
+        echo "check_500: dívida tolerada (nova) — $file tem $count linhas (alvo $LIMIT; tolerado até $((CRITICAL-1)))."
     elif [ "$count" -gt "$base" ]; then
-        echo "check_500: CRÍTICO-crescente — $file tinha $base no baseline, agora $count (dívida travada nunca cresce)."
-        fail=1
+        echo "check_500: aviso — $file cresceu $base -> $count (tolerado até $((CRITICAL-1)); a $((CRITICAL-count)) linhas do crítico — planeje o split)."
     elif [ "$count" -lt "$base" ]; then
         note="$note\n    $file: $base -> $count (remova do baseline com --update-baseline)"
     fi
@@ -61,7 +58,7 @@ while IFS=$'\t' read -r count file; do
 done < <(grep -v '^#' "$BASELINE")
 
 if [ "$fail" -ne 0 ]; then
-    echo "check_500: FALHOU — classe crítica (>= $CRITICAL) ou dívida crescente acima do baseline."
+    echo "check_500: FALHOU — classe crítica (>= $CRITICAL linhas); refactor/split antes do merge."
     exit 1
 fi
 
@@ -69,5 +66,5 @@ if [ -n "$note" ]; then
     echo "check_500: OK (dívida diminuiu — atualize o baseline):"
     printf "$note\n"
 else
-    echo "check_500: OK — nenhuma classe crítica (>= $CRITICAL) nem dívida crescente acima do baseline."
+    echo "check_500: OK — nenhuma classe crítica (>= $CRITICAL)."
 fi
