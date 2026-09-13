@@ -135,7 +135,7 @@ diferenciais.
 >    tratava `recv.metodo(...)`. Corrigido (bare-call), senão *qualquer* corpo
 >    de try real quebrava.
 > Prova: `TranslateTest.tryCatchFinallyTranslates` (traduz + compila JVM +
-> roda `caught/done/t2`). `Translate.java` **526 linhas — dívida tolerada
-> nova** (faixa 500–599 avisa, não quebra; split planejado: extrair
-> `parseSwitch`/`parseTry` p/ um `TranslateStatements`, ver §gate ≤500);
+> roda `caught/done/t2`). **Split feito no mesmo dia:** `Translate.java`
+> 526 → **255** + `TranslateStatements.java` 287 (statements extraídos p/ o
+> gate ≤500 — dívida tolerada zerada, `check_500` sem aviso de Translate);
 > `TranslateTest` 12/12.
