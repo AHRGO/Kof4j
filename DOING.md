@@ -60,6 +60,35 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
  ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (13/09 ~15:10, lane docs — dono = esta sessão): CONSOLIDAÇÃO DE
+> PLANOS em `docs/development/` (pedido da mantenedora "junta o que tiver
+> parecido").** **Cluster A (planos de implementação):** `ACTION_PLAN.md` +
+> `IMPLEMENTATION_PLAN.md` **APAGADOS** e fundidos no `roadmap.md` **§23
+> "Plano de Implementação Consolidado (Tiers 0–12)"** — único plano ordenado.
+> **Corrigi status FALSO contra o código (auditoria, não memória):**
+> `IMPLEMENTATION_PLAN` marcava 2.1.5 FFI-Native "✅ real" (era gap honesto
+> `FFI001` — `dlopen` segfaulta; provado em `FfiE2ETest`) e 2.2.2 `CodegenStep`
+> "✅" (hook **não existe no HEAD** — `d1c56bad` addiu, pipeline voltou a
+> chamar `desugarTests`/`desugarApplication` direto; `CompilerPipeline:295`);
+> `infra` parse/2.2.4 e 2.3.2 = ❌ não-iniciado (zero no fonte). **Cluster B
+> (migração):** `LEGACY_IR.md` + `DIFFERENTIAL_TESTING.md` **APAGADOS** e
+> fundidos no umbrella `LEGACY_MIGRATION.md` (novos §4 Legacy Semantic
+> IR/Confidence/irrecuperável, §8 diff-testing + migration report); zero
+> conteúdo único perdido. **NÃO toquei** `DECOMPILER.md`/`TRANSLATOR.md` (tem
+> work-log técnico único E dono vivo .17/.22). **Números mortos** (70/73/"55")
+> substituídos por ponteiro p/ a fonte única `roadmap.md` §23. Refs corrigidas:
+> AGENTS corpus, development/README, future/README ×2, scoped-resources,
+> PLANNING-FUTURE-AUDIT, 4 javadoc (`Confidence`/`Inspect`/`Compare`/`Decompile`
+> +`CompareTest`). **Prova:** nenhum path-link quebrado (grep), `0` refs mortas
+> aos 4 apagados fora do journal, `-am compile` rc=0. **PRÓXIMO PASSO (docs):**
+> fila de fusão da mantenedora no cluster `decision-pending/`+planos vivos
+> (ex.: `plan-platform-completion` vs `roadmap` §23 TIER 1, `security-plan` vs
+> §23 TIER 9 — ambos citam SECN002/PQC; só fundir se confirmar zero conteúdo
+> único, mesmos critérios daqui). Re-disparo sem isso → **RECUSAR** (lane
+> issues 9094 segue zerada/estável). **NUNCA:** `DECOMPILER.md`/`TRANSLATOR.md`
+> (donos ativos), `Translate*`/`ExpressionAssignment*`/`EditorIntegrationTest`
+> (WIP alheio na árvore).
+
 > **✅ FEITO (13/09 ~13:40, lane issues 9094 — dono = esta sessão): #126 +
 > #125 (reportes PublioSantos, 0.3.23-beta).** **#126** (`json.encode(x,4)`
 > passava no check → VerifyError): causa raiz = o caminho SEMÂNTICO

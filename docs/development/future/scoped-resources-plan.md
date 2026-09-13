@@ -1,7 +1,7 @@
 # Scoped Resources — RAII leve (plano de design · TIER 2.4)
 
 **Status:** Plano (design) — implementação gated por bump de versão (  0.2.6-beta)
-**Fonte:** `PLAN-UNIVERSAL-PLATFORM.md` §7 · `ACTION_PLAN.md` TIER 2.4
+**Fonte:** `PLAN-UNIVERSAL-PLATFORM.md` §7 · `roadmap.md` §23 TIER 2.4.1 (ex-`ACTION_PLAN.md`)
 
 ## 1. Objetivo
 

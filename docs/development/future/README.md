@@ -28,7 +28,7 @@ documento de arquitetura/visão **sem código implementado** (ou com código que
 
 | Doc | Gatilho da queda |
 |-----|------------------|
-| `DECOMPILER.md`, `TRANSLATOR.md`, `DIFFERENTIAL_TESTING.md`, `LEGACY_MIGRATION.md`, `LEGACY_IR.md`, `IMPLEMENTATION_PLAN.md`, `ACTION_PLAN.md` | plataforma de migração com código+testes: `kof inspect/decompile/translate/compare/migrate` no `Main.java:25-29`, 70 testes kof-cli (medidos 13/09), `Confidence.java`, `Type.fromJvmSignature` |
+| `DECOMPILER.md`, `TRANSLATOR.md`, `LEGACY_MIGRATION.md` (os `IMPLEMENTATION_PLAN.md`+`ACTION_PLAN.md` desta lista foram FUNDIDOS p/ `roadmap.md` §23 e os `DIFFERENTIAL_TESTING.md`+`LEGACY_IR.md` p/ dentro do `LEGACY_MIGRATION.md`, tudo 13/09) | plataforma de migração com código+testes: `kof inspect/decompile/translate/compare/migrate` no `Main.java:25-29`, `Confidence.java`, `Type.fromJvmSignature` (contagem viva em `roadmap.md` §23) |
 | `PLATFORM-PLAN.md` | Fases 1–3, 8, 9 com código: `ProjectLocator`, `KofProjectConfig`, `Target.SCRIPT`, PKG006/PKG007, `conformance-matrix.md` travada por 11 testes |
 | `APPLICATION_MODEL.md` | `application { onStart/onShutdown }` parseado+desugared+E2E nos 3 targets; `KofProjectConfig` |
 | ~~`PLANNING-FUTURE-AUDIT.md`, `planning-future-reconcile.md`~~ → `docs/audits/` | auditorias **encerradas 13/09** (comparação branch×beta); R2→`decision-pending/` (APPLICATION_MODEL/PLATFORM-PLAN), R5→cluster migração |

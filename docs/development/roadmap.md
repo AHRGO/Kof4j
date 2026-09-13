@@ -1,6 +1,9 @@
 # Kof — Roadmap de Longo Prazo
 
-**Última atualização:** 13 de setembro de 2026
+**Última atualização:** 13 de setembro de 2026 (fusão de planos: §23 = plano
+de implementação ÚNICO (ex-`ACTION_PLAN`+`IMPLEMENTATION_PLAN`); cluster de
+migração consolidado — `LEGACY_IR`+`DIFFERENTIAL_TESTING` fundidos em
+`LEGACY_MIGRATION.md`)
 **Versão:** 0.4.0-beta (branch ativa `beta-0.4.0`)
 
 ---
@@ -795,13 +798,15 @@ maps, avançado) planejadas. Ver: `docs/debugging/debugger-architecture.md`,
 Iniciativa de longo prazo para analisar, recuperar, traduzir e modernizar
 sistemas legados para Kof — **fora do escopo 0.0.x**.
 
-- Documento central: `LEGACY_MIGRATION.md`
+- Documento central: `LEGACY_MIGRATION.md` (§4 = Legacy Semantic IR/Confidence;
+  §8 = teste diferencial + migration report)
 - Componentes planejados: `kof inspect`, `kof decompile`, `kof translate`,
   `kof migrate`, `kof compare`
 - Arquitetura: `Legacy Input → Legacy Semantic IR → Kof AST → Kof IR → Backend`
 - Java é origem suportada, nunca representação intermediária obrigatória
-- Documentos relacionados: `DECOMPILER.md`, `TRANSLATOR.md`, `LEGACY_IR.md`,
-  `DIFFERENTIAL_TESTING.md`
+- Documentos relacionados: `DECOMPILER.md`, `TRANSLATOR.md` (os antigos
+  `LEGACY_IR.md` e `DIFFERENTIAL_TESTING.md` foram fundidos no central 13/09;
+  `IMPLEMENTATION_PLAN.md`/`ACTION_PLAN.md` viraram o §23 deste roadmap)
 
 **Não implementar nada desta seção antes da consolidação da linguagem,
 compilador, runtime, stdlib e tooling.**
@@ -833,3 +838,87 @@ ciência) **sem** destruir a simplicidade da linguagem.
 **Não implementar nada desta seção antes do estágio SYSTEMS fechar**
 (paridade de gaps, GC mark-sweep, package manager básico — ver
 `docs/development/decision-pending/plan-platform-completion.md` P0–P5).
+
+---
+
+## 23. Plano de Implementação Consolidado (Tiers 0–12)
+
+> **Este é o ÚNICO plano de implementação ordenado do repo.** Funde
+> `ACTION_PLAN.md` e `IMPLEMENTATION_PLAN.md` (apagados 13/09 — ~85% do
+> conteúdo era a MESMA tabela de fases/tiers entre os dois, e as duas
+> divergiam do código). Toda fase aqui move o doc correspondente de
+> `future/`→`docs/` quando ganha código. Dificuldade: `E` fácil · `M`
+> médio · `H` alto · `R` pesquisa.
+>
+> **Regra transversal (R12):** nenhum item de plano futuro é ação sobre o
+> estado atual; frentes novas (AUTOMATION/DATA/SCI/BIO) não abrem antes do
+> estágio SYSTEMS (§21/§22) fechar. Non-goals (§16/§22): sem macros abertas,
+> type-classes, ownership, effect system, cripto caseira, reimplementar
+> Arrow/BLAS/ML; sem "Kali em Kof"; sem motor SQL próprio.
+
+### TIER 0 — Guardrails e processos (E, ≈ zero) ✅ 01/09
+
+R1/R5/R6/R7/R9–R12 como invariantes (AGENTS.md + §22); convenção de gaps por
+domínio (`INFRA00x`/`DATA00x`/`SCI00x`/`BIO00x`/`SECPQ`) + matriz de paridade;
+tiers `stable`/`experimental` (`docs/backend-parity.md`).
+
+### TIER 1 — Fechamento do estágio SYSTEMS (M–H, pré-requisito p/ Tiers 6+)
+
+| # | Item | Estado medido (13/09) |
+|---|------|----------------------|
+| 1.1 | Gaps de paridade (`HTTP002`, `WEB001/002`, `CONC003`, `LOG001`, `MQ001`, `SCHED001`/`TIME001`, `SECN002`, `OBS002`, `MEDIA`) | 🟡 em progresso — JS web server base `abbde60b`; residual por `backend-parity.md` |
+| 1.2 | GC mark-sweep automático no Native | 🟡 riscv `356f33b9` ✅; x86 decomposto G-1..G-5 (`native-multiarch.md`) |
+| 1.3 | Query DSL tipada (`User.query {}`) | ✅ 01/09 (`KofOrmE2ETest`) |
+| 1.4 | Package manager MVP (`kofdeps`) | 🟡 `kof deps` + resolução Maven Central; transitivos/registry pendentes |
+| 1.5 | Tracing/OpenTelemetry + lifecycle `application{}` | 🟡 spans W3C + lifecycle ✅ 3 targets; OTel export pendente |
+
+### TIER 2 — Fundações de compilador (M) — **status corrigido contra o código**
+
+> A versão antiga marcava 2.1.5 e 2.2.2 como "✅"; **não são** (ver abaixo —
+> auditado em HEAD 13/09, não de memória).
+
+| # | Item | Estado REAL medido |
+|---|------|--------------------|
+| 2.1.1–2.1.3 | Sintaxe `extern` + type-check + gaps `FFI001`/`FFI002` (nunca drop silencioso) | ✅ `Parser.java:192` (PARSE090), `ExternalFunctionNode`, `FfiE2ETest` |
+| 2.1.4 | Binding **JVM** (FFM `java.lang.foreign`) | ✅ `abs`/`atoi`(String→Int)/`sqrt`(Double→Double) reais via FFM |
+| 2.1.5 | Binding **Native** (`dlsym`) | ❌ **gap honesto `FFI001`** — `dlopen` segfaulta no binário cru (sem init glibc); NÃO é "✅ real" |
+| 2.1.6 | Marshalling struct/array | 🟡 String↔Int, Double↔Double (JVM); struct/array completo pendente |
+| 2.1.7 | JS: gap `FFI002` | ✅ |
+| 2.2.1 | Inventário do codegen implícito (4 pontos: runtime `.source()`, `desugarTests`, `desugarApplication`, entity→record+schema) | ✅ os 4 existem (`CompilerPipeline:295-296`) |
+| 2.2.2 | **Hook formal `CodegenStep`** | ❌ **NÃO existe no HEAD** — `d1c56bad` adicionou, a pipeline voltou a chamar os `desugar*` direto; o "✅" antigo era sobre-claim da branch `planning-future` |
+| 2.2.3 | Migrar DDL/runner p/ o hook formal | ❌ bloqueado por 2.2.2 |
+| 2.2.4 | Base de `infra "prod" {}` (codegen sobre records) | ❌ não iniciado (zero parse de `infra`) |
+| 2.3.1 | Constant-folding de constantes de domínio | ✅ `"a"+"b"→"ab"` (`OptimizerConstantFold:100`) |
+| 2.3.2 | Detecção de ciclo no grafo `infra` em compile-time | ❌ bloqueado por 2.2.4 |
+| 2.4.1 | Scoped resources (RAII leve sobre `try/finally`) | 🟡 só design (`future/scoped-resources-plan.md`); sintaxe `using` gated por bump |
+| 2.5 | Variance / sealed | ✅ **DECIDIDO ADIAR** — `enum`+`record`/`interface` cobrem o caso; abre só com pipeline científica (bump) |
+
+### TIER 3–5 — Plataforma de migração legado (Fases A–H) ✅ código+testes
+
+`kof inspect/decompile/translate/compare/migrate` no CLI (`Main.java`);
+Legacy Semantic IR com Confidence Model (5 níveis) + "nunca inventar". Prova
+medida 13/09 em HEAD: **Decompile 57, Translate 33, Compare 6, Migrate 3**
+(Translate tem 1 célula vermelha — `qualifiedLocalTypeTranslates`, WIP da lane
+`.22`, alheia a este plano). Recuperação de corpo de método ainda parcial
+(joins estruturais = Fase C, o maior gargalo medido: 2452 métodos). O
+histórico técnico detalhado vive em `LEGACY_MIGRATION.md` + `DECOMPILER.md`
+(§7) — **não duplicar aqui**; esta tabela só dá a ordem.
+
+### TIER 6–12 — Plataforma universal (não iniciados; regidos por `future/PLAN-UNIVERSAL-PLATFORM.md`)
+
+| Tier | Estágio | Escopo (uma linha) |
+|------|---------|--------------------|
+| 6 | AUTOMATION | `kof.workflow`/`batch`/`shell`/`ssh` — jobs como código Kof, nunca YAML/bash |
+| 7 | INFRAESTRUTURA | `infra "prod" {}` (codegen, não HCL) + reconciliation loop — deps 1.4, 2.2 |
+| 8 | DATA | `dataframe` tipado + Arrow/Parquet/estatística **por FFI** (wrapper, nunca reimplementar) — deps 2.1, pkg manager |
+| 9 | SECURITY | S2 `Secret`/`KeyHandle` · S3 `keys.*` · S4 assimétrica · S5 **PQC** (`liboqs`, NIST) · S6 híbrido · S7 `secure.channel`; só FFI a lib auditada |
+| 10 | SCIENTIFIC | BLAS/LAPACK/GPU/MPI **por FFI**; SIMD Native (pesquisa); deps 2.1, 2.4, 1.2 |
+| 11 | BIO | `kof-bio` (pacote oficial): FASTA/FASTQ/VCF + alinhamento via FFI/CLI — deps 6, 8, 10 |
+| 12 | UNIVERSAL | integração total + pkg manager maduro + LSP/debug/profiler por domínio; **teste final: o core da linguagem quase não cresceu** |
+
+### Critical path (o que bloqueia o quê)
+
+`Legacy-Class-File-Parser` → todos os Tiers 3–5 · `Decompiler-Structural` →
+`Diff-Framework` → `Migration-Reports` · `2.1 FFI` → Tiers 8/9/10 (tudo por
+FFI) · `2.2 codegen hook` → `infra`/gRPC stubs · **TIER 1 (SYSTEMS) fecha
+antes de QUALQUER Tier 6+ (R12).**

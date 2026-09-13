@@ -17,7 +17,7 @@ import java.util.List;
  * and method signatures are recovered exactly from the class file. Method
  * bodies are NOT recovered yet (Control Flow / Data Flow recovery are later
  * phases), so every body is emitted as an honest {@code throw} stub instead
- * of fabricating behavior (per LEGACY_IR: never invent silently).
+ * of fabricating behavior (per LEGACY_MIGRATION §4: never invent silently).
  */
 public final class Decompile {
 

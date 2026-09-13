@@ -1095,7 +1095,7 @@ use o harness do projeto ou crie um teste E2E mínimo no pacote da área.
 | `docs/development/native-multiarch.md`, `docs/stdlib/DATABASE_VISION.md`, `docs/audits/complexity-audit.md` | Native multiarch (NATIVE002) + DB vision (realizada → stdlib) + audit ≤500 (snapshot → architecture) |
 | `docs/development/decision-pending/security-plan.md` | Plano de segurança (18 camadas, B/C/D pendentes) |
 | `docs/development/decision-pending/plan-platform-completion.md`, `docs/development/decision-pending/plan-spring-independence.md` | Plans de plataforma & Spring independence (P3–P5) |
-| `docs/development/ACTION_PLAN.md` | Ordem de implementação dos planos da plataforma (Tiers 0–12) — migração feita, universal não iniciada |
+| `docs/development/roadmap.md` §23 | **Plano de implementação consolidado** (Tiers 0–12) — único plano ordenado; migração A–H ✅, universal não iniciada |
 
 ---
 

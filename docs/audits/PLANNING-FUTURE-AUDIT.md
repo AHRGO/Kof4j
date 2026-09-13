@@ -43,7 +43,7 @@ aninhado KofJS (na beta `5d6e68a`).
 
 ## 2. O que o plano documenta e a branch NÃO tem
 
-1. **Fase D — Type Recovery** (LEGACY_IR, Tier 4.2): análise de
+1. **Fase D — Type Recovery** (ex-`LEGACY_IR.md`, hoje `LEGACY_MIGRATION.md` §4; Tier 4.2): análise de
    `instanceof`/`checkcast`/`new` + data flow → **zero código**.
 2. **FFI formalizado (TIER 2.1)** — o doc de reconciliação da própria
    branch (`planning-future-reconcile.md`) afirma entregue (`extern`,
@@ -53,7 +53,7 @@ aninhado KofJS (na beta `5d6e68a`).
 3. **Codegen hook (TIER 2.2)** — `CodegenStep`/`runCodegen`: idem, não
    está no HEAD. (ct-eval 2.3: `OptimizerConstantFold` já existia na
    beta — não é entrega deles.)
-4. **`kof inspect --java`** (task Java-Inspect-CLI do IMPLEMENTATION_PLAN):
+4. **`kof inspect --java`** (task Java-Inspect-CLI do ex-IMPLEMENTATION_PLAN, hoje `roadmap.md` §23):
    não implementado (Inspect só lê `.class`).
 5. **Decompiler-Confidence** (task: IR marca inferred vs exact): o enum
    existiu (`7e6fbe8`) mas foi perdido no merge — `Decompile.java` do HEAD
