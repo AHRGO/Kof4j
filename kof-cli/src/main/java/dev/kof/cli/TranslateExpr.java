@@ -281,6 +281,16 @@ class TranslateExpr {
 
         String parseNew() {
             String typeName = p.next().text;
+            // Nome qualificado `new java.util.ArrayList<...>()`: o translator
+            // ignora imports e não resolve FQN. Mapear coleções Java →
+            // stdlib Kof (`ArrayList`→`listOf`/`List`, `HashMap`→`Map`) é
+            // decisão de design (regra 6) → revisão manual (R6), nunca parse
+            // error confuso nem Kof inválido.
+            if (p.at(".")) {
+                throw new TranslateException(
+                        "tipo qualificado (`new pacote.Classe(...)`) não é resolvido pelo "
+                        + "translator (imports ignorados) — revisão manual");
+            }
             // `new Box<Integer>(...)` — Kof infere o tipo na chamada
             // (`Box(5)`); os argumentos de tipo Java são descartados.
             if (p.at("<")) {

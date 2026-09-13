@@ -233,6 +233,15 @@ class TranslateStatements extends TranslateExpr {
         // Multi-catch Java `catch (A | B e)` → catch único (Kof não tem
         // união de tipos em catch). Bloco vazio → `{}`.
         p.next(); // try
+        if (p.at("(")) {
+            // `try (R r = ...) { }` — Kof não tem try-with-resources nem
+            // AutoCloseable (RAII é plano futuro). Desugar mecânico p/
+            // `try/finally` exige `if (r != null) r.close()` + o tipo Java
+            // pode nem existir em Kof → revisão manual (R6: nunca silencioso).
+            throw new TranslateException(
+                    "try-with-resources (`try (R r = ...)`) não tem equivalente direto em Kof "
+                    + "(sem AutoCloseable; use `try/finally` + `r.close()`) — revisão manual");
+        }
         List<String> tryBody = parseBlock();
         String tryStr = tryBody.isEmpty() ? "{}"
                 : "{ " + String.join(" ", tryBody) + " }";

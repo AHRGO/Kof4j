@@ -199,3 +199,12 @@ diferenciais.
 > `TranslateTest.constructorTranslatesWithBody` (traduz + compila JVM + roda
 > `Hello Mel/26`) + `TranslateTest.genericsTranslate` (roda `5/7`).
 > `Translate.java` 316 ≤500; `TranslateTest` 19/19.
+>
+> **Estado (13/09 ~13:15, dono = 192.168.100.22): gaps honestos
+> try-with-resources e tipo qualificado.** `try (R r = ...)` (Kof sem
+> AutoCloseable — RAII é plano futuro) e `new pacote.Classe(...)` (translator
+> ignora imports; mapear coleções Java→stdlib Kof é decisão de design,
+> regra 6) → diagnóstico explícito com sugestão de revisão manual (R6).
+> Prova: `TranslateTest.varargsAndNestedTypeAreHonestGaps` estendido.
+> `TranslateExpr` 419 ≤500; `TranslateStatements` 335 ≤500;
+> `TranslateTest` 19/19.

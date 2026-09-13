@@ -311,6 +311,28 @@ class TranslateTest {
                         """));
         assertTrue(nested.getMessage().contains("tipo aninhado") && nested.getMessage().contains("revisão manual"),
                 "tipo aninhado sem equivalente Kof (SEM042) → gap explícito (R6), foi: " + nested.getMessage());
+
+        TranslateException twr = assertThrows(TranslateException.class, () ->
+                Translate.translateJava("""
+                        public class T {
+                            static void f() {
+                                try (java.io.StringReader r = new java.io.StringReader("x")) {
+                                    System.out.println(r.read());
+                                }
+                            }
+                        }
+                        """));
+        assertTrue(twr.getMessage().contains("try-with-resources") && twr.getMessage().contains("revisão manual"),
+                "try-with-resources sem equivalente Kof → gap explícito (R6), foi: " + twr.getMessage());
+
+        TranslateException fqn = assertThrows(TranslateException.class, () ->
+                Translate.translateJava("""
+                        public class Q {
+                            static Object make() { return new java.util.ArrayList<String>(); }
+                        }
+                        """));
+        assertTrue(fqn.getMessage().contains("tipo qualificado") && fqn.getMessage().contains("revisão manual"),
+                "tipo qualificado não resolvido → gap explícito (R6), foi: " + fqn.getMessage());
     }
 
     @Test
