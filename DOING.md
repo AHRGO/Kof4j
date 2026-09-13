@@ -60,6 +60,40 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (13/09 ~14:40, lane bugs-and-gaps, dono = 192.168.100.15):
+> §176 CORRIGIDO (2 faces) + §177 CATALOGADO.** Caça Q4 sobre o §173/§174.
+> **(a) compound em elemento de array no JS** (`a[0] += x`, `a[1] <<= 2`):
+> JVM/Native/Script ok, KofJS `COMP002 unexpected op ... KofDup2` — o guard
+> `isExpressionOp` do `JsExpressionParser` não listava `KofDup2` (o handler
+> existe desde #64 `c78109c5`; o teste da época só cobria JVM). Fix: incluir
+> `KofDup2` no guard. **(b) lambda com `var` local + `return x`**: lambda
+> tipava **VOID** (JVM VerifyError `Bad type on operand stack`, Native `0`,
+> Script `Long.valueOf/1`, JS COMP002) — `ExpressionTyper.firstReturnValueType`
+> não registrava os `VarDeclStmt` do corpo no escopo, então `return x` era
+> UNKNOWN. Fix: escopo cópia mutável com os locais do corpo antes da varredura.
+> **(c) lambda que retorna handle kof.ui/media** (regressão exposta por (b)):
+> o tipo inferido `kof.ui.Label` sobrevivia ao round-trip do
+> `CompilerLambdaClass` mas o `invoke` saía `LLabel;` com int na pilha →
+> VerifyError. Fix aditivo: preservar o tipo real no `lambdaClass` +
+> `JvmLiteralEmitter.returnOpcode` emite `IRETURN` p/ handle (consistente com
+> `JvmTypeMapper.toDescriptor` = "I").
+> **Prova Q1 (falhavam antes):** `CoreRegressionE2ETest.compoundOnArrayElementJs`
+> + `CoreRegressionE2ETest.lambdaReturnLocalVar` (novos, `runBoth` JVM+JS) +
+> `ComponentCoreE2ETest` 14/14 (regressão UI).
+> **§177 CATALOGADO (ABERTO):** tipo `kof.ui`/`kof.media` **DECLARADO**
+> (var/param/campo/retorno) quebra o backend JVM — `MemberResolver.resolveType`
+> não reconhece o builtin (sai `ClassType("", "Label")` → descritor `LLabel;`
+> p/ int). Menor repro nos 4 contextos + fix proposto em `known-bugs.md §177`.
+> **NÃO corrigido** (toca resolução de nomes — regra 6, precisa decisão).
+> **PRÓXIMO PASSO:** fila de `known-bugs.md` só tem itens de outras lanes
+> (§101 congelado; §104b-ii/§107/§114 bugfixer; §129/§161 nat; §132 OTP-JS;
+> §165 não-reproduz; §170 issue-lane; §171 diagnóstico; §175 remoto S13b).
+> **Re-disparo: ler esta linha + `known-bugs.md:11`; se nada novo e suíte
+> verde → RECUSAR.**
+> **NUNCA:** `nat/` lane GC viva; fila de outras lanes; push main.
+> **Livre para caça Q4:** áreas recém-mexidas por outras lanes (S13a stdlib,
+> translator) são candidatas a probe de borda — sem tocar arquivos EM CURSO.
+
 > **✅ FEITO (13/09 ~14:20, lane bugs-and-gaps, dono = 192.168.100.15):
 > §174 CORRIGIDO (`return`/`throw` dentro de `if` dentro do `try` → KofJS
 > `COMP002 unexpected KofCatchStart`).** Achado na caça Q4 sobre o S13a
@@ -76,6 +110,7 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > 558 — helper movido p/ `MethodCtx`).
 > **Gate 4-módulos:** compiler 1493 run / **0 falhas** / 13 erros (só `node`) /
 > 158 skip; script 32/0; c 5/0; cli 184/0. BUILD SUCCESS.
+
 > **Nota S13a (caça Q4, sem bug novo):** `math.parseDouble` Native diverge de
 > JVM/Script/JS em hex-float (`0x1.8p1`) e sufixos `d`/`f` — é a **família
 > FLT001 já documentada** (B31, `known-bugs.md` §81/FLT001), NÃO regressão do

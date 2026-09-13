@@ -369,8 +369,22 @@ public final class ExpressionTyper {
     private static Type firstReturnValueType(CompilerDriver driver,
                                              List<StatementNode> body,
                                              List<IRLocalVariable> locals) {
+        // §176: declarações locais do próprio corpo (`var x = 1; return x`)
+        // precisam entrar no escopo da varredura, senão o `return x` é UNKNOWN
+        // e a lambda tipa VOID (o backend descarta o valor). Cópia mutável:
+        // o escopo do chamador não pode ser poluído.
+        List<IRLocalVariable> scope = new ArrayList<>(locals);
         for (StatementNode s : body) {
-            Type t = returnValueType(driver, s, locals);
+            if (s instanceof VarDeclStmt vds) {
+                Type vt = CompilerTypes.toType(vds.type(), driver.currentUnit);
+                if (("var".equals(vds.type()) || "val".equals(vds.type()))
+                        && vds.initializer() != null) {
+                    vt = inferExprType(driver, vds.initializer(), scope);
+                }
+                scope.add(new IRLocalVariable(0, vds.name(), vt));
+                continue;
+            }
+            Type t = returnValueType(driver, s, scope);
             if (!Type.UnknownType.UNKNOWN.equals(t)) return t;
         }
         return Type.UnknownType.UNKNOWN;

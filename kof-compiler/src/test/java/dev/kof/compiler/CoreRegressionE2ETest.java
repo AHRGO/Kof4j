@@ -791,6 +791,52 @@ class CoreRegressionE2ETest {
                 """, "X\nY\ncaught:boom\nY", tempDir, "tryifreturn");
     }
 
+    // known-bugs §176 — compound em ELEMENTO de array (`values[0] += 5`,
+    // `a[0] <<= 2`, `d[0] += 0.25`) no KofJS: o op `KofDup2` não constava em
+    // `isExpressionOp`, então o parser abortava antes de consumir o par
+    // [array,index] (`COMP002 unexpected op ... KofDup2`). JVM/Native/Script ok.
+    @Test
+    void compoundOnArrayElementJs(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                main() {
+                    var a = new Long[2]
+                    a[0] = 10L
+                    a[0] += 5L
+                    a[1] = 3L
+                    a[1] <<= 2
+                    println(a[0])
+                    println(a[1])
+                    var d = new Double[1]
+                    d[0] = 1.5
+                    d[0] += 0.25
+                    println(d[0] == 1.75)
+                    var i = new Int[1]
+                    i[0] = 10
+                    i[0] += 5
+                    println(i[0])
+                }
+                """, "15\n12\ntrue\n15", tempDir, "arrcompound");
+    }
+
+    // known-bugs §176 — lambda com `var` local + `return x` no corpo: a
+    // varredura de tipo de retorno não enxergava os locais declarados no
+    // corpo, então a lambda tipava VOID e o backend descartava o valor
+    // (JVM VerifyError `Bad type on operand stack`, Native `0`, Script
+    // `Long.valueOf/1`, JS COMP002). O JVM/Native/Script/JS agora concordam.
+    @Test
+    void lambdaReturnLocalVar(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                main() {
+                    val f = () -> { var x = 1L; x++; return x }
+                    println(f())
+                    val g = (y: Int) -> { var z = y + 1; return z * 2 }
+                    println(g(4))
+                    val s = () -> { var t = "hi"; return t }
+                    println(s())
+                }
+                """, "2\n10\nhi", tempDir, "lambdalocal");
+    }
+
     // known-bugs #51 — CompilerDriver reutilizado vazava classes sintéticas
     // (syntheticClasses/lambdaCounter não resetavam): compilar programa com
     // spawn e DEPOIS outro sem spawn no MESMO driver quebrava o link Native

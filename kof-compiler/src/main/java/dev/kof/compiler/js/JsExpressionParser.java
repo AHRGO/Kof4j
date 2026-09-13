@@ -124,7 +124,7 @@ boolean isExpressionOp(KofOperation op) {
                 || op instanceof KofLoadField || op instanceof KofGetStatic
                 || op instanceof KofBinary || op instanceof KofUnary
                 || op instanceof KofCall || op instanceof KofNewObject
-                || op instanceof KofDup || op instanceof KofDupX1 || op instanceof KofDupX2 || op instanceof KofNewArray
+                || op instanceof KofDup || op instanceof KofDup2 || op instanceof KofDupX1 || op instanceof KofDupX2 || op instanceof KofNewArray
                 || op instanceof KofNewMultiArray
                 || op instanceof KofArrayLoad || op instanceof KofArrayLength
                 || op instanceof KofInstanceOf || op instanceof KofCheckCast

@@ -112,6 +112,12 @@ public final class JvmLiteralEmitter {
         // JvmTypeMapper.toDescriptor (que já desempacota Nullable). A
         // assimetria (descritor `I` + opcode ARETURN) era o VerifyError.
         if (type instanceof Type.NullableType nt) type = nt.inner();
+        // §176: handles kof.ui/kof.media são Int em runtime — o descriptor
+        // apaga para "I" (JvmTypeMapper). Sem isto, `return label` emitia
+        // ARETURN com um int na pilha → VerifyError (Bad type on operand stack).
+        if (type instanceof Type.ClassType ct && (KofUi.isUiType(ct) || KofMedia.isHandleType(ct))) {
+            return IRETURN;
+        }
         if (type instanceof Type.PrimitiveType pt) {
             return switch (pt.name()) {
                 case "void" -> RETURN;

@@ -71,7 +71,13 @@ public final class CompilerLambdaClass {
         // lambda retornando lambda (bug 19): preservar a FunctionType (o
         // round-trip por string a destruía) — o className do lambda interno
         // será preenchido após a emissão do corpo.
-        Type returnType = ft.returnType() instanceof Type.FunctionType
+        // §176: handles kof.ui/media também são preservados — o round-trip
+        // typeToString→toType perde o pacote (`kof.ui.Label` → `Label`) e o
+        // descriptor do invoke sairia "LLabel;" com um int na pilha (o valor
+        // real do handle) → VerifyError. JvmTypeMapper apaga o handle p/ "I"
+        // e JvmLiteralEmitter.returnOpcode emite IRETURN de forma consistente.
+        Type returnType = (ft.returnType() instanceof Type.FunctionType
+                || KofUi.isUiType(ft.returnType()) || KofMedia.isHandleType(ft.returnType()))
                 ? ft.returnType()
                 : CompilerTypes.toType(CompilerTypes.typeToString(ft.returnType()), driver.currentUnit);
         List<FormalParameterNode> params = le.parameters();

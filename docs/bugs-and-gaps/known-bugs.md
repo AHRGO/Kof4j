@@ -8,12 +8,16 @@
 >
 > | | |
 > |---|---|
-> | **Fila ABERTA (varredura 13/09 — seções sem resolução no próprio cabeçalho)** | **10 itens** (seções/sub-faces sem resolução) — §177 (NOVO 13/09: lambda com corpo em BLOCO que retorna local declarada no bloco → tipada void/SEM033 quando o módulo tem classe; lane compiler, achado na caça Q4 do translator) — ~~§168~~ ✅ CORRIGIDO 13/09 (`3ab4c99e`; SEM025 json — `json.metodoRuim()` agora rejeitado, re-verificado no `kof check`; era pré-existente, não do WEB001-T1), ~~§166~~ ✅ CORRIGIDO 13/09 (gate tamanho hello: baseline re-medido 7.700→8.297; shim DOM #121 é préambulo `always` legítimo, mesmo processo do #104 — opção (a) do próprio registro; lane bugs-and-gaps), §165 re-verificado 13/09: NÃO reproduz em build limpo (node v22 presente, export no runtime, célula verde) — trap de inlining `static final`, ver §165; ~~§81~~ ✅ CORRIGIDO 13/09 (5b: Long=BigInt no JS, paridade 64-bit real, golden JS unificado ao JVM), §101 (relacionais de Double com NaN divergem cross — **congelado** regra 6), §104b-ii (record em coleção + storage-box asm — **lane bugfixer**, unidade GRANDE), §107 🟡 (`println(coleção)` nativo → lixo de ponteiro; **face escalar ✅ CORRIGIDA 12/09** nos 3 nativos `f3b3821c`+B39; restam record/aninhado=`?` até §104b-ii + FP-cross=FLT001), §114 ⏳ (equals de record com campo-referência no Native; sub-face do §104b-ii), §129 (throw em worker `spawn` → longjmp cross-thread no Native — **lane nat**; era referido como "§129-TLS"), §132 (KofJS: task de task não roda sem ceder o event-loop — gate OTP002; **lane alheia**), §161/NAT-STR01 (case-fold ASCII-only no Native vs Unicode no JVM/JS — **DECIDIDO 13/09**, lane nat; registrado aqui 13/09). **§165 RE-VERIFICADO 13/09 (dono 192.168.100.17, node v22 presente): NÃO reproduz em build limpo** — o export CHEGA ao `kof-runtime.mjs`, a célula verde; o sintoma era a trap de inlining `static final` (classes stale). Fecho/blindagem = dono §106/js-slices; §166 aberto). **~~§149~~ NÃO está aberto — ✅ CORRIGIDO 12/09** (a linha anterior o listava por engano; a raiz era o `JsIfThrowElse` do §147). **§156 ✅ CORRIGIDO 13/09** (lista heterogênea de lambdas mesma assinatura → elemento sem className, dispatch SAM). **§155 ✅ CORRIGIDO 13/09** (tipo-função em type-args → `ClassFormatError`; parser preserva os espaços do type-ref). **§127-JVM ✅ CORRIGIDO 13/09** (decisão 9a: `as ()->T` parseia como type-ref; checkcast p/ interface SAM sintética). **§94 ✅ CORRIGIDO 13/09** (EQ/NE de Double/Float no interpretador agora IEEE). **§125 ✅ CORRIGIDO 12/09** (return Nullable(primitivo) → default; célula `nullableprint` 4/4). **§139 ✅ CORRIGIDO 12/09** (JS fold `f()==null` → COMP002; parser JS descarta mid-expression). **§140 ✅ CORRIGIDO 12/09** (gate ≤500 virou ratchet com baseline no CI). **§90 ✅ CORRIGIDO 12/09** (lane web). **§145/§146/§147 ✅ CORRIGIDOS 12/09** (`440730c8`, issue #101). **§45 ✅ IMPLEMENTADO 13/09** (DD-01 opção 4a: FinallyFrame na IR; 4 targets, `063ed956`) e **S10c ✅ 13/09** (`random.randomBytesHex`, `317b23e7`). **§157/§158/§159/§160 ✅ CORRIGIDOS 13/09** (issue-lane: #103 caso 3 POP2 em `HashMap.put` de `Long`, kof.web `header()`/`query()` `String?`+SEM049, Native web WEB001, KofJS hostless `kof_platform`). **§172 ✅ CORRIGIDO 13/09** (compostos de SHIFT `<<=`/`>>=`/`>>>=` baixados como atribuição simples — miscompilação silenciosa; + 2ª face `Long<<=Long` VerifyError, L2I na contagem; lane development/translator, dono = 192.168.100.22). **Conclusão honesta (13/09):** dos **8 itens abertos**, a maioria pende de **decisão da mantenedora já ratificada** (fila de implementação), **congelamento regra-6** (§101 + sub-faces §114/§107 = 3), **lane alheia** (§104b-ii lane bugfixer + §129 lane nat + §132 = 3) — **§89 ✅ CORRIGIDO 13/09** (`e33425b5`, 4 alvos + warning SEM090), **§106 ✅ CORRIGIDO 13/09** (`5b939106` + residual JS `ab85cfae`, 4 alvos), **§117 ✅ CORRIGIDO 13/09** (`3734f2aa`), **§131 ✅ CORRIGIDO 13/09** (`18a64d45`, 4 backends; + **residual same-arity/tipos** `73ca2d58`, Native), **§156 ✅ CORRIGIDO 13/09**, **§81 ✅ CORRIGIDO 13/09** (Long=BigInt JS, seção própria) e **§163 ✅ CORRIGIDO 13/09** (interpretador: 2º parâmetro largo lido como `null` — paridade 4-target, achado no probe do split `NativeBackend`). **§167 ✅ CORRIGIDO 13/09** (bitwise/shift com `Long` misturado: JVM VerifyError + JS TypeError/máscara errada + overflow de Long sem wrap no JS; lane bugs-and-gaps `192.168.100.15`, 4 targets, 3 testes — seção própria). |
+> | **Fila ABERTA (varredura 13/09 — seções sem resolução no próprio cabeçalho)** | **10 itens** (seções/sub-faces sem resolução) — ~~§177~~ ✅ CORRIGIDO 13/09 (lambda com corpo em BLOCO que retorna local declarada no bloco era tipada void/SEM033 quando o módulo tinha classe — `firstReturnValueType` não registrava os `VarDeclStmt` do corpo; lane bugs-and-gaps `192.168.100.15`, fechado na unidade do §178; repro do translator roda 4 targets = 8). **NOVO §179** (tipo `kof.ui`/`kof.media` DECLARADO → JVM VerifyError; `MemberResolver.resolveType` não reconhece o builtin — catalogado, não corrigido, regra 6) — ~~§168~~ ✅ CORRIGIDO 13/09 (`3ab4c99e`; SEM025 json — `json.metodoRuim()` agora rejeitado, re-verificado no `kof check`; era pré-existente, não do WEB001-T1), ~~§166~~ ✅ CORRIGIDO 13/09 (gate tamanho hello: baseline re-medido 7.700→8.297; shim DOM #121 é préambulo `always` legítimo, mesmo processo do #104 — opção (a) do próprio registro; lane bugs-and-gaps), §165 re-verificado 13/09: NÃO reproduz em build limpo (node v22 presente, export no runtime, célula verde) — trap de inlining `static final`, ver §165; ~~§81~~ ✅ CORRIGIDO 13/09 (5b: Long=BigInt no JS, paridade 64-bit real, golden JS unificado ao JVM), §101 (relacionais de Double com NaN divergem cross — **congelado** regra 6), §104b-ii (record em coleção + storage-box asm — **lane bugfixer**, unidade GRANDE), §107 🟡 (`println(coleção)` nativo → lixo de ponteiro; **face escalar ✅ CORRIGIDA 12/09** nos 3 nativos `f3b3821c`+B39; restam record/aninhado=`?` até §104b-ii + FP-cross=FLT001), §114 ⏳ (equals de record com campo-referência no Native; sub-face do §104b-ii), §129 (throw em worker `spawn` → longjmp cross-thread no Native — **lane nat**; era referido como "§129-TLS"), §132 (KofJS: task de task não roda sem ceder o event-loop — gate OTP002; **lane alheia**), §161/NAT-STR01 (case-fold ASCII-only no Native vs Unicode no JVM/JS — **DECIDIDO 13/09**, lane nat; registrado aqui 13/09). **§165 RE-VERIFICADO 13/09 (dono 192.168.100.17, node v22 presente): NÃO reproduz em build limpo** — o export CHEGA ao `kof-runtime.mjs`, a célula verde; o sintoma era a trap de inlining `static final` (classes stale). Fecho/blindagem = dono §106/js-slices; §166 aberto). **~~§149~~ NÃO está aberto — ✅ CORRIGIDO 12/09** (a linha anterior o listava por engano; a raiz era o `JsIfThrowElse` do §147). **§156 ✅ CORRIGIDO 13/09** (lista heterogênea de lambdas mesma assinatura → elemento sem className, dispatch SAM). **§155 ✅ CORRIGIDO 13/09** (tipo-função em type-args → `ClassFormatError`; parser preserva os espaços do type-ref). **§127-JVM ✅ CORRIGIDO 13/09** (decisão 9a: `as ()->T` parseia como type-ref; checkcast p/ interface SAM sintética). **§94 ✅ CORRIGIDO 13/09** (EQ/NE de Double/Float no interpretador agora IEEE). **§125 ✅ CORRIGIDO 12/09** (return Nullable(primitivo) → default; célula `nullableprint` 4/4). **§139 ✅ CORRIGIDO 12/09** (JS fold `f()==null` → COMP002; parser JS descarta mid-expression). **§140 ✅ CORRIGIDO 12/09** (gate ≤500 virou ratchet com baseline no CI). **§90 ✅ CORRIGIDO 12/09** (lane web). **§145/§146/§147 ✅ CORRIGIDOS 12/09** (`440730c8`, issue #101). **§45 ✅ IMPLEMENTADO 13/09** (DD-01 opção 4a: FinallyFrame na IR; 4 targets, `063ed956`) e **S10c ✅ 13/09** (`random.randomBytesHex`, `317b23e7`). **§157/§158/§159/§160 ✅ CORRIGIDOS 13/09** (issue-lane: #103 caso 3 POP2 em `HashMap.put` de `Long`, kof.web `header()`/`query()` `String?`+SEM049, Native web WEB001, KofJS hostless `kof_platform`). **§172 ✅ CORRIGIDO 13/09** (compostos de SHIFT `<<=`/`>>=`/`>>>=` baixados como atribuição simples — miscompilação silenciosa; + 2ª face `Long<<=Long` VerifyError, L2I na contagem; lane development/translator, dono = 192.168.100.22). **Conclusão honesta (13/09):** dos **8 itens abertos**, a maioria pende de **decisão da mantenedora já ratificada** (fila de implementação), **congelamento regra-6** (§101 + sub-faces §114/§107 = 3), **lane alheia** (§104b-ii lane bugfixer + §129 lane nat + §132 = 3) — **§89 ✅ CORRIGIDO 13/09** (`e33425b5`, 4 alvos + warning SEM090), **§106 ✅ CORRIGIDO 13/09** (`5b939106` + residual JS `ab85cfae`, 4 alvos), **§117 ✅ CORRIGIDO 13/09** (`3734f2aa`), **§131 ✅ CORRIGIDO 13/09** (`18a64d45`, 4 backends; + **residual same-arity/tipos** `73ca2d58`, Native), **§156 ✅ CORRIGIDO 13/09**, **§81 ✅ CORRIGIDO 13/09** (Long=BigInt JS, seção própria) e **§163 ✅ CORRIGIDO 13/09** (interpretador: 2º parâmetro largo lido como `null` — paridade 4-target, achado no probe do split `NativeBackend`). **§167 ✅ CORRIGIDO 13/09** (bitwise/shift com `Long` misturado: JVM VerifyError + JS TypeError/máscara errada + overflow de Long sem wrap no JS; lane bugs-and-gaps `192.168.100.15`, 4 targets, 3 testes — seção própria). |
 > | **§167 ✅ CORRIGIDO 13/09 (lane bugs-and-gaps, 192.168.100.15)** | bitwise/shift com `Long` misturado: JVM VerifyError + JS TypeError/máscara errada + overflow de Long sem wrap no JS. 4 targets; achado na caça Q4 13/09. Overclaim conexo do §81 (declarava "64-bit real" cobrindo só parse/literal). Prova: `BackendParityTest.parityLongBitwiseShiftMixed` + `KofInterpreterParityTest.longBitwiseShiftMixed` + célula `bitwise` estendida 4/4. |
 > | **§172 ✅ CORRIGIDO 13/09 (lane development/translator, 192.168.100.22)** | compound shift `<<=`/`>>=`/`>>>=` era parseado mas baixado como atribuição SIMPLES (só o RHS gravado): `x=6; x <<= 2` dava `2` (silencioso, 4 targets). Fix: `isCompoundOp`+`compoundBinaryOp` com SHL/SHR/USHR + `emitCompoundRhsConv` (L2I no RHS largo). Prova: `CoreRegressionE2ETest.compoundShiftAssignments`. |
 > | **§173 ✅ CORRIGIDO 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `++`/`--`/compound em `Long`/`Double`/`Float` + incremento de ELEMENTO de array: JVM VerifyError (literal `INT 1` em binário de 2 slots, `DUP` de 1 slot, `arraystore` sem `[array,index]`), Native core dump, Script `NoSuchElementException`, JS `stack underflow`/`KofDup2`. 4 targets; caça Q4 13/09 (sobre o §167). Prova: `BackendParityTest.parityIncrementWideTypesAndArrayElement` + `KofInterpreterParityTest.incrementWideTypesAndArrayElement` + célula `increment` 4/4. |
 > | **§174 ✅ CORRIGIDO 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `return`/`throw` dentro de um `if` dentro do `try`: JVM/Native/Script corretos, KofJS abortava com `COMP002 unexpected KofCatchStart` (o `JsIfThrowElse.parseElse` consumia o endLabel do try envolvente ao tratar o `then` incondicional como if-else). Fix sem mudança de contrato/IR (guarda `isTryEndLabel`). Prova: `CoreRegressionE2ETest.returnInsideIfInsideTryJs`. |
+> | **§176 (WEB001-T1) — ver §176 abaixo (lane JS/web, 192.168.100.17)** | o número §176 foi ocupado no remoto por WEB001-T1 antes desta lane commitar; a unidade compound-array+lambda desta lane foi renumerada para **§178** (e a face lambda-local para **§177**, colidindo com a seção já existente do translator, fechada pela mesma raiz). |
+> | **§177 ✅ CORRIGIDO 13/09 (lane bugs-and-gaps, 192.168.100.15 — raiz da lane compiler)** | Lambda com corpo em BLOCO que retorna uma LOCAL declarada no próprio bloco era tipada VOID quando o módulo continha classe (`SEM033` no repro do translator): `ExpressionTyper.firstReturnValueType` não registrava os `VarDeclStmt` do corpo no escopo → `return y` = UNKNOWN → lambda void. Fix: escopo cópia mutável com os locais do corpo antes da varredura. Prova: repro exato (com `class C {}`) roda 4 targets = `8`; `CoreRegressionE2ETest.lambdaReturnLocalVar`. |
+> | **§178 ✅ CORRIGIDO 13/09 (lane bugs-and-gaps, 192.168.100.15)** | (a) compound em ELEMENTO de array no JS (`a[0] += x`, `a[0] <<= 2`) → `COMP002 unexpected KofDup2`: o guard `isExpressionOp` não listava `KofDup2` (o handler já existia desde #64). (c) lambda que retorna handle `kof.ui`/`kof.media` → VerifyError no `invoke` (descritor `LLabel;` com int na pilha): `CompilerLambdaClass` preserva o handle + `JvmLiteralEmitter.returnOpcode` emite `IRETURN` (consistente com `JvmTypeMapper` = `"I"`). Prova: `CoreRegressionE2ETest.compoundOnArrayElementJs` + `ComponentCoreE2ETest` 14/14. A face (b) é o §177 (mesma raiz). |
 > | **§168 ✅ CORRIGIDO 13/09 (lane development/translator, `3ab4c99e`)** | SEM025 ausente em namespace `json` para método inexistente: `json.metodoRuim()` compilava com sucesso (deveria falhar com SEM025). O handler do #126 (`61495f69`) validava aridade de `encode/decode` mas não rejeitava método desconhecido; `MemberCallNamespaces` mudou de `if (known && !valid)` para `if (!valid)` (rejeita QUALQUER método ≠ encode/decode) + `return null` no caminho válido. Re-verificado no binário (`kof check` → SEM025; `json.encode(42)` → no errors); `SemanticResolutionTest` 27/27. |
+> | **§179 ❌ ABERTO 13/09 (lane bugs-and-gaps, 192.168.100.15 — catalogado na caça Q4 do §178)** | Tipo `kof.ui`/`kof.media` DECLARADO numa assinatura/var/param/campo quebra o backend JVM (VerifyError `Bad type on operand stack`): `MemberResolver.resolveType("Label")` cai em `Type.of("Label")` = `ClassType("", "Label")` — NÃO reconhece o builtin `kof.ui.Label` — então o descritor sai `LLabel;` enquanto o valor real do handle é um `int` (`kof_ui_label_new` devolve int). Menor repro `main(){ Label l = Label("x"); println(uiNodesLive()) }` → JVM VerifyError; Native/Script/JS OK. Mesma raiz: `Label make(){...}`, param `void use(Label l)`, campo `Label field`. **NÃO corrigido** (toca resolução de nomes — shadowing de classe de usuário homônima; regra 6, precisa decisão). Fix proposto: em `MemberResolver.resolveType`, após `qualifyDeep`, mapear `ClassType("", name)` p/ `KofUi.constructorType(name)`/`KofMedia` quando `name` é builtin UI/media E não foi resolvido por import/classe do módulo (shadowing preservado). |
 
 > | Antiga "varredura 08/09" (apócrifa — corrigida 12/09) | os "abertos" 39/62/63/64/46/48/50/59/61 estão ✅ CORRIGIDO nos próprios cabeçalhos (39/62/63/64 JVM/JS; 46/50/59 Native; 48/61 gap honesto JSN004/FFI001); contagem real na linha acima. |
 > | Paridade interpretador × compilados (semântica `==` congelada — regra 6) | **0** — bug 94 ✅ CORRIGIDO 13/09 (EQ/NE de Double/Float no interpretador agora IEEE; a "decisão" era alinhar ao previsto, que os 3 compilados + corpus já definiam) |
@@ -5747,7 +5751,7 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
 - **Não fiz:** não consertei (lane JS/web; regra 6 — mexer em host-access do
   runner sem a lane-dona pode quebrar as outras fatias web/DOM), não relaxei
   o teste (Q5). Registro + pointer do repro.
-### §177 — Lambda com corpo em BLOCO que retorna uma LOCAL declarada no próprio bloco é tipada VOID quando o módulo contém uma classe (SEM033) — 🟡 ABERTO (achado 13/09 na caça Q4 do translator, dono = lane compiler)
+### §177 — Lambda com corpo em BLOCO que retorna uma LOCAL declarada no próprio bloco é tipada VOID quando o módulo contém uma classe (SEM033) — ✅ CORRIGIDO 13/09 (raiz fechada pela lane bugs-and-gaps `192.168.100.15`; achado na caça Q4 do translator)
 
 - **Sintoma:** o programa abaixo é Kof VÁLIDO (a local `y` existe), mas o
   `kof check`/compilação rejeita com
@@ -5766,16 +5770,104 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   file(s) — no errors`) — a presença da classe é o gatilho. O mesmo ocorre
   trocando o retorno por `return y` (só a local) e não ocorre retornando
   `n * 2` (expressão sobre o parâmetro).
-- **Causa raiz (provável):** `ExpressionTyper.firstReturnValueType`
-  (`ExpressionTyper.java:369`) varre o corpo da lambda p/ achar o primeiro
+- **Causa raiz (CONFIRMADA):** `ExpressionTyper.firstReturnValueType`
+  (`ExpressionTyper.java`) varre o corpo da lambda p/ achar o primeiro
   `return` com valor, mas **não registra os `VarDeclStmt` do bloco** em
   `locals` — o `return y` não acha a local e infere `UNKNOWN` → a lambda vira
-  `void` (linha 241-246). Sem classe o caminho de resolução cai em outro ramo
-  (por isso "funciona" sem ela) — sintoma dependente do semanticAnalyzer
-  estar populado.
+  `void`. Sem classe o caminho de resolução cai em outro ramo (por isso
+  "funciona" sem ela).
+- **Fix (13/09):** `firstReturnValueType` monta um escopo CÓPIA mutável e
+  registra cada `VarDeclStmt` (tipo declarado ou inferido do initializer)
+  antes de varrer os statements seguintes; o escopo do chamador não é
+  poluído. Mesma unidade do §178(b) (mesma raiz).
+- **Prova (Q1 — falhava antes):** o repro exato desta seção (com `class C {}`)
+  agora compila e roda nos 4 targets = `8` (`JVM 8 / Native 8 / Script 8 /
+  JS 8`); `CoreRegressionE2ETest.lambdaReturnLocalVar` cobre a mesma raiz.
 - **Impacto:** o `kof translate` emite exatamente essa forma (lambda Java com
-  corpo em bloco), então o output do translator é Kof válido que o compilador
-  recusa. Teste do translator usa uma variante (`return n + 1`) p/ não
-  depender deste bug; o fix pertence à lane compiler (não do translator).
+  corpo em bloco), então o output do translator era Kof válido que o
+  compilador recusava; agora passa.
 - **Arquivos:** `kof-compiler/src/main/java/dev/kof/compiler/ExpressionTyper.java`
   (`firstReturnValueType`/`returnValueType`).
+
+### §178 — KofJS: compound em ELEMENTO de array (`a[0] += x`) → `COMP002 unexpected KofDup2`; e lambda que retorna handle `kof.ui`/`kof.media` → VerifyError no invoke — ✅ CORRIGIDO 13/09 (lane bugs-and-gaps `192.168.100.15`)
+
+- **Contexto:** achados na caça Q4 sobre o §173/§174 (mesma sessão, probes
+  `/tmp/opencode/d134/INC2.kf`/`INC3.kf`). A face (b) desta unidade é o §177
+  (mesma raiz — registrado lá).
+- **Face (a) — compound em elemento de array no JS:**
+  - **Menor repro:** `var a = new Long[2]; a[0] = 10L; a[0] += 5L; println(a[0])`
+    (idem `Int[]`, `Double[]`, `a[1] <<= 2`). JVM/Native/Script → `15`;
+    **KofJS → COMPILE-FAIL** `COMP002 unexpected op in expression statement:
+    KofDup2`.
+  - **Causa raiz:** o lowering emite `KofDup2` (dup do par `[array,index]`,
+    GitHub #64) para o compound em elemento, e o `consumeExpressionOp` do
+    `JsExpressionParser` **já trata** `KofDup2` — mas o guard `isExpressionOp`
+    (que roda antes) não o listava (`KofDup`/`KofDupX1`/`KofDupX2` estão lá,
+    `KofDup2` ficou de fora no commit `c78109c5`). O guard abortava antes do
+    handler.
+  - **Fix:** adicionar `KofDup2` a `isExpressionOp`.
+- **Face (c) — lambda que retorna handle `kof.ui`/`kof.media`:**
+  - **Menor repro:** `val f = () -> { var l = Label("x"); return l }; println(uiNodesLive())`.
+    JVM → **VerifyError** (`Bad type on operand stack`: o `invoke` da lambda
+    saía descritor `LLabel;` com um `int` na pilha).
+  - **Causa raiz:** handles UI/media são `int` em runtime, mas o round-trip
+    `typeToString→toType` do `CompilerLambdaClass.lambdaClass` preservava o
+    tipo e o `JvmLiteralEmitter.returnOpcode` emitia `ARETURN` — a assimetria
+    com `JvmTypeMapper.toDescriptor` (que apaga o handle p/ `"I"`). Exposição
+    nova: com o §177/(b) corrigido, lambdas de UI passaram a tipar o handle
+    (antes tipavam void) e o defeito latente apareceu.
+  - **Fix aditivo:** `lambdaClass` preserva o tipo real p/ UI/media (evita o
+    round-trip que perde o pacote); `JvmLiteralEmitter.returnOpcode` emite
+    `IRETURN` p/ handle — consistente com o descritor `"I"`.
+- **Prova (Q1 — falhavam no código velho):**
+  - `CoreRegressionE2ETest.compoundOnArrayElementJs` (novo, `runBoth` JVM+JS,
+    golden `15\n12\ntrue\n15`).
+  - `ComponentCoreE2ETest` 14/14 (regressão UI — `view` recebe lambda que
+    retorna `Label`).
+- **Bordas Q3:** array `Int`/`Long`/`Double`; `+=`/`<<=`; lambda sem/1/com
+  parâmetro; `var` com tipo explícito e inferido; `String` local.
+- **Arquivos:** `kof-compiler/src/main/java/dev/kof/compiler/js/JsExpressionParser.java`,
+  `.../CompilerLambdaClass.java`, `.../jvm/JvmLiteralEmitter.java`.
+
+### §179 — Tipo `kof.ui`/`kof.media` DECLARADO (assinatura/var/param/campo) quebra o backend JVM (VerifyError `Bad type on operand stack`) — ❌ ABERTO 13/09 (lane bugs-and-gaps `192.168.100.15`)
+
+- **Sintoma:** qualquer tipo UI/media **declarado** (não inferido) vira
+  `ClassType("", "Label")` no typer — NÃO o builtin `kof.ui.Label` — e o
+  backend JVM emite descritor `LLabel;` para um valor que é `int` em runtime
+  (`kof_ui_label_new` devolve int; `JvmTypeMapper.toDescriptor` só apaga UI
+  quando o tipo É reconhecido como UI). Resultado: VerifyError.
+- **Menor repro (4 contextos, todos VerifyError no JVM, 0 no Native/Script/JS):**
+  ```kof
+  // (1) var declarada
+  main() { Label l = Label("x"); println(uiNodesLive()) }
+  // (2) função que retorna
+  Label make() { var l = Label("x"); return l }
+  // (3) parâmetro
+  void use(Label l) { println(uiNodesLive()) }
+  main() { use(Label("x")) }
+  // (4) campo de classe
+  class Holder { Label field; public constructor(Label l) { this.field = l }
+                 Label get() { return field } }
+  ```
+  JVM: `VerifyError: Bad type on operand stack` (ex.: `Main.make()LLabel; @7:
+  areturn` com `Type integer ... not assignable to reference type`); Native
+  `0`; Script `0` + warning UI002; JS `0`.
+- **Causa raiz:** `MemberResolver.resolveType(name, scope)` → `Type.of(name)`
+  → `ClassType("", name)`; `qualifyDeep` só atribui pacote via imports/classe
+  declarada, então `"Label"` fica sem pacote e NÃO é `KofUi.LABEL`. O
+  reconhecimento de UI só existe no caminho de CHAMADA (`KofUi.isConstructor`
+  em `BuiltinCallTyper`/`ExpressionStaticCallLowerer`), não no de TIPO.
+- **Fix proposto:** em `MemberResolver.resolveType`, após `qualifyDeep`, se o
+  resultado for `ClassType("", name)` e `name` for builtin UI/media
+  (`KofUi.isConstructor(name)` / `KofMedia`), mapear p/ o tipo canônico. O
+  shadowing é preservado porque um `class Label`/`import ...Label` já faz o
+  `qualifyDeep` atribuir pacote (não cai no `pkg.isEmpty()`).
+- **Por que não corrigi agora:** toca **resolução de nomes** (regra 6) — o
+  mapeamento de nome simples p/ builtin é decisão de design (o que acontece
+  com uma classe de usuário chamada `Label`). Registrar o repro + fix proposto
+  e deixar a decisão travada antes de editar.
+- **Conexão:** o §178(c) (lambda) tem a mesma família de raiz, mas o tipo do
+  lambda é INFERIDO (`kof.ui.Label` via `MethodCallTyper`), por isso foi
+  corrigível de forma aditiva (`CompilerLambdaClass` preserva o handle +
+  `JvmLiteralEmitter.returnOpcode` emite `IRETURN`) sem tocar a resolução de
+  nomes.
