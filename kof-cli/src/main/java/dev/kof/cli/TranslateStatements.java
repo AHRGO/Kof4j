@@ -42,6 +42,14 @@ class TranslateStatements extends TranslateExpr {
             for (String s : body) sb.append(s).append(' ');
             return sb.append('}').toString().trim();
         }
+        if (p.peek().type == T.IDENT && p.peek(1).text.equals(":")) {
+            // Labeled statement Java (`outer: for (...)`) — Kof não tem
+            // labels (verificado 13/09: `outer:` é PARSE041). Revisão manual
+            // (R6): o desugar (flag booleana + condição) muda o fluxo.
+            throw new TranslateException(
+                    "labeled statement (`label:`) não tem equivalente direto em Kof "
+                    + "(sem labels; use uma flag) — revisão manual");
+        }
         if (p.at("return")) {
             p.next();
             if (p.at(";")) { p.next(); return "return"; }

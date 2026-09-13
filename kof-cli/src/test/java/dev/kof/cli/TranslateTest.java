@@ -316,6 +316,28 @@ class TranslateTest {
     }
 
     @Test
+    void interfaceExtendsTranslates(@TempDir Path dir) throws Exception {
+        String kof = Translate.translateJava("""
+                interface A { void g(); }
+                interface B extends A { void f(); }
+                class C implements B {
+                    public void g() { System.out.println("g"); }
+                    public void f() { System.out.println("f"); }
+                    public static void main(String[] args) {
+                        C c = new C();
+                        c.g();
+                        c.f();
+                    }
+                }
+                """);
+
+        assertTrue(kof.contains("interface B extends A"),
+                "interface Java `extends A` → Kof (antes: expected '{' but found 'extends'):\n" + kof);
+
+        assertCompiles(dir, kof, "g\nf");
+    }
+
+    @Test
     void varargsAndNestedTypeAreHonestGaps() {
         TranslateException varargs = assertThrows(TranslateException.class, () ->
                 Translate.translateJava("""
@@ -356,6 +378,33 @@ class TranslateTest {
                         """));
         assertTrue(fqn.getMessage().contains("tipo qualificado") && fqn.getMessage().contains("revisão manual"),
                 "tipo qualificado não resolvido → gap explícito (R6), foi: " + fqn.getMessage());
+
+        TranslateException label = assertThrows(TranslateException.class, () ->
+                Translate.translateJava("""
+                        public class L {
+                            public static void main(String[] args) {
+                                outer: for (int i = 0; i < 3; i++) {
+                                    for (int j = 0; j < 3; j++) { break outer; }
+                                }
+                            }
+                        }
+                        """));
+        assertTrue(label.getMessage().contains("labeled") && label.getMessage().contains("revisão manual"),
+                "labeled statement sem equivalente Kof → gap explícito (R6), foi: " + label.getMessage());
+
+        TranslateException anon = assertThrows(TranslateException.class, () ->
+                Translate.translateJava("""
+                        public class A {
+                            public static void main(String[] args) {
+                                Runnable r = new Runnable() {
+                                    public void run() { System.out.println("x"); }
+                                };
+                                r.run();
+                            }
+                        }
+                        """));
+        assertTrue(anon.getMessage().contains("classe anônima") && anon.getMessage().contains("revisão manual"),
+                "classe anônima sem equivalente Kof → gap explícito (R6), foi: " + anon.getMessage());
     }
 
     @Test

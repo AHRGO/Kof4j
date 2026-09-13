@@ -319,6 +319,15 @@ class TranslateExpr {
                 return "new " + kofType(typeName) + "[" + size + "]";
             }
             String args = parseCallArgs();
+            if (p.at("{")) {
+                // Classe anônima Java (`new Runnable() { ... }`) — Kof não
+                // tem classes anônimas (só lambdas p/ interface funcional).
+                // Converter exige inferir a interface funcional — decisão de
+                // design (regra 6) → revisão manual (R6).
+                throw new TranslateException(
+                        "classe anônima (`new X() { ... }`) não tem equivalente direto em Kof "
+                        + "(use lambda p/ interface funcional) — revisão manual");
+            }
             if (typeName.equals("RuntimeException") || typeName.equals("IllegalStateException")
                     || typeName.equals("IllegalArgumentException") || typeName.equals("Exception")) {
                 // Exceções Java → String Kof (idiom errors.md: `throw "msg"`).

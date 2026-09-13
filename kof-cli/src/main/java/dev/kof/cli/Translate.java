@@ -178,8 +178,19 @@ public final class Translate {
             p.expect("interface");
             String name = p.next().text;
             String typeParams = p.at("<") ? parseTypeParams() : "";
+            List<String> ext = new ArrayList<>();
+            if (p.at("extends")) {
+                // Kof interface suporta `extends A, B` (verificado 13/09).
+                p.next();
+                ext.add(p.next().text);
+                while (p.at(",")) { p.next(); ext.add(p.next().text); }
+            }
             p.expect("{");
-            out.append("interface ").append(name).append(typeParams).append(" {\n");
+            out.append("interface ").append(name).append(typeParams);
+            if (!ext.isEmpty()) {
+                out.append(" extends ").append(String.join(", ", ext));
+            }
+            out.append(" {\n");
             while (!p.at("}")) {
                 // method signature ending in ';'
                 int save = p.pos;

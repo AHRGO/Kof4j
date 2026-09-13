@@ -6,10 +6,10 @@
 
 **Status:** EM DESENVOLVIMENTO (caiu de `future/` em 12/09 — Fase F
 implementada: `Translate.java` + `TranslateLexer`/`TranslateExpr`;
-prova: `TranslateTest` 20/20 (output compila e roda; +do-while +switch
+prova: `TranslateTest` 21/21 (output compila e roda; +do-while +switch
 +try/catch/throw +arrays +cast/instanceof +throws +generics +constructor
-+enum-body/multi-decl +varargs/nested 13/09). Subconjunto Java ampliado
-ainda pendente)
++enum-body/multi-decl +interface-extends +varargs/nested 13/09).
+Subconjunto Java ampliado ainda pendente)
 **Data:** 22 de agosto de 2026
 
 ---
@@ -218,3 +218,12 @@ diferenciais.
 > (`var x = 1 var y = 2`); antes `expected ';' but found ','`. Prova:
 > `TranslateTest.enumBodyAndMultiDeclTranslate` (traduz + compila JVM + roda
 > `3`). `TranslateStatements` 354 ≤500; `TranslateTest` 20/20.
+>
+> **Estado (13/09 ~13:45, dono = 192.168.100.22): interface `extends` +
+> gaps honestos labeled/anon.** `interface B extends A` → Kof (verificado no
+> compilador); antes `expected '{' but found 'extends'`. Labeled statement
+> (`outer: for ...`) e classe anônima (`new Runnable(){...}`) não têm
+> equivalente Kof → diagnóstico explícito (R6). Prova:
+> `TranslateTest.interfaceExtendsTranslates` (traduz + compila JVM + roda
+> `g/f`) + `varargsAndNestedTypeAreHonestGaps` estendido. `Translate.java`
+> 335 ≤500; `TranslateTest` 21/21.
