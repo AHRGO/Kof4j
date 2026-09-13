@@ -301,11 +301,30 @@ class TranslateStatements extends TranslateExpr {
                             + "(use `new Int[n]` + atribuições ou `listOf(...)`) — revisão manual");
                 }
                 String e = parseExpr();
+                List<String> decls = new ArrayList<>();
+                decls.add("var " + name + " = " + e);
+                // multi-declaração Java `int x = 1, y = 2;` → statements
+                // Kof separados por espaço dentro do bloco (não há `,` em
+                // decl Kof). `int x = 1, y = f()` também.
+                while (p.at(",")) {
+                    p.next();
+                    String n2 = p.next().text;
+                    if (p.at("=") ) { p.next(); n2 = "var " + n2 + " = " + parseExpr(); }
+                    else { n2 = "var " + n2; }
+                    decls.add(n2);
+                }
                 p.expect(";");
-                return "var " + name + " = " + e;
+                return String.join(" ", decls);
+            }
+            // multi-declaração sem init: `int x, y;`
+            List<String> decls = new ArrayList<>();
+            decls.add("var " + name);
+            while (p.at(",")) {
+                p.next();
+                decls.add("var " + p.next().text);
             }
             p.expect(";");
-            return "var " + name;
+            return String.join(" ", decls);
         }
         p.pos = save;
         String e = parseExpr();

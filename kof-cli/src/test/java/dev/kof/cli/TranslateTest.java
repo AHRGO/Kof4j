@@ -293,6 +293,29 @@ class TranslateTest {
     }
 
     @Test
+    void enumBodyAndMultiDeclTranslate(@TempDir Path dir) throws Exception {
+        String kof = Translate.translateJava("""
+                enum Color {
+                    RED, GREEN;
+                    int code() { return 1; }
+                }
+                public class ED {
+                    public static void main(String[] args) {
+                        int x = 1, y = 2;
+                        System.out.println(x + y);
+                    }
+                }
+                """);
+
+        assertTrue(kof.contains("enum Color { RED, GREEN }"),
+                "corpo do enum é ignorado (Kof enum é só constantes; antes: expected '{' but found 'int'):\n" + kof);
+        assertTrue(kof.contains("var x = 1 var y = 2"),
+                "multi-declaração `int x = 1, y = 2` → statements separados (antes: expected ';' but found ','):\n" + kof);
+
+        assertCompiles(dir, kof, "3");
+    }
+
+    @Test
     void varargsAndNestedTypeAreHonestGaps() {
         TranslateException varargs = assertThrows(TranslateException.class, () ->
                 Translate.translateJava("""

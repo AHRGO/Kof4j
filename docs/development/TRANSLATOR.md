@@ -6,9 +6,10 @@
 
 **Status:** EM DESENVOLVIMENTO (caiu de `future/` em 12/09 — Fase F
 implementada: `Translate.java` + `TranslateLexer`/`TranslateExpr`;
-prova: `TranslateTest` 19/19 (output compila e roda; +do-while +switch
+prova: `TranslateTest` 20/20 (output compila e roda; +do-while +switch
 +try/catch/throw +arrays +cast/instanceof +throws +generics +constructor
-+varargs/nested 13/09). Subconjunto Java ampliado ainda pendente)
++enum-body/multi-decl +varargs/nested 13/09). Subconjunto Java ampliado
+ainda pendente)
 **Data:** 22 de agosto de 2026
 
 ---
@@ -208,3 +209,12 @@ diferenciais.
 > Prova: `TranslateTest.varargsAndNestedTypeAreHonestGaps` estendido.
 > `TranslateExpr` 419 ≤500; `TranslateStatements` 335 ≤500;
 > `TranslateTest` 19/19.
+>
+> **Estado (13/09 ~13:30, dono = 192.168.100.22): corpo de enum + multi-decl.**
+> Corpo de enum Java (`enum Color { RED; int code(){...} }`) era pulado com
+> `skipBlock` num `;` sem `{` → `expected '{' but found 'int'`; agora o corpo
+> é pulado token a token até `}` (Kof enum é só constantes). Multi-declaração
+> `int x = 1, y = 2;` (e sem init) → statements Kof separados
+> (`var x = 1 var y = 2`); antes `expected ';' but found ','`. Prova:
+> `TranslateTest.enumBodyAndMultiDeclTranslate` (traduz + compila JVM + roda
+> `3`). `TranslateStatements` 354 ≤500; `TranslateTest` 20/20.

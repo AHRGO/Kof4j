@@ -113,7 +113,15 @@ public final class Translate {
                 if (p.at("{")) skipBlock();                                          // corpo de constante ignorado
                 if (p.at(",")) p.next();
             }
-            if (p.at(";")) { p.next(); while (!p.at("}")) skipBlock(); }             // métodos/campos ignorados
+            if (p.at(";")) {
+                p.next();
+                // Corpo do enum (métodos/campos) — Kof enum não tem corpo
+                // (só constantes). Pular tokens balanceados até o `}`.
+                while (!p.at("}") && !p.at(T.EOF)) {
+                    if (p.at("{")) skipBlock();
+                    else p.next();
+                }
+            }
             p.expect("}");
             out.append("enum ").append(name).append(" { ")
                .append(String.join(", ", constants)).append(" }\n");
