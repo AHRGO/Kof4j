@@ -486,5 +486,70 @@ public final class NativeRiscvAsmRtB33 {
                 ld ra, 56(sp)
                 addi sp, sp, 64
                 ret
+
+            # kof_time_hoursBetween(a0..a7 = y1,m1,d1,h1,y2,m2,d2,h2) -> Int
+            # (D3: floor simétrico = truncado a zero; datas inválidas ou hora
+            # fora de 0..23 => 0). Reusa kdv_valid/kdv_epoch (B14). LIÇÃO B14:
+            # nada vivo em s0/s1 entre calls; slots de pilha dedicados.
+            .globl kof_time_hoursBetween
+            kof_time_hoursBetween:
+                addi sp, sp, -80
+                sd   ra, 72(sp)
+                sw   a0, 0(sp)                 # y1
+                sw   a1, 4(sp)                 # m1
+                sw   a2, 8(sp)                 # d1
+                sw   a3, 12(sp)                # h1
+                sw   a4, 16(sp)                # y2
+                sw   a5, 20(sp)                # m2
+                sw   a6, 24(sp)                # d2
+                sw   a7, 28(sp)                # h2
+                # hora 1 em 0..23
+                lw   t0, 12(sp)
+                bltz t0, .Lu8_hb_f
+                li   t1, 23
+                bgt  t0, t1, .Lu8_hb_f
+                # valida data 1 + epoch
+                lw   a0, 0(sp)
+                lw   a1, 4(sp)
+                lw   a2, 8(sp)
+                call kdv_valid
+                beqz a0, .Lu8_hb_f
+                lw   a0, 0(sp)
+                lw   a1, 4(sp)
+                lw   a2, 8(sp)
+                call kdv_epoch
+                li   t1, 24
+                mul  a0, a0, t1
+                lw   t0, 12(sp)
+                add  a0, a0, t0                # hours1
+                sw   a0, 36(sp)                # hours1 (slot dedicado)
+                # hora 2 em 0..23
+                lw   t0, 28(sp)
+                bltz t0, .Lu8_hb_f
+                li   t1, 23
+                bgt  t0, t1, .Lu8_hb_f
+                # valida data 2 + epoch
+                lw   a0, 16(sp)
+                lw   a1, 20(sp)
+                lw   a2, 24(sp)
+                call kdv_valid
+                beqz a0, .Lu8_hb_f
+                lw   a0, 16(sp)
+                lw   a1, 20(sp)
+                lw   a2, 24(sp)
+                call kdv_epoch
+                li   t1, 24
+                mul  a0, a0, t1
+                lw   t0, 28(sp)
+                add  a0, a0, t0                # hours2
+                lw   t0, 36(sp)
+                sub  a0, a0, t0                # hours2 - hours1 (trunca a zero)
+                j    .Lu8_hb_d
+            .Lu8_hb_f:
+                li   a0, 0
+            .Lu8_hb_d:
+                ld   ra, 72(sp)
+                addi sp, sp, 80
+                ret
         """;
 }

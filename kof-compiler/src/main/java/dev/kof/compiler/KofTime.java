@@ -48,7 +48,10 @@ public final class KofTime {
                     // STDLIB S7a: add/diff sobre data ISO (STR->STR/Int)
                     "addDays", "diffDays",
                     // S7e (D-STDLIB ratificado 13/09): hoje/formato UTC-only
-                    "todayIso", "formatDateIso", "isToday" -> true;
+                    "todayIso", "formatDateIso", "isToday",
+                    // S7f (D3): diferença de horas entre dois instantes
+                    // (data+hora), floor simétrico
+                    "hoursBetween" -> true;
             default -> false;
         };
     }
@@ -151,6 +154,15 @@ public final class KofTime {
                     && argTypes.get(1) == INT && argTypes.get(2) == INT
                     ? new TimeCall("kof_time_isToday", BOOL,
                             List.of(INT, INT, INT)) : null;
+            // D3: floor simétrico sobre horas completas (consistente com
+            // daysBetween = truncado a zero); sem float (FLT001).
+            case "hoursBetween" -> {
+                if (argTypes.size() == 8 && argTypes.stream().allMatch(a -> a == INT)) {
+                    yield new TimeCall("kof_time_hoursBetween", INT,
+                            List.of(INT, INT, INT, INT, INT, INT, INT, INT));
+                }
+                yield null;
+            }
             default -> null;
         };
     }

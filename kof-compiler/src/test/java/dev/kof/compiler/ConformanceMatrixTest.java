@@ -1065,6 +1065,26 @@ class ConformanceMatrixTest {
                     println(parts.get(2).length)
                 }
                 """, "10\n2026-09-13\n2024-02-29\n\n\n\n\n\nfalse\nfalse\n3\n4\n2\n2", Set.of(), tempDir);
+        // STDLIB S7f (D3 ratificado 13/09): hoursBetween — floor simétrico
+        // (truncado a zero, consistente daysBetween); datas inválidas/hora
+        // fora de 0..23 => 0; sem float (FLT001). 5 alvos (JVM/JS/SCRIPT +
+        // x86 emit genérico 7+ args FIXADO + riscv B33-ext; aarch tradutor).
+        // Golden determinístico: diferencas ±, virada de dia, bissexto,
+        // ano 9999->1 (overflow de janela => 0).
+        matrix("stdtime4", """
+                main() {
+                    println(time.hoursBetween(2026, 1, 1, 10, 2026, 1, 2, 12))
+                    println(time.hoursBetween(2026, 1, 2, 12, 2026, 1, 1, 10))
+                    println(time.hoursBetween(2026, 1, 1, 0, 2026, 1, 1, 23))
+                    println(time.hoursBetween(2026, 1, 1, 23, 2026, 1, 2, 0))
+                    println(time.hoursBetween(2026, 1, 1, 5, 2026, 1, 1, 5))
+                    println(time.hoursBetween(2026, 2, 30, 5, 2026, 3, 1, 5))
+                    println(time.hoursBetween(2026, 1, 1, 24, 2026, 1, 2, 5))
+                    println(time.hoursBetween(2024, 2, 29, 1, 2024, 3, 1, 1))
+                    println(time.hoursBetween(9999, 12, 31, 0, 1, 1, 0, 23))
+                    println(time.hoursBetween(2026, 1, 1, 10, 2027, 1, 1, 10))
+                }
+                """, "26\n-26\n23\n1\n0\n0\n0\n24\n0\n8760", Set.of(), tempDir);
         // §89 (decisão 3a, 13/09): conversão numérica em receiver PRIMITIVO
         // (`n.toDouble()`/`toInt()`/`toLong()`/`toFloat()`) = alias do cast
         // `as`. Antes: JVM ClassFormatError (owner ""), Native undefined

@@ -253,6 +253,7 @@ public final class JvmRuntimeCallDescriptors {
             case "kof_time_todayIso" -> "()Ljava/lang/String;";
             case "kof_time_formatDateIso" -> "(III)Ljava/lang/String;";
             case "kof_time_isToday" -> "(III)Z";
+            case "kof_time_hoursBetween" -> "(IIIIIIII)I";
             case "kof_time_now" -> "()J";
             case "kof_time_interval" -> "(ILjava/lang/Object;)Ljava/lang/String;";
             case "kof_time_cancel" -> "(Ljava/lang/String;)V";

@@ -435,6 +435,83 @@ public final class RuntimeTimeIso {
                 popq %rbx
                 ret
 
+            # kof_time_hoursBetween(y1,m1,d1,h1, y2,m2,d2,h2) -> Int (D3:
+            # floor simétrico = truncado a zero; datas inválidas ou hora fora
+            # de 0..23 => 0). SysV: y1..h1 em edi/esi/edx/ecx; y2..h2 na
+            # stack do caller (entry_rsp+0..12). Reusa .Lkd_valid+.Lkd_epoch.
+            .globl kof_time_hoursBetween
+            .type kof_time_hoursBetween, @function
+            kof_time_hoursBetween:
+                pushq %rbx
+                pushq %r12
+                pushq %r13
+                pushq %r14
+                subq $32, %rsp                   # 8 slots (y1..h1 + y2..h2)
+                # S7f (emit genérico corrigido): args 1-6 em edi/esi/edx/ecx/
+                # r8/r9; args 7/8 (d2/h2) na stack do callee: 0/8(%rsp) na
+                # ENTRY => 48/56(%rsp) após 4 pushes (32B) + sub 16.
+                # y2/m2/d2/h2 vão para slots de pilha LOGO — .Lkd_valid chama
+                # kof_time_daysInMonth que clobbera caller-saved (r8-r11,
+                # rax/rcx/rdx); nada vivo em regs entre calls (licao B14/x86).
+                movl %r8d, 16(%rsp)              # y2 (5º arg)
+                movl %r9d, 20(%rsp)              # m2 (6º arg)
+                movl 72(%rsp), %r13d
+                movl %r13d, 24(%rsp)             # d2 (entry+8: ret addr
+                                                 # ocupa entry+0)
+                movl 80(%rsp), %r13d
+                movl %r13d, 28(%rsp)             # h2 (entry+16)
+                movl %edi, 0(%rsp)               # y1
+                movl %esi, 4(%rsp)               # m1
+                movl %edx, 8(%rsp)               # d1
+                movl %ecx, 12(%rsp)              # h1
+                # valida hora 1 (data 1 valida abaixo junto do epoch)
+                cmpl $0, 12(%rsp)
+                jl .Lka_hb0
+                cmpl $23, 12(%rsp)
+                jg .Lka_hb0
+                movl 0(%rsp), %edi
+                movl 4(%rsp), %esi
+                movl 8(%rsp), %edx
+                call .Lkd_valid
+                testl %eax, %eax
+                jz .Lka_hb0
+                movl 0(%rsp), %edi
+                movl 4(%rsp), %esi
+                movl 8(%rsp), %edx
+                call .Lkd_epoch
+                movl %eax, %ebx                  # ep1 (y2 livre agora)
+                imull $24, %ebx
+                addl 12(%rsp), %ebx              # h1 = hours1
+                cmpl $0, 28(%rsp)
+                jl .Lka_hb0
+                cmpl $23, 28(%rsp)
+                jg .Lka_hb0
+                movl %ebx, 0(%rsp)               # hours1 (reusa slot y1)
+                movl %ebx, %r12d                 # hours1 backup
+                movl 16(%rsp), %edi              # y2
+                movl 20(%rsp), %esi              # m2
+                movl 24(%rsp), %edx              # d2
+                call .Lkd_valid
+                testl %eax, %eax
+                jz .Lka_hb0
+                movl 16(%rsp), %edi
+                movl 20(%rsp), %esi
+                movl 24(%rsp), %edx
+                call .Lkd_epoch
+                imull $24, %eax
+                addl 28(%rsp), %eax              # + h2 = hours2
+                subl %r12d, %eax                 # hours2 - hours1
+                jmp .Lka_hbd
+            .Lka_hb0:
+                xorl %eax, %eax
+            .Lka_hbd:
+                addq $32, %rsp
+                popq %r14
+                popq %r13
+                popq %r12
+                popq %rbx
+                ret
+
             .globl kof_time_diffDays
             .type kof_time_diffDays, @function
             kof_time_diffDays:

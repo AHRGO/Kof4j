@@ -450,15 +450,37 @@ public final class NativeX86Calls {
         String[] intRegs = {"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"};
         int stackArgs = Math.max(0, argCount - 6);
         if (stackArgs > 0) {
-            sb.append("    addq $").append(stackArgs * 8).append(", %rsp\n");
+            // S7f (13/09): funções com 7+ args NÃO são descartadas — o emit
+            // anterior fazia addq $stackArgs*8 (perdia os args silenciosamente
+            // e o callee lia lixo na stack). ABI SysV: args 7..N na stack do
+            // callee, arg7 no menor endereço (0(%rsp) na entry) => na pilha do
+            // emitter, arg7 tem que ficar NO TOPO no call. Salvo os args
+            // 8..N (topo da pilha) em slots do frame, popo os 6 regs, e
+            // re-empilho em ordem reversa (argN primeiro => arg7 no topo).
+            for (int s = stackArgs - 1; s >= 0; s--) {
+                // slots altos do frame local (padrão do ramo CONSTRUCTOR)
+                int off = 256 + s * 8;
+                sb.append("    popq %r10\n");
+                sb.append("    movq %r10, -").append(off).append("(%rbp)\n");
+            }
         }
-        for (int i = 5; i >= 0; i--) {
-            if (i < argCount) {
-                sb.append("    popq ").append(intRegs[i]).append("\n");
+        for (int i = Math.min(argCount, 6) - 1; i >= 0; i--) {
+            sb.append("    popq ").append(intRegs[i]).append("\n");
+        }
+        if (stackArgs > 0) {
+            // re-push: argN primeiro ... arg7 por último (topo = 0(%rsp))
+            for (int s = stackArgs - 1; s >= 0; s--) {
+                int off = 256 + s * 8;
+                sb.append("    pushq -").append(off).append("(%rbp)\n");
             }
         }
         String callee = nb.resolveCalleeName(kc);
         sb.append("    call ").append(callee).append("\n");
+        if (stackArgs > 0) {
+            // limpa os stack args após o call (caller-cleanup, padrão dos
+            // ramos INSTANCE/INTERFACE acima)
+            sb.append("    addq $").append(stackArgs * 8).append(", %rsp\n");
+        }
         if (!Type.isVoid(kc.returnType())) {
             sb.append("    pushq %rax\n");
         }

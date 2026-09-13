@@ -332,6 +332,21 @@ public final class JsRuntimeUiWeb {
                 return String(Math.floor(v / 10) % 10) + String(v % 10);
             }
 
+            // ── kof.time (STDLIB S7f) — hoursBetween (D3) ─────────────────
+            // floor simétrico (truncado a zero, como daysBetween); datas
+            // inválidas/hora fora de 0..23 => 0 (paridade wedge).
+            export function kofTimeHoursBetween(y1, m1, d1, h1, y2, m2, d2, h2) {
+                if (y1 < 1 || y1 > 9999 || m1 < 1 || m1 > 12) return 0;
+                if (y2 < 1 || y2 > 9999 || m2 < 1 || m2 > 12) return 0;
+                if (d1 < 1 || d1 > kofTimeDaysInMonth(y1, m1)) return 0;
+                if (d2 < 1 || d2 > kofTimeDaysInMonth(y2, m2)) return 0;
+                if (h1 < 0 || h1 > 23 || h2 < 0 || h2 > 23) return 0;
+                const hours1 = kofTimeEpochDay(y1, m1, d1) * 24 + h1;
+                const hours2 = kofTimeEpochDay(y2, m2, d2) * 24 + h2;
+                const diff = hours2 - hours1;
+                return (diff < -2147483648 || diff > 2147483647) ? 0 : diff;
+            }
+
             // ── kof.time (STDLIB S7-wedge) — calendário civil ─────────────
             export function kofTimeIsLeapYear(year) {
                 if (year < 1) return 0;

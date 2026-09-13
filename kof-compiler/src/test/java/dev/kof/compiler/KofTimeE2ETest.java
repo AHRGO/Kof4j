@@ -649,6 +649,122 @@ class KofTimeE2ETest {
         }
     }
 
+    // ── STDLIB S7f (D3): hoursBetween — floor simétrico (truncado a
+    // zero, consistente com daysBetween); datas inválidas/hora fora de
+    // 0..23 => 0 (paridade do gating do wedge). Sem float (FLT001).
+    // Totalmente determinístico — vetor cru incl. diferenças negativas,
+    // virada de dia/mês/ano-bissexto e bounds 9999/1.
+    @Test
+    void hoursBetweenJvm(@TempDir Path tempDir) throws IOException {
+        runJvm(tempDir, """
+                main() {
+                    println(time.hoursBetween(2026, 1, 1, 10, 2026, 1, 2, 12))
+                    println(time.hoursBetween(2026, 1, 2, 12, 2026, 1, 1, 10))
+                    println(time.hoursBetween(2026, 1, 1, 0, 2026, 1, 1, 23))
+                    println(time.hoursBetween(2026, 1, 1, 23, 2026, 1, 2, 0))
+                    println(time.hoursBetween(2026, 1, 1, 5, 2026, 1, 1, 5))
+                    println(time.hoursBetween(2026, 2, 30, 5, 2026, 3, 1, 5))
+                    println(time.hoursBetween(2026, 1, 1, 24, 2026, 1, 2, 5))
+                    println(time.hoursBetween(2026, 1, 1, 5, 2026, 1, 1, 25))
+                    println(time.hoursBetween(2024, 2, 29, 1, 2024, 3, 1, 1))
+                    println(time.hoursBetween(9999, 12, 31, 0, 1, 1, 0, 23))
+                    println(time.hoursBetween(2026, 1, 1, 10, 2027, 1, 1, 10))
+                }
+                """, "26\n-26\n23\n1\n0\n0\n0\n0\n24\n0\n8760");
+    }
+
+    @Test
+    void hoursBetweenJs(@TempDir Path tempDir) throws IOException {
+        runJs(tempDir, """
+                main() {
+                    println(time.hoursBetween(2026, 1, 1, 10, 2026, 1, 2, 12))
+                    println(time.hoursBetween(2026, 1, 2, 12, 2026, 1, 1, 10))
+                    println(time.hoursBetween(2026, 1, 1, 0, 2026, 1, 1, 23))
+                    println(time.hoursBetween(2026, 1, 1, 23, 2026, 1, 2, 0))
+                    println(time.hoursBetween(2026, 1, 1, 5, 2026, 1, 1, 5))
+                    println(time.hoursBetween(2026, 2, 30, 5, 2026, 3, 1, 5))
+                    println(time.hoursBetween(2026, 1, 1, 24, 2026, 1, 2, 5))
+                    println(time.hoursBetween(2024, 2, 29, 1, 2024, 3, 1, 1))
+                    println(time.hoursBetween(2026, 1, 1, 10, 2027, 1, 1, 10))
+                }
+                """, "26\n-26\n23\n1\n0\n0\n0\n24\n8760");
+    }
+
+    @Test
+    void hoursBetweenNative(@TempDir Path tempDir) throws IOException {
+        runNative(tempDir, """
+                main() {
+                    println(time.hoursBetween(2026, 1, 1, 10, 2026, 1, 2, 12))
+                    println(time.hoursBetween(2026, 1, 2, 12, 2026, 1, 1, 10))
+                    println(time.hoursBetween(2026, 1, 1, 0, 2026, 1, 1, 23))
+                    println(time.hoursBetween(2026, 1, 1, 23, 2026, 1, 2, 0))
+                    println(time.hoursBetween(2026, 1, 1, 5, 2026, 1, 1, 5))
+                    println(time.hoursBetween(2026, 2, 30, 5, 2026, 3, 1, 5))
+                    println(time.hoursBetween(2026, 1, 1, 24, 2026, 1, 2, 5))
+                    println(time.hoursBetween(2024, 2, 29, 1, 2024, 3, 1, 1))
+                    println(time.hoursBetween(2026, 1, 1, 10, 2027, 1, 1, 10))
+                }
+                """, "26\n-26\n23\n1\n0\n0\n0\n24\n8760");
+    }
+
+    @Test
+    void hoursBetweenCrossArch(@TempDir Path tempDir) throws Exception {
+        String src = """
+            main() {
+                println(time.hoursBetween(2026, 1, 1, 10, 2026, 1, 2, 12))
+                println(time.hoursBetween(2026, 1, 2, 12, 2026, 1, 1, 10))
+                println(time.hoursBetween(2026, 1, 1, 0, 2026, 1, 1, 23))
+                println(time.hoursBetween(2026, 1, 1, 23, 2026, 1, 2, 0))
+                println(time.hoursBetween(2026, 1, 1, 5, 2026, 1, 1, 5))
+                println(time.hoursBetween(2026, 2, 30, 5, 2026, 3, 1, 5))
+                println(time.hoursBetween(2026, 1, 1, 24, 2026, 1, 2, 5))
+                println(time.hoursBetween(2024, 2, 29, 1, 2024, 3, 1, 1))
+                println(time.hoursBetween(2026, 1, 1, 10, 2027, 1, 1, 10))
+            }
+            """;
+        String expected = "26\n-26\n23\n1\n0\n0\n0\n24\n8760";
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            String qemu = t == Target.NATIVE_RISCV64 ? "qemu-riscv64" : "qemu-aarch64";
+            String[] tools = t == Target.NATIVE_RISCV64
+                    ? new String[]{"riscv64-linux-gnu-as", "riscv64-linux-gnu-ld", "qemu-riscv64"}
+                    : new String[]{"aarch64-linux-gnu-as", "aarch64-linux-gnu-ld", "qemu-aarch64"};
+            assumeToolchain(tools);
+            Path file = tempDir.resolve("T7f-" + t + "-" + System.nanoTime() + ".kf");
+            Files.writeString(file, src);
+            Path outDir = tempDir.resolve("t7f-" + t + "-" + System.nanoTime());
+            CompilationResult r = new CompilerDriver().compile(file, outDir, t);
+            assertTrue(r.success(), t + " compile: " + r.diagnostics().getDiagnostics());
+            Process p = new ProcessBuilder(qemu, outDir.resolve("Default/Main").toString())
+                    .redirectErrorStream(true).start();
+            String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8)
+                    .replace("\r\n", "\n").trim();
+            int ec;
+            try {
+                ec = p.waitFor();
+            } catch (InterruptedException e) {
+                throw new IOException("interrupted", e);
+            }
+            assertEquals(0, ec, t + " qemu exit, out: " + out);
+            assertEquals(expected, out, t + " golden S7f");
+        }
+    }
+
+    @Test
+    void hoursBetweenCompilesOnAllTargets(@TempDir Path tempDir) throws IOException {
+        String src = """
+            main() {
+                println(time.hoursBetween(2026, 1, 1, 10, 2026, 1, 2, 12))
+            }
+            """;
+        Path gateSrc = tempDir.resolve("GateT7f.kf");
+        Files.writeString(gateSrc, src);
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            CompilationResult r = new CompilerDriver().compile(gateSrc, tempDir.resolve("gate-t7f-" + t), t);
+            assertTrue(r.success(), t + " deve compilar hoursBetween (S7f): "
+                    + r.diagnostics().getDiagnostics());
+        }
+    }
+
     private void assumeToolchain(String... tools) {
         for (String c : tools) {
             try {

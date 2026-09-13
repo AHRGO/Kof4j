@@ -143,6 +143,46 @@ class KofScriptStdlibParityTest {
     }
 
     @Test
+    void timeHoursBetweenParity() throws Exception {
+        // S7f (D3): floor simétrico; datas inválidas/hora fora 0..23 => 0.
+        parity("""
+            main() {
+                println(time.hoursBetween(2026, 1, 1, 10, 2026, 1, 2, 12))
+                println(time.hoursBetween(2026, 1, 2, 12, 2026, 1, 1, 10))
+                println(time.hoursBetween(2026, 1, 1, 0, 2026, 1, 1, 23))
+                println(time.hoursBetween(2026, 1, 1, 23, 2026, 1, 2, 0))
+                println(time.hoursBetween(2026, 1, 1, 5, 2026, 1, 1, 5))
+                println(time.hoursBetween(2026, 2, 30, 5, 2026, 3, 1, 5))
+                println(time.hoursBetween(2026, 1, 1, 24, 2026, 1, 2, 5))
+                println(time.hoursBetween(2024, 2, 29, 1, 2024, 3, 1, 1))
+            }
+            """, "26\n-26\n23\n1\n0\n0\n0\n24");
+    }
+
+    @Test
+    void timeTodayParity() throws Exception {
+        // S7e (D-STDLIB): todayIso por FORMATO (o dia vira — nunca valor
+        // literal); formatDateIso/isToday determinísticos.
+        parity("""
+            main() {
+                var today = time.todayIso()
+                println(today.length)
+                println(time.formatDateIso(2026, 9, 13))
+                println(time.formatDateIso(2024, 2, 29))
+                println(time.formatDateIso(2023, 2, 29))
+                println(time.formatDateIso(0, 1, 1))
+                println(time.formatDateIso(2026, 13, 1))
+                println(time.isToday(2026, 9, 12))
+                println(time.isToday(2026, 2, 30))
+                var parts = today.split("-")
+                println(parts.size)
+                println(parts.get(0).length)
+                println(parts.get(1).length)
+            }
+            """, "10\n2026-09-13\n2024-02-29\n\n\n\nfalse\nfalse\n3\n4\n2");
+    }
+
+    @Test
     void randomFacadeParity() throws Exception {
         // Não-determinístico: valida a FACHADA (formato/contrato), não o
         // valor sorteado. randomInt(1) == 0 travado; randomString(-1) == "";

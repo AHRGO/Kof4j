@@ -77,16 +77,27 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > Nota (regra 6): `math.parse*OrNull` segue BLOQUEADO — §125 congelado
 > (nullable primitivo não existe; OrNull = `parseOrDefault(s,0)` morto);
 > `roundTo`/`strings.lines/words` aguardam decisão da mantenedora.
-> **PRÓXIMO PASSO:** continuar a fila D-STDLIB (DECISIONS.md ratificada):
-> próxima linha = `time.hoursBetween(y,m,d,H,y,m,d,H) (I×8) -> Int, floor
-> simétrico` — despacho `KofTime` (8×INT→INT), JVM em `JvmTimeRuntime`
-> (epochDay*24+H, floorDiv simétrico), JS civil, x86/riscv (kdv_epoch
-> B14/.Lkd_epoch), aarch tradutor. Prova: golden determinístico (diferenças
-> +01h, cruzando dia, negativo, datas inválidas => 0) em `KofTimeE2ETest`
-+ célula matriz `stdtime4` + sync DocTest. Depois: `parseDateIso` (x86
-> reusa .Lkd_epoch; riscv kdv_epoch; JS civil; JVM epochDay) → célula
-> `stdtime5`. **NUNCA:** tocar `nat/` GC, lanes .15/.17/.22 (decompiler/
-> translator), bugs de outra lane; push main.
+> **✅ FEITO (13/09 ~19:45, lane development, dono = 192.168.100.18):
+> D-STDLIB degrau 2 — `time.hoursBetween(y,m,d,H,y,m,d,H)` (S7f, D3 floor
+> simétrico, 5 alvos).** Dispatch `KofTime` (I×8→INT); JVM `epochDay*24+h`
+> (epochDay Hinnant); JS civil; x86 `RuntimeTimeIso` (reusa .Lkd_valid/
+> .Lkd_epoch; slots dedicados y2..h2 — lição clobber caller-saved);
+> riscv **B33-ext** (a0..a7 = 8 regs, sem stack args); aarch tradutor.
+> **FIX de causa raiz no emit x86** (`NativeX86Calls` genérico FUNCTION):
+> funções com 7+ args eram DESCARTADAS (`addq $stackArgs*8` — o callee lia
+> lixo). Agora: args 7..N salvos em slots do frame, 6 regs popados,
+> re-push em ordem reversa (arg7 no topo = 0(%rsp)+ret addr, ABI SysV).
+> Offsets no callee: entry+8/+16 (ret addr em entry+0). Prova Q1:
+> `KofTimeE2ETest.hoursBetween{Jvm,Js,Native,CrossArch,CompilesOnAllTargets}`
+> (23/23) + `stdtime4` matriz (11/11) + `timeHoursBetweenParity`/
+> `timeTodayParity` Script (10/10). Suíte: **1758/0/0, 160 skip**.
+> **PRÓXIMO PASSO:** fila D-STDLIB continua: `time.parseDateIso(STR) ->
+> Int` (serial daysFromEpoch; inválido ⇒ 0) — x86 reusa .Lkd_epoch do
+> wedge + parse estilo .Lka_parse2; riscv kdv_epoch (B14); JS
+> kofTimeEpochDay; JVM epochDay Hinnant. Célula `stdtime5` + parity.
+> Depois: `tzOffsetSeconds` (JVM/JS/SCRIPT; Native gap TIME003 DIAG) —
+> consultar DECISIONS.md antes. **NUNCA:** tocar `nat/` GC, lanes
+> .15/.17/.22 (decompiler/translator), bugs de outra lane; push main.
 
 > **✅ FEITO (13/09 ~18:00, lane bugs-and-gaps, dono = 192.168.100.15):
 > §177 + §178 CORRIGIDOS, §179 + §180 CATALOGADOS.** Caça Q4 sobre o §173/§174.

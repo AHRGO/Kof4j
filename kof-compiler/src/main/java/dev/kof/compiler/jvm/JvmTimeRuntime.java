@@ -157,6 +157,22 @@ public final class JvmTimeRuntime {
                     return new long[]{m <= 2 ? y + 1 : y, m, d};
                 }
 
+                // ── kof.time (STDLIB S7f) — hoursBetween (D3) ──────────────
+                // floor simétrico: conta horas COMPLETAS entre os instantes
+                // (data+hora), truncado em direção a zero (mesma convenção
+                // daysBetween). Datas inválidas => 0; hora fora de 0..23
+                // também invalida o instante (paridade do gating do wedge).
+                public static int kof_time_hoursBetween(int y1, int m1, int d1, int h1,
+                                                        int y2, int m2, int d2, int h2) {
+                    if (!kof_time_validDate(y1, m1, d1) || !kof_time_validDate(y2, m2, d2)) return 0;
+                    if (h1 < 0 || h1 > 23 || h2 < 0 || h2 > 23) return 0;
+                    long hours1 = kof_time_epochDay(y1, m1, d1) * 24 + h1;
+                    long hours2 = kof_time_epochDay(y2, m2, d2) * 24 + h2;
+                    long diff = hours2 - hours1;
+                    return (diff < Integer.MIN_VALUE || diff > Integer.MAX_VALUE)
+                            ? 0 : (int) diff;
+                }
+
                 public static String kof_time_interval(int ms, Object fn) {
                     if (ms <= 0) throw new IllegalArgumentException("interval must be positive: " + ms);
                     String id = "job-" + KOF_TIME_SEQ.incrementAndGet();
