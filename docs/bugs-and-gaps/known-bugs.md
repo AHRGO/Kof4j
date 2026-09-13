@@ -5957,6 +5957,13 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
     **`9300000000000000000`**; `-9.3e18 as Long` → **`-9300000000000000000`**;
     e **`NaN as Long` LANÇA `RangeError: BigInt out of range`** (crash de
     runtime, não valor errado).
+  - **(d) a stdlib §89 `n.toInt()`/`n.toLong()` é alias do cast** (mesmo
+    lowering `D2I/F2I/D2L/F2L`) e sofre o mesmo desvio: `3.0e9.toInt()` →
+    JVM/Script `2147483647`, Native `-2147483648`, JS `3000000000`;
+    `1.0e19.toLong()` → `9223372036854775807` vs `Long.MIN` vs
+    `10000000000000000000`; `(0.0/0.0).toLong()` → `0` vs `Long.MIN` vs
+    **`RangeError`**. A célula `numconv` (§89) só testa `3.7.toInt()`/
+    `(-2.5).toInt()` **em faixa** = também verde falso (Q5).
 - **Menor repro:**
   ```kof
   main() {
