@@ -33,6 +33,8 @@ final class BytecodeCp {
             case 0x9f -> "!="; case 0xa0 -> "=="; case 0xa1 -> ">="; case 0xa2 -> "<";
             case 0xa3 -> "<="; case 0xa4 -> ">";  case 0x99 -> "!= 0"; case 0x9a -> "== 0";
             case 0x9b -> ">= 0"; case 0x9c -> "< 0"; case 0x9d -> "<= 0"; case 0x9e -> "> 0";
+            // narrowing canônico da linguagem (idiom §Null safety): ifnull/ifnonnull
+            case 0xc6 -> "!= null"; case 0xc7 -> "== null";
             default -> null;
         };
     }

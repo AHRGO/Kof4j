@@ -837,6 +837,46 @@ class DecompileTest {
     }
 
     @Test
+    void recoversNullNarrowAndRunsIt(@TempDir Path dir) throws Exception {
+        // Fase C: ifnull/ifnonnull (0xc6/0xc7) — narrowing CANONICO da
+        // linguagem (idiom Null safety; ROI medido: 308 testes sobre load
+        // puro no corpus). len vira if-expression ternaria (linear path),
+        // nul vira if-sem-else com join (degrau 1). Prova por EXECUCAO dos
+        // 4 caminhos (oracle JVM medido 3 0 5 9).
+        Path src = dir.resolve("classes");
+        Files.createDirectories(src);
+        Path s = src.resolve("Nl.java");
+        Files.writeString(s, """
+                public class Nl {
+                    public static int len(String x) { if (x != null) { return x.length(); } return 0; }
+                    public static int nul(String x) { int r = 5; if (x == null) { r = 9; } return r; }
+                    public static void main(String[] a) { }
+                }
+                """);
+        runJavac(java.util.List.of(s), src);
+        String kof = Decompile.decompile(src.resolve("Nl.class"));
+        assertTrue(kof.contains("if (arg0 != null)"), "ifnonnull vira `!= null`:\n" + kof);
+        assertTrue(kof.contains("if (arg0 == null) {"), "ifnull vira `== null`:\n" + kof);
+        assertFalse(kof.contains("body not recovered"), "ambos recuperados:\n" + kof);
+        Path out = dir.resolve("gen");
+        Files.createDirectories(out);
+        Path kf = out.resolve("Nl.kf");
+        Files.writeString(kf, kof);
+        Path mainKf = out.resolve("Main.kf");
+        Files.writeString(mainKf, "main() {\n    println(Nl.len(\"abc\"))\n    println(Nl.len(null))\n    println(Nl.nul(\"x\"))\n    println(Nl.nul(null))\n}\n");
+        CompilationResult r = new CompilerDriver().compileSources(java.util.List.of(kf, mainKf),
+                dir.resolve("o"), Target.JVM, out);
+        assertTrue(r.success(), "narrowing decompilado deve compilar:\n" + kof + "\n" + r.diagnostics().getDiagnostics());
+        ProcessBuilder pb = new ProcessBuilder("java", "-cp", dir.resolve("o").toString(), "Default.Main");
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String o = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+                .replace("\r\n", "\n").trim();
+        assertEquals(0, p.waitFor(), "run: " + o);
+        assertEquals("3\n0\n5\n9", o, "os 4 caminhos do narrow:\n" + kof);
+    }
+
+    @Test
     void recoversContinueAsEmptyThenJoinAndRunsIt(@TempDir Path dir) throws Exception {
         // Fase C degrau 2a: `for` com `continue` vira while + if de condicao
         // INVERTIDA com then VAZIO (o continue pula o corpo; o incremento
