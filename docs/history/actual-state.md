@@ -4,7 +4,7 @@
 > a lista "O que NÃO está implementado" está em grande parte resolvida na
 > 0.3.x (ver a prova real). Para o estado **CORRENTE**: `docs/status.md`
 > (gate da suíte), `docs/backend-parity.md` (matriz) e
-> `docs/development/known-bugs.md` (fila de bugs). Movido de
+> `docs/bugs-and-gaps/known-bugs.md` (fila de bugs). Movido de
 > `docs/development/` p/ `docs/` em 11/09 (regra de classificação: snapshot
 > sem trabalho pendente não é backlog vivo).
 
