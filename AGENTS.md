@@ -322,7 +322,7 @@ intervalo.
 ### Lição aprendida (04/09) — trabalhe SEMPRE em partes pequenas
 
 > **Nunca tente gravar/produzir um artefato grande de uma vez.** O plano de
-> refactoring `docs/development/refactoring/PLAN-SOLID-500.md` (120 classes, 8 fases) foi
+> refactoring `docs/architecture/PLAN-SOLID-500.md` (FECHADO 13/09; 120 classes, 8 fases) foi
 > perdido uma vez porque o agente tentou escrever o documento inteiro num único
 > `write`. A lição:
 

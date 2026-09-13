@@ -4,7 +4,7 @@
 > 12/09 e daí p/ `docs/audits/` no refactor de clareza de 13/09**: a foto é de 02/09 (0.2.6-beta, 810 testes) e os números de linhas já
 > mudaram — as megaclasses listadas foram splitadas pelo `PLAN-SOLID-500`.
 > Mantido como registro da decisão "Kof é pequeno"; o gate vivo é
-> `scripts/check_500.sh` + `docs/development/refactoring/PLAN-SOLID-500.md`.
+> `scripts/check_500.sh` + `docs/architecture/PLAN-SOLID-500.md` (FECHADO 13/09).
 > A regra "pergunte antes de adicionar feature" (§Conclusão) continua vigente.
 
 **Última atualização:** 2 de setembro de 2026
