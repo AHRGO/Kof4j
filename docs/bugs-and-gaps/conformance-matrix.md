@@ -139,12 +139,13 @@
 > boolean/int/hex` — o `double` chegou a riscv/aarch na fatia B27
 > (fcvt.d.l/fdiv + tradutor ucvtf/fld), encerrando o FLT001 para a família
 > random. As duas faces convivem no dispatch (retrocompat aditiva).
-> `randomBytes`/`randomChoice` ficam S10c (retorno Array/objeto
-> sem precedente na camada de dispatch — DD-STDLIB-01).
-> **DD-STDLIB-01 DECIDIDO 13/09 (opção 6a):** `randomBytesHex` (String hex) +
-> `randomChoice` = idiom (`list.get(randomInt(list.size))`); `randomBytes`
-> binário fica reservado. Implementação pendente na lane STDLIB — ao entrar,
-> ganha caso próprio nesta matriz.
+> `randomBytes`/`randomChoice` eram S10c (retorno Array/objeto
+> sem precedente na camada de dispatch — DD-STDLIB-01): **DECIDIDO 13/09
+> (opção 6a) + IMPLEMENTADO nesta unidade** — `random.randomBytesHex(n)->String`
+> (alias aditivo de `random.hex`, mesma runtime fn `kof_random_hex`, 5 alvos,
+> `KofRandomTest.randomBytesHex{Jvm,Js,Native}`); `randomBytes` binário
+> segue RESERVADO (não entra); choice = idiom
+> `l[random.randomInt(l.size)]` (learn/39 + training/idioms).
 
 > `uuid.v4()` não entra na matriz equality (entropia): paridade provada por
 > ASSERTS DE SHAPE nos 3 targets testáveis (JVM/Native-x86/JS: length=36,

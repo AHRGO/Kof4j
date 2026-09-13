@@ -43,15 +43,31 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
 > **⚡ FEITO (13/09, lane development/docs — auditoria de LOCALIZAÇÃO 3-estados, dono =
-> esta sessão):** `docs/development/README.md` §1/§4.1/§4.2 ainda listavam como
+> outra sessão, remoto `28073c17`):** `docs/development/README.md` §1/§4.1/§4.2 ainda listavam como
 > vivas em `development/` 6 docs que o refactor 13/09 moveu p/ `decision-pending/`
 > (PLATFORM-PLAN, APPLICATION_MODEL, security-plan, plan-platform-completion,
 > plan-spring-independence, planning-stdlib-time-design) e 4 registros que
 > moram em `docs/bugs-and-gaps/` (conformance-matrix, ecosystem-coverage,
 > KOFUI-AUDIT, known-bugs) — agora anotados com `~~riscado~~ → <destino>`.
-> §4.2 OTP sincronizado (S2-JVM ✅). Só doc, zero código. **PRÓXIMO TICK:**
-> varredura docs↔localização↔decisão; `decision-pending/` 6 docs todos ainda
-> aguardando decisão; nenhum doc de `development/` concluído p/ mover.
+> §4.2 OTP sincronizado (S2-JVM ✅). Só doc, zero código.
+>
+> **⚡ FEITO (13/09, lane STDLIB — DD-STDLIB-01 decisão 6a, dono = esta sessão,
+> commit desta unidade):**
+> `random.randomBytesHex(n)->String` como alias aditivo de `random.hex`
+> (mesma runtime fn `kof_random_hex`, zero plumbing — os 5 alvos já a têm:
+> JVM `JvmStringRandomRuntime`, JS `kofRandomHex`, x86 `RuntimeRandom`,
+> riscv B27 + aarch tradutor). Toque: `KofRandom.staticMethod` + javadoc
+> (1 case); testes `randomBytesHex{Jvm,Js,Native}` em `KofRandomTest`
+> (contrato 2n-hex + borda null; Native sem null — `kof_sec_random_hex`
+> pré-existente devolve ""); docs: matriz S10c, DD→IMPLEMENTADO, plano
+> S10c, README §3, `learn/39-stdlib.md` (choice-idiom já documentado).
+> `KofRandomTest` 15/0 (3 skip = toolchain cross). Gate 4-módulos: 22 falhas
+> PRÉ-EXISTENTES sem minha mudança (stash-prova: Router/Ui/Window/
+> ComponentCore/JsRuntimeSliceRegistry — lanes JS/UI). Ratchet: violações
+> em `ExpressionParser`/`SemExpressionTyper` (não meus — outra lane).
+> **PRÓXIMO PASSO:** push desta unidade; depois fila ratificada
+> (S2-OTP → DD-01 → §106 → §89 → §117 → §131 → pow → Long=BigInt), checando
+> dono antes de cada. **NUNCA:** `nat/` lane GC viva; push main.
 
 > **⚡ FEITO (13/09, lane development/docs — varredura de claims stale pós-ratificações
 > 13/09, dono = esta sessão):** auditoria doc-vs-decisão em `docs/development/` +

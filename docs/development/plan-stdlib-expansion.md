@@ -113,9 +113,11 @@ na   (null-safety + throw são o mecanismo).
     kof_platform+crypto fallback, JVM SecureRandom). `randomChoice` NÃO entra:
     idiom `l[randomInt(l.size)]` (a regra — complexidade a quem usa).
     `randomBytes`/`randomChoice` binário = DD-STDLIB-01
-    (`planning-stdlib-array-returns.md`) — **DECIDIDO 13/09 (opção 6a):**
-    `randomBytesHex` (String hex) + `randomChoice` = idiom; `randomBytes`
-    binário reservado. Implementação pendente na lane STDLIB.
+    (`planning-stdlib-array-returns.md`, **DECIDIDO 13/09 (opção 6a) +
+    IMPLEMENTADO nesta unidade**: `random.randomBytesHex(n)->String` como
+    alias aditivo de `random.hex`, mesma runtime fn `kof_random_hex`, 5 alvos;
+    `randomBytes` binário RESERVADO; choice = idiom) — retorno Array
+    na camada de dispatch é decisão de design, não edição.
   - **S10 face main (845284e5 + fix §92, merge beta→main 10/09):**
     `random.double/boolean/int/hex` — as DUAS faces convivem no dispatch
     (`KofRandom.staticMethod` aceita `randomInt` E `int`, etc.; mesma runtime

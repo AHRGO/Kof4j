@@ -2,8 +2,12 @@
 
 > **✅ DECIDIDO 13/09 (mantenedora, opção 6a):** Opção B — `randomBytesHex(n)->String` (zero plumbing); `randomChoice` fechado como idiom (`l[random.randomInt(l.size)]` documentado em `training/idioms`); nome `randomBytes` binário fica RESERVADO (não entra).
 >
-> **Status:** `RATIFICADO` (13/09, opção 6a) — implementação pendente na lane STDLIB · **Gap:** S10c
-> (`random.randomBytes` / `random.randomChoice`) · **Lane:** STDLIB (executora do 6a) ·
+> **Status:** `IMPLEMENTADO` 13/09 (opção 6a) — `random.randomBytesHex(n)->String`
+> como alias aditivo de `random.hex` (mesma runtime fn `kof_random_hex`,
+> mesmo contrato, 5 alvos; `KofRandomTest.randomBytesHex{Jvm,Js,Native}`);
+> nome `randomBytes` binário RESERVADO (não entra); choice = idiom
+> `l[random.randomInt(l.size)]` (já documentado em learn/39-stdlib.md +
+> training/idioms/stdlib.md) · **Gap S10c FECHADO** · **Lane:** STDLIB ·
 > **Criado:** 09/09/2026 · **Bump:** nenhum (aditivo — só abre caminho)
 
 ## O problema

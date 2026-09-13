@@ -20,10 +20,16 @@ import java.util.List;
  *  - random.int(bound) -> Int em [0,bound); bound<=0 => 0 (face leniente;
  *    security.randomInt lança — paridade honesta, não silenciosa).
  *  - random.hex(n)     -> String de 2n dígito hex minúsculo (n>=1; n<=0=>null).
+ *  - randomBytesHex(n) -> ALIAS de random.hex(n) (DD-STDLIB-01, decisão 6a
+ *    13/09): mesma runtime fn `kof_random_hex`, mesmo contrato; o nome
+ *    `randomBytes` binário fica RESERVADO (não entra — exigiria plumbing
+ *    ArrayType na camada de dispatch).
  *  - randomString(n, alphabet) -> n chars uniformes do alfabeto (S10b).
  *
  * {@code choice} fica fora de S10 (devolver elemento de List = objeto
  * estruturado em asm — mesma decisão S8 do net; multi-sessão própria).
+ * Idiom: `l[random.randomInt(l.size)]` (documentado em learn/39-stdlib.md
+ * e training/idioms/stdlib.md — decisão 6a fecha S10c sem runtime).
  */
 public final class KofRandom {
 
@@ -53,6 +59,10 @@ public final class KofRandom {
             case "int" -> argc == 1
                     ? new RandomCall("kof_random_int", INT, List.of(INT)) : null;
             case "hex" -> argc == 1
+                    ? new RandomCall("kof_random_hex", STR, List.of(INT)) : null;
+            // DD-STDLIB-01 (decisão 6a 13/09): alias aditivo — mesma runtime
+            // fn, mesmo contrato; `randomBytes` binário segue RESERVADO.
+            case "randomBytesHex" -> argc == 1 && argTypes.get(0) == INT
                     ? new RandomCall("kof_random_hex", STR, List.of(INT)) : null;
             // face beta (S10a/S10b): randomInt/randomBoolean/randomString
             case "randomInt" -> argc == 1 && argTypes.get(0) == INT

@@ -219,6 +219,7 @@ Espelho do `capitalize`: só o 1º byte; `A-Z` -> `a-z`; null/`""`/fora-de-A-Z
 var n = random.randomInt(100)          // 0..99 (bound<=0 -> 0, face leniente)
 var coin = random.randomBoolean()      // 0 ou 1
 var token = random.randomString(8, "0123456789abcdef")  // 8 chars do alfabeto
+var salt = random.randomBytesHex(16)   // 32 hex minúsculo (alias de random.hex — DD-STDLIB-01)
 // escolha de lista = idiom, não função:
 var l = listOf("a", "b", "c")
 var pick = l[random.randomInt(l.size)]
