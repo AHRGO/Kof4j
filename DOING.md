@@ -42,6 +42,32 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **⚡ PRÓXIMO PASSO (12/09 ~22:50, sessão melissa/dev — GATE VERMELHO registrado com
+> causa raiz completa; este é o despacho):** HEAD `0538f3dc`. Estado medido
+> (`gateFixed.log`, HEAD e1962735): **1602 = 1430+31+5+136, 2 falhas, 5 skip** —
+> as 2 = `KofRandomTest.randomStringJs`/`randomShapeJs` = **§149** (análise
+> completa em known-bugs §149: poda do J/L(end) pós-throw pelo Optimizer
+> deixa o parseIfBody sem a ÚNICA fronteira else-vs-epílogo; fix em
+> Optimizer/parser = compartilhado 3-backends → stop-cond-1/regra 6 +
+> domínio autor §147; lanes bugfix-101 declararam #101 FEITO 21:45 mas o
+> §149 que ELAS abriram segue vermelho — unidade não terminada).
+> FEITOS desta sessão no remoto: build destravado (B40 `)` órfão —
+> antecipado por eles em 4459ff57), matriz doc +3 células (DocTest verde),
+> fold JLS-15.28 <clinit> + anti-pattern corpus, retificação "host sem
+> qemu" (cross roda: 42/42 skipped=0), contagens 1602/2/5 nas 4 matrizes.
+> **PRÓXIMO TICK (ordem):** (1) **SE a mantenedora ou dono §147 escolher a
+> porta (i) Optimizer preserva L(end)-como-fronteira OU (ii) pilha de
+> end-labels (§147 "Fix previsto")** → executar + prova = os 2 KofRandom
+> JS verdes + célula `assertepilogue` na matriz + suíte completa; SEM a
+> decisão, NÃO editar Optimizer/parser (regra 6). (2) fila §1: #97 ✅
+> consolidada (docs/stdlib/stdlib-loading.md), G-1..G-5 lane GC, splits
+> §140 lane idiomatic, OTP ratificação. (3) sem (1) decidido e sem item
+> novo sem dono → **RECUSAR** com esta linha como prova (estabilidade não
+> vale: gate vermelho é trabalho, mas o trabalho é DELES/da mesa).
+> **NUNCA:** tocar Optimizer/js/* sem decisão; §145-148/§149 sem dono
+> declarado; tocar lane alheia viva.
+
+
 > **⚡ FEITO (13/09 ~03:10, lane issues-novas — #102.2 commitado + WIP-103 resgatado, dono = esta sessão):** fix `9e823af9` pushado (rebased sobre `e84a04cc` §149-análise alheio, sem conflito). WIP-103 alheio intacto em `/tmp/RESGATE-ExpressionJsonCallLowerer.java` + `/tmp/RESGATE-JvmRuntimeJson.java` (dono resgata via `cp`; meu commit só levou meus 3 arquivos + DOING). **PRÓXIMO PASSO (ordem):** (1) #110 (findChrome macOS — `KofJsBrowserE2ETest:30`, sem dono, código-puro teste); (2) #103-partes-JVM (I2L putfield + Map.put Long/Double — checar se WIP-103 cobre antes); (3) #102.3 (Native web stub/WEB001) + header/query nullable; (4) #104 bloqueada regra 6; #97/S-6 = ViniAguiar1; §149 = bugfix-101. **NUNCA:** commitar arquivo alheio; descartar stash sem resgate; cruzar sessões; `nat/` lane GC viva; push main.
 
 > **⚡ FEITO (13/09 ~02:30, lane issues-novas — #108 corrigida e fechada, dono = esta sessão):** fix `90463a67` pushado + issue fechada com `gh issue close` (prova citada no fechamento). Ao fechar, o tree tinha um `M ExpressionJsonCallLowerer.java` NÃO meu — diff mostrava WIP de outra lane (§103.1 Map decode: `object_map`/`JSN004`, autor do stash = lane bugfix/§103, NÃO toco) → dei `git stash push` (`stash@{0} WIP-103-json-map`, intacto p/ o dono resgatar) e o close da #108 saiu com tree limpo. **PRÓXIMO PASSO (ordem):** (1) #110 (findChrome macOS) ou #103-parte-JVM (I2L/Map.put — verificar se o WIP do stash cobre; se cobrir, é lane alheia) — checar `stash list` + `git log` antes de abrir; (2) #102 itens 2-3 + header/query nullable; (3) #104 bloqueada regra 6; #97/S-6 = ViniAguiar1; §149 = bugfix-101. **NUNCA:** aplicar/descartar stash alheio; cruzar sessões; `nat/` lane GC viva; push main.
