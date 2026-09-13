@@ -54,6 +54,22 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **⚡ RECUSA de re-disparo (13/09 ~06:50, lane development/docs, dono =
+> 192.168.100.17 — pow fechado em `d736e36e`+docs `c75dcbbd`):** varredura
+> §1 do README executada no HEAD (não na memória): (1) stdlib-expansion —
+> nada sem decisão pendente (pow/S10c ✅; roundTo/parse* = regra 6); (2)
+> OTP = lane CONC + `nat/` (GC viva); (3) editor IntelliJ = subprojeto §21
+> com frente na issue #1 (dono declarado .22, recusa registrada 572fa7da);
+> (4) SOLID-500 F3 = bloqueada `nat/` (GC viva); (5) native-multiarch GC =
+> lane GC; (6) `decision-pending/` = intocável sem ordem. **NADA sem dono na
+> lane development.** Estabilidade global ainda FALSA (bugs 14 abertos na
+> lane bugs, nat/ GC, decisões na mesa) — mas o resto não é meu. PRÓXIMO
+> TICK: reler esta linha + fila §1; só age se surgir `.md` solto novo,
+> decisão ratificada (move decision-pending→development) ou regressão na
+> suíte. Build/compile verificado verde neste turno.
+> **NÃO:** `nat/`; fila de bugs (§106/§89/§117/§161); roundTo/parse* sem
+> decisão; push main.
+
 > **⚡ FEITO (13/09 ~06:20, lane development — pow fechado + sync docs, dono
 > = 192.168.100.17):** corrida de colisão no pow: eu tinha o delta (testes
 > E2E + matriz + build-fix do `usesPow` quebrado pelo `7f174a6f`) quando o
