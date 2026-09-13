@@ -410,8 +410,4 @@ Native; pequeno e isolado. Não bloqueia OTP (que usa flag própria).
   não é mecânica de port). A alternativa do núcleo atual (1 thread `vigiar`
   por filho) segue sendo a implementada e coberta pelos 4 gates DD-OTP-11
   (`KofSupervisorE2ETest` 6/6).
-- **Ratificação:** as DDs fechadas em proposta (01/02/03/08/09/10/11/12/13)
-  continuam **aguardando ratificação da mantenedora** (regra 6) — nenhuma
-  foi ratificada desde a emenda de 11/09; a 1ª fatia ficou entregue e
-  testada, a fatia S2 não abre sem ratificação + decisão do wrapper de
-  identidade.
+- **Ratificação:** ~~aguardando~~ **✅ RATIFICADAS 13/09** (ver topo do doc). **S2-JVM IMPLEMENTADO 13/09** (opção 1a): `Supervisor.startAll()` + `lacoUnico()` no `supervisor-host.kf` — 1 thread supervisora, `selectAny(handles)` sobre os filhos vivos; **wrapper de identidade** `kofSupRun` devolve o id (término normal) ou lança `"id: motivo"` (falha → parse do par `(id, motivo)` no laço). Gates novos: `KofSupervisorE2ETest.supervisorS2TresFilhosUmLacoSelectAny` + `supervisorS2NoInterpretador` (8/8 verdes). riscv/aarch = PARTIAL (gate OTP001 já bloqueia o pacote — R6 honesto). S2-Native x86 pendente do §129-TLS (ABERTO por decisão 13/09).
