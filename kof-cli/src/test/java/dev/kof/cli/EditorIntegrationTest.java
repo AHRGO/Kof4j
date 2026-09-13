@@ -245,6 +245,29 @@ class EditorIntegrationTest {
         assertTrue(pkg.contains("kof.startLsp"), "comando Start LSP (§19)");
     }
 
+    @Test
+    void intellijInstallsHonestContentDelegatingToCli(@TempDir Path home) throws IOException {
+        // Degrau 10 (conteúdo honesto, sem plugin — issue #1): filetype XML
+        // (*.kf/*.kof) + External Tools delegando à CLI + README LSP4IJ.
+        var ctx = fake(Set.of("idea"), Map.of("idea", "2024.1.2"), Set.of());
+        ByteArrayOutputStream bo = new ByteArrayOutputStream();
+        PrintStream out = new PrintStream(bo, true, StandardCharsets.UTF_8);
+        assertEquals(0, CmdEditor.run(new String[]{"editor", "install", "intellij"}, ctx, home,
+                new BufferedReader(new StringReader("")), out, out));
+        assertTrue(EditorInstaller.isInstalled(home, "intellij"), "marker deve existir: " + bo);
+        Path ft = home.resolve(".config/JetBrains/kof/filetypes/Kof.xml");
+        Path tools = home.resolve(".config/JetBrains/kof/tools/Kof.xml");
+        Path readme = home.resolve(".config/JetBrains/kof/README.txt");
+        assertTrue(Files.isRegularFile(ft), "filetype: " + bo);
+        assertTrue(Files.isRegularFile(tools), "external tools: " + bo);
+        assertTrue(Files.isRegularFile(readme), "readme LSP4IJ: " + bo);
+        assertTrue(Files.readString(ft).contains("kf;kof"), "reconhece *.kf/*.kof");
+        String t = Files.readString(tools);
+        assertTrue(t.contains("kof build") && t.contains("kof run")
+                && t.contains("kof test") && t.contains("kof fmt"), "delega à CLI: " + t);
+        assertTrue(Files.readString(readme).contains("LSP4IJ"), "aponta p/ LSP4IJ");
+    }
+
     // ---- degrau 11: hook pós-instalador (§13) -----------------------------
 
     @Test

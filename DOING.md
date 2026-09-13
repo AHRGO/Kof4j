@@ -54,6 +54,9 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **⚡ EM CURSO (13/09, lane development/docs — IntelliJ degrau-10 honesto, dono = 192.168.100.22):** diretriz da mantenedora registrada ("o dono do pow corrige o `usesPow`; segue com outra tarefa"). HEAD quebrado pelo `7f174a6f` (pow): `NativeBackend.java:593` referencia `usesPow` sem campo + `NativeAssembler.assemble` com 6º arg — `KofMathTest` Native + `KofGcE2ETest` 3/3 ERROR com 'usesPow cannot be resolved' (NÃO toco — lane pow). Meu WIP `roundTo` (6 arquivos) foi descartado via `stash drop` (lane pow/STDLIB alheia — sem roundTo sem dono). Em vez disso: IntelliJ degrau-10 honesto (sem plugin — issue #1 segue): `KofEditorContent.intellij()` (filetype XML `*.kf/*.kof` + External Tools `build/run/test/fmt/check/lsp` delegando à CLI + README LSP4IJ) + `IntelliJProvider` liga o conteúdo + teste novo `intellijInstallsHonestContentDelegatingToCli`; `EditorIntegrationTest` 17/17 verde; docs `editors/intellij.md` + `plan-editor-integration.md` status sync. Working-tree `nat/` GC (#113 root_start..root_end) preservado e commitado junto (regra 8 — trabalho de outra lane, NÃO meu; `check_500` acusa NativeBackend 664→693 CRÍTICO-crescente por esse delta alheio, dono GC resolve). **PRÓXIMO PASSO:** push; depois re-auditar `.md` soltos (degrau 13 gate final / roadmap sync) ou RECUSAR se nada sem dono (estabilidade).
+> **NUNCA:** pow/`usesPow`/roundTo (dono pow); `nat/` lane GC viva; fila §106/§89/§117 (outro agente); push main.
+
 > **⚡ EM CURSO (13/09, lane development/docs — .md soltos, dono =
 > 192.168.100.22):** regra nova AGENTS (`.md` soltos primeiro): (1)
 > native-multiarch: nota S1b.2 `math.pow` (x86 libm, cross MATH001); (2)

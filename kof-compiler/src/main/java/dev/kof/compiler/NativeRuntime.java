@@ -79,14 +79,15 @@ public final class NativeRuntime {
 
     static public String generateRuntimeAssembly() {
         StringBuilder sb = new StringBuilder();
-        // marcador de início da área de raízes estáticas: o GC mark conservador
-        // precisa varrer .data (cache/config/mq além de .bss). As emissões de
-        // .data acontecem abaixo; o primeiro rótulo fica aqui (antes de tudo).
+        // #113: o intervalo de raízes do GC conservador (kof_heap_root_start)
+        // MOVOU-SE para o caminho de programa (NativeBackend.emit, abertura do
+        // .data) — estáticos/strings/tabelas do usuário também são raízes e
+        // antes ficavam ABAIXO do início do intervalo (não varridos). Aqui o
+        // runtime apenas reabre .data (o sentinel .quad 0 é a primeira palavra
+        // varrida da parte-runtime) e volta para .text.
         // IMPORTANTE: voltar pra .text — senão emitPrint grava kof_print em .data
         // e o executável inteiro quebra (visto: SIGSEGV em println "a").
         sb.append("            .section .data\n");
-        sb.append("            .globl kof_heap_root_start\n");
-        sb.append("            kof_heap_root_start:\n");
         sb.append("            .quad 0\n");
         sb.append("            .section .text\n");
         RuntimePrint.emitPrint(sb);

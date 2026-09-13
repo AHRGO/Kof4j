@@ -45,12 +45,15 @@ public final class RuntimeGc {
                 addq $8, %r12
                 jmp .Lgc_mark_stack
             .Lgc_mark_stack_done:
-                # raizes estaticas: varre a area de dados do runtime
-                # (.data+.bss) -- cache/mq/config/etc. vivem em .data, NAO bss,
-                # e "kof_heap_root_start" e emitido como primeiro rotulo do
-                # generateRuntimeAssembly, antes de qualquer .data do runtime.
+                # raizes estaticas: varre root_start..root_end -- NAO _end.
+                # kof_heap_root_start e emitido na abertura do .data do PROGRAMA
+                # (NativeBackend.emit), root_end no .bss final: o intervalo cobre
+                # .data merged (estaticos/strings/tabelas do programa + cache/
+                # config/mq do runtime) e .bss. Com --gc-sections o _end do
+                # linker deixa de ser previsivel; rotulos proprios ficam junto
+                # dos dados que protegem (#113 / S-5 x86).
                 leaq kof_heap_root_start(%rip), %r12
-                leaq _end(%rip), %r13
+                leaq kof_heap_root_end(%rip), %r13
             .Lgc_mark_bss:
                 cmpq %r13, %r12
                 jge .Lgc_mark_bss_done

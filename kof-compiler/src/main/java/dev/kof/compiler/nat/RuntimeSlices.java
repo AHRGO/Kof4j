@@ -88,7 +88,7 @@ public final class RuntimeSlices {
      *  são candidatos a poda, e um needs que aponta p/ eles não é órfão.
      *  Fonte: grep por rótulos definidos fora do conjunto Runtime*. */
     public static Set<String> programSideSymbols() {
-        return Set.of("kof_super_table");
+        return Set.of("kof_super_table", "kof_heap_root_start", "kof_heap_root_end");
     }
 
     /** Rótulos locais `.L*` definidos pelo CAMINHO DE PROGRAMA (Main.s) e
@@ -124,8 +124,6 @@ public final class RuntimeSlices {
      *  (raiz do GC + .text). As fatias seguem na ordem de {@link #slices()}. */
     public static final String PREAMBLE =
             "            .section .data\n"
-          + "            .globl kof_heap_root_start\n"
-          + "            kof_heap_root_start:\n"
           + "            .quad 0\n"
           + "            .section .text\n";
 

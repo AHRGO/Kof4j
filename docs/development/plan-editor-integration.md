@@ -1,6 +1,9 @@
 # PLAN — Editor Integration (EDI001)
 
-> **Status:** `EM CURSO` (degraus 1-3, 4-10, 11, 12 feitos; resta IntelliJ plugin) · **Gap:** `EDI001` · **Criado:** 07/09/2026
+> **Status:** `EM CURSO` (degraus 1-12 feitos; IntelliJ: conteúdo honesto
+> instalado 13/09 — filetype XML + External Tools + README LSP4IJ via
+> `KofEditorContent.intellij`, `EditorIntegrationTest` 17/17; plugin oficial
+> Gradle/Platform segue na issue #1 + degrau 13 gate final) · **Gap:** `EDI001` · **Criado:** 07/09/2026
 > **Prova degrau 12 (medido 13/09):** `docs/editors/` 8 docs (overview+7
 > editores) + `training/tooling/cli.md:25` (tabela `kof editor …`) +
 > `learn/38-editors.md` (detect/setup/install). Resta: IntelliJ plugin

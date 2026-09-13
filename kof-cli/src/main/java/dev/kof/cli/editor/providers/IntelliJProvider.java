@@ -21,7 +21,7 @@ public final class IntelliJProvider extends AbstractEditorIntegration {
 
     @Override
     public java.util.List<EditorFile> integrationFiles(DetectContext ctx) {
-        return java.util.List.of();
+        return KofEditorContent.intellij(ctx);
     }
 
     @Override
