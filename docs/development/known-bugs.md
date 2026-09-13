@@ -4606,3 +4606,49 @@ statement-switch na mesma taxa). Reprodução no próprio teste (kof-cli).
 - **Causa raiz (a lane dona confirma):** o commit `718ae5cf` ("feat: add 'isEmpty' method support for strings and fix related issues") mexeu em `JsCallEmitter`/`JsControlFlowParser`/`JsIfThrowElse` + `CollectionMethodTyper`/`KofInterpreterCollections` — a face JS quebrou a declaração de variável de loop/compreensão no codegen JS (sintoma `i`/`k` indefinidos) e a matriz de conformidade (`docs/CONFORMANCE_MATRIX.md` ↔ `ConformanceMatrixDocTest`) não foi atualizada no MESMO commit.
 - **Prova de que NÃO é regressão do split-7 (§140):** mesmo conjunto de testes no HEAD limpo (stash do split aplicado) falha IGUAL (3/3) — `ExpressionMethodCallLowerer` não toca JS nem random.
 - **Não consertei por cima** (regra 3 das condições de parada + DOING: §145-147 são da lane bugfix-101, EM CURSO). Dono fecha aqui com a célula de matriz + codegen JS.
+
+#### Atualização da lane development (12/09 ~22:40) — metade MATRIZ ✅ FECHADA; metade JS com causa raiz CORRIGIDA e locus do fix provado
+
+- **(a) Metade matriz RESOLVIDA por esta sessão (`0c107eb9`):** não é
+  "a célula de isEmpty" nem o caminho `docs/CONFORMANCE_MATRIX.md` (que não
+  existe — o real é `docs/development/conformance-matrix.md`); são **3**
+  células (`doublemod`, `strisempty`, `ifthrowelse`) adicionadas ao
+  `ConformanceMatrixTest` por `718ae5cf`/`440730c8` sem linha na doc. Linhas
+  espelhando-as (PARTIAL = `Set.of` do teste) postas na doc →
+  `ConformanceMatrixDocTest` **verde (1/1)** + `ConformanceMatrixTest`
+  `conformanceCoreArithmetic` verde no gate `gateFixed.log`. NÃO requer
+  mudança na lane deles.
+- **(b) Metade JS — causa raiz é outra (prova deste HEAD, `CompilerDriver`
+  Target.JS dump):** NÃO é "declaração de variável de loop quebrada no
+  codegen". O `assert(c)` abaixa para `if((c===0)) throw` **sem else-fonte**,
+  e o lowering de if-com-then-throw **omite o `Jump(end)`/`Label(end)`**
+  (throw é fall-through unreachable). O `JsControlFlowParser.parseIfBody`
+  decide "tem else?" pela PRESENÇA de `Label(end)` após o `Label(false)` —
+  sem ele, cai no ramo §147 (`JsIfThrowElse.parseElse`), que consome
+  statements até o próximo `KofJump`/`KofLabel`-não-loop. Resultado: os
+  statements SEGUINTES ao if (corpo do método pós-if) são engolidos como
+  "else" — `var i` fica preso no bloco, `while(i<8)` posterior lê `i` fora
+  de escopo → `ReferenceError`. O caso do reporter (if-throw **com** else,
+  célula `ifthrowelse`) tem IR linear **byte-idêntico** → `println("after")`
+  também fica dentro do else no JS; só passa na matriz por coincidência de
+  output. Logo o bug não é JS-específico do assert: é o **shape do then-throw
+  sem Label(end)** que contamina qualquer programa cujo if-throw não é o
+  último statement do método.
+- **(c) Fix NÃO pode morar em `JsIfThrowElse`** (dado o IR ambíguo — a
+  informação some no lowering). Duas portas corretas, ambas no emissor de
+  IR/JS compartilhado: **(i)** o lowering do `if` com then-termina-em-throw
+  emitir normalmente `Jump(end)`+`Label(end)` (código morto após throw é
+  só não-chegável, não ausente); OU **(ii)** a "pilhinha de labels `end`
+  ancestrais" que a própria nota **"Fix previsto" do §147** pediu e o autor
+  do `718ae5cf` NÃO implementou (fez o heurístico do `parseElse`, que é o
+  que regressa). Qualquer das duas = mudança de IR/parsing compartilhado →
+  **regra 6** (é decisão de design, não correção mecânica) + domínio do
+  autor do §147. `KofRandomTest.{randomStringJs,randomShapeJs}` verdes +
+  golden assert-then-epilogue nos 4 targets + célula nova `assertepilogue`
+  na matriz provam o fechamento.
+- **(d) Estado do gate 4-módulos neste HEAD (`e1962735`, `gateFixed.log`):**
+  **1602 = 1430+31+5+136, 2 falhas, 5 skip** — as 2 falhas são EXATAMENTE
+  §149-JS. Lane bugfix-101 declarou #101 FEITO (21:45) mas o §149 que ELES
+  mesmos abriram continua vermelho: unidade não terminada. Registrado na
+  mesa + no dispatcher.
+
