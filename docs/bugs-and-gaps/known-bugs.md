@@ -5712,7 +5712,14 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
 - **Status:** FECHADO 13/09 (fix + prova no MESMO commit).
 - **Status:** ABERTO — corrigir em unidade própria (bug de paridade do parse base, não do wrapper S13b); golden `stdmathparseord` no KofMathTest usa esta linha como prova do wrapper APÓS o fix (até lá, x86 diverge na linha "" do golden — teste fica skipado? NÃO: a linha é removida do golden ATÉ o fix, e este §175 é a fila).
 
-### 174. WEB001-T1: `KofWebJsE2ETest.jsWebServesRoutes` — server JS nunca abre a porta (TypeError `InetSocketAddress.create` engolido pelo teste) — ❌ ABERTO (lane JS/web)
+### 176. WEB001-T1: `KofWebJsE2ETest.jsWebServesRoutes` — server JS nunca abre a porta (TypeError `InetSocketAddress.create` engolido pelo teste) — ❌ ABERTO (lane JS/web)
+
+> **Renumerado 13/09 (dono = 192.168.100.17):** a seção nasceu "§174" e
+> COLIDIU com a §174 da lane bugs-and-gaps (`return`/`throw` em `if` em `try`
+> → COMP002, ✅ CORRIGIDO, anterior no arquivo — vencedora do número).
+> O número livre era 176 (175 = native `toDouble` já ocupado). Refs desta
+> sessão nos commits (43fe2834/5c944709/6b776936) dizem "§174 KofWebJs" =
+> historicamente §176.
 
 - **Sintoma (medido 13/09, dono = 192.168.100.17):** `dev.kof.compiler.KofWebJsE2ETest.
   jsWebServesRoutes` → `server JS não abriu a porta <N> ==> expected: <true> but
@@ -5734,7 +5741,7 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   precisa de `HostAccess.Builder.allowPublicAccess`+create ou de um factory
   host-side). O teste ENGOLE o erro: roda o `KofJsRunner.run` em thread
   daemon com `catch (Exception ignored)` + stdout para `nullOutputStream`
-  (§174b: o harness deveria anexar o stderr ao report — sem isto, qualquer
+  (§176b: o harness deveria anexar o stderr ao report — sem isto, qualquer
   morte do listener vira "porta não abriu" às cegas).
 - **Menor repro:** compilar `main(){ var app = web.app() ; app.get("/hello"){return "x"} ; app.listen(45999) }` p/ JS e rodar `KofJsRunner.run(Default.mjs,...)` — stderr mostra o TypeError; a porta nunca binda.
 - **Não fiz:** não consertei (lane JS/web; regra 6 — mexer em host-access do

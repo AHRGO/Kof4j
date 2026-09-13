@@ -140,7 +140,7 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > seriam código errado viraram stub honesto; contagem de stub não é análogo de
 > conformidade quando o alternante era errado. DriftCheck = baseline 4;
 > DecompileTest 62/62; suíte sequencial limpa: cli 186/0, script/c 0,
-> compiler 1492/**1 (KofWebJs — alheio)**. **§174 ABERTO registrado** (KofWebJs
+> compiler 1492/**1 (KofWebJs — alheio)**. **§176 ABERTO registrado** (KofWebJs
 > determinístico, attributed por stash+3 commits + causa raiz `InetSocketAddress.
 > create` via repro isolado; NÃO toquei — regra 6, lane JS/web). **PRÓXIMO
 > PASSO (decompiler/Fase C degrau 2b): pós-dominador real** p/ aninhamento/else
