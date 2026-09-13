@@ -372,6 +372,14 @@ testes automatizados, documentação, multiplataforma.
 | 12 | Docs `docs/editors/*` + `training/` + `learn/` | docs | revisão + CI lint |
 | 13 | Gate final: suíte completa + release gate §19 | — | `mvn test` verde |
 
+> **Degrau 13 — gate rodado 13/09 15:22 (dono = 192.168.100.22):** suíte
+> 4-módulos verde — `kof-compiler` 1485/0 (156 skip), `kof-script` 31/0,
+> `kof-c-compiler` 5/0, `kof-cli` 181/0; `grep -rl FAILURE` vazio; BUILD
+> SUCCESS (10m37s). Os skips são qemu/BD externo. `check_500` OK.
+> **Residual do release gate §19:** IntelliJ plugin oficial (issue #1, §21) —
+> é decisão de escopo, não código; a distribuição local via `kof editor` está
+> completa para os 7 editores.
+
 **Dependências:** 0 (LSP) é independente e pode ir primeiro/paralelo. 1→2→3 em
 sequência. 4-10 (providers) independentes entre si depois do 3 (paralelizáveis,
 um por agente). 11,12,13 no fim.
