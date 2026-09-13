@@ -56,6 +56,26 @@ if (mc.receiver() == null && driver.semanticAnalyzer != null
         && driver.semanticAnalyzer.getClass(mc.methodName()) != null) {
     return driver.semanticAnalyzer.getClass(mc.methodName()).type();
 }
+// §89 (decisão 3a, 13/09): conversão numérica em receiver primitivo/unknown
+// (String recebe dispatch próprio ANTES no lowering, sem colisão) = alias
+// do `as` — o TIPO da expressão é o alvo da conversão, senão o `var d =
+// n.toDouble()` fica Unknown e o EQ seguinte compara Object (dava false).
+if (mc.receiver() != null && mc.arguments().isEmpty()
+        && switch (mc.methodName()) {
+            case "toInt", "toLong", "toFloat", "toDouble" -> true;
+            default -> false;
+        }) {
+    Type rv89 = ExpressionTyper.inferExprType(driver, mc.receiver(), locals);
+    if (rv89 instanceof Type.NullableType nt89) rv89 = nt89.inner();
+    if (TypeMetrics.isPrimitiveType(rv89) || rv89 instanceof Type.UnknownType) {
+        return switch (mc.methodName()) {
+            case "toInt" -> Type.PrimitiveType.INT;
+            case "toLong" -> Type.PrimitiveType.LONG;
+            case "toFloat" -> Type.PrimitiveType.FLOAT;
+            default -> Type.PrimitiveType.DOUBLE;
+        };
+    }
+}
 if (mc.receiver() != null && "toString".equals(mc.methodName()) && mc.arguments().isEmpty()) {
     Type rv = ExpressionTyper.inferExprType(driver, mc.receiver(), locals);
     if (TypeMetrics.isPrimitiveType(rv) || rv instanceof Type.ArrayType) return BuiltinTypes.STRING;

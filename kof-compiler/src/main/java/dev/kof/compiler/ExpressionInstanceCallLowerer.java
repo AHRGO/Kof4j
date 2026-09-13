@@ -368,6 +368,39 @@ public final class ExpressionInstanceCallLowerer {
             methodReturnType = sig.returnType();
             methodParamTypes = new ArrayList<>(sig.parameterTypes());
         }
+    } else if ((TypeMetrics.isPrimitiveType(recvType) || recvType instanceof Type.UnknownType)
+            && mc.arguments().isEmpty()
+            && ("toInt".equals(mc.methodName()) || "toLong".equals(mc.methodName())
+                || "toFloat".equals(mc.methodName()) || "toDouble".equals(mc.methodName()))) {
+        // §89 (decisão 3a, 13/09): conversão numérica em receiver PRIMITIVO =
+        // alias do `as` (mesma superfície do corpus: learn/04, cast.kf exit 0
+        // nos 3 nativos). Antes emitia KofCall owner vazio → ClassFormatError
+        // no JVM compilado / undefined reference nos nativos (só o
+        // interpretador implementava). WARNING (não erro) quando a conversão
+        // pode truncar (Double/Float -> Int/Long) apontando o `as`.
+        Type target = switch (mc.methodName()) {
+            case "toInt" -> Type.PrimitiveType.INT;
+            case "toLong" -> Type.PrimitiveType.LONG;
+            case "toFloat" -> Type.PrimitiveType.FLOAT;
+            default -> Type.PrimitiveType.DOUBLE;
+        };
+        String fn0 = TypeMetrics.primitiveName(recvType);
+        boolean mayTruncate = ("toInt".equals(mc.methodName()) || "toLong".equals(mc.methodName()))
+                && (fn0.isEmpty() || "double".equals(fn0) || "Double".equals(fn0)
+                    || "float".equals(fn0) || "Float".equals(fn0));
+        if (mayTruncate && driver.currentDiagnostics != null) {
+            driver.currentDiagnostics.warning("", 0, 0, 0,
+                    "'" + mc.methodName() + "()' pode truncar (parte fracionária descartada; "
+                        + "overflow lança) — forma explícita: valor as "
+                        + TypeMetrics.primitiveName(target), "SEM090");
+        }
+        driver.emitWideningIfNeeded(ops, recvType, target);
+        if (target instanceof Type.PrimitiveType tp
+                && ("char".equals(tp.name()) || "Char".equals(tp.name()))) {
+            ops.add(new KofUnary(KofUnaryOp.I2C, recvType));
+        }
+        driver.emitPrimNarrow(ops, recvType, target);
+        return localIdx;
     } else if (TypeMetrics.isPrimitiveType(recvType) && "toString".equals(mc.methodName())
             && mc.arguments().isEmpty()) {
         // primitivo.toString(): o primitivo não tem classe —

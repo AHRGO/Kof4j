@@ -836,7 +836,32 @@ class CoreRegressionE2ETest {
         assertEquals("fin\n1\nfin2\n2\nfin3", runJvm(outJvm), "JVM finally+return output mismatch");
     }
 
-    // known-bugs #5/#24 — FP→Int/Long casts and Double→Float narrowing were
+    // known-bugs §89 (decisão 3a, 13/09) — conversão numérica em receiver
+    // primitivo (n.toInt()/toDouble()/toFloat()/toLong()) = alias do `as`
+    // (trunc para zero, paridade JVM). Antes: JVM compilado quebrava
+    // (ClassFormatError owner "") e nativo dava undefined reference.
+    // Cenários Q3: trunc (3.7→3), negativo (-2.5→-2), toLong, Float round-trip,
+    // String.toInt NÃO é afetado (dispatch próprio antes).
+    @Test
+    void numericConvertMethodAliasOfAs(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                main() {
+                    var d = 3.7
+                    println(d.toInt())
+                    var d2 = -2.5
+                    println(d2.toInt())
+                    var n = 7
+                    println(n.toLong())
+                    var d3 = 2.5
+                    println(d3.toFloat())
+                    var n2 = 5
+                    var dd = n2.toDouble()
+                    println(dd == 5.0)
+                }
+                """, "3\n-2\n7\n2.5\ntrue", tempDir, "num-convert-alias");
+    }
+
+    // The wide parameter belongs to an instance method (slot 0 is `this`), so
     // missing conversion ops → invalid bytecode (ClassFormatError). Now D2I/
     // F2I/D2L/F2L (truncate toward zero) and D2F are emitted.
     @Test

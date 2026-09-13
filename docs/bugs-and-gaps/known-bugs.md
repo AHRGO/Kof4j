@@ -2180,6 +2180,17 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
   `learn/04`: `Int i = d as Int`) — o `as` lower p/ o intrínseco numérico
   do backend (I2D/D2I/...) que existe nos 3 nativos.
 - **✅ DECIDIDO 13/09 (mantenedora, opção 3a + emenda):** `.toDouble()`/`.toInt()`/`.toFloat()`/`.toLong()` em receiver primitivo = **alias do `as`** (truncamento; overflow → throw, paridade JVM) nos 3 nativos, COM **WARNING compile-time** (não erro) quando a conversão pode truncar (`Double→Int/Long`) apontando o `as` como forma explícita. Implementação liberada p/ lane.
+- **✅ CORRIGIDO 13/09 (opção 3a implementada):** o lower de method call
+  (`ExpressionInstanceCallLowerer`) recebeu ramo §89: receiver primitivo
+  OU Unknown (String tem dispatch próprio ANTES — `String.toInt` intacto)
+  + método toInt/toLong/toFloat/toFloat + 0 args → emite EXATAMENTE os
+  mesmos KofUnary do cast `as` (emitWideningIfNeeded + emitPrimNarrow + I2C).
+  `MethodCallTyper` retorna o tipo alvo (senão `var d = n.toDouble()` ficava
+  Unknown e o EQ seguinte comparava Object → false). Warning SEM090 (não
+  erro) quando Double/Float → Int/Long pode truncar. Prova:
+  `CoreRegressionE2ETest.numericConvertMethodAliasOfAs` JVM+JS (trunc 3.7→3,
+  negativo -2.5→-2, toLong, toFloat round-trip, toDouble==5.0) + medido
+  NATIVO x86 idem (repro manual — sem qemu o cross fica no guard).
 - **Registro da decisão anterior (substituída pela de cima):** p/
   adicionar o emit nativo de `.toDouble()`/`.toInt()` em primitivo falta a
   **semântica congelada** da conversão — `3.7.toInt()` deve truncar?

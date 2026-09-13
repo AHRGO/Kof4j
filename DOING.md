@@ -90,11 +90,19 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > root_end explícito é fase S-5; §162 retificado no known-bugs). Gate
 > 4-módulos BUILD SUCCESS 1646/0 reais (2 stale limpos; 2 erros node
 > ambientais).
-> **PRÓXIMO PASSO:** §89 (toInt/toDouble = alias do `as` + warning de
-> truncamento, decisão 3a+) — depois §117 (cancelled() slot por TID, 8a);
-> §131 (sobrecarga método por aridade, 10a); Long=BigInt JS (5b, último,
-> bump+migração). **NUNCA:** `nat/` lane GC viva; UI*; push main;
-> `git config user.*` (regra 7); Co-authored-by.
+> **⚡ FEITO (13/09 ~08:10, §89 implementado):** conversão numérica em
+> receiver primitivo (n.toInt()/toDouble()/toFloat()/toLong()) = alias do
+> `as` (decisão 3a): ramo §89 no `ExpressionInstanceCallLowerer` (emite os
+> mesmos KofUnary do cast; String.toInt intacto — dispatch antes) + tipo
+> no `MethodCallTyper` (sem isso `var d = n.toDouble()` ficava Unknown e o
+> EQ comparava Object) + warning SEM090 de truncamento (Double/Float→
+> Int/Long). Antes: JVM compilado ClassFormatError owner "" / nativo
+> undefined reference. Prova: `CoreRegressionE2ETest.numericConvert
+> MethodAliasOfAs` JVM+JS verde + nativo x86 medido (repro manual, 5/5).
+> **PRÓXIMO PASSO:** commit+push §89; depois §117 (cancelled() slot por
+> TID, 8a); §131 (sobrecarga método por aridade, 10a); Long=BigInt JS
+> (5b, último, bump+migração). **NUNCA:** `nat/` lane GC viva; UI*; push
+> main; `git config user.*` (regra 7); Co-authored-by.
 
 
 
