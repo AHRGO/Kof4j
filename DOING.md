@@ -69,6 +69,62 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > suíte. Build/compile verificado verde neste turno.
 > **NÃO:** `nat/`; fila de bugs (§106/§89/§117/§161); roundTo/parse* sem
 > decisão; push main.
+> **⚡ EM CURSO (13/09 ~05:00, lane development — fila ratificada da
+> mantenedora CONFIRMADA como desta sessão/dono = 192.168.100.18; S2-OTP ✅
+> `020be966`, DD-01 finally ✅ `063ed956`):** **§106 json.encode(Map) sorted ✅
+> implementado** (decisão 2b): call-site baixa `kof_json_encode_map(map,
+> tagDoValor)` (0=int,1=string,2=bool) — `JsonDispatch.encodeFunction` ramo
+> isMap; JVM `JvmRuntimeJson.kof_json_encode_map(Map,int)` chaves TreeSet;
+> nativo x86 asm próprio `RuntimeJsonEncode` (selection-sort c/
+> kof_string_compare_to; movslq destino 64-bit — `movslq %eax,%esi` NÃO
+> monta); interpretador `encodeMapTagged`; riscv/aarch sem o símbolo (gap de
+> porta, segue na matriz). Prova: `JsonCompleteE2ETest` **9/9** (incl.
+> `jvmEncodeMapSortedKeys` + `nativeEncodeMapSortedKeys`, golden compact
+> `{"a":1,"b":2}`). Fix alheio pow `17596ce7` preservado (meus edits
+> usesPow/assemble 5-arg descartados — a solução HEAD é melhor). Gate
+> 4-módulos rodando agora.
+> **⚡ ACHADO + CORRIGIDO no gate (13/09 ~04:50): §162 — regressão do
+> `17596ce7` (gate/pow):** a emissão de `kof_heap_root_start`/`_end` (#113,
+> raízes do GC conservador x86) foi DELETADA do `NativeBackend.emit` sem
+> substituto. Testes do kof-compiler não pegam (poda por CWD); de kof-script
+> (CWD diferente) o fallback completo emite `kof_gc_mark` → undefined
+> reference. Restaurado + §162 no known-bugs; `KofScriptTest` 25/0; gate
+> 4-módulos BUILD SUCCESS — 1646 testes, 0 falhas reais (2 reports STALE
+> 07/09 de classes deletadas — KofShellE2ETest/KofWorkflowE2ETest — limpos;
+> 2 erros = node/GraalJS ausente, ambientais).
+> **PRÓXIMO PASSO:** commit + push §106+§162; depois §89 (toInt/toDouble = alias do
+> `as` + warning de truncamento, decisão 3a+); (3) §117 (cancelled() slot por
+> TID, 8a); (4) §131 (sobrecarga método por aridade, 10a); (5) Long=BigInt JS
+> (5b, último, bump+migração). **NUNCA:** `nat/` lane GC viva; UI*; push main;
+> `git config user.*` (regra 7); Co-authored-by.
+
+
+
+> **🚨 P0 RESOLVIDO — `pow`/`usesPow` + Portão de qualidade universal (13/09, lane
+> gate/qualidade, dono = 192.168.100.15):** o commit `7f174a6f` (pow) subiu
+> `NativeBackend.assemble` passando `usesPow` **não declarado** → `mvn compile`
+> falhava em TODA a branch (`cannot find symbol: usesPow`) + `pow` sem NENHUM
+> teste. **Fix (causa raiz):** removido o arg fantasma — o `NativeAssembler` já
+> liga `-lm` incondicionalmente (a fatia RuntimeMath com `call pow` está sempre
+> no runtime x86, decisão 7a). **O remoto `f2cb92ba` (dono 192.168.100.22) fez o
+> MESMO fix** (com comentário explicativo) — converge: fiquei com o dele no
+> `NativeBackend` (código idêntico + doc melhor), preservando os dois lados
+> (regra 8). Minha parte ÚNICA que fica: **teste** `KofMathTest.powJvm/powNative/
+> powJs` (14 casos: finitos, exp negativo/fracionário, `pow(0,0)=1`, NaN em base
+> negativa fracionária, overflow) + matriz `stdmathpow` (doc+teste) + suíte
+> 4-módulos **1636/0** (13 erros = só `node`). **+ Endurecimento AGENTS.md:**
+> §"Portão de qualidade — nenhum bug sobe" **universal p/ TODAS as branches**
+> (Q0 conserta≠prova, Q1 teste no mesmo commit, Q2 compile antes do push, Q3
+> matriz de bordas, Q4 caça-bug, Q5 sem verde falso, Q6 suíte é o chão) +
+> self-check 8–12 + checklist pré-push Q0–Q6.
+> **PUSHADO `17596ce7`.** **PRÓXIMO PASSO:** varredura docs↔código (matriz já
+> com `stdmathpow`); conferir se as lanes seguem fechando a fila ratificada.
+> **NOTA (autostash stale, regra 8):** sobrou `stash@{0}` (autostash do
+> `pull --rebase` desta sessão) — snapshot ANTIGO já **superseded** por HEAD
+> (não tem `#113` nem IntelliJ; HEAD tem ambos), **sem trabalho único**.
+> Mantido por segurança (nunca `stash drop`); se o próximo agente confirmar,
+> pode descartar com nota. **NUNCA:** código de lane alheia (pow = lane STDLIB —
+> só o fix de build); `nat/` lane GC viva; push main.
 
 > **⚡ FEITO (13/09 ~06:20, lane development — pow fechado + sync docs, dono
 > = 192.168.100.17):** corrida de colisão no pow: eu tinha o delta (testes

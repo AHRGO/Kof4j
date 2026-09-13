@@ -2749,6 +2749,8 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
 - **Causa raiz (2 camadas):** (a) dispatch: `JsonDispatch` não tem ramo `isMap` → genérico inexistente no nativo; (b) JVM: encode de objeto por reflexão não diferencia Map (deveria iterar entries, não `getDeclaredFields`). E (c) UX: failure de link não é diagnóstico R6.
 - **✅ DECIDIDO 13/09 (mantenedora, opção 2b):** superfície = objeto JSON com chaves **SORTED** (determinismo > ordem de inserção). Correção liberada: JVM (itera `entrySet`), nativos (ramo próprio no dispatch), gate `JSN00x` compile-time no que faltar + golden de ordem nos 5 alvos. Sai de "ABERTO por decisão" para lane implementável. A correção tem 3 partes: gate honesto no compile-time até a superfície decidir (diagnóstico `JSN00x` no estilo JSN004 no dispatch de Map em nativos) + decisão de formato + ramos JVM (entries) e nativo. Registra aqui; NÃO vira edição de semântica sem decisão.
 - **Pista de teste faltante (para quem fechar):** `json.encode(mapOf(...))` nos 5 alvos com golden de ordem (provavelmente insertion-order = `LinkedHashMap` semantics, mas é a decisão).
+- **✅ CORRIGIDO 13/09 (opção 2b implementada):** superfície = objeto JSON com chaves **SORTED** (TreeSet/selection-sort). Call-site baixa `kof_json_encode_map(map, tagDoValor)` (tag = mesma tabela de `listTag`: 0=int, 1=string, 2=bool). JVM: `JvmRuntimeJson.kof_json_encode_map(Map,int)` (TreeSet keys, encode por tag); nativo x86: asm próprio `kof_json_encode_map` em `RuntimeJsonEncode.java` (selection-sort com `kof_string_compare_to`, builder JSON); interpretador: `KofInterpreterRuntime.encodeMapTagged`; dispatch: ramo `isMap` em `JsonDispatch.encodeFunction`. Riscv/aarch64: asm próprio pendente (gap de porta — segue como XXX00x na matriz). Prova: `JsonCompleteE2ETest.jvmEncodeMapSortedKeys` (golden `{"a":1,"b":2}
+{"x":"w","y":"z"}`) + `nativeEncodeMapSortedKeys` (golden `{"a":1,"b":2}`) verdes 13/09.
 
 ### 108. `println(listOf(bool,...))` — interpretador (Script) imprime `[1, 0]` vs JVM `[true, false]` — ✅ CORRIGIDO (11/09, Script-only; storage boxing)
 
@@ -5082,3 +5084,29 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   toca `nat/`, lane GC viva).
 
 
+
+### 162. Regressão `17596ce7` (gate/pow): emissão de `kof_heap_root_start`/`kof_heap_root_end` deletada do `NativeBackend.emit` sem substituto → todo nativo x86 com GC no runtime falha o link (`undefined reference`) — ✅ CORRIGIDO 13/09
+
+- **Menor repro:** qualquer compilado nativo x86 a partir do módulo **kof-script**
+  (`KofScript.runFile(f, Target.NATIVE)`), mesmo trivial:
+  ```kof
+  main() { println(7) }
+  ```
+  → `ld: na função "kof_gc_mark": undefined reference to 'kof_heap_root_start'/'kof_heap_root_end'` (COMP001).
+- **Causa raiz:** o commit `17596ce7` (13/09, portão/pow) removeu do
+  `NativeBackend.emit` a abertura do intervalo de raízes do GC conservador
+  (`.globl kof_heap_root_start` no início do `.data` + `kof_heap_root_end` em
+  `.bss` após o fim do dado — fix do bug #113, comentários dedicados) SEM
+  substituir por emissão equivalente. O runtime x86 referencia os dois símbolos
+  (`RuntimeGc.kof_gc_mark`: `leaq kof_heap_root_start(%rip)`…). Nos testes do
+  kof-compiler não explodiu porque o `RuntimeSlices.readSourceAndOrder()`
+  resolve o fonte por **CWD** (`kof-compiler/src/...`): rodando do módulo
+  kof-compiler a poda funciona e a fatia GC sai do subset; rodando de outro
+  módulo (kof-script/kof-cli), o mapa de fatias cai no **fallback completo**
+  (R6: emitir runtime inteiro) — o GC entra e o link quebra. `mvn test`
+  compila por módulo e escondeu a diferença de CWD.
+- **Prova:** `KofScriptTest.evalNativeTarget` (25/0 pós-fix, falhava 1/25
+  antes); gate 4-módulos re-rodado 13/09 com 0 falhas reais.
+- **Lição:** emissão de símbolo referenciado pelo runtime é **contrato do
+  backend** — remover exige verificar TODOS os callers de pruneRuntime/fallback
+  (CWD-dependente), não só o caminho do módulo que os testes da lane exercitam.

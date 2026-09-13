@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Ponte do interpretador com o {@code KofRuntime} GERADO (mesma fonte do
@@ -46,6 +47,17 @@ public final class KofInterpreterRuntime {
         if (name.equals("kof_json_encode") && args.length == 1
                 && args[0] instanceof KofInterpreter.KofObj ko) {
             return encodeKof(ko);
+        }
+        // §106 (decisão 2b, 13/09): json.encode(Map) -> objeto JSON com chaves
+        // SORTED (mesma superfície do JVM/native — determinismo). O call-site
+        // baixa p/ kof_json_encode_map(map, tagDoValor) — aceito as duas formas.
+        if (name.equals("kof_json_encode_map") && args.length == 2
+                && args[0] instanceof Map<?, ?> m) {
+            return encodeMapTagged(m, ((Number) args[1]).intValue());
+        }
+        if (name.equals("kof_json_encode") && args.length == 1
+                && args[0] instanceof Map<?, ?> m) {
+            return encodeMap(m);
         }
         // json.decode<KofClass>: o método gerado faz Class.forName(nome) — mas
         // no interpretador a classe Kof é KofObj (NUNCA vira classe JVM).
@@ -104,6 +116,52 @@ public final class KofInterpreterRuntime {
             }
         }
         throw new NoSuchMethodError("KofRuntime." + name + "/" + args.length);
+    }
+
+    /** §106: Map -> JSON objeto com chaves sorted (mesma superfície do JVM). */
+    // §106: variante com tag do valor (call-site kof_json_encode_map(map, tag))
+    // — chaves sorted, valor codificado pelo tag: 0=int, 1=string, 2=bool.
+    private String encodeMapTagged(Map<?, ?> m, int tag) throws Throwable {
+        StringBuilder sb = new StringBuilder("{");
+        java.util.SortedSet<String> keys = new java.util.TreeSet<>();
+        for (Object k : m.keySet()) keys.add(String.valueOf(k));
+        boolean first = true;
+        for (String k : keys) {
+            if (!first) sb.append(',');
+            first = false;
+            sb.append(runtimeFn("kof_json_encode_string", new Object[]{k}));
+            sb.append(':');
+            Object v = m.get(k);
+            switch (tag) {
+                case 1 -> sb.append(runtimeFn("kof_json_encode_string", new Object[]{v}));
+                case 2 -> sb.append(runtimeFn("kof_json_encode_bool",
+                        new Object[]{v instanceof Boolean b && b ? 1 : 0}));
+                default -> sb.append(runtimeFn("kof_json_encode", new Object[]{v}));
+            }
+        }
+        return sb.append('}').toString();
+    }
+
+    private String encodeMap(Map<?, ?> m) throws Throwable {
+        StringBuilder sb = new StringBuilder("{");
+        java.util.SortedSet<String> keys = new java.util.TreeSet<>();
+        for (Object k : m.keySet()) keys.add(String.valueOf(k));
+        boolean first = true;
+        for (String k : keys) {
+            if (!first) sb.append(',');
+            first = false;
+            sb.append(runtimeFn("kof_json_encode_string", new Object[]{k}));
+            sb.append(':');
+            Object v = m.get(k);
+            if (v instanceof KofInterpreter.KofObj) {
+                sb.append(encodeKof((KofInterpreter.KofObj) v));
+            } else if (v instanceof Map<?, ?>) {
+                sb.append(encodeMap((Map<?, ?>) v));
+            } else {
+                sb.append(runtimeFn("kof_json_encode", new Object[]{v}));
+            }
+        }
+        return sb.append('}').toString();
     }
 
     private String encodeKof(KofInterpreter.KofObj ko) throws Throwable {

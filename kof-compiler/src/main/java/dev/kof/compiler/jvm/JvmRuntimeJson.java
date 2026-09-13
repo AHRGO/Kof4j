@@ -122,7 +122,37 @@ public final class JvmRuntimeJson {
                         return sb.append(']').toString();
                     }
                     if (value.getClass().isArray()) return kof_json_encode_array(value);
+                    if (value instanceof Map<?, ?> m) return kof_json_encode_map(m, 0);
                     return kof_json_encode_object(value);
+                }
+
+                // §106 (decisão 2b, 13/09): Map -> objeto JSON com chaves SORTED
+                // (determinismo > ordem de insercao). Map nao e objeto de campos:
+                // refletir getDeclaredFields sobre HashMap crasha
+                // (InaccessibleObjectException) — itera entries com chaves ordenadas.
+                // §106 (2b): assinatura com tag do valor (mesma do encode_list:
+                // 0=int, 1=string, 2=bool) — o call-site baixa (Map,I).
+                public static String kof_json_encode_map(Map<?, ?> m, int tag) {
+                    StringBuilder sb = new StringBuilder("{");
+                    java.util.SortedSet<String> keys = new java.util.TreeSet<>();
+                    for (Object k : m.keySet()) keys.add(String.valueOf(k));
+                    boolean first = true;
+                    for (String k : keys) {
+                        if (!first) sb.append(',');
+                        first = false;
+                        sb.append(kof_json_encode_string(k));
+                        sb.append(':');
+                        sb.append(encodeByTag(m.get(k), tag));
+                    }
+                    return sb.append('}').toString();
+                }
+
+                private static String encodeByTag(Object v, int tag) {
+                    if (tag == 1 && v instanceof String s) return kof_json_encode_string(s);
+                    if (tag == 2) return kof_json_encode_bool(v instanceof Boolean b && b ? 1 : 0);
+                    if (v instanceof Integer i) return kof_json_encode_int(i);
+                    if (v instanceof Long l) return kof_json_encode_long(l);
+                    return kof_json_encode(v);
                 }
 
                 private static String kof_json_encode_object(Object value) {

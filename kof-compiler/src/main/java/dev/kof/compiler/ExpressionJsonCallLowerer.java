@@ -23,6 +23,14 @@ public final class ExpressionJsonCallLowerer {
             int tag = JsonDispatch.listTag(driver.listElementType(argType));
             ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, tag));
             paramTypes = List.of(argType, Type.PrimitiveType.INT);
+        } else if (BuiltinTypes.isMap(argType)) {
+            // §106 (decisão 2b): Map -> objeto JSON com chaves sorted; o runtime
+            // recebe a tag do VALOR (mesma tabela do elem de List) p/ escolher
+            // o encoder tipado (v1 flat: int/string/bool).
+            Type mv2 = BuiltinTypes.mapValue(argType);
+            int tag = JsonDispatch.listTag(mv2);
+            ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, tag));
+            paramTypes = List.of(argType, Type.PrimitiveType.INT);
         } else if (driver.target.isNative()
                 && argType instanceof Type.ClassType ect
                 && !BuiltinTypes.isString(argType)
