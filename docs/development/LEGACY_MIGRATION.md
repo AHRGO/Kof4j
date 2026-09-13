@@ -2,7 +2,10 @@
 
 **Status:** EM DESENVOLVIMENTO (caiu de `future/` em 12/09 — a plataforma
 existe: `kof inspect/decompile/translate/compare/migrate` registrados no
-`Main.java`; prova: 63 testes verdes em kof-cli (45+9+6+3 + Inspect).
+`Main.java`; prova medida 13/09: 70 testes verdes em kof-cli
+(DecompileTest 45 + TranslateTest 9 + CompareTest 6 + MigrateTest 3 +
+CmdCheckTest 7; `inspect` é o comando de IR stats `Main.java:25,61`, sem
+classe de teste própria).
 Recuperação de corpo de método ainda é parcial — relatório rastreável o
 expõe de forma honesta)
 **Escopo:** plataforma de migração (implementação iniciada na 0.3.x)
@@ -75,7 +78,7 @@ de geração de Java entre o artefato legado e o Kof.
 | `kof compare <legacy> <kof>` | Teste diferencial entre sistemas | ✅ `Compare.java` (Main.java:28; stdout/exit/stderr) |
 
 **Todos os comandos existem no CLI** (verificados 12/09 — `Main.java:25-29`,
-63 testes kof-cli verdes). O que permanece em desenvolvimento é a
+70 testes kof-cli verdes medidos 13/09). O que permanece em desenvolvimento é a
 **cobertura** da recuperação (corpos de método complexos → stub UNKNOWN
 honesto; subconjunto Java do translator).
 

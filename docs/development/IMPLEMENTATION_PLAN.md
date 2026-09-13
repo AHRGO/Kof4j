@@ -2,7 +2,7 @@
 
 > **EM DESENVOLVIMENTO** (caiu de `future/` em 12/09 — Fases A–H da
 > plataforma de migração têm código+testes: inspect/decompile/translate/
-> compare/migrate, 63 testes kof-cli verdes; tiers posteriores não iniciados).
+> compare/migrate, 70 testes kof-cli verdes (medidos 13/09); tiers posteriores não iniciados).
 
 **Created:** 2026-09-04  
 **Author:** agente-planning  
