@@ -326,6 +326,35 @@ Fase E  Kof Decompiler          (gerar Kof source)
 > Um join recuperado errado é compilável mas semanticamente ERRADO = R6
 > (pior bug possível); NUNCA relaxar o `struct` sem o golden de execução.
 >
+> **Diagnóstico EXATO do sub-caso (13/09, dono = 192.168.100.17 — pronto p/
+> a próxima sessão executar):** fixture mínimo reproduzido
+> (`/tmp/opencode/join/J.java`, `g(int x)`, oracle JVM medido: g(6)=107,
+> g(1)=101): `r = 100; if (x > 5) { r = r + x }` SEM else + join que
+> continua. O decompiler de HOJE stuba `g` e já trata `h` (then termina em
+> `return`) como if-else-expression via path linear. **Traço do CFG (por que
+> stuba):** líderes {0,8,12}; B0[0,8) `if_icmple 12` → succ=[12,8]; B1[8,12)
+> corpo-then → succ único=[12]; B2[12,…) join. Em `struct`(B0): linha 271
+> abre `if`, chama `struct(B1)`; B1 tem succ único 12 → linha 280 **anda**
+> para B2 e marca 12 emitida (o corpo do join cai DENTRO do `if`); volta e
+> linha 275 `struct(B2)` re-entra em 12 → linha 206 RECUSA (join não-header)
+> → null → stub. **Correção NÃO é 3 linhas:** exige um *boundary* de parada
+> — o then de if-sem-else deve PARAR no join (não andar para ele) e o join
+> ser emitido UMA vez como sequela do `if`. Caminho: parâmetro `Set<Integer>
+> stop` (ou `joinStop`) em `struct`/`emitLinear`-walker: quando o próximo
+> bloco é o `exitStart` do if-encadeamento atual e não tem outro pred,
+> emite `if (cond) { <then> }` (SEM else) e continua `struct(exitStart)` uma
+> vez. Detectar if-sem-else: `then.succ==[exitStart]` && `exitStart` preds
+> ⊆ {b, then}. **NÃO tocar:** guard com return/goto no then (path linear já
+> trata), skip com pred extra (break/continue/&&/|| — manter recusa linha
+> 206), header de loop (intacto). Arquivo: só `BytecodeStatements.struct`
+> (+ walk de emitLinear do then) + `DecompileTest`. **Golden OBRIGATÓRIO no
+> MESMO commit (não só compilar):** padrão `DecompileTest:747-791`
+> (`java -cp <out> J` stdout == oracle JVM nos DOIS caminhos — g(6)=107,
+> g(1)=101) + drift-check da árvore inteira (4=4) + suíte 4-módulos; sem o
+> golden de execução passando, NÃO commitar (R6: join errado = compilável
+> mas semanticamente errado = pior bug). Orçamento: thread `stop` por todas
+> as recursões de struct — sessão inteira dedicada, não encaixa no fim desta.
+>
 > **Estágio 3 (13/09, dono = 192.168.100.17): interna do MESMO pacote.**
 > Categorização reflexiva dos 89 rejeitados (harness `RecCat`): **31** eram
 > só `implements Outer$Inner` do mesmo pacote (cluster `JsIr$*` com 43

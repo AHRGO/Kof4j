@@ -162,13 +162,25 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > Fase C (joins)** — NÃO começar sem golden cross-target por sub-caso: um
 > join recuperado errado é compilável mas semanticamente ERRADO = R6 (pior
 > bug). Ordem segura: (a) harness golden JVM/JS/Native/Script para um
-> sub-caso estreito (ex. if-then sem else com join no fim — o `ifeq` de
-> `CompilerTypeSupport.fieldOk`); (b) tratar SÓ re-entrância que é join de
+> sub-caso estreito (ex. if-then sem else com join no fim — o fixture
+> verificado `/tmp/opencode/join/J.java` g(6)=107/g(1)=101; NÃO
+> `fieldOk`, que stuba por `$`-instanceof = outro gap reprovado); (b) tratar SÓ re-entrância que é join de
 > if (não loop), emitir `if {}` sem `else` + continuar no bloco pós-join;
 > (c) drift-check da árvore inteira + suíte + golden por target ANTES de
-> commitar. **NÃO (reiterado):** `nat/`; §166 (lane JS/gate, ABERTO com
-> repro+pointer em known-bugs `### 166`); roundTo (regra 6); `$`-resolve
-> global (experimente reprovado — não refazer).
+> commitar. **Infra de golden JÁ EXISTE (pointer 13/09):**
+> `DecompileTest:747-791` — "FORTE: não basta compilar — executa os 3
+> caminhos" (`java -cp <out> S` + assertEquals no stdout); replicar o padrão
+> p/ join. Causa medida do gargalo: `struct()` linha 206 (join estrutural
+> recusado = 2452 métodos silenciosos, `StoreCat`). **DIAGNÓSTICO PRONTO
+> (13/09, DECOMPILER.md "Diagnóstico EXATO do sub-caso"):** fixture
+> reproduzido (`/tmp/opencode/join/J.java`, g(6)=107/g(1)=101), traço do CFG
+> do stub (linha 280 anda p/ o join + 275 re-entra → 206 recusa), a regra
+> exata (if-sem-else: `then.succ==[exitStart]` && preds ⊆ {b,then}) e o
+> mecanismo necessário (parâmetro `stop` no walker — NÃO é 3 linhas; sessão
+> inteira dedicada). Executar direto da doc na próxima sessão. **NÃO
+> (reiterado):** `nat/`; §166 (lane JS/gate, ABERTO com repro+pointer em
+> known-bugs `### 166`); roundTo (regra 6); `$`-resolve global (experimente
+> reprovado — não refazer).
 
 > **✅ FEITO (13/09 ~10:00, lane bugs-and-gaps, dono = 192.168.100.15):**
 > sincronizados os 5 registros de `docs/bugs-and-gaps/` + contagens da suíte
