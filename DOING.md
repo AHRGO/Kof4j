@@ -58,18 +58,32 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
-> **⏸️ LANE gate/qualidade + docs (192.168.100.15) SEM trabalho novo — 13/09
-> ~09:30.** Nesta sessão: (1) **P0 gate vermelho** `check_500` corrigido
-> (split `NativeBackend` 671→579, `145fc5a3`); (2) **§131-residual** Native
+> **🔎 VERIFICAÇÃO de overclaim — §165 NÃO reproduz em build limpo (13/09
+> ~09:40, lane gate/qualidade, dono = 192.168.100.15).** O §165 (registrado
+> no remoto `af86a03d`) afirma que `kof-runtime.mjs` não traz `export function
+> kofJsonEncodeMap`. Medido no HEAD `d2a8a618` com `mvn -o -pl kof-compiler
+> -am clean compile`: o bundle **TEM** o export (l.138) e a célula
+> `jsonenc-map` **passa** (executada via `KofJsRunner`/GraalJS — a célula NÃO
+> depende de node). Reproduzi o sintoma de propósito com `JsRuntimeSlices.class`
+> stale (compilado antes do helper existir) → idêntico ao §165. Causa: o
+> `JSON_MAP_RUNTIME` é `static final String` (constante de compilação)
+> **inlined** em `JsRuntimeSlices.BLOCKS` — editar o runtime sem recompilar o
+> consumidor (ou compartilhar `target/` stale no cluster) deixa classes stale.
+> Anotado na seção §165 (`known-bugs.md`); **NÃO fechada** (lane alheia
+> §106/js-slices; sem node no host o caminho node fica pendente). Próximo
+> passo da lane dona: rodar com `clean`; se confirmar não-bug, fechar §165
+> (e, se quiser blindar, tornar as constantes não-inlináveis — mudança nos
+> `JsRuntime*`).
+>
+> **⏸️ LANE gate/qualidade + docs (192.168.100.15) — 13/09:** trabalho
+> desta sessão = (1) **P0 gate vermelho** `check_500` corrigido (split
+> `NativeBackend` 671→579, `145fc5a3`); (2) **§131-residual** Native
 > (overload de mesma aridade/tipos → SIGSEGV) corrigido (`2d27f22b`);
 > (3) **§163** interpretador (2º parâmetro largo `Long`/`Double` → `null`)
-> corrigido (`d2a8a618`). Gate 4-módulos **1653 run / 0 falhas / 13 erros
-> (`*Js`=node) / 157 skip**; `check_500` OK; pushado. **Fila aberta = 8**
-> (§101 congelado; §104b-ii/§107/§114 bugfixer; §129/§161 nat; §132 OTP-JS;
-> §165 js-slices) — **todas de outras lanes**. `docs/development/` auditado
-> (nenhum doc concluído a mover); header de `known-bugs.md` confere. **Nada
-> novo sem dono nesta lane → re-disparo RECUSADO** (não inventar trabalho;
-> a estabilidade GLOBAL ainda depende das lanes acima).
+> corrigido (`d2a8a618`); (4) re-verificação §165 (`5a68a955`). Gate
+> 4-módulos **1653 run / 0 falhas / 13 erros (`*Js`=node) / 157 skip**;
+> `check_500` OK; pushado. Fila aberta = 8, **todas de outras lanes**.
+> Nada novo sem dono nesta lane → re-disparo RECUSADO.
 >
 > **✅ FEITO (13/09 ~09:00, lane gate/qualidade, dono = 192.168.100.15): §163
 > — interpretador lia o 2º parâmetro largo (`Double`/`Long`) como `null`.**
@@ -83,8 +97,8 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > `KofInterpreterParityTest.wideParametersOccupyTwoSlots` (novo) falhava no
 > código velho (`exit divergente expected <0> but was <1>`) e passa com o fix
 > (`KofInterpreterParityTest` 23/23); probes `OVD`/`OVDX`/`DBL7` 4-target
-> (Script agora = JVM/Native). Gate 4-módulos **1645 run / 0 falhas / 13 erros
-> (`*Js`=node) / 157 skip** (`gate_s163.log`); `check_500` OK.
+> (Script agora = JVM/Native). Gate 4-módulos **1653 run / 0 falhas / 13 erros
+> (`*Js`=node) / 157 skip** (`gate_s163_final.log`); `check_500` OK.
 > `known-bugs.md` §163 + header da fila atualizados. **NÃO:** `nat/`; UI*;
 > push main; `git config user.*`; Co-authored-by.
 >
