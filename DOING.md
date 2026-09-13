@@ -60,17 +60,23 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
-> **✅ FEITO (13/09 ~14:40, lane bugs-and-gaps, dono = 192.168.100.15):
-> §176 CORRIGIDO (2 faces) + §177 CATALOGADO.** Caça Q4 sobre o §173/§174.
+> **✅ FEITO (13/09 ~18:00, lane bugs-and-gaps, dono = 192.168.100.15):
+> §177 + §178 CORRIGIDOS, §179 CATALOGADO.** Caça Q4 sobre o §173/§174.
+> **Colisão de numeração resolvida no rebase** (o remoto ocupou §176 c/ WEB001
+> e §177 c/ a lambda-local do translator): a unidade virou **§177** (lambda
+> local em bloco — raiz da lane compiler, fechada por mim) + **§178**
+> (compound-array JS + handle UI no invoke) + **§179** (UI declarado, aberto).
 > **(a) compound em elemento de array no JS** (`a[0] += x`, `a[1] <<= 2`):
 > JVM/Native/Script ok, KofJS `COMP002 unexpected op ... KofDup2` — o guard
 > `isExpressionOp` do `JsExpressionParser` não listava `KofDup2` (o handler
 > existe desde #64 `c78109c5`; o teste da época só cobria JVM). Fix: incluir
-> `KofDup2` no guard. **(b) lambda com `var` local + `return x`**: lambda
-> tipava **VOID** (JVM VerifyError `Bad type on operand stack`, Native `0`,
-> Script `Long.valueOf/1`, JS COMP002) — `ExpressionTyper.firstReturnValueType`
-> não registrava os `VarDeclStmt` do corpo no escopo, então `return x` era
-> UNKNOWN. Fix: escopo cópia mutável com os locais do corpo antes da varredura.
+> `KofDup2` no guard. **(b) lambda com `var` local + `return x`** (== §177 do
+> translator): lambda tipava **VOID** (JVM VerifyError `Bad type on operand
+> stack`, Native `0`, Script `Long.valueOf/1`, JS COMP002) —
+> `ExpressionTyper.firstReturnValueType` não registrava os `VarDeclStmt` do
+> corpo no escopo, então `return x` era UNKNOWN. Fix: escopo cópia mutável com
+> os locais do corpo antes da varredura. Repro exato do translator (com
+> `class C {}`) roda 4 targets = `8`.
 > **(c) lambda que retorna handle kof.ui/media** (regressão exposta por (b)):
 > o tipo inferido `kof.ui.Label` sobrevivia ao round-trip do
 > `CompilerLambdaClass` mas o `invoke` saía `LLabel;` com int na pilha →
@@ -79,17 +85,18 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > `JvmTypeMapper.toDescriptor` = "I").
 > **Prova Q1 (falhavam antes):** `CoreRegressionE2ETest.compoundOnArrayElementJs`
 > + `CoreRegressionE2ETest.lambdaReturnLocalVar` (novos, `runBoth` JVM+JS) +
-> `ComponentCoreE2ETest` 14/14 (regressão UI).
-> **§177 CATALOGADO (ABERTO):** tipo `kof.ui`/`kof.media` **DECLARADO**
+> `ComponentCoreE2ETest` 14/14 (regressão UI). Suíte 4 módulos pós-rebase:
+> compiler 1499/0/13-node; script 33; c 5; cli 194 — 0 falhas.
+> **§179 CATALOGADO (ABERTO):** tipo `kof.ui`/`kof.media` **DECLARADO**
 > (var/param/campo/retorno) quebra o backend JVM — `MemberResolver.resolveType`
 > não reconhece o builtin (sai `ClassType("", "Label")` → descritor `LLabel;`
-> p/ int). Menor repro nos 4 contextos + fix proposto em `known-bugs.md §177`.
+> p/ int). Menor repro nos 4 contextos + fix proposto em `known-bugs.md §179`.
 > **NÃO corrigido** (toca resolução de nomes — regra 6, precisa decisão).
 > **PRÓXIMO PASSO:** fila de `known-bugs.md` só tem itens de outras lanes
 > (§101 congelado; §104b-ii/§107/§114 bugfixer; §129/§161 nat; §132 OTP-JS;
-> §165 não-reproduz; §170 issue-lane; §171 diagnóstico; §175 remoto S13b).
-> **Re-disparo: ler esta linha + `known-bugs.md:11`; se nada novo e suíte
-> verde → RECUSAR.**
+> §165 não-reproduz; §170 issue-lane; §171 diagnóstico; §175 remoto S13b;
+> §176 WEB001 lane JS/web; §179 UI-declarado — regra 6). **Re-disparo: ler
+> esta linha + `known-bugs.md:11`; se nada novo e suíte verde → RECUSAR.**
 > **NUNCA:** `nat/` lane GC viva; fila de outras lanes; push main.
 > **Livre para caça Q4:** áreas recém-mexidas por outras lanes (S13a stdlib,
 > translator) são candidatas a probe de borda — sem tocar arquivos EM CURSO.
