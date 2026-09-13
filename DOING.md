@@ -143,9 +143,14 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > Fila **12→8** itens. **Gate 4-módulos pós-§89/§106/§117/§131: 1645 run / 0
 > falhas / 13 erros (`*Js` = `node` ausente) / 157 skip — verde**
 > (`gate_s106js.log`).
-> **PRÓXIMO PASSO:** (gate/docs) resta na fila ratificada só **§81 (5b,
-> Long=BigInt JS)** — lane .18/9094, NÃO tocar (regra 9). Os outros 7 abertos
-> são de outras lanes/bloqueios (§101 congelado; §104b-ii/§107/§114 bugfixer;
+> **PRÓXIMO PASSO (atualizado 13/09 ~11:00 — fila .18 COMPLETA):** a fila
+> ratificada da lane .18 terminou (§106 §89 §117 §131 §81 todos ✅ — §81
+> fechado nesta lane, ver bloco FEITO abaixo). Re-dispacho deve: (1) reler a
+> fila §1 do README + `docs/development/` por `.md` solto sem dono; (2)
+> verificar regressão (gate 4-módulos); (3) se nada novo sem dono na lane
+> development → RECUSAR o re-disparo (condição de ESTABILIDADE parcial —
+> global ainda depende de lanes bugs/nat/alheias). Os outros 7 abertos são
+> de outras lanes/bloqueios (§101 congelado; §104b-ii/§107/§114 bugfixer;
 > §129/§161 lane nat; §132 OTP-JS). Esta lane (gate/qualidade + docs, dono
 > 192.168.100.15) só age se: (a) regressão na suíte (gate vermelho),
 > (b) header/contagem de `known-bugs.md` divergir do código, (c) doc concluído
@@ -234,8 +239,20 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > estendido p/ todas as classes (lowerFunction + call-site structural).
 > Prova: `methodOverloadByArity` JVM+JS 6/7 + nativo x86 `6|7` + gate
 > 4-módulos BUILD SUCCESS 1642/0 reais (2 erros GraalJS ambientais).
-> **FILA RATIFICADA: §106 ✅ §89 ✅ §117 ✅ §131 ✅ — resta Long=BigInt JS
-> (5b, último, bump+migração 0.3.22→0.3.23).** **NUNCA:** `nat/` lane GC
+> **FILA RATIFICADA: §106 ✅ §89 ✅ §117 ✅ §131 ✅ §81 ✅ — COMPLETA.**
+> **⚡ FEITO (13/09 ~11:00, §81 implementado — decisão 5b):** Long = BigInt
+> no JS (paridade 64-bit real): literal `...n` (`literalExpr` +
+> `literalText` p/ field); `binaryExpr` roteia `isLongType` →
+> `longBinaryExpr` (aritmética/comparação/bitwise sobre BigInt; `BigInt()`
+> idempotente promove Number→Long; DIV BigInt já trunca; EQ/NE loose;
+> USHR→SHR); `unaryExpr` I2L→`BigInt(x)`, L2I→`BigInt.asIntN(32,x)` (wrap
+> 32-bit EXATO — Number perde >2^53), D2L/F2L→`BigInt(Math.trunc(x))`;
+> `kof_string_to_long` = BigInt(s) + range ±2^63 (overflow LANÇA). Bump
+> desnecessário — semântica nova entra sob 0.4.0-beta. Migração: golden JS
+> de `KofStringParseTest` UNIFICADO ao JVM (acabou a limitação ±2^53).
+> Prova: repro JVM×JS byte-idênticos (2^53+1 exato, toLong 2^63-1,
+> overflow→catch, arrays, `as`) + KofStringParseTest 8/8 + gate 4-módulos
+> **1647/0** (2 erros GraalJS ambientais). known-bugs §81 fechado. **NUNCA:** `nat/` lane GC
 > viva; UI*; push main; `git config user.*` (regra 7); Co-authored-by.
 
 

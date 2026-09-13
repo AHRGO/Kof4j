@@ -314,6 +314,10 @@ void handleStringOp(MethodCtx ctx, List<Object> stack,
     }
 
 JsIr.JsExpression binaryExpr(KofBinary kb, JsIr.JsExpression left, JsIr.JsExpression right) {
+        // §81 (5b): binário de LONG no JS = BigInt. Os lados podem chegar como
+        // Number (literal Int promovido, var Int) — BigInt() é idempotente e
+        // garante a promoção Int->Long do JVM (mistura BigInt/Number lança).
+        if (JsTypeMapper.isLongType(kb.operandType())) return longBinaryExpr(kb, left, right);
         return switch (kb.op()) {
             case ADD -> intWrap(kb.operandType(), new JsIr.JsBinary(left, "+", right));
             case SUB -> intWrap(kb.operandType(), new JsIr.JsBinary(left, "-", right));
@@ -321,11 +325,6 @@ JsIr.JsExpression binaryExpr(KofBinary kb, JsIr.JsExpression left, JsIr.JsExpres
             case DIV -> {
                 if (JsTypeMapper.isIntFamily(kb.operandType())) {
                     yield intWrap(kb.operandType(), new JsIr.JsBinary(left, "/", right));
-                }
-                if (JsTypeMapper.isLongType(kb.operandType())) {
-                    // JS / yields doubles; truncate toward zero like JVM LIDIV
-                    yield new JsIr.JsCall(new JsIr.JsMember(new JsIr.JsIdentifier("Math"), "trunc"),
-                            List.of(new JsIr.JsBinary(left, "/", right)));
                 }
                 yield new JsIr.JsBinary(left, "/", right);
             }
@@ -357,7 +356,43 @@ JsIr.JsExpression binaryExpr(KofBinary kb, JsIr.JsExpression left, JsIr.JsExpres
      * Kof Int is a signed 32-bit type; JavaScript numbers are doubles. Wrap
      * int arithmetic with ToInt32 (| 0) to preserve Kof/JVM 32-bit semantics.
      */
-JsIr.JsExpression intWrap(Type operandType, JsIr.JsExpression inner) {
+    /** §81 (5b): binário de LONG sobre BigInt. DIV: BigInt / já trunca p/
+     *  zero (JVM LIDIV; Math.trunc não aceita BigInt). EQ/NE: `==` loose JS
+     *  (5n==5 é true — o === cru daria false misturando BigInt/Number, e o
+     *  `==` de Kof é de conteúdo). longOperand promove Number->BigInt
+     *  (BigInt é idempotente p/ BigInt puro). */
+    JsIr.JsExpression longBinaryExpr(KofBinary kb, JsIr.JsExpression left, JsIr.JsExpression right) {
+        JsIr.JsExpression l = longOperand(left), r = longOperand(right);
+        return switch (kb.op()) {
+            case ADD -> new JsIr.JsBinary(l, "+", r);
+            case SUB -> new JsIr.JsBinary(l, "-", r);
+            case MUL -> new JsIr.JsBinary(l, "*", r);
+            case DIV -> new JsIr.JsBinary(l, "/", r);
+            case MOD -> new JsIr.JsBinary(l, "%", r);
+            case EQ -> new JsIr.JsBinary(l, "==", r);
+            case NE -> new JsIr.JsBinary(l, "!=", r);
+            case LT -> new JsIr.JsBinary(l, "<", r);
+            case LE -> new JsIr.JsBinary(l, "<=", r);
+            case GT -> new JsIr.JsBinary(l, ">", r);
+            case GE -> new JsIr.JsBinary(l, ">=", r);
+            case AND -> new JsIr.JsBinary(l, "&", r);
+            case OR -> new JsIr.JsBinary(l, "|", r);
+            case XOR -> new JsIr.JsBinary(l, "^", r);
+            case SHL -> new JsIr.JsBinary(l, "<<", r);
+            case SHR, USHR -> new JsIr.JsBinary(l, ">>", r);   // BigInt não tem >>>; SHR JVM-like
+            default -> new JsIr.JsBinary(l, "+", r);
+        };
+    }
+
+    /** §81: envolve o operando com BigInt() quando é literal Number cru
+     *  (promoção Int->Long); BigInt puro passa reto (idempotente). */
+    JsIr.JsExpression longOperand(JsIr.JsExpression e) {
+        if (e instanceof JsIr.JsNumber n) return new JsIr.JsCall(
+                new JsIr.JsIdentifier("BigInt"), List.of(n));
+        return e;
+    }
+
+    JsIr.JsExpression intWrap(Type operandType, JsIr.JsExpression inner) {
         if (JsTypeMapper.isIntFamily(operandType)) {
             return new JsIr.JsBinary(inner, "|", new JsIr.JsNumber("0"));
         }
@@ -380,9 +415,19 @@ JsIr.JsExpression unaryExpr(KofUnary ku, JsIr.JsExpression operand) {
         return switch (ku.op()) {
             case NEG -> new JsIr.JsUnary("-", operand);
             case NOT -> new JsIr.JsConditional(operand, new JsIr.JsNumber("0"), new JsIr.JsNumber("1"));
-            case I2L, I2F, I2D, I2C, L2I, L2F, L2D, F2D, D2F -> operand;
-            case D2I, F2I, D2L, F2L -> new JsIr.JsCall(new JsIr.JsIdentifier("Math.trunc"),
+            case I2F, I2D, I2C, L2F, L2D, F2D, D2F -> operand;
+            case I2L -> new JsIr.JsCall(new JsIr.JsIdentifier("BigInt"), List.of(operand));   // §81
+            // §81: Long(BigInt)->Int — o JVM trunca p/ 32-bit com o valor
+            // EXATO do long (2^53+1 → 1). Number() perde precisão acima de
+            // 2^53 (daria 0) — o truncamento tem de ser sobre BigInt:
+            // BigInt.asIntN(32, l) faz exatamente o wrap signed do JVM.
+            case L2I -> new JsIr.JsCall(
+                    new JsIr.JsMember(new JsIr.JsIdentifier("BigInt"), "asIntN"),
+                    List.of(new JsIr.JsNumber("32"), operand));
+            case D2I, F2I -> new JsIr.JsCall(new JsIr.JsIdentifier("Math.trunc"),
                     List.of(operand));
+            case D2L, F2L -> new JsIr.JsCall(new JsIr.JsIdentifier("BigInt"),
+                    List.of(new JsIr.JsCall(new JsIr.JsIdentifier("Math.trunc"), List.of(operand))));
         };
     }
 
@@ -393,7 +438,9 @@ JsIr.JsExpression literalExpr(KofLoadLiteral lit) {
             return new JsIr.JsIdentifier((v instanceof Integer i && i != 0) ? "true" : "false");
         }
         if (lit.value() instanceof Integer i) return new JsIr.JsNumber(Integer.toString(i));
-        if (lit.value() instanceof Long l) return new JsIr.JsNumber(Long.toString(l));
+        // §81 (5b, 13/09): Long no JS = BigInt (paridade 64-bit real); o
+        // sufixo `n` fabrica o literal BigInt.
+        if (lit.value() instanceof Long l) return new JsIr.JsNumber(Long.toString(l) + "n");
         if (lit.value() instanceof Float f) return new JsIr.JsNumber(Float.toString(f));
         if (lit.value() instanceof Double d) return new JsIr.JsNumber(Double.toString(d));
         if (lit.value() instanceof String s) return new JsIr.JsString(s);

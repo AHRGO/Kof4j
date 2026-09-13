@@ -81,6 +81,8 @@ public final class JsTypeMapper {
         if (value instanceof Double d) return Double.toString(d);
         if (value instanceof Boolean b) return b ? "1" : "0";
         if (value instanceof String s) return jsStringLiteral(s);
+        // §81 (5b): field inicializado com Long → BigInt literal
+        if (value instanceof Long l) return Long.toString(l) + "n";
         return String.valueOf(value);
     }
 
