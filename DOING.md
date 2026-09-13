@@ -101,12 +101,31 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > `check_500` **exit 0**. **NÃO:** `nat/` (refactor meu, não lane GC); UI*;
 > push main; `git config user.*`; Co-authored-by.
 >
-> **⚠️ ACHADO NO CAMINHO (a tratar):** §131 tem residual de **overload de
-> MESMA aridade e tipos diferentes** (`twice(Int)`/`twice(String)`): o call
-> site nativo resolve a vtable só pela ARIDADE → chama o 1º overload → SIGSEGV
-> (JVM/Script/JS corretos). Repro `OV1.kf`. Fix proposto = resolver pelo TIPO
-> do call site (`findVirtualMethodIndex(..., parameterTypes())`) — lane §131
-> (.18/9094); registrar em `known-bugs.md` §131-residual antes de mexer.
+> **✅ §131-RESIDUAL CORRIGIDO — overload de MESMA aridade e tipos diferentes
+> (13/09 ~08:00, lane gate/qualidade, dono = 192.168.100.15):** achado ao
+> provar o split do `NativeBackend` (probe `OV1.kf`). `class Calc { Int
+> twice(Int); String twice(String) }` + `c.twice("ab")` → **SIGSEGV no
+> Native** (`exit 139`): o dispatch virtual resolvia a vtable só pela
+> **ARIDADE** e caía no 1º slot (o de `Int`), passando `String` p/ um parâmetro
+> `Int`. JVM/Script/JS sempre corretos (descritor/SAM). O fechamento do §131
+> (`18a64d45`) só cobria aridade (`methodOverloadByArity`). **Fix:**
+> `NativeClassMeta.findVirtualMethodIndex` casa **nome + TIPOS do call site**
+> (`methodsForCall`: exato, com fallback p/ a 1ª assinatura da aridade quando o
+> arg é `Unknown`); x86 (`NativeX86Calls`) e riscv/aarch (`NativeRiscvCrossOps`)
+> passam `kc.parameterTypes()`. **Prova:** célula de matriz
+> `methodoverloadtype` (4 targets, `42/abab`) + probes `OV1`/`CLSOV`/`OVIF`
+> 4/4; gate 4-módulos **1645 run / 0 falhas / 13 erros (node) / 157 skip**
+> (`gate_overloadfix.log`). Registrado em `known-bugs.md` §131 (residual) +
+> `conformance-matrix.md`. **NÃO:** `nat/` (meu fix é dispatch, não lane GC);
+> UI*; push main; `git config user.*`; Co-authored-by.
+>
+> **⚠️ GAP NOVO (registrar/decidir — NÃO tocar sem dono):** Script/interpretador
+> — método/função de usuário com parâmetro `Double` recebe **`null`** no
+> interpretador: `Double soma(Double a, Double b){ return a+b }; println(soma(1.5,
+> 2.5))` → `ERR: Cannot invoke "java.lang.Number.doubleValue()" because "b" is
+> null` (JVM/Native OK; JS `4` vs JVM `4.0` = bug 44 floatprint). Probe
+> `OVD.kf`/`OVD2.kf`/`OVD3.kf`. **Pre-existing** (caminho do interpretador,
+> não tocado por este fix) — lane KOFSCRIPT/bugfixer; registrar antes de mexer.
 
 > **⏸️ RECUSA de re-disparo (13/09 ~07:15, lane gate/qualidade + docs, dono =
 > 192.168.100.15):** varredura completa feita nesta sessão — (a) **6 células de

@@ -1176,6 +1176,22 @@ class ConformanceMatrixTest {
                     println(c.twice(3, 4))
                 }
                 """, "42\n7", Set.of(), tempDir);
+        // §131-residual (13/09): overload de MESMA aridade e TIPOS diferentes
+        // (`twice(Int)`/`twice(String)`) — o call site nativo resolvia a
+        // vtable só pela ARIDADE e caía no 1º slot; passar String p/ um
+        // parâmetro Int dava SIGSEGV. JVM/Script/JS sempre corretos (descritor/
+        // SAM). Fix: resolver o slot pelo NOME + TIPOS do call site.
+        matrix("methodoverloadtype", """
+                class Calc {
+                    Int twice(Int x) { return x + x }
+                    String twice(String s) { return s + s }
+                }
+                main() {
+                    var c = Calc()
+                    println(c.twice(21))
+                    println(c.twice("ab"))
+                }
+                """, "42\nabab", Set.of(), tempDir);
         // §155 (13/09): tipo-função como ARGUMENTO GENÉRICO declarado
         // (`List<(Int) -> Int>`) — o parser montava a string de tipo sem
         // espaços (`"(Int)->Int"`), e `Type.of` só reconhece `"(Int) -> Int"`

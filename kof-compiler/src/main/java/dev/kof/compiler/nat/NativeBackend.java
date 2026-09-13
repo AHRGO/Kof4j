@@ -574,6 +574,7 @@ public class NativeBackend implements Backend {
     List<String> collectVirtualMethods(IRClass clazz) { return NativeClassMeta.collectVirtualMethods(this, clazz); }
     int findVirtualMethodIndex(String ownerTypeName, String methodName) { return NativeClassMeta.findVirtualMethodIndex(this, ownerTypeName, methodName, -1); }
     int findVirtualMethodIndex(String ownerTypeName, String methodName, int argCount) { return NativeClassMeta.findVirtualMethodIndex(this, ownerTypeName, methodName, argCount); }
+    int findVirtualMethodIndex(String ownerTypeName, String methodName, List<Type> argTypes) { return NativeClassMeta.findVirtualMethodIndex(this, ownerTypeName, methodName, argTypes); }
     void emitStringData(StringBuilder sb) { NativeClassMeta.emitStringData(this, sb); }
 
 }

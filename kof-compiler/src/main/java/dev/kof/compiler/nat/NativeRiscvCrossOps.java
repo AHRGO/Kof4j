@@ -375,7 +375,7 @@ public final class NativeRiscvCrossOps {
         if ((kc.kind() == KofCallKind.INSTANCE || kc.kind() == KofCallKind.INTERFACE)
                 && kc.ownerType() instanceof Type.ClassType ct && !BuiltinTypes.isString(ct)) {
             int argCount = kc.parameterTypes().size();
-            int vtableIdx = nb.findVirtualMethodIndex(ct.name(), mn, argCount);
+            int vtableIdx = nb.findVirtualMethodIndex(ct.name(), mn, kc.parameterTypes());
             if (vtableIdx >= 0) {
                 for (int i = argCount - 1; i >= 0; i--) {
                     sb.append("    pop ").append(crossArgReg(i + 1)).append("\n");

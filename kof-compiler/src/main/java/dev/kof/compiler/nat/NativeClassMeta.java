@@ -84,42 +84,70 @@ final class NativeClassMeta {
     }
 
     static int findVirtualMethodIndex(NativeBackend nb, String ownerTypeName, String methodName, int argCount) {
+        return findVirtualMethodIndex(nb, ownerTypeName, methodName, arityTypes(argCount));
+    }
+
+    /** §131-residual (13/09): resolve o slot pelo NOME + TIPOS do call site.
+     *  Só a ARIDADE não bastava — `twice(Int)`/`twice(String)` (mesma aridade,
+     *  tipos diferentes) resolviam ambas para o 1º slot: o Native chamava o
+     *  método errado (SIGSEGV ao passar String p/ parâmetro Int). JVM/Script/JS
+     *  sempre estiveram corretos (dispatch por descritor/SAM). */
+    static int findVirtualMethodIndex(NativeBackend nb, String ownerTypeName, String methodName, List<Type> argTypes) {
         for (IRClass clazz : nb.allClassesMap.values()) {
             if (clazz.name().equals(ownerTypeName) || clazz.name().endsWith("/" + ownerTypeName)
                     || ownerTypeName.endsWith("/" + clazz.name()) || ownerTypeName.equals(nb.sanitizeName(clazz.name()))) {
                 List<String> methods = collectVirtualMethods(nb, clazz);
                 String mangled = NativeSymbolMangling.fnSymbol(clazz.name(), methodName,
-                        methodsForArity(clazz, methodName, argCount), nb.allClassesMap);
-                for (int i = 0; i < methods.size(); i++) {
-                    if (methods.get(i).equals(mangled)) {
-                        return i;
-                    }
-                }
+                        methodsForCall(clazz, methodName, argTypes), nb.allClassesMap);
+                int bySig = indexOfSymbol(methods, mangled);
+                if (bySig >= 0) return bySig;
+                // sem casamento por tipo (arg Unknown): casa QUALQUER overload
+                // do nome — melhor que -1 (sem dispatch).
                 for (IRMethod m : clazz.methods()) {
                     if (m.name().equals(methodName) && !"<init>".equals(m.name()) && !"<clinit>".equals(m.name())) {
                         String m2 = NativeSymbolMangling.fnSymbol(clazz.name(), m.name(), m.parameterTypes(), nb.allClassesMap);
-                        for (int i = 0; i < methods.size(); i++) {
-                            if (methods.get(i).equals(m2)) {
-                                return i;
-                            }
-                        }
+                        int idx = indexOfSymbol(methods, m2);
+                        if (idx >= 0) return idx;
                     }
                 }
-                break;
+                return -1;
             }
         }
         return -1;
     }
 
-    /** §131: paramTypes do método (clazz,name) com a aridade pedida — para
-     *  construir o símbolo tageado do call site. Lista vazia se não achar. */
-    static java.util.List<Type> methodsForArity(IRClass clazz, String methodName, int argCount) {
-        for (IRMethod m : clazz.methods()) {
-            if (m.name().equals(methodName) && m.parameterTypes().size() == argCount) {
-                return m.parameterTypes();
-            }
+    private static List<Type> arityTypes(int argCount) {
+        if (argCount < 0) return List.of();
+        java.util.ArrayList<Type> l = new java.util.ArrayList<>();
+        for (int i = 0; i < argCount; i++) l.add(Type.UnknownType.UNKNOWN);
+        return l;
+    }
+
+    private static int indexOfSymbol(List<String> methods, String symbol) {
+        for (int i = 0; i < methods.size(); i++) {
+            if (methods.get(i).equals(symbol)) return i;
         }
-        return java.util.List.of();
+        return -1;
+    }
+
+    /** §131-residual: paramTypes do método (clazz,name) que casa com os tipos
+     *  do call site (aridade + tipo). Prefere casamento exato; sem ele, cai na
+     *  1ª assinatura da aridade (arg Unknown). Lista vazia se não achar. */
+    static java.util.List<Type> methodsForCall(IRClass clazz, String methodName, List<Type> argTypes) {
+        IRMethod arityMatch = null;
+        for (IRMethod m : clazz.methods()) {
+            if (!m.name().equals(methodName)) continue;
+            if (m.parameterTypes().size() != argTypes.size()) continue;
+            if (arityMatch == null) arityMatch = m;
+            boolean ok = true;
+            for (int i = 0; i < argTypes.size(); i++) {
+                Type declared = m.parameterTypes().get(i);
+                Type arg = argTypes.get(i);
+                if (!(declared.equals(arg) || declared.toString().equals(arg.toString()))) { ok = false; break; }
+            }
+            if (ok) return m.parameterTypes();
+        }
+        return arityMatch != null ? arityMatch.parameterTypes() : java.util.List.of();
     }
 
     static void emitStringData(NativeBackend nb, StringBuilder sb) {

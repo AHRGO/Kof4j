@@ -229,7 +229,7 @@ public final class NativeX86Calls {
             } else if (dispatchType instanceof Type.ClassType ct && !BuiltinTypes.isString(dispatchType)) {
                 // valueOf(objeto) → obj.toString() via vtable (records têm
                 // toString no IR; String é identity). Paridade com o JVM.
-                int tosIdx = nb.findVirtualMethodIndex(ct.name(), "toString", 0);
+                int tosIdx = nb.findVirtualMethodIndex(ct.name(), "toString", java.util.List.of());
                 if (tosIdx >= 0) {
                     sb.append("    popq %rax\n");
                     sb.append("    pushq %rax\n");
@@ -368,7 +368,7 @@ public final class NativeX86Calls {
             }
         }
         if (kc.kind() == KofCallKind.INSTANCE && kc.ownerType() instanceof Type.ClassType ct) {
-            int vtableIdx = nb.findVirtualMethodIndex(ct.name(), kc.methodName(), kc.parameterTypes().size());
+            int vtableIdx = nb.findVirtualMethodIndex(ct.name(), kc.methodName(), kc.parameterTypes());
             if (vtableIdx >= 0) {
                 int argCount = kc.parameterTypes().size();
                 String[] intRegs = {"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"};
@@ -407,7 +407,7 @@ public final class NativeX86Calls {
             }
         }
         if (kc.kind() == KofCallKind.INTERFACE && kc.ownerType() instanceof Type.ClassType ct) {
-            int vtableIdx = nb.findVirtualMethodIndex(ct.name(), kc.methodName(), kc.parameterTypes().size());
+            int vtableIdx = nb.findVirtualMethodIndex(ct.name(), kc.methodName(), kc.parameterTypes());
             if (vtableIdx >= 0) {
                 int argCount = kc.parameterTypes().size();
                 String[] intRegs = {"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"};

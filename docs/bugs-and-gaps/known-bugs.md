@@ -4094,6 +4094,16 @@ int de índice) — verificados na varredura.
   (`ConformanceMatrixTest.conformanceCoreFunctions`) roda `42/7` nos **4
   targets em CI** (antes a prova automatizada era só JVM+JS via `runBoth`; o
   Native/Script era repro manual) — 4/4.
+  **⚠️ RESIDUAL achado+corrigido (lane gate, 13/09):** o dispatch nativo
+  resolvia a vtable só pela **ARIDADE** — overload de MESMA aridade e TIPOS
+  diferentes (`twice(Int)`/`twice(String)`) caía no 1º slot: passar `String`
+  p/ um parâmetro `Int` dava **SIGSEGV** (JVM/Script/JS sempre corretos —
+  descritor/SAM). Repro `OV1.kf`; `methodOverloadByArity` (do fechamento) só
+  cobria aridade. **Fix:** `findVirtualMethodIndex` passa a casar **nome +
+  TIPOS do call site** (`NativeClassMeta.methodsForCall`, casamento exato com
+  fallback p/ a 1ª assinatura da aridade quando o arg é `Unknown`); x86 e
+  riscv/aarch passam `kc.parameterTypes()`. Prova: célula
+  `methodoverloadtype` (4 targets, `42/abab`) + `OV1`/`CLSOV` 4/4.
 
 
 ### 132. KofJS: task spawnada DE DENTRO de outra task nunca roda sem ceder o event-loop (worker do supervisor nunca dispara) — 🔴 ABERTO (impeditivo JS do OTP #83; gate OTP002 aplicado)
