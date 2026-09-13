@@ -68,7 +68,15 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
             // type information stays in the Kof compiler (generics erasure).
             JsIr.JsExpression value = kc.kind() == KofCallKind.FUNCTION
                     ? args.get(0) : receiver;
-            if (name.contains("encode")) {
+            if (name.equals("kof_json_encode_map")) {
+                // §106 residual (13/09): Map no JS é `new Map()` — JSON.stringify
+                // devolve '{}' (sem own enumerable props). Roteia p/ o helper
+                // que monta o objeto com chaves SORTED (decisão 2b), igual ao
+                // JVM/nativo/interp. args = (map, tag).
+                p.lc.registerRuntime("kofJsonEncodeMap");
+                stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofJsonEncodeMap"),
+                        List.of(value, args.get(1))));
+            } else if (name.contains("encode")) {
                 stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("JSON.stringify"), List.of(value)));
             } else if (name.startsWith("kof_json_decode_")
                     && BuiltinTypes.isList(kc.ownerType())) {

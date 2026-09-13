@@ -23,6 +23,22 @@ public final class JsRuntimeUiJsonMap {
                 return m;
             }
 
+            // §106 residual (13/09): encode<Map<String,T>> no JS. JSON.stringify
+            // num `Map` devolve '{}' (Map não tem own enumerable properties) —
+            // o §106 declarou "4 backends" mas NUNCA testou o JS (matriz não
+            // cobria json.encode(Map)). Aqui montamos o objeto com chaves
+            // SORTED (mesma semântica JVM/nativo/interp, decisão 2b) via
+            // JSON.stringify por valor (escapa string/número/bool/null
+            // corretamente; `tag` fica na assinatura por simetria).
+            export function kofJsonEncodeMap(map, tag) {
+                const keys = [...map.keys()].sort();
+                const parts = [];
+                for (const k of keys) {
+                    parts.push(JSON.stringify(String(k)) + ':' + JSON.stringify(map.get(k)));
+                }
+                return '{' + parts.join(',') + '}';
+            }
+
             """;
 
 }

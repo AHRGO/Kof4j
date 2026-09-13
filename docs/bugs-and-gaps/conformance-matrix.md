@@ -195,6 +195,7 @@
 | json.encode int/string/bool | `42` / `"oi"` / `true` | DONE | DONE | DONE | DONE | `jsonenc-int` |
 | json.encode lista | `[1,2,3]` | DONE | DONE | DONE | DONE | `jsonenc-list` |
 | json.encode record | `{"x":1,"y":2}` | DONE | DONE | DONE | DONE | `jsonenc-record` |
+| json.encode Map (chaves SORTED — §106, decisão 2b) | `{"a":1,"b":2}` | DONE | DONE | DONE | DONE | `jsonenc-map` |
 | json.decode int/string/bool | `7` / `oi` / `true` | DONE | DONE | DONE | DONE | `jsondec-int` |
 | json.decode lista de primitivo | `3` / `2` | DONE | DONE | DONE | DONE | `jsondec-list` |
 | json.decode record | `1` / `2` | DONE | DONE | DONE (fix 07/09) | DONE | `jsondec-record` |

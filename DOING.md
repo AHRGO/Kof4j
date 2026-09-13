@@ -82,6 +82,22 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > Se nada disso aparecer, RECUSAR o re-disparo (não inventar trabalho).
 > **NÃO:** `nat/`; UI*; push main; `git config user.*`; Co-authored-by.
 
+> **⚡ RESIDUAL §106 CORRIGIDO (13/09 ~05:40, lane gate/qualidade, dono =
+> 192.168.100.15):** o fechamento do §106 (`5b939106`) declarava "JVM/x86/
+> Script/JS" mas o **JS nunca foi testado** (o `JsonCompleteE2ETest` só cobria
+> JVM+Native) — `json.encode(Map)` no JS devolvia `{}` (`JSON.stringify(new
+> Map())` = `{}`; Map não tem own enumerable props). **Achado pela nova célula
+> de matriz `jsonenc-map`** (que o fechamento dizia existir — "segue na
+> matriz" — mas NÃO existia). **Fix:** helper `kofJsonEncodeMap(map, tag)` em
+> `JsRuntimeUiJsonMap` (chaves SORTED + `JSON.stringify`) + ramo no
+> `JsRuntimeOps`; matriz ganhou `jsonenc-map` com bordas (valor string +
+> mapa vazio). **Prova:** `ConformanceMatrixTest#conformanceJson` 4/4 alvos
+> (`{"a":1,"b":2}` / `{"a":"first","z":"last"}` / `{}`) + harness `S106.kf`
+> 4/4. **Gate 4-módulos pós-fix: 1644 run / 0 falhas / 13 erros (`*Js` node)
+> / 157 skip — verde** (`gate_s106js.log`). **Lição:** fechamento sem teste no
+> alvo declarado = verde falso (Q5); a matriz de conformidade foi o que
+> pegou. **NÃO:** `nat/`; UI*; push main; `git config user.*`; Co-authored-by.
+
 > **⚡ RECUSA de re-disparo (13/09 ~06:50, lane development/docs, dono =
 > 192.168.100.17 — pow fechado em `d736e36e`+docs `c75dcbbd`):** varredura
 > §1 do README executada no HEAD (não na memória): (1) stdlib-expansion —

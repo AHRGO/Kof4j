@@ -1348,6 +1348,22 @@ class ConformanceMatrixTest {
                     println(json.encode(P(1, 2)))
                 }
                 """, "{\"x\":1,\"y\":2}", Set.of(), tempDir);
+        // §106 (decisão 2b): json.encode(Map) = objeto JSON com chaves SORTED
+        // (determinismo). A ordem de inserção é invertida de propósito
+        // (b depois a) p/ provar que a saída é ordenada, não insertion-order.
+        // Q3: valor string (escape) + mapa vazio.
+        matrix("jsonenc-map", """
+                import kof.json.*
+                main() {
+                    var m = mapOf("b", 2)
+                    m.put("a", 1)
+                    println(json.encode(m))
+                    var s = mapOf("z", "last")
+                    s.put("a", "first")
+                    println(json.encode(s))
+                    println(json.encode(mapOf()))
+                }
+                """, "{\"a\":1,\"b\":2}\n{\"a\":\"first\",\"z\":\"last\"}\n{}", Set.of(), tempDir);
         matrix("jsondec-int", """
                 main() {
                     println(json.decode<Int>("7"))

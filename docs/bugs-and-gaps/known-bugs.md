@@ -2782,7 +2782,18 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
 - **✅ DECIDIDO 13/09 (mantenedora, opção 2b):** superfície = objeto JSON com chaves **SORTED** (determinismo > ordem de inserção). Correção liberada: JVM (itera `entrySet`), nativos (ramo próprio no dispatch), gate `JSN00x` compile-time no que faltar + golden de ordem nos 5 alvos. Sai de "ABERTO por decisão" para lane implementável. A correção tem 3 partes: gate honesto no compile-time até a superfície decidir (diagnóstico `JSN00x` no estilo JSN004 no dispatch de Map em nativos) + decisão de formato + ramos JVM (entries) e nativo. Registra aqui; NÃO vira edição de semântica sem decisão.
 - **Pista de teste faltante (para quem fechar):** `json.encode(mapOf(...))` nos 5 alvos com golden de ordem (provavelmente insertion-order = `LinkedHashMap` semantics, mas é a decisão).
 - **✅ CORRIGIDO 13/09 (opção 2b implementada):** superfície = objeto JSON com chaves **SORTED** (TreeSet/selection-sort). Call-site baixa `kof_json_encode_map(map, tagDoValor)` (tag = mesma tabela de `listTag`: 0=int, 1=string, 2=bool). JVM: `JvmRuntimeJson.kof_json_encode_map(Map,int)` (TreeSet keys, encode por tag); nativo x86: asm próprio `kof_json_encode_map` em `RuntimeJsonEncode.java` (selection-sort com `kof_string_compare_to`, builder JSON); interpretador: `KofInterpreterRuntime.encodeMapTagged`; dispatch: ramo `isMap` em `JsonDispatch.encodeFunction`. Riscv/aarch64: asm próprio pendente (gap de porta — segue como XXX00x na matriz). Prova: `JsonCompleteE2ETest.jvmEncodeMapSortedKeys` (golden `{"a":1,"b":2}
-{"x":"w","y":"z"}`) + `nativeEncodeMapSortedKeys` (golden `{"a":1,"b":2}`) verdes 13/09.
+  {"x":"w","y":"z"}`) + `nativeEncodeMapSortedKeys` (golden `{"a":1,"b":2}`) verdes 13/09.
+- **✅ RESIDUAL JS CORRIGIDO 13/09 (lane gate, dono 192.168.100.15):** o
+  fechamento acima declarava "JVM/x86/Script/JS", mas **o JS nunca foi
+  testado** (o `JsonCompleteE2ETest` só cobria JVM+Native) e devolvia `{}`
+  — `json.encode(Map)` no JS caía no `JSON.stringify` genérico, e
+  `JSON.stringify(new Map())` é `{}` (Map não tem own enumerable props).
+  Achado pela nova célula de matriz **`jsonenc-map`** (antes inexistente —
+  o "segue na matriz" do fechamento era falso). Fix: helper
+  `kofJsonEncodeMap(map, tag)` em `JsRuntimeUiJsonMap` (chaves SORTED +
+  `JSON.stringify` por chave/valor) + ramo `kof_json_encode_map` no
+  `JsRuntimeOps`. Prova: `ConformanceMatrixTest#conformanceJson` célula
+  `jsonenc-map` (4 alvos: `{"a":1,"b":2}` / `{"a":"first","z":"last"}` / `{}`).
 
 ### 108. `println(listOf(bool,...))` — interpretador (Script) imprime `[1, 0]` vs JVM `[true, false]` — ✅ CORRIGIDO (11/09, Script-only; storage boxing)
 
