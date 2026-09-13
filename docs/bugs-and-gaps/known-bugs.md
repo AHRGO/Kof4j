@@ -6010,6 +6010,12 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
     -2147483648 : Math.trunc(x)` p/ `Int`; análogo p/ `Long` com
     `BigInt.asIntN(64, …)` sobre o valor já saturado, e guard de NaN antes do
     `BigInt`). Pode virar helper de runtime (ex.: `kofD2I`/`kofD2L`).
+    **⚠️ NÃO emitir a árvore condicional INLINE sobre o `operand` cru:** o
+    IR do JS é uma expressão e `operand` pode ter side-effect
+    (`f() as Int`) — repeti-lo nas comparações o avaliaria 2-4×, divergindo
+    do JVM/Script (avalia 1×). A correção exige avaliar UMA vez: helper de
+    runtime (`kofD2I(v)`) ou IIFE. Foi por isso que esta unidade não foi
+    feita nesta sessão (o helper toca o runtime JS de outra lane).
   - **Native x86 (lane Native, espelho riscv/aarch):** após `cvttsd2si`,
     detectar o "integer indefinite" (`0x80000000`/`0x8000…`) **ou** comparar
     com a faixa via `ucomisd` e saturar (MAX/MIN) — NaN→`0`. Toca
