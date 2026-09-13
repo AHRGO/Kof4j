@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Gate de CI da Fase 9 (plano de plataforma): "CI compara matriz × testes
- * reais". A matriz {@code docs/development/conformance-matrix.md} declara,
+ * reais". A matriz {@code docs/bugs-and-gaps/conformance-matrix.md} declara,
  * por caso, quais targets são DONE e quais são PARTIAL (bug registrado). O
  * {@link ConformanceMatrixTest} é a PROVA — o {@code Set.of(...)} de cada
  * {@code matrix(...)} lista os targets EXCLUÍDOS da asserção. Este teste
@@ -33,7 +33,7 @@ class ConformanceMatrixDocTest {
     private static Path repoRoot() {
         Path p = Path.of(System.getProperty("user.dir")).toAbsolutePath();
         for (int i = 0; i < 6 && p != null; i++, p = p.getParent()) {
-            if (Files.exists(p.resolve("docs/development/conformance-matrix.md"))) return p;
+            if (Files.exists(p.resolve("docs/bugs-and-gaps/conformance-matrix.md"))) return p;
         }
         throw new IllegalStateException("conformance-matrix.md não achado a partir de " + p);
     }
@@ -41,7 +41,7 @@ class ConformanceMatrixDocTest {
     /** caso → targets NÃO-DONE declarados na matriz. */
     private static Map<String, Set<String>> matrixPartials() throws IOException {
         Map<String, Set<String>> out = new LinkedHashMap<>();
-        for (String line : Files.readAllLines(repoRoot().resolve("docs/development/conformance-matrix.md"))) {
+        for (String line : Files.readAllLines(repoRoot().resolve("docs/bugs-and-gaps/conformance-matrix.md"))) {
             String l = line.trim();
             if (!l.startsWith("|")) continue;
             // GFM: \| é pipe literal dentro de célula — só quebra em pipe não escapado

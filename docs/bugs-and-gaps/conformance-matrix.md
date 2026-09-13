@@ -1,13 +1,13 @@
 # Conformance Matrix — Feature × Target (Fase 9, plano de plataforma)
 
 > **Criado:** 07/09/2026 · **Dono:** lane KOFSCRIPT (fixes-for-kofagent)
-> **Plano:** `docs/development/PLATFORM-PLAN.md` Fase 9 ·
+> **Plano:** `docs/development/decision-pending/PLATFORM-PLAN.md` Fase 9 ·
 > **Roadmap-audit:** linha 12 "Conformance Suite — NOT STARTED (BackendParityTest é proxy)" + fila P4.
 >
 > **Regra:** cada célula é travada por teste em `ConformanceMatrixTest`
 > (kof-compiler/src/test). **DONE** = os 4 targets concordam com a saída
 > esperada. **PARTIAL** = divergência com bug registrado em
-> `docs/development/known-bugs.md` (ref na célula). **UNSUPPORTED** = gap
+> `docs/bugs-and-gaps/known-bugs.md` (ref na célula). **UNSUPPORTED** = gap
 > honesto (R6: diagnóstico, nunca stub silencioso).
 >
 > Targets: **JVM** (bytecode compilado), **Native** (x86_64 ELF; riscv64/
@@ -78,7 +78,7 @@
 | lógica booleana + comparação | `false` / `true` / `false` / `true` | DONE | DONE | DONE | DONE | `boollogic` |
 | bitwise & \|\| ^ << >> | `2` / `7` / `5` / `16` / `64` | DONE | DONE | DONE | DONE | `bitwise` |
 | stdlib kof.math (S1: clamp/abs/sign/min/max/isEven/isOdd/isZero + `==true`/`==false` §93) | `10` / `0` / `7` / `-1` / `3` / `8` / `true` / `false` / `true` / `true` / `false` | DONE | DONE | DONE | DONE | `stdmath` |
-| stdlib kof.math (S1b: sqrt — primeiro Double; comparações Bool, NaN em <0 = IEEE; riscv/aarch = B32 `fsqrt.d`, MATH001 fechado 11/09) | `true` / `true` / `true` / `true` / `false` / `true` | DONE | DONE | DONE (bug 94 corrigido 13/09: `numEq` IEEE — `NaN==NaN` false, `+0.0==-0.0` true) | DONE | `stdsqrt` |
+| stdlib kof.math (S1b: sqrt — primeiro Double; comparações Bool, NaN em <0 = IEEE; riscv/aarch = B32 `fsqrt.d`, MATH001 fechado 11/09; §94 fechado 13/09 — interp agora IEEE) | `true` / `true` / `true` / `true` / `false` / `true` | DONE | DONE | DONE | DONE | `stdsqrt` |
 | stdlib kof.math (S1b.1: lerp/percentage/isInteger/isDecimal — Double puro, SSE2; subset determinístico, NaN só nos compilados via KofMathTest; riscv/aarch = B32, MATH001 fechado 11/09) | `true` ×15 | DONE | DONE | DONE | DONE | `stdmathdouble` |
 | stdlib kof.strings (S2a: isAlpha/isNumeric/isAlphaNumeric/isAscii/isUpper/isLower/count + `==true` §93) | `true` / `false` / `false` / `true` / `false` / `false` / `true` / `false` / `true` / `true` / `true` / `false` / `true` / `false` / `2` / `1` / `true` | DONE | DONE | DONE | DONE | `stdstrings` |
 | stdlib kof.strings (S2b: capitalize/reverse/repeat/truncate/pad — ASCII) | `Hello world` / `1abc` / `321cba` / `kayak` / `ababab` / `hello` / `abc` / `007` / `ab---` | DONE | DONE | DONE | DONE | `stdstrings2b` |
@@ -245,7 +245,7 @@ motivo diferente, ambos honestos (R6):
   `Target.WASM`; `TargetMatrix.frontendGapFor` mapeia os nomes pedidos
   (`wasm`, `kofwasm`, `kofwebasm`, `kofwebassembly`, `webassembly`) ao gap
   **WASM001**, planejado na Fase 6 do plano de plataforma
-  (`docs/development/PLATFORM-PLAN.md`). Os dois caminhos da CLI
+  (`docs/development/decision-pending/PLATFORM-PLAN.md`). Os dois caminhos da CLI
   diagnosticam igual: `--frontend=wasm`/`kof.toml` →
   `TargetMatrix.parse` com o gap; `--target=wasm` (flag legado) → a mesma
   mensagem via `KofCliSupport.parseTarget`. Nunca compila como JVM por

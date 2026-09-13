@@ -221,7 +221,7 @@ tradutor; 39+39 E2E sob qemu — faces de paridade avançada = NATIVE002),
 GC mark-sweep (G-0 riscv ✅ `356f33b9`; decomposição G-1..G-5 em
 `native-multiarch.md`).
 (kof.mq pub/sub + queue = 3 targets — MQ001 fechado 01/09)
-Ver `docs/plan-spring-independence.md` (Fases 5-14).
+Ver `docs/development/decision-pending/plan-spring-independence.md` (Fases 5-14).
 
 **gRPC no `kof.web` (novo, 31/08 — planejado)**: comunicação gRPC como
 primeira classe na plataforma web — `app.grpc { service ... }` com stubs
@@ -649,7 +649,7 @@ contratos estabilizarem.
 - security defaults / audit.
 
 > Auditoria do ecossistema: a matriz de cobertura, gaps (G1-G12),
-> prioridades e estratégia vivem em `docs/ecosystem-coverage.md`.
+> prioridades e estratégia vivem em `docs/bugs-and-gaps/ecosystem-coverage.md`.
 > Ordem de implementação P0: diagnóstico de target (G7) → `kof.test`
 > estruturado (G6) → `kof.config` (G3) → `kof.http` client (G2) →
 > `kof.database` (G1) → validation (G4) → observability (G5) →
@@ -829,4 +829,4 @@ ciência) **sem** destruir a simplicidade da linguagem.
 
 **Não implementar nada desta seção antes do estágio SYSTEMS fechar**
 (paridade de gaps, GC mark-sweep, package manager básico — ver
-`docs/development/plan-platform-completion.md` P0–P5).
+`docs/development/decision-pending/plan-platform-completion.md` P0–P5).

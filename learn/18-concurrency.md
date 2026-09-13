@@ -190,7 +190,7 @@ compile-time** (antes caía no `sanitizeName` genérico de
 > célula de suporte não citar um método de teste existente, ou se uma
 > célula marcada `❌` referir-se a um símbolo que os emissores cross de
 > fato emitem. É o mesmo padrão do `ConformanceMatrixDocTest`, que trava
-> `docs/development/conformance-matrix.md`. Motivo: esta tabela passou
+> `docs/bugs-and-gaps/conformance-matrix.md`. Motivo: esta tabela passou
 > meses dizendo que os auxiliares reportavam `CONC001` no Native — porque
 > nada a comparava com o código.
 >

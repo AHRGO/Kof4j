@@ -6,7 +6,7 @@ package dev.kof.compiler.runtime;
  * (Double/Float.parseFloat(s.trim())): trim, +/-, digitos, um '.', expoente,
  * literais NaN/Infinity, falha -> excecao String (kof_throw_string). Mantissa
  * em int64 + uma divisao por 10^nfrac (rounding unico; "0.3"==0.3). LIMITE
- * documentado em docs/development/known-bugs.md §82: mantissa >19 digitos
+ * documentado em docs/bugs-and-gaps/known-bugs.md §82: mantissa >19 digitos
  * LANCA (JVM parsearia); hex-float nao parseia. Split de RuntimeStringParse
  * (gate ≤500; REFACTOR-500) — mesma familia, corpos separados por alvo de
  * paridade (Int/Long inteiro x FP).

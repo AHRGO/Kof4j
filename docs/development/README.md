@@ -12,10 +12,15 @@
 > **só plano, zero código**. Concluiu → move p/ submódulo de `docs/` no mesmo
 > commit; iniciou → cai p/ cá. A varredura de 12/09 (`655afa6b`) moveu 13 docs
 > de `future/` p/ cá (todos com código) e 4 concluídos p/ `docs/`.
+> **Refactor de clareza 13/09 (mantenedora):** bugs/gaps/matrizes →
+> `docs/bugs-and-gaps/` (linhas 2, 41, §2, §3, §4.2, §5); planos **parados por
+> decisão** → `docs/development/decision-pending/` (§3 inteiro, §4.1/§4.2
+> linhas deles). Este README lista o que **anda**; o que espera ordem mora em
+> `decision-pending/` e NÃO puxa prioridade sem a mantenedora (regra 6).
 
 **Fontes de verdade que NÃO estão aqui (não são backlog):** `docs/status.md`
 (o que funciona + gate da suíte), `docs/backend-parity.md` (matriz de
-paridade com gaps honestos), `docs/language-reference/specification-gaps.md`
+paridade com gaps honestos), `docs/bugs-and-gaps/specification-gaps.md`
 (SG-001–020 — fila do maintainer COMPLETA 12/09, virou referência).
 
 ---
@@ -45,7 +50,7 @@ package-compiler) abre antes de SYSTEMS fechar (paridade + GC + estabilidade).
 
 ---
 
-## 2. Bugs abertos (fila em `known-bugs.md`) — triagem 13/09
+## 2. Bugs abertos (fila em `docs/bugs-and-gaps/known-bugs.md`) — triagem 13/09
 
 **11 seções sem ✅ no cabeçalho** (§127-JVM e §94 fechados 13/09; §9 triado ✅ 13/09 — `nativeLambdaMutableCapture` 1/1) — e a conclusão honesta
 (`known-bugs.md:11`): **nenhum item de código-puro-sem-decisão restou na lane**.
@@ -67,6 +72,11 @@ escalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 ---
 
 ## 3. Bloqueados por decisão da mantenedora (NUNCA atacar sem ordem)
+
+> Os "Onde" abaixo: `decision-pending/` = `docs/development/decision-pending/`;
+> `known-bugs.md` = `docs/bugs-and-gaps/known-bugs.md`. Ao decidir, o item sai
+> de `decision-pending/` (volta p/ `development/` se vira código, p/ `docs/` se
+> já estava pronto).
 
 | Item | Onde | O que espera |
 |---|---|---|
@@ -132,7 +142,7 @@ evidência em cada linha de §4.1; snapshot SG 08/09 → `docs/history/`)*
 
 | Saiu p/ | Doc | Prova |
 |---|---|---|
-| `docs/language-reference/specification-gaps.md` | SG-001–020 + E1–E3 | fila do maintainer COMPLETA (resumo do próprio doc); snapshot antigo → `docs/history/specification-gaps-0.3.0-snapshot.md` |
+| `docs/bugs-and-gaps/specification-gaps.md` | SG-001–020 + E1–E3 | fila do maintainer COMPLETA (resumo do próprio doc); snapshot antigo → `docs/history/specification-gaps-0.3.0-snapshot.md` |
 | `docs/stdlib/DATABASE_VISION.md` | níveis 0–4 | query DSL 01/09 (`KofOrmE2ETest` 22), MySQL prepared (`nativeMysqlPreparedBinary`), pooling ✅; DB001/ORM001 vivem na matriz de paridade |
 | `docs/architecture/complexity-audit.md` | snapshot 02/09 | números pré-SOLID-500; gate vivo = `scripts/check_500.sh` (ratchet) |
 | `docs/history/roadmap-gap-2026-09-03.md` | gap report datado | pendências vivem em roadmap-audit/known-bugs |

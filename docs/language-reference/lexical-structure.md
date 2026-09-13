@@ -56,7 +56,7 @@ que o parser não aceita como identificador em **nenhuma** posição).
 > **Divergência documentada (SG-002):** `sealed` e `permits` são keywords do
 > lexer mas **não são aceitas em lugar nenhum do parser** — `sealed class X {}`
 > falha com `PARSE007`. São tokens mortos. Ver
-> [../specification-gaps.md](specification-gaps.md).
+> [specification-gaps.md](../bugs-and-gaps/specification-gaps.md).
 
 > **SG-001 RESOLVIDO (06/09):** `fun`/`fn`/`func` são **palavras reservadas**
 > (tokens `FUN`/`FN`/`FUNC` no lexer) — **não existem** no Kof, nem como

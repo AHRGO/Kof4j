@@ -19,8 +19,8 @@ direto, FFM Vulkan compute, interop Java + GraalJS), `mvn test` 810.
 
 Referências (não alteradas): `docs/roadmap.md` (visão), `docs/philosophy.md`
 (intenção), `docs/architecture/architecture.md` (ADR multi-target),
-`docs/ecosystem-coverage.md` (matriz de capacidades), `docs/stdlib/stdlib.md`
-(mecanismo de dispatch), `docs/plan-platform-completion.md` (execução atual).
+`docs/bugs-and-gaps/ecosystem-coverage.md` (matriz de capacidades), `docs/stdlib/stdlib.md`
+(mecanismo de dispatch), `docs/development/decision-pending/plan-platform-completion.md` (execução atual).
 
 ---
 
@@ -351,7 +351,7 @@ Isso cobre grande parte da "automação de máquinas" — **A/B**.
 **O que falta:** um *modelo de job/pipeline* declarativo e um *executor*
 compartilhado (fila de jobs, retry, dead-letter, checkpoints) — hoje há
 `kof.mq` (pub/sub, **A**) e `scheduler` (**A**), mas não um **batch/pipeline
-framework** (ver §3.8 do `ecosystem-coverage.md`: `PLANNED`). **C** (namespace
+framework** (ver §3.8 do docs/bugs-and-gaps/`ecosystem-coverage.md`: `PLANNED`). **C** (namespace
 `kof.workflow`/`kof.batch`).
 
 **Veredito:** automação é onde Kof tem **maior aderência natural** — o
@@ -440,7 +440,7 @@ dia; não reimplementar álgebra linear; a entrada do Kof em data science é
 
 **O que é:** tensores, modelos, treinamento, inferência, métricas, pipelines.
 
-**Estado real:** nada no Kof hoje (ver `ecosystem-coverage.md` §3.14: `PLANNED`,
+**Estado real:** nada no Kof hoje (ver docs/bugs-and-gaps/`ecosystem-coverage.md` §3.14: `PLANNED`,
 decisão stdlib-vs-externo adiada à P3). **D** (pesquisa) — e a maioria é
 **A via interop**.
 
@@ -496,7 +496,7 @@ rate limit, sessions, API keys. **A** — e com gaps diagnosticados
 **Princípio do domínio:** **defesa primeiro**; ofensiva somente em contexto
 legítimo (auditoria, pentest autorizado, pesquisa) — e sempre como *ferramenta
 orquestrada*, não como "Kof é um framework de ataque". (Reflete a postura do
-`docs/security-plan.md`.)
+`docs/development/decision-pending/security-plan.md`.)
 
  **O que NÃO fazer:** não reimplementar stacks cripto do zero quando há
  implementações auditadas (FFI a libs); não transformar Kof em "Kali em Kof";
@@ -1588,7 +1588,7 @@ arquiteturais futuras e guardrails.)
 - **O quê:** nenhum item deste plano é **ação** sobre o estado atual. O estado
   atual (0.2.6-beta, 810 testes, 7 targets) permanece **100% intacto**. Os
   itens **C/D** acima são **dependências arquiteturais futuras**, a serem
-  retomadas pelo roadmap vigente (`roadmap.md` / `plan-platform-completion.md`)
+  retomadas pelo roadmap vigente (`roadmap.md` / `docs/development/decision-pending/plan-platform-completion.md`)
   **após** a consolidação atual (P0-P5) — nunca como frente paralela agora.
 - **Por quê:** o enunciado é explícito: preservar o trabalho em andamento.
 - **Custo:** zero.

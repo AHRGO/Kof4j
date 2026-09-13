@@ -22,7 +22,7 @@
  > frontend** (lexer→parser→AST→IR) e executa a IR otimizada no interpretador
  > (target de execução direta, 0.3.0-beta); (c) a IR é uma **máquina de pilha
  > linear** (30 ops), não uma "árvore". Ver SG-E1/SG-E3 em
- > [`specification-gaps.md`](../language-reference/specification-gaps.md).
+ > [`specification-gaps.md`](../bugs-and-gaps/specification-gaps.md).
 
 ## Context
 

@@ -178,8 +178,8 @@ disconnect). Ver [docs/debugging/debugging.md](docs/debugging/debugging.md).
 
 **Auditoria do ecossistema**: matriz de cobertura da stdlib (inventário,
 gaps G1-G12, prioridade e estratégia) em
-[docs/development/ecosystem-coverage.md](docs/development/ecosystem-coverage.md). Plano de evolução
-para plataforma completa: [docs/development/plan-platform-completion.md](docs/development/plan-platform-completion.md).
+[docs/bugs-and-gaps/ecosystem-coverage.md](docs/bugs-and-gaps/ecosystem-coverage.md). Plano de evolução
+para plataforma completa: [docs/development/decision-pending/plan-platform-completion.md](docs/development/decision-pending/plan-platform-completion.md).
 
 ---
 

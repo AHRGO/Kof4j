@@ -4273,7 +4273,7 @@ statement-switch na mesma taxa). Reprodução no próprio teste (kof-cli).
   normal justo antes da região crítica. Qualquer adição de linhas com aspas
   (o §107-x86 emitiu `.ascii "["`/`"?"/...`) desloca o deslocamento e a
   montagem falha — em código NON-MINE. Convenção correta do próprio repo
-  (lição já escrita em `docs/development/plan-spring-independence.md`
+  (lição já escrita em `docs/development/decision-pending/plan-spring-independence.md`
   §"Pegadinha de text block", e usada em `RuntimeMemory.java:228`,
   `RuntimeObservability3.java:35-42`, `RuntimeValidation.java:356-359`):
   para emitir `\n` no asm a partir de um text block, escrever `\\n`.
@@ -4660,7 +4660,7 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
 
 - **(a) Metade matriz RESOLVIDA por esta sessão (`0c107eb9`):** não é
   "a célula de isEmpty" nem o caminho `docs/CONFORMANCE_MATRIX.md` (que não
-  existe — o real é `docs/development/conformance-matrix.md`); são **3**
+  existe — o real é `docs/bugs-and-gaps/conformance-matrix.md`); são **3**
   células (`doublemod`, `strisempty`, `ifthrowelse`) adicionadas ao
   `ConformanceMatrixTest` por `718ae5cf`/`440730c8` sem linha na doc. Linhas
   espelhando-as (PARTIAL = `Set.of` do teste) postas na doc →

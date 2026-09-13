@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Conformance Matrix (Fase 9 do plano de plataforma —
- * docs/development/conformance-matrix.md): cada caso trava a MESMA saída
+ * docs/bugs-and-gaps/conformance-matrix.md): cada caso trava a MESMA saída
  * esperada nos 4 targets — JVM (bytecode), Native (x86_64), Script
  * (interpretador de IR) e KofJS (GraalJS).
  *
@@ -131,7 +131,7 @@ class ConformanceMatrixTest {
                 "[" + name + "] esperado <" + expected + "> — divergências:");
     }
 
-    // ===== Lote 1 — linguagem core (docs/development/conformance-matrix.md) =====
+    // ===== Lote 1 — linguagem core (docs/bugs-and-gaps/conformance-matrix.md) =====
 
     @Test
     void conformanceCoreArithmetic(@TempDir Path tempDir) throws IOException {

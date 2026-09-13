@@ -104,7 +104,7 @@ deixe trabalho grande não-commitado — é assim que se perde uma sessão.
 2. **Colisão de lane inevitável** — o único caminho toca um arquivo `EM CURSO`
    de outro agente e não dá para adiar: pare, registre no DOING.md, aguarde.
 3. **Gate quebrado sem causa na sua mudança** — suíte vermelha que você não
-   introduziu e não consegue diagnosticar: registre em `docs/development/known-bugs.md`
+   introduziu e não consegue diagnosticar: registre em `docs/bugs-and-gaps/known-bugs.md`
    com reproduções, não "conserte" o teste para passar.
 4. **Requisito genuinamente ausente do corpus** — nem `training/`, nem
    `learn/`, nem o compilador respondem: escreva a pergunta no DOING.md na
@@ -117,7 +117,7 @@ deixe trabalho grande não-commitado — é assim que se perde uma sessão.
 > **O desenvolvimento está estável quando as três condições abaixo valem ao
 > mesmo tempo:**
 >
-> 1. **Todos os bugs resolvidos** — `docs/development/known-bugs.md` sem item
+> 1. **Todos os bugs resolvidos** — `docs/bugs-and-gaps/known-bugs.md` sem item
 >    aberto (tudo `CORRIGIDO`/`FECHADO` com prova).
 > 2. **Todo `docs/development/` concluído** — nenhuma doc com desenvolvimento
 >    pendente (as concluídas já foram movidas para `docs/`, as não-iniciadas
@@ -232,7 +232,7 @@ conceitual nem decide arquitetura/rumo. Consequências práticas para o agente:
    raiz": rigor na compilação, vivência prática, código robusto.
 2. **Compile antes de entregar.** Alucinação é proibida. "Achar" que compila
    não compila. O loop de verificação (§ abaixo) é inegociável.
-3. **Transparência cirúrgica de erros.** Erros vão para `docs/development/known-bugs.md`
+3. **Transparência cirúrgica de erros.** Erros vão para `docs/bugs-and-gaps/known-bugs.md`
    com **causa raiz** + **menor repro**, inclusive regressões que a mantenedora
    introduziu. Nunca "documentar em volta" do bug.
 4. **Discussão técnica antes de código.** Quando a dúvida é conceitual (semântica,
@@ -357,6 +357,20 @@ estado do **SOFTWARE**, não o do texto:
 | `docs/` | documentação consolidada e válida | **somente** o que já foi implementado, validado ou decidido |
 | `docs/development/` | trabalho atualmente em desenvolvimento | **somente** itens com implementação, validação, testes ou integração **pendentes** |
 | `docs/development/future/` | planejado para depois | ideias/funcionalidades **não** em desenvolvimento atual |
+| `docs/development/decision-pending/` | planos **parados aguardando decisão da mantenedora** | trabalho técnico existe mas **não anda sem ordem** (regra 6) — nunca atacar sem decisão; sai daqui ao ser decidido (volta p/ `development/` se vira código, ou p/ `docs/` se já estava pronto) |
+| `docs/bugs-and-gaps/` | **registros vivos** de bugs, gaps de spec e matrizes de conformidade/paridade | fila por alvo (regra 3 do congelamento); não é "plano" — atualiza no MESMO commit que fecha o item |
+
+> **Refactor de clareza (13/09, decisão da mantenedora):** bugs/gaps/matrizes
+> (`known-bugs.md`, `conformance-matrix.md`, `ecosystem-coverage.md`,
+> `KOFUI-AUDIT.md`, `specification-gaps.md`) **não são backlog de
+> desenvolvimento** — moram em `docs/bugs-and-gaps/`. Documentos 100% parados
+> por decisão (`PLATFORM-PLAN.md`, `APPLICATION_MODEL.md`, `security-plan.md`,
+> `plan-platform-completion.md`, `plan-spring-independence.md`,
+> `planning-stdlib-time-design.md`) moram em
+> `docs/development/decision-pending/`. `docs/development/` fica **só** com
+> trabalho que anda (planos com código em andamento, refactors, auditorias
+> vivas da fila). Um agente da lane **docs** não mexe em bug/gap (são de
+> outra lane) — só mantém esses registros sincronizados com o código.
 
 > **`docs/development/` NÃO é arquivo morto, histórico nem depósito de
 > documentação.** A presença de um documento lá significa explicitamente:
@@ -517,7 +531,7 @@ Bool isQuery(String op) {
    **comportamento**. Prova: mesma suíte + golden E2E por target. Se o refactor
    muda output observável, é **bug do refactor** — corrige ou reverte.
 4. **Bug = alinhar ao previsto, nunca o contrário.** Tudo em
-   `docs/development/known-bugs.md` é desvio do comportamento previsto e **deve ser
+   `docs/bugs-and-gaps/known-bugs.md` é desvio do comportamento previsto e **deve ser
    corrigido no código** para atingir o comportamento documentado. Proibido
    "documentar em volta do bug" (mudar o corpus para aceitar o comportamento
    errado como se fosse o certo). Se o comportamento documentado está errado,
@@ -884,11 +898,11 @@ use o harness do projeto ou crie um teste E2E mínimo no pacote da área.
 | `docs/architecture/architecture.md`, `docs/architecture/compiler-architecture.md` etc. | Domínios específicos (estáveis) |
 | `docs/development/` | **Backlog vivo — tudo que NÃO está concluído** (planos, roadmaps, audits, gaps, refactors). Ver `docs/development/README.md` para índice completo. |
 | `docs/development/future/` (plans) | **só plano sem código**: plataforma universal (visão), RAII TIER 2.4, DD-STDLIB-01. A migração legado (decompiler/translator/IR/differential) **caiu p/ `docs/development/` 12/09** — implementada com testes |
-| `docs/development/roadmap.md`, `docs/development/roadmap-audit.md`, `docs/development/ecosystem-coverage.md` | Roadmaps & auditoria de cobertura (fila P0→P5) |
-| `docs/language-reference/specification-gaps.md`, `docs/development/known-bugs.md` | Gaps de spec (SG-00x — fila do maintainer completa, virou referência) + bugs abertos |
+| `docs/development/roadmap.md`, `docs/development/roadmap-audit.md`, `docs/bugs-and-gaps/ecosystem-coverage.md` | Roadmaps & auditoria de cobertura (fila P0→P5) |
+| `docs/bugs-and-gaps/specification-gaps.md`, `docs/bugs-and-gaps/known-bugs.md` | Gaps de spec (SG-00x — fila do maintainer completa, virou referência) + bugs abertos |
 | `docs/development/native-multiarch.md`, `docs/stdlib/DATABASE_VISION.md`, `docs/architecture/complexity-audit.md` | Native multiarch (NATIVE002) + DB vision (realizada → stdlib) + audit ≤500 (snapshot → architecture) |
-| `docs/development/security-plan.md` | Plano de segurança (18 camadas, B/C/D pendentes) |
-| `docs/development/plan-platform-completion.md`, `docs/development/plan-spring-independence.md` | Plans de plataforma & Spring independence (P3–P5) |
+| `docs/development/decision-pending/security-plan.md` | Plano de segurança (18 camadas, B/C/D pendentes) |
+| `docs/development/decision-pending/plan-platform-completion.md`, `docs/development/decision-pending/plan-spring-independence.md` | Plans de plataforma & Spring independence (P3–P5) |
 | `docs/development/ACTION_PLAN.md` | Ordem de implementação dos planos da plataforma (Tiers 0–12) — migração feita, universal não iniciada |
 
 ---

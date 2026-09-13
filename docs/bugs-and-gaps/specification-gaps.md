@@ -1,11 +1,11 @@
 # Specification Gaps e Divergências
 
-> **CONSOLIDADO — movido de `docs/development/` p/ `docs/language-reference/` em
+> **CONSOLIDADO — movido de `docs/development/` p/ `docs/language-reference/` (09/09) e p/ `docs/bugs-and-gaps/` (13/09, refactor de clareza da mantenedora) em
 > 12/09** (regra dos 3 estados): as 23 entradas SG-001–020 + E1–E3 estão todas
 > resolvidas (APLICADOS 06–12/09, maioria por decisão explícita da mantenedora —
 > fila da 2ª rodada COMPLETA, ver §Resumo). O doc vira **referência da spec**
 > (o que cada SG exige e onde está travado); novos gaps de spec entram aqui com
-> status próprio. Bugs abertos ficam em `docs/development/known-bugs.md`.
+> status próprio. Bugs abertos ficam em `docs/bugs-and-gaps/known-bugs.md`.
 
 **Versão:** 0.3.0-beta · **Data:** 06/09/2026 · **Fonte:** auditoria completa do
 `kof-compiler` + probes de execução + revisão de `docs/`, `training/`, `AGENTS.md`
@@ -387,7 +387,7 @@ recomendações futuras (regra 14 da tarefa: não alterar comportamento).
 
 ## Categoria D — Bugs conhecidos (referência cruzada) — atualizada 10/09
 
-Não duplicados aqui — ver [known-bugs.md](../development/known-bugs.md):
+Não duplicados aqui — ver [known-bugs.md](known-bugs.md):
 - **#29** spawn{lambda}-com-handle — ✅ CORRIGIDO 06/09
 - **#30** decode<Bool> x86_64 — ✅ CORRIGIDO
 - **#31** process.<inexistente> — ✅ CORRIGIDO 06/09

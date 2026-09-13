@@ -97,7 +97,7 @@ CONC001, JSN00x) — nunca comportamento silenciosamente diferente.
 # 5. AUDITORIA DO ECOSSISTEMA
 
 A matriz completa de cobertura (inventário, gaps, dependências,
-arquitetura, prioridade e estratégia) vive em **`docs/development/ecosystem-coverage.md`**
+arquitetura, prioridade e estratégia) vive em **`docs/bugs-and-gaps/ecosystem-coverage.md`**
 — resultado da auditoria da stdlib contra as capacidades de uma
 plataforma moderna (checklist derivado do ecossistema Spring, usado como
 matriz de capacidades, não como especificação de API).
@@ -127,4 +127,4 @@ Resumo executivo (0.2.6-beta, 31/08):
 
 Histórico fechado: G7 SECN004, G6 `kof.test` estruturado, G3 `kof.config` (JVM+Native), G2 `kof.http` (JVM+JS), G1 `kof.db`/`kof.orm` (SQLite + MySQL scramble), G4 `kof.validation`, G5 `kof.observability`, G8 `kof.time sleep/interval`, G10 security Native, G9 rateLimit/session/apiKey, G12 TLS, 0.2.0 pattern matching + `String?` + `List map/filter/reduce`.
 
-Prioridades e estratégia completas: `docs/development/ecosystem-coverage.md` §7-§8.
+Prioridades e estratégia completas: `docs/bugs-and-gaps/ecosystem-coverage.md` §7-§8.

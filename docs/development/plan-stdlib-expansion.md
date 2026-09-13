@@ -16,7 +16,7 @@ Kof<Domain>.java (raiz dev/kof/compiler)     ← dispatch + tipagem (record <D>C
         │         nat/NativeRiscvAsmRtB*.java (riscv64; aarch64 = tradutor)
         └ JS:     js/JsRuntimeUi<Domain>.java (export kofCamelCase) — bundle kof-runtime.mjs
 Teste: Kof<Domain>Test.java (padrão KofValidationTest: JVM+Native+JS, 136 linhas)
-Gate:  ConformanceMatrixTest + matriz docs/development/conformance-matrix.md
+Gate:  ConformanceMatrixTest + matriz docs/bugs-and-gaps/conformance-matrix.md
 ```
 
 Precedente exato: `validation` (G4, `KofValidation.java` 77 linhas + 3 backends + teste).
