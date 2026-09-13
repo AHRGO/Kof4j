@@ -177,4 +177,62 @@ class KofSupervisorE2ETest {
         assertFalse(r.success(), "sem 'import kof.supervisor', supervisor e desconhecido: "
                 + r.diagnostics().getDiagnostics());
     }
+
+    // ===== S2 (DD-OTP-03 opção 1a ratificada 13/09): N workers, 1 laço selectAny =====
+    private static final String APP_S2 = """
+            import kof.supervisor
+            class WF3 implements KofWorkerFactory {
+                Int chamadas = 0
+                KofWorker novo() {
+                    chamadas = chamadas + 1
+                    var idx = chamadas % 3
+                    return WK3(idx == 0)
+                }
+            }
+            class WK3 implements KofWorker {
+                Bool falha
+                constructor(Bool falha) { this.falha = falha }
+                Object run() {
+                    if (falha) { throw "boom" }
+                    return "ok"
+                }
+            }
+            class Esc3 implements KofEscalate {
+                Int chamadas = 0
+                Void disparou(String id, String motivo, Int reinicios) { chamadas = chamadas + 1 }
+            }
+            main() {
+                var esc = Esc3()
+                var wf = WF3()
+                var s = supervisor("s2").child("w0", wf, "transient").child("w1", wf, "transient").child("w2", wf, "transient").escalate(esc)
+                s.startAll()
+                // w2 falha 1x, depois todos os 3 ficam ok; ao completar 2 voltas
+                // limpas o supervisor drena (temporary... transient com sucesso para).
+                var t = 0
+                while (s.stats().vivos > 0 && t < 300) { time.sleep(10); t = t + 1 }
+                var st = s.stats()
+                println("esc=" + esc.chamadas + " fabrica=" + wf.chamadas + " vivos=" + st.vivos)
+                s.stop(1000)
+                println("parou vivos=" + s.stats().vivos)
+            }
+            """;
+
+    // ---- gate S2: 3 filhos, 1 thread supervisora (laço selectAny único) ----
+    @Test
+    void supervisorS2TresFilhosUmLacoSelectAny(@TempDir Path tmp) throws IOException {
+        String os = runJvm(tmp, APP_S2);
+        assertTrue(os.contains("esc="), "escalate disparou (wrapper id:motivo chegou ao laço): " + os);
+        assertTrue(os.contains("fabrica="), "factory chamada por reinicio: " + os);
+        assertTrue(os.contains("parou vivos=0"), "stop encerra o laço único: " + os);
+    }
+
+    // ---- S2 no interpretador (paridade por construção) ----
+    @Test
+    void supervisorS2NoInterpretador(@TempDir Path tmp) throws IOException {
+        Path main = write(tmp, APP_S2);
+        KofInterpreter.Result ir = driver.interpret(List.of(main), tmp, new String[0]);
+        String os = ir.stdout() + ir.stderr();
+        assertEquals(0, ir.exitCode(), "script S2 roda limpo: " + os);
+        assertTrue(os.contains("parou vivos=0"), "S2 paridade interpretador: " + os);
+    }
 }

@@ -164,7 +164,105 @@ class Supervisor {
         }
         return s
     }
+
+Supervisor startAll() {
+    if (vivo) { return this }
+    if (filhos.size == 0) { throw "supervisor '" + nome + "': sem children" }
+    vivo = true
+    drenando = false
+    var self = this
+    spawn { self.lacoUnico() }
+    return this
 }
+
+Void lacoUnico() {
+    while (!drenando) {
+        var vivos = listOf()
+        for (var n in filhos) {
+            if (n.running) { vivos.add(n) }
+        }
+        if (vivos.size == 0) { return }
+        var handles = listOf()
+        for (var n in vivos) {
+            var w = n.fabrica.novo()
+            n.reinicios = n.reinicios + 1
+            var wrap = KofSupWrap(n.id, w)
+            n.h = spawn kofSupRun(wrap)
+            handles.add(n.h)
+        }
+        // espera o PRIMEIRO terminar (selectAny devolve o id — wrapper 1a)
+        try {
+            var id = selectAny(handles)
+            for (var n in vivos) {
+                if (n.id == id) {
+                    if (n.politica == "permanent") {
+                        relatar(n, "normal", n.reinicios - 1, false)
+                        time.sleep(1)
+                    } else {
+                        n.running = false
+                    }
+                }
+            }
+        } catch (String e) {
+            // falha: mensagem = "id: motivo" (wrapper de identidade)
+            var sep = e.indexOf(":")
+            var id2 = ""
+            var motivo2 = ""
+            if (sep > 0) { id2 = e.substring(0, sep); motivo2 = e.substring(sep + 2) } else { motivo2 = e }
+            var achou = false
+            for (var n in vivos) {
+                if (n.id == id2) {
+                    achou = true
+                    var reiniciosUsados = n.reinicios - 1
+                    if (n.politica == "temporary") {
+                        relatar(n, motivo2, reiniciosUsados, true)
+                        n.running = false
+                    } else if (maxReinicios > 0 && reiniciosUsados >= maxReinicios) {
+                        relatar(n, motivo2, reiniciosUsados, true)
+                        n.running = false
+                    } else {
+                        relatar(n, motivo2, reiniciosUsados, false)
+                        time.sleep(1)
+                    }
+                }
+            }
+            if (!achou) { throw e }
+        }
+    }
+}
+}
+
+// ===== S2 (DD-OTP-03, opção 1a ratificada 13/09): N workers sem bloquear =====
+// Um laço único com selectAny sobre os handles vivos; cada filho roda um
+// WRAPPER que devolve o id (término normal) ou lança "id: motivo" (falha) —
+// o par (id, motivo) ratificado. Custo: 1 thread supervisora, zero threads
+// extras por filho. riscv/aarch: PARTIAL (selectAny ausente — gate R6 já
+// bloqueia o pacote no compile-time com OTP001).
+
+class KofSupWrap {
+    String id
+    KofWorker w
+    constructor(String id, KofWorker w) { this.id = id; this.w = w }
+}
+
+class KofSupResult {
+    String id
+    String motivo
+    Object valor
+    Bool falhou
+}
+
+// wrapper (opção 1a): devolve o id (término normal) — falha propaga como
+// "id: motivo"; o selectAny do laço devolve o id ou relança a falha.
+String kofSupRun(KofSupWrap wrap) {
+    try {
+        wrap.w.run()
+        return wrap.id
+    } catch (String e) {
+        throw wrap.id + ": " + e
+    }
+}
+
 
 Supervisor supervisor(String nome) {
     return Supervisor(nome)
