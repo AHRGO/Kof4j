@@ -351,4 +351,24 @@ class JsonE2ETest {
             """);
         runJvm(source, tempDir.resolve("out"), "1\nFool");
     }
+
+    @Test
+    void jvmIntToLongFieldWidening(@TempDir Path tempDir) throws IOException {
+        // §103.2 (#103): Int→Long em campo de instância precisa de I2L
+        // antes do putfield (antes: VerifyError no <init>).
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            class Holder {
+                Long value
+                public constructor(Int n) {
+                    this.value = n
+                }
+            }
+            main() {
+                var h = Holder(42)
+                println(h.value)
+            }
+            """);
+        runJvm(source, tempDir.resolve("out"), "42");
+    }
 }
