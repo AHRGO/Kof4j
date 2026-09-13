@@ -8,7 +8,7 @@
 >
 > | | |
 > |---|---|
-> | **Fila ABERTA (varredura 13/09 — seções sem resolução no próprio cabeçalho)** | **8 itens** (seções/sub-faces sem resolução) — ~~§81~~ ✅ CORRIGIDO 13/09 (5b: Long=BigInt no JS, paridade 64-bit real, golden JS unificado ao JVM), §101 (relacionais de Double com NaN divergem cross — **congelado** regra 6), §104b-ii (record em coleção + storage-box asm — **lane bugfixer**, unidade GRANDE), §107 🟡 (`println(coleção)` nativo → lixo de ponteiro; **face escalar ✅ CORRIGIDA 12/09** nos 3 nativos `f3b3821c`+B39; restam record/aninhado=`?` até §104b-ii + FP-cross=FLT001), §114 ⏳ (equals de record com campo-referência no Native; sub-face do §104b-ii), §129 (throw em worker `spawn` → longjmp cross-thread no Native — **lane nat**; era referido como "§129-TLS"), §132 (KofJS: task de task não roda sem ceder o event-loop — gate OTP002; **lane alheia**), §161/NAT-STR01 (case-fold ASCII-only no Native vs Unicode no JVM/JS — **DECIDIDO 13/09**, lane nat; registrado aqui 13/09). **§165 ABERTO 13/09** (JS `ui-jsonmap`: seed no `// kof:seeds` sem export no `kof-runtime.mjs` — célula `jsonenc-map` só executa com node presente, gate mediu sem node; menor repro registrada, dono = §106/js-slices, NÃO desta lane). **~~§149~~ NÃO está aberto — ✅ CORRIGIDO 12/09** (a linha anterior o listava por engano; a raiz era o `JsIfThrowElse` do §147). **§156 ✅ CORRIGIDO 13/09** (lista heterogênea de lambdas mesma assinatura → elemento sem className, dispatch SAM). **§155 ✅ CORRIGIDO 13/09** (tipo-função em type-args → `ClassFormatError`; parser preserva os espaços do type-ref). **§127-JVM ✅ CORRIGIDO 13/09** (decisão 9a: `as ()->T` parseia como type-ref; checkcast p/ interface SAM sintética). **§94 ✅ CORRIGIDO 13/09** (EQ/NE de Double/Float no interpretador agora IEEE). **§125 ✅ CORRIGIDO 12/09** (return Nullable(primitivo) → default; célula `nullableprint` 4/4). **§139 ✅ CORRIGIDO 12/09** (JS fold `f()==null` → COMP002; parser JS descarta mid-expression). **§140 ✅ CORRIGIDO 12/09** (gate ≤500 virou ratchet com baseline no CI). **§90 ✅ CORRIGIDO 12/09** (lane web). **§145/§146/§147 ✅ CORRIGIDOS 12/09** (`440730c8`, issue #101). **§45 ✅ IMPLEMENTADO 13/09** (DD-01 opção 4a: FinallyFrame na IR; 4 targets, `063ed956`) e **S10c ✅ 13/09** (`random.randomBytesHex`, `317b23e7`). **§157/§158/§159/§160 ✅ CORRIGIDOS 13/09** (issue-lane: #103 caso 3 POP2 em `HashMap.put` de `Long`, kof.web `header()`/`query()` `String?`+SEM049, Native web WEB001, KofJS hostless `kof_platform`). **Conclusão honesta (13/09):** dos **8 itens abertos**, a maioria pende de **decisão da mantenedora já ratificada** (fila de implementação: §161 = 1; §81 ✅ CORRIGIDO 13/09), **congelamento regra-6** (§101 + sub-faces §114/§107 = 3), **lane alheia** (§104b-ii lane bugfixer + §129 lane nat + §132 = 3) — **§89 ✅ CORRIGIDO 13/09** (`e33425b5`, 4 alvos + warning SEM090), **§106 ✅ CORRIGIDO 13/09** (`5b939106` + residual JS `ab85cfae`, 4 alvos), **§117 ✅ CORRIGIDO 13/09** (`3734f2aa`), **§131 ✅ CORRIGIDO 13/09** (`18a64d45`, 4 backends), **§156 ✅ CORRIGIDO 13/09** e **§81 ✅ CORRIGIDO 13/09** (Long=BigInt JS, seção própria). |
+> | **Fila ABERTA (varredura 13/09 — seções sem resolução no próprio cabeçalho)** | **8 itens** (seções/sub-faces sem resolução) — ~~§81~~ ✅ CORRIGIDO 13/09 (5b: Long=BigInt no JS, paridade 64-bit real, golden JS unificado ao JVM), §101 (relacionais de Double com NaN divergem cross — **congelado** regra 6), §104b-ii (record em coleção + storage-box asm — **lane bugfixer**, unidade GRANDE), §107 🟡 (`println(coleção)` nativo → lixo de ponteiro; **face escalar ✅ CORRIGIDA 12/09** nos 3 nativos `f3b3821c`+B39; restam record/aninhado=`?` até §104b-ii + FP-cross=FLT001), §114 ⏳ (equals de record com campo-referência no Native; sub-face do §104b-ii), §129 (throw em worker `spawn` → longjmp cross-thread no Native — **lane nat**; era referido como "§129-TLS"), §132 (KofJS: task de task não roda sem ceder o event-loop — gate OTP002; **lane alheia**), §161/NAT-STR01 (case-fold ASCII-only no Native vs Unicode no JVM/JS — **DECIDIDO 13/09**, lane nat; registrado aqui 13/09). **§165 ABERTO 13/09** (JS `ui-jsonmap`: seed no `// kof:seeds` sem export no `kof-runtime.mjs` — célula `jsonenc-map` só executa com node presente, gate mediu sem node; menor repro registrada, dono = §106/js-slices, NÃO desta lane). **~~§149~~ NÃO está aberto — ✅ CORRIGIDO 12/09** (a linha anterior o listava por engano; a raiz era o `JsIfThrowElse` do §147). **§156 ✅ CORRIGIDO 13/09** (lista heterogênea de lambdas mesma assinatura → elemento sem className, dispatch SAM). **§155 ✅ CORRIGIDO 13/09** (tipo-função em type-args → `ClassFormatError`; parser preserva os espaços do type-ref). **§127-JVM ✅ CORRIGIDO 13/09** (decisão 9a: `as ()->T` parseia como type-ref; checkcast p/ interface SAM sintética). **§94 ✅ CORRIGIDO 13/09** (EQ/NE de Double/Float no interpretador agora IEEE). **§125 ✅ CORRIGIDO 12/09** (return Nullable(primitivo) → default; célula `nullableprint` 4/4). **§139 ✅ CORRIGIDO 12/09** (JS fold `f()==null` → COMP002; parser JS descarta mid-expression). **§140 ✅ CORRIGIDO 12/09** (gate ≤500 virou ratchet com baseline no CI). **§90 ✅ CORRIGIDO 12/09** (lane web). **§145/§146/§147 ✅ CORRIGIDOS 12/09** (`440730c8`, issue #101). **§45 ✅ IMPLEMENTADO 13/09** (DD-01 opção 4a: FinallyFrame na IR; 4 targets, `063ed956`) e **S10c ✅ 13/09** (`random.randomBytesHex`, `317b23e7`). **§157/§158/§159/§160 ✅ CORRIGIDOS 13/09** (issue-lane: #103 caso 3 POP2 em `HashMap.put` de `Long`, kof.web `header()`/`query()` `String?`+SEM049, Native web WEB001, KofJS hostless `kof_platform`). **Conclusão honesta (13/09):** dos **8 itens abertos**, a maioria pende de **decisão da mantenedora já ratificada** (fila de implementação: §161 = 1; §81 ✅ CORRIGIDO 13/09), **congelamento regra-6** (§101 + sub-faces §114/§107 = 3), **lane alheia** (§104b-ii lane bugfixer + §129 lane nat + §132 = 3) — **§89 ✅ CORRIGIDO 13/09** (`e33425b5`, 4 alvos + warning SEM090), **§106 ✅ CORRIGIDO 13/09** (`5b939106` + residual JS `ab85cfae`, 4 alvos), **§117 ✅ CORRIGIDO 13/09** (`3734f2aa`), **§131 ✅ CORRIGIDO 13/09** (`18a64d45`, 4 backends; + **residual same-arity/tipos** `73ca2d58`, Native), **§156 ✅ CORRIGIDO 13/09**, **§81 ✅ CORRIGIDO 13/09** (Long=BigInt JS, seção própria) e **§163 ✅ CORRIGIDO 13/09** (interpretador: 2º parâmetro largo lido como `null` — paridade 4-target, achado no probe do split `NativeBackend`). |
 > | Antiga "varredura 08/09" (apócrifa — corrigida 12/09) | os "abertos" 39/62/63/64/46/48/50/59/61 estão ✅ CORRIGIDO nos próprios cabeçalhos (39/62/63/64 JVM/JS; 46/50/59 Native; 48/61 gap honesto JSN004/FFI001); contagem real na linha acima. |
 > | Paridade interpretador × compilados (semântica `==` congelada — regra 6) | **0** — bug 94 ✅ CORRIGIDO 13/09 (EQ/NE de Double/Float no interpretador agora IEEE; a "decisão" era alinhar ao previsto, que os 3 compilados + corpus já definiam) |
 > | Paridade backend-only (regra 5, atacável na lane Native) | **2** — §107 (println coleção → lixo; **face escalar ✅ CORRIGIDA 12/09 nos 3 targets nativos** — x86 `f3b3821c` + cross B39, golden JVM byte-idêntico; restam record/aninhado=`?` honesto até §104b-ii, FP-cross=FLT001; §107-JS 11/09), §104b-ii (equals de conteúdo p/ record + box de primitivo no storage asm; **face char ✅ FECHADA 11/09** — `mapgetprim` 4/4)
@@ -5237,6 +5237,52 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   backend** — remover exige verificar TODOS os callers de pruneRuntime/fallback
   (CWD-dependente), não só o caminho do módulo que os testes da lane exercitam.
 
+### 163. Script (interpretador): 2º parâmetro largo (`Double`/`Long`) de método/função de usuário é lido como `null` → NPE — ✅ CORRIGIDO 13/09 (paridade 4-target; achado no probe do split `NativeBackend`)
+
+- **Sintoma:** qualquer função/método/construtor de usuário com **dois ou
+  mais** parâmetros largos (`Double`/`Long`) — ou um largo **não-último** —
+  quebra no interpretador (KofScript):
+  ```kof
+  Double soma(Double a, Double b) { return a + b }
+  main() { println(soma(1.5, 2.5)) }
+  ```
+  → `ERR: Cannot invoke "java.lang.Number.doubleValue()" because "b" is null`
+  (exit 1). JVM e Native imprimem `4.0`; JS imprime `4` (bug 44 floatprint,
+  alheio). Era **divergência silenciosa de paridade** entre targets.
+- **Menor repro / matriz medida (`OVD.kf`, `DBL*.kf`):**
+  | forma | Script antes | JVM/Native |
+  |---|---|---|
+  | `Double f(Double a, Double b)` | NPE (`b` null) | `4.0` |
+  | `Double f(Double x)` | `7.0` ✅ | `7.0` |
+  | `Double f(Double a, Int b)` | NPE (`b` null) | `3.0` |
+  | `Double f(Int a, Double b)` | `3.5` ✅ | `3.5` |
+  | `Long f(Long a, Long b)` | NPE (`b` null) | `9000000003` |
+  Só quebra quando um parâmetro largo **não é o primeiro** (o 2º cai no
+  índice errado). Mesma classe de falha do §64, mas no **interpretador**, não
+  no KofJS — a correção do §64 foi no `JsMethodParser`.
+- **Causa raiz:** `KofInterpreter.invokeKof` copiava o array compacto de
+  argumentos direto para `f.locals` (`System.arraycopy(args, 0, f.locals, 0,
+  args.length)`). O layout da IR — igual ao bytecode JVM — dá **2 slots** a
+  `Double`/`Long` (`TypeMetrics.isDoubleWidth`, usado por
+  `CompilerFunctionLowering`/`CompilerClassLowering`), então o 2º parâmetro
+  largo vive no slot `+2`, que ficava `null` (ou era sobrescrito por um
+  argumento posterior). O array de locais também podia ser **curto** para o
+  layout real (parâmetro largo não lido → `ArrayIndexOutOfBounds`).
+- **Fix:** posicionar os argumentos nos slots reais — `this` em 0 quando
+  `hasThis`; depois cada parâmetro avança `2` (largo) ou `1`; o tamanho do
+  array de locais parte do layout de parâmetros, não do nº de argumentos.
+  A lógica ficou em `KofInterpreterValues.bindLocals` (colaborador de
+  valores/coerções do interpretador) para manter `KofInterpreter` ≤500 linhas.
+- **Prova (Q1 — teste que falharia no código velho):**
+  `KofInterpreterParityTest.wideParametersOccupyTwoSlots` (novo) — função,
+  método de instância, construtor, `Long`, parâmetro largo não lido e ordem
+  mista `Int, Double, Double`, tudo comparado byte-a-byte com o JVM
+  compilado + fork; **falhava com o interpretador antigo** (`exit code
+  divergente expected <0> but was <1>`) e passa com o fix
+  (`KofInterpreterParityTest` 23/23). Probes 4-target `OVD`/`OVDX`/`DBL7`:
+  Script agora idêntico a JVM/Native.
+- **Arquivo:** `kof-compiler/src/main/java/dev/kof/compiler/KofInterpreterValues.java`
+  (`bindLocals`, chamado por `KofInterpreter.invokeKof`).
 ### 165. JS: bloco `ui-jsonmap` entra no `// kof:seeds` mas o `export function kofJsonEncodeMap` não vai p/ o `kof-runtime.mjs` — `json.encode(Map)` quebra SÓ com node presente
 
 - **Menor repro (compilar p/ JS com node no PATH, v22):**

@@ -1192,6 +1192,28 @@ class ConformanceMatrixTest {
                     println(c.twice("ab"))
                 }
                 """, "42\nabab", Set.of(), tempDir);
+        // §163 (13/09): parâmetro largo (`Long`/`Double`) NÃO-primeiro no
+        // interpretador (Script) — a IR dá 2 slots a largos, mas `invokeKof`
+        // copiava `args` compacto → 2º largo lido como `null` (NPE). JVM/
+        // Native/JS sempre corretos. Fix: posicionar cada arg no slot real.
+        // Só `Long` (JS imprime `Double` sem o ".0" — bug 44, alheio).
+        matrix("wideparams", """
+                Long g(Long a, Long b) { return a + b }
+                Long mixed(Int a, Long b, Long c) { return b + c }
+                Long unread(Long a, Long b) { return a }
+                class Box {
+                    Long v
+                    public constructor(Long v) { this.v = v }
+                    Long add(Long x) { return this.v + x }
+                }
+                main() {
+                    println(g(10000000000L, 2L))
+                    println(mixed(9, 10000000000L, 7L))
+                    println(unread(10000000000L, 5L))
+                    var b = Box(10000000000L)
+                    println(b.add(5L))
+                }
+                """, "10000000002\n10000000007\n10000000000\n10000000005", Set.of(), tempDir);
         // §155 (13/09): tipo-função como ARGUMENTO GENÉRICO declarado
         // (`List<(Int) -> Int>`) — o parser montava a string de tipo sem
         // espaços (`"(Int)->Int"`), e `Type.of` só reconhece `"(Int) -> Int"`

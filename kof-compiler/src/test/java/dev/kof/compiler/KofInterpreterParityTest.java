@@ -101,6 +101,36 @@ class KofInterpreterParityTest {
     }
 
     @Test
+    void wideParametersOccupyTwoSlots() throws IOException {
+        // §163: parâmetros largos (Double/Long) ocupam DOIS slots no layout da
+        // IR. O interpretador copiava `args` compacto nos locais, então o 2º
+        // parâmetro largo era lido como `null` (NPE) — divergência silenciosa
+        // de JVM/Native/JS. Cobre função, método de instância, construtor,
+        // parâmetro largo não lido (limite do array de locais) e ordem mista.
+        parity("wide-params", """
+                Double g(Double a, Double b) { return a + b }
+                Double unread(Double a, Double b) { return a }
+                Double mixed(Int a, Double b, Double c) { return b + c }
+                Long wideLong(Long a, Long b, Long c) { return a + c }
+                class Box {
+                    Double v
+                    public constructor(Double v) { this.v = v }
+                    Double add(Double x) { return this.v + x }
+                    Long addLong(Long x) { return 10000000000L + x }
+                }
+                main() {
+                    println(g(1.5, 2.5))
+                    println(unread(1.5, 2.5))
+                    println(mixed(9, 1.25, 2.25))
+                    println(wideLong(10000000000L, 5L, 7L))
+                    var b = Box(10.5)
+                    println(b.add(0.5))
+                    println(b.addLong(1L))
+                }
+                """);
+    }
+
+    @Test
     void doubleIeeeEquality() throws IOException {
         // §94: EQ/NE de Double/Float no interpretador usava Double.compare
         // (ordenação total) — NaN == NaN dava true e +0.0 == -0.0 dava false,

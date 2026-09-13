@@ -58,6 +58,23 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **⚡ FEITO (13/09 ~09:00, lane gate/qualidade, dono = 192.168.100.15): §163
+> — interpretador lia o 2º parâmetro largo (`Double`/`Long`) como `null`.**
+> Achado ao provar o split do `NativeBackend` (`OVD.kf`): `Double soma(Double
+> a, Double b){ return a+b }` → Script `NPE` (JVM/Native `4.0`). A IR dá 2
+> slots a largos (`TypeMetrics.isDoubleWidth`), mas `KofInterpreter.invokeKof`
+> copiava `args` compacto p/ `f.locals` → o 2º largo caía no slot errado.
+> **Fix:** posicionar cada arg no slot real (this=0; largo avança 2) e o array
+> de locais parte do layout de params (`KofInterpreterValues.bindLocals`, p/
+> manter `KofInterpreter` ≤500). **Prova (Q0/Q1):**
+> `KofInterpreterParityTest.wideParametersOccupyTwoSlots` (novo) falhava no
+> código velho (`exit divergente expected <0> but was <1>`) e passa com o fix
+> (`KofInterpreterParityTest` 23/23); probes `OVD`/`OVDX`/`DBL7` 4-target
+> (Script agora = JVM/Native). Gate 4-módulos **1645 run / 0 falhas / 13 erros
+> (`*Js`=node) / 157 skip** (`gate_s163.log`); `check_500` OK.
+> `known-bugs.md` §163 + header da fila atualizados. **NÃO:** `nat/`; UI*;
+> push main; `git config user.*`; Co-authored-by.
+>
 > **✅ FEITO (13/09 ~06:00, lane development — cluster legado/decompiler Fase
 > E, dono = 192.168.100.17): Java record → `record` Kof no `kof decompile`.**
 > A fila Fase E de 09/09 estava medida como **obsoleta** (o caveat do

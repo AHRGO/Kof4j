@@ -204,8 +204,9 @@ public final class KofInterpreter {
             if (op instanceof KofStoreLocal sl && sl.index() + 1 > size) size = sl.index() + 1;
             if (op instanceof KofCatchStart cs && cs.localIndex() + 1 > size) size = cs.localIndex() + 1;
         }
-        f.locals = new Object[size];
-        System.arraycopy(args, 0, f.locals, 0, args.length);
+        // Parâmetros largos (Double/Long) ocupam DOIS slots no layout da IR —
+        // igual ao bytecode JVM (§163).
+        f.locals = KofInterpreterValues.bindLocals(m, args, hasThis, size);
         runFrame(f);
         return f.returnValue;
     }
