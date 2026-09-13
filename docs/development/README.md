@@ -40,9 +40,9 @@ paridade com gaps honestos), `docs/bugs-and-gaps/specification-gaps.md`
 | 4 | `planning-otp-supervision.md` (#83) | `EM CURSO` — 1ª fatia ✅ 11/09 (núcleo+`restartLimit`+`stop`) + **S2-JVM ✅ 13/09** (`startAll`/`lacoUnico` + wrapper de identidade; `KofSupervisorE2ETest` 8/8; Native=OTP001 §129, JS=OTP002 §132) | **DD-OTP RATIFICADAS 13/09** (opção 1a: S2 JVM; riscv/aarch PARTIAL) — ver §3 | S2-Native x86 pendente do §129 (unwind cross-thread, lane nat); promover OTP001/002 só com a face cross decidida |
 | 5 | `plan-editor-integration.md` (EDI001) | `EM CURSO` — graus 1-3, 4-10, 11, 12 ✅ | único degrau sem dono pendente é tooling | plugin IntelliJ (DAP/LSP já funcionam via CLI) |
 | 6 | `plan-stdlib-expansion.md` | `EM CURSO` — S0–S6, S8–S12 ✅ | só o que NÃO depende de decisão anda | `pow`/`-lm` e S10c (`randomBytesHex`) **DECIDIDOS 13/09** → implementar (§3); só `format`/`boundaries` (DD-STDLIB-02) segue na mesa da mantenedora |
-| 7 | `PLATFORM-PLAN.md` F4/F5/F7 + `APPLICATION_MODEL.md` I2+ | `EM CURSO` (parciais) | dependem de decisão/prioridade da release | sem próximo passo próprio: entram na medida em que a fila acima fecha |
-| — | `security-plan.md` (camadas B/C/D) | `PARTIAL` | cada camada B/C/D tem decisão pendente (ChaCha20 formato, keys, OAuth2) | atacar só com ordem explícita da mantenedora |
-| — | `plan-platform-completion.md` (P4/P5), `plan-spring-independence.md` (Fases 12–14) | `PARTIAL` | P4/P5 e Fase 12 dependem do core estável + decisões | idem — não abrir por conta |
+| 7 | `decision-pending/PLATFORM-PLAN.md` F4/F5/F7 + `decision-pending/APPLICATION_MODEL.md` I2+ | `PARADO` (parciais) | dependem de decisão/prioridade da release | sem próximo passo próprio: entram na medida em que a fila acima fecha |
+| — | `decision-pending/security-plan.md` (camadas B/C/D) | `PARTIAL` | cada camada B/C/D tem decisão pendente (ChaCha20 formato, keys, OAuth2) | atacar só com ordem explícita da mantenedora |
+| — | `decision-pending/plan-platform-completion.md` (P4/P5), `decision-pending/plan-spring-independence.md` (Fases 12–14) | `PARTIAL` | P4/P5 e Fase 12 dependem do core estável + decisões | idem — não abrir por conta |
 | — | registros vivos: `conformance-matrix.md`, `ecosystem-coverage.md`, `KOFUI-AUDIT.md`, `known-bugs.md` (em `docs/bugs-and-gaps/`); `roadmap.md` (aqui); `roadmap-audit.md`/`complexity-audit.md` (em `docs/audits/`) | `VIVA` | **não são backlog** — matriz/auditoria/fila que se atualizam junto com cada fechamento | atualizar célula/seção no MESMO commit que fecha o gap |
 
 **Regra R12 (AGENTS.md):** nada de `future/` (plataforma universal, RAII,
@@ -96,17 +96,17 @@ escalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 
 ## 4. Índice do que está EM DESENVOLVIMENTO aqui
 
-### 4.1 Plataformas & migração (caíram de `future/` 12/09 — código iniciado)
+### 4.1 Plataformas & migração (caíram de `future/` 12/09 — código iniciado; os `~~riscados~~` já migraram p/ `decision-pending/` no refactor 13/09)
 
 | Arquivo | Estado real | O que falta p/ fechar |
 |---|---|---|
-| `PLATFORM-PLAN.md` | F1–3/8/9 com código (`ProjectLocator`, `KofProjectConfig`, `Target.SCRIPT`, PKG006/007, conformance 11 testes) | F4/F5, F6 (WASM001), F7 |
-| `APPLICATION_MODEL.md` | `application { onStart/onShutdown }` ✅ E2E 3 targets; I2 (full-stack) ✅ `FullStackE2ETest` | I3/I4 (distribuído, packaging, System) — Q1/Q2 mantenedora |
+| ~~`PLATFORM-PLAN.md`~~ → `decision-pending/` | F1–3/8/9 com código (`ProjectLocator`, `KofProjectConfig`, `Target.SCRIPT`, PKG006/007, conformance 11 testes) | F4/F5, F6 (WASM001), F7 — parado por decisão |
+| ~~`APPLICATION_MODEL.md`~~ → `decision-pending/` | `application { onStart/onShutdown }` ✅ E2E 3 targets; I2 (full-stack) ✅ `FullStackE2ETest` | I3/I4 (distribuído, packaging, System) — Q1/Q2 mantenedora |
 | `LEGACY_MIGRATION.md` + `DECOMPILER.md` + `TRANSLATOR.md` + `DIFFERENTIAL_TESTING.md` + `LEGACY_IR.md` | plataforma completa no CLI: `inspect/decompile/translate/compare/migrate` (`Main.java:25-29`), 63 testes kof-cli + `Confidence`/`Type.fromJvmSignature` | cobertura: switch/athrow opacos, `inspect --java` (R5 do audit), IR non-JVM |
 | `IMPLEMENTATION_PLAN.md` / `ACTION_PLAN.md` | Fases A–H têm código+testes | tiers 6–12 = `future/` (R12) |
 | ~~`PLANNING-FUTURE-AUDIT.md` / `planning-future-reconcile.md`~~ → `docs/audits/` | comparação branch `planning-future`×beta **encerrada 13/09** — nada de código aberto próprio mora nelas: R2 vive em `decision-pending/APPLICATION_MODEL.md`+`PLATFORM-PLAN.md`; R5 no cluster migração (`DECOMPILER.md`/`LEGACY_IR.md` Fase C) | — (fora de `development/`) |
-| `planning-finally-return.md` | JS corrigido (`c727fee` + `finallyReturnJs`) | decisão DD-01 (§3) |
-| `planning-stdlib-time-design.md` | `addDays`/`diffDays` nos 5 alvos | decisão `format`/`boundaries` (§3) |
+| `planning-finally-return.md` | JS corrigido (`c727fee` + `finallyReturnJs`) | DD-01 JVM/Native/interp **DECIDIDO 13/09** (4a: FinallyFrame IR + bump 0.3.1) — implementação pendente (§3) |
+| ~~`planning-stdlib-time-design.md`~~ → `decision-pending/` | `addDays`/`diffDays` nos 5 alvos | decisão `format`/`boundaries` (§3) |
 
 ### 4.2 Plans & auditorias vivas
 
@@ -114,18 +114,18 @@ escalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 |---|---|---|
 | ~~`PLAN-TREE-SHAKING.md`~~ → `docs/stdlib/PLAN-TREE-SHAKING.md` | ✅ CONCLUÍDO 13/09 (S-1..S-6.1 + S-7; consolidado em `docs/stdlib/stdlib-loading.md`) | S-5-x86 = fila bugfix (`root_end`), fora do plano |
 | `plan-stdlib-expansion.md` | S0–S6, S8–S12 ✅ (MATH001/TIME002 fechados 11/09) | só decisões pendentes (§3) |
-| `planning-otp-supervision.md` | 1ª fatia ✅ JVM+Script; gates OTP001/OTP002 honestos | fatia 2 (§1 item 4) |
+| `planning-otp-supervision.md` | 1ª fatia ✅ JVM+Script; **S2-JVM ✅ 13/09** (`startAll`/`lacoUnico`); gates OTP001/OTP002 honestos | S2-Native x86 pendente do §129 (lane nat) |
 | `plan-editor-integration.md` | CLI/DAP/LSP/stdout-json ✅ | plugin IntelliJ |
 | `native-multiarch.md` | re-auditoria 12/09 sob qemu: ~30 faces cross fechadas | GC riscv/aarch + faces §5 |
-| `security-plan.md` | A ✅; B/C/D ❌ (csrf/cors/headers cross, OAuth2, TLS cert, keys) | decisão por camada |
-| `plan-platform-completion.md` | P0–P3 ✅; P4 (health/tracing/metrics) ❌; P5: `kof fmt` ✅ 31/08, LSP/VS Code ❌ | app E2E final (blog/API nos 2 targets) fecha o plano |
-| `plan-spring-independence.md` | F1–5,7 ✅ (web/json/config/log/db/security v1); F8–11 parciais ([ ] em tracing/pooling/queues/auth); F12 (app web completa) é o teste; F13/14 planejadas | Fase 12 = gatilho; starter só depois |
-| `conformance-matrix.md` | matriz Feature×4 targets travada por `ConformanceMatrixTest` (11) + doc-gate | viva: atualiza com cada gap |
-| `ecosystem-coverage.md` | G1–G12 com `PARTIAL`/`PLANNED` (events, batch, AI) | referência de cobertura |
+| ~~`security-plan.md`~~ → `decision-pending/` | A ✅; B/C/D ❌ (csrf/cors/headers cross, OAuth2, TLS cert, keys) | decisão por camada |
+| ~~`plan-platform-completion.md`~~ → `decision-pending/` | P0–P3 ✅; P4 (health/tracing/metrics) ❌; P5: `kof fmt` ✅ 31/08, LSP/VS Code ❌ | app E2E final (blog/API nos 2 targets) fecha o plano |
+| ~~`plan-spring-independence.md`~~ → `decision-pending/` | F1–5,7 ✅ (web/json/config/log/db/security v1); F8–11 parciais ([ ] em tracing/pooling/queues/auth); F12 (app web completa) é o teste; F13/14 planejadas | Fase 12 = gatilho; starter só depois |
+| ~~`conformance-matrix.md`~~ → `docs/bugs-and-gaps/` | matriz Feature×4 targets travada por `ConformanceMatrixTest` (11) + doc-gate | viva: atualiza com cada gap |
+| ~~`ecosystem-coverage.md`~~ → `docs/bugs-and-gaps/` | G1–G12 com `PARTIAL`/`PLANNED` (events, batch, AI) | referência de cobertura |
 | `roadmap.md` | §§8–11 ❌ (frontend same-project, monólito→micro) | longo prazo |
 | ~~`roadmap-audit.md`~~ → `docs/audits/roadmap-audit.md` | matriz 06/09 + fila P0→P5 (P0 FECHADO 09/09) | re-audit quando algo fecha |
-| `KOFUI-AUDIT.md` | UI001-Native (face R6: no-op silencioso) ABERTO | lane UI |
-| `known-bugs.md` | 14 abertos (triagem §2 acima; §127-JVM, §155, §94, §157-160 e §65 fechados/NÃO-REPRODUZ 13/09) | fila viva |
+| ~~`KOFUI-AUDIT.md`~~ → `docs/bugs-and-gaps/` | UI001-Native (face R6: no-op silencioso) ABERTO | lane UI |
+| ~~`known-bugs.md`~~ → `docs/bugs-and-gaps/` | 14 abertos (triagem §2 acima; §127-JVM, §155, §94, §157-160 e §65 fechados/NÃO-REPRODUZ 13/09) | fila viva |
 | `refactoring/PLAN-SOLID-500.md` | F1–2, 4–9 ✅ (**F2 fechada 12/09** — 487 ≤500 medido); **só F3 em curso** (NativeBackend 664, bloqueada pela lane GC em `nat/`); ratchet `check_500-baseline.txt` (dívidas travadas — nº autoritativo = `wc -l` do arquivo; **8** neste HEAD, era 17 no §140) no CI | F3 fecha o plano |
 
 ### 4.3 `future/` — só plano, zero código (não é trabalho atual)

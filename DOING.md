@@ -42,6 +42,17 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **⚡ FEITO (13/09, lane development/docs — auditoria de LOCALIZAÇÃO 3-estados, dono =
+> esta sessão):** `docs/development/README.md` §1/§4.1/§4.2 ainda listavam como
+> vivas em `development/` 6 docs que o refactor 13/09 moveu p/ `decision-pending/`
+> (PLATFORM-PLAN, APPLICATION_MODEL, security-plan, plan-platform-completion,
+> plan-spring-independence, planning-stdlib-time-design) e 4 registros que
+> moram em `docs/bugs-and-gaps/` (conformance-matrix, ecosystem-coverage,
+> KOFUI-AUDIT, known-bugs) — agora anotados com `~~riscado~~ → <destino>`.
+> §4.2 OTP sincronizado (S2-JVM ✅). Só doc, zero código. **PRÓXIMO TICK:**
+> varredura docs↔localização↔decisão; `decision-pending/` 6 docs todos ainda
+> aguardando decisão; nenhum doc de `development/` concluído p/ mover.
+
 > **⚡ FEITO (13/09, lane development/docs — varredura de claims stale pós-ratificações
 > 13/09, dono = esta sessão):** auditoria doc-vs-decisão em `docs/development/` +
 > `docs/audits/` + matriz. Corrigido: `roadmap-audit.md` P4 (conformance suite +
