@@ -6,10 +6,10 @@
 
 **Status:** EM DESENVOLVIMENTO (caiu de `future/` em 12/09 — Fase F
 implementada: `Translate.java` + `TranslateLexer`/`TranslateExpr`;
-prova: `TranslateTest` 24/24 (output compila e roda; +do-while +switch
+prova: `TranslateTest` 26/26 (output compila e roda; +do-while +switch
 +try/catch/throw +arrays +cast/instanceof +throws +generics +constructor
 +enum-body/multi-decl +interface-extends +bitwise/shift +parênteses
-+tipos qualificados 13/09). Subconjunto Java ampliado ainda pendente)
++tipos qualificados +assert 13/09). Subconjunto Java ampliado ainda pendente)
 **Data:** 22 de agosto de 2026
 
 ---
@@ -246,3 +246,13 @@ diferenciais.
 > `bitwiseAndShiftTranslate` (roda `2/7/5/24/3/3/2147483644`),
 > `qualifiedTypeNamesAreStripped`. `TranslateExpr` 471 ≤500;
 > `TranslateTest` 24/24.
+>
+> **Estado (13/09 ~14:30, dono = 192.168.100.22): assert + gap de `for` com
+> vírgula.** `assert cond;` / `assert cond : msg;` Java → `assert(cond)` /
+> `assert(cond, msg)` Kof (primitive de teste, é função — `AssertE2ETest`);
+> antes `expected ';' but found 'x'`. `for` C-style com init/incr múltiplos
+> (`for (int i=0, j=3; ...; i++, j--)`) não tem equivalente Kof (for não
+> aceita vírgula — PARSE041; desugar p/ while muda o fluxo do `continue`) →
+> gap honesto (R6). Prova: `TranslateTest.assertTranslates` (roda `1`) +
+> `forMultipleInitIncrIsHonestGap`. `TranslateStatements` 399 ≤500;
+> `TranslateTest` 26/26.

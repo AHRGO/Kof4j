@@ -333,6 +333,41 @@ class TranslateTest {
     }
 
     @Test
+    void assertTranslates(@TempDir Path dir) throws Exception {
+        String kof = Translate.translateJava("""
+                public class AS {
+                    public static void main(String[] args) {
+                        int x = 1;
+                        assert x > 0;
+                        assert x > 0 : "neg";
+                        System.out.println(x);
+                    }
+                }
+                """);
+
+        assertTrue(kof.contains("assert(x > 0)"),
+                "`assert cond;` → `assert(cond)` Kof (antes: expected ';' but found 'x'):\n" + kof);
+        assertTrue(kof.contains("assert(x > 0, \"neg\")"),
+                "`assert cond : msg;` → `assert(cond, msg)`:\n" + kof);
+
+        assertCompiles(dir, kof, "1");
+    }
+
+    @Test
+    void forMultipleInitIncrIsHonestGap() {
+        TranslateException e = assertThrows(TranslateException.class, () ->
+                Translate.translateJava("""
+                        public class FM {
+                            public static void main(String[] args) {
+                                for (int i = 0, j = 3; i < j; i++, j--) { System.out.println(i); }
+                            }
+                        }
+                        """));
+        assertTrue(e.getMessage().contains("múltiplos") && e.getMessage().contains("revisão manual"),
+                "`for` com vírgula sem equivalente Kof → gap explícito (R6), foi: " + e.getMessage());
+    }
+
+    @Test
     void bitwiseAndShiftTranslate(@TempDir Path dir) throws Exception {
         String kof = Translate.translateJava("""
                 public class BS {

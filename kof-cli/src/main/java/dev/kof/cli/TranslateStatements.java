@@ -116,6 +116,21 @@ class TranslateStatements extends TranslateExpr {
             p.expect(";");
             return "throw " + e;
         }
+        if (p.at("assert")) {
+            // `assert cond;` / `assert cond : msg;` Java → `assert(cond)`
+            // / `assert(cond, "msg")` Kof (primitive de teste, ver
+            // AssertE2ETest — é função, não keyword).
+            p.next();
+            String cond = parseExpr();
+            if (p.at(":")) {
+                p.next();
+                String msg = parseExpr();
+                p.expect(";");
+                return "assert(" + cond + ", " + msg + ")";
+            }
+            p.expect(";");
+            return "assert(" + cond + ")";
+        }
         // local variable declaration or expression statement.
         return parseExprOrDecl();
     }
@@ -133,6 +148,15 @@ class TranslateStatements extends TranslateExpr {
             String body = parseStatement();
             return "for (var " + varName + " in " + coll + ") { " + body + " }";
         }
+        // Kof `for` C-style NÃO aceita init/incr com vírgula (`i=0, j=3` /
+        // `i++, j--` — verificado 13/09: PARSE041). Detectar a vírgula no
+        // cabeçalho ANTES do parse (senão `parseExpr` quebra) e devolver gap
+        // honesto: desugar p/ while muda o fluxo (continue pula o incr).
+        if (forHeaderHasComma()) {
+            throw new TranslateException(
+                    "`for` com init/incr múltiplos (`i=0, j=3` / `i++, j--`) não tem "
+                    + "equivalente direto em Kof (for não aceita vírgula) — revisão manual");
+        }
         String init = "";
         if (!p.at(";")) init = parseForInit();
         p.expect(";");
@@ -144,6 +168,19 @@ class TranslateStatements extends TranslateExpr {
         p.expect(")");
         String body = parseStatement();
         return "for (" + init + "; " + cond + "; " + incr + ") { " + body + " }";
+    }
+
+    /** Vírgula no nível do cabeçalho do `for` (init ou incr), fora de `[...]`/`(...)`. */
+    private boolean forHeaderHasComma() {
+        int depth = 0;
+        for (int i = p.pos; i < p.toks.size(); i++) {
+            String t = p.toks.get(i).text;
+            if (t.equals("(") || t.equals("[") || t.equals("{")) depth++;
+            else if (t.equals(")") || t.equals("]") || t.equals("}")) { if (depth == 0) return false; depth--; }
+            else if (depth == 0 && t.equals(",")) return true;
+            else if (depth == 0 && t.equals(";")) continue;
+        }
+        return false;
     }
 
     private boolean forHasColon() {
