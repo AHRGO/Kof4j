@@ -11,6 +11,23 @@ public final class JsRuntimeCore {
             // This module is not a VM: it only provides operations that
             // JavaScript does not represent directly.
 
+            // kof_platform só é injetado pelo host GraalJS (KofJsRunner). Nos
+            // blocos de uuid/security/random/crypto/ui-web deste módulo o nome
+            // era referenciado cru, dando ReferenceError fora do GraalJS (#104).
+            // Mesmo shim do kof-runtime-io.mjs: resolve do global quando o host
+            // existe e, no Node/navegador, troca o ReferenceError por um erro
+            // claro. Implementação real no browser (Web Crypto) é contrato de
+            // target — não é deste fix.
+            const kof_platform = globalThis.kof_platform || new Proxy({}, {
+                get(t, prop) {
+                    if (prop in t) return t[prop];
+                    return function () {
+                        throw new Error("kof: kof_platform." + String(prop)
+                                + " is not available outside the Kof JS host (GraalJS)");
+                    };
+                }
+            });
+
             if (typeof document === "undefined") {
                 function kofMakeEl(tag) {
                     return {
