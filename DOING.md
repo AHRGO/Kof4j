@@ -42,6 +42,17 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **⚡ EM CURSO (13/09, lane development/docs — bump 0.4.0-beta, dono = esta sessão,
+> pedido da mantenedora):** `VERSION` 0.3.22→0.4.0-beta via
+> `scripts/bump-version.sh` (pom `revision` + version.properties 0.4.0/0.4.0/0.4.0
+> sincronizados; compile `kof-compiler` OK). Headers `**Versão/Version:**`
+> 0.3.22→0.4.0 em ~80 arquivos docs/training/learn (headers + `Updated:` +
+> `verificado no compilador` + versioning/install vivos). Preservado como
+> histórico: CHANGELOG, deltas 0.1.0→0.3.22 (parity), Issue #101, títulos
+> `(0.3.22-beta)` de feature em training (marcam QUANDO a feature entrou),
+> exemplos de path `ex.:`. **PRÓXIMO PASSO:** commit + push.
+> **NUNCA:** fila §106/§89/§117 (outro agente); `nat/` lane GC viva; push main.
+
 > **⚡ EM CURSO (13/09, lane development/docs — auditoria development/ + roadmap,
 > dono = esta sessão):** varredura doc-vs-código dos 9 docs restantes:
 > OTP (S2-JVM ✅ real — `supervisor-host.kf:168` + E2E; S2-Native/JS gates §129/
