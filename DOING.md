@@ -96,10 +96,14 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > `NativeBackend` 671→579, `145fc5a3`); (2) **§131-residual** Native
 > (overload de mesma aridade/tipos → SIGSEGV) corrigido (`2d27f22b`);
 > (3) **§163** interpretador (2º parâmetro largo `Long`/`Double` → `null`)
-> corrigido (`d2a8a618`); (4) re-verificação §165 (`5a68a955`). Gate
-> 4-módulos **1653 run / 0 falhas / 13 erros (`*Js`=node) / 157 skip**;
-> `check_500` OK; pushado. Fila aberta = 8, **todas de outras lanes**.
-> Nada novo sem dono nesta lane → re-disparo RECUSADO.
+> corrigido (`d2a8a618`); (4) re-verificação §165 (`5a68a955`); (5) **docs
+> sync** README development + `PLAN-SOLID-500` com a realidade do remoto
+> (`6afabf1a`) — F3 fechada 498/12 dívidas (a lane .18 fechou antes do meu
+> push; rebase preservou os dois lados, regra 8), fila bugs = 8, §81/§163
+> adicionados aos fechados, §165 anotado como não-reproduzível em clean
+> build. Gate 4-módulos **1653 run / 0 falhas / 13 erros (`*Js`=node) /
+> 157 skip**; `check_500` OK; pushado. Fila aberta = 8, **todas de outras
+> lanes**. Nada novo sem dono nesta lane → re-disparo RECUSADO.
 >
 > **✅ FEITO (13/09 ~09:00, lane gate/qualidade, dono = 192.168.100.15): §163
 > — interpretador lia o 2º parâmetro largo (`Double`/`Long`) como `null`.**
