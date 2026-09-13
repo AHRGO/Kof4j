@@ -380,7 +380,7 @@ estado do **SOFTWARE**, não o do texto:
 | `docs/` | documentação consolidada e válida | **somente** o que já foi implementado, validado ou decidido |
 | `docs/development/` | trabalho atualmente em desenvolvimento | **somente** itens com implementação, validação, testes ou integração **pendentes** |
 | `docs/development/future/` | planejado para depois | ideias/funcionalidades **não** em desenvolvimento atual |
-| `docs/development/decision-pending/` | planos **parados aguardando decisão da mantenedora** | trabalho técnico existe mas **não anda sem ordem** (regra 6) — nunca atacar sem decisão; sai daqui ao ser decidido (volta p/ `development/` se vira código, ou p/ `docs/` se já estava pronto) |
+| `docs/development/DECISIONS.md` | **registro de decisões da mantenedora** (a pasta `decision-pending/` foi EXTINTA 13/09 — os 6 planos viraram este doc único) | decisão tomada no chat **mora aqui** (data + opção + evidência), nunca só no chat; item decidido vira fila no `roadmap.md` §23/DOING no mesmo commit — nunca atacar frente sem decisão travada aqui (regra 6) |
 | `docs/bugs-and-gaps/` | **registros vivos** de bugs, gaps de spec e matrizes de conformidade/paridade | fila por alvo (regra 3 do congelamento); não é "plano" — atualiza no MESMO commit que fecha o item |
 | `docs/audits/` | **auditorias** — foto de estado (planejado × realizado) e registros datados de comparação | apontam trabalho, nunca são fila: o que uma auditoria marca pendente tem casa própria (bug → `bugs-and-gaps/`, código → `development/`, decisão → `decision-pending/`); ao fechar o apontado, atualiza a linha da auditoria no MESMO commit |
 
@@ -388,10 +388,13 @@ estado do **SOFTWARE**, não o do texto:
 > (`known-bugs.md`, `conformance-matrix.md`, `ecosystem-coverage.md`,
 > `KOFUI-AUDIT.md`, `specification-gaps.md`) **não são backlog de
 > desenvolvimento** — moram em `docs/bugs-and-gaps/`. Documentos 100% parados
-> por decisão (`PLATFORM-PLAN.md`, `APPLICATION_MODEL.md`, `security-plan.md`,
-> `plan-platform-completion.md`, `plan-spring-independence.md`,
-> `planning-stdlib-time-design.md`) moram em
-> `docs/development/decision-pending/`. Auditorias (`roadmap-audit.md`,
+> por decisão **não têm mais pasta própria**: os 6 que viviam em
+> `decision-pending/` (`PLATFORM-PLAN.md`, `APPLICATION_MODEL.md`,
+> `security-plan.md`, `plan-platform-completion.md`,
+> `plan-spring-independence.md`, `planning-stdlib-time-design.md`) foram
+> inventariados, auditados contra o código e **ratificados 13/09** num doc
+> único — `docs/development/DECISIONS.md` (a pasta foi apagada). Auditorias
+> (`roadmap-audit.md`,
 > `complexity-audit.md`, `PLANNING-FUTURE-AUDIT.md`,
 > `planning-future-reconcile.md`) moram em `docs/audits/` — não são fila de
 > desenvolvimento nem registro de gap, são fotos de estado.
@@ -424,18 +427,19 @@ testes, build e commits. Para cada item:
 
 > **Implemente PRIMEIRO os `.md` soltos em `docs/development/`** — eles são o
 > trabalho **sem impedimento**: plano ratified, escopo definido, nada parado.
-> Documentos em pastas dentro de `docs/development/` (`decision-pending/`,
-> `refactoring/`, `future/`) **têm impedimento** e não são fila enquanto o
+> Documentos em pastas dentro de `docs/development/` (`refactoring/`,
+> `future/`) **têm impedimento** e não são fila enquanto o
 > impedimento existir.
 
-- **`decision-pending/` não é trabalho atual:** quando a mantenedora ATUALIZA
-  uma decisão (ratifica, como nas 12 de 13/09), o agente **move o arquivo para
-  `docs/development/`** — só aí ele entra na fila e fica disponível para
-  desenvolver. Ratificar sem mover = decisão invisível (padrão já aplicado em
-  DD-STDLIB-01, `a09127d7`).
+- **Decisão no chat vira DECISIONS.md no mesmo commit:** quando a mantenedora
+  decide algo no chat, o agente **trava a resposta em
+  `docs/development/DECISIONS.md`** (data + opção + evidência) **e abre a
+  fila** no `roadmap.md` §23/DOING — decidir sem registrar = decisão
+  invisível; registrar sem abrir fila = decisão morta. Frente sem linha em
+  DECISIONS.md **não é atacada** (regra 6).
 - **Ordem de seleção de tarefa:** (1) `.md` solto em `development/` com
-  implementação pendente e sem dono `EM CURSO`; (2) movimento de `decision-pending/`
-  → `development/` quando há decisão nova; (3) só então o resto da fila.
+  implementação pendente e sem dono `EM CURSO`; (2) fila recém-aberta de
+  `DECISIONS.md`; (3) só então o resto da fila.
 - **`future/`** permanece intocável sem promoção explícita (regra dos três
   estados); um item de `future/` **não** vira prioridade só porque está
   "planejado".
@@ -1138,8 +1142,7 @@ use o harness do projeto ou crie um teste E2E mínimo no pacote da área.
 | `docs/development/roadmap.md`, `docs/audits/roadmap-audit.md`, `docs/bugs-and-gaps/ecosystem-coverage.md` | Roadmaps & auditoria de cobertura (fila P0→P5) |
 | `docs/bugs-and-gaps/specification-gaps.md`, `docs/bugs-and-gaps/known-bugs.md` | Gaps de spec (SG-00x — fila do maintainer completa, virou referência) + bugs abertos |
 | `docs/development/native-multiarch.md`, `docs/stdlib/DATABASE_VISION.md`, `docs/audits/complexity-audit.md` | Native multiarch (NATIVE002) + DB vision (realizada → stdlib) + audit ≤500 (snapshot → architecture) |
-| `docs/development/decision-pending/security-plan.md` | Plano de segurança (18 camadas, B/C/D pendentes) |
-| `docs/development/decision-pending/plan-platform-completion.md`, `docs/development/decision-pending/plan-spring-independence.md` | Plans de plataforma & Spring independence (P3–P5) |
+| `docs/development/DECISIONS.md` | **Decisões da mantenedora** (time/segurança/app-model/Spring — pasta `decision-pending/` extinta 13/09) |
 | `docs/development/roadmap.md` §23 | **Plano de implementação consolidado** (Tiers 0–12) — único plano ordenado; migração A–H ✅, universal não iniciada |
 
 ---

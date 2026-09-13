@@ -30,7 +30,7 @@
 
 CLI registrada no `Main.java`: `inspect`/`decompile`/`translate`/`compare`/`migrate` + `new` (scaffold com kof.toml).
 
-### AppManifest / `kof new` (I1–I4 do APPLICATION_MODEL)
+### AppManifest / `kof new` (I1–I4 do ex-APPLICATION_MODEL — decisões em `docs/development/DECISIONS.md` §D-APP)
 `AppManifest.java` (182) + `CmdNew.java` (141): gera projeto com `kof.toml`,
 `[system]`/`[dev.ports]`, `serve` lê o toml, `build` empacota.
 ⚠️ **Colisão com a beta**: a beta tem `KofProjectConfig` (meu F2) — DOIS

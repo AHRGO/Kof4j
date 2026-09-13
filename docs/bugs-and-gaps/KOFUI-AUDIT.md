@@ -1,4 +1,4 @@
-# KofUI — Auditoria de cobertura (Fase 4, PLATFORM-PLAN)
+# KofUI — Auditoria de cobertura (Fase 4 — ex-PLATFORM-PLAN, `docs/development/DECISIONS.md` §D-PLATFORM)
 
 > **Status:** AUDITORIA (07/09) — matriz de gaps `UI00x`. Fonte: código
 > (prova, não memória). Escopo: `kof.ui` (widgets/DOM). Web APIs de browser

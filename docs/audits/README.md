@@ -13,7 +13,7 @@
 |---|---|---|
 | `roadmap-audit.md` | roadmap × código (matriz + fila P0→P5) | **viva** — re-audit quando algo fecha |
 | `complexity-audit.md` | contagem de linhas/classe (02/09) | **snapshot** — gate vivo = `scripts/check_500.sh` (ratchet CI) |
-| `PLANNING-FUTURE-AUDIT.md` | branch `planning-future` × beta (07–08/09) | **encerrada** — R2 vive em `decision-pending/`, R5 no cluster migração |
+| `PLANNING-FUTURE-AUDIT.md` | branch `planning-future` × beta (07–08/09) | **encerrada** — R2 vive em `DECISIONS.md` x{a7}D-APP/x{a7}D-PLATFORM (ratificado 13/09), R5 no cluster migração |
 | `planning-future-reconcile.md` | merge da branch (05/09) | **encerrada** — checklist cumprido (port dos tiers) |
 
 ## Como usar
@@ -21,7 +21,7 @@
 1. **Nunca** atacar trabalho direto daqui — o que uma auditoria marca como
    pendente tem que ter casa: bug → `docs/bugs-and-gaps/known-bugs.md`; plano
    com código a escrever → doc do plano em `docs/development/`; decisão →
-   `docs/development/decision-pending/`.
+   `docs/development/DECISIONS.md` (a pasta `decision-pending/` foi extinta 13/09).
 2. Ao fechar o que uma auditoria apontou, **atualize a linha da auditoria no
    MESMO commit** (ela é registro, não opinião congelada).
 3. Auditoria encerrada (nada vivo apontando para trabalho não-casado) fica

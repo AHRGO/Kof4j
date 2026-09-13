@@ -792,4 +792,4 @@ Docs: `debugger-architecture.md`, `debugging.md`, `debug-adapter.md`,
 - **gRPC no `kof.web`** (31/08) — comunicação RPC gRPC como primeira classe da plataforma web: `app.grpc { service ... }` (stubs a partir de `.proto`, server streaming + unary sobre HTTP/2 no JVM) + client `grpc.call(endpoint, method, msg)`; codegen `.proto` → IR; parity JVM primeiro (ver `docs/development/roadmap.md` § web)
 - auto-hospedagem (compilador escrito em Kof)
 
-Roadmap completo: `docs/development/roadmap.md`; execução: `docs/development/decision-pending/plan-platform-completion.md`
+Roadmap completo: `docs/development/roadmap.md`; execução: `docs/development/roadmap.md` §23 (ex-plan-platform-completion)

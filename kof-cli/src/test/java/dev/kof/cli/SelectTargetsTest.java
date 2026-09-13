@@ -91,7 +91,7 @@ class SelectTargetsTest {
         var msgs = KofCliSupport.unknownTargetMessages("wasm");
         assertEquals(1, msgs.size());
         assertTrue(msgs.get(0).contains("WASM001"), msgs.get(0));
-        assertTrue(msgs.get(0).contains("docs/development/decision-pending/PLATFORM-PLAN.md"),
+        assertTrue(msgs.get(0).contains("docs/development/DECISIONS.md"),
                 "mensagem deve apontar para o caminho REAL do plano: " + msgs.get(0));
         // alvo válido → sem diagnóstico; lixo → unknown genérico
         assertTrue(KofCliSupport.unknownTargetMessages("native").isEmpty());

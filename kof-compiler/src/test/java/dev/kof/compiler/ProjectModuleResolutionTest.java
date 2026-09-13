@@ -11,7 +11,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Fase 1 do plano de plataforma (docs/development/decision-pending/PLATFORM-PLAN.md): module
+ * Fase 1 do plano de plataforma (docs/development/DECISIONS.md §D-APP.REF): module
  * resolution cross-directory via kof.toml + diagnósticos PKG006/PKG007.
  * Retrocompatibilidade: sem kof.toml, o comportamento LCA atual é mantido.
  */

@@ -4434,8 +4434,9 @@ statement-switch na mesma taxa). Reprodução no próprio teste (kof-cli).
   normal justo antes da região crítica. Qualquer adição de linhas com aspas
   (o §107-x86 emitiu `.ascii "["`/`"?"/...`) desloca o deslocamento e a
   montagem falha — em código NON-MINE. Convenção correta do próprio repo
-  (lição já escrita em `docs/development/decision-pending/plan-spring-independence.md`
-  §"Pegadinha de text block", e usada em `RuntimeMemory.java:228`,
+  (lição escrita em `training/anti-patterns/asm-comment-escape.md`
+  §"dupla interpretação" — ex-`plan-spring-independence.md` §"Pegadinha de text block",
+  e usada em `RuntimeMemory.java:228`,
   `RuntimeObservability3.java:35-42`, `RuntimeValidation.java:356-359`):
   para emitir `\n` no asm a partir de um text block, escrever `\\n`.
 - **Fix (1 byte, backend-only):** `\\n` na linha 219 (o resto da string fica
@@ -4448,7 +4449,7 @@ statement-switch na mesma taxa). Reprodução no próprio teste (kof-cli).
   build com linhas com aspas antes da região existia. Não é regressão — é
   latente que o §107 revelou. Lição: text blocks que EMITEM asm/string têm
   que ser revistos contra a pegadinha do escape (double backslash), e a
-  pegadinha está documentada em `plan-spring-independence.md` mas não era
+  pegadinha está documentada em `training/anti-patterns/asm-comment-escape.md` mas não era
   CHECKLIST obrigatório da lane Native.
 
 

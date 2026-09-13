@@ -224,7 +224,7 @@ tradutor; 39+39 E2E sob qemu — faces de paridade avançada = NATIVE002),
 GC mark-sweep (G-0 riscv ✅ `356f33b9`; decomposição G-1..G-5 em
 `native-multiarch.md`).
 (kof.mq pub/sub + queue = 3 targets — MQ001 fechado 01/09)
-Ver `docs/development/decision-pending/plan-spring-independence.md` (Fases 5-14).
+Ver `docs/development/DECISIONS.md` §D-SPRING (Fases 5-14).
 
 **gRPC no `kof.web` (novo, 31/08 — planejado)**: comunicação gRPC como
 primeira classe na plataforma web — `app.grpc { service ... }` com stubs
@@ -837,7 +837,7 @@ ciência) **sem** destruir a simplicidade da linguagem.
 
 **Não implementar nada desta seção antes do estágio SYSTEMS fechar**
 (paridade de gaps, GC mark-sweep, package manager básico — ver
-`docs/development/decision-pending/plan-platform-completion.md` P0–P5).
+`docs/development/roadmap.md` §23 (ex-plan-platform-completion) P0–P5).
 
 ---
 

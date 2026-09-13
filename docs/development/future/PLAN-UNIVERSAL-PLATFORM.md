@@ -20,7 +20,7 @@ direto, FFM Vulkan compute, interop Java + GraalJS), `mvn test` 810.
 Referências (não alteradas): `docs/development/roadmap.md` (visão), `docs/philosophy.md`
 (intenção), `docs/architecture/architecture.md` (ADR multi-target),
 `docs/bugs-and-gaps/ecosystem-coverage.md` (matriz de capacidades), `docs/stdlib/stdlib.md`
-(mecanismo de dispatch), `docs/development/decision-pending/plan-platform-completion.md` (execução atual).
+(mecanismo de dispatch), `docs/development/roadmap.md` §23 (ex-plan-platform-completion) (execução atual).
 
 ---
 
@@ -496,7 +496,7 @@ rate limit, sessions, API keys. **A** — e com gaps diagnosticados
 **Princípio do domínio:** **defesa primeiro**; ofensiva somente em contexto
 legítimo (auditoria, pentest autorizado, pesquisa) — e sempre como *ferramenta
 orquestrada*, não como "Kof é um framework de ataque". (Reflete a postura do
-`docs/development/decision-pending/security-plan.md`.)
+`docs/development/DECISIONS.md` §D-SEC.)
 
  **O que NÃO fazer:** não reimplementar stacks cripto do zero quando há
  implementações auditadas (FFI a libs); não transformar Kof em "Kali em Kof";
@@ -1588,7 +1588,7 @@ arquiteturais futuras e guardrails.)
 - **O quê:** nenhum item deste plano é **ação** sobre o estado atual. O estado
   atual (0.2.6-beta, 810 testes, 7 targets) permanece **100% intacto**. Os
   itens **C/D** acima são **dependências arquiteturais futuras**, a serem
-  retomadas pelo roadmap vigente (`roadmap.md` / `docs/development/decision-pending/plan-platform-completion.md`)
+  retomadas pelo roadmap vigente (`roadmap.md` §23 — plano único consolidado)
   **após** a consolidação atual (P0-P5) — nunca como frente paralela agora.
 - **Por quê:** o enunciado é explícito: preservar o trabalho em andamento.
 - **Custo:** zero.

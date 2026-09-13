@@ -343,7 +343,7 @@ Legenda nas colunas de target: `y` = suportado, `~` = parcial, `–` = não.
 | Capacidade | Kof | JVM | Native | JS | Tests | Docs |
 |-----------|-----|-----|--------|----|-------|------|
 | chamar Java | `DONE` (interop direta) | y | – | – | CompilerDriverTest | architecture/architecture.md |
-| Spring | `EXTERNAL` (`kof spring starter` planejado — start.spring.io) | — | — | — | — | development/plan-spring-independence.md |
+| Spring | `EXTERNAL` (`kof spring starter` planejado — start.spring.io) | — | — | — | — | DECISIONS.md §D-SPRING |
 | JS (Node/browser) | `PARTIAL` (GraalJS embarcado, `kof_platform`) | — | — | y | KofJsE2ETest | targets/KOFJS.md |
 | libc | `NA` (native sem libc) | — | — | — | — | architecture/architecture.md |
 
