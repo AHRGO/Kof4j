@@ -127,20 +127,21 @@ tick_all() {
         fi
     done
     new_seen=$(printf '%s' "$new_seen" | tr -s ' ' | sed 's/^ //')
-    if [ -z "$news" ]; then
-        # só atualiza o snapshot (issue nova pode ter aparecido); sem ruído no log
-        [ -n "$new_seen" ] && sed -i "s/^seen=.*/seen=\"$new_seen\"/" "$STATE"
-        return 0
-    fi
     if ! curl -s -o /dev/null -m 5 "$SERVER/global/health"; then
-        echo "$(date -Is) tick all: comentários novos:$news mas servidor $SERVER fora do ar — não injeta" >> "$LOG"
+        echo "$(date -Is) tick all: servidor $SERVER fora do ar — não injeta" >> "$LOG"
         return 0
     fi
-    echo "$(date -Is) tick all: comentários novos:$news -> injeta na sessão $session" >> "$LOG"
-    local prompt="As issues$news têm comentário(s) novo(s) (ver 'gh issue view N --repo $GH_REPO --json comments'). Leia os novos, interaja (responda tecnicamente na issue se procedente), atualize DOING.md/plano conforme impactar o trabalho em docs/development, e continue a fila PRÓXIMO PASSO. Ao final commite."
+    if [ -n "$news" ]; then
+        echo "$(date -Is) tick all: comentários novos:$news -> injeta na sessão $session" >> "$LOG"
+    else
+        echo "$(date -Is) tick all: sem comentário novo, mas injeta igual (varredura completa) -> sessão $session" >> "$LOG"
+        [ -n "$new_seen" ] && sed -i "s/^seen=.*/seen=\"$new_seen\"/" "$STATE"
+    fi
+    local prompt="Varredura completa das issues abertas (NÃO só a #97$( [ -n "$news" ] && printf ' — novidades desde o último tick:%s' "$news")). Passos obrigatórios, NESTA ordem: (1) liste TODAS as issues abertas com 'gh issue list --state open' e leia o corpo de cada uma; (2) leia os comentários novos de cada uma ('gh issue view N --repo $GH_REPO --json comments') e responda tecnicamente na issue quando procedente; (3) TRIAGEM: para cada issue aberta decida — corrigir agora (se está na sua lane e sem dono EM CURSO no DOING.md), registrar gap/plano em docs/development (se é decisão de design — regra 6 do AGENTS.md), ou declarar NÃO-procedente com motivo técnico; (4) CORRIJA o que for da sua lane (compile + teste + commit, regra do DOING.md no mesmo commit); (5) FECHE a issue com 'gh issue close' (ou peça review do parceiro/dono quando a frente é de outra lane, ex. S-6/ViniAguiar1, §149/bugfix-101) somente após a prova existir; (6) atualize DOING.md (PRÓXIMO PASSO) e o plano afetado em docs/development. NUNCA: tocar frente com dono EM CURSO de outra lane; fechar issue sem prova (teste verde/suíte). Ao final commite e pushe."
     "$OPENCODE" run --session "$session" --dir "$REPO_DIR" --attach "$SERVER" --auto "$prompt" >> "$LOG" 2>&1 \
         || echo "$(date -Is) tick all INJEÇÃO FALHOU (rc=$?)" >> "$LOG"
-    sed -i "s/^seen=.*/seen=\"$new_seen\"/" "$STATE"
+    # 'seen' só avança após injeção bem sucedida (falha de entrega = re-tenta no próximo tick)
+    [ -n "$new_seen" ] && sed -i "s/^seen=.*/seen=\"$new_seen\"/" "$STATE"
 }
 
 case "${1:-}" in
