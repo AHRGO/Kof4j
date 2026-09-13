@@ -558,6 +558,24 @@ class ConformanceMatrixTest {
                     println(math.isDecimal(4.0) == false)
                 }
                 """, "true\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue", Set.of(), tempDir);
+        // STDLIB S1b.2 — kof.math.pow (decisão 7a): primeiro caso libm no
+        // native x86 (`pow@PLT` + `-lm`); JVM/JS Math.pow; riscv/aarch =
+        // MATH001 (link estático sem libc — gap diagnosticado, fora das 4
+        // colunas). Subset determinístico travado nos 4 targets.
+        matrix("stdmathpow", """
+                main() {
+                    println(math.pow(2.0, 10.0) == 1024.0)
+                    println(math.pow(9.0, 0.5) == 3.0)
+                    println(math.pow(2.0, -1.0) == 0.5)
+                    println(math.pow(2.0, 0.0) == 1.0)
+                    println(math.pow(0.0, 0.0) == 1.0)
+                    println(math.pow(2.0, 0.5) == math.sqrt(2.0))
+                    println(math.pow(3.0, 3.0) == 27.0)
+                    println(math.pow(-2.0, 3.0) == -8.0)
+                    println(math.pow(10.0, -2.0) == 0.01)
+                    println(math.pow(-1.0, 0.5) != math.pow(-1.0, 0.5))
+                }
+                """, "true\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue", Set.of(), tempDir);
         // STDLIB S2a — kof.strings predicados paridade total nos 4 targets.
         matrix("stdstrings", """
                 main() {

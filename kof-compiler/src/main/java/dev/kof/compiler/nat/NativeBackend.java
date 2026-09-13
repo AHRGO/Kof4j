@@ -318,15 +318,6 @@ public class NativeBackend implements Backend {
             sb.append(".file 1 \"").append(sourceFile).append("\"\n");
         }
         sb.append(".section .data\n");
-        // #113: ABERTURA do intervalo de raízes do GC conservador ANTES de
-        // qualquer dado do programa (.data merged: strings, kof_static_*,
-        // schemas, method tables + runtime) — estáticos do usuário apontando
-        // p/ heap eram raízes invisíveis ao mark (abaixo do root_start antigo,
-        // que ficava no preâmbulo do runtime). O sentinel .quad 0 é a primeira
-        // palavra varrida (nunca pointer-plausível, mark ignora).
-        sb.append(".globl kof_heap_root_start\n");
-        sb.append("kof_heap_root_start:\n");
-        sb.append(".quad 0\n");
         for (IRClass clazz : module.classes()) {
             currentClass = clazz;
             getLayout(clazz);
@@ -415,16 +406,6 @@ public class NativeBackend implements Backend {
             }
             emitStart(sb, mainClass);
         }
-        // #113/S-5(x86): FECHAMENTO do intervalo de raizes, num .bss proprio
-        // DEPOIS de todo dado do arquivo (.data merged + .bss do heap): o mark
-        // varre root_start..root_end, entao a semantica do antigo _end (varria
-        // .data+.bss ate o fim do linker) e preservada — e agora os estaticos
-        // do programa estao DENTRO, nao abaixo do inicio.
-        sb.append("\n.section .bss\n");
-        sb.append(".balign 8\n");
-        sb.append(".globl kof_heap_root_end\n");
-        sb.append("kof_heap_root_end:\n");
-        sb.append(".quad 0\n");
         String mainClassName = mainClass != null ? mainClass.name() : module.classes().getFirst().name();
         Path asmFile = outputDir.resolve(mainClassName + ".s");
         Path binFile = outputDir.resolve(mainClassName);

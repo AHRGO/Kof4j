@@ -167,6 +167,48 @@ class KofMathTest {
         forCrossArch(tmp, DBL_SRC, DBL_OUT);
     }
 
+    // S1b.2: pow(base,exp) — primeiro caso libm no native (pow@PLT + -lm)
+    // e Math.pow/** nos outros. Golden = oracle JVM medido, comparações Bool
+    // (bug 44: nunca println de double cru no Native). Cobre finitos exatos,
+    // exp negativo, exp fracionário (raiz) e a borda IEEE pow(0.0,0.0)==1.0.
+    private static final String POW_SRC = """
+        main() {
+            println(math.pow(2.0, 10.0) == 1024.0)
+            println(math.pow(9.0, 0.5) == 3.0)
+            println(math.pow(2.0, -1.0) == 0.5)
+            println(math.pow(10.0, 2.0) == 100.0)
+            println(math.pow(2.0, 0.0) == 1.0)
+            println(math.pow(0.0, 0.0) == 1.0)
+            println(math.pow(2.0, 0.5) == math.sqrt(2.0))
+            println(math.pow(3.0, 3.0) == 27.0)
+            println(math.pow(-2.0, 3.0) == -8.0)
+            println(math.pow(10.0, -2.0) == 0.01)
+            println(math.pow(1.0, 0.0) == 1.0)
+            println(math.pow(-1.0, 0.5) != math.pow(-1.0, 0.5))
+            println(math.pow(2.0, 1024.0) == math.pow(2.0, 1024.0))
+            println(math.pow(-8.0, 0.3333333333333333) != math.pow(-8.0, 0.3333333333333333))
+        }
+        """;
+
+    private static final String POW_OUT = String.join("\n",
+            "true", "true", "true", "true", "true", "true", "true", "true", "true",
+            "true", "true", "true", "true", "true");
+
+    @Test
+    void powJvm(@TempDir Path tmp) throws Exception {
+        runJvm(tmp, POW_SRC, POW_OUT);
+    }
+
+    @Test
+    void powNative(@TempDir Path tmp) throws Exception {
+        runNative(tmp, POW_SRC, POW_OUT);
+    }
+
+    @Test
+    void powJs(@TempDir Path tmp) throws Exception {
+        runJs(tmp, POW_SRC, POW_OUT);
+    }
+
     private void forCrossArch(Path tmp, String src, String expected) throws Exception {
         // golden byte-idêntico ao JVM/x86/JS, executado sob qemu (padrão
         // STRN001/SECN000 da lane; skipa honesto se toolchain ausente).

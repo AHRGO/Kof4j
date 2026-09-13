@@ -20,11 +20,17 @@
 >    nem `stash drop`. Conflito de rebase = resolve preservando os dois lados
 >    (fatos idênticos → escolhe uma redação; fatos diferentes → mantém ambos).
 >    Reversão de commit alheio só com causa raiz provada + registro no DOING.
-> 9. **Identificação por IP local (13/09, diretriz da mantenedora):** cada
->    agente se identifica pelo **IPv4 local da máquina** (`hostname -I`).
->    Toda reivindicação `EM CURSO`/`FEITO` leva `dono = <IPv4>` (ex. `dono =
->    192.168.100.22` = `mel-optiplex`). Esta sessão = **192.168.100.18**
->    (lane development — S2-OTP, DD-01 finally, §106 JSON Map).
+> 9. **Identificação por IP local — CLUSTER (13/09, diretriz da mantenedora):**
+>    os agentes rodam em **máquinas diferentes** num **cluster que compartilha
+>    o armazenamento** (mesmo repo/worktree visível a todos). Por isso a
+>    identidade é o **IPv4 local da máquina** (`hostname -I`): **cada IP = um
+>    agente = uma máquina**. Toda reivindicação `EM CURSO`/`FEITO` leva
+>    `dono = <IPv4>`. Não confundir máquinas nem assumir o dono de outro IP:
+>    `192.168.100.22` = `mel-optiplex`, `192.168.100.18` = outra máquina
+>    (lane development — S2-OTP/DD-01/§106). **Esta sessão = `192.168.100.15`**
+>    (lane gate/qualidade + docs). Como o storage é compartilhado, o working
+>    tree pode ter edição de OUTRA máquina — vale a regra 8 (nunca descartar),
+>    e o `git fetch`/`pull --rebase` antes de todo commit é obrigatório.
 >    Quem voltar (humano/cron/outra instância) retoma em ≤1 leitura.
 
 Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
@@ -54,7 +60,30 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **🚨 P0 RESOLVIDO — `pow`/`usesPow` + Portão de qualidade universal (13/09, lane
+> gate/qualidade, dono = 192.168.100.15):** o commit `7f174a6f` (pow) subiu
+> `NativeBackend.assemble` passando `usesPow` **não declarado** → `mvn compile`
+> falhava em TODA a branch (`cannot find symbol: usesPow`) + `pow` sem NENHUM
+> teste. **Fix (causa raiz):** removido o arg fantasma — o `NativeAssembler` já
+> liga `-lm` incondicionalmente (a fatia RuntimeMath com `call pow` está sempre
+> no runtime x86, decisão 7a). **O remoto `f2cb92ba` (dono 192.168.100.22) fez o
+> MESMO fix** (com comentário explicativo) — converge: fiquei com o dele no
+> `NativeBackend` (código idêntico + doc melhor), preservando os dois lados
+> (regra 8). Minha parte ÚNICA que fica: **teste** `KofMathTest.powJvm/powNative/
+> powJs` (14 casos: finitos, exp negativo/fracionário, `pow(0,0)=1`, NaN em base
+> negativa fracionária, overflow) + matriz `stdmathpow` (doc+teste) + suíte
+> 4-módulos **1636/0** (13 erros = só `node`). **+ Endurecimento AGENTS.md:**
+> §"Portão de qualidade — nenhum bug sobe" **universal p/ TODAS as branches**
+> (Q0 conserta≠prova, Q1 teste no mesmo commit, Q2 compile antes do push, Q3
+> matriz de bordas, Q4 caça-bug, Q5 sem verde falso, Q6 suíte é o chão) +
+> self-check 8–12 + checklist pré-push Q0–Q6.
+> **PRÓXIMO PASSO:** commit + push; depois varredura docs↔código.
+> **NUNCA:** código de lane alheia (pow = lane STDLIB — só o fix de build);
+> `nat/` lane GC viva; push main.
+
 > **⚡ RECUSA HONESTA (13/09, lane development/docs, dono = 192.168.100.22):** commits `f2cb92ba`/`92b959e4`/`05bcc184` pushados (IntelliJ degrau-10 + learn/38 + roadmap §17). Re-audit `.md` soltos: stdlib = só pow/roundTo (dono pow) + format/boundaries/isNis/ulid/Luhn (decisão/sem-algoritmo); native = NATIVE002/GC (lane GC viva); OTP/legado/SOLID-500 = donos/bloqueios; editor = degrau 13 gate final (exige suíte verde — HEAD quebrado pelo `usesPow` do dono pow, NÃO toco) + plugin (issue #1, subprojeto Gradle). **Nada sem dono nesta lane — não edito p/ parecer ocupado** (regra estabilidade). Cron NÃO parado (gerenciado por outra sessão). Retomo em regressão, decisão da mantenedora, ou lane órfã real.
+
+> **⚡ EM CURSO (13/09, lane development/docs — IntelliJ degrau-10 honesto, dono = 192.168.100.22):** diretriz da mantenedora registrada ("o dono do pow corrige o `usesPow`; segue com outra tarefa"). HEAD quebrado pelo `7f174a6f` (pow): `NativeBackend.java:593` referencia `usesPow` sem campo + `NativeAssembler.assemble` com 6º arg — `KofMathTest` Native + `KofGcE2ETest` 3/3 ERROR com 'usesPow cannot be resolved' (NÃO toco — lane pow). Meu WIP `roundTo` (6 arquivos) foi descartado via `stash drop` (lane pow/STDLIB alheia — sem roundTo sem dono). Em vez disso: IntelliJ degrau-10 honesto (sem plugin — issue #1 segue): `KofEditorContent.intellij()` (filetype XML `*.kf/*.kof` + External Tools `build/run/test/fmt/check/lsp` delegando à CLI + README LSP4IJ) + `IntelliJProvider` liga o conteúdo + teste novo `intellijInstallsHonestContentDelegatingToCli`; `EditorIntegrationTest` 17/17 verde; docs `editors/intellij.md` + `plan-editor-integration.md` status sync. Working-tree `nat/` GC (#113 root_start..root_end) preservado e commitado junto (regra 8 — trabalho de outra lane, NÃO meu; `check_500` acusa NativeBackend 664→693 CRÍTICO-crescente por esse delta alheio, dono GC resolve). **PRÓXIMO PASSO:** push; depois re-auditar `.md` soltos (degrau 13 gate final / roadmap sync) ou RECUSAR se nada sem dono (estabilidade).
 > **NUNCA:** pow/`usesPow`/roundTo (dono pow); `nat/` lane GC viva; fila §106/§89/§117 (outro agente); push main.
 
 > **⚡ EM CURSO (13/09, lane development/docs — .md soltos, dono =

@@ -3,7 +3,14 @@
 Este é o guia **obrigatório** para qualquer agente de IA (ou humano) que
 escreva código Kof neste repositório. Leia antes de gerar qualquer `.kf`.
 
-**Versão:** 0.4.0-beta · Última atualização: 11/09/2026 (modo autônomo + condição de ESTABILIDADE com recusa de re-disparo; branch ativa = `beta-0.4.0`)
+**Versão:** 0.4.0-beta · Última atualização: 13/09/2026 (modo autônomo + condição de ESTABILIDADE com recusa de re-disparo + **Portão de qualidade: nenhum bug sobe**; branch ativa = `beta-0.4.0`)
+
+> **PRIORIDADE Nº 1: QUALIDADE.** Antes de qualquer feature, leia o
+> **Portão de qualidade — "nenhum bug sobe"** (§ abaixo), **universal para
+> TODAS as branches**. A ordem é **reproduzir → consertar a causa raiz →
+> provar com teste → rodar a suíte → só então commitar**. O teste **prova**;
+> ele nunca substitui a correção. Entrega sem prova não é entrega: é bug
+> adiado. A pressa de entregar é o maior risco do repo.
 
 ---
 
@@ -245,6 +252,16 @@ conceitual nem decide arquitetura/rumo. Consequências práticas para o agente:
 6. **Toda PR vem acompanhada de uma issue relacionada.** PR "solta" não entra.
    Toda mudança proposta referencia uma issue aberta que a justifica —
    rastreabilidade é lei, não preferência.
+7. **Entrega por agente exige prova de qualidade (§"Portão de qualidade").**
+   Antes de abrir PR/commitar/pushar, o agente responde ao **checklist de
+   pré-push (Q1–Q6)**. Um commit de agente sem teste no mesmo commit é
+   **rejeitado na revisão** — a mantenedora não é a primeira a descobrir o
+   bug. Se o agente não conseguiu rodar um gate (toolchain/qemu ausente),
+   **declara isso explicitamente** no commit/PR; nunca finge verde.
+8. **Sem regressão silenciosa.** O agente que deixa a branch não-compilável
+   ou a suíte vermelha (fora dos erros ambientais documentados) está violando
+   o portão: conserta na mesma unidade ou reverte. `git bisect`-hostil é o
+   pior legado que um agente pode deixar.
 7. **Identidade do git (12/09, decisão da mantenedora — identidade única).**
    A regra antiga do `temmcode` (e-mail `aminadojava@gmail.com` no `--local`
    para atribuir commits ao worker + bloco `"Kof-agent-worker"` em comentários
@@ -542,6 +559,119 @@ Bool isQuery(String op) {
 
 ---
 
+## Portão de qualidade — "nenhum bug sobe" (obrigatório, 13/09 — **UNIVERSAL**)
+
+> **Prioridade nº 1 do projeto é QUALIDADE, não volume de entrega.** Um commit
+> que adiciona feature sem prova é pior que um commit que não existe: ele
+> transfere o custo do bug para a próxima sessão e para a mantenedora.
+>
+> **Esta regra é universal: vale para TODAS as branches** (`beta-0.4.0`,
+> `wip-*`, `fix/*`, `issue-lane`, `docs/*`, feature branches, forks), **para
+> todo agente, toda lane e toda unidade** — não só a branch de release. Um
+> push que quebra o build em QUALQUER branch é uma violação do portão. Não é
+> negociável com "o teste já passava antes", "é só um WIP" ou "outro agente
+> vê depois".
+
+### Q0. O bug se CONSERTA; o teste só PROVA
+
+> **Consertar o bug é o trabalho. O teste é a prova de que ele morreu — nunca
+> um substituto para a correção.** É proibido entregar "o teste que reproduz o
+> bug" e deixar o código quebrado; é proibido também "documentar em volta" ou
+> rebaixar a asserção para o teste passar. A ordem é sempre:
+>
+> **reproduzir (menor repro) → consertar a causa raiz → provar com o teste
+> que falharia antes → rodar a suíte completa.**
+
+- **Bug fix entrega o código corrigido + o teste de regressão no mesmo commit.**
+  Faltando qualquer um dos dois, o commit não existe.
+- **Corrigir a causa raiz, não o sintoma.** Um `if` que esconde a exceção, um
+  `try/catch` que engole, ou um valor default que mascara o erro **não é fix** —
+  é bug adiado. Se a correção exige mudança de contrato/operador/ordem de
+  avaliação, é **regra 6**: vira plano, nunca edição silenciosa.
+- **Build quebrado é o bug mais grave.** Se o seu commit deixa a branch
+  não-compilável (ex.: `7f174a6f`, `usesPow` não declarado), a correção é
+  **prioridade zero** — conserta na mesma unidade e pusha, não espera o próximo.
+
+### Q1. Toda mudança de código vem com teste que a PROVA
+
+- **Feature nova → teste novo.** Sem exceção. "Implementei X" sem teste que
+  execute X é entrega inválida (o `pow` de 13/09 subiu sem teste e quebrou o
+  build da release — não se repete).
+- **Bug fix → teste de regressão** que falharia no código velho e passa no
+  novo. O teste é a prova de que o bug morreu; sem ele, o bug volta.
+- **Refactor → mesma suíte + golden E2E por target** (regra 3 do Congelamento).
+- **O teste entra no MESMO commit da mudança.** Teste depois = teste que nunca
+  vem. Se o commit não tem a prova, o commit não existe.
+
+### Q2. Prova de compilação ANTES de qualquer push
+
+```bash
+mvn -o -pl kof-compiler -am compile -q     # falha aqui = NÃO PUSHA
+```
+
+O caso `7f174a6f` (pow com `usesPow` não declarado) deixou a branch de release
+**não-compilável** para todos os agentes. **Regra dura: agente que não roda o
+`compile` do módulo antes do push está quebrando o repo.** Se o gate completo
+não foi rodado, o commit/mensagem diz isso explicitamente — nunca finge verde.
+
+### Q3. Além do caminho feliz — a matriz mínima de cenários
+
+Todo teste novo cobre, no mínimo, **o caminho feliz + as bordas relevantes**.
+O agente escolhe as que se aplicam e **registra no commit** o que cobriu:
+
+| Cenário | Exemplo |
+|---|---|
+| **Borda numérica** | `0`, negativo, overflow, `NaN`/`Infinity`, `-0.0`, expoente negativo/fracionário |
+| **Vazio/nulo** | coleção vazia, String `""`, `null`/`Nullable`, ausência de chave |
+| **Limite/índice** | primeiro/último elemento, fora-de-faixa, um-past-the-end |
+| **Erro esperado** | entrada inválida → diagnóstico/gap `XXX00x` (nunca silêncio, R6) |
+| **Cross-target** | JVM × Native × Script × JS com a MESMA saída (ou gap diagnosticado) |
+| **Idempotência/repetição** | rodar 2× dá o mesmo resultado; estado não vaza |
+| **Concorrência** | `spawn`/`await`, corrida, cancelamento, isolamento entre workers |
+| **Interop/limite de recurso** | arquivo inexistente, rede fora, lib ausente, memória |
+
+- **Proibido entregar só o happy path** (self-check 7). Se o caso só tem o
+  caminho feliz testável, **diga por quê no commit** (ex.: "só o determinístico
+  é observável; o resto é ambiente").
+- **Golden = medição real, nunca memória.** O valor esperado sai do oracle JVM
+  executado (ou harness C isolado), nunca de "acho que dá isso".
+- **`assertEquals` com mensagem** que identifica o caso e o target — um vermelho
+  precisa ser diagnosticável sem re-rodar.
+
+### Q4. Cace o bug ANTES de subir (postura de caça, não de entrega)
+
+Antes de cada commit, o agente **tenta quebrar a própria mudança**:
+
+1. **Casos extremos:** o que acontece com entrada vazia/nula/negativa/gigante?
+2. **Cross-target:** os 3+ targets concordam? Onde divergem, é gap ou bug?
+3. **Fronteira de contrato:** a mudança toca operador/precedência/ordem de
+   avaliação/null-safety/`==`/exceções/`spawn`/coleções? Então é **regra 6** —
+   vira plano, não edição.
+4. **Regressão vizinha:** rode a suíte completa, não só a classe nova.
+5. **O que o teste NÃO cobre?** Escreva-o — é exatamente aí que o bug mora.
+
+> Um bug achado por um agente antes do push custa minutos. O mesmo bug subindo
+> custa uma sessão inteira de outro agente + a confiança da mantenedora. **Achar
+> o bug é parte do trabalho, não uma fase opcional.**
+
+### Q5. Nada de "verde falso"
+
+- Teste que passa por acidente (assert fraco, `success=true` sem executar
+  output, mensagem de erro aceita como saída esperada) é **bug disfarçado**.
+  Proibido "consertar" teste relaxando a asserção (JavaFX, §149 — precedentes).
+- Skip é **honesto e explícito** (`assumeTrue` de toolchain ausente), nunca
+  para esconder falha.
+- Se a suíte fica vermelha por causa da sua mudança, **o commit não entra** —
+  nem "com nota", nem "depois eu volto". Corrige ou reverte.
+
+### Q6. A suíte é o chão, não o teto
+
+Passar a suíte é o **mínimo**. A pergunta de aceite é: *"que cenário quebra
+isso e eu ainda não testei?"*. Enquanto houver resposta, a unidade não está
+pronta.
+
+---
+
 ## Congelamento de comportamento (obrigatório)
 
 > **O comportamento previsto é lei.** "Comportamento previsto" = o que o corpus
@@ -549,7 +679,7 @@ Bool isQuery(String op) {
 > completa) provam. **Nenhum agente pode quebrar comportamento que já funciona.**
 
 1. **Zero regressão.** Nenhum commit pode fazer um teste existente passar a
-   falhar. A suíte completa (`mvn test`, hoje **1611** nos 4 módulos — ver
+   falhar. A suíte completa (`mvn test`, hoje **1636** nos 4 módulos — ver
    §"Loop de verificação" para o comando com o flag de failure.ignore) é **gate de merge** —
    mudança que não mantém tudo verde não entra. Exceção única: mudança de
    contrato **deliberada**, com bump de versão + docs atualizados + migração.
@@ -834,7 +964,7 @@ Se você está prestes a escrever algo desta lista, **pare**:
 
 Responda SIM a todas antes de terminar:
 
-1. **Compilei?** (loop de verificação abaixo)
+1. **Compilei?** (loop de verificação abaixo) — `mvn -o -pl kof-compiler -am compile -q` verde.
 2. **Traduzi alguma linguagem?** Se sim, reescreva com a abstração do Kof.
 3. **Há repetição 3+ vezes de um padrão?** (comparação, branch, construção)
    → existe feature da linguagem para isso (Set/Map/switch/higher-order/record).
@@ -846,6 +976,19 @@ Responda SIM a todas antes de terminar:
    inesperados (confiabilidade do codegen, bordas de erro, tipos nullable,
    concorrência, alocação de memória, cross-target paridade). Nunca delivery
    com testes que cobrem apenas o caso de sucesso esperado.
+8. **A feature/bug tem teste no MESMO commit?** (Q1) — sem prova, o commit não existe.
+9. **Cobri as bordas relevantes da matriz Q3** (numérica, vazio/nulo, limite,
+   erro esperado, cross-target, idempotência, concorrência, recurso) e
+   **declarei no commit** o que cobri?
+10. **Tentei quebrar a mudança antes do push?** (Q4) — casos extremos,
+    cross-target, fronteira de contrato, regressão vizinha, o que o teste não cobre.
+11. **O golden veio de medição real** (oracle JVM/harness C) e não de memória?
+12. **Nenhum teste passou por acidente** (assert fraco, `success=true` sem
+    executar, erro aceito como saída)? (Q5)
+
+> Se alguma resposta for NÃO, a unidade **não está pronta** — volte para a
+> implementação. O portão de qualidade (§"nenhum bug sobe") é pré-requisito
+> de commit, não uma revisão posterior.
 
 ---
 
@@ -854,23 +997,40 @@ Responda SIM a todas antes de terminar:
 Sempre que escrever/alterar código Kof:
 
 ```bash
-# 1. Compilar o módulo (rápido)
+# 0. PRE-PUSH GATE (Q2) — sem isto o push é proibido
 mvn -o -pl kof-compiler -am compile -q
 
-# 2. Rodar os testes da área alterada
+# 1. Rodar os testes da área alterada (rápido)
 mvn test -o -pl kof-compiler -am -Dtest='KofAreaTest' -Dsurefire.failIfNoSpecifiedTests=false
 
-# 3. Suíte completa antes de commit
+# 2. Suíte completa antes de commit
 mvn test -o -pl kof-compiler,kof-script,kof-c-compiler,kof-cli -am \
     -Dsurefire.failIfNoSpecifiedTests=false \
     -Dmaven.test.failure.ignore=true
+
+# 3. Conferir os reports POR MÓDULO (não confie no resumo do reactor)
+grep -rl "FAILURE" */target/surefire-reports/*.txt
 ```
+
+### Checklist de pré-push (Q0–Q6 — responda antes de `git push`, em QUALQUER branch)
+
+0. O bug foi **consertado na causa raiz** (não mascarado) e o teste que prova
+   falharia no código velho? **(Q0)**
+1. `mvn -o -pl kof-compiler -am compile -q` verde? **(Q2)**
+2. A mudança tem teste no MESMO commit que a prova? **(Q1)**
+3. O teste cobre o happy path **e** as bordas Q3 que se aplicam? **(Q3)**
+4. Tentei quebrar a mudança (casos extremos, cross-target, regressão vizinha)? **(Q4)**
+5. A suíte completa está verde (0 falhas fora dos erros ambientais de `node`)? **(Q5)**
+6. `grep -rl FAILURE */target/surefire-reports/*.txt` não aponta nada seu? **(Q5)**
+
+> **Nenhum push sem os 7 itens, em nenhuma branch.** Se algum falhar, corrija
+> ou reverta — não suba "com nota" nem "para o próximo agente ver".
 
 > **`-Dmaven.test.failure.ignore=true` é OBRIGATÓRIO na suíte completa.** Sem
 > ele, o Maven é fail-fast por módulo: qualquer falha em **kof-compiler aborta
 > o reactor** e **kof-script, kof-c-compiler e kof-cli nunca rodam** — você
 > acha que validou tudo mas só viu o primeiro módulo. O total real com o flag
-> é **1611 testes** (compiler 1439 + script 31 + kof-c 5 + cli 136, medição
+> é **1636 testes** (compiler 1464 + script 31 + kof-c 5 + cli 136, medição
 > 13/09 — cresce com cada commit): **0 falhas** (13 erros = só `node` ausente
 > no host, ambientais). O §149 JS (`KofRandomTest.randomStringJs`/`randomShapeJs`,
 > regressão do fix §147 no `JsIfThrowElse`) foi **CORRIGIDO 13/09** — a raiz era
@@ -888,8 +1048,8 @@ mvn test -o -pl kof-compiler,kof-script,kof-c-compiler,kof-cli -am \
 >
 > **Os números mudam com qemu no ambiente:** sem qemu, os 84 cross
 > (2×42, `NativeRiscv64/Aarch64E2ETest`) são **skipados** pelo guard
-> (`4408eb6`) + 5 de BD externo → `~1611/0/~89-skip` (estimado — a medição
-> abaixo é de host COM toolchain). Com qemu, **tudo executa** — `1611/0/5-skip`
+> (`4408eb6`) + 5 de BD externo → `~1547/0/~89-skip` (estimado — a medição
+> abaixo é de host COM toolchain). Com qemu, **tudo executa** — `1636/0/5-skip`
 > (os 5 = MySQL/Mongo/Postgres externos; medido 13/09). Estado correto HOJE:
 > **0 falhas** nos dois cenários (o §149 JS foi corrigido 13/09); os 13 erros
 > são só `node` ausente. O que importa continua sendo nenhum FAILURE fora
