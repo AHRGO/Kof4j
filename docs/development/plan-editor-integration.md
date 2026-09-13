@@ -1,6 +1,10 @@
 # PLAN — Editor Integration (EDI001)
 
 > **Status:** `EM CURSO` (degraus 1-3, 4-10, 11, 12 feitos; resta IntelliJ plugin) · **Gap:** `EDI001` · **Criado:** 07/09/2026
+> **Prova degrau 12 (medido 13/09):** `docs/editors/` 8 docs (overview+7
+> editores) + `training/tooling/cli.md:25` (tabela `kof editor …`) +
+> `learn/38-editors.md` (detect/setup/install). Resta: IntelliJ plugin
+> (subprojeto Gradle próprio, §21) + degrau 13 (gate final).
 > **Origem:** briefing "KOF EDITOR INTEGRATION" (infra oficial de integração de
 > editores/IDEs). **Escopo desta doc:** especificação + ordem de implementação.
 > **A implementação é DEPOIS** — este documento é o contrato.

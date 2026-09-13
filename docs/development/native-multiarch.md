@@ -11,7 +11,10 @@
 > higher-order `map/filter/reduce` (probe 12/09: `[2,4,6]`/`[2,3]` idêntico
 > JVM), HTTP client (`riscv64HttpGetPostStatus`), `kof.net`, JSON
 > encode/decode int/list/string, spawn/await (`clone`+`futex`), `time` ISO
-> (add/diff), `math` Double (MATH001), `random`, `uuid`, multi-dim array
+> (add/diff), `math` Double (MATH001) + **`math.pow` S1b.2 (decisão 7a 13/09:
+> x86 via libm `pow@PLT` + `-lm`; riscv/aarch recusam com MATH001 — link
+> cross estático sem libc, decisão de arquitetura regra 6; `KofMath.supportedOn`),
+> `random`, `uuid`, multi-dim array
 > (§113), busca String UTF-16 (§43/§102/§111). **ABERTO — recusa HONESTA em
 > compile-time (NUNCA binário mudo; regra R6 — o stub "exit 0 sem efeito" de
 > 03/09 já NÃO descreve mais o estado, ops desconhecidos dão código de gap):**

@@ -53,6 +53,17 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **⚡ EM CURSO (13/09, lane development/docs — .md soltos, dono =
+> 192.168.100.22):** regra nova AGENTS (`.md` soltos primeiro): (1)
+> native-multiarch: nota S1b.2 `math.pow` (x86 libm, cross MATH001); (2)
+> editor: prova degrau 12 medida (`docs/editors/` 8 + training/cli.md:25 +
+> learn/38) — resta IntelliJ plugin + degrau 13; (3) stdlib-expansion: S1b.2
+> registrado como FEITO-outro-agente `7f174a6f` (dispatch+shim, sem E2E/matriz
+> — NÃO tocar, pow tem dono); SOLID-500 F3 segue bloqueada lane GC `nat/`.
+> **PRÓXIMO PASSO:** commit + push; depois roadmap/README sync.
+> **NUNCA:** pow/E2E (outro agente `7f174a6f`); fila §106/§89/§117 (outro
+> agente); `nat/` lane GC viva; push main.
+
 > **⚡ EM CURSO (13/09, lane development/docs — cluster legado + OTP, dono =
 > 192.168.100.22):** (1) `LEGACY_MIGRATION.md`: contradição corrigida ("nada
 > existe" → tabela real §3) + contagem 63→70 testes (Decompile 45 + Translate
