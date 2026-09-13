@@ -690,7 +690,7 @@ contratos estabilizarem.
 - `Parser.java` / `SemanticAnalyzer.java` / `JvmBackend.java` → sub-parsers.
 
 Critério de aceite: `cloc`/`wc -l` por classe — nenhuma acima de 500.
-Detalhes e tabela de tamanhos: `docs/architecture/complexity-audit.md` → "Regra de
+Detalhes e tabela de tamanhos: `docs/audits/complexity-audit.md` → "Regra de
 arquitetura — limite de 500 linhas por classe".
 
 ---

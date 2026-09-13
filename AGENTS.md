@@ -359,6 +359,7 @@ estado do **SOFTWARE**, não o do texto:
 | `docs/development/future/` | planejado para depois | ideias/funcionalidades **não** em desenvolvimento atual |
 | `docs/development/decision-pending/` | planos **parados aguardando decisão da mantenedora** | trabalho técnico existe mas **não anda sem ordem** (regra 6) — nunca atacar sem decisão; sai daqui ao ser decidido (volta p/ `development/` se vira código, ou p/ `docs/` se já estava pronto) |
 | `docs/bugs-and-gaps/` | **registros vivos** de bugs, gaps de spec e matrizes de conformidade/paridade | fila por alvo (regra 3 do congelamento); não é "plano" — atualiza no MESMO commit que fecha o item |
+| `docs/audits/` | **auditorias** — foto de estado (planejado × realizado) e registros datados de comparação | apontam trabalho, nunca são fila: o que uma auditoria marca pendente tem casa própria (bug → `bugs-and-gaps/`, código → `development/`, decisão → `decision-pending/`); ao fechar o apontado, atualiza a linha da auditoria no MESMO commit |
 
 > **Refactor de clareza (13/09, decisão da mantenedora):** bugs/gaps/matrizes
 > (`known-bugs.md`, `conformance-matrix.md`, `ecosystem-coverage.md`,
@@ -367,9 +368,12 @@ estado do **SOFTWARE**, não o do texto:
 > por decisão (`PLATFORM-PLAN.md`, `APPLICATION_MODEL.md`, `security-plan.md`,
 > `plan-platform-completion.md`, `plan-spring-independence.md`,
 > `planning-stdlib-time-design.md`) moram em
-> `docs/development/decision-pending/`. `docs/development/` fica **só** com
-> trabalho que anda (planos com código em andamento, refactors, auditorias
-> vivas da fila). Um agente da lane **docs** não mexe em bug/gap (são de
+> `docs/development/decision-pending/`. Auditorias (`roadmap-audit.md`,
+> `complexity-audit.md`, `PLANNING-FUTURE-AUDIT.md`,
+> `planning-future-reconcile.md`) moram em `docs/audits/` — não são fila de
+> desenvolvimento nem registro de gap, são fotos de estado.
+> `docs/development/` fica **só** com
+> trabalho que anda (planos com código em andamento e refactors). Um agente da lane **docs** não mexe em bug/gap (são de
 > outra lane) — só mantém esses registros sincronizados com o código.
 
 > **`docs/development/` NÃO é arquivo morto, histórico nem depósito de
@@ -898,9 +902,9 @@ use o harness do projeto ou crie um teste E2E mínimo no pacote da área.
 | `docs/architecture/architecture.md`, `docs/architecture/compiler-architecture.md` etc. | Domínios específicos (estáveis) |
 | `docs/development/` | **Backlog vivo — tudo que NÃO está concluído** (planos, roadmaps, audits, gaps, refactors). Ver `docs/development/README.md` para índice completo. |
 | `docs/development/future/` (plans) | **só plano sem código**: plataforma universal (visão), RAII TIER 2.4, DD-STDLIB-01. A migração legado (decompiler/translator/IR/differential) **caiu p/ `docs/development/` 12/09** — implementada com testes |
-| `docs/development/roadmap.md`, `docs/development/roadmap-audit.md`, `docs/bugs-and-gaps/ecosystem-coverage.md` | Roadmaps & auditoria de cobertura (fila P0→P5) |
+| `docs/development/roadmap.md`, `docs/audits/roadmap-audit.md`, `docs/bugs-and-gaps/ecosystem-coverage.md` | Roadmaps & auditoria de cobertura (fila P0→P5) |
 | `docs/bugs-and-gaps/specification-gaps.md`, `docs/bugs-and-gaps/known-bugs.md` | Gaps de spec (SG-00x — fila do maintainer completa, virou referência) + bugs abertos |
-| `docs/development/native-multiarch.md`, `docs/stdlib/DATABASE_VISION.md`, `docs/architecture/complexity-audit.md` | Native multiarch (NATIVE002) + DB vision (realizada → stdlib) + audit ≤500 (snapshot → architecture) |
+| `docs/development/native-multiarch.md`, `docs/stdlib/DATABASE_VISION.md`, `docs/audits/complexity-audit.md` | Native multiarch (NATIVE002) + DB vision (realizada → stdlib) + audit ≤500 (snapshot → architecture) |
 | `docs/development/decision-pending/security-plan.md` | Plano de segurança (18 camadas, B/C/D pendentes) |
 | `docs/development/decision-pending/plan-platform-completion.md`, `docs/development/decision-pending/plan-spring-independence.md` | Plans de plataforma & Spring independence (P3–P5) |
 | `docs/development/ACTION_PLAN.md` | Ordem de implementação dos planos da plataforma (Tiers 0–12) — migração feita, universal não iniciada |

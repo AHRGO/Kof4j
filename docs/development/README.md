@@ -43,7 +43,7 @@ paridade com gaps honestos), `docs/bugs-and-gaps/specification-gaps.md`
 | 7 | `PLATFORM-PLAN.md` F4/F5/F7 + `APPLICATION_MODEL.md` I2+ | `EM CURSO` (parciais) | dependem de decisão/prioridade da release | sem próximo passo próprio: entram na medida em que a fila acima fecha |
 | — | `security-plan.md` (camadas B/C/D) | `PARTIAL` | cada camada B/C/D tem decisão pendente (ChaCha20 formato, keys, OAuth2) | atacar só com ordem explícita da mantenedora |
 | — | `plan-platform-completion.md` (P4/P5), `plan-spring-independence.md` (Fases 12–14) | `PARTIAL` | P4/P5 e Fase 12 dependem do core estável + decisões | idem — não abrir por conta |
-| — | registros vivos: `conformance-matrix.md`, `ecosystem-coverage.md`, `roadmap.md`, `roadmap-audit.md`, `KOFUI-AUDIT.md`, `known-bugs.md` | `VIVA` | **não são backlog** — matriz/auditoria/fila que se atualizam junto com cada fechamento | atualizar célula/seção no MESMO commit que fecha o gap |
+| — | registros vivos: `conformance-matrix.md`, `ecosystem-coverage.md`, `KOFUI-AUDIT.md`, `known-bugs.md` (em `docs/bugs-and-gaps/`); `roadmap.md` (aqui); `roadmap-audit.md`/`complexity-audit.md` (em `docs/audits/`) | `VIVA` | **não são backlog** — matriz/auditoria/fila que se atualizam junto com cada fechamento | atualizar célula/seção no MESMO commit que fecha o gap |
 
 **Regra R12 (AGENTS.md):** nada de `future/` (plataforma universal, RAII,
 package-compiler) abre antes de SYSTEMS fechar (paridade + GC + estabilidade).
@@ -104,7 +104,7 @@ escalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 | `APPLICATION_MODEL.md` | `application { onStart/onShutdown }` ✅ E2E 3 targets; I2 (full-stack) ✅ `FullStackE2ETest` | I3/I4 (distribuído, packaging, System) — Q1/Q2 mantenedora |
 | `LEGACY_MIGRATION.md` + `DECOMPILER.md` + `TRANSLATOR.md` + `DIFFERENTIAL_TESTING.md` + `LEGACY_IR.md` | plataforma completa no CLI: `inspect/decompile/translate/compare/migrate` (`Main.java:25-29`), 63 testes kof-cli + `Confidence`/`Type.fromJvmSignature` | cobertura: switch/athrow opacos, `inspect --java` (R5 do audit), IR non-JVM |
 | `IMPLEMENTATION_PLAN.md` / `ACTION_PLAN.md` | Fases A–H têm código+testes | tiers 6–12 = `future/` (R12) |
-| `PLANNING-FUTURE-AUDIT.md` / `planning-future-reconcile.md` | auditorias com R2 (kof.toml × AppManifest) e R5 abertos; tabela da Fase D corrigida 12/09 | R2/R5 → decisões; doc pode consolidar ao fechar |
+| ~~`PLANNING-FUTURE-AUDIT.md` / `planning-future-reconcile.md`~~ → `docs/audits/` | comparação branch `planning-future`×beta **encerrada 13/09** — nada de código aberto próprio mora nelas: R2 vive em `decision-pending/APPLICATION_MODEL.md`+`PLATFORM-PLAN.md`; R5 no cluster migração (`DECOMPILER.md`/`LEGACY_IR.md` Fase C) | — (fora de `development/`) |
 | `planning-finally-return.md` | JS corrigido (`c727fee` + `finallyReturnJs`) | decisão DD-01 (§3) |
 | `planning-stdlib-time-design.md` | `addDays`/`diffDays` nos 5 alvos | decisão `format`/`boundaries` (§3) |
 
@@ -123,7 +123,7 @@ escalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 | `conformance-matrix.md` | matriz Feature×4 targets travada por `ConformanceMatrixTest` (11) + doc-gate | viva: atualiza com cada gap |
 | `ecosystem-coverage.md` | G1–G12 com `PARTIAL`/`PLANNED` (events, batch, AI) | referência de cobertura |
 | `roadmap.md` | §§8–11 ❌ (frontend same-project, monólito→micro) | longo prazo |
-| `roadmap-audit.md` | matriz 06/09 + fila P0→P5 (P0 FECHADO 09/09) | re-audit quando algo fecha |
+| ~~`roadmap-audit.md`~~ → `docs/audits/roadmap-audit.md` | matriz 06/09 + fila P0→P5 (P0 FECHADO 09/09) | re-audit quando algo fecha |
 | `KOFUI-AUDIT.md` | UI001-Native (face R6: no-op silencioso) ABERTO | lane UI |
 | `known-bugs.md` | 11 abertos (triagem §2 acima; §127-JVM e §94 fechados 13/09) | fila viva |
 | `refactoring/PLAN-SOLID-500.md` | F1–2, 4–9 ✅ (**F2 fechada 12/09** — 487 ≤500 medido); **só F3 em curso** (NativeBackend 664, bloqueada pela lane GC em `nat/`); ratchet `check_500-baseline.txt` (dívidas travadas — nº autoritativo = `wc -l` do arquivo; **9** neste HEAD, era 17 no §140) no CI | F3 fecha o plano |
@@ -147,7 +147,7 @@ evidência em cada linha de §4.1; snapshot SG 08/09 → `docs/history/`)*
 |---|---|---|
 | `docs/bugs-and-gaps/specification-gaps.md` | SG-001–020 + E1–E3 | fila do maintainer COMPLETA (resumo do próprio doc); snapshot antigo → `docs/history/specification-gaps-0.3.0-snapshot.md` |
 | `docs/stdlib/DATABASE_VISION.md` | níveis 0–4 | query DSL 01/09 (`KofOrmE2ETest` 22), MySQL prepared (`nativeMysqlPreparedBinary`), pooling ✅; DB001/ORM001 vivem na matriz de paridade |
-| `docs/architecture/complexity-audit.md` | snapshot 02/09 | números pré-SOLID-500; gate vivo = `scripts/check_500.sh` (ratchet) |
+| `docs/audits/complexity-audit.md` | snapshot 02/09 | números pré-SOLID-500; gate vivo = `scripts/check_500.sh` (ratchet) |
 | `docs/history/roadmap-gap-2026-09-03.md` | gap report datado | pendências vivem em roadmap-audit/known-bugs |
 | `docs/decisions/` | `planning-switch-expr`, `planning-mutability` | SYN001, DD-02/SEM037/SEM038 aplicados |
 | `docs/ui/PLAN-CANVAS-WIDGET.md` | CANVAS001 | `UiE2ETest` 29/29 sem exclusões |
