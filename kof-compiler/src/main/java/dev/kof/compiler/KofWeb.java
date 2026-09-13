@@ -106,8 +106,12 @@ public final class KofWeb {
             case "use" -> argTypes.size() == 1
                     ? new WebCall("kof_web_use", VOID, List.of(STR, argTypes.get(0)))
                     : null;
-            case "listen" -> argTypes.size() == 1
-                    ? new WebCall("kof_web_listen", VOID, List.of(STR, argTypes.get(0)))
+            // #102.2 (13/09): `listen` aceita SÓ Int — String virava
+            // VerifyError em runtime. Com o gate aqui, `listen("8100")`
+            // retorna null → o typer emite SEM025 em compile-time
+            // (kof check) em vez de bytecode inválido.
+            case "listen" -> argTypes.size() == 1 && isInt(argTypes.get(0))
+                    ? new WebCall("kof_web_listen", VOID, List.of(STR, INT))
                     : null;
             case "serveDir" -> argTypes.size() == 2
                     ? new WebCall("kof_web_serve_dir", VOID, List.of(STR, STR, STR))

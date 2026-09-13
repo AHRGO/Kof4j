@@ -311,4 +311,22 @@ class KofWebE2ETest {
         assertTrue(diagnostics.stream().anyMatch(d -> d.code().equals("WEB004")),
                 "Should have WEB004, got: " + diagnostics);
     }
+
+    // #102.2 (13/09): `app.listen("8100")` (String) — antes VerifyError em
+    // runtime; agora SEM025 no `kof check` (listen aceita SÓ Int).
+    @Test
+    void listenWithStringIsRejectedAtCheckTime(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("App.kf");
+        Files.writeString(source, """
+                main() {
+                    var app = web.app()
+                    app.get("/a") { return "A" }
+                    app.listen("8100")
+                }
+                """);
+        CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.JVM);
+        var diagnostics = result.diagnostics().getDiagnostics();
+        assertTrue(diagnostics.stream().anyMatch(d -> d.code().equals("SEM025")),
+                "listen(String) deve dar SEM025, got: " + diagnostics);
+    }
 }
