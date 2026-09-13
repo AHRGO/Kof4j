@@ -42,6 +42,34 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **⚡ FEITO (13/09 ~05:30, lane development/docs — refactor de organização 3 pastas +
+> auditoria doc-vs-código, dono = esta sessão):** pedidos diretos da mantenedora,
+> todos pushados: (1) `docs/bugs-and-gaps/` nasce (known-bugs, conformance-matrix,
+> ecosystem-coverage, KOFUI-AUDIT, specification-gaps) + `docs/development/
+> decision-pending/` (6 docs parados por decisão) — refs de caminho em *.java
+> (ConformanceMatrixDocTest lê a matriz por path — 20/20 verdes pós-move) e *.md
+> sincronizadas (`48e7774c`/rebase). (2) `docs/audits/` nasce (roadmap-audit,
+> complexity-audit, PLANNING-FUTURE-AUDIT, planning-future-reconcile + README da
+> pasta definindo o gênero: auditoria aponta, nunca é fila) (`975ed2a1`).
+> (3) `native-multiarch.md` §2.2: 3 linhas FALSAS corrigidas por medição — CI cross
+> ❌→✅ (job `cross-native` verde no run 34732932745), 13/13→42/42 (surefire),
+> "stub sai 0"→SUPERADA (`f302c414`). (4) DD-STDLIB-01: decisão 6a ratificada ⇒
+> doc subiu de `future/` p/ `development/` com status RATIFICADO/pendente-STDLIB
+> (a doc se contradizia: topo DECIDIDO × status PROPOSED) (`a09127d7`).
+> **Aprendizado da sessão (corrigido no texto do §149, commit `7a410b6c`):**
+> afirmei "IR byte-idêntico" sem rodar dump — proibido (não asserir o não-rodado).
+> **PRÓXIMO TICK:** lane development/docs segue a fila §1 do README development;
+> sem código: (a) quando um item de `decision-pending/` for decidido, MOVÊ-LO
+> (volta p/ development/ se vira código pendente, p/ docs/ se já pronto) —
+> padrão aplicado em DD-STDLIB-01; (b) conferir células da matriz conformance
+> vs teste quando outro commit mexer em qualquer lado (padrão §149/§94);
+> (c) `planning-future-reconcile`/`PLANNING-FUTURE-AUDIT` já consolidadas em
+> `docs/audits/`. **NÃO:** bugs/gaps/código de lane alheia (pow/S10c = lane
+> STDLIB; nat/ = lane GC viva; finally-IR = mesa). Estabilidade: ainda FALSA
+> (docs/development tem trabalho; fila §3 tem implementações autorizadas sem
+> dono que PERTENCEM às lanes delas).
+
+
 > **⚡ FEITO (13/09, lane gate/paridade — §155 FECHADO + §156 aberto, dono = esta sessão):** ao validar o §127 descobri que **tipo-função como ARGUMENTO GENÉRICO** (`List<(Int) -> Int>`, `listOf<(Int) -> Int>()`) gerava bytecode inválido: `TypeParser.parseTypeRef` concatenava os type-args com os tokens CRUS → `"(Int)->Int"` (sem espaços), que `Type.of` não reconhece (precisa de `" -> "`) → `ClassType` de nome inválido → `ClassFormatError` no JVM + COMPILE-FAIL/lixo nos outros 3. **Fix (parser, 2 pontos):** `TypeParser` delega a `parseFunctionTypeRef` ao ver `LPAREN` nos type-args; `ExpressionParser.parseCallTypeArguments` aceita `LPAREN`. **Prova:** `LambdaE2ETest.declaredFunctionTypeListJvm/Native` (`6`/`10`) + sondas C1/C2/C3 4/4; subset 321/0. **§156 ABERTO (novo, infra de tipos):** `listOf(lambdaA, lambdaB)` heterogêneo com MESMA assinatura → `ClassCastException Lambda1→Lambda0` no JVM (Native/Script/JS corretos); raiz = elemento da lista carrega o `className` da PRIMEIRA lambda (`Lambda0`) em vez da interface SAM — mesmo território do §127, **NÃO atacar sem dono**. **PRÓXIMO PASSO:** §156 é candidato de infra de tipos (checar dono); senão seguir a fila ratificada (§131/S2-OTP); se nada code-pure livre → RECUSAR (estabilidade). **NUNCA:** `nat/` lane GC viva; push main.
 
 > **⚡ FEITO (13/09, lane gate/paridade — §127 FECHADO, dono = esta sessão):** `x as () -> Int` / `as (Int) -> Int` (cast p/ tipo-função) era parseado como LAMBDA (o RHS de `as` ia por `parsePrimary`, e `() -> Int` casa `looksLikeLambdaParams`) → `targetType = UNKNOWN` → `checkcast // class "?"` (VerifyError JVM). **Fix (decisão 9a, 3 pontos):** (1) `ExpressionParser.parseBinary` — `as` com lookahead `(`…`)` `->` parseia via `TypeParser.parseTypeRef` (novo `looksLikeFunctionTypeRef`); (2) `ExpressionBinaryLowerer` — `FunctionType` no alvo do checkcast vira a interface SAM sintética (`CompilerLambdaClass.lambdaInterfaceType`, a mesma do dispatch); (3) `SemExpressionTyper` — `IdentifierExpr` com type-ref `"(...) -> ..."` não dispara SEM011. **Prova:** `LambdaE2ETest.castToFunctionTypeJvm/Native` (`true`/`7`) + sonda B127 4/4 targets; classe 19/0. **PRÓXIMO PASSO:** próxima unidade da fila ratificada — §131 (sobrecarga de método por aridade) ou S2-OTP JVM; §106/§89 têm risco de colisão (lane §103 / `nat/` GC viva) → checar dono. Se nada code-pure livre → RECUSAR (estabilidade). **NUNCA:** `nat/` lane GC viva; push main.
