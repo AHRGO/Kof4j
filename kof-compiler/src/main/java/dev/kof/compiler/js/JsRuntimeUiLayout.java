@@ -135,7 +135,6 @@ public final class JsRuntimeUiLayout {
             }
 
             export function kofListContains(list, value) {
-                // §104c: conteúdo p/ record (native first = primitivos/String intactos)
                 for (let i = 0; i < list.length; i++) {
                     if (kofValEq(list[i], value)) return 1;
                 }
@@ -161,8 +160,25 @@ public final class JsRuntimeUiLayout {
                 return new Map();
             }
 
-            // §104c: encontra índice da key por conteúdo (record .equals),
-            // nativo (===) para primitivos/String. Retorna -1 se ausente.
+            // §103.1 (#103): decode<Map<String,T>> no JS — monta um Map
+            // real (o else dava objeto puro: m.size/m.get quebravam); com
+            // decoder, cada valor é bindado à classe.
+            export function kofJsonDecodeMap(obj) {
+                const m = new Map();
+                if (obj && typeof obj === 'object')
+                    for (const [k, v] of Object.entries(obj)) m.set(k, v);
+                return m;
+            }
+
+            export function kofJsonDecodeObjectMap(obj, decoder) {
+                const m = new Map();
+                if (obj && typeof obj === 'object')
+                    for (const [k, v] of Object.entries(obj)) m.set(k, decoder(v));
+                return m;
+            }
+
+            // §104c: key por conteúdo (record .equals); nativo (===)
+            // p/ primitivos/String. Retorna -1 se ausente.
             function kofMapKeyIdx(map, key) {
                 for (const k of map.keys()) {
                     if (kofValEq(k, key)) return k;
@@ -224,8 +240,7 @@ public final class JsRuntimeUiLayout {
                 return new Set();
             }
 
-            // §104c: valor por conteúdo (record .equals) — dedup/lookup idêntico
-            // ao JVM (HashSet.contains/add). Nativo para primitivos/String.
+            // §104c: conteúdo (record .equals) — dedup/lookup idêntico ao JVM.
             function kofSetHas(set, value) {
                 for (const e of set) {
                     if (kofValEq(e, value)) return true;

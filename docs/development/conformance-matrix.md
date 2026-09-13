@@ -190,6 +190,8 @@
 | json.decode lista de primitivo | `3` / `2` | DONE | DONE | DONE | DONE | `jsondec-list` |
 | json.decode record | `1` / `2` | DONE | DONE | DONE (fix 07/09) | DONE | `jsondec-record` |
 | json.decode lista de record | `2` / `2` | DONE | PARTIAL (bug 48 ✅ 09/09 → gap honesto **JSN004**: `ExpressionJsonCallLowerer` recusa `List<Record>` no Native em compilação, nunca stub-lixo; R6) | DONE (fix 07/09) | DONE | `jsondec-recordlist` |
+| json.decode map de record | `2` / `Magician` | DONE (fix #103.1) | PARTIAL (**JSN004**: `ExpressionJsonCallLowerer` recusa `Map<String,T>` no Native em compilação — antes link-fail `kof_json_decode_Map` inexistente; R6) | DONE (fix #103.1) | DONE (fix #103.1) | `jsondec-map` |
+| json.decode map de string | `2` / `y` | DONE (fix #103.1) | PARTIAL (**JSN004**: idem acima) | DONE (fix #103.1) | DONE (fix #103.1) | `jsondec-mapscalar` |
 
 > **Fix 07/09 (lane interpreter):** `json.decode<Record>` no interpretador
 > dava exit 1 + stderr só `Point` (R6) — o método gerado `kof_json_decode_Point`

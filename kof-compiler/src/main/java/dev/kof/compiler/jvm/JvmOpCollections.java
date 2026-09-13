@@ -201,7 +201,7 @@ public final class JvmOpCollections {
                     emitBoxIfPrimitive(mv, keyType);        // [m,V,K]
                     mv.visitInsn(SWAP);                     // [m,K,V]
                 }
-                mv.visitMethodInsn(INVOKEVIRTUAL, "java/util/HashMap", "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", false);
+                mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", true);
                 // VOID no call-site (ex.: pares do mapOf): o valor anterior é descartado
                 if (Type.isVoid(kc.returnType())) {
                     mv.visitInsn(POP);
@@ -217,7 +217,7 @@ public final class JvmOpCollections {
             }
             case "kof_map_get" -> {
                 emitBoxIfPrimitive(mv, keyType);
-                mv.visitMethodInsn(INVOKEVIRTUAL, "java/util/HashMap", "get", "(Ljava/lang/Object;)Ljava/lang/Object;", false);
+                mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "get", "(Ljava/lang/Object;)Ljava/lang/Object;", true);
                 // SG-008 (bug 87): get() devolve V? — ausência é null comparável
                 // (`x == null` dá true, nunca NPE). Quando o USE espera o
                 // primitivo (slot `Int a` / aritmética), o unbox é com GUARD
@@ -255,7 +255,7 @@ public final class JvmOpCollections {
             }
             case "kof_map_remove" -> {
                 emitBoxIfPrimitive(mv, keyType);
-                mv.visitMethodInsn(INVOKEVIRTUAL, "java/util/HashMap", "remove", "(Ljava/lang/Object;)Ljava/lang/Object;", false);
+                mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "remove", "(Ljava/lang/Object;)Ljava/lang/Object;", true);
                 if (!isPrimitiveType(valueType) && !(valueType instanceof Type.UnknownType)) {
                     String internal = JvmTypeMapper.toInternalName(valueType instanceof Type.ClassType ct ? ct.packageName() : "", valueType instanceof Type.ClassType ct ? ct.name() : "java/lang/Object");
                     mv.visitTypeInsn(CHECKCAST, internal);
@@ -269,20 +269,20 @@ public final class JvmOpCollections {
             }
             case "kof_map_contains" -> {
                 emitBoxIfPrimitive(mv, keyType);
-                mv.visitMethodInsn(INVOKEVIRTUAL, "java/util/HashMap", "containsKey", "(Ljava/lang/Object;)Z", false);
+                mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "containsKey", "(Ljava/lang/Object;)Z", true);
             }
-            case "kof_map_size" -> mv.visitMethodInsn(INVOKEVIRTUAL, "java/util/HashMap", "size", "()I", false);
-            case "kof_map_is_empty" -> mv.visitMethodInsn(INVOKEVIRTUAL, "java/util/HashMap", "isEmpty", "()Z", false);
-            case "kof_map_clear" -> mv.visitMethodInsn(INVOKEVIRTUAL, "java/util/HashMap", "clear", "()V", false);
+            case "kof_map_size" -> mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "size", "()I", true);
+            case "kof_map_is_empty" -> mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "isEmpty", "()Z", true);
+            case "kof_map_clear" -> mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "clear", "()V", true);
             case "kof_map_keys" -> {
-                mv.visitMethodInsn(INVOKEVIRTUAL, "java/util/HashMap", "keySet", "()Ljava/util/Set;", false);
+                mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "keySet", "()Ljava/util/Set;", true);
                 mv.visitTypeInsn(NEW, "java/util/ArrayList");
                 mv.visitInsn(DUP_X1);
                 mv.visitInsn(SWAP);
                 mv.visitMethodInsn(INVOKESPECIAL, "java/util/ArrayList", "<init>", "(Ljava/util/Collection;)V", false);
             }
             case "kof_map_values" -> {
-                mv.visitMethodInsn(INVOKEVIRTUAL, "java/util/HashMap", "values", "()Ljava/util/Collection;", false);
+                mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "values", "()Ljava/util/Collection;", true);
                 mv.visitTypeInsn(NEW, "java/util/ArrayList");
                 mv.visitInsn(DUP_X1);
                 mv.visitInsn(SWAP);

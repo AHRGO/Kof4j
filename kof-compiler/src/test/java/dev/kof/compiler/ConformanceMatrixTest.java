@@ -1367,6 +1367,27 @@ class ConformanceMatrixTest {
                     println(l.get(1).x)
                 }
                 """, "2\n2", Set.of("native"), tempDir);
+        // §103.1 (#103): decode<Map<String,Record>> — o caso do report
+        // (arquivo de config keyed). Antes: kof_json_decode_Map inexistente
+        // (NoSuchMethodError no JVM). Agora objeto_list-estilo por valor.
+        // Native: JSN004 (gap honesto — runtime nativo sem decoder de mapa).
+        matrix("jsondec-map", """
+                record CardText(String name, String upright)
+                main() {
+                    var m = json.decode<Map<String, CardText>>("{\\"0\\":{\\"name\\":\\"Fool\\",\\"upright\\":\\"fresh\\"},\\"1\\":{\\"name\\":\\"Magician\\",\\"upright\\":\\"focus\\"}}")
+                    println(m.size)
+                    println(m.get("1").name)
+                }
+                """, "2\nMagician", Set.of("native"), tempDir);
+        // §103.1 (#103): decode<Map<String,String>> — valor escalar (String),
+        // caminho kof_json_decode_map (não object_map).
+        matrix("jsondec-mapscalar", """
+                main() {
+                    var m = json.decode<Map<String, String>>("{\\"a\\":\\"x\\",\\"b\\":\\"y\\"}")
+                    println(m.size)
+                    println(m.get("b"))
+                }
+                """, "2\ny", Set.of("native"), tempDir);
     }
 
     // ===== Lote 3 — concorrência DETERMINÍSTICA (ordem garantida por await/
