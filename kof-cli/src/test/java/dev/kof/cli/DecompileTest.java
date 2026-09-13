@@ -1408,6 +1408,68 @@ class DecompileTest {
         assertTrue(kof.contains("class Bnd extends Record"), "bound não-suportado → skeleton atual:\n" + kof);
     }
 
+    @Test
+    void recoversRecordImplementingSamePackageInterface(@TempDir Path dir) throws Exception {
+        Path root = dir.resolve("classes");
+        Files.createDirectories(root);
+        Path iface = root.resolve("Named.java");
+        Files.writeString(iface, "public interface Named { String name(); }\n");
+        Path javaFile = root.resolve("NamedR.java");
+        Files.writeString(javaFile, "public record NamedR(String name) implements Named { }\n");
+        runJavac(java.util.List.of(iface, javaFile), root);
+        Path out = dir.resolve("gen");
+        Decompile.decompileTree(root, out);
+        String kof = Files.readString(out.resolve("NamedR.kf"));
+        assertTrue(kof.contains("record NamedR implements Named(String name)"),
+                "interface top do MESMO pacote resolve (probe R7: Kof quer 'implements' ANTES dos componentes):\n" + kof);
+        assertFalse(kof.contains("body not recovered"), "sem stub:\n" + kof);
+        CompilationResult r = new CompilerDriver().compileSources(
+                List.of(out.resolve("NamedR.kf").toAbsolutePath().normalize(),
+                        out.resolve("Named.kf").toAbsolutePath().normalize()),
+                dir.resolve("kout"), Target.JVM, out);
+        assertTrue(r.success(), "record implements irmão deve compilar junto:\n" + kof + "\n" + r.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void recoversRecordWithInterfaceFromTreeScope(@TempDir Path dir) throws Exception {
+        Path root = dir.resolve("classes");
+        Path p1 = root.resolve("a");
+        Path p2 = root.resolve("b");
+        Files.createDirectories(p1);
+        Files.createDirectories(p2);
+        Path iface = p1.resolve("Iface.java");
+        Files.writeString(iface, "package a; public interface Iface { String name(); }\n");
+        Path rec = p2.resolve("CrossR.java");
+        Files.writeString(rec, "package b;\nimport a.Iface;\npublic record CrossR(String name) implements Iface { }\n");
+        runJavac(java.util.List.of(iface, rec), root);
+        Path out = dir.resolve("gen");
+        Decompile.decompileTree(root, out);
+        String kof = Files.readString(out.resolve("b/CrossR.kf"));
+        assertTrue(kof.contains("record CrossR implements Iface(String name)"),
+                "cross-package com import:\n" + kof);
+        assertTrue(kof.contains("import a.Iface"), "import emitido:\n" + kof);
+        assertFalse(kof.contains("body not recovered"), "sem stub:\n" + kof);
+        CompilationResult r = new CompilerDriver().compileSources(
+                List.of(out.resolve("b/CrossR.kf").toAbsolutePath().normalize(),
+                        out.resolve("a/Iface.kf").toAbsolutePath().normalize()),
+                dir.resolve("out"), Target.JVM, out);
+        assertTrue(r.success(), "árvore cross-pkg compila:\n" + kof + "\n" + r.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void recordWithOutOfTreeInterfaceKeepsHonestSkeleton(@TempDir Path dir) throws Exception {
+        Path javaFile = dir.resolve("SerR.java");
+        Files.writeString(javaFile, """
+                import java.io.Serializable;
+                public record SerR(int x) implements Serializable { }
+                """);
+        runJavac(javaFile, dir);
+        String kof = Decompile.decompile(dir.resolve("SerR.class"));
+        // JDK fora da árvore → `implements Serializable` é SEM015/PKG006 = drift
+        // → skeleton atual (compila hoje; Serializable era resolveSuperName fallback)
+        assertTrue(kof.contains("class SerR extends Record"), "fora-da-árvore → skeleton:\n" + kof);
+    }
+
     private void runJavac(Path javaFile, Path dir) throws IOException, InterruptedException {
         runJavac(java.util.List.of(javaFile), dir);
     }

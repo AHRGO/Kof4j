@@ -204,19 +204,23 @@ public final class Decompile {
         sb.append('\n');
 
         String simpleName = simpleName(ir.thisClass);
-        // Fase E (fila 13/09): Java record PURO → `record Nome(T a, T b)` (o
-        // frontend gera ctor/accessors/equals/hashCode/toString). Os corpos dos
-        // 3 sintéticos NÃO existem no bytecode (invokedynamic ObjectMethods) —
-        // no esqueleto `class X extends Record` cada um era um stub silencioso
-        // (~215 records no corpus = a maior fonte única de stubs). Qualquer
-        // desvio do shape (interface→PARSE007, método extra, nome reservado)
-        // → null → cai no esqueleto de hoje (zero-drift por construção).
-        List<dev.kof.compiler.parser.ClassFileParser.FieldInfo> comps =
-                BytecodeRecords.pureRecordComponents(ir);
-        if (comps != null) {
+        // Fase E (fila 13/09): Java record PURO → `record Nome implements I(T a, T b)`
+        // (o frontend gera ctor/accessors/equals/hashCode/toString; a ordem do
+        // header é name/typeParams/extends/implements/COMPONENTES — probe R7).
+        // Os corpos dos 3 sintéticos NÃO existem no bytecode (invokedynamic
+        // ObjectMethods) — no esqueleto `class X extends Record` cada um era um
+        // stub silencioso (~215 records no corpus = a maior fonte única de
+        // stubs). Qualquer desvio do shape (interface não-resolvida, método
+        // extra, nome reservado, bound genérico) → null → esqueleto de hoje
+        // (zero-drift por construção).
+        BytecodeRecords.Rec rec = BytecodeRecords.pureRecord(ir, scope);
+        if (rec != null) {
+            List<dev.kof.compiler.parser.ClassFileParser.FieldInfo> comps = rec.components();
             sb.append("record ").append(simpleName);
             var tps = BytecodeRecords.typeParams(ir.classSignature);
             if (!tps.isEmpty()) sb.append('<').append(String.join(", ", tps)).append('>');
+            if (!rec.interfaces().isEmpty())
+                sb.append(" implements ").append(String.join(", ", rec.interfaces()));
             sb.append('(');
             for (int k = 0; k < comps.size(); k++) {
                 if (k > 0) sb.append(", ");

@@ -33,15 +33,46 @@ final class BytecodeRecords {
             "bool", "byte", "short", "int", "long", "float", "double", "char", "string",
             "true", "false", "null");
 
+    /** Header de um record puro: componentes + interfaces JÁ resolvidas (nomes Kof). */
+    record Rec(List<ClassFileParser.FieldInfo> components, List<String> interfaces) {}
+
     /**
-     * Devolve os campos (componentes, em ordem de declaração) de um record PURO,
-     * ou null se não-é-record / tem lógica extra / nome de componente reservado /
-     * implementa interface (PARSE007 no frontend) / type-bound não-simples.
+     * Igual a {@link #pureRecordComponents} mas aceita `implements` de nomes
+     * que RESOLVEM no escopo da árvore. Conservador: JDK / fora-da-árvore /
+     * ambíguo / classe interna (contém `$`) → null = skeleton (porque
+     * `record X implements Desconhecida` é PKG006/SEM011 = drift). scope null
+     * (modo 1-arquivo): só resolve se for classe TOPO do MESMO pacote (sem
+     * import); interna/JDK/fora → skeleton (bytes idênticos ao estágio 1).
      */
-    static List<ClassFileParser.FieldInfo> pureRecordComponents(ClassFileParser.ClassFile ir) {
+    static Rec pureRecord(ClassFileParser.ClassFile ir, TreeScope scope) {
+        var comps = pureRecordComponentsNoIface(ir);
+        if (comps == null) return null;
+        if (ir.interfaces == null || ir.interfaces.length == 0) return new Rec(comps, List.of());
+        String myPkg = scope == null ? null : scope.currentPkg();
+        String myTop = ir.thisClass.lastIndexOf('$') < 0 ? ir.thisClass : null;
+        List<String> ifaces = new ArrayList<>();
+        for (String i : ir.interfaces) {
+            int slash = i.lastIndexOf('/');
+            String pkg = slash < 0 ? "" : i.substring(0, slash).replace('/', '.');
+            String simple = slash < 0 ? i : i.substring(slash + 1);
+            if (i.indexOf('$') < 0 && pkg.equals(myPkg)) {          // classe top do MESMO pacote
+                ifaces.add(simple);
+            } else if (scope == null) {
+                return null;
+            } else {
+                String r = scope.resolve(i);
+                if (r == null) return null;                          // ambíguo/fora/JDK → skeleton
+                ifaces.add(r);
+            }
+        }
+        return new Rec(comps, ifaces);
+    }
+
+    /** Componentes de record PURO SEM `implements` (estágio 1; chamador decide interfaces). */
+    private static List<ClassFileParser.FieldInfo> pureRecordComponentsNoIface(ClassFileParser.ClassFile ir) {
         if (!ir.attributes.containsKey("Record")) return null;
         if (typeParams(ir.classSignature) == null) return null;
-        if (ir.interfaces != null && ir.interfaces.length > 0) return null;
+        if (ir.fields == null || ir.fields.isEmpty()) return null;
         if (ir.fields == null || ir.fields.isEmpty()) return null;
         for (var f : ir.fields) {
             if ((f.accessFlags & 0x0008) != 0) return null;           // static — não é componente

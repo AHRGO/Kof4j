@@ -261,6 +261,7 @@ Fase E  Kof Decompiler          (gerar Kof source)
 > `new Int[2][3]` → VerifyError — lane compiler, não tocado);
 > `multianewarray` recusado (sem forma válida p/ recuperar).
 
+
 > **Estado (13/09, dono = 192.168.100.17): Fase E — Java record → `record` Kof.**
 > Re-mediação da fila com atribuição POR MÉTODO (o caveat de 09/09 confirmado
 > na prática: o blockerSink global contava o path de expressão que o de
@@ -284,7 +285,8 @@ Fase E  Kof Decompiler          (gerar Kof source)
 > método-extra/reservado/interface → esqueleto honesto) — 50/50; suíte
 > 1649/0. Fila Fase E re-medida pós-unidade: próximos candidatos reais =
 > `astore` em corpo com store (0x4c/0x4d/0x4e/0x3a) e branches de loop sem
-> join estrutural (Fase C), não mais instanceof/checkcast (tratados).
+> join estrutural (Fase C); instanceof/checkcast SÓ tratam quando a árvore
+> resolve o nome (statements-path sem escopo = ainda caiem — o furo do 09/09).
 
 ## 7. Relação com o Compilador
 

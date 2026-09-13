@@ -62,6 +62,11 @@ final class TreeScope {
         return simple;
     }
 
+    /** Pacote do arquivo atual (o `currentPkg` imutável do escopo). */
+    String currentPkg() {
+        return currentPkg;
+    }
+
     /** Imports dotted (`p.B`) usados, ordenados, p/ emissão após o package. */
     java.util.Set<String> usedImports() {
         return java.util.Collections.unmodifiableSet(usedImports);
