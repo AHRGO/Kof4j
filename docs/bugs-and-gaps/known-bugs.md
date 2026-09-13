@@ -2105,7 +2105,13 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
   >19 dígitos LANÇA no x86 (JVM/JS parseiam com arredondamento — a máquina
   usa int64 + UMA divisão por 10^nfrac, o que dá round-trip correto p/
   ≤19 dígitos: `"0.3"==0.3`, `"0.1"+"0.2"==0.30000000000000004` batem);
-  hex-float (`0x1p3`) lança (JVM parseia). Paridade bit-exata p/ casos fora
+  hex-float (`0x1p3`) lança (JVM parseia). **+ sufixo de tipo `d/D/f/F`
+  (`"1.0d"`, `"1.0f"`, `"1d"`) lança no Native E no JS (JVM/Script aceitam
+  → `1.0`; verificado 13/09 na caça Q4, `math.parseDouble`/`parseDoubleOrDefault`
+  herdam: `"1.0d"` → JVM/Script `1.0`, Native `Invalid number`, JS `Cannot
+  parse`; `"0x1.8p1"` → JVM/Script `3.0`, Native/JS caem no default).** A
+  célula `stdmathparse` não cobre nem hex nem sufixo = cobertura estreita (Q5).
+  Paridade bit-exata p/ casos fora
   disso exige o algoritmo big-int shortest-round-trip do JDK → família
   FLT001. exp |e|>320 satura a 0/Infinity (JVM idem).
 - **Correção face cross FEITA 10/09:** `NativeRiscvAsmRtB31` novo (parser
