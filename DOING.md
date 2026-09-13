@@ -42,6 +42,16 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **⚡ FEITO (13/09, lane development/docs — commit de working-tree pendente,
+> dono = esta sessão, pedido da mantenedora "quando for assim commita tudo"):**
+> `scripts/check_500.sh` tinha edição não-commitada no tree (distingue
+> CRÍTICO-novo ≥600 de CRÍTICO-avô congelado no baseline; dívida nova
+> 500–599 = tolerada-avisada). Validado: `bash -n` OK + run OK (4 toleradas,
+> 1 avô NativeBackend 664 congelado, 1 aviso SemExpressionTyper 573→577,
+> 1 nota JsRuntimeUiLayout 520→518 p/ --update-baseline). Commitado + pushado.
+> **PRÓXIMO PASSO:** re-auditar `docs/development/` no próximo tick.
+> **NUNCA:** fila §106/§89/§117 (outro agente); `nat/` lane GC viva; push main.
+
 > **⚡ FEITO (13/09, lane development/docs — bump 0.4.0-beta + push,
 > dono = esta sessão, pedido da mantenedora):** outro agente pushou o bump
 > primeiro (`e8a8aeea`: VERSION+pom+properties+71 docs); meus commits da fila
