@@ -2479,3 +2479,46 @@ int de índice) — verificados na varredura.
   genérico (qualquer formal String/CharSequence + primitivo). `indexOf(s, n)`
   (2-arg) com 2º arg não-Int não é tipado pelo registry (o aridade-2 formal já
   é `(String, Int)` — o Int está no formal, ok).
+
+### 100. KofJS: compound assignment em elemento de array (`a[i] += v`) nunca compilou no target JS — ABERTO (achado na varredura KOF-SBD-001, sem teste JS prévio cobrindo o caso)
+
+- **Sintoma:** `var a = new Int[3]; a[0] = 10; a[0] += 5` **compila e roda
+  correto no JVM** (`values[0] += 5` já tem regressão JVM-only em
+  `CoreRegressionE2ETest.compoundAssignmentOnArrayElementAndQualifiedStatic`,
+  GitHub #64), mas o MESMO programa falha ao compilar para KofJS:
+  `Internal compiler error: KofJS: unexpected op in expression statement:
+  KofDup2[]` (COMP002). Reproduz com o índice mais simples possível
+  (`a[0] += 5`) — não depende de o índice ter efeito colateral.
+- **Causa:** o IR de compound-assignment em elemento de array
+  (`ExpressionAssignmentLowerer`, comentário "GitHub #64") emite
+  `KofDup2` para duplicar o par `[array, index]` antes do `KofArrayLoad`.
+  `JsExpressionStatementParser.parseExpressionStatement` decide se um op é
+  "fim de statement" via `JsExpressionParser.isExpressionOp(op)` — esse
+  método lista `KofDup`/`KofDupX1`/`KofDupX2` mas **omite `KofDup2`**, então
+  o loop trata o `KofDup2` como fronteira de statement em vez de despachá-lo
+  para `consumeExpressionOp` (que JÁ sabe lowerar `KofDup2` — ver o branch
+  `op instanceof KofDup2` nesse método, usado por outros caminhos que
+  compilam uma expressão isolada). Resultado: a pilha JS está vazia nesse
+  ponto e cai no `throw` de op inesperado.
+  `JsExpressionParser.consumeExpressionOp` já sabe lowerar `KofDup2`
+  corretamente (existe um branch para ele) — só falta incluí-lo em
+  `isExpressionOp` para o statement-level parser não interromper a
+  expressão antes de chegar lá.
+- **Por que não foi corrigido em KOF-SBD-001:** achado incidentalmente ao
+  escrever `ArrayBoundsSafetyE2ETest.t10CompoundAssignmentStillWorks` (a
+  paridade JVM×JS exigida pelo caso SBD-001-T10). Reproduz **identicamente**
+  no SHA-base `8a470a92` (antes de qualquer mudança de KOF-SBD-001) — não é
+  causado nem tocado pelo fix de bounds-check (que atua depois do ponto onde
+  o crash acontece: `KofArrayLoad`/`KofArrayStore` nunca são alcançados). É
+  uma classe de bug própria (JS lowering de compound-assignment em array),
+  fora do escopo "array bounds safety" — corrigir aqui violaria a regra de
+  não misturar correções não relacionadas na mesma PR.
+- **Ação sugerida:** adicionar `KofDup2` à lista de `isExpressionOp` em
+  `JsExpressionParser.java` (mesmo arquivo do fix SBD-001) + teste de
+  regressão JVM×JS parity para `a[i] += v` em array (não List). Baixo risco,
+  mudança de 1 linha — mas fora do escopo desta PR.
+- **Workaround atual:** nenhum necessário para SBD-001 (o requisito de
+  bounds-safety não depende de compound assignment funcionar no JS); para
+  quem precisa de `a[i] += v` hoje no target JS, reescrever como
+  `a[i] = a[i] + v`.
+- **Descoberto:** 13/09, varredura KOF-SBD-001 (Array Bounds Safety).

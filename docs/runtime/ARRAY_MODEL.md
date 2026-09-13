@@ -156,12 +156,24 @@ createArray(): Int[] {
 
 ## 6. IR Operations
 
-| Operação | JVM | Native | Descrição |
-|----------|-----|--------|-----------|
-| `KofNewArray(elemType)` | `NEWARRAY` | `kof_array_alloc` | Cria array |
-| `KofArrayLoad(elemType)` | `IALOAD`/`LALOAD`/etc | `kof_array_get` | Lê elemento |
-| `KofArrayStore(elemType)` | `IASTORE`/`LASTORE`/etc | `kof_array_set` | Escreve elemento |
-| `KofArrayLength()` | `ARRAYLENGTH` | `kof_array_length` | Retorna length |
+| Operação | JVM | Native | KofJS | Descrição |
+|----------|-----|--------|-------|-----------|
+| `KofNewArray(elemType)` | `NEWARRAY` | `kof_array_alloc` | `new Array(n).fill(...)` | Cria array |
+| `KofArrayLoad(elemType)` | `IALOAD`/`LALOAD`/etc | `kof_array_get` | `kofArrayGet(array, index)` | Lê elemento (bounds check) |
+| `KofArrayStore(elemType)` | `IASTORE`/`LASTORE`/etc | `kof_array_set` | `kofArraySet(array, index, value)` | Escreve elemento (bounds check) |
+| `KofArrayLength()` | `ARRAYLENGTH` | `kof_array_length` | `array.length` | Retorna length |
+
+> **KOF-SBD-001 (Array Bounds Safety):** até a correção do gap KofJS, o
+> lowering desse target baixava `KofArrayLoad`/`KofArrayStore` para
+> `array[index]`/`array[index] = value` diretos (semântica JS crua: leitura
+> fora dos limites retornava `undefined`, escrita em `index >= length`
+> ampliava o array silenciosamente). Os helpers `kofArrayGet`/`kofArraySet`
+> (`JsRuntimeCore`) fecham essa divergência: todo acesso indexado a array
+> Kof no target JS agora rejeita `index < 0 || index >= length` antes de
+> tocar o array, equivalente à checagem que a JVM já faz em
+> `IALOAD`/`AALOAD`/etc (JVMS §6.5) e que o Native faz em `kof_array_get`/
+> `kof_array_set`. A classe do erro não é idêntica entre os 3 targets — a
+> propriedade de segurança (bounds safety) é.
 
 ---
 

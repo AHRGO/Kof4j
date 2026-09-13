@@ -71,8 +71,12 @@ final class JsExpressionStatementParser {
                 JsIr.JsExpression value = parser.pop(stack);
                 JsIr.JsExpression index = parser.pop(stack);
                 JsIr.JsExpression array = parser.pop(stack);
-                JsIr.JsStatement stmt = new JsIr.JsExprStmt(new JsIr.JsBinary(
-                        new JsIr.JsIndex(array, index), "=", value));
+                // KOF-SBD-001: bounds-checked write (raw `array[index] = value`
+                // would inherit JS array semantics — a write at/after `length`
+                // silently grows the array instead of being rejected).
+                parser.p.lc.registerRuntime("kofArraySet");
+                JsIr.JsStatement stmt = new JsIr.JsExprStmt(
+                        new JsIr.JsCall(new JsIr.JsIdentifier("kofArraySet"), List.of(array, index, value)));
                 if (stack.isEmpty() && !parser.isIncTmpLoadAhead(ctx, pos)) {
                     return parser.finishExpressionStatement(preamble, preambleExprs, stmt);
                 }
