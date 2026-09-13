@@ -28,6 +28,8 @@
 | 13 | Colisão do `cancelled()` | ✅ fechada (condicional ao 08) |
 
 **8 fechadas · 2 fecháveis com emenda · 2 abertas · 1 bloqueada.**
+
+> **✅ RATIFICADAS 13/09 (decisão da mantenedora):** DD-OTP-01/02/03/04/08/09/10/11/12/13 ratificadas na forma da proposta do doc + emendas 11/09. **DD-OTP-03 decidido: opção 1a** — S2 abre na JVM com wrapper de identidade `(id, resultado)` por filho; riscv64/aarch64 = **PARTIAL declarado** (1 worker/supervisor) até a lane nat portar os auxiliares (gate R6).
 As 8 são independentes entre si — podem ser ratificadas sem esperar as outras.
 O caminho crítico é só o **DD-OTP-08**, e ele se resolve com um teste, não
 com design: o padrão stop-flag (escritor + leitor em laço com deadline).

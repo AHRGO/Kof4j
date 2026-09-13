@@ -2064,7 +2064,7 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
   separado, família FLT001). Menor repro pré-fix: riscv `"2.5".toDouble()` →
   COMP001 `undefined reference to kof_string_to_double`.
 
-### 81. KofJS: `Long` é `Number` (double 53-bit) — `"...".toLong()` acima de ±2^53 perde precisão e NÃO lança overflow — ABERTO (paridade R5 cross-target)
+### 81. KofJS: `Long` é `Number` (double 53-bit) — 🟢 DECIDIDO 13/09 (opção 5b: BigInt no JS, bump + migração) — lane implementável
 
 - **Sintoma:** `println("9007199254740993".toLong())` no JS → `9007199254740992`
   (arredondado); `println("12345678901234567890".toLong())` → notação
@@ -2074,7 +2074,8 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
 - **Causa raiz:** `JsRuntimeUiStdlib:314` — `Number(s)` (IEEE-754 double); o
   comentário no fonte já assume "sem BigInt". É decisão do **modelo numérico JS**
   (congelado, regra 6), não do parser do bug 79.
-- **Não-corrigível silenciosamente:**BigInt no GraalJS rodaria, mas trocar o
+- **✅ DECIDIDO 13/09 (mantenedora, opção 5b):** `Long` no JS passa a **BigInt** (paridade real de 64-bit; overflow lança como nos outros alvos). Exige bump de versão + migração (narrowing/`==`/println afetados) + gate `JSN00x` durante a transição. Lanane implementável.
+- **Registro anterior (substituído):**BigInt no GraalJS rodaria, mas trocar o
   tipo de `Long` em JS é mudança de contrato (narrowing/`==`/println) → nota de
   design, não edição. Por ora a matriz `stdparse` (linha bug 79) cobre `toInt`
   nos 5 e `toLong` com golden JVM/Native; o teste JS limita-se a ±2^53
@@ -2142,7 +2143,7 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
   alvos — **não** é divergência cross; registrar como gap de semântica
   `mapOf()`-vazio (se a mantenedora quiser `null` ali, é decisão SG-00x).
 
-### 89. Native (x86 + cross): conversão numérica de primitivo `n.toDouble()`/`n.toInt()`/`n.toFloat()`/`n.toLong()` quebra o LINK — o idiom documentado é `as` — ABERTO (decisão de design, regra 6; achado 10/09 varredura STDLIB)
+### 89. Native (x86 + cross): conversão numérica de primitivo `n.toDouble()`/`n.toInt()`/`n.toFloat()`/`n.toLong()` quebra o LINK — 🟢 DECIDIDO 13/09 (opção 3a: alias do `as` + warning de truncamento) — lane implementável
 
 - **Sintoma:** `main() { var n = 5; println(n.toDouble() == 5.0) }` falha no
   link nos 3 nativos — x86: `undefined reference to toDouble`; riscv64/
@@ -2158,7 +2159,8 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
   `n as Double`, `d as Int` (AGENTS.md "Cast: x as Char / big as Int";
   `learn/04`: `Int i = d as Int`) — o `as` lower p/ o intrínseco numérico
   do backend (I2D/D2I/...) que existe nos 3 nativos.
-- **Por que NÃO é "só implementar" (regra 6 — decisão de design):** p/
+- **✅ DECIDIDO 13/09 (mantenedora, opção 3a + emenda):** `.toDouble()`/`.toInt()`/`.toFloat()`/`.toLong()` em receiver primitivo = **alias do `as`** (truncamento; overflow → throw, paridade JVM) nos 3 nativos, COM **WARNING compile-time** (não erro) quando a conversão pode truncar (`Double→Int/Long`) apontando o `as` como forma explícita. Implementação liberada p/ lane.
+- **Registro da decisão anterior (substituída pela de cima):** p/
   adicionar o emit nativo de `.toDouble()`/`.toInt()` em primitivo falta a
   **semântica congelada** da conversão — `3.7.toInt()` deve truncar?
   arredondar? overflow → throw? — e **nenhum teste e nenhum doc do corpus**
@@ -2713,7 +2715,7 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
 - **Arquivos:** `NativeRiscvCrossOps.emitCrossBinaryRiscv` (cross),
   `NativeX86Calls`/`RuntimeFp` (x86), `JvmOpEmitter` (JVM DCMPL/G).
 
-### 106. `json.encode(Map)` quebra em 3 dos 5 alvos (JVM crasha; x86/riscv link error; só Script/JS ok) — ❌ ABERTO (decisão de superfície JSON = mantenedora, regra 6)
+### 106. `json.encode(Map)` quebra em 3 dos 5 alvos (JVM crasha; x86/riscv link error; só Script/JS ok) — 🟢 DECIDIDO 13/09 (opção 2b: chaves sorted) — lane implementável
 
 - **Menor repro (medido 11/09):**
   ```kof
@@ -2725,7 +2727,7 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
   - **Script (interpretador)**: funciona (`KofInterpreterRuntime.kof_json_encode` trata Map). **JS**: não medido no harness (classpath GraalJS); presumido ok pelo path de objeto nativo JS.
   - Cobertura de teste é o motivo de nunca ter aparecido: os E2E de encode cobrem Int/String/List/Array/record — NUNCA `Map`/`Map<String,*>`.
 - **Causa raiz (2 camadas):** (a) dispatch: `JsonDispatch` não tem ramo `isMap` → genérico inexistente no nativo; (b) JVM: encode de objeto por reflexão não diferencia Map (deveria iterar entries, não `getDeclaredFields`). E (c) UX: failure de link não é diagnóstico R6.
-- **Por que ABERTO (não corrijo silencioso):** formato de `encode(Map)` é SEMÂNTICA de superfície (ordem das chaves? insertion vs sorted? null values?) — é decisão da mantenedora (regra 6: JSON surface congelada 0.2.6-beta). A correção tem 3 partes: gate honesto no compile-time até a superfície decidir (diagnóstico `JSN00x` no estilo JSN004 no dispatch de Map em nativos) + decisão de formato + ramos JVM (entries) e nativo. Registra aqui; NÃO vira edição de semântica sem decisão.
+- **✅ DECIDIDO 13/09 (mantenedora, opção 2b):** superfície = objeto JSON com chaves **SORTED** (determinismo > ordem de inserção). Correção liberada: JVM (itera `entrySet`), nativos (ramo próprio no dispatch), gate `JSN00x` compile-time no que faltar + golden de ordem nos 5 alvos. Sai de "ABERTO por decisão" para lane implementável. A correção tem 3 partes: gate honesto no compile-time até a superfície decidir (diagnóstico `JSN00x` no estilo JSN004 no dispatch de Map em nativos) + decisão de formato + ramos JVM (entries) e nativo. Registra aqui; NÃO vira edição de semântica sem decisão.
 - **Pista de teste faltante (para quem fechar):** `json.encode(mapOf(...))` nos 5 alvos com golden de ordem (provavelmente insertion-order = `LinkedHashMap` semantics, mas é a decisão).
 
 ### 108. `println(listOf(bool,...))` — interpretador (Script) imprime `[1, 0]` vs JVM `[true, false]` — ✅ CORRIGIDO (11/09, Script-only; storage boxing)
@@ -3288,7 +3290,7 @@ int de índice) — verificados na varredura.
   residual da família §97 cross é SÓ a AUSÊNCIA dos 3 símbolos
   (equals/compareTo/hashCode), não o hijack.
 
-### 117. Native x86: `cancelled()` usa tabela de 256 slots por hash de TID → colisão (cancel de um worker vaza/outro apaga) — ABERTO (registrado da issue #83)  *(renumerado de §101 na reconciliação do merge beta-0.3.0→beta-0.4.0 11/09 — colidiu com a série ativa §95–§114)*
+### 117. Native x86: `cancelled()` usa tabela de 256 slots por hash de TID → colisão (cancel de um worker vaza/outro apaga) — 🟢 DECIDIDO 13/09 (opção 8a: corrigir agora — tabela por TID real/slot alocado no spawn) — lane implementável  *(renumerado de §101 na reconciliação do merge beta-0.3.0→beta-0.4.0 11/09 — colidiu com a série ativa §95–§114)*
 
 - **Sintoma (potencial, não reproduzido):** o trampoline de spawn
   (`RuntimeConcurrency.java:20-38`) resolve o slot como
@@ -3802,7 +3804,7 @@ int de índice) — verificados na varredura.
   medido) + sonda `Double as Int` aarch (0→`5`) + suíte completa.
 
 
-### 127. JVM: cast para tipo de função (`x as () -> Int`) gera bytecode inválido (VerifyError) — 🔴 ABERTO (achado no spike OTP #83 11/09)
+### 127. JVM: cast para tipo de função (`x as () -> Int`) gera bytecode inválido (VerifyError) — 🟢 DECIDIDO 13/09 (opção 9a: implementar checkcast na interface sintética) — lane implementável
 - **Reprodução:** `var o: Object = (Object)(() -> 5)`… em Kof puro:
   `fun(Int x) { var g = x as () -> Int; return g() }` — `fun(() -> 9)` →
   **compila ok** mas ao rodar: `VerifyError: Operand stack underflow` /
@@ -3863,7 +3865,7 @@ int de índice) — verificados na varredura.
   supervisor consegue viver sem selectAny no núcleo 1ª fatia).
 
 
-### 129. Native x86_64: `throw` dentro de worker `spawn` → unwinder faz longjmp no handler da THREAD MAIN (crash/hang cross-thread) — 🔴 ABERTO (impeditivo do OTP no Native; spike #83 11/09, evidência GDB)
+### 129. Native x86_64: `throw` dentro de worker `spawn` → unwinder faz longjmp no handler da THREAD MAIN (crash/hang cross-thread) — 🟢 ABERTO POR DECISÃO 13/09 (mantenedora mandou abrir — impeditivo do OTP-Native; lane nat implementável)
 - **Reprodução (M2, deterministicamente travado/crashado no native):**
   `main(){ var i=0; while(i<3){ var h=spawn { throw "x" }; try { await h }
   catch(String e){println("cap")} i=i+1 } println("fim3") }` → imprime
@@ -3938,7 +3940,7 @@ int de índice) — verificados na varredura.
   passo ZERO. É impeditivo direto da unidade assumida, não auditoria geral.
 
 
-### 131. Frontend/Backend: sobrecarga de método por ARIDADE na mesma classe quebra (SEM013 no JVM; colisão de símbolo no NATIVE) — 🔴 ABERTO (achado no spike OTP #83 11/09; contornado)
+### 131. Frontend/Backend: sobrecarga de método por ARIDADE na mesma classe quebra (SEM013 no JVM; colisão de símbolo no NATIVE) — 🟢 DECIDIDO 13/09 (opção 10a: implementar sobrecarga de método) — lane implementável
 - **Reprodução:** `class B { Int m(Int a){ return this.m(a,1) } Int m(Int a, Int
   b){ return a+b } }` → no JVM: `SEM013: Wrong number of arguments for 'm':
   expected 2 but got 1` na chamada `b.m(5)` — a seleção de overload ignora o

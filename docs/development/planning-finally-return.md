@@ -1,5 +1,7 @@
 # Planning — `finally` no caminho `return` do `try` (DD-01)
 
+> **✅ DECIDIDO 13/09 (mantenedora, opção 4a):** aprova a proposta abaixo (lowering único com `FinallyFrame` na IR, espelho do bytecode JVM, parser JS reconstrói) + **bump 0.3.0→0.3.1**. Implementação liberada p/ lane lowerers.
+>
 > **Status:** `EM CURSO` — a face **JS do bug 45 já foi corrigida** (`c727fee`,
 > `CoreRegressionE2ETest.finallyReturnJs` verde; colateral fecha §52); a decisão
 > DD-01 para **JVM/Native/interpretador** aguarda a mantenedora · **Gap:** bug 45 ·

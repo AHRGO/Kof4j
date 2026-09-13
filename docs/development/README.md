@@ -69,12 +69,14 @@ escalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 
 | Item | Onde | O que espera |
 |---|---|---|
-| DD-STDLIB-01 — `randomBytes`/`randomChoice` (S10c) | `future/planning-stdlib-array-returns.md` | decisão de dispatch Array/objeto |
-| DD-STDLIB-02 — `time.format`/`boundaries` | `planning-stdlib-time-design.md` (caiu 12/09: `addDays`/`diffDays` ✅) | decisão de superfície |
-| DD-01 — `finally` no caminho de `return` (JVM/Native/interp) | `planning-finally-return.md` (caiu 12/09: JS ✅ `c727fee`) | mudança de IR 4-backend |
-| DD-OTP (restante) | `planning-otp-supervision.md` | promover OTP001 (Native)/OTP002 (JS) |
-| `pow`/`-lm`, `roundTo`-mode | `plan-stdlib-expansion.md` | decisão de link/contrato |
-| NAT-STR01 (case-map astral), TLS §129, json §106 | `known-bugs.md` | regra 6 / design |
+| DD-STDLIB-01 — `randomBytes`/`randomChoice` (S10c) | `future/planning-stdlib-array-returns.md` | ✅ DECIDIDO 13/09 (opção 6a: `randomBytesHex` + choice=idiom) — implementar |
+| DD-STDLIB-02 — `time.format`/`boundaries` | `planning-stdlib-time-design.md` (caiu 12/09: `addDays`/`diffDays` ✅) | decisão de superfície (AINDA PENDENTE) |
+| DD-01 — `finally` no caminho de `return` (JVM/Native/interp) | `planning-finally-return.md` (caiu 12/09: JS ✅ `c727fee`) | ✅ DECIDIDO 13/09 (opção 4a: FinallyFrame na IR + bump 0.3.1) — implementar |
+| DD-OTP (restante) | `planning-otp-supervision.md` | ✅ RATIFICADAS 13/09 (opção 1a: S2 JVM + wrapper `(id, resultado)`; riscv/aarch PARTIAL) — implementar S2 |
+| `pow`/`-lm`, `roundTo`-mode | `plan-stdlib-expansion.md` | ✅ DECIDIDO 13/09 (opção 7a: link `-lm` aprovado) — implementar `pow` |
+| NAT-STR01 (case-map astral) | `known-bugs.md`/conformance-matrix | ✅ ABERTO POR DECISÃO 13/09 — implementar UTF-8 astral nos nativos |
+| TLS §129 | `known-bugs.md` | ✅ ABERTO POR DECISÃO 13/09 — lane nat |
+| json §106 | `known-bugs.md` | ✅ DECIDIDO 13/09 (opção 2b: chaves sorted) — implementar |
 
 ---
 
