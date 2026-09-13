@@ -304,17 +304,21 @@ import java.util.Set;
         if (!last.isCond()) return null;
         String inv = BytecodeCp.invCond(last.opcode());
         if (inv == null) return null;
+        // Aridade EXATA (regressão travada 13/09, contFor %2): bloco
+        // [iload, iconst, irem, ifne] com o antigo "ate 2 loads" coletava
+        // v2 e 2, IGNORAVA o irem e emitia `v2 == 0` — CODIGO ERRADO
+        // COMPILAVEL (medido: 0 0 1 3 6... vs oracle 0 0 1 1 4...).
+        // Se o bloco do teste tem qualquer calculo, o test-expr nao e
+        // recuperavel aqui: null = stub honesto (R6).
+        int arity = (last.opcode() >= 0x9f && last.opcode() <= 0xa4) ? 2 : 1;
+        if (block.size() - 1 != arity) return null;
         java.util.List<String> operands = new java.util.ArrayList<>();
-        for (int i = 0; i < block.size() - 1 && operands.size() < 2; i++) {
+        for (int i = 0; i < block.size() - 1; i++) {
             String v = loadValue(block.get(i), frame);
             if (v == null) return null;
             operands.add(v);
         }
-        if (last.opcode() >= 0x9f && last.opcode() <= 0xa4) {
-            if (operands.size() != 2) return null;
-            return operands.get(0) + " " + inv + " " + operands.get(1);
-        }
-        return operands.isEmpty() ? null : operands.get(0) + " " + inv;
+        return operands.get(0) + " " + inv + (arity == 2 ? " " + operands.get(1) : "");
     }
 
     static String blockReturnExpr(BytecodeReader.Block b, List<BytecodeReader.Insn> insns,

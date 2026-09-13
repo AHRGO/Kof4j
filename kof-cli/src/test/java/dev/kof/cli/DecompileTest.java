@@ -837,6 +837,97 @@ class DecompileTest {
     }
 
     @Test
+    void recoversContinueAsEmptyThenJoinAndRunsIt(@TempDir Path dir) throws Exception {
+        // Fase C degrau 2a: `for` com `continue` vira while + if de condicao
+        // INVERTIDA com then VAZIO (o continue pula o corpo; o incremento
+        // fica na sequela do join — preservado nos DOIS caminhos). Medido
+        // por execucao 13/09: contFor(0..6) = 0 0 1 3 3 7 12 == oracle JVM.
+        // (A variante `i % 2 == 0` fica em stub honesto — blockCondition nao
+        // recupera test-expr com calculo; diamondJoinShapesStayHonestStub.)
+        Path src = dir.resolve("classes");
+        Files.createDirectories(src);
+        Path s = src.resolve("Jn.java");
+        Files.writeString(s, """
+                public class Jn {
+                    public static int contFor(int n) {
+                        int s = 0;
+                        for (int i = 0; i < n; i++) { if (i == 3) continue; s = s + i; }
+                        return s;
+                    }
+                    public static void main(String... args) { }
+                }
+                """.replace("String... args", "String[] a"));
+        runJavac(java.util.List.of(s), src);
+        String kof = Decompile.decompile(src.resolve("Jn.class"));
+        assertTrue(kof.contains("while (") , "for vira while:\n" + kof);
+        assertFalse(kof.contains("throw \"body not recovered\""), "corpo recuperado:\n" + kof);
+        Path out = dir.resolve("gen");
+        Files.createDirectories(out);
+        Path kf = out.resolve("Jn.kf");
+        Files.writeString(kf, kof);
+        Path mainKf = out.resolve("Main.kf");
+        StringBuilder calls = new StringBuilder("main() {\n");
+        for (int n = 0; n < 7; n++) calls.append("    println(Jn.contFor(").append(n).append("))\n");
+        calls.append("}\n");
+        Files.writeString(mainKf, calls.toString());
+        CompilationResult r = new CompilerDriver().compileSources(java.util.List.of(kf, mainKf),
+                dir.resolve("o"), Target.JVM, out);
+        assertTrue(r.success(), "decompilado deve compilar:\n" + kof + "\n" + r.diagnostics().getDiagnostics());
+        ProcessBuilder pb = new ProcessBuilder("java", "-cp", dir.resolve("o").toString(), "Default.Main");
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String o = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+                .replace("\r\n", "\n").trim();
+        assertEquals(0, p.waitFor(), "run: " + o);
+        assertEquals("0\n0\n1\n3\n3\n7\n12", o, "continue==then vazio, incremento no join:\n" + kof);
+    }
+
+    @Test
+    void recoversIfElseWithTailJoinAndRunsIt(@TempDir Path dir) throws Exception {
+        // Fase C degrau 2a: if-else LINEAR com sequela pos-if (join P com
+        // preds exatos {then,else}). Hoje o naive path anda o then p/ dentro
+        // do join e a recusa 214 stuba o metodo INTEIRO (E.class stubou
+        // honesto na medicao 13/09 — nunca codigo errado). Prova FORTE:
+        // executa os 2 caminhos (oracle JVM medido 13/14) — o caminho do
+        // else e justamente o que um join duplicado/perdido quebraria.
+        Path src = dir.resolve("classes");
+        Files.createDirectories(src);
+        Path s = src.resolve("E.java");
+        Files.writeString(s, """
+                public class E {
+                    public static int e(int a) {
+                        int r = 1;
+                        if (a > 0) { r = r + 2; } else { r = r + 3; }
+                        return r + 10;
+                    }
+                    public static void main(String[] a) { }
+                }
+                """.replace("String[]", "String[]"));
+        runJavac(java.util.List.of(s), src);
+        String kof = Decompile.decompile(src.resolve("E.class"));
+        assertTrue(kof.contains("} else {"), "if-else deve recuperar:\n" + kof);
+        Path out = dir.resolve("gen");
+        Files.createDirectories(out);
+        Path kf = out.resolve("E.kf");
+        Files.writeString(kf, kof);
+        CompilationResult r = new CompilerDriver().compileSources(java.util.List.of(kf),
+                dir.resolve("o"), Target.JVM, out);
+        assertTrue(r.success(), "if-else decompilado deve compilar:\n" + kof + "\n" + r.diagnostics().getDiagnostics());
+        Path mainKf = out.resolve("Main.kf");
+        Files.writeString(mainKf, "main() {\n    println(E.e(1))\n    println(E.e(-1))\n}\n");
+        CompilationResult r2 = new CompilerDriver().compileSources(java.util.List.of(kf, mainKf),
+                dir.resolve("o2"), Target.JVM, out);
+        assertTrue(r2.success(), "programa deve compilar:\n" + r2.diagnostics().getDiagnostics());
+        ProcessBuilder pb = new ProcessBuilder("java", "-cp", dir.resolve("o2").toString(), "Default.Main");
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String o = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+                .replace("\r\n", "\n").trim();
+        assertEquals(0, p.waitFor(), "run: " + o);
+        assertEquals("13\n14", o, "os 2 caminhos do join if-else:\n" + kof);
+    }
+
+    @Test
     void recoversIfThenChainAndRunsIt(@TempDir Path dir) throws Exception {
         // Fase C degrau 1 (Q3 idempotencia/irmas): DOIS if-sem-else seguidos.
         // Prova que a borda de um naoo vaza p/ o irmao (stops consumido

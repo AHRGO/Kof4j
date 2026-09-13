@@ -123,6 +123,30 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 
 > **✅ FEITO (13/09 ~15:20, lane development/decompiler — dono = 192.168.100.17):
+> **✅ FEITO (13/09 ~17:10, lane development/decompiler — dono = 192.168.100.17):
+> Fase C DEGRAU 2a — if-else LINEAR com sequela (join P, preds exatos
+> {then,else}) + **bug latente do `blockCondition` corrigido na raiz**.**
+> `Orient`: 1138 candidatos (vs −3 do degrau 1). `pureIfElse` desce a borda de
+> `stops` nos DOIS braços (cópia compartilhada; dono emite P na sequela) —
+> trap 1 impossível por construção (preds(P) não contém o if). **A descida
+> revelou código ERRADO COMPILÁVEL latente:** `blockCondition` coletava "até 2
+> loads" sem exigir aridade → `if (i % 2 == 0)` virava `if (i == 0)` (irem
+> ignorado); provado por EXECUÇÃO (decomp 0 0 1 3 6… vs oracle 0 0 1 1 4…); o
+> guard histórico `diamondJoinShapesStayHonestStub` PEGOU (é LEI). Fix raiz:
+> aridade EXATA (bloco do teste com qualquer cálculo → null → stub honesto R6).
+> Variantes sem cálculo (ex. `i==3` continue) agora recuperam como `if{}`vazio+
+> else — golden `recoversContinueAsEmptyThenJoinAndRunsIt` (0 0 1 3 3 7 12).
+> Stubs 1387→1412 (árvore 692): o AUMENTO é QUALIDADE — as "recuperações" que
+> seriam código errado viraram stub honesto; contagem de stub não é análogo de
+> conformidade quando o alternante era errado. DriftCheck = baseline 4;
+> DecompileTest 62/62; suíte sequencial limpa: cli 186/0, script/c 0,
+> compiler 1492/**1 (KofWebJs — alheio)**. **§174 ABERTO registrado** (KofWebJs
+> determinístico, attributed por stash+3 commits + causa raiz `InetSocketAddress.
+> create` via repro isolado; NÃO toquei — regra 6, lane JS/web). **PRÓXIMO
+> PASSO (decompiler/Fase C degrau 2b): pós-dominador real** p/ aninhamento/else
+> (trap 1) + investigar por que só −3/1387 puros recuperam no degrau 1 (bloco
+> do corpo tem shape não-compatível; categorizar os 502 por causa exata antes de
+> atacar). **NÃO:** `nat/`; KofWebJs/JS-web (§174, outra lane); roundTo (regra 6).
 > Fase C DEGRAU 1 (join de if-then PURO sem else), commit `e17ac9e1`.** `struct()`
 > ganha `Set<Integer> stops`; borda SÓ para `pureIfThen` (join não-loop, preds
 > exatos {if,then}, then.succ==[join]) → `if (cond) { then }` SEM else + sequela

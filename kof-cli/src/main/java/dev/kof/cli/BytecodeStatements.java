@@ -279,7 +279,7 @@ final class BytecodeStatements {
                 List<BytecodeReader.Insn> blk = BytecodeDecoder.insnsWithin(b, insns);
                 BytecodeReader.Insn last = blk.get(blk.size() - 1);
                 int lop = last.opcode();
-                int k = (lop >= 0x9f && lop <= 0xa6) ? 2 : 1;
+                int k = (lop >= 0x9f && lop <= 0xa4) ? 2 : 1;   // if_acmp* = 2 ops; demais 1
                 if (blk.size() >= k + 1 && last.isCond()) {
                     String x = BytecodeDecoder.loadValue(blk.get(blk.size() - 1 - k), frame);
                     String y = k == 2 ? BytecodeDecoder.loadValue(blk.get(blk.size() - 2), frame) : null;
@@ -330,6 +330,35 @@ final class BytecodeStatements {
                     return false;
                 out.add("}");
                 return struct(join, insns, byStart, cp, frame, out, emitted, declared, header, stops);
+            }
+            // Fase C degrau 2a (if-else LINEAR com sequela): ambos os ramos
+            // terminam no MESMO join P (preds exatos {then,else}, nao-loop) —
+            // cada braco para na borda de P (copia propria; dono emite P no
+            // fim). SEM a borda o primeiro ramo ANDA p/ P e o segundo cai na
+            // recusa 214 = stub do metodo inteiro. O trap 1 (sequela sugada
+            // p/ dentro do else) NAO e possivel aqui: preds(P)=={then,else}
+            // NAO contem o if — P nao e alvo de branch, e o join dos ramos.
+            BytecodeReader.Block thenB = byStart.get(thenStart);
+            BytecodeReader.Block elseB = join;
+            int tail = thenB != null && thenB.succ.size() == 1 ? thenB.succ.get(0) : -1;
+            boolean pureIfElse = tail >= 0 && elseB != null && tail != exitStart && tail != b.start
+                    && elseB.succ.equals(List.of(tail))
+                    && !BytecodeReader.isLoopHeader(byStart.get(tail) != null ? byStart.get(tail) : elseB)
+                    && byStart.get(tail) != null
+                    && byStart.get(tail).pred.size() == 2
+                    && byStart.get(tail).pred.contains(thenStart)
+                    && byStart.get(tail).pred.contains(exitStart);
+            if (pureIfElse) {
+                // o `if (cond) { acima (linha do path classico) ja foi emitido
+                Set<Integer> bstops = new HashSet<>(stops);
+                bstops.add(tail);
+                if (!struct(thenB, insns, byStart, cp, frame, out, emitted, declared, header, bstops))
+                    return false;
+                out.add("} else {");
+                if (!struct(elseB, insns, byStart, cp, frame, out, emitted, declared, header, bstops))
+                    return false;
+                out.add("}");
+                return struct(byStart.get(tail), insns, byStart, cp, frame, out, emitted, declared, header, stops);
             }
             if (!struct(byStart.get(thenStart), insns, byStart, cp, frame, out, emitted, declared, header, stops))
                 return false;

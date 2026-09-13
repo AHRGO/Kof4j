@@ -379,6 +379,31 @@ Fase E  Kof Decompiler          (gerar Kof source)
 > real (walker com emissão única de join + sequela por fora do `if-else` —
 > trap 1 mostra que borda ingênua corrompe; não é stop simples).
 >
+> **DEGRAU 2a EXECUTADO — if-else LINEAR com sequela + bug latente do
+> `blockCondition` destravado (13/09, dono = 192.168.100.17):** ROI medido
+> (`Orient`): 1138 candidatos `then.succ==else.succ==[P]`, `preds(P) =
+> {then,else}` exatos, P não-loop — a borda de stop entra nos DOIS braços
+> (cópia compartilhada; o dono do join o emite na sequela) e o trap 1 é
+> impossível *por construção* aqui (preds(P) não contém o if → P não é alvo
+> de branch). `pureIfElse` no mesmo sítio do `pureIfThen`. **Mas descer até
+> aqui revelou um BUG LATENTE grave** (exatamente o serviço que Q4 pede):
+> `blockCondition` coletava "até 2 loads" do bloco de teste SEM exigir
+> aridade — em `if (i % 2 == 0) continue` o corpo `[iload i, iconst 2, irem,
+> ifne]` virava `if (i == 0)` (o `irem` ignorado!) = CÓDIGO ERRADO
+> COMPILÁVEL. Antes do degrau 2a o método stubava antes de chegar ali e o
+> bug estava abafado; eu provei por EXECUÇÃO (decompilado `0 0 1 3 6 10
+> 15 21 28` vs oracle `0 0 1 1 4 4 9 9 16` — o guard histórico
+> `diamondJoinShapesStayHonestStub` pegou, e ele é LEI). Fix na raiz:
+> aridade exata (todos os insns do bloco de teste devem ser loads puros →
+> senão `null` = stub honesto). A variante `i == 3` (sem cálculo) agora
+> recupera como `if (v == 3) { } else { corpo }` — golden de execução
+> `recoversContinueAsEmptyThenJoinAndRunsIt` (contFor 0..6 = 0 0 1 3 3 7
+> 12, increment no join preservado nos dois caminhos). Stubs na árvore:
+> 1387 → 1409 — o AUMENTO é QUALIDADE: as "recuperações" que seriam código
+> errado viraram stub honesto (Q5/R6); contagem de stub não é métonimo de
+> conformidade quando o alternante era código errado. DriftCheck =
+> baseline 4; DecompileTest 62/62.
+>
 > **Estágio 3 (13/09, dono = 192.168.100.17): interna do MESMO pacote.**
 > Categorização reflexiva dos 89 rejeitados (harness `RecCat`): **31** eram
 > só `implements Outer$Inner` do mesmo pacote (cluster `JsIr$*` com 43
