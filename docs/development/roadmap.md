@@ -1,7 +1,7 @@
 # Kof — Roadmap de Longo Prazo
 
-**Última atualização:** 2 de setembro de 2026
-**Versão:** 0.2.6-beta
+**Última atualização:** 13 de setembro de 2026
+**Versão:** 0.3.22-beta (branch ativa `beta-0.4.0`)
 
 ---
 
@@ -128,7 +128,7 @@ kof run arquivo.kf
 
 A implementação interna poderá evoluir para interpretação, compilação incremental, JIT ou execução híbrida, mas a decisão será tomada posteriormente com base em benchmarks.
 
-Estado atual: ✅ implementado (0.2.6-beta): `kof script app.kf [--watch]` + `kof repl` (statements de topo → `main()`, `var`/`val` de topo → `KofScriptGlobals`; Windows SIGPIPE fix). **0.3.0-beta: execução direta por interpretação** — `KofInterpreter` roda a MESMA IR otimizada do frontend (sem emitir bytecode, sem fork de JVM; paridade por construção com o backend JVM, provada em teste). `KofCcompiler` (`kof c`) compila C subset → ELF x86_64 nativo (`int` globals, `void` funcs, `if`/`while`/`*(int*)`/`&`).
+Estado atual: ✅ implementado: `kof script app.kf [--watch]` + `kof repl` (statements de topo → `main()`, `var`/`val` de topo → `KofScriptGlobals`; Windows SIGPIPE fix). **0.3.0-beta: execução direta por interpretação** — `KofInterpreter` roda a MESMA IR otimizada do frontend (sem emitir bytecode, sem fork de JVM; paridade por construção com o backend JVM, provada em teste). `KofCcompiler` (`kof c`) compila C subset → ELF x86_64 nativo (`int` globals, `void` funcs, `if`/`while`/`*(int*)`/`&`).
 
 ---
 
@@ -230,13 +230,16 @@ gerados a partir de `.proto`, server streaming + unary sobre HTTP/2 no JVM
 Escopo: Fase web (mesma família de `app.ws`/`sse.*`); codegen `.proto` → IR
 Kof; parity JVM primeiro, Native/JS depois.
 
-### Concorrência — fila residual (0.2.6-beta, 31/08)
+### Concorrência — fila residual (atualizado 13/09 — era "0.2.6-beta, 31/08")
 
-Estado 0.2.6-beta: concorrência real **JVM** (virtual threads) + **Native**
+Estado 13/09: concorrência real **JVM** (virtual threads) + **Native**
 (pthread, CONC001 fechado 31/08: spawn/await + `done`/`poll`/`cancel`/
 `cancelled`/`selectAny` — cancel cooperativo por TID, selectAny por polling
 1ms) + **JS** ✅ 03/09 (CONC003 fechado — stmt/expr/cancel/selectAny com
-async/await/Promise reais). ⚠️ Bug pré-existente separado: `spawn→await→spawn`
+async/await/Promise reais) + **supervisão OTP** (`kof.supervisor`: 1ª fatia
+11/09 núcleo JVM+Script, **S2-JVM 13/09** `startAll`/`lacoUnico` — ver
+`planning-otp-supervision.md`; Native=OTP001 §129, JS=OTP002 §132 gates
+honestos). ⚠️ Bug pré-existente separado: `spawn→await→spawn`
 corrompe a pilha da main (SIGSEGV no próximo `pthread_create`); reproduz sem
 o feature de cancel/select (suspeito: `pthread_join` no `kof_await`).
 
@@ -255,7 +258,7 @@ o feature de cancel/select (suspeito: `pthread_join` no `kof_await`).
 Critério de "100%": os três targets executando os mesmos programas
 concorrentes com golden diff vazio (mesmo padrão da métrica 1 do plano).
 
-### Linguagem — fila residual (P1/P2, 0.2.6-beta)
+### Linguagem — fila residual (P1/P2, atualizado 13/09)
 
 | Item | Status | Plano |
 |------|--------|-------|
@@ -717,7 +720,7 @@ O Kof é uma plataforma distribuível, não apenas um JAR:
 
 - distribuição autocontida (compiler, CLI, runtime, stdlib, tooling, editor support, JDK 21 embutido);
 - OpenJDK embutido no pacote oficial (Temurin 21, Tooling API Level 21);
-- versionamento centralizado (`VERSION` 0.2.6-beta → pom/properties via `scripts/bump-version.sh`);
+- versionamento centralizado (`VERSION` 0.3.22-beta → pom/properties via `scripts/bump-version.sh`);
 - releases por 2 jobs (`release.yml`: `test-and-bump` exporta `bump_sha` → `package-and-release` checkeia o commit de bump + sanity check de versão) por push na `main`, por plataforma linux-x86_64 / macos-arm64 / windows-x86_64 (testes 819 → bump → package 3 plataformas → GitHub Release);
 - `scripts/package.sh` PASS (layout dist + tar.gz/zip + SHA256SUMS + jars), golden 16/16, integration 9/9;
 - editor support oficial: grammar TextMate + LSP (hover/completion + diagnostics reais);

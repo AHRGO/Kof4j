@@ -42,6 +42,18 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **⚡ EM CURSO (13/09, lane development/docs — auditoria development/ + roadmap,
+> dono = esta sessão):** varredura doc-vs-código dos 9 docs restantes:
+> OTP (S2-JVM ✅ real — `supervisor-host.kf:168` + E2E; S2-Native/JS gates §129/
+> §132 honestos — fica), native (re-auditado 12/09 — fica), editor (IntelliJ
+> plugin = subprojeto Gradle próprio — fica), SOLID-500 (F3 bloqueada lane GC
+> `nat/` — fica), legado/DECOMPILER/TRANSLATOR/DIFFERENTIAL/LEGACY_IR/ACTION/
+> IMPLEMENTATION (trabalho real pendente — ficam), stdlib-expansion (pow 7a +
+> roundTo pendentes — fica). Nada a mover desta vez. `roadmap.md`: header
+> 0.2.6-beta→0.3.22-beta + nota OTP S2-JVM na concorrência + VERSION bump.
+> **PRÓXIMO PASSO:** commit + push; depois re-auditar no próximo tick.
+> **NUNCA:** fila §106/§89/§117 (outro agente); `nat/` lane GC viva; push main.
+
 > **⚡ FEITO (13/09, lane development/docs — DD-01 movido p/ docs/,
 > commit `2ef6ce69` pushado):** `planning-finally-return.md` →
 > `docs/decisions/DD-01-finally-return.md` (IMPLEMENTADO `063ed956`, bug 45
