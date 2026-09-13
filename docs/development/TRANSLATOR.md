@@ -342,3 +342,31 @@ diferenciais.
 > `interfaceDefaultMethodIsHonestGap`, `interfaceAbstractSignatureTranslates`
 > (roda `7`), `staticFieldsTranslateAndQualifyInHoistedFns` (roda `5/hi/5`) —
 > `TranslateTest` 39/39. `Translate.java` 443, `TranslateStatics` 134 ≤500.
+>
+> **Estado (13/09 ~17:30, dono = 192.168.100.22): `this(...)`, wildcard
+> genérico, corpo de lambda em BLOCO + split `TranslateTypes` (bugs latentes
+> Q4).** Três construtos Java que produziam Kof inválido/parse error confuso
+> agora têm tratamento explícito, e o `TranslateExpr` (que estourou 500 com
+> os fixes) foi aliviado por extração. (1) **Delegação de construtor
+> `this(...)`** → Kof não tem (probe: `variable 'this' is not a function` =
+> SEM015) → **gap honesto R6**. (2) **Wildcard genérico** `? extends/super`
+> → Kof rejeita (PARSE086) → **gap honesto R6** (em vez de emitir `? extends
+> Number`). (3) **Corpo de lambda em BLOCO** `() -> { ... }` → o parser só
+> aceitava expressão (`expected ';' but found 'System'`); Kof **aceita** bloco
+> (`() -> { counter = counter + 1 }` verificado no binário) → agora traduz
+> `(params) -> { stmts }`. (4) **Split:** helpers estáticos de tipo
+> (`isModifier`/`isTypekeyword`/`isPrimitiveOrType`/`isKeyword`/`kofType`)
+> extraídos de `TranslateExpr` (500→487) para `TranslateTypes.java` (50).
+> Prova: `constructorDelegationIsHonestGap`, `wildcardGenericIsHonestGap`,
+> `lambdaBlockBodyTranslates` (roda `14` no Kof gerado) — `TranslateTest`
+> **42/42**; gate 4-módulos **1493/0 + 32/0 + 5/0 + 191/0**, BUILD SUCCESS.
+> `check_500` OK (sem aviso de `Translate*`).
+>
+> **Nota (achado na caça Q4, registrado §176 — lane compiler, NÃO do
+> translator):** lambda com corpo em BLOCO que retorna uma **local declarada
+> no próprio bloco** é tipada VOID (`SEM033`) **quando o módulo contém uma
+> classe** (`main`+`class C {}`); sem a classe o mesmo programa passa. Causa
+> provável: `ExpressionTyper.firstReturnValueType` não registra os
+> `VarDeclStmt` do bloco em `locals` ao inferir o retorno. O teste
+> `lambdaBlockBodyTranslates` usa `return n + 1` p/ não depender do bug; o
+> fix pertence à lane compiler (não ao translator). Ver `known-bugs.md §176`.

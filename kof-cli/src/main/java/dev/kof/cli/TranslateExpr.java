@@ -14,6 +14,16 @@ class TranslateExpr {
 
     TranslateExpr(Parser p) { this.p = p; }
 
+    /**
+     * Hook para o corpo em bloco de lambda: os statements vivem em
+     * {@link TranslateStatements} (subclasse), então reaproveitamos a
+     * implementação de lá via override. Sem isto o {@code parseLambda}
+     * (aqui na base) não enxerga {@code parseBlock}.
+     */
+    protected List<String> parseStatementBlock() {
+        throw new TranslateException("lambda com corpo em bloco indisponível nesta camada");
+    }
+
         String parseExpr() {
             return parseTernary();
         }
@@ -290,12 +300,12 @@ class TranslateExpr {
             List<String> params = new ArrayList<>();  // '(' já consumido pelo parsePrimary
             if (!p.at(")")) {
                 // (Type name, ...) — tipado; (name) — não-tipado (fallback)
-                boolean typed = isPrimitiveOrType(p.peek().text) && p.peek(1).type == T.IDENT;
+                boolean typed = TranslateTypes.isPrimitiveOrType(p.peek().text) && p.peek(1).type == T.IDENT;
                 if (typed) {
-                    String ty = kofType(p.next().text);
+                    String ty = TranslateTypes.kofType(p.next().text);
                     String nm = p.next().text;
                     params.add(nm + ": " + ty);
-                    while (p.at(",")) { p.next(); String t2 = kofType(p.next().text); String n2 = p.next().text; params.add(n2 + ": " + t2); }
+                    while (p.at(",")) { p.next(); String t2 = TranslateTypes.kofType(p.next().text); String n2 = p.next().text; params.add(n2 + ": " + t2); }
                 } else {
                     String nm = p.next().text;
                     params.add(nm);
@@ -304,7 +314,17 @@ class TranslateExpr {
             }
             p.expect(")");
             p.expect("->");
-            String body = parseExpr();
+            // Corpo em BLOCO `() -> { ... }` — Kof aceita corpo de bloco em
+            // lambda (verificado 13/09: `() -> { counter = counter + 1 }`).
+            // Antes o parser só aceitava expressão → `expected ';' but found
+            // 'System'` (bug latente Q4).
+            String body;
+            if (p.at("{")) {
+                List<String> stmts = parseStatementBlock();
+                body = "{ " + String.join(" ", stmts) + " }";
+            } else {
+                body = parseExpr();
+            }
             return "(" + String.join(", ", params) + ") -> " + body;
         }
 
@@ -312,7 +332,7 @@ class TranslateExpr {
         boolean isCastAhead() {
             // já consumimos '('; olha o próximo token
             String first = p.peek().text;
-            if (!isPrimitiveOrType(first) && !first.equals("int") && !first.equals("boolean")
+            if (!TranslateTypes.isPrimitiveOrType(first) && !first.equals("int") && !first.equals("boolean")
                     && !first.equals("char") && !first.equals("long") && !first.equals("double")) {
                 return false;
             }
@@ -379,7 +399,7 @@ class TranslateExpr {
                 }
                 String size = parseExpr();
                 p.expect("]");
-                return "new " + kofType(typeName) + "[" + size + "]";
+                return "new " + TranslateTypes.kofType(typeName) + "[" + size + "]";
             }
             String args = parseCallArgs();
             if (p.at("{")) {
@@ -398,12 +418,21 @@ class TranslateExpr {
                 // Sem args → string vazia (throw exige String, SEM026).
                 return args.isEmpty() ? "\"\"" : args;
             }
-            return kofType(typeName) + "(" + args + ")";
+            return TranslateTypes.kofType(typeName) + "(" + args + ")";
         }
 
         // ── types ───────────────────────────────────────────────────────────
 
         String parseType() {
+            if (p.at("?")) {
+                // Wildcard genérico Java `?`/`? extends X`/`? super X` — Kof
+                // rejeita (PARSE086: "Wildcard types ... not supported; use a
+                // concrete type or nullable T?"). Sem equivalente direto →
+                // gap honesto R6 (bug latente Q4 13/09).
+                throw new TranslateException(
+                        "wildcard genérico (`?`, `? extends`, `? super`) não é suportado em Kof "
+                        + "(PARSE086; use tipo concreto ou `T?`) — revisão manual");
+            }
             String base = p.next().text;
             // Tipo qualificado `java.util.Map` → `Map` (stripa o pacote; o
             // translator ignora imports e Kof referencia tipos pelo nome
@@ -412,7 +441,7 @@ class TranslateExpr {
                 p.next();
                 base = p.next().text;
             }
-            StringBuilder sb = new StringBuilder(kofType(base));
+            StringBuilder sb = new StringBuilder(TranslateTypes.kofType(base));
             // generic args <...>
             if (p.at("<")) {
                 p.next();
@@ -454,47 +483,5 @@ class TranslateExpr {
 
         String paramList(List<String> params) {
             return String.join(", ", params);
-        }
-
-        // ── static helpers ──────────────────────────────────────────────────
-
-        static boolean isModifier(String s) {
-            return switch (s) {
-                case "public", "private", "protected", "static", "final",
-                     "abstract", "synchronized", "native", "transient", "volatile",
-                     "default" -> true;
-                default -> false;
-            };
-        }
-
-        static boolean isTypekeyword(String s) {
-            return switch (s) {
-                case "int", "long", "float", "double", "boolean", "char", "byte",
-                     "short", "void", "String" -> true;
-                default -> false;
-            };
-        }
-
-        static boolean isPrimitiveOrType(String s) {
-            return isTypekeyword(s) || (!isKeyword(s) && Character.isUpperCase(s.charAt(0)));
-        }
-
-        static boolean isKeyword(String s) {
-            return TranslateLexer.KEYWORDS.contains(s);
-        }
-
-        static String kofType(String javaType) {
-            return switch (javaType) {
-                case "int", "Integer" -> "Int";
-                case "long", "Long" -> "Long";
-                case "float", "Float" -> "Float";
-                case "double", "Double" -> "Double";
-                case "boolean", "Boolean" -> "Bool";
-                case "char", "Character" -> "Char";
-                case "byte", "Byte" -> "Byte";
-                case "short", "Short" -> "Short";
-                case "void" -> "void";
-                default -> javaType;
-            };
         }
 }

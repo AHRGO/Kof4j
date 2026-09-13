@@ -13,6 +13,11 @@ class TranslateStatements extends TranslateExpr {
 
     TranslateStatements(Parser p) { super(p); }
 
+    @Override
+    protected List<String> parseStatementBlock() {
+        return parseBlock();
+    }
+
     // ── statements ─────────────────────────────────────────────────────
 
     protected List<String> parseBlock() {
@@ -41,6 +46,15 @@ class TranslateStatements extends TranslateExpr {
             StringBuilder sb = new StringBuilder("{ ");
             for (String s : body) sb.append(s).append(' ');
             return sb.append('}').toString().trim();
+        }
+        if (p.at("this") && p.peek(1).text.equals("(")) {
+            // Delegação de construtor Java `this(...)` — Kof não tem (probe:
+            // `variable 'this' is not a function` = SEM015). Sem equivalente
+            // direto (duplicar o corpo ou usar um `init` privado) → gap
+            // honesto R6 (bug latente Q4 13/09).
+            throw new TranslateException(
+                    "delegação de construtor `this(...)` não tem equivalente direto em Kof "
+                    + "(SEM015) — duplique o corpo ou extraia um método privado — revisão manual");
         }
         if (p.peek().type == T.IDENT && p.peek(1).text.equals(":")) {
             // Labeled statement Java (`outer: for (...)`) — Kof não tem
@@ -196,7 +210,7 @@ class TranslateStatements extends TranslateExpr {
     }
 
     private String parseForInit() {
-        if (isPrimitiveOrType(p.peek().text) && p.peek(1).type == T.IDENT) {
+        if (TranslateTypes.isPrimitiveOrType(p.peek().text) && p.peek(1).type == T.IDENT) {
             p.next(); // type
             String name = p.next().text;
             String expr = "";
@@ -398,7 +412,7 @@ class TranslateStatements extends TranslateExpr {
         if (p.toks.get(base).text.equals("var")) {
             return base + 1 < p.toks.size() && p.toks.get(base + 1).type == T.IDENT;
         }
-        if (!isPrimitiveOrType(p.toks.get(base).text)) {
+        if (!TranslateTypes.isPrimitiveOrType(p.toks.get(base).text)) {
             // tipo qualificado `java.util.List<...> name` — o primeiro
             // segmento é pacote minúsculo; reconhece a cadeia e exige que o
             // último segmento seja um tipo (maiúsculo).
@@ -409,7 +423,7 @@ class TranslateStatements extends TranslateExpr {
                 j += 2;
                 chain = true;
             }
-            if (!chain || !isPrimitiveOrType(p.toks.get(j).text)) return false;
+            if (!chain || !TranslateTypes.isPrimitiveOrType(p.toks.get(j).text)) return false;
             int k = j + 1;
             if (k < p.toks.size() && p.toks.get(k).text.equals("<")) {
                 int depth = 0;

@@ -114,7 +114,7 @@ public final class Translate {
          */
         private void skipAnnotationsAndModifiers() {
             while (true) {
-                if (isModifier(p.peek().text)) { p.next(); continue; }
+                if (TranslateTypes.isModifier(p.peek().text)) { p.next(); continue; }
                 if (p.at(T.AT)) {
                     p.next();                 // @
                     p.next();                 // Nome
@@ -165,7 +165,7 @@ public final class Translate {
             if (p.at("(")) {
                 p.next();
                 while (!p.at(")")) {
-                    String type = kofType(p.next().text);
+                    String type = TranslateTypes.kofType(p.next().text);
                     String cname = p.next().text;
                     components.add(type + " " + cname);
                     if (p.at(",")) p.next();
@@ -194,11 +194,11 @@ public final class Translate {
             // hoisted — `X` → `Classe.X`; ver TranslateStatics).
             staticFields.clear();
             staticFields.addAll(TranslateStatics.scanFieldNames(p, p.pos));
-            out.append("class ").append(kofType(name)).append(typeParams);
-            if (superCls != null) out.append(" extends ").append(kofType(superCls));
+            out.append("class ").append(TranslateTypes.kofType(name)).append(typeParams);
+            if (superCls != null) out.append(" extends ").append(TranslateTypes.kofType(superCls));
             if (!ifaces.isEmpty()) {
                 out.append(" implements ");
-                out.append(ifaces.stream().map(Emitter::kofType).collect(java.util.stream.Collectors.joining(", ")));
+                out.append(ifaces.stream().map(TranslateTypes::kofType).collect(java.util.stream.Collectors.joining(", ")));
             }
             out.append(" {\n");
 
@@ -230,7 +230,7 @@ public final class Translate {
                 // method signature ending in ';'
                 int save = p.pos;
                 boolean isStatic = false;
-                while (isModifier(p.peek().text)) { if (p.at("static")) isStatic = true; p.next(); }
+                while (TranslateTypes.isModifier(p.peek().text)) { if (p.at("static")) isStatic = true; p.next(); }
                 String ret = parseType();
                 String mname = p.next().text;
                 if (!p.at("(")) {
@@ -291,7 +291,7 @@ public final class Translate {
             int save = p.pos;
             boolean isStatic = false;
             while (true) {
-                if (isModifier(p.peek().text)) { if (p.at("static")) isStatic = true; p.next(); continue; }
+                if (TranslateTypes.isModifier(p.peek().text)) { if (p.at("static")) isStatic = true; p.next(); continue; }
                 if (p.at(T.AT)) {
                     p.next(); p.next();
                     while (p.at(".")) { p.next(); p.next(); }
@@ -387,7 +387,7 @@ public final class Translate {
                 // referência virava `Undefined variable or type: 'X'`
                 // (SEM011) = Kof inválido (bug latente Q4).
                 out.append("    ").append(isStatic ? "static " : "")
-                   .append(kofType(typeName)).append(' ').append(memberName).append(init).append('\n');
+                   .append(TranslateTypes.kofType(typeName)).append(' ').append(memberName).append(init).append('\n');
             }
         }
 
@@ -420,7 +420,7 @@ public final class Translate {
                 sb.append("}\n");
                 return;
             }
-            sb.append("    ").append(kofType(retType)).append(' ').append(name)
+            sb.append("    ").append(TranslateTypes.kofType(retType)).append(' ').append(name)
               .append(typeParams).append('(').append(paramList(params)).append(')');
             if (emitBody.size() == 1 && emitBody.get(0).startsWith("return ")) {
                 String expr = emitBody.get(0).substring("return ".length());

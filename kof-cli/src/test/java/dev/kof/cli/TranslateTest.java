@@ -486,6 +486,61 @@ class TranslateTest {
     }
 
     @Test
+    void constructorDelegationIsHonestGap() {
+        // Java `this(...)` delega ao outro construtor; Kof não tem (probe:
+        // `variable 'this' is not a function` = SEM015) → gap honesto (R6).
+        TranslateException e = assertThrows(TranslateException.class, () ->
+                Translate.translateJava("""
+                        public class CD {
+                            int x;
+                            CD(int x) { this.x = x; }
+                            CD() { this(5); }
+                        }
+                        """));
+        assertTrue(e.getMessage().contains("this(...)") && e.getMessage().contains("revisão manual"),
+                "delegação `this(...)` sem equivalente Kof → gap explícito (R6), foi: " + e.getMessage());
+    }
+
+    @Test
+    void wildcardGenericIsHonestGap() {
+        // Kof rejeita wildcard genérico (PARSE086: use tipo concreto ou `T?`)
+        // → gap honesto em vez de emitir `? extends Number` (parse error).
+        TranslateException e = assertThrows(TranslateException.class, () ->
+                Translate.translateJava("""
+                        import java.util.List;
+                        public class WG {
+                            void go(List<? extends Number> xs) { }
+                        }
+                        """));
+        assertTrue(e.getMessage().contains("wildcard") && e.getMessage().contains("revisão manual"),
+                "wildcard genérico sem equivalente Kof → gap explícito (R6), foi: " + e.getMessage());
+    }
+
+    @Test
+    void lambdaBlockBodyTranslates(@TempDir Path dir) throws Exception {
+        // Lambda Java com corpo em BLOCO `() -> { ... }` → Kof aceita bloco
+        // (antes: parse error `expected ';' but found ...`, bug latente Q4).
+        // O call-site Java (`f.applyAsInt`) não tem equivalente Kof; a prova de
+        // que o BLOCO emitido é Kof válido é chamar a lambda como função.
+        // (A local `y` fica declarada mas o `return` usa expressão: retornar a
+        // local dispara bug do COMPILADOR §174 — fora da lane do translator.)
+        String kof = Translate.translateJava("""
+                public class LB {
+                    public static void main(String[] args) {
+                        int base = 10;
+                        java.util.function.IntUnaryOperator f = (int n) -> { int y = n + 1; return n + 1; };
+                        System.out.println(f.applyAsInt(3) + base);
+                    }
+                }
+                """);
+        assertTrue(kof.contains("-> {"),
+                "corpo de lambda em bloco preservado:\n" + kof);
+        assertTrue(kof.contains("var y = n + 1"),
+                "statements do bloco preservados:\n" + kof);
+        assertCompiles(dir, kof.replace("f.applyAsInt(3)", "f(3)"), "14");
+    }
+
+    @Test
     void annotationsAreDiscarded(@TempDir Path dir) throws Exception {
         String kof = Translate.translateJava("""
                 @Deprecated
@@ -501,7 +556,6 @@ class TranslateTest {
                     }
                 }
                 """);
-
         assertTrue(kof.contains("class An"),
                 "anotação de tipo descartada (antes: expected class... found '@'):\n" + kof);
         assertTrue(kof.contains("String toString()"),
