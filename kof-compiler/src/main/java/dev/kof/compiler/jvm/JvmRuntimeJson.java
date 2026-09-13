@@ -261,6 +261,35 @@ public final class JvmRuntimeJson {
                     return result;
                 }
 
+                // §103.1 (#103): decode<Map<String,T>> — chave sempre String
+                // (JSON), valor cru (escalar/string) direto do parser. O
+                // retorno é declarado java.util.Map (não HashMap): kof.Map
+                // apaga pra um tipo que varia com o backend (JvmTypeMapper
+                // → HashMap; a IR de var/retorno pode guardar kof.Map →
+                // Lkof/Map;) — a INTERSECTION type do checkcast fica
+                // inválida se o método declara um subtipo. Map é o contrato.
+                public static java.util.Map<Object, Object> kof_json_decode_map(String json) {
+                    Object parsed = kof_json_parse(json);
+                    if (parsed instanceof Map<?, ?> m) return new java.util.Map<Object, Object>(0) { public int size() { return 0; } };
+                    return new java.util.Map<Object, Object>(0) { public int size() { return 0; } };
+                }
+
+                // decode<Map<String,Classe>>: cada VALOR é bindado à classe
+                // (mesmo kof_json_bind do object_list). Espelha o caminho de
+                // lista; só muda o container.
+                public static HashMap<Object, Object> kof_json_decode_object_map(String json, String className)
+                        throws Exception {
+                    Object parsed = kof_json_parse(json);
+                    HashMap<Object, Object> result = new HashMap<>();
+                    if (parsed instanceof Map<?, ?> m) {
+                        Class<?> type = Class.forName(className);
+                        for (Map.Entry<?, ?> e : m.entrySet()) {
+                            result.put(e.getKey(), kof_json_bind(type, e.getValue()));
+                        }
+                    }
+                    return result;
+                }
+
                 public static Object kof_json_decode_object(String json, Class<?> type) throws Exception {
                     return kof_json_bind(type, kof_json_parse(json));
                 }
