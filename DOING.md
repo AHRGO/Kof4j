@@ -27,9 +27,11 @@
 >    (mesmo repo/branch): cada IPv4 = **um agente = uma máquina**; nunca
 >    assumir o trabalho/dono de outro IP, e a linha `Esta sessão = ...` vale
 >    só para quem a escreveu. Esta sessão = **192.168.100.15**
->    (lane gate/qualidade + docs — §106 fechado pela lane .18/9094; §89
->    evidência corrigida 13/09). Quem voltar (humano/cron/outra instância)
->    retoma em ≤1 leitura.
+>    (lane **bugs-and-gaps** — manter `docs/bugs-and-gaps/` (known-bugs,
+>    conformance-matrix, ecosystem-coverage, specification-gaps, KOFUI-AUDIT)
+>    sincronizados com o código/suíte; §106 fechado pela lane .18/9094; §89
+>    evidência corrigida 13/09; contagem da suíte sync 13/09). Quem voltar
+>    (humano/cron/outra instância) retoma em ≤1 leitura.
 
 Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
@@ -57,6 +59,30 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 ---
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
+
+> **✅ FEITO (13/09 ~10:00, lane bugs-and-gaps, dono = 192.168.100.15):**
+> sincronizados os 5 registros de `docs/bugs-and-gaps/` + contagens da suíte
+> ao HEAD medido. (1) **Gate autoritativo rodado neste HEAD** (`gate_now.log`):
+> **1662 run / 0 falhas / 13 erros (só `node` ausente, todos `*Js`) / 157 skip**
+> — 1479 kof-compiler + 31 kof-script + 5 kof-c-compiler + 147 kof-cli; BUILD
+> SUCCESS. (2) **Contagem 1611→1662** corrigida em `docs/status.md` (2 pontos),
+> `docs/backend-parity.md` e `docs/bugs-and-gaps/ecosystem-coverage.md`
+> (`c29d86b8`); `docs/development/README.md` 1653→1662 + testes de migração
+> 70→73 medidos (`175421d1`). (3) **Auditoria dos registros da lane:**
+> `specification-gaps.md` = 0 gaps abertos (SG-001–020 + E1–E3 todos
+> APLICADOS/RESOLVIDOS); `known-bugs.md` = **8 abertos** (§101/§104b-ii/§107/
+> §114/§129/§132/§161/§165 — todos com dono/bloqueio, zero código-puro sem
+> decisão); `conformance-matrix.md` = 12 células PARTIAL (travadas por
+> `ConformanceMatrixTest`); `ecosystem-coverage.md` = inventário (não fila);
+> `KOFUI-AUDIT.md` = UI00x todos FEITOs exceto UI001/UI007/UI008 (residual
+> R6/decisão). **Doc-only; sem código.**
+> **PRÓXIMO PASSO:** a lane bugs-and-gaps está sincronizada — não há célula
+> stale/overclaim conhecida. Re-disparo: reler `known-bugs.md:11` + a fila
+> §2 do README; se os 8 abertos continuarem sem dono novo nesta lane e a
+> suíte estiver verde → **RECUSAR** (estabilidade parcial — 8 itens de outras
+> lanes). Se surgir bug novo (§166+) ou célula divergir do código, assumir.
+> **NUNCA:** `nat/` lane GC viva; fila §101/§104b-ii/§107/§114/§129/§132/§161/
+> §165 (donos/bloqueios); push main.
 
 > **⏸️ RECUSA de re-disparo (13/09 ~09:55, lane development/docs, dono = 192.168.100.22):** varredura completa executada no HEAD (não na memória): (1) `docs/development/` auditado — plan-stdlib-expansion S0–S12 FEITOs salvo S7 format/boundaries (regra 6) e itens sem algoritmo (isNis/ulid/creditCard); native/OTP/editor/legado/roadmap todos com fase aberta ou bloqueio — corretamente em `development/`; PLAN-SOLID-500 movido p/ `docs/architecture/`; (2) fila `known-bugs.md` = 8 itens, todos com dono/bloqueio (§101 congelado; §104b-ii/§107/§114 bugfixer; §129/§161 lane nat VIVA 2–4h; §132 OTP-JS; §165 lane JS com 3 toques <9h); NAT-STR01 avaliado — asm UTF-8 astral = lane nat (NativeRiscvCrossOps/NativeX86Calls tocados 2h atrás, dono vivo); (3) `git fetch` sem novidade além do já preservado (regra 8). S1a/S1/S2/S3 sincronizados no plano (`3a491b3c`). **NADA sem dono na lane development.** Estabilidade global ainda FALSA (8 abertos de outras lanes) — mas o resto não é meu. PRÓXIMO TICK: reler esta linha + fila §1 do README; só age se surgir `.md` solto novo, decisão ratificada (move decision-pending→development) ou regressão na suíte.
 > **NUNCA:** `nat/` (lane GC viva); fila §101/§104b-ii/§107/§114/§129/§132/§161/§165 (donos/bloqueios); `KofMath/Strings/Validation` sem dono (só doc-sync); roundTo/parse*/format sem decisão (regra 6); push main.
