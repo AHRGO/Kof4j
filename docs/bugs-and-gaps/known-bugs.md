@@ -18,6 +18,7 @@
 > | **§178 ✅ CORRIGIDO 13/09 (lane bugs-and-gaps, 192.168.100.15)** | (a) compound em ELEMENTO de array no JS (`a[0] += x`, `a[0] <<= 2`) → `COMP002 unexpected KofDup2`: o guard `isExpressionOp` não listava `KofDup2` (o handler já existia desde #64). (c) lambda que retorna handle `kof.ui`/`kof.media` → VerifyError no `invoke` (descritor `LLabel;` com int na pilha): `CompilerLambdaClass` preserva o handle + `JvmLiteralEmitter.returnOpcode` emite `IRETURN` (consistente com `JvmTypeMapper` = `"I"`). Prova: `CoreRegressionE2ETest.compoundOnArrayElementJs` + `ComponentCoreE2ETest` 14/14. A face (b) é o §177 (mesma raiz). |
 > | **§168 ✅ CORRIGIDO 13/09 (lane development/translator, `3ab4c99e`)** | SEM025 ausente em namespace `json` para método inexistente: `json.metodoRuim()` compilava com sucesso (deveria falhar com SEM025). O handler do #126 (`61495f69`) validava aridade de `encode/decode` mas não rejeitava método desconhecido; `MemberCallNamespaces` mudou de `if (known && !valid)` para `if (!valid)` (rejeita QUALQUER método ≠ encode/decode) + `return null` no caminho válido. Re-verificado no binário (`kof check` → SEM025; `json.encode(42)` → no errors); `SemanticResolutionTest` 27/27. |
 > | **§179 ❌ ABERTO 13/09 (lane bugs-and-gaps, 192.168.100.15 — catalogado na caça Q4 do §178)** | Tipo `kof.ui`/`kof.media` DECLARADO numa assinatura/var/param/campo quebra o backend JVM (VerifyError `Bad type on operand stack`): `MemberResolver.resolveType("Label")` cai em `Type.of("Label")` = `ClassType("", "Label")` — NÃO reconhece o builtin `kof.ui.Label` — então o descritor sai `LLabel;` enquanto o valor real do handle é um `int` (`kof_ui_label_new` devolve int). Menor repro `main(){ Label l = Label("x"); println(uiNodesLive()) }` → JVM VerifyError; Native/Script/JS OK. Mesma raiz: `Label make(){...}`, param `void use(Label l)`, campo `Label field`. **NÃO corrigido** (toca resolução de nomes — shadowing de classe de usuário homônima; regra 6, precisa decisão). Fix proposto: em `MemberResolver.resolveType`, após `qualifyDeep`, mapear `ClassType("", name)` p/ `KofUi.constructorType(name)`/`KofMedia` quando `name` é builtin UI/media E não foi resolvido por import/classe do módulo (shadowing preservado). |
+> | **§181 ❌ ABERTO 13/09 (lane bugs-and-gaps, 192.168.100.15)** | Cast `Double/Float as Int/Long` FORA de faixa / `NaN` / `Infinity`: o contrato é o JVM (JLS 5.1.3 — satura: NaN→0, >MAX→MAX, <MIN→MIN) e **JVM+Script concordam**. **Native x86** usa `cvttsd2si` cru → "integer indefinite" `INT_MIN` (`3.0e9 as Int`→`-2147483648`, `NaN`→`INT_MIN`, `1.0e19 as Long`→`Long.MIN`). **JS** usa `Math.trunc`/`BigInt(Math.trunc)` sem 32-bit (`3.0e9 as Int`→`3000000000`, `NaN as Int`→`NaN`, `Infinity as Int`→`Infinity`; `1.0e19 as Long`→`10000000000000000000`; e **`NaN as Long` LANÇA `RangeError`**). Incoerente até com a aritmética Int do JS (que faz wrap 32-bit). Célula `cast` só testa valores EM FAIXA = **verde falso (Q5)**. Fix: JS = helper saturante (`kofD2I`/`kofD2L`, lane JS); Native = guard `ucomisd`+saturação após `cvttsd2si` (lane Native, espelho riscv/aarch, família FLT001). Célula `castrange` (JVM+Script) trava o golden. |
 > | **§180 ❌ ABERTO 13/09 (lane bugs-and-gaps, 192.168.100.15 — residual/overclaim do bug 44)** | `println(double/float)` no Native x86_64 NÃO é JDK `Double.toString`/`Float.toString`: `%.16g` trunca o shortest-round-trip (`println(0.1+0.2)` → JVM/Script/JS `0.30000000000000004`, Native `0.3`; `100.0/3.0` → `33.333333333333336` vs `33.33333333333334`), diverge na notação científica (`1e7` → `1.0E7` vs `10000000.0`; `1e-5` → `1.0E-5` vs `1e-05`) e o `Float` imprime a expansão double (`1.0f/3.0f` → JVM `0.33333334`, Native `0.3333333432674408`). Só o Native x86 diverge (regra 5, silencioso). Célula `floatprint` só testava 3 valores que coincidem = **verde falso (Q5)**. Causa: `RuntimeStringConv.emitDoubleToString`/`emitFloatToString`/`RuntimePrintNum` usam `snprintf("%.16g")` + `cvtss2sd`. Fix = shortest-round-trip JDK (Ryu/Grisu ou loop `%.{1..17}g`+`strtod`) + normalizar científico + `Float.toString` próprio — **unidade GRANDE, lane Native**, não corrigido aqui. |
 
 > | Antiga "varredura 08/09" (apócrifa — corrigida 12/09) | os "abertos" 39/62/63/64/46/48/50/59/61 estão ✅ CORRIGIDO nos próprios cabeçalhos (39/62/63/64 JVM/JS; 46/50/59 Native; 48/61 gap honesto JSN004/FFI001); contagem real na linha acima. |
@@ -5929,3 +5930,70 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   double→string bit-exato exige o algoritmo big-int do JDK).
 - **Overclaim corrigido:** o cabeçalho do bug 44 e a linha `floatprint` da
   matriz diziam "DONE"; passam a apontar este residual.
+
+
+### §181 — `Double/Float as Int` e `as Long` FORA DE FAIXA / `NaN` / `Infinity`: JVM+Script saturam (JLS 5.1.3), Native usa `cvttsd2si` cru (`INT_MIN`) e JS usa `Math.trunc`/`BigInt` sem 32-bit (dá `3000000000`/`NaN`/`Infinity`, e `NaN as Long` lança `RangeError`) — ❌ ABERTO 13/09 (lane bugs-and-gaps `192.168.100.15`; fix Native = lane Native, fix JS = lane JS)
+
+- **Sintoma (medido 13/09, 4 targets):** o contrato documentado é o do JVM
+  (`learn/04-variables-and-types.md:150` "Double → Int", `training/language/types.md:70`
+  "trunca … como Java"): a conversão `double→int`/`double→long` do JLS 5.1.3
+  **satura** (NaN→`0`; `> MAX`→`MAX`; `< MIN`→`MIN`; senão trunca p/ zero) e o
+  resultado é sempre um `Int`/`Long` de 32/64 bits válido. Nenhum target além
+  do JVM/Script cumpre:
+  - **(a) Native x86_64 usa `cvttsd2si` cru:** fora de faixa e NaN devolvem o
+    "integer indefinite" `0x80000000` (`INT_MIN`) em vez de saturar. `3.0e9 as Int`
+    → JVM/Script `2147483647`, **Native `-2147483648`**; `NaN as Int` → `0` vs
+    **`-2147483648`**; `Infinity as Int` → `MAX` vs **`INT_MIN`**.
+    `1.0e19 as Long` → JVM `9223372036854775807`, **Native
+    `-9223372036854775808`**; `NaN as Long` → `0` vs **`Long.MIN`**.
+  - **(b) JS `D2I/F2I` é só `Math.trunc`** (`JsCallEmitter.unaryExpr:398`), sem
+    wrap/32-bit nem saturação: `3.0e9 as Int` → **`3000000000`** (não é um Int
+    válido); `1.0e300 as Int` → **`1e+300`**; `NaN as Int` → **`NaN`**;
+    `Infinity as Int` → **`Infinity`**. Isso é **incoerente com a própria
+    aritmética Int do JS**, que **já** faz wrap de 32 bits (`2147483647 + 1` →
+    `-2147483648` nos 4 targets).
+  - **(c) JS `D2L/F2L` é `BigInt(Math.trunc(x))`** sem saturação: `1.0e19 as Long`
+    → **`10000000000000000000`** (BigInt > `Long.MAX`); `9.3e18 as Long` →
+    **`9300000000000000000`**; `-9.3e18 as Long` → **`-9300000000000000000`**;
+    e **`NaN as Long` LANÇA `RangeError: BigInt out of range`** (crash de
+    runtime, não valor errado).
+- **Menor repro:**
+  ```kof
+  main() {
+      println(3.0e9 as Int)      // JVM/Script 2147483647 | Native -2147483648 | JS 3000000000
+      println((0.0/0.0) as Int)  // JVM/Script 0          | Native -2147483648 | JS NaN
+      println(1.0e19 as Long)    // JVM 9223372036854775807 | Native Long.MIN   | JS 10000000000000000000
+      println((0.0/0.0) as Long) // JVM/Script 0          | Native Long.MIN     | JS RangeError (crash)
+  }
+  ```
+  **JVM e Script concordam entre si** (oracle JLS 5.1.3); **Native e JS
+  divergem** (regra 5) — divergência **silenciosa** no Native, e **crash** no
+  JS na face `as Long` de NaN.
+- **Causa raiz:**
+  - Native: o lowering de `D2I/F2I/D2L/F2L` emite a instrução SSE de conversão
+    direta (`cvttsd2si`) sem o guard de faixa/NaN que o JLS exige (o JVM insere
+    a saturação no `d2i`/`d2l`). Espelha o bug 120 (direção invertida do
+    `fcvt` no aarch), mas aqui é o **comportamento de borda**, não a instrução.
+  - JS: `JsCallEmitter.unaryExpr` (`case D2I, F2I -> Math.trunc(operand)`;
+    `case D2L, F2L -> BigInt(Math.trunc(operand))`) — falta o
+    truncamento/saturação 32/64-bit. `BigInt(NaN)` lança `RangeError`.
+- **Impacto:** qualquer Kof que faça cast de `Double`/`Float` fora de faixa
+  (dado de entrada, `parseDouble`, cálculo que estoura) produz valores
+  diferentes por target — ou **derruba** o programa no JS. A célula `cast` da
+  matriz só testa `9.9 as Int`/`70000L as Int`/`66 as Char` (todos **em
+  faixa**), dando **verde falso** ao problema (mesmo padrão do §180/Q5).
+- **Fix proposto:**
+  - **JS (lane JS, menor):** trocar `Math.trunc` por uma conversão saturante
+    (`isNaN(x) ? 0 : x >= 2147483647 ? 2147483647 : x <= -2147483648 ?
+    -2147483648 : Math.trunc(x)` p/ `Int`; análogo p/ `Long` com
+    `BigInt.asIntN(64, …)` sobre o valor já saturado, e guard de NaN antes do
+    `BigInt`). Pode virar helper de runtime (ex.: `kofD2I`/`kofD2L`).
+  - **Native x86 (lane Native, espelho riscv/aarch):** após `cvttsd2si`,
+    detectar o "integer indefinite" (`0x80000000`/`0x8000…`) **ou** comparar
+    com a faixa via `ucomisd` e saturar (MAX/MIN) — NaN→`0`. Toca
+    `RuntimeNumeric`/emissão de cast dos 3 nativos + o tradutor aarch/riscv
+    (mesma família FLT001/MATH001).
+- **Provas a adicionar:** célula de matriz `castrange` (4 targets) com os
+  valores saturados do JVM + testes cross dos nativos quando qemu presente.
+  **Não corrigido nesta sessão** (Native = lane Native; JS = lane JS; a unidade
+  segura aqui é catalogar + travar o golden).

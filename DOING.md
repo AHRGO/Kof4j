@@ -128,11 +128,20 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > `floatprint` só testava 3 valores que coincidiam (**verde falso, Q5**) — nova
 > célula `doubleprint` (4 targets, Native+JS excluídos) **prova** a divergência.
 > Fix = shortest-round-trip JDK (unidade GRANDE, lane Native).
+> **§181 CATALOGADO (ABERTO):** cast `Double/Float as Int/Long` FORA de faixa /
+> `NaN` / `Infinity` — JVM+Script saturam (JLS 5.1.3), Native usa `cvttsd2si`
+> cru (`3.0e9 as Int`→`-2147483648`, `NaN`→`INT_MIN`, `1.0e19 as Long`→
+> `Long.MIN`) e JS usa `Math.trunc`/`BigInt` sem 32-bit (`3.0e9 as Int`→
+> `3000000000`, `NaN as Int`→`NaN`; `NaN as Long` **lança `RangeError`**).
+> Célula `cast` só testava valores em faixa (**verde falso, Q5**) — nova célula
+> `castrange` (JVM+Script) trava o golden. Fix = lane JS (helper saturante) +
+> lane Native (`ucomisd`+saturação).
 > **PRÓXIMO PASSO:** fila de `known-bugs.md` só tem itens de outras lanes ou
 > que precisam de decisão (§101 congelado; §104b-ii/§107/§114 bugfixer;
 > §129/§161 nat; §132 OTP-JS; §165 não-reproduz; §170 issue-lane; §171
 > diagnóstico; §176 WEB001 lane JS/web; §179 UI-declarado — regra 6;
-> §180 double→string Native — unidade GRANDE lane Native). **Re-disparo: ler
+> §180 double→string Native — unidade GRANDE lane Native; §181 cast-fora-de-
+> faixa Native+JS — lane Native/lane JS). **Re-disparo: ler
 > esta linha + `known-bugs.md:11`; se nada novo e suíte verde → RECUSAR.**
 > **NUNCA:** `nat/` lane GC viva; fila de outras lanes; push main.
 > **Livre para caça Q4:** áreas recém-mexidas por outras lanes (S13a stdlib,
