@@ -67,9 +67,26 @@ if (ae.target() instanceof IdentifierExpr ie && !owner.isEmpty()) {
                 ops.add(new KofLoadField(ownerType, ie.name(), fieldSym.type()));
             }
             localIdx = ExpressionLowerer.emitExpression(driver, ae.value(), ops, owner, localIdx, locals);
-            if ("+=".equals(op) || "-=".equals(op) || "*=".equals(op)
+            boolean compoundAsgn = "+=".equals(op) || "-=".equals(op) || "*=".equals(op)
                     || "/=".equals(op) || "%=".equals(op)
-                    || "&=".equals(op) || "|=".equals(op) || "^=".equals(op)) {
+                    || "&=".equals(op) || "|=".equals(op) || "^=".equals(op);
+            // §103.2 (#103): widening do valor p/ o tipo do CAMPO — Int→Long
+            // putfield sem I2L → VerifyError (this.value = n, campo Long,
+            // param Int). O caminho estático (~158) e o de array-store já
+            // faziam; o de campo de instância não fazia NEM simples NEM
+            // composto (RHS Int num LADD também quebra o frame).
+            if (TypeMetrics.isPrimitiveType(fieldSym.type()) && compoundAsgn) {
+                driver.emitWideningIfNeeded(ops,
+                        ExpressionTyper.inferExprType(driver, ae.value(), locals),
+                        fieldSym.type());
+            } else if ("=".equals(op)) {
+                Type faValT = ExpressionTyper.inferExprType(driver, ae.value(), locals);
+                if (TypeMetrics.isPrimitiveType(faValT)
+                        && TypeMetrics.isPrimitiveType(fieldSym.type())) {
+                    driver.emitWideningIfNeeded(ops, faValT, fieldSym.type());
+                }
+            }
+            if (compoundAsgn) {
                 KofBinaryOp binOp = switch (op) {
                     case "+=" -> KofBinaryOp.ADD;
                     case "-=" -> KofBinaryOp.SUB;
@@ -248,9 +265,16 @@ if (ae.target() instanceof FieldAccessExpr fa) {
         ops.add(new KofLoadField(recvType, fa.fieldName(), fieldType));
     }
     localIdx = ExpressionLowerer.emitExpression(driver, ae.value(), ops, owner, localIdx, locals);
-    if ("+=".equals(faOp) || "-=".equals(faOp) || "*=".equals(faOp)
+    boolean faCompound = "+=".equals(faOp) || "-=".equals(faOp) || "*=".equals(faOp)
             || "/=".equals(faOp) || "%=".equals(faOp)
-            || "&=".equals(faOp) || "|=".equals(faOp) || "^=".equals(faOp)) {
+            || "&=".equals(faOp) || "|=".equals(faOp) || "^=".equals(faOp);
+    // §103.2 (#103): widening do valor p/ o tipo do campo (h.value = n,
+    // Int→Long) — espelha o caminho por-nome acima e o store de array.
+    if (TypeMetrics.isPrimitiveType(fieldType) && (faCompound || "=".equals(faOp))) {
+        driver.emitWideningIfNeeded(ops,
+                ExpressionTyper.inferExprType(driver, ae.value(), locals), fieldType);
+    }
+    if (faCompound) {
         KofBinaryOp binOp = switch (faOp) {
             case "+=" -> KofBinaryOp.ADD;
             case "-=" -> KofBinaryOp.SUB;
