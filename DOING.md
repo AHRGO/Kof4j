@@ -83,19 +83,17 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > `{"a":1,"b":2}`). Fix alheio pow `17596ce7` preservado (meus edits
 > usesPow/assemble 5-arg descartados — a solução HEAD é melhor). Gate
 > 4-módulos rodando agora.
-> **⚡ ACHADO + CORRIGIDO no gate (13/09 ~04:50): §162 — regressão do
-> `17596ce7` (gate/pow):** a emissão de `kof_heap_root_start`/`_end` (#113,
-> raízes do GC conservador x86) foi DELETADA do `NativeBackend.emit` sem
-> substituto. Testes do kof-compiler não pegam (poda por CWD); de kof-script
-> (CWD diferente) o fallback completo emite `kof_gc_mark` → undefined
-> reference. Restaurado + §162 no known-bugs; `KofScriptTest` 25/0; gate
-> 4-módulos BUILD SUCCESS — 1646 testes, 0 falhas reais (2 reports STALE
-> 07/09 de classes deletadas — KofShellE2ETest/KofWorkflowE2ETest — limpos;
-> 2 erros = node/GraalJS ausente, ambientais).
-> **PRÓXIMO PASSO:** commit + push §106+§162; depois §89 (toInt/toDouble = alias do
-> `as` + warning de truncamento, decisão 3a+); (3) §117 (cancelled() slot por
-> TID, 8a); (4) §131 (sobrecarga método por aridade, 10a); (5) Long=BigInt JS
-> (5b, último, bump+migração). **NUNCA:** `nat/` lane GC viva; UI*; push main;
+> **⚡ FEITO (13/09 ~07:30, §106 §162 pushados `5b939106`):** §106
+> json.encode(Map) sorted nos 4 backends (prova JsonCompleteE2ETest 9/9) +
+> §162 (diagnóstico CWD-fallback; meu restore de `_end` em .bss descartado
+> no rebase — lado do dono `53b089fd` preservado: `kof_gc_mark` usa `_end`,
+> root_end explícito é fase S-5; §162 retificado no known-bugs). Gate
+> 4-módulos BUILD SUCCESS 1646/0 reais (2 stale limpos; 2 erros node
+> ambientais).
+> **PRÓXIMO PASSO:** §89 (toInt/toDouble = alias do `as` + warning de
+> truncamento, decisão 3a+) — depois §117 (cancelled() slot por TID, 8a);
+> §131 (sobrecarga método por aridade, 10a); Long=BigInt JS (5b, último,
+> bump+migração). **NUNCA:** `nat/` lane GC viva; UI*; push main;
 > `git config user.*` (regra 7); Co-authored-by.
 
 

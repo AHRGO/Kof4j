@@ -5093,20 +5093,22 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   main() { println(7) }
   ```
   → `ld: na função "kof_gc_mark": undefined reference to 'kof_heap_root_start'/'kof_heap_root_end'` (COMP001).
-- **Causa raiz:** o commit `17596ce7` (13/09, portão/pow) removeu do
-  `NativeBackend.emit` a abertura do intervalo de raízes do GC conservador
-  (`.globl kof_heap_root_start` no início do `.data` + `kof_heap_root_end` em
-  `.bss` após o fim do dado — fix do bug #113, comentários dedicados) SEM
-  substituir por emissão equivalente. O runtime x86 referencia os dois símbolos
-  (`RuntimeGc.kof_gc_mark`: `leaq kof_heap_root_start(%rip)`…). Nos testes do
-  kof-compiler não explodiu porque o `RuntimeSlices.readSourceAndOrder()`
-  resolve o fonte por **CWD** (`kof-compiler/src/...`): rodando do módulo
-  kof-compiler a poda funciona e a fatia GC sai do subset; rodando de outro
-  módulo (kof-script/kof-cli), o mapa de fatias cai no **fallback completo**
-  (R6: emitir runtime inteiro) — o GC entra e o link quebra. `mvn test`
-  compila por módulo e escondeu a diferença de CWD.
-- **Prova:** `KofScriptTest.evalNativeTarget` (25/0 pós-fix, falhava 1/25
-  antes); gate 4-módulos re-rodado 13/09 com 0 falhas reais.
+- **Causa raiz (retificada pós-rebase 13/09):** a lane nat (#113, `53b089fd`)
+  já tinha movido a ABERTURA do intervalo de raízes (`kof_heap_root_start`)
+  para o `.data` do programa E trocado o topo do intervalo pelo `_end` do
+  linker (`RuntimeGc.kof_gc_mark`: `leaq _end(%rip)`) — o `kof_heap_root_end`
+  explícito NÃO deve existir hoje (encolheria o intervalo → under-mark). O
+  meu restore do `_end` em `.bss` foi descartado no rebase (regra 8 — lado do
+  dono preservado). O que RESTOU real como bug: o **fallback de poda por
+  CWD** — `RuntimeSlices.readSourceAndOrder()` resolve `NativeRuntime.java`
+  relativo ao diretório corrente; compilando do módulo kof-compiler a poda
+  funciona (fatia GC sai do subset); de kof-script/kof-cli o mapa cai no
+  fallback completo (R6) e qualquer referência de GC não resolvida quebra o
+  link. Após o pull com `53b089fd`+fixes da lane nat no HEAD, o
+  `KofScriptTest` 25/0 — a superfície fica consistente.
+- **Prova:** `KofScriptTest.evalNativeTarget` (25/0, falhava 1/25 antes do
+  sync do HEAD); gate 4-módulos BUILD SUCCESS — 1646 testes, 0 falhas reais
+  (2 reports stale de classes deletadas limpos; 2 erros ambientais node).
 - **Lição:** emissão de símbolo referenciado pelo runtime é **contrato do
   backend** — remover exige verificar TODOS os callers de pruneRuntime/fallback
   (CWD-dependente), não só o caminho do módulo que os testes da lane exercitam.
