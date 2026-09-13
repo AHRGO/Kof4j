@@ -47,18 +47,19 @@ package-compiler) abre antes de SYSTEMS fechar (paridade + GC + estabilidade).
 
 ## 2. Bugs abertos (fila em `known-bugs.md`) — triagem 13/09
 
-**12 seções sem ✅ no cabeçalho** (§94 fechado 13/09; §9 triado ✅ 13/09 — `nativeLambdaMutableCapture` 1/1) — e a conclusão honesta
+**11 seções sem ✅ no cabeçalho** (§127-JVM e §94 fechados 13/09; §9 triado ✅ 13/09 — `nativeLambdaMutableCapture` 1/1) — e a conclusão honesta
 (`known-bugs.md:11`): **nenhum item de código-puro-sem-decisão restou na lane**.
 Todos pendurados em:
 
 | Grupo | Bugs | Quem destrava |
 |---|---|---|
-| Decisão da mantenedora (regra 6) | §45 (`planning-finally-return` — JVM/Native/interp), §81, §89, §106, §131, §127-JVM | mantenedora |
+| Decisão da mantenedora (regra 6) | §45 (`planning-finally-return` — JVM/Native/interp), §81, §89, §106, §131 | mantenedora |
 | Congelados regra-6 | §101, §117, §129-TLS | ninguém (contrato) |
 | Lane alheia | §65/§132 (UI/web/OTP-JS), §104b-ii + §107 restante + §114 (bugfixer — storage-box de record) | donos das lanes |
 
 Corrigidos 13/09: **§94** (EQ/NE de Double/Float no interpretador agora IEEE —
-célula `stdsqrt` 4/4 sem exclusão). Corrigidos 12/09: §90 (web, #98), §125,
+célula `stdsqrt` 4/4 sem exclusão), **§127-JVM** (cast p/ tipo-função →
+interface SAM sintética; `LambdaE2ETest.castToFunctionTypeJvm/Native`). Corrigidos 12/09: §90 (web, #98), §125,
 §139, §140 (gate→ratchet), §107-face
 escalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 `440730c8` — prova qemu 42+42)**.
@@ -111,7 +112,7 @@ escalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 | `roadmap.md` | §§8–11 ❌ (frontend same-project, monólito→micro) | longo prazo |
 | `roadmap-audit.md` | matriz 06/09 + fila P0→P5 (P0 FECHADO 09/09) | re-audit quando algo fecha |
 | `KOFUI-AUDIT.md` | UI001-Native (face R6: no-op silencioso) ABERTO | lane UI |
-| `known-bugs.md` | 13 abertos (triagem §2 acima; retificado de "14" — contagem conferida seção a seção 13/09) | fila viva |
+| `known-bugs.md` | 11 abertos (triagem §2 acima; §127-JVM e §94 fechados 13/09) | fila viva |
 | `refactoring/PLAN-SOLID-500.md` | F1–2, 4–9 ✅ (**F2 fechada 12/09** — 487 ≤500 medido); **só F3 em curso** (NativeBackend 664, bloqueada pela lane GC em `nat/`); ratchet `check_500-baseline.txt` (dívidas travadas — nº autoritativo = `wc -l` do arquivo; **9** neste HEAD, era 17 no §140) no CI | F3 fecha o plano |
 
 ### 4.3 `future/` — só plano, zero código (não é trabalho atual)

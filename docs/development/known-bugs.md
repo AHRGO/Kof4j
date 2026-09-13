@@ -8,7 +8,7 @@
 >
 > | | |
 > |---|---|
-> | **Fila ABERTA (varredura 13/09 — todas as seções sem ✅ no próprio cabeçalho)** | **12** — §149 (regressão JS do fix `isEmpty` `718ae5cf` — `ReferenceError: i/k is not defined` + matriz dessincronizada; lane bugfix-101), §45 (finally+return: exige mudança de IR 4-backend + decisão DD-01, mantenedora), §65 (UI/Chrome — lane UI), §81 (KofJS Long>2^53 — decisão de precisão/contrato), §89 (n.toDouble()/toInt() cross — contrato de conversão), §101 (congelado regra 6), §104b-ii (record-em-coleção + storage-box asm — **lane bugfixer**, unidade GRANDE), §106 (json.encode Map — decisão mantenedora), §107 🟡 (restam record/aninhado=`?` até §104b-ii + FP-cross=FLT001; face escalar ✅ 12/09 nos 3 nativos `f3b3821c`+B39), §117 (cancelled() colisão — design TLS, congelado), §127-JVM (cast p/ tipo-função → mudança de erasure no `JvmTypeMapper`, **infra de tipos**; workaround interface verificado), §129-TLS (congelado), §131 (sobrecarga de MÉTODO — semântica, mantenedora), §132 (OTP JS gate). **§94 ✅ CORRIGIDO 13/09** (paridade interpretador × compilados: EQ/NE de Double/Float agora IEEE — `NaN==NaN`→false, `+0.0==-0.0`→true; `KofInterpreterValues.numEq` + `KofInterpreterOps.compare` + `KofInterpreterObjects.numEq`; célula `stdsqrt` 4/4 sem exclusão). **§125 ✅ CORRIGIDO 12/09** (decisão A: return Nullable(primitivo) apaga p/ default — 3 pontos no IR compartilhado, célula `nullableprint` 4/4 sem exclusão). **§139 ✅ CORRIGIDO 12/09** (mesma unidade: JS fold `f()==null` → COMP002 underflow; parser JS ganha o descarte mid-expression com preservação de side-effect). **§140 ✅ CORRIGIDO 12/09** (processual: gate ≤500 virou ratchet com baseline de dívida e entrou no CI — 17 violadores travados de crescer, split continua no PLAN-SOLID-500). **§90 ✅ CORRIGIDO 12/09 (lane web, remoto).** **§145/§146/§147 ✅ CORRIGIDOS 12/09 (`440730c8`, issue #101: `isEmpty` no registry 3-targets; `kof_double_mod` riscv64 B40 + dispatcher MOD float/double; `JsIfThrowElse` else-pós-throw — prova qemu 42+42).** **Conclusão honesta (13/09): nenhum item de código-puro-sem-decisão na lane restou nesta máquina** — os 12 abertos estão pendurados em decisão da mantenedora, congelamento regra-6, ou lane alheia (UI/bugfixer — §149 é da lane bugfix-101, que continua EM CURSO no `DOING.md:47`). O trabalho REAL sem-colisão-aceito da sessão é a **frente #97 tree-shaking** (S-1..S-6.1 ✅, S-7 ✅ `eabf814b` — plano movido p/ `docs/stdlib/PLAN-TREE-SHAKING.md`). |
+> | **Fila ABERTA (varredura 13/09 — todas as seções sem ✅ no próprio cabeçalho)** | **11** — §149 (regressão JS do fix `isEmpty` `718ae5cf` — `ReferenceError: i/k is not defined` + matriz dessincronizada; lane bugfix-101), §45 (finally+return: exige mudança de IR 4-backend + decisão DD-01, mantenedora), §65 (UI/Chrome — lane UI), §81 (KofJS Long>2^53 — decisão de precisão/contrato), §89 (n.toDouble()/toInt() cross — contrato de conversão), §101 (congelado regra 6), §104b-ii (record-em-coleção + storage-box asm — **lane bugfixer**, unidade GRANDE), §106 (json.encode Map — decisão mantenedora), §107 🟡 (restam record/aninhado=`?` até §104b-ii + FP-cross=FLT001; face escalar ✅ 12/09 nos 3 nativos `f3b3821c`+B39), §117 (cancelled() colisão — design TLS, congelado), §129-TLS (congelado), §131 (sobrecarga de MÉTODO — semântica, mantenedora), §132 (OTP JS gate). **§127-JVM ✅ CORRIGIDO 13/09** (decisão 9a: o RHS de `as` com lookahead `(`…`)` `->` parseia como type-ref; checkcast de `FunctionType` vai p/ interface SAM sintética — `true`/`7` em JVM+Native, sonda B127 4/4). **§94 ✅ CORRIGIDO 13/09** (paridade interpretador × compilados: EQ/NE de Double/Float agora IEEE — `NaN==NaN`→false, `+0.0==-0.0`→true; `KofInterpreterValues.numEq` + `KofInterpreterOps.compare` + `KofInterpreterObjects.numEq`; célula `stdsqrt` 4/4 sem exclusão). **§125 ✅ CORRIGIDO 12/09** (decisão A: return Nullable(primitivo) apaga p/ default — 3 pontos no IR compartilhado, célula `nullableprint` 4/4 sem exclusão). **§139 ✅ CORRIGIDO 12/09** (mesma unidade: JS fold `f()==null` → COMP002 underflow; parser JS ganha o descarte mid-expression com preservação de side-effect). **§140 ✅ CORRIGIDO 12/09** (processual: gate ≤500 virou ratchet com baseline de dívida e entrou no CI — 17 violadores travados de crescer, split continua no PLAN-SOLID-500). **§90 ✅ CORRIGIDO 12/09 (lane web, remoto).** **§145/§146/§147 ✅ CORRIGIDOS 12/09 (`440730c8`, issue #101: `isEmpty` no registry 3-targets; `kof_double_mod` riscv64 B40 + dispatcher MOD float/double; `JsIfThrowElse` else-pós-throw — prova qemu 42+42).** **Conclusão honesta (13/09): nenhum item de código-puro-sem-decisão na lane restou nesta máquina** — os 12 abertos estão pendurados em decisão da mantenedora, congelamento regra-6, ou lane alheia (UI/bugfixer — §149 é da lane bugfix-101, que continua EM CURSO no `DOING.md:47`). O trabalho REAL sem-colisão-aceito da sessão é a **frente #97 tree-shaking** (S-1..S-6.1 ✅, S-7 ✅ `eabf814b` — plano movido p/ `docs/stdlib/PLAN-TREE-SHAKING.md`). |
 > | Antiga "varredura 08/09" (apócrifa — corrigida 12/09) | os "abertos" 39/62/63/64/46/48/50/59/61 estão ✅ CORRIGIDO nos próprios cabeçalhos (39/62/63/64 JVM/JS; 46/50/59 Native; 48/61 gap honesto JSN004/FFI001); contagem real na linha acima. |
 > | Paridade interpretador × compilados (semântica `==` congelada — regra 6) | **0** — bug 94 ✅ CORRIGIDO 13/09 (EQ/NE de Double/Float no interpretador agora IEEE; a "decisão" era alinhar ao previsto, que os 3 compilados + corpus já definiam) |
 > | Paridade backend-only (regra 5, atacável na lane Native) | **2** — §107 (println coleção → lixo; **face escalar ✅ CORRIGIDA 12/09 nos 3 targets nativos** — x86 `f3b3821c` + cross B39, golden JVM byte-idêntico; restam record/aninhado=`?` honesto até §104b-ii, FP-cross=FLT001; §107-JS 11/09), §104b-ii (equals de conteúdo p/ record + box de primitivo no storage asm; **face char ✅ FECHADA 11/09** — `mapgetprim` 4/4)
@@ -3804,29 +3804,39 @@ int de índice) — verificados na varredura.
   medido) + sonda `Double as Int` aarch (0→`5`) + suíte completa.
 
 
-### 127. JVM: cast para tipo de função (`x as () -> Int`) gera bytecode inválido (VerifyError) — 🟢 DECIDIDO 13/09 (opção 9a: implementar checkcast na interface sintética) — lane implementável
+### 127. JVM: cast para tipo de função (`x as () -> Int`) gera bytecode inválido (VerifyError) — ✅ CORRIGIDO 13/09 (decisão 9a: parser parseia `as ()->T` como type-ref; checkcast vai p/ interface SAM sintética)
 - **Reprodução:** `var o: Object = (Object)(() -> 5)`… em Kof puro:
   `fun(Int x) { var g = x as () -> Int; return g() }` — `fun(() -> 9)` →
   **compila ok** mas ao rodar: `VerifyError: Operand stack underflow` /
   `checkcast // class "?"` (checkcast para classe INEXISTENTE — o tipo de
   função não tem erasure mapeado no cast).
 - **Menor repro:** `main(){ var l = listOf(() -> 5); var g = l.get(0) as () -> Int; println(g()==5) }` (out_B107).
+- **Correção (13/09, lane gate/paridade):** o RHS de `as` era parseado por
+  `parsePrimary`, e `() -> Int` casa `looksLikeLambdaParams` → virava
+  **LambdaExpr** (não type-ref) → `ExpressionBinaryLowerer` ficava com
+  `targetType = UNKNOWN` → `JvmOpEmitter` mapeava p/ `"?"`. Fix em 3 pontos:
+  (1) `ExpressionParser.parseBinary` — `as` com lookahead `(`…`)` `->` usa
+  `TypeParser.parseTypeRef` (novo `looksLikeFunctionTypeRef`); (2)
+  `ExpressionBinaryLowerer` — `FunctionType` no alvo do checkcast vira a
+  interface SAM sintética (`CompilerLambdaClass.lambdaInterfaceType`, a mesma
+  do dispatch); (3) `SemExpressionTyper` — o `IdentifierExpr` com type-ref
+  `"(...) -> ..."` não dispara SEM011. Prova: `LambdaE2ETest.castToFunctionType`
+  (JVM+Native, `true`/`7`); sonda B127 4/4 targets.
 - **Impacto OTP:** DD-OTP-02 propunha `child(id, factory, ...)` com `factory`
-  como tipo de função. O cast `as () -> T` está quebrado no JVM, então a forma
-  "Object/qualquer + cast p/ função" NÃO é utilizável hoje.
+  como tipo de função. Com este fix, a forma "Object/qualquer + `as () -> T`"
+  RODA nos 4 targets; a alternativa por **interface** (abaixo) segue válida.
 - **Workaround verificado (forma que RODA nos targets):** usar **interface** como
   contrato da fábrica (DD-OTP-06 "factory nova sempre"): `interface Worker { Int
   criar() }` + `class W implements Worker { criar(){...} }` — dispatch virtual de
   interface funciona nos 5 targets (spike S2/S4: supervisor puro-Kof com campo
   `Worker` + `spawn { w.criar() }` + try/await/catch = captura/limit/restart tudo
   verde no JVM). O campo tipado como `() -> Int` dá PARSE016 (parser de corpo de
-  classe não aceita LPAREN como início de campo — `ClassMemberParser`), e como
-  `Object`+cast dá este §127.
-- **Por que NÃO corrigi agora:** consertar o erasure do cast de tipo-função no
-  `JvmTypeMapper` é mudança de infraestrutura de tipos (afeta `mapOf<String,
-  ()->T>` etc.) — fora do escopo OTP (a interface resolve o caso de uso do
-  supervisor). Registrado como pré-requisito se um dia a API quiser closure como
-  tipo-valor declarado.
+  classe não aceita LPAREN como início de campo — `ClassMemberParser`).
+- **Não-regressão:** a sonda B127c (`listOf` heterogêneo de lambdas com
+  assinaturas DIFERENTES e dispatch por índice) já era CCE no JVM antes deste
+  fix — é o bug separado do erasure de assinatura da lambda (§8/`Lambda1` vs
+  `Lambda0`), NÃO regressão desta unidade. O caso homogêneo (o que este bug
+  cobria) passou de COMPILE-FAIL/VerifyError para verde 4/4.
 
 
 ### 128. JVM: resultado de `selectAny`/`await` de Handle<Int> atribuído a var e usado como Int → VerifyError — ✅ CORRIGIDO 12/09 (JVM; await já caía no unbox, selectAny não) (spike OTP #83 11/09)

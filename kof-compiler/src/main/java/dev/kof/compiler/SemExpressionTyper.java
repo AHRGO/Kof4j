@@ -171,6 +171,10 @@ public final class SemExpressionTyper {
                         && !KofUi.isRouterNamespace(ie.name())
                         && !"Theme".equals(ie.name())
                         && !MemberResolver.isBuiltinTypeName(ie.name())
+                        // bug 127: operando de TIPO do cast `as` — `x as
+                        // () -> Int` vira IdentifierExpr com o type-ref
+                        // completo (não é variável/tipo declarado).
+                        && !(ie.name().startsWith("(") && ie.name().contains(" -> "))
                         && !sa.allClasses().containsKey(ie.name())
                         // §134: nome de classe EXTERNA (Button.inflate,
                         // Greeter.hello) — o lowering (ExpressionMethodCall

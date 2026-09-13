@@ -273,4 +273,32 @@ class LambdaE2ETest {
         Files.writeString(source, DECLARED_FN_TYPE_PARAM);
         runNative(source, tempDir.resolve("out"), "10");
     }
+
+    // bug 127: cast para TIPO-FUNÇÃO (`x as () -> Int` / `as (Int) -> Int`)
+    // gerava `checkcast` para a classe inexistente "?" no JVM (VerifyError /
+    // CCE). O alvo é a interface SAM sintética da assinatura.
+    private static final String CAST_FN_TYPE = """
+            main() {
+                var l = listOf(() -> 5)
+                var g = l.get(0) as () -> Int
+                println(g() == 5)
+                var o: Object = (x: Int) -> x - 3
+                var h = o as (Int) -> Int
+                println(h(10))
+            }
+            """;
+
+    @Test
+    void castToFunctionTypeJvm(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, CAST_FN_TYPE);
+        runJvm(source, tempDir.resolve("out"), "true\n7");
+    }
+
+    @Test
+    void castToFunctionTypeNative(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, CAST_FN_TYPE);
+        runNative(source, tempDir.resolve("out"), "true\n7");
+    }
 }

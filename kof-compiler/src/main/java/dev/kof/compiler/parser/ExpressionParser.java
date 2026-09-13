@@ -60,10 +60,33 @@ public class ExpressionParser {
         while (isBinaryOp(ctx) && precedence(ctx, ctx.peek().value()) >= minPrec) {
             String op = ctx.advance().value();
             int prec = precedence(ctx, op);
-            ExpressionNode right = ExpressionParser.parseBinary(ctx, prec + 1);
+            // `as` recebe um TIPO à direita. Um tipo-função (`() -> Int`,
+            // `(Int, String) -> Bool`) começa com `(` e seria lido como lambda
+            // por parsePrimary; aqui é parseado como type-ref (bug 127).
+            ExpressionNode right = ("as".equals(op) && looksLikeFunctionTypeRef(ctx))
+                    ? new IdentifierExpr(ctx.pos(), TypeParser.parseTypeRef(ctx))
+                    : ExpressionParser.parseBinary(ctx, prec + 1);
             left = new BinaryExpr(ctx.pos(), op, left, right);
         }
         return left;
+    }
+
+    /** `(` params `)` `->` tipo — o operando de tipo de um cast `as`. */
+    static boolean looksLikeFunctionTypeRef(ParseContext ctx) {
+        if (!ctx.check(TokenType.LPAREN)) return false;
+        int i = ctx.pos + 1;
+        int depth = 0;
+        while (i < ctx.tokens.size()) {
+            TokenType t = ctx.tokens.get(i).type();
+            if (t == TokenType.LPAREN) {
+                depth++;
+            } else if (t == TokenType.RPAREN) {
+                if (depth == 0) return i + 1 < ctx.tokens.size() && ctx.tokens.get(i + 1).type() == TokenType.ARROW;
+                depth--;
+            }
+            i++;
+        }
+        return false;
     }
 
     static int precedence(ParseContext ctx, String op) {

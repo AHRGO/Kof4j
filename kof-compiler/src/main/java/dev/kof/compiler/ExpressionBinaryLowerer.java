@@ -41,7 +41,15 @@ if ("instanceof".equals(bin.operator()) || "as".equals(bin.operator())) {
         // (bug 5) e Long→Int via wid().não cobria
         driver.emitPrimNarrow(ops, fromT, targetType);
     } else {
-        ops.add(new KofCheckCast(targetType));
+        // bug 127: cast para TIPO-FUNÇÃO (`x as () -> Int`) — o alvo não é
+        // uma classe; o valor em runtime é uma lambda que implementa a
+        // interface SAM da assinatura. O checkcast vai para a interface
+        // sintética (a mesma que o call site usa no dispatch), não p/ "?".
+        Type castTarget = targetType;
+        if (targetType instanceof Type.FunctionType ft) {
+            castTarget = CompilerLambdaClass.lambdaInterfaceType(driver, ft);
+        }
+        ops.add(new KofCheckCast(castTarget));
         // o resultado do cast tem o tipo alvo — o próximo
         // acesso (campo/método) precisa enxergá-lo
         if (bin.left() instanceof IdentifierExpr lie && !Type.isUnknown(targetType)) {
