@@ -418,4 +418,75 @@ class BackendParityTest {
         assertEquals("", divergentes.toString().trim(),
                 "paridade cross-target JVM×JS (grupo A do sweep interpretado):");
     }
+
+    @Test
+    void parityLongBitwiseShiftMixed(@TempDir Path tempDir) throws IOException {
+        // §167: bitwise/shift com Int e Long misturados + overflow de Long.
+        // Antes: JVM VerifyError (land/lor/lxor/lshl com tipo errado; inferência
+        // dizia INT p/ `int & long` → box Integer sobre um long) e JS
+        // TypeError (BigInt misturado com Number) / sem máscara de shift /
+        // sem wrap de 64 bits. Golden medido no oracle JVM (4 targets concordam).
+        runParity("""
+                main() {
+                    var l = 5L
+                    println(l & 3)
+                    println(l | 3)
+                    println(l ^ 3)
+                    var i = 5
+                    println(i & l)
+                    var neg = -1
+                    var big = 4294967295L
+                    println(neg & big)
+                    println(neg | big)
+                    println(neg ^ big)
+                    println(l << 2L)
+                    println(l << 70)
+                    println(l << 70L)
+                    println(l >> 65L)
+                    var one = 1
+                    println(one << 40L)
+                    println(one >> 40L)
+                    println(one >>> 40L)
+                    var n = -1L
+                    println(n >>> 1)
+                    println(n >>> 64L)
+                    println(n >>> 65L)
+                    var max = 9223372036854775807L
+                    println(max + 1L)
+                    println(max * 2L)
+                    var min = -9223372036854775807L - 1L
+                    println(-min)
+                    var w = 5000000000L
+                    var t = w as Int
+                    println(t)
+                    println(t + 1)
+                    println((l as Int) & 3)
+                }
+                """, """
+                1
+                7
+                6
+                5
+                4294967295
+                -1
+                -4294967296
+                20
+                320
+                320
+                2
+                256
+                0
+                0
+                9223372036854775807
+                -1
+                9223372036854775807
+                -9223372036854775808
+                -2
+                -9223372036854775808
+                705032704
+                705032705
+                1
+                """.trim(),
+                tempDir, "longbitshift");
+    }
 }

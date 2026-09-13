@@ -16,6 +16,16 @@ public final class ExpressionBinaryLowerer {
                 || (t instanceof Type.NullableType nt && nt.inner() instanceof Type.UnknownType);
     }
 
+    /** §167: bitwise inteiro `& | ^` (o `&&`/`||` lógico já saiu antes). */
+    private static boolean isBitwiseOp(String op) {
+        return "&".equals(op) || "|".equals(op) || "^".equals(op);
+    }
+
+    /** §167: shift inteiro `<< >> >>>`. */
+    private static boolean isShiftOp(String op) {
+        return "<<".equals(op) || ">>".equals(op) || ">>>".equals(op);
+    }
+
     static int lower(CompilerDriver driver, BinaryExpr bin, List<KofOperation> ops,
                         String owner, int localIdx, List<IRLocalVariable> locals) {
 if ("instanceof".equals(bin.operator()) || "as".equals(bin.operator())) {
@@ -146,6 +156,42 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
         driver.emitWideningIfNeeded(ops, rightType, commonType);
         ops.add(new KofBinary(TypeMetrics.mapArithmeticOp(be.operator()), commonType));
         accType = commonType;
+    } else if (isBitwiseOp(be.operator())
+            && TypeMetrics.isInteger(accType) && TypeMetrics.isInteger(rightType)) {
+        // §167: bitwise `& | ^` com Int e Long misturados. A promoção binária
+        // do JVM eleva AMBOS ao tipo comum (long se qualquer lado for long);
+        // sem o widening, `long & int` virava `land` sobre um int (VerifyError)
+        // e `int & long` truncava o long p/ 32 bits no Native/Script (resultado
+        // errado). `operandType` = tipo comum p/ os 4 targets.
+        Type commonInt = TypeMetrics.commonNumericType(accType, rightType);
+        if (!TypeMetrics.isInteger(commonInt)) commonInt = Type.PrimitiveType.INT;
+        driver.emitWideningIfNeeded(ops, accType, commonInt);
+        localIdx = ExpressionLowerer.emitExpression(driver, be.right(), ops, owner, localIdx, locals);
+        driver.emitWideningIfNeeded(ops, rightType, commonInt);
+        KofBinaryOp bitOp = switch (be.operator()) {
+            case "&" -> KofBinaryOp.AND;
+            case "|" -> KofBinaryOp.OR;
+            default -> KofBinaryOp.XOR;
+        };
+        ops.add(new KofBinary(bitOp, commonInt));
+        accType = commonInt;
+    } else if (isShiftOp(be.operator())
+            && TypeMetrics.isInteger(accType) && TypeMetrics.isInteger(rightType)) {
+        // §167: shift `<< >> >>>`. O tipo do resultado é o tipo PROMOVIDO do
+        // operando ESQUERDO (JLS 15.19), não o tipo comum: `int << long` tem
+        // tipo int. O deslocamento é sempre int no JVM (`lshl`/`ishl` tomam
+        // (long,int)/(int,int)) — um RHS long precisa de L2I, senão VerifyError.
+        Type resultType = "long".equals(TypeMetrics.primitiveName(accType)) ? Type.PrimitiveType.LONG : Type.PrimitiveType.INT;
+        driver.emitWideningIfNeeded(ops, accType, resultType);
+        localIdx = ExpressionLowerer.emitExpression(driver, be.right(), ops, owner, localIdx, locals);
+        driver.emitPrimNarrow(ops, rightType, Type.PrimitiveType.INT);
+        KofBinaryOp shiftOp = switch (be.operator()) {
+            case "<<" -> KofBinaryOp.SHL;
+            case ">>" -> KofBinaryOp.SHR;
+            default -> KofBinaryOp.USHR;
+        };
+        ops.add(new KofBinary(shiftOp, resultType));
+        accType = resultType;
     } else if ("+".equals(be.operator())
             && (Type.isString(accType) || Type.isString(rightType))) {
         // concatenação com float/double no Native formataria

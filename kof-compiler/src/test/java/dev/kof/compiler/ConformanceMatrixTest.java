@@ -497,8 +497,70 @@ class ConformanceMatrixTest {
                     println(6 ^ 3)
                     println(1 << 4)
                     println(256 >> 2)
+                    var l = 5L
+                    println(l & 3)
+                    println(l | 3)
+                    println(l ^ 3)
+                    var i = 5
+                    println(i & l)
+                    var neg = -1
+                    var big = 4294967295L
+                    println(neg & big)
+                    println(neg | big)
+                    println(neg ^ big)
+                    println(l << 2L)
+                    println(l << 70)
+                    println(l << 70L)
+                    println(l >> 65L)
+                    var one = 1
+                    println(one << 40L)
+                    println(one >> 40L)
+                    println(one >>> 40L)
+                    var n = -1L
+                    println(n >>> 1)
+                    println(n >>> 64L)
+                    println(n >>> 65L)
+                    var max = 9223372036854775807L
+                    println(max + 1L)
+                    println(max * 2L)
+                    var min = -9223372036854775807L - 1L
+                    println(-min)
+                    var w = 5000000000L
+                    var t = w as Int
+                    println(t)
+                    println(t + 1)
+                    println((l as Int) & 3)
                 }
-                """, "2\n7\n5\n16\n64", Set.of(), tempDir);
+                """, """
+                2
+                7
+                5
+                16
+                64
+                1
+                7
+                6
+                5
+                4294967295
+                -1
+                -4294967296
+                20
+                320
+                320
+                2
+                256
+                0
+                0
+                9223372036854775807
+                -1
+                9223372036854775807
+                -9223372036854775808
+                -2
+                -9223372036854775808
+                705032704
+                705032705
+                1
+                """.trim(), Set.of(), tempDir);
         // STDLIB S1 — kof.math (Int-only) paridade total nos 4 targets.
         // §93: os dois últimos casos comparam `== true`/`== false` no
         // CAMINHO DE VALOR (o print sozinho coercia 1/0 e mascarava o bug).

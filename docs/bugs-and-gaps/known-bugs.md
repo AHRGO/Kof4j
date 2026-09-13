@@ -8,7 +8,8 @@
 >
 > | | |
 > |---|---|
-> | **Fila ABERTA (varredura 13/09 — seções sem resolução no próprio cabeçalho)** | **9 itens** (seções/sub-faces sem resolução) — §166 ABERTO 13/09 (gate tamanho hello: shim DOM #121 no CORE_runtime → 8297B > 8085B; bisect de build aponta `cd8ad70b`; lane JS/gate), §165 re-verificado 13/09: NÃO reproduz em build limpo (node v22 presente, export no runtime, célula verde) — trap de inlining `static final`, ver §165; ~~§81~~ ✅ CORRIGIDO 13/09 (5b: Long=BigInt no JS, paridade 64-bit real, golden JS unificado ao JVM), §101 (relacionais de Double com NaN divergem cross — **congelado** regra 6), §104b-ii (record em coleção + storage-box asm — **lane bugfixer**, unidade GRANDE), §107 🟡 (`println(coleção)` nativo → lixo de ponteiro; **face escalar ✅ CORRIGIDA 12/09** nos 3 nativos `f3b3821c`+B39; restam record/aninhado=`?` até §104b-ii + FP-cross=FLT001), §114 ⏳ (equals de record com campo-referência no Native; sub-face do §104b-ii), §129 (throw em worker `spawn` → longjmp cross-thread no Native — **lane nat**; era referido como "§129-TLS"), §132 (KofJS: task de task não roda sem ceder o event-loop — gate OTP002; **lane alheia**), §161/NAT-STR01 (case-fold ASCII-only no Native vs Unicode no JVM/JS — **DECIDIDO 13/09**, lane nat; registrado aqui 13/09). **§165 RE-VERIFICADO 13/09 (dono 192.168.100.17, node v22 presente): NÃO reproduz em build limpo** — o export CHEGA ao `kof-runtime.mjs`, a célula verde; o sintoma era a trap de inlining `static final` (classes stale). Fecho/blindagem = dono §106/js-slices; §166 aberto). **~~§149~~ NÃO está aberto — ✅ CORRIGIDO 12/09** (a linha anterior o listava por engano; a raiz era o `JsIfThrowElse` do §147). **§156 ✅ CORRIGIDO 13/09** (lista heterogênea de lambdas mesma assinatura → elemento sem className, dispatch SAM). **§155 ✅ CORRIGIDO 13/09** (tipo-função em type-args → `ClassFormatError`; parser preserva os espaços do type-ref). **§127-JVM ✅ CORRIGIDO 13/09** (decisão 9a: `as ()->T` parseia como type-ref; checkcast p/ interface SAM sintética). **§94 ✅ CORRIGIDO 13/09** (EQ/NE de Double/Float no interpretador agora IEEE). **§125 ✅ CORRIGIDO 12/09** (return Nullable(primitivo) → default; célula `nullableprint` 4/4). **§139 ✅ CORRIGIDO 12/09** (JS fold `f()==null` → COMP002; parser JS descarta mid-expression). **§140 ✅ CORRIGIDO 12/09** (gate ≤500 virou ratchet com baseline no CI). **§90 ✅ CORRIGIDO 12/09** (lane web). **§145/§146/§147 ✅ CORRIGIDOS 12/09** (`440730c8`, issue #101). **§45 ✅ IMPLEMENTADO 13/09** (DD-01 opção 4a: FinallyFrame na IR; 4 targets, `063ed956`) e **S10c ✅ 13/09** (`random.randomBytesHex`, `317b23e7`). **§157/§158/§159/§160 ✅ CORRIGIDOS 13/09** (issue-lane: #103 caso 3 POP2 em `HashMap.put` de `Long`, kof.web `header()`/`query()` `String?`+SEM049, Native web WEB001, KofJS hostless `kof_platform`). **Conclusão honesta (13/09):** dos **8 itens abertos**, a maioria pende de **decisão da mantenedora já ratificada** (fila de implementação: §161 = 1; §81 ✅ CORRIGIDO 13/09), **congelamento regra-6** (§101 + sub-faces §114/§107 = 3), **lane alheia** (§104b-ii lane bugfixer + §129 lane nat + §132 = 3) — **§89 ✅ CORRIGIDO 13/09** (`e33425b5`, 4 alvos + warning SEM090), **§106 ✅ CORRIGIDO 13/09** (`5b939106` + residual JS `ab85cfae`, 4 alvos), **§117 ✅ CORRIGIDO 13/09** (`3734f2aa`), **§131 ✅ CORRIGIDO 13/09** (`18a64d45`, 4 backends; + **residual same-arity/tipos** `73ca2d58`, Native), **§156 ✅ CORRIGIDO 13/09**, **§81 ✅ CORRIGIDO 13/09** (Long=BigInt JS, seção própria) e **§163 ✅ CORRIGIDO 13/09** (interpretador: 2º parâmetro largo lido como `null` — paridade 4-target, achado no probe do split `NativeBackend`). |
+> | **Fila ABERTA (varredura 13/09 — seções sem resolução no próprio cabeçalho)** | **9 itens** (seções/sub-faces sem resolução) — §166 ABERTO 13/09 (gate tamanho hello: shim DOM #121 no CORE_runtime → 8297B > 8085B; bisect de build aponta `cd8ad70b`; lane JS/gate), §165 re-verificado 13/09: NÃO reproduz em build limpo (node v22 presente, export no runtime, célula verde) — trap de inlining `static final`, ver §165; ~~§81~~ ✅ CORRIGIDO 13/09 (5b: Long=BigInt no JS, paridade 64-bit real, golden JS unificado ao JVM), §101 (relacionais de Double com NaN divergem cross — **congelado** regra 6), §104b-ii (record em coleção + storage-box asm — **lane bugfixer**, unidade GRANDE), §107 🟡 (`println(coleção)` nativo → lixo de ponteiro; **face escalar ✅ CORRIGIDA 12/09** nos 3 nativos `f3b3821c`+B39; restam record/aninhado=`?` até §104b-ii + FP-cross=FLT001), §114 ⏳ (equals de record com campo-referência no Native; sub-face do §104b-ii), §129 (throw em worker `spawn` → longjmp cross-thread no Native — **lane nat**; era referido como "§129-TLS"), §132 (KofJS: task de task não roda sem ceder o event-loop — gate OTP002; **lane alheia**), §161/NAT-STR01 (case-fold ASCII-only no Native vs Unicode no JVM/JS — **DECIDIDO 13/09**, lane nat; registrado aqui 13/09). **§165 RE-VERIFICADO 13/09 (dono 192.168.100.17, node v22 presente): NÃO reproduz em build limpo** — o export CHEGA ao `kof-runtime.mjs`, a célula verde; o sintoma era a trap de inlining `static final` (classes stale). Fecho/blindagem = dono §106/js-slices; §166 aberto). **~~§149~~ NÃO está aberto — ✅ CORRIGIDO 12/09** (a linha anterior o listava por engano; a raiz era o `JsIfThrowElse` do §147). **§156 ✅ CORRIGIDO 13/09** (lista heterogênea de lambdas mesma assinatura → elemento sem className, dispatch SAM). **§155 ✅ CORRIGIDO 13/09** (tipo-função em type-args → `ClassFormatError`; parser preserva os espaços do type-ref). **§127-JVM ✅ CORRIGIDO 13/09** (decisão 9a: `as ()->T` parseia como type-ref; checkcast p/ interface SAM sintética). **§94 ✅ CORRIGIDO 13/09** (EQ/NE de Double/Float no interpretador agora IEEE). **§125 ✅ CORRIGIDO 12/09** (return Nullable(primitivo) → default; célula `nullableprint` 4/4). **§139 ✅ CORRIGIDO 12/09** (JS fold `f()==null` → COMP002; parser JS descarta mid-expression). **§140 ✅ CORRIGIDO 12/09** (gate ≤500 virou ratchet com baseline no CI). **§90 ✅ CORRIGIDO 12/09** (lane web). **§145/§146/§147 ✅ CORRIGIDOS 12/09** (`440730c8`, issue #101). **§45 ✅ IMPLEMENTADO 13/09** (DD-01 opção 4a: FinallyFrame na IR; 4 targets, `063ed956`) e **S10c ✅ 13/09** (`random.randomBytesHex`, `317b23e7`). **§157/§158/§159/§160 ✅ CORRIGIDOS 13/09** (issue-lane: #103 caso 3 POP2 em `HashMap.put` de `Long`, kof.web `header()`/`query()` `String?`+SEM049, Native web WEB001, KofJS hostless `kof_platform`). **Conclusão honesta (13/09):** dos **9 itens abertos** (§166 somado 13/09), a maioria pende de **decisão da mantenedora já ratificada** (fila de implementação: §161 = 1; §81 ✅ CORRIGIDO 13/09), **congelamento regra-6** (§101 + sub-faces §114/§107 = 3), **lane alheia** (§104b-ii lane bugfixer + §129 lane nat + §132 = 3) — **§89 ✅ CORRIGIDO 13/09** (`e33425b5`, 4 alvos + warning SEM090), **§106 ✅ CORRIGIDO 13/09** (`5b939106` + residual JS `ab85cfae`, 4 alvos), **§117 ✅ CORRIGIDO 13/09** (`3734f2aa`), **§131 ✅ CORRIGIDO 13/09** (`18a64d45`, 4 backends; + **residual same-arity/tipos** `73ca2d58`, Native), **§156 ✅ CORRIGIDO 13/09**, **§81 ✅ CORRIGIDO 13/09** (Long=BigInt JS, seção própria) e **§163 ✅ CORRIGIDO 13/09** (interpretador: 2º parâmetro largo lido como `null` — paridade 4-target, achado no probe do split `NativeBackend`). **§167 ✅ CORRIGIDO 13/09** (bitwise/shift com `Long` misturado: JVM VerifyError + JS TypeError/máscara errada + overflow de Long sem wrap no JS; lane bugs-and-gaps `192.168.100.15`, 4 targets, 3 testes — seção própria). |
+> | **§167 ✅ CORRIGIDO 13/09 (lane bugs-and-gaps, 192.168.100.15)** | bitwise/shift com `Long` misturado: JVM VerifyError + JS TypeError/máscara errada + overflow de Long sem wrap no JS. 4 targets; achado na caça Q4 13/09. Overclaim conexo do §81 (declarava "64-bit real" cobrindo só parse/literal). Prova: `BackendParityTest.parityLongBitwiseShiftMixed` + `KofInterpreterParityTest.longBitwiseShiftMixed` + célula `bitwise` estendida 4/4. |
 > | Antiga "varredura 08/09" (apócrifa — corrigida 12/09) | os "abertos" 39/62/63/64/46/48/50/59/61 estão ✅ CORRIGIDO nos próprios cabeçalhos (39/62/63/64 JVM/JS; 46/50/59 Native; 48/61 gap honesto JSN004/FFI001); contagem real na linha acima. |
 > | Paridade interpretador × compilados (semântica `==` congelada — regra 6) | **0** — bug 94 ✅ CORRIGIDO 13/09 (EQ/NE de Double/Float no interpretador agora IEEE; a "decisão" era alinhar ao previsto, que os 3 compilados + corpus já definiam) |
 > | Paridade backend-only (regra 5, atacável na lane Native) | **2** — §107 (println coleção → lixo; **face escalar ✅ CORRIGIDA 12/09 nos 3 targets nativos** — x86 `f3b3821c` + cross B39, golden JVM byte-idêntico; restam record/aninhado=`?` honesto até §104b-ii, FP-cross=FLT001; §107-JS 11/09), §104b-ii (equals de conteúdo p/ record + box de primitivo no storage asm; **face char ✅ FECHADA 11/09** — `mapgetprim` 4/4)
@@ -5378,3 +5379,60 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   atualiza-se o baseline". Armadilha conexa: o gate só vê o inchaço em build
   LIMPO — incremental com `JsRuntimeCore.class` stale passa (mesma trap do
   §165, terceira vítima da família).
+
+### 167. Bitwise/shift com `Long` misturado: JVM VerifyError + JS TypeError/máscara errada + overflow de Long no JS — ✅ CORRIGIDO 13/09 (4 targets, lane bugs-and-gaps `192.168.100.15`)
+
+- **Contexto:** achado na varredura da lane bugs-and-gaps 13/09 (caça Q4 sobre
+  bitwise/shift). Os 3 sintomas são da MESMA raiz: a promoção binária
+  `int`↔`long` não era aplicada em bitwise/shift. Gatilho: só com **variáveis**
+  (literais são constant-folded antes do backend) — por isso escapou das
+  matrizes anteriores, que só usavam literais `Int`.
+- **Menor repro / matriz medida (oracle = JVM compilado; probes `MIXB.kf`/`OVF.kf`/`L2I.kf`):**
+  | expressão | JVM antes | Native/Script | JS antes |
+  |---|---|---|---|
+  | `var l=5L; l & 3` | **VerifyError** `land` | `1` ✅ | **TypeError** Cannot mix BigInt |
+  | `var i=5; var l=5L; i & l` | **VerifyError** (`iand` c/ long; inferência INT) | `5` ✅ | **TypeError** |
+  | `var i=-1; var l=4294967295L; i & l` | **VerifyError** | `4294967295` ✅ | **TypeError** |
+  | `l << 2L` / `l << 70L` | **VerifyError** `lshl` (RHS long) | `20` / `320` ✅ | `20` / `320` ✅ |
+  | `var i=1; i << 40L` | **VerifyError** | `256` ✅ | **TypeError** |
+  | `l << 70` (RHS int) | `320` ✅ | `320` ✅ | `5902958103587056517120` ❌ (sem máscara 0x3f) |
+  | `var n=-1L; n >>> 1` | `9223372036854775807` ✅ | idem ✅ | `-1` ❌ (USHR virava SHR) |
+  | `Long.MAX + 1L` | `-9223372036854775808` ✅ | idem ✅ | `9223372036854775808` ❌ (BigInt ilimitado) |
+  | `var l=5L; var i=l as Int; i + 1` | `6` ✅ | `6` ✅ | **TypeError** (L2I devolvia BigInt) |
+- **Causa raiz (3 arquivos):**
+  1. **JVM/lowering** — `ExpressionBinaryLowerer` mandava bitwise/shift para o
+     branch genérico sem `emitWideningIfNeeded`; e `ExpressionTyper` inferia
+     INT p/ `int & long` (o box usava `Integer.valueOf` sobre um long →
+     `Bad type on operand stack`). Shift precisa do tipo do operando
+     ESQUERDO (JLS 15.19) e do RHS **narrowado p/ int** (`L2I`), pois
+     `lshl`/`ishl` tomam `(long,int)`/`(int,int)`.
+  2. **JS** — `JsCallEmitter.longBinaryExpr`/`longOperand` só envolviam
+     **literais** `JsNumber` com `BigInt()`; variáveis Int-typed chegavam como
+     Number → `Cannot mix BigInt and other types`. Shift BigInt não mascarava
+     (0x3f) e USHR virava SHR.
+  3. **JS overflow** — BigInt é ilimitado; a aritmética não reaplicava o wrap
+     de 64 bits do JVM (`asIntN(64, …)`), e `L2I` devolvia BigInt (deveria
+     voltar a Number, pois Int no JS é Number).
+- **Fix:** (1) `ExpressionBinaryLowerer` — novos branches p/ bitwise (common
+  numeric type) e shift (resultado = tipo promovido do lado esquerdo, RHS
+  `emitPrimNarrow`→int); `ExpressionTyper` promove a inferência de forma
+  idêntica. (2) `JsCallEmitter` — `longOperand` envolve QUALQUER operando com
+  `BigInt()` (idempotente); shift long mascara o contador com `& 63n`; USHR =
+  `BigInt.asUintN(64, l) >> (r & 63n)`; aritmética long reaplica
+  `asIntN(64, …)` (wrap); NEG long wrap; `L2I` = `Number(BigInt.asIntN(32, l))`;
+  shift int normaliza o RHS BigInt p/ Number 32-bit.
+- **Prova (Q1 — falhava no código velho):**
+  - `BackendParityTest.parityLongBitwiseShiftMixed` (novo) — JVM×JS + golden
+    JVM; **falhava antes** (`frame crash … longbitshift.kf:34:5`).
+  - `KofInterpreterParityTest.longBitwiseShiftMixed` (novo) — interpretado×JVM
+    byte-a-byte; **falhava antes** (`exit code divergente expected <-1> but was <0>`).
+  - `ConformanceMatrixTest.conformanceCoreArithmetic` — caso `bitwise`
+    **estendido** com o bloco Long (30 linhas, `Set.of()` — os 4 targets),
+    passa 4/4.
+- **Nota sobre o §81 (overclaim):** o §81 declarou "paridade 64-bit real" mas
+  só cobria **parse** (`toLong`) e literais; a **aritmética** de Long no JS
+  divergia (overflow sem wrap, shift sem máscara, mistura Int/Long lançando).
+  Esta correção fecha a lacuna; o texto do §81 fica como registro histórico.
+- **Arquivos:** `kof-compiler/src/main/java/dev/kof/compiler/ExpressionBinaryLowerer.java`,
+  `.../ExpressionTyper.java`, `.../js/JsCallEmitter.java`, `.../js/JsLongEmitter.java`
+  (colaborador de LONG/shift extraído p/ manter `JsCallEmitter` ≤500).

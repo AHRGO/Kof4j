@@ -60,6 +60,31 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (13/09 ~11:40, lane bugs-and-gaps, dono = 192.168.100.15):
+> §167 CORRIGIDO — bitwise/shift com `Long` misturado (JVM VerifyError + JS
+> TypeError/máscara errada + overflow de Long sem wrap no JS).** Achado na
+> caça Q4 (só aparece com **variáveis** — literais são constant-folded, por
+> isso as matrizes antigas de bitwise só Int não pegaram). Causa raiz em 3
+> arquivos: `ExpressionBinaryLowerer` (branch genérico sem widening; shift =
+> tipo do operando esquerdo + RHS narrowado p/ int), `ExpressionTyper`
+> (inferia INT p/ `int & long` → box `Integer.valueOf` sobre long) e
+> `JsCallEmitter` (só literais viravam BigInt; shift sem máscara 0x3f; USHR
+> virava SHR; overflow BigInt sem `asIntN(64)`; L2I devolvia BigInt).
+> Extraí o long/shift p/ `JsLongEmitter` (novo, 127 linhas) — `JsCallEmitter`
+> voltou a 420 (≤500, saiu da dívida). Prova Q1 (falhava antes): 3 testes
+> novos/estendidos — `BackendParityTest.parityLongBitwiseShiftMixed` (JVM×JS),
+> `KofInterpreterParityTest.longBitwiseShiftMixed` (interpretado×JVM) e célula
+> `bitwise` da matriz estendida 4/4. Gate 4-módulos: **compiler 1481/1-falha
+> (a §166 alheia)/13-erros-node, script 31/0, c 5/0, cli 160/0** — zero
+> regressão minha. `check_500` OK. Registro: `known-bugs.md §167` +
+> `conformance-matrix.md`.
+> **PRÓXIMO PASSO:** a lane bugs-and-gaps segue sem bug de código puro sem
+> dono; a única falha da suíte é a **§166 (lane JS/gate)** — bitwise/shift já
+> corrigido. Re-disparo: reler `known-bugs.md:11`; se os abertos não mudarem
+> e a suíte estiver verde fora da §166 → **RECUSAR** (estabilidade parcial).
+> **NUNCA:** `nat/` lane GC viva; fila §101/§104b-ii/§107/§114/§129/§132/§161/
+> §165/§166 (donos/bloqueios); push main.
+
 > **✅ FEITO (13/09 ~10:15, lane development/docs, dono = 192.168.100.17):
 > Estágio 2 dos records + registros sincronizados com a verdade medida.**
 > (1) **Código** `c8b756c2` (pushado): `pureRecord(ir, scope)` recupera

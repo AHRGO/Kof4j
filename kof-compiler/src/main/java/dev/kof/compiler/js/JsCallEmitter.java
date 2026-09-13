@@ -313,11 +313,11 @@ void handleStringOp(MethodCtx ctx, List<Object> stack,
         }
     }
 
-JsIr.JsExpression binaryExpr(KofBinary kb, JsIr.JsExpression left, JsIr.JsExpression right) {
+    JsIr.JsExpression binaryExpr(KofBinary kb, JsIr.JsExpression left, JsIr.JsExpression right) {
         // §81 (5b): binário de LONG no JS = BigInt. Os lados podem chegar como
         // Number (literal Int promovido, var Int) — BigInt() é idempotente e
         // garante a promoção Int->Long do JVM (mistura BigInt/Number lança).
-        if (JsTypeMapper.isLongType(kb.operandType())) return longBinaryExpr(kb, left, right);
+        if (JsTypeMapper.isLongType(kb.operandType())) return JsLongEmitter.longBinaryExpr(kb, left, right);
         return switch (kb.op()) {
             case ADD -> intWrap(kb.operandType(), new JsIr.JsBinary(left, "+", right));
             case SUB -> intWrap(kb.operandType(), new JsIr.JsBinary(left, "-", right));
@@ -346,9 +346,12 @@ JsIr.JsExpression binaryExpr(KofBinary kb, JsIr.JsExpression left, JsIr.JsExpres
                     ? new JsIr.JsBinary(left, "||", right)
                     : new JsIr.JsBinary(left, "|", right);
             case XOR -> new JsIr.JsBinary(left, "^", right);
-            case SHL -> new JsIr.JsBinary(left, "<<", right);
-            case SHR -> new JsIr.JsBinary(left, ">>", right);
-            case USHR -> new JsIr.JsBinary(left, ">>>", right);
+            // §167: `int << long` tem tipo int (JLS 15.19) mas o RHS pode
+            // chegar como BigInt (literal Long ou var Long) → TypeError no JS.
+            // Normaliza o contador p/ Number 32-bit (o JS já mascara em 0x1f).
+            case SHL -> new JsIr.JsBinary(JsLongEmitter.int32(left), "<<", JsLongEmitter.toNumber32(right));
+            case SHR -> new JsIr.JsBinary(JsLongEmitter.int32(left), ">>", JsLongEmitter.toNumber32(right));
+            case USHR -> new JsIr.JsBinary(JsLongEmitter.int32(left), ">>>", JsLongEmitter.toNumber32(right));
         };
     }
 
@@ -356,42 +359,6 @@ JsIr.JsExpression binaryExpr(KofBinary kb, JsIr.JsExpression left, JsIr.JsExpres
      * Kof Int is a signed 32-bit type; JavaScript numbers are doubles. Wrap
      * int arithmetic with ToInt32 (| 0) to preserve Kof/JVM 32-bit semantics.
      */
-    /** §81 (5b): binário de LONG sobre BigInt. DIV: BigInt / já trunca p/
-     *  zero (JVM LIDIV; Math.trunc não aceita BigInt). EQ/NE: `==` loose JS
-     *  (5n==5 é true — o === cru daria false misturando BigInt/Number, e o
-     *  `==` de Kof é de conteúdo). longOperand promove Number->BigInt
-     *  (BigInt é idempotente p/ BigInt puro). */
-    JsIr.JsExpression longBinaryExpr(KofBinary kb, JsIr.JsExpression left, JsIr.JsExpression right) {
-        JsIr.JsExpression l = longOperand(left), r = longOperand(right);
-        return switch (kb.op()) {
-            case ADD -> new JsIr.JsBinary(l, "+", r);
-            case SUB -> new JsIr.JsBinary(l, "-", r);
-            case MUL -> new JsIr.JsBinary(l, "*", r);
-            case DIV -> new JsIr.JsBinary(l, "/", r);
-            case MOD -> new JsIr.JsBinary(l, "%", r);
-            case EQ -> new JsIr.JsBinary(l, "==", r);
-            case NE -> new JsIr.JsBinary(l, "!=", r);
-            case LT -> new JsIr.JsBinary(l, "<", r);
-            case LE -> new JsIr.JsBinary(l, "<=", r);
-            case GT -> new JsIr.JsBinary(l, ">", r);
-            case GE -> new JsIr.JsBinary(l, ">=", r);
-            case AND -> new JsIr.JsBinary(l, "&", r);
-            case OR -> new JsIr.JsBinary(l, "|", r);
-            case XOR -> new JsIr.JsBinary(l, "^", r);
-            case SHL -> new JsIr.JsBinary(l, "<<", r);
-            case SHR, USHR -> new JsIr.JsBinary(l, ">>", r);   // BigInt não tem >>>; SHR JVM-like
-            default -> new JsIr.JsBinary(l, "+", r);
-        };
-    }
-
-    /** §81: envolve o operando com BigInt() quando é literal Number cru
-     *  (promoção Int->Long); BigInt puro passa reto (idempotente). */
-    JsIr.JsExpression longOperand(JsIr.JsExpression e) {
-        if (e instanceof JsIr.JsNumber n) return new JsIr.JsCall(
-                new JsIr.JsIdentifier("BigInt"), List.of(n));
-        return e;
-    }
-
     JsIr.JsExpression intWrap(Type operandType, JsIr.JsExpression inner) {
         if (JsTypeMapper.isIntFamily(operandType)) {
             return new JsIr.JsBinary(inner, "|", new JsIr.JsNumber("0"));
@@ -413,17 +380,21 @@ JsIr.JsExpression boolEq(JsIr.JsExpression left, JsIr.JsExpression right, boolea
 
 JsIr.JsExpression unaryExpr(KofUnary ku, JsIr.JsExpression operand) {
         return switch (ku.op()) {
-            case NEG -> new JsIr.JsUnary("-", operand);
+            case NEG -> JsTypeMapper.isLongType(ku.operandType())
+                    ? JsLongEmitter.wrap64(new JsIr.JsUnary("-", JsLongEmitter.longOperand(operand)))
+                    : new JsIr.JsUnary("-", operand);
             case NOT -> new JsIr.JsConditional(operand, new JsIr.JsNumber("0"), new JsIr.JsNumber("1"));
             case I2F, I2D, I2C, L2F, L2D, F2D, D2F -> operand;
             case I2L -> new JsIr.JsCall(new JsIr.JsIdentifier("BigInt"), List.of(operand));   // §81
-            // §81: Long(BigInt)->Int — o JVM trunca p/ 32-bit com o valor
-            // EXATO do long (2^53+1 → 1). Number() perde precisão acima de
-            // 2^53 (daria 0) — o truncamento tem de ser sobre BigInt:
-            // BigInt.asIntN(32, l) faz exatamente o wrap signed do JVM.
-            case L2I -> new JsIr.JsCall(
-                    new JsIr.JsMember(new JsIr.JsIdentifier("BigInt"), "asIntN"),
-                    List.of(new JsIr.JsNumber("32"), operand));
+            // §81/§167: Long(BigInt)->Int — truncamento EXATO sobre BigInt
+            // (BigInt.asIntN(32,...) faz o wrap signed do JVM; Number() direto
+            // perderia precisão >2^53 e daria 0 onde o JVM dá 1). O resultado
+            // volta a Number: Int no JS é Number, e um BigInt fluindo p/
+            // aritmética Int lançava `Cannot mix BigInt and other types` (§167).
+            case L2I -> new JsIr.JsCall(new JsIr.JsIdentifier("Number"),
+                    List.of(new JsIr.JsCall(
+                            new JsIr.JsMember(new JsIr.JsIdentifier("BigInt"), "asIntN"),
+                            List.of(new JsIr.JsNumber("32"), operand))));
             case D2I, F2I -> new JsIr.JsCall(new JsIr.JsIdentifier("Math.trunc"),
                     List.of(operand));
             case D2L, F2L -> new JsIr.JsCall(new JsIr.JsIdentifier("BigInt"),

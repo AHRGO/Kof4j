@@ -567,4 +567,49 @@ class KofInterpreterParityTest {
                 }
                 """);
     }
+
+    @Test
+    void longBitwiseShiftMixed() throws IOException {
+        // §167: bitwise/shift com Int e Long misturados + overflow/wrap de
+        // Long. O interpretador já estava correto; o JVM emitia VerifyError
+        // (inferência INT p/ `int & long` + `land` sobre int). Paridade
+        // interpretado×JVM byte-a-byte (o JS tem cobertura em BackendParityTest).
+        parity("longbitshift", """
+                main() {
+                    var l = 5L
+                    println(l & 3)
+                    println(l | 3)
+                    println(l ^ 3)
+                    var i = 5
+                    println(i & l)
+                    var neg = -1
+                    var big = 4294967295L
+                    println(neg & big)
+                    println(neg | big)
+                    println(neg ^ big)
+                    println(l << 2L)
+                    println(l << 70)
+                    println(l << 70L)
+                    println(l >> 65L)
+                    var one = 1
+                    println(one << 40L)
+                    println(one >> 40L)
+                    println(one >>> 40L)
+                    var n = -1L
+                    println(n >>> 1)
+                    println(n >>> 64L)
+                    println(n >>> 65L)
+                    var max = 9223372036854775807L
+                    println(max + 1L)
+                    println(max * 2L)
+                    var min = -9223372036854775807L - 1L
+                    println(-min)
+                    var w = 5000000000L
+                    var t = w as Int
+                    println(t)
+                    println(t + 1)
+                    println((l as Int) & 3)
+                }
+                """);
+    }
 }

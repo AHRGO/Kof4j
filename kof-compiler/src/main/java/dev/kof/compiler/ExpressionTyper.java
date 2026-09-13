@@ -112,6 +112,26 @@ public final class ExpressionTyper {
                         leftType = TypeMetrics.commonNumericType(leftType, rType);
                         continue;
                     }
+                    // §167: bitwise `& | ^` promove ao tipo comum (long se
+                    // qualquer lado for long); shift `<< >> >>>` tem o tipo do
+                    // operando ESQUERDO promovido (JLS 15.19). Sem isto a
+                    // inferência dizia INT p/ `int & long` e o box/despacho
+                    // usava Integer sobre um long → VerifyError.
+                    if (switch (be.operator()) {
+                        case "&", "|", "^" -> true;
+                        default -> false;
+                    } && TypeMetrics.isInteger(leftType) && TypeMetrics.isInteger(rType)) {
+                        leftType = TypeMetrics.commonNumericType(leftType, rType);
+                        continue;
+                    }
+                    if (switch (be.operator()) {
+                        case "<<", ">>", ">>>" -> true;
+                        default -> false;
+                    } && TypeMetrics.isInteger(leftType) && TypeMetrics.isInteger(rType)) {
+                        leftType = "long".equals(TypeMetrics.primitiveName(leftType))
+                                ? Type.PrimitiveType.LONG : Type.PrimitiveType.INT;
+                        continue;
+                    }
                     leftType = leftType;
                 }
                 yield leftType;
