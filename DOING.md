@@ -70,8 +70,14 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > pós-fix: 4/4 alvos verdes** (S89/S89b/S89c) + `CoreRegressionE2ETest`
 > 1/1. Fila **12→10** itens. (4) **regra 9** restaurada com a semântica de
 > cluster (storage compartilhado; 1 IP = 1 agente = 1 máquina).
-> **PRÓXIMO PASSO:** §117 (cancelled() slot por TID, 8a) — depois §131 (10a);
-> §81 (5b, último, bump+migração). Reivindicar aqui antes de implementar.
+> **PRÓXIMO PASSO:** (gate/docs) §117/§131/§81 são da **fila ratificada da lane
+> .18/9094** — NÃO tocar (regra 9: outro IP = outro agente). Esta lane
+> (gate/qualidade + docs, dono 192.168.100.15) só age se: (a) surgir regressão
+> na suíte (gate vermelho), (b) header/contagem de `known-bugs.md` divergir do
+> código, (c) doc concluído não movido p/ `docs/`. **Gate 4-módulos pós-§89
+> medido neste turno: 1643 run / 0 falhas / 13 erros (todos `*Js` = `node`
+> ausente, ambiental) / 157 skip — verde.** Se nada disso aparecer, RECUSAR o
+> re-disparo (não inventar trabalho).
 > **NÃO:** `nat/`; UI*; push main; `git config user.*`; Co-authored-by.
 
 > **⚡ RECUSA de re-disparo (13/09 ~06:50, lane development/docs, dono =

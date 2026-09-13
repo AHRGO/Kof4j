@@ -1,10 +1,12 @@
 # Development — backlog vivo (só trabalho em desenvolvimento)
 
 > **Base:** `0.4.0-beta` · branch `beta-0.4.0` · **atualizado:** 13/09/2026
-> **Suíte medida neste HEAD:** `1611` testes (1439 kof-compiler + 31 kof-script
-> + 5 kof-c-compiler + 136 kof-cli), **0 falhas** (13 erros = só `node` ausente, ambientais; o §149 JS foi corrigido — era `KofRandomTest`), 5 skip (guardas de
-> toolchain/node) — com cross riscv/aarch 42+42 sob qemu real (G-0/§142 somaram os
-> testes de header/OOM). Refold da concatenação do `NativeRiscvAsm` para
+> **Suíte medida neste HEAD:** `1643` testes (1470 kof-compiler + 31 kof-script
+> + 5 kof-c-compiler + 137 kof-cli), **0 falhas** (13 erros = só `node` ausente, ambientais — todos `*Js`; o §149 JS foi corrigido), 157 skip (guardas de
+> toolchain/node; sem qemu os 84 cross são skipados) — com cross riscv/aarch
+> 42+42 sob qemu real (G-0/§142 somaram os
+> testes de header/OOM). Gate pós-§89 medido 13/09 (`gate_s89.log`, BUILD
+> SUCCESS). Refold da concatenação do `NativeRiscvAsm` para
 > `<clinit>` (anti-pattern novo `constant-folded-runtime-asm.md`) verde no
 > gate `gate1585.log` (HEAD 54da1325).
 > **Regra dos 3 estados (`AGENTS.md`):** `docs/` = implementado/decidido ·
