@@ -49,7 +49,7 @@
 
 ``` 
 mvn clean package    → PASSA
-mvn test             → 1611 testes (1439 kof-compiler + 31 kof-script + 5 kof-c-compiler + 136 kof-cli), 0 falhas, 13 erros (só `node` ausente no host — ambientais), 5 skip com toolchain cross (guardas de DB externo; sem qemu no host → cross skipa honesto, ~126 skip) — 13/09 (o §149 JS foi corrigido; era `KofRandomTest.randomStringJs/randomShapeJs`)
+mvn test             → 1662 testes (1479 kof-compiler + 31 kof-script + 5 kof-c-compiler + 147 kof-cli), 0 falhas, 13 erros (só `node` ausente no host — ambientais), 157 skip (guardas de toolchain cross/DB externo; sem qemu no host → cross skipa honesto) — 13/09 (o §149 JS foi corrigido; era `KofRandomTest.randomStringJs/randomShapeJs`)
 kof build            → PASS (--target jvm|native|js|native.risc|native.arm) [--release]
 kof run              → PASS (jvm|native|js|native.risc|native.arm) [--release]
 kof serve            → PASS (web.app() nativo + API legada handle())
@@ -538,7 +538,7 @@ main() { /* ignorado pelo kof test */ }
 
 ---
 
-## Testes (1611 = 1439 kof-compiler + 31 kof-script + 5 kof-c-compiler + 136 kof-cli — suíte completa verde, 0 falhas (13 erros = só `node` ausente); medição 13/09. Host sem qemu: cross → skip honesto, total ~1500)
+## Testes (1662 = 1479 kof-compiler + 31 kof-script + 5 kof-c-compiler + 147 kof-cli — suíte completa verde, 0 falhas (13 erros = só `node` ausente), 157 skip; medição 13/09. Host sem qemu: cross → skip honesto)
 
 | Suíte | Quantidade | Cobertura |
 |-------|-----------|-----------|
