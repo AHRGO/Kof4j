@@ -70,6 +70,32 @@ import java.util.Set;
      */
     static String linearReturn(List<BytecodeReader.Insn> insns, String[] cp,
                                        BytecodeFrame frame, boolean laxType) {
+        MachineRun r = machineRun(insns, cp, frame);
+        if (r == null) return null;
+        if (r.stopped) return r.returned;
+        // fim sem return: devolve o topo da pilha (região protegida de try)
+        if (laxType) {
+            return r.stack.size() == 1 ? r.stack.topExpr() : null;
+        }
+        return r.stack.size() == 1 ? r.stack.retTyped(frame.retType()) : null;
+    }
+
+    /** Estado da pilha simbólica após a máquina de expressão (degrau 3,
+     *  13/09): exposto p/ o walker de pós-dominadores reusar a MESMA máquina
+     *  — um segundo interpretador divergiria (lição trap 3/contFor%2).
+     *  `stopped` = chegou em `return` (a pilha final NÃO reavalia: o
+     *  `retTyped` do return já decidiu, inclusive por null — byte-idêntico). */
+    static final class MachineRun {
+        final BytecodeTypes.TStack stack;
+        final String returned;
+        final boolean stopped;
+        MachineRun(BytecodeTypes.TStack stack, String returned, boolean stopped) {
+            this.stack = stack; this.returned = returned; this.stopped = stopped;
+        }
+    }
+
+    static MachineRun machineRun(List<BytecodeReader.Insn> insns, String[] cp,
+                                       BytecodeFrame frame) {
         BytecodeTypes.TStack stack = new BytecodeTypes.TStack();
         for (BytecodeReader.Insn in : insns) {
             int op = in.opcode();
@@ -208,14 +234,14 @@ import java.util.Set;
                     if (result == null || !result.startsWith("⟦new⟧")) return null;
                     stack.push(result.substring("⟦new⟧".length()) + "(" + a + ")", "L");
                 }
-                case 0xac -> { return stack.retTyped("I"); }
-                case 0xad -> { return stack.retTyped("J"); }
-                case 0xae -> { return stack.retTyped("F"); }
-                case 0xaf -> { return stack.retTyped("D"); }
-                case 0xb0 -> { return stack.retTyped("L"); }
+                case 0xac -> { return new MachineRun(stack, stack.retTyped("I"), true); }
+                case 0xad -> { return new MachineRun(stack, stack.retTyped("J"), true); }
+                case 0xae -> { return new MachineRun(stack, stack.retTyped("F"), true); }
+                case 0xaf -> { return new MachineRun(stack, stack.retTyped("D"), true); }
+                case 0xb0 -> { return new MachineRun(stack, stack.retTyped("L"), true); }
                 case 0xb1 -> {
                     if (!"V".equals(frame.retType())) return null;   // return em método não-void → drift
-                    return stack.isEmpty() ? "" : null;
+                    return new MachineRun(stack, stack.isEmpty() ? "" : null, true);
                 }
                 default -> {
                     if (blockerSink != null) blockerSink.accept(op);
@@ -223,12 +249,7 @@ import java.util.Set;
                 }
             }
         }
-        // fim sem return: devolve o topo da pilha (região protegida de try)
-        if (laxType) {
-            String top = stack.topExpr();
-            return stack.size() == 1 ? top : null;
-        }
-        return stack.size() == 1 ? stack.retTyped(frame.retType()) : null;
+        return new MachineRun(stack, null, false);
     }
 
     // ── comparação booleana de retorno ───────────────────────────────────
