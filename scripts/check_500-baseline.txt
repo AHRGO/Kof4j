@@ -1,9 +1,11 @@
+514	kof-compiler/src/main/java/dev/kof/compiler/ExpressionInstanceCallLowerer.java
 558	kof-compiler/src/main/java/dev/kof/compiler/js/JsControlFlowParser.java
 518	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeUiLayout.java
 514	kof-compiler/src/main/java/dev/kof/compiler/jvm/JvmOpCollections.java
+525	kof-compiler/src/main/java/dev/kof/compiler/jvm/JvmRuntimeJson.java
 510	kof-compiler/src/main/java/dev/kof/compiler/jvm/JvmRuntimeUi.java
 539	kof-compiler/src/main/java/dev/kof/compiler/KofUi.java
-645	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeBackend.java
+579	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeBackend.java
 507	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeRiscvAsmMapset0.java
 516	kof-compiler/src/main/java/dev/kof/compiler/parser/ExpressionParser.java
 557	kof-compiler/src/main/java/dev/kof/compiler/runtime/RuntimeUi.java

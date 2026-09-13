@@ -65,8 +65,8 @@ final class NativeClassMeta {
                 // §131 (10a): método sobrecarregado (2+ defs do nome) ganha slot
                 // PRÓPRIO por assinatura (fnSymbol tageia) — antes o 2º def
                 // sobrescrevia o slot (methods.set) e os 2 .globl colidiam.
-                String sym = nb.fnSymbol(clazz.name(), m.name(), m.parameterTypes(), nb.allClassesMap);
-                if (NativeBackend.sigMangles(clazz.name(), m.name(), nb.allClassesMap)) {
+                String sym = NativeSymbolMangling.fnSymbol(clazz.name(), m.name(), m.parameterTypes(), nb.allClassesMap);
+                if (NativeSymbolMangling.sigMangles(clazz.name(), m.name(), nb.allClassesMap)) {
                     methodNames.add(m.name());
                     methods.add(sym);
                 } else {
@@ -88,7 +88,7 @@ final class NativeClassMeta {
             if (clazz.name().equals(ownerTypeName) || clazz.name().endsWith("/" + ownerTypeName)
                     || ownerTypeName.endsWith("/" + clazz.name()) || ownerTypeName.equals(nb.sanitizeName(clazz.name()))) {
                 List<String> methods = collectVirtualMethods(nb, clazz);
-                String mangled = nb.fnSymbol(clazz.name(), methodName,
+                String mangled = NativeSymbolMangling.fnSymbol(clazz.name(), methodName,
                         methodsForArity(clazz, methodName, argCount), nb.allClassesMap);
                 for (int i = 0; i < methods.size(); i++) {
                     if (methods.get(i).equals(mangled)) {
@@ -97,7 +97,7 @@ final class NativeClassMeta {
                 }
                 for (IRMethod m : clazz.methods()) {
                     if (m.name().equals(methodName) && !"<init>".equals(m.name()) && !"<clinit>".equals(m.name())) {
-                        String m2 = nb.fnSymbol(clazz.name(), m.name(), m.parameterTypes(), nb.allClassesMap);
+                        String m2 = NativeSymbolMangling.fnSymbol(clazz.name(), m.name(), m.parameterTypes(), nb.allClassesMap);
                         for (int i = 0; i < methods.size(); i++) {
                             if (methods.get(i).equals(m2)) {
                                 return i;

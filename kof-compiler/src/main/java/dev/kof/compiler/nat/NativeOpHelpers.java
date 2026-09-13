@@ -171,7 +171,7 @@ final class NativeOpHelpers {
             return mn;
         }
         if (kc.kind() == KofCallKind.FUNCTION) {
-            String key = NativeBackend.fnKey(NativeBackend.internalOwner(kc.ownerType()),
+            String key = NativeSymbolMangling.fnKey(NativeSymbolMangling.internalOwner(kc.ownerType()),
                     kc.methodName(), kc.parameterTypes(), nb.allClassesMap);
             return nb.functionMangleMap.getOrDefault(key, nb.sanitizeName(kc.methodName()));
         }
@@ -200,6 +200,45 @@ final class NativeOpHelpers {
             if (offset >= 0) return offset;
         }
         return ClassLayout.HEADER_SIZE;
+    }
+
+    // ---- emitters de array x86_64 (extraídos do NativeBackend, split 13/09) ----
+
+    static void emitNewArray(NativeBackend nb, StringBuilder sb, KofNewArray na) {
+        sb.append("    popq %rdi\n");
+        sb.append("    movl $").append(elementTypeSize(nb, na.elementType())).append(", %esi\n");
+        sb.append("    call kof_array_alloc\n");
+        sb.append("    pushq %rax\n");
+    }
+
+    static void emitNewMultiArray(NativeBackend nb, StringBuilder sb, KofNewMultiArray ma) {
+        sb.append("    movl $").append(ma.dims()).append(", %edx\n");
+        sb.append("    movl $").append(elementTypeSize(nb, ma.baseType())).append(", %ebx\n");
+        sb.append("    movl $1, %esi\n");
+        sb.append("    call kof_multi_alloc\n");
+        sb.append("    addq $").append(8 * ma.dims()).append(", %rsp\n");
+        sb.append("    pushq %rax\n");
+    }
+
+    static void emitArrayLoad(NativeBackend nb, StringBuilder sb, KofArrayLoad al) {
+        sb.append("    popq %rsi\n");
+        sb.append("    popq %rdi\n");
+        sb.append("    call kof_array_get\n");
+        sb.append("    pushq %rax\n");
+    }
+
+    static void emitArrayStore(NativeBackend nb, StringBuilder sb, KofArrayStore as) {
+        sb.append("    popq %rdx\n");
+        sb.append("    popq %rsi\n");
+        sb.append("    popq %rdi\n");
+        sb.append("    call kof_array_set\n");
+    }
+
+    static void emitArrayLength(NativeBackend nb, StringBuilder sb) {
+        sb.append("    popq %rdi\n");
+        sb.append("    call kof_array_length\n");
+        sb.append("    movslq %eax, %rax\n");
+        sb.append("    pushq %rax\n");
     }
 
 }

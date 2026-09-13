@@ -59,8 +59,8 @@ final class NativeMethodEmitter {
 
         nb.currentClass = clazz;
 
-        String mangled = nb.fnSymbol(clazz.name(), method.name(), method.parameterTypes(), nb.allClassesMap);
-        nb.functionMangleMap.put(nb.fnKey(clazz.name(), method.name(), method.parameterTypes(), nb.allClassesMap), mangled);
+        String mangled = NativeSymbolMangling.fnSymbol(clazz.name(), method.name(), method.parameterTypes(), nb.allClassesMap);
+        nb.functionMangleMap.put(NativeSymbolMangling.fnKey(clazz.name(), method.name(), method.parameterTypes(), nb.allClassesMap), mangled);
         sb.append("\n.globl ").append(mangled).append("\n");
         sb.append(".type ").append(mangled).append(", @function\n");
         sb.append(mangled).append(":\n");

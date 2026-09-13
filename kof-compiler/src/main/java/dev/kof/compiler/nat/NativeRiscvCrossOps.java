@@ -408,7 +408,7 @@ public final class NativeRiscvCrossOps {
         String mn = kc.methodName();
         if (mn.startsWith("kof_map_") || mn.startsWith("kof_set_") || mn.startsWith("kof_list_")) return mn;
         if (kc.kind() == KofCallKind.FUNCTION) {
-            String key = NativeBackend.fnKey(NativeBackend.internalOwner(kc.ownerType()), mn, kc.parameterTypes(), nb.allClassesMap);
+            String key = NativeSymbolMangling.fnKey(NativeSymbolMangling.internalOwner(kc.ownerType()), mn, kc.parameterTypes(), nb.allClassesMap);
             return nb.functionMangleMap.getOrDefault(key, nb.sanitizeName(mn));
         }
         if (kc.kind() == KofCallKind.CONSTRUCTOR && kc.ownerType() instanceof Type.ClassType ct) {

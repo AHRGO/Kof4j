@@ -126,73 +126,8 @@ public class NativeBackend implements Backend {
                 .replace("<", "").replace(">", "");
     }
 
-    // ---- SG-011B: mangling de FUNÇÃO TOP-LEVEL por assinatura (oracle JVM) ----
-    // Só funções do recipiente sintético Main (não-<init>, não-`main`) recebem
-    // sufixo de assinatura. Métodos de instância, construtores (<init>_n) e a
-    // entrada `main` continuam byte-idênticos ao antes — vtables referenciam
-    // esses símbolos e não podem mudar. Um programa com um único candidato por
-    // nome ganha sufixo nos DOIS lados (registro e call site) igualmente, então
-    // só o NOME DO SÍMBOLO muda, nunca a semântica (e isso DE-DUPLICAPAR as
-    // wrappers de default-arg que antes colidiam no `as` — bug latente).
-    static boolean isTopLevelOwner(String className) {
-        return "Main".equals(className) || className.endsWith("/Main");
-    }
-    /** true quando (clazz,name) é uma função top-level sobrecarregável. */
-    static boolean sigMangles(String className, String name) {
-        return sigMangles(className, name, Map.of());
-    }
-    /** true quando (clazz,name) leva sufixo de assinatura: função top-level
-     *  OU método de classe SOBRECARREGADO (§131, 10a). */
-    static boolean sigMangles(String className, String name, Map<String, IRClass> classes) {
-        if ("<init>".equals(name) || "main".equals(name)) return false;
-        if (isTopLevelOwner(className)) return true;
-        return classHasOverload(className, name, classes);
-    }
-    /** §131: (clazz,name) tem 2+ métodos com o mesmo nome? */
-    boolean classHasOverload(String className, String name) {
-        return classHasOverload(className, name, allClassesMap);
-    }
-    /** §131: (clazz,name) tem 2+ métodos com o mesmo nome? */
-    static boolean classHasOverload(String className, String name, Map<String, IRClass> classes) {
-        String simple = className.substring(className.lastIndexOf('/') + 1);
-        for (IRClass clazz : classes.values()) {
-            if (clazz.name().equals(simple) || clazz.name().endsWith("/" + simple)) {
-                int count = 0;
-                for (IRMethod m : clazz.methods()) {
-                    if (m.name().equals(name)) count++;
-                }
-                return count > 1;
-            }
-        }
-        return false;
-    }
-    static String sigTag(java.util.List<Type> ps) {
-        return dev.kof.compiler.TopLevelOverload.sigTag(ps);
-    }
-    /** internal name (pkg/Name) do dono de um KofCall, ou "" se não-Classe. */
-    static String internalOwner(Type owner) {
-        if (owner instanceof Type.ClassType ct) {
-            return ct.packageName() != null && !ct.packageName().isEmpty()
-                    ? ct.packageName().replace('.', '/') + "/" + ct.name() : ct.name();
-        }
-        return "";
-    }
-    /** Chave do functionMangleMap para (clazz,name,pts): com assinatura só p/
-     *  funções top-level; caso contrário o nome cru (comportamento antigo). */
-    static String fnKey(String className, String name, java.util.List<Type> pts, Map<String, IRClass> classes) {
-        return sigMangles(className, name, classes) ? name + "#" + sigTag(pts) : name;
-    }
-    /** Símbolo assembly de (clazz,name,pts). */
-    static String fnSymbol(String className, String name, java.util.List<Type> pts, Map<String, IRClass> classes) {
-        String m = sanitizeNameStatic(className) + "_" + sanitizeNameStatic(name);
-        if ("<init>".equals(name)) m += "_" + pts.size();
-        else if (sigMangles(className, name, classes)) m += sigTag(pts);
-        return m;
-    }
-    static String sanitizeNameStatic(String name) {
-        return name.replace("/", "_").replace(".", "_").replace("-", "_")
-                .replace("<", "").replace(">", "");
-    }
+    // SG-011B/§131: mangling de símbolo extraído p/ NativeSymbolMangling
+    // (split ≤500, 13/09) — a responsabilidade é só nomear, sem estado.
 
 
 
@@ -417,8 +352,8 @@ public class NativeBackend implements Backend {
         for (IRClass clazz : module.classes()) {
             for (IRMethod method : clazz.methods()) {
                 if ("<clinit>".equals(method.name())) continue;
-                String mangled = fnSymbol(clazz.name(), method.name(), method.parameterTypes(), allClassesMap);
-                functionMangleMap.putIfAbsent(fnKey(clazz.name(), method.name(), method.parameterTypes(), allClassesMap), mangled);
+                String mangled = NativeSymbolMangling.fnSymbol(clazz.name(), method.name(), method.parameterTypes(), allClassesMap);
+                functionMangleMap.putIfAbsent(NativeSymbolMangling.fnKey(clazz.name(), method.name(), method.parameterTypes(), allClassesMap), mangled);
             }
         }
         for (IRClass clazz : module.classes()) {
@@ -487,42 +422,15 @@ public class NativeBackend implements Backend {
 
 
 
-    void emitNewArray(StringBuilder sb, KofNewArray na) {
-        sb.append("    popq %rdi\n");
-        sb.append("    movl $").append(elementTypeSize(na.elementType())).append(", %esi\n");
-        sb.append("    call kof_array_alloc\n");
-        sb.append("    pushq %rax\n");
-    }
+    void emitNewArray(StringBuilder sb, KofNewArray na) { NativeOpHelpers.emitNewArray(this, sb, na); }
 
-    void emitNewMultiArray(StringBuilder sb, KofNewMultiArray ma) {
-        sb.append("    movl $").append(ma.dims()).append(", %edx\n");
-        sb.append("    movl $").append(elementTypeSize(ma.baseType())).append(", %ebx\n");
-        sb.append("    movl $1, %esi\n");
-        sb.append("    call kof_multi_alloc\n");
-        sb.append("    addq $").append(8 * ma.dims()).append(", %rsp\n");
-        sb.append("    pushq %rax\n");
-    }
+    void emitNewMultiArray(StringBuilder sb, KofNewMultiArray ma) { NativeOpHelpers.emitNewMultiArray(this, sb, ma); }
 
-    void emitArrayLoad(StringBuilder sb, KofArrayLoad al) {
-        sb.append("    popq %rsi\n");
-        sb.append("    popq %rdi\n");
-        sb.append("    call kof_array_get\n");
-        sb.append("    pushq %rax\n");
-    }
+    void emitArrayLoad(StringBuilder sb, KofArrayLoad al) { NativeOpHelpers.emitArrayLoad(this, sb, al); }
 
-    void emitArrayStore(StringBuilder sb, KofArrayStore as) {
-        sb.append("    popq %rdx\n");
-        sb.append("    popq %rsi\n");
-        sb.append("    popq %rdi\n");
-        sb.append("    call kof_array_set\n");
-    }
+    void emitArrayStore(StringBuilder sb, KofArrayStore as) { NativeOpHelpers.emitArrayStore(this, sb, as); }
 
-    void emitArrayLength(StringBuilder sb) {
-        sb.append("    popq %rdi\n");
-        sb.append("    call kof_array_length\n");
-        sb.append("    movslq %eax, %rax\n");
-        sb.append("    pushq %rax\n");
-    }
+    void emitArrayLength(StringBuilder sb) { NativeOpHelpers.emitArrayLength(this, sb); }
 
 
 

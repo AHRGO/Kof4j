@@ -83,7 +83,31 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > gate `check_500` falha no origin em `NativeBackend.java` **645→671 ≥600**
 > CRÍTICO (trazido por `18a64d45` §131/nat, outro agente). Split de `nat/` é
 > da lane nat; a suíte segue verde (gate é style, não teste). Não mexi.
+> **→ RESOLVIDO no bloco abaixo (P0 gate/qualidade, split `02157897`).**
 >
+> **🚨 P0 GATE VERMELHO — `check_500` FALHAVA no CI (13/09 ~07:40, lane
+> gate/qualidade, dono = 192.168.100.15):** o fix §131 (`18a64d45`) cresceu
+> `NativeBackend` 645→**671** (≥600 = CRÍTICO) — o gate `scripts/check_500.sh`
+> (etapa do CI, `ci.yml:41`) falhava a branch para TODOS. **Fix (split, zero
+> mudança de comportamento):** extraídos (a) `NativeSymbolMangling` (92 linhas,
+> só nomeação de símbolo: `fnSymbol`/`fnKey`/`sigMangles`/`classHasOverload`/
+> `sigTag`/`internalOwner`/`sanitizeNameStatic` — a área que o §131 inflou) e
+> (b) os 5 emitters de array p/ `NativeOpHelpers` (`emitNewArray`/`MultiArray`/
+> `Load`/`Store`/`Length`). `NativeBackend` **671→579**. Baseline re-travado
+> (`--update-baseline`, 13 dívidas). **Prova (Q1/regra 3 do congelamento):**
+> **asm nativo BYTE-IDÊNTICO** antes/depois (`diff before.s after.s` = igual,
+> probe com array 1D/2D, overload de classe, overload top-level, estático) +
+> gate 4-módulos **1645 run / 0 falhas / 13 erros (`*Js`=node) / 157 skip** +
+> `check_500` **exit 0**. **NÃO:** `nat/` (refactor meu, não lane GC); UI*;
+> push main; `git config user.*`; Co-authored-by.
+>
+> **⚠️ ACHADO NO CAMINHO (a tratar):** §131 tem residual de **overload de
+> MESMA aridade e tipos diferentes** (`twice(Int)`/`twice(String)`): o call
+> site nativo resolve a vtable só pela ARIDADE → chama o 1º overload → SIGSEGV
+> (JVM/Script/JS corretos). Repro `OV1.kf`. Fix proposto = resolver pelo TIPO
+> do call site (`findVirtualMethodIndex(..., parameterTypes())`) — lane §131
+> (.18/9094); registrar em `known-bugs.md` §131-residual antes de mexer.
+
 > **⏸️ RECUSA de re-disparo (13/09 ~07:15, lane gate/qualidade + docs, dono =
 > 192.168.100.15):** varredura completa feita nesta sessão — (a) **6 células de
 > matriz** criadas para fechar overclaims de alvo-múltiplo (§89/§127-JVM/§131/
