@@ -446,3 +446,24 @@ diferenciais.
 > `mainArgsArePreserved` (roda `0`) — `TranslateTest` **55/55**; gate
 > 4-módulos **1499/0 + 33/0 + 5/0 + 207/0**, BUILD SUCCESS; `check_500` OK
 > **sem dívida de translate**.
+
+> **Estado (13/09 ~20:00, dono = 192.168.100.22): escapes unicode/char, lambda
+> 1-param, enum/record/init/abstract (3ª varredura de probes Q4).**
+> (1) **Escapes de string/char**: o lexer dropava a barra de `\uXXXX` e emitia
+> o texto cru (Kof inválido); `\b`/`\f` e octais iam crus; `char '\n'`/`'\''`/
+> `'\uXXXX'` caíam no fallthrough e eram **dropados**. Agora `decodeEscape` +
+> `Esc(ch,len)` decodificam `\n \t \r \b \f \" \' \\`, `\uXXXX` e octal, em
+> string E char; o emit re-escapa controle `<0x20`/`0x7F` como `\uXXXX` (Kof
+> suporta unicode escape). (2) **Lambda de 1 parâmetro SEM parênteses**
+> (`x -> x + 1`): Kof exige parênteses (PARSE041) → emite `(x) -> x + 1`
+> (antes: `expected ';' but found '->'`). (3) **Enum com construtor/corpo de
+> constante** (`A(1)`, `A { … }`) e **record com corpo** (construtor compacto/
+> accessors) → **gap honesto R6** (antes: pulados em SILÊNCIO = validação
+> sumia). (4) **`static {}` e bloco de instância** → gap R6; **método
+> `abstract`/`native` sem corpo** em classe → gap R6 (antes: dropado silencioso
+> → chamada virava SEM011). Prova: `unicodeAndControlEscapesRoundTrip` (roda
+> `A/true/3/true/true/true/true`), `singleParamLambdaWithoutParensTranslates`,
+> `enumBodyIsHonestGap`, `recordBodyIsHonestGap`, `abstractMethodIsHonestGap`,
+> `instanceInitializerBlockIsHonestGap` (static incluso) — `TranslateTest`
+> **60/60**; gate 4-módulos **1499/0 + 33/0 + 5/0 + 212/0**, BUILD SUCCESS;
+> `check_500` OK (`TranslateExpr` 506 = dívida tolerada ≤599; split planejado).

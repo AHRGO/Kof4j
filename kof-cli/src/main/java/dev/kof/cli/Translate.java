@@ -160,17 +160,27 @@ public final class Translate {
             p.expect("{");
             while (!p.at("}") && !p.at(";")) {
                 constants.add(p.next().text);
-                if (p.at("(")) { p.next(); while (!p.at(")")) p.next(); p.next(); }  // args ignorados (MVP)
-                if (p.at("{")) skipBlock();                                          // corpo de constante ignorado
+                if (p.at("(") || p.at("{")) {
+                    // Argumentos de constante (`A(1)`) ou corpo de constante
+                    // (`A { ... }`) exigem construtor/override — Kof enum é
+                    // só o NOME. Antes era pulado em SILÊNCIO (R6/Q7).
+                    throw new TranslateException(
+                            "enum com construtor/corpo de constante (`" + constants.get(constants.size() - 1)
+                            + "(…)` / `{ … }`) não tem equivalente em Kof "
+                            + "(enum = só constantes) — revisão manual");
+                }
                 if (p.at(",")) p.next();
             }
             if (p.at(";")) {
                 p.next();
-                // Corpo do enum (métodos/campos) — Kof enum não tem corpo
-                // (só constantes). Pular tokens balanceados até o `}`.
-                while (!p.at("}") && !p.at(T.EOF)) {
-                    if (p.at("{")) skipBlock();
-                    else p.next();
+                // `enum E { A, B; }` (só o `;` de fechamento) é no-op; com
+                // conteúdo, Kof enum tem SÓ constantes, sem corpo — antes era
+                // pulado em SILÊNCIO → `E.A.get()`/`E.A.v` sumiam (R6).
+                if (!p.at("}")) {
+                    throw new TranslateException(
+                            "enum com corpo (campos/métodos/construtor) não tem equivalente em Kof "
+                            + "(enum = só constantes; use `class` com `static` se precisar de dados) — "
+                            + "revisão manual");
                 }
             }
             p.expect("}");
@@ -192,8 +202,20 @@ public final class Translate {
                 }
                 p.expect(")");
             }
-            if (p.at("{")) skipBlock();
-            else p.expect(";");
+            if (p.at("{")) {
+                // Corpo do record (construtor compacto, accessors, métodos) —
+                // Kof record é só os componentes. Corpo VAZIO `{}` é no-op;
+                // corpo com conteúdo era pulado em SILÊNCIO → validações/
+                // overrides sumiam (R6, Q4 13/09).
+                if (!p.peek(1).text.equals("}")) {
+                    throw new TranslateException(
+                            "record com corpo (construtor compacto/accessors/métodos) não tem "
+                            + "equivalente em Kof (record = só componentes) — revisão manual");
+                }
+                skipBlock();
+            } else {
+                p.expect(";");
+            }
             out.append("record ").append(name).append(typeParams).append('(')
                .append(String.join(", ", components)).append(")\n");
         }
@@ -325,19 +347,18 @@ public final class Translate {
                 break;
             }
             if (p.at("{")) {
-                // Bloco de inicialização. `static {}`: skip (Kof não tem estado
-                // top-level; consistente com campo estático skipado). Bloco de
-                // INSTÂNCIA `{ ... }` (não-static): roda antes do construtor e
-                // tem efeito — dropá-lo SILENCIOSAMENTE muda o comportamento
-                // (bug latente Q4 13/09) → gap honesto R6.
-                if (!isStatic) {
-                    throw new TranslateException(
-                            "bloco de inicialização de instância `{ ... }` (não-static) roda antes "
-                            + "do construtor — sem equivalente direto em Kof; mova o corpo para o "
-                            + "`constructor(...)` — revisão manual");
-                }
-                skipBlock();
-                return;
+                // Bloco de inicialização. AMBOS têm efeito: o de INSTÂNCIA
+                // roda antes do construtor; o `static {}` inicializa campos
+                // estáticos (que agora EMITIMOS como `static Int X`) — pulá-lo
+                // em silêncio deixaria X com o default errado (R6, Q4 13/09).
+                throw new TranslateException(
+                        (isStatic
+                                ? "bloco de inicialização `static { ... }` não tem equivalente direto em Kof "
+                                  + "(mova p/ o inicializador do campo `static` ou p/ um método)"
+                                : "bloco de inicialização de instância `{ ... }` (não-static) roda antes "
+                                  + "do construtor — sem equivalente direto em Kof; mova o corpo para o "
+                                  + "`constructor(...)`")
+                        + " — revisão manual");
             }
             if (p.at("class") || p.at("interface") || p.at("record") || p.at("enum")) {
                 // Kof não suporta tipo aninhado (SEM042). Hoisting p/ o topo
@@ -380,7 +401,14 @@ public final class Translate {
                     p.next();
                     while (!p.at("{") && !p.at(";") && !p.at(T.EOF)) p.next();
                 }
-                if (p.at(";")) { p.next(); return; } // abstract/native signature
+                if (p.at(";")) {
+                    // Método sem corpo (`abstract`/`native`) em CLASSE: Kof
+                    // não tem — toda função tem corpo. Antes era dropado em
+                    // SILÊNCIO → a chamada virava SEM011 (Kof inválido), Q4.
+                    throw new TranslateException(
+                            "método sem corpo (`abstract`/`native` `" + memberName + "`) em classe "
+                            + "não tem equivalente em Kof (toda função tem corpo) — revisão manual");
+                }
                 List<String> body = parseBlock();
                 emitMethod(isStatic, typeName, className, memberName, typeParams, params, body);
             } else {

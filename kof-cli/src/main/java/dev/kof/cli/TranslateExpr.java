@@ -324,6 +324,17 @@ class TranslateExpr {
                                     + ".…`) não é resolvido pelo translator (imports ignorados) — "
                                     + "revisão manual");
                         }
+                        if (p.at(T.ARROW)) {
+                            // Lambda de um parâmetro SEM parênteses (`x -> expr`):
+                            // Java permite, Kof exige parênteses (probe: `x -> x`
+                            // é PARSE041) → emite `(x) -> expr`. Antes dava
+                            // `expected ';' but found '->'` (bug latente Q4).
+                            p.next(); // ->
+                            String body = p.at("{")
+                                    ? "{ " + String.join(" ", parseStatementBlock()) + " }"
+                                    : parseExpr();
+                            yield "(" + t.text + ") -> " + body;
+                        }
                         yield t.text;
                     }
                 };

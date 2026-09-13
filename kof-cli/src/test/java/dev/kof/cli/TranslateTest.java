@@ -294,11 +294,10 @@ class TranslateTest {
     }
 
     @Test
-    void enumBodyAndMultiDeclTranslate(@TempDir Path dir) throws Exception {
+    void enumMultiDeclTranslate(@TempDir Path dir) throws Exception {
         String kof = Translate.translateJava("""
                 enum Color {
                     RED, GREEN;
-                    int code() { return 1; }
                 }
                 public class ED {
                     public static void main(String[] args) {
@@ -309,11 +308,57 @@ class TranslateTest {
                 """);
 
         assertTrue(kof.contains("enum Color { RED, GREEN }"),
-                "corpo do enum é ignorado (Kof enum é só constantes; antes: expected '{' but found 'int'):\n" + kof);
+                "enum com `;` de fechamento (sem corpo) → só constantes:\n" + kof);
         assertTrue(kof.contains("var x = 1 var y = 2"),
                 "multi-declaração `int x = 1, y = 2` → statements separados (antes: expected ';' but found ','):\n" + kof);
 
         assertCompiles(dir, kof, "3");
+    }
+
+    @Test
+    void enumBodyIsHonestGap() {
+        // Enum com corpo (campos/métodos/construtor): Kof enum é SÓ
+        // constantes — antes o corpo era pulado em SILÊNCIO (perda de
+        // comportamento, Q7) → gap honesto R6 (Q4 13/09).
+        TranslateException e = assertThrows(TranslateException.class, () ->
+                Translate.translateJava("""
+                        enum Color {
+                            RED, GREEN;
+                            int code() { return 1; }
+                        }
+                        """));
+        assertTrue(e.getMessage().contains("enum com corpo") && e.getMessage().contains("revisão manual"),
+                "enum com corpo → gap explícito (R6), foi: " + e.getMessage());
+    }
+
+    @Test
+    void recordBodyIsHonestGap() {
+        // Record com corpo (construtor compacto/accessors/métodos): Kof
+        // record é SÓ componentes — antes era pulado em SILÊNCIO (validação
+        // sumia, Q7) → gap honesto R6. Corpo VAZIO `{}` segue ok.
+        TranslateException e = assertThrows(TranslateException.class, () ->
+                Translate.translateJava("""
+                        record P(int x) {
+                            P { if (x < 0) throw new RuntimeException("neg"); }
+                        }
+                        """));
+        assertTrue(e.getMessage().contains("record com corpo") && e.getMessage().contains("revisão manual"),
+                "record com corpo → gap explícito (R6), foi: " + e.getMessage());
+    }
+
+    @Test
+    void abstractMethodIsHonestGap() {
+        // Método sem corpo (`abstract`) em classe: Kof não tem — antes era
+        // dropado em SILÊNCIO (a chamada virava SEM011) → gap honesto R6.
+        TranslateException e = assertThrows(TranslateException.class, () ->
+                Translate.translateJava("""
+                        abstract class A {
+                            abstract int f();
+                            int g() { return f(); }
+                        }
+                        """));
+        assertTrue(e.getMessage().contains("sem corpo") && e.getMessage().contains("revisão manual"),
+                "método abstract → gap explícito (R6), foi: " + e.getMessage());
     }
 
     @Test
@@ -1085,15 +1130,18 @@ class TranslateTest {
         assertTrue(e.getMessage().contains("revisão manual"),
                 "instance initializer block → gap explícito (R6), foi: " + e.getMessage());
 
-        // `static {}` continua skipado (Kof não tem estado top-level).
-        String kof = Translate.translateJava("""
-                public class SI {
-                    static { System.out.println("boot"); }
-                    void m() { System.out.println(1); }
-                }
-                """);
-        assertTrue(kof.contains("void m()"), "static block skipado, método segue:\n" + kof);
-        assertFalse(kof.contains("boot"), "static block não vaza pro output:\n" + kof);
+        // `static {}` TAMBÉM é gap: agora que o campo `static` é EMITIDO,
+        // pular o bloco deixaria o campo no default (perda silenciosa) — Q4.
+        TranslateException st = assertThrows(TranslateException.class, () ->
+                Translate.translateJava("""
+                        public class SI {
+                            static int X;
+                            static { X = 5; }
+                            void m() { System.out.println(X); }
+                        }
+                        """));
+        assertTrue(st.getMessage().contains("static") && st.getMessage().contains("revisão manual"),
+                "static initializer block → gap explícito (R6), foi: " + st.getMessage());
     }
 
     @Test
@@ -1135,6 +1183,54 @@ class TranslateTest {
         assertTrue(kof.contains("\\\"hi\\\""), "aspas re-escapadas:\n" + kof);
         assertTrue(kof.contains("path\\\\x"), "barra re-escapada:\n" + kof);
         assertCompiles(dir, kof, "say \"hi\"\npath\\x\na\tb");
+    }
+
+    @Test
+    void unicodeAndControlEscapesRoundTrip(@TempDir Path dir) throws Exception {
+        // Escape unicode do Java era decodificado ERRADO: o lexer dropava a
+        // barra e emitia o texto cru (Kof inválido) — bug latente Q4 13/09.
+        // Backspace/formfeed também iam crus. Agora o escape vira char real e
+        // o emit re-escapa controle como escape unicode (Kof suporta).
+        String kof = Translate.translateJava("""
+                public class Uni {
+                    public static void main(String[] args) {
+                        String a = "\\u0041";
+                        String bs = "a\\bb";
+                        char nl = '\\n';
+                        char ua = '\\u0042';
+                        char oc = '\\101';
+                        char q = '\\'';
+                        System.out.println(a);
+                        System.out.println(a == "A");
+                        System.out.println(bs.length);
+                        System.out.println(nl == 10);
+                        System.out.println(ua == 66);
+                        System.out.println(oc == 65);
+                        System.out.println(q == 39);
+                    }
+                }
+                """);
+        assertTrue(kof.contains("\"A\""), "`\\u0041` → `A`:\n" + kof);
+        assertTrue(kof.contains("\\u0008"), "`\\b` re-escapa como `\\u0008`:\n" + kof);
+        assertCompiles(dir, kof, "A\ntrue\n3\ntrue\ntrue\ntrue\ntrue");
+    }
+
+    @Test
+    void singleParamLambdaWithoutParensTranslates() throws Exception {
+        // Java `x -> x + 1` (lambda de 1 param sem parênteses): Kof exige
+        // parênteses (`x -> x` é PARSE041) → emite `(x) -> x + 1`. Antes dava
+        // `expected ';' but found '->'` (bug latente Q4 13/09). Aqui provamos a
+        // FORMA (o tipo do param vem do contexto `map`/alvo, como no
+        // `lambdaTranslates`) — a inferência contextual é da suite do
+        // compilador, não do translator.
+        String kof = Translate.translateJava("""
+                public class Lam {
+                    public static void main(String[] args) {
+                        java.util.function.IntUnaryOperator f = x -> x + 1;
+                    }
+                }
+                """);
+        assertTrue(kof.contains("(x) -> x + 1"), "lambda 1-param ganha parênteses:\n" + kof);
     }
 
     @Test

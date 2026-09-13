@@ -57,13 +57,9 @@ import java.util.List;
                 StringBuilder sb = new StringBuilder();
                 while (j < n && s.charAt(j) != '"') {
                     if (s.charAt(j) == '\\' && j + 1 < n) {
-                        char e = s.charAt(j + 1);
-                        sb.append(switch (e) {
-                            case 'n' -> '\n'; case 't' -> '\t'; case 'r' -> '\r';
-                            case '"' -> '"'; case '\\' -> '\\';
-                            default -> e;
-                        });
-                        j += 2;
+                        Esc esc = decodeEscape(s, j);
+                        sb.append(esc.ch());
+                        j += esc.len();
                     } else {
                         sb.append(s.charAt(j)); j++;
                     }
@@ -73,12 +69,26 @@ import java.util.List;
                 continue;
             }
             if (c == '\'') {
+                // Char literal: simples, com escape (barra-n etc.), unicode
+                // (barra-u + 4 hex) e octal. Antes so o simples era lido.
+                // Antes só `'x'` simples era reconhecido; `'\n'` caía no
+                // `else` e o literal inteiro era descartado (bug latente Q4
+                // 13/09 — o `'` de abertura sumia e o resto virava lixo).
+                if (i + 1 < n && s.charAt(i + 1) == '\\' && i + 2 < n) {
+                    Esc esc = decodeEscape(s, i + 1);
+                    int end = i + 1 + esc.len();
+                    if (end < n && s.charAt(end) == '\'') {
+                        out.add(new Tok(T.CHAR, String.valueOf(esc.ch())));
+                        i = end + 1;
+                        continue;
+                    }
+                }
                 if (i + 2 < n && s.charAt(i + 2) == '\'') {
                     out.add(new Tok(T.CHAR, String.valueOf(s.charAt(i + 1))));
                     i += 3;
-                } else {
-                    i++;
+                    continue;
                 }
+                i++;
                 continue;
             }
             if (Character.isDigit(c)) {
@@ -208,6 +218,50 @@ import java.util.List;
      * `path\x`) — bug latente Q4 13/09. Escapa só o essencial; os demais
      * chars vão crus (Kof aceita raw).
      */
+    /** Escape Java decodificado: o char real + quantos chars de fonte consumiu. */
+    private record Esc(char ch, int len) {}
+
+    /**
+     * Decodifica um escape Java a partir de {@code s.charAt(j) == '\\'}:
+     * barra-n, barra-t, barra-r, barra-b, barra-f, aspas, apostrofo, barra,
+     * unicode (barra-u + 4 hex) e octal. Os escapes sem forma direta em Kof
+     * viram o char de controle e o {@link #escapeKofString} os reemite como
+     * unicode (Kof suporta) — antes eram dropados/errados silenciosamente.
+     */
+    private static Esc decodeEscape(String s, int j) {
+        char e = s.charAt(j + 1);
+        switch (e) {
+            case 'n': return new Esc('\n', 2);
+            case 't': return new Esc('\t', 2);
+            case 'r': return new Esc('\r', 2);
+            case 'b': return new Esc('\b', 2);
+            case 'f': return new Esc('\f', 2);
+            case '"': return new Esc('"', 2);
+            case '\'': return new Esc('\'', 2);
+            case '\\': return new Esc('\\', 2);
+            case 'u': {
+                int hex = 0, k = 0;
+                while (k < 4 && j + 2 + k < s.length()) {
+                    int d = Character.digit(s.charAt(j + 2 + k), 16);
+                    if (d < 0) break;
+                    hex = hex * 16 + d; k++;
+                }
+                return new Esc((char) hex, 2 + k);
+            }
+            default:
+                if (e >= '0' && e <= '7') {
+                    int oct = 0, k = 0;
+                    while (k < 3 && j + 1 + k < s.length()) {
+                        char oc = s.charAt(j + 1 + k);
+                        if (oc < '0' || oc > '7') break;
+                        oct = oct * 8 + (oc - '0'); k++;
+                    }
+                    return new Esc((char) oct, 1 + k);
+                }
+                return new Esc(e, 2);
+        }
+    }
+
     static String escapeKofString(String s) {
         StringBuilder sb = new StringBuilder(s.length() + 8);
         for (int i = 0; i < s.length(); i++) {
@@ -218,20 +272,32 @@ import java.util.List;
                 case '\n' -> sb.append("\\n");
                 case '\t' -> sb.append("\\t");
                 case '\r' -> sb.append("\\r");
-                default -> sb.append(c);
+                default -> {
+                    // Controles sem escape Kof dedicado (`\b`, `\f`, outros)
+                    // → unicode (Kof suporta); antes iam CRUS.
+                    if (c < 0x20 || c == 0x7F) {
+                        sb.append(String.format("\\u%04x", (int) c));
+                    } else {
+                        sb.append(c);
+                    }
+                }
             }
         }
         return sb.toString();
     }
 
     static String escapeKofChar(String s) {
-        return switch (s) {
-            case "\\" -> "\\\\";
-            case "'" -> "\\'";
-            case "\n" -> "\\n";
-            case "\t" -> "\\t";
-            case "\r" -> "\\r";
-            default -> s;
+        if (s.length() != 1) return s;
+        char c = s.charAt(0);
+        return switch (c) {
+            case '\\' -> "\\\\";
+            case '\'' -> "\\'";
+            case '\n' -> "\\n";
+            case '\t' -> "\\t";
+            case '\r' -> "\\r";
+            default -> (c < 0x20 || c == 0x7F)
+                    ? String.format("\\u%04x", (int) c)
+                    : s;
         };
     }
 
