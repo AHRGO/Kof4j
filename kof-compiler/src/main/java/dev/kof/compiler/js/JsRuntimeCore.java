@@ -45,6 +45,15 @@ public final class JsRuntimeCore {
                         children: [],
                         parentNode: null,
                         style: {},
+                        dataset: {},
+                        disabled: false,
+                        classList: {
+                            _set: new Set(),
+                            add(cls) { this._set.add(cls); },
+                            remove(cls) { this._set.delete(cls); },
+                            toggle(cls) { if (this._set.has(cls)) { this._set.delete(cls); return false; } this._set.add(cls); return true; },
+                            contains(cls) { return this._set.has(cls); }
+                        },
                         appendChild(child) {
                             if (child && child.parentNode) child.parentNode.removeChild(child);
                             child.parentNode = this;
