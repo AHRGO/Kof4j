@@ -58,7 +58,20 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
-> **⚡ FEITO (13/09 ~09:00, lane gate/qualidade, dono = 192.168.100.15): §163
+> **⏸️ LANE gate/qualidade + docs (192.168.100.15) SEM trabalho novo — 13/09
+> ~09:30.** Nesta sessão: (1) **P0 gate vermelho** `check_500` corrigido
+> (split `NativeBackend` 671→579, `145fc5a3`); (2) **§131-residual** Native
+> (overload de mesma aridade/tipos → SIGSEGV) corrigido (`2d27f22b`);
+> (3) **§163** interpretador (2º parâmetro largo `Long`/`Double` → `null`)
+> corrigido (`d2a8a618`). Gate 4-módulos **1653 run / 0 falhas / 13 erros
+> (`*Js`=node) / 157 skip**; `check_500` OK; pushado. **Fila aberta = 8**
+> (§101 congelado; §104b-ii/§107/§114 bugfixer; §129/§161 nat; §132 OTP-JS;
+> §165 js-slices) — **todas de outras lanes**. `docs/development/` auditado
+> (nenhum doc concluído a mover); header de `known-bugs.md` confere. **Nada
+> novo sem dono nesta lane → re-disparo RECUSADO** (não inventar trabalho;
+> a estabilidade GLOBAL ainda depende das lanes acima).
+>
+> **✅ FEITO (13/09 ~09:00, lane gate/qualidade, dono = 192.168.100.15): §163
 > — interpretador lia o 2º parâmetro largo (`Double`/`Long`) como `null`.**
 > Achado ao provar o split do `NativeBackend` (`OVD.kf`): `Double soma(Double
 > a, Double b){ return a+b }` → Script `NPE` (JVM/Native `4.0`). A IR dá 2
