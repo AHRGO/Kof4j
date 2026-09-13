@@ -383,7 +383,9 @@ public final class SemExpressionTyper {
                 // SG-005: deref de T? sem narrowing é erro (espelha SEM049 de
                 // method call) — `s.length` em String? seria NPE em runtime.
                 if (recvType instanceof Type.NullableType && sa.diagnostics() != null) {
-                    sa.diagnostics().error("", 0, 0, 0,
+                    SourcePosition faPos = fa.position();
+                    sa.diagnostics().error(faPos != null ? faPos.file() : "",
+                            faPos != null ? faPos.line() : 0, faPos != null ? faPos.column() : 0, 0,
                             "receiver is nullable (T?); narrow first: if (x != null) { x.field }",
                             "SEM049");
                 }

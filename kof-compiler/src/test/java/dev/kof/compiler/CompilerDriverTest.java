@@ -4899,6 +4899,14 @@ class CompilerDriverTest {
         assertFalse(result.success(), "deref de T? sem narrowing deve falhar");
         String diags = result.diagnostics().getDiagnostics().toString();
         assertTrue(diags.contains("SEM049"), "should be SEM049, got: " + diags);
+        // #120: a posição do diagnóstico era hardcoded (arquivo="", linha=0,
+        // coluna=0) — inútil pra localizar o deref no fonte. `s.length` está
+        // na linha 3 (1-indexed, incluindo a linha em branco do text block).
+        Diagnostic sem049 = result.diagnostics().getDiagnostics().stream()
+                .filter(d -> "SEM049".equals(d.code())).findFirst()
+                .orElseThrow(() -> new AssertionError("SEM049 não encontrado: " + diags));
+        assertEquals(3, sem049.line(), "SEM049 deve apontar a linha real do deref, não 0: " + diags);
+        assertTrue(sem049.file().endsWith("N4.kf"), "SEM049 deve apontar o arquivo real, não \"\": " + diags);
     }
 
     @Test
@@ -4914,6 +4922,12 @@ class CompilerDriverTest {
         assertFalse(result.success(), "method call em T? sem narrowing deve falhar");
         String diags = result.diagnostics().getDiagnostics().toString();
         assertTrue(diags.contains("SEM049"), "should be SEM049, got: " + diags);
+        // #120: mesma causa raiz do teste acima, agora no branch de MethodCallExpr.
+        Diagnostic sem049 = result.diagnostics().getDiagnostics().stream()
+                .filter(d -> "SEM049".equals(d.code())).findFirst()
+                .orElseThrow(() -> new AssertionError("SEM049 não encontrado: " + diags));
+        assertEquals(3, sem049.line(), "SEM049 deve apontar a linha real do deref, não 0: " + diags);
+        assertTrue(sem049.file().endsWith("N5.kf"), "SEM049 deve apontar o arquivo real, não \"\": " + diags);
     }
 
     @Test
