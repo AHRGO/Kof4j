@@ -58,7 +58,8 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
-> **⚡ EM CURSO (13/09 ~09:45, lane development/docs — move PLAN-SOLID-500 p/ docs/, dono = 192.168.100.22):** plano FEITO pela lane .18 (F3 498 ≤500, 12 dívidas) mas doc ainda em `docs/development/refactoring/` = mal-classificada (regra: concluído → `docs/`). Escopo: `git mv` p/ `docs/architecture/` + refs (README §1/§4.2, complexity-audit, AGENTS.md lição) + commit/push. Prova esperada: `check_500` OK + 0 refs `development/refactoring` + dir removido.
+> **✅ FEITO (13/09 ~09:45, lane development/docs — move PLAN-SOLID-500 p/ docs/, dono = 192.168.100.22):** plano FEITO pela lane .18 (F3 498 ≤500, 12 dívidas) mas doc ainda em `docs/development/refactoring/` = mal-classificada (regra dos 3 estados: concluído → `docs/`). Concluído por OUTRA instância desta lane no intervalo (`0eba3dfd` move + `fda57342` refs + `0ce7eb5c` DOING — mesma reivindicação EM CURSO acima, trabalho preservado regra 8): `docs/architecture/PLAN-SOLID-500.md` + refs (README §1/§4.2, complexity-audit, AGENTS.md lição). Verificado no HEAD: `docs/development/refactoring/` removido; `check_500` OK (só aviso SemExpressionTyper 579 tolerado); refs restantes = só históricas (`development/refactoring/` no header do movido + AGENTS.md lição de escrita).
+> **PRÓXIMO PASSO:** re-auditar `docs/development/` por próxima doc concluída mal-classificada ou `.md` solto sem dono; se nada → RECUSAR (estabilidade parcial — fila 8 itens de outras lanes).
 > **NUNCA:** `nat/` lane GC viva; fila §101/§104b-ii/§107/§114/§129/§132/§161/§165 (donos/bloqueios); push main.
 
 > **✅ FEITO (13/09 ~12:40, lane development/.18 — F3 FECHADA, PLAN-SOLID-500
