@@ -421,6 +421,25 @@ Fase E  Kof Decompiler          (gerar Kof source)
 > do do-while só roteia 0x99-0xa4, o mapeamento seria código morto
 > (`do{}while(x==null)` seguiria stubando honesto). Registrado p/ não refazer.
 >
+> **DEGRAU 3a TENTADO E REJEITADO — fallback de expressão na `blockCondition`
+> (13/09, dono = 192.168.100.17, hipótese negativa registrada):** ROI medido
+> (`Arity1`/`Why0` na máquina REAL `linearReturn`): dos ~1990 candidatos
+> if-sem-else com prefixo multi-insn, 816 "avaliam a 1 valor" SEM guardas de
+> estrutura. Implementei a máquina exposta (`machineRun` + flag `stopped`,
+> byte-idêntica ao `linearReturn` no round-trip: DriftCheck = baseline 4) e o
+> fallback com guardas (sem ret/throw no prefixo, pilha final exata =
+> aridade, tipos I/L). **`diamondJoinShapesStayHonestStub` quebrou (63/1):**
+> o fixture tem loop cujo TESTE tem cálculo fundido no header pelo javac —
+> recuperar a cond sem recuperar o incremento do `for` emite `while` que
+> PERDE o incremento = código errado compilável, o trap 3 exato. A
+> aridade-exata do degrau 2a é guard de **estrutura**, não só da expressão:
+> teste com cálculo em header de loop SINALIZA `for` dessugarado, cujo corpo
+> exige o pós-dominador. Revertido o código inteiro (árvore = `edc4728c`).
+> Fica travado: QUALQUER fallback de cond precisa de gate `!isLoopHeader` por
+> construção, e mesmo assim só depois do walker com pós-dominador (os
+> 404+160+228 "default@0xc0/0xc1/0x3a" do `Why0` = stores e checkcast no
+> caminho — shape que nunca é só expressão).
+>
 > **Estágio 3 (13/09, dono = 192.168.100.17): interna do MESMO pacote.**
 > Categorização reflexiva dos 89 rejeitados (harness `RecCat`): **31** eram
 > só `implements Outer$Inner` do mesmo pacote (cluster `JsIr$*` com 43
