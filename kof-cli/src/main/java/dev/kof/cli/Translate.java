@@ -201,6 +201,12 @@ public final class Translate {
                 // method or constructor
                 List<String> params = parseParams();
                 boolean isConstructor = memberName.equals(className);
+                // `throws E1, E2` — Kof não declara throws (exceções são
+                // Strings, sempre propagáveis) → consumir e descartar.
+                if (p.at("throws")) {
+                    p.next();
+                    while (!p.at("{") && !p.at(";")) p.next();
+                }
                 if (p.at(";")) { p.next(); return; } // abstract/native signature
                 List<String> body = parseBlock();
                 emitMethod(isStatic, isConstructor, typeName, memberName, params, body);

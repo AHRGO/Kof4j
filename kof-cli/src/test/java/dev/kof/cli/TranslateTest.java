@@ -239,6 +239,31 @@ class TranslateTest {
     }
 
     @Test
+    void throwsClauseIsDropped(@TempDir Path dir) throws Exception {
+        String kof = Translate.translateJava("""
+                public class TH {
+                    static void fail() throws java.io.IOException {
+                        throw new RuntimeException("boom");
+                    }
+                    public static void main(String[] args) {
+                        try {
+                            fail();
+                        } catch (RuntimeException e) {
+                            System.out.println("caught");
+                        }
+                    }
+                }
+                """);
+
+        assertTrue(kof.contains("void fail() {"),
+                "`throws IOException` deve ser descartado (Kof não declara throws; antes: expected '{' but found 'throws'):\n" + kof);
+        assertFalse(kof.contains("throws"), "sem cláusula throws no output:\n" + kof);
+        assertTrue(kof.contains("throw \"boom\""), "throw new Exc(msg) → throw msg:\n" + kof);
+
+        assertCompiles(dir, kof, "caught");
+    }
+
+    @Test
     void castAndInstanceofTranslate(@TempDir Path dir) throws Exception {
         String kof = Translate.translateJava("""
                 public class CI {
