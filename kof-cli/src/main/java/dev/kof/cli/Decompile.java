@@ -204,6 +204,35 @@ public final class Decompile {
         sb.append('\n');
 
         String simpleName = simpleName(ir.thisClass);
+        // Fase E (fila 13/09): Java record PURO → `record Nome(T a, T b)` (o
+        // frontend gera ctor/accessors/equals/hashCode/toString). Os corpos dos
+        // 3 sintéticos NÃO existem no bytecode (invokedynamic ObjectMethods) —
+        // no esqueleto `class X extends Record` cada um era um stub silencioso
+        // (~215 records no corpus = a maior fonte única de stubs). Qualquer
+        // desvio do shape (interface→PARSE007, método extra, nome reservado)
+        // → null → cai no esqueleto de hoje (zero-drift por construção).
+        List<dev.kof.compiler.parser.ClassFileParser.FieldInfo> comps =
+                BytecodeRecords.pureRecordComponents(ir);
+        if (comps != null) {
+            sb.append("record ").append(simpleName).append('(');
+            for (int k = 0; k < comps.size(); k++) {
+                if (k > 0) sb.append(", ");
+                var f = comps.get(k);
+                String ctype = f.signature != null
+                        ? methodKofType(dev.kof.compiler.Type.describe(
+                                dev.kof.compiler.Type.fromJvmSignature(f.signature)))
+                        : fieldKofType(f.descriptor);
+                recordSignatureUses(fieldTypeTree(f.descriptor, f.signature), scope);
+                sb.append(ctype).append(' ').append(f.name);
+            }
+            sb.append(")\n\n");
+            if (scope != null) {
+                var lines = new StringBuilder();
+                for (String imp : scope.usedImports()) lines.append("import ").append(imp).append('\n');
+                if (lines.length() > 0) sb.insert(importPos, lines.toString());
+            }
+            return sb.toString();
+        }
         sb.append("class ").append(simpleName);
         if (ir.superClass != null && !ir.superClass.equals("java/lang/Object")) {
             sb.append(" extends ").append(resolveSuperName(ir.superClass, scope));

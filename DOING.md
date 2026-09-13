@@ -58,6 +58,32 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (13/09 ~06:00, lane development — cluster legado/decompiler Fase
+> E, dono = 192.168.100.17): Java record → `record` Kof no `kof decompile`.**
+> A fila Fase E de 09/09 estava medida como **obsoleta** (o caveat do
+> blockerSink, §caveat, é literal: contava o path de expressão que o de
+> statements recupera). Re-medí **por método**: 215/686 classes (31%) são Java
+> record; os 3 corpos sintéticos (`toString/hashCode/equals` =
+> `invokedynamic ObjectMethods` — corpo não existe no bytecode) eram ~195
+> stubs silenciosos, a **maior fonte única** do corpus. Novo
+> `BytecodeRecords.pureRecordComponents` detecta record PURO por shape de
+> bytecode (zero mudança no `ClassFileParser` compartilhado — usa
+> `ir.attributes["Record"]`); `Decompile.java` emite `record Nome(T a, ...)`.
+> Fallback honesto (zero-drift por construção): `implements`→PARSE007, nome
+> reservado→PARSE015, método extra, ≠1 `<init>` → esqueleto atual. Prova:
+> **+5 testes DecompileTest (50/50)** — puro/genérico round-trip compila,
+> método-extra/reservado/interface→skeleton; corpus **1843→1648 stubs (−195)**,
+> 0 crash; **suíte 1649/0** (compiler 1471+script 31+c 5+cli 142). Commits:
+> código+teste+doc DECOMPILER.md no mesmo commit. PRÓXIMO da fila (re-medida,
+> Med2/Med3): `astore`-com-store e joins estruturais de loop (Fase C) — NÃO
+> mais instanceof/checkcast (já tratados via índice).
+> **NÃO:** `nat/` (lane GC/§131 viva); `instanceof/checkcast` (tratados).
+>
+> **⚠️ registrado (condição de parada 3 — NÃO é desta lane, NÃO corrigi):** o
+> gate `check_500` falha no origin em `NativeBackend.java` **645→671 ≥600**
+> CRÍTICO (trazido por `18a64d45` §131/nat, outro agente). Split de `nat/` é
+> da lane nat; a suíte segue verde (gate é style, não teste). Não mexi.
+>
 > **⏸️ RECUSA de re-disparo (13/09 ~07:15, lane gate/qualidade + docs, dono =
 > 192.168.100.15):** varredura completa feita nesta sessão — (a) **6 células de
 > matriz** criadas para fechar overclaims de alvo-múltiplo (§89/§127-JVM/§131/

@@ -1301,6 +1301,83 @@ class DecompileTest {
         assertTrue(kof.contains("now()"), "currentTimeMillis vira now():\\n" + kof);
     }
 
+    @Test
+    void recoversPureJavaRecordAsKofRecord(@TempDir Path dir) throws Exception {
+        Path javaFile = dir.resolve("Point.java");
+        Files.writeString(javaFile, """
+                public record Point(int x, int y) { }
+                """);
+        runJavac(javaFile, dir);
+        String kof = Decompile.decompile(dir.resolve("Point.class"));
+        assertTrue(kof.contains("record Point(Int x, Int y)"), "record puro → record Kof:\n" + kof);
+        assertFalse(kof.contains("extends Record"), "sem esqueleto class+extends:\n" + kof);
+        assertFalse(kof.contains("body not recovered"), "sem stub sintético:\n" + kof);
+        Path out = dir.resolve("Point.kf");
+        Files.writeString(out, kof);
+        CompilationResult result = new CompilerDriver().compile(out, dir.resolve("out"), Target.JVM);
+        assertTrue(result.success(), "decompiled deve compilar:\n" + kof + "\n" + result.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void recoversPureRecordWithGenericsAndObjects(@TempDir Path dir) throws Exception {
+        Path javaFile = dir.resolve("Bag2.java");
+        Files.writeString(javaFile, """
+                import java.util.List;
+                public record Bag2(List<String> items, String label) { }
+                """);
+        runJavac(javaFile, dir);
+        String kof = Decompile.decompile(dir.resolve("Bag2.class"));
+        assertTrue(kof.contains("record Bag2(List<String> items, String label)"),
+                "componentes genéricos EXACT:\n" + kof);
+        assertFalse(kof.contains("body not recovered"), "sem stub:\n" + kof);
+        Path out = dir.resolve("Bag2.kf");
+        Files.writeString(out, kof);
+        CompilationResult result = new CompilerDriver().compile(out, dir.resolve("out"), Target.JVM);
+        assertTrue(result.success(), "decompiled deve compilar:\n" + kof + "\n" + result.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void extraMethodInRecordKeepsHonestSkeleton(@TempDir Path dir) throws Exception {
+        Path javaFile = dir.resolve("Twice.java");
+        Files.writeString(javaFile, """
+                public record Twice(int x) {
+                    public int twice() { return x * 2; }
+                }
+                """);
+        runJavac(javaFile, dir);
+        String kof = Decompile.decompile(dir.resolve("Twice.class"));
+        // método extra (não-acessor) → não-puro → esqueleto de hoje (zero drift)
+        assertTrue(kof.contains("class Twice extends Record"), "extra → skeleton atual:\n" + kof);
+        assertTrue(kof.contains("Int twice() = (this.x * 2)"), "método extra ainda recuperado como body:\n" + kof);
+    }
+
+    @Test
+    void reservedComponentNameKeepsHonestSkeleton(@TempDir Path dir) throws Exception {
+        Path javaFile = dir.resolve("ValR.java");
+        Files.writeString(javaFile, """
+                public record ValR(int val) { }
+                """);
+        runJavac(javaFile, dir);
+        String kof = Decompile.decompile(dir.resolve("ValR.class"));
+        // `val` é reservada no frontend (PARSE015) → emitir record DRIFTARIA;
+        // deve permanecer no skeleton atual (honesto, compila).
+        assertTrue(kof.contains("class ValR extends Record"), "nome reservado → skeleton atual:\n" + kof);
+    }
+
+    @Test
+    void recordWithInterfaceKeepsHonestSkeleton(@TempDir Path dir) throws Exception {
+        Path iface = dir.resolve("Named.java");
+        Files.writeString(iface, "public interface Named { String name(); }\n");
+        Path javaFile = dir.resolve("NamedR.java");
+        Files.writeString(javaFile, """
+                public record NamedR(String name) implements Named { }
+                """);
+        runJavac(java.util.List.of(iface, javaFile), dir);
+        String kof = Decompile.decompile(dir.resolve("NamedR.class"));
+        // `record X implements Y` → PARSE007 no frontend (probe 13/09) → skeleton atual
+        assertTrue(kof.contains("class NamedR extends Record"), "implements → skeleton atual:\n" + kof);
+    }
+
     private void runJavac(Path javaFile, Path dir) throws IOException, InterruptedException {
         runJavac(java.util.List.of(javaFile), dir);
     }
