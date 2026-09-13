@@ -5447,3 +5447,33 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
 - **Arquivos:** `kof-compiler/src/main/java/dev/kof/compiler/ExpressionBinaryLowerer.java`,
   `.../ExpressionTyper.java`, `.../js/JsCallEmitter.java`, `.../js/JsLongEmitter.java`
   (colaborador de LONG/shift extraído p/ manter `JsCallEmitter` ≤500).
+
+### 168. Residual #126: célula `jsondec-map` da matriz deref `Map.get()` sem narrow → SEM049 (gate vermelho real) — ✅ CORRIGIDO 13/09 (migração do programa da célula ao congelado §87)
+
+- **Sintoma (medido, não inferido):** após `61495f69` (#126: `json` ganha
+  handler em `MemberCallNamespaces.inferStatic`), `ConformanceMatrixTest.
+  conformanceJson` passou a FALHAR no **JVM compile**:
+  `Diagnostic[ERROR, line=5, column=28, receiver is nullable (T?); narrow
+  first, code=SEM049]` em `println(m.get("1").name)`. A/B por worktree:
+  pai `5a116284` → célula 1/1 VERDE; `61495f69` → 1/1 VERMELHO. Suíte
+  HEAD antes deste fix: 1482 run / **1 fail** (só ConformanceMatrixTest).
+- **Causa raiz (não é bug de código — é exposição de programa ilegal):**
+  §126 ensinou o `SemanticAnalyzer` a conhecer `json`, então
+  `json.decode<Map<String,CardText>>(…)` agora inference `m` corretamente e
+  `m.get("1")` sai `CardText?` (congelado §87/SG-008: `get()` devolve `V?`
+  sempre). A célula SEMPRE teve deref sem narrow — só não era pega porque o
+  tipo de `m` era desconhecido antes (o lowering JVM resolvia no fim). O
+  golden (`2\nMagician`) está CORRETO; o **programa** é que violava o
+  congelado. Proibido "consertar" relaxando a asserção ou stubando (portão
+  Q0/Q5): a migração correta é narrow no programa.
+- **Menor repro:** `var m = json.decode<Map<String,CardText>>(…); println(m.get("1").name)`
+  → SEM049; `var c = m.get("1"); if (c != null) println(c.name)` → compila
+  (medido fora do harness com `CompilerDriver.compile(..., Target.JVM)`).
+- **Correção:** narrow adicionado no programa da célula
+  (`ConformanceMatrixTest:1591`, `jsondec-map`); golden e targets
+  inalterados. Não mexi no handler do §126 (está certo — só tornou o erro
+  visível). Suíte completa após o fix: **1682 run / 0 falhas / 0 erros /
+  5 skip** (os 5 = DB externo; node presente, JS roda).
+- **Arquivo:** `kof-compiler/src/test/java/dev/kof/compiler/ConformanceMatrixTest.java`
+  (só a célula). Aquisição: 13/09, dono = 192.168.100.17 (achado ao rodar o
+  gate para fechar §166; atribuído por A/B, não por memória).

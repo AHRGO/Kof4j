@@ -1593,7 +1593,8 @@ class ConformanceMatrixTest {
                 main() {
                     var m = json.decode<Map<String, CardText>>("{\\"0\\":{\\"name\\":\\"Fool\\",\\"upright\\":\\"fresh\\"},\\"1\\":{\\"name\\":\\"Magician\\",\\"upright\\":\\"focus\\"}}")
                     println(m.size)
-                    println(m.get("1").name)
+                    var c = m.get("1")
+                    if (c != null) { println(c.name) }
                 }
                 """, "2\nMagician", Set.of("native"), tempDir);
         // §103.1 (#103): decode<Map<String,String>> — valor escalar (String),
