@@ -5477,3 +5477,75 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
 - **Arquivo:** `kof-compiler/src/test/java/dev/kof/compiler/ConformanceMatrixTest.java`
   (só a célula). Aquisição: 13/09, dono = 192.168.100.17 (achado ao rodar o
   gate para fechar §166; atribuído por A/B, não por memória).
+## §170 — `json.encode`/`json.decode` não validam aridade: check passa e o bytecode sai inválido (VerifyError) — Issue #126 (PublioSantos, 13/09) ✅ CORRIGIDO 13/09 (lane issues 9094)
+
+- **Sintoma:** `json.encode(x, 4)`, `json.encode()` e `json.decode("x")` (sem
+  type-arg) passavam no `kof check` e quebravam em runtime com
+  `java.lang.VerifyError: Operand stack underflow` (JVM) / undefined reference
+  (Native). Os outros namespaces (`strings.escapeJson`, `time.daysInMonth`) já
+  rejeitavam aridade errada no check com `SEM025`.
+- **Menor repro:** `record No(String t)\nmain() { println(json.encode(No("x"), 4)) }`
+  → check "no errors"; `java -cp out Default.Main` → VerifyError bci@6
+  (`invokevirtual` com pilha vazia). Medido no HEAD da beta antes do fix.
+- **Causa raiz:** o namespace `json` só era despachado no lowering JVM
+  (`MethodCallNamespaces.inferStatic` + `ExpressionJsonCallLowerer`, guard
+  `arguments().size() == 1`). O **caminho semântico** (`MemberCallNamespaces`,
+  usado por `check`) não tinha nenhum `if` para `json` — a chamada caía em
+  UNKNOWN sem diagnóstico. Com aridade errada, o lowerer não emitia nada e o
+  `println` consumia slot inexistente.
+- **Correção:** branch `json` em `MemberCallNamespaces.inferStatic` validando o
+  contrato fixo (encode 1 arg; decode 1 arg + type-arg) — inválido → `SEM025`
+  com a forma correta. **Caso VÁLIDO devolve `null`** (continua a cadeia
+  exatamente como antes): dar tipo concreto ao `decode` mudaria o narrowing a
+  jusante e quebraria `l.get(1).x` (regressão `ConformanceMatrixTest.conformanceJson`
+  — `List<T>.get` é `T?` no semântico; pegamos isso ANTES do push, suíte).
+- **Residual conhecido:** a primeira versão pushada deste fix (`61495f69`) deu
+  tipo concreto ao `decode` no semântico e expôs o deref sem narrow da célula
+  `jsondec-map` (SEM049) — registrado e CORRIGIDO no §168 (dono 192.168.100.17);
+  o refin `return null` (caso válido) entrou em HEAD via `3ab4c99e` e elimina a
+  raiz; o narrow da célula fica como programa-congelado-§87 correto (belt).
+- **Prova:** `SemanticResolutionTest.wrongArityOnJsonNamespace` (4 casos
+  rejeitados + encode/decode corretos verdes) e `ConformanceMatrixTest#conformanceJson`
+  (a célula que a primeira versão minha QUEBROU, agora verde). Repr do #126
+  agora: `: error: Cannot resolve method 'encode' on namespace 'json' — use
+  json.encode(x) (1 arg) [SEM025]`. Suíte compiler 1483/0/156. Cross-target: o
+  check é compartilhado IR, vale p/ os 4 alvos.
+- **Nota de processo (honesto):** o fix entrou em HEAD pela mão da irmã 9093
+  (`git add -A` em árvore compartilhada capturou meus `MemberCallNamespaces`
+  +`SemanticResolutionTest` nos commits `3ab4c99e`), após minha primeira versão
+  (`61495f69`) ter a regressão. Registro aqui para rastreabilidade #126.
+
+## §171 — `synchronized` é aceito mas não chega ao bytecode (sem ACC_SYNCHRONIZED) — Issue #125 (PublioSantos, 13/09) ✅ DIAGNÓSTICO FEITO 13/09 (lane issues 9094) — warning SEM091; non-goal ratificado NÃO muda
+
+- **Sintoma:** `synchronized Int somar(...)` (e `volatile`/`transient`/`native`)
+  passava no check e rodava, mas o `.class` saía sem `ACC_SYNCHRONIZED`
+  (`javap`: Kof `0x0001` vs Java `0x0021`). Contador "synchronized" compartilhado
+  não tinha proteção — falsa sensação de segurança.
+- **Menor repro:** `class C { synchronized Int f() { return 1 } }\nmain() { println(C().f()) }`
+  → check "no errors"; `javap -v` do método: `flags: ACC_PUBLIC` (sem
+  `ACC_SYNCHRONIZED`). Medido na beta.
+- **Causa raiz:** `parseModifiers` (`TypeDeclarations.java:49`) aceita o token e
+  guarda como string, mas `AccessFlags` **não define a constante** SYNCHRONIZED
+  (0x0020 é SUPER) e `CompilerTypeSupport.computeAccess` cai em `default -> 0` —
+  o modificador é **descartado em silêncio**.
+- **Decisão (regra 6 — NÃO é minha):** `synchronized`/`volatile` são
+  **non-goals ratificados** na superfície da linguagem
+  (`concurrency-memory-model.md §5`: "Kof não expõe mecanismo — Channel é a
+  abstração"; `specification-gaps.md:365`). Implementar `ACC_SYNCHRONIZED` na JVM
+  seria divergir dos outros 3 targets e **violar o memory model**. Então o bug
+  NÃO é "falta o flag" — é o **silêncio**.
+- **Correção (R6 — nunca silencioso):** `warnMechanismModifiers`
+  (`CompilerClassLowering`, chamado em lowerField+lowerMethodInner) emite
+  **warning não-fatal SEM091** com a posição do membro nomeando o substituto
+  (spawn/await/Channel). Não-fatal preserva retrocompatibilidade (regra 2 — o
+  que compila hoje continua compilando).
+- **Prova:** `SemanticResolutionTest.mechanismModifierWarnsButStaysGreen` —
+  synchronized/volatile avisam, o programa compila (warning não quebra), e
+  código limpo não polui (0 SEM091). CLI: `C.kf:8:42: warning: ... [SEM091]`,
+  build jvm ok. Suíte compiler 1483/0.
+- **Remanescente (não-alvo deste fix):** (i) o off-by-one de posição do `volatile`
+  de campo (reporta a linha do próximo membro) é quirk pré-existente de
+  `ctx.pos()` pós-`advance` em `ClassMemberParser` — o caso da issue (método) é
+  exato; registrado, é face separada. (ii) se a mantenedora quiser que
+  `synchronized` DEIXE de ser non-goal e vire ACC_SYNCHRONIZED + paridade cross
+  (monitores no Native), é decisão de design com bump — planejar, não editar.

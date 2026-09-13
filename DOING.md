@@ -58,7 +58,34 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ---
 
-## PRÓXIMO PASSO (re-dispacho lê isto)
+ ## PRÓXIMO PASSO (re-dispacho lê isto)
+
+> **✅ FEITO (13/09 ~13:40, lane issues 9094 — dono = esta sessão): #126 +
+> #125 (reportes PublioSantos, 0.3.23-beta).** **#126** (`json.encode(x,4)`
+> passava no check → VerifyError): causa raiz = o caminho SEMÂNTICO
+> (`MemberCallNamespaces`) não conhecia `json` (só o lowering JVM); fix valida
+> aridade → SEM025 com a forma correta, caso válido devolve `null` (não muda
+> narrowing — a 1ª versão minha deu tipo concreto ao `decode` e QUEBROU
+> `conformanceJson` (`l.get(1).x` = deref de `P?`); achado na suíte ANTES do
+> push, Q4). **#125** (`synchronized` sem ACC_SYNCHRONIZED): non-goal
+> RATIFICADO (concurrency-memory-model §5) — regra 6 proíbe implementar o
+> flag; o bug era o **silêncio** (R6) → warning **SEM091** não-fatal com
+> posição + substituto (Channel/spawn) em lowerField/lowerMethodInner
+> (retrocompat preservada). Prova: `SemanticResolutionTest`
+> +`wrongArityOnJsonNamespace` +`mechanismModifierWarnsButStaysGreen` (27/27);
+> suíte compiler **1483/0/156**; CLI re-prodo: repros → SEM025/SEM091, código
+> limpo verde. **Colisão registrada (honesto):** a 9093 fez `git add -A` na
+> árvore compartilhada e meus 4 arquivos entraram nos commits dela
+> (`61495f69`→`3ab4c99e`, todos na beta, pushados) — nada perdido, histórico
+> compartilhado NÃO reescrito; §168/§169 no known-bugs com a nota. **Falha
+> `TranslateTest` (2) na suíte kof-cli = WIP da lane tradutor (.22, dono
+> 192.168.100.22, arquivos `Translate*` sujos na árvore) — NÃO tocar.**
+> **PRÓXIMO PASSO:** fila da lane 9094 zerada de novo (issues/PRs abertos
+> vazios, CI histórico); #125/#126 fechadas com comentário+release note. Se o
+> watcher/heartbeat chamar sem item novo → **RECUSAR** (estável). Reativar só
+> com `scripts/issue-watcher.sh start all 5 ses_f69c2cb03ffe2zDYCqW7fesphi`.
+> **NUNCA:** `Translate*`/`decompile/` (.22), `nat/`+interp (9093), pow (.15),
+> push main, fechar sem prova.
 
 > **✅ FEITO (13/09 ~12:10, lane bugs-and-gaps, dono = 192.168.100.15):
 > §166 CORRIGIDO (opção (a) — baseline re-medido) + §167 (bitwise/shift Long).**
