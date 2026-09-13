@@ -15,6 +15,14 @@
 > no vim; `kof-mode.el` com auto-mode-alist no emacs; `filetypes.kof` com
 > build/run no geany; `kof.nanorc` só syntax no nano) — **21/21**. Nenhum
 > provider toca o ambiente real (§24, DetectContext fake).
+> **Fix de contrato §6 (13/09):** `kof editor` sem subcomando era **usage**,
+> divergindo do §6 ("alias de `detect`"); corrigido + teste
+> (`bareEditorIsDetectAliasAndHelpShowsUsage`). `update` ganhou teste de
+> re-sincronização (`updateResyncsInstalledIntegrations`) — **23/23**.
+> **`workspace/executeCommand` (degrau 0 opcional, P2) permanece adiado:**
+> o VS Code delega `Kof: Build/Run/Test` à CLI em terminal (§15/§20), então
+> a capability não é necessária ao release gate; adicioná-la exige split do
+> `LspServer` (501 linhas, no ratchet). Registrar como gap separado.
 > **Origem:** briefing "KOF EDITOR INTEGRATION" (infra oficial de integração de
 > editores/IDEs). **Escopo desta doc:** especificação + ordem de implementação.
 > **A implementação é DEPOIS** — este documento é o contrato.

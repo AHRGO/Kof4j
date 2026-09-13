@@ -126,6 +126,26 @@ class EditorIntegrationTest {
     }
 
     @Test
+    void bareEditorIsDetectAliasAndHelpShowsUsage() {
+        // §6: `kof editor` (sem subcomando) = alias de `detect`.
+        var ctx = fake(Set.of("code"), Map.of("code", "1.102.3"), Set.of(".vscode"));
+        ByteArrayOutputStream bo = new ByteArrayOutputStream();
+        PrintStream out = new PrintStream(bo, true, StandardCharsets.UTF_8);
+        BufferedReader in = new BufferedReader(new StringReader(""));
+
+        assertEquals(0, CmdEditor.run(new String[]{"editor"}, ctx, null, in, out, out));
+        String bare = bo.toString(StandardCharsets.UTF_8);
+        assertTrue(bare.contains("✓ Visual Studio Code"), "bare = detect: " + bare);
+        assertFalse(bare.contains("usage: kof editor"), "bare NÃO mostra usage: " + bare);
+
+        // --help continua mostrando o uso (não detecta)
+        bo.reset();
+        assertEquals(0, CmdEditor.run(new String[]{"editor", "--help"}, ctx, null, in, out, out));
+        String help = bo.toString(StandardCharsets.UTF_8);
+        assertTrue(help.contains("usage: kof editor"), "help mostra usage: " + help);
+    }
+
+    @Test
     void unknownSubcommandFails() {
         var ctx = fake(Set.of(), Map.of(), Set.of());
         ByteArrayOutputStream bo = new ByteArrayOutputStream();
@@ -330,6 +350,24 @@ class EditorIntegrationTest {
         String c = Files.readString(rc);
         assertTrue(c.contains("syntax") && c.contains(".kof"), "filetype *.kof: " + c);
         assertTrue(c.contains("color"), "syntax highlighting: " + c);
+    }
+
+    @Test
+    void updateResyncsInstalledIntegrations(@TempDir Path home) throws IOException {
+        var ctx = fake(Set.of("nvim"), Map.of("nvim", "NVIM v0.10.0"), Set.of());
+        ByteArrayOutputStream bo = new ByteArrayOutputStream();
+        PrintStream out = new PrintStream(bo, true, StandardCharsets.UTF_8);
+        CmdEditor.run(new String[]{"editor", "install", "neovim"}, ctx, home,
+                new BufferedReader(new StringReader("")), out, out);
+        assertTrue(EditorInstaller.isInstalled(home, "neovim"), "pré-condição: instalado");
+
+        // update re-sincroniza as instaladas (não mexe nas ausentes)
+        bo.reset();
+        assertEquals(0, CmdEditor.run(new String[]{"editor", "update"}, ctx, home,
+                new BufferedReader(new StringReader("")), out, out));
+        String s = bo.toString(StandardCharsets.UTF_8);
+        assertTrue(s.contains("Neovim"), "reporta a instalada: " + s);
+        assertFalse(EditorInstaller.isInstalled(home, "vscode"), "não instala as ausentes");
     }
 
     // ---- degrau 11: hook pós-instalador (§13) -----------------------------
