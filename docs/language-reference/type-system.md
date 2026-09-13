@@ -263,9 +263,13 @@ representação 1/0, mas é implementation-defined — §3.1).
 
 - **Construtores**: sobrecarga **por aridade** (`ConstructorSet`,
   `SymbolTable.java:47-58`). Aridade errada → `SEM023`.
-- **Métodos**: **NÃO há sobrecarga real** — `define` sobrescreve homônimos;
-  `resolveInHierarchy` retorna o único `MethodSymbol`. `checkArgTypes` valida
-  aridade/tipos do escolhido mas **não seleciona entre candidatos**.
+- **Métodos**: **sobrecarga real por assinatura** (§131 fechado 13/09,
+  `18a64d45`): homônimos com aridade/tipos diferentes coexistem via
+  `MethodSet` (merge no `define`, `select(argCount, argTypes)`); o typer
+  (`MemberCallTyper`) escolhe o candidato e registra em `resolvedMethods()`.
+  Nos backends: descritor JVM por assinatura, símbolo/slot próprio por
+  overload no Native, mangle de assinatura no JS. Sem candidato compatível →
+  `SEM013`/`SEM057`.
 - **Default parameters** geram overloads sintéticos por aridade decrescente no
   lowering (`lowerFunctionDefaults`).
 - **Dispatch**: `KofCallKind {INSTANCE, STATIC, CONSTRUCTOR, FUNCTION,

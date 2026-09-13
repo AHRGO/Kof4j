@@ -38,7 +38,10 @@
 > backend referencia o candidato pela ASSINATURA (descritor JVM, símbolo
 > sufixado no Native, nome sufixado no JS, dispatch por tipo no interpretador)
 > — saída byte-idêntica nos 6 targets (`TopLevelOverloadE2ETest` 5/5; §136,
-> contrato ratificado na §135). Sobrecarga de MÉTODO de classe (§131) segue aberta — outra máquina.
+> contrato ratificado na §135). **Sobrecarga de MÉTODO de classe (§131)
+> FECHADA 13/09** (`18a64d45`, 4 backends: `MethodSet` na symtable +
+> seleção por assinatura no typer + slot/símbolo próprio por overload no
+> Native + mangle JS; `CoreRegressionE2ETest.methodOverloadByArity`).
 
 ---
 

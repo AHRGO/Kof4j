@@ -773,7 +773,9 @@ Int g(Int x) { return x }                    // sobrecarga top-level (0.4.0,
 Int g(Int x, Int y) { return x + y }         // oracle JVM): assinatura difere
 // ❌ duplicata EXATA → SEM047; só trocar o RETORNO NÃO é sobrecarga (SEM047)
 // chamada ambígua → SEM057 (dê tipo ao argumento p/ escolher)
-// sobrecarga de MÉTODO de classe ainda NÃO existe (§131, aberto)
+// sobrecarga de MÉTODO de classe ✅ existe (0.4.0, §131 13/09): mesmo nome,
+// assinaturas diferentes (aridade/tipos) na mesma classe coexistem nos 4
+// backends; o typer seleciona por aridade+compatibilidade
 ```
 
 ### Variáveis (só dentro de funções/corpos — **não existe top-level `val`/`var`/`let`**)

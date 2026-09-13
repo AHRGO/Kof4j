@@ -4303,8 +4303,8 @@ statement-switch na mesma taxa). Reprodução no próprio teste (kof-cli).
   não existe" e pendurou a lane §134) foi substituído pelo contrato novo.
 - **Alcance honesto:** isto fecha a sobrecarga de **função TOP-LEVEL**
   (SG-011B). Sobrecarga de MÉTODO de classe (SEM013/colisão `Supervisor_child`
-  do §131, espelho OTP) permanece ABERTA — outra máquina (symtable de classe,
-  dispatch virtual, vtable real), repro e workaround lá documentados.
+  do §131, espelho OTP) foi **FECHADA 13/09** (`18a64d45`, decisão 10a) —
+  ver §131 (symtable de classe, vtable com slot por overload, mangle JS).
 
 ### 137. `kof decompile`: `switch`-statement recuperava código INCOMPILÁVEL (locals sem hoist) + `static` perdido na assinatura — ✅ CORRIGIDO 11/09 (achado pelo gate do HEAD; lane migração-legado, sem dono)
 

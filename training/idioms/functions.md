@@ -81,8 +81,10 @@ main() {
   argumento (cast ou variável declarada) para escolher.
 - Mesma saída nos 5 targets (JVM/Script/JS/Native): a resolução é do frontend;
   cada backend referencia o candidato pela assinatura.
-- **Sobrecarga de MÉTODO de classe ainda não existe** (§131, aberto) — isto é
-  só função top-level.
+- **Sobrecarga de MÉTODO de classe ✅ existe** (0.4.0, §131 13/09): mesmo nome,
+  assinaturas diferentes (aridade/tipos) na mesma classe coexistem nos 4
+  backends; o typer seleciona por aridade+compatibilidade. O texto acima sobre
+  duplicata/retorno/ambiguidade vale igual para método de classe.
 
 ## BAD — utility class
 
