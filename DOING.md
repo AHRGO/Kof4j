@@ -81,7 +81,9 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > `TranslateTest` (2) na suíte kof-cli = WIP da lane tradutor (.22, dono
 > 192.168.100.22, arquivos `Translate*` sujos na árvore) — NÃO tocar.**
 > **PRÓXIMO PASSO:** fila da lane 9094 zerada de novo (issues/PRs abertos
-> vazios, CI histórico); #125/#126 fechadas com comentário+release note. Se o
+> vazios, CI histórico); #125/#126 **FECHADAS com comentário+release note**
+> (`gh issue close`; SG-021 pretty-print registrado `051608d1`; merge da main
+> `0.3.23-beta` puxado preservando `0.4.0-beta` `8c447a71`). Se o
 > watcher/heartbeat chamar sem item novo → **RECUSAR** (estável). Reativar só
 > com `scripts/issue-watcher.sh start all 5 ses_f69c2cb03ffe2zDYCqW7fesphi`.
 > **NUNCA:** `Translate*`/`decompile/` (.22), `nat/`+interp (9093), pow (.15),

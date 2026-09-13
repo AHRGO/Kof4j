@@ -333,6 +333,71 @@ class TranslateTest {
     }
 
     @Test
+    void bitwiseCompoundAssignmentsTranslate(@TempDir Path dir) throws Exception {
+        String kof = Translate.translateJava("""
+                public class BCA {
+                    public static void main(String[] args) {
+                        int x = 6;
+                        x &= 3;
+                        x |= 8;
+                        x ^= 1;
+                        x <<= 2;
+                        x >>= 1;
+                        x >>>= 1;
+                        System.out.println(x);
+                    }
+                }
+                """);
+
+        for (String op : new String[]{"&=", "|=", "^=", "<<=", ">>=", ">>>="}) {
+            assertTrue(kof.contains(op),
+                    "composto `" + op + "` preservado (antes: expected ';'):\n" + kof);
+        }
+
+        // x=6; &=3 → 2; |=8 → 10; ^=1 → 11; <<=2 → 44; >>=1 → 22; >>>=1 → 11
+        assertCompiles(dir, kof, "11");
+    }
+
+    @Test
+    void prefixIncrementTranslate(@TempDir Path dir) throws Exception {
+        String kof = Translate.translateJava("""
+                public class Pre {
+                    public static void main(String[] args) {
+                        int x = 1;
+                        int y = ++x;
+                        int z = --x;
+                        System.out.println(y);
+                        System.out.println(z);
+                    }
+                }
+                """);
+
+        assertTrue(kof.contains("++x"), "prefixo `++x` preservado (antes: expected ';'):\n" + kof);
+        assertTrue(kof.contains("--x"), "prefixo `--x` preservado:\n" + kof);
+
+        assertCompiles(dir, kof, "2\n1");
+    }
+
+    @Test
+    void qualifiedLocalTypeTranslates(@TempDir Path dir) throws Exception {
+        String kof = Translate.translateJava("""
+                public class QLT {
+                    public static void main(String[] args) {
+                        java.util.List<String> xs = null;
+                        java.util.Map<String, Integer> m = null;
+                        System.out.println(xs == null);
+                        System.out.println(m == null);
+                    }
+                }
+                """);
+
+        assertFalse(kof.contains("java.util"),
+                "pacote qualificado descartado na decl local (antes: parse error):\n" + kof);
+
+        assertCompiles(dir, kof, "true\ntrue");
+    }
+
+    @Test
     void varLocalTranslates(@TempDir Path dir) throws Exception {
         String kof = Translate.translateJava("""
                 public class V {

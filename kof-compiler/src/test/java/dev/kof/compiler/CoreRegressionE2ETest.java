@@ -666,6 +666,26 @@ class CoreRegressionE2ETest {
                 """, "8\n5\n1\n30\n15\n10\n10", tempDir, "compound-order");
     }
 
+    // §172 — compound SHIFT assignments (`<<=`, `>>=`, `>>>=`) were parsed
+    // but the lowering never recognized them as compound (only +=,-=,*=,/=,
+    // %=,&=,|=,^=): they fell into the plain-assignment path and stored just
+    // the RHS (`x = 6; x <<= 2` produced 2, not 24) — silent miscompilation
+    // found 13/09 while hunting Q4 in the translator, which emits `<<=`.
+    @Test
+    void compoundShiftAssignments(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                main() {
+                    var a = 6; a <<= 2; println(a)
+                    var b = 6; b >>= 1; println(b)
+                    var c = -8; c >>>= 1; println(c)
+                    var d = 6; d &= 3; println(d)
+                    var e = 6; e |= 8; println(e)
+                    var f = 6; f ^= 1; println(f)
+                    var g = 1L; g <<= 40L; println(g)
+                }
+                """, "24\n3\n2147483644\n2\n14\n7\n1099511627776", tempDir, "compound-shift");
+    }
+
     // known-bugs #27 — String.valueOf(char) parity: JVM/Native return the UTF-8
     // char ("h"); JS was returning the numeric codepoint ("104"). Now aligned.
     @Test

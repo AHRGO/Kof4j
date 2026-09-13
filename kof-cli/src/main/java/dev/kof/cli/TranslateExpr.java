@@ -39,6 +39,26 @@ class TranslateExpr {
             if (t == T.STAREQ) { p.next(); return lhs + " *= " + parseAssignment(); }
             if (t == T.SLASHEQ) { p.next(); return lhs + " /= " + parseAssignment(); }
             if (t == T.PERCENTEQ) { p.next(); return lhs + " %= " + parseAssignment(); }
+            // Compostos bitwise/shift (`x &= 3`, `x <<= 2`, `x >>>= 1`): o
+            // lexer os emite como operador + `=`. Kof aceita os compostos.
+            if (p.at(T.AMP) && p.peek(1).type == T.EQ) {
+                p.next(); p.next(); return lhs + " &= " + parseAssignment();
+            }
+            if (p.at(T.PIPE) && p.peek(1).type == T.EQ) {
+                p.next(); p.next(); return lhs + " |= " + parseAssignment();
+            }
+            if (p.at(T.CARET) && p.peek(1).type == T.EQ) {
+                p.next(); p.next(); return lhs + " ^= " + parseAssignment();
+            }
+            if (p.at(T.LT) && p.peek(1).type == T.LT && p.peek(2).type == T.EQ) {
+                p.next(); p.next(); p.next(); return lhs + " <<= " + parseAssignment();
+            }
+            if (p.at(T.GT) && p.peek(1).type == T.GT && p.peek(2).type == T.GT && p.peek(3).type == T.EQ) {
+                p.next(); p.next(); p.next(); p.next(); return lhs + " >>>= " + parseAssignment();
+            }
+            if (p.at(T.GT) && p.peek(1).type == T.GT && p.peek(2).type == T.EQ) {
+                p.next(); p.next(); p.next(); return lhs + " >>= " + parseAssignment();
+            }
             return lhs;
         }
 
@@ -56,7 +76,8 @@ class TranslateExpr {
 
         String parseBitOr() {
             String e = parseBitAnd();
-            while (p.at(T.PIPE) || p.at(T.CARET)) {
+            while ((p.at(T.PIPE) && p.peek(1).type != T.EQ)
+                    || (p.at(T.CARET) && p.peek(1).type != T.EQ)) {
                 String op = p.next().text;
                 e = e + " " + op + " " + parseBitAnd();
             }
@@ -65,7 +86,7 @@ class TranslateExpr {
 
         String parseBitAnd() {
             String e = parseEquality();
-            while (p.at(T.AMP)) { p.next(); e = e + " & " + parseEquality(); }
+            while (p.at(T.AMP) && p.peek(1).type != T.EQ) { p.next(); e = e + " & " + parseEquality(); }
             return e;
         }
 
@@ -80,7 +101,9 @@ class TranslateExpr {
 
         String parseRel() {
             String e = parseShift();
-            while (p.at(T.LT) || p.at(T.LE) || p.at(T.GT) || p.at(T.GE) || p.at("instanceof")) {
+            while (p.at("instanceof") || p.at(T.LE) || p.at(T.GE)
+                    || (p.at(T.LT) && p.peek(1).type != T.LT)
+                    || (p.at(T.GT) && p.peek(1).type != T.GT)) {
                 if (p.at("instanceof")) {
                     // `o instanceof String` → `o instanceof String` (Kof tem
                     // instanceof nativo, training/language/overview.md).
@@ -97,13 +120,15 @@ class TranslateExpr {
         String parseShift() {
             String e = parseAdd();
             while (true) {
-                if (p.at(T.LT) && p.peek(1).type == T.LT) {
+                if (p.at(T.LT) && p.peek(1).type == T.LT && p.peek(2).type != T.EQ) {
                     p.next(); p.next();
                     e = e + " << " + parseAdd();
-                } else if (p.at(T.GT) && p.peek(1).type == T.GT && p.peek(2).type == T.GT) {
+                } else if (p.at(T.GT) && p.peek(1).type == T.GT && p.peek(2).type == T.GT
+                        && p.peek(3).type != T.EQ) {
                     p.next(); p.next(); p.next();
                     e = e + " >>> " + parseAdd();
-                } else if (p.at(T.GT) && p.peek(1).type == T.GT) {
+                } else if (p.at(T.GT) && p.peek(1).type == T.GT
+                        && p.peek(2).type != T.GT && p.peek(2).type != T.EQ) {
                     p.next(); p.next();
                     e = e + " >> " + parseAdd();
                 } else {
@@ -135,6 +160,8 @@ class TranslateExpr {
             if (p.at(T.NOT)) { p.next(); return "!" + parseUnary(); }
             if (p.at(T.MINUS)) { p.next(); return "-" + parseUnary(); }
             if (p.at(T.PLUS)) { p.next(); return "+" + parseUnary(); }
+            if (p.at(T.INC)) { p.next(); return "++" + parseUnary(); }
+            if (p.at(T.DEC)) { p.next(); return "--" + parseUnary(); }
             return parsePostfix();
         }
 

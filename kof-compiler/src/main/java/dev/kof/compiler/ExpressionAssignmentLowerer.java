@@ -31,35 +31,20 @@ if (ae.target() instanceof IdentifierExpr ie && !owner.isEmpty()) {
             if (fieldSym instanceof SymbolTable.FieldSymbol fsStatic
                     && (fsStatic.accessFlags() & AccessFlags.STATIC) != 0) {
                 String sop = ae.operator();
-                boolean compound = "+=".equals(sop) || "-=".equals(sop) || "*=".equals(sop)
-                        || "/=".equals(sop) || "%=".equals(sop) || "&=".equals(sop)
-                        || "|=".equals(sop) || "^=".equals(sop);
+                boolean compound = isCompoundOp(sop);
                 if (compound) {
                     ops.add(new KofGetStatic(ownerType, ie.name(), fsStatic.type()));
                 }
                 localIdx = ExpressionLowerer.emitExpression(driver, ae.value(), ops, owner, localIdx, locals);
                 if (compound) {
-                    KofBinaryOp binOp = switch (sop) {
-                        case "+=" -> KofBinaryOp.ADD;
-                        case "-=" -> KofBinaryOp.SUB;
-                        case "*=" -> KofBinaryOp.MUL;
-                        case "/=" -> KofBinaryOp.DIV;
-                        case "%=" -> KofBinaryOp.MOD;
-                        case "&=" -> KofBinaryOp.AND;
-                        case "|=" -> KofBinaryOp.OR;
-                        case "^=" -> KofBinaryOp.XOR;
-                        default -> KofBinaryOp.ADD;
-                    };
-                    ops.add(new KofBinary(binOp, fsStatic.type()));
+                    ops.add(new KofBinary(compoundBinaryOp(sop), fsStatic.type()));
                 }
                 ops.add(new KofPutStatic(ownerType, ie.name(), fsStatic.type()));
                 return localIdx;
             }
             ops.add(new KofLoadLocal(ownerType, 0));
             String op = ae.operator();
-            if ("+=".equals(op) || "-=".equals(op) || "*=".equals(op)
-                    || "/=".equals(op) || "%=".equals(op)
-                    || "&=".equals(op) || "|=".equals(op) || "^=".equals(op)) {
+            if (isCompoundOp(op)) {
                 // compound em CAMPO de instância: o getfield consome o `this`
                 // e o putfield precisa dele de novo — duplica antes (bug 40:
                 // stack underflow no putfield, `n += 1` em método de instância).
@@ -67,9 +52,7 @@ if (ae.target() instanceof IdentifierExpr ie && !owner.isEmpty()) {
                 ops.add(new KofLoadField(ownerType, ie.name(), fieldSym.type()));
             }
             localIdx = ExpressionLowerer.emitExpression(driver, ae.value(), ops, owner, localIdx, locals);
-            boolean compoundAsgn = "+=".equals(op) || "-=".equals(op) || "*=".equals(op)
-                    || "/=".equals(op) || "%=".equals(op)
-                    || "&=".equals(op) || "|=".equals(op) || "^=".equals(op);
+            boolean compoundAsgn = isCompoundOp(op);
             // §103.2 (#103): widening do valor p/ o tipo do CAMPO — Int→Long
             // putfield sem I2L → VerifyError (this.value = n, campo Long,
             // param Int). O caminho estático (~158) e o de array-store já
@@ -87,18 +70,7 @@ if (ae.target() instanceof IdentifierExpr ie && !owner.isEmpty()) {
                 }
             }
             if (compoundAsgn) {
-                KofBinaryOp binOp = switch (op) {
-                    case "+=" -> KofBinaryOp.ADD;
-                    case "-=" -> KofBinaryOp.SUB;
-                    case "*=" -> KofBinaryOp.MUL;
-                    case "/=" -> KofBinaryOp.DIV;
-                    case "%=" -> KofBinaryOp.MOD;
-                    case "&=" -> KofBinaryOp.AND;
-                    case "|=" -> KofBinaryOp.OR;
-                    case "^=" -> KofBinaryOp.XOR;
-                    default -> KofBinaryOp.ADD;
-                };
-                ops.add(new KofBinary(binOp, fieldSym.type()));
+                ops.add(new KofBinary(compoundBinaryOp(op), fieldSym.type()));
             }
             ops.add(new KofStoreField(ownerType, ie.name(), fieldSym.type()));
             return localIdx;
@@ -113,9 +85,7 @@ if (ae.target() instanceof FieldAccessExpr fa) {
         SymbolTable.Symbol fs = HierarchyResolver.resolveFieldInHierarchy(cs.name(), fa.fieldName(), driver.semanticAnalyzer);
         if (fs instanceof SymbolTable.FieldSymbol fld) {
             String sfaOp = ae.operator();
-            boolean sfaCompound = "+=".equals(sfaOp) || "-=".equals(sfaOp) || "*=".equals(sfaOp)
-                    || "/=".equals(sfaOp) || "%=".equals(sfaOp) || "&=".equals(sfaOp)
-                    || "|=".equals(sfaOp) || "^=".equals(sfaOp);
+            boolean sfaCompound = isCompoundOp(sfaOp);
             // compound em campo ESTÁTICO qualificado (`Counter.total += 5`,
             // GitHub #64): getstatic antes do emit — sem receiver na pilha
             // (estático não consome this), a ordem simples do caminho por
@@ -254,9 +224,7 @@ if (ae.target() instanceof FieldAccessExpr fa) {
         }
     }
     String faOp = ae.operator();
-    if ("+=".equals(faOp) || "-=".equals(faOp) || "*=".equals(faOp)
-            || "/=".equals(faOp) || "%=".equals(faOp)
-            || "&=".equals(faOp) || "|=".equals(faOp) || "^=".equals(faOp)) {
+    if (isCompoundOp(faOp)) {
         // compound em CAMPO (via variável, ex.: b.n -= 2): o getfield
         // consome o receiver e o putfield precisa dele de novo — duplica
         // (bug 40: putfield com stack underflow). O tipo do campo REAL
@@ -265,9 +233,7 @@ if (ae.target() instanceof FieldAccessExpr fa) {
         ops.add(new KofLoadField(recvType, fa.fieldName(), fieldType));
     }
     localIdx = ExpressionLowerer.emitExpression(driver, ae.value(), ops, owner, localIdx, locals);
-    boolean faCompound = "+=".equals(faOp) || "-=".equals(faOp) || "*=".equals(faOp)
-            || "/=".equals(faOp) || "%=".equals(faOp)
-            || "&=".equals(faOp) || "|=".equals(faOp) || "^=".equals(faOp);
+    boolean faCompound = isCompoundOp(faOp);
     // §103.2 (#103): widening do valor p/ o tipo do campo (h.value = n,
     // Int→Long) — espelha o caminho por-nome acima e o store de array.
     if (TypeMetrics.isPrimitiveType(fieldType) && (faCompound || "=".equals(faOp))) {
@@ -275,18 +241,7 @@ if (ae.target() instanceof FieldAccessExpr fa) {
                 ExpressionTyper.inferExprType(driver, ae.value(), locals), fieldType);
     }
     if (faCompound) {
-        KofBinaryOp binOp = switch (faOp) {
-            case "+=" -> KofBinaryOp.ADD;
-            case "-=" -> KofBinaryOp.SUB;
-            case "*=" -> KofBinaryOp.MUL;
-            case "/=" -> KofBinaryOp.DIV;
-            case "%=" -> KofBinaryOp.MOD;
-            case "&=" -> KofBinaryOp.AND;
-            case "|=" -> KofBinaryOp.OR;
-            case "^=" -> KofBinaryOp.XOR;
-            default -> KofBinaryOp.ADD;
-        };
-        ops.add(new KofBinary(binOp, fieldType));
+        ops.add(new KofBinary(compoundBinaryOp(faOp), fieldType));
     }
     ops.add(new KofStoreField(recvType, fa.fieldName(), fieldType));
     return localIdx;
@@ -297,9 +252,7 @@ if (ae.target() instanceof ArrayAccessExpr aa) {
     Type aaRecvType = ExpressionTyper.inferExprType(driver, aa.receiver(), locals);
     Type aaElemType = Type.arrayElementType(aaRecvType);
     String aaOp = ae.operator();
-    boolean aaCompound = "+=".equals(aaOp) || "-=".equals(aaOp) || "*=".equals(aaOp)
-            || "/=".equals(aaOp) || "%=".equals(aaOp) || "&=".equals(aaOp)
-            || "|=".equals(aaOp) || "^=".equals(aaOp);
+    boolean aaCompound = isCompoundOp(aaOp);
     if (aaCompound) {
         // compound em ELEMENTO de array (`values[0] += 5`, GitHub #64): o
         // stack do aaload é [receiver, index] — duplica os 2 e carrega o
@@ -377,25 +330,12 @@ if (ae.target() instanceof IdentifierExpr ieBox) {
                         List.of(BuiltinTypes.STRING, BuiltinTypes.STRING),
                         BuiltinTypes.STRING, KofCallKind.FUNCTION));
                 ops.add(new KofStoreField(boxLv.type(), "value", valType));
-            } else if ("+=".equals(op) || "-=".equals(op) || "*=".equals(op)
-                    || "/=".equals(op) || "%=".equals(op)
-                    || "&=".equals(op) || "|=".equals(op) || "^=".equals(op)) {
+            } else if (isCompoundOp(op)) {
                 ops.add(new KofLoadLocal(boxLv.type(), boxLv.index()));
                 ops.add(new KofLoadField(boxLv.type(), "value", valType));
                 localIdx = ExpressionLowerer.emitExpression(driver, ae.value(), ops, owner, localIdx, locals);
                 driver.emitWideningIfNeeded(ops, ExpressionTyper.inferExprType(driver, ae.value(), locals), valType);
-                KofBinaryOp binOp = switch (op) {
-                    case "+=" -> KofBinaryOp.ADD;
-                    case "-=" -> KofBinaryOp.SUB;
-                    case "*=" -> KofBinaryOp.MUL;
-                    case "/=" -> KofBinaryOp.DIV;
-                    case "%=" -> KofBinaryOp.MOD;
-                    case "&=" -> KofBinaryOp.AND;
-                    case "|=" -> KofBinaryOp.OR;
-                    case "^=" -> KofBinaryOp.XOR;
-                    default -> KofBinaryOp.ADD;
-                };
-                ops.add(new KofBinary(binOp, valType));
+                ops.add(new KofBinary(compoundBinaryOp(op), valType));
                 driver.emitWideningIfNeeded(ops, valType, valType);
                 ops.add(new KofStoreField(boxLv.type(), "value", valType));
             } else {
@@ -433,23 +373,10 @@ if (ae.target() instanceof IdentifierExpr cie) {
                     BuiltinTypes.STRING, KofCallKind.FUNCTION));
             ops.add(new KofStoreLocal(targetLocal.type(), targetLocal.index()));
             return localIdx;
-        } else if ("+=".equals(op) || "-=".equals(op) || "*=".equals(op)
-                || "/=".equals(op) || "%=".equals(op)
-                || "&=".equals(op) || "|=".equals(op) || "^=".equals(op)) {
+        } else if (isCompoundOp(op)) {
             ops.add(new KofLoadLocal(targetLocal.type(), targetLocal.index()));
             localIdx = ExpressionLowerer.emitExpression(driver, ae.value(), ops, owner, localIdx, locals);
-            KofBinaryOp binOp = switch (op) {
-                case "+=" -> KofBinaryOp.ADD;
-                case "-=" -> KofBinaryOp.SUB;
-                case "*=" -> KofBinaryOp.MUL;
-                case "/=" -> KofBinaryOp.DIV;
-                case "%=" -> KofBinaryOp.MOD;
-                case "&=" -> KofBinaryOp.AND;
-                case "|=" -> KofBinaryOp.OR;
-                case "^=" -> KofBinaryOp.XOR;
-                default -> KofBinaryOp.ADD;
-            };
-            ops.add(new KofBinary(binOp, targetLocal.type()));
+            ops.add(new KofBinary(compoundBinaryOp(op), targetLocal.type()));
             driver.emitWideningIfNeeded(ops, ExpressionTyper.inferExprType(driver, ae.value(), locals), targetLocal.type());
             ops.add(new KofStoreLocal(targetLocal.type(), targetLocal.index()));
             return localIdx;
@@ -488,7 +415,26 @@ return localIdx;
             case "&=" -> KofBinaryOp.AND;
             case "|=" -> KofBinaryOp.OR;
             case "^=" -> KofBinaryOp.XOR;
+            case "<<=" -> KofBinaryOp.SHL;
+            case ">>=" -> KofBinaryOp.SHR;
+            case ">>>=" -> KofBinaryOp.USHR;
             default -> KofBinaryOp.ADD;
+        };
+    }
+
+    /**
+     * Operador de atribuição composta reconhecido pelo lowering. O parser
+     * aceita `<<=`, `>>=`, `>>>=` (Lexer/ExpressionParser), mas o lowerer não
+     * os tratava como compostos → caíam no ramo de atribuição SIMPLES e só o
+     * RHS era gravado (`x = 6; x <<= 2` virava `x = 2`, não 24) — bug de
+     * correção silencioso nos 4 targets (achado 13/09 na caça Q4 do
+     * translator, que emite `<<=`).
+     */
+    static boolean isCompoundOp(String op) {
+        return switch (op) {
+            case "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=",
+                 "<<=", ">>=", ">>>=" -> true;
+            default -> false;
         };
     }
 }

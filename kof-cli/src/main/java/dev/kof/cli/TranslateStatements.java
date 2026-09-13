@@ -322,6 +322,13 @@ class TranslateStatements extends TranslateExpr {
         // Detect "Type name [= expr];" / "Type[] name ..." / "Type<...> name ..."
         if (isLocalDeclAhead()) {
             p.next(); // type base
+            // tipo qualificado `java.util.List` — o tipo simples é o último
+            // segmento (`List`); o pacote é descartado (Kof referencia pelo
+            // nome simples; a decl local vira `var`).
+            while (p.at(".") && p.peek(1).type == T.IDENT) {
+                p.next();
+                p.next();
+            }
             int dims = 0;
             if (p.at("<")) {  // generics: List<String> xs
                 int depth = 0;
@@ -384,8 +391,41 @@ class TranslateStatements extends TranslateExpr {
         if (p.peek().text.equals("var")) {
             return p.peek(1).type == T.IDENT;
         }
-        if (!isPrimitiveOrType(p.peek().text)) return false;
+        if (!isPrimitiveOrType(p.peek().text)) {
+            // tipo qualificado `java.util.List<...> name` — o primeiro
+            // segmento é pacote minúsculo; reconhece a cadeia e exige que o
+            // último segmento seja um tipo (maiúsculo).
+            int j = p.pos;
+            boolean chain = false;
+            while (j + 1 < p.toks.size() && p.toks.get(j + 1).text.equals(".")
+                    && p.toks.get(j + 2).type == T.IDENT) {
+                j += 2;
+                chain = true;
+            }
+            if (!chain || !isPrimitiveOrType(p.toks.get(j).text)) return false;
+            int k = j + 1;
+            if (k < p.toks.size() && p.toks.get(k).text.equals("<")) {
+                int depth = 0;
+                while (k < p.toks.size()) {
+                    String t = p.toks.get(k).text;
+                    if (t.equals("<")) depth++;
+                    else if (t.equals(">")) { depth--; if (depth == 0) { k++; break; } }
+                    k++;
+                }
+            }
+            while (k + 1 < p.toks.size() && p.toks.get(k).text.equals("[")
+                    && p.toks.get(k + 1).text.equals("]")) {
+                k += 2;
+            }
+            return k < p.toks.size() && p.toks.get(k).type == T.IDENT;
+        }
         int i = p.pos + 1;
+        // tipo qualificado `java.util.List<...>` — stripa o pacote no parse
+        // (o tipo simples é o último segmento); reconhece a cadeia aqui.
+        while (i + 1 < p.toks.size() && p.toks.get(i).text.equals(".")
+                && p.toks.get(i + 1).type == T.IDENT) {
+            i += 2;
+        }
         if (i < p.toks.size() && p.toks.get(i).text.equals("<")) {
             int depth = 0;
             while (i < p.toks.size()) {
