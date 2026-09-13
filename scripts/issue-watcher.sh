@@ -30,20 +30,30 @@ latest_comment_id() {
     gh api "repos/$GH_REPO/issues/$issue/comments" --jq '.[-1].id // 0' 2>/dev/null || echo ""
 }
 
+open_issues() {
+    gh issue list --repo "$GH_REPO" --state open --json number --jq '.[].number' 2>/dev/null || echo ""
+}
+
 cmd_start() {
-    local issue="${1:-97}" interval="${2:-120}" session="${3:-}"
+    local issue="${1:-all}" interval="${2:-20}" session="${3:-}"
     [ -n "$session" ] || session=$("$OPENCODE" session list -n 1 --format json \
         | python3 -c 'import json,sys; print(json.load(sys.stdin)[0]["id"])')
     case "$interval" in *[!0-9]*|'') echo "intervalo deve ser inteiro (minutos)" >&2; exit 1;; esac
     mkdir -p "$STATE_DIR"
     local seen
-    seen=$(latest_comment_id "$issue")
-    seen="${seen:-0}"
+    if [ "$issue" = "all" ]; then
+        seen=$(for i in $(open_issues); do printf '%s=%s\n' "$i" "$(latest_comment_id "$i")"; done | tr '\n' ' ')
+        seen="${seen:-none}"
+    else
+        seen=$(latest_comment_id "$issue")
+        seen="${seen:-0}"
+    fi
     {
         echo "issue=$issue"
         echo "interval=$interval"
         echo "session=$session"
-        echo "seen=$seen"
+        echo "server=$SERVER"
+        echo "seen=\"$seen\""
         echo "started=$(date -Is)"
     } > "$STATE"
     local line
@@ -79,6 +89,13 @@ cmd_tick() {
     [ -f "$STATE" ] || exit 0
     # shellcheck disable=SC1090
     . "$STATE"
+    # OPENCODE_SERVER_URL no momento do start fixa a porta da sessão-alvo;
+    # o tick roda no cron sem o env → usa o server gravado no state.
+    SERVER="${OPENCODE_SERVER_URL:-${server:-$SERVER}}"
+    if [ "${issue:-}" = "all" ]; then
+        tick_all
+        return $?
+    fi
     local now
     now=$(latest_comment_id "$issue")
     [ -n "$now" ] || { echo "$(date -Is) tick: gh falhou (sem rede?)" >> "$LOG"; return 0; }
@@ -95,6 +112,35 @@ cmd_tick() {
         || echo "$(date -Is) tick #$issue INJEÇÃO FALHOU (rc=$?)" >> "$LOG"
     # só avança o 'seen' depois de injetar (falha de entrega = re-tenta no próximo tick)
     sed -i "s/^seen=.*/seen=$now/" "$STATE"
+}
+
+tick_all() {
+    local i now new_seen="" news=""
+    for i in $(open_issues); do
+        now=$(latest_comment_id "$i")
+        [ -n "$now" ] || continue
+        new_seen="$new_seen $i=$now"
+        old=$(printf '%s' "${seen:-}" | tr ' ' '\n' | grep "^$i=" | cut -d= -f2)
+        old="${old:-0}"
+        if [ "$now" -gt "$old" ] 2>/dev/null; then
+            news="$news #$i($old->$now)"
+        fi
+    done
+    new_seen=$(printf '%s' "$new_seen" | tr -s ' ' | sed 's/^ //')
+    if [ -z "$news" ]; then
+        # só atualiza o snapshot (issue nova pode ter aparecido); sem ruído no log
+        [ -n "$new_seen" ] && sed -i "s/^seen=.*/seen=\"$new_seen\"/" "$STATE"
+        return 0
+    fi
+    if ! curl -s -o /dev/null -m 5 "$SERVER/global/health"; then
+        echo "$(date -Is) tick all: comentários novos:$news mas servidor $SERVER fora do ar — não injeta" >> "$LOG"
+        return 0
+    fi
+    echo "$(date -Is) tick all: comentários novos:$news -> injeta na sessão $session" >> "$LOG"
+    local prompt="As issues$news têm comentário(s) novo(s) (ver 'gh issue view N --repo $GH_REPO --json comments'). Leia os novos, interaja (responda tecnicamente na issue se procedente), atualize DOING.md/plano conforme impactar o trabalho em docs/development, e continue a fila PRÓXIMO PASSO. Ao final commite."
+    "$OPENCODE" run --session "$session" --dir "$REPO_DIR" --attach "$SERVER" --auto "$prompt" >> "$LOG" 2>&1 \
+        || echo "$(date -Is) tick all INJEÇÃO FALHOU (rc=$?)" >> "$LOG"
+    sed -i "s/^seen=.*/seen=\"$new_seen\"/" "$STATE"
 }
 
 case "${1:-}" in

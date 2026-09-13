@@ -191,12 +191,14 @@ scripts/auto-loop.sh status           # confirmar que está ativo
   continuada do heartbeat.
 - O re-disparo chega como turno normal: vale a regra 6 (responder com tool
   call, não com "ok") e o contrato do `PRÓXIMO PASSO` no `DOING.md`.
-- **Watchers de issue (12/09):** `scripts/issue-watcher.sh start <issue> <min>
-  <sessão>` vigia comentários novos de uma issue a cada N minutos (aceita horas
-  divisíveis de 60: 60/120) e injeta um turno na sessão viva (mesmo
-  `--attach` obrigatório do heartbeat; `seen` só avança após injeção bem
-  sucedida). Em uso: **#97 a cada 2h** — quando a frente tree-shaking recebe
-  comentário externo (review/parceiro), o agente LÊ, responde na issue se
+- **Watchers de issue (12/09, multi-issue 13/09):** `scripts/issue-watcher.sh start <issue|all> <min>
+  <sessão>` vigia comentários novos de uma issue (ou de **todas as abertas** com
+  `all` — snapshot `N=id` por issue) a cada N minutos e injeta um turno na
+  sessão viva (mesmo `--attach` obrigatório do heartbeat; `seen` só avança
+  após injeção bem sucedida; `server=` gravado no state fixa a porta p/ o tick
+  do cron). Em uso: **todas a cada 20min → sessão `ses_f69c2cb03ffe2zDYCqW7fesphi`
+  (porta 9094)** — quando qualquer issue recebe comentário externo
+  (review/parceiro/reporter), o agente LÊ, responde na issue se
   procedente, ajusta o plano/DOING e segue a fila. Interagir com issue que
   impacta o trabalho EM CURSO é parte do loop, não distração.
 
