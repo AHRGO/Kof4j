@@ -302,6 +302,28 @@ public final class Translate {
                 String body = parseStatement();
                 return "while (" + cond + ") { " + body + " }";
             }
+            if (p.at("do")) {
+                // do-while Java → do-while Kof (idiom 1:1, training/idioms/control-flow.md).
+                // `do` é keyword do TranslateLexer (KEYWORDS) mas nenhum statement a consumia —
+                // caía em parseExprOrDecl → "expected ';' but found '{'".
+                // parseStatement embrulha bloco em "{ ... }" — aqui o corpo precisa
+                // do CONTEÚDO cru (o "do { ... }" já abre as chaves), senão sai
+                // "do { { ... } }".
+                p.next();
+                String body;
+                if (p.at("{")) {
+                    List<String> stmts = parseBlock();
+                    body = String.join(" ", stmts);
+                } else {
+                    body = parseStatement();
+                }
+                p.expect("while");
+                p.expect("(");
+                String cond = parseExpr();
+                p.expect(")");
+                p.expect(";");
+                return "do { " + body + " } while (" + cond + ")";
+            }
             if (p.at("for")) {
                 return parseFor();
             }

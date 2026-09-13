@@ -163,6 +163,27 @@ class TranslateTest {
         assertTrue(kof.contains("List<Bool>"), "Boolean vira Bool:\n" + kof);
     }
 
+    @Test
+    void doWhileTranslates(@TempDir Path dir) throws Exception {
+        String kof = Translate.translateJava("""
+                public class DW {
+                    public static void main(String[] args) {
+                        int i = 0;
+                        do {
+                            System.out.println(i);
+                            i = i + 1;
+                        } while (i < 3);
+                    }
+                }
+                """);
+
+        assertTrue(kof.contains("do { println(i) i = i + 1 } while (i < 3)"),
+                "do-while Java deve virar do-while Kof (antes: expected ';' but found '{'):\n" + kof);
+        assertFalse(kof.contains("do { {"), "sem chaves duplas:\n" + kof);
+
+        assertCompiles(dir, kof, "0\n1\n2");
+    }
+
     private void assertCompiles(Path dir, String kof, String expected) throws Exception {
         Path src = dir.resolve("T.kf");
         Files.writeString(src, kof);

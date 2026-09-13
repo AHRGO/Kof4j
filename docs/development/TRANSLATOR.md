@@ -6,8 +6,8 @@
 
 **Status:** EM DESENVOLVIMENTO (caiu de `future/` em 12/09 — Fase F
 implementada: `Translate.java` + `TranslateLexer`/`TranslateExpr`;
-prova: `TranslateTest` 9/9 (output compila e roda). Subconjunto Java
-ampliado ainda pendente)
+prova: `TranslateTest` 10/10 (output compila e roda; +do-while 13/09).
+Subconjunto Java ampliado ainda pendente)
 **Data:** 22 de agosto de 2026
 
 ---
@@ -99,3 +99,12 @@ A Fase F do roadmap da plataforma (`LEGACY_MIGRATION.md`).
 Antes de implementar: protótipo pequeno com um subconjunto de Java
 (classes, campos, métodos, if/while, strings) validado contra testes
 diferenciais.
+
+> **Estado (13/09, dono = 192.168.100.22): do-while traduzido.** `do { ... }
+> while (c)` Java → `do { ... } while (c)` Kof (idiom 1:1,
+> `training/idioms/control-flow.md`). Causa: `do` era keyword do
+> `TranslateLexer` mas nenhum statement a consumia → `parseExprOrDecl`
+> falhava com `expected ';' but found '{'`. Fix: ramo `do` em
+> `Translate.parseStatement` (corpo em bloco usa o conteúdo cru, sem chaves
+> duplas). Prova: `TranslateTest.doWhileTranslates` (traduz + compila no JVM
+> + roda `0/1/2`). `Translate.java` 412 ≤500; `TranslateTest` 10/10.
