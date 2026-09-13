@@ -404,6 +404,23 @@ Fase E  Kof Decompiler          (gerar Kof source)
 > conformidade quando o alternante era código errado. DriftCheck =
 > baseline 4; DecompileTest 62/62.
 >
+> **DEGRAU 2b EXECUTADO — narrowing `ifnull`/`ifnonnull` (0xc6/0xc7) (13/09,
+> dono = 192.168.100.17):** ROI medido (`NullTest`): **308** testes nulos sobre
+> load PURO (226 ifnull + 82 ifnonnull) stubavam só porque `invCond`
+> (`BytecodeCp`) mapeava apenas 0x99-0xa4 — `blockCondition` devolvia null →
+> stub. É o **idiom canônico** da linguagem (§Null safety: `if (x != null)`).
+> Fix mínimo: +2 linhas no `invCond` (0xc6→`!= null`, 0xc7→`== null`;
+> aridade 1 cai natural no `blockCondition` de aridade-exata do degrau 2a).
+> `len()` vira if-expression ternária (o path linear já existia, só faltava o
+> mapeamento); `nul()` vira if-sem-else (degrau 1). A/B mesma árvore 692:
+> 1412→**1402** (−10; os outros ~298 têm JOIN/cálculo no corpo = gargalo
+> ALHEIO ao narrowing). DriftCheck baseline (o `recoverExpression` —
+> ternários/elif — usa o MESMO `invCond` e não derivou); golden
+> `recoversNullNarrowAndRunsIt` (oracle 3/0/5/9, 4 caminhos). **Anti-fachada
+> (Q7):** adicionei E REMOVI 0xc6/0xc7 do `contCond` (do-while) — o dispatch
+> do do-while só roteia 0x99-0xa4, o mapeamento seria código morto
+> (`do{}while(x==null)` seguiria stubando honesto). Registrado p/ não refazer.
+>
 > **Estágio 3 (13/09, dono = 192.168.100.17): interna do MESMO pacote.**
 > Categorização reflexiva dos 89 rejeitados (harness `RecCat`): **31** eram
 > só `implements Outer$Inner` do mesmo pacote (cluster `JsIr$*` com 43

@@ -144,9 +144,12 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > determinístico, attributed por stash+3 commits + causa raiz `InetSocketAddress.
 > create` via repro isolado; NÃO toquei — regra 6, lane JS/web). **PRÓXIMO
 > PASSO (decompiler/Fase C degrau 2b): pós-dominador real** p/ aninhamento/else
-> (trap 1) + investigar por que só −3/1387 puros recuperam no degrau 1 (bloco
-> do corpo tem shape não-compatível; categorizar os 502 por causa exata antes de
-> atacar). **NÃO:** `nat/`; KofWebJs/JS-web (§174, outra lane); roundTo (regra 6).
+> PASSO (decompiler/Fase C degrau 3): pós-dominador real p/ corpo com JOIN
+> interno (multi-if no braço) — os 2462 "outra" e o resto dos 308 narrowing
+> estão presas aqui. **DEGRAU 2b FEITO (commit `43fe2834`+doc): narrowing
+> ifnull/ifnonnull — ROI 308, recuperados −10 (outros ~298 têm JOIN no corpo
+> = gargalo alheio), golden 3/0/5/9, DecompileTest 63/63, DriftCheck
+> baseline, anti-fachada Q7 registrada (contCond revertido).** **NÃO:**
 > Fase C DEGRAU 1 (join de if-then PURO sem else), commit `e17ac9e1`.** `struct()`
 > ganha `Set<Integer> stops`; borda SÓ para `pureIfThen` (join não-loop, preds
 > exatos {if,then}, then.succ==[join]) → `if (cond) { then }` SEM else + sequela
