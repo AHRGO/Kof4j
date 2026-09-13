@@ -565,7 +565,7 @@ public class NativeBackend implements Backend {
     }
 
     void assemble(Path asmFile, Path binFile) throws IOException {
-        NativeAssembler.assemble(asmFile, binFile, usesDb, usesMysql, usesConcurrency);
+        NativeAssembler.assemble(asmFile, binFile, usesDb, usesMysql, usesConcurrency, usesPow);
     }
 
     // ---------------------------------------------------------------------

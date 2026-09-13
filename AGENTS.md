@@ -399,9 +399,29 @@ testes, build e commits. Para cada item:
    somente após a conclusão mover para `docs/`.
 3. **Apenas planejado** (sem implementação em andamento) → mover para
    `docs/development/future/`.
-4. **Obsoleto, duplicado ou contradizendo o estado atual** → corrigir ou
-   consolidar; nunca manter documentação falsa/desatualizada em
-   `docs/development/`.
+ 4. **Obsoleto, duplicado ou contradizendo o estado atual** → corrigir ou
+    consolidar; nunca manter documentação falsa/desatualizada em
+    `docs/development/`.
+
+### Regra de prioridade — `.md` soltos primeiro (13/09, orientação da mantenedora)
+
+> **Implemente PRIMEIRO os `.md` soltos em `docs/development/`** — eles são o
+> trabalho **sem impedimento**: plano ratified, escopo definido, nada parado.
+> Documentos em pastas dentro de `docs/development/` (`decision-pending/`,
+> `refactoring/`, `future/`) **têm impedimento** e não são fila enquanto o
+> impedimento existir.
+
+- **`decision-pending/` não é trabalho atual:** quando a mantenedora ATUALIZA
+  uma decisão (ratifica, como nas 12 de 13/09), o agente **move o arquivo para
+  `docs/development/`** — só aí ele entra na fila e fica disponível para
+  desenvolver. Ratificar sem mover = decisão invisível (padrão já aplicado em
+  DD-STDLIB-01, `a09127d7`).
+- **Ordem de seleção de tarefa:** (1) `.md` solto em `development/` com
+  implementação pendente e sem dono `EM CURSO`; (2) movimento de `decision-pending/`
+  → `development/` quando há decisão nova; (3) só então o resto da fila.
+- **`future/`** permanece intocável sem promoção explícita (regra dos três
+  estados); um item de `future/` **não** vira prioridade só porque está
+  "planejado".
 
 ### Regra de conclusão
 

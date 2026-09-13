@@ -115,6 +115,12 @@ public final class NativeX86Calls {
             sb.append("    pushq %rax\n");
             return;
         }
+        // STDLIB S1b.2 (decisão 7a): pow(a,b) = pow@PLT (libm — flag -lm no
+        // NativeAssembler quando usesPow). Vai pelo caminho GENÉRICO (igual
+        // percentage): base→%rdi, exp→%rsi como 8 bits crus cada (pilha
+        // 1-slot), shim RuntimeMath.kof_math_pow movimenta p/ xmm0/xmm1,
+        // alinha a pilha e chama pow; retorno = bits crus em %rax (pushq do
+        // genérico). Recusado em riscv/aarch via KofMath.supportedOn (MATH001).
         // CONC001: spawn/await no Native
         if ("kof_spawn".equals(kc.methodName()) || "kof_spawn_result".equals(kc.methodName())) {
             sb.append("    popq %rdi\n");

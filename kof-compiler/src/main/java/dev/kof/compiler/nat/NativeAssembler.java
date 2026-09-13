@@ -42,6 +42,12 @@ public final class NativeAssembler {
                 if (usesMysql) cmdL.add("-l:libmariadb.so.3");
             }
             if (usesConcurrency) cmdL.add("-l:libpthread.so.0");
+            // STDLIB S1b.2 (decisão 7a da mantenedora): pow → libm. O runtime
+            // x86 é emitido inteiro (fatia byte-a-byte do RuntimeSlices — o
+            // shim kof_math_pow com `call pow` está sempre presente), então
+            // -lm é sempre ligado, como -lc (dyn). Recusa em riscv/aarch =
+            // KofMath.supportedOn (MATH001) — lá o link é estático sem libc.
+            cmdL.add("-lm");
             runCommand(cmdL.toArray(new String[0]), "ld");
         } else {
             if (usesDb) {

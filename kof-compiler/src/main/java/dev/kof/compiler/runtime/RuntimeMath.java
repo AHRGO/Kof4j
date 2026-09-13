@@ -146,6 +146,26 @@ public final class RuntimeMath {
                 sqrtsd %xmm0, %xmm0
                 ret
 
+            # S1b.2 (decisão 7a): pow(base,exp) — PRIMEIRO caso libm. O
+            # caminho genérico entrega base/exp como 8 bits crus em rdi/rsi
+            # (pilha 1-slot do emitArgs); SysV quer doubles em xmm0/xmm1.
+            # A pilha de operandos tem paridade imprevisível (1 push = 8B),
+            # então auto-alinha via rbx como o snprintf (RuntimePrintNum):
+            # o código GERADO nunca usa rbx e pow o preserva (callee-saved
+            # SysV — medido no Arith/StringCalls: só rax/rdi/rsi/rcx/rdx).
+            # Retorno = bits crus em rax (pushq do genérico).
+            .globl kof_math_pow
+            .type kof_math_pow, @function
+            kof_math_pow:
+                movq %rdi, %xmm0
+                movq %rsi, %xmm1
+                movq %rsp, %rbx
+                andq $-16, %rsp
+                call pow
+                movq %rbx, %rsp
+                movq %xmm0, %rax
+                ret
+
             # S1b.1: escalares Double puros (SSE2 — sem libm). Args chegam
             # como 8 bits crus em rdi/rsi/rdx (pilha 1-slot do generic path);
             # retorno = bits crus em rax (o generic path faz pushq %rax).

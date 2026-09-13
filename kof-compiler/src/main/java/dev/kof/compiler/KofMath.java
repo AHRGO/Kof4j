@@ -61,13 +61,28 @@ public final class KofMath {
                     ? new MathCall("kof_math_percentage", DOUBLE, List.of(DOUBLE, DOUBLE)) : null;
             case "isInteger", "isDecimal" -> argc == 1 && isDouble(argTypes.get(0))
                     ? new MathCall("kof_math_" + name, BOOL, List.of(DOUBLE)) : null;
+            // S1b.2 (decisão 7a da mantenedora 13/09): pow = PRIMEIRO caso que
+            // exige libm no native (call pow@PLT + link -lm no x86, que já é
+            // dinâmico). JVM/SCRIPT/JS = Math.pow / ** (exato). riscv/aarch =
+            // MATH001 (link cross é estático sem libc — ligar libm mudaria o
+            // modelo de runtime da lane nat; recusa honesta aqui, nunca link
+            // quebrado silencioso).
+            case "pow" -> argc == 2 && isDouble(argTypes.get(0)) && isDouble(argTypes.get(1))
+                    ? new MathCall("kof_math_pow", DOUBLE, List.of(DOUBLE, DOUBLE)) : null;
             default -> null;
         };
     }
 
     /** S1 (Int) + S1b/S1b.1 (Double) em TODOS os targets (MATH001 fechado
-     * 11/09 — fatia riscv B32 + tradutor aarch fsqrt.d/fcvtzs; prova qemu). */
+     * 11/09 — fatia riscv B32 + tradutor aarch fsqrt.d/fcvtzs; prova qemu).
+     * S1b.2 pow (decisão 7a): x86 sim (pow@PLT + -lm); riscv/aarch NÃO —
+     * o link cross é estático sem libc (invariante "asm puro" da lane nat;
+     * ligar libm = decisão de arquitetura, regra 6). Recusa com código
+     * MATH001 (R6), nunca undefined-reference silencioso. */
     static boolean supportedOn(String function, Target target) {
+        if ("kof_math_pow".equals(function)) {
+            return target != Target.NATIVE_RISCV64 && target != Target.NATIVE_AARCH64;
+        }
         return true;
     }
 

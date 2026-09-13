@@ -14,6 +14,7 @@ final class JsRuntimeUiMathDouble {
             // Bool = 1/0 (chokepoint §93 cuida do ==true).
             export function kofMathLerp(a, b, t) { return a + (b - a) * t; }
             export function kofMathPercentage(p, tot) { return p / tot * 100.0; }
+            export function kofMathPow(base, exp) { return Math.pow(base, exp); }
             export function kofMathIsInteger(v) {
                 return (v === Math.floor(v) && v !== Infinity && v !== -Infinity) ? 1 : 0;
             }
