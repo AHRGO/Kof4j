@@ -66,8 +66,10 @@ public final class CompilerUiEmitter {
                                    List<KofOperation> ops, int localIdx,
                                    List<IRLocalVariable> locals) {
         int recvTmp = localIdx++;
-        int valTmp = localIdx++;
-        int newTmp = localIdx++;
+        int valTmp = localIdx;
+        localIdx += TypeMetrics.isDoubleWidth(fieldType) ? 2 : 1;
+        int newTmp = localIdx;
+        localIdx += TypeMetrics.isDoubleWidth(fieldType) ? 2 : 1;
         locals.add(new IRLocalVariable(recvTmp, "#recv", ownerType));
         locals.add(new IRLocalVariable(valTmp, "#inc", fieldType));
         locals.add(new IRLocalVariable(newTmp, "#new", fieldType));
@@ -76,7 +78,7 @@ public final class CompilerUiEmitter {
         ops.add(new KofLoadField(ownerType, fieldName, fieldType));
         ops.add(new KofStoreLocal(fieldType, valTmp));
         ops.add(new KofLoadLocal(fieldType, valTmp));
-        ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 1));
+        CompilerEmissionHelpers.emitIncrementOne(ops, fieldType);
         ops.add(new KofBinary(op, fieldType));
         ops.add(new KofStoreLocal(fieldType, newTmp));
         ops.add(new KofLoadLocal(ownerType, recvTmp));

@@ -671,6 +671,9 @@ class CoreRegressionE2ETest {
     // %=,&=,|=,^=): they fell into the plain-assignment path and stored just
     // the RHS (`x = 6; x <<= 2` produced 2, not 24) — silent miscompilation
     // found 13/09 while hunting Q4 in the translator, which emits `<<=`.
+    // A 2ª face (achada no gate da lane bugs-and-gaps): o RHS largo não era
+    // narrowado p/ int — `g = 1L; g <<= 40L` emitia `lshl` (long,long) →
+    // VerifyError; fechada pelo `emitCompoundRhsConv` (L2I).
     @Test
     void compoundShiftAssignments(@TempDir Path tempDir) throws IOException {
         runBoth("""

@@ -10,6 +10,8 @@
 > |---|---|
 > | **Fila ABERTA (varredura 13/09 — seções sem resolução no próprio cabeçalho)** | **8 itens** (seções/sub-faces sem resolução) — ~~§168~~ ✅ CORRIGIDO 13/09 (`3ab4c99e`; SEM025 json — `json.metodoRuim()` agora rejeitado, re-verificado no `kof check`; era pré-existente, não do WEB001-T1), ~~§166~~ ✅ CORRIGIDO 13/09 (gate tamanho hello: baseline re-medido 7.700→8.297; shim DOM #121 é préambulo `always` legítimo, mesmo processo do #104 — opção (a) do próprio registro; lane bugs-and-gaps), §165 re-verificado 13/09: NÃO reproduz em build limpo (node v22 presente, export no runtime, célula verde) — trap de inlining `static final`, ver §165; ~~§81~~ ✅ CORRIGIDO 13/09 (5b: Long=BigInt no JS, paridade 64-bit real, golden JS unificado ao JVM), §101 (relacionais de Double com NaN divergem cross — **congelado** regra 6), §104b-ii (record em coleção + storage-box asm — **lane bugfixer**, unidade GRANDE), §107 🟡 (`println(coleção)` nativo → lixo de ponteiro; **face escalar ✅ CORRIGIDA 12/09** nos 3 nativos `f3b3821c`+B39; restam record/aninhado=`?` até §104b-ii + FP-cross=FLT001), §114 ⏳ (equals de record com campo-referência no Native; sub-face do §104b-ii), §129 (throw em worker `spawn` → longjmp cross-thread no Native — **lane nat**; era referido como "§129-TLS"), §132 (KofJS: task de task não roda sem ceder o event-loop — gate OTP002; **lane alheia**), §161/NAT-STR01 (case-fold ASCII-only no Native vs Unicode no JVM/JS — **DECIDIDO 13/09**, lane nat; registrado aqui 13/09). **§165 RE-VERIFICADO 13/09 (dono 192.168.100.17, node v22 presente): NÃO reproduz em build limpo** — o export CHEGA ao `kof-runtime.mjs`, a célula verde; o sintoma era a trap de inlining `static final` (classes stale). Fecho/blindagem = dono §106/js-slices; §166 aberto). **~~§149~~ NÃO está aberto — ✅ CORRIGIDO 12/09** (a linha anterior o listava por engano; a raiz era o `JsIfThrowElse` do §147). **§156 ✅ CORRIGIDO 13/09** (lista heterogênea de lambdas mesma assinatura → elemento sem className, dispatch SAM). **§155 ✅ CORRIGIDO 13/09** (tipo-função em type-args → `ClassFormatError`; parser preserva os espaços do type-ref). **§127-JVM ✅ CORRIGIDO 13/09** (decisão 9a: `as ()->T` parseia como type-ref; checkcast p/ interface SAM sintética). **§94 ✅ CORRIGIDO 13/09** (EQ/NE de Double/Float no interpretador agora IEEE). **§125 ✅ CORRIGIDO 12/09** (return Nullable(primitivo) → default; célula `nullableprint` 4/4). **§139 ✅ CORRIGIDO 12/09** (JS fold `f()==null` → COMP002; parser JS descarta mid-expression). **§140 ✅ CORRIGIDO 12/09** (gate ≤500 virou ratchet com baseline no CI). **§90 ✅ CORRIGIDO 12/09** (lane web). **§145/§146/§147 ✅ CORRIGIDOS 12/09** (`440730c8`, issue #101). **§45 ✅ IMPLEMENTADO 13/09** (DD-01 opção 4a: FinallyFrame na IR; 4 targets, `063ed956`) e **S10c ✅ 13/09** (`random.randomBytesHex`, `317b23e7`). **§157/§158/§159/§160 ✅ CORRIGIDOS 13/09** (issue-lane: #103 caso 3 POP2 em `HashMap.put` de `Long`, kof.web `header()`/`query()` `String?`+SEM049, Native web WEB001, KofJS hostless `kof_platform`). **§172 ✅ CORRIGIDO 13/09** (compostos de SHIFT `<<=`/`>>=`/`>>>=` baixados como atribuição simples — miscompilação silenciosa; + 2ª face `Long<<=Long` VerifyError, L2I na contagem; lane development/translator, dono = 192.168.100.22). **Conclusão honesta (13/09):** dos **8 itens abertos**, a maioria pende de **decisão da mantenedora já ratificada** (fila de implementação), **congelamento regra-6** (§101 + sub-faces §114/§107 = 3), **lane alheia** (§104b-ii lane bugfixer + §129 lane nat + §132 = 3) — **§89 ✅ CORRIGIDO 13/09** (`e33425b5`, 4 alvos + warning SEM090), **§106 ✅ CORRIGIDO 13/09** (`5b939106` + residual JS `ab85cfae`, 4 alvos), **§117 ✅ CORRIGIDO 13/09** (`3734f2aa`), **§131 ✅ CORRIGIDO 13/09** (`18a64d45`, 4 backends; + **residual same-arity/tipos** `73ca2d58`, Native), **§156 ✅ CORRIGIDO 13/09**, **§81 ✅ CORRIGIDO 13/09** (Long=BigInt JS, seção própria) e **§163 ✅ CORRIGIDO 13/09** (interpretador: 2º parâmetro largo lido como `null` — paridade 4-target, achado no probe do split `NativeBackend`). **§167 ✅ CORRIGIDO 13/09** (bitwise/shift com `Long` misturado: JVM VerifyError + JS TypeError/máscara errada + overflow de Long sem wrap no JS; lane bugs-and-gaps `192.168.100.15`, 4 targets, 3 testes — seção própria). |
 > | **§167 ✅ CORRIGIDO 13/09 (lane bugs-and-gaps, 192.168.100.15)** | bitwise/shift com `Long` misturado: JVM VerifyError + JS TypeError/máscara errada + overflow de Long sem wrap no JS. 4 targets; achado na caça Q4 13/09. Overclaim conexo do §81 (declarava "64-bit real" cobrindo só parse/literal). Prova: `BackendParityTest.parityLongBitwiseShiftMixed` + `KofInterpreterParityTest.longBitwiseShiftMixed` + célula `bitwise` estendida 4/4. |
+> | **§172 ✅ CORRIGIDO 13/09 (lane development/translator, 192.168.100.22)** | compound shift `<<=`/`>>=`/`>>>=` era parseado mas baixado como atribuição SIMPLES (só o RHS gravado): `x=6; x <<= 2` dava `2` (silencioso, 4 targets). Fix: `isCompoundOp`+`compoundBinaryOp` com SHL/SHR/USHR + `emitCompoundRhsConv` (L2I no RHS largo). Prova: `CoreRegressionE2ETest.compoundShiftAssignments`. |
+> | **§173 ✅ CORRIGIDO 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `++`/`--`/compound em `Long`/`Double`/`Float` + incremento de ELEMENTO de array: JVM VerifyError (literal `INT 1` em binário de 2 slots, `DUP` de 1 slot, `arraystore` sem `[array,index]`), Native core dump, Script `NoSuchElementException`, JS `stack underflow`/`KofDup2`. 4 targets; caça Q4 13/09 (sobre o §167). Prova: `BackendParityTest.parityIncrementWideTypesAndArrayElement` + `KofInterpreterParityTest.incrementWideTypesAndArrayElement` + célula `increment` 4/4. |
 > | **§168 ABERTO 13/09 (SEM025 ausente em namespace `json` — caminho de método inexistente)** | `json.metodoRuim()` compila com sucesso (deveria falhar com SEM025 "on namespace 'json'"). Menor repro: `main() { println(json.metodoRuim()) }` → success=true. Pré-existente, provado em `b17663d7`/`553b3326` com working tree limpo (stash) — **não é regressão do WEB001-T1**. O handler do #126 (`61495f69`) valida aridade de `encode/decode` mas não rejeita método desconhecido no namespace. Célula J4 de `SemanticResolutionTest.wrongArityOnJsonNamespace` vermelha. Corrigir no `SemanticAnalyzer` (o handler de namespace `json` precisa de allow-list de métodos). |
 
 > | Antiga "varredura 08/09" (apócrifa — corrigida 12/09) | os "abertos" 39/62/63/64/46/48/50/59/61 estão ✅ CORRIGIDO nos próprios cabeçalhos (39/62/63/64 JVM/JS; 46/50/59 Native; 48/61 gap honesto JSN004/FFI001); contagem real na linha acima. |
@@ -5606,3 +5608,57 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   no código velho (`2` no primeiro valor) e pega a 2ª face (`VerifyError` sem
   o L2I). `TranslateTest` 33/33 (o translator que emite `<<=` agora roda o
   output — a caça Q4 que achou o bug).
+
+### §173 — `++`/`--`/compound assignment em `Long`/`Double`/`Float` + incremento de elemento de array: JVM VerifyError, Native core dump, Script/JS sobem erro — ✅ CORRIGIDO 13/09 (4 targets, lane bugs-and-gaps `192.168.100.15`)
+
+- **Contexto:** achado na caça Q4 sobre o §167 (mesma sessão). O `++`/`--` e o
+  compound assignment em tipos de **2 slots** emitiam literal `INT 1` num
+  binário do tipo do alvo (`long`/`double`/`float`) → frame corrompido. E o
+  incremento de **elemento de array** não rematerializava `[array, index]` antes
+  do `arraystore`.
+- **Menor repro / matriz medida (oracle = JVM compilado; probes `CMP.kf`/`S168.kf`/`ARR.kf`/`ARRI.kf`/`FIELD.kf`):**
+  | construto | JVM antes | Native antes | Script antes | JS antes |
+  |---|---|---|---|---|
+  | `var c=1L; c++` | **VerifyError** (`LADD` c/ int) | `0` ❌ | `Long.valueOf/1` ❌ | **COMP002** |
+  | `var c=1L; ++c` | **VerifyError** | `0` ❌ | `Long.valueOf/1` ❌ | **COMP002** |
+  | `var d=1.5; d++` | **VerifyError** | `0.0` ❌ | `Double.valueOf/1` ❌ | **COMP002** |
+  | `var f=1.5f; f++` | `1.5` ✅ | `1.5` ✅ | `1.5` ✅ | `1.5` ✅ |
+  | `var l=100L; l /= 3` | **VerifyError** (I2L no topo errado) | — | — | — |
+  | `var a=new Long[2]; a[0]++;` | **VerifyError** | **core dump** | `NoSuchElementException` ❌ | **stack underflow** |
+  | `var a=new Int[3]; a[0]++;` | **VerifyError** | **core dump** | `NoSuchElementException` ❌ | **stack underflow** |
+  | `var b=Box(1L,1.5); b.n++` | **VerifyError** (`Bad local variable type`) | `2` ✅ | `2` ✅ | `2` ✅ |
+  | `var max=9223372036854775807L; max++` | — | — | — | — (pós-fix: wrap p/ `-9223372036854775808`, 4/4) |
+- **Causa raiz (4 arquivos, 3 sub-faces):**
+  1. **Literal do incremento** (`CompilerEmissionHelpers.emitIncrementOne`): o
+     `1` era sempre `INT`. Para `long`/`double`/`float` o binário `ADD`/`SUB`
+     esperava os DOIS operandos no tipo do alvo → `LADD`/`DADD` sobre (largo,
+     int). Fix: literal no tipo do alvo (`1L`/`1.0f`/`1.0`).
+  2. **DUP de largura errada** (`CompilerEmission2.emitIncrement` local):
+     `KofDup` duplica **1 slot**, mas `long`/`double` ocupam **2**. `KofDup2`
+     não serve no JS (o parser o interpreta como "duplicar par array+índice").
+     Fix: para tipos largos, materializa um **temp explícito** (load/store) em
+     vez de dup; o temp avança **2 slots** (`TypeMetrics.isDoubleWidth`), senão
+     `valTmp`/`newTmp` se sobrepõem (VerifyError `Bad local variable type`).
+  3. **`arraystore` sem `[array,index]`** (`CompilerEmission2.emitIncrement`
+     array): o `KofArrayStore` consome `[array, index, valor]`, mas o caminho
+     emitia só o valor. Fix: materializa `#arr`/`#idx` em temps, carrega
+     `[arr, idx, new]` e armazena; pós-fixado devolve o valor velho, prefixado
+     o novo. Mesmo tratamento de largura nos temps.
+  4. **Compound de local** (`ExpressionAssignmentLowerer`): o widening do RHS
+     (`I2L` p/ `long op= Int`) saía **DEPOIS** do `KofBinary` (sobre o
+     RESULTADO); movido p/ ANTES. Mesmo bug em `CompilerUiEmitter.emitFieldIncrement`
+     (temps de campo largo).
+- **Fix:** `CompilerEmissionHelpers.emitIncrementOne` (novo);
+  `CompilerEmission2.emitIncrement` (local/array/legacy — temp explícito p/
+  largos, rematerialização de array); `CompilerUiEmitter.emitFieldIncrement`
+  (largura dos temps); `ExpressionAssignmentLowerer` (ordem do widening).
+- **Prova (Q1 — falhava no código velho):**
+  - `BackendParityTest.parityIncrementWideTypesAndArrayElement` (novo) — JVM×JS
+    + golden JVM; **falhava antes** (VerifyError/COMP002).
+  - `KofInterpreterParityTest.incrementWideTypesAndArrayElement` (novo) —
+    interpretado×JVM byte-a-byte; **falhava antes** (JVM `FRONTEND-ERR`).
+  - `ConformanceMatrixTest.conformanceCoreArithmetic` — caso `increment`
+    (novo, `Set.of()` — os 4 targets), passa 4/4.
+- **Arquivos:** `kof-compiler/src/main/java/dev/kof/compiler/CompilerEmissionHelpers.java`,
+  `.../CompilerEmission2.java`, `.../CompilerUiEmitter.java`,
+  `.../ExpressionAssignmentLowerer.java`.

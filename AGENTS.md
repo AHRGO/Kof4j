@@ -670,6 +670,46 @@ Passar a suíte é o **mínimo**. A pergunta de aceite é: *"que cenário quebra
 isso e eu ainda não testei?"*. Enquanto houver resposta, a unidade não está
 pronta.
 
+### Q7. Proibido stub — a implementação é COMPLETA ou não sobe (13/09)
+
+> **"Funciona o suficiente para o teste passar" não é entrega.** Um stub,
+> placeholder, `return null`/`return 0` de fachada, corpo vazio, `throw
+> "not implemented"`, `TODO`/`FIXME`, ramo `default` que engole caso não
+> tratado, ou qualquer caminho que **finge** fazer o trabalho é **bug
+> pré-instalado** — ele passa o teste de hoje e falha o usuário de amanhã.
+> **É proibido commitar stub.** A unidade entrega a **implementação
+> completa** do escopo declarado, com a matriz Q3 coberta.
+
+- **Implementação completa = o comportamento previsto, inteiro.** Se o escopo
+  é "suporte a `++` em long", entrega os 4 targets, prefixo/pós-fixo, borda
+  numérica e array/field — não "só o caso do teste". Escopo menor é aceitável
+  **se declarado**; escopo menor disfarçado de completo, nunca.
+- **Stub não é "trabalho incremental"** — trabalho incremental é entregar um
+  **degrau inteiro** (uma capacidade completa), commitá-lo e seguir. Deixar
+  metade de uma capacidade no código fingindo completude é o que a regra
+  proíbe. A distinção: *corte vertical completo* (ok) × *fachada de fachada*
+  (proibido).
+- **Gap honesto ≠ stub.** Um caminho **não suportado** deve falhar com
+  diagnóstico `XXX00x` (R6, regra 6 do congelamento), nunca retornar valor
+  falso silenciosamente. "Não suportado com diagnóstico" é entrega válida;
+  "não suportado fingindo que sim" é stub.
+- **Todo stub EXISTENTE é dívida catalogada.** Encontrar um stub/placeholder
+  no software (código, stdlib, backend, docs) **obriga** a:
+  1. **catalogá-lo como gap de implementação** em
+     `docs/bugs-and-gaps/known-bugs.md` (bug) ou
+     `docs/bugs-and-gaps/specification-gaps.md` (gap de spec), com
+     **localização** (`arquivo:linha`), **o que falta** e **menor repro**;
+  2. **anotá-lo no ponto do código** com o código do gap (`XXX00x`/`§NNN`),
+     para que o próximo agente o veja sem arqueologia;
+  3. **planejá-lo** na fila (regra dos três estados) para que seja
+     **formalmente desenvolvido da forma correta** — não corrigido às pressas
+     nem escondido atrás de um teste fraco.
+  Stub achado e não catalogado = **omissão de agente**, tão grave quanto o
+  próprio stub. Catalogar não fecha o item: ele só fecha com implementação
+  completa + prova (Q0–Q6).
+- **Aceite:** a pergunta final não é "o teste passa?", é **"o que aqui ainda
+  é fachada?"**. Enquanto houver resposta, a unidade não está pronta.
+
 ---
 
 ## Congelamento de comportamento (obrigatório)
@@ -987,6 +1027,9 @@ Responda SIM a todas antes de terminar:
 11. **O golden veio de medição real** (oracle JVM/harness C) e não de memória?
 12. **Nenhum teste passou por acidente** (assert fraco, `success=true` sem
     executar, erro aceito como saída)? (Q5)
+13. **A entrega é implementação COMPLETA, sem stub?** (Q7) — nenhum
+    placeholder/`TODO`/`return` de fachada/ramo que engole caso não tratado.
+    Stub encontrado no caminho foi catalogado como gap + anotado no código?
 
 > Se alguma resposta for NÃO, a unidade **não está pronta** — volte para a
 > implementação. O portão de qualidade (§"nenhum bug sobe") é pré-requisito
@@ -1014,7 +1057,7 @@ mvn test -o -pl kof-compiler,kof-script,kof-c-compiler,kof-cli -am \
 grep -rl "FAILURE" */target/surefire-reports/*.txt
 ```
 
-### Checklist de pré-push (Q0–Q6 — responda antes de `git push`, em QUALQUER branch)
+### Checklist de pré-push (Q0–Q7 — responda antes de `git push`, em QUALQUER branch)
 
 0. O bug foi **consertado na causa raiz** (não mascarado) e o teste que prova
    falharia no código velho? **(Q0)**
@@ -1024,8 +1067,10 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 4. Tentei quebrar a mudança (casos extremos, cross-target, regressão vizinha)? **(Q4)**
 5. A suíte completa está verde (0 falhas fora dos erros ambientais de `node`)? **(Q5)**
 6. `grep -rl FAILURE */target/surefire-reports/*.txt` não aponta nada seu? **(Q5)**
+7. A entrega é implementação COMPLETA (sem stub/fachada/TODO)? Stub achado foi
+   catalogado como gap + anotado no código? **(Q7)**
 
-> **Nenhum push sem os 7 itens, em nenhuma branch.** Se algum falhar, corrija
+> **Nenhum push sem os 8 itens, em nenhuma branch.** Se algum falhar, corrija
 > ou reverta — não suba "com nota" nem "para o próximo agente ver".
 
 > **`-Dmaven.test.failure.ignore=true` é OBRIGATÓRIO na suíte completa.** Sem

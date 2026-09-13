@@ -612,4 +612,61 @@ class KofInterpreterParityTest {
                 }
                 """);
     }
+
+    @Test
+    void incrementWideTypesAndArrayElement() throws IOException {
+        // §168: `++`/`--`/compound em long/double + incremento de elemento de
+        // array. O JVM emitia VerifyError (literal INT 1 em binário de 2 slots,
+        // DUP de 1 slot, arraystore sem [array,index]); o interpretador era o
+        // oracle. Paridade interpretado×JVM byte-a-byte (JS/native em
+        // BackendParityTest/conformance).
+        parity("incrwide", """
+                main() {
+                    var c = 1L
+                    c++
+                    println(c)
+                    ++c
+                    println(c)
+                    c--
+                    println(c)
+                    var d = 1.5
+                    d++
+                    println(d)
+                    ++d
+                    println(d)
+                    d--
+                    println(d)
+                    var f = 1.5f
+                    f++
+                    println(f)
+                    var i = 5
+                    i++
+                    println(i)
+                    var l = 100L
+                    l /= 3
+                    println(l)
+                    l += 2L
+                    println(l)
+                    d /= 2.0
+                    println(d)
+                    var max = 9223372036854775807L
+                    max++
+                    println(max)
+                    var a = new Long[2]
+                    a[0] = 7L
+                    a[0]++
+                    println(a[0])
+                    println(++a[0])
+                    a[1] = 40L
+                    a[1]--
+                    println(a[1])
+                    var b = new Int[2]
+                    b[0] = 7
+                    b[0]++
+                    println(b[0])
+                    println(b[0]--)
+                    println(b[0])
+                }
+                """);
+    }
 }

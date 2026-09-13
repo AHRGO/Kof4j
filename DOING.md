@@ -58,8 +58,40 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ---
 
- ## PRÓXIMO PASSO (re-dispacho lê isto)
- 
+## PRÓXIMO PASSO (re-dispacho lê isto)
+
+> **✅ FEITO (13/09 ~13:50, lane bugs-and-gaps, dono = 192.168.100.15):
+> §173 CORRIGIDO (`++`/`--`/compound em tipos largos + elemento de array).**
+> Achado na caça Q4 sobre o §167. Sintomas: `var c=1L; c++` → JVM VerifyError
+> (`LADD` c/ `INT 1`), Native `0`, Script `Long.valueOf/1`, JS COMP002;
+> `var a=new Long[2]; a[0]++` → JVM VerifyError + Native **core dump** +
+> Script `NoSuchElementException` + JS stack underflow (idem `Int[3]`). Causa
+> raiz em 4 arquivos/3 sub-faces: (1) `emitIncrementOne` (literal `1` no tipo
+> do alvo — `1L`/`1.0f`/`1.0`); (2) `KofDup` de 1 slot em tipo de 2 slots →
+> temp explícito com avanço de 2 slots (`TypeMetrics.isDoubleWidth`);
+> (3) `arraystore` sem rematerializar `[array,index]`; (4) widening do RHS no
+> compound de local saía DEPOIS do `KofBinary` (movido p/ ANTES). **Prova Q1
+> (falhava antes):** `BackendParityTest.parityIncrementWideTypesAndArrayElement`,
+> `KofInterpreterParityTest.incrementWideTypesAndArrayElement` e célula
+> `increment` da matriz 4/4. Registro: `known-bugs.md §173` +
+> `conformance-matrix.md`. **AGENTS.md endurecido:** nova **Q7 "Proibido stub"**
+> (implementação completa ou não sobe; stub encontrado → catalogar em
+> `known-bugs.md`/`specification-gaps.md` + anotar no código + planejar;
+> checklist pré-push agora Q0–Q7).
+> **Gate 4-módulos FINAL: compiler 1487 run / 0 falhas / 13 erros (só `node`
+> ausente) / 157 skip, script 31/0, c 5/0, cli 173/0 (a 1 falha `TranslateTest`
+> é WIP da lane .22, `var xs = null` → SEM048, confirma-se no HEAD remoto).**
+> `check_500` OK (só aviso SemExpressionTyper 579 + dívida nova
+> JsRuntimeUiWeb 529, de outras lanes). **Nota:** o §172 (shift-compound) foi
+> corrigido pela lane .22 no remoto `1cd5a19d` — a 2ª face (RHS largo sem L2I)
+> está fechada por `emitCompoundRhsConv`.
+> **PRÓXIMO PASSO:** a fila de `known-bugs.md` segue com itens de outras lanes
+> (§101 congelado; §104b-ii/§107/§114 bugfixer; §129/§161 nat; §132 OTP-JS;
+> §165 não-reproduz; §168/§170 issue-lane; §171 diagnóstico). Re-disparo: ler
+> esta linha + `known-bugs.md:11`; se nada novo e suíte verde → **RECUSAR**.
+> **NUNCA:** `nat/` lane GC viva; fila de outras lanes; push main.
+
+
 
 > **✅ FEITO (13/09 ~15:20, lane development/decompiler — dono = 192.168.100.17):
 > Fase C DEGRAU 1 (join de if-then PURO sem else), commit `e17ac9e1`.** `struct()`

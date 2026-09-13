@@ -17,7 +17,8 @@ public final class CompilerEmissionHelpers {
         return driver.target == Target.JVM;
     }
 
-    static void emitWideningIfNeeded(CompilerDriver driver, List<KofOperation> ops, Type from, Type to) {        if (from.equals(to)) return;
+    static void emitWideningIfNeeded(CompilerDriver driver, List<KofOperation> ops, Type from, Type to) {
+        if (from.equals(to)) return;
         String fn = TypeMetrics.primitiveName(from);
         String tn = TypeMetrics.primitiveName(to);
         // slot declarado primitivo + valor de tipo APAGADO (Unknown/Object/
@@ -145,5 +146,21 @@ public final class CompilerEmissionHelpers {
         if (!driver.needsErasureBoxing()) return;
         Type boxed = TypeMetrics.boxedTypeFor(primitive);
         ops.add(new KofCall(primitive, "kof_unbox", List.of(boxed), primitive, KofCallKind.FUNCTION));
+    }
+
+    /**
+     * §168: literal `1` no TIPO do operando — usado por `++`/`--`. Antes o
+     * incremento empurrava sempre `INT 1` e o binário era emitido com o tipo
+     * do alvo: `long x; x++` virava `LADD` sobre (long, int) → VerifyError no
+     * JVM; `double`/`float` idem. O literal tem de casar com o tipo do alvo.
+     */
+    static void emitIncrementOne(List<KofOperation> ops, Type type) {
+        String name = TypeMetrics.primitiveName(type);
+        switch (name) {
+            case "long", "Long" -> ops.add(new KofLoadLiteral(Type.PrimitiveType.LONG, 1L));
+            case "float", "Float" -> ops.add(new KofLoadLiteral(Type.PrimitiveType.FLOAT, 1.0f));
+            case "double", "Double" -> ops.add(new KofLoadLiteral(Type.PrimitiveType.DOUBLE, 1.0));
+            default -> ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 1));
+        }
     }
 }

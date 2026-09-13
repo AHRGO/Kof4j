@@ -561,6 +561,101 @@ class ConformanceMatrixTest {
                 705032705
                 1
                 """.trim(), Set.of(), tempDir);
+        // §168 — `++`/`--`/compound em tipos largos + elemento de array.
+        // O JVM emitia VerifyError (literal INT 1 em binário de 2 slots, DUP de
+        // 1 slot em long/double, arraystore sem [array,index]); agora os 4
+        // targets concordam (golden = oracle JVM). Bordas: prefixo/pós-fixo,
+        // `--` negativo, float/double/long, estouro de Long em `++` e elemento
+        // de array Int e Long.
+        matrix("increment", """
+                main() {
+                    var c = 1L
+                    c++
+                    println(c)
+                    ++c
+                    println(c)
+                    c--
+                    println(c)
+                    var d = 1.5
+                    d++
+                    println(d)
+                    ++d
+                    println(d)
+                    d--
+                    println(d)
+                    var f = 1.5f
+                    f++
+                    println(f)
+                    var i = 5
+                    i++
+                    println(i)
+                    var l = 100L
+                    l /= 3
+                    println(l)
+                    l += 2L
+                    println(l)
+                    d /= 2.0
+                    println(d)
+                    var max = 9223372036854775807L
+                    max++
+                    println(max)
+                    var a = new Long[2]
+                    a[0] = 7L
+                    a[0]++
+                    println(a[0])
+                    println(++a[0])
+                    a[1] = 40L
+                    a[1]--
+                    println(a[1])
+                    var b = new Int[2]
+                    b[0] = 7
+                    b[0]++
+                    println(b[0])
+                    println(b[0]--)
+                    println(b[0])
+                }
+                """, """
+                2
+                3
+                2
+                2.5
+                3.5
+                2.5
+                2.5
+                6
+                33
+                35
+                1.25
+                -9223372036854775808
+                8
+                9
+                39
+                8
+                8
+                7
+                """.trim(), Set.of(), tempDir);
+        // §172 — compound shift `<<=`/`>>=`/`>>>=` (parser reconhece; o
+        // lowering narrowa o RHS largo p/ int — `g=1L; g <<= 40L` sem o L2I
+        // emitia `lshl` (long,long) → VerifyError no JVM). 4 targets.
+        matrix("compound-shift", """
+                main() {
+                    var a = 6; a <<= 2; println(a)
+                    var b = 6; b >>= 1; println(b)
+                    var c = -8; c >>>= 1; println(c)
+                    var d = 6; d &= 3; println(d)
+                    var e = 6; e |= 8; println(e)
+                    var f = 6; f ^= 1; println(f)
+                    var g = 1L; g <<= 40L; println(g)
+                }
+                """, """
+                24
+                3
+                2147483644
+                2
+                14
+                7
+                1099511627776
+                """.trim(), Set.of(), tempDir);
         // STDLIB S1 — kof.math (Int-only) paridade total nos 4 targets.
         // §93: os dois últimos casos comparam `== true`/`== false` no
         // CAMINHO DE VALOR (o print sozinho coercia 1/0 e mascarava o bug).

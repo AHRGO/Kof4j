@@ -489,4 +489,84 @@ class BackendParityTest {
                 """.trim(),
                 tempDir, "longbitshift");
     }
+
+    @Test
+    void parityIncrementWideTypesAndArrayElement(@TempDir Path tempDir) throws IOException {
+        // §168: `++`/`--` e compound assignment em long/double emitiam literal
+        // INT 1 num binário de 2 slots → JVM VerifyError; DUP de 1 slot
+        // corrompia o frame em tipos largos; incremento de ELEMENTO de array
+        // não rematerializava [array,index] antes do arraystore (VerifyError
+        // JVM / underflow JS / core dump Native). Golden medido no oracle JVM
+        // (os 4 targets concordam). Bordas Q3: prefixo/pós-fixo, negativo
+        // (`--`), float/double, long com estouro (`max`), divisão compound e
+        // elemento de array Int e Long.
+        runParity("""
+                main() {
+                    var c = 1L
+                    c++
+                    println(c)
+                    ++c
+                    println(c)
+                    c--
+                    println(c)
+                    var d = 1.5
+                    d++
+                    println(d)
+                    ++d
+                    println(d)
+                    d--
+                    println(d)
+                    var f = 1.5f
+                    f++
+                    println(f)
+                    var i = 5
+                    i++
+                    println(i)
+                    var l = 100L
+                    l /= 3
+                    println(l)
+                    l += 2L
+                    println(l)
+                    d /= 2.0
+                    println(d)
+                    var max = 9223372036854775807L
+                    max++
+                    println(max)
+                    var a = new Long[2]
+                    a[0] = 7L
+                    a[0]++
+                    println(a[0])
+                    println(++a[0])
+                    a[1] = 40L
+                    a[1]--
+                    println(a[1])
+                    var b = new Int[2]
+                    b[0] = 7
+                    b[0]++
+                    println(b[0])
+                    println(b[0]--)
+                    println(b[0])
+                }
+                """, """
+                2
+                3
+                2
+                2.5
+                3.5
+                2.5
+                2.5
+                6
+                33
+                35
+                1.25
+                -9223372036854775808
+                8
+                9
+                39
+                8
+                8
+                7
+                """.trim(),
+                tempDir, "incrwide");
+    }
 }

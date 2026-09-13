@@ -86,6 +86,8 @@
 | lógica booleana + comparação | `false` / `true` / `false` / `true` | DONE | DONE | DONE | DONE | `boollogic` |
 | bitwise & \|\| ^ << >> | `2` / `7` / `5` / `16` / `64` | DONE | DONE | DONE | DONE | `bitwise` |
 | bitwise/shift com `Long` misturado + overflow 64-bit (§167 ✅ 13/09) | `1` / `7` / `6` / `5` / `4294967295` / `320` / `2` / `-9223372036854775808` / `705032704` … | DONE | DONE | DONE | DONE | `bitwise` (estendido) |
+| incremento `++`/`--`/compound em `Long`/`Double`/`Float` + elemento de array (§173 ✅ 13/09) | `2` / `3` / `2` / `2.5` / `3.5` / `2.5` / `2.5` / `6` / `33` / `35` / `1.25` / `-9223372036854775808` / `8` / `9` / `39` / `8` / `8` / `7` | DONE | DONE | DONE | DONE | `increment` |
+| compound shift `<<=`/`>>=`/`>>>=` com RHS largo (§172 ✅ 13/09) | `24` / `6` / `2147483644` / … / `1099511627776` | DONE | DONE | DONE | DONE | `compound-shift` |
 | stdlib kof.math (S1: clamp/abs/sign/min/max/isEven/isOdd/isZero + `==true`/`==false` §93) | `10` / `0` / `7` / `-1` / `3` / `8` / `true` / `false` / `true` / `true` / `false` | DONE | DONE | DONE | DONE | `stdmath` |
 | stdlib kof.math (S1b: sqrt — primeiro Double; comparações Bool, NaN em <0 = IEEE; riscv/aarch = B32 `fsqrt.d`, MATH001 fechado 11/09; §94 fechado 13/09 — interp agora IEEE) | `true` / `true` / `true` / `true` / `false` / `true` | DONE | DONE | DONE | DONE | `stdsqrt` |
 | stdlib kof.math (S1b.1: lerp/percentage/isInteger/isDecimal — Double puro, SSE2; subset determinístico, NaN só nos compilados via KofMathTest; riscv/aarch = B32, MATH001 fechado 11/09) | `true` ×15 | DONE | DONE | DONE | DONE | `stdmathdouble` |
