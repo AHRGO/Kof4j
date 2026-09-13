@@ -70,17 +70,23 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > pós-fix: 4/4 alvos verdes** (S89/S89b/S89c) + `CoreRegressionE2ETest`
 > 1/1. (4) **§117 fechado** (`3734f2aa`, tabela por TID real + probe linear) —
 > header + README + parity sincronizados; `KofConcurrency2Test` **34/0**
-> re-executado por mim. (5) **regra 9** restaurada com a semântica de
-> cluster (storage compartilhado; 1 IP = 1 agente = 1 máquina). Fila
-> **12→9** itens. **Gate 4-módulos pós-§89/§117: 1644 run / 0 falhas / 13
-> erros (`*Js` = `node` ausente) / 157 skip — verde** (`gate_s117.log`).
-> **PRÓXIMO PASSO:** (gate/docs) §131 ✅ fechado (`18a64d45`, 4 backends) —
-> resta **§81 (5b, Long=BigInt JS)** da fila ratificada, que é da lane
-> .18/9094 — NÃO tocar (regra 9: outro IP = outro agente). Esta lane
-> (gate/qualidade + docs, dono 192.168.100.15) só age se:
-> (a) regressão na suíte (gate vermelho), (b) header/contagem de
-> `known-bugs.md` divergir do código, (c) doc concluído não movido p/ `docs/`.
-> Se nada disso aparecer, RECUSAR o re-disparo (não inventar trabalho).
+> re-executado por mim. (5) **§131 fechado** (`18a64d45`, 4 backends) —
+> header + README + status + corpus (AGENTS.md/type-system/functions/training)
+> sincronizados; harness `S131.kf` 4/4. (6) **regra 9** restaurada com a
+> semântica de cluster (storage compartilhado; 1 IP = 1 agente = 1 máquina).
+> Fila **12→8** itens. **Gate 4-módulos pós-§89/§106/§117/§131: 1645 run / 0
+> falhas / 13 erros (`*Js` = `node` ausente) / 157 skip — verde**
+> (`gate_s106js.log`).
+> **PRÓXIMO PASSO:** (gate/docs) resta na fila ratificada só **§81 (5b,
+> Long=BigInt JS)** — lane .18/9094, NÃO tocar (regra 9). Os outros 7 abertos
+> são de outras lanes/bloqueios (§101 congelado; §104b-ii/§107/§114 bugfixer;
+> §129/§161 lane nat; §132 OTP-JS). Esta lane (gate/qualidade + docs, dono
+> 192.168.100.15) só age se: (a) regressão na suíte (gate vermelho),
+> (b) header/contagem de `known-bugs.md` divergir do código, (c) doc concluído
+> não movido p/ `docs/`. **Auditoria 13/09: `docs/development/` sem doc
+> concluído pendente de mover; header da fila confere com as seções sem ✅
+> (6 seções + 2 sub-faces = 8).** Se nada disso aparecer, RECUSAR o
+> re-disparo (não inventar trabalho).
 > **NÃO:** `nat/`; UI*; push main; `git config user.*`; Co-authored-by.
 
 > **⚡ RESIDUAL §106 CORRIGIDO (13/09 ~05:40, lane gate/qualidade, dono =
