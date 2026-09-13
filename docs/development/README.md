@@ -45,9 +45,9 @@ package-compiler) abre antes de SYSTEMS fechar (paridade + GC + estabilidade).
 
 ---
 
-## 2. Bugs abertos (fila em `known-bugs.md`) — triagem 12/09
+## 2. Bugs abertos (fila em `known-bugs.md`) — triagem 13/09
 
-**14 seções sem ✅ no cabeçalho** — e a conclusão honesta da mesa do bugfixer
+**14 seções sem ✅ no cabeçalho** — e a conclusão honesta
 (`known-bugs.md:11`): **nenhum item de código-puro-sem-decisão restou na lane**.
 Todos pendurados em:
 
@@ -58,7 +58,8 @@ Todos pendurados em:
 | Lane alheia | §65/§132 (UI/web/OTP-JS), §104b-ii + §107 restante + §114 (bugfixer — storage-box de record) | donos das lanes |
 
 Corrigidos 12/09: §90 (web, #98), §125, §139, §140 (gate→ratchet), §107-face
-escalar, §108, §138, MATH001, TIME002.
+escalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
+`440730c8` — prova qemu 42+42)**.
 
 ---
 
