@@ -23,7 +23,8 @@
 > 9. **Identificação por IP local (13/09, diretriz da mantenedora):** cada
 >    agente se identifica pelo **IPv4 local da máquina** (`hostname -I`).
 >    Toda reivindicação `EM CURSO`/`FEITO` leva `dono = <IPv4>` (ex. `dono =
->    192.168.100.22`). Esta sessão = **192.168.100.22** (`mel-optiplex`).
+>    192.168.100.22` = `mel-optiplex`). Esta sessão = **192.168.100.18**
+>    (lane development — S2-OTP, DD-01 finally, §106 JSON Map).
 >    Quem voltar (humano/cron/outra instância) retoma em ≤1 leitura.
 
 Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
@@ -64,7 +65,7 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > **NUNCA:** pow/E2E (outro agente `7f174a6f`); fila §106/§89/§117 (outro
 > agente); `nat/` lane GC viva; push main.
 
-> **⚡ EM CURSO (13/09, lane development/docs — cluster legado + OTP, dono =
+> **⚡ EM CURSO (13/09, lane development/docs — cluster legado + OTP, dono = 192.168.100.18, era
 > 192.168.100.22):** (1) `LEGACY_MIGRATION.md`: contradição corrigida ("nada
 > existe" → tabela real §3) + contagem 63→70 testes (Decompile 45 + Translate
 > 9 + Compare 6 + Migrate 3 + CmdCheck 7, medidos 13/09; `inspect` = IR stats
