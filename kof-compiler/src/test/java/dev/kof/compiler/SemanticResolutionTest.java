@@ -92,6 +92,29 @@ class SemanticResolutionTest {
         assertSem025(r, "on namespace 'web.app'");
     }
 
+    // ---- #126: json no caminho semântico — aridade nunca escapa p/ bytecode ----
+
+    @Test
+    void wrongArityOnJsonNamespace(@TempDir Path tmp) throws IOException {
+        // O namespace `json` só existia no lowering JVM; o check não o via,
+        // e aridade errada produzia bytecode inválido (VerifyError). Agora o
+        // SemanticAnalyzer valida o contrato fixo: encode(x) 1 arg,
+        // decode<T>(s) 1 arg + type-argument.
+        assertSem025(compile(tmp, "J1.kf", "record No(String t)\nmain() { println(json.encode(No(\"x\"), 4)) }"),
+                "on namespace 'json'");
+        assertSem025(compile(tmp, "J2.kf", "main() { println(json.encode()) }"),
+                "on namespace 'json'");
+        assertSem025(compile(tmp, "J3.kf", "main() { println(json.decode(\"x\")) }"),
+                "use json.decode<T>(s)");
+        assertSem025(compile(tmp, "J4.kf", "main() { println(json.metodoRuim()) }"),
+                "on namespace 'json'");
+        // caminho feliz continua verde (regressão zero)
+        assertTrue(compile(tmp, "J5.kf", "main() { println(json.encode(42)) }").success(),
+                "json.encode(x) deve compilar");
+        assertTrue(compile(tmp, "J6.kf", "main() { println(json.decode<String>(\"\\\"a\\\"\")) }").success(),
+                "json.decode<T>(s) deve compilar");
+    }
+
     // ---- #6: super.metodoInexistente → SEM025 ----
 
     @Test

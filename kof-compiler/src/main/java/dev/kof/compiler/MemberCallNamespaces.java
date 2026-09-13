@@ -18,6 +18,34 @@ final class MemberCallNamespaces {
     private MemberCallNamespaces() {}
 
     static Type inferStatic(SemanticAnalyzer sa, MethodCallExpr mc, SymbolTable scope, Type recvType) {
+        // #126: o caminho semântico não conhecia o namespace `json` — só o
+        // lowering JVM (MethodCallNamespaces) o despacha. Resultado: aridade
+        // errada (`json.encode(x, 4)`, `json.encode()`) passava no check e o
+        // lowering não emitia nada para a chamada → bytecode com operand
+        // stack underflow (VerifyError em runtime). strings/time/db validam
+        // por KofXxx.staticCall + unknown(); json tem contrato fixo:
+        // encode(T) 1 arg, decode<T>(String) 1 arg + type-arg.
+        if (mc.receiver() instanceof IdentifierExpr rid && "json".equals(rid.name())
+                && !SemExpressionTyper.isLocalName(scope, rid.name())) {
+            if ("encode".equals(mc.methodName()) && mc.arguments().size() == 1) {
+                SemExpressionTyper.inferType(sa, mc.arguments().get(0), scope);
+                return BuiltinTypes.STRING;
+            }
+            if ("decode".equals(mc.methodName()) && mc.arguments().size() == 1
+                    && !mc.typeArguments().isEmpty()) {
+                SemExpressionTyper.inferType(sa, mc.arguments().get(0), scope);
+                return MemberResolver.resolveType(sa, mc.typeArguments().get(0), scope);
+            }
+            if (sa.diagnostics() != null) {
+                sa.diagnostics().error("", 0, 0, 0,
+                        "Cannot resolve method '" + mc.methodName() + "' on namespace 'json' — "
+                                + ("decode".equals(mc.methodName())
+                                        ? "use json.decode<T>(s) (1 arg + type argument)"
+                                        : "use json.encode(x) (1 arg)"),
+                        "SEM025");
+            }
+            return Type.UnknownType.UNKNOWN;
+        }
         if (mc.receiver() instanceof IdentifierExpr rid && !SemExpressionTyper.isLocalName(scope, rid.name()) && KofDb.isDbNamespace(rid.name())) {
             List<Type> argTypes = new ArrayList<>();
             for (ExpressionNode arg : mc.arguments()) argTypes.add(SemExpressionTyper.inferType(sa, arg, scope));
