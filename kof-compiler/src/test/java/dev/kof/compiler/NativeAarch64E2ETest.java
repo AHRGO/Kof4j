@@ -930,6 +930,38 @@ main() {
                 "esgotar o heap deve dar o panic honesto 'out of memory', foi: " + output);
     }
 
+    /** §146 cross (12/09, #101): Double % variável no aarch64 (herda o B40
+     *  via tradutor — fdiv.d/fcvt.l.d/fcvt.d.l/fmul.d/fsub.d/fmv cobertos).
+     *  Golden = oracle JVM (Bool/Int, regra bug 44). */
+    @Test
+    void aarch64DoubleModVariables(@TempDir Path tempDir) throws IOException {
+        assumeToolchain();
+        String output = runAarch64(tempDir, """
+            main() {
+                var a = 7.5
+                var b = 2.0
+                println(a % b == 1.5)
+                println(7.5 % 2.0 == 1.5)
+                println(10.0 % 3.0 == 1.0)
+                println(0.5 % 1.0 == 0.5)
+                println(-7.5 % 2.0 == -1.5)
+                println(7.5 % -2.0 == 1.5)
+                var z = 0.0
+                var r1 = 7.5 % z
+                println(r1 != r1)
+                var inf = 1.0 / z
+                var r2 = inf % 2.0
+                println(r2 != r2)
+                var nan = z / z
+                var r3 = nan % 2.0
+                println(r3 != r3)
+                var c = 10.0
+                println(c % 3.0 == 1.0)
+            }
+            """);
+        assertEquals("true\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue", output);
+    }
+
     /** §142 (12/09): paridade cross do fix Pop2 (idem riscv — o aarch herda
      *  o emissor cross; `addi sp,sp,16` desbalanceava do mesmo jeito). */
     @Test

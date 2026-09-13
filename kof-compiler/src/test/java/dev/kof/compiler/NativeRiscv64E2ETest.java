@@ -953,6 +953,40 @@ main() {
                 "esgotar o heap deve dar o panic honesto 'out of memory', foi: " + output);
     }
 
+    /** §146 cross (12/09, #101): Double % variável no riscv64. O MOD de
+     *  Float/Double caía no `default` vazio do dispatcher cross e devolvia o
+     *  dividendo (mesma raiz do x86). fmod via kof_double_mod (B40 — a -
+     *  trunc(a/b)*b, NaN p/ 0/Inf/NaN). Golden = oracle JVM (comparações
+     *  Bool/Int, nunca println de double cru — regra bug 44). */
+    @Test
+    void riscvDoubleModVariables(@TempDir Path tempDir) throws IOException, InterruptedException {
+        assumeToolchain();
+        String output = runRiscv64(tempDir, """
+            main() {
+                var a = 7.5
+                var b = 2.0
+                println(a % b == 1.5)
+                println(7.5 % 2.0 == 1.5)
+                println(10.0 % 3.0 == 1.0)
+                println(0.5 % 1.0 == 0.5)
+                println(-7.5 % 2.0 == -1.5)
+                println(7.5 % -2.0 == 1.5)
+                var z = 0.0
+                var r1 = 7.5 % z
+                println(r1 != r1)
+                var inf = 1.0 / z
+                var r2 = inf % 2.0
+                println(r2 != r2)
+                var nan = z / z
+                var r3 = nan % 2.0
+                println(r3 != r3)
+                var c = 10.0
+                println(c % 3.0 == 1.0)
+            }
+            """);
+        assertEquals("true\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue", output);
+    }
+
     /** §142 (12/09): paridade cross do fix Pop2. O emissor riscv emitia
      *  `addi sp,sp,16` p/ KofPop2 mas a pilha cross é 8 bytes/slot — o
      *  MESMO desbalanceamento do x86 (`m.put("b",2L)` como statement +

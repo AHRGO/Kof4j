@@ -29,6 +29,25 @@ public final class NativeRiscvCrossOps {
         boolean isFloat = NativeTypeKinds.isFloatType(opTy);
         boolean isDouble = NativeTypeKinds.isDoubleType(opTy);
         if (isFloat || isDouble) {
+            // §146 cross (12/09, #101): MOD de Float/Double variável caía no
+            // `default` vazio e devolvia o dividendo (mesma raiz do x86).
+            // Double: fmod via kof_double_mod (B40 — a - trunc(a/b)*b, NaN p/
+            // 0/Inf/NaN e |q|>=2^63, paridade JVM). Float: promove p/ double,
+            // chama o MESMO helper, trunca de volta (fcvt.s.d; o caller
+            // espera bits de float no push).
+            if (kb.op() == KofBinaryOp.MOD) {
+                String s = isFloat ? "s" : "d";
+                sb.append("    pop t0\n    fmv.").append(s).append(".x f1, t0\n");
+                sb.append("    pop t1\n    fmv.").append(s).append(".x f0, t1\n");
+                if (isFloat) sb.append("    fcvt.d.s f0, f0\n    fcvt.d.s f1, f1\n");
+                sb.append("    fmv.x.d a0, f0\n    fmv.x.d a1, f1\n");
+                sb.append("    call kof_double_mod\n");
+                sb.append("    fmv.d.x f0, a0\n");
+                if (isFloat) sb.append("    fcvt.s.d f0, f0\n");
+                sb.append("    fmv.x.").append(s).append(" t0, f0\n");
+                other.pushRiscv(sb, "t0");
+                return;
+            }
             String s = isFloat ? "s" : "d";
             sb.append("    pop t0\n    fmv.").append(s).append(".x f1, t0\n");
             sb.append("    pop t1\n    fmv.").append(s).append(".x f0, t1\n");

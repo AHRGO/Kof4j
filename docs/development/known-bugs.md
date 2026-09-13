@@ -4453,7 +4453,7 @@ statement-switch na mesma taxa). Reprodução no próprio teste (kof-cli).
 
 ## Issue #101 (reporte externo PublioSantos, 12/09) — 3 bugs de calculator, todos REPRODUZIDOS neste HEAD (`356f33b9`, worktree limpo; CLI da release 0.3.22-beta do reporter bate com o do repo)
 
-### 145. `String.isEmpty()` não está no registro de String → JVM `NoSuchMethodError` (descritor `()Ljava/lang/Object;`), Native link-fail `java_lang_String_isEmpty`, JS `t.isEmpty is not a function` — ⏳ ABERTO (3 targets; passes `kof check`/`kof test` — só quebra em runtime)
+### 145. `String.isEmpty()` não estava no registro de String → JVM `NoSuchMethodError` (descritor `()Ljava/lang/Object;`), Native link-fail `java_lang_String_isEmpty`, JS `t.isEmpty is not a function` — ✅ CORRIGIDO 12/09 (x86+riscv/aarch+JVM+Script+JS; issue #101)
 
 - **Menor repro (medido 12/09 no worktree):** `main() { var s = "abc"; var t = s.trim(); if (!t.isEmpty()) { println("ok") } }` →
   JVM: `NoSuchMethodError: 'java.lang.Object java.lang.String.isEmpty()'`;
@@ -4485,8 +4485,15 @@ statement-switch na mesma taxa). Reprodução no próprio teste (kof-cli).
 - **Nota:** `kof check`/`kof test` passam nos 3 — o bug é de codegen/link em
   método TIPADO corretamente pelo checker (a verificação não confere
   registrador de assinatura vs typer: sonda futura §145-bis).
+- **Fix (12/09, `718ae5cf` — lane bugfix-101):** `case "isEmpty" -> sig(BOOL)`
+  no `StringMethodRegistry` + ramo `isEmpty` no `CollectionMethodTyper` +
+  `case "isEmpty"` no `KofInterpreterCollections` + intrinsic x86
+  (`NativeX86StringCalls`: length@16==0) + ramo riscv (`NativeRiscvCrossOps`:
+  `seqz` sobre length) + alias JS (`JsCallEmitter`: `length === 0`).
+  **Prova:** célula `strisempty` da matriz (`false/false/true/ok` nos 4
+  targets — `ConformanceMatrixTest#conformanceCoreStrings` verde).
 
-### 146. Native: `Double %` (variáveis) retorna o DIVIDENDO — só o fold de constantes funciona — ⏳ ABERTO (x86; verificar riscv/aarch — mesma shape de dispatcher)
+### 146. Native: `Double %` (variáveis) retornava o DIVIDENDO — só o fold de constantes funcionava — ✅ CORRIGIDO 12/09 (x86+riscv+aarch+JVM+Script; JS excluído bug 44; issue #101)
 
 - **Menor repro (medido 12/09):** `println(10.0 % 3.0)` → `1.0` ✅ (fold de
   constantes no frontend); `var a=7.5; var b=2.0; println(a % b)` → **`7.5`**
@@ -4506,8 +4513,22 @@ statement-switch na mesma taxa). Reprodução no próprio teste (kof-cli).
   medido (regra bug 44: compara Bool/Int, nunca println de double cru).
 - **Nota:** passa `kof check`/`kof test` (value bug, R6 não violada — não é
   fallback silencioso, é aritmética errada em caminho que existe).
+- **Fix (12/09 — lane bugfix-101):** x86 `718ae5cf` (ramo MOD Double em
+  `NativeX86Arith` → `call kof_double_mod`; `RuntimeMath.kof_double_mod` em
+  SSE2 puro sem libm: `a - trunc(a/b)*b`, NaN p/ 0/Inf/NaN e |q|>=2^63) +
+  cross NESTE commit (fatia B40 `NativeRiscvAsmRtB40` — port 1:1 p/ riscv64:
+  `fdiv.d`+`fcvt.l.d rtz`+`fmul.d`/`fsub.d`; a faixa ±2^63 por comparação FP
+  porque o SAT riscv (INT64_MAX) difere do x86 (INT64_MIN); NaN canônico sem
+  `lui`/`fneg` que o tradutor aarch64 não conhece; ramo MOD no dispatcher
+  float/double de `NativeRiscvCrossOps` — Float promove p/ double e trunca de
+  volta; aarch64 herda via tradutor, 0 UNHANDLED).
+  **Prova:** célula `doublemod` da matriz (x86+JVM+Script; JS excluído bug 44)
+  + `NativeRiscv64E2ETest#riscvDoubleModVariables` e
+  `NativeAarch64E2ETest#aarch64DoubleModVariables` (10 vetores Bool sob qemu:
+  6 finitos + 3 NaN + `c % 3.0` do reporter). Limite honesto: |q|>=2^63 dá
+  NaN (igual x86); magnitudes gigantes fora do gate.
 
-### 147. JS: if-branch terminando em `throw` ENGole o epílogo do método — `return` final cai DENTRO do bloco `if`, statements seguintes viram dead code; em `while` o `else{...}` do loop desaparece (loop infinito) — ⏳ ABERTO (JsBackend/`JsControlFlowParser.parseIf`)
+### 147. JS: if-branch terminando em `throw` ENGolia o epílogo do método — `return` final caía DENTRO do bloco `if`, statements seguintes viravam dead code; em `while` o `else{...}` do loop desaparecia (loop infinito) — ✅ CORRIGIDO 12/09 (JS+JVM+Script+Native; issue #101)
 
 - **Menor repro (medido 12/09):** o `pick()` do reporter; output gerado:
   `else { if ((n === 3)) { ...; return x; } return 99; } }` — o `return 99`
@@ -4530,6 +4551,14 @@ statement-switch na mesma taxa). Reprodução no próprio teste (kof-cli).
   `s.accept(40)`) — golden JVM-vs-JS `10 20 30 99`.
 - **Workaround em produção hoje (reporter confirmou):** mover o `throw` p/
   função separada. Não documentar como idiom (é bug).
+- **Fix (12/09, `718ae5cf` — lane bugfix-101):** novo `JsIfThrowElse.java`
+  (extraído do `JsControlFlowParser` p/ manter o ratchet ≤500): `parseElse`
+  consome o else até o primeiro `KofJump`/`KofLabel` não-loop, EXCETO o
+  trailing `KofReturnVoid` do corpo do método (retorno implícito — epílogo
+  real, nunca statement do else); `thenEndsUnconditional` detecta
+  then-throw/return/break/continue.
+  **Prova:** célula `ifthrowelse` da matriz (`else/after` nos 4 targets —
+  `ConformanceMatrixTest#conformanceErrors` verde).
 
 ### 148. Frontend: constante de enum qualificada (`Color.RED`) como EXPRESSÃO tipava UNKNOWN → **SEM032 falso** em switch-expr exaustivo sobre enum (`var c = Color.RED` / `switch (Color.RED)`) — ✅ CORRIGIDO 12/09 (achado no sweep de paridade 4-target)
 
