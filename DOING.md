@@ -60,6 +60,41 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **📢 DIRETRIZ DE PRIORIDADE PARA ESTA BETA (13/09 ~21:00, da mantenedora —
+> vale para TODOS os agentes; leia ANTES de escolher tarefa).**
+> **Foco da `0.4.0-beta` = fechar `DECISIONS`, `stdlib` e `OTP`.**
+>
+> | Frente | Prioridade | Observação |
+> |---|---|---|
+> | `docs/development/DECISIONS.md` (§D-STDLIB/D-SEC/D-APP/D-SPRING) | **P0 — finalizar** | fila ratificada; cada linha = unidade+teste+commit |
+> | `docs/development/plan-stdlib-expansion.md` (STDLIB) | **P0 — finalizar** | resta só `format`/`boundaries` (decisão) + itens sem algoritmo |
+> | `docs/development/planning-otp-supervision.md` (OTP) | **P0 — finalizar** | S2-JVM ✅; S2-Native/JS dependem de §129/§132 (lane de bugs) |
+> | `docs/development/DECOMPILER.md` (Fase C) | **DESPRIORIZADO** | NÃO puxar trabalho agora |
+> | `docs/development/plan-editor-integration.md` (EDI001) | **DESPRIORIZADO** | só resta plugin IntelliJ (decisão de escopo) |
+> | `docs/development/TRANSLATOR.md` | **DESPRIORIZADO** | lane encerrada; gaps restantes = regra 6 |
+> | `docs/bugs-and-gaps/known-bugs.md` | **mantém** | o agente de bugs (`192.168.100.15`) **continua na lane dele** — não puxar |
+>
+> **Consequência prática:** quem terminar a unidade atual vai para a fila
+> `DECISIONS`→`stdlib`→`OTP` (ordem do §23/README), **não** para decompiler/
+> editor/translator. Se um item dessas três frentes estiver `EM CURSO` com
+> dono, escolha outro da mesma fila. Itens bloqueados por §129/§132 (OTP
+> Native/JS) **não travam** o loop: pegue o próximo item destravado da fila.
+>
+> **TODO de implementação derivado (o que falta de fato — auditado no código
+> 13/09, não na memória):**
+>
+> - **D-SEC:** `chacha20Encrypt/Decrypt` (**ausente** — grep 0; espelha
+>   `kof_sec_aesgcm_*`); `security.cookies` + `app.security()` (**ausente** —
+>   casados ao I2 do app model); OAuth resource-server (fila); `listenSecure`
+>   (já existe).
+> - **D-APP:** `CmdNew` + `--fat` (**ausentes** — grep 0); `kof.toml` ✅.
+> - **D-SPRING:** Fase 10 (`kof test` com asserts Kof), Fase 11 (`kof new`),
+>   Fase 12 (blog E2E — **AGORA**, validação da plataforma).
+> - **STDLIB:** `time.format`/`boundaries` (DD-STDLIB-02, decisão da
+>   mantenedora); `isNis`/`ulid`/`creditCard` sem algoritmo no corpus.
+> - **OTP:** S2-Native/JS bloqueados (§129/§132 — lane de bugs); S3
+>   (`supervisorStats`/docs de paridade) destravado.
+
 > **✅ FEITO (13/09 ~19:30, lane development, dono = 192.168.100.18):
 > D-STDLIB degrau 1 — `time.todayIso/formatDateIso/isToday` (S7e, 5 alvos).**
 > Dispatch em `KofTime` (`isTimeMethod` + cases; SEM025 cobre overloads),
@@ -344,7 +379,8 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > **✅ FEITO (13/09 ~19:00, lane development/translator, dono = 192.168.100.22): switch-EXPRESSÃO + method-ref/text-block/instanceof-pattern/import-static/`Math.` + literal `.5` + `~x` + classe local + `;` vazio + `main(args)` + splits `TranslateSwitch`/`TranslateNew` (bugs latentes Q4).** (1) **switch-EXPRESSÃO** → switch-expr Kof (`case L -> expr`); multi-label expande (PARSE078), colon+`yield` → `case L -> expr`, corpo em BLOCO = gap R6 (PARSE094). (2) **method reference** `Tipo::metodo` → gap R6. (3) **text block** `"""` → gap R6. (4) **`instanceof` binding** → gap R6. (5) **tipo qualificado em expressão** → gap R6 (antes SEM011 silencioso). (6) **`import static` de JDK** → gap R6; static import próprio passa. (7) **literal `.5`** → `0.5` no lexer (PARSE041). (8) **receptor `Math.`** → gap R6 (antes SEM011 silencioso; `math.*` Int-only). (9) **`~x`** (complemento) → `(-x - 1)` (mesmo valor em complemento de dois; antes o lexer DROPAVA o `~` = Kof truncado silencioso) + lexer agora **rejeita caractere inesperado** em vez de dropar. (10) **classe local** → gap R6 (SEM042; antes parse error confuso). (11) **instrução vazia `;`** → descartada (antes `expected ';'` confuso). (12) **`main(String[] args)`** → `main(args)` (antes params DESCARTADOS = SEM011 silencioso se o corpo usasse `args`; Kof aceita `main(String[] args)`, verificado). **Splits:** switch-expr → `TranslateSwitch.java` (77); `new` → `TranslateNew.java` (72); `TranslateExpr` 554→495, `TranslateStatements` 528→470 (entram ≤500). Prova: `switchExpressionTranslates` (roda `10/0`), `methodReferenceIsHonestGap`, `textBlockIsHonestGap`, `instanceofBindingPatternIsHonestGap`, `qualifiedTypeInExpressionIsHonestGap`, `jdkStaticImportIsHonestGap`, `ownStaticImportPassesThrough`, `mathReceiverIsHonestGap`, `leadingDotLiteralIsNormalized` (roda `0.5`), `bitComplementTranslates` (roda `-6/-1`), `emptyStatementIsSkipped` (roda `1`), `localClassIsHonestGap`, `mainArgsArePreserved` (roda `0`) — `TranslateTest` **55/55**; `check_500` OK **sem dívida de translate**. Gap de design conhecido (regra 6): demais receptores de classe JDK (`Integer.parseInt`, `Objects.*`, `Collections.*`, `Arrays.*`…) não têm mapeamento p/ stdlib — diagnóstico downstream SEM011, não silencioso.
 > **✅ FEITO (13/09 ~19:30, lane development/translator, dono = 192.168.100.22): `~x` + classe local + `;` vazio + `main(args)` + split `TranslateNew` (bugs latentes Q4, 2ª varredura de probes).** (1) **`~x`** (complemento bit a bit) → Kof não tem `~` (PARSE041) → emite `(-x - 1)` (identidade exata em complemento de dois); a raiz era o **lexer dropar o `~` em SILÊNCIO** → o lexer agora **rejeita** caractere inesperado com diagnóstico (antes: Kof truncado silencioso). (2) **classe LOCAL** dentro de método → Kof não tem tipos aninhados (SEM042) → gap honesto R6. (3) **instrução vazia `;`** → descartada. (4) **`main(String[] args)`** → `main(args)`: os params eram DESCARTADOS e o corpo podia referenciar `args` → Kof inválido silencioso; Kof aceita `main(String[] args)` (verificado no binário, roda `0`). **Split:** `new` → `TranslateNew.java` (72); `TranslateExpr` 554→495 (≤500). Prova: `bitComplementTranslates` (roda `-6/-1`), `localClassIsHonestGap`, `emptyStatementIsSkipped` (roda `1`), `mainArgsArePreserved` (roda `0`) — `TranslateTest` **55/55**; gate 4-módulos **1499/0 + 33/0 + 5/0 + 207/0**, BUILD SUCCESS, `grep -rl FAILURE` vazio; `check_500` OK **sem dívida de translate**.
 > **✅ FEITO (13/09 ~20:00, lane development/translator, dono = 192.168.100.22): escapes unicode/char + lambda 1-param + enum/record/init/abstract (3ª varredura de probes Q4).** (1) **Escapes**: o lexer dropava a barra de `\uXXXX` e emitia o texto cru (Kof inválido); `\b`/`\f` e octais iam crus; `char '\n'`/`'\''`/`'\uXXXX'` caíam no fallthrough e eram **dropados** — agora `decodeEscape`+`Esc(ch,len)` decodificam `\n \t \r \b \f \" \' \\`, `\uXXXX` e octal em string E char; emit re-escapa controle `<0x20`/`0x7F` como `\uXXXX`. (2) **Lambda 1-param SEM parênteses** (`x -> x + 1`) → `(x) -> x + 1` (Kof exige parênteses, PARSE041; antes `expected ';' but found '->'`). (3) **enum com construtor/corpo de constante** (`A(1)`, `A {…}`) e **record com corpo** → gap honesto R6 (antes pulados em SILÊNCIO = validação sumia). (4) **`static {}` e bloco de instância** → gap R6; **método `abstract`/`native` sem corpo** → gap R6 (antes dropado → SEM011). Prova: `unicodeAndControlEscapesRoundTrip` (roda `A/true/3/true/true/true/true`), `singleParamLambdaWithoutParensTranslates`, `enumBodyIsHonestGap`, `recordBodyIsHonestGap`, `abstractMethodIsHonestGap`, `instanceInitializerBlockIsHonestGap` (static incluso) — `TranslateTest` **60/60**; gate 4-módulos **1499/0 + 33/0 + 5/0 + 212/0**, BUILD SUCCESS, `grep -rl FAILURE` vazio; `check_500` OK (`TranslateExpr` 506 = dívida tolerada ≤599, split planejado).
-> **PRÓXIMO PASSO (translator):** gaps Java restantes são decisão de design/regra 6 (FQN `new pacote.Classe`→stdlib, classe anônima, varargs de usuário, receptores de classe JDK `Integer.parseInt`/`Objects.*`/`Collections.*`/`Arrays.*`, `synchronized(this){}` parse-error = gap) ou já cobertos. O **§177** (lambda bloco→VOID) que esta lane registrou na caça Q4 foi **CORRIGIDO pela lane bugs-and-gaps** (`192.168.100.15`, `firstReturnValueType` registra os `VarDeclStmt` do corpo; prova `CoreRegressionE2ETest.lambdaReturnLocalVar`, 4 targets). **Translator efetivamente esgotado** → próxima tarefa: fila ratificada de `DECISIONS.md` §D-STDLIB time (menor unidade: `time.todayIso`/`formatDateIso`/`isToday`; DOING:292 rank #1). Nova varredura via probes antes de tocar; re-disparo sem órfão novo e suíte verde → **RECUSAR** (estabilidade parcial — fila de bugs de outras lanes). **NUNCA:** `nat/` lane GC viva; fila de outras lanes; push main.
+> **✅ FEITO (13/09 ~21:00, lane development/translator, dono = 192.168.100.22): `synchronized (obj) { … }` → gap honesto R6 (encerramento da lane).** O bloco `synchronized` dava `expected ';' but found '{'` confuso; Kof não tem monitor explícito (concorrência é `spawn`/`await`; `synchronized` é warning SEM091) → dropá-lo mudaria a atomicidade → gap honesto R6. Prova: `synchronizedBlockIsHonestGap` — `TranslateTest` **61/61**.
+> **⏸️ LANE TRANSLATOR ENCERRADA / DESPRIORIZADA (diretriz da mantenedora 13/09):** a fila da `0.4.0-beta` é **DECISIONS → stdlib → OTP**. Gaps Java restantes são decisão de design/regra 6 (FQN `new pacote.Classe`→stdlib, classe anônima, varargs de usuário, receptores de classe JDK `Integer.parseInt`/`Objects.*`/`Collections.*`/`Arrays.*`) — não puxar mais trabalho desta lane. O **§177** (lambda bloco→VOID) foi **CORRIGIDO pela lane bugs-and-gaps** (`192.168.100.15`, `firstReturnValueType` registra os `VarDeclStmt` do corpo; prova `CoreRegressionE2ETest.lambdaReturnLocalVar`, 4 targets). **NUNCA:** `nat/` lane GC viva; fila de outras lanes; push main.
 
 > **✅ FEITO (13/09 ~15:10, lane docs — dono = esta sessão): CONSOLIDAÇÃO DE
 > PLANOS em `docs/development/` (pedido da mantenedora "junta o que tiver

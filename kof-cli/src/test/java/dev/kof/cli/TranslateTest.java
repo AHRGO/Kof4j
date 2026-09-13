@@ -798,6 +798,23 @@ class TranslateTest {
     }
 
     @Test
+    void synchronizedBlockIsHonestGap() {
+        // `synchronized (obj) { ... }` — Kof não tem monitor explícito
+        // (concorrência é `spawn`/`await`) → gap honesto R6 (antes:
+        // `expected ';' but found '{'` confuso) — Q4 13/09.
+        TranslateException e = assertThrows(TranslateException.class, () ->
+                Translate.translateJava("""
+                        public class Sy {
+                            int f(Object o) {
+                                synchronized (o) { return 1; }
+                            }
+                        }
+                        """));
+        assertTrue(e.getMessage().contains("synchronized") && e.getMessage().contains("revisão manual"),
+                "bloco synchronized → gap explícito (R6), foi: " + e.getMessage());
+    }
+
+    @Test
     void mainArgsArePreserved(@TempDir Path dir) throws Exception {
         // `main(String[] args)` tinha os params DESCARTADOS (`main()`), mas o
         // corpo podia referenciar `args` → Kof inválido (SEM011 silencioso).

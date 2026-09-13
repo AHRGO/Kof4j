@@ -83,6 +83,16 @@ class TranslateStatements extends TranslateExpr {
                     "labeled statement (`label:`) não tem equivalente direto em Kof "
                     + "(sem labels; use uma flag) — revisão manual");
         }
+        if (p.at("synchronized")) {
+            // Bloco `synchronized (obj) { ... }` — Kof não tem monitor
+            // explícito (`synchronized` é warning SEM091 no corpus; a
+            // concorrência é `spawn`/`await`). Dropá-lo mudaria a atomicidade
+            // do bloco → gap honesto R6 (antes: `expected ';' but found '{'`
+            // confuso — Q4 13/09).
+            throw new TranslateException(
+                    "bloco `synchronized (…) { … }` não tem equivalente direto em Kof "
+                    + "(concorrência é `spawn`/`await`; sem monitor explícito) — revisão manual");
+        }
         if (p.at("return")) {
             p.next();
             if (p.at(";")) { p.next(); return "return"; }
