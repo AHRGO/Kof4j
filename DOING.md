@@ -55,6 +55,17 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > (S2-OTP→DD-01→§106→§89→§117→§131→pow→Long=BigInt), checando dono.
 > **NUNCA:** `nat/` lane GC viva; push main.
 
+> **⚡ FEITO (13/09, lane development/docs — sync pós-implementações, dono = esta
+> sessão, `3e8167d8`):** as lanes fecharam **DD-01/§45** (`063ed956`, FinallyFrame
+> na IR, 4 targets) e **S10c/DD-STDLIB-01** (`317b23e7`) e moveram o doc de S10c
+> p/ `docs/stdlib/`. Sincronizei os registros centrais que elas não tocam:
+> `known-bugs.md` header (fila **14→13**, §45+S10c nos corrigidos 13/09),
+> `backend-parity.md` (`finally` c/ return → ✅ 4 targets), README §2/§3.
+> Cross-refs a arquivos movidos corrigidos em 9 docs. Gate matriz 1/1.
+> **PRÓXIMO TICK:** refletir novas implementações da fila ratificada
+> (§89/§106/§117/§131/pow) nos registros ao fecharem. **NÃO:** código de lane
+> alheia. **NUNCA:** push main.
+
 > **⚡ FEITO (13/09, lane development/docs — auditoria de LOCALIZAÇÃO 3-estados, dono =
 > outra sessão, remoto `28073c17`):** `docs/development/README.md` §1/§4.1/§4.2 ainda listavam como
 > vivas em `development/` 6 docs que o refactor 13/09 moveu p/ `decision-pending/`
