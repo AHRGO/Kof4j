@@ -1,5 +1,9 @@
 # TRANSLATOR.md — Kof Translator (plano → EM DESENVOLVIMENTO)
 
+> **Dono:** 192.168.100.22 (reivindicado 13/09 ~10:05 — órfão: sem dono com IP
+> no header; último código há 6 dias `84c48041`; regra dono-sem-IP=órfão da
+> mantenedora).
+
 **Status:** EM DESENVOLVIMENTO (caiu de `future/` em 12/09 — Fase F
 implementada: `Translate.java` + `TranslateLexer`/`TranslateExpr`;
 prova: `TranslateTest` 9/9 (output compila e roda). Subconjunto Java
