@@ -262,29 +262,10 @@ public final class JvmRuntimeJson {
                     return result;
                 }
 
-                // §103.1 (#103, merge 13/09): decode<Map<String,T>> — o parser
-                // devolve LinkedHashMap; o lowerer espera java.util.Map
-                // (HashMap quebra o checkcast quando a IR guarda Lkof/Map;).
-                public static java.util.Map<Object, Object> kof_json_decode_map(String json) {
-                    java.util.Map<Object, Object> result = new LinkedHashMap<>();
-                    if (kof_json_parse(json) instanceof Map<?, ?> m) result.putAll(m);
-                    return result;
-                }
-
+                // §103.1 (#103): decode<Map<String,T>> — texto em
+                // JvmRuntimeJsonMap (mesmo KofRuntime; split ≤500 byte-idêntico).
                 // decode<Map<String,Classe>>: cada VALOR é bindado à classe
-                // (mesmo kof_json_bind do object_list). Espelha o caminho de
-                // lista; só muda o container.
-                public static java.util.Map<Object, Object> kof_json_decode_object_map(String json, String cn)
-                        throws Exception {
-                    java.util.Map<Object, Object> result = new LinkedHashMap<>();
-                    if (kof_json_parse(json) instanceof Map<?, ?> m) {
-                        Class<?> type = Class.forName(cn);
-                        for (Map.Entry<?, ?> e : m.entrySet())
-                            result.put(e.getKey(), kof_json_bind(type, e.getValue()));
-                    }
-                    return result;
-                }
-
+                // (idem — JvmRuntimeJsonMap).
                 public static Object kof_json_decode_object(String json, Class<?> type) throws Exception {
                     return kof_json_bind(type, kof_json_parse(json));
                 }
