@@ -58,6 +58,24 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **⏸️ RECUSA de re-disparo (13/09 ~07:15, lane gate/qualidade + docs, dono =
+> 192.168.100.15):** varredura completa feita nesta sessão — (a) **6 células de
+> matriz** criadas para fechar overclaims de alvo-múltiplo (§89/§127-JVM/§131/
+> §155/§156/§157; detalhe no bloco abaixo); (b) `docs/development/` auditado:
+> **nenhum doc concluído pendente de mover** (DECOMPILER/DIFFERENTIAL_TESTING/
+> LEGACY_IR/LEGACY_MIGRATION/TRANSLATOR/ACTION_PLAN/IMPLEMENTATION_PLAN/
+> native-multiarch/roadmap/plan-editor-integration/planning-otp-supervision/
+> plan-stdlib-expansion todos com fase aberta — corretamente em
+> `development/`); (c) header da fila de `known-bugs.md` confere com as seções
+> sem ✅ (**8**); (d) `git fetch` sem novidade. **Gate 4-módulos: 1645 run / 0
+> falhas / 13 erros (`*Js` = `node` ausente) / 157 skip — verde**
+> (`gate_final.log`). **Nada novo na minha lane → re-disparo RECUSADO.** A
+> estabilidade GLOBAL ainda NÃO vale (8 bugs abertos, todos com dono de outra
+> lane: §81 .18/9094, §101 congelado, §104b-ii/§107/§114 bugfixer, §129/§161
+> nat, §132 OTP-JS) — o loop segue para as lanes deles; esta sessão não tem
+> trabalho real. **NÃO:** `nat/`; UI*; push main; `git config user.*`;
+> Co-authored-by.
+
 > **⚡ gate/qualidade — prova NATIVA automatizada de bugs fechados (13/09
 > ~07:10, dono = 192.168.100.15):** varredura de overclaims de alvo-múltiplo
 > (mesmo padrão do §106-JS) achou **6 células faltantes**: §89 (`numconv`),
