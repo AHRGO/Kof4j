@@ -304,10 +304,14 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
 } else if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.name(), locals)
             && KofWeb.isWebNamespace(rid.name())) {
     if ("app".equals(mc.methodName()) && mc.arguments().isEmpty()) {
+        // WEB001-T1 JS (13/09): web.app() liberado — o runtime JS tem server
+        // real (JsRuntimeUiWeb: kofWebAppNew/Route/Listen via GraalJS
+        // HttpServer); o gap real era o frontend bloquear o JS aqui.
         if (driver.target != Target.JVM && driver.target != Target.ANDROID
                 && driver.target != Target.NATIVE
                 && driver.target != Target.NATIVE_RISCV64
-                && driver.target != Target.NATIVE_AARCH64) {
+                && driver.target != Target.NATIVE_AARCH64
+                && driver.target != Target.JS) {
             gapError(driver, mc, "web: not available on the " + driver.target
                     + " driver.target yet (WEB001)", "WEB001");
             return localIdx;

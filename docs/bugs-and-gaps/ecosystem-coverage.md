@@ -106,7 +106,12 @@ Documentação: `docs/stdlib/security.md`; testes: `KofSecurityTest` (22).
 - Targets: JVM ✅ (incl. ws/sse); Native ✅ base (WEB002 server: `kof_web_*`
   no asm — `NativeWebCore`/`Listen`/`Responses`/`Runtime`; prova
   `KofWebNativeE2ETest` 4/4 no gate 12/09; cauda TLS/ws/sse/path-params
-  seguem como WEB002 residual na mesa de abertos do DOING); JS ❌ WEB001.
+  seguem como WEB002 residual na mesa de abertos do DOING); JS ✅ WEB001-T1
+  (13/09: server GraalJS hostless — `kofWeb*` em `JsRuntimeUiWeb` + fila Java
+  `KofJsWebQueue` (Context thread-confined → event-loop em `kofWebListen`);
+  retorno do handler = body 200 idem JVM; encoder UTF-8 puro JS (interop de
+  instância host não expõe métodos nesta build); prova `KofWebJsE2ETest`
+  (rotas exata/:param/query/method/path/POST-body por sockets reais).
 - Tests: `KofWebE2ETest` (9, sockets reais), `KofHttpServerTest` (8),
   `KofWebWsE2ETest` (11), `KofWsFrameTest` (7), `KofWebSseE2ETest` (7).
 - Docs: `docs/stdlib/stdlib-web.md`.
@@ -166,9 +171,9 @@ Legenda nas colunas de target: `y` = suportado, `~` = parcial, `–` = não.
 
 | Capacidade | Kof | JVM | Native | JS | Tests | Docs |
 |-----------|-----|-----|--------|----|-------|------|
-| HTTP server | `web.app()` | y | – WEB002 | – WEB001 | KofWebE2ETest | stdlib/stdlib-web.md |
-| routing (path params, query, headers) | `app.get("/users/:id")` | y | – | – | KofWebE2ETest | stdlib/stdlib-web.md |
-| REST verbs | get/post/put/delete/patch/options | y | – | – | KofWebE2ETest | stdlib/stdlib-web.md |
+| HTTP server | `web.app()` | y | – WEB002 | ✅ T1 (13/09) | KofWebE2ETest, KofWebJsE2ETest | stdlib/stdlib-web.md |
+| routing (path params, query, headers) | `app.get("/users/:id")` | y | – | ✅ T1 (13/09) | KofWebE2ETest, KofWebJsE2ETest | stdlib/stdlib-web.md |
+| REST verbs | get/post/put/delete/patch/options | y | – | ✅ get/post (T1) | KofWebE2ETest, KofWebJsE2ETest | stdlib/stdlib-web.md |
 | JSON body | automático (Content-Type) | y | – | – | KofWebE2ETest | stdlib/stdlib-web.md |
 | middleware | `app.use` | y | – | – | KofWebE2ETest | stdlib/stdlib-web.md |
 | HTTP client | ✅ `kof.http` (get/post/put/delete/patch/options/status; 3 targets — Native via HTTP/1.1 asm, https/retry) | y | y (asm `NativeHttpRuntime`) | y (GraalJS `Java HttpClient` + fetch) | KofHttpE2ETest (6) + KofHttpResilienceE2ETest (3, JVM+JS) | stdlib/http.md |

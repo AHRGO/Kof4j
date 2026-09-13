@@ -87,6 +87,38 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > **NUNCA:** `Translate*`/`decompile/` (.22), `nat/`+interp (9093), pow (.15),
 > push main, fechar sem prova.
 
+> **FEITO (13/09 ~15:30, lane development, dono = 192.168.100.18): WEB001-T1
+> JS — web server no target JS (ratificado pela mantenedora: "Ratificar e
+> terminar").** Compilação: `web.app()`/`app.get/post`/`app.listen` liberados
+> p/ Target.JS (`ExpressionMethodCallLowerer` + `ExpressionBuiltinInstanceCalls`
+> → kof_web_*); runtime `JsRuntimeUiWeb`: match de rotas (exato + :params),
+> helpers de contexto reais (param/query/header/body/method/path/status/
+> headerSet — eram stub silencioso, violação R6), RETORNO do handler = body
+> 200 (idem JVM `JvmRuntimeWebDispatch`). 3 bugs de runtime corrigidos com
+> causa raiz: (1) Context GraalJS é thread-confined — callback JS no
+> dispatcher morria silencioso; dispatcher agora é Java puro
+> (`KofJsWebQueue`, novo, 27 linhas) + event-loop: `kofWebListen` bloqueia
+> (idem JVM) e processa a fila na main thread; (2) createContext não casa
+> `:params` — registra o PREFIXO estático da rota; (3) interop de INSTÂNCIA
+> Java host não expõe métodos nesta build (String.getBytes → TypeError) —
+> encoder/decoder UTF-8 puro JS (`kofWebUtf8Bytes`/`kofWebBytesToUtf8`).
+> Body do POST lido do stream (a linha `getRequestBodyBodyHandlers` era
+> alucinação pré-existente → body null sempre). Prova Q1: `KofWebJsE2ETest`
+> (NOVO, sockets reais: rota exata, :param+query, method()+path(), POST
+> body). Bônus: slice ui-web tinha unidade desbalanceada (indentação
+> misturada 8/12 espaços → chunker não achava DECL → bloco inteiro em
+> fallback `always` em TODO programa JS, 28KB); normalizada → poda voltou
+> (hello = 6867B runtime). **Gate 4-módulos: 3372 run / 2 falhas AMBAS
+> PRÉ-EXISTENTES (provadas em HEAD limpo com stash): ArtifactSize
+> (corrigida pela lane .15 no pull: baseline 8.297, 6/6 verde agora) e
+> §168 NOVO registro (SEM025 ausente em `json.metodoRuim()` — SEM025 só
+> cobre encode/decode; conhecido do #126; aberto na fila — NÃO desta
+> unidade).** KofWebJsE2ETest 1/1, SemanticResolutionTest (J1-J3/J5-J6)
+> verdes. Cobertura: `ecosystem-coverage.md` (linhas 109 + matriz 3.2)
+> JS ✅ T1. **NÃO faz parte do T1 (residual):** ws/sse/TLS/serveDir no JS;
+> `web.listen(port)` namespace silenciosamente dropado em TODOS os targets
+> (bug pré-existente separado — idiom canônico é `app.listen`); §168.
+
 > **✅ FEITO (13/09 ~12:10, lane bugs-and-gaps, dono = 192.168.100.15):
 > §166 CORRIGIDO (opção (a) — baseline re-medido) + §167 (bitwise/shift Long).**
 > **§166** (`ArtifactSizeTest.helloJsRuntimeSizeWithinBaseline` 8297B > 8085B):

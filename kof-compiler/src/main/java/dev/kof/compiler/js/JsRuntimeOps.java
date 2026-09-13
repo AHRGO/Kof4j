@@ -296,6 +296,7 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
             // for GraalJS CreateObject interop. The handler (lambda obj) has
             // an 'invoke' method that processes Exchange.
             if (name.equals("kof_web_app_new")) {
+                p.lc.registerRuntime("kofWebAppNew");
                 stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofWebAppNew"), List.of()));
                 return;
             }
@@ -313,15 +314,52 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
                 stack.add(call);
                 return;
             }
+            // WEB001-T1 (13/09): helpers de contexto reais no JS — param/
+            // query/header/body/method/path leem o request corrente
+            // (kofWebRequest no JsRuntimeUiWeb). R6: nunca stub silencioso.
+            if (name.equals("kof_web_param") && args.size() == 1) {
+                p.lc.registerRuntime("kofWebParam");
+                stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofWebParam"), args));
+                return;
+            }
+            if (name.equals("kof_web_query") && args.size() == 1) {
+                p.lc.registerRuntime("kofWebQuery");
+                stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofWebQuery"), args));
+                return;
+            }
+            if (name.equals("kof_web_header") && args.size() == 1) {
+                p.lc.registerRuntime("kofWebHeader");
+                stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofWebHeader"), args));
+                return;
+            }
+            if (name.equals("kof_web_body") && args.isEmpty()) {
+                p.lc.registerRuntime("kofWebBody");
+                stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofWebBody"), List.of()));
+                return;
+            }
+            if (name.equals("kof_web_method") && args.isEmpty()) {
+                p.lc.registerRuntime("kofWebMethod");
+                stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofWebMethod"), List.of()));
+                return;
+            }
+            if (name.equals("kof_web_path") && args.isEmpty()) {
+                p.lc.registerRuntime("kofWebPath");
+                stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofWebPath"), List.of()));
+                return;
+            }
             if (name.equals("kof_web_status") && args.size() == 2) {
-                stack.add(args.get(1));
+                // response.status(code, text) — o 2º arg (texto) é o corpo;
+                // mantém o valor de String no topo (contrato JVM).
+                p.lc.registerRuntime("kofWebStatus");
+                stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofWebStatus"), args));
                 return;
             }
             if (name.equals("kof_web_header_set") && args.size() == 2) {
-                stack.add(args.get(1));
+                p.lc.registerRuntime("kofWebHeaderSet");
+                stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofWebHeaderSet"), args));
                 return;
             }
-            // fallback: stub for unimplemented web functions
+            // fallback: R6 — o gap é EXPLICITO (kofWebStub lança WEB001), nunca undefined
             p.lc.registerRuntime("kofWebStub");
             JsIr.JsExpression call = new JsIr.JsCall(new JsIr.JsIdentifier("kofWebStub"), args);
             if (Type.isVoid(kc.returnType())) {
