@@ -158,8 +158,8 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > **Livre para caça Q4:** áreas recém-mexidas por outras lanes (S13a stdlib,
 > translator) são candidatas a probe de borda — sem tocar arquivos EM CURSO.
 
-> **✅ FEITO (13/09 ~19:45, lane bugs-and-gaps, dono = 192.168.100.15):
-> Continuidade da caça Q4 — §180 face (c) + §181 + bug 82 face sufixo.**
+> **✅ FEITO (13/09 ~20:15, lane bugs-and-gaps, dono = 192.168.100.15):
+> Continuidade da caça Q4 — §180 faces (c)/(d) + §181 + bug 82 face sufixo.**
 > **(a) §180 face (c)** (`println(Float)` no Native expande p/ double;
 > `1.0f/3.0f` → `0.3333333432674408` vs JVM `0.33333334`) extendido na célula
 > `doubleprint` (JVM+Script) + header do bug 44. **(b) §181 NOVO** (cast
@@ -169,12 +169,15 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > `RangeError`). Célula `cast` só testava em faixa (**verde falso Q5**) — nova
 > célula `castrange` (JVM+Script). **(c) §181 face (d)** (`toInt()/toLong()` §89
 > alias do cast − mesmos valores). **(d) bug 82 face sufixo** (`"1.0d"` Native/
-> JS rejeitam; JVM/Script aceitam). Prova: `ConformanceMatrixTest` 11/11 +
-> `ConformanceMatrixDocTest` 1/1 + KofTimeE2ETest 18/18 (falso-verde era o
-> stale-build trap do §165 — `clean compile` resolve). Suíte 4 módulos:
-> compiler 1504/0/13-node/160-skip; script 33; c 5; cli 207 — BUILD SUCCESS.
+> JS rejeitam; JVM/Script aceitam). **(e) §180 face (d)** (`-nan` de libm —
+> `math.pow(-1.0, 0.5)` → Native `-nan` vs JVM/Script/JS `NaN`; o ramo `sp4`
+> do fix residual do bug 44 só casa `-inf`, não `-nan`) — célula `doubleprint`
+> ganha o caso. Prova: `ConformanceMatrixTest` 11/11 + `ConformanceMatrixDocTest`
+> 1/1 + `KofTimeE2ETest` 18/18 (falso-verde era o stale-build trap do §165 —
+> `clean compile` resolve). Suíte 4 módulos pós-rebase:
+> compiler 1509/0/13-node/161-skip; script 35; c 5; cli 207 — BUILD SUCCESS.
 > **Já pushado** (a3561ab3 §180c, e6058294 §181, 98c5d738 §181d, 56174ce2
-> bug82, 98e758db fila 10→12).
+> bug82, 98e758db fila 10→12, 02c1defa §180d).
 > **§181 NÃO corrigido por mim** (JS = `JsCallEmitter`/runtime core de outra
 > lane; Native = lane Native; já catalogado com fix proposto).
 
