@@ -36,7 +36,10 @@ class ArtifactSizeTest {
     // volta a proteger de regressão a partir daqui).
     private static final long HELLO_X86_BYTES = 32_520L;
     private static final int HELLO_X86_SYMS = 37;
-    private static final long HELLO_JS_BYTES = 6_873L;
+    // Pós-#104 (13/09): o shim globalThis.kof_platform do core JS (erro claro
+    // em vez de ReferenceError fora do GraalJS) entrou no préâmbulo always —
+    // o hello carrega ~827B a mais. Re-medido neste host: 6.873 → 7.700.
+    private static final long HELLO_JS_BYTES = 7_700L;
     // Hello riscv64 (cross — só medido onde há toolchain). Pós-S-5 (T1b,
     // 12/09): seções .text.<fn> por função do runtime + `ld --gc-sections`
     // derrubaram os irmãos mortos DENTRO das peças mantidas pela S-4:
