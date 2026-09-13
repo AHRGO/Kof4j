@@ -39,7 +39,13 @@ class ArtifactSizeTest {
     // Pós-#104 (13/09): o shim globalThis.kof_platform do core JS (erro claro
     // em vez de ReferenceError fora do GraalJS) entrou no préâmbulo always —
     // o hello carrega ~827B a mais. Re-medido neste host: 6.873 → 7.700.
-    private static final long HELLO_JS_BYTES = 7_700L;
+    // §166 (13/09): o shim DOM (#121: dataset/disabled/classList em kofMakeEl)
+    // vive no MESMO préâmbulo always do core (é `if (typeof document ===
+    // "undefined")`, sem DECL de topo — o chunker o trata como always). +9
+    // linhas de API DOM legítima subiram o hello 7.700 → 8.297 (+7,8% > tol).
+    // Baseline re-medido (mesmo processo do #104). Prune real = mover o shim
+    // p/ unit alcançável por UI (T2 follow-up); aí o baseline volta a cair.
+    private static final long HELLO_JS_BYTES = 8_297L;
     // Hello riscv64 (cross — só medido onde há toolchain). Pós-S-5 (T1b,
     // 12/09): seções .text.<fn> por função do runtime + `ld --gc-sections`
     // derrubaram os irmãos mortos DENTRO das peças mantidas pela S-4:

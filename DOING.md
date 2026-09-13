@@ -60,6 +60,27 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (13/09 ~12:10, lane bugs-and-gaps, dono = 192.168.100.15):
+> §166 CORRIGIDO (opção (a) — baseline re-medido) + §167 (bitwise/shift Long).**
+> **§166** (`ArtifactSizeTest.helloJsRuntimeSizeWithinBaseline` 8297B > 8085B):
+> o shim DOM #121 (dataset/disabled/classList) vive no préâmbulo `always` do
+> core (`if (typeof document === "undefined")`, sem DECL de topo → chunker
+> trata como always, igual ao shim `kof_platform` do #104) — é API DOM
+> legítima. Apliquei a opção (a) documentada no próprio registro: baseline
+> `HELLO_JS_BYTES` 7.700 → **8.297** (mesmo processo do #104: 6.873 → 7.700),
+> com nota no teste + follow-up T2 (mover p/ unit alcançável por UI faria
+> cair de novo — meta de poda, não bug). `ArtifactSizeTest` 6/6.
+> **Gate 4-módulos FINAL: compiler 1481 run / 0 falhas / 13 erros (só `node`
+> ausente) / 157 skip, script 31/0, c 5/0, cli 160/0 — BUILD SUCCESS, suíte
+> 100% verde fora do `node`.** §167 já commitado/pushado (`76a0ff62`).
+> **PRÓXIMO PASSO:** a lane bugs-and-gaps fechou §166+§167 — a suíte está
+> verde (só erros ambientais de `node`) e a fila aberta volta a **8 itens,
+> todos de outras lanes** (§101 congelado; §104b-ii/§107/§114 bugfixer;
+> §129/§161 nat; §132 OTP-JS; §165 não-reproduz). Re-disparo: reler
+> `known-bugs.md:11`; se nada novo e suíte verde → **RECUSAR** (estabilidade
+> parcial). **NUNCA:** `nat/` lane GC viva; fila §101/§104b-ii/§107/§114/§129/
+> §132/§161/§165 (donos/bloqueios); push main.
+
 > **✅ FEITO (13/09 ~11:40, lane bugs-and-gaps, dono = 192.168.100.15):
 > §167 CORRIGIDO — bitwise/shift com `Long` misturado (JVM VerifyError + JS
 > TypeError/máscara errada + overflow de Long sem wrap no JS).** Achado na
