@@ -362,11 +362,11 @@ diferenciais.
 > **42/42**; gate 4-módulos pós-rebase **1497/0 + 33/0 + 5/0 + 194/0**, BUILD SUCCESS.
 > `check_500` OK (sem aviso de `Translate*`).
 >
-> **Nota (achado na caça Q4, registrado §176 — lane compiler, NÃO do
+> **Nota (achado na caça Q4, registrado §177 — lane compiler, NÃO do
 > translator):** lambda com corpo em BLOCO que retorna uma **local declarada
 > no próprio bloco** é tipada VOID (`SEM033`) **quando o módulo contém uma
 > classe** (`main`+`class C {}`); sem a classe o mesmo programa passa. Causa
 > provável: `ExpressionTyper.firstReturnValueType` não registra os
 > `VarDeclStmt` do bloco em `locals` ao inferir o retorno. O teste
 > `lambdaBlockBodyTranslates` usa `return n + 1` p/ não depender do bug; o
-> fix pertence à lane compiler (não ao translator). Ver `known-bugs.md §176`.
+> fix pertence à lane compiler (não ao translator). Ver `known-bugs.md §177`.
