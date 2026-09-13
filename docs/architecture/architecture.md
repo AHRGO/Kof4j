@@ -4,8 +4,14 @@
 
 ## Status: Accepted
 
-**Última atualização:** 6 de setembro de 2026
+**Última atualização:** 13 de setembro de 2026
 **Versão:** 0.3.0-beta
+
+> **Melhoria visual 13/09 (issue #109):** os diagramas em ASCII deste ADR
+> (Pipeline, Type Representation, IR, backends e dispatch da stdlib) passaram
+> a **Mermaid** — o GitHub renderiza nativamente; conteúdo e fatos inalterados
+> (só a notação). Blocos de terminal (ex.: exemplo de diagnóstico) continuam
+> `text`.
 
 > **Este ADR registra a decisão arquitetural (multi-target via frontend
 > compartilhado + backends plugáveis).** A descrição **completa e atual** da
@@ -32,56 +38,31 @@ Uma linguagem. Um compilador. Múltiplos targets.
 
 ## Pipeline
 
-```text
-Source (.kf)
-  ↓ Lexer (hand-written, maximal munch, LEX00x)
-  ↓ Token stream
-  ↓ Parser (recursive descent + precedence climbing, PARSE0xx)
-  ↓ AST crua (39 nós sealed, tipos como String)
-  ↓ Desugar (test/application) + expand imports
-  ↓ Semantic analysis (SemanticAnalyzer — name resolution e type checking
-  │   ENTRELACEADOS em inferType, NÃO fases separadas; 4 fases, fixpoint ≤4;
-  │   SEM0xx; NÃO há typed AST — tipos em IdentityHashMap laterais)
-  ↓ [aborta se houver erro]
-  ↓ Lowering AST→IR (StatementLowerer/ExpressionLowerer/lambdaClass)
-  ↓ Kof IR (máquina de pilha linear, 30 ops, tipada, backend-agnostic,
-  │   com KofDebugInfo; basic blocks nominais)
-  ↓ Optimizer (constant folding, dead effects, reachability, jump-to-next)
-  ↓
-  ├── Kof4J Backend (ASM, bytecode V21)
-  │   ↓ .class files
-  │   ↓ JVM (virtual threads, KofRuntime gerado)
-  │
-  ├── KofNative Backend (x86_64)
-  │   ↓ Assembly x86-64
-  │   ↓ as + ld
-  │   ↓ ELF x86_64 (syscalls, free-list + kof_gc_collect)
-  │   ↓ OS
-  │
-   ├── KofNative riscv64 (native.risc)
-   │   ↓ lowering riscv64 REAL (emitRiscv) — asm puro, raw syscalls, ELF estático
-   │   ↓ toolchain riscv64-linux-gnu-as/ld + qemu
-   
-   ├── KofNative aarch64 (native.arm)
-   │   ↓ asm riscv64 traduzido linha-a-linha (translateRiscvToAarch64)
-   │   ↓ toolchain aarch64-linux-gnu-as/ld + qemu
-   
-  ├── KofJS Backend (ESM ES2022+)
-  │   ↓ ES Modules (ECMAScript 2022+)
-  │   ↓ kof-runtime.mjs + KofJsRunner (embedded GraalJS)
-  │   ↓ Node/Browser via kof_platform
-   ├── KofAndroid (Target.ANDROID)
-   │   ↓ bytecode JVM + host Activity em Kof (android-host.kf)
-   │   ↓ projeto Maven (d8/aapt2/apksigner) + APK (Fase 1)
-     ├── KofScript (Target de execução direta — interpretador da IR)
-     │   ↓ Kof PURO consumindo o MESMO frontend (lexer→parser→AST→IR→opt);
-     │   ↓   sem `let`/`const`/`async`/`fn` — não é JavaScript.
-     │   ↓   único serviço do wrapper: statements de topo → main(),
-     │   ↓   var/val de topo → KofScriptGlobals.
-     │   ↓ KofInterpreter executa a IR otimizada SEM emitir bytecode e
-     │   ↓   SEM fork de JVM — paridade por construção com o backend JVM.
-     └── (fora da IR Kof) kof-c-compiler (subconjunto C → ELF x86_64)
-         NÃO consome a IR do Kof.
+```mermaid
+flowchart TD
+    S["Source (.kf)"]
+    S -->|"Lexer (hand-written, maximal munch, LEX00x)"| T["Token stream"]
+    T -->|"Parser (recursive descent + precedence climbing, PARSE0xx)"| AST["AST crua<br/>(39 nós sealed, tipos como String)"]
+    AST --> DES["Desugar (test/application) + expand imports"]
+    DES --> SEM["Semantic analysis (SemanticAnalyzer)<br/>name resolution e type checking<br/>ENTRELACEADOS em inferType, NÃO fases separadas<br/>4 fases, fixpoint ≤4; SEM0xx<br/>NÃO há typed AST — tipos em IdentityHashMap laterais"]
+    SEM -->|"aborta se houver erro"| X([erro])
+    SEM -->|"Lowering AST→IR<br/>(StatementLowerer/ExpressionLowerer/lambdaClass)"| IR["Kof IR<br/>máquina de pilha linear, 30 ops, tipada,<br/>backend-agnostic, com KofDebugInfo;<br/>basic blocks nominais"]
+    IR --> OPT["Optimizer<br/>(constant folding, dead effects, reachability, jump-to-next)"]
+    OPT --> JVM["Kof4J Backend (ASM, bytecode V21)"]
+    JVM --> JVMo[".class files →<br/>JVM (virtual threads, KofRuntime gerado)"]
+    OPT --> X86["KofNative Backend (x86_64)"]
+    X86 --> X86o["Assembly x86-64 → as + ld →<br/>ELF x86_64 (syscalls, free-list + kof_gc_collect) → OS"]
+    OPT --> RISC["KofNative riscv64 (native.risc)"]
+    RISC --> RISCo["lowering riscv64 REAL (emitRiscv) —<br/>asm puro, raw syscalls, ELF estático →<br/>toolchain riscv64-linux-gnu-as/ld + qemu"]
+    OPT --> ARM["KofNative aarch64 (native.arm)"]
+    ARM --> ARMo["asm riscv64 traduzido linha-a-linha<br/>(translateRiscvToAarch64) →<br/>toolchain aarch64-linux-gnu-as/ld + qemu"]
+    OPT --> JS["KofJS Backend (ESM ES2022+)"]
+    JS --> JSo["ES Modules (ECMAScript 2022+) →<br/>kof-runtime.mjs + KofJsRunner (embedded GraalJS) →<br/>Node/Browser via kof_platform"]
+    OPT --> AND["KofAndroid (Target.ANDROID)"]
+    AND --> ANDo["bytecode JVM + host Activity em Kof (android-host.kf) →<br/>projeto Maven (d8/aapt2/apksigner) + APK (Fase 1)"]
+    OPT --> SCR["KofScript (Target de execução direta — interpretador da IR)"]
+    SCR --> SCRo["Kof PURO consumindo o MESMO frontend<br/>(lexer→parser→AST→IR→opt); sem let/const/async/fn —<br/>não é JavaScript. único serviço do wrapper: statements de<br/>topo → main(), var/val de topo → KofScriptGlobals.<br/>KofInterpreter executa a IR otimizada SEM emitir bytecode<br/>e SEM fork de JVM — paridade por construção com o backend JVM."]
+    C["(fora da IR Kof) kof-c-compiler<br/>(subconjunto C → ELF x86_64)<br/>NÃO consome a IR do Kof"]
 ```
 
 ## Decision: Multiplatform via Shared Frontend + Pluggable Backends
@@ -140,30 +121,30 @@ The type system supports (0.2.6-beta, 27/08/2026):
 
 ### Type Representation
 
-```text
-Type
-  ├── PrimitiveType (int, bool, etc.)
-  ├── ClassType (User, String, etc.)
-  ├── ArrayType (int[], User[])
-  ├── TypeVariable (T)
-  ├── WildcardType (? extends T)
-  └── UnknownType
+```mermaid
+graph LR
+    Type --> PrimitiveType["PrimitiveType (int, bool, etc.)"]
+    Type --> ClassType["ClassType (User, String, etc.)"]
+    Type --> ArrayType["ArrayType (int[], User[])"]
+    Type --> TypeVariable["TypeVariable (T)"]
+    Type --> WildcardType["WildcardType (? extends T)"]
+    Type --> UnknownType
 ```
 
 ## IR
 
 The IR is a backend-agnostic lowered representation of the AST.
 
-```text
-IRModule
-  ├── IRClass
-  │     ├── IRField*
-  │     ├── IRMethod*
-  │     │     ├── IRBasicBlock*
-  │     │     │     └── KofOperation*
-  │     │     └── IRLocalVariable*
-  │     └── metadata
-  └── imports
+```mermaid
+graph LR
+    IRModule --> IRClass
+    IRModule --> imports
+    IRClass --> IRField["IRField*"]
+    IRClass --> IRMethod["IRMethod*"]
+    IRClass --> metadata
+    IRMethod --> IRBasicBlock["IRBasicBlock*"]
+    IRMethod --> IRLocalVariable["IRLocalVariable*"]
+    IRBasicBlock --> KofOperation["KofOperation*"]
 ```
 
 ### KofOperation types
@@ -196,12 +177,10 @@ Each backend maps LabelId to its own representation (ASM Label for JVM, assembly
 
 The JVM backend uses ASM to generate class files.
 
-```text
-Kof IR
-  ↓
-ClassWriter (ASM)
-  ↓
-.class bytes
+```mermaid
+flowchart TD
+    A["Kof IR"] --> B["ClassWriter (ASM)"]
+    B --> C[".class bytes"]
 ```
 
 The backend produces:
@@ -223,18 +202,13 @@ client com **retry/circuit breaker** (`KOF_HTTP_RETRIES`/`KOF_HTTP_TRIPS`/
 
 The native backend generates ELF binaries (0.2.6-beta).
 
-```text
-Kof IR
-  ↓
-Assembly generation (x86-64 / riscv64 / aarch64)
-  ↓
-as (GNU assembler: as / riscv64-linux-gnu-as / aarch64-linux-gnu-as)
-  ↓
-.o (object file)
-  ↓
-ld (linker)
-  ↓
-ELF binary
+```mermaid
+flowchart TD
+    A["Kof IR"] --> B["Assembly generation<br/>(x86-64 / riscv64 / aarch64)"]
+    B --> C["as (GNU assembler:<br/>as / riscv64-linux-gnu-as / aarch64-linux-gnu-as)"]
+    C --> D[".o (object file)"]
+    D --> E["ld (linker)"]
+    E --> F["ELF binary"]
 ```
 
 Targets (0.2.6-beta, 31/08):
@@ -300,14 +274,13 @@ compile-time** (docs/stdlib/stdlib.md): cada módulo é um descriptor no compila
 (`KofIo.java`, `KofWeb.java`, `KofSecurity.java`, `KofUi.java`) que mapeia a
 intenção do programador para funções de runtime `kof_*`:
 
-```text
-Kof source
-  ↓
-SemanticAnalyzer   → tipos das chamadas
-CompilerDriver     → lowering para KofCall(kof_*)
-  ├── JvmRuntime   → KofRuntime.java gerado (javax.crypto, java.nio..., HttpClient for kof.http JS)
-  ├── NativeRuntime→ assembly x86-64 / riscv64 (syscalls, sem libc, free-list + kof_gc_collect)
-  └── JsBackend    → kof-runtime.mjs (JS puro + kof_platform, GraalJS)
+```mermaid
+flowchart TD
+    A["Kof source"] --> B["SemanticAnalyzer<br/>→ tipos das chamadas"]
+    B --> C["CompilerDriver<br/>→ lowering para KofCall(kof_*)"]
+    C --> D["JvmRuntime<br/>→ KofRuntime.java gerado<br/>(javax.crypto, java.nio..., HttpClient for kof.http JS)"]
+    C --> E["NativeRuntime<br/>→ assembly x86-64 / riscv64<br/>(syscalls, sem libc, free-list + kof_gc_collect)"]
+    C --> F["JsBackend<br/>→ kof-runtime.mjs<br/>(JS puro + kof_platform, GraalJS)"]
 ```
 
 Gaps de target produzem **diagnósticos claros em compile-time** (SECN00x,
