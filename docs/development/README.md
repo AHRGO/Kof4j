@@ -83,7 +83,7 @@ escalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 
 | Item | Onde | O que espera |
 |---|---|---|
-| DD-STDLIB-01 — `randomBytes`/`randomChoice` (S10c) | `future/planning-stdlib-array-returns.md` | ✅ DECIDIDO 13/09 (opção 6a: `randomBytesHex` + choice=idiom) — implementar |
+| DD-STDLIB-01 — `randomBytes`/`randomChoice` (S10c) | `planning-stdlib-array-returns.md` (subiu de `future/` 13/09 — decisão feita) | ✅ DECIDIDO 13/09 (opção 6a: `randomBytesHex` + choice=idiom) — implementar |
 | DD-STDLIB-02 — `time.format`/`boundaries` | `planning-stdlib-time-design.md` (caiu 12/09: `addDays`/`diffDays` ✅) | decisão de superfície (AINDA PENDENTE) |
 | DD-01 — `finally` no caminho de `return` (JVM/Native/interp) | `planning-finally-return.md` (caiu 12/09: JS ✅ `c727fee`) | ✅ DECIDIDO 13/09 (opção 4a: FinallyFrame na IR + bump 0.3.1) — implementar |
 | DD-OTP (restante) | `planning-otp-supervision.md` | ✅ RATIFICADAS 13/09 (opção 1a: S2 JVM + wrapper `(id, resultado)`; riscv/aarch PARTIAL) — implementar S2 |

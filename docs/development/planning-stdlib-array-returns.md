@@ -1,9 +1,9 @@
-# Planning — retorno Array/objeto na camada de dispatch stdlib (DD-STDLIB-01)
+# DD-STDLIB-01 — retorno Array/objeto na camada de dispatch stdlib (RATIFICADO 6a — implementação pendente)
 
 > **✅ DECIDIDO 13/09 (mantenedora, opção 6a):** Opção B — `randomBytesHex(n)->String` (zero plumbing); `randomChoice` fechado como idiom (`l[random.randomInt(l.size)]` documentado em `training/idioms`); nome `randomBytes` binário fica RESERVADO (não entra).
 >
-> **Status:** `PROPOSED` (aguarda decisão da mantenedora) · **Gap:** S10c
-> (`random.randomBytes` / `random.randomChoice`) · **Lane:** STDLIB ·
+> **Status:** `RATIFICADO` (13/09, opção 6a) — implementação pendente na lane STDLIB · **Gap:** S10c
+> (`random.randomBytes` / `random.randomChoice`) · **Lane:** STDLIB (executora do 6a) ·
 > **Criado:** 09/09/2026 · **Bump:** nenhum (aditivo — só abre caminho)
 
 ## O problema
