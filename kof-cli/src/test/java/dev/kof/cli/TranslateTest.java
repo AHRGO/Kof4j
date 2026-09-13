@@ -541,6 +541,173 @@ class TranslateTest {
     }
 
     @Test
+    void methodReferenceIsHonestGap() {
+        // `Tipo::metodo` / `obj::metodo` — Kof não tem method reference (só
+        // lambda); antes dava `expected ')' but found ':'` confuso (Q4 13/09).
+        TranslateException e = assertThrows(TranslateException.class, () ->
+                Translate.translateJava("""
+                        import java.util.List;
+                        public class MR {
+                            int f() {
+                                List<String> xs = List.of("a");
+                                xs.forEach(System.out::println);
+                                return xs.size();
+                            }
+                        }
+                        """));
+        assertTrue(e.getMessage().contains("method reference") && e.getMessage().contains("revisão manual"),
+                "method reference sem equivalente Kof → gap explícito (R6), foi: " + e.getMessage());
+    }
+
+    @Test
+    void textBlockIsHonestGap() {
+        // Text block `"""..."""` — Kof não tem; antes o lexer lia `""` vazio e
+        // reabria (parse error confuso) — Q4 13/09.
+        TranslateException e = assertThrows(TranslateException.class, () ->
+                Translate.translateJava("""
+                        public class TB {
+                            String s() {
+                                return \"\"\"
+                                    hello
+                                    \"\"\";
+                            }
+                        }
+                        """));
+        assertTrue(e.getMessage().contains("text block") && e.getMessage().contains("revisão manual"),
+                "text block sem equivalente Kof → gap explícito (R6), foi: " + e.getMessage());
+    }
+
+    @Test
+    void instanceofBindingPatternIsHonestGap() {
+        // `o instanceof String s` (binding) — Kof não tem binding de pattern;
+        // antes dava `expected ')' but found 's'` confuso (Q4 13/09).
+        TranslateException e = assertThrows(TranslateException.class, () ->
+                Translate.translateJava("""
+                        public class IP {
+                            int f(Object o) {
+                                if (o instanceof String s) { return s.length(); }
+                                return 0;
+                            }
+                        }
+                        """));
+        assertTrue(e.getMessage().contains("pattern matching") && e.getMessage().contains("revisão manual"),
+                "binding pattern sem equivalente Kof → gap explícito (R6), foi: " + e.getMessage());
+    }
+
+    @Test
+    void qualifiedTypeInExpressionIsHonestGap() {
+        // `java.util.List.of(...)` em posição de expressão — o translator
+        // ignora imports e não resolve FQN; antes emitia Kof inválido
+        // (`java` undefined = SEM011) — Q4 13/09.
+        TranslateException e = assertThrows(TranslateException.class, () ->
+                Translate.translateJava("""
+                        public class QT {
+                            int f() {
+                                for (String s : java.util.List.of("a")) { }
+                                return 1;
+                            }
+                        }
+                        """));
+        assertTrue(e.getMessage().contains("tipo qualificado") && e.getMessage().contains("revisão manual"),
+                "tipo qualificado em expressão → gap explícito (R6), foi: " + e.getMessage());
+    }
+
+    @Test
+    void switchExpressionTranslates(@TempDir Path dir) throws Exception {
+        // `return switch (x) { case 1 -> 10; default -> 0; }` → switch-expr
+        // Kof (`case L -> expr`); antes `expected ';' but found '{'` (Q4).
+        // Multi-label `case 1, 2 ->` expande em cases separados; a forma
+        // `case L: yield v;` vira `case L -> v`.
+        String kof = Translate.translateJava("""
+                public class SW {
+                    int f(int x) {
+                        return switch (x) {
+                            case 1, 2 -> 10;
+                            default -> 0;
+                        };
+                    }
+                }
+                """);
+        assertTrue(kof.contains("switch (x)") && kof.contains("case 1 -> 10") && kof.contains("case 2 -> 10"),
+                "switch-expressão + multi-label:\n" + kof);
+        assertCompiles(dir, kof + "\nmain() { println(SW().f(2)); println(SW().f(9)) }", "10\n0");
+
+        String yieldKof = Translate.translateJava("""
+                public class YS {
+                    int f(int x) {
+                        return switch (x) { case 1: yield 7; default: yield 0; };
+                    }
+                }
+                """);
+        assertTrue(yieldKof.contains("case 1 -> 7"), "forma `yield` → `case L -> expr`:\n" + yieldKof);
+    }
+
+    @Test
+    void jdkStaticImportIsHonestGap() {
+        // `import static java.lang.Math.max` + `max(3,4)`: Kof não mapeia a
+        // stdlib JDK; antes emitia `max(3, 4)` (SEM011) silenciosamente — Q4.
+        TranslateException e = assertThrows(TranslateException.class, () ->
+                Translate.translateJava("""
+                        import static java.lang.Math.max;
+                        public class SI {
+                            int f() { return max(3, 4); }
+                        }
+                        """));
+        assertTrue(e.getMessage().contains("import static") && e.getMessage().contains("revisão manual"),
+                "import static de JDK → gap explícito (R6), foi: " + e.getMessage());
+    }
+
+    @Test
+    void mathReceiverIsHonestGap() {
+        // `Math.max(3,4)` / `Math.PI`: antes emitia `Math.max(...)` / `Math.PI`
+        // (Kof inválido = SEM011 silencioso). Kof expõe `math.*`, mas
+        // `math.min/max/abs` são Int-only e o translator não tem tipos p/
+        // escolher o overload → gap honesto R6 (Q4 13/09).
+        TranslateException call = assertThrows(TranslateException.class, () ->
+                Translate.translateJava("""
+                        public class MM {
+                            int f() { return Math.max(3, 4); }
+                        }
+                        """));
+        assertTrue(call.getMessage().contains("Math.max") && call.getMessage().contains("revisão manual"),
+                "Math.<fn> → gap explícito (R6), foi: " + call.getMessage());
+
+        TranslateException constant = assertThrows(TranslateException.class, () ->
+                Translate.translateJava("""
+                        public class MP {
+                            double f() { return Math.PI; }
+                        }
+                        """));
+        assertTrue(constant.getMessage().contains("Math.PI") && constant.getMessage().contains("revisão manual"),
+                "Math.<const> → gap explícito (R6), foi: " + constant.getMessage());
+    }
+
+    @Test
+    void ownStaticImportPassesThrough() throws Exception {
+        // `import static mypkg.Util.max` + `max(3,4)`: o static method vira
+        // função top-level Kof, então a chamada nua resolve — não é gap.
+        String kof = Translate.translateJava("""
+                import static mypkg.Util.max;
+                public class OS {
+                    int f() { return max(3, 4); }
+                }
+                """);
+        assertTrue(kof.contains("max(3, 4)"), "static import próprio passa:\n" + kof);
+    }
+
+    @Test
+    void leadingDotLiteralIsNormalized(@TempDir Path dir) throws Exception {
+        // `.5` (Java) → `0.5` (Kof exige o zero; `.5` é PARSE041) — Q4 13/09.
+        String kof = Translate.translateJava("""
+                public class LD {
+                    double f() { return .5; }
+                }
+                """);
+        assertTrue(kof.contains("0.5"), "literal `.5` normalizado p/ `0.5`:\n" + kof);
+        assertCompiles(dir, kof + "\nmain() { println(LD().f()) }", "0.5");
+    }
+
+    @Test
     void annotationsAreDiscarded(@TempDir Path dir) throws Exception {
         String kof = Translate.translateJava("""
                 @Deprecated

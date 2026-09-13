@@ -18,6 +18,11 @@ class TranslateStatements extends TranslateExpr {
         return parseBlock();
     }
 
+    @Override
+    protected String parseSwitchExprHook() {
+        return TranslateSwitch.parse(p, this::parseExpr);
+    }
+
     // ── statements ─────────────────────────────────────────────────────
 
     protected List<String> parseBlock() {

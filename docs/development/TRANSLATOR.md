@@ -362,11 +362,57 @@ diferenciais.
 > **42/42**; gate 4-módulos pós-rebase **1497/0 + 33/0 + 5/0 + 194/0**, BUILD SUCCESS.
 > `check_500` OK (sem aviso de `Translate*`).
 >
-> **Nota (achado na caça Q4, registrado §177 — lane compiler, NÃO do
-> translator):** lambda com corpo em BLOCO que retorna uma **local declarada
-> no próprio bloco** é tipada VOID (`SEM033`) **quando o módulo contém uma
-> classe** (`main`+`class C {}`); sem a classe o mesmo programa passa. Causa
-> provável: `ExpressionTyper.firstReturnValueType` não registra os
-> `VarDeclStmt` do bloco em `locals` ao inferir o retorno. O teste
-> `lambdaBlockBodyTranslates` usa `return n + 1` p/ não depender do bug; o
-> fix pertence à lane compiler (não ao translator). Ver `known-bugs.md §177`.
+> **Nota (achado na caça Q4, registrado §177 — ✅ CORRIGIDO pela lane
+> bugs-and-gaps `192.168.100.15`):** lambda com corpo em BLOCO que retorna uma
+> **local declarada no próprio bloco** era tipada VOID (`SEM033`) **quando o
+> módulo continha uma classe** (`main`+`class C {}`); sem a classe o mesmo
+> programa passava. Raiz: `ExpressionTyper.firstReturnValueType` não registrava
+> os `VarDeclStmt` do bloco no escopo ao inferir o retorno. Fix da lane
+> bugs-and-gaps: escopo cópia mutável com os locais do corpo; prova
+> `CoreRegressionE2ETest.lambdaReturnLocalVar` (4 targets). O teste
+> `lambdaBlockBodyTranslates` usa `return n + 1` e segue válido.
+>
+> **Estado (13/09 ~18:30, dono = 192.168.100.22): switch-EXPRESSÃO +
+> method-ref/text-block/instanceof-pattern/import-static/`Math.` + split
+> `TranslateSwitch` (bugs latentes Q4).** Oito construtos Java que davam
+> parse error confuso ou **Kof inválido silencioso** agora têm tratamento:
+> (1) **switch-EXPRESSÃO** `return switch (x) { case 1, 2 -> 10; default -> 0; }`
+> → traduz para o switch-expr Kof (`case L -> expr`, `training/idioms/
+> control-flow.md`); multi-label expande em cases separados (Kof rejeita
+> lista, PARSE078) e a forma colon+`yield` vira `case L -> expr`; corpo de
+> case em BLOCO é **gap honesto R6** (Kof exige UMA expressão, PARSE094) —
+> antes `expected ';' but found '{'`. (2) **Method reference** `Tipo::metodo`
+> → Kof só tem lambda → **gap honesto R6** (antes `expected ')' but found ':'`).
+> (3) **Text block** `"""…"""` → Kof não tem → **gap honesto R6** (antes o
+> lexer lia `""` vazio e reabria). (4) **`instanceof` binding pattern**
+> `o instanceof String s` → **gap honesto R6** (antes `expected ')' but found
+> 's'`). (5) **Tipo qualificado em EXPRESSÃO** `java.util.List.of(...)` →
+> antes emitia Kof inválido (`java` undefined = SEM011) **em silêncio** →
+> **gap honesto R6** (mapear Java→stdlib é decisão de design, regra 6).
+> (6) **`import static` de JDK** `import static java.lang.Math.max` + `max(3,4)`
+> → emitia `max(3, 4)` sem diagnóstico (SEM011) → **gap honesto R6**;
+> static import de classe do próprio programa passa (o static method vira
+> função top-level Kof e resolve). (7) **Literal `.5`** → normalizado para
+> `0.5` no lexer (Kof exige o zero; `.5` é PARSE041). (8) **Receptor
+> `Math.`** `Math.max(3,4)` / `Math.PI` → antes emitia `Math.max(...)` /
+> `Math.PI` (Kof inválido = SEM011 **silencioso**); Kof expõe a stdlib em
+> `math.*`, mas `math.min/max/abs` são **Int-only** (SEM025 p/ Double, sem
+> widening) e o translator não tem tipos p/ escolher o overload → **gap
+> honesto R6**. **Split:** o parser de
+> switch-expressão (~55 linhas) saiu para `TranslateSwitch.java` (77) —
+> `TranslateStatements` 528→470. Prova: `switchExpressionTranslates` (roda
+> `10/0` no Kof gerado), `methodReferenceIsHonestGap`, `textBlockIsHonestGap`,
+> `instanceofBindingPatternIsHonestGap`, `qualifiedTypeInExpressionIsHonestGap`,
+> `jdkStaticImportIsHonestGap`, `ownStaticImportPassesThrough`,
+> `mathReceiverIsHonestGap`, `leadingDotLiteralIsNormalized` (roda `0.5`) —
+> `TranslateTest` **51/51**;
+> `check_500` OK (sem crítico; `TranslateExpr` 527 / `TranslateStatements`
+> 470 = dívida tolerada 500–599).
+>
+> **Gap de design conhecido (regra 6, NÃO corrigido):** outros **receptores de
+> classe JDK** (`Integer.parseInt`, `Long.valueOf`, `Objects.requireNonNull`,
+> `Collections.sort`, `Arrays.asList`, `String.valueOf`, `StringBuilder`…) e
+> `new` de tipos JDK não têm mapeamento p/ a stdlib Kof — o translator emite o
+> nome como está, que falha com SEM011 (diagnóstico downstream, não
+> silencioso). Mapear Java→stdlib é decisão de design (regra 6); fica
+> registrado como fila futura, não como edição.

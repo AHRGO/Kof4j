@@ -45,6 +45,14 @@ import java.util.List;
                 continue;
             }
             if (c == '"') {
+                // Text block Java `""" ... """` — Kof não tem text block
+                // (só string com `\n`) → gap honesto R6 (antes: o lexer lia
+                // `""` vazio e reabria, gerando parse error confuso).
+                if (i + 2 < n && s.charAt(i + 1) == '"' && s.charAt(i + 2) == '"') {
+                    throw new TranslateException(
+                            "text block (`\"\"\"`) não tem equivalente direto em Kof "
+                            + "(use string com `\\n`) — revisão manual");
+                }
                 int j = i + 1;
                 StringBuilder sb = new StringBuilder();
                 while (j < n && s.charAt(j) != '"') {
@@ -108,7 +116,18 @@ import java.util.List;
                 case ',' -> out.add(new Tok(T.P, ","));
                 case ':' -> out.add(new Tok(T.P, ":"));
                 case '?' -> out.add(new Tok(T.P, "?"));
-                case '.' -> out.add(new Tok(T.P, "."));
+                case '.' -> {
+                    // Literal iniciado por ponto (`.5`) — válido em Java, Kof
+                    // exige o zero à esquerda (`.5` é PARSE041). Normaliza p/
+                    // `0.5` (mesmo valor) em vez de erro de parse confuso.
+                    if (i + 1 < n && Character.isDigit(s.charAt(i + 1))) {
+                        int j = scanNumber(s, i + 1);
+                        out.add(new Tok(T.FLOAT, ("0" + s.substring(i, j)).replace("_", "")));
+                        i = j;
+                        continue;
+                    }
+                    out.add(new Tok(T.P, "."));
+                }
                 case '=' -> { if (i + 1 < n && s.charAt(i + 1) == '=') { out.add(new Tok(T.EQEQ, "==")); i += 2; continue; } out.add(new Tok(T.EQ, "=")); }
                 case '!' -> { if (i + 1 < n && s.charAt(i + 1) == '=') { out.add(new Tok(T.NE, "!=")); i += 2; continue; } out.add(new Tok(T.NOT, "!")); }
                 case '<' -> { if (i + 2 < n && s.charAt(i + 1) == '<' && s.charAt(i + 2) == '=') { out.add(new Tok(T.LT, "<")); out.add(new Tok(T.LT, "<")); out.add(new Tok(T.EQ, "=")); i += 3; continue; } if (i + 1 < n && s.charAt(i + 1) == '=') { out.add(new Tok(T.LE, "<=")); i += 2; continue; } out.add(new Tok(T.LT, "<")); }

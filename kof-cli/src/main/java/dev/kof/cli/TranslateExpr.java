@@ -24,6 +24,14 @@ class TranslateExpr {
         throw new TranslateException("lambda com corpo em bloco indisponível nesta camada");
     }
 
+    /**
+     * Hook para switch-EXPRESSÃO Java (`switch (x) { case 1 -> ... }`): os
+     * corpo/statements vivem em {@link TranslateStatements} (subclasse).
+     */
+    protected String parseSwitchExprHook() {
+        throw new TranslateException("switch expressão indisponível nesta camada");
+    }
+
         String parseExpr() {
             return parseTernary();
         }
@@ -118,7 +126,17 @@ class TranslateExpr {
                     // `o instanceof String` → `o instanceof String` (Kof tem
                     // instanceof nativo, training/language/overview.md).
                     p.next();
-                    e = e + " instanceof " + parseType();
+                    String ty = parseType();
+                    // Pattern matching `o instanceof String s` (binding) — Kof
+                    // não tem binding de pattern; introduzir a variável muda
+                    // o fluxo → gap honesto R6 (antes: `expected ')' but
+                    // found 's'` confuso).
+                    if (p.peek().type == T.IDENT && !p.at("instanceof")) {
+                        throw new TranslateException(
+                                "pattern matching `instanceof Tipo var` (binding) não tem equivalente "
+                                + "direto em Kof (use `instanceof` + cast/`as`) — revisão manual");
+                    }
+                    e = e + " instanceof " + ty;
                 } else {
                     String op = p.next().text;
                     e = e + " " + op + " " + parseShift();
@@ -184,6 +202,13 @@ class TranslateExpr {
                     if (p.at("(")) {
                         // method call on receiver
                         e = translateCall(e, field);
+                    } else if (e.equals("Math")) {
+                        // `Math.PI` / `Math.E` — constantes JDK sem equivalente
+                        // garantido em Kof (`math.*` cobre funções) → gap
+                        // honesto R6 em vez de `Math.PI` = SEM011 silencioso.
+                        throw new TranslateException(
+                                "constante `Math." + field + "` não é resolvida pelo translator "
+                                + "(Kof não expõe as constantes da classe Math do JDK) — revisão manual");
                     } else {
                         e = e + "." + field;
                     }
@@ -199,6 +224,13 @@ class TranslateExpr {
                     // do try quase sempre chama métodos).
                     String args = parseCallArgs();
                     e = e + "(" + args + ")";
+                } else if (p.at(":") && p.peek(1).text.equals(":")) {
+                    // Method reference `Tipo::metodo` / `obj::metodo` — Kof
+                    // não tem referência de método (só lambda) → gap honesto
+                    // R6 (antes: `expected ')' but found ':'` confuso).
+                    throw new TranslateException(
+                            "method reference (`::`) não tem equivalente direto em Kof "
+                            + "(use lambda `(x) -> ...`) — revisão manual");
                 } else if (p.at(T.INC)) { p.next(); e += "++"; }
                 else if (p.at(T.DEC)) { p.next(); e += "--"; }
                 else break;
@@ -214,6 +246,19 @@ class TranslateExpr {
             if (receiver.equals("System.out") && method.equals("print")) {
                 String args = parseCallArgs();
                 return "print(" + args + ")";
+            }
+            if (receiver.equals("Math")) {
+                // `Math.<fn>(...)`: Kof expõe a stdlib em `math.<fn>` mas
+                // `math.min/max/abs` são **Int-only** (SEM025 p/ Double, sem
+                // widening) e o translator não tem tipos p/ escolher o
+                // overload → mapear cegamente geraria Kof que não compila;
+                // emitir `Math.x(...)` dava `Math` undefined = SEM011
+                // silencioso. Mapear Java→stdlib é decisão de design
+                // (regra 6) → gap honesto R6 (Q4 13/09).
+                throw new TranslateException(
+                        "chamada a `Math." + method + "(...)` não é resolvida pelo translator "
+                        + "(Kof usa o namespace `math.*`, mas os overloads Double/Int não mapeiam "
+                        + "automaticamente) — revisão manual");
             }
             if (method.equals("equals")) {
                 String arg = parseSingleArg();
@@ -258,7 +303,22 @@ class TranslateExpr {
                     case "new" -> parseNew();
                     case "this" -> "this";
                     case "throw" -> "throw " + parseExpr();
-                    default -> t.text;
+                    case "switch" -> parseSwitchExprHook();
+                    default -> {
+                        // Referência a tipo QUALIFICADO em expressão
+                        // (`java.util.List.of(...)`, `javax.foo.Bar.x`): o
+                        // translator ignora imports e Kof referencia por nome
+                        // simples — mapear Java→stdlib é decisão de design
+                        // (regra 6) → gap honesto R6 (antes: emitia
+                        // `java.util.List.of(...)` = Kof inválido/SEM011).
+                        if ((t.text.equals("java") || t.text.equals("javax")) && p.at(".")) {
+                            throw new TranslateException(
+                                    "tipo qualificado em expressão (`" + t.text
+                                    + ".…`) não é resolvido pelo translator (imports ignorados) — "
+                                    + "revisão manual");
+                        }
+                        yield t.text;
+                    }
                 };
                 case P -> {
                     if (t.text.equals("(")) {

@@ -76,8 +76,28 @@ public final class Translate {
                 p.next(); // ;
             }
             while (p.at("import")) {
-                while (!p.at(";")) p.next();
+                boolean isStatic = p.peek(1) != null && "static".equals(p.peek(1).text);
+                // FQN do import (após `import`/`import static`).
                 p.next();
+                if (isStatic) { p.next(); }
+                String fqn = "";
+                while (!p.at(";") && !p.at(T.EOF)) {
+                    fqn += p.next().text;
+                }
+                if (!p.at(T.EOF)) { p.next(); } // ;
+                // `import static java.lang.Math.max` / `java.lang.Math.*`:
+                // o translator ignora imports e Kof não mapeia a stdlib JDK —
+                // emitir a chamada nua (`max(3,4)`) gera Kof inválido
+                // (SEM011), silenciosamente. Mapear Java→stdlib é decisão de
+                // design (regra 6) → gap honesto R6 (Q4 13/09). Imports
+                // estáticos de classes do PRÓPRIO programa ficam de fora
+                // (o static method vira função top-level Kof e resolve).
+                if (isStatic && (fqn.startsWith("java.") || fqn.startsWith("javax."))) {
+                    throw new TranslateException(
+                            "`import static " + fqn + "` não é resolvido pelo translator "
+                            + "(Kof não mapeia membros estáticos da stdlib JDK; imports são ignorados) — "
+                            + "revisão manual");
+                }
             }
             // Parse all top-level type declarations.
             while (!p.at(T.EOF)) {
