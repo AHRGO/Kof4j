@@ -373,6 +373,18 @@ recomendações futuras (regra 14 da tarefa: não alterar comportamento).
   "(3)(4) a implementar" — desatualizado; corrigido no doc). Gate:
   `KofConcurrency2Test` 29/0/1-skip (qemu) na suíte 1270/0-código.
 
+### SG-021 — `json.encode` sem forma indentada (pretty-print) — PEDIDO, sem decisão
+
+- **Origem:** Issue #126 (reporter procurava um `JSON.stringify`-style 3º
+  argumento de indentação; o check aceitou `json.encode(x, 4)` — lacuna de
+  aridade corrigida 13/09 em `MemberCallNamespaces` com SEM025).
+- **Estado da spec:** `json.encode(x)` é o contrato flat (v1) nos 4 targets;
+  não existe forma indentada e NUNCA foi prometida.
+- **O que é pedido:** face `json.encode(x, n)`/`json.encodePretty(x)` com
+  indentação determinística (golden por target). Decisão de design (regra 6):
+  cabe à mantenedora; até lá a aridade errada é SEM025 com dica da forma
+  correta — nunca fallback silencioso (R6).
+
 ---
 
 ## Categoria C — Divergências entre targets (paridade) — atualizada 10/09
