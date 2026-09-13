@@ -1,3 +1,11 @@
+# PLAN-SOLID-500 — refactor ≤500 linhas/classe (FECHADO 13/09 — movido p/ docs/)
+
+> **✅ CONCLUÍDO 13/09 (F1–F9 todas ✅; F3: NativeBackend 498 ≤500 medido, fora
+> do ratchet `scripts/check_500-baseline.txt` com 12 dívidas remanescentes).**
+> Gate vivo = `scripts/check_500.sh` no CI. Movido de
+> `docs/development/refactoring/` p/ cá pela regra dos 3 estados (concluído →
+> `docs/`).
+
 Versão: 1.0 · Data: 04/09/2026 · Branch: beta-0.3.0
 Regra de ferro: comportamento é lei — zero regressão em cada fase (suíte completa verde como gate de merge).
 1. Objetivo
