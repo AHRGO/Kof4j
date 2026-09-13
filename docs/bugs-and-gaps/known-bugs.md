@@ -5905,6 +5905,15 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
     `println(1.0e20f)` → `1.0E20` vs `1.000000020040877e+20`;
     `println(3.4028235e38f)` → `3.4028235E38` vs `3.402823466385289e+38`;
     `1.1754944e-38f` → `1.1754944E-38` vs `1.175494350822288e-38`.
+  - **(d) `-nan` (NaN negativo) NÃO é normalizado:** o fix residual do bug 44
+    (11/09) normaliza os 3 spellings do glibc `inf`/`-inf`/`nan`, mas o ramo
+    de 4 chars (`sp4`) só casa `-inf` (checa `'-'` e depois `'i'`); para
+    `-nan` (byte 1 = `'n'`) cai no `fin` e deixa `-nan` passar. Medido com
+    `math.pow(-1.0, 0.5)` (libm devolve NaN negativo): JVM/Script/JS `NaN`,
+    **Native `-nan`** — em **todos** os caminhos (`println`, `print`,
+    `String.valueOf`, concat `+`). `0.0/0.0` (NaN positivo) já sai `NaN`
+    correto. `RuntimeStringConv.emitDoubleToString`, ramo `.Lkof_dbl_str_sp4`
+    (~l.465) — falta o caso `-nan`→`NaN`.
 - **Menor repro:**
   ```kof
   main() {

@@ -275,8 +275,9 @@ class ConformanceMatrixTest {
                     println(100.0 / 3.0)
                     println(1.0f / 3.0f)
                     println(1.0e20f)
+                    println(math.pow(-1.0, 0.5))
                 }
-                """, "0.30000000000000004\n1.0E7\n1.0E-5\n33.333333333333336\n0.33333334\n1.0E20",
+                """, "0.30000000000000004\n1.0E7\n1.0E-5\n33.333333333333336\n0.33333334\n1.0E20\nNaN",
                 Set.of("native", "js"), tempDir);
         // bug 100 (paridade absoluta): `String.equals(não-String)` é `false` em
         // todo target — o JVM sempre deu false (Objects.equals), mas o Native
