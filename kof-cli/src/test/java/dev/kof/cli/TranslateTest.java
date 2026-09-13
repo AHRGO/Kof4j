@@ -776,6 +776,36 @@ class TranslateTest {
     }
 
     @Test
+    void javaNumericLiteralsTranslate(@TempDir Path dir) throws Exception {
+        // Java numeric literals que o lexer antes partia em tokens separados
+        // (`10L` → `10` `L`, `1.5e3` → `1.5` `e3`, `0x1F` → `0` `x1F`) =
+        // parse error. Kof aceita as mesmas formas (probe `kof check`), exceto
+        // o separador `_` (PARSE043) — esse é removido (mesmo valor).
+        String kof = Translate.translateJava("""
+                public class Num {
+                    public static void main(String[] args) {
+                        long l = 10L;
+                        double d = 1.5e3;
+                        float f = 2.5f;
+                        double d2 = 10d;
+                        int hex = 0x1F;
+                        int sep = 1_000;
+                        int sepHex = 0xFF_FF;
+                        System.out.println(l + d + f + d2 + hex + sep + sepHex);
+                    }
+                }
+                """);
+        assertTrue(kof.contains("10L"), "sufixo long preservado:\n" + kof);
+        assertTrue(kof.contains("1.5e3"), "expoente preservado:\n" + kof);
+        assertTrue(kof.contains("0x1F"), "hex preservado:\n" + kof);
+        assertFalse(kof.contains("1_000"), "separador `_` removido (Kof não aceita):\n" + kof);
+        assertTrue(kof.contains("1000"), "valor de `1_000` preservado:\n" + kof);
+        assertTrue(kof.contains("0xFFFF"), "`0xFF_FF` → `0xFFFF`:\n" + kof);
+
+        assertCompiles(dir, kof, "68088.5");
+    }
+
+    @Test
     void doWhileTranslates(@TempDir Path dir) throws Exception {
         String kof = Translate.translateJava("""
                 public class DW {

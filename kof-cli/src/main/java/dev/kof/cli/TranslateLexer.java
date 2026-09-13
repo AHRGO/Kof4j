@@ -74,13 +74,14 @@ import java.util.List;
                 continue;
             }
             if (Character.isDigit(c)) {
-                int j = i;
-                boolean isFloat = false;
-                while (j < n && (Character.isDigit(s.charAt(j)) || s.charAt(j) == '.')) {
-                    if (s.charAt(j) == '.') isFloat = true;
-                    j++;
-                }
-                out.add(new Tok(isFloat ? T.FLOAT : T.INT, s.substring(i, j)));
+                int j = scanNumber(s, i);
+                // Kof NÃO aceita separador `_` (PARSE043) — remove (mesmo valor).
+                String text = s.substring(i, j).replace("_", "");
+                boolean isFloat = text.indexOf('.') >= 0 || text.indexOf('e') >= 0
+                        || text.indexOf('E') >= 0
+                        || text.endsWith("f") || text.endsWith("F")
+                        || text.endsWith("d") || text.endsWith("D");
+                out.add(new Tok(isFloat ? T.FLOAT : T.INT, text));
                 i = j;
                 continue;
             }
@@ -127,6 +128,54 @@ import java.util.List;
         }
         out.add(new Tok(T.EOF, ""));
         return out;
+    }
+
+    /**
+     * Consome um literal numérico Java (mesma forma que o Kof aceita):
+     * decimal/hex/bin/octal, `_` separador, ponto, expoente `e/E`, sufixos
+     * `l/L/f/F/d/D` e hex-float `0x1.8p3`. Antes o scanner parava em
+     * dígitos+ponto, então `10L`/`1.5e3`/`1.5f`/`0x1F`/`1_000` viravam
+     * tokens separados (`L`, `e3`, `f`, …) = erro de parse (bug latente Q4).
+     * O texto é preservado como veio — Kof aceita as mesmas formas.
+     */
+    static int scanNumber(String s, int start) {
+        int n = s.length();
+        int j = start;
+        boolean hex = false;
+        if (s.charAt(j) == '0' && j + 1 < n && (s.charAt(j + 1) == 'x' || s.charAt(j + 1) == 'X')) {
+            hex = true; j += 2;
+            while (j < n && (isHex(s.charAt(j)) || s.charAt(j) == '_')) j++;
+            if (j < n && s.charAt(j) == '.') {
+                j++;
+                while (j < n && (isHex(s.charAt(j)) || s.charAt(j) == '_')) j++;
+            }
+            if (j < n && (s.charAt(j) == 'p' || s.charAt(j) == 'P')) {
+                j++;
+                if (j < n && (s.charAt(j) == '+' || s.charAt(j) == '-')) j++;
+                while (j < n && (Character.isDigit(s.charAt(j)) || s.charAt(j) == '_')) j++;
+            }
+        } else if (s.charAt(j) == '0' && j + 1 < n && (s.charAt(j + 1) == 'b' || s.charAt(j + 1) == 'B')) {
+            j += 2;
+            while (j < n && (s.charAt(j) == '0' || s.charAt(j) == '1' || s.charAt(j) == '_')) j++;
+        } else {
+            while (j < n && (Character.isDigit(s.charAt(j)) || s.charAt(j) == '_')) j++;
+            if (j < n && s.charAt(j) == '.') {
+                j++;
+                while (j < n && (Character.isDigit(s.charAt(j)) || s.charAt(j) == '_')) j++;
+            }
+            if (j < n && (s.charAt(j) == 'e' || s.charAt(j) == 'E')) {
+                j++;
+                if (j < n && (s.charAt(j) == '+' || s.charAt(j) == '-')) j++;
+                while (j < n && (Character.isDigit(s.charAt(j)) || s.charAt(j) == '_')) j++;
+            }
+        }
+        // sufixo de tipo (l/L/f/F/d/D); hex aceita l/L
+        if (j < n && "lLfFdD".indexOf(s.charAt(j)) >= 0) j++;
+        return j;
+    }
+
+    private static boolean isHex(char c) {
+        return Character.isDigit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
     }
 
     // ── Parser + Emitter range helpers ────────────────────────────────────

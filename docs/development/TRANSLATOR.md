@@ -298,3 +298,14 @@ diferenciais.
 > `TranslateTest.instanceInitializerBlockIsHonestGap` (instância gap + static
 > skipado) — `TranslateTest` 34/34; probe no binário → diagnóstico explícito.
 > `Translate.java` ~420 ≤500; `check_500` OK.
+>
+> **Estado (13/09 ~16:15, dono = 192.168.100.22): literais numéricos Java
+> (bug latente Q4).** O lexer só consumia dígitos+ponto → `10L` virava `10`
+> `L`, `1.5e3` → `1.5` `e3`, `1.5f` → `1.5` `f`, `0x1F` → `0` `x1F` — todos
+> davam `expected ';' but found '…'` (parse error confuso). Fix: `scanNumber`
+> consome decimal/hex/bin, `_`, ponto, expoente `e/E`/`p/P`, sufixos
+> `l/L/f/F/d/D`; o texto é preservado (Kof aceita as mesmas formas — probe
+> `kof check`), **exceto** `_` que o Kof rejeita (PARSE043) → removido (mesmo
+> valor). Prova: `TranslateTest.javaNumericLiteralsTranslate` (traduz +
+> compila JVM + roda `68088.5`, oracle javac) — `TranslateTest` 35/35; probe
+> binário nos 7 literais. `check_500` OK.
