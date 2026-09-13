@@ -210,6 +210,26 @@ public final class JsRuntimeCore {
                 return outer;
             }
 
+            // KOF-SBD-001 — Array Bounds Safety: JVM aaload/aastore/iaload/...
+            // already bounds-check per the JVM spec (§6.5); raw JS `array[i]`
+            // does not (out-of-bounds read → undefined, out-of-bounds write →
+            // silent grow). These helpers close that KofJS-only gap so an
+            // invalid Kof array access is rejected the same way on every
+            // target, without claiming Kof is memory-safe as a whole.
+            export function kofArrayGet(array, index) {
+                if (index < 0 || index >= array.length) {
+                    throw new Error("Array index out of bounds: " + index + " (length " + array.length + ")");
+                }
+                return array[index];
+            }
+
+            export function kofArraySet(array, index, value) {
+                if (index < 0 || index >= array.length) {
+                    throw new Error("Array index out of bounds: " + index + " (length " + array.length + ")");
+                }
+                array[index] = value;
+            }
+
             // hashCode de valor Kof: espelha o Objects.hashCode/record JVM.
             // primitivos numéricos → int32 (wrap), String → algoritmo Java,
             // record → hashCode() sintético, senão → hash de String(valor).

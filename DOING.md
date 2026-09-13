@@ -2497,6 +2497,38 @@ lowerer (diferente de `C.ghost()` → SEM025) e o emit gera descritor vazio
 método de Set (decisão de design, regra 6) ou o lowerer de coleção dá erro
 para método inexistente. Prova esperada: `vs.first()` compila com `first`
 implementado OU dá diagnóstico; suíte verde.
+
+**FEITO (13/09, lane security — KOF-SBD-001 Array Bounds Safety, achado via
+documento de execução externo, sem dono prévio no DOING.md):** o backend
+KofJS baixava `KofArrayLoad`/`KofArrayStore` para acesso JS direto
+(`array[index]` / `array[index] = value`), herdando semântica JS crua:
+leitura fora do limite retornava `undefined`, escrita em `index >= length`
+amplia array silenciosamente — divergindo da JVM (bounds check via JVMS
+§6.5) e do Native (`kof_array_get`/`kof_array_set`, já com bounds check).
+Fix: 2 novos helpers no runtime JS, `kofArrayGet`/`kofArraySet`
+(`JsRuntimeCore.java`, mesma convenção de `kofListGet`/`kofListSet` de
+`List<T>`), e os 2 únicos sites que baixavam `KofArrayLoad`/`KofArrayStore`
+para JS (`JsExpressionParser.java`, `JsExpressionStatementParser.java`)
+passam a chamar os helpers em vez de gerar `JsIndex` cru. Teste novo
+`ArrayBoundsSafetyE2ETest` (10 casos, JVM×JS onde aplicável): vermelho
+confirmado antes (6/10 falhas reproduzindo o gap exato) → verde depois
+(10/10). Suíte `kof-compiler` completa: 361→355 falhas (−6, exatamente os
+casos corrigidos) — diff das 356 falhas restantes é **idêntico** antes/depois
+(todas pré-existentes: falta do assembler `as` no Windows p/ Native, FFI
+`libc.so.6` ausente, JDBC Postgres/SQLite não configurado — zero relação com
+esta mudança). Suíte completa 4 módulos (`-Dmaven.test.failure.ignore=true`):
+mesma causa-raiz nas falhas restantes de `kof-script`/`kof-c-compiler`
+(`as` ausente) e `kof-cli` (limpeza de temp-dir do Windows, teste de
+servidor). **Achado colateral (R6, registrado, NÃO corrigido nesta lane):**
+compound assignment em elemento de array (`a[i] += v`) nunca compilou no
+target JS — `KofDup2` ausente de `JsExpressionParser.isExpressionOp` —
+reproduz idêntico no SHA-base, não é tocado por este fix; ver
+`docs/development/known-bugs.md` #100. Docs atualizadas: `KOFJS.md` (remove
+divergência), `ARRAY_MODEL.md` (coluna KofJS). Branch
+`fix/sbd-001-array-bounds-kofjs` (local, a partir de `origin/main`
+`8a470a92`) — commit local feito, push/Issue/PR **aguardando revisão do
+maintainer/usuário** antes de publicar (não presumir permissão de escrita
+no upstream).
 ---
 
 ## REGRA DE SINCRONIZAÇÃO (07/09, obrigatória)
@@ -2531,6 +2563,7 @@ implementado OU dá diagnóstico; suíte verde.
 
 | Gap/Item | Estado | Dono | Data | Prova |
 |---|---|---|---|---|
+| **KOF-SBD-001** — Array Bounds Safety no KofJS (`kofArrayGet`/`kofArraySet` bounds-checked, fecha divergência JS crua de `array[index]`) | `FEITO` (commit local; push/Issue/PR aguardando revisão) | agente-sbd001 | 13/09 | `ArrayBoundsSafetyE2ETest` 10/10 verde (era 6 FAIL); `kof-compiler` 361→355 falhas (−6, diff das 355 restantes idêntico antes/depois); branch `fix/sbd-001-array-bounds-kofjs` |
 | **Plataforma de migração legado** — Fases A–H (`kof inspect/decompile/translate/compare/migrate` + `Confidence`) | `FEITO` | agente-planning | 05/09 | branch `planning-future`; `ClassFileParser`+`Confidence`+CLIs; suíte **855/0**; commits `34ded81`→`98a4d8b` |
 | **FFI formalizado** — TIER 2.1 (`extern` + gap FFI001/002 + binding real JVM(FFM)+Native(dlopen/dlsym)) | `FEITO` | agente-planning | 05/09 | `FfiE2ETest` 5/5 (libc `abs`/`atoi`, libm `sqrt`); suíte 855/0 |
 | **Codegen hook + ct-eval** — TIER 2.2/2.3 (`CodegenStep` + string-concat folding) | `FEITO` | agente-planning | 05/09 | `OptimizerTest` 22/22 + `StructuredTestE2ETest` 32/0 |
