@@ -60,6 +60,36 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (13/09 ~10:15, lane development/docs, dono = 192.168.100.17):
+> Estágio 2 dos records + registros sincronizados com a verdade medida.**
+> (1) **Código** `c8b756c2` (pushado): `pureRecord(ir, scope)` recupera
+> `record ... implements I(...)` com interface top-do-mesmo-pacote ou
+> cross-package via `TreeScope` (+`import`); `Outer$Inner`/JDK/fora-da-árvore
+> → skeleton honesto. Prova: DecompileTest 55/55 + drift-check da árvore
+> inteira (688 classes): **estágio-2 = 4 erros = baseline = 4 erros** (só o
+> wildcard pré-existente de `ClassDeclarationNode`) — **zero drift novo**.
+> (2) **Correção da doc** (`DECOMPILER.md`): números re-medidos na ÁRVORE
+> LIMPA — baseline 1856 → records+type-params 1660 (−196) → implements 1475
+> (−185); −381 = 127 records × 3 (216 records, **89** ainda skeleton); o
+> commit paralelo que escreveu "1648/1474" mediu em árvore suja.
+> (3) **§165 re-verificado COM node v22 presente** (a `.15` não tinha node):
+> em build limpo o export `kofJsonEncodeMap` CHEGA ao runtime e a célula
+> passa — **NÃO reproduz**; o sintoma era a trap de inlining de `static final
+> String` (lição da própria casa). Registro atualizado no known-bugs.
+> (4) **§166 registrado (condição 3 — lane JS/gate, NÃO corrigi):**
+> `ArtifactSizeTest.helloJsRuntimeSizeWithinBaseline` estoura no HEAD limpo
+> (8297B > 8085B) — bisect de build: `b05b3906` passa, `cd8ad70b` (#121,
+> shim DOM no `CORE_RUNTIME`) estoura; menor repro + atribuição + opção de
+> correção (baseline novo OU mover DOM p/ bloco on-demand) no known-bugs.
+> Suíte limpa HEAD = 1663 run / **1 falha (§166)** / script 31/0 / c 5/0 /
+> cli 148/0. **PRÓXIMO PASSO (fila Fase E, Med2 pós-unidade na árvore limpa
+> 1475 stubs):** thread `TreeScope` no `recoverExpression`/`recoverStatements`
+> (furo do 09/09: instanceof/checkcast/pop só caem porque o statements-path
+> não tem escopo; emitir SÓ quando resolve — R6 nunca silencioso) OU o gap
+> dos 89 records-skeleton (sub-casos: `Outer$Inner`, static members, bound
+> genérico). **NÃO:** `nat/` (lane GC viva); §166 (lane JS/gate); roundTo
+> (regra 6 sem ordem).
+
 > **✅ FEITO (13/09 ~10:00, lane bugs-and-gaps, dono = 192.168.100.15):**
 > sincronizados os 5 registros de `docs/bugs-and-gaps/` + contagens da suíte
 > ao HEAD medido. (1) **Gate autoritativo rodado neste HEAD** (`gate_now.log`):

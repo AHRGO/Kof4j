@@ -8,7 +8,7 @@
 >
 > | | |
 > |---|---|
-> | **Fila ABERTA (varredura 13/09 — seções sem resolução no próprio cabeçalho)** | **8 itens** (seções/sub-faces sem resolução) — ~~§81~~ ✅ CORRIGIDO 13/09 (5b: Long=BigInt no JS, paridade 64-bit real, golden JS unificado ao JVM), §101 (relacionais de Double com NaN divergem cross — **congelado** regra 6), §104b-ii (record em coleção + storage-box asm — **lane bugfixer**, unidade GRANDE), §107 🟡 (`println(coleção)` nativo → lixo de ponteiro; **face escalar ✅ CORRIGIDA 12/09** nos 3 nativos `f3b3821c`+B39; restam record/aninhado=`?` até §104b-ii + FP-cross=FLT001), §114 ⏳ (equals de record com campo-referência no Native; sub-face do §104b-ii), §129 (throw em worker `spawn` → longjmp cross-thread no Native — **lane nat**; era referido como "§129-TLS"), §132 (KofJS: task de task não roda sem ceder o event-loop — gate OTP002; **lane alheia**), §161/NAT-STR01 (case-fold ASCII-only no Native vs Unicode no JVM/JS — **DECIDIDO 13/09**, lane nat; registrado aqui 13/09). **§165 ABERTO 13/09** (JS `ui-jsonmap`: seed no `// kof:seeds` sem export no `kof-runtime.mjs` — célula `jsonenc-map` só executa com node presente, gate mediu sem node; menor repro registrada, dono = §106/js-slices, NÃO desta lane). **~~§149~~ NÃO está aberto — ✅ CORRIGIDO 12/09** (a linha anterior o listava por engano; a raiz era o `JsIfThrowElse` do §147). **§156 ✅ CORRIGIDO 13/09** (lista heterogênea de lambdas mesma assinatura → elemento sem className, dispatch SAM). **§155 ✅ CORRIGIDO 13/09** (tipo-função em type-args → `ClassFormatError`; parser preserva os espaços do type-ref). **§127-JVM ✅ CORRIGIDO 13/09** (decisão 9a: `as ()->T` parseia como type-ref; checkcast p/ interface SAM sintética). **§94 ✅ CORRIGIDO 13/09** (EQ/NE de Double/Float no interpretador agora IEEE). **§125 ✅ CORRIGIDO 12/09** (return Nullable(primitivo) → default; célula `nullableprint` 4/4). **§139 ✅ CORRIGIDO 12/09** (JS fold `f()==null` → COMP002; parser JS descarta mid-expression). **§140 ✅ CORRIGIDO 12/09** (gate ≤500 virou ratchet com baseline no CI). **§90 ✅ CORRIGIDO 12/09** (lane web). **§145/§146/§147 ✅ CORRIGIDOS 12/09** (`440730c8`, issue #101). **§45 ✅ IMPLEMENTADO 13/09** (DD-01 opção 4a: FinallyFrame na IR; 4 targets, `063ed956`) e **S10c ✅ 13/09** (`random.randomBytesHex`, `317b23e7`). **§157/§158/§159/§160 ✅ CORRIGIDOS 13/09** (issue-lane: #103 caso 3 POP2 em `HashMap.put` de `Long`, kof.web `header()`/`query()` `String?`+SEM049, Native web WEB001, KofJS hostless `kof_platform`). **Conclusão honesta (13/09):** dos **8 itens abertos**, a maioria pende de **decisão da mantenedora já ratificada** (fila de implementação: §161 = 1; §81 ✅ CORRIGIDO 13/09), **congelamento regra-6** (§101 + sub-faces §114/§107 = 3), **lane alheia** (§104b-ii lane bugfixer + §129 lane nat + §132 = 3) — **§89 ✅ CORRIGIDO 13/09** (`e33425b5`, 4 alvos + warning SEM090), **§106 ✅ CORRIGIDO 13/09** (`5b939106` + residual JS `ab85cfae`, 4 alvos), **§117 ✅ CORRIGIDO 13/09** (`3734f2aa`), **§131 ✅ CORRIGIDO 13/09** (`18a64d45`, 4 backends; + **residual same-arity/tipos** `73ca2d58`, Native), **§156 ✅ CORRIGIDO 13/09**, **§81 ✅ CORRIGIDO 13/09** (Long=BigInt JS, seção própria) e **§163 ✅ CORRIGIDO 13/09** (interpretador: 2º parâmetro largo lido como `null` — paridade 4-target, achado no probe do split `NativeBackend`). |
+> | **Fila ABERTA (varredura 13/09 — seções sem resolução no próprio cabeçalho)** | **9 itens** (seções/sub-faces sem resolução) — §166 ABERTO 13/09 (gate tamanho hello: shim DOM #121 no CORE_runtime → 8297B > 8085B; bisect de build aponta `cd8ad70b`; lane JS/gate), §165 re-verificado 13/09: NÃO reproduz em build limpo (node v22 presente, export no runtime, célula verde) — trap de inlining `static final`, ver §165; ~~§81~~ ✅ CORRIGIDO 13/09 (5b: Long=BigInt no JS, paridade 64-bit real, golden JS unificado ao JVM), §101 (relacionais de Double com NaN divergem cross — **congelado** regra 6), §104b-ii (record em coleção + storage-box asm — **lane bugfixer**, unidade GRANDE), §107 🟡 (`println(coleção)` nativo → lixo de ponteiro; **face escalar ✅ CORRIGIDA 12/09** nos 3 nativos `f3b3821c`+B39; restam record/aninhado=`?` até §104b-ii + FP-cross=FLT001), §114 ⏳ (equals de record com campo-referência no Native; sub-face do §104b-ii), §129 (throw em worker `spawn` → longjmp cross-thread no Native — **lane nat**; era referido como "§129-TLS"), §132 (KofJS: task de task não roda sem ceder o event-loop — gate OTP002; **lane alheia**), §161/NAT-STR01 (case-fold ASCII-only no Native vs Unicode no JVM/JS — **DECIDIDO 13/09**, lane nat; registrado aqui 13/09). **§165 RE-VERIFICADO 13/09 (dono 192.168.100.17, node v22 presente): NÃO reproduz em build limpo** — o export CHEGA ao `kof-runtime.mjs`, a célula verde; o sintoma era a trap de inlining `static final` (classes stale). Fecho/blindagem = dono §106/js-slices; §166 aberto). **~~§149~~ NÃO está aberto — ✅ CORRIGIDO 12/09** (a linha anterior o listava por engano; a raiz era o `JsIfThrowElse` do §147). **§156 ✅ CORRIGIDO 13/09** (lista heterogênea de lambdas mesma assinatura → elemento sem className, dispatch SAM). **§155 ✅ CORRIGIDO 13/09** (tipo-função em type-args → `ClassFormatError`; parser preserva os espaços do type-ref). **§127-JVM ✅ CORRIGIDO 13/09** (decisão 9a: `as ()->T` parseia como type-ref; checkcast p/ interface SAM sintética). **§94 ✅ CORRIGIDO 13/09** (EQ/NE de Double/Float no interpretador agora IEEE). **§125 ✅ CORRIGIDO 12/09** (return Nullable(primitivo) → default; célula `nullableprint` 4/4). **§139 ✅ CORRIGIDO 12/09** (JS fold `f()==null` → COMP002; parser JS descarta mid-expression). **§140 ✅ CORRIGIDO 12/09** (gate ≤500 virou ratchet com baseline no CI). **§90 ✅ CORRIGIDO 12/09** (lane web). **§145/§146/§147 ✅ CORRIGIDOS 12/09** (`440730c8`, issue #101). **§45 ✅ IMPLEMENTADO 13/09** (DD-01 opção 4a: FinallyFrame na IR; 4 targets, `063ed956`) e **S10c ✅ 13/09** (`random.randomBytesHex`, `317b23e7`). **§157/§158/§159/§160 ✅ CORRIGIDOS 13/09** (issue-lane: #103 caso 3 POP2 em `HashMap.put` de `Long`, kof.web `header()`/`query()` `String?`+SEM049, Native web WEB001, KofJS hostless `kof_platform`). **Conclusão honesta (13/09):** dos **8 itens abertos**, a maioria pende de **decisão da mantenedora já ratificada** (fila de implementação: §161 = 1; §81 ✅ CORRIGIDO 13/09), **congelamento regra-6** (§101 + sub-faces §114/§107 = 3), **lane alheia** (§104b-ii lane bugfixer + §129 lane nat + §132 = 3) — **§89 ✅ CORRIGIDO 13/09** (`e33425b5`, 4 alvos + warning SEM090), **§106 ✅ CORRIGIDO 13/09** (`5b939106` + residual JS `ab85cfae`, 4 alvos), **§117 ✅ CORRIGIDO 13/09** (`3734f2aa`), **§131 ✅ CORRIGIDO 13/09** (`18a64d45`, 4 backends; + **residual same-arity/tipos** `73ca2d58`, Native), **§156 ✅ CORRIGIDO 13/09**, **§81 ✅ CORRIGIDO 13/09** (Long=BigInt JS, seção própria) e **§163 ✅ CORRIGIDO 13/09** (interpretador: 2º parâmetro largo lido como `null` — paridade 4-target, achado no probe do split `NativeBackend`). |
 > | Antiga "varredura 08/09" (apócrifa — corrigida 12/09) | os "abertos" 39/62/63/64/46/48/50/59/61 estão ✅ CORRIGIDO nos próprios cabeçalhos (39/62/63/64 JVM/JS; 46/50/59 Native; 48/61 gap honesto JSN004/FFI001); contagem real na linha acima. |
 > | Paridade interpretador × compilados (semântica `==` congelada — regra 6) | **0** — bug 94 ✅ CORRIGIDO 13/09 (EQ/NE de Double/Float no interpretador agora IEEE; a "decisão" era alinhar ao previsto, que os 3 compilados + corpus já definiam) |
 > | Paridade backend-only (regra 5, atacável na lane Native) | **2** — §107 (println coleção → lixo; **face escalar ✅ CORRIGIDA 12/09 nos 3 targets nativos** — x86 `f3b3821c` + cross B39, golden JVM byte-idêntico; restam record/aninhado=`?` honesto até §104b-ii, FP-cross=FLT001; §107-JS 11/09), §104b-ii (equals de conteúdo p/ record + box de primitivo no storage asm; **face char ✅ FECHADA 11/09** — `mapgetprim` 4/4)
@@ -5334,3 +5334,47 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   §106/js-slices decide fechar (provável não-bug) ou blindar contra o
   inlining. Sem `node` neste host, o caminho node fica pendente de
   confirmação — **não fechada por mim** (lane alheia).
+- **RE-VERIFICAÇÃO 13/09 (dono 192.168.100.17, node v22.22.3 PRESENTE neste
+  host):** em build limpo (`rm -rf target/classes` + `mvn -o -q -pl
+  kof-compiler -am compile`), o `kof-runtime.mjs` gerado do meu menor repro
+  traz `export function kofJsonEncodeMap` (linha 138) e o `Default.mjs` roda
+  com **node** → `{"a":1}`, exit=0. `ConformanceMatrixTest` 11/11 verde
+  (incluindo `conformanceJson`/`jsonenc-map`) — com node real, não GraalJS.
+  Reproduzi o sintoma de novo só com classes stale (sem `clean`). Conclusão
+  dual: **(a) o §165 é não-bug no código** (a pista de causa dele — export
+  nunca no runtime — não se confirma); **(b) a TRAP de inlining de
+  `static final String` é real e armou dois falsos-positivos seguidos**
+  (§165 por mim, §81-completo pela suite run incremental). Fechar/ blindar é
+  do dono §106/js-slices; a fila do cabeçalho deve tratar §165 como
+  **não-reproduzível em build limpo** até lá.
+
+### 166. JS: shim DOM (#121) estoura o gate de tamanho do bundle hello (`ArtifactSizeTest.helloJsRuntimeSizeWithinBaseline`) — 8297B > 8085B — ❌ ABERTO (lane JS/gate)
+
+- **Sintoma (medido 13/09, build limpo `rm -rf target/classes` + `mvn -o -q
+  -pl kof-compiler -am compile`):** suíte completa do HEAD `c8b756c2` →
+  `Tests run: 6, Failures: 1` em `ArtifactSizeTest`:
+  `runtime JS inchou: 8297B > 8085B (baseline 7700B +5%)`. É a ÚNICA falha
+  da suíte 4-módulos limpa (compiler 1479/1, script 31/0, c 5/0, cli 148/0).
+- **Menor repro:** qualquer `mvn -o test -pl kof-compiler -Dtest='ArtifactSizeTest'`
+  em build limpo no HEAD atual. O programa é o próprio `main(){println("hello")}`
+  do teste — o que inchou foi o runtime, não o programa.
+- **Causa raiz (atribuída por bisect de build, não opinião):** `cd8ad70b`
+  (merge PR #124, fix #121, jonasrochasilva-prog, 09:29) adicionou +9 linhas
+  de dataset/disabled/classList ao shim DOM dentro de `JsRuntimeCore.CORE_RUNTIME`
+  — o CORE é o bloco que todo bundle JS carrega (até hello), então o bundle do
+  hello cresceu 7700→8297 (+7.8% > tol de 5%). Prova A/B na MESMA árvore de
+  fontes: em `b05b3906` (imediatamente antes do merge) a célula **passa**
+  (1/1 verde, medido com worktree + rebuild limpo); em `cd8ad70b` falha.
+  O baseline do gate (`HELLO_JS_BYTES = 7_700`) nunca foi re-medido.
+- **Por que não é desta lane (registro = docs/decompiler, dono
+  192.168.100.17):** minha unidade toca só `kof-cli/**`+docs e o gate falha
+  no HEAD sem meu working tree (stash → mesma falha, medido 13/09).
+- **Correção é da lane JS/gate:** (a) decidir se +9 linhas de shim DOM no
+  CORE é aceitável (então re-medir o baseline 7_700 → novo valor com nota),
+  OU (b) mover dataset/disabled/classList p/ um bloco on-demand (UI/DOM,
+  `always=false` — hello não puxa DOM; o gate existe exatamente p/ capturar
+  isto). Precedente do formato (a): comentário no próprio
+  `ArtifactSizeTest` (linha 21): "Quando uma poda por alcançabilidade fechar,
+  atualiza-se o baseline". Armadilha conexa: o gate só vê o inchaço em build
+  LIMPO — incremental com `JsRuntimeCore.class` stale passa (mesma trap do
+  §165, terceira vítima da família).

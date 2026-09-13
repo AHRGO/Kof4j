@@ -265,28 +265,43 @@ Fase E  Kof Decompiler          (gerar Kof source)
 > **Estado (13/09, dono = 192.168.100.17): Fase E — Java record → `record` Kof.**
 > Re-mediação da fila com atribuição POR MÉTODO (o caveat de 09/09 confirmado
 > na prática: o blockerSink global contava o path de expressão que o de
-> statements recupera depois; a fila 09/09 ainda listava instanceof/checkcast
-> como alvos sem dizer que já tratam via índice — 215 das 686 classes do
-> corpus (31%) são record e os 3 corpos sintéticos (`invokedynamic
-> ObjectMethods` — o corpo NÃO existe no bytecode) eram ~195 stubs silenciosos,
-> a maior fonte única do corpus). `BytecodeRecords.pureRecordComponents`:
-> atributo `Record` (o parser já expõe em `ir.attributes` — zero mudança no
-> parser compartilhado) + super = `java/lang/Record` + shape EXATO por
-> bytecode: ctor `aload_0;invokespecial;N×(aload_0;load;putfield f_i);return`,
-> equals/hashCode/toString = `aload_0;(aload_1;)invokedynamic;ret`, accessor =
-> `aload_0;getfield f_i;ret` com descriptor casando campo; sem `implements`
-> (probe: `record ... implements` → PARSE007 no frontend), sem nome de
-> componente reservado (`val` → PARSE015), sem método extra. Qualquer desvio
-> → null → esqueleto de hoje (zero-drift). Emissão `record Nome(T a, ...)` sem
-> corpo — o frontend gera ctor/accessors/equals/hashCode/toString; genéricos
-> nos componentes via `signature` (probe R2 OK). Corpus: 1843→1648 stubs
-> (−195 = 65 records puros × 3, contagem Med2/Med3 offline), 0 crash. Prova:
-> 5 testes novos em `DecompileTest` (puro, genérico+objeto round-trip compila,
-> método-extra/reservado/interface → esqueleto honesto) — 50/50; suíte
-> 1649/0. Fila Fase E re-medida pós-unidade: próximos candidatos reais =
-> `astore` em corpo com store (0x4c/0x4d/0x4e/0x3a) e branches de loop sem
-> join estrutural (Fase C); instanceof/checkcast SÓ tratam quando a árvore
-> resolve o nome (statements-path sem escopo = ainda caiem — o furo do 09/09).
+> statements recupera depois). 216 das 688 classes do corpus (31%) são record
+> e os 3 corpos sintéticos (`invokedynamic ObjectMethods` — o corpo NÃO existe
+> no bytecode) eram a maior fonte única de stubs. Medido na ÁRVORE LIMPA
+> (`mvn -am compile`, 688 classes, `Med2`): baseline sem recovery = **1856**
+> stubs → records puros + type-params EXATOS = **1660** (−196) → `implements`
+> resolvido = **1475** (−185). Total **−381 = 127 records × 3** (216 records;
+> **89** ainda em skeleton). Cada etapa é zero-drift por construção (desvio →
+> null → esqueleto de hoje).
+>
+> - **Estágio 1** (`BytecodeRecords.pureRecordComponents`): atributo `Record`
+>   (parser já expõe em `ir.attributes` — zero mudança no parser
+>   compartilhado) + super = `java/lang/Record` + shape EXATO por bytecode
+>   (ctor `aload_0;invokespecial;N×(aload_0;load;putfield f_i);return`,
+>   equals/hashCode/toString = `invokedynamic` skeleton, accessor =
+>   `aload_0;getfield f_i;ret` com descriptor casando campo), sem método extra,
+>   sem nome reservado (`val` → PARSE015).
+> - **Type-params** (JVMS 4.7.9.1, forma `Ident:Lclass;`): `record Gp<T>`
+>   emite `<T>` EXATO; bound genérico/interface-bound → RECUSA (skeleton).
+> - **Estágio 2** (`pureRecord(ir, scope)`): probe R7 — o frontend Kof quer
+>   `record Nome implements I(...)` (implements ANTES dos componentes; ordem
+>   Java dá PARSE007). Interface = classe TOPO do MESMO pacote (resolve sem
+>   import) OU via `TreeScope.resolve` (cross-package emite `import`);
+>   `Outer$Inner`/JDK/fora-da-árvore/ambíguo/scope-null (1-arquivo) → skeleton.
+>
+> Prova: `DecompileTest` 55/55 (round-trips puro/genérico/mesmo-pacote/
+> cross-package+import compilam; método-extra/reservado/interface-fora-da-árvore
+> → skeleton honesto). Drift-check da árvore inteira (`DriftCheck`:
+> `decompileTree` 688 → `compileSources` batch): **estágio-2 = 4 erros =
+> baseline = 4 erros**, todos wildcard `? extends` PRÉ-EXISTENTE em
+> `ClassDeclarationNode` (não-record) — **zero drift novo**, 62 arquivos
+> mudaram de esqueleto p/ record. Restam de records: os **89** em skeleton
+> (interface fora-da-árvore p/ 1-arquivo, `Outer$Inner`, class-signature com
+> bound genérico, static members) — cada caso é gap próprio. Fila Fase E
+> re-medida (Med2 pós-unidade): top dos 1475 restantes = store+branch
+> estrutural (`astore` 0x4c/0x4d/0x4e/0x3a, joins de loop = Fase C);
+> instanceof/checkcast SÓ tratam quando a árvore resolve o nome
+> (statements-path sem escopo = ainda caem — o furo do 09/09).
 
 ## 7. Relação com o Compilador
 
