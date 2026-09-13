@@ -93,7 +93,8 @@ class KofScriptStdlibParityTest {
 
     // STDLIB S13b (plan-stdlib-expansion §2, P0): parse com default (§43 —
     // falha DEVOLVE o default, nunca lança). Paridade interpretador×JVM;
-    // linha "" do Double fora do golden (§169 — fila própria).
+    // Linhas ""/"   " do Double INCLUÍDAS pós-§175 (vazio lançava 0.0 no
+    // Native — paridade do parse base fechada).
     @Test
     void mathParseOrDefaultParity() throws Exception {
         parity("""
@@ -109,8 +110,10 @@ class KofScriptStdlibParityTest {
                 println(math.parseDoubleOrDefault("2.5", 0.0) == 2.5)
                 println(math.parseDoubleOrDefault("nope", -0.5) == -0.5)
                 println(math.parseDoubleOrDefault("1e2", 0.0) == 100.0)
+                println(math.parseDoubleOrDefault("", 1.5) == 1.5)
+                println(math.parseDoubleOrDefault("   ", -0.25) == -0.25)
             }
-            """, "42\n-1\n7\n15\n3\n9007199254740993\n-5\n8\ntrue\ntrue\ntrue");
+            """, "42\n-1\n7\n15\n3\n9007199254740993\n-5\n8\ntrue\ntrue\ntrue\ntrue\ntrue");
     }
 
     @Test

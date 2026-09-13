@@ -185,9 +185,15 @@ main() {
     try { println("1.2.3".toDouble()); println("S7") } catch (String e) { println("T7") }
     println("7".toDouble() == 7.0)
     println("1e3".toFloat() == 1000.0)
+    try { println("".toDouble()); println("S8") } catch (String e) { println("T8") }
+    try { println("   ".toDouble()); println("S9") } catch (String e) { println("T9") }
 }    """;
 
-    private static final String FP_EXPECTED = "true\ntrue\ntrue\ntrue\ntrue\ntrue\nT1\nT2\ntrue\ntrue\nT3\ntrue\ntrue\ntrue\ntrue\ntrue\nfalse\ntrue\ntrue\ntrue\nT5\nT6\nT7\ntrue\ntrue";
+    // §175 (13/09): ""/"   " LANÇAM nos 5 alvos (T8/T9) — no x86/riscv era
+    // 0.0 silencioso (.Lpdd_vazio/.Lpd_vazio devolviam xorpd/li a0,0), JVM
+    // lança NumberFormatException. R6/paridade fechada; a prova do OrDefault
+    // com vazio fica em KofMathTest.PARSEORD (linha `parseDoubleOrDefault("", d)`).
+    private static final String FP_EXPECTED = "true\ntrue\ntrue\ntrue\ntrue\ntrue\nT1\nT2\ntrue\ntrue\nT3\ntrue\ntrue\ntrue\ntrue\ntrue\nfalse\ntrue\ntrue\ntrue\nT5\nT6\nT7\ntrue\ntrue\nT8\nT9";
     // === bug 82 (face cross): riscv64/aarch64 definem kof_string_to_double/float
     // (NativeRiscvAsmRtB31, espelho do x86 RuntimeStringParseFp). Oracle SEM
     // print de double (print double segue FLT001 no cross) — throw vira var +

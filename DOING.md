@@ -257,17 +257,30 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > 4 targets + paridade Script. Suíte **1720/0/0**. Residual catalogado:
 > **§175** (`"".toDouble()` = 0.0 no Native vs lança no JVM — paridade do
 > parse BASE; fila própria em known-bugs.md).
-> **PRÓXIMO PASSO:** S13c — OrNull (`parseIntOrNull` etc., briefing §43)
-> ou §175 (fix paridade vazio Double). **§175 primeiro** (menor, destrava a
-> linha `""` do golden S13b): trocar `xorpd %xmm0,%xmm0` (x86
-> RuntimeStringParseFp `.Lpdd_vazio`) e `li a0,0; j .Lpd_ret` (riscv B31
-> `.Lpd_vazio`) por salto ao throw; aarch herda; re-medir goldens
-> (`KofStringParseTest` NÃO muda — não testa vazio; adicionar linha `""`
-> ao PARSEORD golden = devolve default nos 4). Depois S13c: `Int?` return
-> via mecanismo §125 (nullable primitivo) — avaliar typer do dispatch
-> stdlib antes (se `Int?` no MathCall returnType travar, unidade própria).
-> Arquivos: `RuntimeStringParseFp.java`, `NativeRiscvAsmRtB31.java`,
-> `KofMathTest`, matriz `stdmathparseord` (adicionar linha), DOING.md.
+> **§175 FECHADO 13/09 (mesma sessão S13b):** `"".toDouble()`/"   " LANÇAM
+> nos 5 alvos (x86 `.Lpdd_vazio` → `jmp .Lpdd_throw`; riscv B31
+> `.Lpd_vazio` → `j .Lpd_throw`; aarch herda). Prova: T8/T9 no FP_GOLDEN
+> de KofStringParseTest (8/8, 2 skip cross) + linhas "" no PARSEORD
+> (KofMathTest 24/24, matriz stdmathparseord, paridade Script). Suíte
+> **1725/0/0**. 
+> **PRÓXIMO PASSO:** S13c — `math.parseIntOrNull/parseLongOrNull/
+> parseDoubleOrNull` (briefing §43, fecha o item P0 do §2). Retorno
+> nullable primitivo: mecanismo §125 (`Nullable(primitivo)` → box com null;
+> precedentes `KofIo` STR_NULL readLine, `KofWeb` linha 198 `String?`).
+> Plano: (1) `KofMath` 3 cases com returnType `Type.NullableType(INT/LONG/
+> DOUBLE)` — se o typer do dispatch stdlib rejeitar `Int?` return, é regra
+> 6 (mechanism gap), registrar e fatiar; (2) backends: JVM `kof_string_to_*
+> _or_null` (try/catch → null — devolve `Integer` boxed ou null), JS
+> (try/catch → null), x86/riscv wrapper devolvendo "nulo-primitivo"
+> (§125: convenção de flag/valor — verificar como kof_web_header/STR_NULL
+> fazem no Native ANTES de codar; se Int? no Native não tem mecanismo de
+> retorno, fatiar: OrNull JVM/JS/Script primeiro, Native como unidade
+> seguinte com gap honesto R6 se necessário); (3) testes: `parseOrNull{Jvm,
+> Native,Js,CrossArch}` + matriz `stdmathparseornull` + paridade.
+> Arquivos: `KofMath.java`, `JvmStringCoreRuntime.java` + descritores
+> (return Ljava/lang/Integer;? — verificar box/null no emit),
+> `JsRuntimeUiStdlib.java`, `JsRuntimeOps.java`, `NativeX86StringCalls.java`
+> (+ runtime asm se Native viável), `KofMathTest`, matriz, DOING.md.
 
 > **✅ FEITO (13/09 ~13:40, lane issues 9094 — dono = esta sessão): #126 +
 > #125 (reportes PublioSantos, 0.3.23-beta).** **#126** (`json.encode(x,4)`

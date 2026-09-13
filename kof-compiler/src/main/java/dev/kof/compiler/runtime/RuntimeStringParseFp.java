@@ -65,13 +65,10 @@ kof_string_to_float:
                 decl %r15d
                 jmp .Lpdd_th0
            .Lpdd_vazio:
-                xorpd %xmm0, %xmm0
-                popq %r15
-                popq %r14
-                popq %r13
-                popq %r12
-                popq %rbx
-                ret
+                # §175 (paridade): "" (ou só espaços) LANÇA como o JVM
+                # (Double.parseDouble("") = NumberFormatException) — era 0.0
+                # silencioso (R6/paridade; fila do §175, fechado 13/09).
+                jmp .Lpdd_throw
            .Lpdd_lit:
                 # literais: NaN (3) / [+/-]Infinity (8/9/10). NaN: bit qNaN;
                 # Infinity: +inf (NaN nao tem sinal).

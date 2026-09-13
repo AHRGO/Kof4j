@@ -268,9 +268,10 @@ class KofMathTest {
     // JS wrapper (JsRuntimeUiStdlib), x86 wrapper c/ handler no exc_chain
     // (RuntimeStringParseOrDefault), riscv B41 (aarch herda via tradutor).
     // Literal Int default em parseLong prova o widening I2L do KofStd
-    // (crash COMPUTE_FRAMES sem ele — mesma unidade). Linha `""` do Double
-    // fora do golden: §169 (vazio devolve 0.0 no Native — paridade do parse
-    // BASE, fila própria); Int/Long vazio estão no golden (lançam nos 4).
+    // (crash COMPUTE_FRAMES sem ele — mesma unidade). Linhas `""`/"   " do
+    // Double INCLUÍDAS pós-§175 (vazio lançava 0.0 no Native — paridade do
+    // parse base fechada; antes estavam fora do golden). Int/Long vazios
+    // devolvem o default (o parse base sempre lançou neles).
     private static final String PARSEORD_SRC = """
         main() {
             println(math.parseIntOrDefault("42", 0))
@@ -284,13 +285,15 @@ class KofMathTest {
             println(math.parseDoubleOrDefault("2.5", 0.0) == 2.5)
             println(math.parseDoubleOrDefault("nope", -0.5) == -0.5)
             println(math.parseDoubleOrDefault("1e2", 0.0) == 100.0)
+            println(math.parseDoubleOrDefault("", 1.5) == 1.5)
+            println(math.parseDoubleOrDefault("   ", -0.25) == -0.25)
         }
         """;
 
     private static final String PARSEORD_OUT = String.join("\n",
             "42", "-1", "7", "15", "3",
             "9007199254740993", "-5", "8",
-            "true", "true", "true");
+            "true", "true", "true", "true", "true");
 
     @Test
     void parseOrDefaultJvm(@TempDir Path tmp) throws Exception {

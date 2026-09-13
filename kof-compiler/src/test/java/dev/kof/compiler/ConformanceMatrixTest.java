@@ -763,9 +763,9 @@ class ConformanceMatrixTest {
         // falha de parse DEVOLVE o default, nunca lança). Backends: JVM
         // try/catch, JS wrapper, x86 wrapper c/ handler no exc_chain, riscv
         // B41 (aarch tradutor). Literal Int em param Long prova o widening
-        // I2L do KofStd (crash COMPUTE_FRAMES sem ele). Linha "" do Double
-        // fora do golden: §169 (vazio = 0.0 no Native — fila própria); Int/
-        // Long "" DEVOLVEM o default nos 4 (lançam no parse base).
+        // I2L do KofStd (crash COMPUTE_FRAMES sem ele). Linhas ""/"   " do
+        // Double INCLUÍDAS pós-§175 (vazio lançava 0.0 no Native — paridade
+        // fechada); Int/Long "" DEVOLVEM o default (lançam no parse base).
         matrix("stdmathparseord", """
                 main() {
                     println(math.parseIntOrDefault("42", 0))
