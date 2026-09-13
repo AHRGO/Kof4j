@@ -265,13 +265,32 @@ class TranslateStatements extends TranslateExpr {
 
     private String parseExprOrDecl() {
         int save = p.pos;
-        // Detect "Type name [= expr];"   — but also plain "name = expr;" 
-        // Consume first ident; if next is an identifier (not operator) it's a decl.
-        if (isPrimitiveOrType(p.peek().text) && p.peek(1).type == T.IDENT) {
-            p.next(); // type
+        // Detect "Type name [= expr];" / "Type[] name ..." / "Type<...> name ..."
+        if (isLocalDeclAhead()) {
+            p.next(); // type base
+            int dims = 0;
+            if (p.at("<")) {  // generics: List<String> xs
+                int depth = 0;
+                do {
+                    if (p.at("<")) depth++;
+                    else if (p.at(">")) depth--;
+                    p.next();
+                } while (depth > 0 && !p.at(T.EOF));
+            }
+            while (p.at("[")) { p.next(); p.expect("]"); dims++; }  // Type[] name
             String name = p.next().text;
+            while (p.at("[")) { p.next(); p.expect("]"); dims++; }  // Type name[]
             if (p.at("=")) {
                 p.next();
+                if (p.at("{")) {
+                    // Array initializer `int[] xs = {1,2,3}` não tem literal
+                    // equivalente em Kof (não existe `{...}` — arrays são
+                    // `new Int[n]` + atribuição, ou `listOf` p/ List).
+                    // Revisão manual (R6: nunca silencioso).
+                    throw new TranslateException(
+                            "array initializer `{...}` não tem equivalente direto em Kof "
+                            + "(use `new Int[n]` + atribuições ou `listOf(...)`) — revisão manual");
+                }
                 String e = parseExpr();
                 p.expect(";");
                 return "var " + name + " = " + e;
@@ -283,5 +302,25 @@ class TranslateStatements extends TranslateExpr {
         String e = parseExpr();
         p.expect(";");
         return e;
+    }
+
+    /** Lookahead: "Type[<...>][[]...] name ..." — declaração local. */
+    private boolean isLocalDeclAhead() {
+        if (!isPrimitiveOrType(p.peek().text)) return false;
+        int i = p.pos + 1;
+        if (i < p.toks.size() && p.toks.get(i).text.equals("<")) {
+            int depth = 0;
+            while (i < p.toks.size()) {
+                String t = p.toks.get(i).text;
+                if (t.equals("<")) depth++;
+                else if (t.equals(">")) { depth--; if (depth == 0) { i++; break; } }
+                i++;
+            }
+        }
+        while (i + 1 < p.toks.size() && p.toks.get(i).text.equals("[")
+                && p.toks.get(i + 1).text.equals("]")) {
+            i += 2;
+        }
+        return i < p.toks.size() && p.toks.get(i).type == T.IDENT;
     }
 }

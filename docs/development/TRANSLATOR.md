@@ -6,8 +6,8 @@
 
 **Status:** EM DESENVOLVIMENTO (caiu de `future/` em 12/09 — Fase F
 implementada: `Translate.java` + `TranslateLexer`/`TranslateExpr`;
-prova: `TranslateTest` 12/12 (output compila e roda; +do-while +switch
-+try/catch/throw 13/09). Subconjunto Java ampliado ainda pendente)
+prova: `TranslateTest` 14/14 (output compila e roda; +do-while +switch
++try/catch/throw +arrays 13/09). Subconjunto Java ampliado ainda pendente)
 **Data:** 22 de agosto de 2026
 
 ---
@@ -139,3 +139,19 @@ diferenciais.
 > 526 → **255** + `TranslateStatements.java` 287 (statements extraídos p/ o
 > gate ≤500 — dívida tolerada zerada, `check_500` sem aviso de Translate);
 > `TranslateTest` 12/12.
+>
+> **Estado (13/09 ~11:45, dono = 192.168.100.22): arrays + declarações com
+> `[]`/generics.** Gap: `int[] xs = new int[3]` → `expected ']' but found
+> 'xs'` (o decl-parser não pulava `[]` após o tipo). **Bug latente grave
+> achado no caminho:** `new int[3]` gerava `new Int[]]` (o `parseNew`
+> consumia `[` e o PRIMEIRO token da dimensão antes do `parseExpr`) → Kof
+> inválido (`PARSE041`); `new int[]` local nem chegava ao compilador porque
+> o decl-parser já falhava. Fix: `parseExprOrDecl` com lookahead
+> `isLocalDeclAhead` (generics `List<String> xs`, `Type[] name`, `Type
+> name[]`); `parseNew` corrigido (size via `parseExpr`, `new T[]{...}` →
+> gap explícito R6). `array initializer {...}` → **gap honesto** (não há
+> literal `{...}` em Kof — `new Int[n]` + atribuições ou `listOf`).
+> Prova: `TranslateTest.arrayDeclarationTranslates` (traduz + compila JVM +
+> roda `10/0/0`; C-style for preservado) +
+> `TranslateTest.arrayInitializerIsHonestGap` (diagnóstico explícito, R6).
+> `TranslateStatements` 326 ≤500; `TranslateTest` 14/14.

@@ -239,6 +239,44 @@ class TranslateTest {
     }
 
     @Test
+    void arrayDeclarationTranslates(@TempDir Path dir) throws Exception {
+        String kof = Translate.translateJava("""
+                public class AR {
+                    public static void main(String[] args) {
+                        int[] xs = new int[3];
+                        xs[0] = 10;
+                        for (int i = 0; i < xs.length; i++) {
+                            System.out.println(xs[i]);
+                        }
+                    }
+                }
+                """);
+
+        assertTrue(kof.contains("var xs = new Int[3]"),
+                "new int[3] deve virar new Int[3] (bug latente: saía `new Int[]]`, PARSE041):\n" + kof);
+        assertFalse(kof.contains("[]]"), "não pode sobrar `[]]` do size consumido errado:\n" + kof);
+        assertTrue(kof.contains("for (var i = 0; i < xs.length; i++)"),
+                "for C-style preservado (Kof suporta):\n" + kof);
+
+        assertCompiles(dir, kof, "10\n0\n0");
+    }
+
+    @Test
+    void arrayInitializerIsHonestGap() {
+        TranslateException e = assertThrows(TranslateException.class, () ->
+                Translate.translateJava("""
+                        public class AI {
+                            public static void main(String[] args) {
+                                int[] xs = {1, 2, 3};
+                                System.out.println(xs[0]);
+                            }
+                        }
+                        """));
+        assertTrue(e.getMessage().contains("revisão manual"),
+                "array initializer `{...}` sem equivalente Kof → gap explícito (R6), foi: " + e.getMessage());
+    }
+
+    @Test
     void doWhileTranslates(@TempDir Path dir) throws Exception {
         String kof = Translate.translateJava("""
                 public class DW {

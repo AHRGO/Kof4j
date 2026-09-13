@@ -238,10 +238,20 @@ class TranslateExpr {
         String parseNew() {
             String typeName = p.next().text;
             if (p.at("[")) {
-                // array creation: new int[n] or new int[]{...}
-                p.next();
-                p.next(); // ]
+                // array creation: `new int[n]` → `new Int[n]`.
+                // Bug latente (achado 13/09): o código consumia `[` E o
+                // primeiro token da dimensão antes do parseExpr, então
+                // `new int[3]` saía `new Int[]]` (PARSE041 no Kof gerado).
+                p.next(); // [
+                if (p.at("]")) {
+                    // `new int[]{...}` — array initializer sem equivalente
+                    // direto em Kof (revisão manual, R6).
+                    throw new TranslateException(
+                            "array initializer `new T[]{...}` não tem equivalente direto em Kof "
+                            + "(use `new Int[n]` + atribuições) — revisão manual");
+                }
                 String size = parseExpr();
+                p.expect("]");
                 return "new " + kofType(typeName) + "[" + size + "]";
             }
             String args = parseCallArgs();
