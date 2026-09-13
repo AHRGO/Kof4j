@@ -42,18 +42,16 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
-> **⚡ EM CURSO (13/09, lane development/docs — DD-STDLIB-01 movido p/ docs/, dono = esta sessão):**
-> `docs/development/planning-stdlib-array-returns.md` → `docs/stdlib/DD-STDLIB-01-array-returns.md`
-> (regra dos 3 estados: IMPLEMENTADO = sai de development/). Título→FECHADO.
-> Refs sincronizadas: `training/idioms/stdlib.md` ("em aberto"→FECHADO 6a),
-> `docs/stdlib/stdlib.md` (gaps S10c→FECHADO), README §3 + nota histórica,
-> `future/README.md` (CAIU→FECHADO+movido), plano S10c, time-design precedente.
-> Auditoria development/ completa: nenhum outro doc finalizado (finally EM
-> CURSO lane lowerers; OTP EM CURSO + S2-JVM; native re-auditado 12/09;
-> editor IntelliJ pendente; SOLID-500 F3 bloqueada nat/; legado EM
-> DESENVOLVIMENTO). **PRÓXIMO PASSO:** commit + push; depois fila ratificada
-> (S2-OTP→DD-01→§106→§89→§117→§131→pow→Long=BigInt), checando dono.
-> **NUNCA:** `nat/` lane GC viva; push main.
+> **⚡ FEITO (13/09, lane development/docs — DD-STDLIB-01 movido p/ docs/,
+> commit `157c5551` pushado):** `planning-stdlib-array-returns.md` →
+> `docs/stdlib/DD-STDLIB-01-array-returns.md`, título FECHADO, 5 refs
+> sincronizadas. **CORREÇÃO DE ROTA 13/09 (aviso da mantenedora):** a fila
+> ratificada 13/09 (§106→§89→§117→§131→pow→Long=BigInt) está com OUTRO AGENTE
+> (ele está no §106 agora e segue §89, §117...) — esta sessão NÃO toca nessa
+> fila. Lane desta sessão = **docs/development (fechar/mover docs concluídos)**,
+> sem colisão. **PRÓXIMO PASSO:** auditar `docs/development/` doc-vs-código e
+> mover o que estiver concluído p/ `docs/` (regra dos 3 estados).
+> **NUNCA:** fila §106/§89/§117 (outro agente); `nat/` lane GC viva; push main.
 
 > **⚡ FEITO (13/09, lane development/docs — sync pós-implementações, dono = esta
 > sessão, `3e8167d8`):** as lanes fecharam **DD-01/§45** (`063ed956`, FinallyFrame

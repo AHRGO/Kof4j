@@ -39,7 +39,7 @@ paridade com gaps honestos), `docs/bugs-and-gaps/specification-gaps.md`
 | 3 | `native-multiarch.md` (NATIVE002) | `EM CURSO` — ~30 faces cross fechadas sob qemu (41+41 medidas 12/09) | paridade riscv/aarch = condição de estabilidade do release | GC mark-sweep p/ riscv/aarch (faces restantes da §5; JS é outra frente) |
 | 4 | `planning-otp-supervision.md` (#83) | `EM CURSO` — 1ª fatia ✅ 11/09 (núcleo+`restartLimit`+`stop`) + **S2-JVM ✅ 13/09** (`startAll`/`lacoUnico` + wrapper de identidade; `KofSupervisorE2ETest` 8/8; Native=OTP001 §129, JS=OTP002 §132) | **DD-OTP RATIFICADAS 13/09** (opção 1a: S2 JVM; riscv/aarch PARTIAL) — ver §3 | S2-Native x86 pendente do §129 (unwind cross-thread, lane nat); promover OTP001/002 só com a face cross decidida |
 | 5 | `plan-editor-integration.md` (EDI001) | `EM CURSO` — graus 1-3, 4-10, 11, 12 ✅ | único degrau sem dono pendente é tooling | plugin IntelliJ (DAP/LSP já funcionam via CLI) |
-| 6 | `plan-stdlib-expansion.md` | `EM CURSO` — S0–S6, S8–S12 ✅; **S10c ✅ 13/09** (`random.randomBytesHex`, `317b23e7`) | só o que NÃO depende de decisão anda | `pow`/`-lm` **DECIDIDO 13/09** → implementar (§3); só `format`/`boundaries` (DD-STDLIB-02) segue na mesa da mantenedora |
+| 6 | `plan-stdlib-expansion.md` | `EM CURSO` — S0–S6, S8–S12 ✅ | só o que NÃO depende de decisão anda | `pow`/`-lm` e S10c (`randomBytesHex`) **DECIDIDOS 13/09** → implementar (§3); só `format`/`boundaries` (DD-STDLIB-02) segue na mesa da mantenedora |
 | 7 | `decision-pending/PLATFORM-PLAN.md` F4/F5/F7 + `decision-pending/APPLICATION_MODEL.md` I2+ | `PARADO` (parciais) | dependem de decisão/prioridade da release | sem próximo passo próprio: entram na medida em que a fila acima fecha |
 | — | `decision-pending/security-plan.md` (camadas B/C/D) | `PARTIAL` | cada camada B/C/D tem decisão pendente (ChaCha20 formato, keys, OAuth2) | atacar só com ordem explícita da mantenedora |
 | — | `decision-pending/plan-platform-completion.md` (P4/P5), `decision-pending/plan-spring-independence.md` (Fases 12–14) | `PARTIAL` | P4/P5 e Fase 12 dependem do core estável + decisões | idem — não abrir por conta |
@@ -52,13 +52,13 @@ package-compiler) abre antes de SYSTEMS fechar (paridade + GC + estabilidade).
 
 ## 2. Bugs abertos (fila em `docs/bugs-and-gaps/known-bugs.md`) — triagem 13/09
 
-**13 seções sem ✅ no cabeçalho** (§127-JVM, §155, §94, §45 fechados 13/09; §156 aberto 13/09 — infra de tipos; §157-160 e §65 fechados/NÃO-REPRODUZ 13/09) — e a conclusão honesta
+**14 seções sem ✅ no cabeçalho** (§127-JVM, §155 e §94 fechados 13/09; §156 aberto 13/09 — infra de tipos; §157-160 e §65 fechados/NÃO-REPRODUZ 13/09) — e a conclusão honesta
 (`known-bugs.md:11`): **há UM item de código-puro-sem-decisão: §156**.
 Todos pendurados em:
 
 | Grupo | Bugs | Quem destrava |
 |---|---|---|
-| Decisão ratificada 13/09 — implementação pendente | §81, §89, §106, §117, §131, §161/NAT-STR01 (§45 ✅ implementado 13/09; S10c ✅ 13/09) | fila ratificada / lanes executoras |
+| Decisão ratificada 13/09 — implementação pendente | §81, §89, §106, §117, §131, §161/NAT-STR01 (§45/DD-01 FECHADO 13/09 — ver `docs/decisions/DD-01-finally-return.md`) | fila ratificada / lanes executoras |
 | Congelado regra-6 | §101 | ninguém (contrato) |
 | Lane alheia | §104b-ii + §107 restante + §114 (bugfixer — storage-box de record), §129 (lane nat), §132 (OTP-JS) | donos das lanes |
 | Infra de tipos (sem dono) | §156 (`List` heterogêneo de lambdas → CCE JVM) | agente de tipos |
@@ -85,7 +85,7 @@ escalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 |---|---|---|
 | DD-STDLIB-01 — `randomBytes`/`randomChoice` (S10c) | `docs/stdlib/DD-STDLIB-01-array-returns.md` (FECHADO 13/09, movido p/ docs/) | ✅ IMPLEMENTADO 13/09 (opção 6a: `randomBytesHex` alias de `hex` + choice=idiom; S10c FECHADO) |
 | DD-STDLIB-02 — `time.format`/`boundaries` | `planning-stdlib-time-design.md` (caiu 12/09: `addDays`/`diffDays` ✅) | decisão de superfície (AINDA PENDENTE) |
-| DD-01 — `finally` no caminho de `return` (JVM/Native/interp) | `planning-finally-return.md` (caiu 12/09: JS ✅ `c727fee`) | ✅ IMPLEMENTADO 13/09 (opção 4a: FinallyFrame na IR; bug 45 fechado nos 4 targets, `063ed956`) |
+| DD-01 — `finally` no caminho de `return` | `docs/decisions/DD-01-finally-return.md` (FECHADO 13/09, movido p/ docs/) | ✅ IMPLEMENTADO 13/09 (opção 4a: FinallyFrame na IR + gates finallyReturnJvm/Js; suíte 1627/0; bug 45 FECHADO) |
 | DD-OTP (restante) | `planning-otp-supervision.md` | ✅ RATIFICADAS 13/09 (opção 1a: S2 JVM + wrapper `(id, resultado)`; riscv/aarch PARTIAL) — implementar S2 |
 | `pow`/`-lm`, `roundTo`-mode | `plan-stdlib-expansion.md` | ✅ DECIDIDO 13/09 (opção 7a: link `-lm` aprovado) — implementar `pow` |
 | NAT-STR01 (case-map astral) | `known-bugs.md` §161 / conformance-matrix | ✅ ABERTO POR DECISÃO 13/09 — implementar UTF-8 astral nos nativos |
@@ -105,7 +105,7 @@ escalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 | `LEGACY_MIGRATION.md` + `DECOMPILER.md` + `TRANSLATOR.md` + `DIFFERENTIAL_TESTING.md` + `LEGACY_IR.md` | plataforma completa no CLI: `inspect/decompile/translate/compare/migrate` (`Main.java:25-29`), 63 testes kof-cli + `Confidence`/`Type.fromJvmSignature` | cobertura: switch/athrow opacos, `inspect --java` (R5 do audit), IR non-JVM |
 | `IMPLEMENTATION_PLAN.md` / `ACTION_PLAN.md` | Fases A–H têm código+testes | tiers 6–12 = `future/` (R12) |
 | ~~`PLANNING-FUTURE-AUDIT.md` / `planning-future-reconcile.md`~~ → `docs/audits/` | comparação branch `planning-future`×beta **encerrada 13/09** — nada de código aberto próprio mora nelas: R2 vive em `decision-pending/APPLICATION_MODEL.md`+`PLATFORM-PLAN.md`; R5 no cluster migração (`DECOMPILER.md`/`LEGACY_IR.md` Fase C) | — (fora de `development/`) |
-| `planning-finally-return.md` | JS corrigido (`c727fee` + `finallyReturnJs`); **DD-01 4-targets ✅ 13/09** (`063ed956`) | ✅ FECHADO — bug 45 corrigido nos 4 targets (FinallyFrame na IR) |
+| ~~`planning-finally-return.md`~~ → `docs/decisions/DD-01-finally-return.md` | FECHADO 13/09 (FinallyFrame IR + gates; bug 45 CORRIGIDO, suíte 1627/0) | — (fora de `development/`) |
 | ~~`planning-stdlib-time-design.md`~~ → `decision-pending/` | `addDays`/`diffDays` nos 5 alvos | decisão `format`/`boundaries` (§3) |
 
 ### 4.2 Plans & auditorias vivas
@@ -125,7 +125,7 @@ escalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 | `roadmap.md` | §§8–11 ❌ (frontend same-project, monólito→micro) | longo prazo |
 | ~~`roadmap-audit.md`~~ → `docs/audits/roadmap-audit.md` | matriz 06/09 + fila P0→P5 (P0 FECHADO 09/09) | re-audit quando algo fecha |
 | ~~`KOFUI-AUDIT.md`~~ → `docs/bugs-and-gaps/` | UI001-Native (face R6: no-op silencioso) ABERTO | lane UI |
-| ~~`known-bugs.md`~~ → `docs/bugs-and-gaps/` | 13 abertos (triagem §2 acima; §127-JVM, §155, §94, §45, §157-160 e §65 fechados/NÃO-REPRODUZ 13/09) | fila viva |
+| ~~`known-bugs.md`~~ → `docs/bugs-and-gaps/` | 14 abertos (triagem §2 acima; §127-JVM, §155, §94, §157-160 e §65 fechados/NÃO-REPRODUZ 13/09) | fila viva |
 | `refactoring/PLAN-SOLID-500.md` | F1–2, 4–9 ✅ (**F2 fechada 12/09** — 487 ≤500 medido); **só F3 em curso** (NativeBackend 664, bloqueada pela lane GC em `nat/`); ratchet `check_500-baseline.txt` (dívidas travadas — nº autoritativo = `wc -l` do arquivo; **8** neste HEAD, era 17 no §140) no CI | F3 fecha o plano |
 
 ### 4.3 `future/` — só plano, zero código (não é trabalho atual)
@@ -135,7 +135,7 @@ escalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 | `PLAN-UNIVERSAL-PLATFORM.md` | decisão + SYSTEMS fechado (R12) |
 | `scoped-resources-plan.md` (RAII TIER 2.4) | bump com `using`/`resource_scope` decidido |
 
-*(DD-STDLIB-01 `planning-stdlib-array-returns.md` **saiu de `future/` 13/09** — decisão 6a ratificada, implementado (S10c) e movido p/ `docs/stdlib/DD-STDLIB-01-array-returns.md`; não é mais trabalho de `development/`.)*
+*(DD-STDLIB-01 `planning-stdlib-array-returns.md` **saiu de `future/` 13/09** — decisão 6a ratificada, implementado e movido p/ `docs/stdlib/DD-STDLIB-01-array-returns.md`.)*
 
 *(movimentos históricos de 12/09: 13 docs caíram de `future/` p/ cá —
 evidência em cada linha de §4.1; snapshot SG 08/09 → `docs/history/`)*

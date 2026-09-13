@@ -1,4 +1,4 @@
-# Planning — `finally` no caminho `return` do `try` (DD-01)
+# DD-01 — `finally` no caminho `return` do `try` (FECHADO 13/09 — movido p/ docs/)
 
 > **✅ DECIDIDO 13/09 (mantenedora, opção 4a):** aprova a proposta abaixo (lowering único com `FinallyFrame` na IR, espelho do bytecode JVM, parser JS reconstrói) + **bump 0.3.0→0.3.1**. Implementação liberada p/ lane lowerers.
 >
