@@ -99,5 +99,5 @@ final class NativeRiscvAsmRtB40 {
                 slli t1, t1, 51            # 0x0008000000000000 (quiet bit 51)
                 or   a0, t0, t1            # NaN canônico 0x7ff8...
                 ret
-        """);
+        """;
 }
