@@ -11,34 +11,61 @@ arquitetura mudar (refatoração, novo backend), a **linguagem não muda**.
 
 ## 1. Visão geral
 
-`text
-Kof Language Specification  (docs/language-reference/)
-        │
-        │ implemented by
-        ▼
-Kof Compiler  (kof-compiler, Java 21 + ASM 9.8)
-        │
-        ├── Frontend
-        │    ├── Lexer            (Lexer.java, 477L)
-        │    ├── Parser           (Parser.java, 1975L)
-        │    ├── AST              (AstNodes.java, 50 nós sealed)
-        │    ├── Desugar          (CompilerDesugar.java)
-        │    ├── Imports          (CompilerImports.java)
-        │    └── Semantic Analysis (SemanticAnalyzer.java, 2293L)
-        │         ├── SymbolTable (SymbolTable.java)
-        │         ├── Type        (Type.java, 8 records)
-        │         └── BuiltinTypes (BuiltinTypes.java)
-        │
-        ├── Middle-end
-        │    ├── Lowering AST→IR  (CompilerDriver + *Lowerer.java)
-        │    ├── IR               (IRNodes.java, 30 ops)
-        │    └── Optimizer        (Optimizer.java + OptimizerConstantFold)
-        │
-        └── Backend (interface Backend.java)
-             ├── JvmBackend       (ASM → .class)
-             ├── NativeBackend    (asm x86_64/riscv64/aarch64 → ELF)
-             └── JsBackend        (ESM → .mjs)
-`
+flowchart TD
+    %% Estilos
+    classDef spec fill:#f9f2f4,stroke:#d0a0b0,stroke-width:2px,stroke-dasharray: 5 5
+    classDef compiler fill:#e1f5fe,stroke:#0288d1,stroke-width:2px
+    classDef module fill:#e8eaf6,stroke:#3f51b5,stroke-width:1px
+    classDef sub fill:#ffffff,stroke:#9e9e9e,stroke-width:1px
+    classDef backend fill:#f3e5f5,stroke:#8e24aa,stroke-width:1px
+
+    %% Elementos Principais
+    Spec[/"Kof Language Specification (docs/)"/]:::spec
+    
+    subgraph Compiler ["Kof Compiler (Java 21 + ASM 9.8)"]
+        direction TB
+        
+        subgraph Frontend ["Frontend"]
+            direction TB
+            Lexer["Lexer (477L)"]:::sub
+            Parser["Parser (1975L)"]:::sub
+            AST["AST (50 nós sealed)"]:::sub
+            Desugar["Desugar"]:::sub
+            Imports["Imports"]:::sub
+            
+            subgraph Semantic ["Semantic Analysis (2293L)"]
+                direction TB
+                SymTab["SymbolTable"]:::sub
+                Type["Type (8 records)"]:::sub
+                Builtin["BuiltinTypes"]:::sub
+            end
+        end
+
+        subgraph MiddleEnd ["Middle-end"]
+            direction TB
+            Lowering["Lowering AST → IR"]:::sub
+            IR["IR (30 ops)"]:::sub
+            Optimizer["Optimizer"]:::sub
+        end
+
+        subgraph BackendGroup ["Backend"]
+            direction TB
+            BackendInterface{{"«interface» Backend"}}:::module
+            JVM["JvmBackend (ASM → .class)"]:::backend
+            Native["NativeBackend (→ ELF)"]:::backend
+            JS["JsBackend (ESM → .mjs)"]:::backend
+            
+            JVM -.->|implements| BackendInterface
+            Native -.->|implements| BackendInterface
+            JS -.->|implements| BackendInterface
+        end
+        
+        %% Fluxo de Compilação
+        Frontend ==> MiddleEnd ==> BackendGroup
+    end
+
+    %% Relacionamento Principal
+    Compiler -.->|implemented by| Spec
 
 **Módulos Maven relacionados:**
 
