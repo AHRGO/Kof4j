@@ -281,6 +281,16 @@ class TranslateExpr {
 
         String parseNew() {
             String typeName = p.next().text;
+            // `new Box<Integer>(...)` — Kof infere o tipo na chamada
+            // (`Box(5)`); os argumentos de tipo Java são descartados.
+            if (p.at("<")) {
+                int depth = 0;
+                do {
+                    if (p.at("<")) depth++;
+                    else if (p.at(">")) depth--;
+                    p.next();
+                } while (depth > 0 && !p.at(T.EOF));
+            }
             if (p.at("[")) {
                 // array creation: `new int[n]` → `new Int[n]`.
                 // Bug latente (achado 13/09): o código consumia `[` E o

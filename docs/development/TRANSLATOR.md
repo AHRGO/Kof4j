@@ -6,9 +6,9 @@
 
 **Status:** EM DESENVOLVIMENTO (caiu de `future/` em 12/09 — Fase F
 implementada: `Translate.java` + `TranslateLexer`/`TranslateExpr`;
-prova: `TranslateTest` 17/17 (output compila e roda; +do-while +switch
-+try/catch/throw +arrays +cast/instanceof +throws +gaps 13/09). Subconjunto
-Java ampliado ainda pendente)
+prova: `TranslateTest` 19/19 (output compila e roda; +do-while +switch
++try/catch/throw +arrays +cast/instanceof +throws +generics +constructor
++varargs/nested 13/09). Subconjunto Java ampliado ainda pendente)
 **Data:** 22 de agosto de 2026
 
 ---
@@ -186,3 +186,16 @@ diferenciais.
 > como erro de sintaxe; `parseMember` caía em `expected class/...`.
 > Prova: `TranslateTest.varargsAndNestedTypeAreHonestGaps`. `TranslateExpr`
 > 399 ≤500; `Translate.java` 270 ≤500; `TranslateTest` 17/17.
+>
+> **Estado (13/09 ~13:00, dono = 192.168.100.22): generics + construtores.**
+> `class Box<T>`/`record Pair<A,B>`/`<T> T id(T x)` → `Box<T>`/`Pair<A,B>`/
+> `T id<T>(T x)` (Kof tem generics); `new Box<Integer>(5)` → `Box(5)` (Kof
+> infere). **Bug latente grave:** construtor Java (`public User(...)`) tinha
+> o nome da classe lido como tipo de retorno → o ramo de campo escaneava até
+> um `;` inexistente e **travava em loop infinito** (EOF) em `kof translate`;
+> e o corpo do construtor era descartado (`constructor(...) {}`). Fix:
+> detectar `ClassName(` antes de `parseType` → `emitConstructor` com corpo.
+> Bounds `<T extends X>` → gap honesto (R6). Prova:
+> `TranslateTest.constructorTranslatesWithBody` (traduz + compila JVM + roda
+> `Hello Mel/26`) + `TranslateTest.genericsTranslate` (roda `5/7`).
+> `Translate.java` 316 ≤500; `TranslateTest` 19/19.

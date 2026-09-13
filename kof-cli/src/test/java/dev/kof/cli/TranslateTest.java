@@ -239,6 +239,60 @@ class TranslateTest {
     }
 
     @Test
+    void constructorTranslatesWithBody(@TempDir Path dir) throws Exception {
+        String kof = Translate.translateJava("""
+                public class User {
+                    String name;
+                    int age;
+                    public User(String n, int a) {
+                        this.name = n;
+                        this.age = a;
+                    }
+                    public String greet() { return "Hello " + name; }
+                    public static void main(String[] args) {
+                        User u = new User("Mel", 26);
+                        System.out.println(u.greet());
+                        System.out.println(u.age);
+                    }
+                }
+                """);
+
+        assertTrue(kof.contains("constructor(String n, Int a) {"),
+                "construtor Java deve virar constructor Kof (antes: loop infinito/parse error):\n" + kof);
+        assertTrue(kof.contains("this.name = n"),
+                "corpo do construtor NÃO pode ser descartado (era bug latente `{}`):\n" + kof);
+        assertTrue(kof.contains("var u = User(\"Mel\", 26)"), "new X(...) → X(...):\n" + kof);
+
+        assertCompiles(dir, kof, "Hello Mel\n26");
+    }
+
+    @Test
+    void genericsTranslate(@TempDir Path dir) throws Exception {
+        String kof = Translate.translateJava("""
+                class Box<T> {
+                    T value;
+                    public Box(T v) { this.value = v; }
+                    public T get() { return value; }
+                }
+                class GM {
+                    static <T> T id(T x) { return x; }
+                    public static void main(String[] args) {
+                        Box<Integer> b = new Box<Integer>(5);
+                        System.out.println(b.get());
+                        System.out.println(id(7));
+                    }
+                }
+                """);
+
+        assertTrue(kof.contains("class Box<T>"), "classe genérica Java → Kof (antes: expected class/... found 'T'):\n" + kof);
+        assertTrue(kof.contains("T id<T>(T x)"), "método genérico `<T> T id` → `T id<T>`:\n" + kof);
+        assertTrue(kof.contains("var b = Box(5)"),
+                "`new Box<Integer>(5)` → `Box(5)` (Kof infere o tipo):\n" + kof);
+
+        assertCompiles(dir, kof, "5\n7");
+    }
+
+    @Test
     void varargsAndNestedTypeAreHonestGaps() {
         TranslateException varargs = assertThrows(TranslateException.class, () ->
                 Translate.translateJava("""

@@ -120,8 +120,8 @@ public final class Translate {
         }
 
         private void parseRecord() {
-            p.expect("record");
-            String name = p.next().text;
+            p.expect("record");            String name = p.next().text;
+            String typeParams = p.at("<") ? parseTypeParams() : "";
             List<String> components = new ArrayList<>();
             if (p.at("(")) {
                 p.next();
@@ -135,13 +135,14 @@ public final class Translate {
             }
             if (p.at("{")) skipBlock();
             else p.expect(";");
-            out.append("record ").append(name).append('(')
+            out.append("record ").append(name).append(typeParams).append('(')
                .append(String.join(", ", components)).append(")\n");
         }
 
         private void parseClass() {
             p.expect("class");
             String name = p.next().text;
+            String typeParams = p.at("<") ? parseTypeParams() : "";
             String superCls = null;
             List<String> ifaces = new ArrayList<>();
             if (p.at("extends")) { p.next(); superCls = p.next().text; }
@@ -150,7 +151,7 @@ public final class Translate {
                 while (!p.at("{")) { ifaces.add(p.next().text); if (p.at(",")) p.next(); }
             }
             p.expect("{");
-            out.append("class ").append(kofType(name));
+            out.append("class ").append(kofType(name)).append(typeParams);
             if (superCls != null) out.append(" extends ").append(kofType(superCls));
             if (!ifaces.isEmpty()) {
                 out.append(" implements ");
@@ -168,8 +169,9 @@ public final class Translate {
         private void parseInterface() {
             p.expect("interface");
             String name = p.next().text;
+            String typeParams = p.at("<") ? parseTypeParams() : "";
             p.expect("{");
-            out.append("interface ").append(name).append(" {\n");
+            out.append("interface ").append(name).append(typeParams).append(" {\n");
             while (!p.at("}")) {
                 // method signature ending in ';'
                 int save = p.pos;
@@ -185,6 +187,28 @@ public final class Translate {
             }
             p.expect("}");
             out.append("}\n");
+        }
+
+        /**
+         * Tipo genérico Java `<T>` / `<K, V>` → Kof `<T>` / `<K, V>`.
+         * Bounds (`<T extends X>`) não têm equivalente direto → revisão
+         * manual (R6).
+         */
+        private String parseTypeParams() {
+            p.expect("<");
+            List<String> tps = new ArrayList<>();
+            while (!p.at(">") && !p.at(T.EOF)) {
+                String tp = p.next().text;
+                if (p.at("extends")) {
+                    throw new TranslateException(
+                            "type parameter com bound (`<T extends X>`) não tem equivalente "
+                            + "direto em Kof — revisão manual");
+                }
+                tps.add(tp);
+                if (p.at(",")) p.next();
+            }
+            p.expect(">");
+            return "<" + String.join(", ", tps) + ">";
         }
 
         private void parseMember(String className) {
@@ -204,21 +228,41 @@ public final class Translate {
                         "tipo aninhado (`class`/`interface`/`record`/`enum` dentro de classe) "
                         + "não tem equivalente direto em Kof (SEM042; declare no top level) — revisão manual");
             }
+            // Construtor Java: `[mods] ClassName ( params ) { body }` — sem tipo
+            // de retorno. Precisa ser detectado ANTES de parseType, senão o nome
+            // da classe vira "tipo" e o `(` vira "nome do membro" → o ramo de
+            // campo escaneia até o `;` (que não existe) e trava no EOF
+            // (bug latente achado 13/09: loop infinito em `kof translate`).
+            if (p.peek().text.equals(className) && p.peek(1).text.equals("(")) {
+                p.next(); // nome da classe
+                List<String> params = parseParams();
+                if (p.at("throws")) {
+                    p.next();
+                    while (!p.at("{") && !p.at(";") && !p.at(T.EOF)) p.next();
+                }
+                if (p.at(";")) { p.next(); return; }
+                List<String> body = parseBlock();
+                emitConstructor(params, body);
+                return;
+            }
+            String typeParams = "";
+            if (p.at("<")) {
+                typeParams = parseTypeParams();
+            }
             String typeName = parseType();
             String memberName = p.next().text;
             if (p.at("(")) {
-                // method or constructor
+                // method
                 List<String> params = parseParams();
-                boolean isConstructor = memberName.equals(className);
                 // `throws E1, E2` — Kof não declara throws (exceções são
                 // Strings, sempre propagáveis) → consumir e descartar.
                 if (p.at("throws")) {
                     p.next();
-                    while (!p.at("{") && !p.at(";")) p.next();
+                    while (!p.at("{") && !p.at(";") && !p.at(T.EOF)) p.next();
                 }
                 if (p.at(";")) { p.next(); return; } // abstract/native signature
                 List<String> body = parseBlock();
-                emitMethod(isStatic, isConstructor, typeName, memberName, params, body);
+                emitMethod(isStatic, typeName, memberName, typeParams, params, body);
             } else {
                 // field: "Type name [= expr];"
                 String init = "";
@@ -226,20 +270,22 @@ public final class Translate {
                     p.next();
                     init = " = " + parseExpr();
                 }
-                while (!p.at(";")) p.next();
-                p.next();
+                while (!p.at(";") && !p.at(T.EOF)) p.next();
+                if (p.at(";")) p.next();
                 if (isStatic) return; // static field → skip (no top-level state in Kof)
                 out.append("    ").append(kofType(typeName)).append(' ').append(memberName).append(init).append('\n');
             }
         }
 
-        private void emitMethod(boolean isStatic, boolean isConstructor, String retType,
-                                String name, List<String> params, List<String> body) {
+        private void emitConstructor(List<String> params, List<String> body) {
+            out.append("    constructor(").append(paramList(params)).append(") {\n");
+            for (String stmt : body) out.append("        ").append(stmt).append('\n');
+            out.append("    }\n");
+        }
+
+        private void emitMethod(boolean isStatic, String retType,
+                                String name, String typeParams, List<String> params, List<String> body) {
             StringBuilder sb = isStatic ? topFns : out;
-            if (isConstructor) {
-                sb.append("    constructor(").append(paramList(params)).append(") {}\n");
-                return;
-            }
             if (isStatic && name.equals("main")) {
                 // Java main(String[] args) → top-level Kof main()
                 sb.append("main() {\n");
@@ -248,7 +294,7 @@ public final class Translate {
                 return;
             }
             sb.append("    ").append(kofType(retType)).append(' ').append(name)
-              .append('(').append(paramList(params)).append(')');
+              .append(typeParams).append('(').append(paramList(params)).append(')');
             if (body.size() == 1 && body.get(0).startsWith("return ")) {
                 String expr = body.get(0).substring("return ".length());
                 sb.append(" = ").append(expr).append('\n');
