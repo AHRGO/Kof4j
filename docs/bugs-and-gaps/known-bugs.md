@@ -5318,3 +5318,19 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
 - **Prova da atribuição:** `65d4a97e` (decompiler, esta lane) toca só
   `kof-cli/**`+docs — kof-compiler NÃO depende de kof-cli (grafo de build).
   Stash com working tree limpo no HEAD base → falha idêntica (medido 13/09).
+- **⚠️ RE-VERIFICAÇÃO 13/09 (lane gate/qualidade, dono 192.168.100.15) — NÃO
+  REPRODUZ em build limpo; é a armadilha da constante INLINED.** Medido no
+  HEAD `d2a8a618` com `mvn -o -pl kof-compiler -am clean compile`: o
+  `kof-runtime.mjs` gerado **TEM** `export function kofJsonEncodeMap`
+  (linha 138) e a célula `jsonenc-map` **passa** (executada via
+  `KofJsRunner`/GraalJS). Reproduzi o sintoma de propósito: com
+  `JsRuntimeSlices.class` compilado antes de `JsRuntimeUiJsonMap` ganhar o
+  helper (build incremental sem `clean`), o bundle sai SEM o export —
+  idêntico ao §165. Causa: `JsRuntimeUiJsonMap.JSON_MAP_RUNTIME` é
+  `static final String` (**constante de compilação**) e é **inlined** em
+  `JsRuntimeSlices.BLOCKS`; editar o runtime sem recompilar o consumidor
+  deixa classes stale (lição já documentada para `JsRuntimeCore`/slices).
+  Ação: re-rodar com `clean` antes de confirmar; o dono da lane
+  §106/js-slices decide fechar (provável não-bug) ou blindar contra o
+  inlining. Sem `node` neste host, o caminho node fica pendente de
+  confirmação — **não fechada por mim** (lane alheia).
