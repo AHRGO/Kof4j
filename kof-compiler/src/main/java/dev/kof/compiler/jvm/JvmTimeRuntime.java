@@ -183,6 +183,14 @@ public final class JvmTimeRuntime {
                     return (int) kof_time_epochDay(ld.getYear(), ld.getMonthValue(), ld.getDayOfMonth());
                 }
 
+                // ── kof.time (STDLIB S7h) — tzOffsetSeconds (D1) ───────────
+                // Fuso do HOST como getter explícito (segundos leste+).
+                // D1: todayIso/isToday NUNCA usam isto (UTC-only em todos
+                // os alvos) — sem paridade acidental de fuso.
+                public static int kof_time_tzOffsetSeconds() {
+                    return java.time.ZoneId.systemDefault().getRules().getOffset(java.time.Instant.now()).getTotalSeconds();
+                }
+
                 public static String kof_time_interval(int ms, Object fn) {
                     if (ms <= 0) throw new IllegalArgumentException("interval must be positive: " + ms);
                     String id = "job-" + KOF_TIME_SEQ.incrementAndGet();

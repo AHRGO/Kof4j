@@ -51,7 +51,7 @@ public final class KofTime {
                     "todayIso", "formatDateIso", "isToday",
                     // S7f (D3): diferença de horas entre dois instantes
                     // (data+hora), floor simétrico
-                    "hoursBetween", "parseDateIso" -> true;
+                    "hoursBetween", "parseDateIso", "tzOffsetSeconds" -> true;
             default -> false;
         };
     }
@@ -84,6 +84,14 @@ public final class KofTime {
         // (parse2/civil/put4/put2 + kof_time_addDays/diffDays) reusando
         // kdv_valid/kdv_epoch da B14; aarch64 via tradutor (divu/remu/
         // sext.w cobertos — verificado). golden stdtime2 nos 4 targets.
+        // S7h (D1 ratificado 13/09): tzOffsetSeconds = fuso do HOST.
+        // Native = gap honesto TIME003 (D1: sem TZ//etc/localtime no asm —
+        // implementar seria paridade acidental/falsa). JVM/JS/SCRIPT seguem.
+        if ("tzOffsetSeconds".equals(method)
+                && (target == Target.NATIVE || target == Target.NATIVE_RISCV64
+                    || target == Target.NATIVE_AARCH64)) {
+            return false;
+        }
         return true;
     }
 
@@ -92,6 +100,7 @@ public final class KofTime {
         // (addDays/diffDays) fechado no cross 11/09 (S7c-1, fatia B35).
         // gapCode só alimenta o gate de suporte; mantém a chave por
         // retrocompatibilidade dos diagnósticos existentes.
+        if ("tzOffsetSeconds".equals(method)) return "TIME003";
         return ("addDays".equals(method) || "diffDays".equals(method))
                 ? "TIME002" : "TIME001";
     }
@@ -159,6 +168,11 @@ public final class KofTime {
             // D4: parseDateIso (STR) -> Int serial daysFromEpoch; inválido => 0.
             case "parseDateIso" -> argTypes.size() == 1 && argTypes.get(0) == STR
                     ? new TimeCall("kof_time_parseDateIso", INT, List.of(STR)) : null;
+            // D1: fuso do HOST como getter explícito — JVM host TZ, JS
+            // getTimezoneOffset (min->seg, invertido), SCRIPT herda JVM;
+            // NATIVE = gap honesto TIME003 (sem TZ//etc/localtime no asm).
+            case "tzOffsetSeconds" -> argTypes.isEmpty()
+                    ? new TimeCall("kof_time_tzOffsetSeconds", INT, List.of()) : null;
             case "hoursBetween" -> {
                 if (argTypes.size() == 8 && argTypes.stream().allMatch(a -> a == INT)) {
                     yield new TimeCall("kof_time_hoursBetween", INT,

@@ -101,16 +101,29 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > Prova Q1: `KofTimeE2ETest.parseDateIso{Jvm,Js,Native,CrossArch,
 > CompilesOnAllTargets}` (28/28) + `stdtime5` matriz (11/11) +
 > `timeParseDateIsoParity` Script (11/11). Suíte: **1764/0/0, 161 skip**.
-> **PRÓXIMO PASSO:** fila D-STDLIB restante: `time.tzOffsetSeconds()` —
-> **ler DECISIONS.md D1 antes**: JVM host TZ, JS `Date.getTimezoneOffset`,
-> **Native = gap DIAG TIME003 (não implementar asm — honesto, retorna
-> erro/0 diagnosticado?)**; só 3 alvos (JVM/JS/SCRIPT) com Native gap na
-> matriz. Célula `stdtime6` + parity. Se a unidade exigir decisão de
-> contrato da mantenedora (o que o Native retorna), **NÃO editar —
-> registrar no DECISIONS.md como pendência e parar a fila STDLIB time**;
-> seguir p/ próximo item da fila geral (docs/development .md soltos).
-> **NUNCA:** tocar `nat/` GC, lanes .15/.17/.22 (decompiler/translator),
-> bugs de outra lane; push main.
+> **✅ FEITO (13/09 ~20:35, lane development, dono = 192.168.100.18):
+> D-STDLIB degrau 4 — `time.tzOffsetSeconds()` (S7h, D1, 3 alvos + gap
+> honesto TIME003 no Native).** Dispatch `KofTime` (()→INT) + gate
+> `supportedOn` = false p/ NATIVE/RISCV/AARCH (recusa com diagnóstico
+> TIME003 — R6, nunca "0 fingido"; D1: sem TZ//etc/localtime no asm =
+> paridade acidental). JVM `ZoneId.systemDefault().getRules().getOffset
+> (Instant.now())`; JS `-(getTimezoneOffset())*60` (min OESTE→seg leste+);
+> SCRIPT herda JVM. Paridade JVM×JS por oracle JVM no MESMO host (medição
+> real, nunca memória). Prova Q1: `KofTimeE2ETest.tzOffsetSeconds{JvmAnd
+> JsParity,NativeRefusedWithDiagnostic}` (30/30) + `stdtime6` matriz
+> (PARTIAL native, DocTest sync) + `timeTzOffsetParity` Script (12/12).
+> Suíte: **1767/0/0, 161 skip**.
+> **PRÓXIMO PASSO:** **fila D-STDLIB time FECHADA** (todayIso/
+> formatDateIso/isToday/hoursBetween/parseDateIso/tzOffsetSeconds — 6/6
+> ratificados e implementados; TIME003 fica na fila geral p/ parser de TZ
+> no asm). Atualizar DECISIONS.md/README (marcar fila executada) + seguir
+> a regra de seleção: (1) .md soltos em docs/development/ com pendência —
+> DECOMPILER.md/TRANSLATOR.md são das lanes .17/.22 (NÃO tocar); (2) fila
+> D-SEC (chacha20Encrypt/Decrypt — D-SEC ratificado 13/09, envelope AES-
+> GCM espelho em RuntimeSecurity8/9; 3 alvos + SECN00x honesto) OU (3)
+> varredura de gaps/known-bugs. Escolher pela maior prova possível numa
+> sessão. **NUNCA:** tocar `nat/` GC, lanes .15/.17/.22, bugs de outra
+> lane; push main.
 
 > **✅ FEITO (13/09 ~18:00, lane bugs-and-gaps, dono = 192.168.100.15):
 > §177 + §178 CORRIGIDOS, §179 + §180 CATALOGADOS.** Caça Q4 sobre o §173/§174.

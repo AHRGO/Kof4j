@@ -200,6 +200,22 @@ class KofScriptStdlibParityTest {
     }
 
     @Test
+    void timeTzOffsetParity() throws Exception {
+        // S7h (D1): fuso do HOST; SCRIPT herda o runtime JVM => MESMO valor
+        // (oracle ZoneId, medição real). Contrato: mód 60 == 0, range.
+        int tzNow = java.time.ZoneId.systemDefault().getRules()
+                .getOffset(java.time.Instant.now()).getTotalSeconds();
+        parity("""
+            main() {
+                var tz = time.tzOffsetSeconds()
+                println(tz % 60)
+                println(tz >= -43200 && tz <= 50400)
+                println(tz)
+            }
+            """, "0\ntrue\n" + tzNow);
+    }
+
+    @Test
     void randomFacadeParity() throws Exception {
         // Não-determinístico: valida a FACHADA (formato/contrato), não o
         // valor sorteado. randomInt(1) == 0 travado; randomString(-1) == "";

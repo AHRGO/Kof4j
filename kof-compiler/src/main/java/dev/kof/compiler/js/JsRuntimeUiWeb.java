@@ -367,6 +367,14 @@ public final class JsRuntimeUiWeb {
                 return kofTimeEpochDay(y, m, d);
             }
 
+            // ── kof.time (STDLIB S7h) — tzOffsetSeconds (D1) ──────────────
+            // Fuso do HOST: Date.getTimezoneOffset() = minutos A OESTE do
+            // UTC (São Paulo = +180) => segundos leste+ = -min*60 (paridade
+            // JVM ZoneOffset.systemDefault().getTotalSeconds()).
+            export function kofTimeTzOffsetSeconds() {
+                return -(new Date().getTimezoneOffset()) * 60;
+            }
+
             // ── kof.time (STDLIB S7-wedge) — calendário civil ─────────────
             export function kofTimeIsLeapYear(year) {
                 if (year < 1) return 0;

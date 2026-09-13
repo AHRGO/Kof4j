@@ -120,6 +120,7 @@
 | stdlib kof.time (S7f: hoursBetween(y,m,d,H,y,m,d,H) — floor simétrico (D3: truncado a zero, consistente daysBetween); data inválida/hora fora 0..23 => 0; sem float (FLT001); JVM + JS civil + x86 emit genérico 7+ args FIXADO + riscv **B33-ext**; aarch tradutor) | `26` / `-26` / `23` / `1` / `0`×3 / `24` / `0` / `8760` | DONE | DONE | DONE | DONE | `stdtime4` |
 | stdlib kof.time (S7g: parseDateIso(STR) -> Int serial daysFromEpoch — parse estrito YYYY-MM-DD, inválido ⇒ 0 (D4); MESMO serial de hoursBetween/daysBetween (recomposição fecha); JVM + JS civil + x86 `.Lka_parse2`/`.Lkd_epoch` + riscv **B33-ext**; aarch tradutor) | `0` / `20709` / `19782` / `-719162` / `2932896` / `0`×4 / `20709` | DONE | DONE | DONE | DONE | `stdtime5` |
 | parse ISO ESTRITO rejeita campo com sinal (`+999`/`+1`) — §182 (contrato "estrito" declarado em S7a/S7g) | `0` / `0` / `0` / `20454` / `` / `0` | PARTIAL (bug §182 — `Integer.parseInt` aceita `+999`/`+1`: `-354650`/`20454`) | DONE (referência: valida dígito a dígito) | PARTIAL (bug §182 — `Integer.parseInt` aceita sinal) | PARTIAL (bug §182 — `kofTimeParseIso` de addDays/diffDays usa `parseInt` leniente; `parseDateIso` do JS é estrito = inconsistência interna) | `parseisostrict` |
+| stdlib kof.time (S7h: tzOffsetSeconds() — fuso do HOST como getter explícito (D1); JVM `ZoneId`/JS `getTimezoneOffset` invertido (paridade por oracle JVM no host); **Native = gap honesto TIME003** — recusa com diagnóstico (R6); não-determinístico entre hosts, célula fixa oracle JVM) ⁵ | `0` (mód 60) / `true` / `<oracle>` | DONE | PARTIAL ⁵ | DONE | DONE | `stdtime6` |
 | stdlib kof.encoding (S4: hex + base64 + url + base64url — UTF-8 por bytes) | `4869` / `Hi` / `636166c3a9` / `café` / `TWFu` / `café` / `a%20b` / `café` / `ZmImTy0-Zg` / `fb&O->f` / `E` | DONE | DONE² | DONE | DONE | `stdenc` |
 
 > ¹ **STRN001 FECHADO 09/09:** joinWords portado p/ riscv64 (fatia B15) + aarch64
@@ -127,7 +128,14 @@
 > golden oracle no qemu (16 vetores, incl. delimitadores UTF-8 `>=128`).
 > `KofStringsTest.wordConvertersClosedOnCrossArch`.
 
-> ⁴ **TIME002 FECHADO 11/09 (riscv64/aarch64)**: `addDays`/`diffDays` rodam nos 5 alvos —
+> ⁵ **TIME003 (13/09, D-STDLIB D1):** `tzOffsetSeconds` = fuso do HOST —
+> JVM/Script/KofJS DONE (paridade por oracle JVM no host); **Native (x86/
+> riscv/aarch) PARTIAL por design**: sem `TZ`//etc/localtime no asm,
+> implementar seria paridade acidental (D1 proíbe). O backend NATIVE RECUSA
+> com diagnóstico `TIME003` (R6 — gap honesto, nunca "0 fingido").
+> Fechamento = parser de TZ//etc/localtime em asm (escopo próprio, fila
+> geral).
+FECHADO 11/09 (riscv64/aarch64)**: `addDays`/`diffDays` rodam nos 5 alvos —
 > JVM/Script/JS + native **x86** (`RuntimeTimeIso`) + riscv64/aarch64 (fatia
 > **B33**: `.Lu8_parse2`/`.Lu8_civil`/`.Lu8_put*` port 1:1 do spec x86 reusando
 > `kdv_valid`/`kdv_epoch` da B14; aarch via tradutor). Prova:

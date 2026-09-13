@@ -1123,6 +1123,20 @@ class ConformanceMatrixTest {
                     println(time.diffDays("+999-01-01", "1000-01-01"))
                 }
                 """, "0\n0\n0\n20454\n\n0", Set.of("jvm", "script", "js"), tempDir);
+        // STDLIB S7h (D1): tzOffsetSeconds — fuso do HOST como getter
+        // explícito; paridade JVM×JS (mesmo host, MESMO oracle ZoneId);
+        // NÃO-determinístico entre hosts => o valor vem do oracle JVM
+        // (medição real); native RECUSA (gap honesto TIME003 — R6).
+        int tzNow = java.time.ZoneId.systemDefault().getRules()
+                .getOffset(java.time.Instant.now()).getTotalSeconds();
+        matrix("stdtime6", """
+                main() {
+                    var tz = time.tzOffsetSeconds()
+                    println(tz % 60)
+                    println(tz >= -43200 && tz <= 50400)
+                    println(tz)
+                }
+                """, "0\ntrue\n" + tzNow, Set.of("native"), tempDir);
         // §89 (decisão 3a, 13/09): conversão numérica em receiver PRIMITIVO
         // (`n.toDouble()`/`toInt()`/`toLong()`/`toFloat()`) = alias do cast
         // `as`. Antes: JVM ClassFormatError (owner ""), Native undefined

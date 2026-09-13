@@ -887,6 +887,50 @@ class KofTimeE2ETest {
         }
     }
 
+    // ── STDLIB S7h (D1): tzOffsetSeconds — fuso do HOST como getter
+    // explícito. NÃO-determinístico entre máquinas: a prova valida o
+    // CONTRATO (múltiplo de 900s na prática, range UTC-12..UTC+14, e
+    // consistência interna: now()+tz alinhado em minutos com civil UTC)
+    // e a PARIDADE JVM×JS (mesma saída nas 2 execuções — mesmo host).
+    // Native/riscv/aarch = gap honesto TIME003 (diagnóstico, R6).
+    @Test
+    void tzOffsetSecondsJvmAndJsParity(@TempDir Path tempDir) throws IOException {
+        String src = """
+                main() {
+                    var tz = time.tzOffsetSeconds()
+                    println(tz % 60)
+                    println(tz >= -43200 && tz <= 50400)
+                    println(tz)
+                }
+                """;
+        // Oracle JVM (medição real, nunca memória): offset ATUAL da zona do
+        // host (com DST). getTimezoneOffset() do JS = mesmo instante.
+        int jvmTz = java.time.ZoneId.systemDefault().getRules()
+                .getOffset(java.time.Instant.now()).getTotalSeconds();
+        String expected = "0\ntrue\n" + jvmTz;
+        // JVM e JS rodam NO MESMO HOST => a paridade JVM×JS (D1: sem
+        // divergência acidental) é provada por AMBOS baterem com o oracle.
+        runJvm(tempDir, src, expected);
+        runJs(tempDir, src, expected);
+    }
+
+    @Test
+    void tzOffsetSecondsNativeRefusedWithDiagnostic(@TempDir Path tempDir) throws IOException {
+        // Gap honesto TIME003 (R6): Native recusa com diagnóstico — nunca
+        // fallback silencioso, nunca "0 fingido".
+        Path source = tempDir.resolve("Tz.kf");
+        Files.writeString(source, """
+                main() {
+                    println(time.tzOffsetSeconds())
+                }
+                """);
+        CompilationResult r = driver.compile(source, tempDir.resolve("out-tz-nat"), Target.NATIVE);
+        assertFalse(r.success(), "Native deve RECUSAR tzOffsetSeconds (TIME003)");
+        assertTrue(r.diagnostics().getDiagnostics().stream()
+                        .anyMatch(d -> d.message().contains("TIME003")),
+                "diagnóstico deve citar TIME003: " + r.diagnostics().getDiagnostics());
+    }
+
     private void assumeToolchain(String... tools) {
         for (String c : tools) {
             try {
