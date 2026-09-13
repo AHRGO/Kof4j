@@ -512,6 +512,32 @@ public final class RuntimeTimeIso {
                 popq %rbx
                 ret
 
+            # kof_time_parseDateIso(rdi=str) -> Int serial (D4: "YYYY-MM-DD"
+            # estrito; inválido => 0). Reusa .Lka_parse2 (slot y/m/d) +
+            # .Lkd_epoch (wedge). MESMO serial de hoursBetween/daysBetween.
+            .globl kof_time_parseDateIso
+            .type kof_time_parseDateIso, @function
+            kof_time_parseDateIso:
+                pushq %rbx
+                subq $16, %rsp
+                movq %rdi, %rbx
+                movq %rsp, %rsi                  # slot y@0/m@4/d@8
+                movq %rbx, %rdi
+                call .Lka_parse2
+                testl %eax, %eax
+                jz .Lka_pd0
+                movl 0(%rsp), %edi
+                movl 4(%rsp), %esi
+                movl 8(%rsp), %edx
+                call .Lkd_epoch
+                jmp .Lka_pdd
+            .Lka_pd0:
+                xorl %eax, %eax
+            .Lka_pdd:
+                addq $16, %rsp
+                popq %rbx
+                ret
+
             .globl kof_time_diffDays
             .type kof_time_diffDays, @function
             kof_time_diffDays:

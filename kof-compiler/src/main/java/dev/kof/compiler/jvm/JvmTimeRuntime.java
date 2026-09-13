@@ -173,6 +173,16 @@ public final class JvmTimeRuntime {
                             ? 0 : (int) diff;
                 }
 
+                // ── kof.time (STDLIB S7g) — parseDateIso (D4) ──────────────
+                // STR "YYYY-MM-DD" estrito -> serial daysFromEpoch; inválido
+                // => 0 (mesma política do calendário wedge). Serial = MESMO
+                // domínio de hoursBetween/daysBetween (recomposição fecha).
+                public static int kof_time_parseDateIso(String iso) {
+                    java.time.LocalDate ld = kof_time_parseIso(iso);
+                    if (ld == null) return 0;
+                    return (int) kof_time_epochDay(ld.getYear(), ld.getMonthValue(), ld.getDayOfMonth());
+                }
+
                 public static String kof_time_interval(int ms, Object fn) {
                     if (ms <= 0) throw new IllegalArgumentException("interval must be positive: " + ms);
                     String id = "job-" + KOF_TIME_SEQ.incrementAndGet();

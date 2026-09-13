@@ -51,7 +51,7 @@ public final class KofTime {
                     "todayIso", "formatDateIso", "isToday",
                     // S7f (D3): diferença de horas entre dois instantes
                     // (data+hora), floor simétrico
-                    "hoursBetween" -> true;
+                    "hoursBetween", "parseDateIso" -> true;
             default -> false;
         };
     }
@@ -156,6 +156,9 @@ public final class KofTime {
                             List.of(INT, INT, INT)) : null;
             // D3: floor simétrico sobre horas completas (consistente com
             // daysBetween = truncado a zero); sem float (FLT001).
+            // D4: parseDateIso (STR) -> Int serial daysFromEpoch; inválido => 0.
+            case "parseDateIso" -> argTypes.size() == 1 && argTypes.get(0) == STR
+                    ? new TimeCall("kof_time_parseDateIso", INT, List.of(STR)) : null;
             case "hoursBetween" -> {
                 if (argTypes.size() == 8 && argTypes.stream().allMatch(a -> a == INT)) {
                     yield new TimeCall("kof_time_hoursBetween", INT,

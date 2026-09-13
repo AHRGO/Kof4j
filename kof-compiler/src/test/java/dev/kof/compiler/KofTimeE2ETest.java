@@ -765,6 +765,128 @@ class KofTimeE2ETest {
         }
     }
 
+    // ── STDLIB S7g (D4): parseDateIso — "YYYY-MM-DD" estrito -> serial
+    // daysFromEpoch; inválido => 0. MESMO serial de hoursBetween/
+    // daysBetween (recomposição s - e = diff fecha com os vetores de cima).
+    // Totalmente determinístico.
+    @Test
+    void parseDateIsoJvm(@TempDir Path tempDir) throws IOException {
+        runJvm(tempDir, """
+                main() {
+                    println(time.parseDateIso("1970-01-01"))
+                    println(time.parseDateIso("2026-09-13"))
+                    println(time.parseDateIso("2024-02-29"))
+                    println(time.parseDateIso("0001-01-01"))
+                    println(time.parseDateIso("9999-12-31"))
+                    println(time.parseDateIso("2023-02-29"))
+                    println(time.parseDateIso("2026-13-01"))
+                    println(time.parseDateIso("garbage"))
+                    println(time.parseDateIso(""))
+                    println(time.parseDateIso("2026-9-13"))
+                    var s = time.parseDateIso("2026-09-13")
+                    var e = time.parseDateIso("1970-01-01")
+                    println(s - e)
+                }
+                """, "0\n20709\n19782\n-719162\n2932896\n0\n0\n0\n0\n0\n20709");
+    }
+
+    @Test
+    void parseDateIsoJs(@TempDir Path tempDir) throws IOException {
+        runJs(tempDir, """
+                main() {
+                    println(time.parseDateIso("1970-01-01"))
+                    println(time.parseDateIso("2026-09-13"))
+                    println(time.parseDateIso("2024-02-29"))
+                    println(time.parseDateIso("0001-01-01"))
+                    println(time.parseDateIso("9999-12-31"))
+                    println(time.parseDateIso("2023-02-29"))
+                    println(time.parseDateIso("2026-13-01"))
+                    println(time.parseDateIso("garbage"))
+                    println(time.parseDateIso(""))
+                    println(time.parseDateIso("2026-9-13"))
+                }
+                """, "0\n20709\n19782\n-719162\n2932896\n0\n0\n0\n0\n0");
+    }
+
+    @Test
+    void parseDateIsoNative(@TempDir Path tempDir) throws IOException {
+        runNative(tempDir, """
+                main() {
+                    println(time.parseDateIso("1970-01-01"))
+                    println(time.parseDateIso("2026-09-13"))
+                    println(time.parseDateIso("2024-02-29"))
+                    println(time.parseDateIso("0001-01-01"))
+                    println(time.parseDateIso("9999-12-31"))
+                    println(time.parseDateIso("2023-02-29"))
+                    println(time.parseDateIso("2026-13-01"))
+                    println(time.parseDateIso("garbage"))
+                    println(time.parseDateIso(""))
+                    println(time.parseDateIso("2026-9-13"))
+                }
+                """, "0\n20709\n19782\n-719162\n2932896\n0\n0\n0\n0\n0");
+    }
+
+    @Test
+    void parseDateIsoCrossArch(@TempDir Path tempDir) throws Exception {
+        String src = """
+            main() {
+                println(time.parseDateIso("1970-01-01"))
+                println(time.parseDateIso("2026-09-13"))
+                println(time.parseDateIso("2024-02-29"))
+                println(time.parseDateIso("0001-01-01"))
+                println(time.parseDateIso("9999-12-31"))
+                println(time.parseDateIso("2023-02-29"))
+                println(time.parseDateIso("2026-13-01"))
+                println(time.parseDateIso("garbage"))
+                println(time.parseDateIso("2026-9-13"))
+                var s = time.parseDateIso("2026-09-13")
+                var e = time.parseDateIso("1970-01-01")
+                println(s - e)
+            }
+            """;
+        String expected = "0\n20709\n19782\n-719162\n2932896\n0\n0\n0\n0\n20709";
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            String qemu = t == Target.NATIVE_RISCV64 ? "qemu-riscv64" : "qemu-aarch64";
+            String[] tools = t == Target.NATIVE_RISCV64
+                    ? new String[]{"riscv64-linux-gnu-as", "riscv64-linux-gnu-ld", "qemu-riscv64"}
+                    : new String[]{"aarch64-linux-gnu-as", "aarch64-linux-gnu-ld", "qemu-aarch64"};
+            assumeToolchain(tools);
+            Path file = tempDir.resolve("T7g-" + t + "-" + System.nanoTime() + ".kf");
+            Files.writeString(file, src);
+            Path outDir = tempDir.resolve("t7g-" + t + "-" + System.nanoTime());
+            CompilationResult r = new CompilerDriver().compile(file, outDir, t);
+            assertTrue(r.success(), t + " compile: " + r.diagnostics().getDiagnostics());
+            Process p = new ProcessBuilder(qemu, outDir.resolve("Default/Main").toString())
+                    .redirectErrorStream(true).start();
+            String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8)
+                    .replace("\r\n", "\n").trim();
+            int ec;
+            try {
+                ec = p.waitFor();
+            } catch (InterruptedException e) {
+                throw new IOException("interrupted", e);
+            }
+            assertEquals(0, ec, t + " qemu exit, out: " + out);
+            assertEquals(expected, out, t + " golden S7g");
+        }
+    }
+
+    @Test
+    void parseDateIsoCompilesOnAllTargets(@TempDir Path tempDir) throws IOException {
+        String src = """
+            main() {
+                println(time.parseDateIso("2026-09-13"))
+            }
+            """;
+        Path gateSrc = tempDir.resolve("GateT7g.kf");
+        Files.writeString(gateSrc, src);
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            CompilationResult r = new CompilerDriver().compile(gateSrc, tempDir.resolve("gate-t7g-" + t), t);
+            assertTrue(r.success(), t + " deve compilar parseDateIso (S7g): "
+                    + r.diagnostics().getDiagnostics());
+        }
+    }
+
     private void assumeToolchain(String... tools) {
         for (String c : tools) {
             try {

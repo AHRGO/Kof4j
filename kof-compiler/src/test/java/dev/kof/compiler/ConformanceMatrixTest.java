@@ -1086,6 +1086,25 @@ class ConformanceMatrixTest {
                     println(time.hoursBetween(2026, 1, 1, 10, 2027, 1, 1, 10))
                 }
                 """, "26\n-26\n23\n1\n0\n0\n0\n24\n0\n8760", Set.of(), tempDir);
+        // STDLIB S7g (D4): parseDateIso — "YYYY-MM-DD" estrito -> serial
+        // daysFromEpoch; inválido => 0. MESMO serial de hoursBetween/
+        // daysBetween (recomposição s-e = 20709 fecha com stdtime2).
+        matrix("stdtime5", """
+                main() {
+                    println(time.parseDateIso("1970-01-01"))
+                    println(time.parseDateIso("2026-09-13"))
+                    println(time.parseDateIso("2024-02-29"))
+                    println(time.parseDateIso("0001-01-01"))
+                    println(time.parseDateIso("9999-12-31"))
+                    println(time.parseDateIso("2023-02-29"))
+                    println(time.parseDateIso("2026-13-01"))
+                    println(time.parseDateIso("garbage"))
+                    println(time.parseDateIso("2026-9-13"))
+                    var s = time.parseDateIso("2026-09-13")
+                    var e = time.parseDateIso("1970-01-01")
+                    println(s - e)
+                }
+                """, "0\n20709\n19782\n-719162\n2932896\n0\n0\n0\n0\n20709", Set.of(), tempDir);
         // §89 (decisão 3a, 13/09): conversão numérica em receiver PRIMITIVO
         // (`n.toDouble()`/`toInt()`/`toLong()`/`toFloat()`) = alias do cast
         // `as`. Antes: JVM ClassFormatError (owner ""), Native undefined

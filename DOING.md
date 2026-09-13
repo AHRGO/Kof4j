@@ -91,13 +91,26 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > `KofTimeE2ETest.hoursBetween{Jvm,Js,Native,CrossArch,CompilesOnAllTargets}`
 > (23/23) + `stdtime4` matriz (11/11) + `timeHoursBetweenParity`/
 > `timeTodayParity` Script (10/10). Suíte: **1758/0/0, 160 skip**.
-> **PRÓXIMO PASSO:** fila D-STDLIB continua: `time.parseDateIso(STR) ->
-> Int` (serial daysFromEpoch; inválido ⇒ 0) — x86 reusa .Lkd_epoch do
-> wedge + parse estilo .Lka_parse2; riscv kdv_epoch (B14); JS
-> kofTimeEpochDay; JVM epochDay Hinnant. Célula `stdtime5` + parity.
-> Depois: `tzOffsetSeconds` (JVM/JS/SCRIPT; Native gap TIME003 DIAG) —
-> consultar DECISIONS.md antes. **NUNCA:** tocar `nat/` GC, lanes
-> .15/.17/.22 (decompiler/translator), bugs de outra lane; push main.
+> **✅ FEITO (13/09 ~20:00, lane development, dono = 192.168.100.18):
+> D-STDLIB degrau 3 — `time.parseDateIso(STR) -> Int` (S7g, D4 serial
+> daysFromEpoch, inválido ⇒ 0, 5 alvos).** Dispatch `KofTime` (STR→INT);
+> JVM `kof_time_parseIso`+`epochDay` Hinnant; JS civil (dígito-a-dígito,
+> hífens 4/7); x86 `.Lka_parse2`+.Lkd_epoch; riscv **B33-ext**
+> (.Lu8_parse2+kdv_epoch); aarch tradutor. Serial FECHA com
+> hoursBetween/daysBetween (s-e recomposto = 20709, vetores stdtime2/5).
+> Prova Q1: `KofTimeE2ETest.parseDateIso{Jvm,Js,Native,CrossArch,
+> CompilesOnAllTargets}` (28/28) + `stdtime5` matriz (11/11) +
+> `timeParseDateIsoParity` Script (11/11). Suíte: **1764/0/0, 161 skip**.
+> **PRÓXIMO PASSO:** fila D-STDLIB restante: `time.tzOffsetSeconds()` —
+> **ler DECISIONS.md D1 antes**: JVM host TZ, JS `Date.getTimezoneOffset`,
+> **Native = gap DIAG TIME003 (não implementar asm — honesto, retorna
+> erro/0 diagnosticado?)**; só 3 alvos (JVM/JS/SCRIPT) com Native gap na
+> matriz. Célula `stdtime6` + parity. Se a unidade exigir decisão de
+> contrato da mantenedora (o que o Native retorna), **NÃO editar —
+> registrar no DECISIONS.md como pendência e parar a fila STDLIB time**;
+> seguir p/ próximo item da fila geral (docs/development .md soltos).
+> **NUNCA:** tocar `nat/` GC, lanes .15/.17/.22 (decompiler/translator),
+> bugs de outra lane; push main.
 
 > **✅ FEITO (13/09 ~18:00, lane bugs-and-gaps, dono = 192.168.100.15):
 > §177 + §178 CORRIGIDOS, §179 + §180 CATALOGADOS.** Caça Q4 sobre o §173/§174.

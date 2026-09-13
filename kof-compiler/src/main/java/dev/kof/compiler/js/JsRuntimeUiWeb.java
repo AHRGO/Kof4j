@@ -347,6 +347,26 @@ public final class JsRuntimeUiWeb {
                 return (diff < -2147483648 || diff > 2147483647) ? 0 : diff;
             }
 
+            // ── kof.time (STDLIB S7g) — parseDateIso (D4) ─────────────────
+            // "YYYY-MM-DD" estrito (10 chars, hífens 4/7, dígitos, data
+            // válida) -> serial daysFromEpoch; inválido => 0. MESMO serial de
+            // hoursBetween (epochDay*24+h) — recomposição fecha.
+            export function kofTimeParseDateIso(iso) {
+                if (typeof iso !== "string" || iso.length !== 10) return 0;
+                if (iso.charAt(4) !== "-" || iso.charAt(7) !== "-") return 0;
+                for (let i = 0; i < 10; i++) {
+                    if (i === 4 || i === 7) continue;
+                    const c = iso.charAt(i);
+                    if (c < "0" || c > "9") return 0;
+                }
+                const y = parseInt(iso.substring(0, 4), 10);
+                const m = parseInt(iso.substring(5, 7), 10);
+                const d = parseInt(iso.substring(8, 10), 10);
+                if (y < 1 || y > 9999 || m < 1 || m > 12) return 0;
+                if (d < 1 || d > kofTimeDaysInMonth(y, m)) return 0;
+                return kofTimeEpochDay(y, m, d);
+            }
+
             // ── kof.time (STDLIB S7-wedge) — calendário civil ─────────────
             export function kofTimeIsLeapYear(year) {
                 if (year < 1) return 0;

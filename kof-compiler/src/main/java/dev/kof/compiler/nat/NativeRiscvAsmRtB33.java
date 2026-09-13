@@ -551,5 +551,31 @@ public final class NativeRiscvAsmRtB33 {
                 ld   ra, 72(sp)
                 addi sp, sp, 80
                 ret
+
+            # kof_time_parseDateIso(a0=str) -> Int serial (D4: estrito;
+            # inválido => 0). Reusa .Lu8_parse2 (slot y/m/d) + kdv_epoch
+            # (B14). MESMO serial de hoursBetween/daysBetween.
+            .globl kof_time_parseDateIso
+            kof_time_parseDateIso:
+                addi sp, sp, -32
+                sd   ra, 24(sp)
+                sd   s1, 16(sp)
+                mv   s1, a0
+                mv   a1, sp                      # slot y@0/m@4/d@8
+                mv   a0, s1
+                call .Lu8_parse2
+                beqz a0, .Lu8_pd0
+                lw   a0, 0(sp)
+                lw   a1, 4(sp)
+                lw   a2, 8(sp)
+                call kdv_epoch
+                j    .Lu8_pdd
+            .Lu8_pd0:
+                li   a0, 0
+            .Lu8_pdd:
+                ld   s1, 16(sp)
+                ld   ra, 24(sp)
+                addi sp, sp, 32
+                ret
         """;
 }

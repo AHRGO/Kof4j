@@ -183,6 +183,23 @@ class KofScriptStdlibParityTest {
     }
 
     @Test
+    void timeParseDateIsoParity() throws Exception {
+        // S7g (D4): parse estrito; inválido => 0; serial = daysFromEpoch.
+        parity("""
+            main() {
+                println(time.parseDateIso("1970-01-01"))
+                println(time.parseDateIso("2026-09-13"))
+                println(time.parseDateIso("2024-02-29"))
+                println(time.parseDateIso("0001-01-01"))
+                println(time.parseDateIso("9999-12-31"))
+                println(time.parseDateIso("2023-02-29"))
+                println(time.parseDateIso("garbage"))
+                println(time.parseDateIso(""))
+            }
+            """, "0\n20709\n19782\n-719162\n2932896\n0\n0\n0");
+    }
+
+    @Test
     void randomFacadeParity() throws Exception {
         // Não-determinístico: valida a FACHADA (formato/contrato), não o
         // valor sorteado. randomInt(1) == 0 travado; randomString(-1) == "";
