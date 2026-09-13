@@ -358,4 +358,53 @@ class LambdaE2ETest {
         Files.writeString(source, HETEROGENEOUS_LAMBDA_LIST);
         runNative(source, tempDir.resolve("out"), "10\n6\n11\n20");
     }
+
+    // #119: `g` chama `f` sem receiver (`f(y)`) — uma variável local de tipo
+    // função capturada do escopo externo, não uma função top-level. O parser
+    // não distingue as duas formas de MethodCallExpr, e CompilerCaptures só
+    // tratava IdentifierExpr como candidato a captura. `g` perdia `f` como
+    // campo da classe sintética; no JS isso vira `ReferenceError: f is not
+    // defined` em runtime (JVM/Native falhavam por símbolo não resolvido).
+    private static final String NESTED_LAMBDA_BARE_CALL_CAPTURE = """
+            main() {
+                var f = (x: Int) -> x + 1
+                var g = (y: Int) -> f(y) * 2
+                println(g(3))
+            }
+            """;
+
+    @Test
+    void nestedLambdaBareCallCaptureJvm(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, NESTED_LAMBDA_BARE_CALL_CAPTURE);
+        runJvm(source, tempDir.resolve("out"), "8");
+    }
+
+    @Test
+    void nestedLambdaBareCallCaptureNative(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, NESTED_LAMBDA_BARE_CALL_CAPTURE);
+        runNative(source, tempDir.resolve("out"), "8");
+    }
+
+    @Test
+    void nestedLambdaBareCallCaptureJs(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, NESTED_LAMBDA_BARE_CALL_CAPTURE);
+        Path outDir = tempDir.resolve("out-js");
+        CompilationResult result = driver.compile(source, outDir, Target.JS);
+        assertTrue(result.success(), "JS compile failed: " + result.diagnostics().getDiagnostics());
+        Path entry;
+        try (var s = Files.walk(outDir)) {
+            entry = s.filter(p -> p.getFileName().toString().equals("Default.mjs"))
+                    .findFirst().orElseThrow();
+        }
+        try (java.io.ByteArrayOutputStream buf = new java.io.ByteArrayOutputStream()) {
+            int ec = dev.kof.runtime.KofJsRunner.run(entry, buf,
+                    java.io.InputStream.nullInputStream(), new java.io.ByteArrayOutputStream());
+            String output = buf.toString(java.nio.charset.StandardCharsets.UTF_8).trim();
+            assertEquals(0, ec, "JS exit code, output: " + output);
+            assertEquals("8", output, "JS output");
+        }
+    }
 }

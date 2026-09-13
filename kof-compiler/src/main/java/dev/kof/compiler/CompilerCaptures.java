@@ -145,6 +145,18 @@ public final class CompilerCaptures {
         } else if (expr instanceof MethodCallExpr mc) {
             if (mc.receiver() != null) {
                 collectCapturesExpr(driver,mc.receiver(), outerLocals, captures, captured, shadowed);
+            } else if (!shadowed.contains(mc.methodName()) && !captured.contains(mc.methodName())) {
+                // Chamada "nua" (sem receiver, ex.: `f(x)`) pode ser uma variável
+                // local de tipo função (`var f = () -> {...}`), não só uma função
+                // top-level — o parser não distingue as duas formas. Sem este
+                // check, um lambda que chama outro lambda capturado do escopo
+                // externo perdia essa referência (não virava campo da classe
+                // gerada) e falhava em runtime: "ReferenceError: f is not defined".
+                IRLocalVariable outerFn = driver.findLocalVar(mc.methodName(), outerLocals);
+                if (outerFn != null) {
+                    captures.add(outerFn);
+                    captured.add(mc.methodName());
+                }
             }
             for (ExpressionNode arg : mc.arguments()) {
                 collectCapturesExpr(driver,arg, outerLocals, captures, captured, shadowed);
