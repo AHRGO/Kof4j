@@ -41,7 +41,6 @@ public final class StatementLowerer {
             }
             case ExpressionStmt es -> {
                 if (es.expression() != null) {
-                    int beforeSize = ops.size();
                     localIdx = ExpressionLowerer.emitExpression(driver, es.expression(), ops, owner, localIdx, locals);
                     if (driver.hasReturnValue(es.expression(), locals)) {
                         // SG-020/bug 79: descarte de valor de categoria-2 (Long/
@@ -49,43 +48,7 @@ public final class StatementLowerer {
                         // pilha e o verificador rejeita (Bad type on operand
                         // stack: long_2nd). Statement de await de Long era o
                         // caso canônico.
-                        // §103.3 (#103): Map.put como statement — o prev JVM
-                        // é SEMPRE Object 1-slot (boxeado), mesmo com V
-                        // pinado 2-slot (Long/Double): POP2 sobre Object →
-                        // NegativeArraySize no COMPUTE_FRAMES (caso 3 do
-                        // reporter). O retType do KofCall é valueType (p/
-                        // o unbox §112 do USE) — o descarte usa Object.
-                        // Prova pela PILHA REAL: o KofCall do put (último
-                        // call desde beforeSize) diz o que está empilhado
-                        // (valueType pinado no lowering — o infer do emit
-                        // veria Map<Unknown,Unknown> do mapOf).
                         Type discardT = ExpressionTyper.inferExprType(driver, es.expression(), locals);
-                        if (es.expression() instanceof MethodCallExpr putMc
-                                && "put".equals(putMc.methodName())) {
-                            for (int oi = ops.size() - 1; oi >= beforeSize; oi--) {
-                                if (ops.get(oi) instanceof KofCall kc
-                                        && kc.methodName().startsWith("kof_map_")) {
-                                    if ("kof_map_put".equals(kc.methodName())
-                                            && TypeMetrics.isDoubleWidth(kc.returnType())) {
-                                        // §103.3: reescreve o retType do IR p/
-                                        // Unknown — SÓ quando V é 2-slot
-                                        // (Long/Double). Aí o emit do put NÃO
-                                        // emite unbox (Unknown = no-op) e o
-                                        // KofPop descarta o prev Object 1-slot.
-                                        // Com V 1-slot (Int/...), o retType
-                                        // fica — o unbox-guard §112 com
-                                        // default Int sobre null é SEGURO
-                                        // (POP único, sem underflow) e o
-                                        // mapmutret depende dele.
-                                        ops.set(oi, new KofCall(kc.ownerType(),
-                                                kc.methodName(), kc.parameterTypes(),
-                                                Type.UnknownType.UNKNOWN, kc.kind()));
-                                        discardT = BuiltinTypes.OBJECT;
-                                    }
-                                    break;
-                                }
-                            }
-                        }
                         ops.add(TypeMetrics.isDoubleWidth(discardT)
                                 ? new KofPop2() : new KofPop());
                     }

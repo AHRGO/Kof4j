@@ -298,11 +298,6 @@ public final class CollectionCallLowerer {
                 }
             }
             Type retType = switch (mapFn) {
-                // §103.3 (#103): o prev do put é SEMPRE Object 1-slot no
-                // JVM (boxeado) — mas o KofCall guarda valueType (pinado)
-                // p/ o unbox §112 do USE (println(m.put) etc). O STATEMENT
-                // descarta pelo tipo do SemMethodCallTyper (=Object →
-                // POP); o KofCall NÃO pode ser Object (quebraria o unbox).
                 case "kof_map_put", "kof_map_remove" -> valueType;
                 // get() devolve V? (SG-008/bug 87): ausência é null comparável
                 // (`x == null`), nunca NPE por unbox. O unbox acontece no

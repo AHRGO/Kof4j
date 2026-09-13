@@ -11,9 +11,6 @@ public final class BuiltinTypes {
     public static final Type STRING = new Type.ClassType("java.lang", "String", List.of());
 
 
-    public static final Type OBJECT = new Type.ClassType("java.lang", "Object", List.of());
-
-
     public static final Type STRING_ARRAY = new Type.ArrayType(STRING);
 
 

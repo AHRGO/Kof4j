@@ -91,13 +91,7 @@ public final class SemMethodCallTyper {
                     // ausência é null comparável, nunca NPE por unbox
                     return new Type.NullableType(valueType);
                 }
-                // §103.3 (#103): put como STATEMENT descarta o prev — o
-                // prev JVM é SEMPRE Object 1-slot (boxeado), então o tipo
-                // do descarte é Object (POP, nunca POP2-sobre-Object).
-                // pinado 2-slot (Long/Double) aqui daria KofPop2 sobre
-                // 1 slot → NegativeArraySize no COMPUTE_FRAMES.
-                if ("put".equals(mc.methodName())) return BuiltinTypes.OBJECT;
-                if ("remove".equals(mc.methodName())) return valueType;
+                if ("put".equals(mc.methodName()) || "remove".equals(mc.methodName())) return valueType;
                 if ("size".equals(mc.methodName()) || "length".equals(mc.methodName())
                         || "count".equals(mc.methodName())) return Type.PrimitiveType.INT;
                 if ("contains".equals(mc.methodName()) || "containsKey".equals(mc.methodName())

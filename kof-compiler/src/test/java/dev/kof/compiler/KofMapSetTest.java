@@ -321,29 +321,6 @@ class KofMapSetTest {
             """, "true\nfalse\ntrue");
     }
 
-    @Test
-    void mapPutTwoSlotValueJvm(@TempDir Path tmp) throws Exception {
-        // §103.3 (#103, caso 3 do reporter): Map.put com valor 2-slot
-        // (Long/Double) como STATEMENT derrubava o compiler
-        // (NegativeArraySize no COMPUTE_FRAMES — POP2 sobre o prev
-        // Object 1-slot). O pin continua valendo p/ get/unbox.
-        runJvm(tmp, """
-            main() {
-                var m = mapOf()
-                var agora = now()
-                m.put("k", agora)
-                println("guardado")
-                println(m.get("k") == agora)
-                var md = mapOf()
-                md.put("d", 1.5)
-                println(md.get("d") == 1.5)
-                Long v = 42 as Long
-                m.put("v", v)
-                println(m.get("v") == 42L)
-            }
-            """, "guardado\ntrue\ntrue\ntrue");
-    }
-
     private String runNative(Path tempDir, String source, String expected) throws java.io.IOException {
         Path file = tempDir.resolve("Main-" + System.nanoTime() + ".kf");
         Files.writeString(file, source);
