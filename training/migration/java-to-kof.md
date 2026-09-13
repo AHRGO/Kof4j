@@ -150,7 +150,7 @@ Optional<String> maybe = Optional.of("hi");
 String nullable = null;
 ```
 
-### Kof (0.3.22-beta)
+### Kof (0.4.0-beta)
 ```kof
 String? maybe = null
 if (maybe != null) {
@@ -174,7 +174,7 @@ public class UserController {
 }
 ```
 
-### Kof (0.3.22-beta)
+### Kof (0.4.0-beta)
 ```kof
 // kof.http client — JVM + JS (Java HttpClient interop), Native HTTP002
 // verbos: get/post/put/delete/patch/options
@@ -213,7 +213,7 @@ import a.b.*
 
 ### Java — não aplicável
 
-### Kof (0.3.22-beta)
+### Kof (0.4.0-beta)
 ```kof
 let x = 5            // top-level let → KofScriptGlobals
 const y: Int = 10

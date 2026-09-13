@@ -9,7 +9,7 @@ record User(String name, String email)
 var u = User("Mel", "mel@kof.dev")
 ```
 
-## Service Pattern — prefer funções top-level (0.3.22-beta)
+## Service Pattern — prefer funções top-level (0.4.0-beta)
 
 ```kof
 // Kof não precisa de Service/Repository ceremony — função top-level é idiomática
@@ -59,7 +59,7 @@ app.listenSecure(8443)               // TLS
 `headerSet`, `app.use`, WebSocket `app.ws`, SSE `app.sse` com `sse.send/event/close`,
 `listenSecure` TLS) — 30/08. Native/JS: WEB001.
 
-## HTTP client (0.3.22-beta)
+## HTTP client (0.4.0-beta)
 
 ```kof
 var html = http.get("https://example.com")
@@ -93,7 +93,7 @@ if (maybe != null) {
 }
 ```
 
-## Collections — higher-order (0.3.22-beta)
+## Collections — higher-order (0.4.0-beta)
 
 ```kof
 var nomes = users.map((u: User) -> u.name)
@@ -104,7 +104,7 @@ var soma = nums.reduce((a: Int, b: Int) -> a + b, 0)
 var x = listOf(1,2,3).get(1)   // 2
 ```
 
-## Record pattern destructuring (0.3.22-beta)
+## Record pattern destructuring (0.4.0-beta)
 
 ```kof
 record Point(Int x, Int y)
@@ -159,7 +159,7 @@ class Entity implements Serializable {
 }
 ```
 
-## KofScript global (0.3.22-beta)
+## KofScript global (0.4.0-beta)
 
 ```kof
 let x = 5

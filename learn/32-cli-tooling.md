@@ -39,7 +39,7 @@ Todos os comandos seguem `intention->Kof->frontend->IR->backend->runtime`.
 Diagnóstico oficial do ambiente — para usuários e suporte:
 
 ```text
-Kof 0.3.22-beta
+Kof 0.4.0-beta
 Release channel: beta
 Tooling API: 21
 OS: linux

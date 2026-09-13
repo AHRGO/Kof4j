@@ -7,7 +7,7 @@
 A partir do 0.2.x-beta, o Kof se comporta como uma linguagem distribuível:
 
 ```text
-Kof 0.3.22-beta
+Kof 0.4.0-beta
         ├── Compiler
         ├── CLI (build/run/serve/check/test/script/repl/c/fmt/config gen/bench/
         │    profile/inspect/debug/info/lsp/install/version)
