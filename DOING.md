@@ -77,9 +77,14 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > (Q0 conserta≠prova, Q1 teste no mesmo commit, Q2 compile antes do push, Q3
 > matriz de bordas, Q4 caça-bug, Q5 sem verde falso, Q6 suíte é o chão) +
 > self-check 8–12 + checklist pré-push Q0–Q6.
-> **PRÓXIMO PASSO:** commit + push; depois varredura docs↔código.
-> **NUNCA:** código de lane alheia (pow = lane STDLIB — só o fix de build);
-> `nat/` lane GC viva; push main.
+> **PUSHADO `17596ce7`.** **PRÓXIMO PASSO:** varredura docs↔código (matriz já
+> com `stdmathpow`); conferir se as lanes seguem fechando a fila ratificada.
+> **NOTA (autostash stale, regra 8):** sobrou `stash@{0}` (autostash do
+> `pull --rebase` desta sessão) — snapshot ANTIGO já **superseded** por HEAD
+> (não tem `#113` nem IntelliJ; HEAD tem ambos), **sem trabalho único**.
+> Mantido por segurança (nunca `stash drop`); se o próximo agente confirmar,
+> pode descartar com nota. **NUNCA:** código de lane alheia (pow = lane STDLIB —
+> só o fix de build); `nat/` lane GC viva; push main.
 
 > **⚡ RECUSA HONESTA (13/09, lane development/docs, dono = 192.168.100.22):** commits `f2cb92ba`/`92b959e4`/`05bcc184` pushados (IntelliJ degrau-10 + learn/38 + roadmap §17). Re-audit `.md` soltos: stdlib = só pow/roundTo (dono pow) + format/boundaries/isNis/ulid/Luhn (decisão/sem-algoritmo); native = NATIVE002/GC (lane GC viva); OTP/legado/SOLID-500 = donos/bloqueios; editor = degrau 13 gate final (exige suíte verde — HEAD quebrado pelo `usesPow` do dono pow, NÃO toco) + plugin (issue #1, subprojeto Gradle). **Nada sem dono nesta lane — não edito p/ parecer ocupado** (regra estabilidade). Cron NÃO parado (gerenciado por outra sessão). Retomo em regressão, decisão da mantenedora, ou lane órfã real.
 
