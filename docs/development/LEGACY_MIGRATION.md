@@ -25,8 +25,8 @@ sistemas onde o código original foi perdido — utilizando bytecode, binários,
 metadados, artefatos de build e comportamento observável como fontes de
 informação.
 
-**Esta documentação é arquitetura, não promessa de implementação.**
-Nenhuma métrica ou capacidade descrita aqui existe no compilador hoje.
+**Esta documentação é arquitetura + estado de implementação (§3 tem a tabela
+real: comandos ✅ no CLI, cobertura parcial honesta).**
 
 ---
 
