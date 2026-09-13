@@ -419,18 +419,57 @@ class TranslateTest {
     }
 
     @Test
-    void interfaceDefaultMethodKeepsBody(@TempDir Path dir) throws Exception {
+    void staticFieldsTranslateAndQualifyInHoistedFns(@TempDir Path dir) throws Exception {
+        // Java `static` fields → `static` em Kof. Métodos `static` (e main)
+        // viram funções top-level (hoisted) → refs a campo estático ficam fora
+        // de escopo; o translator qualifica `X` → `Classe.X` (Kof aceita).
         String kof = Translate.translateJava("""
-                public interface I {
-                    default int f() { return 1; }
-                    int g();
+                public class SF {
+                    static final int X = 5;
+                    static String S = "hi";
+                    int get() { return X; }
+                    public static void main(String[] args) {
+                        System.out.println(new SF().get());
+                        System.out.println(S);
+                        System.out.println(X);
+                    }
                 }
                 """);
+        assertTrue(kof.contains("static Int X = 5"), "campo estático emitido:\n" + kof);
+        assertTrue(kof.contains("println(SF.S)"), "ref hoisted qualificada:\n" + kof);
+        assertTrue(kof.contains("println(SF.X)"), "ref hoisted qualificada:\n" + kof);
+        assertCompiles(dir, kof, "5\nhi\n5");
+    }
 
-        assertTrue(kof.contains("Int f() {") && kof.contains("return 1"),
-                "interface `default` preserva o corpo (antes: corpo dropado → SEM043):\n" + kof);
+    @Test
+    void interfaceDefaultMethodIsHonestGap() {
+        // Kof NÃO tem default method: o corpo em interface é ignorado e o
+        // implementador falha com SEM043 (re-verificado 13/09 no binário — a
+        // nota anterior "Kof aceita corpo" era verificação falsa, Q5).
+        TranslateException e = assertThrows(TranslateException.class, () ->
+                Translate.translateJava("""
+                        public interface I {
+                            default int f() { return 1; }
+                            int g();
+                        }
+                        """));
+        assertTrue(e.getMessage().contains("revisão manual"),
+                "default method sem equivalente Kof → gap explícito (R6), foi: " + e.getMessage());
+    }
+
+    @Test
+    void interfaceAbstractSignatureTranslates(@TempDir Path dir) throws Exception {
+        String kof = Translate.translateJava("""
+                public interface I {
+                    int g();
+                }
+                public class C implements I {
+                    public int g() { return 7; }
+                }
+                """);
         assertTrue(kof.contains("Int g(): Int"),
-                "assinatura abstrata continua `Type m(): Type`:\n" + kof);
+                "assinatura abstrata `Type m(): Type`:\n" + kof);
+        assertCompiles(dir, kof + "\nmain() { println(C().g()) }", "7");
     }
 
     @Test

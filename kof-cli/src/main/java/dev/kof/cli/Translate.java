@@ -64,6 +64,8 @@ public final class Translate {
     static final class Emitter extends TranslateStatements {
         final StringBuilder out = new StringBuilder();
         final StringBuilder topFns = new StringBuilder();
+        /** Campos `static` da classe em parse — p/ qualificar em funções hoisted. */
+        private final java.util.Set<String> staticFields = new java.util.HashSet<>();
 
         Emitter(Parser p) { super(p); }
 
@@ -188,6 +190,10 @@ public final class Translate {
                 while (!p.at("{")) { ifaces.add(p.next().text); if (p.at(",")) p.next(); }
             }
             p.expect("{");
+            // Pré-varre os campos `static` (p/ qualificar refs nas funções
+            // hoisted — `X` → `Classe.X`; ver TranslateStatics).
+            staticFields.clear();
+            staticFields.addAll(TranslateStatics.scanFieldNames(p, p.pos));
             out.append("class ").append(kofType(name)).append(typeParams);
             if (superCls != null) out.append(" extends ").append(kofType(superCls));
             if (!ifaces.isEmpty()) {
@@ -239,18 +245,21 @@ public final class Translate {
                 }
                 List<String> params = parseParams();
                 if (p.at("{")) {
-                    // interface `default`/corpo: Kof aceita corpo em interface
-                    // (default method — verificado 13/09). Preserva o corpo.
-                    List<String> body = parseBlock();
-                    out.append("    ").append(ret).append(' ').append(mname).append('(')
-                       .append(paramList(params)).append(") {\n");
-                    for (String stmt : body) out.append("        ").append(stmt).append('\n');
-                    out.append("    }\n");
-                } else {
-                    p.expect(";");
-                    out.append("    ").append(ret).append(' ').append(mname).append('(')
-                       .append(paramList(params)).append("): ").append(ret).append('\n');
+                    // Método de interface COM corpo = `default` (ou `static`)
+                    // method Java. Kof NÃO tem default method: o corpo é
+                    // IGNORADO e o implementador falha com SEM043
+                    // (re-verificado 13/09 — a nota anterior "Kof aceita corpo"
+                    // era verificação falsa). Emitir o corpo seria um Kof que
+                    // não compila; dropá-lo silenciosamente muda o
+                    // comportamento → gap honesto (R6).
+                    throw new TranslateException(
+                            "método de interface com corpo (`default`/`static` method) não tem "
+                            + "equivalente direto em Kof (sem default method; o implementador "
+                            + "falharia com SEM043) — mova o corpo para a classe — revisão manual");
                 }
+                p.expect(";");
+                out.append("    ").append(ret).append(' ').append(mname).append('(')
+                   .append(paramList(params)).append("): ").append(ret).append('\n');
             }
             p.expect("}");
             out.append("}\n");
@@ -353,7 +362,7 @@ public final class Translate {
                 }
                 if (p.at(";")) { p.next(); return; } // abstract/native signature
                 List<String> body = parseBlock();
-                emitMethod(isStatic, typeName, memberName, typeParams, params, body);
+                emitMethod(isStatic, typeName, className, memberName, typeParams, params, body);
             } else {
                 // field: "Type name [= expr];"
                 String init = "";
@@ -372,8 +381,13 @@ public final class Translate {
                 }
                 while (!p.at(";") && !p.at(T.EOF)) p.next();
                 if (p.at(";")) p.next();
-                if (isStatic) return; // static field → skip (no top-level state in Kof)
-                out.append("    ").append(kofType(typeName)).append(' ').append(memberName).append(init).append('\n');
+                // Campo estático Java → `static` em Kof (Kof suporta campo
+                // estático de classe — verificado 13/09: `static Int X = 5` +
+                // `A.X` compila e roda). Antes era SKIPADO silenciosamente →
+                // referência virava `Undefined variable or type: 'X'`
+                // (SEM011) = Kof inválido (bug latente Q4).
+                out.append("    ").append(isStatic ? "static " : "")
+                   .append(kofType(typeName)).append(' ').append(memberName).append(init).append('\n');
             }
         }
 
@@ -383,24 +397,37 @@ public final class Translate {
             out.append("    }\n");
         }
 
-        private void emitMethod(boolean isStatic, String retType,
+        private void emitMethod(boolean isStatic, String retType, String owner,
                                 String name, String typeParams, List<String> params, List<String> body) {
             StringBuilder sb = isStatic ? topFns : out;
+            // Função hoisted: refs a campo estático ficam fora de escopo →
+            // qualifica `X` → `Owner.X` (o Kof aceita `Classe.campo`).
+            java.util.Set<String> shadowed = new java.util.HashSet<>();
+            for (String prm : params) {
+                int sp = prm.lastIndexOf(' ');
+                shadowed.add(sp >= 0 ? prm.substring(sp + 1) : prm);
+            }
+            List<String> emitBody = new ArrayList<>(body.size());
+            for (String stmt : body) {
+                emitBody.add(isStatic
+                        ? TranslateStatics.qualify(stmt, owner, staticFields, shadowed)
+                        : stmt);
+            }
             if (isStatic && name.equals("main")) {
                 // Java main(String[] args) → top-level Kof main()
                 sb.append("main() {\n");
-                for (String stmt : body) sb.append("    ").append(stmt).append('\n');
+                for (String stmt : emitBody) sb.append("    ").append(stmt).append('\n');
                 sb.append("}\n");
                 return;
             }
             sb.append("    ").append(kofType(retType)).append(' ').append(name)
               .append(typeParams).append('(').append(paramList(params)).append(')');
-            if (body.size() == 1 && body.get(0).startsWith("return ")) {
-                String expr = body.get(0).substring("return ".length());
+            if (emitBody.size() == 1 && emitBody.get(0).startsWith("return ")) {
+                String expr = emitBody.get(0).substring("return ".length());
                 sb.append(" = ").append(expr).append('\n');
             } else {
                 sb.append(" {\n");
-                for (String stmt : body) sb.append("        ").append(stmt).append('\n');
+                for (String stmt : emitBody) sb.append("        ").append(stmt).append('\n');
                 sb.append("    }\n");
             }
         }

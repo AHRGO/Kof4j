@@ -269,13 +269,17 @@ diferenciais.
 > **Estado (13/09 ~15:00, dono = 192.168.100.22): `var`, `default` de
 > interface, constante de interface.** (1) `var x = 1;` local Java → `var x =
 > 1` Kof (`var` é reservado idêntico; antes `expected ';' but found 'x'`).
-> (2) interface `default`/corpo de método agora **preserva o corpo** (Kof
-> aceita corpo em interface — verificado; antes dropava → `SEM043` no
-> implementador). (3) constante de interface (`int X = 1;` implícito
+> (2) interface `default`/corpo de método — **CORRIGIDO 13/09 ~16:45:** a
+> nota anterior ("Kof aceita corpo em interface") era **verificação FALSA**
+> (Q5): Kof **ignora** o corpo e o implementador falha com `SEM043`
+> (`kof check` no binário). Agora é **gap honesto R6** (sem default method em
+> Kof). (3) constante de interface (`int X = 1;` implícito
 > `static final`) → **gap honesto R6**: Kof aceita declarar mas não resolve
 > (`I.X`/`C.X` → `SEM025`), sem equivalente direto. Prova:
 > `TranslateTest.varLocalTranslates` (roda `1/hi`),
-> `interfaceDefaultMethodKeepsBody`, `interfaceConstantIsHonestGap`.
+> `interfaceDefaultMethodIsHonestGap` (substitui o teste falso),
+> `interfaceAbstractSignatureTranslates` (roda `7`),
+> `interfaceConstantIsHonestGap`.
 > `Translate.java` 396, `TranslateStatements` 404 ≤500; `TranslateTest` 30/30.
 >
 > **Estado (13/09 ~15:50, dono = 192.168.100.22): array-initializer em CAMPO
@@ -323,3 +327,18 @@ diferenciais.
 > `TranslateTest.stringEscapesRoundTripToValidKof` (roda `say "hi"`/`path\x`)
 > e `finalLocalAndParamTranslate` (roda `3hi`) — `TranslateTest` 37/37.
 > `TranslateExpr` 500 (limite), `TranslateStatements` 451 ≤500; `check_500` OK.
+>
+> **Estado (13/09 ~16:45, dono = 192.168.100.22): `default` de interface +
+> campos estáticos (bugs latentes Q4).** (1) **CORREÇÃO da unidade `3ab4c99e`:**
+> a nota anterior dizia que "Kof aceita corpo em interface" — **falso**
+> (re-verificado no binário: Kof ignora o corpo e o implementador falha com
+> `SEM043`). Método de interface com corpo (`default`/`static`) agora é **gap
+> honesto R6**; assinatura abstrata segue `Type m(): Type` (probe: `7`).
+> (2) Campo `static` Java era **skipado silenciosamente** → referência virava
+> `Undefined variable or type` (SEM011) = Kof inválido. Agora emite `static`
+> e, nas funções **hoisted** (métodos `static`/`main` promovidos a top-level),
+> qualifica a ref nua `X` → `Classe.X` via `TranslateStatics` (novo: varredura
+> + qualificação segura, sem tocar strings/`.X`/parâmetro shadow). Prova:
+> `interfaceDefaultMethodIsHonestGap`, `interfaceAbstractSignatureTranslates`
+> (roda `7`), `staticFieldsTranslateAndQualifyInHoistedFns` (roda `5/hi/5`) —
+> `TranslateTest` 39/39. `Translate.java` 443, `TranslateStatics` 134 ≤500.
