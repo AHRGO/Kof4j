@@ -8,7 +8,7 @@
 >
 > | | |
 > |---|---|
-> | **Fila ABERTA (varredura 13/09 — seções sem resolução no próprio cabeçalho)** | **14 itens** (seções/sub-faces sem resolução) — §45 (finally+return no try; JVM/interpretador descartam o efeito do finally — **DECIDIDO 13/09** 4a: FinallyFrame na IR + bump 0.3.1), §65 (UI/Chrome — `Audio`/`Video` no DOM real; **lane UI**), §81 (KofJS `Long` é `Number` 53-bit — **DECIDIDO 13/09** 5b: BigInt no JS, bump+migração), §89 (conversão numérica de primitivo quebra o LINK nos nativos — **DECIDIDO 13/09** 3a: alias do `as` + warning de truncamento), §101 (relacionais de Double com NaN divergem cross — **congelado** regra 6), §104b-ii (record em coleção + storage-box asm — **lane bugfixer**, unidade GRANDE), §106 (`json.encode(Map)` quebra em 3 alvos — **DECIDIDO 13/09** 2b: chaves sorted), §107 🟡 (`println(coleção)` nativo → lixo de ponteiro; **face escalar ✅ CORRIGIDA 12/09** nos 3 nativos `f3b3821c`+B39; restam record/aninhado=`?` até §104b-ii + FP-cross=FLT001), §114 ⏳ (equals de record com campo-referência no Native; sub-face do §104b-ii), §117 (`cancelled()` colide por hash de TID — **DECIDIDO 13/09** 8a: slot por TID no spawn), §129 (throw em worker `spawn` → longjmp cross-thread no Native — **lane nat**; era referido como "§129-TLS"), §131 (sobrecarga de método por aridade — **DECIDIDO 13/09** 10a: implementar), §132 (KofJS: task de task não roda sem ceder o event-loop — gate OTP002; **lane alheia**), §156 (List HETEROGÊNEO de lambdas → CCE JVM; **infra de tipos**, registrado 13/09). **~~§149~~ NÃO está aberto — ✅ CORRIGIDO 12/09** (a linha anterior o listava por engano; a raiz era o `JsIfThrowElse` do §147). **§155 ✅ CORRIGIDO 13/09** (tipo-função em type-args → `ClassFormatError`; parser preserva os espaços do type-ref). **§127-JVM ✅ CORRIGIDO 13/09** (decisão 9a: `as ()->T` parseia como type-ref; checkcast p/ interface SAM sintética). **§94 ✅ CORRIGIDO 13/09** (EQ/NE de Double/Float no interpretador agora IEEE). **§125 ✅ CORRIGIDO 12/09** (return Nullable(primitivo) → default; célula `nullableprint` 4/4). **§139 ✅ CORRIGIDO 12/09** (JS fold `f()==null` → COMP002; parser JS descarta mid-expression). **§140 ✅ CORRIGIDO 12/09** (gate ≤500 virou ratchet com baseline no CI). **§90 ✅ CORRIGIDO 12/09** (lane web). **§145/§146/§147 ✅ CORRIGIDOS 12/09** (`440730c8`, issue #101). **Conclusão honesta (13/09):** os itens abertos estão pendurados em **decisão da mantenedora** (já ratificadas em 13/09 — fila de implementação), **congelamento regra-6** ou **lane alheia**; a maior parte já tem decisão. |
+> | **Fila ABERTA (varredura 13/09 — seções sem resolução no próprio cabeçalho)** | **15 itens** (seções/sub-faces sem resolução) — §45 (finally+return no try; JVM/interpretador descartam o efeito do finally — **DECIDIDO 13/09** 4a: FinallyFrame na IR + bump 0.3.1), §65 (UI/Chrome — `Audio`/`Video` no DOM real; **lane UI**), §81 (KofJS `Long` é `Number` 53-bit — **DECIDIDO 13/09** 5b: BigInt no JS, bump+migração), §89 (conversão numérica de primitivo quebra o LINK nos nativos — **DECIDIDO 13/09** 3a: alias do `as` + warning de truncamento), §101 (relacionais de Double com NaN divergem cross — **congelado** regra 6), §104b-ii (record em coleção + storage-box asm — **lane bugfixer**, unidade GRANDE), §106 (`json.encode(Map)` quebra em 3 alvos — **DECIDIDO 13/09** 2b: chaves sorted), §107 🟡 (`println(coleção)` nativo → lixo de ponteiro; **face escalar ✅ CORRIGIDA 12/09** nos 3 nativos `f3b3821c`+B39; restam record/aninhado=`?` até §104b-ii + FP-cross=FLT001), §114 ⏳ (equals de record com campo-referência no Native; sub-face do §104b-ii), §117 (`cancelled()` colide por hash de TID — **DECIDIDO 13/09** 8a: slot por TID no spawn), §129 (throw em worker `spawn` → longjmp cross-thread no Native — **lane nat**; era referido como "§129-TLS"), §131 (sobrecarga de método por aridade — **DECIDIDO 13/09** 10a: implementar), §132 (KofJS: task de task não roda sem ceder o event-loop — gate OTP002; **lane alheia**), §156 (List HETEROGÊNEO de lambdas → CCE JVM; **infra de tipos**, registrado 13/09), §157/NAT-STR01 (case-fold ASCII-only no Native vs Unicode no JVM/JS — **DECIDIDO 13/09**, lane nat; registrado aqui 13/09). **~~§149~~ NÃO está aberto — ✅ CORRIGIDO 12/09** (a linha anterior o listava por engano; a raiz era o `JsIfThrowElse` do §147). **§155 ✅ CORRIGIDO 13/09** (tipo-função em type-args → `ClassFormatError`; parser preserva os espaços do type-ref). **§127-JVM ✅ CORRIGIDO 13/09** (decisão 9a: `as ()->T` parseia como type-ref; checkcast p/ interface SAM sintética). **§94 ✅ CORRIGIDO 13/09** (EQ/NE de Double/Float no interpretador agora IEEE). **§125 ✅ CORRIGIDO 12/09** (return Nullable(primitivo) → default; célula `nullableprint` 4/4). **§139 ✅ CORRIGIDO 12/09** (JS fold `f()==null` → COMP002; parser JS descarta mid-expression). **§140 ✅ CORRIGIDO 12/09** (gate ≤500 virou ratchet com baseline no CI). **§90 ✅ CORRIGIDO 12/09** (lane web). **§145/§146/§147 ✅ CORRIGIDOS 12/09** (`440730c8`, issue #101). **Conclusão honesta (13/09):** os itens abertos estão pendurados em **decisão da mantenedora** (já ratificadas em 13/09 — fila de implementação), **congelamento regra-6** ou **lane alheia**; a maior parte já tem decisão. |
 > | Antiga "varredura 08/09" (apócrifa — corrigida 12/09) | os "abertos" 39/62/63/64/46/48/50/59/61 estão ✅ CORRIGIDO nos próprios cabeçalhos (39/62/63/64 JVM/JS; 46/50/59 Native; 48/61 gap honesto JSN004/FFI001); contagem real na linha acima. |
 > | Paridade interpretador × compilados (semântica `==` congelada — regra 6) | **0** — bug 94 ✅ CORRIGIDO 13/09 (EQ/NE de Double/Float no interpretador agora IEEE; a "decisão" era alinhar ao previsto, que os 3 compilados + corpus já definiam) |
 > | Paridade backend-only (regra 5, atacável na lane Native) | **2** — §107 (println coleção → lixo; **face escalar ✅ CORRIGIDA 12/09 nos 3 targets nativos** — x86 `f3b3821c` + cross B39, golden JVM byte-idêntico; restam record/aninhado=`?` honesto até §104b-ii, FP-cross=FLT001; §107-JS 11/09), §104b-ii (equals de conteúdo p/ record + box de primitivo no storage asm; **face char ✅ FECHADA 11/09** — `mapgetprim` 4/4)
@@ -5013,4 +5013,36 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
 - **Não é regressão do §127/§155:** o caminho (`JvmOpCollections` +
   `ExpressionInstanceCallLowerer`) não foi tocado por eles; a sonda B127c já
   dava CCE antes.
+
+
+### 157. NAT-STR01 — case-fold (`toUpperCase`/`toLowerCase` de instância) e conversores de string são **ASCII-only no Native** (x86/riscv/aarch), Unicode (`Character.toUpperCase`, default locale) no JVM/interpretador; JS usa `String.prototype.toUpperCase` (Unicode) — 🟢 DECIDIDO 13/09 (abrir/implementar; ratificação da mantenedora) — lane nat
+
+- **Menor repro (medido 13/09, harness de paridade 4-target):**
+  `main(){ println("café".toUpperCase()); println("CAFÉ".toLowerCase()) }` →
+  **JVM/Script/JS `CAFÉ`/`café`**; **Native x86 `CAFé`/`cafÉ`** (as letras
+  ASCII são dobradas, o `é`/`É` de 2 bytes UTF-8 não é tocado). Sonda `sw2b.kf`.
+- **Causa raiz:** `RuntimeStringOps.emitStringCase` (`kof_string_to_upper`/
+  `kof_string_to_lower`, `:359-413`) faz `±0x20` **byte a byte** só na faixa
+  `a-z`/`A-Z` (`cmpb $97`/`cmpb $122`) — nunca faz fold de acentos. Idêntico
+  em riscv/aarch (o aarch traduz o x86). JVM (`JvmOpCollections:501` usa
+  `Character.toUpperCase`) e o interpretador (`KofInterpreterCollections:68`
+  `String.toUpperCase`) fazem case-fold Unicode. **Paridade R5 quebrada** em
+  método do reference (`type-system.md:290`).
+- **Irmãos do mesmo gap (todos ASCII-only no Native):** os conversores
+  `strings.*` que alocam String — `capitalize`/`uncapitalize`/`reverse`/
+  `toCamelCase`/`toPascalCase`/`toSnakeCase`/`toKebabCase`/`slugify`/
+  `padLeft`/`padRight` (`KofStrings.java:39-69` documenta "ASCII-first no
+  Native; casos não-ASCII ficam em KofStringsTest (JVM+JS)"). A matriz trava
+  só ASCII de propósito (`conformance-matrix.md` §"S2b ASCII"/NAT-STR01).
+- **Estado do registro (13/09):** o `docs/development/README.md:91` já listava
+  NAT-STR01 como "`known-bugs.md`/conformance-matrix", mas a seção **não
+  existia aqui** (só a nota na matriz) — lacuna de registro fechada nesta
+  unidade.
+- **Alcance honesto do fix:** Latin-1 (`é`/`É`) é factível (2 bytes UTF-8,
+  comprimento preservado) com tabela de 256 entradas; scripts além de Latin-1
+  (grego/cirílico/astral) exigem tabela Unicode completa (multi-sessão). O
+  fix fecha a paridade R5 para Latin-1 e mantém o resto como gap honesto
+  documentado — nunca silencioso. **NÃO corrigido nesta unidade** (docs-only;
+  toca `nat/`, lane GC viva).
+
 

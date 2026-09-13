@@ -160,12 +160,15 @@
 > **S2b ASCII:** `capitalize` usa a MESMA regra nos 4 targets (byte 0 `a-z`→`A-Z`).
 > `reverse` é byte-reverso no Native e UTF-16/UTF-8 nos demais — coincidem em ASCII
 > (caso `stdstrings2b`). Casos não-ASCII: **NAT-STR01** (gap do UTF-8 nativo,
-> `plan-stdlib-expansion.md` §5) — não entram na matriz até corrigido (R5/R6).
+> `plan-stdlib-expansion.md` §5; **seção de registro:** `known-bugs.md` §157)
+> — não entram na matriz até corrigido (R5/R6).
 > **Extensão NAT-STR01 (10/09, varredura String parte 2):** os métodos de
 > INSTÂNCIA `"café".toUpperCase()`/`"CAFÉ".toLowerCase()` são **ASCII-only no
 > x86_64** (`RuntimeStringOps` só faz ±0x20 em `a-z`/`A-Z`; é→`É` não é tocado)
 > enquanto JVM/interpretador fazem case-fold Unicode completo ("café"→"CAFÉ").
-> Paridade R5 quebrada em método do reference (`type-system.md:290`). Latin-1 é
+> Medido 13/09 (paridade 4-target): JVM/Script/JS `CAFÉ`/`café` × Native x86
+> `CAFé`/`cafÉ`. Paridade R5 quebrada em método do reference
+> (`type-system.md:290`). Latin-1 é
 > factível (é/É têm 2 bytes no UTF-8 → comprimento preservado); scripts além de
 > Latin-1 precisam de tabela Unicode (multi-sessão). NÃO travado na matriz até o
 > port; menor repro `sw2b.kf`.
