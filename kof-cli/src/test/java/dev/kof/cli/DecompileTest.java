@@ -1378,6 +1378,36 @@ class DecompileTest {
         assertTrue(kof.contains("class NamedR extends Record"), "implements → skeleton atual:\n" + kof);
     }
 
+    @Test
+    void recoversGenericRecordWithExactTypeParams(@TempDir Path dir) throws Exception {
+        Path javaFile = dir.resolve("Gp.java");
+        Files.writeString(javaFile, """
+                public record Gp<T>(T value, int tag) { }
+                """);
+        runJavac(javaFile, dir);
+        String kof = Decompile.decompile(dir.resolve("Gp.class"));
+        assertTrue(kof.contains("record Gp<T>(T value, Int tag)"),
+                "type-param EXATO na forma Kof:\n" + kof);
+        assertFalse(kof.contains("body not recovered"), "sem stub:\n" + kof);
+        Path out = dir.resolve("Gp.kf");
+        Files.writeString(out, kof);
+        CompilationResult result = new CompilerDriver().compile(out, dir.resolve("out"), Target.JVM);
+        assertTrue(result.success(), "decompiled deve compilar:\n" + kof + "\n" + result.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void genericBoundRecordKeepsHonestSkeleton(@TempDir Path dir) throws Exception {
+        Path javaFile = dir.resolve("Bnd.java");
+        Files.writeString(javaFile, """
+                public record Bnd<T extends Comparable<T>>(T value) { }
+                """);
+        runJavac(javaFile, dir);
+        String kof = Decompile.decompile(dir.resolve("Bnd.class"));
+        // bound genérico (`<T:Ljava/lang/Comparable<...>;>`) não é a forma que
+        // emitimos: RECUSAR (skeleton atual, compila) — nunca `record Bnd<T>` errado.
+        assertTrue(kof.contains("class Bnd extends Record"), "bound não-suportado → skeleton atual:\n" + kof);
+    }
+
     private void runJavac(Path javaFile, Path dir) throws IOException, InterruptedException {
         runJavac(java.util.List.of(javaFile), dir);
     }

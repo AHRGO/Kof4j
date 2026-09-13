@@ -1,6 +1,7 @@
 package dev.kof.cli;
 
 import dev.kof.compiler.parser.ClassFileParser;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -35,10 +36,11 @@ final class BytecodeRecords {
     /**
      * Devolve os campos (componentes, em ordem de declaração) de um record PURO,
      * ou null se não-é-record / tem lógica extra / nome de componente reservado /
-     * implementa interface (PARSE007 no frontend).
+     * implementa interface (PARSE007 no frontend) / type-bound não-simples.
      */
     static List<ClassFileParser.FieldInfo> pureRecordComponents(ClassFileParser.ClassFile ir) {
         if (!ir.attributes.containsKey("Record")) return null;
+        if (typeParams(ir.classSignature) == null) return null;
         if (ir.interfaces != null && ir.interfaces.length > 0) return null;
         if (ir.fields == null || ir.fields.isEmpty()) return null;
         for (var f : ir.fields) {
@@ -128,5 +130,43 @@ final class BytecodeRecords {
     private static boolean refNameEquals(String[] cp, int idx, String name) {
         String[] r = BytecodeCp.resolveMethodRef(cp, idx);   // Fieldref e Methodref têm o mesmo layout
         return r != null && name.equals(r[1]);
+    }
+
+    /**
+     * Type-params da assinatura da classe (JVMS 4.7.9.1) na forma que o Kof
+     * usa: {@code record Nome<T>}. Aceita só a forma que o javac gera p/
+     * records reais — {@code Ident:Lclass;} repetido ({@code <T:Ljava/lang/Object;>}).
+     * Qualquer desao (bound genérico, interface-bound {@code ::}, tipo base)
+     * → {@code null}: o chamador RECUSA o record (skeleton atual) em vez de
+     * emitir {@code <T>} errado (regra: recuperar código que não compila é proibido).
+     */
+    static List<String> typeParams(String sig) {
+        if (sig == null) return List.of();
+        if (sig.isEmpty()) return List.of();
+        if (sig.charAt(0) != '<') return List.of();            // sem type params
+        List<String> names = new ArrayList<>();
+        int i = 1;
+        while (i < sig.length()) {
+            if (sig.charAt(i) == '>') return names;             // fim do bloco de type params
+            int s = i;
+            while (i < sig.length() && Character.isJavaIdentifierPart(sig.charAt(i))) i++;
+            if (i == s) return null;                            // não-nome → forma não-suportada
+            names.add(sig.substring(s, i));
+            if (i >= sig.length()) return null;
+            char c = sig.charAt(i);
+            if (c == '>') return names;                         // último param, sem bound
+            if (c != ':') return null;                          // javac sempre emite ':' → conservador
+            i++;
+            if (i < sig.length() && sig.charAt(i) == ':') return null;   // interface-bound extra (::)
+            if (i >= sig.length() || sig.charAt(i) != 'L') return null;  // só class bound simples
+            i++;
+            while (i < sig.length() && sig.charAt(i) != ';') {
+                if (sig.charAt(i) == '<') return null;          // bound genérico
+                i++;
+            }
+            if (i >= sig.length()) return null;
+            i++;                                                 // consome ';'
+        }
+        return null;                                             // nunca viu '>'
     }
 }

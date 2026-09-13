@@ -214,7 +214,10 @@ public final class Decompile {
         List<dev.kof.compiler.parser.ClassFileParser.FieldInfo> comps =
                 BytecodeRecords.pureRecordComponents(ir);
         if (comps != null) {
-            sb.append("record ").append(simpleName).append('(');
+            sb.append("record ").append(simpleName);
+            var tps = BytecodeRecords.typeParams(ir.classSignature);
+            if (!tps.isEmpty()) sb.append('<').append(String.join(", ", tps)).append('>');
+            sb.append('(');
             for (int k = 0; k < comps.size(); k++) {
                 if (k > 0) sb.append(", ");
                 var f = comps.get(k);
