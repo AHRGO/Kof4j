@@ -268,6 +268,70 @@ class EditorIntegrationTest {
         assertTrue(Files.readString(readme).contains("LSP4IJ"), "aponta p/ LSP4IJ");
     }
 
+    // ---- degraus 6-9: providers vim / emacs / geany / nano ----------------
+    // Prova de instalação idiômica (config gerado), delegando ao LSP/CLI —
+    // antes só vscode/neovim/intellij tinham teste (§15/Q1).
+
+    @Test
+    void vimInstallsFtdetectSyntaxAndCompiler(@TempDir Path home) throws IOException {
+        var ctx = fake(Set.of("vim"), Map.of("vim", "VIM - Vi IMproved 9.1"), Set.of());
+        ByteArrayOutputStream bo = new ByteArrayOutputStream();
+        PrintStream out = new PrintStream(bo, true, StandardCharsets.UTF_8);
+        assertEquals(0, CmdEditor.run(new String[]{"editor", "install", "vim"}, ctx, home,
+                new BufferedReader(new StringReader("")), out, out));
+        assertTrue(EditorInstaller.isInstalled(home, "vim"), "marker: " + bo);
+        assertTrue(Files.isRegularFile(home.resolve(".vim/ftdetect/kof.vim")), "ftdetect: " + bo);
+        assertTrue(Files.isRegularFile(home.resolve(".vim/after/syntax/kof.vim")), "syntax: " + bo);
+        Path compiler = home.resolve(".vim/after/compiler/kof.vim");
+        assertTrue(Files.isRegularFile(compiler), "compiler: " + bo);
+        assertTrue(Files.readString(compiler).contains("build"), "compiler delega à CLI: "
+                + Files.readString(compiler));
+    }
+
+    @Test
+    void emacsInstallsKofMode(@TempDir Path home) throws IOException {
+        var ctx = fake(Set.of("emacs"), Map.of("emacs", "GNU Emacs 29.3"), Set.of());
+        ByteArrayOutputStream bo = new ByteArrayOutputStream();
+        PrintStream out = new PrintStream(bo, true, StandardCharsets.UTF_8);
+        assertEquals(0, CmdEditor.run(new String[]{"editor", "install", "emacs"}, ctx, home,
+                new BufferedReader(new StringReader("")), out, out));
+        assertTrue(EditorInstaller.isInstalled(home, "emacs"), "marker: " + bo);
+        Path mode = home.resolve(".emacs.d/lisp/kof-mode.el");
+        assertTrue(Files.isRegularFile(mode), "kof-mode.el: " + bo);
+        String c = Files.readString(mode);
+        assertTrue(c.contains("define-derived-mode kof-mode"), "modo: " + c);
+        assertTrue(c.contains("auto-mode-alist") && c.contains("kof"), "associação *.kof: " + c);
+    }
+
+    @Test
+    void geanyInstallsFiletypeWithBuildRun(@TempDir Path home) throws IOException {
+        var ctx = fake(Set.of("geany"), Map.of("geany", "geany 2.0"), Set.of());
+        ByteArrayOutputStream bo = new ByteArrayOutputStream();
+        PrintStream out = new PrintStream(bo, true, StandardCharsets.UTF_8);
+        assertEquals(0, CmdEditor.run(new String[]{"editor", "install", "geany"}, ctx, home,
+                new BufferedReader(new StringReader("")), out, out));
+        assertTrue(EditorInstaller.isInstalled(home, "geany"), "marker: " + bo);
+        Path ft = home.resolve(".config/geany/filedefs/filetypes.kof");
+        assertTrue(Files.isRegularFile(ft), "filetypes.kof: " + bo);
+        String c = Files.readString(ft);
+        assertTrue(c.contains("compiler=") && c.contains("execute="), "build/run delegam: " + c);
+    }
+
+    @Test
+    void nanoInstallsSyntaxOnly(@TempDir Path home) throws IOException {
+        var ctx = fake(Set.of("nano"), Map.of("nano", "GNU nano, versão 7.2"), Set.of());
+        ByteArrayOutputStream bo = new ByteArrayOutputStream();
+        PrintStream out = new PrintStream(bo, true, StandardCharsets.UTF_8);
+        assertEquals(0, CmdEditor.run(new String[]{"editor", "install", "nano"}, ctx, home,
+                new BufferedReader(new StringReader("")), out, out));
+        assertTrue(EditorInstaller.isInstalled(home, "nano"), "marker: " + bo);
+        Path rc = home.resolve(".nano/kof.nanorc");
+        assertTrue(Files.isRegularFile(rc), "kof.nanorc: " + bo);
+        String c = Files.readString(rc);
+        assertTrue(c.contains("syntax") && c.contains(".kof"), "filetype *.kof: " + c);
+        assertTrue(c.contains("color"), "syntax highlighting: " + c);
+    }
+
     // ---- degrau 11: hook pós-instalador (§13) -----------------------------
 
     @Test

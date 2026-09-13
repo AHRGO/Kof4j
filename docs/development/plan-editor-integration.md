@@ -8,6 +8,13 @@
 > editores) + `training/tooling/cli.md:25` (tabela `kof editor …`) +
 > `learn/38-editors.md` (detect/setup/install). Resta: IntelliJ plugin
 > (subprojeto Gradle próprio, §21) + degrau 13 (gate final).
+> **Prova degraus 6-9 (medido 13/09, dono = 192.168.100.22):** os providers
+> vim/emacs/geany/nano existiam desde os degraus, mas **só** vscode/neovim/
+> intellij tinham teste de instalação (Q1: feature sem prova). Agora
+> `EditorIntegrationTest` cobre o config gerado dos 4 (ftdetect+syntax+compiler
+> no vim; `kof-mode.el` com auto-mode-alist no emacs; `filetypes.kof` com
+> build/run no geany; `kof.nanorc` só syntax no nano) — **21/21**. Nenhum
+> provider toca o ambiente real (§24, DetectContext fake).
 > **Origem:** briefing "KOF EDITOR INTEGRATION" (infra oficial de integração de
 > editores/IDEs). **Escopo desta doc:** especificação + ordem de implementação.
 > **A implementação é DEPOIS** — este documento é o contrato.

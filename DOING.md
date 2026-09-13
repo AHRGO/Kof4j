@@ -59,6 +59,10 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 ---
 
  ## PRÓXIMO PASSO (re-dispacho lê isto)
+ 
+> **✅ FEITO (13/09 ~15:30, lane development — TRANSLATOR §172 + EDI001 degraus 6-9, dono = 192.168.100.22):** (a) **§172**: `<<=`/`>>=`/`>>>=` eram parseados mas baixados como atribuição SIMPLES (só o RHS gravado — `x=6; x<<=2` dava 2) nos 4 targets; fix = helper único `isCompoundOp`+`compoundBinaryOp(SHL/SHR/USHR)` nos 6 sítios + `emitCompoundRhsConv` (L2I na contagem — 2ª face `Long<<=Long` = VerifyError). Prova: `CoreRegressionE2ETest.compoundShiftAssignments` (JVM+JS, golden `24/3/2147483644/…`) + translator 33/33. Ver `known-bugs.md §172`. (b) **EDI001 degraus 6-9**: providers vim/emacs/geany/nano existiam sem teste de instalação (Q1) — `EditorIntegrationTest` agora prova o config gerado dos 4 (ftdetect+syntax+compiler vim, `kof-mode.el` emacs, `filetypes.kof` geany, `kof.nanorc` nano) — **21/21**. Plano `plan-editor-integration.md` sincronizado. Commit/push `beta-0.4.0`.
+> **PRÓXIMO PASSO (editor):** EDI001 só resta o **plugin IntelliJ** (subprojeto Gradle/Platform próprio, issue #1, §21 — escopo P2 a decidir) + degrau 13 (gate final suíte). Sem decisão de escopo, o gate pode ser rodado quando a árvore estabilizar; re-disparo sem decisão → seguir o próximo órfão.
+> **PRÓXIMO PASSO (translator):** gaps Java restantes são decisão de design/regra 6 (FQN `new pacote.Classe`→stdlib, classe anônima, tipo aninhado hoisting, varargs de usuário) ou já cobertos; nova varredura via probes antes de tocar.
 
 > **✅ FEITO (13/09 ~15:10, lane docs — dono = esta sessão): CONSOLIDAÇÃO DE
 > PLANOS em `docs/development/` (pedido da mantenedora "junta o que tiver
