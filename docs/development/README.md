@@ -1,8 +1,8 @@
 # Development — backlog vivo (só trabalho em desenvolvimento)
 
 > **Base:** `0.4.0-beta` · branch `beta-0.4.0` · **atualizado:** 13/09/2026
-> **Suíte medida neste HEAD:** `1653` run (1473 kof-compiler + 31 kof-script
-> + 5 kof-c-compiler + 144 kof-cli), **0 falhas** (13 erros = só `node` ausente, ambientais — todos `*Js`), 157 skip (guardas de
+> **Suíte medida neste HEAD:** `1662` run (1479 kof-compiler + 31 kof-script
+> + 5 kof-c-compiler + 147 kof-cli), **0 falhas** (13 erros = só `node` ausente, ambientais — todos `*Js`), 157 skip (guardas de
 > toolchain/node; sem qemu os 84 cross são skipados) — com cross riscv/aarch
 > 42+42 sob qemu real (G-0/§142 somaram os
 > testes de header/OOM). Gate pós-§131/§163 medido 13/09 (`gate_final2.log`, BUILD
@@ -122,7 +122,7 @@ escalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 |---|---|---|
 | ~~`PLATFORM-PLAN.md`~~ → `decision-pending/` | F1–3/8/9 com código (`ProjectLocator`, `KofProjectConfig`, `Target.SCRIPT`, PKG006/007, conformance 11 testes) | F4/F5, F6 (WASM001), F7 — parado por decisão |
 | ~~`APPLICATION_MODEL.md`~~ → `decision-pending/` | `application { onStart/onShutdown }` ✅ E2E 3 targets; I2 (full-stack) ✅ `FullStackE2ETest` | I3/I4 (distribuído, packaging, System) — Q1/Q2 mantenedora |
-| `LEGACY_MIGRATION.md` + `DECOMPILER.md` + `TRANSLATOR.md` + `DIFFERENTIAL_TESTING.md` + `LEGACY_IR.md` | plataforma completa no CLI: `inspect/decompile/translate/compare/migrate` (`Main.java:25-29`), 70 testes kof-cli (medidos 13/09) + `Confidence`/`Type.fromJvmSignature` | cobertura: switch/athrow opacos, `inspect --java` (R5 do audit), IR non-JVM |
+| `LEGACY_MIGRATION.md` + `DECOMPILER.md` + `TRANSLATOR.md` + `DIFFERENTIAL_TESTING.md` + `LEGACY_IR.md` | plataforma completa no CLI: `inspect/decompile/translate/compare/migrate` (`Main.java:25-29`), 73 testes kof-cli de migração (Decompile 55 + Translate 9 + Compare 6 + Migrate 3; medidos 13/09) + `Confidence`/`Type.fromJvmSignature` | cobertura: switch/athrow opacos, `inspect --java` (R5 do audit), IR non-JVM |
 | `IMPLEMENTATION_PLAN.md` / `ACTION_PLAN.md` | Fases A–H têm código+testes | tiers 6–12 = `future/` (R12) |
 | ~~`PLANNING-FUTURE-AUDIT.md` / `planning-future-reconcile.md`~~ → `docs/audits/` | comparação branch `planning-future`×beta **encerrada 13/09** — nada de código aberto próprio mora nelas: R2 vive em `decision-pending/APPLICATION_MODEL.md`+`PLATFORM-PLAN.md`; R5 no cluster migração (`DECOMPILER.md`/`LEGACY_IR.md` Fase C) | — (fora de `development/`) |
 | ~~`planning-finally-return.md`~~ → `docs/decisions/DD-01-finally-return.md` | FECHADO 13/09 (FinallyFrame IR + gates; bug 45 CORRIGIDO, suíte 1627/0) | — (fora de `development/`) |
