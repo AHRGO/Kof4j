@@ -60,6 +60,29 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
  ## PRÓXIMO PASSO (re-dispacho lê isto)
  
+
+> **✅ FEITO (13/09 ~15:20, lane development/decompiler — dono = 192.168.100.17):
+> Fase C DEGRAU 1 (join de if-then PURO sem else), commit `e17ac9e1`.** `struct()`
+> ganha `Set<Integer> stops`; borda SÓ para `pureIfThen` (join não-loop, preds
+> exatos {if,then}, then.succ==[join]) → `if (cond) { then }` SEM else + sequela
+> UMA vez. Destravou via **fallback de prólogo** (javac funde `int r=100;` no
+> bloco do teste → `blockCondition` recusa; testa cond nos últimos k insns +
+> prefixo p/ emitLinear, COM guarda de fluxo). Prova (TDD): `recoversIfThen-
+> JoinAndRunsIt` EXECUTA o .kf (oracle g(6)=107/g(1)=101, RED→GREEN); DriftCheck
+> árvore = baseline 4; A/B stash mesma árvore: stubs 1390→**1387** (−3; puro é
+> raro no corpus); suíte 4-módulos **1691/0/5-skip**; DecompileTest 60/60.
+> **Dois traps medidos (viraram teste `nestedIfWithoutElseStaysHonestStub`):**
+> (1) borda descendo no braço do ELSE suga a sequela p/ dentro do else em if-
+> ANINHADO = CÓDIGO ERRADO COMPILÁVEL — revertido, aninhado fica em stub honesto
+> (R6); (2) `emitLinear` retorna PARCIAL em branch → trunc silencioso → guarda.
+> **PRÓXIMO PASSO (decompiler/Fase C degrau 2): joins de aninhamento/else/loop
+> exigem PÓS-DOMINADOR real** (emissão única do join + sequela por FORA do if-
+> else) — borda ingênua corrompe (trap 1), NÃO é stop simples; re-estruturação
+> do walker + golden de execução por sub-caso ANTES de tocar; sessão inteira.
+> **NÃO:** `nat/` (GC viva); roundTo (regra 6); `$`-resolve global (8732eb96).
+> **§168 aberto+corrigido `45dc2284`** (célula jsondec-map deref `Map.get()` (T?,
+> §87) sem narrow → SEM049 exposto pelo handler #126; migrei o PROGRAMA, golden
+> intocado — não stub/relax; A/B medido: pai 5a116284 verde, 61495f69 vermelho).
 > **✅ FEITO (13/09 ~15:30, lane development — TRANSLATOR §172 + EDI001 degraus 6-9, dono = 192.168.100.22):** (a) **§172**: `<<=`/`>>=`/`>>>=` eram parseados mas baixados como atribuição SIMPLES (só o RHS gravado — `x=6; x<<=2` dava 2) nos 4 targets; fix = helper único `isCompoundOp`+`compoundBinaryOp(SHL/SHR/USHR)` nos 6 sítios + `emitCompoundRhsConv` (L2I na contagem — 2ª face `Long<<=Long` = VerifyError). Prova: `CoreRegressionE2ETest.compoundShiftAssignments` (JVM+JS, golden `24/3/2147483644/…`) + translator 33/33. Ver `known-bugs.md §172`. (b) **EDI001 degraus 6-9**: providers vim/emacs/geany/nano existiam sem teste de instalação (Q1) — `EditorIntegrationTest` agora prova o config gerado dos 4 (ftdetect+syntax+compiler vim, `kof-mode.el` emacs, `filetypes.kof` geany, `kof.nanorc` nano) — **21/21**. Plano `plan-editor-integration.md` sincronizado. Commit/push `beta-0.4.0`.
 > **PRÓXIMO PASSO (editor):** EDI001 só resta o **plugin IntelliJ** (subprojeto Gradle/Platform próprio, issue #1, §21 — escopo P2 a decidir) + degrau 13 (gate final suíte). `workspace/executeCommand` (degrau 0 opcional) fica adiado (exige split do `LspServer`, 501 linhas; VS Code já delega build/run à CLI em terminal). Sem decisão de escopo, o gate pode ser rodado quando a árvore estabilizar; re-disparo sem decisão → seguir o próximo órfão.
 > **Fix de contrato §6 (13/09, dono = 192.168.100.22):** `kof editor` sem subcomando imprimia usage (divergia do §6 = alias de `detect`); agora = detect, só `--help` mostra usage. Teste `bareEditorIsDetectAliasAndHelpShowsUsage`. `update` ganhou `updateResyncsInstalledIntegrations`. `EditorIntegrationTest` 23/23; `kof-cli` 179/0; suíte completa verde.
