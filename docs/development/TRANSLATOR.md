@@ -277,3 +277,13 @@ diferenciais.
 > `TranslateTest.varLocalTranslates` (roda `1/hi`),
 > `interfaceDefaultMethodKeepsBody`, `interfaceConstantIsHonestGap`.
 > `Translate.java` 396, `TranslateStatements` 404 ≤500; `TranslateTest` 30/30.
+>
+> **Estado (13/09 ~15:50, dono = 192.168.100.22): array-initializer em CAMPO
+> (bug latente Q4).** `int[] xs = {1,2,3}` como **campo** de classe (não
+> local) não passava pelo guard de gap honesto que o local já tinha → o
+> translator emitia `Int[] xs = {` **truncado** = Kof inválido silencioso
+> (viola R6; o pior tipo, output quebrado sem diagnóstico). Fix: `Translate.
+> parseMember` detecta `{` após `=` e lança o mesmo `TranslateException` R6 do
+> local. Prova: `arrayInitializerIsHonestGap` estendido (campo + local) —
+> `TranslateTest` 33/33; probe no binário `kof translate` → diagnóstico
+> explícito, sem truncamento. `Translate.java` 406 ≤500; `check_500` OK.

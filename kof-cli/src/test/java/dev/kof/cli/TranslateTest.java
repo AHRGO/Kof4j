@@ -736,6 +736,18 @@ class TranslateTest {
                         """));
         assertTrue(e.getMessage().contains("revisão manual"),
                 "array initializer `{...}` sem equivalente Kof → gap explícito (R6), foi: " + e.getMessage());
+
+        // Campo (não-local): mesmo gap — antes o output saía TRUNCADO
+        // (`Int[] xs = {`) = Kof inválido (bug latente achado 13/09, Q4).
+        TranslateException e2 = assertThrows(TranslateException.class, () ->
+                Translate.translateJava("""
+                        public class AF {
+                            int[] xs = {1, 2, 3};
+                            int first() { return xs[0]; }
+                        }
+                        """));
+        assertTrue(e2.getMessage().contains("revisão manual"),
+                "array initializer em CAMPO também é gap honesto (R6), foi: " + e2.getMessage());
     }
 
     @Test

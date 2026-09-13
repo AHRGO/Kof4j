@@ -348,6 +348,15 @@ public final class Translate {
                 String init = "";
                 if (p.at("=")) {
                     p.next();
+                    if (p.at("{")) {
+                        // Array initializer em CAMPO `int[] xs = {1,2,3}` — mesmo
+                        // gap honesto do local (TranslateStatements); sem o guard
+                        // o output saía TRUNCADO (`Int[] xs = {`) = Kof inválido
+                        // (bug latente achado 13/09 no probe Q4).
+                        throw new TranslateException(
+                                "array initializer `{...}` não tem equivalente direto em Kof "
+                                + "(use `new Int[n]` + atribuições ou `listOf(...)`) — revisão manual");
+                    }
                     init = " = " + parseExpr();
                 }
                 while (!p.at(";") && !p.at(T.EOF)) p.next();

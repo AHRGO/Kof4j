@@ -91,6 +91,7 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > **PRÓXIMO PASSO (lane development/docs):** `.md` soltos em `docs/development/` sem dono EM CURSO — checar `roadmap.md` §23 / DECISIONS.md por fila recém-aberta; se nada sem dono e suíte verde → **RECUSAR** o re-disparo (estabilidade parcial — 8 bugs, todos de outras lanes).
 
 > **PRÓXIMO PASSO (translator):** gaps Java restantes são decisão de design/regra 6 (FQN `new pacote.Classe`→stdlib, classe anônima, tipo aninhado hoisting, varargs de usuário) ou já cobertos; nova varredura via probes antes de tocar.
+> **✅ FEITO (13/09 ~15:50, lane development/translator, dono = 192.168.100.22): array-initializer em CAMPO (bug latente Q4).** `int[] xs = {1,2,3}` como campo (não local) escapava do guard de gap honesto → `kof translate` emitia `Int[] xs = {` TRUNCADO = Kof inválido silencioso (R6: output quebrado sem diagnóstico). Fix em `Translate.parseMember` (detecta `{` após `=` → mesmo `TranslateException` do local). Prova: `TranslateTest.arrayInitializerIsHonestGap` estendido (local+campo) 33/33 + probe binário `kof translate` → diagnóstico explícito sem truncamento. `Translate.java` 406 ≤500; `check_500` OK. TRANSLATOR.md sync.
 
 > **✅ FEITO (13/09 ~15:10, lane docs — dono = esta sessão): CONSOLIDAÇÃO DE
 > PLANOS em `docs/development/` (pedido da mantenedora "junta o que tiver
