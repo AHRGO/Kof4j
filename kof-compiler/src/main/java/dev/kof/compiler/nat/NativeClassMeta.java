@@ -1,5 +1,6 @@
 package dev.kof.compiler.nat;
 import dev.kof.compiler.IRMethod;
+import dev.kof.compiler.NativeRuntime;
 
 import dev.kof.compiler.IRClass;
 import dev.kof.compiler.Type;
@@ -87,7 +88,20 @@ final class NativeClassMeta {
         return findVirtualMethodIndex(nb, ownerTypeName, methodName, arityTypes(argCount));
     }
 
-    /** §131-residual (13/09): resolve o slot pelo NOME + TIPOS do call site.
+    /** vtable da classe: método vazio = .quad 0; senão a tabela gerada do
+     *  runtime (split ≤500 — movida do NativeBackend, dono = meta de classe). */
+    static void emitMethodTable(NativeBackend nb, StringBuilder sb, IRClass clazz) {
+        List<String> methods = collectVirtualMethods(nb, clazz);
+        if (methods.isEmpty()) {
+            sb.append(".balign 8\n");
+            sb.append(nb.sanitizeName(clazz.name()) + "_vtable:\n");
+            sb.append("    .quad 0\n");
+            return;
+        }
+        NativeRuntime.generateMethodTable(sb, nb.sanitizeName(clazz.name()), methods);
+    }
+
+/** §131-residual (13/09): resolve o slot pelo NOME + TIPOS do call site.
      *  Só a ARIDADE não bastava — `twice(Int)`/`twice(String)` (mesma aridade,
      *  tipos diferentes) resolviam ambas para o 1º slot: o Native chamava o
      *  método errado (SIGSEGV ao passar String p/ parâmetro Int). JVM/Script/JS

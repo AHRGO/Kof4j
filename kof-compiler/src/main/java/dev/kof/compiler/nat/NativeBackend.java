@@ -331,14 +331,7 @@ public class NativeBackend implements Backend {
 
 
     private void emitMethodTable(StringBuilder sb, IRClass clazz) {
-        List<String> methods = collectVirtualMethods(clazz);
-        if (methods.isEmpty()) {
-            sb.append(".balign 8\n");
-            sb.append(sanitizeName(clazz.name()) + "_vtable:\n");
-            sb.append("    .quad 0\n");
-            return;
-        }
-        NativeRuntime.generateMethodTable(sb, sanitizeName(clazz.name()), methods);
+        NativeClassMeta.emitMethodTable(this, sb, clazz);
     }
 
 

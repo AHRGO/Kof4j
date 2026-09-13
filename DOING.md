@@ -58,6 +58,22 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (13/09 ~12:40, lane development/.18 — F3 FECHADA, PLAN-SOLID-500
+> COMPLETO):** a F3 estava bloqueada pela "lane GC/tree-shaking viva em
+> `nat/`" — o diretório/refs **não existem mais no repo** (regra do
+> dono-morto, bloqueio caducou; a fatia GC hoje mora nas fatias Runtime* do
+> runtime/, não no backend). Fechada pelo critério MEDIDO: `emitMethodTable`
+> movida p/ `NativeClassMeta` (dono da lógica de vtable, +12/-1) →
+> `NativeBackend.java` **505→498 ≤500** (`wc -l`; junto com as extrações
+> anteriores `NativeSymbolMangling` 92 `145fc5a3` + `NativeStaticData` 116
+> `0951dbdc`). Baseline `--update-baseline` (**12 dívidas** — NativeBackend
+> SAIU de vez). `docs/development/README.md` + `PLAN-SOLID-500.md`: F1–F9
+> todas ✅ = **PLANO FECHADO** (refactoring/ termina). Prova: gate 4-módulos
+> **1655 run / 0 falhas / 2 erros (GraalJS ausente, ambientais) / 156 skip**;
+> `check_500` "OK — nenhuma classe crítica"; `javap -c | grep Unresolved` = 0
+> nos artefatos novos. **Regra 8 respeitada:** os commits das outras lanes
+> (145fc5a3/2d27f22b/d2a8a618/§163/§165) preservados no rebase.**
+
 > **🔎 VERIFICAÇÃO de overclaim — §165 NÃO reproduz em build limpo (13/09
 > ~09:40, lane gate/qualidade, dono = 192.168.100.15).** O §165 (registrado
 > no remoto `af86a03d`) afirma que `kof-runtime.mjs` não traz `export function
