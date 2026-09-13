@@ -81,8 +81,7 @@ public class NativeBackend implements Backend {
     int inlineSeq = 0;   // labels inline (split etc.) — únicas por call site
 
     /** Campos estáticos: chave "owner|name" → label no .data (bug 41). */
-    final java.util.LinkedHashMap<String, String> staticFieldSymbols = new java.util.LinkedHashMap<>();
-    final java.util.LinkedHashMap<String, Object> staticFieldValues = new java.util.LinkedHashMap<>();
+    final NativeStaticData staticData = new NativeStaticData(this);
     Type lastPushedType = Type.UnknownType.UNKNOWN;
     IRClass currentClass = null;
     boolean usesDb = false;
@@ -122,13 +121,23 @@ public class NativeBackend implements Backend {
     }
 
     String sanitizeName(String name) {
-        return name.replace("/", "_").replace(".", "_").replace("-", "_")
-                .replace("<", "").replace(">", "");
+        return NativeSymbolMangling.sanitizeNameStatic(name);
     }
 
     // SG-011B/§131: mangling de símbolo extraído p/ NativeSymbolMangling
     // (split ≤500, 13/09) — a responsabilidade é só nomear, sem estado.
 
+
+    /** Registra um campo estático e devolve o símbolo .data (bug 41). */
+    String staticSymbol(String ownerKey, String fieldName) {
+        return staticData.symbol(ownerKey, fieldName);
+    }
+    String staticSymbol(String ownerKey, String fieldName, Object initialValue) {
+        return staticData.symbol(ownerKey, fieldName, initialValue);
+    }
+    String staticKey(Type ownerType) { return staticData.key(ownerType); }
+    void collectStaticFields() { staticData.collect(); }
+    void emitStaticData(StringBuilder sb) { staticData.emit(sb); }
 
 
     String internString(String value) {
@@ -143,90 +152,6 @@ public class NativeBackend implements Backend {
     ClassLayout getLayout(IRClass clazz) {
         return layoutCache.computeIfAbsent(clazz.name(), k ->
             ClassLayout.buildWithSuper(clazz, name -> allClassesMap.get(name)));
-    }
-
-    /** Registra um campo estático e devolve o símbolo .data (bug 41). */
-    String staticSymbol(String ownerKey, String fieldName) {
-        return staticSymbol(ownerKey, fieldName, null);
-    }
-
-    String staticSymbol(String ownerKey, String fieldName, Object initialValue) {
-        String key = ownerKey + "|" + fieldName;
-        String label = staticFieldSymbols.get(key);
-        if (label == null) {
-            label = "kof_static_" + sanitizeName(ownerKey) + "_" + sanitizeName(fieldName);
-            staticFieldSymbols.put(key, label);
-        }
-        if (initialValue != null && !staticFieldValues.containsKey(key)) {
-            staticFieldValues.put(key, initialValue);
-        }
-        return label;
-    }
-
-    /** Chave normalizada do dono (internal name) para o símbolo estático. */
-    String staticKey(Type ownerType) {
-        if (ownerType instanceof Type.ClassType ct) return ct.internalName();
-        return ownerType.toString();
-    }
-
-    /** Coleta os campos estáticos de todas as classes E operações (bug 41). */
-    void collectStaticFields() {
-        for (IRClass clazz : allClassesMap.values()) {
-            for (IRField field : clazz.fields()) {
-                if ((field.accessFlags() & dev.kof.compiler.AccessFlags.STATIC) != 0) {
-                    staticSymbol(clazz.name(), field.name(), field.initialValue());
-                }
-            }
-            for (IRMethod method : clazz.methods()) {
-                for (IRBasicBlock block : method.basicBlocks()) {
-                    for (KofOperation op : block.operations()) {
-                        if (op instanceof KofGetStatic gs) staticSymbol(staticKey(gs.ownerType()), gs.name());
-                        else if (op instanceof KofPutStatic ps) staticSymbol(staticKey(ps.ownerType()), ps.name());
-                    }
-                }
-            }
-        }
-    }
-
-    /** Emite os slots dos campos estáticos no .data (um .quad por campo). */
-    void emitStaticData(StringBuilder sb) {
-        for (java.util.Map.Entry<String, String> e : staticFieldSymbols.entrySet()) {
-            Object v = staticFieldValues.get(e.getKey());
-            if (v instanceof String s) {
-                // strings estáticas são OBJETOS Kof (header+length+chars), não
-                // `.asciz` — o kof_print_string lê length@16 e chars@24.
-                String objLabel = e.getValue() + "_obj";
-                emitStaticStringObject(sb, objLabel, s);
-                sb.append(e.getValue()).append(": .quad ").append(objLabel).append("\n");
-            } else {
-                sb.append(e.getValue()).append(": .quad ").append(staticInitialText(v)).append("\n");
-            }
-        }
-    }
-
-    private void emitStaticStringObject(StringBuilder sb, String label, String s) {
-        String bytes = s.getBytes(java.nio.charset.StandardCharsets.UTF_8).length + "";
-        String escaped = s.replace("\\", "\\\\").replace("\"", "\\\"")
-                .replace("\n", "\\n").replace("\t", "\\t");
-        sb.append(label).append(":\n");
-        sb.append("    .long 1\n");
-        sb.append("    .long 0\n");
-        sb.append("    .quad 0\n");
-        sb.append("    .long ").append(bytes).append("\n");
-        sb.append("    .long 0\n");
-        sb.append("    .ascii \"").append(escaped).append("\"\n");
-        sb.append("    .byte 0\n");
-        sb.append("    .balign 8\n");
-    }
-
-    private String staticInitialText(Object v) {
-        if (v == null) return "0";
-        if (v instanceof Boolean b) return b ? "1" : "0";
-        if (v instanceof Integer i) return Integer.toString(i);
-        if (v instanceof Long l) return Long.toString(l);
-        if (v instanceof Double d) return "0x" + Long.toHexString(Double.doubleToLongBits(d));
-        if (v instanceof Float f) return "0x" + Long.toHexString(Double.doubleToLongBits(f.doubleValue()));
-        return "0";
     }
 
     ClassLayout getLayoutForType(Type type) {

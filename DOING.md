@@ -313,6 +313,19 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > Prova: `methodOverloadByArity` JVM+JS 6/7 + nativo x86 `6|7` + gate
 > 4-módulos BUILD SUCCESS 1642/0 reais (2 erros GraalJS ambientais).
 > **FILA RATIFICADA: §106 ✅ §89 ✅ §117 ✅ §131 ✅ §81 ✅ — COMPLETA.**
+> **⚡ FEITO (13/09 ~12:10, check_500 verde no origin — NATIVEBACKEND 505 ≤500 REAL):**
+> durante o re-dispacho o rebase revelou que a lane do dono-morto já tinha
+> dividido o mangle (`145fc5a3` → `NativeSymbolMangling`, 579). REGRA 8:
+> o lado do outro agente foi PRESERVADO (NativeSymbolMangling é a versão
+> viva; meu `NativeSymbolMangle` duplicado foi removido). Minha adição
+> NÃO-conflitante: `NativeStaticData` (116 linhas — .data de campos
+> estáticos bug 41: symbol/collect/emit/emitStringObject), NativeBackend
+> **579→505** (delegações cru = call-sites dos emitters byte-idênticos,
+> zero churn). Baseline `--update-baseline` (13 dívidas — NativeBackend
+> SAIU). Prova: gate 4-módulos **1654/0/0** (suíte 100% verde, nem
+> ambientais) + `javap -c | grep Unresolved` = 0 nos artefatos novos.
+> (Lição: ecj EMBUTE erro de compilação no .class e `mvn compile` aceita —
+> `rm -rf target/classes` + grep Unresolved no artefato fazem parte do gate.)
 > **⚡ FEITO (13/09 ~11:00, §81 implementado — decisão 5b):** Long = BigInt
 > no JS (paridade 64-bit real): literal `...n` (`literalExpr` +
 > `literalText` p/ field); `binaryExpr` roteia `isLongType` →
