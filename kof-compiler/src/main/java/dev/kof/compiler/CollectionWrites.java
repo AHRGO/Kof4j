@@ -62,18 +62,31 @@ public final class CollectionWrites {
      * miss silencioso (false/null) — exatamente o que o JVM faz com
      * tipos incompatíveis no HashMap/HashSet/ArrayList reais.
      */
-    public static int stringTag(Type elemType, java.util.List<Type> argTypes, int argIdx) {
+    public static int stringTag(CompilationUnitNode unit, Type elemType,
+                                java.util.List<Type> argTypes, int argIdx) {
         Type at = argIdx < argTypes.size() ? argTypes.get(argIdx) : null;
         if (at instanceof Type.NullableType nt) at = nt.inner();
         Type et = elemType instanceof Type.NullableType ent ? ent.inner() : elemType;
         boolean etKnown = et != null && !(et instanceof Type.UnknownType);
         boolean atKnown = at != null && !(at instanceof Type.UnknownType);
         if (etKnown && atKnown) {
-            return BuiltinTypes.isString(et) && BuiltinTypes.isString(at) ? 1 : 0;
+            return isStringLike(et, unit) && isStringLike(at, unit) ? 1 : 0;
         }
-        if (etKnown) return BuiltinTypes.isString(et) ? 1 : 0;
-        if (atKnown) return BuiltinTypes.isString(at) ? 1 : 0;
+        if (etKnown) return isStringLike(et, unit) ? 1 : 0;
+        if (atKnown) return isStringLike(at, unit) ? 1 : 0;
         return 1;
+    }
+
+    /**
+     * §150: uma constante de enum é lowering p/ String literal (representação
+     * de runtime), então comparação por CONTEÚDO vale — mesmo princípio do
+     * `==` de enum (CompilerComparisons:27). Sem isto, `listOf(Color.Red).
+     * contains(Color.Green)` no Native usava raw cmpq sobre dois ponteiros
+     * String distintos → false, enquanto JVM/Script/JS davam true.
+     * Só enum entra: record/objeto NÃO é String em runtime (deref → SIGSEGV).
+     */
+    private static boolean isStringLike(Type t, CompilationUnitNode unit) {
+        return BuiltinTypes.isString(t) || CompilerTypes.isEnumType(t, unit);
     }
 
     public static String typeNameFor(Type t) {

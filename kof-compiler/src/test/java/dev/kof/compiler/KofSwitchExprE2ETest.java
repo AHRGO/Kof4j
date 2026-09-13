@@ -398,6 +398,92 @@ class KofSwitchExprE2ETest {
                 """, "vermelho");
     }
 
+    // §149: switch-expr EXAUSTIVO sobre enum (sem default) com corpo PRIMITIVO.
+    // O fallback sintético usava o tipo do SUBJECT (enum = referência) como tipo
+    // do resultado, então `branchTypesDiffer` boxeava os braços primitivos →
+    // VerifyError no JVM (Integer vs int) e crash COMP002 em Double/Long. O
+    // fallback agora usa o tipo do RESULTADO (inferExprType do switch).
+
+    @Test
+    void enumExhaustiveIntBodyJvm(@TempDir Path tmp) throws Exception {
+        runJvm(tmp, """
+                enum Color { Red, Green, Blue }
+                main() {
+                    var c = Color.Blue
+                    var r = switch (c) {
+                        case Color.Red -> 1
+                        case Color.Green -> 2
+                        case Color.Blue -> 3
+                    }
+                    println(r)
+                }
+                """, "3");
+    }
+
+    @Test
+    void enumExhaustiveDoubleBodyJvm(@TempDir Path tmp) throws Exception {
+        runJvm(tmp, """
+                enum Color { Red, Green, Blue }
+                main() {
+                    var c = Color.Blue
+                    var r = switch (c) {
+                        case Color.Red -> 1.5
+                        case Color.Green -> 2.5
+                        case Color.Blue -> 3.5
+                    }
+                    println(r)
+                }
+                """, "3.5");
+    }
+
+    @Test
+    void enumExhaustiveLongBodyJvm(@TempDir Path tmp) throws Exception {
+        runJvm(tmp, """
+                enum Color { Red, Green, Blue }
+                main() {
+                    var c = Color.Blue
+                    var r = switch (c) {
+                        case Color.Red -> 1L
+                        case Color.Green -> 2L
+                        case Color.Blue -> 3L
+                    }
+                    println(r)
+                }
+                """, "3");
+    }
+
+    @Test
+    void enumExhaustiveBoolBodyJvm(@TempDir Path tmp) throws Exception {
+        runJvm(tmp, """
+                enum Color { Red, Green, Blue }
+                main() {
+                    var c = Color.Green
+                    var r = switch (c) {
+                        case Color.Red -> true
+                        case Color.Green -> false
+                        case Color.Blue -> true
+                    }
+                    println(r)
+                }
+                """, "false");
+    }
+
+    @Test
+    void enumExhaustiveIntBodyNative(@TempDir Path tmp) throws Exception {
+        runNative(tmp, """
+                enum Color { Red, Green, Blue }
+                main() {
+                    var c = Color.Green
+                    var r = switch (c) {
+                        case Color.Red -> 1
+                        case Color.Green -> 2
+                        case Color.Blue -> 3
+                    }
+                    println(r)
+                }
+                """, "2");
+    }
+
     @Test
     void enumExhaustiveNative(@TempDir Path tmp) throws Exception {
         runNative(tmp, """

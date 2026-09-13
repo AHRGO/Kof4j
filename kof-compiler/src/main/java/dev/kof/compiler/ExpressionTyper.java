@@ -307,8 +307,10 @@ public final class ExpressionTyper {
         if (e instanceof IfExpr ie && ie.elseExpr() != null)
             return branchTypesDiffer(ifBranchTypes(driver, ie, locals));
         if (e instanceof SwitchExpr se)
+            // §149: fallback sintético (sem default) tem o tipo do RESULTADO, não
+            // o do subject — alinhado ao lowering (SwitchExprLowerer.emitSwitchExpr).
             return branchTypesDiffer(switchBranchTypes(driver, se.cases(),
-                    se.defaultValue(), inferExprType(driver, se.expression(), locals), locals));
+                    se.defaultValue(), inferExprType(driver, se, locals), locals));
         return false;
     }
 

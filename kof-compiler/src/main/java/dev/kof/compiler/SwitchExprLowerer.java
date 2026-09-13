@@ -12,16 +12,24 @@ public final class SwitchExprLowerer {
     static int emitSwitchExpr(CompilerDriver driver, SwitchExpr se, List<KofOperation> ops, String owner,
                                int localIdx, List<IRLocalVariable> locals) {
         Type switchType = ExpressionTyper.inferExprType(driver, se.expression(), locals);
+        Type resultType = ExpressionTyper.inferExprType(driver, se, locals);
+        // §149: switch exaustivo sobre enum NÃO tem default explícito; o fallback
+        // sintético precisa ter o tipo do RESULTADO (corpo dos casos), não o tipo
+        // do subject. Sem isso, `switch(c){case Color.Red -> 1 ...}` fazia o merge
+        // int-vs-referência do enum → VerifyError (Integer vs int) no JVM.
+        boolean differ = ExpressionTyper.branchTypesDiffer(ExpressionTyper.switchBranchTypes(
+                driver, se.cases(), se.defaultValue(), resultType, locals));
+        Type fallbackType = differ ? new Type.ClassType("java.lang", "Object", List.of()) : resultType;
         int switchTmp = localIdx++;
         localIdx = ExpressionLowerer.emitExpression(driver, se.expression(), ops, owner, localIdx, locals);
         ops.add(new KofStoreLocal(switchType, switchTmp));
         locals.add(new IRLocalVariable(switchTmp, "#switchExpr", switchType));
-        return emitSwitchChain(driver, se.cases(), 0, se.defaultValue(), switchType, switchTmp,
+        return emitSwitchChain(driver, se.cases(), 0, se.defaultValue(), switchType, fallbackType, switchTmp,
                 ops, owner, localIdx, locals);
     }
 
     static int emitSwitchChain(CompilerDriver driver, List<SwitchExprCase> cases, int i, ExpressionNode defaultValue,
-                                Type switchType, int switchTmp, List<KofOperation> ops, String owner,
+                                Type switchType, Type fallbackType, int switchTmp, List<KofOperation> ops, String owner,
                                 int localIdx, List<IRLocalVariable> locals) {
         if (i >= cases.size()) {
             if (defaultValue != null) {
@@ -29,13 +37,13 @@ public final class SwitchExprLowerer {
                 // #57/§70: corpos com tipos distintos → boxa ramo primitivo
                 // in-branch (join só de referências); callers pulam pós-box.
                 if (ExpressionTyper.branchTypesDiffer(ExpressionTyper.switchBranchTypes(
-                        driver, cases, defaultValue, switchType, locals))) {
+                        driver, cases, defaultValue, fallbackType, locals))) {
                     ExpressionTyper.boxPrimitiveBranch(driver, ops,
                             ExpressionTyper.inferExprType(driver, defaultValue, locals));
                 }
                 return localIdx;
             }
-            ops.add(CompilerTypes.defaultValueOp(switchType));
+            ops.add(CompilerTypes.defaultValueOp(fallbackType));
             return localIdx;
         }
         SwitchExprCase sc = cases.get(i);
@@ -90,13 +98,13 @@ public final class SwitchExprLowerer {
         localIdx = ExpressionLowerer.emitExpression(driver, sc.body(), ops, owner, localIdx, locals);
         // #57/§70: corpos com tipos distintos → boxa corpo primitivo in-branch.
         if (ExpressionTyper.branchTypesDiffer(ExpressionTyper.switchBranchTypes(
-                driver, cases, defaultValue, switchType, locals))) {
+                driver, cases, defaultValue, fallbackType, locals))) {
             ExpressionTyper.boxPrimitiveBranch(driver, ops,
                     ExpressionTyper.inferExprType(driver, sc.body(), locals));
         }
         ops.add(new KofJump(endLabel));
         ops.add(new KofLabel(elseLabel));
-        localIdx = emitSwitchChain(driver, cases, i + 1, defaultValue, switchType, switchTmp,
+        localIdx = emitSwitchChain(driver, cases, i + 1, defaultValue, switchType, fallbackType, switchTmp,
                 ops, owner, localIdx, locals);
         ops.add(new KofLabel(endLabel));
         return localIdx;

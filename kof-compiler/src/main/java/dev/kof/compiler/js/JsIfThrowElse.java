@@ -39,7 +39,17 @@ public final class JsIfThrowElse {
         while (pos[0] < ctx.ops.size()) {
             KofOperation op = ctx.ops.get(pos[0]);
             if (op instanceof KofLabel kl) {
-                if (!ctx.isLoopLabel(kl.label())) pos[0]++;
+                if (ctx.isLoopLabel(kl.label())) return out;
+                // §147 + assert: um label de INÍCIO de loop (lookahead) NÃO é o
+                // end do else. No if-throw sem else (assert), o corpo seguinte
+                // pertence ao else (o then sempre lança) — parar no label do
+                // `while` seguinte deixava o `var` do loop fora do escopo
+                // (ReferenceError). Parseia o loop DENTRO do else e continua.
+                if (JsLabelParser.isLoopStart(ctx, pos, kl.label())) {
+                    out.add(flow.parseLoop(ctx, pos, kl.label()));
+                    continue;
+                }
+                pos[0]++;
                 return out;
             }
             if (op instanceof KofJump) {

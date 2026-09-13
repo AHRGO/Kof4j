@@ -158,7 +158,7 @@ JsIr.JsStatement parseIfBody(MethodCtx ctx, int[] pos, KofConditionalJump cj,
             // Label(end) — no else branch. A loop label (continue/start) is
             // not the if's end; it belongs to the enclosing loop.
             KofLabel end = (KofLabel) ctx.ops.get(pos[0]);
-            if (!ctx.isLoopLabel(end.label())) {
+            if (!ctx.isLoopLabel(end.label()) && !JsLabelParser.isLoopStart(ctx, pos, end.label())) {
                 pos[0]++;
             }
             return new JsIr.JsIf(condition, thenBranch, List.of());
@@ -173,7 +173,8 @@ JsIr.JsStatement parseIfBody(MethodCtx ctx, int[] pos, KofConditionalJump cj,
             elseBranch = parseStatements(ctx, pos, Set.of(), new ArrayList<>());
         }
         if (pos[0] < ctx.ops.size() && ctx.ops.get(pos[0]) instanceof KofLabel kl3
-                && !ctx.isLoopLabel(kl3.label())) {
+                && !ctx.isLoopLabel(kl3.label())
+                && !JsLabelParser.isLoopStart(ctx, pos, kl3.label())) {
             // Label(end) — end of else branch (loop labels belong to the loop)
             pos[0]++;
         }

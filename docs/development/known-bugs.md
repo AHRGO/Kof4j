@@ -4597,7 +4597,7 @@ statement-switch na mesma taxa). Reprodução no próprio teste (kof-cli).
   **1412/0-fail** (13 err = `node` ausente, ambientais), script 31, kof-c 5,
   cli 136; ratchet ≤500 OK (SemExpressionTyper voltou a 573 < baseline 577).
 
-### 149. JS: regressão do fix `isEmpty` (`718ae5cf`) — código gerado referencia variável não declarada (`ReferenceError: i is not defined` / `k is not defined`) + matriz de conformidade dessincronizada — ⏳ ABERTO (lane bugfix-101, DONO: quem abriu §145-147)
+### 149. JS: regressão do fix `isEmpty` (`718ae5cf`) — código gerado referencia variável não declarada (`ReferenceError: i is not defined` / `k is not defined`) + matriz de conformidade dessincronizada — ✅ CORRIGIDO 12/09 (gate de paridade; a raiz é o `JsIfThrowElse` do §147, não o `isEmpty`)
 
 - **Repro (medido 12/09 21:30, HEAD `7a85dd93`):** `mvn -o test -pl kof-compiler -am -Dtest='KofRandomTest,ConformanceMatrixDocTest'` →
   - `KofRandomTest.randomStringJs`: `JS exit code, output:  err: ReferenceError: i is not defined` (exit 1)
@@ -4605,7 +4605,31 @@ statement-switch na mesma taxa). Reprodução no próprio teste (kof-cli).
   - `ConformanceMatrixDocTest.matrixDocMatchesTestExclusions`: "casos na matriz ≠ casos no teste" (a matriz passou a esperar casos que o teste não tem — a célula nova de `isEmpty` não foi casada com a lista de exclusões/casos)
 - **Causa raiz (a lane dona confirma):** o commit `718ae5cf` ("feat: add 'isEmpty' method support for strings and fix related issues") mexeu em `JsCallEmitter`/`JsControlFlowParser`/`JsIfThrowElse` + `CollectionMethodTyper`/`KofInterpreterCollections` — a face JS quebrou a declaração de variável de loop/compreensão no codegen JS (sintoma `i`/`k` indefinidos) e a matriz de conformidade (`docs/CONFORMANCE_MATRIX.md` ↔ `ConformanceMatrixDocTest`) não foi atualizada no MESMO commit.
 - **Prova de que NÃO é regressão do split-7 (§140):** mesmo conjunto de testes no HEAD limpo (stash do split aplicado) falha IGUAL (3/3) — `ExpressionMethodCallLowerer` não toca JS nem random.
-- **Não consertei por cima** (regra 3 das condições de parada + DOING: §145-147 são da lane bugfix-101, EM CURSO). Dono fecha aqui com a célula de matriz + codegen JS.
+
+#### ✅ Correção medida (13/09, lane gate/paridade — FECHA o §149; supersede a previsão de locus abaixo)
+
+A análise da lane dev (12/09 ~22:40, logo abaixo) diagnosticou a causa
+corretamente mas **previu errado o locus do fix**: disse que o fix "NÃO pode
+morar em `JsIfThrowElse`" e propôs mudança de IR (regra 6). Medido no fonte:
+o IR **não é ambíguo para este caso** — o predicado que decide "label é fim
+do else?" é que estava fraco. `ctx.isLoopLabel` só enxerga loops JÁ ABERTOS;
+o `while` seguinte a um `assert`/if-throw ainda não está na pilha. O
+`JsLabelParser.isLoopStart` (lookahead: algum jump/cond-jump posterior salta
+para o label) é o predicado correto e **já era usado** no `parseStatements`.
+
+- **Fix (sem mudança de contrato/IR):** `JsIfThrowElse.parseElse` — se o
+  label for INÍCIO de loop (lookahead), parseia o loop DENTRO do else e
+  continua (`flow.parseLoop`), em vez de tratá-lo como fim do else;
+  `JsControlFlowParser.parseIfBody` ganha a mesma guarda nas 2 checagens de
+  `Label(end)`/`Label(else-end)`. O corpo pós-if-throw fica aninhado no else
+  — semanticamente equivalente, porque o then sempre lança (só o caminho
+  `false` chega ao epílogo).
+- **Prova:** `KofRandomTest.randomStringJs`/`randomShapeJs` **verdes** (antes
+  `ReferenceError`); `KofJsE2ETest` 40/40; `ConformanceMatrixTest` 11/11 +
+  `ConformanceMatrixDocTest` 1/1; gate 4-módulos **1610/0 falhas** (13 erros
+  = só `node` ausente). A previsão de que a célula `assertepilogue` seria
+  necessária foi cumprida de forma equivalente pelos testes do `KofRandomTest`
+  (assert + `while` + epílogo) — ver bloco de prova do commit.
 
 #### Atualização da lane development (12/09 ~22:40) — metade MATRIZ ✅ FECHADA; metade JS com causa raiz CORRIGIDA e locus do fix provado
 
@@ -4660,3 +4684,94 @@ statement-switch na mesma taxa). Reprodução no próprio teste (kof-cli).
   mesmos abriram continua vermelho: unidade não terminada. Registrado na
   mesa + no dispatcher.
 
+### 150. Codegen (4 targets): switch-expr EXAUSTIVO sobre enum com corpo PRIMITIVO → o fallback sintético usava o tipo do SUBJECT (referência) → boxing dos braços → **VerifyError no JVM** (`Integer` vs `int`) e **COMP002 (frame crash) em Double/Long** — ✅ CORRIGIDO 12/09 (achado no sweep de paridade 4-target do §148)
+
+- **Menor repro:**
+  ```kof
+  enum Color { Red, Green, Blue }
+  main() {
+      var c = Color.Blue
+      var r = switch (c) {
+          case Color.Red -> 1
+          case Color.Green -> 2
+          case Color.Blue -> 3
+      }
+      println(r)
+  }
+  ```
+  JVM: `VerifyError: Bad type on operand stack @66 istore_3` (`Integer` no
+  slot de `int`). Variante Double/Long: `Internal compiler error: frame crash
+  ... ASM COMPUTE_FRAMES AIOOBE` (COMP002). Native/Script/JS imprimiam `3`.
+  Com `default` explícito sempre funcionou (`default -> 99`); só o switch
+  **exaustivo de enum sem default** quebrava.
+- **Causa raiz:** `SwitchExprLowerer.emitSwitchExpr` passava o tipo do SUBJECT
+  (`switchType` = enum, referência) como `switchFallbackType` do
+  `emitSwitchChain`. Num switch exaustivo não há default, então o valor
+  sintético (`defaultValueOp(switchType)` = `null`) entra no merge; como o
+  subject (referência) difere dos corpos (primitivo), `branchTypesDiffer`
+  ligava e cada braço primitivo era BOXADO in-branch. Resultado: braços
+  `Integer`/`Long`/`Double`/`Boolean` + fallback `null` no mesmo ponto de
+  merge, mas o store do `var r` era primitivo (`istore`/`lstore`/`dstore`).
+  `ExpressionTyper.boxesOwnBranches` tinha o MESMO defeito (passava o tipo do
+  subject), então concordava com o lowering errado.
+- **Fix:** o fallback sintético passa a usar o tipo do **RESULTADO**
+  (`inferExprType(driver, se, locals)`, que já é o tipo dos corpos/do `var r`),
+  não o do subject. `SwitchExprLowerer.emitSwitchExpr` calcula `resultType` e
+  `fallbackType` (`Object` se os corpos divergirem — preserva o §68
+  heterogêneo) e `emitSwitchChain` recebe `fallbackType`; `boxesOwnBranches`
+  usa o mesmo `inferExprType(se)`. Sem mudança de contrato: só o tipo do valor
+  SINTÉTICO (que nunca é observado num switch exaustivo).
+- **Prova:** `KofSwitchExprE2ETest.enumExhaustiveIntBodyJvm` /
+  `enumExhaustiveDoubleBodyJvm` / `enumExhaustiveLongBodyJvm` /
+  `enumExhaustiveBoolBodyJvm` / `enumExhaustiveIntBodyNative` (novos; JVM
+  vermelho com VerifyError/COMP002 antes). Paridade medida 4-target
+  `3|3|3|3`, `3.5|3.5|3.5|3.5`, `true|true|true|true`. Sem regressão nos
+  testes de switch/pattern (§68 heterogêneo e SYN001 continuam como estavam).
+- **Fora de escopo (segue aberto):** corpo de case em BLOCO
+  (`case X -> { ... }`) é sintaxe inválida (o corpus diz "não há escopo de
+  bloco"), mas o parser a aceita e o resultado vira lixo/`Lambda0@...` em vez
+  de diagnóstico — violação R6 registrada para triagem (não é a mesma raiz).
+
+### 151. Native: membership de coleção com constante de enum usa comparação por PONTEIRO → `contains` devolve `false` (JVM/Script/JS: `true`) — ✅ CORRIGIDO 12/09 (achado no sweep de paridade 4-target)
+
+- **Menor repro:**
+  ```kof
+  enum Color { Red, Green, Blue }
+  main() {
+      var l = listOf(Color.Red, Color.Green)
+      println(l.contains(Color.Green))   // Native: false; JVM/Script/JS: true
+      var s = setOf(Color.Red, Color.Blue)
+      println(s.contains(Color.Blue))    // Native: false
+  }
+  ```
+- **Causa raiz:** a constante de enum é lowering para **String literal**
+  (`ExpressionLowerer` case `FieldAccessExpr` → `KofLoadLiteral(STRING, nome)`),
+  então a membership tem de comparar por CONTEÚDO. O tag do Native
+  (`CollectionWrites.stringTag`) só reconhecia `String`; enum caía em `0` →
+  `kof_list_contains`/`kof_set_contains` faziam `cmpq` de ponteiro entre duas
+  Strings distintas → `false`. O `==` de enum já era por conteúdo
+  (`CompilerComparisons:27`), por isso `l.get(0) == Color.Red` dava `true` e o
+  `contains` não — divergência intra-Native.
+- **Fix:** `CollectionWrites.isStringLike` trata enum como String-backed
+  (`BuiltinTypes.isString(t) || CompilerTypes.isEnumType(t, unit)`) e
+  `stringTag` recebe a `CompilationUnitNode`. Record/objeto NÃO entra (não é
+  String em runtime; deref seria SIGSEGV) — §104b-ii segue aberto.
+- **Prova:** `KofMapSetTest.listContainsEnumNative` / `listContainsEnumJvm` /
+  `listContainsEnumJs` (novos) + paridade medida 4-target `true|false|true`.
+  O caso record (`listOf(P(1),P(2)).contains(P(2))`) continua `false` no Native
+  — é o §104b-ii (lane `nat/`), NÃO regride.
+
+### 152. Build: `NativeRiscvAsmRtB40.java` fechava o text-block com `""");` (parêntese extra) → `';' expected`; **o `origin/beta-0.4.0` NÃO COMPILAVA** — ✅ CORRIGIDO 13/09 no remoto (`4459ff57`/`d2acf867`; achado no gate pós-rebase desta sessão)
+
+- **Menor repro:** `mvn -o -pl kof-compiler -am compile` em `440730c8`
+  (e no merge `0104f6d6`) →
+  `NativeRiscvAsmRtB40.java:[102,12] ';' expected`.
+- **Causa raiz:** a fatia `RISCV_RUNTIME_ASM_B_40` (port riscv64 do
+  `kof_double_mod`, §146) é um campo `static final String = """…"""`; o
+  fechamento foi escrito `""");` (parêntese de chamada, copiado do padrão
+  `sb.append("""…""")` dos vizinhos) em vez de `""";`. Introduzido em
+  `440730c8` (lane bugfix-101) — passou batido porque o gate de lá rodou só os
+  testes de runtime do riscv, não o `compile` limpo do módulo.
+- **Fix:** `""");` → `""";` (1 char) — já no remoto; os demais `""");` do
+  pacote `nat/` são `sb.append("""…""")` legítimos (6 ocorrências, todas com
+  abertura em chamada).
