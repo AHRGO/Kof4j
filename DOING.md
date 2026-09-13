@@ -42,15 +42,13 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
-> **⚡ EM CURSO (13/09, lane development/docs — bump 0.4.0-beta, dono = esta sessão,
-> pedido da mantenedora):** `VERSION` 0.3.22→0.4.0-beta via
-> `scripts/bump-version.sh` (pom `revision` + version.properties 0.4.0/0.4.0/0.4.0
-> sincronizados; compile `kof-compiler` OK). Headers `**Versão/Version:**`
-> 0.3.22→0.4.0 em ~80 arquivos docs/training/learn (headers + `Updated:` +
-> `verificado no compilador` + versioning/install vivos). Preservado como
-> histórico: CHANGELOG, deltas 0.1.0→0.3.22 (parity), Issue #101, títulos
-> `(0.3.22-beta)` de feature em training (marcam QUANDO a feature entrou),
-> exemplos de path `ex.:`. **PRÓXIMO PASSO:** commit + push.
+> **⚡ FEITO (13/09, lane development/docs — bump 0.4.0-beta + push,
+> dono = esta sessão, pedido da mantenedora):** outro agente pushou o bump
+> primeiro (`e8a8aeea`: VERSION+pom+properties+71 docs); meus commits da fila
+> (`86fe575e`/`1fe7d3f4`/`8d72b690` + `b0fba3ef` DOING) completam a cobertura.
+> Reverti edição local em `scripts/check_500.sh` (outro agente mexeu depois —
+> sem colisão). Working tree limpo, em cima do remoto.
+> **PRÓXIMO PASSO:** re-auditar `docs/development/` no próximo tick.
 > **NUNCA:** fila §106/§89/§117 (outro agente); `nat/` lane GC viva; push main.
 
 > **⚡ EM CURSO (13/09, lane development/docs — auditoria development/ + roadmap,
