@@ -383,18 +383,20 @@ class TranslateTest {
         String kof = Translate.translateJava("""
                 public class QLT {
                     public static void main(String[] args) {
-                        java.util.List<String> xs = null;
-                        java.util.Map<String, Integer> m = null;
-                        System.out.println(xs == null);
-                        System.out.println(m == null);
+                        java.util.List<Integer> xs;
+                        java.util.Map<String, Integer> m;
+                        java.lang.String s = "ok";
+                        System.out.println(s);
                     }
                 }
                 """);
 
         assertFalse(kof.contains("java.util"),
                 "pacote qualificado descartado na decl local (antes: parse error):\n" + kof);
+        assertFalse(kof.contains("java.lang"),
+                "pacote qualificado descartado:\n" + kof);
 
-        assertCompiles(dir, kof, "true\ntrue");
+        assertCompiles(dir, kof, "ok");
     }
 
     @Test

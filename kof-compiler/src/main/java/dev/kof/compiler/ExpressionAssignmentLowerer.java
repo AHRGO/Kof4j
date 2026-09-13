@@ -37,6 +37,8 @@ if (ae.target() instanceof IdentifierExpr ie && !owner.isEmpty()) {
                 }
                 localIdx = ExpressionLowerer.emitExpression(driver, ae.value(), ops, owner, localIdx, locals);
                 if (compound) {
+                    emitCompoundRhsConv(driver, ops, sop, fsStatic.type(),
+                            ExpressionTyper.inferExprType(driver, ae.value(), locals));
                     ops.add(new KofBinary(compoundBinaryOp(sop), fsStatic.type()));
                 }
                 ops.add(new KofPutStatic(ownerType, ie.name(), fsStatic.type()));
@@ -59,9 +61,8 @@ if (ae.target() instanceof IdentifierExpr ie && !owner.isEmpty()) {
             // faziam; o de campo de instância não fazia NEM simples NEM
             // composto (RHS Int num LADD também quebra o frame).
             if (TypeMetrics.isPrimitiveType(fieldSym.type()) && compoundAsgn) {
-                driver.emitWideningIfNeeded(ops,
-                        ExpressionTyper.inferExprType(driver, ae.value(), locals),
-                        fieldSym.type());
+                emitCompoundRhsConv(driver, ops, op, fieldSym.type(),
+                        ExpressionTyper.inferExprType(driver, ae.value(), locals));
             } else if ("=".equals(op)) {
                 Type faValT = ExpressionTyper.inferExprType(driver, ae.value(), locals);
                 if (TypeMetrics.isPrimitiveType(faValT)
@@ -126,11 +127,9 @@ if (ae.target() instanceof FieldAccessExpr fa) {
             } else if (sfaCompound) {
                 // RHS primitivo ≠ campo (ex.: Double *= int): widening p/ o
                 // tipo do campo — o KofBinary usa fld.type() p/ o opcode e o
-                // literal int na pilha de um DMUL daria frame inválido.
-                if (TypeMetrics.isPrimitiveType(sfaValueType)
-                        && TypeMetrics.isPrimitiveType(fld.type())) {
-                    driver.emitWideningIfNeeded(ops, sfaValueType, fld.type());
-                }
+                // literal int na pilha de um DMUL daria frame inválido. Shift
+                // (`<<=`) exige contagem int (L2I) e resultado no tipo do alvo.
+                emitCompoundRhsConv(driver, ops, sfaOp, fld.type(), sfaValueType);
                 ops.add(new KofBinary(compoundBinaryOp(sfaOp), fld.type()));
             }
             ops.add(new KofPutStatic(cs.type(), fa.fieldName(), sfaConcat ? BuiltinTypes.STRING : fld.type()));
@@ -234,14 +233,15 @@ if (ae.target() instanceof FieldAccessExpr fa) {
     }
     localIdx = ExpressionLowerer.emitExpression(driver, ae.value(), ops, owner, localIdx, locals);
     boolean faCompound = isCompoundOp(faOp);
-    // §103.2 (#103): widening do valor p/ o tipo do campo (h.value = n,
-    // Int→Long) — espelha o caminho por-nome acima e o store de array.
-    if (TypeMetrics.isPrimitiveType(fieldType) && (faCompound || "=".equals(faOp))) {
+    if (faCompound) {
+        // §103.2 (#103): widening do valor p/ o tipo do campo (h.value = n,
+        // Int→Long); no shift (`<<=`) a contagem é int (L2I) — regra do §167.
+        emitCompoundRhsConv(driver, ops, faOp, fieldType,
+                ExpressionTyper.inferExprType(driver, ae.value(), locals));
+        ops.add(new KofBinary(compoundBinaryOp(faOp), fieldType));
+    } else if ("=".equals(faOp) && TypeMetrics.isPrimitiveType(fieldType)) {
         driver.emitWideningIfNeeded(ops,
                 ExpressionTyper.inferExprType(driver, ae.value(), locals), fieldType);
-    }
-    if (faCompound) {
-        ops.add(new KofBinary(compoundBinaryOp(faOp), fieldType));
     }
     ops.add(new KofStoreField(recvType, fa.fieldName(), fieldType));
     return localIdx;
@@ -290,11 +290,9 @@ if (ae.target() instanceof ArrayAccessExpr aa) {
                 BuiltinTypes.STRING, KofCallKind.FUNCTION));
     } else if (aaCompound) {
         // RHS primitivo ≠ elemento (ex.: Int[] += int ok, Long[] += int
-        // precisa widening) — o KofBinary usa aaElemType p/ o opcode.
-        if (TypeMetrics.isPrimitiveType(aaValueType)
-                && TypeMetrics.isPrimitiveType(aaElemType)) {
-            driver.emitWideningIfNeeded(ops, aaValueType, aaElemType);
-        }
+        // precisa widening) — o KofBinary usa aaElemType p/ o opcode. Shift
+        // (`<<=`) exige contagem int (L2I) — regra do §167.
+        emitCompoundRhsConv(driver, ops, aaOp, aaElemType, aaValueType);
         ops.add(new KofBinary(compoundBinaryOp(aaOp), aaElemType));
     }
     if (!aaStringConcat && !aaCompound) {
@@ -334,9 +332,9 @@ if (ae.target() instanceof IdentifierExpr ieBox) {
                 ops.add(new KofLoadLocal(boxLv.type(), boxLv.index()));
                 ops.add(new KofLoadField(boxLv.type(), "value", valType));
                 localIdx = ExpressionLowerer.emitExpression(driver, ae.value(), ops, owner, localIdx, locals);
-                driver.emitWideningIfNeeded(ops, ExpressionTyper.inferExprType(driver, ae.value(), locals), valType);
+                emitCompoundRhsConv(driver, ops, op, valType,
+                        ExpressionTyper.inferExprType(driver, ae.value(), locals));
                 ops.add(new KofBinary(compoundBinaryOp(op), valType));
-                driver.emitWideningIfNeeded(ops, valType, valType);
                 ops.add(new KofStoreField(boxLv.type(), "value", valType));
             } else {
                 ops.add(new KofLoadLocal(boxLv.type(), boxLv.index()));
@@ -376,8 +374,10 @@ if (ae.target() instanceof IdentifierExpr cie) {
         } else if (isCompoundOp(op)) {
             ops.add(new KofLoadLocal(targetLocal.type(), targetLocal.index()));
             localIdx = ExpressionLowerer.emitExpression(driver, ae.value(), ops, owner, localIdx, locals);
+            // conversão ANTES do binário (shift: contagem int via L2I).
+            emitCompoundRhsConv(driver, ops, op, targetLocal.type(),
+                    ExpressionTyper.inferExprType(driver, ae.value(), locals));
             ops.add(new KofBinary(compoundBinaryOp(op), targetLocal.type()));
-            driver.emitWideningIfNeeded(ops, ExpressionTyper.inferExprType(driver, ae.value(), locals), targetLocal.type());
             ops.add(new KofStoreLocal(targetLocal.type(), targetLocal.index()));
             return localIdx;
         }
@@ -436,5 +436,28 @@ return localIdx;
                  "<<=", ">>=", ">>>=" -> true;
             default -> false;
         };
+    }
+
+    /** Operador de atribuição composta de shift (`<<=`, `>>=`, `>>>=`). */
+    static boolean isShiftAssignOp(String op) {
+        return "<<=".equals(op) || ">>=".equals(op) || ">>>=".equals(op);
+    }
+
+    /**
+     * Conversão do RHS já empilhado para o composto. No shift o JVM usa
+     * `lshl`/`ishl` com contagem SEMPRE int (`(long,int)`/`(int,int)`) e o
+     * resultado tem o tipo PROMOVIDO do operando esquerdo (JLS 15.19) — o RHS
+     * long precisa de L2I, nunca de widening p/ o tipo do alvo (§167 no
+     * caminho binário; aqui no composto). Nos demais compostos, widening do
+     * RHS p/ o tipo do alvo (ex.: campo Long `+=` Int).
+     */
+    static void emitCompoundRhsConv(CompilerDriver driver, List<KofOperation> ops,
+                                    String op, Type targetType, Type valueType) {
+        if (isShiftAssignOp(op)) {
+            driver.emitPrimNarrow(ops, valueType, Type.PrimitiveType.INT);
+        } else if (TypeMetrics.isPrimitiveType(valueType)
+                && TypeMetrics.isPrimitiveType(targetType)) {
+            driver.emitWideningIfNeeded(ops, valueType, targetType);
+        }
     }
 }

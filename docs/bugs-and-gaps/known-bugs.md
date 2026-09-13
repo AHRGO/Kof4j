@@ -5569,3 +5569,33 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   exato; registrado, é face separada. (ii) se a mantenedora quiser que
   `synchronized` DEIXE de ser non-goal e vire ACC_SYNCHRONIZED + paridade cross
   (monitores no Native), é decisão de design com bump — planejar, não editar.
+
+## §172 — Atribuição composta de SHIFT (`<<=`, `>>=`, `>>>=`) era parseada mas baixada como atribuição SIMPLES (só o RHS gravado) — ✅ CORRIGIDO 13/09 (lane development/translator, dono = 192.168.100.22)
+
+- **Sintoma:** `var x = 6; x <<= 2; println(x)` imprimia `2` (só o RHS), não
+  `24`; `x >>= 1` dava `1` em vez de `3`; `x >>>= 1` idem. Miscompilação
+  SILENCIOSA (compila, roda, resultado errado) nos 4 targets — o pior tipo
+  de bug (Q0).
+- **Menor repro:** `main() { var x = 6; x <<= 2; println(x) }` → `2` (Kof JVM);
+  `x = x << 2` no mesmo programa dá `24` (a forma binária sempre funcionou).
+- **Causa raiz:** o parser (`Lexer`/`ExpressionParser`) reconhece
+  `LESS_LESS_EQUAL`/`GREATER_GREATER_EQUAL`/`GREATER_GREATER_GREATER_EQUAL` e
+  produz `AssignmentExpr(op="<<=")`, mas `ExpressionAssignmentLowerer`
+  checava os compostos com uma lista literal que **não incluía os shifts**
+  (`+=,-=,*=,/=,%=,&=,|=,^=`): o op caía no caminho de **atribuição simples**
+  (emitia só o RHS e o `KofStoreLocal`) e o `KofBinary(SHL)` nunca era
+  emitido. Gatilho: só a forma COMPOSTA (a binária `x = x << 2` tem ramo
+  próprio em `ExpressionBinaryLowerer`, §167).
+- **Correção:** helper único `isCompoundOp` (fonte da verdade dos compostos,
+  agora com os 3 shifts) + `compoundBinaryOp` com `SHL/SHR/USHR`, aplicado
+  nos 6 sítios (campo estático por nome, campo de instância, campo estático
+  qualificado, campo via variável, elemento de array, box, local). **Segunda
+  face achada na prova:** `Long <<= Long` dava `VerifyError: Bad type on
+  operand stack @ lshl` — o JVM usa `(long,int)` e o shift count é sempre
+  int; novo helper `emitCompoundRhsConv` faz `L2I` no RHS do shift (espelha
+  o §167 do caminho binário) e widening normal nos demais compostos.
+- **Prova:** `CoreRegressionE2ETest.compoundShiftAssignments` — JVM+JS, golden
+  medido no oracle (`24/3/2147483644/2/14/7/1099511627776`); o teste falhava
+  no código velho (`2` no primeiro valor) e pega a 2ª face (`VerifyError` sem
+  o L2I). `TranslateTest` 33/33 (o translator que emite `<<=` agora roda o
+  output — a caça Q4 que achou o bug).
