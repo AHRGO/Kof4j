@@ -522,8 +522,8 @@ class ConformanceMatrixTest {
         // = B32 `fsqrt.d` (MATH001 fechado 11/09 — a cobertura cross com
         // golden byte-idêntico mora em KofMathTest.sqrtCrossArch/
         // doubleOpsCrossArch sob qemu; esta matriz roda os 4 targets não-cross).
-        // PARTIAL script = bug 94 (numEq usa Double.compare → NaN==NaN true,
-        // divergindo dos 3 compilados que seguem IEEE NaN!=NaN).
+        // §94 FECHADO 13/09: o interpretador usava Double.compare (NaN==NaN
+        // true, +0.0==-0.0 false) — agora IEEE, paridade 4/4 sem exclusão.
         matrix("stdsqrt", """
                 main() {
                     println(math.sqrt(9.0) == 3.0)
@@ -532,12 +532,13 @@ class ConformanceMatrixTest {
                     println(math.sqrt(0.0) == 0.0)
                     println(math.sqrt(-1.0) == -1.0)
                     println(math.sqrt(-1.0) != math.sqrt(-1.0))
+                    println(0.0 == -0.0)
                 }
-                 """, "true\ntrue\ntrue\ntrue\nfalse\ntrue", Set.of("script"), tempDir);
+                 """, "true\ntrue\ntrue\ntrue\nfalse\ntrue\ntrue", Set.of(), tempDir);
         // STDLIB S1b.1 — kof.math escalares Double (lerp/percentage/
         // isInteger/isDecimal). Subset determinístico travado nos 4 targets
-        // (NaN excluído — bug 94 no interpretador; provado só nos compilados
-        // em KofMathTest.doubleOps*). Bool == false no script casa (S12b).
+        // (NaN incluído após §94; provado nos compilados em KofMathTest.doubleOps*).
+        // Bool == false no script casa (S12b).
         matrix("stdmathdouble", """
                 main() {
                     println(math.lerp(0.0, 10.0, 0.5) == 5.0)

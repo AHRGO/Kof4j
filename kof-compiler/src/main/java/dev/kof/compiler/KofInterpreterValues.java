@@ -99,7 +99,7 @@ public final class KofInterpreterValues {
         if (a instanceof Number x && b instanceof Number y) {
             if (a instanceof Long || b instanceof Long) return x.longValue() == y.longValue();
             if (a instanceof Double || b instanceof Double || a instanceof Float || b instanceof Float) {
-                return Double.compare(x.doubleValue(), y.doubleValue()) == 0;
+                return x.doubleValue() == y.doubleValue();
             }
             return x.intValue() == y.intValue();
         }

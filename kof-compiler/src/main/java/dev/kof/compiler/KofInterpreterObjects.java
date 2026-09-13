@@ -68,8 +68,8 @@ public final class KofInterpreterObjects {
         if (x == null || y == null) return Objects.equals(x, y);
         return switch (Type.canonicalPrimitiveName(pt.name())) {
             case "long" -> ((Number) x).longValue() == ((Number) y).longValue();
-            case "float" -> Float.compare(((Number) x).floatValue(), ((Number) y).floatValue()) == 0;
-            case "double" -> Double.compare(((Number) x).doubleValue(), ((Number) y).doubleValue()) == 0;
+            case "float" -> ((Number) x).floatValue() == ((Number) y).floatValue();
+            case "double" -> ((Number) x).doubleValue() == ((Number) y).doubleValue();
             default -> ((Number) x).intValue() == ((Number) y).intValue();
         };
     }

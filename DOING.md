@@ -42,6 +42,8 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **⚡ FEITO (13/09 ~04:00, lane gate/paridade — §94 FECHADO, dono = esta sessão):** o interpretador usava `Double.compare`/`Float.compare` (ordenação TOTAL) no EQ/NE de Double/Float → `NaN == NaN` dava `true` e `+0.0 == -0.0` dava `false`, divergindo dos 3 compilados (IEEE). **Não é mudança de contrato — é alinhar o interpretador ao comportamento já congelado e provado nos 3 compilados + corpus** (`KofMathTest` documenta IEEE, regra 4). Fix em 3 pontos: `KofInterpreterValues.numEq` (caminho `binary` EQ/NE → `==` primitivo), `KofInterpreterOps.compare` (caminho `if (a==b)` via `cmpResult`, que só o EQ/NE troca; ordenação segue `Double.compare`) e `KofInterpreterObjects.numEq` (equals de record com campo Double/Float — espelha `DCMPL`+`IFEQ` do `JvmRecordEmitter`). **Prova:** `KofInterpreterParityTest.doubleIeeeEquality` (novo; NaN/if/vars/±0.0) + célula `stdsqrt` SEM exclusão (4 targets, com `+0.0 == -0.0`); `KofInterpreterParityTest` 22/22 + `ConformanceMatrixTest` 11/11. **PRÓXIMO PASSO:** próxima unidade da fila de bugs — §107 face record/aninhado exige `nat/` (lane GC viva → NÃO); §45 exige decisão/IR (regra 6 → NÃO); candidatos code-pure = §89 (gate honesto no typer p/ receiver primitivo) e §106 (gate honesto JSN00x no dispatch Map nativo) — ambos SEM mudar semântica (só diagnóstico R6), mas checar dono antes. **NUNCA:** `nat/` com lane GC viva; `js/` da #97; §104b-ii/§45/decisão; push main.
+
 > **⚡ PRÓXIMO PASSO (13/09 ~03:45, sessão melissa/dev — §149 retificação pós-fix +
 > tabela known-bugs revisada; este é o despacho):** HEAD `43fd55fe`. GATE
 > **VERDE** (outros fecharam §149 em `29923a5b` + sincronizei em `6973a339`):

@@ -47,17 +47,19 @@ package-compiler) abre antes de SYSTEMS fechar (paridade + GC + estabilidade).
 
 ## 2. Bugs abertos (fila em `known-bugs.md`) — triagem 13/09
 
-**13 seções sem ✅ no cabeçalho** (§9 triado ✅ 13/09 — `nativeLambdaMutableCapture` 1/1) — e a conclusão honesta
+**12 seções sem ✅ no cabeçalho** (§94 fechado 13/09; §9 triado ✅ 13/09 — `nativeLambdaMutableCapture` 1/1) — e a conclusão honesta
 (`known-bugs.md:11`): **nenhum item de código-puro-sem-decisão restou na lane**.
 Todos pendurados em:
 
 | Grupo | Bugs | Quem destrava |
 |---|---|---|
 | Decisão da mantenedora (regra 6) | §45 (`planning-finally-return` — JVM/Native/interp), §81, §89, §106, §131, §127-JVM | mantenedora |
-| Congelados regra-6 | §94, §101, §117, §129-TLS | ninguém (contrato) |
+| Congelados regra-6 | §101, §117, §129-TLS | ninguém (contrato) |
 | Lane alheia | §65/§132 (UI/web/OTP-JS), §104b-ii + §107 restante + §114 (bugfixer — storage-box de record) | donos das lanes |
 
-Corrigidos 12/09: §90 (web, #98), §125, §139, §140 (gate→ratchet), §107-face
+Corrigidos 13/09: **§94** (EQ/NE de Double/Float no interpretador agora IEEE —
+célula `stdsqrt` 4/4 sem exclusão). Corrigidos 12/09: §90 (web, #98), §125,
+§139, §140 (gate→ratchet), §107-face
 escalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 `440730c8` — prova qemu 42+42)**.
 

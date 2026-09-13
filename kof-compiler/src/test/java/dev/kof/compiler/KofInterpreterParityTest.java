@@ -101,6 +101,26 @@ class KofInterpreterParityTest {
     }
 
     @Test
+    void doubleIeeeEquality() throws IOException {
+        // §94: EQ/NE de Double/Float no interpretador usava Double.compare
+        // (ordenação total) — NaN == NaN dava true e +0.0 == -0.0 dava false,
+        // divergindo dos 3 compilados (IEEE). Agora usa == primitivo.
+        parity("double-ieee", """
+                main() {
+                    println(math.sqrt(-1.0) == math.sqrt(-1.0))
+                    println(math.sqrt(-1.0) != math.sqrt(-1.0))
+                    if (math.sqrt(-1.0) == math.sqrt(-1.0)) { println("eq") } else { println("ne") }
+                    var x = math.sqrt(-1.0)
+                    var y = math.sqrt(-1.0)
+                    println(x == y)
+                    println(x != y)
+                    println(0.0 == -0.0)
+                    println(0.0 != -0.0)
+                }
+                """);
+    }
+
+    @Test
     void stringsAndChars() throws IOException {
         parity("string", """
                 main() {
