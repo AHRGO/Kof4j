@@ -237,7 +237,7 @@ Perda de contexto (por que o código é assim)
 Gate permanente: `scripts/check_500.sh` falha se qualquer classe de produção
 ultrapassar 500 linhas. Exceções documentadas: `static Opcodes.*` (convenção
 ASM). O plano está completo quando a Fase 3 fechar (F2 ✅ 12/09 — critério ≤500
-medido cumprido; F3 bloqueada pela lane GC em `nat/`).
+medido cumprido; **F3 ✅ 13/09 — NativeBackend 498 ≤500 medido (bloqueio da "lane GC em `nat/`" caducou: refs não existem mais no repo, regra do dono-morto); ratchet com 12 dívidas remanescentes (505–579), todas paradas).
 
 > **⚠️ RETIFICADO 12/09 (§140 known-bugs): o gate era decorativo.** Nenhum
 > workflow chamava `check_500.sh` → a medição acima ("todas ≤500") **regrediu
