@@ -327,6 +327,18 @@ Fase E  Kof Decompiler          (gerar Kof source)
 > field; 2 reserved) — custo/benefício baixo; a fila real da Fase E agora é
 > o caminho não-record (1382 stubs): joins estruturais + `astore`/
 > `istore` multi-stmt (Fase C) com o statements-path já escopado.
+>
+> **Experimente NEGATIVO (13/09, dono = 192.168.100.17 — documentado p/ não
+> refazerem):** aceitar `$` no regex do `TreeScope.resolve` (habilitar
+> `instanceof`/`as` de interna em expressão). Probes ✓
+> (`x instanceof Box$Expr`/`as Box$Expr` compilam), MAS **−9 stubs só**
+> (1382→1373; os 238 "resolvable-domain" contados por `Why193` não eram o
+> drop real — o que derruba ex. `BuiltinTypes.isString` é `astore_1`+`ifeq`
+> de corpo multi-stmt = Fase C) e **risco latente real**: `arrayElementType`
+> passaria a aceitar interna → `new Type$ClassType[n]` = PARSE041 no
+> frontend (o drift-check do corpus não pegou: nenhum arquivo do corpus
+> dispara anewarray-de-interna; outro corpus dispara). ROI negativo + perigo
+> cross-corpus → REVERTIDO (working tree limpo, HEAD = estágio-3).
 
 ## 7. Relação com o Compilador
 
