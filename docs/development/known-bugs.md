@@ -4742,10 +4742,8 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   vermelho com VerifyError/COMP002 antes). Paridade medida 4-target
   `3|3|3|3`, `3.5|3.5|3.5|3.5`, `true|true|true|true`. Sem regressão nos
   testes de switch/pattern (§68 heterogêneo e SYN001 continuam como estavam).
-- **Fora de escopo (segue aberto):** corpo de case em BLOCO
-  (`case X -> { ... }`) é sintaxe inválida (o corpus diz "não há escopo de
-  bloco"), mas o parser a aceita e o resultado vira lixo/`Lambda0@...` em vez
-  de diagnóstico — violação R6 registrada para triagem (não é a mesma raiz).
+- **Fora de escopo (fechado em §153):** corpo de case em BLOCO
+  (`case X -> { ... }`) era aceito em silêncio (lixo) — agora PARSE094.
 
 ### 151. Native: membership de coleção com constante de enum usa comparação por PONTEIRO → `contains` devolve `false` (JVM/Script/JS: `true`) — ✅ CORRIGIDO 12/09 (achado no sweep de paridade 4-target)
 
@@ -4790,3 +4788,34 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
 - **Fix:** `""");` → `""";` (1 char) — já no remoto; os demais `""");` do
   pacote `nat/` são `sb.append("""…""")` legítimos (6 ocorrências, todas com
   abertura em chamada).
+
+### 153. switch-expressão: corpo de case em BLOCO (`case X -> { ... }`) era aceito em silêncio → lixo (`Lambda0@…`/`[object Object]`/saída vazia) — ✅ CORRIGIDO 13/09 (diagnóstico PARSE094; R6)
+
+- **Menor repro (medido 13/09):**
+  ```kof
+  enum E { A, B }
+  main() {
+      var e = E.A
+      var x = switch (e) {
+          case A -> { println("a"); "aa" }
+          default -> "other"
+      }
+      println(x)
+  }
+  ```
+  Antes: JVM/Script `Lambda0@<hash>`, Native saída **vazia**, JS
+  `[object Object]` — exit 0 silencioso (violação R6: o corpus diz
+  "não há escopo de bloco" no switch-expressão —
+  `training/idioms/control-flow.md:145`).
+- **Causa raiz:** `ExpressionParser.parseSwitchExpression` chamava
+  `parseExpression` para o corpo do case; um `{` cai no ramo de lambda de
+  bloco de `parsePrimary` (`case LBRACE -> new LambdaExpr(...)`), virando um
+  valor de tipo-função silencioso.
+- **Fix (parser, 1 guarda):** `rejectBlockCaseBody` emite `PARSE094` ("o corpo
+  de cada case é uma ÚNICA expressão (sem escopo de bloco); use o
+  switch-statement (`case ...:`) para múltiplos statements") quando o token
+  seguinte ao `->` é `{`, tanto em `case` quanto em `default`. Semântica
+  inalterada para as formas válidas (expressão única).
+- **Prova:** `KofSwitchExprE2ETest.blockCaseBodyFailsWithDiagnostic` (novo;
+  vermelho antes — compilava com `success=true`); os 31 testes prévios seguem
+  (6 erros = só `node` ausente, ambientais).

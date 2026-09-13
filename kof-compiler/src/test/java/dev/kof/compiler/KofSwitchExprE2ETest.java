@@ -327,6 +327,28 @@ class KofSwitchExprE2ETest {
                 "deveria reportar SEM032: " + result.diagnostics().getDiagnostics());
     }
 
+    // ── corpo de case em BLOCO → diagnóstico PARSE094 (R6) ──────────
+
+    @Test
+    void blockCaseBodyFailsWithDiagnostic(@TempDir Path tmp) throws Exception {
+        Path file = tmp.resolve("Main.kf");
+        Files.writeString(file, """
+                enum E { A, B }
+                main() {
+                    var e = E.A
+                    var x = switch (e) {
+                        case A -> { println("a"); "aa" }
+                        default -> "other"
+                    }
+                    println(x)
+                }
+                """);
+        CompilationResult result = driver.compile(file, tmp.resolve("out"), Target.JVM);
+        assertFalse(result.success(), "case -> { } deve ser rejeitado (sem escopo de bloco)");
+        assertTrue(result.diagnostics().getDiagnostics().toString().contains("PARSE094"),
+                "deveria reportar PARSE094: " + result.diagnostics().getDiagnostics());
+    }
+
     // ── enum: exaustivo sem default (SEM031/SEM032) ─────────────────
     @Test
     void enumExhaustiveJvm(@TempDir Path tmp) throws Exception {

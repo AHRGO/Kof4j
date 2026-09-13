@@ -388,11 +388,13 @@ public class ExpressionParser {
                 ExpressionNode value = StatementParser.parseSwitchCasePatternOrValue(ctx, cp);
                 ctx.expect(TokenType.ARROW,
                         "Switch expressão exige '->' (a forma statement usa ':')", "PARSE076");
+                rejectBlockCaseBody(ctx);
                 ExpressionNode body = ExpressionParser.parseExpression(ctx);
                 cases.add(new SwitchExprCase(cp, value, body));
             } else if (ctx.check(TokenType.DEFAULT)) {
                 ctx.advance();
                 ctx.expect(TokenType.ARROW, "Expected '->' after 'default'", "PARSE077");
+                rejectBlockCaseBody(ctx);
                 defaultValue = ExpressionParser.parseExpression(ctx);
             } else {
                 ctx.error("Esperava 'case' ou 'default' em switch expressão", "PARSE078");
@@ -401,6 +403,21 @@ public class ExpressionParser {
         }
         ctx.expect(TokenType.RBRACE, "Expected '}'", "PARSE075");
         return new SwitchExpr(p, expr, cases, defaultValue);
+    }
+
+    /**
+     * Switch-expressão (SYN001): cada case é UMA expressão — o corpus diz
+     * "não há escopo de bloco" (`training/idioms/control-flow.md`). Um `{`
+     * aqui é lido pelo parser como literal de lambda (block body) e o valor
+     * do case vira um `Lambda0@...`/`[object Object]` silencioso (R6). Emite
+     * diagnóstico em vez de aceitar lixo.
+     */
+    static void rejectBlockCaseBody(ParseContext ctx) {
+        if (ctx.check(TokenType.LBRACE)) {
+            ctx.error("switch expressão: o corpo de cada case é uma ÚNICA expressão "
+                    + "(sem escopo de bloco); use o switch-statement (`case ...:`) para "
+                    + "múltiplos statements", "PARSE094");
+        }
     }
 
     static List<ExpressionNode> parseArguments(ParseContext ctx) {
