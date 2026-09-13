@@ -178,6 +178,41 @@ import java.util.List;
         return Character.isDigit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
     }
 
+    /**
+     * Re-escapa o valor JÁ decodificado do literal Java para uma forma que o
+     * Kof interpreta igual. O lexer decodifica `\n`/`\t`/`\"`/`\\` para chars
+     * reais; emitir cru quebrava: `\"` virava `"` (fecha a string = PARSE043)
+     * e `\\` virava `\` (Kof engole a barra: `"path\x"` → `pathx` ≠ Java
+     * `path\x`) — bug latente Q4 13/09. Escapa só o essencial; os demais
+     * chars vão crus (Kof aceita raw).
+     */
+    static String escapeKofString(String s) {
+        StringBuilder sb = new StringBuilder(s.length() + 8);
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            switch (c) {
+                case '\\' -> sb.append("\\\\");
+                case '"' -> sb.append("\\\"");
+                case '\n' -> sb.append("\\n");
+                case '\t' -> sb.append("\\t");
+                case '\r' -> sb.append("\\r");
+                default -> sb.append(c);
+            }
+        }
+        return sb.toString();
+    }
+
+    static String escapeKofChar(String s) {
+        return switch (s) {
+            case "\\" -> "\\\\";
+            case "'" -> "\\'";
+            case "\n" -> "\\n";
+            case "\t" -> "\\t";
+            case "\r" -> "\\r";
+            default -> s;
+        };
+    }
+
     // ── Parser + Emitter range helpers ────────────────────────────────────
 
     }

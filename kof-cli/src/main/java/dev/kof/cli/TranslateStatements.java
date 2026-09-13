@@ -321,6 +321,10 @@ class TranslateStatements extends TranslateExpr {
         int save = p.pos;
         // Detect "Type name [= expr];" / "Type[] name ..." / "Type<...> name ..."
         if (isLocalDeclAhead()) {
+            // modificador local `final int y = 2` — Kof não tem `final` em
+            // local (vars são mutáveis; sem `val` local) → descarta o
+            // modificador e traduz a declaração (bug latente Q4 13/09).
+            while (p.at("final")) p.next();
             p.next(); // type base
             // tipo qualificado `java.util.List` — o tipo simples é o último
             // segmento (`List`); o pacote é descartado (Kof referencia pelo
@@ -388,14 +392,17 @@ class TranslateStatements extends TranslateExpr {
     private boolean isLocalDeclAhead() {
         // Java `var x = 1` — `var` é o mesmo nome reservado do Kof; a
         // declaração traduz como ela mesma (`var x = 1`).
-        if (p.peek().text.equals("var")) {
-            return p.peek(1).type == T.IDENT;
+        // Modificador local `final` é descartado (Kof não tem final local).
+        int base = p.pos;
+        while (base < p.toks.size() && p.toks.get(base).text.equals("final")) base++;
+        if (p.toks.get(base).text.equals("var")) {
+            return base + 1 < p.toks.size() && p.toks.get(base + 1).type == T.IDENT;
         }
-        if (!isPrimitiveOrType(p.peek().text)) {
+        if (!isPrimitiveOrType(p.toks.get(base).text)) {
             // tipo qualificado `java.util.List<...> name` — o primeiro
             // segmento é pacote minúsculo; reconhece a cadeia e exige que o
             // último segmento seja um tipo (maiúsculo).
-            int j = p.pos;
+            int j = base;
             boolean chain = false;
             while (j + 1 < p.toks.size() && p.toks.get(j + 1).text.equals(".")
                     && p.toks.get(j + 2).type == T.IDENT) {
@@ -419,7 +426,7 @@ class TranslateStatements extends TranslateExpr {
             }
             return k < p.toks.size() && p.toks.get(k).type == T.IDENT;
         }
-        int i = p.pos + 1;
+        int i = base + 1;
         // tipo qualificado `java.util.List<...>` — stripa o pacote no parse
         // (o tipo simples é o último segmento); reconhece a cadeia aqui.
         while (i + 1 < p.toks.size() && p.toks.get(i).text.equals(".")

@@ -309,3 +309,17 @@ diferenciais.
 > valor). Prova: `TranslateTest.javaNumericLiteralsTranslate` (traduz +
 > compila JVM + roda `68088.5`, oracle javac) — `TranslateTest` 35/35; probe
 > binário nos 7 literais. `check_500` OK.
+>
+> **Estado (13/09 ~16:30, dono = 192.168.100.22): escapes de string/char +
+> `final` local/param (bugs latentes Q4).** (1) O lexer **decodificava** os
+> escapes Java para chars reais e o emitter os reemitia **crus** → Kof
+> inválido/semântica errada: `"say \"hi\""` virava `"say "hi""` (PARSE043) e
+> `"path\\x"` virava `"path\x"` (Kof engole a barra → `pathx` ≠ Java
+> `path\x`). Fix: `TranslateLexer.escapeKofString/escapeKofChar` re-escapam
+> `\ " \n \t \r` no emit (helpers no lexer p/ `TranslateExpr` seguir ≤500).
+> (2) `final` em local (`final int y = 2;`) e em parâmetro (`p(final int x)`)
+> dava parse error — Kof não tem `final` local/param (vars mutáveis); o
+> modificador é descartado. Prova:
+> `TranslateTest.stringEscapesRoundTripToValidKof` (roda `say "hi"`/`path\x`)
+> e `finalLocalAndParamTranslate` (roda `3hi`) — `TranslateTest` 37/37.
+> `TranslateExpr` 500 (limite), `TranslateStatements` 451 ≤500; `check_500` OK.

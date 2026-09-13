@@ -776,6 +776,47 @@ class TranslateTest {
     }
 
     @Test
+    void finalLocalAndParamTranslate(@TempDir Path dir) throws Exception {
+        // Kof não tem `final` em local/parâmetro (vars são mutáveis) — o
+        // modificador é descartado; antes `final int y = 2;` dava parse error
+        // (bug latente Q4 13/09).
+        String kof = Translate.translateJava("""
+                public class Fin {
+                    int p(final int x) { return x + 1; }
+                    public static void main(String[] args) {
+                        final int y = 2;
+                        final String s = "hi";
+                        System.out.println(new Fin().p(y) + s);
+                    }
+                }
+                """);
+        assertFalse(kof.contains("final"), "`final` local/param descartado:\n" + kof);
+        assertCompiles(dir, kof, "3hi");
+    }
+
+    @Test
+    void stringEscapesRoundTripToValidKof(@TempDir Path dir) throws Exception {
+        // O lexer decodifica `\"`/`\\`/`\n`/`\t` p/ chars reais; emitir cru
+        // quebrava o Kof: `\"` fechava a string (PARSE043) e `\\` sumia
+        // (`"path\x"` → `pathx`). Re-escapa no emit (bug latente Q4 13/09).
+        String kof = Translate.translateJava("""
+                public class Esc {
+                    public static void main(String[] args) {
+                        String quote = "say \\"hi\\"";
+                        String slash = "path\\\\x";
+                        String tab = "a\\tb";
+                        System.out.println(quote);
+                        System.out.println(slash);
+                        System.out.println(tab);
+                    }
+                }
+                """);
+        assertTrue(kof.contains("\\\"hi\\\""), "aspas re-escapadas:\n" + kof);
+        assertTrue(kof.contains("path\\\\x"), "barra re-escapada:\n" + kof);
+        assertCompiles(dir, kof, "say \"hi\"\npath\\x\na\tb");
+    }
+
+    @Test
     void javaNumericLiteralsTranslate(@TempDir Path dir) throws Exception {
         // Java numeric literals que o lexer antes partia em tokens separados
         // (`10L` → `10` `L`, `1.5e3` → `1.5` `e3`, `0x1F` → `0` `x1F`) =

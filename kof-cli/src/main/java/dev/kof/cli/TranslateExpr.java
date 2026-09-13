@@ -239,8 +239,8 @@ class TranslateExpr {
             Tok t = p.next();
             return switch (t.type) {
                 case INT, FLOAT -> t.text;
-                case STR -> "\"" + t.text + "\"";
-                case CHAR -> "'" + t.text + "'";
+                case STR -> "\"" + TranslateLexer.escapeKofString(t.text) + "\"";
+                case CHAR -> "'" + TranslateLexer.escapeKofChar(t.text) + "'";
                 case IDENT -> switch (t.text) {
                     case "true" -> "true";
                     case "false" -> "false";
@@ -437,6 +437,8 @@ class TranslateExpr {
         }
 
         private String parseParam() {
+            // `final T x` — Kof não tem final em parâmetro → descarta.
+            while (p.at("final")) p.next();
             String ty = parseType();
             if (p.at(".") && p.peek(1).text.equals(".") && p.peek(2).text.equals(".")) {
                 // Java varargs `T...` não tem equivalente em função Kof
