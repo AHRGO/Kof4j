@@ -8,7 +8,7 @@
 >
 > | | |
 > |---|---|
-> | **Fila ABERTA (varredura 13/09 — seções sem resolução no próprio cabeçalho)** | **15 itens** (seções/sub-faces sem resolução) — §45 (finally+return no try; JVM/interpretador descartam o efeito do finally — **DECIDIDO 13/09** 4a: FinallyFrame na IR + bump 0.3.1), §65 (UI/Chrome — `Audio`/`Video` no DOM real; **lane UI**), §81 (KofJS `Long` é `Number` 53-bit — **DECIDIDO 13/09** 5b: BigInt no JS, bump+migração), §89 (conversão numérica de primitivo quebra o LINK nos nativos — **DECIDIDO 13/09** 3a: alias do `as` + warning de truncamento), §101 (relacionais de Double com NaN divergem cross — **congelado** regra 6), §104b-ii (record em coleção + storage-box asm — **lane bugfixer**, unidade GRANDE), §106 (`json.encode(Map)` quebra em 3 alvos — **DECIDIDO 13/09** 2b: chaves sorted), §107 🟡 (`println(coleção)` nativo → lixo de ponteiro; **face escalar ✅ CORRIGIDA 12/09** nos 3 nativos `f3b3821c`+B39; restam record/aninhado=`?` até §104b-ii + FP-cross=FLT001), §114 ⏳ (equals de record com campo-referência no Native; sub-face do §104b-ii), §117 (`cancelled()` colide por hash de TID — **DECIDIDO 13/09** 8a: slot por TID no spawn), §129 (throw em worker `spawn` → longjmp cross-thread no Native — **lane nat**; era referido como "§129-TLS"), §131 (sobrecarga de método por aridade — **DECIDIDO 13/09** 10a: implementar), §132 (KofJS: task de task não roda sem ceder o event-loop — gate OTP002; **lane alheia**), §156 (List HETEROGÊNEO de lambdas → CCE JVM; **infra de tipos**, registrado 13/09), §161/NAT-STR01 (case-fold ASCII-only no Native vs Unicode no JVM/JS — **DECIDIDO 13/09**, lane nat; registrado aqui 13/09). **~~§149~~ NÃO está aberto — ✅ CORRIGIDO 12/09** (a linha anterior o listava por engano; a raiz era o `JsIfThrowElse` do §147). **§155 ✅ CORRIGIDO 13/09** (tipo-função em type-args → `ClassFormatError`; parser preserva os espaços do type-ref). **§127-JVM ✅ CORRIGIDO 13/09** (decisão 9a: `as ()->T` parseia como type-ref; checkcast p/ interface SAM sintética). **§94 ✅ CORRIGIDO 13/09** (EQ/NE de Double/Float no interpretador agora IEEE). **§125 ✅ CORRIGIDO 12/09** (return Nullable(primitivo) → default; célula `nullableprint` 4/4). **§139 ✅ CORRIGIDO 12/09** (JS fold `f()==null` → COMP002; parser JS descarta mid-expression). **§140 ✅ CORRIGIDO 12/09** (gate ≤500 virou ratchet com baseline no CI). **§90 ✅ CORRIGIDO 12/09** (lane web). **§145/§146/§147 ✅ CORRIGIDOS 12/09** (`440730c8`, issue #101). **Conclusão honesta (13/09):** os itens abertos estão pendurados em **decisão da mantenedora** (já ratificadas em 13/09 — fila de implementação), **congelamento regra-6** ou **lane alheia**; a maior parte já tem decisão. |
+> | **Fila ABERTA (varredura 13/09 — seções sem resolução no próprio cabeçalho)** | **15 itens** (seções/sub-faces sem resolução) — §45 (finally+return no try; JVM/interpretador descartam o efeito do finally — **DECIDIDO 13/09** 4a: FinallyFrame na IR + bump 0.3.1), §65 (UI/Chrome — `Audio`/`Video` no DOM real; **lane UI**), §81 (KofJS `Long` é `Number` 53-bit — **DECIDIDO 13/09** 5b: BigInt no JS, bump+migração), §89 (conversão numérica de primitivo quebra o LINK nos nativos — **DECIDIDO 13/09** 3a: alias do `as` + warning de truncamento), §101 (relacionais de Double com NaN divergem cross — **congelado** regra 6), §104b-ii (record em coleção + storage-box asm — **lane bugfixer**, unidade GRANDE), §106 (`json.encode(Map)` quebra em 3 alvos — **DECIDIDO 13/09** 2b: chaves sorted), §107 🟡 (`println(coleção)` nativo → lixo de ponteiro; **face escalar ✅ CORRIGIDA 12/09** nos 3 nativos `f3b3821c`+B39; restam record/aninhado=`?` até §104b-ii + FP-cross=FLT001), §114 ⏳ (equals de record com campo-referência no Native; sub-face do §104b-ii), §117 (`cancelled()` colide por hash de TID — **DECIDIDO 13/09** 8a: slot por TID no spawn), §129 (throw em worker `spawn` → longjmp cross-thread no Native — **lane nat**; era referido como "§129-TLS"), §131 (sobrecarga de método por aridade — **DECIDIDO 13/09** 10a: implementar), §132 (KofJS: task de task não roda sem ceder o event-loop — gate OTP002; **lane alheia**), §156 (List HETEROGÊNEO de lambdas → CCE JVM; **infra de tipos**, registrado 13/09), §161/NAT-STR01 (case-fold ASCII-only no Native vs Unicode no JVM/JS — **DECIDIDO 13/09**, lane nat; registrado aqui 13/09). **~~§149~~ NÃO está aberto — ✅ CORRIGIDO 12/09** (a linha anterior o listava por engano; a raiz era o `JsIfThrowElse` do §147). **§155 ✅ CORRIGIDO 13/09** (tipo-função em type-args → `ClassFormatError`; parser preserva os espaços do type-ref). **§127-JVM ✅ CORRIGIDO 13/09** (decisão 9a: `as ()->T` parseia como type-ref; checkcast p/ interface SAM sintética). **§94 ✅ CORRIGIDO 13/09** (EQ/NE de Double/Float no interpretador agora IEEE). **§125 ✅ CORRIGIDO 12/09** (return Nullable(primitivo) → default; célula `nullableprint` 4/4). **§139 ✅ CORRIGIDO 12/09** (JS fold `f()==null` → COMP002; parser JS descarta mid-expression). **§140 ✅ CORRIGIDO 12/09** (gate ≤500 virou ratchet com baseline no CI). **§90 ✅ CORRIGIDO 12/09** (lane web). **§145/§146/§147 ✅ CORRIGIDOS 12/09** (`440730c8`, issue #101). **§157/§158/§159/§160 ✅ CORRIGIDOS 13/09** (issue-lane: #103 caso 3 POP2 em `HashMap.put` de `Long`, kof.web `header()`/`query()` `String?`+SEM049, Native web WEB001, KofJS hostless `kof_platform`). **Conclusão honesta (13/09):** dos 13 itens abertos, a maioria pende de **decisão da mantenedora já ratificada** (fila de implementação: §45/§81/§89/§106/§117/§131/§161), **congelamento regra-6** (§101 + as sub-faces §104b-ii/§114/§107) ou **lane alheia** (§65/§132) — **há UM item code-pure sem decisão: §156** (infra de tipos, `List` heterogêneo de lambdas → CCE JVM), candidato a agente de tipos. |
 > | Antiga "varredura 08/09" (apócrifa — corrigida 12/09) | os "abertos" 39/62/63/64/46/48/50/59/61 estão ✅ CORRIGIDO nos próprios cabeçalhos (39/62/63/64 JVM/JS; 46/50/59 Native; 48/61 gap honesto JSN004/FFI001); contagem real na linha acima. |
 > | Paridade interpretador × compilados (semântica `==` congelada — regra 6) | **0** — bug 94 ✅ CORRIGIDO 13/09 (EQ/NE de Double/Float no interpretador agora IEEE; a "decisão" era alinhar ao previsto, que os 3 compilados + corpus já definiam) |
 > | Paridade backend-only (regra 5, atacável na lane Native) | **2** — §107 (println coleção → lixo; **face escalar ✅ CORRIGIDA 12/09 nos 3 targets nativos** — x86 `f3b3821c` + cross B39, golden JVM byte-idêntico; restam record/aninhado=`?` honesto até §104b-ii, FP-cross=FLT001; §107-JS 11/09), §104b-ii (equals de conteúdo p/ record + box de primitivo no storage asm; **face char ✅ FECHADA 11/09** — `mapgetprim` 4/4)
@@ -4864,6 +4864,53 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   58/0. Lição: WIP preservado vai SÓ para branch própria; commit de WIP na
   branch de release é regressão de build (regra 1 — zero regressão).
 
+### 155. Tipo-função como ARGUMENTO GENÉRICO declarado (`List<(Int) -> Int>`, `listOf<(Int) -> Int>()`) → `ClassFormatError` no JVM e COMPILE-FAIL/lixo nos outros 3 targets — ✅ CORRIGIDO 13/09 (achado ao validar o §127)
+
+- **Menor repro:** `main(){ List<(Int) -> Int> l = listOf((x: Int) -> x + 1);
+  println(l.get(0)(5)) }` — compila (`success=true`) mas no JVM:
+  `ClassFormatError: Illegal zero length constant pool entry at 33 in class
+  Default/Main`; Native `COMPILE-FAIL`; Script `ERR: Lambda0.`; JS
+  `TypeError: ... is not a function`.
+- **Causa raiz:** `TypeParser.parseTypeRef` monta os type-args concatenando os
+  tokens CRUS (`args.append(ctx.tokens.get(ctx.pos).value())`) — sem espaços.
+  O tipo-função `(Int) -> Int` virava a string `"(Int)->Int"`, e `Type.of` só
+  reconhece `"(Int) -> Int"` (com espaços: `name.contains(" -> ")`). Resultado:
+  `ClassType("", "(Int)->Int")` — nome de classe inválido que desce até o
+  `checkcast`/`invoke` do JVM. O mesmo buraco no `parseCallTypeArguments` do
+  `ExpressionParser` (guard só aceitava IDENTIFIER/primitive, não `LPAREN`).
+- **Fix (parser, 2 pontos, aditivo):** `TypeParser.parseTypeRef` detecta
+  `LPAREN` dentro dos type-args e delega a `parseFunctionTypeRef` (preserva os
+  espaços); `ExpressionParser.parseCallTypeArguments` aceita `LPAREN` como
+  início de type-arg. Sem mudança de semântica — só a string do tipo fica
+  correta.
+- **Prova:** `LambdaE2ETest.declaredFunctionTypeListJvm/Native` (`6`/`10`) +
+  sonda C1/C2/C3 4/4 targets; `CompilerDriverTest.functionTypeSyntax`
+  (o teste antigo só assertava `success=true` — o bytecode inválido passava).
+- **Não-regressão:** 321/0 no subset (`LambdaE2ETest`+`CoreRegressionE2ETest`+
+  `CompilerDriverTest`).
+
+
+### 156. JVM: `List` HETEROGÊNEO de lambdas com a MESMA assinatura → `ClassCastException` (`Lambda1` não é `Lambda0`) — 🟢 ABERTO (pré-existente, infra de tipos; JVM-only)
+
+- **Menor repro:** `main(){ var l = listOf((x: Int) -> x + 1, (x: Int) -> x * 2);
+  println(l.get(1)(5)) }` → JVM `ClassCastException: class Lambda1 cannot be
+  cast to class Lambda0`; Native/Script/JS imprimem `10` (correto).
+- **Causa raiz:** o tipo do elemento da lista é inferido do PRIMEIRO argumento
+  (`listOfElementType`) e carrega o `className` da lambda concreta (`Lambda0`).
+  O `JvmOpCollections` `kof_list_get` faz `checkcast ft.className()` (Lambda0)
+  e o call site invoca via `Lambda0.invoke` — mas o segundo lambda é outra
+  classe (`Lambda1`) que só compartilha a **interface SAM sintética**
+  (`kof/Function1_int_int`). É o mesmo território do §127: a distinção
+  `FunctionType.className` (lambda concreta) × interface sintética
+  (`CompilerLambdaClass.lambdaInterfaceType`) precisa ser resolvida na
+  inferência do elemento da coleção — mudança de infraestrutura de tipos que
+  afeta todo o dispatch de lambda em coleção. **NÃO corrigido nesta sessão**
+  (fora da fila ratificada, risco de regressão no bug 20/§127).
+- **Não é regressão do §127/§155:** o caminho (`JvmOpCollections` +
+  `ExpressionInstanceCallLowerer`) não foi tocado por eles; a sonda B127c já
+  dava CCE antes.
+
+
 ### 157. JVM: `m.put(k, <Long>)` com `mapOf()` → `HashMap.put` empilha 1 Object mas o descarte da statement popa 2 (POP2) → **COMP002 "frame crash" / VerifyError** — ✅ CORRIGIDO 13/09 (issue #103 caso 3, fix da issue-lane `bee8555c` — pin-align no `CollectionCallLowerer`; merge na `beta-0.4.0` 13/09)
 - **Menor repro**:
   ```kof
@@ -4967,53 +5014,6 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   erro claro, não ReferenceError, para `uuid.v4` e `security.randomHex`; sem
   regressão com host — `KofUuidTest` 14/14, `KofRandomTest` 12/12,
   `KofSecurityTest` 28/28.
-
-### 155. Tipo-função como ARGUMENTO GENÉRICO declarado (`List<(Int) -> Int>`, `listOf<(Int) -> Int>()`) → `ClassFormatError` no JVM e COMPILE-FAIL/lixo nos outros 3 targets — ✅ CORRIGIDO 13/09 (achado ao validar o §127)
-
-- **Menor repro:** `main(){ List<(Int) -> Int> l = listOf((x: Int) -> x + 1);
-  println(l.get(0)(5)) }` — compila (`success=true`) mas no JVM:
-  `ClassFormatError: Illegal zero length constant pool entry at 33 in class
-  Default/Main`; Native `COMPILE-FAIL`; Script `ERR: Lambda0.`; JS
-  `TypeError: ... is not a function`.
-- **Causa raiz:** `TypeParser.parseTypeRef` monta os type-args concatenando os
-  tokens CRUS (`args.append(ctx.tokens.get(ctx.pos).value())`) — sem espaços.
-  O tipo-função `(Int) -> Int` virava a string `"(Int)->Int"`, e `Type.of` só
-  reconhece `"(Int) -> Int"` (com espaços: `name.contains(" -> ")`). Resultado:
-  `ClassType("", "(Int)->Int")` — nome de classe inválido que desce até o
-  `checkcast`/`invoke` do JVM. O mesmo buraco no `parseCallTypeArguments` do
-  `ExpressionParser` (guard só aceitava IDENTIFIER/primitive, não `LPAREN`).
-- **Fix (parser, 2 pontos, aditivo):** `TypeParser.parseTypeRef` detecta
-  `LPAREN` dentro dos type-args e delega a `parseFunctionTypeRef` (preserva os
-  espaços); `ExpressionParser.parseCallTypeArguments` aceita `LPAREN` como
-  início de type-arg. Sem mudança de semântica — só a string do tipo fica
-  correta.
-- **Prova:** `LambdaE2ETest.declaredFunctionTypeListJvm/Native` (`6`/`10`) +
-  sonda C1/C2/C3 4/4 targets; `CompilerDriverTest.functionTypeSyntax`
-  (o teste antigo só assertava `success=true` — o bytecode inválido passava).
-- **Não-regressão:** 321/0 no subset (`LambdaE2ETest`+`CoreRegressionE2ETest`+
-  `CompilerDriverTest`).
-
-
-### 156. JVM: `List` HETEROGÊNEO de lambdas com a MESMA assinatura → `ClassCastException` (`Lambda1` não é `Lambda0`) — 🟢 ABERTO (pré-existente, infra de tipos; JVM-only)
-
-- **Menor repro:** `main(){ var l = listOf((x: Int) -> x + 1, (x: Int) -> x * 2);
-  println(l.get(1)(5)) }` → JVM `ClassCastException: class Lambda1 cannot be
-  cast to class Lambda0`; Native/Script/JS imprimem `10` (correto).
-- **Causa raiz:** o tipo do elemento da lista é inferido do PRIMEIRO argumento
-  (`listOfElementType`) e carrega o `className` da lambda concreta (`Lambda0`).
-  O `JvmOpCollections` `kof_list_get` faz `checkcast ft.className()` (Lambda0)
-  e o call site invoca via `Lambda0.invoke` — mas o segundo lambda é outra
-  classe (`Lambda1`) que só compartilha a **interface SAM sintética**
-  (`kof/Function1_int_int`). É o mesmo território do §127: a distinção
-  `FunctionType.className` (lambda concreta) × interface sintética
-  (`CompilerLambdaClass.lambdaInterfaceType`) precisa ser resolvida na
-  inferência do elemento da coleção — mudança de infraestrutura de tipos que
-  afeta todo o dispatch de lambda em coleção. **NÃO corrigido nesta sessão**
-  (fora da fila ratificada, risco de regressão no bug 20/§127).
-- **Não é regressão do §127/§155:** o caminho (`JvmOpCollections` +
-  `ExpressionInstanceCallLowerer`) não foi tocado por eles; a sonda B127c já
-  dava CCE antes.
-
 
 ### 161. NAT-STR01 — case-fold (`toUpperCase`/`toLowerCase` de instância) e conversores de string são **ASCII-only no Native** (x86/riscv/aarch), Unicode (`Character.toUpperCase`, default locale) no JVM/interpretador; JS usa `String.prototype.toUpperCase` (Unicode) — 🟢 DECIDIDO 13/09 (abrir/implementar; ratificação da mantenedora) — lane nat
 
