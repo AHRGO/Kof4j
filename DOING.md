@@ -23,9 +23,13 @@
 > 9. **Identificação por IP local (13/09, diretriz da mantenedora):** cada
 >    agente se identifica pelo **IPv4 local da máquina** (`hostname -I`).
 >    Toda reivindicação `EM CURSO`/`FEITO` leva `dono = <IPv4>` (ex. `dono =
->    192.168.100.22` = `mel-optiplex`). Esta sessão = **192.168.100.18**
->    (lane development — S2-OTP, DD-01 finally, §106 JSON Map).
->    Quem voltar (humano/cron/outra instância) retoma em ≤1 leitura.
+>    192.168.100.22` = `mel-optiplex`). **O cluster compartilha o storage**
+>    (mesmo repo/branch): cada IPv4 = **um agente = uma máquina**; nunca
+>    assumir o trabalho/dono de outro IP, e a linha `Esta sessão = ...` vale
+>    só para quem a escreveu. Esta sessão = **192.168.100.15**
+>    (lane gate/qualidade + docs — §106 fechado pela lane .18/9094; §89
+>    evidência corrigida 13/09). Quem voltar (humano/cron/outra instância)
+>    retoma em ≤1 leitura.
 
 Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
@@ -53,6 +57,21 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 ---
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
+
+> **⚡ docs/gate (13/09 ~05:00, dono = 192.168.100.15):** (1) **reparo de
+> corrupção** no `known-bugs.md:11` — o cabeçalho tinha um bloco DUPLICADO +
+> o marcador literal `(line truncated to 2000 chars)` (um read truncado colado
+> no arquivo); reconstruído, `§156` preservado. (2) **§106 fechado** no
+> cabeçalho (fila **12→11** itens; `README §2` alinhado). (3) **§89 evidência
+> CORRIGIDA**: medido por EXECUÇÃO (não `success=true`) — `n.toDouble()` quebra
+> nos **4 alvos** (JVM `ClassFormatError: Illegal class name ""`; Native
+> `undefined reference`; Script `ERR: Integer.toDouble/0`; JS `TypeError`),
+> não só no link nativo; o `as` funciona nos 4 (`S89b.kf`). Decisão 3a vale,
+> mas o fix deve cobrir **JVM+Script+JS+3 nativos**. (4) **regra 9** restaurada
+> com a semântica de cluster (storage compartilhado; 1 IP = 1 agente = 1 máquina).
+> **PRÓXIMO PASSO:** §89 (alias do `as` + warning de truncamento) — se
+> implementar, reivindicar aqui antes; depois §117 (8a), §131 (10a), §81 (5b).
+> **NÃO:** `nat/`; UI*; push main; `git config user.*`; Co-authored-by.
 
 > **⚡ RECUSA de re-disparo (13/09 ~06:50, lane development/docs, dono =
 > 192.168.100.17 — pow fechado em `d736e36e`+docs `c75dcbbd`):** varredura

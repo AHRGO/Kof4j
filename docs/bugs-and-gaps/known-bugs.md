@@ -8,7 +8,7 @@
 >
 > | | |
 > |---|---|
-> | **Fila ABERTA (varredura 13/09 — seções sem resolução no próprio cabeçalho)** | **12 itens** (seções/sub-faces sem resolução) — §81 (KofJS `Long` é `Number` 53-bit — **DECIDIDO 13/09** 5b: BigInt no JS, bump+migração), §89 (conversão numérica de primitivo quebra o LINK nos nativos — **DECIDIDO 13/09** 3a: alias do `as` + warning de truncamento), §101 (relacionais de Double com NaN divergem cross — **congelado** regra 6), §104b-ii (record em coleção + storage-box asm — **lane bugfixer**, unidade GRANDE), §106 (`json.encode(Map)` quebra em 3 alvos — **DECIDIDO 13/09** 2b: chaves sorted), §107 🟡 (`println(coleção)` nativo → lixo de ponteiro; **face escalar ✅ CORRIGIDA 12/09** nos 3 nativos `f3b3821c`+B39; restam record/aninhado=`?` até §104b-ii + FP-cross=FLT001), §114 ⏳ (equals de record com campo-referência no Native; sub-face do §104b-ii), §117 (`cancelled()` colide por hash de TID — **DECIDIDO 13/09** 8a: slot por TID no spawn), §129 (throw em worker `spawn` → longjmp cross-thread no Native — **lane nat**; era referido como "§129-TLS"), §131 (sobrecarga de método por aridade — **DECIDIDO 13/09** 10a: implementar), §132 (KofJS: task de task não roda sem ceder o event-loop — gate OTP002; **lane alheia**), §161/NAT-STR01 (case-fold ASCII-only no Native vs Unicode no JVM/JS — **DECIDIDO 13/09**, lane nat; registrado aqui 13/09). **~~§149~~ NÃO está aberto — ✅ CORRIGIDO 12/09** (a linha anterior o listava por engano; a raiz era o `JsIfThrowElse` do §147). **§156 ✅ CORRIGIDO 13/09** (lista heterogênea de lambdas mesma assinatura → elemento sem className, dispatch SAM). **§155 ✅ CORRIGIDO 13/09** (tipo-função em type-args → `ClassFormatError`; parser preserva os espaços do type-ref). **§127-JVM ✅ CORRIGIDO 13/09** (decisão 9a: `as ()->T` parseia como type-ref; checkcast p/ interface SAM sintética). **§94 ✅ CORRIGIDO 13/09** (EQ/NE de Double/Float no interpretador agora IEEE). **§125 ✅ CORRIGIDO 12/09** (return Nullable(primitivo) → default; célula `nullableprint` 4/4). **§139 ✅ CORRIGIDO 12/09** (... (line truncated to 2000 chars) **~~§149~~ NÃO está aberto — ✅ CORRIGIDO 12/09** (a linha anterior o listava por engano; a raiz era o `JsIfThrowElse` do §147). **§155 ✅ CORRIGIDO 13/09** (tipo-função em type-args → `ClassFormatError`; parser preserva os espaços do type-ref). **§127-JVM ✅ CORRIGIDO 13/09** (decisão 9a: `as ()->T` parseia como type-ref; checkcast p/ interface SAM sintética). **§94 ✅ CORRIGIDO 13/09** (EQ/NE de Double/Float no interpretador agora IEEE). **§125 ✅ CORRIGIDO 12/09** (return Nullable(primitivo) → default; célula `nullableprint` 4/4). **§139 ✅ CORRIGIDO 12/09** (JS fold `f()==null` → COMP002; parser JS descarta mid-expression). **§140 ✅ CORRIGIDO 12/09** (gate ≤500 virou ratchet com baseline no CI). **§90 ✅ CORRIGIDO 12/09** (lane web). **§145/§146/§147 ✅ CORRIGIDOS 12/09** (`440730c8`, issue #101). **§45 ✅ IMPLEMENTADO 13/09** (DD-01 opção 4a: FinallyFrame na IR; 4 targets, `063ed956`) e **S10c ✅ 13/09** (`random.randomBytesHex`, `317b23e7`). **§157/§158/§159/§160 ✅ CORRIGIDOS 13/09** (issue-lane: #103 caso 3 POP2 em `HashMap.put` de `Long`, kof.web `header()`/`query()` `String?`+SEM049, Native web WEB001, KofJS hostless `kof_platform`). **Conclusão honesta (13/09):** dos **13 itens abertos**, a maioria pende de **decisão da mantenedora já ratificada** (fila de implementação: §81/§89/§106/§117/§131/§161 = 6), **congelamento regra-6** (§101 + sub-faces §114/§107 = 3), **lane alheia** (§104b-ii lane bugfixer + §129 lane nat + §132 = 3) — **há UM item code-pure sem decisão: §156** (infra de tipos, `List` heterogêneo de lambdas → CCE JVM), candidato a agente de tipos. |
+> | **Fila ABERTA (varredura 13/09 — seções sem resolução no próprio cabeçalho)** | **11 itens** (seções/sub-faces sem resolução) — §81 (KofJS `Long` é `Number` 53-bit — **DECIDIDO 13/09** 5b: BigInt no JS, bump+migração), §89 (conversão numérica de primitivo quebra nos 4 alvos — **DECIDIDO 13/09** 3a: alias do `as` + warning de truncamento), §101 (relacionais de Double com NaN divergem cross — **congelado** regra 6), §104b-ii (record em coleção + storage-box asm — **lane bugfixer**, unidade GRANDE), §107 🟡 (`println(coleção)` nativo → lixo de ponteiro; **face escalar ✅ CORRIGIDA 12/09** nos 3 nativos `f3b3821c`+B39; restam record/aninhado=`?` até §104b-ii + FP-cross=FLT001), §114 ⏳ (equals de record com campo-referência no Native; sub-face do §104b-ii), §117 (`cancelled()` colide por hash de TID — **DECIDIDO 13/09** 8a: slot por TID no spawn), §129 (throw em worker `spawn` → longjmp cross-thread no Native — **lane nat**; era referido como "§129-TLS"), §131 (sobrecarga de método por aridade — **DECIDIDO 13/09** 10a: implementar), §132 (KofJS: task de task não roda sem ceder o event-loop — gate OTP002; **lane alheia**), §161/NAT-STR01 (case-fold ASCII-only no Native vs Unicode no JVM/JS — **DECIDIDO 13/09**, lane nat; registrado aqui 13/09). **~~§149~~ NÃO está aberto — ✅ CORRIGIDO 12/09** (a linha anterior o listava por engano; a raiz era o `JsIfThrowElse` do §147). **§156 ✅ CORRIGIDO 13/09** (lista heterogênea de lambdas mesma assinatura → elemento sem className, dispatch SAM). **§155 ✅ CORRIGIDO 13/09** (tipo-função em type-args → `ClassFormatError`; parser preserva os espaços do type-ref). **§127-JVM ✅ CORRIGIDO 13/09** (decisão 9a: `as ()->T` parseia como type-ref; checkcast p/ interface SAM sintética). **§94 ✅ CORRIGIDO 13/09** (EQ/NE de Double/Float no interpretador agora IEEE). **§125 ✅ CORRIGIDO 12/09** (return Nullable(primitivo) → default; célula `nullableprint` 4/4). **§139 ✅ CORRIGIDO 12/09** (JS fold `f()==null` → COMP002; parser JS descarta mid-expression). **§140 ✅ CORRIGIDO 12/09** (gate ≤500 virou ratchet com baseline no CI). **§90 ✅ CORRIGIDO 12/09** (lane web). **§145/§146/§147 ✅ CORRIGIDOS 12/09** (`440730c8`, issue #101). **§45 ✅ IMPLEMENTADO 13/09** (DD-01 opção 4a: FinallyFrame na IR; 4 targets, `063ed956`) e **S10c ✅ 13/09** (`random.randomBytesHex`, `317b23e7`). **§157/§158/§159/§160 ✅ CORRIGIDOS 13/09** (issue-lane: #103 caso 3 POP2 em `HashMap.put` de `Long`, kof.web `header()`/`query()` `String?`+SEM049, Native web WEB001, KofJS hostless `kof_platform`). **Conclusão honesta (13/09):** dos **11 itens abertos**, a maioria pende de **decisão da mantenedora já ratificada** (fila de implementação: §81/§89/§117/§131/§161 = 5), **congelamento regra-6** (§101 + sub-faces §114/§107 = 3), **lane alheia** (§104b-ii lane bugfixer + §129 lane nat + §132 = 3) — **§106 ✅ CORRIGIDO 13/09** (`5b939106`, JVM/x86/Script/JS; riscv/aarch = gap de porta na matriz) e **§156 ✅ CORRIGIDO 13/09** (não é mais candidato). |
 > | Antiga "varredura 08/09" (apócrifa — corrigida 12/09) | os "abertos" 39/62/63/64/46/48/50/59/61 estão ✅ CORRIGIDO nos próprios cabeçalhos (39/62/63/64 JVM/JS; 46/50/59 Native; 48/61 gap honesto JSN004/FFI001); contagem real na linha acima. |
 > | Paridade interpretador × compilados (semântica `==` congelada — regra 6) | **0** — bug 94 ✅ CORRIGIDO 13/09 (EQ/NE de Double/Float no interpretador agora IEEE; a "decisão" era alinhar ao previsto, que os 3 compilados + corpus já definiam) |
 > | Paridade backend-only (regra 5, atacável na lane Native) | **2** — §107 (println coleção → lixo; **face escalar ✅ CORRIGIDA 12/09 nos 3 targets nativos** — x86 `f3b3821c` + cross B39, golden JVM byte-idêntico; restam record/aninhado=`?` honesto até §104b-ii, FP-cross=FLT001; §107-JS 11/09), §104b-ii (equals de conteúdo p/ record + box de primitivo no storage asm; **face char ✅ FECHADA 11/09** — `mapgetprim` 4/4)
@@ -2163,18 +2163,35 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
   alvos — **não** é divergência cross; registrar como gap de semântica
   `mapOf()`-vazio (se a mantenedora quiser `null` ali, é decisão SG-00x).
 
-### 89. Native (x86 + cross): conversão numérica de primitivo `n.toDouble()`/`n.toInt()`/`n.toFloat()`/`n.toLong()` quebra o LINK — 🟢 DECIDIDO 13/09 (opção 3a: alias do `as` + warning de truncamento) — lane implementável
+### 89. Conversão numérica de primitivo `n.toDouble()`/`n.toInt()`/`n.toFloat()`/`n.toLong()` quebra em TODOS os alvos (não só o LINK nativo) — 🟢 DECIDIDO 13/09 (opção 3a: alias do `as` + warning de truncamento) — lane implementável
 
-- **Sintoma:** `main() { var n = 5; println(n.toDouble() == 5.0) }` falha no
+- **⚠️ CORREÇÃO 13/09 (medição de EXECUÇÃO, não de compile):** a versão
+  anterior dizia "**JVM e JS executam certo**" — era **verde falso**. O probe
+  antigo só lia `success=true` do compilador (que mede *compile*, não
+  *execução*). Medido agora com execução real (`S89.kf`:
+  `main() { var n = 5; println(n.toDouble() == 5.0) }`) no HEAD:
+  - **JVM**: `LinkageError`/`ClassFormatError: Illegal class name "" in class
+    file Default/Main` — o lowering emite `invokevirtual "".toDouble:()Ljava/lang/Object;`
+    (owner VAZIO; `Object.toDouble` não existe).
+  - **Native x86/riscv/aarch64**: `undefined reference to toDouble` (link).
+  - **Script (interpretador)**: `ERR: java.lang.Integer.toDouble/0`.
+  - **JS**: `TypeError: n.toDouble is not a function`.
+  - **Workaround `as` funciona nos 4 alvos** (`S89b.kf`: `(n as Double) == 5.0`
+    → `true` em JVM/Native/Script/JS).
+  Consequência: o fix da decisão 3a deve cobrir **JVM + Script + JS + os 3
+  nativos**, não só o emit nativo (a premissa da decisão — "JVM/JS já
+  funcionam" — era falsa).
+- **Sintoma original (link nativo):** `main() { var n = 5; println(n.toDouble() == 5.0) }` falha no
   link nos 3 nativos — x86: `undefined reference to toDouble`; riscv64/
-  aarch64: idem. **JVM e JS executam certo** (interpretador implementa o
-  método em primitivo — probe `box2.kf`: JVM success=true). A API **existe**
-  e funciona em 2 dos 3 targets; falta só o emit nativo.
-- **Causa raiz:** o backend nativo (`NativeX86Calls.emitCall` /
-  `NativeRiscvCrossOps`) não tem intrínseco p/ conversão numérica de
-  primitivo — o call genérico cai em `call <nome>` sem que NENHUMA runtime
-  defina `toDouble`/`toInt`/`toFloat`/`toLong` (só `String.toDouble` →
-  `kof_string_to_double`, símbolo diferente). O idiom que funciona em TODOS
+  aarch64: idem. Os outros alvos (JVM/Script/JS) também quebram — ver
+  correção acima. A API **não existe/ não funciona em nenhum** alvo;
+  falta o lowering correto em todos.
+- **Causa raiz:** o lowering de método de instância em primitivo
+  (`ExpressionInstanceCallLowerer`) não tem ramo para conversões numéricas:
+  emite um `invokevirtual` genérico com owner vazio (JVM) / um `call <nome>`
+  sem runtime (nativo) / reflexão que não existe (Script) / método inexistente
+  (JS). Só `String.toDouble` → `kof_string_to_double` (símbolo diferente)
+  funciona. O idiom que funciona em TODOS
   os targets (incluindo cross, exit 0 medido 10/09) é o **cast `as`**:
   `n as Double`, `d as Int` (AGENTS.md "Cast: x as Char / big as Int";
   `learn/04`: `Int i = d as Int`) — o `as` lower p/ o intrínseco numérico
@@ -2746,7 +2763,7 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
 - **Arquivos:** `NativeRiscvCrossOps.emitCrossBinaryRiscv` (cross),
   `NativeX86Calls`/`RuntimeFp` (x86), `JvmOpEmitter` (JVM DCMPL/G).
 
-### 106. `json.encode(Map)` quebra em 3 dos 5 alvos (JVM crasha; x86/riscv link error; só Script/JS ok) — 🟢 DECIDIDO 13/09 (opção 2b: chaves sorted) — lane implementável
+### 106. `json.encode(Map)` quebra em 3 dos 5 alvos (JVM crasha; x86/riscv link error; só Script/JS ok) — ✅ CORRIGIDO 13/09 (opção 2b: chaves sorted; JVM/x86/Script/JS — riscv/aarch gap de porta)
 
 - **Menor repro (medido 11/09):**
   ```kof

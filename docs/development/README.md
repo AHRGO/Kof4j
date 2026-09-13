@@ -52,15 +52,15 @@ package-compiler) abre antes de SYSTEMS fechar (paridade + GC + estabilidade).
 
 ## 2. Bugs abertos (fila em `docs/bugs-and-gaps/known-bugs.md`) — triagem 13/09
 
-**14 seções sem ✅ no cabeçalho** (§127-JVM, §155, §94 e §156 fechados 13/09;
-§157-160 e §65 fechados/NÃO-REPRODUZ 13/09) — e a conclusão honesta
-(`known-bugs.md:11`): **fila aberta = 12 itens, todos com decisão/dono/
+**11 itens na fila aberta** (§127-JVM, §155, §94, §156 e §106 fechados
+13/09; §157-160 e §65 fechados/NÃO-REPRODUZ 13/09) — e a conclusão honesta
+(`known-bugs.md:11`): **fila aberta = 11 itens, todos com decisão/dono/
 bloqueio — ZERO item código-puro-sem-decisão nesta lane**.
 Todos pendurados em:
 
 | Grupo | Bugs | Quem destrava |
 |---|---|---|
-| Decisão ratificada 13/09 — implementação pendente | §81, §89, §106, §117, §131, §161/NAT-STR01 (§45/DD-01 FECHADO 13/09 — ver `docs/decisions/DD-01-finally-return.md`) | fila ratificada / lanes executoras |
+| Decisão ratificada 13/09 — implementação pendente | §81, §89, §117, §131, §161/NAT-STR01 (§106 ✅ 13/09; §45/DD-01 FECHADO 13/09 — ver `docs/decisions/DD-01-finally-return.md`) | fila ratificada / lanes executoras |
 | Congelado regra-6 | §101 | ninguém (contrato) |
 | Lane alheia | §104b-ii + §107 restante + §114 (bugfixer — storage-box de record), §129 (lane nat), §132 (OTP-JS) | donos das lanes |
 
