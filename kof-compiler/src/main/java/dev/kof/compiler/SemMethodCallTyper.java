@@ -27,7 +27,9 @@ public final class SemMethodCallTyper {
             // acesso é direto e seria NPE em runtime. Antes o lowering
             // desembrulhava silenciosamente (ExpressionTyper) — advisory.
             if (recv instanceof Type.NullableType && sa.diagnostics() != null) {
-                sa.diagnostics().error("", 0, 0, 0,
+                SourcePosition mcPos = mc.position();
+                sa.diagnostics().error(mcPos != null ? mcPos.file() : "",
+                        mcPos != null ? mcPos.line() : 0, mcPos != null ? mcPos.column() : 0, 0,
                         "receiver is nullable (T?); narrow first: if (x != null) { x.method() }",
                         "SEM049");
             }
