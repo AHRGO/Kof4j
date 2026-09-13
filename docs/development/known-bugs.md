@@ -4819,3 +4819,36 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
 - **Prova:** `KofSwitchExprE2ETest.blockCaseBodyFailsWithDiagnostic` (novo;
   vermelho antes — compilava com `success=true`); os 31 testes prévios seguem
   (6 erros = só `node` ausente, ambientais).
+
+### 154. P0 — `origin/beta-0.4.0` ficou VERMELHO por um instante: o WIP §103.1 (`69fdab59`) aterrissou na branch e quebrou o `javac` do `KofRuntime` (345 falhas) — ✅ RESOLVIDO 13/09 (fix do dono da lane §103: `751a83f2`/`3fd3c1b3`)
+
+- **Sintoma (medido no gate pós-rebase, HEAD `7a410b6c`):** suíte
+  `kof-compiler` **1445 testes, 345 falhas, 20 erros** (normal: 1439/0/13).
+  As falhas eram de classe inteira (`ComponentCoreE2ETest` 13/13,
+  `ConfigGenTest` 3/3, `CompilerDriverTest` 3, `BackendParityTest` 2,
+  `AndroidInteropE2ETest` 2, `CodegenKitchenSinkTest` 1) e o `kof-cli`
+  (`CompareTest`/`DecompileTest`/`FullStackE2ETest`/`ServePortTest`), todas
+  com a MESMA raiz: `failed to compile KofRuntime helper (javac exit 1)`.
+- **Causa raiz:** o commit `69fdab59` ("preserva §103.1 do outro agente em
+  branch própria") foi empurrado TAMBÉM na `beta-0.4.0` — não só na branch
+  `wip-103-json-map-103.1`. O conteúdo é um WIP inacabado: o
+  `JvmRuntimeJson` emite `kof_json_decode_object_map` retornando
+  `HashMap<Object,Object>` **sem importar `java.util.HashMap`** e um
+  `kof_json_decode_map` com `new java.util.Map<Object,Object>(0){...}`
+  (interface não instanciável → `anonymous class implements interface;
+  cannot have arguments`). O `KofRuntime.java` gerado não compila → **toda
+  compilação JVM falha**.
+- **Fix (do dono da lane §103, não revert):** no rebase de 13/09 o remoto já
+  trazia a implementação correta — `751a83f2` (decode real) +
+  `3fd3c1b3` (`JvmRuntimeJsonMap`/`JsRuntimeUiJsonMap`, o split ≤500 que
+  carrega os helpers de Map com os imports certos) + `606662f4` (§103.2
+  Int→Long em campo). O meu `git revert 69fdab59` (`8d5b8e65`) ficou
+  **obsoleto e foi descartado no rebase** (`git rebase --skip`): reverter
+  teria destruído a implementação boa do dono. O WIP antigo segue
+  preservado em `origin/wip-103-json-map-103.1` (`cf610fba`).
+- **Prova:** com o fix do dono, `CompilerDriverTest` 252/0,
+  `ComponentCoreE2ETest` 14/0, `ConfigGenTest` 3/0, `BackendParityTest` 16/0,
+  `CodegenKitchenSinkTest` 1/0, `AndroidInteropE2ETest` 12/0 (298/0) e
+  `kof-cli` `CompareTest`/`DecompileTest`/`FullStackE2ETest`/`ServePortTest`
+  58/0. Lição: WIP preservado vai SÓ para branch própria; commit de WIP na
+  branch de release é regressão de build (regra 1 — zero regressão).
