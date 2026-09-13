@@ -327,6 +327,9 @@ public final class Translate {
             if (p.at("for")) {
                 return parseFor();
             }
+            if (p.at("switch")) {
+                return parseSwitch();
+            }
             // local variable declaration or expression statement.
             return parseExprOrDecl();
         }
@@ -378,6 +381,67 @@ public final class Translate {
                 return "var " + name + (expr.isEmpty() ? "" : " = " + expr);
             }
             return parseExpr();
+        }
+
+        private String parseSwitch() {
+            // switch Java-statement → switch Kof-statement (idiom 1:1,
+            // training/idioms/control-flow.md: `case N:` + sem fallthrough).
+            // `switch`/`case`/`break`/`default` são keywords do TranslateLexer
+            // mas nenhum statement as consumia — caía em parseExprOrDecl →
+            // "expected ';' but found '('".
+            // Mapeamento: `break` é OPCIONAL em Kof (auto-termina, sem
+            // fallthrough — verificado 02/09) → dropar; labels múltiplos
+            // `case 1, 2:` → cases separados; corpo de case = statements até
+            // o próximo `case`/`default`/`}` (consumindo `break;` e `:`).
+            p.next(); // switch
+            p.expect("(");
+            String subj = parseExpr();
+            p.expect(")");
+            p.expect("{");
+            StringBuilder sb = new StringBuilder("switch (" + subj + ") {");
+            while (!p.at("}")) {
+                if (p.at("case")) {
+                    p.next();
+                    // labels: expr [, expr]*
+                    List<String> labels = new ArrayList<>();
+                    labels.add(parseExpr());
+                    while (p.at(",")) { p.next(); labels.add(parseExpr()); }
+                    if (p.at(T.ARROW)) {
+                        // Java 14+ arrow-switch `case 1 -> stmt` → `case 1:` Kof
+                        // (Kof-statement usa `:`; `->` é a forma expressão SYN001).
+                        p.next();
+                    } else {
+                        p.expect(":");
+                    }
+                    for (String label : labels) {
+                        sb.append(" case ").append(label).append(":");
+                    }
+                    // corpo: statements até case/default/}; `break;` → drop.
+                    boolean any = false;
+                    while (!p.at("case") && !p.at("default") && !p.at("}")) {
+                        if (p.at("break")) { p.next(); p.expect(";"); continue; }
+                        sb.append(' ').append(parseStatement());
+                        any = true;
+                    }
+                    if (!any) sb.append(" {}");
+                } else if (p.at("default")) {
+                    p.next();
+                    if (p.at(T.ARROW)) p.next(); else p.expect(":");
+                    sb.append(" default:");
+                    boolean any = false;
+                    while (!p.at("case") && !p.at("default") && !p.at("}")) {
+                        if (p.at("break")) { p.next(); p.expect(";"); continue; }
+                        sb.append(' ').append(parseStatement());
+                        any = true;
+                    }
+                    if (!any) sb.append(" {}");
+                } else {
+                    throw new TranslateException("expected 'case'/'default' but found '" + p.peek().text + "'");
+                }
+            }
+            p.expect("}");
+            sb.append(" }");
+            return sb.toString();
         }
 
         private String parseExprOrDecl() {

@@ -6,8 +6,8 @@
 
 **Status:** EM DESENVOLVIMENTO (caiu de `future/` em 12/09 — Fase F
 implementada: `Translate.java` + `TranslateLexer`/`TranslateExpr`;
-prova: `TranslateTest` 10/10 (output compila e roda; +do-while 13/09).
-Subconjunto Java ampliado ainda pendente)
+prova: `TranslateTest` 11/11 (output compila e roda; +do-while +switch
+statement 13/09). Subconjunto Java ampliado ainda pendente)
 **Data:** 22 de agosto de 2026
 
 ---
@@ -108,3 +108,14 @@ diferenciais.
 > `Translate.parseStatement` (corpo em bloco usa o conteúdo cru, sem chaves
 > duplas). Prova: `TranslateTest.doWhileTranslates` (traduz + compila no JVM
 > + roda `0/1/2`). `Translate.java` 412 ≤500; `TranslateTest` 10/10.
+>
+> **Estado (13/09 ~10:45, dono = 192.168.100.22): switch-statement traduzido.**
+> `switch (x) { case 1: ...; break; default: ... }` Java → `switch (x) {
+> case 1: ... default: ... }` Kof statement (`:`, `training/idioms/control-flow.md`).
+> Causa: `switch`/`case`/`break`/`default` eram keywords sem ramo no statement
+> parser → `expected ';' but found '('`. Fix: `parseSwitch` (corpo de case =
+> statements até próximo `case`/`default`/`}`; `break;` dropado — em Kof é
+> opcional/sem fallthrough; labels múltiplos `case "a", "b":` → cases
+> separados; arrow `case 3 ->` normalizado p/ `:`). Prova:
+> `TranslateTest.switchStatementTranslates` (traduz + compila JVM + roda
+> `one/ab`; Int e String). `Translate.java` 476 ≤500; `TranslateTest` 11/11.

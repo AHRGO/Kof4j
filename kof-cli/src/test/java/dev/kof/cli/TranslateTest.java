@@ -164,6 +164,45 @@ class TranslateTest {
     }
 
     @Test
+    void switchStatementTranslates(@TempDir Path dir) throws Exception {
+        String kof = Translate.translateJava("""
+                public class SW {
+                    public static void main(String[] args) {
+                        int x = 1;
+                        switch (x) {
+                            case 1:
+                                System.out.println("one");
+                                break;
+                            case 2:
+                                System.out.println("two");
+                                break;
+                            default:
+                                System.out.println("other");
+                                break;
+                        }
+                        String s = "b";
+                        switch (s) {
+                            case "a", "b":
+                                System.out.println("ab");
+                                break;
+                            default:
+                                System.out.println("zz");
+                                break;
+                        }
+                    }
+                }
+                """);
+
+        assertTrue(kof.contains("switch (x) { case 1: println(\"one\") case 2: println(\"two\") default: println(\"other\") }"),
+                "switch Java deve virar switch Kof statement (antes: expected ';' but found '('):\n" + kof);
+        assertFalse(kof.contains("break"), "break Java é opcional em Kof (sem fallthrough) — dropar:\n" + kof);
+        assertTrue(kof.contains("case \"a\": case \"b\": println(\"ab\")"),
+                "labels múltiplos `case \"a\", \"b\":` viram cases separados:\n" + kof);
+
+        assertCompiles(dir, kof, "one\nab");
+    }
+
+    @Test
     void doWhileTranslates(@TempDir Path dir) throws Exception {
         String kof = Translate.translateJava("""
                 public class DW {
