@@ -356,6 +356,11 @@ após o aceite dos §T:
      **177.412 → 6.873 B** travado no `ArtifactSizeTest` (a asserção
      `js > 100_000` virou `js < 30_000`), `JsRuntimePruneWriterTest` 6/6.
      `kof_platform` foi para a issue #104 — a poda preserva o comportamento.
+   - **S-6.1c ✅ 12/09** — gate branch×base + sonda de teste (`JsRuntimeTestSupport`
+     declara os imports da sonda como sementes pela união do multi-módulo;
+     `KofJsBrowserE2ETest` 22/22 Chrome real, `KofJsE2ETest` 40/40) —
+     mergeado `0104f6d6` (PR #106) + complemento #107 (remoção de comentários,
+     merge `97ad0a9c`).
    - **Resta:** nada — S-7 consolidou em `docs/stdlib/stdlib-loading.md` 13/09.
 7. **S-7** ✅ **FEITA 13/09** — docs consolidadas em
    `docs/stdlib/stdlib-loading.md` (mecanismo por target, números travados,
