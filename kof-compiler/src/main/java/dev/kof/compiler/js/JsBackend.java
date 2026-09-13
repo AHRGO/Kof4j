@@ -102,7 +102,7 @@ public class JsBackend implements Backend {
         this.lc.fnArityNames = new HashMap<>();
         this.lc.fnSigNames = new HashMap<>();
         for (IRClass clazz : module.classes()) {
-            if (JsLoweringContext.skipClass(clazz) || !JsLoweringContext.isMainClass(clazz)) continue;
+            if (JsLoweringContext.skipClass(clazz)) continue;
             Map<String, Integer> maxArity = new HashMap<>();
             Map<String, Set<String>> sigsByName = new HashMap<>();
             for (IRMethod method : clazz.methods()) {

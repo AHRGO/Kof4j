@@ -103,10 +103,10 @@ public final class JsMethodParser {
         MethodCtx ctx = new MethodCtx(lc, method, clazz);
         String name = method.name();
         if ("<init>".equals(name)) name = "constructor";
-        if (isTopLevel) {
-            // SG-011B: resolve pela ASSINATURA (twice(String) vs twice(Int) têm
-            // a mesma aridade — por aridade colidiriam); não-sobrecarregadas
-            // caem no caminho antigo (nome cru / $d de defaults).
+        if (isTopLevel || !isTopLevel && clazz != null && !"<init>".equals(method.name())) {
+            // SG-011B/§131: sobrecarregado resolve pela ASSINATURA (top-level
+            // E método de classe — o JS não tem overload; classe não-sobre-
+            // carregada mantém o nome cru, zero churn no structural dispatch).
             name = this.lc.jsFunctionName(name, method.parameterTypes(), method.parameterTypes().size());
         }
         return new JsIr.JsFunction(name, parameterNames(ctx), parseMethodBody(ctx), isStatic, false, isTopLevel,

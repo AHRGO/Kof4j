@@ -139,7 +139,32 @@ public class NativeBackend implements Backend {
     }
     /** true quando (clazz,name) é uma função top-level sobrecarregável. */
     static boolean sigMangles(String className, String name) {
-        return isTopLevelOwner(className) && !"<init>".equals(name) && !"main".equals(name);
+        return sigMangles(className, name, Map.of());
+    }
+    /** true quando (clazz,name) leva sufixo de assinatura: função top-level
+     *  OU método de classe SOBRECARREGADO (§131, 10a). */
+    static boolean sigMangles(String className, String name, Map<String, IRClass> classes) {
+        if ("<init>".equals(name) || "main".equals(name)) return false;
+        if (isTopLevelOwner(className)) return true;
+        return classHasOverload(className, name, classes);
+    }
+    /** §131: (clazz,name) tem 2+ métodos com o mesmo nome? */
+    boolean classHasOverload(String className, String name) {
+        return classHasOverload(className, name, allClassesMap);
+    }
+    /** §131: (clazz,name) tem 2+ métodos com o mesmo nome? */
+    static boolean classHasOverload(String className, String name, Map<String, IRClass> classes) {
+        String simple = className.substring(className.lastIndexOf('/') + 1);
+        for (IRClass clazz : classes.values()) {
+            if (clazz.name().equals(simple) || clazz.name().endsWith("/" + simple)) {
+                int count = 0;
+                for (IRMethod m : clazz.methods()) {
+                    if (m.name().equals(name)) count++;
+                }
+                return count > 1;
+            }
+        }
+        return false;
     }
     static String sigTag(java.util.List<Type> ps) {
         return dev.kof.compiler.TopLevelOverload.sigTag(ps);
@@ -154,14 +179,14 @@ public class NativeBackend implements Backend {
     }
     /** Chave do functionMangleMap para (clazz,name,pts): com assinatura só p/
      *  funções top-level; caso contrário o nome cru (comportamento antigo). */
-    static String fnKey(String className, String name, java.util.List<Type> pts) {
-        return sigMangles(className, name) ? name + "#" + sigTag(pts) : name;
+    static String fnKey(String className, String name, java.util.List<Type> pts, Map<String, IRClass> classes) {
+        return sigMangles(className, name, classes) ? name + "#" + sigTag(pts) : name;
     }
     /** Símbolo assembly de (clazz,name,pts). */
-    static String fnSymbol(String className, String name, java.util.List<Type> pts) {
+    static String fnSymbol(String className, String name, java.util.List<Type> pts, Map<String, IRClass> classes) {
         String m = sanitizeNameStatic(className) + "_" + sanitizeNameStatic(name);
         if ("<init>".equals(name)) m += "_" + pts.size();
-        else if (sigMangles(className, name)) m += sigTag(pts);
+        else if (sigMangles(className, name, classes)) m += sigTag(pts);
         return m;
     }
     static String sanitizeNameStatic(String name) {
@@ -392,8 +417,8 @@ public class NativeBackend implements Backend {
         for (IRClass clazz : module.classes()) {
             for (IRMethod method : clazz.methods()) {
                 if ("<clinit>".equals(method.name())) continue;
-                String mangled = fnSymbol(clazz.name(), method.name(), method.parameterTypes());
-                functionMangleMap.putIfAbsent(fnKey(clazz.name(), method.name(), method.parameterTypes()), mangled);
+                String mangled = fnSymbol(clazz.name(), method.name(), method.parameterTypes(), allClassesMap);
+                functionMangleMap.putIfAbsent(fnKey(clazz.name(), method.name(), method.parameterTypes(), allClassesMap), mangled);
             }
         }
         for (IRClass clazz : module.classes()) {
@@ -639,7 +664,8 @@ public class NativeBackend implements Backend {
     int resolveFieldOffset(Type ownerType, String fieldName) { return NativeOpHelpers.resolveFieldOffset(this, ownerType, fieldName); }
 
     List<String> collectVirtualMethods(IRClass clazz) { return NativeClassMeta.collectVirtualMethods(this, clazz); }
-    int findVirtualMethodIndex(String ownerTypeName, String methodName) { return NativeClassMeta.findVirtualMethodIndex(this, ownerTypeName, methodName); }
+    int findVirtualMethodIndex(String ownerTypeName, String methodName) { return NativeClassMeta.findVirtualMethodIndex(this, ownerTypeName, methodName, -1); }
+    int findVirtualMethodIndex(String ownerTypeName, String methodName, int argCount) { return NativeClassMeta.findVirtualMethodIndex(this, ownerTypeName, methodName, argCount); }
     void emitStringData(StringBuilder sb) { NativeClassMeta.emitStringData(this, sb); }
 
 }

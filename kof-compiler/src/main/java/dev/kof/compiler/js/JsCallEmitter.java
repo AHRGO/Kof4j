@@ -140,8 +140,13 @@ void handleCall(MethodCtx ctx, List<Object> stack,
             stack.add(new JsIr.JsBinary(receiver, "===", args.get(0)));
             return;
         }
+        // §131: método de classe sobrecarregado tem nome JS tageado por
+        // assinatura (o MESMO mangle do lowerFunction) — structural dispatch
+        // precisa usar o nome exato; não-sobrecarregado volta o nome cru.
+        String calleeJsName = p.lc.jsFunctionName(kc.methodName(), kc.parameterTypes(),
+                kc.parameterTypes().size());
         finishCall(stack, kc, new JsIr.JsCall(
-                new JsIr.JsMember(receiver, JsTypeMapper.sanitizeName(kc.methodName())), args));
+                new JsIr.JsMember(receiver, JsTypeMapper.sanitizeName(calleeJsName)), args));
     }
 
 JsIr.JsExpression maybeAwait(KofCall kc, JsIr.JsExpression call) {

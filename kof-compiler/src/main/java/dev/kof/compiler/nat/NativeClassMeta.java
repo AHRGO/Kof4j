@@ -62,25 +62,34 @@ final class NativeClassMeta {
                 // SG-011B: fnSymbol == sanitize+"_"+name p/ classes reais (vtable
                 // idêntica); só o recipiente Main leva sufixo de assinatura — o
                 // MESMO da .globl, então cada slot referencia um símbolo definido.
-                String sym = nb.fnSymbol(clazz.name(), m.name(), m.parameterTypes());
-                int idx = methodNames.indexOf(m.name());
-                if (idx >= 0) {
-                    methods.set(idx, sym);
-                } else {
+                // §131 (10a): método sobrecarregado (2+ defs do nome) ganha slot
+                // PRÓPRIO por assinatura (fnSymbol tageia) — antes o 2º def
+                // sobrescrevia o slot (methods.set) e os 2 .globl colidiam.
+                String sym = nb.fnSymbol(clazz.name(), m.name(), m.parameterTypes(), nb.allClassesMap);
+                if (NativeBackend.sigMangles(clazz.name(), m.name(), nb.allClassesMap)) {
                     methodNames.add(m.name());
                     methods.add(sym);
+                } else {
+                    int idx = methodNames.indexOf(m.name());
+                    if (idx >= 0) {
+                        methods.set(idx, sym);
+                    } else {
+                        methodNames.add(m.name());
+                        methods.add(sym);
+                    }
                 }
             }
         }
         return methods;
     }
 
-    static int findVirtualMethodIndex(NativeBackend nb, String ownerTypeName, String methodName) {
+    static int findVirtualMethodIndex(NativeBackend nb, String ownerTypeName, String methodName, int argCount) {
         for (IRClass clazz : nb.allClassesMap.values()) {
             if (clazz.name().equals(ownerTypeName) || clazz.name().endsWith("/" + ownerTypeName)
                     || ownerTypeName.endsWith("/" + clazz.name()) || ownerTypeName.equals(nb.sanitizeName(clazz.name()))) {
                 List<String> methods = collectVirtualMethods(nb, clazz);
-                String mangled = nb.sanitizeName(clazz.name()) + "_" + nb.sanitizeName(methodName);
+                String mangled = nb.fnSymbol(clazz.name(), methodName,
+                        methodsForArity(clazz, methodName, argCount), nb.allClassesMap);
                 for (int i = 0; i < methods.size(); i++) {
                     if (methods.get(i).equals(mangled)) {
                         return i;
@@ -88,7 +97,7 @@ final class NativeClassMeta {
                 }
                 for (IRMethod m : clazz.methods()) {
                     if (m.name().equals(methodName) && !"<init>".equals(m.name()) && !"<clinit>".equals(m.name())) {
-                        String m2 = nb.sanitizeName(clazz.name()) + "_" + nb.sanitizeName(m.name());
+                        String m2 = nb.fnSymbol(clazz.name(), m.name(), m.parameterTypes(), nb.allClassesMap);
                         for (int i = 0; i < methods.size(); i++) {
                             if (methods.get(i).equals(m2)) {
                                 return i;
@@ -100,6 +109,17 @@ final class NativeClassMeta {
             }
         }
         return -1;
+    }
+
+    /** §131: paramTypes do método (clazz,name) com a aridade pedida — para
+     *  construir o símbolo tageado do call site. Lista vazia se não achar. */
+    static java.util.List<Type> methodsForArity(IRClass clazz, String methodName, int argCount) {
+        for (IRMethod m : clazz.methods()) {
+            if (m.name().equals(methodName) && m.parameterTypes().size() == argCount) {
+                return m.parameterTypes();
+            }
+        }
+        return java.util.List.of();
     }
 
     static void emitStringData(NativeBackend nb, StringBuilder sb) {

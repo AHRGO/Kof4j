@@ -836,6 +836,27 @@ class CoreRegressionE2ETest {
         assertEquals("fin\n1\nfin2\n2\nfin3", runJvm(outJvm), "JVM finally+return output mismatch");
     }
 
+    // known-bugs §131 (decisão 10a, 13/09) — sobrecarga de MÉTODO por
+    // aridade/assinatura na mesma classe. Antes: SEM013 no JVM (só o último
+    // def sobrevivia na symtable) e `symbol B_m is already defined` no
+    // nativo (vtable dedup por nome + .globl colidindo). Agora: MethodSet
+    // na symtable + vtable com slot próprio por assinatura.
+    // Cenários Q3: aridade 1 e 2, chamada interna this.m(a,1), ordem de defs.
+    @Test
+    void methodOverloadByArity(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                class B {
+                    Int m(Int a) { return this.m(a, 1) }
+                    Int m(Int a, Int b) { return a + b }
+                }
+                main() {
+                    var b = B()
+                    println(b.m(5))
+                    println(b.m(5, 2))
+                }
+                """, "6\n7", tempDir, "method-overload");
+    }
+
     // known-bugs §89 (decisão 3a, 13/09) — conversão numérica em receiver
     // primitivo (n.toInt()/toDouble()/toFloat()/toLong()) = alias do `as`
     // (trunc para zero, paridade JVM). Antes: JVM compilado quebrava

@@ -172,7 +172,7 @@ final class NativeOpHelpers {
         }
         if (kc.kind() == KofCallKind.FUNCTION) {
             String key = NativeBackend.fnKey(NativeBackend.internalOwner(kc.ownerType()),
-                    kc.methodName(), kc.parameterTypes());
+                    kc.methodName(), kc.parameterTypes(), nb.allClassesMap);
             return nb.functionMangleMap.getOrDefault(key, nb.sanitizeName(kc.methodName()));
         }
         if (kc.kind() == KofCallKind.CONSTRUCTOR) {

@@ -374,9 +374,9 @@ public final class NativeRiscvCrossOps {
         // dispatch virtual (INSTANCE/INTERFACE em classe de usuário)
         if ((kc.kind() == KofCallKind.INSTANCE || kc.kind() == KofCallKind.INTERFACE)
                 && kc.ownerType() instanceof Type.ClassType ct && !BuiltinTypes.isString(ct)) {
-            int vtableIdx = nb.findVirtualMethodIndex(ct.name(), mn);
+            int argCount = kc.parameterTypes().size();
+            int vtableIdx = nb.findVirtualMethodIndex(ct.name(), mn, argCount);
             if (vtableIdx >= 0) {
-                int argCount = kc.parameterTypes().size();
                 for (int i = argCount - 1; i >= 0; i--) {
                     sb.append("    pop ").append(crossArgReg(i + 1)).append("\n");
                 }
@@ -408,7 +408,7 @@ public final class NativeRiscvCrossOps {
         String mn = kc.methodName();
         if (mn.startsWith("kof_map_") || mn.startsWith("kof_set_") || mn.startsWith("kof_list_")) return mn;
         if (kc.kind() == KofCallKind.FUNCTION) {
-            String key = NativeBackend.fnKey(NativeBackend.internalOwner(kc.ownerType()), mn, kc.parameterTypes());
+            String key = NativeBackend.fnKey(NativeBackend.internalOwner(kc.ownerType()), mn, kc.parameterTypes(), nb.allClassesMap);
             return nb.functionMangleMap.getOrDefault(key, nb.sanitizeName(mn));
         }
         if (kc.kind() == KofCallKind.CONSTRUCTOR && kc.ownerType() instanceof Type.ClassType ct) {

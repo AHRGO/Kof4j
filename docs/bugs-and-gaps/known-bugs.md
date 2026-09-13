@@ -4043,6 +4043,27 @@ int de índice) — verificados na varredura.
   é outra (`defineMethodSymbol` sobreescreve o Symbol homônimo na symtable da
   classe + vtable por índice), e o `as: symbol 'Supervisor_child' is already
   defined` ali é `<init>`/método, não função top-level. Continua ABERTO.
+- **✅ CORRIGIDO 13/09 (opção 10a implementada, 4 backend faces):**
+  (a) **symtable:** `SymbolTable.define` faz merge de `MethodSymbol` homônimo
+  num `MethodSet` (espelho do `ConstructorSet`) com `select(argCount, argTypes)`
+  — aridade + compatibilidade (`TypeChecker.isAssignable`); o typer
+  (`MemberCallTyper`) seleciona e registra em `resolvedMethods()`.
+  (b) **nativo x86/riscv:** `sigMangles` estendido — método de CLASSE leva
+  sufixo de assinatura SÓ quando sobrecarregado (`classHasOverload`: 2+ defs
+  do nome na própria classe); classes sem overload mantêm símbolo cru (vtable
+  idêntica, zero churn). `collectVirtualMethods` dá slot PRÓPRIO por overload
+  (antes o 2º def sobrescrevia o slot E os dois `.globl` colidiam);
+  `findVirtualMethodIndex(owner, name, argCount)` resolve pelo símbolo
+  tageado da aridade pedida.
+  (c) **JS:** o mangle de assinatura (SG-011B) agora cobre TODAS as classes
+  (antes só Main) — métodos sobrecarregados ganham nome JS `$`-tageado no
+  `lowerFunction` E no call-site structural (`JsCallEmitter`), mesmo mangle.
+  (d) **JVM:** dispatch por overload resolvido no typer (KofCall já carrega
+  a assinatura certa) — o descritor JVM faz o resto.
+  Prova: `CoreRegressionE2ETest.methodOverloadByArity` JVM+JS (`6\n7`:
+  aridade 1 delegando `this.m(a,1)`, aridade 2 direto) + nativo x86 medido
+  (`6|7`) + gate 4-módulos BUILD SUCCESS (1642, 0 falhas reais; 2 erros
+  ambientais GraalJS).
 
 
 ### 132. KofJS: task spawnada DE DENTRO de outra task nunca roda sem ceder o event-loop (worker do supervisor nunca dispara) — 🔴 ABERTO (impeditivo JS do OTP #83; gate OTP002 aplicado)

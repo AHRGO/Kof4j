@@ -211,6 +211,20 @@ public final class MemberCallTyper {
         }
         if (recvType instanceof Type.ClassType ct) {
             SymbolTable.Symbol m = MemberResolver.resolveInHierarchy(sa, ct.name(), mc.methodName());
+            // §131 (10a): MethodSet = sobrecarga por assinatura; seleciona
+            // por aridade + compatibilidade de args.
+            if (m instanceof SymbolTable.MethodSet set) {
+                List<Type> argTypes0 = new ArrayList<>();
+                for (ExpressionNode arg : mc.arguments()) argTypes0.add(SemExpressionTyper.inferType(sa, arg, scope));
+                SymbolTable.MethodSymbol ms = set.select(mc.arguments().size(), argTypes0);
+                if (ms != null) {
+                    checkMemberAccess(sa, ms.accessFlags(), ms.ownerClass(), ct.name(),
+                            "'" + ct.name() + "." + mc.methodName() + "'");
+                    sa.resolvedMethods().put(mc, ms);
+                    TypeChecker.checkArgTypes(sa.diagnostics(), mc.methodName(), argTypes0, ms.parameterTypes());
+                    return ms.returnType();
+                }
+            }
             if (m instanceof SymbolTable.MethodSymbol ms) {
                 // SG-013 (SEM046): private/protected checados em compile-time
                 // (antes viravam flags JVM e acesso indevido só explodia em

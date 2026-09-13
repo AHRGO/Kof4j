@@ -136,10 +136,18 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > a entry pelo TID real — sem mudança de contrato, sem TLS glibc.
 > Prova: `KofConcurrency2Test.cancelDoesNotLeakAcrossWorkersNative` (20
 > iterações colisão forçada) + concorrência 34/0.
-> **PRÓXIMO PASSO:** commit+push §117; depois §131 (sobrecarga método por
-> aridade, 10a); Long=BigInt JS (5b, último, bump+migração). **NUNCA:**
-> `nat/` lane GC viva; UI*; push main; `git config user.*` (regra 7);
-> Co-authored-by.
+> **⚡ FEITO (13/09 ~10:00, §131 implementado — decisão 10a):** sobrecarga
+> de MÉTODO por assinatura nos 4 backends: `MethodSet` na symtable (merge
+> homônimos, `select` por aridade+compatibilidade) + typer seleciona
+> (`MemberCallTyper`) + nativo: sigMangles p/ método de classe SOBRECARREGADO
+> (vtable com slot próprio por assinatura; não-sobrecarregado = símbolo cru,
+> zero churn) + findVirtualMethodIndex com argCount + JS: mangle de assinatura
+> estendido p/ todas as classes (lowerFunction + call-site structural).
+> Prova: `methodOverloadByArity` JVM+JS 6/7 + nativo x86 `6|7` + gate
+> 4-módulos BUILD SUCCESS 1642/0 reais (2 erros GraalJS ambientais).
+> **FILA RATIFICADA: §106 ✅ §89 ✅ §117 ✅ §131 ✅ — resta Long=BigInt JS
+> (5b, último, bump+migração 0.3.22→0.3.23).** **NUNCA:** `nat/` lane GC
+> viva; UI*; push main; `git config user.*` (regra 7); Co-authored-by.
 
 
 

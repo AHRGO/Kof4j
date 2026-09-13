@@ -39,6 +39,25 @@ public class SymbolTable {
             }
             return;
         }
+        // §131 (10a): sobrecarga de MÉTODO por assinatura — mesmo nome,
+        // aridades/tipos vários coexistem (MethodSet), espelho do <init>.
+        if (symbol instanceof MethodSymbol ms) {
+            Symbol existing = symbols.get(ms.name());
+            java.util.LinkedHashMap<List<Type>, MethodSymbol> merged = new java.util.LinkedHashMap<>();
+            if (existing instanceof MethodSymbol one) {
+                merged.put(one.parameterTypes(), one);
+            } else if (existing instanceof MethodSet set) {
+                for (MethodSymbol m : set.methods()) merged.put(m.parameterTypes(), m);
+            }
+            merged.put(ms.parameterTypes(), ms);
+            if (merged.size() == 1 && !(existing instanceof MethodSet)) {
+                symbols.put(ms.name(), ms);
+            } else {
+                if (!(existing instanceof MethodSet)) symbolOrder.add(ms.name());
+                symbols.put(ms.name(), new MethodSet(new ArrayList<>(merged.values())));
+            }
+            return;
+        }
         symbols.put(symbol.name(), symbol);
         symbolOrder.add(symbol.name());
     }
@@ -171,6 +190,43 @@ public class SymbolTable {
 
         public DispatchKind dispatchKind() {
             return dispatchKind;
+        }
+    }
+
+    /** Conjunto de MÉTODOS sobrecarregados (§131, 10a) — mesmo nome,
+     *  assinaturas várias; type() = último (comportamento pré-§131 p/ quem
+     *  não faz seleção por aridade). */
+    record MethodSet(List<MethodSymbol> methods) implements Symbol {
+        @Override
+        public String name() {
+            return methods.get(0).name();
+        }
+
+        @Override
+        public Type type() {
+            return methods.get(methods.size() - 1).type();
+        }
+
+        /** §131: seleciona o overload por aridade (e compatibilidade de args
+         *  quando conhecida); null = nenhum casa. */
+        public MethodSymbol select(int argCount, List<Type> argTypes) {
+            MethodSymbol byArity = null;
+            for (MethodSymbol m : methods) {
+                if (m.parameterTypes().size() == argCount) {
+                    byArity = m;
+                    if (argTypes == null) break;
+                    boolean compatible = true;
+                    for (int i = 0; i < argCount; i++) {
+                        if (!Type.isUnknown(argTypes.get(i))
+                                && !dev.kof.compiler.TypeChecker.isAssignable(argTypes.get(i), m.parameterTypes().get(i))) {
+                            compatible = false;
+                            break;
+                        }
+                    }
+                    if (compatible) return m;
+                }
+            }
+            return byArity;
         }
     }
 
