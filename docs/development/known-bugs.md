@@ -2523,7 +2523,7 @@ int de índice) — verificados na varredura.
   `a[i] = a[i] + v`.
 - **Descoberto:** 13/09, varredura KOF-SBD-001 (Array Bounds Safety).
 
-### 101. JVM: `Bool[]`/`Byte[]`/`Short[]`/`Char[]` usam opcode errado (`iaload`/`iastore`) no acesso a elemento — ABERTO (achado na varredura KOF-SBD-001-STRESS, não relacionado a bounds safety)
+### 101. JVM: `Bool[]`/`Byte[]`/`Short[]`/`Char[]` usam opcode errado (`iaload`/`iastore`) no acesso a elemento — ABERTO, [issue #132](https://github.com/KofLang/Kof4j/issues/132) (achado na varredura KOF-SBD-001-STRESS, não relacionado a bounds safety)
 
 - **Sintoma:** um `Bool[]` compilado para JVM roda e imprime valores corretos
   na maioria dos casos, mas em pelo menos um ambiente (JDK 25.0.4.1 Temurin
@@ -2576,7 +2576,7 @@ int de índice) — verificados na varredura.
 - **Descoberto:** 13/09, KOF-SBD-001-STRESS (stress test de array bounds
   safety, STRESS-018 cobertura de tipos).
 
-### 102. JVM/KofJS: inicializador de campo `static` com expressão não-constante é ignorado silenciosamente (`<clinit>` nunca é sintetizado) — ABERTO, ALTA PRIORIDADE (achado incidentalmente na varredura KOF-SBD-001-STRESS)
+### 102. JVM/KofJS: inicializador de campo `static` com expressão não-constante é ignorado silenciosamente (`<clinit>` nunca é sintetizado) — ABERTO, ALTA PRIORIDADE, [issue #133](https://github.com/KofLang/Kof4j/issues/133) (achado incidentalmente na varredura KOF-SBD-001-STRESS)
 
 - **Sintoma:** `static Int[] shared = new Int[3]` — `Holder.shared` é `null`
   no JVM e `undefined` no KofJS (nunca é o array esperado). Não é
