@@ -230,9 +230,9 @@ globais por JVM e devolvidas como `String`.
 
 | Função | Retorna |
 |--------|---------|
-| `param("id")` | Path parameter |
-| `query("name")` | Query parameter |
-| `header("x-auth")` | Header (case-insensitive) |
+| `param("id")` | Path parameter (`String` — só rota matchada chega ao handler) |
+| `query("name")` | Query parameter (`String?` — `null` se ausente; narrow antes de deref) |
+| `header("x-auth")` | Header case-insensitive (`String?` — `null` se ausente; narrow antes de deref) |
 | `body()` | Corpo cru da request |
 | `method()` | Método HTTP ("GET", "POST", ...) |
 | `path()` | Caminho da request |

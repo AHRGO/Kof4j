@@ -93,6 +93,22 @@ if (mc.receiver() == null && "readLine".equals(mc.methodName()) && mc.arguments(
 if (mc.receiver() == null && KofWeb.isContextFunction(mc.methodName())) {
     KofWeb.WebCall webCtx = KofWeb.contextCall(mc.methodName(), mc.arguments().size());
     if (webCtx != null) {
+        // #102 item 3: o runtime nativo só tem o T1 (listen/route + body/
+        // method/path); as demais funções de contexto não são emitidas e a
+        // chamada vazava para o linker como `undefined reference to
+        // 'kof_web_param'`. Agora é WEB001 em tempo de compilação (R6 —
+        // gap diagnosticado, nunca ld-fail).
+        if (!KofWeb.contextNativeSupported(webCtx.function()) && KofWeb.isNativeTarget(driver.target)) {
+            if (driver.currentDiagnostics != null) {
+                var pos = mc.position();
+                driver.currentDiagnostics.error(pos != null ? pos.file() : "",
+                        pos != null ? pos.line() : 0, pos != null ? pos.column() : 0,
+                        0, "web context '" + mc.methodName() + "()': not available on the "
+                                + driver.target + " driver.target yet (WEB001)",
+                        "WEB001");
+            }
+            return localIdx;
+        }
         for (ExpressionNode arg : mc.arguments()) {
             localIdx = ExpressionLowerer.emitExpression(driver, arg, ops, owner, localIdx, locals);
         }

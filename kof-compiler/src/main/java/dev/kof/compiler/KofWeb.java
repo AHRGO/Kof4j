@@ -164,12 +164,38 @@ public final class KofWeb {
         };
     }
 
+    /**
+     * #102 item 3: quais funções de contexto o runtime nativo realmente emite.
+     * O T1 nativo cobre listen/route + body/method/path; o resto não tem
+     * símbolo no .s gerado e virava `undefined reference` no ld.
+     */
+    static boolean contextNativeSupported(String function) {
+        return switch (function) {
+            case "kof_web_body" -> true;
+            default -> false;
+        };
+    }
+
+    static boolean isNativeTarget(Target t) {
+        return t == Target.NATIVE || t == Target.NATIVE_RISCV64 || t == Target.NATIVE_AARCH64;
+    }
+
 
     /** Request-context functions available inside route handlers. */
     static WebCall contextCall(String name, int argCount) {
+        // #102 item 4: query()/header() devolvem null quando o parâmetro/cabeçalho
+        // não está presente no request (HashMap.get no runtime). Declará-las como
+        // String era uma mentira de tipo (NPE silencioso em header().split(...));
+        // agora Nullable(STR) força o narrowing no kof check (SEM049), espelhando
+        // SG-008 (Map.get -> V?). param() continua STR: só rota matchada chega ao
+        // handler e todo :param do match tem valor (training/idioms/web.md usa
+        // param("id").toInt() sem check — código válido, não pode virar erro).
         return switch (name) {
-            case "param", "query", "header" -> argCount == 1
-                    ? new WebCall("kof_web_" + name, STR, List.of(STR))
+            case "param" -> argCount == 1
+                    ? new WebCall("kof_web_param", STR, List.of(STR))
+                    : null;
+            case "query", "header" -> argCount == 1
+                    ? new WebCall("kof_web_" + name, new Type.NullableType(STR), List.of(STR))
                     : null;
             case "body", "method", "path" -> argCount == 0
                     ? new WebCall("kof_web_" + name, STR, List.of())

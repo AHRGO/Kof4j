@@ -4862,3 +4862,107 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   `kof-cli` `CompareTest`/`DecompileTest`/`FullStackE2ETest`/`ServePortTest`
   58/0. Lição: WIP preservado vai SÓ para branch própria; commit de WIP na
   branch de release é regressão de build (regra 1 — zero regressão).
+
+### 155. JVM: `m.put(k, <Long>)` com `mapOf()` → `HashMap.put` empilha 1 Object mas o descarte da statement popa 2 (POP2) → **COMP002 "frame crash" / VerifyError** — ✅ CORRIGIDO 13/09 (issue #103 caso 3, fix da issue-lane `bee8555c` — pin-align no `CollectionCallLowerer`; merge na `beta-0.4.0` 13/09)
+- **Menor repro**:
+  ```kof
+  main() {
+      var m = mapOf()
+      var agora = now()      // Long
+      m.put("k", agora)      // ← frame crash
+      println("guardado")
+  }
+  ```
+  `kof run` → `frame crash em Default/Main.main` / o `javap` mostra
+  `INVOKESTATIC java/lang/Long.valueOf → INVOKEVIRTUAL HashMap.put → POP2`.
+- **Causa raiz (divergência de ordem, não de largura):** `mapOf()` nasce
+  `Map<Unknown,Unknown>` e o **primeiro `put` pina os tipos no local** — mas os
+  dois sides do pin rodavam em ordens diferentes:
+  1. **Emit** (`CollectionCallLowerer`) lia `valueType` do receiver **antes** de
+     mutar o local para `Map<String,Long>` → `KofCall.returnType` = Unknown →
+     `emitPrevValueUnbox(Unknown)` era no-op → `HashMap.put` deixa **1 Object** na
+     pilha.
+  2. **Typer da statement** (`StatementLowerer` → `SemMethodCallTyper`, que roda
+     o MESMO pin) via o local **depois** do pin → vê `Map<String,Long>` →
+     `isDoubleWidth(Long)` → emite **POP2**.
+  POP2 sobre 1 slot = underflow do frame. (`isDoubleWidth(Unknown)` é `false`,
+  então o bug só aparece quando o valor pinado é primitivo de categoria-2 —
+  `Long`/`Double`; `String`-value e `Int`-value não disparavam.)
+- **Fix:** quando o pin dispara, alinhar `keyType`/`valueType` locais do lowering
+  aos tipos pinados (`CollectionCallLowerer.java`, bloco do pin): assim o
+  `retType` do `KofCall` sai `Long` e `emitPrevValueUnbox(Long)` unboxa
+  Object→long (2 slots), casando com o POP2 do descarte.
+- **Prova:** reproc mp/mp2/mp3 rodam; caso-onde-o-retorno-é-usado
+  (`var prev = m.put(...)` → `prev=0`, e `println(m.put(...))` de Double →
+  `0.0`) verde; check de poluição §126 intacto (2º `put` com valor `String` em
+  mapa `Long`-pinado → `SEM056`, não auto-suprimido pelo alinhamento);
+  `KofMapSetTest` 14/14, célula nova na matriz de conformidade.
+
+### 154. kof.web: `header()`/`query()` declarados `String` mas devolvem `null` na ausência → deref sem narrowing passava no check e NPEava 500 silencioso — ✅ CORRIGIDO 13/09 (issue #102 item 4, comentário PublioSantos)
+
+- **Menor repro**: rota com `return header("accept-language").split(",")[0]` —
+  1º visitor sem aquele header → 500 nu, nada no log.
+- **Causa:** `KofWeb.contextCall` tipava `param/query/header` todos como `STR`,
+  mas o runtime (`JvmWebCoreRuntime.WebRequest.{query,header}` →
+  `HashMap.get`) devolve `null` quando o campo não está no request. Mentira de
+  tipo: o null-safety da linguagem não podia exigir o check.
+- **Fix:** `query()`/`header()` agora retornam `Nullable(STR)` — o **SEM049**
+  exige `if (c != null)` antes de deref (mesmo idioma de SG-008, `Map.get`→`V?`).
+  `param()` continua `String` deliberadamente: só uma rota matchada chega ao
+  handler e todo `:param` do match tem valor — o idiom canônico
+  `param("id").toInt()` do corpus não pode virar erro.
+- **Prova:** `kof check` rejeita `header(...).split(...)` direto (SEM049) e
+  aceita a forma com narrowing; E2E novo `absentHeaderAndQueryAreNullable`
+  (server JVM real: header ausente → "nada", presente → "len:3"; idem query) —
+  `KofWebE2ETest` 14/14 + hardening/sse/ws/stream 27/27.
+
+### 155. Native web: funções de contexto não-emitidas vazavam para o linker (`undefined reference to 'kof_web_param'`) em vez de WEB001 — ✅ CORRIGIDO 13/09 (issue #102 item 3)
+
+- **Menor repro:** `kof build . --target native` de uma rota que chama
+  `query("id")` → sucesso de compilação + `ld: undefined reference to
+  'kof_web_query' [COMP001]`. O `--target native` falhava em 5 funções
+  diferentes (`param/query/header/status/headerSet`) com `ld`-fail, não com o
+  diagnóstico `WEB001` prometido nos docs.
+- **Causa:** o gate de paridade de web (`ExpressionBuiltinInstanceCalls.lowerWeb`)
+  cobre os métodos do objeto `app` (listen/route/etc.), mas as **funções de
+  contexto** (receiver ausente) baixam por outro caminho —
+  `ExpressionStaticCallLowerer` (ramo `isContextFunction`) — que não checava o
+  target: emitia `KofCall` de um símbolo que o backend nativo não possui.
+- **Fix:** o mesmo gate no ramo de contexto — as funções sem símbolo no asm
+  nativo (só `body()` tem; o T1 é listen/route + body) dão **WEB001 em tempo de
+  compilação** nos 3 targets nativos, com mensagem nomeando a função
+  (R6: gap diagnosticado, nunca `ld`-fail). `KofWeb.contextNativeSupported` é a
+  lista única do que o nativo emite.
+- **Prova:** `build --target native` da rota com `query/header/status/
+  param/headerSet` → 5 erros `WEB001` (rc=1, nenhum binário); rota T1 com
+  `body()` → compila e o ELF responde (`POST /echo` → `got:olaho`);
+  `KofWebNativeE2ETest` 4/4. Os demais sintomas do item 3 (return null →
+  200-vazio em vez de 404; POST inconsistente) são comportamento do runtime
+  nativo T1 — **documentados como limitação do gap WEB001**, não corrigidos aqui
+  (a fila agora é: WEB001 no compile impede "shippar sem saber").
+
+### 156. KofJS: blocos do `kof-runtime.mjs` referenciam `kof_platform` cru → **ReferenceError** no Node/navegador (só existe no host GraalJS) — ✅ CORRIGIDO 13/09 (issue #104)
+
+- **Menor repro:** `kof build . --target js` de `uuid.v4().length`; rodar o
+  artefato fora do Graal (Node/Chrome) → `ReferenceError: kof_platform is not
+  defined` em `kof-runtime.mjs`. JVM e `kof run --target js` (Graal) → `36`.
+- **Causa:** o shim `globalThis.kof_platform || Proxy` só vivia no módulo
+  `kof-runtime-io.mjs` (`const` local àquele módulo). Os blocos `uuid`/`random`/
+  `security`/`crypto`/`ui-web` do `kof-runtime.mjs` (outro módulo) citavam o
+  nome cru; no Graal funcionava porque o `KofJsRunner` injeta o binding global.
+- **Fix (decisão 1 — mecânica):** o mesmo shim passa a ser emitido no topo do
+  core (`JsRuntimeCore.CORE_RUNTIME`), trocando o `ReferenceError` pelo erro
+  claro do Proxy (`"is not available outside the Kof JS host"`), como o io já
+  prometia. Os blocos afetados são *units* do mesmo módulo do `core`, então a
+  declaração única cobre todos.
+- **Decisão 2 (contrato de target — mantenedora):** se/qual capacidade tem
+  implementação real no browser (Web Crypto `crypto.randomUUID`/`getRandomValues`/
+  `crypto.subtle` para `uuid`/`security`) — fora do escopo deste fix mecânico.
+  Efeito colateral benéfico já medido: `random.*` (que já tinha `try/catch` →
+  `crypto.getRandomValues`) agora **funciona** no browser (o catch pega o erro do
+  Proxy, antes era ReferenceError não-capturável).
+- **Prova:** teste novo `KofJsHostlessRuntimeTest` roda o artefato JS num
+  `Context` Graal **sem** injetar `kof_platform` (simula Node/browser) e asserta
+  erro claro, não ReferenceError, para `uuid.v4` e `security.randomHex`; sem
+  regressão com host — `KofUuidTest` 14/14, `KofRandomTest` 12/12,
+  `KofSecurityTest` 28/28.

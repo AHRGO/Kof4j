@@ -153,6 +153,43 @@ class KofWebE2ETest {
     }
 
     @Test
+    void absentHeaderAndQueryAreNullable(@TempDir Path tempDir) throws IOException {
+        // #102 item 4 (comentário PublioSantos): header()/query() presentes como
+        // String mas null na ausência -> deref sem narrowing passava no check e
+        // NPEava 500 silencioso. Agora String?: o narrowing é obrigatório.
+        String app = """
+                main() {
+                    var app = web.app()
+                    app.get("/h") {
+                        var c = header("x-ausente")
+                        if (c != null) {
+                            return "len:" + c.length
+                        }
+                        return "nada"
+                    }
+                    app.get("/q") {
+                        var n = query("name")
+                        if (n != null) {
+                            return "nome:" + n
+                        }
+                        return "sem-nome"
+                    }
+                    app.listen(PORT)
+                }
+                """;
+        int port = startServer(tempDir, app);
+        String r = request(port, "GET /h HTTP/1.1\r\nHost: x\r\n\r\n");
+        assertTrue(r.startsWith("HTTP/1.1 200 OK"), r);
+        assertTrue(bodyOf(r).equals("nada"), r);
+        String r2 = request(port, "GET /h HTTP/1.1\r\nHost: x\r\nx-ausente: abc\r\n\r\n");
+        assertTrue(bodyOf(r2).equals("len:3"), r2);
+        String r3 = request(port, "GET /q?name=mel HTTP/1.1\r\nHost: x\r\n\r\n");
+        assertTrue(bodyOf(r3).equals("nome:mel"), r3);
+        String r4 = request(port, "GET /q HTTP/1.1\r\nHost: x\r\n\r\n");
+        assertTrue(bodyOf(r4).equals("sem-nome"), r4);
+    }
+
+    @Test
     void headersAvailable(@TempDir Path tempDir) throws IOException {
         int port = startServer(tempDir);
         String r = request(port, "GET /agent HTTP/1.1\r\nHost: x\r\nX-Auth: secret\r\nUser-Agent: KofTest\r\n\r\n");
