@@ -18,7 +18,7 @@
 > | **§178 ✅ CORRIGIDO 13/09 (lane bugs-and-gaps, 192.168.100.15)** | (a) compound em ELEMENTO de array no JS (`a[0] += x`, `a[0] <<= 2`) → `COMP002 unexpected KofDup2`: o guard `isExpressionOp` não listava `KofDup2` (o handler já existia desde #64). (c) lambda que retorna handle `kof.ui`/`kof.media` → VerifyError no `invoke` (descritor `LLabel;` com int na pilha): `CompilerLambdaClass` preserva o handle + `JvmLiteralEmitter.returnOpcode` emite `IRETURN` (consistente com `JvmTypeMapper` = `"I"`). Prova: `CoreRegressionE2ETest.compoundOnArrayElementJs` + `ComponentCoreE2ETest` 14/14. A face (b) é o §177 (mesma raiz). |
 > | **§168 ✅ CORRIGIDO 13/09 (lane development/translator, `3ab4c99e`)** | SEM025 ausente em namespace `json` para método inexistente: `json.metodoRuim()` compilava com sucesso (deveria falhar com SEM025). O handler do #126 (`61495f69`) validava aridade de `encode/decode` mas não rejeitava método desconhecido; `MemberCallNamespaces` mudou de `if (known && !valid)` para `if (!valid)` (rejeita QUALQUER método ≠ encode/decode) + `return null` no caminho válido. Re-verificado no binário (`kof check` → SEM025; `json.encode(42)` → no errors); `SemanticResolutionTest` 27/27. |
 > | **§179 ❌ ABERTO 13/09 (lane bugs-and-gaps, 192.168.100.15 — catalogado na caça Q4 do §178)** | Tipo `kof.ui`/`kof.media` DECLARADO numa assinatura/var/param/campo quebra o backend JVM (VerifyError `Bad type on operand stack`): `MemberResolver.resolveType("Label")` cai em `Type.of("Label")` = `ClassType("", "Label")` — NÃO reconhece o builtin `kof.ui.Label` — então o descritor sai `LLabel;` enquanto o valor real do handle é um `int` (`kof_ui_label_new` devolve int). Menor repro `main(){ Label l = Label("x"); println(uiNodesLive()) }` → JVM VerifyError; Native/Script/JS OK. Mesma raiz: `Label make(){...}`, param `void use(Label l)`, campo `Label field`. **NÃO corrigido** (toca resolução de nomes — shadowing de classe de usuário homônima; regra 6, precisa decisão). Fix proposto: em `MemberResolver.resolveType`, após `qualifyDeep`, mapear `ClassType("", name)` p/ `KofUi.constructorType(name)`/`KofMedia` quando `name` é builtin UI/media E não foi resolvido por import/classe do módulo (shadowing preservado). |
-> | **§180 ❌ ABERTO 13/09 (lane bugs-and-gaps, 192.168.100.15 — residual/overclaim do bug 44)** | `println(double)` no Native x86_64 NÃO é JDK `Double.toString`: `%.16g` trunca o shortest-round-trip (`println(0.1+0.2)` → JVM/Script/JS `0.30000000000000004`, Native `0.3`; `100.0/3.0` → `33.333333333333336` vs `33.33333333333334`) e diverge na notação científica (`1e7` → `1.0E7` vs `10000000.0`; `1e-5` → `1.0E-5` vs `1e-05`). Só o Native x86 diverge (regra 5, silencioso). Célula `floatprint` só testa 3 valores que coincidem = **verde falso (Q5)**. Causa: `RuntimeStringConv.emitDoubleToString`/`RuntimePrintNum` usam `snprintf("%.16g")`. Fix = shortest-round-trip JDK (Ryu/Grisu ou loop `%.{1..17}g`+`strtod`) + normalizar científico — **unidade GRANDE, lane Native**, não corrigido aqui. |
+> | **§180 ❌ ABERTO 13/09 (lane bugs-and-gaps, 192.168.100.15 — residual/overclaim do bug 44)** | `println(double/float)` no Native x86_64 NÃO é JDK `Double.toString`/`Float.toString`: `%.16g` trunca o shortest-round-trip (`println(0.1+0.2)` → JVM/Script/JS `0.30000000000000004`, Native `0.3`; `100.0/3.0` → `33.333333333333336` vs `33.33333333333334`), diverge na notação científica (`1e7` → `1.0E7` vs `10000000.0`; `1e-5` → `1.0E-5` vs `1e-05`) e o `Float` imprime a expansão double (`1.0f/3.0f` → JVM `0.33333334`, Native `0.3333333432674408`). Só o Native x86 diverge (regra 5, silencioso). Célula `floatprint` só testava 3 valores que coincidem = **verde falso (Q5)**. Causa: `RuntimeStringConv.emitDoubleToString`/`emitFloatToString`/`RuntimePrintNum` usam `snprintf("%.16g")` + `cvtss2sd`. Fix = shortest-round-trip JDK (Ryu/Grisu ou loop `%.{1..17}g`+`strtod`) + normalizar científico + `Float.toString` próprio — **unidade GRANDE, lane Native**, não corrigido aqui. |
 
 > | Antiga "varredura 08/09" (apócrifa — corrigida 12/09) | os "abertos" 39/62/63/64/46/48/50/59/61 estão ✅ CORRIGIDO nos próprios cabeçalhos (39/62/63/64 JVM/JS; 46/50/59 Native; 48/61 gap honesto JSN004/FFI001); contagem real na linha acima. |
 > | Paridade interpretador × compilados (semântica `==` congelada — regra 6) | **0** — bug 94 ✅ CORRIGIDO 13/09 (EQ/NE de Double/Float no interpretador agora IEEE; a "decisão" era alinhar ao previsto, que os 3 compilados + corpus já definiam) |
@@ -5874,7 +5874,7 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   `JvmLiteralEmitter.returnOpcode` emite `IRETURN`) sem tocar a resolução de
   nomes.
 
-### §180 — `println(double)` no Native x86_64 NÃO é JDK `Double.toString`: `%.16g` trunca o shortest-round-trip (`0.1+0.2` → `0.3`) e a notação científica diverge (`1e7` → `10000000.0`) — ❌ ABERTO 13/09 (residual/overclaim do bug 44; lane bugs-and-gaps `192.168.100.15`)
+### §180 — `println(double/float)` no Native x86_64 NÃO é JDK `Double.toString`/`Float.toString`: `%.16g` trunca o shortest-round-trip (`0.1+0.2` → `0.3`), a notação científica diverge (`1e7` → `10000000.0`) e o `Float` imprime a expansão double (`1.0f/3.0f` → `0.3333333432674408`) — ❌ ABERTO 13/09 (residual/overclaim do bug 44; lane bugs-and-gaps `192.168.100.15`)
 
 - **Sintoma (medido 13/09, x86_64, 4 targets):** o bug 44 foi fechado 10/09
   com a nota "16 casas + `.0` casa com o JVM", mas o `%.16g` do glibc **não**
@@ -5890,12 +5890,21 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
     `println(1e7)` → JVM/Script `1.0E7`, Native `10000000.0`;
     `println(1e-4)` → JVM `1.0E-4`, Native `0.0001`; `1e-5` → `1.0E-5` vs
     `1e-05`; `1.23456789E8` vs `123456789.0`.
+  - **(c) `Float` imprime a expansão double, não `Float.toString`:** o bug 44
+    dizia "float imprime como double (`cvtss2sd` antes de formatar) — paridade
+    JVM", mas o JVM usa `Float.toString` (shortest repr do float, 7-8 dígitos):
+    `println(1.0f / 3.0f)` → JVM/Script/JS `0.33333334`, **Native
+    `0.3333333432674408`** (o double exato de `(double)(1.0f/3.0f)`).
+    `println(1.0e20f)` → `1.0E20` vs `1.000000020040877e+20`;
+    `println(3.4028235e38f)` → `3.4028235E38` vs `3.402823466385289e+38`;
+    `1.1754944e-38f` → `1.1754944E-38` vs `1.175494350822288e-38`.
 - **Menor repro:**
   ```kof
   main() {
       println(0.1 + 0.2)   // JVM 0.30000000000000004 | Native x86 0.3
       println(1e7)         // JVM 1.0E7               | Native x86 10000000.0
       println(1e-5)        // JVM 1.0E-5              | Native x86 1e-05
+      println(1.0f / 3.0f) // JVM 0.33333334          | Native x86 0.3333333432674408
   }
   ```
   JVM/Script/JS concordam entre si; **só o Native x86 diverge** (regra 5).

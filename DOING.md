@@ -92,13 +92,14 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > não reconhece o builtin (sai `ClassType("", "Label")` → descritor `LLabel;`
 > p/ int). Menor repro nos 4 contextos + fix proposto em `known-bugs.md §179`.
 > **NÃO corrigido** (toca resolução de nomes — regra 6, precisa decisão).
-> **§180 CATALOGADO (ABERTO — overclaim do bug 44):** `println(double)` no
-> Native x86 não é JDK `Double.toString`: `%.16g` trunca o shortest-round-trip
-> (`0.1+0.2` → `0.3` vs `0.30000000000000004`) e diverge no científico
-> (`1e7` → `10000000.0` vs `1.0E7`). A célula `floatprint` só testava 3 valores
-> que coincidiam (**verde falso, Q5**) — nova célula `doubleprint` (4 targets,
-> Native+JS excluídos) **prova** a divergência. Fix = shortest-round-trip JDK
-> (unidade GRANDE, lane Native).
+> **§180 CATALOGADO (ABERTO — overclaim do bug 44):** `println(double/float)`
+> no Native x86 não é JDK `Double.toString`/`Float.toString`: `%.16g` trunca o
+> shortest-round-trip (`0.1+0.2` → `0.3` vs `0.30000000000000004`), diverge no
+> científico (`1e7` → `10000000.0` vs `1.0E7`) e o `Float` imprime a expansão
+> double (`1.0f/3.0f` → `0.3333333432674408` vs `0.33333334`). A célula
+> `floatprint` só testava 3 valores que coincidiam (**verde falso, Q5**) — nova
+> célula `doubleprint` (4 targets, Native+JS excluídos) **prova** a divergência.
+> Fix = shortest-round-trip JDK (unidade GRANDE, lane Native).
 > **PRÓXIMO PASSO:** fila de `known-bugs.md` só tem itens de outras lanes ou
 > que precisam de decisão (§101 congelado; §104b-ii/§107/§114 bugfixer;
 > §129/§161 nat; §132 OTP-JS; §165 não-reproduz; §170 issue-lane; §171
