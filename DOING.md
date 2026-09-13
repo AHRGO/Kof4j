@@ -59,25 +59,26 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
 > **⚡ gate/qualidade — prova NATIVA automatizada de bugs fechados (13/09
-> ~07:00, dono = 192.168.100.15):** varredura de overclaims de alvo-múltiplo
-> (mesmo padrão do §106-JS) achou **5 células faltantes**: §89 (`numconv`),
-> §131 (`methodoverload`), §155 (`fntypegeneric`), §156 (`lambdalisthet`) e
+> ~07:10, dono = 192.168.100.15):** varredura de overclaims de alvo-múltiplo
+> (mesmo padrão do §106-JS) achou **6 células faltantes**: §89 (`numconv`),
+> §131 (`methodoverload`), §155 (`fntypegeneric`), §156 (`lambdalisthet`),
 > §157 (`mapputlong` — o doc dizia "célula nova na matriz" mas ela **não
-> existia**). Os fixes eram de 4 alvos mas a prova automatizada era só
-> JVM+JS ou JVM+Native; o resto era "sonda manual". Adicionadas 5 células em
-> `ConformanceMatrixTest` (`conformanceCoreArithmetic`/`conformanceCoreFunctions`)
-> que rodam os repros nos **4 targets em CI**; goldens medidos por execução
-> real (`true/3/-2/5/2.5`, `42/7`, `6`, `10/6`, `9000000001/1`). `known-bugs.md`
-> §89/§131/§155/§156/§157 anotados ("trava automatizada"); rows novas na
-> `conformance-matrix.md`. **Prova:** `ConformanceMatrixTest` 11/0 +
-> `ConformanceMatrixDocTest` 1/0 + compile gate verde. **NÃO:** `nat/`; UI*;
-> push main; `git config user.*`; Co-authored-by.
+> existia**) e §127-JVM (`castfn`). Os fixes eram de 4 alvos mas a prova
+> automatizada era só JVM+JS ou JVM+Native; o resto era "sonda manual".
+> Adicionadas 6 células em `ConformanceMatrixTest`
+> (`conformanceCoreArithmetic`/`conformanceCoreFunctions`) que rodam os repros
+> nos **4 targets em CI**; goldens medidos por execução real
+> (`true/3/-2/5/2.5`, `42/7`, `6`, `10/6`, `9000000001/1`, `true`).
+> `known-bugs.md` §89/§127/§131/§155/§156/§157 anotados ("trava automatizada");
+> rows novas na `conformance-matrix.md`. **Gate 4-módulos pós-mudança: 1645
+> run / 0 falhas / 13 erros (`*Js` = `node` ausente) / 157 skip — verde**
+> (`gate_final.log`). **NÃO:** `nat/`; UI*; push main; `git config user.*`;
+> Co-authored-by.
 >
-> **PRÓXIMO PASSO (gate/docs):** continuar a varredura de overclaims nos
-> fechados restantes (§94/§127-JVM/§158-160) contra a matriz — se o fix
-> declarar N alvos e a prova for só JVM+JS, adicionar célula. Fila aberta = 8
-> (só §81 na lane .18/9094, NÃO tocar — regra 9). Se nada aparecer, RECUSAR
-> o re-disparo.
+> **PRÓXIMO PASSO (gate/docs):** a varredura de overclaims cobriu os fechados
+> recentes; restam §94/§158-160 (provas específicas de target, não 4-alvos).
+> Se nada novo aparecer, **RECUSAR o re-disparo** — fila aberta = 8 (só §81 na
+> lane .18/9094, NÃO tocar — regra 9), gate verde, matriz 5/5.
 
 > **⚡ docs/gate (13/09 ~05:30, dono = 192.168.100.15):** (1) **reparo de
 > corrupção** no `known-bugs.md:11` — o cabeçalho tinha um bloco DUPLICADO +
