@@ -58,25 +58,26 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
-> **⚡ gate/qualidade — prova NATIVA automatizada de §89/§131 (13/09 ~06:35,
-> dono = 192.168.100.15):** auditoria achou o MESMO padrão do §106-JS em duas
-> células: §89 (`numconv`) e §131 (`methodoverload`) tinham fix de **4 alvos**
-> mas prova AUTOMATIZADA só em **JVM+JS** (`CoreRegressionE2ETest.runBoth`); o
-> Native/Script era "repro manual". Adicionadas 2 células de matriz
-> (`ConformanceMatrixTest`: `numconv` em `conformanceCoreArithmetic`,
-> `methodoverload` em `conformanceCoreFunctions`) que rodam o programa nos
-> **4 targets em CI**; goldens medidos por execução real
-> (`true/3/-2/5/2.5` e `42/7`). `known-bugs.md` §89/§131 anotados ("trava
-> automatizada"); `conformance-matrix.md` rows `numconv`/`methodoverload`.
-> **Prova:** `ConformanceMatrixTest` 11/0 + `ConformanceMatrixDocTest` 1/0 +
-> compile gate verde. **NÃO:** `nat/`; UI*; push main; `git config user.*`;
-> Co-authored-by.
+> **⚡ gate/qualidade — prova NATIVA automatizada de bugs fechados (13/09
+> ~07:00, dono = 192.168.100.15):** varredura de overclaims de alvo-múltiplo
+> (mesmo padrão do §106-JS) achou **5 células faltantes**: §89 (`numconv`),
+> §131 (`methodoverload`), §155 (`fntypegeneric`), §156 (`lambdalisthet`) e
+> §157 (`mapputlong` — o doc dizia "célula nova na matriz" mas ela **não
+> existia**). Os fixes eram de 4 alvos mas a prova automatizada era só
+> JVM+JS ou JVM+Native; o resto era "sonda manual". Adicionadas 5 células em
+> `ConformanceMatrixTest` (`conformanceCoreArithmetic`/`conformanceCoreFunctions`)
+> que rodam os repros nos **4 targets em CI**; goldens medidos por execução
+> real (`true/3/-2/5/2.5`, `42/7`, `6`, `10/6`, `9000000001/1`). `known-bugs.md`
+> §89/§131/§155/§156/§157 anotados ("trava automatizada"); rows novas na
+> `conformance-matrix.md`. **Prova:** `ConformanceMatrixTest` 11/0 +
+> `ConformanceMatrixDocTest` 1/0 + compile gate verde. **NÃO:** `nat/`; UI*;
+> push main; `git config user.*`; Co-authored-by.
 >
-> **PRÓXIMO PASSO (gate/docs):** manter a varredura de overclaims de
-> alvo-múltiplo nos bugs fechados recentes (§94/§127-JVM/§155/§156/§157-160)
-> contra a matriz — se achar fix "4 alvos" com prova só JVM+JS, adicionar
-> célula. Fila aberta = 8 (só §81 na lane .18/9094, NÃO tocar — regra 9). Se
-> nada aparecer, RECUSAR o re-disparo.
+> **PRÓXIMO PASSO (gate/docs):** continuar a varredura de overclaims nos
+> fechados restantes (§94/§127-JVM/§158-160) contra a matriz — se o fix
+> declarar N alvos e a prova for só JVM+JS, adicionar célula. Fila aberta = 8
+> (só §81 na lane .18/9094, NÃO tocar — regra 9). Se nada aparecer, RECUSAR
+> o re-disparo.
 
 > **⚡ docs/gate (13/09 ~05:30, dono = 192.168.100.15):** (1) **reparo de
 > corrupção** no `known-bugs.md:11` — o cabeçalho tinha um bloco DUPLICADO +

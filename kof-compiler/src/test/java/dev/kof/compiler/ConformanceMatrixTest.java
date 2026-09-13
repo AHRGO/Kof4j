@@ -1176,6 +1176,44 @@ class ConformanceMatrixTest {
                     println(c.twice(3, 4))
                 }
                 """, "42\n7", Set.of(), tempDir);
+        // §155 (13/09): tipo-função como ARGUMENTO GENÉRICO declarado
+        // (`List<(Int) -> Int>`) — o parser montava a string de tipo sem
+        // espaços (`"(Int)->Int"`), e `Type.of` só reconhece `"(Int) -> Int"`
+        // → ClassType com nome vazio → ClassFormatError no JVM e lixo nos
+        // outros 3. Fix no parser (parseFunctionTypeRef preserva espaços);
+        // a prova automatizada era só JVM+Native. Esta célula trava 4 targets.
+        matrix("fntypegeneric", """
+                main() {
+                    List<(Int) -> Int> l = listOf((x: Int) -> x + 1)
+                    println(l.get(0)(5))
+                }
+                """, "6", Set.of(), tempDir);
+        // §156 (13/09): `List` HETEROGÊNEO de lambdas com a MESMA assinatura
+        // → ClassCastException no JVM (`Lambda1` não é `Lambda0`); os outros 3
+        // já imprimiam certo. Fix na inferência do elemento (unifica a SAM).
+        // A prova automatizada era só JVM+Native; esta célula trava 4 targets.
+        matrix("lambdalisthet", """
+                main() {
+                    var l = listOf((x: Int) -> x + 1, (x: Int) -> x * 2)
+                    println(l.get(1)(5))
+                    println(l.get(0)(5))
+                }
+                """, "10\n6", Set.of(), tempDir);
+        // §157 (13/09): `mapOf()` vazio + 1º `put` de valor Long (pin-alinha)
+        // — o emit lia o valueType antes do pin (retType Unknown → sem unbox,
+        // 1 Object) mas o descarte da statement via o local depois do pin
+        // (Long → POP2) → underflow de frame/VerifyError no JVM. Fix no
+        // CollectionCallLowerer (alinhar key/value ao tipo pinado). O doc
+        // dizia "célula nova na matriz", mas ela não existia — esta é ela.
+        matrix("mapputlong", """
+                main() {
+                    var m = mapOf()
+                    var v = 9000000001L
+                    m.put("k", v)
+                    println(m.get("k"))
+                    println(m.size)
+                }
+                """, "9000000001\n1", Set.of(), tempDir);
     }
 
     @Test

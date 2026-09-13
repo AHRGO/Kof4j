@@ -4997,6 +4997,11 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   (o teste antigo só assertava `success=true` — o bytecode inválido passava).
 - **Não-regressão:** 321/0 no subset (`LambdaE2ETest`+`CoreRegressionE2ETest`+
   `CompilerDriverTest`).
+- **Trava automatizada (lane gate, 13/09):** célula de matriz `fntypegeneric`
+  (`ConformanceMatrixTest.conformanceCoreFunctions`) roda o menor repro nos
+  **4 targets em CI** (`6` 4/4) — antes a prova automatizada era só
+  JVM+Native (`LambdaE2ETest.declaredFunctionTypeListJvm/Native`); Script/JS
+  eram sonda manual.
 
 
 ### 156. JVM: `List` HETEROGÊNEO de lambdas com a MESMA assinatura → `ClassCastException` (`Lambda1` não é `Lambda0`) — ✅ CORRIGIDO 13/09 (infra de tipos; dono = 192.168.100.22)
@@ -5035,6 +5040,11 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
 - **Não é regressão do §127/§155:** o caminho (`JvmOpCollections` +
   `ExpressionInstanceCallLowerer`) não foi tocado por eles; a sonda B127c já
   dava CCE antes.
+- **Trava automatizada (lane gate, 13/09):** célula de matriz `lambdalisthet`
+  (`ConformanceMatrixTest.conformanceCoreFunctions`) roda o menor repro nos
+  **4 targets em CI** (`10/6` 4/4) — antes a prova automatizada era só
+  JVM+Native (`LambdaE2ETest.heterogeneousLambdaListJvm/Native`); o "Native/
+  Script/JS já imprimiam 10" era sonda manual.
 
 
 ### 157. JVM: `m.put(k, <Long>)` com `mapOf()` → `HashMap.put` empilha 1 Object mas o descarte da statement popa 2 (POP2) → **COMP002 "frame crash" / VerifyError** — ✅ CORRIGIDO 13/09 (issue #103 caso 3, fix da issue-lane `bee8555c` — pin-align no `CollectionCallLowerer`; merge na `beta-0.4.0` 13/09)
@@ -5071,6 +5081,11 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   `0.0`) verde; check de poluição §126 intacto (2º `put` com valor `String` em
   mapa `Long`-pinado → `SEM056`, não auto-suprimido pelo alinhamento);
   `KofMapSetTest` 14/14, célula nova na matriz de conformidade.
+  **Trava automatizada (lane gate, 13/09):** a "célula nova" declarada acima
+  NÃO existia na matriz (overclaim — achado na varredura). Criada agora:
+  `mapputlong` (`ConformanceMatrixTest.conformanceCoreFunctions`) roda o
+  repro `mapOf()` vazio + `put` de `Long` nos **4 targets em CI**
+  (`9000000001/1` 4/4).
 
 ### 158. kof.web: `header()`/`query()` declarados `String` mas devolvem `null` na ausência → deref sem narrowing passava no check e NPEava 500 silencioso — ✅ CORRIGIDO 13/09 (issue #102 item 4, comentário PublioSantos)
 

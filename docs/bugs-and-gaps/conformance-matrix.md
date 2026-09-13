@@ -53,6 +53,7 @@
 | list empty/isEmpty/contains | `true` / `0` / `false` | DONE | DONE | DONE | DONE | `emptylist` |
 | widening abençoado §126 em escrita de List pinada (`listOf(1L).add(3)` / `.set`) | `3` / `4` / `3` | DONE (bug 143 ✅ 12/09 — era VerifyError: o box do store era pelo tipo PINADO sobre arg cru width-1; `coerceStoreWiden` aplica o §121/array-store p/ coleção) | DONE (bug 143 ✅ 12/09 — heap nativo já 8-byte, I2L é no-op de semântica; imprimia certo) | DONE (bug 143 ✅ 12/09 — já dava `[1,2,3]`; agora 4/4 idênticos) | DONE (bug 143 ✅ 12/09) | `collwiden` |
 | widening no VALOR do `Map.put` pinado (`mapOf(_,Long).put(_,Int)`) | `2` / `1` | DONE (bug 143 ✅ 12/09 — era VerifyError/CCE no get; coerção + paramTypes ajustado ao tipo pinado) | DONE (bug 143 ✅ 12/09 + bug 142 ✅ 12/09 — o widening nativo já era no-op, mas o `put` como statement descartava o prev `Long` com POP2 de 16 bytes sobre 1 qword empilhado → pisava o local `m` = SIGSEGV; POP2 nativo agora descarta 1 qword) | DONE (bug 143 ✅ 12/09) | DONE (bug 143 ✅ 12/09) | `mapwiden` |
+| `mapOf()` vazio + 1º `put` de valor `Long` (pin-alinha, §157) | `9000000001` / `1` | DONE | DONE | DONE | DONE | `mapputlong` |
 | descarte de expressão `Long`/`Double` (POP2 nativo) | `2` / `false` / `false` | DONE | DONE (bug 142 ✅ 12/09 — era SIGSEGV: `m.put(_,2L)` statement e `d==null`/`x==null`; POP2 herdado do JVM descartava 2 qwords num stack onde todo valor é 1 qword) | DONE | DONE | `longdiscard` |
 | `null == null` / `!=` | `true` / `false` | DONE | DONE | DONE | DONE | `nulleq` |
 | if-expr curto-circuito null | `iguais` / `nao-ne` | DONE | DONE | DONE | DONE | `nulleqshortcut` |
@@ -70,6 +71,8 @@
 | record `hashCode()` igual | `true` | DONE | DONE (bug 42 Native corrigido) | DONE | DONE (bug 42 JS corrigido `1ecfb3d`) | `recordhash` |
 | record com campo String `==` por conteúdo (null-safe) | `true` / `false` / `true` / `false` | DONE | DONE (bug 114 ✅ 11/09 Native — era **ponteiro** (`S("ab")==S("ab")` false); campo String agora via `kof_string_equals`; campo record aninhado/hash-ref/coleção ficam §104b-ii) | DONE | DONE | `recordstrfield` |
 | lambda filter/map/reduce | `90` | DONE | DONE | DONE | DONE | `lambdachain` |
+| tipo-função como argumento genérico `List<(Int) -> Int>` (§155) | `6` | DONE | DONE | DONE | DONE | `fntypegeneric` |
+| lista heterogênea de lambdas (mesma assinatura, §156) | `10` / `6` | DONE | DONE | DONE | DONE | `lambdalisthet` |
 | sobrecarga de método de classe por assinatura (§131, decisão 10a) | `42` / `7` | DONE | DONE | DONE | DONE | `methodoverload` |
 | lambda captura mutável | `3` | DONE | DONE | DONE | DONE | `lambdacapture` |
 | array 2D/3D: alloc + length + store/load + zero-fill | `60`/`3`/`2`/`3`/`0`/`7`/`2`/`2`/`9`/`0` | DONE | DONE (bug 113 ✅ 11/09 x86 — `new Int[a][b]` NÃO alocava nada: `KofNewMultiArray` caía no `default->{}` → SIGSEGV; agora `kof_multi_alloc` recursivo; faces riscv/aarch ✅ 11/09 — fatia B37 + roteio cross, golden JVM sob qemu) | DONE (B37, port 0.3.0→0.4.0 ✅) | DONE (tradutor, ✅) | `array2d` |
