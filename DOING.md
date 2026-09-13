@@ -147,6 +147,26 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > **Livre para caça Q4:** áreas recém-mexidas por outras lanes (S13a stdlib,
 > translator) são candidatas a probe de borda — sem tocar arquivos EM CURSO.
 
+> **✅ FEITO (13/09 ~19:45, lane bugs-and-gaps, dono = 192.168.100.15):
+> Continuidade da caça Q4 — §180 face (c) + §181 + bug 82 face sufixo.**
+> **(a) §180 face (c)** (`println(Float)` no Native expande p/ double;
+> `1.0f/3.0f` → `0.3333333432674408` vs JVM `0.33333334`) extendido na célula
+> `doubleprint` (JVM+Script) + header do bug 44. **(b) §181 NOVO** (cast
+> `Double/Float as Int/Long` fora de faixa/NaN/Inf): JVM+Script saturam (JLS
+> 5.1.3), Native `cvttsd2si` cru (`INT_MIN`/`Long.MIN`), JS `Math.trunc`/
+> `BigInt` sem clamp (`3000000000`/`NaN`/`Infinity`; `NaN as Long` lança
+> `RangeError`). Célula `cast` só testava em faixa (**verde falso Q5**) — nova
+> célula `castrange` (JVM+Script). **(c) §181 face (d)** (`toInt()/toLong()` §89
+> alias do cast − mesmos valores). **(d) bug 82 face sufixo** (`"1.0d"` Native/
+> JS rejeitam; JVM/Script aceitam). Prova: `ConformanceMatrixTest` 11/11 +
+> `ConformanceMatrixDocTest` 1/1 + KofTimeE2ETest 18/18 (falso-verde era o
+> stale-build trap do §165 — `clean compile` resolve). Suíte 4 módulos:
+> compiler 1504/0/13-node/160-skip; script 33; c 5; cli 207 — BUILD SUCCESS.
+> **Já pushado** (a3561ab3 §180c, e6058294 §181, 98c5d738 §181d, 56174ce2
+> bug82, 98e758db fila 10→12).
+> **§181 NÃO corrigido por mim** (JS = `JsCallEmitter`/runtime core de outra
+> lane; Native = lane Native; já catalogado com fix proposto).
+
 > **✅ FEITO (13/09 ~14:20, lane bugs-and-gaps, dono = 192.168.100.15):
 > §174 CORRIGIDO (`return`/`throw` dentro de `if` dentro do `try` → KofJS
 > `COMP002 unexpected KofCatchStart`).** Achado na caça Q4 sobre o S13a
