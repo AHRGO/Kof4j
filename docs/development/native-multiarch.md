@@ -167,13 +167,17 @@ funciona de ponta a ponta.
 | Os 18 métodos `emit*` reais (x86_64) | ✅ | `emitBinary`/`emitOperation`/`emitMethod`/`emitConditionalJump`/vcall… — o caminho completo continua só em x86_64 |
 | Extração de `NativeBase` (layout/`kof_alloc`/mangle comum) | ❌ não existe | `NativeBackend` ainda é monolítico x86_64 (riscv/aarch64 reusam o mesmo lowering via tradução) |
 | Runtime por arch (asm) | ✅ riscv64 + aarch64 core | `kof_alloc`(bump)/`kof_memcpy`/strings (literal/concat/equals/charAt/substring/contains/startsWith/endsWith/indexOf/toInt/length)/int-long-bool→string/print/objects (`init_object`/`instanceof`/super_table/vtables)/arrays (alloc/get/set/length+bounds)/List (new/add/get/set/size/contains/grow)/exceções (`throw`/exc_chain/`null_error`/`bounds_error`) em **asm puro** riscv64 **e** aarch64 (raw syscalls, sem libc; aarch64 via `translateRiscvToAarch64` — `adrp`+`add :lo12:`, `svc #0`, `and sp` skip, `str sp` via `x17`); `qemu-riscv64`/`qemu-aarch64` (ver §2.3). |
-| Testes E2E `qemu` (aarch64/riscv64) | ✅ | `NativeRiscv64E2ETest` 13/13 + `NativeAarch64E2ETest` 13/13 (26 testes cross) |
-| CI com cross toolchains | ❌ não existe | `aarch64/riscv64` não entram no pipeline |
+| Testes E2E `qemu` (aarch64/riscv64) | ✅ | `NativeRiscv64E2ETest` 42/42 + `NativeAarch64E2ETest` 42/42 (84 testes cross, medidos por @Test + surefire 13/09) |
+| CI com cross toolchains | ✅ existe (13/09) | job `cross-native` em `.github/workflows/ci.yml` (instala binutils-riscv64/aarch64 + qemu-user-static e roda as 2 suites; provado `success` no run 34732932745) |
 | `backend-parity.md` colunas por arch | ⚠️ parcial | delta citado, colunas `NATIVE_X86_64/AARCH64/RISCV64` separadas pendentes |
 
-**Consequência prática:** um programa real (com `println`, `instanceof`,
-`switch`) em `native.risc`/`native.arm` **não executa a lógica** — sai `0` sem
-efeto. O stub existe para validar o *encanamento*, não a codegen.
+**Consequência prática (SUPERADA — foto de 01/09):** valia p/ o stub
+original de plumbing; hoje (re-auditoria 12/09 no topo) riscv/aarch **executam
+a lógica** sob qemu — 42+42 testes E2E cross, inclusive programas reais com
+`println`/`instanceof`/`switch`/Map/Set/higher-order byte-idênticos ao JVM.
+O que restou de honesto nesta tabela: `NativeBase` não extraído, colunas por
+arch em `backend-parity.md` não separadas, e as faces de ops fora do core
+(JSON/DB/UI por arch específico).
 
 ### 2.3 Runtime em assembly puro por arch (decisão 02/09)
 
