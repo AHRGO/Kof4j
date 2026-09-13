@@ -186,6 +186,13 @@ class TranslateExpr {
 
         String parseUnary() {
             if (p.at(T.NOT)) { p.next(); return "!" + parseUnary(); }
+            if (p.at("~")) {
+                // Complemento bit a bit `~x`: Kof não tem `~` (PARSE041), mas
+                // a identidade `~x == -x - 1` é exata em complemento de dois
+                // → emite `(-x - 1)` com parênteses (precedência preservada).
+                p.next();
+                return "(-" + parseUnary() + " - 1)";
+            }
             if (p.at(T.MINUS)) { p.next(); return "-" + parseUnary(); }
             if (p.at(T.PLUS)) { p.next(); return "+" + parseUnary(); }
             if (p.at(T.INC)) { p.next(); return "++" + parseUnary(); }
@@ -300,7 +307,7 @@ class TranslateExpr {
                     case "true" -> "true";
                     case "false" -> "false";
                     case "null" -> "null";
-                    case "new" -> parseNew();
+                    case "new" -> TranslateNew.parse(this);
                     case "this" -> "this";
                     case "throw" -> "throw " + parseExpr();
                     case "switch" -> parseSwitchExprHook();
@@ -420,65 +427,6 @@ class TranslateExpr {
             p.expect(")");
             String operand = parseUnary();
             return operand + " as " + type;
-        }
-
-        String parseNew() {
-            String typeName = p.next().text;
-            // Nome qualificado `new java.util.ArrayList<...>()`: o translator
-            // ignora imports e não resolve FQN. Mapear coleções Java →
-            // stdlib Kof (`ArrayList`→`listOf`/`List`, `HashMap`→`Map`) é
-            // decisão de design (regra 6) → revisão manual (R6), nunca parse
-            // error confuso nem Kof inválido.
-            if (p.at(".")) {
-                throw new TranslateException(
-                        "tipo qualificado (`new pacote.Classe(...)`) não é resolvido pelo "
-                        + "translator (imports ignorados) — revisão manual");
-            }
-            // `new Box<Integer>(...)` — Kof infere o tipo na chamada
-            // (`Box(5)`); os argumentos de tipo Java são descartados.
-            if (p.at("<")) {
-                int depth = 0;
-                do {
-                    if (p.at("<")) depth++;
-                    else if (p.at(">")) depth--;
-                    p.next();
-                } while (depth > 0 && !p.at(T.EOF));
-            }
-            if (p.at("[")) {
-                // array creation: `new int[n]` → `new Int[n]`.
-                // Bug latente (achado 13/09): o código consumia `[` E o
-                // primeiro token da dimensão antes do parseExpr, então
-                // `new int[3]` saía `new Int[]]` (PARSE041 no Kof gerado).
-                p.next(); // [
-                if (p.at("]")) {
-                    // `new int[]{...}` — array initializer sem equivalente
-                    // direto em Kof (revisão manual, R6).
-                    throw new TranslateException(
-                            "array initializer `new T[]{...}` não tem equivalente direto em Kof "
-                            + "(use `new Int[n]` + atribuições) — revisão manual");
-                }
-                String size = parseExpr();
-                p.expect("]");
-                return "new " + TranslateTypes.kofType(typeName) + "[" + size + "]";
-            }
-            String args = parseCallArgs();
-            if (p.at("{")) {
-                // Classe anônima Java (`new Runnable() { ... }`) — Kof não
-                // tem classes anônimas (só lambdas p/ interface funcional).
-                // Converter exige inferir a interface funcional — decisão de
-                // design (regra 6) → revisão manual (R6).
-                throw new TranslateException(
-                        "classe anônima (`new X() { ... }`) não tem equivalente direto em Kof "
-                        + "(use lambda p/ interface funcional) — revisão manual");
-            }
-            if (typeName.equals("RuntimeException") || typeName.equals("IllegalStateException")
-                    || typeName.equals("IllegalArgumentException") || typeName.equals("Exception")) {
-                // Exceções Java → String Kof (idiom errors.md: `throw "msg"`).
-                // `new RuntimeException("boom " + k)` → `"boom " + k`.
-                // Sem args → string vazia (throw exige String, SEM026).
-                return args.isEmpty() ? "\"\"" : args;
-            }
-            return TranslateTypes.kofType(typeName) + "(" + args + ")";
         }
 
         // ── types ───────────────────────────────────────────────────────────

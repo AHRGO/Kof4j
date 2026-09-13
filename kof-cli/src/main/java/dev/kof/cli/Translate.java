@@ -434,8 +434,12 @@ public final class Translate {
                         : stmt);
             }
             if (isStatic && name.equals("main")) {
-                // Java main(String[] args) → top-level Kof main()
-                sb.append("main() {\n");
+                // Java `main(String[] args)` → top-level Kof `main(args)`.
+                // Bug latente (Q4 13/09): os parâmetros eram DESCARTADOS
+                // (`main()`), mas o corpo podia referenciar `args` → Kof
+                // inválido (SEM011 silencioso). Kof aceita `main(String[] args)`
+                // (verificado no binário: `println(args.length)` roda e dá 0).
+                sb.append("main(").append(paramList(params)).append(") {\n");
                 for (String stmt : emitBody) sb.append("    ").append(stmt).append('\n');
                 sb.append("}\n");
                 return;

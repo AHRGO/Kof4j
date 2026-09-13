@@ -141,7 +141,10 @@ import java.util.List;
                 case '|' -> { if (i + 1 < n && s.charAt(i + 1) == '|') { out.add(new Tok(T.OROR, "||")); i += 2; continue; } out.add(new Tok(T.PIPE, "|")); }
                 case '^' -> out.add(new Tok(T.CARET, "^"));
                 case '@' -> out.add(new Tok(T.AT, "@"));
-                default -> i++;
+                case '~' -> out.add(new Tok(T.P, "~"));
+                default -> throw new TranslateException(
+                        "caractere inesperado `" + s.charAt(i) + "` não é suportado pelo translator "
+                        + "(antes era dropado em SILÊNCIO, gerando Kof inválido) — revisão manual");
             }
             i = Math.min(i + 1, n); // guarded advance for simple single-char cases
         }

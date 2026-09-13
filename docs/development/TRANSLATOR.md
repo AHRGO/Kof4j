@@ -398,16 +398,28 @@ diferenciais.
 > `Math.PI` (Kof inválido = SEM011 **silencioso**); Kof expõe a stdlib em
 > `math.*`, mas `math.min/max/abs` são **Int-only** (SEM025 p/ Double, sem
 > widening) e o translator não tem tipos p/ escolher o overload → **gap
-> honesto R6**. **Split:** o parser de
-> switch-expressão (~55 linhas) saiu para `TranslateSwitch.java` (77) —
-> `TranslateStatements` 528→470. Prova: `switchExpressionTranslates` (roda
-> `10/0` no Kof gerado), `methodReferenceIsHonestGap`, `textBlockIsHonestGap`,
-> `instanceofBindingPatternIsHonestGap`, `qualifiedTypeInExpressionIsHonestGap`,
-> `jdkStaticImportIsHonestGap`, `ownStaticImportPassesThrough`,
-> `mathReceiverIsHonestGap`, `leadingDotLiteralIsNormalized` (roda `0.5`) —
-> `TranslateTest` **51/51**;
-> `check_500` OK (sem crítico; `TranslateExpr` 527 / `TranslateStatements`
-> 470 = dívida tolerada 500–599).
+> honesto R6**. (9) **`~x`** (complemento bit a bit) → Kof não tem `~`
+> (PARSE041), mas `~x == -x - 1` é exato em complemento de dois → emite
+> `(-x - 1)`; o **lexer agora REJEITA** caractere inesperado em vez de
+> dropá-lo em silêncio (era a raiz do `~` sumir). (10) **Classe LOCAL**
+> (`class`/`interface`/`enum`/`record` dentro de método) → Kof não tem
+> tipos aninhados (SEM042) → **gap honesto R6** (antes `expected ';' but
+> found 'B'`). (11) **Instrução vazia `;`** → descartada (antes
+> `expected ';' but found 'return'`). (12) **`main(String[] args)`** →
+> `main(args)`: os params eram **DESCARTADOS** e o corpo podia referenciar
+> `args` → Kof inválido silencioso; Kof aceita `main(String[] args)`
+> (verificado no binário). **Splits:** o parser de switch-expressão (~55
+> linhas) saiu para `TranslateSwitch.java` (77) e `new` para
+> `TranslateNew.java` (72) — `TranslateStatements` 528→470 e
+> `TranslateExpr` 554→495, ambos ≤500. Prova: `switchExpressionTranslates`
+> (roda `10/0` no Kof gerado), `methodReferenceIsHonestGap`,
+> `textBlockIsHonestGap`, `instanceofBindingPatternIsHonestGap`,
+> `qualifiedTypeInExpressionIsHonestGap`, `jdkStaticImportIsHonestGap`,
+> `ownStaticImportPassesThrough`, `mathReceiverIsHonestGap`,
+> `leadingDotLiteralIsNormalized` (roda `0.5`), `bitComplementTranslates`
+> (roda `-6/-1`), `emptyStatementIsSkipped` (roda `1`),
+> `localClassIsHonestGap`, `mainArgsArePreserved` (roda `0`) —
+> `TranslateTest` **55/55**; `check_500` OK **sem dívida de translate**.
 >
 > **Gap de design conhecido (regra 6, NÃO corrigido):** outros **receptores de
 > classe JDK** (`Integer.parseInt`, `Long.valueOf`, `Objects.requireNonNull`,
@@ -416,3 +428,21 @@ diferenciais.
 > nome como está, que falha com SEM011 (diagnóstico downstream, não
 > silencioso). Mapear Java→stdlib é decisão de design (regra 6); fica
 > registrado como fila futura, não como edição.
+>
+> **Estado (13/09 ~19:30, dono = 192.168.100.22): `~x`, classe local, `;`
+> vazio, `main(args)` + split `TranslateNew` (2ª varredura de probes Q4).**
+> (1) **`~x`** (complemento bit a bit): Kof não tem `~` (PARSE041); a
+> identidade `~x == -x - 1` é exata em complemento de dois → emite
+> `(-x - 1)`. A raiz era o **lexer dropar `~` em silêncio** → agora o
+> `default` do lexer **rejeita** caractere inesperado com diagnóstico
+> (antes: Kof truncado silencioso). (2) **Classe LOCAL** dentro de método →
+> Kof não tem tipos aninhados (SEM042) → **gap honesto R6**. (3) **Instrução
+> vazia `;`** → descartada. (4) **`main(String[] args)`** → `main(args)`: os
+> params eram **descartados** e o corpo podia referenciar `args` → Kof
+> inválido silencioso; Kof aceita `main(String[] args)` (verificado no
+> binário). **Split:** `new` → `TranslateNew.java` (72); `TranslateExpr`
+> 554→495 (≤500). Prova: `bitComplementTranslates` (roda `-6/-1`),
+> `localClassIsHonestGap`, `emptyStatementIsSkipped` (roda `1`),
+> `mainArgsArePreserved` (roda `0`) — `TranslateTest` **55/55**; gate
+> 4-módulos **1499/0 + 33/0 + 5/0 + 207/0**, BUILD SUCCESS; `check_500` OK
+> **sem dívida de translate**.

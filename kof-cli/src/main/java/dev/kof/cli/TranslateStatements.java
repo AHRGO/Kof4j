@@ -46,10 +46,24 @@ class TranslateStatements extends TranslateExpr {
     }
 
     protected String parseStatement() {
+        if (p.at(";")) {
+            // Instrução vazia Java (`;`) — sem efeito; Kof não tem, então
+            // descarta (antes: `expected ';' but found 'return'` confuso).
+            p.next();
+            return "";
+        }
+        if (p.at("class") || p.at("interface") || p.at("enum") || p.at("record")) {
+            // Classe LOCAL (`void f() { class B { ... } }`) — Kof não tem
+            // tipos aninhados/locais (SEM042) → gap honesto R6 (antes:
+            // `expected ';' but found 'B'` confuso).
+            throw new TranslateException(
+                    "classe/tipo LOCAL (`class`/`interface`/`enum`/`record` dentro de método) não "
+                    + "tem equivalente em Kof (SEM042: sem tipos aninhados) — revisão manual");
+        }
         if (p.at("{")) {
             List<String> body = parseBlock();
             StringBuilder sb = new StringBuilder("{ ");
-            for (String s : body) sb.append(s).append(' ');
+            for (String s : body) if (!s.isEmpty()) sb.append(s).append(' ');
             return sb.append('}').toString().trim();
         }
         if (p.at("this") && p.peek(1).text.equals("(")) {

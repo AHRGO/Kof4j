@@ -27,7 +27,8 @@ class TranslateTest {
                 }
                 """);
 
-        assertTrue(kof.contains("main()"), "should emit top-level main():\n" + kof);
+        assertTrue(kof.contains("main(String[] args)"),
+                "should preserve main params (corpo pode usar args):\n" + kof);
         assertTrue(kof.contains("println(\"Hello\")"), "should map println:\n" + kof);
         assertFalse(kof.contains("System.out"), "must drop System.out:\n" + kof);
 
@@ -705,6 +706,66 @@ class TranslateTest {
                 """);
         assertTrue(kof.contains("0.5"), "literal `.5` normalizado p/ `0.5`:\n" + kof);
         assertCompiles(dir, kof + "\nmain() { println(LD().f()) }", "0.5");
+    }
+
+    @Test
+    void bitComplementTranslates(@TempDir Path dir) throws Exception {
+        // `~x` (complemento bit a bit): Kof não tem `~` (PARSE041). A
+        // identidade `~x == -x - 1` é exata em complemento de dois → emite
+        // `(-x - 1)`. Antes o lexer DROPAVA o `~` em silêncio (output
+        // truncado) — bug latente Q4 13/09.
+        String kof = Translate.translateJava("""
+                public class BC {
+                    int f(int x) { return ~x; }
+                }
+                """);
+        assertTrue(kof.contains("(-x - 1)"), "~x → (-x - 1):\n" + kof);
+        assertCompiles(dir, kof + "\nmain() { println(BC().f(5)); println(BC().f(0)) }", "-6\n-1");
+    }
+
+    @Test
+    void emptyStatementIsSkipped(@TempDir Path dir) throws Exception {
+        // Instrução vazia Java (`;`) → descartada (antes: `expected ';' but
+        // found 'return'` confuso) — Q4 13/09.
+        String kof = Translate.translateJava("""
+                public class ES {
+                    int f() { ; ; return 1; }
+                }
+                """);
+        assertCompiles(dir, kof + "\nmain() { println(ES().f()) }", "1");
+    }
+
+    @Test
+    void localClassIsHonestGap() {
+        // Classe LOCAL dentro de método — Kof não tem tipos aninhados
+        // (SEM042) → gap honesto R6 (antes: `expected ';' but found 'B'`).
+        TranslateException e = assertThrows(TranslateException.class, () ->
+                Translate.translateJava("""
+                        public class LC {
+                            int f() {
+                                class B { int g() { return 1; } }
+                                return 0;
+                            }
+                        }
+                        """));
+        assertTrue(e.getMessage().contains("LOCAL") && e.getMessage().contains("revisão manual"),
+                "classe local → gap explícito (R6), foi: " + e.getMessage());
+    }
+
+    @Test
+    void mainArgsArePreserved(@TempDir Path dir) throws Exception {
+        // `main(String[] args)` tinha os params DESCARTADOS (`main()`), mas o
+        // corpo podia referenciar `args` → Kof inválido (SEM011 silencioso).
+        // Kof aceita `main(String[] args)` (verificado no binário) — Q4.
+        String kof = Translate.translateJava("""
+                public class MA {
+                    public static void main(String[] args) {
+                        System.out.println(args.length);
+                    }
+                }
+                """);
+        assertTrue(kof.contains("main(String[] args)"), "params de main preservados:\n" + kof);
+        assertCompiles(dir, kof, "0");
     }
 
     @Test
