@@ -13,6 +13,13 @@
 >    volte para `ABERTO` com nota do que já funciona e o que falta.
 > 7. **Modo autônomo:** se o turno vai acabar, a ÚLTIMA coisa escrita aqui é
 >    a linha **"PRÓXIMO PASSO"** abaixo (tarefa exata + arquivo + prova).
+> 8. **Nunca descartar trabalho de outro agente (13/09, diretriz da
+>    mantenedora):** os agentes trabalham **em conjunto, não um contra o
+>    outro**. Working tree sujo de outro agente = trabalho dele: **commita
+>    tudo** (valide antes: sintaxe + run/compile da área), nunca `checkout --`
+>    nem `stash drop`. Conflito de rebase = resolve preservando os dois lados
+>    (fatos idênticos → escolhe uma redação; fatos diferentes → mantém ambos).
+>    Reversão de commit alheio só com causa raiz provada + registro no DOING.
 >    Quem voltar (humano/cron/outra instância) retoma em ≤1 leitura.
 
 Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
