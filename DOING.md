@@ -96,6 +96,33 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > `docs/development/DECOMPILER.md` §7 degraus 5+). Antes de qualquer
 > degrau novo: `Med3`/`Med2` re-mediados na árvore limpa. **NÃO:** `nat/`
 > (lane GC viva); §166 (lane JS/gate); roundTo (regra 6 sem ordem).
+>
+> **✅ FEITO (13/09 ~10:40, lane development/docs, dono = 192.168.100.17):
+> Estágio 3 dos records + duas investigações NEGATIVAS documentadas (commit
+> `8732eb96`).** (1) Estágio 3 pushado (`35fc24b8`): record `implements` de
+> interna do MESMO pacote (probes: frontend aceita nome top com `$`;
+> SEM042 só proíbe declaração ANINHADA) → 1475→1382 stubs (31 internos × 3;
+> 158/216 records). Drift 4=4 zero, DecompileTest 57/57, kof-cli 151/0.
+> (2) Categorização reflexiva (`RecCat`/`RecExtra2`) fecha o cluster de
+> records: restam 58 = 52 método-extra (só 3 com corpos recuperáveis hoje)
+> + 4 static-field (frontend SEM025 — gap dele, regra 6) + 2 reserved —
+> **teto de ROI atingido**. (3) **Experimente NEGATIVO documentado**
+> (`8732eb96`): aceitar `$` no `TreeScope.resolve` = −9 stubs só + risco
+> anewarray-de-interna (PARSE041) → REVERTIDO. (4) Fila re-medida por
+> `StoreCat` (causa do drop, não last-opcode): 202 instanceof/checkcast +
+> 267 STORE + ~240 branches (99/9a/c6/c7/a5/a6) — TODOS o mesmo gargalo:
+> **junta estrutural de if/loop multi-bloco** (`BytecodeStatements.struct`
+> recusa re-entrância de join — linha 206, deliberado). **PRÓXIMO PASSO =
+> Fase C (joins)** — NÃO começar sem golden cross-target por sub-caso: um
+> join recuperado errado é compilável mas semanticamente ERRADO = R6 (pior
+> bug). Ordem segura: (a) harness golden JVM/JS/Native/Script para um
+> sub-caso estreito (ex. if-then sem else com join no fim — o `ifeq` de
+> `CompilerTypeSupport.fieldOk`); (b) tratar SÓ re-entrância que é join de
+> if (não loop), emitir `if {}` sem `else` + continuar no bloco pós-join;
+> (c) drift-check da árvore inteira + suíte + golden por target ANTES de
+> commitar. **NÃO (reiterado):** `nat/`; §166 (lane JS/gate, ABERTO com
+> repro+pointer em known-bugs `### 166`); roundTo (regra 6); `$`-resolve
+> global (experimente reprovado — não refazer).
 
 > **✅ FEITO (13/09 ~10:00, lane bugs-and-gaps, dono = 192.168.100.15):**
 > sincronizados os 5 registros de `docs/bugs-and-gaps/` + contagens da suíte
