@@ -52,19 +52,21 @@ package-compiler) abre antes de SYSTEMS fechar (paridade + GC + estabilidade).
 
 ## 2. Bugs abertos (fila em `docs/bugs-and-gaps/known-bugs.md`) — triagem 13/09
 
-**11 itens na fila aberta** (§127-JVM, §155, §94, §156 e §106 fechados
+**10 itens na fila aberta** (§89, §106, §127-JVM, §155, §94 e §156 fechados
 13/09; §157-160 e §65 fechados/NÃO-REPRODUZ 13/09) — e a conclusão honesta
-(`known-bugs.md:11`): **fila aberta = 11 itens, todos com decisão/dono/
+(`known-bugs.md:11`): **fila aberta = 10 itens, todos com decisão/dono/
 bloqueio — ZERO item código-puro-sem-decisão nesta lane**.
 Todos pendurados em:
 
 | Grupo | Bugs | Quem destrava |
 |---|---|---|
-| Decisão ratificada 13/09 — implementação pendente | §81, §89, §117, §131, §161/NAT-STR01 (§106 ✅ 13/09; §45/DD-01 FECHADO 13/09 — ver `docs/decisions/DD-01-finally-return.md`) | fila ratificada / lanes executoras |
+| Decisão ratificada 13/09 — implementação pendente | §81, §117, §131, §161/NAT-STR01 (§89 ✅ 13/09 `e33425b5`; §106 ✅ 13/09; §45/DD-01 FECHADO 13/09 — ver `docs/decisions/DD-01-finally-return.md`) | fila ratificada / lanes executoras |
 | Congelado regra-6 | §101 | ninguém (contrato) |
 | Lane alheia | §104b-ii + §107 restante + §114 (bugfixer — storage-box de record), §129 (lane nat), §132 (OTP-JS) | donos das lanes |
 
-Corrigidos 13/09: **§94** (EQ/NE de Double/Float no interpretador agora IEEE —
+Corrigidos 13/09: **§89** (conversão numérica em primitivo = alias do `as` +
+warning SEM090; 4 alvos — `CoreRegressionE2ETest.numericConvertMethodAliasOfAs`),
+**§94** (EQ/NE de Double/Float no interpretador agora IEEE —
 célula `stdsqrt` 4/4 sem exclusão), **§127-JVM** (cast p/ tipo-função →
 interface SAM sintética; `LambdaE2ETest.castToFunctionTypeJvm/Native`),
 **§155** (tipo-função como type-arg → parser preserva os espaços do type-ref;

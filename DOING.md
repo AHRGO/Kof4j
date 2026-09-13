@@ -58,19 +58,20 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
-> **⚡ docs/gate (13/09 ~05:00, dono = 192.168.100.15):** (1) **reparo de
+> **⚡ docs/gate (13/09 ~05:15, dono = 192.168.100.15):** (1) **reparo de
 > corrupção** no `known-bugs.md:11` — o cabeçalho tinha um bloco DUPLICADO +
 > o marcador literal `(line truncated to 2000 chars)` (um read truncado colado
 > no arquivo); reconstruído, `§156` preservado. (2) **§106 fechado** no
-> cabeçalho (fila **12→11** itens; `README §2` alinhado). (3) **§89 evidência
-> CORRIGIDA**: medido por EXECUÇÃO (não `success=true`) — `n.toDouble()` quebra
-> nos **4 alvos** (JVM `ClassFormatError: Illegal class name ""`; Native
-> `undefined reference`; Script `ERR: Integer.toDouble/0`; JS `TypeError`),
-> não só no link nativo; o `as` funciona nos 4 (`S89b.kf`). Decisão 3a vale,
-> mas o fix deve cobrir **JVM+Script+JS+3 nativos**. (4) **regra 9** restaurada
-> com a semântica de cluster (storage compartilhado; 1 IP = 1 agente = 1 máquina).
-> **PRÓXIMO PASSO:** §89 (alias do `as` + warning de truncamento) — se
-> implementar, reivindicar aqui antes; depois §117 (8a), §131 (10a), §81 (5b).
+> cabeçalho. (3) **§89 evidência CORRIGIDA e depois FECHADA**: medido por
+> EXECUÇÃO — `n.toDouble()` quebrava nos **4 alvos** (JVM `ClassFormatError`;
+> Native `undefined reference`; Script `ERR: Integer.toDouble/0`; JS
+> `TypeError`), não só no link nativo; o `as` funciona nos 4. A lane .18/9094
+> fechou em `e33425b5` (alias do `as` + warning SEM090) — **re-medido por mim
+> pós-fix: 4/4 alvos verdes** (S89/S89b/S89c) + `CoreRegressionE2ETest`
+> 1/1. Fila **12→10** itens. (4) **regra 9** restaurada com a semântica de
+> cluster (storage compartilhado; 1 IP = 1 agente = 1 máquina).
+> **PRÓXIMO PASSO:** §117 (cancelled() slot por TID, 8a) — depois §131 (10a);
+> §81 (5b, último, bump+migração). Reivindicar aqui antes de implementar.
 > **NÃO:** `nat/`; UI*; push main; `git config user.*`; Co-authored-by.
 
 > **⚡ RECUSA de re-disparo (13/09 ~06:50, lane development/docs, dono =
