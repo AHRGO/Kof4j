@@ -12,6 +12,7 @@
 > | **§167 ✅ CORRIGIDO 13/09 (lane bugs-and-gaps, 192.168.100.15)** | bitwise/shift com `Long` misturado: JVM VerifyError + JS TypeError/máscara errada + overflow de Long sem wrap no JS. 4 targets; achado na caça Q4 13/09. Overclaim conexo do §81 (declarava "64-bit real" cobrindo só parse/literal). Prova: `BackendParityTest.parityLongBitwiseShiftMixed` + `KofInterpreterParityTest.longBitwiseShiftMixed` + célula `bitwise` estendida 4/4. |
 > | **§172 ✅ CORRIGIDO 13/09 (lane development/translator, 192.168.100.22)** | compound shift `<<=`/`>>=`/`>>>=` era parseado mas baixado como atribuição SIMPLES (só o RHS gravado): `x=6; x <<= 2` dava `2` (silencioso, 4 targets). Fix: `isCompoundOp`+`compoundBinaryOp` com SHL/SHR/USHR + `emitCompoundRhsConv` (L2I no RHS largo). Prova: `CoreRegressionE2ETest.compoundShiftAssignments`. |
 > | **§173 ✅ CORRIGIDO 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `++`/`--`/compound em `Long`/`Double`/`Float` + incremento de ELEMENTO de array: JVM VerifyError (literal `INT 1` em binário de 2 slots, `DUP` de 1 slot, `arraystore` sem `[array,index]`), Native core dump, Script `NoSuchElementException`, JS `stack underflow`/`KofDup2`. 4 targets; caça Q4 13/09 (sobre o §167). Prova: `BackendParityTest.parityIncrementWideTypesAndArrayElement` + `KofInterpreterParityTest.incrementWideTypesAndArrayElement` + célula `increment` 4/4. |
+> | **§174 ✅ CORRIGIDO 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `return`/`throw` dentro de um `if` dentro do `try`: JVM/Native/Script corretos, KofJS abortava com `COMP002 unexpected KofCatchStart` (o `JsIfThrowElse.parseElse` consumia o endLabel do try envolvente ao tratar o `then` incondicional como if-else). Fix sem mudança de contrato/IR (guarda `isTryEndLabel`). Prova: `CoreRegressionE2ETest.returnInsideIfInsideTryJs`. |
 > | **§168 ✅ CORRIGIDO 13/09 (lane development/translator, `3ab4c99e`)** | SEM025 ausente em namespace `json` para método inexistente: `json.metodoRuim()` compilava com sucesso (deveria falhar com SEM025). O handler do #126 (`61495f69`) validava aridade de `encode/decode` mas não rejeitava método desconhecido; `MemberCallNamespaces` mudou de `if (known && !valid)` para `if (!valid)` (rejeita QUALQUER método ≠ encode/decode) + `return null` no caminho válido. Re-verificado no binário (`kof check` → SEM025; `json.encode(42)` → no errors); `SemanticResolutionTest` 27/27. |
 
 > | Antiga "varredura 08/09" (apócrifa — corrigida 12/09) | os "abertos" 39/62/63/64/46/48/50/59/61 estão ✅ CORRIGIDO nos próprios cabeçalhos (39/62/63/64 JVM/JS; 46/50/59 Native; 48/61 gap honesto JSN004/FFI001); contagem real na linha acima. |
@@ -5663,3 +5664,40 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
 - **Arquivos:** `kof-compiler/src/main/java/dev/kof/compiler/CompilerEmissionHelpers.java`,
   `.../CompilerEmission2.java`, `.../CompilerUiEmitter.java`,
   `.../ExpressionAssignmentLowerer.java`.
+
+### §174 — `return`/`throw` dentro de um `if` dentro do `try` → KofJS `COMP002 unexpected KofCatchStart` (paridade cross-target) — ✅ CORRIGIDO 13/09 (lane bugs-and-gaps `192.168.100.15`)
+
+- **Contexto:** achado na caça Q4 sobre o S13a `math.parse*` (mesma sessão do
+  §173). O `return` dentro de um `if` no corpo do `try` compilava e rodava nos
+  targets JVM/Native/Script, mas o KofJS abortava a compilação com
+  `Internal compiler error: KofJS: unexpected KofCatchStart at statement level`
+  (`JsControlFlowParser.parseStatement`). Paridade regra 5 quebrada de forma
+  **não-silenciosa** (COMP002), mas ainda assim um alvo que recusa programa
+  válido.
+- **Menor repro:** `String f(String s) { try { if (s == "x") { return "X" } return "Y" } catch (String e) { return "ERR" } }` + `println(f("x"))`.
+  JVM/Native/Script → `X`; JS → **COMPILE-FAIL** (`COMP002`). O mesmo ocorre
+  com `throw` no lugar do `return` e com o `if` sem `else`.
+- **Causa raiz:** o `then` do `if` termina em saída incondicional (`return`/
+  `throw`), então o IR **não emite** o `KofJump` de fim de `if`. O
+  `JsControlFlowParser.parseIfBody` cai no ramo "else" e chama
+  `JsIfThrowElse.parseElse` (§147), que percorre os statements seguintes como
+  se fossem o `else` — e, ao encontrar o `KofLabel` do **endLabel do try
+  envolvente**, o **consome** (linha 52). O `parseStatements` do corpo do try
+  então nunca casa o endLabel e caminha até o `KofCatchStart` solto no
+  statement level.
+- **Fix (sem mudança de contrato/IR):** `JsIfThrowElse.parseElse` **não
+  consome** um `KofLabel` que seja `isTryEndLabel` (o dono, `parseTryStatement`,
+  precisa casá-lo); idem o consumo do "Label(end) — no else" e o do "end of
+  else branch" em `parseIfBody` ganham a mesma guarda. A condição pré-existente
+  `isTryEndLabel` (MethodCtx) já existia para o bug 49 — o §147 a tinha
+  perdido no caminho do `then` incondicional.
+- **Prova (Q1 — falhava no código velho):**
+  `CoreRegressionE2ETest.returnInsideIfInsideTryJs` (novo) — `runBoth` compila
+  JVM+JS e compara a saída byte-a-byte (`X\nY\ncaught:boom\nY`); **falhava
+  antes** (JS COMP002). Golden medido no oracle JVM.
+- **Bordas Q3:** `return` no `if` (com e sem statement após), `throw` no `if`,
+  `if` sem `else`, catch que retorna, continuação após o `if`, e a regressão
+  vizinha `nestedTryJs`/`finallyReturnJs`/`finallyReturnJvm` (55/55 no
+  `CoreRegressionE2ETest`).
+- **Arquivos:** `kof-compiler/src/main/java/dev/kof/compiler/js/JsControlFlowParser.java`,
+  `.../js/JsIfThrowElse.java`.

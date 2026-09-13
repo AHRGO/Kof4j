@@ -763,6 +763,34 @@ class CoreRegressionE2ETest {
         assertTrue(rjs.success(), "JS compile failed: " + rjs.diagnostics().getDiagnostics());
     }
 
+    // known-bugs §174 — `return`/`throw` dentro de um `if` dentro do `try`
+    // deixava o KofCatchStart solto no statement level (COMP002): o
+    // JsIfThrowElse.parseElse consumia o endLabel do try envolvente ao tratar
+    // o then incondicional como if-else. JVM/Native/Script já funcionavam.
+    @Test
+    void returnInsideIfInsideTryJs(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                String f(String s) {
+                    try {
+                        if (s == "x") { return "X" }
+                        return "Y"
+                    } catch (String e) { return "ERR" }
+                }
+                String g(String s) {
+                    try {
+                        if (s == "x") { throw "boom" }
+                        return "Y"
+                    } catch (String e) { return "caught:" + e }
+                }
+                main() {
+                    println(f("x"))
+                    println(f("z"))
+                    println(g("x"))
+                    println(g("z"))
+                }
+                """, "X\nY\ncaught:boom\nY", tempDir, "tryifreturn");
+    }
+
     // known-bugs #51 — CompilerDriver reutilizado vazava classes sintéticas
     // (syntheticClasses/lambdaCounter não resetavam): compilar programa com
     // spawn e DEPOIS outro sem spawn no MESMO driver quebrava o link Native

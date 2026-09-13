@@ -125,6 +125,17 @@ public final class MethodCtx {
         return false;
     }
 
+    /**
+     * true se `label` em {@code pos[0]} é o Label(end) de um if (deve ser
+     * consumido). Um label de loop (continue/start) pertence ao loop
+     * envolvente e o endLabel de um try envolvente pertence ao try — consumir
+     * este último deixa o KofCatchStart solto (COMP002, §174).
+     */
+    boolean isIfEndLabel(int[] pos, LabelId label) {
+        return !isLoopLabel(label) && !JsLabelParser.isLoopStart(this, pos, label)
+                && !isTryEndLabel(label);
+    }
+
     boolean hasClassMethod(String kofClassName, String method) {
         Set<String> names = lc.classMethodNames.get(kofClassName);
         return names != null && names.contains(method);

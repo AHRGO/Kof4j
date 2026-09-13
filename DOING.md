@@ -60,6 +60,34 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (13/09 ~14:20, lane bugs-and-gaps, dono = 192.168.100.15):
+> §174 CORRIGIDO (`return`/`throw` dentro de `if` dentro do `try` → KofJS
+> `COMP002 unexpected KofCatchStart`).** Achado na caça Q4 sobre o S13a
+> `math.parse*` (probe `/tmp/opencode/d134/S13A.kf`). JVM/Native/Script
+> corretos; JS abortava a compilação. Causa raiz: o `then` do `if` termina em
+> saída incondicional → IR não emite o `KofJump` de fim; o
+> `JsIfThrowElse.parseElse` (§147) percorria os statements seguintes como
+> `else` e **consumia o endLabel do try envolvente** → `KofCatchStart` solto.
+> Fix sem mudança de contrato/IR: guarda `isTryEndLabel` no consumo do
+> "Label(end)" (`JsControlFlowParser.parseIfBody` ×2) e em
+> `JsIfThrowElse.parseElse`. **Prova Q1:** `CoreRegressionE2ETest.returnInsideIfInsideTryJs`
+> (novo, `runBoth` JVM+JS, golden `X\nY\ncaught:boom\nY`; falhava antes).
+> `CoreRegressionE2ETest` 55/55. `check_500` OK (JsControlFlowParser mantido em
+> 558 — helper movido p/ `MethodCtx`).
+> **Gate 4-módulos:** compiler 1493 run / **0 falhas** / 13 erros (só `node`) /
+> 158 skip; script 32/0; c 5/0; cli 184/0. BUILD SUCCESS.
+> **Nota S13a (caça Q4, sem bug novo):** `math.parseDouble` Native diverge de
+> JVM/Script/JS em hex-float (`0x1.8p1`) e sufixos `d`/`f` — é a **família
+> FLT001 já documentada** (B31, `known-bugs.md` §81/FLT001), NÃO regressão do
+> S13a. Divergência JS de `String(1.0)`="1" = bug 44 documentado.
+> **PRÓXIMO PASSO:** fila de `known-bugs.md` só tem itens de outras lanes
+> (§101 congelado; §104b-ii/§107/§114 bugfixer; §129/§161 nat; §132 OTP-JS;
+> §165 não-reproduz; §170 issue-lane; §171 diagnóstico). **Re-disparo: ler
+> esta linha + `known-bugs.md:11`; se nada novo e suíte verde → RECUSAR.**
+> **NUNCA:** `nat/` lane GC viva; fila de outras lanes; push main.
+> **Livre para caça Q4:** áreas recém-mexidas por outras lanes (S13a stdlib,
+> translator) são candidatas a probe de borda — sem tocar arquivos EM CURSO.
+
 > **✅ FEITO (13/09 ~13:50, lane bugs-and-gaps, dono = 192.168.100.15):
 > §173 CORRIGIDO (`++`/`--`/compound em tipos largos + elemento de array).**
 > Achado na caça Q4 sobre o §167. Sintomas: `var c=1L; c++` → JVM VerifyError
@@ -85,6 +113,7 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > JsRuntimeUiWeb 529, de outras lanes). **Nota:** o §172 (shift-compound) foi
 > corrigido pela lane .22 no remoto `1cd5a19d` — a 2ª face (RHS largo sem L2I)
 > está fechada por `emitCompoundRhsConv`.
+
 > **PRÓXIMO PASSO:** a fila de `known-bugs.md` segue com itens de outras lanes
 > (§101 congelado; §104b-ii/§107/§114 bugfixer; §129/§161 nat; §132 OTP-JS;
 > §165 não-reproduz; §168/§170 issue-lane; §171 diagnóstico). Re-disparo: ler
