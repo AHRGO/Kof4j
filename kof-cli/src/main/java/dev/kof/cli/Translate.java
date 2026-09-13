@@ -295,7 +295,18 @@ public final class Translate {
                 }
                 break;
             }
-            if (p.at("{")) { // static initializer block — skip
+            if (p.at("{")) {
+                // Bloco de inicialização. `static {}`: skip (Kof não tem estado
+                // top-level; consistente com campo estático skipado). Bloco de
+                // INSTÂNCIA `{ ... }` (não-static): roda antes do construtor e
+                // tem efeito — dropá-lo SILENCIOSAMENTE muda o comportamento
+                // (bug latente Q4 13/09) → gap honesto R6.
+                if (!isStatic) {
+                    throw new TranslateException(
+                            "bloco de inicialização de instância `{ ... }` (não-static) roda antes "
+                            + "do construtor — sem equivalente direto em Kof; mova o corpo para o "
+                            + "`constructor(...)` — revisão manual");
+                }
                 skipBlock();
                 return;
             }

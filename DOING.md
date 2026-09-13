@@ -92,6 +92,7 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 > **PRÓXIMO PASSO (translator):** gaps Java restantes são decisão de design/regra 6 (FQN `new pacote.Classe`→stdlib, classe anônima, tipo aninhado hoisting, varargs de usuário) ou já cobertos; nova varredura via probes antes de tocar.
 > **✅ FEITO (13/09 ~15:50, lane development/translator, dono = 192.168.100.22): array-initializer em CAMPO (bug latente Q4).** `int[] xs = {1,2,3}` como campo (não local) escapava do guard de gap honesto → `kof translate` emitia `Int[] xs = {` TRUNCADO = Kof inválido silencioso (R6: output quebrado sem diagnóstico). Fix em `Translate.parseMember` (detecta `{` após `=` → mesmo `TranslateException` do local). Prova: `TranslateTest.arrayInitializerIsHonestGap` estendido (local+campo) 33/33 + probe binário `kof translate` → diagnóstico explícito sem truncamento. `Translate.java` 406 ≤500; `check_500` OK. TRANSLATOR.md sync.
+> **✅ FEITO (13/09 ~16:00, lane development/translator, dono = 192.168.100.22): bloco de inicialização de instância (bug latente Q4).** `{ ... }` não-static dropado SILENCIOSAMENTE (muda comportamento — roda antes do construtor no Java) → agora gap honesto R6; `static {}` segue skipado. Prova: `TranslateTest.instanceInitializerBlockIsHonestGap` (34/34) + probe binário. `check_500` OK.
 
 > **✅ FEITO (13/09 ~15:10, lane docs — dono = esta sessão): CONSOLIDAÇÃO DE
 > PLANOS em `docs/development/` (pedido da mantenedora "junta o que tiver
@@ -113,12 +114,39 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > AGENTS corpus, development/README, future/README ×2, scoped-resources,
 > PLANNING-FUTURE-AUDIT, 4 javadoc (`Confidence`/`Inspect`/`Compare`/`Decompile`
 > +`CompareTest`). **Prova:** nenhum path-link quebrado (grep), `0` refs mortas
-> aos 4 apagados fora do journal, `-am compile` rc=0. **PRÓXIMO PASSO (docs):**
-> fila de fusão da mantenedora no cluster `decision-pending/`+planos vivos
-> (ex.: `plan-platform-completion` vs `roadmap` §23 TIER 1, `security-plan` vs
-> §23 TIER 9 — ambos citam SECN002/PQC; só fundir se confirmar zero conteúdo
-> único, mesmos critérios daqui). Re-disparo sem isso → **RECUSAR** (lane
-> issues 9094 segue zerada/estável). **NUNCA:** `DECOMPILER.md`/`TRANSLATOR.md`
+> aos 4 apagados fora do journal, `-am compile` rc=0.
+> **✅ FEITO (13/09 ~16:00, lane docs — dono = esta sessão): `decision-pending/`
+> EXTINTA — os 6 planos ratificados e consolidados em
+> `docs/development/DECISIONS.md` (pedido da mantenedora: "definir os
+> decision-pending e transformar num doc só"; opções presentas, ela aceitou as
+> recomendadas = decisão registrada com data).** Ratificações travadas:
+> **D-STDLIB** (UTC-only; escalares ISO sem retorno composto — a trava
+> DD-STDLIB-01 fechou 13/09 e **não** é para reabrir; zero pattern-DSL;
+> `todayIso/formatDateIso/isToday/hoursBetween/parseDateIso/tzOffsetSeconds`
+> = fila liberada), **D-SEC** (chacha20 `$`-envelope espelhando o AES-GCM REAL
+> auditado `JvmStringSecurityRuntime:152` keyHex 2º arg; cookies+`app.security()`
+> casados ao I2; OAuth resource-server→client, provider NUNCA; TLS
+> `listenSecure(port,cert,key)`), **D-APP** (Q1 `kof.toml` ✅ já implementado
+> `KofProjectConfig:10`; Q2 0.4.0-beta; Q4 rejeitado; Q6 `--fat`; Q10 android
+> ✅; + §D-APP.REF com o modelo em uma página p/ nada se perder), **D-SPRING**
+> (F12 blog E2E AGORA; regras estruturais anti-Spring preservadas), **D-PLAT**
+> morto (DoD mora em `performance.md` §40–41 + Q0–Q6 do AGENTS), **D-PLATFORM**
+> morto (F1 resolvido pelo manifesto). **Conteúdo único salvo antes de apagar:**
+> lição "pegadinha text-block" → `training/anti-patterns/asm-comment-escape.md`
+> (variante dupla interpretação `\n`/`\\n` — era a casa que o known-bugs §138
+> citava). **Regra nova no AGENTS:** decisão do chat → trava em DECISIONS.md no
+> MESMO commit + abre fila; frente sem linha lá não é atacada. Refs: 16
+> arquivos (AGENTS×3 blocos, 2 README, audits×2, roadmap×2, status, README raiz,
+> backend-parity, stdlib-web, known-bugs×2, conformance, ecosystem, KOFUI-AUDIT,
+> PLAN-UNIVERSAL×3); `git rm -r decision-pending/`. **Prova:** grep 0 path-link
+> vivo p/ os 6 apagados (restam só menções históricas nominais em journal/
+> auditoria encerrada); docs-only (sem código tocado — `mvn -am compile` do
+> HEAD inalterado vale). **PRÓXIMO PASSO (docs/dev — fila RECÉM-ABERTA de
+> DECISIONS.md, AGENTS ordem (2)):** (1) `time.todayIso/formatDateIso/isToday`
+> (D-STDLIB, 5 alvos, golden oracle JVM, `KofTime` dispatch, matriz) — menor e
+> destrava S7c; (2) `chacha20Encrypt/Decrypt` (D-SEC, espelha SecCall AES-GCM);
+> (3) `CmdNew` (D-APP I1). Re-disparo sem tocar a fila → **RECUSAR**.
+> **NUNCA:** `DECOMPILER.md`/`TRANSLATOR.md`
 > (donos ativos), `Translate*`/`ExpressionAssignment*`/`EditorIntegrationTest`
 > (WIP alheio na árvore).
 

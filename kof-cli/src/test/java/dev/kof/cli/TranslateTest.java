@@ -751,6 +751,31 @@ class TranslateTest {
     }
 
     @Test
+    void instanceInitializerBlockIsHonestGap() {
+        // Bloco de instância `{ ... }` roda antes do construtor; dropá-lo
+        // silenciosamente muda comportamento → gap honesto (R6).
+        TranslateException e = assertThrows(TranslateException.class, () ->
+                Translate.translateJava("""
+                        public class II {
+                            { System.out.println("init"); }
+                            void m() { System.out.println(1); }
+                        }
+                        """));
+        assertTrue(e.getMessage().contains("revisão manual"),
+                "instance initializer block → gap explícito (R6), foi: " + e.getMessage());
+
+        // `static {}` continua skipado (Kof não tem estado top-level).
+        String kof = Translate.translateJava("""
+                public class SI {
+                    static { System.out.println("boot"); }
+                    void m() { System.out.println(1); }
+                }
+                """);
+        assertTrue(kof.contains("void m()"), "static block skipado, método segue:\n" + kof);
+        assertFalse(kof.contains("boot"), "static block não vaza pro output:\n" + kof);
+    }
+
+    @Test
     void doWhileTranslates(@TempDir Path dir) throws Exception {
         String kof = Translate.translateJava("""
                 public class DW {

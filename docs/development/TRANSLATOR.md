@@ -287,3 +287,14 @@ diferenciais.
 > local. Prova: `arrayInitializerIsHonestGap` estendido (campo + local) —
 > `TranslateTest` 33/33; probe no binário `kof translate` → diagnóstico
 > explícito, sem truncamento. `Translate.java` 406 ≤500; `check_500` OK.
+>
+> **Estado (13/09 ~16:00, dono = 192.168.100.22): bloco de inicialização de
+> instância (bug latente Q4).** `{ ... }` não-static dentro de classe rodava
+> antes de todo construtor no Java; o translator dropava **silenciosamente**
+> (só se documentava `static {}` skip), mudando comportamento sem diagnóstico
+> (viola R6). Fix: `Translate.parseMember` distingue `static {}` (skip,
+> consistente com campo estático) de instância (→ `TranslateException` R6,
+> orienta mover p/ `constructor`). Prova:
+> `TranslateTest.instanceInitializerBlockIsHonestGap` (instância gap + static
+> skipado) — `TranslateTest` 34/34; probe no binário → diagnóstico explícito.
+> `Translate.java` ~420 ≤500; `check_500` OK.
