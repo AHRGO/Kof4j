@@ -87,8 +87,10 @@ public final class Translate {
         }
 
         private void parseTypeDeclaration() {
-            // modifiers
-            while (isModifier(p.peek().text)) p.next();
+            // modifiers + annotations (@Override, @SuppressWarnings(...)) —
+            // Kof ignora anotações no translator (não são semântica p/ o
+            // subconjunto; a anotação some junto com o `@Nome` e args).
+            skipAnnotationsAndModifiers();
             if (p.at("class")) {
                 parseClass();
             } else if (p.at("interface")) {
@@ -99,6 +101,33 @@ public final class Translate {
                 parseEnum();
             } else {
                 throw new TranslateException("expected class/interface/record/enum, found '" + p.peek().text + "'");
+            }
+        }
+
+        /**
+         * Consome modificadores e anotações Java (`@Override`,
+         * `@SuppressWarnings("x")`, `@Deprecated(...)`). Anotações não têm
+         * semântica no subconjunto traduzido → descartadas (Kof as ignora,
+         * verificado 13/09).
+         */
+        private void skipAnnotationsAndModifiers() {
+            while (true) {
+                if (isModifier(p.peek().text)) { p.next(); continue; }
+                if (p.at(T.AT)) {
+                    p.next();                 // @
+                    p.next();                 // Nome
+                    while (p.at(".")) { p.next(); p.next(); }  // @a.b.C
+                    if (p.at("(")) {          // args
+                        int depth = 0;
+                        do {
+                            if (p.at("(")) depth++;
+                            else if (p.at(")")) depth--;
+                            p.next();
+                        } while (depth > 0 && !p.at(T.EOF));
+                    }
+                    continue;
+                }
+                break;
             }
         }
 
@@ -233,7 +262,20 @@ public final class Translate {
         private void parseMember(String className) {
             int save = p.pos;
             boolean isStatic = false;
-            while (isModifier(p.peek().text)) { if (p.at("static")) isStatic = true; p.next(); }
+            while (true) {
+                if (isModifier(p.peek().text)) { if (p.at("static")) isStatic = true; p.next(); continue; }
+                if (p.at(T.AT)) {
+                    p.next(); p.next();
+                    while (p.at(".")) { p.next(); p.next(); }
+                    if (p.at("(")) {
+                        int depth = 0;
+                        do { if (p.at("(")) depth++; else if (p.at(")")) depth--; p.next(); }
+                        while (depth > 0 && !p.at(T.EOF));
+                    }
+                    continue;
+                }
+                break;
+            }
             if (p.at("{")) { // static initializer block — skip
                 skipBlock();
                 return;

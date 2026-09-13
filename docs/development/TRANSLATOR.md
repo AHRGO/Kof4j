@@ -6,10 +6,11 @@
 
 **Status:** EM DESENVOLVIMENTO (caiu de `future/` em 12/09 — Fase F
 implementada: `Translate.java` + `TranslateLexer`/`TranslateExpr`;
-prova: `TranslateTest` 26/26 (output compila e roda; +do-while +switch
+prova: `TranslateTest` 27/27 (output compila e roda; +do-while +switch
 +try/catch/throw +arrays +cast/instanceof +throws +generics +constructor
 +enum-body/multi-decl +interface-extends +bitwise/shift +parênteses
-+tipos qualificados +assert 13/09). Subconjunto Java ampliado ainda pendente)
++tipos qualificados +assert +annotations 13/09). Subconjunto Java ampliado
+ainda pendente)
 **Data:** 22 de agosto de 2026
 
 ---
@@ -256,3 +257,11 @@ diferenciais.
 > gap honesto (R6). Prova: `TranslateTest.assertTranslates` (roda `1`) +
 > `forMultipleInitIncrIsHonestGap`. `TranslateStatements` 399 ≤500;
 > `TranslateTest` 26/26.
+>
+> **Estado (13/09 ~14:45, dono = 192.168.100.22): annotations descartadas.**
+> `@Override`, `@Deprecated`, `@SuppressWarnings("x")` (com args) em tipo e
+> membro → descartadas (Kof ignora; verificado no compilador); antes
+> `expected class/... found '@'`. Fix: `skipAnnotationsAndModifiers` no
+> `parseTypeDeclaration` + ramo `@` no `parseMember`. Prova:
+> `TranslateTest.annotationsAreDiscarded` (traduz + compila JVM + roda
+> `x/f`). `Translate.java` 377 ≤500; `TranslateTest` 27/27.

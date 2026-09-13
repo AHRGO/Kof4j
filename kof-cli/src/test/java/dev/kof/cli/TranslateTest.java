@@ -333,6 +333,32 @@ class TranslateTest {
     }
 
     @Test
+    void annotationsAreDiscarded(@TempDir Path dir) throws Exception {
+        String kof = Translate.translateJava("""
+                @Deprecated
+                public class An {
+                    @Override
+                    public String toString() { return "x"; }
+                    @SuppressWarnings("unchecked")
+                    public void f() { System.out.println("f"); }
+                    public static void main(String[] args) {
+                        An a = new An();
+                        System.out.println(a.toString());
+                        a.f();
+                    }
+                }
+                """);
+
+        assertTrue(kof.contains("class An"),
+                "anotação de tipo descartada (antes: expected class... found '@'):\n" + kof);
+        assertTrue(kof.contains("String toString()"),
+                "anotação de método descartada:\n" + kof);
+        assertFalse(kof.contains("@"), "nenhuma anotação no output:\n" + kof);
+
+        assertCompiles(dir, kof, "x\nf");
+    }
+
+    @Test
     void assertTranslates(@TempDir Path dir) throws Exception {
         String kof = Translate.translateJava("""
                 public class AS {
