@@ -10,7 +10,7 @@ Distribuído (System/packaging) ainda não iniciado → não vai para `docs/`)
 **Versão-alvo:** 0.4.0-beta (a linha 0.3.0 está em curso — ver DOING.md)
 **Gap-codes desta RFC:** `APP001`..`APP003` (convenção R6; matriz em
 `docs/backend-parity.md`)
-**Relacionados:** `docs/roadmap.md` §§8–11 (promessas ❌ de 02/09),
+**Relacionados:** `docs/development/roadmap.md` §§8–11 (promessas ❌ de 02/09),
 `docs/stdlib/stdlib-web.md`, `docs/targets/KOFJS.md`,
 `docs/development/future/PLAN-UNIVERSAL-PLATFORM.md` (R1/R6/R7/R9/R12)
 
@@ -24,7 +24,7 @@ Consequências auditadas (seção 2):
 
 - **Full-stack não é primeira classe.** `kof serve` sobe só backend (JVM-only);
   o frontend (KofJS) é um build separado que o usuário serve manualmente.
-  `docs/roadmap.md` §9 ("Frontend + Backend no Mesmo Projeto") está ❌ desde
+  `docs/development/roadmap.md` §9 ("Frontend + Backend no Mesmo Projeto") está ❌ desde
   02/09.
 - **`kof build` não empacota.** JVM sai como pasta de `.class` sem jar/manifest;
   não existe artifact de aplicação standalone com assets (roadmap §11 ❌).

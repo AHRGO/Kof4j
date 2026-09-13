@@ -2,7 +2,7 @@
 
 > **EM DESENVOLVIMENTO** (caiu de `future/` em 12/09 — Fases A–H da
 > plataforma de migração implementadas com testes; Tiers 6–12 (universal)
-> não iniciados — esses ficam regidos por `future/PLAN-UNIVERSAL-PLATFORM.md`.)
+> não iniciados — esses ficam regidos por `docs/development/future/PLAN-UNIVERSAL-PLATFORM.md`.)
 
 **Criado:** 01/09/2026
 **Escopo:** os planos originais de `docs/future/` — `DECOMPILER.md`,

@@ -268,7 +268,7 @@ arquitetural). Critérios de aceite:
 4. O teste de independência (aplicação Kof sem Spring) é tão importante
    quanto o teste de interoperabilidade (Kof consumindo Spring).
 5. Cada fase termina com testes verdes (`mvn test`) e documentação.
-6. O roadmap existente (`docs/roadmap.md`) permanece a visão de longo prazo;
+6. O roadmap existente (`docs/development/roadmap.md`) permanece a visão de longo prazo;
    este documento é o plano de execução da independência + starter.
 
 ---

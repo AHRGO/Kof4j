@@ -354,7 +354,7 @@ sql """
 Princípio: "Abstração quando ajuda, SQL quando precisa."
 
 Estado atual: 🟡 parcial — **nível 0-2 e 4 implementados** (`kof.db` +
-`kof.orm`, ver `docs/DATABASE_VISION.md`): conexão idiomática
+`kof.orm`, ver `docs/stdlib/DATABASE_VISION.md`): conexão idiomática
 (JDBC no JVM; SQLite nativo via `.so`; MySQL handshake `kof_db_mysql_scramble` 27/08), SQL com prepared
 statements, transactions, `entity` declarativo em compile-time, CRUD
 (`create/save/find/all/where/delete/count`), `orm.where` por campo + operadores, `saveAll` batch, `page`/`count`/`deleteAll`,

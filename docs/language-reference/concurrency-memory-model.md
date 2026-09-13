@@ -89,7 +89,7 @@ de HB da §2 com os E2Es da §4 antes de sair de `experimental`.
 > `noWordTearingOnLong` (`:737`) **é** prova real da regra 6 — há escrita
 > concorrente em `Estado.v` com leitura em laço.
 >
-> **Lacuna que importa para `development/planning-otp-supervision.md`
+> **Lacuna que importa para `docs/development/planning-otp-supervision.md`
 > (DD-OTP-08):** o padrão **stop-flag** — um fluxo escreve `Bool = true`, outro
 > lê em laço até observar — não é coberto por teste nenhum. `Estado.pronto` é
 > escrito em `noWordTearingOnLong` e nunca lido. Como `volatile` é non-goal

@@ -17,7 +17,7 @@ direto, FFM Vulkan compute, interop Java + GraalJS), `mvn test` 810.
 > Tudo que abaixo exigir mudança profunda no core é registrado como
 > **dependência arquitetural futura**, nunca como ação.
 
-Referências (não alteradas): `docs/roadmap.md` (visão), `docs/philosophy.md`
+Referências (não alteradas): `docs/development/roadmap.md` (visão), `docs/philosophy.md`
 (intenção), `docs/architecture/architecture.md` (ADR multi-target),
 `docs/bugs-and-gaps/ecosystem-coverage.md` (matriz de capacidades), `docs/stdlib/stdlib.md`
 (mecanismo de dispatch), `docs/development/decision-pending/plan-platform-completion.md` (execução atual).
