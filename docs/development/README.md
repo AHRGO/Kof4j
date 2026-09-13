@@ -52,7 +52,7 @@ package-compiler) abre antes de SYSTEMS fechar (paridade + GC + estabilidade).
 
 ## 2. Bugs abertos (fila em `docs/bugs-and-gaps/known-bugs.md`) — triagem 13/09
 
-**11 seções sem ✅ no cabeçalho** (§127-JVM e §94 fechados 13/09; §9 triado ✅ 13/09 — `nativeLambdaMutableCapture` 1/1) — e a conclusão honesta
+**12 seções sem ✅ no cabeçalho** (§127-JVM, §155 e §94 fechados 13/09; §156 aberto 13/09 — infra de tipos; §9 triado ✅ 13/09 — `nativeLambdaMutableCapture` 1/1) — e a conclusão honesta
 (`known-bugs.md:11`): **nenhum item de código-puro-sem-decisão restou na lane**.
 Todos pendurados em:
 
@@ -61,10 +61,13 @@ Todos pendurados em:
 | Decisão da mantenedora (regra 6) | §45 (`planning-finally-return` — JVM/Native/interp), §81, §89, §106, §131 | mantenedora |
 | Congelados regra-6 | §101, §117, §129-TLS | ninguém (contrato) |
 | Lane alheia | §65/§132 (UI/web/OTP-JS), §104b-ii + §107 restante + §114 (bugfixer — storage-box de record) | donos das lanes |
+| Infra de tipos (sem dono) | §156 (`List` heterogêneo de lambdas → CCE JVM) | agente de tipos |
 
 Corrigidos 13/09: **§94** (EQ/NE de Double/Float no interpretador agora IEEE —
 célula `stdsqrt` 4/4 sem exclusão), **§127-JVM** (cast p/ tipo-função →
-interface SAM sintética; `LambdaE2ETest.castToFunctionTypeJvm/Native`). Corrigidos 12/09: §90 (web, #98), §125,
+interface SAM sintética; `LambdaE2ETest.castToFunctionTypeJvm/Native`),
+**§155** (tipo-função como type-arg → parser preserva os espaços do type-ref;
+`LambdaE2ETest.declaredFunctionTypeListJvm/Native`). Corrigidos 12/09: §90 (web, #98), §125,
 §139, §140 (gate→ratchet), §107-face
 escalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 `440730c8` — prova qemu 42+42)**.

@@ -301,4 +301,33 @@ class LambdaE2ETest {
         Files.writeString(source, CAST_FN_TYPE);
         runNative(source, tempDir.resolve("out"), "true\n7");
     }
+
+    // bug 155: tipo-função como ARGUMENTO GENÉRICO declarado
+    // (`List<(Int) -> Int>`, `listOf<(Int) -> Int>()`). O parser de type-args
+    // concatenava os tokens crus sem espaços → "(Int)->Int", que `Type.of` não
+    // reconhece → ClassType com nome inválido → ClassFormatError no JVM e
+    // COMPILE-FAIL/lixo nos outros 3 targets.
+    private static final String DECLARED_FN_TYPE_LIST = """
+            main() {
+                List<(Int) -> Int> l = listOf((x: Int) -> x + 1)
+                println(l.get(0)(5))
+                var fs = listOf<(Int) -> Int>()
+                fs.add((x: Int) -> x * 2)
+                println(fs.get(0)(5))
+            }
+            """;
+
+    @Test
+    void declaredFunctionTypeListJvm(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, DECLARED_FN_TYPE_LIST);
+        runJvm(source, tempDir.resolve("out"), "6\n10");
+    }
+
+    @Test
+    void declaredFunctionTypeListNative(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, DECLARED_FN_TYPE_LIST);
+        runNative(source, tempDir.resolve("out"), "6\n10");
+    }
 }
