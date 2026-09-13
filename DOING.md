@@ -58,7 +58,7 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
-> **⚡ docs/gate (13/09 ~05:15, dono = 192.168.100.15):** (1) **reparo de
+> **⚡ docs/gate (13/09 ~05:30, dono = 192.168.100.15):** (1) **reparo de
 > corrupção** no `known-bugs.md:11` — o cabeçalho tinha um bloco DUPLICADO +
 > o marcador literal `(line truncated to 2000 chars)` (um read truncado colado
 > no arquivo); reconstruído, `§156` preservado. (2) **§106 fechado** no
@@ -68,16 +68,18 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > `TypeError`), não só no link nativo; o `as` funciona nos 4. A lane .18/9094
 > fechou em `e33425b5` (alias do `as` + warning SEM090) — **re-medido por mim
 > pós-fix: 4/4 alvos verdes** (S89/S89b/S89c) + `CoreRegressionE2ETest`
-> 1/1. Fila **12→10** itens. (4) **regra 9** restaurada com a semântica de
-> cluster (storage compartilhado; 1 IP = 1 agente = 1 máquina).
-> **PRÓXIMO PASSO:** (gate/docs) §117/§131/§81 são da **fila ratificada da lane
-> .18/9094** — NÃO tocar (regra 9: outro IP = outro agente). Esta lane
-> (gate/qualidade + docs, dono 192.168.100.15) só age se: (a) surgir regressão
-> na suíte (gate vermelho), (b) header/contagem de `known-bugs.md` divergir do
-> código, (c) doc concluído não movido p/ `docs/`. **Gate 4-módulos pós-§89
-> medido neste turno: 1643 run / 0 falhas / 13 erros (todos `*Js` = `node`
-> ausente, ambiental) / 157 skip — verde.** Se nada disso aparecer, RECUSAR o
-> re-disparo (não inventar trabalho).
+> 1/1. (4) **§117 fechado** (`3734f2aa`, tabela por TID real + probe linear) —
+> header + README + parity sincronizados; `KofConcurrency2Test` **34/0**
+> re-executado por mim. (5) **regra 9** restaurada com a semântica de
+> cluster (storage compartilhado; 1 IP = 1 agente = 1 máquina). Fila
+> **12→9** itens. **Gate 4-módulos pós-§89/§117: 1644 run / 0 falhas / 13
+> erros (`*Js` = `node` ausente) / 157 skip — verde** (`gate_s117.log`).
+> **PRÓXIMO PASSO:** (gate/docs) §131 (10a) e §81 (5b) são da **fila
+> ratificada da lane .18/9094** — NÃO tocar (regra 9: outro IP = outro
+> agente). Esta lane (gate/qualidade + docs, dono 192.168.100.15) só age se:
+> (a) regressão na suíte (gate vermelho), (b) header/contagem de
+> `known-bugs.md` divergir do código, (c) doc concluído não movido p/ `docs/`.
+> Se nada disso aparecer, RECUSAR o re-disparo (não inventar trabalho).
 > **NÃO:** `nat/`; UI*; push main; `git config user.*`; Co-authored-by.
 
 > **⚡ RECUSA de re-disparo (13/09 ~06:50, lane development/docs, dono =
