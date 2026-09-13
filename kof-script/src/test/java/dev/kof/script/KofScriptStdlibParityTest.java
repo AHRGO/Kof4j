@@ -62,6 +62,35 @@ class KofScriptStdlibParityTest {
             """, "529.982.247-25\n123|\n01310-100\n34.546.401/0001-63\n123|");
     }
 
+    // STDLIB S13a (plan-stdlib-expansion §2, P0): math.parseInt/parseLong/
+    // parseDouble — fachada sobre kof_string_to_* (o interpretador resolve
+    // por reflexão no MESMO KofRuntime; paridade por construção). Golden
+    // igual ao KofMathTest/ConformanceMatrixTest (fonte única de verdade);
+    // erro de parse lança (contrato JDK com trim). Long > 2^53 prova Long
+    // real; Double via == Bool (bug 44).
+    @Test
+    void mathParseParity() throws Exception {
+        parity("""
+            main() {
+                println(math.parseInt("42"))
+                println(math.parseInt(" -7 "))
+                println(math.parseInt("+13"))
+                println(math.parseInt("0"))
+                println(math.parseInt("-2147483648"))
+                println(math.parseLong("9007199254740993"))
+                println(math.parseLong("-9223372036854775807"))
+                println(math.parseDouble("2.5") == 2.5)
+                println(math.parseDouble("  -0.25 ") == -0.25)
+                println(math.parseDouble("1e2") == 100.0)
+                try { println(math.parseInt("abc")); println("S1") } catch (String e) { println("T1") }
+                try { println(math.parseInt("12a34")); println("S2") } catch (String e) { println("T2") }
+                try { println(math.parseInt("2147483648")); println("S3") } catch (String e) { println("T3") }
+                try { println(math.parseInt("")); println("S4") } catch (String e) { println("T4") }
+                try { println(math.parseLong("9223372036854775808")); println("S5") } catch (String e) { println("T5") }
+            }
+            """, "42\n-7\n13\n0\n-2147483648\n9007199254740993\n-9223372036854775807\ntrue\ntrue\ntrue\nT1\nT2\nT3\nT4\nT5");
+    }
+
     @Test
     void isUuidParity() throws Exception {
         parity("""

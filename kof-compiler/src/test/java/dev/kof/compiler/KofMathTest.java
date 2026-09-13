@@ -194,6 +194,73 @@ class KofMathTest {
             "true", "true", "true", "true", "true", "true", "true", "true", "true",
             "true", "true", "true", "true", "true");
 
+    // S13a (plan-stdlib-expansion §2, P0): math.parseInt/parseLong/parseDouble
+    // = fachada de namespace sobre as runtime fns EXISTENTES kof_string_to_*
+    // (zero runtime novo nos 4 alvos; regra 2). Contrato = JDK com trim (idem
+    // `.toInt()`): inválido/overflow LANÇA. Golden byte-idêntico JVM/Script/JS/
+    // x86 (Double via == Bool — bug 44: nunca println de double cru no Native;
+    // Long 2^63-1 prova 64-bit real pós-§81/BigInt no JS). Erro esperado via
+    // try/catch (Q3: borda) + bordas Int (MIN ok, MAX+1 lança) e Long.
+    private static final String PARSE_SRC = """
+        main() {
+            println(math.parseInt("42"))
+            println(math.parseInt(" -7 "))
+            println(math.parseInt("+13"))
+            println(math.parseInt("0"))
+            println(math.parseInt("-2147483648"))
+            println(math.parseLong("9007199254740993"))
+            println(math.parseLong("-9223372036854775807"))
+            println(math.parseDouble("2.5") == 2.5)
+            println(math.parseDouble("  -0.25 ") == -0.25)
+            println(math.parseDouble("1e2") == 100.0)
+            try { println(math.parseInt("abc")); println("S1") } catch (String e) { println("T1") }
+            try { println(math.parseInt("12a34")); println("S2") } catch (String e) { println("T2") }
+            try { println(math.parseInt("2147483648")); println("S3") } catch (String e) { println("T3") }
+            try { println(math.parseInt("")); println("S4") } catch (String e) { println("T4") }
+            try { println(math.parseLong("9223372036854775808")); println("S5") } catch (String e) { println("T5") }
+        }
+        """;
+
+    private static final String PARSE_OUT = String.join("\n",
+            "42", "-7", "13", "0", "-2147483648",
+            "9007199254740993", "-9223372036854775807",
+            "true", "true", "true",
+            "T1", "T2", "T3", "T4", "T5");
+
+    @Test
+    void parseJvm(@TempDir Path tmp) throws Exception {
+        runJvm(tmp, PARSE_SRC, PARSE_OUT);
+    }
+
+    @Test
+    void parseNative(@TempDir Path tmp) throws Exception {
+        runNative(tmp, PARSE_SRC, PARSE_OUT);
+    }
+
+    @Test
+    void parseJs(@TempDir Path tmp) throws Exception {
+        runJs(tmp, PARSE_SRC, PARSE_OUT);
+    }
+
+    @Test
+    void parseCrossArch(@TempDir Path tmp) throws Exception {
+        // kof_string_to_int/long = B30 (bug 79, contrato JDK); kof_string_to_double
+        // = B31 (bug 82). Golden BYTE-IDÊNTICO sob qemu-riscv64 + qemu-aarch64.
+        forCrossArch(tmp, PARSE_SRC, PARSE_OUT);
+    }
+
+    @Test
+    void parseTypeGuardRefused(@TempDir Path tmp) throws Exception {
+        // Q3 (erro esperado) + SEM025 (R6): Int NÃO alarga para String em
+        // silêncio — math.parseInt(42) é erro de COMPILAÇÃO (guia no check,
+        // não exceção em runtime; por isso o golden acima não tem T6).
+        Path file = tmp.resolve("Guard-" + System.nanoTime() + ".kf");
+        Files.writeString(file, "main() { println(math.parseInt(42)) }");
+        Path outDir = tmp.resolve("guard-" + System.nanoTime());
+        CompilationResult result = driver.compile(file, outDir, Target.JVM);
+        assertFalse(result.success(), "math.parseInt(42) deve ser rejeitado no typer (SEM025)");
+    }
+
     @Test
     void powJvm(@TempDir Path tmp) throws Exception {
         runJvm(tmp, POW_SRC, POW_OUT);

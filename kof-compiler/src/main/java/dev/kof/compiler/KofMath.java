@@ -19,6 +19,8 @@ public final class KofMath {
     private static final Type INT = Type.PrimitiveType.INT;
     private static final Type BOOL = Type.PrimitiveType.BOOL;
     private static final Type DOUBLE = Type.PrimitiveType.DOUBLE;
+    private static final Type LONG = Type.PrimitiveType.LONG;
+    private static final Type STR = BuiltinTypes.STRING;
 
     static final List<String> NAMESPACES = List.of("math");
 
@@ -69,6 +71,20 @@ public final class KofMath {
             // quebrado silencioso).
             case "pow" -> argc == 2 && isDouble(argTypes.get(0)) && isDouble(argTypes.get(1))
                     ? new MathCall("kof_math_pow", DOUBLE, List.of(DOUBLE, DOUBLE)) : null;
+            // S13a (plan-stdlib-expansion §2, P0): parse numérico como fachada
+            // de namespace sobre as runtime fns EXISTENTES kof_string_to_*
+            // (regra 2 — zero runtime novo nos 4 alvos). Contrato = JDK
+            // Integer.parseInt/Long.parseLong/Double.parseDouble com trim
+            // (idem `.toInt()`); inválido/overflow LANÇA (String runtime fn
+            // kof_throw_string no native, exceção nos demais). Guard de tipo:
+            // arg STR obrigatório (número não alarga de/para String em
+            // silêncio — SEM025, R6). OrNull/OrDefault = S13b/S13c.
+            case "parseInt" -> argc == 1 && isStr(argTypes.get(0))
+                    ? new MathCall("kof_string_to_int", INT, List.of(STR)) : null;
+            case "parseLong" -> argc == 1 && isStr(argTypes.get(0))
+                    ? new MathCall("kof_string_to_long", LONG, List.of(STR)) : null;
+            case "parseDouble" -> argc == 1 && isStr(argTypes.get(0))
+                    ? new MathCall("kof_string_to_double", DOUBLE, List.of(STR)) : null;
             default -> null;
         };
     }
@@ -96,5 +112,9 @@ public final class KofMath {
 
     private static boolean isDouble(Type t) {
         return t == DOUBLE || "double".equals(t.toString()) || "Double".equals(t.toString());
+    }
+
+    private static boolean isStr(Type t) {
+        return BuiltinTypes.STRING.equals(t) || "String".equals(t.toString());
     }
 }

@@ -121,6 +121,22 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > (donos ativos), `Translate*`/`ExpressionAssignment*`/`EditorIntegrationTest`
 > (WIP alheio na árvore).
 
+> **⚡ EM CURSO→FEITO (13/09, lane development, dono = 192.168.100.18):
+- **FEITO 13/09 — STDLIB S13a (plan-stdlib-expansion §2, P0; prioridade direta da mantenedora): `math.parseInt/parseLong/parseDouble` — fachada de namespace sobre as runtime fns `kof_string_to_*` EXISTENTES nos 4 backends (regra 2, zero runtime novo). Prova Q1/Q3:** `KofMathTest.parse{Jvm,Native,Js,CrossArch,TypeGuardRefused}` + célula `stdmathparse` na ConformanceMatrixTest (4 targets não-cross) + `KofScriptStdlibParityTest.mathParseParity` (interpretador×JVM). Golden byte-idêntico: válidos, trim, +sinal, Int MIN, Long ±2^63 (9007199254740993 > 2^53 prova Long real pós-§81 BigInt), double via == Bool (bug 44), erros T1–T5 (inválido/partial/overflow/"" via try-catch). Suíte completa 4 módulos: **1698 run, 0 falhas, 0 erros** (157 skip = guard qemu ausente neste host + BD externos).
+  - **Implementação:** `KofMath.java` (cases parseInt→kof_string_to_int INT [STR], parseLong→kof_string_to_long LONG, parseDouble→kof_string_to_double DOUBLE + guard SEM025 em tipo errado, travado no typer por `parseTypeGuardRefused`); `JsRuntimeOps.java` (case `kof_string_to_*` no handleRuntimeOp: FUNCTION = fachada c/ args.get(0); METHOD = path .toInt() de StringMethodRegistry c/ receiver — emit IDÊNTOCO ao case de lá, JsCallEmitter:276; registerRuntime RAW snake = export real de JsRuntimeUiStdlib). REGRESSÃO pega no gate (Q4 funcionou): o prefixo no isRuntimeOp capturava o METHOD path e o default genérico fazia args.get(0) em args vazio → COMP002 IndexOutOfBounds em KofJsE2ETest/KofStringParseTest; fix = shape por kind no case (receiver p/ METHOD). Doc: célula `stdmathparse` adicionada em conformance-matrix.md (ConformanceMatrixDocTest sincronizado).
+> (prioridade da mantenedora: "pega como prioridade o plan-stdlib-expansion.md").**
+> Degrau A do item P0 "parse + OrNull/OrDefault" do §2 do plano: CONCLUÍDO
+> acima (S13a). **PRÓXIMO PASSO:** S13b — `math.parseIntOrNull/parseLongOrNull/
+> parseDoubleOrNull` + OrDefault (3+3 fns; briefing §43: falha de parse =
+> OrNull/OrDefault em vez de lança). JVM = fachada sobre `kof_string_to_*`
+> com try-catch; JS idem (helper JS); Native x86 = clone do parse com default
+> em vez de throw (RuntimeStringParse*); riscv/aarch = template clone B30/B31.
+> OrNull precisa nullable primitivo (mecanismo §125) — se o typer de `Int?`
+> no dispatch stdlib travar, fatiar: OrDefault primeiro (retorna Int),
+> OrNull em unidade própria. Arquivos: `KofMath.java`, `KofMathTest`,
+> `ConformanceMatrixTest` célula stdmathparseord, `plan-stdlib-expansion.md`
+> (S13a FEITO → sincronizar no MESMO commit), DOING.md.
+
 > **✅ FEITO (13/09 ~13:40, lane issues 9094 — dono = esta sessão): #126 +
 > #125 (reportes PublioSantos, 0.3.23-beta).** **#126** (`json.encode(x,4)`
 > passava no check → VerifyError): causa raiz = o caminho SEMÂNTICO

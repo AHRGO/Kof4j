@@ -638,6 +638,32 @@ class ConformanceMatrixTest {
                     println(math.pow(-1.0, 0.5) != math.pow(-1.0, 0.5))
                 }
                 """, "true\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue", Set.of(), tempDir);
+        // STDLIB S13a — math.parseInt/parseLong/parseDouble (fachada sobre as
+        // runtime fns kof_string_to_* EXISTENTES nos 4 backends; regra 2 —
+        // zero runtime novo). Contrato JDK com trim (idem `.toInt()`):
+        // inválido/overflow LANÇA (try/catch). Double via == Bool (bug 44).
+        // Long 9007199254740993 > 2^53 prova Long real pós-§81 (BigInt JS).
+        // Cross-arch (riscv B30/B31 + aarch) com golden byte-idêntico mora em
+        // KofMathTest.parseCrossArch sob qemu.
+        matrix("stdmathparse", """
+                main() {
+                    println(math.parseInt("42"))
+                    println(math.parseInt(" -7 "))
+                    println(math.parseInt("+13"))
+                    println(math.parseInt("0"))
+                    println(math.parseInt("-2147483648"))
+                    println(math.parseLong("9007199254740993"))
+                    println(math.parseLong("-9223372036854775807"))
+                    println(math.parseDouble("2.5") == 2.5)
+                    println(math.parseDouble("  -0.25 ") == -0.25)
+                    println(math.parseDouble("1e2") == 100.0)
+                    try { println(math.parseInt("abc")); println("S1") } catch (String e) { println("T1") }
+                    try { println(math.parseInt("12a34")); println("S2") } catch (String e) { println("T2") }
+                    try { println(math.parseInt("2147483648")); println("S3") } catch (String e) { println("T3") }
+                    try { println(math.parseInt("")); println("S4") } catch (String e) { println("T4") }
+                    try { println(math.parseLong("9223372036854775808")); println("S5") } catch (String e) { println("T5") }
+                }
+                """, "42\n-7\n13\n0\n-2147483648\n9007199254740993\n-9223372036854775807\ntrue\ntrue\ntrue\nT1\nT2\nT3\nT4\nT5", Set.of(), tempDir);
         // STDLIB S2a — kof.strings predicados paridade total nos 4 targets.
         matrix("stdstrings", """
                 main() {
