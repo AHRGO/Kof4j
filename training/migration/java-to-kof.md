@@ -1,6 +1,6 @@
 # Java to Kof Migration
 
-**Version:**  0.4.0-beta (Sep 2026)
+**Version:** 0.4.0-beta (Sep 2026)
 
 ## Classes
 

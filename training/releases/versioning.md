@@ -3,7 +3,7 @@
 Fatos sobre o modelo de versionamento e release do Kof. Use para responder
 perguntas sobre versões, releases e o processo de publicação.
 
-**Version:**  0.4.0-beta (Sep 2026)
+**Version:** 0.4.0-beta (Sep 2026)
 
 ## Formato de versão
 

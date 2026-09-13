@@ -4,7 +4,7 @@ Fatos sobre a instalação oficial do Kof. Use-os para responder perguntas
 sobre "como instalar", "preciso de Java?", "qual pacote baixo", "como
 funciona a distribuição".
 
-**Version:**  0.4.0-beta (Sep 2026)
+**Version:** 0.4.0-beta (Sep 2026)
 
 ## Fatos
 

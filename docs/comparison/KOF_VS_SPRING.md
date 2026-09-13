@@ -1,7 +1,7 @@
 # Kof vs Spring — O Problema que Kof Resolve
 
 **Última atualização:** 12 de setembro de 2026
-**Versão:**  0.4.0-beta (web stack completa: ws/sse/middleware/cache; `kof.http` JVM+JS com retry/circuit; `kof.db` SQLite nativo + MySQL WIP)
+**Versão:** 0.4.0-beta (web stack completa: ws/sse/middleware/cache; `kof.http` JVM+JS com retry/circuit; `kof.db` SQLite nativo + MySQL WIP)
 
 ---
 

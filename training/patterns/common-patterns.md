@@ -1,6 +1,6 @@
 # Kof Common Patterns
 
-**Version:**  0.4.0-beta (Sep 2026)
+**Version:** 0.4.0-beta (Sep 2026)
 
 ## CRUD Entity (record + primary constructor)
 

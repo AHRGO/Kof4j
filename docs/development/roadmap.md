@@ -1,7 +1,7 @@
 # Kof — Roadmap de Longo Prazo
 
 **Última atualização:** 13 de setembro de 2026
-**Versão:**  0.4.0-beta (branch ativa `beta-0.4.0`)
+**Versão:** 0.4.0-beta (branch ativa `beta-0.4.0`)
 
 ---
 
