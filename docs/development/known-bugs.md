@@ -4620,30 +4620,38 @@ statement-switch na mesma taxa). Reprodução no próprio teste (kof-cli).
   mudança na lane deles.
 - **(b) Metade JS — causa raiz é outra (prova deste HEAD, `CompilerDriver`
   Target.JS dump):** NÃO é "declaração de variável de loop quebrada no
-  codegen". O `assert(c)` abaixa para `if((c===0)) throw` **sem else-fonte**,
-  e o lowering de if-com-then-throw **omite o `Jump(end)`/`Label(end)`**
-  (throw é fall-through unreachable). O `JsControlFlowParser.parseIfBody`
-  decide "tem else?" pela PRESENÇA de `Label(end)` após o `Label(false)` —
-  sem ele, cai no ramo §147 (`JsIfThrowElse.parseElse`), que consome
-  statements até o próximo `KofJump`/`KofLabel`-não-loop. Resultado: os
-  statements SEGUINTES ao if (corpo do método pós-if) são engolidos como
-  "else" — `var i` fica preso no bloco, `while(i<8)` posterior lê `i` fora
-  de escopo → `ReferenceError`. O caso do reporter (if-throw **com** else,
-  célula `ifthrowelse`) tem IR linear **byte-idêntico** → `println("after")`
-  também fica dentro do else no JS; só passa na matriz por coincidência de
-  output. Logo o bug não é JS-específico do assert: é o **shape do then-throw
-  sem Label(end)** que contamina qualquer programa cujo if-throw não é o
-  último statement do método.
-- **(c) Fix NÃO pode morar em `JsIfThrowElse`** (dado o IR ambíguo — a
-  informação some no lowering). Duas portas corretas, ambas no emissor de
-  IR/JS compartilhado: **(i)** o lowering do `if` com then-termina-em-throw
-  emitir normalmente `Jump(end)`+`Label(end)` (código morto após throw é
-  só não-chegável, não ausente); OU **(ii)** a "pilhinha de labels `end`
-  ancestrais" que a própria nota **"Fix previsto" do §147** pediu e o autor
-  do `718ae5cf` NÃO implementou (fez o heurístico do `parseElse`, que é o
-  que regressa). Qualquer das duas = mudança de IR/parsing compartilhado →
-  **regra 6** (é decisão de design, não correção mecânica) + domínio do
-  autor do §147. `KofRandomTest.{randomStringJs,randomShapeJs}` verdes +
+  codegen". O `assert(c)` abaixa para `if((c===0)) throw` **sem else-fonte**.
+  O lowering EMITE o `Jump(end)`+`Label(end)` normais (o docstring do
+  `parseIfBody:136-137` declara o padrão `[CJump, L(t), then, J(end), L(f),
+  else?, L(end)]`) — mas o `backend/Optimizer` faz **"unreachable code
+  elimination" + "jump-to-next elimination"** (linhas 44-45): o `J(end)` que
+  vem logo APÓS um `KofThrow` é inalcançável → deletado; sem referências, o
+  `L(end)` par também é podado. Resultado: o stream que chega ao parser JS
+  é `CJump, L(t), throw, L(f), <statements…>` SEM end-label, enquanto um
+  if-else NORMAL mantém os dois labels (o `J(end)` do then é alcançável —
+  o then não termina em saída incondicional). O `JsControlFlowParser.
+  parseIfBody` decide "tem else?" pela presença de `Label(end)`/`KofJump`
+  após `L(false)` — sem eles, cai no ramo §147 (`JsIfThrowElse.parseElse`),
+  que consome statements até o próximo `KofJump`/`KofLabel`-não-loop. Os
+  statements SEGUINTES ao if (corpo do método pós-if) viram "else": `var i`
+  fica preso no bloco, `while(i<8)` posterior lê `i` fora de escopo →
+  `ReferenceError`. O caso do reporter (if-throw **com** else-fonte, célula
+  `ifthrowelse`) tem o MESMO shape podado → `println("after")` também fica
+  dentro do else no JS; só passa na matriz por coincidência de output.
+  Logo o bug não é do lowering do assert nem do parser sozinho: é a
+  **poda do J/L(end) pós-throw no Optimizer** que apaga a única
+  informação que distinguiria else-de-epílogo.
+- **(c) Fix NÃO pode morar em `JsIfThrowElse`** (a informação some no
+  Optimizer, antes do parser). Portas corretas, todas em código
+  compartilhado: **(i)** o `Optimizer` preservar `Label(end)`/não podar o
+  `Jump(end)` que fecha um `if` cujo then termina em `KofThrow` (ou podar
+  o J mas manter o L como fronteira de parse de quem consome o IR — o
+  parser JS é consumidor literal do stream podado); OU **(ii)** a "pilha de
+  labels `end` ancestrais" que a própria nota **"Fix previsto" do §147**
+  pediu e o autor do `718ae5cf` NÃO implementou (fez o heurístico do
+  `parseElse`, que é o que regressa). Qualquer das duas = mudança de
+  IR/Optimizer compartilhado (afeta os 3 backends) → **regra 6** (decisão
+  de design, não correção mecânica) + domínio do autor do §147/Optimizer. `KofRandomTest.{randomStringJs,randomShapeJs}` verdes +
   golden assert-then-epilogue nos 4 targets + célula nova `assertepilogue`
   na matriz provam o fechamento.
 - **(d) Estado do gate 4-módulos neste HEAD (`e1962735`, `gateFixed.log`):**
