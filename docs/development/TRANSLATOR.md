@@ -359,7 +359,7 @@ diferenciais.
 > extraídos de `TranslateExpr` (500→487) para `TranslateTypes.java` (50).
 > Prova: `constructorDelegationIsHonestGap`, `wildcardGenericIsHonestGap`,
 > `lambdaBlockBodyTranslates` (roda `14` no Kof gerado) — `TranslateTest`
-> **42/42**; gate 4-módulos **1493/0 + 32/0 + 5/0 + 191/0**, BUILD SUCCESS.
+> **42/42**; gate 4-módulos pós-rebase **1497/0 + 33/0 + 5/0 + 194/0**, BUILD SUCCESS.
 > `check_500` OK (sem aviso de `Translate*`).
 >
 > **Nota (achado na caça Q4, registrado §176 — lane compiler, NÃO do
