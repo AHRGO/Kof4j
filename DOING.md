@@ -74,6 +74,20 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > main.
 
 > **⚡ FEITO (13/09 ~05:40, lane 9094 issues — #113 + #97 fechadas + gate ≤500→600, dono = esta sessão):** (a) **#113** corrigida (commit `53b089fd`): `kof_heap_root_start` era emitido no preâmbulo do RUNTIME, abaixo dos `kof_static_*` do programa → heap referido só por campo estático não era marcado (UAF latente). Fix: abrir o intervalo na ABERTURA do `.data` do programa (`NativeBackend.emit`, antes de strings/estáticos/schemas/vtables); mapa de fatias atualizado (`PREAMBLE` espelha o novo prefixo — byte-idêntico passa; `root_start` vira `programSideSymbol`, fatia GC o referencia via `leaq`). **Topo fica `_end`** (medido: `root_end` no tail = 0x422cc0, 33KB ABAIXO do `_end` 0x42b100 — trocar hoje = under-mark; o rótulo explícito entra JUNTO do `--gc-sections` x86 = S-5, documentado no código). Prova: `nm` do Holder da issue — `root_start 0x415098 < kof_static_Holder_label_obj 0x4150c0` (antes: ABAIXO); programa roda (x1/42); `NativeRuntimeSliceRegistryTest` 7/7, ArtifactSize 6/6, KofMath 11/11, suíte compiler **1463/0**. (b) **gate ≤500→faixas** (decisão da mantenedora no turno): 500–599 TOLERADO (avisa, não quebra CI), ≥600 CRÍTICO (falha); `NativeBackend` avô 687→**645** (pruneRuntime movido p/ `RuntimeSlices`, subsistema S-3); baseline re-travado (11 dívidas); sintético provado: novo ≥600 FALHA, avô crescendo FALHA, tolerada NÃO falha. (c) **#97** fechada — S-1..S-7 ✅ no HEAD, números medidos AGORA: hello x86 `--print-sizes` = **32520B/37 syms** (era 138.928B/627 na issue). (d) **discussion #25** — switch-expression `case ->` JÁ EXISTE (PARSE094 honesto no corpo-bloco; matriz `switchexpr` DONE 5/5 targets; learn/15 + training/idioms/control-flow cobrem) — nada a implementar. **PRÓXIMO PASSO:** fila de issues da lane 9094 ZERADA (open: nenhuma na minha frente); re-disparo sem nada novo E suíte verde → **RECUSAR** (estabilidade). **NUNCA:** `nat/` sem aviso (a 9093 trabalha na MESMA árvore — conflito hoje em `NativeBackend`, resolvido preservando os dois lados); pow (dono 100.15); push main.
+> **⚡ NOTA (13/09, lane gate/qualidade, dono = 192.168.100.15):** confirmado o
+> caminho do #113 — o commit `17596ce7` (pow/qualidade) tinha REVERTIDO
+> acidentalmente as 19 linhas do fix ao editar `NativeBackend.java`; a lane 9094
+> re-fixou em `53b089fd` (root_start na abertura do `.data` do programa, topo
+> `_end`). **Onde o bug se manifesta:** no `kof-compiler` o prune remove a fatia
+> GC (o mínimo `main(){println(7)}` linka); o `ld: undefined reference to
+> kof_heap_root_start` só estoura no `kof-script` (roda fora do módulo → prune
+> cai no fallback e emite o runtime COMPLETO). Por isso o teste de regressão é
+> `KofScriptTest#evalNativeTarget` — anotado com o porquê (reproduzido vermelho
+> no código quebrado, verde no fix). **Removido** o teste falso
+> `KofGcE2ETest#gcRootLabelsEmittedAndLink` que passava mesmo com o build
+> quebrado (verde falso, Q5 — o prune esconde a fatia GC no kof-compiler).
+> Suíte 4-módulos **1637/0** (13 erros = só `node`). Nada a fazer no código
+> (fix já no remoto) — só a prova/teste.
 
 > **⚡ FEITO (13/09, lane infra-tipos — §156, dono = 192.168.100.22):** item
 > código-puro-sem-decisão fechado (commits da lane 9094 `53b089fd`/`4c31a121`

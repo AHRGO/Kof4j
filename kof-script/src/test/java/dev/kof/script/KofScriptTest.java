@@ -92,6 +92,13 @@ class KofScriptTest {
 
     @Test
     void evalNativeTarget() throws Exception {
+        // Regressão #113: este é o caminho onde o bug do GC aparece. O
+        // KofScript roda fora do módulo kof-compiler, então o prune de fatias
+        // do runtime cai no fallback (emite o runtime COMPLETO, incluindo
+        // RuntimeGc) — se NativeBackend.emit não emitir kof_heap_root_start, o
+        // ld quebra com "undefined reference" no menor programa nativo. O mesmo
+        // programa no kof-compiler passa porque lá o prune remove a fatia GC;
+        // por isso o teste de regressão mora AQUI.
         Path tmp = Files.createTempDirectory("nativetest");
         Path f = tmp.resolve("Main.kf");
         Files.writeString(f, "main() { println(7) }");
