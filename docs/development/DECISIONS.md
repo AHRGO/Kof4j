@@ -65,6 +65,14 @@ entram na stdlib base** (R1/R12 — motor de parsing é pacote, não base).
 Cada linha: golden do oracle JVM (medição real), dispatch em `KofTime`,
 `training/idioms`, matriz de conformidade, gap honesto onde houver.
 
+> **✅ EXECUTADO 13/09 (lane development, dono 192.168.100.18):** as 6
+> linhas acima implementadas e validadas — todayIso/formatDateIso/isToday
+> (S7e), hoursBetween (S7f + fix emit x86 7+ args), parseDateIso (S7g),
+> tzOffsetSeconds (S7h, Native gap honesto TIME003 — fila geral). Prova:
+> `KofTimeE2ETest` S7e-S7h (30/30) + matriz `stdtime3`/`stdtime4`/
+> `stdtime5`/`stdtime6` + parity Script. Suíte 1772/0/0. **Fila
+> D-STDLIB TIME FECHADA.**
+
 ---
 
 ## D-SEC — segurança (ratificado 13/09)
