@@ -209,6 +209,26 @@ class KofMathTest {
         runJs(tmp, POW_SRC, POW_OUT);
     }
 
+    @Test
+    void powCrossArchRefused(@TempDir Path tmp) throws Exception {
+        // R6 / Q3 (erro esperado): riscv/aarch NÃO linkam libm (cross é
+        // estático sem libc — invariante asm-puro da lane nat). A recusa é no
+        // LOWERING com código MATH001 (não undefined-reference silencioso no
+        // ld). É do typer, não da toolchain — roda sem qemu. Trava o gate de
+        // KofMath.supportedOn: removê-lo quebraria o link cross.
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            Path file = tmp.resolve("Refuse-" + t + "-" + System.nanoTime() + ".kf");
+            Files.writeString(file, POW_SRC);
+            Path outDir = tmp.resolve("refuse-" + t + "-" + System.nanoTime());
+            CompilationResult result = driver.compile(file, outDir, t);
+            assertFalse(result.success(), t + " deve recusar math.pow (MATH001)");
+            boolean hasGap = result.diagnostics().getDiagnostics().stream()
+                    .anyMatch(d -> String.valueOf(d.code()).contains("MATH001"));
+            assertTrue(hasGap, t + " recusa deve citar MATH001: "
+                    + result.diagnostics().getDiagnostics());
+        }
+    }
+
     private void forCrossArch(Path tmp, String src, String expected) throws Exception {
         // golden byte-idêntico ao JVM/x86/JS, executado sob qemu (padrão
         // STRN001/SECN000 da lane; skipa honesto se toolchain ausente).
