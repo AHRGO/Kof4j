@@ -97,7 +97,15 @@ public final class JsIr {
     }
 
     record JsTry(List<JsStatement> tryBody, List<JsCatchClause> catches,
-                 List<JsStatement> finallyBody) implements JsStatement {
+                 List<JsStatement> finallyBody, List<JsStatement> returnFinally) implements JsStatement {
+        /** DD-01 (bug 45): statements do epílogo return-finally — load #retVal
+         *  + return; emitido DEPOIS do try/finally (return direto do valor). */
+        JsTry {
+            if (returnFinally == null) returnFinally = List.of();
+        }
+        JsTry(List<JsStatement> tryBody, List<JsCatchClause> catches, List<JsStatement> finallyBody) {
+            this(tryBody, catches, finallyBody, List.of());
+        }
     }
 
     record JsCatchClause(String param, List<JsStatement> body) {

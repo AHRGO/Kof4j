@@ -228,6 +228,9 @@ public final class JsEmitter {
                 indent--;
             }
             line("}");
+            // DD-01 (bug 45): epílogo do return que saiu do try — roda DEPOIS
+            // do finally (que o try nativo do JS já garante no caminho normal)
+            for (JsIr.JsStatement s : t.returnFinally()) emitStatement(s);
         }
     }
 

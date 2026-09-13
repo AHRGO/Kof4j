@@ -21,6 +21,9 @@ public final class MethodCtx {
     final List<KofOperation> ops;
     final Map<Integer, String> localNames = new HashMap<>();
     final Map<Integer, String> rawLocalNames = new HashMap<>();
+
+    /** DD-01 (bug 45): label do epílogo return-finally do try em parse. */
+    LabelId currentReturnFinallyLabel;
     final Set<Integer> declared = new HashSet<>();
     final Set<String> usedNames = new HashSet<>();
     final List<String> tempDecls = new ArrayList<>();

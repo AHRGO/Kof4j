@@ -104,11 +104,14 @@ Type vt = vds.type() != null && !"var".equals(vds.type())
         }
         java.util.Set<String> savedMutated = driver.mutatedCapturedNames;
         driver.mutatedCapturedNames = new java.util.HashSet<>();
+        java.util.Deque<CompilerDriverState.FinallyFrame> savedFrames = driver.finallyFrames;
+        driver.finallyFrames.clear(); // DD-01: frame do finally externo não vaza p/ dentro
         CompilerCaptureScanner.collectMutatedCaptures(driver, func.body(), locals);
         for (StatementNode stmt : func.body()) {
             localIdx = driver.emitStatement(stmt, body, "", localIdx, locals, returnType);
         }
         driver.mutatedCapturedNames = savedMutated;
+        driver.finallyFrames.addAll(savedFrames); // DD-01: restaura
         KofOperation last = body.isEmpty() ? null : body.get(body.size() - 1);
         if (last == null || !(last instanceof KofReturn || last instanceof KofReturnVoid)) {
             if (Type.isVoid(returnType)) body.add(new KofReturnVoid());

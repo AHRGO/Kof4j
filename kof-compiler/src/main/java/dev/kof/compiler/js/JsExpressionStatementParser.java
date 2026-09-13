@@ -118,6 +118,12 @@ final class JsExpressionStatementParser {
             }
             if (op instanceof KofReturn kr) {
                 pos[0]++;
+                // DD-01: KofReturn inalcançável no epílogo do método (o valor
+                // já retornou via return-finally) — sem ops de carga antes:
+                // stack vazia → return null (equivalente JVM de areturn vazio).
+                if (stack.isEmpty() && preamble.isEmpty() && preambleExprs.isEmpty()) {
+                    return parser.finishExpressionStatement(preamble, preambleExprs, new JsIr.JsReturn(null));
+                }
                 if (Type.isVoid(kr.returnType()) && !stack.isEmpty()) {
                     // A void call's result is still a side-effecting
                     // expression (default-parameter wrapper returning a

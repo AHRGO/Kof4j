@@ -2,10 +2,15 @@
 
 > **✅ DECIDIDO 13/09 (mantenedora, opção 4a):** aprova a proposta abaixo (lowering único com `FinallyFrame` na IR, espelho do bytecode JVM, parser JS reconstrói) + **bump 0.3.0→0.3.1**. Implementação liberada p/ lane lowerers.
 >
-> **Status:** `EM CURSO` — a face **JS do bug 45 já foi corrigida** (`c727fee`,
-> `CoreRegressionE2ETest.finallyReturnJs` verde; colateral fecha §52); a face
-> **JVM/Native/interpretador** foi **DECIDIDA 13/09 (opção 4a)** — implementação
-> pendente na lane lowerers (FinallyFrame na IR + bump 0.3.1) · **Gap:** bug 45 ·
+> **Status:** ✅ **IMPLEMENTADO 13/09** (opção 4a ratificada; a face JS do bug 45
+> já tinha sido corrigida em `c727fee`): `FinallyFrame` na IR
+> (`CompilerDriverState`), `ReturnStmt` com frame ativo → store `#retVal` + jump
+> `returnFinallyLabel`; epílogo do try roda o finally e retorna/encadeia p/ frame
+> externo; lambda/método/função salvam a pilha de frames; JS: try/finally nativo
+> + epílogo só com o return (evita finally duplicado), `#retVal` pre-declarado.
+> Gates: `CoreRegressionE2ETest.finallyReturnJvm` (try-return, catch-return, void)
+> + `finallyReturnJs`. Suíte 4-módulos **1627/0**. Gap bug 45 FECHADO (JVM/Native/
+> interp/JS todos `fin`+valor). · **Gap:** bug 45 ·
 > **Lane:** lowerers · **Criado:** 08/09/2026 · **Bump proposto:** 0.3.0 → 0.3.1 ·
 > **Movido de `future/` p/ `development/` 12/09** (implementação iniciada — regra dos 3 estados)
 

@@ -429,7 +429,26 @@ boolean isDoWhileConditionAhead(MethodCtx ctx, int[] pos, LabelId startLabel) {
 JsIr.JsStatement parseTryStatement(MethodCtx ctx, int[] pos) {
         KofTryStart ts = (KofTryStart) ctx.ops.get(pos[0]);
                 pos[0]++;
+        // DD-01 (bug 45): lookahead do label return-finally — é o alvo do
+        // KofJump que aparece logo após o store #retVal no corpo do try.
+        ctx.currentReturnFinallyLabel = null;
+        for (int i = pos[0]; i < ctx.ops.size(); i++) {
+            if (ctx.ops.get(i) instanceof KofStoreLocal sl
+                    && "#retVal".equals(ctx.rawLocalNames.get(sl.index()))) {
+                for (int j = i + 1; j < ctx.ops.size() && j <= i + 3; j++) {
+                    if (ctx.ops.get(j) instanceof KofJump kj) { ctx.currentReturnFinallyLabel = kj.target(); break; }
+                    if (ctx.ops.get(j) instanceof KofLabel) break;
+                }
+                break;
+            }
+        }
         List<JsIr.JsStatement> tryBody = parseStatements(ctx, pos, Set.of(ts.endLabel()), new ArrayList<>());
+        // DD-01: com return no corpo (sem catch), o body para no primeiro
+        // region-exit (jump p/ returnFinally) e sobra o jump do fluxo normal
+        // p/ o finally — consumir jumps soltos até o endLabel/TryEnd/CatchStart.
+        while (pos[0] < ctx.ops.size() && ctx.ops.get(pos[0]) instanceof KofJump) {
+            pos[0]++;
+        }
         if (pos[0] < ctx.ops.size() && ctx.ops.get(pos[0]) instanceof KofLabel tryEnd
                 && tryEnd.label().equals(ts.endLabel())) {
             // The end label may already have been consumed as a region exit
@@ -455,7 +474,8 @@ JsIr.JsStatement parseTryStatement(MethodCtx ctx, int[] pos) {
             catches.add(new JsIr.JsCatchClause(param, catchBody));
         }
         if (pos[0] >= ctx.ops.size() || !(ctx.ops.get(pos[0]) instanceof KofTryEnd)) {
-            throw new IllegalStateException("KofJS: try expected KofTryEnd");
+            throw new IllegalStateException("KofJS: try expected KofTryEnd at " + pos[0]
+                    + " of " + ctx.ops.size() + ": " + (pos[0] < ctx.ops.size() ? ctx.ops.get(pos[0]) : "eof"));
         }
         pos[0]++;
         List<JsIr.JsStatement> finallyBody = List.of();
@@ -468,8 +488,16 @@ JsIr.JsStatement parseTryStatement(MethodCtx ctx, int[] pos) {
             List<LabelId> exits = new ArrayList<>();
             finallyBody = parseStatements(ctx, pos, Set.of(), exits);
             // skip the rethrow machinery: Label(rethrow) ... Label(done)
+            // DD-01: se há return-finally (return no corpo), o epílogo vem
+            // ANTES do Label(done) — parar o skip nele e parsear o epílogo.
             LabelId done = exits.isEmpty() ? null : exits.get(exits.size() - 1);
-            if (done != null) {
+            LabelId rf = ctx.currentReturnFinallyLabel;
+            if (rf != null) {
+                while (pos[0] < ctx.ops.size() && !(ctx.ops.get(pos[0]) instanceof KofLabel kl
+                        && kl.label().equals(rf))) {
+                    pos[0]++;
+                }
+            } else if (done != null) {
                 while (pos[0] < ctx.ops.size() && !(ctx.ops.get(pos[0]) instanceof KofLabel kl
                         && kl.label().equals(done))) {
                     pos[0]++;
@@ -494,7 +522,37 @@ JsIr.JsStatement parseTryStatement(MethodCtx ctx, int[] pos) {
             // faz o finally rodar e o retorno prevalecer (Java-correct).
             finallyBody = finallyBody.subList(0, finallyBody.size() - 1);
         }
-        return new JsIr.JsTry(tryBody, catches, finallyBody);
+        // DD-01 (bug 45): após o caminho de rethrow vem Label(returnFinally)
+        // + finallyBody + (load #retVal + return). No JS o try/finally NATIVO
+        // já executa o corpo do finally no caminho do return — o epílogo IR
+        // repetiria o corpo (duplicado). Consumimos os ops e descartamos o
+        // corpo, preservando SÓ o return final do valor.
+        List<JsIr.JsStatement> returnFinally = new ArrayList<>();
+        if (hasFinally && pos[0] < ctx.ops.size() && ctx.ops.get(pos[0]) instanceof KofLabel rf
+                && rf.label().equals(returnFinallyLabel(ctx))) {
+            pos[0]++;
+            List<JsIr.JsStatement> epilogue = parseStatements(ctx, pos, Set.of(), new ArrayList<>());
+            boolean returning = false;
+            for (JsIr.JsStatement st : epilogue) {
+                if (st instanceof JsIr.JsReturn jr) { returnFinally.add(jr); returning = true; }
+            }
+            if (!returning) returnFinally.addAll(epilogue);
+            // o Label(done) do try encerra o epílogo — consumir (não é loop:
+            // nenhum jump posterior aponta p/ ele depois do epílogo parseado)
+            if (pos[0] < ctx.ops.size() && ctx.ops.get(pos[0]) instanceof KofLabel dl
+                    && !ctx.isLoopLabel(dl.label())) {
+                pos[0]++;
+            }
+        }
+        return new JsIr.JsTry(tryBody, catches, finallyBody, returnFinally);
+    }
+
+    /** Label do epílogo return-finally do try que está sendo parseado (DD-01):
+     *  é o label alvo do KofJump que segue o KofTryStart do corpo — o return
+     *  do corpo salta p/ ele. Detectado via lookahead: primeiro KofJump após
+     *  um KofStoreLocal de um slot "#retVal" dentro do corpo do try. */
+    private LabelId returnFinallyLabel(MethodCtx ctx) {
+        return ctx.currentReturnFinallyLabel;
     }
 
 }

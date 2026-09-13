@@ -102,7 +102,10 @@ JsIr.JsStatement storeLocalStatement(MethodCtx ctx, KofStoreLocal sl, JsIr.JsExp
         if ("this".equals(name)) {
             throw new IllegalStateException("KofJS: cannot store to 'this'");
         }
-        if (ctx.declared.add(sl.index())) {
+        // DD-01 (bug 45): #retVal é sempre ATRIBUIÇÃO — a declaração (let)
+        // sobe para o topo do método via predecl em JsMethodParser, pois o
+        // epílogo return-finally lê o slot FORA do bloco do try.
+        if (!"#retVal".equals(ctx.rawLocalNames.get(sl.index())) && ctx.declared.add(sl.index())) {
             return new JsIr.JsVarDecl(name, value, false);
         }
         return new JsIr.JsAssign(name, value);

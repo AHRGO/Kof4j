@@ -808,6 +808,34 @@ class CoreRegressionE2ETest {
         assertEquals("fin\n1", runJs(outJs), "JS finally+return output mismatch");
     }
 
+    // known-bugs #45 — JVM/Native/interp: DD-01 opção 4a (13/09) — FinallyFrame
+    // na IR: return no try/catch salta o finally, que termina loadando #retVal.
+    // JVM agora roda fin e preserva 1; interpretador idem (mesma IR).
+    @Test
+    void finallyReturnJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("finretjvm.kf");
+        Files.writeString(src, """
+                Int f() {
+                    try { return 1 } finally { println("fin") }
+                }
+                Int g() {
+                    try { throw "x" } catch (String e) { return 2 } finally { println("fin2") }
+                }
+                Void h() {
+                    try { return } finally { println("fin3") }
+                }
+                main() {
+                    println(f())
+                    println(g())
+                    h()
+                }
+                """);
+        Path outJvm = tempDir.resolve("jvm");
+        CompilationResult rjvm = driver.compile(src, outJvm, Target.JVM);
+        assertTrue(rjvm.success(), "JVM compile failed: " + rjvm.diagnostics().getDiagnostics());
+        assertEquals("fin\n1\nfin2\n2\nfin3", runJvm(outJvm), "JVM finally+return output mismatch");
+    }
+
     // known-bugs #5/#24 — FP→Int/Long casts and Double→Float narrowing were
     // missing conversion ops → invalid bytecode (ClassFormatError). Now D2I/
     // F2I/D2L/F2L (truncate toward zero) and D2F are emitted.

@@ -40,6 +40,19 @@ IRModule currentModule;
 
     final java.util.Deque<LabelId> continueLabels = new java.util.ArrayDeque<>();
 
+    /**
+     * DD-01 (bug 45, opção 4a ratificada 13/09): pilha de try/finally ativos
+     * durante o lowering de UMA função. `ReturnStmt` com frame ativo não faz
+     * return direto — store do valor no slot do frame + jump p/ o epílogo
+     * `returnFinally` do frame (que roda o corpo do finally e retorna).
+     * Lambda/class-body lowering salva e zera esta pilha (mesmo padrão de
+     * savedMutated) p/ não vazar frame do método externo.
+     */
+    record FinallyFrame(LabelId returnFinallyLabel, LabelId rethrowLabel, int slotValor, Type returnType) {
+    }
+
+    final java.util.Deque<FinallyFrame> finallyFrames = new java.util.ArrayDeque<>();
+
     boolean loweringMain;
 
     boolean mainArgsListField;

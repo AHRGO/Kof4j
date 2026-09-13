@@ -232,9 +232,12 @@ public final class CompilerClassLowering {
             }
             java.util.Set<String> savedMutated = driver.mutatedCapturedNames;
             driver.mutatedCapturedNames = new java.util.HashSet<>();
+            java.util.Deque<CompilerDriverState.FinallyFrame> savedFrames = driver.finallyFrames;
+            driver.finallyFrames.clear(); // DD-01: frame do finally externo não vaza p/ dentro
             CompilerCaptureScanner.collectMutatedCaptures(driver, method.body(), localVars);
             for (StatementNode stmt : method.body()) localIdx = driver.emitStatement(stmt, ops, owner, localIdx, localVars, returnType);
             driver.mutatedCapturedNames = savedMutated;
+            driver.finallyFrames.addAll(savedFrames); // DD-01: restaura
             KofOperation lastOp = ops.isEmpty() ? null : ops.get(ops.size() - 1);
             if (lastOp == null || !(lastOp instanceof KofReturn || lastOp instanceof KofReturnVoid)) {
                 if (Type.isVoid(returnType)) ops.add(new KofReturnVoid());
