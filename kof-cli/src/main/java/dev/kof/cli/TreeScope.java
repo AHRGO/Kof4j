@@ -67,6 +67,12 @@ final class TreeScope {
         return currentPkg;
     }
 
+    /** O internalName está no índice da árvore? (mesmo-pacote pode faltar em
+     *  árvore parcial — sem isto, `implements X` de tipo não-decompilado = drift). */
+    boolean inIndex(String internal) {
+        return internal != null && pkgOf.containsKey(internal);
+    }
+
     /** Imports dotted (`p.B`) usados, ordenados, p/ emissão após o package. */
     java.util.Set<String> usedImports() {
         return java.util.Collections.unmodifiableSet(usedImports);

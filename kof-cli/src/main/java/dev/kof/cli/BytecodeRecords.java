@@ -39,26 +39,34 @@ final class BytecodeRecords {
     /**
      * Igual a {@link #pureRecordComponents} mas aceita `implements` de nomes
      * que RESOLVEM no escopo da árvore. Conservador: JDK / fora-da-árvore /
-     * ambíguo / classe interna (contém `$`) → null = skeleton (porque
-     * `record X implements Desconhecida` é PKG006/SEM011 = drift). scope null
-     * (modo 1-arquivo): só resolve se for classe TOPO do MESMO pacote (sem
-     * import); interna/JDK/fora → skeleton (bytes idênticos ao estágio 1).
+     * ambíguo / interna CROSS-pacote (import `p.Outer$I` não provado) →
+     * null = skeleton (porque `record X implements Desconhecida` é
+     * PKG006/SEM011 = drift). Interna do MESMO pacote é aceita: o decompiler
+     * emite `Outer$Inner` como tipo TOP de arquivo irmão e o frontend aceita
+     * `record X$Y implements X$Z(...)` (probe 13/09; nomes únicos na árvore).
+     * scope null (modo 1-arquivo): só resolve se for do MESMO pacote (sem
+     * import); JDK/fora → skeleton (bytes idênticos ao estágio 1).
      */
     static Rec pureRecord(ClassFileParser.ClassFile ir, TreeScope scope) {
         var comps = pureRecordComponentsNoIface(ir);
         if (comps == null) return null;
         if (ir.interfaces == null || ir.interfaces.length == 0) return new Rec(comps, List.of());
         String myPkg = scope == null ? null : scope.currentPkg();
-        String myTop = ir.thisClass.lastIndexOf('$') < 0 ? ir.thisClass : null;
         List<String> ifaces = new ArrayList<>();
         for (String i : ir.interfaces) {
             int slash = i.lastIndexOf('/');
             String pkg = slash < 0 ? "" : i.substring(0, slash).replace('/', '.');
             String simple = slash < 0 ? i : i.substring(slash + 1);
-            if (i.indexOf('$') < 0 && pkg.equals(myPkg)) {          // classe top do MESMO pacote
+            if (pkg.equals(myPkg) && scope.inIndex(i)) {
+                // MESMO pacote E presente no índice da árvore: top OU interna.
+                // O decompiler emite cada `Outer$Inner` como classe TOP num
+                // arquivo irmão (probe 13/09: `record X$Y implements X$Z(...)`
+                // compila; SEM042 proíbe aninhamento, mas nome top com `$` é
+                // aceito). Os 688 nomes simples da árvore são globalmente
+                // únicos (medido). inIndex: árvore parcial → sem irmão = drift.
                 ifaces.add(simple);
-            } else if (scope == null) {
-                return null;
+            } else if (scope == null || i.indexOf('$') >= 0) {
+                return null;   // cross-pacote interna: import `p.Outer$I` não provado → skeleton
             } else {
                 String r = scope.resolve(i);
                 if (r == null) return null;                          // ambíguo/fora/JDK → skeleton

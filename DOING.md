@@ -82,13 +82,20 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > shim DOM no `CORE_RUNTIME`) estoura; menor repro + atribuição + opção de
 > correção (baseline novo OU mover DOM p/ bloco on-demand) no known-bugs.
 > Suíte limpa HEAD = 1663 run / **1 falha (§166)** / script 31/0 / c 5/0 /
-> cli 148/0. **PRÓXIMO PASSO (fila Fase E, Med2 pós-unidade na árvore limpa
-> 1475 stubs):** thread `TreeScope` no `recoverExpression`/`recoverStatements`
-> (furo do 09/09: instanceof/checkcast/pop só caem porque o statements-path
-> não tem escopo; emitir SÓ quando resolve — R6 nunca silencioso) OU o gap
-> dos 89 records-skeleton (sub-casos: `Outer$Inner`, static members, bound
-> genérico). **NÃO:** `nat/` (lane GC viva); §166 (lane JS/gate); roundTo
-> (regra 6 sem ordem).
+> cli 148/0. ~~PRÓXIMO PASSO: thread TreeScope no body-recovery~~ — **já
+> existe** (`frame.treeScope = scope`, verificado 13/09; instanceof/checkcast
+> já resolvem via `indexKofType`). **Estágio 3 FEITO (este commit):** interna
+> do MESMO pacote em record (`implements Box$Expr` — probes: frontend aceita
+> nome top com `$`; SEM042 só proíbe declaração aninhada) → 1475→**1382**
+> stubs (−93 = 31 internos × 3; 158/216 records). Drift 4=4 zero;
+> DecompileTest 57/57; kof-cli 151/0. **PRÓXIMO PASSO (fila real, medida
+> RecCat/RecExtra2):** 58 records restantes = 52 método-extra (só 3 com
+> corpos 100% recuperáveis hoje — baixo ROI), 4 static-field, 2 reserved →
+> cluster fechado; a fila agora é o caminho NÃO-record dos 1382: joins
+> estruturais de loop/branch + stores multi-stmt (Fase C,
+> `docs/development/DECOMPILER.md` §7 degraus 5+). Antes de qualquer
+> degrau novo: `Med3`/`Med2` re-mediados na árvore limpa. **NÃO:** `nat/`
+> (lane GC viva); §166 (lane JS/gate); roundTo (regra 6 sem ordem).
 
 > **✅ FEITO (13/09 ~10:00, lane bugs-and-gaps, dono = 192.168.100.15):**
 > sincronizados os 5 registros de `docs/bugs-and-gaps/` + contagens da suíte

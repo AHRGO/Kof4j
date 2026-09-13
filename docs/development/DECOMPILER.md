@@ -295,13 +295,38 @@ Fase E  Kof Decompiler          (gerar Kof source)
 > `decompileTree` 688 → `compileSources` batch): **estágio-2 = 4 erros =
 > baseline = 4 erros**, todos wildcard `? extends` PRÉ-EXISTENTE em
 > `ClassDeclarationNode` (não-record) — **zero drift novo**, 62 arquivos
-> mudaram de esqueleto p/ record. Restam de records: os **89** em skeleton
-> (interface fora-da-árvore p/ 1-arquivo, `Outer$Inner`, class-signature com
-> bound genérico, static members) — cada caso é gap próprio. Fila Fase E
+> mudaram de esqueleto p/ record. Restam de records (na época): os **89** em
+> skeleton — categorizados no estágio-3 abaixo (interface fora-da-árvore
+> p/ 1-arquivo, `Outer$Inner`, class-signature com bound genérico, static
+> members). Fila Fase E
 > re-medida (Med2 pós-unidade): top dos 1475 restantes = store+branch
 > estrutural (`astore` 0x4c/0x4d/0x4e/0x3a, joins de loop = Fase C);
 > instanceof/checkcast SÓ tratam quando a árvore resolve o nome
 > (statements-path sem escopo = ainda caem — o furo do 09/09).
+>
+> **Estágio 3 (13/09, dono = 192.168.100.17): interna do MESMO pacote.**
+> Categorização reflexiva dos 89 rejeitados (harness `RecCat`): **31** eram
+> só `implements Outer$Inner` do mesmo pacote (cluster `JsIr$*` com 43
+> internos, `SymbolTable$*`); o resto = 52 shape-fail (método extra real),
+> 4 static-field, 2 reserved. Probes 13/09 no frontend: SEM042 proíbe tipo
+> ANINHADO, mas nome top com `$` compila — `record X$Y implements X$Z(...)`
+> ✓, `record X(...) { extra() }` ✓, `static` em record ✓, compact
+> constructor ✗ (PARSE018). E o decompiler já emite cada interno como classe
+> TOP de arquivo irmão (688/688 nomes simples únicos, medido). `pureRecord`
+> agora aceita interna quando o pacote casa E o interno está no índice
+> (`TreeScope.inIndex` — árvore parcial sem irmão = skeleton honesto);
+> interna CROSS-pacote → skeleton (import `p.Outer$I` sem probe). Corpus:
+> 1475→**1382** stubs (−93 = 31 × 3 sintéticos; **158** de 216 records
+> recuperados). Drift-check: current 4 erros = baseline 4 (zero drift — só
+> `ClassDeclarationNode.kf x4` wildcard pré-existente). Prova: +2 testes
+> (57/57 `DecompileTest`) — mesmo-pacote interna round-trip compila
+> (marker interface; interface abstrata exige método extra = outro gap),
+> cross-package interna → skeleton honesto. Restam 58 records em skeleton
+> (52 com método extra — `record X(...) { corpo }` seria a chave, mas
+> `RecExtra2` mede só 3 com TODOS os corpos recuperáveis hoje; 4 static
+> field; 2 reserved) — custo/benefício baixo; a fila real da Fase E agora é
+> o caminho não-record (1382 stubs): joins estruturais + `astore`/
+> `istore` multi-stmt (Fase C) com o statements-path já escopado.
 
 ## 7. Relação com o Compilador
 

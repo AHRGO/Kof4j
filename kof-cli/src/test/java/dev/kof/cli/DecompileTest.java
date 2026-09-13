@@ -1470,6 +1470,65 @@ class DecompileTest {
         assertTrue(kof.contains("class SerR extends Record"), "fora-da-árvore → skeleton:\n" + kof);
     }
 
+    @Test
+    void recoversRecordImplementingSamePackageInnerInterface(@TempDir Path dir) throws Exception {
+        Path root = dir.resolve("classes");
+        Files.createDirectories(root);
+        Path outer = root.resolve("Box.java");
+        Files.writeString(outer, """
+                public class Box {
+                    public interface Expr { }
+                }
+                """);
+        Path rec = root.resolve("NumR.java");
+        Files.writeString(rec, "public record NumR(int v) implements Box.Expr { }\n");
+        runJavac(java.util.List.of(outer, rec), root);
+        Path out = dir.resolve("gen");
+        Decompile.decompileTree(root, out);
+        String numr = Files.readString(out.resolve("NumR.kf"));
+        assertTrue(numr.contains("record NumR implements Box$Expr(Int v)"),
+                "interna do MESMO pacote: frontend aceita nome com `$` como top (probe 13/09):\n" + numr);
+        assertFalse(numr.contains("body not recovered"), "sem stub:\n" + numr);
+        CompilationResult r = new CompilerDriver().compileSources(
+                List.of(out.resolve("NumR.kf").toAbsolutePath().normalize(),
+                        out.resolve("Box.kf").toAbsolutePath().normalize(),
+                        out.resolve("Box$Expr.kf").toAbsolutePath().normalize()),
+                dir.resolve("kout"), Target.JVM, out);
+        assertTrue(r.success(), "record implements interna compila junto:\n"
+                + numr + "\n" + Files.readString(out.resolve("Box.kf")) + "\n"
+                + Files.readString(out.resolve("Box$Expr.kf")) + "\n"
+                + r.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void recordWithCrossPackageInnerInterfaceKeepsHonestSkeleton(@TempDir Path dir) throws Exception {
+        Path root = dir.resolve("classes");
+        Files.createDirectories(root.resolve("a"));
+        Path iface = root.resolve("a/Box.java");
+        Files.writeString(iface, """
+                package a;
+                public class Box {
+                    public interface Expr { }
+                }
+                """);
+        Path rec = root.resolve("CrossI.java");
+        Files.writeString(rec, """
+                import a.Box;
+                public record CrossI(int v) implements Box.Expr { }
+                """);
+        runJavac(java.util.List.of(iface, rec), root);
+        Path out = dir.resolve("gen");
+        Decompile.decompileTree(root, out);
+        String kof = Files.readString(out.resolve("CrossI.kf"));
+        // interna CROSS-pacote: `import a.Box$Expr` NÃO PROVADO (SEM015?) →
+        // NÃO vira record. O `implements Box$Expr` que aparece vem do
+        // fallback de skeleton PRÉ-EXISTENTE (não mudei o fallback); o gate
+        // desta unidade é record-vs-skeleton.
+        assertTrue(kof.contains("class CrossI extends Record"),
+                "interna cross-pacote continua honesta (skeleton):\n" + kof);
+        assertFalse(kof.contains("record CrossI"), "não virou record (cross-pkg interna):\n" + kof);
+    }
+
     private void runJavac(Path javaFile, Path dir) throws IOException, InterruptedException {
         runJavac(java.util.List.of(javaFile), dir);
     }
