@@ -5,9 +5,17 @@
 > (fetch/WS/storage) são **Fase 5 (KofJS)** — marcadas aqui só como fronteira.
 > Convenção (R6): todo gap tem código + diagnóstico; nunca no-op silencioso.
 
-## 1. Registry do compilador (`KofUi.java`, 383 linhas)
+## 1. Registry do compilador (`KofUi.java`, 539 linhas — era 383 na auditoria de 07/09)
 
-**Tipos (24):** Color, Theme, Label, Button, Input, Column, Row, View, Style,
+> **⚠️ Snapshot 07/09 — inventário abaixo é histórico.** O registry cresceu
+> depois da auditoria: hoje `isUiType` cobre **30 tipos** (o texto lista 24),
+> incluindo `Textarea`/`Select`/`Ul`/`Ol`/`Table`/`Form`/`Fieldset`/`Iframe`/
+> `Video`/`Audio`/`Hr` (o `KofUi.java` tem 36 `new ClassType("kof.ui", ...)` —
+> alguns são helpers, não tipos do registry). A matriz de gaps `UI00x` e a
+> convenção R6 continuam válidas; **recontar `UI001/UI002` (Native/Script
+> no-op silencioso) contra o código atual** antes de tratá-los como abertos.
+
+**Tipos (24 na varredura de 07/09):** Color, Theme, Label, Button, Input, Column, Row, View, Style,
 Window, Link, Image, Icon, Font, Component, Event, Box, Stack, Spacer, Wrap,
 Grid, Center, Align, Store, Canvas + namespace `Router`.
 
@@ -150,9 +158,11 @@ mecânico quando a superfície fechar.
 
 ## 7. Notas de fidelidade
 
-- `docs/development/README.md:30` diz "CANVAS001 JS pendente (anexar ao
-  kof-root)" — **desatualizado**: `JsRuntimeUiWidgets.java` já anexa ao
-  `#kof-root`; CANVAS001 fechado `5a9cac4` (3 targets). Corrigir o índice.
+- ~~`docs/development/README.md:30` diz "CANVAS001 JS pendente (anexar ao
+  kof-root)"~~ — **RESOLVIDO (13/09):** o índice foi reescrito e não contém
+  mais a linha; `JsRuntimeUiWidgets.java` anexa ao `#kof-root` e o CANVAS001
+  está fechado `5a9cac46` (3 targets, reprovado verde 12/09 — `UiE2ETest`
+  29/29 sem exclusões). Nada a corrigir.
 - JVM no-op (UI008) é decisão de design documentada (backend-parity), não bug
   — mas R6 sugere diagnóstico em log (low prio).
 - Native/Script no-op silencioso **não** é decisão documentada — é omissão

@@ -31,7 +31,7 @@ documento de arquitetura/visão **sem código implementado** (ou com código que
 | `DECOMPILER.md`, `TRANSLATOR.md`, `DIFFERENTIAL_TESTING.md`, `LEGACY_MIGRATION.md`, `LEGACY_IR.md`, `IMPLEMENTATION_PLAN.md`, `ACTION_PLAN.md` | plataforma de migração com código+testes: `kof inspect/decompile/translate/compare/migrate` no `Main.java:25-29`, 63 testes kof-cli, `Confidence.java`, `Type.fromJvmSignature` |
 | `PLATFORM-PLAN.md` | Fases 1–3, 8, 9 com código: `ProjectLocator`, `KofProjectConfig`, `Target.SCRIPT`, PKG006/PKG007, `conformance-matrix.md` travada por 11 testes |
 | `APPLICATION_MODEL.md` | `application { onStart/onShutdown }` parseado+desugared+E2E nos 3 targets; `KofProjectConfig` |
-| `PLANNING-FUTURE-AUDIT.md`, `planning-future-reconcile.md` | auditorias com itens abertos (R2/R5) e tabela defasada — trabalho de doc em curso |
+| ~~`PLANNING-FUTURE-AUDIT.md`, `planning-future-reconcile.md`~~ → `docs/audits/` | auditorias **encerradas 13/09** (comparação branch×beta); R2→`decision-pending/` (APPLICATION_MODEL/PLATFORM-PLAN), R5→cluster migração |
 | `planning-finally-return.md` | face JS do bug 45 corrigida (`c727fee`); decisão DD-01 só p/ JVM/Native/interp |
 | `planning-stdlib-time-design.md` | `addDays`/`diffDays` (o formato D2 do doc) implementados nos 5 alvos (TIME002 11/09) |
 

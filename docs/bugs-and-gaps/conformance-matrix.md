@@ -260,11 +260,11 @@ motivo diferente, ambos honestos (R6):
   do target.
 - **Native x86_64** é o "runtime de referência" do Native; riscv64/aarch64
   herdam via `translateRiscvToAarch64` e são cobertos por
-  `NativeRiscv64E2ETest`/`NativeAarch64E2ETest` (20/20 cada) — o follow-up
+  `NativeRiscv64E2ETest`/`NativeAarch64E2ETest` (42/42 cada em 13/09, sob qemu) — o follow-up
   desta matriz é estender os casos aqui para qemu.
 - **Script = JVM no interpretador** (`runFile(f, Target.JVM)`/`SCRIPT`):
   por construção roda a MESMA IR otimizada do frontend — divergência
   Script×JVM-compilado é bug do interpretador OU do lowering (ambos
-  têm gate de paridade próprio: `KofInterpreterParityTest` 16/16).
+  têm gate de paridade próprio: `KofInterpreterParityTest` 22/22).
 - **Riscar célula** = editar a matriz + commit; o teste é a prova, a
   matriz é o índice (R6: o teste falha antes da doc divergir).

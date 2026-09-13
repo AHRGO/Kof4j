@@ -370,7 +370,8 @@ public class ExpressionParser {
         ctx.expect(TokenType.LESS, "Expected '<'", "PARSE078");
         while (!ctx.check(TokenType.GREATER) && !ctx.atEnd()) {
             Parser.splitShiftRight(ctx);
-            if (ctx.check(TokenType.IDENTIFIER) || TypeParser.isPrimitiveType(ctx)) {
+            if (ctx.check(TokenType.IDENTIFIER) || TypeParser.isPrimitiveType(ctx)
+                    || ctx.check(TokenType.LPAREN)) {
                 String typeRef = TypeParser.parseTypeRef(ctx);
                 while (ctx.check(TokenType.LBRACKET) && ctx.checkNext(TokenType.RBRACKET)) {
                     ctx.advance();
