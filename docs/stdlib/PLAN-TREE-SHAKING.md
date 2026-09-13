@@ -1,6 +1,6 @@
 # PLAN-TREE-SHAKING.md — stdlib por alcançabilidade: o compilador inclui só o que o programa usa
 
-**Dono:** lane PLATAFORMA (frente designada pela mantenedora 11/09; execução na lane development) · **Status:** EM CURSO — **S-1 (T0) ✅ 12/09 · S-2/S-2.5 ✅ 12/09 · S-3 (T1a.2, poda x86) ✅ 12/09 · S-4 (T1a.3, poda riscv64 + aarch herda) ✅ 12/09 · S-5 (T1b, gc-sections) ✅ PARTE CROSS 12/09** (riscv 103→18 syms + aarch travado; parte x86 = Fila bugfix, exige `kof_heap_root_end` + `emitStaticData` no intervalo de raízes) · S-6 (T2 JS, ViniAguiar1) — **S-6.1 ✅ 12/09** (hello JS 177.412→6.873 B, PR p/ `beta-0.4.0`) · resta S-7 (consolidar doc p/ `docs/`) · **Criado:** 12/09 · **Issue:** #97
+**Dono:** lane PLATAFORMA (frente designada pela mantenedora 11/09; execução na lane development) · **Status:** S-1 (T0) ✅ 12/09 · S-2/S-2.5 ✅ 12/09 · S-3 (T1a.2, poda x86) ✅ 12/09 · S-4 (T1a.3, poda riscv64 + aarch herda) ✅ 12/09 · S-5 (T1b, gc-sections) ✅ PARTE CROSS 12/09 · S-6 (T2 JS) ✅ 12/09 — **S-6.1 ✅ 12/09** (hello JS 177.412→6.873 B, mergeado `0104f6d6` PR #106) · **S-7 ✅ 13/09** (consolidado em `docs/stdlib/stdlib-loading.md`, linkado de `docs/stdlib/stdlib.md`) · **PLANO CONCLUÍDO — mover p/ `docs/`** · **Criado:** 12/09 · **Issue:** #97
 
 > **Regra fundamental:** o desenvolvedor declara o que pretende utilizar; o
 > compilador inclui **somente** o que for realmente necessário para executar
@@ -356,11 +356,12 @@ após o aceite dos §T:
      **177.412 → 6.873 B** travado no `ArtifactSizeTest` (a asserção
      `js > 100_000` virou `js < 30_000`), `JsRuntimePruneWriterTest` 6/6.
      `kof_platform` foi para a issue #104 — a poda preserva o comportamento.
-   - **Resta:** S-7 (consolidação em `docs/`).
-7. **S-7** docs consolidadas (`docs/stdlib-loading.md` ou seção em
-   `docs/architecture/architecture.md`) + mover este doc para `docs/development/` no
-   início da S-1 (regra dos três estados: com código em desenvolvimento,
-   não é mais `future/`).
+   - **Resta:** nada — S-7 consolidou em `docs/stdlib/stdlib-loading.md` 13/09.
+7. **S-7** ✅ **FEITA 13/09** — docs consolidadas em
+   `docs/stdlib/stdlib-loading.md` (mecanismo por target, números travados,
+   limites honestos, referências de código) + link em
+   `docs/stdlib/stdlib.md` §2; este plano vai para `docs/` (regra dos três
+   estados: trabalho concluído).
 
 Cada sessão: 1 degrau, commit, DOING.md atualizado no MESMO commit.
 

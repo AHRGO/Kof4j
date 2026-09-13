@@ -39,6 +39,10 @@ KofSecurity.java / KofWeb.java / KofIo.java / KofUi.java
 Gaps de target produzem **diagnósticos claros em compile-time** (SECN00x,
 CONC001, JSN00x) — nunca comportamento silenciosamente diferente.
 
+> **Entrega:** o compilador inclui só o que o programa usa (tree-shaking
+> por alcançabilidade — ver `docs/stdlib/stdlib-loading.md` com os números
+> travados no `ArtifactSizeTest`).
+
 ---
 
 # 3. MÓDULOS
