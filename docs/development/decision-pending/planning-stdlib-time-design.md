@@ -96,7 +96,7 @@ decisão travada + matrizes novas.
 
 ## Precedentes
 
-- DD-STDLIB-01 (`planning-stdlib-array-returns.md`) — retorno composto.
+- DD-STDLIB-01 (`docs/stdlib/DD-STDLIB-01-array-returns.md` — FECHADO 13/09) — retorno composto.
 - split random/security (S10) — face leniente inseguro documentada.
 - S6a/S6b — predicados sem gate entraram direto (semambiguidade); o critério
   é "sem ambiguidade".

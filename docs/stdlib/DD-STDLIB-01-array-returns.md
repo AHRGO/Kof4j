@@ -1,4 +1,4 @@
-# DD-STDLIB-01 — retorno Array/objeto na camada de dispatch stdlib (RATIFICADO 6a — implementação pendente)
+# DD-STDLIB-01 — retorno Array/objeto na camada de dispatch stdlib (FECHADO 13/09 — movido p/ docs/)
 
 > **✅ DECIDIDO 13/09 (mantenedora, opção 6a):** Opção B — `randomBytesHex(n)->String` (zero plumbing); `randomChoice` fechado como idiom (`l[random.randomInt(l.size)]` documentado em `training/idioms`); nome `randomBytes` binário fica RESERVADO (não entra).
 >

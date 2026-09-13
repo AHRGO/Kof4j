@@ -42,6 +42,19 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **⚡ EM CURSO (13/09, lane development/docs — DD-STDLIB-01 movido p/ docs/, dono = esta sessão):**
+> `docs/development/planning-stdlib-array-returns.md` → `docs/stdlib/DD-STDLIB-01-array-returns.md`
+> (regra dos 3 estados: IMPLEMENTADO = sai de development/). Título→FECHADO.
+> Refs sincronizadas: `training/idioms/stdlib.md` ("em aberto"→FECHADO 6a),
+> `docs/stdlib/stdlib.md` (gaps S10c→FECHADO), README §3 + nota histórica,
+> `future/README.md` (CAIU→FECHADO+movido), plano S10c, time-design precedente.
+> Auditoria development/ completa: nenhum outro doc finalizado (finally EM
+> CURSO lane lowerers; OTP EM CURSO + S2-JVM; native re-auditado 12/09;
+> editor IntelliJ pendente; SOLID-500 F3 bloqueada nat/; legado EM
+> DESENVOLVIMENTO). **PRÓXIMO PASSO:** commit + push; depois fila ratificada
+> (S2-OTP→DD-01→§106→§89→§117→§131→pow→Long=BigInt), checando dono.
+> **NUNCA:** `nat/` lane GC viva; push main.
+
 > **⚡ FEITO (13/09, lane development/docs — auditoria de LOCALIZAÇÃO 3-estados, dono =
 > outra sessão, remoto `28073c17`):** `docs/development/README.md` §1/§4.1/§4.2 ainda listavam como
 > vivas em `development/` 6 docs que o refactor 13/09 moveu p/ `decision-pending/`

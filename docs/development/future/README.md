@@ -22,7 +22,7 @@ documento de arquitetura/visão **sem código implementado** (ou com código que
 |-----|------|---------------------------|
 | `PLAN-UNIVERSAL-PLATFORM.md` | visão de longo prazo (Kof como plataforma universal) | 100% visão/estratégia — não é ordem de implementação; nenhum pacote `ml`/`bio`/`hpc`/`infra-*` no código |
 | `scoped-resources-plan.md` | RAII leve (TIER 2.4, `using`/`resource_scope`) | design puro — zero ocorrências de `resource_scope`/`kof_resource`/`using` no lexer/parser/runtime; gated por bump |
-| ~~`planning-stdlib-array-returns.md`~~ → `docs/development/` | DD-STDLIB-01 | **CAIU 13/09 — decisão 6a ratificada** (`randomBytesHex`->String; choice=idiom): agora é implementação pendente (lane STDLIB), não mais 'só plano' |
+| ~~`planning-stdlib-array-returns.md`~~ → `docs/stdlib/DD-STDLIB-01-array-returns.md` | DD-STDLIB-01 | **FECHADO 13/09** — decisão 6a + implementação (`randomBytesHex`->String; choice=idiom), movido p/ docs/ |
 
 ## Já caíram para `docs/development/` (iniciados — regra dos 3 estados, 12/09)
 
