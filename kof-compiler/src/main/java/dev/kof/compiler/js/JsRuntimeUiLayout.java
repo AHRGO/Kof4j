@@ -161,6 +161,27 @@ public final class JsRuntimeUiLayout {
                 return new Map();
             }
 
+            // §103.1 (#103): decode<Map<String,T>> no JS. O else do
+            // JsRuntimeOps dava JSON.parse → objeto PURO, que não é um
+            // kof.Map — m.size/m.get quebravam. Monta um Map real; com
+            // decoder, cada valor é bindado à classe (mesmo objeto do
+            // __kof_decode_<Classe> da célula de lista).
+            export function kofJsonDecodeMap(obj) {
+                const m = new Map();
+                if (obj && typeof obj === 'object') {
+                    for (const [k, v] of Object.entries(obj)) m.set(k, v);
+                }
+                return m;
+            }
+
+            export function kofJsonDecodeObjectMap(obj, decoder) {
+                const m = new Map();
+                if (obj && typeof obj === 'object') {
+                    for (const [k, v] of Object.entries(obj)) m.set(k, decoder(v));
+                }
+                return m;
+            }
+
             // §104c: encontra índice da key por conteúdo (record .equals),
             // nativo (===) para primitivos/String. Retorna -1 se ausente.
             function kofMapKeyIdx(map, key) {

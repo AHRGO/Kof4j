@@ -17,6 +17,7 @@ public final class JvmRuntimeJson {
             import java.lang.reflect.Modifier;
             import java.lang.reflect.RecordComponent;
             import java.util.ArrayList;
+            import java.util.HashMap;
             import java.util.LinkedHashMap;
             import java.util.List;
             import java.util.Map;
@@ -263,6 +264,33 @@ public final class JvmRuntimeJson {
 
                 public static Object kof_json_decode_object(String json, Class<?> type) throws Exception {
                     return kof_json_bind(type, kof_json_parse(json));
+                }
+
+                // §103.1 (#103): decode<Map<String,T>> — chave sempre String
+                // (JSON), valor escalar/string cru do parser. Retorno
+                // HashMap concreto: o descriptor do call-site vem de
+                // JvmTypeMapper (kof.Map → Ljava/util/HashMap;) — o método
+                // precisa casar EXATAMENTE (mesma regra do object_list que
+                // declara ArrayList).
+                public static HashMap<Object, Object> kof_json_decode_map(String json) {
+                    Object parsed = kof_json_parse(json);
+                    if (parsed instanceof Map<?, ?> m) return new HashMap<Object, Object>(m);
+                    return new HashMap<Object, Object>();
+                }
+
+                // decode<Map<String,Classe>>: cada VALOR é bindado à classe
+                // (mesmo kof_json_bind do object_list); só muda o container.
+                public static HashMap<Object, Object> kof_json_decode_object_map(String json, String className)
+                        throws Exception {
+                    Object parsed = kof_json_parse(json);
+                    HashMap<Object, Object> result = new HashMap<>();
+                    if (parsed instanceof Map<?, ?> m) {
+                        Class<?> type = Class.forName(className);
+                        for (Map.Entry<?, ?> e : m.entrySet()) {
+                            result.put(e.getKey(), kof_json_bind(type, e.getValue()));
+                        }
+                    }
+                    return result;
                 }
 
                 private static Object kof_json_bind(Class<?> type, Object value) throws Exception {

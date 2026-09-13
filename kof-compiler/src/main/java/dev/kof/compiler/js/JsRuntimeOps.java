@@ -91,6 +91,27 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
                     stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("JSON.parse"), List.of(value)));
                 }
             } else if (name.startsWith("kof_json_decode_")
+                    && BuiltinTypes.isMap(kc.ownerType())) {
+                // §103.1 (#103): decode<Map<String,T>> — JSON.parse do
+                // objeto + monta um Map real (o else dava objeto puro, que
+                // não responde m.get/m.size). Valor classe → bind via
+                // __kof_decode_<Classe> (mesmo helper da célula de lista).
+                Type mv2 = BuiltinTypes.mapValue(kc.ownerType());
+                JsIr.JsExpression parsed = new JsIr.JsCall(
+                        new JsIr.JsIdentifier("JSON.parse"), List.of(value));
+                if (mv2 instanceof Type.ClassType mct
+                        && p.lc.classMethodNames.containsKey(mct.internalName())) {
+                    String jsName = JsTypeMapper.jsClassName(mct.internalName());
+                    p.lc.decodeHelpers.add(jsName);
+                    p.lc.registerRuntime("kofJsonDecodeObjectMap");
+                    stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofJsonDecodeObjectMap"),
+                            List.of(parsed, new JsIr.JsIdentifier("__kof_decode_" + jsName))));
+                } else {
+                    p.lc.registerRuntime("kofJsonDecodeMap");
+                    stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofJsonDecodeMap"),
+                            List.of(parsed)));
+                }
+            } else if (name.startsWith("kof_json_decode_")
                     && p.lc.classMethodNames.containsKey(JsTypeMapper.ownerInternalName(kc.ownerType()))) {
                 // decode<Class> — bind the parsed object to the Kof class
                 String jsName = JsTypeMapper.jsClassName(JsTypeMapper.ownerInternalName(kc.ownerType()));

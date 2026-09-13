@@ -68,6 +68,25 @@ public final class KofInterpreterRuntime {
             }
             return out;
         }
+        // §103.1 (#103): decode<Map<String,Classe>> — mesma limitação do
+        // object_list: Class.forName não conhece classe Kof (vira KofObj).
+        if (name.equals("kof_json_decode_object_map") && args.length == 2
+                && args[0] instanceof String json && args[1] instanceof String cn) {
+            IRClass kc = null;
+            for (IRClass c : interp.module().classes()) {
+                if (KofInterpreterValues.simpleOf(c.name()).equals(cn)
+                        || c.name().replace('/', '.').equals(cn)) { kc = c; break; }
+            }
+            if (kc == null) throw new NoSuchMethodError("KofRuntime." + name + " (classe '" + cn + "' não achada)");
+            Object parsed = runtimeFn("kof_json_parse", new Object[]{json});
+            java.util.Map<Object, Object> out = new java.util.LinkedHashMap<>();
+            if (parsed instanceof java.util.Map<?, ?> m) {
+                for (java.util.Map.Entry<?, ?> e : m.entrySet()) {
+                    out.put(e.getKey(), decodeKofValue(kc, e.getValue()));
+                }
+            }
+            return out;
+        }
         if (name.startsWith("kof_json_decode_") && args.length == 1
                 && args[0] instanceof String json) {
             IRClass kc = kofClassByDecodeName(name);

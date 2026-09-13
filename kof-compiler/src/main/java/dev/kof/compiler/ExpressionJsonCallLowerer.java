@@ -152,6 +152,37 @@ public final class ExpressionJsonCallLowerer {
             String className = ect.packageName().isEmpty()
                     ? ect.name() : ect.packageName() + "." + ect.name();
             ops.add(new KofLoadLiteral(BuiltinTypes.STRING, className));
+        } else if (BuiltinTypes.isMap(targetType)) {
+            // §103.1 (#103): decode<Map<String,T>>. Antes caía no default
+            // JsonDispatch → "kof_json_decode_" + sanitize("Map") =
+            // kof_json_decode_Map, método que NUNCA existiu no runtime
+            // (NoSuchMethodError em runtime, passa no check). Native não tem
+            // decoder de mapa: gap honesto (R6), espelha List<Record>.
+            if (driver.target.isNative()) {
+                if (driver.currentDiagnostics != null) {
+                    SourcePosition p = mc.position();
+                    driver.currentDiagnostics.error(p != null ? p.file() : "",
+                            p != null ? p.line() : 0, p != null ? p.column() : 0, 0,
+                            "json.decode: Map<String,T> not supported on the Native target yet (JSN004); use JVM/JS/interpreted",
+                            "JSN004");
+                }
+                return localIdx;
+            }
+            Type vt = BuiltinTypes.mapValue(targetType);
+            boolean valueIsClass = vt instanceof Type.ClassType vct
+                    && !BuiltinTypes.isString(vct)
+                    && !BuiltinTypes.isList(vct) && !BuiltinTypes.isMap(vct);
+            if (valueIsClass) {
+                decodeFn = "kof_json_decode_object_map";
+                decodeParams = List.of(BuiltinTypes.STRING, BuiltinTypes.STRING);
+                Type.ClassType vct = (Type.ClassType) vt;
+                String vcn = vct.packageName().isEmpty()
+                        ? vct.name() : vct.packageName() + "." + vct.name();
+                ops.add(new KofLoadLiteral(BuiltinTypes.STRING, vcn));
+            } else {
+                decodeFn = "kof_json_decode_map";
+                decodeParams = List.of(BuiltinTypes.STRING);
+            }
         } else if (driver.target.isNative()
                 && targetType instanceof Type.ClassType dct
                 && !BuiltinTypes.isString(targetType)
