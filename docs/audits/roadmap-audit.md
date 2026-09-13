@@ -7,6 +7,8 @@
 > contagens de teste citadas abaixo = gate 12/09 regenerado dos surefire-reports
 > (`docs/status.md` §Testes, `e2c03812`); células cujo estado mudou desde 06/09
 > foram reescritas com prova (SG-009/WEB001/conformance/LSP/GC — ver cada linha).
+> **Toque 13/09:** P4 (conformance suite estruturada + SG-009 subtipagem)
+> marcado FECHADO — contradizia a própria linha 25 (SG-009 ✅ desde 10/09).
 
 ## Matriz de estado
 

@@ -396,6 +396,10 @@ Native; pequeno e isolado. Não bloqueia OTP (que usa flag própria).
 - **§128-unbox JVM ✅ CORRIGIDO 12/09** (`6e68cb36`, 02:22 — `JvmOpCollections`
   estende o unbox de `kof_await` a `kof_select_any`; prova
   `KofConcurrency2Test#selectAnyPrimitiveJvm` + paridade 4 alvos).
+- **§127-cast tipo-função ✅ CORRIGIDO 13/09** (decisão 9a — `as ()->T` parseia
+  como type-ref; a nota "está quebrado" do bloco acima é histórica) e
+  **§131-sobrecarga ✅ DECIDIDO 13/09** (opção 10a: implementar — o contorno
+  "`child` de 3 args único" pode ser revisto quando a lane de tipos implementar).
 - **§129-longjmp Native 🔴 segue ABERTO** (impeditivo do S2-Native x86) e
   **§132 event-loop JS 🔴 segue ABERTO** (impeditivo do S2-JS) — ambos
   lanes de bugs/UI, regra 6.
