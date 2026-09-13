@@ -195,6 +195,15 @@ public final class Translate {
                 skipBlock();
                 return;
             }
+            if (p.at("class") || p.at("interface") || p.at("record") || p.at("enum")) {
+                // Kof não suporta tipo aninhado (SEM042). Hoisting p/ o topo
+                // exige renomear referências (`Outer.Inner` → `Inner`) —
+                // transformação semântica, decisão de design → revisão manual
+                // (R6), nunca parse error confuso.
+                throw new TranslateException(
+                        "tipo aninhado (`class`/`interface`/`record`/`enum` dentro de classe) "
+                        + "não tem equivalente direto em Kof (SEM042; declare no top level) — revisão manual");
+            }
             String typeName = parseType();
             String memberName = p.next().text;
             if (p.at("(")) {

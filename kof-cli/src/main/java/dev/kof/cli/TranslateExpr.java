@@ -330,13 +330,25 @@ class TranslateExpr {
             p.expect("(");
             List<String> params = new ArrayList<>();
             if (!p.at(")")) {
-                params.add(parseType());
-                String pname = p.next().text;
-                params.set(params.size() - 1, params.get(params.size() - 1) + " " + pname);
-                while (p.at(",")) { p.next(); String ty = parseType(); String nm = p.next().text; params.add(ty + " " + nm); }
+                params.add(parseParam());
+                while (p.at(",")) { p.next(); params.add(parseParam()); }
             }
             p.expect(")");
             return params;
+        }
+
+        private String parseParam() {
+            String ty = parseType();
+            if (p.at(".") && p.peek(1).text.equals(".") && p.peek(2).text.equals(".")) {
+                // Java varargs `T...` não tem equivalente em função Kof
+                // (só builtins setOf/listOf são variádicos). Revisão manual
+                // (R6: nunca silencioso).
+                throw new TranslateException(
+                        "varargs (`T...`) não tem equivalente direto em Kof "
+                        + "(use `List<T>` ou `T[]`) — revisão manual");
+            }
+            String nm = p.next().text;
+            return ty + " " + nm;
         }
 
         String paramList(List<String> params) {

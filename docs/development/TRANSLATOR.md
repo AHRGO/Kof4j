@@ -6,9 +6,9 @@
 
 **Status:** EM DESENVOLVIMENTO (caiu de `future/` em 12/09 — Fase F
 implementada: `Translate.java` + `TranslateLexer`/`TranslateExpr`;
-prova: `TranslateTest` 16/16 (output compila e roda; +do-while +switch
-+try/catch/throw +arrays +cast/instanceof +throws 13/09). Subconjunto Java
-ampliado ainda pendente)
+prova: `TranslateTest` 17/17 (output compila e roda; +do-while +switch
++try/catch/throw +arrays +cast/instanceof +throws +gaps 13/09). Subconjunto
+Java ampliado ainda pendente)
 **Data:** 22 de agosto de 2026
 
 ---
@@ -176,3 +176,13 @@ diferenciais.
 > `expected '{' but found 'throws'`. Fix: consumir `throws` + lista até
 > `{`/`;` em `parseMember`. Prova: `TranslateTest.throwsClauseIsDropped`
 > (traduz + compila JVM + roda `caught`). `TranslateTest` 16/16.
+>
+> **Estado (13/09 ~12:30, dono = 192.168.100.22): gaps honestos varargs e
+> tipo aninhado.** Dois constructos Java **sem** equivalente Kof viram
+> diagnóstico explícito (R6: nunca silencioso, nunca parse error confuso):
+> `T...` varargs (Kof só tem builtins variádicos — `setOf`/`listOf`; função
+> de usuário não) e tipo aninhado (`class`/`interface`/`record`/`enum`
+> dentro de classe — SEM042 exige top level). Causa: `parseParams` lia `...`
+> como erro de sintaxe; `parseMember` caía em `expected class/...`.
+> Prova: `TranslateTest.varargsAndNestedTypeAreHonestGaps`. `TranslateExpr`
+> 399 ≤500; `Translate.java` 270 ≤500; `TranslateTest` 17/17.

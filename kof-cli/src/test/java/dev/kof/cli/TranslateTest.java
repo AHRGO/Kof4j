@@ -239,6 +239,27 @@ class TranslateTest {
     }
 
     @Test
+    void varargsAndNestedTypeAreHonestGaps() {
+        TranslateException varargs = assertThrows(TranslateException.class, () ->
+                Translate.translateJava("""
+                        public class V {
+                            static int sum(int... xs) { return xs.length; }
+                        }
+                        """));
+        assertTrue(varargs.getMessage().contains("varargs") && varargs.getMessage().contains("revisão manual"),
+                "varargs `T...` sem equivalente Kof → gap explícito (R6), foi: " + varargs.getMessage());
+
+        TranslateException nested = assertThrows(TranslateException.class, () ->
+                Translate.translateJava("""
+                        public class N {
+                            static class Inner { int x = 1; }
+                        }
+                        """));
+        assertTrue(nested.getMessage().contains("tipo aninhado") && nested.getMessage().contains("revisão manual"),
+                "tipo aninhado sem equivalente Kof (SEM042) → gap explícito (R6), foi: " + nested.getMessage());
+    }
+
+    @Test
     void throwsClauseIsDropped(@TempDir Path dir) throws Exception {
         String kof = Translate.translateJava("""
                 public class TH {
