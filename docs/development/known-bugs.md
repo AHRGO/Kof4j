@@ -4661,25 +4661,25 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   que consome statements até o próximo `KofJump`/`KofLabel`-não-loop. Os
   statements SEGUINTES ao if (corpo do método pós-if) viram "else": `var i`
   fica preso no bloco, `while(i<8)` posterior lê `i` fora de escopo →
-  `ReferenceError`. O caso do reporter (if-throw **com** else-fonte, célula
-  `ifthrowelse`) tem o MESMO shape podado → `println("after")` também fica
-  dentro do else no JS; só passa na matriz por coincidência de output.
-  Logo o bug não é do lowering do assert nem do parser sozinho: é a
-  **poda do J/L(end) pós-throw no Optimizer** que apaga a única
-  informação que distinguiria else-de-epílogo.
-- **(c) Fix NÃO pode morar em `JsIfThrowElse`** (a informação some no
-  Optimizer, antes do parser). Portas corretas, todas em código
-  compartilhado: **(i)** o `Optimizer` preservar `Label(end)`/não podar o
-  `Jump(end)` que fecha um `if` cujo then termina em `KofThrow` (ou podar
-  o J mas manter o L como fronteira de parse de quem consome o IR — o
-  parser JS é consumidor literal do stream podado); OU **(ii)** a "pilha de
-  labels `end` ancestrais" que a própria nota **"Fix previsto" do §147**
-  pediu e o autor do `718ae5cf` NÃO implementou (fez o heurístico do
-  `parseElse`, que é o que regressa). Qualquer das duas = mudança de
-  IR/Optimizer compartilhado (afeta os 3 backends) → **regra 6** (decisão
-  de design, não correção mecânica) + domínio do autor do §147/Optimizer. `KofRandomTest.{randomStringJs,randomShapeJs}` verdes +
-  golden assert-then-epilogue nos 4 targets + célula nova `assertepilogue`
-  na matriz provam o fechamento.
+  `ReferenceError`. **(Retificação 13/09, pós-fix `29923a5b`):** eu aleguei
+  que o reporter (`ifthrowelse`, com else-fonte) tinha IR "byte-idêntico" —
+  **nunca comparei dumps de IR** (alegação de memória, violação da regra de
+  não-assertar-o-não-rodado; o teste que depois passou a comparar os dois
+  `while` do random-prova provou o shape distinto: o `isLoopStart` lookahead
+  é justamente o que separa os casos). A parte que sobrevive ao fix: o
+  parser decidir "tem else?" pela PRESENÇA de `Label(end)` — sem a
+  informação, é obrigado a escolher um heurístico, e o heurístico fraco
+  (`isLoopLabel` só vê loops já abertos) regressou.
+- **(c) Retificada pelo fix medido (13/09):** eu afirmei que o fix "NÃO pode
+  morar em `JsIfThrowElse`" e que a porta correta seria mexer no Optimizer
+  (regra 6). **Errado** — o IR não precisou de mudança: `JsLabelParser.
+  isLoopStart` (lookahead de jump posterior p/ o label, já usado em
+  `parseStatements`) é o predicado que faltava no `parseElse`. Fix
+  puramente-parser (`JsIfThrowElse` + guarda dupla no `parseIfBody`), sem
+  contrato compartilhado. A "pilha de end-labels do §147" permanece não
+  implementada (o lookahead a substitui neste caso); se algum shape futuro
+  precisar de fronteira real, reabre-se como decisão de design.
+
 - **(d) Estado do gate 4-módulos neste HEAD (`e1962735`, `gateFixed.log`):**
   **1602 = 1430+31+5+136, 2 falhas, 5 skip** — as 2 falhas são EXATAMENTE
   §149-JS. Lane bugfix-101 declarou #101 FEITO (21:45) mas o §149 que ELES

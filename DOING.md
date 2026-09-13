@@ -42,6 +42,29 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **⚡ PRÓXIMO PASSO (13/09 ~03:45, sessão melissa/dev — §149 retificação pós-fix +
+> tabela known-bugs revisada; este é o despacho):** HEAD `43fd55fe`. GATE
+> **VERDE** (outros fecharam §149 em `29923a5b` + sincronizei em `6973a339`):
+> **1611 = 1439+31+5+136, 0 falhas, 13 erros = só node ausente**. A minha
+> linha ~22:50 ("gate vermelho, próximo tick exige decisão da mesa") está
+> SUPERADA — retirei-a em `6973a339` da mesa alheia e neste commit retifico a
+> MINHA análise §149 (b/c): afirmei "fix não pode morar em JsIfThrowElse" e
+> "IR byte-idêntico" — o fix real foi NO PARSER (`isLoopStart` lookahead) e
+> o dump byte-idêntico nunca foi rodado por mim (lição: não asserir sem
+> rodar). Contagem de abertos conferida seção a seção = **13** (README
+> §2/índice já retificados; 3 seções dizem "CORRIGIDO" sem ✅: §28/§32/§93).
+> Revisão da tabela 9/18/21/22/23 "não reverificados" → **REVERIFICADOS com
+> teste rodado** (`77c36752`).
+> **PRÓXIMO TICK (ordem):** (1) fila §1 inteira bloqueada legítima: #97 ✅;
+> F3 split (lane GC/idiomatic EM CURSO); native-multiarch → GC riscv (9092
+> VIVA, colisão); OTP/DD-STDLIB/S7d format/security-plan → decisões da
+> mesa (README §3); edições de issue → watcher. (2) se 9092 cair >2h sem
+> commit em nat/ → reavaliar dono-morto p/ G-1. (3) se a mesa decidir algo
+> do §3 → executar. (4) senão → **RECUSAR** (estabilidade ainda FALSA pela
+> cond #2/#3, mas sem trabalho meu sem colisão/decisão).
+> **NUNCA:** tocar lanes alheias vivas; editar sem regra-6; asserir sem rodar.
+
+
 > **⚡ FEITO (13/09, lane issues-novas — #110 Chrome-bundle macOS + Safari fallback, dono = esta sessão):** commit `21e7495b` pushado + respondido na issue (`5650161070`, pedido de validação no Mac real). Prova: `KofJsBrowserE2ETest` 25/25 + check_500 OK. WIP-103 alheio em `origin/wip-103-json-map-103.1`. **PRÓXIMO PASSO:** #102.3/#103-JVM (checar cobertura do WIP-103 antes) ou #114 (responder §65). **NUNCA:** tocar `ExpressionJsonCallLowerer`/`JvmRuntimeJson`; `nat/` lane GC viva; push main.
 
 > **⚡ FEITO (13/09 ~03:20, lane gate/paridade 4-target — §149 FECHADO com fix MEDIDO no parser JS; GATE VERDE, dono = esta sessão):** supersede o despacho de gate-vermelho (12/09 ~22:50). A análise da lane dev estava CERTA na causa (o `Optimizer` poda o `J/L(end)` pós-throw → o parser JS perde a fronteira else-vs-epílogo) mas **errada no locus do fix**: o bug NÃO exige mudança de IR/Optimizer (regra 6) — a informação de fronteira está recuperável por **lookahead** no próprio parser JS. `JsIfThrowElse.parseElse` usava `ctx.isLoopLabel` (só loops JÁ ABERTOS) e tratava o label de INÍCIO do `while` seguinte como fim do else → `while` virava `if` + `var` fora de escopo. Fix: `JsLabelParser.isLoopStart` (lookahead: algum jump/cond-jump posterior salta p/ o label) — o mesmo predicado que o `parseStatements` já usa — e o loop é parseado DENTRO do else (`flow.parseLoop`); `parseIfBody` ganha a mesma guarda nas 2 checagens de `Label(end)`. Ninhar o epílogo no else é semanticamente seguro porque o then termina em saída incondicional (`thenEndsUnconditional`). **Não toquei `Optimizer`/IR compartilhado — só o backend JS** (o JVM/Script/Native já emitiam certo). Junto: **§150** (switch-expr enum primitivo → fallback pelo tipo do RESULTADO) e **§151** (`contains` de enum no Native por conteúdo). Docs sincronizadas (§149 fechado → **1611/0**, 13 err = só `node`): `status.md`, `development/README.md`, `backend-parity.md`, `AGENTS.md`. **Prova:** gate 4-módulos 1611/0 (KofRandomTest 12/12, KofJsE2ETest 40/40, ConformanceMatrixTest 11/11, KofSwitchExprE2ETest 31/31, KofMapSetTest 14/14); ratchet ≤500 OK; paridade medida do repro if-throw+while+else (`else|after|0|1` no JS). **PRÓXIMO PASSO:** push; depois varrer `docs/development/` por item sem dono ou doc concluída mal-classificada; se nada → RECUSAR (estabilidade). **NUNCA:** `nat/` com lane GC viva; `js/` da #97; §104b-ii/§45/decisão; push main.
