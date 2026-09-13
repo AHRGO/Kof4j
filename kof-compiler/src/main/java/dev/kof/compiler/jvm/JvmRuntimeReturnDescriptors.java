@@ -90,6 +90,10 @@ public final class JvmRuntimeReturnDescriptors {
             case "kof_string_to_long" -> "J";
             case "kof_string_to_double" -> "D";
             case "kof_string_to_float" -> "F";
+            // S13b (plan-stdlib-expansion): parse com default — briefing §43
+            case "kof_string_to_int_or_default" -> "I";
+            case "kof_string_to_long_or_default" -> "J";
+            case "kof_string_to_double_or_default" -> "D";
             case "kof_orm_create", "kof_orm_delete", "kof_orm_migrate" -> "Z";
             case "kof_orm_save", "kof_orm_find" -> "Ljava/lang/Object;";
             case "kof_orm_count" -> "J";

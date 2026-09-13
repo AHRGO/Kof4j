@@ -3,6 +3,7 @@ package dev.kof.compiler;
 import java.util.ArrayList;
 import java.util.List;
 
+
 /**
  * Lowering de MethodCallExpr (case do emitExpression).
  */
@@ -259,6 +260,28 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
             return localIdx;
         }
         localIdx = emitArgs(driver, mc, ops, owner, localIdx, locals);
+        // S13b: alinha cada arg empilhado ao param declarado com widening
+        // GENUÍNO (só I2L/I2F/I2D/L2F/L2D/D2F — nunca trunca). Sem isso, um
+        // literal Int em param Long (ex.: math.parseLongOrDefault(s, 0))
+        // chega com 1 slot onde o descritor JVM pede 2 (J) → stack map
+        // inconsistente = crash NegativeArraySize no COMPUTE_FRAMES. O typer
+        // SEM025 já recusou tudo que não é widening; aqui só emitimos a
+        // instrução que faltava. JS/Native x86/riscv são width-agnostic
+        // (1 slot/8 bytes), então a divergência só existe no JVM — mas a
+        // instrução é no-op semântico nos demais (KofUnary ignorado), então
+        // emitir incondicionalmente é seguro. Ajusta argTypes p/ o box
+        // guiado pelos paramTypes (idem coerceStoreWiden §121).
+        var sParams = sCall.parameterTypes();
+        for (int ai = 0; ai < mc.arguments().size() && ai < sParams.size(); ai++) {
+            Type from = argTypes.get(ai);
+            Type to = sParams.get(ai);
+            if (from instanceof Type.PrimitiveType && to instanceof Type.PrimitiveType
+                    && !from.equals(to)) {
+                int before = ops.size();
+                CompilerEmissionHelpers.emitWideningIfNeeded(driver, ops, from, to);
+                if (ops.size() > before) argTypes.set(ai, to);
+            }
+        }
         ops.add(new KofCall(new Type.ClassType(sCall.ownerPackage(), sCall.ownerClass(), List.of()),
                 sCall.function(), sCall.parameterTypes(), sCall.returnType(),
                 KofCallKind.FUNCTION));

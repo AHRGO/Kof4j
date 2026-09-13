@@ -91,6 +91,28 @@ class KofScriptStdlibParityTest {
             """, "42\n-7\n13\n0\n-2147483648\n9007199254740993\n-9223372036854775807\ntrue\ntrue\ntrue\nT1\nT2\nT3\nT4\nT5");
     }
 
+    // STDLIB S13b (plan-stdlib-expansion §2, P0): parse com default (§43 —
+    // falha DEVOLVE o default, nunca lança). Paridade interpretador×JVM;
+    // linha "" do Double fora do golden (§169 — fila própria).
+    @Test
+    void mathParseOrDefaultParity() throws Exception {
+        parity("""
+            main() {
+                println(math.parseIntOrDefault("42", 0))
+                println(math.parseIntOrDefault("abc", -1))
+                println(math.parseIntOrDefault("", 7))
+                println(math.parseIntOrDefault("  15  ", 0))
+                println(math.parseIntOrDefault("99999999999999", 3))
+                println(math.parseLongOrDefault("9007199254740993", 0))
+                println(math.parseLongOrDefault("x", -5))
+                println(math.parseLongOrDefault("9223372036854775808", 8))
+                println(math.parseDoubleOrDefault("2.5", 0.0) == 2.5)
+                println(math.parseDoubleOrDefault("nope", -0.5) == -0.5)
+                println(math.parseDoubleOrDefault("1e2", 0.0) == 100.0)
+            }
+            """, "42\n-1\n7\n15\n3\n9007199254740993\n-5\n8\ntrue\ntrue\ntrue");
+    }
+
     @Test
     void isUuidParity() throws Exception {
         parity("""

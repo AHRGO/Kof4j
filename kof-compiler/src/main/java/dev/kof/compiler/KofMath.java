@@ -85,6 +85,19 @@ public final class KofMath {
                     ? new MathCall("kof_string_to_long", LONG, List.of(STR)) : null;
             case "parseDouble" -> argc == 1 && isStr(argTypes.get(0))
                     ? new MathCall("kof_string_to_double", DOUBLE, List.of(STR)) : null;
+            // S13b (plan-stdlib-expansion §2, P0): parse com default —
+            // briefing §43 ("falha de parse = OrNull/OrDefault"). Mesmo
+            // contrato do parse (JDK + trim); falha DEVOLVE o default
+            // (nunca lança — paridade: JVM try/catch, JS wrapper, x86/riscv
+            // handler local no exc_chain). Default tipado (Int/Long/Double
+            // literal ou expressão — número não alarga p/ String, SEM025).
+            case "parseIntOrDefault" -> argc == 2 && isStr(argTypes.get(0)) && isInt(argTypes.get(1))
+                    ? new MathCall("kof_string_to_int_or_default", INT, List.of(STR, INT)) : null;
+            case "parseLongOrDefault" -> argc == 2 && isStr(argTypes.get(0))
+                    && (isLong(argTypes.get(1)) || isInt(argTypes.get(1)))
+                ? new MathCall("kof_string_to_long_or_default", LONG, List.of(STR, LONG)) : null;
+            case "parseDoubleOrDefault" -> argc == 2 && isStr(argTypes.get(0)) && isDouble(argTypes.get(1))
+                    ? new MathCall("kof_string_to_double_or_default", DOUBLE, List.of(STR, DOUBLE)) : null;
             default -> null;
         };
     }
@@ -116,5 +129,9 @@ public final class KofMath {
 
     private static boolean isStr(Type t) {
         return BuiltinTypes.STRING.equals(t) || "String".equals(t.toString());
+    }
+
+    private static boolean isLong(Type t) {
+        return t == LONG || "long".equals(t.toString()) || "Long".equals(t.toString());
     }
 }

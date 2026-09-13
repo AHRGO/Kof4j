@@ -59,6 +59,7 @@ import dev.kof.compiler.runtime.RuntimeStringConv;
 import dev.kof.compiler.runtime.RuntimeStringEdit;
 import dev.kof.compiler.runtime.RuntimeStringOps;
 import dev.kof.compiler.runtime.RuntimeStringParse;
+import dev.kof.compiler.runtime.RuntimeStringParseOrDefault;
 import dev.kof.compiler.runtime.RuntimeStringParseFp;
 import dev.kof.compiler.runtime.RuntimeStringSearch;
 import dev.kof.compiler.runtime.RuntimeTime;
@@ -129,6 +130,9 @@ public final class NativeRuntime {
         RuntimeStringParse.emitStringToInt(sb);
         RuntimeStringParse.emitStringToLong(sb);
         RuntimeStringParseFp.emitStringToDouble(sb);
+        // S13b (plan-stdlib-expansion): parse com default (briefing §43) —
+        // wrappers com handler local no exc_chain; nunca lançam.
+        RuntimeStringParseOrDefault.emitAll(sb);
         RuntimeStringBase.emitPrintString(sb);
         RuntimeStringBase.emitPrintlnString(sb);
         RuntimeStringOps.emitStringCharAt(sb);

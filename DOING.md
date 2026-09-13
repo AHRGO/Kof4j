@@ -219,16 +219,28 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
   - **Implementação:** `KofMath.java` (cases parseInt→kof_string_to_int INT [STR], parseLong→kof_string_to_long LONG, parseDouble→kof_string_to_double DOUBLE + guard SEM025 em tipo errado, travado no typer por `parseTypeGuardRefused`); `JsRuntimeOps.java` (case `kof_string_to_*` no handleRuntimeOp: FUNCTION = fachada c/ args.get(0); METHOD = path .toInt() de StringMethodRegistry c/ receiver — emit IDÊNTOCO ao case de lá, JsCallEmitter:276; registerRuntime RAW snake = export real de JsRuntimeUiStdlib). REGRESSÃO pega no gate (Q4 funcionou): o prefixo no isRuntimeOp capturava o METHOD path e o default genérico fazia args.get(0) em args vazio → COMP002 IndexOutOfBounds em KofJsE2ETest/KofStringParseTest; fix = shape por kind no case (receiver p/ METHOD). Doc: célula `stdmathparse` adicionada em conformance-matrix.md (ConformanceMatrixDocTest sincronizado).
 > (prioridade da mantenedora: "pega como prioridade o plan-stdlib-expansion.md").**
 > Degrau A do item P0 "parse + OrNull/OrDefault" do §2 do plano: CONCLUÍDO
-> acima (S13a). **PRÓXIMO PASSO:** S13b — `math.parseIntOrNull/parseLongOrNull/
-> parseDoubleOrNull` + OrDefault (3+3 fns; briefing §43: falha de parse =
-> OrNull/OrDefault em vez de lança). JVM = fachada sobre `kof_string_to_*`
-> com try-catch; JS idem (helper JS); Native x86 = clone do parse com default
-> em vez de throw (RuntimeStringParse*); riscv/aarch = template clone B30/B31.
-> OrNull precisa nullable primitivo (mecanismo §125) — se o typer de `Int?`
-> no dispatch stdlib travar, fatiar: OrDefault primeiro (retorna Int),
-> OrNull em unidade própria. Arquivos: `KofMath.java`, `KofMathTest`,
-> `ConformanceMatrixTest` célula stdmathparseord, `plan-stdlib-expansion.md`
-> (S13a FEITO → sincronizar no MESMO commit), DOING.md.
+> acima (S13a). **S13b (OrDefault) CONCLUÍDO 13/09 (mesmo dia):** 3 fns
+> `parse{Int,Long,Double}OrDefault` nos 5 alvos (JVM try/catch, JS wrapper,
+> x86 `RuntimeStringParseOrDefault` c/ handler no exc_chain, riscv **B41**,
+> aarch tradutor). Fixes de causa raiz da unidade: (1) widening genuíno nos
+> args do KofStd (literal Int em param Long crashava COMPUTE_FRAMES JVM);
+> (2) cases `kof_string_to_*` S13a/S13b movidos para fora do bloco
+> `kof_web_` no JsRuntimeOps (estavam inertes — S13a JS funcionava só pelo
+> case METHOD da linha 404). Prova: 24 testes KofMathTest + `stdmathparseord`
+> 4 targets + paridade Script. Suíte **1720/0/0**. Residual catalogado:
+> **§175** (`"".toDouble()` = 0.0 no Native vs lança no JVM — paridade do
+> parse BASE; fila própria em known-bugs.md).
+> **PRÓXIMO PASSO:** S13c — OrNull (`parseIntOrNull` etc., briefing §43)
+> ou §175 (fix paridade vazio Double). **§175 primeiro** (menor, destrava a
+> linha `""` do golden S13b): trocar `xorpd %xmm0,%xmm0` (x86
+> RuntimeStringParseFp `.Lpdd_vazio`) e `li a0,0; j .Lpd_ret` (riscv B31
+> `.Lpd_vazio`) por salto ao throw; aarch herda; re-medir goldens
+> (`KofStringParseTest` NÃO muda — não testa vazio; adicionar linha `""`
+> ao PARSEORD golden = devolve default nos 4). Depois S13c: `Int?` return
+> via mecanismo §125 (nullable primitivo) — avaliar typer do dispatch
+> stdlib antes (se `Int?` no MathCall returnType travar, unidade própria).
+> Arquivos: `RuntimeStringParseFp.java`, `NativeRiscvAsmRtB31.java`,
+> `KofMathTest`, matriz `stdmathparseord` (adicionar linha), DOING.md.
 
 > **✅ FEITO (13/09 ~13:40, lane issues 9094 — dono = esta sessão): #126 +
 > #125 (reportes PublioSantos, 0.3.23-beta).** **#126** (`json.encode(x,4)`
@@ -247,7 +259,7 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > limpo verde. **Colisão registrada (honesto):** a 9093 fez `git add -A` na
 > árvore compartilhada e meus 4 arquivos entraram nos commits dela
 > (`61495f69`→`3ab4c99e`, todos na beta, pushados) — nada perdido, histórico
-> compartilhado NÃO reescrito; §168/§169 no known-bugs com a nota. **Falha
+> compartilhado NÃO reescrito; §168/§175 no known-bugs com a nota. **Falha
 > `TranslateTest` (2) na suíte kof-cli = WIP da lane tradutor (.22, dono
 > 192.168.100.22, arquivos `Translate*` sujos na árvore) — NÃO tocar.**
 > **PRÓXIMO PASSO:** fila da lane 9094 zerada de novo (issues/PRs abertos

@@ -5701,3 +5701,10 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   `CoreRegressionE2ETest`).
 - **Arquivos:** `kof-compiler/src/main/java/dev/kof/compiler/js/JsControlFlowParser.java`,
   `.../js/JsIfThrowElse.java`.
+
+## §175 — kof_string_to_double("") devolve 0.0 no Native (JVM lança) — PARIDADE (aberto 13/09, S13b)
+- **Sintoma:** `math.parseDoubleOrDefault("", d)` no Native x86/riscv devolve 0.0 (a comparação com d falha); JVM/JS devolvem o default `d` (o parse lança NumberFormatException, o wrapper captura). O mesmo vale para `.toDouble()` direto: `"".toDouble()` no Native = 0.0 silencioso; no JVM = exceção (R6 — viola paridade).
+- **Causa raiz:** o caminho `.Lpdd_vazio` (RuntimeStringParseFp x86, linha ~67) e `.Lpd_vazio` (NativeRiscvAsmRtB31 riscv, linha ~87) devolvem `xorpd %xmm0,%xmm0` (0.0) em vez de saltar para `.Lpd*_throw`. O trim vazio é tratado como "sucesso com valor 0" — herdado do comportamento pré-S13 (não coberto pelo golden de KofStringParseTest, que não testa `"".toDouble()`).
+- **Menor repro:** `main() { try { println("".toDouble()); } catch (String e) { println("T") } }` → JVM: exceção→T; Native x86/riscv: `0.0` (ou `println("".toDouble() == 0.0)` → true no Native, exceção no JVM).
+- **Fix proposto:** trocar `xorpd %xmm0, %xmm0` por `jmp .Lpdd_throw` (x86) e `j .Lpd_throw` (riscv) nos dois vazio-labels; aarch herda via tradutor. Re-medir golden: `parseDoubleOrDefault("", d)` passa a devolver `d` nos 5 alvos (a célula stdmathparseord já está escrita com o valor pós-fix; o golden do KofStringParseTest NÃO muda pois "" não está lá). Impacto no golden S13a stdmathparse: nenhum ("" só aparece no parseInt T4, que lança nos 4).
+- **Status:** ABERTO — corrigir em unidade própria (bug de paridade do parse base, não do wrapper S13b); golden `stdmathparseord` no KofMathTest usa esta linha como prova do wrapper APÓS o fix (até lá, x86 diverge na linha "" do golden — teste fica skipado? NÃO: a linha é removida do golden ATÉ o fix, e este §175 é a fila).

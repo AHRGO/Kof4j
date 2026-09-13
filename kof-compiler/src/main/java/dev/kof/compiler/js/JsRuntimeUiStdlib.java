@@ -307,6 +307,20 @@ final class JsRuntimeUiStdlib {
                 const n = Number(kofParseDoubleChecked(v, "Float"));
                 return Math.fround(n);   // Float = 32-bit (Kof aceita; paridade com Native)
             }
+            // S13b (plan-stdlib-expansion §2, P0): parse com default — briefing
+            // §43 ("falha de parse = OrNull/OrDefault"). Mesmo contrato do
+            // parse (trim/regex estreito acima); falha DEVOLVE o default
+            // (nunca lança). Paridade com JvmStringCoreRuntime (JVM) e os
+            // wrappers asm x86/riscv. Long = BigInt ±2^63 (§81).
+            export function kof_string_to_int_or_default(v, def) {
+                try { return kof_string_to_int(v); } catch (e) { return def; }
+            }
+            export function kof_string_to_long_or_default(v, def) {
+                try { return kof_string_to_long(v); } catch (e) { return def; }
+            }
+            export function kof_string_to_double_or_default(v, def) {
+                try { return kof_string_to_double(v); } catch (e) { return def; }
+            }
             // §102 (paridade absoluta JVM=JS=X86=ARM=RISC): o `from` de
             // lastIndexOf/startsWith. JS `String.prototype` já é UTF-16 (code
             // units, casa com o contrato do bug 43), mas diverge do JDK em 2

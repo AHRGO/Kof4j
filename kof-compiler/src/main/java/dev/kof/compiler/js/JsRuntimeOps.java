@@ -318,15 +318,6 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
             // WEB001-T1 (13/09): helpers de contexto reais no JS — param/
             // query/header/body/method/path leem o request corrente
             // (kofWebRequest no JsRuntimeUiWeb). R6: nunca stub silencioso.
-            // S13a (plan-stdlib-expansion): fachada math.parseInt/parseLong/
-            // parseDouble -> as runtime fns EXISTENTES do backend JS
-            // (JsRuntimeUiStdlib exporta kof_string_to_* em snake RAW; idem
-            // METHOD case do JsCallEmitter — mesma export, 1 face só).
-            if (name.startsWith("kof_string_to_") && args.size() == 1) {
-                p.lc.registerRuntime(name);
-                stack.add(new JsIr.JsCall(new JsIr.JsIdentifier(name), List.of(args.get(0))));
-                return;
-            }
             if (name.equals("kof_web_param") && args.size() == 1) {
                 p.lc.registerRuntime("kofWebParam");
                 stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofWebParam"), args));
@@ -376,6 +367,22 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
                 throw new StatementEnd(call);
             }
             stack.add(call);
+            return;
+        }
+        // S13a (plan-stdlib-expansion): fachada math.parseInt/parseLong/
+        // parseDouble -> as runtime fns EXISTENTES do backend JS
+        // (JsRuntimeUiStdlib exporta kof_string_to_* em snake RAW; idem
+        // METHOD case do JsCallEmitter — mesma export, 1 face só).
+        // S13b: parse com default (briefing §43) — falha DEVOLVE o default,
+        // nunca lança (wrapper try/catch em kof_string_to_*).
+        if (name.startsWith("kof_string_to_") && name.endsWith("_or_default") && args.size() == 2) {
+            p.lc.registerRuntime(name);
+            stack.add(new JsIr.JsCall(new JsIr.JsIdentifier(name), args));
+            return;
+        }
+        if (name.startsWith("kof_string_to_") && args.size() == 1) {
+            p.lc.registerRuntime(name);
+            stack.add(new JsIr.JsCall(new JsIr.JsIdentifier(name), List.of(args.get(0))));
             return;
         }
         if (name.equals("kof_now")) {

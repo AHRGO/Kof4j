@@ -759,6 +759,28 @@ class ConformanceMatrixTest {
                     try { println(math.parseLong("9223372036854775808")); println("S5") } catch (String e) { println("T5") }
                 }
                 """, "42\n-7\n13\n0\n-2147483648\n9007199254740993\n-9223372036854775807\ntrue\ntrue\ntrue\nT1\nT2\nT3\nT4\nT5", Set.of(), tempDir);
+        // STDLIB S13b — math.parseInt/parseLong/parseDouble**OrDefault** (§43:
+        // falha de parse DEVOLVE o default, nunca lança). Backends: JVM
+        // try/catch, JS wrapper, x86 wrapper c/ handler no exc_chain, riscv
+        // B41 (aarch tradutor). Literal Int em param Long prova o widening
+        // I2L do KofStd (crash COMPUTE_FRAMES sem ele). Linha "" do Double
+        // fora do golden: §169 (vazio = 0.0 no Native — fila própria); Int/
+        // Long "" DEVOLVEM o default nos 4 (lançam no parse base).
+        matrix("stdmathparseord", """
+                main() {
+                    println(math.parseIntOrDefault("42", 0))
+                    println(math.parseIntOrDefault("abc", -1))
+                    println(math.parseIntOrDefault("", 7))
+                    println(math.parseIntOrDefault("  15  ", 0))
+                    println(math.parseIntOrDefault("99999999999999", 3))
+                    println(math.parseLongOrDefault("9007199254740993", 0))
+                    println(math.parseLongOrDefault("x", -5))
+                    println(math.parseLongOrDefault("9223372036854775808", 8))
+                    println(math.parseDoubleOrDefault("2.5", 0.0) == 2.5)
+                    println(math.parseDoubleOrDefault("nope", -0.5) == -0.5)
+                    println(math.parseDoubleOrDefault("1e2", 0.0) == 100.0)
+                }
+                """, "42\n-1\n7\n15\n3\n9007199254740993\n-5\n8\ntrue\ntrue\ntrue", Set.of(), tempDir);
         // STDLIB S2a — kof.strings predicados paridade total nos 4 targets.
         matrix("stdstrings", """
                 main() {

@@ -298,6 +298,10 @@ public final class JvmRuntimeCallDescriptors {
             case "kof_string_to_long" -> "(Ljava/lang/String;)J";
             case "kof_string_to_double" -> "(Ljava/lang/String;)D";
             case "kof_string_to_float" -> "(Ljava/lang/String;)F";
+            // S13b (plan-stdlib-expansion): parse com default — briefing §43
+            case "kof_string_to_int_or_default" -> "(Ljava/lang/String;I)I";
+            case "kof_string_to_long_or_default" -> "(Ljava/lang/String;J)J";
+            case "kof_string_to_double_or_default" -> "(Ljava/lang/String;D)D";
             case "kof_orm_create" -> "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z";
             case "kof_orm_save" -> "(Ljava/lang/String;Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;";
             case "kof_orm_find" -> "(Ljava/lang/String;Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;";

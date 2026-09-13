@@ -261,6 +261,59 @@ class KofMathTest {
         assertFalse(result.success(), "math.parseInt(42) deve ser rejeitado no typer (SEM025)");
     }
 
+    // S13b (plan-stdlib-expansion §2, P0): math.parseInt/parseLong/
+    // parseDouble**OrDefault** — briefing §43 ("falha de parse = OrNull/
+    // OrDefault"). Mesmo contrato do parse (JDK + trim); falha DEVOLVE o
+    // default (nunca lança) — backends: JVM try/catch (JvmStringCoreRuntime),
+    // JS wrapper (JsRuntimeUiStdlib), x86 wrapper c/ handler no exc_chain
+    // (RuntimeStringParseOrDefault), riscv B41 (aarch herda via tradutor).
+    // Literal Int default em parseLong prova o widening I2L do KofStd
+    // (crash COMPUTE_FRAMES sem ele — mesma unidade). Linha `""` do Double
+    // fora do golden: §169 (vazio devolve 0.0 no Native — paridade do parse
+    // BASE, fila própria); Int/Long vazio estão no golden (lançam nos 4).
+    private static final String PARSEORD_SRC = """
+        main() {
+            println(math.parseIntOrDefault("42", 0))
+            println(math.parseIntOrDefault("abc", -1))
+            println(math.parseIntOrDefault("", 7))
+            println(math.parseIntOrDefault("  15  ", 0))
+            println(math.parseIntOrDefault("99999999999999", 3))
+            println(math.parseLongOrDefault("9007199254740993", 0))
+            println(math.parseLongOrDefault("x", -5))
+            println(math.parseLongOrDefault("9223372036854775808", 8))
+            println(math.parseDoubleOrDefault("2.5", 0.0) == 2.5)
+            println(math.parseDoubleOrDefault("nope", -0.5) == -0.5)
+            println(math.parseDoubleOrDefault("1e2", 0.0) == 100.0)
+        }
+        """;
+
+    private static final String PARSEORD_OUT = String.join("\n",
+            "42", "-1", "7", "15", "3",
+            "9007199254740993", "-5", "8",
+            "true", "true", "true");
+
+    @Test
+    void parseOrDefaultJvm(@TempDir Path tmp) throws Exception {
+        runJvm(tmp, PARSEORD_SRC, PARSEORD_OUT);
+    }
+
+    @Test
+    void parseOrDefaultNative(@TempDir Path tmp) throws Exception {
+        runNative(tmp, PARSEORD_SRC, PARSEORD_OUT);
+    }
+
+    @Test
+    void parseOrDefaultJs(@TempDir Path tmp) throws Exception {
+        runJs(tmp, PARSEORD_SRC, PARSEORD_OUT);
+    }
+
+    @Test
+    void parseOrDefaultCrossArch(@TempDir Path tmp) throws Exception {
+        // riscv = B41 (wrapper c/ handler no exc_chain sobre B30/B31); aarch
+        // herda linha-a-linha no tradutor. Golden BYTE-IDÊNTICO sob qemu.
+        forCrossArch(tmp, PARSEORD_SRC, PARSEORD_OUT);
+    }
+
     @Test
     void powJvm(@TempDir Path tmp) throws Exception {
         runJvm(tmp, POW_SRC, POW_OUT);

@@ -263,6 +263,26 @@ public final class NativeX86StringCalls {
             sb.append("    pushq %rax\n");
             return true;
         }
+        // S13b (plan-stdlib-expansion): parse com default — briefing §43.
+        // (String, default) -> número; o wrapper NUNCA lança (handler local
+        // no exc_chain, RuntimeStringParseOrDefault). Default = 2º slot da
+        // pilha (8 bytes crus — Int/Long valor; Double bits IEEE -> %rsi).
+        if ("kof_string_to_int_or_default".equals(kc.methodName())
+                || "kof_string_to_long_or_default".equals(kc.methodName())) {
+            sb.append("    popq %rsi\n");   // default (2º arg, empilhado por último)
+            sb.append("    popq %rdi\n");   // String
+            sb.append("    call ").append(kc.methodName()).append("\n");
+            sb.append("    pushq %rax\n");
+            return true;
+        }
+        if ("kof_string_to_double_or_default".equals(kc.methodName())) {
+            sb.append("    popq %rsi\n");   // default: bits crus (pilha 1-slot)
+            sb.append("    popq %rdi\n");
+            sb.append("    call kof_string_to_double_or_default\n");
+            sb.append("    movq %xmm0, %rax\n");  // wrapper devolve por xmm0
+            sb.append("    pushq %rax\n");
+            return true;
+        }
         // retorno FP vive em xmm0 — preservar os bits na pilha
         if ("kof_string_to_double".equals(kc.methodName())) {
             sb.append("    popq %rdi\n");
