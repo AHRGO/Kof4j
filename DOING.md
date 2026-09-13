@@ -42,6 +42,20 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **⚡ FEITO (13/09, lane development/docs — sincroniza `docs/development/README.md`
+> com a fila viva de `known-bugs.md`, dono = esta sessão):** o README declarava
+> "**12 seções / 11 abertos / nenhum código-puro**" e listava §65 como lane alheia —
+> defasado frente ao `known-bugs.md:11` (14 abertos, §157-160 corrigidos, §65
+> NÃO REPRODUZ, §161/NAT-STR01 registrado). Corrigido: §2 (14 seções; grupos =
+> 7 decisão-ratificada + 1 congelado §101 + 5 lane-alheia + 1 infra §156; "há UM
+> item code-pure: §156"), §3 (NAT-STR01→§161; "§129 (unwind cross-thread via TLS)"
+> em vez do alias solto "TLS §129"), §4.2 (14 abertos) e §4.3 (DD-STDLIB-01 já
+> saiu de `future/`). Só doc, zero código. **PRÓXIMO TICK:** manter o padrão
+> (docs/development ↔ bugs-and-gaps ↔ matriz×teste em sincronia quando um item
+> fecha/decide); varredura de `decision-pending/` por item já decidido que deva
+> mover. **NÃO:** bugs/gaps/código de lane alheia (pow/S10c = STDLIB; nat/ = GC
+> viva; finally-IR = mesa). **NUNCA:** push main.
+
 > **⚡ FEITO (13/09 ~05:30, lane development/docs — refactor de organização 3 pastas +
 > auditoria doc-vs-código, dono = esta sessão):** pedidos diretos da mantenedora,
 > todos pushados: (1) `docs/bugs-and-gaps/` nasce (known-bugs, conformance-matrix,

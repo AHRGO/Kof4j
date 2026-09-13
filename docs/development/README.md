@@ -52,15 +52,15 @@ package-compiler) abre antes de SYSTEMS fechar (paridade + GC + estabilidade).
 
 ## 2. Bugs abertos (fila em `docs/bugs-and-gaps/known-bugs.md`) — triagem 13/09
 
-**12 seções sem ✅ no cabeçalho** (§127-JVM, §155 e §94 fechados 13/09; §156 aberto 13/09 — infra de tipos; §9 triado ✅ 13/09 — `nativeLambdaMutableCapture` 1/1) — e a conclusão honesta
-(`known-bugs.md:11`): **nenhum item de código-puro-sem-decisão restou na lane**.
+**14 seções sem ✅ no cabeçalho** (§127-JVM, §155 e §94 fechados 13/09; §156 aberto 13/09 — infra de tipos; §157-160 e §65 fechados/NÃO-REPRODUZ 13/09) — e a conclusão honesta
+(`known-bugs.md:11`): **há UM item de código-puro-sem-decisão: §156**.
 Todos pendurados em:
 
 | Grupo | Bugs | Quem destrava |
 |---|---|---|
-| Decisão da mantenedora (regra 6) | §45 (`planning-finally-return` — JVM/Native/interp), §81, §89, §106, §131 | mantenedora |
-| Congelados regra-6 | §101, §117, §129-TLS | ninguém (contrato) |
-| Lane alheia | §65/§132 (UI/web/OTP-JS), §104b-ii + §107 restante + §114 (bugfixer — storage-box de record) | donos das lanes |
+| Decisão ratificada 13/09 — implementação pendente | §45 (`planning-finally-return` — JVM/Native/interp), §81, §89, §106, §117, §131, §161/NAT-STR01 | fila ratificada / lanes executoras |
+| Congelado regra-6 | §101 | ninguém (contrato) |
+| Lane alheia | §104b-ii + §107 restante + §114 (bugfixer — storage-box de record), §129 (lane nat), §132 (OTP-JS) | donos das lanes |
 | Infra de tipos (sem dono) | §156 (`List` heterogêneo de lambdas → CCE JVM) | agente de tipos |
 
 Corrigidos 13/09: **§94** (EQ/NE de Double/Float no interpretador agora IEEE —
@@ -88,8 +88,8 @@ escalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 | DD-01 — `finally` no caminho de `return` (JVM/Native/interp) | `planning-finally-return.md` (caiu 12/09: JS ✅ `c727fee`) | ✅ DECIDIDO 13/09 (opção 4a: FinallyFrame na IR + bump 0.3.1) — implementar |
 | DD-OTP (restante) | `planning-otp-supervision.md` | ✅ RATIFICADAS 13/09 (opção 1a: S2 JVM + wrapper `(id, resultado)`; riscv/aarch PARTIAL) — implementar S2 |
 | `pow`/`-lm`, `roundTo`-mode | `plan-stdlib-expansion.md` | ✅ DECIDIDO 13/09 (opção 7a: link `-lm` aprovado) — implementar `pow` |
-| NAT-STR01 (case-map astral) | `known-bugs.md`/conformance-matrix | ✅ ABERTO POR DECISÃO 13/09 — implementar UTF-8 astral nos nativos |
-| TLS §129 | `known-bugs.md` | ✅ ABERTO POR DECISÃO 13/09 — lane nat |
+| NAT-STR01 (case-map astral) | `known-bugs.md` §161 / conformance-matrix | ✅ ABERTO POR DECISÃO 13/09 — implementar UTF-8 astral nos nativos |
+| §129 (unwind cross-thread via TLS) | `known-bugs.md` | ✅ ABERTO POR DECISÃO 13/09 — lane nat |
 | json §106 | `known-bugs.md` | ✅ DECIDIDO 13/09 (opção 2b: chaves sorted) — implementar |
 
 ---
@@ -125,7 +125,7 @@ escalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 | `roadmap.md` | §§8–11 ❌ (frontend same-project, monólito→micro) | longo prazo |
 | ~~`roadmap-audit.md`~~ → `docs/audits/roadmap-audit.md` | matriz 06/09 + fila P0→P5 (P0 FECHADO 09/09) | re-audit quando algo fecha |
 | `KOFUI-AUDIT.md` | UI001-Native (face R6: no-op silencioso) ABERTO | lane UI |
-| `known-bugs.md` | 11 abertos (triagem §2 acima; §127-JVM e §94 fechados 13/09) | fila viva |
+| `known-bugs.md` | 14 abertos (triagem §2 acima; §127-JVM, §155, §94, §157-160 e §65 fechados/NÃO-REPRODUZ 13/09) | fila viva |
 | `refactoring/PLAN-SOLID-500.md` | F1–2, 4–9 ✅ (**F2 fechada 12/09** — 487 ≤500 medido); **só F3 em curso** (NativeBackend 664, bloqueada pela lane GC em `nat/`); ratchet `check_500-baseline.txt` (dívidas travadas — nº autoritativo = `wc -l` do arquivo; **9** neste HEAD, era 17 no §140) no CI | F3 fecha o plano |
 
 ### 4.3 `future/` — só plano, zero código (não é trabalho atual)
@@ -134,7 +134,8 @@ escalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 |---|---|
 | `PLAN-UNIVERSAL-PLATFORM.md` | decisão + SYSTEMS fechado (R12) |
 | `scoped-resources-plan.md` (RAII TIER 2.4) | bump com `using`/`resource_scope` decidido |
-| `planning-stdlib-array-returns.md` (DD-STDLIB-01) | decisão da mantenedora destrava o dispatch |
+
+*(DD-STDLIB-01 `planning-stdlib-array-returns.md` **saiu de `future/` 13/09** — decisão 6a ratificada; agora implementação pendente em `development/`.)*
 
 *(movimentos históricos de 12/09: 13 docs caíram de `future/` p/ cá —
 evidência em cada linha de §4.1; snapshot SG 08/09 → `docs/history/`)*
