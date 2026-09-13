@@ -6,7 +6,10 @@
 > toolchain/node; sem qemu os 84 cross são skipados) — com cross riscv/aarch
 > 42+42 sob qemu real (G-0/§142 somaram os
 > testes de header/OOM). Gate pós-§131/§163 medido 13/09 (`gate_final2.log`, BUILD
-> SUCCESS). Refold da concatenação do `NativeRiscvAsm` para
+> SUCCESS). **Nº autoritativo da suíte = a execução no host** (o gate
+> `mvn test ... -Dmaven.test.failure.ignore=true`; conferir por módulo com
+> `grep -rl FAILURE */target/surefire-reports/*.txt`), não esta linha — ela
+> apodrece a cada commit. Refold da concatenação do `NativeRiscvAsm` para
 > `<clinit>` (anti-pattern novo `constant-folded-runtime-asm.md`) verde no
 > gate `gate1585.log` (HEAD 54da1325).
 > **Regra dos 3 estados (`AGENTS.md`):** `docs/` = implementado/decidido ·
