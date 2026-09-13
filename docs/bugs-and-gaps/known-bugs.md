@@ -2212,6 +2212,10 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
   → **4/4 alvos** (JVM/Native/Script/JS) com `n.toDouble()==5.0`, trunc
   `3.7→3`, negativo `-2.5→-2`, `toDouble` tipado (EQ com Double, não Object) e
   `"3.7".toDouble()` intacto (String dispatch antes) + warning SEM090 emitido.
+  **Trava automatizada (lane gate, 13/09):** célula de matriz `numconv`
+  (`ConformanceMatrixTest.conformanceCoreArithmetic`) roda o mesmo programa
+  nos **4 targets em CI** (antes a prova automatizada era só JVM+JS via
+  `runBoth`; o Native era repro manual) — `true/3/-2/5/2.5` 4/4.
 - **Registro da decisão anterior (substituída pela de cima):** p/
   adicionar o emit nativo de `.toDouble()`/`.toInt()` em primitivo falta a
   **semântica congelada** da conversão — `3.7.toInt()` deve truncar?
@@ -4075,6 +4079,10 @@ int de índice) — verificados na varredura.
   aridade 1 delegando `this.m(a,1)`, aridade 2 direto) + nativo x86 medido
   (`6|7`) + gate 4-módulos BUILD SUCCESS (1642, 0 falhas reais; 2 erros
   ambientais GraalJS).
+  **Trava automatizada (lane gate, 13/09):** célula de matriz `methodoverload`
+  (`ConformanceMatrixTest.conformanceCoreFunctions`) roda `42/7` nos **4
+  targets em CI** (antes a prova automatizada era só JVM+JS via `runBoth`; o
+  Native/Script era repro manual) — 4/4.
 
 
 ### 132. KofJS: task spawnada DE DENTRO de outra task nunca roda sem ceder o event-loop (worker do supervisor nunca dispara) — 🔴 ABERTO (impeditivo JS do OTP #83; gate OTP002 aplicado)

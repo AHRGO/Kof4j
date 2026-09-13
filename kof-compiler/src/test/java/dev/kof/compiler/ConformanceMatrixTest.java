@@ -792,6 +792,24 @@ class ConformanceMatrixTest {
                     println(time.addDays("1700-02-28", 1))
                 }
                 """, "2024-02-29\n2023-03-01\n2025-01-01\n2023-12-31\n\n\n60\n-60\n0\n1000-01-01\n\n1700-03-01", Set.of(), tempDir);
+        // §89 (decisão 3a, 13/09): conversão numérica em receiver PRIMITIVO
+        // (`n.toDouble()`/`toInt()`/`toLong()`/`toFloat()`) = alias do cast
+        // `as`. Antes: JVM ClassFormatError (owner ""), Native undefined
+        // reference, Script `Integer.toDouble/0`, JS TypeError — quebrava nos
+        // 4. O fix tinha prova só em JVM+JS (`runBoth`); esta célula trava os
+        // 4 targets (incl. Native) e o warning SEM090 (não-erro).
+        matrix("numconv", """
+                main() {
+                    var n = 5
+                    println(n.toDouble() == 5.0)
+                    var d = 3.7
+                    println(d.toInt())
+                    println((-2.5).toInt())
+                    println(n.toLong())
+                    var f = 2.5
+                    println(f.toFloat())
+                }
+                """, "true\n3\n-2\n5\n2.5", Set.of(), tempDir);
     }
 
     @Test
@@ -1143,6 +1161,21 @@ class ConformanceMatrixTest {
                     println(e[0])
                 }
                 """, "9\n3\n0", Set.of(), tempDir);
+        // §131 (decisão 10a, 13/09): sobrecarga de MÉTODO de classe por
+        // assinatura (aridade/tipos). Antes: SEM013 no JVM (último def
+        // sobrescrevia) e colisão de símbolo no Native. Prova só JVM+JS
+        // (`runBoth`) — esta célula trava os 4 targets.
+        matrix("methodoverload", """
+                class Calc {
+                    Int twice(Int x) { return this.twice(x, x) }
+                    Int twice(Int x, Int y) { return x + y }
+                }
+                main() {
+                    var c = Calc()
+                    println(c.twice(21))
+                    println(c.twice(3, 4))
+                }
+                """, "42\n7", Set.of(), tempDir);
     }
 
     @Test

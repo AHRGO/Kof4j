@@ -25,6 +25,7 @@
 |---|---|---|---|---|---|---|
 | aritmética int + overflow | `-2147483648` / `-1` / `1` | DONE | DONE | DONE | DONE | `arith` |
 | long div/mod | `3333333333` / `4` | DONE | DONE | DONE | DONE | `longdiv` |
+| conversão numérica em primitivo `n.toInt()/toLong()/toDouble()/toFloat()` (§89, decisão 3a) | `true` / `3` / `-2` / `5` / `2.5` | DONE | DONE | DONE | DONE | `numconv` |
 | `Double %` (mod de variáveis; + NaN/±Inf) | `1.5` / `1.0` / `0.5` / `-1.5` / `NaN` | DONE | DONE (bug 146 ✅ 12/09 `718ae5cf` — `NativeX86Arith` emite o fmod real) | DONE | PARTIAL (test exclui js; §146 shape `JsBackend`) | `doublemod` |
 | cast `d as Int` / `L as Int` / `66 as Char` | `9` / `70000` / `66` | DONE | DONE | DONE | DONE | `cast` |
 | float println | `0.3333333333333333` / `5.0` / `3.5` | DONE | DONE (bug 44 ✅ 10/09 x86) | DONE | PARTIAL (doc: `5` vs `5.0`) | `floatprint` |
@@ -69,6 +70,7 @@
 | record `hashCode()` igual | `true` | DONE | DONE (bug 42 Native corrigido) | DONE | DONE (bug 42 JS corrigido `1ecfb3d`) | `recordhash` |
 | record com campo String `==` por conteúdo (null-safe) | `true` / `false` / `true` / `false` | DONE | DONE (bug 114 ✅ 11/09 Native — era **ponteiro** (`S("ab")==S("ab")` false); campo String agora via `kof_string_equals`; campo record aninhado/hash-ref/coleção ficam §104b-ii) | DONE | DONE | `recordstrfield` |
 | lambda filter/map/reduce | `90` | DONE | DONE | DONE | DONE | `lambdachain` |
+| sobrecarga de método de classe por assinatura (§131, decisão 10a) | `42` / `7` | DONE | DONE | DONE | DONE | `methodoverload` |
 | lambda captura mutável | `3` | DONE | DONE | DONE | DONE | `lambdacapture` |
 | array 2D/3D: alloc + length + store/load + zero-fill | `60`/`3`/`2`/`3`/`0`/`7`/`2`/`2`/`9`/`0` | DONE | DONE (bug 113 ✅ 11/09 x86 — `new Int[a][b]` NÃO alocava nada: `KofNewMultiArray` caía no `default->{}` → SIGSEGV; agora `kof_multi_alloc` recursivo; faces riscv/aarch ✅ 11/09 — fatia B37 + roteio cross, golden JVM sob qemu) | DONE (B37, port 0.3.0→0.4.0 ✅) | DONE (tradutor, ✅) | `array2d` |
 | store `Int` em slot `Long[]` (widening, 1-D e 2-D) | `9` / `3` / `0` | DONE (bug 121 ✅ 11/09 — era **frame crash** no `COMPUTE_FRAMES`: o bloco de conversão do `ExpressionAssignmentLowerer` era um `if {}` que só comentava a promessa, nunca emitia `I2L`) | DONE | DONE | DONE | `arrlongstore` |

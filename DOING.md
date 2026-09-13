@@ -58,6 +58,26 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **⚡ gate/qualidade — prova NATIVA automatizada de §89/§131 (13/09 ~06:35,
+> dono = 192.168.100.15):** auditoria achou o MESMO padrão do §106-JS em duas
+> células: §89 (`numconv`) e §131 (`methodoverload`) tinham fix de **4 alvos**
+> mas prova AUTOMATIZADA só em **JVM+JS** (`CoreRegressionE2ETest.runBoth`); o
+> Native/Script era "repro manual". Adicionadas 2 células de matriz
+> (`ConformanceMatrixTest`: `numconv` em `conformanceCoreArithmetic`,
+> `methodoverload` em `conformanceCoreFunctions`) que rodam o programa nos
+> **4 targets em CI**; goldens medidos por execução real
+> (`true/3/-2/5/2.5` e `42/7`). `known-bugs.md` §89/§131 anotados ("trava
+> automatizada"); `conformance-matrix.md` rows `numconv`/`methodoverload`.
+> **Prova:** `ConformanceMatrixTest` 11/0 + `ConformanceMatrixDocTest` 1/0 +
+> compile gate verde. **NÃO:** `nat/`; UI*; push main; `git config user.*`;
+> Co-authored-by.
+>
+> **PRÓXIMO PASSO (gate/docs):** manter a varredura de overclaims de
+> alvo-múltiplo nos bugs fechados recentes (§94/§127-JVM/§155/§156/§157-160)
+> contra a matriz — se achar fix "4 alvos" com prova só JVM+JS, adicionar
+> célula. Fila aberta = 8 (só §81 na lane .18/9094, NÃO tocar — regra 9). Se
+> nada aparecer, RECUSAR o re-disparo.
+
 > **⚡ docs/gate (13/09 ~05:30, dono = 192.168.100.15):** (1) **reparo de
 > corrupção** no `known-bugs.md:11` — o cabeçalho tinha um bloco DUPLICADO +
 > o marcador literal `(line truncated to 2000 chars)` (um read truncado colado
