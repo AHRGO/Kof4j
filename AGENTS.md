@@ -197,9 +197,12 @@ scripts/auto-loop.sh status           # confirmar que está ativo
   sessão viva (mesmo `--attach` obrigatório do heartbeat; `seen` só avança
   após injeção bem sucedida; `server=` gravado no state fixa a porta p/ o tick
   do cron). Em uso: **todas a cada 5min → sessão `ses_f69c2cb03ffe2zDYCqW7fesphi`
-  (porta 9094)** — quando qualquer issue recebe comentário externo
-  (review/parceiro/reporter), o agente LÊ, responde na issue se
-  procedente, ajusta o plano/DOING e segue a fila. Interagir com issue que
+  (porta 9094)** — o tick `all` **injeta a CADA tick** (com ou sem comentário
+  novo) com prompt de **varredura completa**: listar TODAS as abertas, ler
+  corpo+comentários, responder tecnicamente, **triar** (corrigir o que for da
+  lane / registrar gap-plano regra 6 / declarar não-procedente), **corrigir e
+  fechar com `gh issue close` + commit** (só com prova; frente de outra lane =
+  pedir review do dono, nunca tocar). Interagir com issue que
   impacta o trabalho EM CURSO é parte do loop, não distração.
 - **Duas sessões, dois crons (13/09, pedido da mantenedora):** 9093 =
   `ses_f69e2a3f7ffe9J10aWcHEUOfW8` (heartbeat auto-loop, `*/5`) e 9094 =
