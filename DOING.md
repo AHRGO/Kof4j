@@ -70,8 +70,8 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > prefixo p/ emitLinear, COM guarda de fluxo). Prova (TDD): `recoversIfThen-
 > JoinAndRunsIt` EXECUTA o .kf (oracle g(6)=107/g(1)=101, RED→GREEN); DriftCheck
 > árvore = baseline 4; A/B stash mesma árvore: stubs 1390→**1387** (−3; puro é
-> raro no corpus); suíte 4-módulos **1691/0/5-skip**; DecompileTest 60/60.
-> **Dois traps medidos (viraram teste `nestedIfWithoutElseStaysHonestStub`):**
+> árvore = baseline 4; A/B stash mesma árvore: stubs 1390→**1387** (−3; puro é raro: 502 ifs puros orient-A, 0 orient-B, `Orient`),
+> `JoinAndRunsIt`+`recoversIfThenChainAndRunsIt` (corrente 2 ifs, 4 caminhos, 6/4/5/3 — **extra: borda não vaza p/ irmão**); DriftCheck
 > (1) borda descendo no braço do ELSE suga a sequela p/ dentro do else em if-
 > ANINHADO = CÓDIGO ERRADO COMPILÁVEL — revertido, aninhado fica em stub honesto
 > (R6); (2) `emitLinear` retorna PARCIAL em branch → trunc silencioso → guarda.

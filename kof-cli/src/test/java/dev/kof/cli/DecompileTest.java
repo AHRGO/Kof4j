@@ -837,6 +837,52 @@ class DecompileTest {
     }
 
     @Test
+    void recoversIfThenChainAndRunsIt(@TempDir Path dir) throws Exception {
+        // Fase C degrau 1 (Q3 idempotencia/irmas): DOIS if-sem-else seguidos.
+        // Prova que a borda de um naoo vaza p/ o irmao (stops consumido
+        // localmente): os 4 caminhos executam (oracle JVM medido 6/4/5/3).
+        Path src = dir.resolve("classes");
+        Files.createDirectories(src);
+        Path s = src.resolve("C.java");
+        Files.writeString(s, """
+                public class C {
+                    public static int c(int a, int b) {
+                        int x = 0;
+                        if (a > 0) { x = x + 1; }
+                        if (b > 0) { x = x + 2; }
+                        x = x + 3;
+                        return x;
+                    }
+                    public static void main(String[] a) {
+                        System.out.println(c(1, 1));
+                        System.out.println(c(1, 0));
+                        System.out.println(c(0, 1));
+                        System.out.println(c(0, 0));
+                    }
+                }
+                """);
+        runJavac(java.util.List.of(s), src);
+        String kof = Decompile.decompile(src.resolve("C.class"));
+        assertTrue(kof.contains("if (arg0 > 0) {") && kof.contains("if (arg1 > 0) {"),
+                "os dois ifs devem recuperar:\n" + kof);
+        assertFalse(kof.contains("} else {"), "nenhum com else (joins puros):\n" + kof);
+        Path out = dir.resolve("gen");
+        Files.createDirectories(out);
+        Path kf = out.resolve("C.kf");
+        Files.writeString(kf, kof);
+        CompilationResult r = new CompilerDriver().compileSources(java.util.List.of(kf),
+                dir.resolve("o"), Target.JVM, out);
+        assertTrue(r.success(), "corrente decompilada deve compilar:\n" + kof + "\n" + r.diagnostics().getDiagnostics());
+        ProcessBuilder pb = new ProcessBuilder("java", "-cp", dir.resolve("o").toString(), "C");
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String o = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+                .replace("\r\n", "\n").trim();
+        assertEquals(0, p.waitFor(), "run: " + o);
+        assertEquals("6\n4\n5\n3", o, "os 4 caminhos da corrente:\n" + kof);
+    }
+
+    @Test
     void nestedIfWithoutElseStaysHonestStub(@TempDir Path dir) throws Exception {
         // Fase C (Q4): o if-sem-else NAO-puro (then com sequela propria +
         // join externo) stuba HONESTO. Medido 13/09: a variante ingenua
