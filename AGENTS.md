@@ -196,11 +196,17 @@ scripts/auto-loop.sh status           # confirmar que está ativo
   `all` — snapshot `N=id` por issue) a cada N minutos e injeta um turno na
   sessão viva (mesmo `--attach` obrigatório do heartbeat; `seen` só avança
   após injeção bem sucedida; `server=` gravado no state fixa a porta p/ o tick
-  do cron). Em uso: **todas a cada 20min → sessão `ses_f69c2cb03ffe2zDYCqW7fesphi`
+  do cron). Em uso: **todas a cada 5min → sessão `ses_f69c2cb03ffe2zDYCqW7fesphi`
   (porta 9094)** — quando qualquer issue recebe comentário externo
   (review/parceiro/reporter), o agente LÊ, responde na issue se
   procedente, ajusta o plano/DOING e segue a fila. Interagir com issue que
   impacta o trabalho EM CURSO é parte do loop, não distração.
+- **Duas sessões, dois crons (13/09, pedido da mantenedora):** 9093 =
+  `ses_f69e2a3f7ffe9J10aWcHEUOfW8` (heartbeat auto-loop, `*/5`) e 9094 =
+  `ses_f69c2cb03ffe2zDYCqW7fesphi` (watcher all, `*/5`). **Nunca cruzar:**
+  cada tick injeta SÓ na sua sessão (`--attach` + porta gravada/resolvida).
+  O heartbeat da 9093 tinha sido parado; foi **reativado** (`auto-loop.sh start
+  ses_f69e2a3f7ffe9J10aWcHEUOfW8 5`, dry-run prova attach 9093).
 
 
 ---
