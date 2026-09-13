@@ -55,10 +55,10 @@ na   (null-safety + throw são o mecanismo).
 ## 3. Degraus commitáveis (cada um: dispatch + 3 backends + teste Kof<Domain>Test + matriz + doc)
 
 - **S0** este plano + claim DOING
-- **S1a** `JvmRuntimeCallDescriptors` 504→≤500 (split por domínio — pré-requisito do gate)
-- **S1** `math` (P0-a) — 4 targets
-- **S2** `strings` (parte 1: cases/slug/pad/reverse/count) — 4 targets
-- **S3** `strings` (parte 2: escapes/lines/words/indent/isX)
+- **S1a** `JvmRuntimeCallDescriptors` 504→≤500 (split por domínio — pré-requisito do gate) — **FEITO 08/09** (`ea0046c4`: 504→354, `JvmRuntimeReturnDescriptors` extraído; medido 13/09: **414 ≤500**, fora do baseline `check_500-baseline.txt`)
+- **S1** `math` (P0-a) — 4 targets — **FEITO 08/09** (math clamp/abs/sign/min/max/isEven/isOdd/isPositive/isNegative/isZero `d0b829a1`; Double segue em S1b/S1b.1/S1b.2; `KofMathTest` 15 testes)
+- **S2** `strings` (parte 1: cases/slug/pad/reverse/count) — 4 targets — **FEITO 08/09** (predicados isAlpha/isNumeric/isAlphaNumeric/isAscii/isUpperCase/isLowerCase/count + conversores capitalize/reverse/repeat/truncate; `KofStringsTest` 16 testes)
+- **S3** `strings` (parte 2: escapes/lines/words/indent/isX) — **FEITO** (escapeJson `aef9cf23` + indent/dedent nos 5 targets `ca1e3d36`; `KofStringsIndentDedentTest` 4 testes)
 - **S4** `encoding` (hex/url/base64/base64Url) **FEITO 08/09** — matriz `stdenc`
   4 alvos; base64* nos **4 alvos — ENC002 fechado 09/09** (port riscv B23; spec tolerante única). ⚠️ Nota:
   o runner JS do projeto (GraalJS embutido) NÃO tem `TextEncoder/TextDecoder` —
