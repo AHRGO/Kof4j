@@ -273,6 +273,17 @@ public final class CollectionCallLowerer {
                         break;
                     }
                 }
+                // #103 caso 3: o pin acima muda o TIPO DO LOCAL, mas este
+                // lowering continua usando o valueType/keyType lidos do
+                // receiver ANTES do pin (Unknown). Sem alinhá-los, o
+                // retType do KofCall sai Unknown e emitPrevValueUnbox é no-op
+                // (put deixa 1 Object na pilha) — mas o typer da statement
+                // (SemMethodCallTyper, que roda o mesmo pin) já vê Map<K,Long>
+                // e descarta com POP2. 1 slot empilhado × POP2 = underflow do
+                // frame (VerifyError / "frame crash"). Alinhar ao pinado casa
+                // o unbox (Object→long, 2 slots) com o descarte.
+                keyType = argTypes.get(0);
+                valueType = argTypes.get(1);
             }
             // §126 (ii): put CHAVE ou VALOR de tipo ≠ pinado polui o mapa.
             // Chave errada = scan tag=1 sobre Int cru → SIGSEGV no Native

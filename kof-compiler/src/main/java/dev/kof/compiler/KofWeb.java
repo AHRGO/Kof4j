@@ -164,6 +164,22 @@ public final class KofWeb {
         };
     }
 
+    /**
+     * #102 item 3: quais funções de contexto o runtime nativo realmente emite.
+     * O T1 nativo cobre listen/route + body/method/path; o resto não tem
+     * símbolo no .s gerado e virava `undefined reference` no ld.
+     */
+    static boolean contextNativeSupported(String function) {
+        return switch (function) {
+            case "kof_web_body" -> true;
+            default -> false;
+        };
+    }
+
+    static boolean isNativeTarget(Target t) {
+        return t == Target.NATIVE || t == Target.NATIVE_RISCV64 || t == Target.NATIVE_AARCH64;
+    }
+
 
     /** Request-context functions available inside route handlers. */
     static WebCall contextCall(String name, int argCount) {
