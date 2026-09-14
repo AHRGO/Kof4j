@@ -23,7 +23,11 @@ public final class CompilerClassLowering {
             }
         }
         if (superName == null) {
-            superName = cls.superClass() != null ? driver.toInternalName("", cls.superClass())
+            String rawSuper = cls.superClass();
+            if (rawSuper != null && rawSuper.contains("<")) {
+                rawSuper = rawSuper.substring(0, rawSuper.indexOf('<')).trim();
+            }
+            superName = rawSuper != null ? driver.toInternalName("", rawSuper)
                     : "java/lang/Object";
         }
         List<String> ifaces = cls.interfaces().stream().map(n -> CompilerAnnotations.externalOrLocalInternalName(driver, n)).toList();

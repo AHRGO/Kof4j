@@ -2245,6 +2245,48 @@ class CoreRegressionE2ETest {
         assertEquals("int=10\ndbl=2.5\nint=42\ndouble=3.14\nbool=true", runJvm(out));
     }
 
+    // Issue #246 — Extending a generic class writes angle-bracketed name as super_class
+    @Test
+    void extendGenericClassJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("extend_generic.kf");
+        Files.writeString(src, """
+                class Container<T> {
+                    T item
+                    T get() { return item }
+                    void set(T v) { item = v }
+                }
+                class StringBox extends Container<String> {
+                    void hello() { println("hi") }
+                }
+                class TypedBox<T> extends Container<T> {
+                    void test() { println("typed") }
+                }
+                class IntBox extends Container<Int> {
+                    void num() { println("int") }
+                }
+                main() {
+                    var sb = new StringBox()
+                    sb.hello()
+                    sb.set("world")
+                    println(sb.get())
+
+                    var tb = new TypedBox<String>()
+                    tb.test()
+                    tb.set("box")
+                    println(tb.get())
+
+                    var ib = new IntBox()
+                    ib.num()
+                    ib.set(123)
+                    println(ib.get())
+                }
+                """);
+        Path out = tempDir.resolve("extend_generic-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("hi\nworld\ntyped\nbox\nint\n123", runJvm(out));
+    }
+
     // Issue #241 — Catch clause with qualified exception name generates illegal class name in exception table
     @Test
     void qualifiedExceptionInCatchClauseJvm(@TempDir Path tempDir) throws IOException {
