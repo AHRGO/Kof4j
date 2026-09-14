@@ -2,9 +2,27 @@
 
 # Kof Project Status
 
-**Last updated:** September 12, 2026
+**Last updated:** September 14, 2026
 **Version:** 0.4.0-beta (pom `revision`)
 
+> **14/09 — RELEASE-STABILIZATION BASELINE (owner = 192.168.100.17, docs/stab
+> lane).** Clean 4-module run (`rm -rf */target`): **1819 tests, 3 failures,
+> 0 errors, 7 skips** (compiler 1552 + script 37 + kof-c 5 + cli 225). All 3
+> reds are **cross-arch in other lanes**, catalogued with repro + root-cause
+> pointer (NOT this lane, NOT to be attacked without owner):
+> **§181 residual** — `riscv64CastSaturation` + `aarch64CastSaturation`, the
+> ONLY diverging golden row is `(-inf) as Int` (`0` vs `-2147483648`; the rest
+> re-confirmed green on HEAD with `67db6c50` merged), nat lane active (fix
+> 22:42 13/09); **§192** — `KofMathTest.parseOrDefaultCrossArch` HANGS on riscv
+> (a throwing `parse*OrDefault` before a `parseDouble` corrupts `kof_exc_chain`
+> via the B41 `sd a1,24(sp)` default/chain slot alias → non-converging exponent
+> scaling loop; 2-line repro + loop PC in known-bugs §192), stdlib/nat lane.
+> Everything else is green (JVM/Script/JS/x86 parity holds). **The release is
+> NOT freezable until these 3 go 0-failures** — gate = 0 FAILURE outside the
+> missing-`node` (13) + external-DB (5) + toolchain guards. §176 closed
+> (`a5eedbe2`, root cause = stale constant-fold of the JS web slice). Decompiler
+> stays deprioritized (maintainer decision — meta = stabilize the release).
+>
 > **12/09 — §107 SCALAR face CLOSED on the 3 native targets** (`println(<collection>)`
 > printed pointer garbage; `kof_{list,set,map}_to_string` + compile-time tag
 > x86 `f3b3821c` + cross riscv/aarch B39 `411e9ce5`, golden JVM byte-identical

@@ -570,18 +570,21 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > roundtrip JVM→JS + SECN006 cross). **Resta da C11/C18:** `app.security()`
 > (middleware composto) — depende de `app.use` no app model (I2).
 >
-> **PRÓXIMO PASSO (estabilização beta-0.4.0 → release):** rodar a suíte
-> COMPLETA limpa pós-push (`rm -rf */target && mvn -o test -pl
-> kof-compiler,kof-script,kof-c-compiler,kof-cli -am
-> -Dsurefire.failIfNoSpecifiedTests=false -Dmaven.test.failure.ignore=true`)
-> e registrar a linha de base em `docs/status.md` (gate de release = 0
-> FAILURE fora dos erros de `node`/BD ausente + das guardas de toolchain).
-> A fila `known-bugs.md` aberta (13 itens) é TODA de outras lanes (`.15`/
-> `.18`/Native) ou regra 6/decisão da mantenedora — **NÃO atacar sem don**
-> **o**; se a suíte verde confirmar estabilidade, seguir a condição de
-> ESTABILIDADE do AGENTS.md (recusar re-disparo, parar o cron). **NUNCA:**
-> tocar `nat/` GC, lanes `.15`/`.22`; reabrir decompiler/translator sem
-> decisão (despriorizados — meta = estabilizar a release).
+> **PRÓXIMO PASSO (estabilização beta-0.4.0 → release, atualizado 14/09
+> ~09:00):** a linha de base COMPLETA limpa foi **RODADA e REGISTRADA** em
+> `docs/status.md` (topo, 14/09): **1819 testes / 3 falhas / 0 erros / 7 skips**.
+> As 3 falhas são TODAS cross-arch de outras lanes, com repro + causa raiz no
+> `known-bugs.md` (re-confirmed no HEAD atual): §181 residual (`(-inf) as Int`
+> → `0`; riscv+aarch, 1.0–2.2s) e §192 (`parse*OrDefault` throw→`parseDouble`
+> trava; aliasing de slot B41). **Gate de release = 0 FAILURE fora desses 3 +
+> dos erros de `node`/BD ausente/guardas.** O que a lane de estabilização pode
+> fazer AGORA sem violar regra 6: (a) aguardar a lane nat (viva — `67db6c50`
+> 22:42, `ac794c52` 02:26) fechar os 3 e re-medir; (b) caça Q4 read-only sobre
+> a fila (faces ainda não catalogadas); (c) i18n dos 6 meta-vivos PENDENTE de
+> decisão da mantenedora (outros agentes editam esses arquivos ao vivo — ver a
+> linha i18n acima). **NUNCA:** tocar `nat/` GC, lanes `.15`/`.22`; reabrir
+> decompiler/translator sem decisão (despriorizados — meta = estabilizar a
+> release).
 >
 >
 > **✅ FEITO (14/09 ~00:30, dono = 192.168.100.22): CI vermelho na beta

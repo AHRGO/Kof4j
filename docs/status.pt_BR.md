@@ -2,9 +2,28 @@
 
 # Status do Projeto Kof
 
-**Última atualização:** 12 de setembro de 2026
+**Última atualização:** 14 de setembro de 2026
 **Versão:** 0.4.0-beta (pom `revision`)
 
+> **14/09 — LINHA DE BASE DA ESTABILIZAÇÃO DE RELEASE (dono = 192.168.100.17,
+> lane docs/estabilização).** Run limpo 4-módulos (`rm -rf */target`): **1819
+> testes, 3 falhas, 0 erros, 7 skips** (compiler 1552 + script 37 + kof-c 5 +
+> cli 225). As 3 vermelhas são **cross-arch de OUTRAS lanes**, catalogadas com
+> repro + pointer de causa raiz (NÃO desta lane, NÃO atacar sem dono):
+> **residual §181** — `riscv64CastSaturation` + `aarch64CastSaturation`, a
+> ÚNICA linha divergente do golden é `(-inf) as Int` (`0` vs `-2147483648`; o
+> resto re-confirmado verde no HEAD com `67db6c50` no history), lane nat viva
+> (fix 22:42 13/09); **§192** — `KofMathTest.parseOrDefaultCrossArch` TRAVA no
+> riscv (um `parse*OrDefault` que lança antes de um `parseDouble` corrompe o
+> `kof_exc_chain` via aliasing do slot default/chain `sd a1,24(sp)` no B41 →
+> loop de escalação de expoente sem convergência; repro de 2 linhas + PC do
+> loop no known-bugs §192), lane stdlib/nat. Todo o resto verde (paridade
+> JVM/Script/JS/x86 segura). **A release NÃO congela enquanto esses 3 não
+> zerarem** — gate = 0 FAILURE fora dos erros de `node` ausente (13) + BD
+> externa (5) + guardas de toolchain. §176 fechado (`a5eedbe2`, causa raiz =
+> constant-fold stale da fatia JS web). Decompiler segue despriorizado
+> (decisão da mantenedora — meta = estabilizar a release).
+>
 > **12/09 — §107 face ESCALAR FECHADA nos 3 alvos nativos** (`println(<coleção>)`
 > imprimia lixo de ponteiro; `kof_{list,set,map}_to_string` + tag compile-time
 > x86 `f3b3821c` + cross riscv/aarch B39 `411e9ce5`, golden JVM byte-idêntico
