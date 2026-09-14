@@ -110,8 +110,28 @@ class KofBlogE2ETest {
                 """.replace("KOFE2EPORT", port);
     }
 
-    private String post(int port, String path, String jsonBody) throws IOException {
+    /**
+     * DECISIONS §5 (Spring model): CSRF is ON by default for state-changing
+     * methods. A safe request (GET) to a public path issues the double-submit
+     * cookie; the client echoes it as {@code Cookie: csrf=...} +
+     * {@code X-CSRF-Token: ...} on every POST.
+     */
+    private String csrfToken(int port) throws IOException {
+        String r = http(port, "GET /login HTTP/1.1\r\nHost: x\r\n\r\n");
+        for (String line : r.split("\r\n")) {
+            if (line.toLowerCase().startsWith("set-cookie:")) {
+                for (String part : line.substring(line.indexOf(':') + 1).trim().split(";")) {
+                    String kv = part.trim();
+                    if (kv.startsWith("csrf=")) return kv.substring("csrf=".length());
+                }
+            }
+        }
+        throw new IOException("no csrf cookie issued by GET /login; response: " + r);
+    }
+
+    private String post(int port, String path, String jsonBody, String csrf) throws IOException {
         String req = "POST " + path + " HTTP/1.1\r\nHost: x\r\n"
+                + (csrf == null ? "" : "Cookie: csrf=" + csrf + "\r\nX-CSRF-Token: " + csrf + "\r\n")
                 + "Content-Length: " + jsonBody.getBytes(StandardCharsets.UTF_8).length
                 + "\r\n\r\n" + jsonBody;
         return http(port, req);
@@ -195,12 +215,15 @@ class KofBlogE2ETest {
         startAppManaged(tempDir, port, blogApp(String.valueOf(port)));
         Process app = appProcesses.get(tempDir);
         try {
+            // 0. CSRF (on by default, DECISIONS §5): obtém o cookie double-submit.
+            String csrf = csrfToken(port);
+
             // 1. registro
-            String r = post(port, "/register", "{\"user\":\"mel\",\"password\":\"hunter2\"}");
+            String r = post(port, "/register", "{\"user\":\"mel\",\"password\":\"hunter2\"}", csrf);
             assertEquals("HTTP/1.1 201 Created", getStatus(r), r);
 
             // 2. login → token de sessão
-            r = post(port, "/login", "{\"user\":\"mel\",\"password\":\"hunter2\"}");
+            r = post(port, "/login", "{\"user\":\"mel\",\"password\":\"hunter2\"}", csrf);
             assertEquals("HTTP/1.1 200 OK", getStatus(r), r);
             String body = getBody(r);
             assertTrue(body.contains("\"token\""), body);
@@ -208,17 +231,18 @@ class KofBlogE2ETest {
             assertFalse(token.isBlank(), "token must be non-empty: " + body);
 
             // 3. login com senha errada → 401
-            r = post(port, "/login", "{\"user\":\"mel\",\"password\":\"wrong\"}");
+            r = post(port, "/login", "{\"user\":\"mel\",\"password\":\"wrong\"}", csrf);
             assertEquals("HTTP/1.1 401 Unauthorized", getStatus(r), r);
 
             // 4. criar post com sessão → 201
             String post = "{\"id\":\"ignored\",\"title\":\"Kof\",\"body\":\"validação da plataforma\"}";
             r = http(port, "POST /posts HTTP/1.1\r\nHost: x\r\nauthorization: " + token
+                    + "\r\nCookie: csrf=" + csrf + "\r\nX-CSRF-Token: " + csrf
                     + "\r\nContent-Length: " + post.getBytes(StandardCharsets.UTF_8).length
                     + "\r\n\r\n" + post);
             assertEquals("HTTP/1.1 201 Created", getStatus(r), r);
 
-            // 5. post sem sessão → 401
+            // 5. post sem sessão → 401 (a sessão é validada ANTES do CSRF)
             r = http(port, "POST /posts HTTP/1.1\r\nHost: x\r\nContent-Length: "
                     + post.getBytes(StandardCharsets.UTF_8).length + "\r\n\r\n" + post);
             assertEquals("HTTP/1.1 401 Unauthorized", getStatus(r), r);

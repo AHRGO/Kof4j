@@ -24,6 +24,12 @@ public final class JvmWebSecurityRuntime {
                  * rateLimit (String "n/janelaSeg" ou Number de requests),
                  * csrf (Bool), sessionHeader (String), publicPaths (String CSV),
                  * auth (Bool), roles (String CSV ou List).
+                 *
+                 * §5 (Spring model): `permitAll` é alias de `publicPaths`
+                 * (allow-list de matchers; todo o resto exige autenticação).
+                 * CSRF é ON por padrão (métodos seguros emitem o cookie;
+                 * métodos de mutação exigem o double-submit) — pode desligar
+                 * com csrf:false.
                  */
                 public static void kof_web_security(String appId) {
                     kof_web_security_opts(appId, null);
@@ -32,6 +38,9 @@ public final class JvmWebSecurityRuntime {
                 public static void kof_web_security_opts(String appId, java.util.Map<?, ?> opts) {
                     WebApp app = kof_web_app(appId);
                     app.securityConfigured = true;
+                    // §5 (Spring model): CSRF ON por padrão quando app.security()
+                    // é configurado (csrf:false desliga explicitamente).
+                    app.securityCsrf = true;
                     if (opts == null) return;
                     Object headers = opts.get("headers");
                     if (headers != null) app.securityHeaders = kof_web_sec_bool(headers);
@@ -58,6 +67,7 @@ public final class JvmWebSecurityRuntime {
                         app.securityAuthHeader = s.toLowerCase();
                     }
                     Object publicPaths = opts.get("publicPaths");
+                    if (publicPaths == null) publicPaths = opts.get("permitAll");
                     if (publicPaths instanceof String csv && !csv.isBlank()) {
                         for (String p : csv.split(",")) {
                             if (!p.isBlank()) app.securityPublicPaths.add(p.trim());

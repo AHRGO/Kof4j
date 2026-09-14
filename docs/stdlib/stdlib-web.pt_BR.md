@@ -111,7 +111,8 @@ Retorno `null` → continua; retorno `String` → resposta imediata (200).
 Aplica a **ordem fixa** rate-limit → CORS → headers → cookies/session → csrf →
 auth → RBAC → rota (D-SEC). Substitui a cadeia manual de `app.use`.
 
-Sem argumentos, liga só os **headers de hardening** (sempre seguros):
+Sem argumentos, liga os **headers de hardening** (sempre seguros) e o **CSRF**
+para métodos que mudam estado:
 
 - `Content-Security-Policy: default-src 'self'; frame-ancestors 'none'; base-uri 'self'`
 - `X-Content-Type-Options: nosniff`
@@ -124,9 +125,11 @@ Opts documentados (chaves do `Map`; qualquer outra é ignorada):
 | Chave | Tipo | Default | Efeito |
 |-------|------|---------|--------|
 | `headers` | `Bool` | `true` | Liga/desliga os headers acima |
-| `cors` | `String` | off | Origem permitida, CSV ou `*`. Origem não listada → 403; preflight `OPTIONS` → 204 |
-| `rateLimit` | `String` | off | `"limite/janelaSegundos"` por IP remoto (ex.: `"100/60"`). Excedeu → 429 + `Retry-After` |
-| `csrf` | `Bool` | `false` | Double-submit cookie: emite `csrf` (SameSite=Lax) em métodos seguros; exige `X-CSRF-Token` casando com o cookie em POST/PUT/PATCH/DELETE, senão 403 |
+| `cors` / `corsOrigin` | `String` | off | Origem permitida, CSV ou `*`. Origem não listada → 403; preflight `OPTIONS` → 204 |
+| `rateLimit` | `String` ou `Number` | off | `"limite/janelaSegundos"` (ex.: `"100/60"`) ou só o limite. Por IP remoto; excedeu → 429 + `Retry-After` |
+| `csrf` | `Bool` | `true` | Double-submit cookie: emite `csrf` (SameSite=Lax) em métodos seguros; exige `X-CSRF-Token` casando com o cookie em POST/PUT/PATCH/DELETE, senão 403. `csrf:false` desliga |
+| `sessionHeader` | `String` | off | Nome do header de sessão. Fora dos `publicPaths`, **toda** request (GET incluído) exige sessão válida; ausente/inválida → 401 |
+| `publicPaths` / `permitAll` | `String` CSV | — | Allow-list de matchers públicos (ex.: `"/register,/login"`); todo o resto exige autenticação |
 | `auth` | `Bool` | `false` | Exige `Authorization: Bearer` JWT válido (secret via `auth.secret`); ausente/inválido → 401 + `WWW-Authenticate` |
 | `roles` | `String` CSV ou `List` | — | Exige todas as roles (claims `roles`); falta → 403 (implica auth) |
 

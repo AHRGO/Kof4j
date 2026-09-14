@@ -395,6 +395,7 @@ public final class JvmWebCoreRuntime {
                     int securityRateLimit = 0;
                     int securityRateWindow = 60;
                     String securityCors = null;
+                    // §5: CSRF ON só com app.security() (kof_web_security_opts).
                     boolean securityCsrf = false;
                     String securityAuthHeader = null;
                     final java.util.List<String> securityPublicPaths = new java.util.ArrayList<>();

@@ -7511,6 +7511,13 @@ the user's — a compile-time diagnostic is the goal (rule 6).
 
 ### §195 ✅ FIXED 14/09 (same `KofBlogE2ETest` green re-measured 14:35 on `b7fdcb7e`: the single test method covers both GETs w/ session and POSTs w/ Content-Length — both faces closed) — `KofBlogE2ETest` RED (HEAD `11780dc1`): the test started using `app.security(...)` (C18) but the `GET /posts` and `GET /posts/:id` do not send the session header → 401 (the middleware is RIGHT) — ⚠️ TEST, not product; Q5 (commit `ab15a30f` went up with the test red) — recorded 14/09 (bugs-and-gaps lane `192.168.100.15`; owner = lane `.18`/`.22`, `app.security`)
 
+> **✅ RE-CONFIRMED 14/09 (owner lane `.18`, DECISIONS §5):** the "reads public"
+> note of the C18 merge was stale — the session guard already rejects any
+> non-`publicPaths` request (GET included). §5 execution flipped **CSRF on by
+> default** (once `app.security()` is configured) and added **`permitAll`** as a
+> `publicPaths` alias; `KofBlogE2ETest` now does the CSRF double-submit on its
+> POSTs (`KofWebE2ETest` 25/25 + blog 1/1 green).
+
 - **Symptom (measured 14/09, HEAD `11780dc1`, `mvn -o -pl kof-compiler -am
   -Dtest=KofBlogE2ETest`):** the only blog test fails at
   `KofBlogE2ETest.java:228` (step 6, `GET /posts`) with

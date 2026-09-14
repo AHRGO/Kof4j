@@ -91,8 +91,8 @@ public final class JvmRuntimeWebDispatch {
                         }
                     }
                     // 4. session: header de auth obrigatório fora dos prefixos
-                    //    públicos (login/health). Sem header → 401; header
-                    //    presente mas sessão inválida → 401 (nunca passa).
+                    //    públicos (§5: autenticado por padrão, LEITURA incluída;
+                    //    publicPaths é a allow-list). Sessão inválida nunca passa.
                     if (app.securityAuthHeader != null) {
                         boolean isPublic = app.securityPublicPaths.stream()
                                 .anyMatch(p -> req.path.equals(p) || req.path.startsWith(p));
@@ -106,6 +106,9 @@ public final class JvmRuntimeWebDispatch {
                         }
                     }
                     // 5. csrf: double-submit cookie (ou token de sessão).
+                    //    §5 (Spring model): ON por padrão (método seguro emite
+                    //    o cookie; mutação exige o double-submit). csrf:false
+                    //    desliga explicitamente.
                     if (app.securityCsrf) {
                         boolean safe = "GET".equals(req.method)
                                 || "HEAD".equals(req.method)

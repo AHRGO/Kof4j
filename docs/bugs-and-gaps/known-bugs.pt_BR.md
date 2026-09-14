@@ -7495,6 +7495,13 @@ usuário — diagnostic em compile-time é a meta (regra 6).
 
 ### §195 ✅ CORRIGID 14/09 (mesmo `KofBlogE2ETest` verde re-medido 14:35 em `b7fdcb7e`: o único método cobre GETs c/ sessão e POSTs c/ Content-Length — ambas as faces fechadas) — `KofBlogE2ETest` VERMELHO (HEAD `11780dc1`): o teste passou a usar `app.security(...)` (C18) mas os `GET /posts` e `GET /posts/:id` não mandam o header de sessão → 401 (o middleware está CERTO) — ⚠️ TESTE, não produto; Q5 (commit `ab15a30f` subiu com o teste vermelho) — registrado 14/09 (lane bugs-and-gaps `192.168.100.15`; dono = lane `.18`/`.22`, `app.security`)
 
+> **✅ RE-CONFIRMADO 14/09 (dono lane `.18`, DECISÕES §5):** a nota "reads
+> públicas" do merge C18 estava desatualizada — a guarda de sessão já rejeita
+> toda request fora de `publicPaths` (GET incluído). A execução do §5 ligou o
+> **CSRF por default** (quando `app.security()` é configurado) e adicionou
+> **`permitAll`** como alias de `publicPaths`; o `KofBlogE2ETest` agora faz o
+> double-submit de CSRF nos POSTs (`KofWebE2ETest` 25/25 + blog 1/1 verde).
+
 - **Sintoma (medido 14/09, HEAD `11780dc1`, `mvn -o -pl kof-compiler -am
   -Dtest=KofBlogE2ETest`):** o único teste do blog falha em
   `KofBlogE2ETest.java:228` (passo 6, `GET /posts`) com
