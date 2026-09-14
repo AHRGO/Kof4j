@@ -535,17 +535,20 @@ class SemanticResolutionTest {
         assertTrue(r.success(), "legítimo deve compilar: " + r.diagnostics().getDiagnostics());
     }
 
-    // ---- subscript `[]`: existe para ARRAY e para List (get e set). List[i]
-    // era SEM054 e virou rota kof_list_get/kof_list_set no #149/#152 (prova
-    // viva: CoreRegressionE2ETest.listIndexAccess + listIndexPrimitiveUnbox).
-    // String/Map/Set seguem SEM054 nos 5 alvos (paridade absoluta). ----
+    // ---- subscript `[]`: existe para ARRAY e para a LEITURA de List
+    // (`l[i]` → kof_list_get, #149/#152). A ESCRITA `l[i] = v` NÃO foi
+    // lowerada (emitia store cru de array: JVM VerifyError aastore, Native
+    // SIGSEGV, JS silencioso — §220) e segue rejeitada com SEM054 apontando
+    // p/ `l.set(i, v)`. String/Map/Set seguem SEM054 nos 5 alvos
+    // (paridade absoluta). ----
 
     @Test
     void subscriptOnCollectionsRejected(@TempDir Path tmp) throws IOException {
         String[] exprs = {
             "var s = \"abc\"; println(s[0])",
             "var m = mapOf(\"a\", 1); println(m[\"a\"])",
-            "var st = setOf(\"a\"); println(st[\"a\"])"};
+            "var st = setOf(\"a\"); println(st[\"a\"])",
+            "var l2 = listOf(1); l2[0] = 9"};
         for (String e : exprs) {
             CompilationResult r = compile(tmp, "e.kf", "main() { " + e + " }");
             assertFalse(r.success(), "deve falhar: " + e);
@@ -554,6 +557,14 @@ class SemanticResolutionTest {
             assertTrue(found, "esperava SEM054 p/ '" + e + "', foi: "
                     + r.diagnostics().getDiagnostics());
         }
+    }
+
+    @Test
+    void listSubscriptReadIsSupported(@TempDir Path tmp) throws IOException {
+        CompilationResult r = compile(tmp, "e.kf",
+                "main() { var l = listOf(10, 20); println(l[1]) }");
+        assertTrue(r.success(), "List[i] leitura (#149/#152) deve compilar: "
+                + r.diagnostics().getDiagnostics());
     }
 
     // ---- §122: índice de List.get/set/remove é Int (learn/12). String/record

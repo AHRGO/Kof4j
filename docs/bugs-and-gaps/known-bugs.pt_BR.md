@@ -7278,6 +7278,48 @@ antes — lição da obsolescência do §206/§207), corpos-exatos das issues
 
 §193 — E2E blog (F12): `db.query` cru + `.get("col")`/recursos dentro de handler web derr
 
+### §228 — `List[i] = v` (e o composto `List[i] += v`) era ACEITO mas nunca baixado: JVM `VerifyError` no `aastore`, Native SIGSEGV (exit 139), JS silencioso — ✅ CORRIGIDO 14/09 (exposto por `0ab25887`; fix = lane bugs-and-gaps `192.168.100.15`)
+
+- **Sintoma (medido 14/09 ~13:40 em `9048a366`, classes frescas):**
+  ```kof
+  main() { var l2 = listOf(1); l2[0] = 9; println(l2.get(0)) }
+  ```
+  compila sem diagnóstico e então: **JVM** `VerifyError: Bad type on operand
+  stack @21: aastore` (frame `stack={ArrayList, integer, integer}`, integer
+  não atribuível a `Object`), **Native** exit 139 (SIGSEGV), **JS** exit 0
+  (`9`). A face composta `l[0] += 10` quebra igual no JVM (`VerifyError …
+  aaload`). Violação regra 5/6: compila e não carrega.
+- **Causa raiz:** `ExpressionAssignmentLowerer` trata um alvo `ArrayAccessExpr`
+  com `KofArrayStore` cru incondicionalmente (caminho `aaload`/`aastore`).
+  #149/#152 (`6d7ac697`) roteou só a LEITURA `l[i]` para `kof_list_get`; a
+  ESCRITA nunca foi baixada. Antes ficava mascarada porque `listOf(...)` era
+  tipado `List` e caía no SEM054 (rejeitado), enquanto `new List<T>()` era
+  `Unknown` e escapava; `0ab25887` (fix #214) mapeou `new List<T>()` para
+  `BuiltinTypes.LIST` E isentou `List` do guard SEM054 para manter
+  `new List<T>()[i]` funcionando — o que também tornou `listOf(...)[i] = v`
+  alcançável, expondo a escrita quebrada.
+- **Fix (raiz, `StatementAnalyzer.analyzeAssignmentStatement`):** quando o
+  alvo da atribuição é um `ArrayAccessExpr` cujo receiver é uma coleção
+  conhecida (String/List/Map/Set, nullable desembrulhado, `Unknown` excluído —
+  SG-008), emite **SEM054** apontando para o mutador da coleção
+  (`l.set(i, v)` / `m.put(k, v)`) em vez de deixar o store cru de array passar.
+  Arrays intactos. É fix de bug (R6), não mudança de contrato: o corpus escreve
+  listas com `l.set(0, 9)` (`training/idioms/collections.md:20`); `l[i] = v`
+  nunca foi baixado.
+- **Alinhamento de teste (`SemanticResolutionTest`):** o antigo
+  `subscriptOnCollectionsRejected` ainda listava a LEITURA de List como falha
+  esperada (obsoleto desde #149/#152); agora rejeita só as formas de fato
+  quebradas (subscript de String/Map/Set + `List[i] = v`), e o novo
+  `listSubscriptReadIsSupported` fixa a leitura `l[i]` suportada.
+- **Prova (4 alvos):** escrita em array segue funcionando (`a[0]=7` → `8`
+  JVM/JS/Native); `l.set(0,9)` → `9` nos 3; leitura `l[1]` → `20` nos 3;
+  `l2[0]=9` e `l[0]+=10` → SEM054 com o hint `.set`. `SemanticResolutionTest`
+  30/30.
+- **Nota de dono (lane `.17`):** o fix vive no `StatementAnalyzer` (não no guard
+  do `SemExpressionTyper` de `0ab25887`, para preservar a isenção da leitura).
+
+## §193 — E2E blog (F12): `db.query` cru + `.get("col")`/recursos dentro de handler web derr
+
 > **Renumerado de §189→§193 (14/09, dono = 192.168.100.17):** colisão tripla
 > de §189 na varredura (record-nullable da lane `.15` venceu por posição;
 > parseOrDefault virou §192). Registro da lane compiler; conteúdo intocado.ubam a conexão com `VerifyError`/`connection closed before headers` — catalogado 14/09 (lane development, dono = 192.168.100.18, descoberto no blog E2E D-SPRING F12)
