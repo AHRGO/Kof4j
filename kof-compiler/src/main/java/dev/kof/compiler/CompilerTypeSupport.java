@@ -85,7 +85,7 @@ public final class CompilerTypeSupport {
         return false;
     }
 
-    static boolean fpSupportedOnNative(CompilerDriver driver, Type type, SourcePosition pos) {
+    static boolean fpSupportedOnNative(CompilerDriver driver, Type type, @SuppressWarnings("unused") SourcePosition pos) {
         // Native float/double now supported via XMM (was FLT001) — KofJS always was
         return true;
     }
