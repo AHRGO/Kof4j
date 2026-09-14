@@ -451,7 +451,14 @@ Fase E  Kof Decompiler          (gerar Kof source)
 > **Conclusão firme: nenhuma guarda local basta — o único caminho para teste
 > com cálculo é o walker com pós-dominador (degrau 3 real).** A extração da
 > máquina (`machineRun`) está provada byte-idêntica (DriftCheck baseline 4) e
-> é pré-requisito do degrau 3; guarda-se no histórico da branch, não no tree.
+> é pré-requisito do degrau 3. **AUDITORIA 14/09 (lane docs/development, vs
+> CÓDIGO, não memória): a frase acima ficou OBSOLETA — a extração ENTROU no
+> tree em `158c174b` (13/09 19:52, "refactor(decompiler): extrai maquina de
+> expressao do linearReturn"), DEPOIS desta sessão ter escrito o revert.
+> Hoje `BytecodeDecoder.machineRun` está VIVA e É o corpo de `linearReturn`
+> (BytecodeDecoder.java:73/97). Pré-requisito do degrau 3: presente e
+> provado (o DriftCheck=baseline-4 byte-idêntico vale — linearReturn passa
+> por ela em toda chamada).
 >
 > **Estágio 3 (13/09, dono = 192.168.100.17): interna do MESMO pacote.**
 > Categorização reflexiva dos 89 rejeitados (harness `RecCat`): **31** eram

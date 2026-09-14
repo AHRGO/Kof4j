@@ -451,7 +451,14 @@ Phase E  Kof Decompiler          (generate Kof source)
 > **Firm conclusion: no local guard suffices — the only path for a test
 > with computation is the walker with post-dominator (real step 3).** The extraction of the
 > machine (`machineRun`) is proven byte-identical (DriftCheck baseline 4) and
-> is a prerequisite of step 3; it is kept in the branch history, not in the tree.
+> is a prerequisite of step 3. **AUDIT 14/09 (lane docs/development, vs CODE,
+> not memory): the statement above became STALE — the extraction LANDED in
+> the tree at `158c174b` (13/09 19:52, "refactor(decompiler): extrai maquina
+> de expressao do linearReturn"), AFTER this session's revert was written.
+> Today `BytecodeDecoder.machineRun` is live and IS the body of
+> `linearReturn` (BytecodeDecoder.java:73/97). Prerequisite of step 3:
+> present and proven (the byte-identical DriftCheck=baseline-4 holds —
+> linearReturn goes through it on every call).
 >
 > **Stage 3 (13/09, owner = 192.168.100.17): internal of the SAME package.**
 > Reflective categorization of the 89 rejected (harness `RecCat`): **31** were
