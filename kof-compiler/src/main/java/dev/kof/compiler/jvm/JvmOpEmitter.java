@@ -269,10 +269,11 @@ public final class JvmOpEmitter {
                     mv.visitInsn(LCMP);
                     cmpOpcode = JvmLiteralEmitter.intCompareOpcode(kb.op());
                 } else if (isFloat) {
-                    mv.visitInsn(FCMPL);
+                    // §101: cmpg p/ < e <= (NaN → false, como o javac/IEEE).
+                    mv.visitInsn(JvmLiteralEmitter.floatCmpIsG(kb.op()) ? FCMPG : FCMPL);
                     cmpOpcode = JvmLiteralEmitter.intCompareOpcode(kb.op());
                 } else if (isDouble) {
-                    mv.visitInsn(DCMPL);
+                    mv.visitInsn(JvmLiteralEmitter.floatCmpIsG(kb.op()) ? DCMPG : DCMPL);
                     cmpOpcode = JvmLiteralEmitter.intCompareOpcode(kb.op());
                 } else {
                     cmpOpcode = switch (kb.op()) {
@@ -349,9 +350,10 @@ public final class JvmOpEmitter {
         if (isLong) {
             mv.visitInsn(LCMP);
         } else if (isFloat) {
-            mv.visitInsn(FCMPL);
+            // §101: cmpg p/ < e <= (NaN → false, como o javac/IEEE).
+            mv.visitInsn(JvmLiteralEmitter.condCmpIsG(kc.comparison()) ? FCMPG : FCMPL);
         } else if (isDouble) {
-            mv.visitInsn(DCMPL);
+            mv.visitInsn(JvmLiteralEmitter.condCmpIsG(kc.comparison()) ? DCMPG : DCMPL);
         }
         int opcode;
         if (isRef) {

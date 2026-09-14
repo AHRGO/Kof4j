@@ -78,6 +78,16 @@ public final class CompilerTypes {
                 String via = simpleNamePackage(name, unit, sa);
                 if (via != null) pkg = via;
             }
+            // 2b) §179 (D-BACKEND-SEMANTICS #4): tipo kof.ui/kof.media DECLARADO
+            // (var/param/campo/retorno) que nada mais resolveu → builtin. Sem
+            // isto o descritor JVM saía `LLabel;` enquanto o handle é `int`
+            // (VerifyError). O shadowing do usuário é preservado: se o módulo
+            // declara um tipo homônimo (nome simples, mesmo arquivo), ele vence.
+            if (pkg.isEmpty() && !name.contains(".") && !name.contains("<")
+                    && !unitDeclaresType(unit, name) && (sa == null || sa.getClass(name) == null)) {
+                Type builtin = builtinDeclaredType(name);
+                if (builtin != null) return qualifyDeep(builtin, unit, sa);
+            }
             // 3) args recursivos
             List<Type> args = new java.util.ArrayList<>();
             boolean changedArgs = false;
@@ -135,6 +145,31 @@ public final class CompilerTypes {
             if (cs != null) return cs.packageName();
         }
         return null;
+    }
+
+    /**
+     * §179: tipo kof.ui/kof.media por nome simples, para RESOLUÇÃO DE TIPO
+     * DECLARADO (var/param/campo/retorno). {@code KofUi.typeByName} cobre todos
+     * os tipos de UI; {@code ImageData} é o único tipo de DADO de kof.media com
+     * nome próprio (Audio/Video de media são namespaces e o typer de construtor
+     * já os resolve como ui.Audio/ui.Video). Retorna null se não for builtin.
+     */
+    static Type builtinDeclaredType(String name) {
+        Type ui = KofUi.typeByName(name);
+        if (ui != null) return ui;
+        if ("ImageData".equals(name)) return KofMedia.IMAGE_DATA;
+        return null;
+    }
+
+    /** O módulo (mesmo arquivo) declara classe/record/enum com este nome? */
+    static boolean unitDeclaresType(CompilationUnitNode unit, String name) {
+        if (unit == null) return false;
+        for (AstNode d : unit.declarations()) {
+            if (d instanceof ClassDeclarationNode c && c.name().equals(name)) return true;
+            if (d instanceof RecordDeclarationNode r && r.name().equals(name)) return true;
+            if (d instanceof EnumDeclarationNode e && e.name().equals(name)) return true;
+        }
+        return false;
     }
 
     /** Espelho driver-side do qualifyViaImports do SemanticAnalyzer. */

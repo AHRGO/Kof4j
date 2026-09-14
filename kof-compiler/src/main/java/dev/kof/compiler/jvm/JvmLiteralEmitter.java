@@ -7,7 +7,9 @@ import dev.kof.compiler.KofBinaryOp;
 import dev.kof.compiler.KofCall;
 import dev.kof.compiler.KofCatchStart;
 import dev.kof.compiler.KofCheckCast;
+import dev.kof.compiler.KofComparison;
 import dev.kof.compiler.KofConditionalJump;
+import dev.kof.compiler.KofComparison;
 import dev.kof.compiler.KofDup;
 import dev.kof.compiler.KofDup2;
 import dev.kof.compiler.KofGetStatic;
@@ -104,6 +106,25 @@ public final class JvmLiteralEmitter {
             case GE -> IFGE;
             default -> IFEQ;
         };
+    }
+
+    /**
+     * §101 (D-BACKEND-SEMANTICS #1, opção A — IEEE 754 puro): variante do
+     * {@code fcmp}/{@code dcmp} que faz a comparação com NaN dar {@code false}
+     * em TODOS os relacionais. A JVM tem duas: {@code cmpg} devolve +1 quando
+     * há NaN, {@code cmpl} devolve -1. O javac usa {@code cmpg} para {@code <}
+     * e {@code <=} (NaN→+1→{@code iflt}/{@code ifle} = false) e {@code cmpl}
+     * para {@code >}/{@code >=} (NaN→-1→{@code ifgt}/{@code ifge} = false);
+     * {@code ==} dá false e {@code !=} dá true em ambos. É o contrato do Java
+     * (JLS 15.20.1) e a referência riscv/IEEE.
+     */
+    static boolean floatCmpIsG(KofBinaryOp op) {
+        return op == KofBinaryOp.LT || op == KofBinaryOp.LE;
+    }
+
+    /** §101: idem para o salto condicional (enum próprio). */
+    static boolean condCmpIsG(KofComparison op) {
+        return op == KofComparison.LT || op == KofComparison.LE;
     }
 
     static int returnOpcode(Type type) {

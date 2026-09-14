@@ -125,6 +125,8 @@ public final class MemberResolver {
         // `import com.dev.NodeUI` precisa do pacote no ARG (senão o receiver
         // do `.get()` fica ClassType("","NodeUI") e o checkcast sai sem pacote
         // → NoClassDefFoundError). Idempotente; não toca builtin/enum/nome local.
+        // §179: qualifyDeep mapeia o builtin kof.ui/kof.media quando nada mais
+        // resolve o nome (preservando shadowing por import/classe do módulo).
         return CompilerTypes.qualifyDeep(qualifiedType(Type.of(name)), sa.unit(), sa);
     }
 

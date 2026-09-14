@@ -74,7 +74,10 @@ public final class StatementLowerer {
                 yield localIdx;
             }
             case VarDeclStmt vds -> {
-                Type varType = CompilerTypes.toType(vds.type(), driver.currentUnit);
+                // §179: usa a resolução semântica (qualifyDeep) — sem ela o tipo
+                // declarado kof.ui/kof.media saía ClassType("", "Label") e o
+                // store local virava `astore` sobre handle `int` (VerifyError).
+                Type varType = CompilerTypes.toType(vds.type(), driver.currentUnit, driver.semanticAnalyzer);
                 // §125(A) extensão: `Int? v = if (c) x else null` — slot
                 // explícito Nullable(primitivo) nunca guarda null (storage é o
                 // inner), então o ramo null colapsa p/ default do primitivo.

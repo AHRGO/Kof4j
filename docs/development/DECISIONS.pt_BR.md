@@ -375,6 +375,123 @@ até o desenvolvimento estar completo"* — e o chão inegociável que a acompan
 
 ---
 
+## D-ENGINEERING — não reinventar a roda (14/09, princípio da mantenedora)
+
+**Regra da mantenedora (14/09):** *"sobre a lógica interna do compilador, sempre
+se inspirar na forma que **Java e C** resolvem os problemas, desde que o
+frontend e a forma de escrever continuem idiomáticos e a saída continue
+determinística; pode se inspirar na forma como outras linguagens resolvem o
+backend. Não queremos reinventar a roda."*
+
+- **Escopo:** lógica interna do compilador/backend (lowering, helpers de
+  runtime, codegen, semântica). **Não** é o frontend Kof: sintaxe e a forma de
+  escrever continuam Kof idiomático (regra 6 — superfície congelada não muda
+  com isto).
+- **Ordem de referência:** (1) **Java** (JLS/JVMS + comportamento de
+  `java.lang`/`java.math` — âncora mais forte, pois o backend JVM já mira nele),
+  (2) **C** (ISO C / libm para o backend nativo), (3) outras linguagens só para
+  *técnica de backend* (nunca para a superfície Kof).
+- **Invariantes mantidos:** saída determinística (mesma entrada → mesmos
+  bytes/resultado em todo alvo) e a regra do gap honesto (R6: nunca resposta
+  errada silenciosa; face não implementada reporta código, não adivinha).
+- **Primeiras aplicações (mesmo dia):** §D-BACKEND-SEMANTICS abaixo.
+
+---
+
+## D-BACKEND-SEMANTICS — 6 decisões do chat de 14/09 (dono 192.168.100.18)
+
+A mantenedora respondeu a lista aberta. Opções escolhidas e a execução:
+
+### 1. §101 — operadores relacionais com NaN → **opção A (IEEE 754 puro)**
+Todos os alvos concordam com IEEE 754: **toda comparação relacional com NaN é
+`false`** (e `!=` é `true`). O comportamento riscv/aarch é a referência (já é
+IEEE); **JVM/x86/JS são alinhados a ele**. Concretamente: o lowering JVM não
+pode depender do quirk `dcmpl`/`dcmpg` que devolve `true` para `1.0 < NaN` /
+`1.0 <= NaN`; o resultado é computado IEEE-correto (resultado unordered força
+`false` para `<`, `<=`, `>`, `>=` e `true` para `!=`). JS segue IEEE por
+construção (`<` com NaN é `false`). É o próprio contrato do Java (JLS 15.20.1:
+comparações com NaN são todas `false`), então o JVM era o outlier, não a
+referência.
+
+**Feito (14/09, dono 192.168.100.18):** o JVM usa `FCMPG`/`DCMPG` para `<`/`<=`
+e `FCMPL`/`DCMPL` para `>`/`>=` (`JvmOpEmitter` via
+`JvmLiteralEmitter.floatCmpIsG`/`condCmpIsG`); o Native x86 foi corrigido em
+`NativeX86Arith` (caminho de valor) e `NativeOpHelpers` (caminho de salto) — o
+`setb`/`jb` do `LT` não tinha o guard de unordered que `LE`/`GE` já tinham.
+riscv/aarch já eram IEEE. Prova: `BackendParityTest.parityNanRelationalIeee`
+(JVM×JS) e `ComponentCoreE2ETest.nanRelationalIsIeeeOnAllTargets`
+(JVM+Native+JS, caminhos de valor e de salto, Double e Float).
+
+### 2. §129 — unwind cross-thread no Native → **opção B (frame por thread)**
+Dar ao unwinder do Native um **frame de exceção por thread** (não um
+`kof_exc_chain` global, não uma chain compartilhada por TID): cada thread é dona
+da sua cadeia de handlers/frames, então um `throw` sem handler dentro de um
+worker `spawn` marca o handle do worker como excepcionalmente-completo em vez de
+`longjmp` para fora da thread. Inspirado no Java (estado de exceção por thread)
+e no C (frames `setjmp`/`longjmp` são locais à pilha). Afeta o runtime
+compartilhado (`RuntimeDb4`/GC); a chain vira thread-scoped. Destrava o
+**OTP S2-Native** (§129), cujo gate é `OTP001` até isto fechar.
+
+### 3. `roundTo` — **implementar, racional (inspirado em Java + C)**
+Aprovado para implementação (a ratificação do `pow` de 13/09 o deixou aberto).
+Design racional, inspirado em Java+C:
+- **Família `round()` do C** = arredonda-meio-para-longe-do-zero
+  (`round(2.5)=3`, `round(-2.5)=-3`) — a âncora para o *modo de arredondamento*.
+- **`BigDecimal.setScale(n, RoundingMode.HALF_UP)` do Java** = a âncora para a
+  *escala decimal* (arredondar `Double`/`Float` para N casas decimais).
+- **Superfície (Kof idiomático):** `math.roundTo(value, decimals)` devolve o
+  mesmo tipo numérico de `value`, `decimals` um `Int` (0 = arredonda inteiro).
+  Determinístico: escala decimal pura, sem locale, sem pattern DSL (mesmo
+  precedente de `time.format`, §D-STDLIB). Célula golden cross-target.
+
+### 4. §179 — tipo `kof.ui`/`kof.media` declarado → **opção A (mapear o builtin)**
+`MemberResolver.resolveType`, após `qualifyDeep`, mapeia `ClassType("", name)`
+para `KofUi.constructorType(name)`/`KofMedia` quando `name` é builtin UI/media
+**e** não foi resolvido por import/classe do módulo — **shadowing do usuário é
+preservado** (classe de usuário chamada `Label` ainda vence). Corrige o
+`VerifyError` do JVM (descritor `LLabel;` vs handle `int`) para
+var/param/campo/retorno declarado de tipos UI/media.
+
+**Feito (14/09, dono 192.168.100.18):** o mapeamento vive em
+`CompilerTypes.qualifyDeep` (passo 2b: após `simpleNamePackage` devolver null e
+nem o módulo nem o `SymbolTable` declararem o nome), via `builtinDeclaredType`
+(`KofUi.typeByName` para todos os tipos UI + `KofMedia.IMAGE_DATA`) e o guard de
+shadowing `unitDeclaresType`; `MemberResolver.resolveType` passa por
+`qualifyDeep`, e o `VarDeclStmt` do `StatementLowerer` agora resolve com o
+analisador semântico (o `toType` de 2 args pulava `qualifyDeep`, então um local
+declarado mantinha o pacote vazio). Prova:
+`ComponentCoreE2ETest.declaredUiAndMediaTypesCompileAndRun` +
+`userClassShadowsBuiltinUiTypeName` (JVM+Native+JS).
+
+### 5. `app.security()` → **inspirado no Spring Security**
+Refinar o middleware composto ao **modelo mental do Spring Security**, mantendo
+a superfície Kof idiomática e a saída determinística:
+- **Chain estilo `HttpSecurity`:** a ordem do middleware é fixa e do framework
+  (não composta à mão pelo usuário) — a ordem fixa atual (rate-limit → CORS →
+  headers → session → CSRF → auth → RBAC) é exatamente a ideia de filter-chain
+  do Spring.
+- **`authorizeHttpRequests`:** os caminhos públicos são uma **allow-list** de
+  matchers; tudo que não casa exige autenticação. Leituras **não** são
+  implicitamente públicas: **o default é autenticado** (o
+  `anyRequest().authenticated()` do Spring), com matchers `permitAll`
+  explícitos. Isto reverte a escolha interina "reads públicas" do merge — o
+  blog E2E manda o token de sessão nos GETs.
+- **CSRF:** ligado por default para métodos que mudam estado (o Spring liga por
+  default); métodos seguros emitem o cookie. **Session:** o modo header-token
+  fica (Kof não tem sessão de servlet), mesma regra "autenticado por default".
+- **Native/JS:** seguem gap honesto (`WEB006`).
+
+### 6. §180 — `println(double/float)` no Native x86 → **inspirado no Java**
+Alinhar o Native ao **`Double.toString`/`Float.toString` (Java)**: decimal
+shortest round-trip, `Float` impresso na sua própria forma mais curta (não a
+expansão double), o limiar de notação científica do Java (`1e7`→`1.0E7`,
+`1e-3`→`0.001`). Inspirado no Java (representação mais curta estilo
+Ryu/Grisu; um loop limitado `%.{1..17}g`+`strtod` é implementação
+determinística aceitável) — sem reinventar o algoritmo além do que o JDK já
+define. Célula golden cross-target (`floatprint`).
+
+---
+
 ## Como atualizar este doc
 
 Decidiu mais alguma coisa no chat → trava aqui (data + opção + evidência de

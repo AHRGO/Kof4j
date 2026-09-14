@@ -143,6 +143,33 @@ public final class KofUi {
                 || "Video".equals(name) || "Audio".equals(name) || "Hr".equals(name);
     }
 
+    /**
+     * §179 (D-BACKEND-SEMANTICS #4): tipo builtin a partir do nome simples, para
+     * RESOLUÇÃO DE TIPO DECLARADO (var/param/campo/retorno). Cobre TODOS os
+     * tipos kof.ui — inclusive os que {@link #constructorType} delega a ramos
+     * explícitos do typer (Label/Button/Input/...). Retorna null se o nome não
+     * é um tipo UI (o chamador preserva o tipo declarado do usuário).
+     */
+    static Type typeByName(String name) {
+        return switch (name) {
+            case "Color" -> COLOR; case "Theme" -> THEME;
+            case "Label" -> LABEL; case "Button" -> BUTTON;
+            case "Input" -> INPUT; case "Textarea" -> TEXTAREA;
+            case "Select" -> SELECT; case "Ul" -> UL; case "Ol" -> OL;
+            case "Table" -> TABLE; case "Column" -> COLUMN; case "Row" -> ROW;
+            case "Form" -> FORM; case "View" -> VIEW; case "Style" -> STYLE;
+            case "Window" -> WINDOW; case "Link" -> LINK; case "Image" -> IMAGE;
+            case "Icon" -> ICON; case "Font" -> FONT; case "Component" -> COMPONENT;
+            case "Event" -> EVENT; case "Box" -> BOX; case "Stack" -> STACK;
+            case "Spacer" -> SPACER; case "Wrap" -> WRAP; case "Grid" -> GRID;
+            case "Center" -> CENTER; case "Align" -> ALIGN; case "Store" -> STORE;
+            case "Canvas" -> CANVAS; case "Fieldset" -> FIELDSET;
+            case "Iframe" -> IFRAME; case "Video" -> VIDEO; case "Audio" -> AUDIO;
+            case "Hr" -> HR;
+            default -> null;
+        };
+    }
+
     static Type constructorType(String name) {
         if ("Color".equals(name)) return COLOR;
         if ("Link".equals(name)) return LINK;

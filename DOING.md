@@ -277,6 +277,34 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > EM CURSO por outros donos; `future/` bloqueado pela regra R12). Reler
 > `docs/development/README.md` §7 e a regra de ESTABILIDADE antes de re-disparar.
 
+> **✅ FEITO (14/09, dono = 192.168.100.18): 6 decisões do chat —
+> §D-BACKEND-SEMANTICS (1/6 e 4/6 concluídas).**
+> Registro em `docs/development/DECISIONS.md` + `.pt_BR.md` (§D-ENGINEERING +
+> §D-BACKEND-SEMANTICS com as 6 opções e a execução).
+> - **§101 (decisão 1 — IEEE 754 puro):** JVM usa `FCMPG`/`DCMPG` p/ `<`/`<=`
+>   e `FCMPL`/`DCMPL` p/ `>`/`>=` (`JvmOpEmitter` via
+>   `JvmLiteralEmitter.floatCmpIsG`/`condCmpIsG`); Native x86 corrigido em
+>   `NativeX86Arith` (valor) e `NativeOpHelpers` (salto) — o `setb`/`jb` do `LT`
+>   não tinha o guard de unordered que `LE`/`GE` já tinham; riscv/aarch já IEEE;
+>   JS já IEEE por construção. **Prova:** `BackendParityTest.parityNanRelationalIeee`
+>   (JVM×JS) + `ComponentCoreE2ETest.nanRelationalIsIeeeOnAllTargets`
+>   (JVM+Native+JS, valor e salto, Double e Float).
+> - **§179 (decisão 4 — mapear o builtin preservando shadowing):** fix central
+>   em `CompilerTypes.qualifyDeep` (passo 2b) via `builtinDeclaredType`
+>   (`KofUi.typeByName` cobre todos os tipos UI + `KofMedia.IMAGE_DATA`) e guard
+>   `unitDeclaresType`; `MemberResolver.resolveType` centralizado; `VarDeclStmt`
+>   do `StatementLowerer` passa a resolver com o analisador semântico (o `toType`
+>   de 2 args pulava `qualifyDeep`). **Prova:**
+>   `ComponentCoreE2ETest.declaredUiAndMediaTypesCompileAndRun` +
+>   `userClassShadowsBuiltinUiTypeName` (JVM+Native+JS). `ComponentCoreE2ETest`
+>   17/17, `BackendParityTest` 19/19, `UiE2ETest` 29/29 (65/0/0).
+> - **Toolchain:** JDK 25 confirmado em `/home/mel/tools/jdk-25` — baseline
+>   `release 25` compila limpo (`JAVA_HOME=/home/mel/tools/jdk-25`); o
+>   workaround do pom em 21 não é mais necessário.
+> **Restantes (4/6):** `roundTo` (decisão 3), `app.security()` modelo Spring
+> (decisão 5, reverte reads públicas), §180 Native x86 double/float toString
+> (decisão 6), §129 frame por thread (decisão 2).
+
 > **✅ FEITO (14/09 ~03:45, dono = 192.168.100.22, lane repo-hygiene/.github):
 > pack segurança GitHub + merge na main (ordem da mantenedora, sem bump —
 > D-RELEASE mantido).** Commit main `9e289d84` (só 4 arquivos):
