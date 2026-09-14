@@ -1,13 +1,15 @@
-# STRING_MODEL.md — Modelo de Strings do Kof
+[English](STRING_MODEL.md) | [Português](STRING_MODEL.pt_BR.md)
 
-**Data:** 21 de agosto de 2026
-**Status:** Implementado — Fase F.1
+# STRING_MODEL.md — Kof String Model
+
+**Date:** August 21, 2026
+**Status:** Implemented — Phase F.1
 
 ---
 
-## 1. Visão Geral
+## 1. Overview
 
-String é um tipo builtin do Kof com representação independente para cada backend:
+String is a builtin Kof type with an independent representation for each backend:
 
 ```
 Kof String
@@ -20,12 +22,12 @@ java.lang    KofString
 String       (heap object)
 ```
 
-O core do compilador NÃO depende de java.lang.String.
-O tipo String é representado como BuiltinTypes.STRING em todo o compiler.
+The compiler core does NOT depend on java.lang.String.
+The String type is represented as BuiltinTypes.STRING throughout the compiler.
 
 ---
 
-## 2. Tipo Centralizado
+## 2. Centralized Type
 
 ```java
 // BuiltinTypes.java
@@ -39,11 +41,11 @@ public static boolean isString(Type type) {
 }
 ```
 
-Todos os arquivos do compiler referenciam BuiltinTypes.STRING.
+All compiler files reference BuiltinTypes.STRING.
 
 ---
 
-## 3. Layout KofString (Native)
+## 3. KofString Layout (Native)
 
 ```
 +--------------------+
@@ -59,43 +61,43 @@ Todos os arquivos do compiler referenciam BuiltinTypes.STRING.
 +--------------------+
 ```
 
-| Decisão | Escolha | Motivação |
+| Decision | Choice | Motivation |
 |---------|---------|-----------|
-| Encoding | UTF-8 | Compatibilidade C/POSIX |
-| Imutabilidade | Sim | Segurança, hash consistency |
-| Length | Byte length | Simples, consistente com strlen |
-| Null terminator | Sim | Compatibilidade C |
-| Header size | 16 bytes | Alinhamento 16 bytes |
+| Encoding | UTF-8 | C/POSIX compatibility |
+| Immutability | Yes | Safety, hash consistency |
+| Length | Byte length | Simple, consistent with strlen |
+| Null terminator | Yes | C compatibility |
+| Header size | 16 bytes | 16-byte alignment |
 
 ---
 
 ## 4. Runtime Functions (Native)
 
-| Função | Entrada | Retorno | Descrição |
+| Function | Input | Return | Description |
 |--------|---------|---------|-----------|
-| `kof_string_from_literal` | data_ptr, byte_length | str_ptr | Cria KofString de literal |
-| `kof_string_length` | str_ptr | int | Retorna byte length |
-| `kof_string_concat` | str1, str2 | str3 | Concatena duas strings |
-| `kof_string_equals` | str1, str2 | bool | Compara byte a byte |
-| `kof_print_string` | str_ptr | void | Imprime usando length |
-| `kof_println_string` | str_ptr | void | Imprime + newline |
-| `kof_memcpy` | dest, src, n | void | Copia n bytes |
+| `kof_string_from_literal` | data_ptr, byte_length | str_ptr | Creates a KofString from a literal |
+| `kof_string_length` | str_ptr | int | Returns byte length |
+| `kof_string_concat` | str1, str2 | str3 | Concatenates two strings |
+| `kof_string_equals` | str1, str2 | bool | Compares byte by byte |
+| `kof_print_string` | str_ptr | void | Prints using length |
+| `kof_println_string` | str_ptr | void | Prints + newline |
+| `kof_memcpy` | dest, src, n | void | Copies n bytes |
 
 ---
 
 ## 5. print / println Dispatch
 
-| Tipo | Função Nativa |
+| Type | Native Function |
 |------|---------------|
 | int | kof_print_int |
 | String | kof_print_string |
-| outro | kof_print (strlen-based) |
+| other | kof_print (strlen-based) |
 
 ---
 
 ## 6. JVM vs Native
 
-| Operação | JVM | Native |
+| Operation | JVM | Native |
 |----------|-----|--------|
 | Literal | ldc | kof_string_from_literal |
 | length() | String.length() | kof_string_length |
@@ -108,39 +110,39 @@ Todos os arquivos do compiler referenciam BuiltinTypes.STRING.
 
 ## 7. Null
 
-| Valor | Representação |
+| Value | Representation |
 |-------|---------------|
-| null | Ponteiro 0x0 |
-| "" | KofString com length=0 |
+| null | Pointer 0x0 |
+| "" | KofString with length=0 |
 
-kof_null_error() disponível para detecção futura.
+kof_null_error() available for future detection.
 
 ---
 
-## 8. Concatenação e Igualdade
+## 8. Concatenation and Equality
 
-> **Atualizado (0.0.5):** a sintaxe está integrada — `+` concatena
-> (`kof_string_concat`) e `==`/`!=` comparam conteúdo (`kof_string_equals`)
-> em JVM e Native. A API completa (charAt, substring, contains, startsWith,
-> endsWith, indexOf, trim, toUpperCase, toLowerCase, replace, split) está
-> disponível (detecção de tipo de `+` já resolvida no CompilerDriver).
+> **Updated (0.0.5):** the syntax is integrated — `+` concatenates
+> (`kof_string_concat`) and `==`/`!=` compare content (`kof_string_equals`)
+> in JVM and Native. The complete API (charAt, substring, contains, startsWith,
+> endsWith, indexOf, trim, toUpperCase, toLowerCase, replace, split) is
+> available (type detection of `+` already resolved in CompilerDriver).
 >
-> **Atualizado (0.2.6-beta, 31/08):** `kof_print_string` passou a **guardar
-> `null`** (antes: segfault em `println(null)`); a conversão de ponto
-> flutuante para string (dtoa) usa `snprintf` alinhado, com FP real em XMM
-> no Native — parte do fechamento do JSN001/FLT001.
+> **Updated (0.2.6-beta, 31/08):** `kof_print_string` now **guards against
+> `null`** (before: segfault on `println(null)`); the floating-point to
+> string conversion (dtoa) uses aligned `snprintf`, with real FP in XMM
+> in Native — part of closing JSN001/FLT001.
 
 ---
 
-## 9. Arquivos
+## 9. Files
 
-| Arquivo | Papel |
+| File | Role |
 |---------|-------|
-| BuiltinTypes.java | Referência centralizada do tipo String |
-| Type.java | Type.of("string") usa BuiltinTypes.STRING |
-| IRNodes.java | KofLoadLiteral.ofString usa BuiltinTypes.STRING |
-| SemanticAnalyzer.java | Literal typing usa BuiltinTypes.STRING |
-| CompilerDriver.java | print/println com BuiltinTypes.isString() |
+| BuiltinTypes.java | Centralized reference for the String type |
+| Type.java | Type.of("string") uses BuiltinTypes.STRING |
+| IRNodes.java | KofLoadLiteral.ofString uses BuiltinTypes.STRING |
+| SemanticAnalyzer.java | Literal typing uses BuiltinTypes.STRING |
+| CompilerDriver.java | print/println with BuiltinTypes.isString() |
 | NativeBackend.java | KofString creation + print dispatch |
-| NativeRuntime.java | 7 funções de runtime para strings |
-| JvmBackend.java | Delega para java.lang.String |
+| NativeRuntime.java | 7 runtime functions for strings |
+| JvmBackend.java | Delegates to java.lang.String |

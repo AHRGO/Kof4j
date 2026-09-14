@@ -1,70 +1,72 @@
-# DD-STDLIB-01 — retorno Array/objeto na camada de dispatch stdlib (FECHADO 13/09 — movido p/ docs/)
+[English](DD-STDLIB-01-array-returns.md) | [Português](DD-STDLIB-01-array-returns.pt_BR.md)
 
-> **✅ DECIDIDO 13/09 (mantenedora, opção 6a):** Opção B — `randomBytesHex(n)->String` (zero plumbing); `randomChoice` fechado como idiom (`l[random.randomInt(l.size)]` documentado em `training/idioms`); nome `randomBytes` binário fica RESERVADO (não entra).
+# DD-STDLIB-01 — Array/object return in the stdlib dispatch layer (CLOSED 13/09 — moved to docs/)
+
+> **✅ DECIDED 13/09 (maintainer, option 6a):** Option B — `randomBytesHex(n)->String` (zero plumbing); `randomChoice` closed as an idiom (`l[random.randomInt(l.size)]` documented in `training/idioms`); the binary `randomBytes` name stays RESERVED (does not enter).
 >
-> **Status:** `IMPLEMENTADO` 13/09 (opção 6a) — `random.randomBytesHex(n)->String`
-> como alias aditivo de `random.hex` (mesma runtime fn `kof_random_hex`,
-> mesmo contrato, 5 alvos; `KofRandomTest.randomBytesHex{Jvm,Js,Native}`);
-> nome `randomBytes` binário RESERVADO (não entra); choice = idiom
-> `l[random.randomInt(l.size)]` (já documentado em learn/39-stdlib.md +
-> training/idioms/stdlib.md) · **Gap S10c FECHADO** · **Lane:** STDLIB ·
-> **Criado:** 09/09/2026 · **Bump:** nenhum (aditivo — só abre caminho)
+> **Status:** `IMPLEMENTED` 13/09 (option 6a) — `random.randomBytesHex(n)->String`
+> as an additive alias of `random.hex` (same runtime fn `kof_random_hex`,
+> same contract, 5 targets; `KofRandomTest.randomBytesHex{Jvm,Js,Native}`);
+> binary `randomBytes` name RESERVED (does not enter); choice = idiom
+> `l[random.randomInt(l.size)]` (already documented in learn/39-stdlib.md +
+> training/idioms/stdlib.md) · **Gap S10c CLOSED** · **Lane:** STDLIB ·
+> **Created:** 09/09/2026 · **Bump:** none (additive — only opens the way)
 
-## O problema
+## The problem
 
-O plano S10 lista `randomBytes(n)` (retorna bytes) e `randomChoice(List)`
-(retorna elemento) no namespace `random`
-(`plan-stdlib-expansion.md:45`). As duas exigem que uma função **stdlib**
-retorne um tipo composto pela camada de dispatch (`KofStd.StdCall` →
-`KofCall` → runtime dos 5 alvos). Hoje **nenhuma** função stdlib retorna
-Array/objeto — o vocabulário da camada é `Int/Bool/String/Void`:
+Plan S10 lists `randomBytes(n)` (returns bytes) and `randomChoice(List)`
+(returns an element) in the `random` namespace
+(`plan-stdlib-expansion.md:45`). Both require a **stdlib** function to
+return a composite type through the dispatch layer (`KofStd.StdCall` →
+`KofCall` → runtime of the 5 targets). Today **no** stdlib function returns
+Array/object — the layer's vocabulary is `Int/Bool/String/Void`:
 
-- `KofMath`: Int-only (`kof_math_*` → `(I)I`); FP fica S1b.
-- `KofStrings`: STR→STR; `split` não é stdlib (é método de `String`, rota
-  própria com `kof_new_array` embutido no lowerer de método).
+- `KofMath`: Int-only (`kof_math_*` → `(I)I`); FP stays S1b.
+- `KofStrings`: STR→STR; `split` is not stdlib (it is a `String` method, its
+  own route with `kof_new_array` embedded in the method lowerer).
 - `KofUuid`/`KofNet`/`KofEncoding`/`KofValidation`: STR/BOOL.
 - `KofRandom` (S10a/b): INT/BOOL/STR.
 
-Arrays NATIVOS existem (`kof_array_alloc`/`get`/`set` no x86; alocador riscv
-B-slices; `List<T>` interp com reflection JVM) — o que não existe é o
-**plumbing de tipo** `Type.ArrayType` atravessar `KofStd → KofCall →
-descritores JVM → JsTypeMapper → ABI asm`. Isso é decisão de design (regra
-6): mexe em cinco contratos de alvo, e a forma do retorno (byte[]? List?
-String hex?) afeta a API congelada.
+NATIVE arrays exist (`kof_array_alloc`/`get`/`set` in x86; riscv
+allocator B-slices; `List<T>` interp with JVM reflection) — what does not exist is the
+**type plumbing** for `Type.ArrayType` to cross `KofStd → KofCall →
+JVM descriptors → JsTypeMapper → ABI asm`. This is a design decision (rule
+6): it touches five target contracts, and the shape of the return (byte[]? List?
+String hex?) affects the frozen API.
 
-## Opções
+## Options
 
-| Opção | randomBytes | randomChoice | Custo |
+| Option | randomBytes | randomChoice | Cost |
 |---|---|---|---|
-| **A. Tipo-Array no dispatch** | `Bytes -> ByteArray` | `Choice(List) -> Object` | plumbing completo; 5 ABI; `ArrayType` nos descritores |
-| **B. Hex String** (recomendada p/ bytes) | `randomBytesHex(n) -> String` | — | zero plumbing; reusa a máquina de String dinâmica do S10b; precedent: `security.randomHex` existe! |
-| **C. Sem randomChoice** | — | `l[random.randomInt(l.size)]` em Kof puro | zero — a linguagem já resolve |
+| **A. Array type in dispatch** | `Bytes -> ByteArray` | `Choice(List) -> Object` | complete plumbing; 5 ABI; `ArrayType` in the descriptors |
+| **B. Hex String** (recommended for bytes) | `randomBytesHex(n) -> String` | — | zero plumbing; reuses the dynamic String machine from S10b; precedent: `security.randomHex` exists! |
+| **C. No randomChoice** | — | `l[random.randomInt(l.size)]` in pure Kof | zero — the language already solves it |
 
-## Recomendação
+## Recommendation
 
-- **`randomChoice` NÃO precisa de runtime**: `list.get(random.randomInt(list.size))`
-  é 1 linha Kof idiomatica (a regra da língua: complexidade pertence a quem
-  usa, não à plataforma — e `get`+`size` já existem nos 5 alvos). Fechar o
-  item do plano como "coberto por idiom", documentar em `learn/39` +
-  `training/idioms`. Se a mantenedora quiser o açúcar, vira feature de
-  `List` (não de `random`).
-- **`randomBytes`**: a versão segura já existe (`security.randomHex(n)` —
-  hex string, 5 alvos). Se o plano mantiver a face insegura, o shape
-  coerente é idêntico: **Opção B** (`random.bytes` devolve o mesmo shape
-  hex? NÃO — bytes binário ≠ hex; abriria divergência de paridade no tipo
-  de retorno). **Pergunta à mantenedora:** o valor de `randomBytes` binário
-  justifica o plumbing do tipo-Array (Opção A) agora, ou o nome fica
-  reservado e `security.randomHex`/`security.randomBytes` cobre o caso de
-  uso real (que é SIEMPRE criptográfico — token/salt/chave)?
+- **`randomChoice` does NOT need a runtime**: `list.get(random.randomInt(list.size))`
+  is 1 idiomatic line of Kof (the language rule: complexity belongs to whoever
+  uses it, not to the platform — and `get`+`size` already exist in the 5 targets). Close the
+  plan item as "covered by idiom", document it in `learn/39` +
+  `training/idioms`. If the maintainer wants the sugar, it becomes a `List`
+  feature (not a `random` one).
+- **`randomBytes`**: the safe version already exists (`security.randomHex(n)` —
+  hex string, 5 targets). If the plan keeps the unsafe face, the coherent
+  shape is identical: **Option B** (`random.bytes` returns the same hex
+  shape? NO — binary bytes ≠ hex; it would open a parity divergence in the return
+  type). **Question for the maintainer:** does the value of binary `randomBytes`
+  justify the Array-type plumbing (Option A) now, or does the name stay
+  reserved and `security.randomHex`/`security.randomBytes` cover the real
+  use case (which is ALWAYS cryptographic — token/salt/key)?
 
-Nenhum dos dois entra por edição direta da camada atual. `random` fecha
-v1 com `randomInt/randomBoolean/randomString` (S10a/b) + idiom p/ choice.
+Neither enters by directly editing the current layer. `random` closes
+v1 with `randomInt/randomBoolean/randomString` (S10a/b) + idiom for choice.
 
-## Impacto se aprovada a Opção A (só para registro)
+## Impact if Option A is approved (for the record only)
 
-`KofStd.StdCall.returnType` aceitar `ArrayType` → `JvmRuntimeCallDescriptors`
+`KofStd.StdCall.returnType` accepts `ArrayType` → `JvmRuntimeCallDescriptors`
 (case `"[B"`), `JvmRuntimeReturnDescriptors` (`"[B"`), `KofInterpreter`
-dispatch, `JsTypeMapper.runtimeJsName` (invariante — só nome), ABI x86
-(rdi/len → rax já é o shape de `kof_array_alloc`), riscv/aarch (idem B14).
-Estimativa: 1 unidade por alvo (como S1–S10b) + matriz equality com
-elemento-walk. NÃO começa sem decisão.
+dispatch, `JsTypeMapper.runtimeJsName` (invariant — name only), x86 ABI
+(rdi/len → rax is already the `kof_array_alloc` shape), riscv/aarch (same B14).
+Estimate: 1 unit per target (like S1–S10b) + equality matrix with
+element-walk. Does NOT start without a decision.

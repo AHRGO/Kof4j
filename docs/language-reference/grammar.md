@@ -1,40 +1,42 @@
-# Gramática Formal do Kof
+[English](grammar.md) | [Português](grammar.pt_BR.md)
 
-**Status:** Stable (a forma) · **Evidência:** `Parser.java` (1975 linhas)
+# Kof Formal Grammar
 
-## Formalismo e justificativa
+**Status:** Stable (the form) · **Evidence:** `Parser.java` (1975 lines)
 
-O parser do Kof é **recursive descent com precedence-climbing para expressões
-binárias** (ExpressionParser.parseBinary), **hand-written**, com lookahead
-arbitrário sobre a lista de tokens (`check`/`checkNext`/varreduras em
-`looksLike*`). **Não** é LL(1) estrito, **não** é PEG, **não** é gerado por
-ferramenta (não há arquivo `.g4`/`.y`/`.ebnf`).
+## Formalism and rationale
 
-Por isso a gramática abaixo é apresentada em **EBNF** como *descrição
-extrativa* do parser real — não como a especificação que o parser segue. Onde
-o parser usa heurística de lookahead (ex.: `looksLikeLambdaParams`), a
-gramática marca a construção como **ambígua resolvida por lookahead** e o
-comportamento exato é **Implementation-defined**.
+The Kof parser is **recursive descent with precedence-climbing for binary
+expressions** (ExpressionParser.parseBinary), **hand-written**, with arbitrary
+lookahead over the token list (`check`/`checkNext`/scans in `looksLike*`). It
+is **not** strict LL(1), **not** PEG, **not** tool-generated (there is no
+`.g4`/`.y`/`.ebnf` file).
 
-Convenção EBNF usada:
+Therefore the grammar below is presented in **EBNF** as an *extractive
+description* of the real parser — not as the specification the parser follows.
+Where the parser uses a lookahead heuristic (e.g. `looksLikeLambdaParams`), the
+grammar marks the construct as **ambiguous, resolved by lookahead**, and the
+exact behavior is **Implementation-defined**.
+
+EBNF convention used:
 
 `text
-=           definição          { x }   zero ou mais
-,           concatenação       [ x ]   opcional
-( x | y )   alternativa        "x"     terminal literal
-(* ... *)   comentário
+=           definition         { x }   zero or more
+,           concatenation      [ x ]   optional
+( x | y )   alternative        "x"     literal terminal
+(* ... *)   comment
 `
 
 `text
-Código-fonte ──Lexer──▶ Tokens ──Parser──▶ AST ──Desugar──▶ AST ──Analyze──▶ AST anotada (maps laterais)
+Source-code ──Lexer──▶ Tokens ──Parser──▶ AST ──Desugar──▶ AST ──Analyze──▶ annotated AST (side maps)
 `
 
-A **gramática léxica** está em [lexical-structure.md](lexical-structure.md).
-Aqui está a **gramática sintática** e a **AST** resultante.
+The **lexical grammar** is in [lexical-structure.md](lexical-structure.md).
+Here is the **syntactic grammar** and the resulting **AST**.
 
 ---
 
-## 1. Unidade de compilação
+## 1. Compilation unit
 
 `ebnf
 compilation-unit = [ package-declaration ] , { import-declaration } ,
@@ -53,19 +55,19 @@ top-level-declaration =
     | function-declaration ;
 `
 
-**Somente** declarações de tipo e de função podem aparecer no topo. `val`/`var`
-no topo → `PARSE007` (*probe*). Não há `let` (SG-001).
+**Only** type and function declarations may appear at the top. `val`/`var`
+at the top → `PARSE007` (*probe*). There is no `let` (SG-001).
 
-> **Resolução da pergunta "o parser produz diretamente a AST?":** **não.** O
-> parser produz uma AST *crua*; o driver aplica **desugaring** sobre ela antes
-> da análise (`CompilerDriver.java`, chamadas a `CompilerDesugar.desugarTests`/`desugarApplication`): `desugarTests` (blocos `test` →
-> harness) e `desugarApplication` (blocos `application { onStart/onShutdown }`
-> → funções sintetizadas que envolvem o `main`). Ver
+> **Resolution of the question "does the parser produce the AST directly?":** **no.** The
+> parser produces a *raw* AST; the driver applies **desugaring** to it before
+> analysis (`CompilerDriver.java`, calls to `CompilerDesugar.desugarTests`/`desugarApplication`): `desugarTests` (`test` blocks →
+> harness) and `desugarApplication` (`application { onStart/onShutdown }`
+> blocks → synthesized functions that wrap `main`). See
 > [../compiler-architecture.md](../architecture/compiler-architecture.md).
 
 ---
 
-## 2. Declarações de tipo
+## 2. Type declarations
 
 `ebnf
 type-declaration =
@@ -81,9 +83,9 @@ class-declaration = modifiers , "class" , identifier , [ type-parameters ] ,
                     ( class-body | record-header , class-body ) ;   (* `Parser.parseTypeDeclaration (class)` *)
 `
 
-> `class X(...)` **com parênteses** é parseado como **record** (corpo via
-> `parseRecordBody`, Parser.parseRecordBody) — não como classe com primary
-> constructor. É o comportamento documentado em `AGENTS.md`.
+> `class X(...)` **with parentheses** is parsed as a **record** (body via
+> `parseRecordBody`, Parser.parseRecordBody) — not as a class with a primary
+> constructor. This is the behavior documented in `AGENTS.md`.
 
 `ebnf
 class-body = "{" , { class-member } , "}" ;
@@ -95,7 +97,7 @@ interface-declaration = modifiers , "interface" , identifier ,
                         "{" , { class-member } , "}" ;              (* `Parser.parseTypeDeclaration (class-body)` *)
 `
 
-**Interfaces não aceitam type-parameters** (`interface F<T>` → `PARSE007`,
+**Interfaces do not accept type-parameters** (`interface F<T>` → `PARSE007`,
 *probe*).
 
 `ebnf
@@ -111,9 +113,9 @@ enum-declaration = modifiers , "enum" , identifier ,
                    "{" , [ identifier , { "," , identifier } ] , "}" ;  (* `Parser.parseTypeDeclaration (enum)` *)
 `
 
-**Enums são apenas constantes** — sem corpo, sem métodos, sem construtores, sem
-campos (`enum E { A String f(){…} }` → `PARSE032`, *probe*). Em runtime o
-valor de um enum **é** o nome (`String`) — ver [classes.md](classes.md).
+**Enums are just constants** — no body, no methods, no constructors, no
+fields (`enum E { A String f(){…} }` → `PARSE032`, *probe*). At runtime the
+value of an enum **is** the name (`String`) — see [classes.md](classes.md).
 
 `ebnf
 entity-declaration = modifiers , "entity" , identifier ,
@@ -123,16 +125,16 @@ entity-field       = identifier , ":" , type-ref , { "generated" | "unique" } ;
 
 ---
 
-## 3. Funções e métodos
+## 3. Functions and methods
 
 `ebnf
 function-declaration = annotation-list , modifiers ,
                        [ type-ref ] , identifier , [ type-parameters ] ,
                        "(" , [ parameter-list ] , ")" ,
-                       [ ":" , type-ref ] ,                          (* retorno sufixado *)
+                       [ ":" , type-ref ] ,                          (* suffixed return *)
                        function-body ;                               (* Parser.java *)
 
-function-body = block | "=" , expression , [ ";" ] | ";" ;          (* corpo: bloco, expressão, ou abstrato *)
+function-body = block | "=" , expression , [ ";" ] | ";" ;          (* body: block, expression, or abstract *)
 
 method-declaration = [ type-ref ] , identifier , "(" , [ parameter-list ] , ")" ,
                      [ ":" , type-ref ] , [ throws-clause ] , function-body ;
@@ -147,23 +149,23 @@ throws-clause  = "throw" , type-ref , { "," , type-ref } ;           (* `TypePar
 type-parameters = "<" , identifier , { "," , identifier } , ">" ;    (* `TypeParser.parseTypeParameters` *)
 `
 
-As **três formas de retorno** são válidas e equivalentes:
+The **three return forms** are valid and equivalent:
 
 `kof
-String a() { … }      // tipo antes do nome
-b(): String { … }     // tipo depois dos parênteses (forma anotada)
-c() { … }             // sem tipo → void (default)
+String a() { … }      // type before the name
+b(): String { … }     // type after the parentheses (annotated form)
+c() { … }             // no type → void (default)
 `
 
-**Não existe keyword de declaração de função** (SG-001 resolvido 06/09):
-`fn`/`fun`/`func` como prefixo são rejeitados com `PARSE085`. Como *nome* de
-função continuam identificadores válidos. Parâmetros aceitam **default values**
-(`parameter = expression`), que geram overloads sintéticos por aridade no
+**There is no function declaration keyword** (SG-001 resolved 06/09):
+`fn`/`fun`/`func` as a prefix are rejected with `PARSE085`. As a function
+*name* they remain valid identifiers. Parameters accept **default values**
+(`parameter = expression`), which generate synthetic overloads by arity in the
 lowering.
 
 ---
 
-## 4. Tipos (referência sintática)
+## 4. Types (syntactic reference)
 
 `ebnf
 type-ref = "void"
@@ -172,25 +174,25 @@ type-ref = "void"
          | qualified-name , [ generic-args ] , { "[]" } , { "?" } ;
 
 primitive-type = "bool" | "byte" | "short" | "int" | "long"
-               | "float" | "double" | "char" | "string" ;           (* `TypeParser (primitivos)` *)
+               | "float" | "double" | "char" | "string" ;           (* `TypeParser (primitives)` *)
 qualified-name = identifier , { "." , identifier } ;
 generic-args   = "<" , type-ref , { "," , type-ref } , ">" ;        (* `TypeParser (generic args)` *)
 function-type  = "(" , [ type-ref , { "," , type-ref } ] , ")" , "->" , type-ref ;  (* `TypeParser.parseFunctionType` *)
 `
 
-O parser captura o tipo como **string bruta** (`parseTypeRef` devolve
-`String`), não como estrutura. A resolução para `Type` acontece na análise
-semântica. Sufixos `[]` (array) e `?` (nullable) são **anexados à string**
-(`Int[]?` é válido). Genéricos aninhados (`Map<String, List<Int>>`) são
-consumidos por contagem de profundidade com split de `>>`/`>>>`
+The parser captures the type as a **raw string** (`parseTypeRef` returns
+`String`), not as a structure. Resolution to `Type` happens during semantic
+analysis. The `[]` (array) and `?` (nullable) suffixes are **appended to the
+string** (`Int[]?` is valid). Nested generics (`Map<String, List<Int>>`) are
+consumed by depth counting with a split of `>>`/`>>>`
 (`splitShiftRight`).
 
-> **`?` é sufixo de tipo, não operador de expressão.** `Int?` é nullable;
-> `x?y` não é sintaxe.
+> **`?` is a type suffix, not an expression operator.** `Int?` is nullable;
+> `x?y` is not syntax.
 
 ---
 
-## 5. Expressões
+## 5. Expressions
 
 `ebnf
 expression = switch-expression | assignment ;                       (* `ExpressionParser.parseExpression` *)
@@ -219,9 +221,9 @@ postfix-op = "." , identifier , [ call-args | trailing-lambda ]
 primary    = literal | "this" | "super" | identifier
            | new-expression
            | "(" , lambda-params , ")" , "->" , lambda-body         (* lambda *)
-           | "(" , expression , ")"                                 (* parêntese *)
+           | "(" , expression , ")"                                 (* parenthesis *)
            | "if" , "(" , expression , ")" , expression , "else" , expression   (* if-expr *)
-           | "{" , lambda-body , "}" ;                              (* lambda sem params *)
+           | "{" , lambda-body , "}" ;                              (* lambda without params *)
 
 new-expression = "new" , type-ref , [ generic-args ] ,
                  ( "[" , expression , "]" | call-args ) ;           (* `ExpressionParser.parsePostfix` *)
@@ -231,12 +233,12 @@ lambda-param  = identifier , [ ":" , type-ref ] ;                   (* `LambdaPa
 lambda-body   = block | expression , [ ";" ] ;                      (* `LambdaParser` *)
 `
 
-### 5.1 Precedência e associatividade (exata — ExpressionParser (precedence table))
+### 5.1 Precedence and associativity (exact — ExpressionParser (precedence table))
 
-Maior precedência no topo. **Todos os binários são left-associativos**
-(`parseBinary(prec+1)`); atribuição é **right-associativa**.
+Higher precedence at the top. **All binaries are left-associative**
+(`parseBinary(prec+1)`); assignment is **right-associative**.
 
-| Prec | Operadores | Assoc |
+| Prec | Operators | Assoc |
 |---|---|---|
 | 8 | `* / %` | left |
 | 7 | `+ -` | left |
@@ -248,22 +250,22 @@ Maior precedência no topo. **Todos os binários são left-associativos**
 | 1 | `\|\|` | left (short-circuit) |
 | 0 | `= +=` … | **right** |
 
-> `instanceof` e `as` têm a **mesma** precedência (5) e são left-assoc no
-> parser, mas o lowering **interrompe o encadeamento** neles (bug 13,
-> `ExpressionLowerer.java:174-176`): `(x as Int) + 1` não é `x as (Int + 1)`.
-> O comportamento de encadeamento puro (`a as B as C`) é **Unspecified**.
+> `instanceof` and `as` have the **same** precedence (5) and are left-assoc in
+> the parser, but the lowering **breaks the chaining** on them (bug 13,
+> `ExpressionLowerer.java:174-176`): `(x as Int) + 1` is not `x as (Int + 1)`.
+> The behavior of pure chaining (`a as B as C`) is **Unspecified**.
 
 ### 5.2 Short-circuit
 
-`&&` e `||` são avaliados com short-circuit por labels em **JVM e Native**;
-no **target JS o short-circuit é desligado** (`ExpressionLowerer.java:147-148`)
+`&&` and `||` are evaluated with short-circuit via labels in **JVM and Native**;
+in the **JS target the short-circuit is turned off** (`ExpressionLowerer.java:147-148`)
 — **Target-specific** (SG-006).
 
-### 5.3 Operadores que NÃO existem (SG-002, verificado por probe)
+### 5.3 Operators that do NOT exist (SG-002, verified by probe)
 
 `~` (bitwise NOT), `?:` (elvis), `??` (null-coalesce), `..` (range), `in`
-(membership em expressão), `=>`, `::`, `|>`, `...`. Todos produzem erro de
-parse. Para membership use `setOf(…).contains(x)` (idiom da linguagem).
+(membership in an expression), `=>`, `::`, `|>`, `...`. All produce a parse
+error. For membership use `setOf(…).contains(x)` (the language idiom).
 
 ---
 
@@ -280,21 +282,21 @@ if-stmt     = "if" , "(" , expression , ")" , statement , [ "else" , statement ]
 while-stmt  = "while" , "(" , expression , ")" , statement ;
 do-while    = "do" , statement , "while" , "(" , expression , ")" , [ ";" ] ;
 for-stmt    = "for" , "(" , ( for-init | for-in ) , ")" , statement ;
-for-in      = ( "var" | "val" ) , identifier , "in" , expression ;  (* "in" é contextual *)
+for-in      = ( "var" | "val" ) , identifier , "in" , expression ;  (* "in" is contextual *)
 for-init    = [ statement ] , [ expression ] , ";" , [ expression ] ;
 throw-stmt  = "throw" , expression , [ ";" ] ;
 spawn-stmt  = "spawn" , expression , [ ";" ] ;
 assert-stmt = "assert" , "(" , expression , [ "," , string-literal ] , ")" , [ ";" ] ;
 try-stmt    = "try" , block , { catch-clause } , [ "finally" , block ] ;
 catch-clause = "catch" , "(" , type-ref , identifier , ")" , block ;
-break-stmt  = "break" , [ ";" ] ;                                   (* sem label *)
-continue-stmt = "continue" , [ ";" ] ;                              (* sem label *)
+break-stmt  = "break" , [ ";" ] ;                                   (* no label *)
+continue-stmt = "continue" , [ ";" ] ;                              (* no label *)
 var-decl    = ( "var" | "val" | type-ref ) , identifier ,
               [ ":" , type-ref ] , [ "=" , expression ] , [ ";" ] ; (* `StatementParser.parseVarDecl` *)
 expr-stmt   = expression , [ ";" ] ;
 `
 
-### 6.1 Switch — duas formas
+### 6.1 Switch — two forms
 
 `ebnf
 switch-stmt = "switch" , "(" , expression , ")" , "{" , { case-stmt } ,
@@ -311,14 +313,14 @@ pattern = type-name , identifier                          (* binding:  case Stri
         | type-name , "(" , { ( "var" | "val" )? , identifier } , ")" ;  (* destructuring: case Point(var x, var y) *)
 `
 
-- **Statement** usa `:`; **expressão** usa `->`. A forma expressão exige
-  `default` (ou enum exaustivo) — `SEM032`.
-- **Não há fallthrough**: cada case do statement salta para o fim
+- **Statement** uses `:`; **expression** uses `->`. The expression form requires
+  `default` (or an exhaustive enum) — `SEM032`.
+- **There is no fallthrough**: each statement case jumps to the end
   (`SwitchStmtLowerer.java:174`) — *probe*: `case 1: println("a") case 2:
-  println("b")` com valor 1 imprime só `a`.
-- **Não há `break` obrigatório** no statement, mas `break`/`continue` são
-  válidos (e necessários em loops aninhados).
-- **Não há labeled break/continue** (`L: for …` → `PARSE041`, *probe*).
+  println("b")` with value 1 prints only `a`.
+- **There is no mandatory `break`** in the statement, but `break`/`continue` are
+  valid (and necessary in nested loops).
+- **There is no labeled break/continue** (`L: for …` → `PARSE041`, *probe*).
 
 ---
 
@@ -333,13 +335,13 @@ annotation-value = ( identifier , "=" )? ,
 array-literal   = "{" , [ literal , { "," , literal } ] , "}" ;
 `
 
-Annotations são **metadados de interop** (emitidas no bytecode JVM como
-`RuntimeVisibleAnnotations`); valores devem ser constantes em compile-time
-(`ANNOT001` se não). Não são macros (não existe macro em Kof — SG-003).
+Annotations are **interop metadata** (emitted in the JVM bytecode as
+`RuntimeVisibleAnnotations`); values must be compile-time constants
+(`ANNOT001` if not). They are not macros (there is no macro in Kof — SG-003).
 
 ---
 
-## 8. Declarações especiais
+## 8. Special declarations
 
 `ebnf
 test-declaration = "test" , string-literal , block ;                (* `Parser.parseTestDeclaration` *)
@@ -347,17 +349,17 @@ application-declaration = "application" , "{" ,
                           [ "onStart" , block ] , [ "onShutdown" , block ] , "}" ;  (* `Parser.parseApplicationDeclaration` *)
 `
 
-`test` e `application` são **identificadores contextuais** (reconhecidos por
-`peek().value()` em Parser.parse (dispatch)), não keywords. São desugared antes da
-análise (item 1).
+`test` and `application` are **contextual identifiers** (recognized by
+`peek().value()` in Parser.parse (dispatch)), not keywords. They are desugared before
+analysis (item 1).
 
 ---
 
-## 9. AST produzida
+## 9. Produced AST
 
-A AST é um conjunto de **records** numa hierarquia `sealed interface`
-(`AstNodes.java`). **Não há AST tipada**: os nós guardam tipos como `String`;
-os tipos resolvidos vivem em `IdentityHashMap` laterais do analisador (ver
+The AST is a set of **records** in a `sealed interface` hierarchy
+(`AstNodes.java`). **There is no typed AST**: nodes store types as `String`;
+resolved types live in the analyzer's side `IdentityHashMap`s (see
 [type-system.md](type-system.md) §6).
 
 `text
@@ -382,12 +384,12 @@ AstNode (sealed) { SourcePosition position() }
 `
 
 `SourcePosition = record(file, line, column, offset, length)`
-(`SourcePosition.java`). Literais carregam `LiteralKind` (`ConcreteLiteralKind`:
-`INT LONG FLOAT DOUBLE STRING CHAR BOOLEAN NULL`) e valor como `String`.
+(`SourcePosition.java`). Literals carry a `LiteralKind` (`ConcreteLiteralKind`:
+`INT LONG FLOAT DOUBLE STRING CHAR BOOLEAN NULL`) and value as `String`.
 
-**Total: 50 nós de AST** (53 records em `AstNodes.java`; 3 não implementam
-`AstNode` e são auxiliares de valor: `AnnotationPair`, `AnnotationClassRef`,
-`AnnotationEnumRef`). Os demais — incluindo `SwitchExprCase`, `SwitchCase`,
+**Total: 50 AST nodes** (53 records in `AstNodes.java`; 3 do not implement
+`AstNode` and are value helpers: `AnnotationPair`, `AnnotationClassRef`,
+`AnnotationEnumRef`). The rest — including `SwitchExprCase`, `SwitchCase`,
 `CatchClause`, `RecordComponentNode`, `EntityFieldNode`, `FormalParameterNode`
-— implementam `AstNode` (direta ou via `ExpressionNode`/`StatementNode`/
+— implement `AstNode` (directly or via `ExpressionNode`/`StatementNode`/
 `MemberNode`/`TypeDeclarationNode`).

@@ -1,13 +1,15 @@
-# RUNTIME_ABI.md — Contrato de Runtime do Kof
+[English](RUNTIME_ABI.md) | [Português](RUNTIME_ABI.pt_BR.md)
 
-**Data:** 21 de agosto de 2026
-**Status:** Definição — Fase F
+# RUNTIME_ABI.md — Kof Runtime Contract
+
+**Date:** August 21, 2026
+**Status:** Definition — Phase F
 
 ---
 
-## 1. Visão Geral
+## 1. Overview
 
-A Kof Runtime ABI define o contrato semântico entre o compilador Kof e as implementações de runtime (JVM e Native).
+The Kof Runtime ABI defines the semantic contract between the Kof compiler and the runtime implementations (JVM and Native).
 
 ```
 Kof Language
@@ -19,60 +21,60 @@ Kof Runtime ABI
 JVM         Native
 ```
 
-A ABI NÃO é uma especificação de bytecode ou assembly. É um contrato de comportamento que ambas as implementações devem satisfazer.
+The ABI is NOT a bytecode or assembly specification. It is a behavioral contract that both implementations must satisfy.
 
 ---
 
-## 2. Princípios
+## 2. Principles
 
-1. **Independência de plataforma** — a ABI não assume endianness, word size, ou calling convention
-2. **Minimalismo** — definir apenas o necessário para o subconjunto atual da linguagem
-3. **Evolutividade** — novos recursos podem ser adicionados sem quebrar implementações existentes
-4. **Dupla implementação** — cada recurso da ABI deve ter implementação JVM e Native
-5. **Nenhuma dependência JVM** — a ABI NÃO referencia java.lang.Object, java.lang.String, etc.
+1. **Platform independence** — the ABI does not assume endianness, word size, or calling convention
+2. **Minimalism** — define only what is needed for the current language subset
+3. **Evolvability** — new features can be added without breaking existing implementations
+4. **Dual implementation** — each ABI feature must have a JVM and a Native implementation
+5. **No JVM dependency** — the ABI does NOT reference java.lang.Object, java.lang.String, etc.
 
 ---
 
-## 3. Recursos da ABI
+## 3. ABI Features
 
-### 3.1 Alocação
+### 3.1 Allocation
 
-| Operação | Descrição |
+| Operation | Description |
 |----------|-----------|
-| `kof_alloc(size)` | Aloca `size` bytes no heap, retorna ponteiro |
-| `kof_free(ptr)` | Libera memória alocada por kof_alloc |
+| `kof_alloc(size)` | Allocates `size` bytes on the heap, returns a pointer |
+| `kof_free(ptr)` | Frees memory allocated by kof_alloc |
 
-**Contrato:**
-- `kof_alloc` retorna ponteiro alinhado em 16 bytes
-- `kof_alloc` retorna NULL se memória insuficiente (tratado como runtime error)
-- `kof_free` em ponteiro NULL é no-op
-- `kof_free` em ponteiro já liberado é comportamento indefinido (future: GC resolve)
+**Contract:**
+- `kof_alloc` returns a pointer aligned to 16 bytes
+- `kof_alloc` returns NULL if memory is insufficient (treated as a runtime error)
+- `kof_free` on a NULL pointer is a no-op
+- `kof_free` on an already-freed pointer is undefined behavior (future: GC resolves it)
 
-**JVM:** Delega para `new` bytecode / JVM allocator
-**Native:** Implementação via `malloc`/`free` ou arena allocator
+**JVM:** Delegates to `new` bytecode / JVM allocator
+**Native:** Implementation via `malloc`/`free` or arena allocator
 
 ### 3.2 Object Model
 
-Todo objeto Kof possui:
+Every Kof object has:
 
-| Campo | Tamanho | Descrição |
+| Field | Size | Description |
 |-------|---------|-----------|
-| type_id | 4 bytes | Identificador do tipo (índice em type table) |
-| flags | 4 bytes | Flags do objeto (mark bits, etc.) |
-| fields... | variável | Dados dos campos na ordem de declaração |
+| type_id | 4 bytes | Type identifier (index into the type table) |
+| flags | 4 bytes | Object flags (mark bits, etc.) |
+| fields... | variable | Field data in declaration order |
 
-**Contrato:**
-- O tipo_id é determinado em compile-time pelo compilador
-- O field layout é determinado em compile-time pelo ClassLayout
-- O object header NÃO é acessível pelo código Kof
-- O acesso a fields é via offset calculado em compile-time
+**Contract:**
+- The type_id is determined at compile-time by the compiler
+- The field layout is determined at compile-time by ClassLayout
+- The object header is NOT accessible from Kof code
+- Field access is via an offset computed at compile-time
 
-**JVM:** O object header é gerenciado pela JVM (klass pointer + mark word)
-**Native:** O object header é parte do kof-runtime nativo
+**JVM:** The object header is managed by the JVM (klass pointer + mark word)
+**Native:** The object header is part of the native kof-runtime
 
 ### 3.3 Field Layout
 
-Cada classe possui um layout de campos calculado em compile-time:
+Each class has a field layout computed at compile-time:
 
 ```
 FieldLayout:
@@ -80,57 +82,57 @@ FieldLayout:
   - fields: List<FieldInfo>
     - name: String
     - type: Type
-    - offset: int (bytes do início do objeto)
-    - size: int (tamanho em bytes)
+    - offset: int (bytes from the start of the object)
+    - size: int (size in bytes)
 ```
 
-**Contrato:**
-- Fields são ordenados na ordem de declaração
-- Cada field tem offset e tamanho determinados pelo ClassLayout
-- O compilador usa o ClassLayout para gerar código de acesso a fields
-- O NativeBackend consome o ClassLayout (não calcula offsets inline)
+**Contract:**
+- Fields are ordered in declaration order
+- Each field has an offset and size determined by ClassLayout
+- The compiler uses the ClassLayout to generate field access code
+- NativeBackend consumes the ClassLayout (it does not compute offsets inline)
 
 ### 3.4 Strings
 
-Uma string Kof é representada como (KofString):
+A Kof string is represented as (KofString):
 
 ```
 KofString:
   - type_id: 4 bytes (= 1)
   - flags: 4 bytes (= 0)
-  - length: int (4 bytes, byte length UTF-8)
+  - length: int (4 bytes, UTF-8 byte length)
   - padding: 4 bytes
   - bytes: UTF-8 data (length bytes)
   - null terminator: 1 byte
 ```
 
-**Contrato:**
-- Strings são imutáveis
-- Encoding é UTF-8
-- Length é byte length (não codepoint count)
-- String literals são criadas via kof_string_from_literal
-- `println` e `print` aceitam KofString
-- `+` em strings produz concatenação (futuro: via kof_string_concat)
-- `==` em strings produz igualdade (futuro: via kof_string_equals)
+**Contract:**
+- Strings are immutable
+- Encoding is UTF-8
+- Length is byte length (not codepoint count)
+- String literals are created via kof_string_from_literal
+- `println` and `print` accept KofString
+- `+` on strings produces concatenation (future: via kof_string_concat)
+- `==` on strings produces equality (future: via kof_string_equals)
 
 **Runtime Functions (Native):**
 
-| Função | Assinatura | Descrição |
+| Function | Signature | Description |
 |--------|-----------|-----------|
-| `kof_string_from_literal` | (data_ptr, byte_length) → str_ptr | Cria KofString de literal estático |
-| `kof_string_length` | (str_ptr) → int | Retorna byte length |
-| `kof_string_concat` | (str1, str2) → str3 | Concatena duas strings |
-| `kof_string_equals` | (str1, str2) → bool | Compara conteúdo byte a byte |
-| `kof_print_string` | (str_ptr) | Imprime usando length armazenado |
-| `kof_println_string` | (str_ptr) | Imprime + newline |
-| `kof_memcpy` | (dest, src, n) | Copia n bytes |
+| `kof_string_from_literal` | (data_ptr, byte_length) → str_ptr | Creates a KofString from a static literal |
+| `kof_string_length` | (str_ptr) → int | Returns byte length |
+| `kof_string_concat` | (str1, str2) → str3 | Concatenates two strings |
+| `kof_string_equals` | (str1, str2) → bool | Compares content byte by byte |
+| `kof_print_string` | (str_ptr) | Prints using the stored length |
+| `kof_println_string` | (str_ptr) | Prints + newline |
+| `kof_memcpy` | (dest, src, n) | Copies n bytes |
 
-**JVM:** Delega para java.lang.String
-**Native:** Implementação via kof-runtime (NativeRuntime.java)
+**JVM:** Delegates to java.lang.String
+**Native:** Implementation via kof-runtime (NativeRuntime.java)
 
 ### 3.5 Arrays
 
-Um array Kof é representado como:
+A Kof array is represented as:
 
 ```
 ArrayObject:
@@ -140,81 +142,81 @@ ArrayObject:
   - elements: bytes (length * element_size)
 ```
 
-**Contrato:**
-- `array.length` retorna o número de elementos
-- `array[i]` acessa o elemento no offset `header_size + i * element_size`
-- Acesso fora dos limites gera runtime error
-- Arrays de tipos primitivos armazenam valores diretamente
-- Arrays de tipos de referência armazenam ponteiros
+**Contract:**
+- `array.length` returns the number of elements
+- `array[i]` accesses the element at offset `header_size + i * element_size`
+- Out-of-bounds access raises a runtime error
+- Arrays of primitive types store values directly
+- Arrays of reference types store pointers
 
-**JVM:** Delega para arrays nativos da JVM
-**Native:** Implementação via kof-runtime
+**JVM:** Delegates to the JVM's native arrays
+**Native:** Implementation via kof-runtime
 
 ### 3.6 Method Dispatch
 
-| Tipo | Descrição | Mecanismo |
+| Type | Description | Mechanism |
 |------|-----------|-----------|
-| FUNCTION | Função top-level | Chamada direta (link-time) |
-| STATIC | Método estático | Chamada direta (link-time) |
-| INSTANCE | Método de instância | Chamada direta (futuro: virtual) |
-| CONSTRUCTOR | Construtor | Chamada direta |
+| FUNCTION | Top-level function | Direct call (link-time) |
+| STATIC | Static method | Direct call (link-time) |
+| INSTANCE | Instance method | Direct call (future: virtual) |
+| CONSTRUCTOR | Constructor | Direct call |
 
-**Contrato:**
-- FUNCTION e STATIC são resolvidos em compile-time
-- INSTANCE usa virtual dispatch via vtable (método em `method_table_ptr`)
-- INTERFACE usa a mesma vtable (dispatch por interface, Fase F.5)
+**Contract:**
+- FUNCTION and STATIC are resolved at compile-time
+- INSTANCE uses virtual dispatch via vtable (method in `method_table_ptr`)
+- INTERFACE uses the same vtable (interface dispatch, Phase F.5)
 
-**JVM:** JVM handle diretamente via vtable
-**Native:** Chamada direta via `call ClassName_methodName`
+**JVM:** The JVM handles it directly via vtable
+**Native:** Direct call via `call ClassName_methodName`
 
 ### 3.7 Constructors
 
-**Contrato:**
-1. Alocação do objeto (`kof_alloc`)
-2. Inicialização do header (type_id, flags)
-3. Chamada do construtor (`<init>`)
-4. O construtor recebe `this` como primeiro argumento
-5. O construtor pode chamar `super.<init>()`
+**Contract:**
+1. Object allocation (`kof_alloc`)
+2. Header initialization (type_id, flags)
+3. Constructor call (`<init>`)
+4. The constructor receives `this` as the first argument
+5. The constructor can call `super.<init>()`
 
 **JVM:** `NEW` + `DUP` + `INVOKESPECIAL <init>`
 **Native:** `kof_alloc` + init header + `call ClassName_<init>`
 
-### 3.8 Erros de Runtime
+### 3.8 Runtime Errors
 
-| Erro | Descrição | Comportamento |
+| Error | Description | Behavior |
 |------|-----------|---------------|
-| `kof_null_error()` | Acesso a ponteiro NULL | Termina com mensagem |
-| `kof_bounds_error(i, len)` | Index out of bounds | Termina com mensagem |
-| `kof_panic(message)` | Erro genérico | Termina com mensagem |
-| `kof_alloc_error()` | Falha de alocação | Termina com mensagem |
+| `kof_null_error()` | NULL pointer access | Terminates with a message |
+| `kof_bounds_error(i, len)` | Index out of bounds | Terminates with a message |
+| `kof_panic(message)` | Generic error | Terminates with a message |
+| `kof_alloc_error()` | Allocation failure | Terminates with a message |
 
-**Contrato:**
-- Erros de runtime são fatais (não há recovery nesta fase)
-- Cada erro produz uma mensagem descritiva
-- O processo é terminado com código de saída != 0
+**Contract:**
+- Runtime errors are fatal (there is no recovery in this phase)
+- Each error produces a descriptive message
+- The process is terminated with exit code != 0
 
-**JVM:** Pode usar exceções Java futuramente
-**Native:** Syscall exit com mensagem de erro
+**JVM:** May use Java exceptions in the future
+**Native:** Exit syscall with an error message
 
 ---
 
 ## 4. Calling Convention (Native)
 
-O NativeBackend usa System V AMD64 ABI:
+NativeBackend uses the System V AMD64 ABI:
 
-| Registrador | Uso |
+| Register | Use |
 |-------------|-----|
-| %rdi | 1º argumento (this em métodos de instância) |
-| %rsi | 2º argumento |
-| %rdx | 3º argumento |
-| %rcx | 4º argumento |
-| %r8 | 5º argumento |
-| %r9 | 6º argumento |
-| %rax | Valor de retorno |
+| %rdi | 1st argument (this in instance methods) |
+| %rsi | 2nd argument |
+| %rdx | 3rd argument |
+| %rcx | 4th argument |
+| %r8 | 5th argument |
+| %r9 | 6th argument |
+| %rax | Return value |
 
-**Contrato:**
-- `this` é passado como primeiro argumento (%rdi)
-- Valores de retorno em %rax
+**Contract:**
+- `this` is passed as the first argument (%rdi)
+- Return values in %rax
 - Caller-save: %rax, %rcx, %rdx, %rsi, %rdi, %r8, %r9, %r10, %r11
 - Callee-save: %rbx, %rbp, %r12, %r13, %r14, %r15
 
@@ -222,83 +224,83 @@ O NativeBackend usa System V AMD64 ABI:
 
 ## 5. Type Table
 
-O compilador gera uma type table que mapeia type_id para metadata:
+The compiler generates a type table that maps type_id to metadata:
 
 ```
 TypeTable:
   - types: Array<TypeEntry>
-    - name: String (nome interno do tipo)
-    - size: int (tamanho total do objeto em bytes)
+    - name: String (internal type name)
+    - size: int (total object size in bytes)
     - field_count: int
     - fields: Array<FieldEntry>
 ```
 
-**Contrato:**
-- type_id 0 é reservado para "unknown"
-- type_id é único por tipo
-- A type table é gerada pelo compilador e embutida no binário
+**Contract:**
+- type_id 0 is reserved for "unknown"
+- type_id is unique per type
+- The type table is generated by the compiler and embedded in the binary
 
-**JVM:** Não necessária (JVM possui reflection)
-**Native:** Embutida na seção `.data` do assembly
+**JVM:** Not needed (the JVM has reflection)
+**Native:** Embedded in the `.data` section of the assembly
 
 ---
 
-## 6. Decisões Arquiteturais
+## 6. Architectural Decisions
 
 ### 6.1 Heap vs Stack
-- **Decisão:** Objetos são alocados no heap via `kof_alloc`
-- **Motivo:** Permite referências, herança, GC futuro
-- **Exceção:** Valores primitivos locais permanecem na stack
+- **Decision:** Objects are allocated on the heap via `kof_alloc`
+- **Reason:** Allows references, inheritance, future GC
+- **Exception:** Local primitive values remain on the stack
 
 ### 6.2 UTF-8 vs UTF-16
-- **Decisão:** Strings são UTF-8
-- **Motivo:** Compatibilidade com C/POSIX, menor uso de memória
-- **Trade-off:** Operações de índice por codepoint são O(n)
+- **Decision:** Strings are UTF-8
+- **Reason:** Compatibility with C/POSIX, lower memory usage
+- **Trade-off:** Codepoint index operations are O(n)
 
-### 6.3 Imutabilidade de Strings
-- **Decisão:** Strings são imutáveis
-- **Motivo:** Segurança, hash consistency, internamento
-- **Trade-off:** Concatenação requer nova alocação
+### 6.3 String Immutability
+- **Decision:** Strings are immutable
+- **Reason:** Safety, hash consistency, interning
+- **Trade-off:** Concatenation requires a new allocation
 
-### 6.4 Direct Dispatch (por agora)
-- **Decisão:** Método dispatch é direto (não virtual)
-- **Motivo:** Simplicidade, o subconjunto atual não precisa de virtual dispatch
-- **Futuro:** O object model permite adicionar vtable depois
+### 6.4 Direct Dispatch (for now)
+- **Decision:** Method dispatch is direct (not virtual)
+- **Reason:** Simplicity; the current subset does not need virtual dispatch
+- **Future:** The object model allows adding a vtable later
 
-### 6.5 Error Handling Fatal
-- **Decisão:** Erros de runtime são fatais
-- **Motivo:** Simplicidade, não há try/catch na linguagem ainda
-- **Futuro:** Exceções podem ser adicionadas com a mesma ABI
+### 6.5 Fatal Error Handling
+- **Decision:** Runtime errors are fatal
+- **Reason:** Simplicity; there is no try/catch in the language yet
+- **Future:** Exceptions can be added with the same ABI
 
 ---
 
-## 7. Fronteira entre Compiler e Runtime
+## 7. Boundary between Compiler and Runtime
 
-| Responsabilidade | Compiler | Runtime |
+| Responsibility | Compiler | Runtime |
 |-----------------|----------|---------|
-| Tamanho do objeto | Calcula via ClassLayout | Usa o tamanho |
-| Offset dos fields | Calcula via FieldLayout | Usa o offset |
-| Alocação | Gera chamada kof_alloc | Executa kof_alloc |
-| Inicialização | Gera chamada <init> | Executa construtor |
-| Acesso a field | Gera código com offset | — |
-| Chamada de método | Gera call com nome mangleado | — |
-| Erro de runtime | — | Gera mensagem e exit |
+| Object size | Computes via ClassLayout | Uses the size |
+| Field offset | Computes via FieldLayout | Uses the offset |
+| Allocation | Generates kof_alloc call | Executes kof_alloc |
+| Initialization | Generates <init> call | Executes constructor |
+| Field access | Generates code with offset | — |
+| Method call | Generates call with mangled name | — |
+| Runtime error | — | Generates message and exits |
 
 ---
 
-> **Atualizado (0.0.5):** virtual dispatch (vtable), exceptions reais
-> (JVM table + Native frame chain), generics por erasure e `spawn` (JVM)
-> foram implementados. Ainda fora: GC (Native), reflection, serialization.
+> **Updated (0.0.5):** virtual dispatch (vtable), real exceptions
+> (JVM table + Native frame chain), generics by erasure and `spawn` (JVM)
+> were implemented. Still out: GC (Native), reflection, serialization.
 >
-> **Atualizado (0.2.6-beta, 31/08):** `spawn`/`await` no Native foi
-> implementado (CONC001 fechado — `pthread_create` + trampoline +
-> `pthread_join` + allocator thread-safe com futex). GC automático continua
-> fora (mark-sweep pendente; free-list `kof_free_head` reusa `mmap`,
-> auto-GC desativado após hang).
+> **Updated (0.2.6-beta, 31/08):** `spawn`/`await` in Native was
+> implemented (CONC001 closed — `pthread_create` + trampoline +
+> `pthread_join` + thread-safe allocator with futex). Automatic GC remains
+> out (mark-sweep pending; free-list `kof_free_head` reuses `mmap`,
+> auto-GC disabled after a hang).
 
-## 8. NÃO incluído nesta ABI
+## 8. NOT included in this ABI
 
-- Garbage collection automática (Native — free-list `kof_free_head` com
-  reuso `mmap`; memória devolvida ao SO no `munmap` fallback/exit)
+- Automatic garbage collection (Native — free-list `kof_free_head` with
+  `mmap` reuse; memory returned to the OS on the `munmap` fallback/exit)
 - Reflection
 - Serialization

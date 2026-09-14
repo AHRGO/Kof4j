@@ -1,13 +1,15 @@
-# INTERFACE_MODEL.md — Modelo de Interfaces do Kof
+[English](INTERFACES_MODEL.md) | [Português](INTERFACES_MODEL.pt_BR.md)
 
-**Data:** 21 de agosto de 2026
-**Status:** Implementado — Fase F.5
+# INTERFACE_MODEL.md — Kof Interface Model
+
+**Date:** August 21, 2026
+**Status:** Implemented — Phase F.5
 
 ---
 
-## 1. Visão Geral
+## 1. Overview
 
-Kof suporta interfaces com métodos abstratos. Uma classe pode implementar uma ou mais interfaces.
+Kof supports interfaces with abstract methods. A class can implement one or more interfaces.
 
 ```kof
 interface Speaker {
@@ -21,9 +23,9 @@ class Dog implements Speaker {
 
 ---
 
-## 2. Sintaxe
+## 2. Syntax
 
-### Declaração de interface
+### Interface declaration
 
 ```kof
 interface Nome {
@@ -31,15 +33,15 @@ interface Nome {
 }
 ```
 
-### Implementação por classe
+### Implementation by class
 
 ```kof
 class Classe implements Interface1, Interface2 {
-    // implementar métodos obrigatórios
+    // implement required methods
 }
 ```
 
-### Herança de interface
+### Interface inheritance
 
 ```kof
 interface Base {
@@ -52,32 +54,32 @@ interface Derivada extends Base {
 
 ---
 
-## 3. Semântica
+## 3. Semantics
 
-### Regras
+### Rules
 
-1. Interfaces definem contratos (métodos abstratos)
-2. Classes devem implementar todos os métodos da interface
-3. Uma classe pode implementar múltiplas interfaces
-4. Interfaces podem estender outras interfaces
-5. Interfaces NÃO possuem campos (apenas métodos)
-6. Interfaces NÃO possuem construtores
-7. Métodos de interface são sempre públicos
+1. Interfaces define contracts (abstract methods)
+2. Classes must implement all interface methods
+3. A class can implement multiple interfaces
+4. Interfaces can extend other interfaces
+5. Interfaces do NOT have fields (only methods)
+6. Interfaces do NOT have constructors
+7. Interface methods are always public
 
 ### Dispatch
 
-Chamadas através de tipo de interface usam dispatch via vtable:
+Calls through an interface type use vtable dispatch:
 
 ```
 Speaker s = new Dog()
 s.speak()
     ↓
-Dog.speak()  // resolvido pelo tipo real do objeto
+Dog.speak()  // resolved by the object's real type
 ```
 
 ---
 
-## 4. Representação na IR
+## 4. Representation in the IR
 
 ### KofCallKind
 
@@ -85,51 +87,51 @@ Dog.speak()  // resolvido pelo tipo real do objeto
 enum KofCallKind { INSTANCE, STATIC, CONSTRUCTOR, FUNCTION, INTERFACE }
 ```
 
-Chamadas via tipo de interface usam `KofCallKind.INTERFACE`.
+Calls through an interface type use `KofCallKind.INTERFACE`.
 
 ### JvmBackend
 
-Chamadas via interface usam `INVOKEINTERFACE` em vez de `INVOKEVIRTUAL`.
+Interface calls use `INVOKEINTERFACE` instead of `INVOKEVIRTUAL`.
 
 ### NativeBackend
 
-Dispatch via vtable, mesmo mecanismo que virtual dispatch. O índice do método é determinado pela ordem dos métodos na interface.
+Dispatch via vtable, the same mechanism as virtual dispatch. The method index is determined by the order of the methods in the interface.
 
 ---
 
 ## 5. Method Tables
 
-Interfaces contribuem para a vtable das classes que as implementam:
+Interfaces contribute to the vtable of the classes that implement them:
 
 ```
 Speaker_vtable: [Speaker_speak]
-Dog_vtable:     [Dog_speak]  // herda slot da interface
+Dog_vtable:     [Dog_speak]  // inherits the interface slot
 ```
 
-Métodos herdados de interfaces são incluídos na vtable da classe implementadora.
+Methods inherited from interfaces are included in the implementing class's vtable.
 
 ---
 
-## 6. Arquivos
+## 6. Files
 
-| Arquivo | Papel |
+| File | Role |
 |---------|-------|
 | IRNodes.java | `KofCallKind.INTERFACE` |
-| SemanticAnalyzer.java | `isInterfaceType()`, `resolveInHierarchy()` caminha interfaces |
-| CompilerDriver.java | Define `KofCallKind.INTERFACE` para chamadas via interface |
-| JvmBackend.java | `INVOKEINTERFACE` para chamadas via interface |
-| NativeBackend.java | `collectVirtualMethods()` inclui interfaces, dispatch via vtable |
+| SemanticAnalyzer.java | `isInterfaceType()`, `resolveInHierarchy()` walks interfaces |
+| CompilerDriver.java | Defines `KofCallKind.INTERFACE` for interface calls |
+| JvmBackend.java | `INVOKEINTERFACE` for interface calls |
+| NativeBackend.java | `collectVirtualMethods()` includes interfaces, dispatch via vtable |
 
 ---
 
-> **Atualizado (0.2.6-beta, 31/08):** dispatch via vtable para interfaces é
-> thread-safe com o `spawn` em threads (pthread, 31/08). As limitações de
-> default/static methods continuam válidas.
+> **Updated (0.2.6-beta, 31/08):** vtable dispatch for interfaces is
+> thread-safe with `spawn` on threads (pthread, 31/08). The limitations on
+> default/static methods still hold.
 
-## 7. Limitações
+## 7. Limitations
 
-1. Sem default methods (métodos com corpo na interface)
-2. Sem static methods em interfaces
-3. Sem campos em interfaces
-4. Sem validação de implementação completa (compile-time)
-5. Sem generics em interfaces
+1. No default methods (methods with a body in the interface)
+2. No static methods in interfaces
+3. No fields in interfaces
+4. No validation of complete implementation (compile-time)
+5. No generics in interfaces

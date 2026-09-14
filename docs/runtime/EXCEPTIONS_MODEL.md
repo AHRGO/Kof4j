@@ -1,22 +1,24 @@
-# EXCEPTIONS_MODEL.md — Modelo de Exceções do Kof
+[English](EXCEPTIONS_MODEL.md) | [Português](EXCEPTIONS_MODEL.pt_BR.md)
 
-**Data:** 21 de agosto de 2026
-**Status:** Implementado — Fase F.6
+# EXCEPTIONS_MODEL.md — Kof Exception Model
 
----
-
-## 1. Visão Geral
-
-Kof suporta `throw` e `try/catch/finally`. Exceções são tratadas de forma diferente nos dois backends:
-
-- **JVM**: Exceções são propagadas naturalmente pela JVM via `athrow`
-- **Native**: unwinding real pela cadeia de frames (`kof_throw_string`); a
-  mensagem (String) é recuperada no catch. Exceção não capturada termina o
-  processo com a mensagem.
+**Date:** August 21, 2026
+**Status:** Implemented — Phase F.6
 
 ---
 
-## 2. Sintaxe
+## 1. Overview
+
+Kof supports `throw` and `try/catch/finally`. Exceptions are handled differently in the two backends:
+
+- **JVM**: Exceptions are propagated naturally by the JVM via `athrow`
+- **Native**: real unwinding through the frame chain (`kof_throw_string`); the
+  message (String) is recovered in the catch. An uncaught exception terminates the
+  process with the message.
+
+---
+
+## 2. Syntax
 
 ### throw
 
@@ -56,7 +58,7 @@ try {
 }
 ```
 
-### Múltiplos catch
+### Multiple catch
 
 ```kof
 try {
@@ -70,80 +72,80 @@ try {
 
 ---
 
-## 3. Semântica
+## 3. Semantics
 
 ### throw
 
-1. Avalia a expressão (String)
-2. No JVM: emite `athrow` com wrap em `RuntimeException` (exceção propagada pela JVM)
-3. No Native: `kof_throw_string(msg)` — unwinding real pela cadeia de frames
+1. Evaluates the expression (String)
+2. On the JVM: emits `athrow` with a wrap in `RuntimeException` (exception propagated by the JVM)
+3. On Native: `kof_throw_string(msg)` — real unwinding through the frame chain
 
 ### try/catch
 
-1. Executa o bloco try
-2. Se uma exceção é lançada e há um catch compatível, executa o bloco catch
-3. No JVM: exception table nativa da JVM
-4. No Native: frame de exceção registrado no início do try (handler, rsp, rbp, prev);
-   o unwind restaura rsp/rbp e salta para o handler com a mensagem em `%rdi`.
-   O handler do primeiro catch captura (múltiplos catches: o primeiro captura no Native)
+1. Executes the try block
+2. If an exception is thrown and there is a compatible catch, executes the catch block
+3. On the JVM: JVM's native exception table
+4. On Native: exception frame registered at the start of the try (handler, rsp, rbp, prev);
+   the unwind restores rsp/rbp and jumps to the handler with the message in `%rdi`.
+   The handler of the first catch captures (multiple catches: the first one captures on Native)
 
 ### finally
 
-1. Executa independentemente de exceção ser lançada ou não
-2. No JVM: catch-all + rethrow
-3. No Native: catch-all no frame (handler = rethrow); o finally roda e a exceção
-   é relançada, propagando para o frame anterior da cadeia
+1. Executes regardless of whether an exception is thrown or not
+2. On the JVM: catch-all + rethrow
+3. On Native: catch-all in the frame (handler = rethrow); the finally runs and the exception
+   is rethrown, propagating to the previous frame in the chain
 
-### Frame de exceção (Native, 32 bytes na stack)
+### Exception frame (Native, 32 bytes on the stack)
 
 ```
-+0  handler_addr   (leaq do primeiro catch / catch-all)
-+8  rsp_value      (stack restaurada no unwind)
-+16 rbp_value      (frame base restaurado no unwind)
-+24 prev_chain     (kof_exc_chain anterior)
++0  handler_addr   (leaq of the first catch / catch-all)
++8  rsp_value      (stack restored on unwind)
++16 rbp_value      (frame base restored on unwind)
++24 prev_chain     (previous kof_exc_chain)
 ```
 
-`kof_exc_chain` é o topo da cadeia (ponteiro global). Exceção não capturada
-termina o processo imprimindo a mensagem.
+`kof_exc_chain` is the top of the chain (global pointer). An uncaught exception
+terminates the process by printing the message.
 
 ---
 
 ## 4. Runtime Errors
 
-Erros de runtime são fatais em ambos os backends:
+Runtime errors are fatal in both backends:
 
-| Erro | Função Nativa | Comportamento |
+| Error | Native Function | Behavior |
 |------|---------------|---------------|
-| Null pointer | `kof_null_error()` | Termina com mensagem |
-| Array bounds | `kof_bounds_error(i, len)` | Termina com mensagem |
-| Runtime panic | `kof_panic(msg)` | Termina com mensagem |
-| Exceção não capturada | `kof_throw_string(msg)` | Imprime a mensagem e termina |
+| Null pointer | `kof_null_error()` | Terminates with message |
+| Array bounds | `kof_bounds_error(i, len)` | Terminates with message |
+| Runtime panic | `kof_panic(msg)` | Terminates with message |
+| Uncaught exception | `kof_throw_string(msg)` | Prints the message and terminates |
 
 ---
 
-## 5. Arquivos
+## 5. Files
 
-| Arquivo | Papel |
+| File | Role |
 |---------|-------|
 | AstNodes.java | `ThrowStmt`, `TryStmt`, `CatchClause` |
-| Parser.java | Parsing de `throw`, `try/catch/finally` |
+| Parser.java | Parsing of `throw`, `try/catch/finally` |
 | IRNodes.java | `KofThrow` |
-| CompilerDriver.java | Lowering de `throw` e `try/catch/finally` |
+| CompilerDriver.java | Lowering of `throw` and `try/catch/finally` |
 | JvmBackend.java | Exception table, StackMapTable, wrap `RuntimeException` |
-| NativeBackend.java | Frames de exceção, unwind, `kof_throw_string` |
+| NativeBackend.java | Exception frames, unwind, `kof_throw_string` |
 | NativeRuntime.java | `kof_throw_string`, `kof_panic`, `kof_null_error`, `kof_bounds_error` |
 
 ---
 
-> **Atualizado (0.2.6-beta, 31/08):** o `spawn` em threads (pthread) roda o
-> código do programa de forma concorrente; o mecanismo de exceção (frame de
-> 32 bytes + cadeia `kof_exc_chain`) é inalterado. Exceções continuam fatais
-> quando não capturadas.
+> **Updated (0.2.6-beta, 31/08):** `spawn` on threads (pthread) runs the
+> program code concurrently; the exception mechanism (32-byte frame +
+> `kof_exc_chain` chain) is unchanged. Exceptions remain fatal
+> when uncaught.
 
-## 6. Limitações
+## 6. Limitations
 
-1. No Native, o primeiro catch de um try captura (múltiplos catches não fazem dispatch por tipo)
-2. Sem exception object model completo (exceção = String/mensagem)
-3. Sem DWARF-based unwinding (cadeia de frames própria)
-4. Sem checked exceptions
-5. Sem stack traces
+1. On Native, the first catch of a try captures (multiple catches do not dispatch by type)
+2. No complete exception object model (exception = String/message)
+3. No DWARF-based unwinding (own frame chain)
+4. No checked exceptions
+5. No stack traces
