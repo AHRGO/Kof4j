@@ -727,7 +727,18 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > Regra da lição gravada (4e0957ee + cdda27d9): `mvn -o compile`
 > IMEDIATAMENTE antes de medir (falso-vermelho de classe obsoleta queimou
 > meu primeiro "#218 ainda reproduz"); assir SEMÂNTICA do título.
-> **Gatilhos do próximo disparo (estado 14/09 ~15:38, ciclo 15:10–15:38):**
+> **DIRETRIZ DA MANTENEDORA (14/09 ~16:00 — LANE REPOSICIONADA, vale sobre
+> tudo acima):** esta lane (192.168.100.17) é a lane EXCLUSIVA de
+> **`docs/development/`** — evoluir a linguagem fechando os docs pendentes.
+> **TRIAGEM DE ISSUES = PAUSADA** (as outras lanes cuidam das issues; meus
+> comentários em issues criaram corrida com outras lanes — erro meu, não
+> repete). Gatilho 1 (re-medir fixes alheios) e 3 (issues novas) estão
+> SUSPENSOS até a mantenedora liberar; o gate cross-arch (2) continua sendo
+> guarda (não-atacar, nat/donos). Trabalho agora: auditar o pendente REAL de
+> DECOMPILER / TRANSLATOR / LEGACY_MIGRATION / planning-otp-supervision /
+> native-multiarch e implementar as unidades, na ordem de valor, até cada doc
+> poder virar `docs/` (regra de conclusão: implement → test → validate →
+> update doc → move).
 > #237 RETIFICADA: não é face do §225 — vira §228 (descriptor vazava o tipo
 > CONCRETO do argumento no PARAMETRO + retorno fabricado; comentario
 > publico corrigido na issue; a face errada removida do §225). #238→§230
