@@ -1,16 +1,18 @@
+[English](duplicate-state.md) | [Português](duplicate-state.pt_BR.md)
+
 # Anti-pattern — Duplicate State
 
-**Updated:**  0.4.0-beta (Sep 2026) (02 Sep 2026) — `List.size` via `kof_list_get` bounds OK; `Box<T>` e `map/filter` não duplicam.
+**Updated:**  0.4.0-beta (Sep 2026) (02 Sep 2026) — `List.size` via `kof_list_get` bounds OK; `Box<T>` and `map/filter` do not duplicate.
 
 ## Name
 
-Manter o mesmo dado em dois lugares e sincronizar manualmente.
+Keeping the same data in two places and synchronizing it manually.
 
 ## Problem
 
-Uma classe guarda `List` e também um `count`, ou um `name` e um `displayName`
-que derivam do mesmo valor. Cada mutação precisa atualizar os dois — e em
-algum ponto eles divergem.
+A class keeps a `List` and also a `count`, or a `name` and a `displayName`
+that derive from the same value. Every mutation must update both — and at
+some point they diverge.
 
 ## Bad example
 
@@ -25,15 +27,15 @@ class Cart {
     }
     add(Int id) {
         items.add(id)
-        count = items.size   // sincronização manual
+        count = items.size   // manual synchronization
     }
 }
 ```
 
 ## Why it is bad
 
-O `count` é derivável de `items.size`. Ele não é estado — é uma projeção.
-Cada ponto de mutação precisa lembrar de sincronizar. Um esquecimento = bug.
+`count` is derivable from `items.size`. It is not state — it is a projection.
+Every mutation point must remember to synchronize. One oversight = bug.
 
 ## Preferred approach
 
@@ -53,24 +55,24 @@ class Cart {
 }
 ```
 
-O tamanho é consultado, não armazenado.
+The size is queried, not stored.
 
-## Outro exemplo
+## Another example
 
 ```kof
-// BAD: duplica
+// BAD: duplicates
 String nome
-String nomeMaiusculo   // sincronizar em toda atribuição
+String nomeMaiusculo   // synchronize on every assignment
 
-// GOOD: deriva quando necessário
+// GOOD: derive when needed
 String nome
 ```
 
-## Regra
+## Rule
 
-Se um valor pode ser derivado de outro, derive-o (método ou função).
-Não armazene projeções.
+If a value can be derived from another, derive it (method or function).
+Do not store projections.
 
 ## Exceptions
 
-- Cache intencional com invalidação explícita (caso raro, documentado).
+- Intentional cache with explicit invalidation (rare case, documented).

@@ -1,29 +1,31 @@
+[English](security.md) | [Português](security.pt_BR.md)
+
 # Security (kof.security)
 
-`kof.security` é a camada de segurança da Standard Library: senhas, crypto,
-JWT, segredos e autenticação web — secure by default, com gaps de target
-reportados em compile-time (SECN00x).
+`kof.security` is the Standard Library's security layer: passwords, crypto,
+JWT, secrets and web authentication — secure by default, with target gaps
+reported at compile time (SECN00x).
 
-## Intenção
+## Intent
 
 ```kof
 passwords.hash(password)                  // secure by default
 passwords.verify(password, storedHash)    // constant-time
 jwt.create(claimsJson, secret)            // HS256 + iat/exp
 jwt.verify(token, secret, iss, aud)       // sig + exp + iss + aud
-secrets.get("API_KEY")                    // env, nunca logado
-secrets.redact(value)                     // para logs
-security.constantTimeEquals(a, b)         // comparação segura
+secrets.get("API_KEY")                    // env, never logged
+secrets.redact(value)                     // for logs
+security.constantTimeEquals(a, b)         // safe comparison
 crypto.sha256(data) / crypto.hmacSha256(key, data)
 crypto.encryptAesGcm(text, keyHex) / decryptAesGcm(ct, keyHex)
 ```
 
-## Anti-padrões
+## Anti-patterns
 
-- `sha256(password)` para armazenar senha — use `passwords.hash`.
-- `==` para comparar tokens/hashes — use `security.constantTimeEquals`.
-- Imprimir segredos em logs — use `secrets.redact`.
-- Confiar no `alg` do token — o Kof fixa HS256.
+- `sha256(password)` to store a password — use `passwords.hash`.
+- `==` to compare tokens/hashes — use `security.constantTimeEquals`.
+- Printing secrets in logs — use `secrets.redact`.
+- Trusting the token's `alg` — Kof fixes HS256.
 
 ## Web
 
@@ -36,17 +38,17 @@ app.use {
 }
 ```
 
-## Suporte por target (0.3.22-beta)
+## Support per target (0.3.22-beta)
 
-| Função | JVM | Native | JS |
+| Function | JVM | Native | JS |
 |--------|-----|--------|----|
 | passwords (PBKDF2 600k) | ✅ | ✅ (asm SHA-256 + hmac) | ✅ (via platform) |
 | sha256 / hmacSha256 | ✅ | ✅ | ✅ |
 | sha512 | ✅ | ✅ (asm FIPS 180-4) | ✅ |
-| aesGcm | ✅ | ✅ (asm; SECN002 fechado 30/08) | ❌ SECN002 |
+| aesGcm | ✅ | ✅ (asm; SECN002 closed 30/08) | ❌ SECN002 |
 | jwt HS256 | ✅ | ✅ (asm, iat/exp/iss/aud) | ✅ |
 | secrets | ✅ | ✅ (/proc/self/environ) | ✅ |
 | constantTimeEquals | ✅ | ✅ | ✅ |
-| auth web (rateLimit/sessions/apiKeys) | ✅ | ✅ | ✅ |
+| web auth (rateLimit/sessions/apiKeys) | ✅ | ✅ | ✅ |
 
-Referência: docs/stdlib/security.md (0.3.22-beta), learn/36-security.md.
+Reference: docs/stdlib/security.md (0.3.22-beta), learn/36-security.md.

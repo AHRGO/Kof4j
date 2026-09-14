@@ -1,61 +1,64 @@
-# Versionamento e Releases
+[English](versioning.md) | [Português](versioning.pt_BR.md)
 
-Fatos sobre o modelo de versionamento e release do Kof. Use para responder
-perguntas sobre versões, releases e o processo de publicação.
+# Versioning and Releases
+
+Facts about Kof's versioning and release model. Use it to answer
+questions about versions, releases and the publishing process.
 
 **Version:** 0.4.0-beta (Sep 2026)
 
-## Formato de versão
+## Version format
 
 ```text
 MAJOR.MINOR.PATCH[-suffix]
 ```
 
 - `X` — Major release.
-- `Y` — Major fix / evolução significativa.
-- `Z` — Bugfix — o "pontinho da vergonha" (correções, regressões, pequenos
-  ajustes sem mudança arquitetural relevante).
-- `-beta` / `-alpha` / `-rc` — estágio.
+- `Y` — Major fix / significant evolution.
+- `Z` — Bugfix — the "little dot of shame" (fixes, regressions, small
+  adjustments without relevant architectural change).
+- `-beta` / `-alpha` / `-rc` — stage.
 
-## Estágio atual
+## Current stage
 
-- O Kof está em `0.4.0-beta` (branch `beta-0.4.0`, set 2026).
-- Evolução: `0.0.5-alpha` → `0.1.0` → `0.2.6-beta` → Beta → Release Candidate → Stable.
-- A versão de componente (compiler/runtime/stdlib) é `0.2.0`; o sufixo
-  `-beta` pertence ao release.
+- Kof is at `0.4.0-beta` (branch `beta-0.4.0`, Sep 2026).
+- Evolution: `0.0.5-alpha` → `0.1.0` → `0.2.6-beta` → Beta → Release Candidate → Stable.
+- The component version (compiler/runtime/stdlib) is `0.2.0`; the `-beta`
+  suffix belongs to the release.
 - Targets: `jvm` / `native` / `native.risc` / `native.arm` / `js` / `kofc` + `KofScript`.
 
-## Fonte única de verdade
+## Single source of truth
 
-- A versão vive no arquivo `VERSION` na raiz do repositório (`0.4.0-beta`).
-- `scripts/bump-version.sh` sincroniza `VERSION` → `pom.xml` (`<revision>`)
-  → `kof-compiler/src/main/resources/dev/kof/version.properties` (`kof.version` acompanha o `revision`).
-- A pipeline atualiza automaticamente: compiler, CLI, runtime, artefatos,
-  pacote, GitHub Release, changelog.
-- Não editar versões manualmente em vários arquivos.
+- The version lives in the `VERSION` file at the repository root (`0.4.0-beta`).
+- `scripts/bump-version.sh` syncs `VERSION` → `pom.xml` (`<revision>`)
+  → `kof-compiler/src/main/resources/dev/kof/version.properties` (`kof.version` follows the `revision`).
+- The pipeline automatically updates: compiler, CLI, runtime, artifacts,
+  package, GitHub Release, changelog.
+- Do not edit versions manually in several files.
 
- ## Release automático (CI/CD) — 2 jobs (test-and-bump → package-and-release)
+ ## Automatic release (CI/CD) — 2 jobs (test-and-bump → package-and-release)
 
- Cada commit na `main`:
+ Every commit on `main`:
 
  ```text
- commit → CI (gate) → test-and-bump (mvn package + golden + integration + bump + push do commit, exporta bump_sha)
-       → package-and-release (checkout do COMMIT DE BUMP via ref: bump_sha; matriz 3 runners; sanity check VERSION; package --jdk; valida artefato; GitHub Release por plataforma)
+ commit → CI (gate) → test-and-bump (mvn package + golden + integration + bump + push of the commit, exports bump_sha)
+       → package-and-release (checks out the BUMP COMMIT via ref: bump_sha; 3-runner matrix; VERSION sanity check; package --jdk; validates the artifact; GitHub Release per platform)
  ```
 
- - A `main` nunca aponta para um estado que não compila.
- - O release só acontece se `mvn clean package`, `tests/run-golden.sh` e
-   `tests/run-integration.sh` passarem.
- - O job `package-and-release` **checkout o commit de bump** (não o do
-   trigger) — sem isso o pacote saíria com a versão anterior; há sanity
-   check que `VERSION` do checkout == versão da release.
- - Workflow de PR: build + testes + verificações estáticas.
- - Workflow de push na main: 2 jobs — `test-and-bump` (bump + push +
-   exporta SHA) e `package-and-release` (matriz: linux-x86_64,
-   windows-x86_64, **macos-arm64**), validação de artefato, changelog,
-   GitHub Release por plataforma com JDK 21 embutido.
+ - `main` never points to a state that does not compile.
+ - The release only happens if `mvn clean package`, `tests/run-golden.sh` and
+   `tests/run-integration.sh` pass.
+ - The `package-and-release` job **checks out the bump commit** (not the
+   trigger one) — without this the package would ship with the previous
+   version; there is a sanity check that the checkout's `VERSION` == the
+   release version.
+ - PR workflow: build + tests + static checks.
+ - Push workflow on main: 2 jobs — `test-and-bump` (bump + push +
+   exports SHA) and `package-and-release` (matrix: linux-x86_64,
+   windows-x86_64, **macos-arm64**), artifact validation, changelog,
+   GitHub Release per platform with embedded JDK 21.
 
- ## Artefatos
+ ## Artifacts
 
  ```text
  kof-0.4.0-beta-linux-x86_64.tar.gz
@@ -65,26 +68,26 @@ MAJOR.MINOR.PATCH[-suffix]
  SHA256SUMS
  ```
 
-Cada pacote contém compiler, CLI, runtime, stdlib, tooling, editor support e
-JDK embutido (Temurin 21, Tooling API Level 21).
+Each package contains compiler, CLI, runtime, stdlib, tooling, editor support and
+embedded JDK (Temurin 21, Tooling API Level 21).
 
 ## Changelog
 
-- `CHANGELOG.md` mantido no repositório, com marcador `<!-- NEXT-RELEASE -->`
-  onde a pipeline insere a próxima seção.
-- `scripts/changelog.sh` agrupa commits desde o último tag pela convenção:
+- `CHANGELOG.md` kept in the repository, with the marker `<!-- NEXT-RELEASE -->`
+  where the pipeline inserts the next section.
+- `scripts/changelog.sh` groups commits since the last tag by the convention:
   `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `build:`, `tooling:`.
 
 ## Tags
 
-- Tags seguem `kof-<versão>` (ex.: `kof-0.4.0-beta`).
-- O commit de bump usa `[skip ci]` para não re-disparar a pipeline.
+- Tags follow `kof-<version>` (e.g.: `kof-0.4.0-beta`).
+- The bump commit uses `[skip ci]` so it does not re-trigger the pipeline.
 
-## Regras importantes
+## Important rules
 
-- Em Beta: todo commit na main gera a próxima versão Beta.
-- Verificação de consistência: CI compara `VERSION`, `pom.xml` e o resource
-  empacotado (`mvn package` valida).
-- O job `package-and-release` faz checkout do **commit de bump** (via
-  `ref: bump_sha`) — nunca do commit trigger, para o pacote carregar a
-  versão nova; há sanity check de `VERSION` antes do empacotamento.
+- In Beta: every commit on main generates the next Beta version.
+- Consistency check: CI compares `VERSION`, `pom.xml` and the packaged resource
+  (`mvn package` validates).
+- The `package-and-release` job checks out the **bump commit** (via
+  `ref: bump_sha`) — never the trigger commit, so the package carries the
+  new version; there is a `VERSION` sanity check before packaging.

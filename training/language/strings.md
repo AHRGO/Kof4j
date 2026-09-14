@@ -1,3 +1,5 @@
+[English](strings.md) | [Português](strings.pt_BR.md)
+
 # Kof String Reference
 
 **Version:** 0.4.0-beta (Sep 2026)

@@ -1,14 +1,16 @@
+[English](sentinel-values.md) | [Português](sentinel-values.pt_BR.md)
+
 # Anti-pattern — Sentinel Values
 
 ## Name
 
-Usar um valor de dados para representar ausência/erro.
+Using a data value to represent absence/error.
 
 ## Problem
 
-`""`, `-1`, `0`, `"not found"` retornados para significar "não existe".
-O consumidor precisa conhecer a convenção; valores legítimos podem colidir
-com a sentinela; o erro não carrega informação.
+`""`, `-1`, `0`, `"not found"` returned to mean "does not exist".
+The consumer must know the convention; legitimate values can collide
+with the sentinel; the error carries no information.
 
 ## Bad example
 
@@ -23,15 +25,15 @@ Int findIndex(String key) {
 }
 ```
 
-`-1` é a sentinela. O chamador precisa lembrar: `if (findIndex(k) >= 0)`.
+`-1` is the sentinel. The caller must remember: `if (findIndex(k) >= 0)`.
 
 ## Why it is bad
 
-- Convenção invisível (o tipo `Int` não diz que `-1` é especial).
-- Erro e dado são indistinguíveis.
-- Não há mensagem de erro.
+- Invisible convention (the `Int` type does not say that `-1` is special).
+- Error and data are indistinguishable.
+- There is no error message.
 
-## Preferred approach (erro real)
+## Preferred approach (real error)
 
 ```kof
 Int findIndex(String key) {
@@ -44,12 +46,12 @@ Int findIndex(String key) {
 }
 ```
 
-O consumidor trata com `try/catch` e recebe a informação do erro.
+The consumer handles it with `try/catch` and receives the error information.
 
-## Preferred approach (ausência como dado)
+## Preferred approach (absence as data)
 
 ```kof
-// ✅ String? / Int? com narrowing é o idiom
+// ✅ String? / Int? with narrowing is the idiom
 String? find(String key) {
     for (var e in entries) {
         if (e.key == key) return e.value
@@ -61,15 +63,15 @@ if (r != null) {
     println(r.length)
 }
 
-// Alternativa quando erro e dado não se misturam: exception
+// Alternative when error and data do not mix: exception
 String findOrThrow(String key) {
     for (var e in entries) { if (e.key == key) return e.value }
     throw "not found: " + key
 }
 ```
 
-> **Nota:** `Option<T>` genérico ainda é `planned` — para casos simples use `String?`/`Int?`. Sentinela (`""`/`-1`) só é `WORKAROUND` se `null` não modela o domínio e deve ser marcada explicitamente.
+> **Note:** generic `Option<T>` is still `planned` — for simple cases use `String?`/`Int?`. A sentinel (`""`/`-1`) is only a `WORKAROUND` if `null` does not model the domain and must be marked explicitly.
 
 ## Exceptions
 
-- Convenções de APIs externas (ex.: índices retornam -1 em certos protocolos).
+- Conventions of external APIs (e.g.: indexes return -1 in certain protocols).

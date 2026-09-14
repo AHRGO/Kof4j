@@ -1,3 +1,5 @@
+[English](types.md) | [Português](types.pt_BR.md)
+
 # Kof Types
 
 **Version:** 0.4.0-beta (Sep 2026)
@@ -17,7 +19,7 @@
 | `string` | reference | KofString |
 | `void` | — | No return |
 
-Nullable: suffix `?` → `String?`, `Int?`, `Point?` (NullableType — desde 0.2.6-beta). `if (x != null)` narrows para non-null via `isAssignable`.
+Nullable: suffix `?` → `String?`, `Int?`, `Point?` (NullableType — since 0.2.6-beta). `if (x != null)` narrows to non-null via `isAssignable`.
 
 ## Reference Types
 
@@ -42,51 +44,51 @@ switch (p) {
 class Box<T>(T value) {
     get(): T { return value }
 }
-var b: Box<Int> = Box(42)   // T primitivo OK — substituteTypeVariable fix 25/08
+var b: Box<Int> = Box(42)   // primitive T OK — substituteTypeVariable fix 25/08
 var l: List<Box<Int>> = listOf(Box(1), Box(2))
 var dobrados = listOf(1,2,3).map((x: Int) -> x * 2)
 ```
 
-Erasure com boxing via `parameterTypes` do call-site.
+Erasure with boxing via the call-site's `parameterTypes`.
 
 ### Arrays
 ```kof
 var arr = new Int[10]
 var strings = new String[5]
-var bigs = new Long[10]    // ✅ Long[] real (JVM long[]; Native/JS idem)
+var bigs = new Long[10]    // ✅ real Long[] (JVM long[]; Native/JS same)
 ```
 
-### Casts primitivos (`as`) — desde 0.2.6-beta (01/09)
+### Primitive casts (`as`) — since 0.2.6-beta (01/09)
 
 ```kof
-var c = 104 as Char          // ✅ I2C real — Char do codepoint
+var c = 104 as Char          // ✅ real I2C — Char from the codepoint
 println(String.valueOf(c))   // "h"
 var big: Long = 3000000000
-var i = big as Int           // ✅ L2I real — narrowing Long→Int
-// widening Int→Long é implícito; narrowing Long→Int exige `as Int`
+var i = big as Int           // ✅ real L2I — narrowing Long→Int
+// widening Int→Long is implicit; narrowing Long→Int requires `as Int`
 ```
 
-- `x as Char`: codepoint do Int (verificação: `String.valueOf(x as Char)`).
-- `big as Int`: trunca o Long para Int (como Java).
-- Nunca use `KofCheckCast` mental para primitivos — o compilador emite
-  conversões numéricas reais (I2C/L2I), não checkcast de objeto.
+- `x as Char`: codepoint from the Int (check: `String.valueOf(x as Char)`).
+- `big as Int`: truncates the Long to Int (like Java).
+- Never use a mental `KofCheckCast` for primitives — the compiler emits
+  real numeric conversions (I2C/L2I), not an object checkcast.
 
-### Aritmética Long (fixed-point / precisão)
+### Long arithmetic (fixed-point / precision)
 
 ```kof
 var acc: Long = 0
 var i = 0
 while (i < 2048) {
-    acc = acc + bigs[i] * bigs[i]   // ✅ Long×Long→Long (sem overflow de Int)
+    acc = acc + bigs[i] * bigs[i]   // ✅ Long×Long→Long (no Int overflow)
     i = i + 1
 }
-var rms = acc / 2048                // divisão Long ok
+var rms = acc / 2048                // Long division ok
 ```
 
-- Literal sufixado por atribuição (`var acc: Long = 0`) — sem sufixo L.
-- Int×Long promove para Long; Int×Int permanece Int (pode overflow).
-- Padrão fixed-point: estados em MICRO (1e-6) e pesos em NANO (1e-9),
-  acumulador Long, divisão no fim (`acc / 1_000_000_000` estilo).
+- Literal suffixed by assignment (`var acc: Long = 0`) — no `L` suffix.
+- Int×Long promotes to Long; Int×Int stays Int (may overflow).
+- Fixed-point pattern: states in MICRO (1e-6) and weights in NANO (1e-9),
+  Long accumulator, division at the end (`acc / 1_000_000_000` style).
 
 ### Interfaces
 ```kof
@@ -117,10 +119,10 @@ Int? n = 5
 if (s != null) {
     println(s.length)   // OK — narrowing
 }
-String t = s            // erro: String? não atribuível a String sem check
+String t = s            // error: String? not assignable to String without a check
 ```
 
-`NullableType(inner)` em `Type.java`; `SemanticAnalyzer.isAssignable` trata `Nullable → non-null`.
+`NullableType(inner)` in `Type.java`; `SemanticAnalyzer.isAssignable` handles `Nullable → non-null`.
 
 ## Type Inference
 
@@ -145,8 +147,8 @@ Box<Int> boxed = Box<Int>(5)
 ## Type Compatibility
 
 - Widening: `Int` → `Long` → `Float` → `Double`
-- Nullable: `String` assignable to `String?`, not vice-versa without `!= null` check
+- Nullable: `String` assignable to `String?`, not vice-versa without a `!= null` check
 - String + anything → String (concatenation)
 - Comparison operators → Bool
 - Logical operators → Bool
-- Erasure: `List<Int>` e `List<String>` mesmo runtime, boxing via call-site
+- Erasure: `List<Int>` and `List<String>` same runtime, boxing via call-site

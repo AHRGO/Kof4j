@@ -1,13 +1,15 @@
+[English](database.md) | [Português](database.pt_BR.md)
+
 # Idioms — Database / ORM
 
 **Status:** available · **Introduced:** 0.2.6-beta · **Updated:**  0.4.0-beta (Sep 2026) (02 Sep 2026)
 
 ## What it is
 
-`kof.db` fala SQL via binds preparados; `kof.orm` conhece o schema da
-entidade em **compile-time** (campos, tipos e constraints declarados com
-`entity` — nunca reflection, nunca annotations). O **Query DSL** (nível 3,
-`ORM001`) expressa consultas tipadas sem string de SQL:
+`kof.db` speaks SQL via prepared binds; `kof.orm` knows the entity schema at
+**compile-time** (fields, types and constraints declared with `entity` — never
+reflection, never annotations). The **Query DSL** (level 3, `ORM001`) expresses
+typed queries without an SQL string:
 
 ```kof
 entity User {
@@ -21,7 +23,7 @@ var db = db.connect("jdbc:h2:mem:app")
 orm.create<User>(db)
 orm.save(db, User(0, "Mel", "mel@kof.dev", 30))
 
-// Query DSL: where / orderBy / limit — o compilador gera a SQL
+// Query DSL: where / orderBy / limit — the compiler generates the SQL
 var adultos = User.query(db) {
     where age > 25
     orderBy name asc
@@ -31,10 +33,10 @@ println(adultos.size)
 println(adultos.get(0).name)
 ```
 
-O lowering é agnóstico de target (emite o mesmo `db.query<T>` no JVM e no
-Native) e o E2E roda no JVM (H2). `KofOrmE2ETest` (22).
+The lowering is target-agnostic (emits the same `db.query<T>` on JVM and
+Native) and the E2E runs on JVM (H2). `KofOrmE2ETest` (22).
 
-## API real (verificada no compilador — 0.4.0-beta)
+## Real API (verified in the compiler — 0.4.0-beta)
 
 ```kof
 var db = db.connect("jdbc:h2:mem:app")
@@ -42,18 +44,18 @@ db.execute(db, "create table t(id int)")
 db.execute(db, "insert into t values (?)", 1)
 var rows = db.query<User>(db, "select * from t where id = ?", 1)
 
-// ORM — CRUD sobre o schema
+// ORM — CRUD over the schema
 orm.create<User>(db)
 orm.save(db, User(0, "Mel", "mel@kof.dev", 30))
 var u = orm.find<User>(db, 1)
 var all = orm.all<User>(db)
-orm.where<User>(db, "age", ">", 25)        // + operador opcional
+orm.where<User>(db, "age", ">", 25)        // + optional operator
 orm.count<User>(db, "age", 30)
 orm.delete<User>(db, 1)
 orm.page<User>(db, 1, 20)
 orm.deleteAll<User>(db)
 
-// Query DSL (nível 3) — múltiplos where = AND
+// Query DSL (level 3) — multiple where = AND
 User.query(db) {
     where age >= 25
     where age < 40
@@ -64,50 +66,50 @@ User.query(db) {
 
 ## When to use
 
-- Persistência relacional: `db` para SQL explícito com binds; `orm` para CRUD
-  sobre uma entidade tipada; Query DSL para filtros/ordenação/limit sem
-  montar string de SQL.
-- `where`/`orderBy` do DSL referenciam **colunas** (nomes de campo da
-  entidade) — o compilador valida contra o schema.
+- Relational persistence: `db` for explicit SQL with binds; `orm` for CRUD
+  over a typed entity; Query DSL for filters/ordering/limit without
+  building an SQL string.
+- The DSL's `where`/`orderBy` reference **columns** (entity field names) —
+  the compiler validates against the schema.
 
 ## When not to use
 
-- Não montar SQL por concatenação de entrada quando um bind `?` resolve
-  (injeção) — `db.execute`/`db.query` e o DSL já usam binds.
-- Não usar `List<entity>` + busca linear quando `orm.where`/Query DSL
-  resolvem.
+- Do not build SQL by concatenating input when a `?` bind solves it
+  (injection) — `db.execute`/`db.query` and the DSL already use binds.
+- Do not use `List<entity>` + linear search when `orm.where`/Query DSL
+  solve it.
 
-## BAD — SQL por string + sem tipos
+## BAD — SQL as a string + no types
 
 ```kof
-// ❌ SQL montada com concatenação de entrada (injeção) + loop manual p/ filtrar
+// ❌ SQL built with input concatenation (injection) + manual loop to filter
 var sql = "select * from user where age > " + entrada
 var rows = db.query(db, sql)
 var ok = rows.filter((u: User) -> u.age > 25)
 ```
 
 ```kof
-// ✅ binds preparados + Query DSL (intenção, sem string de entrada)
+// ✅ prepared binds + Query DSL (intent, no input string)
 var ok = User.query(db) {
-    where age > entrada      // entrada vira bind `?`
+    where age > entrada      // input becomes a `?` bind
 }
 ```
 
-## BAD — ORM sem validação de coluna
+## BAD — ORM without column validation
 
 ```kof
-// ❌ coluna inexistente só falha em runtime (ou pior: retorna tudo)
-var r = orm.where<User>(db, "idade", 30)   // ORM003 em compile-time
+// ❌ a nonexistent column only fails at runtime (or worse: returns everything)
+var r = orm.where<User>(db, "idade", 30)   // ORM003 at compile-time
 ```
 
 ```kof
-// ✅ validação tipada: `idade` não é campo de `User` → erro no compile
+// ✅ typed validation: `idade` is not a field of `User` → compile error
 var r = orm.where<User>(db, "age", 30)
 ```
 
-## Gaps (diagnóstico claro, nunca fallback silencioso)
+## Gaps (clear diagnostic, never silent fallback)
 
-- Coluna inexistente no `where` do ORM/DSL → `ORM003`.
-- `where` sem comparação, operador não suportado ou >4 binds no DSL → `ORM004`.
-- ORM fora do JVM (Native/JS) → `ORM001` em compile-time.
-- `db` no JS → `DB001`.
+- Nonexistent column in the ORM/DSL `where` → `ORM003`.
+- `where` without comparison, unsupported operator or >4 binds in the DSL → `ORM004`.
+- ORM outside the JVM (Native/JS) → `ORM001` at compile-time.
+- `db` on JS → `DB001`.

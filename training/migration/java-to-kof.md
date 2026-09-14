@@ -1,3 +1,5 @@
+[English](java-to-kof.md) | [Português](java-to-kof.pt_BR.md)
+
 # Java to Kof Migration
 
 **Version:** 0.4.0-beta (Sep 2026)
@@ -20,18 +22,18 @@ public class User {
 }
 ```
 
-### Kof (record-style para dados imutáveis)
+### Kof (record-style for immutable data)
 ```kof
-// class X(...) == record X(...): imutável, accessors, leitura u.name ok
+// class X(...) == record X(...): immutable, accessors, reading u.name ok
 class User(String name, Int age) {
 }
 var u = User("Mel", 30)
 println(u.name)
 ```
 
-> **Estado mutável (o Java `private` + setters NÃO se traduz 1:1):** em Kof o
-> campo é público e mutável — sem getter/setter. Se a entidade muda, use
-> classe com campos + `constructor(...)`:
+> **Mutable state (Java's `private` + setters does NOT translate 1:1):** in Kof
+> the field is public and mutable — no getter/setter. If the entity changes, use
+> a class with fields + `constructor(...)`:
 > ```kof
 > class User2 {
 >     String name
@@ -42,9 +44,9 @@ println(u.name)
 >     }
 > }
 > var u2 = User2("Mel", 30)
-> u2.age = 31      // campo direto — sem setAge()
+> u2.age = 31      // direct field — no setAge()
 > ```
-> Dados imutáveis → `record User(String name, Int age)` (accessors `u.name()`).
+> Immutable data → `record User(String name, Int age)` (accessors `u.name()`).
 
 ## Records
 
@@ -121,7 +123,7 @@ Set<String> set = new HashSet<>();
 var list = listOf("hello")
 list.add("world")
 list.contains("hello")
-var x = list.get(0)          // fix 27/08 — sem workaround manual
+var x = list.get(0)          // fix 27/08 — no manual workaround
 println(list.size)
 
 var map = mapOf("a", 1)
@@ -136,11 +138,11 @@ var nomes = users.map((u: User) -> u.name)
 var pares = nums.filter((x: Int) -> x % 2 == 0)
 var soma = nums.reduce((a: Int, b: Int) -> a + b, 0)
 
-// Generics com primitivo
+// Generics with primitive
 var box: Box<Int> = Box(42)
 ```
 
-`List`, `Map`, `Set` disponíveis em JVM/Native/JS com `map/filter/reduce` e `Box<T>`.
+`List`, `Map`, `Set` available on JVM/Native/JS with `map/filter/reduce` and `Box<T>`.
 
 ## Null safety — Option vs String?
 
@@ -158,7 +160,7 @@ if (maybe != null) {
 }
 String? other = "ola"
 var len = if (other != null) other.length else 0
-// Option<T> genérico ainda planned — use String? para casos simples
+// generic Option<T> still planned — use String? for simple cases
 ```
 
 ## HTTP
@@ -177,19 +179,19 @@ public class UserController {
 ### Kof (0.4.0-beta)
 ```kof
 // kof.http client — JVM + JS (Java HttpClient interop), Native HTTP002
-// verbos: get/post/put/delete/patch/options
+// verbs: get/post/put/delete/patch/options
 var html = http.get("https://example.com")
 var resp = http.post(api, json.encode(user), "Content-Type: application/json")
 if (http.status(url) == 404) { println("not found") }
-http.timeout(30)    // resiliência (30/08): timeout/retry/circuit
+http.timeout(30)    // resilience (30/08): timeout/retry/circuit
 http.retry(3)
 http.circuit(5)
 
 // web server (JVM; Native/JS WEB001)
 var app = web.app()
 app.get("/users/:id") { return "user " + param("id") }
-return status(201, body())       // status customizado por handler
-headerSet("X-App", "kof")        // headers customizados
+return status(201, body())       // custom status per handler
+headerSet("X-App", "kof")        // custom headers
 app.ws("/chat") { wsSend(wsMessage()) }  // WebSocket
 app.sse("/events") { sse.send("tick") }  // SSE
 app.listen(8080)
@@ -205,13 +207,13 @@ import java.util.*;
 
 ### Kof (fix 27/08)
 ```kof
-import a.b.C          // file-specific — projetos grandes agora OK
+import a.b.C          // file-specific — large projects now OK
 import a.b.*
 ```
 
 ## KofScript
 
-### Java — não aplicável
+### Java — not applicable
 
 ### Kof (0.4.0-beta)
 ```kof

@@ -1,18 +1,20 @@
+[English](strings.md) | [Português](strings.pt_BR.md)
+
 # Idioms — Strings
 
 **Status:** available · **Introduced:** 0.0.4-alpha · **Updated:**  0.4.0-beta (Sep 2026)
 
 ## What it is
 
-String é um tipo primário da linguagem: concatenação com `+`, comparação de
-conteúdo com `==`/`!=`, e uma API de métodos direta.
+String is a primary type of the language: concatenation with `+`, content
+comparison with `==`/`!=`, and a direct method API.
 
-## Operações (verificadas)
+## Operations (verified)
 
 ```kof
 var s = "Hello World"
-s.length                    // 11 (propriedade; s.length() também é aceito)
-s.charAt(1)                 // 'e' como valor numérico (101)
+s.length                    // 11 (property; s.length() is also accepted)
+s.charAt(1)                 // 'e' as a numeric value (101)
 s.substring(6)              // "World"
 s.substring(0, 5)           // "Hello"
 s.contains("World")
@@ -26,29 +28,29 @@ s.equalsIgnoreCase("hello world")
 s.split(" ")                // String[]
 var a = "x"
 var b = "y"
-a == b                      // comparação de CONTEÚDO (não referência)
-a + "!"                     // concatenação
+a == b                      // CONTENT comparison (not reference)
+a + "!"                     // concatenation
 ```
 
-## String.valueOf + concat (corrigido 01/09)
+## String.valueOf + concat (fixed 01/09)
 
 ```kof
-// ✅ receiver estático de tipo builtin funciona (String/Integer/Long/
+// ✅ static receiver of a builtin type works (String/Integer/Long/
 // Float/Double/Boolean/Char/Math/System):
 var s = "n=" + String.valueOf(42)
-var c = String.valueOf(104 as Char)   // "h" — codepoint→caractere
+var c = String.valueOf(104 as Char)   // "h" — codepoint→character
 
-// ⚠️ ATENÇÃO: String.valueOf(int) retorna DÍGITOS ("104"), não o caractere.
-// Para o caractere: String.valueOf(x as Char)
+// ⚠️ ATTENTION: String.valueOf(int) returns DIGITS ("104"), not the character.
+// For the character: String.valueOf(x as Char)
 ```
 
-- Concat com mistura de tipos (`str + Int + Long + Double + Float + char`) é
-  suportado; o compilador boxa e chama `valueOf` no ponto certo (fixes:
-  COMP002 01/09; **`"str" + double` descartava o operando FP → saída vazia,
-  corrigido 02/09**).
-- Não construa conversão manual dígito-a-dígito — use `String.valueOf`.
+- Concat with mixed types (`str + Int + Long + Double + Float + char`) is
+  supported; the compiler boxes and calls `valueOf` at the right point (fixes:
+  COMP002 01/09; **`"str" + double` discarded the FP operand → empty output,
+  fixed 02/09**).
+- Do not build manual digit-by-digit conversion — use `String.valueOf`.
 
-## BAD — equals de Java
+## BAD — Java's equals
 
 ```kof
 if (nome.equals("Mel")) {
@@ -66,11 +68,11 @@ if (nome == "Mel") {
 
 ## WHY
 
-Em Kof, `==` em strings compara conteúdo. O `.equals()` de Java existe porque
-Java não pode sobrecarregar `==`. Kof não tem essa limitação.
-Use `==` — é a intenção.
+In Kof, `==` on strings compares content. Java's `.equals()` exists because
+Java cannot overload `==`. Kof does not have that limitation.
+Use `==` — it is the intent.
 
-## BAD — concatenação manual em loop
+## BAD — manual concatenation in a loop
 
 ```kof
 var result = ""
@@ -88,7 +90,7 @@ for (var item in items) {
 }
 ```
 
-Ou, quando a sequência é pequena, `listOf(...).toString()`-like ou concat direto:
+Or, when the sequence is small, `listOf(...).toString()`-like or direct concat:
 
 ```kof
 var saudacao = "ola " + nome + "!"
@@ -96,39 +98,39 @@ var saudacao = "ola " + nome + "!"
 
 ## WHY
 
-`+` já é concatenação de strings. Não há necessidade de `StringBuilder` manual —
-e **não existe** uma classe StringBuilder na linguagem (não invente uma).
+`+` is already string concatenation. There is no need for a manual `StringBuilder` —
+and there **is no** StringBuilder class in the language (do not invent one).
 
-## Nota por target (`STR001` — gap cross-target documentado)
+## Note per target (`STR001` — documented cross-target gap)
 
-- No Native, `length` conta **bytes UTF-8** de uma string imutável.
-- No JVM, `length` conta unidades UTF-16 (comportamento padrão do `java.lang.String`).
+- On Native, `length` counts **UTF-8 bytes** of an immutable string.
+- On the JVM, `length` counts UTF-16 units (standard `java.lang.String` behavior).
 
-Para strings com acentos/emoji os valores divergem (`"Olá".length` = 4 no Native,
-3 no JVM). É um gap **conhecido e explícito** (código `STR001` em
-`docs/backend-parity.md`): use `length` para tamanho bruto; não assuma contagem
-de caracteres quando o target importa.
+For strings with accents/emoji the values diverge (`"Olá".length` = 4 on Native,
+3 on the JVM). It is a **known and explicit** gap (code `STR001` in
+`docs/backend-parity.md`): use `length` for raw size; do not assume character
+count when the target matters.
 
 ## Null safety (0.3.22-beta)
 
 ```kof
 String? s = null
 if (s != null) {
-    println(s.length)   // narrowing OK — propriedade E métodos (s.substring(...))
+    println(s.length)   // narrowing OK — property AND methods (s.substring(...))
 }
-// s.length sem check → erro SEM014
+// s.length without a check → error SEM014
 ```
 
-> **02/09:** narrowing de `String?` no JVM corrigido — antes `s.length`/`s.substring(...)`
-> com narrowing emitiam `getfield "?".length`/`"".substring` (bytecode inválido →
-> `ClassFormatError`/erro de launcher). Agora roda nos 3 targets
+> **02/09:** narrowing of `String?` on the JVM fixed — before, `s.length`/`s.substring(...)`
+> with narrowing emitted `getfield "?".length`/`"".substring` (invalid bytecode →
+> `ClassFormatError`/launcher error). Now it runs on the 3 targets
 > (`NullSafetyE2ETest`).
 
-## Limitações
+## Limitations
 
-- `replace` é **somente** `replace(Char, Char)` (códigos numéricos de caractere).
-- `split` retorna `String[]`.
+- `replace` is **only** `replace(Char, Char)` (numeric character codes).
+- `split` returns `String[]`.
 
-## Anti-patterns relacionados
+## Related anti-patterns
 
-- `sentinel-values.md` — use `String?` em vez de `""` para "não encontrado" (0.3.22-beta)
+- `sentinel-values.md` — use `String?` instead of `""` for "not found" (0.3.22-beta)
