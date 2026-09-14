@@ -141,6 +141,8 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > **✅ SYNC FEITO ~06:37:** 7 dependabot PRs merged (#171 main, #174–177 main,
 > #172 beta, #178 main); main→beta (6bcaef10+363b4444); beta→main PR #179 merged
 > (main=851e514b). Correção dos erros (checks vermelhos, junit 6, release) com ela.
+> **Opt-ins 14/09 ("pode"): push protection + dependabot-security-updates
+> ATIVADOS via API.** Nada mais pendente no pack.
 
 > **EM CURSO (14/09 ~02:30, dono = 192.168.100.15, lane bugs-and-gaps):
 > unidade §186/#133 — fix estrutural completo do `<clinit>`.** Autostash
