@@ -1016,6 +1016,7 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 ### Features
 
+  - S1b.3 math.roundTo(value, decimals) — half-away-from-zero by deterministic decimal scaling, no libm (5 targets; DECISIONS §3)
   - implement saturating casts for Double/Float to Int/Long (JLS 5.1.3) across all targets
   - add ui-config block and kof.config functions
   - time.tzOffsetSeconds — host timezone (D1), 3 targets + honest TIME003 gap

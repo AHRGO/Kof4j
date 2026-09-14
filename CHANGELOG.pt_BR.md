@@ -1017,6 +1017,7 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 ### Features
 
+  - S1b.3 math.roundTo(value, decimals) — meio-para-longe-do-zero por escala decimal determinística, sem libm (5 alvos; DECISIONS §3)
   - implement saturating casts for Double/Float to Int/Long (JLS 5.1.3) across all targets
   - add ui-config block and kof.config functions
   - time.tzOffsetSeconds — fuso do host (D1), 3 alvos + gap honesto TIME003

@@ -145,6 +145,7 @@ public final class JvmRuntimeReturnDescriptors {
             case "kof_math_lerp", "kof_math_percentage" -> "D";
             case "kof_math_pow" -> "D";
             case "kof_math_isInteger", "kof_math_isDecimal" -> "I";
+            case "kof_math_roundTo" -> "D";
             case "kof_strings_isUpperCase", "kof_strings_isLowerCase",
                     "kof_strings_count" -> "I";
             case "kof_strings_capitalize", "kof_strings_uncapitalize", "kof_strings_reverse", "kof_strings_toCamelCase",

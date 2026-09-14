@@ -234,6 +234,116 @@ public final class RuntimeMath {
                 xorl $1, %eax
                 ret
 
+            # S1b.3 (DECISIONS §3): kof_math_roundTo(rdi=v bits, esi=decimals)
+            # -> rax=bits. Half-away-from-zero (âncora C round()) por escala
+            # decimal determinística (âncora Java BigDecimal.setScale), SEM
+            # libm. p = 10^m (m=|d|, saturado em 308) por multiplicação
+            # REPETIDA — cada mul é 1 op IEEE corretamente arredondada →
+            # byte-idêntico JVM/JS/riscv/aarch. d>=0: scaled=v*p, r/p. d<0:
+            # scaled=v/p (encolhe, nunca estoura), r*p. Overflow de v*p (|v|
+            # grande demais p/ ter casas na escala) → devolve v (no-op).
+            # NÃO usa xmm1 (p) — kof_math_roundHalfAway preserva.
+            .globl kof_math_roundTo
+            .type kof_math_roundTo, @function
+            kof_math_roundTo:
+                movq %rdi, %xmm0                 # v
+                # v NaN/Inf (exp==0x7ff) -> devolve v
+                movq %rdi, %rax
+                shrq $52, %rax
+                andl $0x7ff, %eax
+                cmpl $0x7ff, %eax
+                je .Lv_rt_ret_v
+                # m = min(|d|, 308)
+                movl %esi, %ecx
+                movl %ecx, %eax
+                sarl $31, %eax                   # eax = d<0 ? -1 : 0
+                xorl %eax, %ecx
+                subl %eax, %ecx                  # ecx = |d|
+                cmpl $308, %ecx
+                jle .Lv_rt_m_ok
+                movl $308, %ecx
+            .Lv_rt_m_ok:
+                # p = 10^m
+                movabsq $0x3ff0000000000000, %rdx # 1.0
+                movq %rdx, %xmm1                 # p = 1.0
+                movabsq $0x4024000000000000, %rdx # 10.0
+                movq %rdx, %xmm2
+                testl %ecx, %ecx
+                jz .Lv_rt_p_done
+            .Lv_rt_p_loop:
+                mulsd %xmm2, %xmm1               # p *= 10.0
+                decl %ecx
+                jnz .Lv_rt_p_loop
+            .Lv_rt_p_done:
+                testl %esi, %esi
+                js .Lv_rt_negd
+                mulsd %xmm1, %xmm0               # scaled = v*p
+                movq %xmm0, %rax
+                shrq $52, %rax
+                andl $0x7ff, %eax
+                cmpl $0x7ff, %eax
+                je .Lv_rt_ret_v                  # overflow -> v
+                call kof_math_roundHalfAway
+                divsd %xmm1, %xmm0               # r/p
+                movq %xmm0, %rax
+                ret
+            .Lv_rt_negd:
+                divsd %xmm1, %xmm0               # scaled = v/p
+                movq %xmm0, %rax
+                shrq $52, %rax
+                andl $0x7ff, %eax
+                cmpl $0x7ff, %eax
+                je .Lv_rt_ret_v
+                call kof_math_roundHalfAway
+                mulsd %xmm1, %xmm0               # r*p
+                movq %xmm0, %rax
+                ret
+            .Lv_rt_ret_v:
+                movq %rdi, %rax
+                ret
+
+            # kof_math_roundHalfAway(xmm0=x) -> xmm0. Half-away-from-zero:
+            # trunc + correção do resto (|f|>=0.5 → ±1). |x|>=2^52 (exp>=0x433,
+            # inclui NaN/Inf) já é inteiro → devolve x. Evita o double-rounding
+            # do floor(x+0.5) (0.49999999999999994 → 0). Clobbers xmm3/xmm4,
+            # rax/rcx/rdx; PRESERVA xmm1/xmm2 (fator do caller).
+            .globl kof_math_roundHalfAway
+            .type kof_math_roundHalfAway, @function
+            kof_math_roundHalfAway:
+                movq %xmm0, %rax
+                movq %rax, %rdx
+                shrq $52, %rdx
+                andl $0x7ff, %edx
+                cmpl $0x433, %edx
+                jae .Lv_rha_ret
+                cvttsd2si %xmm0, %rcx            # t = trunc (|x|<2^52, cabe)
+                cvtsi2sdq %rcx, %xmm3            # (double)t
+                subsd %xmm3, %xmm0               # f = x - t
+                movabsq $0x3fe0000000000000, %rdx # 0.5
+                movq %rdx, %xmm4
+                ucomisd %xmm4, %xmm0
+                jae .Lv_rha_up                   # f >= 0.5
+                movabsq $0xbfe0000000000000, %rdx # -0.5
+                movq %rdx, %xmm4
+                ucomisd %xmm4, %xmm0
+                jbe .Lv_rha_down                 # f <= -0.5
+                movq %xmm3, %xmm0
+                ret
+            .Lv_rha_up:
+                movabsq $0x3ff0000000000000, %rdx # 1.0
+                movq %rdx, %xmm4
+                addsd %xmm4, %xmm3
+                movq %xmm3, %xmm0
+                ret
+            .Lv_rha_down:
+                movabsq $0x3ff0000000000000, %rdx # 1.0
+                movq %rdx, %xmm4
+                subsd %xmm4, %xmm3
+                movq %xmm3, %xmm0
+                ret
+            .Lv_rha_ret:
+                ret
+
             # §146 (12/09, #101): Double % variável devolvia o dividendo (o
             # MOD do bloco Double em NativeX86Arith caía no `default` que
             # reempurra xmm0; só o fold de literais acertava). fmod em SSE2

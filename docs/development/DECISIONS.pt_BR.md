@@ -444,6 +444,20 @@ Design racional, inspirado em Java+C:
   Determinístico: escala decimal pura, sem locale, sem pattern DSL (mesmo
   precedente de `time.format`, §D-STDLIB). Célula golden cross-target.
 
+**Feito (14/09, dono 192.168.100.18):** S1b.3 — `kof_math_roundTo(Double,Int)`
+nos 5 alvos. Contrato **aritmético** (não decimal-string): `p=10^|d|` por
+multiplicação REPETIDA (cada passo é 1 op IEEE corretamente arredondada →
+byte-idêntico); `d>=0`: `roundHalfAway(v*p)/p`, `d<0`: `roundHalfAway(v/p)*p`
+(decimals negativo arredonda p/ dezenas/centenas); `|d|` satura em 308; overflow
+de `v*p` → devolve `v` (no-op). `roundHalfAway` = trunc + correção do resto
+(`|f|>=0.5` → ±1; evita o double-rounding do `floor(x+0.5)`). Consequência
+travada: `roundTo(2.675,2)==2.68` (o double `2.675*100` arredonda a `267.5`).
+Sem libm. Backends: JVM (`JvmStringMathRuntime`), SCRIPT (reflexão), JS
+(`kofMathRoundTo`), x86 (`RuntimeMath`), riscv (fatia B32, aarch via tradutor).
+Prova: `KofMathTest.roundTo{Jvm,Native,Js,CrossArch}` + guard SEM025 +
+`ConformanceMatrixTest.stdmathround` (4 targets) + `KofScriptStdlibParityTest.
+mathRoundToParity`.
+
 ### 4. §179 — tipo `kof.ui`/`kof.media` declarado → **opção A (mapear o builtin)**
 `MemberResolver.resolveType`, após `qualifyDeep`, mapeia `ClassType("", name)`
 para `KofUi.constructorType(name)`/`KofMedia` quando `name` é builtin UI/media

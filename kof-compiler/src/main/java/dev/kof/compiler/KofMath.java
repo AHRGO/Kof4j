@@ -9,8 +9,9 @@ import java.util.List;
  * {@code math.abs(x)}, {@code math.isEven(x)}. Maps to {@code kof_math_*}
  * runtime functions on each backend. S1 is Int-only (clamp/abs/sign/min/max/
  * isEven/isOdd/isPositive/isNegative/isZero) — all available on JVM / Native /
- * JS / interpreter with byte-identical parity. Double variants (lerp/roundTo/
- * percentage/sqrt/pow) are S1b (need FP asm on riscv — FLT001 caution).
+ * JS / interpreter with byte-identical parity. Double variants (sqrt/lerp/
+ * percentage/isInteger/isDecimal/pow/roundTo) are S1b (MATH001 closed 11/09 —
+ * riscv slice B32; FLT001 caution: tests compare via Bool, never raw print).
  */
 public final class KofMath {
 
@@ -63,6 +64,16 @@ public final class KofMath {
                     ? new MathCall("kof_math_percentage", DOUBLE, List.of(DOUBLE, DOUBLE)) : null;
             case "isInteger", "isDecimal" -> argc == 1 && isDouble(argTypes.get(0))
                     ? new MathCall("kof_math_" + name, BOOL, List.of(DOUBLE)) : null;
+            // S1b.3 (DECISIONS §3): roundTo(value: Double, decimals: Int) —
+            // half-away-from-zero (âncora C round()) por escala decimal
+            // determinística (âncora Java BigDecimal.setScale). SEM libm: o
+            // 10^decimals é potência por multiplicação/divisão REPETIDA (cada
+            // passo é uma operação IEEE corretamente arredondada → byte-idêntico
+            // nos 5 alvos). decimals pode ser negativo (arredonda p/ dezenas,
+            // centenas...). Guard de tipo: decimals Int obrigatório (sem
+            // widening silencioso, SEM025/R6).
+            case "roundTo" -> argc == 2 && isDouble(argTypes.get(0)) && isInt(argTypes.get(1))
+                    ? new MathCall("kof_math_roundTo", DOUBLE, List.of(DOUBLE, INT)) : null;
             // S1b.2 (decisão 7a da mantenedora 13/09): pow = PRIMEIRO caso que
             // exige libm no native (call pow@PLT + link -lm no x86, que já é
             // dinâmico). JVM/SCRIPT/JS = Math.pow / ** (exato). riscv/aarch =
