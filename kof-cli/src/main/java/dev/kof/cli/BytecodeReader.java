@@ -158,11 +158,8 @@ final class BytecodeReader {
         leaders.add(insns.get(0).offset());
         for (Insn in : insns) {
             if (in.target() >= 0) leaders.add(in.target());
-            // fall-through leader: offset após instrução terminal (goto/return/cond/opaco)
-            if (in.isGoto() || in.isReturn() || in.isCond() || in.isOpaque()) {
-                int next = in.offset() + (in.isOpaque() ? skipVariableBytes(in) : length(in.opcode()));
-                // next não vira líder (a branch já cobre)
-            }
+            // fall-through NÃO vira líder p/ goto/return/cond/opaco (a branch já
+            // cobre); só cond adiciona o fall-through (pc+len) abaixo.
             // para cond, o fall-through (pc+len) é líder:
             if (in.isCond()) {
                 leaders.add(in.offset() + length(in.opcode()));

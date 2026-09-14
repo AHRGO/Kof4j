@@ -306,7 +306,7 @@ final class JdwpClient {
                     }
                     continue;
                 }
-                int sp = evt.readByte(); // suspendPolicy (lido p/ avançar o cursor; valor não usado)
+                evt.readByte(); // suspendPolicy (lido p/ avançar o cursor; valor não usado)
                 int eventCount = evt.readInt();
                 for (int e = 0; e < eventCount; e++) {
                     int kind = evt.readByte();

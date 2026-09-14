@@ -10,6 +10,9 @@ on:
     branches: [main, beta-0.4.0]
   schedule:
     - cron: "0 6 * * 1"
+  # Re-scan manual (Actions → CodeQL → Run workflow): atualiza os snapshots
+  # de findings sem precisar de push (a UI agrega por análise, com lag).
+  workflow_dispatch:
 
 permissions:
   actions: read
