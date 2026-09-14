@@ -80,17 +80,20 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
-> **EM CURSO (14/09, dono = 192.168.100.22, lane repo-hygiene): degrau-1
-> CodeQL-segurança (ordem da mantenedora, 18 rules, 495 alerts).**
-> Escopo: findings de SEGURANÇA em arquivos SEM dono (BytecodeReader,
-> KofWebTlsTest, harness de testes) — **NÃO tocar** lanes (ExpressionLowerer/
-> Typer — Typer WIP guardado pelo dono .15 em stash@{1}, MethodCallTyper,
-> BlogE2ETest, Translate*, Decompile*, providers, nat/, known-bugs —
-> conflito do pop resolvido preservando os dois §189; **colisão de numeração:
-> dois §189 distintos** (parseOrDefault-cross .17 × blog-db.query .18) p/
-> donos renumerarem). Degrau-1: skipVariable OOB (fix+teste) + dismiss
-> documentado de trustmanager-localhost e 27 command-concat de harness.
-> Prova: teste novo + CodeQL CI no push.
+> **✅ FEITO degrau-1 (14/09, dono = 192.168.100.22, lane repo-hygiene):
+> CodeQL-segurança.** (a) **Fix real:** `BytecodeReader.skipVariable`
+> lia tableswitch/lookupswitch sem checar fim do array (AIOOBE em .class
+> truncado; npairs negativo voltava o pc — risco de loop) → clamp em
+> `code.length`, aritmética idêntica no input válido. Prova:
+> `BytecodeReaderTest` 7/7 (truncados, npairs<0, range invertido, goldens
+> válidos) + `DecompileTest` 63/63 (vizinho). (b) **Dismiss documentado
+> (28, used-in-tests):** insecure-trustmanager #1 (só localhost efêmero em
+> teste) + 27 concatenated-command-line (harness: java.home+tempdirs, sem
+> input externo — padrão conferido nos 27). (c) known-bugs: conflito do pop
+> resolvido (dois §189 preservados; colisão de numeração p/ donos).
+> **PRÓXIMO PASSO:** degrau-2 = Errors restantes em arqs livres
+> (contradictory TypeChecker/KofFormatter, unused-container ×5, index OOB
+> Compare — checar dono antes) + triar warnings por lane p/ donos.
 
 > **✅ FEITO (14/09, dono = 192.168.100.18, lane development): blog E2E
 > (D-SPRING F12) + `--fat` (D-APP I3)** — commit `8eb156f4`; as duas últimas

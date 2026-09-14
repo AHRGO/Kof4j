@@ -60,7 +60,7 @@ class BytecodeReaderTest {
 
     @Test
     void validLookupSwitchDecodesOneOpaqueInsn() {
-        List<BytecodeReader.Insn> insns = lookupSwitch(0, new int[]{1, 10});
+        List<BytecodeReader.Insn> insns = BytecodeReader.decode(lookupSwitch(0, new int[]{1, 10}));
         assertEquals(1, insns.size(), "lookupswitch válido = 1 insn opaco");
         assertEquals(0xab, insns.get(0).opcode());
     }
