@@ -780,7 +780,25 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > destrava) — ✅ **FEITO 14/09 ~16:25: ROI medido (harness roi/Roi.java no
 > package do cli, corpus real 699 classes / 3899 métodos / 2628 stubs;
 > **1098** stubs têm a forma bloco-teste-com-computação succ==2 cond==null =
-> teto do walker; ROI ≫ 30 → **DECIDIDO: construir**).** (2) ligar
+> teto do walker; ROI ≫ 30 → **DECIDIDO: construir**).** (1b) ✅ UNIDADE 2a
+> FEITA: `pathOracle` brute-force (definição de caminhos) vs passada rápida
+> em 300 classes REAIS = zero divergência, 6/6 (220064fc) + auditoria
+> doc-vs-código (machineRun:97 VIVA em 158c174b — doc corrigido b9996938);
+> (2) **UNIDADE 2b (PRÓXIMO PASSO EXATO):** em
+> `BytecodeStatements.struct()`, no ramo `cond == null && !loop0` (~linha
+> 287), ANTES do fallback de prefixo atual: calcular o idom-map uma vez por
+> método (cache no recoverStatements, passar p/ struct via um campo/parâmetro
+> — BytecodeStatements.java está em 538 linhas = ZONA TOLERADA, a adição vai
+> p/ classe NOVA `StructWalker.java` nomeada pela responsabilidade, regra 7
+> de nomenclatura); recuperar teste-com-computação SOMENTE quando
+> idom(then)==idom(senão)==P, P não é loop-header, nenhuma back-edge dos
+> braços cruza P; a computação do teste sai via `machineRun` (pré-requisito
+> vivo) em `if (...)` SEM hoisting p/ fora (hoisting = trap 1). PROVA
+> ESPERADA: (a) `diamondJoinShapesStayHonestStub` VERDE (lei vinculante),
+> (b) golden de execução novo p/ `contFor`-like (oracle JVM: 0 0 1 3 3 7 12
+> ou o medido à mão), (c) ROI cai (re-contagem com o MESMO harness
+> roi/Roi.java), (d) 63 DecompileTest + 6 PostDom VERDES, (e) se QUALQUER
+> um falhar: REVERT a fatia, o doc já travou as 2 rejeições anteriores.
 > `immediatePostDom` no `struct()` p/ o join estruturado, cada recuperação
 > guardando `diamondJoinShapesStayHonestStub` VERTO (lei do diamante é
 > vinculante — se quebrar, é stub honesto, nunca código errado compilável);
