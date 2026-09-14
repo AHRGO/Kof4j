@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 #
-# post-checkout — reaplica o idioma da maquina na arvore de documentacao.
-# Nao fatal: uma falha aqui nunca pode quebrar um checkout.
+# post-checkout — documentacao bilingue: reaplica/restaura o idioma da maquina.
+# No-op durante rebase/merge/cherry-pick (mexer na arvore ali quebra o git).
 root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
 [ -x "$root/scripts/docs-lang.sh" ] || exit 0
+for marker in rebase-merge rebase-apply MERGE_HEAD CHERRY_PICK_HEAD REVERT_HEAD; do
+    [ -e "$root/.git/$marker" ] && exit 0
+done
 "$root/scripts/docs-lang.sh" apply auto >/dev/null 2>&1 || true
 exit 0
