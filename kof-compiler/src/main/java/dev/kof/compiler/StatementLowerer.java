@@ -174,9 +174,16 @@ public final class StatementLowerer {
                 yield localIdx + (TypeMetrics.isDoubleWidth(varType) ? 2 : 1);
             }
             case BlockStmt block -> {
+                int startSize = locals.size();
                 int idx = localIdx;
                 for (StatementNode s : block.statements()) {
                     idx = driver.emitStatement(s, ops, owner, idx, locals, returnType);
+                }
+                for (int i = startSize; i < locals.size(); i++) {
+                    IRLocalVariable lv = locals.get(i);
+                    if (!lv.name().startsWith("#")) {
+                        locals.set(i, new IRLocalVariable(lv.index(), "#scopedVar$" + lv.name(), lv.type()));
+                    }
                 }
                 yield idx;
             }

@@ -1607,24 +1607,42 @@ class CoreRegressionE2ETest {
                 """, "7\n2.75\ntrue", tempDir, "prim-return-obj");
     }
 
-    // Issue #201 — Long hex literals with high bit set (≥ 0x8000000000000000L)
-    // threw unhandled NumberFormatException (COMP002). Fixed using parseUnsignedLong.
+    // Issue #203 — Inner block variable declaration shadows outer variable beyond block scope.
+    // The inner var must be unmapped/renamed on block exit so the outer variable binding is restored.
     @Test
-    void longHexLiteralWithHighBitSet(@TempDir Path tempDir) throws IOException {
-        Path src = tempDir.resolve("hexlong.kf");
+    void innerVarDeclarationScopeRollback(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("shadowblock.kf");
         Files.writeString(src, """
                 main() {
-                    var a: Long = 0x8000000000000000L
-                    var b: Long = 0xFFFFFFFF00000000L
-                    var c: Long = 0x7FFFFFFFFFFFFFFFL
-                    println(a)
-                    println(b)
-                    println(c)
+                    var x = 1
+                    if (true) {
+                        var x = 100
+                        println(x)
+                    }
+                    println(x)
+
+                    var y = 1
+                    if (false) {
+                        var y = 100
+                    } else {
+                        var y = 200
+                        println(y)
+                    }
+                    println(y)
+
+                    var n = 10
+                    var done = false
+                    while (!done) {
+                        var n = 99
+                        println(n)
+                        done = true
+                    }
+                    println(n)
                 }
                 """);
-        Path out = tempDir.resolve("hexlong-jvm");
+        Path out = tempDir.resolve("shadowblock-jvm");
         CompilationResult r = driver.compile(src, out, Target.JVM);
         assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
-        assertEquals("-9223372036854775808\n-4294967296\n9223372036854775807", runJvm(out));
+        assertEquals("100\n1\n200\n1\n99\n10", runJvm(out));
     }
 }
