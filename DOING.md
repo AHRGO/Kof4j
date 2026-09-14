@@ -760,6 +760,24 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > native-multiarch e implementar as unidades, na ordem de valor, até cada doc
 > poder virar `docs/` (regra de conclusão: implement → test → validate →
 > update doc → move).
+
+> **✅ UNIDADE 1 FEITA (14/09 ~16:10, lane docs/development — DECOMPILER
+> Fase C passo 3 pré-requisito, dono = 192.168.100.17, commit `7dc2e03d`):**
+> `PostDominator.java` (pós-dominador imediato puro, dual bit-set CH-K) +
+> `DecompilePostDominatorTest` 5/5 (oráculos caminho-ate-EXIT à mão). Zero
+> mudança de recovery (passada não ligada); 63 `DecompileTest` re-rodados
+> FRESCOS 115.6s verdes (o 87.43s era relatório stale — pego, corrigido).
+> **UNIDADE 2 (PRÓXIMO PASSO, na ordem):** (1) harness ROI em `dev.kof.cli`
+> (padrão Orient/Why0/StoreCat) sobre os 851 `.class` do kof-compiler/target:
+> contar quantos dos 1402 stubs têm bloco NÃO-header com `succ.size()==2` e
+> cond==null (a forma teste-com-computação que o walker de pós-dominador
+> destrava) — mede antes de escrever; (2) se ROI > ~30: ligar
+> `immediatePostDom` no `struct()` p/ o join estruturado, cada recuperação
+> guardando `diamondJoinShapesStayHonestStub` VERTO (lei do diamante é
+> vinculante — se quebrar, é stub honesto, nunca código errado compilável);
+> (3) golden de execução (oracle JVM) p/ cada nova forma recuperada. Meta:
+> reduzir stubs SEM novo falso-verde. Só mover DECOMPILER p/ `docs/` quando
+> a Fase C fechar o corpo (hoje: recovery parcial honesto).
 > #237 RETIFICADA: não é face do §225 — vira §228 (descriptor vazava o tipo
 > CONCRETO do argumento no PARAMETRO + retorno fabricado; comentario
 > publico corrigido na issue; a face errada removida do §225). #238→§230
