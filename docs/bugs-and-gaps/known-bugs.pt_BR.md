@@ -7714,3 +7714,25 @@ usuário — diagnostic em compile-time é a meta (regra 6).
   honesta no Native (R6), alinhado à decisão §107/§104b-ii. A célula `ifexpr`
   era verde antes do #183 porque o typer devolvia o tipo do THEN e nunca
   chegava ao caminho de print de `Object`.
+
+### §231 — sobrecarga top-level com parâmetro default: `requiredArity` não considera defaults → chamada curta dá SEM014 em vez de selecionar o candidato com default — 🟡 catalogado 14/09 (achado na triagem CodeQL local-variable #160, dono = fila de overload/§131)
+
+- **Sintoma:** `Int h(Int x, Int y = 10) { ... }` + `Int h(String s) { ... }`;
+  `h(5)` → `SEM014: Argument 1 of 'h': expected String but got int` (escolhe o
+  candidato errado). Com função ÚNICA com default, `h(5)` funciona (caminho
+  candidato-único / wrappers de desugar). Medido no CLI 14/09: `o.kf` red,
+  `s.kf` → 15.
+- **Mecanismo:** o typer de candidatos top-level (`MethodCallTyper:399-404`,
+  espelho `ExpressionMethodCallLowerer:461`, `BuiltinCallTyper:408`) calcula
+  `seenDefault`/`hasDefaults` e NÃO usa: `new Candidate(fn, pt, pt.size())`
+  define `requiredArity = totalArity`, então `pick` só aplica o candidato com
+  default quando `nArgs == totalArity`. `TopLevelOverload` por contrato usa
+  `requiredArity <= n <= totalArity` — os call-sites têm o fio pela metade.
+- **Por que §231 e não um fix aqui:** completar o `requiredArity` MUDA a ordem
+  de resolução (contrato §131/§205 congelado, regra 6) — é implementação da
+  feature, não limpeza. O comentário em `MethodCallTyper:399` aponta esta seção.
+- **Plano de fix (quando a fila de overload atacar):** `requiredArity = índice
+  do primeiro default` (já existe o loop `firstDefault` em
+  `CompilerClassLowering:360-366` — mesma lógica p/ função top-level), nos 3
+  sítios; regressão: um caso `h(Int,Int=) + h(String)` chamando `h(5)` → 15 em
+  4 alvos + SEM057 quando ambíguo de verdade.
