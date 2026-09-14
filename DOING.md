@@ -202,6 +202,31 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > tinha runtime em curso, ele não está no tree (grep `kof_web_security` só acha
 > o meu). Registrado para a .22 não retrabalhar.
 >
+> **⚠️→✅ COLISÃO C18 RESOLVIDA NO MERGE (14/09, dono = 192.168.100.18):** o
+> merge de `origin/beta-0.4.0` (degrau-4, `75304956`) trouxe a implementação
+> C18 **completa e paralela** da lane `.22` (`ab15a30f`): `kof_web_security(String,
+> Object)` com opts `rateLimit` (Number), `corsOrigin`, `csrf`, `sessionHeader`,
+> `publicPaths` e o pipeline em `JvmRuntimeWebDispatch`, mais campos em `WebApp`.
+> A minha (`kof_web_security(String)` + `kof_web_security_opts(String,Map)`) foi
+> **unificada como superconjunto** (não descartei a da .22 — pacto de agregação):
+> - **API:** as DUAS funções (`kof_web_security`/`_opts`) + helpers
+>   `kof_web_sec_bool`; opts agora aceitam `headers`/`cors`/`corsOrigin`/
+>   `rateLimit` (String `"n/janela"` **ou** Number)/`csrf`/`sessionHeader`/
+>   `publicPaths`/`auth`/`roles`.
+> - **Pipeline único** (superset) em `JvmRuntimeWebDispatch`: rate-limit →
+>   cors → headers → session → csrf → auth → RBAC; headers de resposta em
+>   `KOF_SEC_RESPONSE_HEADERS` (sobrevivem ao clear do dispatch).
+> - **Session (`.22`):** validado para mutações fora de `publicPaths` (leitura
+>   pública; header presente mas inválido → 401). **Auth/RBAC (`.18`):**
+>   `auth:true`/`roles` via Bearer JWT; auth-if-present só quando não há
+>   `sessionHeader` (senão sessão válida viraria 401). Preflight CORS → 204.
+> - **Removido** `JvmWebSecurityRuntime.java` duplicado (recriado só com a
+>   config unificada, 101 linhas — ratchet §140: `JvmWebCoreRuntime` 597→512).
+> **Prova:** `KofWebE2ETest` 22/22 + `KofBlogE2ETest` 1/1 (usa
+> `sessionHeader`/`publicPaths` da .22) + `KofOAuthResourceServerTest` 4/4 +
+> `KofSecurityTest` 41/41 = **68/0/0**; `check_500` exit 0. Merge commit fecha a
+> divergência; `docs/development/README.md` §7 segue vazia.
+>
 > **PRÓXIMO PASSO:** fila §7 de `docs/development/README.md` **VAZIA**. Restam
 > apenas itens de outras lanes / decisão da mantenedora (`docs/development/` §3-6
 > EM CURSO por outros donos; `future/` bloqueado pela regra R12). Reler
