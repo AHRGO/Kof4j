@@ -64,6 +64,8 @@ final class BytecodeReader {
                 out.add(new Insn(pc, -1, operands, -1));
                 break;
             }
+            // CodeQL: garante que pc+1, pc+2, pc+3 estão dentro dos limites
+            // (já verificado pc+len <= code.length acima; len >= 2 aqui).
             if (len == 2) {
                 operands = new int[]{code[pc + 1] & 0xFF};
             } else if (len == 3) {

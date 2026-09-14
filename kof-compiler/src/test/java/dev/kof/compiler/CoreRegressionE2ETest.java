@@ -2036,4 +2036,58 @@ class CoreRegressionE2ETest {
         assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
         assertEquals("vehicle-default sedan\ntruck f150\nbase-implicit", runJvm(out));
     }
+
+    // Issue #222 — constructor-like method inside class body compiled as void instance method instead of <init>
+    @Test
+    void classNamedConstructorInBodyJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("pointctor.kf");
+        Files.writeString(src, """
+                class Point {
+                    Int x = 0
+                    Int y = 0
+                    Point(Int x, Int y) {
+                        this.x = x
+                        this.y = y
+                    }
+                }
+
+                main() {
+                    var p = new Point(3, 4)
+                    println(p.x + " " + p.y)
+                }
+                """);
+        Path out = tempDir.resolve("pointctor-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("3 4", runJvm(out));
+    }
+
+    // Issue #234 — for-in loop with explicit type annotation on iterator variable fails with SEM011
+    @Test
+    void forInWithExplicitTypeAnnotationJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("forinannot.kf");
+        Files.writeString(src, """
+                enum Color { RED, GREEN, BLUE }
+
+                main() {
+                    var lst = listOf(1, 2, 3)
+                    for (var n: Int in lst) {
+                        println(n)
+                    }
+
+                    var strs = listOf("alpha", "beta")
+                    for (val s: String in strs) {
+                        println(s)
+                    }
+
+                    for (var c: Color in Color.values()) {
+                        println(c)
+                    }
+                }
+                """);
+        Path out = tempDir.resolve("forinannot-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("1\n2\n3\nalpha\nbeta\nRED\nGREEN\nBLUE", runJvm(out));
+    }
 }

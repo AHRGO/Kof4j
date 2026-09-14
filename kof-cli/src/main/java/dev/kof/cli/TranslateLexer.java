@@ -314,7 +314,11 @@ class TranslateException extends RuntimeException {
         Parser(List<Tok> toks) { this.toks = toks; }
         Tok peek() { return toks.get(pos); }
         Tok peek(int ahead) { int i = Math.min(pos + ahead, toks.size() - 1); return toks.get(i); }
-        Tok next() { Tok t = toks.get(pos); if (pos < toks.size() - 1) pos++; return t; }
+        Tok next() {
+            Tok t = toks.get(pos);
+            if (pos < toks.size() - 1) pos++;
+            return t;
+        }
         boolean at(String text) { return peek().text.equals(text); }
         boolean at(T t) { return peek().type == t; }
         Tok expect(String text) {

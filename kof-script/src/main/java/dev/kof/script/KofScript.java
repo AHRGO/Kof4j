@@ -90,7 +90,10 @@ public final class KofScript {
         StringBuilder cur = new StringBuilder();
         for (String raw : code.split("\n", -1)) {
             String t = raw.strip();
-            if (t.isEmpty() || t.startsWith("//")) { if (cur.length() > 0) cur.append(raw).append('\n'); continue; }
+            if (t.isEmpty() || t.startsWith("//")) {
+                if (cur.length() > 0) cur.append(raw).append('\n');
+                continue;
+            }
             if (cur.length() == 0) {
                 java.util.regex.Matcher m = varPat.matcher(t);
                 if (m.matches() && !t.contains("{") && !t.contains("}")) {

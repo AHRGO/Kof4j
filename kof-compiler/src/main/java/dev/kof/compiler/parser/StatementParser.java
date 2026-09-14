@@ -22,6 +22,7 @@ import dev.kof.compiler.StatementNode;
 import dev.kof.compiler.SwitchCase;
 import dev.kof.compiler.SwitchStmt;
 import dev.kof.compiler.ThrowStmt;
+import dev.kof.compiler.Token;
 import dev.kof.compiler.TokenType;
 import dev.kof.compiler.TryStmt;
 import dev.kof.compiler.Type;
@@ -201,16 +202,35 @@ public class StatementParser {
         SourcePosition p = ctx.pos();
         ctx.advance();
         ctx.expect(TokenType.LPAREN, "Expected '(' after 'for'", "PARSE032");
-        if (ctx.check(TokenType.VAR, TokenType.VAL) && ctx.checkNext(TokenType.IDENTIFIER)
-                && ctx.pos + 2 < ctx.tokens.size() && ctx.tokens.get(ctx.pos + 2).is(TokenType.IDENTIFIER)
-                && "in".equals(ctx.tokens.get(ctx.pos + 2).value())) {
-            ctx.advance();
-            String varName = ctx.advance().value();
-            ctx.advance();
-            ExpressionNode collection = ExpressionParser.parseExpression(ctx);
-            ctx.expect(TokenType.RPAREN, "Expected ')'", "PARSE035");
-            StatementNode body = StatementParser.parseStatement(ctx);
-            return new ForInStmt(p, varName, collection, body);
+        if (ctx.check(TokenType.VAR, TokenType.VAL) && ctx.checkNext(TokenType.IDENTIFIER)) {
+            int inPos = -1;
+            if (ctx.pos + 2 < ctx.tokens.size() && ctx.tokens.get(ctx.pos + 2).is(TokenType.IDENTIFIER)
+                    && "in".equals(ctx.tokens.get(ctx.pos + 2).value())) {
+                inPos = ctx.pos + 2;
+            } else if (ctx.pos + 2 < ctx.tokens.size() && ctx.tokens.get(ctx.pos + 2).is(TokenType.COLON)) {
+                // var name: Type in collection (issue #234)
+                for (int i = ctx.pos + 3; i < ctx.tokens.size(); i++) {
+                    Token tk = ctx.tokens.get(i);
+                    if (tk.is(TokenType.RPAREN) || tk.is(TokenType.SEMICOLON)) break;
+                    if (tk.is(TokenType.IDENTIFIER) && "in".equals(tk.value())) {
+                        inPos = i;
+                        break;
+                    }
+                }
+            }
+            if (inPos != -1) {
+                ctx.advance();
+                String varName = ctx.advance().value();
+                if (ctx.check(TokenType.COLON)) {
+                    ctx.advance();
+                    TypeParser.parseTypeRef(ctx);
+                }
+                ctx.advance();
+                ExpressionNode collection = ExpressionParser.parseExpression(ctx);
+                ctx.expect(TokenType.RPAREN, "Expected ')'", "PARSE035");
+                StatementNode body = StatementParser.parseStatement(ctx);
+                return new ForInStmt(p, varName, collection, body);
+            }
         }
         StatementNode init;
         if (ctx.check(TokenType.SEMICOLON)) {

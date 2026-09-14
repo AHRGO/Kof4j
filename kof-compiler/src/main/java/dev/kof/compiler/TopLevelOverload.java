@@ -96,7 +96,10 @@ public final class TopLevelOverload {
             }
             if (fits) applicable.add(i);
         }
-        if (applicable.isEmpty()) { if (out != null && out.length > 0) out[0] = Status.NO_MATCH; return -1; }
+        if (applicable.isEmpty()) {
+            if (out != null && out.length > 0) out[0] = Status.NO_MATCH;
+            return -1;
+        }
         if (applicable.size() == 1) return applicable.get(0);
         // Empate de aplicáveis: pontua por igualdade exata de tipo.
         int best = -1; int bestScore = -1; boolean tie = false;

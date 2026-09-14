@@ -127,6 +127,15 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > quentes. O codemod dos 17 locals puros restantes ficou p/ depois (varios
 > carregam chamada com efeito — deletar linha = mudanca de comportamento).## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (14/09 ~15:37, dono = 192.168.100.22, lane compiler): fix issue #234 — for-in loop with explicit type annotation on iterator variable fails with SEM011.**
+> - Causa raiz: em `StatementParser.parseForStatement()`, a verificação de for-in avaliava apenas `for (var x in ...)` diretamente com lookahead de offset fixo `ctx.pos + 2` para o identificador `"in"`. Quando o loop continha uma anotação de tipo explícita na variável do iterador (`for (var n: Int in lst)` ou `for (val s: String in strs)`), o lookahead não reconhecia a estrutura for-in e desviava o fluxo para a declaração de variável tradicional no estilo C `for (init; cond; update)`. Nessa rota, o parser aguardava `=` para inicialização e acabava tratando o token `in` como parte da expressão ou identificador indefinido, disparando `SEM011`.
+> - Correção: `StatementParser.parseForStatement()` agora inspeciona tokens subsequentes após `:` para localizar o separador `in` da iteração for-in, permitindo que tipos explícitos sejam consumidos via `TypeParser.parseTypeRef(ctx)` e vinculados corretamente à variável do iterador.
+> - Prova: `CoreRegressionE2ETest#forInWithExplicitTypeAnnotationJvm`.
+> - Próximo: issues #230, #232, #233, #239.
+
+> **✅ FEITO (14/09 ~15:15, dono = 192.168.100.22, lane compiler): fix issue #222 — constructor-like method inside class body compiled as void instance method instead of <init>.**
+> - Verificado e validado com teste E2E `CoreRegressionE2ETest#classNamedConstructorInBodyJvm`. Construtores com o nome da classe no corpo da classe já são compilados diretamente como construtores `<init>` da JVM. Issue #222 fechada.
+
 > **✅ FEITO (14/09 ~15:05, dono = 192.168.100.22, lane compiler): fix issue #226 — super() constructor call always fails with SEM017 regardless of parent constructor.**
 > - Causa raiz: (1) em `SymbolTableBuilder.defineClassMembers()`, quando uma classe não declarava construtor explícito (`!hasCtor`), o construtor padrão sintético sem argumentos era registrado apenas em `classScope`, mas não em `classSym.members()`, tornando-o invisível para consultas na superclasse. (2) em `ExpressionMethodCallLowerer.java`, a resolução do construtor da superclasse (`super(...)`) usava `targetCs.members().resolve("<init>")` diretamente sem tratar `ConstructorSet` (quando a superclasse possuía múltiplos construtores sobrecarregados), fazendo com que `ctor` ficasse nulo e disparasse falso-positivo `SEM017`.
 > - Correção: `SymbolTableBuilder` agora define o construtor padrão tanto em `classScope` quanto em `classSym.members()`. `ExpressionMethodCallLowerer` passa a utilizar `SymbolTable.constructorFor(targetCs.members(), mc.arguments().size())`, que suporta tanto `ConstructorSymbol` único quanto `ConstructorSet` sobrecarregado por aridade.

@@ -218,7 +218,10 @@ final class BytecodeKofTypes {
         int lastOpen = -1;
         for (int i = 0; i < s.length(); i++) {
             char c = s.charAt(i);
-            if (c == '(') { if (depth == 0) lastOpen = i; depth++; }
+            if (c == '(') {
+                if (depth == 0) lastOpen = i;
+                depth++;
+            }
             else if (c == ')') depth--;
             else if (depth == 0 && (c == '+' || c == '-' || c == '*' || c == '/' || c == '%')) return false;
         }
