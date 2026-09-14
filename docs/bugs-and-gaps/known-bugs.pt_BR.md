@@ -7152,7 +7152,59 @@ antes — lição da obsolescência do §206/§207), corpos-exatos das issues
 - **Pointer (lane compiler):** ramo do parser para if-EXPRESSION onde a parte
   `then` começa com `{` — hoje cai no caminho de produção de lambda.
 
-## §193 — E2E blog (F12): `db.query` cru + `.get("col")`/recursos dentro de handler web derr
+## ### §223 — método `static` em INTERFACE mantém ACC_ABSTRACT → `ClassFormatError: illegal modifiers 0x409` (issue #230)
+
+- **Sintoma (medido 14/09 ~14:05 no `de38f7b5` com classes FRESCAS, dono =
+  192.168.100.17 — só catalogado, lane compiler):**
+  ```kof
+  interface Calc { static Int add(Int a, Int b) { return a + b } }
+  main() { println(Calc.add(3, 4)) }
+  ```
+  compila; no load: `ClassFormatError: Method add in class Calc has
+  illegal modifiers: 0x409`. javap: `public static abstract int add` —
+  flags ACC_PUBLIC|ACC_STATIC|**ACC_ABSTRACT** SEM Code attribute: o corpo
+  emitido pelo parser foi descartado e o flag abstract-implícito dos membros
+  de interface foi aplicado a um membro `static` (ilegal desde JVMS 2.9:
+  método estático em interface DEVE ter Code e NÃO pode ser abstrato).
+- **Esperado:** `Calc.add` → `ACC_PUBLIC|ACC_STATIC` com Code (default
+  static method Java 8+); o sítio de chamada já faz `invokestatic Calc.add`
+  (correto) — só a emissão da classe está errada.
+- **Pointer (lane compiler):** o writer de método de interface que ORA
+  ACC_ABSTRACT em todo flag de membro precisa pular membros `static` (e
+  `default`) e emitir o Code deles.
+
+### §224 — descriptor de retorno de interop apagado para `Object`: `sb.append("hello")` emite `append(String)Ljava/lang/Object;` → `NoSuchMethodError` (issue #231)
+
+- **Sintoma (medido 14/09 ~14:05 no `de38f7b5` com classes FRESCAS, dono =
+  192.168.100.17 — só catalogado, lane compiler):**
+  ```kof
+  main() {
+      var sb = new java.lang.StringBuilder()
+      sb.append("hello")
+      println(sb.toString())
+  }
+  ```
+  `NoSuchMethodError: 'java.lang.Object java.lang.StringBuilder.append(java.lang.String)'`.
+  javap: `invokevirtual StringBuilder.append:(Ljava/lang/String;)Ljava/lang/Object;`
+  — o método REAL do JVM retorna `StringBuilder`; o compilador INVENTOU o
+  retorno `Object` porque `StringBuilder` NÃO está na tabela de assinaturas
+  de interop (fallback de classe-desconhecida). A linha
+  `toString:()Ljava/lang/String;` ESTÁ correta — prova de que o fallback é
+  por-buraco-na-tabela, não global.
+- **Família:** mesma raiz do §217/#161 (retorno genérico sem checkcast) e do
+  §203 (descriptor montado da fonte errada): o caminho de emissão inventa o
+  descriptor em vez de ler da classe real.
+- **Esperado (interop-first, R9):** para tipos `java.*`, resolver o descriptor
+  por reflexão no JDK (ou carregar a classe em compile-time — o backend JVM
+  tem as classes no module path); o fallback `Object` é aceitável só para
+  classe de usuário genuinamente desconhecida, e mesmo assim com diagnóstico
+  honesto (R6) — `NoSuchMethodError` em runtime é silencioso.
+- **Pointer (lane compiler):** o lowering de member-call de interop (o caminho
+  que respondeu `toString` pela tabela) não tem `StringBuilder`/`append`;
+  encher a tabela trata o sintoma — o fix real é descriptor-por-reflexão p/
+  receptores `java.*`.
+
+§193 — E2E blog (F12): `db.query` cru + `.get("col")`/recursos dentro de handler web derr
 
 > **Renumerado de §189→§193 (14/09, dono = 192.168.100.17):** colisão tripla
 > de §189 na varredura (record-nullable da lane `.15` venceu por posição;
