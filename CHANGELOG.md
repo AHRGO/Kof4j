@@ -1011,6 +1011,487 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
   - adicionar suporte à flag --json no comando kof check
 
+## [0.4.0-beta] - 2026-09-14
+
+### Features
+
+  - implement saturating casts for Double/Float to Int/Long (JLS 5.1.3) across all targets
+  - add ui-config block and kof.config functions
+  - time.tzOffsetSeconds — fuso do host (D1), 3 alvos + gap honesto TIME003
+  - time.parseDateIso -> serial daysFromEpoch nos 5 alvos (D4)
+  - time.hoursBetween (D3 floor simétrico) nos 5 alvos + fix emit x86 7+ args
+  - time.todayIso/formatDateIso/isToday nos 5 alvos (D-STDLIB ratificado 13/09)
+  - Fase C degrau 2b — narrowing ifnull/ifnonnull (0xc6/0xc7) recupera e EXECUTA
+  - Fase C degrau 2a (if-else com sequela) + fix raiz do blockCondition (aridade exata; destrava código errado latente)
+  - S13b math.parse{Int,Long,Double}OrDefault — briefing §43 (falha DEVOLVE default, 5 alvos) + fixes de causa raiz KofStd/rota JS
+  - S13a math.parseInt/parseLong/parseDouble — fachada sobre kof_string_to_* (4 targets, zero runtime novo)
+  - Fase C degrau 1 — join de if-then PURO sem else recupera e EXECUTA (oracle 107/101)
+  - add support for compound bitwise and shift assignments in the parser and lowerer
+  - web server no target JS (GraalJS hostless) + KofJsWebQueue event-loop + teste E2E
+  - var local + interface default body + gap constante interface (R6) + testes - dono 192.168.100.22
+  - descarta annotations Java (@Override/@Deprecated/@SuppressWarnings) + teste - dono 192.168.100.22
+  - assert Java -> assert() Kof + gap honesto for-virgula (R6) + testes - dono 192.168.100.22
+  - interface extends Java -> Kof + gaps honestos labeled/anon (R6) + teste - dono 192.168.100.22
+  - estágio-3 — record implements interface INTERNA do mesmo pacote (−93 stubs)
+  - corpo de enum ignorado + multi-declaracao local Java -> Kof + teste - dono 192.168.100.22
+  - gaps honestos try-with-resources e tipo qualificado (R6) + teste - dono 192.168.100.22
+  - generics + construtores com corpo + fix loop infinito no parseMember - dono 192.168.100.22
+  - gaps honestos varargs e tipo aninhado (R6) + teste + plano sync - dono 192.168.100.22
+  - descarta clausula throws Java (Kof nao declara) + teste + plano sync - dono 192.168.100.22
+  - cast (T)expr -> expr as T + instanceof Java -> Kof + teste + plano sync - dono 192.168.100.22
+  - arrays + declaracoes []/generics Java -> Kof + fix new Int[n] + gap honesto p/ initializer - dono 192.168.100.22
+  - try/catch/finally + throw + bare-call Java -> Kof + teste + plano sync - dono 192.168.100.22
+  - switch-statement Java -> Kof + teste + plano sync - dono 192.168.100.22
+  - do-while Java -> Kof + teste + plano sync + DOING (11 orfaos marcados) - dono 192.168.100.22
+  - enhance record handling with interface resolution and add tests
+  - record genérico emite type-params EXATOS (record Gen<T>)
+  - Fase E — Java record → record Kof (~195 stubs, maior fonte única)
+  - IntelliJ degrau-10 honesto (filetype+tools+README, 17/17) + DOING - dono 192.168.100.22
+  - implement pow function across multiple runtimes and update documentation
+  - random.randomBytesHex(n)->String (decisão 6a 13/09)
+  - add OBJECT type and enhance Map.put handling for two-slot values
+  - add comprehensive plans for Kof Spring Starter and stdlib time design
+  - supervisor.startAll() — laço selectAny único para N filhos com wrapper de identidade (id/motivo), opção 1a ratificada; gates S2 JVM+interpretador; sincroniza célula stdsqrt pós-fix bug 94; KofSupervisorE2ETest 8/8, gate 1620/0
+  - add JsRuntimeUiJsonMap and JvmRuntimeJsonMap for JSON map decoding
+  - implement decode<Map<String,T>> for JSON parsing and binding
+  - runtime JS por alcançabilidade ligado no writer
+  - inventário do runtime JS por unidade de topo
+  - add 'isEmpty' method support for strings and fix related issues
+  - G-0 bloco-header riscv + guard OOM honesto (face 1 do GC cross)
+  - PODA riscv64+aarch64 ligada — port riscv da S-3 (hello riscv 258→103 syms)
+  - RiscvSlices — mapa de 48 peças do runtime riscv por reflexão (espelho riscv da S-2, zero mudança de emissão)
+  - add gh-as-agent and issue-watcher scripts for GitHub issue management
+  - add RiscvSlices class and corresponding tests for runtime assembly validation
+  - poda x86 do runtime por alcançabilidade — hello 627→37 syms (138.928B→32.520B)
+  - precursor .L-aware do S-3 — 119 arestas de rotulos locais cross-slice medida e codada no mapa
+  - mapa de fatias do runtime x86 por reflexao derivada do fonte de producao
+  - harness de tamanho (ArtifactSize ELF64 puro-Java) + gate anti-inchaço + kof build --print-sizes
+  - println(<coleção>) riscv64+aarch64 — B39 + FLT001 p/ coleção FP (paridade com x86/JVM)
+  - println(<coleção>) com toString real em asm + fix colateral §138 (text-block \n → .asciz quebrado)
+  - implement top-level function overloading with distinct signatures
+  - implement top-level function overloading resolution and diagnostics for concurrency helpers
+  - #91 — CONC001 em compile-time para auxiliares de concorrência ausentes em riscv64/aarch64
+  - kof_multi_alloc riscv64 + aarch64 (fatia B37) — faces cross fechadas
+  - implement recovery for switch statements and add related utilities
+  - §133 — fetch assíncrono real no Node/browser (spawn http.* + await)
+  - implementar strings.indent e strings.dedent nos 5 targets
+  - OTP núcleo (issue #83) 1ª fatia — pacote virtual kof.supervisor, JVM+Script, gates OTP001/OTP002
+  - MATH001 FECHADO — sqrt/lerp/percentage/isInteger/isDecimal riscv64/aarch64 (S1b.2)
+  - split remove vazios TRAILING no riscv64/aarch64
+  - TIME002 FECHADO — addDays/diffDays em data ISO riscv64/aarch64 (S7c-1)
+  - String equals/compareTo/hashCode + substring -1 no riscv64/aarch64 (B36)
+  - busca UTF-16 riscv64/aarch64 (B35) — indexOf/lastIndexOf + from
+  - add UTF-16 support for string operations in riscv64 (B34)
+  - bug 43 estágio 2 riscv64/aarch64 — substring/indexOf/lastIndexOf em code units UTF-16
+  - bug 43 faces riscv64/aarch64 — length/charAt em code units UTF-16
+  - addDays/diffDays ISO em riscv64/aarch64 (fatia B33)
+  - addDays/diffDays ISO em riscv/aarch (B33)
+  - bug 97 faces riscv64+aarch64 — compareTo/hashCode/equals cross em code units UTF-16
+  - primitivas visuais por widget + fix bug 102 (col/row dropados) — issue #78
+  - math Double (sqrt/lerp/percentage/isInteger/isDecimal) em riscv/aarch
+  - add support for UUID v7 (RFC 9562) in stdlib
+
+### Bugfixes
+
+  - §181 doc-sync + baseline HELLO_JS 8.297→13.007 (#132) + UIW050 event-handle em estágio
+  - §181 regressão do cast saturante — bits de double no x86 + labels únicos riscv/aarch
+  - Bool[] unificado como boolean[] (json.decode<Bool[]> era o outlier int[]) + golden do bloco ui-config no registry JS — #132
+  - correct array access opcodes for Bool[], Byte[], Short[], and Char[] types
+  - parse ISO de kof.time ESTRITO nos 4 targets + testes time blindados ao relógio
+  - synchronized block -> gap honesto R6 + encerra lane - dono 192.168.100.22
+  - enforce array bounds safety (KOF-SBD-001)
+  - escapes unicode/char + lambda 1-param + gaps enum/record/init/abstract - dono 192.168.100.22
+  - ~x/classe-local/; vazio/main(args) + split TranslateNew - dono 192.168.100.22
+  - switch-expr + method-ref/text-block/instanceof-pattern/import-static/Math. viram traducao/gap honesto - dono 192.168.100.22
+  - §176 — compound em array no JS + lambda com local/return (VOID) + handle kof.ui no invoke
+  - this(...)/wildcard/lambda-bloco viram gap/emissao honesta + split TranslateTypes - dono 192.168.100.22
+  - enforce array bounds safety (KOF-SBD-001)
+  - "".toDouble() LANÇA nos 5 alvos (era 0.0 silencioso no x86/riscv) — paridade JDK
+  - default de interface vira gap honesto (corrige 3ab4c99e) + campos static qualificados nas funcoes hoisted - dono 192.168.100.22
+  - §174 — return/throw dentro de if dentro do try compilava p/ JS (COMP002)
+  - escapes string/char re-escapados + final local/param descartado - dono 192.168.100.22
+  - literais numericos Java (10L/1.5e3/0x1F/1_000 etc) deixam de quebrar o parse - dono 192.168.100.22
+  - §173 — ++/--/compound em Long/Double/Float + elemento de array (4 targets)
+  - bloco de init de instancia dropado silenciosamente vira gap R6 + teste - dono 192.168.100.22
+  - array-initializer em CAMPO vira gap honesto R6 (era output truncado invalido) + teste - dono 192.168.100.22
+  - bare 'kof editor' = alias de detect (§6) + teste update - dono 192.168.100.22
+  - shift composto (<<=,>>=,>>>=) grava o RHS (L2I na contagem) - §172 - dono 192.168.100.22
+  - preserva parenteses + bitwise/shift/qualificados (3 bugs de correcao Q4) + testes - dono 192.168.100.22
+  - json ganha handler no caminho semântico — aridade errada vira SEM025 no check
+  - re-mede baseline do runtime JS hello (7.700 -> 8.297) — shim DOM #121
+  - bitwise/shift com Long misturado — JVM VerifyError + JS TypeError/máscara/overflow
+  - interpretador lia 2º parâmetro largo (Long/Double) como null
+  - shim DOM (kofMakeEl) ganha dataset/disabled/classList
+  - overload de MESMA aridade e tipos diferentes no Native → SIGSEGV
+  - SEM049 reporta posição real do deref (não mais 0:0)
+  - lambda que chama outra função-variável capturada sem receiver
+  - Long = BigInt no backend JS (decisão 5b, paridade 64-bit real)
+  - json.encode(Map) no JS devolvia {} — JSON.stringify(new Map()) não enumera; helper kofJsonEncodeMap (chaves SORTED) + ramo no JsRuntimeOps
+  - sobrecarga de método por assinatura nos 4 backends (decisão 10a)
+  - tabela de cancel por TID real + probe linear (decisão 8a) — fim da colisão de hash entre workers
+  - conversão numérica em primitivo = alias do  + warning SEM090 (decisão 3a)
+  - chaves sorted nos 4 backends; restaura kof_heap_root_start/end
+  - raízes do GC cobrem os estáticos do programa + gate ≤500→600
+  - finally roda no caminho return — FinallyFrame na IR (store #retVal + jump return-finally, encadeia try aninhado), lambda/método salvam pilha de frames; JS: try/finally nativo + epílogo return-only, #retVal pre-declarado; gates finallyReturnJvm/Js; suíte 1627/0
+  - shim passa a atribuicao globalThis — const no core quebrava poda e registry
+  - shim passa a atribuicao globalThis — const no core quebrava poda e registry
+  - WEB001 no compile das funcoes de contexto Native + Map.put de Long nao crasha mais
+  - §155 tipo-função em type-args (List<(Int)->Int>) preserva espaços; §156 registrado (List heterogêneo de lambdas, CCE JVM)
+  - §127 cast para tipo-função (as ()->T) — parser type-ref + checkcast na interface SAM
+  - §153 switch-expressão rejeita corpo de case em bloco (PARSE094, R6)
+  - query()/header() agora sao String? no kof.web — narrowing obrigatorio
+  - shim kof_platform no core JS — ReferenceError vira erro claro fora do GraalJS
+  - §94 EQ/NE de Double/Float no interpretador agora IEEE (NaN==NaN false, +0.0==-0.0 true)
+  - browser real no macOS — bundle Chrome + fallback Safari
+  - json.decode<Map<String,T>> — decoder real JVM/Script/JS + JSN004 no Native
+  - §149 JS if-throw/loop + §150 switch-expr enum primitivo + §151 contains enum Native
+  - app.listen(String) -> SEM025 no kof check (aceita só Int)
+  - sleep(ms) sem receiver resolve como time.sleep(ms)
+  - fecha sintaxe da fatia B40 — parêntese órfão em """);" travava o build do repo INTEIRO
+  - correct string termination in NativeRiscvAsmRtB40
+  - add widening for compound assignments and field access in ExpressionAssignmentLowerer
+  - kof_double_mod riscv64 (B40) + dispatcher MOD float/double; known-bugs §145/§146/§147 ✅; DOING bugfix-101 FEITO
+  - constante de enum como EXPRESSÃO tipava UNKNOWN — SEM032 falso em switch-expr exaustivo sobre enum
+  - update 'PRÓXIMO PASSO' section to correct false premise regarding qemu/toolchain cross availability
+  - remove JLS-15.28 constant-fold do NativeRiscvAsm (causa raiz do falso split-brain do G-0)
+  - POP2 nativo descarta 1 qword (não 2) — SIGSEGV em descarte de Long/Double
+  - widening abençoado converte, narrowing rejeita — escrita de coleção pinada (IR compartilhado) + literais cobertos
+  - Native concat "a" + <Int?-null> → lixo de ponteiro; guard único box+valueOf (IR compartilhado, 4 targets)
+  - ramo null de if/switch em retorno/slot primitivo-nullable → default (mesma opção A; 4 targets)
+  - gate ≤500 era decorativo — vira RATCHET com baseline de dívida e entra no CI
+  - tick resolve a porta do servidor que REALMENTE hospeda a sessão (probe /session/<id> em 9091-9095, fallback 9093) — porta fixa 9092 é OUTRA sessão TUI e injetar nela dava 'Session not found' a cada tick desde 12:35
+  - println(f()) com T? f() retornando null → default do primitivo (decisão A) + JS fold f()==null no parser
+  - elimina flake no contador SSE_EVENTS_SENT sob carga concorrente
+  - §137 — round-trip do statement-switch (hoist var que escapa do case + static preservado + main() forwarder) — DecompileTest 45/45
+  - §134 residual — import wildcard externo (ext.*) qualifica pelo ExternalClasspath
+  - §128 — selectAny de Handle<Int> com uso primitivo unboxa (era VerifyError)
+  - switch decompilado compilável+executável — hoist de locals + static na assinatura
+  - §127 — map get/remove de MISS com valor primitivo dá default (0/false), não null
+  - §126 — SEM056 rejeita escrita heterogênea em container PINADO (decisão mantenedora: opção ii)
+  - §134 — external classpath (0.3.1→0.4.x) — import de dependência real (--classpath/--deps) apanhava PKG006; estática externa apanhava SEM011
+  - §129 — Set.remove apagava o elemento no índice==TAG (silent corruption); passa o índice achado
+  - §126 lado ARG — tag de String é CONJUNÇÃO elem×arg; tipos errados viram miss seguro como o JVM
+  - §124 — println(String? null) NPEava no interpretador (JVM/Native imprimem null)
+  - §123 — Map<Int,*> funcionava só por acaso; chave Int SIGSEGVava (tag de chave no header)
+  - §122 — índice não-Int em List.get/set/remove vira SEM055 (opção B)
+  - §114 face String — equals de record compara campo String por CONTEÚDO
+  - §121 FECHADO — Int→slot Long[] converte no IR (bloco era if{} que só comentava)
+  - §113 FECHADO x86 — kof_multi_alloc aloca o multi-dim (op IR não cai mais no default)
+  - §110 corpo de método re-analisado no MESMO escopo -> SEM024 falso (impeditivo do host OTP puro-Kof)
+  - bug 104b-ii face char — println(char-em-coleção) paridade 4/4
+  - interpretador boxia Bool em colecoes -> [true, false] == JVM (merge com §112)
+  - bug 112-JS — prev ausente de put/remove imprimia null (4/4 targets)
+  - bug 112 — prev null de put/remove (VerifyError/NPE/SIGSEGV) + set.add sempre-true no interp
+  - bug 111 — split sem trim de trailing (Java) + sentinela substring 0->-1
+  - bug 110 — literal -0.0 virava +0.0 (DCONST_0 colapsava o sinal)
+  - bug 104c — membership de record por conteúdo no JS (kofValEq)
+  - bug 109 — map.get(<primitivo>) CRASHAVA no JVM (NoSuchMethodError Boolean.intValue)
+  - bug 103 — tradutor riscv→aarch lw virava ldr w (zero-extend) onde riscv é sign-extend
+  - bug 107 — println(coleção) com formato do contêiner JVM (kofFormat) [renumerado 106→107]
+  - bug 106-JS — println(coleção) com formato do contêiner JVM (kofFormat)
+  - bug 104b-i — equals herdado de classe não-record (LINK_FAIL → identidade)
+  - random.int(bound) riscv/aarch LOOP INFINITO — rejection sampling estourava 2^64
+  - bug 104a — KofObj sobrescreve equals/hashCode/toString (records em coleção = conteúdo)
+  - bug 103 — subscript `x[i]` em String/List/Map/Set → SEM054 (opção B)
+  - bug 102 — indexOf/lastIndexOf/startsWith(s,from) respeitam o índice inicial (paridade absoluta)
+  - bug 100 — SEM051 generalizado (qualquer não-String em formal String) + equals(não-String) fold no Native
+  - bug 98 — < <= > >= em String → SEM053 (rejeitar, paridade absoluta)
+  - runtime JS ao vivo sem CSS p/ layout+form (issues #75/#76) + meta viewport webview (#77)
+  - bug 96 — funções strings.* como método de String → SEM052 (paridade absoluta)
+  - bug 100 — hijack x86: método de usuário com nome de String-op era sequestrado pelo intrínseco (p.trim() → lixo silencioso)
+  - bug 100 — Char em método String (indexOf/contains/split/...) → SEM051 (opção B, rejeitar)
+  - bug 44 residual — spelling inf/-inf/nan → JDK Infinity/-Infinity/NaN (x86_64)
+  - bug 99 (R6) — Int.MAX_VALUE/<primitivo>.<campo> agora é SEM050, não lixo/crash
+  - bug 97 (cont.) — String.equals roteado p/ kof_string_equals (x86_64)
+  - bug 97 — String.compareTo/hashCode emite nos nativos (x86_64)
+  - bug 95 — 2+ split no mesmo programa quebrou o assembler (x86_64)
+
+### Documentation
+
+  - §186 — borda medida (literal direto × qualquer expressão) + Script também falha
+  - §187 novo — Char[] fora de faixa não estreita no Native (e JS); célula charnarrow
+  - §185 causa raiz corrigida (coerceFor, não o arrayStore morto) + face Bool[]
+  - §184/§185 — arrays de tipo estreito (Q4 no #132); célula narrowarr/chararr prova
+  - §181 seq do header sync + matriz sem linha duplicada de castrange
+  - fila time EXECUTADA — DECISIONS + README marcados (S7e-S7h, 6/6)
+  - link known-bugs.md #101/#102 to their upstream issues
+  - §182 — parse ISO de kof.time com campo de sinal diverge (JVM/Script vs Native/JS)
+  - §181 fix JS — alerta de dupla-avaliação do operand (helper/IIFE obrigatório)
+  - sincroniza registro da sessão (§180d + suíte 1509/35/5/207)
+  - §180 face (d) — -nan (NaN negativo de libm) não é normalizado no Native
+  - registra caça Q4 da sessão (§180c/§181/§181d/bug82) + suíte verde
+  - fila ABERTA 10→12 itens — registra §180/§181 na linha de varredura
+  - bug 82 — registra face do sufixo `d/D/f/F` (Native/JS rejeitam; JVM/Script aceitam)
+  - §181 face (d) — toInt()/toLong() (§89) sofrem o mesmo desvio
+  - §181 — cast FP→Int/Long fora de faixa/NaN/Inf divergente no Native e JS
+  - PRÓXIMO PASSO degrau 3 — expr-fallback MORTO por 2 medicoes (gate !isLoopHeader insuficiente, cond aninhada com join-back-edge); so pos-dominador + goldens por shape em sessao dedicada
+  - degrau 3a negativa REFORCADA — gate !isLoopHeader provado INSUFICIENTE (2a quebra do diamond)
+  - degrau 3a TENTADO-REJEITADO registrado — fallback de expr na blockCondition reabre o trap 3 via header de loop (medição, nao opiniao)
+  - §180 face (c) — println(Float) no Native imprime a expansão double
+  - §180 — overclaim do bug 44: double→string no Native x86 não é JDK Double.toString
+  - alinha numeração pós-rebase (§177/§178 corrigidos, §179 catalogado) — dono 192.168.100.15
+  - §176 WEB001 colidiu com lane JS/web no remoto — renumerada a minha seção p/ §177 - dono 192.168.100.22
+  - gate pos-rebase medido (1497/33/5/194) - dono 192.168.100.22
+  - desambiga colisão §174 — minha seção KofWebJs → §176 (a §174 legítima da lane bugs-and-gaps/ é anterior e mantém o número)
+  - degrau 2b registrado (plano + DOING PRÓXIMO PASSO) — narrowing 308 candidatos, −10 medidos, anti-fachada Q7 (contCond revertido)
+  - sincroniza §168 como CORRIGIDO na fila do known-bugs.md
+  - §168 CORRIGIDO (efeito 3ab4c99e) + EDI001 degrau-13 gate verde - dono 192.168.100.22
+  - §168 CORRIGIDO (SEM025 json, efeito de 3ab4c99e, re-verificado no kof check) + EDI001 degrau-13 gate verde - dono 192.168.100.22
+  - Fase C degrau 1 FEITO (e17ac9e1) + PRÓXIMO PASSO (joins aninhados = pós-dominador real) + §168
+  - plano único roadmap §23 + cluster migração fundido no umbrella
+  - SG-021 — pedido de json.encode indentado registrado (regra 6, sem decisão)
+  - §168/§169 no known-bugs (causa raiz + menor repro + prova) + DOING da lane 9094
+  - Fase C — diagnóstico EXATO do sub-caso if-sem-else pronto p/ executar (fixture J.g reproduzido: oracle g(6)=107/g(1)=101 medido com java real; traço do CFG do stub: linha 280 anda p/ o join + 275 re-entra → 206 recusa; regra: then.succ==[exitStart] && preds⊆{b,then}; mecanismo: parâmetro stop no walker — NÃO é 3 linhas, sessão dedicada; golden de execução OBRIGATÓRIO no mesmo commit, padrão DecompileTest:747-791). DOING PRÓXIMO PASSO aponta p/ o diagnóstico. dono = 192.168.100.17
+  - Fase C — gargalo medido (StoreCat: struct() linha 206 recusa join = 2452 stubs silenciosos; instanceof/STORE/branch são SINTOMAS do mesmo join) + plano de sub-caso estreito (if-then sem else) + pointer da infra de golden de EXECUÇÃO que JÁ existe (DecompileTest:747-791, java -cp + assertEquals stdout). R6: join errado = compilável+semântica errada = pior bug; nunca relaxar struct sem golden. dono = 192.168.100.17
+  - PRÓXIMO PASSO com fila StoreCat medida + fase C gated por golden (junta de if sem else = sub-caso estreito). dono = 192.168.100.17
+  - registra experimente NEGATIVO — aceitar $ no TreeScope.resolve = −9 stubs só + risco anewarray-interna (PARSE041). Probes ✓ (instanceof/as de interna compilam) mas o drop real (BuiltinTypes.isString) é astore_1+ifeq multi-stmt = Fase C; regex atual protege anewarray de interna. REVERTIDO, working tree limpo em 35fc24b8. Medição via Med+DriftCheck no mesmo corpus 688. dono = 192.168.100.17
+  - registros da verdade medida — DECOMPILER estágio-2 com números da árvore limpa (1856→1660→1475, zero drift 4=4, 89 skeleton); §165 re-verificado COM node v22 = não reproduz em build limpo (trap do inlining static-final); §166 registrado: ArtifactSizeTest hello JS estoura 8297B>8085B por shim DOM #121 no CORE (bisect b05b3906→cd8ad70b) — lane JS/gate; DOING PRÓXIMO PASSO = TreeScope no statements-path. dono = 192.168.100.17
+  - update ownership details and status for TRANSLATOR.md
+  - DOING — lane desta sessão = bugs-and-gaps; registra sync/auditoria dos 5 registros
+  - README development — suíte 1653→1662 e testes de migração 70→73 (medidos no HEAD)
+  - sync contagem da suíte ao HEAD medido (1611→1662: 1479+31+5+147)
+  - RECUSA de re-disparo ~09:55Z - nada sem dono na lane development (.22), fila 8 de outras lanes - dono 192.168.100.22
+  - sync stdlib S1a/S1/S2/S3 FEITO + PRÓXIMO PASSO - dono 192.168.100.22
+  - plano S1a/S1/S2/S3 marcados FEITOs (medição real 13/09) + DOING - dono 192.168.100.22
+  - move PLAN-SOLID-500 FEITO por outra instancia preservado (regra 8) - dono 192.168.100.22
+  - update PRÓXIMO PASSO with current status and reclassification of PLAN-SOLID-500
+  - update PLAN-SOLID-500 path to docs/architecture and clarify status
+  - add PLAN-SOLID-500 for class refactoring strategy and guidelines
+  - README development — nº da suíte é a execução no host, não a linha (apodrece a cada commit)
+  - §3 do README — DD-OTP S2-JVM implementado (não "implementar S2"); registra docs sync no DOING
+  - sincroniza README development + PLAN-SOLID-500 com a realidade (F3 fechada 498/12 dívidas; fila bugs 8; §81/§163/§165)
+  - cabeçalho do PLAN-SOLID-500 sincronizado (F3 fechada, ratchet 12)
+  - §165 re-verificado (não reproduz em clean build) + sumário da lane gate/qualidade
+  - re-verificação — NÃO reproduz em build limpo; era constante INLINED (JsRuntimeUiJsonMap)
+  - §163 pushed + lane gate/qualidade sem trabalho novo — re-disparo recusado (fila 8, gate verde)
+  - §165 JS ui-jsonmap seed-sem-export (menor repro; célula jsonenc-map só roda com node)
+  - registra RECUSA de re-disparo da lane gate/docs — nada novo (gate verde, docs/development sem doc pendente, fila 8)
+  - fecha varredura de overclaims — 6 células de matriz, gate final 1645/0/13-node/157
+  - fecha auditoria da lane gate/docs — §131 sincronizado, fila 12→8, docs/development sem doc concluído pendente; PRÓXIMO PASSO = §81 (lane .18, não tocar)
+  - corpus sincronizado — sobrecarga de método existe nos 4 backends (AGENTS.md, type-system, functions, training, status); §136 alcance atualizado
+  - §131 fechado (18a64d45, 4 backends — harness 4/4 re-medido) — fila 9→8; gate pós-§131 verde 1645/0/13-node/157
+  - §117 fechado (3734f2aa) — fila 10→9; gate pós-§117 verde 1644/0/13-node/157; parity KofConcurrency2Test 34
+  - gate pós-§89 verde (1643/0/13-node/157) + suíte do README 1611→1643; PRÓXIMO PASSO aponta lane .18
+  - §89 fechado (4 alvos re-medidos + warning SEM090) — fila 11→10; README/plan-stdlib/DOING alinhados
+  - repara header corrompido do known-bugs (§11 truncado) + §106 fechado (fila 12→11) + §89 evidência corrigida (quebra nos 4 alvos, não só link nativo) + regra 9 cluster
+  - RECUSA de re-disparo ~07:55Z — fila estável PROVADA (issues/PRs abertos VAZIOS, comentários terceiros = nenhum, CI unidade success, discussão #113 no caminho do interp roda e passa). Cron 9094 parado, 9093 intocado.
+  - retifica causa raiz pós-rebase — lane nat 53b089fd já movia root_start p/ .data do programa (kof_gc_mark usa _end); restante real = fallback de poda por CWD; DOING sincronizado
+  - recusa por lane (nada sem dono na development) — pow fechado
+  - corrige extrapolação roundTo (regra 6) + sincroniza fila §1 item 6
+  - sync pow FEITO + roundTo aprovado-7a (README §3) + DOING próximo passo = roundTo
+  - varredura completa da fila — issues abertas = VAZIAS; discussions #25 (switch-expr já implementada) e #36 (7 bugs = #28–#35 todos corrigidos) respondidas + fechadas
+  - §156 FEITO confirmado no HEAD remoto (fix+testes preservados, re-validado 340/0) - dono 192.168.100.22
+  - lane 9094 zera fila de issues — #113 corrigida (root_start cobre estáticos, prova nm), #97 fechada (medido 32520B/37), #25 é feature existente
+  - nota do autostash stale (superseded por HEAD; mantido, regra 8) - dono 192.168.100.15
+  - recusa honesta pos-IntelliJ (nada sem dono) - dono 192.168.100.22
+  - §17 editor support cita IntelliJ degrau-10 + DOING - dono 192.168.100.22
+  - learn/38 IntelliJ install real (degrau-10) + DOING - dono 192.168.100.22
+  - regra de identidade por IPv4 local — esta sessão = dono 192.168.100.18 (conflito com bloco .md-soltos resolvido preservando ambos)
+  - sync .md soltos 13/09 (native pow S1b.2, editor degrau 12 provado, stdlib S1b.2 outro agente) - dono 192.168.100.22
+  - regra 9 - agentes se identificam pelo IPv4 local (dono = IP; esta sessao 192.168.100.22)
+  - cluster legado + OTP sincronizados 13/09 (contradicao LEGACY, contagem 70 testes, S2-JVM 020be966)
+  - update README.md to reflect 70 tests in migration platform and clarify documentation status
+  - update implementation status in LEGACY_MIGRATION.md and IMPLEMENTATION_PLAN.md to reflect 70 passing tests
+  - update LEGACY_MIGRATION.md to clarify documentation status and implementation state
+  - add guidelines for `check_500` gate thresholds and handling code size limits
+  - regra 8 - nunca descartar trabalho de outro agente (diretriz da mantenedora 13/09, agentes em conjunto)
+  - enhance comments in check_500.sh and check_500-baseline.txt for clarity and consistency
+  - bump 0.4.0-beta FEITO (e8a8aeea do outro agente + meus complementos) - sem colisao, tree limpo
+  - improve comments and messages in check_500.sh for clarity and consistency
+  - update version references from 0.3.22-beta to 0.4.0-beta in README, check_500.sh, and versioning.md
+  - update version references from 0.3.22-beta to 0.4.0-beta across multiple documentation files
+  - standardize version formatting across multiple documentation files
+  - roadmap.md sincronizado 13/09 (header 0.2.6->0.3.22-beta, OTP S2-JVM, VERSION) + auditoria 9 docs (nada a mover)
+  - PRÓXIMO PASSO registra DD-01 FEITO 2ef6ce69 + lane sem colisão (fila 106/89/117 é do outro agente)
+  - DD-01 planning-finally-return movido p/ docs/decisions/ (bug 45 FECHADO 063ed956)
+  - §4.1 planning-finally-return → FECHADO (DD-01 4-targets 063ed956)
+  - registra sync §45/S10c nos registros centrais (3e8167d8)
+  - sincroniza §45 (finally-return) e S10c (randomBytesHex) nos registros — fila 14→13 abertos, parity/README
+  - DD-STDLIB-01 movido p/ docs/stdlib/ + refs S10c sincronizadas
+  - corrige cross-refs a arquivos movidos (roadmap→development/roadmap, native-multiarch, DATABASE_VISION→stdlib, PLAN-UNIVERSAL/scoped-resources, specification-gaps→bugs-and-gaps)
+  - evidência CI da beta (runs failure) reforça o alerta de gate do #116
+  - README §1/§4.1/§4.2 corrige localização 3-estados (6 docs → decision-pending, 4 registros → bugs-and-gaps) + OTP S2-JVM
+  - lane 9094 issues — registro dos commits da fila + alerta de gate da beta
+  - PRÓXIMO PASSO registra fixes de path + condição de recusa por estabilidade
+  - corrige paths pós-refactor (complexity-audit docs/audits; actual-state → bugs-and-gaps/known-bugs)
+  - roadmap-audit header nota 13/09 + OTP §127/§131 corrigidos/decididos no bloco de atualização
+  - architecture.md — diagramas ASCII viram Mermaid (render nativo no GitHub)
+  - varredura de claims stale pós-ratificações 13/09 (roadmap-audit P4, matrix S10c, finally-return, stdlib-expansion, OTP 8x, README S2/ratchet)
+  - fila §1 itens 4/6 sincronizados — DD-OTP (S2 JVM) e pow/-lm/S10c ratificados 13/09, não mais 'na mesa'
+  - README §2/§3/§4.3 sincronizado com a fila viva (14 abertos; §65 NÃO REPRODUZ; NAT-STR01→§161; DD-STDLIB-01 fora de future/)
+  - architecture.md — diagramas ASCII viram Mermaid (render nativo no GitHub)
+  - dispatcher 05:30 — sessão de organização (bugs-and-gaps/decision-pending/audits) + auditoria native-multiarch/DD-STDLIB-01; próximo tick = manter movimento de docs ao decidir/fechar + células matriz×teste, sem código de lane alheia
+  - DD-STDLIB-01 sai de future/ — decisão 6a ratificada 13/09 (a própria doc se contradizia: topo ✅DECIDIDO × status 'PROPOSED aguarda decisão' — corrigido p/ RATIFICADO/Implementação pendente, lane STDLIB executora); futuro/README e README development atualizados
+  - conclusão honesta agrupa §104b-ii como lane bugfixer (não regra-6) — 7+3+3+1=14 coerente com a fila
+  - ecosystem-coverage baseline ~1620→1611 testes (alinhado a docs/status.md 13/09)
+  - conclusão honesta alinhada ao PR #115 (§65→NÃO REPRODUZ): 14 itens, não 13; §65 sai das lanes alheias
+  - specification-gaps version 0.3.0-beta→0.3.22-beta (pom revision atual)
+  - fila de renumeração da série OTP §127-129 corrigida p/ §162-164 (merge ocupou §157-160)
+  - §2.2 tabela corrigida contra medição (auditoria doc-vs-código, lane development) — CI cross ❌→✅ (job cross-native existe e verde, run 34732932745), 13/13→42/42 (surefire medido), 'consequência prática: stub sai 0' marcada SUPERADA (hoje executa lógica sob qemu; re-auditoria 12/09 no topo já dizia — a tabela §2.2 é de 01/09 e contradizia o próprio topo do doc)
+  - reordena §155/§156 antes de §157-160 (merge deixou fora de ordem) + conclusão honesta reflete §157-160 corrigidos e §156 code-pure
+  - NAT-STR01 renumerado §157→§161 (colisão com o merge dos §157-160 da issue-lane)
+  - registra NAT-STR01 (case-fold ASCII-only no Native) como §157 — lacuna: README apontava p/ known-bugs mas só existia na matriz
+  - refactor de clareza (pedido da mantenedora) — auditorias saem de development/architecture/history e passam a morar em docs/audits/
+  - sincroniza registros com o estado real — fila 14 itens (era 12 com §149 fechado por engano), desambigua colisão §127/128/129, corrige versão e contagens
+  - sincronizar plano — S2-JVM implementado (commit anterior), ratificação registrada
+  - P0 — WIP §103.1 (69fdab59) quebrou o javac do KofRuntime na beta-0.4.0; resolvido pelo fix do dono (§103: 751a83f2/3fd3c1b3)
+  - ratificação da mantenedora 13/09 — 12 decisões (OTP S2 1a, json Map sorted 2b, §89 alias+warning 3a, DD-01 4a bump 0.3.1, Long=BigInt 5b, 6a hex, 7a -lm, 8a slots, 9a cast, 10a sobrecarga, 11b fila, 12 abrir TLS+NAT-STR01)
+  - registrar descarte do commit duplicado de §149 (reversão conflitava com fix 29923a5b da lane dona) — estado = remoto, gate 1611/0
+  - retificação da MINHA análise pós-fix 29923a5b — eu afirmei 'fix não pode morar em JsIfThrowElse' e 'IR byte-idêntico'; o fix real foi no parser (isLoopStart lookahead) e o dump byte-idêntico eu NUNCA rodei (alegação de memória — não asserir o não-rodado) + PRÓXIMO PASSO re-sincronizado (gate 1611/0, 13 abertos todos em decisão/lane alheia)
+  - retificação interna — índice dizia '14 abertos' enquanto o próprio §2 (triagem 13/09) diz '13 seções sem ✅'; contagem conferida seção a seção neste HEAD (16 seções sem ✅ no cabeçalho − 3 com 'CORRIGIDO' sem glifo: §28, §32, §93) = 13
+  - #110 FEITO (21e7495b, respondida 5650161070)
+  - tabela-resumo corrigida contra o código — 9/18/21/22/23 'não reverificados' viram REVERIFICADOS com prova (16/16 testes neste HEAD) e a ressalva 'host arm64/macOS sem toolchain' marcada como superada (host atual x86_64 + qemu riscv/aarch; Native reverificado 11/09–13/09)
+  - §149 JS corrigido — suíte 1611/0 (13 err node) em status/README/backend-parity/AGENTS/DOING
+  - dispatcher 22:50 — gate vermelho = §149 (causa raiz completa em known-bugs); próximo tick exige DECISÃO da mesa sobre a porta do fix (Optimizer vs pilha de end-labels do §147)
+  - mecanismo exato da poda — Optimizer (unreachable+jump-to-next, linhas 44-45/180) apaga o Jump/Label(end) pós-throw; NÃO é o lowering nem só o parser
+  - #102.2 FEITO (9e823af9); WIP-103 em /tmp/RESGATE-* p/ o dono
+  - análise da lane dev — metade matriz FECHADA (0c107eb9), metade JS com causa raiz corrigida e locus do fix provado
+  - #108 FEITO+fechada; WIP-103 alheio stasheado intacto (stash@{0})
+  - 1602/2/5 re-medido no e1962735 + matriz doc sincronizada às células do teste
+  - watcher all = varredura completa a cada tick (triar+corrigir+fechar)
+  - watcher processado — resposta 5649828936 (B40 4459ff57 compile OK); plano + DOING sincronizados
+  - baseline ≤500 17→9 sincronizado (split-7 e45140d6 tirou ExpressionMethodCallLowerer)
+  - §9 triado ✅ (nativeLambdaMutableCapture 1/1) — fila 14→13
+  - fila 17→14 — §145/146/147 ✅ 440730c8; §149 aberto (lane bugfix-101); §9 p/ triagem
+  - S-7 FEITO eabf814b + PRÓXIMO PASSO (fila §1 item 1 concluído)
+  - tree-shaking consolidado em docs/ — plano CONCLUÍDO
+  - releases.md → release-naming.md — colisão de caixa com RELEASES.md quebrava checkout em macOS/Windows
+  - sem trailer Co-authored-by (polui o log) + identidade única consolidada
+  - add JavaFX error handling guidelines to prevent regressions
+  - higiene de identidade do git — agente vive SÓ no --local (temmcode); --global é da mantenedora e nunca é tocado; scripts/CI nunca setam identidade (release.yml usa kof-release-bot)
+  - suíte 1585 = 1413+31+5+136 re-medida no HEAD 54da1325 (gate1585.log)
+  - retifica premissa falsa do dispatcher 20:10 ('host sem qemu/toolchain cross')
+  - 'free sem caller = código morto' era FALSO — riscv faz 57 allocs e 0 frees
+  - sincroniza impeditivos da fatia S2 ao medido — §128 ✅ 12/09; buraco de design do selectAny documentado
+  - 3 bugs de backend reportados por PublioSantos — REPRODUZIDOS + causa raiz localizada neste HEAD
+  - agente PODE postar via conta da mantenedora (override 12/09) — MAS todo comentário DEVE abrir com bloco de citação marcando autoria real como "Kof-agent-worker" (apelido entre aspas, nunca como se fosse conta real). A regra antiga (NUNCA comentar como melmonfre) gerou rascunho pendente eternamente na #97; a nova troca o risco de identidade pelo risco de parecer palavra da mantenedora — e o elimina com a marcação. Prova de uso: #97 issuecomment-5649162397 (marcação presente).
+  - recusa de re-disparo 20:15 — re-varredura pós-F2, TODO vazio honesto
+  - F2 (CompilerDriver) FECHADA com prova medida — 487 ≤500, ratchet sem violação
+  - recusa de re-disparo 20:00 — re-varredura fila §1 + mesa bugs, TODO vazio honesto
+  - recusa de re-disparo na lane nat — varredura de estabilidade 12/09 (nada sem dono)
+  - varredura doc-vs-realidade — claims de 31/08 sincronizados ao medido
+  - varredura doc-vs-realidade — 7 células sincronizadas ao medido no HEAD
+  - suíte 1580 re-medida no HEAD 9cda2b3d + AGENTS.md sem o 'bug 59 aberto/59 falhas'
+  - decompõe a face (1) GC mark-sweep cross em 5 degraus executáveis (G-1..G-5)
+  - sincroniza a fila ao medido HOJE — S-5 cross ✅ (103→18 syms), suíte 1579→1580, ratchet 13→12
+  - add Kof philosophy manifesto to guide development principles
+  - contagens da suíte sincronizadas ao gate medido — total 1576/1560→1579 + 32 linhas da tabela regeneradas dos surefire-reports
+  - célula WEB002-Native sincronizada ao medido — 'sem kof_web_* no asm' era FALSO
+  - PRÓXIMO PASSO = auditoria fila §1 completa (tudo owned/decisão); re-disparo = doc-vs-realidade nas matrizes vivas OU resgate do S-5/GC se 9092 largar
+  - ratchet ≤500 aponta p/ nº autoritativo (wc -l do baseline) em vez de número cru que apodrece
+  - sincroniza a FILA ao estado medido — suíte 1577→1579, ratchet 17→14, donos S-5/S-6 da #97
+  - varredura doc-vs-realidade da coluna ABERTO — 4 linhas corrigidas p/ CORRIGIDO + 1 p/ gap honesto JSN004
+  - README vira FILA — base 0.3.22-beta, estado real medido hoje + ordem de execução dos planos
+  - CONCLUI a reclassificação de docs/development/ + future/ — unidade meia-executada resgatada (working tree de sessão encerrada no meio do turno)
+  - unidades 12/09 — heartbeat porta-dinâmica (9092=outra sessão, ticks mortos 1h), NUL no known-bugs (grep pulava o backlog), triagem §139 (doc-sync de correção já commitada) + watchers #97 processados (S-6 autorizado ao ViniAguiar1, fora da lane dev); PRÓXIMO PASSO = S-5 só se a lane 9092 largar
+  - sincroniza doc-vs-realidade — §139 foi CORRIGIDO em 39da8416 (parser JS consome KofPop/KofPop2 no meio de fragmento; célula nullableprint sem exclusão trava os 2 repros nos 4 targets) mas o header dizia ABERTO. ConformanceMatrixTest 11/11 medido. Mesmo padrãoo da lição SG-002 (doc descreve estado pré-fix).
+  - remove byte NUL literal (default de Char escrito como \0 bruto na linha 3556) — o arquivo era tratado como BINÁRIO pelo grep ('binary file matches'), o que fazia TODA varredura (triagem de bugs abertos, auditoria de segredos, grep -r nos agentes) PULAR o backlog inteiro silenciosamente
+  - planning-mutability + planning-switch-expr voltam p/ docs/decisions/
+  - known-bugs/ecosystem-coverage apontam o caminho real em docs/development/ (comentários Java + learn/19)
+  - atalhos mortos de docs/development/ resolvidos no estado-corrente
+  - pós-movimento — células da matriz ecosystem-coverage resolvidas sob docs/, banners 0.3.22-beta no corpus, contagem da suíte real (1576/0/126-skip), docs/future/ → docs/development/future/ em comentários Java, learn 00→39 na tabela de corpus do AGENTS/README
+  - mover arquivos soltos de docs/ para subdiretórios de domínio (architecture/debugging/stdlib/history/distribution/comparison/decisions/ui)
+  - auditoria doc-vs-realidade — objmethods/native (LINK_FAIL 104b-i virou bloqueio REAL 104b-ii) + linha da unidade CI-cross (f2fee2f8) com o PRÓXIMO PASSO devido
+  - heartbeat na porta certa (9093 = sessão viva; conferir ss antes de assumir) + watcher de issue #97 a cada 2h documentado como parte do loop
+  - identidade de agente DESVENDADA — atribuição por e-mail de autor (temmcode 268 commits = aminadojava@gmail.com verificado), não App/PAT; setup git config por clone; proibido comentar issue como melmonfre (corpo vai p/ .issue<N>-reply-pending.md gitignored + pendência no DOING) + watcher de issue #97 c/ scripts/issue-watcher.sh (cron 2h, attach obrigatório)
+  - célula jsondec-recordlist Native — PARTIAL com a verdade do §48 (era 'não compila' de 08/09; hoje é recusa JSN004 em compilação, R6; ConformanceMatrixDocTest verde)
+  - reconcila o PRÓXIMO PASSO apos a S-2.5 (a35053f9 saiu sem atualizar a linha — auto-denuncia + despacho corrigido)
+  - auditoria dev/ — CANVAS001 reprovado verde + doc consolidado (movido future/->docs/); AGENTS.md perde flag obsoleta !canvasCreation
+  - 12/09 — §107 3-alvos + #97 S-1 + re-auditorias doc-vs-realidade; contagem 1249->1560/0/5-skip medida neste HEAD (5 skips = BD externos MySQL/Mongo/Postgres, cross EXECUTA)
+  - corrige a tabela do topo — varredura 08/09 estava APÓCRIFA (39/62/63/64/46/48/50/59/61 estão ✅ nos próprios cabeçalhos); fila real 12/09 = 16 abertas, cada uma com bloqueio mensurável (decisão/lane/congelado), ecoando a mesa do bugfixer 4d51defe
+  - reconcilia a linha PRÓXIMO PASSO apócrifa do rodapé — §135 resolvido, suíte verde, #97 aceite via issue e S-1 FEITA a3996600; fila real = S-2 (provides/needs por fatia)
+  - re-auditoria medida do estado cross riscv/aarch — doc contradiz o código (regra AGENTS 'audit vs reality', estado-4)
+  - reconcilia as duas retificações da toolchain cross — host-dependente (evidência de ambos os hosts)
+  - mesa bugfixer 12/09 = 0 itens desbloqueados (17 abertos auditados 1-1: cada um com bloqueio mensurável — contrato/mantenedora (45,81,89,94,101,106,117,125,129,§127-cast,§132,§68a/§70), lane alheia (65 web/UI, 90, 107 CEDIDO dev 12/09, 131 semântica), cross-sem-toolchain-aqui (114/§104b-ii, provas §123/§126/§127-JS)); FECHADOS da sessão: §127-JS f85ffadd + §128-JVM 6e68cb36 + §134-wildcard 6e147824 + retificações bda06e81/bc45aaf9; gate medido no HEAD exato (matrix 11/11, doc 1/1, classpath 6/6, concurrency 33/0, decompile 45/0); NÃO é condição de estabilidade (development/ e future/ seguem com trabalho) — cron continua; re-disparo da minha lane só assume se: resposta §125 chegar, regressão na suíte, ou dev liberar §107/infra storage-box
+  - retifica 92b01b2b — toolchain cross NÃO está neste host (medido: command -v ausente, find vazio, NativeRiscv64E2ETest 36/36 SKIPPED pelo guard assumeTrue); faces cross §123/§126-tag seguem sem prova possível aqui; afirmação possivelmente válida no host com qemu (B37/melissa), não neste — regra de hoje: auditar doc contra o código/ambiente, não contra a memória
+  - §137 cedida ao remoto 982f53f0 (fix paralelo descartado na fusao); DOING com a licao de colisao; gate medido 1547/0/5-skip
+  - linha da unidade SG-011B+§137 (paragrafo duplicado do replace anterior removido; refs renumerados §136/ratificacao §135)
+  - sincroniza o gap com o estado REAL do lexer (tokens já removidos; teste verde) — fila avança p/ cross§123/§126 + §107
+  - retifica ACHADO COLATERAL #88 — 'runtime sem export kofStringsIndent' era artefato do MEU build incremental (inlining de WS_RUNTIME static final em JsArtifactWriter.class); causa real do indentDedentJs vermelho = só node ausente no host (mesma classe do node-trio); lição: mvn -o clean na sonda antes de registrar causa-raiz de runtime gerado
+  - PRÓXIMO PASSO com §135 — plano tree-shaking enviado (eae16c46); S-1 pré-bloqueado pela decisão de contrato da suíte vermelha
+  - §135 — conflito de contrato SEM047(09/09) vs SG-011B(11/09) + DecompileTest switch — suíte vermelha no base, PRÉ-EXISTENTE a esta sessão
+  - PLAN-TREE-SHAKING — stdlib por alcançabilidade (frente designada pela mantenedora)
+  - linha #91 (gate CONC001) + PRÓXIMO PASSO com fila real (#96 merge, #87/#88 conflito B37, frente tree-shaking)
+  - update development focus and stability criteria in DOING.md
+  - update version and last update details in AGENTS.md
+  - add stability evaluation criteria for autonomous mode
+  - §129 FEITO + §125 com causa-raiz pinada (descritor, não print) + fila real (decisões de contrato em 2 itens, §104b-ii grande, prova cross p/ sessão com qemu)
+  - §125 no PRÓXIMO PASSO com o oracle medido (0 via precedente PN3)
+  - oracle resolvido pelo precedente medido — Nullable(INT)→0 no println; guard falta no boxPrimitive do print-lowering
+  - §113 pushed (d2a4dc0a+edb86c34) — gate no HEAD exato em execução
+  - faces cross 5/5 no header do known-bugs + suíte do HEAD no PRÓXIMO PASSO
+  - §122/§123/§124 FEITOs em um só commit + fila real corrigida (regra do MESMO commit, restaurada)
+  - §126 — chave do tipo errado em Map/Set/contains → Native SIGSEGV (design opção-B fechado)
+  - SG-020 — a regra 5 (SC para statics/campos compartilhados) ainda não tem prova
+  - emendas verificadas ao plano de supervisão + fechamento das 8 DDs independentes
+  - corrigir tabela de gaps desatualizada + travá-la com ConcurrencyGapsDocTest
+  - linha CONC — pos-merge + renumeracao 127-132 registrada
+  - move 0.3.0→0.4.0 FECHADO + fila real pós-merge (§113→§114x86→§107; toolchain cross = aspiracional neste host)
+  - spike #83 encerrado — supervisor viável em Kof puro (forma interface-factory) + 3 achados registrados (§107/§108/§109)
+  - resync pós-rebase — §111 cross fechado pelo agente B36/B37 (qemu naquela sessão; ausente NESTA); PRÓXIMO PASSO agora §112-JS com a tentativa revertida documentada + 104b-ii
+  - split residual fechado nos 5 targets + linha STDLIB atualizada
+  - residual riscv/aarch atualizado + linha STDLIB no DOING (B35+B36 juntos, split-trailing riscv em aberto)
+  - resíduos fechados + registro no DOING — teste ampliada p/ 22 vetores (bordas starts_with2 provadas sob qemu)
+  - varredura cross 11/09 sem bug novo + sonda §101 (cancel-colisão) travada em decisão
+  - §106 — Native println(coleção) imprime ponteiro como lixo (causa raiz: vtable -1 silencioso em kof.List/Map/Set)
+  - println(<coleção>) → lixo de ponteiro no nativo (sem kof_{list,set,map}_to_string; valueOf dispatch só trata vtable toString = records) — ABERTO, backend-only lane Native
+  - tabela known-bugs na varredura 11/09 — fila viva = §45/§104b/§104c + congelados explicitados
+  - json.encode(Map) quebra em 3/5 alvos (JVM crash reflection; x86/riscv link error) — registrado com repro medido, ABERTO (superfície JSON = decisão regra 6)
+  - renumera meu random-loop 102→105 (102 tomado pelo §102 indexOf no remoto 11/09) + ref no código/DOING
+  - snapshots históricos 02/09 (language-state/actual-state) movidos p/ docs/
+  - reclassificação development/ — SG-020 p/ docs/, planning PROPOSED p/ future/
+  - §102 FEITO (x86+JS) + PRÓXIMO=varredura collections/higher-order
+  - PRÓXIMO PASSO §102 (indexOf/lastIndexOf from-arg no Native, backend-only)
+  - renumera meu indexOf(String,from) p/ §102 (colidiu com §101 relacional-NaN no remoto) + linha PRÓXIMO
+  - renumera meu bug relacional-NaN p/ 101 (100 tomado pelo bug Char no remoto) + DOING MATH001 FEITO / PRÓXIMO=TIME002
+  - planning-otp-supervision.md — issue #83 (DD-OTP-01..13) + bug 101 registrado
+  - lane STDLIB S3b.2 uuid.v7 FEITO (5 alvos) + sync pós-rebase com S1b.1 lerp (remoto)
+  - restaurar linha S1b.1 (lane STDLIB) + sincronizar PRÓXIMO PASSO pós-rebase
+  - NAT-STR01 estendido p/ toUpperCase/toLowerCase de instância (varredura String parte 2)
+  - §97/§98 — String.compareTo/hashCode link-fail + `<`/`>` Unspecified (varredura String parte 2)
+
+### Refactoring
+
+  - extrai maquina de expressao do linearReturn em machineRun (Fase C degrau 3, unidade 1/n)
+  - split Translate.java 526->255 + TranslateStatements 287 (gate <=500) - dono 192.168.100.22
+  - F3 FECHADA — NativeBackend 505→498 ≤500; PLAN-SOLID-500 completo
+  - NativeBackend 579→505 — NativeStaticData extraído (bug 41)
+  - split NativeBackend 671->579 (check_500 verde) — NativeSymbolMangling + array emitters
+  - split-7/8 — dedupe gap-diagnostics in ExpressionMethodCallLowerer (515→468) and extract builtin namespace inference from MemberCallTyper (550→379) into MemberCallNamespaces
+  - simplify error handling in ExpressionMethodCallLowerer and extract argument emission to a dedicated method
+  - extract static method type inference logic into MethodCallNamespaces class
+  - ExpressionInstanceCallLowerer 554->481 — famílias builtin por receiver em ExpressionBuiltinInstanceCalls (baseline 12->11)
+  - JsControlFlowParser 530->492 — split por RESPONSABILIDADE real (baseline 13->12)
+  - BytecodeDecoder 521->359 via BytecodeCp.java (baseline 14->13)
+  - SemanticAnalyzer 535->473 removendo visitor no-op (base do ratchet: 17->14)
+  - Parser 513->320 via TypeDeclarations.java + baseline do ratchet encolhe 17->16
+  - hook de injecao kof.supervisor em classe propria (regra <=500)
+
+### Tests
+
+  - torna gate de asm riscv/aarch OPCIONAL ate dev nativo completo (D-ASM-GATE)
+  - stress array bounds safety (KOF-SBD-001-STRESS)
+  - corrente de 2 if-sem-else executa os 4 caminhos (Q3: borda não vaza entre irmãos)
+  - EDI001 degraus 6-9 - prova de instalacao vim/emacs/geany/nano (21/21) + plano sync - dono 192.168.100.22
+  - jsondec-map estreita o narrow exigido pelo congelado §87 (regressão visível do #126; A/B medido: pai 5a116284 verde, 61495f69 vermelho SEM049)
+  - célula de matriz castfn (§127-JVM) — prova 4 targets em CI
+  - células de matriz p/ §155/§156/§157 — overclaims de alvo-múltiplo (4 targets em CI)
+  - prova NATIVA automatizada de §89/§131 — células de matriz numconv/methodoverload (4 targets em CI)
+  - anota KofScriptTest.evalNativeTarget como regressão do GC x86 + DOING
+  - pow — trava a recusa MATH001 cross (KofMathTest.powCrossArchRefused)
+  - §103.2 Int→Long em campo prova o I2L do ExpressionAssignmentLowerer (repro do reporter, VerifyError antes)
+  - KofJsBrowserE2ETest acha o Chrome do macOS em vez de pular em silêncio
+  - sonda JS declara os imports do runtime podado; plano e DOING com o gate
+  - E2E dedicados por target p/ descarte Long/Double (delta sobre 360401a4)
+  - hardening da poda riscv (2 testes não-vácuos sobre o port 2f1dba45) + sync de doc do design S-6 (unidade de topo, aprovada na #97)
+  - prova qemu real das faces riscv64+aarch64 da tag de chave de Map
+  - faces UTF-16 riscv/aarch provadas (B34) — NativeStringUtf16CrossTest
+  - bug 104 — célula objmethods na matriz de paridade (record em coleção) + §104b/§104c registrados
+
+### Build
+
+  - nomenclatura 0.4.0-beta (pedido da mantenedora - proxima versao quando estavel)
+
 <!-- NEXT-RELEASE -->
 
 ## [0.2.7-beta] - 2026-09-04
