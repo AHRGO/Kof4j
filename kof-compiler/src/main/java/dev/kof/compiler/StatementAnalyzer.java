@@ -226,6 +226,19 @@ public final class StatementAnalyzer {
                     elemType = ct.typeArguments().get(0);
                 } else if (collType instanceof Type.ArrayType at) {
                     elemType = at.componentType();
+                } else if (sa.diagnostics() != null && isNonIterableForIn(collType)) {
+                    // bug 145 (espelha o bug 103/SEM054): `for (var c in "abc")`
+                    // era ACEITO e quebrava de um jeito em cada target — JVM
+                    // VerifyError `arraylength` em String (a classe nem carrega),
+                    // Native SIGSEGV, Script "Argument is not an array" e JS
+                    // iterava chars em silêncio (divergência cross-target, R6).
+                    // `for-in` só itera List<T>/array; rejeitar em compile-time.
+                    SourcePosition pos = fis.position();
+                    sa.diagnostics().error(pos != null ? pos.file() : "",
+                            pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0,
+                            "`for-in` só itera sobre `List<T>` ou array em Kof; para String use "
+                                    + "`s.charAt(i)` num loop numérico",
+                            "SEM058");
                 }
                 forScope.define(new SymbolTable.LocalVariableSymbol(fis.varName(), elemType, 0));
                 analyzeStatement(sa, fis.body(), forScope, returnType);
@@ -375,5 +388,21 @@ public final class StatementAnalyzer {
             case "==" -> elseNarrow.add(narrowed);
             default -> {}
         }
+    }
+
+    /**
+     * bug 145: `for-in` só itera `List<T>` ou array. Tipos conhecidamente NÃO
+     * iteráveis (String, primitivos, Map/Set, record/classe) são rejeitados em
+     * compile-time (SEM058) em vez de virar bytecode inválido/lixo cross-target.
+     * `Unknown`/`TypeVariable`/`Nullable` de coleção NÃO são flagados — podem
+     * ser List/array em runtime (SG-008) ou genérico.
+     */
+    static boolean isNonIterableForIn(Type t) {
+        if (t instanceof Type.NullableType nt) t = nt.inner();
+        if (t instanceof Type.ArrayType) return false;
+        if (t instanceof Type.UnknownType) return false;
+        if (t instanceof Type.TypeVariable) return false;
+        if (BuiltinTypes.isList(t)) return false;
+        return true;
     }
 }

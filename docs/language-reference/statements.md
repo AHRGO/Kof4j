@@ -118,9 +118,13 @@ for-in = "for" , "(" , ( "var" | "val" ) , identifier , "in" , expression , ")" 
   (`StatementLowerer.java:259-310`). **No custom iterator.**
 - **`in` is a contextual word** (not a keyword) — only valid here.
 - The variable type is `typeArguments.get(0)` of the List or the array component.
-- **`for (var c in "ab")` does NOT iterate over a string** — the `string` receiver is not a
-  collection; **Unspecified** behavior (the JVM probe gave a runtime error, not
-  iteration). Use `s.charAt(i)` in a numeric loop.
+- **`for (var c in "ab")` does NOT iterate over a string** — the `string`
+  receiver is not a collection. Since 14/09 it is **rejected at compile time
+  with `SEM058`** on all 5 targets (previously it was silently accepted and
+  broke differently per target — JVM `VerifyError` `arraylength` on String,
+  Native SIGSEGV, Script "Argument is not an array", JS iterated chars). Use
+  `s.charAt(i)` in a numeric loop. The same applies to `Map`/`Set`/primitives/
+  record/class receivers (only `List<T>` and arrays are iterable).
 
 ### 5.5 `break` / `continue`
 

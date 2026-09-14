@@ -187,7 +187,7 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > Fix: `kof_json_bind` COERGE ao tipo do alvo (`intValue/longValue/…` em vez
 > de devolver o objeto) — mesma família do fix de CLOB do `8eb156f4`.
 > Prova: `KofBlogE2ETest` verde (1/1) + `KofDbE2ETest` 16/0/2 + `JvmE2ETest` 35.
-> Registrado em `docs/bugs-and-gaps/known-bugs.md` §192.
+> Registrado em `docs/bugs-and-gaps/known-bugs.md` §197 (renumerado de §192 em 14/09 — colisão com o parseOrDefault da lane `.17`).
 >
 > ChaCha20 (D-SEC) entregue pelo colega (`3e1d1ff7`); cookies C11 em
 > `521049aa`. **Fila restante de `DECISIONS`:** OAuth resource-server (JWKS +
@@ -282,8 +282,9 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > (CodeQL success; 4 grupos Error p/ triagem das lanes de código — array-index,
 > container-never-accessed, contradictory-checks, self-assignment — NÃO desta lane).
 
-> **EM CURSO (14/09 ~02:30, dono = 192.168.100.15, lane bugs-and-gaps):
-> unidade §186/#133 — fix estrutural completo do `<clinit>`.** Autostash
+> **✅ FEITO (14/09, dono = 192.168.100.15, lane bugs-and-gaps): §186/#133 —
+> fix estrutural completo do `<clinit>` (commit `814f44da`, pushado; suíte
+> 4-módulos re-verificada 0 FAILURE em 14/09 ~03:30).** Autostash
 > da unidade REAPROVEITADO (stash@{0} aplicado; conflito com e4613704
 > resolvido preservando os dois lados). Código: `CompilerClassLowering.
 > generateStaticInitializer` (IR) + emissão nos 4 backends (JVM/JVM nativo
@@ -297,9 +298,8 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > + `.receiverlessCallToSameClassStaticMethod` (JVM+JS verdes); célula
 > `10\n100\n42` via CLI em JVM/JS/x86; riscv `.s` contém `Math2_clinit`
 > chamado no `_start` (toolchain/qemu ausente no host — gate ambienta).
-> known-bugs §186 atualizado p/ CORRIGIDO. **FALTA p/ commit:** suíte
-> completa 4 módulos rodando em background; commit + push + fechar #133
-> com triagem. **Depois (fila .15):** triagem/fix #139+#150 (Set/Map
+> known-bugs §186 atualizado p/ CORRIGIDO. **FALTA:** fechar a issue #133 no
+> GitHub (sem `gh` no host — pedir à mantenedora). **Depois (fila .15):** triagem/fix #139+#150 (Set/Map
 > ClassFormatError), #143 (record == referencial), #145 (for-in String),
 #149/#152 (List[i] aaload), #141 (spawn{block}), #142 (ctor genérico),
 > #151 (is) — .17 assume #146/#147/#148 (família Jvm*Descriptors, arquivos
@@ -385,13 +385,72 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > **(c) §186 fix parcial** (já em `e4613704`): `FieldConstantFolder` dobra
 > constantes p/ o `initialValue`; `static` não vira `this.x=...`. Residual
 > (runtime/`new`) ABERTO.
-> **PRÓXIMO PASSO (lane bugs-and-gaps):** (1) rodar a suíte 4-módulos LIMPA e
-> confirmar **0 falhas** (a §189 era a vermelha); (2) continuar a caça Q4 sobre
-> os registros vivos (`known-bugs.md` §11) — candidatos da minha lane:
-> §187 face JS (lane JS), §184 (lane JS), §185 (lane `interp` 9093), §180
-> (Native, unidade grande), §188 (regra 6). **NÃO** tocar lane de outro dono.
-> Se nada novo e suíte verde → **RECUSAR** o re-disparo. **NUNCA:** `nat/` GC
-> viva; fila de outras lanes; push `main`.
+>
+> **✅ FEITO (14/09 ~03:40, lane bugs-and-gaps, dono = 192.168.100.15): §191
+> CORRIGIDO + teste-oracle RFC 8439 do ChaCha20 (`e238330a`, pushado).**
+> Caça Q4 sobre as features recém-mergeadas: **(a) §191** — `cookieSet` com
+> `secure`/`httpOnly` STRING divergia JVM×JS no case: JVM usava
+> `equalsIgnoreCase`/`"0"`, JS comparava `s === "false"` cru → `"FALSE"`/`"False"`
+> removiam a flag no JVM e a mantinham no JS (divergência cross-target silenciosa,
+> regra 5). Fix JS `flag()` = `s.toLowerCase() === "false"`; teste
+> `KofSecurityTest.cookieFlagStringCaseInsensitiveCrossTarget` (golden único JVM+JS)
+> **falhava antes** (Q1). Os testes antigos só usavam `"false"` minúsculo = verde
+> falso (Q5). Bordas medidas e já concordes: booleans, `sameSite None`, `expires`,
+> `domain`, `maxAge 0`, `path ""`, valor com `=`, vazio. **(b) ChaCha20** — os
+> testes existentes só provavam round-trip consigo mesmo; novo
+> `KofSecurityTest.chacha20InteropWithJdkRfc8439` usa o **ChaCha20-Poly1305 do
+> próprio JDK como oráculo** (JDK cifra → Kof decifra; Kof cifra → JDK decifra;
+> vazio/15/16/17/114 bytes + unicode). Mutation test (corromper `mac[len-8]`)
+> prova que o oráculo pega o que o round-trip não pega. **Nenhum bug no ChaCha20**
+> (interop confirmada). `KofSecurityTest` 41/41. **(c)** §190 RESOLVIDO pelo dono
+> `.18` (`8eb156f4`, `Content-Length` em bytes + bug real de UTF-8 no `readRequest`);
+> **suíte 4-módulos 0 FAILURE** (verificado ~03:30). Registro em `known-bugs.md
+> §190/§191`.
+>
+> **✅ FEITO (14/09 ~06:50, lane bugs-and-gaps, dono = 192.168.100.15): §194
+> CORRIGIDO — for-in sobre String/não-coleção (triagem do #145).** Triagem da
+> fila de issues da lane reproduzindo cada título no probe 4-target: **#139/#150**
+> (Set/Map), **#143** (`record ==`), **#149/#152** (`List[i]` → já rejeitado por
+> SEM054), **#141** (`spawn{block}`), **#142** (ctor genérico) **não reproduzem**
+> (já corretos no HEAD); **#151** (`is`) é parse error — Kof usa `instanceof`
+> (que funciona), então é pedido de feature, não bug. **Só o #145 reproduz:** o
+> `for (var c in "abc")` era ACEITO em silêncio e quebrava de um jeito por target
+> — JVM `VerifyError` `arraylength` (classe nem carrega), Native SIGSEGV, Script
+> "Argument is not an array", JS iterava chars (divergência cross-target).
+> Causa raiz: `StatementAnalyzer` (caso `ForInStmt`) só extraía elem-type de
+> List/array; o resto virava `UNKNOWN` sem diagnóstico. **Fix:** guard
+> `isNonIterableForIn` no frontend semântico único dos 5 alvos → **SEM058**
+> (espelha o bug 103/SEM054; `docs/language-reference/statements.md §5.4`
+> "Unspecified" → SEM058). Prova: `SemanticResolutionTest.forInNonIterableRejected`
+> (String/Map/Set/Int) + `forInListAndArrayStillCompiles`; **falhava antes**
+> (`expected <false> but was <true>`). SEM058 idêntico em JVM/JS/Script/Native.
+> `known-bugs.md §194` + header.
+> **+ §195 REGISTRADO (Q5):** ao rodar a suíte limpa no HEAD `11780dc1`,
+> `KofBlogE2ETest` está **VERMELHO** — o commit `ab15a30f` (`app.security` C18,
+> lane `.22`) adicionou o middleware ao app do teste, mas os `GET /posts` e
+> `GET /posts/:id` não mandam o header de sessão → 401 (o middleware está
+> **CERTO**; o teste ficou desatualizado). **Provado:** sem `app.security` →
+> verde; com `authorization` nos 2 GET → verde. É bug de TESTE (como o §190),
+> arquivo EM CURSO da lane `.18`/`.22` — **não toquei** (regra 2); registrado
+> em `known-bugs.md §195` + header. **Bloqueia o "suíte verde" de release.**
+> **+ §196 CORRIGIDO (regressão cross-lane da suíte):** a suíte limpa acusou
+> também `ConcurrencyGapsDocTest` VERMELHO — o commit `f5a0ea41` (i18n lote 6,
+> lane `.17`) trocou o cabeçalho da tabela de `learn/18-concurrency.md` de
+> `| Construto |` (PT) para `| Construct |` (a doc canônica é EN), mas o guard
+> `gapRows()` detectava o início da tabela por string PT HARDCODED → tabela
+> lida vazia → `assertEquals` falha. Fix (Q0): guard aceita as DUAS grafias
+> (rótulo é prosa traduzível; o teste não pode fixar idioma). Prova:
+> `ConcurrencyGapsDocTest` 3/3. `known-bugs.md §196` + header.
+> **PRÓXIMO PASSO (lane bugs-and-gaps):** (1) rodar a suíte 4-módulos limpa
+> (a §194 mexeu no frontend semântico — confirmar 0 regressão; a única vermelha
+> esperada é a §195, de outra lane); (2) continuar a caça Q4 na fila aberta
+> (§179/§180 regra 6/grande; §184/§185/§187-JS de outras lanes); (3) se nada
+> novo reproduz e a suíte segue verde → **RECUSAR** o re-disparo (condição de
+> ESTABILIDADE). **NUNCA:** `nat/` GC viva; fila de outras lanes; push `main`.
+> **NOTA (build offline):** o bump de deps `f74d4c8f` (mariadb 3.5.3 /
+> postgresql 42.7.7 / jna 5.15.0) exige um `mvn` ONLINE uma vez p/ popular o
+> `~/.m2` local — depois `-o` volta a funcionar. Sem isso, `-o` falha na
+> resolução de dependências (não é bug de código).
 >
 > **✅ FEITO (14/09 ~01:10, dono = 192.168.100.22): issue #132 FECHADA no
 > GitHub** (causa raiz IALOAD→BALOAD/CALOAD/SALOAD `JvmLiteralEmitter`
