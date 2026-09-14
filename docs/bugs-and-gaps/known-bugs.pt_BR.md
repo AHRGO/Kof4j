@@ -6946,6 +6946,122 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   (slots de destructuring de record, que FOI consertado por `1bef9281`).
 - **Estado:** reproduz no `7ba7e48d`.
 
+### §216 — `Char` é boxado como `Integer`: `println(c)` / `c.toString()` mostram o code point (`65`) em vez do caractere (`A`) (issues #168 + #153, uma raiz)
+
+- **Sintoma (medido 14/09 ~13:05 no `d2d025f4` com classes FRESCAS, dono =
+  192.168.100.17 — só catalogado, lane compiler):** um valor `Char` passa
+  pela box int, então qualquer exibição em string mostra o NÚMERO, em
+  silêncio (R6 / freeze-4 valor-errado, não crash):
+  ```kof
+  main() {
+      var c: Char = 'A'
+      println(c)              // #168: imprime 65, esperado A
+      println("char=" + c)    // #168: imprime char=65
+      var a = 'A'
+      println(a.toString())        // #153: imprime 65, esperado A
+      println(a.toString().length())  // #153: imprime 2 (len de "65"), esperado 1
+  }
+  ```
+  `ec=0` o tempo todo — silencioso. As duas issues são a MESMA raiz (`Char`
+  → `Integer.valueOf` no caminho de boxing; §213 é a família geral de box
+  faltante, esta é a box ERRADA). Relacionado: família §166/#156 (descriptor/
+  box errado em primitivos).
+- **Esperado:** `Char` vira box `java/lang/Character`; `c.toString()` →
+  `"A"`; concatenação → o caractere.
+- **Pointer (lane compiler):** o mapeador de box de primitivo para `Char`
+  (o caso `char`→`Character` é descartado, caindo em `Integer`) — o caminho
+  `8af810c5` "mapear tipos primitivos p/ classes boxeadas" que consertou as
+  faces checkcast/instanceof provavelmente omite o sítio de concatenação
+  String / boxing, e `Char.toString()` baixa para `Integer.toString`.
+- **Estado:** reproduz no `d2d025f4` (casos #168 e #153).
+
+### §217 — retorno de método de classe genérica não faz downcast: `Box<String>.get(): T` emite `()Object`, chamar método nele → `VerifyError` no primeiro uso (issue #161)
+
+- **Sintoma (medido 14/09 ~13:05 no `d2d025f4`, classes FRESCAS, dono =
+  192.168.100.17 — só catalogado, lane compiler):** chamar um método no
+  resultado de um método genérico cujo retorno declarado é uma variável de
+  tipo produz um `Object` cru na pilha; a primeira chamada de método de
+  referência nele quebra no load:
+  ```kof
+  class Box<T> {
+      T item = null
+      set(T v) { this.item = v }
+      get(): T { return this.item }
+  }
+  main() {
+      var b = new Box<String>()
+      b.set("hello")
+      var s = b.get()
+      println(s.length())   // VerifyError: Bad type on operand stack
+  }
+  ```
+- **javap (medido, mecanismo):** `Box.get:()Ljava/lang/Object;` →
+  `invokevirtual String.length()I` no offset 23 SEM o `checkcast
+  java/lang/String` que a erasure exige — `s.length()` é enviado a um
+  `Object` na pilha. (A chamada `b.set` passa `Object` corretamente; só o
+  caminho de-chamada-de-método-em-`T`-resultado perde o cast.)
+- **Esperado:** `checkcast String` entre `get()` e `.length()` (o mesmo cast
+  de erasure que o fix irmão `§203`/`8af810c5` agora faz para `as`).
+- **Pointer (lane compiler):** tipagem do receptor de member-call para um
+  retorno de variável genérica — onde o `checkcast` de erasure é inserido; o
+  sítio de chamada tipado `T` não o dispara. Família: §161/#166/#161 gaps de
+  descriptor genérico.
+- **Estado:** reproduz no `d2d025f4`.
+
+### §218 — `n.toHexString()` / `toBinaryString()` em Int emite `invokevirtual "".toHexString()` (classe dona vazia) → `ClassFormatError: Illegal class name ""` (issue #148)
+
+- **Sintoma (medido 14/09 ~13:05 no `d2d025f4`, classes FRESCAS, dono =
+  192.168.100.17 — só catalogado, lane compiler):** um método estilo-extensão
+  de Int é emitido com classe dona VAZIA no Methodref, então a classe nunca
+  carrega:
+  ```kof
+  main() {
+      var n = 255
+      var h = n.toHexString()
+      println(h)
+  }
+  ```
+  → `ClassFormatError: Illegal class name "" in class file Default/Main`.
+- **javap (medido):** `invokevirtual #13 // Method "".toHexString:()Ljava/
+  lang/Object;` — a entrada de classe no constant pool do receptor é `""`.
+  Dois sub-bugs: (a) owner = vazio em vez de `java/lang/Integer` (o
+  `Integer.toHexString` da JVM é ESTÁTICO — a chamada deveria ser
+  `invokestatic` em `Integer`, não é método de instância/extensão de Int no
+  JDK); (b) o tipo de retorno some para `Object` (deveria ser `String`), a
+  família inversa do §166.
+- **Esperado:** OU rotear `n.toHexString()` para `Integer.toHexString(n)`
+  (estático, retorno `String`) OU rejeitar com diagnóstico em compile-time —
+  nunca emitir `"".toHexString`.
+- **Pointer (lane compiler):** a resolução de método-extensão para helpers
+  de formatação numérica de Int; quando não há extensão do usuário, cai num
+  owner `""` não-resolvido em vez de um estático do JDK ou um erro `SEM`.
+  Irmão de §203/§213/§161 (família `as`/cast de descriptor quebrado).
+- **Estado:** reproduz no `d2d025f4`.
+
+### §219 — batch (triagem 14/09): 5 issues abertas cujo código é REJEITADO por falsos positivos de diagnóstico em compile-time (formas legítimas do corpus bloqueadas — diagnóstico honesto, veredito errado, logo não R6-silencioso; cada uma precisa de fix no compiler, não de fix de crash)
+
+Medido 14/09 ~13:05–13:20 no `d2d025f4` com classes FRESCAS (`mvn -o compile`
+antes — lição da obsolescência do §206/§207), corpos-exatos das issues
+(repros guardados nos comentários das issues):
+
+| Issue | Forma | Veredito hoje | Por que está errado (esperado) |
+|---|---|---|---|
+| #151 | `if (d is Dog) { }` (corpus: operador `is`, §78) | `PARSE029: Expected ')'` @5:11 | parser: `is` aceito noutros sítios (println/`var`) mas não liderando condição de `if` — buraco de gramática no parser de cond |
+| #155 | duas interfaces, `save(): Boolean` segunda | `SEM: println recebeu void` @10 | o segundo método implementado é tipado void (o título da #155 diz SEM033 ordem-dependente) — colisão de typer/`SymbolTableBuilder`, `print()` funciona, `save()` lê void |
+| #159 | `String? s; while (s != null) { s.length(); s = nextVal(i) }` | `SEM049 receiver is nullable` @9:27 | o narrowing de null funciona em `if` mas NÃO ao longo de condição `while` + re-atribuição em loop — gap de fluxo de narrowing (face do título da #159 confirmada) |
+| #160 | `interface Mapper<T> { map(T input): String }` | `PARSE007` @1:17 | interface genérica NÃO parseia (CLASSE genérica parseia bem — §217/#161 compila `Box<T>`) — o ramo de declaração de interface não tem a lista de type-param |
+| #141 | `var h = spawn { "ok" }; var r = await h` | `SEM: atribuição void` @3:5 | o `await` de um Handle de `spawn { block }` é tipado VOID (o resultado se perde no typing) — irmão da face §29 já fixada (`var h = spawn {lambda}`), tipagem de resultado do handle no caminho block-lambda |
+
+- **Lição Q4 desta leva:** estas 5 NÃO são bugs silenciosos (recusam
+  compilar = diagnóstico honesto) — então são **gaps de suporte / bugs de
+  typer**, não crashes R6; prioridade na estabilização = abaixo de §216–§218
+  (que quebram programas válidos em RUNTIME silenciosamente). Fixes
+  pertencem à lane compiler (regra 6).
+- **Pointer-resumo:** parser — `is` em condições (#151), type params de
+  interface (#160); typer — tipagem de método multi-interface (#155),
+  narrowing de null no fluxo while (#159), tipagem de resultado do Handle-
+  await (#141 — perto do lowering §29 de spawn já consertado).
+
 ## §193 — E2E blog (F12): `db.query` cru + `.get("col")`/recursos dentro de handler web derr
 
 > **Renumerado de §189→§193 (14/09, dono = 192.168.100.17):** colisão tripla
