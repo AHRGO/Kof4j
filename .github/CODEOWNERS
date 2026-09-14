@@ -1,0 +1,5 @@
+# CODEOWNERS — KofLang / Kof4j
+# Mantenedora oficial e proprietários do código
+# Apenas os donos abaixo têm autorização para abrir PRs e realizar merges diretamente na branch `main`.
+
+* @aminadojava @melmonfre

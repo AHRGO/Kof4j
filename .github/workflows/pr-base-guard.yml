@@ -1,0 +1,105 @@
+name: PR base guard
+
+# Política de branches do KofLang / Kof4j:
+# - Todo desenvolvimento entra via branch `beta-*` (ex.: `beta-0.4.0`).
+# - PRs com base em `main` são reservados aos codeowners (.github/CODEOWNERS).
+# - Este guard FALHA o check de qualquer PR aberto contra `main`
+#   por autor que não esteja no CODEOWNERS, com mensagem explicativa.
+#
+# Usa `pull_request_target` (roda no contexto do base, seguro para forks):
+# nenhum código do PR é executado — só metadados + leitura do CODEOWNERS.
+
+on:
+  pull_request_target:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  guard-main:
+    name: Block non-codeowner PRs to main
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check PR base and author against CODEOWNERS
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const base = pr.base.ref;
+            const author = pr.user.login;
+
+            // PRs para beta-* (ou qualquer base que não seja main): sempre permitidos.
+            if (base !== 'main') {
+              core.info(`Base '${base}' — permitido (só 'main' é restrita).`);
+              return;
+            }
+
+            // Base é main: só codeowners podem.
+            // Fonte da verdade: .github/CODEOWNERS na base. Fallback para a
+            // lista embutida enquanto o CODEOWNERS ainda não chegou à main
+            // (bootstrap: o arquivo nasce nas betas e só entra na main no
+            // próximo merge de release).
+            const FALLBACK_OWNERS = ['aminadojava', 'melmonfre'];
+            let raw = null;
+            try {
+              const { data } = await github.rest.repos.getContent({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                path: '.github/CODEOWNERS',
+                ref: base,
+              });
+              raw = Buffer.from(data.content, 'base64').toString('utf8');
+            } catch (e) {
+              if (e.status !== 404) throw e;
+              core.warning('CODEOWNERS ausente na main — usando lista de fallback.');
+            }
+            const owners = new Set(FALLBACK_OWNERS);
+            if (raw) {
+              for (const line of raw.split('\n')) {
+                const t = line.trim();
+                if (!t || t.startsWith('#')) continue;
+                for (const tok of t.split(/\s+/)) {
+                  // Usuários (@user). Times (@org/team) e e-mails são ignorados
+                  // aqui — a checagem de time exigiria chamada extra à API.
+                  if (tok.startsWith('@') && !tok.includes('/')) {
+                    owners.add(tok.slice(1).toLowerCase());
+                  }
+                }
+              }
+            }
+
+            if (owners.has(author.toLowerCase())) {
+              core.info(`@${author} é codeowner — PR para main permitido.`);
+              return;
+            }
+
+            const body = [
+              `⛔ @${author}, este PR mira a branch \`main\`, que é restrita aos codeowners.`,
+              ``,
+              `**O que fazer:** feche este PR e reabra com base na branch \`beta-*\` ativa`,
+              `(ex.: \`beta-0.4.0\`). Todo desenvolvimento entra pela beta;`,
+              `a \`main\` só recebe releases controladas pela mantenedora.`,
+            ].join('\n');
+
+            // Comenta uma única vez (evita spam a cada push).
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+            });
+            const marker = 'mira a branch `main`, que é restrita';
+            if (!comments.some(c => c.body && c.body.includes(marker))) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                body,
+              });
+            }
+
+            core.setFailed(
+              `PR #${pr.number} de @${author} mira 'main' e o autor não está no CODEOWNERS. ` +
+              `Reabra o PR contra a branch beta-* ativa.`
+            );
