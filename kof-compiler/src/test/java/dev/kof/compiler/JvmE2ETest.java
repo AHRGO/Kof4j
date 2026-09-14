@@ -627,6 +627,36 @@ class JvmE2ETest {
         runJvm(source, tempDir.resolve("out"), "a\nb\nt");
     }
 
+    // §189: a assinatura genérica de campo RECORD nullable (`List<Item>?`) era
+    // omitida (`toGenericSignature` não desembrulhava `NullableType`), então
+    // `RecordComponent.getGenericType()` devolvia `ArrayList` cru e o decoder
+    // JSON não bindava os elementos → `LinkedHashMap` cru → ClassCastException.
+    // O #128 (`76ca3dd4`) subiu com esse teste VERMELHO — a correção é esta
+    // unidade. Prova: nullable populado, nullable AUSENTE (null honesto, não
+    // crash) e o controle NÃO-nullable (que já funcionava via #34/bug 58).
+    @Test
+    void execRecordNullableGenericListFieldDecode(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            record Item(String? name)
+            record NullableBox(String? title, List<Item>? items)
+            record PlainBox(String? title, List<Item> items)
+            main() {
+                var n = json.decode<NullableBox>("{\\"title\\":\\"n\\",\\"items\\":[{\\"name\\":\\"x\\"}]}")
+                var ni = n.items()
+                if (ni != null) {
+                    println(ni.get(0).name())
+                }
+                var absent = json.decode<NullableBox>("{\\"title\\":\\"z\\"}")
+                println(absent.items() == null)
+                var p = json.decode<PlainBox>("{\\"title\\":\\"p\\",\\"items\\":[{\\"name\\":\\"y\\"}]}")
+                println(p.items().get(0).name())
+                println(p.title())
+            }
+            """);
+        runJvm(source, tempDir.resolve("out"), "x\ntrue\ny\np");
+    }
+
     @Test
     void execRecordValueMethods(@TempDir Path tempDir) throws IOException {
         Path source = tempDir.resolve("Main.kf");

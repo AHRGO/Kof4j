@@ -113,6 +113,42 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > versão antes do gatilho. O re-disparo continua: escolher o próximo
 > fix/issue da fila, não feature.
 >
+> **✅ FEITO (14/09, lane bugs-and-gaps, dono = 192.168.100.15): §189 CORRIGIDO
+> (portão de qualidade — teste VERMELHO subiu declarando verde) + §187 face
+> Native CORRIGIDA + §186 fix parcial (já pushado `e4613704`).**
+> **(a) §189 — bug real achado ao rodar a suíte 4-módulos LIMPA:** o teste
+> `JvmE2ETest.execRecordListFieldDecode` (regressão do **#128**, commit
+> `76ca3dd4` da lane `.22`) **FALHA** com `ClassCastException: LinkedHashMap
+> cannot be cast to Item` — o commit afirma "Teste VERDE" (**falso verde,
+> Q5**). Causa raiz: `JvmTypeMapper.toGenericSignature` só tratava
+> `ClassType`/`ArrayType`; **`NullableType` caía no `return null`** → o record
+> component `List<Item>?` saía SEM `Signature` → `getGenericType()` = `ArrayList`
+> cru → `JvmRuntimeJson.listElement` null → elementos `LinkedHashMap` cru.
+> **Fix:** desembrulhar `NullableType` no topo (`toGenericSignature(n.inner())`).
+> Prova: `execRecordNullableGenericListFieldDecode` (novo: nullable populado,
+> nullable AUSENTE→null honesto, controle não-nullable) + o teste do #128 agora
+> verde; **falhava antes** (ClassCastException reproduzido com o fix revertido).
+> `JvmE2ETest` 34/34. **#128 NÃO estava realmente fechada — a issue só fecha
+> com esta correção.** Registro: `known-bugs.md §189`.
+> **(b) §187 face Native CORRIGIDA:** `Char[]` fora de faixa não estreitava a
+> 16 bits (o store não mascarava; `elementTypeSize` mapeia char→4). Fix =
+> **máscara 0xFFFF no store**, stride 4 preservado (não toca alocador nem
+> decoders JSON): x86 `movzwl %dx,%edx` (`NativeOpHelpers.emitArrayStore`),
+> riscv/aarch `slli a2,a2,48`+`srli a2,a2,48` (`NativeRiscvCrossEmit`). O load
+> `movslq`/`lw` segue correto (valor fica em `[0,65535]`). Prova: célula
+> `charnarrow` ampliada (1-D + 2-D + controle `Short[] -1`) com `Set.of("script",
+> "js")` — Native agora ASSERTA `4464\n65535`. **Face JS segue ABERTA** (§184).
+> **(c) §186 fix parcial** (já em `e4613704`): `FieldConstantFolder` dobra
+> constantes p/ o `initialValue`; `static` não vira `this.x=...`. Residual
+> (runtime/`new`) ABERTO.
+> **PRÓXIMO PASSO (lane bugs-and-gaps):** (1) rodar a suíte 4-módulos LIMPA e
+> confirmar **0 falhas** (a §189 era a vermelha); (2) continuar a caça Q4 sobre
+> os registros vivos (`known-bugs.md` §11) — candidatos da minha lane:
+> §187 face JS (lane JS), §184 (lane JS), §185 (lane `interp` 9093), §180
+> (Native, unidade grande), §188 (regra 6). **NÃO** tocar lane de outro dono.
+> Se nada novo e suíte verde → **RECUSAR** o re-disparo. **NUNCA:** `nat/` GC
+> viva; fila de outras lanes; push `main`.
+>
 > **✅ FEITO (14/09 ~01:10, dono = 192.168.100.22): issue #132 FECHADA no
 > GitHub** (causa raiz IALOAD→BALOAD/CALOAD/SALOAD `JvmLiteralEmitter`
 > `10fd1b32` + irmã `json.decode<Bool[]>`→`boolean[]`/`[Z` `0c122131`; teste

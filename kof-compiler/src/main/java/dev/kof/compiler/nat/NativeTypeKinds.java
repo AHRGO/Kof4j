@@ -30,4 +30,9 @@ public final class NativeTypeKinds {
     static boolean isInt32Type(Type t) {
         return t instanceof Type.PrimitiveType pt && "int".equals(Type.canonicalPrimitiveName(pt.name()));
     }
+
+    /** `char`/`Char` — precisa de máscara 16-bit no store de array (§187). */
+    static boolean isCharType(Type t) {
+        return t instanceof Type.PrimitiveType pt && "char".equals(Type.canonicalPrimitiveName(pt.name()));
+    }
 }
