@@ -10,7 +10,7 @@
 >
 > | | |
 > |---|---|
-> | **Fila ABERTA (varredura 13/09 — seções sem resolução no próprio cabeçalho)** | **17 itens** (12 da varredura [~~§176~~ fechou 14/09] + §184/§185/§186/§187/§188 novos; §189 ✅ corrigido 14/09; §190 teste da lane `.18` — `KofBlogE2ETest` sem `Content-Length`; §191 ✅ corrigido 14/09 (`cookieSet` secure/httpOnly string case))) (seções/sub-faces sem resolução) — ~~§177~~ ✅ CORRIGIDO 13/09 (lambda com corpo em BLOCO que retorna local declarada no bloco era tipada void/SEM033 quando o módulo tinha classe — `firstReturnValueType` não registrava os `VarDeclStmt` do corpo; lane bugs-and-gaps `192.168.100.15`, fechado na unidade do §178; repro do translator roda 4 targets = 8). **NOVO §179** (tipo `kof.ui`/`kof.media` DECLARADO → JVM VerifyError; `MemberResolver.resolveType` não reconhece o builtin — catalogado, não corrigido, regra 6) **+ NOVO §180** (println double/float no Native x86 ≠ JDK `Double.toString`/`Float.toString` — residual/overclaim do bug 44; lane Native) **+ §181 ✅ CORRIGIDO 13/09** (cast `Double/Float as Int/Long` fora de faixa/NaN/Inf — implementado em `c90e85ee` (JS `kofD2I/kofD2L` + Native) e **regressão do fix x86/riscv corrigida pela lane bugs-and-gaps `192.168.100.15`**: bits inteiros lidos como double saturavam TODO valor positivo; labels riscv duplicados; 4 targets) **+ §182 ✅ CORRIGIDO 13/09** (parse ISO de `kof.time` com campo de SINAL: JVM/Script lenientes via `Integer.parseInt`, Native estrito, JS inconsistente — fix da lane .18 `a13665f7`, consenso ESTRITO) **+ §183 ✅ CORRIGIDO 13/09** (teste `KofTimeE2ETest.todayIso…` era flaky de relógio — `isToday(2026,9,13)` literal; fix da lane .18 `a13665f7` via partes de `todayIso()`; achado da lane bugs-and-gaps `192.168.100.15`) **+ NOVO §184** (store em `Byte[]`/`Short[]` fora de faixa NÃO trunca no JS — JVM/Native/Script `-126`/`4464` vs JS `130`/`70000`; silencioso, regra 5) **+ NOVO §185** (interpretador Script **crash** ao gravar em `Char[]` **e `Bool[]`**: `c[0]='A'`/`b[0]=true` → `argument type mismatch`; JVM/Native/JS corretos — causa raiz real é `KofInterpreterValues.coerceFor` no caminho vivo `KofInterpreter:306`, **não** o `KofInterpreterOps.arrayStore` que é código morto) **+ §189 ✅ CORRIGIDO 14/09** (record com campo de lista genérica **nullable** `List<Item>?` — `toGenericSignature` não desembrulhava `NullableType` → record component sem `Signature` → `json.decode` devolvia `LinkedHashMap` cru → `ClassCastException`; **o teste do #128 `76ca3dd4` subiu VERMELHO declarando verde**; fix = desembrulhar nullable, lane bugs-and-gaps `192.168.100.15`) **+ §187 🟡 face Native ✅ CORRIGIDA 13/09** (`Char[]` fora de faixa NÃO estreitava a 16 bits no Native — `elementTypeSize` mapeia `char`→4 e o `kof_array_set` fazia `movl` cru; **fix = máscara 0xFFFF no store** x86 `movzwl` + riscv/aarch `slli`/`srli`, stride 4 preservado; **face JS segue ABERTA** = §184; JVM/Script `4464`/`65535`; **§186 = bug distinto do colaborador Jonas Rocha**, inicializador `static` não-constante/issue #133)   — ~~§168~~ ✅ CORRIGIDO 13/09 (`3ab4c99e`; SEM025 json — `json.metodoRuim()` agora rejeitado, re-verificado no `kof check`; era pré-existente, não do WEB001-T1), ~~§166~~ ✅ CORRIGIDO 13/09 (gate tamanho hello: baseline re-medido 7.700→8.297; shim DOM #121 é préambulo `always` legítimo, mesmo processo do #104 — opção (a) do próprio registro; lane bugs-and-gaps), §165 re-verificado 13/09: NÃO reproduz em build limpo (node v22 presente, export no runtime, célula verde) — trap de inlining `static final`, ver §165; ~~§81~~ ✅ CORRIGIDO 13/09 (5b: Long=BigInt no JS, paridade 64-bit real, golden JS unificado ao JVM), §101 (relacionais de Double com NaN divergem cross — **congelado** regra 6), §104b-ii (record em coleção + storage-box asm — **lane bugfixer**, unidade GRANDE), §107 🟡 (`println(coleção)` nativo → lixo de ponteiro; **face escalar ✅ CORRIGIDA 12/09** nos 3 nativos `f3b3821c`+B39; restam record/aninhado=`?` até §104b-ii + FP-cross=FLT001), §114 ⏳ (equals de record com campo-referência no Native; sub-face do §104b-ii), §129 (throw em worker `spawn` → longjmp cross-thread no Native — **lane nat**; era referido como "§129-TLS"), §132 (KofJS: task de task não roda sem ceder o event-loop — gate OTP002; **lane alheia**), §161/NAT-STR01 (case-fold ASCII-only no Native vs Unicode no JVM/JS — **DECIDIDO 13/09**, lane nat; registrado aqui 13/09). **§165 RE-VERIFICADO 13/09 (dono 192.168.100.17, node v22 presente): NÃO reproduz em build limpo** — o export CHEGA ao `kof-runtime.mjs`, a célula verde; o sintoma era a trap de inlining `static final` (classes stale). Fecho/blindagem = dono §106/js-slices; §166 aberto). **~~§149~~ NÃO está aberto — ✅ CORRIGIDO 12/09** (a linha anterior o listava por engano; a raiz era o `JsIfThrowElse` do §147). **§156 ✅ CORRIGIDO 13/09** (lista heterogênea de lambdas mesma assinatura → elemento sem className, dispatch SAM). **§155 ✅ CORRIGIDO 13/09** (tipo-função em type-args → `ClassFormatError`; parser preserva os espaços do type-ref). **§127-JVM ✅ CORRIGIDO 13/09** (decisão 9a: `as ()->T` parseia como type-ref; checkcast p/ interface SAM sintética). **§94 ✅ CORRIGIDO 13/09** (EQ/NE de Double/Float no interpretador agora IEEE). **§125 ✅ CORRIGIDO 12/09** (return Nullable(primitivo) → default; célula `nullableprint` 4/4). **§139 ✅ CORRIGIDO 12/09** (JS fold `f()==null` → COMP002; parser JS descarta mid-expression). **§140 ✅ CORRIGIDO 12/09** (gate ≤500 virou ratchet com baseline no CI). **§90 ✅ CORRIGIDO 12/09** (lane web). **§145/§146/§147 ✅ CORRIGIDOS 12/09** (`440730c8`, issue #101). **§45 ✅ IMPLEMENTADO 13/09** (DD-01 opção 4a: FinallyFrame na IR; 4 targets, `063ed956`) e **S10c ✅ 13/09** (`random.randomBytesHex`, `317b23e7`). **§157/§158/§159/§160 ✅ CORRIGIDOS 13/09** (issue-lane: #103 caso 3 POP2 em `HashMap.put` de `Long`, kof.web `header()`/`query()` `String?`+SEM049, Native web WEB001, KofJS hostless `kof_platform`). **§172 ✅ CORRIGIDO 13/09** (compostos de SHIFT `<<=`/`>>=`/`>>>=` baixados como atribuição simples — miscompilação silenciosa; + 2ª face `Long<<=Long` VerifyError, L2I na contagem; lane development/translator, dono = 192.168.100.22). **Conclusão honesta (13/09):** dos **8 itens abertos**, a maioria pende de **decisão da mantenedora já ratificada** (fila de implementação), **congelamento regra-6** (§101 + sub-faces §114/§107 = 3), **lane alheia** (§104b-ii lane bugfixer + §129 lane nat + §132 = 3) — **§89 ✅ CORRIGIDO 13/09** (`e33425b5`, 4 alvos + warning SEM090), **§106 ✅ CORRIGIDO 13/09** (`5b939106` + residual JS `ab85cfae`, 4 alvos), **§117 ✅ CORRIGIDO 13/09** (`3734f2aa`), **§131 ✅ CORRIGIDO 13/09** (`18a64d45`, 4 backends; + **residual same-arity/tipos** `73ca2d58`, Native), **§156 ✅ CORRIGIDO 13/09**, **§81 ✅ CORRIGIDO 13/09** (Long=BigInt JS, seção própria) e **§163 ✅ CORRIGIDO 13/09** (interpretador: 2º parâmetro largo lido como `null` — paridade 4-target, achado no probe do split `NativeBackend`). **§167 ✅ CORRIGIDO 13/09** (bitwise/shift com `Long` misturado: JVM VerifyError + JS TypeError/máscara errada + overflow de Long sem wrap no JS; lane bugs-and-gaps `192.168.100.15`, 4 targets, 3 testes — seção própria). |> | **§167 ✅ CORRIGIDO 13/09 (lane bugs-and-gaps, 192.168.100.15)** | bitwise/shift com `Long` misturado: JVM VerifyError + JS TypeError/máscara errada + overflow de Long sem wrap no JS. 4 targets; achado na caça Q4 13/09. Overclaim conexo do §81 (declarava "64-bit real" cobrindo só parse/literal). Prova: `BackendParityTest.parityLongBitwiseShiftMixed` + `KofInterpreterParityTest.longBitwiseShiftMixed` + célula `bitwise` estendida 4/4. |
+> | **Fila ABERTA (varredura 13/09 — seções sem resolução no próprio cabeçalho)** | **22 itens** (12 da varredura [~~§176~~ fechou 14/09] + §184/§185/§186/§187/§188/§192/§193/§194/§195/§196/§197 novos; §189 ✅ corrigido 14/09; §190 teste da lane `.18` — `KofBlogE2ETest` sem `Content-Length`; §191 ✅ corrigido 14/09 (`cookieSet` secure/httpOnly string case); **§192 tinha DUPLICATA (parseOrDefault lane `.17` × `db.query<Record>` lane `.18`) — o registro do `db.query<Record>` foi renumerado para §197 em 14/09 pelo registry owner (lane bugs-and-gaps `192.168.100.15`); §192 = parseOrDefault; **NOVO §194** (for-in sobre String/não-coleção era ACEITO e quebrava por target — JVM VerifyError/Native SIGSEGV/Script crash/JS iterava; ✅ CORRIGIDO 14/09 SEM058, triagem do #145, lane bugs-and-gaps `192.168.100.15`); **NOVO §195** (`KofBlogE2ETest` vermelho no HEAD: teste usa `app.security` mas os GET não mandam sessão → 401, middleware CERTO; ⚠️ TESTE, dono lane `.18`/`.22`); **NOVO §196** (i18n EN quebrou o guard `ConcurrencyGapsDocTest` — o teste fixava o cabeçalho PT `| Construto |`; ✅ CORRIGIDO 14/09, guard aceita as duas grafias, lane bugs-and-gaps `192.168.100.15`))) (seções/sub-faces sem resolução) — ~~§177~~ ✅ CORRIGIDO 13/09 (lambda com corpo em BLOCO que retorna local declarada no bloco era tipada void/SEM033 quando o módulo tinha classe — `firstReturnValueType` não registrava os `VarDeclStmt` do corpo; lane bugs-and-gaps `192.168.100.15`, fechado na unidade do §178; repro do translator roda 4 targets = 8). **NOVO §179** (tipo `kof.ui`/`kof.media` DECLARADO → JVM VerifyError; `MemberResolver.resolveType` não reconhece o builtin — catalogado, não corrigido, regra 6) **+ NOVO §180** (println double/float no Native x86 ≠ JDK `Double.toString`/`Float.toString` — residual/overclaim do bug 44; lane Native) **+ §181 ✅ CORRIGIDO 13/09** (cast `Double/Float as Int/Long` fora de faixa/NaN/Inf — implementado em `c90e85ee` (JS `kofD2I/kofD2L` + Native) e **regressão do fix x86/riscv corrigida pela lane bugs-and-gaps `192.168.100.15`**: bits inteiros lidos como double saturavam TODO valor positivo; labels riscv duplicados; 4 targets) **+ §182 ✅ CORRIGIDO 13/09** (parse ISO de `kof.time` com campo de SINAL: JVM/Script lenientes via `Integer.parseInt`, Native estrito, JS inconsistente — fix da lane .18 `a13665f7`, consenso ESTRITO) **+ §183 ✅ CORRIGIDO 13/09** (teste `KofTimeE2ETest.todayIso…` era flaky de relógio — `isToday(2026,9,13)` literal; fix da lane .18 `a13665f7` via partes de `todayIso()`; achado da lane bugs-and-gaps `192.168.100.15`) **+ NOVO §184** (store em `Byte[]`/`Short[]` fora de faixa NÃO trunca no JS — JVM/Native/Script `-126`/`4464` vs JS `130`/`70000`; silencioso, regra 5) **+ NOVO §185** (interpretador Script **crash** ao gravar em `Char[]` **e `Bool[]`**: `c[0]='A'`/`b[0]=true` → `argument type mismatch`; JVM/Native/JS corretos — causa raiz real é `KofInterpreterValues.coerceFor` no caminho vivo `KofInterpreter:306`, **não** o `KofInterpreterOps.arrayStore` que é código morto) **+ §189 ✅ CORRIGIDO 14/09** (record com campo de lista genérica **nullable** `List<Item>?` — `toGenericSignature` não desembrulhava `NullableType` → record component sem `Signature` → `json.decode` devolvia `LinkedHashMap` cru → `ClassCastException`; **o teste do #128 `76ca3dd4` subiu VERMELHO declarando verde**; fix = desembrulhar nullable, lane bugs-and-gaps `192.168.100.15`) **+ §187 🟡 face Native ✅ CORRIGIDA 13/09** (`Char[]` fora de faixa NÃO estreitava a 16 bits no Native — `elementTypeSize` mapeia `char`→4 e o `kof_array_set` fazia `movl` cru; **fix = máscara 0xFFFF no store** x86 `movzwl` + riscv/aarch `slli`/`srli`, stride 4 preservado; **face JS segue ABERTA** = §184; JVM/Script `4464`/`65535`; **§186 = bug distinto do colaborador Jonas Rocha**, inicializador `static` não-constante/issue #133)   — ~~§168~~ ✅ CORRIGIDO 13/09 (`3ab4c99e`; SEM025 json — `json.metodoRuim()` agora rejeitado, re-verificado no `kof check`; era pré-existente, não do WEB001-T1), ~~§166~~ ✅ CORRIGIDO 13/09 (gate tamanho hello: baseline re-medido 7.700→8.297; shim DOM #121 é préambulo `always` legítimo, mesmo processo do #104 — opção (a) do próprio registro; lane bugs-and-gaps), §165 re-verificado 13/09: NÃO reproduz em build limpo (node v22 presente, export no runtime, célula verde) — trap de inlining `static final`, ver §165; ~~§81~~ ✅ CORRIGIDO 13/09 (5b: Long=BigInt no JS, paridade 64-bit real, golden JS unificado ao JVM), §101 (relacionais de Double com NaN divergem cross — **congelado** regra 6), §104b-ii (record em coleção + storage-box asm — **lane bugfixer**, unidade GRANDE), §107 🟡 (`println(coleção)` nativo → lixo de ponteiro; **face escalar ✅ CORRIGIDA 12/09** nos 3 nativos `f3b3821c`+B39; restam record/aninhado=`?` até §104b-ii + FP-cross=FLT001), §114 ⏳ (equals de record com campo-referência no Native; sub-face do §104b-ii), §129 (throw em worker `spawn` → longjmp cross-thread no Native — **lane nat**; era referido como "§129-TLS"), §132 (KofJS: task de task não roda sem ceder o event-loop — gate OTP002; **lane alheia**), §161/NAT-STR01 (case-fold ASCII-only no Native vs Unicode no JVM/JS — **DECIDIDO 13/09**, lane nat; registrado aqui 13/09). **§165 RE-VERIFICADO 13/09 (dono 192.168.100.17, node v22 presente): NÃO reproduz em build limpo** — o export CHEGA ao `kof-runtime.mjs`, a célula verde; o sintoma era a trap de inlining `static final` (classes stale). Fecho/blindagem = dono §106/js-slices; §166 aberto). **~~§149~~ NÃO está aberto — ✅ CORRIGIDO 12/09** (a linha anterior o listava por engano; a raiz era o `JsIfThrowElse` do §147). **§156 ✅ CORRIGIDO 13/09** (lista heterogênea de lambdas mesma assinatura → elemento sem className, dispatch SAM). **§155 ✅ CORRIGIDO 13/09** (tipo-função em type-args → `ClassFormatError`; parser preserva os espaços do type-ref). **§127-JVM ✅ CORRIGIDO 13/09** (decisão 9a: `as ()->T` parseia como type-ref; checkcast p/ interface SAM sintética). **§94 ✅ CORRIGIDO 13/09** (EQ/NE de Double/Float no interpretador agora IEEE). **§125 ✅ CORRIGIDO 12/09** (return Nullable(primitivo) → default; célula `nullableprint` 4/4). **§139 ✅ CORRIGIDO 12/09** (JS fold `f()==null` → COMP002; parser JS descarta mid-expression). **§140 ✅ CORRIGIDO 12/09** (gate ≤500 virou ratchet com baseline no CI). **§90 ✅ CORRIGIDO 12/09** (lane web). **§145/§146/§147 ✅ CORRIGIDOS 12/09** (`440730c8`, issue #101). **§45 ✅ IMPLEMENTADO 13/09** (DD-01 opção 4a: FinallyFrame na IR; 4 targets, `063ed956`) e **S10c ✅ 13/09** (`random.randomBytesHex`, `317b23e7`). **§157/§158/§159/§160 ✅ CORRIGIDOS 13/09** (issue-lane: #103 caso 3 POP2 em `HashMap.put` de `Long`, kof.web `header()`/`query()` `String?`+SEM049, Native web WEB001, KofJS hostless `kof_platform`). **§172 ✅ CORRIGIDO 13/09** (compostos de SHIFT `<<=`/`>>=`/`>>>=` baixados como atribuição simples — miscompilação silenciosa; + 2ª face `Long<<=Long` VerifyError, L2I na contagem; lane development/translator, dono = 192.168.100.22). **Conclusão honesta (13/09):** dos **8 itens abertos**, a maioria pende de **decisão da mantenedora já ratificada** (fila de implementação), **congelamento regra-6** (§101 + sub-faces §114/§107 = 3), **lane alheia** (§104b-ii lane bugfixer + §129 lane nat + §132 = 3) — **§89 ✅ CORRIGIDO 13/09** (`e33425b5`, 4 alvos + warning SEM090), **§106 ✅ CORRIGIDO 13/09** (`5b939106` + residual JS `ab85cfae`, 4 alvos), **§117 ✅ CORRIGIDO 13/09** (`3734f2aa`), **§131 ✅ CORRIGIDO 13/09** (`18a64d45`, 4 backends; + **residual same-arity/tipos** `73ca2d58`, Native), **§156 ✅ CORRIGIDO 13/09**, **§81 ✅ CORRIGIDO 13/09** (Long=BigInt JS, seção própria) e **§163 ✅ CORRIGIDO 13/09** (interpretador: 2º parâmetro largo lido como `null` — paridade 4-target, achado no probe do split `NativeBackend`). **§167 ✅ CORRIGIDO 13/09** (bitwise/shift com `Long` misturado: JVM VerifyError + JS TypeError/máscara errada + overflow de Long sem wrap no JS; lane bugs-and-gaps `192.168.100.15`, 4 targets, 3 testes — seção própria). |> | **§167 ✅ CORRIGIDO 13/09 (lane bugs-and-gaps, 192.168.100.15)** | bitwise/shift com `Long` misturado: JVM VerifyError + JS TypeError/máscara errada + overflow de Long sem wrap no JS. 4 targets; achado na caça Q4 13/09. Overclaim conexo do §81 (declarava "64-bit real" cobrindo só parse/literal). Prova: `BackendParityTest.parityLongBitwiseShiftMixed` + `KofInterpreterParityTest.longBitwiseShiftMixed` + célula `bitwise` estendida 4/4. |
 > | **§172 ✅ CORRIGIDO 13/09 (lane development/translator, 192.168.100.22)** | compound shift `<<=`/`>>=`/`>>>=` era parseado mas baixado como atribuição SIMPLES (só o RHS gravado): `x=6; x <<= 2` dava `2` (silencioso, 4 targets). Fix: `isCompoundOp`+`compoundBinaryOp` com SHL/SHR/USHR + `emitCompoundRhsConv` (L2I no RHS largo). Prova: `CoreRegressionE2ETest.compoundShiftAssignments`. |
 > | **§173 ✅ CORRIGIDO 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `++`/`--`/compound em `Long`/`Double`/`Float` + incremento de ELEMENTO de array: JVM VerifyError (literal `INT 1` em binário de 2 slots, `DUP` de 1 slot, `arraystore` sem `[array,index]`), Native core dump, Script `NoSuchElementException`, JS `stack underflow`/`KofDup2`. 4 targets; caça Q4 13/09 (sobre o §167). Prova: `BackendParityTest.parityIncrementWideTypesAndArrayElement` + `KofInterpreterParityTest.incrementWideTypesAndArrayElement` + célula `increment` 4/4. |
 > | **§174 ✅ CORRIGIDO 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `return`/`throw` dentro de um `if` dentro do `try`: JVM/Native/Script corretos, KofJS abortava com `COMP002 unexpected KofCatchStart` (o `JsIfThrowElse.parseElse` consumia o endLabel do try envolvente ao tratar o `then` incondicional como if-else). Fix sem mudança de contrato/IR (guarda `isTryEndLabel`). Prova: `CoreRegressionE2ETest.returnInsideIfInsideTryJs`. |
@@ -5979,6 +5979,13 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
 
 ### §181 — `Double/Float as Int` e `as Long` FORA DE FAIXA / `NaN` / `Infinity`: JVM+Script saturam (JLS 5.1.3), Native usa `cvttsd2si` cru (`INT_MIN`) e JS usa `Math.trunc`/`BigInt` sem 32-bit (dá `3000000000`/`NaN`/`Infinity`, e `NaN as Long` lança `RangeError`) — ✅ CORRIGIDO 13/09 (catalogado pela lane bugs-and-gaps `192.168.100.15`; implementado em `c90e85ee` — JS `kofD2I/kofD2L/…` + Native `emitSatConv` + riscv/aarch — e **regressão do fix x86 corrigida + verificada** pela mesma lane `192.168.100.15`)
 
+> **Residual medido 14/09 (run limpo da suíte de release, dono =
+> 192.168.100.17, só catalogado — lane nat):** `riscv64CastSaturation` e
+> `aarch64CastSaturation` continuam vermelhos — ÚNICA linha divergente é o
+> `(-inf) as Int`: devolve `0`, o contrato §181/JLS 5.1.3 exige
+> `-2147483648` (NaN→0 está correto, +overflow→MAX está correto; só o
+> -inf/saturação-negativa ficou fora do `67db6c50`). Fix na lane nat.
+
 - **Sintoma (medido 13/09, 4 targets):** o contrato documentado é o do JVM
   (`learn/04-variables-and-types.md:150` "Double → Int", `training/language/types.md:70`
   "trunca … como Java"): a conversão `double→int`/`double→long` do JLS 5.1.3
@@ -6569,3 +6576,264 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   `KofSecurityTest` 41/41.
 - **Lição Q5:** teste de paridade cross-target que usa só a grafia canônica
   não prova a paridade — as bordas de case/`"0"`/boolean precisam entrar.
+
+### §192 — `math.parse*OrDefault` no cross riscv/aarch: programa TRAVA na 1ª chamada `parseDoubleOrDefault` (era §189; colisão tripla de numeração renomeada 14/09)
+
+- **Sintoma (medido 14/09 no run limpo da suíte de release + isolado, dono =
+  192.168.100.17 — só catalogado, é lane stdlib/nat):**
+  `KofMathTest.parseOrDefaultCrossArch` falha no riscv: o golden exige 13
+  linhas + `ec 0`; o programa imprime as **8 linhas** dos `parse{Int,Long}`
+  corretamente (42/-1/7/15/3/9007199254740993/-5/8) e **TRAVA na 9ª**
+  (`parseDoubleOrDefault("2.5", 0.0) == 2.5`): no gate o teste queimou
+  **5737 s** em `readAllBytes` do qemu (sem exit code); no re-run isolado o
+  `qemu-riscv64` do mesmo binário pendurou >5 min e precisou ser morto a
+  `-9`. DETERMÍNISTICO (2/2). Não é flake de host: é loop/bloqueio no
+  caminho double do S13b sob riscv.
+- **Causa raiz (parcial, lida no código — `NativeRiscvAsmRtB41.java`):** o
+  TEMPLATE do wrapper usa o MESMO slot duas vezes: `sd t2, 24(sp)` salva o
+  chain antigo do handler, e logo `sd a1, 24(sp)` grava o DEFAULT no MESMO
+  offset (o frame é de 48B com ra@40/s0@32 e handler@0..24 — não sobra slot
+  pro default). Consequência mecânica: (a) no sucesso E no handler, `ld t2,
+  24(sp)` restaura `kof_exc_chain` com os BITS DO DEFAULT, não o chain
+  antigo — a chain global fica lixo entre calls (ex.: default `-1` → chain
+  = -1); (b) QUALQUER throw fora do wrapper com chain corrompido faz o
+  desempacotador (`ld handler, 0(t2)`) ler endereço inválido → trap sem
+  handler → hang/`SIGSEGV` sob qemu. A face DOUBLE (9ª linha do vetor) é
+  onde o programa encontra o caminho que trava (throw com chain pré-corrompido);
+  o Int/Long 'sobrevive' porque cada wrapper reinstala o próprio frame antes
+  de tocar a chain. JVM/Script/JS/x86 não têm este template (usa try/catch
+  host-side) — daí só riscv/aarch falharem. **Fix na lane nat:** slot
+  separado pro default (frame 56B ou mover ra/s0) — a causa do hang exato
+  (por que a 9ª e não a 3ª) pede `gdb-multiarch`/qemu -singlestep no binário
+  do menor repro; o aliasing é bug REAL independentemente dele.
+- **Menor repro:** `main(){ println(math.parseDoubleOrDefault("2.5", 0.0)
+  == 2.5) }` compilado p/ `NATIVE_RISCV64`, rodado sob qemu → esperar
+  `true`/`ec 0`.
+- **Estado da suíte:** único teste na rota cross do parseOrDefault
+  (célula da matriz stdlib13 cobre os outros alvos), por isso não é
+  vermelho em massa — mas um programa de usuário no riscv morre.
+- **Determinística CRAVADA (re-run isolado 14/09 ~04:20, dono =
+  192.168.100.17):** riscv64CastSaturation falhou em 2.2s e o
+  parseOrDefault pendurou o qemu >5 min (morto a -9) — 2/2, NÃO flake.
+  (O bloqueio de cache dependabot relatado antes foi RESOLVIDO:
+  surefire 3.6.0 + mariadb 3.5.10 + postgresql 42.7.13 no `.m2`;
+  `mvn -o` resolve de novo.)
+- **MENOR REPRO de 2 linhas CRAVADO (14/09 ~05:10, harness próprio
+  `dev.cli.BR` compila riscv + qemu timeout 20s, dono = 192.168.100.17 —
+  só diagnóstico, lane nat conserta):**
+  ```
+  main() {
+      println(math.parseIntOrDefault("abc", -1))          // linha 1: imprime -1
+      println(math.parseDoubleOrDefault("2.5", 0.0) == 2.5)  // trava aqui
+  }
+  ```
+  Tabela de ordem (5 casos, todos ec medidos): throw-OrDefault (int OU
+  long) ANTES de qualquer `to_double` → **HANG**; `to_double` ANTES do
+  throw → ok; só throws int/long (3+ calls) → ok. Regra: **qualquer
+  OrDefault que lança + qualquer `parseDouble`/`Double` depois = hang**.
+  O binário imprime `-1` e trava na linha 2 (stdout parcial medido).
+- **PC do loop infinito CRAVADO (`qemu -d exec` + objdump do binário do
+  repro):** TBs 0x10b60↔0x10b6c alternando para sempre — o loop de
+  escalação de expoente dentro da região `kof_string_to_double/float`
+  (`beqz s8 / fmul ft0,ft0,ft1 / addi s5,s5,-1 / bnez s5`): `ft1` vem de
+  constante em `.data` (o `# 30026` é só o símbolo anterior mais próximo,
+  `kof_exc_chain+0x26` — pool de dados, NÃO a chain); o contador `s5` é
+  que vem de estado do parse. Hang ⇒ `s5` inicial ≈ 2⁶³ (loop de
+  escalação de expoente sem convergência). Coerente com o aliasing
+  acima: com a chain global corrompida pelos BITS DO DEFAULT
+  (`-1` = todos os bits), um throw subsequente desempacota estado lixo e
+  o double-base chega ao parser como NaN/normal absurdo → s5 garbage.
+  Causa do s5 exato pede gdb-multiarch na lane nat (o host tem só gdb
+  x86; attach `-g` no qemu travou na leitura — não cravei além do loop).
+- **Fix para a lane nat (duas frentes, na ordem):** (1) destravar o
+  slot do default (frame 56B ou mover `ra`/`s0`) — mata o aliasing;
+  (2) conferir por que a região de escalação de expoente lê seed em
+  `kof_exc_chain+0x26` (load não alinhado, endereço par/ímpar pelo
+  bit de expoente) — mesmo pós-fix (1), um seed lido de dentro da área
+  do chain é fracilo. **Prova esperada pós-fix:** `dev.cli.BR` do repro
+  de 2 linhas → `ec=0 out=[-1|true]` + os 3 vermelhos da suíte verde.
+
+## §193 — E2E blog (F12): `db.query` cru + `.get("col")`/recursos dentro de handler web derr
+
+> **Renumerado de §189→§193 (14/09, dono = 192.168.100.17):** colisão tripla
+> de §189 na varredura (record-nullable da lane `.15` venceu por posição;
+> parseOrDefault virou §192). Registro da lane compiler; conteúdo intocado.ubam a conexão com `VerifyError`/`connection closed before headers` — catalogado 14/09 (lane development, dono = 192.168.100.18, descoberto no blog E2E D-SPRING F12)
+
+**Causa raiz (typer × bytecode, família SEM049/SEM048):** o resultado cru de
+`db.query(...)` (`List<Map<String,Object>>` no typer) chega ao bytecode como
+`Object` — chamar `.get("col")` no row ou passar o resultado direto a um
+runtime call (`passwords.verify`) desalinha typer e emitter:
+`VerifyError: Bad type on operand stack` (`Lambda1.invoke()Ljava/lang/String;`
+— `invokestatic` recebe `java/lang/Object` onde espera `String`). No handler
+web, a exceção estoura no invoke e a conexão morre sem resposta
+(`kof web connection error: connection closed before headers`), R6 violado —
+o cliente recebe `Read timed out`, não diagnóstico.
+
+**Menor repro (medido, `/tmp/opencode/blogrepro/B7.kf`):**
+```
+app.post("/login") {
+    var rows = db.query(h, "select pwhash from users where usr = ?", c.user())
+    var rec = rows.get(0)
+    var hash = rec.get("pwhash")          // Object no bytecode, String no typer
+    if (!passwords.verify(c.password(), hash)) { ... }   // VerifyError
+}
+```
+**Correção da causa raiz (esta unidade):** tipagem real do element-type de
+`List` no typer — `new List<Int>()` propaga o type-argument (antes caía em
+`BuiltinTypes.LIST` sem `type-args`, e `list[0]`/`get` viravam `Unknown` no
+typer mas `ArrayList.get → Object` no bytecode); `map/filter/reduce`
+inferred em `MethodCallTyper`. Testes: `i149a-d` (`list[0]` no `println`/
+`var`/`String.valueOf`) e `i152a-d` (`r.get(0)`), todos verdes na suíte
+completa (1816/0/0).
+
+**Fila ainda aberta (dono: lane compiler):** o `db.query` CRU continuar
+expondo `Object` nos values do Map — o handler precisa de `db.query<Record>`
+tipado (caminho canônico, usado pelo E2E) ou do `"" + rec.get(...)` como
+workaround. O `VerifyError` no bytecode emitido é erro do COMPILER, não do
+usuário — diagnostic em compile-time é a meta (regra 6).
+
+
+### §194 — `for (var c in "abc")` (for-in sobre String/não-coleção) era ACEITO e quebrava de um jeito por target (JVM `VerifyError`, Native SIGSEGV, Script crash, JS iterava) — ✅ CORRIGIDO 14/09 (SEM058; triagem da fila #145 da lane bugs-and-gaps `192.168.100.15`)
+
+- **Sintoma (medido 14/09, HEAD `e238330a`):** `for (var c in "abc")` compilava
+  em silêncio e divergia de forma grosseira:
+  - **JVM:** `VerifyError: Bad type on operand stack in arraylength` — a classe
+    principal **nem carrega** (o emitter trata String como array e emite
+    `arraylength` sobre `java/lang/String`).
+  - **Native x86:** SIGSEGV (exit 139).
+  - **Script:** `Argument is not an array` (erro de runtime).
+  - **JS:** itera os chars (`a\nb\nc`) — a **única** que "funciona", logo
+    divergência cross-target silenciosa (regra 5 + R6).
+- **Corpus/contrato:** `docs/language-reference/statements.md` §5.4 já dizia que
+  `for-in` itera **só `List<T>` ou array** ("Sem iterator customizado"; para
+  String use `s.charAt(i)`), mas marcava o resto como "Unspecified" — que o R6
+  não permite (nunca silencioso). Bug 103/SEM054 é o precedente exato
+  (`[]` em coleção → rejeitar em compile-time).
+- **Causa raiz:** `StatementAnalyzer` (caso `ForInStmt`) só extraía o tipo do
+  elemento para `List`/`ArrayType`; qualquer outro tipo caía em
+  `elemType = UNKNOWN` **sem diagnóstico** e o lowering emitia código inválido.
+- **Fix (Q0):** guard no frontend semântico único dos 5 alvos
+  (`StatementAnalyzer.isNonIterableForIn`) → **SEM058** ("`for-in` só itera
+  sobre `List<T>` ou array em Kof; para String use `s.charAt(i)` num loop
+  numérico"). Não flagados: `ArrayType` (legítimo), `UnknownType`/
+  `Nullable`/`TypeVariable` (podem ser List/array em runtime — SG-008).
+- **Prova Q1:** `SemanticResolutionTest.forInNonIterableRejected` (String, Map,
+  Set, Int → SEM058) + `forInListAndArrayStillCompiles` (List, array, List
+  vinda de função não regridem); **falhava antes** (`assertFalse(success)` deu
+  `expected <false> but was <true>` com o guard desligado). Confirmado
+  `SEM058` idêntico em JVM/JS/Script/Native via probe 4-target.
+- **Arquivos:** `StatementAnalyzer.java` (caso `ForInStmt` + helper
+  `isNonIterableForIn`); `SemanticResolutionTest.java`;
+  `docs/language-reference/statements.md` §5.4 (Unspecified → SEM058).
+
+
+### §195 — `KofBlogE2ETest` VERMELHO no `origin/beta-0.4.0` (HEAD `11780dc1`): o teste passou a usar `app.security(...)` (C18) mas os `GET /posts` e `GET /posts/:id` não mandam o header de sessão → 401 (o middleware está CERTO) — ⚠️ TESTE, não produto; Q5 (commit `ab15a30f` subiu com o teste vermelho) — registrado 14/09 (lane bugs-and-gaps `192.168.100.15`; dono = lane `.18`/`.22`, `app.security`)
+
+- **Sintoma (medido 14/09, HEAD `11780dc1`, `mvn -o -pl kof-compiler -am
+  -Dtest=KofBlogE2ETest`):** o único teste do blog falha em
+  `KofBlogE2ETest.java:228` (passo 6, `GET /posts`) com
+  `HTTP/1.1 401 Unauthorized` / `{"error":"unauthorized"}` onde espera `200`.
+  O passo 7 (`GET /posts/999`) idem (espera 404, recebe 401).
+- **Causa raiz (provada):** o commit `ab15a30f` (`app.security()` C18,
+  lane `.22`) adicionou ao app do teste
+  `app.security(mapOf("sessionHeader","authorization","publicPaths","/register,/login"))`.
+  Com `sessionHeader` configurado, o middleware exige sessão em TODO path que
+  não seja público — `/posts` **não** está em `publicPaths`, logo os `GET`
+  sem `authorization` são (corretamente) rejeitados com 401. Os `POST /posts`
+  (passos 4/5) mandam o token e passam; só os `GET` (6/7) ficaram sem.
+  **O middleware está CERTO** (security-by-default); o **teste** ficou
+  desatualizado — mesmo padrão do §190 (teste × produto).
+- **Prova (Q0/repro):** (a) removendo a linha `app.security(...)` do app do
+  teste → **verde**; (b) adicionando `authorization: <token>` aos `GET` 6 e 7
+  → **verde** (`Tests run: 1, Failures: 0`). Determinístico (3/3).
+- **Menor repro (standalone, `/tmp/opencode/triage/`):** app mínimo
+  `web.app` + `app.security(sessionHeader=authorization, publicPaths=/register,/login)`
+  + rota `GET /posts` → request sem `authorization` = 401; com o token = 200.
+- **Correção (do dono, uma linha por GET):** mandar o header de sessão nos
+  `GET` 6/7 do teste **ou** incluir `/posts` em `publicPaths` (decisão de
+  design do dono: leitura pública vs protegida). Não aplico por ser arquivo
+  EM CURSO de outra lane (regra 2); registro para destravar o dono.
+- **Impacto no gate:** a suíte 4-módulos fica **vermelha** por este teste
+  até o dono corrigir — bloqueia o critério "suíte verde" de release.
+  **Q5:** `ab15a30f` subiu declarando a feature implementada com o próprio
+  E2E vermelho — o portão pegou (a lane bugs-and-gaps roda a suíte limpa e
+  não confia no "verde" do commit).
+
+
+### §196 — i18n EN quebrou o guard `ConcurrencyGapsDocTest`: o teste fixava o cabeçalho PT `| Construto |` e a doc canônica virou EN (`| Construct |`) — ✅ CORRIGIDO 14/09 (guard aceita as duas grafias; lane bugs-and-gaps `192.168.100.15`)
+
+- **Sintoma (medido 14/09, HEAD `11780dc1`):**
+  `ConcurrencyGapsDocTest.tabelaDeGapsDeclaraTodosOsConstrutosConhecidos` falha
+  com `expected: <[awaitTimeout, val r = spawn expr, ...]> but was: <[]>` — a
+  tabela é lida VAZIA.
+- **Causa raiz:** o commit `f5a0ea41` (i18n lote 6, lane docs `.17`) trocou o
+  cabeçalho da tabela de `learn/18-concurrency.md` de `| Construto |` para
+  `| Construct |` (a doc canônica é EN desde a frente bilíngue). O `gapRows()`
+  do guard detectava o início da tabela por `l.startsWith("| Construto |")`
+  — string PT HARDCODED no teste. Sem casar, `inTable` nunca vira `true` e
+  `gapRows()` devolve mapa vazio → o `assertEquals(SYMBOLS.keySet(), ...)`
+  falha. É regressão cross-lane silenciosa (o i18n não roda a suíte Java).
+- **Fix (Q0):** o guard aceita as DUAS grafias do rótulo (`| Construto |`
+  PT **ou** `| Construct |` EN). O rótulo é prosa (traduzível); o teste não
+  pode fixar um idioma — a correção certa é ser robusto aos dois.
+- **Prova Q1:** `ConcurrencyGapsDocTest` 3/3 verde (era 1 falha). Suíte
+  4-módulos limpa: a única vermelha restante é o §195 (outra lane).
+- **Arquivo:** `kof-compiler/src/test/java/dev/kof/compiler/ConcurrencyGapsDocTest.java`
+  (`gapRows`, l.80).
+- **Lição Q5:** guard de doc que casa um rótulo TRADUZÍVEL precisa aceitar as
+  variantes de idioma — senão a tradução (frente ativa) derruba a suíte sem
+  tocar o código.
+
+### §197 — `db.query<Record>` com componente `Int` e coluna `identity` (H2 → `Long`): `kof_json_bind` devolvia o Number CRU → `IllegalArgumentException: argument type mismatch` no read path — ✅ CORRIGIDO 14/09 (dono = lane `.18`, achado ao fechar o blog E2E F12; mesma família do CLOB do `8eb156f4`)
+
+- **Sintoma (medido 14/09, HEAD `a689cbd2`):** o `GET /posts` do app canônico
+  (`KofBlogE2ETest.blogEndToEndJvm`) devolvia
+  `500 {"error": "handler error: argument type mismatch"}`. As escritas
+  (`/register`, `/login`, `POST /posts`) passavam; só o read path quebrava.
+- **Causa raiz:** `JvmRuntimeJson.kof_json_bind(Class,generic,Object)` tinha o
+  ramo numérico `return value;` — devolvia o `Number` como o driver JDBC o
+  entregou. A coluna `id identity` do H2 chega como `Long`; o record
+  `Post(Int id, String title, String body)` tem construtor `(int,String,String)`
+  e `getDeclaredConstructor(...).newInstance(Long)` lança
+  `IllegalArgumentException: argument type mismatch` (reflexão não faz
+  narrowing). Só aparecia com componente primário de largura diferente do
+  que o driver devolve (o `Post(String?…)` do teste anterior não tinha esse
+  campo, por isso o verde).
+- **Fix:** `kof_json_bind` COERGE ao tipo do alvo em vez de devolver cru —
+  `intValue()/longValue()/byteValue()/shortValue()/floatValue()/doubleValue()`
+  com fallback `parse*` para `String`; `Number.class` continua passthrough.
+- **Prova:** `KofBlogE2ETest` 1/1 (o `GET /posts` devolve o post criado) +
+  `KofDbE2ETest` 16/0/2 + `JvmE2ETest` 35/35. Reproduzido antes do fix com
+  `db.query<Post>` sobre H2 mem (o 500 só aparecia no read path).
+- **Lição:** binding reflexivo de record precisa **coagir** cada componente
+  ao tipo declarado; `Class` do componente + `Number` do driver não bastam.
+
+### §198 — `==` direto em condição de `if`/`if-expr` usava `if_acmpeq` para `Record` em vez de `.equals()` — ✅ CORRIGIDO 14/09 ([issue #188](https://github.com/KofLang/Kof4j/issues/188), dono = lane `192.168.100.22`)
+
+- **Sintoma (issue #188):**
+  ```kof
+  record Tag(String name)
+  main() {
+      var t1 = new Tag("hi")
+      var t2 = new Tag("hi")
+      if (t1 == t2) println("equal") else println("not equal")
+  }
+  ```
+  Imprimia `"not equal"`, enquanto `println(t1 == t2)` imprimia `"true"`.
+- **Causa raiz:** `CompilerComparisons.isComparisonShortcut` só desativava shortcut para `String` e `enum`. Para records e classes, retornava `true` no shortcut, gerando `KofConditionalJump` com `operandType` do record → `JvmOpEmitter` emitia `if_acmpeq` (igualdade referencial de ponteiro).
+- **Fix:** `CompilerComparisons.isComparisonShortcut` desativa shortcut se `left` ou `right` for record type (`CompilerTypes.isRecordType(...) == true`), forçando a cair no lowering normal de `ExpressionBinaryLowerer` que emite `record.equals(other)`.
+- **Prova:** `CoreRegressionE2ETest.recordEqualityInDirectIfCondition` prova `if (t1 == t2)` e `if-expression` com `Tag("hi") == Tag("hi")` avaliando para `true` e `"equal"`.
+
+### §199 — Record destructuring com campos `Double` ou `Long` causava colisão de slots no frame JVM (VerifyError / COMP002) — ✅ CORRIGIDO 14/09 ([issue #187](https://github.com/KofLang/Kof4j/issues/187), dono = lane `192.168.100.22`)
+
+- **Sintoma (issue #187):** Desestruturar um record com campos `Double` ou `Long` em `switch` gerava `VerifyError: Bad local variable type ... Reason: Type top is not assignable to double` ou crash `COMP002`.
+- **Causa raiz:** Ao desestruturar os componentes de um record (`case Rect(var w, var h)`), `SwitchExprLowerer` e `SwitchStmtLowerer` incrementavam `localIdx` de 1 em 1 (`localIdx++`), ignorando que `Double` e `Long` são de 2 slots no frame JVM (categoria-2).
+- **Fix:** Alocação de slots locais em `SwitchExprLowerer.emitPatternBinding` e `SwitchStmtLowerer` ajustada para avançar `TypeMetrics.isDoubleWidth(fieldType) ? 2 : 1`.
+- **Prova:** `CoreRegressionE2ETest.recordDestructuringDoubleAndLong` passando nos targets (JVM e JS).
+
+### §200 — `if-expression` com ramos de tipos primitivos mistos (Int e Double) falhava com VerifyError ou COMP002 — ✅ CORRIGIDO 14/09 ([issue #183](https://github.com/KofLang/Kof4j/issues/183), dono = lane `192.168.100.22`)
+
+- **Sintoma (issue #183):** `var result = if (flag) 1 else 2.0` causava `VerifyError: Bad type on operand stack ... Type java/lang/Number is not assignable to integer`, e `var result = if (flag) 2.0 else 1` causava crash interno de ASM frames `COMP002`.
+- **Causa raiz:** O lowering de `IfExpr` e `SwitchExpr` já aplicava boxing in-branch quando `branchTypesDiffer` era verdadeiro (boxing para `Object`), mas `ExpressionTyper.inferExprType` retornava cegamente o tipo do primeiro ramo (`thenType`). Assim, `var result` recebia `Int` (ou `Double`), alocava slot/tipo primitivo e tentava fazer `istore`/`dstore` de uma referência `Object`/`Number`.
+- **Fix:** `ExpressionTyper.inferExprType` para `IfExpr` e `SwitchExpr` agora retorna `Object` (`java.lang.Object`) quando `branchTypesDiffer` for verdadeiro, casando o tipo da variável receptora com os valores unificados na pilha.
+- **Prova:** `CoreRegressionE2ETest.ifExpressionMixedNumericBranches` prova os dois casos (`1 else 2.5` e `3.5 else 4`) compilando e executando corretamente na JVM e JS.

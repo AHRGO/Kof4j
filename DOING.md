@@ -71,17 +71,24 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > codigo Kof NAO sao traduzidos (so prosa/titulos/rotulos). Nao tocar `nat/`,
 > nem lanes de bugs/feature de outros donos.
 >
-> **STATUS i18n medido 14/09 (~05:40, dono = 192.168.100.17):** cobertura de
-> par PT = **214/214 (100%)**; switcher pendente = **6** (todos os demais já
-> comutaram no lote resgatado `11780dc1`): `AGENTS.md`, `CHANGELOG.md`,
-> `docs/bugs-and-gaps/known-bugs.md`, `docs/bugs-and-gaps/conformance-matrix.md`,
-> `docs/status.md`, `docs/development/future/PLAN-UNIVERSAL-PLATFORM.md` — os
-> **meta-vivos** da repo (8k+ linhas editadas por TODAS as lanes todo dia).
-> Traduzi-los AGORA = colisão garantida com todas as lanes durante a
-> estabilização da release (a meta atual). **Plano:** manter os canônicos
-> desses 6 em PT até o corte da release; pós-release, um lote dedicado os
-> traduz para EN + insere o switcher (a paridade `check` fecha 0). Não é
-> esquecimento: é ordem de prioridade da mantenedora (estabilizar → i18n).
+> **STATUS i18n medido 14/09 (~08:45, dono = 192.168.100.17):** cobertura de
+> par PT = **214/214 (100%)**; switcher na 1a linha = **214/214**;
+> `scripts/docs-lang.sh untranslated` = **0** (métrica = canônico com seletor).
+> Os **6 meta-vivos** (`AGENTS.md`,
+> `CHANGELOG.md`, `docs/bugs-and-gaps/known-bugs.md`,
+> `docs/bugs-and-gaps/conformance-matrix.md`, `docs/status.md`,
+> `docs/development/future/PLAN-UNIVERSAL-PLATFORM.md`) foram traduzidos para EN
+> no lote `docs/i18n-vivos` — o plano anterior de adiá-los até o corte da
+> release foi **superado** pela decisão da mantenedora de traduzir TODOS os
+> `.md` (inclusive operacionais/vivos).
+>
+> **⚠️ Regra de sincronização dos meta-vivos (obrigatória):** toda edição de um
+> meta-vivo vai para `X.pt_BR.md` (PT) **e** para o canônico `X.md` (EN) no
+> **MESMO commit**; o hook `pre-commit` **recusa** o commit se um doc com overlay
+> `skip-worktree` foi editado (a edição deve ir para `X.pt_BR.md`). **Drift
+> inerente:** os meta-vivos mudam a cada commit de qualquer lane — após `pull`,
+> re-rodar `scripts/docs-lang.sh apply` na máquina PT e reconciliar o par antes de
+> commitar (o conflito de rebase do `known-bugs.md` de 14/09 veio daí).
 >
 > **⚠️ CUIDADO (14/09 ~01:30, dono = 192.168.100.18):** este commit carrega
 > wips de OUTRAS lanes resgatados do working tree compartilhado (regra 8 —

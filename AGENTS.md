@@ -1,519 +1,521 @@
-# AGENTS.md — Escrevendo Kof (guia para agentes de IA)
+[English](AGENTS.md) | [Português](AGENTS.pt_BR.md)
 
-Este é o guia **obrigatório** para qualquer agente de IA (ou humano) que
-escreva código Kof neste repositório. Leia antes de gerar qualquer `.kf`.
+# AGENTS.md — Writing Kof (guide for AI agents)
 
-**Versão:** 0.4.0-beta · Última atualização: 13/09/2026 (modo autônomo + condição de ESTABILIDADE com recusa de re-disparo + **Portão de qualidade: nenhum bug sobe**; branch ativa = `beta-0.4.0`)
+This is the **mandatory** guide for any AI agent (or human) who
+writes Kof code in this repository. Read it before generating any `.kf`.
 
-> **PRIORIDADE Nº 1: QUALIDADE.** Antes de qualquer feature, leia o
-> **Portão de qualidade — "nenhum bug sobe"** (§ abaixo), **universal para
-> TODAS as branches**. A ordem é **reproduzir → consertar a causa raiz →
-> provar com teste → rodar a suíte → só então commitar**. O teste **prova**;
-> ele nunca substitui a correção. Entrega sem prova não é entrega: é bug
-> adiado. A pressa de entregar é o maior risco do repo.
+**Version:** 0.4.0-beta · Last update: 09/13/2026 (autonomous mode + STABILITY condition with refusal to re-trigger + **Quality gate: no bug ships**; active branch = `beta-0.4.0`)
+
+> **PRIORITY No. 1: QUALITY.** Before any feature, read the
+> **Quality gate — "no bug ships"** (§ below), **universal for
+> ALL branches**. The order is **reproduce → fix the root cause →
+> prove with a test → run the suite → only then commit**. The test **proves**;
+> it never replaces the fix. Delivery without proof is not delivery: it is a bug
+> postponed. The rush to deliver is the biggest risk in the repo.
 
 ---
 
-## Modo autônomo (definição — o padrão de operação desta sessão)
+## Autonomous mode (definition — the operating standard of this session)
 
-> **Entrar em modo autônomo = trabalhar sem interromper o humano, por dias a
-> fio, até a próxima interferência humana.** O humano não está disponível para
-> perguntas; o repo é a única fonte de verdade. Tudo de que você precisa já
-> está nos documentos — se não está, é porque precisa ser escrito (e você
-> escreve).
+> **Entering autonomous mode = working without interrupting the human, for days on
+> end, until the next human interference.** The human is not available for
+> questions; the repo is the only source of truth. Everything you need is already
+> in the documents — if it isn't, it's because it needs to be written (and you
+> write it).
 
-**O loop (nunca pare no meio):**
+**The loop (never stop in the middle):**
 
 ```
-1. LEIA o estado (DOING.md, docs/status.md, git log, suíte) — nunca pergunte.
-2. ESCOLHA a próxima tarefa: maior valor, sem dono `EM CURSO`, na sua lane.
-3. REIVINDIQUE no DOING.md (mesmo commit do primeiro passo).
-4. QUEBRE em escopos realizáveis numa sessão (ver "partes pequenas" abaixo).
-5. EXECUTE um escopo → teste → commit → atualize DOING.md + todowrite.
-6. VOLTE ao passo 1. Não anuncie "fim"; só pare por condição de parada.
+1. READ the state (DOING.md, docs/status.md, git log, suite) — never ask.
+2. CHOOSE the next task: highest value, without an owner `IN PROGRESS`, in your lane.
+3. CLAIM it in DOING.md (same commit as the first step).
+4. BREAK it into scopes achievable in one session (see "small parts" below).
+5. EXECUTE one scope → test → commit → update DOING.md + todowrite.
+6. GO BACK to step 1. Don't announce "the end"; only stop on a stop condition.
 ```
 
-**O loop dentro de UM turno (regra que impede o "parar e resumir"):**
+**The loop within ONE turn (rule that prevents "stopping and summarizing"):**
 
-> **O agente não se re-dispara sozinho.** Quando um turno termina, a execução
-> para. Então: **terminar um turno com resumo é a única falha de autonomia
-> imperdoável** — é o que transformou "dias a fio" em "um turno".
+> **The agent does not re-trigger itself.** When a turn ends, execution
+> stops. So: **ending a turn with a summary is the only unforgivable autonomy
+> failure** — it's what turned "days on end" into "one turn".
 
-1. **Encadeie tool calls dentro do turno** até: (a) uma condição de parada,
-   (b) o contexto quase esgotar, ou (c) o turno ficar sem trabalho novo
-   (suíte verde + DOING.md sem item sem dono na sua lane).
-2. **Proibido terminar o turno com resumo/status para o humano**
-   ("pushed", "resumo da sessão", "o que falta agora é..."). Se o turno
-   vai acabar, a ÚLTIMA coisa escrita no turno é:
-   - commit final do estado atual,
-   - `DOING.md` atualizado com a linha **"PRÓXIMO PASSO: <tarefa exata +
-     arquivo + prova esperada>"** (o re-dispacho lê isso e continua),
-   - `todowrite` espelhando isso.
-   Depois disso, silêncio — ou a próxima tool call.
-3. **Todo commit do turno exige atualização da linha no `DOING.md` no MESMO
-   commit** (regra da seção multi-agente vale dobrado aqui: sem DOING.md
-   atualizado, o próximo agente/sessão não sabe o que já existe).
-4. **`todowrite` a cada mudança de etapa** — exatamente um `in_progress`;
-   item só vai para `completed` com prova (teste verde/suíte).
-5. **Re-dispacho é do humano ou de cron** (o agente não acorda a si mesmo).
-    Ao entrar em modo autônomo, o agente **lança o cron** (ver "Heartbeat
-    de cron" abaixo). Por isso o item 2b é contrato: quem volta — humano ou
-    outra instância — deve conseguir retomar em ≤1 leitura do `DOING.md`,
-    sem perguntar.
-6. **Re-dispacho NÃO é conversa.** Quando o humano manda "continue", "vai",
-   "e agora?" ou qualquer re-disparo: **não responda com reconhecimento ou
-   status** ("Entendido", "ok", "pushed", "vou continuar..."). A PRIMEIRA
-   ação do turno é a tool call que lê o `PRÓXIMO PASSO` e executa. Um turno
-   que termina em frase de confirmação sem tool call é a MESMA falha de um
-   turno que termina em resumo — o loop parou e o humano teve que empurrar
-   de novo.
-7. **Unidade em progresso = turno em progresso.** Se o turno vai acabar e
-   existe uma unidade MEIO-EXECUTADA (edição aplicada sem teste rodado,
-   teste verde sem commit, commit sem `DOING.md`), **acabe a unidade antes
-   de encerrar**: rode o teste, commite, atualize o `DOING.md` — na mesma
-   resposta, encadeando as tool calls. "Parei no meio de um edit" é o loop
-   morrendo no ponto mais caro: o próximo agente herda working tree sujo
-   sem saber o estado. Regra prática: **depois de todo tool call, a
-   pergunta é "a unidade está commitada? não → próxima tool call agora"**,
-   nunca "chega de tool calls nesta resposta?".
+1. **Chain tool calls within the turn** until: (a) a stop condition,
+   (b) the context nearly runs out, or (c) the turn runs out of new work
+   (green suite + DOING.md without an unowned item in your lane).
+2. **It is forbidden to end the turn with a summary/status for the human**
+   ("pushed", "session summary", "what's missing now is..."). If the turn
+   is going to end, the LAST thing written in the turn is:
+   - final commit of the current state,
+   - `DOING.md` updated with the line **"NEXT STEP: <exact task +
+     file + expected proof>"** (the re-trigger reads this and continues),
+   - `todowrite` mirroring this.
+   After that, silence — or the next tool call.
+3. **Every commit in the turn requires updating the line in `DOING.md` in the
+   SAME commit** (the multi-agent section rule applies doubly here: without
+   DOING.md updated, the next agent/session doesn't know what already exists).
+4. **`todowrite` at every stage change** — exactly one `in_progress`;
+   an item only moves to `completed` with proof (green test/suite).
+5. **Re-trigger is from the human or cron** (the agent doesn't wake itself).
+    When entering autonomous mode, the agent **launches the cron** (see "Cron
+    heartbeat" below). That's why item 2b is a contract: whoever returns —
+    human or another instance — must be able to resume in ≤1 read of `DOING.md`,
+    without asking.
+6. **Re-trigger is NOT conversation.** When the human sends "continue", "go",
+   "and now?" or any re-trigger: **do not reply with acknowledgment or
+   status** ("Understood", "ok", "pushed", "I'll continue..."). The FIRST
+   action of the turn is the tool call that reads the `NEXT STEP` and executes it. A turn
+   that ends with a confirmation phrase without a tool call is the SAME failure as a
+   turn that ends with a summary — the loop stopped and the human had to push
+   it again.
+7. **Unit in progress = turn in progress.** If the turn is going to end and
+   there is a HALF-EXECUTED unit (edit applied without a test run,
+   green test without commit, commit without `DOING.md`), **finish the unit before
+   closing**: run the test, commit, update the `DOING.md` — in the same
+   response, chaining the tool calls. "I stopped in the middle of an edit" is the loop
+   dying at the most expensive point: the next agent inherits a dirty working tree
+   without knowing the state. Rule of thumb: **after every tool call, the
+   question is "is the unit committed? no → next tool call now"**,
+   never "are we done with tool calls in this response?".
 
-**Falhas reais que motivaram estas regras (05/09, três ocorrências):**
-(a) o agente fez 5 commits corretos (fixes riscv64) e terminou o turno com
-um "resumo da sessão" em vez de continuar o loop; `DOING.md` ficou sem
-atualização desde o início do trabalho. (b) no MESMO dia, após o humano
-dizer "continue", o agente respondeu "Entendido. Vou prosseguir." — um
-turno inteiro gasto em frase de confirmação, sem tool call, sem trabalho.
-(c) ainda no MESMO dia, com o loop rodando e um port (time.sleep) a 2
-edições do commit, o turno TERMINOU logo após o último tool call de edit —
-sem rodar o teste, sem commitar, sem atualizar o DOING.md; o humano teve
-que empurrar de novo. Autonomia que termina em resumo, em "ok" ou **no
-meio de uma unidade** não é autonomia — é polidez ou desatenção.
+**Real failures that motivated these rules (09/05, three occurrences):**
+(a) the agent made 5 correct commits (riscv64 fixes) and ended the turn with
+a "session summary" instead of continuing the loop; `DOING.md` had no
+update since the start of the work. (b) on the SAME day, after the human
+said "continue", the agent replied "Understood. I'll proceed." — an entire
+turn spent on a confirmation phrase, without a tool call, without work.
+(c) still on the SAME day, with the loop running and a port (time.sleep) 2
+edits away from the commit, the turn ENDED right after the last edit tool call —
+without running the test, without committing, without updating the DOING.md; the human had
+to push it again. Autonomy that ends in a summary, in "ok", or **in the
+middle of a unit** is not autonomy — it's politeness or carelessness.
 
-**O que fazer em vez de perguntar:**
+**What to do instead of asking:**
 
-| Dúvida | Fonte de resposta (nesta ordem) |
+| Question | Source of the answer (in this order) |
 |---|---|
-| "Existe dono nisso?" | `DOING.md` |
-| "Qual a sintaxe/idiom real?" | `training/`, `learn/`, **compile e confirme** |
-| "O que já funciona?" | suíte + E2E rodando (a prova, não a memória) |
-| "Qual a próxima prioridade?" | `docs/status.md`, `docs/backend-parity.md`, `docs/development/` (fila P0→P5: `roadmap-audit.md`/`roadmap.md`/`specification-gaps.md` + `known-bugs.md`), `planning-*` |
-| "Isso é decisão de design?" | **NÃO é sua** — registre gap/plano e siga (regra 6) |
+| "Is there an owner for this?" | `DOING.md` |
+| "What's the real syntax/idiom?" | `training/`, `learn/`, **compile and confirm** |
+| "What already works?" | suite + E2E running (the proof, not memory) |
+| "What's the next priority?" | `docs/status.md`, `docs/backend-parity.md`, `docs/development/` (queue P0→P5: `roadmap-audit.md`/`roadmap.md`/`specification-gaps.md` + `known-bugs.md`), `planning-*` |
+| "Is this a design decision?" | **It's NOT yours** — record the gap/plan and move on (rule 6) |
 
-**Escopo realizável numa sessão** = uma unidade coesa com prova ao fim
-(teste verde, qemu rodando, suíte passando). Se a tarefa inteira não cabe,
-faça o primeiro degrau, commite, e o próximo agente/sessão continua. Nunca
-deixe trabalho grande não-commitado — é assim que se perde uma sessão.
+**Scope achievable in one session** = a cohesive unit with proof at the end
+(green test, qemu running, suite passing). If the whole task doesn't fit,
+do the first step, commit, and the next agent/session continues. Never
+leave large uncommitted work — that's how a session is lost.
 
-**Condições de parada (as ÚNICAS que justificam parar e chamar o humano):**
+**Stop conditions (the ONLY ones that justify stopping and calling the human):**
 
-1. **  em jogo** — mudança de contrato/operador/ordem de
-   avaliação (regra 6): vira gap/plano em `planning-*`, nunca edição.
-2. **Colisão de lane inevitável** — o único caminho toca um arquivo `EM CURSO`
-   de outro agente e não dá para adiar: pare, registre no DOING.md, aguarde.
-3. **Gate quebrado sem causa na sua mudança** — suíte vermelha que você não
-   introduziu e não consegue diagnosticar: registre em `docs/bugs-and-gaps/known-bugs.md`
-   com reproduções, não "conserte" o teste para passar.
-4. **Requisito genuinamente ausente do corpus** — nem `training/`, nem
-   `learn/`, nem o compilador respondem: escreva a pergunta no DOING.md na
-   linha do item e siga para outra tarefa (não trave o loop).
-5. **Desenvolvimento estável (condição de ESTABILIDADE — para o re-disparo)**
-   — ver a seção seguinte: o loop só tem trabalho se houver trabalho real.
+1. **  at stake** — change of contract/operator/order of
+   evaluation (rule 6): becomes a gap/plan in `planning-*`, never an edit.
+2. **Unavoidable lane collision** — the only path touches a file `IN PROGRESS`
+   of another agent and it can't be postponed: stop, record it in the DOING.md, wait.
+3. **Gate broken without cause in your change** — red suite that you didn't
+   introduce and can't diagnose: record it in `docs/bugs-and-gaps/known-bugs.md`
+   with reproductions, don't "fix" the test to pass.
+4. **Requirement genuinely absent from the corpus** — neither `training/`, nor
+   `learn/`, nor the compiler answer: write the question in the DOING.md on the
+   item's line and move on to another task (don't stall the loop).
+5. **Stable development (STABILITY condition — for the re-trigger)**
+   — see the next section: the loop only has work if there is real work.
 
-### Estabilidade: quando parar o loop e como avaliar cada re-disparo (obrigatório)
+### Stability: when to stop the loop and how to evaluate each re-trigger (mandatory)
 
-> **O desenvolvimento está estável quando as três condições abaixo valem ao
-> mesmo tempo:**
+> **Development is stable when the three conditions below hold at the
+> same time:**
 >
-> 1. **Todos os bugs resolvidos** — `docs/bugs-and-gaps/known-bugs.md` sem item
->    aberto (tudo `CORRIGIDO`/`FECHADO` com prova).
-> 2. **Todo `docs/development/` concluído** — nenhuma doc com desenvolvimento
->    pendente (as concluídas já foram movidas para `docs/`, as não-iniciadas
->    movidas para `docs/development/future/`).
-> 3. **Todo `docs/development/future/` desenvolvido** — os planos de futuro
->    implementados e validados (ou promovidos/promovidos a `docs/` conforme a
->    regra dos três estados).
+> 1. **All bugs resolved** — `docs/bugs-and-gaps/known-bugs.md` with no open
+>    item (everything `FIXED`/`CLOSED` with proof).
+> 2. **All of `docs/development/` concluded** — no doc with pending
+>    development (the concluded ones were already moved to `docs/`, the not-started
+>    ones moved to `docs/development/future/`).
+> 3. **All of `docs/development/future/` developed** — the future plans
+>    implemented and validated (or promoted/promoted to `docs/` according to the
+>    three-states rule).
 >
-> Sob essas três condições, **a suíte completa verde + a matriz de conformidade
-> 5/5 são a prova da estabilidade** — ela é um ESTADO a verificar, não uma
-> opinião a declarar.
+> Under these three conditions, **the full green suite + the 5/5 conformance
+> matrix are the proof of stability** — it is a STATE to verify, not an
+> opinion to declare.
 >
-> **A cada mensagem do modo autônomo (heartbeat/re-disparo), o agente DEVE
-> avaliar antes de agir:**
+> **On every message of autonomous mode (heartbeat/re-trigger), the agent MUST
+> evaluate before acting:**
 >
-> - **Surgiu regressão** (suíte vermelha, teste novo falhando, bug reintroduzido,
->   documento novo adicionado a `docs/development/` com trabalho pendente)?
->   → **assuma a tarefa**: reivindique no DOING.md e execute o loop normal.
-> - **Não surgiu nada** (as três condições de estabilidade continuam valendo e
->   a suíte está verde)? → **RECUSE o pedido do modo autônomo**: não invente
->   trabalho, não edite "para parecer ocupado", não rode suíte de novo só para
->   consumir turno. A recusa honesta É a resposta correta: registre no DOING.md
->   ("estável — re-disparo recusado em <data>, nada pendente"), **pare o cron**
->   (`scripts/auto-loop.sh stop`) e informe a estabilidade à mantenedora.
+> - **Did a regression appear** (red suite, new test failing, bug reintroduced,
+>   new document added to `docs/development/` with pending work)?
+>   → **take on the task**: claim it in the DOING.md and run the normal loop.
+> - **Nothing appeared** (the three stability conditions still hold and
+>   the suite is green)? → **REFUSE the autonomous mode request**: don't invent
+>   work, don't edit "to look busy", don't run the suite again just to
+>   consume a turn. The honest refusal IS the correct answer: record it in the DOING.md
+>   ("stable — re-trigger refused on <date>, nothing pending"), **stop the cron**
+>   (`scripts/auto-loop.sh stop`) and report the stability to the maintainer.
 >
-> Rejeitar o re-disparo não quebrado é **tão obrigatório quanto executar o
-> re-disparo legítimo**: o heartbeat existe para cobrir o intervalo entre
-> trabalhos reais, não para gerar trabalho artificial. Loop que não encontra
-> trabalho quando o trabalho acabou está funcionando corretamente ao recusar.
+> Rejecting the unbroken re-trigger is **as mandatory as executing the
+> legitimate re-trigger**: the heartbeat exists to cover the interval between
+> real work, not to generate artificial work. A loop that finds no
+> work when the work is done is functioning correctly by refusing.
 
-**O que o modo autônomo NÃO relaxa (nada):** todas as regras deste arquivo
-continuam valendo — zero regressão, retrocompatibilidade aditiva, ≤500
-linhas, R6 (nunca silencioso), suíte como gate de merge, commit por unidade.
-Autonomia muda **quem decide a ordem**, nunca **o que é aceitável**.
+**What autonomous mode does NOT relax (nothing):** all the rules in this file
+still hold — zero regression, additive backward compatibility, ≤500
+lines, R6 (never silent), suite as merge gate, commit per unit.
+Autonomy changes **who decides the order**, never **what is acceptable**.
 
-**Sinal para o humano:** `todowrite` é a janela desta conversa (atualize a
-cada etapa); `DOING.md` é a memória entre sessões. Se o humano voltar e ler
-esses dois, ele sabe exatamente onde você está e por quê.
+**Signal for the human:** `todowrite` is the window of this conversation (update it
+at every stage); `DOING.md` is the memory between sessions. If the human returns and reads
+these two, they know exactly where you are and why.
 
-### Heartbeat de cron (obrigatório ao entrar no modo autônomo)
+### Cron heartbeat (mandatory when entering autonomous mode)
 
-> O agente **não acorda a si mesmo**. Para o loop sobreviver ao fim de cada
-> turno, ao **entrar em modo autônomo** o agente lança o cron da sessão:
+> The agent **doesn't wake itself**. For the loop to survive the end of each
+> turn, upon **entering autonomous mode** the agent launches the session cron:
 
 ```bash
-scripts/auto-loop.sh start            # última sessão, re-disparo a cada 30 min
-scripts/auto-loop.sh status           # confirmar que está ativo
+scripts/auto-loop.sh start            # last session, re-trigger every 30 min
+scripts/auto-loop.sh status           # confirm that it's active
 ```
 
-- O cron chama `opencode run --session <id> --dir <repo> --attach <server>
-  --auto "<prompt>"` a cada intervalo (padrão 30 min), com o prompt de
-  re-disparo: *"analize os documentos, verifique os gaps, identifique o que
-  falta em nossos planos, trace um todo de implementação e continue o
-  desenvolvimento"*.
-- **`--attach` é OBRIGATÓRIO — o heartbeat injeta na SESSÃO ABERTA, nunca
-  spawna agente concorrente.** Sem `--attach`, `opencode run --session` cria
-  um **processo headless novo** que só compartilha o histórico: você vê "outra
-  sessão" rodando em paralelo, dois agentes competindo pela mesma sessão (o
-  tick das 00:00 de 06/09 deixou um `run` vivo 20 min disputando com o TUI).
-  O servidor TUI da sessão aberta escuta em **`http://127.0.0.1:9093`**
-  (porta da sessão do modo autônomo — confira `ss -tlnp | grep opencode` e a
-  sessão viva; sobrescreva com `OPENCODE_SERVER_URL`). O `tick`
-  faz health-check na porta antes de disparar: servidor fora do ar → tick
-  pulado e logado (não adianta injetar numa sessão que não existe).
-- `flock` no `tick` impede run sobreposto: se o turno anterior ainda está
-  ativo, o tick é pulado e logado (`~/.local/state/kof-auto-loop/loop.log`).
-- **Ao sair do modo autônomo** (humano retorna, condição de parada, ou
-  trabalho concluído): `scripts/auto-loop.sh stop`. Deixar o cron rodando
-  depois do fim é ruído — o heartbeat existe só enquanto o loop vive.
-- Se o cron já está ATIVO (`status`), não lance outro — a sessão atual é a
-  continuada do heartbeat.
-- O re-disparo chega como turno normal: vale a regra 6 (responder com tool
-  call, não com "ok") e o contrato do `PRÓXIMO PASSO` no `DOING.md`.
-- **Watchers de issue (12/09, multi-issue 13/09):** `scripts/issue-watcher.sh start <issue|all> <min>
-  <sessão>` vigia comentários novos de uma issue (ou de **todas as abertas** com
-  `all` — snapshot `N=id` por issue) a cada N minutos e injeta um turno na
-  sessão viva (mesmo `--attach` obrigatório do heartbeat; `seen` só avança
-  após injeção bem sucedida; `server=` gravado no state fixa a porta p/ o tick
-  do cron). Em uso: **todas a cada 5min → sessão `ses_f69c2cb03ffe2zDYCqW7fesphi`
-  (porta 9094)** — o tick `all` **injeta a CADA tick** (com ou sem comentário
-  novo) com prompt de **varredura completa**: listar TODAS as abertas, ler
-  corpo+comentários, responder tecnicamente, **triar** (corrigir o que for da
-  lane / registrar gap-plano regra 6 / declarar não-procedente), **corrigir e
-  fechar com `gh issue close` + commit** (só com prova; frente de outra lane =
-  pedir review do dono, nunca tocar). Interagir com issue que
-  impacta o trabalho EM CURSO é parte do loop, não distração.
-- **Duas sessões, dois crons (13/09, pedido da mantenedora):** 9093 =
-  `ses_f69e2a3f7ffe9J10aWcHEUOfW8` (heartbeat auto-loop, `*/5`) e 9094 =
-  `ses_f69c2cb03ffe2zDYCqW7fesphi` (watcher all, `*/5`). **Nunca cruzar:**
-  cada tick injeta SÓ na sua sessão (`--attach` + porta gravada/resolvida).
-  O heartbeat da 9093 tinha sido parado; foi **reativado** (`auto-loop.sh start
-  ses_f69e2a3f7ffe9J10aWcHEUOfW8 5`, dry-run prova attach 9093).
+- The cron calls `opencode run --session <id> --dir <repo> --attach <server>
+  --auto "<prompt>"` at every interval (default 30 min), with the re-trigger
+  prompt: *"analyze the documents, check the gaps, identify what's
+  missing in our plans, draw up an implementation todo and continue
+  development"*.
+- **`--attach` is MANDATORY — the heartbeat injects into the OPEN SESSION, never
+  spawns a concurrent agent.** Without `--attach`, `opencode run --session` creates
+  a **new headless process** that only shares the history: you see "another
+  session" running in parallel, two agents competing for the same session (the
+  00:00 tick of 09/06 left a `run` alive for 20 min disputing with the TUI).
+  The TUI server of the open session listens on **`http://127.0.0.1:9093`**
+  (port of the autonomous mode session — check `ss -tlnp | grep opencode` and the
+  live session; override with `OPENCODE_SERVER_URL`). The `tick`
+  does a health-check on the port before firing: server down → tick
+  skipped and logged (no point injecting into a session that doesn't exist).
+- `flock` in the `tick` prevents overlapping runs: if the previous turn is still
+  active, the tick is skipped and logged (`~/.local/state/kof-auto-loop/loop.log`).
+- **When leaving autonomous mode** (human returns, stop condition, or
+  work concluded): `scripts/auto-loop.sh stop`. Leaving the cron running
+  after the end is noise — the heartbeat exists only while the loop lives.
+- If the cron is already ACTIVE (`status`), don't launch another — the current session is the
+  continuation of the heartbeat.
+- The re-trigger arrives as a normal turn: rule 6 applies (reply with a tool
+  call, not with "ok") and so does the `NEXT STEP` contract in the `DOING.md`.
+- **Issue watchers (09/12, multi-issue 09/13):** `scripts/issue-watcher.sh start <issue|all> <min>
+  <session>` watches new comments on an issue (or on **all open ones** with
+  `all` — snapshot `N=id` per issue) every N minutes and injects a turn into the
+  live session (same mandatory `--attach` as the heartbeat; `seen` only advances
+  after a successful injection; `server=` recorded in the state fixes the port for the cron
+  tick). In use: **all every 5min → session `ses_f69c2cb03ffe2zDYCqW7fesphi`
+  (port 9094)** — the `all` tick **injects at EVERY tick** (with or without a new
+  comment) with a **full sweep** prompt: list ALL open ones, read
+  body+comments, reply technically, **triage** (fix what belongs to the
+  lane / record a gap-plan rule 6 / declare non-proceeding), **fix and
+  close with `gh issue close` + commit** (only with proof; another lane's front =
+  ask the owner for review, never touch). Interacting with an issue that
+  impacts IN-PROGRESS work is part of the loop, not a distraction.
+- **Two sessions, two crons (09/13, maintainer's request):** 9093 =
+  `ses_f69e2a3f7ffe9J10aWcHEUOfW8` (heartbeat auto-loop, `*/5`) and 9094 =
+  `ses_f69c2cb03ffe2zDYCqW7fesphi` (watcher all, `*/5`). **Never cross them:**
+  each tick injects ONLY into its session (`--attach` + recorded/resolved port).
+  The heartbeat of 9093 had been stopped; it was **reactivated** (`auto-loop.sh start
+  ses_f69e2a3f7ffe9J10aWcHEUOfW8 5`, dry-run proves attach 9093).
 
 
 ---
 
-## Fonte da verdade e modelo de colaboração (obrigatório)
+## Source of truth and collaboration model (mandatory)
 
-O ecossistema Kof (Koflang, Kof4J, Kof Native, Kof Editor) é **open source
-(GPLv3)** e **centralizado** em torno da mantenedora oficial, **Mel Santos**
-([@aminadojava](https://pt.linkedin.com/in/aminadojava)) — a **única fonte da
-verdade** e quem detém o controle da engenharia de baixo nível (compilador,
-injeção de Assembly direto na JDK, arquitetura CISC x86).
+The Kof ecosystem (Koflang, Kof4J, Kof Native, Kof Editor) is **open source
+(GPLv3)** and **centralized** around the official maintainer, **Mel Santos**
+([@aminadojava](https://pt.linkedin.com/in/aminadojava)) — the **only source of
+truth** and the one who holds control of the low-level engineering (compiler,
+injection of Assembly directly into the JDK, CISC x86 architecture).
 
-O desenvolvimento é **ativamente conduzido com agentes de IA documentados
-publicamente** — mas **o Kof não foi feito por IA**. A IA é uma **ferramenta**
-sob as rédeas da mantenedora: acelera e otimiza, mas não substitui a engenharia
-conceitual nem decide arquitetura/rumo. Consequências práticas para o agente:
+Development is **actively driven with publicly documented AI agents**
+— but **Kof was not made by AI**. AI is a **tool**
+under the maintainer's reins: it accelerates and optimizes, but it does not replace
+conceptual engineering nor decide architecture/direction. Practical consequences for the agent:
 
-1. **Ceticismo técnico.** IA é tratada com ceticismo — nunca com fé. Automação
-   sem critérios mascara falta de qualidade e imediatismo. Vale a "programação
-   raiz": rigor na compilação, vivência prática, código robusto.
-2. **Compile antes de entregar.** Alucinação é proibida. "Achar" que compila
-   não compila. O loop de verificação (§ abaixo) é inegociável.
-3. **Transparência cirúrgica de erros.** Erros vão para `docs/bugs-and-gaps/known-bugs.md`
-   com **causa raiz** + **menor repro**, inclusive regressões que a mantenedora
-   introduziu. Nunca "documentar em volta" do bug.
-4. **Discussão técnica antes de código.** Quando a dúvida é conceitual (semântica,
-   estouro de ponto flutuante, ABI), a contribuição é por **debate técnico** —
-   propostas/documentos de design comentados — não PR desordenado que muda
+1. **Technical skepticism.** AI is treated with skepticism — never with faith. Automation
+   without criteria masks lack of quality and immediacy. The "root
+   programming" applies: rigor in compilation, practical experience, robust code.
+2. **Compile before delivering.** Hallucination is forbidden. "Thinking" it compiles
+   does not compile. The verification loop (§ below) is non-negotiable.
+3. **Surgical transparency of errors.** Errors go to `docs/bugs-and-gaps/known-bugs.md`
+   with **root cause** + **minimal repro**, including regressions that the maintainer
+   introduced. Never "document around" the bug.
+4. **Technical discussion before code.** When the doubt is conceptual (semantics,
+   floating-point overflow, ABI), the contribution is through **technical debate** —
+   commented design proposals/documents — not a disorderly PR that changes
     .
-5. **Blindagem contra poluição.** Nunca misturar a linguagem Kof com termos
-   alheios ao domínio (jogos, etc.) em docs/código. Disclaimers e nomenclatura
-   são lei; violou, reverte.
-6. **Toda PR vem acompanhada de uma issue relacionada.** PR "solta" não entra.
-   Toda mudança proposta referencia uma issue aberta que a justifica —
-   rastreabilidade é lei, não preferência.
-7. **Entrega por agente exige prova de qualidade (§"Portão de qualidade").**
-   Antes de abrir PR/commitar/pushar, o agente responde ao **checklist de
-   pré-push (Q1–Q6)**. Um commit de agente sem teste no mesmo commit é
-   **rejeitado na revisão** — a mantenedora não é a primeira a descobrir o
-   bug. Se o agente não conseguiu rodar um gate (toolchain/qemu ausente),
-   **declara isso explicitamente** no commit/PR; nunca finge verde.
-8. **Sem regressão silenciosa.** O agente que deixa a branch não-compilável
-   ou a suíte vermelha (fora dos erros ambientais documentados) está violando
-   o portão: conserta na mesma unidade ou reverte. `git bisect`-hostil é o
-   pior legado que um agente pode deixar.
-7. **Identidade do git (12/09, decisão da mantenedora — identidade única).**
-   A regra antiga do `temmcode` (e-mail `aminadojava@gmail.com` no `--local`
-   para atribuir commits ao worker + bloco `"Kof-agent-worker"` em comentários
-   via proxy) foi **ABANDONADA a pedido da mantenedora** — dava dor de cabeça
-   demais (commit manual dela subindo como `temmcode` pelo `--local` do clone).
-   Vale agora: **uma identidade só, a dela**. O agente NUNCA configura
-   identidade (`git config user.*` com ou sem `--global` é proibido; nunca
-   escreve em `~/.gitconfig` nem no `.git/config`); usa a identidade efetiva
-   do repo/ambiente como está. Sem truque de e-mail, sem bloco de marcação
-   obrigatório em issues/PRs, **sem trailer `Co-authored-by`** (polui o log do
-   repo). Quando ela preparar algo exclusivo para os
-   agentes, essa regra volta numa forma nova.
+5. **Shielding against pollution.** Never mix the Kof language with terms
+   foreign to the domain (games, etc.) in docs/code. Disclaimers and nomenclature
+   are law; violated it, revert.
+6. **Every PR comes with a related issue.** A "loose" PR doesn't get in.
+   Every proposed change references an open issue that justifies it —
+   traceability is law, not a preference.
+7. **Delivery by an agent requires proof of quality (§"Quality gate").**
+   Before opening a PR/committing/pushing, the agent answers the **pre-push
+   checklist (Q1–Q6)**. An agent commit without a test in the same commit is
+   **rejected in review** — the maintainer is not the first to discover the
+   bug. If the agent couldn't run a gate (missing toolchain/qemu),
+   **state that explicitly** in the commit/PR; never fake green.
+8. **No silent regression.** The agent who leaves the branch non-compilable
+   or the suite red (outside the documented environmental errors) is violating
+   the gate: fix it in the same unit or revert. `git bisect`-hostile is the
+   worst legacy an agent can leave.
+7. **Git identity (09/12, maintainer's decision — single identity).**
+   The old `temmcode` rule (e-mail `aminadojava@gmail.com` in `--local`
+   to attribute commits to the worker + a `"Kof-agent-worker"` block in comments
+   via proxy) was **ABANDONED at the maintainer's request** — it caused too much
+   headache (her manual commit going up as `temmcode` due to the clone's `--local`).
+   What applies now: **a single identity, hers**. The agent NEVER configures
+   identity (`git config user.*` with or without `--global` is forbidden; it never
+   writes to `~/.gitconfig` nor to `.git/config`); it uses the effective identity
+   of the repo/environment as is. No e-mail trick, no mandatory marking
+   block in issues/PRs, **no `Co-authored-by` trailer** (pollutes the repo
+   log). When she prepares something exclusive for the
+   agents, that rule comes back in a new form.
 
-> Em resumo: a IA roda **sob as regras estritas da computação de verdade** —
-> documentação cirúrgica, zero alucinação, sem o hype do mercado.
+> In summary: AI runs **under the strict rules of real computing** —
+> surgical documentation, zero hallucination, without the market hype.
 
 ---
 
-## Coordenação multi-agente — DOING.md (obrigatório)
+## Multi-agent coordination — DOING.md (mandatory)
 
-Vários agentes trabalham em paralelo neste repo. **Antes de começar qualquer
-feature/gap, leia `DOING.md`:**
+Several agents work in parallel in this repo. **Before starting any
+feature/gap, read `DOING.md`:**
 
-- Se o item já tem **dono + estado `EM CURSO`**, não toque nele — escolha outro.
-- Ao começar um item, **reivindique no `DOING.md` no mesmo commit** (dono,
-  branch, arquivos que vai tocar).
-- **A cada commit, atualize sua linha** no `DOING.md` (o que fez, o que falta).
-- Ao concluir, marque `FEITO` com data + SHA + teste que prova, e feche o gap
-  em `docs/status.md`/`docs/backend-parity.md`.
-- Abandonou? Volte para `ABERTO` com nota do que funciona e o que falta.
-- **Dono sumiu = tarefa morta; reatribua.** Se um item está `EM CURSO` com dono
-  mas **não há commit novo na lane dele** (a linha não se move desde a
-  reivindicação, o dono não aparece no `git log`, ou o branch/arquivo citado não
-  existe), assuma que o agente **morreu no meio do turno** (crash, contexto
-  esgotado, sessão fechada sem fechar a unidade). O item não tem dono real:
-  qualquer agente pode **reivindicá-lo de novo** (troca o dono no `DOING.md`, no
-  mesmo commit do primeiro passo), reaproveitando o que o morto deixou (working
-  tree/branch) e seguindo. Antes de tocar, **verifique o estado real no código**
-  (o que compila, o que a suíte prova — nunca a memória do `DOING.md`) e note na
-  reivindicação o que o dono anterior deixou. Não espere o fantasma voltar nem
-  peça permissão — `EM CURSO` órfão é `ABERTO` disfarçado, e gap órfão é
-  trabalho perdido.
+- If the item already has **an owner + state `IN PROGRESS`**, don't touch it — choose another.
+- When starting an item, **claim it in the `DOING.md` in the same commit** (owner,
+  branch, files you're going to touch).
+- **On every commit, update your line** in the `DOING.md` (what you did, what's left).
+- When concluding, mark `DONE` with date + SHA + test that proves it, and close the gap
+  in `docs/status.md`/`docs/backend-parity.md`.
+- Abandoned it? Go back to `OPEN` with a note of what works and what's left.
+- **Owner vanished = dead task; reassign it.** If an item is `IN PROGRESS` with an owner
+  but **there is no new commit in their lane** (the line hasn't moved since the
+  claim, the owner doesn't appear in `git log`, or the cited branch/file doesn't
+  exist), assume the agent **died mid-turn** (crash, context
+  exhausted, session closed without closing the unit). The item has no real owner:
+  any agent can **claim it again** (change the owner in the `DOING.md`, in the
+  same commit as the first step), reusing what the dead one left (working
+  tree/branch) and continuing. Before touching it, **verify the real state in the code**
+  (what compiles, what the suite proves — never the `DOING.md`'s memory) and note in the
+  claim what the previous owner left. Don't wait for the ghost to return nor
+  ask permission — an orphan `IN PROGRESS` is a disguised `OPEN`, and an orphan gap is
+  lost work.
 
-Regra de ouro: **nunca dois agentes no mesmo gap ou no mesmo arquivo gigante**
-(`NativeRuntime.java`, `CompilerDriver.java`) ao mesmo tempo. Se for
-inevitável, combine no chat antes.
+Golden rule: **never two agents on the same gap or on the same giant file**
+(`NativeRuntime.java`, `CompilerDriver.java`) at the same time. If it's
+unavoidable, coordinate in the chat first.
 
-**Sincronização obrigatória (pull antes, push depois):** antes de **todo
-commit** — `git fetch` + `git pull --rebase` (com working tree sujo, use
-`git stash push` antes e `git stash pop` depois, ou `--autostash`) e
-**verifique se há conflito** (rebase parado / `<<<<<<<`): conflito é resolvido
-na hora, nunca commitado por cima. Depois do commit, **`git push`** — o DOING.md
-só coordena quem *vê* o remoto; commit local não reivindicado é tarefa fantasma
-para os outros agentes. Depois do pull, **releia o DOING.md**: o que era seu
-"próximo passo" pode ter sido feito ou reivindicado por outro agente no
-intervalo.
+**Mandatory synchronization (pull before, push after):** before **every
+commit** — `git fetch` + `git pull --rebase` (with a dirty working tree, use
+`git stash push` before and `git stash pop` after, or `--autostash`) and
+**check whether there's a conflict** (stalled rebase / `<<<<<<<`): a conflict is resolved
+right away, never committed on top. After the commit, **`git push`** — the DOING.md
+only coordinates those who *see* the remote; an unclaimed local commit is a ghost task
+for the other agents. After the pull, **re-read the DOING.md**: what was your
+"next step" may have been done or claimed by another agent in the
+interval.
 
-### Lição aprendida (04/09) — trabalhe SEMPRE em partes pequenas
+### Lesson learned (09/04) — ALWAYS work in small parts
 
-> **Nunca tente gravar/produzir um artefato grande de uma vez.** O plano de
-> refactoring `docs/architecture/PLAN-SOLID-500.md` (FECHADO 13/09; 120 classes, 8 fases) foi
-> perdido uma vez porque o agente tentou escrever o documento inteiro num único
-> `write`. A lição:
+> **Never try to write/produce a large artifact all at once.** The
+> refactoring plan `docs/architecture/PLAN-SOLID-500.md` (CLOSED 09/13; 120 classes, 8 phases) was
+> lost once because the agent tried to write the entire document in a single
+> `write`. The lesson:
 
-- **Um passo por vez.** Cada ação (write/edit/commit) resolve UMA unidade
-  coesa e pequena. Se a resposta precisa de >1 ação grande, divida em várias
-  respostas com commit entre elas.
-- **Commite cedo e sempre.** Toda unidade concluída vira commit isolado
-  (`git add -A && git commit`), mesmo que "pareça incompleta" — o próximo
-  passo continua de onde parou.
-- **Arquivos grandes são editados em pedaços.** Ler/editar um arquivo de 17k
-  linhas aos poucos (nunca `read` de 2000+ linhas de uma vez se não precisar).
-- **Se a tarefa parece maior que a janela**, crie o esqueleto/documento-enxuto
-  primeiro, commite, e preencha incrementalmente.
-- **A regra ≤500 linhas/classe existe exatamente porque** "fazer tudo de uma
-  vez" vira código impossível de carregar/manter. O agente é parte do sistema:
-  agir pequeno é seguir a própria regra que aplicamos ao código.
-- **Faixas do gate `check_500` (decisão da mantenedora, 13/09):** ≤500 é alvo;
-  **500–599 é TOLERADO** (dívida viva — o gate avisa, não quebra o CI; split
-  continua sendo o caminho); **≥600 é CRÍTICO** (falha o CI, refactor/split
-  obrigatório antes do merge). Dívida já travada no baseline nunca cresce
-  (aproximar-se de 600 = split agora). Ao splitar, tire a linha do baseline com
+- **One step at a time.** Each action (write/edit/commit) resolves ONE cohesive
+  and small unit. If the response needs >1 large action, split it into several
+  responses with a commit between them.
+- **Commit early and always.** Every concluded unit becomes an isolated commit
+  (`git add -A && git commit`), even if it "looks incomplete" — the next
+  step continues from where it stopped.
+- **Large files are edited in pieces.** Read/edit a file of 17k
+  lines little by little (never a `read` of 2000+ lines at once if you don't need it).
+- **If the task seems bigger than the window**, create the skeleton/lean document
+  first, commit, and fill it in incrementally.
+- **The ≤500 lines/class rule exists exactly because** "doing everything at once"
+  becomes code impossible to load/maintain. The agent is part of the system:
+  acting small is following the very rule we apply to the code.
+- **`check_500` gate ranges (maintainer's decision, 09/13):** ≤500 is the target;
+  **500–599 is TOLERATED** (live debt — the gate warns, doesn't break CI; split
+  remains the path); **≥600 is CRITICAL** (fails CI, refactor/split
+  mandatory before merge). Debt already locked in the baseline never grows
+  (approaching 600 = split now). When splitting, remove the line from the baseline with
   `./scripts/check_500.sh --update-baseline`.
 
-Isso vale para código, docs, planos e testes: **pequeno é sustentável.**
+This applies to code, docs, plans and tests: **small is sustainable.**
 
-### Status visível — `todowrite` (obrigatório, a cada etapa)
+### Visible status — `todowrite` (mandatory, at every stage)
 
-`DOING.md` é a memória **persistente** do repo (sobrevive entre sessões e
-agentes). O **`todowrite`** é o status **visível ao humano nesta sessão** —
-uma lista de tarefas que a CLI renderiza em tempo real. Os dois são
-**complementares**, nunca substitutos:
+`DOING.md` is the **persistent** memory of the repo (survives across sessions and
+agents). **`todowrite`** is the status **visible to the human in this session** —
+a task list that the CLI renders in real time. The two are
+**complementary**, never substitutes:
 
-- **A cada etapa de pensamento entre implementações**, atualize o `todowrite`:
-  marque `completed` o que terminou, `in_progress` exatamente **um** item
-  (o que você está atacando agora), `pending` o que falta.
-- Não espere o fim do turno nem o commit: a pessoa acompanhando precisa ver
-  o progresso **enquanto** você trabalha (ex.: ao trocar de módulo — JSON →
-  http → spawn — mova o item anterior para `completed` e abra o próximo).
-- Um item só vai para `completed` quando a prova existe (teste verde, qemu
-  rodando, suíte passando) — nunca por intenção.
-- Se uma etapa destrava trabalho novo que não estava previsto, **adicione**
-  ao `todowrite` na hora.
-- Ao fim da sessão, o `DOING.md` continua sendo a fonte da verdade para o
-  **próximo** agente; o `todowrite` é só a janela desta conversa.
+- **At every thinking stage between implementations**, update the `todowrite`:
+  mark `completed` what finished, `in_progress` exactly **one** item
+  (what you're attacking now), `pending` what's left.
+- Don't wait for the end of the turn nor the commit: the person following along needs to see
+  the progress **while** you work (e.g., when switching modules — JSON →
+  http → spawn — move the previous item to `completed` and open the next).
+- An item only moves to `completed` when the proof exists (green test, qemu
+  running, suite passing) — never by intention.
+- If a stage unlocks new work that wasn't planned, **add** it
+  to the `todowrite` right away.
+- At the end of the session, the `DOING.md` remains the source of truth for the
+  **next** agent; the `todowrite` is just the window of this conversation.
 
 ---
 
-## Organização de documentação (obrigatório — 09/09)
+## Documentation organization (mandatory — 09/09)
 
-A estrutura de documentação tem **três estados**, e a classificação reflete o
-estado do **SOFTWARE**, não o do texto:
+The documentation structure has **three states**, and the classification reflects the
+state of the **SOFTWARE**, not of the text:
 
-| Pasta | Conteúdo | Significado |
+| Folder | Content | Meaning |
 |---|---|---|
-| `docs/` | documentação consolidada e válida | **somente** o que já foi implementado, validado ou decidido |
-| `docs/development/` | trabalho atualmente em desenvolvimento | **somente** itens com implementação, validação, testes ou integração **pendentes** |
-| `docs/development/future/` | planejado para depois | ideias/funcionalidades **não** em desenvolvimento atual |
-| `docs/development/DECISIONS.md` | **registro de decisões da mantenedora** (a pasta `decision-pending/` foi EXTINTA 13/09 — os 6 planos viraram este doc único) | decisão tomada no chat **mora aqui** (data + opção + evidência), nunca só no chat; item decidido vira fila no `roadmap.md` §23/DOING no mesmo commit — nunca atacar frente sem decisão travada aqui (regra 6) |
-| `docs/bugs-and-gaps/` | **registros vivos** de bugs, gaps de spec e matrizes de conformidade/paridade | fila por alvo (regra 3 do congelamento); não é "plano" — atualiza no MESMO commit que fecha o item |
-| `docs/audits/` | **auditorias** — foto de estado (planejado × realizado) e registros datados de comparação | apontam trabalho, nunca são fila: o que uma auditoria marca pendente tem casa própria (bug → `bugs-and-gaps/`, código → `development/`, decisão → `decision-pending/`); ao fechar o apontado, atualiza a linha da auditoria no MESMO commit |
+| `docs/` | consolidated and valid documentation | **only** what has already been implemented, validated or decided |
+| `docs/development/` | work currently in development | **only** items with implementation, validation, tests or integration **pending** |
+| `docs/development/future/` | planned for later | ideas/features **not** in current development |
+| `docs/development/DECISIONS.md` | **record of the maintainer's decisions** (the `decision-pending/` folder was EXTINCT 09/13 — the 6 plans became this single doc) | a decision made in the chat **lives here** (date + option + evidence), never only in the chat; a decided item becomes a queue in `roadmap.md` §23/DOING in the same commit — never attack a front without a decision locked here (rule 6) |
+| `docs/bugs-and-gaps/` | **living records** of bugs, spec gaps and conformance/parity matrices | queue by target (rule 3 of the freeze); it's not a "plan" — it updates in the SAME commit that closes the item |
+| `docs/audits/` | **audits** — snapshot of state (planned × accomplished) and dated comparison records | they point out work, never are a queue: what an audit marks pending has its own home (bug → `bugs-and-gaps/`, code → `development/`, decision → `decision-pending/`); when closing what was pointed out, update the audit's line in the SAME commit |
 
-> **Refactor de clareza (13/09, decisão da mantenedora):** bugs/gaps/matrizes
+> **Clarity refactor (09/13, maintainer's decision):** bugs/gaps/matrices
 > (`known-bugs.md`, `conformance-matrix.md`, `ecosystem-coverage.md`,
-> `KOFUI-AUDIT.md`, `specification-gaps.md`) **não são backlog de
-> desenvolvimento** — moram em `docs/bugs-and-gaps/`. Documentos 100% parados
-> por decisão **não têm mais pasta própria**: os 6 que viviam em
+> `KOFUI-AUDIT.md`, `specification-gaps.md`) **are not a development
+> backlog** — they live in `docs/bugs-and-gaps/`. Documents 100% stopped
+> by decision **no longer have their own folder**: the 6 that lived in
 > `decision-pending/` (`PLATFORM-PLAN.md`, `APPLICATION_MODEL.md`,
 > `security-plan.md`, `plan-platform-completion.md`,
-> `plan-spring-independence.md`, `planning-stdlib-time-design.md`) foram
-> inventariados, auditados contra o código e **ratificados 13/09** num doc
-> único — `docs/development/DECISIONS.md` (a pasta foi apagada). Auditorias
+> `plan-spring-independence.md`, `planning-stdlib-time-design.md`) were
+> inventoried, audited against the code and **ratified 09/13** in a single
+> doc — `docs/development/DECISIONS.md` (the folder was deleted). Audits
 > (`roadmap-audit.md`,
 > `complexity-audit.md`, `PLANNING-FUTURE-AUDIT.md`,
-> `planning-future-reconcile.md`) moram em `docs/audits/` — não são fila de
-> desenvolvimento nem registro de gap, são fotos de estado.
-> `docs/development/` fica **só** com
-> trabalho que anda (planos com código em andamento e refactors). Um agente da lane **docs** não mexe em bug/gap (são de
-> outra lane) — só mantém esses registros sincronizados com o código.
+> `planning-future-reconcile.md`) live in `docs/audits/` — they are neither a
+> development queue nor a gap record, they are snapshots of state.
+> `docs/development/` keeps **only**
+> work that moves (plans with code in progress and refactors). A **docs** lane agent doesn't touch bug/gap (they belong to
+> another lane) — it only keeps those records synchronized with the code.
 
-> **`docs/development/` NÃO é arquivo morto, histórico nem depósito de
-> documentação.** A presença de um documento lá significa explicitamente:
-> *"existe trabalho técnico pendente para este item."*
+> **`docs/development/` is NOT a dead archive, history nor a documentation
+> dump.** The presence of a document there explicitly means:
+> *"there is pending technical work for this item."*
 
-### Regra fundamental — auditar antes de iniciar
+### Fundamental rule — audit before starting
 
-**Antes de iniciar qualquer nova implementação**, o agente DEVE vasculhar
-`docs/development/` e comparar cada documento com o estado REAL do código,
-testes, build e commits. Para cada item:
+**Before starting any new implementation**, the agent MUST comb through
+`docs/development/` and compare each document with the REAL state of the code,
+tests, build and commits. For each item:
 
-1. **Já implementado e validado** → atualizar a doc se necessário, **mover
-   para `docs/`**, remover referências antigas que indiquem desenvolvimento.
-2. **Parcialmente implementado** → manter em `docs/development/`, identificar
-   exatamente o que falta, **implementar o que falta**, rodar os testes;
-   somente após a conclusão mover para `docs/`.
-3. **Apenas planejado** (sem implementação em andamento) → mover para
+1. **Already implemented and validated** → update the doc if necessary, **move
+   it to `docs/`**, remove old references that indicate development.
+2. **Partially implemented** → keep it in `docs/development/`, identify
+   exactly what's missing, **implement what's missing**, run the tests;
+   only after conclusion move it to `docs/`.
+3. **Only planned** (without implementation in progress) → move it to
    `docs/development/future/`.
- 4. **Obsoleto, duplicado ou contradizendo o estado atual** → corrigir ou
-    consolidar; nunca manter documentação falsa/desatualizada em
+ 4. **Obsolete, duplicated or contradicting the current state** → fix or
+    consolidate; never keep false/outdated documentation in
     `docs/development/`.
 
-### Regra de prioridade — `.md` soltos primeiro (13/09, orientação da mantenedora)
+### Priority rule — loose `.md` first (09/13, maintainer's guidance)
 
-> **Implemente PRIMEIRO os `.md` soltos em `docs/development/`** — eles são o
-> trabalho **sem impedimento**: plano ratified, escopo definido, nada parado.
-> Documentos em pastas dentro de `docs/development/` (`refactoring/`,
-> `future/`) **têm impedimento** e não são fila enquanto o
-> impedimento existir.
+> **Implement FIRST the loose `.md` in `docs/development/`** — they are the
+> work **without impediment**: ratified plan, defined scope, nothing stopped.
+> Documents in folders inside `docs/development/` (`refactoring/`,
+> `future/`) **have an impediment** and are not a queue while the
+> impediment exists.
 
-- **Decisão no chat vira DECISIONS.md no mesmo commit:** quando a mantenedora
-  decide algo no chat, o agente **trava a resposta em
-  `docs/development/DECISIONS.md`** (data + opção + evidência) **e abre a
-  fila** no `roadmap.md` §23/DOING — decidir sem registrar = decisão
-  invisível; registrar sem abrir fila = decisão morta. Frente sem linha em
-  DECISIONS.md **não é atacada** (regra 6).
-- **Ordem de seleção de tarefa:** (1) `.md` solto em `development/` com
-  implementação pendente e sem dono `EM CURSO`; (2) fila recém-aberta de
-  `DECISIONS.md`; (3) só então o resto da fila.
-- **`future/`** permanece intocável sem promoção explícita (regra dos três
-  estados); um item de `future/` **não** vira prioridade só porque está
-  "planejado".
+- **A decision in the chat becomes DECISIONS.md in the same commit:** when the maintainer
+  decides something in the chat, the agent **locks the answer in
+  `docs/development/DECISIONS.md`** (date + option + evidence) **and opens the
+  queue** in `roadmap.md` §23/DOING — deciding without recording = invisible
+  decision; recording without opening the queue = dead decision. A front without a line in
+  DECISIONS.md **is not attacked** (rule 6).
+- **Task selection order:** (1) loose `.md` in `development/` with
+  pending implementation and without an `IN PROGRESS` owner; (2) newly opened queue from
+  `DECISIONS.md`; (3) only then the rest of the queue.
+- **`future/`** remains untouchable without explicit promotion (the three-states
+  rule); an item in `future/` **does not** become a priority just because it's
+  "planned".
 
-### Regra de conclusão
+### Conclusion rule
 
-**NADA que esteja concluído pode permanecer em `docs/development/`.** A ordem
-obrigatória ao concluir uma tarefa é:
-
-```
-implementar → testar → validar → atualizar documentação → mover de development/ para docs/
-```
-
-A movimentação do documento **não é opcional nem tarefa administrativa
-secundária** — faz parte da definição de "concluído".
-
-### Regra de retomada
-
-Ao retomar o trabalho no repositório:
-
-1. Ler `DOING.md`, `AGENTS.md` e `docs/status.md`.
-2. Vasculhar `docs/development/`.
-3. Para cada documento, verificar o estado real da implementação no código e
-   nos testes.
-4. Corrigir a classificação dos documentos.
-5. **Finalizar primeiro o trabalho que já está em desenvolvimento** antes de
-   iniciar novas funcionalidades.
-6. Após cada conclusão, mover imediatamente a documentação para `docs/`.
-7. Somente depois de esgotar o trabalho em desenvolvimento, selecionar novos
-   itens.
-8. Itens em `future/` **não** são trabalho atual sem decisão explícita de
-   promovê-los para desenvolvimento.
-
-### Proibição de cascata documental
-
-- Não criar documentos de planejamento, auditoria, roadmap ou TODO **apenas
-  para evitar implementar** uma tarefa já iniciada.
-- Não transformar uma tarefa em desenvolvimento em outra tarefa de planejamento.
-- Se o código já começou a ser implementado, o objetivo é **terminar a
-  implementação**, testar e consolidar a documentação.
-
-### Critério objetivo e prioridade
+**NOTHING that is concluded may remain in `docs/development/`.** The mandatory
+order when concluding a task is:
 
 ```
-development/ + implementação concluída  = doc MAL classificada (mover p/ docs/)
-development/ + implementação pendente   = correto
-future/      + implementação não iniciada = correto
-docs/        + funcional implementada/validada = correto
+implement → test → validate → update documentation → move from development/ to docs/
 ```
 
-Ordem de prioridade do agente: (1) concluir o que já está em
-`docs/development/`; (2) validar e consolidar; (3) mover doc concluída para
-`docs/`; (4) só então escolher novo trabalho; (5) `future/` só entra em
-execução sem trabalho atual pendente ou por decisão explícita da mantenedora.
+Moving the document **is neither optional nor a secondary administrative
+task** — it is part of the definition of "concluded".
+
+### Resumption rule
+
+When resuming work in the repository:
+
+1. Read `DOING.md`, `AGENTS.md` and `docs/status.md`.
+2. Comb through `docs/development/`.
+3. For each document, verify the real state of the implementation in the code and
+   in the tests.
+4. Fix the classification of the documents.
+5. **Finish first the work that is already in development** before
+   starting new features.
+6. After each conclusion, immediately move the documentation to `docs/`.
+7. Only after exhausting the work in development, select new
+   items.
+8. Items in `future/` **are not** current work without an explicit decision to
+   promote them to development.
+
+### Prohibition of documentary cascade
+
+- Don't create planning, audit, roadmap or TODO documents **only
+  to avoid implementing** a task already started.
+- Don't turn a task in development into another planning task.
+- If the code has already started being implemented, the goal is to **finish the
+  implementation**, test and consolidate the documentation.
+
+### Objective criterion and priority
+
+```
+development/ + implementation concluded  = doc MISCLASSIFIED (move to docs/)
+development/ + implementation pending    = correct
+future/      + implementation not started = correct
+docs/        + functionality implemented/validated = correct
+```
+
+Agent priority order: (1) conclude what is already in
+`docs/development/`; (2) validate and consolidate; (3) move the concluded doc to
+`docs/`; (4) only then choose new work; (5) `future/` only enters
+execution with no pending current work or by explicit decision of the maintainer.
 
 ---
 
-## Diretriz primária
+## Primary guideline
 
-> **Kof deve ser mais simples que qualquer alternativa.**
+> **Kof must be simpler than any alternative.**
 
-O propósito da linguagem é reduzir verbosidade. Se o código que você está
-gerando em Kof parece Java, C# ou Go traduzido, **ele está errado** — mesmo
-que compile. O teste do litmo, antes de emitir qualquer código:
+The purpose of the language is to reduce verbosity. If the code you're
+generating in Kof looks like translated Java, C# or Go, **it is wrong** — even
+if it compiles. The litmus test, before emitting any code:
 
-> *"Um humano escreceria isso em Kof, ou eu traduzi outra linguagem?"*
-> *"Se um reviewer do Kof ver isso num PR, ele fica constrangido?"*
+> *"Would a human write this in Kof, or did I translate another language?"*
+> *"If a Kof reviewer saw this in a PR, would they be embarrassed?"*
 
-Se a resposta for "traduzi" ou "sim", reescreva.
+If the answer is "I translated" or "yes", rewrite it.
 
-**Caso canônico (nunca se repete):**
+**Canonical case (never repeats):**
 
 ```kof
-// ❌ NUNCA — 50 || seguidos é Java disfarçado de Kof
+// ❌ NEVER — 50 || in a row is Java disguised as Kof
 Bool isQuery(String op) {
     return op == "GetSession" || op == "GetAccess" || op == "GetDashboard"
         || op == "GetToday" || op == "GetTodayBoard" || op == "ListIntakes"
@@ -523,7 +525,7 @@ Bool isQuery(String op) {
 ```
 
 ```kof
-// ✅ IDIOMÁTICO — a linguagem tem a feature; use-a
+// ✅ IDIOMATIC — the language has the feature; use it
 Bool isQuery(String op) {
     val known = setOf(
         "GetSession", "GetAccess", "GetDashboard", "GetToday",
@@ -534,308 +536,308 @@ Bool isQuery(String op) {
 }
 ```
 
-> *"Por que a Kof deixou você escrever 50 `||`?"* — a resposta nunca é
-> "aprenda a escrever melhor". É "use a abstração da linguagem".
+> *"Why did Kof let you write 50 `||`?"* — the answer is never
+> "learn to write better". It is "use the language's abstraction".
 
 ---
 
-## Regras de ferro (negociáveis com o compilador, não com o estilo)
+## Iron rules (negotiable with the compiler, not with style)
 
-1. **Intenção, não mecanismo.** `spawn` (não `Thread`), `setOf().contains()`
-   (não `||`), `==` (não `.equals()`), `json.encode` (não parser manual).
-2. **Complexidade pertence à plataforma.** JSON, DB, HTTP, cache, crypto,
-   UI já existem na stdlib (`kof.*`). Reimplementar = anti-pattern.
-3. **Represente o domínio, não a implementação acidental.** `List<T>`/`Map<K,V>`/
-   `Set<T>`, não linked-list manual.
-4. **Zero cerimônia.** Sem getters/setters, sem builders, sem utility classes,
-   sem camadas Service/Repository/Controller.
-5. **Nunca alucine sintaxe.** Se não está em `training/`, **compile e confirme**
-   antes de usar. Sintaxe que não compila é pior que sintaxe verbosa.
-6. **Multi-target honesto.** Código que só roda em um target precisa de
-   diagnóstico claro (gap `XXX00x`), nunca fallback silencioso.
-7. **Nome descreve responsabilidade, nunca posição.** `JsRuntimeUiMathDouble`,
-   `RuntimeStringsWords` — sim; `...Math2`, `...V2`, `...New`, `...Bak`,
-   `stdmath2` — não. Sufixo numérico é lixo de co-processador (só existe para
-   não colidir com um nome que ninguém entendeu). Ao splitar por gate ≤500, o
-   arquivo novo ganha nome pelo que **contém** (a responsabilidade que
-   saiu), não por quantos irmãos já existem. Legibilidade vem antes de
-   qualquer economia de digitação.
+1. **Intention, not mechanism.** `spawn` (not `Thread`), `setOf().contains()`
+   (not `||`), `==` (not `.equals()`), `json.encode` (not a manual parser).
+2. **Complexity belongs to the platform.** JSON, DB, HTTP, cache, crypto,
+   UI already exist in the stdlib (`kof.*`). Reimplementing = anti-pattern.
+3. **Represent the domain, not the accidental implementation.** `List<T>`/`Map<K,V>`/
+   `Set<T>`, not a manual linked-list.
+4. **Zero ceremony.** No getters/setters, no builders, no utility classes,
+   no Service/Repository/Controller layers.
+5. **Never hallucinate syntax.** If it's not in `training/`, **compile and confirm**
+   before using it. Syntax that doesn't compile is worse than verbose syntax.
+6. **Honest multi-target.** Code that only runs on one target needs a
+   clear diagnostic (gap `XXX00x`), never a silent fallback.
+7. **A name describes responsibility, never position.** `JsRuntimeUiMathDouble`,
+   `RuntimeStringsWords` — yes; `...Math2`, `...V2`, `...New`, `...Bak`,
+   `stdmath2` — no. A numeric suffix is co-processor garbage (it exists only to
+   not collide with a name nobody understood). When splitting due to the ≤500 gate, the
+   new file is named for what it **contains** (the responsibility that
+   left), not for how many siblings already exist. Readability comes before
+   any typing economy.
 
 ---
 
-## Portão de qualidade — "nenhum bug sobe" (obrigatório, 13/09 — **UNIVERSAL**)
+## Quality gate — "no bug ships" (mandatory, 09/13 — **UNIVERSAL**)
 
-> **Prioridade nº 1 do projeto é QUALIDADE, não volume de entrega.** Um commit
-> que adiciona feature sem prova é pior que um commit que não existe: ele
-> transfere o custo do bug para a próxima sessão e para a mantenedora.
+> **The project's priority No. 1 is QUALITY, not delivery volume.** A commit
+> that adds a feature without proof is worse than a commit that doesn't exist: it
+> transfers the cost of the bug to the next session and to the maintainer.
 >
-> **Esta regra é universal: vale para TODAS as branches** (`beta-0.4.0`,
-> `wip-*`, `fix/*`, `issue-lane`, `docs/*`, feature branches, forks), **para
-> todo agente, toda lane e toda unidade** — não só a branch de release. Um
-> push que quebra o build em QUALQUER branch é uma violação do portão. Não é
-> negociável com "o teste já passava antes", "é só um WIP" ou "outro agente
-> vê depois".
+> **This rule is universal: it applies to ALL branches** (`beta-0.4.0`,
+> `wip-*`, `fix/*`, `issue-lane`, `docs/*`, feature branches, forks), **to
+> every agent, every lane and every unit** — not only the release branch. A
+> push that breaks the build on ANY branch is a violation of the gate. It is not
+> negotiable with "the test was already passing before", "it's just a WIP" or "another agent
+> sees it later".
 
-### Q0. O bug se CONSERTA; o teste só PROVA
+### Q0. The bug is FIXED; the test only PROVES
 
-> **Consertar o bug é o trabalho. O teste é a prova de que ele morreu — nunca
-> um substituto para a correção.** É proibido entregar "o teste que reproduz o
-> bug" e deixar o código quebrado; é proibido também "documentar em volta" ou
-> rebaixar a asserção para o teste passar. A ordem é sempre:
+> **Fixing the bug is the work. The test is the proof that it died — never
+> a substitute for the fix.** It is forbidden to deliver "the test that reproduces the
+> bug" and leave the code broken; it is also forbidden to "document around" or
+> lower the assertion so the test passes. The order is always:
 >
-> **reproduzir (menor repro) → consertar a causa raiz → provar com o teste
-> que falharia antes → rodar a suíte completa.**
+> **reproduce (minimal repro) → fix the root cause → prove with the test
+> that would fail before → run the full suite.**
 
-- **Bug fix entrega o código corrigido + o teste de regressão no mesmo commit.**
-  Faltando qualquer um dos dois, o commit não existe.
-- **Corrigir a causa raiz, não o sintoma.** Um `if` que esconde a exceção, um
-  `try/catch` que engole, ou um valor default que mascara o erro **não é fix** —
-  é bug adiado. Se a correção exige mudança de contrato/operador/ordem de
-  avaliação, é **regra 6**: vira plano, nunca edição silenciosa.
-- **Build quebrado é o bug mais grave.** Se o seu commit deixa a branch
-  não-compilável (ex.: `7f174a6f`, `usesPow` não declarado), a correção é
-  **prioridade zero** — conserta na mesma unidade e pusha, não espera o próximo.
+- **Bug fix delivers the fixed code + the regression test in the same commit.**
+  Missing either of the two, the commit doesn't exist.
+- **Fix the root cause, not the symptom.** An `if` that hides the exception, a
+  `try/catch` that swallows, or a default value that masks the error **is not a fix** —
+  it's a postponed bug. If the fix requires a change of contract/operator/order of
+  evaluation, it's **rule 6**: it becomes a plan, never a silent edit.
+- **A broken build is the most serious bug.** If your commit leaves the branch
+  non-compilable (e.g., `7f174a6f`, `usesPow` not declared), the fix is
+  **priority zero** — fix it in the same unit and push, don't wait for the next.
 
-### Q1. Toda mudança de código vem com teste que a PROVA
+### Q1. Every code change comes with a test that PROVES it
 
-- **Feature nova → teste novo.** Sem exceção. "Implementei X" sem teste que
-  execute X é entrega inválida (o `pow` de 13/09 subiu sem teste e quebrou o
-  build da release — não se repete).
-- **Bug fix → teste de regressão** que falharia no código velho e passa no
-  novo. O teste é a prova de que o bug morreu; sem ele, o bug volta.
-- **Refactor → mesma suíte + golden E2E por target** (regra 3 do Congelamento).
-- **O teste entra no MESMO commit da mudança.** Teste depois = teste que nunca
-  vem. Se o commit não tem a prova, o commit não existe.
+- **New feature → new test.** No exception. "I implemented X" without a test that
+  executes X is invalid delivery (the `pow` of 09/13 went up without a test and broke the
+  release build — it doesn't repeat).
+- **Bug fix → regression test** that would fail on the old code and passes on the
+  new one. The test is the proof that the bug died; without it, the bug comes back.
+- **Refactor → same suite + golden E2E per target** (rule 3 of the Freeze).
+- **The test goes in the SAME commit as the change.** Test later = test that never
+  comes. If the commit doesn't have the proof, the commit doesn't exist.
 
-### Q2. Prova de compilação ANTES de qualquer push
+### Q2. Compilation proof BEFORE any push
 
 ```bash
-mvn -o -pl kof-compiler -am compile -q     # falha aqui = NÃO PUSHA
+mvn -o -pl kof-compiler -am compile -q     # failure here = DO NOT PUSH
 ```
 
-O caso `7f174a6f` (pow com `usesPow` não declarado) deixou a branch de release
-**não-compilável** para todos os agentes. **Regra dura: agente que não roda o
-`compile` do módulo antes do push está quebrando o repo.** Se o gate completo
-não foi rodado, o commit/mensagem diz isso explicitamente — nunca finge verde.
+The `7f174a6f` case (pow with `usesPow` not declared) left the release branch
+**non-compilable** for all agents. **Hard rule: an agent who doesn't run the
+module's `compile` before pushing is breaking the repo.** If the full gate
+wasn't run, the commit/message says so explicitly — never fakes green.
 
-### Q3. Além do caminho feliz — a matriz mínima de cenários
+### Q3. Beyond the happy path — the minimum scenario matrix
 
-Todo teste novo cobre, no mínimo, **o caminho feliz + as bordas relevantes**.
-O agente escolhe as que se aplicam e **registra no commit** o que cobriu:
+Every new test covers, at minimum, **the happy path + the relevant edges**.
+The agent chooses the ones that apply and **records in the commit** what it covered:
 
-| Cenário | Exemplo |
+| Scenario | Example |
 |---|---|
-| **Borda numérica** | `0`, negativo, overflow, `NaN`/`Infinity`, `-0.0`, expoente negativo/fracionário |
-| **Vazio/nulo** | coleção vazia, String `""`, `null`/`Nullable`, ausência de chave |
-| **Limite/índice** | primeiro/último elemento, fora-de-faixa, um-past-the-end |
-| **Erro esperado** | entrada inválida → diagnóstico/gap `XXX00x` (nunca silêncio, R6) |
-| **Cross-target** | JVM × Native × Script × JS com a MESMA saída (ou gap diagnosticado) |
-| **Idempotência/repetição** | rodar 2× dá o mesmo resultado; estado não vaza |
-| **Concorrência** | `spawn`/`await`, corrida, cancelamento, isolamento entre workers |
-| **Interop/limite de recurso** | arquivo inexistente, rede fora, lib ausente, memória |
+| **Numeric edge** | `0`, negative, overflow, `NaN`/`Infinity`, `-0.0`, negative/fractional exponent |
+| **Empty/null** | empty collection, String `""`, `null`/`Nullable`, missing key |
+| **Limit/index** | first/last element, out-of-range, one-past-the-end |
+| **Expected error** | invalid input → diagnostic/gap `XXX00x` (never silence, R6) |
+| **Cross-target** | JVM × Native × Script × JS with the SAME output (or diagnosed gap) |
+| **Idempotency/repetition** | running 2× gives the same result; state doesn't leak |
+| **Concurrency** | `spawn`/`await`, race, cancellation, isolation between workers |
+| **Interop/resource limit** | nonexistent file, network down, missing lib, memory |
 
-- **Proibido entregar só o happy path** (self-check 7). Se o caso só tem o
-  caminho feliz testável, **diga por quê no commit** (ex.: "só o determinístico
-  é observável; o resto é ambiente").
-- **Golden = medição real, nunca memória.** O valor esperado sai do oracle JVM
-  executado (ou harness C isolado), nunca de "acho que dá isso".
-- **`assertEquals` com mensagem** que identifica o caso e o target — um vermelho
-  precisa ser diagnosticável sem re-rodar.
+- **Forbidden to deliver only the happy path** (self-check 7). If the case only has the
+  testable happy path, **say why in the commit** (e.g., "only the deterministic
+  is observable; the rest is environment").
+- **Golden = real measurement, never memory.** The expected value comes from the executed
+  JVM oracle (or isolated C harness), never from "I think it gives this".
+- **`assertEquals` with a message** that identifies the case and the target — a red
+  needs to be diagnosable without re-running.
 
-### Q4. Cace o bug ANTES de subir (postura de caça, não de entrega)
+### Q4. Hunt the bug BEFORE pushing (hunting posture, not delivery)
 
-Antes de cada commit, o agente **tenta quebrar a própria mudança**:
+Before every commit, the agent **tries to break its own change**:
 
-1. **Casos extremos:** o que acontece com entrada vazia/nula/negativa/gigante?
-2. **Cross-target:** os 3+ targets concordam? Onde divergem, é gap ou bug?
-3. **Fronteira de contrato:** a mudança toca operador/precedência/ordem de
-   avaliação/null-safety/`==`/exceções/`spawn`/coleções? Então é **regra 6** —
-   vira plano, não edição.
-4. **Regressão vizinha:** rode a suíte completa, não só a classe nova.
-5. **O que o teste NÃO cobre?** Escreva-o — é exatamente aí que o bug mora.
+1. **Extreme cases:** what happens with empty/null/negative/huge input?
+2. **Cross-target:** do the 3+ targets agree? Where they diverge, is it a gap or a bug?
+3. **Contract boundary:** does the change touch operator/precedence/order of
+   evaluation/null-safety/`==`/exceptions/`spawn`/collections? Then it's **rule 6** —
+   it becomes a plan, not an edit.
+4. **Neighboring regression:** run the full suite, not just the new class.
+5. **What does the test NOT cover?** Write it — that's exactly where the bug lives.
 
-> Um bug achado por um agente antes do push custa minutos. O mesmo bug subindo
-> custa uma sessão inteira de outro agente + a confiança da mantenedora. **Achar
-> o bug é parte do trabalho, não uma fase opcional.**
+> A bug found by an agent before the push costs minutes. The same bug shipping
+> costs an entire session of another agent + the maintainer's trust. **Finding
+> the bug is part of the work, not an optional phase.**
 
-### Q5. Nada de "verde falso"
+### Q5. No "false green"
 
-- Teste que passa por acidente (assert fraco, `success=true` sem executar
-  output, mensagem de erro aceita como saída esperada) é **bug disfarçado**.
-  Proibido "consertar" teste relaxando a asserção (JavaFX, §149 — precedentes).
-- Skip é **honesto e explícito** (`assumeTrue` de toolchain ausente), nunca
-  para esconder falha.
-- Se a suíte fica vermelha por causa da sua mudança, **o commit não entra** —
-  nem "com nota", nem "depois eu volto". Corrige ou reverte.
+- A test that passes by accident (weak assert, `success=true` without executing
+  output, error message accepted as expected output) is a **disguised bug**.
+  Forbidden to "fix" a test by relaxing the assertion (JavaFX, §149 — precedents).
+- Skip is **honest and explicit** (`assumeTrue` for a missing toolchain), never
+  to hide a failure.
+- If the suite turns red because of your change, **the commit doesn't go in** —
+  neither "with a note", nor "I'll come back later". Fix it or revert it.
 
-### Q6. A suíte é o chão, não o teto
+### Q6. The suite is the floor, not the ceiling
 
-Passar a suíte é o **mínimo**. A pergunta de aceite é: *"que cenário quebra
-isso e eu ainda não testei?"*. Enquanto houver resposta, a unidade não está
-pronta.
+Passing the suite is the **minimum**. The acceptance question is: *"what scenario breaks
+this and I haven't tested yet?"*. While there's an answer, the unit is not
+ready.
 
-### Q7. Proibido stub — a implementação é COMPLETA ou não sobe (13/09)
+### Q7. No stubs — the implementation is COMPLETE or it doesn't ship (09/13)
 
-> **"Funciona o suficiente para o teste passar" não é entrega.** Um stub,
-> placeholder, `return null`/`return 0` de fachada, corpo vazio, `throw
-> "not implemented"`, `TODO`/`FIXME`, ramo `default` que engole caso não
-> tratado, ou qualquer caminho que **finge** fazer o trabalho é **bug
-> pré-instalado** — ele passa o teste de hoje e falha o usuário de amanhã.
-> **É proibido commitar stub.** A unidade entrega a **implementação
-> completa** do escopo declarado, com a matriz Q3 coberta.
+> **"It works enough for the test to pass" is not delivery.** A stub,
+> placeholder, facade `return null`/`return 0`, empty body, `throw
+> "not implemented"`, `TODO`/`FIXME`, a `default` branch that swallows an unhandled
+> case, or any path that **pretends** to do the work is a **pre-installed
+> bug** — it passes today's test and fails tomorrow's user.
+> **It is forbidden to commit a stub.** The unit delivers the **complete
+> implementation** of the declared scope, with the Q3 matrix covered.
 
-- **Implementação completa = o comportamento previsto, inteiro.** Se o escopo
-  é "suporte a `++` em long", entrega os 4 targets, prefixo/pós-fixo, borda
-  numérica e array/field — não "só o caso do teste". Escopo menor é aceitável
-  **se declarado**; escopo menor disfarçado de completo, nunca.
-- **Stub não é "trabalho incremental"** — trabalho incremental é entregar um
-  **degrau inteiro** (uma capacidade completa), commitá-lo e seguir. Deixar
-  metade de uma capacidade no código fingindo completude é o que a regra
-  proíbe. A distinção: *corte vertical completo* (ok) × *fachada de fachada*
-  (proibido).
-- **Gap honesto ≠ stub.** Um caminho **não suportado** deve falhar com
-  diagnóstico `XXX00x` (R6, regra 6 do congelamento), nunca retornar valor
-  falso silenciosamente. "Não suportado com diagnóstico" é entrega válida;
-  "não suportado fingindo que sim" é stub.
-- **Todo stub EXISTENTE é dívida catalogada.** Encontrar um stub/placeholder
-  no software (código, stdlib, backend, docs) **obriga** a:
-  1. **catalogá-lo como gap de implementação** em
-     `docs/bugs-and-gaps/known-bugs.md` (bug) ou
-     `docs/bugs-and-gaps/specification-gaps.md` (gap de spec), com
-     **localização** (`arquivo:linha`), **o que falta** e **menor repro**;
-  2. **anotá-lo no ponto do código** com o código do gap (`XXX00x`/`§NNN`),
-     para que o próximo agente o veja sem arqueologia;
-  3. **planejá-lo** na fila (regra dos três estados) para que seja
-     **formalmente desenvolvido da forma correta** — não corrigido às pressas
-     nem escondido atrás de um teste fraco.
-  Stub achado e não catalogado = **omissão de agente**, tão grave quanto o
-  próprio stub. Catalogar não fecha o item: ele só fecha com implementação
-  completa + prova (Q0–Q6).
-- **Aceite:** a pergunta final não é "o teste passa?", é **"o que aqui ainda
-  é fachada?"**. Enquanto houver resposta, a unidade não está pronta.
-
----
-
-## Congelamento de comportamento (obrigatório)
-
-> **O comportamento previsto é lei.** "Comportamento previsto" = o que o corpus
-> (`training/`, `learn/`, `docs/`) documenta e os testes (golden + E2E + suíte
-> completa) provam. **Nenhum agente pode quebrar comportamento que já funciona.**
-
-1. **Zero regressão.** Nenhum commit pode fazer um teste existente passar a
-   falhar. A suíte completa (`mvn test`, hoje **1636** nos 4 módulos — ver
-   §"Loop de verificação" para o comando com o flag de failure.ignore) é **gate de merge** —
-   mudança que não mantém tudo verde não entra. Exceção única: mudança de
-   contrato **deliberada**, com bump de versão + docs atualizados + migração.
-2. **Retrocompatibilidade obrigatória.** Toda feature/API nova é **aditiva**:
-   código Kof que compila e roda hoje continua compilando e rodando. Mudança de
-   semântica existente nunca é silenciosa — só com bump + doc + migração.
-3. **Refactor preserva semântica.** O refactor para a regra **≤500 linhas/
-   classe** (e qualquer outro refactor) mexe em **estrutura**, nunca em
-   **comportamento**. Prova: mesma suíte + golden E2E por target. Se o refactor
-   muda output observável, é **bug do refactor** — corrige ou reverte.
-4. **Bug = alinhar ao previsto, nunca o contrário.** Tudo em
-   `docs/bugs-and-gaps/known-bugs.md` é desvio do comportamento previsto e **deve ser
-   corrigido no código** para atingir o comportamento documentado. Proibido
-   "documentar em volta do bug" (mudar o corpus para aceitar o comportamento
-   errado como se fosse o certo). Se o comportamento documentado está errado,
-   é decisão de design → bump de versão + discussão, nunca correção silenciosa.
-5. **Paridade cross-target.** JVM/Native/JS divergindo no mesmo programa é bug
-   de paridade. O comportamento previsto vale nos 3 targets, ou gap `XXX00x`
-   diagnosticado — nunca divergência silenciosa.
-6. **  (0.2.6-beta).** Operadores, precedência, ordem de
-   avaliação, null-safety, `==` de conteúdo, exceções como String,
-   `spawn`/`await`, coleções `List/Map/Set` são **congelados**. Proposta de
-   mudança vira gap/plano em `planning-*`, nunca edição direta da semântica
-   atual.
+- **Complete implementation = the expected behavior, entire.** If the scope
+  is "support for `++` on long", deliver the 4 targets, prefix/postfix, numeric
+  edge and array/field — not "only the test case". A smaller scope is acceptable
+  **if declared**; a smaller scope disguised as complete, never.
+- **A stub is not "incremental work"** — incremental work is delivering an
+  **entire step** (a complete capability), committing it and moving on. Leaving
+  half of a capability in the code pretending to be complete is what the rule
+  forbids. The distinction: *complete vertical cut* (ok) × *facade of a facade*
+  (forbidden).
+- **Honest gap ≠ stub.** An **unsupported** path must fail with a
+  diagnostic `XXX00x` (R6, rule 6 of the freeze), never return a false value
+  silently. "Unsupported with a diagnostic" is valid delivery;
+  "unsupported pretending it's supported" is a stub.
+- **Every EXISTING stub is catalogued debt.** Finding a stub/placeholder
+  in the software (code, stdlib, backend, docs) **obliges** you to:
+  1. **catalogue it as an implementation gap** in
+     `docs/bugs-and-gaps/known-bugs.md` (bug) or
+     `docs/bugs-and-gaps/specification-gaps.md` (spec gap), with
+     **location** (`file:line`), **what's missing** and **minimal repro**;
+  2. **annotate it at the code point** with the gap code (`XXX00x`/`§NNN`),
+     so the next agent sees it without archaeology;
+  3. **plan it** in the queue (three-states rule) so that it is
+     **formally developed in the correct way** — not fixed in a rush
+     nor hidden behind a weak test.
+  A stub found and not catalogued = **agent omission**, as serious as the
+  stub itself. Cataloguing doesn't close the item: it only closes with a complete
+  implementation + proof (Q0–Q6).
+- **Acceptance:** the final question is not "does the test pass?", it's **"what here is still
+  a facade?"**. While there's an answer, the unit is not ready.
 
 ---
 
-## Invariantes da plataforma (visão universal — `docs/development/future/PLAN-UNIVERSAL-PLATFORM.md`)
+## Behavior freeze (mandatory)
 
-Estas regras **sempre** se aplicam, mesmo quando não há código de domínio novo
-em jogo. São o mecanismo anti-"god language":
+> **The expected behavior is law.** "Expected behavior" = what the corpus
+> (`training/`, `learn/`, `docs/`) documents and the tests (golden + E2E + full
+> suite) prove. **No agent may break behavior that already works.**
 
-1. **Fronteira core → stdlib base → plataforma → pacotes oficiais → interop**
-   (R1). Domínio pesado (`ml`, `bio`, `hpc`, `infra-<cloud>`) vai para
-   **pacote oficial**, nunca para a stdlib base. Só entra na stdlib o que é
-   "essencial à plataforma e pequeno".
-2. **Interop-first** (R9). Para qualquer capacidade, a primeira pergunta é
-   "já existe por fora e é melhor?" → FFI/interop (`kof.process`, `.so`, JVM,
-   GraalJS). Nunca reimplementar Arrow/Parquet/BLAS/LAPACK/CUDA/NumPy/
-   alinhadores/frameworks de ML.
-3. **Escopo honesto por target** (R7): capacidades pesadas chegam **JVM-first**
-   (interop), **Native** para sistemas/deploy, **JS** só web/edge. Nunca
-   prometer paridade JS para domínios pesados.
-4. **Nunca silencioso por domínio** (R6): todo gap de domínio tem código
-   (`INFRA00x`, `DATA00x`, `SCI00x`, `BIO00x`, `SECPQ`, ...) + entrada na
-   matriz de paridade. Nunca stub silencioso, nunca fallback fraco.
-5. **Tiers de estabilidade** (R5): namespace/pacote é `stable` ou
-   `experimental`. Camada de pacotes oficiais nasce `experimental` e só
-   promove a `stable` com DoD completo (3 targets ou gap diagnosticado, E2E
-   por target, benchmark quando plausível, docs+training sincronizadas).
-6. **Core pequeno e estável** (R12): nenhum item de plano futuro é **ação**
-   sobre o trabalho atual. Frentes novas (infra/data/sci/bio, plataforma de
-   migração legado) **não** abrem antes do estágio SYSTEMS (gaps de paridade,
-   GC mark-sweep, package manager) fechar.
-7. **Segurança: defesa primeiro** (R11). Cripto nunca caseira — toda primitiva
-   nova é FFI a lib auditada (JCA/liboqs/libsodium/SubtleCrypto). Default
-   seguro, constante de tempo, formato versionado, gaps `SECN00x`/`SECPQ`.
-8. **Correto e determinístico por padrão** (R10): em ciência/ML, correção
-   numérica e determinismo são requisito de aceite (property-based + golden).
-
-**Non-goals permanentes:** sem macros abertas, type-classes, annotations como
-fundação, ownership/borrowing, effect system completo; sem "Kali em Kof"; sem
-target por domínio; sem motor SQL/Arrow/ML próprio.
+1. **Zero regression.** No commit may make an existing test start to
+   fail. The full suite (`mvn test`, today **1636** across the 4 modules — see
+   §"Verification loop" for the command with the failure.ignore flag) is a **merge gate** —
+   a change that doesn't keep everything green doesn't get in. Single exception: a **deliberate**
+   contract change, with a version bump + updated docs + migration.
+2. **Mandatory backward compatibility.** Every new feature/API is **additive**:
+   Kof code that compiles and runs today keeps compiling and running. A change of
+   existing semantics is never silent — only with a bump + doc + migration.
+3. **Refactor preserves semantics.** The refactor for the **≤500 lines/
+   class** rule (and any other refactor) touches **structure**, never
+   **behavior**. Proof: same suite + golden E2E per target. If the refactor
+   changes observable output, it's a **refactor bug** — fix it or revert it.
+4. **Bug = align with the expected, never the opposite.** Everything in
+   `docs/bugs-and-gaps/known-bugs.md` is a deviation from the expected behavior and **must be
+   fixed in the code** to reach the documented behavior. Forbidden to
+   "document around the bug" (change the corpus to accept the wrong
+   behavior as if it were right). If the documented behavior is wrong,
+   it's a design decision → version bump + discussion, never a silent fix.
+5. **Cross-target parity.** JVM/Native/JS diverging on the same program is a parity
+   bug. The expected behavior holds on the 3 targets, or a diagnosed gap `XXX00x`
+   — never silent divergence.
+6. **  (0.2.6-beta).** Operators, precedence, order of
+   evaluation, null-safety, content `==`, exceptions as String,
+   `spawn`/`await`, `List/Map/Set` collections are **frozen**. A proposal to
+   change becomes a gap/plan in `planning-*`, never a direct edit of the current
+   semantics.
 
 ---
 
-## Antes de escrever código (obrigatório)
+## Platform invariants (universal vision — `docs/development/future/PLAN-UNIVERSAL-PLATFORM.md`)
 
-1. Leia `training/idioms/<area>.md` da área do problema
+These rules **always** apply, even when there's no new domain code
+at stake. They are the anti-"god language" mechanism:
+
+1. **Boundary core → base stdlib → platform → official packages → interop**
+   (R1). Heavy domain (`ml`, `bio`, `hpc`, `infra-<cloud>`) goes to an
+   **official package**, never to the base stdlib. Only what is
+   "essential to the platform and small" enters the stdlib.
+2. **Interop-first** (R9). For any capability, the first question is
+   "does it already exist outside and is it better?" → FFI/interop (`kof.process`, `.so`, JVM,
+   GraalJS). Never reimplement Arrow/Parquet/BLAS/LAPACK/CUDA/NumPy/
+   aligners/ML frameworks.
+3. **Honest scope per target** (R7): heavy capabilities arrive **JVM-first**
+   (interop), **Native** for systems/deploy, **JS** only web/edge. Never
+   promise JS parity for heavy domains.
+4. **Never silent per domain** (R6): every domain gap has a code
+   (`INFRA00x`, `DATA00x`, `SCI00x`, `BIO00x`, `SECPQ`, ...) + an entry in the
+   parity matrix. Never a silent stub, never a weak fallback.
+5. **Stability tiers** (R5): a namespace/package is `stable` or
+   `experimental`. The official packages layer is born `experimental` and only
+   promotes to `stable` with a complete DoD (3 targets or diagnosed gap, E2E
+   per target, benchmark when plausible, docs+training synchronized).
+6. **Small and stable core** (R12): no future plan item is an **action**
+   on the current work. New fronts (infra/data/sci/bio, legacy migration
+   platform) do **not** open before the SYSTEMS stage (parity gaps,
+   GC mark-sweep, package manager) closes.
+7. **Security: defense first** (R11). Crypto never homemade — every new
+   primitive is FFI to an audited lib (JCA/liboqs/libsodium/SubtleCrypto). Secure
+   default, constant time, versioned format, gaps `SECN00x`/`SECPQ`.
+8. **Correct and deterministic by default** (R10): in science/ML, numeric
+   correctness and determinism are an acceptance requirement (property-based + golden).
+
+**Permanent non-goals:** no open macros, type-classes, annotations as a
+foundation, ownership/borrowing, complete effect system; no "Kali in Kof"; no
+target per domain; no SQL/Arrow/ML engine of its own.
+
+---
+
+## Before writing code (mandatory)
+
+1. Read `training/idioms/<area>.md` for the problem's area
    (collections, functions, strings, errors, records, classes, concurrency, control-flow).
-2. Leia `training/anti-patterns/` — em especial `java-like-code.md`,
+2. Read `training/anti-patterns/` — especially `java-like-code.md`,
    `chained-or-membership.md`, `fake-idioms.md`.
-3. Se a dúvida persistir: **escreva um snippet e compile** (loop abaixo).
+3. If the doubt persists: **write a snippet and compile** (loop below).
 
 ---
 
-## Sintaxe real (verificada no compilador — 0.3.0-beta)
+## Real syntax (verified in the compiler — 0.3.0-beta)
 
-### Funções (não existe `fun` nem `func`)
+### Functions (there is no `fun` nor `func`)
 
 ```kof
-main() { println("entry point") }            // única sem tipo explícito
+main() { println("entry point") }            // the only one without an explicit type
 
-String saudacao() { return "oi" }            // tipo antes do nome
-despedida(): String { return "tchau" }       // tipo depois dos parênteses
-void fazIsso() { println("x") }              // void explícito
+String saudacao() { return "oi" }            // type before the name
+despedida(): String { return "tchau" }       // type after the parentheses
+void fazIsso() { println("x") }              // explicit void
 Bool positivo(Int x) = x > 0                 // expression body
 Int dobro(Int x) { return x * 2 }
 
-Int g(Int x) { return x }                    // sobrecarga top-level (0.4.0,
-Int g(Int x, Int y) { return x + y }         // oracle JVM): assinatura difere
-// ❌ duplicata EXATA → SEM047; só trocar o RETORNO NÃO é sobrecarga (SEM047)
-// chamada ambígua → SEM057 (dê tipo ao argumento p/ escolher)
-// sobrecarga de MÉTODO de classe ✅ existe (0.4.0, §131 13/09): mesmo nome,
-// assinaturas diferentes (aridade/tipos) na mesma classe coexistem nos 4
-// backends; o typer seleciona por aridade+compatibilidade
+Int g(Int x) { return x }                    // top-level overload (0.4.0,
+Int g(Int x, Int y) { return x + y }         // JVM oracle): signature differs
+// ❌ EXACT duplicate → SEM047; only changing the RETURN is NOT overloading (SEM047)
+// ambiguous call → SEM057 (give the argument a type to choose)
+// class METHOD overloading ✅ exists (0.4.0, §131 09/13): same name,
+// different signatures (arity/types) in the same class coexist in the 4
+// backends; the typer selects by arity+compatibility
 ```
 
-### Variáveis (só dentro de funções/corpos — **não existe top-level `val`/`var`/`let`**)
+### Variables (only inside functions/bodies — **there is no top-level `val`/`var`/`let`**)
 
 ```kof
-var x = 10              // mutável
-val y = 20              // imutável
+var x = 10              // mutable
+val y = 20              // immutable
 String nome = "Mel"
-String? nome2 = null    // nullability: forma TIPO-PRIMEIRO (idiomática no corpus)
-var idade: Int? = null  // nullability: forma ANOTADA (também válida)
+String? nome2 = null    // nullability: TYPE-FIRST form (idiomatic in the corpus)
+var idade: Int? = null  // nullability: ANNOTATED form (also valid)
 ```
 
-### Classes (mutable → campos + `constructor(...)`) e o caso `class X(...)` = record
+### Classes (mutable → fields + `constructor(...)`) and the case `class X(...)` = record
 
 ```kof
-// ✅ ESTADO MUTÁVEL — campos explícitos + construtor (campos públicos, diretos)
+// ✅ MUTABLE STATE — explicit fields + constructor (public, direct fields)
 class User {
     String name
     Int age
@@ -845,16 +847,16 @@ class User {
     }
     String greeting() { return "Hello " + name }
 }
-var u = User("Mel", 26)     // sem `new`
-u.age = 27                  // escrita direta — mutável
+var u = User("Mel", 26)     // without `new`
+u.age = 27                  // direct write — mutable
 
-// ⚠️ ATENÇÃO (verificado 02/09): `class User(String name, Int age) { }` NÃO é
-// classe mutável — o parser o trata como RECORD (imutável, accessors p.x()).
-// Leitura `u.name` funciona (vira accessor); escrita `u.name = "x"` NÃO.
-// Para dados imutáveis, use `record` (a forma canônica).
+// ⚠️ ATTENTION (verified 09/02): `class User(String name, Int age) { }` is NOT a
+// mutable class — the parser treats it as a RECORD (immutable, accessors p.x()).
+// Reading `u.name` works (becomes an accessor); writing `u.name = "x"` does NOT.
+// For immutable data, use `record` (the canonical form).
 ```
 
-### Records (dados imutáveis, zero cerimônia)
+### Records (immutable data, zero ceremony)
 
 ```kof
 record Point(Int x, Int y)
@@ -863,18 +865,18 @@ println(p.x())                               // accessors
 println(p)                                   // JVM: Point[x=10, y=20]
 ```
 
-### Controle de fluxo
+### Control flow
 
 ```kof
 var status = if (ativo) "online" else "offline"   // if-EXPRESSION
-for (var item in items) { println(item) }          // for-in (com `var`)
+for (var item in items) { println(item) }          // for-in (with `var`)
 while (cond) { ... }
 switch (obj) {
     case String s:            println(s); break
     case Point(var x, var y): println(x + "," + y); break
     default:                  println("outro")
 }
-// switch-EXPRESSION (SYN001) — quando o switch produz valor:
+// switch-EXPRESSION (SYN001) — when the switch produces a value:
 var desc = switch (obj) {
     case String s -> "str:" + s
     case Point(var x, var y) -> x + "," + y
@@ -886,24 +888,24 @@ var desc = switch (obj) {
 
 ```kof
 var s = "Hello"
-s.length          // propriedade
+s.length          // property
 s.charAt(1)
 s.substring(6)
 s.contains("lo")
 s.startsWith("He")
 s.split(" ")      // String[]
-a == b            // compara CONTEÚDO (não referência) — nunca .equals()
-a + "!"           // concatenação — nunca StringBuilder
+a == b            // compares CONTENT (not reference) — never .equals()
+a + "!"           // concatenation — never StringBuilder
 ```
 
-### Coleções (API real)
+### Collections (real API)
 
 ```kof
 var l = listOf(1, 2, 3)
 l.add(4)
 l.get(0)
 l.set(0, 9)
-l.size            // propriedade (não método)
+l.size            // property (not a method)
 l.contains(3)
 l.isEmpty()
 l.remove(1)
@@ -913,7 +915,7 @@ var m = mapOf("a", 1)
 m.put("b", 2)
 m.get("a")
 
-var s = setOf("a", "b", "c")   // variádico
+var s = setOf("a", "b", "c")   // variadic
 s.contains("a")
 
 // Higher-order (3 targets)
@@ -922,7 +924,7 @@ var adultos = users.filter((u: User) -> u.age >= 18)
 var total = nums.reduce((a: Int, b: Int) -> a + b, 0)
 ```
 
-### Erros (exceções são Strings)
+### Errors (exceptions are Strings)
 
 ```kof
 try {
@@ -934,13 +936,13 @@ try {
 }
 ```
 
-### Concorrência (não existe `Thread`/`Executor`)
+### Concurrency (there is no `Thread`/`Executor`)
 
 ```kof
 spawn trabalho()              // fire-and-forget
 spawn { println("bg") }
 val r = spawn compute()       // Handle<T>
-var v = await r               // bloqueia; unboxing de primitivos
+var v = await r               // blocks; unboxing of primitives
 var id = time.interval(1000, () -> println("tick"))
 scheduler.every(100) { ... }
 ```
@@ -948,7 +950,7 @@ scheduler.every(100) { ... }
 ### Null safety
 
 ```kof
-var nome: String? = find(key)   // forma anotada (não `String? nome = ...`)
+var nome: String? = find(key)   // annotated form (not `String? nome = ...`)
 if (nome != null) {
     println(nome)               // narrowing
 }
@@ -956,230 +958,230 @@ if (nome != null) {
 
 ---
 
-## Tabela de idioms (BAD → GOOD) — a referência rápida
+## Idiom table (BAD → GOOD) — the quick reference
 
-| ❌ BAD (Java/outra linguagem) | ✅ GOOD (Kof) | Por quê |
+| ❌ BAD (Java/another language) | ✅ GOOD (Kof) | Why |
 |---|---|---|
-| `x == "A" \|\| x == "B" \|\| ...` (3+ valores) | `setOf("A","B",...).contains(x)` | intenção de pertencimento, O(1), sem esquecer entrada |
-| `a.equals(b)` | `a == b` | `==` compara conteúdo em Kof |
-| `StringBuilder` em loop | `+` / `+=` | `+` já é eficiente |
-| getters/setters | campo direto (`u.name`, `u.age = 3`) | Kof não tem JavaBeans/reflection ceremony |
-| `new User(...)` com construtor explícito | `User(...)` sem `new` (ambos válidos) | `new` é retrocompatível |
-| utility class com `static` | função top-level | Kof tem funções fora de classes |
-| Service/Repository/Controller | função top-level ou classe direta | sem camadas de injeção |
-| `class Node { Node next ... }` | `List<T>` | coleção da linguagem |
-| loop manual para map/filter | `list.map/filter/reduce` | higher-order expressa intenção |
-| `return ""` como "não encontrado" | `throw "not found: " + key` ou `String?` | sentinela esconde erro |
+| `x == "A" \|\| x == "B" \|\| ...` (3+ values) | `setOf("A","B",...).contains(x)` | membership intention, O(1), without forgetting an entry |
+| `a.equals(b)` | `a == b` | `==` compares content in Kof |
+| `StringBuilder` in a loop | `+` / `+=` | `+` is already efficient |
+| getters/setters | direct field (`u.name`, `u.age = 3`) | Kof has no JavaBeans/reflection ceremony |
+| `new User(...)` with an explicit constructor | `User(...)` without `new` (both valid) | `new` is backward compatible |
+| utility class with `static` | top-level function | Kof has functions outside classes |
+| Service/Repository/Controller | top-level function or direct class | no injection layers |
+| `class Node { Node next ... }` | `List<T>` | the language's collection |
+| manual loop for map/filter | `list.map/filter/reduce` | higher-order expresses intention |
+| `return ""` as "not found" | `throw "not found: " + key` or `String?` | a sentinel hides the error |
 | `var s = ""; if (c) { s = "a" } else { s = "b" }` | `var s = if (c) "a" else "b"` | if-expression |
-| parser JSON / DB / HTTP manual | `json.encode/decode`, `db.connect`, `http.get` | plataforma |
-| `new Thread(...)`, `Executor` | `spawn` / `await` | intenção, não mecanismo |
-| DTO + mapper + `@Data` | `record User(String name, Int age)` | dados imutáveis |
-| `Optional<T>` | `String?` + `if (x != null)` | nullability nativa |
+| manual JSON / DB / HTTP parser | `json.encode/decode`, `db.connect`, `http.get` | platform |
+| `new Thread(...)`, `Executor` | `spawn` / `await` | intention, not mechanism |
+| DTO + mapper + `@Data` | `record User(String name, Int age)` | immutable data |
+| `Optional<T>` | `String?` + `if (x != null)` | native nullability |
 | `instanceof` + cast | `case String s:` / `as` | pattern matching |
-| `import java.util.*` | `listOf`/`mapOf`/`setOf` + `import a.b.C` | stdlib própria |
+| `import java.util.*` | `listOf`/`mapOf`/`setOf` + `import a.b.C` | own stdlib |
 
 ---
 
-## Fake idioms — NÃO EXISTE em Kof (nunca use)
+## Fake idioms — DO NOT EXIST in Kof (never use)
 
-Se você está prestes a escrever algo desta lista, **pare**:
+If you're about to write something from this list, **stop**:
 
-| ❌ Não existe | ✅ Use |
+| ❌ Does not exist | ✅ Use |
 |---|---|
-| `fun` / `func` / `fn` | `String nome(...) { }` (palavras reservadas — não existem) |
-| `val x = ...` / `var x = ...` no **top-level** | dentro de função; ou campo de `class` |
-| `let x = ...` / `const x = ...` / `async fn` | `var`/`val` em função; `spawn`/`await` (KofScript **não** é JavaScript — roda Kof puro) |
-| `x in [...]` (operador de expressão) | `setOf(...).contains(x)` |
-| `Int.MAX_VALUE` / `Long.MIN_VALUE` / `<primitivo>.<campo>` | literal (`2147483647`) ou `as` — primitivos não têm estáticos (SEM050) |
-| `{"a", "b"}` (literal de conjunto) | `setOf("a", "b")` |
-| `[1, 2, 3]` (literal de array) | `listOf(1, 2, 3)` ou `new Int[n]` |
-| `Option<T>` / `Result<T>` | `String?` + narrowing; `throw` para erro |
-| `async`/`await` JS-style | `spawn`/`await` (Kof; `spawn f()` fire-and-forget é válido sozinho) |
-| `for (x in coll)` **sem `var`** | `for (var x in coll)` |
+| `fun` / `func` / `fn` | `String nome(...) { }` (reserved words — they don't exist) |
+| `val x = ...` / `var x = ...` at the **top-level** | inside a function; or a `class` field |
+| `let x = ...` / `const x = ...` / `async fn` | `var`/`val` in a function; `spawn`/`await` (KofScript **is not** JavaScript — it runs pure Kof) |
+| `x in [...]` (expression operator) | `setOf(...).contains(x)` |
+| `Int.MAX_VALUE` / `Long.MIN_VALUE` / `<primitive>.<field>` | literal (`2147483647`) or `as` — primitives have no statics (SEM050) |
+| `{"a", "b"}` (set literal) | `setOf("a", "b")` |
+| `[1, 2, 3]` (array literal) | `listOf(1, 2, 3)` or `new Int[n]` |
+| `Option<T>` / `Result<T>` | `String?` + narrowing; `throw` for an error |
+| `async`/`await` JS-style | `spawn`/`await` (Kof; `spawn f()` fire-and-forget is valid on its own) |
+| `for (x in coll)` **without `var`** | `for (var x in coll)` |
 | `Thread` / `Executor` / `Runnable` | `spawn` |
-| `match x { A, B => ... }` (multi-case OR) | `switch (x) { case "A": ... case "B": ... }` ou `setOf` |
-| `x instanceof String ? (String) x : null` | `if (x instanceof String) { var s = x as String ... }` ou `case String s:` |
-| primary constructor `class X(val a, val b)` (Kotlin) | `record X(String a, Int b)` (imutável) ou classe mutável com `constructor(...)` |
+| `match x { A, B => ... }` (multi-case OR) | `switch (x) { case "A": ... case "B": ... }` or `setOf` |
+| `x instanceof String ? (String) x : null` | `if (x instanceof String) { var s = x as String ... }` or `case String s:` |
+| primary constructor `class X(val a, val b)` (Kotlin) | `record X(String a, Int b)` (immutable) or a mutable class with `constructor(...)` |
 
-> Regra: **toda feature nova que você quiser usar, compile antes.**
-> Se não compila, é fake idiom — mesmo que exista em outra linguagem.
-
----
-
-## Self-check obrigatório antes de considerar o código "pronto"
-
-Responda SIM a todas antes de terminar:
-
-1. **Compilei?** (loop de verificação abaixo) — `mvn -o -pl kof-compiler -am compile -q` verde.
-2. **Traduzi alguma linguagem?** Se sim, reescreva com a abstração do Kof.
-3. **Há repetição 3+ vezes de um padrão?** (comparação, branch, construção)
-   → existe feature da linguagem para isso (Set/Map/switch/higher-order/record).
-4. **Crio infraestrutura que a stdlib já tem?** (`kof.json`, `kof.db`,
-   `kof.http`, `kof.cache`, `kof.security`, `kof.ui`) → use a stdlib.
-5. **Código parece gerado ou escrito por humano?** Se gerado, reescreva.
-6. **Novo idiom/anti-pattern descoberto?** → atualize `training/` (obrigatório).
-7. **Testei apenas o "caminho feliz"?** Se sim, testar comportamentos
-   inesperados (confiabilidade do codegen, bordas de erro, tipos nullable,
-   concorrência, alocação de memória, cross-target paridade). Nunca delivery
-   com testes que cobrem apenas o caso de sucesso esperado.
-8. **A feature/bug tem teste no MESMO commit?** (Q1) — sem prova, o commit não existe.
-9. **Cobri as bordas relevantes da matriz Q3** (numérica, vazio/nulo, limite,
-   erro esperado, cross-target, idempotência, concorrência, recurso) e
-   **declarei no commit** o que cobri?
-10. **Tentei quebrar a mudança antes do push?** (Q4) — casos extremos,
-    cross-target, fronteira de contrato, regressão vizinha, o que o teste não cobre.
-11. **O golden veio de medição real** (oracle JVM/harness C) e não de memória?
-12. **Nenhum teste passou por acidente** (assert fraco, `success=true` sem
-    executar, erro aceito como saída)? (Q5)
-13. **A entrega é implementação COMPLETA, sem stub?** (Q7) — nenhum
-    placeholder/`TODO`/`return` de fachada/ramo que engole caso não tratado.
-    Stub encontrado no caminho foi catalogado como gap + anotado no código?
-
-> Se alguma resposta for NÃO, a unidade **não está pronta** — volte para a
-> implementação. O portão de qualidade (§"nenhum bug sobe") é pré-requisito
-> de commit, não uma revisão posterior.
+> Rule: **every new feature you want to use, compile it first.**
+> If it doesn't compile, it's a fake idiom — even if it exists in another language.
 
 ---
 
-## Loop de verificação (obrigatório)
+## Mandatory self-check before considering the code "ready"
 
-Sempre que escrever/alterar código Kof:
+Answer YES to all of them before finishing:
+
+1. **Did I compile?** (verification loop below) — `mvn -o -pl kof-compiler -am compile -q` green.
+2. **Did I translate some language?** If so, rewrite it with Kof's abstraction.
+3. **Is there a pattern repeated 3+ times?** (comparison, branch, construction)
+   → there's a language feature for that (Set/Map/switch/higher-order/record).
+4. **Am I creating infrastructure the stdlib already has?** (`kof.json`, `kof.db`,
+   `kof.http`, `kof.cache`, `kof.security`, `kof.ui`) → use the stdlib.
+5. **Does the code look generated or written by a human?** If generated, rewrite it.
+6. **New idiom/anti-pattern discovered?** → update `training/` (mandatory).
+7. **Did I test only the "happy path"?** If so, test unexpected
+   behaviors (codegen reliability, error edges, nullable types,
+   concurrency, memory allocation, cross-target parity). Never deliver
+   with tests that cover only the expected success case.
+8. **Does the feature/bug have a test in the SAME commit?** (Q1) — without proof, the commit doesn't exist.
+9. **Did I cover the relevant edges of the Q3 matrix** (numeric, empty/null, limit,
+   expected error, cross-target, idempotency, concurrency, resource) and
+   **did I declare in the commit** what I covered?
+10. **Did I try to break the change before the push?** (Q4) — extreme cases,
+    cross-target, contract boundary, neighboring regression, what the test doesn't cover.
+11. **Did the golden come from real measurement** (JVM oracle/C harness) and not from memory?
+12. **Did no test pass by accident** (weak assert, `success=true` without
+    executing, error accepted as output)? (Q5)
+13. **Is the delivery a COMPLETE implementation, without stubs?** (Q7) — no
+    placeholder/`TODO`/facade `return`/branch that swallows an unhandled case.
+    Was a stub found along the way catalogued as a gap + annotated in the code?
+
+> If any answer is NO, the unit **is not ready** — go back to the
+> implementation. The quality gate (§"no bug ships") is a prerequisite
+> of commit, not a later review.
+
+---
+
+## Verification loop (mandatory)
+
+Whenever you write/change Kof code:
 
 ```bash
-# 0. PRE-PUSH GATE (Q2) — sem isto o push é proibido
+# 0. PRE-PUSH GATE (Q2) — without this the push is forbidden
 mvn -o -pl kof-compiler -am compile -q
 
-# 1. Rodar os testes da área alterada (rápido)
+# 1. Run the tests for the changed area (fast)
 mvn test -o -pl kof-compiler -am -Dtest='KofAreaTest' -Dsurefire.failIfNoSpecifiedTests=false
 
-# 2. Suíte completa antes de commit
+# 2. Full suite before commit
 mvn test -o -pl kof-compiler,kof-script,kof-c-compiler,kof-cli -am \
     -Dsurefire.failIfNoSpecifiedTests=false \
     -Dmaven.test.failure.ignore=true
 
-# 3. Conferir os reports POR MÓDULO (não confie no resumo do reactor)
+# 3. Check the reports PER MODULE (don't trust the reactor summary)
 grep -rl "FAILURE" */target/surefire-reports/*.txt
 ```
 
-### Checklist de pré-push (Q0–Q7 — responda antes de `git push`, em QUALQUER branch)
+### Pre-push checklist (Q0–Q7 — answer before `git push`, on ANY branch)
 
-0. O bug foi **consertado na causa raiz** (não mascarado) e o teste que prova
-   falharia no código velho? **(Q0)**
-1. `mvn -o -pl kof-compiler -am compile -q` verde? **(Q2)**
-2. A mudança tem teste no MESMO commit que a prova? **(Q1)**
-3. O teste cobre o happy path **e** as bordas Q3 que se aplicam? **(Q3)**
-4. Tentei quebrar a mudança (casos extremos, cross-target, regressão vizinha)? **(Q4)**
-5. A suíte completa está verde (0 falhas fora dos erros ambientais de `node`)? **(Q5)**
-6. `grep -rl FAILURE */target/surefire-reports/*.txt` não aponta nada seu? **(Q5)**
-7. A entrega é implementação COMPLETA (sem stub/fachada/TODO)? Stub achado foi
-   catalogado como gap + anotado no código? **(Q7)**
+0. Was the bug **fixed at the root cause** (not masked) and would the test that proves it
+   fail on the old code? **(Q0)**
+1. `mvn -o -pl kof-compiler -am compile -q` green? **(Q2)**
+2. Does the change have a test in the SAME commit as the proof? **(Q1)**
+3. Does the test cover the happy path **and** the applicable Q3 edges? **(Q3)**
+4. Did I try to break the change (extreme cases, cross-target, neighboring regression)? **(Q4)**
+5. Is the full suite green (0 failures outside the environmental `node` errors)? **(Q5)**
+6. Does `grep -rl FAILURE */target/surefire-reports/*.txt` point to nothing of yours? **(Q5)**
+7. Is the delivery a COMPLETE implementation (no stub/facade/TODO)? Was a stub found
+   catalogued as a gap + annotated in the code? **(Q7)**
 
-> **Nenhum push sem os 8 itens, em nenhuma branch.** Se algum falhar, corrija
-> ou reverta — não suba "com nota" nem "para o próximo agente ver".
+> **No push without the 8 items, on any branch.** If any fails, fix
+> or revert — don't ship "with a note" nor "for the next agent to see".
 
-> **`-Dmaven.test.failure.ignore=true` é OBRIGATÓRIO na suíte completa.** Sem
-> ele, o Maven é fail-fast por módulo: qualquer falha em **kof-compiler aborta
-> o reactor** e **kof-script, kof-c-compiler e kof-cli nunca rodam** — você
-> acha que validou tudo mas só viu o primeiro módulo. O total real com o flag
-> é **1636 testes** (compiler 1464 + script 31 + kof-c 5 + cli 136, medição
-> 13/09 — cresce com cada commit): **0 falhas** (13 erros = só `node` ausente
-> no host, ambientais). O §149 JS (`KofRandomTest.randomStringJs`/`randomShapeJs`,
-> regressão do fix §147 no `JsIfThrowElse`) foi **CORRIGIDO 13/09** — a raiz era
-> o parser consumir o label de início do `while` seguinte a um assert/if-throw
-> como fim do else (ver `known-bugs.md §149`).
-> As 59 falhas históricas do bug 59 (Native riscv/aarch,
-> `kof_static_java_lang_System_out` no link) foram **CORRIDAS 09/09** — com
-> qemu os cross agora PASSAM (`NativeRiscv64E2ETest`/`NativeAarch64E2ETest`
-> 42/42 cada; prova no `known-bugs.md §59` + gate 12/09). Qualquer falha que
-> não seja dos 13 erros de `node` ausente é SUA. Antes de commitar, confira os
-> reports POR MÓDULO
+> **`-Dmaven.test.failure.ignore=true` is MANDATORY in the full suite.** Without
+> it, Maven is fail-fast per module: any failure in **kof-compiler aborts
+> the reactor** and **kof-script, kof-c-compiler and kof-cli never run** — you
+> think you validated everything but only saw the first module. The real total with the flag
+> is **1636 tests** (compiler 1464 + script 31 + kof-c 5 + cli 136, measurement
+> 09/13 — grows with each commit): **0 failures** (13 errors = only `node` missing
+> on the host, environmental). The §149 JS (`KofRandomTest.randomStringJs`/`randomShapeJs`,
+> regression of the §147 fix in `JsIfThrowElse`) was **FIXED 09/13** — the root was
+> the parser consuming the start label of the `while` following an assert/if-throw
+> as the end of the else (see `known-bugs.md §149`).
+> The 59 historical failures of bug 59 (Native riscv/aarch,
+> `kof_static_java_lang_System_out` at link) were **RUN 09/09** — with
+> qemu the cross now PASS (`NativeRiscv64E2ETest`/`NativeAarch64E2ETest`
+> 42/42 each; proof in `known-bugs.md §59` + gate 09/12). Any failure that
+> isn't one of the 13 missing-`node` errors is YOURS. Before committing, check the
+> reports PER MODULE
 > (`grep -rl FAILURE */target/surefire-reports/*.txt`).
-> (Lição registrada 08/09: sessões inteiras citaram "suíte 1085/59" sem os
-> módulos finais terem rodado.)
+> (Lesson recorded 09/08: entire sessions cited "suite 1085/59" without the
+> final modules having run.)
 >
-> **Os números mudam com qemu no ambiente:** sem qemu, os 84 cross
-> (2×42, `NativeRiscv64/Aarch64E2ETest`) são **skipados** pelo guard
-> (`4408eb6`) + 5 de BD externo → `~1547/0/~89-skip` (estimado — a medição
-> abaixo é de host COM toolchain). Com qemu, **tudo executa** — `1636/0/5-skip`
-> (os 5 = MySQL/Mongo/Postgres externos; medido 13/09). Estado correto HOJE:
-> **0 falhas** nos dois cenários (o §149 JS foi corrigido 13/09); os 13 erros
-> são só `node` ausente. O que importa continua sendo nenhum FAILURE fora
-> deles e das guardas.
+> **The numbers change with qemu in the environment:** without qemu, the 84 cross
+> (2×42, `NativeRiscv64/Aarch64E2ETest`) are **skipped** by the guard
+> (`4408eb6`) + 5 external DB → `~1547/0/~89-skip` (estimated — the measurement
+> below is from a host WITH toolchain). With qemu, **everything executes** — `1636/0/5-skip`
+> (the 5 = external MySQL/Mongo/Postgres; measured 09/13). Correct state TODAY:
+> **0 failures** in both scenarios (the §149 JS was fixed 09/13); the 13 errors
+> are only missing `node`. What matters remains no FAILURE outside
+> them and the guards.
 
-Para validar um snippet isolado (ex.: confirmar se um idiom compila),
-use o harness do projeto ou crie um teste E2E mínimo no pacote da área.
+To validate an isolated snippet (e.g., confirm whether an idiom compiles),
+use the project harness or create a minimal E2E test in the area's package.
 
-**Nunca** entregue código Kof que você não compilou.
+**Never** deliver Kof code you haven't compiled.
 
-> **Regra do JavaFX (12/09, pedido da mantenedora): a mensagem `Erro: os
+> **JavaFX rule (09/12, maintainer's request): the message `Erro: os
 > componentes de runtime do JavaFX não foram encontrados. Eles são obrigatórios
-> para executar este aplicativo` NUNCA é benigna — sempre representa uma
-> regressão ou bug oculto e exige causa raiz + correção.** No JVM o launcher
-> do `java -cp <dir> Default.Main` engole o `VerifyError`/`ExceptionInInitializer`
-> real atrás dessa mensagem (medido: era `VerifyError: Bad type on operand
-> stack`). Para ver o erro de verdade, rode por reflection (contorna o launcher
-> JavaFX): grave um `Run.java` que faz `Class.forName("Default.Main")
+> para executar este aplicativo` is NEVER benign — it always represents a
+> regression or hidden bug and requires root cause + fix.** On the JVM the launcher
+> of `java -cp <dir> Default.Main` swallows the real `VerifyError`/`ExceptionInInitializer`
+> behind that message (measured: it was `VerifyError: Bad type on operand
+> stack`). To see the real error, run it via reflection (bypasses the JavaFX
+> launcher): write a `Run.java` that does `Class.forName("Default.Main")
 > .getMethod("main", String[].class).invoke(null, (Object) new String[0])`,
-> compile e `java -cp "out:run-dir" Run Default.Main`. A stack trace que sai é
-> o bug; trate-a como qualquer falha (regra 1 do Congelamento). **Proibido**
-> "consertar" o teste aceitando essa mensagem como saída esperada.
+> compile and `java -cp "out:run-dir" Run Default.Main`. The stack trace that comes out is
+> the bug; treat it like any failure (rule 1 of the Freeze). **Forbidden** to
+> "fix" the test by accepting that message as expected output.
 
 ---
 
-## Corpus (onde aprofundar)
+## Corpus (where to go deeper)
 
-| Arquivo | Conteúdo |
+| File | Content |
 |---|---|
-| `training/idioms/` | FORMA IDIOMÁTICA de cada problema (BAD/GOOD/WHY) |
-| `training/anti-patterns/` | Catálogo de o que NÃO fazer |
-| `training/anti-patterns/fake-idioms.md` | Tabela de features que NÃO existem |
-| `training/anti-patterns/chained-or-membership.md` | Cadeia de `\|\|` → `setOf().contains()` |
-| `training/anti-patterns/java-like-code.md` | Java traduzido → Kof |
-| `learn/` | Tutorials passo a passo (00-introduction → 39-stdlib) |
-| `docs/architecture/architecture.md`, `docs/architecture/compiler-architecture.md` etc. | Domínios específicos (estáveis) |
-| `docs/development/` | **Backlog vivo — tudo que NÃO está concluído** (planos, roadmaps, audits, gaps, refactors). Ver `docs/development/README.md` para índice completo. |
-| `docs/development/future/` (plans) | **só plano sem código**: plataforma universal (visão), RAII TIER 2.4, DD-STDLIB-01. A migração legado (decompiler/translator/IR/differential) **caiu p/ `docs/development/` 12/09** — implementada com testes |
-| `docs/development/roadmap.md`, `docs/audits/roadmap-audit.md`, `docs/bugs-and-gaps/ecosystem-coverage.md` | Roadmaps & auditoria de cobertura (fila P0→P5) |
-| `docs/bugs-and-gaps/specification-gaps.md`, `docs/bugs-and-gaps/known-bugs.md` | Gaps de spec (SG-00x — fila do maintainer completa, virou referência) + bugs abertos |
-| `docs/development/native-multiarch.md`, `docs/stdlib/DATABASE_VISION.md`, `docs/audits/complexity-audit.md` | Native multiarch (NATIVE002) + DB vision (realizada → stdlib) + audit ≤500 (snapshot → architecture) |
-| `docs/development/DECISIONS.md` | **Decisões da mantenedora** (time/segurança/app-model/Spring — pasta `decision-pending/` extinta 13/09) |
-| `docs/development/roadmap.md` §23 | **Plano de implementação consolidado** (Tiers 0–12) — único plano ordenado; migração A–H ✅, universal não iniciada |
+| `training/idioms/` | the IDIOMATIC FORM of each problem (BAD/GOOD/WHY) |
+| `training/anti-patterns/` | Catalogue of what NOT to do |
+| `training/anti-patterns/fake-idioms.md` | Table of features that do NOT exist |
+| `training/anti-patterns/chained-or-membership.md` | Chain of `\|\|` → `setOf().contains()` |
+| `training/anti-patterns/java-like-code.md` | Translated Java → Kof |
+| `learn/` | Step-by-step tutorials (00-introduction → 39-stdlib) |
+| `docs/architecture/architecture.md`, `docs/architecture/compiler-architecture.md` etc. | Specific domains (stable) |
+| `docs/development/` | **Living backlog — everything that is NOT concluded** (plans, roadmaps, audits, gaps, refactors). See `docs/development/README.md` for the full index. |
+| `docs/development/future/` (plans) | **only plan without code**: universal platform (vision), RAII TIER 2.4, DD-STDLIB-01. The legacy migration (decompiler/translator/IR/differential) **moved to `docs/development/` 09/12** — implemented with tests |
+| `docs/development/roadmap.md`, `docs/audits/roadmap-audit.md`, `docs/bugs-and-gaps/ecosystem-coverage.md` | Roadmaps & coverage audit (queue P0→P5) |
+| `docs/bugs-and-gaps/specification-gaps.md`, `docs/bugs-and-gaps/known-bugs.md` | Spec gaps (SG-00x — maintainer queue complete, became a reference) + open bugs |
+| `docs/development/native-multiarch.md`, `docs/stdlib/DATABASE_VISION.md`, `docs/audits/complexity-audit.md` | Native multiarch (NATIVE002) + DB vision (realized → stdlib) + audit ≤500 (snapshot → architecture) |
+| `docs/development/DECISIONS.md` | **Maintainer's decisions** (time/security/app-model/Spring — `decision-pending/` folder extinct 09/13) |
+| `docs/development/roadmap.md` §23 | **Consolidated implementation plan** (Tiers 0–12) — the only ordered plan; migration A–H ✅, universal not started |
 
 ---
 
-## Atualizando o corpus (obrigatório)
+## Updating the corpus (mandatory)
 
-Se durante o trabalho você descobrir:
+If during the work you discover:
 
-- Um **idiom novo** que a linguagem suporta (ex.: `setOf` variádico) →
-  adicione em `training/idioms/<area>.md` com BAD/GOOD/WHY.
-- Um **anti-pattern novo** (ex.: cadeia de `\|\|`) → crie
-  `training/anti-patterns/<nome>.md` com Name/Problem/Bad/Preferred/Why.
-- Uma **feature que não existe** que uma IA quase alucinou → adicione na
-  tabela de `training/anti-patterns/fake-idioms.md`.
+- A **new idiom** that the language supports (e.g., variadic `setOf`) →
+  add it to `training/idioms/<area>.md` with BAD/GOOD/WHY.
+- A **new anti-pattern** (e.g., a chain of `\|\|`) → create
+  `training/anti-patterns/<name>.md` with Name/Problem/Bad/Preferred/Why.
+- A **feature that doesn't exist** that an AI almost hallucinated → add it to the
+  table in `training/anti-patterns/fake-idioms.md`.
 
-O corpus é a memória de longo prazo dos agentes. Se você aprendeu algo,
-ensine-o para o próximo.
+The corpus is the agents' long-term memory. If you learned something,
+teach it to the next one.
 
 ---
 
-## Resumão (cola na tela)
+## Summary (cheat sheet)
 
 ```
-Kof = intenção + simplicidade.
+Kof = intention + simplicity.
 
-- Função:  String nome(Int x) { ... }     (sem fun/func)
-- Classe:  class X { campos; constructor(...) }  (mutável) / class X(...) = record
-- Dados:   record Point(Int x, Int y)
-- String:  a == b  (não .equals)   a + "!"  (não StringBuilder)
-- Coleção: listOf / mapOf / setOf  +  .map/.filter/.reduce
-- Memb.:   setOf("A","B").contains(x)   (NUNCA x=="A" || x=="B" || ...)
-- Erro:    throw "msg"  /  catch (String e)
-- Null:    String?  +  if (x != null)
-- Cast:    x as Char / big as Int  (conversões numéricas reais)
-- Concorr: spawn / await   (sem Thread)
-- Loops:   for (var x in coll)  /  if-expr  /  switch-expr (case ->)
-- Top-level: SÓ class e função (sem val/var/let)
+- Function:  String nome(Int x) { ... }     (no fun/func)
+- Class:     class X { fields; constructor(...) }  (mutable) / class X(...) = record
+- Data:      record Point(Int x, Int y)
+- String:    a == b  (not .equals)   a + "!"  (not StringBuilder)
+- Collection: listOf / mapOf / setOf  +  .map/.filter/.reduce
+- Memb.:     setOf("A","B").contains(x)   (NEVER x=="A" || x=="B" || ...)
+- Error:     throw "msg"  /  catch (String e)
+- Null:      String?  +  if (x != null)
+- Cast:      x as Char / big as Int  (real numeric conversions)
+- Concur.:   spawn / await   (no Thread)
+- Loops:     for (var x in coll)  /  if-expr  /  switch-expr (case ->)
+- Top-level: ONLY class and function (no val/var/let)
 
-Se parece Java, está errado. Compile antes de entregar.
+If it looks like Java, it's wrong. Compile before delivering.
 ```

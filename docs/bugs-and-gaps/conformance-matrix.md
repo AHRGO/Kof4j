@@ -1,3 +1,5 @@
+[English](conformance-matrix.md) | [Português](conformance-matrix.pt_BR.md)
+
 # Conformance Matrix — Feature × Target (Phase 9, platform plan)
 
 > **Created:** 07/09/2026 · **Owner:** KOFSCRIPT lane (fixes-for-kofagent)
