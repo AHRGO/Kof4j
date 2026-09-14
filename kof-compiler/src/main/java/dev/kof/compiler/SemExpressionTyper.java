@@ -475,19 +475,33 @@ public final class SemExpressionTyper {
                 }
                 StatementAnalyzer.analyzeBody(sa, le.body(), lambdaScope, Type.UnknownType.UNKNOWN);
                 Type returnType = Type.UnknownType.UNKNOWN;
+                boolean hasReturn = false;
                 for (StatementNode s : le.body()) {
-                    if (s instanceof ReturnStmt rs && rs.value() != null) {
-                        returnType = inferType(sa, rs.value(), lambdaScope);
+                    if (s instanceof ReturnStmt rs) {
+                        hasReturn = true;
+                        if (rs.value() != null) {
+                            returnType = inferType(sa, rs.value(), lambdaScope);
+                        } else {
+                            returnType = Type.PrimitiveType.VOID;
+                        }
                         break;
                     }
                     if (s instanceof BlockStmt b) {
                         for (StatementNode inner : b.statements()) {
-                            if (inner instanceof ReturnStmt rs2 && rs2.value() != null) {
-                                returnType = inferType(sa, rs2.value(), lambdaScope);
+                            if (inner instanceof ReturnStmt rs2) {
+                                hasReturn = true;
+                                if (rs2.value() != null) {
+                                    returnType = inferType(sa, rs2.value(), lambdaScope);
+                                } else {
+                                    returnType = Type.PrimitiveType.VOID;
+                                }
                                 break;
                             }
                         }
                     }
+                }
+                if (!hasReturn) {
+                    returnType = Type.PrimitiveType.VOID;
                 }
                 yield new Type.FunctionType(paramTypes, returnType);
             }

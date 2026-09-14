@@ -101,6 +101,12 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (14/09 ~09:50, dono = 192.168.100.22, lane compiler): fix issue #180 — Block lambda with no return inferred as UnknownType instead of void (SEM014).**
+> - Causa raiz: `SemExpressionTyper` inferia `returnType = UnknownType.UNKNOWN` quando a lambda de bloco não continha statement `ReturnStmt` com valor, disparando rejeição SEM014 ao passar para funções esperando `(T) -> void`.
+> - Correção: `SemExpressionTyper` agora detecta quando o corpo da lambda não possui nenhum `return` ou possui `return` sem valor e atribui `Type.PrimitiveType.VOID`.
+> - Prova: `CoreRegressionE2ETest#blockLambdaWithNoReturnInferredVoid` (chamada passando block lambda `(Int) -> void` sem return para função receptora).
+> - Próximo: issues #168 ou #167.
+
 > **✅ FEITO (14/09 ~09:40, dono = 192.168.100.22, lane compiler): fix issue #203 — Inner var declaration shadows outer variable beyond block scope.**
 > - Causa raiz: variáveis declaradas dentro de `BlockStmt` permaneciam no escopo `locals` após a saída do bloco, fazendo com que `findLocalVar` resolvesse o nome para o slot interno e tornasse a variável externa inacessível.
 > - Correção: `StatementLowerer` em `BlockStmt` renomeia as variáveis introduzidas no bloco para `#scopedVar$<nome>` ao sair do bloco, preservando seus slots e restaurando a visibilidade da variável externa.

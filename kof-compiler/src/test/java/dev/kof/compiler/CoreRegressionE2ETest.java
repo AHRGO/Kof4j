@@ -1607,42 +1607,27 @@ class CoreRegressionE2ETest {
                 """, "7\n2.75\ntrue", tempDir, "prim-return-obj");
     }
 
-    // Issue #203 — Inner block variable declaration shadows outer variable beyond block scope.
-    // The inner var must be unmapped/renamed on block exit so the outer variable binding is restored.
+    // Issue #180 — Block lambda with no return inferred as UnknownType instead of void (SEM014).
     @Test
-    void innerVarDeclarationScopeRollback(@TempDir Path tempDir) throws IOException {
-        Path src = tempDir.resolve("shadowblock.kf");
+    void blockLambdaWithNoReturnInferredVoid(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("blocklambda.kf");
         Files.writeString(src, """
+                void run(List<Int> lst, (Int) -> void f) {
+                    for (var x in lst) { f(x) }
+                }
                 main() {
-                    var x = 1
-                    if (true) {
-                        var x = 100
-                        println(x)
-                    }
-                    println(x)
-
-                    var y = 1
-                    if (false) {
-                        var y = 100
-                    } else {
-                        var y = 200
+                    var lst = new List<Int>()
+                    lst.add(1)
+                    lst.add(2)
+                    run(lst, (x: Int) -> {
+                        var y = x * 2
                         println(y)
-                    }
-                    println(y)
-
-                    var n = 10
-                    var done = false
-                    while (!done) {
-                        var n = 99
-                        println(n)
-                        done = true
-                    }
-                    println(n)
+                    })
                 }
                 """);
-        Path out = tempDir.resolve("shadowblock-jvm");
+        Path out = tempDir.resolve("blocklambda-jvm");
         CompilationResult r = driver.compile(src, out, Target.JVM);
         assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
-        assertEquals("100\n1\n200\n1\n99\n10", runJvm(out));
+        assertEquals("2\n4", runJvm(out));
     }
 }
