@@ -250,7 +250,7 @@ void consumeExpressionOp(MethodCtx ctx, int[] pos, List<Object> stack,
             }
             p.lc.registerRuntime("kofMultiArray");
             stack.add(new JsIr.JsNestedArray(sizes, JsTypeMapper.arrayFill(ma.baseType())));
-        } else if (op instanceof KofArrayLoad al) {
+        } else if (op instanceof KofArrayLoad _) {
             // KOF-SBD-001: bounds-checked read (raw JsIndex would inherit JS
             // array semantics — out-of-bounds returns `undefined` instead of
             // being rejected, diverging from the JVM's aaload/iaload/...).

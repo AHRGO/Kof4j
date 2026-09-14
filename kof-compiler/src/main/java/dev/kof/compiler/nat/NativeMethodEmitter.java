@@ -202,7 +202,7 @@ final class NativeMethodEmitter {
             }
             case KofBinary kb -> NativeX86Arith.emitBinary(sb, kb);
             case KofUnary ku -> NativeX86Arith.emitUnary(sb, ku);
-            case KofReturn kr -> {
+            case KofReturn _ -> {
                 if (nb.usesConcurrency && "main".equals(currentMethod.name())) {
                     // join implícito no fim do main — nenhuma tarefa órfã.
                     // (main sempre termina em um return explícito/implícito,
@@ -215,7 +215,7 @@ final class NativeMethodEmitter {
                 sb.append("    popq %rbp\n");
                 sb.append("    ret\n");
             }
-            case KofReturnVoid rv -> {
+            case KofReturnVoid _ -> {
                 if (nb.usesConcurrency && "main".equals(currentMethod.name())) {
                     sb.append("    call kof_spawn_join_all\n");
                 }
@@ -240,7 +240,7 @@ final class NativeMethodEmitter {
                 sb.append("    movq %rcx, 24(%rsp)\n");
                 sb.append("    movq %rsp, kof_exc_chain(%rip)\n");
             }
-            case KofTryEnd kte -> {
+            case KofTryEnd _ -> {
                 sb.append("    movq 24(%rsp), %rcx\n");
                 sb.append("    movq %rcx, kof_exc_chain(%rip)\n");
                 sb.append("    addq $32, %rsp\n");
@@ -249,21 +249,21 @@ final class NativeMethodEmitter {
             case KofConditionalJump kc -> nb.emitConditionalJump(sb, kc);
             case KofCall kc -> nb.emitCall(sb, kc);
             case KofNewObject no -> nb.emitNewObject(sb, no);
-            case KofDup dup -> sb.append("    movq (%rsp), %rax\n    pushq %rax\n");
-            case KofDup2 dup2 -> sb.append("""
+            case KofDup _ -> sb.append("    movq (%rsp), %rax\n    pushq %rax\n");
+            case KofDup2 _ -> sb.append("""
                     movq (%rsp), %rax
                     movq 8(%rsp), %rbx
                     pushq %rbx
                     pushq %rax
                     """);
-            case KofDupX1 x1 -> sb.append("""
+            case KofDupX1 _ -> sb.append("""
                     movq (%rsp), %rax
                     movq 8(%rsp), %rbx
                     pushq %rax
                     pushq %rbx
                     pushq %rax
                 """.stripIndent());
-            case KofDupX2 x2 -> sb.append("""
+            case KofDupX2 _ -> sb.append("""
                     movq (%rsp), %rax
                     movq 8(%rsp), %rbx
                     movq 16(%rsp), %rcx
@@ -272,14 +272,14 @@ final class NativeMethodEmitter {
                     pushq %rbx
                     pushq %rax
                 """.stripIndent());
-            case KofPop pop -> sb.append("    addq $8, %rsp\n");
+            case KofPop _ -> sb.append("    addq $8, %rsp\n");
             // §142 (12/09): no nativo TODO valor de pilha é 1 qword — inclusive
             // Long/Double (o 2º slot da convenção JVM não existe aqui; o frame
             // de LOCAIS reserva 2 slots, mas o valor empilhado é 1). O POP2
             // herdado do JVM (addq $16) desbalanceava a pilha e o push seguinte
             // pisava no local — `mapOf(_,1L).put(_,2L); println(m.size)` dava
             // SIGSEGV (o mapa lido era o System.out). Descartar 1 qword.
-            case KofPop2 pop2 -> sb.append("    addq $8, %rsp\n");
+            case KofPop2 _ -> sb.append("    addq $8, %rsp\n");
             case KofGetStatic gs -> {
                 // campo estático (bug 41): slot global no .data, não no objeto.
                 String sym = nb.staticSymbol(nb.staticKey(gs.ownerType()), gs.name());
@@ -293,7 +293,7 @@ final class NativeMethodEmitter {
                 sb.append("    leaq ").append(sym).append("(%rip), %rcx\n");
                 sb.append("    movq %rax, 0(%rcx)\n");
             }
-            case KofCheckCast cc -> { }
+            case KofCheckCast _ -> { }
             case KofInstanceOf io -> {
                 int targetTypeId = 0;
                 if (BuiltinTypes.isString(io.type())) {
@@ -316,8 +316,8 @@ final class NativeMethodEmitter {
             case KofNewMultiArray ma -> nb.emitNewMultiArray(sb, ma);
             case KofArrayLoad al -> nb.emitArrayLoad(sb, al);
             case KofArrayStore as -> nb.emitArrayStore(sb, as);
-            case KofArrayLength al -> nb.emitArrayLength(sb);
-            case KofThrow thr -> {
+            case KofArrayLength _ -> nb.emitArrayLength(sb);
+            case KofThrow _ -> {
                 sb.append("    popq %rdi\n");
                 sb.append("    call kof_throw_string\n");
             }

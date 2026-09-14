@@ -100,6 +100,11 @@ if (ae.target() instanceof IdentifierExpr ie && !owner.isEmpty()) {
                 if (TypeMetrics.isPrimitiveType(instValType)
                         && TypeMetrics.isPrimitiveType(fieldSym.type())) {
                     driver.emitWideningIfNeeded(ops, instValType, fieldSym.type());
+                } else if (driver.erasesToReference(fieldSym.type())
+                        && TypeMetrics.isPrimitiveType(instValType)
+                        && !ExpressionTyper.boxesOwnBranches(driver, ae.value(), locals)) {
+                    // Issue #181: campo de instância declarado Object recebendo primitivo (this.item = 99)
+                    driver.emitErasureBox(ops, instValType);
                 }
             }
             if (compoundAsgn && !instConcat) {
@@ -164,6 +169,15 @@ if (ae.target() instanceof FieldAccessExpr fa) {
                 // (`<<=`) exige contagem int (L2I) e resultado no tipo do alvo.
                 emitCompoundRhsConv(driver, ops, sfaOp, fld.type(), sfaValueType);
                 ops.add(new KofBinary(compoundBinaryOp(sfaOp), fld.type()));
+            } else if ("=".equals(sfaOp)) {
+                if (TypeMetrics.isPrimitiveType(sfaValueType) && TypeMetrics.isPrimitiveType(fld.type())) {
+                    driver.emitWideningIfNeeded(ops, sfaValueType, fld.type());
+                } else if (driver.erasesToReference(fld.type())
+                        && TypeMetrics.isPrimitiveType(sfaValueType)
+                        && !ExpressionTyper.boxesOwnBranches(driver, ae.value(), locals)) {
+                    // Issue #181: campo estático Object recebendo primitivo (Holder.item = 99)
+                    driver.emitErasureBox(ops, sfaValueType);
+                }
             }
             ops.add(new KofPutStatic(cs.type(), fa.fieldName(), sfaConcat ? BuiltinTypes.STRING : fld.type()));
             return localIdx;
@@ -266,15 +280,21 @@ if (ae.target() instanceof FieldAccessExpr fa) {
     }
     localIdx = ExpressionLowerer.emitExpression(driver, ae.value(), ops, owner, localIdx, locals);
     boolean faCompound = isCompoundOp(faOp);
+    Type faValType = ExpressionTyper.inferExprType(driver, ae.value(), locals);
     if (faCompound) {
         // §103.2 (#103): widening do valor p/ o tipo do campo (h.value = n,
         // Int→Long); no shift (`<<=`) a contagem é int (L2I) — regra do §167.
-        emitCompoundRhsConv(driver, ops, faOp, fieldType,
-                ExpressionTyper.inferExprType(driver, ae.value(), locals));
+        emitCompoundRhsConv(driver, ops, faOp, fieldType, faValType);
         ops.add(new KofBinary(compoundBinaryOp(faOp), fieldType));
-    } else if ("=".equals(faOp) && TypeMetrics.isPrimitiveType(fieldType)) {
-        driver.emitWideningIfNeeded(ops,
-                ExpressionTyper.inferExprType(driver, ae.value(), locals), fieldType);
+    } else if ("=".equals(faOp)) {
+        if (TypeMetrics.isPrimitiveType(fieldType)) {
+            driver.emitWideningIfNeeded(ops, faValType, fieldType);
+        } else if (driver.erasesToReference(fieldType)
+                && TypeMetrics.isPrimitiveType(faValType)
+                && !ExpressionTyper.boxesOwnBranches(driver, ae.value(), locals)) {
+            // Issue #181: atribuição de primitivo a campo tipo Object (h.field = 99)
+            driver.emitErasureBox(ops, faValType);
+        }
     }
     ops.add(new KofStoreField(recvType, fa.fieldName(), fieldType));
     return localIdx;

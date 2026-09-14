@@ -24,7 +24,14 @@ public final class StatementLowerer {
                     if (ret.value() != null && !CompilerComparisons.isNullablePrimNullReturn(ret, returnType)) {
                         ExpressionNode rv = CompilerComparisons.foldNullablePrimBranches(ret.value(), returnType);
                         localIdx = ExpressionLowerer.emitExpression(driver, rv, ops, owner, localIdx, locals);
-                        driver.emitWideningIfNeeded(ops, ExpressionTyper.inferExprType(driver, rv, locals), returnType);
+                        Type rvType = ExpressionTyper.inferExprType(driver, rv, locals);
+                        driver.emitWideningIfNeeded(ops, rvType, returnType);
+                        // Issue #169: retorno de primitivo de função tipo Object
+                        if (driver.erasesToReference(returnType)
+                                && TypeMetrics.isPrimitiveType(rvType)
+                                && !ExpressionTyper.boxesOwnBranches(driver, rv, locals)) {
+                            driver.emitErasureBox(ops, rvType);
+                        }
                         ops.add(new KofStoreLocal(returnType, f.slotValor()));
                     } else if (!Type.isVoid(returnType)) {
                         ops.add(CompilerTypes.defaultValueOp(returnType));
@@ -39,7 +46,14 @@ public final class StatementLowerer {
                     // heterogêneo que boxia e quebra o ireturn).
                     ExpressionNode rv = CompilerComparisons.foldNullablePrimBranches(ret.value(), returnType);
                     localIdx = ExpressionLowerer.emitExpression(driver, rv, ops, owner, localIdx, locals);
-                    driver.emitWideningIfNeeded(ops, ExpressionTyper.inferExprType(driver, rv, locals), returnType);
+                    Type rvType = ExpressionTyper.inferExprType(driver, rv, locals);
+                    driver.emitWideningIfNeeded(ops, rvType, returnType);
+                    // Issue #169: retorno de primitivo de função tipo Object
+                    if (driver.erasesToReference(returnType)
+                            && TypeMetrics.isPrimitiveType(rvType)
+                            && !ExpressionTyper.boxesOwnBranches(driver, rv, locals)) {
+                        driver.emitErasureBox(ops, rvType);
+                    }
                     ops.add(new KofReturn(returnType));
                 } else if (Type.isVoid(returnType)) {
                     ops.add(new KofReturnVoid());

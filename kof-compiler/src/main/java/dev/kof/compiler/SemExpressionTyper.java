@@ -395,7 +395,7 @@ public final class SemExpressionTyper {
                 if (KofProcess.isResult(recvType) && KofProcess.isField(fa.fieldName())) {
                     yield KofProcess.fieldType(fa.fieldName());
                 }
-                if (recvType instanceof Type.ArrayType at && "length".equals(fa.fieldName())) {
+                if (recvType instanceof Type.ArrayType _ && "length".equals(fa.fieldName())) {
                     yield Type.PrimitiveType.INT;
                 }
                 if (Type.isString(recvType) && "length".equals(fa.fieldName())) {

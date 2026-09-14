@@ -17,8 +17,8 @@ public final class NativeTypeMapper {
                 case "void", "Void" -> 0;
                 default -> 8;
             };
-            case Type.ClassType ct -> 8;
-            case Type.ArrayType at -> 8;
+            case Type.ClassType _ -> 8;
+            case Type.ArrayType _ -> 8;
             default -> 8;
         };
     }

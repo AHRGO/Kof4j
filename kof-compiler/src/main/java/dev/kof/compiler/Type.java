@@ -179,10 +179,10 @@ public sealed interface Type {
                             .collect(java.util.stream.Collectors.joining(", ", "<", ">")));
             case ArrayType a -> describe(a.componentType()) + "[]";
             case NullableType n -> describe(n.inner()) + "?";
-            case UnknownType u -> "unknown";
+            case UnknownType _ -> "unknown";
             case TypeVariable v -> v.name();
-            case FunctionType f -> "function";
-            case WildcardType w -> "?";
+            case FunctionType _ -> "function";
+            case WildcardType _ -> "?";
         };
     }
 

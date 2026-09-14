@@ -236,17 +236,15 @@ class CoreRegressionE2ETest {
                 """, "42\nhello", tempDir, "CtorNamedLikeClass");
     }
 
-    // GitHub #30 — String.split + acesso ao array: .get(i) era baixado como
-    // KofCall com owner ArrayType → JvmTypeMapper produzia internalName ""
-    // → Methodref "" no constant pool → ClassFormatError: Illegal class name "".
-    // Fix: .get(i) → arrayload, .size/.length → arraylength (typer + lowering).
+    // GitHub #30 — String.split + acesso ao array:
+    // .size/.length → arraylength (typer + lowering), arr[i] → arrayload.
     @Test
     void stringSplitArrayAccess(@TempDir Path tempDir) throws IOException {
         runBoth("""
                 main() {
                     var parts = "a,b,c".split(",")
                     println(parts.size)
-                    println(parts.get(0))
+                    println(parts[0])
                     println(parts.length)
                 }
                 """, "3\na\n3", tempDir, "splitArr");
@@ -1568,5 +1566,76 @@ class CoreRegressionE2ETest {
                     println(i)
                 }
                 """, "a\nb\nouter\n1\n2\n100\n0\n1\n999", tempDir, "for-in-shadow-outer");
+    }
+
+    // Issue #181: Assigning primitive literal to Object-typed field missing autobox
+    // VerifyError: Bad type on operand stack at putfield.
+    @Test
+    void primitiveAssignedToObjectField(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                class Holder {
+                    Object item
+                }
+                main() {
+                    var h = new Holder()
+                    h.item = 99
+                    println(h.item)
+
+                    h.item = 3.5
+                    println(h.item)
+
+                    h.item = true
+                    println(h.item)
+                }
+                """, "99\n3.5\ntrue", tempDir, "prim-to-obj-field");
+    }
+
+    // Issue #169: Returning a primitive from Object-typed function missing autobox
+    // VerifyError: Bad type on operand stack at areturn.
+    @Test
+    void primitiveReturnedFromObjectFunction(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                Object wrapInt(Int n) { return n }
+                Object wrapDouble(Double d) { return d + 0.25 }
+                Object wrapBool(Bool b) { return b }
+
+                main() {
+                    println(wrapInt(7))
+                    println(wrapDouble(2.5))
+                    println(wrapBool(true))
+                }
+                """, "7\n2.75\ntrue", tempDir, "prim-return-obj");
+    }
+
+    // Issues #146/#147/#158/#166 — JVM return descriptors of real
+    // java.lang.String/wrapper methods. Before the fix the typer had no
+    // signature for these methods, so the emitter produced
+    // `(...)Ljava/lang/Object;` or an empty class name:
+    //   #146 String.matches       -> VerifyError (boxed Boolean, if_icmpne)
+    //   #147 String.replaceAll    -> NoSuchMethodError (Object return)
+    //   #158 String.toCharArray   -> NoClassDefFoundError "?" (char[] lost)
+    //   #166 Int.parseInt/Long.toHexString -> NoSuchMethodError (String return)
+    // JVM-only: the JS runtime faces for matches/toCharArray/parseInt are a
+    // separate pre-existing gap (tracked in known-bugs), not a JVM regression.
+    @Test
+    void stringAndWrapperMethodReturnDescriptors(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("strdesc.kf");
+        Files.writeString(src, """
+                main() {
+                    println("hello123".matches("[a-z]+[0-9]+"))
+                    println("hello123".matches("[0-9]+"))
+                    var r = "hello world 123".replaceAll("[0-9]+", "NUM")
+                    println(r)
+                    var arr = "hello".toCharArray()
+                    println(arr.length)
+                    var n = Int.parseInt("42")
+                    println(n + 8)
+                    println(Long.toHexString(255L))
+                }
+                """);
+        Path out = tempDir.resolve("strdesc-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("true\nfalse\nhello world NUM\n5\n50\nff", runJvm(out));
     }
 }

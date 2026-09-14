@@ -61,8 +61,8 @@ public final class CompilerEmission2 {
             }
             localIdx = ExpressionLowerer.emitExpression(driver, args.get(i), ops, owner, localIdx, locals);
             Type argType = ExpressionTyper.inferExprType(driver, args.get(i), locals);
-            if (formal != null && formal instanceof Type.PrimitiveType fpt
-                    && argType instanceof Type.PrimitiveType apt
+            if (formal != null && formal instanceof Type.PrimitiveType _
+                    && argType instanceof Type.PrimitiveType _
                     && !BuiltinTypes.isString(formal)) {
                 driver.emitWideningIfNeeded(ops, argType, formal);
             }

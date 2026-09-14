@@ -145,7 +145,7 @@ public class SemanticAnalyzer {
             case RecordDeclarationNode rec -> analyzeRecord(rec);
             case EntityDeclarationNode ent -> analyzeEntity(ent);
             case InterfaceDeclarationNode iface -> analyzeInterface(iface);
-            case EnumDeclarationNode en -> { }
+            case EnumDeclarationNode _ -> { }
             case FunctionDeclarationNode func -> analyzeFunction(func);
             default -> {}
         }

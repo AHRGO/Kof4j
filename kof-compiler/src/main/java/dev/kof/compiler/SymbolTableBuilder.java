@@ -79,7 +79,7 @@ public final class SymbolTableBuilder {
             case RecordDeclarationNode rec -> defineRecordMembers(sa, rec);
             case EntityDeclarationNode ent -> defineEntityMembers(sa, ent);
             case InterfaceDeclarationNode iface -> defineInterfaceMembers(sa, iface);
-            case EnumDeclarationNode en -> { }
+            case EnumDeclarationNode _ -> { }
             default -> {}
         }
     }

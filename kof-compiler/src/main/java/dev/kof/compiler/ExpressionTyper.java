@@ -212,7 +212,7 @@ public final class ExpressionTyper {
                 if (BuiltinTypes.isSet(recvType) && ("size".equals(fa.fieldName()) || "length".equals(fa.fieldName()))) {
                     yield Type.PrimitiveType.INT;
                 }
-                if (recvType instanceof Type.ArrayType at && ("length".equals(fa.fieldName())
+                if (recvType instanceof Type.ArrayType _ && ("length".equals(fa.fieldName())
                         || "size".equals(fa.fieldName()) || "count".equals(fa.fieldName()))) {
                     yield Type.PrimitiveType.INT;
                 }
