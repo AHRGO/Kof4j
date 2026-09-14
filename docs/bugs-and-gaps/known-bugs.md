@@ -6851,3 +6851,36 @@ the user's — a compile-time diagnostic is the goal (rule 6).
 - **Root cause:** The lowering of `IfExpr` and `SwitchExpr` already applied in-branch boxing when `branchTypesDiffer` was true (boxing to `Object`), but `ExpressionTyper.inferExprType` blindly returned the first branch's type (`thenType`). So `var result` got `Int` (or `Double`), allocated a primitive slot/type and tried to `istore`/`dstore` an `Object`/`Number` reference.
 - **Fix:** `ExpressionTyper.inferExprType` for `IfExpr` and `SwitchExpr` now returns `Object` (`java.lang.Object`) when `branchTypesDiffer` is true, matching the receiver variable's type with the values unified on the stack.
 - **Proof:** `CoreRegressionE2ETest.ifExpressionMixedNumericBranches` proves both cases (`1 else 2.5` and `3.5 else 4`) compiling and running correctly on JVM and JS.
+
+### §201 — `for`/`for-in` no JS: variável de loop `_forInitVar_*`/`_forInVar` referenciada sem declaração (`ReferenceError`) — 🔴 OPEN 14/09 (introduzido por `75e38d35` #182, dono = lane do fix #182)
+
+- **Sintoma (JS):** `ReferenceError: _forInitVar_3 is not defined` /
+  `_forInVar is not defined` — o programa roda no JVM mas quebra no JS.
+- **Repro mínimo:** `ArrayBoundsStressTest#stress007_recoversCleanlyAfterRejectedAccess`
+  e `#stress003to008and017_mixedIndexSeveralSeeds` (linha JS), `ArrayBoundsDeepStressTest#deepStress003_*`,
+  `BackendParityTest#parityCrossTargetGroupA` (break-continue). 4–5 vermelhos.
+- **Bisseção (provada):** `75e38d35` RED ×2 / `b3ab9858`+codemod e `75e38d35~1` GREEN.
+  O fix #182 ("unshadow loop variable names in locals after for/for-in")
+  trocou o nome da variável no `locals` do typer mas o backend JS emite a
+  declaração com um nome e o corpo referencia o `_forInitVar_N` novo (ou
+  vice-versa) — a declaração some do escopo do for no JS.
+- **Não fixei:** é regra 6 + lane alheia viva (o autor comitou 30 min antes
+  da descoberta); correção é do dono do #182. Linha no DOING.md da mesma
+  agregação. JVM/Native/Script NÃO são afetados (só JS).
+
+### §202 — `String.split(...).get(i)` → SEM028 "array não tem método get()" (typer passou a cravar `String[]` do split; o `.get` era aceito antes por tipagemUnknown) — 🔴 OPEN 14/09 (introduzido por `e6e5c9b8`, dono = lane de inferência de tipos/String methods)
+
+- **Sintoma:** `Compilation should succeed: [Diagnostic ... code=SEM028]` em
+  `KofTimeE2ETest#todayIsoFormatDateIsoIsToday{Jvm,Js,Native}` (o programa
+  usa `parts.get(0)` após `today.split("-")`), `CodegenKitchenSinkTest`
+  (strings), e família em `ConformanceMatrixTest`. 6–9 vermelhos.
+- **Bisseção (provada):** `e6e5c9b8` RED / `75e38d35` GREEN (`git worktree`
+  com `mvn -o test -pl kof-compiler -Dtest=...`).
+- **Mecanismo:** `e6e5c9b8` deu retorno real ao `split`/`toCharArray`/etc. no
+  typer (`CollectionMethodTyper`/`StringMethodRegistry`), então o receiver de
+  `.get(i)` virou `Type.ArrayType` e caiu no ramo SEM028 (diagnóstico por
+  design: arrays crus não têm `get()`; o idiom é `arr[i]`). Antes o receiver
+  era desconhecido e o `.get` passava. **Decisão de contrato (regra 6):**
+  arrasar os testes (usar `parts[0]`) OU aceitar `.get` em `ArrayType` —
+  escolha do dono da lane, não desta; o test-corpus que usou `.get` em array
+  está em `KofTimeE2ETest` (S7e) e precisa de align com o que for decidido.

@@ -99,7 +99,33 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > `KofConcurrency2Test.cancelJsSequential` asserts ajustados — paridade JS
 > do §186 e4613704). Suíte completa re-provada depois do rebase.
 
-## PRÓXIMO PASSO (re-dispacho lê isto)
+
+
+> **FEITO (14/09 ~09:30, dono = 192.168.100.22, lane CodeQL/health): baseline
+> 25 + codemod `_` (agregados no main pela agregacao do cluster).** (a)
+> `b3ab9858` D-BASELINE: toolchain do repo 21→25 (pom+workflows+package.sh+
+> README EN/PT); DECISIONS.md registra a decisao da mantenedora; `V21` do
+> JvmBackend e release=21 do template Android NAO tocados (alvo do usuario,
+> regra 6). Prova: worktree limpo `b3ab9858` suíte compiler 1464/0 (162 skip)
+> em JDK 25 + 61 bindings `case T x ->`/`instanceof T x` → `_` (JEP 443) em 19
+> arquivos → kof-compiler 1574/1-fail, onde a única fail é o FLAKE sse_connection_counter
+> (passa 6/6 isolado; classe inteira 6/6 com a mudanca; nao toca arquivos web).
+> (b) Os 61 bindings estao no HEAD via `a892b3c5`/`752dc5df` + agregacao
+> `e6e5c9b8`/`663ded3a` (o cluster absorbou; conferido por-arquivo: worktree
+> == HEAD nos 19). Isso FECHA ~61 alerts `local-variable-is-never-read` no
+> proximo scan CodeQL. (c) **REGRESSOS DE OUTRAS LANES CATALOGADOS COM
+> BISSECAO PROVADA: §201 (`75e38d35` #182 → JS `_forInitVar` ReferenceError;
+> 4-5 vermelhos ArrayBounds*/BackendParity) e §202 (`e6e5c9b8` → split()
+> agora e ArrayType e `.get(i)` cai em SEM028; 6-9 vermelhos KofTime/Kitchen/
+> ConformanceMatrix).** Donos = lanes do #182 e da inferencia String — NAO
+> tocar sem coordenação (regra 6: decisão de contrato em §202). Suíte da
+> árvore hoje: ~1601/16 — os 16 sao os dois grupos acima + flake; ZERO dos
+> meus. **PROXIMO PASSO (esta lane):** seguir fila livre CodeQL apos scan
+> re-contar: unused-parameter ×81 (por caso, conferir callers), useless-null
+> ×11, indent ×10, deref-null ×8, IOB ×2 (Compare), chained-type ×21 —
+> SEMPRE checando `git log -5 -- <arq>` p/ nao colidir c/ lanes §201/§202
+> quentes. O codemod dos 17 locals puros restantes ficou p/ depois (varios
+> carregam chamada com efeito — deletar linha = mudanca de comportamento).## PRÓXIMO PASSO (re-dispacho lê isto)
 
 > **✅ FEITO (14/09 ~10:10, dono = 192.168.100.22, lane compiler): fix issue #167 — instanceof with primitive/boxed types emits '?' as class name (NoClassDefFoundError).**
 > - Causa raiz: `JvmOpEmitter` em `KofInstanceOf` e `KofCheckCast` extraía o nome interno apenas se o tipo fosse `Type.ClassType`, caindo em `"?"` para tipos primitivos (`Type.PrimitiveType`).
