@@ -535,19 +535,17 @@ class SemanticResolutionTest {
         assertTrue(r.success(), "legítimo deve compilar: " + r.diagnostics().getDiagnostics());
     }
 
-    // ---- subscript `[]`: só existe para ARRAY no corpus (learn/04:84,
-    // control-flow.md:81). Em String/List/Map/Set era ACEITO e quebrava de um
-    // jeito por target (JVM VerifyError aaload, Native/Script vazios). SEM054
-    // rejeita nos 5 alvos (paridade absoluta) — escrita (l[0] = 9) inclusa. ----
+    // ---- subscript `[]`: existe para ARRAY e para List (get e set). List[i]
+    // era SEM054 e virou rota kof_list_get/kof_list_set no #149/#152 (prova
+    // viva: CoreRegressionE2ETest.listIndexAccess + listIndexPrimitiveUnbox).
+    // String/Map/Set seguem SEM054 nos 5 alvos (paridade absoluta). ----
 
     @Test
     void subscriptOnCollectionsRejected(@TempDir Path tmp) throws IOException {
         String[] exprs = {
             "var s = \"abc\"; println(s[0])",
-            "var l = listOf(10, 20); println(l[1])",
             "var m = mapOf(\"a\", 1); println(m[\"a\"])",
-            "var st = setOf(\"a\"); println(st[\"a\"])",
-            "var l2 = listOf(1); l2[0] = 9" };
+            "var st = setOf(\"a\"); println(st[\"a\"])"};
         for (String e : exprs) {
             CompilationResult r = compile(tmp, "e.kf", "main() { " + e + " }");
             assertFalse(r.success(), "deve falhar: " + e);
