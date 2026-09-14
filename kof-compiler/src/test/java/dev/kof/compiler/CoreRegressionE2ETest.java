@@ -1775,4 +1775,29 @@ class CoreRegressionE2ETest {
         assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
         assertEquals("00042\nhi---", runJvm(out));
     }
+
+    // Issue #210 — static field ++ / -- emits instance field opcodes
+    @Test
+    void staticFieldIncrementJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("staticinc.kf");
+        Files.writeString(src, """
+                class Counter {
+                    static Int count = 0
+                    void inc() { Counter.count++ }
+                    void dec() { Counter.count-- }
+                }
+                main() {
+                    var c = new Counter()
+                    c.inc()
+                    c.inc()
+                    println(Counter.count)
+                    c.dec()
+                    println(Counter.count)
+                }
+                """);
+        Path out = tempDir.resolve("staticinc-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("2\n1", runJvm(out));
+    }
 }

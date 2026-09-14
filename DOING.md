@@ -127,8 +127,14 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > quentes. O codemod dos 17 locals puros restantes ficou p/ depois (varios
 > carregam chamada com efeito — deletar linha = mudanca de comportamento).## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (14/09 ~11:40, dono = 192.168.100.22, lane compiler): fix issue #210 — static field ++ / -- emits instance field opcodes (getfield/putfield) instead of getstatic/putstatic.**
+> - Causa raiz: `CompilerEmission2.emitIncrement` tratava acessos a campos em `IdentifierExpr` e `FieldAccessExpr` exclusivamente como instâncias (emitia `KofLoadLocal(ownerType, 0)` ou `emitExpression(receiver)` seguido de `KofLoadField`/`KofStoreField`), gerando `getfield`/`putfield` que causavam `IncompatibleClassChangeError: Expected non-static field`.
+> - Correção: detectado modificador `STATIC` no `FieldSymbol` em `emitIncrement` (para referências diretas ou qualificadas `Class.field`), delegando para `emitStaticFieldIncrement` que opera via `KofGetStatic` e `KofPutStatic` sem receiver de instância na pilha.
+> - Prova: `CoreRegressionE2ETest#staticFieldIncrementJvm`.
+> - Próximo: issues #214, #215, #217.
+
 > **✅ FEITO (14/09 ~11:30, dono = 192.168.100.18, lane development): §204 — fix-forward do ELSE do `if`-statement (frame crash `Supervisor.lacoUnico`).** A limpeza CodeQL `a892b3c5` removeu, junto com o binding unread `condType`, a linha VIVA `if (ifStmt.elseBranch() != null) analyzeStatement(sa, ..., scope, ...)` em `StatementAnalyzer`. Sem analisar o ELSE, os tipos das expressões do ramo não entram em `sa.expressionTypes()` e o lowering JVM gera frames inválidos (ASM `COMPUTE_FRAMES` AIOOBE) — visível em `Supervisor.lacoUnico` (3 vermelhos em `KofSupervisorE2ETest`). **Bisseção provada em worktree limpo:** `0448ef5d` GREEN / `ed409ff9` GREEN / `752dc5df` RED / `75e38d35` RED. Fix: restaura a chamada (binding `condType` segue removido). Prova: `KofSupervisorE2ETest` 8/8 + `BackendParityTest` 19/19 + `ArrayBoundsStressTest` 15/15 + `CoreRegressionE2ETest` 79/79 (121/0/0). Registrado em `known-bugs.md` §204 (EN+PT). **§205 catalogado:** `ifexpr-heterogeneous-direct` Native SIGSEGV (exit 139) introduzido por `ed409ff9` (#183) — `println(Object)` nativo; dono = lane do #183 (contrato regra 6), NÃO desta.
->
+
 > **✅ FEITO (14/09 ~11:20, dono = 192.168.100.22, lane compiler): fix issue #154 — strings.padLeft / padRight crash with Char literal (VerifyError).**
 > - Causa raiz: `ExpressionMethodCallLowerer` emitia chamadas estáticas `strings.padLeft/padRight` usando `emitArgs` cru sem coerção de argumentos para os tipos formais `(String, Int, String)`. Ao passar literal `Char` (`'0'`), o valor `int` era deixado na pilha para um parâmetro que esperava `Ljava/lang/String;`, resultando em `VerifyError`.
 > - Correção: `ExpressionMethodCallLowerer` agora utiliza `driver.emitArgumentsWithFormalTypes` para chamadas `KofStd`. Em `CompilerEmission2`, quando o parâmetro formal espera `String` e o argumento é `Char`, é emitido `String.valueOf(char)`.
