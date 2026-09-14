@@ -5,7 +5,6 @@
 522	kof-compiler/src/main/java/dev/kof/compiler/ExpressionAssignmentLowerer.java
 514	kof-compiler/src/main/java/dev/kof/compiler/ExpressionInstanceCallLowerer.java
 535	kof-compiler/src/main/java/dev/kof/compiler/ExpressionLowerer.java
-519	kof-compiler/src/main/java/dev/kof/compiler/ExpressionMethodCallLowerer.java
 558	kof-compiler/src/main/java/dev/kof/compiler/js/JsControlFlowParser.java
 523	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeCore.java
 518	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeUiLayout.java
@@ -23,5 +22,5 @@
 524	kof-compiler/src/main/java/dev/kof/compiler/parser/ExpressionParser.java
 579	kof-compiler/src/main/java/dev/kof/compiler/runtime/RuntimeTimeIso.java
 557	kof-compiler/src/main/java/dev/kof/compiler/runtime/RuntimeUi.java
-572	kof-compiler/src/main/java/dev/kof/compiler/SemExpressionTyper.java
-592	kof-compiler/src/main/java/dev/kof/compiler/StatementLowerer.java
+573	kof-compiler/src/main/java/dev/kof/compiler/SemExpressionTyper.java
+598	kof-compiler/src/main/java/dev/kof/compiler/StatementLowerer.java

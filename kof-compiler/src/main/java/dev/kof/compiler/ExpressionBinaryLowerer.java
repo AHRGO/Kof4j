@@ -75,6 +75,27 @@ if ("instanceof".equals(bin.operator()) || "as".equals(bin.operator())) {
             castTarget = CompilerLambdaClass.lambdaInterfaceType(driver, ft);
         }
         ops.add(new KofCheckCast(castTarget));
+        // #205: cast de REFERÊNCIA → PRIMITIVO (`obj as Int` com obj Object)
+        // chegava aqui com targetType primitivo (from não é primitivo → o ramo
+        // de conversão numérica não pega). O CHECKCAST vira a caixa (Integer),
+        // mas sem unbox o stack fica `Integer` onde o consumidor espera `int`
+        // (VerifyError) — e p/ Long/Double o COMPUTE_FRAMES da ASM crasha
+        // (COMP002). kof_unbox = checkcast(boxed)+unboxMethod no JVM; é
+        // identidade no interpretador (Script) e JS (stack já boxed) — o
+        // CHECKCAST de cima fica redundante (mesmo alvo, inofensivo).
+        if (TypeMetrics.isPrimitiveType(targetType)
+                && !TypeMetrics.isPrimitiveType(fromCastType) && !handleAsInt) {
+            // kof_unbox: JVM faz CHECKCAST(boxed)+INVOKEVIRTUAL unboxMethod
+            // com descriptor "()" + toDescriptor(returnType). Char é guardado
+            // BOXED como Integer (§104b-ii): o return tem que ser INT (senão
+            // emite Integer.intValue()C inexistente). No interpretador/JS é
+            // identidade, então INT-preserving é seguro nos outros alvos
+            // (Kof `char` é int-width na JVM por contrato).
+            Type unboxResult = TypeMetrics.isCharType(targetType) ? Type.PrimitiveType.INT : targetType;
+            ops.add(new KofCall(unboxResult, "kof_unbox",
+                    List.of(TypeMetrics.boxedTypeFor(targetType)), unboxResult,
+                    KofCallKind.FUNCTION));
+        }
         // o resultado do cast tem o tipo alvo — o próximo
         // acesso (campo/método) precisa enxergá-lo
         if (bin.left() instanceof IdentifierExpr lie && !Type.isUnknown(targetType)) {
