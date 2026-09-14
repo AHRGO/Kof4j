@@ -23,7 +23,7 @@ jobs:
       bump_sha: ${{ steps.bumpsha.outputs.sha }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -113,7 +113,7 @@ jobs:
             target: macos-arm64
     steps:
       - name: Checkout (bumped commit, não o trigger)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           # Sem `ref` o checkout traz o commit que DISPAROU o workflow
