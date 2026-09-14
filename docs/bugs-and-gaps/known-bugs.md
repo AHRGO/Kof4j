@@ -6616,6 +6616,40 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   (O bloqueio de cache dependabot relatado antes foi RESOLVIDO:
   surefire 3.6.0 + mariadb 3.5.10 + postgresql 42.7.13 no `.m2`;
   `mvn -o` resolve de novo.)
+- **MENOR REPRO de 2 linhas CRAVADO (14/09 ~05:10, harness próprio
+  `dev.cli.BR` compila riscv + qemu timeout 20s, dono = 192.168.100.17 —
+  só diagnóstico, lane nat conserta):**
+  ```
+  main() {
+      println(math.parseIntOrDefault("abc", -1))          // linha 1: imprime -1
+      println(math.parseDoubleOrDefault("2.5", 0.0) == 2.5)  // trava aqui
+  }
+  ```
+  Tabela de ordem (5 casos, todos ec medidos): throw-OrDefault (int OU
+  long) ANTES de qualquer `to_double` → **HANG**; `to_double` ANTES do
+  throw → ok; só throws int/long (3+ calls) → ok. Regra: **qualquer
+  OrDefault que lança + qualquer `parseDouble`/`Double` depois = hang**.
+  O binário imprime `-1` e trava na linha 2 (stdout parcial medido).
+- **PC do loop infinito CRAVADO (`qemu -d exec` + objdump do binário do
+  repro):** TBs 0x10b60↔0x10b6c alternando para sempre — o loop de
+  escalação de expoente dentro da região `kof_string_to_double/float`
+  (`beqz s8 / fmul ft0,ft0,ft1 / addi s5,s5,-1 / bnez s5`): `ft1` vem de
+  constante em `.data` (o `# 30026` é só o símbolo anterior mais próximo,
+  `kof_exc_chain+0x26` — pool de dados, NÃO a chain); o contador `s5` é
+  que vem de estado do parse. Hang ⇒ `s5` inicial ≈ 2⁶³ (loop de
+  escalação de expoente sem convergência). Coerente com o aliasing
+  acima: com a chain global corrompida pelos BITS DO DEFAULT
+  (`-1` = todos os bits), um throw subsequente desempacota estado lixo e
+  o double-base chega ao parser como NaN/normal absurdo → s5 garbage.
+  Causa do s5 exato pede gdb-multiarch na lane nat (o host tem só gdb
+  x86; attach `-g` no qemu travou na leitura — não cravei além do loop).
+- **Fix para a lane nat (duas frentes, na ordem):** (1) destravar o
+  slot do default (frame 56B ou mover `ra`/`s0`) — mata o aliasing;
+  (2) conferir por que a região de escalação de expoente lê seed em
+  `kof_exc_chain+0x26` (load não alinhado, endereço par/ímpar pelo
+  bit de expoente) — mesmo pós-fix (1), um seed lido de dentro da área
+  do chain é fracilo. **Prova esperada pós-fix:** `dev.cli.BR` do repro
+  de 2 linhas → `ec=0 out=[-1|true]` + os 3 vermelhos da suíte verde.
 
 ## §193 — E2E blog (F12): `db.query` cru + `.get("col")`/recursos dentro de handler web derr
 
