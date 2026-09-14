@@ -582,6 +582,29 @@ class JvmE2ETest {
     }
 
     @Test
+    void execRecordNullablePrimitiveEquals(@TempDir Path tempDir) throws IOException {
+        // #127: record com campo Int? gerava equals() com bytecode inválido —
+        // dois `int` crus na pilha chamando Objects.equals(Object,Object) →
+        // VerifyError "integer not assignable to java/lang/Object" (issue do
+        // colaborador, distro oficial 0.3.23-beta). Fix: JvmRecordEmitter erases
+        // Nullable(primitivo) p/ primitivo em equals/hashCode/toString. Este
+        // teste PROVA a morte: no código velho falha com exit != 0 (VerifyError).
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            record Pair(Int? x, Int? y)
+            main() {
+                var a = Pair(1, 2)
+                var b = Pair(1, 2)
+                println(a == b)
+                println(a == a)
+                println(a.hashCode() == b.hashCode())
+                println(a)
+            }
+            """);
+        runJvm(source, tempDir.resolve("out"), "true\ntrue\ntrue\nPair[x=1, y=2]");
+    }
+
+    @Test
     void execRecordValueMethods(@TempDir Path tempDir) throws IOException {
         Path source = tempDir.resolve("Main.kf");
         Files.writeString(source, """
