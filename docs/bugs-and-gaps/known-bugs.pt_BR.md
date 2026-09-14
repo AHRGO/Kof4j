@@ -6892,6 +6892,60 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
 - **Prova Q1:** os repros `e205c/e205e` acima → pós-fix devem imprimir `7`
   (sem VerifyError); `var o: Object = 7` (`e205d`) continua `ec=0`.
 
+### §214 — tipo de lambda perdido ao ler de container genérico: `List<() -> Int>.get(0)` → SEM015 "not a function" (issue #193)
+
+- **Sintoma (medido 14/09 ~13:10 no `7ba7e48d` com classes FRESCAS (`mvn -o
+  compile` antes), dono = 192.168.100.17 — só catalogado, lane compiler):** o
+  tipo de elemento `() -> Int` é apagado na leitura, então o handle obtido
+  não é chamável:
+  ```kof
+  main() {
+      var fns = new List<() -> Int>()
+      fns.add(() -> 42)
+      var f = fns.get(0)
+      println(f())     // SEM015: variable 'f' is not a function
+  }
+  ```
+- **Família relacionada (medida hoje):** `Function<() -> Void>` como tipo de
+  PARÂMETRO também falha (`runIt(f: Function<() -> Void>)` → `variable 'f' is
+  not a function`, e204c 12:35) — mesma raiz: o type-argument genérico que
+  carrega um tipo-função não é recuperado no ponto de uso (lista/campo/
+  parâmetro).
+- **Pointer (lane compiler):** caminho do typer que mapeia o tipo de elemento
+  de `List<T>` e os type-args de `Function<...>` de volta para `FunctionType`
+  na leitura de `.get()`/parâmetro (cf. o `toGenericSignature` do §189 que
+  desembrulha `NullableType` — o caso de função-argumento é o buraco irmão).
+- **Estado:** reproduz no `7ba7e48d`.
+
+### §215 — padrão de vinculação com guarda (`case String s if cond -> s`) omite o store da variável vinculada → `VerifyError: Bad local variable type` na entrada do ramo (issue #199)
+
+- **Sintoma (medido 14/09 ~13:10 no `7ba7e48d`, classes FRESCAS, dono =
+  192.168.100.17 — só catalogado, lane compiler):** a variável vinculada de um
+  padrão de tipo COM GUARDA nunca é `astore`ada; usá-la na guarda/ramo
+  compila mas falha no load:
+  ```kof
+  main() {
+      var obj: Object = "hello"
+      var r = switch (obj) {
+          case String s if s.length() > 0 -> s
+          default -> "x"
+      }
+      println(r)
+  }
+  ```
+  `VerifyError: Bad local variable type — Type top (current frame,
+  locals[3]) is not assignable to reference type` no offset 41 (`aload_3`).
+  javap: o ramo faz `aload_2; instanceof String; ifeq` direto na guarda sem
+  `checkcast`/`astore 3` de `s`. A forma SEM guarda (`case String s -> s`)
+  funciona — o caminho com guarda pulou o store da vinculação.
+- **Esperado:** o ramo com guarda armazena o valor do cast no slot da
+  vinculação ANTES de avaliar a guarda (a guarda lê `s`!).
+- **Pointer (lane compiler):** lowering de switch-pattern para ramos com
+  guarda — `SwitchExprLowerer`/`KofInterpreterMembers` no caminho da guarda
+  sem o emit de vinculação que o caminho sem guarda faz; irmão do §199
+  (slots de destructuring de record, que FOI consertado por `1bef9281`).
+- **Estado:** reproduz no `7ba7e48d`.
+
 ## §193 — E2E blog (F12): `db.query` cru + `.get("col")`/recursos dentro de handler web derr
 
 > **Renumerado de §189→§193 (14/09, dono = 192.168.100.17):** colisão tripla
