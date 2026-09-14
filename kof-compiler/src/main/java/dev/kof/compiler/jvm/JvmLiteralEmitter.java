@@ -148,10 +148,20 @@ public final class JvmLiteralEmitter {
         return T_BYTE;
     }
 
+    // #132: a especificação da JVM amarra o opcode de acesso ao TIPO real do
+    // array (JVM Spec §6.5): boolean[]/byte[] usam BALOAD/BASTORE, short[]
+    // SALOAD/SASTORE, char[] CALOAD/CASTORE. Emitir IALOAD/IASTORE nesses
+    // arrays é bytecode inválido — o verificador aceita em alguns JDKs e o
+    // processo morre no boot com sintoma não-relacionado (a mensagem JavaFX
+    // engolida, regra do JavaFX no AGENTS.md). A largura na pilha é a mesma
+    // (int), só a extensão/sinal na fronteira memory↔pilha muda.
     static int arrayLoadOpcode(Type type) {
         if (type instanceof Type.PrimitiveType pt) {
             return switch (pt.name()) {
-                case "int", "Int", "boolean", "bool", "Bool", "byte", "Byte", "short", "Short", "char", "Char" -> IALOAD;
+                case "boolean", "bool", "Bool", "byte", "Byte" -> BALOAD;
+                case "short", "Short" -> SALOAD;
+                case "char", "Char" -> CALOAD;
+                case "int", "Int" -> IALOAD;
                 case "long", "Long" -> LALOAD;
                 case "float", "Float" -> FALOAD;
                 case "double", "Double" -> DALOAD;
@@ -164,7 +174,10 @@ public final class JvmLiteralEmitter {
     static int arrayStoreOpcode(Type type) {
         if (type instanceof Type.PrimitiveType pt) {
             return switch (pt.name()) {
-                case "int", "Int", "boolean", "bool", "Bool", "byte", "Byte", "short", "Short", "char", "Char" -> IASTORE;
+                case "boolean", "bool", "Bool", "byte", "Byte" -> BASTORE;
+                case "short", "Short" -> SASTORE;
+                case "char", "Char" -> CASTORE;
+                case "int", "Int" -> IASTORE;
                 case "long", "Long" -> LASTORE;
                 case "float", "Float" -> FASTORE;
                 case "double", "Double" -> DASTORE;

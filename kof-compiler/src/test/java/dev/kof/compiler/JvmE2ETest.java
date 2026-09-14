@@ -306,6 +306,47 @@ class JvmE2ETest {
         runJvm(source, tempDir.resolve("out"), "6\n3");
     }
 
+    // #132 (issue da mantenedora): acesso a elemento de Bool[]/Byte[]/Short[]/
+    // Char[] emitia IALOAD/IASTORE (opcode de int[]) em vez de BALOAD/SALOAD/
+    // CALOAD. No Temurin 25 o verificador aceita o bytecode errado e o processo
+    // morre no boot com o sintoma JavaFX (regra do JavaFX/AGENTS.md) — o teste
+    // falhava com exit!=0 ANTES do fix. Cobertura: os 4 tipos afetados + Int[]
+    // como controle, valores negativos (Byte/Short preservam sinal via
+    // BALOAD/SALOAD) e round-trip load→store.
+    @Test
+    void execNarrowPrimitiveArrayAccess(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            main() {
+                var b = new Bool[2]
+                b[0] = true
+                b[1] = false
+                println(b[0])
+                println(b[1])
+                var c = new Char[2]
+                c[0] = 'A'
+                c[1] = 'B'
+                println(c[0])
+                println(c[1])
+                var s = new Short[2]
+                s[0] = 1000
+                s[1] = -5
+                println(s[0])
+                println(s[1])
+                var y = new Byte[2]
+                y[0] = 7
+                y[1] = -8
+                println(y[0])
+                println(y[1])
+                var i = new Int[2]
+                i[0] = 42
+                i[1] = i[0] + 1
+                println(i[1])
+            }
+            """);
+        runJvm(source, tempDir.resolve("out"), "true\nfalse\n65\n66\n1000\n-5\n7\n-8\n43");
+    }
+
     @Test
     void execFunctions(@TempDir Path tempDir) throws IOException {
         Path source = tempDir.resolve("Main.kf");
