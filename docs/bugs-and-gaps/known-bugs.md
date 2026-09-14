@@ -6639,3 +6639,28 @@ expondo `Object` nos values do Map — o handler precisa de `db.query<Record>`
 tipado (caminho canônico, usado pelo E2E) ou do `"" + rec.get(...)` como
 workaround. O `VerifyError` no bytecode emitido é erro do COMPILER, não do
 usuário — diagnostic em compile-time é a meta (regra 6).
+
+
+### §192 — `db.query<Record>` com componente `Int` e coluna `identity` (H2 → `Long`): `kof_json_bind` devolvia o Number CRU → `IllegalArgumentException: argument type mismatch` no read path — ✅ CORRIGIDO 14/09 (dono = lane `.18`, achado ao fechar o blog E2E F12; mesma família do CLOB do `8eb156f4`)
+
+- **Sintoma (medido 14/09, HEAD `a689cbd2`):** o `GET /posts` do app canônico
+  (`KofBlogE2ETest.blogEndToEndJvm`) devolvia
+  `500 {"error": "handler error: argument type mismatch"}`. As escritas
+  (`/register`, `/login`, `POST /posts`) passavam; só o read path quebrava.
+- **Causa raiz:** `JvmRuntimeJson.kof_json_bind(Class,generic,Object)` tinha o
+  ramo numérico `return value;` — devolvia o `Number` como o driver JDBC o
+  entregou. A coluna `id identity` do H2 chega como `Long`; o record
+  `Post(Int id, String title, String body)` tem construtor `(int,String,String)`
+  e `getDeclaredConstructor(...).newInstance(Long)` lança
+  `IllegalArgumentException: argument type mismatch` (reflexão não faz
+  narrowing). Só aparecia com componente primário de largura diferente do
+  que o driver devolve (o `Post(String?…)` do teste anterior não tinha esse
+  campo, por isso o verde).
+- **Fix:** `kof_json_bind` COERGE ao tipo do alvo em vez de devolver cru —
+  `intValue()/longValue()/byteValue()/shortValue()/floatValue()/doubleValue()`
+  com fallback `parse*` para `String`; `Number.class` continua passthrough.
+- **Prova:** `KofBlogE2ETest` 1/1 (o `GET /posts` devolve o post criado) +
+  `KofDbE2ETest` 16/0/2 + `JvmE2ETest` 35/35. Reproduzido antes do fix com
+  `db.query<Post>` sobre H2 mem (o 500 só aparecia no read path).
+- **Lição:** binding reflexivo de record precisa **coagir** cada componente
+  ao tipo declarado; `Class` do componente + `Number` do driver não bastam.

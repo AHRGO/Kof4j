@@ -141,6 +141,15 @@ first (third-party JWT validation: JWKS + issuer/aud — cheap, closes
 keyPem)` (PKCS#8 PEM; JVM first; Native/JS remain honest `WEB002`).
 The current self-signed remains a dev convenience, not production.
 
+> **✅ EXECUTADO (14/09, dono 192.168.100.18):** `app.listenSecure(port,
+> certPem, keyPem)` no JVM — `kof_web_listen_secure_pem` monta o `SSLContext`
+> a partir do cert X.509 PEM + chave PKCS#8 PEM (RSA/EC/DSA, via KeyFactory),
+> sem `keytool` (produção não depende de toolchain externa). A variante de 1
+> arg (self-signed de dev) fica intacta. Native/JS seguem `WEB002` honesto em
+> compile-time (mesmo gate). Prova: `KofWebTlsTest` 7/7 (incl.
+> `tlsOwnCertificateServesHttps` — handshake + 200 com cert gerado no teste;
+> `tlsOwnCertificateGapOnNative` — WEB002).
+
 ---
 
 ## D-APP — Application Model (ratified 13/09)

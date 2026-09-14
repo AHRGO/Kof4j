@@ -197,4 +197,108 @@ class KofWebTlsTest {
         assertTrue(result.diagnostics().getDiagnostics().stream().anyMatch(d -> d.code().equals("WEB001") || d.code().equals("WEB002")),
                 "Should have WEB001/002, got: " + result.diagnostics().getDiagnostics());
     }
+
+    // ── D-SEC: TLS com certificado PRÓPRIO (PKCS#8 PEM) ──────────────────
+    // app.listenSecure(port, certPem, keyPem) — produção; o self-signed de
+    // dev (1 arg) continua. Native/JS seguem WEB002 honesto.
+
+    private record PemPair(String certPem, String keyPem) {}
+
+    /** Gera um par cert/chave auto-assinado em PEM (PKCS#8) via keytool+JDK. */
+    private static PemPair generatePem(Path dir) throws Exception {
+        Path ks = dir.resolve("test.p12");
+        Process p = new ProcessBuilder("keytool", "-genkeypair", "-alias", "kof",
+                "-keyalg", "RSA", "-keysize", "2048", "-validity", "365",
+                "-dname", "CN=localhost,OU=Kof,O=Kof,L=Test,ST=Test,C=US",
+                "-ext", "SAN=IP:127.0.0.1,DNS:localhost",
+                "-keystore", ks.toString(), "-storepass", "changeit",
+                "-keypass", "changeit", "-storetype", "PKCS12", "-noprompt")
+                .redirectErrorStream(true).start();
+        String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        assertEquals(0, p.waitFor(), "keytool falhou: " + out);
+        java.security.KeyStore store = java.security.KeyStore.getInstance("PKCS12");
+        try (var in = Files.newInputStream(ks)) {
+            store.load(in, "changeit".toCharArray());
+        }
+        java.security.PrivateKey key = (java.security.PrivateKey)
+                store.getKey("kof", "changeit".toCharArray());
+        java.security.cert.Certificate cert = store.getCertificate("kof");
+        return new PemPair(
+                "-----BEGIN CERTIFICATE-----\n" + mime(cert.getEncoded()) + "-----END CERTIFICATE-----\n",
+                "-----BEGIN PRIVATE KEY-----\n" + mime(key.getEncoded()) + "-----END PRIVATE KEY-----\n");
+    }
+
+    private static String mime(byte[] der) {
+        return java.util.Base64.getMimeEncoder(64, "\n".getBytes(StandardCharsets.US_ASCII))
+                .encodeToString(der) + "\n";
+    }
+
+    /** Escapa um PEM para um literal String do Kof (mesma linha, \n). */
+    private static String kofLiteral(String s) {
+        return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n");
+    }
+
+    @Test
+    void tlsOwnCertificateServesHttps(@TempDir Path tempDir) throws Exception {
+        PemPair pem = generatePem(tempDir);
+        int port = freePort();
+        Path source = tempDir.resolve("App.kf");
+        Files.writeString(source, "main() {\n"
+                + "    var app = web.app()\n"
+                + "    app.get(\"/hello\") { return \"Hello PEM\" }\n"
+                + "    app.listenSecure(" + port + ", \""
+                + kofLiteral(pem.certPem()) + "\", \"" + kofLiteral(pem.keyPem()) + "\")\n"
+                + "}\n");
+        Path outDir = tempDir.resolve("classes");
+        CompilationResult result = driver.compile(source, outDir, Target.JVM);
+        assertTrue(result.success(), "PEM TLS deve compilar: " + result.diagnostics().getDiagnostics());
+        ProcessBuilder pb = new ProcessBuilder(JAVA_BIN, "-cp", outDir.toString(), "Default.Main");
+        pb.redirectErrorStream(true);
+        serverProcess = pb.start();
+
+        int attempt = 0;
+        while (attempt < 60) {
+            if (!serverProcess.isAlive()) {
+                String out = new String(serverProcess.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+                fail("servidor PEM morreu: " + out);
+            }
+            try {
+                javax.net.ssl.SSLSocketFactory factory = insecureFactory();
+                try (javax.net.ssl.SSLSocket probe =
+                             (javax.net.ssl.SSLSocket) factory.createSocket("localhost", port)) {
+                    probe.setSoTimeout(300);
+                    probe.startHandshake();
+                    String r = httpsRequest(port, "GET /hello HTTP/1.1\r\nHost: x\r\n\r\n");
+                    assertTrue(r.startsWith("HTTP/1.1 200 OK"), r);
+                    assertEquals("Hello PEM", bodyOf(r).trim(), r);
+                    return;
+                }
+            } catch (IOException e) {
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+            attempt++;
+        }
+        fail("servidor PEM não subiu");
+    }
+
+    @Test
+    void tlsOwnCertificateGapOnNative(@TempDir Path tempDir) throws Exception {
+        Path source = tempDir.resolve("App.kf");
+        Files.writeString(source, """
+                main() {
+                    var app = web.app()
+                    app.listenSecure(8443, "cert", "key")
+                }
+                """);
+        CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.NATIVE);
+        assertFalse(result.success(), "Native PEM TLS deve reportar gap");
+        assertTrue(result.diagnostics().getDiagnostics().stream()
+                        .anyMatch(d -> d.code().equals("WEB002")),
+                "esperava WEB002, foi: " + result.diagnostics().getDiagnostics());
+    }
 }

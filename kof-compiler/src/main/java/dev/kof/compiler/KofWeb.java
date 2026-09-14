@@ -127,9 +127,20 @@ public final class KofWeb {
             case "health" -> argTypes.size() == 1
                     ? new WebCall("kof_web_health", VOID, List.of(STR, STR))
                     : null;
-            case "listenSecure" -> argTypes.size() == 1
-                    ? new WebCall("kof_web_listen_secure", VOID, List.of(STR, INT))
-                    : null;
+            case "listenSecure" -> {
+                // 1 arg: TLS self-signed de dev (G12). 3 args: certificado
+                // próprio PKCS#8 PEM (D-SEC: `listenSecure(port, certPem,
+                // keyPem)`) — produção; Native/JS seguem WEB002 honesto.
+                if (argTypes.size() == 1 && isInt(argTypes.get(0))) {
+                    yield new WebCall("kof_web_listen_secure", VOID, List.of(STR, INT));
+                }
+                if (argTypes.size() == 3 && isInt(argTypes.get(0))
+                        && isString(argTypes.get(1)) && isString(argTypes.get(2))) {
+                    yield new WebCall("kof_web_listen_secure_pem", VOID,
+                            List.of(STR, INT, STR, STR));
+                }
+                yield null;
+            }
             case "port" -> argTypes.isEmpty()
                     ? new WebCall("kof_web_port", INT, List.of(STR))
                     : null;
@@ -167,7 +178,7 @@ public final class KofWeb {
         return switch (function) {
             case "kof_web_sse_route" -> "WEB003";
             case "kof_web_ws_route" -> "WEB004";
-            case "kof_web_listen_secure" -> "WEB002";
+            case "kof_web_listen_secure", "kof_web_listen_secure_pem" -> "WEB002";
             default -> "WEB001";
         };
     }

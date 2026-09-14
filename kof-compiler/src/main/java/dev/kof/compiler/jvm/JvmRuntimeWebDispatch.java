@@ -38,6 +38,7 @@ public final class JvmRuntimeWebDispatch {
                     KOF_WEB_REQUEST.set(req);
                     KOF_WEB_STATUS.remove();
                     KOF_WEB_HEADERS.get().clear();
+                    KOF_SEC_RESPONSE_HEADERS.get().clear();
                     KOF_LOG_REQUEST_ID.set(kof_sec_random_hex(16));
                     try {
                         // app.health(path): built-in — responde antes dos
@@ -245,6 +246,15 @@ public final class JvmRuntimeWebDispatch {
                             hdr.append(e.getKey()).append(": ").append(e.getValue()).append("\\r\\n");
                         }
                     }
+                    // D-SEC C18: headers do middleware de security sobrevivem
+                    // ao clear do dispatch antes da rota.
+                    java.util.Map<String, String> secHeaders = KOF_SEC_RESPONSE_HEADERS.get();
+                    if (secHeaders != null) {
+                        for (java.util.Map.Entry<String, String> e : secHeaders.entrySet()) {
+                            if (e.getKey().equalsIgnoreCase("Content-Type")) hasContentType = true;
+                            hdr.append(e.getKey()).append(": ").append(e.getValue()).append("\\r\\n");
+                        }
+                    }
                     String ctHeader = hasContentType ? "" : "Content-Type: " + contentType + "\\r\\n";
                     return "HTTP/1.1 " + status + " " + statusText + "\\r\\n"
                             + ctHeader
@@ -256,6 +266,11 @@ public final class JvmRuntimeWebDispatch {
                 }
 
                 private static WebRequest readRequest(java.io.InputStream in) throws java.io.IOException {
+                    return readRequest(in, null, false);
+                }
+
+                private static WebRequest readRequest(java.io.InputStream in, String remoteAddr,
+                        boolean secure) throws java.io.IOException {
                     byte[] buffer = new byte[8192];
                     java.io.ByteArrayOutputStream raw = new java.io.ByteArrayOutputStream();
                     int headerEnd = -1;
@@ -311,7 +326,7 @@ public final class JvmRuntimeWebDispatch {
                         path = fullPath.substring(0, q);
                         query = fullPath.substring(q + 1);
                     }
-                    return new WebRequest(method, path, query, headerBlock, body);
+                    return new WebRequest(method, path, query, headerBlock, body, remoteAddr, secure);
                 }
 
                 private static int indexOfHeaderEnd(byte[] bytes) {

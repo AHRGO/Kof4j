@@ -113,6 +113,18 @@ Return `null` → continues; return `String` → immediate response (200).
 `app.listen(0)` binds an ephemeral port; `app.port()` reveals the real port.
 `app.listenSecure` is available on the JVM (Native/JS `WEB002`).
 
+| `app.listen(port)` | Inicia o servidor (bloqueante) em `0.0.0.0` |
+| `app.listenSecure(port)` | Idem, com TLS self-signed de dev (JVM; `keytool` + `SSLServerSocket`) |
+| `app.listenSecure(port, certPem, keyPem)` | TLS com **certificado próprio** (PKCS#8 PEM) — produção (JVM) |
+| `app.port()` | Porta efetivamente vinculada (útil com `listen(0)`) |
+| `app.close()` | Encerra o servidor (graceful shutdown) |
+
+`app.listen(0)` vincula uma porta efêmera; `app.port()` revela a porta real.
+`app.listenSecure` está disponível no JVM (Native/JS `WEB002`). A variante de
+3 args usa o par cert/chave do usuário (`-----BEGIN CERTIFICATE-----` /
+`-----BEGIN PRIVATE KEY-----`, chave PKCS#8 RSA/EC/DSA); o self-signed de 1
+arg continua como conveniência de dev, não de produção (D-SEC).
+
 ### Static files (`app.serveDir`) (31/08)
 
 | Call | Description |

@@ -166,6 +166,37 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > Esta sessão = 192.168.100.22; blog E2E (F12) concluído e absorvido no
 > `bdbe4be7` (dono .18). Antes de commitar: reler `DECISIONS.md` §D-SEC C18.
 
+> **CONTINUAÇÃO (14/09, dono = 192.168.100.18):**
+>
+> **(a) `listenSecure(port, certPem, keyPem)` — TLS com certificado próprio
+> (D-SEC, JVM).** `kof_web_listen_secure_pem` monta o `SSLContext` do cert
+> X.509 PEM + chave PKCS#8 PEM (RSA/EC/DSA via KeyFactory), **sem `keytool`**
+> (produção não depende de toolchain externa); a variante de 1 arg
+> (self-signed de dev) fica intacta; Native/JS seguem `WEB002` honesto no
+> mesmo gate. Prova: `KofWebTlsTest` **7/7** (incl. `tlsOwnCertificateServesHttps`
+> — handshake + 200 com par gerado no teste — e `tlsOwnCertificateGapOnNative`).
+> Docs: `DECISIONS.md` §D-SEC, `docs/stdlib/stdlib-web.md`, `backend-parity.md`.
+>
+> **(b) Bug de plataforma exposto pelo blog E2E reescrito (`a689cbd2`):
+> `kof_json_bind` devolvia Number CRU.** O read path `db.query<Post>` com
+> `Post(Int id, ...)` e coluna `identity` (H2 devolve `Long`) chamava
+> `record.getDeclaredConstructor(int.class,…).newInstance(Long,…)` →
+> `IllegalArgumentException: argument type mismatch` (o `GET /posts` dava 500).
+> Fix: `kof_json_bind` COERGE ao tipo do alvo (`intValue/longValue/…` em vez
+> de devolver o objeto) — mesma família do fix de CLOB do `8eb156f4`.
+> Prova: `KofBlogE2ETest` verde (1/1) + `KofDbE2ETest` 16/0/2 + `JvmE2ETest` 35.
+> Registrado em `docs/bugs-and-gaps/known-bugs.md` §192.
+>
+> ChaCha20 (D-SEC) entregue pelo colega (`3e1d1ff7`); cookies C11 em
+> `521049aa`. **Fila restante de `DECISIONS`:** `app.security()` (C18,
+> middleware composto sobre `app.use` — `JvmRuntimeWebDispatch` já itera
+> `app.middlewares`; primitivas `security.rateLimit/corsAllowed/cspHeader/
+> csrfToken/session*/auth.*` já existem) e OAuth resource-server (JWKS +
+> issuer/aud). **PRÓXIMO PASSO:** `app.security()` (C18) — `KofWeb.java`
+> (`case "security"`) + runtime JVM/JS; prova = E2E com rota protegida
+> (401 sem credencial, 200 com). Antes: reler `docs/development/DECISIONS.md`
+> §D-SEC C18 e a §5 de `docs/stdlib/security.md`.
+
 > **✅ FEITO (14/09 ~03:45, dono = 192.168.100.22, lane repo-hygiene/.github):
 > pack segurança GitHub + merge na main (ordem da mantenedora, sem bump —
 > D-RELEASE mantido).** Commit main `9e289d84` (só 4 arquivos):
