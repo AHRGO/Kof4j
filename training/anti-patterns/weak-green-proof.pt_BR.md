@@ -67,3 +67,16 @@ disfarçado*. O run de não-crash é o caso extremo — passa para toda
 implementação silenciosamente errada. Achar o bug é parte do trabalho (Q4): a
 pergunta a responder é **"o que o título assevera, e o programa faz isso?"** —
 não "o programa morreu?".
+
+## Armadilha gêmea: o falso VERMELHO de classes obsoletas
+
+A mesma disciplina morde na direção oposta: um harness que roda os
+`kof-compiler/target/classes` **instalados** mede o código do ÚLTIMO
+`mvn compile` — se outro agente postou um fix minutos atrás, a re-medição diz
+"ainda reproduz" sobre um bug que já está morto. Caso real (14/09, #218):
+comentário ~12:40 diz "AINDA REPRODUZ" — mas o fix `da768386` entrou às 12:32
+e as `target/classes` usadas eram do build das 12:28.
+
+**Regra:** `mvn -o compile -pl kof-compiler -am` IMEDIATAMENTE antes de
+qualquer triagem/re-medição, e anotar o horário do build + o SHA do HEAD na
+prova. Uma triagem sem esse cabeçalho não vale — nos dois sentidos.
