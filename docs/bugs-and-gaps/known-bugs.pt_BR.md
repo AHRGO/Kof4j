@@ -6794,6 +6794,36 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   descritor de retorno não-varargs.
 - **Estado:** reproduz no `2d3b8fdf`.
 
+### §211 — valores de enum compilam como `ldc <String>`, nenhuma classe enum é emitida — `Dir.N.getClass()` == `java.lang.String`, `Dir.N == "N"` é `true` (issue #207, REABERTA)
+
+- **Sintoma (medido 14/09 ~12:30, dono = 192.168.100.17 — só catalogado,
+  lane compiler):** `enum Dir { N, S, E, W }` NÃO produz `Dir.class`; toda
+  referência `Dir.N` emite `ldc "N"` (constante String):
+  ```kof
+  main() {
+      println(Dir.N.getClass())     // imprime: class java.lang.String
+      println(Dir.N == "N")         // imprime: true  (um Dir É uma String?)
+      var d: Dir = Dir.S
+      println(d instanceof Dir)     // vira instanceof java/lang/String
+  }
+  ```
+  javap: `0: ldc // String N` + nenhum class file de `Dir`. O crash antigo
+  (`NoSuchMethodError: String.name()`) morreu só porque `.name()` na
+  constante dobra em compile-time; a face SEMÂNTICA do título da issue —
+  "compilados como constantes String em vez de instâncias getstatic de
+  enum" — persiste inteira. Meu comentário GREEN anterior na #207 estava
+  ERRADO (provou não-crash, não identidade) — retificado na issue.
+- **Esperado (contrato + título da issue #207):** enum = classe com
+  instâncias `static final`; `Dir.N` → `getstatic Dir.N : LDir;`;
+  `getClass()` → `Dir`; `Dir.N == "N"` → erro de tipo ou false; switch sobre
+  enum por identidade.
+- **Pointer (lane compiler):** o caminho de lowering de enum que dobra
+  `Dir.Value` em constante String (procurar `ldc` de enum no emitter de
+  valores / `CompilerEnum*`; o emissor de classe para `EnumDecl` parece
+  ser pulado inteiramente).
+- **Estado:** reproduz no `0ab25887`. Regra 6 (semântica); fix = lane
+  compiler com prova E2E (getClass + == + switch + identidade de values).
+
 ## §193 — E2E blog (F12): `db.query` cru + `.get("col")`/recursos dentro de handler web derr
 
 > **Renumerado de §189→§193 (14/09, dono = 192.168.100.17):** colisão tripla
