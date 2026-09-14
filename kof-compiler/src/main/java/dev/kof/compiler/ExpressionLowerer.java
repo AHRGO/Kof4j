@@ -240,18 +240,28 @@ public final class ExpressionLowerer {
                 localIdx = ExpressionLowerer.emitExpression(driver, aa.receiver(), ops, owner, localIdx, locals);
                  localIdx = ExpressionLowerer.emitExpression(driver, aa.index(), ops, owner, localIdx, locals);
                  Type recvType = ExpressionTyper.inferExprType(driver, aa.receiver(), locals);
-                 // #152/#149: `list[i]` sobre List/Map/Set NÃO é array — emitir
+                 // #152/#149: `list[i]` sobre List/Map NÃO é array — emitir
                  // KofArrayLoad gerava AALOAD sobre java/util/ArrayList →
                  // VerifyError (o receptor é referência, não array). Baixa p/
-                 // as mesmas funções de runtime do `.get()`/`.get(k)`
-                 // (CollectionCallLowerer: kof_list_get/kof_map_get/kof_set_*).
-                 if (BuiltinTypes.isList(recvType) || BuiltinTypes.isMap(recvType)
-                         || BuiltinTypes.isSet(recvType)) {
-                     String fn = BuiltinTypes.isList(recvType) ? "kof_list_get"
-                             : BuiltinTypes.isMap(recvType) ? "kof_map_get" : "kof_set_get";
+                 // as mesmas funções de runtime do `.get()`
+                 // (CollectionCallLowerer: kof_list_get/kof_map_get, INSTANCE).
+                 if (BuiltinTypes.isList(recvType) || BuiltinTypes.isMap(recvType)) {
+                     String fn = BuiltinTypes.isList(recvType) ? "kof_list_get" : "kof_map_get";
                      ops.add(new KofCall(recvType, fn,
                              List.of(Type.UnknownType.UNKNOWN), Type.UnknownType.UNKNOWN,
                              KofCallKind.INSTANCE));
+                     yield localIdx;
+                 }
+                 // Set[i] não existe (R6): sem op de indexação — erro honesto.
+                 if (BuiltinTypes.isSet(recvType)) {
+                     if (driver.currentDiagnostics != null) {
+                         var p = aa.position();
+                         driver.currentDiagnostics.error(p != null ? p.file() : "",
+                                 p != null ? p.line() : 0, p != null ? p.column() : 0, 0,
+                                 "Set não suporta indexação [i]; use contains(x) para "
+                                         + "pertencimento ou keys() para iterar",
+                                 "SEM025");
+                     }
                      yield localIdx;
                  }
                  Type elemType = Type.arrayElementType(recvType);
