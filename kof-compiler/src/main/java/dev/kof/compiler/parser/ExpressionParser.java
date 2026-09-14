@@ -292,6 +292,33 @@ public class ExpressionParser {
                     return new LiteralExpr(ctx.pos(), ConcreteLiteralKind.NULL, "0");
                 }
             }
+            // A mesma familia de crash existia em dois lados NAO cobertos
+            // acima (CodeQL uncaught-number-format-exception #572/#573,
+            // #238-#242): hex sem sufixo vira INT_LITERAL no lexer sem
+            // checagem (>16 digitos estoura o parseUnsignedLong do lowering),
+            // e FLOAT/DOUBLE chegavam crus ao lowering. Regra: somente o que
+            // CRASHA vira PARSE084; o que hoje compila (ex.: 0x1FFFFFFFF
+            // trunca para -1, 1e400 = Infinity — comportamento Java) nao muda
+            // (freeze regra 3).
+            if (t.type() == TokenType.INT_LITERAL
+                    && (t.value().startsWith("0x") || t.value().startsWith("0X"))
+                    && t.value().length() - 2 > 16) {
+                ctx.error("numeric literal out of range: " + t.value(), "PARSE084");
+                return new LiteralExpr(ctx.pos(), ConcreteLiteralKind.NULL, "0");
+            }
+            if (t.type() == TokenType.FLOAT_LITERAL || t.type() == TokenType.DOUBLE_LITERAL) {
+                try {
+                    String raw = t.value().replaceAll("[fFdD]$", "");
+                    if (t.type() == TokenType.FLOAT_LITERAL) {
+                        Float.parseFloat(raw);
+                    } else {
+                        Double.parseDouble(raw);
+                    }
+                } catch (NumberFormatException e) {
+                    ctx.error("invalid float literal: " + t.value(), "PARSE084");
+                    return new LiteralExpr(ctx.pos(), ConcreteLiteralKind.NULL, "0");
+                }
+            }
             return new LiteralExpr(ctx.pos(), kind, t.value());
         }
         if (ctx.check(TokenType.THIS)) {
