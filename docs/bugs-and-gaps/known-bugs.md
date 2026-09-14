@@ -6936,7 +6936,7 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   the lane owner's choice, not this lane's; the test corpus that used `.get` on
   an array is in `KofTimeE2ETest` (S7e) and needs to align with whatever is decided.
 
-### §203 — `if`-statement ELSE branch was NOT analyzed → invalid JVM frames (`Supervisor.lacoUnico` frame crash) — ✅ FIXED 14/09 (introduced by `a892b3c5`, lane CodeQL; root fixed by lane development `192.168.100.18`)
+### §204 — `if`-statement ELSE branch was NOT analyzed → invalid JVM frames (`Supervisor.lacoUnico` frame crash) — ✅ FIXED 14/09 (introduced by `a892b3c5`, lane CodeQL; root fixed by lane development `192.168.100.18`)
 
 - **Symptom (JVM):** `Internal compiler error: frame crash em
   Supervisor.lacoUnico (super=java/lang/Object)` — ASM
@@ -6963,7 +6963,7 @@ the user's — a compile-time diagnostic is the goal (rule 6).
 - **Note:** JVM/Native/Script are affected (the analyzer is target-agnostic); JS
   escaped because the parser resolved the types on its own path.
 
-### §204 — heterogeneous `if`-expression prints `Object` in Native → SIGSEGV (exit 139) — 🔴 OPEN 14/09 (introduced by `ed409ff9` #183, owner = #183 lane)
+### §205 — heterogeneous `if`-expression prints `Object` in Native → SIGSEGV (exit 139) — 🔴 OPEN 14/09 (introduced by `ed409ff9` #183, owner = #183 lane)
 
 - **Symptom (Native):** `ConformanceMatrixTest#conformanceCoreControl` case
   `ifexpr-heterogeneous-direct` (`println(if (s == "") 1 else "s")`) exits 139 on

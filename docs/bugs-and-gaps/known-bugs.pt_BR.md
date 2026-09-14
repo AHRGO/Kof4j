@@ -6921,7 +6921,7 @@ usuário — diagnostic em compile-time é a meta (regra 6).
   escolha do dono da lane, não desta; o test-corpus que usou `.get` em array
   está em `KofTimeE2ETest` (S7e) e precisa de align com o que for decidido.
 
-### §203 — o ramo ELSE do `if`-statement NÃO era analisado → frames JVM inválidos (`Supervisor.lacoUnico` frame crash) — ✅ CORRIGIDO 14/09 (introduzido por `a892b3c5`, lane CodeQL; raiz corrigida pela lane development `192.168.100.18`)
+### §204 — o ramo ELSE do `if`-statement NÃO era analisado → frames JVM inválidos (`Supervisor.lacoUnico` frame crash) — ✅ CORRIGIDO 14/09 (introduzido por `a892b3c5`, lane CodeQL; raiz corrigida pela lane development `192.168.100.18`)
 
 - **Sintoma (JVM):** `Internal compiler error: frame crash em
   Supervisor.lacoUnico (super=java/lang/Object)` — ASM
@@ -6948,7 +6948,7 @@ usuário — diagnostic em compile-time é a meta (regra 6).
 - **Nota:** JVM/Native/Script são afetados (o analyzer é target-agnóstico); o JS
   escapou porque o parser resolvia os tipos no seu próprio caminho.
 
-### §204 — `if`-expression heterogêneo imprime `Object` no Native → SIGSEGV (exit 139) — 🔴 ABERTO 14/09 (introduzido por `ed409ff9` #183, dono = lane do #183)
+### §205 — `if`-expression heterogêneo imprime `Object` no Native → SIGSEGV (exit 139) — 🔴 ABERTO 14/09 (introduzido por `ed409ff9` #183, dono = lane do #183)
 
 - **Sintoma (Native):** `ConformanceMatrixTest#conformanceCoreControl` caso
   `ifexpr-heterogeneous-direct` (`println(if (s == "") 1 else "s")`) sai 139 no
