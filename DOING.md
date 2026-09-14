@@ -2642,6 +2642,22 @@ no upstream).
 > DOING e **RECUSAR** o re-disparo (estabilidade parcial — §179/§180 abertos
 > de outras lanes). **NUNCA:** `nat/` GC viva; fila de outras lanes; push
 > `main`.
+>
+> **✅ FEITO (13/09 ~22:40, lane bugs-and-gaps, dono = 192.168.100.15):
+> caça Q4 pós-#132 — §184 + §185 (arrays de tipo estreito) catalogados.**
+> Probe `Narrow.kf` (4 targets) no código de `10fd1b32`/`0c122131`:
+> **(a) §184** — `new Byte[n]`/`new Short[n]` NÃO estreitam o valor no JS:
+> `b[0]=130` → JVM/Native/Script `-126`, **JS `130`**; `s[0]=70000` →
+> `4464` vs **JS `70000`** (divergência silenciosa, regra 5; `kofArraySet`
+> não conhece o tipo do elemento — família #132/KOF-SBD-001). **(b) §185** —
+> o interpretador **derruba** ao gravar em `Char[]` (`c[0]='A'` → stderr
+> `argument type mismatch`, exit 1) — `KofInterpreterOps.arrayStore` só trata
+> `bool`, o `Array.set(char[], …)` genérico rejeita o valor Kof. JVM/Native/JS
+> imprimem `65`. Ambos catalogados com menor repro + causa raiz + fix proposto
+> em `known-bugs.md`. **PRÓXIMO PASSO:** continuar Q4 (Float/científico do
+> §180; arrays de record/String) OU sincronizar `ecosystem-coverage.md`/
+> `specification-gaps.md`. Se nada novo e suíte verde → **RECUSAR** o
+> re-disparo. **NUNCA:** `nat/` GC viva; fila de outras lanes; push `main`.
 
 ---
 
