@@ -23,6 +23,12 @@ public final class CompilerComparisons {
             Type left = ExpressionTyper.inferExprType(driver, bin.left(), locals);
             Type right = ExpressionTyper.inferExprType(driver, bin.right(), locals);
             if (Type.isString(left) || Type.isString(right)) return false;
+            // bug 188: record == record (ou qualquer record em ==) compara CONTEÚDO via .equals()
+            // desativar shortcut para não emitir if_acmpeq direto
+            if (CompilerTypes.isRecordType(left, driver.currentUnit, driver.semanticAnalyzer)
+                    || CompilerTypes.isRecordType(right, driver.currentUnit, driver.semanticAnalyzer)) {
+                return false;
+            }
             // enum == enum compara conteúdo (string) — nunca identidade
             if (CompilerTypes.isEnumType(left, driver.currentUnit) || CompilerTypes.isEnumType(right, driver.currentUnit)) return false;
             // primitivo vs null → constante (caminho da cadeia binária)

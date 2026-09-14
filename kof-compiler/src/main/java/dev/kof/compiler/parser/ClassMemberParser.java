@@ -38,6 +38,18 @@ public class ClassMemberParser {
             return new FieldDeclarationNode(ctx.pos(), List.of(), "Object", "error", null, annos);
         }
         if ((ctx.check(TokenType.IDENTIFIER) || ctx.check(TokenType.AWAIT) || ctx.check(TokenType.SPAWN)) && ctx.checkNext(TokenType.LPAREN)) {
+            // #142/#157/#164: construtor com o NOME DA CLASSE (forma Java,
+            // sem a keyword `constructor`). A gramática torna `constructor`
+            // opcional (`constructor-declaration = [ "constructor" ] , "("`);
+            // sem esta rota o membro virava um MÉTODO void homônimo
+            // (`public void Box(int)`) e o `new Box(42)` morria em
+            // `NoSuchMethodError: Box.<init>(int)`.
+            if (ctx.check(TokenType.IDENTIFIER) && ctx.currentClassName != null
+                    && ctx.peek().value().equals(ctx.currentClassName)) {
+                ConstructorDeclarationNode ctor = parseConstructor(ctx, mods);
+                return new ConstructorDeclarationNode(ctor.position(), ctor.modifiers(), ctor.name(),
+                        ctor.parameters(), ctor.thrownExceptions(), ctor.body(), annos);
+            }
             String name = ctx.advance().value();
             ctx.expect(TokenType.LPAREN, "Expected '('", "PARSE011");
             List<FormalParameterNode> params = new ArrayList<>();

@@ -94,6 +94,13 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (14/09 ~07:15, dono = 192.168.100.22, lane compiler): fix issue #188 — `==` direto em if/if-expr usava `if_acmpeq` em Record em vez de `.equals()`.**
+> `CompilerComparisons.isComparisonShortcut` desativa shortcut se `left` ou `right` for `Record` (`CompilerTypes.isRecordType`), caindo no lowering completo de `ExpressionBinaryLowerer` com chamada a `record.equals(other)` e comparação de conteúdo.
+> Prova: `CoreRegressionE2ETest.recordEqualityInDirectIfCondition` provando `t1 == t2` em `if` e em ternário avaliando verdadeiro.
+> Suíte `CoreRegressionE2ETest` 65/65 verde, `check_500.sh` sem classes críticas.
+> **PRÓXIMO PASSO:** Continuar triagem da fila de issues abertas (#187, #183, #182, #181, #180).
+
+
 > **✅ FEITO CodeQL testes-fora-do-scan (14/09 ~05:10, dono = 192.168.100.22,
 > lane repo-hygiene): 495→270.** (a) commit `804a03ea`: `.github/codeql/
 > kof4j-config.yml` (security-and-quality + `paths-ignore: "**/src/test/**"`;

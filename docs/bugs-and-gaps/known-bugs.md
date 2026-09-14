@@ -6805,3 +6805,19 @@ usuário — diagnostic em compile-time é a meta (regra 6).
   `db.query<Post>` sobre H2 mem (o 500 só aparecia no read path).
 - **Lição:** binding reflexivo de record precisa **coagir** cada componente
   ao tipo declarado; `Class` do componente + `Number` do driver não bastam.
+
+### §198 — `==` direto em condição de `if`/`if-expr` usava `if_acmpeq` para `Record` em vez de `.equals()` — ✅ CORRIGIDO 14/09 ([issue #188](https://github.com/KofLang/Kof4j/issues/188), dono = lane `192.168.100.22`)
+
+- **Sintoma (issue #188):**
+  ```kof
+  record Tag(String name)
+  main() {
+      var t1 = new Tag("hi")
+      var t2 = new Tag("hi")
+      if (t1 == t2) println("equal") else println("not equal")
+  }
+  ```
+  Imprimia `"not equal"`, enquanto `println(t1 == t2)` imprimia `"true"`.
+- **Causa raiz:** `CompilerComparisons.isComparisonShortcut` só desativava shortcut para `String` e `enum`. Para records e classes, retornava `true` no shortcut, gerando `KofConditionalJump` com `operandType` do record → `JvmOpEmitter` emitia `if_acmpeq` (igualdade referencial de ponteiro).
+- **Fix:** `CompilerComparisons.isComparisonShortcut` desativa shortcut se `left` ou `right` for record type (`CompilerTypes.isRecordType(...) == true`), forçando a cair no lowering normal de `ExpressionBinaryLowerer` que emite `record.equals(other)`.
+- **Prova:** `CoreRegressionE2ETest.recordEqualityInDirectIfCondition` prova `if (t1 == t2)` e `if-expression` com `Tag("hi") == Tag("hi")` avaliando para `true` e `"equal"`.

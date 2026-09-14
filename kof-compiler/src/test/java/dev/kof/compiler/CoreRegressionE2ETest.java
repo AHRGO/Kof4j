@@ -208,6 +208,34 @@ class CoreRegressionE2ETest {
                 """, "1\n1", tempDir, "SetMapNew");
     }
 
+    // GitHub #142/#157/#164 — construtor com o NOME DA CLASSE (forma Java,
+    // sem a keyword `constructor`): o parser roteava o membro como MÉTODO
+    // void homônimo (`public void Box(int)`), então `new Box(42)` morria em
+    // `NoSuchMethodError: Box.<init>(int)`. A gramática torna `constructor`
+    // opcional; o nome igual à classe agora vira ConstructorDeclarationNode.
+    // Cobre: primitivo (Int), String e campo genérico `T` (erasure → Object).
+    @Test
+    void constructorNamedLikeClass(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                class Box {
+                    Int value = 0
+                    Box(Int v) { this.value = v }
+                    get(): Int { return this.value }
+                }
+                class Named {
+                    String name = ""
+                    Named(String n) { this.name = n }
+                    String get() { return name }
+                }
+                main() {
+                    var b = new Box(42)
+                    println(b.get())
+                    var n = new Named("hello")
+                    println(n.get())
+                }
+                """, "42\nhello", tempDir, "CtorNamedLikeClass");
+    }
+
     // GitHub #30 — String.split + acesso ao array: .get(i) era baixado como
     // KofCall com owner ArrayType → JvmTypeMapper produzia internalName ""
     // → Methodref "" no constant pool → ClassFormatError: Illegal class name "".
@@ -1407,5 +1435,22 @@ class CoreRegressionE2ETest {
                     println(c.pick(1L, 42))
                 }
                 """, "42", tempDir, "wide-instance-method");
+    }
+
+    // Issue #188: == em condição direta de if/if-expr usava if_acmpeq em records
+    // em vez de .equals(), causando igualdade de referência errada.
+    @Test
+    void recordEqualityInDirectIfCondition(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                record Tag(String name)
+                main() {
+                    var t1 = new Tag("hi")
+                    var t2 = new Tag("hi")
+                    if (t1 == t2) println("equal") else println("not equal")
+                    println(t1 == t2)
+                    var r = if (t1 == t2) "yes" else "no"
+                    println(r)
+                }
+                """, "equal\ntrue\nyes", tempDir, "record-equality-if");
     }
 }
