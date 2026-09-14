@@ -116,6 +116,29 @@ class KofScriptStdlibParityTest {
             """, "42\n-1\n7\n15\n3\n9007199254740993\n-5\n8\ntrue\ntrue\ntrue\ntrue\ntrue");
     }
 
+    // STDLIB S1b.3 (DECISIONS §3): math.roundTo(value: Double, decimals: Int)
+    // — half-away-from-zero por escala decimal determinística. O interpretador
+    // resolve kof_math_roundTo por reflexão no MESMO KofRuntime do JVM
+    // (paridade por construção). Bool via == (bug 44: nunca println de double
+    // cru). Golden = fonte única (KofMathTest/ConformanceMatrixTest).
+    @Test
+    void mathRoundToParity() throws Exception {
+        parity("""
+            main() {
+                println(math.roundTo(2.5, 0) == 3.0)
+                println(math.roundTo(-2.5, 0) == -3.0)
+                println(math.roundTo(2.4, 0) == 2.0)
+                println(math.roundTo(0.49999999999999994, 0) == 0.0)
+                println(math.roundTo(3.14159, 2) == 3.14)
+                println(math.roundTo(2.675, 2) == 2.68)
+                println(math.roundTo(1234.0, -2) == 1200.0)
+                println(math.roundTo(-1250.0, -2) == -1300.0)
+                println(math.roundTo(1.0, 0) == 1.0)
+                println(math.roundTo(0.0, 5) == 0.0)
+            }
+            """, "true\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue");
+    }
+
     @Test
     void isUuidParity() throws Exception {
         parity("""
@@ -176,8 +199,8 @@ class KofScriptStdlibParityTest {
                 println(time.isToday(2026, 2, 30))
                 var parts = today.split("-")
                 println(parts.size)
-                println(parts.get(0).length)
-                println(parts.get(1).length)
+                println(parts[0].length)
+                println(parts[1].length)
             }
             """, "10\n2026-09-13\n2024-02-29\n\n\n\nfalse\nfalse\n3\n4\n2");
     }

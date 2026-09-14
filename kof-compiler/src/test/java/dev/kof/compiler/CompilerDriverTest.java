@@ -227,6 +227,53 @@ class CompilerDriverTest {
         assertFalse(diags.contains("NumberFormatException"), "Must not crash, was: " + diags);
     }
 
+    // mesma familia (CodeQL uncaught-number-format-exception #572/#573,
+    // #238-#242): hex sem sufixo virava INT_LITERAL no lowering sem checagem
+    // de largura e estourava parseUnsignedLong (crash crua do compilador).
+    @Test
+    void oversizedHexIntLiteralGivesCleanDiagnostic(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("BigHex.kf");
+        Files.writeString(source, """
+            main() {
+                var x = 0xFFFFFFFFFFFFFFFFF
+            }
+            """);
+        CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.JVM);
+        assertFalse(result.success(), ">16-digit hex should fail to compile");
+        String diags = result.diagnostics().getDiagnostics().toString();
+        assertTrue(diags.contains("PARSE084"), "Should be a clean diagnostic, was: " + diags);
+        assertFalse(diags.contains("NumberFormatException"), "Must not crash, was: " + diags);
+    }
+
+    @Test
+    void malformedFloatLiteralGivesCleanDiagnosticAndValidFloatsStillCompile(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("BadFloat.kf");
+        Files.writeString(source, """
+            main() {
+                var x = 1.2e
+            }
+            """);
+        CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.JVM);
+        assertFalse(result.success(), "dangling exponent should fail to compile");
+        String diags = result.diagnostics().getDiagnostics().toString();
+        assertTrue(diags.contains("PARSE084"), "Should be a clean diagnostic, was: " + diags);
+        assertFalse(diags.contains("NumberFormatException"), "Must not crash, was: " + diags);
+        // Q3: o caminho feliz NAO pode mudar (freeze) — float/double validos,
+        // inclusive os que hoje compilam para Infinity/truncacao Java, seguem.
+        Path ok = tempDir.resolve("OkFloat.kf");
+        Files.writeString(ok, """
+            main() {
+                println(1e400)
+                println(1.5f)
+                println(2.5d)
+                println(0xFFFFFFFF)
+            }
+            """);
+        CompilationResult okRes = driver.compile(ok, tempDir.resolve("out-ok"), Target.JVM);
+        assertTrue(okRes.success(), "valid literals must still compile: "
+                + okRes.diagnostics().getDiagnostics());
+    }
+
     // known-bugs #1 — `throw <não-String>` gerava bytecode inválido no JVM.
     // Exceções são Strings em Kof: rejeita em compile-time (SEM026), inclusive
     // dentro de try (que antes nem passava pela análise semântica).

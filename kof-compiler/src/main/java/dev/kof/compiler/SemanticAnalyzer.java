@@ -194,6 +194,19 @@ public class SemanticAnalyzer {
             }
             if (!changed) break;
         }
+        for (AstNode member : cls.members()) {
+            if (member instanceof MethodDeclarationNode method && method.modifiers().contains("abstract")
+                    && !cls.modifiers().contains("abstract")) {
+                if (diagnostics != null) {
+                    SourcePosition pos = method.position() != null ? method.position() : cls.position();
+                    diagnostics.error(pos != null ? pos.file() : "",
+                            pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0,
+                            "abstract method '" + method.name() + "' is not allowed in non-abstract class '"
+                                    + cls.name() + "' (declare the class as 'abstract')",
+                            "SEM041");
+                }
+            }
+        }
         checkInterfaceImplementation(cls, classScope);
         currentScope = prevScope;
         currentClassName = prevClass;

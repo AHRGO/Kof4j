@@ -277,7 +277,8 @@ main() {
    didClose → publishDiagnostics from the real frontend, hover, completion,
    **references + rename** — word-boundary, single-file; `LspServerTest` 4/4).
 - `bin/kof` (Unix) and `bin/kof.bat` (Windows) launchers with embedded JDK
-  (Temurin 21, Tooling API Level 21).
+  (Temurin 25 — toolchain baseline D-BASELINE 14/09; Kof programs still emit
+  V21 bytecode, so the language floor remains JVM 21+).
 - `scripts/package.sh` — official distribution layout, `--jdk` for embedded
   JDK, SHA256SUMS.
 - GitHub Actions: `ci.yml` (PR — tests, golden, integration, multiplatform)

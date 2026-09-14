@@ -41,5 +41,31 @@ final class JsRuntimeUiMathDouble {
             export function kofMathIsDecimal(v) {
                 return !(v === Math.floor(v) && v !== Infinity && v !== -Infinity) ? 1 : 0;
             }
+            // S1b.3 (DECISIONS §3): roundTo(value, decimals) — half-away-from-
+            // zero por escala decimal determinística. SEM Math.round (half-up
+            // p/ +inf): trunc + correção do resto. p = 10^m (m=|d|, satura em
+            // 308) por multiplicação REPETIDA (cada passo IEEE → byte-idêntico
+            // JVM/Native). d>=0: scaled=v*p, r/p. d<0: scaled=v/p, r*p.
+            // Overflow de v*p → devolve v (no-op).
+            export function kofMathRoundTo(v, decimals) {
+                if (v !== v || v === Infinity || v === -Infinity) return v;
+                let m = decimals < 0 ? -decimals : decimals;
+                if (m > 308) m = 308;
+                let p = 1.0;
+                for (let i = 0; i < m; i++) p *= 10.0;
+                const scaled = decimals >= 0 ? v * p : v / p;
+                if (scaled === Infinity || scaled === -Infinity) return v;
+                let r;
+                if (scaled >= 4503599627370496.0 || scaled <= -4503599627370496.0) {
+                    r = scaled;
+                } else {
+                    let t = Math.trunc(scaled);
+                    const f = scaled - t;
+                    if (f >= 0.5) t += 1;
+                    else if (f <= -0.5) t -= 1;
+                    r = t;
+                }
+                return decimals >= 0 ? r / p : r * p;
+            }
             """;
 }

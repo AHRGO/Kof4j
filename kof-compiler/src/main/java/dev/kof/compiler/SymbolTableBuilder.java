@@ -121,7 +121,9 @@ public final class SymbolTableBuilder {
             }
         }
         if (!hasCtor) {
-            classScope.define(new SymbolTable.ConstructorSymbol(cls.name(), List.of(), 1));
+            SymbolTable.ConstructorSymbol defaultCtor = new SymbolTable.ConstructorSymbol(cls.name(), List.of(), 1);
+            classScope.define(defaultCtor);
+            classSym.members().define(defaultCtor);
         }
     }
 

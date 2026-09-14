@@ -28,11 +28,14 @@ final class CmdServe {
     }
 
     static void run(String[] args) {
-        if (args.length < 2) { System.err.println("usage: kof serve <file.kf> [--port <port>] [--host <host>]");
-        if ("--help".equals(args[1]) || "-h".equals(args[1]) || "--version".equals(args[1])) {
+        if (args.length >= 2 && ("--help".equals(args[1]) || "-h".equals(args[1]) || "--version".equals(args[1]))) {
             System.out.println("usage: kof serve <file.kf> [--port <port>] [--host <host>]");
             return;
-        } return; }
+        }
+        if (args.length < 2) {
+            System.err.println("usage: kof serve <file.kf> [--port <port>] [--host <host>]");
+            return;
+        }
         Path file = Path.of(args[1]);
         if (!Files.exists(file)) { System.err.println("file not found: " + file); System.exit(1); return; }
 
@@ -43,7 +46,9 @@ final class CmdServe {
         String frontendFlag = null;
         for (int i = 2; i < args.length; i++) {
             if (args[i].equals("--port") && i + 1 < args.length) {
-                port = Integer.parseInt(args[i + 1]);
+                Integer p = parsePortOption(args[i + 1]);
+                if (p == null) System.exit(1);
+                port = p;
                 portFlag = true;
                 i++;
             } else if (args[i].equals("--host") && i + 1 < args.length) {
@@ -200,6 +205,26 @@ final class CmdServe {
             System.err.println("server error: " + e.getMessage());
             KofCliSupport.cleanup(tempDir);
             System.exit(1);
+        }
+    }
+
+    /**
+     * `--port`: int com diagnostico limpo em vez de NumberFormatException
+     * crua (CodeQL uncaught-number-format-exception, R6 — mesmo padrao do
+     * `parseIntOption` do `kof bench`). Null = valor invalido.
+     */
+    static Integer parsePortOption(String value) {
+        try {
+            int p = Integer.parseInt(value.trim());
+            if (p < 0 || p > 65535) {
+                System.err.println("kof serve: valor invalido para --port: '" + value
+                        + "' (esperado 0-65535)");
+                return null;
+            }
+            return p;
+        } catch (NumberFormatException e) {
+            System.err.println("kof serve: valor invalido para --port: '" + value + "'");
+            return null;
         }
     }
 }

@@ -444,6 +444,20 @@ Design racional, inspirado em Java+C:
   Determinístico: escala decimal pura, sem locale, sem pattern DSL (mesmo
   precedente de `time.format`, §D-STDLIB). Célula golden cross-target.
 
+**Feito (14/09, dono 192.168.100.18):** S1b.3 — `kof_math_roundTo(Double,Int)`
+nos 5 alvos. Contrato **aritmético** (não decimal-string): `p=10^|d|` por
+multiplicação REPETIDA (cada passo é 1 op IEEE corretamente arredondada →
+byte-idêntico); `d>=0`: `roundHalfAway(v*p)/p`, `d<0`: `roundHalfAway(v/p)*p`
+(decimals negativo arredonda p/ dezenas/centenas); `|d|` satura em 308; overflow
+de `v*p` → devolve `v` (no-op). `roundHalfAway` = trunc + correção do resto
+(`|f|>=0.5` → ±1; evita o double-rounding do `floor(x+0.5)`). Consequência
+travada: `roundTo(2.675,2)==2.68` (o double `2.675*100` arredonda a `267.5`).
+Sem libm. Backends: JVM (`JvmStringMathRuntime`), SCRIPT (reflexão), JS
+(`kofMathRoundTo`), x86 (`RuntimeMath`), riscv (fatia B32, aarch via tradutor).
+Prova: `KofMathTest.roundTo{Jvm,Native,Js,CrossArch}` + guard SEM025 +
+`ConformanceMatrixTest.stdmathround` (4 targets) + `KofScriptStdlibParityTest.
+mathRoundToParity`.
+
 ### 4. §179 — tipo `kof.ui`/`kof.media` declarado → **opção A (mapear o builtin)**
 `MemberResolver.resolveType`, após `qualifyDeep`, mapeia `ClassType("", name)`
 para `KofUi.constructorType(name)`/`KofMedia` quando `name` é builtin UI/media
@@ -489,6 +503,35 @@ expansão double), o limiar de notação científica do Java (`1e7`→`1.0E7`,
 Ryu/Grisu; um loop limitado `%.{1..17}g`+`strtod` é implementação
 determinística aceitável) — sem reinventar o algoritmo além do que o JDK já
 define. Célula golden cross-target (`floatprint`).
+
+---
+
+## D-BASELINE — baseline da toolchain 21 → 25 (✅ decidido 14/09, mantenedora)
+
+- **Decisão:** o baseline de build da toolchain do repo sobe de **Java 21**
+  para **Java 25** (LTS), pedida pela mantenedora na sessão da lane CodeQL
+  (14/09) para destravar o codemod 100% preservador de comportamento dos
+  findings `java/local-variable-is-never-read` (×82) e parte de
+  `java/unused-parameter` (×81): **unnamed patterns/variables, JEP 443,
+  finalizado no Java 22** (medido: `javac --release 21` recusa
+  `case WhileStmt _ -> false;`).
+- **O que muda (toolchain do repo, NÃO a linguagem):** `pom.xml` `release=25`;
+  `setup-java` 21→25 em ci/codeql/release/benchmark/android; Temurin embutido
+  do `package.sh --jdk` 21→25; README canônico + PT "JDK 25+"; CHANGELOG EN/PT
+  (seção Build de 0.4.0-beta); `learn/31-distribution` EN/PT com a nota das
+  três camadas.
+- **O que NÃO muda (regra 6 — alvo de runtime de programa Kof, congelado):**
+  `JvmBackend` continua emitindo `V21`; template Android continua
+  `release="21"`; `KofVersion.TOOLING_API=21` (piso do programa emitido,
+  reportado por `kof info`); a guarda `--release 21 --enable-preview` do
+  `JvmRuntime` (caminho vk/extern em JDK <22) segue correta em 21..25.
+  **Programa Kof compilado hoje roda em JVM 21+** — subir a toolchain do repo
+  não sobe o runtime mínimo da linguagem.
+- **Evidência:** `mvn -o -pl kof-compiler -am compile` verde com
+  `Compiling ... with javac [debug release 25]`; suíte do kof-compiler em JDK
+  25: 1464/0 (162 skip) antes do codemod, e worktree b3ab9858+codemod
+  61-bindings: 1574/1 (a única fail é o flake SSE documentado da família §90,
+  verde 6/6 isolado).
 
 ---
 

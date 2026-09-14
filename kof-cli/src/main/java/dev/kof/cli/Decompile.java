@@ -292,7 +292,7 @@ public final class Decompile {
                 if (!hasHandlers) {
                     body = BytecodeDecoder.recoverExpression(m.code.bytecode, ir.constantPool, frame);
                 }
-                if (body == null) {
+                if (body == null && m.code.exceptionHandlers != null) {
                     int[][] handlers = new int[m.code.exceptionHandlers.size()][];
                     for (int i = 0; i < handlers.length; i++) {
                         var h = m.code.exceptionHandlers.get(i);

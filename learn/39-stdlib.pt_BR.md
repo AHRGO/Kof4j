@@ -43,13 +43,23 @@ math.lerp(0.0, 10.0, 0.5)     // 5.0  — a + (b - a) * t   (S1b.1)
 math.percentage(3.0, 4.0)     // 75.0 — total 0 => NaN, nunca lança (S1b.1)
 math.isInteger(4.0)           // true;  4.5/NaN/Inf => false (S1b.1)
 math.isDecimal(4.5)           // true;  !isInteger (S1b.1)
+math.roundTo(3.14159, 2)      // 3.14  — meio-para-longe-do-zero em N casas (S1b.3)
+math.roundTo(2.675, 2)        // 2.68  — escala aritmética (ver nota abaixo)
+math.roundTo(1234.0, -2)      // 1200.0 — decimals negativo arredonda p/ dezenas/centenas
+math.pow(2.0, 10.0)           // 1024.0 — libm no native x86 (S1b.2)
+math.parseInt("42")           // 42     — contrato JDK, lança em inválido (S13a)
+math.parseDouble("2.5")       // 2.5
+math.parseIntOrDefault("x", 0) // 0     — nunca lança (S13b)
 ```
 
-Os inteiros ficam acima; `sqrt`/`lerp`/`percentage`/`isInteger`/`isDecimal`
-são os `Double` da namespace (JVM/Script/JS/x86; riscv64/aarch64 = `MATH001`,
-não compilam). Os argumentos são **Double explícitos** — `math.lerp(0, 10,
-0.5)` não compila (SEM025; sem widening silencioso). `roundTo`/`parse*`/`pow`
-ficam em degrau próprio, com as mesmas garantias.
+Os inteiros ficam acima; `sqrt`/`lerp`/`percentage`/`isInteger`/`isDecimal`/
+`roundTo`/`pow` são os `Double` da namespace (JVM/Script/JS/x86; riscv64/aarch64
+rodam todos exceto `pow`, que é `MATH001` — libm não linka no cross estático).
+Os argumentos são **Double explícitos** — `math.lerp(0, 10,
+0.5)` não compila (SEM025; sem widening silencioso). `roundTo(value, decimals)`
+recebe um `Int` `decimals` e usa **escala decimal determinística** (não o
+`BigDecimal` decimal-string): `roundTo(2.675, 2)` é `2.68` porque o double mais
+próximo de `2.675` escala para `267.5`.
 
 ## strings — predicados, conversores e palavras
 

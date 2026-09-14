@@ -99,10 +99,96 @@ public final class NativeRiscvAsmRtB32 {
                 seqz a0, a0
                 ret
 
+            # S1b.3 (DECISIONS §3): kof_math_roundTo(a0=v bits, a1=decimals)
+            # -> a0=bits. Half-away-from-zero por escala decimal determinística
+            # (sem libm). p = 10^m (m=|d|, satura 308) por fmul.d REPETIDO —
+            # byte-idêntico ao x86/JVM/JS. d>=0: scaled=v*p, r/p. d<0:
+            # scaled=v/p, r*p. Overflow de v*p -> devolve v. Inline (sem
+            # wrapper/call → não precisa salvar ra).
+            .globl kof_math_roundTo
+            kof_math_roundTo:
+                sext.w a1, a1                    # normaliza decimals p/ 64-bit
+                # v NaN/Inf (exp==0x7ff) -> devolve v
+                srli t0, a0, 52
+                andi t0, t0, 0x7ff
+                li   t1, 0x7ff
+                beq  t0, t1, .Lmth_rt_ret
+                # m = min(|d|, 308)
+                mv   t2, a1
+                bgez t2, .Lmth_rt_abs
+                neg  t2, t2
+            .Lmth_rt_abs:
+                li   t1, 308
+                ble  t2, t1, .Lmth_rt_m_ok
+                li   t2, 308
+            .Lmth_rt_m_ok:
+                # p = 10^m
+                la   t0, .Lmth_one
+                fld  f1, 0(t0)
+                la   t3, .Lmth_ten
+                fld  f2, 0(t3)
+                beqz t2, .Lmth_rt_p_done
+            .Lmth_rt_p_loop:
+                fmul.d f1, f1, f2
+                addi t2, t2, -1
+                bnez t2, .Lmth_rt_p_loop
+            .Lmth_rt_p_done:
+                fmv.d.x f0, a0
+                bltz a1, .Lmth_rt_negd
+                fmul.d f0, f0, f1                # scaled = v*p
+                j    .Lmth_rt_scale
+            .Lmth_rt_negd:
+                fdiv.d f0, f0, f1                # scaled = v/p
+            .Lmth_rt_scale:
+                fmv.x.d t0, f0
+                srli t1, t0, 52
+                andi t1, t1, 0x7ff
+                li   t2, 0x7ff
+                beq  t1, t2, .Lmth_rt_ret        # overflow -> v
+                li   t2, 0x433
+                bgeu t1, t2, .Lmth_rt_apply      # |scaled|>=2^52 -> r=scaled
+                # r = half-away-from-zero(scaled)
+                fcvt.l.d t3, f0, rtz             # t = trunc
+                fcvt.d.l f3, t3                  # (double)t
+                fsub.d f4, f0, f3                # frac = scaled - t
+                la   t0, .Lmth_half
+                fld  f5, 0(t0)
+                flt.d t1, f4, f5                 # frac < 0.5 ?
+                beqz t1, .Lmth_rt_up             # !(frac<0.5) -> frac>=0.5
+                la   t0, .Lmth_nhalf
+                fld  f5, 0(t0)
+                flt.d t1, f5, f4                 # -0.5 < frac ?
+                bnez t1, .Lmth_rt_r_done         # frac in (-0.5,0.5) -> r=t
+                addi t3, t3, -1                  # frac <= -0.5 -> t-1
+                j    .Lmth_rt_r_done
+            .Lmth_rt_up:
+                addi t3, t3, 1
+            .Lmth_rt_r_done:
+                fcvt.d.l f0, t3
+            .Lmth_rt_apply:
+                bltz a1, .Lmth_rt_mulback
+                fdiv.d f0, f0, f1                # r/p
+                j    .Lmth_rt_fin
+            .Lmth_rt_mulback:
+                fmul.d f0, f0, f1                # r*p
+            .Lmth_rt_fin:
+                fmv.x.d a0, f0
+                ret
+            .Lmth_rt_ret:
+                ret
+
             .section .rodata
             .align 3
             .Lmth_pct100:
                 .quad 0x4059000000000000
+            .Lmth_one:
+                .quad 0x3ff0000000000000
+            .Lmth_ten:
+                .quad 0x4024000000000000
+            .Lmth_half:
+                .quad 0x3fe0000000000000
+            .Lmth_nhalf:
+                .quad 0xbfe0000000000000
             .section .text
         """;
 }

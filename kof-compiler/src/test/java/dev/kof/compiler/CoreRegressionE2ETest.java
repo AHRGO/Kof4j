@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -1914,5 +1915,125 @@ class CoreRegressionE2ETest {
         CompilationResult r = driver.compile(src, out, Target.JVM);
         assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
         assertEquals("10\n17\n17", runJvm(out));
+    }
+
+    // Issue #223 — for-loop update expression ++ / -- on Long or Double generates iconst_1 instead of lconst_1 / dconst_1 (VerifyError)
+    @Test
+    void forLoopUpdateLongAndDoubleJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("forupdate.kf");
+        Files.writeString(src, """
+                main() {
+                    for (var i: Long = 0L; i < 3L; i++) {
+                        println(i)
+                    }
+                    for (var j: Long = 3L; j > 0L; j--) {
+                        println(j)
+                    }
+                }
+                """);
+        Path out = tempDir.resolve("forupdate-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("0\n1\n2\n3\n2\n1", runJvm(out));
+    }
+
+    // Issue #225 — Instance method shadowed by built-in when name matches print/println
+    @Test
+    void instanceMethodNamedPrintOrPrintlnJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("customprint.kf");
+        Files.writeString(src, """
+                class Logger {
+                    void print(String msg) {
+                        println("[LOG] " + msg)
+                    }
+                    void println(Int n) {
+                        this.print("custom: " + n)
+                    }
+                }
+
+                main() {
+                    var log = new Logger()
+                    log.print("test")
+                    log.println(7)
+                }
+                """);
+        Path out = tempDir.resolve("customprint-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("[LOG] test\n[LOG] custom: 7", runJvm(out));
+    }
+
+    // Issue #224 — abstract method in non-abstract class is accepted without error (AbstractMethodError at runtime)
+    @Test
+    void abstractMethodInNonAbstractClassRejected(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("abstractnonabs.kf");
+        Files.writeString(src, """
+                class Broken {
+                    abstract Int compute()
+                }
+
+                main() {
+                    var b = new Broken()
+                    println(b.compute())
+                }
+                """);
+        Path out = tempDir.resolve("abstractnonabs-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertFalse(r.success());
+        assertTrue(r.diagnostics().getDiagnostics().stream().anyMatch(d -> "SEM041".equals(d.code())),
+                "Expected SEM041 diagnostic but got: " + r.diagnostics().getDiagnostics());
+    }
+
+    // Issue #226 — super() constructor call always fails with SEM017 regardless of parent constructor
+    @Test
+    void superConstructorCallResolvesCorrectlyJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("superctor.kf");
+        Files.writeString(src, """
+                class Vehicle {
+                    String kind = "vehicle"
+                    public constructor() {
+                        this.kind = "vehicle-default"
+                    }
+                    public constructor(String kind) {
+                        this.kind = kind
+                    }
+                }
+
+                class Car extends Vehicle {
+                    String model = "sedan"
+                    public constructor() {
+                        super()
+                    }
+                    public constructor(String kind, String model) {
+                        super(kind)
+                        this.model = model
+                    }
+                }
+
+                class BaseImplicit {
+                    String label = "base-implicit"
+                }
+
+                class ChildImplicit extends BaseImplicit {
+                    public constructor() {
+                        super()
+                    }
+                }
+
+                main() {
+                    var c1 = new Car()
+                    println(c1.kind + " " + c1.model)
+
+                    var c2 = new Car("truck", "f150")
+                    println(c2.kind + " " + c2.model)
+
+                    var ci = new ChildImplicit()
+                    println(ci.label)
+                }
+                """);
+        Path out = tempDir.resolve("superctor-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("vehicle-default sedan\ntruck f150\nbase-implicit", runJvm(out));
     }
 }

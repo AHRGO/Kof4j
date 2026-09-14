@@ -67,3 +67,16 @@ disguised bug*. A no-crash run is the extreme case — it passes for every
 silently-wrong implementation. Finding the bug is part of the work (Q4): the
 question to answer is **"what does the title assert, and does the program do
 it?"** — not "did the program die?".
+
+## Twin trap: the stale-CLASSES false RED
+
+The same discipline bites in the opposite direction: a harness that runs the
+**installed** `kof-compiler/target/classes` measures the code of the LAST
+`mvn compile` — if another agent landed a fix minutes ago, the re-measure
+says "still reproduces" about a bug that is already dead. Real case (14/09,
+#218): comment at ~12:40 says "AINDA REPRODUZ" — but the fix `da768386`
+landed at 12:32 and the `target/classes` used were from a 12:28 build.
+
+**Rule:** `mvn -o compile -pl kof-compiler -am` IMMEDIATELY before any
+triage/re-measure, and note the build time + HEAD SHA in the proof. A triage
+without that header is worthless — in both directions.

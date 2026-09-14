@@ -10,7 +10,7 @@
 >
 > | | |
 > |---|---|
-> | **OPEN Queue (sweep 13/09 — sections without resolution in the header itself)** | **18 items** (12 from the sweep [~~§176~~ closed 14/09] + §184/§185/§186/§187/§188/§192/§193/§194/§195/§196/§197/§201/§202/§203✅/§206✅/§207✅/§208/§209/§210/§211/§212/§213 new; §189 ✅ fixed 14/09; §190 test of lane `.18` — `KofBlogE2ETest` without `Content-Length`; §191 ✅ fixed 14/09 (`cookieSet` secure/httpOnly string case); **§192 had a DUPLICATE (parseOrDefault lane `.17` × `db.query<Record>` lane `.18`) — the `db.query<Record>` record was renumbered to §197 on 14/09 by the registry owner (lane bugs-and-gaps `192.168.100.15`); §192 = parseOrDefault; **NEW §194** (for-in over String/non-collection was ACCEPTED and broke per target — JVM VerifyError/Native SIGSEGV/Script crash/JS iterated; ✅ FIXED 14/09 SEM058, triage of #145, lane bugs-and-gaps `192.168.100.15`); **NEW §195** (`KofBlogE2ETest` red at HEAD: test uses `app.security` but the GETs don't send a session → 401, middleware CORRECT; ⚠️ TEST, owner lane `.18`/`.22`); **NEW §196** (EN i18n broke the guard `ConcurrencyGapsDocTest` — the test pinned the PT header `| Construto |`; ✅ FIXED 14/09, guard accepts both spellings, lane bugs-and-gaps `192.168.100.15`))) (sections/sub-faces without resolution) — ~~§177~~ ✅ FIXED 13/09 (lambda with a BLOCK body that returns a local declared in the block was typed void/SEM033 when the module had a class — `firstReturnValueType` didn't record the body's `VarDeclStmt`; lane bugs-and-gaps `192.168.100.15`, closed in the §178 unit; translator repro runs 4 targets = 8). **NEW §179** (`kof.ui`/`kof.media` type DECLARED → JVM VerifyError; `MemberResolver.resolveType` doesn't recognize the builtin — catalogued, not fixed, rule 6) **+ NEW §180** (println double/float in Native x86 ≠ JDK `Double.toString`/`Float.toString` — residual/overclaim of bug 44; lane Native) **+ §181 ✅ FIXED 13/09** (cast `Double/Float as Int/Long` out of range/NaN/Inf — implemented in `c90e85ee` (JS `kofD2I/kofD2L` + Native) and **regression of the x86/riscv fix fixed by lane bugs-and-gaps `192.168.100.15`**: integer bits read as double saturated EVERY positive value; duplicated riscv labels; 4 targets) **+ §182 ✅ FIXED 13/09** (ISO parse of `kof.time` with a SIGN field: JVM/Script lenient via `Integer.parseInt`, Native strict, JS inconsistent — lane .18 fix `a13665f7`, STRICT consensus) **+ §183 ✅ FIXED 13/09** (test `KofTimeE2ETest.todayIso…` was clock-flaky — literal `isToday(2026,9,13)`; lane .18 fix `a13665f7` via parts of `todayIso()`; finding of lane bugs-and-gaps `192.168.100.15`) **+ NEW §184** (store into `Byte[]`/`Short[]` out of range does NOT truncate in JS — JVM/Native/Script `-126`/`4464` vs JS `130`/`70000`; silent, rule 5) **+ NEW §185** (Script interpreter **crash** when writing to `Char[]` **and `Bool[]`**: `c[0]='A'`/`b[0]=true` → `argument type mismatch`; JVM/Native/JS correct — the real root cause is `KofInterpreterValues.coerceFor` on the live path `KofInterpreter:306`, **not** the `KofInterpreterOps.arrayStore` which is dead code) **+ §189 ✅ FIXED 14/09** (record with a **nullable** generic list field `List<Item>?` — `toGenericSignature` didn't unwrap `NullableType` → record component without `Signature` → `json.decode` returned a raw `LinkedHashMap` → `ClassCastException`; **the test of #128 `76ca3dd4` went up RED while declaring green**; fix = unwrap nullable, lane bugs-and-gaps `192.168.100.15`) **+ §187 🟡 Native face ✅ FIXED 13/09** (`Char[]` out of range did NOT narrow to 16 bits in Native — `elementTypeSize` maps `char`→4 and `kof_array_set` did a raw `movl`; **fix = 0xFFFF mask on the store** x86 `movzwl` + riscv/aarch `slli`/`srli`, stride 4 preserved; **JS face remains OPEN** = §184; JVM/Script `4464`/`65535`; **§186 = distinct bug from collaborator Jonas Rocha**, non-constant `static` initializer/issue #133)   — ~~§168~~ ✅ FIXED 13/09 (`3ab4c99e`; SEM025 json — `json.metodoRuim()` now rejected, re-verified in `kof check`; it was pre-existing, not from WEB001-T1), ~~§166~~ ✅ FIXED 13/09 (hello size gate: baseline re-measured 7.700→8.297; DOM shim #121 is a legitimate `always` preamble, same process as #104 — option (a) of the record itself; lane bugs-and-gaps), §165 re-verified 13/09: does NOT reproduce in a clean build (node v22 present, export in the runtime, green cell) — `static final` inlining trap, see §165; ~~§81~~ ✅ FIXED 13/09 (5b: Long=BigInt in JS, real 64-bit parity, JS golden unified with the JVM), §101 (Double relationals with NaN diverge cross — **frozen** rule 6), §104b-ii (record in collection + storage-box asm — **lane bugfixer**, LARGE unit), §107 🟡 (native `println(collection)` → pointer garbage; **scalar face ✅ FIXED 12/09** in the 3 natives `f3b3821c`+B39; record/nested=`?` remain until §104b-ii + FP-cross=FLT001), §114 ⏳ (record equals with reference field in Native; sub-face of §104b-ii), §129 (throw in `spawn` worker → cross-thread longjmp in Native — **lane nat**; was referred to as "§129-TLS"), §132 (KofJS: task of task doesn't run without yielding the event-loop — OTP002 gate; **another lane**), §161/NAT-STR01 (ASCII-only case-fold in Native vs Unicode in JVM/JS — **DECIDED 13/09**, lane nat; recorded here 13/09). **§165 RE-VERIFIED 13/09 (owner 192.168.100.17, node v22 present): does NOT reproduce in a clean build** — the export REACHES `kof-runtime.mjs`, the cell is green; the symptom was the `static final` inlining trap (stale classes). Closure/shielding = §106/js-slices owner; §166 open). **~~§149~~ is NOT open — ✅ FIXED 12/09** (the previous line listed it by mistake; the root was the `JsIfThrowElse` of §147). **§156 ✅ FIXED 13/09** (heterogeneous list of lambdas with the same signature → element without className, SAM dispatch). **§155 ✅ FIXED 13/09** (function-type in type-args → `ClassFormatError`; parser preserves the type-ref spaces). **§127-JVM ✅ FIXED 13/09** (decision 9a: `as ()->T` parses as type-ref; checkcast for synthetic SAM interface). **§94 ✅ FIXED 13/09** (EQ/NE of Double/Float in the interpreter now IEEE). **§125 ✅ FIXED 12/09** (return Nullable(primitive) → default; cell `nullableprint` 4/4). **§139 ✅ FIXED 12/09** (JS fold `f()==null` → COMP002; JS parser discards mid-expression). **§140 ✅ FIXED 12/09** (≤500 gate became a ratchet with a baseline in CI). **§90 ✅ FIXED 12/09** (lane web). **§145/§146/§147 ✅ FIXED 12/09** (`440730c8`, issue #101). **§45 ✅ IMPLEMENTED 13/09** (DD-01 option 4a: FinallyFrame in the IR; 4 targets, `063ed956`) and **S10c ✅ 13/09** (`random.randomBytesHex`, `317b23e7`). **§157/§158/§159/§160 ✅ FIXED 13/09** (issue-lane: #103 case 3 POP2 in `HashMap.put` of `Long`, kof.web `header()`/`query()` `String?`+SEM049, Native web WEB001, KofJS hostless `kof_platform`). **§172 ✅ FIXED 13/09** (SHIFT compounds `<<=`/`>>=`/`>>>=` lowered as a plain assignment — silent miscompilation; + 2nd face `Long<<=Long` VerifyError, L2I on the count; lane development/translator, owner = 192.168.100.22). **Honest conclusion (13/09):** of the **8 open items**, most depend on a **maintainer decision already ratified** (implementation queue), **rule-6 freeze** (§101 + sub-faces §114/§107 = 3), **another lane** (§104b-ii lane bugfixer + §129 lane nat + §132 = 3) — **§89 ✅ FIXED 13/09** (`e33425b5`, 4 targets + SEM090 warning), **§106 ✅ FIXED 13/09** (`5b939106` + JS residual `ab85cfae`, 4 targets), **§117 ✅ FIXED 13/09** (`3734f2aa`), **§131 ✅ FIXED 13/09** (`18a64d45`, 4 backends; + **same-arity/types residual** `73ca2d58`, Native), **§156 ✅ FIXED 13/09**, **§81 ✅ FIXED 13/09** (Long=BigInt JS, own section) and **§163 ✅ FIXED 13/09** (interpreter: 2nd wide parameter read as `null` — 4-target parity, found in the `NativeBackend` split probe). **§167 ✅ FIXED 13/09** (bitwise/shift with mixed `Long`: JVM VerifyError + JS TypeError/wrong mask + Long overflow without wrap in JS; lane bugs-and-gaps `192.168.100.15`, 4 targets, 3 tests — own section). |> | **§167 ✅ FIXED 13/09 (lane bugs-and-gaps, 192.168.100.15)** | bitwise/shift with mixed `Long`: JVM VerifyError + JS TypeError/wrong mask + Long overflow without wrap in JS. 4 targets; found in the 13/09 Q4 hunt. Related overclaim of §81 (declared "real 64-bit" covering only parse/literal). Proof: `BackendParityTest.parityLongBitwiseShiftMixed` + `KofInterpreterParityTest.longBitwiseShiftMixed` + `bitwise` cell extended 4/4. |
+> | **OPEN Queue (sweep 13/09 — sections without resolution in the header itself)** | **27 items** (12 from the sweep [~~§176~~ closed 14/09] + §184/§185/§186/§187/§188/§192/§193/§194/~~§195~~/§196/§197/§201✅/§202✅/§203✅/§206✅/§207✅/§208✅/§209/§210/§211/§212/§213/§214/§215/§216/§217/§218/§219/§220/~~§221~~/§222/§223/§224/§225/§226/§227/§228/§229/§230 new (§228 ✅ fixed 14/09, lane .15); §189 ✅ fixed 14/09; §190 test of lane `.18` — `KofBlogE2ETest` without `Content-Length`; §191 ✅ fixed 14/09 (`cookieSet` secure/httpOnly string case); **§192 had a DUPLICATE (parseOrDefault lane `.17` × `db.query<Record>` lane `.18`) — the `db.query<Record>` record was renumbered to §197 on 14/09 by the registry owner (lane bugs-and-gaps `192.168.100.15`); §192 = parseOrDefault; **NEW §194** (for-in over String/non-collection was ACCEPTED and broke per target — JVM VerifyError/Native SIGSEGV/Script crash/JS iterated; ✅ FIXED 14/09 SEM058, triage of #145, lane bugs-and-gaps `192.168.100.15`); **NEW §195** (`KofBlogE2ETest` red at HEAD: test uses `app.security` but the GETs don't send a session → 401, middleware CORRECT; ⚠️ TEST, owner lane `.18`/`.22`); **NEW §196** (EN i18n broke the guard `ConcurrencyGapsDocTest` — the test pinned the PT header `| Construto |`; ✅ FIXED 14/09, guard accepts both spellings, lane bugs-and-gaps `192.168.100.15`))) (sections/sub-faces without resolution) — ~~§177~~ ✅ FIXED 13/09 (lambda with a BLOCK body that returns a local declared in the block was typed void/SEM033 when the module had a class — `firstReturnValueType` didn't record the body's `VarDeclStmt`; lane bugs-and-gaps `192.168.100.15`, closed in the §178 unit; translator repro runs 4 targets = 8). **NEW §179** (`kof.ui`/`kof.media` type DECLARED → JVM VerifyError; `MemberResolver.resolveType` doesn't recognize the builtin — catalogued, not fixed, rule 6) **+ NEW §180** (println double/float in Native x86 ≠ JDK `Double.toString`/`Float.toString` — residual/overclaim of bug 44; lane Native) **+ §181 ✅ FIXED 13/09** (cast `Double/Float as Int/Long` out of range/NaN/Inf — implemented in `c90e85ee` (JS `kofD2I/kofD2L` + Native) and **regression of the x86/riscv fix fixed by lane bugs-and-gaps `192.168.100.15`**: integer bits read as double saturated EVERY positive value; duplicated riscv labels; 4 targets) **+ §182 ✅ FIXED 13/09** (ISO parse of `kof.time` with a SIGN field: JVM/Script lenient via `Integer.parseInt`, Native strict, JS inconsistent — lane .18 fix `a13665f7`, STRICT consensus) **+ §183 ✅ FIXED 13/09** (test `KofTimeE2ETest.todayIso…` was clock-flaky — literal `isToday(2026,9,13)`; lane .18 fix `a13665f7` via parts of `todayIso()`; finding of lane bugs-and-gaps `192.168.100.15`) **+ NEW §184** (store into `Byte[]`/`Short[]` out of range does NOT truncate in JS — JVM/Native/Script `-126`/`4464` vs JS `130`/`70000`; silent, rule 5) **+ NEW §185** (Script interpreter **crash** when writing to `Char[]` **and `Bool[]`**: `c[0]='A'`/`b[0]=true` → `argument type mismatch`; JVM/Native/JS correct — the real root cause is `KofInterpreterValues.coerceFor` on the live path `KofInterpreter:306`, **not** the `KofInterpreterOps.arrayStore` which is dead code) **+ §189 ✅ FIXED 14/09** (record with a **nullable** generic list field `List<Item>?` — `toGenericSignature` didn't unwrap `NullableType` → record component without `Signature` → `json.decode` returned a raw `LinkedHashMap` → `ClassCastException`; **the test of #128 `76ca3dd4` went up RED while declaring green**; fix = unwrap nullable, lane bugs-and-gaps `192.168.100.15`) **+ §187 🟡 Native face ✅ FIXED 13/09** (`Char[]` out of range did NOT narrow to 16 bits in Native — `elementTypeSize` maps `char`→4 and `kof_array_set` did a raw `movl`; **fix = 0xFFFF mask on the store** x86 `movzwl` + riscv/aarch `slli`/`srli`, stride 4 preserved; **JS face remains OPEN** = §184; JVM/Script `4464`/`65535`; **§186 = distinct bug from collaborator Jonas Rocha**, non-constant `static` initializer/issue #133)   — ~~§168~~ ✅ FIXED 13/09 (`3ab4c99e`; SEM025 json — `json.metodoRuim()` now rejected, re-verified in `kof check`; it was pre-existing, not from WEB001-T1), ~~§166~~ ✅ FIXED 13/09 (hello size gate: baseline re-measured 7.700→8.297; DOM shim #121 is a legitimate `always` preamble, same process as #104 — option (a) of the record itself; lane bugs-and-gaps), §165 re-verified 13/09: does NOT reproduce in a clean build (node v22 present, export in the runtime, green cell) — `static final` inlining trap, see §165; ~~§81~~ ✅ FIXED 13/09 (5b: Long=BigInt in JS, real 64-bit parity, JS golden unified with the JVM), §101 (Double relationals with NaN diverge cross — **frozen** rule 6), §104b-ii (record in collection + storage-box asm — **lane bugfixer**, LARGE unit), §107 🟡 (native `println(collection)` → pointer garbage; **scalar face ✅ FIXED 12/09** in the 3 natives `f3b3821c`+B39; record/nested=`?` remain until §104b-ii + FP-cross=FLT001), §114 ⏳ (record equals with reference field in Native; sub-face of §104b-ii), §129 (throw in `spawn` worker → cross-thread longjmp in Native — **lane nat**; was referred to as "§129-TLS"), §132 (KofJS: task of task doesn't run without yielding the event-loop — OTP002 gate; **another lane**), §161/NAT-STR01 (ASCII-only case-fold in Native vs Unicode in JVM/JS — **DECIDED 13/09**, lane nat; recorded here 13/09). **§165 RE-VERIFIED 13/09 (owner 192.168.100.17, node v22 present): does NOT reproduce in a clean build** — the export REACHES `kof-runtime.mjs`, the cell is green; the symptom was the `static final` inlining trap (stale classes). Closure/shielding = §106/js-slices owner; §166 open). **~~§149~~ is NOT open — ✅ FIXED 12/09** (the previous line listed it by mistake; the root was the `JsIfThrowElse` of §147). **§156 ✅ FIXED 13/09** (heterogeneous list of lambdas with the same signature → element without className, SAM dispatch). **§155 ✅ FIXED 13/09** (function-type in type-args → `ClassFormatError`; parser preserves the type-ref spaces). **§127-JVM ✅ FIXED 13/09** (decision 9a: `as ()->T` parses as type-ref; checkcast for synthetic SAM interface). **§94 ✅ FIXED 13/09** (EQ/NE of Double/Float in the interpreter now IEEE). **§125 ✅ FIXED 12/09** (return Nullable(primitive) → default; cell `nullableprint` 4/4). **§139 ✅ FIXED 12/09** (JS fold `f()==null` → COMP002; JS parser discards mid-expression). **§140 ✅ FIXED 12/09** (≤500 gate became a ratchet with a baseline in CI). **§90 ✅ FIXED 12/09** (lane web). **§145/§146/§147 ✅ FIXED 12/09** (`440730c8`, issue #101). **§45 ✅ IMPLEMENTED 13/09** (DD-01 option 4a: FinallyFrame in the IR; 4 targets, `063ed956`) and **S10c ✅ 13/09** (`random.randomBytesHex`, `317b23e7`). **§157/§158/§159/§160 ✅ FIXED 13/09** (issue-lane: #103 case 3 POP2 in `HashMap.put` of `Long`, kof.web `header()`/`query()` `String?`+SEM049, Native web WEB001, KofJS hostless `kof_platform`). **§172 ✅ FIXED 13/09** (SHIFT compounds `<<=`/`>>=`/`>>>=` lowered as a plain assignment — silent miscompilation; + 2nd face `Long<<=Long` VerifyError, L2I on the count; lane development/translator, owner = 192.168.100.22). **Honest conclusion (13/09):** of the **8 open items**, most depend on a **maintainer decision already ratified** (implementation queue), **rule-6 freeze** (§101 + sub-faces §114/§107 = 3), **another lane** (§104b-ii lane bugfixer + §129 lane nat + §132 = 3) — **§89 ✅ FIXED 13/09** (`e33425b5`, 4 targets + SEM090 warning), **§106 ✅ FIXED 13/09** (`5b939106` + JS residual `ab85cfae`, 4 targets), **§117 ✅ FIXED 13/09** (`3734f2aa`), **§131 ✅ FIXED 13/09** (`18a64d45`, 4 backends; + **same-arity/types residual** `73ca2d58`, Native), **§156 ✅ FIXED 13/09**, **§81 ✅ FIXED 13/09** (Long=BigInt JS, own section) and **§163 ✅ FIXED 13/09** (interpreter: 2nd wide parameter read as `null` — 4-target parity, found in the `NativeBackend` split probe). **§167 ✅ FIXED 13/09** (bitwise/shift with mixed `Long`: JVM VerifyError + JS TypeError/wrong mask + Long overflow without wrap in JS; lane bugs-and-gaps `192.168.100.15`, 4 targets, 3 tests — own section). |> | **§167 ✅ FIXED 13/09 (lane bugs-and-gaps, 192.168.100.15)** | bitwise/shift with mixed `Long`: JVM VerifyError + JS TypeError/wrong mask + Long overflow without wrap in JS. 4 targets; found in the 13/09 Q4 hunt. Related overclaim of §81 (declared "real 64-bit" covering only parse/literal). Proof: `BackendParityTest.parityLongBitwiseShiftMixed` + `KofInterpreterParityTest.longBitwiseShiftMixed` + `bitwise` cell extended 4/4. |
 > | **§172 ✅ FIXED 13/09 (lane development/translator, 192.168.100.22)** | compound shift `<<=`/`>>=`/`>>>=` was parsed but lowered as a SIMPLE assignment (only the RHS stored): `x=6; x <<= 2` gave `2` (silent, 4 targets). Fix: `isCompoundOp`+`compoundBinaryOp` with SHL/SHR/USHR + `emitCompoundRhsConv` (L2I on the wide RHS). Proof: `CoreRegressionE2ETest.compoundShiftAssignments`. |
 > | **§173 ✅ FIXED 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `++`/`--`/compound on `Long`/`Double`/`Float` + increment of an array ELEMENT: JVM VerifyError (literal `INT 1` in a 2-slot binary, 1-slot `DUP`, `arraystore` without `[array,index]`), Native core dump, Script `NoSuchElementException`, JS `stack underflow`/`KofDup2`. 4 targets; Q4 hunt 13/09 (over §167). Proof: `BackendParityTest.parityIncrementWideTypesAndArrayElement` + `KofInterpreterParityTest.incrementWideTypesAndArrayElement` + cell `increment` 4/4. |
 > | **§174 ✅ FIXED 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `return`/`throw` inside an `if` inside the `try`: JVM/Native/Script correct, KofJS aborted with `COMP002 unexpected KofCatchStart` (the `JsIfThrowElse.parseElse` consumed the endLabel of the enclosing try when treating the unconditional `then` as if-else). Fix without contract/IR change (`isTryEndLabel` guard). Proof: `CoreRegressionE2ETest.returnInsideIfInsideTryJs`. |
@@ -6514,7 +6514,7 @@ to the label) is the correct predicate and **was already used** in `parseStateme
   (not the test) is this unit. Issue #128 **only closes with this
   fix** (in the old distro the symptom had the same root).
 
-### §190 — `KofBlogE2ETest` RED on HEAD: the test's POSTs omit `Content-Length` and the server (correctly) reads an empty body → `unexpected end of JSON` — ✅ RESOLVED 14/09 by the owner (lane `.18`, `8eb156f4`); it was a TEST, not the product — recorded 14/09 (lane bugs-and-gaps `192.168.100.15`)
+### §190 ✅ FIXED 14/09 (test-side: `a689cbd2` lane `.18` added `Content-Length` to the POSTs; re-measured green 14:35 on `b7fdcb7e`) — `KofBlogE2ETest` RED on HEAD: the test's POSTs omit `Content-Length` and the server (correctly) reads an empty body → `unexpected end of JSON` — ✅ RESOLVED 14/09 by the owner (lane `.18`, `8eb156f4`); it was a TEST, not the product — recorded 14/09 (lane bugs-and-gaps `192.168.100.15`)
 
 - **Symptom (measured 14/09, HEAD `521049aa`, 4-module suite clean):**
   `KofBlogE2ETest.canonicalAppServesFrontendDbAuthValidation` **FAILS**
@@ -6702,6 +6702,15 @@ to the label) is the correct predicate and **was already used** in `parseStateme
   `ec=1` + `VerifyError` via the reflection launcher (JavaFX-rule — the
   direct launcher swallows it behind the fake JavaFX message). Fix must
   make it print `8` + a `CoreRegressionE2ETest` case.
+- **✅ FIXED (measured 14/09 ~12:35 on `c252a983`, fix `8af810c5` "map
+  primitive types to boxed classes in instanceof and checkcast"):** javap of
+  the §203 repro now emits a VALID `checkcast java/lang/Integer` +
+  `invokevirtual intValue()` + `istore` (no `?`, no raw istore). The issue's
+  exact claim is dead. Two DIFFERENT residuals stay open and are NOT §203:
+  (i) `o as Int` with `o` holding a real `String` → runtime
+  `ClassCastException` (the §188 design face — rule 6, parse vs cast decision
+  by the maintainer); (ii) `i as Object` with `i` Int → NEW §213
+  (missing boxing — `bipush` + `checkcast Object` → `VerifyError`).
 
 
 ### §206 ✅ FIXED 14/09 — class with constructor params: extra fields/methods in the body unresolvable (issue #215)
@@ -6746,7 +6755,7 @@ to the label) is the correct predicate and **was already used** in `parseStateme
   issue case (`extends` only) and the lane's test case (`extends`+`implements`)
   run `ec=0` (`shape|78.5` / `shape|Circle|78.5`). Issue #217 CLOSED.
 
-### §208 — function-type syntax `(T) -> R` accepted as param/var-annotation but REJECTED as return type/field type (issue #218)
+### §208 ✅ FIXED 14/09 — function-type syntax `(T) -> R` accepted as param/var-annotation but REJECTED as return type/field type (issue #218)
 
 - **Symptom (measured 14/09 ~11:05, owner = 192.168.100.17 — catalogued,
   compiler lane):** inconsistent grammar coverage of the function type:
@@ -6760,8 +6769,13 @@ to the label) is the correct predicate and **was already used** in `parseStateme
   up on the function name). Same shape fails as a field type per the issue.
   The workaround is `FunctionType`-via-`var` at the call site or the
   trailing-return form `makeDoubler(): (Int) -> Int`.
-- **Status:** reproduces on `1c13d982`. Grammar-level (parser), single
-  production: leading function-type in return/field position.
+- **✅ FIXED (`da768386` "support function type syntax as return type and
+  class field type", 12:32; re-measured 14/09 ~12:57 on `3f6ea150` with
+  FRESH classes after `mvn -o compile`): `(Int) -> Int makeDoubler()` now
+  compiles and runs `ec=0` (`42`). Issue #218 CLOSED. (My earlier 12:40
+  "AINDA REPRODUZ" comment was a STALE-CLASS artifact — the fix landed 12:32
+  but my target/classes were from 12:28; retracted on the issue. Lesson
+  re-confirms: `mvn -o compile` IMMEDIATELY before measuring.)
 
 ### §209 — interface default method body silently dropped → compiled abstract → `SEM043` false positive on the implementing class (issue #213)
 
@@ -6928,11 +6942,21 @@ to the label) is the correct predicate and **was already used** in `parseStateme
   type also fails (`runIt(f: Function<() -> Void>)` → `variable 'f' is not a
   function`, e204c 12:35) — same root: the generic type-argument carrying a
   function type is not recovered at the use site (list/field/param).
+- **2nd face — inline call (issue #236, measured 14/09 ~15:05 on `1f4ca5c9`
+  FRESH classes):** `println(fns.get(0)())` (call WITHOUT the intermediate
+  variable) does NOT hit the SEM015 check — the erased element type flows
+  straight to the call emitter and produces `invokevirtual ""."":()Ljava/lang/Object;`
+  (empty owner+name, constant-pool entry `#45 = Class ""`) →
+  `ClassFormatError: Illegal class name "" in class file Default/Main` at
+  LOAD. Silent miscompile → crash (worse than the honest SEM015 of the 1st
+  face; R6). Same root, same fix (recover the FunctionType at `.get()` read)
+  closes both faces.
 - **Pointer (compiler lane):** typer path that maps `List<T>` element type
   and `Function<...>` type-args back to `FunctionType` on `.get()`/parameter
   read (cf. §189's `toGenericSignature` unwrap of `NullableType` — the
-  function-type case is the sibling hole).
-- **Status:** reproduces on `7ba7e48d`.
+  function-type case is the sibling hole). The inline-call path must ALSO
+  guard: an un-resolved callee must diagnostic, never emit `""` as owner.
+- **Status:** reproduces on `7ba7e48d` (1st face) and `1f4ca5c9` (2nd).
 
 ### §215 — guarded type-binding pattern (`case String s if cond -> s`) omits the store of the bound variable → `VerifyError: Bad local variable type` at arm entry (issue #199)
 
@@ -6962,6 +6986,453 @@ to the label) is the correct predicate and **was already used** in `parseStateme
   binding emit that the non-guarded path does; sibling of §199 (record
   destructuring slots, which WAS fixed by `1bef9281`).
 - **Status:** reproduces on `7ba7e48d`.
+
+### §216 — `Char` is boxed as `Integer`: `println(c)` / `c.toString()` show the code point (`65`) not the character (`A`) (issues #168 + #153, one root)
+
+- **Symptom (measured 14/09 ~13:05 on `d2d025f4` with FRESH classes, owner =
+  192.168.100.17 — catalogued, compiler lane):** a `Char` value goes through
+  the int box, so any string display shows the NUMBER, silently (R6 /
+  freeze-4 wrong value, not a crash):
+  ```kof
+  main() {
+      var c: Char = 'A'
+      println(c)              // #168: prints 65,  expected A
+      println("char=" + c)    // #168: prints char=65
+      var a = 'A'
+      println(a.toString())        // #153: prints 65,  expected A
+      println(a.toString().length())  // #153: prints 2 (length of "65"), expected 1
+  }
+  ```
+  `ec=0` throughout — silent. Both issues are the SAME root (`Char` →
+  `Integer.valueOf` on the boxing path; §213 is the general missing-box
+  family, this one is the wrong-box). Related: §166/#156 family (wrong
+  descriptor/box on primitives).
+- **Expected:** `Char` boxes to `java/lang/Character`; `c.toString()` →
+  `"A"`; concatenation → the character.
+- **Pointer (compiler lane):** the primitive-box mapper for `Char` (the
+  `char`→`Character` case is dropped, falling through to `Integer`) — the
+  `8af810c5` "map primitive types to boxed classes" path that fixed the
+  checkcast/instanceof faces likely omits the String-concat / boxing site,
+  and `Char.toString()` lowers to `Integer.toString`.
+- **Status:** reproduces on `d2d025f4` (both #168 and #153 cases).
+
+### §217 — generic class method return not downcast: `Box<String>.get(): T` emits `()Object`, method call on it → `VerifyError` at first use (issue #161)
+
+- **Symptom (measured 14/09 ~13:05 on `d2d025f4`, FRESH classes, owner =
+  192.168.100.17 — catalogued, compiler lane):** calling a method on the
+  result of a generic method whose declared return is a type variable
+  produces a raw `Object` on the stack; the first reference method call on
+  it crashes at load:
+  ```kof
+  class Box<T> {
+      T item = null
+      set(T v) { this.item = v }
+      get(): T { return this.item }
+  }
+  main() {
+      var b = new Box<String>()
+      b.set("hello")
+      var s = b.get()
+      println(s.length())   // VerifyError: Bad type on operand stack
+  }
+  ```
+- **javap (measured, mechanism):** `Box.get:()Ljava/lang/Object;` →
+  `invokevirtual String.length()I` at offset 23 WITHOUT the
+  `checkcast java/lang/String` that erasure requires — `s.length()` is sent
+  to an `Object` on the stack. (The `b.set` call correctly passes
+  `Object`; only the method-call-on-`T`-result path is missing the cast.)
+- **Expected:** `checkcast String` between `get()` and `.length()` (the same
+  erasure cast the sibling `§203`/`8af810c5` fix now does for `as`).
+- **Pointer (compiler lane):** member-call receiver typing for a
+  generic-variable return — where the erasure `checkcast` is inserted; the
+  `T`-typed call site does not trigger it. Family: §161/#166/#161 generic
+  descriptor gaps.
+- **Status:** reproduces on `d2d025f4`.
+
+### §218 — `n.toHexString()` / `toBinaryString()` on Int emit `invokevirtual "".toHexString()` (empty owner class) → `ClassFormatError: Illegal class name ""` (issue #148)
+
+- **Symptom (measured 14/09 ~13:05 on `d2d025f4`, FRESH classes, owner =
+  192.168.100.17 — catalogued, compiler lane):** an extension-style Int
+  method is emitted with an EMPTY owner class in the Methodref, so the class
+  never loads:
+  ```kof
+  main() {
+      var n = 255
+      var h = n.toHexString()
+      println(h)
+  }
+  ```
+  → `ClassFormatError: Illegal class name "" in class file Default/Main`.
+- **javap (measured):** `invokevirtual #13 // Method "".toHexString:()Ljava/lang/Object;`
+  — the constant-pool class entry for the receiver is `""`. Two sub-bugs: (a)
+  owner = empty instead of `java/lang/Integer` (JVM's `Integer.toHexString`
+  is STATIC — the call should be `invokestatic` on `Integer`, the method is
+  not an instance/extension method on Int in the JDK); (b) the return type
+  is erased to `Object` (should be `String`), the §166 inverse family.
+- **Expected:** either route `n.toHexString()` to `Integer.toHexString(n)`
+  (static, `String` return) or reject with a compile-time diagnostic —
+  never emit `"".toHexString`.
+- **Pointer (compiler lane):** the extension-method resolution for Int
+  number-format helpers; when no user extension exists it falls through to
+  an unresolved owner `""` instead of a JDK static or a `SEM` error. Sibling
+  of §203/§213/§161 (broken `as`/cast descriptor family).
+- **Status:** reproduces on `d2d025f4`.
+
+### §219 — batch (triage 14/09): 5 open issues whose code is REJECTED by false-positive compile diagnostics (legitimate corpus forms blocked — honest diagnostic, wrong verdict, so not R6-silent; each needs a compiler fix, not a crash-fix)
+
+Measured 14/09 ~13:05–13:20 on `d2d025f4` with FRESH classes (`mvn -o
+compile` first — lesson of the obsolescence of §206/§207), case-exact bodies
+of the issues (repros kept in the issue comments):
+
+| Issue | Form | Verdict today | Why it's wrong (expected) |
+|---|---|---|---|
+| #151 | `if (d is Dog) { }` (corpus: `is` operator, §78) | `PARSE029: Expected ')'` @5:11 | parser: `is` accepted elsewhere (println/`var`) but not leading an `if` condition — grammar hole in the cond parser |
+| #155 | two interfaces, `save(): Boolean` second | `SEM: println recebeu void` @10 | second implemented method typed void (the §155 title says SEM033 order-dependent) — typer/`SymbolTableBuilder` collision, `print()` works, `save()` reads void |
+| #159 | `String? s; while (s != null) { s.length(); s = nextVal(i) }` | `SEM049 receiver is nullable` @9:27 | null-narrowing works in `if` but NOT across a `while`-condition + re-assignment loop — narrowing flow gap (§159 title's face confirmed) |
+| #160 | `interface Mapper<T> { map(T input): String }` | `PARSE007` @1:17 | generic INTERFACE doesn't parse (generic CLASS parses fine — §217/#161 compiles `Box<T>`) — interface decl branch lacks the type-param list |
+| #141 | `var h = spawn { "ok" }; var r = await h` | `SEM: atribuição void` @3:5 | `await` of a Handle from `spawn { block }` is typed VOID (result lost at typing time) — sibling of the fixed §29 face (`var h = spawn {lambda}`), handle-result typing for the block-lambda path |
+
+- **Lição Q4 desta leva:** these 5 are NOT silent bugs (they refuse to
+  compile = honest diagnostic) — so they are **support gaps/typer bugs**, not
+  R6 crashes; priority for stabilization = below §216–§218 (which break valid
+  programs at RUNTIME silently). Fixes belong to lane compiler (rule 6).
+- **Pointer summary:** parser — `is` in conditions (#151), interface type
+  params (#160); typer — multi-interface method typing (#155), null-narrowing
+  in while-flow (#159), Handle-await result typing (#141 — near the §29 spawn
+  lowering already fixed).
+
+### §220 ✅ FIXED 14/09 (`8a38faa4` analyzer lane, re-measured green 14:38: compile-time diagnostic replaces the runtime AbstractMethodError — exactly the expected of this catalog) — `abstract` method in a NON-abstract class compiles → `AbstractMethodError` at runtime (issue #224)
+
+- **Symptom (measured 14/09 ~13:45 on `cdda27d9` FRESH classes, owner =
+  192.168.100.17 — catalogued, compiler lane):**
+  ```kof
+  class Broken {
+      abstract Int compute()   // class is NOT abstract
+  }
+  main() {
+      var b = new Broken()     // instantiation accepted
+      println(b.compute())     // AbstractMethodError at runtime
+  }
+  ```
+  `new Broken()` + the call compile; at runtime: `AbstractMethodError:
+  Receiver class Broken does not define or inherit an implementation`.
+  javap: `Main` does `new Broken` + `invokevirtual Broken.compute()I` —
+  `Broken` is a CONCRETE class (no ACC_ABSTRACT) holding an ACC_ABSTRACT
+  method.
+- **Expected (rule R6 + JVM spec):** either a compile-time diagnostic
+  (`SEM: class 'Broken' is not abstract but has abstract method 'compute'`
+  — the JVMS says such a class MUST be abstract; JVM would even reject the
+  LOAD in strict mode) or the class becomes implicitly abstract and
+  `new` is rejected. Compiling and crashing at first call is silent-R6.
+- **Pointer (lane compiler):** class validation in the typer/sema — where
+  interface-implementors are checked for missing methods (the SEM043 path
+  from §209) the same audit is missing for `abstract` members of a
+  non-abstract class.
+
+### §221 ✅ FIXED 14/09 (`769371c2`) — instance method whose name collides with a built-in (`print`) is SWALLOWED: `log.print("test")` lowers to `System.out.print` (issue #225)
+
+- **Symptom (measured 14/09 ~13:45 on `cdda27d9` FRESH classes, owner =
+  192.168.100.17 — catalogued, compiler lane):** the user method exists in
+  the class but the call site ignores the receiver:
+  ```kof
+  class Logger {
+      void print(String msg) { println("[LOG] " + msg) }
+  }
+  main() { var log = new Logger(); log.print("test") }
+  ```
+  prints `test` — the `[LOG] ` prefix is LOST. javap: `Logger.print(String)`
+  exists in the class, but `Main.main` emits
+  `invokestatic String.valueOf` + `invokevirtual java/io/PrintStream.print`
+  — the built-in `print` hijacked the member call, receiver dropped. SILENT
+  wrong behavior (R6 / freeze-4), same family as bug 116 (`Native x86:
+  hijack of a user method named like a String-op`) but on the JVM backend.
+- **Expected:** `log.print(...)` → `invokevirtual Logger.print`. The
+  built-in name table applies to BARE calls (`print(x)` at statement/expr
+  level), never to member calls on a typed receiver that declares the name.
+- **Pointer (lane compiler):** member-call lowering order — built-in/namespace
+  dispatch (`MemberCallNamespaces`?) is consulted BEFORE the class's own
+  method table for names like `print`/`println`.
+
+### §222 — `if`-EXPRESSION with BRACE blocks (`if (flag) { "yes" } else { "no" }`) compiles as LAMBDAS — assigned value is `Lambda0@...` (issue #228)
+
+- **Symptom (measured 14/09 ~13:45 on `cdda27d9` FRESH classes, owner =
+  192.168.100.17 — catalogued, compiler lane):**
+  ```kof
+  main() {
+      var flag = true
+      var a = if (flag) { "yes" } else { "no" }
+      println(a)     // prints: Lambda0@7ad041f3 — expected: yes
+  }
+  ```
+  javap: `Main` does `new Lambda0`/`new Lambda1` (the two branches became
+  `kof.Function0_void` closures) and `println` receives an Object —
+  `Lambda0@...` is printed. Silent garbage value (R6). The PARENTHESIZED
+  if-expr (`if (flag) "yes" else "no"`) works; the parser/typer mistakes
+  `{...}` after the condition for a lambda body in the expression position.
+  Related: §200 (LCA of branches) and efda67b2 (block lambdas) — the
+  grammar ambiguity `cond { ... }` is resolved toward lambda creation.
+- **Expected decision (regra 6 for the maintainer):** either brace-form
+  if-expression (evaluate the block as the value) or an explicit
+  diagnostic rejecting it — never compile to lambdas silently.
+- **Pointer (lane compiler):** parser branch for if-EXPRESSION where the
+  `then` part starts with `{` — currently falls into the lambda-production
+  path.
+
+### §223 — `static` method in an INTERFACE keeps ACC_ABSTRACT → `ClassFormatError: illegal modifiers 0x409` (issue #230)
+
+- **Symptom (measured 14/09 ~14:05 on `de38f7b5` FRESH classes, owner =
+  192.168.100.17 — catalogued, compiler lane):**
+  ```kof
+  interface Calc { static Int add(Int a, Int b) { return a + b } }
+  main() { println(Calc.add(3, 4)) }
+  ```
+  compiles; at load: `ClassFormatError: Method add in class Calc has
+  illegal modifiers: 0x409`. javap: `public static abstract int add`
+  — flags ACC_PUBLIC|ACC_STATIC|**ACC_ABSTRACT** WITHOUT a Code attribute:
+  the body emitted by the parser was dropped and the interface-members'
+  implicit-abstract flag was applied to a `static` member (illegal since
+  JVMS 2.9: static methods in interfaces MUST have Code and MUST NOT be
+  abstract).
+- **Expected:** `Calc.add` → `ACC_PUBLIC|ACC_STATIC` with the Code attribute
+  (Java 8+ default static method); the call site already does
+  `invokestatic Calc.add` (correct) — only the class emission is wrong.
+- **Pointer (lane compiler):** the interface-method writer that ORs
+  ACC_ABSTRACT into every member flag must skip `static` (and `default`)
+  members and emit their Code.
+
+### §224 — interop call return descriptor erased to `Object`: `sb.append("hello")` emits `append(String)Ljava/lang/Object;` → `NoSuchMethodError` (issue #231)
+
+- **Symptom (measured 14/09 ~14:05 on `de38f7b5` FRESH classes, owner =
+  192.168.100.17 — catalogued, compiler lane):**
+  ```kof
+  main() {
+      var sb = new java.lang.StringBuilder()
+      sb.append("hello")
+      println(sb.toString())
+  }
+  ```
+  `NoSuchMethodError: 'java.lang.Object java.lang.StringBuilder.append(java.lang.String)'`.
+  javap: `invokevirtual StringBuilder.append:(Ljava/lang/String;)Ljava/lang/Object;`
+  — the REAL JVM method returns `StringBuilder`; the compiler fabricated the
+  return as `Object` because `StringBuilder` is NOT in the interop signature
+  table (unknown-class fallback). The `toString:()Ljava/lang/String;` line
+  IS correct — proof the fallback is per-table-miss, not global.
+- **Family:** same root shape as §217/#161 (generic return without checkcast)
+  and §203 (descriptor built from the wrong source): the emit path invents a
+  descriptor instead of reading it from the actual class.
+- **Expected (interop-first, R9):** for `java.*` types, resolve the descriptor
+  from the JDK reflection table (or load the class at compile time — JVM
+  backend has the classes on the module path); the `Object` fallback is
+  allowed only for genuinely unknown user classes, and even then with an
+  honest diagnostic (R6) — `NoSuchMethodError` at runtime is silent.
+- **Pointer (lane compiler):** interop member-call lowering (the path that
+  answered `toString` from the table) misses `StringBuilder`/`append`;
+  adding the JDK surface to the table treats the symptom — the real fix is
+  descriptor-from-reflection for `java.*` receivers.
+
+### §225 — static `java.*` method with unknown return: `Double.isNaN(d)` emits `(D)Ljava/lang/String;` → `NoSuchMethodError` (issue #233)
+
+- **Symptom (measured 14/09 ~14:25 on `990e4d06` FRESH classes, owner =
+  192.168.100.17 — catalogued, compiler lane):**
+  ```kof
+  main() {
+      var d: Double = 0.0 / 0.0
+      println(Double.isNaN(d))   // expected: true
+  }
+  ```
+  `NoSuchMethodError: java.lang.String java.lang.Double.isNaN(double)`.
+  javap: `invokestatic Double.isNaN:(D)Ljava/lang/String;` — the real
+  `Double.isNaN` returns `boolean`; the compiler invented `String`.
+- **Family:** EXACT same root as §224 (issue #231): a `java.*` member not in
+  the interop signature table gets a fabricated return descriptor — there
+  it was an instance call (`StringBuilder.append` → `Object`), here a static
+  call (`Double.isNaN` → `String`). The `String` return is suspicious
+  (println context?), but the mechanism is the table-miss fallback of §224.
+  A single fix (resolve descriptor by reflection for `java.*`, R9/R6) closes
+  §224 AND §225.
+- **Pointer (lane compiler):** same as §224 — interop member-call lowering
+  must read the descriptor from the JDK, not guess from the call context.
+
+### §226 — `for (var n: Int in lst)` → fake diagnostic "Undefined variable or type: 'in'" (issue #234)
+
+- **Symptom (measured 14/09 ~14:50 on `7f9eb015` FRESH classes, owner =
+  192.168.100.17 — catalogued, compiler lane):**
+  ```kof
+  main() {
+      var lst = new List<Int>(); lst.add(1); lst.add(2); lst.add(3)
+      for (var n: Int in lst) { println(n) }
+  }
+  ```
+  `COMPILE FAIL: Undefined variable or type: 'in' [SEM011]` (file/line=0). The
+  reporter lists ALL annotated variants failing identically (`String`,
+  `Object`, `Color` over `Color.values()`) — systematic, not Int-specific.
+  parser/typer reads the type annotation `n: Int` and then treats the keyword
+  `in` as an IDENTIFIER expression. The un-annotated form is GREEN on the same
+  build: `for (var n in listOf(1,2,3))` prints `1|2|3` (v4a, ec=0).
+- **Family:** fake-diagnosis (same batch of §219/#151-#141: error message that
+  does not describe the real problem). The annotated for-in either parses
+  (the annotation is redundant but well-defined) or gets a precise PARSE/SEM
+  (`type annotation not allowed on for-in variable`), never blames the `in`
+  keyword.
+- **Pointer (lane compiler):** for-in head parsing — the `: Type` consumed
+  the token stream before the `in` keyword is matched; the `in` match must
+  happen against the KEYWORD token, not via expression resolution.
+
+### §227 — call to an overloaded static method is OMITTED from the IR → `println(Fmt.of(10))` prints `null`-wrapped nothing / VerifyError with a var store (issue #235)
+
+- **Symptom (measured 14/09 ~14:50 on `7f9eb015` FRESH classes, owner =
+  192.168.100.17 — catalogued, compiler lane):**
+  ```kof
+  class Fmt {
+      static String of(Int n) { return "int=" + n }
+      static String of(Double d) { return "dbl=" + d }
+  }
+  main() { println(Fmt.of(10)) }        // prints nothing useful
+  ```
+  javap `Main.main`: ONLY `valueOf` + `println` — **the `invokestatic Fmt.of`
+  instruction is absent from the IR** (title of #235, proven here); the stack
+  slot arrives as null/garbage. With a variable store
+  (`var r1 = Fmt.of(10); println(r1)`) the same broken IR crashes at load:
+  `VerifyError: Operand stack underflow` (reflex-run, anti-JavaFX-trap), and
+  the full 2-call body dies earlier in `COMPUTE_FRAMES (visitMaxs)`:
+  `ArrayIndexOutOfBoundsException: Index -1 ... [COMP002]` — the reporter's
+  IR dump corroborates exactly: `KofStoreLocal[type=String]` with NO
+  preceding `KofCall[of]` (the call node is missing BEFORE bytecode, i.e.
+  a lowering/IR bug, not an ASM bug). Single-overload classes
+  are fine — resolution picks the entry, but the emission path for
+  MULTI-overload statics drops the call node.
+- **Family:** overload dispatch (0.4.0 §131 for methods) — the JVM backend's
+  call lowering for overloaded statics resolves the target but never emits
+  the `invokestatic` (or emits into a lost IR branch). Silent-R6 + crash twin.
+- **Pointer (lane compiler):** static-call emission where the callee has >1
+  candidate with the same name: the resolution result must flow to the
+  instruction emitter (compare with the single-overload path that works).
+
+### §228 — `List[i] = v` (and compound `List[i] += v`) was ACCEPTED but never lowered: JVM `VerifyError` at `aastore`, Native SIGSEGV (exit 139), JS silent — ✅ FIXED 14/09 (exposed by `0ab25887`; fix = lane bugs-and-gaps `192.168.100.15`)
+
+- **Symptom (measured 14/09 ~13:40 on `9048a366`, fresh classes):**
+  ```kof
+  main() { var l2 = listOf(1); l2[0] = 9; println(l2.get(0)) }
+  ```
+  compiles with no diagnostic, then: **JVM** `VerifyError: Bad type on operand
+  stack @21: aastore` (frame `stack={ArrayList, integer, integer}`, integer not
+  assignable to `Object`), **Native** exit 139 (SIGSEGV), **JS** exit 0 (`9`).
+  The compound face `l[0] += 10` fails the same way on the JVM (`VerifyError …
+  aaload`). Rule 5/6 violation: compiles and cannot load.
+- **Root cause:** `ExpressionAssignmentLowerer` handles an `ArrayAccessExpr`
+  target with a raw `KofArrayStore` unconditionally (the `aaload`/`aastore`
+  path). #149/#152 (`6d7ac697`) routed only the READ `l[i]` to `kof_list_get`;
+  the WRITE face was never lowered. It was previously masked because
+  `listOf(...)` was typed `List` and hit SEM054 (rejected), while
+  `new List<T>()` was typed `Unknown` and slipped through; `0ab25887` (fix #214)
+  mapped `new List<T>()` to `BuiltinTypes.LIST` AND exempted `List` from the
+  SEM054 guard to keep `new List<T>()[i]` working — which also made
+  `listOf(...)[i] = v` reachable, exposing the broken write.
+- **Fix (root, `StatementAnalyzer.analyzeAssignmentStatement`):** when the
+  assignment target is an `ArrayAccessExpr` whose receiver is a known
+  collection (String/List/Map/Set, nullable unwrapped, `Unknown` excluded —
+  SG-008), emit **SEM054** pointing to the collection's mutator
+  (`l.set(i, v)` / `m.put(k, v)`) instead of letting the raw array store
+  through. Arrays are untouched. This is a bug fix (R6), not a contract
+  change: the corpus writes lists with `l.set(0, 9)`
+  (`training/idioms/collections.md:20`); `l[i] = v` was never lowered.
+- **Test alignment (`SemanticResolutionTest`):** the old
+  `subscriptOnCollectionsRejected` still listed the List READ as an expected
+  failure (stale since #149/#152); it now rejects only the genuinely-broken
+  forms (String/Map/Set subscript + `List[i] = v`), and the new
+  `listSubscriptReadIsSupported` pins the supported `l[i]` read.
+- **Proof (4 targets):** array write still works (`a[0]=7` → `8` JVM/JS/Native);
+  `l.set(0,9)` → `9` on all 3; `l[1]` read → `20` on all 3; `l2[0]=9` and
+  `l[0]+=10` → SEM054 with the `.set` hint. `SemanticResolutionTest` 30/30.
+- **Owner note (lane `.17`):** the fix lives in `StatementAnalyzer` (not in the
+  `SemExpressionTyper` guard of `0ab25887`, to keep the read exemption intact).
+
+### §228 — interop descriptor built from the CONCRETE argument type + fabricated return: `String.join(sep, list)` → `(String,ArrayList)Object` → `NoSuchMethodError` (issue #237)
+
+- **Symptom (measured 14/09 ~15:15 on `01d09d7b` FRESH classes, owner =
+  192.168.100.17 — catalogued, compiler lane):**
+  ```kof
+  main() {
+      var parts = new List<String>()
+      parts.add("a"); parts.add("b"); parts.add("c")
+      println(String.join(", ", parts))   // expected: "a, b, c"
+  }
+  ```
+  `NoSuchMethodError: java.lang.Object java.lang.String.join(String,
+  ArrayList)`. javap: `invokestatic String.join:(Ljava/lang/String;
+  Ljava/util/ArrayList;)Ljava/lang/Object;`. The REAL overloads are
+  `join(CharSequence, Iterable<? extends CharSequence>)String` and
+  `join(CharSequence, CharSequence...)String`. **TWO independent defects in
+  one descriptor**: (1) the 2nd PARAMETER is the CONCRETE argument type
+  (`ArrayList`) instead of the interface the method DECLARES (`Iterable`) —
+  the compiler derived the descriptor from the argument's runtime class, not
+  from the callee's signature; (2) the RETURN is fabricated as `Object`
+  (real: `String`) — the §224/§225 mechanism.
+- **Why it is NOT just a face of §225:** §224/#231 (`StringBuilder.append`)
+  and §225/#233 (`Double.isNaN`) each emit CORRECT parameters and a wrong
+  return ONLY — there the descriptor's argument list matches the real method,
+  only the return is guessed. #237 breaks the PARAMETER too (concrete-vs-
+  interface), a separate lowering hole. Both share the "descriptor invented
+  from context instead of read from the callee" root: reading the real
+  `java.*` signature by reflection fixes parameter AND return at once (R9/R6).
+- **Control (same build):** `listOf("a","b")` (Kof `List` → still `ArrayList`)
+  reproduces identically → the concrete-arg-type leak is systematic, not a
+  one-off.
+- **Pointer (lane compiler):** interop call lowering — the descriptor must be
+  the CALLEE's erased parameter types (from the JDK method being resolved),
+  never the caller's argument classes; and the return from the callee too.
+  This unifies with §224/§225: one descriptor-from-JDK fix closes #231/#233/
+  #237.
+
+### §229 — `static` method called through an instance reference emits `invokevirtual` → `IncompatibleClassChangeError` (issue #239)
+
+- **Symptom (measured 14/09 ~15:30 on `fa8d23f5` FRESH classes, owner =
+  192.168.100.17 — catalogued, compiler lane):**
+  ```kof
+  class Util {
+      static Int square(Int n) { return n * n }
+  }
+  main() {
+      var u = new Util()
+      println(u.square(4))   // expected: 16
+  }
+  ```
+  `IncompatibleClassChangeError: Expecting non-static method Util.square(I)I`.
+  javap: `invokevirtual Util.square:(I)I` — the member IS `static`
+  (ACC_STATIC in the class file) but the call site dispatched through the
+  instance reference. Mirror twin of §223 (there: `static` member keeps
+  ACC_ABSTRACT and dies at LOAD; here: the call opcode is wrong and dies at
+  first execution). Java permits `u.square(4)` (delegates to the class) —
+  Kof must emit `invokestatic Util.square`.
+- **Expected:** member-call lowering: when the resolved member is static, the
+  receiver expression is evaluated (side effects) but the opcode is
+  `invokestatic` with the DECLARING class as owner, not `invokevirtual` with
+  the receiver's class.
+- **Pointer (lane compiler):** same resolution path as §223's flag handling —
+  the static bit must pick the opcode family (`invokestatic`/`getstatic`)
+  after member resolution, not at parse.
+
+### §230 — `static` field in an INTERFACE unresolvable: `K.VAL` → SEM025 `Cannot resolve field 'VAL' on type 'K'` (issue #238)
+
+- **Symptom (measured 14/09 ~15:30 on `fa8d23f5` FRESH classes, owner =
+  192.168.100.17 — catalogued, compiler lane):**
+  ```kof
+  interface K { static Int VAL = 42 }
+  main() { println(K.VAL) }
+  ```
+  `COMPILE FAIL: Cannot resolve field 'VAL' on type 'K'` (SEM025,
+  file/line=0). Interface static constants (implicitly `public static final`)
+  are a legal Java feature and the field syntax parses (no PARSE error) —
+  the MEMBER TABLE of the interface at SEM time simply never receives the
+  static fields declared in it. Related: §223 (the same interface-member
+  emitter mishandles the static METHOD — the field path is the sibling hole:
+  §223's fix must cover FIELDS too, or this re-appears as a ClassFormatError
+  once resolution starts finding the field).
+- **Expected:** `K.VAL` → `getstatic K.VAL` (the field emitted with
+  ACC_PUBLIC|ACC_STATIC|ACC_FINAL + ConstantValue).
+- **Pointer (lane compiler):** interface member registration — static fields
+  declared in the interface body must enter the type's field table the same
+  way class statics do.
 
 ## §193 — E2E blog (F12): raw `db.query` + `.get("col")`/resources inside a web handler take down the connection with `VerifyError`/`connection closed before headers` — catalogued 14/09 (lane development, owner = 192.168.100.18, discovered in the blog E2E D-SPRING F12)
 
@@ -7038,7 +7509,7 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   `docs/language-reference/statements.md` §5.4 (Unspecified → SEM058).
 
 
-### §195 — `KofBlogE2ETest` RED on `origin/beta-0.4.0` (HEAD `11780dc1`): the test started using `app.security(...)` (C18) but the `GET /posts` and `GET /posts/:id` do not send the session header → 401 (the middleware is RIGHT) — ⚠️ TEST, not product; Q5 (commit `ab15a30f` went up with the test red) — recorded 14/09 (bugs-and-gaps lane `192.168.100.15`; owner = lane `.18`/`.22`, `app.security`)
+### §195 ✅ FIXED 14/09 (same `KofBlogE2ETest` green re-measured 14:35 on `b7fdcb7e`: the single test method covers both GETs w/ session and POSTs w/ Content-Length — both faces closed) — `KofBlogE2ETest` RED (HEAD `11780dc1`): the test started using `app.security(...)` (C18) but the `GET /posts` and `GET /posts/:id` do not send the session header → 401 (the middleware is RIGHT) — ⚠️ TEST, not product; Q5 (commit `ab15a30f` went up with the test red) — recorded 14/09 (bugs-and-gaps lane `192.168.100.15`; owner = lane `.18`/`.22`, `app.security`)
 
 - **Symptom (measured 14/09, HEAD `11780dc1`, `mvn -o -pl kof-compiler -am
   -Dtest=KofBlogE2ETest`):** the only blog test fails at
@@ -7178,32 +7649,35 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   `BackendParityTest` 19/19, `CoreRegressionE2ETest` 75/75. JVM/Native/Script
   untouched (JS parser only).
 
-### §202 — `String.split(...).get(i)` → SEM028 "array has no method get()" (the typer now pins `String[]` for split; `.get` used to be accepted via Unknown typing) — 🔴 OPEN 14/09 (introduced by `e6e5c9b8`, owner = type-inference/String-methods lane)
+### §202 — `String.split(...).get(i)` → SEM028 "array has no method get()" — ✅ FIXED 14/09 (introduced by `e6e5c9b8`; corpus aligned by `602dcbc0`, lane `192.168.100.17`)
 
 - **Symptom:** `Compilation should succeed: [Diagnostic ... code=SEM028]` in
   `KofTimeE2ETest#todayIsoFormatDateIsoIsToday{Jvm,Js,Native}` (the program
   uses `parts.get(0)` after `today.split("-")`), `CodegenKitchenSinkTest`
-  (strings), and a family in `ConformanceMatrixTest`. 6–9 red.
+  (strings), `NativeE2ETest` (2), `KofScriptStdlibParityTest` and a family in
+  `ConformanceMatrixTest`. 6–9 red.
 - **Bisection (proven):** `e6e5c9b8` RED / `75e38d35` GREEN (`git worktree`
   with `mvn -o test -pl kof-compiler -Dtest=...`).
 - **Mechanism:** `e6e5c9b8` gave a real return type to `split`/`toCharArray`/etc.
   in the typer (`CollectionMethodTyper`/`StringMethodRegistry`), so the receiver
   of `.get(i)` became `Type.ArrayType` and hit the SEM028 branch (a diagnostic by
   design: raw arrays have no `get()`; the idiom is `arr[i]`). Before, the receiver
-  was unknown and `.get` passed. **Contract decision (rule 6):**
-  flatten the tests (use `parts[0]`) OR accept `.get` on `ArrayType` —
-  the lane owner's choice, not this lane's; the test corpus that used `.get` on
-  an array is in `KofTimeE2ETest` (S7e) and needs to align with whatever is decided.
-
-- **✅ FIXED (measured 14/09 ~12:35 on `c252a983`, fix `8af810c5` "map
-  primitive types to boxed classes in instanceof and checkcast"):** javap of
-  the §203 repro now emits a VALID `checkcast java/lang/Integer` +
-  `invokevirtual intValue()` + `istore` (no `?`, no raw istore). The issue's
-  exact claim is dead. Two DIFFERENT residuals stay open and are NOT §203:
-  (i) `o as Int` with `o` holding a real `String` → runtime
-  `ClassCastException` (the §188 design face — rule 6, parse vs cast decision
-  by the maintainer); (ii) `i as Object` with `i` Int → NEW §213
-  (missing boxing — `bipush` + `checkcast Object` → `VerifyError`).
+  was unknown and `.get` passed — the old tests were **false-green** relying on the
+  typing hole.
+- **Resolution (rule 6 decision — keep SEM028, align the corpus):** `602dcbc0`
+  aligned the 4 test programs to the documented contract (`split` returns
+  `String[]`; access is `arr[i]` — `training/idioms/strings.md:132`, and the guard
+  `CompilerDriverTest.arrayMethodCallGivesCleanDiagnostic` requires SEM028 on
+  `arr.get()`). The alternative "accept `.get` on the semantic path" was rejected
+  (it would break the guard + the contract). **Verified 14/09 at `79bd7ac6`:**
+  `KofTimeE2ETest` 30 (0 fail, 6 skip = external DB), `NativeE2ETest` 65/65,
+  `CodegenKitchenSinkTest` 1/1, SEM028 guard 1/1.
+- **Residual (NOT §202, catalogued):** `MethodCallTyper.java:18` (emit side) still
+  ACCEPTS `.get(i)`/`.size` on an array while `SemMethodCallTyper` rejects `.get`
+  with SEM028 — a latent typer/emit inconsistency: when the receiver type is only
+  pinned at emit (Unknown in sema), an array `.get` can still slip through and
+  silently emit AALOAD. Harmless today (`split` is pinned `String[]`), but it is
+  the exact hole that produced this bug. Owner = type-inference lane.
 
 ### §204 — `if`-statement ELSE branch was NOT analyzed → invalid JVM frames (`Supervisor.lacoUnico` frame crash) — ✅ FIXED 14/09 (introduced by `a892b3c5`, lane CodeQL; root fixed by lane development `192.168.100.18`)
 

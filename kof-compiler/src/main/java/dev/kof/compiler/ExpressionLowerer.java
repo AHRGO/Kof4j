@@ -211,7 +211,6 @@ public final class ExpressionLowerer {
                         && resolvedCtor.parameterTypes().size() == ne.arguments().size()) {
                     ctorParamTypes = resolvedCtor.parameterTypes();
                 } else if (type instanceof Type.ClassType ct && !ct.packageName().isEmpty()
-                        && driver.externalClasspath != null
                         && driver.externalClasspath.knows(ct.internalName())) {
                     // construtor de classe externa: descritor exato do classpath
                     ExternalClasspath.MethodSignature extCtor =
@@ -319,7 +318,6 @@ public final class ExpressionLowerer {
                     // campo de classe EXTERNA: owner e tipo vêm do classpath
                     Type extRecv = ExpressionTyper.inferExprType(driver, fa.receiver(), locals);
                     if (extRecv instanceof Type.ClassType ect && !ect.packageName().isEmpty()
-                            && driver.externalClasspath != null
                             && driver.externalClasspath.knows(ect.internalName())) {
                         String desc = driver.externalClasspath.resolveFieldType(ect.internalName(), fa.fieldName());
                         if (desc != null) {

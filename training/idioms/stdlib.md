@@ -24,15 +24,18 @@ math.lerp(0.0, 10.0, 0.5)               // a + (b - a) * t — linear interpolat
 math.percentage(3.0, 4.0)               // 75.0; total == 0 => NaN (never throws) (S1b.1)
 math.isInteger(4.0)                     // true; 4.5/NaN/Inf => false (S1b.1)
 math.isDecimal(4.5)                     // !isInteger (S1b.1)
+math.roundTo(3.14159, 2)                // 3.14 — half-away-from-zero to N decimals (S1b.3)
+math.roundTo(1234.0, -2)                // 1200.0 — negative decimals: tens/hundreds (S1b.3)
 ```
 
 Double: `math.sqrt(x)` (S1b) + `lerp`/`percentage`/`isInteger`/`isDecimal`
-(S1b.1, 10/09 — **pure** Double scalars, without libm) exist on
-JVM/Script/JS/x86; NaN at <0 = IEEE; riscv64/aarch64 = `MATH001`, they do not
-compile. The args are **explicit Doubles** — `math.lerp(0, 10, 0.5)` (Int)
-**does not** compile (SEM025; no silent widening). `roundTo`/`parse*`/`pow`
-stay on their own step — **do not invent** these yet: they do not compile (`pow`
-needs a libm link decision; `roundTo` needs floor asm).
+(S1b.1, 10/09 — **pure** Double scalars, without libm) + `roundTo(value, decimals)`
+(S1b.3, 14/09 — half-away-from-zero by deterministic decimal scaling, no libm;
+`decimals` is an `Int`, may be negative; arithmetic contract: `roundTo(2.675,2)==2.68`)
+exist on JVM/Script/JS/x86; NaN at <0 = IEEE; riscv64/aarch64 = `MATH001` for
+`pow` only (the rest run under qemu). The args are **explicit Doubles** —
+`math.lerp(0, 10, 0.5)` (Int) **does not** compile (SEM025; no silent widening).
+`pow` is implemented on x86 (libm) but `MATH001` on the cross (no libm link).
 
 ## strings — predicates and converters (S2)
 
@@ -165,8 +168,9 @@ because `dayOfWeek` gives 0).
 | net.scheme/host/port/path/query/fragment + queryEncode/Decode | ✅ | ✅ | ✅ (NET001 closed 09/09) | ✅ |
 | uuid.v4 | ✅ | ✅ | ✅ (SECN000 closed 09/09) | ✅ |
 | uuid.isUuid (form 8-4-4-4-12; version/variant not checked) | ✅ | ✅ | ✅ (B25, UUID001 closed in the beta→main merge 10/09) | ✅ |
-| math.sqrt (S1b — first Double; NaN at <0 = IEEE) | ✅ | ✅ | ❌ `MATH001` | ✅ |
-| math.lerp/percentage/isInteger/isDecimal (S1b.1 — pure SSE2, without libm) | ✅ | ✅ | ❌ `MATH001` | ✅ |
+| math.sqrt (S1b — first Double; NaN at <0 = IEEE) | ✅ | ✅ | ✅ (B32 `fsqrt.d`; MATH001 closed 11/09) | ✅ |
+| math.lerp/percentage/isInteger/isDecimal/roundTo (S1b.1/S1b.3 — pure SSE2, without libm) | ✅ | ✅ | ✅ (B32; MATH001 closed 11/09) | ✅ |
+| math.pow (S1b.2 — libm `pow@PLT` + `-lm` on x86) | ✅ | ✅ | ❌ `MATH001` (static cross without libc) | ✅ |
 | random.randomInt/randomBoolean/randomString (beta face S10a/b) | ✅ | ✅ | ✅ (B27/B28, getrandom/lemire) | ✅ |
 | random.double/boolean/int/hex (main face S10) | ✅ | ✅ | ✅ (B27) | ✅ |
 

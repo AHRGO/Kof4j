@@ -66,7 +66,7 @@ public sealed interface Type {
             Type component = of(name.substring(0, name.length() - 2));
             return new ArrayType(component);
         }
-        if (name != null && name.contains("<")) {
+        if (name.contains("<")) {
             int lt = name.indexOf('<');
             String base = name.substring(0, lt);
             String argsStr = name.substring(lt + 1, name.lastIndexOf('>'));

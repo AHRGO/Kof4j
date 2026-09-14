@@ -752,6 +752,27 @@ class ConformanceMatrixTest {
                     println(math.pow(10.0, -2.0) == 0.01)
                     println(math.pow(-1.0, 0.5) != math.pow(-1.0, 0.5))
                 }
+                 """, "true\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue", Set.of(), tempDir);
+        // STDLIB S1b.3 (DECISIONS §3) — kof.math.roundTo(value: Double,
+        // decimals: Int) -> Double. Half-away-from-zero por escala decimal
+        // determinística, SEM libm (p=10^|d| por multiplicação repetida →
+        // byte-idêntico 5 alvos). Bool via == (bug 44: nunca println de
+        // double cru no Native). decimals negativo arredonda p/ dezenas.
+        // Contrato ARITMÉTICO: 2.675 → 2.68. Cross-arch mora em
+        // KofMathTest.roundToCrossArch sob qemu.
+        matrix("stdmathround", """
+                main() {
+                    println(math.roundTo(2.5, 0) == 3.0)
+                    println(math.roundTo(-2.5, 0) == -3.0)
+                    println(math.roundTo(2.4, 0) == 2.0)
+                    println(math.roundTo(0.49999999999999994, 0) == 0.0)
+                    println(math.roundTo(3.14159, 2) == 3.14)
+                    println(math.roundTo(2.675, 2) == 2.68)
+                    println(math.roundTo(1234.0, -2) == 1200.0)
+                    println(math.roundTo(-1250.0, -2) == -1300.0)
+                    println(math.roundTo(1.0, 0) == 1.0)
+                    println(math.roundTo(0.0, 5) == 0.0)
+                }
                 """, "true\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue", Set.of(), tempDir);
         // STDLIB S13a — math.parseInt/parseLong/parseDouble (fachada sobre as
         // runtime fns kof_string_to_* EXISTENTES nos 4 backends; regra 2 —

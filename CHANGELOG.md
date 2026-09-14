@@ -1016,6 +1016,7 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 ### Features
 
+  - S1b.3 math.roundTo(value, decimals) — half-away-from-zero by deterministic decimal scaling, no libm (5 targets; DECISIONS §3)
   - implement saturating casts for Double/Float to Int/Long (JLS 5.1.3) across all targets
   - add ui-config block and kof.config functions
   - time.tzOffsetSeconds — host timezone (D1), 3 targets + honest TIME003 gap
@@ -1492,6 +1493,15 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 ### Build
 
   - 0.4.0-beta naming (maintainer request - next version when stable)
+  - **D-BASELINE (14/09): the repo toolchain baseline goes 21 → 25** (maintainer
+    decision — `pom.xml` `release=25`, CI/CodeQL/release/benchmark/android JDK
+    25, `package.sh --jdk` embeds Temurin 25). It unlocks the behavior-preserving
+    codemod of CodeQL's `local-variable-is-never-read` (unnamed patterns `_`,
+    JEP 443 — final in 22, refused by `javac --release 21`). **The language
+    contract does not change:** `JvmBackend` still emits `V21` bytecode and the
+    Android template still targets `release 21` — a Kof program keeps running on
+    JVM 21+ (`KofVersion.TOOLING_API=21` unchanged). Layers: build the repo /
+    run the CLI = JDK 25; your compiled `.kf` = JVM 21+.
 
 <!-- NEXT-RELEASE -->
 

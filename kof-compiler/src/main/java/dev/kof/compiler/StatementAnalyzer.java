@@ -75,6 +75,24 @@ public final class StatementAnalyzer {
                         "cannot assign to '" + fa.fieldName() + "': record is immutable",
                         "SEM038");
             }
+        } else if (ae.target() instanceof ArrayAccessExpr aa) {
+            // #149/#152: `l[i]` READ on a List is supported; the WRITE face
+            // (`l[i] = v`) was never lowered — it emitted a raw array store
+            // (JVM VerifyError "not assignable to Object" at aastore, Native
+            // SIGSEGV exit 139, JS silent). R6: reject at compile-time pointing
+            // to `.set(i, v)` instead of emitting broken bytecode. Only List
+            // needs the check here: String/Map/Set writes already hit the
+            // read guard in SemExpressionTyper (avoiding a duplicate SEM054).
+            Type recvType = SemExpressionTyper.inferType(sa, aa.receiver(), scope);
+            Type unwrapped = recvType instanceof Type.NullableType nt ? nt.inner() : recvType;
+            if (sa.diagnostics() != null && BuiltinTypes.isList(unwrapped)) {
+                SourcePosition pos = aa.position();
+                sa.diagnostics().error(pos != null ? pos.file() : "",
+                        pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0,
+                        "`[]` assignment only works on arrays in Kof; for a List use l.set(i, v)",
+                        "SEM054");
+            }
+            targetType = SemExpressionTyper.inferType(sa, ae.target(), scope);
         } else if (ae.target() != null) {
             targetType = SemExpressionTyper.inferType(sa, ae.target(), scope);
         }

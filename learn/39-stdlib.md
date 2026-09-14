@@ -43,13 +43,23 @@ math.lerp(0.0, 10.0, 0.5)     // 5.0  — a + (b - a) * t   (S1b.1)
 math.percentage(3.0, 4.0)     // 75.0 — total 0 => NaN, never throws (S1b.1)
 math.isInteger(4.0)           // true;  4.5/NaN/Inf => false (S1b.1)
 math.isDecimal(4.5)           // true;  !isInteger (S1b.1)
+math.roundTo(3.14159, 2)      // 3.14  — half-away-from-zero to N decimals (S1b.3)
+math.roundTo(2.675, 2)        // 2.68  — arithmetic scaling (see note below)
+math.roundTo(1234.0, -2)      // 1200.0 — negative decimals round to tens/hundreds
+math.pow(2.0, 10.0)           // 1024.0 — libm on native x86 (S1b.2)
+math.parseInt("42")           // 42     — JDK contract, throws on invalid (S13a)
+math.parseDouble("2.5")       // 2.5
+math.parseIntOrDefault("x", 0) // 0     — never throws (S13b)
 ```
 
-Integers are above; `sqrt`/`lerp`/`percentage`/`isInteger`/`isDecimal`
-are the `Double` ones in the namespace (JVM/Script/JS/x86; riscv64/aarch64 = `MATH001`,
-they do not compile). The arguments are **explicit Doubles** — `math.lerp(0, 10,
-0.5)` does not compile (SEM025; no silent widening). `roundTo`/`parse*`/`pow`
-are their own step, with the same guarantees.
+Integers are above; `sqrt`/`lerp`/`percentage`/`isInteger`/`isDecimal`/
+`roundTo`/`pow` are the `Double` ones in the namespace (JVM/Script/JS/x86; riscv64/aarch64
+run all of these except `pow`, which is `MATH001` — libm cannot link on the static cross).
+The arguments are **explicit Doubles** — `math.lerp(0, 10,
+0.5)` does not compile (SEM025; no silent widening). `roundTo(value, decimals)`
+takes an `Int` `decimals` and uses **deterministic decimal scaling** (not
+decimal-string `BigDecimal`): `roundTo(2.675, 2)` is `2.68` because the nearest
+double `2.675` scales to `267.5`.
 
 ## strings — predicates, converters and words
 

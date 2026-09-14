@@ -141,7 +141,7 @@ public final class CompilerPipeline {
         if (userHasHost) return unit;
         // sem android.jar no ExternalClasspath o host não resolve — avisar
         // (AND004) e seguir com o programa puro em vez de SEM015 confuso
-        if (driver.externalClasspath == null || !driver.externalClasspath.knows("android/app/Activity")) {
+        if (!driver.externalClasspath.knows("android/app/Activity")) {
             if (driver.currentDiagnostics != null) {
                 driver.currentDiagnostics.warning("", 0, 0, 0,
                         "driver.target android sem android.jar no ExternalClasspath: "

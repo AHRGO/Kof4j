@@ -368,9 +368,23 @@ kof info | lsp | install | version
 
 # Building and installing from source
 
-**Requirements:** JDK 21+ (Temurin recommended — it is the Tooling API baseline) and
-Maven 3.9+. For the `native` target: `as`/`ld` (binutils). The `js` target
-requires nothing external (GraalJS embedded in the jar).
+**Requirements:** **JDK 25** (Temurin recommended — the repo build baseline
+since D-BASELINE 14/09; `--release 25`) and Maven 3.9+. For the `native`
+target: `as`/`ld` (binutils). The `js` target requires nothing external
+(GraalJS embedded in the jar).
+
+> **Three JDK layers, do not confuse them (D-BASELINE):**
+> - **Building this repo:** JDK **25** required (`pom.xml` `release=25`; the
+>   compiler code uses unnamed patterns `_` = JEP 443, finalized in 22 — JDK
+>   21 cannot compile the sources).
+> - **Running the `kof` CLI:** the classes are `release 25`, so the CLI itself
+>   runs on JDK **25**; `scripts/package.sh --jdk` embeds Temurin 25 so the
+>   packaged distribution carries its own JVM.
+> - **Your Kof programs (the LANGUAGE contract — frozen, rule 6):** unchanged.
+>   The JVM backend still emits **`V21`** bytecode (`JvmBackend`) and the
+>   Android template still targets `release 21`, so a `.kf` you compile runs on
+>   **JVM 21+**. Raising the repo toolchain does NOT raise the language's
+>   minimum runtime.
 
 ```bash
 # 1. Build everything (compiler, runtime, CLI with embedded GraalJS)
@@ -390,13 +404,13 @@ bin/kof install ~/.kof
 export PATH="$HOME/.kof/bin:$PATH"
 kof version
 
-# 5. Package the official distribution (with embedded OpenJDK 21)
+# 5. Package the official distribution (with embedded OpenJDK 25)
 scripts/package.sh --jdk      # generates dist/kof-<version>-<os>-<arch>.tar.gz
 ```
 
 `kof install <dir>` copies `kof.jar` to `<dir>/lib/` and generates the launcher
 `<dir>/bin/kof` (it uses the embedded JDK from `<dir>/jdk/` when present; otherwise the
-system `java`). `scripts/package.sh --jdk` downloads Temurin 21 from
+system `java`). `scripts/package.sh --jdk` downloads Temurin 25 from
 Adoptium and assembles the complete distribution layout.
 
 Versioning centralized in `VERSION` — see

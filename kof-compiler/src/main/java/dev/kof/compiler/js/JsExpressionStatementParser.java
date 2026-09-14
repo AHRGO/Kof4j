@@ -62,7 +62,7 @@ final class JsExpressionStatementParser {
                 return parser.finishExpressionStatement(preamble, new JsIr.JsExprStmt(new JsIr.JsBinary(
                         new JsIr.JsMember(new JsIr.JsIdentifier(owner), JsTypeMapper.sanitizeName(ps.name())), "=", value)));
             }
-            if (op instanceof KofArrayStore _) {
+            if (op instanceof KofArrayStore) {
                 if (stack.isEmpty()) {
                     throw new IllegalStateException("KofJS: arraystore empty stack; next="
                             + (pos[0] < ctx.ops.size() ? ctx.ops.get(pos[0]) : "eof")

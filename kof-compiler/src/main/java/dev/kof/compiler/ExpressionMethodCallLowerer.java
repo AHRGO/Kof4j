@@ -88,7 +88,6 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
         && CompilerTypes.qualifyViaImports(rid.name(), driver.currentUnit,
                 driver.externalClasspath) instanceof Type.ClassType extQ
         && !extQ.packageName().isEmpty()
-        && driver.externalClasspath != null
         && driver.externalClasspath.knows(extQ.internalName())
         && driver.externalClasspath.resolveMethod(extQ.internalName(), mc.methodName(),
                 mc.arguments().size()) != null) {
@@ -350,14 +349,8 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
         Type targetType = CompilerTypes.ownerTypeFromInternal(targetInternal, driver.semanticAnalyzer);
         SymbolTable.ClassSymbol targetCs = driver.semanticAnalyzer.getClass(
                 targetInternal.substring(targetInternal.lastIndexOf('/') + 1));
-        SymbolTable.ConstructorSymbol ctor = null;
-        if (targetCs != null) {
-            SymbolTable.Symbol ctorSym = targetCs.members().resolve("<init>");
-            if (ctorSym instanceof SymbolTable.ConstructorSymbol c
-                    && c.parameterTypes().size() == mc.arguments().size()) {
-                ctor = c;
-            }
-        }
+        SymbolTable.ConstructorSymbol ctor = targetCs != null
+                ? SymbolTable.constructorFor(targetCs.members(), mc.arguments().size()) : null;
         List<Type> argTypes = new ArrayList<>();
         for (ExpressionNode arg : mc.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
         ops.add(new KofLoadLocal(CompilerTypes.ownerTypeFromInternal(owner, driver.semanticAnalyzer), 0));

@@ -51,7 +51,7 @@ public final class CompilerEmission2 {
             // SAM conversion: lambda → interface funcional externa
             // (setOnClickListener(v -> ...) com OnClickListener no classpath)
             if (args.get(i) instanceof LambdaExpr le && formal instanceof Type.ClassType ct
-                    && !ct.packageName().isEmpty() && driver.externalClasspath != null
+                    && !ct.packageName().isEmpty()
                     && driver.externalClasspath.isInterface(ct.internalName())) {
                 ExternalClasspath.Sam sam = driver.externalClasspath.resolveSam(ct.internalName());
                 if (sam != null) {
@@ -61,8 +61,8 @@ public final class CompilerEmission2 {
             }
             localIdx = ExpressionLowerer.emitExpression(driver, args.get(i), ops, owner, localIdx, locals);
             Type argType = ExpressionTyper.inferExprType(driver, args.get(i), locals);
-            if (formal != null && formal instanceof Type.PrimitiveType _
-                    && argType instanceof Type.PrimitiveType _
+            if (formal != null && formal instanceof Type.PrimitiveType
+                    && argType instanceof Type.PrimitiveType
                     && !BuiltinTypes.isString(formal)) {
                 driver.emitWideningIfNeeded(ops, argType, formal);
             }

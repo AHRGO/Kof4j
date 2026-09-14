@@ -127,6 +127,31 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > quentes. O codemod dos 17 locals puros restantes ficou p/ depois (varios
 > carregam chamada com efeito — deletar linha = mudanca de comportamento).## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (14/09 ~15:05, dono = 192.168.100.22, lane compiler): fix issue #226 — super() constructor call always fails with SEM017 regardless of parent constructor.**
+> - Causa raiz: (1) em `SymbolTableBuilder.defineClassMembers()`, quando uma classe não declarava construtor explícito (`!hasCtor`), o construtor padrão sintético sem argumentos era registrado apenas em `classScope`, mas não em `classSym.members()`, tornando-o invisível para consultas na superclasse. (2) em `ExpressionMethodCallLowerer.java`, a resolução do construtor da superclasse (`super(...)`) usava `targetCs.members().resolve("<init>")` diretamente sem tratar `ConstructorSet` (quando a superclasse possuía múltiplos construtores sobrecarregados), fazendo com que `ctor` ficasse nulo e disparasse falso-positivo `SEM017`.
+> - Correção: `SymbolTableBuilder` agora define o construtor padrão tanto em `classScope` quanto em `classSym.members()`. `ExpressionMethodCallLowerer` passa a utilizar `SymbolTable.constructorFor(targetCs.members(), mc.arguments().size())`, que suporta tanto `ConstructorSymbol` único quanto `ConstructorSet` sobrecarregado por aridade.
+> - Prova: `CoreRegressionE2ETest#superConstructorCallResolvesCorrectlyJvm`.
+> - Próximo: issues #216, #222, #221.
+
+> **✅ FEITO (14/09 ~14:30, dono = 192.168.100.22, lane compiler): fix issue #224 — abstract method in non-abstract class is accepted without error (AbstractMethodError at runtime).**
+> - Causa raiz: em `SemanticAnalyzer.analyzeClass()`, não havia verificação estática que exigisse que uma classe contendo métodos com modificador `abstract` fosse ela própria declarada com o modificador `abstract`. Isso permitia que classes concretas fossem compiladas com métodos sem corpo, instanciadas normalmente em runtime, e gerassem `AbstractMethodError` quando o método era invocado.
+> - Correção: adicionada validação em `SemanticAnalyzer.analyzeClass` que rejeita em tempo de compilação métodos `abstract` declarados dentro de classes não-abstratas com o erro `SEM041`.
+> - Prova: `CoreRegressionE2ETest#abstractMethodInNonAbstractClassRejected`.
+> - Próximo: issues #216, #226.
+
+> **✅ FEITO (14/09 ~15:00, dono = 192.168.100.18, lane development): S1b.3 — `math.roundTo(value: Double, decimals: Int) -> Double` nos 5 alvos (DECISIONS §3).** Half-away-from-zero (âncora C `round()`) por escala decimal determinística, SEM libm: `p=10^|d|` por multiplicação REPETIDA (cada passo 1 op IEEE corretamente arredondada → byte-idêntico 5 alvos); `d>=0`: `roundHalfAway(v*p)/p`, `d<0`: `roundHalfAway(v/p)*p` (decimals negativo arredonda p/ dezenas/centenas); `|d|` satura em 308; overflow de `v*p` → devolve `v`. `roundHalfAway` = trunc + correção do resto (`|f|>=0.5` → ±1; evita o double-rounding do `floor(x+0.5)`). Contrato ARITMÉTICO travado (não decimal-string): `roundTo(2.675,2)==2.68` (o double `2.675*100` arredonda a `267.5`). Backends: JVM (`JvmStringMathRuntime`, reflexão p/ SCRIPT), JS (`kofMathRoundTo`), x86 (`RuntimeMath`), riscv (fatia B32 — inline `fcvt.l.d`/`fcvt.d.l`/`feq`/`flt`; aarch herda via tradutor). Guard de tipo: `decimals` Int obrigatório (SEM025). **Prova:** `KofMathTest.roundTo{Jvm,Native,Js,CrossArch}` + `roundToTypeGuardRefused` (28/28 na classe, o hang do §192 `parseOrDefaultCrossArch` é PRÉ-EXISTENTE/lane nat, provado com o meu diff stashed) + `ConformanceMatrixTest.stdmathround` (4 targets + doc-gate) + `KofScriptStdlibParityTest.mathRoundToParity` + slice-registry (x86/riscv/JS) 21/21. Docs: DECISIONS §3 Done (EN+PT), backend-parity, learn/39-stdlib, training/idioms/stdlib, stdlib.md, PLAN-STDLIB-EXPANSION (S1b.3), conformance-matrix (EN+PT), CHANGELOG (EN+PT). `JvmStringMathRuntime` ficou em 495 (o roundTo saiu para o fragmento novo `JvmMathRoundRuntime`, 54 — gate ≤500 limpo, zero dívida nova). **Próximo:** decisão 5 (`app.security()` modelo Spring) → decisão 6 (§180 Native toString) → decisão 2 (§129 frame-per-thread).
+> **✅ FEITO (14/09 ~14:00, dono = 192.168.100.22, lane compiler): fix issue #225 — Instance method shadowed by built-in when name matches print/println.**
+> - Causa raiz: `ExpressionStaticCallLowerer.lower`, `MethodCallTyper.inferType` e `BuiltinCallTyper.inferType` tratavam qualquer chamada `print` ou `println` com 1 argumento como a função builtin global, sem verificar se `mc.receiver() == null`. Quando uma classe definia um método de instância `print` ou `println`, chamadas com receiver explícito (ex: `log.print("test")` ou `f.println(7)`) eram interceptadas e despachadas diretamente para `java/io/PrintStream.print/println`, ignorando o receiver e o método de instância definido.
+> - Correção: adicionada checagem `mc.receiver() == null` em `ExpressionStaticCallLowerer`, `MethodCallTyper` e `BuiltinCallTyper` para os ramos `print`/`println`, garantindo que chamadas com receiver explícito prossigam para a resolução normal de métodos de instância.
+> - Prova: `CoreRegressionE2ETest#instanceMethodNamedPrintOrPrintlnJvm`.
+> - Próximo: issues #216, #224, #226.
+
+> **✅ FEITO (14/09 ~13:30, dono = 192.168.100.22, lane compiler): fix issue #223 — for-loop update expression ++ / -- on Long or Double generates iconst_1 instead of lconst_1 / dconst_1 (VerifyError).**
+> - Causa raiz: em `StatementLowerer.java` (caso `ForStmt`), o tratamento de `fs.update()` para expressões unárias `++` e `--` emitia estritamente `KofLoadLiteral(Type.PrimitiveType.INT, 1)` hardcoded, independentemente de `var.type()`. Quando a variável de controle do laço for `Long` ou `Double`, o `KofBinary(ADD/SUB, var.type())` gerava `ladd`/`dadd` esperando dois operandos `long`/`double`, mas encontrava `int` na pilha, resultando em `VerifyError`.
+> - Correção: `StatementLowerer` unificado para utilizar `CompilerEmissionHelpers.emitIncrementOne(ops, var.type())`, emitindo o literal `1L`, `1.0f`, `1.0` ou `1` estritamente de acordo com o tipo da variável. Linhas de `StatementLowerer` reduzidas de 598 para 592 e baseline do `check_500.sh` atualizado.
+> - Prova: `CoreRegressionE2ETest#forLoopUpdateLongAndDoubleJvm`.
+> - Próximo: issues #216, #225, #224.
+
 > **✅ FEITO (14/09 ~12:45, dono = 192.168.100.22, lane compiler): fix issue #218 — function type syntax accepted in parameter/var-annotation but rejected in return type and field type positions.**
 > - Causa raiz: (1) `Parser.parse()` e `parseFunctionDeclaration()` não aceitavam `TokenType.LPAREN` como início de tipo de retorno top-level `(Int) -> Int makeDoubler()`, caindo em `PARSE007`/`PARSE010`. (2) `ClassMemberParser.parseClassMember` não reconhecia `LPAREN` como início de membro (campo ou método com tipo de retorno função), caindo em `PARSE016`. (3) `ExpressionParser` no parsing pós-primário consumia `(` na linha seguinte como chamada invocada sobre literal/expressão anterior na ausência de ponto-e-vírgula.
 > - Correção: `Parser` e `ClassMemberParser` agora aceitam tipo de função `(T) -> R` como tipo de retorno de função/método e como tipo de campo de classe. `ExpressionParser` previne agrupamento acidental de chamada quando o `(` ocorre em linha posterior após literal ou lambda.
@@ -196,6 +221,15 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 > **✅ FEITO (14/09 ~11:40, dono = 192.168.100.15, lane bugs-and-gaps): §204 — teste de regressão adicionado (Q1 gap da lane .18).**
 > A lane `.18` fixou `fe947b07` (restaura a análise do ramo ELSE do `if` em `StatementAnalyzer`, removida por engano pela limpeza CodeQL `a892b3c5`) **sem teste** (violação Q1). Este lane (gate de qualidade) contribuiu o guard que faltava: `CompilerDriverTest.elseBranchIsAnalyzedBothBranches` — um erro de tipo (`Int s = "not an int"`) no `else` deve ser DIAGNOSTICADO (SEM021), nunca virar bytecode quebrado. **Bisseção independente confirmada:** com a linha viva removida o teste fica VERMELHO (`expected false but was true`); com o fix restaurado, VERDE. Prova: teste 1/1 + `KofSupervisorE2ETest` 8/8. known-bugs §204 (EN+PT) atualizado com o teste na MESMA commit. Não toquei `StatementAnalyzer` (trabalho do .18 preservado, regra 8).
+
+> **✅ FEITO (14/09 ~13:20, dono = 192.168.100.15, lane bugs-and-gaps): §202 — registro sincronizado com o fix da lane `.17` (`602dcbc0`).**
+> A §202 estava catalogada 🔴 OPEN mas já fora resolvida em `602dcbc0` (corpus de teste alinhado ao contrato: `split()` retorna `String[]`, acesso é `arr[i]`, não `.get(i)` — decisão regra 6 mantendo SEM028). Este lane (registry owner) **re-mediu no tip `79bd7ac6`**: `KofTimeE2ETest` 30 (0 fail, 6 skip=DB externa), `NativeE2ETest` 65/65, `CodegenKitchenSinkTest` 1/1, guard `CompilerDriverTest.arrayMethodCallGivesCleanDiagnostic` 1/1 — §202 → ✅ FIXED. **Correção de doc:** uma nota de resolução do §203 estava colocada por engano DENTRO da seção §202 (EN); movida para a seção §203. Catalogado o residual real (NÃO é §202): `MethodCallTyper.java:18` (emit) aceita `.get(i)` em array enquanto o sema rejeita com SEM028 — inconsistência latente typer/emit, dono = lane de inferência.
+> **PRÓXIMO PASSO:** varredura de issues abertas via API (token `/tmp/opencode/.ghtok`) — fechar as já resolvidas upstream citando commit+teste; comentar as abertas com triagem. Depois seguir a fila limpa (§205 SIGSEGV nativo ifexpr-heterogêneo = dono lane do #183).
+
+> **✅ FEITO (14/09 ~13:55, dono = 192.168.100.15, lane bugs-and-gaps): §228 CORRIGIDO — `List[i] = v` compilava e não carregava (JVM VerifyError/Native SIGSEGV).** (renumerado §220→§228: a lane `.17` tomou §220 p/ o abstract-method)
+> Achei na varredura da suíte no tip `9048a366`: `l[0] = 9` num List era ACEITO e gerava `VerifyError: Bad type on operand stack @aastore` no JVM, exit 139 no Native, silêncio no JS (regra 5/6). Causa raiz: `ExpressionAssignmentLowerer` trata alvo `ArrayAccessExpr` com `KofArrayStore` cru; #149/#152 (`6d7ac697`) só roteou a LEITURA `l[i]`→`kof_list_get`; a escrita nunca foi baixada. Ficou mascarada porque `listOf(...)` era `List` (SEM054) e `new List<T>()` era `Unknown`; `0ab25887` (#214, lane .17) mapeou `new List<T>()` p/ `BuiltinTypes.LIST` e isentou List do SEM054 → expôs a escrita. **Fix (raiz, `StatementAnalyzer.analyzeAssignmentStatement`):** alvo `ArrayAccessExpr` com receiver List → SEM054 apontando `l.set(i, v)` (arrays intactos; String/Map/Set já cobertos pelo guard de leitura — sem duplicar diagnóstico). **Prova 4 alvos:** `a[0]=7`→8, `l.set(0,9)`→9, `l[1]`→20, `l[0]=9`/`l[0]+=10`→SEM054. `SemanticResolutionTest` 30/30; suíte 4-módulos `fail=1` (só §205, lane #183) + 13 err=node. known-bugs §228 (EN+PT).
+> **Q5 weak-green da lane `.17` (`de38f7b5`):** aquele commit reescreveu `subscriptOnCollectionsRejected` afirmando "List[i] (leitura e escrita) compila" e **removou o `l2[0] = 9` da lista** — mas só provou que COMPILA, não que EXECUTA. Re-medido no tip fresco (`origin/beta-0.4.0`): `l2[0]=9` ainda `VerifyError` no JVM / SIGSEGV no Native. Restaurei o caso (a escrita segue SEM054) + `listSubscriptReadIsSupported` (a leitura é válida). A asserção deles era verde-falso (Q5).
+> **§202 residual:** o `KofScriptStdlibParityTest.timeTodayParity` (kof-script) ainda usava `parts.get(0)`/`get(1)` — o alinhamento de `602dcbc0` cobriu só o kof-compiler. Alinhado p/ `parts[0]`/`parts[1]` (mesmo contrato); kof-script 12/12.
 
 > **✅ FEITO (14/09 ~10:10, dono = 192.168.100.22, lane compiler): fix issue #167 — instanceof with primitive/boxed types emits '?' as class name (NoClassDefFoundError).**
 > - Causa raiz: `JvmOpEmitter` em `KofInstanceOf` e `KofCheckCast` extraía o nome interno apenas se o tipo fosse `Type.ClassType`, caindo em `"?"` para tipos primitivos (`Type.PrimitiveType`).
@@ -682,14 +716,65 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > VerifyError), #219 reproduz (→§212), #220/#221/#222 GREEN com prova
 > semântica, #213 continua reproduz (§209 OPEN), #218 continua (§208).
 > Fila medida real: 16 abertos (linha da OPEN Queue corrigida de 30→16).
-> **PRÓXIMO re-disparo (triagem pendente, na ordem):** issues antigas ainda
-> sem prova de face única: **#199** (guarded case T s — verificar se é o
-> §199 do known-bugs ou face nova), **#193** (lambda em container genérico —
-> a face `Function<() -> Void>` como tipo de parâmetro que mediram hoje em
-> e204c pode ser ESTA), #185/#168/#161/#160/#159/#156/#155/#153/#151/#148/
-> #141/#129 (mapeadas a seções known-bugs? conferir 1-para-1). Regra da
-> lição: `mvn -o compile` ANTES de medir; assir SEMÂNTICA do título
-> (weak-green-proof).
+> **PRÓXIMO re-disparo (14/09 ~14:05 — TRIAGEM DA FILA TODA FEITA):**
+> #200–#229 triadas com prova de execução (classes frescas + horário/SHA na
+> prova). Catalogadas nesta lane: #193→§214, #199→§215, #168+#153→§216,
+> #161→§217, #148→§218, #151/#155/#159/#160/#141→§219(batch), #205→§203✅
+> (fix 8af810c5)+§213(nova), #219→§212, #224→§220, #225→§221, #228→§222.
+> GREEN com comentário-post: #200/#201/#203/#204/#207/#214/#215/#217/#218/
+> #220/#221/#222/#223/#226/#229 (fechar = dono/watcher). #185 = CodeQL queue
+> (lane própria), #129 = SBD-001 decisão da mantenedora — NÃO triar aqui.
+> Regra da lição gravada (4e0957ee + cdda27d9): `mvn -o compile`
+> IMEDIATAMENTE antes de medir (falso-vermelho de classe obsoleta queimou
+> meu primeiro "#218 ainda reproduz"); assir SEMÂNTICA do título.
+> **Gatilhos do próximo disparo (estado 14/09 ~15:38, ciclo 15:10–15:38):**
+> #237 RETIFICADA: não é face do §225 — vira §228 (descriptor vazava o tipo
+> CONCRETO do argumento no PARAMETRO + retorno fabricado; comentario
+> publico corrigido na issue; a face errada removida do §225). #238→§230
+> (field static de interface SEM025, irmao de §223) e #239→§229
+> (invokevirtual em estatico via instancia → IncompatibleClassChangeError,
+> espelho de §223, javap cravado). Fila = 27, sync corpo=linha. Provas
+> postadas em #236/#237/#238/#239. RE-LEITURA SISTEMATICA de bodies
+> adotada apos o erro da #237 (ler titulo COMPLETO antes de atribuir
+> familia). Lane nat: nenhum commit em nat/ desde 08:50 — gate cross-arch
+> (§181-idx4, §192) segue vermelho (re-confirmado 14:30/14:44).
+> Anexo faces novas: #236→2ª face do §214 (get(0)() inline pula SEM015 e
+> emite invokevirtual "" → ClassFormatError owner vazio, 5448551c) e
+> #237→2ª face do §225 (String.join estatico → retorno Object fabricado;
+> 3a ocorrencia familia §224/§225/#237 = um fix fecha as tres). Provas
+> javap postadas nas duas. Fila=24 (faces anexas a raizes ABERTAS nao
+> incrementam a contagem). fix alheio recente na fila: 23bf99bd
+> (resolve super() overloaded — possivel face da #226/§... verificar na
+> proxima re-medicao), 93b5ec26 (SEM054 subscript List write). Nenhuma
+> das minhas §213-§227 ainda tem fix.
+> Neste ciclo: #234→§226 e #235→§227 catalogadas c/ prova javap
+> (for-in anotado culpa `in`; static overload perde o invokestatic →
+> VerifyError/COMPUTE_FRAMES), prova postada nas duas. RE-MEDIÇÃO dos
+> fixados alheios (gatilho 1): §190+§195 ✅ (KofBlogE2ETest verde 14:35),
+> §220 ✅ (8a38faa4, #224), §221 ✅ (769371c2, #225). RE-MEDIÇÃO das que
+> CONTINUAM abertas (nenhum fix alheio as tocou): §213 (i as Object →
+> VerifyError, reflexão), §216 (Char 65|char=65), §217 (Box<T>.get →
+> VerifyError bad-type). Fila = 24, sync corpo=linha. docs/status.md
+> intocado (só referencia o gate cross-arch, ainda vermelho — correto).
+> Neste ciclo: §190+§195 ✅ (KofBlogE2ETest verde re-medido 14:35, fix
+> test-side a689cbd2 lane .18 já no HEAD), §220 ✅ (8a38faa4 lane analyzer,
+> prova postada #224 — issue fechada 17:37), fila sincronizada corpo=linha
+> (22), audit docs/development/: DECOMPILER/TRANSLATOR/LEGACY_MIGRATION/
+> OTP/native-multiarch todos CORRETOS como IN DEVELOPMENT (fases abertas
+> documentadas — não mover p/ docs/ nem future/).  (1) fix de §213–§224
+> aparecer no log → re-medir com classes frescas e marcar FIXED + comentar
+> na issue (assim foi §221: `769371c2` → `[LOG] test` + `invokevirtual
+> Logger.print`, `21e68a55`). #225 fechável; #230→§223, #231→§224 com prova
+> javap postada. #233→§225 (mesma raiz tabela-miss do §224 — um fix
+> fecha as duas) e #232→ sub-face `ordinal()` do §211 (SEM025,
+> `Cannot resolve method 'ordinal' on type 'Dir'`), prova postada nas duas.
+> Fila atual: 24 abertos. (2) lane nat fechar os 3 cross-arch
+> (re-confirmados vermelhos 13:51: riscv `CastSaturation` idx4 `-inf`→0 +
+> §192 B41 hang) → RE-MEDIR baseline completa e atualizar docs/status.md —
+> gate de release = 0 FAILURE fora de node/BD/guardas; nat commitou 08:50
+> mas NÃO tocou os 3. (3) issues novas do watcher → triagem padrão
+> (caso-exato + javap + hora/SHA + SEMÂNTICA do título; lição gravada). #229
+> re-confirmada e FECHADA pelo usuário externo.
 > Versão anterior da triagem (10:20): medido no HEAD `75455529` com harness
 > JVM (`/tmp/opencode/r292/dev/cli/BJ`):
 > **#200/#201/#203/#204/#214 = GREEN** (casos exatos das issues rodam `ec=0`;

@@ -240,7 +240,13 @@ import java.util.Set;
                 case 0xaf -> { return new MachineRun(stack, stack.retTyped("D"), true); }
                 case 0xb0 -> { return new MachineRun(stack, stack.retTyped("L"), true); }
                 case 0xb1 -> {
-                    if (!"V".equals(frame.retType())) return null;   // return em método não-void → drift
+                    // §CodeQL deref-null: guard defensivo igual ao da 0xb8
+                    // (linha 216). frame nunca chega null pelos callers reais
+                    // (recoverExpression/machineRun sempre recebem new
+                    // BytecodeFrame), mas a API é package-private; sem frame
+                    // não dá para checar o tipo de retorno, então trata-se
+                    // como void-return (mesma saida do "return" simples).
+                    if (frame != null && !"V".equals(frame.retType())) return null;   // return em método não-void → drift
                     return new MachineRun(stack, stack.isEmpty() ? "" : null, true);
                 }
                 default -> {

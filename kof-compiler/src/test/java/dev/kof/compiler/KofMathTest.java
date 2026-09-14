@@ -352,6 +352,78 @@ class KofMathTest {
         }
     }
 
+    // S1b.3 (DECISIONS §3): math.roundTo(value: Double, decimals: Int) ->
+    // Double. Half-away-from-zero por escala decimal determinística, SEM libm
+    // (p=10^|d| por multiplicação repetida → byte-idêntico 5 alvos). Golden
+    // só Bool (bug 44: nunca println de double cru no Native). Contrato
+    // ARITMÉTICO (não decimal-string): 2.675 → 2.68 (o double 2.675*100
+    // arredonda a 267.5, half-away → 268), 1.005 → 1.0 (100.4999…). decimals
+    // negativo arredonda p/ dezenas/centenas; guard de overflow (1e307,5 →
+    // devolve v) e de |d| extremo (1e10,-308 → 0.0).
+    private static final String ROUND_SRC = """
+        main() {
+            println(math.roundTo(2.5, 0) == 3.0)
+            println(math.roundTo(-2.5, 0) == -3.0)
+            println(math.roundTo(2.4, 0) == 2.0)
+            println(math.roundTo(2.6, 0) == 3.0)
+            println(math.roundTo(-2.4, 0) == -2.0)
+            println(math.roundTo(0.49999999999999994, 0) == 0.0)
+            println(math.roundTo(1.5, 0) == 2.0)
+            println(math.roundTo(-1.5, 0) == -2.0)
+            println(math.roundTo(3.14159, 2) == 3.14)
+            println(math.roundTo(2.675, 2) == 2.68)
+            println(math.roundTo(1.005, 2) == 1.0)
+            println(math.roundTo(1234.0, -2) == 1200.0)
+            println(math.roundTo(1250.0, -2) == 1300.0)
+            println(math.roundTo(-1250.0, -2) == -1300.0)
+            println(math.roundTo(2.5, -1) == 0.0)
+            println(math.roundTo(0.0, 5) == 0.0)
+            println(math.roundTo(1.0, 0) == 1.0)
+            println(math.roundTo(1e307, 5) == 1e307)
+            println(math.roundTo(1e10, -308) == 0.0)
+            println(math.roundTo(1.0 / 0.0, 2) == 1.0 / 0.0)
+            println(math.roundTo(0.0 / 0.0, 2) != math.roundTo(0.0 / 0.0, 2))
+            println(math.roundTo(-0.4, 0) == 0.0)
+        }
+        """;
+
+    private static final String ROUND_OUT = String.join("\n",
+            "true", "true", "true", "true", "true", "true", "true", "true",
+            "true", "true", "true", "true", "true", "true", "true", "true",
+            "true", "true", "true", "true", "true", "true");
+
+    @Test
+    void roundToJvm(@TempDir Path tmp) throws Exception {
+        runJvm(tmp, ROUND_SRC, ROUND_OUT);
+    }
+
+    @Test
+    void roundToNative(@TempDir Path tmp) throws Exception {
+        runNative(tmp, ROUND_SRC, ROUND_OUT);
+    }
+
+    @Test
+    void roundToJs(@TempDir Path tmp) throws Exception {
+        runJs(tmp, ROUND_SRC, ROUND_OUT);
+    }
+
+    @Test
+    void roundToCrossArch(@TempDir Path tmp) throws Exception {
+        // riscv = fatia B32 (fmul.d/fdiv.d/fcvt.l.d/fcvt.d.l/feq/flt inline);
+        // aarch herda via tradutor. Golden BYTE-IDÊNTICO sob qemu.
+        forCrossArch(tmp, ROUND_SRC, ROUND_OUT);
+    }
+
+    @Test
+    void roundToTypeGuardRefused(@TempDir Path tmp) throws Exception {
+        // SEM025 (R6): decimals é Int — Double NÃO alarga em silêncio.
+        Path file = tmp.resolve("Guard-" + System.nanoTime() + ".kf");
+        Files.writeString(file, "main() { println(math.roundTo(2.0, 2.0)) }");
+        Path outDir = tmp.resolve("guard-" + System.nanoTime());
+        CompilationResult result = driver.compile(file, outDir, Target.JVM);
+        assertFalse(result.success(), "math.roundTo(2.0, 2.0) deve ser rejeitado no typer (SEM025)");
+    }
+
     private void forCrossArch(Path tmp, String src, String expected) throws Exception {
         // golden byte-idêntico ao JVM/x86/JS, executado sob qemu (padrão
         // STRN001/SECN000 da lane; skipa honesto se toolchain ausente).
