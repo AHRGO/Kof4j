@@ -127,6 +127,12 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > quentes. O codemod dos 17 locals puros restantes ficou p/ depois (varios
 > carregam chamada com efeito — deletar linha = mudanca de comportamento).## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (14/09 ~12:45, dono = 192.168.100.22, lane compiler): fix issue #218 — function type syntax accepted in parameter/var-annotation but rejected in return type and field type positions.**
+> - Causa raiz: (1) `Parser.parse()` e `parseFunctionDeclaration()` não aceitavam `TokenType.LPAREN` como início de tipo de retorno top-level `(Int) -> Int makeDoubler()`, caindo em `PARSE007`/`PARSE010`. (2) `ClassMemberParser.parseClassMember` não reconhecia `LPAREN` como início de membro (campo ou método com tipo de retorno função), caindo em `PARSE016`. (3) `ExpressionParser` no parsing pós-primário consumia `(` na linha seguinte como chamada invocada sobre literal/expressão anterior na ausência de ponto-e-vírgula.
+> - Correção: `Parser` e `ClassMemberParser` agora aceitam tipo de função `(T) -> R` como tipo de retorno de função/método e como tipo de campo de classe. `ExpressionParser` previne agrupamento acidental de chamada quando o `(` ocorre em linha posterior após literal ou lambda.
+> - Prova: `CoreRegressionE2ETest#functionTypeAsReturnTypeAndFieldTypeJvm`.
+> - Próximo: issues #216, #213.
+
 > **✅ FEITO (14/09 ~12:30, dono = 192.168.100.22, lane compiler): fix issue #217 — class with constructor parameters cannot use extends or implements (PARSE007).**
 > - Causa raiz: `TypeDeclarations.parseClassDeclaration` esperava que `extends` e `implements` aparecessem antes do `(`, tratando classes como `class Circle(Double r) extends Shape implements AreaNamed` como `PARSE007` ao encontrar tokens após o fecha-parênteses. Adicionalmente, `SymbolTableBuilder.preDeclareType`, `CompilerClassLowering.lowerRecord` e `CompilerRecordSupport.generateRecordConstructor` assumiam estritamente `"Record"` como superclasse sem propagar `superClass` nem `interfaces`.
 > - Correção: `TypeDeclarations.parseClassDeclaration` agora parseia parâmetros de construtor `(...)` e em seguida as cláusulas `extends` e `implements`. `SymbolTableBuilder.preDeclareType` qualifica e preserva a superclasse informada e interfaces implementadas, `CompilerClassLowering.lowerRecord` gera a superclasse correta e `CompilerRecordSupport.generateRecordConstructor` invoca o `<init>` da superclasse correspondente.

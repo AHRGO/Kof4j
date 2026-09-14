@@ -207,6 +207,12 @@ public class ExpressionParser {
                 ctx.expect(TokenType.RBRACKET, "Expected ']'", "PARSE045");
                 expr = new ArrayAccessExpr(p, expr, index);
             } else if (ctx.check(TokenType.LPAREN)) {
+                // Previne chamada acidental se '(' está em outra linha e expr é literal ou terminador
+                Token prevToken = ctx.pos > 0 ? ctx.tokens.get(ctx.pos - 1) : null;
+                if (prevToken != null && prevToken.line() != ctx.peek().line()
+                        && (expr instanceof LiteralExpr || expr instanceof LambdaExpr)) {
+                    break;
+                }
                 List<ExpressionNode> args = ExpressionParser.parseArguments(ctx);
                 if (ctx.check(TokenType.LBRACE)) {
                     // Query DSL tipada: `Entity.query(db) { where ...; }` — o `{`

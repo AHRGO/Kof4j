@@ -1882,4 +1882,37 @@ class CoreRegressionE2ETest {
         assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
         assertEquals("shape\nCircle\n78.5", runJvm(out));
     }
+
+    // Issue #218 — function type syntax as return type and class field type
+    @Test
+    void functionTypeAsReturnTypeAndFieldTypeJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("fntypes.kf");
+        Files.writeString(src, """
+                (Int) -> Int makeDoubler() {
+                    return (x: Int) -> x * 2
+                }
+
+                class Transformer {
+                    (Int) -> Int transform = (x: Int) -> x + 10
+                    (Int) -> Int getTransform() {
+                        return transform
+                    }
+                }
+
+                main() {
+                    var doubler = makeDoubler()
+                    println(doubler(5))
+
+                    var t = new Transformer()
+                    var f1 = t.transform
+                    println(f1(7))
+                    var f2 = t.getTransform()
+                    println(f2(7))
+                }
+                """);
+        Path out = tempDir.resolve("fntypes-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("10\n17\n17", runJvm(out));
+    }
 }
