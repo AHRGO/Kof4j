@@ -138,6 +138,9 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > container-never-accessed, contradictory-checks, self-assignment — NÃO desta lane).
 > **Sync 14/09 (ordem dela): main→beta aqui (junit 6 da beta + bumps #171 da main;
 > mariadb 3.5.10/postgres 42.7.13 vencem 3.5.3/42.7.7); beta→main por PR na sequência.**
+> **✅ SYNC FEITO ~06:37:** 7 dependabot PRs merged (#171 main, #174–177 main,
+> #172 beta, #178 main); main→beta (6bcaef10+363b4444); beta→main PR #179 merged
+> (main=851e514b). Correção dos erros (checks vermelhos, junit 6, release) com ela.
 
 > **EM CURSO (14/09 ~02:30, dono = 192.168.100.15, lane bugs-and-gaps):
 > unidade §186/#133 — fix estrutural completo do `<clinit>`.** Autostash
