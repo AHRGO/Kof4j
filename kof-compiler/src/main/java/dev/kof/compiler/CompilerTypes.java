@@ -23,8 +23,8 @@ public final class CompilerTypes {
                         ExternalClasspath external) {
          // SG-012: param de lambda sem anotação — Unknown (nunca Object)
          if (typeName == null) return Type.UnknownType.UNKNOWN;
-         if ("List".equals(typeName) || "ArrayList".equals(typeName)) return BuiltinTypes.LIST;
-         // #139/#150 — `new Set<T>()`/`new Map<K,V>()`: sem este pin o tipo
+         if ("List".equals(typeName) || "ArrayList".equals(typeName) || "LinkedList".equals(typeName)) return BuiltinTypes.LIST;
+         // #139/#150/#214 — `new Set<T>()`/`new Map<K,V>()`: sem este pin o tipo
          // ficava ClassType("", "Set"/"Map") → os métodos (add/size/put)
          // emitiam owner `Set`/`Map` cru → NoClassDefFoundError/ClassFormatError.
          if ("Set".equals(typeName) || "HashSet".equals(typeName)) return BuiltinTypes.SET;

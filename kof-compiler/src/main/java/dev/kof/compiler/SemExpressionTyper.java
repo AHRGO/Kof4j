@@ -290,6 +290,15 @@ public final class SemExpressionTyper {
             }
             case MethodCallExpr mc -> SemMethodCallTyper.infer(sa, mc, scope);
             case NewExpr ne -> {
+                if ("List".equals(ne.typeName()) || "ArrayList".equals(ne.typeName()) || "LinkedList".equals(ne.typeName())) {
+                    yield BuiltinTypes.LIST;
+                }
+                if ("Set".equals(ne.typeName()) || "HashSet".equals(ne.typeName())) {
+                    yield BuiltinTypes.SET;
+                }
+                if ("Map".equals(ne.typeName()) || "HashMap".equals(ne.typeName())) {
+                    yield BuiltinTypes.MAP;
+                }
                 SymbolTable.ClassSymbol cs = sa.getClass(ne.typeName());
                 if (cs != null) {
                     // SG-017 (SEM041): classe abstrata não pode ser instanciada.
@@ -447,20 +456,23 @@ public final class SemExpressionTyper {
                 }
                 // paridade absoluta (JVM=JS=X86=ARM=RISC, regra 6/R6) — mesmo
                 // padrão do §96/§98/§100: `x[i]` SÓ existe para ARRAY no corpus
-                // (`learn/04:84`, `new Int[n]`). Em String/List/Map/Set o
+                // (`learn/04:84`, `new Int[n]`). Em String/Map/Set o
                 // subscript era ACEITO e quebrava de um jeito em cada target
-                // ("abc"[0]: JVM VerifyError, Native/Script vazios;
-                // listOf(1,2)[0]: JVM VerifyError `aaload` em Object, idem).
-                // Opção B: REJEITAR em compile-time (SEM054) apontando p/ o
-                // idiom da coleção. Unknown/Nullable (ex.: get de map sem pin)
-                // NÃO é flagado — pode ser array em runtime (SG-008).
-                if (sa.diagnostics() != null && isKofCollectionType(recvType)) {
+                // ("abc"[0]: JVM VerifyError, Native/Script vazios).
+                // #149/#152: List[i] é suportado (roteado para kof_list_get).
+                if (sa.diagnostics() != null && isKofCollectionType(recvType) && !BuiltinTypes.isList(recvType)) {
                     var pos = aa.position();
                     sa.diagnostics().error(pos != null ? pos.file() : "",
                             pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0,
                             "`[]` só pega em array em Kof; para esta coleção use "
                                     + collectionIndexHint(recvType),
                             "SEM054");
+                }
+                if (BuiltinTypes.isList(recvType)) {
+                    if (recvType instanceof Type.ClassType ct && !ct.typeArguments().isEmpty()) {
+                        yield ct.typeArguments().get(0);
+                    }
+                    yield Type.UnknownType.UNKNOWN;
                 }
                 yield Type.UnknownType.UNKNOWN;
             }

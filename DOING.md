@@ -127,6 +127,12 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > quentes. O codemod dos 17 locals puros restantes ficou p/ depois (varios
 > carregam chamada com efeito — deletar linha = mudanca de comportamento).## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (14/09 ~12:00, dono = 192.168.100.22, lane compiler): fix issue #214 — Map, HashMap, Set, HashSet, LinkedList compile with unqualified class names (NoClassDefFoundError at runtime).**
+> - Causa raiz: `new Map()`, `new HashMap()`, `new Set()`, `new HashSet()`, e `new LinkedList()` produziam `ClassType("", "Map")` etc., sem mapeamento prévio em `CompilerTypes.toType`, `SemExpressionTyper` ou `ExpressionTyper`. No JVM, eram instanciadas diretamente como classes não-qualificadas sem pacote (`new Map`, `new HashMap`), resultando em `NoClassDefFoundError: Map`.
+> - Correção: `CompilerTypes.toType`, `ExpressionTyper` e `SemExpressionTyper` agora mapeiam `LinkedList` para `BuiltinTypes.LIST`, `HashSet` para `BuiltinTypes.SET` e `HashMap` para `BuiltinTypes.MAP`. `SemExpressionTyper` também sincronizado para permitir indexação `List[i]` (introduzida em #149/#152) sem falso-positivo SEM054.
+> - Prova: `CoreRegressionE2ETest#standardCollectionInstantiationJvm`.
+> - Próximo: issues #215, #217, #218.
+
 > **✅ FEITO (14/09 ~11:40, dono = 192.168.100.22, lane compiler): fix issue #210 — static field ++ / -- emits instance field opcodes (getfield/putfield) instead of getstatic/putstatic.**
 > - Causa raiz: `CompilerEmission2.emitIncrement` tratava acessos a campos em `IdentifierExpr` e `FieldAccessExpr` exclusivamente como instâncias (emitia `KofLoadLocal(ownerType, 0)` ou `emitExpression(receiver)` seguido de `KofLoadField`/`KofStoreField`), gerando `getfield`/`putfield` que causavam `IncompatibleClassChangeError: Expected non-static field`.
 > - Correção: detectado modificador `STATIC` no `FieldSymbol` em `emitIncrement` (para referências diretas ou qualificadas `Class.field`), delegando para `emitStaticFieldIncrement` que opera via `KofGetStatic` e `KofPutStatic` sem receiver de instância na pilha.

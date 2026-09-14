@@ -147,8 +147,12 @@ public final class ExpressionTyper {
             }
             case NewExpr ne -> {
                 Type t = CompilerTypes.toType(ne.typeName(), driver.currentUnit);
-                if ("List".equals(ne.typeName()) || "ArrayList".equals(ne.typeName())) {
+                if ("List".equals(ne.typeName()) || "ArrayList".equals(ne.typeName()) || "LinkedList".equals(ne.typeName())) {
                     t = BuiltinTypes.LIST;
+                } else if ("Set".equals(ne.typeName()) || "HashSet".equals(ne.typeName())) {
+                    t = BuiltinTypes.SET;
+                } else if ("Map".equals(ne.typeName()) || "HashMap".equals(ne.typeName())) {
+                    t = BuiltinTypes.MAP;
                 }
                 if (!ne.typeArguments().isEmpty() && t instanceof Type.ClassType cts) {
                     t = new Type.ClassType(cts.packageName(), cts.name(),

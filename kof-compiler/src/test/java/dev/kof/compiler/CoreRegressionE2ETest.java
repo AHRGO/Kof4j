@@ -1800,4 +1800,37 @@ class CoreRegressionE2ETest {
         assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
         assertEquals("2\n1", runJvm(out));
     }
+
+    // Issue #214 — Map, HashMap, Set, HashSet, LinkedList compile with unqualified class names
+    @Test
+    void standardCollectionInstantiationJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("stdcoll.kf");
+        Files.writeString(src, """
+                main() {
+                    var m1 = new Map<String, Int>()
+                    m1.put("a", 1)
+                    println(m1.get("a"))
+
+                    var m2 = new HashMap<String, Int>()
+                    m2.put("b", 2)
+                    println(m2.get("b"))
+
+                    var s1 = new Set<Int>()
+                    s1.add(10)
+                    println(s1.contains(10))
+
+                    var s2 = new HashSet<Int>()
+                    s2.add(20)
+                    println(s2.contains(20))
+
+                    var l1 = new LinkedList<String>()
+                    l1.add("x")
+                    println(l1.get(0))
+                }
+                """);
+        Path out = tempDir.resolve("stdcoll-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("1\n2\ntrue\ntrue\nx", runJvm(out));
+    }
 }
