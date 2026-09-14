@@ -132,6 +132,10 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > dependabot-security-updates, AI findings. (Histórico: a445f450 varreu WIP da
 > árvore cf. regra 8; rebase com DOING+JvmTypeMapper+blog add/add resolvidos
 > preservando os dois lados; fóssil de marcador em a689cbd2:72, tip limpo.)
+> **AI findings 14/09 (pedido dela, era o opt-in pendente):**
+> `ai_findings_option=on_push` via API. Code scanning entrega findings na main
+> (CodeQL success; 4 grupos Error p/ triagem das lanes de código — array-index,
+> container-never-accessed, contradictory-checks, self-assignment — NÃO desta lane).
 
 > **EM CURSO (14/09 ~02:30, dono = 192.168.100.15, lane bugs-and-gaps):
 > unidade §186/#133 — fix estrutural completo do `<clinit>`.** Autostash
