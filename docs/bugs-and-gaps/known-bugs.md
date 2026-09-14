@@ -6828,3 +6828,10 @@ usuário — diagnostic em compile-time é a meta (regra 6).
 - **Causa raiz:** Ao desestruturar os componentes de um record (`case Rect(var w, var h)`), `SwitchExprLowerer` e `SwitchStmtLowerer` incrementavam `localIdx` de 1 em 1 (`localIdx++`), ignorando que `Double` e `Long` são de 2 slots no frame JVM (categoria-2).
 - **Fix:** Alocação de slots locais em `SwitchExprLowerer.emitPatternBinding` e `SwitchStmtLowerer` ajustada para avançar `TypeMetrics.isDoubleWidth(fieldType) ? 2 : 1`.
 - **Prova:** `CoreRegressionE2ETest.recordDestructuringDoubleAndLong` passando nos targets (JVM e JS).
+
+### §200 — `if-expression` com ramos de tipos primitivos mistos (Int e Double) falhava com VerifyError ou COMP002 — ✅ CORRIGIDO 14/09 ([issue #183](https://github.com/KofLang/Kof4j/issues/183), dono = lane `192.168.100.22`)
+
+- **Sintoma (issue #183):** `var result = if (flag) 1 else 2.0` causava `VerifyError: Bad type on operand stack ... Type java/lang/Number is not assignable to integer`, e `var result = if (flag) 2.0 else 1` causava crash interno de ASM frames `COMP002`.
+- **Causa raiz:** O lowering de `IfExpr` e `SwitchExpr` já aplicava boxing in-branch quando `branchTypesDiffer` era verdadeiro (boxing para `Object`), mas `ExpressionTyper.inferExprType` retornava cegamente o tipo do primeiro ramo (`thenType`). Assim, `var result` recebia `Int` (ou `Double`), alocava slot/tipo primitivo e tentava fazer `istore`/`dstore` de uma referência `Object`/`Number`.
+- **Fix:** `ExpressionTyper.inferExprType` para `IfExpr` e `SwitchExpr` agora retorna `Object` (`java.lang.Object`) quando `branchTypesDiffer` for verdadeiro, casando o tipo da variável receptora com os valores unificados na pilha.
+- **Prova:** `CoreRegressionE2ETest.ifExpressionMixedNumericBranches` prova os dois casos (`1 else 2.5` e `3.5 else 4`) compilando e executando corretamente na JVM e JS.

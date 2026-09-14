@@ -102,7 +102,11 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > `SwitchExprLowerer.emitPatternBinding` e `SwitchStmtLowerer` incrementavam `localIdx` em 1 para cada campo do pattern, corrompendo variáveis seguintes quando o campo era `Double` ou `Long` (2 slots).
 > Ajustado para `localIdx += TypeMetrics.isDoubleWidth(fieldType) ? 2 : 1`.
 > Prova: `CoreRegressionE2ETest.recordDestructuringDoubleAndLong` provando `Rect(Double, Double)` e `Box(Long)` destructuring em `switch`.
-> **PRÓXIMO PASSO:** Continuar triagem da fila de issues abertas (#183, #182, #181, #180).
+> **✅ FEITO (14/09 ~07:35, dono = 192.168.100.22, lane compiler): fix issue #183 — if-expression com ramos de tipos primitivos mistos (Int e Double).**
+> `ExpressionTyper.inferExprType` retornava o tipo do primeiro ramo de `IfExpr`/`SwitchExpr` mesmo quando `branchTypesDiffer` era verdadeiro e os ramos eram boxeados para referências. Ajustado para retornar `java.lang.Object` quando os ramos divergem, casando com a variável receptora e frame JVM.
+> Prova: `CoreRegressionE2ETest.ifExpressionMixedNumericBranches` (Int vs Double e Double vs Int) verde nos targets.
+> **PRÓXIMO PASSO:** Continuar triagem da fila de issues abertas (#182, #181, #180).
+
 
 
 

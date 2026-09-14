@@ -261,10 +261,19 @@ public final class ExpressionTyper {
             }
             case IfExpr ie -> {
                 Type thenType = inferExprType(driver, ie.thenExpr(), locals);
-                Type elseType = inferExprType(driver, ie.elseExpr(), locals);
+                Type elseType = ie.elseExpr() != null ? inferExprType(driver, ie.elseExpr(), locals) : Type.UnknownType.UNKNOWN;
+                List<Type> bts = ifBranchTypes(driver, ie, locals);
+                if (branchTypesDiffer(bts)) {
+                    yield new Type.ClassType("java.lang", "Object", List.of());
+                }
                 yield thenType;
             }            case SwitchExpr se -> {
                 if (!se.cases().isEmpty()) {
+                    List<Type> bts = switchBranchTypes(driver, se.cases(), se.defaultValue(),
+                            inferExprType(driver, se.cases().get(0).body(), locals), locals);
+                    if (branchTypesDiffer(bts)) {
+                        yield new Type.ClassType("java.lang", "Object", List.of());
+                    }
                     yield inferExprType(driver, se.cases().get(0).body(), locals);
                 }
                 yield se.defaultValue() != null ? inferExprType(driver, se.defaultValue(), locals)
