@@ -127,6 +127,12 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > quentes. O codemod dos 17 locals puros restantes ficou p/ depois (varios
 > carregam chamada com efeito — deletar linha = mudanca de comportamento).## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (14/09 ~10:35, dono = 192.168.100.22, lane compiler): fix issue #208 — switch expression over Boolean rejects exhaustive true/false coverage (SEM032).**
+> - Causa raiz: `SemExpressionTyper` exigia `default` incondicionalmente a menos que `subjectType` fosse enum, disparando `SEM032` mesmo com cobertura exaustiva de `true` e `false`.
+> - Correção: `MemberResolver.checkSwitchExprExhaustiveness` reconhece `Boolean`/`Bool` e valida se os casos cobrem `true` e `false`.
+> - Prova: `CoreRegressionE2ETest#switchExpressionOverBooleanExhaustive`.
+> - Próximo: issues #168, #165, #162.
+
 > **✅ FEITO (14/09 ~10:30, dono = 192.168.100.22, lane compiler): fix issue #200 — switch expression rejected as RHS of assignment statement (PARSE041).**
 > - Causa raiz: `ExpressionParser.parsePrimary` não reconhecia `TokenType.SWITCH`, e `parseAssignment` para o lado direito chamava `parseAssignment` (que descia para `parsePrimary`), disparando `PARSE041` ao encontrar `switch`.
 > - Correção: adicionada verificação de `TokenType.SWITCH` em `ExpressionParser.parsePrimary` delegando para `parseSwitchExpression(ctx)`.

@@ -537,25 +537,7 @@ public final class SemExpressionTyper {
                     SymbolTable defaultScope = scope.enterScope();
                     inferType(sa, se.defaultValue(), defaultScope);
                 } else {
-                    // exaustividade: sem default, switch sobre enum precisa cobrir
-                    // todas as constantes (mesma regra do statement, SEM031).
-                    if (subjectType instanceof Type.ClassType sct && sct.packageName().isEmpty()
-                            && sa.unit() != null) {
-                        java.util.Set<String> covered = new java.util.HashSet<>();
-                        for (SwitchExprCase sc : se.cases()) {
-                            String cn = MemberResolver.enumConstantOfExpr(sa.unit(), sc.value());
-                            if (cn != null) covered.add(cn);
-                        }
-                        List<String> constants = MemberResolver.enumConstantsOf(sa.unit(), sct.name());
-                        List<String> missing = constants.stream().filter(c -> !covered.contains(c)).toList();
-                        if (!missing.isEmpty()) {
-                            sa.reportError(se, "switch expressão sobre '" + sct.name()
-                                    + "' não cobre: " + String.join(", ", missing)
-                                    + " (adicione default ou os casos faltantes)", "SEM032");
-                        }
-                    } else {
-                        sa.reportError(se, "switch expressão exige 'default' (ou exaustividade de enum)", "SEM032");
-                    }
+                    MemberResolver.checkSwitchExprExhaustiveness(sa, se, subjectType);
                 }
                 yield result;
             }

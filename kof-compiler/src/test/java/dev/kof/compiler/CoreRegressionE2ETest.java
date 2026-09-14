@@ -1654,4 +1654,32 @@ class CoreRegressionE2ETest {
         assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
         assertEquals("99\n77", runJvm(out));
     }
+
+    // Issue #208 — switch expression over Boolean rejects exhaustive true/false coverage (SEM032).
+    @Test
+    void switchExpressionOverBooleanExhaustive(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("switchbool.kf");
+        Files.writeString(src, """
+                String describe(Boolean b) {
+                    return switch (b) {
+                        case true  -> "yes"
+                        case false -> "no"
+                    }
+                }
+                main() {
+                    var b = true
+                    var r1 = switch (b) {
+                        case true  -> "T"
+                        case false -> "F"
+                    }
+                    var r2 = describe(false)
+                    println(r1)
+                    println(r2)
+                }
+                """);
+        Path out = tempDir.resolve("switchbool-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("T\nno", runJvm(out));
+    }
 }
