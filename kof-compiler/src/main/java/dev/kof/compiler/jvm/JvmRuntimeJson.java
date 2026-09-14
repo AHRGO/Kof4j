@@ -226,15 +226,20 @@ public final class JvmRuntimeJson {
                     return new long[0];
                 }
 
-                public static int[] kof_json_decode_bool_array(String json) {
+                // #132: Bool[] no JVM é boolean[] (JvmTypeMapper `Z`, new-array
+                // T_BOOLEAN) — o decoder era o outlier que alojava int[], e só
+                // "funcionava" porque o load usava IALOAD universal (ilegal num
+                // boolean[] real). Representação única: BALOAD/BASTORE agora
+                // batem em `new Bool[n]` E em `json.decode<Bool[]>`.
+                public static boolean[] kof_json_decode_bool_array(String json) {
                     Object parsed = kof_json_parse(json);
                     if (parsed instanceof List<?> l) {
                         int n = l.size();
-                        int[] out = new int[n];
-                        for (int i = 0; i < n; i++) out[i] = ((Boolean) l.get(i)) ? 1 : 0;
+                        boolean[] out = new boolean[n];
+                        for (int i = 0; i < n; i++) out[i] = (Boolean) l.get(i);
                         return out;
                     }
-                    return new int[0];
+                    return new boolean[0];
                 }
 
                 public static double[] kof_json_decode_double_array(String json) {

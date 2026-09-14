@@ -27,7 +27,8 @@ public final class JvmRuntimeCallDescriptors {
             case "kof_json_decode_string" -> "(Ljava/lang/String;)Ljava/lang/String;";
             case "kof_json_decode_int_list", "kof_json_decode_string_list", "kof_json_decode_list"
                     -> "(Ljava/lang/String;)Ljava/util/ArrayList;";
-            case "kof_json_decode_int_array", "kof_json_decode_bool_array" -> "(Ljava/lang/String;)[I";
+            case "kof_json_decode_int_array" -> "(Ljava/lang/String;)[I";
+            case "kof_json_decode_bool_array" -> "(Ljava/lang/String;)[Z";
             case "kof_json_decode_long_array" -> "(Ljava/lang/String;)[J";
             case "kof_json_decode_double_array" -> "(Ljava/lang/String;)[D";
             case "kof_json_decode_string_array" -> "(Ljava/lang/String;)[Ljava/lang/String;";
