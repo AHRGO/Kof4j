@@ -1536,4 +1536,37 @@ class CoreRegressionE2ETest {
                 }
                 """, "1\n3.5", tempDir, "if-expr-mixed-numeric");
     }
+
+    // Issue #182: for-in loop variable shadowing outer variable corrupts outer slot —
+    // VerifyError: Bad local variable type after loop when outer variable is read.
+    @Test
+    void forInLoopVariableShadowingOuterVariable(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                main() {
+                    var s = "outer"
+                    var lst = new List<String>()
+                    lst.add("a")
+                    lst.add("b")
+                    for (var s in lst) {
+                        println(s)
+                    }
+                    println(s)
+
+                    var x = 100
+                    var nums = new List<Int>()
+                    nums.add(1)
+                    nums.add(2)
+                    for (var x in nums) {
+                        println(x)
+                    }
+                    println(x)
+
+                    var i = 999
+                    for (var i = 0; i < 2; i++) {
+                        println(i)
+                    }
+                    println(i)
+                }
+                """, "a\nb\nouter\n1\n2\n100\n0\n1\n999", tempDir, "for-in-shadow-outer");
+    }
 }

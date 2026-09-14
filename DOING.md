@@ -94,18 +94,12 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
-> **✅ FEITO (14/09 ~07:15, dono = 192.168.100.22, lane compiler): fix issue #188 — `==` direto em if/if-expr usava `if_acmpeq` em Record em vez de `.equals()`.**
-> `CompilerComparisons.isComparisonShortcut` desativa shortcut se `left` ou `right` for `Record` (`CompilerTypes.isRecordType`), caindo no lowering completo de `ExpressionBinaryLowerer` com chamada a `record.equals(other)` e comparação de conteúdo.
-> Prova: `CoreRegressionE2ETest.recordEqualityInDirectIfCondition` provando `t1 == t2` em `if` e em ternário avaliando verdadeiro.
-> Suíte `CoreRegressionE2ETest` 65/65 verde, `check_500.sh` sem classes críticas.
-> **✅ FEITO (14/09 ~07:25, dono = 192.168.100.22, lane compiler): fix issue #187 — Record destructuring com campos Double/Long causava colisão de slots no frame JVM (VerifyError / COMP002).**
-> `SwitchExprLowerer.emitPatternBinding` e `SwitchStmtLowerer` incrementavam `localIdx` em 1 para cada campo do pattern, corrompendo variáveis seguintes quando o campo era `Double` ou `Long` (2 slots).
-> Ajustado para `localIdx += TypeMetrics.isDoubleWidth(fieldType) ? 2 : 1`.
-> Prova: `CoreRegressionE2ETest.recordDestructuringDoubleAndLong` provando `Rect(Double, Double)` e `Box(Long)` destructuring em `switch`.
-> **✅ FEITO (14/09 ~07:35, dono = 192.168.100.22, lane compiler): fix issue #183 — if-expression com ramos de tipos primitivos mistos (Int e Double).**
-> `ExpressionTyper.inferExprType` retornava o tipo do primeiro ramo de `IfExpr`/`SwitchExpr` mesmo quando `branchTypesDiffer` era verdadeiro e os ramos eram boxeados para referências. Ajustado para retornar `java.lang.Object` quando os ramos divergem, casando com a variável receptora e frame JVM.
-> Prova: `CoreRegressionE2ETest.ifExpressionMixedNumericBranches` (Int vs Double e Double vs Int) verde nos targets.
-> **PRÓXIMO PASSO:** Continuar triagem da fila de issues abertas (#182, #181, #180).
+> **✅ FEITO (14/09 ~08:15, dono = 192.168.100.22, lane compiler): fix issue #182 — for-in / for loop variable shadowing outer variable corrupts outer slot lookup after loop.**
+> Ao sair de `ForInStmt` e `ForStmt`, as variáveis de iteração (`fis.varName()`) e de inicialização (`fs.init()`) tinham seus nomes mantidos na lista `locals`, fazendo com que leituras posteriores da variável externa homônima resolvessem para o slot da variável do loop (que no final do loop fica undefined/top no frame JVM, gerando `VerifyError: Bad local variable type`).
+> Ajustado para renomear a entrada de `locals` no término do loop para `#forInVar` / `#forInitVar`, preservando o índice/slot alocado para metadados de backends (JS/Native) enquanto libera o nome original para resolver a variável do escopo externo.
+> Prova: `CoreRegressionE2ETest.forInLoopVariableShadowingOuterVariable` provando shadowing com String e Int em `for-in` e em `for` clássico.
+> Suíte `CoreRegressionE2ETest` 71/71 verde, `check_500.sh` sem classes críticas.
+> **PRÓXIMO PASSO:** Continuar triagem da fila de issues abertas (#181, #180, #169).
 
 
 
