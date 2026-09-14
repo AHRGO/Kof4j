@@ -6852,35 +6852,48 @@ the user's — a compile-time diagnostic is the goal (rule 6).
 - **Fix:** `ExpressionTyper.inferExprType` for `IfExpr` and `SwitchExpr` now returns `Object` (`java.lang.Object`) when `branchTypesDiffer` is true, matching the receiver variable's type with the values unified on the stack.
 - **Proof:** `CoreRegressionE2ETest.ifExpressionMixedNumericBranches` proves both cases (`1 else 2.5` and `3.5 else 4`) compiling and running correctly on JVM and JS.
 
-### §201 — `for`/`for-in` no JS: variável de loop `_forInitVar_*`/`_forInVar` referenciada sem declaração (`ReferenceError`) — 🔴 OPEN 14/09 (introduzido por `75e38d35` #182, dono = lane do fix #182)
+### §201 — `for`/`for-in` in JS: loop variable `_forInitVar_*`/`_forInVar` referenced without a declaration (`ReferenceError`) — ✅ FIXED 14/09 (introduced by `75e38d35` #182; root fixed by the bugs-and-gaps lane `192.168.100.15`)
 
-- **Sintoma (JS):** `ReferenceError: _forInitVar_3 is not defined` /
-  `_forInVar is not defined` — o programa roda no JVM mas quebra no JS.
-- **Repro mínimo:** `ArrayBoundsStressTest#stress007_recoversCleanlyAfterRejectedAccess`
-  e `#stress003to008and017_mixedIndexSeveralSeeds` (linha JS), `ArrayBoundsDeepStressTest#deepStress003_*`,
-  `BackendParityTest#parityCrossTargetGroupA` (break-continue). 4–5 vermelhos.
-- **Bisseção (provada):** `75e38d35` RED ×2 / `b3ab9858`+codemod e `75e38d35~1` GREEN.
-  O fix #182 ("unshadow loop variable names in locals after for/for-in")
-  trocou o nome da variável no `locals` do typer mas o backend JS emite a
-  declaração com um nome e o corpo referencia o `_forInitVar_N` novo (ou
-  vice-versa) — a declaração some do escopo do for no JS.
-- **Não fixei:** é regra 6 + lane alheia viva (o autor comitou 30 min antes
-  da descoberta); correção é do dono do #182. Linha no DOING.md da mesma
-  agregação. JVM/Native/Script NÃO são afetados (só JS).
+- **Symptom (JS):** `ReferenceError: _forInitVar_3 is not defined` /
+  `_forInVar is not defined` — the program runs on the JVM but breaks on JS.
+- **Minimal repro:** `ArrayBoundsStressTest#stress007_recoversCleanlyAfterRejectedAccess`
+  and `#stress003to008and017_mixedIndexSeveralSeeds` (JS line), `ArrayBoundsDeepStressTest#deepStress003_*`,
+  `BackendParityTest#parityCrossTargetGroupA` (break-continue). 4–5 red.
+- **Bisection (proven):** `75e38d35` RED ×2 / `b3ab9858`+codemod and `75e38d35~1` GREEN.
+- **Root cause (measured):** the #182 fix renames, on loop exit, the `locals`
+  entry to `#forInitVar`/`#forInVar` to free the original name back to the
+  outer scope (correct on JVM/Native/Script, which resolve by slot/index).
+  The JS backend, however, resolves by NAME and treats **any** raw local with a
+  `#` prefix as a droppable compiler-temp (`JsExpressionParser.isCompilerTemp`,
+  used by `JsExpressionStatementParser`): the loop variable's store goes into
+  the `preamble` and is **discarded** when the next op is an `if`
+  (`parseIfBody` returns without the preamble) → the variable is referenced
+  without a declaration. It only breaks when the loop body starts with an
+  `if`/complex block (the simple `while` case escaped by accident). The same
+  mechanism affected `#scopedVar$…` from the #203 fix (`aadc0176`).
+- **Fix (root):** `isCompilerTemp` no longer treats `#forInitVar`/`#forInVar`/
+  `#scopedVar$…` as temporaries — they are renames of USER variables with a
+  persistent binding and must be declared in JS. The real temporaries
+  (`#retVal`, `#switch`, `#idx`, `#coll`, `#inc`, `#excTmp`…) are unchanged.
+- **Proof:** `CoreRegressionE2ETest.loopBodyLocalsBeforeIfAreDeclaredInJs`
+  (green with the fix; red without it — `ReferenceError: _forInitVar_2 is not
+  defined`) + `ArrayBoundsStressTest` 15/15, `ArrayBoundsDeepStressTest` 6/6,
+  `BackendParityTest` 19/19, `CoreRegressionE2ETest` 75/75. JVM/Native/Script
+  untouched (JS parser only).
 
-### §202 — `String.split(...).get(i)` → SEM028 "array não tem método get()" (typer passou a cravar `String[]` do split; o `.get` era aceito antes por tipagemUnknown) — 🔴 OPEN 14/09 (introduzido por `e6e5c9b8`, dono = lane de inferência de tipos/String methods)
+### §202 — `String.split(...).get(i)` → SEM028 "array has no method get()" (the typer now pins `String[]` for split; `.get` used to be accepted via Unknown typing) — 🔴 OPEN 14/09 (introduced by `e6e5c9b8`, owner = type-inference/String-methods lane)
 
-- **Sintoma:** `Compilation should succeed: [Diagnostic ... code=SEM028]` em
-  `KofTimeE2ETest#todayIsoFormatDateIsoIsToday{Jvm,Js,Native}` (o programa
-  usa `parts.get(0)` após `today.split("-")`), `CodegenKitchenSinkTest`
-  (strings), e família em `ConformanceMatrixTest`. 6–9 vermelhos.
-- **Bisseção (provada):** `e6e5c9b8` RED / `75e38d35` GREEN (`git worktree`
-  com `mvn -o test -pl kof-compiler -Dtest=...`).
-- **Mecanismo:** `e6e5c9b8` deu retorno real ao `split`/`toCharArray`/etc. no
-  typer (`CollectionMethodTyper`/`StringMethodRegistry`), então o receiver de
-  `.get(i)` virou `Type.ArrayType` e caiu no ramo SEM028 (diagnóstico por
-  design: arrays crus não têm `get()`; o idiom é `arr[i]`). Antes o receiver
-  era desconhecido e o `.get` passava. **Decisão de contrato (regra 6):**
-  arrasar os testes (usar `parts[0]`) OU aceitar `.get` em `ArrayType` —
-  escolha do dono da lane, não desta; o test-corpus que usou `.get` em array
-  está em `KofTimeE2ETest` (S7e) e precisa de align com o que for decidido.
+- **Symptom:** `Compilation should succeed: [Diagnostic ... code=SEM028]` in
+  `KofTimeE2ETest#todayIsoFormatDateIsoIsToday{Jvm,Js,Native}` (the program
+  uses `parts.get(0)` after `today.split("-")`), `CodegenKitchenSinkTest`
+  (strings), and a family in `ConformanceMatrixTest`. 6–9 red.
+- **Bisection (proven):** `e6e5c9b8` RED / `75e38d35` GREEN (`git worktree`
+  with `mvn -o test -pl kof-compiler -Dtest=...`).
+- **Mechanism:** `e6e5c9b8` gave a real return type to `split`/`toCharArray`/etc.
+  in the typer (`CollectionMethodTyper`/`StringMethodRegistry`), so the receiver
+  of `.get(i)` became `Type.ArrayType` and hit the SEM028 branch (a diagnostic by
+  design: raw arrays have no `get()`; the idiom is `arr[i]`). Before, the receiver
+  was unknown and `.get` passed. **Contract decision (rule 6):**
+  flatten the tests (use `parts[0]`) OR accept `.get` on `ArrayType` —
+  the lane owner's choice, not this lane's; the test corpus that used `.get` on
+  an array is in `KofTimeE2ETest` (S7e) and needs to align with whatever is decided.

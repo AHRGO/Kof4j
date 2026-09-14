@@ -6837,3 +6837,49 @@ usuário — diagnostic em compile-time é a meta (regra 6).
 - **Causa raiz:** O lowering de `IfExpr` e `SwitchExpr` já aplicava boxing in-branch quando `branchTypesDiffer` era verdadeiro (boxing para `Object`), mas `ExpressionTyper.inferExprType` retornava cegamente o tipo do primeiro ramo (`thenType`). Assim, `var result` recebia `Int` (ou `Double`), alocava slot/tipo primitivo e tentava fazer `istore`/`dstore` de uma referência `Object`/`Number`.
 - **Fix:** `ExpressionTyper.inferExprType` para `IfExpr` e `SwitchExpr` agora retorna `Object` (`java.lang.Object`) quando `branchTypesDiffer` for verdadeiro, casando o tipo da variável receptora com os valores unificados na pilha.
 - **Prova:** `CoreRegressionE2ETest.ifExpressionMixedNumericBranches` prova os dois casos (`1 else 2.5` e `3.5 else 4`) compilando e executando corretamente na JVM e JS.
+
+### §201 — `for`/`for-in` no JS: variável de loop `_forInitVar_*`/`_forInVar` referenciada sem declaração (`ReferenceError`) — ✅ CORRIGIDO 14/09 (introduzido por `75e38d35` #182; causa raiz fixada pela lane bugs-and-gaps `192.168.100.15`)
+
+- **Sintoma (JS):** `ReferenceError: _forInitVar_3 is not defined` /
+  `_forInVar is not defined` — o programa roda no JVM mas quebra no JS.
+- **Repro mínimo:** `ArrayBoundsStressTest#stress007_recoversCleanlyAfterRejectedAccess`
+  e `#stress003to008and017_mixedIndexSeveralSeeds` (linha JS), `ArrayBoundsDeepStressTest#deepStress003_*`,
+  `BackendParityTest#parityCrossTargetGroupA` (break-continue). 4–5 vermelhos.
+- **Bisseção (provada):** `75e38d35` RED ×2 / `b3ab9858`+codemod e `75e38d35~1` GREEN.
+- **Causa raiz (medida):** o fix #182 renomeia, na saída do loop, a entrada de
+  `locals` para `#forInitVar`/`#forInVar` para liberar o nome original ao
+  escopo externo (correto no JVM/Native/Script, que resolvem por slot/índice).
+  O backend JS, porém, resolve por NOME e trata **qualquer** local cru com
+  prefixo `#` como compiler-temp descartável (`JsExpressionParser.isCompilerTemp`,
+  usado por `JsExpressionStatementParser`): o store da variável de loop entra
+  no `preamble` e é **descartado** quando o próximo op é um `if`
+  (`parseIfBody` retorna sem o preamble) → a variável é referenciada sem
+  declaração. Só quebra quando o corpo do loop começa com `if`/bloco complexo
+  (o caso `while` simples escapava por acaso). Mesmo mecanismo afetava
+  `#scopedVar$…` do fix #203 (`aadc0176`).
+- **Fix (root):** `isCompilerTemp` deixa de tratar `#forInitVar`/`#forInVar`/
+  `#scopedVar$…` como temporários — são renames de variáveis de USUÁRIO com
+  binding persistente e precisam ser declaradas no JS. Os temporários reais
+  (`#retVal`, `#switch`, `#idx`, `#coll`, `#inc`, `#excTmp`…) seguem como antes.
+- **Prova:** `CoreRegressionE2ETest.loopBodyLocalsBeforeIfAreDeclaredInJs`
+  (verde com o fix; vermelho sem ele — `ReferenceError: _forInitVar_2 is not
+  defined`) + `ArrayBoundsStressTest` 15/15, `ArrayBoundsDeepStressTest` 6/6,
+  `BackendParityTest` 19/19, `CoreRegressionE2ETest` 75/75. JVM/Native/Script
+  não tocados (só o parser JS).
+
+### §202 — `String.split(...).get(i)` → SEM028 "array não tem método get()" (typer passou a cravar `String[]` do split; o `.get` era aceito antes por tipagemUnknown) — 🔴 ABERTO 14/09 (introduzido por `e6e5c9b8`, dono = lane de inferência de tipos/String methods)
+
+- **Sintoma:** `Compilation should succeed: [Diagnostic ... code=SEM028]` em
+  `KofTimeE2ETest#todayIsoFormatDateIsoIsToday{Jvm,Js,Native}` (o programa
+  usa `parts.get(0)` após `today.split("-")`), `CodegenKitchenSinkTest`
+  (strings), e família em `ConformanceMatrixTest`. 6–9 vermelhos.
+- **Bisseção (provada):** `e6e5c9b8` RED / `75e38d35` GREEN (`git worktree`
+  com `mvn -o test -pl kof-compiler -Dtest=...`).
+- **Mecanismo:** `e6e5c9b8` deu retorno real ao `split`/`toCharArray`/etc. no
+  typer (`CollectionMethodTyper`/`StringMethodRegistry`), então o receiver de
+  `.get(i)` virou `Type.ArrayType` e caiu no ramo SEM028 (diagnóstico por
+  design: arrays crus não têm `get()`; o idiom é `arr[i]`). Antes o receiver
+  era desconhecido e o `.get` passava. **Decisão de contrato (regra 6):**
+  arrasar os testes (usar `parts[0]`) OU aceitar `.get` em `ArrayType` —
+  escolha do dono da lane, não desta; o test-corpus que usou `.get` em array
+  está em `KofTimeE2ETest` (S7e) e precisa de align com o que for decidido.

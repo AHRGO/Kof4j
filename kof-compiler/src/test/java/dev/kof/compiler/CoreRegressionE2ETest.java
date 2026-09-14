@@ -1568,6 +1568,44 @@ class CoreRegressionE2ETest {
                 """, "a\nb\nouter\n1\n2\n100\n0\n1\n999", tempDir, "for-in-shadow-outer");
     }
 
+    // §201 (regression of the #182 fix): the scope-exit rename of the loop
+    // variable to "#forInitVar"/"#forInVar" made the JS backend treat its
+    // store as a compiler temp (any raw local starting with "#" is dropped
+    // from the preamble when the next op is an `if`), so the loop variable
+    // was referenced without a declaration (`ReferenceError`). The rename is
+    // correct for JVM/Native/Script (slot by index) — only JS resolves by
+    // name, so the fix is in JsExpressionParser.isCompilerTemp.
+    @Test
+    void loopBodyLocalsBeforeIfAreDeclaredInJs(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                main() {
+                    var a = new Int[3]
+                    for (var i = 0; i < 3; i = i + 1) { a[i] = i * 10 }
+                    var ok = 0
+                    for (var c = 0; c < 3; c = c + 1) {
+                        var first = a[1] == 10
+                        var second = a[2] == 20
+                        if (first && second) {
+                            ok = ok + 1
+                        }
+                    }
+                    println(ok)
+
+                    var lst = new List<Int>()
+                    lst.add(1)
+                    lst.add(2)
+                    for (var n in lst) {
+                        var even = n % 2 == 0
+                        if (even) {
+                            println("even")
+                        } else {
+                            println("odd")
+                        }
+                    }
+                }
+                """, "3\nodd\neven", tempDir, "loop-body-locals-if-js");
+    }
+
     // Issue #181: Assigning primitive literal to Object-typed field missing autobox
     // VerifyError: Bad type on operand stack at putfield.
     @Test

@@ -77,7 +77,14 @@ boolean isIncTmpLoadAhead(MethodCtx ctx, int[] pos) {
 
 boolean isCompilerTemp(MethodCtx ctx, int index) {
         String raw = ctx.rawLocalNames.get(index);
-        return raw != null && raw.startsWith("#");
+        if (raw == null || !raw.startsWith("#")) return false;
+        // #scopedVar$... (#aadc0176) and #forInitVar / #forInVar (#75e38d35)
+        // are scope-exit renames of real user variables — they have a
+        // persistent binding throughout the enclosing scope and MUST be
+        // declared in JS. Dropping them causes ReferenceError (§201).
+        if (raw.startsWith("#scopedVar$")) return false;
+        if (raw.equals("#forInitVar") || raw.equals("#forInVar")) return false;
+        return true;
     }
 
 JsIr.JsExpression wrapStack(List<Object> stack) {
