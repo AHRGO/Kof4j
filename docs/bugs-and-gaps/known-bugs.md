@@ -6229,3 +6229,29 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
 - **Nota Q7 (código morto):** `KofInterpreterOps.arrayStore`/`arrayLoad` e o
   `KofInterpreterBuiltins` que os expõe são fachada não-invocada — catalogar
   a remoção junto do fix (não é stub de feature, é resto de refactor).
+
+### §186 — JVM/KofJS: inicializador de campo `static` com expressão não-constante é descartado silenciosamente (nenhum `<clinit>` é sintetizado) — ❌ ABERTO, ALTA PRIORIDADE, [issue #133](https://github.com/KofLang/Kof4j/issues/133) (colaborador Jonas Rocha, varredura KOF-SBD-001-STRESS; portado do `docs/development/known-bugs.md` do PR #130)
+
+- **Sintoma:** `static Int[] shared = new Int[3]` — `Holder.shared` é `null`
+  no JVM e `undefined` no KofJS; `static Int x = compute()` imprime `0`.
+  Literal constante (`static Int calls = 0`) funciona — só expressões
+  não-constantes são descartadas. Silencioso: compila, roda, zero diagnóstico
+  (viola R6).
+- **Causa raiz:** `visitField(..., field.initialValue())` só transporta o
+  atributo `ConstantValue` (primitivos/String constantes em tempo de
+  compilação). Qualquer inicializador não-constante exige um método `<clinit>`
+  — que NENHUM dos 3 backends compilados (JVM, Native, KofJS) sintetiza; só o
+  interpretador simula `<clinit>` lazy (`KofInterpreterMembers`).
+- **Escopo confirmado:** JVM (array e escalar) e KofJS (array) reproduzidos na
+  varredura; Native não testado empiricamente (mesma ausência de `<clinit>` no
+  código — provavelmente afetado; NÃO marcar NA sem medir).
+- **Seriedade:** `static X = new X(...)`/`static X = função()` é padrão comum
+  (config, tabelas, singletons, caches). Provavelmente escondido porque o
+  corpus usa só literais.
+- **Ação sugerida:** sintetizar `<clinit>` nos 3 backends compilados quando a
+  classe tem ≥1 estático não-constante (atribuições na ordem de declaração —
+  mesma semântica que o interpretador já simula). Escopo estrutural: item de
+  `docs/development/`, não bugfix de 1 commit.
+- **Workaround:** sem inicializador não-constante em `static`; atribuir
+  explicitamente num método chamado antes do primeiro uso.
+- **Descoberto:** 13/09, KOF-SBD-001-STRESS (STRESS-016).
