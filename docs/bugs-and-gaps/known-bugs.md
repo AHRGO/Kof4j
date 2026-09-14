@@ -7263,7 +7263,9 @@ of the issues (repros kept in the issue comments):
       for (var n: Int in lst) { println(n) }
   }
   ```
-  `COMPILE FAIL: Undefined variable or type: 'in'` (SEM, file/line=0). The
+  `COMPILE FAIL: Undefined variable or type: 'in' [SEM011]` (file/line=0). The
+  reporter lists ALL annotated variants failing identically (`String`,
+  `Object`, `Color` over `Color.values()`) — systematic, not Int-specific.
   parser/typer reads the type annotation `n: Int` and then treats the keyword
   `in` as an IDENTIFIER expression. The un-annotated form is GREEN on the same
   build: `for (var n in listOf(1,2,3))` prints `1|2|3` (v4a, ec=0).
@@ -7292,8 +7294,11 @@ of the issues (repros kept in the issue comments):
   slot arrives as null/garbage. With a variable store
   (`var r1 = Fmt.of(10); println(r1)`) the same broken IR crashes at load:
   `VerifyError: Operand stack underflow` (reflex-run, anti-JavaFX-trap), and
-  the full 2-call body dies earlier in `COMPUTE_FRAMES (visitMaxs)`
-  (`frame crash em Default/Main.main ... n235.kf:9`). Single-overload classes
+  the full 2-call body dies earlier in `COMPUTE_FRAMES (visitMaxs)`:
+  `ArrayIndexOutOfBoundsException: Index -1 ... [COMP002]` — the reporter's
+  IR dump corroborates exactly: `KofStoreLocal[type=String]` with NO
+  preceding `KofCall[of]` (the call node is missing BEFORE bytecode, i.e.
+  a lowering/IR bug, not an ASM bug). Single-overload classes
   are fine — resolution picks the entry, but the emission path for
   MULTI-overload statics drops the call node.
 - **Family:** overload dispatch (0.4.0 §131 for methods) — the JVM backend's
