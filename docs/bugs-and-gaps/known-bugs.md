@@ -7434,6 +7434,33 @@ of the issues (repros kept in the issue comments):
   declared in the interface body must enter the type's field table the same
   way class statics do.
 
+### §231 — `NativeStringCompareCrossTest` (lane nat §111) NOT MIGRATED to the `split()→String[]` contract → 2 reds at the release gate (compile error)
+
+- **Symptom (measured 14/09 ~16:40 by a docs/development lane agent running
+  the kof-cli module and scanning FAILURE reports PER MODULE — rule Q4
+  hunt; owner = 192.168.100.17, catalogued, NOT attacked — different lane):**
+  `NativeStringCompareCrossTest.riscv64/aarch64StringCompareHashEquals`
+  fail at the **compile** stage (not a golden diff):
+  `array não tem método 'get()'; use o operador arr[i]`. The embedded
+  `SPLIT_PROGRAM` (NativeStringCompareCrossTest.java:119/122/127/131) still
+  writes `a.get(0)`/`a.get(1)` over the result of `"…".split(",")`, but the
+  contract of §202 (closed 14/09 by `602dcbc0`) made `split()` return
+  `String[]` and moved array access to the SUBSCRIPT `a[i]`. `602dcbc0`
+  migrated `NativeE2ETest` but missed this cross file → the test that was
+  green 11/09 is now RED at HEAD (5th release-gate red, was 3).
+- **Proof the fix is a pure contract-migration (golden preserved):** the
+  SAME program with `a[0]`/`a[1]`/`d[0]`/`f[0]`/`f[1]` runs on the JVM
+  (`ec=0`) producing EXACTLY the golden `SPLIT_GOLDEN = "2|a|b|1|a|0|1|[]|
+  2|2||a"` (measured 16:40, `/tmp/opencode/r292/splitfull.kf`). So the 4
+  `get(N)`→`[N]` edits keep the test's assertions byte-identical — it is not
+  relaxing a test, it is catching the test up with a decision already merged.
+- **Owner / action:** the file is §111 (lane nat, closed 11/09). Two valid
+  owners: whoever merged `602dcbc0` (the contract change owes its blast-
+  radius migration) or the nat lane. This lane (docs/development) catalogues
+  and does NOT edit another lane's test. Fix = mechanical 4× `.get(N)`→`[N]`
+  in SPLIT_PROGRAM + re-run the 2 cross tests (qemu) expecting the existing
+  golden. R6/anti-false-green: do NOT lower the assert.
+
 ## §193 — E2E blog (F12): raw `db.query` + `.get("col")`/resources inside a web handler take down the connection with `VerifyError`/`connection closed before headers` — catalogued 14/09 (lane development, owner = 192.168.100.18, discovered in the blog E2E D-SPRING F12)
 
 > **Renumbered from §189→§193 (14/09, owner = 192.168.100.17):** triple

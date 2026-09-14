@@ -7377,6 +7377,33 @@ antes — lição da obsolescência do §206/§207), corpos-exatos das issues
   estáticos declarados no corpo da interface precisam entrar na tabela de
   fields do tipo igual aos estáticos de classe.
 
+### §231 — `NativeStringCompareCrossTest` (lane nat §111) NAO MIGRADO ao contrato `split()→String[]` → 2 reds no portão de release (erro de compilacao)
+
+- **Sintoma (medido 14/09 ~16:40 por um agente da lane docs/development ao
+  rodar o modulo kof-cli e varrer relatorios FAILURE POR MODULO — caça Q4;
+  dono = 192.168.100.17, catalogado, NAO atacado — lane alheia):**
+  `NativeStringCompareCrossTest.riscv64/aarch64StringCompareHashEquals`
+  falham no estagio de **compilacao** (nao diff de golden):
+  `array não tem método 'get()'; use o operador arr[i]`. O
+  `SPLIT_PROGRAM` embutido (NativeStringCompareCrossTest.java:119/122/127/131)
+  ainda escreve `a.get(0)`/`a.get(1)` sobre o resultado de `"…".split(",")`,
+  mas o contrato do §202 (fechado 14/09 por `602dcbc0`) fez `split()`
+  retornar `String[]` e moveu acesso a array pro SUBSCROTO `a[i]`. O
+  `602dcbc0` migrou `NativeE2ETest` mas esqueceu este arquivo cross → o teste
+  que estava verde 11/09 esta VERMELHO no HEAD (5º red do portao, eram 3).
+- **Prova de que o fix e migracao pura de contrato (golden preservado):** o
+  MESMO programa com `a[0]`/`a[1]`/`d[0]`/`f[0]`/`f[1]` roda na JVM (`ec=0`)
+  produzindo EXATAMENTE o golden `SPLIT_GOLDEN = "2|a|b|1|a|0|1|[]|2|2||a"`
+  (medido 16:40, `/tmp/opencode/r292/splitfull.kf`). As 4 edicoes
+  `get(N)`→`[N]` mantem as assoes do teste byte-identicas — nao e relaxar
+  um teste, e alcancar com o teste uma decisao ja merged.
+- **Dono / acao:** o arquivo e §111 (lane nat, fechado 11/09). Dois donos
+  validos: quem mergeou `602dcbc0` (a mudanca de contrato deve a migracao do
+  seu blast-radius) ou a lane nat. Esta lane (docs/development) cataloga e
+  NAO edita teste de outra lane. Fix = 4× `.get(N)`→`[N]` mecanicos no
+  SPLIT_PROGRAM + re-rodar os 2 cross (qemu) esperando o golden existente.
+  R6/anti-falso-verde: NAO baixar o assert.
+
 §193 — E2E blog (F12): `db.query` cru + `.get("col")`/recursos dentro de handler web derr
 
 ### §228 — `List[i] = v` (e o composto `List[i] += v`) era ACEITO mas nunca baixado: JVM `VerifyError` no `aastore`, Native SIGSEGV (exit 139), JS silencioso — ✅ CORRIGIDO 14/09 (exposto por `0ab25887`; fix = lane bugs-and-gaps `192.168.100.15`)
