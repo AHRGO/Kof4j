@@ -363,12 +363,32 @@ public final class ClassFileParser {
                 interfaces, classSig, fields, methods, attrs);
     }
 
+    /**
+     * Indice de constPool a partir de um slot "#N" AUTO-PRODUZIDO pelo parse.
+     * Utf8 arbitrario (tag 1) pode morar em qualquer slot e chegar aqui via
+     * this_class/super/refs (#247/#248: parseInt derramava NFE crua em
+     * .class corrompido/adversario lido do classpath). -1 = nao resolvivel
+     * (mesma saida do no-match: o chamador usa a entrada crua).
+     */
+    private static int parseCpIndex(String s) {
+        if (s == null || s.isEmpty()) return -1;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c < '0' || c > '9') return -1;
+        }
+        try {
+            return Integer.parseInt(s);
+        } catch (NumberFormatException e) {
+            return -1; // "00000000001234567890..." digital mas fora do int
+        }
+    }
+
     private static String resolveClass(String[] constPool, int idx) {
         if (idx >= constPool.length) return "INVALID";
         String entry = constPool[idx];
         if (entry != null && entry.startsWith("#")) {
-            int cpIdx = Integer.parseInt(entry.substring(1));
-            if (cpIdx < constPool.length && constPool[cpIdx] != null) {
+            int cpIdx = parseCpIndex(entry.substring(1));
+            if (cpIdx >= 0 && cpIdx < constPool.length && constPool[cpIdx] != null) {
                 return constPool[cpIdx];
             }
         }
@@ -433,7 +453,10 @@ public final class ClassFileParser {
             if (ntIdx >= constPool.length) continue;
             String nt = constPool[ntIdx];
             if (nt == null || !nt.startsWith("#")) continue;
-            int nameIdx = Integer.parseInt(nt.substring(1, nt.indexOf('#', 1)));
+            int hash2 = nt.indexOf('#', 1);
+            if (hash2 < 0) continue;
+            int nameIdx = parseCpIndex(nt.substring(1, hash2));
+            if (nameIdx < 0) continue; // .class corrompido: "#<utf8>" no slot NameAndType
             if (!"makeConcatWithConstants".equals(constPool[nameIdx])) continue;
             constPool[i] = "CONCAT:" + recipes[bsIdx];
         }
