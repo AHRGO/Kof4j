@@ -715,7 +715,16 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > Regra da lição gravada (4e0957ee + cdda27d9): `mvn -o compile`
 > IMEDIATAMENTE antes de medir (falso-vermelho de classe obsoleta queimou
 > meu primeiro "#218 ainda reproduz"); assir SEMÂNTICA do título.
-> **Gatilhos do próximo disparo (estado 14/09 ~14:42, após ciclo 14:20–14:42):**
+> **Gatilhos do próximo disparo (estado 14/09 ~15:00, ciclo 14:42–15:00):**
+> Neste ciclo: #234→§226 e #235→§227 catalogadas c/ prova javap
+> (for-in anotado culpa `in`; static overload perde o invokestatic →
+> VerifyError/COMPUTE_FRAMES), prova postada nas duas. RE-MEDIÇÃO dos
+> fixados alheios (gatilho 1): §190+§195 ✅ (KofBlogE2ETest verde 14:35),
+> §220 ✅ (8a38faa4, #224), §221 ✅ (769371c2, #225). RE-MEDIÇÃO das que
+> CONTINUAM abertas (nenhum fix alheio as tocou): §213 (i as Object →
+> VerifyError, reflexão), §216 (Char 65|char=65), §217 (Box<T>.get →
+> VerifyError bad-type). Fila = 24, sync corpo=linha. docs/status.md
+> intocado (só referencia o gate cross-arch, ainda vermelho — correto).
 > Neste ciclo: §190+§195 ✅ (KofBlogE2ETest verde re-medido 14:35, fix
 > test-side a689cbd2 lane .18 já no HEAD), §220 ✅ (8a38faa4 lane analyzer,
 > prova postada #224 — issue fechada 17:37), fila sincronizada corpo=linha
