@@ -127,6 +127,12 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > quentes. O codemod dos 17 locals puros restantes ficou p/ depois (varios
 > carregam chamada com efeito — deletar linha = mudanca de comportamento).## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (14/09 ~16:20, dono = 192.168.100.22, lane compiler): fix issue #238 — interface static fields not accessible — SEM025 on access.**
+> - Causa raiz: (1) em `SymbolTableBuilder.defineInterfaceMembers()`, os membros de interface do tipo `FieldDeclarationNode` não eram registrados na tabela de símbolos (`classSym.members()` / `classScope`), causando falha `SEM025` na checagem semântica ao resolver `Interface.FIELD`. (2) no lowering em `CompilerClassLowering.lowerInterface()`, campos de interface eram gerados sem as flags obrigatórias exigidas pela especificação JVM (`ACC_PUBLIC | ACC_STATIC | ACC_FINAL`), gerando `ClassFormatError: Illegal field modifiers in class K: 0x9`.
+> - Correção: `SymbolTableBuilder.defineInterfaceMembers()` agora registra campos em interfaces com `AccessFlags.STATIC` tanto no escopo da classe quanto em `classSym.members()`. `CompilerClassLowering.lowerInterface()` assegura os modificadores `ACC_PUBLIC | ACC_STATIC | ACC_FINAL` em todos os campos de interface emitidos no bytecode.
+> - Prova: `CoreRegressionE2ETest#interfaceStaticFieldAccessJvm`.
+> - Próximo: issues #232, #239.
+
 > **✅ FEITO (14/09 ~16:00, dono = 192.168.100.22, lane compiler): fix issue #230 — Static method in interface compiled with ACC_ABSTRACT flag causing ClassFormatError.**
 > - Causa raiz: (1) em `CompilerClassLowering.lowerMethodInner()`, qualquer método em interface sem modificador `default` recebia automaticamente `access |= AccessFlags.ABSTRACT`, mesmo quando continha modificador `static` e corpo concreto, resultando na flag combinada ilegal `0x409` (`ACC_PUBLIC | ACC_STATIC | ACC_ABSTRACT`) rejeitada pela especificação da JVM §4.6. (2) em `JvmOpEmitter.emit()`, na instrução `INVOKESTATIC`, o parâmetro `isInterface` de `visitMethodInsn` era fixado em `false`, o que para métodos estáticos em interfaces causava `IncompatibleClassChangeError: Method ... must be InterfaceMethodref constant` no bytecode da chamada.
 > - Correção: (1) em `CompilerClassLowering`, métodos estáticos de interfaces (`method.modifiers().contains("static")`) não recebem mais `AccessFlags.ABSTRACT`. (2) em `JvmOpEmitter`, quando `kc.kind() == STATIC`, verifica-se se a classe dona é uma interface no módulo (`ACC_INTERFACE`), passando `isInterface = true` para `visitMethodInsn(INVOKESTATIC, ...)`.

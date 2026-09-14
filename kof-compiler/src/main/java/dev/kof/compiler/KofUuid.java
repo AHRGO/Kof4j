@@ -55,7 +55,8 @@ public final class KofUuid {
      * bandas hex é EXCLUSIVO, 58/71/103) + aarch64 via tradutor; prova
      * KofUuidTest.isUuidCrossArch (assert sob qemu — bug 59 no println).
      */
-    static boolean supportedOn(String function, Target target) {
+    static boolean supportedOn(@SuppressWarnings("unused") String function,
+            @SuppressWarnings("unused") Target target) {
         // v7 (S3b.2): JVM/SCRIPT/JS têm o emit (SecureRandom / Date.now /
         // crypto). Os 3 nativos ainda não têm fatia asm — UUID001 os bloqueia
         // com código de erro (R6: nunca link-quebrado silencioso, lição §89).

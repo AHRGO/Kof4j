@@ -191,7 +191,14 @@ public final class SymbolTableBuilder {
         SymbolTable classScope = classSym.members().enterScope();
         sa.classMemberScopes().put(iface.name(), classScope);
         for (AstNode member : iface.members()) {
-            if (member instanceof MethodDeclarationNode method) {
+            if (member instanceof FieldDeclarationNode field) {
+                Type fieldType = MemberResolver.resolveType(sa, field.type(), classScope);
+                int flags = AccessFlags.STATIC;
+                if (field.modifiers().contains("static")) flags |= AccessFlags.STATIC;
+                SymbolTable.FieldSymbol fs = new SymbolTable.FieldSymbol(field.name(), fieldType, flags, iface.name());
+                classSym.members().define(fs);
+                classScope.define(fs);
+            } else if (member instanceof MethodDeclarationNode method) {
                 Type returnType = MemberResolver.resolveType(sa, method.returnType(), classScope);
                 List<Type> paramTypes = new ArrayList<>();
                 for (FormalParameterNode p : method.parameters()) paramTypes.add(Type.of(p.type()));

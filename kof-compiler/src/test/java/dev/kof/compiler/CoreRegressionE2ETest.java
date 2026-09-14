@@ -2122,4 +2122,44 @@ class CoreRegressionE2ETest {
         assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
         assertEquals("7\n25\nutils", runJvm(out));
     }
+
+    // Issue #238 — interface static fields not accessible — SEM025 on access
+    @Test
+    void interfaceStaticFieldAccessJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("interface_field.kf");
+        Files.writeString(src, """
+                interface K {
+                    static Int VAL = 42
+                }
+
+                interface Limits {
+                    static Int MAX = 100
+                    static String TAG = "limit"
+                }
+
+                interface Configurable {
+                    static Int DEFAULT_SIZE = 10
+                    void configure()
+                }
+
+                class Widget implements Configurable {
+                    void configure() {
+                        println("ok")
+                    }
+                }
+
+                main() {
+                    println(K.VAL)
+                    println(Limits.MAX)
+                    println(Limits.TAG)
+                    println(Configurable.DEFAULT_SIZE)
+                    var w = new Widget()
+                    w.configure()
+                }
+                """);
+        Path out = tempDir.resolve("interface_field-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("42\n100\nlimit\n10\nok", runJvm(out));
+    }
 }

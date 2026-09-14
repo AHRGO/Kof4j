@@ -94,8 +94,13 @@ public final class CompilerClassLowering {
         List<IRMethod> methods = new ArrayList<>();
         List<IRField> fields = new ArrayList<>();
         for (AstNode member : iface.members()) {
-            if (member instanceof MethodDeclarationNode method) methods.add(CompilerClassLowering.lowerMethod(driver,method, internalName, true, List.of()));
-            else if (member instanceof FieldDeclarationNode field) fields.add(CompilerClassLowering.lowerField(driver,field, List.of()));
+            if (member instanceof MethodDeclarationNode method) {
+                methods.add(CompilerClassLowering.lowerMethod(driver, method, internalName, true, List.of()));
+            } else if (member instanceof FieldDeclarationNode field) {
+                IRField irF = CompilerClassLowering.lowerField(driver, field, List.of());
+                int fAccess = irF.accessFlags() | AccessFlags.PUBLIC | AccessFlags.STATIC | AccessFlags.FINAL;
+                fields.add(new IRField(irF.name(), irF.type(), fAccess, irF.initialValue(), irF.annotations()));
+            }
         }
         return new IRClass(internalName, "java/lang/Object", ifaces, access, fields, methods, List.of(), null,
                 typeId, CompilerAnnotations.lowerAnnotations(driver, iface.annotations()));

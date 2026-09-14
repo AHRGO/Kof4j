@@ -231,7 +231,8 @@ final class NativeOpHelpers {
         sb.append("    pushq %rax\n");
     }
 
-    static void emitArrayStore(NativeBackend nb, StringBuilder sb, KofArrayStore as) {
+    static void emitArrayStore(@SuppressWarnings("unused") NativeBackend nb,
+            StringBuilder sb, KofArrayStore as) {
         sb.append("    popq %rdx\n");
         sb.append("    popq %rsi\n");
         sb.append("    popq %rdi\n");

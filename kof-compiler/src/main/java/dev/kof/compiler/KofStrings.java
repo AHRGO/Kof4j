@@ -83,7 +83,8 @@ public final class KofStrings {
             "kof_strings_toCamelCase", "kof_strings_toPascalCase",
             "kof_strings_toSnakeCase", "kof_strings_toKebabCase", "kof_strings_slugify");
 
-    static boolean supportedOn(String function, Target target) {
+    static boolean supportedOn(@SuppressWarnings("unused") String function,
+            @SuppressWarnings("unused") Target target) {
         // STRN001 FECHADO 09/09: os conversores de palavra (joinWords) foram
         // portados p/ riscv64 (fatia B15) e o aarch64 é o MESMO asm traduzido —
         // paridade byte-a-byte travada por diff do golden oracle x86 no qemu.
