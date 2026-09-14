@@ -1,148 +1,153 @@
+[English](README.md) | [Português](README.pt_BR.md)
+
 # Kof Language Reference
 
-**Versão da especificação:** 0.3.0-beta · **Extraída de:** `kof-compiler` (branch `beta-0.3.0`, 06/09/2026)
+**Specification version:** 0.3.0-beta · **Extracted from:** `kof-compiler` (branch `beta-0.3.0`, 06/09/2026)
 
-Esta é a **referência da linguagem Kof**. Ela descreve *o que é um programa Kof
-válido* e *qual é o significado desse programa* — independentemente de como o
-compilador atual o implementa.
+This is the **Kof language reference**. It describes *what a valid Kof program
+is* and *what that program means* — regardless of how the current compiler
+implements it.
 
-> **Regra fundadora desta referência:** nada aqui é inventado. Cada regra é
-> extraída do código do compilador, dos testes ou de comportamento observável
-> verificado por execução. Onde o comportamento não pôde ser determinado com
-> segurança, a regra está marcada **UNSPECIFIED**. Uma especificação honesta
-> sobre o que *não* sabe vale mais que uma especificação falsa e completa.
+> **Founding rule of this reference:** nothing here is invented. Every rule is
+> extracted from the compiler source, from the tests, or from observable
+> behavior verified by execution. Where the behavior could not be determined
+> with confidence, the rule is marked **UNSPECIFIED**. An honest specification
+> about what it *doesn't* know is worth more than a false and complete one.
 
 ---
 
-## Linguagem ≠ Compilador ≠ Target
+## Language ≠ Compiler ≠ Target
 
-Estes são três níveis distintos, frequentemente confundidos na documentação
-antiga do projeto. A separação é o propósito central desta referência:
+These are three distinct levels, often confused in the project's old
+documentation. This separation is the central purpose of this reference:
 
 `text
-Kof Language Specification  (este diretório)
+Kof Language Specification  (this directory)
         │
-        │ define (o que é um programa válido e o que ele significa)
+        │ defines (what a valid program is and what it means)
         ▼
-   Linguagem Kof            (um conjunto de regras, não um binário)
+   Kof Language             (a set of rules, not a binary)
         │
-        │ implementada por
+        │ implemented by
         ▼
-   Kof Compiler             (uma implementação específica, em Java)
+   Kof Compiler             (a specific implementation, in Java)
         │
-        ├── Frontend (Lexer, Parser, AST, Análise Semântica)
-        ├── Middle-end (IR, Otimizações)
+        ├── Frontend (Lexer, Parser, AST, Semantic Analysis)
+        ├── Middle-end (IR, Optimizations)
         └── Backends (JVM, Native, JS)
         │
-        │ produz
+        │ produces
         ▼
    Targets                  (JVM, Native x86_64/riscv64/aarch64, JS, Android)
 `
 
-- **Kof** é a *linguagem de programação*. Existe como conjunto de regras.
-- **Kof Compiler** é *uma implementação* da linguagem (o `kof-compiler` deste
-  repositório, escrito em Java). Não é a definição da linguagem.
-- **Kof4J** é o *backend/linha JVM* (bytecode via ASM). **KofNative** é o
-  *backend nativo* (asm x86_64/riscv64/aarch64). **KofJS** é o *backend
-  JavaScript* (ESM). São **targets de compilação**, não dialetos da linguagem.
+- **Kof** is the *programming language*. It exists as a set of rules.
+- **Kof Compiler** is *one implementation* of the language (the `kof-compiler`
+  of this repository, written in Java). It is not the definition of the
+  language.
+- **Kof4J** is the *JVM backend/line* (bytecode via ASM). **KofNative** is the
+  *native backend* (asm x86_64/riscv64/aarch64). **KofJS** is the *JavaScript
+  backend* (ESM). They are **compilation targets**, not dialects of the
+  language.
 
-A intenção conceitual é:
+The conceptual intent is:
 
 `text
-mesma linguagem Kof ──┬── JVM
-                      ├── Native
-                      └── JS
+same Kof language ──┬── JVM
+                    ├── Native
+                    └── JS
 `
 
-e **não** `Kof JVM` / `Kof Native` / `Kof JS` como linguagens semanticamente
-diferentes. Quando há divergência real entre targets, ela é registrada como
-*limitação de target* ou *comportamento dependente de target* (ver
-[specification-status.md](specification-status.md) e
-[specification-gaps.md](../bugs-and-gaps/specification-gaps.md)), nunca escondida.
+and **not** `Kof JVM` / `Kof Native` / `Kof JS` as semantically different
+languages. When there is a real divergence between targets, it is recorded as
+a *target limitation* or *target-dependent behavior* (see
+[specification-status.md](specification-status.md) and
+[specification-gaps.md](../bugs-and-gaps/specification-gaps.md)), never hidden.
 
 ---
 
-## O que cada documento responde
+## What each document answers
 
-| Documento | Pergunta que responde |
+| Document | Question it answers |
 |---|---|
-| [lexical-structure.md](lexical-structure.md) | Quais são os tokens válidos? (identificadores, literais, operadores, comentários, keywords) |
-| [grammar.md](grammar.md) | Qual é a gramática formal? (EBNF léxico e sintático, precedência, associatividade) |
-| [syntax.md](syntax.md) | Como se escreve cada construção? (forma concreta, exemplos) |
-| [types.md](types.md) | Quais tipos existem e como se escrevem? |
-| [type-system.md](type-system.md) | Quais operações são válidas? Quando há erro de tipo? O que o sistema de tipos garante? |
-| [expressions.md](expressions.md) | Semântica de cada expressão e operador. |
-| [statements.md](statements.md) | Semântica de cada statement e controle de fluxo. |
-| [functions.md](functions.md) | Declaração, tipos, parâmetros, retorno, recursão, ponto de entrada. |
-| [closures.md](closures.md) | Lambdas, function types, captura de variáveis. |
-| [classes.md](classes.md) | Classes, records, enums, interfaces, entities, herança, visibilidade. |
-| [modules.md](modules.md) | Pacotes, imports, resolução de nomes, unidade de compilação. |
-| [semantics.md](semantics.md) | Modelo de execução, ordem de avaliação, escopo, tempo de vida, erros. |
-| [specification-status.md](specification-status.md) | Classificação de cada feature (Stable/Experimental/…). |
+| [lexical-structure.md](lexical-structure.md) | What are the valid tokens? (identifiers, literals, operators, comments, keywords) |
+| [grammar.md](grammar.md) | What is the formal grammar? (lexical and syntactic EBNF, precedence, associativity) |
+| [syntax.md](syntax.md) | How is each construct written? (concrete form, examples) |
+| [types.md](types.md) | What types exist and how are they written? |
+| [type-system.md](type-system.md) | What operations are valid? When is there a type error? What does the type system guarantee? |
+| [expressions.md](expressions.md) | Semantics of each expression and operator. |
+| [statements.md](statements.md) | Semantics of each statement and control flow. |
+| [functions.md](functions.md) | Declaration, types, parameters, return, recursion, entry point. |
+| [closures.md](closures.md) | Lambdas, function types, variable capture. |
+| [classes.md](classes.md) | Classes, records, enums, interfaces, entities, inheritance, visibility. |
+| [modules.md](modules.md) | Packages, imports, name resolution, compilation unit. |
+| [semantics.md](semantics.md) | Execution model, evaluation order, scope, lifetime, errors. |
+| [specification-status.md](specification-status.md) | Classification of each feature (Stable/Experimental/…). |
 
-A **implementação do compilador** (pipeline, IR, otimizações, backends) tem
-documento próprio: [../compiler-architecture.md](../architecture/compiler-architecture.md).
-Detalhes internos de Java, classes do compilador e estruturas de implementação
-**não pertencem** a esta referência — exceto quando são necessários para
-explicar um comportamento observável da linguagem (nesse caso, a referência
-cita o arquivo-fonte como evidência, não como definição).
+The **compiler implementation** (pipeline, IR, optimizations, backends) has
+its own document: [../compiler-architecture.md](../architecture/compiler-architecture.md).
+Java internals, compiler classes, and implementation structures **do not
+belong** to this reference — except when they are necessary to explain an
+observable behavior of the language (in that case, the reference cites the
+source file as evidence, not as definition).
 
 ---
 
-## Legenda de status
+## Status legend
 
-Cada regra pode carregar uma etiqueta. As categorias usadas nesta referência
-são as que fazem sentido para o estado atual do Kof (beta):
+Each rule may carry a label. The categories used in this reference are those
+that make sense for the current state of Kof (beta):
 
-| Etiqueta | Significado |
+| Label | Meaning |
 |---|---|
-| **Stable** | Comportamento definido pela linguagem, congelado (regra de   0.2.6-beta). Não muda sem bump de versão + migração. |
-| **Experimental** | Implementado e testável, mas sujeito a mudança. Não congelado. |
-| **Implementation-defined** | A linguagem não fixa o resultado; o compilador atual decide. Outro compilador Kof pode divergir legitimamente. |
-| **Target-specific** | O comportamento observável depende do target (JVM/Native/JS). Documentado como diferença, não escondido. |
-| **Unspecified** | A linguagem ainda não define este ponto. Não é "qualquer coisa vale" — é "a especificação não sabe ainda". |
-| **Planned** | Existe plano/documento, mas **não** está implementado. Nunca deve ser usado como se existisse. |
+| **Stable** | Behavior defined by the language, frozen (rule of   0.2.6-beta). Does not change without a version bump + migration. |
+| **Experimental** | Implemented and testable, but subject to change. Not frozen. |
+| **Implementation-defined** | The language does not fix the result; the current compiler decides. Another Kof compiler may legitimately diverge. |
+| **Target-specific** | The observable behavior depends on the target (JVM/Native/JS). Documented as a difference, not hidden. |
+| **Unspecified** | The language does not yet define this point. It is not "anything goes" — it is "the specification doesn't know yet". |
+| **Planned** | A plan/document exists, but it is **not** implemented. It must never be used as if it existed. |
 
-A etiqueta **Unspecified** é preferível a uma regra inventada. Ver
-[specification-status.md](specification-status.md) para a classificação por
-feature e [specification-gaps.md](../bugs-and-gaps/specification-gaps.md) para o catálogo
-de lacunas (SG-00x) e divergências entre documentação, código e testes.
+The **Unspecified** label is preferable to an invented rule. See
+[specification-status.md](specification-status.md) for the per-feature
+classification and [specification-gaps.md](../bugs-and-gaps/specification-gaps.md)
+for the catalog of gaps (SG-00x) and divergences between documentation, code,
+and tests.
 
 ---
 
-## Como esta referência é verificável
+## How this reference is verifiable
 
-Toda afirmação normativa aponta para uma **evidência**:
+Every normative statement points to **evidence**:
 
-- **Código** — `arquivo.java:linha` no `kof-compiler` (ex.: precedência em
+- **Code** — `file.java:line` in `kof-compiler` (e.g., precedence in
   ExpressionParser (precedence)).
-- **Teste** — um teste na suíte que demonstra a regra (ex.:
+- **Test** — a test in the suite that demonstrates the rule (e.g.,
   `PackagesE2ETest`, `KofSwitchExprE2ETest`).
-- **Execução** — comportamento observado rodando um programa (usado para
-  distinguir "compila" de "funciona"; marcado como *probe* quando não há teste
-  dedicado).
+- **Execution** — behavior observed by running a program (used to
+  distinguish "compiles" from "works"; marked as a *probe* when there is no
+  dedicated test).
 
-Quando código, teste e documentação divergem, a divergência é registrada em
-[specification-gaps.md](../bugs-and-gaps/specification-gaps.md) — nunca resolvida
-silenciosamente a favor de uma das fontes.
+When code, test, and documentation diverge, the divergence is recorded in
+[specification-gaps.md](../bugs-and-gaps/specification-gaps.md) — never
+silently resolved in favor of one of the sources.
 
 ---
 
-## Conformance (possibilidade futura, não implementada)
+## Conformance (future possibility, not implemented)
 
-Uma definição de conformidade seria:
+A definition of conformance would be:
 
-> Um compilador Kof é **conforme à especificação** quando aceita todos os
-> programas que a especificação declara válidos, rejeita os que ela declara
-> inválidos (com os diagnósticos especificados), e produz para cada programa
-> válido o significado que a especificação define.
+> A Kof compiler is **conformant to the specification** when it accepts all
+> programs that the specification declares valid, rejects those it declares
+> invalid (with the specified diagnostics), and produces for each valid
+> program the meaning that the specification defines.
 
-Hoje isso **não pode ser rigorosamente definido** porque partes da linguagem
-estão **Unspecified** ou **Implementation-defined** (subtipagem por herança não
-é checada no type checker; coerção `bool→numérico` passa na análise mas não tem
-emissão; `val` não impede reatribuição; generics sem variance/bounds). A
-seção "Conformance" de [specification-status.md](specification-status.md)
-lista exatamente o que ainda impede uma definição rigorosa. Não há, por ora,
-um *conformance suite* formal — mas os testes E2E por target são o embrião de
-um, e cada regra desta referência marca se tem teste (evidência) ou é
-candidata a novo teste de conformidade.
+Today this **cannot be rigorously defined** because parts of the language
+are **Unspecified** or **Implementation-defined** (inheritance subtyping is not
+checked in the type checker; `bool→numeric` coercion passes analysis but has no
+emission; `val` does not prevent reassignment; generics without variance/bounds).
+The "Conformance" section of [specification-status.md](specification-status.md)
+lists exactly what still prevents a rigorous definition. There is, for now,
+no formal *conformance suite* — but the E2E tests per target are the embryo of
+one, and each rule of this reference marks whether it has a test (evidence) or is
+a candidate for a new conformance test.

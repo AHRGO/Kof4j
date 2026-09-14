@@ -1,136 +1,138 @@
-# Semântica — Modelo de Execução
+[English](semantics.md) | [Português](semantics.pt_BR.md)
 
-**Status:** Stable (exceto onde etiquetado) · **Evidência:** `CompilerDriver.java`, `StatementLowerer.java`, `ExpressionLowerer.java`, runtime por target
+# Semantics — Execution Model
 
-Este documento define **o significado de um programa Kof** — o que acontece
-quando ele roda — de forma independente do backend.
+**Status:** Stable (except where labeled) · **Evidence:** `CompilerDriver.java`, `StatementLowerer.java`, `ExpressionLowerer.java`, per-target runtime
 
----
-
-## 1. Início e fim da execução
-
-1. O programa começa no `main` (exatamente um por módulo — PKG002).
-2. `main` é chamado com `String[]` (vazio se o programa não declara `args`).
-3. Blocos `application { onStart }` rodam **antes** do corpo do `main` do
-   usuário; `onShutdown` **depois** (desugaring, `CompilerDesugar.java:47`).
-4. Statements de `main` executam **sequencialmente**, em ordem de fonte.
-5. **Tarefas `spawn` pendentes são aguardadas antes do programa terminar**
-   (join implícito — `SpawnStmt` javadoc, `AstNodes.java:358-363`).
-6. O programa termina; o exit code é 0 (salvo exceção não capturada ou
-   `assert` falho no harness de teste).
-
-> **Unspecified**: se o `Int` retornado por `Int main()` vira exit code. O
-> emit JVM ignora o retorno de `main` (é `void main` no bytecode). **SG-018.**
+This document defines **the meaning of a Kof program** — what happens
+when it runs — independently of the backend.
 
 ---
 
-## 2. Ordem de avaliação
+## 1. Start and end of execution
 
-- **Esquerda para direita** nos operandos de binários (`emitExpression` emite
-  `left` antes de `right`, `ExpressionLowerer.java:177-185`).
-- **Arguments** de uma chamada são avaliados em ordem, esquerda→direita.
-- **`&&`/`||`** são short-circuit (lado direito pode não ser avaliado) —
-  **exceto no target JS**, onde o short-circuit é desligado (SG-006).
-- **Encadeamento de postfix** (`a.b().c()[d]`) é avaliado da esquerda para a
-  direita, receiver antes do membro.
-- **Efeitos colaterais em atribuição**: o lado direito é avaliado antes de
-  escrever no lado esquerdo.
+1. The program starts at `main` (exactly one per module — PKG002).
+2. `main` is called with `String[]` (empty if the program does not declare `args`).
+3. `application { onStart }` blocks run **before** the body of the user's
+   `main`; `onShutdown` **after** (desugaring, `CompilerDesugar.java:47`).
+4. `main` statements execute **sequentially**, in source order.
+5. **Pending `spawn` tasks are awaited before the program ends**
+   (implicit join — `SpawnStmt` javadoc, `AstNodes.java:358-363`).
+6. The program ends; the exit code is 0 (unless an uncaught exception or a
+   failing `assert` in the test harness).
 
----
-
-## 3. Escopo e tempo de vida
-
-- **Bloco** `{ … }` abre escopo; declarações vivem até o fim do bloco.
-- **`var`/`val`** locais: tempo de vida do bloco. Sem heap-allocation de
-  locais (são slots de frame), exceto quando capturados por lambda (aí vivem
-  enquanto a lambda viver — snapshot ou Box).
-- **Campos de objeto**: vivem enquanto o objeto viver.
-- **Gerenciamento de memória**: **delegado ao target**.
-  - JVM: GC do JVM.
-  - Native: allocator próprio (free-list / bump atômico + `kof_gc_collect`
-    mark-sweep em x86_64; riscv64: bump + sem GC completo — **Target-specific**).
-  - JS: GC do engine.
-  - **A linguagem não especifica** quando um objeto é coletado. **Unspecified**
-    (intencional — é o GC do host).
+> **Unspecified**: whether the `Int` returned by `Int main()` becomes the exit code. The
+> JVM emit ignores the return of `main` (it is `void main` in the bytecode). **SG-018.**
 
 ---
 
-## 4. Semântica de valor vs referência
+## 2. Evaluation order
 
-- **Primitivos** (`bool byte short int long float double char`): valor.
-- **`string`**: valor por conteúdo (imutável; `==` compara conteúdo).
-- **`record`**: valor por conteúdo (`==` compara campo a campo).
-- **`class`**: referência (identidade; `==` compara referência; campos mutáveis).
-- **`enum`**: valor = nome (`String`).
-- **Coleções** (`List/Map/Set`): referência (objeto mutável).
-- Passagem a função: **por valor** (para referência, o valor é a referência —
-  mutar o objeto é visível; reatribuir o parâmetro não é).
+- **Left to right** on binary operands (`emitExpression` emits
+  `left` before `right`, `ExpressionLowerer.java:177-185`).
+- **Arguments** of a call are evaluated in order, left→right.
+- **`&&`/`||`** are short-circuit (the right side may not be evaluated) —
+  **except in the JS target**, where short-circuit is turned off (SG-006).
+- **Postfix chaining** (`a.b().c()[d]`) is evaluated from left to
+  right, receiver before the member.
+- **Side effects in assignment**: the right side is evaluated before
+  writing to the left side.
 
 ---
 
-## 5. Exceções
+## 3. Scope and lifetime
 
-- **Exceções são `String`** (`throw "msg"`). Não há classe de exceção.
-- `throw` propaga para o `catch (String e)` mais próximo na pilha de chamada.
-- `finally` executa sempre (inclusive durante propagação).
-- Exceção não capturada:
+- A **block** `{ … }` opens a scope; declarations live until the end of the block.
+- Local **`var`/`val`**: block lifetime. No heap-allocation of
+  locals (they are frame slots), except when captured by a lambda (then they live
+  as long as the lambda lives — snapshot or Box).
+- **Object fields**: live as long as the object lives.
+- **Memory management**: **delegated to the target**.
+  - JVM: the JVM's GC.
+  - Native: its own allocator (free-list / atomic bump + `kof_gc_collect`
+    mark-sweep on x86_64; riscv64: bump + no full GC — **Target-specific**).
+  - JS: the engine's GC.
+  - **The language does not specify** when an object is collected. **Unspecified**
+    (intentional — it is the host's GC).
+
+---
+
+## 4. Value vs reference semantics
+
+- **Primitives** (`bool byte short int long float double char`): value.
+- **`string`**: value by content (immutable; `==` compares content).
+- **`record`**: value by content (`==` compares field by field).
+- **`class`**: reference (identity; `==` compares reference; mutable fields).
+- **`enum`**: value = name (`String`).
+- **Collections** (`List/Map/Set`): reference (mutable object).
+- Passing to a function: **by value** (for reference, the value is the reference —
+  mutating the object is visible; reassigning the parameter is not).
+
+---
+
+## 5. Exceptions
+
+- **Exceptions are `String`** (`throw "msg"`). There is no exception class.
+- `throw` propagates to the nearest `catch (String e)` on the call stack.
+- `finally` always executes (including during propagation).
+- Uncaught exception:
   - JVM: `RuntimeException(msg)` → stack trace + exit ≠ 0.
-  - Native: `kof_panic` → mensagem + exit ≠ 0.
-  - JS: throw da string → não capturada → erro no runner.
-  - **Target-specific** na representação, **Stable** no efeito (aborta com
-    mensagem e exit ≠ 0).
-- **Não há** checked exceptions, nem `throws` validado (a cláusula `throw T`
-  é parseada mas **não checada** — SG-019).
+  - Native: `kof_panic` → message + exit ≠ 0.
+  - JS: throwing the string → uncaught → error in the runner.
+  - **Target-specific** in representation, **Stable** in effect (aborts with
+    a message and exit ≠ 0).
+- **There are no** checked exceptions, nor validated `throws` (the `throw T`
+  clause is parsed but **not checked** — SG-019).
 
 ---
 
-## 6. Concorrência
+## 6. Concurrency
 
-- `spawn` cria uma **tarefa concorrente** (thread no JVM via virtual thread;
-  `pthread_create` no Native x86_64; `clone(220)` no riscv64; `Promise`/worker
-  no JS). **Implementation-defined** o mecanismo.
-- `await h` **bloqueia** o chamador até `h` (Handle<T>) produzir valor.
-- `awaitTimeout(h, ms)` lança exceção se expirar.
-- `Channel<T>`: `send`/`receive` (buffered/unbuffered — **Unspecified** a
-  capacidade default).
-- **Não há** modelo de memória formalizado (atomicidade, visibilidade entre
-  threads, happens-before). **Unspecified** (SG-020) — concorrência é
-  "melhor esforço" delegada ao target.
+- `spawn` creates a **concurrent task** (thread on the JVM via virtual thread;
+  `pthread_create` on Native x86_64; `clone(220)` on riscv64; `Promise`/worker
+  on JS). **Implementation-defined** the mechanism.
+- `await h` **blocks** the caller until `h` (Handle<T>) produces a value.
+- `awaitTimeout(h, ms)` throws an exception if it expires.
+- `Channel<T>`: `send`/`receive` (buffered/unbuffered — **Unspecified** the
+  default capacity).
+- **There is no** formalized memory model (atomicity, visibility between
+  threads, happens-before). **Unspecified** (SG-020) — concurrency is
+  "best effort" delegated to the target.
 
 ---
 
-## 7. Efeitos de entrada/saída
+## 7. Input/output effects
 
-- `println` escreve na stdout (com newline). **UTF-8** nos 3 targets (verificado
-  no sweep R6).
-- `print` sem newline (se existir — **Unspecified**; `println` é o documentado).
-- Ordem de `println` entre threads `spawn`: **não garantida** sem
-  sincronização (no riscv64 foi feito `writev` atômico para reduzir interleave
+- `println` writes to stdout (with newline). **UTF-8** on the 3 targets (verified
+  in the R6 sweep).
+- `print` without newline (if it exists — **Unspecified**; `println` is the documented one).
+- `println` order between `spawn` threads: **not guaranteed** without
+  synchronization (on riscv64 an atomic `writev` was done to reduce interleave
   — **Implementation-defined**).
 
 ---
 
-## 8. Determinismo
+## 8. Determinism
 
-- Para um programa **sem concorrência e sem I/O**, o resultado é determinístico
-  em todos os targets (mesma IR, mesma ordem de ops).
-- **Aritmética de ponto flutuante** segue IEEE-754 do host — **pode divergir**
-  em casos extremos entre targets (FLT001 documenta o estado). **Target-specific.**
-- `hash`/ordem de `Map.keys`/`Set`: **Unspecified** (depende da estrutura do
-  runtime do target — JVM usa `HashMap`, Native usa lista linear).
+- For a program **without concurrency and without I/O**, the result is deterministic
+  on all targets (same IR, same op order).
+- **Floating-point arithmetic** follows the host's IEEE-754 — **may diverge**
+  in extreme cases between targets (FLT001 documents the state). **Target-specific.**
+- `hash`/order of `Map.keys`/`Set`: **Unspecified** (depends on the structure of the
+  target runtime — JVM uses `HashMap`, Native uses a linear list).
 
 ---
 
-## 9. O que a linguagem NÃO define (resumo de Unspecified)
+## 9. What the language does NOT define (summary of Unspecified)
 
-| Ponto | Estado |
+| Point | State |
 |---|---|
-| Quando objetos são coletados | Unspecified (GC do host) |
-| Exit code de `Int main()` | Unspecified (SG-018) |
-| Modelo de memória concorrente | Unspecified (SG-020) |
-| Ordem de iteração de Map/Set | Unspecified |
-| `throws` como contrato | parseado, não checado (SG-019) |
-| Semântica de classes aninhadas | Unspecified (SG-016) |
-| Sobrecarga de função top-level | Unspecified (SG-011) |
-| Valor de `x++` como expressão | Implementation-defined |
-| `<`/`>` em referências não-numéricas | não suportado |
+| When objects are collected | Unspecified (host GC) |
+| Exit code of `Int main()` | Unspecified (SG-018) |
+| Concurrent memory model | Unspecified (SG-020) |
+| Map/Set iteration order | Unspecified |
+| `throws` as a contract | parsed, not checked (SG-019) |
+| Semantics of nested classes | Unspecified (SG-016) |
+| Top-level function overloading | Unspecified (SG-011) |
+| Value of `x++` as an expression | Implementation-defined |
+| `<`/`>` on non-numeric references | not supported |

@@ -1,74 +1,76 @@
-# OBJECT_MODEL.md — Modelo de Objetos do Kof
+[English](OBJECT_MODEL.md) | [Português](OBJECT_MODEL.pt_BR.md)
 
-**Data:** 21 de agosto de 2026
-**Status:** Definição — Fase F
+# OBJECT_MODEL.md — Kof Object Model
 
----
-
-## 1. Visão Geral
-
-O object model do Kof define como objetos são representados na memória, tanto para JVM quanto para Native.
+**Date:** August 21, 2026
+**Status:** Definition — Phase F
 
 ---
 
-## 2. Layout de Objeto
+## 1. Overview
 
-### 2.1 Objeto Genérico
+The Kof object model defines how objects are represented in memory, both for the JVM and for Native.
+
+---
+
+## 2. Object Layout
+
+### 2.1 Generic Object
 
 ```
 +-------------------+
-| type_id (4 bytes) |  ← identificador do tipo
+| type_id (4 bytes) |  ← type identifier
 +-------------------+
 | flags (4 bytes)   |  ← mark bits, GC flags
 +-------------------+
-| field_0           |  ← primeiro campo (tamanho varia)
+| field_0           |  ← first field (size varies)
 +-------------------+
 | field_1           |
 +-------------------+
 | ...               |
 +-------------------+
-| field_n           |  ← último campo
+| field_n           |  ← last field
 +-------------------+
 ```
 
 - **Header size:** 8 bytes (type_id + flags)
 - **Alignment:** 16 bytes total (header + fields padding)
-- **Field order:** Ordem de declaração no código fonte
+- **Field order:** Declaration order in the source code
 
 ### 2.2 Flags
 
-| Bit | Nome | Descrição |
+| Bit | Name | Description |
 |-----|------|-----------|
-| 0 | MARKED | Usado por GC futuro |
-| 1 | PINNED | Não pode ser movido |
-| 2-31 | Reserved | Para uso futuro |
+| 0 | MARKED | Used by future GC |
+| 1 | PINNED | Cannot be moved |
+| 2-31 | Reserved | For future use |
 
 ---
 
-## 3. Tipos Primitivos
+## 3. Primitive Types
 
-Tipos primitivos NÃO são objetos. São valores diretos na stack:
+Primitive types are NOT objects. They are direct values on the stack:
 
-| Tipo | Tamanho | Representação |
+| Type | Size | Representation |
 |------|---------|---------------|
-| bool | 4 bytes | 0 ou 1 |
-| byte | 1 byte | sinalizado |
-| short | 2 bytes | sinalizado |
-| int | 4 bytes | sinalizado |
-| long | 8 bytes | sinalizado |
+| bool | 4 bytes | 0 or 1 |
+| byte | 1 byte | signed |
+| short | 2 bytes | signed |
+| int | 4 bytes | signed |
+| long | 8 bytes | signed |
 | float | 4 bytes | IEEE 754 |
 | double | 8 bytes | IEEE 754 |
-| char | 4 bytes | codepoint UTF-32 |
+| char | 4 bytes | UTF-32 codepoint |
 
-**Nota:** Na stack, todos os valores são tratados como 64-bit slots para alinhamento.
+**Note:** On the stack, all values are treated as 64-bit slots for alignment.
 
 ---
 
-## 4. Tipos de Referência
+## 4. Reference Types
 
 ### 4.1 Record
 
-Records são imutáveis e possuem fields definidos pelo usuario:
+Records are immutable and have user-defined fields:
 
 ```kf
 record Point(Int x, Int y)
@@ -91,7 +93,7 @@ record Point(Int x, Int y)
 
 ### 4.2 Class
 
-Classes são mutáveis e possuem fields + methods:
+Classes are mutable and have fields + methods:
 
 ```kf
 class User {
@@ -107,7 +109,7 @@ class User {
 +-------------------+
 | flags             |
 +-------------------+
-| name (8 bytes)    |  → offset 8 (ponteiro para String)
+| name (8 bytes)    |  → offset 8 (pointer to String)
 +-------------------+
 | age (8 bytes)     |  → offset 16
 +-------------------+
@@ -117,7 +119,7 @@ class User {
 
 ### 4.3 String
 
-Strings são imutáveis com representação UTF-8:
+Strings are immutable with UTF-8 representation:
 
 ```
 +-------------------+
@@ -125,9 +127,9 @@ Strings são imutáveis com representação UTF-8:
 +-------------------+
 | flags             |
 +-------------------+
-| length (4 bytes)  |  → número de codepoints
+| length (4 bytes)  |  → number of codepoints
 +-------------------+
-| padding (4 bytes) |  → alinhamento
+| padding (4 bytes) |  → alignment
 +-------------------+
 | bytes[]           |  → UTF-8 data + null terminator
 +-------------------+
@@ -135,7 +137,7 @@ Strings são imutáveis com representação UTF-8:
 
 ### 4.4 Array
 
-Arrays possuem header + elementos contíguos:
+Arrays have a header + contiguous elements:
 
 ```
 +-------------------+
@@ -143,11 +145,11 @@ Arrays possuem header + elementos contíguos:
 +-------------------+
 | flags             |
 +-------------------+
-| length (4 bytes)  |  → número de elementos
+| length (4 bytes)  |  → number of elements
 +-------------------+
-| elem_size (4 bytes)| → tamanho de cada elemento
+| elem_size (4 bytes)| → size of each element
 +-------------------+
-| elements[]        |  → dados contíguos
+| elements[]        |  → contiguous data
 +-------------------+
 ```
 
@@ -155,25 +157,25 @@ Arrays possuem header + elementos contíguos:
 
 ## 5. Type ID
 
-Cada tipo Kof possui um type_id único atribuído em compile-time:
+Each Kof type has a unique type_id assigned at compile-time:
 
-| type_id | Tipo |
+| type_id | Type |
 |---------|------|
 | 0 | Reserved (unknown/null) |
 | 1 | String |
 | 2 | Array (base) |
-| 10+ | Tipos definidos pelo usuario |
+| 10+ | User-defined types |
 
-**Contrato:**
-- type_id é constante em tempo de execução
-- type_id é único por compilation unit
-- type_id 0 significa "tipo desconhecido" ou "null"
+**Contract:**
+- type_id is constant at runtime
+- type_id is unique per compilation unit
+- type_id 0 means "unknown type" or "null"
 
 ---
 
-## 6. Representação Nativa
+## 6. Native Representation
 
-### 6.1 Header do Objeto (x86-64)
+### 6.1 Object Header (x86-64)
 
 ```c
 struct KofObject {
@@ -190,7 +192,7 @@ struct KofString {
     uint32_t type_id;   // 4 bytes (= 1)
     uint32_t flags;     // 4 bytes
     int32_t length;     // 4 bytes
-    uint32_t _padding;  // 4 bytes (alinhamento)
+    uint32_t _padding;  // 4 bytes (alignment)
     char bytes[];       // UTF-8 data + \0
 };
 ```
@@ -203,17 +205,17 @@ struct KofArray {
     uint32_t flags;     // 4 bytes
     int32_t length;     // 4 bytes
     int32_t elem_size;  // 4 bytes
-    uint8_t elements[]; // dados contíguos
+    uint8_t elements[]; // contiguous data
 };
 ```
 
 ---
 
-## 7. Acesso a Fields
+## 7. Field Access
 
 ### 7.1 Compile-time
 
-O compilador calcula o offset de cada field usando o ClassLayout:
+The compiler computes the offset of each field using the ClassLayout:
 
 ```
 offset = HEADER_SIZE + sum(sizes of preceding fields)
@@ -231,7 +233,7 @@ movq %rcx, 16(%rax)   # offset 16 = header(8) + 8
 
 ### 7.3 JVM Code
 
-JVM usa `GETFIELD`/`PUTFIELD` com descriptor calculado:
+The JVM uses `GETFIELD`/`PUTFIELD` with a computed descriptor:
 ```
 GETFIELD Point.x I    # int x
 GETFIELD Point.name Ljava/lang/String;  # String name
@@ -239,19 +241,19 @@ GETFIELD Point.name Ljava/lang/String;  # String name
 
 ---
 
-> **Atualizado (0.0.5):** herança (F.3), virtual dispatch via vtable (F.4)
-> e dispatch de interfaces (F.5) estão implementados em JVM e Native.
-> O header real é de 16 bytes: type_id(4) + flags(4) + method_table_ptr(8).
+> **Updated (0.0.5):** inheritance (F.3), virtual dispatch via vtable (F.4)
+> and interface dispatch (F.5) are implemented in JVM and Native.
+> The real header is 16 bytes: type_id(4) + flags(4) + method_table_ptr(8).
 >
-> **Atualizado (0.2.6-beta, 31/08):** os objetos são alocados na free-list
-> `kof_free_head` (reuso `mmap`); o allocator é **thread-safe** (futex) por
-> causa do `spawn` em pthreads. GC mark-sweep ainda pendente (ver
-> MEMORY_MODEL.md §9) — a flag MARKED do header continua reservada para
-> essa fase.
+> **Updated (0.2.6-beta, 31/08):** objects are allocated on the free-list
+> `kof_free_head` (`mmap` reuse); the allocator is **thread-safe** (futex)
+> because of `spawn` on pthreads. Mark-sweep GC still pending (see
+> MEMORY_MODEL.md §9) — the header's MARKED flag remains reserved for
+> that phase.
 
-## 8. Herança (Histórico — implementada em F.3)
+## 8. Inheritance (Historical — implemented in F.3)
 
-Quando implementada:
+When implemented:
 
 ```
 +-------------------+
@@ -259,22 +261,22 @@ Quando implementada:
 +-------------------+
 | flags             |
 +-------------------+
-| Animal fields...  |  → campos da superclasse
+| Animal fields...  |  → superclass fields
 +-------------------+
-| Dog fields...     |  → campos da subclasse
+| Dog fields...     |  → subclass fields
 +-------------------+
 ```
 
-**Regas:**
-- Campos da superclasse vêm antes dos campos da subclasse
-- O type_id identifica o tipo real do objeto
-- Method dispatch usa vtable (futuro)
+**Rules:**
+- Superclass fields come before subclass fields
+- The type_id identifies the object's real type
+- Method dispatch uses vtable (future)
 
 ---
 
-## 9. Virtual Dispatch (Histórico — implementada em F.4)
+## 9. Virtual Dispatch (Historical — implemented in F.4)
 
-Quando implementado, cada classe possui uma vtable:
+When implemented, each class has a vtable:
 
 ```
 VTable:
@@ -284,16 +286,16 @@ VTable:
     - ...
 ```
 
-**O objeto não possui ponteiro para vtable no header.** A vtable é consultada pelo compilador em tempo de compilação para determinar o offset correto.
+**The object does not have a pointer to the vtable in the header.** The vtable is consulted by the compiler at compile time to determine the correct offset.
 
-**Alternativa futura:** Se virtual dispatch for necessário, adicionar `vtable_ptr` ao header:
+**Future alternative:** If virtual dispatch is needed, add `vtable_ptr` to the header:
 ```
 +-------------------+
 | type_id           |
 +-------------------+
 | flags             |
 +-------------------+
-| vtable_ptr        |  → ponteiro para vtable
+| vtable_ptr        |  → pointer to vtable
 +-------------------+
 | fields...         |
 +-------------------+
@@ -303,23 +305,23 @@ VTable:
 
 ## 10. GC Future
 
-O object model DEVE suportar GC futuro:
+The object model MUST support future GC:
 
-- **Mark bits** nos flags para mark-and-sweep
-- **Pinned objects** para objects que não podem ser movidos
-- **Forwarding pointer** pode ser adicionado ao header
+- **Mark bits** in the flags for mark-and-sweep
+- **Pinned objects** for objects that cannot be moved
+- **Forwarding pointer** can be added to the header
 
-NÃO implementar GC nesta fase. Apenas garantir que o layout permite.
+Do NOT implement GC in this phase. Only ensure that the layout allows it.
 
 ---
 
-## 11. Comparação com JVM
+## 11. Comparison with the JVM
 
-| Aspecto | JVM | Kof Native |
+| Aspect | JVM | Kof Native |
 |---------|-----|------------|
 | Object header | klass ptr + mark word (16 bytes) | type_id + flags (8 bytes) |
-| Field layout | Determinado pela JVM | Determinado pelo compilador |
-| Method dispatch | vtable em cada classe | vtable (implementado) |
-| String | java.lang.String (mutável internamente) | KofString (imutável) |
-| Array | Tipos nativos da JVM | KofArray (universal) |
-| GC | Generational, concurrent | Nenhum (futuro) |
+| Field layout | Determined by the JVM | Determined by the compiler |
+| Method dispatch | vtable in each class | vtable (implemented) |
+| String | java.lang.String (internally mutable) | KofString (immutable) |
+| Array | JVM native types | KofArray (universal) |
+| GC | Generational, concurrent | None (future) |

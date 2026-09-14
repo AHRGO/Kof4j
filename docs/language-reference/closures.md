@@ -1,10 +1,12 @@
-# Closures e Lambdas
+[English](closures.md) | [Português](closures.pt_BR.md)
 
-**Status:** Stable (exceto onde etiquetado) · **Evidência:** LambdaParser, `CompilerDriver.java` (`lambdaClass`/`collectCaptures`), `BoxClassFactory.java`
+# Closures and Lambdas
+
+**Status:** Stable (except where labeled) · **Evidence:** LambdaParser, `CompilerDriver.java` (`lambdaClass`/`collectCaptures`), `BoxClassFactory.java`
 
 ---
 
-## 1. Formas de lambda
+## 1. Lambda forms
 
 `ebnf
 lambda = "(" , [ lambda-param , { "," , lambda-param } ] , ")" , "->" , lambda-body
@@ -13,58 +15,58 @@ lambda-param = identifier , [ ":" , type-ref ] ;
 lambda-body  = block | expression ;
 `
 
-Exemplos válidos:
+Valid examples:
 
 `kof
-(x: Int) -> x * 2                  // params tipados, corpo-expressão
-(a: Int, b: Int) -> { return a + b }  // corpo-bloco
-() -> println("oi")                // sem params
-{ println("bloco") }               // bloco-lambda (0 params)
-(x: Int) -> (y: Int) -> x + y      // currying (lambda retornando lambda)
+(x: Int) -> x * 2                  // typed params, expression-body
+(a: Int, b: Int) -> { return a + b }  // block-body
+() -> println("oi")                // no params
+{ println("bloco") }               // block-lambda (0 params)
+(x: Int) -> (y: Int) -> x + y      // currying (lambda returning lambda)
 `
 
-- **Corpo-expressão** tem retorno implícito (`parseLambdaBody:1660-1667` vira
+- **Expression-body** has an implicit return (`parseLambdaBody:1660-1667` becomes
   `ReturnStmt`).
-- **Corpo-bloco** exige `return` explícito para produzir valor.
+- **Block-body** requires an explicit `return` to produce a value.
 
 ---
 
-## 2. Parâmetros e tipos
+## 2. Parameters and types
 
-- Parâmetros **podem** ser anotados (`x: Int`).
-- **Sem anotação**, o parâmetro assume `Object` (`parseLambdaParameter:1652`).
-  Usá-lo em aritmética → `SEM001` com dica *"declare o tipo do parâmetro,
-  ex.: `(x: Int) -> …`"* (*probe*: `l.map((x) -> x + 1)` → SEM001).
-- **Não há inferência de tipo de parâmetro de lambda** a partir do contexto de
-  chamada (a tabela de `map` sabe que é `Int`, mas o parser não propaga para o
-  corpo). **Unspecified** como política (SG-012).
+- Parameters **may** be annotated (`x: Int`).
+- **Without annotation**, the parameter assumes `Object` (`parseLambdaParameter:1652`).
+  Using it in arithmetic → `SEM001` with the hint *"declare the parameter type,
+  e.g. `(x: Int) -> …`"* (*probe*: `l.map((x) -> x + 1)` → SEM001).
+- **There is no lambda parameter type inference** from the call context (the
+  `map` table knows it is `Int`, but the parser does not propagate it to the
+  body). **Unspecified** as policy (SG-012).
 
 ---
 
 ## 3. Function types
 
-Uma lambda tem tipo `FunctionType(parameterTypes, returnType, className)`
-(`Type.java:29`). Function types são **valores de primeira classe**:
+A lambda has type `FunctionType(parameterTypes, returnType, className)`
+(`Type.java:29`). Function types are **first-class values**:
 
 `kof
 var f: (Int) -> Int = (x: Int) -> x * 2
-println(f(5))                       // chamada de valor-função
-var g = listOf(1,2).map((x: Int) -> x + 1)   // passada como argumento
+println(f(5))                       // function-value call
+var g = listOf(1,2).map((x: Int) -> x + 1)   // passed as argument
 `
 
-- Sintaxe do tipo: `(Int, String) -> Bool` (`parseFunctionTypeRef`).
-- Chamar uma variável com `FunctionType` → `ft.returnType()` + checagem de
-  args (`SemExpressionTyper`, caso `FunctionType`).
-- Chamar variável **sem** FunctionType → `SEM015`.
-- **Não há** `fun`-type com nome, nem type alias de função.
+- Type syntax: `(Int, String) -> Bool` (`parseFunctionTypeRef`).
+- Calling a variable with `FunctionType` → `ft.returnType()` + arg checking
+  (`SemExpressionTyper`, `FunctionType` case).
+- Calling a variable **without** FunctionType → `SEM015`.
+- **There is no** named `fun`-type, nor function type alias.
 
 ---
 
-## 4. Captura de variáveis (closure)
+## 4. Variable capture (closure)
 
-Uma lambda captura variáveis do escopo externo.
+A lambda captures variables from the outer scope.
 
-### 4.1 Captura read-only (snapshot)
+### 4.1 Read-only capture (snapshot)
 
 `kof
 main() {
@@ -74,14 +76,14 @@ main() {
 }
 `
 
-- Capturas são **campos `private final`** da classe sintética `Lambda<N>`
-  (`lambdaClass`, `CompilerDriver.java`), copiadas no call site.
-- A captura é um **snapshot do valor no momento da criação da lambda**
-  (comentário `:897-898`).
-- `collectCaptures` (`:1072-1209`) varre o corpo; params e declarações internas
-  entram em `shadowed` e **não** capturam a externa homônima.
+- Captures are **`private final` fields** of the synthetic class `Lambda<N>`
+  (`lambdaClass`, `CompilerDriver.java`), copied at the call site.
+- The capture is a **snapshot of the value at the moment the lambda is created**
+  (comment `:897-898`).
+- `collectCaptures` (`:1072-1209`) scans the body; params and inner declarations
+  go into `shadowed` and do **not** capture the homonymous outer one.
 
-### 4.2 Captura mutável (Box)
+### 4.2 Mutable capture (Box)
 
 `kof
 main() {
@@ -92,25 +94,25 @@ main() {
 }
 `
 
-- Se uma variável capturada é **atribuída dentro da lambda**, o lowering a
-  converte em **box mutável**: classe sintética `Box<N>` com campo `value`
-  (`BoxClassFactory.createBoxClass`). Leituras/escritas viram
+- If a captured variable is **assigned inside the lambda**, the lowering
+  converts it into a **mutable box**: synthetic class `Box<N>` with field `value`
+  (`BoxClassFactory.createBoxClass`). Reads/writes become
   `KofLoadField/KofStoreField "value"`.
-- **Consequência observável**: a mutação via box é **visível fora da lambda**
-  (o `n` externo muda). Isso é **Stable** (comportamento documentado e
-  testado).
-- Captura de `this` (`() -> this.v`) funciona (*probe*).
+- **Observable consequence**: the mutation via box is **visible outside the
+  lambda** (the outer `n` changes). This is **Stable** (documented and tested
+  behavior).
+- Capturing `this` (`() -> this.v`) works (*probe*).
 
 ---
 
-## 5. Representação de implementação (não-normativa)
+## 5. Implementation representation (non-normative)
 
-Para explicar o comportamento observável: cada lambda vira uma **classe
-sintética** `Lambda<N>` (ou `LambdaTask<N>` para corpo de `spawn`) que
-implementa uma **interface de função sintética** por assinatura
-(`kof/Function<N>_<mangled>`). O call site faz `new Lambda<N>(captures)` +
-`invoke(args)`. **Implementation-defined** — outro compilador Kof pode usar
-closures de outra forma, desde que preserve a semântica de captura (§4).
+To explain the observable behavior: each lambda becomes a **synthetic class**
+`Lambda<N>` (or `LambdaTask<N>` for a `spawn` body) that implements a
+**synthetic function interface** per signature
+(`kof/Function<N>_<mangled>`). The call site does `new Lambda<N>(captures)` +
+`invoke(args)`. **Implementation-defined** — another Kof compiler may use
+closures differently, as long as it preserves the capture semantics (§4).
 
 ---
 
@@ -123,24 +125,24 @@ call-args , trailing-lambda = "(" , [ args ] , ")" , block
 `kof
 transaction { println("dentro") }
 list.forEach((x: Int) -> println(x))
-map.map { s: String -> s.length }        // trailing com params tipados
+map.map { s: String -> s.length }        // trailing with typed params
 `
 
-- `f { … }`: o bloco é o **último argumento** (ExpressionParser.parsePostfix (trailing lambda)).
-- `f { x: Int -> … }`: trailing lambda com parâmetros (`looksLikeLambdaBlockParams`,
-  heurística de lookahead ≤8 tokens — **Implementation-defined**).
-- `f { … }` sem `->` é uma **lambda de 0 params** cujo corpo é o bloco.
+- `f { … }`: the block is the **last argument** (ExpressionParser.parsePostfix (trailing lambda)).
+- `f { x: Int -> … }`: trailing lambda with parameters (`looksLikeLambdaBlockParams`,
+  lookahead heuristic ≤8 tokens — **Implementation-defined**).
+- `f { … }` without `->` is a **0-param lambda** whose body is the block.
 
 ---
 
-## 7. Limites
+## 7. Limits
 
-- **Lambda não pode declarar função nomeada** dentro do corpo.
-- **Lambda não é genérica** (sem `<T>` próprio).
-- **Lambda não pode ter `return` de tipo incompatível** com o corpo (SEM010).
-- **Não há** SAM-conversion implícita de lambda para interface do usuário de
-  forma garantida: `FunctionType → ClassType` passa em `isAssignable` sempre
-  (caso SAM de `TypeChecker.isAssignable`), mas a compatibilidade real é
-  validada na emissão. **Unspecified.**
-- **Não há** `it`/`$0` como parâmetro implícito (Kotlin-style). Use
+- **A lambda cannot declare a named function** inside its body.
+- **A lambda is not generic** (no `<T>` of its own).
+- **A lambda cannot have a `return` of a type incompatible** with the body (SEM010).
+- **There is no** implicit SAM-conversion from lambda to a user interface in a
+  guaranteed way: `FunctionType → ClassType` always passes in `isAssignable`
+  (SAM case of `TypeChecker.isAssignable`), but the real compatibility is
+  validated at emission. **Unspecified.**
+- **There is no** `it`/`$0` as an implicit parameter (Kotlin-style). Use
   `(x: T) -> …`.

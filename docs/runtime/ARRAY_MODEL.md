@@ -1,13 +1,15 @@
-# ARRAY_MODEL.md — Modelo de Arrays do Kof
+[English](ARRAY_MODEL.md) | [Português](ARRAY_MODEL.pt_BR.md)
 
-**Data:** 21 de agosto de 2026
-**Status:** Implementado — Fase F.2
+# ARRAY_MODEL.md — Kof Array Model
+
+**Date:** August 21, 2026
+**Status:** Implemented — Phase F.2
 
 ---
 
-## 1. Visão Geral
+## 1. Overview
 
-Array é um tipo de coleção builtin do Kof com representação independente para cada backend:
+An array is a builtin collection type of Kof with an independent representation for each backend:
 
 ```
 Kof Array
@@ -17,14 +19,14 @@ Kof IR / Runtime ABI
 JVM         Native
   ↓           ↓
 JVM arrays   KofArray
- nativos     (heap object)
+ natives     (heap object)
 ```
 
-O core do compilador NÃO depende de java.lang.reflect.Array ou qualquer API JVM.
+The compiler core does NOT depend on java.lang.reflect.Array or any JVM API.
 
 ---
 
-## 2. Tipo no Type System
+## 2. Type in the Type System
 
 ```java
 // Type.java
@@ -40,37 +42,37 @@ static Type of(String name) {
 }
 ```
 
-Exemplos:
+Examples:
 - `Int[]` → `ArrayType(PrimitiveType.INT)`
 - `String[]` → `ArrayType(ClassType("java.lang", "String"))`
 - `Int[][]` → `ArrayType(ArrayType(PrimitiveType.INT))`
 
 ---
 
-## 3. Sintaxe
+## 3. Syntax
 
-### Criação
+### Creation
 
 ```kof
-var a = new Int[10]      // array de 10 inteiros
-var b = new String[5]    // array de 5 strings
-var c = new Long[3]      // array de 3 longs
+var a = new Int[10]      // array of 10 integers
+var b = new String[5]    // array of 5 strings
+var c = new Long[3]      // array of 3 longs
 ```
 
-### Acesso
+### Access
 
 ```kof
-a[0] = 42        // escrita
-println(a[0])    // leitura
+a[0] = 42        // write
+println(a[0])    // read
 ```
 
 ### Length
 
 ```kof
-println(a.length)    // retorna Int
+println(a.length)    // returns Int
 ```
 
-### Como parâmetro
+### As a parameter
 
 ```kof
 sum(Int[] arr): Int {
@@ -82,7 +84,7 @@ sum(Int[] arr): Int {
 }
 ```
 
-### Como retorno
+### As a return
 
 ```kof
 createArray(): Int[] {
@@ -96,7 +98,7 @@ createArray(): Int[] {
 
 ---
 
-## 4. Layout KofArray (Native)
+## 4. KofArray Layout (Native)
 
 ```
 +---------------------+
@@ -104,25 +106,25 @@ createArray(): Int[] {
 +---------------------+
 | flags (4 bytes)     |  = 0
 +---------------------+
-| length (4 bytes)    |  = número de elementos
+| length (4 bytes)    |  = number of elements
 +---------------------+
-| elem_size (4 bytes) |  = tamanho de cada elemento
+| elem_size (4 bytes) |  = size of each element
 +---------------------+
-| elements[]          |  = dados contíguos
+| elements[]          |  = contiguous data
 +---------------------+
 ```
 
-| Campo | Offset | Tamanho | Descrição |
-|-------|--------|---------|-----------|
-| type_id | 0 | 4 bytes | Sempre 2 para Array |
-| flags | 4 | 4 bytes | Reservado para GC futuro |
-| length | 8 | 4 bytes | Número de elementos |
-| elem_size | 12 | 4 bytes | Tamanho de cada elemento em bytes |
-| elements | 16 | variável | Dados contíguos |
+| Field | Offset | Size | Description |
+|-------|--------|------|-------------|
+| type_id | 0 | 4 bytes | Always 2 for Array |
+| flags | 4 | 4 bytes | Reserved for future GC |
+| length | 8 | 4 bytes | Number of elements |
+| elem_size | 12 | 4 bytes | Size of each element in bytes |
+| elements | 16 | variable | Contiguous data |
 
-### Tamanhos de Elementos
+### Element Sizes
 
-| Tipo | elem_size |
+| Type | elem_size |
 |------|-----------|
 | byte, bool | 1 |
 | short | 2 |
@@ -130,119 +132,119 @@ createArray(): Int[] {
 | long | 8 |
 | float | 4 |
 | double | 8 |
-| referência | 8 (ponteiro) |
+| reference | 8 (pointer) |
 
 ---
 
 ## 5. Runtime Functions (Native)
 
-| Função | Entrada | Retorno | Descrição |
-|--------|---------|---------|-----------|
-| `kof_array_alloc` | length, elem_size | array_ptr | Aloca array no heap |
-| `kof_array_length` | array_ptr | int | Retorna length |
-| `kof_array_get` | array_ptr, index | element | Lê com bounds check |
-| `kof_array_set` | array_ptr, index, value | void | Escreve com bounds check |
+| Function | Input | Return | Description |
+|----------|-------|--------|-------------|
+| `kof_array_alloc` | length, elem_size | array_ptr | Allocates array on the heap |
+| `kof_array_length` | array_ptr | int | Returns length |
+| `kof_array_get` | array_ptr, index | element | Reads with bounds check |
+| `kof_array_set` | array_ptr, index, value | void | Writes with bounds check |
 
-### Contrato
+### Contract
 
-- `kof_array_alloc` retorna ponteiro alinhado em 16 bytes
-- `kof_array_alloc` inicializa header (type_id=2, flags=0)
-- `kof_array_get` em index inválido → `kof_bounds_error`
-- `kof_array_set` em index inválido → `kof_bounds_error`
-- `kof_array_get` em array NULL → `kof_null_error`
-- `kof_array_set` em array NULL → `kof_null_error`
+- `kof_array_alloc` returns a pointer aligned to 16 bytes
+- `kof_array_alloc` initializes the header (type_id=2, flags=0)
+- `kof_array_get` on an invalid index → `kof_bounds_error`
+- `kof_array_set` on an invalid index → `kof_bounds_error`
+- `kof_array_get` on a NULL array → `kof_null_error`
+- `kof_array_set` on a NULL array → `kof_null_error`
 
 ---
 
 ## 6. IR Operations
 
-| Operação | JVM | Native | KofJS | Descrição |
-|----------|-----|--------|-------|-----------|
-| `KofNewArray(elemType)` | `NEWARRAY` | `kof_array_alloc` | `new Array(n).fill(...)` | Cria array |
-| `KofArrayLoad(elemType)` | `IALOAD`/`LALOAD`/etc | `kof_array_get` | `kofArrayGet(array, index)` | Lê elemento (bounds check) |
-| `KofArrayStore(elemType)` | `IASTORE`/`LASTORE`/etc | `kof_array_set` | `kofArraySet(array, index, value)` | Escreve elemento (bounds check) |
-| `KofArrayLength()` | `ARRAYLENGTH` | `kof_array_length` | `array.length` | Retorna length |
+| Operation | JVM | Native | KofJS | Description |
+|----------|-----|--------|-------|-------------|
+| `KofNewArray(elemType)` | `NEWARRAY` | `kof_array_alloc` | `new Array(n).fill(...)` | Creates array |
+| `KofArrayLoad(elemType)` | `IALOAD`/`LALOAD`/etc | `kof_array_get` | `kofArrayGet(array, index)` | Reads element (bounds check) |
+| `KofArrayStore(elemType)` | `IASTORE`/`LASTORE`/etc | `kof_array_set` | `kofArraySet(array, index, value)` | Writes element (bounds check) |
+| `KofArrayLength()` | `ARRAYLENGTH` | `kof_array_length` | `array.length` | Returns length |
 
-> **KOF-SBD-001 (Array Bounds Safety):** até a correção do gap KofJS, o
-> lowering desse target baixava `KofArrayLoad`/`KofArrayStore` para
-> `array[index]`/`array[index] = value` diretos (semântica JS crua: leitura
-> fora dos limites retornava `undefined`, escrita em `index >= length`
-> ampliava o array silenciosamente). Os helpers `kofArrayGet`/`kofArraySet`
-> (`JsRuntimeCore`) fecham essa divergência: todo acesso indexado a array
-> Kof no target JS agora rejeita `index < 0 || index >= length` antes de
-> tocar o array, equivalente à checagem que a JVM já faz em
-> `IALOAD`/`AALOAD`/etc (JVMS §6.5) e que o Native faz em `kof_array_get`/
-> `kof_array_set`. A classe do erro não é idêntica entre os 3 targets — a
-> propriedade de segurança (bounds safety) é.
+> **KOF-SBD-001 (Array Bounds Safety):** until the KofJS gap was fixed, the
+> lowering of that target lowered `KofArrayLoad`/`KofArrayStore` to
+> `array[index]`/`array[index] = value` directly (raw JS semantics: an out-of-bounds
+> read returned `undefined`, a write at `index >= length`
+> silently expanded the array). The helpers `kofArrayGet`/`kofArraySet`
+> (`JsRuntimeCore`) close that divergence: every indexed access to a Kof
+> array in the JS target now rejects `index < 0 || index >= length` before
+> touching the array, equivalent to the check that the JVM already performs in
+> `IALOAD`/`AALOAD`/etc (JVMS §6.5) and that Native performs in `kof_array_get`/
+> `kof_array_set`. The error class is not identical across the 3 targets — the
+> safety property (bounds safety) is.
 
 ---
 
 ## 7. Type Checking (SemanticAnalyzer)
 
-| Regra | Validação |
+| Rule | Validation |
 |-------|-----------|
-| Índice é Int | `a[b]` — `b` deve ser `Int` |
-| Leitura retorna elementType | `a[i]` retorna tipo do elemento |
-| Escrita exige tipo compatível | `a[i] = v` — `v` deve ser compatível com elementType |
-| length retorna Int | `a.length` retorna `Int` |
-| Criação valida tipo | `new Int[10]` — tipo deve ser válido |
-| Array<Int> não aceita String | Type mismatch em runtime |
-| Array<String> não aceita Int | Type mismatch em runtime |
+| Index is Int | `a[b]` — `b` must be `Int` |
+| Read returns elementType | `a[i]` returns the element type |
+| Write requires a compatible type | `a[i] = v` — `v` must be compatible with elementType |
+| length returns Int | `a.length` returns `Int` |
+| Creation validates the type | `new Int[10]` — type must be valid |
+| Array<Int> does not accept String | Type mismatch at runtime |
+| Array<String> does not accept Int | Type mismatch at runtime |
 
 ---
 
 ## 8. JVM vs Native
 
-| Operação | JVM | Native |
+| Operation | JVM | Native |
 |----------|-----|--------|
-| Criação | `NEWARRAY` | `kof_array_alloc` |
-| Acesso (primitivo) | `IALOAD`/etc | `kof_array_get` |
-| Acesso (referência) | `AALOAD` | `kof_array_get` |
-| Escrita (primitivo) | `IASTORE`/etc | `kof_array_set` |
-| Escrita (referência) | `AASTORE` | `kof_array_set` |
+| Creation | `NEWARRAY` | `kof_array_alloc` |
+| Access (primitive) | `IALOAD`/etc | `kof_array_get` |
+| Access (reference) | `AALOAD` | `kof_array_get` |
+| Write (primitive) | `IASTORE`/etc | `kof_array_set` |
+| Write (reference) | `AASTORE` | `kof_array_set` |
 | Length | `ARRAYLENGTH` | `kof_array_length` |
-| Bounds check | JVM automático | `kof_bounds_error` |
-| Null check | JVM automático | `kof_null_error` |
+| Bounds check | JVM automatic | `kof_bounds_error` |
+| Null check | JVM automatic | `kof_null_error` |
 
 ---
 
 ## 9. Null
 
-| Valor | Representação |
+| Value | Representation |
 |-------|---------------|
-| null | Ponteiro 0x0 |
-| new Int[0] | KofArray com length=0 |
+| null | Pointer 0x0 |
+| new Int[0] | KofArray with length=0 |
 
-kof_null_error() disponível para detecção.
+kof_null_error() available for detection.
 
 ---
 
-## 10. Arquivos
+## 10. Files
 
-| Arquivo | Papel |
+| File | Role |
 |---------|-------|
 | Type.java | `ArrayType` record + `isArray()` + `arrayElementType()` |
 | AstNodes.java | `NewArrayExpr` + `ArrayAccessExpr` |
-| Parser.java | Parsing de `new Type[size]` + `expr[expr]` |
-| SemanticAnalyzer.java | Type checking de arrays |
-| CompilerDriver.java | Lowering para `KofNewArray`/`KofArrayLoad`/`KofArrayStore`/`KofArrayLength` |
+| Parser.java | Parsing of `new Type[size]` + `expr[expr]` |
+| SemanticAnalyzer.java | Array type checking |
+| CompilerDriver.java | Lowering to `KofNewArray`/`KofArrayLoad`/`KofArrayStore`/`KofArrayLength` |
 | IRNodes.java | `KofNewArray`/`KofArrayLoad`/`KofArrayStore`/`KofArrayLength` |
-| NativeRuntime.java | 4 funções de runtime para arrays |
-| NativeBackend.java | Lowering das operações de array |
+| NativeRuntime.java | 4 runtime functions for arrays |
+| NativeBackend.java | Lowering of the array operations |
 | JvmBackend.java | `NEWARRAY`/`IALOAD`/`IASTORE`/`ARRAYLENGTH` |
 
 ---
 
-> **Atualizado (0.2.6-beta, 31/08):** arrays de `Double`/`Float` entram no
-> fluxo do JSON nativo (`Double[]`/`Float[]` no decode — JSN001), com FP em
-> XMM (`vcvtsi2sd`/`mulsd`); a alocação de arrays segue na free-list
-> `kof_free_head` (thread-safe com o `spawn` em pthreads).
+> **Updated (0.2.6-beta, 31/08):** `Double`/`Float` arrays enter the
+> native JSON flow (`Double[]`/`Float[]` in decode — JSN001), with FP in
+> XMM (`vcvtsi2sd`/`mulsd`); array allocation stays on the free-list
+> `kof_free_head` (thread-safe with `spawn` on pthreads).
 
-## 11. Limitações Conhecidas
+## 11. Known Limitations
 
-1. Sem inicialização de array com literais (`[1, 2, 3]`) — apenas `new Type[size]`
-2. Sem arrays multidimensionais sintáticos (`new Int[3][4]`)
-3. Sem `instanceof` para arrays
-4. Sem conversão entre tipos de array
-5. Sem `System.arraycopy` equivalente
-6. Sem anonymous arrays
+1. No array initialization with literals (`[1, 2, 3]`) — only `new Type[size]`
+2. No syntactic multidimensional arrays (`new Int[3][4]`)
+3. No `instanceof` for arrays
+4. No conversion between array types
+5. No `System.arraycopy` equivalent
+6. No anonymous arrays

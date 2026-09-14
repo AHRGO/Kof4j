@@ -1,13 +1,15 @@
-# VIRTUAL_DISPATCH.md — Dispatch Dinâmico do Kof
+[English](VIRTUAL_DISPATCH.md) | [Português](VIRTUAL_DISPATCH.pt_BR.md)
 
-**Data:** 21 de agosto de 2026
-**Status:** Implementado — Fase F.4
+# VIRTUAL_DISPATCH.md — Kof Dynamic Dispatch
+
+**Date:** August 21, 2026
+**Status:** Implemented — Phase F.4
 
 ---
 
-## 1. Visão Geral
+## 1. Overview
 
-Kof suporta dispatch dinâmico (virtual dispatch) para métodos de instância. Quando um método é chamado via referência de superclass, a implementação correta é resolvida em runtime pelo tipo real do objeto.
+Kof supports dynamic dispatch (virtual dispatch) for instance methods. When a method is called through a superclass reference, the correct implementation is resolved at runtime by the object's real type.
 
 ```kof
 class Animal {
@@ -18,116 +20,116 @@ class Dog extends Animal {
 }
 main() {
     Animal a = new Dog()
-    println(a.speak())  // imprime "dog", não "animal"
+    println(a.speak())  // prints "dog", not "animal"
 }
 ```
 
 ---
 
-## 2. Mecanismo
+## 2. Mechanism
 
-### Object Header (estendido)
+### Object Header (extended)
 
 ```
 offset 0:  type_id (4 bytes)
 offset 4:  flags (4 bytes)
-offset 8:  method_table_ptr (8 bytes) — ponteiro para vtable
+offset 8:  method_table_ptr (8 bytes) — pointer to vtable
 ```
 
-HEADER_SIZE = 16 bytes (era 8 antes do F.4).
+HEADER_SIZE = 16 bytes (it was 8 before F.4).
 
 ### Method Table (vtable)
 
-Cada classe possui uma method table na seção `.data`:
+Each class has a method table in the `.data` section:
 
 ```asm
 Dog_vtable:
-    .quad Dog_speak    # slot 0: speak (override de Animal)
+    .quad Dog_speak    # slot 0: speak (override of Animal)
     .quad 0            # sentinel
 ```
 
-A vtable contém ponteiros para as implementações de métodos virtuais.
+The vtable contains pointers to the implementations of virtual methods.
 
-### Ordem dos Slots
+### Slot Order
 
-1. Métodos da superclass primeiro (na ordem de declaração)
-2. Métodos da subclass depois
-3. Override substitui o ponteiro no mesmo slot
-4. Novos métodos recebem novos slots
+1. Superclass methods first (in declaration order)
+2. Subclass methods after
+3. Override replaces the pointer in the same slot
+4. New methods receive new slots
 
-Exemplo:
+Example:
 ```
 Animal_vtable: [Animal_speak]
-Dog_vtable:    [Dog_speak]           # override no slot 0
+Dog_vtable:    [Dog_speak]           # override in slot 0
 ```
 
-### Dispatch Nativo
+### Native Dispatch
 
 ```asm
 # animal.speak()
-popq %rax              # carrega ponteiro do objeto
-movq 8(%rax), %rbx     # carrega method_table_ptr do header
-addq $0, %rbx          # offset do slot (index * 8)
-movq (%rbx), %rbx      # carrega ponteiro da função
-call *%rbx             # chama via ponteiro
+popq %rax              # loads the object pointer
+movq 8(%rax), %rbx     # loads method_table_ptr from the header
+addq $0, %rbx          # slot offset (index * 8)
+movq (%rbx), %rbx      # loads the function pointer
+call *%rbx             # calls via pointer
 ```
 
-### Dispatch JVM
+### JVM Dispatch
 
-O JVM usa `INVOKEVIRTUAL` nativo, que já resolve virtual dispatch corretamente.
-
----
-
-## 3. Regras
-
-1. **Toda classe** recebe uma vtable (mesmo sem override)
-2. **Métodos herdados** mantêm o mesmo slot na hierarquia
-3. **Override** substitui o ponteiro no slot existente
-4. **Novos métodos** recebem slots novos após os herdados
-5. **super.method()** continua sendo chamada estática (direct dispatch)
-6. **Métodos estáticos** e **construtores** não usam vtable
+The JVM uses native `INVOKEVIRTUAL`, which already resolves virtual dispatch correctly.
 
 ---
 
-## 4. Inicialização
+## 3. Rules
 
-Após `kof_alloc`, o objeto é inicializado com:
+1. **Every class** receives a vtable (even without overrides)
+2. **Inherited methods** keep the same slot in the hierarchy
+3. **Override** replaces the pointer in the existing slot
+4. **New methods** receive new slots after the inherited ones
+5. **super.method()** remains a static call (direct dispatch)
+6. **Static methods** and **constructors** do not use the vtable
+
+---
+
+## 4. Initialization
+
+After `kof_alloc`, the object is initialized with:
 1. type_id = 0
 2. flags = 0
-3. method_table_ptr = ponteiro para a vtable da classe concreta
+3. method_table_ptr = pointer to the concrete class's vtable
 
-O construtor depois inicializa os fields.
+The constructor then initializes the fields.
 
 ---
 
-## 5. Arquivos
+## 5. Files
 
-| Arquivo | Papel |
+| File | Role |
 |---------|-------|
 | ClassLayout.java | HEADER_SIZE = 16, METHOD_TABLE_OFFSET = 8 |
 | NativeRuntime.java | generateMethodTable(), emitInitObject() |
 | NativeBackend.java | collectVirtualMethods(), findVirtualMethodIndex(), emitCall() |
-| CompilerDriver.java | inferExprType() com case NewExpr |
+| CompilerDriver.java | inferExprType() with case NewExpr |
 
 ---
 
-> **Atualizado (0.2.6-beta, 31/08):** o item 1 abaixo foi superado —
-> dispatch para interfaces (F.5) usa a mesma vtable. O dispatch é
-> thread-safe com o `spawn` em threads (pthread, 31/08): a vtable é
-> somente-leitura após a compilação.
+> **Updated (0.2.6-beta, 31/08):** item 1 below was superseded —
+> interface dispatch (F.5) uses the same vtable. Dispatch is
+> thread-safe with `spawn` on threads (pthread, 31/08): the vtable is
+> read-only after compilation.
 
-## 6. Limitações Conhecidas
+## 6. Known Limitations
 
-1. ~~Sem virtual dispatch para interfaces~~ — ✅ F.5 (mesma vtable)
-2. Sem vtable para records, strings, arrays (usam header fixo)
-3. Sem cache de vtable em runtime
-4. Sem invalidation de vtable (futuro: sealed classes)
+1. ~~No virtual dispatch for interfaces~~ — ✅ F.5 (same vtable)
+2. No vtable for records, strings, arrays (they use a fixed header)
+3. No runtime vtable cache
+4. No vtable invalidation (future: sealed classes)
 
 ---
 
-## 7. Testes
+## 7. Tests
 
-| Teste | JVM | Native |
+| Test | JVM | Native |
 |-------|-----|--------|
 | simpleOverride | ✅ | ✅ |
 | polymorphism | ✅ | ✅ |

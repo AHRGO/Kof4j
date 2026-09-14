@@ -1,48 +1,50 @@
+[English](statements.md) | [Português](statements.pt_BR.md)
+
 # Statements
 
-**Status:** Stable (exceto onde etiquetado) · **Evidência:** StatementParser, `StatementLowerer.java`
+**Status:** Stable (except where labeled) · **Evidence:** StatementParser, `StatementLowerer.java`
 
-Um statement executa um efeito e **não produz valor**. Semicolons são
-**opcionais** em toda posição de fim de statement (ver
+A statement executes an effect and **does not produce a value**. Semicolons are
+**optional** in every statement-end position (see
 [lexical-structure.md](lexical-structure.md) §6).
 
 ---
 
-## 1. Bloco
+## 1. Block
 
 `ebnf
 block = "{" , { statement } , "}"
 `
 
-Introduz um novo escopo (`StatementLowerer`/`SemanticAnalyzer` fazem
-`enterScope`). Declarações dentro do bloco não vazam para fora.
+Introduces a new scope (`StatementLowerer`/`SemanticAnalyzer` do
+`enterScope`). Declarations inside the block do not leak out.
 
 ---
 
-## 2. Declaração de variável: `var` / `val` / tipo explícito
+## 2. Variable declaration: `var` / `val` / explicit type
 
 `ebnf
 var-decl = ( "var" | "val" | type-ref ) , identifier , [ ":" , type-ref ] , [ "=" , expression ]
 `
 
-Quatro formas válidas:
+Four valid forms:
 
 `kof
-var x = 10              // inferido, mutável
-val y = 20              // inferido, "imutável" (ver abaixo)
-String nome = "Mel"     // tipo explícito (type-first)
-var idade: Int? = null  // tipo anotado (anotado)
+var x = 10              // inferred, mutable
+val y = 20              // inferred, "immutable" (see below)
+String nome = "Mel"     // explicit type (type-first)
+var idade: Int? = null  // annotated type (annotated)
 String? nome2 = null    // type-first nullable
 `
 
-- **`var` sem inicializador** → tipo `UnknownType` (`:625`).
-- **Tipo explícito ≠ tipo do inicializador** → `SEM021`.
-- **Redeclarar no mesmo escopo** → `SEM024`.
-- **`val` NÃO impede reatribuição**: `val x = 1; x = 2` **compila e roda**,
-  imprimindo `2` (*probe*, confirmado isoladamente). A imutabilidade de `val`
-  é **não-garantida** pelo compilador — é convenção de estilo, não regra de
-  linguagem (SG-010). `val` em campo de classe → `PARSE016` (não é aceito como
-  modificador de campo; use `final`).
+- **`var` without initializer** → type `UnknownType` (`:625`).
+- **Explicit type ≠ initializer type** → `SEM021`.
+- **Redeclaring in the same scope** → `SEM024`.
+- **`val` does NOT prevent reassignment**: `val x = 1; x = 2` **compiles and runs**,
+  printing `2` (*probe*, confirmed in isolation). The immutability of `val`
+  is **not guaranteed** by the compiler — it is a style convention, not a
+  language rule (SG-010). `val` in a class field → `PARSE016` (not accepted as a
+  field modifier; use `final`).
 
 ---
 
@@ -52,13 +54,13 @@ String? nome2 = null    // type-first nullable
 return-stmt = "return" , [ expression ]
 `
 
-- `return;` / `return` (bare) em função `void` → ok.
-- `return` com valor incompatível com o retorno declarado → `SEM010`.
-- **`return` vazio em função não-void** → emite o **valor default do tipo**
-  (`0`, `false`, `null`, `'\0'`): `Int f() { return }` retorna `0` (*probe*).
-  **Implementation-defined** (a linguagem não exige que isso compile).
-- Função não-void sem `return` no fim → comportamento **Unspecified** (o
-  lowering injeta `defaultValueOp`).
+- `return;` / `return` (bare) in a `void` function → ok.
+- `return` with a value incompatible with the declared return → `SEM010`.
+- **Empty `return` in a non-void function** → emits the **type's default value**
+  (`0`, `false`, `null`, `'\0'`): `Int f() { return }` returns `0` (*probe*).
+  **Implementation-defined** (the language does not require this to compile).
+- A non-void function without `return` at the end → **Unspecified** behavior (the
+  lowering injects `defaultValueOp`).
 
 ---
 
@@ -68,13 +70,13 @@ return-stmt = "return" , [ expression ]
 if-stmt = "if" , "(" , expression , ")" , statement , [ "else" , statement ]
 `
 
-- A condição deve ser `bool` (ou primitivo inteiro — tratado como não-zero).
-- O `else` é **opcional** na forma statement (só a forma expressão exige).
-- **Narrowing de nullability**: `if (x != null) { … }` estreita `x` para `T`
-  **apenas no then-branch** (`StatementAnalyzer`, narrowing de `IfStmt`). Ver
+- The condition must be `bool` (or an integer primitive — treated as non-zero).
+- The `else` is **optional** in the statement form (only the expression form requires it).
+- **Nullability narrowing**: `if (x != null) { … }` narrows `x` to `T`
+  **only in the then-branch** (`StatementAnalyzer`, `IfStmt` narrowing). See
   [type-system.md](type-system.md) §5.
-- Cada ramo é um statement (bloco ou statement único): `if (true) println("y")`
-  funciona sem chaves (*probe*).
+- Each branch is a statement (a block or a single statement): `if (true) println("y")`
+  works without braces (*probe*).
 
 ---
 
@@ -86,7 +88,7 @@ if-stmt = "if" , "(" , expression , ")" , statement , [ "else" , statement ]
 while-stmt = "while" , "(" , expression , ")" , statement
 `
 
-Condição avaliada **antes** de cada iteração.
+Condition evaluated **before** each iteration.
 
 ### 5.2 `do … while`
 
@@ -94,17 +96,17 @@ Condição avaliada **antes** de cada iteração.
 do-while = "do" , statement , "while" , "(" , expression , ")"
 `
 
-Corpo executa **pelo menos uma vez**.
+Body executes **at least once**.
 
-### 5.3 `for` clássico
+### 5.3 Classic `for`
 
 `ebnf
 for-stmt = "for" , "(" , [ init ] , ";" , [ cond ] , ";" , [ update ] , ")" , statement
 init     = var-decl | expr-stmt
 `
 
-`for (var i = 0; i < 3; i++) { … }` (*probe*: imprime 0,1,2). As três partes
-são opcionais.
+`for (var i = 0; i < 3; i++) { … }` (*probe*: prints 0,1,2). The three parts
+are optional.
 
 ### 5.4 `for-in`
 
@@ -112,19 +114,19 @@ são opcionais.
 for-in = "for" , "(" , ( "var" | "val" ) , identifier , "in" , expression , ")" , statement
 `
 
-- Itera sobre `List<T>` (índice interno `#coll`/`#idx`) ou array
-  (`StatementLowerer.java:259-310`). **Sem iterator customizado.**
-- **`in` é palavra contextual** (não keyword) — só válida aqui.
-- O tipo da variável é `typeArguments.get(0)` da List ou o componente do array.
-- **`for (var c in "ab")` NÃO itera sobre string** — o receiver `string` não é
-  coleção; comportamento **Unspecified** (o probe JVM deu erro de runtime, não
-  iteração). Use `s.charAt(i)` num loop numérico.
+- Iterates over `List<T>` (internal index `#coll`/`#idx`) or an array
+  (`StatementLowerer.java:259-310`). **No custom iterator.**
+- **`in` is a contextual word** (not a keyword) — only valid here.
+- The variable type is `typeArguments.get(0)` of the List or the array component.
+- **`for (var c in "ab")` does NOT iterate over a string** — the `string` receiver is not a
+  collection; **Unspecified** behavior (the JVM probe gave a runtime error, not
+  iteration). Use `s.charAt(i)` in a numeric loop.
 
 ### 5.5 `break` / `continue`
 
-- Encerram/pulam a iteração do **loop mais interno** (ou `switch`).
-- **Não há labeled break/continue** (`L: for … break L` → `PARSE041`, *probe*).
-- Implementados por pilhas de labels (`breakLabels`/`continueLabels`).
+- End/skip the iteration of the **innermost loop** (or `switch`).
+- **There is no labeled break/continue** (`L: for … break L` → `PARSE041`, *probe*).
+- Implemented by label stacks (`breakLabels`/`continueLabels`).
 
 ---
 
@@ -135,16 +137,16 @@ switch-stmt = "switch" , "(" , expression , ")" , "{" , { case-stmt } , [ defaul
 case-stmt   = "case" , ( pattern | expression ) , ":" , { statement }
 `
 
-- Cases usam `:` (a forma expressão usa `->` — ver
+- Cases use `:` (the expression form uses `->` — see
   [expressions.md](expressions.md) §12).
-- **Sem fallthrough**: cada case termina com jump para o fim do switch
-  (`SwitchStmtLowerer.java:174`). *probe*: valor 1 com `case 1: println("a")
-  case 2: println("b")` imprime só `a`.
-- `break` dentro do case é aceito (e redundante).
-- Suporta **pattern matching** (`case String s:`) e **destructuring**
+- **No fallthrough**: each case ends with a jump to the end of the switch
+  (`SwitchStmtLowerer.java:174`). *probe*: value 1 with `case 1: println("a")
+  case 2: println("b")` prints only `a`.
+- `break` inside the case is accepted (and redundant).
+- Supports **pattern matching** (`case String s:`) and **destructuring**
   (`case Point(var x, var y):`).
-- **Enum**: switch sobre enum sem `default` exige cobertura de todas as
-  constantes → senão `SEM031`.
+- **Enum**: a switch over an enum without `default` requires coverage of all
+  constants → otherwise `SEM031`.
 
 ---
 
@@ -154,12 +156,12 @@ case-stmt   = "case" , ( pattern | expression ) , ":" , { statement }
 throw-stmt = "throw" , expression
 `
 
-- **A expressão deve ser `string`** — exceções em Kof são Strings.
-  `throw 5` → `SEM026` (*probe*: "throw exige uma String").
-- No **JVM**, `throw "msg"` é baixado para `new RuntimeException(msg)` +
-  `athrow` (`StatementLowerer.java:311-327`). Nos outros targets é
-  `KofThrow()` direto (a string é o valor lançado). **Target-specific** na
-  representação, **Stable** na semântica (lança uma exceção capturável por
+- **The expression must be `string`** — exceptions in Kof are Strings.
+  `throw 5` → `SEM026` (*probe*: "throw requires a String").
+- On the **JVM**, `throw "msg"` is lowered to `new RuntimeException(msg)` +
+  `athrow` (`StatementLowerer.java:311-327`). On the other targets it is
+  `KofThrow()` directly (the string is the thrown value). **Target-specific** in
+  representation, **Stable** in semantics (throws an exception catchable by
   `catch (String e)`).
 
 ---
@@ -171,13 +173,13 @@ try-stmt = "try" , block , { catch-clause } , [ "finally" , block ]
 catch-clause = "catch" , "(" , type-ref , identifier , ")" , block
 `
 
-- `catch (String e)` captura exceções-Kof (strings). O tipo do catch é
-  resolvido como `String` no JVM (porque `throw` virou `RuntimeException`).
-- `catch (Int e)` **compila** (*probe*) mas o comportamento de captura é
-  **Unspecified** (a exceção lançada é sempre String/RuntimeException).
-- `finally` executa sempre (inclusive em `return`/`throw` do try).
-- Implementado por marcadores de região na IR (`KofTryStart`/`KofCatchStart`),
-  não por exception table separada.
+- `catch (String e)` catches Kof exceptions (strings). The catch type is
+  resolved as `String` on the JVM (because `throw` became `RuntimeException`).
+- `catch (Int e)` **compiles** (*probe*) but the catching behavior is
+  **Unspecified** (the thrown exception is always String/RuntimeException).
+- `finally` always executes (including on `return`/`throw` of the try).
+- Implemented by region markers in the IR (`KofTryStart`/`KofCatchStart`),
+  not by a separate exception table.
 
 ---
 
@@ -187,9 +189,9 @@ catch-clause = "catch" , "(" , type-ref , identifier , ")" , block
 assert-stmt = "assert" , "(" , expression , [ "," , string-literal ] , ")"
 `
 
-- Se a condição é falsa: lança `"assertion failed"` (ou a mensagem dada).
-- A mensagem deve ser **literal de string** (não expressão) — `:901`.
-- Usado pelo harness de `kof test` (exit code ≠ 0).
+- If the condition is false: throws `"assertion failed"` (or the given message).
+- The message must be a **string literal** (not an expression) — `:901`.
+- Used by the `kof test` harness (exit code ≠ 0).
 
 ---
 
@@ -199,11 +201,11 @@ assert-stmt = "assert" , "(" , expression , [ "," , string-literal ] , ")"
 spawn-stmt = "spawn" , expression
 `
 
-- Executa a expressão (chamada ou bloco) como **tarefa concorrente**.
-- Fire-and-forget: o programa **aguarda as tarefas spawned antes de sair**
-  (join implícito no `main`).
-- `spawn { … }` (bloco) e `spawn f()` (chamada) são válidos.
-- Ver [../concurrency.md](concurrency.md).
+- Executes the expression (call or block) as a **concurrent task**.
+- Fire-and-forget: the program **awaits the spawned tasks before exiting**
+  (implicit join in `main`).
+- `spawn { … }` (block) and `spawn f()` (call) are valid.
+- See [../concurrency.md](concurrency.md).
 
 ---
 
@@ -213,11 +215,11 @@ spawn-stmt = "spawn" , expression
 expr-stmt = expression
 `
 
-Qualquer expressão usada por efeito (chamada, atribuição, incremento).
-`println(x)` é um expression statement (chamada de função).
+Any expression used for effect (call, assignment, increment).
+`println(x)` is an expression statement (a function call).
 
 ---
 
-## 12. Statement vazio
+## 12. Empty statement
 
-`;` isolado → `ExpressionStmt(null)` (no-op).
+An isolated `;` → `ExpressionStmt(null)` (no-op).
