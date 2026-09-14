@@ -418,4 +418,155 @@ class BackendParityTest {
         assertEquals("", divergentes.toString().trim(),
                 "paridade cross-target JVM×JS (grupo A do sweep interpretado):");
     }
+
+    @Test
+    void parityLongBitwiseShiftMixed(@TempDir Path tempDir) throws IOException {
+        // §167: bitwise/shift com Int e Long misturados + overflow de Long.
+        // Antes: JVM VerifyError (land/lor/lxor/lshl com tipo errado; inferência
+        // dizia INT p/ `int & long` → box Integer sobre um long) e JS
+        // TypeError (BigInt misturado com Number) / sem máscara de shift /
+        // sem wrap de 64 bits. Golden medido no oracle JVM (4 targets concordam).
+        runParity("""
+                main() {
+                    var l = 5L
+                    println(l & 3)
+                    println(l | 3)
+                    println(l ^ 3)
+                    var i = 5
+                    println(i & l)
+                    var neg = -1
+                    var big = 4294967295L
+                    println(neg & big)
+                    println(neg | big)
+                    println(neg ^ big)
+                    println(l << 2L)
+                    println(l << 70)
+                    println(l << 70L)
+                    println(l >> 65L)
+                    var one = 1
+                    println(one << 40L)
+                    println(one >> 40L)
+                    println(one >>> 40L)
+                    var n = -1L
+                    println(n >>> 1)
+                    println(n >>> 64L)
+                    println(n >>> 65L)
+                    var max = 9223372036854775807L
+                    println(max + 1L)
+                    println(max * 2L)
+                    var min = -9223372036854775807L - 1L
+                    println(-min)
+                    var w = 5000000000L
+                    var t = w as Int
+                    println(t)
+                    println(t + 1)
+                    println((l as Int) & 3)
+                }
+                """, """
+                1
+                7
+                6
+                5
+                4294967295
+                -1
+                -4294967296
+                20
+                320
+                320
+                2
+                256
+                0
+                0
+                9223372036854775807
+                -1
+                9223372036854775807
+                -9223372036854775808
+                -2
+                -9223372036854775808
+                705032704
+                705032705
+                1
+                """.trim(),
+                tempDir, "longbitshift");
+    }
+
+    @Test
+    void parityIncrementWideTypesAndArrayElement(@TempDir Path tempDir) throws IOException {
+        // §168: `++`/`--` e compound assignment em long/double emitiam literal
+        // INT 1 num binário de 2 slots → JVM VerifyError; DUP de 1 slot
+        // corrompia o frame em tipos largos; incremento de ELEMENTO de array
+        // não rematerializava [array,index] antes do arraystore (VerifyError
+        // JVM / underflow JS / core dump Native). Golden medido no oracle JVM
+        // (os 4 targets concordam). Bordas Q3: prefixo/pós-fixo, negativo
+        // (`--`), float/double, long com estouro (`max`), divisão compound e
+        // elemento de array Int e Long.
+        runParity("""
+                main() {
+                    var c = 1L
+                    c++
+                    println(c)
+                    ++c
+                    println(c)
+                    c--
+                    println(c)
+                    var d = 1.5
+                    d++
+                    println(d)
+                    ++d
+                    println(d)
+                    d--
+                    println(d)
+                    var f = 1.5f
+                    f++
+                    println(f)
+                    var i = 5
+                    i++
+                    println(i)
+                    var l = 100L
+                    l /= 3
+                    println(l)
+                    l += 2L
+                    println(l)
+                    d /= 2.0
+                    println(d)
+                    var max = 9223372036854775807L
+                    max++
+                    println(max)
+                    var a = new Long[2]
+                    a[0] = 7L
+                    a[0]++
+                    println(a[0])
+                    println(++a[0])
+                    a[1] = 40L
+                    a[1]--
+                    println(a[1])
+                    var b = new Int[2]
+                    b[0] = 7
+                    b[0]++
+                    println(b[0])
+                    println(b[0]--)
+                    println(b[0])
+                }
+                """, """
+                2
+                3
+                2
+                2.5
+                3.5
+                2.5
+                2.5
+                6
+                33
+                35
+                1.25
+                -9223372036854775808
+                8
+                9
+                39
+                8
+                8
+                7
+                """.trim(),
+                tempDir, "incrwide");
+    }
 }

@@ -106,8 +106,12 @@ public final class KofWeb {
             case "use" -> argTypes.size() == 1
                     ? new WebCall("kof_web_use", VOID, List.of(STR, argTypes.get(0)))
                     : null;
-            case "listen" -> argTypes.size() == 1
-                    ? new WebCall("kof_web_listen", VOID, List.of(STR, argTypes.get(0)))
+            // #102.2 (13/09): `listen` aceita SÓ Int — String virava
+            // VerifyError em runtime. Com o gate aqui, `listen("8100")`
+            // retorna null → o typer emite SEM025 em compile-time
+            // (kof check) em vez de bytecode inválido.
+            case "listen" -> argTypes.size() == 1 && isInt(argTypes.get(0))
+                    ? new WebCall("kof_web_listen", VOID, List.of(STR, INT))
                     : null;
             case "serveDir" -> argTypes.size() == 2
                     ? new WebCall("kof_web_serve_dir", VOID, List.of(STR, STR, STR))
@@ -160,12 +164,38 @@ public final class KofWeb {
         };
     }
 
+    /**
+     * #102 item 3: quais funções de contexto o runtime nativo realmente emite.
+     * O T1 nativo cobre listen/route + body/method/path; o resto não tem
+     * símbolo no .s gerado e virava `undefined reference` no ld.
+     */
+    static boolean contextNativeSupported(String function) {
+        return switch (function) {
+            case "kof_web_body" -> true;
+            default -> false;
+        };
+    }
+
+    static boolean isNativeTarget(Target t) {
+        return t == Target.NATIVE || t == Target.NATIVE_RISCV64 || t == Target.NATIVE_AARCH64;
+    }
+
 
     /** Request-context functions available inside route handlers. */
     static WebCall contextCall(String name, int argCount) {
+        // #102 item 4: query()/header() devolvem null quando o parâmetro/cabeçalho
+        // não está presente no request (HashMap.get no runtime). Declará-las como
+        // String era uma mentira de tipo (NPE silencioso em header().split(...));
+        // agora Nullable(STR) força o narrowing no kof check (SEM049), espelhando
+        // SG-008 (Map.get -> V?). param() continua STR: só rota matchada chega ao
+        // handler e todo :param do match tem valor (training/idioms/web.md usa
+        // param("id").toInt() sem check — código válido, não pode virar erro).
         return switch (name) {
-            case "param", "query", "header" -> argCount == 1
-                    ? new WebCall("kof_web_" + name, STR, List.of(STR))
+            case "param" -> argCount == 1
+                    ? new WebCall("kof_web_param", STR, List.of(STR))
+                    : null;
+            case "query", "header" -> argCount == 1
+                    ? new WebCall("kof_web_" + name, new Type.NullableType(STR), List.of(STR))
                     : null;
             case "body", "method", "path" -> argCount == 0
                     ? new WebCall("kof_web_" + name, STR, List.of())

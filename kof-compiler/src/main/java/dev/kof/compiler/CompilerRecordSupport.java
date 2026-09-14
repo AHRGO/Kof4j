@@ -61,6 +61,10 @@ public final class CompilerRecordSupport {
 
     /**
      * equals() nativo de record: compara todos os componentes (bug 11 native).
+     * §114: campo String → CONTEÚDO via kof_string_equals (null-safe, o mesmo
+     * helper que o top-level `s == t` usa — FUNCTION, roteado nos 3 backends
+     * nativos); campo de classe/record aninhado continua EQ de ponteiro até a
+     * armadura genérica de equals-vtable-do-campo do §104b-ii (unidade própria).
      */
     static IRMethod buildRecordEqualsMethod(CompilerDriver driver, String internalName,
                             List<IRField> fields,
@@ -76,7 +80,13 @@ public final class CompilerRecordSupport {
             ops.add(new KofLoadField(ownerType, f.name(), f.type()));
             ops.add(new KofLoadLocal(ownerType, 1));
             ops.add(new KofLoadField(ownerType, f.name(), f.type()));
-            ops.add(new KofBinary(KofBinaryOp.EQ, f.type()));
+            if (Type.isString(f.type())) {
+                ops.add(new KofCall(BuiltinTypes.STRING, "kof_string_equals",
+                        List.of(BuiltinTypes.STRING, BuiltinTypes.STRING),
+                        Type.PrimitiveType.BOOL, KofCallKind.FUNCTION));
+            } else {
+                ops.add(new KofBinary(KofBinaryOp.EQ, f.type()));
+            }
             // AND acumula a partir do 2º campo: [bool0] → (bool0 AND bool1)
             // O AND só após a 2ª comparação ter empilhado o 2º bool.
             if (i > 0) {
@@ -86,6 +96,29 @@ public final class CompilerRecordSupport {
         if (fields.isEmpty()) {
             ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 1));
         }
+        ops.add(new KofReturn(Type.PrimitiveType.BOOL));
+        return new IRMethod("equals", Type.PrimitiveType.BOOL, List.of(ownerType), AccessFlags.PUBLIC,
+                List.of(), List.of(new IRBasicBlock(0, ops)), locals);
+    }
+
+    /**
+     * equals() de classe NÃO-record no Native: identidade de referência
+     * (this == other), o MESMO contrato do Object.equals herdado no JVM
+     * (Thing(5).equals(Thing(5)) = false — oracle 11/09). Sem este método o
+     * backend emitia `call Thing_equals` sem símbolo (LINK_FAIL) em código
+     * válido (bug 104b-i). A comparação EQ de ponteiro no Native é a mesma
+     * que `t1 == t2` (já provada correta). hashCode/toString de classe
+     * não-record ficam em §104b-ii.
+     */
+    static IRMethod buildClassIdentityEqualsMethod(CompilerDriver driver, String internalName) {
+        Type ownerType = CompilerTypes.ownerTypeFromInternal(internalName, driver.semanticAnalyzer);
+        List<KofOperation> ops = new ArrayList<>();
+        List<IRLocalVariable> locals = new ArrayList<>();
+        locals.add(new IRLocalVariable(0, "this", ownerType));
+        locals.add(new IRLocalVariable(1, "other", ownerType));
+        ops.add(new KofLoadLocal(ownerType, 0));
+        ops.add(new KofLoadLocal(ownerType, 1));
+        ops.add(new KofBinary(KofBinaryOp.EQ, ownerType));
         ops.add(new KofReturn(Type.PrimitiveType.BOOL));
         return new IRMethod("equals", Type.PrimitiveType.BOOL, List.of(ownerType), AccessFlags.PUBLIC,
                 List.of(), List.of(new IRBasicBlock(0, ops)), locals);

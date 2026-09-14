@@ -270,8 +270,8 @@ final class JsRuntimeUiStdlib {
             // (membro) → TypeError só em tempo de execução. Validação ESTREITA por
             // regex (lição bug 62: parseInt/Number sozinhos driftam nos bordas —
             // "0x1a"→0, ""→0, overflow wraps p/ valor errado; o JVM lança fora de
-            // formato/range). Long em KofJS é Number (sem BigInt) — acima de 2^53 a
-            // precisão é limite do backend, não deste helper.
+            // formato/range). §81 (5b, 13/09): Long no JS é BigInt — 64-bit
+            // real, overflow lança como no JVM (kof_string_to_long abaixo).
             function kofParseChecked(v, intRe, name) {
                 const s = String(v).trim();
                 if (!intRe.test(s)) throw new Error("Cannot parse \\"" + s + "\\" as " + name);
@@ -283,9 +283,15 @@ final class JsRuntimeUiStdlib {
                 if (n < -2147483648 || n > 2147483647) throw new Error("Cannot parse \\"" + s + "\\" as Int");
                 return n | 0;   // Int = 32-bit signed (idem intWrap nos binops)
             }
+            // §81 (5b, 13/09): Long no JS = BigInt — paridade 64-bit real
+            // ("9007199254740993".toLong() NAO arredonda) e overflow de Long
+            // lança como no JVM (Long.parseLong).
             export function kof_string_to_long(v) {
                 const s = kofParseChecked(v, /^[-+]?\\d+$/, "Long");
-                return Number(s);
+                const b = BigInt(s);
+                const MIN = -(2n ** 63n), MAX = 2n ** 63n - 1n;
+                if (b < MIN || b > MAX) throw new Error("Cannot parse \\"" + s + "\\" as Long");
+                return b;
             }
             function kofParseDoubleChecked(v, name) {
                 const s = String(v).trim();
@@ -300,6 +306,55 @@ final class JsRuntimeUiStdlib {
             export function kof_string_to_float(v) {
                 const n = Number(kofParseDoubleChecked(v, "Float"));
                 return Math.fround(n);   // Float = 32-bit (Kof aceita; paridade com Native)
+            }
+            // S13b (plan-stdlib-expansion §2, P0): parse com default — briefing
+            // §43 ("falha de parse = OrNull/OrDefault"). Mesmo contrato do
+            // parse (trim/regex estreito acima); falha DEVOLVE o default
+            // (nunca lança). Paridade com JvmStringCoreRuntime (JVM) e os
+            // wrappers asm x86/riscv. Long = BigInt ±2^63 (§81).
+            export function kof_string_to_int_or_default(v, def) {
+                try { return kof_string_to_int(v); } catch (e) { return def; }
+            }
+            export function kof_string_to_long_or_default(v, def) {
+                try { return kof_string_to_long(v); } catch (e) { return def; }
+            }
+            export function kof_string_to_double_or_default(v, def) {
+                try { return kof_string_to_double(v); } catch (e) { return def; }
+            }
+            // §102 (paridade absoluta JVM=JS=X86=ARM=RISC): o `from` de
+            // lastIndexOf/startsWith. JS `String.prototype` já é UTF-16 (code
+            // units, casa com o contrato do bug 43), mas diverge do JDK em 2
+            // clamps: lastIndexOf(x, from<0) → JS trata como 0 (acha), JDK dá
+            // -1; startsWith(p, from<0|from>len) → JS faz clamp (startsWith("")
+            // dá true), JDK dá false. indexOf bate o JDK nativo (clamp from<0→0,
+            // vazio→min(from,len)) — não precisa de helper. Os 2 abaixo aplicam
+            // os clamps JDK ANTES de delegar (needle vazia: lastIndexOf → 
+            // min(from,len), >=0; o resto o prototype resolve exato).
+            export function kof_string_index_of2(s, needle, from) {
+                const s2 = String(s), n2 = String(needle);
+                const f = from < 0 ? 0 : (from > s2.length ? s2.length : from);
+                if (n2.length === 0) return f;
+                if (n2.length > s2.length) return -1;
+                for (let i = f; i + n2.length <= s2.length; i++) {
+                    if (s2.startsWith(n2, i)) return i;
+                }
+                return -1;
+            }
+            export function kof_string_last_index_of2(s, needle, from) {
+                const s2 = String(s), n2 = String(needle);
+                if (from < 0) return -1;
+                const f = from > s2.length ? s2.length : from;
+                if (n2.length === 0) return f;
+                if (n2.length > s2.length) return -1;
+                for (let i = Math.min(f, s2.length - n2.length); i >= 0; i--) {
+                    if (s2.startsWith(n2, i)) return i;
+                }
+                return -1;
+            }
+            export function kof_string_starts_with2(s, needle, from) {
+                const s2 = String(s), n2 = String(needle);
+                if (from < 0 || from > s2.length) return false;
+                return s2.startsWith(n2, from);
             }
 
             // ── kof.validation (STDLIB S6a) — rede ─────────────────────────

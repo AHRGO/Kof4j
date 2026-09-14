@@ -152,6 +152,18 @@ em 8/13/18/23, hex min ou maiúsculo) — não verifica version/variant. Tem
 JVM/Script/JS/x86; riscv64/aarch64 ficam atrás do gap `UUID001` (fatia B
 própria pendente — o compilador recusa com código claro, nunca stub).
 
+## uuid — v7 (S3b.2, RFC 9562)
+
+```kof
+var id = uuid.v7()          // ordenável por tempo: 48 bits de unix-ts-ms no início
+println(id.charAt(14))      // '7' (versão)
+```
+
+Mesmo shape 8-4-4-4-12 do v4, mas os 12 primeiros hex codificam o relógio
+(epoch-ms big-endian), então v7's gerados em sequência são ordenáveis.
+Variante 10xx (19º ∈ {8,9,a,b}) como no v4. Entropia só do SO (SecureRandom /
+getrandom / crypto — R11).
+
 ## uuid — isUuid (S3b-ext)
 
 ```kof
@@ -207,6 +219,7 @@ Espelho do `capitalize`: só o 1º byte; `A-Z` -> `a-z`; null/`""`/fora-de-A-Z
 var n = random.randomInt(100)          // 0..99 (bound<=0 -> 0, face leniente)
 var coin = random.randomBoolean()      // 0 ou 1
 var token = random.randomString(8, "0123456789abcdef")  // 8 chars do alfabeto
+var salt = random.randomBytesHex(16)   // 32 hex minúsculo (alias de random.hex — DD-STDLIB-01)
 // escolha de lista = idiom, não função:
 var l = listOf("a", "b", "c")
 var pick = l[random.randomInt(l.size)]
@@ -295,7 +308,7 @@ spans nos 3 nativos).
 | `math.*`, `strings.is*/count/capitalize/reverse/repeat/truncate/pad*/escapeHtml`, `toCamel/Pascal/Snake/Kebab/slugify`, `encoding.hex*/url*`, `time.isLeapYear/daysInMonth/dayOfWeek/daysBetween`, `validation.isCpf/isCnpj/isCep/isPis/isIpv4/isIpv6/isMac/isPort/isCreditCard/isDomain` | ✅ | ✅ | ✅ | ✅ |
 | `encoding.base64*` / `base64Url*` | ✅ | ✅ | ✅ | ✅ |
 | `net.*` (S8) | ✅ | ✅ | ✅ | ✅ |
-| `uuid.v4` | ✅ | ✅ | ✅ | ✅ |
+| `uuid.v4` / `uuid.v7` | ✅ | ✅ | ✅ | ✅ |
 | `random.randomInt/randomBoolean/randomString` (face beta S10a/b) | ✅ | ✅ | ✅ | ✅ |
 | `random.double/boolean/int/hex` (face main S10) | ✅ | ✅ | ✅ (B27) | ✅ |
 | `uuid.isUuid` (S3b.1, predicado de forma) | ✅ | ✅ | ✅ (B25) | ✅ |
@@ -315,7 +328,7 @@ executados de verdade (riscv/aarch64 sob qemu).
 ## Próximo passo
 
 - `training/idioms/stdlib.md` — BAD/GOOD/WHY de cada namespace.
-- `docs/stdlib.md` §3 — a matriz de referência com gates.
+- `docs/stdlib/stdlib.md` §3 — a matriz de referência com gates.
 - `docs/development/plan-stdlib-expansion.md` — o que falta: `random` (P0),
   `last4`/`creditCardBrand` (tabela de bandeira = marca registrada — avaliar
   antes) e `math` Double (FLT).

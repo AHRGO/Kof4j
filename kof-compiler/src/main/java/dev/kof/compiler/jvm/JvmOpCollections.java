@@ -50,11 +50,15 @@ public final class JvmOpCollections {
                 mv.visitLabel(notNull);
                 mv.visitTypeInsn(CHECKCAST, boxed);
                 mv.visitMethodInsn(INVOKEVIRTUAL, boxed, unboxMethodName(kc.returnType()),
-                        "()" + JvmTypeMapper.toDescriptor(kc.returnType()), false);
+                        unboxDescriptor(kc.returnType()), false);
                 mv.visitLabel(end);
             } else if (("kof_await".equals(kc.methodName())
-                    || "kof_await_timeout".equals(kc.methodName())) && isPrimitiveType(kc.returnType())) {
-                // await/awaitTimeout com resultado primitivo: reflexão devolve boxed.
+                    || "kof_await_timeout".equals(kc.methodName())
+                    || "kof_select_any".equals(kc.methodName())) && isPrimitiveType(kc.returnType())) {
+                // await/awaitTimeout/selectAny com resultado primitivo: o runtime
+                // devolve Object (boxed, do CompletableFuture). §128-JVM: selectAny
+                // compartilhava o destino primitivo de await mas NÃO era roteado
+                // aqui → istore de Object → VerifyError "not assignable to integer".
                 emitUnboxIfPrimitive(mv, kc.returnType());
             } else if ("kof_list_reduce".equals(kc.methodName()) && isPrimitiveType(kc.returnType())) {
                 emitUnboxIfPrimitive(mv, kc.returnType());
@@ -197,15 +201,23 @@ public final class JvmOpCollections {
                     emitBoxIfPrimitive(mv, keyType);        // [m,V,K]
                     mv.visitInsn(SWAP);                     // [m,K,V]
                 }
-                mv.visitMethodInsn(INVOKEVIRTUAL, "java/util/HashMap", "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", false);
+                mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", true);
                 // VOID no call-site (ex.: pares do mapOf): o valor anterior é descartado
                 if (Type.isVoid(kc.returnType())) {
                     mv.visitInsn(POP);
+                } else {
+                    // §112: HashMap.put devolve Object (prev, possivelmente
+                    // null). O typer declara o retorno como V — quando V é
+                    // primitivo o stack ficava Object entrando em uso
+                    // primitivo → VerifyError (println(m.put(...)) emitia
+                    // valueOf(int) sobre Object). Unbox com guard, espelhando
+                    // o kof_map_get (null → default do primitivo).
+                    emitPrevValueUnbox(mv, kc.returnType());
                 }
             }
             case "kof_map_get" -> {
                 emitBoxIfPrimitive(mv, keyType);
-                mv.visitMethodInsn(INVOKEVIRTUAL, "java/util/HashMap", "get", "(Ljava/lang/Object;)Ljava/lang/Object;", false);
+                mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "get", "(Ljava/lang/Object;)Ljava/lang/Object;", true);
                 // SG-008 (bug 87): get() devolve V? — ausência é null comparável
                 // (`x == null` dá true, nunca NPE). Quando o USE espera o
                 // primitivo (slot `Int a` / aritmética), o unbox é com GUARD
@@ -225,7 +237,7 @@ public final class JvmOpCollections {
                     mv.visitLabel(notNull);
                     mv.visitTypeInsn(CHECKCAST, boxed);
                     mv.visitMethodInsn(INVOKEVIRTUAL, boxed, unboxMethodName(unboxGuardType),
-                            "()" + JvmTypeMapper.toDescriptor(unboxGuardType), false);
+                            unboxDescriptor(unboxGuardType), false);
                     mv.visitLabel(end);
                 } else if (valueNullable != null) {
                     // valor de referência (String? etc.): só o cast
@@ -243,29 +255,34 @@ public final class JvmOpCollections {
             }
             case "kof_map_remove" -> {
                 emitBoxIfPrimitive(mv, keyType);
-                mv.visitMethodInsn(INVOKEVIRTUAL, "java/util/HashMap", "remove", "(Ljava/lang/Object;)Ljava/lang/Object;", false);
+                mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "remove", "(Ljava/lang/Object;)Ljava/lang/Object;", true);
                 if (!isPrimitiveType(valueType) && !(valueType instanceof Type.UnknownType)) {
                     String internal = JvmTypeMapper.toInternalName(valueType instanceof Type.ClassType ct ? ct.packageName() : "", valueType instanceof Type.ClassType ct ? ct.name() : "java/lang/Object");
                     mv.visitTypeInsn(CHECKCAST, internal);
                 }
-                emitUnboxIfPrimitive(mv, valueType);
+                // §112: remove de chave AUSENTE devolve null — o unbox cru de
+                // primitivo dava NullPointerException (NPE não é exceção-as-
+                // String do contrato Kof). Guard com default, como get/put.
+                if (isPrimitiveType(valueType) && !KofUi.isUiType(valueType) && !KofMedia.isHandleType(valueType)) {
+                    emitPrevValueUnbox(mv, valueType);
+                }
             }
             case "kof_map_contains" -> {
                 emitBoxIfPrimitive(mv, keyType);
-                mv.visitMethodInsn(INVOKEVIRTUAL, "java/util/HashMap", "containsKey", "(Ljava/lang/Object;)Z", false);
+                mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "containsKey", "(Ljava/lang/Object;)Z", true);
             }
-            case "kof_map_size" -> mv.visitMethodInsn(INVOKEVIRTUAL, "java/util/HashMap", "size", "()I", false);
-            case "kof_map_is_empty" -> mv.visitMethodInsn(INVOKEVIRTUAL, "java/util/HashMap", "isEmpty", "()Z", false);
-            case "kof_map_clear" -> mv.visitMethodInsn(INVOKEVIRTUAL, "java/util/HashMap", "clear", "()V", false);
+            case "kof_map_size" -> mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "size", "()I", true);
+            case "kof_map_is_empty" -> mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "isEmpty", "()Z", true);
+            case "kof_map_clear" -> mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "clear", "()V", true);
             case "kof_map_keys" -> {
-                mv.visitMethodInsn(INVOKEVIRTUAL, "java/util/HashMap", "keySet", "()Ljava/util/Set;", false);
+                mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "keySet", "()Ljava/util/Set;", true);
                 mv.visitTypeInsn(NEW, "java/util/ArrayList");
                 mv.visitInsn(DUP_X1);
                 mv.visitInsn(SWAP);
                 mv.visitMethodInsn(INVOKESPECIAL, "java/util/ArrayList", "<init>", "(Ljava/util/Collection;)V", false);
             }
             case "kof_map_values" -> {
-                mv.visitMethodInsn(INVOKEVIRTUAL, "java/util/HashMap", "values", "()Ljava/util/Collection;", false);
+                mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "values", "()Ljava/util/Collection;", true);
                 mv.visitTypeInsn(NEW, "java/util/ArrayList");
                 mv.visitInsn(DUP_X1);
                 mv.visitInsn(SWAP);
@@ -327,6 +344,32 @@ public final class JvmOpCollections {
     }
 
     static String unboxMethodName(Type boxed) {
+        // bug 109: o GUARD do kof_map_get (Nullable(V) com V primitivo) chama
+        // esta função com o tipo PRIMITIVO interno (Bool/Int/...), não com a
+        // Classe boxada — antes só o ramo ClassType era tratado e um Bool
+        // caía no `return "intValue"` → `Boolean.intValue()Z` →
+        // NoSuchMethodError em runtime (mapOf(k, true).get(k) CRASHAVA no JVM;
+        // só o path ClassType (await/poll) acertava). Espelha o dispatch de
+        // nome de boxedClassNameFor (mesma tabela, método correto por tipo).
+        if (boxed instanceof Type.PrimitiveType pt) {
+            return switch (pt.name()) {
+                case "long", "Long" -> "longValue";
+                case "float", "Float" -> "floatValue";
+                case "double", "Double" -> "doubleValue";
+                case "boolean", "bool", "Bool" -> "booleanValue";
+                case "byte", "Byte" -> "byteValue";
+                case "short", "Short" -> "shortValue";
+                // char é guardado BOXED AS Integer (boxedClassNameFor default →
+                // java/lang/Integer; emitBoxIfPrimitive → valueOf(I)). §104b-ii
+                // face JVM: o unbox derivava method+desc do primitivo DECLARADO
+                // (charValue/()C) → `Integer.charValue()C` inexistente →
+                // NoSuchMethodError em `mapOf(k,'a').get(k)` / `listOf('a').get`.
+                // A caixa é Integer, então o unbox é intValue/()I (char Kof é
+                // int-width no JVM — o print dá o codepoint, oracle 97).
+                case "char", "Char" -> "intValue";
+                default -> "intValue";
+            };
+        }
         if (boxed instanceof Type.ClassType ct) {
             return switch (ct.name()) {
                 case "Integer" -> "intValue";
@@ -341,6 +384,23 @@ public final class JvmOpCollections {
             };
         }
         return "intValue";
+    }
+
+    /**
+     * Descritor do método de unbox — sempre coerente com a CLASSE boxada real
+     * (`boxedClassNameFor`). Nunca o tipo do primitivo DECLARADO: char é
+     * guardado como `Integer` (não `Character`), e `toDescriptor(CHAR)="C"`
+     * produzia `Integer.charValue()C` / `Integer.intValue()C` inexistentes
+     * (§104b-ii face JVM — NoSuchMethodError). Nullable desembrulha (o guard
+     * faz CHECKCAST na caixa do INNER).
+     */
+    static String unboxDescriptor(Type primitive) {
+        Type prim = primitive instanceof Type.NullableType nt ? nt.inner() : primitive;
+        if (prim instanceof Type.PrimitiveType pt) {
+            String n = Type.canonicalPrimitiveName(pt.name());
+            if ("char".equals(n)) return "()I";
+        }
+        return "()" + JvmTypeMapper.toDescriptor(prim);
     }
 
     static String boxedClassNameFor(Type primitive) {
@@ -379,6 +439,44 @@ public final class JvmOpCollections {
         return type instanceof Type.PrimitiveType pt && !"void".equals(pt.name());
     }
 
+    /**
+     * §112: unbox com guard para o VALOR ANTERIOR devolvido por
+     * `HashMap.put`/`HashMap.remove` quando o tipo declarado do retorno é
+     * primitivo. Esses métodos devolvem `Object` (o prev), que pode ser
+     * **null** (primeiro put / remove de chave ausente). O unbox cru de
+     * primitivo (`checkcast Integer; intValue`) estourava NullPointerException
+     * (não é exceção-as-String do contrato Kof) e, no put, o Object entrando em
+     * uso primitivo dava VerifyError. Espelha o guard do `kof_map_get`:
+     * null → default do primitivo (0/false/0.0). Recebe o Object no topo.
+     */
+    static void emitPrevValueUnbox(MethodVisitor mv, Type declared) {
+        Type prim = declared instanceof Type.NullableType nt ? nt.inner() : declared;
+        String boxed = boxedClassNameFor(prim);
+        if (boxed == null) {
+            // valor de referência: só o cast (null-safe); Unknown/UI/Media
+            // não cast (null é comparável, sem NPE).
+            if (!(prim instanceof Type.UnknownType)
+                    && !KofUi.isUiType(prim) && !KofMedia.isHandleType(prim)
+                    && prim instanceof Type.ClassType ct) {
+                mv.visitTypeInsn(CHECKCAST,
+                        JvmTypeMapper.toInternalName(ct.packageName(), ct.name()));
+            }
+            return;
+        }
+        Label notNull = new Label();
+        Label end = new Label();
+        mv.visitInsn(DUP);
+        mv.visitJumpInsn(IFNONNULL, notNull);
+        mv.visitInsn(POP);
+        emitDefaultValue(mv, prim);
+        mv.visitJumpInsn(GOTO, end);
+        mv.visitLabel(notNull);
+        mv.visitTypeInsn(CHECKCAST, boxed);
+        mv.visitMethodInsn(INVOKEVIRTUAL, boxed, unboxMethodName(prim),
+                unboxDescriptor(prim), false);
+        mv.visitLabel(end);
+    }
+
     static void emitUnboxIfPrimitive(MethodVisitor mv, Type type) {
         String boxed = boxedClassNameFor(type);
         if (boxed != null) {
@@ -390,7 +488,7 @@ public final class JvmOpCollections {
                     : boxed.endsWith("Double") ? "doubleValue"
                     : boxed.endsWith("Byte") ? "byteValue"
                     : boxed.endsWith("Short") ? "shortValue" : "intValue";
-            mv.visitMethodInsn(INVOKEVIRTUAL, boxed, method, "()" + JvmTypeMapper.toDescriptor(type), false);
+            mv.visitMethodInsn(INVOKEVIRTUAL, boxed, method, unboxDescriptor(type), false);
         }
     }
 

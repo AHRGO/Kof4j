@@ -30,6 +30,7 @@ import dev.kof.compiler.KofLoadField;
 import dev.kof.compiler.KofLoadLiteral;
 import dev.kof.compiler.KofLoadLocal;
 import dev.kof.compiler.KofNewArray;
+import dev.kof.compiler.KofNewMultiArray;
 import dev.kof.compiler.KofNewObject;
 import dev.kof.compiler.KofOperation;
 import dev.kof.compiler.KofPop;
@@ -62,8 +63,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 
 public class NativeBackend implements Backend {
@@ -78,8 +81,7 @@ public class NativeBackend implements Backend {
     int inlineSeq = 0;   // labels inline (split etc.) — únicas por call site
 
     /** Campos estáticos: chave "owner|name" → label no .data (bug 41). */
-    final java.util.LinkedHashMap<String, String> staticFieldSymbols = new java.util.LinkedHashMap<>();
-    final java.util.LinkedHashMap<String, Object> staticFieldValues = new java.util.LinkedHashMap<>();
+    final NativeStaticData staticData = new NativeStaticData(this);
     Type lastPushedType = Type.UnknownType.UNKNOWN;
     IRClass currentClass = null;
     boolean usesDb = false;
@@ -119,10 +121,23 @@ public class NativeBackend implements Backend {
     }
 
     String sanitizeName(String name) {
-        return name.replace("/", "_").replace(".", "_").replace("-", "_")
-                .replace("<", "").replace(">", "");
+        return NativeSymbolMangling.sanitizeNameStatic(name);
     }
 
+    // SG-011B/§131: mangling de símbolo extraído p/ NativeSymbolMangling
+    // (split ≤500, 13/09) — a responsabilidade é só nomear, sem estado.
+
+
+    /** Registra um campo estático e devolve o símbolo .data (bug 41). */
+    String staticSymbol(String ownerKey, String fieldName) {
+        return staticData.symbol(ownerKey, fieldName);
+    }
+    String staticSymbol(String ownerKey, String fieldName, Object initialValue) {
+        return staticData.symbol(ownerKey, fieldName, initialValue);
+    }
+    String staticKey(Type ownerType) { return staticData.key(ownerType); }
+    void collectStaticFields() { staticData.collect(); }
+    void emitStaticData(StringBuilder sb) { staticData.emit(sb); }
 
 
     String internString(String value) {
@@ -137,90 +152,6 @@ public class NativeBackend implements Backend {
     ClassLayout getLayout(IRClass clazz) {
         return layoutCache.computeIfAbsent(clazz.name(), k ->
             ClassLayout.buildWithSuper(clazz, name -> allClassesMap.get(name)));
-    }
-
-    /** Registra um campo estático e devolve o símbolo .data (bug 41). */
-    String staticSymbol(String ownerKey, String fieldName) {
-        return staticSymbol(ownerKey, fieldName, null);
-    }
-
-    String staticSymbol(String ownerKey, String fieldName, Object initialValue) {
-        String key = ownerKey + "|" + fieldName;
-        String label = staticFieldSymbols.get(key);
-        if (label == null) {
-            label = "kof_static_" + sanitizeName(ownerKey) + "_" + sanitizeName(fieldName);
-            staticFieldSymbols.put(key, label);
-        }
-        if (initialValue != null && !staticFieldValues.containsKey(key)) {
-            staticFieldValues.put(key, initialValue);
-        }
-        return label;
-    }
-
-    /** Chave normalizada do dono (internal name) para o símbolo estático. */
-    String staticKey(Type ownerType) {
-        if (ownerType instanceof Type.ClassType ct) return ct.internalName();
-        return ownerType.toString();
-    }
-
-    /** Coleta os campos estáticos de todas as classes E operações (bug 41). */
-    void collectStaticFields() {
-        for (IRClass clazz : allClassesMap.values()) {
-            for (IRField field : clazz.fields()) {
-                if ((field.accessFlags() & dev.kof.compiler.AccessFlags.STATIC) != 0) {
-                    staticSymbol(clazz.name(), field.name(), field.initialValue());
-                }
-            }
-            for (IRMethod method : clazz.methods()) {
-                for (IRBasicBlock block : method.basicBlocks()) {
-                    for (KofOperation op : block.operations()) {
-                        if (op instanceof KofGetStatic gs) staticSymbol(staticKey(gs.ownerType()), gs.name());
-                        else if (op instanceof KofPutStatic ps) staticSymbol(staticKey(ps.ownerType()), ps.name());
-                    }
-                }
-            }
-        }
-    }
-
-    /** Emite os slots dos campos estáticos no .data (um .quad por campo). */
-    void emitStaticData(StringBuilder sb) {
-        for (java.util.Map.Entry<String, String> e : staticFieldSymbols.entrySet()) {
-            Object v = staticFieldValues.get(e.getKey());
-            if (v instanceof String s) {
-                // strings estáticas são OBJETOS Kof (header+length+chars), não
-                // `.asciz` — o kof_print_string lê length@16 e chars@24.
-                String objLabel = e.getValue() + "_obj";
-                emitStaticStringObject(sb, objLabel, s);
-                sb.append(e.getValue()).append(": .quad ").append(objLabel).append("\n");
-            } else {
-                sb.append(e.getValue()).append(": .quad ").append(staticInitialText(v)).append("\n");
-            }
-        }
-    }
-
-    private void emitStaticStringObject(StringBuilder sb, String label, String s) {
-        String bytes = s.getBytes(java.nio.charset.StandardCharsets.UTF_8).length + "";
-        String escaped = s.replace("\\", "\\\\").replace("\"", "\\\"")
-                .replace("\n", "\\n").replace("\t", "\\t");
-        sb.append(label).append(":\n");
-        sb.append("    .long 1\n");
-        sb.append("    .long 0\n");
-        sb.append("    .quad 0\n");
-        sb.append("    .long ").append(bytes).append("\n");
-        sb.append("    .long 0\n");
-        sb.append("    .ascii \"").append(escaped).append("\"\n");
-        sb.append("    .byte 0\n");
-        sb.append("    .balign 8\n");
-    }
-
-    private String staticInitialText(Object v) {
-        if (v == null) return "0";
-        if (v instanceof Boolean b) return b ? "1" : "0";
-        if (v instanceof Integer i) return Integer.toString(i);
-        if (v instanceof Long l) return Long.toString(l);
-        if (v instanceof Double d) return "0x" + Long.toHexString(Double.doubleToLongBits(d));
-        if (v instanceof Float f) return "0x" + Long.toHexString(Double.doubleToLongBits(f.doubleValue()));
-        return "0";
     }
 
     ClassLayout getLayoutForType(Type type) {
@@ -272,6 +203,15 @@ public class NativeBackend implements Backend {
             sb.append(".file 1 \"").append(sourceFile).append("\"\n");
         }
         sb.append(".section .data\n");
+        // #113: ABERTURA do intervalo de raízes do GC conservador ANTES de
+        // qualquer dado do programa (.data merged: strings, kof_static_*,
+        // schemas, method tables + runtime) — estáticos do usuário apontando
+        // p/ heap eram raízes invisíveis ao mark (abaixo do root_start antigo,
+        // que ficava no preâmbulo do runtime). O sentinel .quad 0 é a primeira
+        // palavra varrida (nunca pointer-plausível, mark ignora).
+        sb.append(".globl kof_heap_root_start\n");
+        sb.append("kof_heap_root_start:\n");
+        sb.append(".quad 0\n");
         for (IRClass clazz : module.classes()) {
             currentClass = clazz;
             getLayout(clazz);
@@ -287,7 +227,9 @@ public class NativeBackend implements Backend {
             emitMethodTable(sb, clazz);
         }
         sb.append("\n.section .text\n");
+        int rtStart = sb.length();
         sb.append(NativeRuntime.generateRuntimeAssembly());
+        int rtEnd = sb.length();
         RuntimeMemory.emitInitObject(sb);
         // kof.db on the native target: link the DB client library directly
         // (no JDBC driver) — the same direct-.so pattern as kof-webview.
@@ -335,11 +277,8 @@ public class NativeBackend implements Backend {
         for (IRClass clazz : module.classes()) {
             for (IRMethod method : clazz.methods()) {
                 if ("<clinit>".equals(method.name())) continue;
-                String mangled = sanitizeName(clazz.name()) + "_" + sanitizeName(method.name());
-                if ("<init>".equals(method.name())) {
-                    mangled += "_" + method.parameterTypes().size();
-                }
-                functionMangleMap.putIfAbsent(method.name(), mangled);
+                String mangled = NativeSymbolMangling.fnSymbol(clazz.name(), method.name(), method.parameterTypes(), allClassesMap);
+                functionMangleMap.putIfAbsent(NativeSymbolMangling.fnKey(clazz.name(), method.name(), method.parameterTypes(), allClassesMap), mangled);
             }
         }
         for (IRClass clazz : module.classes()) {
@@ -361,12 +300,19 @@ public class NativeBackend implements Backend {
             }
             emitStart(sb, mainClass);
         }
+        // #113/S-5(x86): o FECHAMENTO explicito (kof_heap_root_end) entra JUNTO
+        // do --gc-sections no x86, NAO aqui: medir hoje mostra _end ~33KB acima
+        // de um rotulo no .bss final (a arena do heap continua alem), entao
+        // trocar o topo por root_end encolheria o intervalo e under-marcaria
+        // (regressao). O topo fica _end; a correcao do bug e so o root_start
+        // (abaixo, na abertura do .data do programa).
         String mainClassName = mainClass != null ? mainClass.name() : module.classes().getFirst().name();
         Path asmFile = outputDir.resolve(mainClassName + ".s");
         Path binFile = outputDir.resolve(mainClassName);
         Files.createDirectories(asmFile.getParent());
-        Files.writeString(asmFile, sb.toString());
-        try { Files.writeString(java.nio.file.Path.of("/tmp/kof_asm_debug.s"), sb.toString(), java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.TRUNCATE_EXISTING); } catch(Exception ignore){}
+        String fullAsm = RuntimeSlices.pruneRuntime(sb, rtStart, rtEnd);
+        Files.writeString(asmFile, fullAsm);
+        try { Files.writeString(java.nio.file.Path.of("/tmp/kof_asm_debug.s"), fullAsm, java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.TRUNCATE_EXISTING); } catch(Exception ignore){}
         System.err.println("NativeBackend: Generated " + asmFile + " (" + Files.size(asmFile) + " bytes)");
         assemble(asmFile, binFile);
     }
@@ -385,14 +331,7 @@ public class NativeBackend implements Backend {
 
 
     private void emitMethodTable(StringBuilder sb, IRClass clazz) {
-        List<String> methods = collectVirtualMethods(clazz);
-        if (methods.isEmpty()) {
-            sb.append(".balign 8\n");
-            sb.append(sanitizeName(clazz.name()) + "_vtable:\n");
-            sb.append("    .quad 0\n");
-            return;
-        }
-        NativeRuntime.generateMethodTable(sb, sanitizeName(clazz.name()), methods);
+        NativeClassMeta.emitMethodTable(this, sb, clazz);
     }
 
 
@@ -401,33 +340,15 @@ public class NativeBackend implements Backend {
 
 
 
-    void emitNewArray(StringBuilder sb, KofNewArray na) {
-        sb.append("    popq %rdi\n");
-        sb.append("    movl $").append(elementTypeSize(na.elementType())).append(", %esi\n");
-        sb.append("    call kof_array_alloc\n");
-        sb.append("    pushq %rax\n");
-    }
+    void emitNewArray(StringBuilder sb, KofNewArray na) { NativeOpHelpers.emitNewArray(this, sb, na); }
 
-    void emitArrayLoad(StringBuilder sb, KofArrayLoad al) {
-        sb.append("    popq %rsi\n");
-        sb.append("    popq %rdi\n");
-        sb.append("    call kof_array_get\n");
-        sb.append("    pushq %rax\n");
-    }
+    void emitNewMultiArray(StringBuilder sb, KofNewMultiArray ma) { NativeOpHelpers.emitNewMultiArray(this, sb, ma); }
 
-    void emitArrayStore(StringBuilder sb, KofArrayStore as) {
-        sb.append("    popq %rdx\n");
-        sb.append("    popq %rsi\n");
-        sb.append("    popq %rdi\n");
-        sb.append("    call kof_array_set\n");
-    }
+    void emitArrayLoad(StringBuilder sb, KofArrayLoad al) { NativeOpHelpers.emitArrayLoad(this, sb, al); }
 
-    void emitArrayLength(StringBuilder sb) {
-        sb.append("    popq %rdi\n");
-        sb.append("    call kof_array_length\n");
-        sb.append("    movslq %eax, %rax\n");
-        sb.append("    pushq %rax\n");
-    }
+    void emitArrayStore(StringBuilder sb, KofArrayStore as) { NativeOpHelpers.emitArrayStore(this, sb, as); }
+
+    void emitArrayLength(StringBuilder sb) { NativeOpHelpers.emitArrayLength(this, sb); }
 
 
 
@@ -472,6 +393,10 @@ public class NativeBackend implements Backend {
     }
 
     void assemble(Path asmFile, Path binFile) throws IOException {
+        // 7f174a6f passou `usesPow` (campo nunca declarado) + 6º arg (a
+        // assinatura de NativeAssembler.assemble é 4). A -lm é INCONDICIONAL lá
+        // (pow shim sempre presente — ver comentário do commit), então o arg é
+        // morto: chamo com os 4 reais. pow segue linkando.
         NativeAssembler.assemble(asmFile, binFile, usesDb, usesMysql, usesConcurrency);
     }
 
@@ -565,7 +490,9 @@ public class NativeBackend implements Backend {
     int resolveFieldOffset(Type ownerType, String fieldName) { return NativeOpHelpers.resolveFieldOffset(this, ownerType, fieldName); }
 
     List<String> collectVirtualMethods(IRClass clazz) { return NativeClassMeta.collectVirtualMethods(this, clazz); }
-    int findVirtualMethodIndex(String ownerTypeName, String methodName) { return NativeClassMeta.findVirtualMethodIndex(this, ownerTypeName, methodName); }
+    int findVirtualMethodIndex(String ownerTypeName, String methodName) { return NativeClassMeta.findVirtualMethodIndex(this, ownerTypeName, methodName, -1); }
+    int findVirtualMethodIndex(String ownerTypeName, String methodName, int argCount) { return NativeClassMeta.findVirtualMethodIndex(this, ownerTypeName, methodName, argCount); }
+    int findVirtualMethodIndex(String ownerTypeName, String methodName, List<Type> argTypes) { return NativeClassMeta.findVirtualMethodIndex(this, ownerTypeName, methodName, argTypes); }
     void emitStringData(StringBuilder sb) { NativeClassMeta.emitStringData(this, sb); }
 
 }

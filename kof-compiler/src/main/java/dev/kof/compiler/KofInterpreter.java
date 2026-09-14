@@ -45,6 +45,25 @@ public final class KofInterpreter {
         KofObj(IRClass clazz) { this.clazz = clazz; }
         String internalName() { return clazz.name(); }
         boolean isRecord() { return "java/lang/Record".equals(clazz.superName()); }
+
+        @Override public boolean equals(Object o) {
+            // bug 104a: equals/hashCode/toString VIRTUAIS (não só a synthetic
+            // path kofObjectMethod). O JDK usa Object.equals em
+            // ArrayList.contains/indexOf, HashMap/HashSet e List.toString —
+            // sem override, record em coleção batia por identidade (Script
+            // false vs JVM true). Conteúdo SÓ para record (oracle JVM:
+            // classe não-record = identidade).
+            return o instanceof KofObj other && KofInterpreterObjects.objectEquals(this, other);
+        }
+
+        @Override public int hashCode() {
+            return isRecord() ? KofInterpreterObjects.objectHash(this)
+                              : System.identityHashCode(this);
+        }
+
+        @Override public String toString() {
+            return KofInterpreterObjects.objectToString(this);
+        }
     }
 
     /** NEW de classe externa (ex.: RuntimeException do throw): construído no <init>. */
@@ -185,8 +204,9 @@ public final class KofInterpreter {
             if (op instanceof KofStoreLocal sl && sl.index() + 1 > size) size = sl.index() + 1;
             if (op instanceof KofCatchStart cs && cs.localIndex() + 1 > size) size = cs.localIndex() + 1;
         }
-        f.locals = new Object[size];
-        System.arraycopy(args, 0, f.locals, 0, args.length);
+        // Parâmetros largos (Double/Long) ocupam DOIS slots no layout da IR —
+        // igual ao bytecode JVM (§163).
+        f.locals = KofInterpreterValues.bindLocals(m, args, hasThis, size);
         runFrame(f);
         return f.returnValue;
     }
@@ -389,7 +409,7 @@ public final class KofInterpreter {
             return null;
         }
         if (owner != null) {
-            IRMethod m = findKofMethod(owner, name, args.length);
+            IRMethod m = findKofMethod(owner, name, args.length, kc.parameterTypes());
             if (m == null && "<init>".equals(name)) return null; // construtor padrão
             if (m == null) throw new NoSuchMethodError(owner.name() + "." + name);
             members.ensureInit(owner);
@@ -418,11 +438,11 @@ public final class KofInterpreter {
     }
 
     IRMethod findKofMethod(IRClass c, String name, int argc) {
-        for (IRMethod m : c.methods()) {
-            if (m.name().equals(name) && m.parameterTypes().size() == argc) return m;
-        }
-        IRClass sup = c.superName() == null ? null : members.classByInternal(c.superName());
-        return sup == null ? null : findKofMethod(sup, name, argc);
+        return members.findKofMethod(c, name, argc, null);
+    }
+
+    IRMethod findKofMethod(IRClass c, String name, int argc, List<Type> sig) {
+        return members.findKofMethod(c, name, argc, sig);
     }
 
     IRClass kofClassOf(Type t) { return members.kofClassOf(t); }

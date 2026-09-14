@@ -84,9 +84,27 @@ public final class CompilerEmission2 {
             IRLocalVariable var = driver.findLocalVar(ie.name(), locals);
             if (var != null) {
                 // local: [load v, (dup), 1, add, (dup), store v]
+                // §168: long/double ocupam 2 slots no JVM e o KofDup2 tem
+                // semântica de "2 entradas" no IR do JS (array compound) — o
+                // DUP de 1 slot corrompe o frame JVM e o DUP2 quebra o JS.
+                // Para tipos largos usa um temp explícito (sem dup), como já
+                // fazem os increments de campo/array.
+                if (TypeMetrics.isDoubleWidth(var.type())) {
+                    int tmp = localIdx;
+                    localIdx += 2;
+                    locals.add(new IRLocalVariable(tmp, "#inc", var.type()));
+                    ops.add(new KofLoadLocal(var.type(), var.index()));
+                    ops.add(new KofStoreLocal(var.type(), tmp));
+                    ops.add(new KofLoadLocal(var.type(), tmp));
+                    CompilerEmissionHelpers.emitIncrementOne(ops, var.type());
+                    ops.add(new KofBinary(op, var.type()));
+                    ops.add(new KofStoreLocal(var.type(), var.index()));
+                    ops.add(new KofLoadLocal(var.type(), prefix ? var.index() : tmp));
+                    return localIdx;
+                }
                 ops.add(new KofLoadLocal(var.type(), var.index()));
                 if (!prefix) ops.add(new KofDup());
-                ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 1));
+                CompilerEmissionHelpers.emitIncrementOne(ops, var.type());
                 ops.add(new KofBinary(op, var.type()));
                 if (prefix) ops.add(new KofDup());
                 ops.add(new KofStoreLocal(var.type(), var.index()));
@@ -122,33 +140,39 @@ public final class CompilerEmission2 {
             Type elemType = Type.arrayElementType(recvType);
             int arrTmp = localIdx++;
             int idxTmp = localIdx++;
-            int valTmp = localIdx++;
+            int valTmp = localIdx;
+            localIdx += TypeMetrics.isDoubleWidth(elemType) ? 2 : 1;
+            int newTmp = localIdx;
+            localIdx += TypeMetrics.isDoubleWidth(elemType) ? 2 : 1;
             locals.add(new IRLocalVariable(arrTmp, "#arr", recvType));
             locals.add(new IRLocalVariable(idxTmp, "#idx", Type.PrimitiveType.INT));
             locals.add(new IRLocalVariable(valTmp, "#val", elemType));
+            locals.add(new IRLocalVariable(newTmp, "#new", elemType));
             ops.add(new KofStoreLocal(recvType, arrTmp));
             localIdx = ExpressionLowerer.emitExpression(driver, aa.index(), ops, owner, localIdx, locals);
             ops.add(new KofStoreLocal(Type.PrimitiveType.INT, idxTmp));
+            // §168: o store de array consome [array, index, valor]; o caminho
+            // antigo emitia KofArrayStore com só o valor na pilha (VerifyError
+            // no JVM, underflow no JS, core dump no Native). Materializa o
+            // índice via temps e mantém o valor velho p/ o pós-fixado.
             ops.add(new KofLoadLocal(recvType, arrTmp));
             ops.add(new KofLoadLocal(Type.PrimitiveType.INT, idxTmp));
             ops.add(new KofArrayLoad(elemType));
             ops.add(new KofStoreLocal(elemType, valTmp));
             ops.add(new KofLoadLocal(elemType, valTmp));
-            ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 1));
+            CompilerEmissionHelpers.emitIncrementOne(ops, elemType);
             ops.add(new KofBinary(op, elemType));
-            if (prefix) {
-                // [array, index, new] -> [new, array, index, new]
-                ops.add(new KofDupX2());
-                ops.add(new KofArrayStore(elemType));
-            } else {
-                ops.add(new KofArrayStore(elemType));
-                ops.add(new KofLoadLocal(elemType, valTmp));
-            }
+            ops.add(new KofStoreLocal(elemType, newTmp));
+            ops.add(new KofLoadLocal(recvType, arrTmp));
+            ops.add(new KofLoadLocal(Type.PrimitiveType.INT, idxTmp));
+            ops.add(new KofLoadLocal(elemType, newTmp));
+            ops.add(new KofArrayStore(elemType));
+            ops.add(new KofLoadLocal(elemType, prefix ? newTmp : valTmp));
             return localIdx;
         }
         // non-assignable operand: evaluate as expression (legacy behavior)
         localIdx = ExpressionLowerer.emitExpression(driver, ue.operand(), ops, owner, localIdx, locals);
-        ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 1));
+        CompilerEmissionHelpers.emitIncrementOne(ops, operandType);
         ops.add(new KofBinary(op, operandType));
         return localIdx;
     }

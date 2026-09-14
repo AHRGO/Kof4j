@@ -1,7 +1,7 @@
 # Filosofia do Kof
 
-**Última atualização:** 2 de setembro de 2026
-**Versão:** 0.2.6-beta (810 testes; 7 targets; `VERSION` 0.2.6-beta)
+**Última atualização:** 12 de setembro de 2026
+**Versão:** 0.4.0-beta (7 targets; `VERSION` 0.4.0-beta)
 
 ---
 
@@ -217,7 +217,7 @@ Deveria ser algo como:
 var app = web.app()
 app.get("/users") { return users.all() }
 ```
-(implementado no JVM — ver `docs/stdlib-web.md`)
+(implementado no JVM — ver `docs/stdlib/stdlib-web.md`)
 
 ### 13. Performance Sem Sacrificar Ergonomia
 

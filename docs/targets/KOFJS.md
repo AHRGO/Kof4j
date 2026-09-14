@@ -116,7 +116,7 @@ O target JS está em desenvolvimento e o CLI informa isso no `--help`.
 | `Char` | `number` | code unit; `charAt` → `charCodeAt` |
 | `String` | `string` | mapeamento direto na API |
 | `List<T>` | `Array` + runtime | bounds check em get/set/remove |
-| `Array` | `Array` | `new Int[n]` → `new Array(n).fill(0)` |
+| `Array` | `Array` + runtime | `new Int[n]` → `new Array(n).fill(0)`; leitura/escrita via `kofArrayGet`/`kofArraySet` (bounds check — KOF-SBD-001) |
 | classes | `class` | herança, super, override nativos |
 | records | `class` + accessors | campos internos `_name` para não colidir com accessor |
 | interfaces | — (type-level) | chamadas estruturais `recv.method(...)` |
@@ -126,8 +126,6 @@ O target JS está em desenvolvimento e o CLI informa isso no `--help`.
 
 - **Long além de 2^53** perde precisão (JS `number` é double).
 - **Bitwise em Long** trunca para 32 bits (operadores JS).
-- **Arrays JS** crescem automaticamente em atribuição (JVM lança
-  ArrayIndexOutOfBounds).
 - **Float/Double literal integral**: `println(1.0)` → `1` (JVM: `1.0`).
 - **Interface runtime** não existe em JS; a semântica é resolvida no
   compile-time (chamadas estruturais).
@@ -185,7 +183,7 @@ kof.time/kof.io.
   não pode usar `await`, vira erro de compilação em vez de corromper dado
   silenciosamente via `Array<Promise<T>>`). `cancelled()` sempre `0`
   (limitação conhecida — sem thread-local pra contexto "task atual" em
-  async functions intercaladas). Ver `docs/concurrency.md` seção 4.
+  async functions intercaladas). Ver `docs/language-reference/concurrency.md` seção 4.
 - **kof.ui**: widgets, layout, estilo, eventos — renderização em webview
   nativo (WebKitGTK) e browser (`index.html` estático); **Fase 7 Router**
   (`go/replace/back/forward/param/current/depth` — 31/08)

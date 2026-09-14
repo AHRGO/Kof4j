@@ -175,6 +175,30 @@ class NativeRiscv64E2ETest {
     }
 
     @Test
+    void riscv64MultiDimArray(@TempDir Path tempDir) throws IOException {
+        // §113 faces riscv: kof_multi_alloc recursivo (fatia B37). Golden =
+        // oracle JVM medido (mesmo programa da célula array2d da matriz).
+        assumeToolchain();
+        String out = runRiscv64(tempDir, """
+            main() {
+                var m = new Int[2][3]
+                println(m.length)
+                println(m[1].length)
+                println(m[0][2])
+                m[1][2] = 7
+                println(m[1][2])
+                var c = new Int[2][2][2]
+                println(c.length)
+                println(c[0][1].length)
+                c[1][0][1] = 9
+                println(c[1][0][1])
+                println(c[0][0][0])
+            }
+            """);
+        assertEquals("2\n3\n0\n7\n2\n2\n9\n0", out);
+    }
+
+    @Test
     void riscv64List(@TempDir Path tempDir) throws IOException {
         assumeToolchain();
         String out = runRiscv64(tempDir, """
@@ -489,6 +513,35 @@ class NativeRiscv64E2ETest {
         assertEquals("1\n2\ntrue\n1\n1\n1\n2\ntrue\nfalse\ntrue\n1", out);
     }
 
+    // §123/§126 faces CROSS: tag de chave no header do map (off 40) precisa
+    // valer em riscv64 também (o emissor `NativeRiscvCrossOps.java:270-294`
+    // escreve `li t0,<tag>; sw t0,40(a0)` — espelho do x86). Cobre os dois
+    // casos que o `riscv64MapSet` (só String-key, default tag=1) NÃO toca:
+    // (a) chave INT → tag=0 raw-cmp (senão o scan deref um Int cru = SIGSEGV);
+    // (b) chave de TIPO ERRADO (String-arg num map Int / Int-arg num map
+    // String) → miss seguro (null/0 como o JVM), nunca SIGSEGV nem lixo.
+    // Golden = oracle JVM medido 12/09 (`java Default.Main`).
+    @Test
+    void riscv64MapKeyTagCross(@TempDir Path tempDir) throws IOException {
+        assumeToolchain();
+        String out = runRiscv64(tempDir, """
+            main() {
+                var m = mapOf(1, "a", 2, "b")
+                println(m.get(1))
+                println(m.get("x"))
+                println(m.contains(2))
+                println(m.get(99))
+                var s = setOf("a", "b")
+                println(s.contains(5))
+                println(s.contains("a"))
+                var n = mapOf("k", 7)
+                println(n.get(5))
+                println(n.get("k"))
+            }
+            """);
+        assertEquals("a\nnull\ntrue\nnull\nfalse\ntrue\n0\n7", out);
+    }
+
     // NATIVE002-stdlib: higher-order (map/filter/reduce) no cross — closure
     // ABI igual mq (a0=fn, a1..=args, invoke via vtable[0]).
     @Test
@@ -679,5 +732,356 @@ main() {
 }
             """);
         assertEquals("true\nfalse\ntrue\nfalse\ntrue\ntrue\nfalse\ntrue\ntrue\nfalse\ntrue\nfalse\ntrue\nfalse\ntrue\nfalse\na&lt;b&gt;&amp;&quot;&#39;c\ncafé\nab|a b\nhttps|host.io|8443|/p\na%20b%26c%3D1\ntrue\nfalse\n29\n4\n60", out);
+    }
+
+    @Test
+    void nativeStringLengthAndCharAtUtf16(@TempDir Path tempDir) throws IOException {
+        assumeToolchain();
+        // bug 43 cross (faces 1/3): length/charAt em code units UTF-16
+        // (port das faces x86 — MESMO golden do JVM medido na sessão).
+        String out = runRiscv64(tempDir, """
+                main() {
+                    println("caf\\u00e9".length)
+                    println("caf\\u00e9".charAt(3))
+                    println("a\\u00e9\\u00e8".length)
+                    println("a\\u00e9\\u00e8".charAt(1))
+                    println("a\\u00e9\\u00e8".charAt(2))
+                    println("a\\u20ac".length)
+                    println("a\\u20ac".charAt(1))
+                    println("a\\uD83D\\uDE00b".length)
+                    println("a\\uD83D\\uDE00b".charAt(1))
+                    println("a\\uD83D\\uDE00b".charAt(2))
+                    println("a\\uD83D\\uDE00b".charAt(3))
+                }
+                """);
+        assertEquals("4\n233\n3\n233\n232\n2\n8364\n4\n55357\n56832\n98", out);
+    }
+
+    @Test
+    void nativeStringSubstringIndexOfUtf16(@TempDir Path tempDir) throws IOException {
+        assumeToolchain();
+        // bug 43 cross (estágio 2): substring/indexOf/lastIndexOf em code
+        // units UTF-16 — golden JVM MEDIDO (B34, trampolins p/ kof_su_*).
+        String out = runRiscv64(tempDir, """
+                main() {
+                    println("caf\\u00e9".substring(0, 3).length)
+                    println("\\u00e9abc".indexOf("a"))
+                    println("\\u00e9abc".indexOf("bc"))
+                    println("caf\\u00e9".indexOf(""))
+                    println("\\u00e9x\\u00e9".lastIndexOf("\\u00e9"))
+                    println("caf\\u00e9x".indexOf("x"))
+                    println("ab\\u00e9cd".substring(1, 3) + "|")
+                    println("ab\\u00e9cd".substring(3) + "|")
+                    println("a\\uD83D\\uDE00b".substring(1, 3) + "|")
+                    println("a\\uD83D\\uDE00b".substring(3))
+                    println("a\\uD83D\\uDE00b".indexOf("b"))
+                    println("a\\uD83D\\uDE00b".lastIndexOf(""))
+                    println("\\u20acx\\u20ac".lastIndexOf("\\u20ac"))
+                    println("caf\\u00e9".substring(2, 4) + "|")
+                }
+                """);
+        assertEquals("3\n1\n2\n0\n2\n4\nbé|\ncd|\n😀|\nb\n3\n4\n2\nfé|", out);
+    }
+
+    @Test
+    void nativeStringCompareToAndHashCodeUtf16(@TempDir Path tempDir) throws IOException {
+        assumeToolchain();
+        // bug 97 cross: compareTo/hashCode em code units UTF-16 (port do x86,
+        // MESMOS 11 vetores golden do NativeE2ETest) — riscv64.
+        String out = runRiscv64(tempDir, """
+                main() {
+                    println("ab".compareTo("aX"))
+                    println("a\\u00e9".compareTo("a"))
+                    println("abc".compareTo("abd"))
+                    println("ab".compareTo("abc"))
+                    println("\\uD83D\\uDE00".compareTo("a"))
+                    println("a\\uD83D\\uDE00".compareTo("a\\uFFFD"))
+                    println("a\\uFFFD".compareTo("a\\uD83D\\uDE00"))
+                    println("abc".hashCode())
+                    println("a\\u00e9".hashCode())
+                    println("\\uD83D\\uDE00".hashCode())
+                    println("".hashCode())
+                }
+                """);
+        assertEquals("10\n1\n-1\n-1\n55260\n-10176\n10176\n96354\n3240\n1772899\n0", out);
+    }
+    @Test
+    void nativeTimeAddDaysDiffDaysIso(@TempDir Path tempDir) throws IOException {
+        assumeToolchain();
+        // STDLIB S7c-1 (TIME002 fechado 11/09): addDays/diffDays em data ISO
+        // riscv64/aarch64 — fatia B35 + tradutor. Golden stdtime2 (matriz) +
+        // 3 vetores extras (overflow 9999 / borrow 0001 / fim de ano bissexto
+        // de século não-bissexto) verificados byte-a-byte sob qemu vs JVM.
+        String out = runRiscv64(tempDir, """
+                main() {
+                    println(time.addDays("2024-02-28", 1))
+                    println(time.addDays("2023-02-28", 1))
+                    println(time.addDays("2024-12-31", 1))
+                    println(time.addDays("2024-01-01", -1))
+                    println(time.addDays("2024-02-30", 1))
+                    println(time.addDays("garbage", 1))
+                    println(time.diffDays("2024-01-01", "2024-03-01"))
+                    println(time.diffDays("2024-03-01", "2024-01-01"))
+                    println(time.diffDays("x", "y"))
+                    println(time.addDays("0999-12-31", 1))
+                    println(time.addDays("0001-01-01", -1))
+                    println(time.addDays("1700-02-28", 1))
+                    println(time.addDays("9999-12-31", 1))
+                    println(time.addDays("2000-02-29", -365))
+                    println(time.addDays("2024-03-01", -1))
+                    println(time.diffDays("2024-02-29", "2024-03-01"))
+                    println(time.diffDays("1999-12-31", "2000-01-01"))
+                    println(time.diffDays("", "2024-01-01"))
+                }
+                """);
+        assertEquals("2024-02-29\n2023-03-01\n2025-01-01\n2023-12-31\n\n\n60\n-60\n0"
+                + "\n1000-01-01\n\n1700-03-01\n\n1999-03-01\n2024-02-29"
+                + "\n1\n1\n0", out);
+    }
+    @Test
+    void nativeMathDoubleSeries(@TempDir Path tempDir) throws IOException {
+        assumeToolchain();
+        // STDLIB S1b/S1b.1 (MATH001 fechado 11/09): escalares Double puros
+        // kof.math (sqrt/lerp/percentage/isInteger/isDecimal) riscv64/aarch64
+        // — fatia B36 (bits crus via a0..aN, fsqrt.d/fcvt/feq cobertos no
+        // tradutor). Golden = oracle JVM MEDIDO (KofMathTest SQRT_SRC+DBL_SRC;
+        // inclui NaN `!=` — exige o fix da maquina NE cross `feq+seqz`).
+        String out = runRiscv64(tempDir, """
+                main() {
+                    println(math.sqrt(4.0) == 2.0)
+                    println(math.sqrt(9.0) == 3.0)
+                    println(math.sqrt(2.25) == 1.5)
+                    println(math.sqrt(0.0) == 0.0)
+                    println(math.sqrt(-1.0) == -1.0)
+                    println(math.sqrt(-1.0) != math.sqrt(-1.0))
+                    println(math.lerp(0.0, 10.0, 0.5) == 5.0)
+                    println(math.lerp(-4.0, 4.0, 0.75) == 2.0)
+                    println(math.percentage(3.0, 4.0) == 75.0)
+                    println(math.percentage(0.0, 0.0) != math.percentage(0.0, 0.0))
+                    println(math.isInteger(4.0))
+                    println(math.isInteger(4.5) == false)
+                    println(math.isInteger(-3.0))
+                    println(math.isInteger(0.0))
+                    println(math.isInteger(1e20))
+                    println(math.isInteger(-0.5) == false)
+                    println(math.isDecimal(4.5))
+                    println(math.isDecimal(4.0) == false)
+                    println(math.isInteger(1.0 / 0.0) == false)
+                    println(math.isDecimal(1.0 / 0.0))
+                }
+                """);
+        assertEquals("true\ntrue\ntrue\ntrue\nfalse\ntrue\ntrue\ntrue\ntrue\ntrue"
+                + "\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue", out);
+    }
+
+    @Test
+    void nativeCollectionPrintMatchesJvmGolden(@TempDir Path tempDir) throws IOException {
+        assumeToolchain();
+        // §107-cross (fatia B39): println(<coleção>) imprimia LIXO de ponteiro
+        // (`@` medido no qemu antes do fix) — o valueOf cross não tinha ramo
+        // List/Map/Set e caía em kof_println_string sobre o ponteiro cru. Os
+        // helpers riscv kof_{list,set,map}_to_string espelham o x86 (mesma
+        // tag compile-time 0/1/2/3/6, `?` p/ record/aninhado). Golden = MESMA
+        // string do execCollectionPrintMatchesJvmGolden x86 (= oracle JVM
+        // medido) — sem a linha de Double (tag 4/5), barrada por FLT001 em
+        // tempo de compilação no cross (recusa honesta, ver outro teste).
+        String out = runRiscv64(tempDir, """
+                main() {
+                    println(listOf(1, 2, 3))
+                    println(setOf(1, 2))
+                    println(mapOf("k", 9))
+                    println(listOf("a", "b"))
+                    println(listOf(true, false))
+                    println(listOf(100000000000L, 2L))
+                    println(listOf('a', 'b'))
+                    println(listOf())
+                    println(listOf(listOf(1), listOf(2)))
+                    println(mapOf("a", 1, "b", 2))
+                }
+                """);
+        assertEquals("[1, 2, 3]\n[1, 2]\n{k=9}\n[a, b]\n[true, false]\n"
+                + "[100000000000, 2]\n[97, 98]\n[]\n[?, ?]\n{a=1, b=2}", out);
+    }
+
+    @Test
+    void nativeCollectionPrintFloatDoubleRefusedHonest(@TempDir Path tempDir) throws IOException {
+        assumeToolchain();
+        // §107-cross: coleção de Double/Float NÃO pode virar `?` silencioso
+        // nem lixo — mesma recusa FLT001 do valueOf escalar cross (sem
+        // snprintf no asm puro). A falha é em TEMPO DE COMPILAÇÃO (R6/R7:
+        // diagnóstico claro, nunca output errado). `listOf(1.5, 2.0)` deve
+        // diagnosticar FLT001, não compilar.
+        Path src = tempDir.resolve("Main.kf");
+        Files.writeString(src, "main() {\n    println(listOf(1.5, 2.0))\n}\n");
+        CompilationResult result = driver.compile(src, tempDir.resolve("out"), Target.NATIVE_RISCV64);
+        assertFalse(result.success(), "Double-em-lista deve ser recusado (FLT001)");
+        String diags = result.diagnostics().getDiagnostics().toString();
+        assertTrue(diags.contains("FLT001"), "recusa deve ser FLT001, foi: " + diags);
+    }
+
+    /** G-0 (native-multiarch face 1, 12/09): o guard OOM honesto. O bump riscv
+     *  não tinha bounds-check e o cabeçalho de 32B triplica o consumo por bloco;
+     *  um loop que aloca até estourar os 256KB de _kof_heap deve PANICAR com
+     *  "out of memory" (exit != 0), nunca correr lixo nem travar (R6). Sem o
+     *  guard o topo caminhava para fora do heap e corrompia .Lmq_subs/—. */
+    @Test
+    void riscvHeapExhaustionPanicsHonest(@TempDir Path tempDir) throws IOException, InterruptedException {
+        assumeToolchain();
+        Path src = tempDir.resolve("Main.kf");
+        // sem GC (riscv é bump), a lista retém tudo → o bump estoura os 256KB.
+        Files.writeString(src, """
+            main() {
+                val l = listOf("")
+                var i = 0
+                while (true) {
+                    l.add("padding " + i + " xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
+                    i = i + 1
+                }
+            }
+            """);
+        Path outDir = tempDir.resolve("out");
+        CompilationResult result = driver.compile(src, outDir, Target.NATIVE_RISCV64);
+        assertTrue(result.success(), "compilação deve passar: " + result.diagnostics().getDiagnostics());
+        Path binFile = outDir.resolve("Default/Main");
+        ProcessBuilder pb = new ProcessBuilder("qemu-riscv64", binFile.toString());
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String output = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        int ec = p.waitFor();
+        assertNotEquals(0, ec, "esgotar o heap deve terminar com exit != 0 (não travar/lixo), output: " + output);
+        assertTrue(output.contains("out of memory"),
+                "esgotar o heap deve dar o panic honesto 'out of memory', foi: " + output);
+    }
+
+    /** §146 cross (12/09, #101): Double % variável no riscv64. O MOD de
+     *  Float/Double caía no `default` vazio do dispatcher cross e devolvia o
+     *  dividendo (mesma raiz do x86). fmod via kof_double_mod (B40 — a -
+     *  trunc(a/b)*b, NaN p/ 0/Inf/NaN). Golden = oracle JVM (comparações
+     *  Bool/Int, nunca println de double cru — regra bug 44). */
+    @Test
+    void riscvDoubleModVariables(@TempDir Path tempDir) throws IOException, InterruptedException {
+        assumeToolchain();
+        String output = runRiscv64(tempDir, """
+            main() {
+                var a = 7.5
+                var b = 2.0
+                println(a % b == 1.5)
+                println(7.5 % 2.0 == 1.5)
+                println(10.0 % 3.0 == 1.0)
+                println(0.5 % 1.0 == 0.5)
+                println(-7.5 % 2.0 == -1.5)
+                println(7.5 % -2.0 == 1.5)
+                var z = 0.0
+                var r1 = 7.5 % z
+                println(r1 != r1)
+                var inf = 1.0 / z
+                var r2 = inf % 2.0
+                println(r2 != r2)
+                var nan = z / z
+                var r3 = nan % 2.0
+                println(r3 != r3)
+                var c = 10.0
+                println(c % 3.0 == 1.0)
+            }
+            """);
+        assertEquals("true\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue\ntrue", output);
+    }
+
+    /** §142 (12/09): paridade cross do fix Pop2. O emissor riscv emitia
+     *  `addi sp,sp,16` p/ KofPop2 mas a pilha cross é 8 bytes/slot — o
+     *  MESMO desbalanceamento do x86 (`m.put("b",2L)` como statement +
+     *  `get` depois = SIGSEGV). Prova: o cenário que crashava no x86 roda
+     *  aqui sob qemu. */
+    @Test
+    void riscvMapPutDiscardedLongValueKeepsStackBalanced(@TempDir Path tempDir) throws IOException, InterruptedException {
+        assumeToolchain();
+        String output = runRiscv64(tempDir, """
+            main() {
+                var m = mapOf("a", 1L)
+                m.put("b", 2L)
+                println(m.get("b"))
+                println(m.get("a"))
+            }
+            """);
+        assertEquals("2\n1", output);
+    }
+
+    /** §181 (13/09): cast Double/Float as Int/Long SATURANTE (JLS 5.1.3) no
+     *  riscv64 sob qemu — o commit c90e85ee comparava o inteiro JÁ convertido,
+     *  mas `fcvt.w.d` devolve o "indefinite" (0x80000000) p/ fora-de-faixa, o
+     *  que nunca detecta o estouro (3.0e9 caía em INT_MIN). Aqui o clamp é
+     *  feito em double (±2^31/±2^63) ANTES de converter. Golden = oracle JVM
+     *  (mesmo vetor da célula `castrange` do ConformanceMatrixTest). */
+    @Test
+    void riscv64CastSaturation(@TempDir Path tempDir) throws IOException {
+        assumeToolchain();
+        String out = runRiscv64(tempDir, """
+            main() {
+                var d = 3.0e9
+                println(d as Int)
+                var n = 0.0 / 0.0
+                println(n as Int)
+                println(n as Int == 0)
+                var inf = 1.0 / 0.0
+                println(inf as Int)
+                println((-inf) as Int)
+                println((1.0e19) as Long)
+                println(n as Long == 0)
+                println((100.7) as Int)
+                println((-100.7) as Int)
+                var f = 3.0e9f
+                println(f as Int)
+                println((-1.5) as Long)
+            }
+            """);
+        assertEquals("2147483647\n0\ntrue\n2147483647\n-2147483648\n"
+                + "9223372036854775807\ntrue\n100\n-100\n2147483647\n-1", out);
+    }
+
+    /** §181 (13/09, regressão do c90e85ee): dois casts no MESMO método emitiam
+     *  labels FIXOS `.Lsat181_*` e o GNU as falhava com símbolo duplicado. O fix
+     *  sufixa cada emissão (`_<seq>`). A inspeção do `.s` NÃO funciona em host
+     *  COM toolchain: após `as`+`ld` linkarem com sucesso o backend APAGA o
+     *  `.s` (NativeArchEmitter, exceto KOF_KEEP_ASM) — a asserção "asm should
+     *  be kept" era verde só em host sem toolchain e vermelha no CI (14/09).
+     *  OPCIONAL por decisão da mantenedora (14/09, DECISIONS.md): skip honesto
+     *  até o desenvolvimento nativo estar completo; reativa com KOF_ASM_GATE=1.
+     *  A unicidade continua provada mecanicamente nos 42 E2ES sob qemu (label
+     *  duplicada = `as` falha = `success()` false). */
+    @Test
+    void riscvCastSaturationLabelsAreUniquePerEmission(@TempDir Path tempDir) throws IOException {
+        Assumptions.assumeTrue(System.getenv("KOF_ASM_GATE") != null,
+                "§181 gate de asm riscv OPCIONAL até dev nativo completo (14/09, DECISIONS); reativa com KOF_ASM_GATE=1");
+        Path src = tempDir.resolve("Main.kf");
+        Files.writeString(src, """
+            main() {
+                var a = 3.0e9
+                println(a as Int)
+                var b = -3.0e9
+                println(b as Int)
+            }
+            """);
+        Path outDir = tempDir.resolve("out");
+        CompilationResult result = driver.compile(src, outDir, Target.NATIVE_RISCV64);
+        assertTrue(result.success(), "Compilation should succeed: " + result.diagnostics().getDiagnostics());
+        Path asm = outDir.resolve("Default/Main.s");
+        if (Files.exists(asm)) {
+            java.util.Map<String, Integer> defs = new java.util.HashMap<>();
+            for (String line : Files.readAllLines(asm)) {
+                String t = line.strip();
+                if (t.startsWith(".Lsat181") && t.endsWith(":")) defs.merge(t, 1, Integer::sum);
+            }
+            assertFalse(defs.isEmpty(), "esperava labels .Lsat181_* no asm do riscv");
+            List<String> dups = defs.entrySet().stream()
+                    .filter(e -> e.getValue() > 1).map(java.util.Map.Entry::getKey).sorted().toList();
+            assertEquals(List.of(), dups, "§181: labels de saturação duplicados (assembler falha)");
+        } else {
+            // toolchain presente: as+ld linkaram e apagaram o .s — prova
+            // mecânica de unicidade (label duplicada = `as` falha = success()
+            // false, já assertado acima). Exige o binário existir (nunca
+            // success=true sem binário, R6).
+            assertTrue(Files.exists(outDir.resolve("Default/Main")),
+                    "sem .s E sem binário linkado — nem prova mecânica nem de texto");
+        }
     }
 }

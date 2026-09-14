@@ -186,6 +186,44 @@ public final class KofEditorContent {
         return VscodeExtensionContent.files(ctx, grammar(ctx));
     }
 
+    // ---- IntelliJ IDEA ---------------------------------------------------
+    // Degrau 10 (conteúdo honesto, sem plugin): o plugin oficial é um
+    // subprojeto Gradle/Platform à parte (issue #1, plano §21). O provider
+    // instala o que delega ao tooling oficial SEM plugin: filetype XML
+    // (reconhece *.kf/*.kof), External Tools (kof build/run/test/fmt/check
+    // com $FilePath$ — §15: delega, nunca reimplementa), template de
+    // file-type + README com o passo LSP4IJ manual (docs/editors/intellij.md
+    // é a fonte; aqui vai o essencial p/ uso offline).
+
+    public static List<EditorFile> intellij(DetectContext ctx) {
+        return List.of(
+            new EditorFile(".config/JetBrains/kof/filetypes/Kof.xml", """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <!-- Kof: file type (*.kf/*.kof) — delega semântica ao kof lsp -->
+                <filetype name="Kof" implementationClass="com.intellij.openapi.fileTypes.impl.SimpleFileType"
+                          fieldName="INSTANCE" language="Kof" extensions="kf;kof"
+                          description="Kof language source file" />
+                """),
+            new EditorFile(".config/JetBrains/kof/tools/Kof.xml", kof(ctx, """
+                <!-- Kof: External Tools — delegam à CLI oficial (@KOF@). Ver docs/editors/intellij.md p/ o LSP4IJ. -->
+                <toolSet name="Kof">
+                  <tool name="kof build" program="@KOF@" parameters="build $ProjectFileDir$ --target jvm" />
+                  <tool name="kof run" program="@KOF@" parameters="run $FilePath$" />
+                  <tool name="kof test" program="@KOF@" parameters="test $ProjectFileDir$" />
+                  <tool name="kof fmt" program="@KOF@" parameters="fmt $FilePath$" />
+                  <tool name="kof check" program="@KOF@" parameters="check $FilePath$" />
+                  <tool name="kof lsp" program="@KOF@" parameters="lsp" />
+                </toolSet>
+                """)),
+            new EditorFile(".config/JetBrains/kof/README.txt", kof(ctx, """
+                Kof for IntelliJ IDEA (sem plugin — issue #1 rastreia o plugin oficial).
+                1. TextMate: Settings > Editor > TextMate Bundles > + > editor/kof.tmLanguage.json.
+                2. LSP: plugin LSP4IJ (Marketplace) > Server Mapping: command [@KOF@, lsp], extensions kf/kof.
+                3. External Tools: Settings > Tools > External Tools > importar .config/JetBrains/kof/tools/Kof.xml.
+                4. File type: Kof.xml registra *.kf/*.kof (plugin oficial dará highlight real).
+                """)));
+    }
+
     private static final String MINIMAL_GRAMMAR = """
             {
               "name": "Kof",

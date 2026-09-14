@@ -23,6 +23,14 @@ public final class ExpressionJsonCallLowerer {
             int tag = JsonDispatch.listTag(driver.listElementType(argType));
             ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, tag));
             paramTypes = List.of(argType, Type.PrimitiveType.INT);
+        } else if (BuiltinTypes.isMap(argType)) {
+            // §106 (decisão 2b): Map -> objeto JSON com chaves sorted; o runtime
+            // recebe a tag do VALOR (mesma tabela do elem de List) p/ escolher
+            // o encoder tipado (v1 flat: int/string/bool).
+            Type mv2 = BuiltinTypes.mapValue(argType);
+            int tag = JsonDispatch.listTag(mv2);
+            ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, tag));
+            paramTypes = List.of(argType, Type.PrimitiveType.INT);
         } else if (driver.target.isNative()
                 && argType instanceof Type.ClassType ect
                 && !BuiltinTypes.isString(argType)
@@ -152,6 +160,42 @@ public final class ExpressionJsonCallLowerer {
             String className = ect.packageName().isEmpty()
                     ? ect.name() : ect.packageName() + "." + ect.name();
             ops.add(new KofLoadLiteral(BuiltinTypes.STRING, className));
+        } else if (BuiltinTypes.isMap(targetType)) {
+            // §103.1 (#103): decode<Map<String,T>>. Antes caía no default
+            // JsonDispatch → "kof_json_decode_" + sanitize("Map") =
+            // kof_json_decode_Map, método que NUNCA existiu no runtime
+            // (NoSuchMethodError em runtime, passa no check). Roteia pelo
+            // tipo do VALOR: classe de usuário → object_map (binda cada
+            // valor); escalável/string → map (HashMap cru do parser).
+            Type vt = BuiltinTypes.mapValue(targetType);
+            boolean valueIsClass = vt instanceof Type.ClassType vct
+                    && !BuiltinTypes.isString(vct)
+                    && !BuiltinTypes.isList(vct) && !BuiltinTypes.isMap(vct);
+            if (driver.target.isNative()) {
+                // Gap honesto (R6): o runtime nativo não tem decoder de mapa
+                // (nem escalável nem de classes). Sem este ramo, Map<String,T>
+                // caía no default JsonDispatch → kof_json_decode_Map e dava
+                // link-fail / decodificava errado. Espelha List<Record>.
+                if (driver.currentDiagnostics != null) {
+                    SourcePosition p = mc.position();
+                    driver.currentDiagnostics.error(p != null ? p.file() : "",
+                            p != null ? p.line() : 0, p != null ? p.column() : 0, 0,
+                            "json.decode: Map<String,T> not supported on the Native target yet (JSN004); use JVM/JS/interpreted",
+                            "JSN004");
+                }
+                return localIdx;
+            }
+            if (valueIsClass) {
+                decodeFn = "kof_json_decode_object_map";
+                decodeParams = List.of(BuiltinTypes.STRING, BuiltinTypes.STRING);
+                Type.ClassType vct = (Type.ClassType) vt;
+                String vcn = vct.packageName().isEmpty()
+                        ? vct.name() : vct.packageName() + "." + vct.name();
+                ops.add(new KofLoadLiteral(BuiltinTypes.STRING, vcn));
+            } else {
+                decodeFn = "kof_json_decode_map";
+                decodeParams = List.of(BuiltinTypes.STRING);
+            }
         } else if (driver.target.isNative()
                 && targetType instanceof Type.ClassType dct
                 && !BuiltinTypes.isString(targetType)

@@ -103,7 +103,15 @@ public final class JvmRecordEmitter {
     }
 
     private static void emitEqualsComparison(MethodVisitor mv, Type type, String cn) {
-        if (type instanceof Type.PrimitiveType pt) {
+        // UIW050: handle de UI/mídia é int no bytecode (JvmTypeMapper) —
+        // Objects.equals sobre int é inválido. Trata como primitivo int.
+        if (JvmTypeMapper.isHandleErasedToInt(type)) {
+            Label ok = new Label();
+            mv.visitJumpInsn(IF_ICMPEQ, ok);
+            mv.visitInsn(ICONST_0);
+            mv.visitInsn(IRETURN);
+            mv.visitLabel(ok);
+        } else if (type instanceof Type.PrimitiveType pt) {
             switch (pt.name()) {
                 case "int", "Int", "byte", "Byte", "short", "Short", "char", "Char", "bool", "Bool" -> {
                     Label ok = new Label();
@@ -149,6 +157,11 @@ public final class JvmRecordEmitter {
     }
 
     private static void emitHashContribution(MethodVisitor mv, Type type) {
+        // UIW050: handle apagado para int — contribui o próprio valor, sem
+        // Objects.hashCode (que receberia int e rejeitaria no verifier).
+        if (JvmTypeMapper.isHandleErasedToInt(type)) {
+            return;
+        }
         if (type instanceof Type.PrimitiveType pt) {
             switch (pt.name()) {
                 case "int", "Int", "byte", "Byte", "short", "Short", "char", "Char", "bool", "Bool" -> { }
@@ -176,6 +189,10 @@ public final class JvmRecordEmitter {
     }
 
     private static String appendDescriptor(Type type) {
+        // UIW050: handle apagado para int — StringBuilder.append(int).
+        if (JvmTypeMapper.isHandleErasedToInt(type)) {
+            return "(I)Ljava/lang/StringBuilder;";
+        }
         if (type instanceof Type.PrimitiveType pt) {
             return switch (pt.name()) {
                 case "long", "Long" -> "(J)Ljava/lang/StringBuilder;";

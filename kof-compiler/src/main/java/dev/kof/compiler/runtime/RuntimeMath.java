@@ -146,6 +146,26 @@ public final class RuntimeMath {
                 sqrtsd %xmm0, %xmm0
                 ret
 
+            # S1b.2 (decisão 7a): pow(base,exp) — PRIMEIRO caso libm. O
+            # caminho genérico entrega base/exp como 8 bits crus em rdi/rsi
+            # (pilha 1-slot do emitArgs); SysV quer doubles em xmm0/xmm1.
+            # A pilha de operandos tem paridade imprevisível (1 push = 8B),
+            # então auto-alinha via rbx como o snprintf (RuntimePrintNum):
+            # o código GERADO nunca usa rbx e pow o preserva (callee-saved
+            # SysV — medido no Arith/StringCalls: só rax/rdi/rsi/rcx/rdx).
+            # Retorno = bits crus em rax (pushq do genérico).
+            .globl kof_math_pow
+            .type kof_math_pow, @function
+            kof_math_pow:
+                movq %rdi, %xmm0
+                movq %rsi, %xmm1
+                movq %rsp, %rbx
+                andq $-16, %rsp
+                call pow
+                movq %rbx, %rsp
+                movq %xmm0, %rax
+                ret
+
             # S1b.1: escalares Double puros (SSE2 — sem libm). Args chegam
             # como 8 bits crus em rdi/rsi/rdx (pilha 1-slot do generic path);
             # retorno = bits crus em rax (o generic path faz pushq %rax).
@@ -212,6 +232,55 @@ public final class RuntimeMath {
             kof_math_isDecimal:
                 call kof_math_isInteger
                 xorl $1, %eax
+                ret
+
+            # §146 (12/09, #101): Double % variável devolvia o dividendo (o
+            # MOD do bloco Double em NativeX86Arith caía no `default` que
+            # reempurra xmm0; só o fold de literais acertava). fmod em SSE2
+            # puro, sem libm: a - trunc(a/b)*b. NaN/Inf/±0: trunc via
+            # cvttsd2si satura em INT64_MIN (0x8000...) — o caminho SAT trata
+            # como "quociente indefinido" e devolve NaN (JVM: 7.5%0=NaN,
+            # Inf%x=NaN, x%0=NaN). b==±0.0 finito-normal também dá NaN.
+            # Args: rdi=a-bits, rsi=b-bits; retorno: rax=bits do resto.
+            .globl kof_double_mod
+            .type kof_double_mod, @function
+            kof_double_mod:
+                movq %rdi, %xmm0                 # a
+                movq %rsi, %xmm1                 # b
+                movq %rsi, %rax
+                # b==0.0? (bits & ~sign == 0) -> NaN
+                movabsq $0x7fffffffffffffff, %rdx
+                andq %rax, %rdx
+                testq %rdx, %rdx
+                jz .Lv_dmod_nan
+                # b NaN ou Inf? (exp==0x7ff) -> NaN
+                movq %rax, %rdx
+                shrq $52, %rdx
+                andl $0x7ff, %edx
+                cmpl $0x7ff, %edx
+                je .Lv_dmod_nan
+                # a Inf ou NaN? (exp==0x7ff) -> NaN
+                movq %rdi, %rdx
+                shrq $52, %rdx
+                andl $0x7ff, %edx
+                cmpl $0x7ff, %edx
+                je .Lv_dmod_nan
+                # q = trunc(a/b); cvttsd2si satura p/ INT64_MIN se |q|>=2^63
+                divsd %xmm1, %xmm0               # xmm0 = a/b (exato p/ finitos)
+                cvttsd2si %xmm0, %rdx            # q truncado (ou SAT)
+                movabsq $0x8000000000000000, %rcx
+                cmpq %rcx, %rdx
+                je .Lv_dmod_nan                  # |a/b|>=2^63 -> NaN (JVM idem)
+                cvtsi2sdq %rdx, %xmm1            # (double)q exato (|q|<2^63)
+                movq %rsi, %xmm2
+                movq %xmm2, %xmm2
+                mulsd %xmm2, %xmm1               # q*b (arredondado 1x)
+                movq %rdi, %xmm0                 # a
+                subsd %xmm1, %xmm0               # a-q*b
+                movq %xmm0, %rax
+                ret
+            .Lv_dmod_nan:
+                movabsq $0x7ff8000000000000, %rax # NaN canônico
                 ret
         """);
     }

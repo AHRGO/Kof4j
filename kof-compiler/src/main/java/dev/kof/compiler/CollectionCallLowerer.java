@@ -127,10 +127,54 @@ public final class CollectionCallLowerer {
             List<Type> argTypes = new ArrayList<>();
             for (ExpressionNode arg : mc.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
             Type elemType = driver.listElementType(recvType);
-            // listOf() with no type argument produces
+            // §122 (opção B, família SEM051/052/053/054): o índice de
+            // get/set/remove é Int (learn/12: remove(0) devolve o elemento);
+            // String/record/array no índice era ACEITO em silêncio e quebrava
+            // feio: JVM VerifyError "not assignable to integer" na carga da
+            // classe, Native usa o PONTEIRO como índice (array index out of
+            // bounds — RM/RM5/IX/IX2 probes 11/09). Unknown/Nullable NÃO
+            // flagados (SG-008: pode chegar Int em runtime); numéricos passam
+            // (Int é o contrato; o verifier cuida do resto).
+            if (("kof_list_get".equals(listFn) || "kof_list_set".equals(listFn)
+                    || "kof_list_remove".equals(listFn))
+                    && !argTypes.isEmpty() && driver.currentDiagnostics != null) {
+                Type idxT = argTypes.get(0);
+                if (isReferenceIndexType(idxT)) {
+                    var pos = mc.position();
+                    driver.currentDiagnostics.error(pos != null ? pos.file() : "",
+                            pos != null ? pos.line() : 0,
+                            pos != null ? pos.column() : 0, 0,
+                            "List." + mc.methodName() + " pega ÍNDICE Int; " + CollectionWrites.typeNameFor(idxT)
+                                    + " não é índice (para buscar por valor use contains)",
+                            "SEM055");
+                    return localIdx;
+                }
+            }
+                // listOf() with no type argument produces
             // List<Unknown>; the first add() pins the element
             // type on the local so later get() calls are
             // typed (records, classes) instead of Object.
+            if ("kof_list_add".equals(listFn) || "kof_list_set".equals(listFn)) {
+                // §126 (ii): add/set de tipo ≠ elemType PINADA polui o heap —
+                // o JVM já VerifyError no get/unbox, o Native SIGSEGV no
+                // scan com tag String. Rejeitar em compile-time (SEM056).
+                // Só quando elemType já é concreto (o add que PINA um
+                // List<Unknown> não é poluição — é a definição do tipo).
+                // set: o VALOR é o arg 1 (o índice já foi checado em SEM055).
+                int valIdx = "kof_list_set".equals(listFn) ? 1 : 0;
+                if (argTypes.size() > valIdx && CollectionWrites.pollutesPinned(elemType, argTypes.get(valIdx))
+                        && driver.currentDiagnostics != null) {
+                    var pos = mc.position();
+                    driver.currentDiagnostics.error(pos != null ? pos.file() : "",
+                            pos != null ? pos.line() : 0,
+                            pos != null ? pos.column() : 0, 0,
+                            "List." + mc.methodName() + ": elemento " + CollectionWrites.typeNameFor(argTypes.get(valIdx))
+                                    + " não casa com o tipo da lista (" + CollectionWrites.typeNameFor(elemType)
+                                    + ") — coleções Kof são homogêneas",
+                            "SEM056");
+                    return localIdx;
+                }
+            }
             if ("kof_list_add".equals(listFn)
                     && Type.UnknownType.UNKNOWN.equals(elemType)
                     && !argTypes.isEmpty()
@@ -145,7 +189,23 @@ public final class CollectionCallLowerer {
                     }
                 }
             }
-            for (ExpressionNode arg : mc.arguments()) localIdx = ExpressionLowerer.emitExpression(driver, arg, ops, owner, localIdx, locals);
+            // §121/§126 (B1): o widening numérico ABENÇOADO pelo §126
+            // ("Int em Long passa") precisa da CONVERSÃO no IR antes do
+            // store — sem ela o JVM boxeia pelo tipo PINADO (Long.valueOf(J))
+            // sobre um int cru na pilha (arg empurrado width-1) → VerifyError
+            // "integer not assignable to long_2nd" (B1a), e o unbox do get dá
+            // CCE. Mesmo mecanismo do array-store §121 (emitWideningIfNeeded,
+            // que SÓ promove I2L/I2F/I2D/L2F/L2D/D2F — nunca trunca). Só o
+            // VALOR armazenado (add arg0, set arg1); índice (set arg0) e as
+            // buscas contains/get ficam raw (família §126 miss, intocada).
+            // §121/§126 (B1): widening numérico abençoado no VALOR (add arg0,
+            // set arg1) precisa da conversão IR antes do store — sem ela o
+            // JVM boxeia pelo tipo PINADO sobre arg cru (VerifyError/CCE).
+            // Índice (set arg0) e buscas ficam raw (família §126 miss).
+            int storeValIdx = "kof_list_set".equals(listFn) ? 1 : 0;
+            localIdx = CompilerEmissionHelpers.emitArgsCoercingValue(driver, mc, ops, owner,
+                    localIdx, locals, argTypes, elemType,
+                    ("kof_list_add".equals(listFn) || "kof_list_set".equals(listFn)) ? storeValIdx : -1);
             Type retType = switch (listFn) {
                 case "kof_list_add", "kof_list_set", "kof_list_clear" -> Type.PrimitiveType.VOID;
                 case "kof_list_contains", "kof_list_is_empty" -> Type.PrimitiveType.BOOL;
@@ -154,8 +214,11 @@ public final class CollectionCallLowerer {
             };
             if ("kof_list_contains".equals(listFn)) {
 
-                int tag = BuiltinTypes.isString(elemType) ? 1 : 0;
-                ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, tag));
+                // §126: equals de String só quando AMBOS elemType e arg são
+                // String conhecidos; senão raw cmpq (nunca deref → miss seguro
+                // = false do JVM). Int-arg em String-list era SIGSEGV (E1).
+                ops.add(new KofLoadLiteral(Type.PrimitiveType.INT,
+                        CollectionWrites.stringTag(driver.currentUnit, elemType, argTypes, 0)));
                 argTypes = new ArrayList<>(argTypes);
                 argTypes.add(Type.PrimitiveType.INT);
             }
@@ -210,6 +273,40 @@ public final class CollectionCallLowerer {
                         break;
                     }
                 }
+                // #103 caso 3: o pin acima muda o TIPO DO LOCAL, mas este
+                // lowering continua usando o valueType/keyType lidos do
+                // receiver ANTES do pin (Unknown). Sem alinhá-los, o
+                // retType do KofCall sai Unknown e emitPrevValueUnbox é no-op
+                // (put deixa 1 Object na pilha) — mas o typer da statement
+                // (SemMethodCallTyper, que roda o mesmo pin) já vê Map<K,Long>
+                // e descarta com POP2. 1 slot empilhado × POP2 = underflow do
+                // frame (VerifyError / "frame crash"). Alinhar ao pinado casa
+                // o unbox (Object→long, 2 slots) com o descarte.
+                keyType = argTypes.get(0);
+                valueType = argTypes.get(1);
+            }
+            // §126 (ii): put CHAVE ou VALOR de tipo ≠ pinado polui o mapa.
+            // Chave errada = scan tag=1 sobre Int cru → SIGSEGV no Native
+            // (A2/H4); valor errado = ClassCastException no JVM no get/unbox.
+            // Rejeição cobre os dois lados (decisão "put heterogêneo").
+            if ("kof_map_put".equals(mapFn) && driver.currentDiagnostics != null) {
+                String badSlot = null; Type badType = null, slotType = null;
+                if (argTypes.size() >= 1 && CollectionWrites.pollutesPinned(keyType, argTypes.get(0))) {
+                    badSlot = "chave"; badType = argTypes.get(0); slotType = keyType;
+                } else if (argTypes.size() >= 2 && CollectionWrites.pollutesPinned(valueType, argTypes.get(1))) {
+                    badSlot = "valor"; badType = argTypes.get(1); slotType = valueType;
+                }
+                if (badSlot != null) {
+                    var pos = mc.position();
+                    driver.currentDiagnostics.error(pos != null ? pos.file() : "",
+                            pos != null ? pos.line() : 0,
+                            pos != null ? pos.column() : 0, 0,
+                            "Map.put: " + badSlot + " " + CollectionWrites.typeNameFor(badType)
+                                    + " não casa com o tipo do mapa (" + CollectionWrites.typeNameFor(slotType)
+                                    + ") — coleções Kof são homogêneas",
+                            "SEM056");
+                    return localIdx;
+                }
             }
             Type retType = switch (mapFn) {
                 case "kof_map_put", "kof_map_remove" -> valueType;
@@ -223,7 +320,13 @@ public final class CollectionCallLowerer {
                 case "kof_map_keys", "kof_map_values" -> new Type.ClassType("kof", "List", List.of(mapFn.equals("kof_map_keys") ? keyType : valueType));
                 default -> Type.UnknownType.UNKNOWN;
             };
-            for (ExpressionNode arg : mc.arguments()) localIdx = ExpressionLowerer.emitExpression(driver, arg, ops, owner, localIdx, locals);
+            // §121/§126 (B1): widening no VALOR do put (arg1); chave (arg0)
+            // fica raw (família §126 miss: Long-key em String-map → null do
+            // get, nunca crash). O box JVM é guiado por parameterTypes —
+            // emitArgsCoercingValue ajusta argTypes ao converter.
+            localIdx = CompilerEmissionHelpers.emitArgsCoercingValue(driver, mc, ops, owner,
+                    localIdx, locals, argTypes, valueType,
+                    "kof_map_put".equals(mapFn) ? 1 : -1);
             ops.add(new KofCall(recvType, mapFn, argTypes, retType, KofCallKind.INSTANCE));
             return localIdx;
         }
@@ -254,6 +357,22 @@ public final class CollectionCallLowerer {
             for (ExpressionNode arg : mc.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
             Type elemType = Type.UnknownType.UNKNOWN;
             if (recvType instanceof Type.ClassType ct && !ct.typeArguments().isEmpty()) elemType = ct.typeArguments().get(0);
+            // §126 (ii): Set.add com tipo ≠ elemType pinada = heap poluído
+            // (o scan tag=1 chama kof_string_equals sobre Int cru → SIGSEGV
+            // no Native — ST1/H3). JVM tolera; a linguagem NÃO (homogênea).
+            if ("kof_set_add".equals(setFn) && !argTypes.isEmpty()
+                    && CollectionWrites.pollutesPinned(elemType, argTypes.get(0))
+                    && driver.currentDiagnostics != null) {
+                var pos = mc.position();
+                driver.currentDiagnostics.error(pos != null ? pos.file() : "",
+                        pos != null ? pos.line() : 0,
+                        pos != null ? pos.column() : 0, 0,
+                        "Set.add: elemento " + CollectionWrites.typeNameFor(argTypes.get(0))
+                                + " não casa com o tipo do set (" + CollectionWrites.typeNameFor(elemType)
+                                + ") — coleções Kof são homogêneas",
+                        "SEM056");
+                return localIdx;
+            }
             Type retType = switch (setFn) {
                 case "kof_set_add", "kof_set_remove" -> Type.PrimitiveType.BOOL;
                 case "kof_set_contains", "kof_set_is_empty" -> Type.PrimitiveType.BOOL;
@@ -266,7 +385,9 @@ public final class CollectionCallLowerer {
                     && ("kof_set_add".equals(setFn) || "kof_set_contains".equals(setFn)
                         || "kof_set_remove".equals(setFn))) {
                 // tag de tipo só no Native (HashSet usa equals no JVM)
-                int tag = BuiltinTypes.isString(elemType) ? 1 : 0;
+                // §126: conjunção elem×arg — senão raw cmpq, que nunca deref
+                // (Int-arg em String-set era SIGSEGV: ST1/ST2).
+                int tag = CollectionWrites.stringTag(driver.currentUnit, elemType, argTypes, 0);
                 ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, tag));
                 argTypes = new ArrayList<>(argTypes);
                 argTypes.add(Type.PrimitiveType.INT);
@@ -311,4 +432,14 @@ public final class CollectionCallLowerer {
     }
         return -1;
     }
+
+    /** §122: tipos que NUNCA são um índice válido p/ get/set/remove de List. */
+    private static boolean isReferenceIndexType(Type t) {
+        if (t == null || Type.UnknownType.UNKNOWN.equals(t)) return false;
+        if (t instanceof Type.NullableType nt) return isReferenceIndexType(nt.inner());
+        if (TypeMetrics.isPrimitiveType(t)) return false;
+        return t instanceof Type.ClassType || t instanceof Type.ArrayType
+                || t instanceof Type.TypeVariable;
+    }
+
 }

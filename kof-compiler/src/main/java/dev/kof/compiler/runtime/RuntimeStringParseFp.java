@@ -6,7 +6,7 @@ package dev.kof.compiler.runtime;
  * (Double/Float.parseFloat(s.trim())): trim, +/-, digitos, um '.', expoente,
  * literais NaN/Infinity, falha -> excecao String (kof_throw_string). Mantissa
  * em int64 + uma divisao por 10^nfrac (rounding unico; "0.3"==0.3). LIMITE
- * documentado em docs/development/known-bugs.md §82: mantissa >19 digitos
+ * documentado em docs/bugs-and-gaps/known-bugs.md §82: mantissa >19 digitos
  * LANCA (JVM parsearia); hex-float nao parseia. Split de RuntimeStringParse
  * (gate ≤500; REFACTOR-500) — mesma familia, corpos separados por alvo de
  * paridade (Int/Long inteiro x FP).
@@ -65,13 +65,10 @@ kof_string_to_float:
                 decl %r15d
                 jmp .Lpdd_th0
            .Lpdd_vazio:
-                xorpd %xmm0, %xmm0
-                popq %r15
-                popq %r14
-                popq %r13
-                popq %r12
-                popq %rbx
-                ret
+                # §175 (paridade): "" (ou só espaços) LANÇA como o JVM
+                # (Double.parseDouble("") = NumberFormatException) — era 0.0
+                # silencioso (R6/paridade; fila do §175, fechado 13/09).
+                jmp .Lpdd_throw
            .Lpdd_lit:
                 # literais: NaN (3) / [+/-]Infinity (8/9/10). NaN: bit qNaN;
                 # Infinity: +inf (NaN nao tem sinal).

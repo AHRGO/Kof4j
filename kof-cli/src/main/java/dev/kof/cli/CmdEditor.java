@@ -80,7 +80,12 @@ final class CmdEditor {
     /** Testável: contexto, home, stdin e saídas injetáveis (§24). */
     static int run(String[] args, DetectContext ctx, Path home, BufferedReader in,
                    PrintStream out, PrintStream err) {
-        if (args.length < 2 || "--help".equals(args[1]) || "-h".equals(args[1])) {
+        // §6: `kof editor` sem subcomando = alias de `detect`; só `--help`/`-h`
+        // mostram o uso. (Antes o bare imprimia usage — divergia do contrato.)
+        if (args.length < 2) {
+            return detect(ctx, out);
+        }
+        if ("--help".equals(args[1]) || "-h".equals(args[1])) {
             usage(out);
             return 0;
         }

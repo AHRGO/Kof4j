@@ -78,14 +78,18 @@ public final class JvmLiteralEmitter {
     }
 
     private static void emitLoadFloat(MethodVisitor mv, float value) {
-        if (value == 0f) mv.visitInsn(FCONST_0);
+        // §110: `value == 0f` também casa -0.0f (IEEE: -0.0 == 0.0) — sem o
+        // guard de raw bits, FCONST_0 colapsava -0.0f em +0.0. O contrato é
+        // o literal (JVM run-time: -z de z=0.0 dá -0.0 corretamente).
+        if (value == 0f && Float.floatToRawIntBits(value) == 0) mv.visitInsn(FCONST_0);
         else if (value == 1f) mv.visitInsn(FCONST_1);
         else if (value == 2f) mv.visitInsn(FCONST_2);
         else mv.visitLdcInsn(value);
     }
 
     private static void emitLoadDouble(MethodVisitor mv, double value) {
-        if (value == 0.0) mv.visitInsn(DCONST_0);
+        // §110 (ver emitLoadFloat): -0.0 literal/foldado virava +0.0.
+        if (value == 0.0 && Double.doubleToRawLongBits(value) == 0L) mv.visitInsn(DCONST_0);
         else if (value == 1.0) mv.visitInsn(DCONST_1);
         else mv.visitLdcInsn(value);
     }
@@ -103,6 +107,17 @@ public final class JvmLiteralEmitter {
     }
 
     static int returnOpcode(Type type) {
+        // §125 (decisão da mantenedora 12/09, opção A): Nullable(primitivo)
+        // apaga para o primitivo na SIGNATURA — exatamente como
+        // JvmTypeMapper.toDescriptor (que já desempacota Nullable). A
+        // assimetria (descritor `I` + opcode ARETURN) era o VerifyError.
+        if (type instanceof Type.NullableType nt) type = nt.inner();
+        // §176: handles kof.ui/kof.media são Int em runtime — o descriptor
+        // apaga para "I" (JvmTypeMapper). Sem isto, `return label` emitia
+        // ARETURN com um int na pilha → VerifyError (Bad type on operand stack).
+        if (type instanceof Type.ClassType ct && (KofUi.isUiType(ct) || KofMedia.isHandleType(ct))) {
+            return IRETURN;
+        }
         if (type instanceof Type.PrimitiveType pt) {
             return switch (pt.name()) {
                 case "void" -> RETURN;
@@ -133,10 +148,20 @@ public final class JvmLiteralEmitter {
         return T_BYTE;
     }
 
+    // #132: a especificação da JVM amarra o opcode de acesso ao TIPO real do
+    // array (JVM Spec §6.5): boolean[]/byte[] usam BALOAD/BASTORE, short[]
+    // SALOAD/SASTORE, char[] CALOAD/CASTORE. Emitir IALOAD/IASTORE nesses
+    // arrays é bytecode inválido — o verificador aceita em alguns JDKs e o
+    // processo morre no boot com sintoma não-relacionado (a mensagem JavaFX
+    // engolida, regra do JavaFX no AGENTS.md). A largura na pilha é a mesma
+    // (int), só a extensão/sinal na fronteira memory↔pilha muda.
     static int arrayLoadOpcode(Type type) {
         if (type instanceof Type.PrimitiveType pt) {
             return switch (pt.name()) {
-                case "int", "Int", "boolean", "bool", "Bool", "byte", "Byte", "short", "Short", "char", "Char" -> IALOAD;
+                case "boolean", "bool", "Bool", "byte", "Byte" -> BALOAD;
+                case "short", "Short" -> SALOAD;
+                case "char", "Char" -> CALOAD;
+                case "int", "Int" -> IALOAD;
                 case "long", "Long" -> LALOAD;
                 case "float", "Float" -> FALOAD;
                 case "double", "Double" -> DALOAD;
@@ -149,7 +174,10 @@ public final class JvmLiteralEmitter {
     static int arrayStoreOpcode(Type type) {
         if (type instanceof Type.PrimitiveType pt) {
             return switch (pt.name()) {
-                case "int", "Int", "boolean", "bool", "Bool", "byte", "Byte", "short", "Short", "char", "Char" -> IASTORE;
+                case "boolean", "bool", "Bool", "byte", "Byte" -> BASTORE;
+                case "short", "Short" -> SASTORE;
+                case "char", "Char" -> CASTORE;
+                case "int", "Int" -> IASTORE;
                 case "long", "Long" -> LASTORE;
                 case "float", "Float" -> FASTORE;
                 case "double", "Double" -> DASTORE;

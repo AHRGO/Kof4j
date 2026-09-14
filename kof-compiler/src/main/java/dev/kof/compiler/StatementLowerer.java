@@ -15,9 +15,31 @@ public final class StatementLowerer {
                                    List<IRLocalVariable> locals, Type returnType) {
         return switch (stmt) {
             case ReturnStmt ret -> {
-                if (ret.value() != null) {
-                    localIdx = ExpressionLowerer.emitExpression(driver, ret.value(), ops, owner, localIdx, locals);
-                    driver.emitWideningIfNeeded(ops, ExpressionTyper.inferExprType(driver, ret.value(), locals), returnType);
+                // DD-01 (bug 45): return dentro de try/finally NÃO retorna
+                // direto — store no slot do frame + jump p/ o epílogo que roda
+                // o finally antes de retornar (training/idioms/errors.md:
+                // "finally roda no caminho normal, no capturado e na propagação").
+                if (!driver.finallyFrames.isEmpty()) {
+                    CompilerDriverState.FinallyFrame f = driver.finallyFrames.peek();
+                    if (ret.value() != null && !CompilerComparisons.isNullablePrimNullReturn(ret, returnType)) {
+                        ExpressionNode rv = CompilerComparisons.foldNullablePrimBranches(ret.value(), returnType);
+                        localIdx = ExpressionLowerer.emitExpression(driver, rv, ops, owner, localIdx, locals);
+                        driver.emitWideningIfNeeded(ops, ExpressionTyper.inferExprType(driver, rv, locals), returnType);
+                        ops.add(new KofStoreLocal(returnType, f.slotValor()));
+                    } else if (!Type.isVoid(returnType)) {
+                        ops.add(CompilerTypes.defaultValueOp(returnType));
+                        ops.add(new KofStoreLocal(returnType, f.slotValor()));
+                    }
+                    ops.add(new KofJump(f.returnFinallyLabel()));
+                    yield localIdx;
+                }
+                if (ret.value() != null && !CompilerComparisons.isNullablePrimNullReturn(ret, returnType)) {
+                    // §125(A) extensão: ramo null de if/switch em retorno
+                    // Nullable(primitivo) colapsa p/ o default (evita o join
+                    // heterogêneo que boxia e quebra o ireturn).
+                    ExpressionNode rv = CompilerComparisons.foldNullablePrimBranches(ret.value(), returnType);
+                    localIdx = ExpressionLowerer.emitExpression(driver, rv, ops, owner, localIdx, locals);
+                    driver.emitWideningIfNeeded(ops, ExpressionTyper.inferExprType(driver, rv, locals), returnType);
                     ops.add(new KofReturn(returnType));
                 } else if (Type.isVoid(returnType)) {
                     ops.add(new KofReturnVoid());
@@ -53,33 +75,22 @@ public final class StatementLowerer {
             }
             case VarDeclStmt vds -> {
                 Type varType = CompilerTypes.toType(vds.type(), driver.currentUnit);
+                // §125(A) extensão: `Int? v = if (c) x else null` — slot
+                // explícito Nullable(primitivo) nunca guarda null (storage é o
+                // inner), então o ramo null colapsa p/ default do primitivo.
+                // `var`/`val` inferido INTocado (§68a: alargar slot = decisão
+                // de contrato).
+                ExpressionNode vdInit = CompilerComparisons.foldNullablePrimBranches(vds.initializer(), varType);
                 // nullable é constraint de compile-time: o storage é o inner
                 // (a referência já pode ser null na JVM/Native/JS)
                 if (varType instanceof Type.NullableType nt) {
                     varType = nt.inner();
                 }
                 if (driver.mutatedCapturedNames.contains(vds.name())) {
-                    Type initType = vds.initializer() == null ? Type.PrimitiveType.INT
-                            : ExpressionTyper.inferExprType(driver, vds.initializer(), locals);
-                    String boxName = driver.boxFactory.createBoxClass(initType, driver.syntheticClasses, driver.lambdaCounter);
-                    Type boxType = new Type.ClassType("", boxName, List.of());
-                    ops.add(new KofNewObject(boxType, List.of()));
-                    ops.add(new KofDup());
-                    ops.add(new KofCall(boxType, "<init>", List.of(),
-                            Type.PrimitiveType.VOID, KofCallKind.CONSTRUCTOR));
-                    ops.add(new KofDup());
-                    if (vds.initializer() != null) {
-                        localIdx = ExpressionLowerer.emitExpression(driver, vds.initializer(), ops, owner, localIdx, locals);
-                    } else {
-                        ops.add(new KofLoadLiteral(initType, 0));
-                    }
-                    ops.add(new KofStoreField(boxType, "value", initType));
-                    ops.add(new KofStoreLocal(boxType, localIdx));
-                    locals.add(new IRLocalVariable(localIdx, vds.name(), boxType));
-                    yield localIdx + 1;
+                    yield CapturedVarBox.emit(driver, vds, vdInit, ops, owner, localIdx, locals);
                 }
-                if (vds.initializer() != null) {
-                    Type initType = ExpressionTyper.inferExprType(driver, vds.initializer(), locals);
+                if (vdInit != null) {
+                    Type initType = ExpressionTyper.inferExprType(driver, vdInit, locals);
                     if (Type.isVoid(initType)) {
                         if (driver.currentDiagnostics != null) {
                             driver.currentDiagnostics.error(vds.position() != null ? vds.position().file() : "",
@@ -91,12 +102,12 @@ public final class StatementLowerer {
                         }
                         yield localIdx;
                     }
-                    localIdx = ExpressionLowerer.emitExpression(driver, vds.initializer(), ops, owner, localIdx, locals);
+                    localIdx = ExpressionLowerer.emitExpression(driver, vdInit, ops, owner, localIdx, locals);
                     if ("var".equals(vds.type()) || "val".equals(vds.type())) {
-                        varType = ExpressionTyper.inferExprType(driver, vds.initializer(), locals);
+                        varType = ExpressionTyper.inferExprType(driver, vdInit, locals);
                         // spawn-expr: pina Handle<T> com T do corpo (a inferência
                         // genérica pode ter perdido o typeArgument)
-                        if (vds.initializer() instanceof MethodCallExpr sm
+                        if (vdInit instanceof MethodCallExpr sm
                                 && "__kof_spawn_expr".equals(sm.methodName())
                                 && varType instanceof Type.ClassType hct
                                 && "kof.concurrent".equals(hct.packageName())
@@ -106,7 +117,7 @@ public final class StatementLowerer {
                                     List.of(ExpressionTyper.inferExprType(driver, sm.arguments().get(0), locals)));
                         }
                     } else {
-                        Type initT = ExpressionTyper.inferExprType(driver, vds.initializer(), locals);
+                        Type initT = ExpressionTyper.inferExprType(driver, vdInit, locals);
                         // bug 8: `var s: (Int) -> Int = (x: Int) -> x * 2` — o
                         // tipo declarado é FunctionType sem className, mas o
                         // valor real é a classe sintética da lambda. Preservar
@@ -129,14 +140,14 @@ public final class StatementLowerer {
                 // int num slot Object invalidava o bytecode.
                 // (#57: IfExpr/switch heterogêneo já boxeou in-branch → pular)
                 if (driver.erasesToReference(varType)
-                        && vds.initializer() != null
-                        && TypeMetrics.isPrimitiveType(ExpressionTyper.inferExprType(driver, vds.initializer(), locals))
-                        && !ExpressionTyper.boxesOwnBranches(driver, vds.initializer(), locals)) {
-                    driver.emitErasureBox(ops, ExpressionTyper.inferExprType(driver, vds.initializer(), locals));
+                        && vdInit != null
+                        && TypeMetrics.isPrimitiveType(ExpressionTyper.inferExprType(driver, vdInit, locals))
+                        && !ExpressionTyper.boxesOwnBranches(driver, vdInit, locals)) {
+                    driver.emitErasureBox(ops, ExpressionTyper.inferExprType(driver, vdInit, locals));
                 }
                 // declaração sem inicializador: default (0 primitivo / null
                 // referência) — antes o store saía de pilha vazia (frame crash)
-                if (vds.initializer() == null) {
+                if (vdInit == null) {
                     ops.add(driver.erasesToReference(varType)
                             ? new KofLoadLiteral(varType, null)
                             : new KofLoadLiteral(varType, 0));
@@ -444,6 +455,19 @@ public final class StatementLowerer {
                 }
                 ops.add(new KofTryStart(tryStart, tryEnd,
                         hasCatch ? primaryHandler : catchAllLabel, primaryExcType, primaryExcLocal));
+                // DD-01 (bug 45): o frame entra ANTES do corpo do try — o
+                // ReturnStmt do corpo precisa vê-lo (store+jump p/ epílogo).
+                LabelId returnFinallyLabel = null;
+                int retSlot = -1;
+                if (hasFinally) {
+                    returnFinallyLabel = LabelId.create();
+                    if (!Type.isVoid(returnType)) {
+                        retSlot = localIdx++;
+                        locals.add(new IRLocalVariable(retSlot, "#retVal", returnType));
+                    }
+                    driver.finallyFrames.push(new CompilerDriverState.FinallyFrame(
+                            returnFinallyLabel, rethrowLabel, retSlot, returnType));
+                }
                 for (StatementNode s : ts.tryBody()) {
                     localIdx = driver.emitStatement(s, ops, owner, localIdx, locals, returnType);
                 }
@@ -470,6 +494,8 @@ public final class StatementLowerer {
                     ops.add(new KofJump(finallyLabel));
                 }
                 if (hasFinally) {
+                    // frame já empilhado antes do corpo (DD-01); reusa os ids
+                    LabelId returnFinallyL = returnFinallyLabel;
                     int excTmp = hasCatch ? localIdx++ : primaryExcLocal;
                     if (hasCatch) {
                         locals.add(new IRLocalVariable(excTmp, "#excTmp",
@@ -478,6 +504,9 @@ public final class StatementLowerer {
                     ops.add(new KofCatchStart(catchAllLabel, "Throwable", excTmp));
                     ops.add(new KofJump(rethrowLabel));
                     ops.add(new KofTryEnd());
+                    // frame sai ANTES dos epílogos: return DENTRO do finally
+                    // faz return direto (sombra — Java: finally return vence)
+                    driver.finallyFrames.pop();
                     ops.add(new KofLabel(finallyLabel));
                     for (StatementNode s : ts.finallyBody()) {
                         localIdx = driver.emitStatement(s, ops, owner, localIdx, locals, returnType);
@@ -489,6 +518,25 @@ public final class StatementLowerer {
                     }
                     ops.add(new KofLoadLocal(new Type.ClassType("java.lang", "Throwable", List.of()), excTmp));
                     ops.add(new KofThrow());
+                    // caminho return-no-try/catch: finally roda, valor do slot
+                    // retorna; try/finally EXTERNO encadeia (store no slot dele)
+                    ops.add(new KofLabel(returnFinallyL));
+                    for (StatementNode s : ts.finallyBody()) {
+                        localIdx = driver.emitStatement(s, ops, owner, localIdx, locals, returnType);
+                    }
+                    if (!driver.finallyFrames.isEmpty()) {
+                        CompilerDriverState.FinallyFrame outer = driver.finallyFrames.peek();
+                        if (retSlot >= 0) {
+                            ops.add(new KofLoadLocal(returnType, retSlot));
+                            ops.add(new KofStoreLocal(outer.returnType(), outer.slotValor()));
+                        }
+                        ops.add(new KofJump(outer.returnFinallyLabel()));
+                    } else if (retSlot >= 0) {
+                        ops.add(new KofLoadLocal(returnType, retSlot));
+                        ops.add(new KofReturn(returnType));
+                    } else {
+                        ops.add(new KofReturnVoid());
+                    }
                 } else {
                     ops.add(new KofTryEnd());
                     ops.add(new KofLabel(finallyLabel));

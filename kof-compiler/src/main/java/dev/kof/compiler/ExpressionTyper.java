@@ -112,6 +112,26 @@ public final class ExpressionTyper {
                         leftType = TypeMetrics.commonNumericType(leftType, rType);
                         continue;
                     }
+                    // §167: bitwise `& | ^` promove ao tipo comum (long se
+                    // qualquer lado for long); shift `<< >> >>>` tem o tipo do
+                    // operando ESQUERDO promovido (JLS 15.19). Sem isto a
+                    // inferência dizia INT p/ `int & long` e o box/despacho
+                    // usava Integer sobre um long → VerifyError.
+                    if (switch (be.operator()) {
+                        case "&", "|", "^" -> true;
+                        default -> false;
+                    } && TypeMetrics.isInteger(leftType) && TypeMetrics.isInteger(rType)) {
+                        leftType = TypeMetrics.commonNumericType(leftType, rType);
+                        continue;
+                    }
+                    if (switch (be.operator()) {
+                        case "<<", ">>", ">>>" -> true;
+                        default -> false;
+                    } && TypeMetrics.isInteger(leftType) && TypeMetrics.isInteger(rType)) {
+                        leftType = "long".equals(TypeMetrics.primitiveName(leftType))
+                                ? Type.PrimitiveType.LONG : Type.PrimitiveType.INT;
+                        continue;
+                    }
                     leftType = leftType;
                 }
                 yield leftType;
@@ -307,8 +327,10 @@ public final class ExpressionTyper {
         if (e instanceof IfExpr ie && ie.elseExpr() != null)
             return branchTypesDiffer(ifBranchTypes(driver, ie, locals));
         if (e instanceof SwitchExpr se)
+            // §149: fallback sintético (sem default) tem o tipo do RESULTADO, não
+            // o do subject — alinhado ao lowering (SwitchExprLowerer.emitSwitchExpr).
             return branchTypesDiffer(switchBranchTypes(driver, se.cases(),
-                    se.defaultValue(), inferExprType(driver, se.expression(), locals), locals));
+                    se.defaultValue(), inferExprType(driver, se, locals), locals));
         return false;
     }
 
@@ -347,8 +369,22 @@ public final class ExpressionTyper {
     private static Type firstReturnValueType(CompilerDriver driver,
                                              List<StatementNode> body,
                                              List<IRLocalVariable> locals) {
+        // §176: declarações locais do próprio corpo (`var x = 1; return x`)
+        // precisam entrar no escopo da varredura, senão o `return x` é UNKNOWN
+        // e a lambda tipa VOID (o backend descarta o valor). Cópia mutável:
+        // o escopo do chamador não pode ser poluído.
+        List<IRLocalVariable> scope = new ArrayList<>(locals);
         for (StatementNode s : body) {
-            Type t = returnValueType(driver, s, locals);
+            if (s instanceof VarDeclStmt vds) {
+                Type vt = CompilerTypes.toType(vds.type(), driver.currentUnit);
+                if (("var".equals(vds.type()) || "val".equals(vds.type()))
+                        && vds.initializer() != null) {
+                    vt = inferExprType(driver, vds.initializer(), scope);
+                }
+                scope.add(new IRLocalVariable(0, vds.name(), vt));
+                continue;
+            }
+            Type t = returnValueType(driver, s, scope);
             if (!Type.UnknownType.UNKNOWN.equals(t)) return t;
         }
         return Type.UnknownType.UNKNOWN;

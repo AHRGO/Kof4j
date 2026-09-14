@@ -1,6 +1,6 @@
 # 25 — Spring
 
-> **Status: futuro (pós 0.2.6-beta — `kof.web` + `kof_db` já cobrem o caso sem Spring)**
+> **Status: futuro (pós 0.3.22-beta — `kof.web` + `kof_db` já cobrem o caso sem Spring)**
 >
 > A integração com Spring é um dos objetivos de longo prazo da Kof. Este capítulo documenta a visão planejada — e o que funciona hoje sem Spring.
 
@@ -47,7 +47,7 @@ main() {
   `retry`/`circuit` (JVM+JS; Native reporta `HTTP002`);
 - Web: `WEB002` no Native (sem servidor) — a stack web é JVM hoje.
 
-Ver `docs/stdlib-web.md`.
+Ver `docs/stdlib/stdlib-web.md`.
 
 ## A visão de longo prazo: o objetivo
 

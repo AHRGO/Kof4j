@@ -266,6 +266,278 @@ public final class RuntimeTimeIso {
                 popq %rbx
                 ret
 
+            # ── kof.time (STDLIB S7e) — hoje/formato UTC (D-STDLIB) ────────
+            # D1: UTC-only — todayIso = data UTC de kof_time_now (epoch
+            # millis -> dias via floorDiv 86400000). D4: invalidade => "".
+            # D5: isToday = igualdade de String com todayIso. Reusa
+            # .Lkd_valid (wedge), .Lka_civil + .Lka_put4/.Lka_put2 (S7c).
+
+            # kof_time_todayIso() -> String "YYYY-MM-DD" (UTC)
+            .globl kof_time_todayIso
+            .type kof_time_todayIso, @function
+            kof_time_todayIso:
+                pushq %rbx
+                pushq %r12
+                pushq %r13
+                pushq %r14
+                pushq %r15
+                subq $48, %rsp
+                call kof_time_now                # rax = epoch millis
+                movabsq $86400000, %rcx
+                xorl %edx, %edx
+                divq %rcx                        # rax = dias (floor, epoch positivo)
+                # serial -> y/m/d (entrada em eax; .Lka_civil usa eax)
+                movl %eax, %eax
+                call .Lka_civil                  # edi=y, esi=m, edx=d
+                movl %edi, 0(%rsp)
+                movl %esi, 4(%rsp)
+                movl %edx, 8(%rsp)
+                movl $10, %r12d                  # len "YYYY-MM-DD"
+                leal 25(%r12), %edi
+                call kof_alloc
+                movq %rax, %r15
+                movl $1, 0(%r15)
+                movl $0, 4(%r15)
+                movq $0, 8(%r15)
+                movl %r12d, 16(%r15)
+                movl $0, 20(%r15)
+                movb $0, 24(%r15)
+                leaq 24(%r15), %rdi
+                movl 0(%rsp), %r13d
+                call .Lka_put4
+                movb $45, (%rdi)
+                incq %rdi
+                movl 4(%rsp), %r13d
+                call .Lka_put2
+                movb $45, (%rdi)
+                incq %rdi
+                movl 8(%rsp), %r13d
+                call .Lka_put2
+                movb $0, (%rdi)
+                movq %r15, %rax
+                addq $48, %rsp
+                popq %r15
+                popq %r14
+                popq %r13
+                popq %r12
+                popq %rbx
+                ret
+
+            # kof_time_formatDateIso(y,m,d) -> String "YYYY-MM-DD" ou ""
+            .globl kof_time_formatDateIso
+            .type kof_time_formatDateIso, @function
+            kof_time_formatDateIso:
+                pushq %rbx
+                pushq %r12
+                pushq %r13
+                pushq %r14
+                pushq %r15
+                subq $48, %rsp
+                movl %edi, 0(%rsp)
+                movl %esi, 4(%rsp)
+                movl %edx, 8(%rsp)
+                movq %rsp, %rsi                  # não usado por .Lkd_valid; só clareza
+                movl 0(%rsp), %edi
+                movl 4(%rsp), %esi
+                movl 8(%rsp), %edx
+                call .Lkd_valid
+                testl %eax, %eax
+                jz .Lka_fd_len0
+                movl $10, %r12d
+                jmp .Lka_fd_alloc
+            .Lka_fd_len0:
+                xorl %r12d, %r12d
+            .Lka_fd_alloc:
+                leal 25(%r12), %edi
+                call kof_alloc
+                movq %rax, %r15
+                movl $1, 0(%r15)
+                movl $0, 4(%r15)
+                movq $0, 8(%r15)
+                movl %r12d, 16(%r15)
+                movl $0, 20(%r15)
+                movb $0, 24(%r15)
+                testl %r12d, %r12d
+                jz .Lka_fd_done
+                leaq 24(%r15), %rdi
+                movl 0(%rsp), %r13d
+                call .Lka_put4
+                movb $45, (%rdi)
+                incq %rdi
+                movl 4(%rsp), %r13d
+                call .Lka_put2
+                movb $45, (%rdi)
+                incq %rdi
+                movl 8(%rsp), %r13d
+                call .Lka_put2
+                movb $0, (%rdi)
+            .Lka_fd_done:
+                movq %r15, %rax
+                addq $48, %rsp
+                popq %r15
+                popq %r14
+                popq %r13
+                popq %r12
+                popq %rbx
+                ret
+
+            # kof_time_isToday(y,m,d) -> 0/1 (D5: string-eq com todayIso)
+            .globl kof_time_isToday
+            .type kof_time_isToday, @function
+            kof_time_isToday:
+                pushq %rbx
+                pushq %r12
+                pushq %r13
+                pushq %r14
+                subq $24, %rsp
+                movl %edi, 0(%rsp)
+                movl %esi, 4(%rsp)
+                movl %edx, 8(%rsp)
+                # inválida => 0 (gating D5 — formato só existe p/ data válida)
+                movl 0(%rsp), %edi
+                movl 4(%rsp), %esi
+                movl 8(%rsp), %edx
+                call .Lkd_valid
+                testl %eax, %eax
+                jz .Lka_it_free_no
+                call kof_time_todayIso
+                movq %rax, %r12                  # today
+                movl 0(%rsp), %edi
+                movl 4(%rsp), %esi
+                movl 8(%rsp), %edx
+                call kof_time_formatDateIso
+                movq %rax, %r13                  # arg
+                # string-eq: mesmo len + bytes iguais (len @16, bytes @24)
+                movl 16(%r12), %eax
+                cmpl %eax, 16(%r13)
+                jne .Lka_it_free_no
+                movl %eax, %r14d
+                xorl %ecx, %ecx
+            .Lka_it_cmp:
+                cmpl %r14d, %ecx
+                jae .Lka_it_yes
+                movzbl 24(%r12,%rcx), %eax
+                movzbl 24(%r13,%rcx), %edx
+                cmpl %edx, %eax
+                jne .Lka_it_free_no
+                incl %ecx
+                jmp .Lka_it_cmp
+            .Lka_it_yes:
+                movl $1, %eax
+                jmp .Lka_it_done
+            .Lka_it_free_no:
+                xorl %eax, %eax
+            .Lka_it_done:
+                addq $24, %rsp
+                popq %r14
+                popq %r13
+                popq %r12
+                popq %rbx
+                ret
+
+            # kof_time_hoursBetween(y1,m1,d1,h1, y2,m2,d2,h2) -> Int (D3:
+            # floor simétrico = truncado a zero; datas inválidas ou hora fora
+            # de 0..23 => 0). SysV: y1..h1 em edi/esi/edx/ecx; y2..h2 na
+            # stack do caller (entry_rsp+0..12). Reusa .Lkd_valid+.Lkd_epoch.
+            .globl kof_time_hoursBetween
+            .type kof_time_hoursBetween, @function
+            kof_time_hoursBetween:
+                pushq %rbx
+                pushq %r12
+                pushq %r13
+                pushq %r14
+                subq $32, %rsp                   # 8 slots (y1..h1 + y2..h2)
+                # S7f (emit genérico corrigido): args 1-6 em edi/esi/edx/ecx/
+                # r8/r9; args 7/8 (d2/h2) na stack do callee: 0/8(%rsp) na
+                # ENTRY => 48/56(%rsp) após 4 pushes (32B) + sub 16.
+                # y2/m2/d2/h2 vão para slots de pilha LOGO — .Lkd_valid chama
+                # kof_time_daysInMonth que clobbera caller-saved (r8-r11,
+                # rax/rcx/rdx); nada vivo em regs entre calls (licao B14/x86).
+                movl %r8d, 16(%rsp)              # y2 (5º arg)
+                movl %r9d, 20(%rsp)              # m2 (6º arg)
+                movl 72(%rsp), %r13d
+                movl %r13d, 24(%rsp)             # d2 (entry+8: ret addr
+                                                 # ocupa entry+0)
+                movl 80(%rsp), %r13d
+                movl %r13d, 28(%rsp)             # h2 (entry+16)
+                movl %edi, 0(%rsp)               # y1
+                movl %esi, 4(%rsp)               # m1
+                movl %edx, 8(%rsp)               # d1
+                movl %ecx, 12(%rsp)              # h1
+                # valida hora 1 (data 1 valida abaixo junto do epoch)
+                cmpl $0, 12(%rsp)
+                jl .Lka_hb0
+                cmpl $23, 12(%rsp)
+                jg .Lka_hb0
+                movl 0(%rsp), %edi
+                movl 4(%rsp), %esi
+                movl 8(%rsp), %edx
+                call .Lkd_valid
+                testl %eax, %eax
+                jz .Lka_hb0
+                movl 0(%rsp), %edi
+                movl 4(%rsp), %esi
+                movl 8(%rsp), %edx
+                call .Lkd_epoch
+                movl %eax, %ebx                  # ep1 (y2 livre agora)
+                imull $24, %ebx
+                addl 12(%rsp), %ebx              # h1 = hours1
+                cmpl $0, 28(%rsp)
+                jl .Lka_hb0
+                cmpl $23, 28(%rsp)
+                jg .Lka_hb0
+                movl %ebx, 0(%rsp)               # hours1 (reusa slot y1)
+                movl %ebx, %r12d                 # hours1 backup
+                movl 16(%rsp), %edi              # y2
+                movl 20(%rsp), %esi              # m2
+                movl 24(%rsp), %edx              # d2
+                call .Lkd_valid
+                testl %eax, %eax
+                jz .Lka_hb0
+                movl 16(%rsp), %edi
+                movl 20(%rsp), %esi
+                movl 24(%rsp), %edx
+                call .Lkd_epoch
+                imull $24, %eax
+                addl 28(%rsp), %eax              # + h2 = hours2
+                subl %r12d, %eax                 # hours2 - hours1
+                jmp .Lka_hbd
+            .Lka_hb0:
+                xorl %eax, %eax
+            .Lka_hbd:
+                addq $32, %rsp
+                popq %r14
+                popq %r13
+                popq %r12
+                popq %rbx
+                ret
+
+            # kof_time_parseDateIso(rdi=str) -> Int serial (D4: "YYYY-MM-DD"
+            # estrito; inválido => 0). Reusa .Lka_parse2 (slot y/m/d) +
+            # .Lkd_epoch (wedge). MESMO serial de hoursBetween/daysBetween.
+            .globl kof_time_parseDateIso
+            .type kof_time_parseDateIso, @function
+            kof_time_parseDateIso:
+                pushq %rbx
+                subq $16, %rsp
+                movq %rdi, %rbx
+                movq %rsp, %rsi                  # slot y@0/m@4/d@8
+                movq %rbx, %rdi
+                call .Lka_parse2
+                testl %eax, %eax
+                jz .Lka_pd0
+                movl 0(%rsp), %edi
+                movl 4(%rsp), %esi
+                movl 8(%rsp), %edx
+                call .Lkd_epoch
+                jmp .Lka_pdd
+            .Lka_pd0:
+                xorl %eax, %eax
+            .Lka_pdd:
+                addq $16, %rsp
+                popq %rbx
+                ret
+
             .globl kof_time_diffDays
             .type kof_time_diffDays, @function
             kof_time_diffDays:

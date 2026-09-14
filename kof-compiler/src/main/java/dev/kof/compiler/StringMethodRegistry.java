@@ -44,6 +44,10 @@ public final class StringMethodRegistry {
         Type strArray = new Type.ArrayType(BuiltinTypes.STRING);
         return switch (name) {
             case "length" -> argCount == 0 ? sig(INT, List.of()) : null;
+            // §145 (12/09, #101): isEmpty existia na spec (type-system.md) e
+            // no typer mas NÃO no registro — o JVM emitia descritor fallback
+            // `()Object`, o Native link-fail, o JS TypeError.
+            case "isEmpty" -> argCount == 0 ? sig(BOOL, List.of()) : null;
             case "charAt" -> argCount == 1 ? sig(CHAR, List.of(INT)) : null;
             case "substring" -> argCount == 1 ? sig(str, List.of(INT))
                     : argCount == 2 ? sig(str, List.of(INT, INT)) : null;

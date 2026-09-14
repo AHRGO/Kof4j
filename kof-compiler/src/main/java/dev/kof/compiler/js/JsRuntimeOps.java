@@ -30,6 +30,7 @@ boolean isRuntimeOp(KofCall kc) {
                 || name.startsWith("kof_sec_")
                 || name.startsWith("kof_validation_")
                 || name.startsWith("kof_math_")
+                || name.startsWith("kof_string_to_")
                 || name.startsWith("kof_strings_")
                 || name.startsWith("kof_encoding_")
                 || name.startsWith("kof_uuid_")
@@ -68,7 +69,15 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
             // type information stays in the Kof compiler (generics erasure).
             JsIr.JsExpression value = kc.kind() == KofCallKind.FUNCTION
                     ? args.get(0) : receiver;
-            if (name.contains("encode")) {
+            if (name.equals("kof_json_encode_map")) {
+                // §106 residual (13/09): Map no JS é `new Map()` — JSON.stringify
+                // devolve '{}' (sem own enumerable props). Roteia p/ o helper
+                // que monta o objeto com chaves SORTED (decisão 2b), igual ao
+                // JVM/nativo/interp. args = (map, tag).
+                p.lc.registerRuntime("kofJsonEncodeMap");
+                stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofJsonEncodeMap"),
+                        List.of(value, args.get(1))));
+            } else if (name.contains("encode")) {
                 stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("JSON.stringify"), List.of(value)));
             } else if (name.startsWith("kof_json_decode_")
                     && BuiltinTypes.isList(kc.ownerType())) {
@@ -89,6 +98,27 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
                             List.of(new JsIr.JsArrow(List.of("o"), mapper))));
                 } else {
                     stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("JSON.parse"), List.of(value)));
+                }
+            } else if (name.startsWith("kof_json_decode_")
+                    && BuiltinTypes.isMap(kc.ownerType())) {
+                // §103.1 (#103): decode<Map<String,T>> — JSON.parse do
+                // objeto + monta um Map real (o else dava objeto puro, que
+                // não responde m.get/m.size). Valor classe → bind via
+                // __kof_decode_<Classe> (mesmo helper da célula de lista).
+                Type mv2 = BuiltinTypes.mapValue(kc.ownerType());
+                JsIr.JsExpression parsed = new JsIr.JsCall(
+                        new JsIr.JsIdentifier("JSON.parse"), List.of(value));
+                if (mv2 instanceof Type.ClassType mct
+                        && p.lc.classMethodNames.containsKey(mct.internalName())) {
+                    String jsName = JsTypeMapper.jsClassName(mct.internalName());
+                    p.lc.decodeHelpers.add(jsName);
+                    p.lc.registerRuntime("kofJsonDecodeObjectMap");
+                    stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofJsonDecodeObjectMap"),
+                            List.of(parsed, new JsIr.JsIdentifier("__kof_decode_" + jsName))));
+                } else {
+                    p.lc.registerRuntime("kofJsonDecodeMap");
+                    stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofJsonDecodeMap"),
+                            List.of(parsed)));
                 }
             } else if (name.startsWith("kof_json_decode_")
                     && p.lc.classMethodNames.containsKey(JsTypeMapper.ownerInternalName(kc.ownerType()))) {
@@ -267,6 +297,7 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
             // for GraalJS CreateObject interop. The handler (lambda obj) has
             // an 'invoke' method that processes Exchange.
             if (name.equals("kof_web_app_new")) {
+                p.lc.registerRuntime("kofWebAppNew");
                 stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofWebAppNew"), List.of()));
                 return;
             }
@@ -284,21 +315,74 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
                 stack.add(call);
                 return;
             }
+            // WEB001-T1 (13/09): helpers de contexto reais no JS — param/
+            // query/header/body/method/path leem o request corrente
+            // (kofWebRequest no JsRuntimeUiWeb). R6: nunca stub silencioso.
+            if (name.equals("kof_web_param") && args.size() == 1) {
+                p.lc.registerRuntime("kofWebParam");
+                stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofWebParam"), args));
+                return;
+            }
+            if (name.equals("kof_web_query") && args.size() == 1) {
+                p.lc.registerRuntime("kofWebQuery");
+                stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofWebQuery"), args));
+                return;
+            }
+            if (name.equals("kof_web_header") && args.size() == 1) {
+                p.lc.registerRuntime("kofWebHeader");
+                stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofWebHeader"), args));
+                return;
+            }
+            if (name.equals("kof_web_body") && args.isEmpty()) {
+                p.lc.registerRuntime("kofWebBody");
+                stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofWebBody"), List.of()));
+                return;
+            }
+            if (name.equals("kof_web_method") && args.isEmpty()) {
+                p.lc.registerRuntime("kofWebMethod");
+                stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofWebMethod"), List.of()));
+                return;
+            }
+            if (name.equals("kof_web_path") && args.isEmpty()) {
+                p.lc.registerRuntime("kofWebPath");
+                stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofWebPath"), List.of()));
+                return;
+            }
             if (name.equals("kof_web_status") && args.size() == 2) {
-                stack.add(args.get(1));
+                // response.status(code, text) — o 2º arg (texto) é o corpo;
+                // mantém o valor de String no topo (contrato JVM).
+                p.lc.registerRuntime("kofWebStatus");
+                stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofWebStatus"), args));
                 return;
             }
             if (name.equals("kof_web_header_set") && args.size() == 2) {
-                stack.add(args.get(1));
+                p.lc.registerRuntime("kofWebHeaderSet");
+                stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofWebHeaderSet"), args));
                 return;
             }
-            // fallback: stub for unimplemented web functions
+            // fallback: R6 — o gap é EXPLICITO (kofWebStub lança WEB001), nunca undefined
             p.lc.registerRuntime("kofWebStub");
             JsIr.JsExpression call = new JsIr.JsCall(new JsIr.JsIdentifier("kofWebStub"), args);
             if (Type.isVoid(kc.returnType())) {
                 throw new StatementEnd(call);
             }
             stack.add(call);
+            return;
+        }
+        // S13a (plan-stdlib-expansion): fachada math.parseInt/parseLong/
+        // parseDouble -> as runtime fns EXISTENTES do backend JS
+        // (JsRuntimeUiStdlib exporta kof_string_to_* em snake RAW; idem
+        // METHOD case do JsCallEmitter — mesma export, 1 face só).
+        // S13b: parse com default (briefing §43) — falha DEVOLVE o default,
+        // nunca lança (wrapper try/catch em kof_string_to_*).
+        if (name.startsWith("kof_string_to_") && name.endsWith("_or_default") && args.size() == 2) {
+            p.lc.registerRuntime(name);
+            stack.add(new JsIr.JsCall(new JsIr.JsIdentifier(name), args));
+            return;
+        }
+        if (name.startsWith("kof_string_to_") && args.size() == 1) {
+            p.lc.registerRuntime(name);
+            stack.add(new JsIr.JsCall(new JsIr.JsIdentifier(name), List.of(args.get(0))));
             return;
         }
         if (name.equals("kof_now")) {
@@ -314,6 +398,20 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
                 throw new StatementEnd(call);
             }
             stack.add(call);
+            return;
+        }
+        if (name.startsWith("kof_string_to_")) {
+            // S13a (plan-stdlib-expansion): fachada math.parseInt/parseLong/
+            // parseDouble -> as runtime fns EXISTENTES do backend JS
+            // (JsRuntimeUiStdlib exporta kof_string_to_* em snake RAW). O
+            // prefixo no isRuntimeOp também roteia o METHOD path (.toInt()
+            // de StringMethodRegistry), que antes caía no handleStringOp —
+            // o emit é IDÊNTOCO ao case de lá (JsCallEmitter:276: call RAW
+            // com receiver); FUNCTION (fachada) usa args.get(0).
+            p.lc.registerRuntime(name);
+            JsIr.JsExpression sarg = kc.kind() == KofCallKind.FUNCTION && !args.isEmpty()
+                    ? args.get(0) : receiver;
+            stack.add(new JsIr.JsCall(new JsIr.JsIdentifier(name), List.of(sarg)));
             return;
         }
         String fn = JsTypeMapper.runtimeJsName(name);

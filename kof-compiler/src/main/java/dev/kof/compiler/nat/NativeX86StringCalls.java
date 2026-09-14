@@ -23,7 +23,21 @@ public final class NativeX86StringCalls {
             sb.append("    pushq %rax\n");
             return true;
         }
-        if (kc.kind() == KofCallKind.INSTANCE && "charAt".equals(kc.methodName())) {
+        if (kc.kind() == KofCallKind.INSTANCE && BuiltinTypes.isString(kc.ownerType())
+                && "isEmpty".equals(kc.methodName())) {
+            // §145 (12/09, #101): sem ramo caía no fallback genérico →
+            // undefined reference java_lang_String_isEmpty no link.
+            // isEmpty = (length == 0), via o helper existente.
+            sb.append("    popq %rdi\n");
+            sb.append("    call kof_string_length\n");
+            sb.append("    testq %rax, %rax\n");
+            sb.append("    setz %al\n");
+            sb.append("    movzbl %al, %eax\n");
+            sb.append("    pushq %rax\n");
+            return true;
+        }
+        if (kc.kind() == KofCallKind.INSTANCE && BuiltinTypes.isString(kc.ownerType())
+                && "charAt".equals(kc.methodName())) {
             int argCount = kc.parameterTypes().size();
             String[] intRegs = {"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"};
             for (int i = argCount - 1; i >= 0; i--) {
@@ -35,11 +49,16 @@ public final class NativeX86StringCalls {
             sb.append("    pushq %rax\n");
             return true;
         }
-        if (kc.kind() == KofCallKind.INSTANCE && "substring".equals(kc.methodName())) {
+        if (kc.kind() == KofCallKind.INSTANCE && BuiltinTypes.isString(kc.ownerType())
+                && "substring".equals(kc.methodName())) {
             int argCount = kc.parameterTypes().size();
             if (argCount == 1) {
                 sb.append("    popq %rsi\n");
-                sb.append("    xorq %rdx, %rdx\n");
+                // §111: sentinela "até o fim" era 0 — colidia com o end=0
+                // LEGÍTIMO da forma 2-arg ("hello".substring(0,0) devolvia a
+                // string toda). -1 é impossível como índice (bounds já rejeitam
+                // <0) e o helper trata só -1 como toend.
+                sb.append("    movq $-1, %rdx\n");
             } else {
                 sb.append("    popq %rdx\n");
                 sb.append("    popq %rsi\n");
@@ -50,7 +69,8 @@ public final class NativeX86StringCalls {
             sb.append("    pushq %rax\n");
             return true;
         }
-        if (kc.kind() == KofCallKind.INSTANCE && "contains".equals(kc.methodName())) {
+        if (kc.kind() == KofCallKind.INSTANCE && BuiltinTypes.isString(kc.ownerType())
+                && "contains".equals(kc.methodName())) {
             int argCount = kc.parameterTypes().size();
             String[] intRegs = {"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"};
             for (int i = argCount - 1; i >= 0; i--) {
@@ -62,7 +82,8 @@ public final class NativeX86StringCalls {
             sb.append("    pushq %rax\n");
             return true;
         }
-        if (kc.kind() == KofCallKind.INSTANCE && "startsWith".equals(kc.methodName())) {
+        if (kc.kind() == KofCallKind.INSTANCE && BuiltinTypes.isString(kc.ownerType())
+                && "startsWith".equals(kc.methodName())) {
             int argCount = kc.parameterTypes().size();
             String[] intRegs = {"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"};
             for (int i = argCount - 1; i >= 0; i--) {
@@ -70,11 +91,17 @@ public final class NativeX86StringCalls {
             }
             sb.append("    popq %rax\n");
             sb.append("    movq %rax, %rdi\n");
-            sb.append("    call kof_string_starts_with\n");
+            // §102: startsWith(prefix, from) — o 2º arg (offset em code units
+            // UTF-16) estava sendo IGNORADO (mesmo helper de 1 arg). Com 2
+            // args, %rdx já vem carregado pelo pop loop acima (regs[i+1]).
+            sb.append("    call ")
+              .append(argCount >= 2
+                      ? "kof_string_starts_with2\n" : "kof_string_starts_with\n");
             sb.append("    pushq %rax\n");
             return true;
         }
-        if (kc.kind() == KofCallKind.INSTANCE && "endsWith".equals(kc.methodName())) {
+        if (kc.kind() == KofCallKind.INSTANCE && BuiltinTypes.isString(kc.ownerType())
+                && "endsWith".equals(kc.methodName())) {
             int argCount = kc.parameterTypes().size();
             String[] intRegs = {"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"};
             for (int i = argCount - 1; i >= 0; i--) {
@@ -86,7 +113,8 @@ public final class NativeX86StringCalls {
             sb.append("    pushq %rax\n");
             return true;
         }
-        if (kc.kind() == KofCallKind.INSTANCE && "concat".equals(kc.methodName())) {
+        if (kc.kind() == KofCallKind.INSTANCE && BuiltinTypes.isString(kc.ownerType())
+                && "concat".equals(kc.methodName())) {
             int argCount = kc.parameterTypes().size();
             String[] intRegs = {"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"};
             for (int i = argCount - 1; i >= 0; i--) {
@@ -98,23 +126,32 @@ public final class NativeX86StringCalls {
             sb.append("    pushq %rax\n");
             return true;
         }
-        if (kc.kind() == KofCallKind.INSTANCE && "indexOf".equals(kc.methodName())) {
+        if (kc.kind() == KofCallKind.INSTANCE && BuiltinTypes.isString(kc.ownerType())
+                && "indexOf".equals(kc.methodName())) {
             String[] regs = {"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"};
             for (int i = kc.parameterTypes().size() - 1; i >= 0; i--) {
                 sb.append("    popq ").append(regs[i + 1]).append("\n");
             }
             sb.append("    popq %rdi\n");
-            sb.append("    call kof_string_index_of\n");
+            // §102: o 2º arg (from) já está em %rdx quando há 2 parâmetros —
+            // roteia p/ o helper _2 (JVM: clamps UTF-16 + cut de par). 1-arg
+            // segue o helper byte-index (rdx é lixo, ele ignora).
+            sb.append("    call ")
+              .append(kc.parameterTypes().size() >= 2
+                      ? "kof_string_index_of2\n" : "kof_string_index_of\n");
             sb.append("    pushq %rax\n");
             return true;
         }
-        if (kc.kind() == KofCallKind.INSTANCE && "lastIndexOf".equals(kc.methodName())) {
+        if (kc.kind() == KofCallKind.INSTANCE && BuiltinTypes.isString(kc.ownerType())
+                && "lastIndexOf".equals(kc.methodName())) {
             String[] regs = {"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"};
             for (int i = kc.parameterTypes().size() - 1; i >= 0; i--) {
                 sb.append("    popq ").append(regs[i + 1]).append("\n");
             }
             sb.append("    popq %rdi\n");
-            sb.append("    call kof_string_last_index_of\n");
+            sb.append("    call ")
+              .append(kc.parameterTypes().size() >= 2
+                      ? "kof_string_last_index_of2\n" : "kof_string_last_index_of\n");
             sb.append("    pushq %rax\n");
             return true;
         }
@@ -133,38 +170,44 @@ public final class NativeX86StringCalls {
             sb.append("    pushq %rax\n");
             return true;
         }
-        if (kc.kind() == KofCallKind.INSTANCE && "compareTo".equals(kc.methodName())) {
+        if (kc.kind() == KofCallKind.INSTANCE && BuiltinTypes.isString(kc.ownerType())
+                && "compareTo".equals(kc.methodName())) {
             sb.append("    popq %rsi\n");
             sb.append("    popq %rdi\n");
             sb.append("    call kof_string_compare_to\n");
             sb.append("    pushq %rax\n");
             return true;
         }
-        if (kc.kind() == KofCallKind.INSTANCE && "hashCode".equals(kc.methodName())) {
+        if (kc.kind() == KofCallKind.INSTANCE && BuiltinTypes.isString(kc.ownerType())
+                && "hashCode".equals(kc.methodName())) {
             sb.append("    popq %rdi\n");
             sb.append("    call kof_string_hash_code\n");
             sb.append("    pushq %rax\n");
             return true;
         }
-        if (kc.kind() == KofCallKind.INSTANCE && "trim".equals(kc.methodName())) {
+        if (kc.kind() == KofCallKind.INSTANCE && BuiltinTypes.isString(kc.ownerType())
+                && "trim".equals(kc.methodName())) {
             sb.append("    popq %rdi\n");
             sb.append("    call kof_string_trim\n");
             sb.append("    pushq %rax\n");
             return true;
         }
-        if (kc.kind() == KofCallKind.INSTANCE && "toUpperCase".equals(kc.methodName())) {
+        if (kc.kind() == KofCallKind.INSTANCE && BuiltinTypes.isString(kc.ownerType())
+                && "toUpperCase".equals(kc.methodName())) {
             sb.append("    popq %rdi\n");
             sb.append("    call kof_string_to_upper\n");
             sb.append("    pushq %rax\n");
             return true;
         }
-        if (kc.kind() == KofCallKind.INSTANCE && "toLowerCase".equals(kc.methodName())) {
+        if (kc.kind() == KofCallKind.INSTANCE && BuiltinTypes.isString(kc.ownerType())
+                && "toLowerCase".equals(kc.methodName())) {
             sb.append("    popq %rdi\n");
             sb.append("    call kof_string_to_lower\n");
             sb.append("    pushq %rax\n");
             return true;
         }
-        if (kc.kind() == KofCallKind.INSTANCE && "replace".equals(kc.methodName())) {
+        if (kc.kind() == KofCallKind.INSTANCE && BuiltinTypes.isString(kc.ownerType())
+                && "replace".equals(kc.methodName())) {
             sb.append("    popq %rdx\n");
             sb.append("    popq %rsi\n");
             sb.append("    popq %rdi\n");
@@ -180,14 +223,16 @@ public final class NativeX86StringCalls {
             sb.append("    pushq %rax\n");
             return true;
         }
-        if (kc.kind() == KofCallKind.INSTANCE && "equalsIgnoreCase".equals(kc.methodName())) {
+        if (kc.kind() == KofCallKind.INSTANCE && BuiltinTypes.isString(kc.ownerType())
+                && "equalsIgnoreCase".equals(kc.methodName())) {
             sb.append("    popq %rsi\n");
             sb.append("    popq %rdi\n");
             sb.append("    call kof_string_equals_ignore_case\n");
             sb.append("    pushq %rax\n");
             return true;
         }
-        if (kc.kind() == KofCallKind.INSTANCE && "split".equals(kc.methodName())) {
+        if (kc.kind() == KofCallKind.INSTANCE && BuiltinTypes.isString(kc.ownerType())
+                && "split".equals(kc.methodName())) {
             // bug 95: as labels do ramo inline viviam num nome FIXO — um 2º
             // split no mesmo programa redefinía o símbolo → "symbol .Lkof_split_*
             // is already defined" no assembler (COMP001, qualquer programa com
@@ -215,6 +260,26 @@ public final class NativeX86StringCalls {
             String fn = kc.methodName();
             sb.append("    popq %rdi\n");
             sb.append("    call ").append(fn).append("\n");
+            sb.append("    pushq %rax\n");
+            return true;
+        }
+        // S13b (plan-stdlib-expansion): parse com default — briefing §43.
+        // (String, default) -> número; o wrapper NUNCA lança (handler local
+        // no exc_chain, RuntimeStringParseOrDefault). Default = 2º slot da
+        // pilha (8 bytes crus — Int/Long valor; Double bits IEEE -> %rsi).
+        if ("kof_string_to_int_or_default".equals(kc.methodName())
+                || "kof_string_to_long_or_default".equals(kc.methodName())) {
+            sb.append("    popq %rsi\n");   // default (2º arg, empilhado por último)
+            sb.append("    popq %rdi\n");   // String
+            sb.append("    call ").append(kc.methodName()).append("\n");
+            sb.append("    pushq %rax\n");
+            return true;
+        }
+        if ("kof_string_to_double_or_default".equals(kc.methodName())) {
+            sb.append("    popq %rsi\n");   // default: bits crus (pilha 1-slot)
+            sb.append("    popq %rdi\n");
+            sb.append("    call kof_string_to_double_or_default\n");
+            sb.append("    movq %xmm0, %rax\n");  // wrapper devolve por xmm0
             sb.append("    pushq %rax\n");
             return true;
         }

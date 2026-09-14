@@ -14,7 +14,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * kof decompile — structural skeleton .class → .kf (docs/future/DECOMPILER.md).
+ * kof decompile — structural skeleton .class → .kf (docs/development/DECOMPILER.md).
  * Round-trips a javac-compiled class into Kof source that itself compiles.
  */
 class DecompileTest {
@@ -742,6 +742,334 @@ class DecompileTest {
     }
 
     @Test
+    void recoversStatementSwitchAndRunsIt(@TempDir Path dir) throws Exception {
+        // Fase C: switch-statement (cases com side-effect + break). Prova
+        // FORTE: não basta compilar — executa os 3 caminhos (braço errado
+        // silencioso é a pior falha). `break` sai do switch (probe) e o
+        // epílogo vai após `}` (dentro executaria o próximo braço).
+        Path src = dir.resolve("classes");
+        Files.createDirectories(src);
+        Path s = src.resolve("S.java");
+        Files.writeString(s, """
+                public class S {
+                    public static String grade(int v) {
+                        String r;
+                        switch (v) {
+                            case 1: r = "one"; break;
+                            case 2: r = "two"; break;
+                            default: r = "other"; break;
+                        }
+                        return r;
+                    }
+                    public static void main(String[] a) {
+                        System.out.println(grade(1));
+                        System.out.println(grade(2));
+                        System.out.println(grade(9));
+                    }
+                }
+                """);
+        runJavac(java.util.List.of(s), src);
+        String kof = Decompile.decompile(src.resolve("S.class"));
+        assertTrue(kof.contains("switch (arg0) {"), "switch deve recuperar:\n" + kof);
+        assertTrue(kof.contains("case 1:") && kof.contains("break"),
+                "cases com break explícito:\n" + kof);
+        Path out = dir.resolve("gen");
+        Files.createDirectories(out);
+        Path kf = out.resolve("S.kf");
+        Files.writeString(kf, kof);
+        CompilationResult r = new CompilerDriver().compileSources(java.util.List.of(kf),
+                dir.resolve("o"), Target.JVM, out);
+        assertTrue(r.success(), "switch decompilado deve compilar:\n" + kof + "\n" + r.diagnostics().getDiagnostics());
+        // Entry = a classe decompilada (main estático dentro de `class S`),
+        // não `Default.Main` (que só existe p/ programa Kof de main top-level).
+        ProcessBuilder pb = new ProcessBuilder("java", "-cp", dir.resolve("o").toString(), "S");
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String o = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+                .replace("\r\n", "\n").trim();
+        assertEquals(0, p.waitFor(), "run: " + o);
+        assertEquals("one\ntwo\nother", o, "os 3 caminhos devem executar certo:\n" + kof);
+    }
+
+    @Test
+    void recoversIfThenJoinAndRunsIt(@TempDir Path dir) throws Exception {
+        // Fase C (join de if-sem-else): `if (x > 5) { r = r + x }` seguida de
+        // sequela — o braço then cai no join (preds {b, then}). O walker atual
+        // PARA o braço no join e o struct recusava re-entrar (linha 206),
+        // stubando o método INTEIRO. Prova FORTE: executa os 2 caminhos
+        // (oracle JVM medido: g(6)=107, g(1)=101) — sem o else o fluxo do
+        // braço falso é justamente o que um join errado quebraria.
+        Path src = dir.resolve("classes");
+        Files.createDirectories(src);
+        Path s = src.resolve("G.java");
+        Files.writeString(s, """
+                public class G {
+                    public static int g(int x) {
+                        int r = 100;
+                        if (x > 5) { r = r + x; }
+                        r = r + 1;
+                        return r;
+                    }
+                    public static void main(String[] a) {
+                        System.out.println(g(6));
+                        System.out.println(g(1));
+                    }
+                }
+                """);
+        runJavac(java.util.List.of(s), src);
+        String kof = Decompile.decompile(src.resolve("G.class"));
+        assertTrue(kof.contains("if (arg0 > 5) {"), "if-sem-else deve recuperar:\n" + kof);
+        assertFalse(kof.contains("} else {"), "sem else (join estruturado):\n" + kof);
+        Path out = dir.resolve("gen");
+        Files.createDirectories(out);
+        Path kf = out.resolve("G.kf");
+        Files.writeString(kf, kof);
+        CompilationResult r = new CompilerDriver().compileSources(java.util.List.of(kf),
+                dir.resolve("o"), Target.JVM, out);
+        assertTrue(r.success(), "if-sem-else decompilado deve compilar:\n" + kof + "\n" + r.diagnostics().getDiagnostics());
+        ProcessBuilder pb = new ProcessBuilder("java", "-cp", dir.resolve("o").toString(), "G");
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String o = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+                .replace("\r\n", "\n").trim();
+        assertEquals(0, p.waitFor(), "run: " + o);
+        assertEquals("107\n101", o, "os 2 caminhos do join devem executar certo:\n" + kof);
+    }
+
+    @Test
+    void recoversNullNarrowAndRunsIt(@TempDir Path dir) throws Exception {
+        // Fase C: ifnull/ifnonnull (0xc6/0xc7) — narrowing CANONICO da
+        // linguagem (idiom Null safety; ROI medido: 308 testes sobre load
+        // puro no corpus). len vira if-expression ternaria (linear path),
+        // nul vira if-sem-else com join (degrau 1). Prova por EXECUCAO dos
+        // 4 caminhos (oracle JVM medido 3 0 5 9).
+        Path src = dir.resolve("classes");
+        Files.createDirectories(src);
+        Path s = src.resolve("Nl.java");
+        Files.writeString(s, """
+                public class Nl {
+                    public static int len(String x) { if (x != null) { return x.length(); } return 0; }
+                    public static int nul(String x) { int r = 5; if (x == null) { r = 9; } return r; }
+                    public static void main(String[] a) { }
+                }
+                """);
+        runJavac(java.util.List.of(s), src);
+        String kof = Decompile.decompile(src.resolve("Nl.class"));
+        assertTrue(kof.contains("if (arg0 != null)"), "ifnonnull vira `!= null`:\n" + kof);
+        assertTrue(kof.contains("if (arg0 == null) {"), "ifnull vira `== null`:\n" + kof);
+        assertFalse(kof.contains("body not recovered"), "ambos recuperados:\n" + kof);
+        Path out = dir.resolve("gen");
+        Files.createDirectories(out);
+        Path kf = out.resolve("Nl.kf");
+        Files.writeString(kf, kof);
+        Path mainKf = out.resolve("Main.kf");
+        Files.writeString(mainKf, "main() {\n    println(Nl.len(\"abc\"))\n    println(Nl.len(null))\n    println(Nl.nul(\"x\"))\n    println(Nl.nul(null))\n}\n");
+        CompilationResult r = new CompilerDriver().compileSources(java.util.List.of(kf, mainKf),
+                dir.resolve("o"), Target.JVM, out);
+        assertTrue(r.success(), "narrowing decompilado deve compilar:\n" + kof + "\n" + r.diagnostics().getDiagnostics());
+        ProcessBuilder pb = new ProcessBuilder("java", "-cp", dir.resolve("o").toString(), "Default.Main");
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String o = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+                .replace("\r\n", "\n").trim();
+        assertEquals(0, p.waitFor(), "run: " + o);
+        assertEquals("3\n0\n5\n9", o, "os 4 caminhos do narrow:\n" + kof);
+    }
+
+    @Test
+    void recoversContinueAsEmptyThenJoinAndRunsIt(@TempDir Path dir) throws Exception {
+        // Fase C degrau 2a: `for` com `continue` vira while + if de condicao
+        // INVERTIDA com then VAZIO (o continue pula o corpo; o incremento
+        // fica na sequela do join — preservado nos DOIS caminhos). Medido
+        // por execucao 13/09: contFor(0..6) = 0 0 1 3 3 7 12 == oracle JVM.
+        // (A variante `i % 2 == 0` fica em stub honesto — blockCondition nao
+        // recupera test-expr com calculo; diamondJoinShapesStayHonestStub.)
+        Path src = dir.resolve("classes");
+        Files.createDirectories(src);
+        Path s = src.resolve("Jn.java");
+        Files.writeString(s, """
+                public class Jn {
+                    public static int contFor(int n) {
+                        int s = 0;
+                        for (int i = 0; i < n; i++) { if (i == 3) continue; s = s + i; }
+                        return s;
+                    }
+                    public static void main(String... args) { }
+                }
+                """.replace("String... args", "String[] a"));
+        runJavac(java.util.List.of(s), src);
+        String kof = Decompile.decompile(src.resolve("Jn.class"));
+        assertTrue(kof.contains("while (") , "for vira while:\n" + kof);
+        assertFalse(kof.contains("throw \"body not recovered\""), "corpo recuperado:\n" + kof);
+        Path out = dir.resolve("gen");
+        Files.createDirectories(out);
+        Path kf = out.resolve("Jn.kf");
+        Files.writeString(kf, kof);
+        Path mainKf = out.resolve("Main.kf");
+        StringBuilder calls = new StringBuilder("main() {\n");
+        for (int n = 0; n < 7; n++) calls.append("    println(Jn.contFor(").append(n).append("))\n");
+        calls.append("}\n");
+        Files.writeString(mainKf, calls.toString());
+        CompilationResult r = new CompilerDriver().compileSources(java.util.List.of(kf, mainKf),
+                dir.resolve("o"), Target.JVM, out);
+        assertTrue(r.success(), "decompilado deve compilar:\n" + kof + "\n" + r.diagnostics().getDiagnostics());
+        ProcessBuilder pb = new ProcessBuilder("java", "-cp", dir.resolve("o").toString(), "Default.Main");
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String o = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+                .replace("\r\n", "\n").trim();
+        assertEquals(0, p.waitFor(), "run: " + o);
+        assertEquals("0\n0\n1\n3\n3\n7\n12", o, "continue==then vazio, incremento no join:\n" + kof);
+    }
+
+    @Test
+    void recoversIfElseWithTailJoinAndRunsIt(@TempDir Path dir) throws Exception {
+        // Fase C degrau 2a: if-else LINEAR com sequela pos-if (join P com
+        // preds exatos {then,else}). Hoje o naive path anda o then p/ dentro
+        // do join e a recusa 214 stuba o metodo INTEIRO (E.class stubou
+        // honesto na medicao 13/09 — nunca codigo errado). Prova FORTE:
+        // executa os 2 caminhos (oracle JVM medido 13/14) — o caminho do
+        // else e justamente o que um join duplicado/perdido quebraria.
+        Path src = dir.resolve("classes");
+        Files.createDirectories(src);
+        Path s = src.resolve("E.java");
+        Files.writeString(s, """
+                public class E {
+                    public static int e(int a) {
+                        int r = 1;
+                        if (a > 0) { r = r + 2; } else { r = r + 3; }
+                        return r + 10;
+                    }
+                    public static void main(String[] a) { }
+                }
+                """.replace("String[]", "String[]"));
+        runJavac(java.util.List.of(s), src);
+        String kof = Decompile.decompile(src.resolve("E.class"));
+        assertTrue(kof.contains("} else {"), "if-else deve recuperar:\n" + kof);
+        Path out = dir.resolve("gen");
+        Files.createDirectories(out);
+        Path kf = out.resolve("E.kf");
+        Files.writeString(kf, kof);
+        CompilationResult r = new CompilerDriver().compileSources(java.util.List.of(kf),
+                dir.resolve("o"), Target.JVM, out);
+        assertTrue(r.success(), "if-else decompilado deve compilar:\n" + kof + "\n" + r.diagnostics().getDiagnostics());
+        Path mainKf = out.resolve("Main.kf");
+        Files.writeString(mainKf, "main() {\n    println(E.e(1))\n    println(E.e(-1))\n}\n");
+        CompilationResult r2 = new CompilerDriver().compileSources(java.util.List.of(kf, mainKf),
+                dir.resolve("o2"), Target.JVM, out);
+        assertTrue(r2.success(), "programa deve compilar:\n" + r2.diagnostics().getDiagnostics());
+        ProcessBuilder pb = new ProcessBuilder("java", "-cp", dir.resolve("o2").toString(), "Default.Main");
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String o = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+                .replace("\r\n", "\n").trim();
+        assertEquals(0, p.waitFor(), "run: " + o);
+        assertEquals("13\n14", o, "os 2 caminhos do join if-else:\n" + kof);
+    }
+
+    @Test
+    void recoversIfThenChainAndRunsIt(@TempDir Path dir) throws Exception {
+        // Fase C degrau 1 (Q3 idempotencia/irmas): DOIS if-sem-else seguidos.
+        // Prova que a borda de um naoo vaza p/ o irmao (stops consumido
+        // localmente): os 4 caminhos executam (oracle JVM medido 6/4/5/3).
+        Path src = dir.resolve("classes");
+        Files.createDirectories(src);
+        Path s = src.resolve("C.java");
+        Files.writeString(s, """
+                public class C {
+                    public static int c(int a, int b) {
+                        int x = 0;
+                        if (a > 0) { x = x + 1; }
+                        if (b > 0) { x = x + 2; }
+                        x = x + 3;
+                        return x;
+                    }
+                    public static void main(String[] a) {
+                        System.out.println(c(1, 1));
+                        System.out.println(c(1, 0));
+                        System.out.println(c(0, 1));
+                        System.out.println(c(0, 0));
+                    }
+                }
+                """);
+        runJavac(java.util.List.of(s), src);
+        String kof = Decompile.decompile(src.resolve("C.class"));
+        assertTrue(kof.contains("if (arg0 > 0) {") && kof.contains("if (arg1 > 0) {"),
+                "os dois ifs devem recuperar:\n" + kof);
+        assertFalse(kof.contains("} else {"), "nenhum com else (joins puros):\n" + kof);
+        Path out = dir.resolve("gen");
+        Files.createDirectories(out);
+        Path kf = out.resolve("C.kf");
+        Files.writeString(kf, kof);
+        CompilationResult r = new CompilerDriver().compileSources(java.util.List.of(kf),
+                dir.resolve("o"), Target.JVM, out);
+        assertTrue(r.success(), "corrente decompilada deve compilar:\n" + kof + "\n" + r.diagnostics().getDiagnostics());
+        ProcessBuilder pb = new ProcessBuilder("java", "-cp", dir.resolve("o").toString(), "C");
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String o = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+                .replace("\r\n", "\n").trim();
+        assertEquals(0, p.waitFor(), "run: " + o);
+        assertEquals("6\n4\n5\n3", o, "os 4 caminhos da corrente:\n" + kof);
+    }
+
+    @Test
+    void nestedIfWithoutElseStaysHonestStub(@TempDir Path dir) throws Exception {
+        // Fase C (Q4): o if-sem-else NAO-puro (then com sequela propria +
+        // join externo) stuba HONESTO. Medido 13/09: a variante ingenua
+        // (borda de stop tambem no braco do else) produzia CODIGO ERRADO
+        // COMPILAVEL — a sequela do pos-if era sugada p/ dentro do else e o
+        // caminho falso pulava statements. Recusar > errar (R6/portao Q0).
+        Path src = dir.resolve("classes");
+        Files.createDirectories(src);
+        Path s = src.resolve("N2.java");
+        Files.writeString(s, """
+                public class N2 {
+                    public static int n(int a, int b) {
+                        int x = 0;
+                        if (a > 0) {
+                            if (b > 0) { x = x + 1; }
+                            x = x + 2;
+                        }
+                        x = x + 3;
+                        return x;
+                    }
+                }
+                """);
+        runJavac(java.util.List.of(s), src);
+        String kof = Decompile.decompile(src.resolve("N2.class"));
+        assertTrue(kof.contains("throw \"body not recovered\""),
+                "if-aninhado sem else deve stubar honesto (nao virar codigo errado):\n" + kof);
+    }
+
+    @Test
+    void switchFallthroughStaysHonestStub(@TempDir Path dir) throws Exception {
+        // Kof não tem fallthrough: case sem `break` caindo no próximo braço
+        // NÃO tem forma válida → stub honesto (nunca código errado).
+        Path src = dir.resolve("classes");
+        Files.createDirectories(src);
+        Path s = src.resolve("F.java");
+        Files.writeString(s, """
+                public class F {
+                    public static String grade(int v) {
+                        String r;
+                        switch (v) {
+                            case 1: r = "one";
+                            case 2: r = "two"; break;
+                            default: r = "other"; break;
+                        }
+                        return r;
+                    }
+                }
+                """);
+        runJavac(java.util.List.of(s), src);
+        String kof = Decompile.decompile(src.resolve("F.class"));
+        assertTrue(kof.contains("body not recovered"),
+                "fallthrough (case 1 sem break) deve ficar stub:\n" + kof);
+        assertTrue(!kof.contains("switch ("), "nenhum switch parcial:\n" + kof);
+    }
+
+    @Test
     void escapesStringConstantsInDecompiledSource(@TempDir Path dir) throws Exception {
         // R6 (prova de drift 09/09): o ldc emitia a string do CP CRUA — `\b`,
         // newline real e `"` estouravam o lexer do .kf (LEX002/LEX004). Agora
@@ -1222,6 +1550,234 @@ class DecompileTest {
 
         assertTrue(kof.contains("arg0.toInt()"), "Integer.parseInt vira .toInt():\\n" + kof);
         assertTrue(kof.contains("now()"), "currentTimeMillis vira now():\\n" + kof);
+    }
+
+    @Test
+    void recoversPureJavaRecordAsKofRecord(@TempDir Path dir) throws Exception {
+        Path javaFile = dir.resolve("Point.java");
+        Files.writeString(javaFile, """
+                public record Point(int x, int y) { }
+                """);
+        runJavac(javaFile, dir);
+        String kof = Decompile.decompile(dir.resolve("Point.class"));
+        assertTrue(kof.contains("record Point(Int x, Int y)"), "record puro → record Kof:\n" + kof);
+        assertFalse(kof.contains("extends Record"), "sem esqueleto class+extends:\n" + kof);
+        assertFalse(kof.contains("body not recovered"), "sem stub sintético:\n" + kof);
+        Path out = dir.resolve("Point.kf");
+        Files.writeString(out, kof);
+        CompilationResult result = new CompilerDriver().compile(out, dir.resolve("out"), Target.JVM);
+        assertTrue(result.success(), "decompiled deve compilar:\n" + kof + "\n" + result.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void recoversPureRecordWithGenericsAndObjects(@TempDir Path dir) throws Exception {
+        Path javaFile = dir.resolve("Bag2.java");
+        Files.writeString(javaFile, """
+                import java.util.List;
+                public record Bag2(List<String> items, String label) { }
+                """);
+        runJavac(javaFile, dir);
+        String kof = Decompile.decompile(dir.resolve("Bag2.class"));
+        assertTrue(kof.contains("record Bag2(List<String> items, String label)"),
+                "componentes genéricos EXACT:\n" + kof);
+        assertFalse(kof.contains("body not recovered"), "sem stub:\n" + kof);
+        Path out = dir.resolve("Bag2.kf");
+        Files.writeString(out, kof);
+        CompilationResult result = new CompilerDriver().compile(out, dir.resolve("out"), Target.JVM);
+        assertTrue(result.success(), "decompiled deve compilar:\n" + kof + "\n" + result.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void extraMethodInRecordKeepsHonestSkeleton(@TempDir Path dir) throws Exception {
+        Path javaFile = dir.resolve("Twice.java");
+        Files.writeString(javaFile, """
+                public record Twice(int x) {
+                    public int twice() { return x * 2; }
+                }
+                """);
+        runJavac(javaFile, dir);
+        String kof = Decompile.decompile(dir.resolve("Twice.class"));
+        // método extra (não-acessor) → não-puro → esqueleto de hoje (zero drift)
+        assertTrue(kof.contains("class Twice extends Record"), "extra → skeleton atual:\n" + kof);
+        assertTrue(kof.contains("Int twice() = (this.x * 2)"), "método extra ainda recuperado como body:\n" + kof);
+    }
+
+    @Test
+    void reservedComponentNameKeepsHonestSkeleton(@TempDir Path dir) throws Exception {
+        Path javaFile = dir.resolve("ValR.java");
+        Files.writeString(javaFile, """
+                public record ValR(int val) { }
+                """);
+        runJavac(javaFile, dir);
+        String kof = Decompile.decompile(dir.resolve("ValR.class"));
+        // `val` é reservada no frontend (PARSE015) → emitir record DRIFTARIA;
+        // deve permanecer no skeleton atual (honesto, compila).
+        assertTrue(kof.contains("class ValR extends Record"), "nome reservado → skeleton atual:\n" + kof);
+    }
+
+    @Test
+    void recordWithInterfaceKeepsHonestSkeleton(@TempDir Path dir) throws Exception {
+        Path iface = dir.resolve("Named.java");
+        Files.writeString(iface, "public interface Named { String name(); }\n");
+        Path javaFile = dir.resolve("NamedR.java");
+        Files.writeString(javaFile, """
+                public record NamedR(String name) implements Named { }
+                """);
+        runJavac(java.util.List.of(iface, javaFile), dir);
+        String kof = Decompile.decompile(dir.resolve("NamedR.class"));
+        // `record X implements Y` → PARSE007 no frontend (probe 13/09) → skeleton atual
+        assertTrue(kof.contains("class NamedR extends Record"), "implements → skeleton atual:\n" + kof);
+    }
+
+    @Test
+    void recoversGenericRecordWithExactTypeParams(@TempDir Path dir) throws Exception {
+        Path javaFile = dir.resolve("Gp.java");
+        Files.writeString(javaFile, """
+                public record Gp<T>(T value, int tag) { }
+                """);
+        runJavac(javaFile, dir);
+        String kof = Decompile.decompile(dir.resolve("Gp.class"));
+        assertTrue(kof.contains("record Gp<T>(T value, Int tag)"),
+                "type-param EXATO na forma Kof:\n" + kof);
+        assertFalse(kof.contains("body not recovered"), "sem stub:\n" + kof);
+        Path out = dir.resolve("Gp.kf");
+        Files.writeString(out, kof);
+        CompilationResult result = new CompilerDriver().compile(out, dir.resolve("out"), Target.JVM);
+        assertTrue(result.success(), "decompiled deve compilar:\n" + kof + "\n" + result.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void genericBoundRecordKeepsHonestSkeleton(@TempDir Path dir) throws Exception {
+        Path javaFile = dir.resolve("Bnd.java");
+        Files.writeString(javaFile, """
+                public record Bnd<T extends Comparable<T>>(T value) { }
+                """);
+        runJavac(javaFile, dir);
+        String kof = Decompile.decompile(dir.resolve("Bnd.class"));
+        // bound genérico (`<T:Ljava/lang/Comparable<...>;>`) não é a forma que
+        // emitimos: RECUSAR (skeleton atual, compila) — nunca `record Bnd<T>` errado.
+        assertTrue(kof.contains("class Bnd extends Record"), "bound não-suportado → skeleton atual:\n" + kof);
+    }
+
+    @Test
+    void recoversRecordImplementingSamePackageInterface(@TempDir Path dir) throws Exception {
+        Path root = dir.resolve("classes");
+        Files.createDirectories(root);
+        Path iface = root.resolve("Named.java");
+        Files.writeString(iface, "public interface Named { String name(); }\n");
+        Path javaFile = root.resolve("NamedR.java");
+        Files.writeString(javaFile, "public record NamedR(String name) implements Named { }\n");
+        runJavac(java.util.List.of(iface, javaFile), root);
+        Path out = dir.resolve("gen");
+        Decompile.decompileTree(root, out);
+        String kof = Files.readString(out.resolve("NamedR.kf"));
+        assertTrue(kof.contains("record NamedR implements Named(String name)"),
+                "interface top do MESMO pacote resolve (probe R7: Kof quer 'implements' ANTES dos componentes):\n" + kof);
+        assertFalse(kof.contains("body not recovered"), "sem stub:\n" + kof);
+        CompilationResult r = new CompilerDriver().compileSources(
+                List.of(out.resolve("NamedR.kf").toAbsolutePath().normalize(),
+                        out.resolve("Named.kf").toAbsolutePath().normalize()),
+                dir.resolve("kout"), Target.JVM, out);
+        assertTrue(r.success(), "record implements irmão deve compilar junto:\n" + kof + "\n" + r.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void recoversRecordWithInterfaceFromTreeScope(@TempDir Path dir) throws Exception {
+        Path root = dir.resolve("classes");
+        Path p1 = root.resolve("a");
+        Path p2 = root.resolve("b");
+        Files.createDirectories(p1);
+        Files.createDirectories(p2);
+        Path iface = p1.resolve("Iface.java");
+        Files.writeString(iface, "package a; public interface Iface { String name(); }\n");
+        Path rec = p2.resolve("CrossR.java");
+        Files.writeString(rec, "package b;\nimport a.Iface;\npublic record CrossR(String name) implements Iface { }\n");
+        runJavac(java.util.List.of(iface, rec), root);
+        Path out = dir.resolve("gen");
+        Decompile.decompileTree(root, out);
+        String kof = Files.readString(out.resolve("b/CrossR.kf"));
+        assertTrue(kof.contains("record CrossR implements Iface(String name)"),
+                "cross-package com import:\n" + kof);
+        assertTrue(kof.contains("import a.Iface"), "import emitido:\n" + kof);
+        assertFalse(kof.contains("body not recovered"), "sem stub:\n" + kof);
+        CompilationResult r = new CompilerDriver().compileSources(
+                List.of(out.resolve("b/CrossR.kf").toAbsolutePath().normalize(),
+                        out.resolve("a/Iface.kf").toAbsolutePath().normalize()),
+                dir.resolve("out"), Target.JVM, out);
+        assertTrue(r.success(), "árvore cross-pkg compila:\n" + kof + "\n" + r.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void recordWithOutOfTreeInterfaceKeepsHonestSkeleton(@TempDir Path dir) throws Exception {
+        Path javaFile = dir.resolve("SerR.java");
+        Files.writeString(javaFile, """
+                import java.io.Serializable;
+                public record SerR(int x) implements Serializable { }
+                """);
+        runJavac(javaFile, dir);
+        String kof = Decompile.decompile(dir.resolve("SerR.class"));
+        // JDK fora da árvore → `implements Serializable` é SEM015/PKG006 = drift
+        // → skeleton atual (compila hoje; Serializable era resolveSuperName fallback)
+        assertTrue(kof.contains("class SerR extends Record"), "fora-da-árvore → skeleton:\n" + kof);
+    }
+
+    @Test
+    void recoversRecordImplementingSamePackageInnerInterface(@TempDir Path dir) throws Exception {
+        Path root = dir.resolve("classes");
+        Files.createDirectories(root);
+        Path outer = root.resolve("Box.java");
+        Files.writeString(outer, """
+                public class Box {
+                    public interface Expr { }
+                }
+                """);
+        Path rec = root.resolve("NumR.java");
+        Files.writeString(rec, "public record NumR(int v) implements Box.Expr { }\n");
+        runJavac(java.util.List.of(outer, rec), root);
+        Path out = dir.resolve("gen");
+        Decompile.decompileTree(root, out);
+        String numr = Files.readString(out.resolve("NumR.kf"));
+        assertTrue(numr.contains("record NumR implements Box$Expr(Int v)"),
+                "interna do MESMO pacote: frontend aceita nome com `$` como top (probe 13/09):\n" + numr);
+        assertFalse(numr.contains("body not recovered"), "sem stub:\n" + numr);
+        CompilationResult r = new CompilerDriver().compileSources(
+                List.of(out.resolve("NumR.kf").toAbsolutePath().normalize(),
+                        out.resolve("Box.kf").toAbsolutePath().normalize(),
+                        out.resolve("Box$Expr.kf").toAbsolutePath().normalize()),
+                dir.resolve("kout"), Target.JVM, out);
+        assertTrue(r.success(), "record implements interna compila junto:\n"
+                + numr + "\n" + Files.readString(out.resolve("Box.kf")) + "\n"
+                + Files.readString(out.resolve("Box$Expr.kf")) + "\n"
+                + r.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void recordWithCrossPackageInnerInterfaceKeepsHonestSkeleton(@TempDir Path dir) throws Exception {
+        Path root = dir.resolve("classes");
+        Files.createDirectories(root.resolve("a"));
+        Path iface = root.resolve("a/Box.java");
+        Files.writeString(iface, """
+                package a;
+                public class Box {
+                    public interface Expr { }
+                }
+                """);
+        Path rec = root.resolve("CrossI.java");
+        Files.writeString(rec, """
+                import a.Box;
+                public record CrossI(int v) implements Box.Expr { }
+                """);
+        runJavac(java.util.List.of(iface, rec), root);
+        Path out = dir.resolve("gen");
+        Decompile.decompileTree(root, out);
+        String kof = Files.readString(out.resolve("CrossI.kf"));
+        // interna CROSS-pacote: `import a.Box$Expr` NÃO PROVADO (SEM015?) →
+        // NÃO vira record. O `implements Box$Expr` que aparece vem do
+        // fallback de skeleton PRÉ-EXISTENTE (não mudei o fallback); o gate
+        // desta unidade é record-vs-skeleton.
+        assertTrue(kof.contains("class CrossI extends Record"),
+                "interna cross-pacote continua honesta (skeleton):\n" + kof);
+        assertFalse(kof.contains("record CrossI"), "não virou record (cross-pkg interna):\n" + kof);
     }
 
     private void runJavac(Path javaFile, Path dir) throws IOException, InterruptedException {

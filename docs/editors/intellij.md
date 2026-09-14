@@ -1,9 +1,10 @@
 # IntelliJ IDEA
 
-> **Estado da integração automática: PLANNED.** O provider `intellij` existe
-> (detecção via `idea` no PATH + diretórios JetBrains), mas **não instala
-> nada ainda** — `kof editor install intellij` reporta honestamente que o
-> conteúdo está pendente. O plugin oficial é um **subprojeto próprio**
+> **Estado da integração automática: INSTALA CONTEÚDO HONESTO (degrau 10,
+> 13/09).** `kof editor install intellij` escreve sob `$HOME`: filetype XML
+> (`Kof.xml`, `*.kf`/`*.kof`), External Tools (`Kof.xml`: `kof build/run/test/
+> fmt/check/lsp` — delegam à CLI, §15) e `README.txt` com o passo LSP4IJ
+> manual abaixo. O plugin oficial continua sendo um **subprojeto próprio**
 > (IntelliJ Platform / Gradle), rastreado na issue **#1** e no plano
 > `docs/development/plan-editor-integration.md` (§21).
 

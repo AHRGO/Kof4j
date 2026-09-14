@@ -135,7 +135,10 @@ public final class JsRuntimeUiLayout {
             }
 
             export function kofListContains(list, value) {
-                return list.includes(value) ? 1 : 0;
+                for (let i = 0; i < list.length; i++) {
+                    if (kofValEq(list[i], value)) return 1;
+                }
+                return 0;
             }
 
             export function kofListIsEmpty(list) {
@@ -157,25 +160,43 @@ public final class JsRuntimeUiLayout {
                 return new Map();
             }
 
+            // §104c: key por conteúdo (record .equals); nativo (===)
+            // p/ primitivos/String. Retorna -1 se ausente.
+            function kofMapKeyIdx(map, key) {
+                for (const k of map.keys()) {
+                    if (kofValEq(k, key)) return k;
+                }
+                return undefined;
+            }
+
             export function kofMapPut(map, key, value) {
-                const prev = map.get(key);
+                const k = kofMapKeyIdx(map, key);
+                if (k !== undefined) {
+                    const prev = map.get(k);
+                    map.set(k, value);
+                    return prev === undefined ? null : prev;
+                }
                 map.set(key, value);
-                return prev === undefined ? null : prev;
+                return null;
             }
 
             export function kofMapGet(map, key) {
-                const v = map.get(key);
+                const k = kofMapKeyIdx(map, key);
+                if (k === undefined) return null;
+                const v = map.get(k);
                 return v === undefined ? null : v;
             }
 
             export function kofMapRemove(map, key) {
-                const v = map.get(key);
-                map.delete(key);
+                const k = kofMapKeyIdx(map, key);
+                if (k === undefined) return null;
+                const v = map.get(k);
+                map.delete(k);
                 return v === undefined ? null : v;
             }
 
             export function kofMapContains(map, key) {
-                return map.has(key) ? 1 : 0;
+                return kofMapKeyIdx(map, key) !== undefined ? 1 : 0;
             }
 
             export function kofMapSize(map) {
@@ -202,18 +223,32 @@ public final class JsRuntimeUiLayout {
                 return new Set();
             }
 
+            // §104c: conteúdo (record .equals) — dedup/lookup idêntico ao JVM.
+            function kofSetHas(set, value) {
+                for (const e of set) {
+                    if (kofValEq(e, value)) return true;
+                }
+                return false;
+            }
+
             export function kofSetAdd(set, value) {
-                const had = set.has(value);
-                set.add(value);
+                const had = kofSetHas(set, value);
+                if (!had) set.add(value);
                 return had ? 0 : 1;
             }
 
             export function kofSetContains(set, value) {
-                return set.has(value) ? 1 : 0;
+                return kofSetHas(set, value) ? 1 : 0;
             }
 
             export function kofSetRemove(set, value) {
-                return set.delete(value) ? 1 : 0;
+                for (const e of set) {
+                    if (kofValEq(e, value)) {
+                        set.delete(e);
+                        return 1;
+                    }
+                }
+                return 0;
             }
 
             export function kofSetSize(set) {
@@ -383,7 +418,18 @@ public final class JsRuntimeUiLayout {
                     let req = builder.build();
                     let resp = client.send(req, Java.type('java.net.http.HttpResponse$BodyHandlers').discarding());
                     return resp.statusCode();
-                } catch(e) { return 0; }
+                } catch (e) {
+                    // sem interop Java (Node/Browser): HEAD via fetch → Promise
+                    // (resolve no await; HTTP004 — face síncrona JS não existe).
+                    if (typeof fetch !== 'undefined') {
+                        const ac = new AbortController();
+                        const timer = setTimeout(() => ac.abort(), (kofHttpTimeoutSec || 30) * 1000);
+                        return fetch(url, { method: "HEAD", signal: ac.signal })
+                            .then(r => { clearTimeout(timer); return r.status; },
+                                  err => { clearTimeout(timer); throw err; });
+                    }
+                    throw new Error("kof.http.status: no transport (sem Java interop nem fetch): " + url);
+                }
             }
             function kofHttpRequest(url, method, headers, body) {
                 if (kofHttpCircuitOpen()) {
@@ -420,15 +466,34 @@ public final class JsRuntimeUiLayout {
                             kofHttpCircuitRecordSuccess();
                             return resp.body() != null ? resp.body() : "";
                         }
-                        // Fallback to fetch if Java interop not available (Node/Browser)
+                        // Fallback assíncrono real (Node/Browser): fetch devolve
+                        // Promise — propaga pelo kofSpawnResult (.then encadeia)
+                        // e resolve no await. Chamada síncrona sem await recebe o
+                        // Promise cru (face síncrona JS não existe: HTTP004).
                         if (typeof fetch !== 'undefined') {
-                            // synchronous fallback not possible - use deasync via Atomics if available
-                            // For MVP, do blocking via fetch sync is not supported; return empty
-                            kofHttpCircuitRecordSuccess();
-                            return "";
+                            const h = {};
+                            if (headers) {
+                                const lines = headers.split("\\n");
+                                for (const line of lines) {
+                                    const i = line.indexOf(":");
+                                    if (i > 0) h[line.substring(0, i).trim()] = line.substring(i + 1).trim();
+                                }
+                            }
+                            const ac = new AbortController();
+                            const timer = setTimeout(() => ac.abort(), (kofHttpTimeoutSec || 30) * 1000);
+                            return fetch(url, { method, headers: h, body: body != null ? body : undefined, signal: ac.signal })
+                                .then(r => r.text().then(b => [r.status, b]))
+                                .then(([status, bodyText]) => {
+                                    clearTimeout(timer);
+                                    if (status >= 500) {
+                                        kofHttpCircuitRecordFailure();
+                                        throw new Error("HTTP " + status + " from " + url);
+                                    }
+                                    kofHttpCircuitRecordSuccess();
+                                    return bodyText;
+                                }, err => { clearTimeout(timer); kofHttpCircuitRecordFailure(); throw err; });
                         }
-                        kofHttpCircuitRecordSuccess();
-                        return "";
+                        throw new Error("kof.http: no transport (sem Java interop nem fetch)");
                     } catch(e) {
                         lastErr = e;
                         kofHttpCircuitRecordFailure();

@@ -21,6 +21,9 @@ public final class MethodCtx {
     final List<KofOperation> ops;
     final Map<Integer, String> localNames = new HashMap<>();
     final Map<Integer, String> rawLocalNames = new HashMap<>();
+
+    /** DD-01 (bug 45): label do epílogo return-finally do try em parse. */
+    LabelId currentReturnFinallyLabel;
     final Set<Integer> declared = new HashSet<>();
     final Set<String> usedNames = new HashSet<>();
     final List<String> tempDecls = new ArrayList<>();
@@ -47,6 +50,7 @@ public final class MethodCtx {
         this.recordClass = clazz != null && "java/lang/Record".equals(clazz.superName());
         String asyncKey = clazz == null
                 ? "#" + method.name() + "/" + method.parameterTypes().size()
+                        + dev.kof.compiler.TopLevelOverload.sigTag(method.parameterTypes())
                 : JsLoweringContext.asyncMethodKey(clazz, method);
         this.isAsync = lc.asyncMethods.getOrDefault(asyncKey, false);
         // lambda synthetic classes hold captured locals as private final
@@ -119,6 +123,17 @@ public final class MethodCtx {
             if (op instanceof KofTryStart ts && ts.endLabel().equals(label)) return true;
         }
         return false;
+    }
+
+    /**
+     * true se `label` em {@code pos[0]} é o Label(end) de um if (deve ser
+     * consumido). Um label de loop (continue/start) pertence ao loop
+     * envolvente e o endLabel de um try envolvente pertence ao try — consumir
+     * este último deixa o KofCatchStart solto (COMP002, §174).
+     */
+    boolean isIfEndLabel(int[] pos, LabelId label) {
+        return !isLoopLabel(label) && !JsLabelParser.isLoopStart(this, pos, label)
+                && !isTryEndLabel(label);
     }
 
     boolean hasClassMethod(String kofClassName, String method) {

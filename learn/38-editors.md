@@ -94,8 +94,10 @@ criou):
 | Geany | `~/.config/geany/filedefs/filetypes.kof` | filetype, build/run, parsing de erros |
 | Nano | `~/.nano/kof.nanorc` | highlighting proporcional ao editor (sem LSP — nano não é IDE) |
 
-IntelliJ: o provider detecta, mas o plugin oficial é subprojeto próprio
-(issue #1). Hoje: TextMate bundle + LSP4IJ apontando para `kof lsp`
+IntelliJ: `kof editor install intellij` escreve filetype XML (`*.kf`/`*.kof`)
++ External Tools (`kof build/run/test/fmt/check/lsp`) + README LSP4IJ sob
+`.config/JetBrains/kof/` (degrau 10, 13/09 — sem plugin; o plugin oficial é
+subprojeto próprio, issue #1). Manual extra: TextMate bundle + LSP4IJ
 (`docs/editors/intellij.md`).
 
 ## Passo 4 — status

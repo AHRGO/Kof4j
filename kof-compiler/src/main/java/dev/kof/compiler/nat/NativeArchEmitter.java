@@ -12,6 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /** F3: emissão de arquivos .s riscv64/aarch64 (emitRiscv/emitAarch64). */
 final class NativeArchEmitter {
@@ -40,9 +41,8 @@ final class NativeArchEmitter {
         for (IRClass c : module.classes()) {
             for (IRMethod m : c.methods()) {
                 if ("<clinit>".equals(m.name())) continue;
-                String mg = nb.sanitizeName(c.name()) + "_" + nb.sanitizeName(m.name());
-                if ("<init>".equals(m.name())) mg += "_" + m.parameterTypes().size();
-                nb.functionMangleMap.putIfAbsent(m.name(), mg);
+                String mg = NativeSymbolMangling.fnSymbol(c.name(), m.name(), m.parameterTypes(), nb.allClassesMap);
+                nb.functionMangleMap.putIfAbsent(NativeSymbolMangling.fnKey(c.name(), m.name(), m.parameterTypes(), nb.allClassesMap), mg);
             }
         }
 
@@ -116,7 +116,9 @@ final class NativeArchEmitter {
         sb.append("    li a0, 0\n");
         sb.append("    li a7, 94\n");
         sb.append("    ecall\n");
+        int rtStart = sb.length();
         sb.append(NativeRiscvAsm.RISCV_RUNTIME_ASM).append(NativeRiscvAsm.RISCV_STRN002_ASM).append(NativeRiscvAsm.RISCV_RUNTIME_ASM_B).append(NativeRiscvAsm.RISCV_MAPSET_ASM);
+        int rtEnd = sb.length();
 
         // NATIVE002-stdlib: http.get/post/status riscv64 (asm puro, syscalls
         // asm-generic — mesmos números do aarch64; aarch64 herda via tradutor).
@@ -141,7 +143,7 @@ final class NativeArchEmitter {
         Path asmFile = outputDir.resolve(className + ".s");
         Path binFile = outputDir.resolve(className);
         Files.createDirectories(asmFile.getParent());
-        Files.writeString(asmFile, sb.toString());
+        Files.writeString(asmFile, pruneRiscvRuntime(sb, rtStart, rtEnd, "riscv64"));
         System.err.println("NativeBackend: generated riscv64 " + asmFile);
 
         try {
@@ -150,7 +152,14 @@ final class NativeArchEmitter {
             // gp (binário estático, sem C runtime); `la` relaxado vira `addi rd,gp,off`
             // e faulta (gp=0). Forçado PC-relative (auipc+addi) — sempre correto.
             nb.runCommand(new String[]{"riscv64-linux-gnu-as", "-mno-relax", "-o", objFile.toString(), asmFile.toString()}, "riscv64-as");
-            nb.runCommand(new String[]{"riscv64-linux-gnu-ld", "--no-relax", "-o", binFile.toString(), objFile.toString()}, "riscv64-ld");
+            // S-5 (cross): --gc-sections remove as seções .text.<fn> mortas
+            // criadas por sectionizeTextFunctions. Seguro aqui: NÃO existe GC
+            // no asm riscv/aarch (bump-pointer, sem scan conservative) — nada
+            // vivo pode depender de símbolo sem reloc. O x86 continua sem
+            // gc-sections até a fase `kof_heap_root_end` (root-scan varre
+            // root_start.._end; seção deletada fora do intervalo = raiz que
+            // o coletor nunca vê — precisa primeiro o fim explícito).
+            nb.runCommand(new String[]{"riscv64-linux-gnu-ld", "--no-relax", "--gc-sections", "-o", binFile.toString(), objFile.toString()}, "riscv64-ld");
             Files.deleteIfExists(objFile);
             if (System.getenv("KOF_KEEP_ASM") == null) Files.deleteIfExists(asmFile);
             binFile.toFile().setExecutable(true);
@@ -182,9 +191,8 @@ final class NativeArchEmitter {
         for (IRClass c : module.classes()) {
             for (IRMethod m : c.methods()) {
                 if ("<clinit>".equals(m.name())) continue;
-                String mg = nb.sanitizeName(c.name()) + "_" + nb.sanitizeName(m.name());
-                if ("<init>".equals(m.name())) mg += "_" + m.parameterTypes().size();
-                nb.functionMangleMap.putIfAbsent(m.name(), mg);
+                String mg = NativeSymbolMangling.fnSymbol(c.name(), m.name(), m.parameterTypes(), nb.allClassesMap);
+                nb.functionMangleMap.putIfAbsent(NativeSymbolMangling.fnKey(c.name(), m.name(), m.parameterTypes(), nb.allClassesMap), mg);
             }
         }
         StringBuilder riscvSb = new StringBuilder();
@@ -245,7 +253,9 @@ final class NativeArchEmitter {
         riscvSb.append("    li a0, 0\n");
         riscvSb.append("    li a7, 93\n");
         riscvSb.append("    ecall\n");
+        int rtStart = riscvSb.length();
         riscvSb.append(NativeRiscvAsm.RISCV_RUNTIME_ASM).append(NativeRiscvAsm.RISCV_STRN002_ASM).append(NativeRiscvAsm.RISCV_RUNTIME_ASM_B).append(NativeRiscvAsm.RISCV_MAPSET_ASM);
+        int rtEnd = riscvSb.length();
 
         // NATIVE002-stdlib: http riscv64 → aarch64 (traduzido). Mesma detecção
         // de uso do emitRiscv; o aarch64 herda linha-a-linha do riscv64.
@@ -266,9 +276,10 @@ final class NativeArchEmitter {
         if (usesHttpA) nb.emitRiscvHttp(riscvSb);
         if (usesSpawnA) nb.emitRiscvSpawn(riscvSb);
 
-        // traduz linha-a-linha
+        // traduz linha-a-linha (runtime já podado — a poda no riscv vale p/ os 2)
+        String prunedRiscv = pruneRiscvRuntime(riscvSb, rtStart, rtEnd, "aarch64");
         StringBuilder sb = new StringBuilder();
-        for (String line : riscvSb.toString().split("\n", -1)) {
+        for (String line : prunedRiscv.split("\n", -1)) {
             List<String> tr = NativeAarch64Translator.translateRiscvToAarch64(line);
             for (String t : tr) sb.append(t).append("\n");
         }
@@ -281,7 +292,7 @@ final class NativeArchEmitter {
         try {
             Path objFile = asmFile.resolveSibling("kof.o");
             nb.runCommand(new String[]{"aarch64-linux-gnu-as", "-o", objFile.toString(), asmFile.toString()}, "aarch64-as");
-            nb.runCommand(new String[]{"aarch64-linux-gnu-ld", "-o", binFile.toString(), objFile.toString()}, "aarch64-ld");
+            nb.runCommand(new String[]{"aarch64-linux-gnu-ld", "--gc-sections", "-o", binFile.toString(), objFile.toString()}, "aarch64-ld");
             Files.deleteIfExists(objFile);
             if (System.getenv("KOF_KEEP_ASM") == null) Files.deleteIfExists(asmFile);
             binFile.toFile().setExecutable(true);
@@ -289,6 +300,94 @@ final class NativeArchEmitter {
             System.err.println("NativeBackend: aarch64 toolchain ausente (NATIVE002), keeping asm: " + e.getMessage());
         }
         // as/ld FALHOU → propaga como erro de compilação (R6).
+    }
+
+    /** S-4.2 (issue #97, T1a.3): poda do runtime riscv64/aarch64 por
+     *  alcançabilidade — o port riscv da S-3 x86. O texto do PROGRAMA (head
+     *  .data/tabelas + métodos + _start + tail http/spawn, tudo fora de
+     *  [rtStart,rtEnd)) é a FONTE DE SEEDS, varrido por `kof_*`/`.L*` raw
+     *  (mesma regra da S-2.5/S-3: call sites reais sempre casam o regex).
+     *  keep = piso obrigatório (print/panic/alloc) ∪ fecho UNIFICADO kof∪.L
+     *  (medido: 33 arestas .L cross-peça no riscv — o fecho kof-only é
+     *  INSEGURO aqui também). A concatenação riscv NÃO tem préâmbulo .text
+     *  global: cada peça abre a própria seção (Rt0 .text, B4 .data/.bss,
+     *  B5+ .text), então o tail — emitido DEPOIS por http/spawn via nb.*,
+     *  já abre a sua; só o bloco mantido precisa fechar em .text para o
+     *  append seguinte não herdar .data/.bss de uma peça podada no fim.
+     *  keep == todas as peças → texto BYTE-IDÊNTICO ao de hoje (fallback
+     *  pré-S-4, zero regressão). Mapa falho → runtime COMPLETO + stderr
+     *  (R6: nunca link quebrado silencioso). aarch64: o chamador poda o
+     *  riscvSb ANTES do tradutor — aarch herda a poda linha-a-linha. */
+    static String pruneRiscvRuntime(StringBuilder sb, int rtStart, int rtEnd, String arch) {
+        String all = sb.toString();
+        try {
+            String programText = all.substring(0, rtStart) + all.substring(rtEnd);
+            java.util.Set<Integer> keep = RiscvSlices.keepForProgramText(programText);
+            java.util.List<RiscvSlices.Piece> pieces = RiscvSlices.pieces();
+            if (keep.size() >= pieces.size()) return all;
+            String subset = sectionizeTextFunctions(RiscvSlices.renderSubset(keep));
+            StringBuilder out = new StringBuilder(all.substring(0, rtStart));
+            out.append(subset);
+            if (!subset.endsWith("\n")) out.append('\n');
+            out.append(".section .text\n");
+            out.append(all.substring(rtEnd));
+            System.err.println("NativeBackend: " + arch + " runtime prune " + keep.size() + "/"
+                    + pieces.size() + " peças mantidas (" + (all.length() - out.length())
+                    + " bytes podados)");
+            return out.toString();
+        } catch (RuntimeException e) {
+            System.err.println("NativeBackend: " + arch + " runtime prune DESABILITADO (" + e
+                    + ") — emitindo runtime completo (fallback seguro).");
+            return all;
+        }
+    }
+
+    /** S-5 (issue #97, T1b — parte cross): cada FUNÇÃO do subset mantido do
+     *  runtime abre a própria `.section .text.<nome>,"ax"` para que o
+     *  `ld --gc-sections` (NativeBackend.runCommand) delete os irmãos mortos
+     *  dentro de uma peça mantida — a granularidade fina que faltava à S-4
+     *  (peças inteiras). Transformação puramente textual e determinística:
+     *  padrão `.globl X` → (`type`) → `X:` em seção `.text` anônima; labels
+     *  locais `.L*`, dados (.data/.bss/.rodata) e o programa (fora do subset)
+     *  ficam como estão — o scan conservative existe SÓ no x86 (lá a fase
+     *  exige `kof_heap_root_end` primeiro; cross não tem GC no asm → sem
+     *  raiz oculta, seguro deletar). keep-all continua byte-idêntico (a
+     *  seção-injection só roda no caminho podado). aarch64: a linha passa
+     *  ilesa pelo tradutor (diretiva não-matching → passthrough) e o GAS
+     *  ARMv8 aceita a mesma sintaxe de flags. */
+    static String sectionizeTextFunctions(String text) {
+        String[] lines = text.split("\n", -1);
+        StringBuilder out = new StringBuilder();
+        boolean inText = false;
+        String pendingFn = null;   // último .globl sem label visto ainda
+        for (int i = 0; i < lines.length; i++) {
+            String s = lines[i].strip();
+            if (s.startsWith(".section")) {
+                inText = s.startsWith(".section .text") || s.equals(".section .text");
+                pendingFn = null;
+                out.append(lines[i]).append('\n');
+                continue;
+            }
+            if (inText && s.startsWith(".globl")) {
+                pendingFn = s.substring(".globl".length()).trim();
+                out.append(lines[i]).append('\n');
+                continue;
+            }
+            if (inText && s.endsWith(":") && !s.contains(" ") && !s.startsWith(".L")) {
+                String label = s.substring(0, s.length() - 1);
+                if (pendingFn != null && pendingFn.equals(label) && label.matches("[A-Za-z_][A-Za-z0-9_]*")) {
+                    out.append("    .section .text.").append(label).append(",\"ax\"\n");
+                }
+                pendingFn = null;
+            }
+            out.append(lines[i]).append('\n');
+        }
+        // split(-1) + append('\n') por linha: reconstitui exatamente o
+        // original quando nada é injetado (e o último '' do split vira o
+        // newline final — remove o '\n' sobra se o texto não terminava em \n)
+        String r = out.toString();
+        if (!text.endsWith("\n") && r.endsWith("\n")) r = r.substring(0, r.length() - 1);
+        return r;
     }
 
 }

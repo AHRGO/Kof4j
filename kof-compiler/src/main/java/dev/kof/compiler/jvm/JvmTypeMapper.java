@@ -164,6 +164,18 @@ public final class JvmTypeMapper {
         return Type.of(typeName);
     }
 
+    /**
+     * UIW050: handle de UI/mídia APAGA para int no bytecode (ver
+     * {@link #toDescriptor}). O emit de comparações/hash de record e a
+     * decisão primitive-vs-referência precisam disto: tratar um handle como
+     * referência gerava Objects.equals/if_acmp sobre int → VerifyError.
+     */
+    static boolean isHandleErasedToInt(Type type) {
+        if (type instanceof Type.NullableType nt) return isHandleErasedToInt(nt.inner());
+        return type instanceof Type.ClassType ct
+                && (KofUi.isUiType(ct) || KofMedia.isHandleType(ct));
+    }
+
     static boolean isPrimitive(String descriptor) {
         return "I".equals(descriptor) || "J".equals(descriptor) || "F".equals(descriptor) ||
                "D".equals(descriptor) || "Z".equals(descriptor) || "B".equals(descriptor) ||

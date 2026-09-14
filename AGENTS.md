@@ -3,7 +3,14 @@
 Este é o guia **obrigatório** para qualquer agente de IA (ou humano) que
 escreva código Kof neste repositório. Leia antes de gerar qualquer `.kf`.
 
-**Versão:** 0.3.0-beta · Última atualização: 05/09/2026 (modo autônomo definido; linha 0.3.0 + REFACTOR-500 em curso)
+**Versão:** 0.4.0-beta · Última atualização: 13/09/2026 (modo autônomo + condição de ESTABILIDADE com recusa de re-disparo + **Portão de qualidade: nenhum bug sobe**; branch ativa = `beta-0.4.0`)
+
+> **PRIORIDADE Nº 1: QUALIDADE.** Antes de qualquer feature, leia o
+> **Portão de qualidade — "nenhum bug sobe"** (§ abaixo), **universal para
+> TODAS as branches**. A ordem é **reproduzir → consertar a causa raiz →
+> provar com teste → rodar a suíte → só então commitar**. O teste **prova**;
+> ele nunca substitui a correção. Entrega sem prova não é entrega: é bug
+> adiado. A pressa de entregar é o maior risco do repo.
 
 ---
 
@@ -104,11 +111,49 @@ deixe trabalho grande não-commitado — é assim que se perde uma sessão.
 2. **Colisão de lane inevitável** — o único caminho toca um arquivo `EM CURSO`
    de outro agente e não dá para adiar: pare, registre no DOING.md, aguarde.
 3. **Gate quebrado sem causa na sua mudança** — suíte vermelha que você não
-   introduziu e não consegue diagnosticar: registre em `docs/development/known-bugs.md`
+   introduziu e não consegue diagnosticar: registre em `docs/bugs-and-gaps/known-bugs.md`
    com reproduções, não "conserte" o teste para passar.
 4. **Requisito genuinamente ausente do corpus** — nem `training/`, nem
    `learn/`, nem o compilador respondem: escreva a pergunta no DOING.md na
    linha do item e siga para outra tarefa (não trave o loop).
+5. **Desenvolvimento estável (condição de ESTABILIDADE — para o re-disparo)**
+   — ver a seção seguinte: o loop só tem trabalho se houver trabalho real.
+
+### Estabilidade: quando parar o loop e como avaliar cada re-disparo (obrigatório)
+
+> **O desenvolvimento está estável quando as três condições abaixo valem ao
+> mesmo tempo:**
+>
+> 1. **Todos os bugs resolvidos** — `docs/bugs-and-gaps/known-bugs.md` sem item
+>    aberto (tudo `CORRIGIDO`/`FECHADO` com prova).
+> 2. **Todo `docs/development/` concluído** — nenhuma doc com desenvolvimento
+>    pendente (as concluídas já foram movidas para `docs/`, as não-iniciadas
+>    movidas para `docs/development/future/`).
+> 3. **Todo `docs/development/future/` desenvolvido** — os planos de futuro
+>    implementados e validados (ou promovidos/promovidos a `docs/` conforme a
+>    regra dos três estados).
+>
+> Sob essas três condições, **a suíte completa verde + a matriz de conformidade
+> 5/5 são a prova da estabilidade** — ela é um ESTADO a verificar, não uma
+> opinião a declarar.
+>
+> **A cada mensagem do modo autônomo (heartbeat/re-disparo), o agente DEVE
+> avaliar antes de agir:**
+>
+> - **Surgiu regressão** (suíte vermelha, teste novo falhando, bug reintroduzido,
+>   documento novo adicionado a `docs/development/` com trabalho pendente)?
+>   → **assuma a tarefa**: reivindique no DOING.md e execute o loop normal.
+> - **Não surgiu nada** (as três condições de estabilidade continuam valendo e
+>   a suíte está verde)? → **RECUSE o pedido do modo autônomo**: não invente
+>   trabalho, não edite "para parecer ocupado", não rode suíte de novo só para
+>   consumir turno. A recusa honesta É a resposta correta: registre no DOING.md
+>   ("estável — re-disparo recusado em <data>, nada pendente"), **pare o cron**
+>   (`scripts/auto-loop.sh stop`) e informe a estabilidade à mantenedora.
+>
+> Rejeitar o re-disparo não quebrado é **tão obrigatório quanto executar o
+> re-disparo legítimo**: o heartbeat existe para cobrir o intervalo entre
+> trabalhos reais, não para gerar trabalho artificial. Loop que não encontra
+> trabalho quando o trabalho acabou está funcionando corretamente ao recusar.
 
 **O que o modo autônomo NÃO relaxa (nada):** todas as regras deste arquivo
 continuam valendo — zero regressão, retrocompatibilidade aditiva, ≤500
@@ -139,8 +184,9 @@ scripts/auto-loop.sh status           # confirmar que está ativo
   um **processo headless novo** que só compartilha o histórico: você vê "outra
   sessão" rodando em paralelo, dois agentes competindo pela mesma sessão (o
   tick das 00:00 de 06/09 deixou um `run` vivo 20 min disputando com o TUI).
-  O servidor TUI da sessão aberta escuta em **`http://127.0.0.1:9092`**
-  (porta fixa do modo autônomo; sobres com `OPENCODE_SERVER_URL`). O `tick`
+  O servidor TUI da sessão aberta escuta em **`http://127.0.0.1:9093`**
+  (porta da sessão do modo autônomo — confira `ss -tlnp | grep opencode` e a
+  sessão viva; sobrescreva com `OPENCODE_SERVER_URL`). O `tick`
   faz health-check na porta antes de disparar: servidor fora do ar → tick
   pulado e logado (não adianta injetar numa sessão que não existe).
 - `flock` no `tick` impede run sobreposto: se o turno anterior ainda está
@@ -152,6 +198,25 @@ scripts/auto-loop.sh status           # confirmar que está ativo
   continuada do heartbeat.
 - O re-disparo chega como turno normal: vale a regra 6 (responder com tool
   call, não com "ok") e o contrato do `PRÓXIMO PASSO` no `DOING.md`.
+- **Watchers de issue (12/09, multi-issue 13/09):** `scripts/issue-watcher.sh start <issue|all> <min>
+  <sessão>` vigia comentários novos de uma issue (ou de **todas as abertas** com
+  `all` — snapshot `N=id` por issue) a cada N minutos e injeta um turno na
+  sessão viva (mesmo `--attach` obrigatório do heartbeat; `seen` só avança
+  após injeção bem sucedida; `server=` gravado no state fixa a porta p/ o tick
+  do cron). Em uso: **todas a cada 5min → sessão `ses_f69c2cb03ffe2zDYCqW7fesphi`
+  (porta 9094)** — o tick `all` **injeta a CADA tick** (com ou sem comentário
+  novo) com prompt de **varredura completa**: listar TODAS as abertas, ler
+  corpo+comentários, responder tecnicamente, **triar** (corrigir o que for da
+  lane / registrar gap-plano regra 6 / declarar não-procedente), **corrigir e
+  fechar com `gh issue close` + commit** (só com prova; frente de outra lane =
+  pedir review do dono, nunca tocar). Interagir com issue que
+  impacta o trabalho EM CURSO é parte do loop, não distração.
+- **Duas sessões, dois crons (13/09, pedido da mantenedora):** 9093 =
+  `ses_f69e2a3f7ffe9J10aWcHEUOfW8` (heartbeat auto-loop, `*/5`) e 9094 =
+  `ses_f69c2cb03ffe2zDYCqW7fesphi` (watcher all, `*/5`). **Nunca cruzar:**
+  cada tick injeta SÓ na sua sessão (`--attach` + porta gravada/resolvida).
+  O heartbeat da 9093 tinha sido parado; foi **reativado** (`auto-loop.sh start
+  ses_f69e2a3f7ffe9J10aWcHEUOfW8 5`, dry-run prova attach 9093).
 
 
 ---
@@ -174,7 +239,7 @@ conceitual nem decide arquitetura/rumo. Consequências práticas para o agente:
    raiz": rigor na compilação, vivência prática, código robusto.
 2. **Compile antes de entregar.** Alucinação é proibida. "Achar" que compila
    não compila. O loop de verificação (§ abaixo) é inegociável.
-3. **Transparência cirúrgica de erros.** Erros vão para `docs/development/known-bugs.md`
+3. **Transparência cirúrgica de erros.** Erros vão para `docs/bugs-and-gaps/known-bugs.md`
    com **causa raiz** + **menor repro**, inclusive regressões que a mantenedora
    introduziu. Nunca "documentar em volta" do bug.
 4. **Discussão técnica antes de código.** Quando a dúvida é conceitual (semântica,
@@ -187,6 +252,28 @@ conceitual nem decide arquitetura/rumo. Consequências práticas para o agente:
 6. **Toda PR vem acompanhada de uma issue relacionada.** PR "solta" não entra.
    Toda mudança proposta referencia uma issue aberta que a justifica —
    rastreabilidade é lei, não preferência.
+7. **Entrega por agente exige prova de qualidade (§"Portão de qualidade").**
+   Antes de abrir PR/commitar/pushar, o agente responde ao **checklist de
+   pré-push (Q1–Q6)**. Um commit de agente sem teste no mesmo commit é
+   **rejeitado na revisão** — a mantenedora não é a primeira a descobrir o
+   bug. Se o agente não conseguiu rodar um gate (toolchain/qemu ausente),
+   **declara isso explicitamente** no commit/PR; nunca finge verde.
+8. **Sem regressão silenciosa.** O agente que deixa a branch não-compilável
+   ou a suíte vermelha (fora dos erros ambientais documentados) está violando
+   o portão: conserta na mesma unidade ou reverte. `git bisect`-hostil é o
+   pior legado que um agente pode deixar.
+7. **Identidade do git (12/09, decisão da mantenedora — identidade única).**
+   A regra antiga do `temmcode` (e-mail `aminadojava@gmail.com` no `--local`
+   para atribuir commits ao worker + bloco `"Kof-agent-worker"` em comentários
+   via proxy) foi **ABANDONADA a pedido da mantenedora** — dava dor de cabeça
+   demais (commit manual dela subindo como `temmcode` pelo `--local` do clone).
+   Vale agora: **uma identidade só, a dela**. O agente NUNCA configura
+   identidade (`git config user.*` com ou sem `--global` é proibido; nunca
+   escreve em `~/.gitconfig` nem no `.git/config`); usa a identidade efetiva
+   do repo/ambiente como está. Sem truque de e-mail, sem bloco de marcação
+   obrigatório em issues/PRs, **sem trailer `Co-authored-by`** (polui o log do
+   repo). Quando ela preparar algo exclusivo para os
+   agentes, essa regra volta numa forma nova.
 
 > Em resumo: a IA roda **sob as regras estritas da computação de verdade** —
 > documentação cirúrgica, zero alucinação, sem o hype do mercado.
@@ -235,7 +322,7 @@ intervalo.
 ### Lição aprendida (04/09) — trabalhe SEMPRE em partes pequenas
 
 > **Nunca tente gravar/produzir um artefato grande de uma vez.** O plano de
-> refactoring `docs/development/refactoring/PLAN-SOLID-500.md` (120 classes, 8 fases) foi
+> refactoring `docs/architecture/PLAN-SOLID-500.md` (FECHADO 13/09; 120 classes, 8 fases) foi
 > perdido uma vez porque o agente tentou escrever o documento inteiro num único
 > `write`. A lição:
 
@@ -252,6 +339,12 @@ intervalo.
 - **A regra ≤500 linhas/classe existe exatamente porque** "fazer tudo de uma
   vez" vira código impossível de carregar/manter. O agente é parte do sistema:
   agir pequeno é seguir a própria regra que aplicamos ao código.
+- **Faixas do gate `check_500` (decisão da mantenedora, 13/09):** ≤500 é alvo;
+  **500–599 é TOLERADO** (dívida viva — o gate avisa, não quebra o CI; split
+  continua sendo o caminho); **≥600 é CRÍTICO** (falha o CI, refactor/split
+  obrigatório antes do merge). Dívida já travada no baseline nunca cresce
+  (aproximar-se de 600 = split agora). Ao splitar, tire a linha do baseline com
+  `./scripts/check_500.sh --update-baseline`.
 
 Isso vale para código, docs, planos e testes: **pequeno é sustentável.**
 
@@ -287,6 +380,27 @@ estado do **SOFTWARE**, não o do texto:
 | `docs/` | documentação consolidada e válida | **somente** o que já foi implementado, validado ou decidido |
 | `docs/development/` | trabalho atualmente em desenvolvimento | **somente** itens com implementação, validação, testes ou integração **pendentes** |
 | `docs/development/future/` | planejado para depois | ideias/funcionalidades **não** em desenvolvimento atual |
+| `docs/development/DECISIONS.md` | **registro de decisões da mantenedora** (a pasta `decision-pending/` foi EXTINTA 13/09 — os 6 planos viraram este doc único) | decisão tomada no chat **mora aqui** (data + opção + evidência), nunca só no chat; item decidido vira fila no `roadmap.md` §23/DOING no mesmo commit — nunca atacar frente sem decisão travada aqui (regra 6) |
+| `docs/bugs-and-gaps/` | **registros vivos** de bugs, gaps de spec e matrizes de conformidade/paridade | fila por alvo (regra 3 do congelamento); não é "plano" — atualiza no MESMO commit que fecha o item |
+| `docs/audits/` | **auditorias** — foto de estado (planejado × realizado) e registros datados de comparação | apontam trabalho, nunca são fila: o que uma auditoria marca pendente tem casa própria (bug → `bugs-and-gaps/`, código → `development/`, decisão → `decision-pending/`); ao fechar o apontado, atualiza a linha da auditoria no MESMO commit |
+
+> **Refactor de clareza (13/09, decisão da mantenedora):** bugs/gaps/matrizes
+> (`known-bugs.md`, `conformance-matrix.md`, `ecosystem-coverage.md`,
+> `KOFUI-AUDIT.md`, `specification-gaps.md`) **não são backlog de
+> desenvolvimento** — moram em `docs/bugs-and-gaps/`. Documentos 100% parados
+> por decisão **não têm mais pasta própria**: os 6 que viviam em
+> `decision-pending/` (`PLATFORM-PLAN.md`, `APPLICATION_MODEL.md`,
+> `security-plan.md`, `plan-platform-completion.md`,
+> `plan-spring-independence.md`, `planning-stdlib-time-design.md`) foram
+> inventariados, auditados contra o código e **ratificados 13/09** num doc
+> único — `docs/development/DECISIONS.md` (a pasta foi apagada). Auditorias
+> (`roadmap-audit.md`,
+> `complexity-audit.md`, `PLANNING-FUTURE-AUDIT.md`,
+> `planning-future-reconcile.md`) moram em `docs/audits/` — não são fila de
+> desenvolvimento nem registro de gap, são fotos de estado.
+> `docs/development/` fica **só** com
+> trabalho que anda (planos com código em andamento e refactors). Um agente da lane **docs** não mexe em bug/gap (são de
+> outra lane) — só mantém esses registros sincronizados com o código.
 
 > **`docs/development/` NÃO é arquivo morto, histórico nem depósito de
 > documentação.** A presença de um documento lá significa explicitamente:
@@ -305,9 +419,30 @@ testes, build e commits. Para cada item:
    somente após a conclusão mover para `docs/`.
 3. **Apenas planejado** (sem implementação em andamento) → mover para
    `docs/development/future/`.
-4. **Obsoleto, duplicado ou contradizendo o estado atual** → corrigir ou
-   consolidar; nunca manter documentação falsa/desatualizada em
-   `docs/development/`.
+ 4. **Obsoleto, duplicado ou contradizendo o estado atual** → corrigir ou
+    consolidar; nunca manter documentação falsa/desatualizada em
+    `docs/development/`.
+
+### Regra de prioridade — `.md` soltos primeiro (13/09, orientação da mantenedora)
+
+> **Implemente PRIMEIRO os `.md` soltos em `docs/development/`** — eles são o
+> trabalho **sem impedimento**: plano ratified, escopo definido, nada parado.
+> Documentos em pastas dentro de `docs/development/` (`refactoring/`,
+> `future/`) **têm impedimento** e não são fila enquanto o
+> impedimento existir.
+
+- **Decisão no chat vira DECISIONS.md no mesmo commit:** quando a mantenedora
+  decide algo no chat, o agente **trava a resposta em
+  `docs/development/DECISIONS.md`** (data + opção + evidência) **e abre a
+  fila** no `roadmap.md` §23/DOING — decidir sem registrar = decisão
+  invisível; registrar sem abrir fila = decisão morta. Frente sem linha em
+  DECISIONS.md **não é atacada** (regra 6).
+- **Ordem de seleção de tarefa:** (1) `.md` solto em `development/` com
+  implementação pendente e sem dono `EM CURSO`; (2) fila recém-aberta de
+  `DECISIONS.md`; (3) só então o resto da fila.
+- **`future/`** permanece intocável sem promoção explícita (regra dos três
+  estados); um item de `future/` **não** vira prioridade só porque está
+  "planejado".
 
 ### Regra de conclusão
 
@@ -428,6 +563,159 @@ Bool isQuery(String op) {
 
 ---
 
+## Portão de qualidade — "nenhum bug sobe" (obrigatório, 13/09 — **UNIVERSAL**)
+
+> **Prioridade nº 1 do projeto é QUALIDADE, não volume de entrega.** Um commit
+> que adiciona feature sem prova é pior que um commit que não existe: ele
+> transfere o custo do bug para a próxima sessão e para a mantenedora.
+>
+> **Esta regra é universal: vale para TODAS as branches** (`beta-0.4.0`,
+> `wip-*`, `fix/*`, `issue-lane`, `docs/*`, feature branches, forks), **para
+> todo agente, toda lane e toda unidade** — não só a branch de release. Um
+> push que quebra o build em QUALQUER branch é uma violação do portão. Não é
+> negociável com "o teste já passava antes", "é só um WIP" ou "outro agente
+> vê depois".
+
+### Q0. O bug se CONSERTA; o teste só PROVA
+
+> **Consertar o bug é o trabalho. O teste é a prova de que ele morreu — nunca
+> um substituto para a correção.** É proibido entregar "o teste que reproduz o
+> bug" e deixar o código quebrado; é proibido também "documentar em volta" ou
+> rebaixar a asserção para o teste passar. A ordem é sempre:
+>
+> **reproduzir (menor repro) → consertar a causa raiz → provar com o teste
+> que falharia antes → rodar a suíte completa.**
+
+- **Bug fix entrega o código corrigido + o teste de regressão no mesmo commit.**
+  Faltando qualquer um dos dois, o commit não existe.
+- **Corrigir a causa raiz, não o sintoma.** Um `if` que esconde a exceção, um
+  `try/catch` que engole, ou um valor default que mascara o erro **não é fix** —
+  é bug adiado. Se a correção exige mudança de contrato/operador/ordem de
+  avaliação, é **regra 6**: vira plano, nunca edição silenciosa.
+- **Build quebrado é o bug mais grave.** Se o seu commit deixa a branch
+  não-compilável (ex.: `7f174a6f`, `usesPow` não declarado), a correção é
+  **prioridade zero** — conserta na mesma unidade e pusha, não espera o próximo.
+
+### Q1. Toda mudança de código vem com teste que a PROVA
+
+- **Feature nova → teste novo.** Sem exceção. "Implementei X" sem teste que
+  execute X é entrega inválida (o `pow` de 13/09 subiu sem teste e quebrou o
+  build da release — não se repete).
+- **Bug fix → teste de regressão** que falharia no código velho e passa no
+  novo. O teste é a prova de que o bug morreu; sem ele, o bug volta.
+- **Refactor → mesma suíte + golden E2E por target** (regra 3 do Congelamento).
+- **O teste entra no MESMO commit da mudança.** Teste depois = teste que nunca
+  vem. Se o commit não tem a prova, o commit não existe.
+
+### Q2. Prova de compilação ANTES de qualquer push
+
+```bash
+mvn -o -pl kof-compiler -am compile -q     # falha aqui = NÃO PUSHA
+```
+
+O caso `7f174a6f` (pow com `usesPow` não declarado) deixou a branch de release
+**não-compilável** para todos os agentes. **Regra dura: agente que não roda o
+`compile` do módulo antes do push está quebrando o repo.** Se o gate completo
+não foi rodado, o commit/mensagem diz isso explicitamente — nunca finge verde.
+
+### Q3. Além do caminho feliz — a matriz mínima de cenários
+
+Todo teste novo cobre, no mínimo, **o caminho feliz + as bordas relevantes**.
+O agente escolhe as que se aplicam e **registra no commit** o que cobriu:
+
+| Cenário | Exemplo |
+|---|---|
+| **Borda numérica** | `0`, negativo, overflow, `NaN`/`Infinity`, `-0.0`, expoente negativo/fracionário |
+| **Vazio/nulo** | coleção vazia, String `""`, `null`/`Nullable`, ausência de chave |
+| **Limite/índice** | primeiro/último elemento, fora-de-faixa, um-past-the-end |
+| **Erro esperado** | entrada inválida → diagnóstico/gap `XXX00x` (nunca silêncio, R6) |
+| **Cross-target** | JVM × Native × Script × JS com a MESMA saída (ou gap diagnosticado) |
+| **Idempotência/repetição** | rodar 2× dá o mesmo resultado; estado não vaza |
+| **Concorrência** | `spawn`/`await`, corrida, cancelamento, isolamento entre workers |
+| **Interop/limite de recurso** | arquivo inexistente, rede fora, lib ausente, memória |
+
+- **Proibido entregar só o happy path** (self-check 7). Se o caso só tem o
+  caminho feliz testável, **diga por quê no commit** (ex.: "só o determinístico
+  é observável; o resto é ambiente").
+- **Golden = medição real, nunca memória.** O valor esperado sai do oracle JVM
+  executado (ou harness C isolado), nunca de "acho que dá isso".
+- **`assertEquals` com mensagem** que identifica o caso e o target — um vermelho
+  precisa ser diagnosticável sem re-rodar.
+
+### Q4. Cace o bug ANTES de subir (postura de caça, não de entrega)
+
+Antes de cada commit, o agente **tenta quebrar a própria mudança**:
+
+1. **Casos extremos:** o que acontece com entrada vazia/nula/negativa/gigante?
+2. **Cross-target:** os 3+ targets concordam? Onde divergem, é gap ou bug?
+3. **Fronteira de contrato:** a mudança toca operador/precedência/ordem de
+   avaliação/null-safety/`==`/exceções/`spawn`/coleções? Então é **regra 6** —
+   vira plano, não edição.
+4. **Regressão vizinha:** rode a suíte completa, não só a classe nova.
+5. **O que o teste NÃO cobre?** Escreva-o — é exatamente aí que o bug mora.
+
+> Um bug achado por um agente antes do push custa minutos. O mesmo bug subindo
+> custa uma sessão inteira de outro agente + a confiança da mantenedora. **Achar
+> o bug é parte do trabalho, não uma fase opcional.**
+
+### Q5. Nada de "verde falso"
+
+- Teste que passa por acidente (assert fraco, `success=true` sem executar
+  output, mensagem de erro aceita como saída esperada) é **bug disfarçado**.
+  Proibido "consertar" teste relaxando a asserção (JavaFX, §149 — precedentes).
+- Skip é **honesto e explícito** (`assumeTrue` de toolchain ausente), nunca
+  para esconder falha.
+- Se a suíte fica vermelha por causa da sua mudança, **o commit não entra** —
+  nem "com nota", nem "depois eu volto". Corrige ou reverte.
+
+### Q6. A suíte é o chão, não o teto
+
+Passar a suíte é o **mínimo**. A pergunta de aceite é: *"que cenário quebra
+isso e eu ainda não testei?"*. Enquanto houver resposta, a unidade não está
+pronta.
+
+### Q7. Proibido stub — a implementação é COMPLETA ou não sobe (13/09)
+
+> **"Funciona o suficiente para o teste passar" não é entrega.** Um stub,
+> placeholder, `return null`/`return 0` de fachada, corpo vazio, `throw
+> "not implemented"`, `TODO`/`FIXME`, ramo `default` que engole caso não
+> tratado, ou qualquer caminho que **finge** fazer o trabalho é **bug
+> pré-instalado** — ele passa o teste de hoje e falha o usuário de amanhã.
+> **É proibido commitar stub.** A unidade entrega a **implementação
+> completa** do escopo declarado, com a matriz Q3 coberta.
+
+- **Implementação completa = o comportamento previsto, inteiro.** Se o escopo
+  é "suporte a `++` em long", entrega os 4 targets, prefixo/pós-fixo, borda
+  numérica e array/field — não "só o caso do teste". Escopo menor é aceitável
+  **se declarado**; escopo menor disfarçado de completo, nunca.
+- **Stub não é "trabalho incremental"** — trabalho incremental é entregar um
+  **degrau inteiro** (uma capacidade completa), commitá-lo e seguir. Deixar
+  metade de uma capacidade no código fingindo completude é o que a regra
+  proíbe. A distinção: *corte vertical completo* (ok) × *fachada de fachada*
+  (proibido).
+- **Gap honesto ≠ stub.** Um caminho **não suportado** deve falhar com
+  diagnóstico `XXX00x` (R6, regra 6 do congelamento), nunca retornar valor
+  falso silenciosamente. "Não suportado com diagnóstico" é entrega válida;
+  "não suportado fingindo que sim" é stub.
+- **Todo stub EXISTENTE é dívida catalogada.** Encontrar um stub/placeholder
+  no software (código, stdlib, backend, docs) **obriga** a:
+  1. **catalogá-lo como gap de implementação** em
+     `docs/bugs-and-gaps/known-bugs.md` (bug) ou
+     `docs/bugs-and-gaps/specification-gaps.md` (gap de spec), com
+     **localização** (`arquivo:linha`), **o que falta** e **menor repro**;
+  2. **anotá-lo no ponto do código** com o código do gap (`XXX00x`/`§NNN`),
+     para que o próximo agente o veja sem arqueologia;
+  3. **planejá-lo** na fila (regra dos três estados) para que seja
+     **formalmente desenvolvido da forma correta** — não corrigido às pressas
+     nem escondido atrás de um teste fraco.
+  Stub achado e não catalogado = **omissão de agente**, tão grave quanto o
+  próprio stub. Catalogar não fecha o item: ele só fecha com implementação
+  completa + prova (Q0–Q6).
+- **Aceite:** a pergunta final não é "o teste passa?", é **"o que aqui ainda
+  é fachada?"**. Enquanto houver resposta, a unidade não está pronta.
+
+---
+
 ## Congelamento de comportamento (obrigatório)
 
 > **O comportamento previsto é lei.** "Comportamento previsto" = o que o corpus
@@ -435,7 +723,7 @@ Bool isQuery(String op) {
 > completa) provam. **Nenhum agente pode quebrar comportamento que já funciona.**
 
 1. **Zero regressão.** Nenhum commit pode fazer um teste existente passar a
-   falhar. A suíte completa (`mvn test`, hoje **1207** nos 4 módulos — ver
+   falhar. A suíte completa (`mvn test`, hoje **1636** nos 4 módulos — ver
    §"Loop de verificação" para o comando com o flag de failure.ignore) é **gate de merge** —
    mudança que não mantém tudo verde não entra. Exceção única: mudança de
    contrato **deliberada**, com bump de versão + docs atualizados + migração.
@@ -447,7 +735,7 @@ Bool isQuery(String op) {
    **comportamento**. Prova: mesma suíte + golden E2E por target. Se o refactor
    muda output observável, é **bug do refactor** — corrige ou reverte.
 4. **Bug = alinhar ao previsto, nunca o contrário.** Tudo em
-   `docs/development/known-bugs.md` é desvio do comportamento previsto e **deve ser
+   `docs/bugs-and-gaps/known-bugs.md` é desvio do comportamento previsto e **deve ser
    corrigido no código** para atingir o comportamento documentado. Proibido
    "documentar em volta do bug" (mudar o corpus para aceitar o comportamento
    errado como se fosse o certo). Se o comportamento documentado está errado,
@@ -524,6 +812,14 @@ despedida(): String { return "tchau" }       // tipo depois dos parênteses
 void fazIsso() { println("x") }              // void explícito
 Bool positivo(Int x) = x > 0                 // expression body
 Int dobro(Int x) { return x * 2 }
+
+Int g(Int x) { return x }                    // sobrecarga top-level (0.4.0,
+Int g(Int x, Int y) { return x + y }         // oracle JVM): assinatura difere
+// ❌ duplicata EXATA → SEM047; só trocar o RETORNO NÃO é sobrecarga (SEM047)
+// chamada ambígua → SEM057 (dê tipo ao argumento p/ escolher)
+// sobrecarga de MÉTODO de classe ✅ existe (0.4.0, §131 13/09): mesmo nome,
+// assinaturas diferentes (aridade/tipos) na mesma classe coexistem nos 4
+// backends; o typer seleciona por aridade+compatibilidade
 ```
 
 ### Variáveis (só dentro de funções/corpos — **não existe top-level `val`/`var`/`let`**)
@@ -694,6 +990,7 @@ Se você está prestes a escrever algo desta lista, **pare**:
 | `val x = ...` / `var x = ...` no **top-level** | dentro de função; ou campo de `class` |
 | `let x = ...` / `const x = ...` / `async fn` | `var`/`val` em função; `spawn`/`await` (KofScript **não** é JavaScript — roda Kof puro) |
 | `x in [...]` (operador de expressão) | `setOf(...).contains(x)` |
+| `Int.MAX_VALUE` / `Long.MIN_VALUE` / `<primitivo>.<campo>` | literal (`2147483647`) ou `as` — primitivos não têm estáticos (SEM050) |
 | `{"a", "b"}` (literal de conjunto) | `setOf("a", "b")` |
 | `[1, 2, 3]` (literal de array) | `listOf(1, 2, 3)` ou `new Int[n]` |
 | `Option<T>` / `Result<T>` | `String?` + narrowing; `throw` para erro |
@@ -713,7 +1010,7 @@ Se você está prestes a escrever algo desta lista, **pare**:
 
 Responda SIM a todas antes de terminar:
 
-1. **Compilei?** (loop de verificação abaixo)
+1. **Compilei?** (loop de verificação abaixo) — `mvn -o -pl kof-compiler -am compile -q` verde.
 2. **Traduzi alguma linguagem?** Se sim, reescreva com a abstração do Kof.
 3. **Há repetição 3+ vezes de um padrão?** (comparação, branch, construção)
    → existe feature da linguagem para isso (Set/Map/switch/higher-order/record).
@@ -725,6 +1022,22 @@ Responda SIM a todas antes de terminar:
    inesperados (confiabilidade do codegen, bordas de erro, tipos nullable,
    concorrência, alocação de memória, cross-target paridade). Nunca delivery
    com testes que cobrem apenas o caso de sucesso esperado.
+8. **A feature/bug tem teste no MESMO commit?** (Q1) — sem prova, o commit não existe.
+9. **Cobri as bordas relevantes da matriz Q3** (numérica, vazio/nulo, limite,
+   erro esperado, cross-target, idempotência, concorrência, recurso) e
+   **declarei no commit** o que cobri?
+10. **Tentei quebrar a mudança antes do push?** (Q4) — casos extremos,
+    cross-target, fronteira de contrato, regressão vizinha, o que o teste não cobre.
+11. **O golden veio de medição real** (oracle JVM/harness C) e não de memória?
+12. **Nenhum teste passou por acidente** (assert fraco, `success=true` sem
+    executar, erro aceito como saída)? (Q5)
+13. **A entrega é implementação COMPLETA, sem stub?** (Q7) — nenhum
+    placeholder/`TODO`/`return` de fachada/ramo que engole caso não tratado.
+    Stub encontrado no caminho foi catalogado como gap + anotado no código?
+
+> Se alguma resposta for NÃO, a unidade **não está pronta** — volte para a
+> implementação. O portão de qualidade (§"nenhum bug sobe") é pré-requisito
+> de commit, não uma revisão posterior.
 
 ---
 
@@ -733,41 +1046,83 @@ Responda SIM a todas antes de terminar:
 Sempre que escrever/alterar código Kof:
 
 ```bash
-# 1. Compilar o módulo (rápido)
+# 0. PRE-PUSH GATE (Q2) — sem isto o push é proibido
 mvn -o -pl kof-compiler -am compile -q
 
-# 2. Rodar os testes da área alterada
+# 1. Rodar os testes da área alterada (rápido)
 mvn test -o -pl kof-compiler -am -Dtest='KofAreaTest' -Dsurefire.failIfNoSpecifiedTests=false
 
-# 3. Suíte completa antes de commit
+# 2. Suíte completa antes de commit
 mvn test -o -pl kof-compiler,kof-script,kof-c-compiler,kof-cli -am \
-    -Dtest='!UiE2ETest#canvasCreation' -Dsurefire.failIfNoSpecifiedTests=false \
+    -Dsurefire.failIfNoSpecifiedTests=false \
     -Dmaven.test.failure.ignore=true
+
+# 3. Conferir os reports POR MÓDULO (não confie no resumo do reactor)
+grep -rl "FAILURE" */target/surefire-reports/*.txt
 ```
 
+### Checklist de pré-push (Q0–Q7 — responda antes de `git push`, em QUALQUER branch)
+
+0. O bug foi **consertado na causa raiz** (não mascarado) e o teste que prova
+   falharia no código velho? **(Q0)**
+1. `mvn -o -pl kof-compiler -am compile -q` verde? **(Q2)**
+2. A mudança tem teste no MESMO commit que a prova? **(Q1)**
+3. O teste cobre o happy path **e** as bordas Q3 que se aplicam? **(Q3)**
+4. Tentei quebrar a mudança (casos extremos, cross-target, regressão vizinha)? **(Q4)**
+5. A suíte completa está verde (0 falhas fora dos erros ambientais de `node`)? **(Q5)**
+6. `grep -rl FAILURE */target/surefire-reports/*.txt` não aponta nada seu? **(Q5)**
+7. A entrega é implementação COMPLETA (sem stub/fachada/TODO)? Stub achado foi
+   catalogado como gap + anotado no código? **(Q7)**
+
+> **Nenhum push sem os 8 itens, em nenhuma branch.** Se algum falhar, corrija
+> ou reverta — não suba "com nota" nem "para o próximo agente ver".
+
 > **`-Dmaven.test.failure.ignore=true` é OBRIGATÓRIO na suíte completa.** Sem
-> ele, o Maven é fail-fast por módulo: o **kof-compiler aborta o reactor** com
-> as 59 falhas conhecidas do bug 59 (Native riscv/aarch) e **kof-script,
-> kof-c-compiler e kof-cli nunca rodam** — você acha que validou tudo mas só
-> viu 1086/59 do primeiro módulo. O total real com o flag é **~1207 testes**
-> (compiler ~1086 + script 24 + kof-c 5 + cli 92, números de 08/09 — crescem
-> com cada commit): as 59 falhas devem ser SÓ
-> `NativeRiscv64E2ETest`/`NativeAarch64E2ETest`/`crossNative*` (bug 59).
-> Qualquer falha fora dessas é sua — antes de commitar, confira os reports
-> POR MÓDULO (`grep -rl FAILURE */target/ surefire-reports/*.txt`).
+> ele, o Maven é fail-fast por módulo: qualquer falha em **kof-compiler aborta
+> o reactor** e **kof-script, kof-c-compiler e kof-cli nunca rodam** — você
+> acha que validou tudo mas só viu o primeiro módulo. O total real com o flag
+> é **1636 testes** (compiler 1464 + script 31 + kof-c 5 + cli 136, medição
+> 13/09 — cresce com cada commit): **0 falhas** (13 erros = só `node` ausente
+> no host, ambientais). O §149 JS (`KofRandomTest.randomStringJs`/`randomShapeJs`,
+> regressão do fix §147 no `JsIfThrowElse`) foi **CORRIGIDO 13/09** — a raiz era
+> o parser consumir o label de início do `while` seguinte a um assert/if-throw
+> como fim do else (ver `known-bugs.md §149`).
+> As 59 falhas históricas do bug 59 (Native riscv/aarch,
+> `kof_static_java_lang_System_out` no link) foram **CORRIDAS 09/09** — com
+> qemu os cross agora PASSAM (`NativeRiscv64E2ETest`/`NativeAarch64E2ETest`
+> 42/42 cada; prova no `known-bugs.md §59` + gate 12/09). Qualquer falha que
+> não seja dos 13 erros de `node` ausente é SUA. Antes de commitar, confira os
+> reports POR MÓDULO
+> (`grep -rl FAILURE */target/surefire-reports/*.txt`).
 > (Lição registrada 08/09: sessões inteiras citaram "suíte 1085/59" sem os
 > módulos finais terem rodado.)
 >
-> **Os números mudam com qemu no ambiente:** sem qemu, os ~59 cross-arch
-> são **skipados** pelo guard (`4408eb6`) — mesma suíte vira
-> `~1210/0/~64-skip`. Com qemu, **falham** (bug 59 aberto) —
-> `~1207/59/3-skip`. Ambos os estados são "suíte verde" para a sua lane:
-> o que importa é não ter falha FORA do par riscv/aarch.
+> **Os números mudam com qemu no ambiente:** sem qemu, os 84 cross
+> (2×42, `NativeRiscv64/Aarch64E2ETest`) são **skipados** pelo guard
+> (`4408eb6`) + 5 de BD externo → `~1547/0/~89-skip` (estimado — a medição
+> abaixo é de host COM toolchain). Com qemu, **tudo executa** — `1636/0/5-skip`
+> (os 5 = MySQL/Mongo/Postgres externos; medido 13/09). Estado correto HOJE:
+> **0 falhas** nos dois cenários (o §149 JS foi corrigido 13/09); os 13 erros
+> são só `node` ausente. O que importa continua sendo nenhum FAILURE fora
+> deles e das guardas.
 
 Para validar um snippet isolado (ex.: confirmar se um idiom compila),
 use o harness do projeto ou crie um teste E2E mínimo no pacote da área.
 
 **Nunca** entregue código Kof que você não compilou.
+
+> **Regra do JavaFX (12/09, pedido da mantenedora): a mensagem `Erro: os
+> componentes de runtime do JavaFX não foram encontrados. Eles são obrigatórios
+> para executar este aplicativo` NUNCA é benigna — sempre representa uma
+> regressão ou bug oculto e exige causa raiz + correção.** No JVM o launcher
+> do `java -cp <dir> Default.Main` engole o `VerifyError`/`ExceptionInInitializer`
+> real atrás dessa mensagem (medido: era `VerifyError: Bad type on operand
+> stack`). Para ver o erro de verdade, rode por reflection (contorna o launcher
+> JavaFX): grave um `Run.java` que faz `Class.forName("Default.Main")
+> .getMethod("main", String[].class).invoke(null, (Object) new String[0])`,
+> compile e `java -cp "out:run-dir" Run Default.Main`. A stack trace que sai é
+> o bug; trate-a como qualquer falha (regra 1 do Congelamento). **Proibido**
+> "consertar" o teste aceitando essa mensagem como saída esperada.
 
 ---
 
@@ -780,16 +1135,15 @@ use o harness do projeto ou crie um teste E2E mínimo no pacote da área.
 | `training/anti-patterns/fake-idioms.md` | Tabela de features que NÃO existem |
 | `training/anti-patterns/chained-or-membership.md` | Cadeia de `\|\|` → `setOf().contains()` |
 | `training/anti-patterns/java-like-code.md` | Java traduzido → Kof |
-| `learn/` | Tutorials passo a passo (00-introduction → 37-kofjs) |
-| `docs/architecture.md`, `docs/compiler-architecture.md` etc. | Domínios específicos (estáveis) |
+| `learn/` | Tutorials passo a passo (00-introduction → 39-stdlib) |
+| `docs/architecture/architecture.md`, `docs/architecture/compiler-architecture.md` etc. | Domínios específicos (estáveis) |
 | `docs/development/` | **Backlog vivo — tudo que NÃO está concluído** (planos, roadmaps, audits, gaps, refactors). Ver `docs/development/README.md` para índice completo. |
-| `docs/development/future/` (plans) | Planos futuros: migração legado (decompiler/translator/IR/differential) + plataforma universal (era `docs/future/`) |
-| `docs/development/roadmap.md`, `docs/development/roadmap-audit.md`, `docs/development/ecosystem-coverage.md` | Roadmaps & auditoria de cobertura (fila P0→P5) |
-| `docs/development/specification-gaps.md`, `docs/development/known-bugs.md` | Gaps de spec (20 SG-00x) + bugs abertos (37–40, CANVAS001) |
-| `docs/development/native-multiarch.md`, `docs/development/DATABASE_VISION.md`, `docs/development/complexity-audit.md` | Native multiarch (NATIVE002) + DB vision + audit ≤500 |
-| `docs/development/security-plan.md` | Plano de segurança (18 camadas, B/C/D pendentes) |
-| `docs/development/plan-platform-completion.md`, `docs/development/plan-spring-independence.md` | Plans de plataforma & Spring independence (P3–P5) |
-| `docs/development/future/ACTION_PLAN.md` | Ordem de implementação de `docs/development/future` (Tiers 0–12) |
+| `docs/development/future/` (plans) | **só plano sem código**: plataforma universal (visão), RAII TIER 2.4, DD-STDLIB-01. A migração legado (decompiler/translator/IR/differential) **caiu p/ `docs/development/` 12/09** — implementada com testes |
+| `docs/development/roadmap.md`, `docs/audits/roadmap-audit.md`, `docs/bugs-and-gaps/ecosystem-coverage.md` | Roadmaps & auditoria de cobertura (fila P0→P5) |
+| `docs/bugs-and-gaps/specification-gaps.md`, `docs/bugs-and-gaps/known-bugs.md` | Gaps de spec (SG-00x — fila do maintainer completa, virou referência) + bugs abertos |
+| `docs/development/native-multiarch.md`, `docs/stdlib/DATABASE_VISION.md`, `docs/audits/complexity-audit.md` | Native multiarch (NATIVE002) + DB vision (realizada → stdlib) + audit ≤500 (snapshot → architecture) |
+| `docs/development/DECISIONS.md` | **Decisões da mantenedora** (time/segurança/app-model/Spring — pasta `decision-pending/` extinta 13/09) |
+| `docs/development/roadmap.md` §23 | **Plano de implementação consolidado** (Tiers 0–12) — único plano ordenado; migração A–H ✅, universal não iniciada |
 
 ---
 

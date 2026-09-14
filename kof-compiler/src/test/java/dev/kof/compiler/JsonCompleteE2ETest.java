@@ -160,4 +160,52 @@ class JsonCompleteE2ETest {
         r = driver.compile(source, tempDir.resolve("native-out3"), Target.NATIVE);
         assertTrue(r.success(), r.diagnostics().getDiagnostics().toString());
     }
+
+    // §106 (decisão 2b, 13/09): json.encode(Map) -> objeto JSON com chaves
+    // SORTED. Antes: JVM crashava (reflexão em HashMap →
+    // InaccessibleObjectException); nativo dava link-error (kof_json_encode
+    // genérico inexistente); interpretador ok. Golden = determinismo sorted.
+    @Test
+    void jvmEncodeMapSortedKeys(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            import kof.json.*
+            main() {
+                var m = mapOf("b", 2)
+                m.put("a", 1)
+                println(json.encode(m))
+                var rec = mapOf("y", "z")
+                rec.put("x", "w")
+                println(json.encode(rec))
+            }
+            """);
+        runJvm(source, tempDir.resolve("map-out"),
+                "{\"a\":1,\"b\":2}\n{\"x\":\"w\",\"y\":\"z\"}");
+    }
+
+    @Test
+    void nativeEncodeMapSortedKeys(@TempDir Path tempDir) throws IOException, InterruptedException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            import kof.json.*
+            main() {
+                var m = mapOf("b", 2)
+                m.put("a", 1)
+                println(json.encode(m))
+            }
+            """);
+        CompilationResult r = driver.compile(source, tempDir.resolve("map-native"), Target.NATIVE);
+        assertTrue(r.success(), "Native encode Map should compile: "
+                + r.diagnostics().getDiagnostics());
+        Path binFile = tempDir.resolve("map-native").resolve("Default/Main");
+        assertTrue(Files.exists(binFile), "Binary should exist");
+        ProcessBuilder pb = new ProcessBuilder(binFile.toString());
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String output = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+            .replace("\r\n", "\n").trim();
+        int ec = p.waitFor();
+        assertEquals(0, ec, "Exit code should be 0, output: '" + output + "'");
+        assertEquals("{\"a\":1,\"b\":2}", output, "sorted keys: " + output);
+    }
 }

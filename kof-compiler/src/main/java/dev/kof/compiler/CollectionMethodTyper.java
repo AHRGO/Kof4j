@@ -82,7 +82,8 @@ public final class CollectionMethodTyper {
             return Type.PrimitiveType.INT;
         }
         if ("contains".equals(mn) || "startsWith".equals(mn) || "endsWith".equals(mn)
-                || "equals".equals(mn) || "equalsIgnoreCase".equals(mn)) {
+                || "equals".equals(mn) || "equalsIgnoreCase".equals(mn)
+                || "isEmpty".equals(mn)) {
             return Type.PrimitiveType.BOOL;
         }
         if ("substring".equals(mn) || "concat".equals(mn) || "trim".equals(mn)

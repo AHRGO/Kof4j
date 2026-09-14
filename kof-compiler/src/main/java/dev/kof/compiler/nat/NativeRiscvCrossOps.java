@@ -29,6 +29,25 @@ public final class NativeRiscvCrossOps {
         boolean isFloat = NativeTypeKinds.isFloatType(opTy);
         boolean isDouble = NativeTypeKinds.isDoubleType(opTy);
         if (isFloat || isDouble) {
+            // §146 cross (12/09, #101): MOD de Float/Double variável caía no
+            // `default` vazio e devolvia o dividendo (mesma raiz do x86).
+            // Double: fmod via kof_double_mod (B40 — a - trunc(a/b)*b, NaN p/
+            // 0/Inf/NaN e |q|>=2^63, paridade JVM). Float: promove p/ double,
+            // chama o MESMO helper, trunca de volta (fcvt.s.d; o caller
+            // espera bits de float no push).
+            if (kb.op() == KofBinaryOp.MOD) {
+                String s = isFloat ? "s" : "d";
+                sb.append("    pop t0\n    fmv.").append(s).append(".x f1, t0\n");
+                sb.append("    pop t1\n    fmv.").append(s).append(".x f0, t1\n");
+                if (isFloat) sb.append("    fcvt.d.s f0, f0\n    fcvt.d.s f1, f1\n");
+                sb.append("    fmv.x.d a0, f0\n    fmv.x.d a1, f1\n");
+                sb.append("    call kof_double_mod\n");
+                sb.append("    fmv.d.x f0, a0\n");
+                if (isFloat) sb.append("    fcvt.s.d f0, f0\n");
+                sb.append("    fmv.x.").append(s).append(" t0, f0\n");
+                other.pushRiscv(sb, "t0");
+                return;
+            }
             String s = isFloat ? "s" : "d";
             sb.append("    pop t0\n    fmv.").append(s).append(".x f1, t0\n");
             sb.append("    pop t1\n    fmv.").append(s).append(".x f0, t1\n");
@@ -38,7 +57,10 @@ public final class NativeRiscvCrossOps {
                 case MUL -> sb.append("    fmul.").append(s).append(" f0, f0, f1\n");
                 case DIV -> sb.append("    fdiv.").append(s).append(" f0, f0, f1\n");
                 case EQ -> { sb.append("    feq.").append(s).append(" t1, f0, f1\n    mv t0, t1\n"); }
-                case NE -> { sb.append("    fle.").append(s).append(" t1, f0, f1\n    snez t0, t1\n"); }
+                // NE = NOT(EQ): feq dá 0 p/ NaN (IEEE) e seqz inverte — o
+                // antigo fle+snez dizia NaN != NaN falso (divergia do x86/
+                // JVM/JS = true; achado na prova MATH001 11/09).
+                case NE -> { sb.append("    feq.").append(s).append(" t1, f0, f1\n    seqz t0, t1\n"); }
                 case LT -> { sb.append("    flt.").append(s).append(" t0, f0, f1\n"); }
                 case LE -> { sb.append("    fle.").append(s).append(" t0, f0, f1\n"); }
                 case GT -> { sb.append("    fgt.").append(s).append(" t0, f0, f1\n"); }
@@ -168,6 +190,40 @@ public final class NativeRiscvCrossOps {
                     sb.append("    pop a0\n    call kof_bool_to_string\n");
                     other.pushRiscv(sb, "a0");
                 }
+            } else if (vArgType instanceof Type.ClassType ct && (BuiltinTypes.isList(ct)
+                    || BuiltinTypes.isSet(ct) || BuiltinTypes.isMap(ct))) {
+                // §107-cross: List/Map/Set são tipos de runtime (sem vtable
+                // toString) — o ramo genérico não emitia nada e o ponteiro cru
+                // caía em kof_println_string = lixo (`@` medido no qemu). A tag
+                // do elemento vem do typer (SEM056: homogênea), igual x86.
+                // FP-em-coleção: MESMA recusa honesta do valueOf escalar
+                // (FLT001, sem snprintf no runtime asm-puro) — nunca `[?, ?]`
+                // silencioso nem lixo (R6/R7). Record/aninhado (tag 6) fica
+                // `?` no helper (cara do §104b-ii, idêntico ao x86).
+                Type elem = BuiltinTypes.isMap(ct) ? null
+                        : BuiltinTypes.isList(ct) ? BuiltinTypes.listElement(ct)
+                        : BuiltinTypes.setElement(ct);
+                int ktag = NativeX86Calls.collectionTag(BuiltinTypes.isMap(ct) ? BuiltinTypes.mapKey(ct) : elem);
+                int vtag = BuiltinTypes.isMap(ct) ? NativeX86Calls.collectionTag(BuiltinTypes.mapValue(ct)) : -1;
+                if (ktag == 4 || ktag == 5 || vtag == 4 || vtag == 5) {
+                    throw new IllegalStateException("FLT001: " + mn
+                            + "(coleção de float/double) não é suportada no runtime riscv64/aarch64"
+                            + " (asm puro, sem libc/snprintf) — use JVM/Native x86_64"
+                            + " ou converta (d as Int)");
+                }
+                sb.append("    pop a0\n");
+                if (BuiltinTypes.isList(ct)) {
+                    sb.append("    li a1, ").append(ktag).append("\n");
+                    sb.append("    call kof_list_to_string\n");
+                } else if (BuiltinTypes.isSet(ct)) {
+                    sb.append("    li a1, ").append(ktag).append("\n");
+                    sb.append("    call kof_set_to_string\n");
+                } else {
+                    sb.append("    li a1, ").append(ktag).append("\n");
+                    sb.append("    li a2, ").append(vtag).append("\n");
+                    sb.append("    call kof_map_to_string\n");
+                }
+                other.pushRiscv(sb, "a0");
             }
             return;
         }
@@ -175,6 +231,15 @@ public final class NativeRiscvCrossOps {
         // String.length (propriedade → INSTANCE sem args)
         if (kc.kind() == KofCallKind.INSTANCE && BuiltinTypes.isString(kc.ownerType()) && "length".equals(mn)) {
             sb.append("    pop a0\n    call kof_string_length\n");
+            other.pushRiscv(sb, "a0");
+            return;
+        }
+
+        // §145 (12/09, #101): isEmpty = (length == 0); sem ramo caía no
+        // fallback genérico (link-fail). seqz zera/nonzero→1, convenção Bool.
+        if (kc.kind() == KofCallKind.INSTANCE && BuiltinTypes.isString(kc.ownerType()) && "isEmpty".equals(mn)) {
+            sb.append("    pop a0\n    call kof_string_length\n");
+            sb.append("    seqz a0, a0\n");
             other.pushRiscv(sb, "a0");
             return;
         }
@@ -195,12 +260,28 @@ public final class NativeRiscvCrossOps {
                 case "toLowerCase" -> "kof_string_to_lower";
                 case "lastIndexOf" -> "kof_string_last_index_of";
                 case "equalsIgnoreCase" -> "kof_string_equals_ignore_case";
+                // §97 cross (B36): métodos declarados no reference (equals/
+                // compareTo/hashCode). Sem entry aqui caíam no fallback
+                // genérico (pop só de a0 → receiver fica na pilha, link-fail
+                // String_equals). O bloco abaixo faz pop a1..aN + pop a0.
+                case "equals" -> "String_equals";
+                case "compareTo" -> "String_compareTo";
+                case "hashCode" -> "String_hashCode";
                 default -> null;
             };
             if (fn != null) {
                 int argCount = kc.parameterTypes().size();
+                // §102 cross (B35): com 2+ args o 2º (from) vive em a2 —
+                // roteia p/ o helper _2 (clamps JDK em code units UTF-16),
+                // idem ao dispatch de aridade do x86 em NativeX86StringCalls.
+                if (argCount >= 2 && (mn.equals("indexOf") || mn.equals("lastIndexOf")
+                        || mn.equals("startsWith"))) {
+                    fn = fn + "2";
+                }
                 if ("substring".equals(mn) && argCount == 1) {
-                    sb.append("    pop a1\n    li a2, 0\n");
+                    // §111 cross: sentinela "até o fim" = -1 (0 colide com o
+                    // 0 legítimo do 2-arg — mesmo fix x86 do maintainer).
+                    sb.append("    pop a1\n    li a2, -1\n");
                 } else {
                     for (int i = argCount - 1; i >= 0; i--) {
                         sb.append("    pop ").append(crossArgReg(i + 1)).append("\n");
@@ -248,6 +329,32 @@ public final class NativeRiscvCrossOps {
                 sb.append("    pop ").append(crossArgReg(i + 1)).append("\n");
             }
             sb.append("    pop a0\n");
+            // §123: tag de chave no header do map (off 40) — 1=String
+            // (kof_string_equals), 0=raw cmpq (Int/Long/... senão chave Int
+            // vira PONTEIRO → SIGSEGV). Unknown NÃO toca (mantém default 1).
+            // §126(a): CONJUNÇÃO receptor×arg (espelha o x86) — equals só
+            // quando ambos String; tipos errados em qualquer direção viram
+            // raw cmpq = miss seguro (0/null como o JVM), nunca SIGSEGV.
+            if (mn.startsWith("kof_map_")) {
+                Type mkt = BuiltinTypes.mapKey(kc.ownerType());
+                Type mat = argCount >= 1 ? kc.parameterTypes().get(0) : null;
+                if (mkt instanceof Type.NullableType nt) mkt = nt.inner();
+                if (mat instanceof Type.NullableType nt) mat = nt.inner();
+                boolean ktKnown = mkt != null && !(mkt instanceof Type.UnknownType);
+                boolean atKnown = mat != null && !(mat instanceof Type.UnknownType);
+                int tag = -1;
+                if (ktKnown && atKnown) {
+                    tag = BuiltinTypes.isString(mkt) && BuiltinTypes.isString(mat) ? 1 : 0;
+                } else if (ktKnown) {
+                    tag = BuiltinTypes.isString(mkt) ? 1 : 0;
+                } else if (atKnown) {
+                    tag = BuiltinTypes.isString(mat) ? 1 : 0;
+                }
+                if (tag >= 0) {
+                    sb.append("    li t0, ").append(tag).append("\n");
+                    sb.append("    sw t0, 40(a0)\n");
+                }
+            }
             sb.append("    call ").append(mn).append("\n");
             if (!Type.isVoid(kc.returnType())) other.pushRiscv(sb, "a0");
             return;
@@ -267,9 +374,9 @@ public final class NativeRiscvCrossOps {
         // dispatch virtual (INSTANCE/INTERFACE em classe de usuário)
         if ((kc.kind() == KofCallKind.INSTANCE || kc.kind() == KofCallKind.INTERFACE)
                 && kc.ownerType() instanceof Type.ClassType ct && !BuiltinTypes.isString(ct)) {
-            int vtableIdx = nb.findVirtualMethodIndex(ct.name(), mn);
+            int argCount = kc.parameterTypes().size();
+            int vtableIdx = nb.findVirtualMethodIndex(ct.name(), mn, kc.parameterTypes());
             if (vtableIdx >= 0) {
-                int argCount = kc.parameterTypes().size();
                 for (int i = argCount - 1; i >= 0; i--) {
                     sb.append("    pop ").append(crossArgReg(i + 1)).append("\n");
                 }
@@ -301,7 +408,8 @@ public final class NativeRiscvCrossOps {
         String mn = kc.methodName();
         if (mn.startsWith("kof_map_") || mn.startsWith("kof_set_") || mn.startsWith("kof_list_")) return mn;
         if (kc.kind() == KofCallKind.FUNCTION) {
-            return nb.functionMangleMap.getOrDefault(mn, nb.sanitizeName(mn));
+            String key = NativeSymbolMangling.fnKey(NativeSymbolMangling.internalOwner(kc.ownerType()), mn, kc.parameterTypes(), nb.allClassesMap);
+            return nb.functionMangleMap.getOrDefault(key, nb.sanitizeName(mn));
         }
         if (kc.kind() == KofCallKind.CONSTRUCTOR && kc.ownerType() instanceof Type.ClassType ct) {
             return nb.sanitizeName(ct.name()) + "_" + nb.sanitizeName("<init>") + "_" + kc.parameterTypes().size();

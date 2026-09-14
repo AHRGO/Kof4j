@@ -4563,21 +4563,50 @@ class CompilerDriverTest {
                 + result.diagnostics().getDiagnostics());
     }
 
-    // SG-011B (SEM047) — sobrecarga top-level não existe: função homônima é
-    // erro de compilação (antes a última sobrescrevia silenciosamente).
+    // SG-011B — sobrecarga top-level com assinatura DIFERENTE É permitida (oracle
+    // JVM): f(Int) e f(String) coexistem e resolvem no call site. O que SEM047
+    // continua rejeitando é DUPLICATA EXATA (mesmo nome + mesmos parâmetros) e a
+    // colisão só-de-retorno (JVM também rejeita — retorno não é assinatura).
     @Test
-    void duplicateTopLevelFunctionFails(@TempDir Path tempDir) throws IOException {
+    void distinctSignatureOverloadCompiles(@TempDir Path tempDir) throws IOException {
         Path source = tempDir.resolve("D.kf");
         Files.writeString(source, """
             Int f(Int x) { return x + 1 }
             Int f(String s) { return 2 }
+            main() { println(f(1)) println(f("z")) }
+            """);
+        CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.JVM);
+        assertTrue(result.success(), "assinaturas distintas devem sobrecarregar: "
+                + result.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void duplicateExactSignatureFails(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("D.kf");
+        Files.writeString(source, """
+            Int f(Int x) { return x + 1 }
+            Int f(Int x) { return x + 2 }
             main() { println(f(1)) }
             """);
         CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.JVM);
-        assertFalse(result.success(), "overload top-level deve falhar");
+        assertFalse(result.success(), "duplicata exata de assinatura deve falhar");
         String diags = result.diagnostics().getDiagnostics().toString();
         assertTrue(diags.contains("SEM047"), "should be SEM047, got: " + diags);
         assertTrue(diags.contains("already defined"), "deve nomear o conflito: " + diags);
+    }
+
+    @Test
+    void returnOnlyCollisionFails(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("D.kf");
+        Files.writeString(source, """
+            Int h(Int x) { return x }
+            String h(Int x) { return "s" }
+            main() { println(h(1)) }
+            """);
+        CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.JVM);
+        assertFalse(result.success(), "mesma assinatura com retorno diferente deve falhar (JVM)");
+        assertTrue(result.diagnostics().getDiagnostics().toString().contains("SEM047"),
+                "should be SEM047, got: " + result.diagnostics().getDiagnostics());
     }
 
     // SG-002 — tokens mortos removidos: `~`, `=>`, `|>`, `::`, `...`, `_`,
@@ -4870,6 +4899,14 @@ class CompilerDriverTest {
         assertFalse(result.success(), "deref de T? sem narrowing deve falhar");
         String diags = result.diagnostics().getDiagnostics().toString();
         assertTrue(diags.contains("SEM049"), "should be SEM049, got: " + diags);
+        // #120: a posição do diagnóstico era hardcoded (arquivo="", linha=0,
+        // coluna=0) — inútil pra localizar o deref no fonte. `s.length` está
+        // na linha 3 (1-indexed, incluindo a linha em branco do text block).
+        Diagnostic sem049 = result.diagnostics().getDiagnostics().stream()
+                .filter(d -> "SEM049".equals(d.code())).findFirst()
+                .orElseThrow(() -> new AssertionError("SEM049 não encontrado: " + diags));
+        assertEquals(3, sem049.line(), "SEM049 deve apontar a linha real do deref, não 0: " + diags);
+        assertTrue(sem049.file().endsWith("N4.kf"), "SEM049 deve apontar o arquivo real, não \"\": " + diags);
     }
 
     @Test
@@ -4885,6 +4922,12 @@ class CompilerDriverTest {
         assertFalse(result.success(), "method call em T? sem narrowing deve falhar");
         String diags = result.diagnostics().getDiagnostics().toString();
         assertTrue(diags.contains("SEM049"), "should be SEM049, got: " + diags);
+        // #120: mesma causa raiz do teste acima, agora no branch de MethodCallExpr.
+        Diagnostic sem049 = result.diagnostics().getDiagnostics().stream()
+                .filter(d -> "SEM049".equals(d.code())).findFirst()
+                .orElseThrow(() -> new AssertionError("SEM049 não encontrado: " + diags));
+        assertEquals(3, sem049.line(), "SEM049 deve apontar a linha real do deref, não 0: " + diags);
+        assertTrue(sem049.file().endsWith("N5.kf"), "SEM049 deve apontar o arquivo real, não \"\": " + diags);
     }
 
     @Test

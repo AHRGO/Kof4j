@@ -1,108 +1,197 @@
-# Development — Documentos em Andamento (não concluídos)
+# Development — backlog vivo (só trabalho em desenvolvimento)
 
-> **Criado em:** 07/09/2026 · **Origem:** varredura de `docs/` por status `❌` / `🟡` / `PARTIAL` / `NOT STARTED` / `PLANNED` / `TODO` / `gap`
-> **Propósito:** separar o que **ainda não está concluído** do que já é referência estável em `docs/`.
-> `docs/` mantém só o que é **prova** (comportamento previsto, suíte verde, stable). `development/` é o **backlog vivo** — planos, audits, gaps e roadmaps que guiam o próximo trabalho.
+> **Base:** `0.4.0-beta` · branch `beta-0.4.0` · **atualizado:** 13/09/2026
+> **Suíte medida neste HEAD:** `1662` run (1479 kof-compiler + 31 kof-script
+> + 5 kof-c-compiler + 147 kof-cli), **0 falhas** (13 erros = só `node` ausente, ambientais — todos `*Js`), 157 skip (guardas de
+> toolchain/node; sem qemu os 84 cross são skipados) — com cross riscv/aarch
+> 42+42 sob qemu real (G-0/§142 somaram os
+> testes de header/OOM). Gate pós-§131/§163 medido 13/09 (`gate_final2.log`, BUILD
+> SUCCESS). **Nº autoritativo da suíte = a execução no host** (o gate
+> `mvn test ... -Dmaven.test.failure.ignore=true`; conferir por módulo com
+> `grep -rl FAILURE */target/surefire-reports/*.txt`), não esta linha — ela
+> apodrece a cada commit. Refold da concatenação do `NativeRiscvAsm` para
+> `<clinit>` (anti-pattern novo `constant-folded-runtime-asm.md`) verde no
+> gate `gate1585.log` (HEAD 54da1325).
+> **Regra dos 3 estados (`AGENTS.md`):** `docs/` = implementado/decidido ·
+> `development/` = **trabalho técnico pendente** · `development/future/` =
+> **só plano, zero código**. Concluiu → move p/ submódulo de `docs/` no mesmo
+> commit; iniciou → cai p/ cá. A varredura de 12/09 (`655afa6b`) moveu 13 docs
+> de `future/` p/ cá (todos com código) e 4 concluídos p/ `docs/`.
+> **Refactor de clareza 13/09 (mantenedora):** bugs/gaps/matrizes →
+> `docs/bugs-and-gaps/` (linhas 2, 41, §2, §3, §4.2, §5); planos **parados por
+> decisão** foram **ratificados 13/09 e consolidados em `DECISIONS.md`** (a
+> pasta `decision-pending/` foi extinta — ver §3). Este README lista o que
+> **anda**; decisão tomada mora em `DECISIONS.md` (regra 6: frente sem linha
+> lá não é atacada).
 
-**Regra para agentes:**
-- `docs/status.md` + `docs/backend-parity.md` continuam sendo a **fonte de verdade do que funciona hoje** (sempre em `docs/`).
-- `development/` é a **fila de prioridade**: se precisa saber *o que falta*, leia aqui primeiro.
-- Ao fechar um item: mova o doc correspondente de `development/` de volta para `docs/` (ou marque como `FEITO` e arquive), no mesmo commit que fecha o gap (com prova: teste verde/suíte).
-
----
-
-## Índice — o que foi movido de `docs/` para `development/`
-
-### 1. Visão de Futuro (`future/` — Tiers 0–12, plataforma universal)
-| Arquivo | Por que está aqui | Estado | Próximo passo |
-|---|---|---|---|
-| `future/README.md` | visão geral da plataforma futura | `PLANNED` | não iniciar antes de SYSTEMS fechar (R12) |
-| `future/PLAN-UNIVERSAL-PLATFORM.md` | arquitetura universal (R1–R12) | `NOT STARTED` (arquitetura, não ação) | aguardar estágio SYSTEMS |
-| `future/ACTION_PLAN.md` | ordem Tiers 0–12 | `PARTIAL` | Tier 1 pendentes (ver roadmap-audit) |
-| `future/PLATFORM-PLAN.md` | plano de plataforma (F0–F2) | `EM CURSO` (F1 feita, F2 próxima) | F2 Target Architecture (`Target.SCRIPT`, `KofProjectConfig`, `TargetMatrix`) |
-| `future/APPLICATION_MODEL.md` | RFC App Model (monólito ↔ distribuído) | `EM CURSO` / RFC 975 linhas | decisão maintainer Q1/Q2 → I1 (`AppManifest` + `kof new`) |
-| `future/LEGACY_MIGRATION.md` | migração legado (kof inspect/translate) | `PLANNED` | não fazer antes do core estável |
-| `future/LEGACY_IR.md` | IR legado | `PLANNED` | — |
-| `future/DECOMPILER.md` | decompiler | `PLANNED` | — |
-| `future/TRANSLATOR.md` | translator | `PLANNED` | — |
-| `future/DIFFERENTIAL_TESTING.md` | differential testing | `PLANNED` | — |
-| `future/IMPLEMENTATION_PLAN.md` | plano de implementação legado | `PLANNED` | — |
- | `future/PLAN-CANVAS-WIDGET.md` | Canvas widget (CANVAS001) | `FEITO` (`5a9cac4` — 3 targets; UI009 drawImage `6e3181f`) | — |
-
-### 2. Roadmaps & Audits
-| Arquivo | Por que está aqui | Estado |
-|---|---|---|
-| `roadmap.md` | §§8–11 ❌ não implementado (Frontend, Frontend+Backend same project, Architectura, Monólito→Micro) | `PARTIAL` (Fase 0 ✅, resto 🟡/❌) |
-| `roadmap-audit.md` | matriz 06/09: 13 itens — 5× `PARTIAL`, 4× `NOT STARTED` | `PARTIAL` |
-| `roadmap-gap-2026-09-03.md` | gap report NATIVE002 + discrepâncias | `PARTIAL` |
-| `ecosystem-coverage.md` | matriz G1–G12: muitos `PARTIAL`/`PLANNED` (events, messaging, OAuth2, batch, AI) | `PARTIAL` |
-| `actual-state.md` | "O que NÃO está implementado" residual 0.2.6-beta | `PARTIAL` |
-| `language-state.md` | snapshot 02/09 desatualizado (SG-E2: 810 testes vs 969 hoje, v0.2.6 vs 0.3.0) | `OUTDATED` |
-
-### 3. Plans de Plataforma
-| Arquivo | Por que está aqui | Estado |
-|---|---|---|
-| `plan-platform-completion.md` | P0–P5: P3 (query DSL) ✅ mas P4–P5 (health/tracing/LSP/debug) pendentes | `PARTIAL` |
-| `plan-spring-independence.md` | Fases 5–14: web completa + gRPC planejados, GC pending | `PARTIAL` |
-| `planning-switch-expr.md` | **movido p/ `docs/planning-switch-expr.md` 10/09** (SYN001 FECHADO — nada pendente; concluído não fica em development/) | `FEITO` |
-| `planning-mutability.md` | **movido p/ `docs/planning-mutability.md` 10/09** (DD-02/SEM037/SEM038 aplicados, #42 fechada) | `FEITO` |
-| `planning-finally-return.md` | **movido p/ `docs/development/future/` 10/09** (PROPOSED — bug 45, zero código, decisão da mantenedora pendente) | `PLANEJADO` |
-| `planning-stdlib-time-design.md` | DD-STDLIB-02: semântica de tempo restante (fuso/today, assinaturas compostas, hoursBetween, formatDate) — libera só todayIso/formatDateIso se D1-A | `PROPOSED` |
-| `planning-stdlib-array-returns.md` | DD-STDLIB-01: retorno Array/objeto na camada de dispatch stdlib (S10c randomBytes/randomChoice) — recomendação: choice via idiom, bytes decide a mantenedora | `PROPOSED` |
-| `plan-stdlib-expansion.md` | STDLIB universal S1–S10: S1–S8+S10/S10a/b ✅ 09-10/09 (S1b sqrt 10/09); S10c (DD-STDLIB-01) + S7 riscv/aarch (TIME002) pendentes | `EM CURSO` |
-| `refactoring/PLAN-SOLID-500.md` | regra ≤500 linhas: Fases 4–8 fechadas, mas F1–3 + 9 com resíduo 502 → 493 | `EM CURSO` |
-
-### 4. Gaps & Bugs
-| Arquivo | Por que está aqui | Estado |
-|---|---|---|
- | `specification-gaps.md` | 23 entradas (SG-001–020 + E1–E3) — SG-001/007 resolvidos; demais ABERTOS (a maioria decisão de design, regra 6) | `ABERTO` (~21 gaps) |
- | `known-bugs.md` | bugs 1–60: 39 ABERTO (null de Map — decisão de design regra 6); 37/38/40 + CANVAS001 ✅ corrigidos; Native lane 43/44/46/48/50/59 | `ABERTO` (bug 39 + lane Native) |
-| `security-plan.md` | 18 camadas: A ✅ mas B/C/D com ❌ (cookies, middleware, OAuth2, TLS cert próprio) | `PARTIAL` |
-
-### 5. Native Multiarch
-| Arquivo | Por que está aqui | Estado |
-|---|---|---|
-| `native-multiarch.md` | NATIVE002: core riscv64/aarch64 ✅ 26/26 mas paridade avançada (JSON/DB/HTTP/mq/cache) ❌ + GC riscv/aarch sem | `EM DESENVOLVIMENTO (parcial)` |
-| `DATABASE_VISION.md` | níveis 0–2,4 ✅ mas nível 3 query DSL + pooling + Native/JS ORM ❌ | `PARTIAL` |
-| `complexity-audit.md` | violações ≤500: NativeRuntime 17.3k, CompilerDriver 8.2k, JsBackend 5.7k | `EM CURSO` |
+**Fontes de verdade que NÃO estão aqui (não são backlog):** `docs/status.md`
+(o que funciona + gate da suíte), `docs/backend-parity.md` (matriz de
+paridade com gaps honestos), `docs/bugs-and-gaps/specification-gaps.md`
+(SG-001–020 — fila do maintainer COMPLETA 12/09, virou referência).
 
 ---
 
-## O que ficou em `docs/` (concluído / referência estável)
+## 1. Ordem de execução dos planos (fila oficial da lane development)
 
-Estes **não** foram movidos — são prova ou referência estável:
+> Critério: (1) frente designada pela mantenedora > (2) saúde do gate >
+> (3) trabalho de código-puro sem decisão > (4) itens bloqueados = NÃO atacar
+> (regra 6). Itens de registro vivo (matrizes/auditorias) não têm "fim" —
+> atualizam-se a cada gap fechado, não puxam prioridade.
 
-| Arquivo | Por que ficou |
+| # | Plano | Estado | Por que nesta posição | Próximo passo concreto |
+|---|---|---|---|---|
+| 1 | `stdlib/PLAN-TREE-SHAKING.md` (#97) | ✅ **CONCLUÍDO 13/09** — S-1..S-6.1 ✅ (S-6.1 mergeado `0104f6d6` PR #106) + S-7 ✅ (consolidado em `docs/stdlib/stdlib-loading.md`, movido p/ `docs/stdlib/`) | frente designada 11/09, fechada; S-5-x86 segue fila bugfix (`root_end`, fora deste plano) |
+| 2 | ~~`refactoring/PLAN-SOLID-500.md`~~ → `docs/architecture/PLAN-SOLID-500.md` | ✅ **FEITO 13/09 — F3 fechada** (NativeBackend **498** ≤500 medido: `NativeSymbolMangling` 92 + `NativeStaticData` 116 + `emitMethodTable`→NativeClassMeta; o bloqueio "lane GC em `nat/`" caducou — refs não existem mais no repo, regra do dono-morto) — **PLANO FECHADO e MOVIDO 13/09** (F1–F9 todas ✅; regra dos 3 estados) | gate ≤500 virou **ratchet travado no CI** (2652aa45, §140): dívida não cresce e só encolhe; a contagem autoritativa é `wc -l scripts/check_500-baseline.txt` (atualize APONTANDO p/ o arquivo, não gravando nº que apodrece a cada split) | — (doc em `docs/architecture/`; se resíduo >500 novo aparecer, reabre como item próprio) |
+| 3 | `native-multiarch.md` (NATIVE002) | `EM CURSO` — ~30 faces cross fechadas sob qemu (41+41 medidas 12/09) | paridade riscv/aarch = condição de estabilidade do release | GC mark-sweep p/ riscv/aarch (faces restantes da §5; JS é outra frente) |
+| 4 | `planning-otp-supervision.md` (#83) | `EM CURSO` — 1ª fatia ✅ 11/09 (núcleo+`restartLimit`+`stop`) + **S2-JVM ✅ 13/09** (`startAll`/`lacoUnico` + wrapper de identidade; `KofSupervisorE2ETest` 8/8; Native=OTP001 §129, JS=OTP002 §132) | **DD-OTP RATIFICADAS 13/09** (opção 1a: S2 JVM; riscv/aarch PARTIAL) — ver §3 | S2-Native x86 pendente do §129 (unwind cross-thread, lane nat); promover OTP001/002 só com a face cross decidida |
+| 5 | `plan-editor-integration.md` (EDI001) | `EM CURSO` — graus 1-3, 4-10, 11, 12 ✅ | único degrau sem dono pendente é tooling | plugin IntelliJ (DAP/LSP já funcionam via CLI) |
+| 6 | `plan-stdlib-expansion.md` | `EM CURSO` — S0–S6, S8–S12 ✅ | só o que NÃO depende de decisão anda | `pow` ✅ FEITO 13/09 (`d736e36e`) e S10c `randomBytesHex` ✅ FEITO (6a) — **nada sem decisão pendente nesta doc**; só `format`/`boundaries` (DD-STDLIB-02) seguem na mesa da mantenedora |
+| 7 | fila recém-aberta de `DECISIONS.md` (13/09): ~~`time.todayIso/formatDateIso/isToday/hoursBetween/parseDateIso/tzOffsetSeconds` (D-STDLIB)~~ **✅ EXECUTADA 13/09** (S7e-S7h, matriz stdtime3-6, suíte 1772/0/0; TIME003 = fila geral) · `chacha20Encrypt/Decrypt` (D-SEC) · `security.cookies` + `app.security()` (com I2 do app model) · `CmdNew`+`--fat` (D-APP I1/I3) · blog E2E (D-SPRING F12) | `RATIFICADO` (decisão travada 13/09 — falta só execução com teste) | — | atacar na ordem do §23; cada linha = unidade-teste-commit |
+| — | registros vivos: `conformance-matrix.md`, `ecosystem-coverage.md`, `KOFUI-AUDIT.md`, `known-bugs.md` (em `docs/bugs-and-gaps/`); `roadmap.md` (aqui); `roadmap-audit.md`/`complexity-audit.md` (em `docs/audits/`) | `VIVA` | **não são backlog** — matriz/auditoria/fila que se atualizam junto com cada fechamento | atualizar célula/seção no MESMO commit que fecha o gap |
+
+**Regra R12 (AGENTS.md):** nada de `future/` (plataforma universal, RAII,
+package-compiler) abre antes de SYSTEMS fechar (paridade + GC + estabilidade).
+
+---
+
+## 2. Bugs abertos (fila em `docs/bugs-and-gaps/known-bugs.md`) — triagem 13/09
+
+**8 itens na fila aberta** (§101, §107 🟡, §104b-ii, §114, §129, §132, §161,
+§165) — e a conclusão honesta (`known-bugs.md:11`): **fila aberta = 8 itens,
+todos com decisão/dono/bloqueio — ZERO item código-puro-sem-decisão nesta
+lane**. Fechados 13/09: §89, §106 (+JS `ab85cfae`), §117, §131 (+residual
+`73ca2d58`), §127-JVM, §155, §94, §156, §81 (BigInt), §163 (interpretador
+2º parâmetro largo); §157-160 e §65 fechados/NÃO-REPRODUZ.
+Todos pendurados em:
+
+| Grupo | Bugs | Quem destrava |
+|---|---|---|
+| Decisão ratificada 13/09 — implementação pendente | §161/NAT-STR01 (§89 ✅ `e33425b5`, §106 ✅ `5b939106`+JS `ab85cfae`, §117 ✅ `3734f2aa`, §131 ✅ `18a64d45`, §81 ✅ `839bd73f`, §163 ✅ `d2a8a618`; §45/DD-01 FECHADO 13/09 — ver `docs/decisions/DD-01-finally-return.md`) | fila ratificada / lanes executoras |
+| Congelado regra-6 | §101 | ninguém (contrato) |
+| Lane alheia | §104b-ii + §107 restante + §114 (bugfixer — storage-box de record), §129 (lane nat), §132 (OTP-JS), §165 (js-slices — re-verificado 13/09: NÃO reproduz em clean build, provável não-bug) | donos das lanes |
+
+Corrigidos 13/09: **§89** (conversão numérica em primitivo = alias do `as` +
+warning SEM090; 4 alvos — `CoreRegressionE2ETest.numericConvertMethodAliasOfAs`),
+**§106** (`json.encode(Map)` chaves SORTED nos 4 alvos — `JsonCompleteE2ETest`
++ célula `jsonenc-map` da matriz; residual JS `ab85cfae`),
+**§117** (cancel por TID real + probe linear no Native x86 — `KofConcurrency2Test`
+34/0), **§131** (sobrecarga de método por assinatura nos 4 backends —
+`CoreRegressionE2ETest.methodOverloadByArity` + harness 4/4), **§94** (EQ/NE de Double/Float no interpretador agora IEEE —
+célula `stdsqrt` 4/4 sem exclusão), **§127-JVM** (cast p/ tipo-função →
+interface SAM sintética; `LambdaE2ETest.castToFunctionTypeJvm/Native`),
+**§155** (tipo-função como type-arg → parser preserva os espaços do type-ref;
+`LambdaE2ETest.declaredFunctionTypeListJvm/Native`), **§156** (lista
+heterogênea de lambdas mesma assinatura → elemento sem className, dispatch
+SAM; `LambdaE2ETest.heterogeneousLambdaListJvm/Native`), **§81** (Long=BigInt
+no JS, paridade 64-bit real — `839bd73f`) e **§163** (interpretador: 2º
+parâmetro largo `Long`/`Double` lido como `null` — `KofInterpreterParityTest.
+wideParametersOccupyTwoSlots` + célula `wideparams` 4/4; `d2a8a618`).
+Corrigidos 12/09: §90 (web, #98), §125,
+§139, §140 (gate→ratchet), §107-face
+escalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
+`440730c8` — prova qemu 42+42)**.
+
+---
+
+## 3. Decisões da mantenedora (registro: `DECISIONS.md`)
+
+> Nada aqui está "parado esperando" — as frentes que esperavam decisão foram
+> **ratificadas 13/09** e vivem em `DECISIONS.md` (D-STDLIB/D-SEC/D-APP/
+> D-SPRING/D-PLAT/D-PLATFORM) com a fila de execução aberta. A regra
+> permanece: **frente sem linha em `DECISIONS.md` não é atacada** (regra 6);
+> decisão do chat trava lá no mesmo commit. `known-bugs.md` =
+> `docs/bugs-and-gaps/known-bugs.md`.
+
+| Item | Onde | O que espera |
+|---|---|---|
+| DD-STDLIB-01 — `randomBytes`/`randomChoice` (S10c) | `docs/stdlib/DD-STDLIB-01-array-returns.md` (FECHADO 13/09, movido p/ docs/) | ✅ IMPLEMENTADO 13/09 (opção 6a: `randomBytesHex` alias de `hex` + choice=idiom; S10c FECHADO) |
+| DD-STDLIB-02 — `time.format`/`boundaries` | `DECISIONS.md` §D-STDLIB | ✅ RATIFICADO 13/09 (UTC-only, escalares ISO, zero pattern-DSL) — **fila liberada** (todayIso/formatDateIso/isToday/hoursBetween/parseDateIso/tzOffsetSeconds) |
+| DD-01 — `finally` no caminho de `return` | `docs/decisions/DD-01-finally-return.md` (FECHADO 13/09, movido p/ docs/) | ✅ IMPLEMENTADO 13/09 (opção 4a: FinallyFrame na IR + gates finallyReturnJvm/Js; suíte 1627/0; bug 45 FECHADO) |
+| DD-OTP (restante) | `planning-otp-supervision.md` | ✅ RATIFICADAS 13/09 (opção 1a: wrapper `(id, resultado)`; riscv/aarch PARTIAL) — **S2-JVM ✅ IMPLEMENTADO 13/09** (`Supervisor.startAll`/laço selectAny único; `KofSupervisorE2ETest` 8/8); resta **S2-Native x86** (pendente do §129, lane nat) e OTP002-JS (§132) |
+| `pow`/`-lm`, `roundTo`-mode | `plan-stdlib-expansion.md` | ✅ `pow` **FEITO 13/09** (7a: `-lm`; 5 alvos MATH001 cross; `stdmathpow` matriz + `powCrossArchRefused` `d736e36e`) · `roundTo` **NÃO aprovado pela 7a** (ratificação = só pow; "+roundTo" era nota de agente no plano — superfície/assinatura indefinida = regra 6, aguarda decisão da mantenedora) |
+| NAT-STR01 (case-map astral) | `known-bugs.md` §161 / conformance-matrix | ✅ ABERTO POR DECISÃO 13/09 — implementar UTF-8 astral nos nativos |
+| §129 (unwind cross-thread via TLS) | `known-bugs.md` | ✅ ABERTO POR DECISÃO 13/09 — lane nat |
+| json §106 | `known-bugs.md` | ✅ DECIDIDO 13/09 (opção 2b: chaves sorted) — implementar |
+
+---
+
+## 4. Índice do que está EM DESENVOLVIMENTO aqui
+
+### 4.1 Plataformas & migração (caíram de `future/` 12/09 — código iniciado; os `~~riscados~~` foram **ratificados 13/09 e consolidados em `DECISIONS.md`** — os 6 arquivos de `decision-pending/` foram apagados)
+
+| Arquivo | Estado real | O que falta p/ fechar |
+|---|---|---|
+| ~~`PLATFORM-PLAN.md`~~ → `DECISIONS.md` §D-PLATFORM (morto) | F1–3/8/9 com código (`ProjectLocator`, `KofProjectConfig`, `Target.SCRIPT`, PKG006/007, conformance 11 testes) | F1 resolvido pelo manifesto; F4/F5→KOFUI-AUDIT/stdlib-web; F6 wasm/F7 android→tabela D-APP Q7/Q10; F9→conformance-matrix |
+| ~~`APPLICATION_MODEL.md`~~ → `DECISIONS.md` §D-APP (Q1–Q10 travados) | `application { onStart/onShutdown }` ✅ E2E 3 targets; I2 (full-stack) ✅ `FullStackE2ETest` | `CmdNew` (I1), I3 (`--fat`), System/distribuído — fila |
+| `LEGACY_MIGRATION.md` (umbrella — §4 IR/Confidence, §8 diff-testing) + `DECOMPILER.md` + `TRANSLATOR.md` ~~+ `DIFFERENTIAL_TESTING.md` + `LEGACY_IR.md`~~ (FUNDIDAS no umbrella 13/09) | plataforma completa no CLI: `inspect/decompile/translate/compare/migrate` (`Main.java:25-29`) + `Confidence`/`Type.fromJvmSignature`; **contagem viva = `roadmap.md` §23 TIER 3–5** (não duplicar número aqui) | cobertura: switch/athrow opacos, `inspect --java` (R5 do audit), IR non-JVM |
+| ~~`IMPLEMENTATION_PLAN.md` / `ACTION_PLAN.md`~~ → `roadmap.md` §23 | **FUNDIDOS 13/09** (redundância ~85% entre si; status sobre-claimed vs código — ex.: `CodegenStep` ✅ inexistente, FFI Native era FFI001) | §23 é o plano único; tiers 6–12 = `future/` (R12) |
+| ~~`PLANNING-FUTURE-AUDIT.md` / `planning-future-reconcile.md`~~ → `docs/audits/` | comparação branch `planning-future`×beta **encerrada 13/09** — nada de código aberto próprio mora nelas: R2 vive em `DECISIONS.md` §D-APP/§D-PLATFORM; R5 no cluster migração (`DECOMPILER.md`/`LEGACY_MIGRATION.md` §4 Fase C) | — (fora de `development/`) |
+| ~~`planning-finally-return.md`~~ → `docs/decisions/DD-01-finally-return.md` | FECHADO 13/09 (FinallyFrame IR + gates; bug 45 CORRIGIDO, suíte 1627/0) | — (fora de `development/`) |
+| ~~`planning-stdlib-time-design.md`~~ → `DECISIONS.md` §D-STDLIB | `addDays`/`diffDays` nos 5 alvos | ✅ RATIFICADO 13/09 — fila liberada |
+
+### 4.2 Plans & auditorias vivas
+
+| Arquivo | Estado real | Nota |
+|---|---|---|
+| ~~`PLAN-TREE-SHAKING.md`~~ → `docs/stdlib/PLAN-TREE-SHAKING.md` | ✅ CONCLUÍDO 13/09 (S-1..S-6.1 + S-7; consolidado em `docs/stdlib/stdlib-loading.md`) | S-5-x86 = fila bugfix (`root_end`), fora do plano |
+| `plan-stdlib-expansion.md` | S0–S6, S8–S12 ✅ (MATH001/TIME002 fechados 11/09) | só decisões pendentes (§3) |
+| `planning-otp-supervision.md` | 1ª fatia ✅ JVM+Script; **S2-JVM ✅ 13/09** (`startAll`/`lacoUnico`); gates OTP001/OTP002 honestos | S2-Native x86 pendente do §129 (lane nat) |
+| `plan-editor-integration.md` | CLI/DAP/LSP/stdout-json ✅ | plugin IntelliJ |
+| `native-multiarch.md` | re-auditoria 12/09 sob qemu: ~30 faces cross fechadas | GC riscv/aarch + faces §5 |
+| ~~`security-plan.md`~~ → `DECISIONS.md` §D-SEC | A ✅; B/C ✅; C11 cookies + C18 middleware + D16 OAuth + D17 TLS-cert **ratificados 13/09** (executa com I2 do app model) | ChaCha20 = fila; OAuth: resource-server→client, provider=NUNCA |
+| ~~`plan-platform-completion.md`~~ → `DECISIONS.md` §D-PLAT (morto) | P0–P3 ✅; P4 (health/tracing/metrics) ❌; P5: `kof fmt` ✅ 31/08, LSP/VS Code ❌ | P4/P5 já têm casa (§23/backend-parity); blog E2E = D-SPRING F12 |
+| ~~`plan-spring-independence.md`~~ → `DECISIONS.md` §D-SPRING | F1–9 ✅/parciais; F10–F12 **ratificadas 13/09** (escopo travado) | F12 blog E2E **AGORA** (validação da plataforma); starter só depois |
+| ~~`conformance-matrix.md`~~ → `docs/bugs-and-gaps/` | matriz Feature×4 targets travada por `ConformanceMatrixTest` (11) + doc-gate | viva: atualiza com cada gap |
+| ~~`ecosystem-coverage.md`~~ → `docs/bugs-and-gaps/` | G1–G12 com `PARTIAL`/`PLANNED` (events, batch, AI) | referência de cobertura |
+| `roadmap.md` | §§8–11 ❌ (frontend same-project, monólito→micro) | longo prazo |
+| ~~`roadmap-audit.md`~~ → `docs/audits/roadmap-audit.md` | matriz 06/09 + fila P0→P5 (P0 FECHADO 09/09) | re-audit quando algo fecha |
+| ~~`KOFUI-AUDIT.md`~~ → `docs/bugs-and-gaps/` | UI001-Native (face R6: no-op silencioso) ABERTO | lane UI |
+| ~~`known-bugs.md`~~ → `docs/bugs-and-gaps/` | 8 abertos (triagem §2 acima; §81/§163/§127-JVM, §155, §94, §157-160 e §65 fechados/NÃO-REPRODUZ 13/09) | fila viva |
+| ~~`refactoring/PLAN-SOLID-500.md`~~ → `docs/architecture/PLAN-SOLID-500.md` | ✅ **FEITO + MOVIDO 13/09** (F1–F9 todas fechadas — F3: NativeBackend 498 ≤500 medido, bloqueio da lane GC caducou/regra do dono-morto); ratchet `check_500-baseline.txt` (dívidas travadas — nº autoritativo = `wc -l` do arquivo) no CI | plano FECHADO (regra dos 3 estados) |
+
+### 4.3 `future/` — só plano, zero código (não é trabalho atual)
+
+| Arquivo | Gatilho p/ cair p/ cá |
 |---|---|
-| `docs/status.md` | gate da suíte (910 testes) + build — fonte de verdade do loop autônomo |
-| `docs/backend-parity.md` | matriz JVM×Native×JS — referência de paridade (gaps com código, mas matriz é estável) |
-| `docs/architecture.md` | ADR multi-target (atualizado 06/09, SG-E1 corrigido) |
-| `docs/compiler-architecture.md` | pipeline real frontend→IR→backends (fonte atual) |
-| `docs/security.md` | auditoria v1 + matriz (G9 fechado) |
-| `docs/stdlib.md` + `docs/stdlib/*.md` | stdlib estável (kof.*) |
-| `docs/concurrency.md` | spawn/await/channel/scheduler (CONC003 fechado) |
-| `docs/observability.md`, `performance.md`, `philosophy.md` | referência estável |
-| `docs/debugging*.md`, `debug-adapter.md` | DAP MVP (Fase 3) — parcial mas tooling base estável |
-| `docs/http.md`, `docs/stdlib-*.md`, `docs/runtime/*` | runtime models (STRING/ARRAY/INHERITANCE completos) |
-| `docs/language-reference/*` | spec extraída do código + probes (parcial mas separada como linguagem≠compilador) |
-| `docs/targets/*`, `docs/tooling/*`, `docs/ui/*`, `docs/distribution/*` | docs por domínio (estáveis) |
-| `docs/releases.md`, `docs/LICENSING.md`, `docs/kof-vs-java.md` | histórico/licença/comparativo |
+| `PLAN-UNIVERSAL-PLATFORM.md` | decisão + SYSTEMS fechado (R12) |
+| `scoped-resources-plan.md` (RAII TIER 2.4) | bump com `using`/`resource_scope` decidido |
 
-> **Critério de aceite seletivo:** um doc foi para `development/` **se** (a) seu título/contéudo declara `PLANNED`/`NOT STARTED`/`PARTIAL`/`EM CURSO`/`EM DESENVOLVIMENTO`/`TODO`/`❌`/`🟡`/`gap` **ou** (b) ele é um **plano/roadmap/audit** cujo propósito é listar o que falta (não o que funciona). Docs que apenas *mencionam* gaps mas cujo corpo é referência estável (ex.: `backend-parity.md` lista gaps mas a matriz é a referência oficial) ficaram em `docs/`.
+*(DD-STDLIB-01 `planning-stdlib-array-returns.md` **saiu de `future/` 13/09** — decisão 6a ratificada, implementado e movido p/ `docs/stdlib/DD-STDLIB-01-array-returns.md`.)*
+
+*(movimentos históricos de 12/09: 13 docs caíram de `future/` p/ cá —
+evidência em cada linha de §4.1; snapshot SG 08/09 → `docs/history/`)*
 
 ---
 
-## Como usar (para o agente autônomo)
+## 5. O que NÃO está mais aqui (consolidado 12/09, com prova)
+
+| Saiu p/ | Doc | Prova |
+|---|---|---|
+| `docs/bugs-and-gaps/specification-gaps.md` | SG-001–020 + E1–E3 | fila do maintainer COMPLETA (resumo do próprio doc); snapshot antigo → `docs/history/specification-gaps-0.3.0-snapshot.md` |
+| `docs/stdlib/DATABASE_VISION.md` | níveis 0–4 | query DSL 01/09 (`KofOrmE2ETest` 22), MySQL prepared (`nativeMysqlPreparedBinary`), pooling ✅; DB001/ORM001 vivem na matriz de paridade |
+| `docs/audits/complexity-audit.md` | snapshot 02/09 | números pré-SOLID-500; gate vivo = `scripts/check_500.sh` (ratchet) |
+| `docs/history/roadmap-gap-2026-09-03.md` | gap report datado | pendências vivem em roadmap-audit/known-bugs |
+| `docs/decisions/` | `planning-switch-expr`, `planning-mutability` | SYN001, DD-02/SEM037/SEM038 aplicados |
+| `docs/ui/PLAN-CANVAS-WIDGET.md` | CANVAS001 | `UiE2ETest` 29/29 sem exclusões |
+
+---
+
+## 6. Como usar (agente autônomo)
 
 ```
-1. LEIA docs/status.md + docs/backend-parity.md          → o que funciona (gate)
-2. LEIA development/roadmap-audit.md + development/roadmap.md
-      + development/specification-gaps.md                → o que falta (fila P0→P5)
-3. ESCOLHA o maior valor SEM dono EM CURSO no DOING.md
-4. EXECUTE um escopo → teste → commit → atualize DOING.md
-5. AO FECHAR: mova o doc de development/ de volta para docs/ no mesmo commit
+1. LEIA docs/status.md + docs/backend-parity.md            → o que funciona (gate)
+2. LEIA a fila §1 deste README + DOING.md (donos)          → o que falta, sem colisão
+3. BUGS: known-bugs.md §Aberto só com dono na mesa; decisão → §3, não editar
+4. EXECUTE um escopo → teste (suíte com -Dmaven.test.failure.ignore=true)
+   → commit com DOING.md atualizado → mova doc p/ docs/ se FECHOU
+5. RE-DISPARO: sem item na fila §1 sem dono E suíte verde → RECUSE
+   (condição de estabilidade AGENTS.md)
 ```
 
-**Sincronização:** `docs/` e `development/` são versionados juntos. Pull antes de cada commit (`git fetch && git pull --rebase --autostash`) — se outro agente moveu um doc de `development/` para `docs/` (item fechado), você verá o rename no rebase.
+**Sincronização:** `git fetch && git pull --rebase --autostash` antes de TODO
+commit; releia este README depois do pull (outro agente pode ter fechado um
+item da fila). `DOING.md` marca dono/estado; este README é a **fila**.
 
-**Não confundir:** `training/` + `learn/` + `docs/` = **corpus estável** (comportamento previsto). `development/` = **backlog vivo** (trabalho que ainda não é comportamento previsto). Nunca mude comportamento congelado via `development/` sem bump + doc (regra 6).
+**Não confundir:** `training/` + `learn/` + `docs/` = corpus estável.
+`development/` = trabalho que ainda não é comportamento previsto. Mudança de
+contrato congelado nunca passa por aqui sem bump + decisão (regra 6).

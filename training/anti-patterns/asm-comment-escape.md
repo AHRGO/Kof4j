@@ -53,8 +53,21 @@ grep -a $'\r' out/Default/Main.s | grep -v 'asciz\|\.quad\|\.long\|\.byte'
 
 Se aparecer, ro is an asm-comment escape bug.
 
+## Variante: dupla interpretação em STRINGS emitidas (`\n` vs `\\n`)
+
+A mesma família atinge **strings de código**, não só comentários: um text
+block que EMITE uma linha asm contendo `\n` literal para o `as` interpretar
+(p.ex. mensagem com newline em `.asciz`) precisa escrever `\\n` no Java — o
+primeiro `\` escapa o segundo no text block, e o `.s` recebe `\n` de verdade.
+Escrever só `\n` faz o Java comer o escape e o `as` receber a linha quebra
+(no histórico: `§107-x86` deslocou a região crítica e a montagem falhou em
+código non-mine; ver known-bugs §138). Convenção viva usada em
+`RuntimeMemory.java`, `RuntimeObservability3.java`, `RuntimeValidation.java`.
+
 ## Referência
 
 - Discovered em 03/09 durante WEB002 T2/T3/Т4 (KofWebNativeE2ETest).
+- Variante de string documentada a partir da lição da Fase 1 do plano de
+  independência Spring (registro em `docs/development/DECISIONS.md`).
 - Relacionado: `fake-idioms.md` (o que NÃO existe em Kof); o comentário em
   asm essencialmente **prejudica a build**, não a semântica Kof.

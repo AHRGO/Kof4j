@@ -49,6 +49,14 @@ public final class JsMethodParser {
         int paramStart = ctx.instanceMethod ? 1 : 0;
         int paramEnd = paramStart + ctx.paramCount
                 + (ctx.captureSlots.isEmpty() ? 0 : ctx.captureSlots.size());
+        // DD-01 (bug 45): #retVal primeiro — store acontece DENTRO do try
+        // (é compiler-temp, não vira var-decl no ponto do store) e o epílogo
+        // return-finally (fora do try) precisa do binding já declarado.
+        for (int slot : ctx.localNames.keySet()) {
+            if ("#retVal".equals(ctx.rawLocalNames.get(slot)) && ctx.declared.add(slot)) {
+                predecl.add(new JsIr.JsVarDecl(ctx.localNames.get(slot), null, false));
+            }
+        }
         for (int slot : ctx.localNames.keySet()) {
             if (slot < paramEnd) continue;
             String name = ctx.localNames.get(slot);
@@ -95,8 +103,11 @@ public final class JsMethodParser {
         MethodCtx ctx = new MethodCtx(lc, method, clazz);
         String name = method.name();
         if ("<init>".equals(name)) name = "constructor";
-        if (isTopLevel) {
-            name = this.lc.jsFunctionName(name, method.parameterTypes().size());
+        if (isTopLevel || !isTopLevel && clazz != null && !"<init>".equals(method.name())) {
+            // SG-011B/§131: sobrecarregado resolve pela ASSINATURA (top-level
+            // E método de classe — o JS não tem overload; classe não-sobre-
+            // carregada mantém o nome cru, zero churn no structural dispatch).
+            name = this.lc.jsFunctionName(name, method.parameterTypes(), method.parameterTypes().size());
         }
         return new JsIr.JsFunction(name, parameterNames(ctx), parseMethodBody(ctx), isStatic, false, isTopLevel,
                 ctx.isAsync, firstKofLine(method));

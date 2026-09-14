@@ -58,6 +58,47 @@ public final class CompilerEmissionHelpers {
         }
     }
 
+    /**
+     * §121/§126 (B1, coleção): conversão ANTES do store de VALOR numa
+     * coleção pinada. Só age quando AMBOS os lados são primitivos e o
+     * widening é genuíno (emitWideningIfNeeded SÓ promove I2L/I2F/I2D/
+     * L2F/L2D/D2F — nunca trunca); senão é NO-OP (byte-idêntico ao atual,
+     * zero regressão). Rejeição/narrowing ficam com o guard SEM056 do
+     * §126 (não é daqui). Nullable é desempacotado (storage é o inner).
+     * from = tipo do ARG empilhado, to = tipo PINADO do slot.
+     */
+    static boolean coerceStoreWiden(CompilerDriver driver, List<KofOperation> ops, Type from, Type to) {
+        if (from == null || to == null) return false;
+        Type f = from instanceof Type.NullableType nt ? nt.inner() : from;
+        Type t = to instanceof Type.NullableType nt2 ? nt2.inner() : to;
+        if (!(f instanceof Type.PrimitiveType fp) || !(t instanceof Type.PrimitiveType tp)) return false;
+        if (fp.equals(tp)) return false;
+        // narrowing (Long→Int) NÃO é abençoado (§126: só widening numérico
+        // passa) — deixa o arg cru, nunca truncar silenciosamente (R6).
+        if (TypeMetrics.primWidth(fp) > TypeMetrics.primWidth(tp)) return false;
+        int before = ops.size();
+        emitWideningIfNeeded(driver, ops, fp, tp);
+        return ops.size() > before;
+    }
+
+    /**
+     * §121/§126 (B1): empilha os args de um add/set/put de coleção e aplica
+     * a coerção de widening no arg de VALOR (valIdx). Ao converter, ajusta
+     * `argTypes` p/ o tipo PINADO — o box JVM é guiado pelos paramTypes.
+     */
+    static int emitArgsCoercingValue(CompilerDriver driver, MethodCallExpr mc,
+            List<KofOperation> ops, String owner, int localIdx, List<IRLocalVariable> locals,
+            List<Type> argTypes, Type slotType, int valIdx) {
+        for (int ai = 0; ai < mc.arguments().size(); ai++) {
+            ExpressionNode arg = mc.arguments().get(ai);
+            localIdx = ExpressionLowerer.emitExpression(driver, arg, ops, owner, localIdx, locals);
+            if (ai == valIdx && coerceStoreWiden(driver, ops, argTypes.get(ai), slotType)) {
+                argTypes.set(valIdx, slotType instanceof Type.NullableType nt ? nt.inner() : slotType);
+            }
+        }
+        return localIdx;
+    }
+
     static void emitPrimNarrow(CompilerDriver driver, List<KofOperation> ops, Type from, Type to) {
         if (from.equals(to)) return;
         String fn = TypeMetrics.primitiveName(from);
@@ -105,5 +146,21 @@ public final class CompilerEmissionHelpers {
         if (!driver.needsErasureBoxing()) return;
         Type boxed = TypeMetrics.boxedTypeFor(primitive);
         ops.add(new KofCall(primitive, "kof_unbox", List.of(boxed), primitive, KofCallKind.FUNCTION));
+    }
+
+    /**
+     * §168: literal `1` no TIPO do operando — usado por `++`/`--`. Antes o
+     * incremento empurrava sempre `INT 1` e o binário era emitido com o tipo
+     * do alvo: `long x; x++` virava `LADD` sobre (long, int) → VerifyError no
+     * JVM; `double`/`float` idem. O literal tem de casar com o tipo do alvo.
+     */
+    static void emitIncrementOne(List<KofOperation> ops, Type type) {
+        String name = TypeMetrics.primitiveName(type);
+        switch (name) {
+            case "long", "Long" -> ops.add(new KofLoadLiteral(Type.PrimitiveType.LONG, 1L));
+            case "float", "Float" -> ops.add(new KofLoadLiteral(Type.PrimitiveType.FLOAT, 1.0f));
+            case "double", "Double" -> ops.add(new KofLoadLiteral(Type.PrimitiveType.DOUBLE, 1.0));
+            default -> ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 1));
+        }
     }
 }

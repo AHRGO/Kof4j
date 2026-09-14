@@ -18,27 +18,43 @@ public final class KofInterpreterObjects {
             case "toString":
                 return kofToString(ko);
             case "equals": {
+                // bug 104a: só record tem equals de conteúdo (oracle JVM);
+                // classe não-record é identidade (Thing(5).equals(Thing(5))
+                // = false no JVM — antes o Script dava true).
                 Object other = args[0];
-                if (other == ko) return 1;
-                if (!(other instanceof KofInterpreter.KofObj ok)) return 0;
-                if (!ok.clazz.name().equals(ko.clazz.name())) return 0;
-                for (IRField f : ko.clazz.fields()) {
-                    Object x = ko.fields.get(f.name());
-                    Object y = ok.fields.get(f.name());
-                    if (!fieldEquals(f.type(), x, y)) return 0;
-                }
-                return 1;
+                return objectEquals(ko, other) ? 1 : 0;
             }
-            case "hashCode": {
-                int h = 1;
-                for (IRField f : ko.clazz.fields()) {
-                    h = 31 * h + fieldHash(f.type(), ko.fields.get(f.name()));
-                }
-                return h;
-            }
+            case "hashCode":
+                return objectHash(ko);
             default:
                 return NOT_HANDLED;
         }
+    }
+
+    static boolean objectEquals(KofInterpreter.KofObj ko, Object other) {
+        if (other == ko) return true;
+        if (!ko.isRecord()) return false;
+        if (!(other instanceof KofInterpreter.KofObj ok)) return false;
+        if (!ok.isRecord() || !ok.clazz.name().equals(ko.clazz.name())) return false;
+        for (IRField f : ko.clazz.fields()) {
+            Object x = ko.fields.get(f.name());
+            Object y = ok.fields.get(f.name());
+            if (!fieldEquals(f.type(), x, y)) return false;
+        }
+        return true;
+    }
+
+    static int objectHash(KofInterpreter.KofObj ko) {
+        if (!ko.isRecord()) return System.identityHashCode(ko);
+        int h = 1;
+        for (IRField f : ko.clazz.fields()) {
+            h = 31 * h + fieldHash(f.type(), ko.fields.get(f.name()));
+        }
+        return h;
+    }
+
+    static String objectToString(KofInterpreter.KofObj ko) {
+        return kofToString(ko);
     }
 
     private static boolean fieldEquals(Type t, Object x, Object y) {
@@ -52,8 +68,8 @@ public final class KofInterpreterObjects {
         if (x == null || y == null) return Objects.equals(x, y);
         return switch (Type.canonicalPrimitiveName(pt.name())) {
             case "long" -> ((Number) x).longValue() == ((Number) y).longValue();
-            case "float" -> Float.compare(((Number) x).floatValue(), ((Number) y).floatValue()) == 0;
-            case "double" -> Double.compare(((Number) x).doubleValue(), ((Number) y).doubleValue()) == 0;
+            case "float" -> ((Number) x).floatValue() == ((Number) y).floatValue();
+            case "double" -> ((Number) x).doubleValue() == ((Number) y).doubleValue();
             default -> ((Number) x).intValue() == ((Number) y).intValue();
         };
     }
@@ -71,7 +87,7 @@ public final class KofInterpreterObjects {
         return Objects.hashCode(v);
     }
 
-    String kofToString(Object v) {
+    static String kofToString(Object v) {
         if (v == null) return "null";
         if (v instanceof KofInterpreter.KofObj ko) {
             if (ko.isRecord()) {
@@ -92,7 +108,7 @@ public final class KofInterpreterObjects {
         return String.valueOf(v);
     }
 
-    private String appendValue(Type t, Object v) {
+    private static String appendValue(Type t, Object v) {
         if (v == null) return "null";
         if (t instanceof Type.PrimitiveType pt) {
             return switch (Type.canonicalPrimitiveName(pt.name())) {

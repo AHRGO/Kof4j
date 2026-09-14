@@ -93,6 +93,22 @@ if (mc.receiver() == null && "readLine".equals(mc.methodName()) && mc.arguments(
 if (mc.receiver() == null && KofWeb.isContextFunction(mc.methodName())) {
     KofWeb.WebCall webCtx = KofWeb.contextCall(mc.methodName(), mc.arguments().size());
     if (webCtx != null) {
+        // #102 item 3: o runtime nativo só tem o T1 (listen/route + body/
+        // method/path); as demais funções de contexto não são emitidas e a
+        // chamada vazava para o linker como `undefined reference to
+        // 'kof_web_param'`. Agora é WEB001 em tempo de compilação (R6 —
+        // gap diagnosticado, nunca ld-fail).
+        if (!KofWeb.contextNativeSupported(webCtx.function()) && KofWeb.isNativeTarget(driver.target)) {
+            if (driver.currentDiagnostics != null) {
+                var pos = mc.position();
+                driver.currentDiagnostics.error(pos != null ? pos.file() : "",
+                        pos != null ? pos.line() : 0, pos != null ? pos.column() : 0,
+                        0, "web context '" + mc.methodName() + "()': not available on the "
+                                + driver.target + " driver.target yet (WEB001)",
+                        "WEB001");
+            }
+            return localIdx;
+        }
         for (ExpressionNode arg : mc.arguments()) {
             localIdx = ExpressionLowerer.emitExpression(driver, arg, ops, owner, localIdx, locals);
         }
@@ -154,11 +170,34 @@ if ("listOf".equals(mc.methodName()) && mc.receiver() == null) {
     Type listType = new Type.ClassType("kof", "List", List.of(elemType));
     ops.add(new KofCall(listType, "kof_list_new", List.of(), listType, KofCallKind.FUNCTION));
     for (ExpressionNode arg : mc.arguments()) {
+        Type argType = ExpressionTyper.inferExprType(driver, arg, locals);
+        // §126/§121/§144 (B1c): o caminho literal NÃO passava por
+        // pollutesPinned nem pela coerção → `listOf(1, 2.5)` (Double em
+        // Int-pinado) virava VerifyError no JVM, `listOf(1L, 2)` (widening)
+        // quebrava igual. Mesma disciplina do add: rejeitar o que quebra,
+        // converter o widening abençoado.
+        if (CollectionWrites.pollutesPinned(elemType, argType) && driver.currentDiagnostics != null) {
+            var pos = mc.position();
+            driver.currentDiagnostics.error(pos != null ? pos.file() : "",
+                    pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0,
+                    "listOf: elemento " + CollectionWrites.typeNameFor(argType)
+                            + " não casa com o tipo da lista ("
+                            + CollectionWrites.typeNameFor(elemType)
+                            + ") — coleções Kof são homogêneas", "SEM056");
+            return localIdx;
+        }
         ops.add(new KofDup());
         localIdx = ExpressionLowerer.emitExpression(driver, arg, ops, owner, localIdx, locals);
-        ops.add(new KofCall(listType, "kof_list_add",
-                List.of(ExpressionTyper.inferExprType(driver, arg, locals)), Type.PrimitiveType.VOID, KofCallKind.INSTANCE));
+        Type paramT = argType;
+        if (CompilerEmissionHelpers.coerceStoreWiden(driver, ops, argType, elemType)) {
+            paramT = elemType instanceof Type.NullableType nt ? nt.inner() : elemType;
+        }
+        ops.add(new KofCall(listType, "kof_list_add", List.of(paramT),
+                Type.PrimitiveType.VOID, KofCallKind.INSTANCE));
     }
+    return localIdx;
+}
+if (isCrossMissingConcurrencyBuiltin(driver, mc, locals)) {
     return localIdx;
 }
 if (mc.receiver() == null && ("cancel".equals(mc.methodName())
@@ -355,11 +394,29 @@ if ("mapOf".equals(mc.methodName()) && mc.receiver() == null) {
     ops.add(new KofCall(mapType, "kof_map_new", List.of(), mapType, KofCallKind.FUNCTION));
     // pares: (k0,v0), (k1,v1), ...
     for (int ai = 0; ai + 1 < mc.arguments().size(); ai += 2) {
-        ops.add(new KofDup());
         Type kType = ExpressionTyper.inferExprType(driver, mc.arguments().get(ai), locals);
         Type vType = ExpressionTyper.inferExprType(driver, mc.arguments().get(ai + 1), locals);
+        // §126/§144 (B1b-c): literal do mapOf também é escrita — rejeitar o
+        // que quebra (String↔não-String, narrowing numérico; M3 dava mapa
+        // heterogêneo no JVM e truncado no Native).
+        if (CollectionWrites.pollutesPinned(valueType, vType) && driver.currentDiagnostics != null) {
+            var pos = mc.position();
+            driver.currentDiagnostics.error(pos != null ? pos.file() : "",
+                    pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0,
+                    "mapOf: valor " + CollectionWrites.typeNameFor(vType)
+                            + " não casa com o tipo do mapa ("
+                            + CollectionWrites.typeNameFor(valueType)
+                            + ") — coleções Kof são homogêneas", "SEM056");
+            return localIdx;
+        }
+        ops.add(new KofDup());
         localIdx = ExpressionLowerer.emitExpression(driver, mc.arguments().get(ai), ops, owner, localIdx, locals);
         localIdx = ExpressionLowerer.emitExpression(driver, mc.arguments().get(ai + 1), ops, owner, localIdx, locals);
+        // §121/§143 (B1): widening abençoado no VALOR (M1: put(2) em Map<_,Long>
+        // dava CCE no get — Integer salvo sob pin Long).
+        if (CompilerEmissionHelpers.coerceStoreWiden(driver, ops, vType, valueType)) {
+            vType = valueType instanceof Type.NullableType nt2 ? nt2.inner() : valueType;
+        }
         // VOID no put: o map duplicado continua na pilha para o próximo par
         ops.add(new KofCall(mapType, "kof_map_put", List.of(kType, vType),
                 Type.PrimitiveType.VOID, KofCallKind.INSTANCE));
@@ -385,5 +442,35 @@ if ("setOf".equals(mc.methodName()) && mc.receiver() == null) {
         return ExpressionPrintLowerer.lower(driver, mc, ops, owner, localIdx, locals);
     }
     return -1;
+    }
+
+    // #91 (R6): nat/NativeRiscvSpawn.java emite apenas kof_spawn_result,
+    // kof_spawn, kof_await e kof_spawn_join_all. Os auxiliares de concorrência
+    // (poll/done/cancel/cancelled/selectAny/awaitTimeout) não existem nos
+    // alvos cruzados — sem gate, a call era emitida e o erro só aparecia no
+    // link como símbolo indefinido (mesmo padrão do bug 59). Diagnóstico
+    // CONC001 em compile-time, nunca link silencioso.
+    private static boolean isCrossMissingConcurrencyBuiltin(CompilerDriver driver,
+            MethodCallExpr mc, List<IRLocalVariable> locals) {
+        if (driver.target != Target.NATIVE_RISCV64 && driver.target != Target.NATIVE_AARCH64) {
+            return false;
+        }
+        if (mc.receiver() != null) return false;
+        String mn = mc.methodName();
+        boolean builtin = switch (mn) {
+            case "poll", "done", "cancel", "cancelled", "selectAny", "awaitTimeout" -> true;
+            default -> false;
+        };
+        if (!builtin || driver.findLocalVar(mn, locals) != null) return false;
+        if (driver.currentDiagnostics != null) {
+            driver.currentDiagnostics.error(mc.position() != null ? mc.position().file() : "",
+                    mc.position() != null ? mc.position().line() : 0,
+                    mc.position() != null ? mc.position().column() : 0,
+                    0,
+                    mn + ": concurrency helpers are not available on the "
+                            + driver.target.nativeArch() + " native target yet (CONC001)",
+                    "CONC001");
+        }
+        return true;
     }
 }

@@ -29,6 +29,26 @@ public final class JvmStringCoreRuntime {
                 public static float kof_string_to_float(String s) {
                     return Float.parseFloat(s.trim());
                 }
+
+                // S13b (plan-stdlib-expansion §2, P0): parse com default —
+                // briefing §43 ("falha de parse = OrNull/OrDefault"). Mesmo
+                // contrato do parse (JDK + trim); falha DEVOLVE o default
+                // (nunca lança). Paridade byte-idêntica com os wrappers asm
+                // x86 (RuntimeStringParseOrDefault) e riscv (B34).
+                public static int kof_string_to_int_or_default(String s, int def) {
+                    try { return Integer.parseInt(s.trim()); }
+                    catch (RuntimeException e) { return def; }
+                }
+
+                public static long kof_string_to_long_or_default(String s, long def) {
+                    try { return Long.parseLong(s.trim()); }
+                    catch (RuntimeException e) { return def; }
+                }
+
+                public static double kof_string_to_double_or_default(String s, double def) {
+                    try { return Double.parseDouble(s.trim()); }
+                    catch (RuntimeException e) { return def; }
+                }
 """;
     }
 }

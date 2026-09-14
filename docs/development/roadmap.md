@@ -1,7 +1,10 @@
 # Kof — Roadmap de Longo Prazo
 
-**Última atualização:** 2 de setembro de 2026
-**Versão:** 0.2.6-beta
+**Última atualização:** 13 de setembro de 2026 (fusão de planos: §23 = plano
+de implementação ÚNICO (ex-`ACTION_PLAN`+`IMPLEMENTATION_PLAN`); cluster de
+migração consolidado — `LEGACY_IR`+`DIFFERENTIAL_TESTING` fundidos em
+`LEGACY_MIGRATION.md`)
+**Versão:** 0.4.0-beta (branch ativa `beta-0.4.0`)
 
 ---
 
@@ -28,7 +31,7 @@ Princípios:
 ### KofAndroid — Android
 
 Kof compilado para aplicativos Android (APK/AAB). Design completo em
-[docs/targets/KOFANDROID.md](targets/KOFANDROID.md).
+[docs/targets/KOFANDROID.md](../targets/KOFANDROID.md).
 
 Objetivos:
 - mesmo código, mesma intenção: `Window(...)` abre um app de verdade;
@@ -78,7 +81,7 @@ mark-sweep pendente — auto-GC desativado após hang, memória devolvida só no
 `pthread_join` com allocator thread-safe (futex) — 31/08; FP real em XMM —
 FLT001; JSON objetos/records + arrays FP — JSN001/002/003; SQLite nativo `.so`
 direto; MySQL wire protocol WIP) + `native.risc` (riscv64: codegen real 02/09 — asm puro + qemu, NATIVE002
-parcial) + `native.arm` (aarch64: toolchain + qemu; codegen ainda placeholder)
+parcial) + `native.arm` (aarch64: herda do riscv via tradutor — `NativeArchEmitter.emitAarch64`, 39/39 E2E sob qemu) *(sincronizado 12/09: a linha "codegen ainda placeholder" apodreceu — `NativeAarch64E2ETest` executa sob qemu onde há toolchain; guard honesto pula em host sem cross)*
 
 ### KofJS — Web
 
@@ -128,7 +131,7 @@ kof run arquivo.kf
 
 A implementação interna poderá evoluir para interpretação, compilação incremental, JIT ou execução híbrida, mas a decisão será tomada posteriormente com base em benchmarks.
 
-Estado atual: ✅ implementado (0.2.6-beta): `kof script app.kf [--watch]` + `kof repl` (statements de topo → `main()`, `var`/`val` de topo → `KofScriptGlobals`; Windows SIGPIPE fix). **0.3.0-beta: execução direta por interpretação** — `KofInterpreter` roda a MESMA IR otimizada do frontend (sem emitir bytecode, sem fork de JVM; paridade por construção com o backend JVM, provada em teste). `KofCcompiler` (`kof c`) compila C subset → ELF x86_64 nativo (`int` globals, `void` funcs, `if`/`while`/`*(int*)`/`&`).
+Estado atual: ✅ implementado: `kof script app.kf [--watch]` + `kof repl` (statements de topo → `main()`, `var`/`val` de topo → `KofScriptGlobals`; Windows SIGPIPE fix). **0.3.0-beta: execução direta por interpretação** — `KofInterpreter` roda a MESMA IR otimizada do frontend (sem emitir bytecode, sem fork de JVM; paridade por construção com o backend JVM, provada em teste). `KofCcompiler` (`kof c`) compila C subset → ELF x86_64 nativo (`int` globals, `void` funcs, `if`/`while`/`*(int*)`/`&`).
 
 ---
 
@@ -207,11 +210,21 @@ targets — 30/08)**, **`kof.http` retry/circuit breaker (JVM+JS — 30/08)**,
 concorrência (`spawn` + `await`/`Handle<T>` — JVM virtual threads, Native
 pthread 31/08, JS sequencial), `List map/filter/reduce`, `Box<T>`, pattern
 matching e `String?` implementados (0.2.6-beta).
-Faltam: HTTP client no Native (HTTP002), RPC (gRPC — ver abaixo),
-tracing (OpenTelemetry), web no Native/JS (WEB002/WEB001),
-MySQL nativo completo, RISC/ARM codegen, GC mark-sweep.
+Faltam (sincronizado 12/09 contra `backend-parity.md` — a lista abaixo era a
+de 31/08; HTTP002/MySQL/cross-codegen FECHARAM desde então):
+~~HTTP client no Native (HTTP002)~~ ✅ fechado (Native HTTP/1.1 asm —
+`backend-parity.md` §kof.http; https→throw declarado), RPC (gRPC — ver
+abaixo), tracing (OpenTelemetry), web residual no Native/JS
+(~~WEB002/WEB001~~ **base real nos dois**: server Native `KofWebNativeE2ETest`
+4/4 + GraalJS HttpServer `bc577aa`; residual TLS/ws/sse/path-params),
+~~MySQL nativo completo~~ ✅ wire protocol + prepared statements binários 03/09
+(`KofDbE2E` `nativeMysqlWireProtocol`/`nativeMysqlPreparedBinary`),
+~~RISC/ARM codegen~~ ✅ core completo (riscv64 real 02/09; aarch64 herda via
+tradutor; 39+39 E2E sob qemu — faces de paridade avançada = NATIVE002),
+GC mark-sweep (G-0 riscv ✅ `356f33b9`; decomposição G-1..G-5 em
+`native-multiarch.md`).
 (kof.mq pub/sub + queue = 3 targets — MQ001 fechado 01/09)
-Ver `docs/plan-spring-independence.md` (Fases 5-14).
+Ver `docs/development/DECISIONS.md` §D-SPRING (Fases 5-14).
 
 **gRPC no `kof.web` (novo, 31/08 — planejado)**: comunicação gRPC como
 primeira classe na plataforma web — `app.grpc { service ... }` com stubs
@@ -220,13 +233,16 @@ gerados a partir de `.proto`, server streaming + unary sobre HTTP/2 no JVM
 Escopo: Fase web (mesma família de `app.ws`/`sse.*`); codegen `.proto` → IR
 Kof; parity JVM primeiro, Native/JS depois.
 
-### Concorrência — fila residual (0.2.6-beta, 31/08)
+### Concorrência — fila residual (atualizado 13/09 — era "0.2.6-beta, 31/08")
 
-Estado 0.2.6-beta: concorrência real **JVM** (virtual threads) + **Native**
+Estado 13/09: concorrência real **JVM** (virtual threads) + **Native**
 (pthread, CONC001 fechado 31/08: spawn/await + `done`/`poll`/`cancel`/
 `cancelled`/`selectAny` — cancel cooperativo por TID, selectAny por polling
 1ms) + **JS** ✅ 03/09 (CONC003 fechado — stmt/expr/cancel/selectAny com
-async/await/Promise reais). ⚠️ Bug pré-existente separado: `spawn→await→spawn`
+async/await/Promise reais) + **supervisão OTP** (`kof.supervisor`: 1ª fatia
+11/09 núcleo JVM+Script, **S2-JVM 13/09** `startAll`/`lacoUnico` — ver
+`planning-otp-supervision.md`; Native=OTP001 §129, JS=OTP002 §132 gates
+honestos). ⚠️ Bug pré-existente separado: `spawn→await→spawn`
 corrompe a pilha da main (SIGSEGV no próximo `pthread_create`); reproduz sem
 o feature de cancel/select (suspeito: `pthread_join` no `kof_await`).
 
@@ -245,7 +261,7 @@ o feature de cancel/select (suspeito: `pthread_join` no `kof_await`).
 Critério de "100%": os três targets executando os mesmos programas
 concorrentes com golden diff vazio (mesmo padrão da métrica 1 do plano).
 
-### Linguagem — fila residual (P1/P2, 0.2.6-beta)
+### Linguagem — fila residual (P1/P2, atualizado 13/09)
 
 | Item | Status | Plano |
 |------|--------|-------|
@@ -280,7 +296,7 @@ security {
 }
 ```
 
-Estado atual: ✅ implementado (v1, docs/security.md)
+Estado atual: ✅ implementado (v1, docs/stdlib/security.md)
 
 **Implementado (0.2.6-beta, inclui 0.0.5):**
 - `kof.security` com API idiomática: `passwords`, `crypto`, `jwt`,
@@ -294,7 +310,7 @@ Estado atual: ✅ implementado (v1, docs/security.md)
 - Gaps de target com diagnóstico claro (SECN001/002/003/004, HTTP002).
 
 **Pendente:**
-- OAuth2/OIDC client (arquitetura preparada em docs/security.md §2.3);
+- OAuth2/OIDC client (arquitetura preparada em docs/stdlib/security.md §2.3);
 - audit logging;
 - integração com database (planejado).
 
@@ -344,7 +360,7 @@ sql """
 Princípio: "Abstração quando ajuda, SQL quando precisa."
 
 Estado atual: 🟡 parcial — **nível 0-2 e 4 implementados** (`kof.db` +
-`kof.orm`, ver `docs/DATABASE_VISION.md`): conexão idiomática
+`kof.orm`, ver `docs/stdlib/DATABASE_VISION.md`): conexão idiomática
 (JDBC no JVM; SQLite nativo via `.so`; MySQL handshake `kof_db_mysql_scramble` 27/08), SQL com prepared
 statements, transactions, `entity` declarativo em compile-time, CRUD
 (`create/save/find/all/where/delete/count`), `orm.where` por campo + operadores, `saveAll` batch, `page`/`count`/`deleteAll`,
@@ -626,7 +642,7 @@ contratos estabilizarem.
 - `kof serve` com handlers top-level (`handle(...)`) ✅;
 - JSON serialization (`json.encode`/`json.decode`) ✅;
 - 8 testes E2E in-process (sockets reais) ✅;
-- Documentação (`docs/http.md`) ✅;
+- Documentação (`docs/stdlib/http.md`) ✅;
 - Path parameters (`:id`), query, headers, middleware `app.use` ✅
   (stack `web.app()` — Fase 1 do plano Spring independence);
 - WebSocket/SSE + hardening (`app.configure`/`app.stats`, connection cap,
@@ -639,7 +655,7 @@ contratos estabilizarem.
 - security defaults / audit.
 
 > Auditoria do ecossistema: a matriz de cobertura, gaps (G1-G12),
-> prioridades e estratégia vivem em `docs/ecosystem-coverage.md`.
+> prioridades e estratégia vivem em `docs/bugs-and-gaps/ecosystem-coverage.md`.
 > Ordem de implementação P0: diagnóstico de target (G7) → `kof.test`
 > estruturado (G6) → `kof.config` (G3) → `kof.http` client (G2) →
 > `kof.database` (G1) → validation (G4) → observability (G5) →
@@ -680,7 +696,7 @@ contratos estabilizarem.
 - `Parser.java` / `SemanticAnalyzer.java` / `JvmBackend.java` → sub-parsers.
 
 Critério de aceite: `cloc`/`wc -l` por classe — nenhuma acima de 500.
-Detalhes e tabela de tamanhos: `docs/complexity-audit.md` → "Regra de
+Detalhes e tabela de tamanhos: `docs/audits/complexity-audit.md` → "Regra de
 arquitetura — limite de 500 linhas por classe".
 
 ---
@@ -707,10 +723,10 @@ O Kof é uma plataforma distribuível, não apenas um JAR:
 
 - distribuição autocontida (compiler, CLI, runtime, stdlib, tooling, editor support, JDK 21 embutido);
 - OpenJDK embutido no pacote oficial (Temurin 21, Tooling API Level 21);
-- versionamento centralizado (`VERSION` 0.2.6-beta → pom/properties via `scripts/bump-version.sh`);
+- versionamento centralizado (`VERSION` 0.4.0-beta → pom/properties via `scripts/bump-version.sh`);
 - releases por 2 jobs (`release.yml`: `test-and-bump` exporta `bump_sha` → `package-and-release` checkeia o commit de bump + sanity check de versão) por push na `main`, por plataforma linux-x86_64 / macos-arm64 / windows-x86_64 (testes 819 → bump → package 3 plataformas → GitHub Release);
 - `scripts/package.sh` PASS (layout dist + tar.gz/zip + SHA256SUMS + jars), golden 16/16, integration 9/9;
-- editor support oficial: grammar TextMate + LSP (hover/completion + diagnostics reais);
+- editor support oficial: grammar TextMate + LSP (hover/completion + diagnostics reais) + `kof editor install` (VS Code/Neovim/Vim/Emacs/Geany/Nano + IntelliJ degrau-10 honesto 13/09: filetype XML + External Tools + README LSP4IJ, sem plugin — issue #1);
 - `kof build/run/serve/check/test/script/repl/c/fmt/config/bench/profile/inspect/debug/info/lsp/install/version` PASS (18 comandos; `fmt` e `config gen` 31/08).
 
 Referências: `docs/distribution/`, `docs/tooling/`.
@@ -754,8 +770,8 @@ source location por op, JVM LineNumberTable/SourceFile/LocalVariableTable
 gerados e **`kof debug` MVP funcional** (DAP over stdio + JDWP cru: launch,
 breakpoints por linha Kof, `stopped`, stack trace com funções/linhas Kof,
 continue, disconnect). Fases 4-7 (Kof Editor, Native DWARF, JS source
-maps, avançado) planejadas. Ver: `docs/debugger-architecture.md`,
-`docs/debugging.md`, `docs/debug-adapter.md`.
+maps, avançado) planejadas. Ver: `docs/debugging/debugger-architecture.md`,
+`docs/debugging/debugging.md`, `docs/debugging/debug-adapter.md`.
 
 ## 20. Princípios de Design
 
@@ -782,13 +798,15 @@ maps, avançado) planejadas. Ver: `docs/debugger-architecture.md`,
 Iniciativa de longo prazo para analisar, recuperar, traduzir e modernizar
 sistemas legados para Kof — **fora do escopo 0.0.x**.
 
-- Documento central: `LEGACY_MIGRATION.md`
+- Documento central: `LEGACY_MIGRATION.md` (§4 = Legacy Semantic IR/Confidence;
+  §8 = teste diferencial + migration report)
 - Componentes planejados: `kof inspect`, `kof decompile`, `kof translate`,
   `kof migrate`, `kof compare`
 - Arquitetura: `Legacy Input → Legacy Semantic IR → Kof AST → Kof IR → Backend`
 - Java é origem suportada, nunca representação intermediária obrigatória
-- Documentos relacionados: `DECOMPILER.md`, `TRANSLATOR.md`, `LEGACY_IR.md`,
-  `DIFFERENTIAL_TESTING.md`
+- Documentos relacionados: `DECOMPILER.md`, `TRANSLATOR.md` (os antigos
+  `LEGACY_IR.md` e `DIFFERENTIAL_TESTING.md` foram fundidos no central 13/09;
+  `IMPLEMENTATION_PLAN.md`/`ACTION_PLAN.md` viraram o §23 deste roadmap)
 
 **Não implementar nada desta seção antes da consolidação da linguagem,
 compilador, runtime, stdlib e tooling.**
@@ -801,7 +819,7 @@ Visão de longo prazo — Kof como plataforma universal (uma linguagem para
 aplicações **e** sistemas, infraestrutura, automação, dados, segurança e
 ciência) **sem** destruir a simplicidade da linguagem.
 
-- Documento central: `docs/future/PLAN-UNIVERSAL-PLATFORM.md` (arquitetura,
+- Documento central: `docs/development/future/PLAN-UNIVERSAL-PLATFORM.md` (arquitetura,
   **não** ordem de implementação)
 - Estágios por capacidade/maturidade: `FOUNDATION ✅` → `SYSTEMS` (em
   andamento) → `AUTOMATION` → `INFRAESTRUTURA` → `DATA` → `SECURITY` →
@@ -819,4 +837,88 @@ ciência) **sem** destruir a simplicidade da linguagem.
 
 **Não implementar nada desta seção antes do estágio SYSTEMS fechar**
 (paridade de gaps, GC mark-sweep, package manager básico — ver
-`docs/plan-platform-completion.md` P0–P5).
+`docs/development/roadmap.md` §23 (ex-plan-platform-completion) P0–P5).
+
+---
+
+## 23. Plano de Implementação Consolidado (Tiers 0–12)
+
+> **Este é o ÚNICO plano de implementação ordenado do repo.** Funde
+> `ACTION_PLAN.md` e `IMPLEMENTATION_PLAN.md` (apagados 13/09 — ~85% do
+> conteúdo era a MESMA tabela de fases/tiers entre os dois, e as duas
+> divergiam do código). Toda fase aqui move o doc correspondente de
+> `future/`→`docs/` quando ganha código. Dificuldade: `E` fácil · `M`
+> médio · `H` alto · `R` pesquisa.
+>
+> **Regra transversal (R12):** nenhum item de plano futuro é ação sobre o
+> estado atual; frentes novas (AUTOMATION/DATA/SCI/BIO) não abrem antes do
+> estágio SYSTEMS (§21/§22) fechar. Non-goals (§16/§22): sem macros abertas,
+> type-classes, ownership, effect system, cripto caseira, reimplementar
+> Arrow/BLAS/ML; sem "Kali em Kof"; sem motor SQL próprio.
+
+### TIER 0 — Guardrails e processos (E, ≈ zero) ✅ 01/09
+
+R1/R5/R6/R7/R9–R12 como invariantes (AGENTS.md + §22); convenção de gaps por
+domínio (`INFRA00x`/`DATA00x`/`SCI00x`/`BIO00x`/`SECPQ`) + matriz de paridade;
+tiers `stable`/`experimental` (`docs/backend-parity.md`).
+
+### TIER 1 — Fechamento do estágio SYSTEMS (M–H, pré-requisito p/ Tiers 6+)
+
+| # | Item | Estado medido (13/09) |
+|---|------|----------------------|
+| 1.1 | Gaps de paridade (`HTTP002`, `WEB001/002`, `CONC003`, `LOG001`, `MQ001`, `SCHED001`/`TIME001`, `SECN002`, `OBS002`, `MEDIA`) | 🟡 em progresso — JS web server base `abbde60b`; residual por `backend-parity.md` |
+| 1.2 | GC mark-sweep automático no Native | 🟡 riscv `356f33b9` ✅; x86 decomposto G-1..G-5 (`native-multiarch.md`) |
+| 1.3 | Query DSL tipada (`User.query {}`) | ✅ 01/09 (`KofOrmE2ETest`) |
+| 1.4 | Package manager MVP (`kofdeps`) | 🟡 `kof deps` + resolução Maven Central; transitivos/registry pendentes |
+| 1.5 | Tracing/OpenTelemetry + lifecycle `application{}` | 🟡 spans W3C + lifecycle ✅ 3 targets; OTel export pendente |
+
+### TIER 2 — Fundações de compilador (M) — **status corrigido contra o código**
+
+> A versão antiga marcava 2.1.5 e 2.2.2 como "✅"; **não são** (ver abaixo —
+> auditado em HEAD 13/09, não de memória).
+
+| # | Item | Estado REAL medido |
+|---|------|--------------------|
+| 2.1.1–2.1.3 | Sintaxe `extern` + type-check + gaps `FFI001`/`FFI002` (nunca drop silencioso) | ✅ `Parser.java:192` (PARSE090), `ExternalFunctionNode`, `FfiE2ETest` |
+| 2.1.4 | Binding **JVM** (FFM `java.lang.foreign`) | ✅ `abs`/`atoi`(String→Int)/`sqrt`(Double→Double) reais via FFM |
+| 2.1.5 | Binding **Native** (`dlsym`) | ❌ **gap honesto `FFI001`** — `dlopen` segfaulta no binário cru (sem init glibc); NÃO é "✅ real" |
+| 2.1.6 | Marshalling struct/array | 🟡 String↔Int, Double↔Double (JVM); struct/array completo pendente |
+| 2.1.7 | JS: gap `FFI002` | ✅ |
+| 2.2.1 | Inventário do codegen implícito (4 pontos: runtime `.source()`, `desugarTests`, `desugarApplication`, entity→record+schema) | ✅ os 4 existem (`CompilerPipeline:295-296`) |
+| 2.2.2 | **Hook formal `CodegenStep`** | ❌ **NÃO existe no HEAD** — `d1c56bad` adicionou, a pipeline voltou a chamar os `desugar*` direto; o "✅" antigo era sobre-claim da branch `planning-future` |
+| 2.2.3 | Migrar DDL/runner p/ o hook formal | ❌ bloqueado por 2.2.2 |
+| 2.2.4 | Base de `infra "prod" {}` (codegen sobre records) | ❌ não iniciado (zero parse de `infra`) |
+| 2.3.1 | Constant-folding de constantes de domínio | ✅ `"a"+"b"→"ab"` (`OptimizerConstantFold:100`) |
+| 2.3.2 | Detecção de ciclo no grafo `infra` em compile-time | ❌ bloqueado por 2.2.4 |
+| 2.4.1 | Scoped resources (RAII leve sobre `try/finally`) | 🟡 só design (`future/scoped-resources-plan.md`); sintaxe `using` gated por bump |
+| 2.5 | Variance / sealed | ✅ **DECIDIDO ADIAR** — `enum`+`record`/`interface` cobrem o caso; abre só com pipeline científica (bump) |
+
+### TIER 3–5 — Plataforma de migração legado (Fases A–H) ✅ código+testes
+
+`kof inspect/decompile/translate/compare/migrate` no CLI (`Main.java`);
+Legacy Semantic IR com Confidence Model (5 níveis) + "nunca inventar". Prova
+medida 13/09 em HEAD: **Decompile 57, Translate 33, Compare 6, Migrate 3**
+(Translate tem 1 célula vermelha — `qualifiedLocalTypeTranslates`, WIP da lane
+`.22`, alheia a este plano). Recuperação de corpo de método ainda parcial
+(joins estruturais = Fase C, o maior gargalo medido: 2452 métodos). O
+histórico técnico detalhado vive em `LEGACY_MIGRATION.md` + `DECOMPILER.md`
+(§7) — **não duplicar aqui**; esta tabela só dá a ordem.
+
+### TIER 6–12 — Plataforma universal (não iniciados; regidos por `future/PLAN-UNIVERSAL-PLATFORM.md`)
+
+| Tier | Estágio | Escopo (uma linha) |
+|------|---------|--------------------|
+| 6 | AUTOMATION | `kof.workflow`/`batch`/`shell`/`ssh` — jobs como código Kof, nunca YAML/bash |
+| 7 | INFRAESTRUTURA | `infra "prod" {}` (codegen, não HCL) + reconciliation loop — deps 1.4, 2.2 |
+| 8 | DATA | `dataframe` tipado + Arrow/Parquet/estatística **por FFI** (wrapper, nunca reimplementar) — deps 2.1, pkg manager |
+| 9 | SECURITY | S2 `Secret`/`KeyHandle` · S3 `keys.*` · S4 assimétrica · S5 **PQC** (`liboqs`, NIST) · S6 híbrido · S7 `secure.channel`; só FFI a lib auditada |
+| 10 | SCIENTIFIC | BLAS/LAPACK/GPU/MPI **por FFI**; SIMD Native (pesquisa); deps 2.1, 2.4, 1.2 |
+| 11 | BIO | `kof-bio` (pacote oficial): FASTA/FASTQ/VCF + alinhamento via FFI/CLI — deps 6, 8, 10 |
+| 12 | UNIVERSAL | integração total + pkg manager maduro + LSP/debug/profiler por domínio; **teste final: o core da linguagem quase não cresceu** |
+
+### Critical path (o que bloqueia o quê)
+
+`Legacy-Class-File-Parser` → todos os Tiers 3–5 · `Decompiler-Structural` →
+`Diff-Framework` → `Migration-Reports` · `2.1 FFI` → Tiers 8/9/10 (tudo por
+FFI) · `2.2 codegen hook` → `infra`/gRPC stubs · **TIER 1 (SYSTEMS) fecha
+antes de QUALQUER Tier 6+ (R12).**

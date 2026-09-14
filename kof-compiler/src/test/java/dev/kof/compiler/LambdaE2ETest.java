@@ -273,4 +273,138 @@ class LambdaE2ETest {
         Files.writeString(source, DECLARED_FN_TYPE_PARAM);
         runNative(source, tempDir.resolve("out"), "10");
     }
+
+    // bug 127: cast para TIPO-FUNÇÃO (`x as () -> Int` / `as (Int) -> Int`)
+    // gerava `checkcast` para a classe inexistente "?" no JVM (VerifyError /
+    // CCE). O alvo é a interface SAM sintética da assinatura.
+    private static final String CAST_FN_TYPE = """
+            main() {
+                var l = listOf(() -> 5)
+                var g = l.get(0) as () -> Int
+                println(g() == 5)
+                var o: Object = (x: Int) -> x - 3
+                var h = o as (Int) -> Int
+                println(h(10))
+            }
+            """;
+
+    @Test
+    void castToFunctionTypeJvm(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, CAST_FN_TYPE);
+        runJvm(source, tempDir.resolve("out"), "true\n7");
+    }
+
+    @Test
+    void castToFunctionTypeNative(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, CAST_FN_TYPE);
+        runNative(source, tempDir.resolve("out"), "true\n7");
+    }
+
+    // bug 155: tipo-função como ARGUMENTO GENÉRICO declarado
+    // (`List<(Int) -> Int>`, `listOf<(Int) -> Int>()`). O parser de type-args
+    // concatenava os tokens crus sem espaços → "(Int)->Int", que `Type.of` não
+    // reconhece → ClassType com nome inválido → ClassFormatError no JVM e
+    // COMPILE-FAIL/lixo nos outros 3 targets.
+    private static final String DECLARED_FN_TYPE_LIST = """
+            main() {
+                List<(Int) -> Int> l = listOf((x: Int) -> x + 1)
+                println(l.get(0)(5))
+                var fs = listOf<(Int) -> Int>()
+                fs.add((x: Int) -> x * 2)
+                println(fs.get(0)(5))
+            }
+            """;
+
+    @Test
+    void declaredFunctionTypeListJvm(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, DECLARED_FN_TYPE_LIST);
+        runJvm(source, tempDir.resolve("out"), "6\n10");
+    }
+
+    @Test
+    void declaredFunctionTypeListNative(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, DECLARED_FN_TYPE_LIST);
+        runNative(source, tempDir.resolve("out"), "6\n10");
+    }
+
+    // §156: lista HETEROGÊNEA de lambdas com a MESMA assinatura —
+    // o elemento carregava o className da primeira lambda concreta
+    // (Lambda0) e o `kof_list_get` fazia checkcast p/ ela (CCE quando o
+    // elemento era Lambda1). O elemento agora desce sem className
+    // (dispatch pela interface SAM sintética, bug 8).
+    private static final String HETEROGENEOUS_LAMBDA_LIST = """
+            main() {
+                var l = listOf((x: Int) -> x + 1, (x: Int) -> x * 2)
+                println(l.get(1)(5))
+                println(l.get(0)(5))
+                for (var f in l) { println(f(10)) }
+            }
+            """;
+
+    @Test
+    void heterogeneousLambdaListJvm(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, HETEROGENEOUS_LAMBDA_LIST);
+        runJvm(source, tempDir.resolve("out"), "10\n6\n11\n20");
+    }
+
+    @Test
+    void heterogeneousLambdaListNative(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, HETEROGENEOUS_LAMBDA_LIST);
+        runNative(source, tempDir.resolve("out"), "10\n6\n11\n20");
+    }
+
+    // #119: `g` chama `f` sem receiver (`f(y)`) — uma variável local de tipo
+    // função capturada do escopo externo, não uma função top-level. O parser
+    // não distingue as duas formas de MethodCallExpr, e CompilerCaptures só
+    // tratava IdentifierExpr como candidato a captura. `g` perdia `f` como
+    // campo da classe sintética; no JS isso vira `ReferenceError: f is not
+    // defined` em runtime (JVM/Native falhavam por símbolo não resolvido).
+    private static final String NESTED_LAMBDA_BARE_CALL_CAPTURE = """
+            main() {
+                var f = (x: Int) -> x + 1
+                var g = (y: Int) -> f(y) * 2
+                println(g(3))
+            }
+            """;
+
+    @Test
+    void nestedLambdaBareCallCaptureJvm(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, NESTED_LAMBDA_BARE_CALL_CAPTURE);
+        runJvm(source, tempDir.resolve("out"), "8");
+    }
+
+    @Test
+    void nestedLambdaBareCallCaptureNative(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, NESTED_LAMBDA_BARE_CALL_CAPTURE);
+        runNative(source, tempDir.resolve("out"), "8");
+    }
+
+    @Test
+    void nestedLambdaBareCallCaptureJs(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, NESTED_LAMBDA_BARE_CALL_CAPTURE);
+        Path outDir = tempDir.resolve("out-js");
+        CompilationResult result = driver.compile(source, outDir, Target.JS);
+        assertTrue(result.success(), "JS compile failed: " + result.diagnostics().getDiagnostics());
+        Path entry;
+        try (var s = Files.walk(outDir)) {
+            entry = s.filter(p -> p.getFileName().toString().equals("Default.mjs"))
+                    .findFirst().orElseThrow();
+        }
+        try (java.io.ByteArrayOutputStream buf = new java.io.ByteArrayOutputStream()) {
+            int ec = dev.kof.runtime.KofJsRunner.run(entry, buf,
+                    java.io.InputStream.nullInputStream(), new java.io.ByteArrayOutputStream());
+            String output = buf.toString(java.nio.charset.StandardCharsets.UTF_8).trim();
+            assertEquals(0, ec, "JS exit code, output: " + output);
+            assertEquals("8", output, "JS output");
+        }
+    }
 }

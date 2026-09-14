@@ -60,10 +60,33 @@ public class ExpressionParser {
         while (isBinaryOp(ctx) && precedence(ctx, ctx.peek().value()) >= minPrec) {
             String op = ctx.advance().value();
             int prec = precedence(ctx, op);
-            ExpressionNode right = ExpressionParser.parseBinary(ctx, prec + 1);
+            // `as` recebe um TIPO à direita. Um tipo-função (`() -> Int`,
+            // `(Int, String) -> Bool`) começa com `(` e seria lido como lambda
+            // por parsePrimary; aqui é parseado como type-ref (bug 127).
+            ExpressionNode right = ("as".equals(op) && looksLikeFunctionTypeRef(ctx))
+                    ? new IdentifierExpr(ctx.pos(), TypeParser.parseTypeRef(ctx))
+                    : ExpressionParser.parseBinary(ctx, prec + 1);
             left = new BinaryExpr(ctx.pos(), op, left, right);
         }
         return left;
+    }
+
+    /** `(` params `)` `->` tipo — o operando de tipo de um cast `as`. */
+    static boolean looksLikeFunctionTypeRef(ParseContext ctx) {
+        if (!ctx.check(TokenType.LPAREN)) return false;
+        int i = ctx.pos + 1;
+        int depth = 0;
+        while (i < ctx.tokens.size()) {
+            TokenType t = ctx.tokens.get(i).type();
+            if (t == TokenType.LPAREN) {
+                depth++;
+            } else if (t == TokenType.RPAREN) {
+                if (depth == 0) return i + 1 < ctx.tokens.size() && ctx.tokens.get(i + 1).type() == TokenType.ARROW;
+                depth--;
+            }
+            i++;
+        }
+        return false;
     }
 
     static int precedence(ParseContext ctx, String op) {
@@ -347,7 +370,8 @@ public class ExpressionParser {
         ctx.expect(TokenType.LESS, "Expected '<'", "PARSE078");
         while (!ctx.check(TokenType.GREATER) && !ctx.atEnd()) {
             Parser.splitShiftRight(ctx);
-            if (ctx.check(TokenType.IDENTIFIER) || TypeParser.isPrimitiveType(ctx)) {
+            if (ctx.check(TokenType.IDENTIFIER) || TypeParser.isPrimitiveType(ctx)
+                    || ctx.check(TokenType.LPAREN)) {
                 String typeRef = TypeParser.parseTypeRef(ctx);
                 while (ctx.check(TokenType.LBRACKET) && ctx.checkNext(TokenType.RBRACKET)) {
                     ctx.advance();
@@ -388,11 +412,13 @@ public class ExpressionParser {
                 ExpressionNode value = StatementParser.parseSwitchCasePatternOrValue(ctx, cp);
                 ctx.expect(TokenType.ARROW,
                         "Switch expressão exige '->' (a forma statement usa ':')", "PARSE076");
+                rejectBlockCaseBody(ctx);
                 ExpressionNode body = ExpressionParser.parseExpression(ctx);
                 cases.add(new SwitchExprCase(cp, value, body));
             } else if (ctx.check(TokenType.DEFAULT)) {
                 ctx.advance();
                 ctx.expect(TokenType.ARROW, "Expected '->' after 'default'", "PARSE077");
+                rejectBlockCaseBody(ctx);
                 defaultValue = ExpressionParser.parseExpression(ctx);
             } else {
                 ctx.error("Esperava 'case' ou 'default' em switch expressão", "PARSE078");
@@ -401,6 +427,21 @@ public class ExpressionParser {
         }
         ctx.expect(TokenType.RBRACE, "Expected '}'", "PARSE075");
         return new SwitchExpr(p, expr, cases, defaultValue);
+    }
+
+    /**
+     * Switch-expressão (SYN001): cada case é UMA expressão — o corpus diz
+     * "não há escopo de bloco" (`training/idioms/control-flow.md`). Um `{`
+     * aqui é lido pelo parser como literal de lambda (block body) e o valor
+     * do case vira um `Lambda0@...`/`[object Object]` silencioso (R6). Emite
+     * diagnóstico em vez de aceitar lixo.
+     */
+    static void rejectBlockCaseBody(ParseContext ctx) {
+        if (ctx.check(TokenType.LBRACE)) {
+            ctx.error("switch expressão: o corpo de cada case é uma ÚNICA expressão "
+                    + "(sem escopo de bloco); use o switch-statement (`case ...:`) para "
+                    + "múltiplos statements", "PARSE094");
+        }
     }
 
     static List<ExpressionNode> parseArguments(ParseContext ctx) {

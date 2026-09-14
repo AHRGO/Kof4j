@@ -157,4 +157,5 @@ main() { println(idf<Int>(7)) }     // → 7 (probe)
   mesma unidade colidem (o `define` sobrescreve; `resolveInHierarchy` retorna
   uma). **Unspecified** se é erro ou último-vence.
 - **Construtores** sobrecarregam por aridade (ver [classes.md](classes.md)).
-- **Métodos** não sobrecarregam (§11 de type-system.md).
+- **Métodos** de classe sobrecarregam por assinatura (§131 fechado 13/09 —
+  ver §11 de type-system.md).

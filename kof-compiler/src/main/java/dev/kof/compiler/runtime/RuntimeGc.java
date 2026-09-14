@@ -45,10 +45,14 @@ public final class RuntimeGc {
                 addq $8, %r12
                 jmp .Lgc_mark_stack
             .Lgc_mark_stack_done:
-                # raizes estaticas: varre a area de dados do runtime
-                # (.data+.bss) -- cache/mq/config/etc. vivem em .data, NAO bss,
-                # e "kof_heap_root_start" e emitido como primeiro rotulo do
-                # generateRuntimeAssembly, antes de qualquer .data do runtime.
+                # raizes estaticas: varre .data+.bss ate _end -- cache/mq/config
+                # vivem em .data, NAO bss. #113: kof_heap_root_start agora e
+                # emitido na ABERTURA do .data do PROGRAMA (NativeBackend.emit),
+                # nao no preamble do runtime — estaticos/strings do usuario
+                # apontando p/ heap eram raizes ABAIXO do inicio e ficavam
+                # invisiveis ao mark. O topo continua _end (fim do .bss):
+                # kof_heap_root_end explicito so entra JUNTO do --gc-sections
+                # x86 (S-5 #97) — hoje encolheria o intervalo e under-marcaria.
                 leaq kof_heap_root_start(%rip), %r12
                 leaq _end(%rip), %r13
             .Lgc_mark_bss:

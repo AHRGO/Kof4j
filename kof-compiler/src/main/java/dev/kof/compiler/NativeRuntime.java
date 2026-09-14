@@ -24,6 +24,7 @@ import dev.kof.compiler.runtime.RuntimeJsonDecode;
 import dev.kof.compiler.runtime.RuntimeJsonEncode;
 import dev.kof.compiler.runtime.RuntimeJsonUtils;
 import dev.kof.compiler.runtime.RuntimeList;
+import dev.kof.compiler.runtime.RuntimeCollectionToString;
 import dev.kof.compiler.runtime.RuntimeLog1;
 import dev.kof.compiler.runtime.RuntimeLog2;
 import dev.kof.compiler.runtime.RuntimeMap;
@@ -58,6 +59,7 @@ import dev.kof.compiler.runtime.RuntimeStringConv;
 import dev.kof.compiler.runtime.RuntimeStringEdit;
 import dev.kof.compiler.runtime.RuntimeStringOps;
 import dev.kof.compiler.runtime.RuntimeStringParse;
+import dev.kof.compiler.runtime.RuntimeStringParseOrDefault;
 import dev.kof.compiler.runtime.RuntimeStringParseFp;
 import dev.kof.compiler.runtime.RuntimeStringSearch;
 import dev.kof.compiler.runtime.RuntimeTime;
@@ -78,14 +80,15 @@ public final class NativeRuntime {
 
     static public String generateRuntimeAssembly() {
         StringBuilder sb = new StringBuilder();
-        // marcador de início da área de raízes estáticas: o GC mark conservador
-        // precisa varrer .data (cache/config/mq além de .bss). As emissões de
-        // .data acontecem abaixo; o primeiro rótulo fica aqui (antes de tudo).
+        // #113: o intervalo de raízes do GC conservador (kof_heap_root_start)
+        // MOVOU-SE para o caminho de programa (NativeBackend.emit, abertura do
+        // .data) — estáticos/strings/tabelas do usuário também são raízes e
+        // antes ficavam ABAIXO do início do intervalo (não varridos). Aqui o
+        // runtime apenas reabre .data (o sentinel .quad 0 é a primeira palavra
+        // varrida da parte-runtime) e volta para .text.
         // IMPORTANTE: voltar pra .text — senão emitPrint grava kof_print em .data
         // e o executável inteiro quebra (visto: SIGSEGV em println "a").
         sb.append("            .section .data\n");
-        sb.append("            .globl kof_heap_root_start\n");
-        sb.append("            kof_heap_root_start:\n");
         sb.append("            .quad 0\n");
         sb.append("            .section .text\n");
         RuntimePrint.emitPrint(sb);
@@ -100,6 +103,7 @@ public final class NativeRuntime {
         RuntimeStringConv.emitLongToString(sb);
         RuntimeStringConv.emitBoolToString(sb);
         RuntimeList.emitListFunctions(sb);
+        RuntimeCollectionToString.emit(sb);
         RuntimeJsonBuilder.emitJsonBuilder(sb);
         RuntimeJsonEncode.emitJsonEncode(sb);
         RuntimeJsonDecode.emitJsonDecode(sb);
@@ -126,6 +130,9 @@ public final class NativeRuntime {
         RuntimeStringParse.emitStringToInt(sb);
         RuntimeStringParse.emitStringToLong(sb);
         RuntimeStringParseFp.emitStringToDouble(sb);
+        // S13b (plan-stdlib-expansion): parse com default (briefing §43) —
+        // wrappers com handler local no exc_chain; nunca lançam.
+        RuntimeStringParseOrDefault.emitAll(sb);
         RuntimeStringBase.emitPrintString(sb);
         RuntimeStringBase.emitPrintlnString(sb);
         RuntimeStringOps.emitStringCharAt(sb);
@@ -135,6 +142,10 @@ public final class NativeRuntime {
         RuntimeStringSearch.emitStringEndsWith(sb);
         RuntimeStringSearch.emitStringIndexOf(sb);
         RuntimeStringSearch.emitStringLastIndexOf(sb);
+        // §102: variantes com índice inicial (from) respeitado (UTF-16, JDK).
+        dev.kof.compiler.runtime.RuntimeStringSearchFrom.emitStringIndexOf2(sb);
+        dev.kof.compiler.runtime.RuntimeStringSearchFrom.emitStringLastIndexOf2(sb);
+        dev.kof.compiler.runtime.RuntimeStringSearchFrom.emitStringStartsWith2(sb);
         RuntimeStringCompare.emit(sb);
         RuntimeStringOps.emitStringTrim(sb);
         RuntimeStringOps.emitStringCase(sb);
@@ -142,6 +153,7 @@ public final class NativeRuntime {
         RuntimeStringOps.emitStringEqualsIgnoreCase(sb);
         RuntimeStringEdit.emitStringSplit(sb);
         RuntimeArray.emitArrayAlloc(sb);
+        RuntimeArray.emitMultiArrayAlloc(sb);
         RuntimeArray.emitArrayLength(sb);
         RuntimeArray.emitArrayGet(sb);
         RuntimeArray.emitArraySet(sb);

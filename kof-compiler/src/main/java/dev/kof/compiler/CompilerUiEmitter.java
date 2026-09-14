@@ -66,8 +66,10 @@ public final class CompilerUiEmitter {
                                    List<KofOperation> ops, int localIdx,
                                    List<IRLocalVariable> locals) {
         int recvTmp = localIdx++;
-        int valTmp = localIdx++;
-        int newTmp = localIdx++;
+        int valTmp = localIdx;
+        localIdx += TypeMetrics.isDoubleWidth(fieldType) ? 2 : 1;
+        int newTmp = localIdx;
+        localIdx += TypeMetrics.isDoubleWidth(fieldType) ? 2 : 1;
         locals.add(new IRLocalVariable(recvTmp, "#recv", ownerType));
         locals.add(new IRLocalVariable(valTmp, "#inc", fieldType));
         locals.add(new IRLocalVariable(newTmp, "#new", fieldType));
@@ -76,7 +78,7 @@ public final class CompilerUiEmitter {
         ops.add(new KofLoadField(ownerType, fieldName, fieldType));
         ops.add(new KofStoreLocal(fieldType, valTmp));
         ops.add(new KofLoadLocal(fieldType, valTmp));
-        ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 1));
+        CompilerEmissionHelpers.emitIncrementOne(ops, fieldType);
         ops.add(new KofBinary(op, fieldType));
         ops.add(new KofStoreLocal(fieldType, newTmp));
         ops.add(new KofLoadLocal(ownerType, recvTmp));
@@ -131,14 +133,31 @@ public final class CompilerUiEmitter {
             }
             return localIdx;
         }
-        if (KofUi.isWindow(recvType) || KofUi.isLabel(recvType) || KofUi.isButton(recvType)
-                || KofUi.isInput(recvType) || KofUi.isTextarea(recvType) || KofUi.isSelect(recvType)
-                || KofUi.isUl(recvType) || KofUi.isOl(recvType) || KofUi.isTable(recvType)
-                || KofUi.isView(recvType)
-                || KofUi.isLink(recvType) || KofUi.isImage(recvType) || KofUi.isIcon(recvType)
-                || KofUi.isForm(recvType) || KofUi.isCanvas(recvType)
-                || KofUi.isFieldset(recvType) || KofUi.isIframe(recvType)
-                || KofUi.isVideo(recvType) || KofUi.isAudio(recvType) || KofUi.isHr(recvType)) {
+        if (KofUi.isEvent(recvType)) {
+            // UIW050: acessores de `e: Event` (e.value()/e.key()/e.x()/e.y()/
+            // e.type()/e.target()/e.relatedTarget()/e.stopPropagation()). O
+            // receiver é o id int do evento; sem este branch o receiver ficava
+            // na pilha e o resultado era DROPADO — o int virava argumento da
+            // chamada seguinte (VerifyError). Paridade com o runtime JS.
+            KofUi.UiCall ec = KofUi.instanceMethod(recvType, mc.methodName(), mc.arguments().size());
+            if (ec != null) {
+                for (ExpressionNode arg : mc.arguments()) {
+                    localIdx = ExpressionLowerer.emitExpression(driver, arg, ops, owner, localIdx, locals);
+                }
+                List<Type> ecParams = new ArrayList<>();
+                ecParams.add(Type.PrimitiveType.INT);
+                ecParams.addAll(ec.parameterTypes());
+                ops.add(new KofCall(new Type.ClassType("kof.ui", "Ui", List.of()),
+                        ec.function(), ecParams, ec.returnType(), KofCallKind.FUNCTION));
+                return localIdx;
+            }
+            return localIdx;
+        }
+        if (KofUi.isDomWidget(recvType) || KofUi.isWindow(recvType) || KofUi.isCanvas(recvType)) {
+            // bug 118 (renumerado do §102 na reconciliação do merge 11/09): a
+            // lista hardcoded omitia Column/Row (isDomWidget os
+            // inclui) → setId/setClass/setDisabled/on/setBorder/... de um
+            // Column eram DROPADOS silenciosamente (compilava e não fazia nada).
             KofUi.UiCall uiCall = KofUi.instanceMethod(recvType, mc.methodName(), mc.arguments().size());
             if (uiCall != null) {
                 for (ExpressionNode arg : mc.arguments()) {

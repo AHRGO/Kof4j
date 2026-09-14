@@ -171,7 +171,19 @@ public final class SemExpressionTyper {
                         && !KofUi.isRouterNamespace(ie.name())
                         && !"Theme".equals(ie.name())
                         && !MemberResolver.isBuiltinTypeName(ie.name())
-                        && !sa.allClasses().containsKey(ie.name())) {
+                        // bug 127: operando de TIPO do cast `as` — `x as
+                        // () -> Int` vira IdentifierExpr com o type-ref
+                        // completo (não é variável/tipo declarado).
+                        && !(ie.name().startsWith("(") && ie.name().contains(" -> "))
+                        && !sa.allClasses().containsKey(ie.name())
+                        // §134: nome de classe EXTERNA (Button.inflate,
+                        // Greeter.hello) — o lowering (ExpressionMethodCall
+                        // Lowerer) resolve via ExternalClasspath; sem este
+                        // passe a análise semântica marcava SEM011 e a
+                        // chamada estática com receiver identificador nunca
+                        // chegava ao lowering (só `new X()` e instância
+                        // funcionavam).
+                        && !isExternalImportedClass(sa, ie.name())) {
                     sa.diagnostics().error("", 0, 0, 0,
                             "Undefined variable or type: '" + ie.name() + "'", "SEM011");
                 }
@@ -255,6 +267,18 @@ public final class SemExpressionTyper {
                 for (int ci = chain.size() - 1; ci >= 0; ci--) {
                     BinaryExpr be = chain.get(ci);
                     Type rightType = inferType(sa, be.right(), scope);
+                    // "x as Char/Int/…" — o alvo é um identificador de tipo
+                    // (não resolve como valor): scope.resolve dá null →
+                    // rightType=Unknown (mesmo repair do ExpressionTyper:89,
+                    // que só roda no lowering; o cache daqui é o que o
+                    // MethodCallTyper lê para `mapOf(k, v as T)`). Sem isto o
+                    // V do Map pinava Unknown e o unbox/print do char-em-
+                    // coleção (§104b-ii) perdia o tipo.
+                    if ("as".equals(be.operator()) && rightType instanceof Type.UnknownType
+                            && be.right() instanceof dev.kof.compiler.IdentifierExpr rie) {
+                        Type q = CompilerTypes.toType(rie.name(), sa.unit());
+                        if (!(q instanceof Type.UnknownType)) rightType = q;
+                    }
                     accType = TypeChecker.inferBinaryResultType(sa.diagnostics(), be.operator(), accType, rightType);
                 }
                 yield accType;
@@ -306,7 +330,8 @@ public final class SemExpressionTyper {
                 // perde o tipo
                 String qname = ne.typeName();
                 if (!qname.contains(".")) {
-                    Type viaImport = MemberResolver.qualifyViaImports(sa.unit(), qname);
+                    Type viaImport = MemberResolver.qualifyViaImports(sa.unit(), qname,
+                            sa.externalTypes());
                     if (viaImport != null) qname = viaImport instanceof Type.ClassType qt
                             ? qt.packageName() + "." + qt.name() : qname;
                 }
@@ -331,15 +356,36 @@ public final class SemExpressionTyper {
                 yield Type.UnknownType.UNKNOWN;
             }
             case FieldAccessExpr fa -> {
-                if (fa.receiver() instanceof IdentifierExpr pId && KofUi.isPalette(pId.name())
-                        && KofUi.paletteColor(fa.fieldName()) != null) {
-                    yield KofUi.COLOR;
-                }
+                if (fa.receiver() instanceof IdentifierExpr pId && KofUi.isPalette(pId.name()) && KofUi.paletteColor(fa.fieldName()) != null) yield KofUi.COLOR;
+                String en = MemberResolver.enumNameOfConstant(sa.unit(), fa);
+                if (en != null) yield new Type.ClassType("", en, List.of());
                 Type recvType = inferType(sa, fa.receiver(), scope);
+                // bug 99 (R6, nunca silencioso): `Int.MAX_VALUE`/`Long.foo` etc.
+                // — acesso a campo num NOME DE TIPO PRIMITIVO. `Int` resolve p/
+                // UNKNOWN (a isenção isBuiltinTypeName de SEM011 existe p/ posição
+                // de TIPO, não p/ receiver de campo) e o guard SEM025 abaixo só
+                // dispara em ClassType → o campo passava SEM diagnóstico e o
+                // lowering emitia `getfield "?".field` (NoClassDefFoundError/SIGSEGV
+                // nos 3 targets; `var x = Int.MAX_VALUE` ainda CRASHAVA o
+                // compilador — ASM visitMaxs NegativeArraySizeException). Não há
+                // constante estática de primitivo em Kof (idiom = literal/`as`).
+                if (recvType instanceof Type.UnknownType
+                        && fa.receiver() instanceof IdentifierExpr rid
+                        && MemberResolver.isBuiltinTypeName(rid.name())
+                        && sa.diagnostics() != null) {
+                    sa.diagnostics().error("", 0, 0, 0,
+                            "'" + rid.name() + "' é um tipo primitivo, não tem campo "
+                                    + "estático '" + fa.fieldName() + "' (use o literal, "
+                                    + "ex.: 2147483647 p/ Int; sem Int.MAX_VALUE em Kof)",
+                            "SEM050");
+                    yield Type.UnknownType.UNKNOWN;
+                }
                 // SG-005: deref de T? sem narrowing é erro (espelha SEM049 de
                 // method call) — `s.length` em String? seria NPE em runtime.
                 if (recvType instanceof Type.NullableType && sa.diagnostics() != null) {
-                    sa.diagnostics().error("", 0, 0, 0,
+                    SourcePosition faPos = fa.position();
+                    sa.diagnostics().error(faPos != null ? faPos.file() : "",
+                            faPos != null ? faPos.line() : 0, faPos != null ? faPos.column() : 0, 0,
                             "receiver is nullable (T?); narrow first: if (x != null) { x.field }",
                             "SEM049");
                 }
@@ -372,12 +418,9 @@ public final class SemExpressionTyper {
                     // erro primeiro, depois UNKNOWN p/ error recovery.
                     // Excecoes: constante de enum (Color.Red e FieldAccess)
                     // e metodos de Object (nao sao campos).
-                    boolean isKnownReceiver = sa.allClasses().containsKey(ct.name())
-                            || sa.isExternal(ct);
-                    boolean isEnumConstant = MemberResolver
-                            .enumConstantOfExpr(sa.unit(), fa) != null;
-                    if (sa.diagnostics() != null && isKnownReceiver && !isEnumConstant
-                            && !MemberResolver.isObjectMethod(fa.fieldName(), 0)) {
+                    boolean isKnownReceiver = sa.allClasses().containsKey(ct.name()) || sa.isExternal(ct);
+                    boolean isEnumConstant = MemberResolver.enumConstantOfExpr(sa.unit(), fa) != null;
+                    if (sa.diagnostics() != null && isKnownReceiver && !isEnumConstant && !MemberResolver.isObjectMethod(fa.fieldName(), 0)) {
                         sa.diagnostics().error("", 0, 0, 0,
                                 "Cannot resolve field '" + fa.fieldName()
                                         + "' on type '" + ct.name() + "'",
@@ -400,6 +443,23 @@ public final class SemExpressionTyper {
                 inferType(sa, aa.index(), scope);
                 if (recvType instanceof Type.ArrayType at) {
                     yield at.componentType();
+                }
+                // paridade absoluta (JVM=JS=X86=ARM=RISC, regra 6/R6) — mesmo
+                // padrão do §96/§98/§100: `x[i]` SÓ existe para ARRAY no corpus
+                // (`learn/04:84`, `new Int[n]`). Em String/List/Map/Set o
+                // subscript era ACEITO e quebrava de um jeito em cada target
+                // ("abc"[0]: JVM VerifyError, Native/Script vazios;
+                // listOf(1,2)[0]: JVM VerifyError `aaload` em Object, idem).
+                // Opção B: REJEITAR em compile-time (SEM054) apontando p/ o
+                // idiom da coleção. Unknown/Nullable (ex.: get de map sem pin)
+                // NÃO é flagado — pode ser array em runtime (SG-008).
+                if (sa.diagnostics() != null && isKofCollectionType(recvType)) {
+                    var pos = aa.position();
+                    sa.diagnostics().error(pos != null ? pos.file() : "",
+                            pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0,
+                            "`[]` só pega em array em Kof; para esta coleção use "
+                                    + collectionIndexHint(recvType),
+                            "SEM054");
                 }
                 yield Type.UnknownType.UNKNOWN;
             }
@@ -487,5 +547,33 @@ public final class SemExpressionTyper {
             }
             default -> Type.UnknownType.UNKNOWN;
         };
+    }
+
+    /**
+     * §134: o nome simples é uma classe EXTERNA importada cujo .class está
+     * nos entries do ExternalClasspath (--classpath/--deps)? Usado para não
+     * marcar SEM011 no receiver de chamada estática externa (Greeter.hello),
+     * que o lowering resolve via knows()/resolveMethod().
+     */
+    private static boolean isExternalImportedClass(SemanticAnalyzer sa, String name) {
+        if (sa.externalTypes() == null || sa.unit() == null) return false;
+        Type t = MemberResolver.qualifyViaImports(sa.unit(), name, sa.externalTypes());
+        return t instanceof Type.ClassType ct && !ct.packageName().isEmpty()
+                && sa.externalTypes().knows(ct.internalName());
+    }
+
+    private static boolean isKofCollectionType(Type t) {
+        if (t instanceof Type.NullableType nt) t = nt.inner();
+        if (t instanceof Type.ArrayType) return false;   // array: [] é válido
+        if (t instanceof Type.UnknownType) return false; // pode ser array em runtime (SG-008)
+        return BuiltinTypes.isString(t) || BuiltinTypes.isList(t)
+                || BuiltinTypes.isMap(t) || BuiltinTypes.isSet(t);
+    }
+
+    private static String collectionIndexHint(Type t) {
+        if (t instanceof Type.NullableType nt) t = nt.inner();
+        if (BuiltinTypes.isString(t)) return "charAt(i) / substring(i)";
+        if (BuiltinTypes.isMap(t)) return "get(k)";
+        return "get(i)";
     }
 }

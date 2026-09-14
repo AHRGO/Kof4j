@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Ponte do interpretador com o {@code KofRuntime} GERADO (mesma fonte do
@@ -47,6 +48,17 @@ public final class KofInterpreterRuntime {
                 && args[0] instanceof KofInterpreter.KofObj ko) {
             return encodeKof(ko);
         }
+        // §106 (decisão 2b, 13/09): json.encode(Map) -> objeto JSON com chaves
+        // SORTED (mesma superfície do JVM/native — determinismo). O call-site
+        // baixa p/ kof_json_encode_map(map, tagDoValor) — aceito as duas formas.
+        if (name.equals("kof_json_encode_map") && args.length == 2
+                && args[0] instanceof Map<?, ?> m) {
+            return encodeMapTagged(m, ((Number) args[1]).intValue());
+        }
+        if (name.equals("kof_json_encode") && args.length == 1
+                && args[0] instanceof Map<?, ?> m) {
+            return encodeMap(m);
+        }
         // json.decode<KofClass>: o método gerado faz Class.forName(nome) — mas
         // no interpretador a classe Kof é KofObj (NUNCA vira classe JVM).
         // Espelha encodeKof: parse com o MESMO parser do runtime gerado e
@@ -68,6 +80,25 @@ public final class KofInterpreterRuntime {
             }
             return out;
         }
+        // §103.1 (#103): decode<Map<String,Classe>> — mesma limitação do
+        // object_list: Class.forName não conhece classe Kof (vira KofObj).
+        if (name.equals("kof_json_decode_object_map") && args.length == 2
+                && args[0] instanceof String json && args[1] instanceof String cn) {
+            IRClass kc = null;
+            for (IRClass c : interp.module().classes()) {
+                if (KofInterpreterValues.simpleOf(c.name()).equals(cn)
+                        || c.name().replace('/', '.').equals(cn)) { kc = c; break; }
+            }
+            if (kc == null) throw new NoSuchMethodError("KofRuntime." + name + " (classe '" + cn + "' não achada)");
+            Object parsed = runtimeFn("kof_json_parse", new Object[]{json});
+            java.util.Map<Object, Object> out = new java.util.LinkedHashMap<>();
+            if (parsed instanceof java.util.Map<?, ?> m) {
+                for (java.util.Map.Entry<?, ?> e : m.entrySet()) {
+                    out.put(e.getKey(), decodeKofValue(kc, e.getValue()));
+                }
+            }
+            return out;
+        }
         if (name.startsWith("kof_json_decode_") && args.length == 1
                 && args[0] instanceof String json) {
             IRClass kc = kofClassByDecodeName(name);
@@ -85,6 +116,52 @@ public final class KofInterpreterRuntime {
             }
         }
         throw new NoSuchMethodError("KofRuntime." + name + "/" + args.length);
+    }
+
+    /** §106: Map -> JSON objeto com chaves sorted (mesma superfície do JVM). */
+    // §106: variante com tag do valor (call-site kof_json_encode_map(map, tag))
+    // — chaves sorted, valor codificado pelo tag: 0=int, 1=string, 2=bool.
+    private String encodeMapTagged(Map<?, ?> m, int tag) throws Throwable {
+        StringBuilder sb = new StringBuilder("{");
+        java.util.SortedSet<String> keys = new java.util.TreeSet<>();
+        for (Object k : m.keySet()) keys.add(String.valueOf(k));
+        boolean first = true;
+        for (String k : keys) {
+            if (!first) sb.append(',');
+            first = false;
+            sb.append(runtimeFn("kof_json_encode_string", new Object[]{k}));
+            sb.append(':');
+            Object v = m.get(k);
+            switch (tag) {
+                case 1 -> sb.append(runtimeFn("kof_json_encode_string", new Object[]{v}));
+                case 2 -> sb.append(runtimeFn("kof_json_encode_bool",
+                        new Object[]{v instanceof Boolean b && b ? 1 : 0}));
+                default -> sb.append(runtimeFn("kof_json_encode", new Object[]{v}));
+            }
+        }
+        return sb.append('}').toString();
+    }
+
+    private String encodeMap(Map<?, ?> m) throws Throwable {
+        StringBuilder sb = new StringBuilder("{");
+        java.util.SortedSet<String> keys = new java.util.TreeSet<>();
+        for (Object k : m.keySet()) keys.add(String.valueOf(k));
+        boolean first = true;
+        for (String k : keys) {
+            if (!first) sb.append(',');
+            first = false;
+            sb.append(runtimeFn("kof_json_encode_string", new Object[]{k}));
+            sb.append(':');
+            Object v = m.get(k);
+            if (v instanceof KofInterpreter.KofObj) {
+                sb.append(encodeKof((KofInterpreter.KofObj) v));
+            } else if (v instanceof Map<?, ?>) {
+                sb.append(encodeMap((Map<?, ?>) v));
+            } else {
+                sb.append(runtimeFn("kof_json_encode", new Object[]{v}));
+            }
+        }
+        return sb.append('}').toString();
     }
 
     private String encodeKof(KofInterpreter.KofObj ko) throws Throwable {
@@ -279,6 +356,14 @@ public final class KofInterpreterRuntime {
             if (p.isPrimitive() != primitiveIr && ir != null
                     && !isBoxedIr(ir, p)) {
                 if (p != Object.class) return -1;
+            }
+            // §124: arg null não pode casar com parâmetro ARRAY (ex.: o
+            // println(null) baixa valueOf(Unknown) e o scorer dava empate
+            // entre valueOf(char[]) e valueOf(Object) → ordem de getMethods()
+            // escolhia char[] → NPE "Cannot read the array length". Array só
+            // compete quando o IR declara array de verdade.
+            if (args[i] == null && p.isArray() && !(ir instanceof Type.ArrayType)) {
+                return -1;
             }
             if (ir != null && primitiveMatchesIr(p, ir)) score += 2;
             if (args[i] != null && p.isInstance(args[i])) score += 1;

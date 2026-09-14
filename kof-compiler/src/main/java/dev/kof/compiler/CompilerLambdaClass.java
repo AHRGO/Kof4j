@@ -71,7 +71,13 @@ public final class CompilerLambdaClass {
         // lambda retornando lambda (bug 19): preservar a FunctionType (o
         // round-trip por string a destruía) — o className do lambda interno
         // será preenchido após a emissão do corpo.
-        Type returnType = ft.returnType() instanceof Type.FunctionType
+        // §176: handles kof.ui/media também são preservados — o round-trip
+        // typeToString→toType perde o pacote (`kof.ui.Label` → `Label`) e o
+        // descriptor do invoke sairia "LLabel;" com um int na pilha (o valor
+        // real do handle) → VerifyError. JvmTypeMapper apaga o handle p/ "I"
+        // e JvmLiteralEmitter.returnOpcode emite IRETURN de forma consistente.
+        Type returnType = (ft.returnType() instanceof Type.FunctionType
+                || KofUi.isUiType(ft.returnType()) || KofMedia.isHandleType(ft.returnType()))
                 ? ft.returnType()
                 : CompilerTypes.toType(CompilerTypes.typeToString(ft.returnType()), driver.currentUnit);
         List<FormalParameterNode> params = le.parameters();
@@ -116,6 +122,8 @@ public final class CompilerLambdaClass {
         }
         java.util.Set<String> savedMutated = driver.mutatedCapturedNames;
         driver.mutatedCapturedNames = new java.util.HashSet<>();
+        java.util.Deque<CompilerDriverState.FinallyFrame> savedFrames = driver.finallyFrames;
+        driver.finallyFrames.clear(); // DD-01: frame do finally externo não vaza p/ dentro
         // lambda não-void com corpo de expressão única: a expressão É o retorno
         // (ExpressionStmt emitiria POP e mataria o valor antes do areturn)
         java.util.List<StatementNode> bodyStmts = le.body();
@@ -128,6 +136,7 @@ public final class CompilerLambdaClass {
             localIdx = driver.emitStatement(stmt, ops, name, localIdx, locals, returnType);
         }
         driver.mutatedCapturedNames = savedMutated;
+        driver.finallyFrames.addAll(savedFrames); // DD-01: restaura
         // bug 19: lambda que RETORNA outra lambda — o lambda interno é
         // sintetizado durante a emissão do corpo acima; o className dele só
         // agora está disponível. Atualiza o returnType para o descriptor do

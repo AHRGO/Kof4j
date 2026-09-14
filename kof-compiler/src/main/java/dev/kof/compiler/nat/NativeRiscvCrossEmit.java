@@ -26,6 +26,7 @@ import dev.kof.compiler.KofLoadField;
 import dev.kof.compiler.KofLoadLiteral;
 import dev.kof.compiler.KofLoadLocal;
 import dev.kof.compiler.KofNewArray;
+import dev.kof.compiler.KofNewMultiArray;
 import dev.kof.compiler.KofNewObject;
 import dev.kof.compiler.KofOperation;
 import dev.kof.compiler.KofPop;
@@ -39,6 +40,7 @@ import dev.kof.compiler.KofThrow;
 import dev.kof.compiler.KofTryEnd;
 import dev.kof.compiler.KofTryStart;
 import dev.kof.compiler.KofUnary;
+import dev.kof.compiler.KofUnaryOp;
 import dev.kof.compiler.NativeRuntime;
 import dev.kof.compiler.Type;
 
@@ -51,6 +53,10 @@ import java.util.List;
  */
 public final class NativeRiscvCrossEmit {
 
+    /** §181: sequência para labels ÚNICOS de saturação (2+ casts por método). */
+    private static final java.util.concurrent.atomic.AtomicLong SAT181_SEQ =
+            new java.util.concurrent.atomic.AtomicLong();
+
     private final NativeBackend nb;
 
     private final NativeRiscvCrossOps other;
@@ -59,8 +65,7 @@ public final class NativeRiscvCrossEmit {
 
     void emitCrossMethodRiscv(StringBuilder sb, IRClass clazz, IRMethod method, boolean joinMain) {
         // Mangle idêntico ao x86_64 (vtables referenciam esses símbolos).
-        String mangled = nb.sanitizeName(clazz.name()) + "_" + nb.sanitizeName(method.name());
-        if ("<init>".equals(method.name())) mangled += "_" + method.parameterTypes().size();
+        String mangled = NativeSymbolMangling.fnSymbol(clazz.name(), method.name(), method.parameterTypes(), nb.allClassesMap);
         int maxSlot = method.localVariables().stream().mapToInt(IRLocalVariable::index).max().orElse(0);
         int frameSize = Math.max((maxSlot + 1) * 8 + 16, 32);
         frameSize = (frameSize + 15) & ~15;
@@ -190,7 +195,10 @@ public final class NativeRiscvCrossEmit {
                 pushRiscv(sb, "t0"); pushRiscv(sb, "t2"); pushRiscv(sb, "t1"); pushRiscv(sb, "t0");
             }
             case KofPop pop -> sb.append("    addi sp, sp, 8\n");
-            case KofPop2 pop2 -> sb.append("    addi sp, sp, 16\n");
+            // §142 (12/09): nativo empilha TODO valor como 1 qword (Long/Double
+            // inclusive — ver pushRiscv). O POP2 herdado do JVM (16) desbalanceava
+            // a pilha; descartar 1 qword. aarch64 herda via tradutor.
+            case KofPop2 pop2 -> sb.append("    addi sp, sp, 8\n");
             case KofCheckCast cc -> { }
             case KofInstanceOf io -> {
                 int targetTypeId = 0;
@@ -214,6 +222,19 @@ public final class NativeRiscvCrossEmit {
                 sb.append("    pop a0\n");
                 sb.append("    li a1, ").append(nb.elementTypeSize(na.elementType())).append("\n");
                 sb.append("    call kof_array_alloc\n");
+                pushRiscv(sb, "a0");
+            }
+            // §113 (port beta-0.3.0 → 0.4.0): n-D (≥2). Os dims JÁ estão na
+            // pilha (d_n no topo); sp é a base dos offsets do helper — o
+            // chamador NUNCA os popa, só avança o sp (frame fixo, sem
+            // pilha-dinâmica do x86).
+            case KofNewMultiArray ma -> {
+                sb.append("    mv a0, sp\n");
+                sb.append("    li a1, ").append(ma.dims()).append("\n");
+                sb.append("    li a2, 1\n");
+                sb.append("    li a3, ").append(nb.elementTypeSize(ma.baseType())).append("\n");
+                sb.append("    call kof_multi_alloc\n");
+                sb.append("    addi sp, sp, ").append(8 * ma.dims()).append("\n");
                 pushRiscv(sb, "a0");
             }
             case KofArrayLoad al -> {
@@ -329,10 +350,77 @@ public final class NativeRiscvCrossEmit {
             case L2D -> sb.append("    fcvt.d.l f0, t0\n    fmv.x.d t0, f0\n");
             case F2D -> sb.append("    fmv.w.x f0, t0\n    fcvt.d.s f0, f0\n    fmv.x.d t0, f0\n");
             case D2F -> sb.append("    fmv.d.x f0, t0\n    fcvt.s.d f0, f0\n    fmv.x.w t0, f0\n");
-            case D2I -> sb.append("    fmv.d.x f0, t0\n    fcvt.w.d t0, f0, rtz\n    sext.w t0, t0\n");
-            case F2I -> sb.append("    fmv.w.x f0, t0\n    fcvt.w.s t0, f0, rtz\n    sext.w t0, t0\n");
-            case D2L -> sb.append("    fmv.d.x f0, t0\n    fcvt.l.d t0, f0, rtz\n");
-            case F2L -> sb.append("    fmv.w.x f0, t0\n    fcvt.l.s f0, f0, rtz\n    fmv.x.d t0, f0\n");
+            // §181 (13/09): SATURAÇÃO JLS 5.1.3 (NaN => 0; fora de faixa =>
+            // limite). fcvt.*.rtz cru devolvia o "indefinite" riscv para
+            // NaN/overflow (padrão de divergência do §181/x86). Ordem:
+            // NaN PRIMEIRO (feq self => 0 sse NaN), depois clamp hi/lo.
+            // FIX 13/09: labels ÚNICOS por emissão (`_<seq>`) — dois casts no
+            // MESMO método (ex. `a as Int` + `b as Int`) geravam labels
+            // duplicados e o GNU as falhava ("symbol already defined").
+            // Float é promovido a double ANTES (NaN/faixa idênticos).
+            case D2I, F2I -> {
+                boolean isF = ku.op() == KofUnaryOp.F2I;
+                String sfx = Long.toString(SAT181_SEQ.incrementAndGet());
+                if (isF) sb.append("    fmv.w.x f0, t0\n    fcvt.d.s f0, f0\n");
+                else sb.append("    fmv.d.x f0, t0\n");
+                sb.append("    feq.d t1, f0, f0\n");              // t1=0 sse NaN
+                sb.append("    beqz t1, .Lsat181_nan_").append(sfx).append("\n");
+                // FIX 13/09: compara em DOUBLE contra ±2^31 ANTES de converter.
+                // `fcvt.w.d` devolve o "indefinite" (0x80000000) p/ fora-de-faixa,
+                // então comparar o inteiro já convertido nunca detecta o estouro
+                // (ex.: 3.0e9 caía em INT_MIN em vez de INT_MAX). Padrões de bit
+                // do double: +2^31=0x41E0000000000000, -2^31=0xC1E0000000000000.
+                sb.append("    li t2, 0x41E0000000000000\n");    // +2^31
+                sb.append("    fmv.d.x f1, t2\n");
+                sb.append("    flt.d t1, f0, f1\n");              // t1=0 => f0 >= 2^31
+                sb.append("    beqz t1, .Lsat181_hi_").append(sfx).append("\n");
+                sb.append("    li t2, 0xC1E0000000000000\n");    // -2^31
+                sb.append("    fmv.d.x f1, t2\n");
+                sb.append("    flt.d t1, f0, f1\n");              // t1=1 => f0 < -2^31
+                sb.append("    bnez t1, .Lsat181_lo_").append(sfx).append("\n");
+                sb.append("    fcvt.w.d t0, f0, rtz\n");
+                sb.append("    sext.w t0, t0\n");                  // estende sinal
+                sb.append("    j .Lsat181_end_").append(sfx).append("\n");
+                sb.append(".Lsat181_hi_").append(sfx).append(":\n");
+                sb.append("    li t0, 2147483647\n");
+                sb.append("    j .Lsat181_end_").append(sfx).append("\n");
+                sb.append(".Lsat181_lo_").append(sfx).append(":\n");
+                sb.append("    li t0, -2147483648\n");
+                sb.append("    j .Lsat181_end_").append(sfx).append("\n");
+                sb.append(".Lsat181_nan_").append(sfx).append(":\n");
+                sb.append("    li t0, 0\n");
+                sb.append(".Lsat181_end_").append(sfx).append(":\n");
+            }
+            case D2L, F2L -> {
+                boolean isF = ku.op() == KofUnaryOp.F2L;
+                String sfx = Long.toString(SAT181_SEQ.incrementAndGet());
+                if (isF) sb.append("    fmv.w.x f0, t0\n    fcvt.d.s f0, f0\n");
+                else sb.append("    fmv.d.x f0, t0\n");
+                sb.append("    feq.d t1, f0, f0\n");              // double (F2L já promoveu)
+                sb.append("    beqz t1, .Lsat181L_nan_").append(sfx).append("\n");
+                // FIX 13/09: mesma estratégia do D2I — compara em double contra
+                // ±2^63 (fcvt.l.d também devolve indefinido p/ fora-de-faixa).
+                // Padrões de bit: +2^63=0x43E0000000000000, -2^63=0xC3E0000000000000.
+                sb.append("    li t2, 0x43E0000000000000\n");    // +2^63
+                sb.append("    fmv.d.x f1, t2\n");
+                sb.append("    flt.d t1, f0, f1\n");              // t1=0 => f0 >= 2^63
+                sb.append("    beqz t1, .Lsat181L_hi_").append(sfx).append("\n");
+                sb.append("    li t2, 0xC3E0000000000000\n");    // -2^63
+                sb.append("    fmv.d.x f1, t2\n");
+                sb.append("    flt.d t1, f0, f1\n");              // t1=1 => f0 < -2^63
+                sb.append("    bnez t1, .Lsat181L_lo_").append(sfx).append("\n");
+                sb.append("    fcvt.l.d t0, f0, rtz\n");
+                sb.append("    j .Lsat181L_end_").append(sfx).append("\n");
+                sb.append(".Lsat181L_hi_").append(sfx).append(":\n");
+                sb.append("    li t0, 9223372036854775807\n");
+                sb.append("    j .Lsat181L_end_").append(sfx).append("\n");
+                sb.append(".Lsat181L_lo_").append(sfx).append(":\n");
+                sb.append("    li t0, -9223372036854775808\n");
+                sb.append("    j .Lsat181L_end_").append(sfx).append("\n");
+                sb.append(".Lsat181L_nan_").append(sfx).append(":\n");
+                sb.append("    li t0, 0\n");
+                sb.append(".Lsat181L_end_").append(sfx).append(":\n");
+            }
         }
         pushRiscv(sb, "t0");
     }

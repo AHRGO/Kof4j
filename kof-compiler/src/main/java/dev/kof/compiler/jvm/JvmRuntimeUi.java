@@ -131,6 +131,14 @@ public final class JvmRuntimeUi {
                 public static void kof_ui_widget_set_disabled(int widget, int disabled) {
                 }
 
+                // issue #78: primitivas visuais — no-op JVM/Native (real só no JS,
+                // como setId/setClass/setDisabled — kof.ui é KofJS). Color empacotado.
+                public static void kof_ui_widget_set_border(int widget, int color, int width) { }
+                public static void kof_ui_widget_set_shadow(int widget, int c, int oy, int blur) { }
+                public static void kof_ui_widget_set_gradient(int widget, int a, int b, int angle) { }
+                public static void kof_ui_widget_set_flex_basis(int widget, int px) { }
+                public static void kof_ui_widget_set_max_width(int widget, int px) { }
+
                 public static void kof_ui_widget_on(int widget, String type, Object handler) {
                 }
 
@@ -204,38 +212,40 @@ public final class JvmRuntimeUi {
                 public static void kof_ui_flush_ui() {
                 }
 
-                public static String kof_ui_event_type(String type) {
-                    return type == null ? "" : type;
-                }
-
-                public static String kof_ui_event_key(String type) {
+                // UIW050: o receiver de Event é o id int do evento (handle
+                // apagado), não String/Object — paridade com o descriptor.
+                public static String kof_ui_event_type(int ev) {
                     return "";
                 }
 
-                public static String kof_ui_event_value(String type) {
+                public static String kof_ui_event_key(int ev) {
                     return "";
                 }
 
-                public static String kof_ui_event_target(String type) {
+                public static String kof_ui_event_value(int ev) {
                     return "";
                 }
 
-                public static String kof_ui_event_related_target(String type) {
+                public static String kof_ui_event_target(int ev) {
                     return "";
                 }
 
-                public static int kof_ui_event_x(String type) {
+                public static String kof_ui_event_related_target(int ev) {
+                    return "";
+                }
+
+                public static int kof_ui_event_x(int ev) {
                     return 0;
                 }
 
-                public static int kof_ui_event_y(String type) {
+                public static int kof_ui_event_y(int ev) {
                     return 0;
                 }
 
                 public static void kof_ui_emit(int c, String type) {
                 }
 
-                public static void kof_ui_event_stop(Object ev) {
+                public static void kof_ui_event_stop(int ev) {
                 }
 
                 // ── Fase 8: Store observável (no-ops) ──

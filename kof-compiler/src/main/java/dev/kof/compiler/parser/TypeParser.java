@@ -78,7 +78,7 @@ public class TypeParser {
 
     static FormalParameterNode parseFormalParameter(ParseContext ctx) {
         List<AnnotationNode> annos = AnnotationParser.parseAnnotations(ctx);
-        List<String> mods = Parser.parseModifiers(ctx);
+        List<String> mods = TypeDeclarations.parseModifiers(ctx);
         if (ctx.check(TokenType.IDENTIFIER) && ctx.checkNext(TokenType.COLON)) {
             // name: Type — annotation form (idiomatic for main(args: List<String>))
             String name = ctx.advance().value();
@@ -146,8 +146,20 @@ public class TypeParser {
                 boolean isClose = ctx.check(TokenType.GREATER);
                 if (ctx.check(TokenType.LESS)) depth++;
                 else if (isClose) depth--;
-                if (!first && !isClose) args.append(ctx.tokens.get(ctx.pos).value());
-                else if (!first && isClose && depth > 0) args.append(ctx.tokens.get(ctx.pos).value());
+                if (!first && !isClose) {
+                    if (ctx.check(TokenType.LPAREN)) {
+                        // bug 155: tipo-função dentro de type-args — a
+                        // concatenação crua de tokens virava "(Int)->Int" (sem
+                        // espaços), que Type.of não reconhece → ClassType com
+                        // nome inválido (ClassFormatError JVM nos 4 targets).
+                        args.append(TypeParser.parseFunctionTypeRef(ctx));
+                        first = false;
+                        continue;
+                    }
+                    args.append(ctx.tokens.get(ctx.pos).value());
+                } else if (!first && isClose && depth > 0) {
+                    args.append(ctx.tokens.get(ctx.pos).value());
+                }
                 first = false;
                 ctx.advance();
             } while (depth > 0 && !ctx.atEnd());

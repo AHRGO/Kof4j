@@ -81,6 +81,8 @@ public final class JsTypeMapper {
         if (value instanceof Double d) return Double.toString(d);
         if (value instanceof Boolean b) return b ? "1" : "0";
         if (value instanceof String s) return jsStringLiteral(s);
+        // §81 (5b): field inicializado com Long → BigInt literal
+        if (value instanceof Long l) return Long.toString(l) + "n";
         return String.valueOf(value);
     }
 
@@ -167,9 +169,16 @@ public final class JsTypeMapper {
     }
 
     static JsIr.JsExpression defaultForType(Type type) {
-        if (type instanceof Type.PrimitiveType pt) {
+        Type t = type instanceof Type.NullableType nt ? nt.inner() : type;
+        if (t instanceof Type.PrimitiveType pt) {
             return switch (Type.canonicalPrimitiveName(pt.name())) {
-                case "bool" -> new JsIr.JsNumber("0");
+                // §127: Bool → false (não 0). Field-default de Bool sem
+                // inicializador e o default de put/remove/poll-channel em
+                // canal/mapa de Bool: o oracle JVM é `false` (Java boolean
+                // default; map.get-miss em Map<K,Boolean> → false). `0` é
+                // Number.js — divergia e imprimia "0" onde JVM dá "false".
+                case "bool" -> new JsIr.JsIdentifier("false");
+                case "double", "float" -> new JsIr.JsNumber("0");
                 default -> new JsIr.JsNumber("0");
             };
         }

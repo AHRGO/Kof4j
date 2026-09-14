@@ -16,6 +16,23 @@ public final class ExpressionBinaryLowerer {
                 || (t instanceof Type.NullableType nt && nt.inner() instanceof Type.UnknownType);
     }
 
+    /** Int (ou Nullable(Int)) — alvo de cast que handle de UI/mídia satisfaz. */
+    private static boolean isIntPrimitive(Type t) {
+        if (t instanceof Type.NullableType nt) return isIntPrimitive(nt.inner());
+        return t instanceof Type.PrimitiveType pt
+                && ("int".equals(pt.name()) || "Int".equals(pt.name()));
+    }
+
+    /** §167: bitwise inteiro `& | ^` (o `&&`/`||` lógico já saiu antes). */
+    private static boolean isBitwiseOp(String op) {
+        return "&".equals(op) || "|".equals(op) || "^".equals(op);
+    }
+
+    /** §167: shift inteiro `<< >> >>>`. */
+    private static boolean isShiftOp(String op) {
+        return "<<".equals(op) || ">>".equals(op) || ">>>".equals(op);
+    }
+
     static int lower(CompilerDriver driver, BinaryExpr bin, List<KofOperation> ops,
                         String owner, int localIdx, List<IRLocalVariable> locals) {
 if ("instanceof".equals(bin.operator()) || "as".equals(bin.operator())) {
@@ -25,12 +42,20 @@ if ("instanceof".equals(bin.operator()) || "as".equals(bin.operator())) {
         // toType resolve imports ("View" + import → android.view.View)
         targetType = CompilerTypes.toType(ie.name(), driver.currentUnit);
     }
+    Type fromCastType = ExpressionTyper.inferExprType(driver, bin.left(), locals);
+    // UIW050: handle de UI/mídia APAGA para int no runtime (JvmTypeMapper
+    // .toDescriptor → "I"). `label as Int` é IDENTITY, não checkcast — um
+    // CHECKCAST sobre um valor int é inválido e derrubava o verifier
+    // ("Bad type on operand stack") em qualquer função que monta UI.
+    boolean handleAsInt = isIntPrimitive(targetType)
+            && (KofUi.isUiType(fromCastType) || KofMedia.isHandleType(fromCastType));
     if ("instanceof".equals(bin.operator())) {
         ops.add(new KofInstanceOf(targetType));
-    } else if (TypeMetrics.isPrimitiveType(targetType) && TypeMetrics.isPrimitiveType(ExpressionTyper.inferExprType(driver, bin.left(), locals))) {
+    } else if (TypeMetrics.isPrimitiveType(targetType)
+            && (TypeMetrics.isPrimitiveType(fromCastType) || handleAsInt)) {
         // cast primitivo (x as Char/Int/…): conversão numérica,
         // NÃO checkcast (que exigiria um objeto na pilha)
-        Type fromT = ExpressionTyper.inferExprType(driver, bin.left(), locals);
+        Type fromT = fromCastType;
         driver.emitWideningIfNeeded(ops, fromT, targetType);
         if (targetType instanceof Type.PrimitiveType tp2
                 && ("char".equals(tp2.name()) || "Char".equals(tp2.name()))) {
@@ -41,7 +66,15 @@ if ("instanceof".equals(bin.operator()) || "as".equals(bin.operator())) {
         // (bug 5) e Long→Int via wid().não cobria
         driver.emitPrimNarrow(ops, fromT, targetType);
     } else {
-        ops.add(new KofCheckCast(targetType));
+        // bug 127: cast para TIPO-FUNÇÃO (`x as () -> Int`) — o alvo não é
+        // uma classe; o valor em runtime é uma lambda que implementa a
+        // interface SAM da assinatura. O checkcast vai para a interface
+        // sintética (a mesma que o call site usa no dispatch), não p/ "?".
+        Type castTarget = targetType;
+        if (targetType instanceof Type.FunctionType ft) {
+            castTarget = CompilerLambdaClass.lambdaInterfaceType(driver, ft);
+        }
+        ops.add(new KofCheckCast(castTarget));
         // o resultado do cast tem o tipo alvo — o próximo
         // acesso (campo/método) precisa enxergá-lo
         if (bin.left() instanceof IdentifierExpr lie && !Type.isUnknown(targetType)) {
@@ -138,6 +171,42 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
         driver.emitWideningIfNeeded(ops, rightType, commonType);
         ops.add(new KofBinary(TypeMetrics.mapArithmeticOp(be.operator()), commonType));
         accType = commonType;
+    } else if (isBitwiseOp(be.operator())
+            && TypeMetrics.isInteger(accType) && TypeMetrics.isInteger(rightType)) {
+        // §167: bitwise `& | ^` com Int e Long misturados. A promoção binária
+        // do JVM eleva AMBOS ao tipo comum (long se qualquer lado for long);
+        // sem o widening, `long & int` virava `land` sobre um int (VerifyError)
+        // e `int & long` truncava o long p/ 32 bits no Native/Script (resultado
+        // errado). `operandType` = tipo comum p/ os 4 targets.
+        Type commonInt = TypeMetrics.commonNumericType(accType, rightType);
+        if (!TypeMetrics.isInteger(commonInt)) commonInt = Type.PrimitiveType.INT;
+        driver.emitWideningIfNeeded(ops, accType, commonInt);
+        localIdx = ExpressionLowerer.emitExpression(driver, be.right(), ops, owner, localIdx, locals);
+        driver.emitWideningIfNeeded(ops, rightType, commonInt);
+        KofBinaryOp bitOp = switch (be.operator()) {
+            case "&" -> KofBinaryOp.AND;
+            case "|" -> KofBinaryOp.OR;
+            default -> KofBinaryOp.XOR;
+        };
+        ops.add(new KofBinary(bitOp, commonInt));
+        accType = commonInt;
+    } else if (isShiftOp(be.operator())
+            && TypeMetrics.isInteger(accType) && TypeMetrics.isInteger(rightType)) {
+        // §167: shift `<< >> >>>`. O tipo do resultado é o tipo PROMOVIDO do
+        // operando ESQUERDO (JLS 15.19), não o tipo comum: `int << long` tem
+        // tipo int. O deslocamento é sempre int no JVM (`lshl`/`ishl` tomam
+        // (long,int)/(int,int)) — um RHS long precisa de L2I, senão VerifyError.
+        Type resultType = "long".equals(TypeMetrics.primitiveName(accType)) ? Type.PrimitiveType.LONG : Type.PrimitiveType.INT;
+        driver.emitWideningIfNeeded(ops, accType, resultType);
+        localIdx = ExpressionLowerer.emitExpression(driver, be.right(), ops, owner, localIdx, locals);
+        driver.emitPrimNarrow(ops, rightType, Type.PrimitiveType.INT);
+        KofBinaryOp shiftOp = switch (be.operator()) {
+            case "<<" -> KofBinaryOp.SHL;
+            case ">>" -> KofBinaryOp.SHR;
+            default -> KofBinaryOp.USHR;
+        };
+        ops.add(new KofBinary(shiftOp, resultType));
+        accType = resultType;
     } else if ("+".equals(be.operator())
             && (Type.isString(accType) || Type.isString(rightType))) {
         // concatenação com float/double no Native formataria
@@ -151,16 +220,26 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
                         be.position())) {
             return localIdx;
         }
-        if (!Type.isString(accType) && TypeMetrics.isPrimitiveType(accType)) TypeEmitter.boxPrimitive(ops, accType);
+        // §125-ext (B2, 12/09): o guard do box usa isPrimitiveType (que
+        // DESEMPACOTA Nullable) mas o ternário do arg do valueOf usava
+        // `instanceof PrimitiveType` (que NÃO desempacota) → p/
+        // `Nullable(Int)` (ex.: `"a" + ni()` c/ Int? ni()) o boxPrimitive já
+        // STRINGUIFICOU o valor (kof_int_to_string) e o valueOf externo
+        // stringuificava DE NOVO o ponteiro da String = lixo. Mesmo guard
+        // nos dois lados: se o box já rodou, o valueOf externo é no-op
+        // (UNKNOWN).
+        boolean accStringified = !Type.isString(accType) && TypeMetrics.isPrimitiveType(accType);
+        if (accStringified) TypeEmitter.boxPrimitive(ops, accType);
         ops.add(new KofCall(BuiltinTypes.STRING, "valueOf",
-                List.of(driver.target.isNative() && !Type.isString(accType)
+                List.of(driver.target.isNative() && !accStringified && !Type.isString(accType)
                         && !(accType instanceof Type.PrimitiveType)
                         ? accType : Type.UnknownType.UNKNOWN),
                 BuiltinTypes.STRING, KofCallKind.STATIC));
         localIdx = ExpressionLowerer.emitExpression(driver, be.right(), ops, owner, localIdx, locals);
-        if (!Type.isString(rightType) && TypeMetrics.isPrimitiveType(rightType)) TypeEmitter.boxPrimitive(ops, rightType);
+        boolean rightStringified = !Type.isString(rightType) && TypeMetrics.isPrimitiveType(rightType);
+        if (rightStringified) TypeEmitter.boxPrimitive(ops, rightType);
         ops.add(new KofCall(BuiltinTypes.STRING, "valueOf",
-                List.of(driver.target.isNative() && !Type.isString(rightType)
+                List.of(driver.target.isNative() && !rightStringified && !Type.isString(rightType)
                         && !(rightType instanceof Type.PrimitiveType)
                         ? rightType : Type.UnknownType.UNKNOWN),
                 BuiltinTypes.STRING, KofCallKind.STATIC));

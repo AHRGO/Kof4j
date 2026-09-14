@@ -318,4 +318,57 @@ class JsonE2ETest {
             throw new IOException("Interrupted", e);
         }
     }
+
+    @Test
+    void jvmDecodeMapOfScalars(@TempDir Path tempDir) throws IOException {
+        // §103.1 (#103, merge 13/09): decode<Map<String,Int>> não pode dar
+        // NoSuchMethodError (kof_json_decode_Map inexistente) — devolve o
+        // mapa real do parser (chave String, valor cru).
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            main() {
+                var m = json.decode<Map<String, Int>>("{\\"a\\": 1, \\"b\\": 2}")
+                println(m.size)
+                println(m.get("a"))
+            }
+            """);
+        runJvm(source, tempDir.resolve("out"), "2\n1");
+    }
+
+    @Test
+    void jvmDecodeMapOfRecords(@TempDir Path tempDir) throws IOException {
+        // §103.1 (#103): decode<Map<String,Record>> binda cada valor à classe
+        // (caso do reporter: Map<String,CardText> do tarot).
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            record CardText(String name, String upright)
+            main() {
+                var m = json.decode<Map<String, CardText>>("{\\"0\\": {\\"name\\": \\"Fool\\", \\"upright\\": \\"fresh\\"}}")
+                println(m.size)
+                var c = m.get("0") as CardText
+                println(c.name())
+            }
+            """);
+        runJvm(source, tempDir.resolve("out"), "1\nFool");
+    }
+
+    @Test
+    void jvmIntToLongFieldWidening(@TempDir Path tempDir) throws IOException {
+        // §103.2 (#103): Int→Long em campo de instância precisa de I2L
+        // antes do putfield (antes: VerifyError no <init>).
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            class Holder {
+                Long value
+                public constructor(Int n) {
+                    this.value = n
+                }
+            }
+            main() {
+                var h = Holder(42)
+                println(h.value)
+            }
+            """);
+        runJvm(source, tempDir.resolve("out"), "42");
+    }
 }

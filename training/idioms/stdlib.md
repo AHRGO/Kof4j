@@ -124,7 +124,8 @@ var pick = colors[random.randomInt(colors.size)]   // choice = idiom
 **WHY:** `random.*` = sorteio (não-críptográfico); `security.*` = tokens
 (rejeição + validação). A escolha de lista **não** é função da stdlib —
 `list[random.randomInt(list.size)]` é o idiom; `randomChoice` exigiria
-retorno Object na camada de dispatch (DD-STDLIB-01 em aberto).
+retorno Object na camada de dispatch (DD-STDLIB-01 — FECHADO 13/09, decisão
+6a: `randomBytesHex` alias de `hex` + choice=idiom; `randomBytes` reservado).
 
 ## validation — formatar NÃO é validar (S12/S12b)
 

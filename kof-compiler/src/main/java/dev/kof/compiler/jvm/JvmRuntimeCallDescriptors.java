@@ -19,6 +19,7 @@ public final class JvmRuntimeCallDescriptors {
             case "kof_json_encode_string" -> "(Ljava/lang/String;)Ljava/lang/String;";
             case "kof_json_encode_list" -> "(Ljava/util/List;I)Ljava/lang/String;";
             case "kof_json_encode_array", "kof_json_encode" -> "(Ljava/lang/Object;)Ljava/lang/String;";
+            case "kof_json_encode_map" -> "(Ljava/util/Map;I)Ljava/lang/String;";
             case "kof_json_decode_int", "kof_json_decode_bool" -> "(Ljava/lang/String;)I";
             case "kof_json_decode_long" -> "(Ljava/lang/String;)J";
             case "kof_json_decode_float" -> "(Ljava/lang/String;)F";
@@ -26,11 +27,14 @@ public final class JvmRuntimeCallDescriptors {
             case "kof_json_decode_string" -> "(Ljava/lang/String;)Ljava/lang/String;";
             case "kof_json_decode_int_list", "kof_json_decode_string_list", "kof_json_decode_list"
                     -> "(Ljava/lang/String;)Ljava/util/ArrayList;";
-            case "kof_json_decode_int_array", "kof_json_decode_bool_array" -> "(Ljava/lang/String;)[I";
+            case "kof_json_decode_int_array" -> "(Ljava/lang/String;)[I";
+            case "kof_json_decode_bool_array" -> "(Ljava/lang/String;)[Z";
             case "kof_json_decode_long_array" -> "(Ljava/lang/String;)[J";
             case "kof_json_decode_double_array" -> "(Ljava/lang/String;)[D";
             case "kof_json_decode_string_array" -> "(Ljava/lang/String;)[Ljava/lang/String;";
             case "kof_json_decode_object_list" -> "(Ljava/lang/String;Ljava/lang/String;)Ljava/util/ArrayList;";
+            case "kof_json_decode_map" -> "(Ljava/lang/String;)Ljava/util/Map;";
+            case "kof_json_decode_object_map" -> "(Ljava/lang/String;Ljava/lang/String;)Ljava/util/Map;";
             case "kof_ffi_i" -> "(Ljava/lang/String;Ljava/lang/String;I)I";
             case "kof_ffi_si" -> "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)I";
             case "kof_ffi_dd" -> "(Ljava/lang/String;Ljava/lang/String;D)D";
@@ -115,12 +119,16 @@ public final class JvmRuntimeCallDescriptors {
             case "kof_ui_component_remove", "kof_ui_component_mount",
                     "kof_ui_component_unmount", "kof_ui_flush_ui" -> "(I)V";
             case "kof_ui_nodes_live", "kof_ui_hr_new" -> "()I";
-            case "kof_ui_event_type" -> "(Ljava/lang/String;)Ljava/lang/String;";
-            case "kof_ui_event_key", "kof_ui_event_value" -> "(Ljava/lang/String;)Ljava/lang/String;";
-            case "kof_ui_event_target", "kof_ui_event_related_target" -> "(Ljava/lang/String;)Ljava/lang/String;";
+            // UIW050: o receiver `e: Event` apaga para int no JVM (KofUi
+            // .isEvent ∈ isUiType → JvmTypeMapper "I"), igual aos demais
+            // handles. O descriptor precisa casar com o receiver na pilha —
+            // antes era String/Object e o verifier rejeitava a lambda.
+            case "kof_ui_event_type" -> "(I)Ljava/lang/String;";
+            case "kof_ui_event_key", "kof_ui_event_value" -> "(I)Ljava/lang/String;";
+            case "kof_ui_event_target", "kof_ui_event_related_target" -> "(I)Ljava/lang/String;";
             case "kof_ui_event_x", "kof_ui_event_y" -> "(I)I";
             case "kof_ui_emit" -> "(ILjava/lang/String;)V";
-            case "kof_ui_event_stop" -> "(Ljava/lang/Object;)V";
+            case "kof_ui_event_stop" -> "(I)V";
             case "kof_ui_store_new" -> "(I)I";
             case "kof_ui_store_get" -> "(I)I";
             case "kof_ui_store_set" -> "(II)V";
@@ -149,6 +157,9 @@ public final class JvmRuntimeCallDescriptors {
              case "kof_ui_widget_set_font" -> "(II)V";
              case "kof_ui_widget_set_id", "kof_ui_widget_set_class" -> "(ILjava/lang/String;)V";
              case "kof_ui_widget_set_disabled" -> "(II)V";
+             case "kof_ui_widget_set_flex_basis", "kof_ui_widget_set_max_width" -> "(II)V";
+             case "kof_ui_widget_set_border" -> "(III)V";
+             case "kof_ui_widget_set_shadow", "kof_ui_widget_set_gradient" -> "(IIII)V";
              case "kof_ui_widget_on" -> "(ILjava/lang/String;Ljava/lang/Object;)V";
             case "kof_ui_widget_font" -> "(I)I";
              case "kof_ui_link_set_text", "kof_ui_link_set_url", "kof_ui_image_set_src",
@@ -243,6 +254,13 @@ public final class JvmRuntimeCallDescriptors {
             case "kof_time_daysBetween" -> "(IIIIII)I";
             case "kof_time_addDays" -> "(Ljava/lang/String;I)Ljava/lang/String;";
             case "kof_time_diffDays" -> "(Ljava/lang/String;Ljava/lang/String;)I";
+            // S7e (D-STDLIB 13/09): hoje/formato UTC-only
+            case "kof_time_todayIso" -> "()Ljava/lang/String;";
+            case "kof_time_formatDateIso" -> "(III)Ljava/lang/String;";
+            case "kof_time_isToday" -> "(III)Z";
+            case "kof_time_hoursBetween" -> "(IIIIIIII)I";
+            case "kof_time_parseDateIso" -> "(Ljava/lang/String;)I";
+            case "kof_time_tzOffsetSeconds" -> "()I";
             case "kof_time_now" -> "()J";
             case "kof_time_interval" -> "(ILjava/lang/Object;)Ljava/lang/String;";
             case "kof_time_cancel" -> "(Ljava/lang/String;)V";
@@ -292,6 +310,10 @@ public final class JvmRuntimeCallDescriptors {
             case "kof_string_to_long" -> "(Ljava/lang/String;)J";
             case "kof_string_to_double" -> "(Ljava/lang/String;)D";
             case "kof_string_to_float" -> "(Ljava/lang/String;)F";
+            // S13b (plan-stdlib-expansion): parse com default — briefing §43
+            case "kof_string_to_int_or_default" -> "(Ljava/lang/String;I)I";
+            case "kof_string_to_long_or_default" -> "(Ljava/lang/String;J)J";
+            case "kof_string_to_double_or_default" -> "(Ljava/lang/String;D)D";
             case "kof_orm_create" -> "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z";
             case "kof_orm_save" -> "(Ljava/lang/String;Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;";
             case "kof_orm_find" -> "(Ljava/lang/String;Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;";
@@ -305,7 +327,7 @@ public final class JvmRuntimeCallDescriptors {
             case "kof_orm_page" -> "(Ljava/lang/String;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/util/ArrayList;";
             case "kof_orm_count_where" -> "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;)J";
             case "kof_orm_delete_all" -> "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z";
-            // ── kof.security (docs/security.md §5) ───────────────────
+            // ── kof.security (docs/stdlib/security.md §5) ───────────────────
             case "kof_sec_sha256", "kof_sec_sha512", "kof_sec_redact", "kof_sec_secret_get",
                     "kof_sec_password_hash", "kof_sec_auth_user" -> "(Ljava/lang/String;)Ljava/lang/String;";
             case "kof_sec_hmac_sha256", "kof_sec_aesgcm_encrypt", "kof_sec_aesgcm_decrypt",
@@ -345,6 +367,7 @@ public final class JvmRuntimeCallDescriptors {
             case "kof_math_sqrt" -> "(D)D";
             case "kof_math_lerp" -> "(DDD)D";
             case "kof_math_percentage" -> "(DD)D";
+            case "kof_math_pow" -> "(DD)D";
             case "kof_math_isInteger", "kof_math_isDecimal" -> "(D)Z";
             // ── kof.strings (STDLIB S2a) ────────────────────────────────────
             case "kof_strings_isAlpha", "kof_strings_isNumeric", "kof_strings_isAlphaNumeric", "kof_strings_isAscii" -> "(Ljava/lang/String;)Z";
@@ -354,8 +377,8 @@ public final class JvmRuntimeCallDescriptors {
                     "kof_strings_toPascalCase", "kof_strings_toSnakeCase", "kof_strings_toKebabCase",
                     "kof_strings_slugify", "kof_strings_escapeHtml", "kof_strings_unescapeHtml",
                     "kof_strings_escapeJson", "kof_strings_removeWhitespace",
-                    "kof_strings_normalizeWhitespace" -> "(Ljava/lang/String;)Ljava/lang/String;";
-            case "kof_strings_repeat", "kof_strings_truncate" -> "(Ljava/lang/String;I)Ljava/lang/String;";
+                    "kof_strings_normalizeWhitespace", "kof_strings_dedent" -> "(Ljava/lang/String;)Ljava/lang/String;";
+            case "kof_strings_repeat", "kof_strings_truncate", "kof_strings_indent" -> "(Ljava/lang/String;I)Ljava/lang/String;";
             case "kof_strings_padLeft", "kof_strings_padRight" -> "(Ljava/lang/String;ILjava/lang/String;)Ljava/lang/String;";
             case "kof_net_scheme", "kof_net_host", "kof_net_port",
                     "kof_net_path", "kof_net_query", "kof_net_fragment",

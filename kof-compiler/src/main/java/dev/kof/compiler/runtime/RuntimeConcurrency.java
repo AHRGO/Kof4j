@@ -15,7 +15,11 @@ public final class RuntimeConcurrency {
             .balign 8
             kof_spawn_handles: .quad 0          # cabeca da lista (no: [next, handle])
             kof_spawn_count: .quad 0
-            kof_cancelled_flags: .space 256     # cancel cooperativo por TID % 256
+            # §117 (8a): 256 entries de 16B [tid(8), flag(8)], chave = TID REAL
+            # (pthread_self) + probe linear — substitui a tabela por hash
+            # truncado (2 TIDs vivos no mesmo slot = cancel perdido/alheio).
+            .balign 16
+            kof_cancel_slots: .space 4096
             .section .text
             .globl kof_spawn_trampoline
             .type kof_spawn_trampoline, @function
@@ -27,16 +31,16 @@ public final class RuntimeConcurrency {
                 pushq %rbx
                 pushq %r12
                 movq %rdi, %rbx
-                # limpa a flag de cancel deste TID (slot pode ser de worker
-                # anterior reutilizado; mod 256).
-                call pthread_self               # TID em rax
-                movabs $0x9E3779B97F4A7C15, %r10
-                mulq %r10                       # rdx = (TID*phi) >> 64
-                shrq $56, %rdx                  # slot 0..255
-                leaq kof_cancelled_flags(%rip), %r10
-                movb $0, (%r10,%rdx,1)
+                # §117 (8a): registra (TID real, flag=0) na tabela de slots
+                # com CHAVE = pthread_self (probe linear) — zero colisão: a
+                # tabela antiga indexava por hash truncado e 2 TIDs vivos
+                # podiam cair no mesmo slot (cancel vazava/apagava alheio).
+                call pthread_self               # rax = TID
+                movq %rax, %rdi
+                call kof_cancel_slot_insert     # rax = entry ptr (flag=0)
+                movq 8(%rbx), %r12              # handle
+                movq %rax, 32(%r12)             # handle->cancelEntry (trampoline SEMPRE tem handle)
                 movq 0(%rbx), %rdi              # task
-                movq 8(%rbx), %r12              # handle (0 p/ stmt)
                 movq 8(%rdi), %rax              # task vtable
                 movq (%rax), %rax               # vtable[0] = invoke
                 call *%rax
@@ -45,6 +49,92 @@ public final class RuntimeConcurrency {
                 movq %rax, 16(%r12)             # handle->result
                 movl $1, 4(%r12)                # handle->done = 1
             .Lkof_spawn_thr_done:
+                # §117: remove a entry deste TID (tid=0) — slot volta a vazio
+                # sem tocar em worker alheio (o bug do `movb $0` por hash).
+                movq 32(%r12), %r12
+                testq %r12, %r12
+                jz .Lkof_spawn_thr_nocl
+                movq $0, (%r12)
+            .Lkof_spawn_thr_nocl:
+                xorl %eax, %eax
+                popq %r12
+                popq %rbx
+                ret
+
+            # ---- tabela de cancel por TID real (§117, 8a) ----
+            # 256 entries de 16B: [tid(8), flag(8)]. Probe linear a partir do
+            # hash phi do TID — chaves REAIS (pthread_self), colisão resolve
+            # pelo probe; tid=0 = vazio. Handle: 32=cancelEntry (novo).
+            .globl kof_cancel_slot_insert
+            .type kof_cancel_slot_insert, @function
+            kof_cancel_slot_insert:
+                # rdi = TID -> rax = entry (tid=rdi, flag=0) ou 0 (tabela cheia)
+                pushq %rbx
+                pushq %r12
+                movq %rdi, %rbx                 # tid
+                movabs $0x9E3779B97F4A7C15, %r10
+                mulq %rbx                       # rdx = high 64
+                shrq $56, %rdx                  # slot base
+                xorl %r12d, %r12d               # i = 0
+            .Lkcsi_loop:
+                cmpl $256, %r12d
+                jge .Lkcsi_full
+                movl %r12d, %eax
+                addl %edx, %eax
+                andl $255, %eax
+                imull $16, %eax, %eax
+                leaq kof_cancel_slots(%rip), %r10
+                addq %rax, %r10                 # entry
+                cmpq $0, (%r10)
+                je .Lkcsi_claim
+                cmpq %rbx, (%r10)
+                je .Lkcsi_reuse
+                incl %r12d
+                jmp .Lkcsi_loop
+            .Lkcsi_claim:
+                movq %rbx, (%r10)
+            .Lkcsi_reuse:
+                movq $0, 8(%r10)                # flag = 0
+                movq %r10, %rax
+                popq %r12
+                popq %rbx
+                ret
+            .Lkcsi_full:
+                xorl %eax, %eax
+                popq %r12
+                popq %rbx
+                ret
+
+            .globl kof_cancel_slot_find
+            .type kof_cancel_slot_find, @function
+            kof_cancel_slot_find:
+                # rdi = TID -> rax = entry (se registrada e viva) ou 0
+                pushq %rbx
+                pushq %r12
+                movq %rdi, %rbx
+                movabs $0x9E3779B97F4A7C15, %r10
+                mulq %rbx
+                shrq $56, %rdx
+                xorl %r12d, %r12d
+            .Lkcsf_loop:
+                cmpl $256, %r12d
+                jge .Lkcsf_none
+                movl %r12d, %eax
+                addl %edx, %eax
+                andl $255, %eax
+                imull $16, %eax, %eax
+                leaq kof_cancel_slots(%rip), %r10
+                addq %rax, %r10
+                cmpq %rbx, (%r10)
+                je .Lkcsf_hit
+                incl %r12d
+                jmp .Lkcsf_loop
+            .Lkcsf_hit:
+                movq %r10, %rax
+                popq %r12
+                popq %rbx
+                ret
+            .Lkcsf_none:
                 xorl %eax, %eax
                 popq %r12
                 popq %rbx
@@ -62,13 +152,16 @@ public final class RuntimeConcurrency {
                 subq $24, %rsp
                 movq %rdi, %r13
                 movl %esi, %r14d
-                movl $32, %edi
+                movl $48, %edi                  # §117: 32=cancelEntry, 40=pad
                 call kof_alloc
                 movq %rax, %rbx                 # handle
                 movl $2, 0(%rbx)
                 movl $0, 4(%rbx)
                 movq $0, 8(%rbx)
                 movq $0, 16(%rbx)
+                movq $0, 24(%rbx)
+                movq $0, 32(%rbx)               # cancelEntry = 0
+                movq $0, 40(%rbx)
                 # bloco do trampolim
                 movl $16, %edi
                 call kof_alloc
@@ -261,8 +354,8 @@ public final class RuntimeConcurrency {
                 xorl %eax, %eax
                 ret
 
-            # cancel(handle): marca a flag do TID do handle (cooperativo).
-            # sem calls -> alinhamento irrelevante.
+            # cancel(handle): marca `canceled` NO PRÓPRIO handle (§117, 8a) —
+            # cooperativo; o worker vê via TLS. Sem calls → alinhamento irrelevante.
             .globl kof_cancel
             .type kof_cancel, @function
             kof_cancel:
@@ -271,15 +364,14 @@ public final class RuntimeConcurrency {
                 jz .Lkof_cancel_no
                 cmpl $2, 0(%rdi)
                 jne .Lkof_cancel_no
-                movq 8(%rdi), %rax              # TID
+                movq 8(%rdi), %rdi              # TID (pthread_create grava)
+                testq %rdi, %rdi
+                jz .Lkof_cancel_no              # nunca disparou
+                call kof_cancel_slot_find
                 testq %rax, %rax
-                jz .Lkof_cancel_no              # nunca disparou: sem TID
-                movabs $0x9E3779B97F4A7C15, %r10
-                mulq %r10                       # rdx = (TID*phi) >> 64
-                shrq $56, %rdx                  # slot 0..255
-                leaq kof_cancelled_flags(%rip), %r10
-                movb $1, (%r10,%rdx,1)
-                movq $1, %rax                   # rax 64b limpo (movl deixaria altos do mulq)
+                jz .Lkof_cancel_no              # worker não registrado (ainda não rodou/terminou)
+                movq $1, 8(%rax)                # flag = 1
+                movq $1, %rax
                 ret
             .Lkof_cancel_no:
                 xorl %eax, %eax
@@ -290,12 +382,26 @@ public final class RuntimeConcurrency {
             .globl kof_cancelled
             .type kof_cancelled, @function
             kof_cancelled:
-                call pthread_self               # TID em rax
-                movabs $0x9E3779B97F4A7C15, %r10
-                mulq %r10                       # rdx = (TID*phi) >> 64
-                shrq $56, %rdx                  # slot 0..255
-                leaq kof_cancelled_flags(%rip), %r10
-                movzbl (%r10,%rdx,1), %eax
+                # §117: flag da entry do TID ATUAL (chave real, sem colisão).
+                # 0 fora de worker (paridade: interpretador sempre 0).
+                pushq %rbx
+                pushq %r12
+                subq $8, %rsp                   # 2 push + subq 8 -> rsp≡8 no call
+                call pthread_self
+                movq %rax, %rdi
+                call kof_cancel_slot_find
+                testq %rax, %rax
+                jz .Lkof_cancelled_no
+                movzbl 8(%rax), %eax
+                addq $8, %rsp
+                popq %r12
+                popq %rbx
+                ret
+            .Lkof_cancelled_no:
+                xorl %eax, %eax
+                addq $8, %rsp
+                popq %r12
+                popq %rbx
                 ret
 
             # selectAny(list): valor do primeiro handle pronto; senão

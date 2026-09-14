@@ -1,6 +1,113 @@
 # Kof Native — Multi-Arch (RISC-V 64 e ARM64/AArch64)
 
-> **Status:** `EM DESENVOLVIMENTO (parcial)` — **riscv64 + aarch64 com core completo (03/09)**: classes/arrays/List/strings/instanceof/switch/try-catch/FP/recursão em asm puro nos dois; paridade avançada pendente.
+> **🔄 RE-AUDITORIA 12/09 (medido sob qemu REAL neste host — NÃO memória):**
+> os cabeçalhos 03/09 abaixo estão DESATUALIZADOS e este bloco é a fonte do
+> estado REAL (regra AGENTS "auditar doc contra o código/testes, não contra a
+> memória"; estado-4 "doc contradiz o código" corrigido). As 13 faces "core"
+> de 03/09 são hoje ~30 testes cross (`NativeRiscv64E2ETest` 39/39 +
+> `NativeAarch64E2ETest` 39/39, **executados**, 0 skip neste host). **FECHADO
+> e EXECUTANDO sob qemu (byte-idêntico ao JVM medido), para além do "core":**
+> Map/Set, `println(<coleção>)` (§107 — x86 `f3b3821c` + cross B39 12/09),
+> higher-order `map/filter/reduce` (probe 12/09: `[2,4,6]`/`[2,3]` idêntico
+> JVM), HTTP client (`riscv64HttpGetPostStatus`), `kof.net`, JSON
+> encode/decode int/list/string, spawn/await (`clone`+`futex`), `time` ISO
+> (add/diff), `math` Double (MATH001) + **`math.pow` S1b.2 (decisão 7a 13/09:
+> x86 via libm `pow@PLT` + `-lm`; riscv/aarch recusam com MATH001 — link
+> cross estático sem libc, decisão de arquitetura regra 6; `KofMath.supportedOn`),
+> `random`, `uuid`, multi-dim array
+> (§113), busca String UTF-16 (§43/§102/§111). **ABERTO — recusa HONESTA em
+> compile-time (NUNCA binário mudo; regra R6 — o stub "exit 0 sem efeito" de
+> 03/09 já NÃO descreve mais o estado, ops desconhecidos dão código de gap):**
+> `kof.db` → **DB001** (`KofDbE2ETest` prova `assertFalse(success)` + diags
+> DB001 nos 6 alvos), `kof.security` crypto-heavy → **SECN000**, os 6
+> construtos de concorrência de mais alta ordem (supervisor/`selectAny`
+> multi/cancel cross …) → **CONC001** (`spawn`/`await`/`sleep`/`interval`
+> VERDES no cross — o gate #91 não os toca), UI (`kof.ui`) **sem port cross
+> algum** (nenhum teste riscv/aarch), `json.decode<List<Record>>` → **JSN004**
+> (asm puro não tem reflection p/ materializar record). **Consequência honesta
+> HOJE:** programa com coleção/HTTP/net/JSON-escalar/spawn/time/math **roda de
+> verdade** no riscv/aarch (a frase 03/09 "não executa a lógica — sai 0 sem
+> efeito" está SUPERADA); o que ainda não roda (DB/segurança/UI/record-decode)
+> é diagnosticado com código de gap em compilação, não silenciosamente.
+> **Gap real `NATIVE002` que sobra:** (1) GC mark-sweep cross (riscv é
+> bump-pointer sem coletor — vazamento em heap longo, não-crash); (2) as
+> recusas DB001/SECN000/CONC001/JSN004 acima; (3) FP-coleção no cross
+> (FLT001 em compilação §107); (4) `backend-parity.md` colunas por-arch
+> ainda por separar; (5) CI cross não existe (toolchain host-dependente) —
+> **face (5) FECHADA 12/09**: job `cross-native` em `.github/workflows/ci.yml`
+> instala `binutils-riscv64/aarch64-linux-gnu` + `qemu-user-static` e roda
+> `NativeRiscv64E2ETest,NativeAarch64E2ETest` (executam sob qemu, não skipam —
+> o job EXISTE para provar; nomes dos binários batem com `NativeArchEmitter:151
+> -282`; local: riscv 39/39 + aarch 39/39 verdes neste host com qemu).
+> Este doc continua em `development/` (NATIVE002 não fecha enquanto restam
+> (1)–(5)); quando (1)–(5) zerarem → mover para `docs/`.
+>
+> **🪜 DECOMPOSIÇÃO DA FACE (1) — GC mark-sweep cross (12/09, fila para
+> execução por degrau — cada degrau cabe numa sessão e tem prova própria):**
+> o riscv é bump puro (`amoadd.d` em `kof_alloc_ptr`, sem flags/mark/free-list);
+> o port NÃO é copiar o RuntimeGc x86 — o scan conservative exige stack-walk
+> riscv + roots no intervalo de seções. **⚠️ CORRIGIDO 12/09 (lido o código,
+> não memória) — a decomposição original estava ERRADA no G-1:** o riscv não
+> tem NENHUM header de bloco: `kof_alloc` riscv (`NativeRiscvAsmRt0.java:17-22`)
+> retorna o bump cru alinhado a 16 e os usuários escrevem o header do OBJETO
+> (typeId @0, vtable @8, …) no OFFSET 0 do ponteiro retornado (ex.:
+> `string_from_literal`: `sw t0, 0(s3)`), enquanto no x86 o GC vive num bloco
+> de 32B ANTERIOR ao ponteiro retornado (`RuntimeMemory.java:145-150` — size@0,
+> free-next@8, gc-next@16, flags@24; `kof_free:205` lê `-32(%rdi)`). Portar a
+> free-list sem o bloco-header = o coletor ler o typeId como tamanho →
+> corrupção. Por isso entra o **G-0** na frente. Degraus na ordem:
+> **G-0 bloco-header riscv (FEITO 12/09, sessão dev):** `kof_alloc` riscv reserva
+> 32B ANTES do ponteiro (total = 32+align16, retorno base+32; preenchimento
+> size/free_next/gc_next/flags) + guard OOM honesto (`_kof_heap_end`, panic
+> `out of memory` exit 1 — R6: o bump NÃO tinha bounds-check e o header
+> triplica o consumo/bloco, então o estouro ficou mais provável). Prova:
+> suíte riscv 40/40 + aarch 40/40 sob qemu (inclui teste de pressão
+> `riscvHeapExhaustionPanicsHonest`/`aarch64HeapExhaustionPanicsHonest`,
+> sabotagem-sem-guard = zero output FAIL) + GC x86 3/3 + Artifact 6/6 +
+> ratchet ≤500 OK (Rt0 com 500 exatas; prosa de design vive aqui).
+> **G-1 free-list riscv** — port da lista de blocos livres do x86 SOBRE o
+> layout do G-0 (header 32B: size/flags/gc-list/free-next); prova: ciclo
+> alloc/free/alloc (free ainda manual, sem GC) reusa o slot — teste riscv
+> E2E novo com memstats (`kof_memstats` port incluído aqui, é a alavanca de
+> observação dos degraus seguintes).
+> ⚠️ **Correção 12/09 ~20:05 (doc-vs-realidade, contagem no fonte — refuta a
+> justificativa "free sem caller = código morto" da recusa de 19:44):** as
+> fatias riscv fazem **57 `call kof_alloc`** (Mapset0 ×4, Rt0 ×3, RtB0-log ×3,
+> B10/B11/B12/B20/B21/B22 ×2, B1/B15 ×1…) e **ZERO `call kof_free`** — enquanto
+> o x86 tem 4 callers reais (`RuntimeChannel:132` nó de channel,
+> `RuntimeLog2:98` nó de log, `RuntimeObservability1:426`/`2:247`). O riscv
+> VAZA em cada nó de log/b64/map-rebuild: o bump nunca devolve (é a razão do
+> `.bss` de ~260KB fixo). O G-1 NÃO é código morto — é o que fecha o vazamento
+> das 57 alocações. **Falta p/ executar: host com toolchain** (o asm novo de
+> free/memstats só é entregável com prova qemu — guard `assumeTrue`, nunca
+> asm não-executado). Ordem do port (proposta): `kof_free` riscv (port 1:1
+> do `RuntimeMemory.emitFree` — header 32B do G-0 já tem size/flags/next) →
+> `kof_memstats` (contadores + print) → ligar o free nos nós do log (RtB0,
+> espelhando `RuntimeLog2:98`) → E2E ciclo alloc/free/alloc reusa slot.
+> **G-2 header flags/mark bits + lista GC** — o bloco aloca com flag=0 e entra
+> na gc-list global (`kof_gc_head` riscv); prova: programa com N allocs e
+> `KOF_GC_DEBUG` dump da lista (syscalls write) com tamanho/flag corretos.
+> **G-3 mark conservative riscv** — port de `kof_gc_mark`: walk `sp..fp`
+> (riscv: `sp` até o limite do frame, fallback 4KB como o x86) + scan de
+> raízes estáticas EXPLÍCITO no intervalo `.data..kof_heap_root_end`
+> (o `kof_heap_root_end` da #97 S-5-x86 é PRÉ-REQUISITO compartilhado —
+> coordenar com a fila bugfix, não duplicar o emissor); transitive = walk dos
+> campos por tamanho (size/8). Prova: objeto alcançado só pela stack sobrevive,
+> inalcançado some (teste com `KOF_GC_DEBUG` antes/depois; SEM sweep ainda —
+> mark-only é observável, inofensivo).
+> **G-4 sweep + collect no alloc** — free-list recebe mortos; `kof_gc_collect`
+> portado (tick 4096 como o x86); prova: teste de VASAMENTO que hoje é
+> impossível (loop de alloc que estouraria o bump de 260KB roda e a memória
+> não cresce monotonicamente — medir via memstats do G-1).
+> **G-5 aarch64** — herda tudo via tradutor (as diretivas/labels riscv passam
+> ilesas — mesmo caminho da poda S-4; `amoadd.d`→`ldadd` já traduzido,
+> `NativeAarch64Translator.java:299`); gate: suíte aarch 39/39 sob qemu +
+> o teste de vazamento G-4 também no aarch.
+> Cada degrau: commit com suíte cross completa verde + DOING.md na linha.
+> NÃO misturar com S-5-x86/root_end (fila bugfix) — mas G-3 DEPENDE dele;
+> G-0/G-1/G-2 adiantam sem root_end.
+>
+> **Status:** `EM DESENVOLVIMENTO (parcial)` — **riscv64 + aarch64 com core completo (03/09)**: classes/arrays/List/strings/instanceof/switch/try-catch/FP/recursão em asm puro nos dois; paridade avançada pendente *(ver re-auditoria 12/09 acima — muito do que estava "pendente" já roda sob qemu; o que falta tem código de gap honesto)*.
 > **Versão:** 0.2.6-beta · **Data:** 2026-09-03
 > **Gap:** `NATIVE002` (riscv64 core ✅ 02/09; aarch64 core ✅ 03/09 via tradução riscv→aarch64; paridade total x86 — JSON/DB/HTTP/concorrência/UI/net — pendente nos dois).
 > **Progresso 03/09:** toolchain cruzada + qemu + **codegen riscv64 + aarch64** (stack machine,
@@ -63,13 +170,17 @@ funciona de ponta a ponta.
 | Os 18 métodos `emit*` reais (x86_64) | ✅ | `emitBinary`/`emitOperation`/`emitMethod`/`emitConditionalJump`/vcall… — o caminho completo continua só em x86_64 |
 | Extração de `NativeBase` (layout/`kof_alloc`/mangle comum) | ❌ não existe | `NativeBackend` ainda é monolítico x86_64 (riscv/aarch64 reusam o mesmo lowering via tradução) |
 | Runtime por arch (asm) | ✅ riscv64 + aarch64 core | `kof_alloc`(bump)/`kof_memcpy`/strings (literal/concat/equals/charAt/substring/contains/startsWith/endsWith/indexOf/toInt/length)/int-long-bool→string/print/objects (`init_object`/`instanceof`/super_table/vtables)/arrays (alloc/get/set/length+bounds)/List (new/add/get/set/size/contains/grow)/exceções (`throw`/exc_chain/`null_error`/`bounds_error`) em **asm puro** riscv64 **e** aarch64 (raw syscalls, sem libc; aarch64 via `translateRiscvToAarch64` — `adrp`+`add :lo12:`, `svc #0`, `and sp` skip, `str sp` via `x17`); `qemu-riscv64`/`qemu-aarch64` (ver §2.3). |
-| Testes E2E `qemu` (aarch64/riscv64) | ✅ | `NativeRiscv64E2ETest` 13/13 + `NativeAarch64E2ETest` 13/13 (26 testes cross) |
-| CI com cross toolchains | ❌ não existe | `aarch64/riscv64` não entram no pipeline |
+| Testes E2E `qemu` (aarch64/riscv64) | ✅ | `NativeRiscv64E2ETest` 42/42 + `NativeAarch64E2ETest` 42/42 (84 testes cross, medidos por @Test + surefire 13/09) |
+| CI com cross toolchains | ✅ existe (13/09) | job `cross-native` em `.github/workflows/ci.yml` (instala binutils-riscv64/aarch64 + qemu-user-static e roda as 2 suites; provado `success` no run 34732932745) |
 | `backend-parity.md` colunas por arch | ⚠️ parcial | delta citado, colunas `NATIVE_X86_64/AARCH64/RISCV64` separadas pendentes |
 
-**Consequência prática:** um programa real (com `println`, `instanceof`,
-`switch`) em `native.risc`/`native.arm` **não executa a lógica** — sai `0` sem
-efeto. O stub existe para validar o *encanamento*, não a codegen.
+**Consequência prática (SUPERADA — foto de 01/09):** valia p/ o stub
+original de plumbing; hoje (re-auditoria 12/09 no topo) riscv/aarch **executam
+a lógica** sob qemu — 42+42 testes E2E cross, inclusive programas reais com
+`println`/`instanceof`/`switch`/Map/Set/higher-order byte-idênticos ao JVM.
+O que restou de honesto nesta tabela: `NativeBase` não extraído, colunas por
+arch em `backend-parity.md` não separadas, e as faces de ops fora do core
+(JSON/DB/UI por arch específico).
 
 ### 2.3 Runtime em assembly puro por arch (decisão 02/09)
 

@@ -30,6 +30,25 @@ public final class BuiltinCallTyper {
                 elemType = MemberResolver.resolveType(sa, mc.typeArguments().get(0), scope);
             } else if (!mc.arguments().isEmpty()) {
                 elemType = SemExpressionTyper.inferType(sa, mc.arguments().get(0), scope);
+                if (elemType instanceof Type.FunctionType ft) {
+                    // §156: espelho do CompilerTypeSupport — lista de lambdas
+                    // da mesma assinatura desce sem className (o analyzer roda
+                    // antes da síntese, então className é null aqui; a checagem
+                    // é só params+retorno iguais em todos os args).
+                    boolean same = true;
+                    for (int i = 1; i < mc.arguments().size(); i++) {
+                        Type t = SemExpressionTyper.inferType(sa, mc.arguments().get(i), scope);
+                        if (!(t instanceof Type.FunctionType oft)
+                                || !oft.parameterTypes().equals(ft.parameterTypes())
+                                || !oft.returnType().equals(ft.returnType())) {
+                            same = false;
+                            break;
+                        }
+                    }
+                    if (same && mc.arguments().size() > 1) {
+                        elemType = new Type.FunctionType(ft.parameterTypes(), ft.returnType());
+                    }
+                }
             }
             for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
             return new Type.ClassType("kof", "List", List.of(elemType));
@@ -78,6 +97,17 @@ public final class BuiltinCallTyper {
         }
         if (mc.receiver() == null && "now".equals(mc.methodName()) && mc.arguments().isEmpty()) {
             return Type.PrimitiveType.LONG;
+        }
+        // #108 (opção 1, 13/09): `sleep(ms)` sem receiver resolve como
+        // `time.sleep(ms)` — espelha o `now()` sem receiver acima.
+        // Só vale sem receiver E sem local/função `sleep` do usuário
+        // (não sombreia: resolve() acha local, param, função ou classe).
+        if (mc.receiver() == null && "sleep".equals(mc.methodName())
+                && scope.resolve("sleep") == null) {
+            List<Type> sleepArgs = new ArrayList<>();
+            for (ExpressionNode arg : mc.arguments()) sleepArgs.add(SemExpressionTyper.inferType(sa, arg, scope));
+            KofTime.TimeCall sleepCall = KofTime.staticCall("sleep", sleepArgs);
+            if (sleepCall != null) return sleepCall.returnType();
         }
         if (mc.receiver() == null && "readLine".equals(mc.methodName()) && mc.arguments().isEmpty()) {
             return BuiltinTypes.STRING;
@@ -359,7 +389,13 @@ public final class BuiltinCallTyper {
                 && !"storesLive".equals(mc.methodName())) {
             List<Type> argTypes = new ArrayList<>();
             for (ExpressionNode arg : mc.arguments()) argTypes.add(SemExpressionTyper.inferType(sa, arg, scope));
+            // SG-011B: junta TODOS os candidatos homônimos ELIGÍVEIS (mesmo
+            // predicado de antes: sem type params próprios, e com args cobrindo
+            // os parâmetros quando há defaults) e resolve por assinatura. Um
+            // único candidato → caminho idêntico ao antigo (zero regressão);
+            // ≥2 → TopLevelOverload.pick (oracle JVM); ambíguo → SEM057.
             boolean found = false;
+            List<TopLevelOverload.Candidate> cands = new ArrayList<>();
             for (AstNode d : sa.unit().declarations()) {
                 if (d instanceof FunctionDeclarationNode fn && fn.name().equals(mc.methodName())) {
                     found = true;
@@ -369,17 +405,8 @@ public final class BuiltinCallTyper {
                             || mc.arguments().size() >= fn.parameters().size())) {
                         List<Type> paramTypes = new ArrayList<>();
                         for (FormalParameterNode p : fn.parameters()) paramTypes.add(MemberResolver.resolveType(sa, p.type(), scope));
-                        TypeChecker.checkArgTypes(sa.diagnostics(), mc.methodName(), argTypes, paramTypes);
-                        // registra o tipo de retorno da função top-level
-                        // para o var local inferir (evita Unknown que
-                        // quebra a resolução de métodos do receiver)
-                        Type fnRet = MemberResolver.resolveType(sa, fn.returnType(), scope);
-                        if (!Type.isVoid(fnRet)) {
-                            sa.expressionTypes().put(mc, fnRet);
-                            return fnRet;
-                        }
+                        cands.add(new TopLevelOverload.Candidate(fn, paramTypes, paramTypes.size()));
                     }
-                    break;
                 } else if (d instanceof ExternalFunctionNode ext && ext.name().equals(mc.methodName())) {
                     // FFI (TIER 2.1): chamada a `extern` declarado resolve pelo
                     // contrato (tipo de retorno), nunca SEM015 — o binding real é
@@ -389,6 +416,32 @@ public final class BuiltinCallTyper {
                     if (!Type.isVoid(extRet)) {
                         sa.expressionTypes().put(mc, extRet);
                         return extRet;
+                    }
+                }
+            }
+            if (!cands.isEmpty()) {
+                TopLevelOverload.Status[] st = new TopLevelOverload.Status[1];
+                int sel = TopLevelOverload.pick(cands, argTypes, st);
+                if (sel < 0 && st[0] == TopLevelOverload.Status.AMBIGUOUS) {
+                    if (sa.diagnostics() != null) {
+                        sa.diagnostics().error(mc.position() != null ? mc.position().file() : "",
+                                mc.position() != null ? mc.position().line() : 0,
+                                mc.position() != null ? mc.position().column() : 0, 0,
+                                "call to '" + mc.methodName() + "' is ambiguous between "
+                                        + cands.size() + " overloads — add a cast to pick one",
+                                "SEM057");
+                    }
+                } else {
+                    if (sel < 0) sel = 0; // NO_MATCH → reporta SEM013/SEM014 no candidato 0, como antes
+                    TopLevelOverload.Candidate chosen = cands.get(sel);
+                    TypeChecker.checkArgTypes(sa.diagnostics(), mc.methodName(), argTypes, chosen.paramTypes());
+                    // registra o tipo de retorno da função top-level para o var
+                    // local inferir (evita Unknown que quebra a resolução de
+                    // métodos do receiver)
+                    Type fnRet = MemberResolver.resolveType(sa, chosen.fn().returnType(), scope);
+                    if (!Type.isVoid(fnRet)) {
+                        sa.expressionTypes().put(mc, fnRet);
+                        return fnRet;
                     }
                 }
             }

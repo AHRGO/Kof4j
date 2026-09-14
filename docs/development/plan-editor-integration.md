@@ -1,6 +1,28 @@
 # PLAN — Editor Integration (EDI001)
 
-> **Status:** `EM CURSO` (degraus 1-3, 4-10, 11, 12 feitos; resta IntelliJ plugin) · **Gap:** `EDI001` · **Criado:** 07/09/2026
+> **Status:** `EM CURSO` (degraus 1-12 feitos; IntelliJ: conteúdo honesto
+> instalado 13/09 — filetype XML + External Tools + README LSP4IJ via
+> `KofEditorContent.intellij`, `EditorIntegrationTest` 17/17; plugin oficial
+> Gradle/Platform segue na issue #1 + degrau 13 gate final) · **Gap:** `EDI001` · **Criado:** 07/09/2026
+> **Prova degrau 12 (medido 13/09):** `docs/editors/` 8 docs (overview+7
+> editores) + `training/tooling/cli.md:25` (tabela `kof editor …`) +
+> `learn/38-editors.md` (detect/setup/install). Resta: IntelliJ plugin
+> (subprojeto Gradle próprio, §21) + degrau 13 (gate final).
+> **Prova degraus 6-9 (medido 13/09, dono = 192.168.100.22):** os providers
+> vim/emacs/geany/nano existiam desde os degraus, mas **só** vscode/neovim/
+> intellij tinham teste de instalação (Q1: feature sem prova). Agora
+> `EditorIntegrationTest` cobre o config gerado dos 4 (ftdetect+syntax+compiler
+> no vim; `kof-mode.el` com auto-mode-alist no emacs; `filetypes.kof` com
+> build/run no geany; `kof.nanorc` só syntax no nano) — **21/21**. Nenhum
+> provider toca o ambiente real (§24, DetectContext fake).
+> **Fix de contrato §6 (13/09):** `kof editor` sem subcomando era **usage**,
+> divergindo do §6 ("alias de `detect`"); corrigido + teste
+> (`bareEditorIsDetectAliasAndHelpShowsUsage`). `update` ganhou teste de
+> re-sincronização (`updateResyncsInstalledIntegrations`) — **23/23**.
+> **`workspace/executeCommand` (degrau 0 opcional, P2) permanece adiado:**
+> o VS Code delega `Kof: Build/Run/Test` à CLI em terminal (§15/§20), então
+> a capability não é necessária ao release gate; adicioná-la exige split do
+> `LspServer` (501 linhas, no ratchet). Registrar como gap separado.
 > **Origem:** briefing "KOF EDITOR INTEGRATION" (infra oficial de integração de
 > editores/IDEs). **Escopo desta doc:** especificação + ordem de implementação.
 > **A implementação é DEPOIS** — este documento é o contrato.
@@ -349,6 +371,14 @@ testes automatizados, documentação, multiplataforma.
 | 11 | Installer hook (oferecer no install, §8) | installer | teste de fluxo |
 | 12 | Docs `docs/editors/*` + `training/` + `learn/` | docs | revisão + CI lint |
 | 13 | Gate final: suíte completa + release gate §19 | — | `mvn test` verde |
+
+> **Degrau 13 — gate rodado 13/09 15:22 (dono = 192.168.100.22):** suíte
+> 4-módulos verde — `kof-compiler` 1485/0 (156 skip), `kof-script` 31/0,
+> `kof-c-compiler` 5/0, `kof-cli` 181/0; `grep -rl FAILURE` vazio; BUILD
+> SUCCESS (10m37s). Os skips são qemu/BD externo. `check_500` OK.
+> **Residual do release gate §19:** IntelliJ plugin oficial (issue #1, §21) —
+> é decisão de escopo, não código; a distribuição local via `kof editor` está
+> completa para os 7 editores.
 
 **Dependências:** 0 (LSP) é independente e pode ir primeiro/paralelo. 1→2→3 em
 sequência. 4-10 (providers) independentes entre si depois do 3 (paralelizáveis,

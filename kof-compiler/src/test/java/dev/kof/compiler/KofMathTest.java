@@ -107,8 +107,11 @@ class KofMathTest {
     }
 
     @Test
-    void sqrtGatedOnCrossArch(@TempDir Path tmp) throws Exception {
-        assertGated(tmp, SQRT_SRC, "sqrt");
+    void sqrtCrossArch(@TempDir Path tmp) throws Exception {
+        // MATH001 FECHADO 11/09: kof_math_sqrt na fatia riscv B32
+        // (fsqrt.d) + aarch (fsqrtd no tradutor). Golden BYTE-IDÊNTICO
+        // aos 3 targets (SQRT_OUT), executado sob qemu.
+        forCrossArch(tmp, SQRT_SRC, SQRT_OUT);
     }
 
     // S1b.1: escalares Double puros (lerp/percentage/isInteger/isDecimal) —
@@ -159,25 +162,232 @@ class KofMathTest {
     }
 
     @Test
-    void doubleOpsGatedOnCrossArch(@TempDir Path tmp) throws Exception {
-        assertGated(tmp, DBL_SRC, "lerp");
+    void doubleOpsCrossArch(@TempDir Path tmp) throws Exception {
+        // MATH001 FECHADO 11/09 (lerp/percentage/isInteger/isDecimal — B32).
+        forCrossArch(tmp, DBL_SRC, DBL_OUT);
     }
 
-    private void assertGated(@TempDir Path tmp, String src, String label) throws Exception {
-        // MATH001 (R6 — nunca silencioso): Double ops têm JVM/Script/JS/x86
-        // (sqrtsd + SSE2); riscv64/aarch64 aguardam as rotinas FP montadas e
-        // rodadas (a lane não tem cross-assembler/qemu — regra: nunca asm sem prova).
-        Path gateSrc = tmp.resolve("Gate-" + label + "-" + System.nanoTime() + ".kf");
-        Files.writeString(gateSrc, src);
+    // S1b.2: pow(base,exp) — primeiro caso libm no native (pow@PLT + -lm)
+    // e Math.pow/** nos outros. Golden = oracle JVM medido, comparações Bool
+    // (bug 44: nunca println de double cru no Native). Cobre finitos exatos,
+    // exp negativo, exp fracionário (raiz) e a borda IEEE pow(0.0,0.0)==1.0.
+    private static final String POW_SRC = """
+        main() {
+            println(math.pow(2.0, 10.0) == 1024.0)
+            println(math.pow(9.0, 0.5) == 3.0)
+            println(math.pow(2.0, -1.0) == 0.5)
+            println(math.pow(10.0, 2.0) == 100.0)
+            println(math.pow(2.0, 0.0) == 1.0)
+            println(math.pow(0.0, 0.0) == 1.0)
+            println(math.pow(2.0, 0.5) == math.sqrt(2.0))
+            println(math.pow(3.0, 3.0) == 27.0)
+            println(math.pow(-2.0, 3.0) == -8.0)
+            println(math.pow(10.0, -2.0) == 0.01)
+            println(math.pow(1.0, 0.0) == 1.0)
+            println(math.pow(-1.0, 0.5) != math.pow(-1.0, 0.5))
+            println(math.pow(2.0, 1024.0) == math.pow(2.0, 1024.0))
+            println(math.pow(-8.0, 0.3333333333333333) != math.pow(-8.0, 0.3333333333333333))
+        }
+        """;
+
+    private static final String POW_OUT = String.join("\n",
+            "true", "true", "true", "true", "true", "true", "true", "true", "true",
+            "true", "true", "true", "true", "true");
+
+    // S13a (plan-stdlib-expansion §2, P0): math.parseInt/parseLong/parseDouble
+    // = fachada de namespace sobre as runtime fns EXISTENTES kof_string_to_*
+    // (zero runtime novo nos 4 alvos; regra 2). Contrato = JDK com trim (idem
+    // `.toInt()`): inválido/overflow LANÇA. Golden byte-idêntico JVM/Script/JS/
+    // x86 (Double via == Bool — bug 44: nunca println de double cru no Native;
+    // Long 2^63-1 prova 64-bit real pós-§81/BigInt no JS). Erro esperado via
+    // try/catch (Q3: borda) + bordas Int (MIN ok, MAX+1 lança) e Long.
+    private static final String PARSE_SRC = """
+        main() {
+            println(math.parseInt("42"))
+            println(math.parseInt(" -7 "))
+            println(math.parseInt("+13"))
+            println(math.parseInt("0"))
+            println(math.parseInt("-2147483648"))
+            println(math.parseLong("9007199254740993"))
+            println(math.parseLong("-9223372036854775807"))
+            println(math.parseDouble("2.5") == 2.5)
+            println(math.parseDouble("  -0.25 ") == -0.25)
+            println(math.parseDouble("1e2") == 100.0)
+            try { println(math.parseInt("abc")); println("S1") } catch (String e) { println("T1") }
+            try { println(math.parseInt("12a34")); println("S2") } catch (String e) { println("T2") }
+            try { println(math.parseInt("2147483648")); println("S3") } catch (String e) { println("T3") }
+            try { println(math.parseInt("")); println("S4") } catch (String e) { println("T4") }
+            try { println(math.parseLong("9223372036854775808")); println("S5") } catch (String e) { println("T5") }
+        }
+        """;
+
+    private static final String PARSE_OUT = String.join("\n",
+            "42", "-7", "13", "0", "-2147483648",
+            "9007199254740993", "-9223372036854775807",
+            "true", "true", "true",
+            "T1", "T2", "T3", "T4", "T5");
+
+    @Test
+    void parseJvm(@TempDir Path tmp) throws Exception {
+        runJvm(tmp, PARSE_SRC, PARSE_OUT);
+    }
+
+    @Test
+    void parseNative(@TempDir Path tmp) throws Exception {
+        runNative(tmp, PARSE_SRC, PARSE_OUT);
+    }
+
+    @Test
+    void parseJs(@TempDir Path tmp) throws Exception {
+        runJs(tmp, PARSE_SRC, PARSE_OUT);
+    }
+
+    @Test
+    void parseCrossArch(@TempDir Path tmp) throws Exception {
+        // kof_string_to_int/long = B30 (bug 79, contrato JDK); kof_string_to_double
+        // = B31 (bug 82). Golden BYTE-IDÊNTICO sob qemu-riscv64 + qemu-aarch64.
+        forCrossArch(tmp, PARSE_SRC, PARSE_OUT);
+    }
+
+    @Test
+    void parseTypeGuardRefused(@TempDir Path tmp) throws Exception {
+        // Q3 (erro esperado) + SEM025 (R6): Int NÃO alarga para String em
+        // silêncio — math.parseInt(42) é erro de COMPILAÇÃO (guia no check,
+        // não exceção em runtime; por isso o golden acima não tem T6).
+        Path file = tmp.resolve("Guard-" + System.nanoTime() + ".kf");
+        Files.writeString(file, "main() { println(math.parseInt(42)) }");
+        Path outDir = tmp.resolve("guard-" + System.nanoTime());
+        CompilationResult result = driver.compile(file, outDir, Target.JVM);
+        assertFalse(result.success(), "math.parseInt(42) deve ser rejeitado no typer (SEM025)");
+    }
+
+    // S13b (plan-stdlib-expansion §2, P0): math.parseInt/parseLong/
+    // parseDouble**OrDefault** — briefing §43 ("falha de parse = OrNull/
+    // OrDefault"). Mesmo contrato do parse (JDK + trim); falha DEVOLVE o
+    // default (nunca lança) — backends: JVM try/catch (JvmStringCoreRuntime),
+    // JS wrapper (JsRuntimeUiStdlib), x86 wrapper c/ handler no exc_chain
+    // (RuntimeStringParseOrDefault), riscv B41 (aarch herda via tradutor).
+    // Literal Int default em parseLong prova o widening I2L do KofStd
+    // (crash COMPUTE_FRAMES sem ele — mesma unidade). Linhas `""`/"   " do
+    // Double INCLUÍDAS pós-§175 (vazio lançava 0.0 no Native — paridade do
+    // parse base fechada; antes estavam fora do golden). Int/Long vazios
+    // devolvem o default (o parse base sempre lançou neles).
+    private static final String PARSEORD_SRC = """
+        main() {
+            println(math.parseIntOrDefault("42", 0))
+            println(math.parseIntOrDefault("abc", -1))
+            println(math.parseIntOrDefault("", 7))
+            println(math.parseIntOrDefault("  15  ", 0))
+            println(math.parseIntOrDefault("99999999999999", 3))
+            println(math.parseLongOrDefault("9007199254740993", 0))
+            println(math.parseLongOrDefault("x", -5))
+            println(math.parseLongOrDefault("9223372036854775808", 8))
+            println(math.parseDoubleOrDefault("2.5", 0.0) == 2.5)
+            println(math.parseDoubleOrDefault("nope", -0.5) == -0.5)
+            println(math.parseDoubleOrDefault("1e2", 0.0) == 100.0)
+            println(math.parseDoubleOrDefault("", 1.5) == 1.5)
+            println(math.parseDoubleOrDefault("   ", -0.25) == -0.25)
+        }
+        """;
+
+    private static final String PARSEORD_OUT = String.join("\n",
+            "42", "-1", "7", "15", "3",
+            "9007199254740993", "-5", "8",
+            "true", "true", "true", "true", "true");
+
+    @Test
+    void parseOrDefaultJvm(@TempDir Path tmp) throws Exception {
+        runJvm(tmp, PARSEORD_SRC, PARSEORD_OUT);
+    }
+
+    @Test
+    void parseOrDefaultNative(@TempDir Path tmp) throws Exception {
+        runNative(tmp, PARSEORD_SRC, PARSEORD_OUT);
+    }
+
+    @Test
+    void parseOrDefaultJs(@TempDir Path tmp) throws Exception {
+        runJs(tmp, PARSEORD_SRC, PARSEORD_OUT);
+    }
+
+    @Test
+    void parseOrDefaultCrossArch(@TempDir Path tmp) throws Exception {
+        // riscv = B41 (wrapper c/ handler no exc_chain sobre B30/B31); aarch
+        // herda linha-a-linha no tradutor. Golden BYTE-IDÊNTICO sob qemu.
+        forCrossArch(tmp, PARSEORD_SRC, PARSEORD_OUT);
+    }
+
+    @Test
+    void powJvm(@TempDir Path tmp) throws Exception {
+        runJvm(tmp, POW_SRC, POW_OUT);
+    }
+
+    @Test
+    void powNative(@TempDir Path tmp) throws Exception {
+        runNative(tmp, POW_SRC, POW_OUT);
+    }
+
+    @Test
+    void powJs(@TempDir Path tmp) throws Exception {
+        runJs(tmp, POW_SRC, POW_OUT);
+    }
+
+    @Test
+    void powCrossArchRefused(@TempDir Path tmp) throws Exception {
+        // R6 / Q3 (erro esperado): riscv/aarch NÃO linkam libm (cross é
+        // estático sem libc — invariante asm-puro da lane nat). A recusa é no
+        // LOWERING com código MATH001 (não undefined-reference silencioso no
+        // ld). É do typer, não da toolchain — roda sem qemu. Trava o gate de
+        // KofMath.supportedOn: removê-lo quebraria o link cross.
         for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
-            CompilationResult r = new CompilerDriver().compile(
-                    gateSrc, tmp.resolve("gate-" + t + "-" + System.nanoTime()), t);
-            assertFalse(r.success(), t + " deve rejeitar " + label + " (MATH001)");
-            boolean has = r.diagnostics().getDiagnostics().stream()
-                    .anyMatch(d -> "MATH001".equals(d.code())
-                            || (d.message() != null && d.message().contains("MATH001")));
-            assertTrue(has, t + " deve reportar MATH001, veio: "
-                    + r.diagnostics().getDiagnostics());
+            Path file = tmp.resolve("Refuse-" + t + "-" + System.nanoTime() + ".kf");
+            Files.writeString(file, POW_SRC);
+            Path outDir = tmp.resolve("refuse-" + t + "-" + System.nanoTime());
+            CompilationResult result = driver.compile(file, outDir, t);
+            assertFalse(result.success(), t + " deve recusar math.pow (MATH001)");
+            boolean hasGap = result.diagnostics().getDiagnostics().stream()
+                    .anyMatch(d -> String.valueOf(d.code()).contains("MATH001"));
+            assertTrue(hasGap, t + " recusa deve citar MATH001: "
+                    + result.diagnostics().getDiagnostics());
+        }
+    }
+
+    private void forCrossArch(Path tmp, String src, String expected) throws Exception {
+        // golden byte-idêntico ao JVM/x86/JS, executado sob qemu (padrão
+        // STRN001/SECN000 da lane; skipa honesto se toolchain ausente).
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            String qemu = t == Target.NATIVE_RISCV64 ? "qemu-riscv64" : "qemu-aarch64";
+            String[] tools = t == Target.NATIVE_RISCV64
+                    ? new String[]{"riscv64-linux-gnu-as", "riscv64-linux-gnu-ld", "qemu-riscv64"}
+                    : new String[]{"aarch64-linux-gnu-as", "aarch64-linux-gnu-ld", "qemu-aarch64"};
+            assumeToolchain(tools);
+            Path file = tmp.resolve("X-" + t + "-" + System.nanoTime() + ".kf");
+            Files.writeString(file, src);
+            Path outDir = tmp.resolve("xout-" + t + "-" + System.nanoTime());
+            CompilationResult result = driver.compile(file, outDir, t);
+            assertTrue(result.success(), t + " compile failed: " + result.diagnostics().getDiagnostics());
+            Process p = new ProcessBuilder(qemu, outDir.resolve("Default/Main").toString())
+                    .redirectErrorStream(true).start();
+            String output = new String(p.getInputStream().readAllBytes(),
+                    java.nio.charset.StandardCharsets.UTF_8).replace("\r\n", "\n").trim();
+            int ec = p.waitFor();
+            assertEquals(0, ec, t + " exit code, output: " + output);
+            assertEquals(expected, output, t + " golden");
+        }
+    }
+
+    private void assumeToolchain(String... tools) {
+        for (String c : tools) {
+            try {
+                Process p = new ProcessBuilder("sh", "-c", "command -v " + c)
+                        .redirectErrorStream(true).start();
+                String out = new String(p.getInputStream().readAllBytes(),
+                        java.nio.charset.StandardCharsets.UTF_8).trim();
+                org.junit.jupiter.api.Assumptions.assumeTrue(
+                        p.waitFor() == 0 && !out.isEmpty(), "toolchain ausente: " + c);
+            } catch (Exception e) {
+                org.junit.jupiter.api.Assumptions.assumeTrue(false, "toolchain ausente: " + c);
+            }
         }
     }
 

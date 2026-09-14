@@ -26,7 +26,7 @@ main() {
     app.delete("/tasks/:id") {
         return "deleted:" + param("id")
     }
-    app.listen("8080")
+    app.listen(8080)
 }
 ```
 
@@ -46,6 +46,9 @@ ordem de pernas (bug 53, GitHub #28 — corrigido 07/09: o type do handler agora
 - Resposta não-200/404 (ex.: 301, 401) → `status(código)` + return.
 
 ## Notas
+
+- `app.listen` aceita SÓ Int (`app.listen(8080)` — #102.2 13/09: String
+  virava VerifyError em runtime; agora é SEM025 no `kof check`).
 
 - `app.delete(path) { … }` é uma rota (verb HTTP), não `File.delete()` —
   o nome colidido era o bug 54 (GitHub #29), corrigido 07/09 (guarda de

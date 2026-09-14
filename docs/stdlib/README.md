@@ -1,6 +1,6 @@
 # Standard Library — Proposta
 
-**Última atualização:** 2 de setembro de 2026
+**Última atualização:** 12 de setembro de 2026
 > **Atualizado (0.2.6-beta):** a stdlib está amplamente implementada nos 3
 > targets (JVM/Native/JS) — `kof.core`, `kof.collections`, `kof.io`,
 > `kof.time`, `kof.json` (FP + arrays completos no Native, 31/08),
@@ -9,10 +9,10 @@
 > `kof.logging`, `kof.observability`, `kof.mq`, `kof.cache`,
 > `kof.scheduler`, `kof.validation`, `kof.test`, `kof.ui` (Color/Theme/
 > Palette + widgets). **Esta página é o plano original; o estado atual, a
-> matriz de módulos e a arquitetura vivem em `docs/stdlib.md`** (fonte de
+> matriz de módulos e a arquitetura vivem em `docs/stdlib/stdlib.md`** (fonte de
 > referência). A tabela abaixo é o plano completo.
 
-**Status:** amplamente implementado (0.2.6-beta; ver `docs/stdlib.md`)
+**Status:** amplamente implementado (0.2.6-beta; ver `docs/stdlib/stdlib.md`)
 
 ---
 
@@ -106,7 +106,7 @@ spawn processarFila()
 spawn { ... }
 ```
 
-`await`/resultado de tarefa: planejado. Ver `docs/concurrency.md`.
+`await`/resultado de tarefa: planejado. Ver `docs/language-reference/concurrency.md`.
 
 ### kof.test
 

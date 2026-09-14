@@ -1,5 +1,6 @@
 package dev.kof.compiler.nat;
 import dev.kof.compiler.KofBinary;
+import dev.kof.compiler.KofBinaryOp;
 import dev.kof.compiler.KofUnary;
 import dev.kof.compiler.KofUnaryOp;
 import dev.kof.compiler.Type;
@@ -96,6 +97,17 @@ public final class NativeX86Arith {
         if (NativeTypeKinds.isDoubleType(opTy)) {
             sb.append("    popq %rcx\n");
             sb.append("    popq %rax\n");
+            // §146 (12/09, #101): MOD Double caía no `default` abaixo e
+            // devolvia o dividendo. fmod via kof_double_mod (SSE2, sem libm):
+            // topo=b, abaixo=a — a pilha x86 entrega b em %rcx e a em %rax,
+            // a convenção do helper é rdi=a, rsi=b.
+            if (kb.op() == KofBinaryOp.MOD) {
+                sb.append("    movq %rax, %rdi\n");
+                sb.append("    movq %rcx, %rsi\n");
+                sb.append("    call kof_double_mod\n");
+                sb.append("    pushq %rax\n");
+                return;
+            }
             sb.append("    movq %rax, %xmm0\n");
             sb.append("    movq %rcx, %xmm1\n");
             sb.append("    movq %xmm0, %xmm0\n");
@@ -275,32 +287,24 @@ public final class NativeX86Arith {
             sb.append("    pushq %rax\n");
             return;
         }
+        // §181 (13/09): D2I/F2I/D2L/F2L SATURANTES (JLS 5.1.3 — NaN => 0,
+        // > MAX => MAX, < MIN => MIN). cvttsd2si cru devolvia "integer
+        // indefinite" (INT_MIN) p/ NaN e fora de faixa = divergência do
+        // JVM (regra 5). Guard: ucomisd (unordered => jp NaN) + clamp.
         if (ku.op() == KofUnaryOp.D2I) {
-            sb.append("    popq %rax\n");
-            sb.append("    movq %rax, %xmm0\n");
-            sb.append("    cvttsd2si %xmm0, %eax\n");
-            sb.append("    pushq %rax\n");
+            emitSatConv(sb, false, true);
             return;
         }
         if (ku.op() == KofUnaryOp.F2I) {
-            sb.append("    popq %rax\n");
-            sb.append("    movd %eax, %xmm0\n");
-            sb.append("    cvttss2si %xmm0, %eax\n");
-            sb.append("    pushq %rax\n");
+            emitSatConv(sb, true, true);
             return;
         }
         if (ku.op() == KofUnaryOp.D2L) {
-            sb.append("    popq %rax\n");
-            sb.append("    movq %rax, %xmm0\n");
-            sb.append("    cvttsd2si %xmm0, %rax\n");
-            sb.append("    pushq %rax\n");
+            emitSatConv(sb, false, false);
             return;
         }
         if (ku.op() == KofUnaryOp.F2L) {
-            sb.append("    popq %rax\n");
-            sb.append("    movd %eax, %xmm0\n");
-            sb.append("    cvttss2si %xmm0, %rax\n");
-            sb.append("    pushq %rax\n");
+            emitSatConv(sb, true, false);
             return;
         }
         if (ku.op() == KofUnaryOp.I2L) {
@@ -321,6 +325,70 @@ public final class NativeX86Arith {
             sb.append("    movzbl %al, %eax\n");
         }
 
+        sb.append("    pushq %rax\n");
+    }
+
+    /**
+     * §181 — conversão float/double -> Int/Long SATURANTE (JLS 5.1.3).
+     * Entrada: valor na pilha (bits crus). NaN => 0; fora de faixa =>
+     * saturado no limite; senão truncamento (cvttsd2si).
+     *
+     * <p><b>FIX 13/09 (regressão do commit `c90e85ee`):</b> os limites eram
+     * carregados com os BITS INTEIROS (`movq $2147483647, %rdx; movq %rdx,
+     * %xmm2`) — interpretados como double, isso é um denormal (~1e-314), então
+     * QUALQUER valor positivo caía no ramo ">= MAX" e saturava em `MAX`
+     * (`9.9 as Int` → `2147483647`; a célula `cast` pegou — verde falso Q5 do
+     * `castrange`, que só testava fora-de-faixa). Agora usa os padrões de bit
+     * do DOUBLE: 2^31 = `0x41E0000000000000`, -2^31 = `0xC1E0000000000000`,
+     * 2^63 = `0x43E0000000000000`, -2^63 = `0xC3E0000000000000`. Comparar com
+     * 2^31 (não 2^31-1) preserva o caso limítrofe `2147483647.0` (in-range).
+     * O Float é promovido a Double ANTES (NaN/faixa idênticos; o `movd` cru
+     * deixava a checagem de NaN errada).
+     * isFloat: entrada é Float (32 bits, movd) senão Double (movq).
+     * toLong: resultado 64-bit (rax) senão 32-bit (eax).
+     */
+    private static java.util.concurrent.atomic.AtomicLong SAT_SEQ =
+            new java.util.concurrent.atomic.AtomicLong();
+
+    private static void emitSatConv(StringBuilder sb, boolean isFloat, boolean toInt) {
+        String sfx = Long.toString(SAT_SEQ.incrementAndGet());
+        sb.append("    popq %rax\n");
+        // normaliza p/ double e trunca (indefinite p/ NaN/fora-de-faixa; os
+        // ramos abaixo sobrescrevem rax quando o valor não é representável).
+        if (isFloat) {
+            sb.append("    movd %eax, %xmm0\n");
+            sb.append("    cvtss2sd %xmm0, %xmm0\n");
+        } else {
+            sb.append("    movq %rax, %xmm0\n");
+        }
+        sb.append("    cvttsd2si %xmm0, %").append(toInt ? "eax" : "rax").append("\n");
+        // NaN PRIMEIRO: ucomisd self é unordered sse NaN => PF=1.
+        sb.append("    ucomisd %xmm0, %xmm0\n");
+        sb.append("    jp .Lsat_nan_").append(sfx).append("\n");
+        // xmm0 >= 2^31 (2^63) => satura MAX (CF=0).
+        sb.append("    movabs $").append(toInt ? "0x41E0000000000000" : "0x43E0000000000000")
+          .append(", %rdx\n");
+        sb.append("    movq %rdx, %xmm1\n");
+        sb.append("    ucomisd %xmm1, %xmm0\n");
+        sb.append("    jnc .Lsat_hi_").append(sfx).append("\n");
+        // xmm0 < -2^31 (-2^63) => satura MIN (CF=1).
+        sb.append("    movabs $").append(toInt ? "0xC1E0000000000000" : "0xC3E0000000000000")
+          .append(", %rdx\n");
+        sb.append("    movq %rdx, %xmm1\n");
+        sb.append("    ucomisd %xmm1, %xmm0\n");
+        sb.append("    jc .Lsat_lo_").append(sfx).append("\n");
+        sb.append("    jmp .Lsat_done_").append(sfx).append("\n");
+        sb.append(".Lsat_hi_").append(sfx).append(":\n");
+        sb.append("    movabs $").append(toInt ? "2147483647" : "9223372036854775807")
+          .append(", %rax\n");
+        sb.append("    jmp .Lsat_done_").append(sfx).append("\n");
+        sb.append(".Lsat_lo_").append(sfx).append(":\n");
+        sb.append("    movabs $").append(toInt ? "-2147483648" : "-9223372036854775808")
+          .append(", %rax\n");
+        sb.append("    jmp .Lsat_done_").append(sfx).append("\n");
+        sb.append(".Lsat_nan_").append(sfx).append(":\n");
+        sb.append("    xorl %eax, %eax\n");
+        sb.append(".Lsat_done_").append(sfx).append(":\n");
         sb.append("    pushq %rax\n");
     }
 }

@@ -13,12 +13,28 @@ public final class NativeRiscvAsmRt0 {
 
             # kof_alloc(size) -> ptr (bump atômico em .bss — amoadd.d: main e
             # workers do spawn compartilham o heap; ldadd no aarch64 via tradutor)
+            # G-0 (12/09): header de bloco 32B antes do ptr (layout x86); callers veem base+32.
             .globl kof_alloc
             kof_alloc:
                 addi t1, a0, 15
                 andi t1, t1, -16
-                la   t0, kof_alloc_ptr
-                amoadd.d a0, t1, (t0)
+                addi t1, t1, 32          # + header de 32B (total ≡0 mod16: alinhamento ok)
+                la   t2, kof_alloc_ptr
+                amoadd.d t0, t1, (t2)    # t0 = base do bloco (ptr antigo)
+                # R6: o bump não tinha bounds-check (corrompia o .bss vizinho);
+                # o header triplica o consumo/bloco → guard vira obrigatório.
+                la   t3, _kof_heap_end
+                add  t4, t0, t1          # novo topo = base + total
+                bltu t4, t3, .Lkof_alloc_ok
+                beq  t4, t3, .Lkof_alloc_ok   # topo == fim: exatamente cheio, válido
+                la   a0, .Lstr_oom
+                call kof_panic
+            .Lkof_alloc_ok:
+                sd   t1, 0(t0)           # size total do bloco
+                sd   zero, 8(t0)         # free_next = 0
+                sd   zero, 16(t0)        # gc_next = 0
+                sd   zero, 24(t0)        # flags = 0
+                addi a0, t0, 32          # retorna o ponteiro de uso
                 ret
 
             # kof_memcpy(dst, src, len)
@@ -476,10 +492,8 @@ public final class NativeRiscvAsmRt0 {
                 call kof_bounds_error
 
             # ---- strings ----
-            .globl kof_string_length
-            kof_string_length:
-                lw   a0, 16(a0)
-                ret
+            # kof_string_length — MOVIDO p/ B34 (faces UTF-16, bug 43 cross):
+            # contava bytes UTF-8 (café=5 vs JVM 4).
 
             # kof_string_concat(a, b) -> KofStr*
             """;
