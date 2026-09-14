@@ -184,28 +184,6 @@ class ConformanceMatrixTest {
                     println(66 as Char)
                 }
                 """, "9\n70000\n66", Set.of(), tempDir);
-        // §181: cast `Double/Float as Int/Long` FORA de faixa / NaN / Inf.
-        // O contrato é o JVM (JLS 5.1.3): satura (NaN→0, >MAX→MAX, <MIN→MIN).
-        // JVM e Script concordam; Native usa cvttsd2si cru (INT_MIN) e JS usa
-        // Math.trunc/BigInt sem 32-bit (3000000000/NaN/Infinity; NaN as Long
-        // lança RangeError). A célula `cast` só testa valores EM FAIXA =
-        // verde falso (Q5). Native+JS excluídos (lane Native / lane JS).
-        matrix("castrange", """
-                main() {
-                    var big = 3.0e9
-                    println(big as Int)
-                    var nan = 0.0 / 0.0
-                    println(nan as Int)
-                    var inf = 1.0 / 0.0
-                    println(inf as Int)
-                    var bigL = 1.0e19
-                    println(bigL as Long)
-                    println(nan as Long)
-                    var bigL2 = 9.3e18
-                    println(bigL2 as Long)
-                }
-                """, "2147483647\n0\n2147483647\n9223372036854775807\n0\n9223372036854775807",
-                Set.of("native", "js"), tempDir);
         // §110 (paridade absoluta, JVM literal-emitter): -0.0 em JVM virava
         // +0.0 — `emitLoadDouble`/`emitLoadFloat` testavam `value == 0.0`,
         // e IEEE casa -0.0 == 0.0 → DCONST_0 colapsava o sinal (literal
@@ -1135,6 +1113,32 @@ class ConformanceMatrixTest {
                     println(tz)
                 }
                 """, "0\ntrue\n" + tzNow, Set.of("native"), tempDir);
+        // §181 ✅ CORRIGIDO 13/09 (lane development .18): cast Double/Float as
+        // Int/Long SATURANTE (JLS 5.1.3 — NaN => 0, > MAX => MAX, < MIN =>
+        // MIN) em TODOS os alvos. Antes: x86 cvttsd2si cru = "integer
+        // indefinite" (NaN => INT_MIN); JS Math.trunc sem clamp (3e9/NaN/
+        // Infinity passavam; NaN as Long LANÇAVA RangeError). Riscv/aarch
+        // espelham (feq NaN-check + clamp; aarch via tradutor fcvtzs).
+        // Golden do oracle JVM (medição real).
+        matrix("castrange", """
+                main() {
+                    var d = 3.0e9
+                    println(d as Int)
+                    var n = 0.0 / 0.0
+                    println(n as Int)
+                    println(n as Int == 0)
+                    var inf = 1.0 / 0.0
+                    println(inf as Int)
+                    println((-inf) as Int)
+                    println((1.0e19) as Long)
+                    println(n as Long == 0)
+                    println((100.7) as Int)
+                    println((-100.7) as Int)
+                    var f = 3.0e9f
+                    println(f as Int)
+                    println((-1.5) as Long)
+                }
+                """, "2147483647\n0\ntrue\n2147483647\n-2147483648\n9223372036854775807\ntrue\n100\n-100\n2147483647\n-1", Set.of(), tempDir);
         // §89 (decisão 3a, 13/09): conversão numérica em receiver PRIMITIVO
         // (`n.toDouble()`/`toInt()`/`toLong()`/`toFloat()`) = alias do cast
         // `as`. Antes: JVM ClassFormatError (owner ""), Native undefined

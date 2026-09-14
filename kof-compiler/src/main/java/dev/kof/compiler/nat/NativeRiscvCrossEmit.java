@@ -40,6 +40,7 @@ import dev.kof.compiler.KofThrow;
 import dev.kof.compiler.KofTryEnd;
 import dev.kof.compiler.KofTryStart;
 import dev.kof.compiler.KofUnary;
+import dev.kof.compiler.KofUnaryOp;
 import dev.kof.compiler.NativeRuntime;
 import dev.kof.compiler.Type;
 
@@ -345,10 +346,63 @@ public final class NativeRiscvCrossEmit {
             case L2D -> sb.append("    fcvt.d.l f0, t0\n    fmv.x.d t0, f0\n");
             case F2D -> sb.append("    fmv.w.x f0, t0\n    fcvt.d.s f0, f0\n    fmv.x.d t0, f0\n");
             case D2F -> sb.append("    fmv.d.x f0, t0\n    fcvt.s.d f0, f0\n    fmv.x.w t0, f0\n");
-            case D2I -> sb.append("    fmv.d.x f0, t0\n    fcvt.w.d t0, f0, rtz\n    sext.w t0, t0\n");
-            case F2I -> sb.append("    fmv.w.x f0, t0\n    fcvt.w.s t0, f0, rtz\n    sext.w t0, t0\n");
-            case D2L -> sb.append("    fmv.d.x f0, t0\n    fcvt.l.d t0, f0, rtz\n");
-            case F2L -> sb.append("    fmv.w.x f0, t0\n    fcvt.l.s f0, f0, rtz\n    fmv.x.d t0, f0\n");
+            // §181 (13/09): SATURAÇÃO JLS 5.1.3 (NaN => 0; fora de faixa =>
+            // limite). fcvt.*.rtz cru devolvia o "indefinite" riscv para
+            // NaN/overflow (padrão de divergência do §181/x86). Ordem:
+            // NaN PRIMEIRO (feq self => 0 sse NaN), depois clamp hi/lo.
+            case D2I, F2I -> {
+                boolean isF = ku.op() == KofUnaryOp.F2I;
+                if (isF) sb.append("    fmv.w.x f0, t0\n");
+                else sb.append("    fmv.d.x f0, t0\n");
+                String fcvt = isF ? "fcvt.w.s t0, f0, rtz" : "fcvt.w.d t0, f0, rtz";
+                String fcmp = isF ? "feq.s t1, f0, f0" : "feq.d t1, f0, f0";
+                String fmax = isF ? "fmv.w.x f1, t2\n    fcvt.s.w f1, f1" : "fmv.x.d f1, t2";
+                String fmin = isF ? "fmv.w.x f1, t2\n    fcvt.s.w f1, f1" : "fmv.x.d f1, t2";
+                sb.append("    ").append(fcmp).append("\n");       // t1=0 sse NaN
+                sb.append("    beqz t1, .Lsat181_nan\n");
+                sb.append("    ").append(fcvt).append("\n");
+                sb.append("    sext.w t0, t0\n");                  // estende sinal
+                sb.append("    li t1, 2147483647\n");
+                sb.append("    blt t1, t0, .Lsat181_hi\n");        // t0 > MAX
+                sb.append("    li t1, -2147483648\n");
+                sb.append("    blt t0, t1, .Lsat181_lo\n");        // t0 < MIN
+                sb.append("    j .Lsat181_end\n");
+                sb.append(".Lsat181_hi:\n");
+                sb.append("    li t0, 2147483647\n");
+                sb.append("    j .Lsat181_end\n");
+                sb.append(".Lsat181_lo:\n");
+                sb.append("    li t0, -2147483648\n");
+                sb.append("    j .Lsat181_end\n");
+                sb.append(".Lsat181_nan:\n");
+                sb.append("    li t0, 0\n");
+                sb.append(".Lsat181_end:\n");
+            }
+            case D2L, F2L -> {
+                boolean isF = ku.op() == KofUnaryOp.F2L;
+                if (isF) sb.append("    fmv.w.x f0, t0\n    fcvt.d.s f0, f0\n");
+                else sb.append("    fmv.d.x f0, t0\n");
+                String fcmp = isF ? "feq.s t1, f0, f0" : "feq.d t1, f0, f0";
+                sb.append("    ").append(fcmp).append("\n");
+                sb.append("    beqz t1, .Lsat181L_nan\n");
+                sb.append(isF ? "    fcvt.l.s t0, f0, rtz\n" : "    fcvt.l.d t0, f0, rtz\n");
+                sb.append("    li t1, 9223372036854775807\n");     // Long.MAX
+                sb.append("    blt t1, t0, .Lsat181L_hi\n");
+                // Long.MIN em li: -9223372036854775808 cabe em imm? li aceita
+                // 64-bit; usar seq com addi (imm de 12 bits não alcança) —
+                // li do assembler expande p/ lui+addiw: ok.
+                sb.append("    li t1, -9223372036854775808\n");
+                sb.append("    blt t0, t1, .Lsat181L_lo\n");
+                sb.append("    j .Lsat181L_end\n");
+                sb.append(".Lsat181L_hi:\n");
+                sb.append("    li t0, 9223372036854775807\n");
+                sb.append("    j .Lsat181L_end\n");
+                sb.append(".Lsat181L_lo:\n");
+                sb.append("    li t0, -9223372036854775808\n");
+                sb.append("    j .Lsat181L_end\n");
+                sb.append(".Lsat181L_nan:\n");
+                sb.append("    li t0, 0\n");
+                sb.append(".Lsat181L_end:\n");
+            }
         }
         pushRiscv(sb, "t0");
     }

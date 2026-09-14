@@ -395,10 +395,26 @@ JsIr.JsExpression unaryExpr(KofUnary ku, JsIr.JsExpression operand) {
                     List.of(new JsIr.JsCall(
                             new JsIr.JsMember(new JsIr.JsIdentifier("BigInt"), "asIntN"),
                             List.of(new JsIr.JsNumber("32"), operand))));
-            case D2I, F2I -> new JsIr.JsCall(new JsIr.JsIdentifier("Math.trunc"),
-                    List.of(operand));
-            case D2L, F2L -> new JsIr.JsCall(new JsIr.JsIdentifier("BigInt"),
-                    List.of(new JsIr.JsCall(new JsIr.JsIdentifier("Math.trunc"), List.of(operand))));
+            // §181 (13/09): saturação JLS 5.1.3 via helpers do runtime —
+            // Math.trunc cru divergia do JVM (3e9, NaN, Infinity).
+            // registerRuntime é OBRIGATÓRIO (sem isso o helper não entra no
+            // kof-runtime.mjs — ReferenceError na execução).
+            case D2I -> {
+                p.lc.registerRuntime("kofD2I");
+                yield new JsIr.JsCall(new JsIr.JsIdentifier("kofD2I"), List.of(operand));
+            }
+            case F2I -> {
+                p.lc.registerRuntime("kofF2I");
+                yield new JsIr.JsCall(new JsIr.JsIdentifier("kofF2I"), List.of(operand));
+            }
+            case D2L -> {
+                p.lc.registerRuntime("kofD2L");
+                yield new JsIr.JsCall(new JsIr.JsIdentifier("kofD2L"), List.of(operand));
+            }
+            case F2L -> {
+                p.lc.registerRuntime("kofF2L");
+                yield new JsIr.JsCall(new JsIr.JsIdentifier("kofF2L"), List.of(operand));
+            }
         };
     }
 

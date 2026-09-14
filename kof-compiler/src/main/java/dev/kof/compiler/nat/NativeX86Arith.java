@@ -287,32 +287,24 @@ public final class NativeX86Arith {
             sb.append("    pushq %rax\n");
             return;
         }
+        // §181 (13/09): D2I/F2I/D2L/F2L SATURANTES (JLS 5.1.3 — NaN => 0,
+        // > MAX => MAX, < MIN => MIN). cvttsd2si cru devolvia "integer
+        // indefinite" (INT_MIN) p/ NaN e fora de faixa = divergência do
+        // JVM (regra 5). Guard: ucomisd (unordered => jp NaN) + clamp.
         if (ku.op() == KofUnaryOp.D2I) {
-            sb.append("    popq %rax\n");
-            sb.append("    movq %rax, %xmm0\n");
-            sb.append("    cvttsd2si %xmm0, %eax\n");
-            sb.append("    pushq %rax\n");
+            emitSatConv(sb, false, true);
             return;
         }
         if (ku.op() == KofUnaryOp.F2I) {
-            sb.append("    popq %rax\n");
-            sb.append("    movd %eax, %xmm0\n");
-            sb.append("    cvttss2si %xmm0, %eax\n");
-            sb.append("    pushq %rax\n");
+            emitSatConv(sb, true, true);
             return;
         }
         if (ku.op() == KofUnaryOp.D2L) {
-            sb.append("    popq %rax\n");
-            sb.append("    movq %rax, %xmm0\n");
-            sb.append("    cvttsd2si %xmm0, %rax\n");
-            sb.append("    pushq %rax\n");
+            emitSatConv(sb, false, false);
             return;
         }
         if (ku.op() == KofUnaryOp.F2L) {
-            sb.append("    popq %rax\n");
-            sb.append("    movd %eax, %xmm0\n");
-            sb.append("    cvttss2si %xmm0, %rax\n");
-            sb.append("    pushq %rax\n");
+            emitSatConv(sb, true, false);
             return;
         }
         if (ku.op() == KofUnaryOp.I2L) {
@@ -334,5 +326,73 @@ public final class NativeX86Arith {
         }
 
         sb.append("    pushq %rax\n");
+    }
+
+    /**
+     * §181 — conversão float/double -> Int/Long SATURANTE (JLS 5.1.3).
+     * Entrada: valor na pilha (bits crus). NaN => 0; fora de faixa =>
+     * saturado no limite; senão truncamento cru (cvttsd2si). O emit entra
+     * no NativeMethodEmitter via labels locais da classe (padrão Kof: asm
+     * inline, labels únicos por instância não são necessários pois o emit
+     * é incondicional/linear — nenhum label colide: usa sufixo contador).
+     * isFloat: entrada é Float (32 bits, movd) senão Double (movq).
+     * toLong: resultado 64-bit (rax) senão 32-bit (eax).
+     */
+    private static java.util.concurrent.atomic.AtomicLong SAT_SEQ =
+            new java.util.concurrent.atomic.AtomicLong();
+
+    private static void emitSatConv(StringBuilder sb, boolean isFloat, boolean toInt) {
+        String sfx = Long.toString(SAT_SEQ.incrementAndGet());
+        // NaN?: ucomisd/x — unordered seta ZF=PF=CF=1; jp pega PF
+        sb.append("    popq %rax\n");
+        if (isFloat) {
+            sb.append("    movd %eax, %xmm0\n");
+            sb.append("    cvttss2si %xmm0, %").append(toInt ? "eax" : "rax").append("\n");
+            if (toInt) {
+                sb.append("    movd %eax, %xmm1\n");
+            } else {
+                sb.append("    movd %eax, %xmm1\n");
+                sb.append("    cvtss2sd %xmm1, %xmm1\n");
+            }
+        } else {
+            sb.append("    movq %rax, %xmm0\n");
+            sb.append("    cvttsd2si %xmm0, %").append(toInt ? "eax" : "rax").append("\n");
+            sb.append("    movq %xmm0, %xmm1\n");
+        }
+        // ordem OBRIGATÓRIA: NaN PRIMEIRO (ucomisd com NaN seta CF=1 E PF=1 —
+        // um jc depois do NaN-check iria saturar MIN em vez de dar 0; a
+        // 1a tentativa caiu nessa armadilha e `NaN as Long` dava Long.MIN).
+        sb.append("    ucomisd %xmm1, %xmm0\n");                 // self: unordered<=>NaN
+        sb.append("    jp .Lsat_nan_").append(sfx).append("\n");
+        sb.append("    movq $").append(toInt ? "2147483647" : "9223372036854775807")
+          .append(", %rdx\n");
+        sb.append("    movq %rdx, %xmm2\n");                     // +MAX
+        sb.append("    ucomisd %xmm2, %xmm0\n");
+        // acima/igual MAX (CF=0) => saturar MAX (JLS: >= MAX_VALUE é MAX)
+        sb.append("    jnc .Lsat_hi_").append(sfx).append("\n");
+        sb.append("    movq $").append(toInt ? "-2147483648" : "-9223372036854775808")
+          .append(", %rdx\n");
+        sb.append("    movq %rdx, %xmm2\n");                     // -MIN (bits)
+        sb.append("    ucomisd %xmm2, %xmm0\n");
+        // abaixo de MIN (CF=1) => saturar MIN
+        sb.append("    jc .Lsat_lo_").append(sfx).append("\n");
+        sb.append("    jmp .Lsat_done_").append(sfx).append("\n");
+        sb.append(".Lsat_hi_").append(sfx).append(":\n");
+        sb.append("    movq $").append(toInt ? "2147483647" : "9223372036854775807")
+          .append(", %").append(toInt ? "rax" : "rax").append("\n");
+        sb.append("    jmp .Lsat_done_").append(sfx).append("\n");
+        sb.append(".Lsat_lo_").append(sfx).append(":\n");
+        sb.append("    movq $").append(toInt ? "-2147483648" : "-9223372036854775808")
+          .append(", %rax\n");
+        sb.append("    jmp .Lsat_done_").append(sfx).append("\n");
+        sb.append(".Lsat_nan_").append(sfx).append(":\n");
+        sb.append("    xorl %eax, %eax\n");
+        sb.append(".Lsat_done_").append(sfx).append(":\n");
+        if (toInt) {
+            // resultado 32-bit já em eax (movq rax p/ eax saturado ok)
+            sb.append("    pushq %rax\n");
+        } else {
+            sb.append("    pushq %rax\n");
+        }
     }
 }
