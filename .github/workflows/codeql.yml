@@ -24,7 +24,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [java, javascript]
+        # Só java: o repo não tem .js rastreado (JS_COUNT=0) e o job
+        # javascript falharia com "no code found". Se .js/.ts entrarem
+        # no corpus, readicionar 'javascript' aqui.
+        language: [java]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -44,9 +47,9 @@ jobs:
           queries: security-and-quality
 
       - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
+        uses: github/codeql-action/autobuild@v4
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"
