@@ -2244,4 +2244,28 @@ class CoreRegressionE2ETest {
         assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
         assertEquals("int=10\ndbl=2.5\nint=42\ndouble=3.14\nbool=true", runJvm(out));
     }
+
+    // Issue #241 — Catch clause with qualified exception name generates illegal class name in exception table
+    @Test
+    void qualifiedExceptionInCatchClauseJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("qualified_catch.kf");
+        Files.writeString(src, """
+                main() {
+                    try {
+                        throw new java.lang.RuntimeException("boom")
+                    } catch (java.lang.RuntimeException e) {
+                        println("caught: " + e.getMessage())
+                    }
+                    try {
+                        throw new java.io.IOException("io-error")
+                    } catch (java.io.IOException e) {
+                        println("io: " + e.getMessage())
+                    }
+                }
+                """);
+        Path out = tempDir.resolve("qualified_catch-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("caught: boom\nio: io-error", runJvm(out));
+    }
 }
