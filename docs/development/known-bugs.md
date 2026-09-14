@@ -2522,3 +2522,117 @@ int de índice) — verificados na varredura.
   quem precisa de `a[i] += v` hoje no target JS, reescrever como
   `a[i] = a[i] + v`.
 - **Descoberto:** 13/09, varredura KOF-SBD-001 (Array Bounds Safety).
+
+### 101. JVM: `Bool[]`/`Byte[]`/`Short[]`/`Char[]` usam opcode errado (`iaload`/`iastore`) no acesso a elemento — ABERTO, [issue #132](https://github.com/KofLang/Kof4j/issues/132) (achado na varredura KOF-SBD-001-STRESS, não relacionado a bounds safety)
+
+- **Sintoma:** um `Bool[]` compilado para JVM roda e imprime valores corretos
+  na maioria dos casos, mas em pelo menos um ambiente (JDK 25.0.4.1 Temurin
+  neste host) o processo falha ao iniciar com
+  `Erro: os componentes de runtime do JavaFX não foram encontrados` (exit 1)
+  para um programa trivial (`new Bool[2]; a[0]=true; a[1]=false;
+  println(a[0]); println(a[1])`) que não referencia JavaFX em lugar nenhum —
+  confirmado inspecionando o `.class` gerado (`javap -v`): nenhuma referência
+  a `javafx.*` no constant pool, `super_class` é `java/lang/Object`. O
+  sintoma exato do launcher pode ser específico desta JDK/versão; a causa
+  raiz abaixo é real e independente do sintoma.
+- **Causa raiz:** `JvmLiteralEmitter.arrayLoadOpcode`/`arrayStoreOpcode`
+  (kof-compiler/.../jvm/JvmLiteralEmitter.java:136-160) mapeiam `boolean`,
+  `bool`, `Bool`, `byte`, `Byte`, `short`, `Short`, `char`, `Char` **todos**
+  para `IALOAD`/`IASTORE` (a instrução de `int[]`). A JVM Spec exige
+  `BALOAD`/`BASTORE` para `boolean[]`/`byte[]`, `SALOAD`/`SASTORE` para
+  `short[]`, `CALOAD`/`CASTORE` para `char[]` — só `int[]` usa
+  `IALOAD`/`IASTORE`. `arrayTypeForType` (mesma classe, linhas 119-134),
+  usado só na alocação (`NEWARRAY`), já distingue os 4 tipos corretamente
+  (`T_BOOLEAN`/`T_BYTE`/`T_SHORT`/`T_CHAR`/`T_INT`) — só o load/store do
+  elemento está errado.
+- **Por que não travou antes:** o corpus/stdlib usa `Int`/`Long`/`Double`/
+  `String` predominantemente; arrays de `Bool`/`Byte`/`Short`/`Char`
+  aparentemente nunca tiveram um teste JVM de acesso a elemento (só ao
+  criar/tipar). O verificador da JVM aparentemente tolera o opcode incorreto
+  (não lançou `VerifyError` nos testes rodados aqui) — bytecode
+  tecnicamente errado que "funciona por acidente" até um ambiente/JIT que
+  não tolera.
+- **Por que não foi corrigido em KOF-SBD-001-STRESS:** achado
+  incidentalmente ao rodar STRESS-018 (cobertura de tipos de array) da
+  suíte de stress do KOF-SBD-001. É um bug de **correção de bytecode por
+  tipo de elemento**, ortogonal a bounds safety (o bounds check em si
+  funciona igual para esses tipos — só o opcode de acesso está errado).
+  Corrigir aqui violaria a regra de não misturar correções não
+  relacionadas na mesma tarefa.
+- **Escopo real do bug:** `Byte[]`/`Short[]`/`Char[]` **não foram testados
+  diretamente** nesta varredura — só `Bool[]` reproduziu o sintoma
+  observado. Mas como os 4 tipos passam pelo mesmo `case` no switch, é
+  esperado que `Byte[]`/`Short[]`/`Char[]` tenham o mesmo opcode incorreto
+  (não confirmado experimentalmente para esses 3).
+- **Ação sugerida:** separar os `case` de `arrayLoadOpcode`/
+  `arrayStoreOpcode` para `BALOAD`/`BASTORE` (bool/byte), `SALOAD`/`SASTORE`
+  (short), `CALOAD`/`CASTORE` (char), mantendo só `int`/`Int` em
+  `IALOAD`/`IASTORE` — mesmo padrão de separação que `arrayTypeForType` já
+  usa. Adicionar teste JVM de acesso a elemento (não só criação) para os 4
+  tipos. Baixo risco, mudança pequena — mas fora do escopo desta tarefa.
+- **Workaround atual:** nenhum necessário para SBD-001-STRESS. Para quem
+  precisa de `Bool[]`/`Byte[]`/`Short[]`/`Char[]` no JVM hoje, testar no
+  ambiente-alvo antes de depender de acesso a elemento em produção.
+- **Descoberto:** 13/09, KOF-SBD-001-STRESS (stress test de array bounds
+  safety, STRESS-018 cobertura de tipos).
+
+### 102. JVM/KofJS: inicializador de campo `static` com expressão não-constante é ignorado silenciosamente (`<clinit>` nunca é sintetizado) — ABERTO, ALTA PRIORIDADE, [issue #133](https://github.com/KofLang/Kof4j/issues/133) (achado incidentalmente na varredura KOF-SBD-001-STRESS)
+
+- **Sintoma:** `static Int[] shared = new Int[3]` — `Holder.shared` é `null`
+  no JVM e `undefined` no KofJS (nunca é o array esperado). Não é
+  específico de array: `static Int x = compute()` (uma função qualquer,
+  não-constante) imprime `0` em vez do valor real retornado — o
+  inicializador inteiro é descartado, o campo fica com o zero-value do seu
+  tipo (`null`/`0`/`false`/`undefined` conforme o tipo e o target).
+  `static Int calls = 0` (literal constante) funciona normalmente — só
+  expressões não-constantes são afetadas.
+- **Causa raiz:** `JvmBackend.java:173` —
+  `cw.visitField(field.accessFlags(), field.name(), desc, sig,
+  field.initialValue())` — o 5º parâmetro do ASM `visitField` só suporta o
+  atributo `ConstantValue` da JVM Spec (primitivos/`String` **constantes em
+  tempo de compilação**). Para qualquer inicializador não-constante, a JVM
+  exige que o valor seja atribuído dentro de um método `<clinit>` — método
+  que **não existe em nenhum lugar dos backends compilados**: `git grep -n
+  "<clinit>"` só encontra `KofInterpreterMembers.java` (o interpretador
+  simula `<clinit>` lazy na leitura do campo; os 3 backends compilados —
+  JVM, Native, KofJS — não sintetizam esse método em lugar nenhum).
+  Portanto o campo é declarado mas nunca recebe o valor do lado direito;
+  fica com o valor-zero padrão da JVM/JS para aquele tipo.
+- **Escopo confirmado:** JVM (array e escalar) e KofJS (array) reproduzidos
+  nesta varredura. Native **não testado** (mesma ausência de `<clinit>` no
+  código, então provavelmente afetado também, mas não confirmado
+  empiricamente — não converter isso em `NA`/`PASS`, é apenas não
+  verificado).
+- **Por que é mais sério que parece:** isso não é um caso de borda raro —
+  `static X field = new X(...)` / `static X field = algumaFuncao()` é um
+  padrão comum (configuração estática, tabelas, singletons, caches). O bug
+  não lança erro nenhum (compila e roda), só produz o valor-zero
+  silenciosamente — exatamente a categoria "nunca silencioso" que a regra 6
+  do `AGENTS.md` proíbe. Provavelmente well hidden porque a maior parte do
+  corpus/stdlib usa `static X field = <literal constante>` (como
+  `Counter.count = 0` no idiom canônico de `AGENTS.md`), não expressões
+  computadas.
+- **Por que não foi corrigido em KOF-SBD-001-STRESS:** achado
+  incidentalmente ao escrever STRESS-016 (efeito colateral na expressão do
+  array — o teste original usava `static Int[] shared = new Int[3]` como
+  holder). Não tem relação nenhuma com bounds safety — é inicialização de
+  campo estático, uma categoria de bug totalmente diferente e
+  provavelmente maior em impacto que SBD-001. Corrigir aqui misturaria
+  escopo de forma inaceitável dado o tamanho do problema real (precisa de
+  `<clinit>` nos 3 backends compilados — mudança estrutural, não 1 linha).
+- **Ação sugerida:** sintetizar um método `<clinit>` (`ACC_STATIC` +
+  `<clinit>` + `()V`) nos 3 backends compilados sempre que uma classe tiver
+  ≥1 campo estático com inicializador não-constante, executando as
+  atribuições na ordem de declaração (mesma semântica de `IRField` que o
+  interpretador já simula) — JVM: método sintético de verdade;
+  Native/KofJS: função/bloco de módulo equivalente rodado antes do
+  `main()`. Escopo grande o suficiente para ser um item de
+  `docs/development/`, não um bugfix de 1 commit.
+- **Workaround atual:** não declarar inicializador não-constante em campo
+  `static`; inicializar explicitamente dentro de um método estático
+  chamado antes do primeiro uso (como o `Holder.init()` desta varredura
+  tentou fazer — e que **também falhou**, porque o campo já está `null`
+  quando `init()` roda, não é um problema de ordem de chamada, é o valor
+  nunca ter sido atribuído em lugar nenhum).
+- **Descoberto:** 13/09, KOF-SBD-001-STRESS (STRESS-016, efeito colateral
+  de expressão de array).
