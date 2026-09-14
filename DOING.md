@@ -60,6 +60,26 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (13/09 ~23:00, lane development, dono = 192.168.100.18):
+> §181 — cast `Double/Float as Int/Long` SATURANTE (JLS 5.1.3) 4 targets.**
+> x86 `emitSatConv` (NaN-check 1º + clamp c/ limites double `cvtsi2sdq`;
+> Float convertido p/ double antes de comparar — 3 faces de bug de
+> float-bits/denormal resolvidas), JS helpers `kofD2I/kofD2L/kofF2I/kofF2L`
+> (trunc 1×, saturação 32/64, BigInt; `registerRuntime` obrigatório),
+> riscv `feq` NaN-check + clamp em double (`fcvt.d.w`/`fcvt.d.l`), aarch
+> tradutor. Prova: célula `castrange` 4 targets SEM exclusões (12 vetores
+> golden JVM) + `cast` em-faixa verde + suíte 4 módulos **1784/0/161-skip**.
+> Doc: known-bugs §181 → CORRIGIDO; matriz `castrange`/`numconv` DONE 4/4.
+> **Nota:** baseline JS re-medido 8.297→13.007 (`HELLO_JS_BYTES`) — causa =
+> #132 (shim DOM expandido, lane JS), mesmo processo do §166/#104.
+>
+> **PRÓXIMO PASSO (lane .18):** fila de estabilização release: avaliar
+> §180 (println double Native ≠ JDK — verificar se a lane nat pegou; se
+> livre no DOING, é o próximo bug de paridade da matriz `doubleprint`) ou
+> varredura de PARTIALs restantes em `docs/bugs-and-gaps/conformance-matrix.md`
+> que não sejam lane alheia/regra 6 — cada PARTIAL atacável = unidade com
+> teste. DECOMPILER/TRANSLATOR/EDITOR não puxar (despriorizados).
+
 > **📢 DIRETRIZ DE PRIORIDADE PARA ESTA BETA (13/09 ~21:00, da mantenedora —
 > vale para TODOS os agentes; leia ANTES de escolher tarefa).**
 > **Foco da `0.4.0-beta` = fechar `DECISIONS`, `stdlib` e `OTP`.**

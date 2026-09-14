@@ -36,6 +36,7 @@ import dev.kof.compiler.KofStoreLocal;
 import dev.kof.compiler.KofThrow;
 import dev.kof.compiler.KofTryEnd;
 import dev.kof.compiler.KofTryStart;
+import dev.kof.compiler.KofUi;
 import dev.kof.compiler.KofUnary;
 import dev.kof.compiler.KofUnaryOp;
 import dev.kof.compiler.Type;
@@ -253,11 +254,10 @@ public final class JvmOpEmitter {
                 boolean isFloat = JvmOpCollections.isPrimitiveOf(kb.operandType(), "float");
                 boolean isDouble = JvmOpCollections.isPrimitiveOf(kb.operandType(), "double");
                 // Unknown NÃO é referência (int não-inferido também infere Unknown)
-                boolean isRef = kb.operandType() instanceof Type.ClassType
-                        || kb.operandType() instanceof Type.ArrayType
-                        || kb.operandType() instanceof Type.TypeVariable
-                        || (kb.operandType() instanceof Type.NullableType nt
-                            && !(nt.inner() instanceof Type.PrimitiveType));
+                // UIW050: handle de UI/mídia APAGA para int no runtime — `==`
+                // entre dois handles é comparação int (if_icmp*), nunca
+                // if_acmp* (que o verifier rejeita sobre int).
+                boolean isRef = isRefOperand(kb.operandType());
                 int cmpOpcode;
                 if (isRef) {
                     cmpOpcode = switch (kb.op()) {
@@ -345,11 +345,7 @@ public final class JvmOpEmitter {
         boolean isDouble = JvmOpCollections.isPrimitiveOf(kc.operandType(), "double");
         // Unknown NÃO é referência: int não-inferido (r.exitCode != 0)
         // também infere Unknown — if_acmp sobre int = VerifyError
-        boolean isRef = kc.operandType() instanceof Type.ClassType
-                || kc.operandType() instanceof Type.ArrayType
-                || kc.operandType() instanceof Type.TypeVariable
-                || (kc.operandType() instanceof Type.NullableType nt
-                    && !(nt.inner() instanceof Type.PrimitiveType));
+        boolean isRef = isRefOperand(kc.operandType());
         if (isLong) {
             mv.visitInsn(LCMP);
         } else if (isFloat) {
@@ -387,6 +383,17 @@ public final class JvmOpEmitter {
         }
         mv.visitJumpInsn(opcode, ctx.resolveLabel(kc.trueLabel()));
         mv.visitJumpInsn(GOTO, ctx.resolveLabel(kc.falseLabel()));
+    }
+
+    /**
+     * UIW050: um operando é REFERÊNCIA no bytecode? Handle de UI/mídia
+     * (ClassType apagado para int por JvmTypeMapper.toDescriptor) NÃO é —
+     * tratá-lo como ref emitia if_acmp* sobre int e o verifier rejeitava.
+     */
+    private static boolean isRefOperand(Type t) {
+        if (t instanceof Type.NullableType nt) return isRefOperand(nt.inner());
+        if (JvmTypeMapper.isHandleErasedToInt(t)) return false;
+        return t instanceof Type.ClassType || t instanceof Type.ArrayType || t instanceof Type.TypeVariable;
     }
 
     private static int opcodeForArithmetic(Type type, int intOpcode) {

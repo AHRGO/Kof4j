@@ -119,12 +119,16 @@ public final class JvmRuntimeCallDescriptors {
             case "kof_ui_component_remove", "kof_ui_component_mount",
                     "kof_ui_component_unmount", "kof_ui_flush_ui" -> "(I)V";
             case "kof_ui_nodes_live", "kof_ui_hr_new" -> "()I";
-            case "kof_ui_event_type" -> "(Ljava/lang/String;)Ljava/lang/String;";
-            case "kof_ui_event_key", "kof_ui_event_value" -> "(Ljava/lang/String;)Ljava/lang/String;";
-            case "kof_ui_event_target", "kof_ui_event_related_target" -> "(Ljava/lang/String;)Ljava/lang/String;";
+            // UIW050: o receiver `e: Event` apaga para int no JVM (KofUi
+            // .isEvent ∈ isUiType → JvmTypeMapper "I"), igual aos demais
+            // handles. O descriptor precisa casar com o receiver na pilha —
+            // antes era String/Object e o verifier rejeitava a lambda.
+            case "kof_ui_event_type" -> "(I)Ljava/lang/String;";
+            case "kof_ui_event_key", "kof_ui_event_value" -> "(I)Ljava/lang/String;";
+            case "kof_ui_event_target", "kof_ui_event_related_target" -> "(I)Ljava/lang/String;";
             case "kof_ui_event_x", "kof_ui_event_y" -> "(I)I";
             case "kof_ui_emit" -> "(ILjava/lang/String;)V";
-            case "kof_ui_event_stop" -> "(Ljava/lang/Object;)V";
+            case "kof_ui_event_stop" -> "(I)V";
             case "kof_ui_store_new" -> "(I)I";
             case "kof_ui_store_get" -> "(I)I";
             case "kof_ui_store_set" -> "(II)V";
