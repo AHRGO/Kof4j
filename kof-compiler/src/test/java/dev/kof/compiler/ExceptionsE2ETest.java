@@ -231,4 +231,25 @@ class ExceptionsE2ETest {
             """);
         runJvm(source, tempDir.resolve("out"), "inner caught");
     }
+
+    // Issue #163 — typing `catch (RuntimeException e)` (a java.lang type
+    // written by its simple name) left the catch local unqualified:
+    // ClassType("", "RuntimeException"). Calling `e.getMessage()` then emitted
+    // `LRuntimeException;` in the constant pool default package and loading
+    // the class failed with NoClassDefFoundError: RuntimeException. The catch
+    // type is now qualified to java.lang (StatementAnalyzer + StatementLowerer).
+    @Test
+    void typedCatchExceptionMethodCall(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            main() {
+                try {
+                    throw "boom"
+                } catch (RuntimeException e) {
+                    println(e.getMessage())
+                }
+            }
+            """);
+        runJvm(source, tempDir.resolve("out"), "boom");
+    }
 }
