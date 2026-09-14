@@ -1039,9 +1039,9 @@ class ConformanceMatrixTest {
                     println(time.isToday(2026, 2, 30))
                     var parts = today.split("-")
                     println(parts.size)
-                    println(parts.get(0).length)
-                    println(parts.get(1).length)
-                    println(parts.get(2).length)
+                    println(parts[0].length)
+                    println(parts[1].length)
+                    println(parts[2].length)
                 }
                 """, "10\n2026-09-13\n2024-02-29\n\n\n\n\n\nfalse\nfalse\n3\n4\n2\n2", Set.of(), tempDir);
         // STDLIB S7f (D3 ratificado 13/09): hoursBetween — floor simétrico

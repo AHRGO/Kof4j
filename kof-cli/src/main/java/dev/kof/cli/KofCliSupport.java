@@ -318,7 +318,7 @@ final class KofCliSupport {
             Path jdk = Path.of(install, "jdk", "bin", exe);
             if (Files.isExecutable(jdk)) return jdk.toString();
         }
-        return "java";
+        return Path.of(System.getProperty("java.home"), "bin", "java").toString();
     }
 
     static String findMainClass(Path dir) {

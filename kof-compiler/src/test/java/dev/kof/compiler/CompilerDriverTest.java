@@ -5007,6 +5007,34 @@ class CompilerDriverTest {
         assertTrue(diags.contains("SEM021"), "should be SEM021, got: " + diags);
     }
 
+    // Regression (§204): a codeql "unread-variable" cleanup (a892b3c5) removed
+    // the else-branch analysis from StatementAnalyzer.IfStmt together with the
+    // truly-unread `condType` binding. The `analyzeStatement(elseBranch)` call
+    // was NOT dead: without it the else branch's expressions are never typed →
+    // the JVM lowering emits invalid frames (ASM COMPUTE_FRAMES AIOOBE, seen as
+    // `Supervisor.lacoUnico` frame crash) or invalid operand stack (VerifyError).
+    // The analyzer MUST walk BOTH branches.
+    @Test
+    void elseBranchIsAnalyzedBothBranches(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("ElseAnalyzed.kf");
+        Files.writeString(source, """
+            main() {
+                var n = 1
+                if (n == 1) {
+                    println("a")
+                } else {
+                    Int s = "not an int"
+                    println(s)
+                }
+            }
+            """);
+        CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.JVM);
+        assertFalse(result.success(),
+                "type error inside the else branch must be diagnosed, not emitted as broken bytecode");
+        String diags = result.diagnostics().getDiagnostics().toString();
+        assertTrue(diags.contains("SEM021"), "else-branch type error should be SEM021, got: " + diags);
+    }
+
     @Test
     void subclassAssignmentStaysGreen(@TempDir Path tempDir) throws IOException {
         Path source = tempDir.resolve("S2.kf");

@@ -223,6 +223,10 @@ IRModule currentModule;
         return CompilerTypeSupport.parseIntLiteral(value);
     }
 
+    long parseLongLiteral(String value) {
+        return CompilerTypeSupport.parseLongLiteral(value);
+    }
+
     String stripSuffix(String value) {
         return CompilerTypeSupport.stripSuffix(value);
     }

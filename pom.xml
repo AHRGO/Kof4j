@@ -85,6 +85,15 @@
                              com NoClassDefFoundError intermitente de classes
                              que existem no classpath -->
                         <argLine>-Xshare:off -Xmx1g</argLine>
+                        <!-- D-BASELINE (release 25): os testes E2E spawnam
+                             `java` do PATH para rodar o binário compilado —
+                             sem isto um host com JDK 21 no PATH carrega
+                             KofRuntime class-file 69 com JVM 65
+                             (UnsupportedClassVersionError em massa). O `bin`
+                             do JDK QUE COMPILA vai primeiro. -->
+                        <environmentVariables>
+                            <PATH>${java.home}/bin:${env.PATH}</PATH>
+                        </environmentVariables>
                     </configuration>
                 </plugin>
             </plugins>

@@ -101,8 +101,10 @@ final class NativeOpHelpers {
                 case GE -> jmp = "jae";
                 default -> jmp = "je";
             }
-            // NaN handling: ordered compares must be false when unordered (PF=1)
-            boolean needsOrderedCheck = kc.comparison() == KofComparison.LE
+            // NaN handling: ordered compares must be false when unordered (PF=1).
+            // §101: LT também (jb com CF=1 no NaN daria true) — igual ao LE/GE.
+            boolean needsOrderedCheck = kc.comparison() == KofComparison.LT
+                    || kc.comparison() == KofComparison.LE
                     || kc.comparison() == KofComparison.GE
                     || kc.comparison() == KofComparison.EQ;
             if (needsOrderedCheck) {
@@ -132,7 +134,9 @@ final class NativeOpHelpers {
                 case GE -> jmp = "jae";
                 default -> jmp = "je";
             }
-            boolean needsOrderedCheck = kc.comparison() == KofComparison.LE
+            // §101: LT também (jb com CF=1 no NaN daria true).
+            boolean needsOrderedCheck = kc.comparison() == KofComparison.LT
+                    || kc.comparison() == KofComparison.LE
                     || kc.comparison() == KofComparison.GE
                     || kc.comparison() == KofComparison.EQ;
             if (needsOrderedCheck) {

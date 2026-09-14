@@ -20,6 +20,13 @@ public final class JvmWebCoreRuntime {
                 private static final ThreadLocal<Integer> KOF_WEB_STATUS = new ThreadLocal<>();
                 private static final ThreadLocal<java.util.Map<String, String>> KOF_WEB_HEADERS =
                         ThreadLocal.withInitial(java.util.HashMap::new);
+                // D-SEC C18: headers de resposta do middleware de security
+                // (CSP/HSTS/CORS/Set-Cookie) — separados de KOF_WEB_HEADERS
+                // porque o dispatch limpa estes ANTES de invocar a rota; estes
+                // sobrevivem até o build da resposta.
+                private static final ThreadLocal<java.util.Map<String, String>> KOF_SEC_RESPONSE_HEADERS =
+                        ThreadLocal.withInitial(java.util.LinkedHashMap::new);
+
                 public static final java.util.concurrent.atomic.AtomicLong SSE_CONNECTIONS_ACTIVE =
                         new java.util.concurrent.atomic.AtomicLong();
                 public static final java.util.concurrent.atomic.AtomicLong WS_CONNECTIONS_ACTIVE =
@@ -56,6 +63,7 @@ public final class JvmWebCoreRuntime {
                         case 404 -> "Not Found";
                         case 409 -> "Conflict";
                         case 422 -> "Unprocessable Entity";
+                        case 429 -> "Too Many Requests";
                         case 500 -> "Internal Server Error";
                         case 502 -> "Bad Gateway";
                         case 503 -> "Service Unavailable";
@@ -109,16 +117,25 @@ public final class JvmWebCoreRuntime {
                     final String query;
                     final String rawHeaders;
                     final String body;
+                    final String remoteAddr;
+                    final boolean secure;
                     final java.util.Map<String, String> params = new java.util.HashMap<>();
                     final java.util.Map<String, String> queryParams = new java.util.HashMap<>();
                     final java.util.Map<String, String> headers = new java.util.HashMap<>();
 
                     WebRequest(String method, String path, String query, String rawHeaders, String body) {
+                        this(method, path, query, rawHeaders, body, null, false);
+                    }
+
+                    WebRequest(String method, String path, String query, String rawHeaders, String body,
+                            String remoteAddr, boolean secure) {
                         this.method = method;
                         this.path = path;
                         this.query = query;
                         this.rawHeaders = rawHeaders;
                         this.body = body;
+                        this.remoteAddr = remoteAddr;
+                        this.secure = secure;
                         if (!query.isEmpty()) {
                             for (String pair : query.split("&")) {
                                 int eq = pair.indexOf('=');
@@ -370,13 +387,19 @@ public final class JvmWebCoreRuntime {
                     final java.util.List<Object> middlewares = new java.util.ArrayList<>();
                     // C18 (D-SEC): config do app.security() aplicada pelo
                     // dispatch — ordem fixa rate-limit → cors → headers →
-                    // session → csrf, sempre antes das rotas (security by
-                    // default não depende do usuário lembrar de compor).
+                    // session → csrf → auth → RBAC, sempre antes das rotas
+                    // (security by default não depende do usuário lembrar de
+                    // compor). União das duas lanes que implementaram C18.
+                    volatile boolean securityConfigured;
+                    boolean securityHeaders = true;
                     int securityRateLimit = 0;
-                    String securityCorsOrigin = null;
+                    int securityRateWindow = 60;
+                    String securityCors = null;
                     boolean securityCsrf = false;
                     String securityAuthHeader = null;
                     final java.util.List<String> securityPublicPaths = new java.util.ArrayList<>();
+                    boolean securityRequireAuth = false;
+                    final java.util.List<String> securityRoles = new java.util.concurrent.CopyOnWriteArrayList<>();
                     final java.util.List<StaticDir> staticDirs = new java.util.ArrayList<>();
                     final java.util.List<String> healthPaths = new java.util.ArrayList<>();
                     final java.util.concurrent.atomic.AtomicInteger activeConnections =
@@ -466,37 +489,6 @@ public final class JvmWebCoreRuntime {
                 public static void kof_web_use(String appId, Object handler) {
                     if (handler == null) throw new IllegalArgumentException("middleware is null");
                     kof_web_app(appId).middlewares.add(handler);
-                }
-
-                /**
-                 * C18 (D-SEC): {@code app.security([opts])} — middleware
-                 * composto de ordem fixa ratificada no DECISIONS §D-SEC:
-                 * rate-limit → cors → headers de segurança → session →
-                 * csrf. Os opts (Map) alimentam campos no WebApp; a
-                 * APLICAÇÃO acontece no dispatch (JvmRuntimeWebDispatch),
-                 * que já tem a WebRequest em mão — nada de handler-reflect.
-                 */
-                @SuppressWarnings("unchecked")
-                public static void kof_web_security(String appId, Object opts) {
-                    WebApp app = kof_web_app(appId);
-                    if (opts instanceof java.util.Map<?, ?> m) {
-                        Object rl = m.get("rateLimit");
-                        if (rl instanceof Number n) app.securityRateLimit = n.intValue();
-                        Object co = m.get("corsOrigin");
-                        if (co instanceof String s && !s.isBlank()) app.securityCorsOrigin = s;
-                        Object c = m.get("csrf");
-                        if (c instanceof Boolean b) app.securityCsrf = b;
-                        Object ah = m.get("sessionHeader");
-                        if (ah instanceof String s && !s.isBlank()) app.securityAuthHeader = s.toLowerCase();
-                        Object pp = m.get("publicPaths");
-                        if (pp instanceof String csv && !csv.isBlank()) {
-                            for (String p : csv.split(",")) {
-                                if (!p.isBlank()) app.securityPublicPaths.add(p.trim());
-                            }
-                        }
-                    } else if (opts != null) {
-                        throw new IllegalArgumentException("app.security opts must be a Map");
-                    }
                 }
 
                 public static int kof_web_port(String appId) {

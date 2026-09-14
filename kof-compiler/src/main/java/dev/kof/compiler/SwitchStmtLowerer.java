@@ -147,7 +147,8 @@ if (hasPattern) {
                     }
                     if (fieldName == null) fieldName = fieldVar;
                     ops.add(new KofLoadField(fieldOwner, fieldName, fieldType));
-                    int varIdx = localIdx++;
+                    int varIdx = localIdx;
+                    localIdx += TypeMetrics.isDoubleWidth(fieldType) ? 2 : 1;
                     locals.add(new IRLocalVariable(varIdx, fieldVar, fieldType));
                     ops.add(new KofStoreLocal(fieldType, varIdx));
                 }

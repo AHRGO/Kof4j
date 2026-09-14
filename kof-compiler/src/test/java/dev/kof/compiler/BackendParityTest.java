@@ -420,6 +420,34 @@ class BackendParityTest {
     }
 
     @Test
+    void parityNanRelationalIeee(@TempDir Path tempDir) throws IOException {
+        // §101 (D-BACKEND-SEMANTICS #1, 14/09): IEEE 754 puro — todo relacional
+        // com NaN é false, `!=` é true (JLS 15.20.1). riscv é a referência;
+        // JVM (dcmpg/dcmpl) e x86 foram alinhados. Golden do oracle Java.
+        runParity("""
+                Double nan(Double zero) {
+                    return zero / zero
+                }
+                main() {
+                    var n = nan(0.0)
+                    println(n < 1.0)
+                    println(n <= 1.0)
+                    println(n > 1.0)
+                    println(n >= 1.0)
+                    println(n == 1.0)
+                    println(n != 1.0)
+                    println(n == n)
+                    println(n != n)
+                    println(1.0 < n)
+                    println(1.0 <= n)
+                    println(1.0 > n)
+                    println(1.0 >= n)
+                }
+                """, "false\nfalse\nfalse\nfalse\nfalse\ntrue\nfalse\ntrue\nfalse\nfalse\nfalse\nfalse",
+                tempDir, "nanrel");
+    }
+
+    @Test
     void parityLongBitwiseShiftMixed(@TempDir Path tempDir) throws IOException {
         // §167: bitwise/shift com Int e Long misturados + overflow de Long.
         // Antes: JVM VerifyError (land/lor/lxor/lshl com tipo errado; inferência

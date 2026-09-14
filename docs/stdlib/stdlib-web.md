@@ -103,6 +103,62 @@ Return `null` → continues; return `String` → immediate response (200).
 
 ### Server
 
+### Segurança (`app.security()`) — D-SEC C18 (14/09)
+
+| Chamada | Descrição |
+|---------|-----------|
+| `app.security()` | Middleware composto com defaults seguros (headers de hardening) |
+| `app.security(opts)` | Idem, com overrides via `Map` |
+
+Aplica a **ordem fixa** rate-limit → CORS → headers → cookies/session → csrf →
+auth → RBAC → rota (D-SEC). Substitui a cadeia manual de `app.use`.
+
+Sem argumentos, liga só os **headers de hardening** (sempre seguros):
+
+- `Content-Security-Policy: default-src 'self'; frame-ancestors 'none'; base-uri 'self'`
+- `X-Content-Type-Options: nosniff`
+- `X-Frame-Options: DENY`
+- `Referrer-Policy: no-referrer`
+- `Strict-Transport-Security` — só sob TLS (`listenSecure`)
+
+Opts documentados (chaves do `Map`; qualquer outra é ignorada):
+
+| Chave | Tipo | Default | Efeito |
+|-------|------|---------|--------|
+| `headers` | `Bool` | `true` | Liga/desliga os headers acima |
+| `cors` | `String` | off | Origem permitida, CSV ou `*`. Origem não listada → 403; preflight `OPTIONS` → 204 |
+| `rateLimit` | `String` | off | `"limite/janelaSegundos"` por IP remoto (ex.: `"100/60"`). Excedeu → 429 + `Retry-After` |
+| `csrf` | `Bool` | `false` | Double-submit cookie: emite `csrf` (SameSite=Lax) em métodos seguros; exige `X-CSRF-Token` casando com o cookie em POST/PUT/PATCH/DELETE, senão 403 |
+| `auth` | `Bool` | `false` | Exige `Authorization: Bearer` JWT válido (secret via `auth.secret`); ausente/inválido → 401 + `WWW-Authenticate` |
+| `roles` | `String` CSV ou `List` | — | Exige todas as roles (claims `roles`); falta → 403 (implica auth) |
+
+**Auth-if-present:** mesmo sem `auth: true`, uma request que **traz**
+`Authorization` com token inválido nunca passa (401) — evita "token ruim vira
+anônimo".
+
+```kof
+main() {
+    auth.secret(secrets.get("JWT_SECRET", "dev"))
+    var app = web.app()
+    var o = mapOf()
+    o.put("cors", "https://app.example")
+    o.put("rateLimit", "100/60")
+    o.put("auth", true)
+    o.put("roles", "admin")
+    app.security(o)
+    app.get("/admin") { return "ok" }
+    app.listen(8080)
+}
+```
+
+**Security by default:** `listen`/`listenSecure` com `KOF_ENV=production` sem
+`app.security()` avisa em `stderr` (nunca falha silenciosamente).
+
+**JVM-only** — Native/JS reportam `WEB006` (gap honesto, mesmo precedente
+`WEB002`/`WEB005`).
+
+### Servidor
+
 | Call | Description |
 |---------|-----------|
 | `app.listen(port)` | Starts the server (blocking) on `0.0.0.0` |
@@ -112,6 +168,18 @@ Return `null` → continues; return `String` → immediate response (200).
 
 `app.listen(0)` binds an ephemeral port; `app.port()` reveals the real port.
 `app.listenSecure` is available on the JVM (Native/JS `WEB002`).
+
+| `app.listen(port)` | Inicia o servidor (bloqueante) em `0.0.0.0` |
+| `app.listenSecure(port)` | Idem, com TLS self-signed de dev (JVM; `keytool` + `SSLServerSocket`) |
+| `app.listenSecure(port, certPem, keyPem)` | TLS com **certificado próprio** (PKCS#8 PEM) — produção (JVM) |
+| `app.port()` | Porta efetivamente vinculada (útil com `listen(0)`) |
+| `app.close()` | Encerra o servidor (graceful shutdown) |
+
+`app.listen(0)` vincula uma porta efêmera; `app.port()` revela a porta real.
+`app.listenSecure` está disponível no JVM (Native/JS `WEB002`). A variante de
+3 args usa o par cert/chave do usuário (`-----BEGIN CERTIFICATE-----` /
+`-----BEGIN PRIVATE KEY-----`, chave PKCS#8 RSA/EC/DSA); o self-signed de 1
+arg continua como conveniência de dev, não de produção (D-SEC).
 
 ### Static files (`app.serveDir`) (31/08)
 

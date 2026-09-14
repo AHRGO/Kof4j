@@ -231,4 +231,51 @@ class ExceptionsE2ETest {
             """);
         runJvm(source, tempDir.resolve("out"), "inner caught");
     }
+
+    // Issue #163 — typing `catch (RuntimeException e)` (a java.lang type
+    // written by its simple name) left the catch local unqualified:
+    // ClassType("", "RuntimeException"). Calling `e.getMessage()` then emitted
+    // `LRuntimeException;` in the constant pool default package and loading
+    // the class failed with NoClassDefFoundError: RuntimeException. The catch
+    // type is now qualified to java.lang (StatementAnalyzer + StatementLowerer).
+    @Test
+    void typedCatchExceptionMethodCall(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            main() {
+                try {
+                    throw "boom"
+                } catch (RuntimeException e) {
+                    println(e.getMessage())
+                }
+            }
+            """);
+        runJvm(source, tempDir.resolve("out"), "boom");
+    }
+
+    // Issue #211 — same root as #163: the caught-variable type of ANY
+    // java.lang throwable written by its simple name (Exception, Throwable,
+    // ...) stayed unqualified, so e.getMessage() emitted
+    // `invokevirtual Exception.getMessage` (default package) -> COMP002 /
+    // NoClassDefFoundError. The catch header is now qualified to java.lang
+    // for every throwable in CompilerTypes.JAVA_LANG_THROWABLES.
+    @Test
+    void typedCatchExceptionAndThrowable(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            main() {
+                try {
+                    throw "boom"
+                } catch (Exception e) {
+                    println(e.getMessage())
+                }
+                try {
+                    throw "deep"
+                } catch (Throwable t) {
+                    println(t.getMessage())
+                }
+            }
+            """);
+        runJvm(source, tempDir.resolve("out"), "boom\ndeep");
+    }
 }

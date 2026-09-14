@@ -198,9 +198,11 @@ public final class JvmRuntimeCallDescriptors {
             case "kof_web_sse_route" -> "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)V";
             case "kof_web_ws_route" -> "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)V";
             case "kof_web_use" -> "(Ljava/lang/String;Ljava/lang/Object;)V";
-            case "kof_web_security" -> "(Ljava/lang/String;Ljava/lang/Object;)V";
+            case "kof_web_security" -> "(Ljava/lang/String;)V";
+            case "kof_web_security_opts" -> "(Ljava/lang/String;Ljava/util/Map;)V";
             case "kof_web_listen" -> "(Ljava/lang/String;I)V";
             case "kof_web_listen_secure" -> "(Ljava/lang/String;I)V";
+            case "kof_web_listen_secure_pem" -> "(Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;)V";
             case "kof_web_serve_dir" -> "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V";
             case "kof_web_health" -> "(Ljava/lang/String;Ljava/lang/String;)V";
             case "kof_web_configure" -> "(Ljava/lang/String;Ljava/lang/String;I)V";
@@ -330,12 +332,17 @@ public final class JvmRuntimeCallDescriptors {
             case "kof_orm_delete_all" -> "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z";
             // ── kof.security (docs/stdlib/security.md §5) ───────────────────
             case "kof_sec_sha256", "kof_sec_sha512", "kof_sec_redact", "kof_sec_secret_get",
-                    "kof_sec_password_hash", "kof_sec_auth_user" -> "(Ljava/lang/String;)Ljava/lang/String;";
+                    "kof_sec_password_hash" -> "(Ljava/lang/String;)Ljava/lang/String;";
             case "kof_sec_hmac_sha256", "kof_sec_aesgcm_encrypt", "kof_sec_aesgcm_decrypt",
                     "kof_sec_chacha20_encrypt", "kof_sec_chacha20_decrypt",
                     "kof_sec_secret_get_default", "kof_sec_jwt_create", "kof_sec_jwt_verify"
                     -> "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;";
             case "kof_sec_jwt_create_ttl" -> "(Ljava/lang/String;Ljava/lang/String;I)Ljava/lang/String;";
+            // D-SEC camada 16: OAuth2 resource server (JWKS).
+            case "kof_sec_auth_resource_server"
+                    -> "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z";
+            case "kof_sec_auth_resource_server_verify"
+                    -> "(Ljava/lang/String;)Ljava/lang/String;";
             case "kof_sec_jwt_verify_iss_aud"
                     -> "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;";
             case "kof_sec_random_hex" -> "(I)Ljava/lang/String;";
@@ -429,7 +436,7 @@ public final class JvmRuntimeCallDescriptors {
             case "kof_sec_jwt_secret", "kof_sec_csrf_token", "kof_sec_csp_header",
                     "kof_sec_hsts_header", "kof_sec_content_type_options_header",
                     "kof_sec_frame_header", "kof_sec_referrer_header", "kof_sec_auth_token",
-                    "kof_sec_auth_claims" -> "()Ljava/lang/String;";
+                    "kof_sec_auth_claims", "kof_sec_auth_user" -> "()Ljava/lang/String;";
             default -> "(Ljava/lang/String;)Ljava/lang/Object;";
         };
     }

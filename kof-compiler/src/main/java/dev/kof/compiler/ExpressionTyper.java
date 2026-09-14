@@ -132,7 +132,6 @@ public final class ExpressionTyper {
                                 ? Type.PrimitiveType.LONG : Type.PrimitiveType.INT;
                         continue;
                     }
-                    leftType = leftType;
                 }
                 yield leftType;
             }
@@ -148,8 +147,12 @@ public final class ExpressionTyper {
             }
             case NewExpr ne -> {
                 Type t = CompilerTypes.toType(ne.typeName(), driver.currentUnit);
-                if ("List".equals(ne.typeName()) || "ArrayList".equals(ne.typeName())) {
+                if ("List".equals(ne.typeName()) || "ArrayList".equals(ne.typeName()) || "LinkedList".equals(ne.typeName())) {
                     t = BuiltinTypes.LIST;
+                } else if ("Set".equals(ne.typeName()) || "HashSet".equals(ne.typeName())) {
+                    t = BuiltinTypes.SET;
+                } else if ("Map".equals(ne.typeName()) || "HashMap".equals(ne.typeName())) {
+                    t = BuiltinTypes.MAP;
                 }
                 if (!ne.typeArguments().isEmpty() && t instanceof Type.ClassType cts) {
                     t = new Type.ClassType(cts.packageName(), cts.name(),
@@ -212,7 +215,7 @@ public final class ExpressionTyper {
                 if (BuiltinTypes.isSet(recvType) && ("size".equals(fa.fieldName()) || "length".equals(fa.fieldName()))) {
                     yield Type.PrimitiveType.INT;
                 }
-                if (recvType instanceof Type.ArrayType at && ("length".equals(fa.fieldName())
+                if (recvType instanceof Type.ArrayType _ && ("length".equals(fa.fieldName())
                         || "size".equals(fa.fieldName()) || "count".equals(fa.fieldName()))) {
                     yield Type.PrimitiveType.INT;
                 }
@@ -261,10 +264,23 @@ public final class ExpressionTyper {
             }
             case IfExpr ie -> {
                 Type thenType = inferExprType(driver, ie.thenExpr(), locals);
-                Type elseType = inferExprType(driver, ie.elseExpr(), locals);
+                Type elseType = ie.elseExpr() != null ? inferExprType(driver, ie.elseExpr(), locals) : Type.UnknownType.UNKNOWN;
+                if (thenType.equals(elseType)) yield thenType;
+                if (driver.semanticAnalyzer != null) {
+                    yield HierarchyResolver.commonSupertype(driver.semanticAnalyzer, thenType, elseType);
+                }
+                List<Type> bts = ifBranchTypes(driver, ie, locals);
+                if (branchTypesDiffer(bts)) {
+                    yield new Type.ClassType("java.lang", "Object", List.of());
+                }
                 yield thenType;
             }            case SwitchExpr se -> {
                 if (!se.cases().isEmpty()) {
+                    List<Type> bts = switchBranchTypes(driver, se.cases(), se.defaultValue(),
+                            inferExprType(driver, se.cases().get(0).body(), locals), locals);
+                    if (branchTypesDiffer(bts)) {
+                        yield new Type.ClassType("java.lang", "Object", List.of());
+                    }
                     yield inferExprType(driver, se.cases().get(0).body(), locals);
                 }
                 yield se.defaultValue() != null ? inferExprType(driver, se.defaultValue(), locals)

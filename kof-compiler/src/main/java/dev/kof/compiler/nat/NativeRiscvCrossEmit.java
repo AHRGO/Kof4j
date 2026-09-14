@@ -178,28 +178,28 @@ public final class NativeRiscvCrossEmit {
             case KofJump kj -> sb.append("    j ").append(nb.resolveLabel(kj.target())).append("\n");
             case KofCall kc -> other.emitCrossCallRiscv(sb, kc);
             case KofNewObject no -> emitCrossNewObjectRiscv(sb, no);
-            case KofDup dup -> {
+            case KofDup _ -> {
                 sb.append("    ld t0, 0(sp)\n");
                 pushRiscv(sb, "t0");
             }
-            case KofDup2 dup2 -> {
+            case KofDup2 _ -> {
                 sb.append("    ld t0, 0(sp)\n    ld t1, 8(sp)\n");
                 pushRiscv(sb, "t1"); pushRiscv(sb, "t0"); pushRiscv(sb, "t1"); pushRiscv(sb, "t0");
             }
-            case KofDupX1 x1 -> {
+            case KofDupX1 _ -> {
                 sb.append("    ld t0, 0(sp)\n    ld t1, 8(sp)\n");
                 pushRiscv(sb, "t0"); pushRiscv(sb, "t1"); pushRiscv(sb, "t0");
             }
-            case KofDupX2 x2 -> {
+            case KofDupX2 _ -> {
                 sb.append("    ld t0, 0(sp)\n    ld t1, 8(sp)\n    ld t2, 16(sp)\n");
                 pushRiscv(sb, "t0"); pushRiscv(sb, "t2"); pushRiscv(sb, "t1"); pushRiscv(sb, "t0");
             }
-            case KofPop pop -> sb.append("    addi sp, sp, 8\n");
+            case KofPop _ -> sb.append("    addi sp, sp, 8\n");
             // §142 (12/09): nativo empilha TODO valor como 1 qword (Long/Double
             // inclusive — ver pushRiscv). O POP2 herdado do JVM (16) desbalanceava
             // a pilha; descartar 1 qword. aarch64 herda via tradutor.
-            case KofPop2 pop2 -> sb.append("    addi sp, sp, 8\n");
-            case KofCheckCast cc -> { }
+            case KofPop2 _ -> sb.append("    addi sp, sp, 8\n");
+            case KofCheckCast _ -> { }
             case KofInstanceOf io -> {
                 int targetTypeId = 0;
                 if (BuiltinTypes.isString(io.type())) {
@@ -237,7 +237,7 @@ public final class NativeRiscvCrossEmit {
                 sb.append("    addi sp, sp, ").append(8 * ma.dims()).append("\n");
                 pushRiscv(sb, "a0");
             }
-            case KofArrayLoad al -> {
+            case KofArrayLoad _ -> {
                 sb.append("    pop a1\n");   // idx
                 sb.append("    pop a0\n");   // arr
                 sb.append("    call kof_array_get\n");
@@ -256,12 +256,12 @@ public final class NativeRiscvCrossEmit {
                 }
                 sb.append("    call kof_array_set\n");
             }
-            case KofArrayLength al -> {
+            case KofArrayLength _ -> {
                 sb.append("    pop a0\n");
                 sb.append("    call kof_array_length\n");
                 pushRiscv(sb, "a0");
             }
-            case KofThrow thr -> {
+            case KofThrow _ -> {
                 sb.append("    pop a0\n");
                 sb.append("    call kof_throw_string\n");
             }
@@ -276,7 +276,7 @@ public final class NativeRiscvCrossEmit {
                 sb.append("    sd t2, 24(sp)\n");
                 sb.append("    sd sp, 0(t1)\n");
             }
-            case KofTryEnd kte -> {
+            case KofTryEnd _ -> {
                 sb.append("    la t1, kof_exc_chain\n");
                 sb.append("    ld t2, 24(sp)\n");
                 sb.append("    sd t2, 0(t1)\n");
@@ -287,7 +287,7 @@ public final class NativeRiscvCrossEmit {
                 sb.append("    addi sp, sp, 32\n");
                 sb.append("    sd a0, ").append(crossLocalOffRiscv(kcs.localIndex())).append("(s11)\n");
             }
-            case KofReturn kr -> {
+            case KofReturn _ -> {
                 sb.append("    pop a0\n");
                 if (joinMain) sb.append("    call kof_spawn_join_all\n");
                 sb.append("    mv sp, s11\n");
@@ -297,7 +297,7 @@ public final class NativeRiscvCrossEmit {
                 sb.append("    addi sp, sp, 16\n");
                 sb.append("    ret\n");
             }
-            case KofReturnVoid rv -> {
+            case KofReturnVoid _ -> {
                 sb.append("    li a0, 0\n");
                 if (joinMain) sb.append("    call kof_spawn_join_all\n");
                 sb.append("    mv sp, s11\n");

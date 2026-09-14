@@ -18,11 +18,11 @@ public final class JvmTypeMapper {
             case Type.ClassType c when KofUi.isUiType(c) || KofMedia.isHandleType(c) -> "I";
             case Type.ClassType c -> classDescriptor(c);
             case Type.ArrayType a -> "[" + toDescriptor(a.componentType());
-            case Type.TypeVariable tv -> "Ljava/lang/Object;";
-            case Type.WildcardType wt -> "Ljava/lang/Object;";
+            case Type.TypeVariable _ -> "Ljava/lang/Object;";
+            case Type.WildcardType _ -> "Ljava/lang/Object;";
             case Type.FunctionType ft -> ft.className() != null
                     ? "L" + ft.className() + ";" : "Ljava/lang/Object;";
-            case Type.UnknownType ut -> "Ljava/lang/Object;";
+            case Type.UnknownType _ -> "Ljava/lang/Object;";
             case Type.NullableType n -> toDescriptor(n.inner());
             default -> "Ljava/lang/Object;";
         };

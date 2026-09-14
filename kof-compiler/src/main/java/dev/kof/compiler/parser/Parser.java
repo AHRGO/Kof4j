@@ -64,7 +64,8 @@ public class Parser {
                 declarations.add(TypeDeclarations.parseTypeDeclaration(ctx, annos));
             } else if (ctx.check(TokenType.EXTERN)) {
                 declarations.add(parseExternDeclaration(ctx));
-            } else if (ctx.check(TokenType.IDENTIFIER) || ctx.check(TokenType.VOID) || TypeParser.isPrimitiveType(ctx)) {
+            } else if (ctx.check(TokenType.IDENTIFIER) || ctx.check(TokenType.VOID) || TypeParser.isPrimitiveType(ctx)
+                    || ctx.check(TokenType.LPAREN)) {
                 declarations.add(parseFunctionDeclaration(ctx, List.of(), annos));
             } else {
                 declarations.add(TypeDeclarations.parseTypeDeclaration(ctx, annos));
@@ -129,7 +130,11 @@ public class Parser {
         // aqui como IDENTIFIER; o dispatch top-level os rejeita (PARSE085).
         String returnType = "void";
         String name;
-        if ((ctx.check(TokenType.IDENTIFIER) || ctx.check(TokenType.VOID) || TypeParser.isPrimitiveType(ctx))
+        if (ctx.check(TokenType.LPAREN)) {
+            // Function type as return type: `(Int) -> Int makeDoubler() { ... }` (issue #218)
+            returnType = TypeParser.parseTypeRef(ctx);
+            name = ctx.expectId("Expected function name", "PARSE010");
+        } else if ((ctx.check(TokenType.IDENTIFIER) || ctx.check(TokenType.VOID) || TypeParser.isPrimitiveType(ctx))
                 && !ctx.checkNext(TokenType.LPAREN)
                 && (isGenericReturnTypeAhead(ctx) || !ctx.checkNext(TokenType.LESS))) {
             returnType = ctx.advance().value();

@@ -145,7 +145,7 @@ public class SemanticAnalyzer {
             case RecordDeclarationNode rec -> analyzeRecord(rec);
             case EntityDeclarationNode ent -> analyzeEntity(ent);
             case InterfaceDeclarationNode iface -> analyzeInterface(iface);
-            case EnumDeclarationNode en -> { }
+            case EnumDeclarationNode _ -> { }
             case FunctionDeclarationNode func -> analyzeFunction(func);
             default -> {}
         }
@@ -296,6 +296,11 @@ public class SemanticAnalyzer {
         for (RecordComponentNode comp : rec.components()) {
             if (comp.initializer() != null) {
                 inferType(comp.initializer(), classScope);
+            }
+        }
+        for (AstNode member : rec.members()) {
+            if (member instanceof FieldDeclarationNode field && field.initializer() != null) {
+                inferType(field.initializer(), classScope);
             }
         }
         for (int pass = 0; pass < 4; pass++) {

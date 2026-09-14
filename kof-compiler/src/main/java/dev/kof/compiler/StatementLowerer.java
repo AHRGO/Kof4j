@@ -24,7 +24,14 @@ public final class StatementLowerer {
                     if (ret.value() != null && !CompilerComparisons.isNullablePrimNullReturn(ret, returnType)) {
                         ExpressionNode rv = CompilerComparisons.foldNullablePrimBranches(ret.value(), returnType);
                         localIdx = ExpressionLowerer.emitExpression(driver, rv, ops, owner, localIdx, locals);
-                        driver.emitWideningIfNeeded(ops, ExpressionTyper.inferExprType(driver, rv, locals), returnType);
+                        Type rvType = ExpressionTyper.inferExprType(driver, rv, locals);
+                        driver.emitWideningIfNeeded(ops, rvType, returnType);
+                        // Issue #169: retorno de primitivo de função tipo Object
+                        if (driver.erasesToReference(returnType)
+                                && TypeMetrics.isPrimitiveType(rvType)
+                                && !ExpressionTyper.boxesOwnBranches(driver, rv, locals)) {
+                            driver.emitErasureBox(ops, rvType);
+                        }
                         ops.add(new KofStoreLocal(returnType, f.slotValor()));
                     } else if (!Type.isVoid(returnType)) {
                         ops.add(CompilerTypes.defaultValueOp(returnType));
@@ -39,7 +46,14 @@ public final class StatementLowerer {
                     // heterogêneo que boxia e quebra o ireturn).
                     ExpressionNode rv = CompilerComparisons.foldNullablePrimBranches(ret.value(), returnType);
                     localIdx = ExpressionLowerer.emitExpression(driver, rv, ops, owner, localIdx, locals);
-                    driver.emitWideningIfNeeded(ops, ExpressionTyper.inferExprType(driver, rv, locals), returnType);
+                    Type rvType = ExpressionTyper.inferExprType(driver, rv, locals);
+                    driver.emitWideningIfNeeded(ops, rvType, returnType);
+                    // Issue #169: retorno de primitivo de função tipo Object
+                    if (driver.erasesToReference(returnType)
+                            && TypeMetrics.isPrimitiveType(rvType)
+                            && !ExpressionTyper.boxesOwnBranches(driver, rv, locals)) {
+                        driver.emitErasureBox(ops, rvType);
+                    }
                     ops.add(new KofReturn(returnType));
                 } else if (Type.isVoid(returnType)) {
                     ops.add(new KofReturnVoid());
@@ -49,11 +63,11 @@ public final class StatementLowerer {
                 }
                 yield localIdx;
             }
-            case BreakStmt ignored -> {
+            case BreakStmt _ -> {
                 if (!driver.breakLabels.isEmpty()) ops.add(new KofJump(driver.breakLabels.peek()));
                 yield localIdx;
             }
-            case ContinueStmt ignored -> {
+            case ContinueStmt _ -> {
                 if (!driver.continueLabels.isEmpty()) ops.add(new KofJump(driver.continueLabels.peek()));
                 yield localIdx;
             }
@@ -74,7 +88,10 @@ public final class StatementLowerer {
                 yield localIdx;
             }
             case VarDeclStmt vds -> {
-                Type varType = CompilerTypes.toType(vds.type(), driver.currentUnit);
+                // §179: usa a resolução semântica (qualifyDeep) — sem ela o tipo
+                // declarado kof.ui/kof.media saía ClassType("", "Label") e o
+                // store local virava `astore` sobre handle `int` (VerifyError).
+                Type varType = CompilerTypes.toType(vds.type(), driver.currentUnit, driver.semanticAnalyzer);
                 // §125(A) extensão: `Int? v = if (c) x else null` — slot
                 // explícito Nullable(primitivo) nunca guarda null (storage é o
                 // inner), então o ramo null colapsa p/ default do primitivo.
@@ -157,9 +174,16 @@ public final class StatementLowerer {
                 yield localIdx + (TypeMetrics.isDoubleWidth(varType) ? 2 : 1);
             }
             case BlockStmt block -> {
+                int startSize = locals.size();
                 int idx = localIdx;
                 for (StatementNode s : block.statements()) {
                     idx = driver.emitStatement(s, ops, owner, idx, locals, returnType);
+                }
+                for (int i = startSize; i < locals.size(); i++) {
+                    IRLocalVariable lv = locals.get(i);
+                    if (!lv.name().startsWith("#")) {
+                        locals.set(i, new IRLocalVariable(lv.index(), "#scopedVar$" + lv.name(), lv.type()));
+                    }
                 }
                 yield idx;
             }
@@ -233,7 +257,9 @@ public final class StatementLowerer {
                 LabelId endLabel = LabelId.create();
                 LabelId continueLabel = LabelId.create();
                 LabelId bodyLabel = LabelId.create();
+                int initLocalEntryIdx = locals.size();
                 if (fs.init() != null) localIdx = driver.emitStatement(fs.init(), ops, owner, localIdx, locals, returnType);
+                int initLocalEndIdx = locals.size();
                 ops.add(new KofLabel(startLabel));
                 if (fs.condition() != null) {
                     if (fs.condition() instanceof BinaryExpr bin && driver.isComparisonShortcut(bin, locals)) {
@@ -284,6 +310,17 @@ public final class StatementLowerer {
                 }
                 ops.add(new KofJump(startLabel));
                 ops.add(new KofLabel(endLabel));
+                // #182: libera SOMENTE os nomes declarados pelo init (ex.: `var i`).
+                // Varrer ate locals.size() renomeava tbem as variaveis do CORPO
+                // (ja empilhadas durante o loop) para o sentinel '#forInitVar',
+                // que o backend JS trata como temp nao-declaravel (isCompilerTemp)
+                // -> o `let` sumia e as leituras davam ReferenceError (#201).
+                if (fs.init() != null) {
+                    for (int li = initLocalEntryIdx; li < initLocalEndIdx; li++) {
+                        IRLocalVariable lv = locals.get(li);
+                        locals.set(li, new IRLocalVariable(lv.index(), "#forInitVar", lv.type()));
+                    }
+                }
                 yield localIdx;
             }
             case ForInStmt fis -> {
@@ -301,6 +338,7 @@ public final class StatementLowerer {
                 int varIdx = localIdx++;
                 locals.add(new IRLocalVariable(collIdx, "#coll", collType));
                 locals.add(new IRLocalVariable(idxIdx, "#idx", Type.PrimitiveType.INT));
+                int varLocalEntryIdx = locals.size();
                 locals.add(new IRLocalVariable(varIdx, fis.varName(), elemType));
                 localIdx = ExpressionLowerer.emitExpression(driver, fis.collection(), ops, owner, localIdx, locals);
                 ops.add(new KofStoreLocal(collType, collIdx));
@@ -336,6 +374,11 @@ public final class StatementLowerer {
                 ops.add(new KofStoreLocal(Type.PrimitiveType.INT, idxIdx));
                 ops.add(new KofJump(startLabel));
                 ops.add(new KofLabel(endLabel));
+                // Issue #182: remove a variável do loop de locals para não sombrear
+                // a variável externa homônima nas leituras posteriores ao loop.
+                // Preserva o slot varIdx nos metadados renomeando para "#forInVar"
+                // para que o backend JS / Native mantenha o mapeamento do slot.
+                locals.set(varLocalEntryIdx, new IRLocalVariable(varIdx, "#forInVar", elemType));
                 yield localIdx;
             }
             case ThrowStmt ts -> {
@@ -448,7 +491,7 @@ public final class StatementLowerer {
                 int primaryExcLocal = localIdx++;
                 if (hasCatch) {
                     locals.add(new IRLocalVariable(primaryExcLocal, ts.catchClauses().getFirst().exceptionName(),
-                            CompilerTypes.toType(primaryExcType, driver.currentUnit)));
+                            CompilerTypes.exceptionType(primaryExcType, driver.currentUnit)));
                 } else if (hasFinally) {
                     locals.add(new IRLocalVariable(primaryExcLocal, "#excTmp",
                             new Type.ClassType("java.lang", "Throwable", List.of())));
@@ -478,7 +521,8 @@ public final class StatementLowerer {
                     LabelId handlerLabel = ci == 0 ? primaryHandler : LabelId.create();
                     int excIdx = ci == 0 ? primaryExcLocal : localIdx++;
                     if (ci > 0) {
-                        locals.add(new IRLocalVariable(excIdx, cc.exceptionName(), CompilerTypes.toType(cc.exceptionType(), driver.currentUnit)));
+                        locals.add(new IRLocalVariable(excIdx, cc.exceptionName(),
+                                CompilerTypes.exceptionType(cc.exceptionType(), driver.currentUnit)));
                     }
                     ops.add(new KofCatchStart(handlerLabel, cc.exceptionType(), excIdx));
                     // o corpo do catch deve enxergar apenas os locals ATÉ este

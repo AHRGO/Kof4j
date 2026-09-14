@@ -294,13 +294,25 @@ public final class JvmStringSecurityRuntime {
                     String cached = KOF_AUTH_CLAIMS.get();
                     if (cached != null) return true;
                     String token = kof_sec_auth_bearerToken();
-                    if (token == null || KOF_AUTH_SECRET == null || KOF_AUTH_SECRET.isBlank()) return false;
-                    try {
-                        KOF_AUTH_CLAIMS.set(kof_sec_jwt_verify(token, KOF_AUTH_SECRET));
-                        return true;
-                    } catch (IllegalArgumentException e) {
-                        return false;
+                    if (token == null) return false;
+                    // HS256 com segredo local (auth.secret) — se configurado.
+                    if (KOF_AUTH_SECRET != null && !KOF_AUTH_SECRET.isBlank()) {
+                        try {
+                            KOF_AUTH_CLAIMS.set(kof_sec_jwt_verify(token, KOF_AUTH_SECRET));
+                            return true;
+                        } catch (IllegalArgumentException e) {
+                            // cai para o resource server, se configurado
+                        }
                     }
+                    // D-SEC camada 16: JWT de terceiro (JWKS), se configurado.
+                    if (KOF_OAUTH_JWKS_URL != null) {
+                        String claims = kof_sec_auth_resource_server_verify(token);
+                        if (claims != null) {
+                            KOF_AUTH_CLAIMS.set(claims);
+                            return true;
+                        }
+                    }
+                    return false;
                 }
 
                 public static String kof_sec_auth_token() {

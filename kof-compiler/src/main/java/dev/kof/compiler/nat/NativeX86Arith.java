@@ -45,10 +45,18 @@ public final class NativeX86Arith {
                     return;
                 }
                 case LT -> {
+                    // §101 (IEEE): unordered (NaN) força false — mesmo guard do LE.
                     sb.append("    ucomiss %xmm1, %xmm0\n");
                     sb.append("    setb %al\n");
+                    sb.append("    setp %dl\n");
+                    sb.append("    testb %dl, %dl\n");
+                    sb.append("    jnz 1f\n");
                     sb.append("    movzbl %al, %eax\n");
                     sb.append("    pushq %rax\n");
+                    sb.append("    jmp 2f\n");
+                    sb.append("1: xorl %eax, %eax\n");
+                    sb.append("    pushq %rax\n");
+                    sb.append("2:\n");
                     return;
                 }
                 case LE -> {
@@ -135,10 +143,19 @@ public final class NativeX86Arith {
                     return;
                 }
                 case LT -> {
+                    // §101 (IEEE): unordered (NaN) força false. `setb` sozinho
+                    // dava CF=1 no NaN (PF=1) → true — mesmo guard do LE.
                     sb.append("    ucomisd %xmm1, %xmm0\n");
                     sb.append("    setb %al\n");
+                    sb.append("    setp %dl\n");
+                    sb.append("    testb %dl, %dl\n");
+                    sb.append("    jnz 1f\n");
                     sb.append("    movzbl %al, %eax\n");
                     sb.append("    pushq %rax\n");
+                    sb.append("    jmp 2f\n");
+                    sb.append("1: xorl %eax, %eax\n");
+                    sb.append("    pushq %rax\n");
+                    sb.append("2:\n");
                     return;
                 }
                 case LE -> {

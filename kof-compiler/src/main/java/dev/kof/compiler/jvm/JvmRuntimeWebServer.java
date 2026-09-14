@@ -24,6 +24,7 @@ public final class JvmRuntimeWebServer {
                         throw new RuntimeException("cannot bind port " + port + ": " + e.getMessage(), e);
                     }
                     app.running = true;
+                    kof_web_warn_security_default(app);
                     Runtime.getRuntime().addShutdownHook(new Thread(() -> kof_web_close(appId)));
                     while (app.running) {
                         try {
@@ -55,6 +56,7 @@ public final class JvmRuntimeWebServer {
                         throw new RuntimeException("cannot bind TLS port " + port + ": " + e.getMessage(), e);
                     }
                     app.running = true;
+                    kof_web_warn_security_default(app);
                     Runtime.getRuntime().addShutdownHook(new Thread(() -> kof_web_close(appId)));
                     while (app.running) {
                         try {
@@ -65,6 +67,87 @@ public final class JvmRuntimeWebServer {
                             if (!app.running) break;
                         }
                     }
+                }
+
+                /**
+                 * D-SEC: TLS com certificado próprio (PKCS#8 PEM) —
+                 * {@code app.listenSecure(port, certPem, keyPem)}. Diferente do
+                 * self-signed de dev (kof_web_listen_secure), usa a chave/cert
+                 * do usuário: produção. Native/JS seguem WEB002 honesto.
+                 */
+                public static void kof_web_listen_secure_pem(String appId, int port,
+                        String certPem, String keyPem) {
+                    WebApp app = kof_web_app(appId);
+                    if (app.serverSocket != null) {
+                        throw new IllegalStateException("app already listening: " + appId);
+                    }
+                    try {
+                        javax.net.ssl.SSLContext ctx = kof_web_ssl_context_pem(certPem, keyPem);
+                        javax.net.ssl.SSLServerSocketFactory ssf = ctx.getServerSocketFactory();
+                        javax.net.ssl.SSLServerSocket ss = (javax.net.ssl.SSLServerSocket) ssf.createServerSocket(port, 64,
+                                java.net.InetAddress.getByName("0.0.0.0"));
+                        ss.setNeedClientAuth(false);
+                        app.serverSocket = ss;
+                    } catch (Exception e) {
+                        throw new RuntimeException("cannot bind TLS port " + port + ": " + e.getMessage(), e);
+                    }
+                    app.running = true;
+                    kof_web_warn_security_default(app);
+                    Runtime.getRuntime().addShutdownHook(new Thread(() -> kof_web_close(appId)));
+                    while (app.running) {
+                        try {
+                            java.net.Socket client = app.serverSocket.accept();
+                            client.setSoTimeout(15000);
+                            Thread.startVirtualThread(() -> kof_web_handle(app, client));
+                        } catch (java.io.IOException e) {
+                            if (!app.running) break;
+                        }
+                    }
+                }
+
+                private static javax.net.ssl.SSLContext kof_web_ssl_context_pem(String certPem, String keyPem)
+                        throws Exception {
+                    byte[] certDer = java.util.Base64.getMimeDecoder().decode(
+                            kof_web_pem_body(certPem, "CERTIFICATE"));
+                    java.security.cert.X509Certificate cert = (java.security.cert.X509Certificate)
+                            java.security.cert.CertificateFactory.getInstance("X.509")
+                                    .generateCertificate(new java.io.ByteArrayInputStream(certDer));
+                    byte[] keyDer = java.util.Base64.getMimeDecoder().decode(
+                            kof_web_pem_body(keyPem, "PRIVATE KEY"));
+                    java.security.spec.PKCS8EncodedKeySpec spec =
+                            new java.security.spec.PKCS8EncodedKeySpec(keyDer);
+                    java.security.PrivateKey key = null;
+                    for (String alg : new String[]{"RSA", "EC", "DSA"}) {
+                        try {
+                            key = java.security.KeyFactory.getInstance(alg).generatePrivate(spec);
+                            break;
+                        } catch (Exception ignored) {
+                        }
+                    }
+                    if (key == null) {
+                        throw new IllegalArgumentException("unsupported PKCS#8 private key (tried RSA/EC/DSA)");
+                    }
+                    java.security.KeyStore ks = java.security.KeyStore.getInstance("PKCS12");
+                    ks.load(null, null);
+                    ks.setKeyEntry("kof", key, "changeit".toCharArray(),
+                            new java.security.cert.Certificate[]{cert});
+                    javax.net.ssl.KeyManagerFactory kmf =
+                            javax.net.ssl.KeyManagerFactory.getInstance("SunX509");
+                    kmf.init(ks, "changeit".toCharArray());
+                    javax.net.ssl.SSLContext ctx = javax.net.ssl.SSLContext.getInstance("TLS");
+                    ctx.init(kmf.getKeyManagers(), null, new java.security.SecureRandom());
+                    return ctx;
+                }
+
+                private static String kof_web_pem_body(String pem, String label) {
+                    String body = pem.replace("-----BEGIN " + label + "-----", "")
+                            .replace("-----END " + label + "-----", "");
+                    StringBuilder sb = new StringBuilder();
+                    for (int i = 0; i < body.length(); i++) {
+                        char c = body.charAt(i);
+                        if (!Character.isWhitespace(c)) sb.append(c);
+                    }
+                    return sb.toString();
                 }
 
                 private static javax.net.ssl.SSLContext kof_web_ssl_context() throws Exception {
@@ -117,7 +200,10 @@ public final class JvmRuntimeWebServer {
                     }
                     try {
                         try (client) {
-                            WebRequest req = readRequest(client.getInputStream());
+                            WebRequest req = readRequest(client.getInputStream(),
+                                    client.getInetAddress() == null
+                                            ? null : client.getInetAddress().getHostAddress(),
+                                    client instanceof javax.net.ssl.SSLSocket);
                             WebDispatchResult result = kof_web_dispatch(app, req);
                             if (result.kind == RouteKind.SSE) {
                                 java.io.OutputStream out = client.getOutputStream();

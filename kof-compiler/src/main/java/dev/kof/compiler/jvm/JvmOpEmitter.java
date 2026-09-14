@@ -1,5 +1,6 @@
 package dev.kof.compiler.jvm;
 import dev.kof.compiler.BuiltinTypes;
+import dev.kof.compiler.TypeMetrics;
 import dev.kof.compiler.IRClass;
 import dev.kof.compiler.IRModule;
 import dev.kof.compiler.KofArrayLength;
@@ -204,11 +205,13 @@ public final class JvmOpEmitter {
             }
             c.mv().visitVarInsn(ASTORE, kcs.localIndex());
         } else if (op instanceof KofCheckCast cc) {
-            String type = cc.type() instanceof Type.ClassType ct
+            Type castT = cc.type() instanceof Type.PrimitiveType pt ? TypeMetrics.boxedTypeFor(pt) : cc.type();
+            String type = castT instanceof Type.ClassType ct
                     ? JvmTypeMapper.toInternalName(ct.packageName(), ct.name()) : "?";
             c.mv().visitTypeInsn(CHECKCAST, type);
         } else if (op instanceof KofInstanceOf io) {
-            String type = io.type() instanceof Type.ClassType ct
+            Type checkT = io.type() instanceof Type.PrimitiveType pt ? TypeMetrics.boxedTypeFor(pt) : io.type();
+            String type = checkT instanceof Type.ClassType ct
                     ? JvmTypeMapper.toInternalName(ct.packageName(), ct.name()) : "?";
             c.mv().visitTypeInsn(INSTANCEOF, type);
         } else if (op instanceof KofNewArray na) {
@@ -269,10 +272,11 @@ public final class JvmOpEmitter {
                     mv.visitInsn(LCMP);
                     cmpOpcode = JvmLiteralEmitter.intCompareOpcode(kb.op());
                 } else if (isFloat) {
-                    mv.visitInsn(FCMPL);
+                    // §101: cmpg p/ < e <= (NaN → false, como o javac/IEEE).
+                    mv.visitInsn(JvmLiteralEmitter.floatCmpIsG(kb.op()) ? FCMPG : FCMPL);
                     cmpOpcode = JvmLiteralEmitter.intCompareOpcode(kb.op());
                 } else if (isDouble) {
-                    mv.visitInsn(DCMPL);
+                    mv.visitInsn(JvmLiteralEmitter.floatCmpIsG(kb.op()) ? DCMPG : DCMPL);
                     cmpOpcode = JvmLiteralEmitter.intCompareOpcode(kb.op());
                 } else {
                     cmpOpcode = switch (kb.op()) {
@@ -349,9 +353,10 @@ public final class JvmOpEmitter {
         if (isLong) {
             mv.visitInsn(LCMP);
         } else if (isFloat) {
-            mv.visitInsn(FCMPL);
+            // §101: cmpg p/ < e <= (NaN → false, como o javac/IEEE).
+            mv.visitInsn(JvmLiteralEmitter.condCmpIsG(kc.comparison()) ? FCMPG : FCMPL);
         } else if (isDouble) {
-            mv.visitInsn(DCMPL);
+            mv.visitInsn(JvmLiteralEmitter.condCmpIsG(kc.comparison()) ? DCMPG : DCMPL);
         }
         int opcode;
         if (isRef) {

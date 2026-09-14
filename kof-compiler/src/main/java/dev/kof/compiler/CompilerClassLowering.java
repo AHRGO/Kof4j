@@ -104,7 +104,7 @@ public final class CompilerClassLowering {
     static IRClass lowerRecord(CompilerDriver driver, RecordDeclarationNode rec,
                        String packageName, int typeId) {
         String internalName = driver.toInternalName(packageName, rec.name());
-        String superName = "java/lang/Record";
+        String superName = rec.superClass() != null ? driver.toInternalName("", rec.superClass()) : "java/lang/Record";
         List<String> ifaces = rec.interfaces().stream().map(n -> CompilerAnnotations.externalOrLocalInternalName(driver, n)).toList();
         int access = driver.computeAccess(rec.modifiers()) | AccessFlags.FINAL | AccessFlags.PUBLIC;
         List<IRField> fields = new ArrayList<>();
@@ -114,6 +114,12 @@ public final class CompilerClassLowering {
             fields.add(new IRField(comp.name(), CompilerTypes.resolveWithTypeParams(comp.type(), typeParams, driver.currentUnit, driver.semanticAnalyzer),
                     AccessFlags.PRIVATE | AccessFlags.FINAL,
                     null, CompilerAnnotations.lowerAnnotations(driver, comp.annotations())));
+        }
+        for (AstNode member : rec.members()) {
+            if (member instanceof FieldDeclarationNode field) {
+                IRField irField = CompilerClassLowering.lowerField(driver, field, typeParams);
+                fields.add(irField);
+            }
         }
         // bug #53: se o record declara um construtor explícito com a MESMA
         // aridade do canônico (número de componentes), NÃO gerar o automático —
@@ -137,6 +143,18 @@ public final class CompilerClassLowering {
             methods.add(new IRMethod(comp.name(), compType, List.of(), AccessFlags.PUBLIC, List.of(),
                     List.of(new IRBasicBlock(0, body)),
                     List.of(new IRLocalVariable(0, "this", ownerType))));
+        }
+        for (AstNode member : rec.members()) {
+            if (member instanceof FieldDeclarationNode field && !field.modifiers().contains("static")) {
+                Type fieldType = CompilerTypes.resolveWithTypeParams(field.type(), typeParams, driver.currentUnit, driver.semanticAnalyzer);
+                List<KofOperation> body = new ArrayList<>();
+                body.add(new KofLoadLocal(ownerType, 0));
+                body.add(new KofLoadField(ownerType, field.name(), fieldType));
+                body.add(new KofReturn(fieldType));
+                methods.add(new IRMethod(field.name(), fieldType, List.of(), AccessFlags.PUBLIC, List.of(),
+                        List.of(new IRBasicBlock(0, body)),
+                        List.of(new IRLocalVariable(0, "this", ownerType))));
+            }
         }
         for (AstNode member : rec.members()) {
             if (member instanceof MethodDeclarationNode method) {

@@ -468,6 +468,21 @@ public final class BuiltinCallTyper {
         if (mc.receiver() != null) {
             Type recv = SemExpressionTyper.inferType(sa, mc.receiver(), scope);
             if (Type.isString(recv) || recv instanceof Type.NullableType nt && Type.isString(nt.inner())) {
+                // Fonte ÚNICA do retorno dos métodos de String: o mesmo
+                // StringMethodRegistry que o emit usa para o descritor JVM.
+                // Antes este switch cobria só Int/Bool e o resto virava Unknown
+                // — `var arr = s.toCharArray()` tipava o local como Object e o
+                // emit gerava `getfield "?".length` / `Class.forName("?")`
+                // (issues #158/#146/#147).
+                List<Type> argTypes = new ArrayList<>();
+                for (ExpressionNode arg : mc.arguments()) {
+                    argTypes.add(sa.expressionTypes().get(arg));
+                }
+                StringMethodRegistry.Sig sig = StringMethodRegistry.stringMethodSignature(
+                        mc.methodName(), mc.arguments().size(), argTypes);
+                if (sig != null && !Type.isVoid(sig.returnType())) {
+                    return sig.returnType();
+                }
                 return switch (mc.methodName()) {
                     case "indexOf", "lastIndexOf", "length", "size", "count",
                          "compareTo", "compareToIgnoreCase", "hashCode" -> Type.PrimitiveType.INT;

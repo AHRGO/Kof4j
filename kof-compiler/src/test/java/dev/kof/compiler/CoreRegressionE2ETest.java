@@ -130,17 +130,121 @@ class CoreRegressionE2ETest {
                 """, "10\n100\n42", tempDir, "ReceiverlessStaticCall");
     }
 
-    // GitHub #30 — String.split + acesso ao array: .get(i) era baixado como
-    // KofCall com owner ArrayType → JvmTypeMapper produzia internalName ""
-    // → Methodref "" no constant pool → ClassFormatError: Illegal class name "".
-    // Fix: .get(i) → arrayload, .size/.length → arraylength (typer + lowering).
+    // GitHub #152 — `list[i]` sobre List<T> era baixado como array access
+    // (KofArrayLoad → aaload) → VerifyError. Agora é roteado p/
+    // kof_list_get (INSTANCE), com o tipo do elemento inferido. Cobre
+    // String (ref) e Int (primitivo, unbox+rebox no println).
+    @Test
+    void listIndexAccess(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                main() {
+                    var strs = new List<String>()
+                    strs.add("a"); strs.add("b"); strs.add("c")
+                    println(strs[0])
+                    println(strs[2])
+                    var ints = new List<Int>()
+                    ints.add(10); ints.add(20)
+                    println(ints[1])
+                }
+                """, "a\nc\n20", tempDir, "IndexAccess");
+    }
+
+    // GitHub #149 — `nums[i]` sobre List<Int> (e sobre o resultado de
+    // map/filter): o elemento precisa voltar como Int (unbox) e o consumo
+    // por println precisa re-boxar. `var n = nums[0]` e `println(nums[0])`
+    // caíam em VerifyError: Bad type on operand stack.
+    @Test
+    void listIndexPrimitiveUnbox(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                main() {
+                    var nums = new List<Int>()
+                    nums.add(7); nums.add(8); nums.add(9)
+                    Int explicit = nums[0]
+                    var inferred = nums[1]
+                    println(explicit)
+                    println(inferred)
+                    println(nums[2])
+                    var doubled = nums.map((x: Int) -> x * 2)
+                    println(doubled[0])
+                    var evens = nums.filter((x: Int) -> x % 2 == 0)
+                    println(evens[0])
+                }
+                """, "7\n8\n9\n14\n8", tempDir, "IndexPrimitive");
+    }
+
+    // GitHub #139/#150 — `new Set<T>()` e `new Map<K,V>()`
+    @Test
+    void newSetAndMapCollections(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                main() {
+                    var s = new Set<String>()
+                    s.add("alpha")
+                    s.add("beta")
+                    println(s.contains("alpha"))
+                    var m = new Map<String, Int>()
+                    m.put("k1", 100)
+                    println(m.get("k1"))
+                }
+                """, "true\n100", tempDir, "NewSetAndMap");
+    }
+
+    // GitHub #139/#150 — `new Set<T>()`/`new Map<K,V>()`: o tipo não era
+    // pinado p/ `kof.Set`/`kof.Map`, então o `new` (KofNewObject) e os
+    // métodos (add/put/size) emitiam o nome Kof cru → NoClassDefFoundError
+    // (Set/Map) ou ClassFormatError (nome vazio). Agora baixam p/
+    // kof_set_new/kof_map_new (como setOf/mapOf) e o tipo resolve p/ HashSet/
+    // HashMap no descritor.
+    @Test
+    void setAndMapConstruction(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                main() {
+                    var s = new Set<String>()
+                    s.add("hello")
+                    println(s.size)
+                    var m = new Map<String, Int>()
+                    m.put("a", 1)
+                    println(m.size)
+                }
+                """, "1\n1", tempDir, "SetMapNew");
+    }
+
+    // GitHub #142/#157/#164 — construtor com o NOME DA CLASSE (forma Java,
+    // sem a keyword `constructor`): o parser roteava o membro como MÉTODO
+    // void homônimo (`public void Box(int)`), então `new Box(42)` morria em
+    // `NoSuchMethodError: Box.<init>(int)`. A gramática torna `constructor`
+    // opcional; o nome igual à classe agora vira ConstructorDeclarationNode.
+    // Cobre: primitivo (Int), String e campo genérico `T` (erasure → Object).
+    @Test
+    void constructorNamedLikeClass(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                class Box {
+                    Int value = 0
+                    Box(Int v) { this.value = v }
+                    get(): Int { return this.value }
+                }
+                class Named {
+                    String name = ""
+                    Named(String n) { this.name = n }
+                    String get() { return name }
+                }
+                main() {
+                    var b = new Box(42)
+                    println(b.get())
+                    var n = new Named("hello")
+                    println(n.get())
+                }
+                """, "42\nhello", tempDir, "CtorNamedLikeClass");
+    }
+
+    // GitHub #30 — String.split + acesso ao array:
+    // .size/.length → arraylength (typer + lowering), arr[i] → arrayload.
     @Test
     void stringSplitArrayAccess(@TempDir Path tempDir) throws IOException {
         runBoth("""
                 main() {
                     var parts = "a,b,c".split(",")
                     println(parts.size)
-                    println(parts.get(0))
+                    println(parts[0])
                     println(parts.length)
                 }
                 """, "3\na\n3", tempDir, "splitArr");
@@ -1329,5 +1433,486 @@ class CoreRegressionE2ETest {
                     println(c.pick(1L, 42))
                 }
                 """, "42", tempDir, "wide-instance-method");
+    }
+
+    // Issue #188: == em condição direta de if/if-expr usava if_acmpeq em records
+    // em vez de .equals(), causando igualdade de referência errada.
+    @Test
+    void recordEqualityInDirectIfCondition(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                record Tag(String name)
+                main() {
+                    var t1 = new Tag("hi")
+                    var t2 = new Tag("hi")
+                    if (t1 == t2) println("equal") else println("not equal")
+                    println(t1 == t2)
+                    var r = if (t1 == t2) "yes" else "no"
+                    println(r)
+                }
+                """, "equal\ntrue\nyes", tempDir, "record-equality-if");
+    }
+
+    // Issue #187: Record destructuring com campos Double ou Long alocava slots
+    // com passo 1 em vez de 2, gerando VerifyError / colisão de slots no frame JVM.
+    @Test
+    void recordDestructuringDoubleAndLong(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                record Rect(Double w, Double h)
+                record Box(Long n)
+                main() {
+                    var obj: Object = new Rect(3.5, 4.0)
+                    var area = switch (obj) {
+                        case Rect(var w, var h) -> w * h
+                        default -> 0.0
+                    }
+                    println(area > 13.9 && area < 14.1)
+
+                    var obj2: Object = new Box(10L)
+                    var r = switch (obj2) {
+                        case Box(var n) -> n * 2L
+                        default -> 0L
+                    }
+                    println(r)
+                }
+                """, "true\n20", tempDir, "record-destructuring-wide");
+    }
+
+    // Issue #194: `s += t` num campo String de INSTÂNCIA emitia KofBinary(ADD)
+    // sobre String → `iadd` → VerifyError. O caminho de campo de instância não
+    // tinha o tratamento de concatenação que o de campo estático já tinha.
+    @Test
+    void stringCompoundAssignInstanceField(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                class Buf {
+                    String s = ""
+                    void append(String t) { s += t }
+                    String get() { return s }
+                }
+                main() {
+                    var b = new Buf()
+                    b.append("hi")
+                    b.append("!")
+                    println(b.get())
+                }
+                """, "hi!", tempDir, "string-compound-field");
+    }
+
+    // Issue #192: compound assignment (`+=`/`-=`/`*=`) em variável capturada
+    // por closure emitia putfield sem o objectref (box) → VerifyError
+    // `Operand stack underflow`. Atribuição simples já funcionava.
+    @Test
+    void compoundAssignCapturedVariable(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                main() {
+                    var n = 10
+                    var inc = () -> { n += 1 }
+                    var dec = () -> { n -= 3 }
+                    var mul = () -> { n *= 2 }
+                    inc()
+                    println(n)
+                    dec()
+                    println(n)
+                    mul()
+                    println(n)
+                }
+                """, "11\n8\n16", tempDir, "compound-captured");
+    }
+
+    // Issue #183: if-expression com ramos de tipos primitivos mistos (Int e Double)
+    // causava VerifyError ou crash de ASM frame porque o tipo inferido da expressão
+    // era do primeiro ramo enquanto os ramos já eram boxeados para Object.
+    @Test
+    void ifExpressionMixedNumericBranches(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                main() {
+                    var flag = true
+                    var r1 = if (flag) 1 else 2.5
+                    println(r1)
+
+                    var r2 = if (flag) 3.5 else 4
+                    println(r2)
+                }
+                """, "1\n3.5", tempDir, "if-expr-mixed-numeric");
+    }
+
+    // Issue #182: for-in loop variable shadowing outer variable corrupts outer slot —
+    // VerifyError: Bad local variable type after loop when outer variable is read.
+    @Test
+    void forInLoopVariableShadowingOuterVariable(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                main() {
+                    var s = "outer"
+                    var lst = new List<String>()
+                    lst.add("a")
+                    lst.add("b")
+                    for (var s in lst) {
+                        println(s)
+                    }
+                    println(s)
+
+                    var x = 100
+                    var nums = new List<Int>()
+                    nums.add(1)
+                    nums.add(2)
+                    for (var x in nums) {
+                        println(x)
+                    }
+                    println(x)
+
+                    var i = 999
+                    for (var i = 0; i < 2; i++) {
+                        println(i)
+                    }
+                    println(i)
+                }
+                """, "a\nb\nouter\n1\n2\n100\n0\n1\n999", tempDir, "for-in-shadow-outer");
+    }
+
+    // §201 (regression of the #182 fix): the scope-exit rename of the loop
+    // variable to "#forInitVar"/"#forInVar" made the JS backend treat its
+    // store as a compiler temp (any raw local starting with "#" is dropped
+    // from the preamble when the next op is an `if`), so the loop variable
+    // was referenced without a declaration (`ReferenceError`). The rename is
+    // correct for JVM/Native/Script (slot by index) — only JS resolves by
+    // name, so the fix is in JsExpressionParser.isCompilerTemp.
+    @Test
+    void loopBodyLocalsBeforeIfAreDeclaredInJs(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                main() {
+                    var a = new Int[3]
+                    for (var i = 0; i < 3; i = i + 1) { a[i] = i * 10 }
+                    var ok = 0
+                    for (var c = 0; c < 3; c = c + 1) {
+                        var first = a[1] == 10
+                        var second = a[2] == 20
+                        if (first && second) {
+                            ok = ok + 1
+                        }
+                    }
+                    println(ok)
+
+                    var lst = new List<Int>()
+                    lst.add(1)
+                    lst.add(2)
+                    for (var n in lst) {
+                        var even = n % 2 == 0
+                        if (even) {
+                            println("even")
+                        } else {
+                            println("odd")
+                        }
+                    }
+                }
+                """, "3\nodd\neven", tempDir, "loop-body-locals-if-js");
+    }
+
+    // Issue #181: Assigning primitive literal to Object-typed field missing autobox
+    // VerifyError: Bad type on operand stack at putfield.
+    @Test
+    void primitiveAssignedToObjectField(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                class Holder {
+                    Object item
+                }
+                main() {
+                    var h = new Holder()
+                    h.item = 99
+                    println(h.item)
+
+                    h.item = 3.5
+                    println(h.item)
+
+                    h.item = true
+                    println(h.item)
+                }
+                """, "99\n3.5\ntrue", tempDir, "prim-to-obj-field");
+    }
+
+    // Issue #169: Returning a primitive from Object-typed function missing autobox
+    // VerifyError: Bad type on operand stack at areturn.
+    @Test
+    void primitiveReturnedFromObjectFunction(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                Object wrapInt(Int n) { return n }
+                Object wrapDouble(Double d) { return d + 0.25 }
+                Object wrapBool(Bool b) { return b }
+
+                main() {
+                    println(wrapInt(7))
+                    println(wrapDouble(2.5))
+                    println(wrapBool(true))
+                }
+                """, "7\n2.75\ntrue", tempDir, "prim-return-obj");
+    }
+
+    // Issue #167 — instanceof with primitive/boxed types (Int, Double, etc.)
+    // emitted '?' as class name instead of boxed java.lang type (NoClassDefFoundError).
+    @Test
+    void instanceofWithPrimitiveTypes(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("instanceofprim.kf");
+        Files.writeString(src, """
+                main() {
+                    var obj: Object = 42
+                    println(obj instanceof Int)
+                    println(obj instanceof Double)
+                    var d: Object = 3.14
+                    println(d instanceof Double)
+                    println(d instanceof Int)
+                }
+                """);
+        Path out = tempDir.resolve("instanceofprim-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("true\nfalse\ntrue\nfalse", runJvm(out));
+    }
+
+    // Issue #200 — switch expression rejected as RHS of assignment statement (PARSE041).
+    @Test
+    void switchExpressionAsRhsOfAssignment(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("switchassign.kf");
+        Files.writeString(src, """
+                class Box {
+                    Int code
+                    public constructor(Int code) {
+                        this.code = code
+                    }
+                }
+                main() {
+                    var n = 2
+                    var x = 0
+                    x = switch (n) { case 2 -> 99 default -> 0 }
+                    var b = Box(0)
+                    b.code = switch (n) { case 2 -> 77 default -> 0 }
+                    println(x)
+                    println(b.code)
+                }
+                """);
+        Path out = tempDir.resolve("switchassign-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("99\n77", runJvm(out));
+    }
+
+    // Issue #208 — switch expression over Boolean rejects exhaustive true/false coverage (SEM032).
+    @Test
+    void switchExpressionOverBooleanExhaustive(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("switchbool.kf");
+        Files.writeString(src, """
+                String describe(Boolean b) {
+                    return switch (b) {
+                        case true  -> "yes"
+                        case false -> "no"
+                    }
+                }
+                main() {
+                    var b = true
+                    var r1 = switch (b) {
+                        case true  -> "T"
+                        case false -> "F"
+                    }
+                    var r2 = describe(false)
+                    println(r1)
+                    println(r2)
+                }
+                """);
+        Path out = tempDir.resolve("switchbool-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("T\nno", runJvm(out));
+    }
+
+    // Issue #206 — if-expression type fixed to true-branch type
+    @Test
+    void ifExpressionBranchTypesLca(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("ifexprtypes.kf");
+        Files.writeString(src, """
+                class A {
+                    String tag() { return "A" }
+                }
+                class B extends A {
+                    String tag() { return "B" }
+                }
+                main() {
+                    var r = if (false) new B() else new A()
+                    println(r.tag())
+                }
+                """);
+        Path out = tempDir.resolve("ifexprtypes-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("A", runJvm(out));
+    }
+
+    @Test
+    void ifExpressionBranchTypesMixedNumeric(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("ifmixed.kf");
+        Files.writeString(src, """
+                main() {
+                    var r = if (true) 1 else 1L
+                    println(r)
+                }
+                """);
+        Path out = tempDir.resolve("ifmixed-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("1", runJvm(out));
+    }
+
+    // Issue #154 — strings.padLeft / padRight crash with Char literal (VerifyError)
+    @Test
+    void stringsPadWithCharLiteralJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("padchar.kf");
+        Files.writeString(src, """
+                main() {
+                    var s1 = strings.padLeft("42", 5, '0')
+                    var s2 = strings.padRight("hi", 5, '-')
+                    println(s1)
+                    println(s2)
+                }
+                """);
+        Path out = tempDir.resolve("padchar-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("00042\nhi---", runJvm(out));
+    }
+
+    // Issue #210 — static field ++ / -- emits instance field opcodes
+    @Test
+    void staticFieldIncrementJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("staticinc.kf");
+        Files.writeString(src, """
+                class Counter {
+                    static Int count = 0
+                    void inc() { Counter.count++ }
+                    void dec() { Counter.count-- }
+                }
+                main() {
+                    var c = new Counter()
+                    c.inc()
+                    c.inc()
+                    println(Counter.count)
+                    c.dec()
+                    println(Counter.count)
+                }
+                """);
+        Path out = tempDir.resolve("staticinc-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("2\n1", runJvm(out));
+    }
+
+    // Issue #214 — Map, HashMap, Set, HashSet, LinkedList compile with unqualified class names
+    @Test
+    void standardCollectionInstantiationJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("stdcoll.kf");
+        Files.writeString(src, """
+                main() {
+                    var m1 = new Map<String, Int>()
+                    m1.put("a", 1)
+                    println(m1.get("a"))
+
+                    var m2 = new HashMap<String, Int>()
+                    m2.put("b", 2)
+                    println(m2.get("b"))
+
+                    var s1 = new Set<Int>()
+                    s1.add(10)
+                    println(s1.contains(10))
+
+                    var s2 = new HashSet<Int>()
+                    s2.add(20)
+                    println(s2.contains(20))
+
+                    var l1 = new LinkedList<String>()
+                    l1.add("x")
+                    println(l1.get(0))
+                }
+                """);
+        Path out = tempDir.resolve("stdcoll-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("1\n2\ntrue\ntrue\nx", runJvm(out));
+    }
+
+    // Issue #215 — fields declared in body of constructor-param class are unresolvable
+    @Test
+    void classWithConstructorParamsExtraFieldsJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("paramclass.kf");
+        Files.writeString(src, """
+                class Box(Int w, Int h) {
+                    Int area = w * h
+                    Int getArea() { return area }
+                }
+                main() {
+                    var b = new Box(3, 4)
+                    println(b.area)
+                    println(b.getArea())
+                }
+                """);
+        Path out = tempDir.resolve("paramclass-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("12\n12", runJvm(out));
+    }
+
+    // Issue #217 — class with constructor parameters cannot use extends or implements
+    @Test
+    void classWithConstructorParamsExtendsImplementsJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("paramclassext.kf");
+        Files.writeString(src, """
+                interface AreaNamed {
+                    String name()
+                }
+                class Shape {
+                    String kind = "shape"
+                }
+                class Circle(Double radius) extends Shape implements AreaNamed {
+                    String name() { return "Circle" }
+                    Double area() { return 3.14 * radius * radius }
+                }
+                main() {
+                    var c = new Circle(5.0)
+                    println(c.kind)
+                    println(c.name())
+                    println(c.area())
+                }
+                """);
+        Path out = tempDir.resolve("paramclassext-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("shape\nCircle\n78.5", runJvm(out));
+    }
+
+    // Issue #218 — function type syntax as return type and class field type
+    @Test
+    void functionTypeAsReturnTypeAndFieldTypeJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("fntypes.kf");
+        Files.writeString(src, """
+                (Int) -> Int makeDoubler() {
+                    return (x: Int) -> x * 2
+                }
+
+                class Transformer {
+                    (Int) -> Int transform = (x: Int) -> x + 10
+                    (Int) -> Int getTransform() {
+                        return transform
+                    }
+                }
+
+                main() {
+                    var doubler = makeDoubler()
+                    println(doubler(5))
+
+                    var t = new Transformer()
+                    var f1 = t.transform
+                    println(f1(7))
+                    var f2 = t.getTransform()
+                    println(f2(7))
+                }
+                """);
+        Path out = tempDir.resolve("fntypes-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("10\n17\n17", runJvm(out));
     }
 }

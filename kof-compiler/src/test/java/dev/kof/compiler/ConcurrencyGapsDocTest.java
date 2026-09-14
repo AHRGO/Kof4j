@@ -77,7 +77,11 @@ class ConcurrencyGapsDocTest {
         boolean inTable = false;
         for (String line : Files.readAllLines(repoRoot().resolve(DOC))) {
             String l = line.trim();
-            if (l.startsWith("| Construto |")) { inTable = true; continue; }
+            // §194: o cabeçalho da tabela é um rótulo (não identificador), então
+            // a doc canônica EN usa `| Construct |` e a PT `| Construto |` — o
+            // guard aceita as duas grafias (antes fixava a PT e a tradução
+            // `f5a0ea41` quebrou a suíte em silêncio).
+            if (l.startsWith("| Construto |") || l.startsWith("| Construct |")) { inTable = true; continue; }
             if (inTable && !l.startsWith("|")) break;   // fim da tabela
             if (!inTable || l.startsWith("|--")) continue;
             String[] c = l.split("(?<!\\\\)\\|");

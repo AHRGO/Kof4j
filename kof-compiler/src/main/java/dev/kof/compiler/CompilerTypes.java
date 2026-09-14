@@ -23,7 +23,12 @@ public final class CompilerTypes {
                         ExternalClasspath external) {
          // SG-012: param de lambda sem anotação — Unknown (nunca Object)
          if (typeName == null) return Type.UnknownType.UNKNOWN;
-         if ("List".equals(typeName) || "ArrayList".equals(typeName)) return BuiltinTypes.LIST;
+         if ("List".equals(typeName) || "ArrayList".equals(typeName) || "LinkedList".equals(typeName)) return BuiltinTypes.LIST;
+         // #139/#150/#214 — `new Set<T>()`/`new Map<K,V>()`: sem este pin o tipo
+         // ficava ClassType("", "Set"/"Map") → os métodos (add/size/put)
+         // emitiam owner `Set`/`Map` cru → NoClassDefFoundError/ClassFormatError.
+         if ("Set".equals(typeName) || "HashSet".equals(typeName)) return BuiltinTypes.SET;
+         if ("Map".equals(typeName) || "HashMap".equals(typeName)) return BuiltinTypes.MAP;
          if ("Channel".equals(typeName)) return BuiltinTypes.CHANNEL;
          Type viaImports = qualifyViaImports(typeName, currentUnit, external);
          if (viaImports != null) return viaImports;
@@ -46,6 +51,31 @@ public final class CompilerTypes {
     static Type toType(String typeName, CompilationUnitNode currentUnit, SemanticAnalyzer sa) {
         Type t = toType(typeName, currentUnit);
         return qualifyDeep(t, currentUnit, sa);
+    }
+
+    /**
+     * #163: tipos de exceção de `java.lang` escritos pelo nome simples no
+     * `catch` (`catch (RuntimeException e)` — o corpus documenta
+     * `catch (Exception e)`, `learn/27:86`). Sem qualificar, o tipo do local
+     * ficava `ClassType("", "RuntimeException")` e o descriptor JVM saía
+     * `LRuntimeException;` → `NoClassDefFoundError: RuntimeException` ao
+     * chamar qualquer método no `e`. `String` continua sendo a exceção de
+     * Kof (mensagem, `RuntimeException` em runtime).
+     */
+    private static final java.util.Set<String> JAVA_LANG_THROWABLES = java.util.Set.of(
+            "Throwable", "Exception", "RuntimeException", "IllegalArgumentException",
+            "IllegalStateException", "IndexOutOfBoundsException", "NumberFormatException",
+            "ArithmeticException", "NullPointerException", "UnsupportedOperationException",
+            "ClassCastException", "Error", "OutOfMemoryError", "StackOverflowError");
+
+    static Type exceptionType(String typeName, CompilationUnitNode currentUnit) {
+        if ("String".equals(typeName)) return BuiltinTypes.STRING;
+        Type t = toType(typeName, currentUnit);
+        if (t instanceof Type.ClassType ct && ct.packageName().isEmpty()
+                && JAVA_LANG_THROWABLES.contains(ct.name())) {
+            return new Type.ClassType("java.lang", ct.name(), List.of());
+        }
+        return t;
     }
 
     /**
@@ -72,6 +102,16 @@ public final class CompilerTypes {
             if (pkg.isEmpty() && !name.contains(".") && !name.contains("<")) {
                 String via = simpleNamePackage(name, unit, sa);
                 if (via != null) pkg = via;
+            }
+            // 2b) §179 (D-BACKEND-SEMANTICS #4): tipo kof.ui/kof.media DECLARADO
+            // (var/param/campo/retorno) que nada mais resolveu → builtin. Sem
+            // isto o descritor JVM saía `LLabel;` enquanto o handle é `int`
+            // (VerifyError). O shadowing do usuário é preservado: se o módulo
+            // declara um tipo homônimo (nome simples, mesmo arquivo), ele vence.
+            if (pkg.isEmpty() && !name.contains(".") && !name.contains("<")
+                    && !unitDeclaresType(unit, name) && (sa == null || sa.getClass(name) == null)) {
+                Type builtin = builtinDeclaredType(name);
+                if (builtin != null) return qualifyDeep(builtin, unit, sa);
             }
             // 3) args recursivos
             List<Type> args = new java.util.ArrayList<>();
@@ -130,6 +170,31 @@ public final class CompilerTypes {
             if (cs != null) return cs.packageName();
         }
         return null;
+    }
+
+    /**
+     * §179: tipo kof.ui/kof.media por nome simples, para RESOLUÇÃO DE TIPO
+     * DECLARADO (var/param/campo/retorno). {@code KofUi.typeByName} cobre todos
+     * os tipos de UI; {@code ImageData} é o único tipo de DADO de kof.media com
+     * nome próprio (Audio/Video de media são namespaces e o typer de construtor
+     * já os resolve como ui.Audio/ui.Video). Retorna null se não for builtin.
+     */
+    static Type builtinDeclaredType(String name) {
+        Type ui = KofUi.typeByName(name);
+        if (ui != null) return ui;
+        if ("ImageData".equals(name)) return KofMedia.IMAGE_DATA;
+        return null;
+    }
+
+    /** O módulo (mesmo arquivo) declara classe/record/enum com este nome? */
+    static boolean unitDeclaresType(CompilationUnitNode unit, String name) {
+        if (unit == null) return false;
+        for (AstNode d : unit.declarations()) {
+            if (d instanceof ClassDeclarationNode c && c.name().equals(name)) return true;
+            if (d instanceof RecordDeclarationNode r && r.name().equals(name)) return true;
+            if (d instanceof EnumDeclarationNode e && e.name().equals(name)) return true;
+        }
+        return false;
     }
 
     /** Espelho driver-side do qualifyViaImports do SemanticAnalyzer. */

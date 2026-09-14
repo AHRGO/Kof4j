@@ -83,13 +83,17 @@ public final class CollectionMethodTyper {
         }
         if ("contains".equals(mn) || "startsWith".equals(mn) || "endsWith".equals(mn)
                 || "equals".equals(mn) || "equalsIgnoreCase".equals(mn)
-                || "isEmpty".equals(mn)) {
+                || "isEmpty".equals(mn) || "matches".equals(mn)) {
             return Type.PrimitiveType.BOOL;
         }
         if ("substring".equals(mn) || "concat".equals(mn) || "trim".equals(mn)
                 || "toUpperCase".equals(mn) || "toLowerCase".equals(mn)
-                || "replace".equals(mn) || "valueOf".equals(mn)) {
+                || "replace".equals(mn) || "replaceAll".equals(mn)
+                || "replaceFirst".equals(mn) || "valueOf".equals(mn)) {
             return BuiltinTypes.STRING;
+        }
+        if ("toCharArray".equals(mn)) {
+            return new Type.ArrayType(Type.PrimitiveType.CHAR);
         }
         if ("split".equals(mn)) {
             return new Type.ArrayType(BuiltinTypes.STRING);

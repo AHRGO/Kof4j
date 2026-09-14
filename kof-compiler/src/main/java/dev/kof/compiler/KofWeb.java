@@ -103,17 +103,24 @@ public final class KofWeb {
             return null;
         }
         return switch (name) {
-            // C18 (D-SEC, DECISIONS 14/09): middleware composto com ordem
-            // fixa rate-limit → cors → headers → session → csrf. Recebe
-            // Map de opts opcional; registra o pipeline embutido no app.
-            case "security" -> (argTypes.isEmpty()
-                    || (argTypes.size() == 1 && argTypes.get(0).toString().contains("Map")))
-                    ? new WebCall("kof_web_security", VOID,
-                            argTypes.isEmpty() ? List.of(STR) : List.of(STR, argTypes.get(0)))
-                    : null;
             case "use" -> argTypes.size() == 1
                     ? new WebCall("kof_web_use", VOID, List.of(STR, argTypes.get(0)))
                     : null;
+            // D-SEC C18: `app.security()` — middleware composto com ordem
+            // fixa (rate-limit → cors → headers → cookies/session → csrf →
+            // auth → RBAC → rota). Sem args = defaults seguros (headers
+            // hardening); com um Map = overrides documentados em
+            // docs/stdlib/stdlib-web.md. JVM primeiro; Native/JS = WEB006.
+            case "security" -> {
+                if (argTypes.isEmpty()) {
+                    yield new WebCall("kof_web_security", VOID, List.of(STR));
+                }
+                if (argTypes.size() == 1 && BuiltinTypes.isMap(argTypes.get(0))) {
+                    yield new WebCall("kof_web_security_opts", VOID,
+                            List.of(STR, BuiltinTypes.MAP));
+                }
+                yield null;
+            }
             // #102.2 (13/09): `listen` aceita SÓ Int — String virava
             // VerifyError em runtime. Com o gate aqui, `listen("8100")`
             // retorna null → o typer emite SEM025 em compile-time
@@ -127,9 +134,20 @@ public final class KofWeb {
             case "health" -> argTypes.size() == 1
                     ? new WebCall("kof_web_health", VOID, List.of(STR, STR))
                     : null;
-            case "listenSecure" -> argTypes.size() == 1
-                    ? new WebCall("kof_web_listen_secure", VOID, List.of(STR, INT))
-                    : null;
+            case "listenSecure" -> {
+                // 1 arg: TLS self-signed de dev (G12). 3 args: certificado
+                // próprio PKCS#8 PEM (D-SEC: `listenSecure(port, certPem,
+                // keyPem)`) — produção; Native/JS seguem WEB002 honesto.
+                if (argTypes.size() == 1 && isInt(argTypes.get(0))) {
+                    yield new WebCall("kof_web_listen_secure", VOID, List.of(STR, INT));
+                }
+                if (argTypes.size() == 3 && isInt(argTypes.get(0))
+                        && isString(argTypes.get(1)) && isString(argTypes.get(2))) {
+                    yield new WebCall("kof_web_listen_secure_pem", VOID,
+                            List.of(STR, INT, STR, STR));
+                }
+                yield null;
+            }
             case "port" -> argTypes.isEmpty()
                     ? new WebCall("kof_web_port", INT, List.of(STR))
                     : null;
@@ -167,7 +185,8 @@ public final class KofWeb {
         return switch (function) {
             case "kof_web_sse_route" -> "WEB003";
             case "kof_web_ws_route" -> "WEB004";
-            case "kof_web_listen_secure" -> "WEB002";
+            case "kof_web_security", "kof_web_security_opts" -> "WEB006";
+            case "kof_web_listen_secure", "kof_web_listen_secure_pem" -> "WEB002";
             default -> "WEB001";
         };
     }

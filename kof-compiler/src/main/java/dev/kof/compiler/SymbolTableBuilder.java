@@ -32,8 +32,15 @@ public final class SymbolTableBuilder {
             sa.currentScope().define(sym);
         } else if (decl instanceof RecordDeclarationNode rec) {
             SymbolTable members = new SymbolTable();
+            String superQualified = rec.superClass();
+            if (superQualified != null && !"Object".equals(superQualified) && !"Record".equals(superQualified)) {
+                Type viaImports = MemberResolver.qualifyViaImports(sa.unit(), superQualified);
+                if (viaImports instanceof Type.ClassType qt) {
+                    superQualified = qt.packageName() + "." + qt.name();
+                }
+            }
             SymbolTable.ClassSymbol sym = new SymbolTable.ClassSymbol(rec.name(), sa.packageOf(rec),
-                    "Record", rec.interfaces(), members);
+                    rec.superClass() != null ? superQualified : "Record", rec.interfaces(), members);
             sa.allClasses().put(rec.name(), sym);
             sa.currentScope().define(sym);
         } else if (decl instanceof EntityDeclarationNode ent) {
@@ -46,12 +53,15 @@ public final class SymbolTableBuilder {
             SymbolTable members = new SymbolTable();
             Type self = new Type.ClassType("", en.name(), List.of());
             members.define(new SymbolTable.MethodSymbol("values", en.name(),
-                    new Type.ClassType("kof", "List", List.of(BuiltinTypes.STRING)), List.of(),
+                    new Type.ClassType("kof", "List", List.of(self)), List.of(),
                     AccessFlags.STATIC, SymbolTable.DispatchKind.STATIC));
             members.define(new SymbolTable.MethodSymbol("valueOf", en.name(),
                     self, List.of(BuiltinTypes.STRING),
                     AccessFlags.STATIC, SymbolTable.DispatchKind.STATIC));
             members.define(new SymbolTable.MethodSymbol("name", en.name(),
+                    BuiltinTypes.STRING, List.of(),
+                    0, SymbolTable.DispatchKind.INSTANCE));
+            members.define(new SymbolTable.MethodSymbol("toString", en.name(),
                     BuiltinTypes.STRING, List.of(),
                     0, SymbolTable.DispatchKind.INSTANCE));
             SymbolTable.ClassSymbol sym = new SymbolTable.ClassSymbol(en.name(), sa.packageOf(en),
@@ -79,7 +89,7 @@ public final class SymbolTableBuilder {
             case RecordDeclarationNode rec -> defineRecordMembers(sa, rec);
             case EntityDeclarationNode ent -> defineEntityMembers(sa, ent);
             case InterfaceDeclarationNode iface -> defineInterfaceMembers(sa, iface);
-            case EnumDeclarationNode en -> { }
+            case EnumDeclarationNode _ -> { }
             default -> {}
         }
     }
@@ -141,6 +151,19 @@ public final class SymbolTableBuilder {
                     compType, List.of(), 1, SymbolTable.DispatchKind.INSTANCE);
             classSym.members().define(ms);
             classScope.define(ms);
+        }
+        for (AstNode member : rec.members()) {
+            if (member instanceof FieldDeclarationNode field) {
+                Type fieldType = MemberResolver.resolveType(sa, field.type(), classScope);
+                int flags = field.modifiers().contains("static") ? AccessFlags.STATIC : 0;
+                SymbolTable.FieldSymbol fs = new SymbolTable.FieldSymbol(field.name(), fieldType, flags, rec.name());
+                classSym.members().define(fs);
+                classScope.define(fs);
+                SymbolTable.MethodSymbol ms = new SymbolTable.MethodSymbol(field.name(), rec.name(),
+                        fieldType, List.of(), 1, SymbolTable.DispatchKind.INSTANCE);
+                classSym.members().define(ms);
+                classScope.define(ms);
+            }
         }
         for (AstNode member : rec.members()) {
             if (member instanceof MethodDeclarationNode method) {

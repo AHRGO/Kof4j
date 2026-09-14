@@ -71,6 +71,25 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > codigo Kof NAO sao traduzidos (so prosa/titulos/rotulos). Nao tocar `nat/`,
 > nem lanes de bugs/feature de outros donos.
 >
+> **STATUS i18n medido 14/09 (~08:45, dono = 192.168.100.17):** cobertura de
+> par PT = **214/214 (100%)**; switcher na 1a linha = **214/214**;
+> `scripts/docs-lang.sh untranslated` = **0** (métrica = canônico com seletor).
+> Os **6 meta-vivos** (`AGENTS.md`,
+> `CHANGELOG.md`, `docs/bugs-and-gaps/known-bugs.md`,
+> `docs/bugs-and-gaps/conformance-matrix.md`, `docs/status.md`,
+> `docs/development/future/PLAN-UNIVERSAL-PLATFORM.md`) foram traduzidos para EN
+> no lote `docs/i18n-vivos` — o plano anterior de adiá-los até o corte da
+> release foi **superado** pela decisão da mantenedora de traduzir TODOS os
+> `.md` (inclusive operacionais/vivos).
+>
+> **⚠️ Regra de sincronização dos meta-vivos (obrigatória):** toda edição de um
+> meta-vivo vai para `X.pt_BR.md` (PT) **e** para o canônico `X.md` (EN) no
+> **MESMO commit**; o hook `pre-commit` **recusa** o commit se um doc com overlay
+> `skip-worktree` foi editado (a edição deve ir para `X.pt_BR.md`). **Drift
+> inerente:** os meta-vivos mudam a cada commit de qualquer lane — após `pull`,
+> re-rodar `scripts/docs-lang.sh apply` na máquina PT e reconciliar o par antes de
+> commitar (o conflito de rebase do `known-bugs.md` de 14/09 veio daí).
+>
 > **⚠️ CUIDADO (14/09 ~01:30, dono = 192.168.100.18):** este commit carrega
 > wips de OUTRAS lanes resgatados do working tree compartilhado (regra 8 —
 > commitar tudo, nunca descartar): **UIW050-JS** (`kofUiEventValue/Key/X/Y/
@@ -80,7 +99,171 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > `KofConcurrency2Test.cancelJsSequential` asserts ajustados — paridade JS
 > do §186 e4613704). Suíte completa re-provada depois do rebase.
 
-## PRÓXIMO PASSO (re-dispacho lê isto)
+
+
+> **FEITO (14/09 ~09:30, dono = 192.168.100.22, lane CodeQL/health): baseline
+> 25 + codemod `_` (agregados no main pela agregacao do cluster).** (a)
+> `b3ab9858` D-BASELINE: toolchain do repo 21→25 (pom+workflows+package.sh+
+> README EN/PT); DECISIONS.md registra a decisao da mantenedora; `V21` do
+> JvmBackend e release=21 do template Android NAO tocados (alvo do usuario,
+> regra 6). Prova: worktree limpo `b3ab9858` suíte compiler 1464/0 (162 skip)
+> em JDK 25 + 61 bindings `case T x ->`/`instanceof T x` → `_` (JEP 443) em 19
+> arquivos → kof-compiler 1574/1-fail, onde a única fail é o FLAKE sse_connection_counter
+> (passa 6/6 isolado; classe inteira 6/6 com a mudanca; nao toca arquivos web).
+> (b) Os 61 bindings estao no HEAD via `a892b3c5`/`752dc5df` + agregacao
+> `e6e5c9b8`/`663ded3a` (o cluster absorbou; conferido por-arquivo: worktree
+> == HEAD nos 19). Isso FECHA ~61 alerts `local-variable-is-never-read` no
+> proximo scan CodeQL. (c) **REGRESSOS DE OUTRAS LANES CATALOGADOS COM
+> BISSECAO PROVADA: §201 (`75e38d35` #182 → JS `_forInitVar` ReferenceError;
+> 4-5 vermelhos ArrayBounds*/BackendParity) e §202 (`e6e5c9b8` → split()
+> agora e ArrayType e `.get(i)` cai em SEM028; 6-9 vermelhos KofTime/Kitchen/
+> ConformanceMatrix).** Donos = lanes do #182 e da inferencia String — NAO
+> tocar sem coordenação (regra 6: decisão de contrato em §202). Suíte da
+> árvore hoje: ~1601/16 — os 16 sao os dois grupos acima + flake; ZERO dos
+> meus. **PROXIMO PASSO (esta lane):** seguir fila livre CodeQL apos scan
+> re-contar: unused-parameter ×81 (por caso, conferir callers), useless-null
+> ×11, indent ×10, deref-null ×8, IOB ×2 (Compare), chained-type ×21 —
+> SEMPRE checando `git log -5 -- <arq>` p/ nao colidir c/ lanes §201/§202
+> quentes. O codemod dos 17 locals puros restantes ficou p/ depois (varios
+> carregam chamada com efeito — deletar linha = mudanca de comportamento).## PRÓXIMO PASSO (re-dispacho lê isto)
+
+> **✅ FEITO (14/09 ~12:45, dono = 192.168.100.22, lane compiler): fix issue #218 — function type syntax accepted in parameter/var-annotation but rejected in return type and field type positions.**
+> - Causa raiz: (1) `Parser.parse()` e `parseFunctionDeclaration()` não aceitavam `TokenType.LPAREN` como início de tipo de retorno top-level `(Int) -> Int makeDoubler()`, caindo em `PARSE007`/`PARSE010`. (2) `ClassMemberParser.parseClassMember` não reconhecia `LPAREN` como início de membro (campo ou método com tipo de retorno função), caindo em `PARSE016`. (3) `ExpressionParser` no parsing pós-primário consumia `(` na linha seguinte como chamada invocada sobre literal/expressão anterior na ausência de ponto-e-vírgula.
+> - Correção: `Parser` e `ClassMemberParser` agora aceitam tipo de função `(T) -> R` como tipo de retorno de função/método e como tipo de campo de classe. `ExpressionParser` previne agrupamento acidental de chamada quando o `(` ocorre em linha posterior após literal ou lambda.
+> - Prova: `CoreRegressionE2ETest#functionTypeAsReturnTypeAndFieldTypeJvm`.
+> - Próximo: issues #216, #213.
+
+> **✅ FEITO (14/09 ~12:30, dono = 192.168.100.22, lane compiler): fix issue #217 — class with constructor parameters cannot use extends or implements (PARSE007).**
+> - Causa raiz: `TypeDeclarations.parseClassDeclaration` esperava que `extends` e `implements` aparecessem antes do `(`, tratando classes como `class Circle(Double r) extends Shape implements AreaNamed` como `PARSE007` ao encontrar tokens após o fecha-parênteses. Adicionalmente, `SymbolTableBuilder.preDeclareType`, `CompilerClassLowering.lowerRecord` e `CompilerRecordSupport.generateRecordConstructor` assumiam estritamente `"Record"` como superclasse sem propagar `superClass` nem `interfaces`.
+> - Correção: `TypeDeclarations.parseClassDeclaration` agora parseia parâmetros de construtor `(...)` e em seguida as cláusulas `extends` e `implements`. `SymbolTableBuilder.preDeclareType` qualifica e preserva a superclasse informada e interfaces implementadas, `CompilerClassLowering.lowerRecord` gera a superclasse correta e `CompilerRecordSupport.generateRecordConstructor` invoca o `<init>` da superclasse correspondente.
+> - Prova: `CoreRegressionE2ETest#classWithConstructorParamsExtendsImplementsJvm`.
+> - Próximo: issues #218, #216, #213.
+
+> **✅ FEITO (14/09 ~12:15, dono = 192.168.100.22, lane compiler): fix issue #215 — fields declared in body of constructor-param class are unresolvable (SEM011/SEM025).**
+> - Causa raiz: classes com parâmetros de construtor no cabeçalho (`class Box(Int w, Int h)`) são parseadas como `RecordDeclarationNode`. Em `SymbolTableBuilder.defineRecordMembers`, apenas os componentes do cabeçalho eram definidos na `SymbolTable`; campos declarados no corpo (`FieldDeclarationNode`) eram ignorados, gerando `SEM011` / `SEM025`. Adicionalmente, em `CompilerClassLowering.lowerRecord`, `CompilerRecordSupport.generateRecordConstructor` e `JvmBackend.emitClass`, os campos adicionais não eram incluídos no IR do construtor, nem geravam métodos assessores correspondentes.
+> - Correção: `SymbolTableBuilder` agora define símbolos de campos e assessores para campos adicionais de records. `SemanticAnalyzer` analisa inicializadores desses campos. `CompilerClassLowering` adiciona os campos e métodos assessores ao `IRClass`, `CompilerRecordSupport` emite a inicialização dos campos no construtor gerado, e `JvmBackend` registra como `RecordComponent` apenas os componentes finais não-estáticos.
+> - Prova: `CoreRegressionE2ETest#classWithConstructorParamsExtraFieldsJvm`.
+> - Próximo: issues #217, #218, #216.
+
+> **✅ FEITO (14/09 ~12:00, dono = 192.168.100.22, lane compiler): fix issue #214 — Map, HashMap, Set, HashSet, LinkedList compile with unqualified class names (NoClassDefFoundError at runtime).**
+> - Causa raiz: `new Map()`, `new HashMap()`, `new Set()`, `new HashSet()`, e `new LinkedList()` produziam `ClassType("", "Map")` etc., sem mapeamento prévio em `CompilerTypes.toType`, `SemExpressionTyper` ou `ExpressionTyper`. No JVM, eram instanciadas diretamente como classes não-qualificadas sem pacote (`new Map`, `new HashMap`), resultando em `NoClassDefFoundError: Map`.
+> - Correção: `CompilerTypes.toType`, `ExpressionTyper` e `SemExpressionTyper` agora mapeiam `LinkedList` para `BuiltinTypes.LIST`, `HashSet` para `BuiltinTypes.SET` e `HashMap` para `BuiltinTypes.MAP`. `SemExpressionTyper` também sincronizado para permitir indexação `List[i]` (introduzida em #149/#152) sem falso-positivo SEM054.
+> - Prova: `CoreRegressionE2ETest#standardCollectionInstantiationJvm`.
+> - Próximo: issues #215, #217, #218.
+
+> **✅ FEITO (14/09 ~11:40, dono = 192.168.100.22, lane compiler): fix issue #210 — static field ++ / -- emits instance field opcodes (getfield/putfield) instead of getstatic/putstatic.**
+> - Causa raiz: `CompilerEmission2.emitIncrement` tratava acessos a campos em `IdentifierExpr` e `FieldAccessExpr` exclusivamente como instâncias (emitia `KofLoadLocal(ownerType, 0)` ou `emitExpression(receiver)` seguido de `KofLoadField`/`KofStoreField`), gerando `getfield`/`putfield` que causavam `IncompatibleClassChangeError: Expected non-static field`.
+> - Correção: detectado modificador `STATIC` no `FieldSymbol` em `emitIncrement` (para referências diretas ou qualificadas `Class.field`), delegando para `emitStaticFieldIncrement` que opera via `KofGetStatic` e `KofPutStatic` sem receiver de instância na pilha.
+> - Prova: `CoreRegressionE2ETest#staticFieldIncrementJvm`.
+> - Próximo: issues #214, #215, #217.
+
+> **✅ FEITO (14/09 ~11:30, dono = 192.168.100.18, lane development): §204 — fix-forward do ELSE do `if`-statement (frame crash `Supervisor.lacoUnico`).** A limpeza CodeQL `a892b3c5` removeu, junto com o binding unread `condType`, a linha VIVA `if (ifStmt.elseBranch() != null) analyzeStatement(sa, ..., scope, ...)` em `StatementAnalyzer`. Sem analisar o ELSE, os tipos das expressões do ramo não entram em `sa.expressionTypes()` e o lowering JVM gera frames inválidos (ASM `COMPUTE_FRAMES` AIOOBE) — visível em `Supervisor.lacoUnico` (3 vermelhos em `KofSupervisorE2ETest`). **Bisseção provada em worktree limpo:** `0448ef5d` GREEN / `ed409ff9` GREEN / `752dc5df` RED / `75e38d35` RED. Fix: restaura a chamada (binding `condType` segue removido). Prova: `KofSupervisorE2ETest` 8/8 + `BackendParityTest` 19/19 + `ArrayBoundsStressTest` 15/15 + `CoreRegressionE2ETest` 79/79 (121/0/0). Registrado em `known-bugs.md` §204 (EN+PT). **§205 catalogado:** `ifexpr-heterogeneous-direct` Native SIGSEGV (exit 139) introduzido por `ed409ff9` (#183) — `println(Object)` nativo; dono = lane do #183 (contrato regra 6), NÃO desta.
+
+> **✅ FEITO (14/09 ~11:20, dono = 192.168.100.22, lane compiler): fix issue #154 — strings.padLeft / padRight crash with Char literal (VerifyError).**
+> - Causa raiz: `ExpressionMethodCallLowerer` emitia chamadas estáticas `strings.padLeft/padRight` usando `emitArgs` cru sem coerção de argumentos para os tipos formais `(String, Int, String)`. Ao passar literal `Char` (`'0'`), o valor `int` era deixado na pilha para um parâmetro que esperava `Ljava/lang/String;`, resultando em `VerifyError`.
+> - Correção: `ExpressionMethodCallLowerer` agora utiliza `driver.emitArgumentsWithFormalTypes` para chamadas `KofStd`. Em `CompilerEmission2`, quando o parâmetro formal espera `String` e o argumento é `Char`, é emitido `String.valueOf(char)`.
+> - Prova: `CoreRegressionE2ETest#stringsPadWithCharLiteralJvm`.
+> - Próximo: issues #162, #161, #160.
+>
+> **✅ FEITO (14/09 ~11:00, dono = 192.168.100.22, lane compiler): fix issue #165 — for-in over EnumType.values() mistyped loop variable (NoSuchMethodError).**
+> - Causa raiz: `SymbolTableBuilder` sintetizava `values()` com tipo de retorno `List<String>` em vez de `List<EnumType>`, fazendo com que o typer inferisse a variável do laço `for (var c in EnumType.values())` como `String`. Ao chamar `c.name()` ou `c.toString()`, o compilador procurava o método em `String` e emitia `invokevirtual java/lang/String.<method>()Ljava/lang/Object;`, resultando em `NoSuchMethodError`.
+> - Correção: `SymbolTableBuilder` sintetiza `values()` retornando `List<EnumType>` e adiciona suporte explícito a `toString()` e `name()` no tipo enum. `ExpressionStaticCallLowerer`, `MethodCallTyper` e `ExpressionBuiltinInstanceCalls` atualizados para reconhecer `EnumType` com `name()` e `toString()` como identidade de runtime.
+> - Prova: `KofEnumTest#enumForInValuesMethodCallsJvm` (`RED`, `GREEN`, `BLUE`).
+> - Nota sobre #207: em Kof, enums são representados intencionalmente e congelados em runtime como String (`BuiltinTypes`, `JvmTypeMapper`, `classes.md §5`); alterar enums para classes JDK getstatic seria uma quebra ampla de arquitetura (regra 6).
+> - Próximo: issues #168, #162, #161.
+
+> **✅ FEITO (14/09 ~10:45, dono = 192.168.100.22, lane compiler): fix issue #206 — if-expression type fixed to true-branch type (VerifyError).**
+> - Causa raiz: `SemExpressionTyper` fixava o tipo de `IfExpr` incondicionalmente no `thenType`, ignorando `elseType` e a hierarquia de tipos; e `ExpressionTyper` não calculava o ancestral comum (LCA) para classes. Ao chamar métodos na variável inferida com uma subclasse enquanto o ramo false instanciava a superclasse, o bytecode emitia `invokevirtual Subclasse.metodo` causando `VerifyError: Type 'A' is not assignable to 'B'`.
+> - Correção: `HierarchyResolver.commonSupertype` implementado para encontrar o LCA de classes via `TypeChecker.isAssignable` e cadeias de superclasses. `SemExpressionTyper` e `ExpressionTyper` agora usam `commonSupertype`.
+> - Prova: `CoreRegressionE2ETest#ifExpressionBranchTypesLca` e `#ifExpressionBranchTypesMixedNumeric`.
+> - Próximo: issues #168, #165, #162.
+
+> **✅ FEITO (14/09 ~10:35, dono = 192.168.100.22, lane compiler): fix issue #208 — switch expression over Boolean rejects exhaustive true/false coverage (SEM032).**
+> - Causa raiz: `SemExpressionTyper` exigia `default` incondicionalmente a menos que `subjectType` fosse enum, disparando `SEM032` mesmo com cobertura exaustiva de `true` e `false`.
+> - Correção: `MemberResolver.checkSwitchExprExhaustiveness` reconhece `Boolean`/`Bool` e valida se os casos cobrem `true` e `false`.
+> - Prova: `CoreRegressionE2ETest#switchExpressionOverBooleanExhaustive`.
+> - Próximo: issues #168, #165, #162.
+
+> **✅ FEITO (14/09 ~10:30, dono = 192.168.100.22, lane compiler): fix issue #200 — switch expression rejected as RHS of assignment statement (PARSE041).**
+> - Causa raiz: `ExpressionParser.parsePrimary` não reconhecia `TokenType.SWITCH`, e `parseAssignment` para o lado direito chamava `parseAssignment` (que descia para `parsePrimary`), disparando `PARSE041` ao encontrar `switch`.
+> - Correção: adicionada verificação de `TokenType.SWITCH` em `ExpressionParser.parsePrimary` delegando para `parseSwitchExpression(ctx)`.
+> - Prova: `CoreRegressionE2ETest#switchExpressionAsRhsOfAssignment` (atribuição para variável local existente e para campo de classe).
+> - Próximo: issues #168, #166, #165.
+
+> **✅ FEITO (14/09 ~10:20, dono = 192.168.100.15, lane bugs-and-gaps): §201 CORRIGIDO — regressão JS do fix #182 (`_forInitVar_*`/`_forInVar` ReferenceError).**
+> A `beta-0.4.0` estava VERMELHA (5-6 testes JS) e o §201 tinha sido catalogado como "regra 6 + lane alheia, não tocar". **Não é regra 6** — é bug de backend puro (regra 1/3 de Freeze), sem decisão de contrato, então o gate de qualidade desta lane assumiu. **Causa raiz medida (worktree isolado em `c160ae5c`):** o rename de saída de loop p/ `#forInitVar`/`#forInVar` (#182, `75e38d35`) e de bloco p/ `#scopedVar$…` (#203, `aadc0176`) é correto — mas o backend JS resolve por NOME e `JsExpressionParser.isCompilerTemp` trata TODO local cru com prefixo `#` como temporário descartável; o store da variável de loop entra no `preamble` e é descartado quando o próximo op é `if` (`parseIfBody` retorna sem o preamble) → `ReferenceError`. Corpos simples escapavam por acaso; corpos começando com `if` quebravam. **Fix (root, 1 método):** `isCompilerTemp` deixa de classificar `#forInitVar`/`#forInVar`/`#scopedVar$…` como temporários (são renames de var de USUÁRIO); os temporários reais (`#retVal`/`#switch`/`#idx`/`#coll`/`#inc`/`#excTmp`) intactos. Arquivo `js/JsExpressionParser.java` (não toca `StatementLowerer` da lane .22 — zero colisão). **Prova:** `CoreRegressionE2ETest.loopBodyLocalsBeforeIfAreDeclaredInJs` (vermelho sem o fix = `ReferenceError: _forInitVar_2 is not defined`; verde com ele) + `ArrayBoundsStressTest` 15/15, `ArrayBoundsDeepStressTest` 6/6, `BackendParityTest` 19/19, `CoreRegressionE2ETest` 75/75. JVM/Native/Script não afetados. known-bugs §201 → FIXED.
+> **PRÓXIMO PASSO:** rodar a suíte 4-módulos COMPLETA + `check_500.sh` e pushar; depois re-avaliar §202 (`split().get` → SEM028, ESSE sim é decisão de contrato da lane de inferência String) e seguir a fila de issues.
+
+> **✅ FEITO (14/09 ~11:40, dono = 192.168.100.15, lane bugs-and-gaps): §204 — teste de regressão adicionado (Q1 gap da lane .18).**
+> A lane `.18` fixou `fe947b07` (restaura a análise do ramo ELSE do `if` em `StatementAnalyzer`, removida por engano pela limpeza CodeQL `a892b3c5`) **sem teste** (violação Q1). Este lane (gate de qualidade) contribuiu o guard que faltava: `CompilerDriverTest.elseBranchIsAnalyzedBothBranches` — um erro de tipo (`Int s = "not an int"`) no `else` deve ser DIAGNOSTICADO (SEM021), nunca virar bytecode quebrado. **Bisseção independente confirmada:** com a linha viva removida o teste fica VERMELHO (`expected false but was true`); com o fix restaurado, VERDE. Prova: teste 1/1 + `KofSupervisorE2ETest` 8/8. known-bugs §204 (EN+PT) atualizado com o teste na MESMA commit. Não toquei `StatementAnalyzer` (trabalho do .18 preservado, regra 8).
+
+> **✅ FEITO (14/09 ~10:10, dono = 192.168.100.22, lane compiler): fix issue #167 — instanceof with primitive/boxed types emits '?' as class name (NoClassDefFoundError).**
+> - Causa raiz: `JvmOpEmitter` em `KofInstanceOf` e `KofCheckCast` extraía o nome interno apenas se o tipo fosse `Type.ClassType`, caindo em `"?"` para tipos primitivos (`Type.PrimitiveType`).
+> - Correção: `JvmOpEmitter` mapeia `Type.PrimitiveType` para seu correspondente boxed (`TypeMetrics.boxedTypeFor`) antes de emitir a instrução `INSTANCEOF`/`CHECKCAST`.
+> - Prova: `CoreRegressionE2ETest#instanceofWithPrimitiveTypes` (testa `obj instanceof Int` e `obj instanceof Double`).
+> - Próximo: issues #168, #166, #165.
+
+> **✅ FEITO (14/09 ~09:50, dono = 192.168.100.22, lane compiler): fix issue #180 — Block lambda with no return inferred as UnknownType instead of void (SEM014).**
+> - Causa raiz: `SemExpressionTyper` inferia `returnType = UnknownType.UNKNOWN` quando a lambda de bloco não continha statement `ReturnStmt` com valor, disparando rejeição SEM014 ao passar para funções esperando `(T) -> void`.
+> - Correção: `SemExpressionTyper` agora detecta quando o corpo da lambda não possui nenhum `return` ou possui `return` sem valor e atribui `Type.PrimitiveType.VOID`.
+> - Prova: `CoreRegressionE2ETest#blockLambdaWithNoReturnInferredVoid` (chamada passando block lambda `(Int) -> void` sem return para função receptora).
+> - Próximo: issues #168 ou #167.
+
+> **✅ FEITO (14/09 ~09:40, dono = 192.168.100.22, lane compiler): fix issue #203 — Inner var declaration shadows outer variable beyond block scope.**
+> - Causa raiz: variáveis declaradas dentro de `BlockStmt` permaneciam no escopo `locals` após a saída do bloco, fazendo com que `findLocalVar` resolvesse o nome para o slot interno e tornasse a variável externa inacessível.
+> - Correção: `StatementLowerer` em `BlockStmt` renomeia as variáveis introduzidas no bloco para `#scopedVar$<nome>` ao sair do bloco, preservando seus slots e restaurando a visibilidade da variável externa.
+> - Prova: `CoreRegressionE2ETest#innerVarDeclarationScopeRollback` (casos `if`, `else` e `while`).
+> - Próximo: issues #180, #168 ou #167.
+
+> **✅ FEITO (14/09 ~09:15, dono = 192.168.100.22, lane compiler): fix issue #201 — Long hex literals with high bit set (>= 0x8000000000000000L) crash compiler (COMP002).**
+> - Causa raiz: `CompilerTypeSupport.parseIntLiteral` e `ExpressionLowerer` usavam `Long.parseLong(...)` que falha para valores hexadecimais de 64 bits com bit mais significativo setado.
+> - Correção: `CompilerTypeSupport.parseLongLiteral` e `parseIntLiteral` usam `Long.parseUnsignedLong(hex, 16)`. Em `Lexer.java`, detecção de literal hexadecimal com sufixo `L/l` agora emite `TokenType.LONG_LITERAL`. Em `ExpressionParser`, faixa de literais `LONG_LITERAL` hex valida com `parseUnsignedLong`.
+> - Prova: `CoreRegressionE2ETest#longHexLiteralWithHighBitSet` (JVM E2E com `0x8000000000000000L`, `0xFFFFFFFF00000000L`, `0x7FFFFFFFFFFFFFFFL`).
+> - Próximo: issues #180, #168 ou #167.
+
+> **✅ FEITO (14/09 ~08:15, dono = 192.168.100.22, lane compiler): fix issue #182 — for-in / for loop variable shadowing outer variable corrupts outer slot lookup after loop.**
+> Ao sair de `ForInStmt` e `ForStmt`, as variáveis de iteração (`fis.varName()`) e de inicialização (`fs.init()`) tinham seus nomes mantidos na lista `locals`, fazendo com que leituras posteriores da variável externa homônima resolvessem para o slot da variável do loop (que no final do loop fica undefined/top no frame JVM, gerando `VerifyError: Bad local variable type`).
+> Ajustado para renomear a entrada de `locals` no término do loop para `#forInVar` / `#forInitVar`, preservando o índice/slot alocado para metadados de backends (JS/Native) enquanto libera o nome original para resolver a variável do escopo externo.
+> Prova: `CoreRegressionE2ETest.forInLoopVariableShadowingOuterVariable` provando shadowing com String e Int em `for-in` e em `for` clássico.
+> Suíte `CoreRegressionE2ETest` 71/71 verde, `check_500.sh` sem classes críticas.
+> **PRÓXIMO PASSO:** Continuar triagem da fila de issues abertas (#181, #180, #169).
+
+
+
+
+> **✅ FEITO CodeQL testes-fora-do-scan (14/09 ~05:10, dono = 192.168.100.22,
+> lane repo-hygiene): 495→270.** (a) commit `804a03ea`: `.github/codeql/
+> kof4j-config.yml` (security-and-quality + `paths-ignore: "**/src/test/**"`;
+> workflow `queries:`→`config-file:`) + **132 dismissals `used in tests`**
+> (relative-path ×87, concat-cmd ×2, trustmanager/TLS-localhost ×1,
+> input-resource-leak ×5, +quality triviais) — harnesses invocam java/gcc/qemu/CLI
+> com Strings proprias do teste (PATH fake DetectContext, @TempDir); trust-all
+> LOCAL e o contrato do teste TLS self-signed. Scan 34820186056 confirmou o
+> config carregado. (b) commit `c669990f` seguranca main: comparison-with-wider-
+> type ×2 (KofJsRunner loop int→long getArrayElement(long); LspServer.offsetOf
+> 'l'→long) + random-used-once ×2 (SecureRandom static final) — LspServerTest
+> 19/19, compila OK. (c) Os **270 restantes = 100% src/main**: local-var ×82,
+> unused-param ×81, NF-exception ×23, chained-type ×21, useless-null ×11, IRE ×11,
+> indent ×10, deref-null ×8, +~24. **bloqueio (regra 6):** fix 100%-seguro
+> p/ local-var-never-read (unnamed pattern `_`, JEP 443) NAO compila no baseline
+> `--release 21` (medido: javac recusa); sem bump, reestruturar caso-a-caso.
+> unused-param idem (remover parametro = mudar assinatura/fronteira contrato).
+> **PROXIMO PASSO (esta lane):** continuar degraus por arquivo LIVRE (checar dono
+> + issue #185): deref-null/IOB/NF-exception (bugs reais, um teste cada); seg
+> main restante KofJsWebview relative-path ×3 + temp-path KofInterpreter ×1.
+> Testar antes de tocar: `git log --oneline -5 -- <arq>`.
+> **✅ FEITO degrau-4 (14/09, dono = 192.168.100.22, lane repo-hygiene):
+> unused-container write-only ×3 removidos (zero efeito observável).**
+> (a) JdwpClient:178 — lista `methods` só append, retorno usa o id;
+> (b) SymbolTable — campo `symbolOrder` + 3 adds, zero leituras no repo;
+> (c) CollectionCallLowerer:429 — lista descartada, chamadas
+> `inferExprType` (efeito útil) preservadas. Prova: CompilerDriver 252/252 +
+> MapSet 14/14 + Semantic 27/27. **NÃO tocados:** SemExpressionTyper:301
+> (lane quente), KofInterpreterConcurrency (lane interpreter) → issue #185.
+> Dismiss #114/#503 (harness) e #505 (já-dismissed). **Issue #185 aberta:**
+> fila de triagem por lane (notes mecânicas por arquivo).
+> **PRÓXIMO PASSO:** warnings livres (useless-null-check ×12 etc., checar
+> dono) ou pausa p/ lanes absorverem #185.
 
 > **✅ FEITO (14/09, dono = 192.168.100.18, lane development): blog E2E
 > (D-SPRING F12) + `--fat` (D-APP I3)** — commit `8eb156f4`; as duas últimas
@@ -122,6 +305,131 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > E2E com rota protegida (401 sem credencial, 200 com) em `KofBlogE2ETest`
 > ou teste próprio. Antes: reler `docs/development/DECISIONS.md` §D-SEC C18.
 
+> **CONTINUAÇÃO (14/09, dono = 192.168.100.18):**
+>
+> **(a) `listenSecure(port, certPem, keyPem)` — TLS com certificado próprio
+> (D-SEC, JVM).** `kof_web_listen_secure_pem` monta o `SSLContext` do cert
+> X.509 PEM + chave PKCS#8 PEM (RSA/EC/DSA via KeyFactory), **sem `keytool`**
+> (produção não depende de toolchain externa); a variante de 1 arg
+> (self-signed de dev) fica intacta; Native/JS seguem `WEB002` honesto no
+> mesmo gate. Prova: `KofWebTlsTest` **7/7** (incl. `tlsOwnCertificateServesHttps`
+> — handshake + 200 com par gerado no teste — e `tlsOwnCertificateGapOnNative`).
+> Docs: `DECISIONS.md` §D-SEC, `docs/stdlib/stdlib-web.md`, `backend-parity.md`.
+>
+> **(b) Bug de plataforma exposto pelo blog E2E reescrito (`a689cbd2`):
+> `kof_json_bind` devolvia Number CRU.** O read path `db.query<Post>` com
+> `Post(Int id, ...)` e coluna `identity` (H2 devolve `Long`) chamava
+> `record.getDeclaredConstructor(int.class,…).newInstance(Long,…)` →
+> `IllegalArgumentException: argument type mismatch` (o `GET /posts` dava 500).
+> Fix: `kof_json_bind` COERGE ao tipo do alvo (`intValue/longValue/…` em vez
+> de devolver o objeto) — mesma família do fix de CLOB do `8eb156f4`.
+> Prova: `KofBlogE2ETest` verde (1/1) + `KofDbE2ETest` 16/0/2 + `JvmE2ETest` 35.
+> Registrado em `docs/bugs-and-gaps/known-bugs.md` §197 (renumerado de §192 em 14/09 — colisão com o parseOrDefault da lane `.17`).
+>
+> ChaCha20 (D-SEC) entregue pelo colega (`3e1d1ff7`); cookies C11 em
+> `521049aa`. **Fila restante de `DECISIONS`:** OAuth resource-server (JWKS +
+> issuer/aud).
+>
+> **✅ FEITO (14/09, dono = 192.168.100.18): `app.security()` (C18) — middleware
+> composto de segurança (JVM).** `app.security()` / `app.security(opts)`
+> (`KofWeb.java` `case "security"` → `kof_web_security`/`kof_web_security_opts`)
+> aplicam a **ordem fixa** rate-limit → CORS → headers → cookies/session → csrf
+> → auth → RBAC → rota via `SecurityMiddleware` registrado em
+> `app.middlewares`. Sem args = defaults seguros (CSP/nosniff/frame/referrer;
+> HSTS só sob TLS). Opts documentados: `headers` (Bool), `cors` (String/CSV/`*`,
+> não listada → 403, preflight → 204), `rateLimit` (`"limite/janelaSeg"` por IP
+> remoto → 429 + `Retry-After`), `csrf` (double-submit cookie), `auth` (Bearer
+> JWT obrigatório), `roles` (CSV/List). **Auth-if-present:** token inválido
+> nunca passa mesmo sem `auth:true`. **Security by default:** `KOF_ENV=
+> production` sem `app.security()` avisa em `stderr`. Headers de resposta
+> sobrevivem ao clear do dispatch (`KOF_SEC_RESPONSE_HEADERS`). **Native/JS
+> reportam `WEB006`** honesto. Novo fragmento `JvmWebSecurityRuntime.java`
+> mantém o ratchet §140 verde (`JvmWebCoreRuntime` 699→495). Bug de descriptor
+> pré-existente corrigido: `kof_sec_auth_user` estava `(Ljava/lang/String;)` mas
+> não recebe args. **Prova:** `KofWebE2ETest` **22/22** (headers, auth 401/200,
+> auth-if-present, roles 403, CORS deny/preflight, CSRF, rate-limit 429, WEB006
+> Native+JS) + `KofSecurityTest` 41/41 + web/HTTP 106/0/0 + `check_500` exit 0.
+> Docs no mesmo commit: `DECISIONS.md` §D-SEC, `docs/stdlib/stdlib-web.md`,
+> `docs/stdlib/security.md`, `backend-parity.md`, `docs/development/README.md`.
+>
+> **✅ FEITO (14/09, dono = 192.168.100.18): OAuth2 resource-server (D-SEC
+> camada 16) — ÚLTIMA linha da fila §7.** `auth.resourceServer(jwksUrl, issuer,
+> audience)` + `auth.resourceServerVerify(token)` (JVM): JWKS RS256/384/512 +
+> ES256/384/512 (nunca `none`/HS*, sem confusão de algoritmo), chaves JWK RSA/EC,
+> `exp`/`iss`/`aud`, re-busca em `kid` desconhecido (rotação), cache em memória;
+> integra com `auth.authenticated()`/`app.security({auth:true})` (fallback
+> HS256→JWKS). Novo fragmento `JvmStringOAuthRuntime.java`. **Native/JS =
+> `SECN007`**. **Prova:** `KofOAuthResourceServerTest` 4/4 (token RS256 real +
+> JWKS local; iss/aud; alg=none/tamper; integração `app.security` 401/200;
+> SECN007 Native+JS). Docs: `DECISIONS.md` §D-SEC, `docs/stdlib/security.md`,
+> `backend-parity.md`, `docs/development/README.md` (EN+PT).
+>
+> **⚠️ COLISÃO C18 RESOLVIDA (14/09, dono = 192.168.100.18):** o rebase trouxe
+> o WIP da lane .22 (`57428c50`) com um `case "security"` incompleto (sem
+> runtime, descriptor divergente) + o meu `case "security"` completo → `case`
+> DUPLICADO que não compilava (`Duplicate case`). Mantida a implementação
+> completa (runtime + testes); o bloco órfão da .22 foi removido. Se a lane .22
+> tinha runtime em curso, ele não está no tree (grep `kof_web_security` só acha
+> o meu). Registrado para a .22 não retrabalhar.
+>
+> **⚠️→✅ COLISÃO C18 RESOLVIDA NO MERGE (14/09, dono = 192.168.100.18):** o
+> merge de `origin/beta-0.4.0` (degrau-4, `75304956`) trouxe a implementação
+> C18 **completa e paralela** da lane `.22` (`ab15a30f`): `kof_web_security(String,
+> Object)` com opts `rateLimit` (Number), `corsOrigin`, `csrf`, `sessionHeader`,
+> `publicPaths` e o pipeline em `JvmRuntimeWebDispatch`, mais campos em `WebApp`.
+> A minha (`kof_web_security(String)` + `kof_web_security_opts(String,Map)`) foi
+> **unificada como superconjunto** (não descartei a da .22 — pacto de agregação):
+> - **API:** as DUAS funções (`kof_web_security`/`_opts`) + helpers
+>   `kof_web_sec_bool`; opts agora aceitam `headers`/`cors`/`corsOrigin`/
+>   `rateLimit` (String `"n/janela"` **ou** Number)/`csrf`/`sessionHeader`/
+>   `publicPaths`/`auth`/`roles`.
+> - **Pipeline único** (superset) em `JvmRuntimeWebDispatch`: rate-limit →
+>   cors → headers → session → csrf → auth → RBAC; headers de resposta em
+>   `KOF_SEC_RESPONSE_HEADERS` (sobrevivem ao clear do dispatch).
+> - **Session (`.22`):** validado para mutações fora de `publicPaths` (leitura
+>   pública; header presente mas inválido → 401). **Auth/RBAC (`.18`):**
+>   `auth:true`/`roles` via Bearer JWT; auth-if-present só quando não há
+>   `sessionHeader` (senão sessão válida viraria 401). Preflight CORS → 204.
+> - **Removido** `JvmWebSecurityRuntime.java` duplicado (recriado só com a
+>   config unificada, 101 linhas — ratchet §140: `JvmWebCoreRuntime` 597→512).
+> **Prova:** `KofWebE2ETest` 22/22 + `KofBlogE2ETest` 1/1 (usa
+> `sessionHeader`/`publicPaths` da .22) + `KofOAuthResourceServerTest` 4/4 +
+> `KofSecurityTest` 41/41 = **68/0/0**; `check_500` exit 0. Merge commit fecha a
+> divergência; `docs/development/README.md` §7 segue vazia.
+>
+> **PRÓXIMO PASSO:** fila §7 de `docs/development/README.md` **VAZIA**. Restam
+> apenas itens de outras lanes / decisão da mantenedora (`docs/development/` §3-6
+> EM CURSO por outros donos; `future/` bloqueado pela regra R12). Reler
+> `docs/development/README.md` §7 e a regra de ESTABILIDADE antes de re-disparar.
+
+> **✅ FEITO (14/09, dono = 192.168.100.18): 6 decisões do chat —
+> §D-BACKEND-SEMANTICS (1/6 e 4/6 concluídas).**
+> Registro em `docs/development/DECISIONS.md` + `.pt_BR.md` (§D-ENGINEERING +
+> §D-BACKEND-SEMANTICS com as 6 opções e a execução).
+> - **§101 (decisão 1 — IEEE 754 puro):** JVM usa `FCMPG`/`DCMPG` p/ `<`/`<=`
+>   e `FCMPL`/`DCMPL` p/ `>`/`>=` (`JvmOpEmitter` via
+>   `JvmLiteralEmitter.floatCmpIsG`/`condCmpIsG`); Native x86 corrigido em
+>   `NativeX86Arith` (valor) e `NativeOpHelpers` (salto) — o `setb`/`jb` do `LT`
+>   não tinha o guard de unordered que `LE`/`GE` já tinham; riscv/aarch já IEEE;
+>   JS já IEEE por construção. **Prova:** `BackendParityTest.parityNanRelationalIeee`
+>   (JVM×JS) + `ComponentCoreE2ETest.nanRelationalIsIeeeOnAllTargets`
+>   (JVM+Native+JS, valor e salto, Double e Float).
+> - **§179 (decisão 4 — mapear o builtin preservando shadowing):** fix central
+>   em `CompilerTypes.qualifyDeep` (passo 2b) via `builtinDeclaredType`
+>   (`KofUi.typeByName` cobre todos os tipos UI + `KofMedia.IMAGE_DATA`) e guard
+>   `unitDeclaresType`; `MemberResolver.resolveType` centralizado; `VarDeclStmt`
+>   do `StatementLowerer` passa a resolver com o analisador semântico (o `toType`
+>   de 2 args pulava `qualifyDeep`). **Prova:**
+>   `ComponentCoreE2ETest.declaredUiAndMediaTypesCompileAndRun` +
+>   `userClassShadowsBuiltinUiTypeName` (JVM+Native+JS). `ComponentCoreE2ETest`
+>   17/17, `BackendParityTest` 19/19, `UiE2ETest` 29/29 (65/0/0).
+> - **Toolchain:** JDK 25 confirmado em `/home/mel/tools/jdk-25` — baseline
+>   `release 25` compila limpo (`JAVA_HOME=/home/mel/tools/jdk-25`); o
+>   workaround do pom em 21 não é mais necessário.
+> **Restantes (4/6):** `roundTo` (decisão 3), `app.security()` modelo Spring
+> (decisão 5, reverte reads públicas), §180 Native x86 double/float toString
+> (decisão 6), §129 frame por thread (decisão 2).
+
 > **✅ FEITO (14/09 ~03:45, dono = 192.168.100.22, lane repo-hygiene/.github):
 > pack segurança GitHub + merge na main (ordem da mantenedora, sem bump —
 > D-RELEASE mantido).** Commit main `9e289d84` (só 4 arquivos):
@@ -139,8 +447,9 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > (CodeQL success; 4 grupos Error p/ triagem das lanes de código — array-index,
 > container-never-accessed, contradictory-checks, self-assignment — NÃO desta lane).
 
-> **EM CURSO (14/09 ~02:30, dono = 192.168.100.15, lane bugs-and-gaps):
-> unidade §186/#133 — fix estrutural completo do `<clinit>`.** Autostash
+> **✅ FEITO (14/09, dono = 192.168.100.15, lane bugs-and-gaps): §186/#133 —
+> fix estrutural completo do `<clinit>` (commit `814f44da`, pushado; suíte
+> 4-módulos re-verificada 0 FAILURE em 14/09 ~03:30).** Autostash
 > da unidade REAPROVEITADO (stash@{0} aplicado; conflito com e4613704
 > resolvido preservando os dois lados). Código: `CompilerClassLowering.
 > generateStaticInitializer` (IR) + emissão nos 4 backends (JVM/JVM nativo
@@ -154,14 +463,31 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > + `.receiverlessCallToSameClassStaticMethod` (JVM+JS verdes); célula
 > `10\n100\n42` via CLI em JVM/JS/x86; riscv `.s` contém `Math2_clinit`
 > chamado no `_start` (toolchain/qemu ausente no host — gate ambienta).
-> known-bugs §186 atualizado p/ CORRIGIDO. **FALTA p/ commit:** suíte
-> completa 4 módulos rodando em background; commit + push + fechar #133
-> com triagem. **Depois (fila .15):** triagem/fix #139+#150 (Set/Map
+> known-bugs §186 atualizado p/ CORRIGIDO. **FALTA:** fechar a issue #133 no
+> GitHub (sem `gh` no host — pedir à mantenedora). **Depois (fila .15):** triagem/fix #139+#150 (Set/Map
 > ClassFormatError), #143 (record == referencial), #145 (for-in String),
 #149/#152 (List[i] aaload), #141 (spawn{block}), #142 (ctor genérico),
 > #151 (is) — .17 assume #146/#147/#148 (família Jvm*Descriptors, arquivos
 > dele EM CURSO: KofSecurity/JvmRuntimeCallDescriptors/JvmRuntimeReturnDescriptors/
 > JvmStringSecurityRuntime — NÃO tocar).
+
+> **✅ FEITO (14/09 ~05:50, lane bugs-and-gaps, dono = 192.168.100.15):
+> #149 + #152 — `list[i]` sobre `List<T>` (aaload/VerifyError).** Causa raiz:
+> o lowering de `ArrayAccessExpr` emitia `KofArrayLoad` (aaload) p/ receptor
+> que é referência (`java/util/ArrayList`) → `VerifyError: Bad type on operand
+> stack`. Fix em 3 pontos (código já no HEAD, commitado junto da lane codeql
+> em `497486a4`/`901f5dea`): (a) `ExpressionLowerer` roteia List/Map p/
+> `kof_list_get`/`kof_map_get` (INSTANCE) com tipo do elemento real; (b)
+> `MethodCallTyper` infere `map`/`filter`/`reduce` sobre `kof/List` (retorno
+> `List<elem>`, não array); (c) `ExpressionTyper` infere o elemento de
+> `ArrayAccessExpr`. `Set[i]` → `SEM025` honesto (R6). Prova NOVA desta
+> unidade: `CoreRegressionE2ETest.listIndexAccess` + `.listIndexPrimitiveUnbox`
+> (String/Int, unbox+rebox no println, map/filter) — 62/62 verde na classe,
+> JVM+JS; repro exato da issue verde nos 3 targets (JVM/JS/x86). Removido
+> `DBG-PRINT` temporário que tinha vazado no `ExpressionPrintLowerer`.
+> **FALTA:** triagem+close #149/#152 (comentário cita este commit) e seguir a
+> fila #139/#150 (Set/Map ctor), #143 (record `==`), #145 (for-in String),
+> #141 (`spawn{block}`), #142 (ctor genérico), #151 (`is`).
 
 > **✅ FEITO (14/09 ~03:30, dono = 192.168.100.22): `CmdNew` (D-APP I1 +
 > D-SPRING F11).** `kof new <dir> [--type mono|backend|frontend|full-stack]`
@@ -224,13 +550,72 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > **(c) §186 fix parcial** (já em `e4613704`): `FieldConstantFolder` dobra
 > constantes p/ o `initialValue`; `static` não vira `this.x=...`. Residual
 > (runtime/`new`) ABERTO.
-> **PRÓXIMO PASSO (lane bugs-and-gaps):** (1) rodar a suíte 4-módulos LIMPA e
-> confirmar **0 falhas** (a §189 era a vermelha); (2) continuar a caça Q4 sobre
-> os registros vivos (`known-bugs.md` §11) — candidatos da minha lane:
-> §187 face JS (lane JS), §184 (lane JS), §185 (lane `interp` 9093), §180
-> (Native, unidade grande), §188 (regra 6). **NÃO** tocar lane de outro dono.
-> Se nada novo e suíte verde → **RECUSAR** o re-disparo. **NUNCA:** `nat/` GC
-> viva; fila de outras lanes; push `main`.
+>
+> **✅ FEITO (14/09 ~03:40, lane bugs-and-gaps, dono = 192.168.100.15): §191
+> CORRIGIDO + teste-oracle RFC 8439 do ChaCha20 (`e238330a`, pushado).**
+> Caça Q4 sobre as features recém-mergeadas: **(a) §191** — `cookieSet` com
+> `secure`/`httpOnly` STRING divergia JVM×JS no case: JVM usava
+> `equalsIgnoreCase`/`"0"`, JS comparava `s === "false"` cru → `"FALSE"`/`"False"`
+> removiam a flag no JVM e a mantinham no JS (divergência cross-target silenciosa,
+> regra 5). Fix JS `flag()` = `s.toLowerCase() === "false"`; teste
+> `KofSecurityTest.cookieFlagStringCaseInsensitiveCrossTarget` (golden único JVM+JS)
+> **falhava antes** (Q1). Os testes antigos só usavam `"false"` minúsculo = verde
+> falso (Q5). Bordas medidas e já concordes: booleans, `sameSite None`, `expires`,
+> `domain`, `maxAge 0`, `path ""`, valor com `=`, vazio. **(b) ChaCha20** — os
+> testes existentes só provavam round-trip consigo mesmo; novo
+> `KofSecurityTest.chacha20InteropWithJdkRfc8439` usa o **ChaCha20-Poly1305 do
+> próprio JDK como oráculo** (JDK cifra → Kof decifra; Kof cifra → JDK decifra;
+> vazio/15/16/17/114 bytes + unicode). Mutation test (corromper `mac[len-8]`)
+> prova que o oráculo pega o que o round-trip não pega. **Nenhum bug no ChaCha20**
+> (interop confirmada). `KofSecurityTest` 41/41. **(c)** §190 RESOLVIDO pelo dono
+> `.18` (`8eb156f4`, `Content-Length` em bytes + bug real de UTF-8 no `readRequest`);
+> **suíte 4-módulos 0 FAILURE** (verificado ~03:30). Registro em `known-bugs.md
+> §190/§191`.
+>
+> **✅ FEITO (14/09 ~06:50, lane bugs-and-gaps, dono = 192.168.100.15): §194
+> CORRIGIDO — for-in sobre String/não-coleção (triagem do #145).** Triagem da
+> fila de issues da lane reproduzindo cada título no probe 4-target: **#139/#150**
+> (Set/Map), **#143** (`record ==`), **#149/#152** (`List[i]` → já rejeitado por
+> SEM054), **#141** (`spawn{block}`), **#142** (ctor genérico) **não reproduzem**
+> (já corretos no HEAD); **#151** (`is`) é parse error — Kof usa `instanceof`
+> (que funciona), então é pedido de feature, não bug. **Só o #145 reproduz:** o
+> `for (var c in "abc")` era ACEITO em silêncio e quebrava de um jeito por target
+> — JVM `VerifyError` `arraylength` (classe nem carrega), Native SIGSEGV, Script
+> "Argument is not an array", JS iterava chars (divergência cross-target).
+> Causa raiz: `StatementAnalyzer` (caso `ForInStmt`) só extraía elem-type de
+> List/array; o resto virava `UNKNOWN` sem diagnóstico. **Fix:** guard
+> `isNonIterableForIn` no frontend semântico único dos 5 alvos → **SEM058**
+> (espelha o bug 103/SEM054; `docs/language-reference/statements.md §5.4`
+> "Unspecified" → SEM058). Prova: `SemanticResolutionTest.forInNonIterableRejected`
+> (String/Map/Set/Int) + `forInListAndArrayStillCompiles`; **falhava antes**
+> (`expected <false> but was <true>`). SEM058 idêntico em JVM/JS/Script/Native.
+> `known-bugs.md §194` + header.
+> **+ §195 REGISTRADO (Q5):** ao rodar a suíte limpa no HEAD `11780dc1`,
+> `KofBlogE2ETest` está **VERMELHO** — o commit `ab15a30f` (`app.security` C18,
+> lane `.22`) adicionou o middleware ao app do teste, mas os `GET /posts` e
+> `GET /posts/:id` não mandam o header de sessão → 401 (o middleware está
+> **CERTO**; o teste ficou desatualizado). **Provado:** sem `app.security` →
+> verde; com `authorization` nos 2 GET → verde. É bug de TESTE (como o §190),
+> arquivo EM CURSO da lane `.18`/`.22` — **não toquei** (regra 2); registrado
+> em `known-bugs.md §195` + header. **Bloqueia o "suíte verde" de release.**
+> **+ §196 CORRIGIDO (regressão cross-lane da suíte):** a suíte limpa acusou
+> também `ConcurrencyGapsDocTest` VERMELHO — o commit `f5a0ea41` (i18n lote 6,
+> lane `.17`) trocou o cabeçalho da tabela de `learn/18-concurrency.md` de
+> `| Construto |` (PT) para `| Construct |` (a doc canônica é EN), mas o guard
+> `gapRows()` detectava o início da tabela por string PT HARDCODED → tabela
+> lida vazia → `assertEquals` falha. Fix (Q0): guard aceita as DUAS grafias
+> (rótulo é prosa traduzível; o teste não pode fixar idioma). Prova:
+> `ConcurrencyGapsDocTest` 3/3. `known-bugs.md §196` + header.
+> **PRÓXIMO PASSO (lane bugs-and-gaps):** (1) rodar a suíte 4-módulos limpa
+> (a §194 mexeu no frontend semântico — confirmar 0 regressão; a única vermelha
+> esperada é a §195, de outra lane); (2) continuar a caça Q4 na fila aberta
+> (§179/§180 regra 6/grande; §184/§185/§187-JS de outras lanes); (3) se nada
+> novo reproduz e a suíte segue verde → **RECUSAR** o re-disparo (condição de
+> ESTABILIDADE). **NUNCA:** `nat/` GC viva; fila de outras lanes; push `main`.
+> **NOTA (build offline):** o bump de deps `f74d4c8f` (mariadb 3.5.3 /
+> postgresql 42.7.7 / jna 5.15.0) exige um `mvn` ONLINE uma vez p/ popular o
+> `~/.m2` local — depois `-o` volta a funcionar. Sem isso, `-o` falha na
+> resolução de dependências (não é bug de código).
 >
 > **✅ FEITO (14/09 ~01:10, dono = 192.168.100.22): issue #132 FECHADA no
 > GitHub** (causa raiz IALOAD→BALOAD/CALOAD/SALOAD `JvmLiteralEmitter`
@@ -287,18 +672,50 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > roundtrip JVM→JS + SECN006 cross). **Resta da C11/C18:** `app.security()`
 > (middleware composto) — depende de `app.use` no app model (I2).
 >
-> **PRÓXIMO PASSO (estabilização beta-0.4.0 → release):** rodar a suíte
-> COMPLETA limpa pós-push (`rm -rf */target && mvn -o test -pl
-> kof-compiler,kof-script,kof-c-compiler,kof-cli -am
-> -Dsurefire.failIfNoSpecifiedTests=false -Dmaven.test.failure.ignore=true`)
-> e registrar a linha de base em `docs/status.md` (gate de release = 0
-> FAILURE fora dos erros de `node`/BD ausente + das guardas de toolchain).
-> A fila `known-bugs.md` aberta (13 itens) é TODA de outras lanes (`.15`/
-> `.18`/Native) ou regra 6/decisão da mantenedora — **NÃO atacar sem don**
-> **o**; se a suíte verde confirmar estabilidade, seguir a condição de
-> ESTABILIDADE do AGENTS.md (recusar re-disparo, parar o cron). **NUNCA:**
-> tocar `nat/` GC, lanes `.15`/`.22`; reabrir decompiler/translator sem
-> decisão (despriorizados — meta = estabilizar a release).
+> **PRÓXIMO PASSO (estabilização beta-0.4.0 → release, atualizado 14/09
+> ~12:50 — TRIAGEM ATÉ #222 FEITA; ⚠️ LIÇÃO DA MEDIÇÃO OBSOLETA: o harness
+> lê `kof-compiler/target/classes` — SEMPRE `mvn -o compile -pl kof-compiler
+> -am` antes de provar qualquer face (a 1a medição da #217 "reproduz" era
+> classe velha; `c57431b9` já tinha consertado). Re-medição fresca no
+> `c252a983`: §203/§206/§207 FIXED (prova javap/exec + comentário nas
+> issues #205/#215 fechada/#217 fechada), §213 NOVA (`i as Object` sem box →
+> VerifyError), #219 reproduz (→§212), #220/#221/#222 GREEN com prova
+> semântica, #213 continua reproduz (§209 OPEN), #218 continua (§208).
+> Fila medida real: 16 abertos (linha da OPEN Queue corrigida de 30→16).
+> **PRÓXIMO re-disparo (triagem pendente, na ordem):** issues antigas ainda
+> sem prova de face única: **#199** (guarded case T s — verificar se é o
+> §199 do known-bugs ou face nova), **#193** (lambda em container genérico —
+> a face `Function<() -> Void>` como tipo de parâmetro que mediram hoje em
+> e204c pode ser ESTA), #185/#168/#161/#160/#159/#156/#155/#153/#151/#148/
+> #141/#129 (mapeadas a seções known-bugs? conferir 1-para-1). Regra da
+> lição: `mvn -o compile` ANTES de medir; assir SEMÂNTICA do título
+> (weak-green-proof).
+> Versão anterior da triagem (10:20): medido no HEAD `75455529` com harness
+> JVM (`/tmp/opencode/r292/dev/cli/BJ`):
+> **#200/#201/#203/#204/#214 = GREEN** (casos exatos das issues rodam `ec=0`;
+> prova + pointer do fix em cada comentário — fechar = ação do dono/watcher,
+> não desta lane); **#202** = face R6 morta (SEM058 honesto, §194), resta
+> decisão de design (regra 6); **#205** = REPRODUZ, catalogado **§203**
+> (known-bugs) com pointer (`internalName` de primitivo → `checkcast "?"` +
+> `istore` sem unbox). Leva #205–#218 COMPLETA (14/09
+> ~11:20): #207 GREEN (prova no comentário); #209 fechado (fix `1c13d982`);
+> #213→§209, #215→§206, #216→§210, #217→§207, #218→§208 catalogados no
+> known-bugs com pointer (fix = lane compiler, regra 6); #210 já foi fixado
+> pela watcher (`e2df59b5`). Triagem Q4 read-only = trabalho contínuo da
+> lane a cada re-disparo (novas issues chegam pelo watcher 9094). A linha de base COMPLETA limpa foi **RODADA e REGISTRADA** em
+> `docs/status.md` (topo, 14/09): **1819 testes / 3 falhas / 0 erros / 7 skips**.
+> As 3 falhas são TODAS cross-arch de outras lanes, com repro + causa raiz no
+> `known-bugs.md` (re-confirmed no HEAD atual): §181 residual (`(-inf) as Int`
+> → `0`; riscv+aarch, 1.0–2.2s) e §192 (`parse*OrDefault` throw→`parseDouble`
+> trava; aliasing de slot B41). **Gate de release = 0 FAILURE fora desses 3 +
+> dos erros de `node`/BD ausente/guardas.** O que a lane de estabilização pode
+> fazer AGORA sem violar regra 6: (a) aguardar a lane nat (viva — `67db6c50`
+> 22:42, `ac794c52` 02:26) fechar os 3 e re-medir; (b) caça Q4 read-only sobre
+> a fila (faces ainda não catalogadas); (c) i18n dos 6 meta-vivos PENDENTE de
+> decisão da mantenedora (outros agentes editam esses arquivos ao vivo — ver a
+> linha i18n acima). **NUNCA:** tocar `nat/` GC, lanes `.15`/`.22`; reabrir
+> decompiler/translator sem decisão (despriorizados — meta = estabilizar a
+> release).
 >
 >
 > **✅ FEITO (14/09 ~00:30, dono = 192.168.100.22): CI vermelho na beta
@@ -3063,7 +3480,7 @@ Tier 1 ⇒ fechado ⇒ Tiers 2–12 (plataforma universal) abrem.
 - **≤500 linhas por classe** (refactor futuro de NativeRuntime: módulo novo por área, ex: `NativeHttpRuntime.java`).
 - Nunca duas frentes no mesmo arquivo gigante ao mesmo tempo — se for inevitável, combine no chat antes.
 - **Sem trocar de branch toda hora; nunca renomear branch compartilhada** (14/09, ordem da mantenedora): tudo entra pela `beta-*` ativa; `tmp-*` local nunca vira ref remota nem renomeia `beta/main` por baixo dos outros.
-- **Overlay i18n nunca apaga edição viva** (14/09, bug real corrigido em `scripts/docs-lang.sh`): o guard usava `git diff --quiet`, cego com skip-worktree — agora compara hash do worktree com o índice. Regra durável: editar o espelho `.pt_BR.md` junto (é ele que o overlay copia).
+- **Overlay i18n nunca apaga edição viva** (14/09, bug real corrigido em `scripts/docs-lang.sh`): o guard usava `git diff --quiet`, cego com skip-worktree — agora compara hash do worktree com o índice.
 - **Congelamento de comportamento** (AGENTS.md, obrigatório): zero regressão (suíte **910** é gate de merge), features novas **aditivas** (retrocompatibilidade), refactor de 500 linhas preserva semântica (mesma suíte + golden E2E; output mudou = bug do refactor), bugs em `docs/known-bugs.md` são corrigidos **no código** para atingir o comportamento previsto (nunca "documentar em volta"), paridade JVM/Native/JS é regra.
 
 ## Incidentes de processo (bronca registrada — 03/09, agente-switch-expr)

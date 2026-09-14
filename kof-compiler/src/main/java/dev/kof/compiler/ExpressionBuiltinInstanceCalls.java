@@ -17,7 +17,7 @@ final class ExpressionBuiltinInstanceCalls {
     /** enum .name(): o valor do enum JÁ é o nome (String em runtime) — identidade. */
     static boolean isEnumIdentityName(CompilerDriver driver, Type recvType, MethodCallExpr mc) {
         return CompilerTypes.isEnumType(recvType, driver.currentUnit)
-                && "name".equals(mc.methodName()) && mc.arguments().isEmpty();
+                && ("name".equals(mc.methodName()) || "toString".equals(mc.methodName())) && mc.arguments().isEmpty();
     }
 
     static int lowerWeb(CompilerDriver driver, MethodCallExpr mc, List<KofOperation> ops,
@@ -48,6 +48,8 @@ final class ExpressionBuiltinInstanceCalls {
                             + " driver.target yet (WEB003)";
                     case "WEB004" -> "web WebSocket: not available on the " + driver.target
                             + " driver.target yet (WEB004)";
+                    case "WEB006" -> "web security middleware: not available on the "
+                            + driver.target + " driver.target yet (WEB006)";
                     default -> "web: not available on the " + driver.target
                             + " driver.target yet (WEB001)";
                 };
