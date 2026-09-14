@@ -103,6 +103,14 @@ public final class KofWeb {
             return null;
         }
         return switch (name) {
+            // C18 (D-SEC, DECISIONS 14/09): middleware composto com ordem
+            // fixa rate-limit → cors → headers → session → csrf. Recebe
+            // Map de opts opcional; registra o pipeline embutido no app.
+            case "security" -> (argTypes.isEmpty()
+                    || (argTypes.size() == 1 && argTypes.get(0).toString().contains("Map")))
+                    ? new WebCall("kof_web_security", VOID,
+                            argTypes.isEmpty() ? List.of(STR) : List.of(STR, argTypes.get(0)))
+                    : null;
             case "use" -> argTypes.size() == 1
                     ? new WebCall("kof_web_use", VOID, List.of(STR, argTypes.get(0)))
                     : null;
