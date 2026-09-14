@@ -539,6 +539,13 @@ Fase E  Kof Decompiler          (gerar Kof source)
 > `diamondJoinShapesStayHonestStub` VERDE (lei vinculante) e adiciona golden
 > de execução (oracle JVM).
 
+> **PROVA DE CORRETUDE adicionada (unidade 2a): `pathOracle` brute-force
+> sobre a DEFINIÇÃO (X pdom b ⟺ todo caminho simples b→terminal passa
+> por X) contra a passada rápida bit-set em CFGs REAIS do corpus (300
+> classes de `kof-compiler/target/classes`, blocos ≤40) — 6/6 verde,
+> 4.28s, divergência ZERO bloco a bloco. O walker pode agora consumir
+> `immediatePostDom` com a passada confiada.
+
 ## 7. Relação com o Compilador
 
 O decompiler alimenta o pipeline existente:
