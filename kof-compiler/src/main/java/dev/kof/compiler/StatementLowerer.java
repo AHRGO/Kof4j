@@ -49,11 +49,11 @@ public final class StatementLowerer {
                 }
                 yield localIdx;
             }
-            case BreakStmt ignored -> {
+            case BreakStmt _ -> {
                 if (!driver.breakLabels.isEmpty()) ops.add(new KofJump(driver.breakLabels.peek()));
                 yield localIdx;
             }
-            case ContinueStmt ignored -> {
+            case ContinueStmt _ -> {
                 if (!driver.continueLabels.isEmpty()) ops.add(new KofJump(driver.continueLabels.peek()));
                 yield localIdx;
             }
@@ -236,6 +236,7 @@ public final class StatementLowerer {
                 LabelId endLabel = LabelId.create();
                 LabelId continueLabel = LabelId.create();
                 LabelId bodyLabel = LabelId.create();
+                int initLocalEntryIdx = locals.size();
                 if (fs.init() != null) localIdx = driver.emitStatement(fs.init(), ops, owner, localIdx, locals, returnType);
                 ops.add(new KofLabel(startLabel));
                 if (fs.condition() != null) {
@@ -287,6 +288,12 @@ public final class StatementLowerer {
                 }
                 ops.add(new KofJump(startLabel));
                 ops.add(new KofLabel(endLabel));
+                if (fs.init() != null && locals.size() > initLocalEntryIdx) {
+                    for (int li = initLocalEntryIdx; li < locals.size(); li++) {
+                        IRLocalVariable lv = locals.get(li);
+                        locals.set(li, new IRLocalVariable(lv.index(), "#forInitVar", lv.type()));
+                    }
+                }
                 yield localIdx;
             }
             case ForInStmt fis -> {
@@ -304,6 +311,7 @@ public final class StatementLowerer {
                 int varIdx = localIdx++;
                 locals.add(new IRLocalVariable(collIdx, "#coll", collType));
                 locals.add(new IRLocalVariable(idxIdx, "#idx", Type.PrimitiveType.INT));
+                int varLocalEntryIdx = locals.size();
                 locals.add(new IRLocalVariable(varIdx, fis.varName(), elemType));
                 localIdx = ExpressionLowerer.emitExpression(driver, fis.collection(), ops, owner, localIdx, locals);
                 ops.add(new KofStoreLocal(collType, collIdx));
@@ -339,6 +347,11 @@ public final class StatementLowerer {
                 ops.add(new KofStoreLocal(Type.PrimitiveType.INT, idxIdx));
                 ops.add(new KofJump(startLabel));
                 ops.add(new KofLabel(endLabel));
+                // Issue #182: remove a variável do loop de locals para não sombrear
+                // a variável externa homônima nas leituras posteriores ao loop.
+                // Preserva o slot varIdx nos metadados renomeando para "#forInVar"
+                // para que o backend JS / Native mantenha o mapeamento do slot.
+                locals.set(varLocalEntryIdx, new IRLocalVariable(varIdx, "#forInVar", elemType));
                 yield localIdx;
             }
             case ThrowStmt ts -> {

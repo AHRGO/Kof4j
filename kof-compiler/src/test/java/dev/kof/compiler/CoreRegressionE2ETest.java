@@ -1478,4 +1478,95 @@ class CoreRegressionE2ETest {
                 }
                 """, "true\n20", tempDir, "record-destructuring-wide");
     }
+
+    // Issue #194: `s += t` num campo String de INSTÂNCIA emitia KofBinary(ADD)
+    // sobre String → `iadd` → VerifyError. O caminho de campo de instância não
+    // tinha o tratamento de concatenação que o de campo estático já tinha.
+    @Test
+    void stringCompoundAssignInstanceField(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                class Buf {
+                    String s = ""
+                    void append(String t) { s += t }
+                    String get() { return s }
+                }
+                main() {
+                    var b = new Buf()
+                    b.append("hi")
+                    b.append("!")
+                    println(b.get())
+                }
+                """, "hi!", tempDir, "string-compound-field");
+    }
+
+    // Issue #192: compound assignment (`+=`/`-=`/`*=`) em variável capturada
+    // por closure emitia putfield sem o objectref (box) → VerifyError
+    // `Operand stack underflow`. Atribuição simples já funcionava.
+    @Test
+    void compoundAssignCapturedVariable(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                main() {
+                    var n = 10
+                    var inc = () -> { n += 1 }
+                    var dec = () -> { n -= 3 }
+                    var mul = () -> { n *= 2 }
+                    inc()
+                    println(n)
+                    dec()
+                    println(n)
+                    mul()
+                    println(n)
+                }
+                """, "11\n8\n16", tempDir, "compound-captured");
+    }
+
+    // Issue #183: if-expression com ramos de tipos primitivos mistos (Int e Double)
+    // causava VerifyError ou crash de ASM frame porque o tipo inferido da expressão
+    // era do primeiro ramo enquanto os ramos já eram boxeados para Object.
+    @Test
+    void ifExpressionMixedNumericBranches(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                main() {
+                    var flag = true
+                    var r1 = if (flag) 1 else 2.5
+                    println(r1)
+
+                    var r2 = if (flag) 3.5 else 4
+                    println(r2)
+                }
+                """, "1\n3.5", tempDir, "if-expr-mixed-numeric");
+    }
+
+    // Issue #182: for-in loop variable shadowing outer variable corrupts outer slot —
+    // VerifyError: Bad local variable type after loop when outer variable is read.
+    @Test
+    void forInLoopVariableShadowingOuterVariable(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                main() {
+                    var s = "outer"
+                    var lst = new List<String>()
+                    lst.add("a")
+                    lst.add("b")
+                    for (var s in lst) {
+                        println(s)
+                    }
+                    println(s)
+
+                    var x = 100
+                    var nums = new List<Int>()
+                    nums.add(1)
+                    nums.add(2)
+                    for (var x in nums) {
+                        println(x)
+                    }
+                    println(x)
+
+                    var i = 999
+                    for (var i = 0; i < 2; i++) {
+                        println(i)
+                    }
+                    println(i)
+                }
+                """, "a\nb\nouter\n1\n2\n100\n0\n1\n999", tempDir, "for-in-shadow-outer");
+    }
 }
