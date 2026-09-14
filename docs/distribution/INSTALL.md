@@ -1,56 +1,58 @@
-# Instalação do Kof
+[English](INSTALL.md) | [Português](INSTALL.pt_BR.md)
 
-Guia oficial de instalação a partir dos artefatos publicados no **GitHub
-Releases**. Siga o passo a passo do **seu sistema** e pronto.
+# Installing Kof
 
-> **Versão atual:** 0.2.6-beta (30/08/2026). Este guia **não depende da
-> versão**: os comandos funcionam em qualquer release, atual ou futura.
-> Você não precisa saber qual é a versão para instalar.
+Official installation guide from the artifacts published on **GitHub
+Releases**. Follow the step-by-step for **your system** and you are done.
 
----
-
-## 0. O que você precisa (e o que você NÃO precisa)
-
-- **Precisa:** um computador com Linux, macOS ou Windows. Nada mais.
-- **NÃO precisa:** Java, JDK, Maven, Node.js ou qualquer outra ferramenta.
-  O pacote do Kof já vem com o **OpenJDK embutido**.
-
-O Kof é uma **distribuição autocontida**: compilador + CLI + runtime +
-standard library + tooling de editor + JDK embutido, tudo num arquivo só.
+> **Current version:** 0.2.6-beta (08/30/2026). This guide **does not depend on the
+> version**: the commands work on any release, current or future.
+> You do not need to know which version it is to install.
 
 ---
 
-## 1. Escolha o arquivo do SEU sistema
+## 0. What you need (and what you do NOT need)
 
-Cada release publica um pacote **por plataforma**. Baixe **apenas um** — o
-da sua:
+- **Need:** a computer with Linux, macOS or Windows. Nothing more.
+- **Do NOT need:** Java, JDK, Maven, Node.js or any other tool.
+  The Kof package already comes with the **embedded OpenJDK**.
 
-| Seu sistema | Pacote (extensão) | Onde está na página |
+Kof is a **self-contained distribution**: compiler + CLI + runtime +
+standard library + editor tooling + embedded JDK, all in a single file.
+
+---
+
+## 1. Choose the file for YOUR system
+
+Each release publishes one package **per platform**. Download **only one** — the
+one for yours:
+
+| Your system | Package (extension) | Where it is on the page |
 |-------------|-------------------|----------------------|
-| **Linux** (Intel/AMD, 64 bits) | `.tar.gz` com `linux-x86_64` | na seção da release `(... linux-x86_64)` |
-| **macOS** (Apple Silicon M1/M2/M3…) | `.tar.gz` com `macos-arm64` | na seção da release `(... macos-arm64)` |
-| **Windows** (Intel/AMD, 64 bits) | `.zip` com `windows-x86_64` | na seção da release `(... windows-x86_64)` |
+| **Linux** (Intel/AMD, 64-bit) | `.tar.gz` with `linux-x86_64` | in the release section `(... linux-x86_64)` |
+| **macOS** (Apple Silicon M1/M2/M3…) | `.tar.gz` with `macos-arm64` | in the release section `(... macos-arm64)` |
+| **Windows** (Intel/AMD, 64-bit) | `.zip` with `windows-x86_64` | in the release section `(... windows-x86_64)` |
 
-**Como baixar:**
+**How to download:**
 
-1. Abra <https://github.com/KofLang/Kof4j/releases> (ou
+1. Open <https://github.com/KofLang/Kof4j/releases> (or
    <https://github.com/KofLang/Kof4j/releases/latest>).
-2. Veja a release **Latest** (a mais recente). Ela lista 3 pacotes — um
-   para cada plataforma — com seus arquivos anexos.
-3. Na seção do **seu** sistema, clique no arquivo `.tar.gz` (Linux/macOS)
-   ou `.zip` (Windows). Ele tem cerca de 230 MB.
+2. Look at the **Latest** release (the most recent one). It lists 3 packages — one
+   for each platform — with their attached files.
+3. In the section for **your** system, click the `.tar.gz` (Linux/macOS)
+   or `.zip` (Windows) file. It is about 230 MB.
 
-> **Nome do arquivo:** o nome muda a cada release
-> (`kof-<versão>-<sistema>.tar.gz`). Baixe o arquivo de pacote da sua
-> plataforma; não se preocupe com o número da versão — o `kof version`
-> mostra a versão real depois.
+> **File name:** the name changes every release
+> (`kof-<version>-<system>.tar.gz`). Download the package file for your
+> platform; do not worry about the version number — `kof version`
+> shows the real version afterwards.
 
 ---
 
-## 2. (Opcional, recomendado) Conferir a integridade
+## 2. (Optional, recommended) Check the integrity
 
-Cada release traz um arquivo `SHA256SUMS` com o código de cada pacote.
-Baixe-o junto e confirme que o arquivo baixado não foi corrompido:
+Each release brings a `SHA256SUMS` file with the code for each package.
+Download it together and confirm that the downloaded file was not corrupted:
 
 ```bash
 # Linux / macOS
@@ -59,109 +61,109 @@ sha256sum -c SHA256SUMS
 Get-FileHash kof-*-windows-x86_64.zip -Algorithm SHA256
 ```
 
-Se aparecer `OK` (Linux/macOS) ou o mesmo hash listado no `SHA256SUMS`
-(Windows), está tudo certo. Pode pular esta etapa se preferir.
+If `OK` appears (Linux/macOS) or the same hash listed in `SHA256SUMS`
+(Windows), everything is fine. You can skip this step if you prefer.
 
 ---
 
-## 3. Instalar
+## 3. Install
 
 ### 🐧 Linux
 
-Abra um terminal na pasta onde você baixou o arquivo:
+Open a terminal in the folder where you downloaded the file:
 
 ```bash
-# 1) extrair (o * pega a versão, não importa qual seja)
+# 1) extract (the * catches the version, no matter which one)
 tar -xzf kof-*-linux-x86_64.tar.gz
 
-# 2) achar a pasta extraída e colocar no PATH (este terminal)
+# 2) find the extracted folder and put it in PATH (this terminal)
 DIR=$(ls -d kof-*-linux-x86_64 | head -1)
 export PATH="$PWD/$DIR/bin:$PATH"
 
-# 3) pronto!
+# 3) done!
 kof version
 ```
 
-Para o PATH valer **em todos os terminais futuros**, copie a linha `export`
-para o final do seu `~/.bashrc` ou `~/.zshrc` (trocando `$PWD/$DIR` pelo
-caminho absoluto real da pasta):
+For the PATH to apply **in all future terminals**, copy the `export` line
+to the end of your `~/.bashrc` or `~/.zshrc` (replacing `$PWD/$DIR` with the
+real absolute path of the folder):
 
 ```bash
-echo 'export PATH="$HOME/<pasta>/kof-*-linux-x86_64/bin:$PATH"' >> ~/.bashrc
+echo 'export PATH="$HOME/<folder>/kof-*-linux-x86_64/bin:$PATH"' >> ~/.bashrc
 ```
 
-> **Nota de segurança:** o Kof roda como usuário normal. Se você quiser
-> instalá-lo em lugar fixo, mova a pasta para `~/.local/share/` ou
-> `/opt/` e aponte o `PATH` para lá.
+> **Security note:** Kof runs as a normal user. If you want to
+> install it in a fixed place, move the folder to `~/.local/share/` or
+> `/opt/` and point `PATH` there.
 
 ### 🍎 macOS (Apple Silicon)
 
 ```bash
-# 1) extrair
+# 1) extract
 tar -xzf kof-*-macos-arm64.tar.gz
 
-# 2) PATH (este terminal)
+# 2) PATH (this terminal)
 DIR=$(ls -d kof-*-macos-arm64 | head -1)
 export PATH="$PWD/$DIR/bin:$PATH"
 
-# 3) pronto!
+# 3) done!
 kof version
 ```
 
-Para o PATH permanente, adicione ao `~/.zshrc` (padrão do macOS):
+For a permanent PATH, add it to `~/.zshrc` (macOS default):
 
 ```bash
-echo 'export PATH="$HOME/<pasta>/kof-*-macos-arm64/bin:$PATH"' >> ~/.zshrc
+echo 'export PATH="$HOME/<folder>/kof-*-macos-arm64/bin:$PATH"' >> ~/.zshrc
 ```
 
-> Se o macOS avisar sobre o arquivo, é só clicar em **Abrir** uma vez nas
-> Configurações de Privacidade — o pacote é assinado pela pipeline oficial.
+> If macOS warns about the file, just click **Open** once in the
+> Privacy Settings — the package is signed by the official pipeline.
 
 ### 🪟 Windows
 
-Abra o **PowerShell** na pasta onde você baixou o `.zip`:
+Open **PowerShell** in the folder where you downloaded the `.zip`:
 
 ```powershell
-# 1) extrair
+# 1) extract
 Expand-Archive .\kof-*-windows-x86_64.zip
 
-# 2) achar a pasta e colocar no PATH (esta sessão)
+# 2) find the folder and put it in PATH (this session)
 $DIR = (Get-ChildItem -Directory -Filter "kof-*-windows-x86_64" | Select-Object -First 1).FullName
 $env:PATH = "$DIR\bin;$env:PATH"
 
-# 3) pronto!
+# 3) done!
 kof version
 ```
 
-Para o PATH **permanente** (todas as sessões), adicione a pasta `...\bin`
-às **Variáveis de Sistema → PATH** do Windows:
+For a **permanent** PATH (all sessions), add the `...\bin` folder
+to the Windows **System Variables → PATH**:
 
-1. `Win + R` → `sysdm.cpl` → aba **Avançado** → **Variáveis de Ambiente**.
-2. Em **Variáveis do sistema**, edite `Path` → **Novo** → cole
-   `C:\...\kof-<versão>-windows-x86_64\bin`.
-3. OK, OK. Reabra o PowerShell e rode `kof version`.
+1. `Win + R` → `sysdm.cpl` → **Advanced** tab → **Environment Variables**.
+2. Under **System variables**, edit `Path` → **New** → paste
+   `C:\...\kof-<version>-windows-x86_64\bin`.
+3. OK, OK. Reopen PowerShell and run `kof version`.
 
 ---
 
-## 4. Verificar se deu certo
+## 4. Verify it worked
 
 ```bash
 kof version
 ```
 
-Saída esperada (o número é o da sua release):
+Expected output (the number is that of your release):
 
 ```
 kof 0.2.6-beta
 ```
 
-Relatório completo do ambiente:
+Full environment report:
 
 ```bash
 kof info
 ```
 
-Saída esperada (resumo):
+Expected output (summary):
 
 ```
 Kof 0.2.6-beta
@@ -180,89 +182,89 @@ Editor support: available
 Install: /caminho/onde/esta/kof-...-linux-x86_64
 ```
 
-Se `kof info` mostrar `JVM: ... (embedded)`, o JDK embutido está em uso —
-**nenhuma instalação externa de Java foi necessária**.
+If `kof info` shows `JVM: ... (embedded)`, the embedded JDK is in use —
+**no external Java installation was needed**.
 
 ---
 
-## 5. O que você recebeu
+## 5. What you received
 
 ```
-kof-<versão>-<sistema>/
+kof-<version>-<system>/
 ├── bin/
 │   ├── kof            # launcher (Linux/macOS)
 │   ├── kof.bat        # launcher (Windows)
-│   └── kof-webview    # shell do kof.ui (quando disponível)
+│   └── kof-webview    # kof.ui shell (when available)
 ├── lib/
-│   └── kof.jar        # compilador + runtime + stdlib + GraalJS
-├── jdk/               # OpenJDK 21 embutido (release oficial)
-├── editor/            # grammar + suportes de editor
-├── tooling/           # definições reutilizáveis da linguagem
-├── docs/              # documentação embarcada
-└── VERSION            # a versão exata desta instalação
+│   └── kof.jar        # compiler + runtime + stdlib + GraalJS
+├── jdk/               # embedded OpenJDK 21 (official release)
+├── editor/            # grammar + editor support
+├── tooling/           # reusable language definitions
+├── docs/              # embedded documentation
+└── VERSION            # the exact version of this installation
 ```
 
-Principais comandos já disponíveis (detalhes em
+Main commands already available (details in
 [learn/32-cli-tooling.md](../../learn/32-cli-tooling.md)):
 
-| Comando | O que faz |
+| Command | What it does |
 |---------|-----------|
-| `kof run app.kf` | compila e executa (JVM por padrão) |
-| `kof build <dir> [--target ...]` | compila para jvm / native / js / android |
-| `kof serve app.kf` | sobe um app `web.app()` |
-| `kof test <dir>` | roda a suíte de testes |
-| `kof check <dir>` | type-check sem emitir código |
-| `kof script <f.kf>` / `kof repl` | execução direta / REPL |
-| `kof fmt <f.kf>` | formata o código |
-| `kof info` / `kof version` | ambiente / versão |
+| `kof run app.kf` | compiles and runs (JVM by default) |
+| `kof build <dir> [--target ...]` | compiles to jvm / native / js / android |
+| `kof serve app.kf` | starts a `web.app()` app |
+| `kof test <dir>` | runs the test suite |
+| `kof check <dir>` | type-check without emitting code |
+| `kof script <f.kf>` / `kof repl` | direct execution / REPL |
+| `kof fmt <f.kf>` | formats the code |
+| `kof info` / `kof version` | environment / version |
 
 ---
 
-## 6. Atualizar
+## 6. Update
 
-1. Baixe o pacote da nova release (mesmo passo 1).
-2. Extraia ao lado (não por cima).
-3. Aponte o `PATH` para a pasta nova e rode `kof version`.
-4. Apague a pasta da versão antiga quando quiser.
+1. Download the package for the new release (same step 1).
+2. Extract it alongside (not over it).
+3. Point `PATH` to the new folder and run `kof version`.
+4. Delete the old version folder whenever you want.
 
-O layout é estável entre releases — não há etapa de "migrar".
+The layout is stable between releases — there is no "migrate" step.
 
 ---
 
-## 7. Solução de problemas
+## 7. Troubleshooting
 
-| Sintoma | Causa provável | Corretivo |
+| Symptom | Probable cause | Fix |
 |---------|----------------|-----------|
-| `kof: command not found` (Linux/macOS) | `PATH` não atualizado neste terminal | Reabra o terminal, ou rode o `export PATH=...` do passo 3 de novo |
-| `'kof' não é reconhecido` (Windows) | `bin` fora do PATH | Siga o passo 2.5 (PATH permanente) e **reabra** o PowerShell |
-| `kf: distribution incomplete` | pasta extraída incompleta | Re-baixe e extraia de novo; confira o checksum (passo 2) |
-| Versão antiga ao rodar `kof version` | há outro `bin` antes no `PATH` | `which kof` (Linux/macOS) / `Get-Command kof` (Windows) e corrija a ordem do PATH |
-| `tar: Unknown option` | usou `tar` errado no Windows | No Windows use o `Expand-Archive` (PowerShell) |
-| Bloqueio de segurança no macOS | aviso do Gatekeeper | Configurações de Privacidade → permitir a app uma vez |
+| `kof: command not found` (Linux/macOS) | `PATH` not updated in this terminal | Reopen the terminal, or run the `export PATH=...` from step 3 again |
+| `'kof' is not recognized` (Windows) | `bin` outside the PATH | Follow step 2.5 (permanent PATH) and **reopen** PowerShell |
+| `kf: distribution incomplete` | incomplete extracted folder | Re-download and extract again; check the checksum (step 2) |
+| Old version when running `kof version` | there is another `bin` earlier in `PATH` | `which kof` (Linux/macOS) / `Get-Command kof` (Windows) and fix the PATH order |
+| `tar: Unknown option` | wrong `tar` used on Windows | On Windows use `Expand-Archive` (PowerShell) |
+| macOS security block | Gatekeeper warning | Privacy Settings → allow the app once |
 
 ---
 
-## 8. Build a partir do código-fonte (desenvolvedores)
+## 8. Build from source (developers)
 
-Só para quem quer contribuir ou testar o `main`:
+Only for those who want to contribute or test `main`:
 
-**Pré-requisitos:** JDK 21+ (Temurin) e Maven 3.9+. Para o target
-`native`: binutils (`as`/`ld`).
+**Prerequisites:** JDK 21+ (Temurin) and Maven 3.9+. For the `native`
+target: binutils (`as`/`ld`).
 
 ```bash
 git clone https://github.com/KofLang/Kof4j.git
 cd Kof4j
 mvn clean package -DskipTests
 
-# usar direto do source (usa o java do sistema, não o embutido)
+# use straight from source (uses the system java, not the embedded one)
 mkdir -p lib
 cp kof-cli/target/kof-cli-$(cat VERSION).jar lib/kof.jar
 bin/kof version
 bin/kof info
 
-# empacotar a distribuição oficial (baixa o JDK embutido)
+# package the official distribution (downloads the embedded JDK)
 scripts/package.sh --jdk
 ```
 
-Versionamento e empacotamento: [VERSIONING.md](VERSIONING.md) e
+Versioning and packaging: [VERSIONING.md](VERSIONING.md) and
 [PACKAGING.md](PACKAGING.md).

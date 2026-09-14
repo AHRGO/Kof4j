@@ -1,255 +1,257 @@
-# Kof Native — Multi-Arch (RISC-V 64 e ARM64/AArch64)
+[English](native-multiarch.md) | [Português](native-multiarch.pt_BR.md)
 
-> **🔄 RE-AUDITORIA 12/09 (medido sob qemu REAL neste host — NÃO memória):**
-> os cabeçalhos 03/09 abaixo estão DESATUALIZADOS e este bloco é a fonte do
-> estado REAL (regra AGENTS "auditar doc contra o código/testes, não contra a
-> memória"; estado-4 "doc contradiz o código" corrigido). As 13 faces "core"
-> de 03/09 são hoje ~30 testes cross (`NativeRiscv64E2ETest` 39/39 +
-> `NativeAarch64E2ETest` 39/39, **executados**, 0 skip neste host). **FECHADO
-> e EXECUTANDO sob qemu (byte-idêntico ao JVM medido), para além do "core":**
-> Map/Set, `println(<coleção>)` (§107 — x86 `f3b3821c` + cross B39 12/09),
-> higher-order `map/filter/reduce` (probe 12/09: `[2,4,6]`/`[2,3]` idêntico
+# Kof Native — Multi-Arch (RISC-V 64 and ARM64/AArch64)
+
+> **🔄 RE-AUDIT 12/09 (measured under REAL qemu on this host — NOT memory):**
+> the 03/09 headers below are OUTDATED and this block is the source of the
+> REAL state (AGENTS rule "audit doc against the code/tests, not against
+> memory"; state-4 "doc contradicts the code" corrected). The 13 "core"
+> faces of 03/09 are today ~30 cross tests (`NativeRiscv64E2ETest` 39/39 +
+> `NativeAarch64E2ETest` 39/39, **executed**, 0 skip on this host). **CLOSED
+> and RUNNING under qemu (byte-identical to the measured JVM), beyond the "core":**
+> Map/Set, `println(<collection>)` (§107 — x86 `f3b3821c` + cross B39 12/09),
+> higher-order `map/filter/reduce` (probe 12/09: `[2,4,6]`/`[2,3]` identical
 > JVM), HTTP client (`riscv64HttpGetPostStatus`), `kof.net`, JSON
 > encode/decode int/list/string, spawn/await (`clone`+`futex`), `time` ISO
-> (add/diff), `math` Double (MATH001) + **`math.pow` S1b.2 (decisão 7a 13/09:
-> x86 via libm `pow@PLT` + `-lm`; riscv/aarch recusam com MATH001 — link
-> cross estático sem libc, decisão de arquitetura regra 6; `KofMath.supportedOn`),
+> (add/diff), `math` Double (MATH001) + **`math.pow` S1b.2 (decision 7a 13/09:
+> x86 via libm `pow@PLT` + `-lm`; riscv/aarch refuse with MATH001 — static
+> cross link without libc, architecture decision rule 6; `KofMath.supportedOn`),
 > `random`, `uuid`, multi-dim array
-> (§113), busca String UTF-16 (§43/§102/§111). **ABERTO — recusa HONESTA em
-> compile-time (NUNCA binário mudo; regra R6 — o stub "exit 0 sem efeito" de
-> 03/09 já NÃO descreve mais o estado, ops desconhecidos dão código de gap):**
-> `kof.db` → **DB001** (`KofDbE2ETest` prova `assertFalse(success)` + diags
-> DB001 nos 6 alvos), `kof.security` crypto-heavy → **SECN000**, os 6
-> construtos de concorrência de mais alta ordem (supervisor/`selectAny`
+> (§113), UTF-16 String search (§43/§102/§111). **OPEN — HONEST refusal at
+> compile-time (NEVER silent binary; rule R6 — the "exit 0 with no effect" stub
+> of 03/09 no longer describes the state, unknown ops give a gap code):**
+> `kof.db` → **DB001** (`KofDbE2ETest` proves `assertFalse(success)` + DB001
+> diags on the 6 targets), `kof.security` crypto-heavy → **SECN000**, the 6
+> higher-order concurrency constructs (supervisor/`selectAny`
 > multi/cancel cross …) → **CONC001** (`spawn`/`await`/`sleep`/`interval`
-> VERDES no cross — o gate #91 não os toca), UI (`kof.ui`) **sem port cross
-> algum** (nenhum teste riscv/aarch), `json.decode<List<Record>>` → **JSN004**
-> (asm puro não tem reflection p/ materializar record). **Consequência honesta
-> HOJE:** programa com coleção/HTTP/net/JSON-escalar/spawn/time/math **roda de
-> verdade** no riscv/aarch (a frase 03/09 "não executa a lógica — sai 0 sem
-> efeito" está SUPERADA); o que ainda não roda (DB/segurança/UI/record-decode)
-> é diagnosticado com código de gap em compilação, não silenciosamente.
-> **Gap real `NATIVE002` que sobra:** (1) GC mark-sweep cross (riscv é
-> bump-pointer sem coletor — vazamento em heap longo, não-crash); (2) as
-> recusas DB001/SECN000/CONC001/JSN004 acima; (3) FP-coleção no cross
-> (FLT001 em compilação §107); (4) `backend-parity.md` colunas por-arch
-> ainda por separar; (5) CI cross não existe (toolchain host-dependente) —
-> **face (5) FECHADA 12/09**: job `cross-native` em `.github/workflows/ci.yml`
-> instala `binutils-riscv64/aarch64-linux-gnu` + `qemu-user-static` e roda
-> `NativeRiscv64E2ETest,NativeAarch64E2ETest` (executam sob qemu, não skipam —
-> o job EXISTE para provar; nomes dos binários batem com `NativeArchEmitter:151
-> -282`; local: riscv 39/39 + aarch 39/39 verdes neste host com qemu).
-> Este doc continua em `development/` (NATIVE002 não fecha enquanto restam
-> (1)–(5)); quando (1)–(5) zerarem → mover para `docs/`.
+> GREEN on cross — gate #91 does not touch them), UI (`kof.ui`) **without any
+> cross port** (no riscv/aarch test), `json.decode<List<Record>>` → **JSN004**
+> (pure asm has no reflection to materialize a record). **Honest consequence
+> TODAY:** a program with collection/HTTP/net/scalar-JSON/spawn/time/math **truly
+> runs** on riscv/aarch (the 03/09 phrase "does not execute the logic — exits 0 with no
+> effect" is SUPERSEDED); what still does not run (DB/security/UI/record-decode)
+> is diagnosed with a gap code at compile time, not silently.
+> **Real remaining gap `NATIVE002`:** (1) cross GC mark-sweep (riscv is
+> bump-pointer without collector — leak on long heap, non-crash); (2) the
+> DB001/SECN000/CONC001/JSN004 refusals above; (3) FP-collection on cross
+> (FLT001 at compile §107); (4) `backend-parity.md` per-arch columns
+> still to be separated; (5) cross CI does not exist (host-dependent toolchain) —
+> **face (5) CLOSED 12/09**: job `cross-native` in `.github/workflows/ci.yml`
+> installs `binutils-riscv64/aarch64-linux-gnu` + `qemu-user-static` and runs
+> `NativeRiscv64E2ETest,NativeAarch64E2ETest` (they execute under qemu, do not skip —
+> the job EXISTS to prove; binary names match `NativeArchEmitter:151
+> -282`; local: riscv 39/39 + aarch 39/39 green on this host with qemu).
+> This doc remains in `development/` (NATIVE002 does not close while (1)–(5)
+> remain); when (1)–(5) reach zero → move to `docs/`.
 >
-> **🪜 DECOMPOSIÇÃO DA FACE (1) — GC mark-sweep cross (12/09, fila para
-> execução por degrau — cada degrau cabe numa sessão e tem prova própria):**
-> o riscv é bump puro (`amoadd.d` em `kof_alloc_ptr`, sem flags/mark/free-list);
-> o port NÃO é copiar o RuntimeGc x86 — o scan conservative exige stack-walk
-> riscv + roots no intervalo de seções. **⚠️ CORRIGIDO 12/09 (lido o código,
-> não memória) — a decomposição original estava ERRADA no G-1:** o riscv não
-> tem NENHUM header de bloco: `kof_alloc` riscv (`NativeRiscvAsmRt0.java:17-22`)
-> retorna o bump cru alinhado a 16 e os usuários escrevem o header do OBJETO
-> (typeId @0, vtable @8, …) no OFFSET 0 do ponteiro retornado (ex.:
-> `string_from_literal`: `sw t0, 0(s3)`), enquanto no x86 o GC vive num bloco
-> de 32B ANTERIOR ao ponteiro retornado (`RuntimeMemory.java:145-150` — size@0,
-> free-next@8, gc-next@16, flags@24; `kof_free:205` lê `-32(%rdi)`). Portar a
-> free-list sem o bloco-header = o coletor ler o typeId como tamanho →
-> corrupção. Por isso entra o **G-0** na frente. Degraus na ordem:
-> **G-0 bloco-header riscv (FEITO 12/09, sessão dev):** `kof_alloc` riscv reserva
-> 32B ANTES do ponteiro (total = 32+align16, retorno base+32; preenchimento
-> size/free_next/gc_next/flags) + guard OOM honesto (`_kof_heap_end`, panic
-> `out of memory` exit 1 — R6: o bump NÃO tinha bounds-check e o header
-> triplica o consumo/bloco, então o estouro ficou mais provável). Prova:
-> suíte riscv 40/40 + aarch 40/40 sob qemu (inclui teste de pressão
+> **🪜 FACE (1) DECOMPOSITION — cross GC mark-sweep (12/09, queue for
+> step-by-step execution — each step fits in a session and has its own proof):**
+> riscv is pure bump (`amoadd.d` in `kof_alloc_ptr`, no flags/mark/free-list);
+> the port is NOT copying the x86 RuntimeGc — the conservative scan requires a
+> riscv stack-walk + roots in the section range. **⚠️ CORRECTED 12/09 (read the code,
+> not memory) — the original decomposition was WRONG at G-1:** riscv has NO
+> block header: riscv `kof_alloc` (`NativeRiscvAsmRt0.java:17-22`)
+> returns the raw bump aligned to 16 and users write the OBJECT header
+> (typeId @0, vtable @8, …) at OFFSET 0 of the returned pointer (e.g.:
+> `string_from_literal`: `sw t0, 0(s3)`), whereas on x86 the GC lives in a block
+> of 32B BEFORE the returned pointer (`RuntimeMemory.java:145-150` — size@0,
+> free-next@8, gc-next@16, flags@24; `kof_free:205` reads `-32(%rdi)`). Porting the
+> free-list without the header-block = the collector reads the typeId as size →
+> corruption. That is why **G-0** comes first. Steps in order:
+> **G-0 riscv header-block (DONE 12/09, dev session):** riscv `kof_alloc` reserves
+> 32B BEFORE the pointer (total = 32+align16, return base+32; filling
+> size/free_next/gc_next/flags) + honest OOM guard (`_kof_heap_end`, panic
+> `out of memory` exit 1 — R6: the bump did NOT have a bounds-check and the header
+> triples the consumption/block, so overflow became more likely). Proof:
+> riscv suite 40/40 + aarch 40/40 under qemu (includes the pressure test
 > `riscvHeapExhaustionPanicsHonest`/`aarch64HeapExhaustionPanicsHonest`,
-> sabotagem-sem-guard = zero output FAIL) + GC x86 3/3 + Artifact 6/6 +
-> ratchet ≤500 OK (Rt0 com 500 exatas; prosa de design vive aqui).
-> **G-1 free-list riscv** — port da lista de blocos livres do x86 SOBRE o
-> layout do G-0 (header 32B: size/flags/gc-list/free-next); prova: ciclo
-> alloc/free/alloc (free ainda manual, sem GC) reusa o slot — teste riscv
-> E2E novo com memstats (`kof_memstats` port incluído aqui, é a alavanca de
-> observação dos degraus seguintes).
-> ⚠️ **Correção 12/09 ~20:05 (doc-vs-realidade, contagem no fonte — refuta a
-> justificativa "free sem caller = código morto" da recusa de 19:44):** as
-> fatias riscv fazem **57 `call kof_alloc`** (Mapset0 ×4, Rt0 ×3, RtB0-log ×3,
-> B10/B11/B12/B20/B21/B22 ×2, B1/B15 ×1…) e **ZERO `call kof_free`** — enquanto
-> o x86 tem 4 callers reais (`RuntimeChannel:132` nó de channel,
-> `RuntimeLog2:98` nó de log, `RuntimeObservability1:426`/`2:247`). O riscv
-> VAZA em cada nó de log/b64/map-rebuild: o bump nunca devolve (é a razão do
-> `.bss` de ~260KB fixo). O G-1 NÃO é código morto — é o que fecha o vazamento
-> das 57 alocações. **Falta p/ executar: host com toolchain** (o asm novo de
-> free/memstats só é entregável com prova qemu — guard `assumeTrue`, nunca
-> asm não-executado). Ordem do port (proposta): `kof_free` riscv (port 1:1
-> do `RuntimeMemory.emitFree` — header 32B do G-0 já tem size/flags/next) →
-> `kof_memstats` (contadores + print) → ligar o free nos nós do log (RtB0,
-> espelhando `RuntimeLog2:98`) → E2E ciclo alloc/free/alloc reusa slot.
-> **G-2 header flags/mark bits + lista GC** — o bloco aloca com flag=0 e entra
-> na gc-list global (`kof_gc_head` riscv); prova: programa com N allocs e
-> `KOF_GC_DEBUG` dump da lista (syscalls write) com tamanho/flag corretos.
-> **G-3 mark conservative riscv** — port de `kof_gc_mark`: walk `sp..fp`
-> (riscv: `sp` até o limite do frame, fallback 4KB como o x86) + scan de
-> raízes estáticas EXPLÍCITO no intervalo `.data..kof_heap_root_end`
-> (o `kof_heap_root_end` da #97 S-5-x86 é PRÉ-REQUISITO compartilhado —
-> coordenar com a fila bugfix, não duplicar o emissor); transitive = walk dos
-> campos por tamanho (size/8). Prova: objeto alcançado só pela stack sobrevive,
-> inalcançado some (teste com `KOF_GC_DEBUG` antes/depois; SEM sweep ainda —
-> mark-only é observável, inofensivo).
-> **G-4 sweep + collect no alloc** — free-list recebe mortos; `kof_gc_collect`
-> portado (tick 4096 como o x86); prova: teste de VASAMENTO que hoje é
-> impossível (loop de alloc que estouraria o bump de 260KB roda e a memória
-> não cresce monotonicamente — medir via memstats do G-1).
-> **G-5 aarch64** — herda tudo via tradutor (as diretivas/labels riscv passam
-> ilesas — mesmo caminho da poda S-4; `amoadd.d`→`ldadd` já traduzido,
-> `NativeAarch64Translator.java:299`); gate: suíte aarch 39/39 sob qemu +
-> o teste de vazamento G-4 também no aarch.
-> Cada degrau: commit com suíte cross completa verde + DOING.md na linha.
-> NÃO misturar com S-5-x86/root_end (fila bugfix) — mas G-3 DEPENDE dele;
-> G-0/G-1/G-2 adiantam sem root_end.
+> sabotage-without-guard = zero output FAIL) + x86 GC 3/3 + Artifact 6/6 +
+> ratchet ≤500 OK (Rt0 with exactly 500; design prose lives here).
+> **G-1 riscv free-list** — port of the x86 free-block list ON TOP of the
+> G-0 layout (header 32B: size/flags/gc-list/free-next); proof: cycle
+> alloc/free/alloc (free still manual, no GC) reuses the slot — new riscv
+> E2E test with memstats (`kof_memstats` port included here, it is the observation
+> lever for the following steps).
+> ⚠️ **Correction 12/09 ~20:05 (doc-vs-reality, count in the source — refutes the
+> justification "free without caller = dead code" of the 19:44 refusal):** the
+> riscv slices make **57 `call kof_alloc`** (Mapset0 ×4, Rt0 ×3, RtB0-log ×3,
+> B10/B11/B12/B20/B21/B22 ×2, B1/B15 ×1…) and **ZERO `call kof_free`** — whereas
+> x86 has 4 real callers (`RuntimeChannel:132` channel node,
+> `RuntimeLog2:98` log node, `RuntimeObservability1:426`/`2:247`). riscv
+> LEAKS on every log/b64/map-rebuild node: the bump never returns (it is the reason for the
+> ~260KB fixed `.bss`). G-1 is NOT dead code — it is what closes the leak
+> of the 57 allocations. **Missing to execute: host with toolchain** (the new
+> free/memstats asm is only deliverable with qemu proof — guard `assumeTrue`, never
+> non-executed asm). Port order (proposed): riscv `kof_free` (1:1 port
+> of `RuntimeMemory.emitFree` — G-0 32B header already has size/flags/next) →
+> `kof_memstats` (counters + print) → wire free into the log nodes (RtB0,
+> mirroring `RuntimeLog2:98`) → E2E alloc/free/alloc cycle reuses slot.
+> **G-2 header flags/mark bits + GC list** — the block allocates with flag=0 and enters
+> the global gc-list (`kof_gc_head` riscv); proof: program with N allocs and
+> `KOF_GC_DEBUG` dump of the list (write syscalls) with correct size/flag.
+> **G-3 conservative mark riscv** — port of `kof_gc_mark`: walk `sp..fp`
+> (riscv: `sp` up to the frame limit, 4KB fallback like x86) + scan of
+> static roots EXPLICIT in the `.data..kof_heap_root_end` interval
+> (the `kof_heap_root_end` of #97 S-5-x86 is a SHARED PREREQUISITE —
+> coordinate with the bugfix queue, do not duplicate the emitter); transitive = walk of the
+> fields by size (size/8). Proof: object reached only by the stack survives,
+> unreachable one disappears (test with `KOF_GC_DEBUG` before/after; WITHOUT sweep yet —
+> mark-only is observable, harmless).
+> **G-4 sweep + collect on alloc** — free-list receives the dead; `kof_gc_collect`
+> ported (tick 4096 like x86); proof: LEAK test that today is
+> impossible (alloc loop that would overflow the 260KB bump runs and memory
+> does not grow monotonically — measure via G-1 memstats).
+> **G-5 aarch64** — inherits everything via translator (the riscv directives/labels pass
+> unscathed — same path as the S-4 prune; `amoadd.d`→`ldadd` already translated,
+> `NativeAarch64Translator.java:299`); gate: aarch suite 39/39 under qemu +
+> the G-4 leak test also on aarch.
+> Each step: commit with the complete cross suite green + DOING.md on the line.
+> Do NOT mix with S-5-x86/root_end (bugfix queue) — but G-3 DEPENDS on it;
+> G-0/G-1/G-2 move ahead without root_end.
 >
-> **Status:** `EM DESENVOLVIMENTO (parcial)` — **riscv64 + aarch64 com core completo (03/09)**: classes/arrays/List/strings/instanceof/switch/try-catch/FP/recursão em asm puro nos dois; paridade avançada pendente *(ver re-auditoria 12/09 acima — muito do que estava "pendente" já roda sob qemu; o que falta tem código de gap honesto)*.
-> **Versão:** 0.2.6-beta · **Data:** 2026-09-03
-> **Gap:** `NATIVE002` (riscv64 core ✅ 02/09; aarch64 core ✅ 03/09 via tradução riscv→aarch64; paridade total x86 — JSON/DB/HTTP/concorrência/UI/net — pendente nos dois).
-> **Progresso 03/09:** toolchain cruzada + qemu + **codegen riscv64 + aarch64** (stack machine,
-> `sp`=operandos/`s11`/`x29`=frame pointer, modelo idêntico ao x86_64) + **runtime asm puro** —
+> **Status:** `IN DEVELOPMENT (partial)` — **riscv64 + aarch64 with complete core (03/09)**: classes/arrays/List/strings/instanceof/switch/try-catch/FP/recursion in pure asm on both; advanced parity pending *(see re-audit 12/09 above — much of what was "pending" already runs under qemu; what remains has an honest gap code)*.
+> **Version:** 0.2.6-beta · **Date:** 2026-09-03
+> **Gap:** `NATIVE002` (riscv64 core ✅ 02/09; aarch64 core ✅ 03/09 via riscv→aarch64 translation; total x86 parity — JSON/DB/HTTP/concurrency/UI/net — pending on both).
+> **Progress 03/09:** cross toolchain + qemu + **riscv64 + aarch64 codegen** (stack machine,
+> `sp`=operands/`s11`/`x29`=frame pointer, model identical to x86_64) + **pure asm runtime** —
 > `NativeRiscv64E2ETest 13/13` (`qemu-riscv64`) + `NativeAarch64E2ETest 13/13` (`qemu-aarch64`): println(String/Int), `var`, `if/else`,
-> aritmética/comparações, **classes (virtual dispatch/fields/métodos), arrays, List,
+> arithmetic/comparisons, **classes (virtual dispatch/fields/methods), arrays, List,
 > switch, try/catch/throw, pattern matching (`switch String s`/`instanceof`/`as`),
-> String methods, recursão**. Ver §2.3.
-> **Decisão (02/09):** runtime por arch **em assembly puro**, no mesmo estilo do x86_64
-> (`NativeRuntime.generateRuntimeAssembly`) — **sem C** ("Kof é Kof"; o `kof-c-compiler`
-> é outra ferramenta, não um runtime). O C compilado com gcc cruzado que foi usado em
-> 02/09 como validação de ABI foi descartado: riscv64/aarch64 passam a emitir runtime asm
-> puro (bump allocator + raw syscalls `write`/`exit`, sem PLT/libc) e linkam estático via `ld`, idêntico ao modelo x86_64 (sem dependência de libc).
-> **Escopo:** expandir o `NativeBackend` (hoje `x86_64` em asm puro) para
-> `riscv64` e `aarch64` Linux, preservando `frontend → Kof IR → backend` e
-> paridade `JVM/Native/JS`. Este doc vive em `docs/` (não em `docs/future/`)
-> porque **já há código em desenvolvimento** — ele documenta o estado real e
-> como finalizar.
+> String methods, recursion**. See §2.3.
+> **Decision (02/09):** runtime per arch **in pure assembly**, in the same style as x86_64
+> (`NativeRuntime.generateRuntimeAssembly`) — **without C** ("Kof is Kof"; `kof-c-compiler`
+> is another tool, not a runtime). The C compiled with cross gcc that was used on
+> 02/09 as ABI validation was discarded: riscv64/aarch64 now emit pure asm
+> runtime (bump allocator + raw syscalls `write`/`exit`, no PLT/libc) and link statically via `ld`, identical to the x86_64 model (no libc dependency).
+> **Scope:** expand the `NativeBackend` (today `x86_64` in pure asm) to
+> `riscv64` and `aarch64` Linux, preserving `frontend → Kof IR → backend` and
+> `JVM/Native/JS` parity. This doc lives in `docs/` (not in `docs/future/`)
+> because **there is already code in development** — it documents the real state and
+> how to finish it.
 
-## 1. Objetivo
+## 1. Objective
 
-Levar o `NativeBackend` de `x86_64` único para multi-arch Linux sem quebrar
+Take the `NativeBackend` from single `x86_64` to multi-arch Linux without breaking
 `KofPatternMatchingTest` 10/10 (`switch String s` / `instanceof` / `as` /
-`checkcast`) e a suíte `NativeE2ETest`.
+`checkcast`) and the `NativeE2ETest` suite.
 
-Não inclui macOS/Windows, GC avançado ou `kof.web` nativo completo (ver
-"fora de escopo").
+It does not include macOS/Windows, advanced GC or complete native `kof.web` (see
+"out of scope").
 
-## 2. Estado Real (auditoria 01/09)
+## 2. Real State (audit 01/09)
 
-> **Regra desta pasta:** `docs/` documenta o que **está em desenvolvimento**;
-> `docs/future/` só o que **é plano futuro** (zero código). Este item já tem
-> código, por isso está aqui.
+> **Rule of this folder:** `docs/` documents what **is in development**;
+> `docs/future/` only what **is a future plan** (zero code). This item already has
+> code, which is why it is here.
 
-### 2.1 O que JÁ ESTÁ FEITO (plumbing)
+### 2.1 What IS ALREADY DONE (plumbing)
 
-| Peça | Estado | Onde |
+| Piece | State | Where |
 |------|--------|------|
-| Enum `Target.NATIVE_RISCV64` / `NATIVE_AARCH64` | ✅ | `Target.java` (valores distintos de `NATIVE`; `NATIVE` continua = `x86_64`) |
-| `Target.isNative()` cobre os 3 nativos | ✅ | `Target.java` |
+| Enum `Target.NATIVE_RISCV64` / `NATIVE_AARCH64` | ✅ | `Target.java` (values distinct from `NATIVE`; `NATIVE` remains = `x86_64`) |
+| `Target.isNative()` covers the 3 natives | ✅ | `Target.java` |
 | `Target.nativeArch()` → `x86_64`/`riscv64`/`aarch64` | ✅ | `Target.java` |
 | CLI `native.risc`/`native.riscv64`/`native.riscv` → `NATIVE_RISCV64` | ✅ | `Main.java:364` |
 | CLI `native.arm`/`native.aarch64`/`native.aarch` → `NATIVE_AARCH64` | ✅ | `Main.java:365` |
-| `kof build`/`run` aceitam `native.risc`/`native.arm` | ✅ | `status.md:13-14` |
+| `kof build`/`run` accept `native.risc`/`native.arm` | ✅ | `status.md:13-14` |
 | Dispatch `emit()` → `emitRiscv`/`emitAarch64` | ✅ | `NativeBackend.java:210-215` |
-| Cross toolchain invocado (as/ld + dynamic-linker + `-lc`) | ✅ | `NativeBackend.emitRiscv`/`emitAarch64` |
-| Fallback gracioso sem toolchain (`keeping asm`) | ✅ | idem (try/catch `IOException`) |
+| Cross toolchain invoked (as/ld + dynamic-linker + `-lc`) | ✅ | `NativeBackend.emitRiscv`/`emitAarch64` |
+| Graceful fallback without toolchain (`keeping asm`) | ✅ | idem (try/catch `IOException`) |
 
-**Consequência prática:** `kof build --target native.risc` **compila e gera um
-binário** (um stub que sai com `0`) — o pipeline de toolchain/cross-as/ld já
-funciona de ponta a ponta.
+**Practical consequence:** `kof build --target native.risc` **compiles and generates a
+binary** (a stub that exits with `0`) — the toolchain/cross-as/ld pipeline already
+works end to end.
 
-### 2.2 O que AINDA NÃO ESTÁ FEITO (codegen — o gap real `NATIVE002`)
+### 2.2 What is NOT DONE YET (codegen — the real gap `NATIVE002`)
 
-| Peça | Estado | Detalhe |
+| Piece | State | Detail |
 |------|--------|---------|
-| **Lowering real riscv64 (core)** | ✅ completo 02/09 | `emitRiscv` emite o IR em asm: stack machine (`sp`=pilha de operandos, `s11`=frame pointer, `ra`/`s11` salvos no frame — modelo idêntico ao x86_64) + `.macro pop`; todos os ops do core: literal/local/field/binary (int+FP+bitwise)/unary/condjump/jump/label/call (println/print/valueOf/String methods/coleções/construtor/vtable virtual/FUNCTION/STATIC)/new_object/dup/pop/checkcast/instanceof/arrays/throw/try/catch/return. `NativeRiscv64E2ETest 13/13` |
-| **Lowering real aarch64 (core)** | ✅ completo 03/09 | `emitAarch64` = **tradução linha-a-linha do riscv64** (mesmo modelo/lowering, ISA ARMv8-A: `sp`=pilha/`x29`=frame pointer, `x30`/`x29` salvos, `.macro pop` → `ldr`/`add`, `sp` já 16-alinhado no `_start`, `str sp` via temp `x17`). `translateRiscvToAarch64` cobre int+FP (`slt`/`sle`/`seqz`/`snez`/`sext.w`/`fcvt`/`fmv`/`fadd`/`feq`…), `andi`/`ori` via `movk x17`, `sd sp` via `mov x17,sp`. `NativeAarch64E2ETest 13/13` (`qemu-aarch64`) |
-| Ops fora do core riscv64/aarch64 (JSON/DB/HTTP/concorrência/UI/net) | ❌ diagnóstico `NATIVE002` | ops desconhecidos emitem comentário `# NATIVE002: op fora do caminho feliz` (nunca binário mudo) |
-| Os 18 métodos `emit*` reais (x86_64) | ✅ | `emitBinary`/`emitOperation`/`emitMethod`/`emitConditionalJump`/vcall… — o caminho completo continua só em x86_64 |
-| Extração de `NativeBase` (layout/`kof_alloc`/mangle comum) | ❌ não existe | `NativeBackend` ainda é monolítico x86_64 (riscv/aarch64 reusam o mesmo lowering via tradução) |
-| Runtime por arch (asm) | ✅ riscv64 + aarch64 core | `kof_alloc`(bump)/`kof_memcpy`/strings (literal/concat/equals/charAt/substring/contains/startsWith/endsWith/indexOf/toInt/length)/int-long-bool→string/print/objects (`init_object`/`instanceof`/super_table/vtables)/arrays (alloc/get/set/length+bounds)/List (new/add/get/set/size/contains/grow)/exceções (`throw`/exc_chain/`null_error`/`bounds_error`) em **asm puro** riscv64 **e** aarch64 (raw syscalls, sem libc; aarch64 via `translateRiscvToAarch64` — `adrp`+`add :lo12:`, `svc #0`, `and sp` skip, `str sp` via `x17`); `qemu-riscv64`/`qemu-aarch64` (ver §2.3). |
-| Testes E2E `qemu` (aarch64/riscv64) | ✅ | `NativeRiscv64E2ETest` 42/42 + `NativeAarch64E2ETest` 42/42 (84 testes cross, medidos por @Test + surefire 13/09) |
-| CI com cross toolchains | ✅ existe (13/09) | job `cross-native` em `.github/workflows/ci.yml` (instala binutils-riscv64/aarch64 + qemu-user-static e roda as 2 suites; provado `success` no run 34732932745) |
-| `backend-parity.md` colunas por arch | ⚠️ parcial | delta citado, colunas `NATIVE_X86_64/AARCH64/RISCV64` separadas pendentes |
+| **Real riscv64 lowering (core)** | ✅ complete 02/09 | `emitRiscv` emits the IR in asm: stack machine (`sp`=operand stack, `s11`=frame pointer, `ra`/`s11` saved in the frame — model identical to x86_64) + `.macro pop`; all core ops: literal/local/field/binary (int+FP+bitwise)/unary/condjump/jump/label/call (println/print/valueOf/String methods/collections/constructor/vtable virtual/FUNCTION/STATIC)/new_object/dup/pop/checkcast/instanceof/arrays/throw/try/catch/return. `NativeRiscv64E2ETest 13/13` |
+| **Real aarch64 lowering (core)** | ✅ complete 03/09 | `emitAarch64` = **line-by-line translation of riscv64** (same model/lowering, ARMv8-A ISA: `sp`=stack/`x29`=frame pointer, `x30`/`x29` saved, `.macro pop` → `ldr`/`add`, `sp` already 16-aligned in `_start`, `str sp` via temp `x17`). `translateRiscvToAarch64` covers int+FP (`slt`/`sle`/`seqz`/`snez`/`sext.w`/`fcvt`/`fmv`/`fadd`/`feq`…), `andi`/`ori` via `movk x17`, `sd sp` via `mov x17,sp`. `NativeAarch64E2ETest 13/13` (`qemu-aarch64`) |
+| Ops outside the riscv64/aarch64 core (JSON/DB/HTTP/concurrency/UI/net) | ❌ diagnostic `NATIVE002` | unknown ops emit the comment `# NATIVE002: op outside the happy path` (never a silent binary) |
+| The 18 real `emit*` methods (x86_64) | ✅ | `emitBinary`/`emitOperation`/`emitMethod`/`emitConditionalJump`/vcall… — the complete path remains only on x86_64 |
+| Extraction of `NativeBase` (common layout/`kof_alloc`/mangle) | ❌ does not exist | `NativeBackend` is still monolithic x86_64 (riscv/aarch64 reuse the same lowering via translation) |
+| Runtime per arch (asm) | ✅ riscv64 + aarch64 core | `kof_alloc`(bump)/`kof_memcpy`/strings (literal/concat/equals/charAt/substring/contains/startsWith/endsWith/indexOf/toInt/length)/int-long-bool→string/print/objects (`init_object`/`instanceof`/super_table/vtables)/arrays (alloc/get/set/length+bounds)/List (new/add/get/set/size/contains/grow)/exceptions (`throw`/exc_chain/`null_error`/`bounds_error`) in **pure asm** riscv64 **and** aarch64 (raw syscalls, no libc; aarch64 via `translateRiscvToAarch64` — `adrp`+`add :lo12:`, `svc #0`, `and sp` skip, `str sp` via `x17`); `qemu-riscv64`/`qemu-aarch64` (see §2.3). |
+| E2E `qemu` tests (aarch64/riscv64) | ✅ | `NativeRiscv64E2ETest` 42/42 + `NativeAarch64E2ETest` 42/42 (84 cross tests, measured by @Test + surefire 13/09) |
+| CI with cross toolchains | ✅ exists (13/09) | job `cross-native` in `.github/workflows/ci.yml` (installs binutils-riscv64/aarch64 + qemu-user-static and runs the 2 suites; proved `success` in run 34732932745) |
+| `backend-parity.md` columns per arch | ⚠️ partial | delta cited, separate `NATIVE_X86_64/AARCH64/RISCV64` columns pending |
 
-**Consequência prática (SUPERADA — foto de 01/09):** valia p/ o stub
-original de plumbing; hoje (re-auditoria 12/09 no topo) riscv/aarch **executam
-a lógica** sob qemu — 42+42 testes E2E cross, inclusive programas reais com
-`println`/`instanceof`/`switch`/Map/Set/higher-order byte-idênticos ao JVM.
-O que restou de honesto nesta tabela: `NativeBase` não extraído, colunas por
-arch em `backend-parity.md` não separadas, e as faces de ops fora do core
-(JSON/DB/UI por arch específico).
+**Practical consequence (SUPERSEDED — snapshot of 01/09):** it was valid for the original
+plumbing stub; today (re-audit 12/09 at the top) riscv/aarch **execute
+the logic** under qemu — 42+42 cross E2E tests, including real programs with
+`println`/`instanceof`/`switch`/Map/Set/higher-order byte-identical to the JVM.
+What remains honest in this table: `NativeBase` not extracted, per-arch columns
+in `backend-parity.md` not separated, and the faces of ops outside the core
+(JSON/DB/UI per specific arch).
 
-### 2.3 Runtime em assembly puro por arch (decisão 02/09)
+### 2.3 Runtime in pure assembly per arch (decision 02/09)
 
-**Não há runtime em C no Kof.** O nativo x86_64 é asm puro de ponta a ponta: o
-runtime (`kof_alloc`, `kof_string_*`, `kof_instanceof`, …) é emitido em
-assembly por `NativeRuntime.generateRuntimeAssembly()` e linkado com
-`ld -dynamic-linker /lib64/ld-linux-x86-64.so.2 -lc` — a libc entra via PLT
-(`printf`/`snprintf`), sem C compilado. (O módulo `kof-c-compiler` é outra
-ferramenta — reimplementação do sectorC — e **não** é um runtime.)
+**There is no C runtime in Kof.** The x86_64 native is pure asm end to end: the
+runtime (`kof_alloc`, `kof_string_*`, `kof_instanceof`, …) is emitted in
+assembly by `NativeRuntime.generateRuntimeAssembly()` and linked with
+`ld -dynamic-linker /lib64/ld-linux-x86-64.so.2 -lc` — libc enters via PLT
+(`printf`/`snprintf`), without compiled C. (The `kof-c-compiler` module is another
+tool — reimplementation of sectorC — and is **not** a runtime.)
 
-Decisão para riscv64/aarch64: **mesmo caminho** — runtime emitido em asm
-puro por arch + `ld -dynamic-linker /lib/ld-linux-<arch>.so.1 -lc`. Um C
-compilado com gcc cruzado foi usado brevemente (02/09) apenas para validar a
-ABI/estática no qemu; ele foi descartado da arquitetura.
+Decision for riscv64/aarch64: **same path** — runtime emitted in pure
+asm per arch + `ld -dynamic-linker /lib/ld-linux-<arch>.so.1 -lc`. A C
+compiled with cross gcc was used briefly (02/09) only to validate the
+ABI/static linking on qemu; it was discarded from the architecture.
 
-Toolchain instalada (02/09, via `sudo apt`):
+Installed toolchain (02/09, via `sudo apt`):
 `binutils-riscv64-linux-gnu`, `binutils-aarch64-linux-gnu`, `qemu-user`,
 `gcc-riscv64-linux-gnu`/`gcc-aarch64-linux-gnu` (debug),
 `libc6-riscv64-cross`, `libc6-arm64-cross`.
 
-Pipeline alvo (`emitRiscv`/`emitAarch64`):
+Target pipeline (`emitRiscv`/`emitAarch64`):
 ```
-Main.s  (programa: kof_main + seções .data/.rodata)
-      + runtime asm riscv64/aarch64 (emitido pelo NativeBackend)
+Main.s  (program: kof_main + .data/.rodata sections)
+      + riscv64/aarch64 asm runtime (emitted by NativeBackend)
    └─ <arch>-as → <arch>-ld -dynamic-linker /lib/ld-linux-<arch>.so.1 -lc
-   └─ qemu-<arch> → saída esperada (exit 0)
+   └─ qemu-<arch> → expected output (exit 0)
 ```
 
-Detalhes do runtime riscv64/aarch64 (inc-0 02/09 + 03/09):
-- alocação: **bump allocator** em `.bss` (sem `mmap` — evita problemas de
-  qemu estático; o x86_64 usa `mmap`+free-list, e riscv64/aarch64 seguem o modelo
-  com bump até a paridade de GC).
-- strings: layout **idêntico ao x86_64** — `[typeId@0 i32][super@4 i32]
+Runtime details for riscv64/aarch64 (inc-0 02/09 + 03/09):
+- allocation: **bump allocator** in `.bss` (no `mmap` — avoids problems with
+  static qemu; x86_64 uses `mmap`+free-list, and riscv64/aarch64 follow the model
+  with bump until GC parity).
+- strings: layout **identical to x86_64** — `[typeId@0 i32][super@4 i32]
   [vtable@8 ptr][len@16 i32][data@24 …]` (`KOF_STRING_TYPE_ID=1`).
-- saída: raw syscall `write(1, …)` (`a7=64` riscv / `x8=64` arm) + `exit` (`a7/x8=93`) — binário **estático**, sem libc/PLT.
-- aarch64: **tradução mecânica** do runtime riscv64 (`riscv2arm.py` validado + `translateRiscvToAarch64` em `NativeBackend.java:3650`): `la`→`adrp`+`add :lo12:`, `ecall`→`svc #0`, `and sp` skip (sp já 16-alinhado), `str sp` via `mov x17,sp`, `andi -16` via `movk x17`+`and`, `rem`→`sdiv`+`msub`, `slt/sle`→`cmp`+`cset`, FP `fcvt`→`scvtf`/`fmv`→`fmov`/`fadd`→`fadd`/`feq`→`fcmp`+`cset`.
-- validação: `NativeRiscv64E2ETest 13/13` via `qemu-riscv64` + `NativeAarch64E2ETest 13/13` via `qemu-aarch64` (core completo).
+- output: raw syscall `write(1, …)` (`a7=64` riscv / `x8=64` arm) + `exit` (`a7/x8=93`) — **static** binary, no libc/PLT.
+- aarch64: **mechanical translation** of the riscv64 runtime (`riscv2arm.py` validated + `translateRiscvToAarch64` in `NativeBackend.java:3650`): `la`→`adrp`+`add :lo12:`, `ecall`→`svc #0`, `and sp` skip (sp already 16-aligned), `str sp` via `mov x17,sp`, `andi -16` via `movk x17`+`and`, `rem`→`sdiv`+`msub`, `slt/sle`→`cmp`+`cset`, FP `fcvt`→`scvtf`/`fmv`→`fmov`/`fadd`→`fadd`/`feq`→`fcmp`+`cset`.
+- validation: `NativeRiscv64E2ETest 13/13` via `qemu-riscv64` + `NativeAarch64E2ETest 13/13` via `qemu-aarch64` (complete core).
 
-O que **restou** para os próximos incrementos:
-- riscv64 + aarch64: Map/Set, higher-order (map/filter/reduce), JSON/DB/HTTP/concorrência/
-  UI/net — paridade total com o x86_64 (mesmo gap nos dois; hoje diagnóstico `NATIVE002`).
+What **remained** for the next increments:
+- riscv64 + aarch64: Map/Set, higher-order (map/filter/reduce), JSON/DB/HTTP/concurrency/
+  UI/net — total parity with x86_64 (same gap on both; today diagnostic `NATIVE002`).
 
-## 3. Arquitetura (alvo)
+## 3. Architecture (target)
 
-> **Nota:** a implementação real divergiu do esboço original (que propunha
-> renomear para `NATIVE_X86_64` + flag `--arch`). A decisão adotada foi **valores
-> de enum distintos** (`NATIVE` = x86_64, `NATIVE_RISCV64`, `NATIVE_AARCH64`) +
-> **nome de target no CLI** (`native.risc`/`native.arm`) — sem flag `--arch` e
-> sem renomear `NATIVE` (mantém compat). Segue a decisão real.
+> **Note:** the real implementation diverged from the original sketch (which proposed
+> renaming to `NATIVE_X86_64` + `--arch` flag). The decision adopted was **distinct
+> enum values** (`NATIVE` = x86_64, `NATIVE_RISCV64`, `NATIVE_AARCH64`) +
+> **target name in the CLI** (`native.risc`/`native.arm`) — without the `--arch` flag and
+> without renaming `NATIVE` (keeps compat). It follows the real decision.
 
 ```
 Target enum:
   JVM, NATIVE (=x86_64), NATIVE_RISCV64, NATIVE_AARCH64, JS, ANDROID
 
-IRModule → NativeBackend.emit (select por target):
-  NATIVE          → lowering x86_64 (completo, 18 emit*)   [FEITO]
-  NATIVE_RISCV64  → emitRiscv   (core completo 02/09, 13/13) [FEITO]
-  NATIVE_AARCH64  → emitAarch64 (core completo 03/09, 13/13 via tradução) [FEITO]
-  → (meta) extrair NativeBase: ClassLayout, kof_alloc, mangle, resolveFieldOffset
+IRModule → NativeBackend.emit (select by target):
+  NATIVE          → x86_64 lowering (complete, 18 emit*)   [DONE]
+  NATIVE_RISCV64  → emitRiscv   (complete core 02/09, 13/13) [DONE]
+  NATIVE_AARCH64  → emitAarch64 (complete core 03/09, 13/13 via translation) [DONE]
+  → (goal) extract NativeBase: ClassLayout, kof_alloc, mangle, resolveFieldOffset
 ```
 
-`kof build --target native.risc|native.arm` (já funciona no dispatch).
+`kof build --target native.risc|native.arm` (already works in dispatch).
 
-## 4. Mapeamento por Arch (referência para o lowering)
+## 4. Per-Arch Mapping (reference for the lowering)
 
-| Aspecto | x86_64 (atual) | AArch64 | RISC-V 64 |
+| Aspect | x86_64 (current) | AArch64 | RISC-V 64 |
 |---------|----------------|---------|-----------|
 | **Assembler** | `as` GNU | `aarch64-linux-gnu-as` | `riscv64-linux-gnu-as` |
-| **Linker** | `ld -dynamic-linker /lib64/ld-linux-x86-64.so.2 -lc` (x86_64 usa PLT/libc) | `aarch64-linux-gnu-ld` **estático** (raw syscalls, sem `-lc`) | `riscv64-linux-gnu-ld` **estático** (raw syscalls, sem `-lc`) |
+| **Linker** | `ld -dynamic-linker /lib64/ld-linux-x86-64.so.2 -lc` (x86_64 uses PLT/libc) | `aarch64-linux-gnu-ld` **static** (raw syscalls, no `-lc`) | `riscv64-linux-gnu-ld` **static** (raw syscalls, no `-lc`) |
 | **Regs args** | `rdi rsi rdx rcx r8 r9` | `x0 x1 x2 x3 x4 x5` | `a0 a1 a2 a3 a4 a5` |
 | **Regs temp** | `rax rcx rbx r10` | `x9 x10 x11 x12` | `t0 t1 t2 t3` |
 | **Ret** | `rax` | `x0` | `a0` |
@@ -257,69 +259,69 @@ IRModule → NativeBackend.emit (select por target):
 | **Call** | `call sym` | `bl sym` | `call sym`/`jal` |
 | **Vcall** | `mov 8(%rax),%rbx; add $idx*8,%rbx; mov (%rbx),%rbx; call *%rbx` | `ldr x9,[x0,#8]; add x9,x9,#idx*8; ldr x9,[x9]; blr x9` | `ld t0,8(a0); addi t0,idx*8; ld t0,0(t0); jalr t0` |
 | **Cmp/Jmp** | `cmpq %rax,%rcx; je L; jmp M` | `cmp x1,x0; b.eq L; b M` | `sub t0,a0,a1; beqz t0,L; j M` |
-| **String header** | `24B [typeId@0][vtable@8][len@16]` | idem | idem |
+| **String header** | `24B [typeId@0][vtable@8][len@16]` | same | same |
 | **Syscall exit** | `mov $60,%rax; xor %rdi,%rdi; syscall` | `mov x8,#93; mov x0,#0; svc #0` | `li a7,93; li a0,0; ecall` |
 
-`kof_alloc`/`kof_instanceof`/`kof_string_*` por arch com `KOF_STRING_TYPE_ID=1`
-constante.
+`kof_alloc`/`kof_instanceof`/`kof_string_*` per arch with `KOF_STRING_TYPE_ID=1`
+constant.
 
-## 5. Como Finalizar (passo a passo — reflete o plumbing que já existe)
+## 5. How to Finish (step by step — reflects the plumbing that already exists)
 
-> O encanamento (enum + CLI + dispatch + toolchain) **já está pronto**. O que
-> falta é a codegen. Ordem incremental, sem quebrar `x86_64`:
+> The plumbing (enum + CLI + dispatch + toolchain) **is already ready**. What is
+> missing is the codegen. Incremental order, without breaking `x86_64`:
 
-1. **Extrair `NativeBase`** — tirar para uma classe/interface comum:
+1. **Extract `NativeBase`** — move to a common class/interface:
    `getLayoutForType`/`sanitize`/`mangle`/`resolveFieldOffset`/`collectStrings`
-   (hoje em `NativeBackend`). `NativeBackend` (x86_64) herda e continua igual.
-   → validar `mvn test -Dtest=CompilerDriverTest` (nenhum `emit` muda).
-   *Depende de: nada. Não muda binário x86_64.*
+   (today in `NativeBackend`). `NativeBackend` (x86_64) inherits and stays the same.
+   → validate `mvn test -Dtest=CompilerDriverTest` (no `emit` changes).
+   *Depends on: nothing. Does not change the x86_64 binary.*
 
-2. **Runtime por arch** — mover `kof_alloc`/`kof_instanceof`/`kof_string_*`
-   para asm por arch (hoje inline em `NativeRuntime` x86_64); o `emit` de cada
-   target inclui a seção `.s` correta. *Depende de 1.*
+2. **Runtime per arch** — move `kof_alloc`/`kof_instanceof`/`kof_string_*`
+   to asm per arch (today inline in x86_64 `NativeRuntime`); the `emit` of each
+   target includes the correct `.s` section. *Depends on 1.*
 
-3. **`Riscv64Backend` mínimo** — substituir o stub `emitRiscv` por lowering real
-   do caminho feliz: `String`/`println`/`instanceof String` + `switch String s`
-   + `checkcast` no-op, usando os mapeamentos da tabela §4.
-   → `qemu-riscv64` rodando `hello` (teste `assume` se `qemu`/`riscv64-as`
-   ausentes, como `NativeE2ETest`). *Depende de 1,2.*
+3. **Minimal `Riscv64Backend`** — replace the `emitRiscv` stub with real lowering
+   of the happy path: `String`/`println`/`instanceof String` + `switch String s`
+   + `checkcast` no-op, using the mappings of table §4.
+   → `qemu-riscv64` running `hello` (test `assume` if `qemu`/`riscv64-as`
+   are absent, like `NativeE2ETest`). *Depends on 1,2.*
 
-4. **`Aarch64Backend` mínimo** — idem para aarch64 (`qemu-aarch64`). *Depende de 1,2.*
+4. **Minimal `Aarch64Backend`** — idem for aarch64 (`qemu-aarch64`). *Depends on 1,2.*
 
-5. **Coleções + classes** — `kof_list_*`/`kof_map_*`/`kof_set_*` e
-   `kof_instanceof` para classes de usuário (o `Dummy` usado em
-   `KofPatternMatchingTest`). *Depende de 3,4.*
+5. **Collections + classes** — `kof_list_*`/`kof_map_*`/`kof_set_*` and
+   `kof_instanceof` for user classes (the `Dummy` used in
+   `KofPatternMatchingTest`). *Depends on 3,4.*
 
-6. **Testes E2E multi-arch** — `NativeRiscv64E2ETest` + `NativeAarch64E2ETest`
-   (`@Tag("slow")`, `assume` p/ `qemu`+cross-as ausentes) rodando a mesma fonte
-   que `KofPatternMatchingTest` roda em x86_64/JS. *Depende de 5.*
+6. **Multi-arch E2E tests** — `NativeRiscv64E2ETest` + `NativeAarch64E2ETest`
+   (`@Tag("slow")`, `assume` for absent `qemu`+cross-as) running the same source
+   that `KofPatternMatchingTest` runs on x86_64/JS. *Depends on 5.*
 
-7. **CI** — toolchains `x86_64` sempre; `aarch64`/`riscv64` com
-   `if: cross-available` (não quebrar o pipeline quando a toolchain falta).
-   *Depende de 6.*
+7. **CI** — `x86_64` toolchains always; `aarch64`/`riscv64` with
+   `if: cross-available` (do not break the pipeline when the toolchain is missing).
+   *Depends on 6.*
 
-8. **Docs** — `backend-parity.md`: colunas separadas
-   `NATIVE_X86_64`/`AARCH64`/`RISCV64`; remover `NATIVE002` quando 6 verde.
-   *Depende de 6.*
+8. **Docs** — `backend-parity.md`: separate columns
+   `NATIVE_X86_64`/`AARCH64`/`RISCV64`; remove `NATIVE002` when 6 is green.
+   *Depends on 6.*
 
-**Critério de pronto:** `var x:Object="hello"; switch(x){case String s: println(s)}`
-compila e roda **idêntico** em `x86_64`, `aarch64 (qemu)`, `riscv64 (qemu)` e
-`JS` (`typeof==="string"`); `KofPatternMatchingTest` 10/10 por arch.
+**Definition of done:** `var x:Object="hello"; switch(x){case String s: println(s)}`
+compiles and runs **identical** on `x86_64`, `aarch64 (qemu)`, `riscv64 (qemu)` and
+`JS` (`typeof==="string"`); `KofPatternMatchingTest` 10/10 per arch.
 
-## 6. Riscos e Mitigação
+## 6. Risks and Mitigation
 
-- **Stack ABI 16-byte** (ARM/RISC-V exigem `sp` alinhado) → usar pares
-  `str/ld` de 16.
-- **Reloc RIP vs PC-relative**: x64 `leaq sym(%rip)` → ARM `adrp`+`add` /
+- **16-byte Stack ABI** (ARM/RISC-V require aligned `sp`) → use 16-byte
+  `str/ld` pairs.
+- **RIP vs PC-relative reloc**: x64 `leaq sym(%rip)` → ARM `adrp`+`add` /
   RISC-V `auipc`+`ld`.
-- **Cross toolchain ausente** → `assume` skip, não falhar `mvn test`.
-- **QEMU lento** → `NativeE2ETest` só x86_64 rápido; aarch64/riscv64 em
+- **Cross toolchain absent** → `assume` skip, do not fail `mvn test`.
+- **QEMU slow** → `NativeE2ETest` only fast x86_64; aarch64/riscv64 in
   `@Tag("slow")`.
-- **Divergência silenciosa**: stub atual "passa" gerando binário → garantir que
-  o gap `NATIVE002` seja **diagnóstico claro** (não binário que silencia a
-  lógica) até o lowering existir.
+- **Silent divergence**: the current stub "passes" by generating a binary → ensure
+  the `NATIVE002` gap is a **clear diagnostic** (not a binary that silences the
+  logic) until the lowering exists.
 
-## 7. Fora de Escopo (ficam em `docs/future/` / outros docs)
+## 7. Out of Scope (stay in `docs/future/` / other docs)
 
-- `GC` mark-sweep avançado, `float/double` no Native (`F2D`), `kof.web`
-  `listen` nativo, `macOS` Mach-O / `Windows` PE.
+- Advanced `GC` mark-sweep, `float/double` on Native (`F2D`), native `kof.web`
+  `listen`, `macOS` Mach-O / `Windows` PE.

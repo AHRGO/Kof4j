@@ -1,12 +1,14 @@
-# Versionamento do Kof
+[English](VERSIONING.md) | [Português](VERSIONING.pt_BR.md)
 
-## Formato
+# Kof Versioning
+
+## Format
 
 ```text
 MAJOR.MINOR.PATCH
 ```
 
-A hierarquia conceitual:
+The conceptual hierarchy:
 
 ```text
 Major releases
@@ -16,30 +18,30 @@ Major fixes
 Bugfixes
 ```
 
-| Componente | Significado |
+| Component | Meaning |
 |-----------|-------------|
-| `X` (MAJOR) | Release maior |
-| `Y` (MINOR) | Major fix / evolução significativa |
-| `Z` (PATCH) | Bugfix — o *pontinho da vergonha* |
+| `X` (MAJOR) | Major release |
+| `Y` (MINOR) | Major fix / significant evolution |
+| `Z` (PATCH) | Bugfix — the *little dot of shame* |
 
-O `PATCH` é carinhosamente chamado de **pontinho da vergonha** porque
-representa principalmente:
+`PATCH` is affectionately called the **little dot of shame** because it
+mainly represents:
 
 - bugfix;
-- correção;
-- regressão;
-- pequenos ajustes;
-- pequenas melhorias sem mudança arquitetural relevante.
+- fix;
+- regression;
+- small adjustments;
+- small improvements without relevant architectural change.
 
-## Estágio atual
+## Current stage
 
-O Kof está no estágio inicial:
+Kof is at the initial stage:
 
 ```text
 0.0.x
 ```
 
-Portanto:
+Therefore:
 
 ```text
 0.0.4
@@ -48,65 +50,63 @@ Portanto:
 ...
 ```
 
-## Convenção Alpha
+## Alpha Convention
 
-Enquanto o Kof estiver em Alpha, o release carrega explicitamente essa
-informação:
+While Kof is in Alpha, the release explicitly carries this information:
 
 ```text
 0.0.5-alpha
 ```
 
-Regras:
+Rules:
 
-- `0.0.5-alpha` identifica o artefato, o GitHub Release e a tag
+- `0.0.5-alpha` identifies the artifact, the GitHub Release and the tag
   (`kof-0.0.5-alpha`);
-- a versão de componente (compiler/runtime/stdlib) é `0.0.4` — o sufixo
-  `-alpha` pertence ao release;
-- nada é chamado de stable;
-- a evolução pretendida é Alpha → Beta → Release Candidate → Stable
-  (sem máquina de estados complexa neste momento).
+- the component version (compiler/runtime/stdlib) is `0.0.4` — the
+  `-alpha` suffix belongs to the release;
+- nothing is called stable;
+- the intended evolution is Alpha → Beta → Release Candidate → Stable
+  (without a complex state machine at this moment).
 
-## Fonte única de verdade
+## Single source of truth
 
-A versão vive em **um único arquivo**: `VERSION` na raiz do repositório.
+The version lives in **a single file**: `VERSION` at the repository root.
 
 ```text
 VERSION ──► scripts/bump-version.sh ──► pom.xml (<revision>)
                                      ──► kof-compiler/src/main/resources/dev/kof/version.properties
 ```
 
-A pipeline atualiza automaticamente:
+The pipeline automatically updates:
 
-- versão do compiler;
-- versão da CLI;
-- metadata do runtime;
-- artefatos (jars);
-- pacote de distribuição;
+- compiler version;
+- CLI version;
+- runtime metadata;
+- artifacts (jars);
+- distribution package;
 - GitHub Release;
 - changelog.
 
-**Nada de versão hardcoded em dezenas de arquivos** — isso é receita para
-inconsistência. Se a versão precisa mudar, muda-se o `VERSION` (ou a
-pipeline faz isso) e o resto segue.
+**No version hardcoded in dozens of files** — that is a recipe for
+inconsistency. If the version needs to change, change `VERSION` (or the
+pipeline does it) and the rest follows.
 
-## Quando a versão muda
+## When the version changes
 
-Enquanto em Alpha, **todo commit na `main` gera a próxima versão Alpha**
-(incremento de PATCH):
+While in Alpha, **every commit on `main` generates the next Alpha version**
+(PATCH increment):
 
 ```text
 0.0.5-alpha → 0.0.5-alpha → 0.0.6-alpha → ...
 ```
 
-Regras de bom senso para o futuro:
+Common-sense rules for the future:
 
-- PATCH: bugfix, correção, regressão;
-- MINOR: evolução significativa de capacidade;
-- MAJOR: mudança arquitetural / quebra de compatibilidade.
+- PATCH: bugfix, fix, regression;
+- MINOR: significant capability evolution;
+- MAJOR: architectural change / compatibility break.
 
-## Verificação
+## Verification
 
-`kof version` e `kof info` reportam a versão empacotada. O CI verifica que
-`VERSION`, `pom.xml` e o resource de versão concordam antes de qualquer
-build.
+`kof version` and `kof info` report the packaged version. CI verifies that
+`VERSION`, `pom.xml` and the version resource agree before any build.

@@ -1,128 +1,130 @@
-# Pipeline de Release
+[English](RELEASES.md) | [Português](RELEASES.pt_BR.md)
 
-Cada commit na `main` representa um estado publicável. A pipeline garante
-que a `main` nunca aponte para um estado que não compila.
+# Release Pipeline
+
+Each commit on `main` represents a publishable state. The pipeline guarantees
+that `main` never points to a state that does not compile.
 
 ```text
-commit na main
+commit on main
       ↓
-CI (ci.yml) — gate: main sempre compila
+CI (ci.yml) — gate: main always compiles
       ↓
 test-and-bump
    ├─ mvn clean package (gate)
    ├─ tests/run-golden.sh (jvm + native)
    ├─ tests/run-integration.sh (CLI + serve + kof test)
-   ├─ version bump (scripts/bump-version.sh) — ex.: 0.2.6-beta → 0.2.6-beta
-   ├─ seção do changelog → CHANGELOG.md
-   └─ commit + push do bump ([skip ci])
+   ├─ version bump (scripts/bump-version.sh) — e.g.: 0.2.6-beta → 0.2.6-beta
+   ├─ changelog section → CHANGELOG.md
+   └─ commit + push of the bump ([skip ci])
       ↓
-package-and-release (matriz — um job por plataforma)
-   ├─ checkout do COMMIT DE BUMP (não o do trigger)
+package-and-release (matrix — one job per platform)
+   ├─ checkout of the BUMP COMMIT (not the trigger one)
    ├─ mvn clean package
-   ├─ sanity check: VERSION do checkout == versão da release
-   ├─ scripts/package.sh --jdk (embute Temurin 21 — Tooling API baseline)
-   ├─ valida o artefato (extrai, bin/kof version + info, JDK embutido)
-   └─ GitHub Release kof-<versão>-<plataforma> com artefato + SHA256SUMS
+   ├─ sanity check: VERSION of the checkout == release version
+   ├─ scripts/package.sh --jdk (embeds Temurin 21 — Tooling API baseline)
+   ├─ validates the artifact (extracts, bin/kof version + info, embedded JDK)
+   └─ GitHub Release kof-<version>-<platform> with artifact + SHA256SUMS
 ```
 
 ---
 
 ## Workflows
 
-### `.github/workflows/ci.yml` — Pull Requests e branches
+### `.github/workflows/ci.yml` — Pull Requests and branches
 
-Executa:
+Runs:
 
-1. Verificação de que `VERSION` e `pom.xml` concordam
+1. Check that `VERSION` and `pom.xml` agree
    (`scripts/bump-version.sh` + `git diff --exit-code`);
-2. `mvn clean test` (todos os testes E2E JVM + Native);
+2. `mvn clean test` (all E2E tests JVM + Native);
 3. `mvn clean package`.
 
-### `.github/workflows/release.yml` — push na `main`
+### `.github/workflows/release.yml` — push to `main`
 
-Dois jobs:
+Two jobs:
 
 1. **test-and-bump** (Ubuntu):
-   - `mvn clean package` — **gate**: nenhuma release é publicada com
-     build quebrado;
-   - `tests/run-golden.sh` (8 casos × jvm+native) e
+   - `mvn clean package` — **gate**: no release is published with a
+     broken build;
+   - `tests/run-golden.sh` (8 cases × jvm+native) and
      `tests/run-integration.sh` (CLI + serve + kof test);
-   - lê `VERSION` (ex.: `0.2.6-beta`), calcula a próxima
-     (`0.2.6-beta`), roda `scripts/bump-version.sh`;
-   - insere a seção do changelog no `CHANGELOG.md`;
-   - commita e faz push do bump (`[skip ci]` para não re-disparar);
-   - exporta o **SHA do commit de bump** (`bump_sha`).
+   - reads `VERSION` (e.g.: `0.2.6-beta`), computes the next one
+     (`0.2.6-beta`), runs `scripts/bump-version.sh`;
+   - inserts the changelog section into `CHANGELOG.md`;
+   - commits and pushes the bump (`[skip ci]` so it does not re-trigger);
+   - exports the **SHA of the bump commit** (`bump_sha`).
 
-2. **package-and-release** (matriz: `ubuntu-latest`/linux-x86_64,
+2. **package-and-release** (matrix: `ubuntu-latest`/linux-x86_64,
    `windows-latest`/windows-x86_64, `macos-latest`/macos-arm64):
-   - **checkout o commit de bump** (via `ref: bump_sha`) — sem isso o
-     checkout traria o commit que disparou o workflow (pré-bump) e o
-     pacote sairia com a versão anterior;
-   - sanity check: `VERSION` do checkout deve ser igual à versão da
-     release (falha a job se divergir);
+   - **checkout the bump commit** (via `ref: bump_sha`) — without this the
+     checkout would bring the commit that triggered the workflow (pre-bump)
+     and the package would come out with the previous version;
+   - sanity check: `VERSION` of the checkout must equal the release
+     version (fails the job if it diverges);
    - `mvn clean package`;
-   - `scripts/package.sh --jdk` (embute Temurin 21);
-   - valida o artefato: extrai, roda `bin/kof version`, `bin/kof info`
-     e verifica o JDK embutido;
-   - cria o **GitHub Release por plataforma**
-     (`kof-<versão>-<plataforma>`) com o pacote, `SHA256SUMS` e o
-     `kof-cli-<versão>.jar`.
+   - `scripts/package.sh --jdk` (embeds Temurin 21);
+   - validates the artifact: extracts, runs `bin/kof version`, `bin/kof info`
+     and verifies the embedded JDK;
+   - creates the **GitHub Release per platform**
+     (`kof-<version>-<platform>`) with the package, `SHA256SUMS` and the
+     `kof-cli-<version>.jar`.
 
 ---
 
-## Tags e releases
+## Tags and releases
 
-- Uma release **por plataforma**: `kof-0.2.6-beta-linux-x86_64`,
+- One release **per platform**: `kof-0.2.6-beta-linux-x86_64`,
   `kof-0.2.6-beta-macos-arm64`, `kof-0.2.6-beta-windows-x86_64`.
-- A mais recente de cada plataforma carrega o selo **Latest**.
-- O usuário instala a partir da release do **seu** sistema
-  (ver [INSTALL.md](INSTALL.md)).
+- The most recent one for each platform carries the **Latest** badge.
+- The user installs from the release for **their** system
+  (see [INSTALL.md](INSTALL.md)).
 
 ---
 
-## Regras
+## Rules
 
-- O release **só** acontece se `mvn clean package`, golden e integration
-  passarem.
-- Nunca publicar uma release quebrada.
-- O bump é commitado com `[skip ci]` para evitar loop de releases.
-- O pacote é construído **a partir do commit de bump** — a tag e o
-  conteúdo do artefato sempre carregam a mesma versão.
+- The release happens **only** if `mvn clean package`, golden and integration
+  pass.
+- Never publish a broken release.
+- The bump is committed with `[skip ci]` to avoid a release loop.
+- The package is built **from the bump commit** — the tag and the
+  artifact contents always carry the same version.
 
 ---
 
-## Artefatos
+## Artifacts
 
 ```text
-kof-<versão>-linux-x86_64.tar.gz     # na release kof-<versão>-linux-x86_64
-kof-<versão>-macos-arm64.tar.gz      # na release kof-<versão>-macos-arm64
-kof-<versão>-windows-x86_64.zip      # na release kof-<versão>-windows-x86_64
-SHA256SUMS                            # em cada release
-kof-cli-<versão>.jar                  # jar standalone (cada release)
+kof-<version>-linux-x86_64.tar.gz     # in the release kof-<version>-linux-x86_64
+kof-<version>-macos-arm64.tar.gz      # in the release kof-<version>-macos-arm64
+kof-<version>-windows-x86_64.zip      # in the release kof-<version>-windows-x86_64
+SHA256SUMS                            # in each release
+kof-cli-<version>.jar                 # standalone jar (each release)
 ```
 
-Cada pacote contém: compiler, CLI, runtime, stdlib, tooling, editor
-support e JDK embutido.
+Each package contains: compiler, CLI, runtime, stdlib, tooling, editor
+support and embedded JDK.
 
 ## Changelog
 
-`CHANGELOG.md` é atualizado pela pipeline via `scripts/changelog.sh`, que
-agrupa os commits desde o último tag pela convenção:
+`CHANGELOG.md` is updated by the pipeline via `scripts/changelog.sh`, which
+groups the commits since the last tag by convention:
 
 ```text
 feat:  fix:  docs:  refactor:  test:  build:  tooling:
 ```
 
-## Execução manual
+## Manual execution
 
 ```bash
 # Local
-scripts/bump-version.sh            # sincroniza VERSION → pom/properties
+scripts/bump-version.sh            # syncs VERSION → pom/properties
 mvn clean test
-scripts/package.sh                 # pacote local sem JDK
-scripts/package.sh --jdk           # pacote oficial com JDK embutido
-scripts/changelog.sh               # seção do changelog no stdout
+scripts/package.sh                 # local package without JDK
+scripts/package.sh --jdk           # official package with embedded JDK
+scripts/changelog.sh               # changelog section on stdout
 
 # GitHub
-# Release manual: GitHub → Actions → Release → Run workflow
+# Manual release: GitHub → Actions → Release → Run workflow
 ```

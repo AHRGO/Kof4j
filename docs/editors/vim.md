@@ -1,30 +1,32 @@
+[English](vim.md) | [Português](vim.pt_BR.md)
+
 # Vim
 
-Integração: filetype + syntax + compiler, idiomáticos de Vim. Semântica via
-LSP (com um plugin de cliente LSP, ex.: `vim-lsp`).
+Integration: filetype + syntax + compiler, idiomatic to Vim. Semantics via
+LSP (with an LSP client plugin, e.g.: `vim-lsp`).
 
-## Instalação automática
+## Automatic installation
 
 ```bash
 kof editor install vim
 ```
 
-Escreve:
+Writes:
 
 - `~/.vim/ftdetect/kof.vim` — `*.kf`/`*.kof` → filetype `kof`.
-- `~/.vim/after/syntax/kof.vim` — highlight por palavras-chave/tipos.
+- `~/.vim/after/syntax/kof.vim` — highlight by keywords/types.
 - `~/.vim/after/ftplugin/kof.vim` — `commentstring`, `expandtab`, `shiftwidth`.
-- `~/.vim/after/compiler/kof.vim` — `:make` delega a `kof build`;
-  `errorformat` casa `arquivo:linha:coluna: msg` (os diagnósticos do Kof).
+- `~/.vim/after/compiler/kof.vim` — `:make` delegates to `kof build`;
+  `errorformat` matches `file:line:column: msg` (the Kof diagnostics).
 
-## Uso
+## Usage
 
 ```vim
 :setfiletype kof
 :make            " kof build
 ```
 
-Para LSP, registre `kof lsp` no seu cliente (ex.: vim-lsp):
+For LSP, register `kof lsp` in your client (e.g.: vim-lsp):
 
 ```vim
 if executable('kof')
@@ -38,4 +40,4 @@ endif
 
 ## Troubleshooting
 
-- Sem highlight: `:syntax list kofKeyword` deve listar os padrões.
+- No highlight: `:syntax list kofKeyword` should list the patterns.

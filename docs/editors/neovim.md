@@ -1,22 +1,24 @@
+[English](neovim.md) | [Português](neovim.pt_BR.md)
+
 # Neovim
 
-Integração: filetype + LSP nativo (`vim.lsp`) apontando para `kof lsp`.
-Nenhum parser próprio — semântica vem do LSP oficial.
+Integration: filetype + native LSP (`vim.lsp`) pointing to `kof lsp`.
+No parser of its own — semantics come from the official LSP.
 
-## Instalação automática
+## Automatic installation
 
 ```bash
 kof editor install neovim
 ```
 
-Escreve:
+Writes:
 
-- `~/.config/nvim/ftdetect/kof.lua` — reconhece `*.kf`/`*.kof` como filetype `kof`.
-- `~/.config/nvim/after/ftplugin/kof.lua` — comenta/indent básicos +
-  `vim.lsp.start({ cmd = { "kof", "lsp" } })` com `root_dir` resolvido por
+- `~/.config/nvim/ftdetect/kof.lua` — recognizes `*.kf`/`*.kof` as filetype `kof`.
+- `~/.config/nvim/after/ftplugin/kof.lua` — basic comment/indent +
+  `vim.lsp.start({ cmd = { "kof", "lsp" } })` with `root_dir` resolved by
   `kof.toml`/`.git`.
 
-## Instalação manual
+## Manual installation
 
 ```lua
 vim.filetype.add({ extension = { kf = 'kof', kof = 'kof' } })
@@ -33,12 +35,12 @@ vim.api.nvim_create_autocmd('FileType', {
 })
 ```
 
-## Uso
+## Usage
 
 - `gd` go-to-definition, `gr` references, `<leader>rn` rename, `K` hover —
-  tudo via LSP.
-- Formatação: `kof fmt <arquivo>` (ou `:silent !kof fmt %`).
+  all via LSP.
+- Formatting: `kof fmt <file>` (or `:silent !kof fmt %`).
 
 ## Troubleshooting
 
-- `:LspInfo` deve mostrar `kof` ativo. Se não, confira `which kof`.
+- `:LspInfo` should show `kof` active. If not, check `which kof`.

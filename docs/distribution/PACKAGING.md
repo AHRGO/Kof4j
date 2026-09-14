@@ -1,6 +1,8 @@
-# Empacotamento (Packaging)
+[English](PACKAGING.md) | [Português](PACKAGING.pt_BR.md)
 
-Como os artefatos oficiais do Kof são produzidos, nomeados e verificados.
+# Packaging
+
+How the official Kof artifacts are produced, named and verified.
 
 ---
 
@@ -10,29 +12,29 @@ Como os artefatos oficiais do Kof são produzidos, nomeados e verificados.
 scripts/package.sh [--jdk] [--output <dir>] [--skip-build]
 ```
 
-| Opção | Efeito |
+| Option | Effect |
 |-------|--------|
-| `--jdk` | Baixa e embute o OpenJDK (Temurin 21) no pacote |
-| `--output <dir>` | Diretório de saída (padrão: `dist/`) |
-| `--skip-build` | Usa o jar já compilado sem rebuild |
+| `--jdk` | Downloads and embeds OpenJDK (Temurin 21) in the package |
+| `--output <dir>` | Output directory (default: `dist/`) |
+| `--skip-build` | Uses the already compiled jar without rebuilding |
 
-O script:
+The script:
 
-1. lê a versão de `VERSION`;
-2. compila `kof-cli-<versão>.jar` se necessário (`mvn package -DskipTests`);
-3. monta o layout de distribuição;
-4. opcionalmente embute o JDK;
-5. gera o arquivo (`tar.gz` ou `zip`) e o `SHA256SUMS`.
+1. reads the version from `VERSION`;
+2. compiles `kof-cli-<version>.jar` if needed (`mvn package -DskipTests`);
+3. assembles the distribution layout;
+4. optionally embeds the JDK;
+5. generates the file (`tar.gz` or `zip`) and the `SHA256SUMS`.
 
-## 2. Nomenclatura
+## 2. Naming
 
 ```text
 kof-<version>-<os>-<arch>.tar.gz   # Linux / macOS
 kof-<version>-<os>-<arch>.zip      # Windows
 ```
 
-O `<os>-<arch>` vem da matriz do workflow de release (um pacote por
-plataforma). Exemplos reais:
+The `<os>-<arch>` comes from the release workflow matrix (one package per
+platform). Real examples:
 
 ```text
 kof-0.2.6-beta-linux-x86_64.tar.gz
@@ -40,79 +42,80 @@ kof-0.2.6-beta-macos-arm64.tar.gz
 kof-0.2.6-beta-windows-x86_64.zip
 ```
 
-> O nome carrega a **versão da release** (ex.: `0.2.6-beta`). O usuário não
-> precisa decorar a versão: o guia de instalação usa o globo
-> `kof-*-<os>-<arch>.tar.gz`.
+> The name carries the **release version** (e.g.: `0.2.6-beta`). The user does
+> not need to memorize the version: the installation guide uses the
+> `kof-*-<os>-<arch>.tar.gz` glob.
 
-## 3. Matriz de plataformas (workflow `release.yml`)
+## 3. Platform matrix (workflow `release.yml`)
 
-| Runner | Target | Artefato |
+| Runner | Target | Artifact |
 |--------|--------|----------|
 | `ubuntu-latest` | `linux-x86_64` | `kof-<v>-linux-x86_64.tar.gz` |
 | `windows-latest` | `windows-x86_64` | `kof-<v>-windows-x86_64.zip` |
 | `macos-latest` | `macos-arm64` | `kof-<v>-macos-arm64.tar.gz` |
 
-> **macOS é publicado para Apple Silicon (`arm64`).** Não há pacote
-> `macos-x86_64`. O mapeamento `os`/`arch` do script (`linux`/`macos`/
-> `windows` × `x86_64`/`arm64`) suporta qualquer combinação futura — para
-> publicar uma nova plataforma basta adicionar uma linha na matriz do
-> workflow.
+> **macOS is published for Apple Silicon (`arm64`).** There is no
+> `macos-x86_64` package. The script's `os`/`arch` mapping (`linux`/`macos`/
+> `windows` × `x86_64`/`arm64`) supports any future combination — to
+> publish a new platform you only need to add a line to the workflow
+> matrix.
 
-## 4. Layout do pacote
+## 4. Package layout
 
 ```text
 kof-<version>-<os>-<arch>/
 ├── bin/
-│   ├── kof            # launcher Unix
-│   ├── kof.bat        # launcher Windows
-│   └── kof-webview    # shell do kof.ui (quando disponível)
+│   ├── kof            # Unix launcher
+│   ├── kof.bat        # Windows launcher
+│   └── kof-webview    # kof.ui shell (when available)
 ├── lib/
-│   └── kof.jar        # CLI + compiler + tooling (autocontido)
-├── jdk/               # OpenJDK embutido (apenas com --jdk)
+│   └── kof.jar        # CLI + compiler + tooling (self-contained)
+├── jdk/               # embedded OpenJDK (only with --jdk)
 ├── tooling/
 ├── editor/
 │   └── kof.tmLanguage.json
-├── docs/              # README, LICENSE, arquitetura, tooling, distribuição
+├── docs/              # README, LICENSE, architecture, tooling, distribution
 └── VERSION
 ```
 
-O `lib/kof.jar` é o jar *shaded* da CLI — contém compiler e tooling. Quando
-o JDK embutido está presente, o launcher o usa automaticamente; sem JDK
-embutido, o launcher usa `java` do PATH (somente builds de desenvolvimento).
+`lib/kof.jar` is the CLI's *shaded* jar — it contains the compiler and
+tooling. When the embedded JDK is present, the launcher uses it automatically;
+without an embedded JDK, the launcher uses `java` from the PATH (development
+builds only).
 
 ## 5. Checksums
 
-Cada build de pacote gera:
+Each package build generates:
 
 ```text
 SHA256SUMS
 ```
 
-Verificação pelo usuário:
+User verification:
 
 ```bash
 sha256sum -c SHA256SUMS
 ```
 
-## 6. JDK embutido
+## 6. Embedded JDK
 
-`--jdk` baixa o OpenJDK Eclipse Temurin 21 (Tooling API Level) da API de
-binários da Adoptium e o coloca em `jdk/`. Não é feito download em builds
-locais sem `--jdk` para manter o ciclo rápido; a pipeline de release sempre
-empacota com `--jdk`.
+`--jdk` downloads OpenJDK Eclipse Temurin 21 (Tooling API Level) from the
+Adoptium binary API and places it in `jdk/`. No download is done in local
+builds without `--jdk` to keep the cycle fast; the release pipeline always
+packages with `--jdk`.
 
-## 7. Verificação do artefato (CI)
+## 7. Artifact verification (CI)
 
-Antes do release, o CI:
+Before the release, CI:
 
-1. extrai o pacote em um diretório limpo;
-2. executa `bin/kof version` e `bin/kof info`;
-3. verifica a presença do JDK embutido (`jdk/bin/java`).
+1. extracts the package into a clean directory;
+2. runs `bin/kof version` and `bin/kof info`;
+3. verifies the presence of the embedded JDK (`jdk/bin/java`).
 
-Nenhum artefato é publicado sem passar nessa validação.
+No artifact is published without passing this validation.
 
-## 8. Referências
+## 8. References
 
-- [ARCHITECTURE.md](ARCHITECTURE.md) — estrutura conceitual da distribuição
-- [INSTALL.md](INSTALL.md) — instalação pelo usuário
-- [RELEASES.md](RELEASES.md) — pipeline de release
+- [ARCHITECTURE.md](ARCHITECTURE.md) — conceptual structure of the distribution
+- [INSTALL.md](INSTALL.md) — user installation
+- [RELEASES.md](RELEASES.md) — release pipeline

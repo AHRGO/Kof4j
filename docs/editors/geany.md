@@ -1,27 +1,29 @@
+[English](geany.md) | [Português](geany.pt_BR.md)
+
 # Geany
 
-Integração: filetype com syntax, indentação e build/run commands que delegam
-à CLI.
+Integration: filetype with syntax, indentation and build/run commands that
+delegate to the CLI.
 
-## Instalação automática
+## Automatic installation
 
 ```bash
 kof editor install geany
 ```
 
-Escreve `~/.config/geany/filedefs/filetypes.kof`:
+Writes `~/.config/geany/filedefs/filetypes.kof`:
 
-- comentários `//` e `/* */`, extensão `.kf`, nome "Kof";
+- comments `//` and `/* */`, extension `.kf`, name "Kof";
 - `[build]`: `compiler=kof build`, `execute=kof run`;
-- `[error_messages]`: regex que casa `arquivo:linha:coluna: error/warning: msg`
-  — os diagnósticos do compilador aparecem clicáveis na barra de mensagens.
+- `[error_messages]`: regex that matches `file:line:column: error/warning: msg`
+  — the compiler diagnostics appear clickable in the message bar.
 
-## Uso
+## Usage
 
-- `F8` compila (`kof build`), `F5` executa (`kof run`).
-- Erros/warnings navegam até a linha no editor (error parsing).
+- `F8` compiles (`kof build`), `F5` runs (`kof run`).
+- Errors/warnings navigate to the line in the editor (error parsing).
 
 ## Troubleshooting
 
-- Se o filetype não aparecer: `Document → Set Filetype → Kof`.
-- Ajuste o caminho do `kof` no arquivo `.conf` se ele não estiver no PATH.
+- If the filetype does not appear: `Document → Set Filetype → Kof`.
+- Adjust the `kof` path in the `.conf` file if it is not in the PATH.

@@ -1,89 +1,91 @@
-# Estado Atual da Linguagem Kof
+[English](language-state.md) | [Português](language-state.pt_BR.md)
 
-> ⚠️ **SNAPSHOT HISTÓRICO (02/09, 0.2.6-beta).** Este doc estava uma versão
-> atrás da implementação; foi mantido como registro do estado naquele dia.
-> Para o estado CORRENTE: `docs/status.md`, `docs/language-reference/`,
-> `docs/bugs-and-gaps/specification-gaps.md` e a suíte (`mvn test`).
+# Current State of the Kof Language
 
-**Data:** 2 de setembro de 2026
-**Versão:** 0.2.6-beta
-**Testes:** 810 JUnit (793 kof-compiler +8 kof-script +5 kof-c-compiler +4 kof-cli, 0 falhas) +1 skip condicional; `NativeE2ETest` 50/50, `JvmE2ETest` 29/29, `KofJsE2ETest` 35/35, `KofCCompilerTest` 5/5, `KofHttpE2ETest` 4/4, `KofCacheE2ETest` 5/5 (x3 targets), `KofWebWsE2ETest` 11/11, `KofWebSseE2ETest` 7/7; inclui JSON (completo nos 3 targets, 31/08), exceptions, web (ws/sse 30/08), db/orm, UI, security G9, generics `Box<T>` fix, pattern matching e null safety (fix JVM 02/09)
-**Status:** Compilador funcional com backends JVM, Native (x86_64 stable + `native.risc`/`native.arm` placeholder via qemu), KofJS (alpha, GraalJS), KofScript, KofC e Android (Fase 1); web server (ws/sse), distribuição e tooling oficiais (0.2.6-beta, 31/08)
+> ⚠️ **HISTORICAL SNAPSHOT (02/09, 0.2.6-beta).** This doc was one version
+> behind the implementation; it was kept as a record of the state on that day.
+> For the CURRENT state: `docs/status.md`, `docs/language-reference/`,
+> `docs/bugs-and-gaps/specification-gaps.md` and the suite (`mvn test`).
+
+**Date:** September 2, 2026
+**Version:** 0.2.6-beta
+**Tests:** 810 JUnit (793 kof-compiler +8 kof-script +5 kof-c-compiler +4 kof-cli, 0 failures) +1 conditional skip; `NativeE2ETest` 50/50, `JvmE2ETest` 29/29, `KofJsE2ETest` 35/35, `KofCCompilerTest` 5/5, `KofHttpE2ETest` 4/4, `KofCacheE2ETest` 5/5 (x3 targets), `KofWebWsE2ETest` 11/11, `KofWebSseE2ETest` 7/7; includes JSON (complete on the 3 targets, 31/08), exceptions, web (ws/sse 30/08), db/orm, UI, security G9, generics `Box<T>` fix, pattern matching and null safety (JVM fix 02/09)
+**Status:** Functional compiler with JVM, Native (x86_64 stable + `native.risc`/`native.arm` placeholder via qemu), KofJS (alpha, GraalJS), KofScript, KofC and Android (Phase 1) backends; web server (ws/sse), official distribution and tooling (0.2.6-beta, 31/08)
 
 ---
 
-## Novidades 0.1.0 → 0.2.6-beta (31/08)
+## What's new 0.1.0 → 0.2.6-beta (31/08)
 
-### 0.2.6-beta — plataforma (30-31/08)
+### 0.2.6-beta — platform (30-31/08)
 
-- **spawn/await no Native** (CONC001 fechado): `pthread_create` + trampoline +
-  `pthread_join` + allocator thread-safe (futex) — join implícito
-- **FP real no Native** (FLT001): aritmética em XMM (`vcvtsi2sd`/`mulsd`),
-  dtoa via `snprintf`, parse completo (fração+expoente)
-- **JSON completo no Native** (JSN001/JSN002/JSN003): objetos/records por
-  composição em compile-time + arrays `Int/Long/Bool/String/Double`
-- **SQLite nativo** via link direto da `.so`; MySQL wire protocol em progresso
-  (auth scramble SHA-1 + parse `user:pass@`)
-- **JVM**: WebSocket (`app.ws`, handshake RFC 6455 + frame codec com máscara)
-  e SSE (`sse.send/event/close`) via `kof.web`; `kof.http` retry/circuit
-  breaker (`KOF_HTTP_RETRIES`/`TRIPS`/`FAILURES`/`OPEN_UNTIL`, janela 30s,
-  fail-fast); `kof.cache` corrigido (clobber de registradores);
-  `KofRuntime.close` + descritores ws
-- **JVM+JS**: `kof.http` retry/circuit em paridade (30/08)
-- **JS**: scheduler `kof.time` via `setInterval`; retry/circuit de `kof.http`
-- **UI Fase 7**: Router (`go/replace/back/forward/param/current/depth`) — real
-  no JS, no-op no JVM
-- **CLI**: `kof fmt` (parser real, idempotente) e `kof config gen` implementados
-- **Android Fase 1**: `kof build --target android` → projeto Maven + APK com
-  host Activity em Kof
-- **Pipeline de release**: 2 jobs (`test-and-bump` exporta `bump_sha` →
-  `package-and-release` checkeia o commit de bump + sanity de versão) ×
-  3 plataformas (linux-x86_64/macos-arm64/windows-x86_64)
+- **spawn/await on Native** (CONC001 closed): `pthread_create` + trampoline +
+  `pthread_join` + thread-safe allocator (futex) — implicit join
+- **Real FP on Native** (FLT001): XMM arithmetic (`vcvtsi2sd`/`mulsd`),
+  dtoa via `snprintf`, full parse (fraction+exponent)
+- **Complete JSON on Native** (JSN001/JSN002/JSN003): objects/records by
+  compile-time composition + `Int/Long/Bool/String/Double` arrays
+- **Native SQLite** via direct `.so` link; MySQL wire protocol in progress
+  (SHA-1 auth scramble + `user:pass@` parse)
+- **JVM**: WebSocket (`app.ws`, handshake RFC 6455 + frame codec with mask)
+  and SSE (`sse.send/event/close`) via `kof.web`; `kof.http` retry/circuit
+  breaker (`KOF_HTTP_RETRIES`/`TRIPS`/`FAILURES`/`OPEN_UNTIL`, 30s window,
+  fail-fast); `kof.cache` fixed (register clobber);
+  `KofRuntime.close` + ws descriptors
+- **JVM+JS**: `kof.http` retry/circuit in parity (30/08)
+- **JS**: `kof.time` scheduler via `setInterval`; `kof.http` retry/circuit
+- **UI Phase 7**: Router (`go/replace/back/forward/param/current/depth`) — real
+  on JS, no-op on JVM
+- **CLI**: `kof fmt` (real parser, idempotent) and `kof config gen` implemented
+- **Android Phase 1**: `kof build --target android` → Maven project + APK with
+  host Activity in Kof
+- **Release pipeline**: 2 jobs (`test-and-bump` exports `bump_sha` →
+  `package-and-release` checks the bump commit + version sanity) ×
+  3 platforms (linux-x86_64/macos-arm64/windows-x86_64)
 
-### 0.2.6-beta — linguagem e plataforma (27/08)
+### 0.2.6-beta — language and platform (27/08)
 
-- **Pattern matching** `switch (x) { case String s: ... }` + record destructuring `Point(x,y)` em JVM/Native/JS (`Parser.java:1`, `SemanticAnalyzer.java:1`, `CompilerDriver.java:1`)
-- **Null safety** `String?` básica (`Type?` nullable, `?`-check em compile-time)
-- **List `map/filter/reduce`** + `Box<T>` generics estáveis (erasure, `substituteTypeVariable` `CompilerDriver.java:3972`)
+- **Pattern matching** `switch (x) { case String s: ... }` + record destructuring `Point(x,y)` on JVM/Native/JS (`Parser.java:1`, `SemanticAnalyzer.java:1`, `CompilerDriver.java:1`)
+- **Null safety** basic `String?` (`Type?` nullable, compile-time `?`-check)
+- **List `map/filter/reduce`** + `Box<T>` generics stable (erasure, `substituteTypeVariable` `CompilerDriver.java:3972`)
 - **KofScript** top-level `let` → `KofScriptGlobals` (REPL, `--watch`, Windows SIGPIPE fix)
-- **KofCcompiler** (`kof c`) C subset native-only: `while`/`if`/deref `&`/`*(int*)` → ELF x86_64 via `kof_c`
+- **KofCcompiler** (`kof c`) native-only C subset: `while`/`if`/deref `&`/`*(int*)` → ELF x86_64 via `kof_c`
 - **Native** free-list (`kof_free_head`) + `kof_gc_collect`; MySQL handshake `kof_db_mysql_scramble`; target separation `native.riscv64`/`native.aarch64` (`Target.java:1`, `NativeBackend.java:1`, riscv64 via `riscv64-linux-gnu-as`, `.option arch,rv64g`, `li a7 214/64/93`)
-- **kof.http** JVM+JS (JS via `Java HttpClient` interop no `KofJsRunner`)
-- **Bugs**: large-project `import a.b.C` file handling (`CompilerDriver.java:243` `import a.b.C` + `a.b` dir, `largeproj` `a/b/C.kf` OK), `List.get`/`listOf`, `release.yml` single job + JDK 21, `kof_free_head` reuso
+- **kof.http** JVM+JS (JS via `Java HttpClient` interop in `KofJsRunner`)
+- **Bugs**: large-project `import a.b.C` file handling (`CompilerDriver.java:243` `import a.b.C` + `a.b` dir, `largeproj` `a/b/C.kf` OK), `List.get`/`listOf`, `release.yml` single job + JDK 21, `kof_free_head` reuse
 
-### 0.1.0 final (P1 — linguagem, 25/08)
+### 0.1.0 final (P1 — language, 25/08)
 
-- **Enums** com switch exaustivo (`SEM031`), `values/valueOf/name`,
-  comparação por conteúdo e mapeamento String nos descritores
-- **Map<K,V> / Set<T>** completos nos 3 targets (Native em asm próprio)
-- **spawn/await** com handle tipado `Handle<T>` e unboxing de primitivos;
-  concorrência real nos 3 targets (CONC001 Native + CONC003 JS fechados);
-  gap `AND001` (Android) explícito; lambda não-void de expressão
-  única vira return (fix de VerifyError)
+- **Enums** with exhaustive switch (`SEM031`), `values/valueOf/name`,
+  content comparison and String mapping in descriptors
+- **Map<K,V> / Set<T>** complete on the 3 targets (Native in its own asm)
+- **spawn/await** with typed handle `Handle<T>` and primitive unboxing;
+  real concurrency on the 3 targets (CONC001 Native + CONC003 JS closed);
+  explicit `AND001` gap (Android); non-void single-expression lambda
+  becomes a return (VerifyError fix)
 
-- **Interop Android/JVM**: `super.metodo()` com INVOKESPECIAL (owner é a
-  superclasse direta; assinaturas externas resolvidas via classpath
-  `.jar`/`.aar` — `CompilerDriver.setExternalClasspath`) e annotations
-  `@Name`/`@Name(valor | key = valor, ...)` emitidas no bytecode
-  (RuntimeVisible/Invisible) em classes, campos, métodos e parâmetros.
-  `super.metodo()` no Native reporta `SUP001`.
-- `entity Name { field: Type constraint }` — schema declarativo (compile-time)
-  para o `kof.orm` (`generated`, `unique`, PK não-numérica).
-- Namespaces da stdlib: `kof.db`, `kof.orm`, `kof.process`, `kof.ui`
-  (Window/Label/Button/Input/Column/Row/View/Style), além de `kof.web`,
+- **Android/JVM interop**: `super.metodo()` with INVOKESPECIAL (owner is the
+  direct superclass; external signatures resolved via `.jar`/`.aar` classpath
+  — `CompilerDriver.setExternalClasspath`) and annotations
+  `@Name`/`@Name(valor | key = valor, ...)` emitted in the bytecode
+  (RuntimeVisible/Invisible) on classes, fields, methods and parameters.
+  `super.metodo()` on Native reports `SUP001`.
+- `entity Name { field: Type constraint }` — declarative schema (compile-time)
+  for `kof.orm` (`generated`, `unique`, non-numeric PK).
+- stdlib namespaces: `kof.db`, `kof.orm`, `kof.process`, `kof.ui`
+  (Window/Label/Button/Input/Column/Row/View/Style), plus `kof.web`,
   `kof.io`, `kof.time`, `kof.config`, `kof.log`, `kof.security`, `kof.validation`, `kof.observability`, `kof.http`, `kof.mq`.
-- Conversões `String.toInt()/toLong()/toDouble()/toFloat()` (runtime).
-- ARITH001: divisão/resto por zero **constante** rejeitada em compile-time
-  (apenas inteiros — float/double produzem Infinity/NaN).
-- Lexer tolera UTF-8 BOM inicial.
-- Lambdas com capturas em todos os targets (box `BoxN`); múltiplas janelas no kof.ui.
-- **25/08:** generics `Box<T>` com `T` primitivo (`Box<Int>`) fix — `substituteTypeVariable` + `kof_int_to_string` nativo; `SEM025` sem falso-positivo em `hashCode/equals/toString`.
+- `String.toInt()/toLong()/toDouble()/toFloat()` conversions (runtime).
+- ARITH001: division/remainder by **constant** zero rejected at compile-time
+  (integers only — float/double produce Infinity/NaN).
+- Lexer tolerates a leading UTF-8 BOM.
+- Lambdas with captures on all targets (`BoxN` box); multiple windows in kof.ui.
+- **25/08:** generics `Box<T>` with primitive `T` (`Box<Int>`) fix — `substituteTypeVariable` + native `kof_int_to_string`; `SEM025` with no false positive in `hashCode/equals/toString`.
 
 ---
 
-## Sintaxe
+## Syntax
 
-### Estrutura básica
+### Basic structure
 
 ```kof
 package com.example
@@ -106,52 +108,52 @@ main() {
 }
 ```
 
-### O que a linguagem suporta atualmente
+### What the language currently supports
 
-| Constructo | Sintaxe | Exemplo |
+| Construct | Syntax | Example |
 |-----------|---------|---------|
 | Package | `package a.b.c` | `package com.example` |
 | Import | `import a.b.c` | `import java.util.List` |
-| Função | `name(args): RetType` | `add(Int a, Int b): Int` |
-| Classe | `class Name extends Super implements Iface` | `class Dog extends Animal` |
+| Function | `name(args): RetType` | `add(Int a, Int b): Int` |
+| Class | `class Name extends Super implements Iface` | `class Dog extends Animal` |
 | Record | `record Name(Type field, ...)` | `record Point(Int x, Int y)` |
 | Interface | `interface Name extends Iface` | `interface Speaker` |
 | Constructor | `constructor(args)` | `constructor(String name)` |
-| Campo | `Type name = value` | `String name = "default"` |
-| Método | `name(args): RetType` | `speak(): String` |
-| Variável | `var name = value` ou `Type name = value` | `var x = 10` |
-| Se | `if (cond) { } else { }` | `if (x > 0) { ... }` |
-| Enquanto | `while (cond) { }` | `while (i < 10) { ... }` |
+| Field | `Type name = value` | `String name = "default"` |
+| Method | `name(args): RetType` | `speak(): String` |
+| Variable | `var name = value` or `Type name = value` | `var x = 10` |
+| If | `if (cond) { } else { }` | `if (x > 0) { ... }` |
+| While | `while (cond) { }` | `while (i < 10) { ... }` |
 | Do-while | `do { } while (cond)` | `do { ... } while (i < 10)` |
-| Para | `for (init; cond; update) { }` | `for (var i = 0; i < 10; i++) { ... }` |
+| For | `for (init; cond; update) { }` | `for (var i = 0; i < 10; i++) { ... }` |
 | Try/catch | `try { } catch (Type e) { }` | `try { ... } catch (String e) { ... }` |
 | Finally | `finally { }` | `finally { ... }` |
 | Throw | `throw expr` | `throw "error"` |
 | Return | `return expr` | `return x + 1` |
-| New | `new Type(args)` ou `new Type[size]` | `new Dog("Rex")`, `new Int[10]` |
+| New | `new Type(args)` or `new Type[size]` | `new Dog("Rex")`, `new Int[10]` |
 | Array access | `arr[index]` | `a[0]` |
 | Array length | `arr.length` | `a.length` |
 | String length | `str.length` | `s.length` |
 | String concat | `str1 + str2` | `"Hello" + " World"` |
-| Herança | `class Sub extends Super` | `class Dog extends Animal` |
-| Implementação | `class Name implements Iface` | `class Dog implements Speaker` |
+| Inheritance | `class Sub extends Super` | `class Dog extends Animal` |
+| Implementation | `class Name implements Iface` | `class Dog implements Speaker` |
 | Super | `super(args)` | `super(name)` |
-| Override | implícito (mesmo nome) | `speak()` sobrescreve |
+| Override | implicit (same name) | `speak()` overrides |
 
-### Modificadores suportados
+### Supported modifiers
 
 `public`, `private`, `protected`, `static`, `final`, `abstract`, `override`
 
-> `override` é **aceito** como modificador (retrocompatível) mas **não exigido**:
-> override é implícito — mesmo nome de método sobrescreve. `training/idioms/classes.md`.
+> `override` is **accepted** as a modifier (backward-compatible) but **not required**:
+> override is implicit — the same method name overrides. `training/idioms/classes.md`.
 
-### Tipos primitivos
+### Primitive types
 
 `bool`, `byte`, `short`, `int`, `long`, `float`, `double`, `char`, `string`, `void`
 
-### Literais
+### Literals
 
-- Inteiro: `42`, `0xFF`
+- Integer: `42`, `0xFF`
 - Long: `42l`
 - Float: `3.14f`
 - Double: `3.14`
@@ -160,50 +162,50 @@ main() {
 - Boolean: `true`, `false`
 - Null: `null`
 
-### Operadores
+### Operators
 
-Aritméticos: `+`, `-`, `*`, `/`, `%`
-Comparação: `==`, `!=`, `<`, `>`, `<=`, `>=`
-Lógicos: `&&`, `||`, `!`
-Atribuição: `=`, `+=`, `-=`, `*=`, `/=`
+Arithmetic: `+`, `-`, `*`, `/`, `%`
+Comparison: `==`, `!=`, `<`, `>`, `<=`, `>=`
+Logical: `&&`, `||`, `!`
+Assignment: `=`, `+=`, `-=`, `*=`, `/=`
 Bitwise: `&`, `|`, `^`, `~`, `<<`, `>>`, `>>>`
 
 ---
 
-## Tipos
+## Types
 
-### Tipos primitivos
+### Primitive types
 
-| Tipo | Tamanho | Descrição |
+| Type | Size | Description |
 |------|---------|-----------|
-| `bool` | 4 bytes | Booleano |
-| `byte` | 1 byte | Byte sinalizado |
-| `short` | 2 bytes | Short sinalizado |
-| `int` | 4 bytes | Inteiro sinalizado |
-| `long` | 8 bytes | Long sinalizado |
-| `float` | 4 bytes | Ponto flutuante IEEE 754 |
-| `double` | 8 bytes | Ponto flutuante IEEE 754 |
-| `char` | 4 bytes | Codepoint UTF-32 |
-| `string` | referência | String Kof (UTF-8) |
-| `void` | — | Sem retorno |
+| `bool` | 4 bytes | Boolean |
+| `byte` | 1 byte | Signed byte |
+| `short` | 2 bytes | Signed short |
+| `int` | 4 bytes | Signed integer |
+| `long` | 8 bytes | Signed long |
+| `float` | 4 bytes | IEEE 754 floating point |
+| `double` | 8 bytes | IEEE 754 floating point |
+| `char` | 4 bytes | UTF-32 codepoint |
+| `string` | reference | Kof String (UTF-8) |
+| `void` | — | No return |
 
-### Tipos de referência
+### Reference types
 
-| Tipo | Descrição |
+| Type | Description |
 |------|-----------|
-| `ClassType` | Classe ou record |
-| `ArrayType` | Array de tipo |
+| `ClassType` | Class or record |
+| `ArrayType` | Array of type |
 | `InterfaceType` | Interface |
 
-### Tipos compound
+### Compound types
 
-- **Records**: `record Point(Int x, Int y)` — imutáveis, campos definidos pelo usuário
-- **Classes**: `class User { ... }` — mutáveis, campos + métodos
-- **Interfaces**: `interface Speaker { ... }` — contratos
+- **Records**: `record Point(Int x, Int y)` — immutable, user-defined fields
+- **Classes**: `class User { ... }` — mutable, fields + methods
+- **Interfaces**: `interface Speaker { ... }` — contracts
 
 ---
 
-## Orientação a Objetos
+## Object Orientation
 
 ### Classes
 
@@ -221,7 +223,7 @@ class User {
 }
 ```
 
-### Herança
+### Inheritance
 
 ```kof
 class Animal {
@@ -252,16 +254,16 @@ class Dog implements Speaker {
 
 ### Virtual Dispatch
 
-- Métodos são resolvidos pelo tipo real do objeto em runtime
-- `Animal a = new Dog()` → `a.speak()` chama `Dog.speak()`
-- Implementado via vtable no Native backend
-- JVM usa `INVOKEVIRTUAL` nativo
+- Methods are resolved by the object's real type at runtime
+- `Animal a = new Dog()` → `a.speak()` calls `Dog.speak()`
+- Implemented via vtable on the Native backend
+- JVM uses native `INVOKEVIRTUAL`
 
 ### Records
 
 ```kof
 record Point(Int x, Int y)
-// Gera: classe, construtor, accessors x(), y(), toString()
+// Generates: class, constructor, accessors x(), y(), toString()
 ```
 
 ---
@@ -270,30 +272,30 @@ record Point(Int x, Int y)
 
 ### JVM
 
-- Delega para facilities da JVM
-- GC: usa GC da JVM
-- Memória: gerenciada pela JVM
+- Delegates to JVM facilities
+- GC: uses the JVM GC
+- Memory: managed by the JVM
 - Strings: `java.lang.String`
-- Arrays: arrays nativos da JVM
+- Arrays: native JVM arrays
 
 ### Native
 
 - Assembly x86-64 System V AMD64 ABI
-- Sem dependência de libc
-- Alocação via mmap (free-list `kof_free_head` com reuso, 27/08)
-- GC: mark-sweep pendente; auto-GC desativado após hang — memória
-  devolvida só no `munmap` fallback (reclaim pelo SO no exit)
-- Concorrência: `spawn`/`await` via `pthread_create` + trampoline +
-  `pthread_join` + allocator thread-safe (futex) — 31/08 (CONC001)
-- FP real em XMM (`vcvtsi2sd`/`mulsd`), dtoa via `snprintf` — 31/08 (FLT001)
+- No libc dependency
+- Allocation via mmap (free-list `kof_free_head` with reuse, 27/08)
+- GC: mark-sweep pending; auto-GC disabled after hang — memory
+  returned only on the `munmap` fallback (reclaimed by the OS on exit)
+- Concurrency: `spawn`/`await` via `pthread_create` + trampoline +
+  `pthread_join` + thread-safe allocator (futex) — 31/08 (CONC001)
+- Real FP in XMM (`vcvtsi2sd`/`mulsd`), dtoa via `snprintf` — 31/08 (FLT001)
 - Strings: KofString (header + UTF-8)
-- Arrays: KofArray (header + elementos)
-- Objetos, herança, virtual dispatch e instanceof com hierarquia:
-  execução real validada por testes E2E (compile → assemble → link → run)
-- String methods nativos: length, charAt, substring, contains, startsWith,
+- Arrays: KofArray (header + elements)
+- Objects, inheritance, virtual dispatch and instanceof with hierarchy:
+  real execution validated by E2E tests (compile → assemble → link → run)
+- Native string methods: length, charAt, substring, contains, startsWith,
   endsWith, concat
-- valueOf (int/char/bool → KofString) implementado no runtime
-- JSON: objetos/records + arrays `Int/Long/Bool/String/Double` (31/08)
+- valueOf (int/char/bool → KofString) implemented in the runtime
+- JSON: objects/records + `Int/Long/Bool/String/Double` arrays (31/08)
 
 ### Object Model
 
@@ -313,89 +315,89 @@ Fields:
 
 ## Backends (0.2.6-beta, 31/08)
 
-| Feature | JVM | Native x86_64 | native.risc (riscv64) | native.arm (aarch64) | JS (GraalJS) | KofC | Android (Fase 1) |
+| Feature | JVM | Native x86_64 | native.risc (riscv64) | native.arm (aarch64) | JS (GraalJS) | KofC | Android (Phase 1) |
 |---------|-----|---------------|----------------|----------------|--------------|------|-----------|
-| Target | .class / .jar | ELF x86_64 | ELF riscv64 via qemu (codegen x86_64 placeholder) | ELF aarch64 via qemu (codegen x86_64 placeholder) | ES Modules (.mjs) | ELF x86_64 (C subset) | projeto Maven + APK (bytecode JVM) |
+| Target | .class / .jar | ELF x86_64 | ELF riscv64 via qemu (codegen x86_64 placeholder) | ELF aarch64 via qemu (codegen x86_64 placeholder) | ES Modules (.mjs) | ELF x86_64 (C subset) | Maven project + APK (JVM bytecode) |
 | Runtime | JVM (virtual threads, web ws/sse, cache, http retry/circuit) | Assembly x86-64 (free-list, pthread spawn, FP XMM) | toolchain + qemu | toolchain + qemu | GraalJS embedded + `Java HttpClient` interop | Native only (`kof_c`) | ART (dex via d8) |
-| GC | JVM GC | free-list `kof_free_head` (mark-sweep pendente; auto-GC desativado — `munmap` fallback) | same | placeholder | GC JS | none | GC da ART |
+| GC | JVM GC | free-list `kof_free_head` (mark-sweep pending; auto-GC disabled — `munmap` fallback) | same | placeholder | GC JS | none | ART GC |
 | Strings | java.lang.String | KofString | via qemu (x86_64) | via qemu (x86_64) | JS string | C char* | KofString (dex) |
-| Arrays | arrays nativos | KofArray | via qemu (x86_64) | via qemu (x86_64) | JS Array | C array | arrays nativos |
+| Arrays | native arrays | KofArray | via qemu (x86_64) | via qemu (x86_64) | JS Array | C array | native arrays |
 | Virtual dispatch | INVOKEVIRTUAL | vtable | via qemu (x86_64) | via qemu (x86_64) | prototype | — | INVOKEVIRTUAL |
 | Interfaces | INVOKEINTERFACE | vtable | via qemu (x86_64) | via qemu (x86_64) | — | — | INVOKEINTERFACE |
-| Exceptions | Exceções JVM | unwinding próprio | via qemu (x86_64) | via qemu (x86_64) | JS throw | — | Exceções JVM |
-| print/println | System.out | Syscalls Linux (`write` 1) | Syscalls riscv64 (`li a7 64`) | Syscalls aarch64 | `kof_platform` | `write` | System.out |
+| Exceptions | JVM exceptions | own unwinding | via qemu (x86_64) | via qemu (x86_64) | JS throw | — | JVM exceptions |
+| print/println | System.out | Linux syscalls (`write` 1) | riscv64 syscalls (`li a7 64`) | aarch64 syscalls | `kof_platform` | `write` | System.out |
 | Pattern matching | ✅ `case String s` + `Point(x,y)` | ✅ | via qemu (x86_64) | placeholder | ✅ (`typeof`) | — | ✅ |
 
 ---
 
-## Segurança de Tipos
+## Type Safety
 
-- Tipagem estática e forte
-- Verificação em compile-time
-- Coerção implícita limitada (widening primitivo)
-- String + anything → String (concatenação)
-- Operações inválidas rejeitadas pelo compilador
+- Static and strong typing
+- Compile-time checking
+- Limited implicit coercion (primitive widening)
+- String + anything → String (concatenation)
+- Invalid operations rejected by the compiler
 
 ---
 
-## Erros
+## Errors
 
 ### Compile-time
 
-- Variável inexistente
-- Método inexistente
-- Tipo incompatível
-- Argumento incompatível
-- Quantidade errada de argumentos
+- Nonexistent variable
+- Nonexistent method
+- Incompatible type
+- Incompatible argument
+- Wrong number of arguments
 
 ### Runtime
 
 - Null pointer → `kof_null_error` (fatal)
 - Array bounds → `kof_bounds_error` (fatal)
-- Allocation failure → retorna null
+- Allocation failure → returns null
 - Panic → `kof_panic` (fatal)
 
 ---
 
 ## Performance
 
-### Gargalos arquiteturais conhecidos
+### Known architectural bottlenecks
 
-1. **kof_alloc** usa mmap (lento para alocações pequenas; free-list com reuso `mmap` mitigou — 27/08)
-2. **kof_string_concat** copia byte a byte
-3. **kof_memcpy** copia byte a byte
-4. **kof_print_int** usa divisão em loop
-5. **GC mark-sweep pendente** — free-list reusa memória; devolução ao SO só no `munmap` fallback (auto-GC desativado após hang)
-6. **Otimizador de IR ativo** (constant folding, branch simplification, DCE, dead stack effects) — mas sem escape analysis/loop optimization
+1. **kof_alloc** uses mmap (slow for small allocations; free-list with `mmap` reuse mitigated it — 27/08)
+2. **kof_string_concat** copies byte by byte
+3. **kof_memcpy** copies byte by byte
+4. **kof_print_int** uses division in a loop
+5. **Mark-sweep GC pending** — free-list reuses memory; return to the OS only on the `munmap` fallback (auto-GC disabled after hang)
+6. **Active IR optimizer** (constant folding, branch simplification, DCE, dead stack effects) — but without escape analysis/loop optimization
 
 ---
 
-## O que NÃO existe (residual 0.2.6-beta, 31/08)
+## What does NOT exist (residual 0.2.6-beta, 31/08)
 
-- Reflection, Macros; annotations de enum/Classe em valores (`ANNOT001`) — planned
-- `kof init` (P5); LSP rename + Debugger Native DWARF/JS source maps (P5)
-- Database nível 3 (query DSL tipada `User.query { where ... }`) — `kof.db` nível 0 e `kof.orm` nível 2/4 já DONE; MySQL wire protocol WIP (scramble SHA-1 + parse `user:pass@`, 31/08)
-- Native riscv64/aarch64 codegen completo (toolchain + qemu prontos; codegen ainda x86_64 placeholder)
-- GC mark-sweep completo (free-list `kof_free_head` done; auto-GC desativado após hang; memória devolvida só no `munmap` fallback)
-- Scheduler no Native (SCHED001); `kof.http` no Native (HTTP002); web no Native/JS (WEB002/WEB001)
+- Reflection, Macros; enum/Class annotations on values (`ANNOT001`) — planned
+- `kof init` (P5); LSP rename + Native Debugger DWARF/JS source maps (P5)
+- Database level 3 (typed query DSL `User.query { where ... }`) — `kof.db` level 0 and `kof.orm` level 2/4 already DONE; MySQL wire protocol WIP (SHA-1 scramble + `user:pass@` parse, 31/08)
+- Complete Native riscv64/aarch64 codegen (toolchain + qemu ready; codegen still x86_64 placeholder)
+- Complete mark-sweep GC (free-list `kof_free_head` done; auto-GC disabled after hang; memory returned only on the `munmap` fallback)
+- Scheduler on Native (SCHED001); `kof.http` on Native (HTTP002); web on Native/JS (WEB002/WEB001)
 
-## O que existe desde 0.0.5 → 0.2.6-beta
+## What exists since 0.0.5 → 0.2.6-beta
 
-- Generics (erasure) — 25/08 `Box<T>` `T` primitivo fixo (`Box<Int>` + `println` nativo `kof_int_to_string` `CompilerDriver.java:2257`)
+- Generics (erasure) — 25/08 `Box<T>` fixed primitive `T` (`Box<Int>` + native `println` `kof_int_to_string` `CompilerDriver.java:2257`)
 - `List<T>` (JVM + Native + JS), `listOf` + `map/filter/reduce` (0.2.0), for-in
 - Pattern matching `switch case String s` + record destructuring `Point(x,y)` (JVM/Native/JS, 27/08)
-- Null safety `String?` básica (`Type?` nullable, 27/08)
-- Lambdas `(x: Int) -> expr` + if-expr + capturas (box `BoxN`) em 3 targets
-- JSON encode/decode completo (JVM + Native + JS; objetos/records + arrays `Int/Long/Bool/String/Double` nos 3 targets — 31/08)
-- Exceptions reais (JVM table + Native unwinding)
-- `assert` + `kof test` estruturado (`test "nome" {}`) + `process.exit`
-- `spawn` (concorrência real nos 3 targets — JVM virtual threads, Native pthread 31/08, JS async/await/Promise 03/09)
+- Basic `String?` null safety (`Type?` nullable, 27/08)
+- Lambdas `(x: Int) -> expr` + if-expr + captures (`BoxN` box) on 3 targets
+- Complete JSON encode/decode (JVM + Native + JS; objects/records + `Int/Long/Bool/String/Double` arrays on the 3 targets — 31/08)
+- Real exceptions (JVM table + Native unwinding)
+- `assert` + structured `kof test` (`test "name" {}`) + `process.exit`
+- `spawn` (real concurrency on the 3 targets — JVM virtual threads, Native pthread 31/08, JS async/await/Promise 03/09)
 - kof.io (File/Path/Directory, readFile/writeFile), kof.time (`now()`, `sleep`; `interval`/`every` JVM+JS)
-- HTTP (`kof serve` — web stack nativa com WebSocket/SSE JVM 30/08), `kof.http` client (JVM+JS via `Java HttpClient`, retry/circuit 30/08), `kof.cache` (3 targets, 30/08), `kof.mq`
-- `kof.validation`, `kof.observability` (health/metrics), `kof.security` (PBKDF2/SHA/JWT/AES-GCM + G9 rateLimit/session/apiKey em 3 targets), `kof.db` (JVM + SQLite nativo `.so` + MySQL WIP) / `kof.orm` + `kof.config`/`kof.log` (asm Native)
-- KofJS (target `js` — GraalJS embutido, `kof.http` JS), TLS `web.listenSecure` (JVM), `KofScript` (`let` → `KofScriptGlobals`), `KofCcompiler` (`kof c`)
+- HTTP (`kof serve` — native web stack with WebSocket/SSE JVM 30/08), `kof.http` client (JVM+JS via `Java HttpClient`, retry/circuit 30/08), `kof.cache` (3 targets, 30/08), `kof.mq`
+- `kof.validation`, `kof.observability` (health/metrics), `kof.security` (PBKDF2/SHA/JWT/AES-GCM + G9 rateLimit/session/apiKey on 3 targets), `kof.db` (JVM + native SQLite `.so` + MySQL WIP) / `kof.orm` + `kof.config`/`kof.log` (Native asm)
+- KofJS (`js` target — embedded GraalJS, `kof.http` JS), TLS `web.listenSecure` (JVM), `KofScript` (`let` → `KofScriptGlobals`), `KofCcompiler` (`kof c`)
 - `native.risc`/`native.arm` targets (`Target.NATIVE_RISCV64/AARCH64` — toolchain + qemu; codegen x86_64 placeholder)
-- Android Fase 1 (`Target.ANDROID` — `kof build --target android` → projeto Maven + APK, host Activity em Kof)
-- Language Server (`kof lsp` — frontend real do compilador, hover/completion)
+- Android Phase 1 (`Target.ANDROID` — `kof build --target android` → Maven project + APK, host Activity in Kof)
+- Language Server (`kof lsp` — real compiler frontend, hover/completion)
 - `kof check`, `kof info`, `kof install`, `kof bench`/`profile`/`inspect`/`debug`, `kof script`/`repl`/`c`, `kof fmt` (31/08), `kof config gen` (31/08)
-- Distribuição oficial com JDK 21 embutido, versionamento `VERSION` 0.2.6-beta e releases por 2 jobs (`test-and-bump` → `package-and-release`) × 3 plataformas (`release.yml`) — `scripts/package.sh` PASS
+- Official distribution with embedded JDK 21, `VERSION` 0.2.6-beta versioning and releases via 2 jobs (`test-and-bump` → `package-and-release`) × 3 platforms (`release.yml`) — `scripts/package.sh` PASS

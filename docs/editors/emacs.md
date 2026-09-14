@@ -1,19 +1,21 @@
+[English](emacs.md) | [Português](emacs.pt_BR.md)
+
 # Emacs
 
-Integração: `kof-mode` (highlight por palavras-chave) + LSP via `eglot`.
-Nenhum parser próprio.
+Integration: `kof-mode` (keyword highlighting) + LSP via `eglot`.
+No parser of its own.
 
-## Instalação automática
+## Automatic installation
 
 ```bash
 kof editor install emacs
 ```
 
-Escreve `~/.emacs.d/lisp/kof-mode.el` — define `kof-mode` (prog-mode),
-syntax table (comentários `//` e `/* */`, strings), `font-lock` por
-palavra-chave e `auto-mode-alist` para `*.kf`/`*.kof`.
+Writes `~/.emacs.d/lisp/kof-mode.el` — defines `kof-mode` (prog-mode),
+syntax table (comments `//` and `/* */`, strings), `font-lock` by
+keyword and `auto-mode-alist` for `*.kf`/`*.kof`.
 
-## Configuração
+## Configuration
 
 ```elisp
 (add-to-list 'load-path "~/.emacs.d/lisp")
@@ -22,10 +24,10 @@ palavra-chave e `auto-mode-alist` para `*.kf`/`*.kof`.
   (add-to-list 'eglot-server-programs '(kof-mode . ("kof" "lsp"))))
 ```
 
-Abrir um `.kof` ativa `kof-mode`; `M-x eglot` conecta ao `kof lsp`
+Opening a `.kof` activates `kof-mode`; `M-x eglot` connects to `kof lsp`
 (diagnostics, completion, hover, rename, references).
 
 ## Troubleshooting
 
-- `M-: (require 'kof-mode)` deve carregar sem erro.
-- `M-x eglot` na buffer `.kof` deve mostrar conexão com o servidor.
+- `M-: (require 'kof-mode)` should load without error.
+- `M-x eglot` in the `.kof` buffer should show a connection to the server.

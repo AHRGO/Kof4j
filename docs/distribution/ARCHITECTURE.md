@@ -1,17 +1,19 @@
-# Arquitetura de Distribuição do Kof
+[English](ARCHITECTURE.md) | [Português](ARCHITECTURE.pt_BR.md)
 
-**Versão:** 0.2.6-beta (30/08/2026)
+# Kof Distribution Architecture
 
-O Kof não é apenas um compilador — é uma plataforma distribuível. A partir
-do 0.2.x-beta, o projeto trata a instalação como parte oficial do produto:
+**Version:** 0.2.6-beta (08/30/2026)
 
-> **Kof deve parecer uma linguagem que você instala, não um projeto Java que você precisa montar.**
+Kof is not just a compiler — it is a distributable platform. Starting with
+0.2.x-beta, the project treats installation as an official part of the product:
+
+> **Kof should feel like a language you install, not a Java project you have to assemble.**
 
 ---
 
-## 1. Modelo de Distribuição
+## 1. Distribution Model
 
-O pacote oficial é autocontido. A instalação fornece:
+The official package is self-contained. Installation provides:
 
 ```text
 kof/
@@ -20,87 +22,87 @@ kof/
 │   └── kof.bat      # launcher (Windows)
 ├── lib/
 │   └── kof.jar      # CLI + compiler + tooling (shaded, self-contained)
-├── jdk/             # OpenJDK embutido (apenas no pacote oficial com --jdk)
+├── jdk/             # embedded OpenJDK (only in the official package with --jdk)
 │   └── bin/java
-├── tooling/         # definições e ferramentas consumidas por editores
-├── editor/          # grammar TextMate oficial (source.kof)
-├── docs/            # documentação compacta que viaja com a distribuição
-└── VERSION          # versão da instalação
+├── tooling/         # definitions and tools consumed by editors
+├── editor/          # official TextMate grammar (source.kof)
+├── docs/            # compact documentation that travels with the distribution
+└── VERSION          # installation version
 ```
 
-O usuário **não** precisa instalar Java, configurar `JAVA_HOME`, usar SDKMAN
-ou ajustar o `PATH` manualmente. O launcher `bin/kof` resolve o JDK embutido
-da própria instalação e, apenas em builds de desenvolvimento sem JDK
-embutido, cai para um `java` do sistema.
+The user does **not** need to install Java, configure `JAVA_HOME`, use SDKMAN
+or adjust `PATH` manually. The `bin/kof` launcher resolves the JDK embedded in
+the installation itself and, only in development builds without an embedded
+JDK, falls back to a system `java`.
 
-### Estrutura de arquivos por artefato
+### File structure per artifact
 
 ```text
-kof-<versão>-linux-x86_64.tar.gz      # Linux (Intel/AMD)
-kof-<versão>-macos-arm64.tar.gz       # macOS (Apple Silicon)
-kof-<versão>-windows-x86_64.zip       # Windows (Intel/AMD)
+kof-<version>-linux-x86_64.tar.gz      # Linux (Intel/AMD)
+kof-<version>-macos-arm64.tar.gz       # macOS (Apple Silicon)
+kof-<version>-windows-x86_64.zip       # Windows (Intel/AMD)
 ```
 
-Cada artefato acompanha um `SHA256SUMS` para verificação de integridade.
-Matriz completa em [PACKAGING.md](PACKAGING.md).
+Each artifact comes with a `SHA256SUMS` for integrity verification.
+Full matrix in [PACKAGING.md](PACKAGING.md).
 
 ---
 
-## 2. JDK Embutido (OpenJDK)
+## 2. Embedded JDK (OpenJDK)
 
-O backend JVM do Kof precisa de uma JVM para executar programas compilados.
-Em vez de depender do ambiente do usuário, o pacote oficial **embarca um
-OpenJDK compatível** (Eclipse Temurin 21, alinhado ao Tooling API Level).
+Kof's JVM backend needs a JVM to run compiled programs.
+Instead of depending on the user's environment, the official package **ships a
+compatible OpenJDK** (Eclipse Temurin 21, aligned with the Tooling API Level).
 
-Decisões:
+Decisions:
 
-- **Não** implementamos uma JVM própria — usamos OpenJDK.
-- O pacote oficial traz o JDK em `jdk/` e o launcher o utiliza
-  automaticamente.
-- `kof run`, `kof build --target=jvm`, `kof serve` e `kof test` funcionam
-  sem nenhuma instalação externa.
-- Em pacotes construídos localmente sem `--jdk`, o launcher usa `java` do
-  `PATH` (equivalente a um build de desenvolvimento).
+- We do **not** implement our own JVM — we use OpenJDK.
+- The official package brings the JDK in `jdk/` and the launcher uses it
+  automatically.
+- `kof run`, `kof build --target=jvm`, `kof serve` and `kof test` work
+  without any external installation.
+- In packages built locally without `--jdk`, the launcher uses `java` from
+  `PATH` (equivalent to a development build).
 
-O download do JDK é feito pela pipeline de release via
-`scripts/package.sh --jdk` (API de binários da Adoptium). A verificação de
-que o JDK embutido está sendo usado aparece em `kof info` (campo JVM marcado
-como *embedded*).
+The JDK download is done by the release pipeline via
+`scripts/package.sh --jdk` (Adoptium binary API). The verification that the
+embedded JDK is being used appears in `kof info` (JVM field marked
+as *embedded*).
 
 ---
 
 ## 3. Tooling API Level: 21
 
-O tooling distribuído pelo Kof assume como baseline a **API Java 21**.
+The tooling distributed by Kof assumes the **Java 21 API** as its baseline.
 
-- APIs usadas pelo tooling são compatíveis com Java 21.
-- O Kof não exige Java anterior a 21 para seu tooling.
-- O pacote oficial carrega sua própria JVM (Temurin 21).
-- Versões posteriores do OpenJDK (ex.: 25) podem ser usadas internamente
-  quando apropriado, **sem** tornar essa versão um requisito obrigatório.
+- APIs used by the tooling are compatible with Java 21.
+- Kof does not require Java earlier than 21 for its tooling.
+- The official package carries its own JVM (Temurin 21).
+- Later OpenJDK versions (e.g.: 25) may be used internally
+  when appropriate, **without** making that version a mandatory requirement.
 
-Esta decisão está documentada em [docs/tooling/README.md](../tooling/README.md)
-e é reportada por `kof info` (`Tooling API: 21`).
+This decision is documented in [docs/tooling/README.md](../tooling/README.md)
+and is reported by `kof info` (`Tooling API: 21`).
 
 ---
 
-## 4. Isolamento e Portabilidade
+## 4. Isolation and Portability
 
-O layout de distribuição garante:
+The distribution layout guarantees:
 
-| Propriedade | Como |
+| Property | How |
 |-------------|------|
-| Isolamento | Nada é instalado fora do diretório do Kof |
-| Portabilidade | Caminhos relativos entre `bin/`, `lib/` e `jdk/` |
-| Atualização simples | Substituir o diretório de instalação (ou extrair por cima) |
-| Versionamento | `VERSION` + arquivos de versão empacotados |
-| Reprodução | Build determinístico via Maven + scripts de empacotamento |
+| Isolation | Nothing is installed outside the Kof directory |
+| Portability | Relative paths between `bin/`, `lib/` and `jdk/` |
+| Simple update | Replace the installation directory (or extract over it) |
+| Versioning | `VERSION` + packaged version files |
+| Reproducibility | Deterministic build via Maven + packaging scripts |
 
 ---
 
-## 5. Multi-target preservado
+## 5. Multi-target preserved
 
-A distribuição não muda a arquitetura de compilação:
+The distribution does not change the compilation architecture:
 
 ```text
 Kof Source
@@ -116,21 +118,21 @@ Kof IR
     └──────────► KofJS
 ```
 
-O código Kof não é reescrito quando o target muda — **a linguagem é a mesma,
-o backend muda**. Especialmente para o target Native, a complexidade de
-memória (`malloc`, `free`, ponteiros, gerenciamento manual) é absorvida pelo
-compilador/runtime, nunca exposta ao programador.
+Kof code is not rewritten when the target changes — **the language is the same,
+the backend changes**. Especially for the Native target, the memory complexity
+(`malloc`, `free`, pointers, manual management) is absorbed by the
+compiler/runtime, never exposed to the programmer.
 
 ---
 
-## 6. Instalação
+## 6. Installation
 
-### Pacote oficial (recomendado)
+### Official package (recommended)
 
-Baixe o pacote do seu sistema em
+Download the package for your system from
 [GitHub Releases](https://github.com/KofLang/Kof4j/releases/latest)
 (Linux `linux-x86_64` / macOS `macos-arm64` / Windows `windows-x86_64`).
-O nome muda a cada release — o globo `*` evita depender da versão:
+The name changes every release — the `*` glob avoids depending on the version:
 
 ```bash
 # Linux
@@ -143,19 +145,19 @@ export PATH="$PWD/$(ls -d kof-*-macos-arm64 | head -1)/bin:$PATH"
 
 # Windows (PowerShell)
 Expand-Archive .\kof-*-windows-x86_64.zip
-# adicione <pasta>\bin ao PATH
+# add <folder>\bin to PATH
 ```
 
-Guia completo por sistema: [INSTALL.md](INSTALL.md).
+Complete guide per system: [INSTALL.md](INSTALL.md).
 
-### Build de desenvolvimento
+### Development build
 
 ```bash
 mvn clean package -DskipTests
 bin/kof info
 ```
 
-Verificar a integridade de um download:
+Verify the integrity of a download:
 
 ```bash
 sha256sum -c SHA256SUMS
@@ -163,12 +165,12 @@ sha256sum -c SHA256SUMS
 
 ---
 
-## 7. Verificação
+## 7. Verification
 
-Depois de instalar:
+After installing:
 
 ```bash
-kof version      # kof 0.2.6-beta (a versão da sua release)
-kof info         # ambiente completo (JVM embutida aparece com "(embedded)")
+kof version      # kof 0.2.6-beta (the version of your release)
+kof info         # full environment (embedded JVM shows up with "(embedded)")
 kof run hello.kf
 ```
