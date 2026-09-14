@@ -266,8 +266,14 @@ public final class ExpressionLowerer {
                              ? driver.listElementType(recvType)
                              : (recvType instanceof Type.ClassType ct && ct.typeArguments().size() > 1
                                  ? ct.typeArguments().get(1) : Type.UnknownType.UNKNOWN);
+                     // #150: o param do get é o ÍNDICE (List → Int) ou a CHAVE
+                     // (Map → tipo da chave). Hardcodar INT boxava a chave String
+                     // como Integer → VerifyError (`Integer.valueOf(String)`).
+                     Type indexOrKey = BuiltinTypes.isList(recvType)
+                             ? Type.PrimitiveType.INT
+                             : BuiltinTypes.mapKey(recvType);
                      ops.add(new KofCall(recvType, fn,
-                             List.of(Type.PrimitiveType.INT), elem,
+                             List.of(indexOrKey), elem,
                              KofCallKind.INSTANCE));
                      yield localIdx;
                  }
