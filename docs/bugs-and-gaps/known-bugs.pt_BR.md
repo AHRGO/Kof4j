@@ -6654,7 +6654,7 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   de 2 linhas → `ec=0 out=[-1|true]` + os 3 vermelhos da suíte verde.
 
 
-### §203 — as-cast para tipo primitivo emite `CHECKCAST "?"` inválido e omite o unboxing — `VerifyError` (issue #205)
+### §203 ✅ CORRIGIDO 14/09 — as-cast para tipo primitivo emite `CHECKCAST "?"` inválido e omite o unboxing — `VerifyError` (issue #205)
 
 - **Sintoma (medido 14/09 ~09:40, dono = 192.168.100.17 — só catalogado,
   lane compiler):** `o as Int` onde `o` é um valor boxed/`Object` compila
@@ -6690,7 +6690,7 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   launcher direto engole atrás da mensagem falsa do JavaFX). O fix deve
   imprimir `8` + caso em `CoreRegressionE2ETest`.
 
-### §206 — classe com parâmetros de construtor (`class Box(Int w, Int h) { ... }`): campos/métodos extras no corpo não resolvem — `SEM011`/`SEM025` (issue #215)
+### §206 ✅ CORRIGIDO 14/09 — classe com parâmetros de construtor: campos/métodos extras no corpo não resolvem (issue #215)
 
 - **Sintoma (medido 14/09 ~11:05, dono = 192.168.100.17 — só catalogado,
   lane compiler):** uma classe estilo-record com corpo que declara um campo
@@ -6715,7 +6715,7 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
 - **Estado:** reproduz no `1c13d982`. Não é mudança de contrato (a forma
   está em `learn/`/`training/` como suportada); bug puro do compiler.
 
-### §207 — `class Circle(Double r) extends Shape` → PARSE007 depois do parêntese de fechamento (issue #217)
+### §207 ✅ CORRIGIDO 14/09 — `class Circle(Double r) extends Shape` → PARSE007 depois do parêntese de fechamento (issue #217)
 
 - **Sintoma (medido 14/09 ~11:05, dono = 192.168.100.17 — só catalogado,
   lane compiler):** a forma com parâmetros de construtor só parseia SEM
@@ -6863,6 +6863,34 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   #221 (static não-constante) roda `100|8|foobar|100` — fecha a face residual
   do §186 via `814f44da`; #222 (método estilo-ctor) emite `<init>(II)` de
   verdade. Comentários postados.
+
+### §213 — `as Object` / cast primitivo→referência NÃO emite boxing → `bipush`+`checkcast Object` → `VerifyError` em @2: checkcast (NOVO 14/09, achado ao re-medir §203)
+
+- **Sintoma (medido 14/09 ~12:40 no `c252a983`, dono = 192.168.100.17 — só
+  catalogado, lane compiler):** fazer cast de uma expressão/valor primitivo
+  para um tipo de referência é emitido como o primitivo cru seguido de
+  `checkcast`:
+  ```kof
+  main() {
+      var i = 7
+      var o = i as Object    // VerifyError @ checkcast
+      println(o)
+  }
+  ```
+  `javap`: `0: bipush 7` → `2: checkcast java/lang/Object` (tipo na pilha
+  `integer` não atribuível a referência). Igual com literal (`7 as Object`) e
+  com a classe-alvo (`as String` sobre Int etc.). Nota: o caminho de
+  **anotação de var** (`var o: Object = 7`) FAZ o boxing (`Integer.valueOf`) —
+  só o lowering do operador `as` está quebrado. R6: compila, nunca carrega.
+- **Relacionado:** mesma família de lowering de §203/§188 (operador `as`). O
+  fix do §203 (`8af810c5`) mapeou primitivo→boxed para os ALVOS de
+  instanceof/checkcast, mas o LADO FONTE (expressão primitiva cast para
+  referência) ainda perde o `valueOf`.
+- **Pointer (lane compiler):** o emissor do cast `as` — quando o tipo de
+  origem é primitivo e o alvo é referência, inserir a box (`Integer.valueOf`
+  etc.), espelhando o que o caminho de atribuição `var o: Object = 7` já faz.
+- **Prova Q1:** os repros `e205c/e205e` acima → pós-fix devem imprimir `7`
+  (sem VerifyError); `var o: Object = 7` (`e205d`) continua `ec=0`.
 
 ## §193 — E2E blog (F12): `db.query` cru + `.get("col")`/recursos dentro de handler web derr
 
