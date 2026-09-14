@@ -1005,4 +1005,68 @@ main() {
             """);
         assertEquals("2\n1", output);
     }
+
+    /** §181 (13/09): cast Double/Float as Int/Long SATURANTE (JLS 5.1.3) no
+     *  riscv64 sob qemu — o commit c90e85ee comparava o inteiro JÁ convertido,
+     *  mas `fcvt.w.d` devolve o "indefinite" (0x80000000) p/ fora-de-faixa, o
+     *  que nunca detecta o estouro (3.0e9 caía em INT_MIN). Aqui o clamp é
+     *  feito em double (±2^31/±2^63) ANTES de converter. Golden = oracle JVM
+     *  (mesmo vetor da célula `castrange` do ConformanceMatrixTest). */
+    @Test
+    void riscv64CastSaturation(@TempDir Path tempDir) throws IOException {
+        assumeToolchain();
+        String out = runRiscv64(tempDir, """
+            main() {
+                var d = 3.0e9
+                println(d as Int)
+                var n = 0.0 / 0.0
+                println(n as Int)
+                println(n as Int == 0)
+                var inf = 1.0 / 0.0
+                println(inf as Int)
+                println((-inf) as Int)
+                println((1.0e19) as Long)
+                println(n as Long == 0)
+                println((100.7) as Int)
+                println((-100.7) as Int)
+                var f = 3.0e9f
+                println(f as Int)
+                println((-1.5) as Long)
+            }
+            """);
+        assertEquals("2147483647\n0\ntrue\n2147483647\n-2147483648\n"
+                + "9223372036854775807\ntrue\n100\n-100\n2147483647\n-1", out);
+    }
+
+    /** §181 (13/09, regressão do c90e85ee): dois casts no MESMO método emitiam
+     *  labels FIXOS `.Lsat181_*` e o GNU as falhava com símbolo duplicado. O fix
+     *  sufixa cada emissão (`_<seq>`). Este teste NÃO exige toolchain — só
+     *  inspeciona o `.s` (sempre mantido pelo backend) para travar a regressão
+     *  em qualquer ambiente. */
+    @Test
+    void riscvCastSaturationLabelsAreUniquePerEmission(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("Main.kf");
+        Files.writeString(src, """
+            main() {
+                var a = 3.0e9
+                println(a as Int)
+                var b = -3.0e9
+                println(b as Int)
+            }
+            """);
+        Path outDir = tempDir.resolve("out");
+        CompilationResult result = driver.compile(src, outDir, Target.NATIVE_RISCV64);
+        assertTrue(result.success(), "Compilation should succeed: " + result.diagnostics().getDiagnostics());
+        Path asm = outDir.resolve("Default/Main.s");
+        assertTrue(Files.exists(asm), "asm should be kept at " + asm);
+        java.util.Map<String, Integer> defs = new java.util.HashMap<>();
+        for (String line : Files.readAllLines(asm)) {
+            String t = line.strip();
+            if (t.startsWith(".Lsat181") && t.endsWith(":")) defs.merge(t, 1, Integer::sum);
+        }
+        assertFalse(defs.isEmpty(), "esperava labels .Lsat181_* no asm do riscv");
+        List<String> dups = defs.entrySet().stream()
+                .filter(e -> e.getValue() > 1).map(java.util.Map.Entry::getKey).sorted().toList();
+        assertEquals(List.of(), dups, "§181: labels de saturação duplicados (assembler falha)");
+    }
 }

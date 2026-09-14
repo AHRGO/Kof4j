@@ -2581,6 +2581,45 @@ maintainer/usuário** antes de publicar (não presumir permissão de escrita
 no upstream).
 ---
 
+> **✅ FEITO (13/09 ~22:20, lane bugs-and-gaps, dono = 192.168.100.15):
+> §181 corrigido/verificado (regressão do fix x86 + riscv/aarch) + §182/§183
+> sincronizados + docs.**
+> **Contexto:** o remoto supersedeu meu commit local (`091e8632` dropado via
+> `reset --hard origin`), que trazia o fix §181-JS + §183 + split `check_500`.
+> O remoto já tinha `25854680` (split `ui-config`), `a13665f7` (§182 estrito +
+> testes de relógio), `c90e85ee` (§181 casts saturantes 4 targets) e
+> `10fd1b32`/`0c122131` (JVM arrays). Trabalho dele PRESERVADO (regra 8).
+> **P0 ACHADO E CORRIGIDO (caça Q4):** o `c90e85ee` **quebrou a célula `cast`**
+> no x86 — `NativeX86Arith.emitSatConv` carregava os limites com os **bits
+> INTEIROS** (`movq $2147483647, %rdx; movq %rdx, %xmm2`) = **denormal
+> (~1e-314)** lido como double → QUALQUER valor positivo saturava (`9.9 as
+> Int` → `2147483647`). O `castrange` não pegou porque só testava
+> fora-de-faixa (**verde falso Q5**). **Fix:** padrões de bit do double
+> (`2^31=0x41E0000000000000`, `-2^31=0xC1E0000000000000`,
+> `2^63=0x43E0000000000000`, `-2^63=0xC3E0000000000000`), comparando com
+> `2^31`/`2^63` (preserva `2147483647.0` limítrofe) + **promoção Float→Double
+> ANTES** do NaN-check. **Regressão irmã riscv/aarch:** labels `.Lsat181_*`
+> FIXOS → 2 casts no mesmo método = **símbolo duplicado** (GNU as falha); e
+> `F2L` usava `fcvt.l.s`/`feq.s` sobre double. **Fix:** sufixo único por
+> emissão (`_<seq>`, igual ao x86) + `feq.d`/`fcvt.l.d`. **Prova Q1:**
+> `ConformanceMatrixTest` 11/11 (célula `cast` pegava, `castrange` trava) +
+> novos `NativeRiscv64E2ETest.riscv64CastSaturation` /
+> `NativeAarch64E2ETest.aarch64CastSaturation` (qemu) e
+> `…CastSaturationLabelsAreUniquePerEmission` (inspeção do `.s`, roda SEM
+> toolchain — prova os labels únicos em qualquer host). Probes manuais:
+> riscv/aarch 2 casts → labels `_1`/`_2` únicos (antes: 4× cada = duplicado).
+> **Docs sync (lane):** `known-bugs.md` §181/§182 → ✅ CORRIGIDO (cabeçalho da
+> fila + seções) + **§183 NOVO** (flaky de relógio `KofTimeE2ETest`, fix
+> `a13665f7`); `conformance-matrix.md` já estava sync no remoto.
+> **PRÓXIMO PASSO:** rodar a suíte 4-módulos + `check_500`, commitar e pushar
+> (branch `beta-0.4.0`, nunca `main`). Depois: caça Q4 em células de cobertura
+> estreita/landings recentes; se nada novo e suíte verde → atualizar este
+> DOING e **RECUSAR** o re-disparo (estabilidade parcial — §179/§180 abertos
+> de outras lanes). **NUNCA:** `nat/` GC viva; fila de outras lanes; push
+> `main`.
+
+---
+
 ## REGRA DE SINCRONIZAÇÃO (07/09, obrigatória)
 
 > **Antes de CADA commit/push: verificar conflito com o trabalho do outro agente.**
