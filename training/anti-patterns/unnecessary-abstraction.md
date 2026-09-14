@@ -1,15 +1,17 @@
+[English](unnecessary-abstraction.md) | [Português](unnecessary-abstraction.pt_BR.md)
+
 # Anti-pattern — Unnecessary Abstraction
 
 **Updated:**  0.4.0-beta (Sep 2026) (02 Sep 2026)
 
 ## Name
 
-Abstrações criadas sem problema real.
+Abstractions created without a real problem.
 
 ## Problem
 
-Classes "Manager", "Helper", "Context", "Handler", "Wrapper", "Factory" que
-apenas repassam chamadas. Cada camada adiciona indireção sem semântica.
+"Manager", "Helper", "Context", "Handler", "Wrapper", "Factory" classes that
+only forward calls. Each layer adds indirection without semantics.
 
 ## Bad example
 
@@ -25,33 +27,33 @@ class UserManager {
 }
 class UserRepository {
     find(Int id): User {
-        // lógica real
+        // real logic
     }
 }
 ```
 
 ## Why it is bad
 
-O consumidor precisa conhecer duas classes para fazer o que uma função faz.
-A indireção não resolve nenhum problema (transação? cache? permutabilidade?).
+The consumer must know two classes to do what one function does.
+The indirection solves no problem (transaction? cache? swappability?).
 
 ## Preferred approach
 
 ```kof
 User findUser(Int id) {
-    // lógica real
+    // real logic
 }
 ```
 
-## Regra
+## Rule
 
-Adicione uma camada somente quando ela resolve um problema concreto:
-- permutabilidade testada (interface + múltiplas implementações);
-- transação/cleanup transversal;
-- estado compartilhado real.
+Add a layer only when it solves a concrete problem:
+- tested swappability (interface + multiple implementations);
+- cross-cutting transaction/cleanup;
+- real shared state.
 
-Se a camada apenas repassa, remova-a.
+If the layer only forwards, remove it.
 
 ## Exceptions
 
-- Interop com código legado que exige a estrutura.
+- Interop with legacy code that requires the structure.

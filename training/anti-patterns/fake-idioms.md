@@ -1,70 +1,72 @@
+[English](fake-idioms.md) | [Português](fake-idioms.pt_BR.md)
+
 # Anti-pattern — Fake Idioms
 
 ## Name
 
-Ensinar ou usar como idiomático algo que não existe na linguagem.
+Teaching or using as idiomatic something that does not exist in the language.
 
 ## Problem
 
-O modelo pode inventar `users.map(...)`, `Option<T>`, `async/await`,
-`for user in users` (sem `var`), primary constructors, pattern matching —
-porque existem em outras linguagens. Código assim **não compila** ou
-**compila por acidente** com semântica errada.
+The model can invent `users.map(...)`, `Option<T>`, `async/await`,
+`for user in users` (without `var`), primary constructors, pattern matching —
+because they exist in other languages. Code like that **does not compile** or
+**compiles by accident** with the wrong semantics.
 
-## Status real (verificado no compilador — 0.4.0-beta, Sep 2026)
+## Real status (verified in the compiler — 0.4.0-beta, Sep 2026)
 
 | Feature | Status |
 |---|---|
-| `List<T>` (add/get/set/size/contains/isEmpty/remove/clear/listOf) | ✅ Implemented (3 targets, free-list GC no Native) |
+| `List<T>` (add/get/set/size/contains/isEmpty/remove/clear/listOf) | ✅ Implemented (3 targets, free-list GC in Native) |
 | `for (var x in coll)` | ✅ Implemented |
-| `Map<K,V>` / `Set<T>` + `mapOf`/`setOf` | ✅ Implemented (JVM HashMap, Native asm, JS Map/Set desde 0.1.0) |
-| Higher-order `list.map/filter/reduce` | ✅ Implemented (desde 0.2.6-beta, 3 targets) |
-| `Box<T>` generics com `T` primitivo (ex.: `Box<Int>`) | ✅ Implemented (fix substituteTypeVariable 25/08) |
-| Lambdas `(x: Int) -> expr` com captura mutável (via box sintético Box0) | ✅ Implemented |
+| `Map<K,V>` / `Set<T>` + `mapOf`/`setOf` | ✅ Implemented (JVM HashMap, Native asm, JS Map/Set since 0.1.0) |
+| Higher-order `list.map/filter/reduce` | ✅ Implemented (since 0.2.6-beta, 3 targets) |
+| `Box<T>` generics with primitive `T` (e.g.: `Box<Int>`) | ✅ Implemented (substituteTypeVariable fix 25/08) |
+| Lambdas `(x: Int) -> expr` with mutable capture (via synthetic box Box0) | ✅ Implemented |
 | If-expr `if (c) a else b` | ✅ Implemented |
-| `json.encode` / `json.decode<T>` | ✅ Implemented (3 targets; JSN001/002/003 fechados 31/08 — objetos/records/arrays, FP XMM no Native) |
+| `json.encode` / `json.decode<T>` | ✅ Implemented (3 targets; JSN001/002/003 closed 31/08 — objects/records/arrays, FP XMM in Native) |
 | `throw "msg"` / `try/catch/finally` | ✅ Implemented (JVM + Native unwinding) |
-| `String?` / `Int?` null safety + `if (x != null)` narrowing | ✅ Implemented (desde 0.2.6-beta, NullableType + isAssignable) |
+| `String?` / `Int?` null safety + `if (x != null)` narrowing | ✅ Implemented (since 0.2.6-beta, NullableType + isAssignable) |
 | Pattern matching `switch (x) { case String s: ... }` + `instanceof`/`as` | ✅ Implemented |
-| Pattern record destructuring `case Point(x, y):` | ✅ Implemented (Parser PatternExpr fieldVars, desde 0.2.6-beta) |
-| Switch como expressão `var r = switch (x) { case A -> b; default -> c }` | ✅ Implemented (SYN001, 03/09 — 3 targets + riscv64/aarch64; `default` obrigatório ou exaustividade de enum, senão `SEM032`) |
-| `spawn` / `await` com `Handle<T>` e unboxing | ✅ 3 targets (JVM virtual threads; Native pthread — CONC001 fechado 31/08; JS sequencial — CONC003 parcial) |
-| Primary constructor `class X(...)` / `record` | ✅ Implemented (record-style desde 0.0.5) |
-| `Thread` / `Executor` (APIs de plataforma) | ❌ Unavailable — nunca use (`spawn` é a intenção) |
-| `Option<T>` genérico | ❌ Planned — use `String?` para nulabilidade |
-| `Int.MAX_VALUE` / `Long.MIN_VALUE` / `Int.SIZE` / `Int.<campo>` | ❌ Unavailable (bug 99, 10/09) — tipos primitivos **não têm campos/constantes estáticas**. `SEM050`: rejeitado no typer (era aceito em silêncio e gerava `NoClassDefFoundError "?"`/SIGSEGV, e `var x = Int.MAX_VALUE` **crashava o compilador**). Use o **literal** (`2147483647`, `9223372036854775807`, `-2147483648`) ou `as`. (`String.valueOf(42)`/`String.format(...)` são o caminho oposto: **métodos** com parênteses, implementados — a isenção vale só p/ posição de *tipo*, `x: Int`/`x as Int`, não p/ *field access*.) |
-| `l.remove(elemento)` por VALOR (Java `List.remove(Object)`) | ❌ Unavailable — `remove/get/set` de List pegam **índice Int** e `remove` devolve o elemento (learn/12). Por valor use `contains(x)` / loop com `get(i)`. `SEM055` rejeita não-Int no índice (bug 122: era aceito → JVM VerifyError, Native pointer-as-index) |
-| `listOf("a").add(5)` / `setOf("a").add(5)` / `mapOf("k",1).put(5,"v")` (coleta HETEROGÊNEA) | ❌ Unavailable — coleções Kof são **HOMOGÊNEAS** (bug 126 decisão da mantenedora 11/09): depois que o tipo PINA (pelo literal `listOf("a")` ou pelo primeiro add/put), escrever tipo ≠ é rejeitado em compile-time com `SEM056`. Não é só o Native que quebra (scan tag String sobre Int cru → SIGSEGV): no JVM `List.add` hetero já dá **VerifyError** na carga e `Map.put` valor-hetero dá **ClassCastException** no get. A rejeição é universal (erro de tipo é erro em todo alvo). **O que NÃO é rejeitado:** query-side (`get(k)`/`contains(x)` com tipo ≠ → miss seguro: null/false, nunca crash); widening numérico (`Int` em `List<Long>`); o **primeiro** add/put num container `Unknown` (pina, não polui); e `Unknown`/nullable de função (SG-008). Use coleções do mesmo tipo — se precisa de "tipos diferentes", modelem **records/unions**, não um `List<Object>` |
-| `for user in users` (sem var) | ❌ Unavailable |
+| Pattern record destructuring `case Point(x, y):` | ✅ Implemented (Parser PatternExpr fieldVars, since 0.2.6-beta) |
+| Switch as expression `var r = switch (x) { case A -> b; default -> c }` | ✅ Implemented (SYN001, 03/09 — 3 targets + riscv64/aarch64; `default` required or enum exhaustiveness, otherwise `SEM032`) |
+| `spawn` / `await` with `Handle<T>` and unboxing | ✅ 3 targets (JVM virtual threads; Native pthread — CONC001 closed 31/08; JS sequential — CONC003 partial) |
+| Primary constructor `class X(...)` / `record` | ✅ Implemented (record-style since 0.0.5) |
+| `Thread` / `Executor` (platform APIs) | ❌ Unavailable — never use (`spawn` is the intent) |
+| Generic `Option<T>` | ❌ Planned — use `String?` for nullability |
+| `Int.MAX_VALUE` / `Long.MIN_VALUE` / `Int.SIZE` / `Int.<campo>` | ❌ Unavailable (bug 99, 10/09) — primitive types **have no static fields/constants**. `SEM050`: rejected in the typer (it was accepted silently and generated `NoClassDefFoundError "?"`/SIGSEGV, and `var x = Int.MAX_VALUE` **crashed the compiler**). Use the **literal** (`2147483647`, `9223372036854775807`, `-2147483648`) or `as`. (`String.valueOf(42)`/`String.format(...)` are the opposite path: **methods** with parentheses, implemented — the exemption applies only to *type* position, `x: Int`/`x as Int`, not to *field access*.) |
+| `l.remove(elemento)` by VALUE (Java `List.remove(Object)`) | ❌ Unavailable — List `remove/get/set` take an **Int index** and `remove` returns the element (learn/12). By value use `contains(x)` / a loop with `get(i)`. `SEM055` rejects non-Int in the index (bug 122: it was accepted → JVM VerifyError, Native pointer-as-index) |
+| `listOf("a").add(5)` / `setOf("a").add(5)` / `mapOf("k",1).put(5,"v")` (HETEROGENEOUS collection) | ❌ Unavailable — Kof collections are **HOMOGENEOUS** (bug 126, maintainer's decision 11/09): after the type PINS (by the `listOf("a")` literal or by the first add/put), writing a type ≠ is rejected at compile-time with `SEM056`. It is not only Native that breaks (String tag scan over raw Int → SIGSEGV): on the JVM a heterogeneous `List.add` already gives a **VerifyError** on load and a heterogeneous-value `Map.put` gives a **ClassCastException** on get. The rejection is universal (a type error is an error on every target). **What is NOT rejected:** query-side (`get(k)`/`contains(x)` with a type ≠ → safe miss: null/false, never crash); numeric widening (`Int` in `List<Long>`); the **first** add/put in an `Unknown` container (it pins, does not pollute); and `Unknown`/nullable from a function (SG-008). Use collections of the same type — if you need "different types", model **records/unions**, not a `List<Object>` |
+| `for user in users` (without var) | ❌ Unavailable |
 | Array literals `{1, 2, 3}` / `[1,2,3]` | ❌ Unavailable — use `new Int[n]` + `listOf` |
-| `async`/`await` (JS-style), `let`/`const` | ❌ Unavailable — use `spawn`/`await` e `var`/`val` (KofScript **não** é JavaScript) |
-| `fn` / `fun` / `func` (qualquer posição) | ❌ Unavailable — palavras **reservadas** (06/09, SG-001): não existem no Kof, nem como keyword nem como identificador (nome de função, variável, parâmetro, campo). Em posição de declaração: `PARSE085`; em outra: `PARSE037`/`PARSE023`/… Use `Tipo nome(...) { }` ou `nome(...): Tipo { }`. **Nem em KofScript** — `.ks` é Kof puro, não JavaScript |
-| `x as Char` (cast primitivo p/ char) | ✅ Implemented (I2C real, 01/09) |
-| `longVal as Int` (narrowing Long→Int) | ✅ Implemented (L2I real, 01/09) |
-| `new Long[n]` (array de 64 bits) | ✅ Implemented (01/09) |
-| `String.valueOf(x)` receiver estático builtin | ✅ Implemented (01/09) |
-| `Set<T>` como tipo declarado (campo/retorno/param) | ✅ Implemented (02/09 — descriptor JVM `kof.Set` → `java/util/HashSet`) |
-| Retorno/método com tipo genérico em classe (`List<String> foo()`) | ✅ Implemented (02/09 — parser parse-then-decide) |
-| Forma prefixada nullable `String? s = null` e retorno `String? f()` | ✅ Implemented (02/09 — statements, funções e classes) |
-| `Map.get` devolvendo `V?` para valores de referência | ✅ Implemented (02/09 — ausência = null, narrowing) |
+| `async`/`await` (JS-style), `let`/`const` | ❌ Unavailable — use `spawn`/`await` and `var`/`val` (KofScript **is not** JavaScript) |
+| `fn` / `fun` / `func` (any position) | ❌ Unavailable — **reserved** words (06/09, SG-001): they do not exist in Kof, neither as a keyword nor as an identifier (function name, variable, parameter, field). In declaration position: `PARSE085`; elsewhere: `PARSE037`/`PARSE023`/… Use `Tipo nome(...) { }` or `nome(...): Tipo { }`. **Not even in KofScript** — `.ks` is pure Kof, not JavaScript |
+| `x as Char` (primitive cast to char) | ✅ Implemented (real I2C, 01/09) |
+| `longVal as Int` (narrowing Long→Int) | ✅ Implemented (real L2I, 01/09) |
+| `new Long[n]` (64-bit array) | ✅ Implemented (01/09) |
+| `String.valueOf(x)` builtin static receiver | ✅ Implemented (01/09) |
+| `Set<T>` as a declared type (field/return/param) | ✅ Implemented (02/09 — JVM descriptor `kof.Set` → `java/util/HashSet`) |
+| Return/method with a generic type in a class (`List<String> foo()`) | ✅ Implemented (02/09 — parser parse-then-decide) |
+| Prefixed nullable form `String? s = null` and return `String? f()` | ✅ Implemented (02/09 — statements, functions and classes) |
+| `Map.get` returning `V?` for reference values | ✅ Implemented (02/09 — absence = null, narrowing) |
 
-## Bad example (ainda não compila)
+## Bad example (still does not compile)
 
 ```kof
-// NÃO COMPILA — array literal não existe
+// DOES NOT COMPILE — array literal does not exist
 var nums = [1, 2, 3]
 
-// NÃO COMPILA — Option genérico não existe
+// DOES NOT COMPILE — generic Option does not exist
 var maybe = Option.of(x)
 
-// NÃO COMPILA — for sem var
+// DOES NOT COMPILE — for without var
 for (user in users) { }
 ```
 
-## Good example — o que existe hoje
+## Good example — what exists today
 
 ```kof
-// map/filter/reduce — implementado
+// map/filter/reduce — implemented
 var nomes = users.map((u: User) -> u.name)
 var adultos = users.filter((u: User) -> u.age >= 18)
 var soma = nums.reduce((a: Int, b: Int) -> a + b, 0)
@@ -74,7 +76,7 @@ String? maybe = null
 if (maybe != null) {
     println(maybe.length)
 }
-var s: String = maybe   // erro SEM014 — não atribuível sem check
+var s: String = maybe   // SEM014 error — not assignable without a check
 
 // Pattern matching + record destructuring
 switch (obj) {
@@ -87,7 +89,7 @@ switch (obj) {
     default:
         println("outro")
 }
-// ...ou como EXPRESSÃO (SYN001) quando o switch produz valor:
+// ...or as an EXPRESSION (SYN001) when the switch produces a value:
 var desc = switch (obj) {
     case String s -> "str:" + s
     case Point(var x, var y) -> x + "," + y
@@ -97,13 +99,13 @@ if (p instanceof Point) {
     var q = p as Point
 }
 
-// Box<T> com primitivo
+// Box<T> with primitive
 var b = Box<Int>(42)
 println(b.get())
 
-// Captura mutável
+// Mutable capture
 var offset = 10
-var f = (x: Int) -> x + offset   // OK — box sintético
+var f = (x: Int) -> x + offset   // OK — synthetic box
 
 // Primary constructor
 class User(String name, Int age) { }
@@ -112,22 +114,22 @@ var u = User("Mel", 30)
 
 ## Why it is bad
 
-Um modelo que "aprende" features inexistentes produz código que o compilador
-rejeita — ou pior, código que compila com outra semântica. O corpus deve
-ensinar a fronteira exata do que existe.
+A model that "learns" nonexistent features produces code the compiler
+rejects — or worse, code that compiles with another semantics. The corpus must
+teach the exact boundary of what exists.
 
-## Regra
+## Rule
 
-Antes de usar uma feature, verifique a tabela de status.
-Quando a feature não existe: use a alternativa real OU marque `WORKAROUND`.
+Before using a feature, check the status table.
+When the feature does not exist: use the real alternative OR mark `WORKAROUND`.
 
 ## Exceptions
 
-- Nenhuma — fake idioms nunca são aceitáveis no corpus.
+- None — fake idioms are never acceptable in the corpus.
 
-> **Lexer gotcha (verificado 09/09):** o lexer do Kof pré-processa `\uXXXX` nas
-> strings **antes** de formar o token (Java-style). `\u0027` dentro de string
-> vira `'` literal e pode estourar o parse (LEX004 "unterminated char") em
-> bordas de token. Para aspas em string-esperada de test, prefira **evitar a
-> aspa** no assert (ex.: testar `&amp;quot;` → `&quot;` em vez de embutir `"`/
-> `'` no literal esperado).
+> **Lexer gotcha (verified 09/09):** the Kof lexer pre-processes `\uXXXX` in
+> strings **before** forming the token (Java-style). `\u0027` inside a string
+> becomes a literal `'` and can blow up the parse (LEX004 "unterminated char") at
+> token boundaries. For quotes in a test-expected string, prefer **avoiding the
+> quote** in the assert (e.g.: test `&amp;quot;` → `&quot;` instead of embedding `"`/
+> `'` in the expected literal).

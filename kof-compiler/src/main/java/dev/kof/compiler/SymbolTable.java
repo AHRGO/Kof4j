@@ -10,7 +10,6 @@ public class SymbolTable {
 
     private final SymbolTable parent;
     private final Map<String, Symbol> symbols = new HashMap<>();
-    private final List<String> symbolOrder = new ArrayList<>();
 
     SymbolTable() {
         this(null);
@@ -34,7 +33,6 @@ public class SymbolTable {
             if (merged.size() == 1 && !(existing instanceof ConstructorSet)) {
                 symbols.put("<init>", cs);
             } else {
-                if (!(existing instanceof ConstructorSet)) symbolOrder.add("<init>");
                 symbols.put("<init>", new ConstructorSet(new ArrayList<>(merged.values())));
             }
             return;
@@ -53,13 +51,11 @@ public class SymbolTable {
             if (merged.size() == 1 && !(existing instanceof MethodSet)) {
                 symbols.put(ms.name(), ms);
             } else {
-                if (!(existing instanceof MethodSet)) symbolOrder.add(ms.name());
                 symbols.put(ms.name(), new MethodSet(new ArrayList<>(merged.values())));
             }
             return;
         }
         symbols.put(symbol.name(), symbol);
-        symbolOrder.add(symbol.name());
     }
 
     /** Construtor com exatamente {@param argumentCount} parâmetros, ou null. */

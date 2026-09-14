@@ -1,11 +1,13 @@
+[English](errors.md) | [Português](errors.pt_BR.md)
+
 # Idioms — Errors
 
 **Status:** available (JVM, Native, JS) · **Introduced:** 0.0.4-alpha · **Updated:**  0.4.0-beta (Sep 2026)
 
 ## What it is
 
-Exceções são Strings. `throw "mensagem"`, `catch (String e)`, `finally`.
-Funciona em JVM (exception table) e Native (unwinding próprio).
+Exceptions are Strings. `throw "mensagem"`, `catch (String e)`, `finally`.
+It works on JVM (exception table) and Native (own unwinding).
 
 ```kof
 try {
@@ -20,16 +22,16 @@ try {
 
 ## When to use
 
-- Erro que interrompe o fluxo e precisa ser tratado em outro ponto.
-- `finally` para cleanup que deve rodar em todos os caminhos.
+- An error that interrupts the flow and needs to be handled at another point.
+- `finally` for cleanup that must run on every path.
 
 ## When not to use
 
-- Fluxo normal de controle — use `if`.
-- Validação simples — `if` + retorno.
-- Ausência como valor (não erro) — use `String?` + `if (x != null)` (0.3.22-beta) em vez de sentinela. `Option<T>` genérico ainda é planned.
+- Normal control flow — use `if`.
+- Simple validation — `if` + return.
+- Absence as a value (not an error) — use `String?` + `if (x != null)` (0.3.22-beta) instead of a sentinel. Generic `Option<T>` is still planned.
 
-## BAD — sentinela
+## BAD — sentinel
 
 ```kof
 String find(String key) {
@@ -42,10 +44,10 @@ String find(String key) {
 }
 ```
 
-Quando `""` significa "não encontrado", o consumidor precisa checar por convenção.
-Isso é uma sentinela: o dado e o erro são indistinguíveis.
+When `""` means "not found", the consumer has to check by convention.
+That is a sentinel: the data and the error are indistinguishable.
 
-## GOOD — exceção
+## GOOD — exception
 
 ```kof
 String find(String key) {
@@ -58,7 +60,7 @@ String find(String key) {
 }
 ```
 
-Uso:
+Usage:
 
 ```kof
 try {
@@ -70,11 +72,11 @@ try {
 
 ## WHY
 
-A exceção carrega a informação do erro no próprio mecanismo de erros da
-linguagem. A sentinela espalha a convenção por todos os consumidores.
+The exception carries the error information in the language's own error
+mechanism. The sentinel spreads the convention across all consumers.
 
-> **Desde 0.2.6-beta:** ausência como valor usa `String?`/`Int?` com narrowing (`if (x != null)`).
-> `Option<T>`/`Result<T>` genéricos ainda são planned — só então sentinela marcada `WORKAROUND` é aceitável.
+> **Since 0.2.6-beta:** absence as a value uses `String?`/`Int?` with narrowing (`if (x != null)`).
+> Generic `Option<T>`/`Result<T>` are still planned — only then is a sentinel marked `WORKAROUND` acceptable.
 
 ## Propagation
 
@@ -92,7 +94,7 @@ String outer() {
 }
 ```
 
-A exceção atravessa frames (funções chamadas) em ambos os targets.
+The exception crosses frames (called functions) on both targets.
 
 ## finally
 
@@ -104,9 +106,9 @@ try {
 }
 ```
 
-`finally` roda no caminho normal, no caminho capturado e na propagação.
+`finally` runs on the normal path, on the caught path and on propagation.
 
-## Anti-patterns relacionados
+## Related anti-patterns
 
 - `sentinel-values.md`
 - `runtime-workarounds.md`

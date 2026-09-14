@@ -71,6 +71,18 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > codigo Kof NAO sao traduzidos (so prosa/titulos/rotulos). Nao tocar `nat/`,
 > nem lanes de bugs/feature de outros donos.
 >
+> **STATUS i18n medido 14/09 (~05:40, dono = 192.168.100.17):** cobertura de
+> par PT = **214/214 (100%)**; switcher pendente = **6** (todos os demais já
+> comutaram no lote resgatado `11780dc1`): `AGENTS.md`, `CHANGELOG.md`,
+> `docs/bugs-and-gaps/known-bugs.md`, `docs/bugs-and-gaps/conformance-matrix.md`,
+> `docs/status.md`, `docs/development/future/PLAN-UNIVERSAL-PLATFORM.md` — os
+> **meta-vivos** da repo (8k+ linhas editadas por TODAS as lanes todo dia).
+> Traduzi-los AGORA = colisão garantida com todas as lanes durante a
+> estabilização da release (a meta atual). **Plano:** manter os canônicos
+> desses 6 em PT até o corte da release; pós-release, um lote dedicado os
+> traduz para EN + insere o switcher (a paridade `check` fecha 0). Não é
+> esquecimento: é ordem de prioridade da mantenedora (estabilizar → i18n).
+>
 > **⚠️ CUIDADO (14/09 ~01:30, dono = 192.168.100.18):** este commit carrega
 > wips de OUTRAS lanes resgatados do working tree compartilhado (regra 8 —
 > commitar tudo, nunca descartar): **UIW050-JS** (`kofUiEventValue/Key/X/Y/
@@ -82,18 +94,39 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
-> **✅ FEITO degrau-2 (14/09, dono = 192.168.100.22, lane repo-hygiene):
-> contradictory-type-checks ×3, ambos ramos mortos provados inalcançáveis
-> (remoção = zero mudança de comportamento).** (a) KofFormatter:297 — 2º
-> `instanceof DoWhileStmt` após o 1º no else-if (primeiro sempre casa) →
-> removido; trava-saída nova `doWhileUsesBlockBodyBranch` (golden medido).
-> Prova: KofFormatterTest 8/8. (b) TypeChecker:187 — `from instanceof
-> NullableType` após branch que sempre retorna p/ Nullable → removido.
-> Prova: SemanticResolution 27/27 + NullSafety 7/7 + CompilerDriver 252/252.
-> Commit código: 8281d549 (só KofFormatter/TypeChecker/KofFormatterTest).
-> **PRÓXIMO PASSO:** degrau-3 = Errors restantes em arqs livres
-> (unused-container ×5 fora de lanes, index OOB Compare — checar dono antes)
-> + triar warnings por lane p/ donos; fechar alerts no CI por push.
+> **✅ FEITO CodeQL testes-fora-do-scan (14/09 ~05:10, dono = 192.168.100.22,
+> lane repo-hygiene): 495→270.** (a) commit `804a03ea`: `.github/codeql/
+> kof4j-config.yml` (security-and-quality + `paths-ignore: "**/src/test/**"`;
+> workflow `queries:`→`config-file:`) + **132 dismissals `used in tests`**
+> (relative-path ×87, concat-cmd ×2, trustmanager/TLS-localhost ×1,
+> input-resource-leak ×5, +quality triviais) — harnesses invocam java/gcc/qemu/CLI
+> com Strings proprias do teste (PATH fake DetectContext, @TempDir); trust-all
+> LOCAL e o contrato do teste TLS self-signed. Scan 34820186056 confirmou o
+> config carregado. (b) commit `c669990f` seguranca main: comparison-with-wider-
+> type ×2 (KofJsRunner loop int→long getArrayElement(long); LspServer.offsetOf
+> 'l'→long) + random-used-once ×2 (SecureRandom static final) — LspServerTest
+> 19/19, compila OK. (c) Os **270 restantes = 100% src/main**: local-var ×82,
+> unused-param ×81, NF-exception ×23, chained-type ×21, useless-null ×11, IRE ×11,
+> indent ×10, deref-null ×8, +~24. **bloqueio (regra 6):** fix 100%-seguro
+> p/ local-var-never-read (unnamed pattern `_`, JEP 443) NAO compila no baseline
+> `--release 21` (medido: javac recusa); sem bump, reestruturar caso-a-caso.
+> unused-param idem (remover parametro = mudar assinatura/fronteira contrato).
+> **PROXIMO PASSO (esta lane):** continuar degraus por arquivo LIVRE (checar dono
+> + issue #185): deref-null/IOB/NF-exception (bugs reais, um teste cada); seg
+> main restante KofJsWebview relative-path ×3 + temp-path KofInterpreter ×1.
+> Testar antes de tocar: `git log --oneline -5 -- <arq>`.
+> **✅ FEITO degrau-4 (14/09, dono = 192.168.100.22, lane repo-hygiene):
+> unused-container write-only ×3 removidos (zero efeito observável).**
+> (a) JdwpClient:178 — lista `methods` só append, retorno usa o id;
+> (b) SymbolTable — campo `symbolOrder` + 3 adds, zero leituras no repo;
+> (c) CollectionCallLowerer:429 — lista descartada, chamadas
+> `inferExprType` (efeito útil) preservadas. Prova: CompilerDriver 252/252 +
+> MapSet 14/14 + Semantic 27/27. **NÃO tocados:** SemExpressionTyper:301
+> (lane quente), KofInterpreterConcurrency (lane interpreter) → issue #185.
+> Dismiss #114/#503 (harness) e #505 (já-dismissed). **Issue #185 aberta:**
+> fila de triagem por lane (notes mecânicas por arquivo).
+> **PRÓXIMO PASSO:** warnings livres (useless-null-check ×12 etc., checar
+> dono) ou pausa p/ lanes absorverem #185.
 
 > **✅ FEITO (14/09, dono = 192.168.100.18, lane development): blog E2E
 > (D-SPRING F12) + `--fat` (D-APP I3)** — commit `8eb156f4`; as duas últimas
@@ -300,31 +333,18 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > roundtrip JVM→JS + SECN006 cross). **Resta da C11/C18:** `app.security()`
 > (middleware composto) — depende de `app.use` no app model (I2).
 >
-> **PRÓXIMO PASSO (estabilização beta-0.4.0 → release):** **linha de base do
-> gate de release medida 14/09 (suíte limpa `rm -rf */target`, dono =
-> 192.168.100.17):** compiler 1552 + script 37 + kof-c 5 + cli 225 = **1819
-> testes / 3 falhas / 0 erros / 7 skip**. As 3 falhas são TODAS cross-arch de
-> OUTRAS lanes, catalogadas com evidência: **§181 residual** (`riscv64/
-> aarch64CastSaturation`: `(-inf) as Int`→`0`, deveria `MIN_VALUE` — só essa
-> linha diverge; lane nat) e **§189** (`parseOrDefaultCrossArch`: programa
-> TRAVA na 1ª `parseDoubleOrDefault` sob riscv — lane stdlib/nat). **Re-run
-> isolado 14/09 (~04:20, dono = 192.168.100.17) CRAVOU os dois como
-> DETERMINÍSTICOS (2/2, NÃO flake):** `riscv64CastSaturation` falhou em 2.2s
-> (linha única `(-inf) as Int`→`0` vs `MIN_VALUE`); `parseOrDefaultCrossArch`
-> pendurou o `qemu-riscv64` >5 min no mesmo `readAllBytes` (matei a `-9`) —
-> o golden exige 13 linhas+ec0 mas só as 8 Int/Long saem, o double trava.
-> O bloqueio de cache anterior foi RESOLVIDO: baixei online o surefire
-> 3.6.0 completo + mariadb/postgresql/junit bumpados pelo dependabot
-> (dependabot re-bumpou de novo → 3.5.10/42.7.13; todos no `.m2` agora;
-> `mvn -o test-compile -pl kof-compiler -am` = BUILD SUCCESS).
-> **Gate de release NÃO está 0-falhas:** os 3 vermelhos cross precisam de fix
-> das lanes nat/stdlib (regra 6 se tocar contrato) antes de congelar a
-> release. **NUNCA:** tocar `nat/` GC, lanes `.15`/`.22`; reabrir
-> decompiler/translator sem decisão (despriorizados — meta = estabilizar a
-> release). O gate offline agora roda: `mvn -o test -pl kof-compiler,kof-script,
-> kof-c-compiler,kof-cli -am -Dsurefire.failIfNoSpecifiedTests=false
-> -Dmaven.test.failure.ignore=true`. **Não relancei o gate completo (gasta
-> 2h+, e o parseOrDefault pendura sozinho — linha de base já medida).**
+> **PRÓXIMO PASSO (estabilização beta-0.4.0 → release):** rodar a suíte
+> COMPLETA limpa pós-push (`rm -rf */target && mvn -o test -pl
+> kof-compiler,kof-script,kof-c-compiler,kof-cli -am
+> -Dsurefire.failIfNoSpecifiedTests=false -Dmaven.test.failure.ignore=true`)
+> e registrar a linha de base em `docs/status.md` (gate de release = 0
+> FAILURE fora dos erros de `node`/BD ausente + das guardas de toolchain).
+> A fila `known-bugs.md` aberta (13 itens) é TODA de outras lanes (`.15`/
+> `.18`/Native) ou regra 6/decisão da mantenedora — **NÃO atacar sem don**
+> **o**; se a suíte verde confirmar estabilidade, seguir a condição de
+> ESTABILIDADE do AGENTS.md (recusar re-disparo, parar o cron). **NUNCA:**
+> tocar `nat/` GC, lanes `.15`/`.22`; reabrir decompiler/translator sem
+> decisão (despriorizados — meta = estabilizar a release).
 >
 >
 > **✅ FEITO (14/09 ~00:30, dono = 192.168.100.22): CI vermelho na beta
@@ -3088,6 +3108,8 @@ Tier 1 ⇒ fechado ⇒ Tiers 2–12 (plataforma universal) abrem.
 
 - **≤500 linhas por classe** (refactor futuro de NativeRuntime: módulo novo por área, ex: `NativeHttpRuntime.java`).
 - Nunca duas frentes no mesmo arquivo gigante ao mesmo tempo — se for inevitável, combine no chat antes.
+- **Sem trocar de branch toda hora; nunca renomear branch compartilhada** (14/09, ordem da mantenedora): tudo entra pela `beta-*` ativa; `tmp-*` local nunca vira ref remota nem renomeia `beta/main` por baixo dos outros.
+- **Overlay i18n nunca apaga edição viva** (14/09, bug real corrigido em `scripts/docs-lang.sh`): o guard usava `git diff --quiet`, cego com skip-worktree — agora compara hash do worktree com o índice.
 - **Congelamento de comportamento** (AGENTS.md, obrigatório): zero regressão (suíte **910** é gate de merge), features novas **aditivas** (retrocompatibilidade), refactor de 500 linhas preserva semântica (mesma suíte + golden E2E; output mudou = bug do refactor), bugs em `docs/known-bugs.md` são corrigidos **no código** para atingir o comportamento previsto (nunca "documentar em volta"), paridade JVM/Native/JS é regra.
 
 ## Incidentes de processo (bronca registrada — 03/09, agente-switch-expr)

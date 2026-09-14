@@ -199,7 +199,7 @@ FECHADO 11/09 (riscv64/aarch64)**: `addDays`/`diffDays` rodam nos 5 alvos —
 > **S2b ASCII:** `capitalize` usa a MESMA regra nos 4 targets (byte 0 `a-z`→`A-Z`).
 > `reverse` é byte-reverso no Native e UTF-16/UTF-8 nos demais — coincidem em ASCII
 > (caso `stdstrings2b`). Casos não-ASCII: **NAT-STR01** (gap do UTF-8 nativo,
-> `plan-stdlib-expansion.md` §5; **seção de registro:** `known-bugs.md` §161)
+> `docs/stdlib/PLAN-STDLIB-EXPANSION.md` §5; **seção de registro:** `known-bugs.md` §161)
 > — não entram na matriz até corrigido (R5/R6).
 > **Extensão NAT-STR01 (10/09, varredura String parte 2):** os métodos de
 > INSTÂNCIA `"café".toUpperCase()`/`"CAFÉ".toLowerCase()` são **ASCII-only no

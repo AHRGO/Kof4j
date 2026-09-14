@@ -1,0 +1,15 @@
+# Config do CodeQL (Kof4j)
+# security-and-quality: varre TODO o codigo-fonte, mas EXCLUI os harnesses de
+# teste. Motivo (triagem 495-alerts, 14/09):
+#   - java/relative-path-command / java/concatenated-command-line: os testes
+#     invocam `java`/`gcc`/`qemu`/CLI a partir de Strings construidas no proprio
+#     teste (PATH fake de DetectContext, dirs temp de @TempDir) — vetor de
+#     injecao exige entrada externa, que nao existe em teste unitario/E2E.
+#   - java/insecure-trustmanager (KofWebTlsTest): trust-all LOCAL e o contrato
+#     do teste de TLS self-signed (a face real do produto e testada a parte).
+# O codigo de producao (src/main) permanece 100% varrido.
+name: Kof4j CodeQL
+queries:
+  - uses: security-and-quality
+paths-ignore:
+  - "**/src/test/**"

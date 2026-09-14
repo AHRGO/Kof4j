@@ -1,8 +1,8 @@
-[English](plan-stdlib-expansion.md) | [Português](plan-stdlib-expansion.pt_BR.md)
+[English](PLAN-STDLIB-EXPANSION.md) | [Português](PLAN-STDLIB-EXPANSION.pt_BR.md)
 
 # Plano — Universal Standard Library (STDLIB)
 
-**Dono:** lane KOFSCRIPT (fixes-for-kofagent) · **Status:** EM CURSO — **S7d FECHADO 11/09**: `addDays`/`diffDays` nos 5 alvos (JVM/Script S7a, JS S7b, x86 S7c `RuntimeTimeIso`, riscv/aarch **B33** — TIME002 fechado; a spec "bloqueada sem qemu" caiu: toolchain+qemu presentes, goldens byte-idênticos sob qemu). S1b/S1b.1 **MATH001 fechado 11/09** (Double math riscv/aarch B32). Restam no plano decisões/implementações ratificadas 13/09 (`pow`/`-lm` 7a ✅, S10c `randomBytesHex` 6a ✅, §89 alias+warning 3a ✅ `e33425b5` — implementado) + a decisão pendente `format`/`boundaries` + itens sem algoritmo no corpus (isNis/ulid/creditCard); S0–S6, S8–S10 FEITOS (auditoria 10/09 vs código) · **Briefing:** maintainer 08/09 (universal stdlib, multitarget, anti-microdependência)
+**Dono:** lane KOFSCRIPT (fixes-for-kofagent) · **Status:** CONCLUÍDO (14/09) — S0–S13 concluídos e consolidados em docs/stdlib/stdlib.md; pendências de decisão movidas para DECISIONS.md §D-STDLIB · **Briefing:** maintainer 08/09 (universal stdlib, multitarget, anti-microdependência)
 
 ## 0. Arquitetura real (mapeada 08/09 — NÃO inventar paralela)
 

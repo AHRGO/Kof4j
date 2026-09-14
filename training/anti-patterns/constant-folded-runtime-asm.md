@@ -1,44 +1,47 @@
-# Constante de runtime: concatenação literal `static final String` é DOBRADA no call-site
+[English](constant-folded-runtime-asm.md) | [Português](constant-folded-runtime-asm.pt_BR.md)
+
+# Runtime constant: literal concatenation of `static final String` is FOLDED at the call-site
 
 ## Problem
 
-Uma `static final String` inicializada com **concatenação de literais de
-String** (constantes JLS 15.28) é tratada pelo javac como **variável-constante**:
-o valor final é embutido no *constant pool* de **cada classe que a referencia**
-em tempo de compilação. Quando o valor muda (você edita uma das peças), só
-quem recompilar vê o valor novo — o resto do build carrega o **valor velho
-in-line**, e `mvn compile -o` incremental não recompila quem não mudou.
+A `static final String` initialized with **concatenation of String
+literals** (JLS 15.28 constants) is treated by javac as a **constant variable**:
+the final value is embedded in the *constant pool* of **every class that
+references it** at compile time. When the value changes (you edit one of the
+pieces), only whoever recompiles sees the new value — the rest of the build
+carries the **old value in-line**, and an incremental `mvn compile -o` does not
+recompile whoever did not change.
 
-Resultado clássico neste repo (12/09, dia do G-0 do GC cross): a lane GC edita
-`NativeRiscvAsmRt0.RISCV_RUNTIME_ASM_0` (novo header de bloco 32B no
-`kof_alloc`), recompila incremental, roda a suíte →
-`NativeRiscvRuntimeSliceRegistryTest` falha com
-"concatenação reflexiva na ordem derivada deve ser byte-idêntica ao runtime de
-produção". **Split-brain FALSO**: `RiscvSlices` lê as peças por *reflection*
-(valor fresco) enquanto o LHS do teste lê `NativeRiscvAsm.RISCV_RUNTIME_ASM`
-(getstatic num `.class` com bytes **dobrados na compilação anterior**). O teste
-estava certo; o build é que era uma loteria.
+Classic result in this repo (12/09, the day of the GC cross G-0): the GC lane edits
+`NativeRiscvAsmRt0.RISCV_RUNTIME_ASM_0` (new 32B block header in
+`kof_alloc`), recompiles incrementally, runs the suite →
+`NativeRiscvRuntimeSliceRegistryTest` fails with
+"reflexive concatenation in the derived order must be byte-identical to the
+production runtime". **FALSE split-brain**: `RiscvSlices` reads the pieces by
+*reflection* (fresh value) while the test's LHS reads
+`NativeRiscvAsm.RISCV_RUNTIME_ASM` (getstatic on a `.class` with bytes **folded
+in the previous compilation**). The test was right; the build was the lottery.
 
 ## Bad
 
 ```java
 // NativoRuntime.java
 static final String RUNTIME_ASM =
-        Part0.RUNTIME_ASM_0 + Part1.RUNTIME_ASM_1;   // ❌ variável-constante
+        Part0.RUNTIME_ASM_0 + Part1.RUNTIME_ASM_1;   // ❌ constant variable
 ```
 
-Quem usa (`RuntimeArchEmitter`, testes, `RiscvSlices`) embute os bytes no
-próprio `.class`. Editar `Part0.java` + `mvn -o compile` incremental →
-`Part0.class` novo, emissor/teste **velhos**, e nenhum erro até a suíte
-acusa divergência. (A `RISCV_RUNTIME_ASM_B` já tinha o mesmo remédio no repo —
-"constante string too long" forçava StringBuilder — mas a justificativa da
-64KB **escondeu** a razão estrutural, e as 3 constantes irmãs ficaram
-dobráveis.)
+Whoever uses it (`RuntimeArchEmitter`, tests, `RiscvSlices`) embeds the bytes in
+its own `.class`. Editing `Part0.java` + incremental `mvn -o compile` →
+new `Part0.class`, **old** emitter/test, and no error until the suite
+flags divergence. (The `RISCV_RUNTIME_ASM_B` already had the same remedy in the
+repo — "constant string too long" forced StringBuilder — but the 64KB
+justification **hid** the structural reason, and the 3 sister constants
+remained foldable.)
 
 ## Preferred
 
 ```java
-// NativoRuntime.java — mesmo bytes, resolvido no <clinit> a cada JVM
+// NativoRuntime.java — same bytes, resolved in <clinit> on every JVM
 static final String RUNTIME_ASM = runtimeAsm();
 private static String runtimeAsm() {
     return new StringBuilder()
@@ -48,28 +51,29 @@ private static String runtimeAsm() {
 }
 ```
 
-`StringBuilder.append` não é expressão-constante → o campo **deixa de ser**
-variável-constante → o valor é calculado no `<clinit>` na JVM de teste; toda
-leitura (`getstatic`) vê o valor **do build atual**.
+`StringBuilder.append` is not a constant expression → the field **stops being**
+a constant variable → the value is computed in `<clinit>` on the test JVM; every
+read (`getstatic`) sees the value **of the current build**.
 
 ## Why
 
-- O problema é **distribuição do valor entre .class files**, não o valor.
-  Concatenação literal move bytes para N constant pools; método/`<clinit>`
-  mantém os bytes só nos `.class` das peças.
-- `static final String` derivada de `String.format`, `+` de variáveis, ou
-  método **já não** é constante — o padrão vale só para concatenação pura de
-  literais/constantes, que é exatamente o formato deste runtime fatiado.
-- `RiscvSlices` (e qualquer oracle que derive ordem das peças **do fonte do
-  agregador** via regex) continua funcionando: ele só precisa da **ordem e dos
-  nomes** `NativeRiscvAsmXxx.CONST` no fonte — chamadas de método
-  (`runtimeRt()` com `.append(...)` nas linhas seguintes) preservam ambos.
+- The problem is **distribution of the value across .class files**, not the
+  value. Literal concatenation moves bytes into N constant pools; a
+  method/`<clinit>` keeps the bytes only in the pieces' `.class` files.
+- A `static final String` derived from `String.format`, `+` of variables, or
+  a method is **no longer** constant — the pattern applies only to pure
+  concatenation of literals/constants, which is exactly the format of this
+  sliced runtime.
+- `RiscvSlices` (and any oracle that derives the order of the pieces **from the
+  aggregator source** via regex) keeps working: it only needs the **order and
+  names** `NativeRiscvAsmXxx.CONST` in the source — method calls
+  (`runtimeRt()` with `.append(...)` on the following lines) preserve both.
 
 ## Checklist
 
-- [ ] A constante é **literal pura concatenada**? → método-`<clinit>`.
-- [ ] Há oracle comparando por reflection/parse (fresco) vs `getstatic`
-      (dobrado)? → **todas** as constantes do agregador precisam do padrão,
-      nunca só a que bateu no erro dos 64KB.
-- [ ] Ao reportar "produção diverge da peça": **recompile full primeiro**
-      (`mvn test-compile` limpo) antes de culpar o autor do commit alheio.
+- [ ] Is the constant **pure concatenated literal**? → method-`<clinit>`.
+- [ ] Is there an oracle comparing by reflection/parse (fresh) vs `getstatic`
+      (folded)? → **all** the aggregator's constants need the pattern,
+      never only the one that hit the 64KB error.
+- [ ] When reporting "production diverges from the piece": **recompile full first**
+      (clean `mvn test-compile`) before blaming the author of someone else's commit.

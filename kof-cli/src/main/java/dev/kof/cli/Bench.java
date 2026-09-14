@@ -36,6 +36,29 @@ public final class Bench {
     private Bench() {
     }
 
+    /**
+     * `--iterations`/`--warmup`: int com diagnóstico limpo em vez de
+     * NumberFormatException (CodeQL uncaught-number-format-exception, R6).
+     */
+    private static Integer parseIntOption(String name, String value) {
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            System.err.println("kof bench: valor inválido para " + name + ": '" + value + "'");
+            return null;
+        }
+    }
+
+    /** `--threshold`: double com o mesmo diagnóstico limpo. */
+    private static Double parseDoubleOption(String name, String value) {
+        try {
+            return Double.parseDouble(value.trim());
+        } catch (NumberFormatException e) {
+            System.err.println("kof bench: valor inválido para " + name + ": '" + value + "'");
+            return null;
+        }
+    }
+
     public static int run(String[] args) {
         if (args.length > 0 && "bench".equals(args[0])) {
             args = java.util.Arrays.copyOfRange(args, 1, args.length);
@@ -60,12 +83,16 @@ public final class Bench {
                 }
                 case "--iterations" -> {
                     if (i + 1 < args.length) {
-                        iterations = Integer.parseInt(args[++i]);
+                        Integer it = parseIntOption("--iterations", args[++i]);
+                        if (it == null) return 1;
+                        iterations = it;
                     }
                 }
                 case "--warmup" -> {
                     if (i + 1 < args.length) {
-                        warmup = Integer.parseInt(args[++i]);
+                        Integer wu = parseIntOption("--warmup", args[++i]);
+                        if (wu == null) return 1;
+                        warmup = wu;
                     }
                 }
                 case "--quick" -> {
@@ -84,7 +111,9 @@ public final class Bench {
                 }
                 case "--threshold" -> {
                     if (i + 1 < args.length) {
-                        threshold = Double.parseDouble(args[++i]);
+                        Double th = parseDoubleOption("--threshold", args[++i]);
+                        if (th == null) return 1;
+                        threshold = th;
                     }
                 }
                 case "--json" -> jsonOut = true;
@@ -94,15 +123,21 @@ public final class Bench {
                     if (arg.startsWith("--target=")) {
                         target = BenchDiscovery.parseTarget(arg.substring("--target=".length()));
                     } else if (arg.startsWith("--iterations=")) {
-                        iterations = Integer.parseInt(arg.substring("--iterations=".length()));
+                        Integer it = parseIntOption("--iterations", arg.substring("--iterations=".length()));
+                        if (it == null) return 1;
+                        iterations = it;
                     } else if (arg.startsWith("--warmup=")) {
-                        warmup = Integer.parseInt(arg.substring("--warmup=".length()));
+                        Integer wu = parseIntOption("--warmup", arg.substring("--warmup=".length()));
+                        if (wu == null) return 1;
+                        warmup = wu;
                     } else if (arg.startsWith("--baseline=")) {
                         baselineFile = Path.of(arg.substring("--baseline=".length()));
                     } else if (arg.startsWith("--update-baseline=")) {
                         updateBaseline = Path.of(arg.substring("--update-baseline=".length()));
                     } else if (arg.startsWith("--threshold=")) {
-                        threshold = Double.parseDouble(arg.substring("--threshold=".length()));
+                        Double th = parseDoubleOption("--threshold", arg.substring("--threshold=".length()));
+                        if (th == null) return 1;
+                        threshold = th;
                     } else {
                         roots.add(Path.of(arg));
                     }

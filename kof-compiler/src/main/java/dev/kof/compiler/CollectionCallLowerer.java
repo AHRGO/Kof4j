@@ -426,9 +426,8 @@ public final class CollectionCallLowerer {
                 "SEM034");
     }
     Type methodReturnType = Type.UnknownType.UNKNOWN;
-    List<Type> methodParamTypes = new ArrayList<>();
     for (ExpressionNode arg : mc.arguments()) {
-        methodParamTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
+        ExpressionTyper.inferExprType(driver, arg, locals);
     }
         return -1;
     }

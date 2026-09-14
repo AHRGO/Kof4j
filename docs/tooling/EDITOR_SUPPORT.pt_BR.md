@@ -13,7 +13,7 @@ Nenhum editor precisa de um parser próprio. O editor consome o tooling do Kof.
 > **Instalação automática:** `kof editor setup` detecta seus editores e
 > instala as integrações recomendadas (com consentimento). Documentação por
 > editor em [`docs/editors/`](../editors/overview.md). Infra e plano:
-> `docs/development/plan-editor-integration.md` (EDI001).
+> `docs/tooling/PLAN-EDITOR-INTEGRATION.md` (EDI001).
 
 ---
 

@@ -1,3 +1,5 @@
+[English](compiler.md) | [Português](compiler.pt_BR.md)
+
 # Kof Compiler Reference
 
 **Version:** 0.4.0-beta (Sep 2026) — 810 tests
@@ -11,14 +13,14 @@ Lexer → Tokens
     ↓
 Parser → AST (PatternExpr fieldVars, NullableType)
     ↓
-Semantic Analysis → Typed AST (isAssignable com null narrowing, record destructuring)
+Semantic Analysis → Typed AST (isAssignable with null narrowing, record destructuring)
     ↓
 Kof IR (backend-agnostic) → Optimizer (constant folding, branch simplification)
     ↓
 ┌─────────┬──────────┬──────┬──────────┬──────┬─────────┐
 │  JVM    │ Native   │ JS   │ KofScript│ KofC │ Android │
 │  (ASM)  │ x86_64/  │ ES   │ JIT      │ C→ELF│ JVM→APK │
-│         │ risc/arm*│      │          │      │ (Fase 1)│
+│         │ risc/arm*│      │          │      │ (Phase 1)│
 └─────────┴──────────┴──────┴──────────┴──────┴─────────┘
 ```
 
@@ -30,28 +32,28 @@ Kof IR (backend-agnostic) → Optimizer (constant folding, branch simplification
 |---------|-------------|
 | `kof build <dir> [--target jvm\|native\|native.risc\|native.arm\|js\|android] [--output <dir>] [--release] [--apk]` | Compile all .kf files |
 | `kof run <file.kf\|dir> [--target jvm\|native\|native.risc\|native.arm\|js\|android] [args...]` | Compile and run (JVM/Native/JS/Android) |
-| `kof serve <file.kf> [--port] [--host]` | Start HTTP server (web.app + API legada handle) |
+| `kof serve <file.kf> [--port] [--host]` | Start HTTP server (web.app + legacy handle API) |
 | `kof check <file.kf\|dir>` | Type-check only |
-| `kof test <file.kf\|dir> [--target jvm\|native\|js]` | Structured tests `test "nome" { }` nos 3 targets |
+| `kof test <file.kf\|dir> [--target jvm\|native\|js]` | Structured tests `test "nome" { }` on the 3 targets |
 | `kof script <file.ks> [--watch] [--inspect]` | KofScript top-level let → KofScriptGlobals + JIT |
-| `kof repl` | REPL incremental KofScript |
-| `kof c <file.c> [-o outDir]` | KofC C subset → ELF x86_64 (nativo-only) |
-| `kof fmt <file.kf\|dir>` | Formatter via parser real (KofFormatter), idempotente |
-| `kof config gen <file.kf\|dir> [--output <arquivo>]` | Gera template `kof.config` a partir das chaves `config.*` do código |
-| `kof bench [paths...] [--iterations N] [--quick] [--baseline <file>]` | Benchmark harness com baselines |
-| `kof profile <file.kf> [--target ...]` | Execução + métricas (CPU, RSS, GC) |
-| `kof inspect <file.kf> [--json]` | IR statistics (ops antes/depois do otimizador) |
-| `kof debug <file.kf>` | DAP MVP no target JVM |
+| `kof repl` | Incremental KofScript REPL |
+| `kof c <file.c> [-o outDir]` | KofC C subset → ELF x86_64 (native-only) |
+| `kof fmt <file.kf\|dir>` | Formatter via the real parser (KofFormatter), idempotent |
+| `kof config gen <file.kf\|dir> [--output <file>]` | Generates a `kof.config` template from the code's `config.*` keys |
+| `kof bench [paths...] [--iterations N] [--quick] [--baseline <file>]` | Benchmark harness with baselines |
+| `kof profile <file.kf> [--target ...]` | Execution + metrics (CPU, RSS, GC) |
+| `kof inspect <file.kf> [--json]` | IR statistics (ops before/after the optimizer) |
+| `kof debug <file.kf>` | DAP MVP on the JVM target |
 | `kof info [--json]` | Environment report |
-| `kof install <dir>` | Instala este build como distribuição |
+| `kof install <dir>` | Installs this build as a distribution |
 | `kof lsp` | Language Server (stdio, LSP 3.x) |
 | `kof version` | Show version (0.4.0-beta) |
 
-18 comandos. `kof fmt` e `kof config gen` implementados (0.4.0-beta).
+18 commands. `kof fmt` and `kof config gen` implemented (0.4.0-beta).
 
 Fixes 27/08:
-- `CompilerDriver.expandKofImports` trata `import a.b.C` (arquivo) além de `a.b.*` (pasta) — projetos grandes com `a/b/C.kf` agora geram ambos os `.class`.
-- `NativeRuntime` free-list GC (`kof_free_head`, `kof_gc_collect` mark-sweep; auto-GC desligado) + spawn/await via pthread (31/08).
+- `CompilerDriver.expandKofImports` handles `import a.b.C` (file) in addition to `a.b.*` (folder) — large projects with `a/b/C.kf` now generate both `.class` files.
+- `NativeRuntime` free-list GC (`kof_free_head`, `kof_gc_collect` mark-sweep; auto-GC off) + spawn/await via pthread (31/08).
 
 ## Backend Targets
 
@@ -64,10 +66,10 @@ Fixes 27/08:
 ### Native
 - Generates x86_64 Linux ELF binaries
 - Uses Linux syscalls directly (no libc)
-- Free-list allocator thread-safe (lock futex) + `kof_gc_collect` mark-sweep conservador; auto-GC desligado (GC mark-sweep automático ainda pendente)
-- Ponto flutuante em XMM real (FLT001 fechado 31/08); JSON completo de objetos/arrays (JSN001/002/003 fechados 31/08)
-- `spawn`/`await` via pthread (CONC001 fechado 31/08)
-- MySQL handshake com SHA-1 scramble (WIP)
+- Thread-safe free-list allocator (futex lock) + conservative `kof_gc_collect` mark-sweep; auto-GC off (automatic mark-sweep GC still pending)
+- Real floating point in XMM (FLT001 closed 31/08); complete JSON for objects/arrays (JSN001/002/003 closed 31/08)
+- `spawn`/`await` via pthread (CONC001 closed 31/08)
+- MySQL handshake with SHA-1 scramble (WIP)
 - Runtime functions: kof_alloc, kof_free, kof_gc_*, kof_print, kof_string_*, kof_array_*, kof_list_*, kof_net_*, kof_db_mysql_scramble, etc.
 
 ### Native RISC-V / ARM
@@ -85,8 +87,8 @@ Fixes 27/08:
 - C subset (`int` globals, `void` funcs, `if`/`while`/`*(int*)`/`&`) → x86_64 via `as`/`ld`
 
 ### Android
-- Fase 1: `AndroidProjectWriter` — saída JVM (bytecode) + KofJS para assets → APK de debug (aapt2/d8/apksigner via Maven; host Activity em Kof)
-- Gaps: `AND001` spawn/await, `AND002` kof.web, `AND003` reflexão, `AND004` android.jar
+- Phase 1: `AndroidProjectWriter` — JVM output (bytecode) + KofJS for assets → debug APK (aapt2/d8/apksigner via Maven; host Activity in Kof)
+- Gaps: `AND001` spawn/await, `AND002` kof.web, `AND003` reflection, `AND004` android.jar
 
 ## IR Operations
 

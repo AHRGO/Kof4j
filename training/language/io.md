@@ -1,60 +1,63 @@
+[English](io.md) | [Português](io.pt_BR.md)
+
 # kof.io — filesystem API
 
-Fatos sobre a API oficial de filesystem do Kof. Use para responder perguntas
-sobre ler/escrever arquivos, trabalhar com paths e listar diretórios.
+Facts about Kof's official filesystem API. Use it to answer questions
+about reading/writing files, working with paths and listing directories.
 
-## Modelo
+## Model
 
-- `File`, `Path` e `Directory` são tipos de `kof.io`.
-- Os três representam um caminho; as operações são as mesmas para os três.
-- O programador nunca vê POSIX, `java.nio`, syscalls ou separadores por
-  plataforma: `kof.io` resolve isso no backend (JVM → `java.nio.file`;
-  Native → syscalls POSIX no Linux x86-64).
-- **`readLine()` (top-level, stdin)** → `String?` (02/09): `null` no EOF em
-  JVM e Native (antes o Native devolvia `""`). Trate com `if (line != null)`.
+- `File`, `Path` and `Directory` are types from `kof.io`.
+- All three represent a path; the operations are the same for all three.
+- The programmer never sees POSIX, `java.nio`, syscalls or per-platform
+  separators: `kof.io` resolves that in the backend (JVM → `java.nio.file`;
+  Native → POSIX syscalls on Linux x86-64).
+- **`readLine()` (top-level, stdin)** → `String?` (02/09): `null` at EOF on
+  JVM and Native (previously Native returned `""`). Handle it with
+  `if (line != null)`.
 
 ## Path
 
-| Operação | Resultado |
+| Operation | Result |
 |----------|-----------|
-| `Path("a").resolve("b")` | `a/b` (separador da plataforma) |
-| `Path("a/b").parent()` | `a` (ou null) |
+| `Path("a").resolve("b")` | `a/b` (platform separator) |
+| `Path("a/b").parent()` | `a` (or null) |
 | `Path("a/b.txt").fileName()` | `b.txt` |
 | `Path("a/b.txt").extension()` | `txt` |
 | `Path("a/./b/../c").normalize()` | `a/c` |
 | `Path("a").isAbsolute()` | `false` |
 | `Path("a").toAbsolute().isAbsolute()` | `true` |
 
-`normalize()` resolve `.` e `..`; um caminho relativo vazio vira `.`.
+`normalize()` resolves `.` and `..`; an empty relative path becomes `.`.
 
 ## File
 
-| Operação | Comportamento |
+| Operation | Behavior |
 |----------|---------------|
 | `File("x").exists()` | Bool |
 | `File("x").isFile()` / `.isDirectory()` | Bool |
-| `File("x").readText()` | `String?` — `null` se falhar (JVM e Native) |
+| `File("x").readText()` | `String?` — `null` if it fails (JVM and Native) |
 | `File("x").writeText(s)` / `.appendText(s)` | Bool |
-| `File("x").readBytes()` | `Int[]` (0-255); `null` se falhar |
+| `File("x").readBytes()` | `Int[]` (0-255); `null` if it fails |
 | `File("x").writeBytes(b)` / `.appendBytes(b)` | Bool |
-| `File("x").size()` | Long; **lança exceção** se o arquivo não existe (02/09 — sem sentinela `-1`) |
+| `File("x").size()` | Long; **throws an exception** if the file does not exist (02/09 — no `-1` sentinel) |
 | `File("x").delete()` | Bool |
 | `File("x").name()` / `.path()` | String |
 
-Estáticas: `File.exists(p)`, `File.readText(p)`, `File.writeText(p, s)`,
+Statics: `File.exists(p)`, `File.readText(p)`, `File.writeText(p, s)`,
 `File.delete(p)`, `File.size(p)`.
 
 ## Directory
 
-| Operação | Comportamento |
+| Operation | Behavior |
 |----------|---------------|
 | `Directory("d").exists()` | Bool |
-| `Directory("d").create()` | cria; falha se já existe |
-| `Directory("d").createDirectories()` | cria recursivamente |
-| `Directory("d").list()` | `List<String>` dos nomes (ordenado) |
-| `Directory("d").delete()` | remove diretório vazio |
+| `Directory("d").create()` | creates; fails if it already exists |
+| `Directory("d").createDirectories()` | creates recursively |
+| `Directory("d").list()` | `List<String>` of the names (sorted) |
+| `Directory("d").delete()` | removes an empty directory |
 
-Iteração:
+Iteration:
 
 ```kof
 for (var entry in dir.list()) {
@@ -62,9 +65,9 @@ for (var entry in dir.list()) {
 }
 ```
 
-`entry.name` e `entry.path` retornam a própria string do entry.
+`entry.name` and `entry.path` return the entry's own string.
 
-## Exemplos
+## Examples
 
 ```kof
 var path = Path("data/users.txt")
@@ -87,20 +90,21 @@ println(file.readBytes().length)
 
 ## Encoding
 
-- `readText`/`writeText`/`appendText` usam UTF-8 sempre.
-- O encoding default do sistema nunca é usado.
+- `readText`/`writeText`/`appendText` always use UTF-8.
+- The system default encoding is never used.
 
-## Erros
+## Errors
 
-- **Ausência como valor (02/09):** `readText()`/`readFile()` devolvem `String?`
-  (`null` quando o arquivo não existe) — em JVM **e** Native (o Native antes
-  encerrava com erro; agora devolve `null` como o JVM).
-- `size()` **lança** exceção recuperável (`catch (String e)`) para arquivo
-  inexistente — o `-1` sentinela foi removido (era anti-pattern do corpus).
-- Operações booleanas retornam `true`/`false`.
+- **Absence as a value (02/09):** `readText()`/`readFile()` return `String?`
+  (`null` when the file does not exist) — on the JVM **and** Native (Native
+  previously terminated with an error; it now returns `null` like the JVM).
+- `size()` **throws** a recoverable exception (`catch (String e)`) for a
+  nonexistent file — the `-1` sentinel was removed (it was an anti-pattern in
+  the corpus).
+- Boolean operations return `true`/`false`.
 
-## Limitações atuais (0.3.22-beta)
+## Current limitations (0.3.22-beta)
 
-- Native: Linux x86_64 (syscalls POSIX) + riscv64/aarch64 placeholder via qemu; GC free-list aplica-se a buffers de arquivo.
-- Symlinks, timestamps e permissões são futuros.
-- Não há API de streams (`Reader`/`Writer`); operações são inteiras.
+- Native: Linux x86_64 (POSIX syscalls) + riscv64/aarch64 placeholder via qemu; the free-list GC applies to file buffers.
+- Symlinks, timestamps and permissions are future.
+- There is no streams API (`Reader`/`Writer`); operations are whole-file.
