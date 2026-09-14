@@ -100,137 +100,153 @@ public final class JsEmitter {
     }
 
     private void emitStatement(JsIr.JsStatement stmt) {
-        if (stmt instanceof JsIr.JsExprStmt es) {
-            line(expr(es.expression()) + ";");
-        } else if (stmt instanceof JsIr.JsVarDecl vd) {
-            line((vd.isConst() ? "const " : "let ") + vd.name()
-                    + (vd.initializer() == null ? "" : " = " + expr(vd.initializer())) + ";");
-        } else if (stmt instanceof JsIr.JsAssign as) {
-            line(as.target() + " = " + expr(as.value()) + ";");
-        } else if (stmt instanceof JsIr.JsReturn r) {
-            line(r.value() == null ? "return;" : "return " + expr(r.value()) + ";");
-        } else if (stmt instanceof JsIr.JsBreak) {
-            line("break;");
-        } else if (stmt instanceof JsIr.JsContinue) {
-            line("continue;");
-        } else if (stmt instanceof JsIr.JsThrow t) {
-            line("throw " + expr(t.value()) + ";");
-        } else if (stmt instanceof JsIr.JsBlock b) {
-            line("{");
-            indent++;
-            for (JsIr.JsStatement s : b.statements()) emitStatement(s);
-            indent--;
-            line("}");
-        } else if (stmt instanceof JsIr.JsIf i) {
-            line("if (" + expr(i.condition()) + ") {");
-            indent++;
-            for (JsIr.JsStatement s : i.thenBranch()) emitStatement(s);
-            indent--;
-            if (i.elseBranch() == null || i.elseBranch().isEmpty()) {
-                line("}");
-            } else {
-                line("} else {");
-                indent++;
-                for (JsIr.JsStatement s : i.elseBranch()) emitStatement(s);
-                indent--;
-                line("}");
+        switch (stmt) {
+            case JsIr.JsExprStmt es -> {
+                line(expr(es.expression()) + ";");
             }
-        } else if (stmt instanceof JsIr.JsWhile w) {
-            if (w.isDoWhile()) {
-                line("do {");
-                indent++;
-                for (JsIr.JsStatement s : w.body()) emitStatement(s);
-                indent--;
-                line("} while (" + expr(w.condition()) + ");");
-            } else {
-                line("while (" + expr(w.condition()) + ") {");
-                indent++;
-                for (JsIr.JsStatement s : w.body()) emitStatement(s);
-                indent--;
-                line("}");
+            case JsIr.JsVarDecl vd -> {
+                line((vd.isConst() ? "const " : "let ") + vd.name()
+                        + (vd.initializer() == null ? "" : " = " + expr(vd.initializer())) + ";");
             }
-        } else if (stmt instanceof JsIr.JsFor f) {
-            StringBuilder init = new StringBuilder();
-            for (int i = 0; i < f.init().size(); i++) {
-                if (i > 0) init.append(" ");
-                if (f.init().get(i) instanceof JsIr.JsVarDecl vd) {
-                    init.append(vd.isConst() ? "const " : "let ").append(vd.name())
-                            .append(vd.initializer() == null ? "" : " = " + expr(vd.initializer())).append(";");
-                } else if (f.init().get(i) instanceof JsIr.JsExprStmt es) {
-                    init.append(expr(es.expression())).append(";");
-                } else if (f.init().get(i) instanceof JsIr.JsAssign as) {
-                    init.append(as.target()).append(" = ").append(expr(as.value())).append(";");
-                }
+            case JsIr.JsAssign as -> {
+                line(as.target() + " = " + expr(as.value()) + ";");
             }
-            StringBuilder update = new StringBuilder();
-            for (int i = 0; i < f.update().size(); i++) {
-                if (i > 0) update.append(", ");
-                if (f.update().get(i) instanceof JsIr.JsExprStmt es) {
-                    update.append(expr(es.expression()));
-                } else if (f.update().get(i) instanceof JsIr.JsAssign as) {
-                    update.append(as.target()).append(" = ").append(expr(as.value()));
-                } else if (f.update().get(i) instanceof JsIr.JsVarDecl vd) {
-                    update.append(vd.name()).append(" = ").append(expr(vd.initializer()));
-                }
+            case JsIr.JsReturn r -> {
+                line(r.value() == null ? "return;" : "return " + expr(r.value()) + ";");
             }
-            StringBuilder head = new StringBuilder("for (");
-            head.append(init.isEmpty() ? ";" : init);
-            if (f.condition() != null) {
-                head.append(" ").append(expr(f.condition()));
-            }
-            head.append("; ").append(update).append(") {");
-            line(head.toString());
-            indent++;
-            for (JsIr.JsStatement s : f.body()) emitStatement(s);
-            indent--;
-            line("}");
-        } else if (stmt instanceof JsIr.JsForIn fi) {
-            line("for (let " + fi.varName() + " of " + expr(fi.collection()) + ") {");
-            indent++;
-            for (JsIr.JsStatement s : fi.body()) emitStatement(s);
-            indent--;
-            line("}");
-        } else if (stmt instanceof JsIr.JsSwitch sw) {
-            line("switch (" + expr(sw.subject()) + ") {");
-            indent++;
-            for (JsIr.JsSwitchCase c : sw.cases()) {
-                line("case " + expr(c.value()) + ":");
-                indent++;
-                for (JsIr.JsStatement s : c.body()) emitStatement(s);
+            case JsIr.JsBreak _ -> {
                 line("break;");
-                indent--;
             }
-            if (sw.defaultCase() != null && !sw.defaultCase().isEmpty()) {
-                line("default:");
+            case JsIr.JsContinue _ -> {
+                line("continue;");
+            }
+            case JsIr.JsThrow t -> {
+                line("throw " + expr(t.value()) + ";");
+            }
+            case JsIr.JsBlock b -> {
+                line("{");
                 indent++;
-                for (JsIr.JsStatement s : sw.defaultCase()) emitStatement(s);
+                for (JsIr.JsStatement s : b.statements()) emitStatement(s);
                 indent--;
+                line("}");
             }
-            indent--;
-            line("}");
-        } else if (stmt instanceof JsIr.JsTry t) {
-            line("try {");
-            indent++;
-            for (JsIr.JsStatement s : t.tryBody()) emitStatement(s);
-            indent--;
-            if (t.catches() != null) {
-                for (JsIr.JsCatchClause c : t.catches()) {
-                    line("} catch (" + c.param() + ") {");
+            case JsIr.JsIf i -> {
+                line("if (" + expr(i.condition()) + ") {");
+                indent++;
+                for (JsIr.JsStatement s : i.thenBranch()) emitStatement(s);
+                indent--;
+                if (i.elseBranch() == null || i.elseBranch().isEmpty()) {
+                    line("}");
+                } else {
+                    line("} else {");
+                    indent++;
+                    for (JsIr.JsStatement s : i.elseBranch()) emitStatement(s);
+                    indent--;
+                    line("}");
+                }
+            }
+            case JsIr.JsWhile w -> {
+                if (w.isDoWhile()) {
+                    line("do {");
+                    indent++;
+                    for (JsIr.JsStatement s : w.body()) emitStatement(s);
+                    indent--;
+                    line("} while (" + expr(w.condition()) + ");");
+                } else {
+                    line("while (" + expr(w.condition()) + ") {");
+                    indent++;
+                    for (JsIr.JsStatement s : w.body()) emitStatement(s);
+                    indent--;
+                    line("}");
+                }
+            }
+            case JsIr.JsFor f -> {
+                StringBuilder init = new StringBuilder();
+                for (int i = 0; i < f.init().size(); i++) {
+                    if (i > 0) init.append(" ");
+                    if (f.init().get(i) instanceof JsIr.JsVarDecl vd) {
+                        init.append(vd.isConst() ? "const " : "let ").append(vd.name())
+                                .append(vd.initializer() == null ? "" : " = " + expr(vd.initializer())).append(";");
+                    } else if (f.init().get(i) instanceof JsIr.JsExprStmt es) {
+                        init.append(expr(es.expression())).append(";");
+                    } else if (f.init().get(i) instanceof JsIr.JsAssign as) {
+                        init.append(as.target()).append(" = ").append(expr(as.value())).append(";");
+                    }
+                }
+                StringBuilder update = new StringBuilder();
+                for (int i = 0; i < f.update().size(); i++) {
+                    if (i > 0) update.append(", ");
+                    if (f.update().get(i) instanceof JsIr.JsExprStmt es) {
+                        update.append(expr(es.expression()));
+                    } else if (f.update().get(i) instanceof JsIr.JsAssign as) {
+                        update.append(as.target()).append(" = ").append(expr(as.value()));
+                    } else if (f.update().get(i) instanceof JsIr.JsVarDecl vd) {
+                        update.append(vd.name()).append(" = ").append(expr(vd.initializer()));
+                    }
+                }
+                StringBuilder head = new StringBuilder("for (");
+                head.append(init.isEmpty() ? ";" : init);
+                if (f.condition() != null) {
+                    head.append(" ").append(expr(f.condition()));
+                }
+                head.append("; ").append(update).append(") {");
+                line(head.toString());
+                indent++;
+                for (JsIr.JsStatement s : f.body()) emitStatement(s);
+                indent--;
+                line("}");
+            }
+            case JsIr.JsForIn fi -> {
+                line("for (let " + fi.varName() + " of " + expr(fi.collection()) + ") {");
+                indent++;
+                for (JsIr.JsStatement s : fi.body()) emitStatement(s);
+                indent--;
+                line("}");
+            }
+            case JsIr.JsSwitch sw -> {
+                line("switch (" + expr(sw.subject()) + ") {");
+                indent++;
+                for (JsIr.JsSwitchCase c : sw.cases()) {
+                    line("case " + expr(c.value()) + ":");
                     indent++;
                     for (JsIr.JsStatement s : c.body()) emitStatement(s);
+                    line("break;");
                     indent--;
                 }
-            }
-            if (t.finallyBody() != null && !t.finallyBody().isEmpty()) {
-                line("} finally {");
-                indent++;
-                for (JsIr.JsStatement s : t.finallyBody()) emitStatement(s);
+                if (sw.defaultCase() != null && !sw.defaultCase().isEmpty()) {
+                    line("default:");
+                    indent++;
+                    for (JsIr.JsStatement s : sw.defaultCase()) emitStatement(s);
+                    indent--;
+                }
                 indent--;
+                line("}");
             }
-            line("}");
-            // DD-01 (bug 45): epílogo do return que saiu do try — roda DEPOIS
-            // do finally (que o try nativo do JS já garante no caminho normal)
-            for (JsIr.JsStatement s : t.returnFinally()) emitStatement(s);
+            case JsIr.JsTry t -> {
+                line("try {");
+                indent++;
+                for (JsIr.JsStatement s : t.tryBody()) emitStatement(s);
+                indent--;
+                if (t.catches() != null) {
+                    for (JsIr.JsCatchClause c : t.catches()) {
+                        line("} catch (" + c.param() + ") {");
+                        indent++;
+                        for (JsIr.JsStatement s : c.body()) emitStatement(s);
+                        indent--;
+                    }
+                }
+                if (t.finallyBody() != null && !t.finallyBody().isEmpty()) {
+                    line("} finally {");
+                    indent++;
+                    for (JsIr.JsStatement s : t.finallyBody()) emitStatement(s);
+                    indent--;
+                }
+                line("}");
+                // DD-01 (bug 45): epílogo do return que saiu do try — roda DEPOIS
+                // do finally (que o try nativo do JS já garante no caminho normal)
+                for (JsIr.JsStatement s : t.returnFinally()) emitStatement(s);
+            }
+            case null, default -> { }  // no-op p/ null ou tipo nao-casado (paridade com o if-else)
         }
     }
 
