@@ -82,6 +82,27 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO CodeQL testes-fora-do-scan (14/09 ~05:10, dono = 192.168.100.22,
+> lane repo-hygiene): 495→270.** (a) commit `804a03ea`: `.github/codeql/
+> kof4j-config.yml` (security-and-quality + `paths-ignore: "**/src/test/**"`;
+> workflow `queries:`→`config-file:`) + **132 dismissals `used in tests`**
+> (relative-path ×87, concat-cmd ×2, trustmanager/TLS-localhost ×1,
+> input-resource-leak ×5, +quality triviais) — harnesses invocam java/gcc/qemu/CLI
+> com Strings proprias do teste (PATH fake DetectContext, @TempDir); trust-all
+> LOCAL e o contrato do teste TLS self-signed. Scan 34820186056 confirmou o
+> config carregado. (b) commit `c669990f` seguranca main: comparison-with-wider-
+> type ×2 (KofJsRunner loop int→long getArrayElement(long); LspServer.offsetOf
+> 'l'→long) + random-used-once ×2 (SecureRandom static final) — LspServerTest
+> 19/19, compila OK. (c) Os **270 restantes = 100% src/main**: local-var ×82,
+> unused-param ×81, NF-exception ×23, chained-type ×21, useless-null ×11, IRE ×11,
+> indent ×10, deref-null ×8, +~24. **bloqueio (regra 6):** fix 100%-seguro
+> p/ local-var-never-read (unnamed pattern `_`, JEP 443) NAO compila no baseline
+> `--release 21` (medido: javac recusa); sem bump, reestruturar caso-a-caso.
+> unused-param idem (remover parametro = mudar assinatura/fronteira contrato).
+> **PROXIMO PASSO (esta lane):** continuar degraus por arquivo LIVRE (checar dono
+> + issue #185): deref-null/IOB/NF-exception (bugs reais, um teste cada); seg
+> main restante KofJsWebview relative-path ×3 + temp-path KofInterpreter ×1.
+> Testar antes de tocar: `git log --oneline -5 -- <arq>`.
 > **✅ FEITO degrau-4 (14/09, dono = 192.168.100.22, lane repo-hygiene):
 > unused-container write-only ×3 removidos (zero efeito observável).**
 > (a) JdwpClient:178 — lista `methods` só append, retorno usa o id;
