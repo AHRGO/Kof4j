@@ -108,7 +108,7 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > arquivo principal `KofWeb.java`/`JvmRuntimeWebDispatch.java`; prova =
 > E2E com rota protegida (401 sem credencial, 200 com) em `KofBlogE2ETest`
 > ou teste próprio. Antes: reler `docs/development/DECISIONS.md` §D-SEC C18.
-=======
+
 > **EM CURSO (14/09, dono = 192.168.100.22, lane repo-hygiene/.github):
 > pack segurança GitHub (pedido da mantenedora) → ordem nova: pull+push+
 > merge NA MAIN (sem bump de versão — D-RELEASE segue: trigger 100–150,
@@ -123,7 +123,14 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > **NÃO é bump:** push protection, dependabot-security-updates e AI findings
 > ficam DESLIGADOS (opt-in da mantenedora). Stash@{0} (autostash) e stash@{1}
 > (lane#127) são de outras lanes — NUNCA dropar.
->>>>>>> cf9797a4 (docs(doing): sec-pack — Code Quality + secret scanning + private reporting ativados via API; missão merge-na-main sem bump (D-RELEASE mantido))
+> **Rebase 14/09 ~03:30:** beta remontada sobre origin/beta (0271c9cd):
+> df10e71b' (clinit; hunk JvmTypeMapper = mesmo fato, redação HEAD) +
+> a445f450' (sec-pack) + 2eeb9eec' + 5c9b8654' + este. **Nota p/ lane .18:**
+> o replay teve add/add em `KofBlogE2ETest.java` (8eb156f4=b54e6d × WIP da
+> árvore=fa479efb, 464 linhas de diff) — mantida a da árvore (fa479efb, sem
+> perda: as duas seguem no histórico); conferir qual é a canônica e
+> reconciliar. **Nota rebase:** os rounds deixaram marcadores residuais em
+> DOING (fóssil em a689cbd2:72, limpo aqui; zero impacto em código/build).
 
 > **EM CURSO (14/09 ~02:30, dono = 192.168.100.15, lane bugs-and-gaps):
 > unidade §186/#133 — fix estrutural completo do `<clinit>`.** Autostash
