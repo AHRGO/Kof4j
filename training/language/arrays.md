@@ -1,3 +1,5 @@
+[English](arrays.md) | [Português](arrays.pt_BR.md)
+
 # Kof Array Reference
 
 **Version:** 0.4.0-beta (Sep 2026)
@@ -8,8 +10,8 @@
 var arr = new Int[10]      // array of 10 integers
 var strings = new String[5] // array of 5 strings
 var empty = new Int[0]      // empty array
-var bigs = new Long[10]    // ✅ Long[] real (desde 0.2.6-beta, 01/09)
-var rows = new Long[n * k] // tamanho por expressão ok
+var bigs = new Long[10]    // ✅ real Long[] (since 0.2.6-beta, 01/09)
+var rows = new Long[n * k] // size by expression ok
 ```
 
 ## Access
@@ -27,19 +29,19 @@ var arr = new Int[5]
 println(arr.length)  // 5
 ```
 
-## Long[] (elementos de 64 bits)
+## Long[] (64-bit elements)
 
 ```kof
 var acc = new Long[256]
-acc[0] = 3000000000          // ✅ acima de Int.MAX — ok
+acc[0] = 3000000000          // ✅ above Int.MAX — ok
 var s = acc[0] + acc[0]      // ✅ 6000000000 (Long)
 ```
 
-- `Long[]` é `long[]` na JVM, `long[]` no Native, `BigInt-like`/Number no JS.
-- Store em `Long[]` promove Int para Long automaticamente.
-- Arithmética: `Long×Long→Long`, `Long+Int→Long`; `Int×Int→Int` (overflow silencioso).
-- Para acumuladores de produtos grandes (matmul, checksum, fixed-point),
-  declare `var acc: Long = 0` — não `Int`.
+- `Long[]` is `long[]` on the JVM, `long[]` on Native, `BigInt-like`/Number on JS.
+- Store into `Long[]` promotes Int to Long automatically.
+- Arithmetic: `Long×Long→Long`, `Long+Int→Long`; `Int×Int→Int` (silent overflow).
+- For accumulators of large products (matmul, checksum, fixed-point),
+  declare `var acc: Long = 0` — not `Int`.
 
 ## Bounds Checking
 

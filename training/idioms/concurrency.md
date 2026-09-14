@@ -1,10 +1,12 @@
+[English](concurrency.md) | [Português](concurrency.pt_BR.md)
+
 # Idioms — Concurrency
 
-**Status:** available (3 targets) · **Introduced:** 0.0.5-alpha · **Updated:**  0.4.0-beta (Sep 2026) (31/08: CONC001 fechado) · **JS:** sequencial (CONC003 parcial)
+**Status:** available (3 targets) · **Introduced:** 0.0.5-alpha · **Updated:**  0.4.0-beta (Sep 2026) (31/08: CONC001 closed) · **JS:** sequential (CONC003 partial)
 
 ## What it is
 
-`spawn` executa uma tarefa concorrentemente sem expor threads:
+`spawn` runs a task concurrently without exposing threads:
 
 ```kof
 void processar(Int id) {
@@ -19,14 +21,14 @@ main() {
     println("fim")
 }
 
-// Com resultado (0.3.22-beta)
+// With result (0.3.22-beta)
 main() {
-    val r = spawn trabalho()   // Handle<T> tipado
-    var v = await r            // bloqueia; T com unboxing de primitivos
+    val r = spawn trabalho()   // typed Handle<T>
+    var v = await r            // blocks; T with primitive unboxing
     println(v)
 }
 
-// Lambda literal com return + Handle (0.3.22-beta)
+// Lambda literal with return + Handle (0.3.22-beta)
 main() {
     var n = 21
     var h = spawn { return n * 2 }   // Handle<Int>
@@ -34,31 +36,31 @@ main() {
 }
 ```
 
-## Semântica real (verificada — 0.3.22-beta)
+## Real semantics (verified — 0.3.22-beta)
 
-- a tarefa roda em paralelo: JVM virtual threads; **Native `pthread_create` + trampoline + `pthread_join` (CONC001 fechado 31/08)**; JS sequencial (statement e expressão cobrem; async real = CONC003 parcial);
-- o programa **espera as tarefas antes de sair** (join implícito: `kof_spawn_join_all` no fim do main no Native);
-- `val r = spawn f()` devolve `Handle<T>` tipado; `await r` com unboxing;
-- `var h = spawn { return expr }` (lambda literal com `return` + Handle) funciona no JVM/JS/interpretador — **gap: Native x86_64 → SIGSEGV (bug 46, known-bugs.md)**; usar `spawn fn(arg)` (função nomeada) como workaround no Native até o fix;
-- exceção na tarefa não derruba o programa;
-- **KofScript** `let` top-level também suporta spawn/await via KofScriptGlobals.
+- the task runs in parallel: JVM virtual threads; **Native `pthread_create` + trampoline + `pthread_join` (CONC001 closed 31/08)**; JS sequential (statement and expression covered; real async = CONC003 partial);
+- the program **waits for the tasks before exiting** (implicit join: `kof_spawn_join_all` at the end of main on Native);
+- `val r = spawn f()` returns a typed `Handle<T>`; `await r` with unboxing;
+- `var h = spawn { return expr }` (lambda literal with `return` + Handle) works on JVM/JS/interpreter — **gap: Native x86_64 → SIGSEGV (bug 46, known-bugs.md)**; use `spawn fn(arg)` (named function) as a workaround on Native until the fix;
+- an exception in the task does not bring down the program;
+- **KofScript** top-level `let` also supports spawn/await via KofScriptGlobals.
 
 ## When to use
 
-- trabalho independente que pode rodar em paralelo (processamento de filas,
-  I/O, notificações);
-- tarefas de background;
-- quando o resultado é necessário — use `val r = spawn f(); await r`.
+- independent work that can run in parallel (queue processing,
+  I/O, notifications);
+- background tasks;
+- when the result is needed — use `val r = spawn f(); await r`.
 
 ## When not to use
 
-- quando a ordem importa e não há sincronização.
-- JS para paralelismo real de CPU (execução sequencial; CONC003 parcial).
+- when order matters and there is no synchronization.
+- JS for real CPU parallelism (sequential execution; CONC003 partial).
 
-## BAD — expor plataforma
+## BAD — exposing the platform
 
 ```kof
-// NÃO EXISTE — não há Thread/Executor na linguagem
+// DOES NOT EXIST — there is no Thread/Executor in the language
 var t = new Thread(() -> work())
 t.start()
 ```
@@ -71,96 +73,98 @@ val r = spawn compute()
 var v = await r
 ```
 
-## GOOD — kof.time interval como scheduler
+## GOOD — kof.time interval as a scheduler
 
 ```kof
-// periódicas: interval/cancel apenas JVM (TIME001 no Native/JS)
+// periodic: interval/cancel JVM only (TIME001 on Native/JS)
 var id = time.interval(1000, () -> println("tick"))
 ```
 
-Para `every`/`at` programados, `kof.scheduler` existe em JVM/JS
+For scheduled `every`/`at`, `kof.scheduler` exists on JVM/JS
 (`Native SCHED001`): `scheduler.every(100) { ... }`, `scheduler.at("0 3 * * *") { ... }`, `scheduler.cancel(id)`.
 
 ## WHY
 
-`spawn` expressa intenção. Thread/Runnable/Executor são mecanismos da
-plataforma — a decisão de como executar pertence ao runtime.
+`spawn` expresses intent. Thread/Runnable/Executor are platform
+mechanisms — the decision of how to execute belongs to the runtime.
 
-## Limitações honestas (0.3.22-beta)
+## Honest limitations (0.3.22-beta)
 
-- ~~Native: CONC001~~ — ✅ fechado 31/08 (pthread_create + trampoline + await/pthread_join + allocator thread-safe futex + join implícito);
-- JS: execução sequencial — `spawn`/`await` cobrem statement e expressão; async real de event-loop = CONC003 parcial;
-- filas produtor/consumidor: `kof.mq` — 3 targets (Native 01/09, MQ001 fechado; pub/sub + `mq.queue()`/`push`/`pop`);
-- lambdas com captura funcionam em spawn (BoxN).
+- ~~Native: CONC001~~ — ✅ closed 31/08 (pthread_create + trampoline + await/pthread_join + futex thread-safe allocator + implicit join);
+- JS: sequential execution — `spawn`/`await` cover statement and expression; real event-loop async = CONC003 partial;
+- producer/consumer queues: `kof.mq` — 3 targets (Native 01/09, MQ001 closed; pub/sub + `mq.queue()`/`push`/`pop`);
+- lambdas with capture work in spawn (BoxN).
 
-## GOOD — kof.supervisor: reinício supervisionado (OTP, issue #83)
+## GOOD — kof.supervisor: supervised restart (OTP, issue #83)
 
 ```kof
-// Falha de worker NÃO mata o sistema: o supervisor observa, reinicia com
-// uma fábrica NOVA, respeita o limite, e escala quando estoura.
+// A worker failure does NOT kill the system: the supervisor observes, restarts with
+// a NEW factory, respects the limit, and escalates when it overflows.
 import kof.supervisor
 
 class Conecta implements KofWorkerFactory {
-    KofWorker novo() { return WorkerConexao() }   // objeto novo por reinício
+    KofWorker novo() { return WorkerConexao() }   // new object per restart
 }
 class WorkerConexao implements KofWorker {
     Object run() {
-        // lança (exceção é String) → o supervisor captura a falha
+        // throws (exception is String) → the supervisor captures the failure
         throw "conexao caiu"
     }
 }
 main() {
     var s = supervisor("net")
-        .child("conn", Conecta(), "permanent")   // permanent: cai → reinicia
+        .child("conn", Conecta(), "permanent")   // permanent: falls → restarts
         .restartLimit(5)
     s.start()
-    // ... s.stop(2000) para encerrar controlado; s.stats() observa ...
+    // ... s.stop(2000) to shut down in a controlled way; s.stats() observes ...
 }
 ```
 
-A fábrica (`KofWorkerFactory.novo()`) retorna um `KofWorker` **novo** a cada
-reinicio — não se reinicia o objeto que falhou, re-fabrica-se (isolamento de
-estado). As três politicas: `permanent` (cai → sempre reinicia), `transient`
-(termina normal → para; só reinicia se falhar), `temporary` (nunca reinicia —
-conta como descartado). `escalate(cb)` chama `disparou(id, motivo, reinicios)`
-no limite (sem `escalate` o supervisor **para de reiniciar e avisa** — nunca
-silencioso).
+The factory (`KofWorkerFactory.novo()`) returns a **new** `KofWorker` on each
+restart — the object that failed is not restarted, it is re-fabricated (state
+isolation). The three policies: `permanent` (falls → always restarts),
+`transient` (ends normally → stops; only restarts if it fails), `temporary`
+(never restarts — counts as discarded). `escalate(cb)` calls
+`disparou(id, motivo, reinicios)` at the limit (without `escalate` the
+supervisor **stops restarting and warns** — never silent).
 
-Paridade honesta: **JVM + Script** (interpretador) entregam o núcleo. NATIVE =
-`OTP001` (o `throw` em task no backend nativo atual cai no handler chain global
-— §129), JS = `OTP002` (event-loop single-thread não agenda task-de-task —
-§132). Nos dois o `import kof.supervisor` falha no compile-time com
-diagnóstico claro, nunca um binário que trava.
+Honest parity: **JVM + Script** (interpreter) deliver the core. NATIVE =
+`OTP001` (the `throw` in a task on the current native backend falls into the
+global handler chain — §129), JS = `OTP002` (single-thread event-loop does not
+schedule task-of-task — §132). In both, `import kof.supervisor` fails at
+compile-time with a clear diagnostic, never a binary that hangs.
 
 ## WHY
 
-Supervisão é **intenção**, não mecanismo: o usuário declara o *quê* vigiar
-(fábrica + política + limite), não *como* reaplicar threads. A plataforma
-(`spawn`/`await`/`try-catch`) já existe; o supervisor é código Kof por cima.
+Supervision is **intent**, not mechanism: the user declares *what* to watch
+(factory + policy + limit), not *how* to reapply threads. The platform
+(`spawn`/`await`/`try-catch`) already exists; the supervisor is Kof code on
+top.
 
-## GOOD — fetch assíncrono: `var h = spawn http.get(url); await h`
+## GOOD — async fetch: `var h = spawn http.get(url); await h`
 
 ```kof
-// ❌ BAD — "paralelo" com threads/futures de outra linguagem, ou síncrono no JS
-val a = http.get(urlA)            // bloqueia a thread inteira até responder
-val b = http.get(urlB)            // sequencial: soma as latências
+// ❌ BAD — "parallel" with threads/futures from another language, or synchronous on JS
+val a = http.get(urlA)            // blocks the whole thread until it responds
+val b = http.get(urlB)            // sequential: adds up the latencies
 
-// ✅ GOOD — a linguagem já tem Handle: spawn dá concorrência, await pega o valor
+// ✅ GOOD — the language already has Handle: spawn gives concurrency, await gets the value
 var ha = spawn http.get(urlA)
 var hb = spawn http.get(urlB)
-val a = await ha                  // dispara antes de esperar; latência = max(a,b)
+val a = await ha                  // fires before waiting; latency = max(a,b)
 val b = await hb
 
-// ✅ GOOD — "qualquer um primeiro"
+// ✅ GOOD — "any one first"
 val first = await selectAny(spawn http.get(a), spawn http.get(b))
 ```
 
-Em JVM/Script/Native a thread do worker faz o I/O; no **Node/browser** o
-`http.*` é `fetch` de verdade — o `Handle` carrega a Promise, e o `await`
-resolve o corpo (`spawn`+`await` é o ÚNICO caminho que transporta em JS puro;
-chamada síncrona lá devolve o Promise cru — §133). Nunca `Thread`/`Future`/
-`async`/`await` de outra linguagem: `spawn`/`await` cobrem os três.
+On JVM/Script/Native the worker thread does the I/O; on **Node/browser**
+`http.*` is real `fetch` — the `Handle` carries the Promise, and the `await`
+resolves the body (`spawn`+`await` is the ONLY path that carries in pure JS;
+a synchronous call there returns the raw Promise — §133). Never
+`Thread`/`Future`/`async`/`await` from another language: `spawn`/`await` cover
+all three.
 
-## Anti-patterns relacionados
+## Related anti-patterns
 
-- `fake-idioms.md` — `async`/`await`/Thread não existem (use `spawn`/`await`)
+- `fake-idioms.md` — `async`/`await`/Thread do not exist (use `spawn`/`await`)
