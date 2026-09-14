@@ -82,6 +82,7 @@
 
 | Gap | Diagnostic | Status |
 |-----|-----------|--------|
+| **App model (D-APP)** — matriz `APP001–003` | `APP001` (build backend-only com `web/` presente → frontend não compilado; honesto R6), `APP002` (serve sem manifesto `[server]`, cai no default), `APP003` (`kof new` — tipo/flag inválido, manifesto existente, dir parcial: recusa com diagnóstico, nunca sobrescreve) | ✅ `CmdNew` 14/09 (D-APP I1, DECISIONS.md §D-APP): `kof new <dir> [--type mono\|backend\|frontend\|full-stack]` — esqueletos nascem compiláveis (prova `CmdNewTest` 8/8, incl. compile JVM real dos esqueletos backend/full-stack); I3 `--fat` segue fila |
 | spawn/await no Native | ✅ 31/08 (CONC001 fechado — pthread_create + trampoline + pthread_join + allocator thread-safe futex; join implícito) | |
 | spawn/await no JS | ✅ 03/09 (CONC003 fechado — async/await/Promise real; stmt + spawn-expr + await/poll/cancel/selectAny/channel bloqueante) | `cancelled()` sempre `0` (sem thread-local pra task atual); só task-lambdas podem ficar async (`CONC003-JS-01`) |
 | web no Native/JS (server, TLS, ws/sse) | ✅ server base (03/09): Native accept/route/lambda/body (`NativeWebRuntime.java`) + JS GraalJS HttpServer (`bc577aa`). Residual: TLS/ws/sse/path params/keepalive nos dois | `WEB002`/`WEB001` (residual) |

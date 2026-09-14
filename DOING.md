@@ -60,6 +60,26 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (14/09 ~03:30, dono = 192.168.100.22): `CmdNew` (D-APP I1 +
+> D-SPRING F11).** `kof new <dir> [--type mono|backend|frontend|full-stack]`
+> — esqueletos por tipo nascendo **compiláveis** (prova: compile JVM real do
+> esqueleto backend e full-stack no `CmdNewTest`), manifesto `kof.toml`
+> parseável por `KofProjectConfig`, **APP003** honesto (tipo/flag inválido,
+> manifesto existente, args extras: recusa com diagnóstico, nunca sobrescreve,
+> nunca projeto parcial) + matriz APP001–003 em `docs/backend-parity.md`
+> (§Gaps). `CmdNew` 206 ≤500; retrocompatível (`kof init` intacto). Prova:
+> `CmdNewTest` 8/8 verde (incl. bordas Q3: tipo inválido não cria projeto
+> parcial, manifesto existente preservado byte-a-byte). Restam na fila
+> DECISIONS executável: ChaCha20 (D-SEC), blog E2E (D-SPRING F12), `--fat`
+> (D-APP I3). **Issues fechadas hoje: #132, #127, #128** (provas nos
+> comentários); **#129** (SBD-001) validado — código `4cb2b8e8` na beta,
+> stress 21/21 (fechar no release). **NÃO tocar:** `CompilerClassLowering.
+> java`/`nat/`/`JsBackend` (lane §186/#133 EM CURSO — o autostash conflitante
+> da unidade `<clinit>` está preservado em `stash@{0}` +
+> `/tmp/opencode/lane133-clinit-work.diff`, dono deve reaproveitar);
+> `stash@{1}` = lane #127 (o fix erased já entrou via `411e7e0b` + teste
+> `03298621` — pode ser dropado pelo dono).
+>
 > **📢 NOVA REGRA DA MANTENEDORA (14/09, travada em DECISIONS.md D-RELEASE):**
 > fechada a minor 0.4.0 (#138 merged), o foco é **estabilização de patch**.
 > Quando a beta cruzar **100–150 commits à frente da main**, avaliar bump
