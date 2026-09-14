@@ -146,65 +146,73 @@ public final class KofCEmitter {
     }
 
     private void emitExpr(KofCAst.Expr expr) {
-        if (expr instanceof KofCAst.IntExpr e) {
-            sb.append("    mov rax, ").append(e.value()).append("\n");
-        } else if (expr instanceof KofCAst.IdentExpr e) {
-            sb.append("    mov rax, qword ptr [rip + ").append(e.name()).append("]\n");
-        } else if (expr instanceof KofCAst.UnaryAddr e) {
-            sb.append("    lea rax, [rip + ").append(e.ident()).append("]\n");
-        } else if (expr instanceof KofCAst.UnaryDeref e) {
-            sb.append("    mov rax, qword ptr [rip + ").append(e.ident()).append("]\n");
-            sb.append("    mov rax, qword ptr [rax]\n");
-        } else if (expr instanceof KofCAst.ParenExpr e) {
-            emitExpr(e.inner());
-        } else if (expr instanceof KofCAst.BinaryExpr e) {
-            // left -> push, right -> rax, pop left to rcx, compute rcx op rax -> rax
-            emitExpr(e.left());
-            sb.append("    push rax\n");
-            emitExpr(e.right());
-            sb.append("    mov rcx, rax\n"); // right in rcx
-            sb.append("    pop rax\n"); // left in rax
-            // now rax = left, rcx = right, compute rax op rcx -> rax
-            switch (e.op()) {
-                case "+" -> sb.append("    add rax, rcx\n");
-                case "-" -> sb.append("    sub rax, rcx\n");
-                case "&" -> sb.append("    and rax, rcx\n");
-                case "|" -> sb.append("    or rax, rcx\n");
-                case "^" -> sb.append("    xor rax, rcx\n");
-                case "<<" -> sb.append("    mov rcx, rcx\n    shl rax, cl\n");
-                case ">>" -> sb.append("    mov rcx, rcx\n    sar rax, cl\n");
-                case "==" -> {
-                    sb.append("    cmp rax, rcx\n");
-                    sb.append("    sete al\n");
-                    sb.append("    movzx rax, al\n");
-                }
-                case "!=" -> {
-                    sb.append("    cmp rax, rcx\n");
-                    sb.append("    setne al\n");
-                    sb.append("    movzx rax, al\n");
-                }
-                case "<" -> {
-                    sb.append("    cmp rax, rcx\n");
-                    sb.append("    setl al\n");
-                    sb.append("    movzx rax, al\n");
-                }
-                case ">" -> {
-                    sb.append("    cmp rax, rcx\n");
-                    sb.append("    setg al\n");
-                    sb.append("    movzx rax, al\n");
-                }
-                case "<=" -> {
-                    sb.append("    cmp rax, rcx\n");
-                    sb.append("    setle al\n");
-                    sb.append("    movzx rax, al\n");
-                }
-                case ">=" -> {
-                    sb.append("    cmp rax, rcx\n");
-                    sb.append("    setge al\n");
-                    sb.append("    movzx rax, al\n");
-                }
-                default -> sb.append("    ; unknown op ").append(e.op()).append("\n");
+        switch (expr) {
+            case KofCAst.IntExpr e -> {
+                sb.append("    mov rax, ").append(e.value()).append("\n");
             }
+            case KofCAst.IdentExpr e -> {
+                sb.append("    mov rax, qword ptr [rip + ").append(e.name()).append("]\n");
+            }
+            case KofCAst.UnaryAddr e -> {
+                sb.append("    lea rax, [rip + ").append(e.ident()).append("]\n");
+            }
+            case KofCAst.UnaryDeref e -> {
+                sb.append("    mov rax, qword ptr [rip + ").append(e.ident()).append("]\n");
+                sb.append("    mov rax, qword ptr [rax]\n");
+            }
+            case KofCAst.ParenExpr e -> {
+                emitExpr(e.inner());
+            }
+            case KofCAst.BinaryExpr e -> {
+                // left -> push, right -> rax, pop left to rcx, compute rcx op rax -> rax
+                emitExpr(e.left());
+                sb.append("    push rax\n");
+                emitExpr(e.right());
+                sb.append("    mov rcx, rax\n"); // right in rcx
+                sb.append("    pop rax\n"); // left in rax
+                // now rax = left, rcx = right, compute rax op rcx -> rax
+                switch (e.op()) {
+                    case "+" -> sb.append("    add rax, rcx\n");
+                    case "-" -> sb.append("    sub rax, rcx\n");
+                    case "&" -> sb.append("    and rax, rcx\n");
+                    case "|" -> sb.append("    or rax, rcx\n");
+                    case "^" -> sb.append("    xor rax, rcx\n");
+                    case "<<" -> sb.append("    mov rcx, rcx\n    shl rax, cl\n");
+                    case ">>" -> sb.append("    mov rcx, rcx\n    sar rax, cl\n");
+                    case "==" -> {
+                        sb.append("    cmp rax, rcx\n");
+                        sb.append("    sete al\n");
+                        sb.append("    movzx rax, al\n");
+                    }
+                    case "!=" -> {
+                        sb.append("    cmp rax, rcx\n");
+                        sb.append("    setne al\n");
+                        sb.append("    movzx rax, al\n");
+                    }
+                    case "<" -> {
+                        sb.append("    cmp rax, rcx\n");
+                        sb.append("    setl al\n");
+                        sb.append("    movzx rax, al\n");
+                    }
+                    case ">" -> {
+                        sb.append("    cmp rax, rcx\n");
+                        sb.append("    setg al\n");
+                        sb.append("    movzx rax, al\n");
+                    }
+                    case "<=" -> {
+                        sb.append("    cmp rax, rcx\n");
+                        sb.append("    setle al\n");
+                        sb.append("    movzx rax, al\n");
+                    }
+                    case ">=" -> {
+                        sb.append("    cmp rax, rcx\n");
+                        sb.append("    setge al\n");
+                        sb.append("    movzx rax, al\n");
+                    }
+                    default -> sb.append("    ; unknown op ").append(e.op()).append("\n");
+                }
+            }
+            case null, default -> { }  // no-op p/ null ou tipo nao-casado (paridade com o if-else)
         }
     }
 
