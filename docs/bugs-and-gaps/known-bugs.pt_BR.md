@@ -6824,6 +6824,46 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
 - **Estado:** reproduz no `0ab25887`. Regra 6 (semântica); fix = lane
   compiler com prova E2E (getClass + == + switch + identidade de values).
 
+### §212 — acesso de campo `b.size` resolve para o MÉTODO `size()` quando um método divide o nome do campo — campo engolido em silêncio (issue #219)
+
+- **Sintoma (medido 14/09 ~13:00, dono = 192.168.100.17 — só catalogado,
+  lane compiler):** uma classe com um campo e um método de mesmo nome compila
+  a LEITURA DO CAMPO como chamada de método. Valor silenciosamente errado
+  (pior que o crash antigo — R6 + regra 4 do freeze):
+  ```kof
+  class Box {
+      Int size = 7
+      Int size() { return 99 }
+  }
+  main() {
+      var b = new Box()
+      println(b.size)     // imprime 99 — DEVE ser 7
+      println(b.size())   // imprime 99 — correto
+  }
+  ```
+- **javap (medido, o mecanismo exato):** no offset 12 de `Main.main`, a
+  expressão `b.size` (SEM parênteses) emite `invokevirtual Box.size:()I` onde
+  deveria emitir `getfield Box.size:I`. `Box.class` declara AMBOS `public int
+  size;` e `public int size()` — a resolução escolhe o método sempre que os
+  nomes colidem, em toda leitura (`b.size` usado duas vezes: ambos
+  invokevirtual).
+- **Esperado:** `b.size` → `getfield`; `b.size()` → `invokevirtual`. A sintaxe
+  desambigua (parênteses) — o resolvedor tem que respeitar. Se a linguagem
+  quiser PROIBIR a colisão (campo ≡ nome de método), o diagnóstico em
+  compile-time é o caminho honesto (território de regra 6), mas HOJE a forma
+  é aceita e produz lixo.
+- **Pointer (lane compiler):** lowering de acesso a membro para um
+  `FieldAccessExpr` não-call quando o receptor é `class` — onde decide
+  getfield vs chamada-de-acessor vs method-reflection; provavelmente o caminho
+  `MemberCallTyper`/`FieldAccessExpr` ou a resolução de propriedade em
+  `CompilerClassLowering` preferindo `methods()` a `fields()` na colisão.
+- **Estado:** reproduz no `4e0957ee` (caso exato da issue).
+- **Nota de triagem (mesma sessão, #220/#221/#222 → GREEN com prova javap):**
+  #220 (box de campo genérico) `Integer.valueOf` antes do `putfield` = correto;
+  #221 (static não-constante) roda `100|8|foobar|100` — fecha a face residual
+  do §186 via `814f44da`; #222 (método estilo-ctor) emite `<init>(II)` de
+  verdade. Comentários postados.
+
 ## §193 — E2E blog (F12): `db.query` cru + `.get("col")`/recursos dentro de handler web derr
 
 > **Renumerado de §189→§193 (14/09, dono = 192.168.100.17):** colisão tripla
