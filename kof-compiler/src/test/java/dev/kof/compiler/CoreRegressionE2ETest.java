@@ -1983,4 +1983,57 @@ class CoreRegressionE2ETest {
         assertTrue(r.diagnostics().getDiagnostics().stream().anyMatch(d -> "SEM041".equals(d.code())),
                 "Expected SEM041 diagnostic but got: " + r.diagnostics().getDiagnostics());
     }
+
+    // Issue #226 — super() constructor call always fails with SEM017 regardless of parent constructor
+    @Test
+    void superConstructorCallResolvesCorrectlyJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("superctor.kf");
+        Files.writeString(src, """
+                class Vehicle {
+                    String kind = "vehicle"
+                    public constructor() {
+                        this.kind = "vehicle-default"
+                    }
+                    public constructor(String kind) {
+                        this.kind = kind
+                    }
+                }
+
+                class Car extends Vehicle {
+                    String model = "sedan"
+                    public constructor() {
+                        super()
+                    }
+                    public constructor(String kind, String model) {
+                        super(kind)
+                        this.model = model
+                    }
+                }
+
+                class BaseImplicit {
+                    String label = "base-implicit"
+                }
+
+                class ChildImplicit extends BaseImplicit {
+                    public constructor() {
+                        super()
+                    }
+                }
+
+                main() {
+                    var c1 = new Car()
+                    println(c1.kind + " " + c1.model)
+
+                    var c2 = new Car("truck", "f150")
+                    println(c2.kind + " " + c2.model)
+
+                    var ci = new ChildImplicit()
+                    println(ci.label)
+                }
+                """);
+        Path out = tempDir.resolve("superctor-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("vehicle-default sedan\ntruck f150\nbase-implicit", runJvm(out));
+    }
 }

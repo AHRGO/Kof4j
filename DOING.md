@@ -127,6 +127,12 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > quentes. O codemod dos 17 locals puros restantes ficou p/ depois (varios
 > carregam chamada com efeito — deletar linha = mudanca de comportamento).## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (14/09 ~15:05, dono = 192.168.100.22, lane compiler): fix issue #226 — super() constructor call always fails with SEM017 regardless of parent constructor.**
+> - Causa raiz: (1) em `SymbolTableBuilder.defineClassMembers()`, quando uma classe não declarava construtor explícito (`!hasCtor`), o construtor padrão sintético sem argumentos era registrado apenas em `classScope`, mas não em `classSym.members()`, tornando-o invisível para consultas na superclasse. (2) em `ExpressionMethodCallLowerer.java`, a resolução do construtor da superclasse (`super(...)`) usava `targetCs.members().resolve("<init>")` diretamente sem tratar `ConstructorSet` (quando a superclasse possuía múltiplos construtores sobrecarregados), fazendo com que `ctor` ficasse nulo e disparasse falso-positivo `SEM017`.
+> - Correção: `SymbolTableBuilder` agora define o construtor padrão tanto em `classScope` quanto em `classSym.members()`. `ExpressionMethodCallLowerer` passa a utilizar `SymbolTable.constructorFor(targetCs.members(), mc.arguments().size())`, que suporta tanto `ConstructorSymbol` único quanto `ConstructorSet` sobrecarregado por aridade.
+> - Prova: `CoreRegressionE2ETest#superConstructorCallResolvesCorrectlyJvm`.
+> - Próximo: issues #216, #222, #221.
+
 > **✅ FEITO (14/09 ~14:30, dono = 192.168.100.22, lane compiler): fix issue #224 — abstract method in non-abstract class is accepted without error (AbstractMethodError at runtime).**
 > - Causa raiz: em `SemanticAnalyzer.analyzeClass()`, não havia verificação estática que exigisse que uma classe contendo métodos com modificador `abstract` fosse ela própria declarada com o modificador `abstract`. Isso permitia que classes concretas fossem compiladas com métodos sem corpo, instanciadas normalmente em runtime, e gerassem `AbstractMethodError` quando o método era invocado.
 > - Correção: adicionada validação em `SemanticAnalyzer.analyzeClass` que rejeita em tempo de compilação métodos `abstract` declarados dentro de classes não-abstratas com o erro `SEM041`.
