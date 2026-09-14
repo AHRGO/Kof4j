@@ -1541,6 +1541,20 @@ class ConformanceMatrixTest {
                     println(b[1])
                 }
                 """, "65\n66\ntrue\nfalse", Set.of("script"), tempDir);
+        // §187 (13/09): `Char[]` NÃO estreita a 16 bits no Native (o
+        // `elementTypeSize` mapeia char→4 e o `kof_array_set` faz `movl`
+        // cru) nem no JS (Array puro, §184); o cast escalar `as Char` está
+        // certo nos 4. JVM `CASTORE`/`CALOAD` trunca/zero-estende. PARTIAL
+        // native+js (§187) e script (§185, crash no store).
+        matrix("charnarrow", """
+                main() {
+                    var c = new Char[2]
+                    c[0] = 70000
+                    c[1] = -1
+                    println(c[0])
+                    println(c[1])
+                }
+                """, "4464\n65535", Set.of("native", "script", "js"), tempDir);
         // §131 (decisão 10a, 13/09): sobrecarga de MÉTODO de classe por
         // assinatura (aridade/tipos). Antes: SEM013 no JVM (último def
         // sobrescrevia) e colisão de símbolo no Native. Prova só JVM+JS

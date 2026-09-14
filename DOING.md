@@ -2663,6 +2663,26 @@ no upstream).
 > sincronizar `ecosystem-coverage.md`/`specification-gaps.md`. Se nada novo e
 > suíte verde → **RECUSAR** o re-disparo. **NUNCA:** `nat/` GC viva; fila de
 > outras lanes; push `main`.
+>
+> **✅ FEITO (13/09 ~23:50, lane bugs-and-gaps, dono = 192.168.100.15):
+> §187 NOVO — `Char[]` fora de faixa no Native (e JS).** Caça Q4 sobre as
+> landings de array `10fd1b32`/`0c122131` + o §185: probe `Char[]` mediu
+> `c[0]=70000` → JVM/Script `4464`, **Native `70000`**, **JS `70000`**;
+> `c[1]=-1` → JVM/Script `65535`, Native/JS `-1`. O **cast escalar**
+> `70000 as Char` está certo nos 4 — é só o **elemento de array**.
+> **Raiz Native:** `NativeOpHelpers.elementTypeSize` mapeia `char`→4 (junto
+> de `int`), então `kof_array_set` faz `movl` sem máscara 0xFFFF e
+> `kof_array_get` faz `movslq` (32→64). **Raiz JS:** §184 (Array puro, sem
+> tag de tipo). Script = §185 (crash). Catalogado em `known-bugs.md §187`
+> (o §186 do arquivo é bug distinto, do colaborador Jonas Rocha — issue #133)
+> (com o alerta: trocar o tamanho p/ 2 **sem** ramo de load próprio
+> quebra o load, `movswq` sinaliza 65535→-1). Célula `charnarrow` (JVM
+> DONE; native/script/js PARTIAL) + linha na matriz; `ConformanceMatrixTest`
+> 11/11 + `ConformanceMatrixDocTest` 1/1. Também reforcei o §184 com a
+> face Char JS. **PRÓXIMO PASSO:** continuar Q4 (Float/científico §180;
+> arrays 2D/3D de Char/Byte; interop) OU sincronizar `ecosystem-coverage`/
+> `specification-gaps`. Se nada novo e suíte verde → **RECUSAR**.
+> **NUNCA:** `nat/` GC viva; fila de outras lanes; push `main`.
 
 ---
 
