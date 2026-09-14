@@ -489,6 +489,28 @@ Phase E  Kof Decompiler          (generate Kof source)
 > triggers anewarray-of-internal; another corpus does). Negative ROI + cross-corpus
 > danger → REVERTED (clean working tree, HEAD = stage-3).
 
+>
+> **State (14/09, this commit, owner = 192.168.100.17 — lane docs/development
+> EXCLUSIVE by maintainer's directive): Phase C STEP 3 prerequisite landed.**
+> `PostDominator.java` — pure immediate-post-dominator pass (bit-set
+> Cooper–Harvey–Kennedy dual: `pdom(b) = {b} ∪ ⋂ pdom(succ)`, terminal →
+> `{b, EXIT}`, monotone intersection so it converges without an iteration
+> order; deterministic — principle D-ENGINEERING: the standard compiler
+> formulation, not reinvented). This is the locked prerequisite from the two
+> STEP-3a rejections (13/09): a test-with-computation can only be recovered by
+> the walker that consumes post-dominators, never by a local guard. Proof:
+> `DecompilePostDominatorTest` 5/5 with hand-computed path-to-EXIT oracles
+> (linear chain, if-then-else join, while-loop back-edge, nested if, fork-
+> without-join). **No recovery output changed yet** — 63 `DecompileTest`
+> untouched (re-run fresh 115.6s, green; the 87.43s number was a stale
+> surefire report, caught and corrected — honesty over false green), corpus
+> stub count unchanged by construction (the pass is not wired in).
+> **NEXT in this doc (unit 2):** consume `immediatePostDom` in
+> `BytecodeStatements.struct()` to recover the test-with-computation shapes
+> that step 3a rejected (the `for+continue` whose cond lives in a nested
+> block joining at the increment) — each recovery must keep
+> `diamondJoinShapesStayHonestStub` green (the diamond law is binding).
+
 ## 7. Relationship with the Compiler
 
 The decompiler feeds the existing pipeline:
