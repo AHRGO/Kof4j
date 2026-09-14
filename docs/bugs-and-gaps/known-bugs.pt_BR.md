@@ -6690,6 +6690,62 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   launcher direto engole atrás da mensagem falsa do JavaFX). O fix deve
   imprimir `8` + caso em `CoreRegressionE2ETest`.
 
+### §206 — classe com parâmetros de construtor (`class Box(Int w, Int h) { ... }`): campos/métodos extras no corpo não resolvem — `SEM011`/`SEM025` (issue #215)
+
+- **Sintoma (medido 14/09 ~11:05, dono = 192.168.100.17 — só catalogado,
+  lane compiler):** uma classe estilo-record com corpo que declara um campo
+  extra inicializado a partir dos parâmetros do construtor não compila,
+  embora o docs/corpus apresente essa forma:
+  ```kof
+  class Box(Int w, Int h) {
+      Int area = w * h
+      Int getArea() { return area }
+  }
+  ```
+  `SEM011: Undefined variable or type: 'area'` dentro do corpo da classe, e
+  `SEM025: Cannot resolve field 'area'` no chamador. As declarações de campo
+  do corpo não enxergam os parâmetros do construtor, e o campo adicionado
+  não é registrado na tabela de campos da classe.
+- **Relacionado:** §207 (mesma família — `extends`/`implements` em classe
+  com parâmetros de construtor → PARSE007): a forma com parâmetros parece
+  suportada apenas quando o corpo é exatamente o caso record.
+- **Pointer (lane compiler):** desugar de `class X(params)` COM corpo
+  explícito — ordem de resolução entre o escopo dos parâmetros do ctor e os
+  campos do corpo; registro da tabela de campos no `ClassTyper`.
+- **Estado:** reproduz no `1c13d982`. Não é mudança de contrato (a forma
+  está em `learn/`/`training/` como suportada); bug puro do compiler.
+
+### §207 — `class Circle(Double r) extends Shape` → PARSE007 depois do parêntese de fechamento (issue #217)
+
+- **Sintoma (medido 14/09 ~11:05, dono = 192.168.100.17 — só catalogado,
+  lane compiler):** a forma com parâmetros de construtor só parseia SEM
+  `extends`/`implements`: `class Circle(Double radius) extends Shape { ... }`
+  falha com `PARSE007: Expected type declaration` na posição do `extends`
+  (col 29 no repro da issue). `class X { }` simples com extends funciona. O
+  caminho record-like do parser não consome as cláusulas de superclasse/
+  interface depois da lista de parâmetros.
+- **Pointer (lane compiler):** ramo do parser para `class NAME (` — depois
+  do `)` dos parâmetros precisa aceitar `extends`/`implements` como o ramo
+  de classe simples.
+- **Estado:** reproduz no `1c13d982` (caso exato da issue).
+
+### §208 — sintaxe de tipo-função `(T) -> R` aceita como parâmetro/anotação de var mas REJEITADA como tipo de retorno/tipo de campo (issue #218)
+
+- **Sintoma (medido 14/09 ~11:05, dono = 192.168.100.17 — só catalogado,
+  lane compiler):** cobertura inconsistente da gramática do tipo-função:
+  funciona em posição de parâmetro e em anotação `var`, falha no parse como
+  **tipo de retorno**:
+  ```kof
+  (Int) -> Int makeDoubler() { return (x: Int) -> x * 2 }
+  ```
+  → `PARSE007: Expected type declaration` + `PARSE010: Expected function
+  name` (o parser lê `(Int)` como expressão parentizada e desiste do nome da
+  função). A mesma forma falha como tipo de campo segundo a issue. O
+  contorno é o tipo anotado no chamador ou a forma de retorno tardio
+  `makeDoubler(): (Int) -> Int`.
+- **Estado:** reproduz no `1c13d982`. Nível de gramática (parser), uma única
+  produção: tipo-função liderando posição de retorno/campo.
+
 ## §193 — E2E blog (F12): `db.query` cru + `.get("col")`/recursos dentro de handler web derr
 
 > **Renumerado de §189→§193 (14/09, dono = 192.168.100.17):** colisão tripla
