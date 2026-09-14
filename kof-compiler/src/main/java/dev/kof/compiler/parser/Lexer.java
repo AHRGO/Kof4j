@@ -279,11 +279,9 @@ public class Lexer {
         boolean isLong = false;
         boolean isFloat = false;
         boolean isDouble = false;
-        boolean isHex = false;
         // hexadecimal literal: 0x...
         if (pos + 1 < source.length() && source.charAt(pos) == '0'
                 && (source.charAt(pos + 1) == 'x' || source.charAt(pos + 1) == 'X')) {
-            isHex = true;
             advance();
             advance();
             while (pos < source.length() && isHexDigit(source.charAt(pos))) {

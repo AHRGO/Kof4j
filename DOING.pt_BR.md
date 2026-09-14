@@ -101,6 +101,14 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (14/09 ~19:30, dono = 192.168.100.15, lane bugs-and-gaps): REGRESSÃO de suíte corrigida na causa raiz — `String.valueOf(char)` (e a família de estáticos de wrapper) dropada em silêncio quando o classpath externo existe mas não contém a classe (residual da issue #233).**
+> - **Sintoma/prova:** `CoreRegressionE2ETest.stringValueOfCharParity` VERMELHO no tip (`cd010bf1`): `Internal compiler error: frame crash … ASM COMPUTE_FRAMES NegativeArraySizeException: -1`. Bissecção em worktree limpo: verde `59359935`, vermelho `1e88309b` (commit rotulado "codeql" que trouxe o dispatch de wrapper). `doubleStaticMethodsJvm` já fora corrigido upstream (`036e5140`); a face `valueOf` ficou.
+> - **Causa raiz:** o novo ramo de receptor-builtin em `ExpressionMethodCallLowerer` (`1e88309b`) casa `String`/`Int`/`Double`/… mesmo quando o `externalClasspath` NÃO conhece a classe (caso comum), e só emite para `extSig != null` ou `isNaN/isInfinite/isFinite`. Para `String.valueOf(...)`/`parse*` o ramo saía **sem emitir nada** (R6 violado — drop silencioso); o `println` externo então emitia seu `String.valueOf(Object)` sem valor na pilha → crash do ASM.
+> - **Fix (Q0, causa raiz):** `ExpressionMethodCallLowerer` delega a `ExpressionInstanceCallLowerer.lower(...)` quando não há `extSig` nem é `isNaN` — restaurando o caminho pré-`1e88309b` (que já tratava `valueOf`/`parse*` no ramo de receptor-builtin). `ExpressionInstanceCallLowerer` inalterado.
+> - **Prova (Q1, no MESMO commit):** `WrapperStaticCallsE2ETest` (arquivo DEDICADO): `stringValueOfCharInsidePrintln` (repro exato, JVM+JS), `stringValueOfPrimitivesInsidePrintln` (JVM+JS), `wrapperIsAndParseStatics` (**só JVM**, honesto: o JS de wrapper-statics é gap pré-existente catalogado como §235). + `CoreRegressionE2ETest#stringValueOfCharParity` 1/1 e `#doubleStaticMethodsJvm` 1/1. Gate `check_500` OK (538 tolerado). Suíte 4-módulos: kof-script 38/38, kof-c 5/5, kof-compiler 1691 (1 fail = §205 aberto, 13 err = node), kof-cli 248 (1 fail pré-existente `DecompileTest.wideParamsMapToCorrectSlots`, confirmado vermelho em origin limpo).
+> - **Catalogado (§235, EN+PT):** backend JS emite `java_lang_Double.isNaN(...)`/`java_lang_Integer.parseInt(...)` → `ReferenceError` (pré-existente, reproduzido em `59359935`; lane JS).
+> - **NÃO tocado:** `DecompileTest.wideParamsMapToCorrectSlots` (pré-existente, lane decompiler) e `ConformanceMatrixTest.conformanceCoreControl` (§205 Native ifexpr, lane do #183).
+>
 > **✅ FEITO (14/09 ~10:20, dono = 192.168.100.15, lane bugs-and-gaps): §201 CORRIGIDO — regressão JS do fix #182 (`_forInitVar_*`/`_forInVar` ReferenceError).**
 > A `beta-0.4.0` estava VERMELHA (5-6 testes JS) e o §201 tinha sido catalogado como "regra 6 + lane alheia, não tocar". **Não é regra 6** — é bug de backend puro (regra 1/3 de Freeze), sem decisão de contrato, então o gate de qualidade desta lane assumiu. **Causa raiz medida (worktree isolado em `c160ae5c`):** o rename de saída de loop p/ `#forInitVar`/`#forInVar` (#182, `75e38d35`) e de bloco p/ `#scopedVar$…` (#203, `aadc0176`) é correto — mas o backend JS resolve por NOME e `JsExpressionParser.isCompilerTemp` trata TODO local cru com prefixo `#` como temporário descartável; o store da variável de loop entra no `preamble` e é descartado quando o próximo op é `if` (`parseIfBody` retorna sem o preamble) → `ReferenceError`. Corpos simples escapavam por acaso; corpos começando com `if` quebravam. **Fix (root, 1 método):** `isCompilerTemp` deixa de classificar `#forInitVar`/`#forInVar`/`#scopedVar$…` como temporários (são renames de var de USUÁRIO); os temporários reais (`#retVal`/`#switch`/`#idx`/`#coll`/`#inc`/`#excTmp`) intactos. Arquivo `js/JsExpressionParser.java` (não toca `StatementLowerer` da lane .22 — zero colisão). **Prova:** `CoreRegressionE2ETest.loopBodyLocalsBeforeIfAreDeclaredInJs` (vermelho sem o fix = `ReferenceError: _forInitVar_2 is not defined`; verde com ele) + `ArrayBoundsStressTest` 15/15, `ArrayBoundsDeepStressTest` 6/6, `BackendParityTest` 19/19, `CoreRegressionE2ETest` 75/75. JVM/Native/Script não afetados. known-bugs §201 → FIXED.
 > **PRÓXIMO PASSO:** rodar a suíte 4-módulos COMPLETA + `check_500.sh` e pushar; depois re-avaliar §202 (`split().get` → SEM028, ESSE sim é decisão de contrato da lane de inferência String) e seguir a fila de issues.
@@ -589,7 +597,69 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > Regra da lição gravada (4e0957ee + cdda27d9): `mvn -o compile`
 > IMEDIATAMENTE antes de medir (falso-vermelho de classe obsoleta queimou
 > meu primeiro "#218 ainda reproduz"); assir SEMÂNTICA do título.
-> **Gatilhos do próximo disparo (estado 14/09 ~15:38, ciclo 15:10–15:38):**
+> **DIRETRIZ DA MANTENEDORA (14/09 ~16:00 — LANE REPOSICIONADA, vale sobre
+> tudo acima):** esta lane (192.168.100.17) é a lane EXCLUSIVA de
+> **`docs/development/`** — evoluir a linguagem fechando os docs pendentes.
+> **TRIAGEM DE ISSUES = PAUSADA** (as outras lanes cuidam das issues; meus
+> comentários em issues criaram corrida com outras lanes — erro meu, não
+> repete). Gatilho 1 (re-medir fixes alheios) e 3 (issues novas) estão
+> SUSPENSOS até a mantenedora liberar; o gate cross-arch (2) continua sendo
+> guarda (não-atacar, nat/donos). Trabalho agora: auditar o pendente REAL de
+> DECOMPILER / TRANSLATOR / LEGACY_MIGRATION / planning-otp-supervision /
+> native-multiarch e implementar as unidades, na ordem de valor, até cada doc
+> poder virar `docs/` (regra de conclusão: implement → test → validate →
+> update doc → move).
+
+> **✅ UNIDADE 1 FEITA (14/09 ~16:10, lane docs/development — DECOMPILER
+> Fase C passo 3 pré-requisito, dono = 192.168.100.17, commit `7dc2e03d`):**
+> `PostDominator.java` (pós-dominador imediato puro, dual bit-set CH-K) +
+> `DecompilePostDominatorTest` 5/5 (oráculos caminho-ate-EXIT à mão). Zero
+> mudança de recovery (passada não ligada); 63 `DecompileTest` re-rodados
+> FRESCOS 115.6s verdes (o 87.43s era relatório stale — pego, corrigido).
+> **UNIDADE 2 (PRÓXIMO PASSO, na ordem):** (1) harness ROI em `dev.kof.cli`
+> (padrão Orient/Why0/StoreCat) sobre os 851 `.class` do kof-compiler/target:
+> contar quantos dos 1402 stubs têm bloco NÃO-header com `succ.size()==2` e
+> cond==null (a forma teste-com-computação que o walker de pós-dominador
+> destrava) — ✅ **FEITO 14/09 ~16:25: ROI medido (harness roi/Roi.java no
+> package do cli, corpus real 699 classes / 3899 métodos / 2628 stubs;
+> **1098** stubs têm a forma bloco-teste-com-computação succ==2 cond==null =
+> teto do walker; ROI ≫ 30 → **DECIDIDO: construir**).** (1b) ✅ UNIDADE 2a
+> FEITA: `pathOracle` brute-force (definição de caminhos) vs passada rápida
+> em 300 classes REAIS = zero divergência, 6/6 (220064fc) + auditoria
+> doc-vs-código (machineRun:97 VIVA em 158c174b — doc corrigido b9996938);
+> (2) ✅ **UNIDADE 2b RE-AVALIADA POR MEDIÇÃO (14/09 ~19:40) — DESCARTADA
+> como escopada, veredito em DECOMPILER.pt_BR.md §6 (re-medida 18:20):** o
+> proxy "1098" supercontou — o caminho prologue da 2a (`5c944709`) JÁ recupera
+> o fundido não-loop com temp (`computed`/`cmp` medidos: saem `if/else`), e dos
+> stubs com teste computado restantes, **646** têm invoke no teste (família
+> interop §234 — lane compiler, não CFG), **453** são loop-header com
+> `continue` (COLISÃO com a lei vinculante `diamondJoinShapesStayHonestStub`:
+> recuperar o cond do `contFor` faria `while (v2 <` voltar — provado no CFG
+> medido: B9=diamante do continue, preds(B22)={15,18}, B22→back-edge B4; Kof
+> não tem `continue` → regra 6, NÃO-edit) e só **8+2** são nits de opcode no
+> `loadValue` (sipush/lcmp — micro-fix compiler). Harness descartável
+> `Roi2.java`/`Roi3.java` (classifica pela CAUSA REAL do stub). PROVAS do
+> descarte: 63 DecompileTest + 6 PostDom VERDES FRESCOS 19:39 (unidades 1/2a
+> intactas, fonte não tocada — StructWalker rascunho deletado antes de nascer,
+> opcodes por memória = a lição que ele mesmo documenta). PRÓXIMO PASSO EXATO
+> da doc DECOMPILER: sem trabalho autônomo — o doc está em parada genuína
+> pedindo decisão da mantenedora (lei do diamante + `continue`), e as 646
+> interop são da lane compiler; mover DECOMPILER p/ `docs/` SÓ quando a
+> mantenedora decidir o destino da Fase C (a recovery atual é o teto honesto).
+> A meta original — reduzir stubs SEM novo falso-verde — foi atingida pelo
+> caminho inverso: a medição PROVOU que reduzir mais exige violar a lei
+> vinculante ou invadir a lane interop. DECOMPILER fica em `docs/development/`
+> aguardando a decisão da mantenedora (destino da Fase C; hoje: recovery no
+> teto honesto).
+
+> **⚠️ 5º RED NO PORTÃO (catalogado, para as lanes de bug — 14/09 ~16:45):**
+> `NativeStringCompareCrossTest` riscv+aarch → §233 no known-bugs (renumerado 17:40: §231 foi tomado pela lane .18 — colisao de rebase; fix
+> mecânico 4× `.get(N)`→`[N]` no SPLIT_PROGRAM:119/122/127/131, golden
+> idêntico PROVADO na JVM 16:40; owner = quem deve o blast-radius do
+> `602dcbc0` ou lane nat §111; NÃO editado por esta lane por diretriz de
+> 16:00). Portão atual: 4 failures vistos (2× CastSaturation + 2×
+> StringCompare; §192 parseOrDefaultCrossArch não re-medido neste sweep —
+> não rodar o harness que pendura sem ~1h35 de qemu).
 > #237 RETIFICADA: não é face do §225 — vira §228 (descriptor vazava o tipo
 > CONCRETO do argumento no PARAMETRO + retorno fabricado; comentario
 > publico corrigido na issue; a face errada removida do §225). #238→§230

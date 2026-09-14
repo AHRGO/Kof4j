@@ -356,7 +356,7 @@ lane; small and isolated. It does not block OTP (which uses its own flag).
    riscv/aarch do **not** come out by construction — `selectAny` does not exist there
    (DD-OTP-03/09). Either they enter with a fallback of one supervisor thread per
    child, or they stay PARTIAL with one worker per supervisor.
-3. **S3:** `supervisorStats` + ring window + `temporary` drop + parity
+3. **S3:** ✅ EXECUTED 14/09 (lane development, owner 192.168.100.18): `stats()` (`started`/`restarts`/`dropped`/`vivos`) + sliding ring window (`restartLimitWindow(max, windowMs)`, ring per child) + injectable clock (`.clock(nowFn)`, DD-OTP-10) + `temporary` drop accounting (`stats().dropped`). Proof: `KofSupervisorE2ETest` 11/11 (window expiry with virtual clock = deterministic, no wall-clock; temporary drop counted on JVM+Script). Original item: `supervisorStats` + ring window + `temporary` drop + parity
    docs; promote to stable only with the complete gate matrix (R5).
 
 ## What this plan is NOT

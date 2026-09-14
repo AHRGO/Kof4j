@@ -16,8 +16,13 @@ public final class SymbolTableBuilder {
             SymbolTable members = new SymbolTable();
             // superclasse qualificada pelos imports: "extends Activity" com
             // "import android.app.Activity" vira "android.app.Activity" —
-            // sem isso a resolução externa (classpath) nunca encontra a classe
+            // sem isso a resolução externa (classpath) nunca encontra a classe.
+            // Para classes genéricas ("Container<String>"), o nome base da superclasse
+            // é extraído ("Container") antes da resolução e herança (Issue #246).
             String superQualified = cls.superClass();
+            if (superQualified != null && superQualified.contains("<")) {
+                superQualified = superQualified.substring(0, superQualified.indexOf('<')).trim();
+            }
             if (superQualified != null && !"Object".equals(superQualified)) {
                 Type viaImports = MemberResolver.qualifyViaImports(sa.unit(), superQualified);
                 if (viaImports instanceof Type.ClassType qt) {
@@ -64,8 +69,14 @@ public final class SymbolTableBuilder {
             members.define(new SymbolTable.MethodSymbol("toString", en.name(),
                     BuiltinTypes.STRING, List.of(),
                     0, SymbolTable.DispatchKind.INSTANCE));
+            members.define(new SymbolTable.MethodSymbol("ordinal", en.name(),
+                    Type.PrimitiveType.INT, List.of(),
+                    0, SymbolTable.DispatchKind.INSTANCE));
+            members.define(new SymbolTable.MethodSymbol("compareTo", en.name(),
+                    Type.PrimitiveType.INT, List.of(self),
+                    0, SymbolTable.DispatchKind.INSTANCE));
             SymbolTable.ClassSymbol sym = new SymbolTable.ClassSymbol(en.name(), sa.packageOf(en),
-                    "Object", List.of(), members);
+                    "Enum", List.of(), members);
             sa.allClasses().put(en.name(), sym);
             sa.currentScope().define(sym);
         } else if (decl instanceof InterfaceDeclarationNode iface) {
@@ -191,7 +202,14 @@ public final class SymbolTableBuilder {
         SymbolTable classScope = classSym.members().enterScope();
         sa.classMemberScopes().put(iface.name(), classScope);
         for (AstNode member : iface.members()) {
-            if (member instanceof MethodDeclarationNode method) {
+            if (member instanceof FieldDeclarationNode field) {
+                Type fieldType = MemberResolver.resolveType(sa, field.type(), classScope);
+                int flags = AccessFlags.STATIC;
+                if (field.modifiers().contains("static")) flags |= AccessFlags.STATIC;
+                SymbolTable.FieldSymbol fs = new SymbolTable.FieldSymbol(field.name(), fieldType, flags, iface.name());
+                classSym.members().define(fs);
+                classScope.define(fs);
+            } else if (member instanceof MethodDeclarationNode method) {
                 Type returnType = MemberResolver.resolveType(sa, method.returnType(), classScope);
                 List<Type> paramTypes = new ArrayList<>();
                 for (FormalParameterNode p : method.parameters()) paramTypes.add(Type.of(p.type()));

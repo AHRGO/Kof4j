@@ -45,137 +45,145 @@ public final class KofFormatter {
 
     static void formatDecl(AstNode decl, StringBuilder out, int indent) {
         String pad = "    ".repeat(indent);
-        if (decl instanceof FunctionDeclarationNode fn) {
-            for (AnnotationNode ann : fn.annotations()) out.append(pad).append(formatAnnotation(ann)).append("\n");
-            if (!fn.modifiers().isEmpty()) out.append(pad).append(String.join(" ", fn.modifiers())).append(" ");
-            else out.append(pad);
-            if (!"void".equals(fn.returnType())) out.append(fn.returnType()).append(" ");
-            out.append(fn.name());
-            if (!fn.typeParameters().isEmpty()) out.append("<").append(String.join(", ", fn.typeParameters())).append(">");
-            out.append("(");
-            for (int i = 0; i < fn.parameters().size(); i++) {
-                if (i > 0) out.append(", ");
-                out.append(formatParam(fn.parameters().get(i)));
-            }
-            out.append(")");
-            if (!fn.thrownExceptions().isEmpty()) out.append(" throw ").append(String.join(", ", fn.thrownExceptions()));
-            if (fn.body().isEmpty()) {
-                out.append(";\n");
-            } else if (fn.body().size() == 1 && fn.body().get(0) instanceof ReturnStmt rs && rs.value() != null) {
-                out.append(" = ").append(formatExpr(rs.value())).append("\n");
-            } else {
-                out.append(" {\n");
-                for (StatementNode st : fn.body()) formatStmt(st, out, indent + 1);
-                out.append(pad).append("}\n");
-            }
-        } else if (decl instanceof ClassDeclarationNode cls) {
-            for (AnnotationNode ann : cls.annotations()) out.append(pad).append(formatAnnotation(ann)).append("\n");
-            if (!cls.modifiers().isEmpty()) out.append(pad).append(String.join(" ", cls.modifiers())).append(" ");
-            else out.append(pad);
-            out.append("class ").append(cls.name());
-            if (!cls.typeParameters().isEmpty()) out.append("<").append(String.join(", ", cls.typeParameters())).append(">");
-            if (cls.superClass() != null) out.append(" extends ").append(cls.superClass());
-            if (!cls.interfaces().isEmpty()) out.append(" implements ").append(String.join(", ", cls.interfaces()));
-            out.append(" {\n");
-            for (AstNode m : cls.members()) {
-                if (m instanceof FieldDeclarationNode f) {
-                    for (AnnotationNode ann : f.annotations()) out.append("    ".repeat(indent + 1)).append(formatAnnotation(ann)).append("\n");
-                    if (!f.modifiers().isEmpty()) out.append("    ".repeat(indent + 1)).append(String.join(" ", f.modifiers())).append(" ");
-                    else out.append("    ".repeat(indent + 1));
-                    out.append(f.type()).append(" ").append(f.name());
-                    if (f.initializer() != null) out.append(" = ").append(formatExpr(f.initializer()));
-                    out.append("\n");
-                } else if (m instanceof MethodDeclarationNode md) {
-                    for (AnnotationNode ann : md.annotations()) out.append("    ".repeat(indent + 1)).append(formatAnnotation(ann)).append("\n");
-                    if (!md.modifiers().isEmpty()) out.append("    ".repeat(indent + 1)).append(String.join(" ", md.modifiers())).append(" ");
-                    else out.append("    ".repeat(indent + 1));
-                    if (!"void".equals(md.returnType())) out.append(md.returnType()).append(" ");
-                    out.append(md.name()).append("(");
-                    for (int i = 0; i < md.parameters().size(); i++) {
-                        if (i > 0) out.append(", ");
-                        out.append(formatParam(md.parameters().get(i)));
-                    }
-                    out.append(")");
-                    if (!md.thrownExceptions().isEmpty()) out.append(" throw ").append(String.join(", ", md.thrownExceptions()));
-                    if (md.body().isEmpty()) out.append(";\n");
-                    else if (md.body().size() == 1 && md.body().get(0) instanceof ReturnStmt rs && rs.value() != null) {
-                        out.append(" = ").append(formatExpr(rs.value())).append("\n");
-                    } else {
-                        out.append(" {\n");
-                        for (StatementNode st : md.body()) formatStmt(st, out, indent + 2);
-                        out.append("    ".repeat(indent + 1)).append("}\n");
-                    }
-                } else if (m instanceof ConstructorDeclarationNode ctor) {
-                    for (AnnotationNode ann : ctor.annotations()) out.append("    ".repeat(indent + 1)).append(formatAnnotation(ann)).append("\n");
-                    if (!ctor.modifiers().isEmpty()) out.append("    ".repeat(indent + 1)).append(String.join(" ", ctor.modifiers())).append(" ");
-                    else out.append("    ".repeat(indent + 1));
-                    out.append("constructor(");
-                    for (int i = 0; i < ctor.parameters().size(); i++) {
-                        if (i > 0) out.append(", ");
-                        out.append(formatParam(ctor.parameters().get(i)));
-                    }
-                    out.append(")");
-                    if (!ctor.thrownExceptions().isEmpty()) out.append(" throw ").append(String.join(", ", ctor.thrownExceptions()));
-                    if (ctor.body().isEmpty()) out.append(" {}\n");
-                    else {
-                        out.append(" {\n");
-                        for (StatementNode st : ctor.body()) formatStmt(st, out, indent + 2);
-                        out.append("    ".repeat(indent + 1)).append("}\n");
-                    }
+        switch (decl) {
+            case FunctionDeclarationNode fn -> {
+                for (AnnotationNode ann : fn.annotations()) out.append(pad).append(formatAnnotation(ann)).append("\n");
+                if (!fn.modifiers().isEmpty()) out.append(pad).append(String.join(" ", fn.modifiers())).append(" ");
+                else out.append(pad);
+                if (!"void".equals(fn.returnType())) out.append(fn.returnType()).append(" ");
+                out.append(fn.name());
+                if (!fn.typeParameters().isEmpty()) out.append("<").append(String.join(", ", fn.typeParameters())).append(">");
+                out.append("(");
+                for (int i = 0; i < fn.parameters().size(); i++) {
+                    if (i > 0) out.append(", ");
+                    out.append(formatParam(fn.parameters().get(i)));
+                }
+                out.append(")");
+                if (!fn.thrownExceptions().isEmpty()) out.append(" throw ").append(String.join(", ", fn.thrownExceptions()));
+                if (fn.body().isEmpty()) {
+                    out.append(";\n");
+                } else if (fn.body().size() == 1 && fn.body().get(0) instanceof ReturnStmt rs && rs.value() != null) {
+                    out.append(" = ").append(formatExpr(rs.value())).append("\n");
+                } else {
+                    out.append(" {\n");
+                    for (StatementNode st : fn.body()) formatStmt(st, out, indent + 1);
+                    out.append(pad).append("}\n");
                 }
             }
-            out.append(pad).append("}\n");
-        } else if (decl instanceof RecordDeclarationNode rec) {
-            for (AnnotationNode ann : rec.annotations()) out.append(pad).append(formatAnnotation(ann)).append("\n");
-            if (!rec.modifiers().isEmpty()) out.append(pad).append(String.join(" ", rec.modifiers())).append(" ");
-            else out.append(pad);
-            out.append("record ").append(rec.name());
-            out.append("(");
-            for (int i = 0; i < rec.components().size(); i++) {
-                if (i > 0) out.append(", ");
-                RecordComponentNode c = rec.components().get(i);
-                if (!c.modifiers().isEmpty()) out.append(String.join(" ", c.modifiers())).append(" ");
-                out.append(c.type()).append(" ").append(c.name());
-                if (c.initializer() != null) out.append(" = ").append(formatExpr(c.initializer()));
-            }
-            out.append(")");
-            if (rec.superClass() != null) out.append(" extends ").append(rec.superClass());
-            if (!rec.interfaces().isEmpty()) out.append(" implements ").append(String.join(", ", rec.interfaces()));
-            if (rec.members().isEmpty()) out.append("\n");
-            else {
+            case ClassDeclarationNode cls -> {
+                for (AnnotationNode ann : cls.annotations()) out.append(pad).append(formatAnnotation(ann)).append("\n");
+                if (!cls.modifiers().isEmpty()) out.append(pad).append(String.join(" ", cls.modifiers())).append(" ");
+                else out.append(pad);
+                out.append("class ").append(cls.name());
+                if (!cls.typeParameters().isEmpty()) out.append("<").append(String.join(", ", cls.typeParameters())).append(">");
+                if (cls.superClass() != null) out.append(" extends ").append(cls.superClass());
+                if (!cls.interfaces().isEmpty()) out.append(" implements ").append(String.join(", ", cls.interfaces()));
                 out.append(" {\n");
-                for (AstNode m : rec.members()) formatDecl(m, out, indent + 1);
+                for (AstNode m : cls.members()) {
+                    if (m instanceof FieldDeclarationNode f) {
+                        for (AnnotationNode ann : f.annotations()) out.append("    ".repeat(indent + 1)).append(formatAnnotation(ann)).append("\n");
+                        if (!f.modifiers().isEmpty()) out.append("    ".repeat(indent + 1)).append(String.join(" ", f.modifiers())).append(" ");
+                        else out.append("    ".repeat(indent + 1));
+                        out.append(f.type()).append(" ").append(f.name());
+                        if (f.initializer() != null) out.append(" = ").append(formatExpr(f.initializer()));
+                        out.append("\n");
+                    } else if (m instanceof MethodDeclarationNode md) {
+                        for (AnnotationNode ann : md.annotations()) out.append("    ".repeat(indent + 1)).append(formatAnnotation(ann)).append("\n");
+                        if (!md.modifiers().isEmpty()) out.append("    ".repeat(indent + 1)).append(String.join(" ", md.modifiers())).append(" ");
+                        else out.append("    ".repeat(indent + 1));
+                        if (!"void".equals(md.returnType())) out.append(md.returnType()).append(" ");
+                        out.append(md.name()).append("(");
+                        for (int i = 0; i < md.parameters().size(); i++) {
+                            if (i > 0) out.append(", ");
+                            out.append(formatParam(md.parameters().get(i)));
+                        }
+                        out.append(")");
+                        if (!md.thrownExceptions().isEmpty()) out.append(" throw ").append(String.join(", ", md.thrownExceptions()));
+                        if (md.body().isEmpty()) out.append(";\n");
+                        else if (md.body().size() == 1 && md.body().get(0) instanceof ReturnStmt rs && rs.value() != null) {
+                            out.append(" = ").append(formatExpr(rs.value())).append("\n");
+                        } else {
+                            out.append(" {\n");
+                            for (StatementNode st : md.body()) formatStmt(st, out, indent + 2);
+                            out.append("    ".repeat(indent + 1)).append("}\n");
+                        }
+                    } else if (m instanceof ConstructorDeclarationNode ctor) {
+                        for (AnnotationNode ann : ctor.annotations()) out.append("    ".repeat(indent + 1)).append(formatAnnotation(ann)).append("\n");
+                        if (!ctor.modifiers().isEmpty()) out.append("    ".repeat(indent + 1)).append(String.join(" ", ctor.modifiers())).append(" ");
+                        else out.append("    ".repeat(indent + 1));
+                        out.append("constructor(");
+                        for (int i = 0; i < ctor.parameters().size(); i++) {
+                            if (i > 0) out.append(", ");
+                            out.append(formatParam(ctor.parameters().get(i)));
+                        }
+                        out.append(")");
+                        if (!ctor.thrownExceptions().isEmpty()) out.append(" throw ").append(String.join(", ", ctor.thrownExceptions()));
+                        if (ctor.body().isEmpty()) out.append(" {}\n");
+                        else {
+                            out.append(" {\n");
+                            for (StatementNode st : ctor.body()) formatStmt(st, out, indent + 2);
+                            out.append("    ".repeat(indent + 1)).append("}\n");
+                        }
+                    }
+                }
                 out.append(pad).append("}\n");
             }
-        } else if (decl instanceof EnumDeclarationNode en) {
-            for (AnnotationNode ann : en.annotations()) out.append(pad).append(formatAnnotation(ann)).append("\n");
-            if (!en.modifiers().isEmpty()) out.append(pad).append(String.join(" ", en.modifiers())).append(" ");
-            else out.append(pad);
-            out.append("enum ").append(en.name()).append(" {\n");
-            for (int i = 0; i < en.constants().size(); i++) {
-                out.append("    ".repeat(indent + 1)).append(en.constants().get(i));
-                if (i + 1 < en.constants().size()) out.append(",");
-                out.append("\n");
+            case RecordDeclarationNode rec -> {
+                for (AnnotationNode ann : rec.annotations()) out.append(pad).append(formatAnnotation(ann)).append("\n");
+                if (!rec.modifiers().isEmpty()) out.append(pad).append(String.join(" ", rec.modifiers())).append(" ");
+                else out.append(pad);
+                out.append("record ").append(rec.name());
+                out.append("(");
+                for (int i = 0; i < rec.components().size(); i++) {
+                    if (i > 0) out.append(", ");
+                    RecordComponentNode c = rec.components().get(i);
+                    if (!c.modifiers().isEmpty()) out.append(String.join(" ", c.modifiers())).append(" ");
+                    out.append(c.type()).append(" ").append(c.name());
+                    if (c.initializer() != null) out.append(" = ").append(formatExpr(c.initializer()));
+                }
+                out.append(")");
+                if (rec.superClass() != null) out.append(" extends ").append(rec.superClass());
+                if (!rec.interfaces().isEmpty()) out.append(" implements ").append(String.join(", ", rec.interfaces()));
+                if (rec.members().isEmpty()) out.append("\n");
+                else {
+                    out.append(" {\n");
+                    for (AstNode m : rec.members()) formatDecl(m, out, indent + 1);
+                    out.append(pad).append("}\n");
+                }
             }
-            out.append(pad).append("}\n");
-        } else if (decl instanceof EntityDeclarationNode ent) {
-            for (AnnotationNode ann : ent.annotations()) out.append(pad).append(formatAnnotation(ann)).append("\n");
-            if (!ent.modifiers().isEmpty()) out.append(pad).append(String.join(" ", ent.modifiers())).append(" ");
-            else out.append(pad);
-            out.append("entity ").append(ent.name()).append(" {\n");
-            for (EntityFieldNode f : ent.fields()) {
-                out.append("    ".repeat(indent + 1)).append(f.name()).append(": ").append(f.type());
-                if (f.generated()) out.append(" generated");
-                if (f.unique()) out.append(" unique");
-                out.append("\n");
+            case EnumDeclarationNode en -> {
+                for (AnnotationNode ann : en.annotations()) out.append(pad).append(formatAnnotation(ann)).append("\n");
+                if (!en.modifiers().isEmpty()) out.append(pad).append(String.join(" ", en.modifiers())).append(" ");
+                else out.append(pad);
+                out.append("enum ").append(en.name()).append(" {\n");
+                for (int i = 0; i < en.constants().size(); i++) {
+                    out.append("    ".repeat(indent + 1)).append(en.constants().get(i));
+                    if (i + 1 < en.constants().size()) out.append(",");
+                    out.append("\n");
+                }
+                out.append(pad).append("}\n");
             }
-            out.append(pad).append("}\n");
-        } else if (decl instanceof TestDeclarationNode t) {
-            out.append(pad).append("test \"").append(t.name()).append("\" {\n");
-            for (StatementNode st : t.body()) formatStmt(st, out, indent + 1);
-            out.append(pad).append("}\n");
-        } else {
-            out.append(pad).append(decl.toString()).append("\n");
+            case EntityDeclarationNode ent -> {
+                for (AnnotationNode ann : ent.annotations()) out.append(pad).append(formatAnnotation(ann)).append("\n");
+                if (!ent.modifiers().isEmpty()) out.append(pad).append(String.join(" ", ent.modifiers())).append(" ");
+                else out.append(pad);
+                out.append("entity ").append(ent.name()).append(" {\n");
+                for (EntityFieldNode f : ent.fields()) {
+                    out.append("    ".repeat(indent + 1)).append(f.name()).append(": ").append(f.type());
+                    if (f.generated()) out.append(" generated");
+                    if (f.unique()) out.append(" unique");
+                    out.append("\n");
+                }
+                out.append(pad).append("}\n");
+            }
+            case TestDeclarationNode t -> {
+                out.append(pad).append("test \"").append(t.name()).append("\" {\n");
+                for (StatementNode st : t.body()) formatStmt(st, out, indent + 1);
+                out.append(pad).append("}\n");
+            }
+            case null, default -> {  // null cai aqui (como no if-else: instanceof null == false)
+                out.append(pad).append(decl.toString()).append("\n");
+            }
         }
     }
 
@@ -209,93 +217,111 @@ public final class KofFormatter {
 
     static void formatStmt(StatementNode st, StringBuilder out, int indent) {
         String pad = "    ".repeat(indent);
-        if (st instanceof ExpressionStmt es) {
-            if (es.expression() == null) out.append(pad).append(";\n");
-            else out.append(pad).append(formatExpr(es.expression())).append("\n");
-        } else if (st instanceof ReturnStmt rs) {
-            if (rs.value() == null) out.append(pad).append("return\n");
-            else out.append(pad).append("return ").append(formatExpr(rs.value())).append("\n");
-        } else if (st instanceof BlockStmt bs) {
-            out.append(pad).append("{\n");
-            for (StatementNode s : bs.statements()) formatStmt(s, out, indent + 1);
-            out.append(pad).append("}\n");
-        } else if (st instanceof IfStmt is) {
-            out.append(pad).append("if (").append(formatExpr(is.condition())).append(") ");
-            formatBody(is.thenBranch(), out, indent);
-            if (is.elseBranch() != null) {
-                out.append(pad).append("else ");
-                formatBody(is.elseBranch(), out, indent);
+        switch (st) {
+            case ExpressionStmt es -> {
+                if (es.expression() == null) out.append(pad).append(";\n");
+                else out.append(pad).append(formatExpr(es.expression())).append("\n");
             }
-        } else if (st instanceof WhileStmt ws) {
-            out.append(pad).append("while (").append(formatExpr(ws.condition())).append(") ");
-            formatBody(ws.body(), out, indent);
-        } else if (st instanceof ForStmt fs) {
-            out.append(pad).append("for (");
-            if (fs.init() != null) {
-                StringBuilder tmp = new StringBuilder();
-                formatStmt(fs.init(), tmp, 0);
-                out.append(tmp.toString().trim().replace(";", "").trim());
+            case ReturnStmt rs -> {
+                if (rs.value() == null) out.append(pad).append("return\n");
+                else out.append(pad).append("return ").append(formatExpr(rs.value())).append("\n");
             }
-            out.append("; ");
-            if (fs.condition() != null) out.append(formatExpr(fs.condition()));
-            out.append("; ");
-            if (fs.update() != null) out.append(formatExpr(fs.update()));
-            out.append(") ");
-            formatBody(fs.body(), out, indent);
-        } else if (st instanceof ForInStmt fis) {
-            out.append(pad).append("for (var ").append(fis.varName()).append(" in ").append(formatExpr(fis.collection())).append(") ");
-            formatBody(fis.body(), out, indent);
-        } else if (st instanceof DoWhileStmt dws) {
-            out.append(pad).append("do ");
-            formatBody(dws.body(), out, indent);
-            out.append(pad).append("while (").append(formatExpr(dws.condition())).append(")\n");
-        } else if (st instanceof VarDeclStmt vds) {
-            out.append(pad);
-            if (!"var".equals(vds.type()) && !"val".equals(vds.type())) out.append(vds.type()).append(" ");
-            else out.append(vds.type()).append(" ");
-            out.append(vds.name());
-            if (vds.initializer() != null) out.append(" = ").append(formatExpr(vds.initializer()));
-            out.append("\n");
-        } else if (st instanceof ThrowStmt ts) {
-            out.append(pad).append("throw ").append(formatExpr(ts.expression())).append("\n");
-        } else if (st instanceof SpawnStmt ss) {
-            out.append(pad).append("spawn ").append(formatExpr(ss.expression())).append("\n");
-        } else if (st instanceof AssertStmt as) {
-            out.append(pad).append("assert(").append(formatExpr(as.condition()));
-            if (as.message() != null) out.append(", \"").append(as.message()).append("\"");
-            out.append(")\n");
-        } else if (st instanceof BreakStmt) {
-            out.append(pad).append("break\n");
-        } else if (st instanceof ContinueStmt) {
-            out.append(pad).append("continue\n");
-        } else if (st instanceof SwitchStmt sw) {
-            out.append(pad).append("switch (").append(formatExpr(sw.expression())).append(") {\n");
-            for (SwitchCase c : sw.cases()) {
-                out.append("    ".repeat(indent + 1)).append("case ").append(formatExpr(c.value())).append(":\n");
-                for (StatementNode s : c.body()) formatStmt(s, out, indent + 2);
+            case BlockStmt bs -> {
+                out.append(pad).append("{\n");
+                for (StatementNode s : bs.statements()) formatStmt(s, out, indent + 1);
+                out.append(pad).append("}\n");
             }
-            if (!sw.defaultBody().isEmpty()) {
-                out.append("    ".repeat(indent + 1)).append("default:\n");
-                for (StatementNode s : sw.defaultBody()) formatStmt(s, out, indent + 2);
+            case IfStmt is -> {
+                out.append(pad).append("if (").append(formatExpr(is.condition())).append(") ");
+                formatBody(is.thenBranch(), out, indent);
+                if (is.elseBranch() != null) {
+                    out.append(pad).append("else ");
+                    formatBody(is.elseBranch(), out, indent);
+                }
             }
-            out.append(pad).append("}\n");
-        } else if (st instanceof TryStmt ts) {
-            out.append(pad).append("try {\n");
-            for (StatementNode s : ts.tryBody()) formatStmt(s, out, indent + 1);
-            out.append(pad).append("}");
-            for (CatchClause cc : ts.catchClauses()) {
-                out.append(" catch (").append(cc.exceptionType()).append(" ").append(cc.exceptionName()).append(") {\n");
-                for (StatementNode s : cc.body()) formatStmt(s, out, indent + 1);
+            case WhileStmt ws -> {
+                out.append(pad).append("while (").append(formatExpr(ws.condition())).append(") ");
+                formatBody(ws.body(), out, indent);
+            }
+            case ForStmt fs -> {
+                out.append(pad).append("for (");
+                if (fs.init() != null) {
+                    StringBuilder tmp = new StringBuilder();
+                    formatStmt(fs.init(), tmp, 0);
+                    out.append(tmp.toString().trim().replace(";", "").trim());
+                }
+                out.append("; ");
+                if (fs.condition() != null) out.append(formatExpr(fs.condition()));
+                out.append("; ");
+                if (fs.update() != null) out.append(formatExpr(fs.update()));
+                out.append(") ");
+                formatBody(fs.body(), out, indent);
+            }
+            case ForInStmt fis -> {
+                out.append(pad).append("for (var ").append(fis.varName()).append(" in ").append(formatExpr(fis.collection())).append(") ");
+                formatBody(fis.body(), out, indent);
+            }
+            case DoWhileStmt dws -> {
+                out.append(pad).append("do ");
+                formatBody(dws.body(), out, indent);
+                out.append(pad).append("while (").append(formatExpr(dws.condition())).append(")\n");
+            }
+            case VarDeclStmt vds -> {
+                out.append(pad);
+                if (!"var".equals(vds.type()) && !"val".equals(vds.type())) out.append(vds.type()).append(" ");
+                else out.append(vds.type()).append(" ");
+                out.append(vds.name());
+                if (vds.initializer() != null) out.append(" = ").append(formatExpr(vds.initializer()));
+                out.append("\n");
+            }
+            case ThrowStmt ts -> {
+                out.append(pad).append("throw ").append(formatExpr(ts.expression())).append("\n");
+            }
+            case SpawnStmt ss -> {
+                out.append(pad).append("spawn ").append(formatExpr(ss.expression())).append("\n");
+            }
+            case AssertStmt as -> {
+                out.append(pad).append("assert(").append(formatExpr(as.condition()));
+                if (as.message() != null) out.append(", \"").append(as.message()).append("\"");
+                out.append(")\n");
+            }
+            case BreakStmt _ -> {
+                out.append(pad).append("break\n");
+            }
+            case ContinueStmt _ -> {
+                out.append(pad).append("continue\n");
+            }
+            case SwitchStmt sw -> {
+                out.append(pad).append("switch (").append(formatExpr(sw.expression())).append(") {\n");
+                for (SwitchCase c : sw.cases()) {
+                    out.append("    ".repeat(indent + 1)).append("case ").append(formatExpr(c.value())).append(":\n");
+                    for (StatementNode s : c.body()) formatStmt(s, out, indent + 2);
+                }
+                if (!sw.defaultBody().isEmpty()) {
+                    out.append("    ".repeat(indent + 1)).append("default:\n");
+                    for (StatementNode s : sw.defaultBody()) formatStmt(s, out, indent + 2);
+                }
+                out.append(pad).append("}\n");
+            }
+            case TryStmt ts -> {
+                out.append(pad).append("try {\n");
+                for (StatementNode s : ts.tryBody()) formatStmt(s, out, indent + 1);
                 out.append(pad).append("}");
+                for (CatchClause cc : ts.catchClauses()) {
+                    out.append(" catch (").append(cc.exceptionType()).append(" ").append(cc.exceptionName()).append(") {\n");
+                    for (StatementNode s : cc.body()) formatStmt(s, out, indent + 1);
+                    out.append(pad).append("}");
+                }
+                if (!ts.finallyBody().isEmpty()) {
+                    out.append(" finally {\n");
+                    for (StatementNode s : ts.finallyBody()) formatStmt(s, out, indent + 1);
+                    out.append(pad).append("}");
+                }
+                out.append("\n");
             }
-            if (!ts.finallyBody().isEmpty()) {
-                out.append(" finally {\n");
-                for (StatementNode s : ts.finallyBody()) formatStmt(s, out, indent + 1);
-                out.append(pad).append("}");
+            case null, default -> {  // null cai aqui (como no if-else: instanceof null == false)
+                out.append(pad).append(st.toString()).append("\n");
             }
-            out.append("\n");
-        } else {
-            out.append(pad).append(st.toString()).append("\n");
         }
     }
 

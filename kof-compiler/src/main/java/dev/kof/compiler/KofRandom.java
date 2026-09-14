@@ -82,7 +82,8 @@ public final class KofRandom {
      * (divu/remu/fcvt/fld/fmv no tradutor). FLT (novo tipo de dados) fica
      * S1b; choice (objeto estruturado) S10c.
      */
-    static boolean supportedOn(String function, Target target) {
+    static boolean supportedOn(@SuppressWarnings("unused") String function,
+            @SuppressWarnings("unused") Target target) {
         return true;
     }
 

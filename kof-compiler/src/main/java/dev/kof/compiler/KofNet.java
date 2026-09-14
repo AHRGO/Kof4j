@@ -43,7 +43,8 @@ public final class KofNet {
         };
     }
 
-    static boolean supportedOn(String function, Target target) {
+    static boolean supportedOn(@SuppressWarnings("unused") String function,
+            @SuppressWarnings("unused") Target target) {
         // NET001: byte-scan nativo pendente (port x86/riscv em unidades
         // próprias); JVM/SCRIPT/JS já implementados.
         return true;

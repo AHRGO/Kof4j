@@ -425,7 +425,6 @@ public final class CollectionCallLowerer {
                         + " copie os elementos com um loop",
                 "SEM034");
     }
-    Type methodReturnType = Type.UnknownType.UNKNOWN;
     for (ExpressionNode arg : mc.arguments()) {
         ExpressionTyper.inferExprType(driver, arg, locals);
     }

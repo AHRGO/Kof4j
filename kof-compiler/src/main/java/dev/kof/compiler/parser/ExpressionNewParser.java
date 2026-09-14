@@ -25,7 +25,13 @@ final class ExpressionNewParser {
             ctx.advance();
             typeArgs = new ArrayList<>();
             while (!ctx.check(TokenType.GREATER) && !ctx.atEnd()) {
-                if (ctx.check(TokenType.IDENTIFIER) || TypeParser.isPrimitiveType(ctx)) {
+                if (ctx.check(TokenType.IDENTIFIER) || TypeParser.isPrimitiveType(ctx)
+                        || ctx.check(TokenType.LPAREN)) {
+                    // #193/#198: LPAREN = tipo-funcao como type-arg
+                    // (`new List<() -> Int>()`). Antes o `(` caia no else e
+                    // os tokens eram DESCARTADOS em silencio — "(  ) -> Int"
+                    // virava só "Int" (lista tipada errada, SEM015 no get).
+                    // parseTypeRef ja trata LPAREN (parseFunctionTypeRef).
                     typeArgs.add(TypeParser.parseTypeRef(ctx));
                 } else {
                     ctx.advance();

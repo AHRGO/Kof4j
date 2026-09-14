@@ -89,7 +89,8 @@ public final class KofValidation {
         };
     }
 
-    static boolean supportedOn(String function, Target target) {
+    static boolean supportedOn(@SuppressWarnings("unused") String function,
+            @SuppressWarnings("unused") Target target) {
         return true; // all validation predicates on JVM/Native/JS
     }
 

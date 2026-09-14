@@ -312,7 +312,8 @@ public final class BuiltinCallTyper {
             return Type.PrimitiveType.VOID;
         }
         if (mc.receiver() == null && "__kof_spawn_expr".equals(mc.methodName())) {
-            Type t = SemExpressionTyper.inferType(sa, mc.arguments().get(0), scope);
+            ExpressionNode body = mc.arguments().get(0);
+            Type t = SemExpressionTyper.inferType(sa, body, scope);
             // bug 46: `spawn { return 42 }` — inferType(lambda) dá
             // FunctionType([], Int), mas o Handle é do RETURN da lambda, não
             // do FunctionType. Guardar Handle<FunctionType> fazia `await h`
@@ -320,6 +321,19 @@ public final class BuiltinCallTyper {
             // kof_println_string(42) → deref de ponteiro inválido (SIGSEGV
             // nativo). Espelha o lowerer (ExpressionStaticCallLowerer, bug 29).
             if (t instanceof Type.FunctionType ft) t = ft.returnType();
+            // #141: corpo-bloco de UMA expressão ({@code spawn { "ok" }}) É o
+            // retorno — o caso LambdaExpr dá VOID sem `return` explícito (a
+            // emissão CompilerLambdaClass faz a conversão quando o tipo do
+            // SAM não é void; sem este espelho o Handle saía Handle<Void> e o
+            // `await` dava SEM033 falso-positivo (a triagem da mantenedora
+            // classificou a rejeição como gap do typer, 0.4.1).
+            if (Type.PrimitiveType.VOID.equals(t)
+                    && body instanceof LambdaExpr sle
+                    && sle.body().size() == 1
+                    && sle.body().get(0) instanceof ExpressionStmt es) {
+                Type et = SemExpressionTyper.inferType(sa, es.expression(), scope);
+                if (!Type.UnknownType.UNKNOWN.equals(et) && !Type.isVoid(et)) t = et;
+            }
             return new Type.ClassType("kof.concurrent", "Handle", List.of(t));
         }
         if (mc.receiver() == null && "cancel".equals(mc.methodName())

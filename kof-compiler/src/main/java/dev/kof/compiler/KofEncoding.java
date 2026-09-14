@@ -44,7 +44,8 @@ public final class KofEncoding {
     // ENC002 FECHADO (09/09): base64/base64Url portados p/ riscv B23 +
     // aarch64 translator (mesma spec tolerante do x86/JVM/JS). supportedOn
     // volta quando outro gap nascer.
-    static boolean supportedOn(String function, Target target) {
+    static boolean supportedOn(@SuppressWarnings("unused") String function,
+            @SuppressWarnings("unused") Target target) {
         return true;
     }
 

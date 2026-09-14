@@ -41,7 +41,10 @@ final class CmdScript {
             else if (a.equals("--target") && i + 1 < args.length) target = KofCliSupport.parseTarget(args[++i]);
             else if (a.equals("--watch")) watch = true;
             else if (a.equals("--inspect")) inspect = true;
-            else if (a.equals("--")) { for (int j = i + 1; j < args.length; j++) progArgs.add(args[j]); break; }
+            else if (a.equals("--")) {
+                for (int j = i + 1; j < args.length; j++) progArgs.add(args[j]);
+                break;
+            }
             else if (a.startsWith("-")) { System.err.println("unknown option: " + a); return 1; }
             else progArgs.add(a);
         }
@@ -127,8 +130,13 @@ final class CmdScript {
                         System.out.println("\n--- " + changed.getFileName() + " changed, re-running ---");
                         try {
                             var r = dev.kof.script.KofScript.runFile(abs, target, progArgs);
-                            if (!r.success()) { if (!r.stderr().isBlank()) System.err.print(r.stderr()); if (!r.stdout().isBlank()) System.out.print(r.stdout()); }
-                            else { if (!r.stdout().isBlank()) System.out.print(r.stdout()); if (!r.stderr().isBlank()) System.err.print(r.stderr()); }
+                            if (!r.success()) {
+                                if (!r.stderr().isBlank()) System.err.print(r.stderr());
+                                if (!r.stdout().isBlank()) System.out.print(r.stdout());
+                            } else {
+                                if (!r.stdout().isBlank()) System.out.print(r.stdout());
+                                if (!r.stderr().isBlank()) System.err.print(r.stderr());
+                            }
                         } catch (Exception e) { System.err.println("watch: " + e.getMessage()); }
                         break;
                     }

@@ -540,6 +540,48 @@ class KofWebE2ETest {
     }
 
     @Test
+    void securityCsrfIsOnByDefault(@TempDir Path tempDir) throws IOException {
+        // DECISIONS §5 (Spring model): CSRF ON por padrão quando app.security()
+        // é configurado, sem precisar de `csrf:true` explícito.
+        int port = startServer(tempDir, """
+                main() {
+                    var app = web.app()
+                    app.security()
+                    app.post("/p") { return "posted" }
+                    app.listen(PORT)
+                }
+                """);
+        String blocked = request(port, "POST /p HTTP/1.1\r\nHost: x\r\nContent-Length: 0\r\n\r\n");
+        assertTrue(blocked.startsWith("HTTP/1.1 403 Forbidden"), blocked);
+
+        String token = "cafef00d";
+        String ok = request(port, "POST /p HTTP/1.1\r\nHost: x\r\n"
+                + "Cookie: csrf=" + token + "\r\nX-CSRF-Token: " + token + "\r\n"
+                + "Content-Length: 0\r\n\r\n");
+        assertTrue(ok.startsWith("HTTP/1.1 200 OK"), ok);
+    }
+
+    @Test
+    void securityPermitAllAliasIsPublicPaths(@TempDir Path tempDir) throws IOException {
+        // §5: `permitAll` é alias de `publicPaths`.
+        int port = startServer(tempDir, """
+                main() {
+                    var app = web.app()
+                    var opts = mapOf("sessionHeader", "authorization", "permitAll", "/open")
+                    app.security(opts)
+                    app.get("/open") { return "open" }
+                    app.get("/closed") { return "closed" }
+                    app.listen(PORT)
+                }
+                """);
+        String open = request(port, "GET /open HTTP/1.1\r\nHost: x\r\n\r\n");
+        assertTrue(open.startsWith("HTTP/1.1 200 OK"), open);
+        assertEquals("open", bodyOf(open));
+        String closed = request(port, "GET /closed HTTP/1.1\r\nHost: x\r\n\r\n");
+        assertTrue(closed.startsWith("HTTP/1.1 401 Unauthorized"), closed);
+    }
+
+    @Test
     void securityRateLimitByRemoteAddress(@TempDir Path tempDir) throws IOException {
         int port = startServer(tempDir, """
                 main() {

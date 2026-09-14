@@ -122,7 +122,6 @@ final class NativeArchEmitter {
 
         // NATIVE002-stdlib: http.get/post/status riscv64 (asm puro, syscalls
         // asm-generic — mesmos números do aarch64; aarch64 herda via tradutor).
-        boolean usesHttp = false;
         for (IRClass c : module.classes()) {
             for (IRMethod m : c.methods()) {
                 for (IRBasicBlock b : m.basicBlocks()) {

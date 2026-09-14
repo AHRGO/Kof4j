@@ -1801,7 +1801,6 @@ class CoreRegressionE2ETest {
         assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
         assertEquals("2\n1", runJvm(out));
     }
-
     // Issue #214 — Map, HashMap, Set, HashSet, LinkedList compile with unqualified class names
     @Test
     void standardCollectionInstantiationJvm(@TempDir Path tempDir) throws IOException {
@@ -2035,5 +2034,304 @@ class CoreRegressionE2ETest {
         CompilationResult r = driver.compile(src, out, Target.JVM);
         assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
         assertEquals("vehicle-default sedan\ntruck f150\nbase-implicit", runJvm(out));
+    }
+
+    // Issue #222 — constructor-like method inside class body compiled as void instance method instead of <init>
+    @Test
+    void classNamedConstructorInBodyJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("pointctor.kf");
+        Files.writeString(src, """
+                class Point {
+                    Int x = 0
+                    Int y = 0
+                    Point(Int x, Int y) {
+                        this.x = x
+                        this.y = y
+                    }
+                }
+
+                main() {
+                    var p = new Point(3, 4)
+                    println(p.x + " " + p.y)
+                }
+                """);
+        Path out = tempDir.resolve("pointctor-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("3 4", runJvm(out));
+    }
+
+    // Issue #234 — for-in loop with explicit type annotation on iterator variable fails with SEM011
+    @Test
+    void forInWithExplicitTypeAnnotationJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("forinannot.kf");
+        Files.writeString(src, """
+                enum Color { RED, GREEN, BLUE }
+
+                main() {
+                    var lst = listOf(1, 2, 3)
+                    for (var n: Int in lst) {
+                        println(n)
+                    }
+
+                    var strs = listOf("alpha", "beta")
+                    for (val s: String in strs) {
+                        println(s)
+                    }
+
+                    for (var c: Color in Color.values()) {
+                        println(c)
+                    }
+                }
+                """);
+        Path out = tempDir.resolve("forinannot-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("1\n2\n3\nalpha\nbeta\nRED\nGREEN\nBLUE", runJvm(out));
+    }
+
+    // Issue #230 — Static method in interface compiled with ACC_ABSTRACT flag causing ClassFormatError
+    @Test
+    void staticMethodInInterfaceJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("interface_static.kf");
+        Files.writeString(src, """
+                interface Calc {
+                    static Int add(Int a, Int b) {
+                        return a + b
+                    }
+                }
+
+                interface MathUtils {
+                    static Int square(Int n) {
+                        return n * n
+                    }
+                    static String tag() {
+                        return "utils"
+                    }
+                }
+
+                main() {
+                    println(Calc.add(3, 4))
+                    println(MathUtils.square(5))
+                    println(MathUtils.tag())
+                }
+                """);
+        Path out = tempDir.resolve("interface_static-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("7\n25\nutils", runJvm(out));
+    }
+
+    // Issue #238 — interface static fields not accessible — SEM025 on access
+    @Test
+    void interfaceStaticFieldAccessJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("interface_field.kf");
+        Files.writeString(src, """
+                interface K {
+                    static Int VAL = 42
+                }
+
+                interface Limits {
+                    static Int MAX = 100
+                    static String TAG = "limit"
+                }
+
+                interface Configurable {
+                    static Int DEFAULT_SIZE = 10
+                    void configure()
+                }
+
+                class Widget implements Configurable {
+                    void configure() {
+                        println("ok")
+                    }
+                }
+
+                main() {
+                    println(K.VAL)
+                    println(Limits.MAX)
+                    println(Limits.TAG)
+                    println(Configurable.DEFAULT_SIZE)
+                    var w = new Widget()
+                    w.configure()
+                }
+                """);
+        Path out = tempDir.resolve("interface_field-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("42\n100\nlimit\n10\nok", runJvm(out));
+    }
+
+    // Issue #239 — static method called via instance reference generates invokevirtual -> IncompatibleClassChangeError
+    @Test
+    void staticMethodCalledViaInstanceReferenceJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("static_instance_call.kf");
+        Files.writeString(src, """
+                class Util {
+                    static Int square(Int n) {
+                        return n * n
+                    }
+                    static Bool isEven(Int n) {
+                        return n % 2 == 0
+                    }
+                }
+
+                main() {
+                    var u = new Util()
+                    println(u.square(4))
+                    println(u.isEven(4))
+                    println(u.isEven(5))
+                }
+                """);
+        Path out = tempDir.resolve("static_instance_call-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("16\ntrue\nfalse", runJvm(out));
+    }
+
+    // Issue #233 — Static boolean-returning methods on Double generate String return type in bytecode
+    @Test
+    void doubleStaticMethodsJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("double_static.kf");
+        Files.writeString(src, """
+                main() {
+                    var d: Double = 0.0 / 0.0
+                    println(Double.isNaN(d))
+                    println(Double.isInfinite(d))
+                    println(Double.isFinite(d))
+                    var norm: Double = 42.0
+                    println(Double.isNaN(norm))
+                    println(Double.isFinite(norm))
+                    var inf: Double = 1.0 / 0.0
+                    println(Double.isInfinite(inf))
+                    var f: Float = 0.0f / 0.0f
+                    println(Float.isNaN(f))
+                    println(Float.isInfinite(f))
+                }
+                """);
+        Path out = tempDir.resolve("double_static-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("true\nfalse\nfalse\nfalse\ntrue\ntrue\ntrue\nfalse", runJvm(out));
+    }
+
+    // Issue #235 — Overloaded static methods: call instruction omitted from IR, causing COMP002
+    @Test
+    void overloadedStaticMethodsJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("overloaded_static.kf");
+        Files.writeString(src, """
+                class Fmt {
+                    static String of(Int n) { return "int=" + n }
+                    static String of(Double d) { return "dbl=" + d }
+                }
+                class Converter {
+                    static String show(Int n) { return "int=" + n }
+                    static String show(Double d) { return "double=" + d }
+                    static String show(Bool b) { return "bool=" + b }
+                }
+                main() {
+                    var r1 = Fmt.of(10)
+                    var r2 = Fmt.of(2.5)
+                    println(r1)
+                    println(r2)
+                    println(Converter.show(42))
+                    println(Converter.show(3.14))
+                    println(Converter.show(true))
+                }
+                """);
+        Path out = tempDir.resolve("overloaded_static-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("int=10\ndbl=2.5\nint=42\ndouble=3.14\nbool=true", runJvm(out));
+    }
+
+    // Issue #246 — Extending a generic class writes angle-bracketed name as super_class
+    @Test
+    void extendGenericClassJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("extend_generic.kf");
+        Files.writeString(src, """
+                class Container<T> {
+                    T item
+                    T get() { return item }
+                    void set(T v) { item = v }
+                }
+                class StringBox extends Container<String> {
+                    void hello() { println("hi") }
+                }
+                class TypedBox<T> extends Container<T> {
+                    void test() { println("typed") }
+                }
+                class IntBox extends Container<Int> {
+                    void num() { println("int") }
+                }
+                main() {
+                    var sb = new StringBox()
+                    sb.hello()
+                    sb.set("world")
+                    println(sb.get())
+
+                    var tb = new TypedBox<String>()
+                    tb.test()
+                    tb.set("box")
+                    println(tb.get())
+
+                    var ib = new IntBox()
+                    ib.num()
+                    ib.set(123)
+                    println(ib.get())
+                }
+                """);
+        Path out = tempDir.resolve("extend_generic-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("hi\nworld\ntyped\nbox\nint\n123", runJvm(out));
+    }
+
+    // Issue #241 — Catch clause with qualified exception name generates illegal class name in exception table
+    @Test
+    void qualifiedExceptionInCatchClauseJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("qualified_catch.kf");
+        Files.writeString(src, """
+                main() {
+                    try {
+                        throw new java.lang.RuntimeException("boom")
+                    } catch (java.lang.RuntimeException e) {
+                        println("caught: " + e.getMessage())
+                    }
+                    try {
+                        throw new java.io.IOException("io-error")
+                    } catch (java.io.IOException e) {
+                        println("io: " + e.getMessage())
+                    }
+                }
+                """);
+        Path out = tempDir.resolve("qualified_catch-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("caught: boom\nio: io-error", runJvm(out));
+    }
+
+    // Issue #247 — Boolean overload resolution selects Int overload when both show(Int) and show(Boolean) exist
+    @Test
+    void booleanOverloadResolutionPrefersBooleanJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("boolean_overload.kf");
+        Files.writeString(src, """
+                class Printer {
+                    void show(Int n)     { println("int: " + n) }
+                    void show(Boolean b) { println("bool: " + b) }
+                }
+                main() {
+                    var p = new Printer()
+                    p.show(true)
+                    p.show(false)
+                    var b: Boolean = true
+                    p.show(b)
+                    p.show(42)
+                }
+                """);
+        Path out = tempDir.resolve("boolean_overload-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("bool: true\nbool: false\nbool: true\nint: 42", runJvm(out));
     }
 }

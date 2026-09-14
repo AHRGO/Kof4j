@@ -71,7 +71,11 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
     // Desconto.aplicar(c) -> invokestatic vendas/regras/Desconto.aplicar
     SymbolTable.MethodSymbol ksm = null;
     SymbolTable.Symbol ks = driver.semanticAnalyzer.resolveInHierarchy(rid.name(), mc.methodName());
-    if (ks instanceof SymbolTable.MethodSymbol ms0
+    if (ks instanceof SymbolTable.MethodSet set) {
+        List<Type> argTypes0 = new ArrayList<>();
+        for (ExpressionNode arg : mc.arguments()) argTypes0.add(ExpressionTyper.inferExprType(driver, arg, locals));
+        ksm = set.select(mc.arguments().size(), argTypes0);
+    } else if (ks instanceof SymbolTable.MethodSymbol ms0
             && ms0.parameterTypes().size() == mc.arguments().size()) {
         ksm = ms0;
     }
@@ -109,6 +113,50 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
             : KofCallKind.INSTANCE);
     ops.add(new KofCall(extQ, mc.methodName(), extFormal, extRet, extKind));
     return localIdx;
+} else if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.name(), locals)
+        && ("Double".equals(rid.name()) || "Float".equals(rid.name()) || "Long".equals(rid.name())
+            || "Integer".equals(rid.name()) || "Int".equals(rid.name()) || "Boolean".equals(rid.name())
+            || "Bool".equals(rid.name()) || "String".equals(rid.name()))) {
+    String javaClass = switch (rid.name()) {
+        case "Int", "Integer" -> "java/lang/Integer";
+        case "Long" -> "java/lang/Long";
+        case "Float" -> "java/lang/Float";
+        case "Double" -> "java/lang/Double";
+        case "Bool", "Boolean" -> "java/lang/Boolean";
+        default -> "java/lang/String";
+    };
+    ExternalClasspath.MethodSignature extSig = driver.externalClasspath != null
+            ? driver.externalClasspath.resolveMethod(javaClass, mc.methodName(), mc.arguments().size())
+            : null;
+    if (extSig != null) {
+        List<Type> extFormal = new ArrayList<>();
+        for (String d : extSig.parameterDescriptors()) {
+            extFormal.add(ExternalClasspath.typeFromDescriptor(d));
+        }
+        Type extRet = ExternalClasspath.typeFromDescriptor(extSig.returnDescriptor());
+        localIdx = driver.emitArgumentsWithFormalTypes(mc.arguments(), extFormal, ops, owner, localIdx, locals);
+        KofCallKind extKind = extSig.isStatic() ? KofCallKind.STATIC : KofCallKind.INSTANCE;
+        ops.add(new KofCall(new Type.ClassType("java.lang", javaClass.substring(javaClass.lastIndexOf('/') + 1), List.of()),
+                mc.methodName(), extFormal, extRet, extKind));
+        return localIdx;
+    } else if (mc.arguments().size() == 1
+            && ("isNaN".equals(mc.methodName()) || "isInfinite".equals(mc.methodName()) || "isFinite".equals(mc.methodName()))
+            && ("Double".equals(rid.name()) || "Float".equals(rid.name()))) {
+        Type argType = "Double".equals(rid.name()) ? Type.PrimitiveType.DOUBLE : Type.PrimitiveType.FLOAT;
+        List<Type> extFormal = List.of(argType);
+        Type extRet = Type.PrimitiveType.BOOL;
+        localIdx = driver.emitArgumentsWithFormalTypes(mc.arguments(), extFormal, ops, owner, localIdx, locals);
+        ops.add(new KofCall(new Type.ClassType("java.lang", javaClass.substring(javaClass.lastIndexOf('/') + 1), List.of()),
+                mc.methodName(), extFormal, extRet, KofCallKind.STATIC));
+        return localIdx;
+    }
+    // #233 regression (found by lane bugs-and-gaps): when the classpath is
+    // present but the wrapper class is NOT in it (or the method does not
+    // resolve), this branch used to fall out and emit NOTHING — the call was
+    // silently dropped (R6) and the enclosing expression broke (JVM frame
+    // crash on the outer valueOf with a missing argument). Fall back to the
+    // instance lowerer, which owns the builtin wrapper/`valueOf` handling.
+    return ExpressionInstanceCallLowerer.lower(driver, mc, ops, owner, localIdx, locals);
 } else if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.name(), locals)
         && "json".equals(rid.name())) {
     return ExpressionJsonCallLowerer.lower(driver, mc, ops, owner, localIdx, locals);

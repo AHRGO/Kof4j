@@ -539,6 +539,19 @@ the Kof surface idiomatic and the output deterministic:
   (Kof has no servlet session), same "authenticated by default" rule.
 - **Native/JS:** remain an honest gap (`WEB006`).
 
+> **✅ EXECUTED (14/09, owner 192.168.100.18):** `app.security()` adopted the
+> Spring model above. **CSRF ON by default** once `app.security()` is configured
+> (`kof_web_security_opts` sets `securityCsrf = true`; `csrf:false` disables
+> explicitly) — safe methods issue the double-submit cookie, state-changing
+> methods require it. **Reads are authenticated by default**: the session guard
+> already enforces auth on every non-`publicPaths` request (including GET), so
+> the merge's "reads public" note was stale. **`permitAll`** accepted as an
+> alias of `publicPaths` (allow-list of matchers). No-arg `app.security()` stays
+> headers-only (GET `/hello` → 200), and apps that never call `app.security()`
+> are unaffected. Proof: `KofWebE2ETest` 25/25 (new `securityCsrfIsOnByDefault`,
+> `securityPermitAllAliasIsPublicPaths`) + `KofBlogE2ETest` (double-submit on
+> its POSTs) + `KofOAuthResourceServerTest` 4/4.
+
 ### 6. §180 — `println(double/float)` in Native x86 → **inspired by Java**
 Align the Native to **`Double.toString`/`Float.toString` (Java)**:
 shortest round-trip decimal, `Float` printed with its own shortest form (not

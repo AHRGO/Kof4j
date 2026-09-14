@@ -69,6 +69,9 @@ class KofWsFrameTest {
         if (len == 126) headerLen = 4;
         else if (len == 127) headerLen = 10;
         else headerLen = 2;
+        // CodeQL: out.length == serverFrame.length + 4; i < serverFrame.length - headerLen
+        // max index = headerLen + 4 + (serverFrame.length - headerLen - 1) = serverFrame.length + 3
+        // out.length = serverFrame.length + 4, so max valid index = serverFrame.length + 3 ✓
         byte[] out = new byte[serverFrame.length + 4];
         System.arraycopy(serverFrame, 0, out, 0, headerLen);
         out[1] = (byte) (serverFrame[1] | 0x80);

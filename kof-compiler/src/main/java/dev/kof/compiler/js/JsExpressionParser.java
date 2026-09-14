@@ -143,189 +143,210 @@ void consumeExpressionOp(MethodCtx ctx, int[] pos, List<Object> stack,
                                      List<JsIr.JsExpression> preambleExprs) {
         KofOperation op = ctx.ops.get(pos[0]);
         pos[0]++;
-        if (op instanceof KofLoadLiteral lit) {
-            stack.add(p.calls.literalExpr(lit));
-        } else if (op instanceof KofLoadLocal ll) {
-            stack.add(new JsIr.JsIdentifier(localName(ctx, ll.index())));
-        } else if (op instanceof KofStoreLocal sl) {
-            // Mid-expression store (sound optimizer round trip: dup; store).
-            // The value stays on the stack as an assignment expression.
-            JsIr.JsExpression value = pop(stack);
-            stack.add(new JsIr.JsAssignExpr(localName(ctx, sl.index()), value));
-        } else if (op instanceof KofLoadField lf) {
-            JsIr.JsExpression receiver = pop(stack);
-            boolean isRecordField = false;
-            if (lf.ownerType() instanceof Type.ClassType ct) {
-                String ownerInternal = JvmTypeMapper.toInternalName(ct.packageName(), ct.name());
-                String ownerSimple = ct.name();
-                if (p.lc.recordClassNames.contains(ownerInternal) || p.lc.recordClassNames.contains(ct.name())
-                        || p.lc.recordClassNames.contains(ownerSimple) || ctx.recordClass) {
-                    isRecordField = true;
+        switch (op) {
+            case KofLoadLiteral lit -> {
+                stack.add(p.calls.literalExpr(lit));
+            }
+            case KofLoadLocal ll -> {
+                stack.add(new JsIr.JsIdentifier(localName(ctx, ll.index())));
+            }
+            case KofStoreLocal sl -> {
+                // Mid-expression store (sound optimizer round trip: dup; store).
+                // The value stays on the stack as an assignment expression.
+                JsIr.JsExpression value = pop(stack);
+                stack.add(new JsIr.JsAssignExpr(localName(ctx, sl.index()), value));
+            }
+            case KofLoadField lf -> {
+                JsIr.JsExpression receiver = pop(stack);
+                boolean isRecordField = false;
+                if (lf.ownerType() instanceof Type.ClassType ct) {
+                    String ownerInternal = JvmTypeMapper.toInternalName(ct.packageName(), ct.name());
+                    String ownerSimple = ct.name();
+                    if (p.lc.recordClassNames.contains(ownerInternal) || p.lc.recordClassNames.contains(ct.name())
+                            || p.lc.recordClassNames.contains(ownerSimple) || ctx.recordClass) {
+                        isRecordField = true;
+                    }
+                }
+                stack.add(new JsIr.JsMember(receiver, isRecordField ? "_" + JsTypeMapper.sanitizeName(lf.name()) : JsTypeMapper.sanitizeName(lf.name())));
+            }
+            case KofGetStatic gs -> {
+                if ("java.lang".equals(JsTypeMapper.classPackage(gs.ownerType())) && "System".equals(JsTypeMapper.className(gs.ownerType()))
+                        && "out".equals(gs.name())) {
+                    stack.add(new JsIr.JsIdentifier("$kofOut"));
+                } else {
+                    String owner = JsTypeMapper.jsClassName(JsTypeMapper.ownerInternalName(gs.ownerType()));
+                    stack.add(new JsIr.JsMember(new JsIr.JsIdentifier(owner), JsTypeMapper.sanitizeName(gs.name())));
                 }
             }
-            stack.add(new JsIr.JsMember(receiver, isRecordField ? "_" + JsTypeMapper.sanitizeName(lf.name()) : JsTypeMapper.sanitizeName(lf.name())));
-        } else if (op instanceof KofGetStatic gs) {
-            if ("java.lang".equals(JsTypeMapper.classPackage(gs.ownerType())) && "System".equals(JsTypeMapper.className(gs.ownerType()))
-                    && "out".equals(gs.name())) {
-                stack.add(new JsIr.JsIdentifier("$kofOut"));
-            } else {
-                String owner = JsTypeMapper.jsClassName(JsTypeMapper.ownerInternalName(gs.ownerType()));
-                stack.add(new JsIr.JsMember(new JsIr.JsIdentifier(owner), JsTypeMapper.sanitizeName(gs.name())));
+            case KofBinary kb -> {
+                JsIr.JsExpression right = pop(stack);
+                JsIr.JsExpression left = pop(stack);
+                stack.add(p.calls.binaryExpr(kb, left, right));
             }
-        } else if (op instanceof KofBinary kb) {
-            JsIr.JsExpression right = pop(stack);
-            JsIr.JsExpression left = pop(stack);
-            stack.add(p.calls.binaryExpr(kb, left, right));
-        } else if (op instanceof KofUnary ku) {
-            JsIr.JsExpression operand = pop(stack);
-            stack.add(p.calls.unaryExpr(ku, operand));
-        } else if (op instanceof KofNewObject no) {
-            stack.add(new NewPending(JsTypeMapper.jsClassName(JsTypeMapper.ownerInternalName(no.type()))));
-        } else if (op instanceof KofDup) {
-            if (!stack.isEmpty() && stack.get(stack.size() - 1) instanceof NewPending) {
-                stack.add(new DupMarker());
-                return;
+            case KofUnary ku -> {
+                JsIr.JsExpression operand = pop(stack);
+                stack.add(p.calls.unaryExpr(ku, operand));
             }
-            JsIr.JsExpression top = pop(stack);
-            if (top instanceof JsIr.JsNumber || top instanceof JsIr.JsString
-                    || top instanceof JsIr.JsNull) {
-                stack.add(top);
-                stack.add(top);
-                return;
+            case KofNewObject no -> {
+                stack.add(new NewPending(JsTypeMapper.jsClassName(JsTypeMapper.ownerInternalName(no.type()))));
             }
-            // Materialize the copy as a preamble assignment: `t = v` must
-            // execute before any later store that consumes the temp.
-            String temp = ctx.freshTemp();
-            preambleExprs.add(new JsIr.JsAssignExpr(temp, top));
-            stack.add(new JsIr.JsIdentifier(temp));
-            stack.add(new JsIr.JsIdentifier(temp));
-        } else if (op instanceof KofDup2) {
-            // compound em elemento de array (#64): [array, index] × 2 +
-            // o valor atual — o par [array, index] é materializado duas
-            // vezes (via temp p/ não reavaliar efeitos).
-            JsIr.JsExpression index = pop(stack);
-            JsIr.JsExpression array = pop(stack);
-            String tempA = ctx.freshTemp();
-            String tempI = ctx.freshTemp();
-            preambleExprs.add(new JsIr.JsAssignExpr(tempA, array));
-            preambleExprs.add(new JsIr.JsAssignExpr(tempI, index));
-            stack.add(new JsIr.JsIdentifier(tempA));
-            stack.add(new JsIr.JsIdentifier(tempI));
-            stack.add(new JsIr.JsIdentifier(tempA));
-            stack.add(new JsIr.JsIdentifier(tempI));
-        } else if (op instanceof KofDupX1) {
-            JsIr.JsExpression top = pop(stack);
-            JsIr.JsExpression below = pop(stack);
-            if (top instanceof JsIr.JsNumber || top instanceof JsIr.JsString
-                    || top instanceof JsIr.JsNull) {
-                stack.add(top);
+            case KofDup _ -> {
+                if (!stack.isEmpty() && stack.get(stack.size() - 1) instanceof NewPending) {
+                    stack.add(new DupMarker());
+                    return;
+                }
+                JsIr.JsExpression top = pop(stack);
+                if (top instanceof JsIr.JsNumber || top instanceof JsIr.JsString
+                        || top instanceof JsIr.JsNull) {
+                    stack.add(top);
+                    stack.add(top);
+                    return;
+                }
+                // Materialize the copy as a preamble assignment: `t = v` must
+                // execute before any later store that consumes the temp.
+                String temp = ctx.freshTemp();
+                preambleExprs.add(new JsIr.JsAssignExpr(temp, top));
+                stack.add(new JsIr.JsIdentifier(temp));
+                stack.add(new JsIr.JsIdentifier(temp));
+            }
+            case KofDup2 _ -> {
+                // compound em elemento de array (#64): [array, index] × 2 +
+                // o valor atual — o par [array, index] é materializado duas
+                // vezes (via temp p/ não reavaliar efeitos).
+                JsIr.JsExpression index = pop(stack);
+                JsIr.JsExpression array = pop(stack);
+                String tempA = ctx.freshTemp();
+                String tempI = ctx.freshTemp();
+                preambleExprs.add(new JsIr.JsAssignExpr(tempA, array));
+                preambleExprs.add(new JsIr.JsAssignExpr(tempI, index));
+                stack.add(new JsIr.JsIdentifier(tempA));
+                stack.add(new JsIr.JsIdentifier(tempI));
+                stack.add(new JsIr.JsIdentifier(tempA));
+                stack.add(new JsIr.JsIdentifier(tempI));
+            }
+            case KofDupX1 _ -> {
+                JsIr.JsExpression top = pop(stack);
+                JsIr.JsExpression below = pop(stack);
+                if (top instanceof JsIr.JsNumber || top instanceof JsIr.JsString
+                        || top instanceof JsIr.JsNull) {
+                    stack.add(top);
+                    stack.add(below);
+                    stack.add(top);
+                    return;
+                }
+                String temp = ctx.freshTemp();
+                stack.add(new JsIr.JsSequence(
+                        List.of(new JsIr.JsAssignExpr(temp, top)), new JsIr.JsIdentifier(temp)));
                 stack.add(below);
-                stack.add(top);
-                return;
+                stack.add(new JsIr.JsIdentifier(temp));
             }
-            String temp = ctx.freshTemp();
-            stack.add(new JsIr.JsSequence(
-                    List.of(new JsIr.JsAssignExpr(temp, top)), new JsIr.JsIdentifier(temp)));
-            stack.add(below);
-            stack.add(new JsIr.JsIdentifier(temp));
-        } else if (op instanceof KofDupX2) {
-            JsIr.JsExpression top = pop(stack);
-            JsIr.JsExpression middle = pop(stack);
-            JsIr.JsExpression bottom = pop(stack);
-            if (top instanceof JsIr.JsNumber || top instanceof JsIr.JsString
-                    || top instanceof JsIr.JsNull) {
-                stack.add(top);
+            case KofDupX2 _ -> {
+                JsIr.JsExpression top = pop(stack);
+                JsIr.JsExpression middle = pop(stack);
+                JsIr.JsExpression bottom = pop(stack);
+                if (top instanceof JsIr.JsNumber || top instanceof JsIr.JsString
+                        || top instanceof JsIr.JsNull) {
+                    stack.add(top);
+                    stack.add(bottom);
+                    stack.add(middle);
+                    stack.add(top);
+                    return;
+                }
+                String temp = ctx.freshTemp();
+                stack.add(new JsIr.JsSequence(
+                        List.of(new JsIr.JsAssignExpr(temp, top)), new JsIr.JsIdentifier(temp)));
                 stack.add(bottom);
                 stack.add(middle);
-                stack.add(top);
-                return;
+                stack.add(new JsIr.JsIdentifier(temp));
             }
-            String temp = ctx.freshTemp();
-            stack.add(new JsIr.JsSequence(
-                    List.of(new JsIr.JsAssignExpr(temp, top)), new JsIr.JsIdentifier(temp)));
-            stack.add(bottom);
-            stack.add(middle);
-            stack.add(new JsIr.JsIdentifier(temp));
-        } else if (op instanceof KofNewArray na) {
-            JsIr.JsExpression size = pop(stack);
-            stack.add(new JsIr.JsArray(size, JsTypeMapper.arrayFill(na.elementType())));
-        } else if (op instanceof KofNewMultiArray ma) {
-            // multidimensional (bug 71): pop das n dims (a 1ª pushed é a externa)
-            List<JsIr.JsExpression> sizes = new ArrayList<>();
-            for (int i = 0; i < ma.dims(); i++) {
-                sizes.add(0, pop(stack));
+            case KofNewArray na -> {
+                JsIr.JsExpression size = pop(stack);
+                stack.add(new JsIr.JsArray(size, JsTypeMapper.arrayFill(na.elementType())));
             }
-            p.lc.registerRuntime("kofMultiArray");
-            stack.add(new JsIr.JsNestedArray(sizes, JsTypeMapper.arrayFill(ma.baseType())));
-        } else if (op instanceof KofArrayLoad) {
-            // KOF-SBD-001: bounds-checked read (raw JsIndex would inherit JS
-            // array semantics — out-of-bounds returns `undefined` instead of
-            // being rejected, diverging from the JVM's aaload/iaload/...).
-            JsIr.JsExpression index = pop(stack);
-            JsIr.JsExpression array = pop(stack);
-            p.lc.registerRuntime("kofArrayGet");
-            stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofArrayGet"), List.of(array, index)));
-        } else if (op instanceof KofArrayLength) {
-            JsIr.JsExpression array = pop(stack);
-            stack.add(new JsIr.JsMember(array, "length"));
-        } else if (op instanceof KofCheckCast) {
-            // JavaScript has no runtime casts; Kof semantics are enforced by
-            // the type checker at compile time.
-        } else if (op instanceof KofInstanceOf io) {
-            JsIr.JsExpression operand = pop(stack);
-            if (BuiltinTypes.isString(io.type())) {
-                stack.add(new JsIr.JsConditional(
-                        new JsIr.JsBinary(new JsIr.JsUnary("typeof", operand), "===", new JsIr.JsString("string")),
-                        new JsIr.JsNumber("1"), new JsIr.JsNumber("0")));
-            } else if (io.type() instanceof Type.PrimitiveType pt) {
-                String cn = Type.canonicalPrimitiveName(pt.name());
-                if ("int".equals(cn) || "long".equals(cn) || "float".equals(cn) || "double".equals(cn) || "byte".equals(cn) || "short".equals(cn) || "char".equals(cn)) {
+            case KofNewMultiArray ma -> {
+                // multidimensional (bug 71): pop das n dims (a 1ª pushed é a externa)
+                List<JsIr.JsExpression> sizes = new ArrayList<>();
+                for (int i = 0; i < ma.dims(); i++) {
+                    sizes.add(0, pop(stack));
+                }
+                p.lc.registerRuntime("kofMultiArray");
+                stack.add(new JsIr.JsNestedArray(sizes, JsTypeMapper.arrayFill(ma.baseType())));
+            }
+            case KofArrayLoad _ -> {
+                // KOF-SBD-001: bounds-checked read (raw JsIndex would inherit JS
+                // array semantics — out-of-bounds returns `undefined` instead of
+                // being rejected, diverging from the JVM's aaload/iaload/...).
+                JsIr.JsExpression index = pop(stack);
+                JsIr.JsExpression array = pop(stack);
+                p.lc.registerRuntime("kofArrayGet");
+                stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofArrayGet"), List.of(array, index)));
+            }
+            case KofArrayLength _ -> {
+                JsIr.JsExpression array = pop(stack);
+                stack.add(new JsIr.JsMember(array, "length"));
+            }
+            case KofCheckCast _ -> {
+                // JavaScript has no runtime casts; Kof semantics are enforced by
+                // the type checker at compile time.
+            }
+            case KofInstanceOf io -> {
+                JsIr.JsExpression operand = pop(stack);
+                if (BuiltinTypes.isString(io.type())) {
                     stack.add(new JsIr.JsConditional(
-                            new JsIr.JsBinary(new JsIr.JsUnary("typeof", operand), "===", new JsIr.JsString("number")),
+                            new JsIr.JsBinary(new JsIr.JsUnary("typeof", operand), "===", new JsIr.JsString("string")),
                             new JsIr.JsNumber("1"), new JsIr.JsNumber("0")));
-                } else if ("bool".equals(cn) || "boolean".equals(cn)) {
-                    stack.add(new JsIr.JsConditional(
-                            new JsIr.JsBinary(new JsIr.JsUnary("typeof", operand), "===", new JsIr.JsString("boolean")),
-                            new JsIr.JsNumber("1"), new JsIr.JsNumber("0")));
+                } else if (io.type() instanceof Type.PrimitiveType pt) {
+                    String cn = Type.canonicalPrimitiveName(pt.name());
+                    if ("int".equals(cn) || "long".equals(cn) || "float".equals(cn) || "double".equals(cn) || "byte".equals(cn) || "short".equals(cn) || "char".equals(cn)) {
+                        stack.add(new JsIr.JsConditional(
+                                new JsIr.JsBinary(new JsIr.JsUnary("typeof", operand), "===", new JsIr.JsString("number")),
+                                new JsIr.JsNumber("1"), new JsIr.JsNumber("0")));
+                    } else if ("bool".equals(cn) || "boolean".equals(cn)) {
+                        stack.add(new JsIr.JsConditional(
+                                new JsIr.JsBinary(new JsIr.JsUnary("typeof", operand), "===", new JsIr.JsString("boolean")),
+                                new JsIr.JsNumber("1"), new JsIr.JsNumber("0")));
+                    } else {
+                        stack.add(new JsIr.JsConditional(
+                                new JsIr.JsInstanceOf(operand, JsTypeMapper.jsClassName(JsTypeMapper.ownerInternalName(io.type()))),
+                                new JsIr.JsNumber("1"), new JsIr.JsNumber("0")));
+                    }
                 } else {
                     stack.add(new JsIr.JsConditional(
                             new JsIr.JsInstanceOf(operand, JsTypeMapper.jsClassName(JsTypeMapper.ownerInternalName(io.type()))),
                             new JsIr.JsNumber("1"), new JsIr.JsNumber("0")));
                 }
-            } else {
-                stack.add(new JsIr.JsConditional(
-                        new JsIr.JsInstanceOf(operand, JsTypeMapper.jsClassName(JsTypeMapper.ownerInternalName(io.type()))),
-                        new JsIr.JsNumber("1"), new JsIr.JsNumber("0")));
             }
-        } else if (op instanceof KofConditionalJump cj) {
-            // if-expression: (cond ? then : else)
-            JsIr.JsExpression right = pop(stack);
-            JsIr.JsExpression left = pop(stack);
-            JsIr.JsExpression condition = JsComparisons.comparisonExpr(cj.comparison(), left, right, cj.operandType());
-            JsIr.JsExpression ifExpr = p.flow.tryParseIfExpr(ctx, pos, cj, condition);
-            if (ifExpr == null) {
-                throw new IllegalStateException("KofJS: malformed if-expression");
+            case KofConditionalJump cj -> {
+                // if-expression: (cond ? then : else)
+                JsIr.JsExpression right = pop(stack);
+                JsIr.JsExpression left = pop(stack);
+                JsIr.JsExpression condition = JsComparisons.comparisonExpr(cj.comparison(), left, right, cj.operandType());
+                JsIr.JsExpression ifExpr = p.flow.tryParseIfExpr(ctx, pos, cj, condition);
+                if (ifExpr == null) {
+                    throw new IllegalStateException("KofJS: malformed if-expression");
+                }
+                stack.add(ifExpr);
             }
-            stack.add(ifExpr);
-        } else if (op instanceof KofCall kc) {
-            p.calls.handleCall(ctx, stack, preambleExprs, kc);
-        } else if (op instanceof KofPop || op instanceof KofPop2) {
-            // §139: descarte de operando no MEIO de um fragmento de expressão
-            // (o fold `f() == null` emite `KofCall; KofPop; KofLoadLiteral`).
-            // JS não tem pilha: o valor é avaliado e o resultado é jogado fora.
-            // Um KofCall filho é sempre side-effecting em Kof (sem
-            // short-circuit) → preserva no preamble, como o handler de
-            // statement faz.
-            JsIr.JsExpression dropped = pop(stack);
-            if (dropped instanceof JsIr.JsCall || dropped instanceof JsIr.JsSequence
-                    || dropped instanceof JsIr.JsAwait
-                    || (dropped instanceof JsIr.JsBinary jb
-                            && (jb.left() instanceof JsIr.JsCall
-                                    || jb.right() instanceof JsIr.JsCall))) {
-                preambleExprs.add(dropped);
+            case KofCall kc -> {
+                p.calls.handleCall(ctx, stack, preambleExprs, kc);
             }
-        } else {
-            throw new IllegalStateException("KofJS: unhandled IR op " + op);
+            case KofPop _, KofPop2 _ -> {
+                // §139: descarte de operando no MEIO de um fragmento de expressão
+                // (o fold `f() == null` emite `KofCall; KofPop; KofLoadLiteral`).
+                // JS não tem pilha: o valor é avaliado e o resultado é jogado fora.
+                // Um KofCall filho é sempre side-effecting em Kof (sem
+                // short-circuit) → preserva no preamble, como o handler de
+                // statement faz.
+                JsIr.JsExpression dropped = pop(stack);
+                if (dropped instanceof JsIr.JsCall || dropped instanceof JsIr.JsSequence
+                        || dropped instanceof JsIr.JsAwait
+                        || (dropped instanceof JsIr.JsBinary jb
+                                && (jb.left() instanceof JsIr.JsCall
+                                        || jb.right() instanceof JsIr.JsCall))) {
+                    preambleExprs.add(dropped);
+                }
+            }
+            case null, default -> throw new IllegalStateException("KofJS: unhandled IR op " + op);
         }
     }
 

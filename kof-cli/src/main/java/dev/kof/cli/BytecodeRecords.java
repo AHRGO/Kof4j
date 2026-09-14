@@ -138,7 +138,8 @@ final class BytecodeRecords {
 
     /** equals: aload_0; aload_1; invokedynamic; ret. hash/toString: aload_0; invokedynamic; ret. */
     private static boolean synthMatches(List<BytecodeReader.Insn> ins,
-                                        ClassFileParser.MethodInfo m, ClassFileParser.ClassFile ir, boolean eq) {
+                                        ClassFileParser.MethodInfo m, ClassFileParser.ClassFile ir,
+                                        @SuppressWarnings("unused") boolean eq) {
         int sz = eq ? 4 : 3;
         if (ins.size() != sz) return false;
         if (ins.get(0).opcode() != 0x2a) return false;

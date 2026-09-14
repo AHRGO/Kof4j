@@ -438,35 +438,44 @@ public final class NativeRiscvCrossEmit {
     }
 
     void emitCrossLoadLiteralRiscv(StringBuilder sb, KofLoadLiteral lit) {
-        if (lit.value() instanceof String s) {
-            String label = nb.internString(s);
-            int len = s.getBytes(java.nio.charset.StandardCharsets.UTF_8).length;
-            sb.append("    la a0, ").append(label).append("\n");
-            sb.append("    li a1, ").append(len).append("\n");
-            sb.append("    call kof_string_from_literal\n");
-            pushRiscv(sb, "a0");
-        } else if (lit.value() instanceof Integer i) {
-            sb.append("    li t0, ").append(i).append("\n");
-            pushRiscv(sb, "t0");
-        } else if (lit.value() instanceof Long l) {
-            sb.append("    li t0, ").append(l).append("\n");
-            pushRiscv(sb, "t0");
-        } else if (lit.value() instanceof Boolean b) {
-            sb.append("    li t0, ").append(b ? 1 : 0).append("\n");
-            pushRiscv(sb, "t0");
-        } else if (lit.value() instanceof Float f) {
-            sb.append("    li t0, ").append(Float.floatToIntBits(f)).append("\n");
-            pushRiscv(sb, "t0");
-        } else if (lit.value() instanceof Double d) {
-            sb.append("    li t0, ").append(Double.doubleToLongBits(d)).append("\n");
-            pushRiscv(sb, "t0");
-        } else if (lit.value() == null) {
-            sb.append("    li t0, 0\n");
-            pushRiscv(sb, "t0");
-        } else {
-            sb.append("    # NATIVE002: literal fora do caminho feliz: ").append(lit.value()).append("\n");
-            sb.append("    li t0, 0\n");
-            pushRiscv(sb, "t0");
+        switch (lit.value()) {
+            case String s -> {
+                String label = nb.internString(s);
+                int len = s.getBytes(java.nio.charset.StandardCharsets.UTF_8).length;
+                sb.append("    la a0, ").append(label).append("\n");
+                sb.append("    li a1, ").append(len).append("\n");
+                sb.append("    call kof_string_from_literal\n");
+                pushRiscv(sb, "a0");
+            }
+            case Integer i -> {
+                sb.append("    li t0, ").append(i).append("\n");
+                pushRiscv(sb, "t0");
+            }
+            case Long l -> {
+                sb.append("    li t0, ").append(l).append("\n");
+                pushRiscv(sb, "t0");
+            }
+            case Boolean b -> {
+                sb.append("    li t0, ").append(b ? 1 : 0).append("\n");
+                pushRiscv(sb, "t0");
+            }
+            case Float f -> {
+                sb.append("    li t0, ").append(Float.floatToIntBits(f)).append("\n");
+                pushRiscv(sb, "t0");
+            }
+            case Double d -> {
+                sb.append("    li t0, ").append(Double.doubleToLongBits(d)).append("\n");
+                pushRiscv(sb, "t0");
+            }
+            case null -> {
+                sb.append("    li t0, 0\n");
+                pushRiscv(sb, "t0");
+            }
+            default -> {
+                sb.append("    # NATIVE002: literal fora do caminho feliz: ").append(lit.value()).append("\n");
+                sb.append("    li t0, 0\n");
+                pushRiscv(sb, "t0");
+            }
         }
     }
 

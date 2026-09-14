@@ -258,6 +258,9 @@ public final class ExpressionTyper {
                     // Without this, the synthetic invoke method is lowered with
                     // an Object return and the backends misparse the bare
                     // KofReturn (empty value stack).
+                    // (closures.md §1: corpo-bloco exige return EXPLÍCITO — o
+                    // implícito só vale no caminho do spawn, ver
+                    // inferLambdaBodyType, GitHub #141.)
                     returnType = Type.PrimitiveType.VOID;
                 }
                 yield new Type.FunctionType(paramTypes, returnType, driver.lambdaClassNames.get(le));
@@ -373,6 +376,15 @@ public final class ExpressionTyper {
      * FunctionType da própria lambda. Lambda sem return é void (mesma
      * regra do caso LambdaExpr acima); lambda que retorna lambda preserva
      * a FunctionType (bug 19).
+     *
+     * #141: corpo-bloco de UMA expressão ({@code spawn { "ok" }}) É o
+     * retorno — o MESMO contrato que a emissão já aplica em
+     * {@code CompilerLambdaClass} (convert `ExpressionStmt` único em
+     * `ReturnStmt` quando o tipo não é void). Sem este ramo, o typer dava
+     * VOID e a conversão do lowerer (gateada em !isVoid) nunca disparava →
+     * {@code Handle<Void>} e `SEM033` falso-positivo no `await`. A varredura
+     * de `firstReturnValueType` só enxerga `return` EXPLÍCITO; o corpo de
+     * expressão única é a borda complementar (não descreve `return`).
      */
     static Type inferLambdaBodyType(CompilerDriver driver, LambdaExpr le,
                                     List<IRLocalVariable> locals) {
@@ -383,6 +395,12 @@ public final class ExpressionTyper {
             extended.add(new IRLocalVariable(pidx++, p.name(), pt));
         }
         Type t = firstReturnValueType(driver, le.body(), extended);
+        if (Type.UnknownType.UNKNOWN.equals(t)
+                && le.body().size() == 1
+                && le.body().get(0) instanceof ExpressionStmt es) {
+            Type et = inferExprType(driver, es.expression(), extended);
+            if (!Type.UnknownType.UNKNOWN.equals(et) && !Type.isVoid(et)) t = et;
+        }
         return Type.UnknownType.UNKNOWN.equals(t) ? Type.PrimitiveType.VOID : t;
     }
 

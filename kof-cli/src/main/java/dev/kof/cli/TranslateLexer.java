@@ -173,9 +173,8 @@ import java.util.List;
     static int scanNumber(String s, int start) {
         int n = s.length();
         int j = start;
-        boolean hex = false;
         if (s.charAt(j) == '0' && j + 1 < n && (s.charAt(j + 1) == 'x' || s.charAt(j + 1) == 'X')) {
-            hex = true; j += 2;
+            j += 2;
             while (j < n && (isHex(s.charAt(j)) || s.charAt(j) == '_')) j++;
             if (j < n && s.charAt(j) == '.') {
                 j++;
@@ -314,7 +313,11 @@ class TranslateException extends RuntimeException {
         Parser(List<Tok> toks) { this.toks = toks; }
         Tok peek() { return toks.get(pos); }
         Tok peek(int ahead) { int i = Math.min(pos + ahead, toks.size() - 1); return toks.get(i); }
-        Tok next() { Tok t = toks.get(pos); if (pos < toks.size() - 1) pos++; return t; }
+        Tok next() {
+            Tok t = toks.get(pos);
+            if (pos < toks.size() - 1) pos++;
+            return t;
+        }
         boolean at(String text) { return peek().text.equals(text); }
         boolean at(T t) { return peek().type == t; }
         Tok expect(String text) {

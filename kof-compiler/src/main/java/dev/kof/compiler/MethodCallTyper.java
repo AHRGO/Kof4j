@@ -90,6 +90,12 @@ if (mc.receiver() != null && "toString".equals(mc.methodName()) && mc.arguments(
 // `Integer.parseInt(...)Ljava/lang/String;` (NoSuchMethodError). O retorno é
 // o primitivo correspondente; a sobrecarga com radix `(String, Int)` também.
 if (mc.receiver() instanceof IdentifierExpr srid && driver.findLocalVar(srid.name(), locals) == null
+        && ("Double".equals(srid.name()) || "Float".equals(srid.name()))
+        && ("isNaN".equals(mc.methodName()) || "isInfinite".equals(mc.methodName()) || "isFinite".equals(mc.methodName()))
+        && mc.arguments().size() == 1) {
+    return Type.PrimitiveType.BOOL;
+}
+if (mc.receiver() instanceof IdentifierExpr srid && driver.findLocalVar(srid.name(), locals) == null
         && switch (mc.methodName()) {
             case "parseInt", "parseLong", "parseDouble", "parseFloat", "parseBoolean" -> true;
             default -> false;
@@ -396,6 +402,10 @@ if (mc.receiver() != null) {
         for (FunctionDeclarationNode fn : tloFns) {
             if (!fn.typeParameters().isEmpty()) continue;
             List<Type> pt = new ArrayList<>();
+            // §231 (gap catalogado): seenDefault nao alimenta o requiredArity
+            // do Candidate ainda — overload top-level com default + call curto
+            // da SEM014 em vez de selecionar o candidato com default. Nao deletar
+            // aqui: o wire e a feature.
             boolean seenDefault = false;
             for (var p : fn.parameters()) {
                 pt.add(CompilerTypes.toType(p.type(), driver.currentUnit));
@@ -424,7 +434,8 @@ if (mc.receiver() != null) {
             return returnType;
     }
 }
-SymbolTable.MethodSymbol resolvedMethod = driver.semanticAnalyzer.getResolvedMethod(mc);
+SymbolTable.MethodSymbol resolvedMethod = driver.semanticAnalyzer != null
+        ? driver.semanticAnalyzer.getResolvedMethod(mc) : null;
 if (resolvedMethod != null) {
     Type rt = resolvedMethod.returnType();
     if (rt instanceof Type.TypeVariable tv && mc.receiver() != null) {

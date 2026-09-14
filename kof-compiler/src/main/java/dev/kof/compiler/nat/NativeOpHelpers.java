@@ -61,24 +61,21 @@ final class NativeOpHelpers {
     }
 
     static void emitLoadLiteral(NativeBackend nb, StringBuilder sb, KofLoadLiteral lit) {
-        if (lit.value() instanceof Integer i) {
-            sb.append("    movq $").append(i).append(", %rax\n");
-        } else if (lit.value() instanceof Long l) {
-            sb.append("    movq $").append(l).append(", %rax\n");
-        } else if (lit.value() instanceof Float f) {
-            sb.append("    movq $").append(Float.floatToIntBits(f)).append(", %rax\n");
-        } else if (lit.value() instanceof Double d) {
-            sb.append("    movq $").append(Double.doubleToLongBits(d)).append(", %rax\n");
-        } else if (lit.value() instanceof String s) {
-            String label = nb.internString(s);
-            int byteLen = s.getBytes(java.nio.charset.StandardCharsets.UTF_8).length;
-            sb.append("    leaq ").append(label).append("(%rip), %rdi\n");
-            sb.append("    movl $").append(byteLen).append(", %esi\n");
-            sb.append("    call kof_string_from_literal\n");
-        } else if (lit.value() instanceof Boolean b) {
-            sb.append("    movq $").append(b ? 1 : 0).append(", %rax\n");
-        } else if (lit.value() == null) {
-            sb.append("    movq $0, %rax\n");
+        switch (lit.value()) {
+            case Integer i -> sb.append("    movq $").append(i).append(", %rax\n");
+            case Long l -> sb.append("    movq $").append(l).append(", %rax\n");
+            case Float f -> sb.append("    movq $").append(Float.floatToIntBits(f)).append(", %rax\n");
+            case Double d -> sb.append("    movq $").append(Double.doubleToLongBits(d)).append(", %rax\n");
+            case String s -> {
+                String label = nb.internString(s);
+                int byteLen = s.getBytes(java.nio.charset.StandardCharsets.UTF_8).length;
+                sb.append("    leaq ").append(label).append("(%rip), %rdi\n");
+                sb.append("    movl $").append(byteLen).append(", %esi\n");
+                sb.append("    call kof_string_from_literal\n");
+            }
+            case Boolean b -> sb.append("    movq $").append(b ? 1 : 0).append(", %rax\n");
+            case null -> sb.append("    movq $0, %rax\n");
+            default -> { }
         }
         sb.append("    pushq %rax\n");
     }
@@ -231,7 +228,8 @@ final class NativeOpHelpers {
         sb.append("    pushq %rax\n");
     }
 
-    static void emitArrayStore(NativeBackend nb, StringBuilder sb, KofArrayStore as) {
+    static void emitArrayStore(@SuppressWarnings("unused") NativeBackend nb,
+            StringBuilder sb, KofArrayStore as) {
         sb.append("    popq %rdx\n");
         sb.append("    popq %rsi\n");
         sb.append("    popq %rdi\n");

@@ -178,7 +178,7 @@ public class SymbolTable {
         }
 
         public List<Type> parameterTypes() {
-            return parameterTypes;
+            return parameterTypes == null ? List.of() : java.util.Collections.unmodifiableList(parameterTypes);
         }
 
         public int accessFlags() {
@@ -205,13 +205,16 @@ public class SymbolTable {
         }
 
         /** §131: seleciona o overload por aridade (e compatibilidade de args
-         *  quando conhecida); null = nenhum casa. */
+         *  quando conhecida); null = nenhum casa. Entre aplicáveis, escolhe
+         *  o mais específico por igualdade exata de tipo (ex.: Boolean não
+         *  cair em Int no primeiro que casar por aridade). */
         public MethodSymbol select(int argCount, List<Type> argTypes) {
             MethodSymbol byArity = null;
+            List<MethodSymbol> applicable = new ArrayList<>();
             for (MethodSymbol m : methods) {
                 if (m.parameterTypes().size() == argCount) {
-                    byArity = m;
-                    if (argTypes == null) break;
+                    if (byArity == null) byArity = m;
+                    if (argTypes == null) continue;
                     boolean compatible = true;
                     for (int i = 0; i < argCount; i++) {
                         if (!Type.isUnknown(argTypes.get(i))
@@ -220,10 +223,28 @@ public class SymbolTable {
                             break;
                         }
                     }
-                    if (compatible) return m;
+                    if (compatible) applicable.add(m);
                 }
             }
-            return byArity;
+            if (argTypes == null || applicable.isEmpty()) return byArity;
+            if (applicable.size() == 1) return applicable.get(0);
+
+            // Mais de um aplicável: pontua por igualdade exata de tipo
+            MethodSymbol best = null;
+            int bestScore = -1;
+            for (MethodSymbol m : applicable) {
+                int score = 0;
+                for (int i = 0; i < argCount; i++) {
+                    Type arg = argTypes.get(i);
+                    Type par = m.parameterTypes().get(i);
+                    if (arg != null && arg.equals(par)) score++;
+                }
+                if (score > bestScore) {
+                    bestScore = score;
+                    best = m;
+                }
+            }
+            return best != null ? best : applicable.get(0);
         }
     }
 

@@ -228,7 +228,6 @@ JsIr.JsStatement parsePatternSwitch(MethodCtx ctx, int[] pos) {
                 && dl.label().equals(defaultLabel)) {
             pos[0]++; // consume default label
             // Default body runs until Jump end
-            List<LabelId> exits = new ArrayList<>();
             // Parse statements until we hit a Jump; the Jump's target is endLabel
             // We need to detect Jump explicitly
             List<JsIr.JsStatement> defStmts = new ArrayList<>();

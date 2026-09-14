@@ -270,9 +270,9 @@ public final class Translate {
             out.append(" {\n");
             while (!p.at("}")) {
                 // method signature ending in ';'
-                int save = p.pos;
-                boolean isStatic = false;
-                while (TranslateTypes.isModifier(p.peek().text)) { if (p.at("static")) isStatic = true; p.next(); }
+                while (TranslateTypes.isModifier(p.peek().text)) {
+                    p.next();
+                }
                 String ret = parseType();
                 String mname = p.next().text;
                 if (!p.at("(")) {
@@ -330,17 +330,23 @@ public final class Translate {
         }
 
         private void parseMember(String className) {
-            int save = p.pos;
             boolean isStatic = false;
             while (true) {
-                if (TranslateTypes.isModifier(p.peek().text)) { if (p.at("static")) isStatic = true; p.next(); continue; }
+                if (TranslateTypes.isModifier(p.peek().text)) {
+                    if (p.at("static")) isStatic = true;
+                    p.next();
+                    continue;
+                }
                 if (p.at(T.AT)) {
                     p.next(); p.next();
                     while (p.at(".")) { p.next(); p.next(); }
                     if (p.at("(")) {
                         int depth = 0;
-                        do { if (p.at("(")) depth++; else if (p.at(")")) depth--; p.next(); }
-                        while (depth > 0 && !p.at(T.EOF));
+                        do {
+                            if (p.at("(")) depth++;
+                            else if (p.at(")")) depth--;
+                            p.next();
+                        } while (depth > 0 && !p.at(T.EOF));
                     }
                     continue;
                 }

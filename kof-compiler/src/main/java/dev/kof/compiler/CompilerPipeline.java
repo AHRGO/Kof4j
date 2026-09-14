@@ -206,37 +206,40 @@ public final class CompilerPipeline {
             if (decl instanceof ClassDeclarationNode cls) classes.add(CompilerClassLowering.lowerClass(driver, cls, declPkg, nextTypeId++));
             else if (decl instanceof InterfaceDeclarationNode iface) classes.add(CompilerClassLowering.lowerInterface(driver, iface, declPkg, nextTypeId++));
             else if (decl instanceof RecordDeclarationNode rec) classes.add(CompilerClassLowering.lowerRecord(driver, rec, declPkg, nextTypeId++));
-            else if (decl instanceof EntityDeclarationNode ent) {
-                driver.entitySchemas.put(ent.name(), ent.fields());
-                List<RecordComponentNode> components = new java.util.ArrayList<>();
-                for (EntityFieldNode f : ent.fields()) {
-                    components.add(new RecordComponentNode(f.position(), List.of(), f.type(), f.name(), null));
+            else switch (decl) {
+                case EntityDeclarationNode ent -> {
+                    driver.entitySchemas.put(ent.name(), ent.fields());
+                    List<RecordComponentNode> components = new java.util.ArrayList<>();
+                    for (EntityFieldNode f : ent.fields()) {
+                        components.add(new RecordComponentNode(f.position(), List.of(), f.type(), f.name(), null));
+                    }
+                    classes.add(CompilerClassLowering.lowerRecord(driver, new RecordDeclarationNode(ent.position(), ent.name(),
+                            ent.modifiers(), null, List.of(), components, List.of()),
+                            declPkg, nextTypeId++));
                 }
-                classes.add(CompilerClassLowering.lowerRecord(driver, new RecordDeclarationNode(ent.position(), ent.name(),
-                        ent.modifiers(), null, List.of(), components, List.of()),
-                        declPkg, nextTypeId++));
-            }
-            else if (decl instanceof FunctionDeclarationNode func) {
-                topLevelFunctions.add(CompilerFunctionLowering.lowerFunction(driver, func));
-                topLevelFunctions.addAll(CompilerFunctionLowering.lowerFunctionDefaults(driver, func));
-            }
-            else if (decl instanceof ExternalFunctionNode ext) {
-                driver.externSignatures.put(ext.name(), ext);
-                // FFI (TIER 2.1.3/2.1.7): binding suportado (JVM Int→Int,
-                // String→Int, Double→Double; Native Int→Int, String→Int) não é
-                // gap; o resto é gap honesto por target — FFI002 no JS (web/edge
-                // sem FFI nativo), FFI001 nos demais. Nunca stub silencioso (R6).
-                if (diagnostics != null && !CompilerPipeline.isExternBound(driver, ext)) {
-                    SourcePosition sp = ext.position();
-                    String lib = ext.library() != null ? " in " + ext.library() : "";
-                    String code = driver.target == Target.JS ? "FFI002" : "FFI001";
-                    String msg = driver.target == Target.JS
-                            ? "extern '" + ext.name() + "'" + lib + ": FFI not available on the JS target (FFI002)"
-                            : "extern '" + ext.name() + "'" + lib + ": FFI binding not implemented on the "
-                                    + driver.target + " target yet (FFI001)";
-                    diagnostics.error(sp != null ? sp.file() : "", sp != null ? sp.line() : 0,
-                            sp != null ? sp.column() : 0, 0, msg, code);
+                case FunctionDeclarationNode func -> {
+                    topLevelFunctions.add(CompilerFunctionLowering.lowerFunction(driver, func));
+                    topLevelFunctions.addAll(CompilerFunctionLowering.lowerFunctionDefaults(driver, func));
                 }
+                case ExternalFunctionNode ext -> {
+                    driver.externSignatures.put(ext.name(), ext);
+                    // FFI (TIER 2.1.3/2.1.7): binding suportado (JVM Int→Int,
+                    // String→Int, Double→Double; Native Int→Int, String→Int) não é
+                    // gap; o resto é gap honesto por target — FFI002 no JS (web/edge
+                    // sem FFI nativo), FFI001 nos demais. Nunca stub silencioso (R6).
+                    if (diagnostics != null && !CompilerPipeline.isExternBound(driver, ext)) {
+                        SourcePosition sp = ext.position();
+                        String lib = ext.library() != null ? " in " + ext.library() : "";
+                        String code = driver.target == Target.JS ? "FFI002" : "FFI001";
+                        String msg = driver.target == Target.JS
+                                ? "extern '" + ext.name() + "'" + lib + ": FFI not available on the JS target (FFI002)"
+                                : "extern '" + ext.name() + "'" + lib + ": FFI binding not implemented on the "
+                                        + driver.target + " target yet (FFI001)";
+                        diagnostics.error(sp != null ? sp.file() : "", sp != null ? sp.line() : 0,
+                                sp != null ? sp.column() : 0, 0, msg, code);
+                    }
+                }
+                case null, default -> { }  // no-op p/ null ou tipo nao-casado (paridade com o if-else original)
             }
         }
         if (!topLevelFunctions.isEmpty()) {

@@ -23,7 +23,11 @@ public final class CompilerClassLowering {
             }
         }
         if (superName == null) {
-            superName = cls.superClass() != null ? driver.toInternalName("", cls.superClass())
+            String rawSuper = cls.superClass();
+            if (rawSuper != null && rawSuper.contains("<")) {
+                rawSuper = rawSuper.substring(0, rawSuper.indexOf('<')).trim();
+            }
+            superName = rawSuper != null ? driver.toInternalName("", rawSuper)
                     : "java/lang/Object";
         }
         List<String> ifaces = cls.interfaces().stream().map(n -> CompilerAnnotations.externalOrLocalInternalName(driver, n)).toList();
@@ -94,8 +98,13 @@ public final class CompilerClassLowering {
         List<IRMethod> methods = new ArrayList<>();
         List<IRField> fields = new ArrayList<>();
         for (AstNode member : iface.members()) {
-            if (member instanceof MethodDeclarationNode method) methods.add(CompilerClassLowering.lowerMethod(driver,method, internalName, true, List.of()));
-            else if (member instanceof FieldDeclarationNode field) fields.add(CompilerClassLowering.lowerField(driver,field, List.of()));
+            if (member instanceof MethodDeclarationNode method) {
+                methods.add(CompilerClassLowering.lowerMethod(driver, method, internalName, true, List.of()));
+            } else if (member instanceof FieldDeclarationNode field) {
+                IRField irF = CompilerClassLowering.lowerField(driver, field, List.of());
+                int fAccess = irF.accessFlags() | AccessFlags.PUBLIC | AccessFlags.STATIC | AccessFlags.FINAL;
+                fields.add(new IRField(irF.name(), irF.type(), fAccess, irF.initialValue(), irF.annotations()));
+            }
         }
         return new IRClass(internalName, "java/lang/Object", ifaces, access, fields, methods, List.of(), null,
                 typeId, CompilerAnnotations.lowerAnnotations(driver, iface.annotations()));
@@ -276,7 +285,9 @@ public final class CompilerClassLowering {
         }
         int access = driver.computeAccess(method.modifiers());
         warnMechanismModifiers(driver, method.modifiers(), method.position());
-        if (isInterface && !method.modifiers().contains("default")) access |= AccessFlags.ABSTRACT;
+        if (isInterface && !method.modifiers().contains("default") && !method.modifiers().contains("static")) {
+            access |= AccessFlags.ABSTRACT;
+        }
         List<IRBasicBlock> body = List.of();
         List<IRLocalVariable> locals = List.of();
         if (method.body() != null && !method.body().isEmpty() && !driver.isAbstractMethod(method)) {
@@ -360,7 +371,6 @@ public final class CompilerClassLowering {
         List<Type> canonicalTypes = new ArrayList<>();
         for (FormalParameterNode p : params) canonicalTypes.add(CompilerTypes.resolveWithTypeParams(p.type(), typeParams, driver.currentUnit, driver.semanticAnalyzer));
         Type ownerType = CompilerTypes.ownerTypeFromInternal(owner, driver.semanticAnalyzer);
-        Type superType = CompilerTypes.ownerTypeFromInternal(superName, driver.semanticAnalyzer);
         for (int drop = 1; drop <= n - firstDefault; drop++) {
             int paramCount = n - drop;
             List<Type> paramTypes = canonicalTypes.subList(0, paramCount);
@@ -532,29 +542,37 @@ public final class CompilerClassLowering {
             Object v = field.initialValue();
             String fieldName = field.type() instanceof Type.PrimitiveType pt
                     ? Type.canonicalPrimitiveName(pt.name()) : "";
-            if (v instanceof Integer) {
-                int iv = (Integer) v;
-                if ("long".equals(fieldName)) {
-                    ops.add(new KofLoadLiteral(Type.PrimitiveType.LONG, (long) iv));
-                } else if ("double".equals(fieldName)) {
-                    ops.add(new KofLoadLiteral(Type.PrimitiveType.DOUBLE, (double) iv));
-                } else if ("float".equals(fieldName)) {
-                    ops.add(new KofLoadLiteral(Type.PrimitiveType.FLOAT, (float) iv));
-                } else {
-                    ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, iv));
+            switch (v) {
+                case Integer _ -> {
+                    int iv = (Integer) v;
+                    if ("long".equals(fieldName)) {
+                        ops.add(new KofLoadLiteral(Type.PrimitiveType.LONG, (long) iv));
+                    } else if ("double".equals(fieldName)) {
+                        ops.add(new KofLoadLiteral(Type.PrimitiveType.DOUBLE, (double) iv));
+                    } else if ("float".equals(fieldName)) {
+                        ops.add(new KofLoadLiteral(Type.PrimitiveType.FLOAT, (float) iv));
+                    } else {
+                        ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, iv));
+                    }
                 }
-            } else if (v instanceof Long) {
-                ops.add(new KofLoadLiteral(Type.PrimitiveType.LONG, (Long) v));
-            } else if (v instanceof String) {
-                ops.add(new KofLoadLiteral(BuiltinTypes.STRING, (String) v));
-            } else if (v instanceof Double) {
-                ops.add(new KofLoadLiteral(Type.PrimitiveType.DOUBLE, (Double) v));
-            } else if (v instanceof Float) {
-                ops.add(new KofLoadLiteral(Type.PrimitiveType.FLOAT, (Float) v));
-            } else if (v instanceof Boolean) {
-                ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, ((Boolean) v) ? 1 : 0));
-            } else {
-                continue;
+                case Long _ -> {
+                    ops.add(new KofLoadLiteral(Type.PrimitiveType.LONG, (Long) v));
+                }
+                case String _ -> {
+                    ops.add(new KofLoadLiteral(BuiltinTypes.STRING, (String) v));
+                }
+                case Double _ -> {
+                    ops.add(new KofLoadLiteral(Type.PrimitiveType.DOUBLE, (Double) v));
+                }
+                case Float _ -> {
+                    ops.add(new KofLoadLiteral(Type.PrimitiveType.FLOAT, (Float) v));
+                }
+                case Boolean _ -> {
+                    ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, ((Boolean) v) ? 1 : 0));
+                }
+                case null, default -> {  // null cai aqui (como no if-else: instanceof null == false)
+                    continue;
+                }
             }
             ops.add(new KofStoreField(ownerType, field.name(), field.type()));
         }

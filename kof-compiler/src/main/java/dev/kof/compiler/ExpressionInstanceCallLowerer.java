@@ -216,6 +216,7 @@ public final class ExpressionInstanceCallLowerer {
             return localIdx;
         }
     }
+    int beforeRecvOps = ops.size();
     localIdx = ExpressionLowerer.emitExpression(driver, mc.receiver(), ops, owner, localIdx, locals);
     Type recvType = ExpressionTyper.inferExprType(driver, mc.receiver(), locals);
     // narrowing de null-safety (`if (x != null) { x.substring(...) }`):
@@ -274,7 +275,8 @@ public final class ExpressionInstanceCallLowerer {
     for (ExpressionNode arg : mc.arguments()) {
         methodParamTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
     }
-    SymbolTable.MethodSymbol resolvedMethod = driver.semanticAnalyzer.getResolvedMethod(mc);
+    SymbolTable.MethodSymbol resolvedMethod = driver.semanticAnalyzer != null
+            ? driver.semanticAnalyzer.getResolvedMethod(mc) : null;
     if (resolvedMethod != null) {
         recvType = CompilerTypes.ownerTypeFromInternal(resolvedMethod.ownerClass(), driver.semanticAnalyzer);
         methodReturnType = resolvedMethod.returnType();
@@ -427,17 +429,28 @@ public final class ExpressionInstanceCallLowerer {
     }
     localIdx = driver.emitArgumentsWithFormalTypes(mc.arguments(), methodParamTypes, ops, owner, localIdx, locals);
     KofCallKind callKind = KofCallKind.INSTANCE;
-    if (recvType instanceof Type.ClassType rt && driver.semanticAnalyzer != null) {
+    if (callKind == KofCallKind.INSTANCE && resolvedMethod != null && driver.semanticAnalyzer != null) {
+        if ((resolvedMethod.accessFlags() & AccessFlags.STATIC) != 0) {
+            callKind = KofCallKind.STATIC;
+        } else {
+            String ownerName = resolvedMethod.ownerClass();
+            if (ownerName.contains("/")) ownerName = ownerName.substring(ownerName.lastIndexOf('/') + 1);
+            if (driver.semanticAnalyzer.isInterfaceType(ownerName)) {
+                callKind = KofCallKind.INTERFACE;
+            }
+        }
+    }
+    if (callKind == KofCallKind.INSTANCE && recvType instanceof Type.ClassType rt && driver.semanticAnalyzer != null) {
         if (driver.semanticAnalyzer.isInterfaceType(rt.name())) {
             callKind = KofCallKind.INTERFACE;
         }
     }
-    if (callKind == KofCallKind.INSTANCE && resolvedMethod != null && driver.semanticAnalyzer != null) {
-        String ownerName = resolvedMethod.ownerClass();
-        if (ownerName.contains("/")) ownerName = ownerName.substring(ownerName.lastIndexOf('/') + 1);
-        if (driver.semanticAnalyzer.isInterfaceType(ownerName)) {
-            callKind = KofCallKind.INTERFACE;
-        }
+    if (callKind == KofCallKind.STATIC) {
+        // Para método estático chamado em receiver (u.square(4)), o valor do
+        // receiver avaliado na pilha antes dos argumentos precisa ser descartado
+        // (POP) antes da chamada INVOKESTATIC, para manter o stack balance.
+        // A inserção do POP ocorre antes de empilhar os argumentos.
+        ops.add(beforeRecvOps + (ops.size() - beforeRecvOps - mc.arguments().size()), new KofPop());
     }
     String runtimeMethod = BuiltinTypes.isString(recvType)
             ? StringMethodRegistry.stringRuntimeMethod(mc.methodName()) : null;
@@ -488,7 +501,24 @@ public final class ExpressionInstanceCallLowerer {
         if (!(jdkOwner instanceof Type.UnknownType)) {
             recvType = jdkOwner;
             callKind = KofCallKind.STATIC;
-            if (methodParamTypes.size() == 1
+            if (jdkOwner instanceof Type.ClassType jct && driver.externalClasspath != null
+                    && driver.externalClasspath.knows(jct.internalName())) {
+                ExternalClasspath.MethodSignature extSig = driver.externalClasspath.resolveMethod(
+                        jct.internalName(), mc.methodName(), mc.arguments().size());
+                if (extSig != null) {
+                    methodReturnType = ExternalClasspath.typeFromDescriptor(extSig.returnDescriptor());
+                    List<Type> formal = new ArrayList<>();
+                    for (String d : extSig.parameterDescriptors()) {
+                        formal.add(ExternalClasspath.typeFromDescriptor(d));
+                    }
+                    methodParamTypes = formal;
+                }
+            } else if (mc.arguments().size() == 1
+                    && ("isNaN".equals(mc.methodName()) || "isInfinite".equals(mc.methodName()) || "isFinite".equals(mc.methodName()))
+                    && ("Double".equals(brid.name()) || "Float".equals(brid.name()))) {
+                methodReturnType = Type.PrimitiveType.BOOL;
+                methodParamTypes = List.of("Double".equals(brid.name()) ? Type.PrimitiveType.DOUBLE : Type.PrimitiveType.FLOAT);
+            } else if ("valueOf".equals(mc.methodName()) && methodParamTypes.size() == 1
                     && methodParamTypes.get(0) instanceof Type.PrimitiveType) {
                 // valueOf(I) direto do JDK — sem boxing duplo
                 methodReturnType = BuiltinTypes.STRING;

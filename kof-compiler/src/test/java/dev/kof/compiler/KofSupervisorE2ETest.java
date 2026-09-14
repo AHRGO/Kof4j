@@ -235,4 +235,93 @@ class KofSupervisorE2ETest {
         assertEquals(0, ir.exitCode(), "script S2 roda limpo: " + os);
         assertTrue(os.contains("parou vivos=0"), "S2 paridade interpretador: " + os);
     }
+
+    // ===== S3 (DD-OTP-02/10): supervisorStats + janela deslizante + drop =====
+    // Janela deslizante com RELOGIO INJETADO (.clock — DD-OTP-10): o worker
+    // falha sempre; 2 falhas na MESMA janela (agora virtual < 1000ms) param o
+    // ciclo, mas como o relógio virtual salta +2000ms por tentativa, cada
+    // falha antiga expira antes da próxima → nunca excede (prova determinística
+    // de expiração, sem wall-clock — qemu/wall não entram no gate).
+    private static final String APP_S3_WINDOW = """
+            import kof.supervisor
+            class WF4 implements KofWorkerFactory {
+                Int chamadas = 0
+                KofWorker novo() { chamadas = chamadas + 1; return WK4() }
+            }
+            class WK4 implements KofWorker {
+                Object run() { throw "sempre" }
+            }
+            class Relogio4 {
+                Int agora = 0
+                Long tick() { agora = agora + 2000; return agora }
+            }
+            main() {
+                var wf = WF4()
+                var rel = Relogio4()
+                var s = supervisor("w4").child("w", wf, "permanent").restartLimitWindow(2, 1000).clock(() -> rel.tick())
+                s.start()
+                var t = 0
+                while (s.stats().vivos > 0 && t < 300) { time.sleep(10); t = t + 1 }
+                var st = s.stats()
+                println("vivos=" + st.vivos + " restarts=" + st.restarts)
+                s.stop(500)
+            }
+            """;
+
+    @Test
+    void supervisorS3JanelaExpiraComClockInjetado(@TempDir Path tmp) throws IOException {
+        String os = runJvm(tmp, APP_S3_WINDOW);
+        // cada falha acontece ~2000ms virtuais após a anterior, janela=1000ms
+        // → nenhuma falha vive na janela quando a próxima chega → ciclo NUNCA
+        // para pelo limite (reinicios cresce até o pool de aguardar drenar).
+        assertFalse(os.contains("limite excedido"), "expiração da janela evita o corte: " + os);
+    }
+
+    // temporary drop accounting: stats().dropped conta temporary DESCARTADO
+    private static final String APP_S3_DROP = """
+            import kof.supervisor
+            class WF5 implements KofWorkerFactory {
+                Int chamadas = 0
+                KofWorker novo() { chamadas = chamadas + 1; return WK5(chamadas) }
+            }
+            class WK5 implements KofWorker {
+                Int n
+                constructor(Int n) { this.n = n }
+                Object run() {
+                    if (n == 1) { throw "primeira-falha" }
+                    return "ok-" + n
+                }
+            }
+            class Esc5 implements KofEscalate {
+                Int chamadas = 0
+                Void disparou(String id, String motivo, Int reinicios) { chamadas = chamadas + 1 }
+            }
+            main() {
+                var esc = Esc5()
+                var wf = WF5()
+                var s = supervisor("d5").child("w", wf, "temporary").escalate(esc)
+                s.start()
+                var t = 0
+                while (s.stats().vivos > 0 && t < 300) { time.sleep(10); t = t + 1 }
+                var st = s.stats()
+                println("dropped=" + st.dropped + " esc=" + esc.chamadas)
+                s.stop(500)
+            }
+            """;
+
+    @Test
+    void supervisorS3TemporaryDropContabilizado(@TempDir Path tmp) throws IOException {
+        String os = runJvm(tmp, APP_S3_DROP);
+        assertTrue(os.contains("dropped=1"), "temporary que falha é contabilizado como dropped: " + os);
+        assertTrue(os.contains("esc=1"), "escalate notifica o drop: " + os);
+    }
+
+    @Test
+    void supervisorS3TemporaryDropNoInterpretador(@TempDir Path tmp) throws IOException {
+        Path main = write(tmp, APP_S3_DROP);
+        KofInterpreter.Result ir = driver.interpret(List.of(main), tmp, new String[0]);
+        String os = ir.stdout() + ir.stderr();
+        assertEquals(0, ir.exitCode(), "script S3 roda limpo: " + os);
+        assertTrue(os.contains("dropped=1"), "S3 drop paridade interpretador: " + os);
+    }
 }

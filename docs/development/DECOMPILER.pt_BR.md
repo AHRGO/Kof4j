@@ -451,7 +451,14 @@ Fase E  Kof Decompiler          (gerar Kof source)
 > **Conclusão firme: nenhuma guarda local basta — o único caminho para teste
 > com cálculo é o walker com pós-dominador (degrau 3 real).** A extração da
 > máquina (`machineRun`) está provada byte-idêntica (DriftCheck baseline 4) e
-> é pré-requisito do degrau 3; guarda-se no histórico da branch, não no tree.
+> é pré-requisito do degrau 3. **AUDITORIA 14/09 (lane docs/development, vs
+> CÓDIGO, não memória): a frase acima ficou OBSOLETA — a extração ENTROU no
+> tree em `158c174b` (13/09 19:52, "refactor(decompiler): extrai maquina de
+> expressao do linearReturn"), DEPOIS desta sessão ter escrito o revert.
+> Hoje `BytecodeDecoder.machineRun` está VIVA e É o corpo de `linearReturn`
+> (BytecodeDecoder.java:73/97). Pré-requisito do degrau 3: presente e
+> provado (o DriftCheck=baseline-4 byte-idêntico vale — linearReturn passa
+> por ela em toda chamada).
 >
 > **Estágio 3 (13/09, dono = 192.168.100.17): interna do MESMO pacote.**
 > Categorização reflexiva dos 89 rejeitados (harness `RecCat`): **31** eram
@@ -488,6 +495,96 @@ Fase E  Kof Decompiler          (gerar Kof source)
 > frontend (o drift-check do corpus não pegou: nenhum arquivo do corpus
 > dispara anewarray-de-interna; outro corpus dispara). ROI negativo + perigo
 > cross-corpus → REVERTIDO (working tree limpo, HEAD = estágio-3).
+
+>
+> **Estado (14/09, este commit, dono = 192.168.100.17 — lane docs/development
+> EXCLUSIVA por diretriz da mantenedora): pré-requisito do PASSO 3 da Fase C
+> entregue.** `PostDominator.java` — passada pura de pós-dominador imediato
+> (dual bit-set de Cooper–Harvey–Kennedy: `pdom(b) = {b} ∪ ⋂ pdom(succ)`,
+> terminal → `{b, EXIT}`, interseção monótona converge sem depender de ordem
+> de iteração; determinístico — princípio D-ENGINEERING: a formulação padrão
+> de compiladores, não reinventada). É o pré-requisito travado pelas duas
+> rejeições do STEP-3a (13/09): um teste com computação só pode ser
+> recuperado pelo walker que consome pós-dominadores, nunca por guarda local.
+> Prova: `DecompilePostDominatorTest` 5/5 com oráculos caminho-até-EXIT
+> calculados à mão (cadeia linear, join if-then-else, back-edge de while,
+> if aninhado, fork sem join). **Nenhuma saída de recovery mudada ainda** —
+> 63 `DecompileTest` intocados (re-rodados frescos 115.6s, verde; o número
+> 87.43s era relatório surefire STALE, pego e corrigido — honestidade acima
+> de falso verde), contagem de stubs do corpus inalterada por construção (a
+> passada ainda não está ligada). **PRÓXIMO neste doc (unidade 2):** consumir
+> `immediatePostDom` em `BytecodeStatements.struct()` p/ recuperar as formas
+> de teste-com-computação que o step 3a rejeitou (o `for+continue` cujo cond
+> vive num bloco aninhado que faz join no incremento) — cada recuperação
+> precisa manter `diamondJoinShapesStayHonestStub` verde (a lei do diamante
+> é vinculante).
+
+>
+> **Estado (14/09 ~16:25, este commit, dono = 192.168.100.17): ROI do walker
+> do passo 3 MEDIDO (harness `/tmp/opencode/roi/dev/kof/cli/Roi.java`,
+> descartável no package `dev.kof.cli` como Orient/Why0/StoreCat — prática da
+> lane: medir antes de escrever).** Corpus REAL hoje
+> (`kof-compiler/target/classes`): 699 classes (0 falhas de parse), 3899
+> métodos, **2628 stubados** (67%). Destes, **1098** têm ao menos uma forma
+> "bloco succ==2 com `blockCondition==null` e computação no bloco-teste"
+> (tam do bloco-teste 1..20 insns antes do cond — init/store/irem fundidos de
+> `for`/`while`) — teto do que o walker com `immediatePostDom` destrava (muitos
+> ainda vão resistir à lei do diamante; o rendimento real vem fatia a fatia).
+> ROI ≫ 30 → **decisão: construir o walker**. *(→
+> SUPERSEDIDA pela RE-MEDIÇÃO abaixo, 14/09 ~18:20: o proxy supercontou, o
+> walker como escopado não tem alvo líquido novo — leia antes de construir.)* Escopo da unidade 2 (travado
+> pela medição): consumir `immediatePostDom` no ramo `cond == null` do `struct()`
+> — recuperar teste-com-computação SOMENTE quando o join P = idom(then) =
+> idom(senão-caminho), P NÃO é loop-header e as back-edges dos braços não
+> cruzam P (a construção que torna trap 1 impossível — critério do passo 2a
+> estendido a teste não-puro); cada fatia mantém
+> `diamondJoinShapesStayHonestStub` VERDE (lei vinculante) e adiciona golden
+> de execução (oracle JVM).
+
+> **PROVA DE CORRETUDE adicionada (unidade 2a): `pathOracle` brute-force
+> sobre a DEFINIÇÃO (X pdom b ⟺ todo caminho simples b→terminal passa
+> por X) contra a passada rápida bit-set em CFGs REAIS do corpus (300
+> classes de `kof-compiler/target/classes`, blocos ≤40) — 6/6 verde,
+> 4.28s, divergência ZERO bloco a bloco. O walker pode agora consumir
+> `immediatePostDom` com a passada confiada.
+
+> **RE-MEDIDO (14/09 ~18:20, dono = 192.168.100.17): o "1098" acima era um
+> PROXY que SUPERCONTOU — o walker NÃO tem alvo líquido novo (harness
+> `/tmp/opencode/w2b/dev/kof/cli/Roi2.java` + `Roi3.java`, descartável
+> package-private como o Roi.java; a classificação é pela CAUSA REAL do stub,
+> não pela forma do blockCondition).** Os 1098 contaram cada
+> "bloco succ==2 com `blockCondition==null`" sem checar se o método ainda é
+> descompilado pelo caminho prologue adicionado na unidade 2a (`5c944709`:
+> um `int x=…; if (x%3==0){}else{}` não-loop fundido JÁ É recuperado hoje —
+> medido: `computed`/`cmp` emitem `if (v1 == 0) { … } else { … }`). Separando
+> os 2642 stubs pela causa que FAZ o `recoverStatements` devolver null, entre
+> os que TÊM um teste computado 2-succ:
+>
+> | causa do stub (medido, corpus 699 classes / 3899 métodos / 2642 stubs) | qtde | de quem é a lane |
+> |---|---|---|
+> | o teste tem um `invoke`/`getfield`/`new` na computação (`.equals`, `.size`, `String.join`…) | **646** | descritor de interop (§234/§224/§225) — **lane compiler**, NÃO é problema de CFG |
+> | o teste computado está no HEADER de um LOOP (diamante com `continue`/back-edge) | **453** | **travado pela lei vinculante do diamante** + Kof não tem `continue` → regra 6 (contrato), NÃO é um edit |
+> | não-loop, prefixo puro load/const/arith mas um opcode que o `loadValue` não trata (sipush/lcmp/ldc_w) | 8 (+2 store) | gap de cobertura de opcode, não o walker |
+>
+> **Veredito: o walker da unidade 2b como escopado (consumir `immediatePostDom`
+> p/ recuperar um teste não-puro) é DESCARTADO — a medição mostra que o caso
+> fundido não-loop já é coberto pela 2a, e os stubs de teste computado restantes
+> são ou interop (646, §234) ou a colisão lei-do-diamante/`continue` (453, regra
+> 6).** O `PostDominator` + `pathOracle` (unidades 1/2a) ficam como fundação
+> confiada (verde, 6/6, zero regressão); simplesmente NÃO são ligados porque não
+> sobra nada no escopo deles que a lei permita e que a 2a já não faça. Re-scope
+> honesto, NÃO um drop silencioso: as 453 faces loop-diamante + 646 interop ficam
+> registradas aqui como o trabalho real (adiado/outra-lane) p/ o próximo agente
+> não pagar de novo a arqueologia da ROI.
+>
+> **PRÓXIMO PASSO deste doc:** a superfície recuperável do decompiler está no
+> teto honesto para formas estruturadas. O trabalho aberto do decompiler é agora
+> (a) a recuperação de `continue`/`break` em `for` SE a mantenedora levantar a
+> lei do diamante (regra 6 — precisa de um `continue` na linguagem, decisão de
+> contrato, NÃO esta lane) e (b) nits de cobertura de opcode (sipush/lcmp no
+> `loadValue`) que são micro-fix da lane compiler, não um walker estrutural.
+> Nenhum dos dois é trabalho de modo autônomo em `docs/development/` → este doc
+> está num ponto de parada genuíno aguardando decisão da mantenedora.
 
 ## 7. Relação com o Compilador
 

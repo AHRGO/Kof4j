@@ -153,20 +153,29 @@ final class NativeMethodEmitter {
                 sb.append("    .loc 1 ").append(dbg.line()).append(" 0\n");
             }
         }
-        if (op instanceof KofLoadLiteral lit) {
-            nb.lastPushedType = lit.type();
-        } else if (op instanceof KofLoadLocal ll) {
-            nb.lastPushedType = ll.type();
-        } else if (op instanceof KofLoadField lf) {
-            nb.lastPushedType = lf.fieldType();
-        } else if (op instanceof KofArrayLength) {
-            nb.lastPushedType = Type.PrimitiveType.INT;
-        } else if (op instanceof KofBinary kb) {
-            nb.lastPushedType = kb.operandType();
-        } else if (op instanceof KofUnary ku) {
-            nb.lastPushedType = ku.operandType();
-        } else if (op instanceof KofCall kc) {
-            nb.lastPushedType = kc.returnType();
+        switch (op) {
+            case KofLoadLiteral lit -> {
+                nb.lastPushedType = lit.type();
+            }
+            case KofLoadLocal ll -> {
+                nb.lastPushedType = ll.type();
+            }
+            case KofLoadField lf -> {
+                nb.lastPushedType = lf.fieldType();
+            }
+            case KofArrayLength _ -> {
+                nb.lastPushedType = Type.PrimitiveType.INT;
+            }
+            case KofBinary kb -> {
+                nb.lastPushedType = kb.operandType();
+            }
+            case KofUnary ku -> {
+                nb.lastPushedType = ku.operandType();
+            }
+            case KofCall kc -> {
+                nb.lastPushedType = kc.returnType();
+            }
+            case null, default -> { }  // no-op p/ null ou tipo nao-casado (paridade com o if-else)
         }
 
         switch (op) {
