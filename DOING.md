@@ -692,14 +692,23 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > VerifyError), #219 reproduz (→§212), #220/#221/#222 GREEN com prova
 > semântica, #213 continua reproduz (§209 OPEN), #218 continua (§208).
 > Fila medida real: 16 abertos (linha da OPEN Queue corrigida de 30→16).
-> **PRÓXIMO re-disparo (triagem pendente, na ordem):** issues antigas ainda
-> sem prova de face única: **#199** (guarded case T s — verificar se é o
-> §199 do known-bugs ou face nova), **#193** (lambda em container genérico —
-> a face `Function<() -> Void>` como tipo de parâmetro que mediram hoje em
-> e204c pode ser ESTA), #185/#168/#161/#160/#159/#156/#155/#153/#151/#148/
-> #141/#129 (mapeadas a seções known-bugs? conferir 1-para-1). Regra da
-> lição: `mvn -o compile` ANTES de medir; assir SEMÂNTICA do título
-> (weak-green-proof).
+> **PRÓXIMO re-disparo (14/09 ~14:05 — TRIAGEM DA FILA TODA FEITA):**
+> #200–#229 triadas com prova de execução (classes frescas + horário/SHA na
+> prova). Catalogadas nesta lane: #193→§214, #199→§215, #168+#153→§216,
+> #161→§217, #148→§218, #151/#155/#159/#160/#141→§219(batch), #205→§203✅
+> (fix 8af810c5)+§213(nova), #219→§212, #224→§220, #225→§221, #228→§222.
+> GREEN com comentário-post: #200/#201/#203/#204/#207/#214/#215/#217/#218/
+> #220/#221/#222/#223/#226/#229 (fechar = dono/watcher). #185 = CodeQL queue
+> (lane própria), #129 = SBD-001 decisão da mantenedora — NÃO triar aqui.
+> Regra da lição gravada (4e0957ee + cdda27d9): `mvn -o compile`
+> IMEDIATAMENTE antes de medir (falso-vermelho de classe obsoleta queimou
+> meu primeiro "#218 ainda reproduz"); assir SEMÂNTICA do título.
+> **Gatilhos do próximo disparo:** (1) fix de §213–§222 aparecer no log →
+> re-medir e marcar FIXED + fechar issue; (2) lane nat fechar os 3
+> cross-arch (§181-idx4 `-inf`; §192 B41 aliasing) → RE-MEDIR baseline
+> completa (`rm -rf */target`) e atualizar docs/status.md — gate de release
+> = 0 FAILURE fora de node/BD/guardas; (3) issues novas do watcher → triagem
+> padrão (caso-exato + javap + hora/SHA).
 > Versão anterior da triagem (10:20): medido no HEAD `75455529` com harness
 > JVM (`/tmp/opencode/r292/dev/cli/BJ`):
 > **#200/#201/#203/#204/#214 = GREEN** (casos exatos das issues rodam `ec=0`;
