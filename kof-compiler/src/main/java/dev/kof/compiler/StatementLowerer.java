@@ -49,11 +49,11 @@ public final class StatementLowerer {
                 }
                 yield localIdx;
             }
-            case BreakStmt ignored -> {
+            case BreakStmt _ -> {
                 if (!driver.breakLabels.isEmpty()) ops.add(new KofJump(driver.breakLabels.peek()));
                 yield localIdx;
             }
-            case ContinueStmt ignored -> {
+            case ContinueStmt _ -> {
                 if (!driver.continueLabels.isEmpty()) ops.add(new KofJump(driver.continueLabels.peek()));
                 yield localIdx;
             }

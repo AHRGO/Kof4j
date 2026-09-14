@@ -168,10 +168,9 @@ public final class StatementAnalyzer {
                     }
                 }
             }
-            case BreakStmt ignored -> {}
-            case ContinueStmt ignored -> {}
+            case BreakStmt _ -> {}
+            case ContinueStmt _ -> {}
             case IfStmt ifStmt -> {
-                Type condType = SemExpressionTyper.inferType(sa, ifStmt.condition(), scope);
                 // Nullability narrowing (SG-005):
                 //   if (x != null) → x: T no THEN
                 //   if (x == null) → x: T no ELSE
@@ -188,7 +187,6 @@ public final class StatementAnalyzer {
                     analyzeStatement(sa, ifStmt.elseBranch(), elseScope, returnType);
                 } else {
                     analyzeStatement(sa, ifStmt.thenBranch(), ifScope, returnType);
-                    if (ifStmt.elseBranch() != null) analyzeStatement(sa, ifStmt.elseBranch(), scope, returnType);
                 }
             }
             case WhileStmt ws -> {
