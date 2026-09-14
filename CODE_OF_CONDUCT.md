@@ -1,218 +1,220 @@
-# Código de Conduta e Filosofia de Colaboração do Kof
+[English](CODE_OF_CONDUCT.md) | [Português](CODE_OF_CONDUCT.pt_BR.md)
 
-> **Fonte da verdade:** Mel Santos ([@aminadojava](https://pt.linkedin.com/in/aminadojava))
-> — mantenedora oficial do ecossistema Kof (Koflang, Kof4J, Kof Native, Kof Editor).
+# Kof Code of Conduct and Collaboration Philosophy
 
-## Filosofia de desenvolvimento
+> **Source of truth:** Mel Santos ([@aminadojava](https://pt.linkedin.com/in/aminadojava))
+> — official maintainer of the Kof ecosystem (Koflang, Kof4J, Kof Native, Kof Editor).
 
-O Kof é **open source (GPLv3)** e seu desenvolvimento é ativamente conduzido
-com **agentes autônomos de IA documentados publicamente** dentro do próprio
-repositório. Mas — e isto é essencial — **o Kof não foi feito por IA**.
+## Development philosophy
 
-A inteligência artificial não tira a linguagem "do nada" e não substitui a
-engenharia conceitual. A IA é uma **ferramenta** sob as rédeas da mantenedora:
-acelera e otimiza a construção, mas a arquitetura, a semântica e o rumo do
-projeto são decisão da **engenharia humana** (a mantenedora).
+Kof is **open source (GPLv3)** and its development is actively conducted
+with **autonomous AI agents publicly documented** inside the repository
+itself. But — and this is essential — **Kof was not made by AI**.
 
-Por isso, a colaboração no Kof segue regras claras:
+Artificial intelligence does not take the language "out of nowhere" and does not
+replace conceptual engineering. AI is a **tool** under the maintainer's reins:
+it accelerates and optimizes the build, but the architecture, the semantics and
+the direction of the project are decisions of **human engineering** (the maintainer).
 
-1. **Ceticismo técnico, não hype.** Automação sem critérios mascara falta de
-   qualidade e imediatismo. Vale a "programação raiz": rigor na compilação,
-   vivência prática e código robusto — nunca entrega apressada.
-2. **Sem alucinação.** Quem "acha" que algo compila sem testar, deve parar e
-   compilar antes de entregar. Sintaxe alucinada é pior que sintaxe verbosa.
-3. **Documentação cirúrgica de erros.** O repositório mantém um **arquivo de
-   regressão** dedicado: para cada bug, a **causa raiz** e o **menor pedaço de
-   código que reproduz** — inclusive regressões que a própria mantenedora
-   introduziu. Nada de esconder o que está quebrado (ver `docs/bugs-and-gaps/known-bugs.md`).
-4. **Blindagem contra poluição.** Disclaimers e regras de nomenclatura explícitas
-   existem para impedir que IAs e ferramentas generativas misturem a linguagem
-   com termos alheios ao domínio e poluam o histórico do projeto.
-5. **Contribuição por discussão técnica.** A contribuição não entra por PRs
-   abertos e desordenados; entra por **debates técnicos profundos** sobre os
-   problemas reais de engenharia (ex.: estouros de ponto flutuante na
-   pre-beta-0.3.0), em que desenvolvedores experientes debatem **soluções
-   conceituais** antes de qualquer linha de código.
-6. **Toda PR vem acompanhada de uma issue relacionada.** Pull requests "soltos"
-   não entram. Toda mudança proposta precisa referenciar uma issue aberta que a
-   justifique — rastreabilidade é lei, não preferência.
+For this reason, collaboration on Kof follows clear rules:
+
+1. **Technical skepticism, not hype.** Automation without criteria masks a lack of
+   quality and immediacy. "Root programming" holds: rigor in compilation,
+   hands-on experience and robust code — never rushed delivery.
+2. **No hallucination.** Whoever "thinks" something compiles without testing should stop and
+   compile before delivering. Hallucinated syntax is worse than verbose syntax.
+3. **Surgical documentation of errors.** The repository keeps a dedicated
+   **regression file**: for each bug, the **root cause** and the **smallest piece of
+   code that reproduces it** — including regressions that the maintainer herself
+   introduced. No hiding what is broken (see `docs/bugs-and-gaps/known-bugs.md`).
+4. **Shielding against pollution.** Explicit disclaimers and naming rules
+   exist to prevent AIs and generative tools from mixing the language
+   with terms foreign to the domain and polluting the project's history.
+5. **Contribution through technical discussion.** Contributions do not come in through
+   open and disorderly PRs; they come in through **deep technical debates** about the
+   real engineering problems (e.g.: floating-point overflows in
+   pre-beta-0.3.0), in which experienced developers debate **conceptual
+   solutions** before any line of code.
+6. **Every PR comes with a related issue.** "Loose" pull requests
+   do not enter. Every proposed change must reference an open issue that
+   justifies it — traceability is law, not a preference.
 
 ---
 
-# Normas de Desenvolvimento Colaborativo (pré-beta 0.3.0)
+# Collaborative Development Norms (pre-beta 0.3.0)
 
-> **Em vigor a partir da próxima beta.** As normas abaixo estão sendo testadas
-> durante a pré-beta 0.3.0 e serão ajustadas nos próximos dias, conforme a
-> experiência evoluir. Site do ecossistema: <https://koflang.github.io>.
+> **In effect from the next beta.** The norms below are being tested
+> during pre-beta 0.3.0 and will be adjusted in the coming days, as
+> experience evolves. Ecosystem site: <https://koflang.github.io>.
 
-## O que mudou
+## What changed
 
-Passamos a **aceitar contribuições assistidas por agentes de IA**, desde que
-cumpram os requisitos de arquitetura, filosofia, sintaxe e regras de qualidade
-do projeto. Usar IA **não é o problema** — entregar código que você não
-entende, é.
+We have started to **accept contributions assisted by AI agents**, as long as
+they meet the project's architecture, philosophy, syntax and quality
+requirements. Using AI **is not the problem** — delivering code you do not
+understand is.
 
-> Relação com as regras 1–6 acima: a **regra 5** (debate técnico antes de
-> de mudança de operador, precedência, contrato de API. O que muda é o fluxo
-> de contribuições em geral: PRs agora são bem-vindas (produzidas por pessoa,
-> agente ou ambos), **mantida a regra 6** — toda PR com issue relacionada.
+> Relation to rules 1–6 above: **rule 5** (technical debate before of
+> operator change, precedence, API contract. What changes is the flow
+> of contributions in general: PRs are now welcome (produced by a person,
+> agent or both), **keeping rule 6** — every PR with a related issue.
 
-## Os três princípios
+## The three principles
 
-1. **Acelerar, não terceirizar o pensamento.** Use os agentes para acelerar o
-   trabalho. O agente pode escrever o código; **quem precisa entender esse
-   código é você.**
-2. **O padrão de qualidade não muda.** Toda Pull Request continua sendo
-   cuidadosamente revisada antes de qualquer merge. Não importa se a
-   contribuição foi produzida por uma pessoa, por um agente ou pelos dois —
-   o critério é o mesmo.
-3. **Responsabilidade antes de permissividade.** A ideia não é impedir IA. É
-   descobrir como usar IA de forma responsável em um projeto de software real.
-   Qualidade e confiabilidade continuam sendo a meta principal.
+1. **Accelerate, do not outsource thinking.** Use the agents to speed up the
+   work. The agent can write the code; **the one who needs to understand that
+   code is you.**
+2. **The quality standard does not change.** Every Pull Request continues to be
+   carefully reviewed before any merge. It does not matter whether the
+   contribution was produced by a person, an agent or both —
+   the criterion is the same.
+3. **Responsibility before permissiveness.** The idea is not to prevent AI. It is
+   to discover how to use AI responsibly in a real software project.
+   Quality and reliability remain the main goal.
 
-## Os dois arquivos de convivência
+## The two coexistence files
 
-| Arquivo | Papel | Conteúdo |
+| File | Role | Content |
 |---|---|---|
-| **`AGENTS.md`** | memória de longo prazo dos agentes | contexto do projeto, regras de convivência, arquitetura, filosofia e coordenação entre múltiplos agentes — documentado e atualizado com frequência |
-| **`DOING.md`** | log dos agentes | tudo que os agentes estão fazendo fica registrado ali — permite acompanhar o trabalho em andamento e reduzir conflitos entre agentes diferentes trabalhando no projeto |
+| **`AGENTS.md`** | long-term memory of the agents | project context, coexistence rules, architecture, philosophy and coordination among multiple agents — documented and updated frequently |
+| **`DOING.md`** | agents' log | everything the agents are doing is recorded there — it allows tracking work in progress and reducing conflicts between different agents working on the project |
 
-## O experimento
+## The experiment
 
-Este é um teste deliberado: descobrir até onde conseguimos evoluir o processo
-de desenvolvimento colaborativo **sem comprometer a qualidade e a
-confiabilidade do Kof**. Se a pré-beta 0.3.0 trouxer resultados positivos, as
-normas podem se tornar progressivamente menos restritivas em relação ao uso de
-agentes no futuro.
+This is a deliberate test: discovering how far we can evolve the collaborative
+development process **without compromising the quality and reliability of
+Kof**. If pre-beta 0.3.0 brings positive results, the
+norms may become progressively less restrictive regarding the use of
+agents in the future.
 
 ---
 
-# Código de Conduta do Colaborador
+# Contributor Code of Conduct
 
-## Nosso Compromisso
+## Our Pledge
 
-Nós, como membros, contribuidores e líderes, nos comprometemos a tornar a
-participação em nossa comunidade uma experiência livre de assédio para todos,
-independentemente de idade, tamanho do corpo, deficiência visível ou invisível,
-etnia, características sexuais, identidade e expressão de gênero, nível de
-experiência, educação, condição socioeconômica, nacionalidade, aparência
-pessoal, raça, religião ou identidade e orientação sexual.
+We as members, contributors and leaders pledge to make participation in our
+community a harassment-free experience for everyone, regardless of age, body
+size, visible or invisible disability, ethnicity, sexual characteristics, gender
+identity and expression, level of experience, education, socio-economic status,
+nationality, personal appearance, race, religion or sexual identity and
+orientation.
 
-Nós nos comprometemos a agir e interagir de maneiras que contribuam para uma
-comunidade aberta, acolhedora, diversa, inclusiva e saudável.
+We pledge to act and interact in ways that contribute to an open, welcoming,
+diverse, inclusive and healthy community.
 
-## Nossos Padrões
+## Our Standards
 
-Exemplos de comportamentos que contribuem para um ambiente positivo:
+Examples of behavior that contributes to a positive environment:
 
-* Demonstrar empatia e gentileza com as outras pessoas
-* Respeitar opiniões, pontos de vista e experiências diferentes
-* Dar e receber feedback construtivo com elegância
-* Assumir responsabilidade e pedir desculpas aos afetados por nossos erros,
-  aprendendo com a experiência
-* Focar no que é melhor não apenas para nós, mas para a comunidade como um todo
+* Demonstrating empathy and kindness toward other people
+* Respecting differing opinions, viewpoints and experiences
+* Giving and gracefully accepting constructive feedback
+* Accepting responsibility and apologizing to those affected by our mistakes,
+  and learning from the experience
+* Focusing on what is best not just for us as individuals, but for the community as a whole
 
-Exemplos de comportamentos inaceitáveis:
+Examples of unacceptable behavior:
 
-* Uso de linguagem ou imagens sexualizadas, e atenção ou avanços sexuais de
-  qualquer tipo
-* Trolagem, comentários insultantes ou depreciativos, e ataques pessoais ou
-  políticos
-* Assédio público ou privado
-* Publicar informações privadas de terceiros, como endereço físico ou de
-  e-mail, sem permissão explícita
-* Outras condutas que possam ser razoavelmente consideradas inadequadas em um
-  ambiente profissional
+* The use of sexualized language or imagery, and sexual attention or advances of
+  any kind
+* Trolling, insulting or derogatory comments, and personal or political
+  attacks
+* Public or private harassment
+* Publishing others' private information, such as a physical or email
+  address, without their explicit permission
+* Other conduct which could reasonably be considered inappropriate in a
+  professional setting
 
-## Responsabilidades de Aplicação
+## Enforcement Responsibilities
 
-Os líderes da comunidade são responsáveis por esclarecer e aplicar nossos
-padrões de comportamento aceitável e tomarão medidas corretivas apropriadas e
-justas em resposta a qualquer comportamento que considerem inadequado,
-ameaçador, ofensivo ou prejudicial.
+Community leaders are responsible for clarifying and enforcing our standards of
+acceptable behavior and will take appropriate and fair corrective action in
+response to any behavior that they consider inappropriate, threatening,
+offensive or harmful.
 
-Os líderes da comunidade têm o direito e a responsabilidade de remover, editar
-ou rejeitar comentários, commits, código, edições de wiki, issues e outras
-contribuições que não estejam alinhadas a este Código de Conduta, e comunicarão
-os motivos das decisões de moderação quando apropriado.
+Community leaders have the right and responsibility to remove, edit
+or reject comments, commits, code, wiki edits, issues and other
+contributions that are not aligned with this Code of Conduct, and will communicate
+the reasons for moderation decisions when appropriate.
 
-## Escopo
+## Scope
 
-Este Código de Conduta se aplica em todos os espaços da comunidade, e também
-quando um indivíduo está representando oficialmente a comunidade em espaços
-públicos. Exemplos de representação da comunidade incluem o uso de um endereço
-de e-mail oficial, publicações via conta oficial de rede social, ou atuação como
-representante designado em eventos online ou presenciais.
+This Code of Conduct applies in all community spaces, and also
+when an individual is officially representing the community in public spaces.
+Examples of representing the community include using an official email
+address, posting via an official social media account, or acting as an
+appointed representative at online or in-person events.
 
-## Aplicação (Enforcement)
+## Enforcement
 
-Casos de comportamento abusivo, assediador ou de outra forma inaceitável — ou
-qualquer dúvida de conduta técnica/centralização — podem ser reportados à
-mantenedora oficial e única fonte da verdade, Mel Santos
+Instances of abusive, harassing or otherwise unacceptable behavior — or
+any question of technical conduct/centralization — may be reported to the
+official maintainer and single source of truth, Mel Santos
 ([@aminadojava](https://pt.linkedin.com/in/aminadojava)).
-Todas as denúncias serão revisadas e investigadas prontamente e com justiça.
+All reports will be reviewed and investigated promptly and fairly.
 
-Todos os líderes da comunidade são obrigados a respeitar a privacidade e a
-segurança de quem reporta qualquer incidente.
+All community leaders are obligated to respect the privacy and security of
+those who report any incident.
 
-## Diretrizes de Aplicação
+## Enforcement Guidelines
 
-Os líderes da comunidade seguirão estas Diretrizes de Impacto na Comunidade ao
-determinar as consequências para qualquer ação em violação deste Código de
-Conduta:
+Community leaders will follow these Community Impact Guidelines in
+determining the consequences for any action in violation of this Code of
+Conduct:
 
-### 1. Correção
+### 1. Correction
 
-**Impacto na Comunidade**: Uso de linguagem inadequada ou outro comportamento
-considerado não profissional ou indesejado na comunidade.
+**Community Impact**: Use of inappropriate language or other behavior
+considered unprofessional or unwelcome in the community.
 
-**Consequência**: Uma advertência privada e por escrito dos líderes da
-comunidade, com clareza sobre a natureza da violação e uma explicação do porquê
-o comportamento foi inadequado. Pode ser solicitada uma desculpa pública.
+**Consequence**: A private, written warning from community
+leaders, with clarity about the nature of the violation and an explanation of why
+the behavior was inappropriate. A public apology may be requested.
 
-### 2. Advertência
+### 2. Warning
 
-**Impacto na Comunidade**: Uma violação por meio de um único incidente ou de uma
-série de ações.
+**Community Impact**: A violation through a single incident or a
+series of actions.
 
-**Consequência**: Uma advertência com consequências para comportamento
-continuado. Nenhuma interação com as pessoas envolvidas, incluindo interação
-não solicitada com quem aplica o Código de Conduta, por um período determinado.
-Isso inclui evitar interações em espaços da comunidade e também em canais
-externos como redes sociais. Violar esses termos pode levar a uma suspensão
-temporária ou permanente.
+**Consequence**: A warning with consequences for continued behavior. No
+interaction with the people involved, including unsolicited interaction with
+those enforcing the Code of Conduct, for a specified period of time.
+This includes avoiding interactions in community spaces and also in external
+channels such as social media. Violating these terms may lead to a temporary
+or permanent suspension.
 
-### 3. Suspensão Temporária
+### 3. Temporary Suspension
 
-**Impacto na Comunidade**: Uma violação grave dos padrões da comunidade,
-incluindo comportamento inadequado contínuo.
+**Community Impact**: A serious violation of community standards,
+including sustained inappropriate behavior.
 
-**Consequência**: Uma suspensão temporária de qualquer tipo de interação ou
-comunicação pública com a comunidade por um período determinado. Nenhuma
-interação pública ou privada com as pessoas envolvidas, incluindo interação não
-solicitada com quem aplica o Código de Conduta, é permitida durante esse
-período. Violar esses termos pode levar a uma suspensão permanente.
+**Consequence**: A temporary suspension from any kind of public interaction or
+communication with the community for a specified period of time. No public or
+private interaction with the people involved, including unsolicited interaction
+with those enforcing the Code of Conduct, is allowed during that
+period. Violating these terms may lead to a permanent suspension.
 
-### 4. Suspensão Permanente
+### 4. Permanent Suspension
 
-**Impacto na Comunidade**: Demonstração de um padrão de violação dos padrões da
-comunidade, incluindo comportamento inadequado continuado, assédio a um
-indivíduo, ou agressão ou depreciação de classes de indivíduos.
+**Community Impact**: Demonstrating a pattern of violation of community
+standards, including sustained inappropriate behavior, harassment of an
+individual, or aggression toward or disparagement of classes of individuals.
 
-**Consequência**: Uma suspensão permanente de qualquer tipo de interação pública
-dentro da comunidade.
+**Consequence**: A permanent suspension from any kind of public interaction
+within the community.
 
-## Atribuição
+## Attribution
 
-Este Código de Conduta é adaptado do [Contributor Covenant][homepage],
-versão 2.0, disponível em
+This Code of Conduct is adapted from the [Contributor Covenant][homepage],
+version 2.0, available at
 https://www.contributor-covenant.org/version/2/0/code_of_conduct.html.
 
-As Diretrizes de Impacto na Comunidade foram inspiradas na [escada de aplicação
-do código de conduta da Mozilla](https://github.com/mozilla/diversity).
+The Community Impact Guidelines were inspired by [Mozilla's code of conduct
+enforcement ladder](https://github.com/mozilla/diversity).
 
 [homepage]: https://www.contributor-covenant.org
 
-Para respostas a dúvidas comuns sobre este código de conduta, veja o FAQ em
-https://www.contributor-covenant.org/faq. Traduções estão disponíveis em
+For answers to common questions about this code of conduct, see the FAQ at
+https://www.contributor-covenant.org/faq. Translations are available at
 https://www.contributor-covenant.org/translations.

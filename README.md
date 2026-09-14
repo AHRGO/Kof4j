@@ -1,77 +1,79 @@
+[English](README.md) | [Português](README.pt_BR.md)
+
 # Kof
 
 <p align="center">
   <img src="kof.png" alt="Kof Logo" width="200">
 </p>
 
-### Uma linguagem. Um compilador. Vários mundos.
-se pronuncia coffe
+### One language. One compiler. Many worlds.
+pronounced coffe
 
-**Menos código. Mais intenção. JVM, nativo, script e web. Tudo partindo da mesma linguagem.**
+**Less code. More intention. JVM, native, script and web. All starting from the same language.**
 
 ---
 
-## Mascote
+## Mascot
 
 <p align="center">
-  <img src="kof_mascot.png" alt="Mascote da Kof — uma civetta" width="300">
+  <img src="kof_mascot.png" alt="Kof mascot — a civetta" width="300">
 </p>
 
-O mascote da Kof é uma **civetta** — também conhecida como **gato do almiscar**,
-é um felino que come café. Nada mais adequado para uma linguagem que se pronuncia
-*coffe*.
+Kof's mascot is a **civetta** — also known as the **musk cat**,
+it is a feline that eats coffee. Nothing more fitting for a language
+pronounced *coffe*.
 
 ---
 
 ## Disclaimer
 
-A linguagem Kof não possui qualquer relação com o jogo The King of Fighters ou com sua franquia.
+The Kof language has no relationship whatsoever with the game The King of Fighters or its franchise.
 
-O nome Kof surgiu como uma referência à palavra "coffee" escrita propositalmente de forma incorreta. A escolha foi feita justamente na tentativa de criar um nome curto, único e facilmente identificável para a linguagem.
+The name Kof came about as a reference to the word "coffee" deliberately spelled incorrectly. The choice was made precisely in an attempt to create a short, unique and easily identifiable name for the language.
 
-Koflang e Kof4J não compactuam com a associação do nome à franquia The King of Fighters. Qualquer semelhança ou associação feita nesse sentido é incidental e não representa a origem, o propósito ou a identidade dos projetos.
+Koflang and Kof4J do not endorse the association of the name with the The King of Fighters franchise. Any similarity or association made in that sense is incidental and does not represent the origin, purpose or identity of the projects.
 
-Nosso objetivo sempre foi criar uma identidade própria para a linguagem e seus componentes.
-
----
-
-> Algumas pessoas olham para um problema e escrevem uma biblioteca.
->
-> Outras escrevem um framework.
->
-> Algumas criam uma ferramenta.
->
-> Eu aparentemente olhei para o ecossistema inteiro e pensei:
->
-> **"Tá tudo complicado demais. Vou criar uma linguagem."**
->
-> E, aparentemente, uma linguagem só também não era suficiente.
-
-Bem-vinda à **Kof**.
+Our goal has always been to create a unique identity for the language and its components.
 
 ---
 
-# O que é Kof?
+> Some people look at a problem and write a library.
+>
+> Others write a framework.
+>
+> Some create a tool.
+>
+> I apparently looked at the entire ecosystem and thought:
+>
+> **"This is all too complicated. I'm going to create a language."**
+>
+> And, apparently, a language alone wasn't enough either.
 
-Kof é uma linguagem de programação **geral e estaticamente tipada**, construída com uma ideia central:
+Welcome to **Kof**.
 
-> **Uma única linguagem não deveria obrigar você a escolher um único mundo.**
+---
 
-> 📖 **A especificação formal da linguagem** (gramática, sistema de tipos,
-> semântica, status de cada feature) está em
-> [`docs/language-reference/`](docs/language-reference/). A arquitetura do
-> compilador (implementação) está em
-> [`docs/architecture/compiler-architecture.md`](docs/architecture/compiler-architecture.md). A
-> distinção **linguagem ≠ compilador ≠ target** é o eixo desses documentos.
+# What is Kof?
 
-Kof possui seu próprio compilador, lexer, parser, sistema de tipos, análise semântica e representação intermediária (Kof IR). A partir dessa IR, diferentes backends transformam o mesmo programa em diferentes formas de execução:
+Kof is a **general-purpose, statically typed** programming language, built around one central idea:
+
+> **A single language should not force you to choose a single world.**
+
+> 📖 **The formal language specification** (grammar, type system,
+> semantics, status of each feature) is in
+> [`docs/language-reference/`](docs/language-reference/). The compiler
+> architecture (implementation) is in
+> [`docs/architecture/compiler-architecture.md`](docs/architecture/compiler-architecture.md). The
+> distinction **language ≠ compiler ≠ target** is the axis of those documents.
+
+Kof has its own compiler, lexer, parser, type system, semantic analysis and intermediate representation (Kof IR). From that IR, different backends turn the same program into different forms of execution:
 
 ```text
-            Linguagem Kof  (definida pela especificação)
+            Kof Language  (defined by the specification)
                           │
-                    Kof Compiler  (uma implementação)
+                    Kof Compiler  (one implementation)
                           │
-                       Kof IR  (máquina de pilha linear, 30 ops)
+                       Kof IR  (linear stack machine, 30 ops)
                           │
           ┌───────────────┼────────────────┐
           │               │                │
@@ -83,116 +85,117 @@ Kof possui seu próprio compilador, lexer, parser, sistema de tipos, análise se
                       riscv64/aarch64)    browser)
 ```
 
-**A linguagem não muda. O target muda.** JVM, Native e JS são *targets de
-compilação* da mesma Kof — não dialetos semanticamente diferentes. **KofScript**
-(`.ks`, REPL) é um *target de execução direta*: Kof puro consumindo o MESMO
-frontend e executado pelo interpretador da IR, sem compilar e sem fork de JVM —
-**não é JavaScript** (`let`/`const`/`async`/`fn` não existem). KofC é uma
-ferramenta separada (subconjunto C → ELF), não consome a IR Kof — ver
+**The language does not change. The target changes.** JVM, Native and JS are
+*compilation targets* of the same Kof — not semantically different dialects.
+**KofScript** (`.ks`, REPL) is a *direct execution target*: pure Kof consuming
+the SAME frontend and executed by the IR interpreter, without compiling and
+without a JVM fork — **it is not JavaScript** (`let`/`const`/`async`/`fn` do
+not exist). KofC is a separate tool (C subset → ELF), it does not consume the
+Kof IR — see
 [docs/architecture/compiler-architecture.md](docs/architecture/compiler-architecture.md) §7.)
 
 ---
 
-# Kof não é um transpiler
+# Kof is not a transpiler
 
-Kof não funciona assim:
+Kof does not work like this:
 
 ```text
 Kof → Java → javac → JVM
 ```
 
-Funciona assim:
+It works like this:
 
 ```text
 Kof → Kof Compiler → Kof IR → Backend → Target
 ```
 
-O compilador possui sua própria implementação de:
+The compiler has its own implementation of:
 
 * lexer
 * parser
 * AST
-* resolução de símbolos
-* sistema de tipos
-* análise semântica
+* symbol resolution
+* type system
+* semantic analysis
 * IR
 * diagnostics
-* geração de código
+* code generation
 
-Kof não depende de Java como linguagem intermediária.
+Kof does not depend on Java as an intermediate language.
 
 ---
 
-# Estado Atual
+# Current State
 
-Kof está em desenvolvimento ativo — **0.3.0-beta**.
+Kof is in active development — **0.3.0-beta**.
 
-O compilador possui frontend próprio, type system, Kof IR e **três backends
-sobre a IR**, que produzem **seis targets**: JVM (V21 via ASM), Native x86_64
-(ELF, sem libc), `native.risc`/`native.arm` (riscv64 real + aarch64 via
-tradutor ISA), KofJS (ES Modules) e Android (variante do JVM + empacotamento
-APK). **KofScript** (`.ks`, REPL) é um **target de execução direta**: Kof puro
-no MESMO frontend, executado pelo interpretador da IR (`KofInterpreter`) sem
-emitir bytecode nem fork de JVM. **KofC** (subconjunto C → nativo) é uma
-ferramenta separada, não consome a IR Kof — ver
+The compiler has its own frontend, type system, Kof IR and **three backends
+over the IR**, which produce **six targets**: JVM (V21 via ASM), Native x86_64
+(ELF, no libc), `native.risc`/`native.arm` (real riscv64 + aarch64 via
+ISA translator), KofJS (ES Modules) and Android (JVM variant + APK packaging).
+**KofScript** (`.ks`, REPL) is a **direct execution target**: pure Kof
+on the SAME frontend, executed by the IR interpreter (`KofInterpreter`) without
+emitting bytecode or a JVM fork. **KofC** (C subset → native) is a separate
+tool, it does not consume the Kof IR — see
 [docs/architecture/compiler-architecture.md](docs/architecture/compiler-architecture.md) §7.
 
 | Feature | JVM | Native | KofJS |
 |---------|-----|--------|-------|
-| println, variáveis, aritmética | ✅ | ✅ | ✅ |
+| println, variables, arithmetic | ✅ | ✅ | ✅ |
 | if/else, if-expr, while, for, for-in, switch | ✅ | ✅ | ✅ |
-| functions (sem `fun`), lambdas com capturas | ✅ | ✅ | ✅ |
-| records, classes, herança, interfaces, virtual dispatch | ✅ | ✅ | ✅ |
-| generics (erasure), `Box<T>` com primitivos | ✅ | ✅ | ✅ |
+| functions (without `fun`), lambdas with captures | ✅ | ✅ | ✅ |
+| records, classes, inheritance, interfaces, virtual dispatch | ✅ | ✅ | ✅ |
+| generics (erasure), `Box<T>` with primitives | ✅ | ✅ | ✅ |
 | exceptions (throw "msg", try/catch/finally) | ✅ | ✅ | ✅ |
 | null safety `String?` + narrowing | ✅ | ✅ | ✅ |
 | pattern matching `case String s` + record destructuring | ✅ | ✅ | ✅ |
-| spawn/await (`Handle<T>`, unboxing) | ✅ | ✅ (pthread) | ✅ sequencial |
-| strings (concat `+`, `==`, API completa) | ✅ | ✅ | ✅ |
+| spawn/await (`Handle<T>`, unboxing) | ✅ | ✅ (pthread) | ✅ sequential |
+| strings (concat `+`, `==`, full API) | ✅ | ✅ | ✅ |
 | arrays, `List<T>`/`Map<K,V>`/`Set<T>` + map/filter/reduce | ✅ | ✅ | ✅ |
-| enums + switch exaustivo | ✅ | ✅ | ✅ |
-| JSON encode/decode (objetos/records/arrays, 3 targets) | ✅ | ✅ | ✅ |
+| enums + exhaustive switch | ✅ | ✅ | ✅ |
+| JSON encode/decode (objects/records/arrays, 3 targets) | ✅ | ✅ | ✅ |
 | kof.io (File, Path, Directory) | ✅ | ✅ | ✅ |
 | kof.time (`now`/`sleep`/`interval`), kof.cache | ✅ | ✅ | ✅ |
 | kof.web (`web.app()`, ws, sse, TLS) | ✅ | WEB002 | WEB001 |
 | kof.http client + retry/circuit | ✅ | HTTP002 | ✅ |
 | kof.security (passwords, crypto, jwt, secrets, auth) | ✅ | ✅ | ✅ |
-| kof.db / kof.orm (SQLite nativo, MySQL WIP, MongoDB) | ✅ | ✅ | DB001/ORM001 |
+| kof.db / kof.orm (native SQLite, MySQL WIP, MongoDB) | ✅ | ✅ | DB001/ORM001 |
 | kof.config / kof.log | ✅ | ✅ | CONF001/LOG001 |
 | kof.ui (Color, Palette, Theme, widgets) | no-op | no-op | ✅ render |
 
-**Concorrência**: `spawn tarefa()` / `val r = spawn f(); await r` — virtual
-threads na JVM, `pthread_create` no Native (CONC001 fechado 31/08), sequencial
-no JS (CONC003). Ver [docs/language-reference/concurrency.md](docs/language-reference/concurrency.md).
+**Concurrency**: `spawn task()` / `val r = spawn f(); await r` — virtual
+threads on the JVM, `pthread_create` on Native (CONC001 closed 31/08),
+sequential on JS (CONC003). See [docs/language-reference/concurrency.md](docs/language-reference/concurrency.md).
 
-**Null safety**: `String?`/`Int?` + `if (x != null)` narrowing nos 3 targets
-(fix JVM 02/09). `Map.get` devolve `V?` para valores de referência.
+**Null safety**: `String?`/`Int?` + `if (x != null)` narrowing on the 3 targets
+(JVM fix 02/09). `Map.get` returns `V?` for reference values.
 
-**Testes**: `test "nome" { }` + `assert(cond, "msg")` + `kof test` — 810 testes
-(793 kof-compiler + 8 kof-script + 5 kof-c-compiler + 4 kof-cli). Ver
+**Tests**: `test "name" { }` + `assert(cond, "msg")` + `kof test` — 810 tests
+(793 kof-compiler + 8 kof-script + 5 kof-c-compiler + 4 kof-cli). See
 [learn/23-testing.md](learn/23-testing.md).
 
-**Depuração**: `kof debug <file.kf>` — servidor DAP sobre stdio com JDWP cru
-(breakpoints por linha Kof, call stack com funções/linhas Kof, continue,
-disconnect). Ver [docs/debugging/debugging.md](docs/debugging/debugging.md).
+**Debugging**: `kof debug <file.kf>` — DAP server over stdio with raw JDWP
+(breakpoints by Kof line, call stack with Kof functions/lines, continue,
+disconnect). See [docs/debugging/debugging.md](docs/debugging/debugging.md).
 
-**Auditoria do ecossistema**: matriz de cobertura da stdlib (inventário,
-gaps G1-G12, prioridade e estratégia) em
-[docs/bugs-and-gaps/ecosystem-coverage.md](docs/bugs-and-gaps/ecosystem-coverage.md). Plano de evolução
-para plataforma completa: [docs/development/roadmap.md](docs/development/roadmap.md).
+**Ecosystem audit**: stdlib coverage matrix (inventory,
+gaps G1-G12, priority and strategy) in
+[docs/bugs-and-gaps/ecosystem-coverage.md](docs/bugs-and-gaps/ecosystem-coverage.md). Evolution plan
+toward a complete platform: [docs/development/roadmap.md](docs/development/roadmap.md).
 
 ---
 
-# kof.ui — A plataforma de UI
+# kof.ui — The UI platform
 
-A fundação da UI do Kof: `Color` (RGBA 32-bit), `Palette` (cores nomeadas)
-e `Theme` (light/dark com cores semânticas) — mesma semântica em JVM,
-Native e JS. A renderização é **KofJS**: widgets → DOM real no webview
-nativo (`bin/kof-webview`, WebKitGTK embutido) ou no browser.
+Kof's UI foundation: `Color` (32-bit RGBA), `Palette` (named colors)
+and `Theme` (light/dark with semantic colors) — same semantics on JVM,
+Native and JS. Rendering is **KofJS**: widgets → real DOM in the native
+webview (`bin/kof-webview`, embedded WebKitGTK) or in the browser.
 
-Widgets: `Window` (título, bind, show/close, size, theme), `Label` (text,
-fontSize, bold, color), `Button` (texto + ação por lambda com capturas),
-`Input` (text), containers `Column`/`Row`, `View`+`Style` (background,
+Widgets: `Window` (title, bind, show/close, size, theme), `Label` (text,
+fontSize, bold, color), `Button` (text + action via lambda with captures),
+`Input` (text), `Column`/`Row` containers, `View`+`Style` (background,
 padding, radius).
 
 ```kof
@@ -213,31 +216,31 @@ main() {
 ```
 
 ```bash
-kof run contador.kf --target=js   # abre a janela; fechar encerra o programa
+kof run contador.kf --target=js   # opens the window; closing ends the program
 ```
 
-Ver: [learn/35-kof-ui.md](learn/35-kof-ui.md) e
+See: [learn/35-kof-ui.md](learn/35-kof-ui.md) and
 [learn/37-kofjs.md](learn/37-kofjs.md).
 
 ---
 
-# Documentação — onde procurar o quê
+# Documentation — where to look for what
 
-| Pasta | Para quem | O que contém |
+| Folder | For whom | What it contains |
 |-------|-----------|--------------|
-| [`docs/`](docs/) | arquitetos, mantenedores, decisões | **Documentação técnica e de projeto**: estado atual (`status.md`, `backend-parity.md`; snapshots em `history/`), arquitetura (`architecture/`), filosofia (`philosophy.md`), stdlib e áreas (`stdlib/` — inclui segurança, http, web, config, database, logging, observabilidade), concorrência (`language-reference/`), linguagem (`language-reference/`), depuração (`debugging/`), comparação (`comparison/`), runtime (`runtime/`), roadmap (`development/roadmap.md`), targets (`targets/`), UI (`ui/`), distribuição e licença (`distribution/`), decisões de design consolidadas (`decisions/`), ferramentas (`tooling/`), visões futuras (`development/future/`) e auditorias (`development/ecosystem-coverage.md`, `architecture/complexity-audit.md`) |
-| [`learn/`](learn/README.md) | humanos aprendendo Kof | **Trilha de aprendizado em capítulos numerados** (00 Introdução → 39 stdlib): linguagem, classes, funções, lambdas, UI, segurança — cada capítulo um guia prático; `learn/native/` para o alvo nativo |
-| [`training/`](training/README.md) | LLMs e ferramentas de IA | **Corpus estruturado otimizado para modelos de linguagem**: fatos por tópico (`language/`), idiomas (`idioms/`), padrões/anti-padrões (`patterns/`, `anti-patterns/`), exemplos compiláveis (`examples/`), referência (`reference/`), migração Java→Kof (`migration/`), tooling e releases |
+| [`docs/`](docs/) | architects, maintainers, decisions | **Technical and project documentation**: current state (`status.md`, `backend-parity.md`; snapshots in `history/`), architecture (`architecture/`), philosophy (`philosophy.md`), stdlib and areas (`stdlib/` — includes security, http, web, config, database, logging, observability), concurrency (`language-reference/`), language (`language-reference/`), debugging (`debugging/`), comparison (`comparison/`), runtime (`runtime/`), roadmap (`development/roadmap.md`), targets (`targets/`), UI (`ui/`), distribution and license (`distribution/`), consolidated design decisions (`decisions/`), tooling (`tooling/`), future visions (`development/future/`) and audits (`development/ecosystem-coverage.md`, `architecture/complexity-audit.md`) |
+| [`learn/`](learn/README.md) | humans learning Kof | **Learning track in numbered chapters** (00 Introduction → 39 stdlib): language, classes, functions, lambdas, UI, security — each chapter a hands-on guide; `learn/native/` for the native target |
+| [`training/`](training/README.md) | LLMs and AI tools | **Structured corpus optimized for language models**: facts by topic (`language/`), idioms (`idioms/`), patterns/anti-patterns (`patterns/`, `anti-patterns/`), compilable examples (`examples/`), reference (`reference/`), Java→Kof migration (`migration/`), tooling and releases |
 
-**Regra prática**: `docs/` diz *como o Kof é* (estado e arquitetura);
-`learn/` ensina *como usar o Kof* (passo a passo); `training/` alimenta
-*quem gera código Kof* (LLMs).
+**Rule of thumb**: `docs/` says *how Kof is* (state and architecture);
+`learn/` teaches *how to use Kof* (step by step); `training/` feeds
+*those who generate Kof code* (LLMs).
 
 ---
 
-# kof.web — Stack Web Nativa
+# kof.web — Native Web Stack
 
-Aplicações web sem Spring, sem servlet container, sem annotations:
+Web applications without Spring, without a servlet container, without annotations:
 
 ```kof
 record User(String name, Int age)
@@ -273,14 +276,14 @@ main() {
 kof serve app.kf
 ```
 
-Path params, query, headers, body, middleware, JSON tipado e servidor HTTP
-embutido no runtime do programa. Ver: [docs/stdlib/stdlib-web.md](docs/stdlib/stdlib-web.md).
+Path params, query, headers, body, middleware, typed JSON and an HTTP server
+embedded in the program's runtime. See: [docs/stdlib/stdlib-web.md](docs/stdlib/stdlib-web.md).
 
 ---
 
 # kof.io — Filesystem
 
-Arquivos, diretórios e caminhos com uma API única em todos os targets:
+Files, directories and paths with a single API across all targets:
 
 ```kof
 var path = Path("data/users.txt")
@@ -298,22 +301,22 @@ for (var entry in dir.list()) {
 }
 ```
 
-Texto sempre UTF-8; bytes como `Int[]`; ausência como `String?` (`null`) e
-`size()` lança em vez de sentinela `-1`. Ver: [learn/34-file-system.md](learn/34-file-system.md) e
+Text always UTF-8; bytes as `Int[]`; absence as `String?` (`null`) and
+`size()` throws instead of a `-1` sentinel. See: [learn/34-file-system.md](learn/34-file-system.md) and
 [docs/stdlib/IO.md](docs/stdlib/IO.md).
 
 ---
 
-# Instalação
+# Installation
 
-Kof é uma **distribuição**: instale e receba compilador, CLI, runtime,
-stdlib, tooling, editor support e um OpenJDK embutido. **Nenhuma instalação
-externa de Java é necessária** — e não precisa saber a versão para instalar.
+Kof is a **distribution**: install it and get the compiler, CLI, runtime,
+stdlib, tooling, editor support and an embedded OpenJDK. **No external
+Java installation is required** — and you don't need to know the version to install.
 
-1. Baixe o pacote do **seu** sistema em
+1. Download the package for **your** system from
    [GitHub Releases](https://github.com/KofLang/Kof4j/releases/latest):
    `linux-x86_64.tar.gz` / `macos-arm64.tar.gz` / `windows-x86_64.zip`.
-2. Extraia e adicione o `bin` ao `PATH`:
+2. Extract it and add `bin` to `PATH`:
 
 ```bash
 # Linux
@@ -330,15 +333,15 @@ $DIR = (Get-ChildItem -Directory -Filter "kof-*-windows-x86_64" | Select-Object 
 $env:PATH = "$DIR\bin;$env:PATH"
 ```
 
-3. Confira:
+3. Check it:
 
 ```bash
-kof version   # kof <versão da release>
-kof info      # ambiente completo (JVM embutida, Tooling API 21, targets)
+kof version   # kof <release version>
+kof info      # full environment (embedded JVM, Tooling API 21, targets)
 ```
 
-Ver: [docs/distribution/INSTALL.md](docs/distribution/INSTALL.md) (guia
-completo com cada sistema, checksum e solução de problemas) e
+See: [docs/distribution/INSTALL.md](docs/distribution/INSTALL.md) (complete
+guide with each system, checksum and troubleshooting) and
 [docs/distribution/ARCHITECTURE.md](docs/distribution/ARCHITECTURE.md).
 
 ---
@@ -356,58 +359,57 @@ kof bench | profile | inspect | debug
 kof info | lsp | install | version
 ```
 
-`kof fmt` (formatter idempotente) e `kof config gen` implementados — ver
+`kof fmt` (idempotent formatter) and `kof config gen` implemented — see
 [docs/tooling/README.md](docs/tooling/README.md).
 
 ---
 
 ---
 
-# Compilando e instalando a partir do source
+# Building and installing from source
 
-**Requisitos:** JDK 21+ (Temurin recomendado — é a Tooling API baseline) e
-Maven 3.9+. Para o target `native`: `as`/`ld` (binutils). O target `js` não
-exige nada externo (GraalJS embarcado no jar).
+**Requirements:** JDK 21+ (Temurin recommended — it is the Tooling API baseline) and
+Maven 3.9+. For the `native` target: `as`/`ld` (binutils). The `js` target
+requires nothing external (GraalJS embedded in the jar).
 
 ```bash
-# 1. Compilar tudo (compilador, runtime, CLI com GraalJS embarcado)
+# 1. Build everything (compiler, runtime, CLI with embedded GraalJS)
 mvn clean package -DskipTests
 
-# 2. Rodar a suíte completa (JVM + Native + KofJS E2E)
+# 2. Run the full suite (JVM + Native + KofJS E2E)
 mvn test
 
-# 3. Usar direto do source (dev build, java do sistema)
+# 3. Use straight from source (dev build, system java)
 mkdir -p lib
 cp kof-cli/target/kof-cli-$(cat VERSION).jar lib/kof.jar
 bin/kof version
 bin/kof info
 
-# 4. Instalar num prefixo (instalação local completa)
+# 4. Install into a prefix (full local installation)
 bin/kof install ~/.kof
 export PATH="$HOME/.kof/bin:$PATH"
 kof version
 
-# 5. Empacotar a distribuição oficial (com OpenJDK 21 embutido)
-scripts/package.sh --jdk      # gera dist/kof-<versão>-<os>-<arch>.tar.gz
+# 5. Package the official distribution (with embedded OpenJDK 21)
+scripts/package.sh --jdk      # generates dist/kof-<version>-<os>-<arch>.tar.gz
 ```
 
-O `kof install <dir>` copia o `kof.jar` para `<dir>/lib/` e gera o launcher
-`<dir>/bin/kof` (usa o JDK embutido de `<dir>/jdk/` quando presente; senão o
-`java` do sistema). O `scripts/package.sh --jdk` baixa o Temurin 21 do
-Adoptium e monta o layout completo de distribuição.
+`kof install <dir>` copies `kof.jar` to `<dir>/lib/` and generates the launcher
+`<dir>/bin/kof` (it uses the embedded JDK from `<dir>/jdk/` when present; otherwise the
+system `java`). `scripts/package.sh --jdk` downloads Temurin 21 from
+Adoptium and assembles the complete distribution layout.
 
-Versionamento centralizado em `VERSION` — ver
+Versioning centralized in `VERSION` — see
 [docs/distribution/VERSIONING.md](docs/distribution/VERSIONING.md).
 
-**Windows:** use o **Git Bash** para `scripts/package.sh` — o `bash`
-genérico do PATH pode resolver para o WSL e gerar uma distribuição Linux
-(OBS-005). No Windows, o Python pode estar disponível apenas como o
-launcher `py` — o script o descobre automaticamente (`python3`/`python`/
-`py -3`).
+**Windows:** use **Git Bash** for `scripts/package.sh` — the generic `bash`
+in `PATH` may resolve to WSL and generate a Linux distribution
+(OBS-005). On Windows, Python may only be available as the launcher `py` —
+the script discovers it automatically (`python3`/`python`/`py -3`).
 
 ---
 
-# Arquitetura
+# Architecture
 
 ```text
 Source (.kf)
@@ -424,74 +426,74 @@ Source (.kf)
 
 ---
 
-# Princípios
+# Principles
 
-1. Menos código, mesma capacidade
-2. Tipagem forte
-3. Intenção acima de cerimônia
-4. Um frontend, múltiplos backends
-5. Direto para o target
-6. Interoperabilidade
-7. Sem mágica desnecessária
-8. Ferramentas importam
+1. Less code, same capability
+2. Strong typing
+3. Intention over ceremony
+4. One frontend, multiple backends
+5. Straight to the target
+6. Interoperability
+7. No unnecessary magic
+8. Tools matter
 
-## O "paradigma" da intenção
+## The "paradigm" of intention
 
-Kof é **orientada à intenção** — o que não é um paradigma formal, e sim a
-orientação a objetos levada ao extremo: o código expressa *o que* quer, e a
-plataforma (linguagem + compilador + runtime + stdlib) decide *como*, por
-target e por convenção.
+Kof is **intention-oriented** — which is not a formal paradigm, but rather
+object orientation taken to the extreme: the code expresses *what* it wants, and
+the platform (language + compiler + runtime + stdlib) decides *how*, per
+target and per convention.
 
 ```text
-intenção → Kof → compilador → backend
+intention → Kof → compiler → backend
 ```
 
-Você escreve `spawn tarefa()` (não `Thread`), `app.get("/users/:id")` (não
-servlet container), `Window`/`Button("+1", () -> ...)` (não WebView/JavaFX),
-`json.decode<User>(body)` (não parser manual), `Palette.red` (não
-`0xFF0000FF`). Se é essencial para qualquer programa, pertence à plataforma.
+You write `spawn task()` (not `Thread`), `app.get("/users/:id")` (not a
+servlet container), `Window`/`Button("+1", () -> ...)` (not WebView/JavaFX),
+`json.decode<User>(body)` (not a manual parser), `Palette.red` (not
+`0xFF0000FF`). If it is essential to any program, it belongs to the platform.
 
-Quando um target não consegue realizar a intenção, ele diz isso em
-compile-time com um código de gap (`CONC001`, `JSN002`, ...) — nunca
-silenciosamente.
+When a target cannot fulfill the intention, it says so at
+compile-time with a gap code (`CONC001`, `JSN002`, ...) — never
+silently.
 
-Detalhes: [docs/philosophy.md](docs/philosophy.md) · idiomas:
-[training/idioms/](training/idioms/) · anti-padrões:
+Details: [docs/philosophy.md](docs/philosophy.md) · idioms:
+[training/idioms/](training/idioms/) · anti-patterns:
 [training/anti-patterns/](training/anti-patterns/).
 
 ---
 
-# O que Kof NÃO é
+# What Kof is NOT
 
-* Java com outra sintaxe.
+* Java with another syntax.
 * Kotlin 2.
-* Julia para JVM.
-* Um transpiler.
-* Um gerador de Java.
-* Um interpretador fantasiado de compilador (o compilador é real: bytecode/ELF/ESM; o `KofInterpreter` é um target adicional de execução direta, não um disfarce).
+* Julia for the JVM.
+* A transpiler.
+* A Java generator.
+* An interpreter disguised as a compiler (the compiler is real: bytecode/ELF/ESM; `KofInterpreter` is an additional direct execution target, not a disguise).
 
-Kof é uma linguagem. Um compilador. Uma IR. Vários backends.
+Kof is a language. A compiler. An IR. Several backends.
 
 ---
 
-# Licença
+# License
 
-Kof é software livre distribuído sob a licença **GNU General Public License v3.0**.
+Kof is free software distributed under the **GNU General Public License v3.0**.
 
-Isso se aplica ao código-fonte do compilador, ferramentas e demais componentes do projeto.
+This applies to the compiler source code, tools and other project components.
 
-**Programas escritos em Kof NÃO são automaticamente GPLv3.**
+**Programs written in Kof are NOT automatically GPLv3.**
 
-O autor do programa mantém o direito de escolher a licença do próprio software. Usar o compilador Kof não obriga ninguém a abrir seu código-fonte.
+The author of a program retains the right to choose the license for their own software. Using the Kof compiler does not obligate anyone to open their source code.
 
-Software proprietário escrito em Kof é permitido, desde que respeite as licenças das dependências que efetivamente incorporar.
+Proprietary software written in Kof is allowed, as long as it respects the licenses of the dependencies it actually incorporates.
 
-Para mais detalhes, consulte [docs/distribution/LICENSING.md](docs/distribution/LICENSING.md).
+For more details, see [docs/distribution/LICENSING.md](docs/distribution/LICENSING.md).
 
 ---
 
 **Kof**
 
-*Uma linguagem. Um compilador. Vários mundos.*
+*One language. One compiler. Many worlds.*
 
-*Menos cerimônia. Mais intenção.*
+*Less ceremony. More intention.*

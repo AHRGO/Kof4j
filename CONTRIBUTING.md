@@ -1,180 +1,182 @@
-# 30 — Contribuindo
+[English](CONTRIBUTING.md) | [Português](CONTRIBUTING.pt_BR.md)
 
-> **Kof 0.2.6-beta — 02 set 2026 — 810 testes — targets jvm/native/native.risc/native.arm/js/kofc**
+# 30 — Contributing
 
-## Estrutura do repositório
+> **Kof 0.2.6-beta — 02 Sep 2026 — 810 tests — targets jvm/native/native.risc/native.arm/js/kofc**
+
+## Repository structure
 
 ```
 kof/
-├── kof-compiler/       ← compilador core (JVM/Native/JS + KofScript/KofC)
+├── kof-compiler/       ← core compiler (JVM/Native/JS + KofScript/KofC)
 ├── kof-cli/            ← CLI (build/run/script/c/test/bench/debug)
 ├── kof-script/         ← KofScript (let→KofScriptGlobals, repl, --watch)
-├── kof-c-compiler/     ← KofC (C subset → ELF nativo-only)
-├── kof-runtime/        ← runtime nativo (free-list GC)
-├── docs/               ← documentação interna
-├── learn/              ← este material (intention->Kof->frontend->IR->backend->runtime)
-├── tests/              ← testes golden (810)
-├── pom.xml             ← build Maven (0.2.6-beta)
+├── kof-c-compiler/     ← KofC (C subset → native-only ELF)
+├── kof-runtime/        ← native runtime (free-list GC)
+├── docs/               ← internal documentation
+├── learn/              ← this material (intention->Kof->frontend->IR->backend->runtime)
+├── tests/              ← golden tests (810)
+├── pom.xml             ← Maven build (0.2.6-beta)
 └── README.md
 ```
 
-## Buildando
+## Building
 
 ```bash
 mvn clean package -DskipTests
 ```
 
-## Rodando testes
+## Running tests
 
 ```bash
 mvn test
 ```
 
-## Estrutura do compilador
+## Compiler structure
 
 ```
 kof-compiler/src/main/java/dev/kof/compiler/
 ├── KofScript.java      ← KofScript eval/runFile/repl (let→Globals)
 ├── KofCCompiler.java   ← KofC C subset → ELF
-├── KofFormatter.java   ← kof fmt (parser real, idempotente)
-├── Lexer.java          ← lexer hand-written
-├── Parser.java         ← parser recursivo descendente
-├── AstNodes.java       ← nós da AST
-├── SemanticAnalyzer.java ← análise semântica/type checking
-├── Type.java           ← sistema de tipos
-├── SymbolTable.java    ← tabela de símbolos
-├── IRNodes.java        ← operações IR
-├── Optimizer.java      ← passes de otimização da IR (sempre ativos)
-├── CompilerDriver.java ← orquestrador
-├── Backend.java        ← interface de backend
-├── Target.java         ← enum de targets
-├── JvmBackend.java     ← geração de bytecode JVM (ASM, V21)
-├── JsBackend.java      ← geração de ES Modules (KofJS)
-├── NativeBackend.java  ← geração de assembly x86-64
-├── Kof*.java           ← namespaces stdlib (KofWeb, KofHttp, KofSecurity,
+├── KofFormatter.java   ← kof fmt (real parser, idempotent)
+├── Lexer.java          ← hand-written lexer
+├── Parser.java         ← recursive descent parser
+├── AstNodes.java       ← AST nodes
+├── SemanticAnalyzer.java ← semantic analysis/type checking
+├── Type.java           ← type system
+├── SymbolTable.java    ← symbol table
+├── IRNodes.java        ← IR operations
+├── Optimizer.java      ← IR optimization passes (always active)
+├── CompilerDriver.java ← orchestrator
+├── Backend.java        ← backend interface
+├── Target.java         ← target enum
+├── JvmBackend.java     ← JVM bytecode generation (ASM, V21)
+├── JsBackend.java      ← ES Modules generation (KofJS)
+├── NativeBackend.java  ← x86-64 assembly generation
+├── Kof*.java           ← stdlib namespaces (KofWeb, KofHttp, KofSecurity,
 │                        KofUi, KofDb, KofOrm, KofConfig, KofLog, KofCache...)
-├── JvmRuntime.java     ← runtime JVM (KofRuntime gerado)
-├── Diagnostic.java     ← diagnósticos
+├── JvmRuntime.java     ← JVM runtime (generated KofRuntime)
+├── Diagnostic.java     ← diagnostics
 ├── DiagnosticCollector.java
 ├── CompilationResult.java
-├── Token.java          ← representação de token
-├── TokenType.java      ← enum de tipos de token
-└── SourcePosition.java ← posição no código
+├── Token.java          ← token representation
+├── TokenType.java      ← token type enum
+└── SourcePosition.java ← position in the code
 ```
 
-## Como adicionar uma feature
+## How to add a feature
 
 ### 1. Lexer
 
-Se a feature precisa de uma nova keyword ou operador:
+If the feature needs a new keyword or operator:
 
-- Adicione o token em `TokenType.java`
-- Adicione o reconhecimento em `Lexer.java`
+- Add the token in `TokenType.java`
+- Add recognition in `Lexer.java`
 
 ### 2. Parser
 
-Se a feature precisa de nova sintaxe:
+If the feature needs new syntax:
 
-- Adicione o nó AST em `AstNodes.java`
-- Adicione o parsing em `Parser.java`
+- Add the AST node in `AstNodes.java`
+- Add parsing in `Parser.java`
 
 ### 3. Lowering
 
-Se a feature precisa gerar IR:
+If the feature needs to generate IR:
 
-- Adicione operações IR em `IRNodes.java` (se necessário)
-- Adicione o lowering em `CompilerDriver.java`
+- Add IR operations in `IRNodes.java` (if needed)
+- Add lowering in `CompilerDriver.java`
 
 ### 4. Backend
 
-Se a feature precisa de novas instruções:
+If the feature needs new instructions:
 
-- Para JVM: adicione o emission em `JvmBackend.java`
-- Para nativo: adicione o emission em `NativeBackend.java`
+- For JVM: add the emission in `JvmBackend.java`
+- For native: add the emission in `NativeBackend.java`
 
-### 5. Testes
+### 5. Tests
 
-- Crie um arquivo `.kf` em `tests/golden/`
-- Crie um teste shell que valide o output
+- Create a `.kf` file in `tests/golden/`
+- Create a shell test that validates the output
 
-## Como alterar o type checker
+## How to change the type checker
 
-O type checker é o `SemanticAnalyzer` (roda entre o parser e o lowering;
-erros de tipo via `DiagnosticCollector`):
+The type checker is `SemanticAnalyzer` (it runs between the parser and
+lowering; type errors via `DiagnosticCollector`):
 
-1. Adicione as regras em `SemanticAnalyzer.java`
-2. Tipos e nullability (`String?`) vivem em `Type.java`
-3. Gaps de target emitem diagnóstico claro (`HTTP002`, `WEB002`, `SECN00x`) — nunca silenciosamente
+1. Add the rules in `SemanticAnalyzer.java`
+2. Types and nullability (`String?`) live in `Type.java`
+3. Target gaps emit a clear diagnostic (`HTTP002`, `WEB002`, `SECN00x`) — never silently
 
-## Como alterar o backend JVM
+## How to change the JVM backend
 
-O backend usa ASM. Para adicionar uma nova instrução:
+The backend uses ASM. To add a new instruction:
 
-1. Defina a operação IR em `IRNodes.java`
-2. Adicione o emission em `JvmBackend.emitOperation()`
-3. Atualize `computeStack()` e `computeLocals()`
+1. Define the IR operation in `IRNodes.java`
+2. Add the emission in `JvmBackend.emitOperation()`
+3. Update `computeStack()` and `computeLocals()`
 
-## Como alterar o backend nativo
+## How to change the native backend
 
-O backend gera assembly x86-64. Para adicionar uma nova instrução:
+The backend generates x86-64 assembly. To add a new instruction:
 
-1. Defina a operação IR em `IRNodes.java`
-2. Adicione a geração de assembly em `NativeBackend.emitOperation()`
-3. Considere a calling convention System V AMD64
+1. Define the IR operation in `IRNodes.java`
+2. Add assembly generation in `NativeBackend.emitOperation()`
+3. Consider the System V AMD64 calling convention
 
-## Como criar testes golden
+## How to create golden tests
 
-1. Crie um arquivo `.kf` em `tests/golden/`
-2. O compilador deve gerar um `.class` (JVM) ou executável (nativo)
-3. Verifique com `javap -v` que o bytecode está correto (JVM)
-4. Teste que a classe carrega e executa na JVM
-5. Para nativo, teste que o executável roda e produz o output esperado
+1. Create a `.kf` file in `tests/golden/`
+2. The compiler must generate a `.class` (JVM) or an executable (native)
+3. Verify with `javap -v` that the bytecode is correct (JVM)
+4. Test that the class loads and runs on the JVM
+5. For native, test that the executable runs and produces the expected output
 
-## Como atualizar documentação
+## How to update documentation
 
-Sempre que uma feature mudar:
+Whenever a feature changes:
 
-1. Verifique se `/learn` precisa ser atualizado
-2. Verifique se `docs/` precisa ser atualizado
-3. Mantenha a documentação sincronizada com o código
+1. Check whether `/learn` needs to be updated
+2. Check whether `docs/` needs to be updated
+3. Keep the documentation in sync with the code
 
-## Regras para pull requests
+## Rules for pull requests
 
-1. Uma feature por PR
-2. Testes para cada feature
-3. Documentação atualizada
-4. Sem comentários no código
-5. Código que compila sem warnings
+1. One feature per PR
+2. Tests for each feature
+3. Updated documentation
+4. No comments in the code
+5. Code that compiles without warnings
 
-## Estado atual do projeto
+## Current state of the project
 
-O projeto está em 0.2.6-beta (810 testes), funcional:
+The project is at 0.2.6-beta (810 tests), functional:
 
-**Funciona hoje:**
-- Frontend completo: lexer, parser, `SemanticAnalyzer` (type checking + nullability `String?`)
-- Records, classes e interfaces + generics (erasure) + `map/filter/reduce` + `Map/Set` + exceptions reais (JVM + Native unwinding)
-- Funções com `main()`, lambdas com capturas, `spawn`/`await` (JVM virtual threads, Native pthread — 31/08)
-- Pattern matching (`case String s`, `Point(x,y)`) em JVM/Native/JS
-- CLI com 18 comandos (build, run, serve, check, test, script, repl, c, fmt, config gen, bench, profile, inspect, debug, info, lsp, install, version) — `--target=jvm|native|native.risc|native.arm|js|android`
-- Backend JVM via ASM — bytecode V21, exception table, virtual threads
-- Backend Nativo — ELF x86-64 estável (free-list GC, spawn/pthread, FP XMM, JSON completo, SQLite) + riscv64/aarch64 placeholders
+**Works today:**
+- Complete frontend: lexer, parser, `SemanticAnalyzer` (type checking + nullability `String?`)
+- Records, classes and interfaces + generics (erasure) + `map/filter/reduce` + `Map/Set` + real exceptions (JVM + Native unwinding)
+- Functions with `main()`, lambdas with captures, `spawn`/`await` (JVM virtual threads, Native pthread — 31/08)
+- Pattern matching (`case String s`, `Point(x,y)`) on JVM/Native/JS
+- CLI with 18 commands (build, run, serve, check, test, script, repl, c, fmt, config gen, bench, profile, inspect, debug, info, lsp, install, version) — `--target=jvm|native|native.risc|native.arm|js|android`
+- JVM backend via ASM — V21 bytecode, exception table, virtual threads
+- Native backend — stable x86-64 ELF (free-list GC, spawn/pthread, FP XMM, complete JSON, SQLite) + riscv64/aarch64 placeholders
 - KofJS — ES Modules via GraalJS (`kof.http` via Java HttpClient interop)
-- KofScript (`let`→`KofScriptGlobals`, repl, --watch) + KofC (`kof c` nativo-only)
+- KofScript (`let`→`KofScriptGlobals`, repl, --watch) + KofC (`kof c` native-only)
 - stdlib: kof.io, kof.web, kof.http, kof.security, kof.db, kof.orm, kof.ui, kof.config, kof.log, kof.cache, kof.mq
-- Testes: 810 (golden 16/16, integração 9/9)
+- Tests: 810 (golden 16/16, integration 9/9)
 
-**Em desenvolvimento:**
-- GC mark-sweep no Native (hoje free-list)
-- MySQL/MariaDB nativo completo (wire protocol: auth SHA-1 feito)
-- Android Fase 2+ (hoje Fase 1: projeto Maven + APK, host Activity em Kof)
-- Módulos multi-arquivo (semântica unificada residual)
-- Scheduler nativo (SCHED001)
+**In development:**
+- Mark-sweep GC in Native (today free-list)
+- Complete native MySQL/MariaDB (wire protocol: auth SHA-1 done)
+- Android Phase 2+ (today Phase 1: Maven project + APK, Activity host in Kof)
+- Multi-file modules (residual unified semantics)
+- Native scheduler (SCHED001)
 
-**Planejado:**
-- Query DSL tipada, connection pooling, ORM fora do JVM
-- Observabilidade (métricas, tracing)
-- Debugger nativo (DWARF) e JS (source maps)
+**Planned:**
+- Typed Query DSL, connection pooling, ORM outside the JVM
+- Observability (metrics, tracing)
+- Native debugger (DWARF) and JS (source maps)
 
-## Próximo passo
+## Next step
 
-[Glossário →](learn/glossary.md)
+[Glossary →](learn/glossary.md)

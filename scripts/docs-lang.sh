@@ -22,6 +22,8 @@
 #   list [--missing]     lista docs canonicos (para lotes de traducao)
 #   show <X.md>          imprime o conteudo no idioma da maquina
 #   drift                lista pares possivelmente desatualizados
+#   untranslated         lista canonicos que ainda nao receberam ingles
+#   pause | resume       pausa/retoma a sobreposicao (lotes de traducao)
 #
 set -euo pipefail
 
@@ -30,6 +32,7 @@ cd "$ROOT"
 
 PT_SUFFIX=".pt_BR.md"
 EN_SUFFIX=".md"
+PAUSE_FILE=".git/kof-i18n-pause"
 
 die() { printf 'docs-lang: %s\n' "$*" >&2; exit 1; }
 
@@ -90,12 +93,24 @@ restore_one() {
 
 cmd_apply() {
     local want="${1:-auto}"
+    [ -f "$PAUSE_FILE" ] && return 0
     [ "$want" = auto ] && want="$(detect_lang)"
     if [ "$want" = pt ]; then
         while IFS= read -r canon; do overlay_one "$canon"; done < <(pairs)
     else
         cmd_restore
     fi
+}
+
+cmd_pause() {
+    : > "$PAUSE_FILE"
+    printf 'sobreposicao i18n PAUSADA (%s)\n' "$PAUSE_FILE"
+}
+
+cmd_resume() {
+    rm -f "$PAUSE_FILE"
+    cmd_apply auto
+    printf 'sobreposicao i18n RETOMADA; idioma=%s\n' "$(detect_lang)"
 }
 
 cmd_restore() {
@@ -182,6 +197,17 @@ cmd_drift() {
     done < <(pairs)
 }
 
+# canonicos cujo X.md ainda NAO tem o seletor (ou seja, ainda esta em PT)
+cmd_untranslated() {
+    local canon
+    while IFS= read -r canon; do
+        if ! head -1 -- "$canon" 2>/dev/null | grep -q 'Portugu'; then
+            printf '%s\n' "$canon"
+        fi
+    done < <(all_canon)
+    return 0
+}
+
 cmd_install() {
     git config core.hooksPath .githooks
     chmod +x .githooks/* scripts/docs-lang.sh 2>/dev/null || true
@@ -199,5 +225,8 @@ case "${1:-status}" in
     list)     shift; cmd_list "${1:-}" ;;
     show)     shift; cmd_show "${1:-}" ;;
     drift)    cmd_drift ;;
+    untranslated) cmd_untranslated ;;
+    pause)    cmd_pause ;;
+    resume)   cmd_resume ;;
     *)        die "subcomando desconhecido: ${1:-} (use: lang|install|apply|restore|status|check|list|show|drift)" ;;
 esac

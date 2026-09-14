@@ -1,206 +1,208 @@
-# Manifesto da Filosofia Kof
+[English](PHILOSOPHY.md) | [Português](PHILOSOPHY.pt_BR.md)
+
+# Kof Philosophy Manifesto
 
 ## Koffie voor iedereen.
 
-Software deveria começar com uma intenção humana e terminar em uma máquina fazendo exatamente aquilo que foi pedido.
+Software should begin with a human intention and end with a machine doing exactly what was asked.
 
-Entre esses dois pontos existe complexidade.
+Between those two points lies complexity.
 
-Parte dela é inevitável.
+Part of it is inevitable.
 
-Grande parte, porém, é criada pelas próprias ferramentas que usamos para construir software.
+Much of it, however, is created by the very tools we use to build software.
 
-Kof nasce para questionar essa complexidade.
+Kof is born to question that complexity.
 
-Não para fingir que sistemas complexos são simples.
-Não para esconder o funcionamento da máquina.
-Não para transformar programação em mágica.
+Not to pretend that complex systems are simple.
+Not to hide how the machine works.
+Not to turn programming into magic.
 
-Kof nasce para remover aquilo que não precisa estar no caminho.
+Kof is born to remove what does not need to be in the way.
 
-**Menos complexidade acidental. Mais intenção.**
-
----
-
-## I. A intenção vem primeiro
-
-Programadores deveriam descrever o problema que estão resolvendo, não lutar contra a ferramenta para expressá-lo.
-
-A linguagem deve aproximar o código da intenção.
-
-Quando alguém lê um programa Kof, deve conseguir entender não apenas como ele funciona, mas principalmente **o que ele pretende fazer**.
-
-Boilerplate não é profundidade.
-
-Configuração não é arquitetura.
-
-Cerimônia não é engenharia.
-
-Abstração não é automaticamente qualidade.
-
-Se uma parte do código existe apenas porque a ferramenta exige que ela exista, devemos questionar sua necessidade.
+**Less accidental complexity. More intention.**
 
 ---
 
-## II. Simplicidade não significa limitação
+## I. Intention comes first
 
-Kof segue o espírito do KISS:
+Programmers should describe the problem they are solving, not fight the tool to express it.
+
+The language should bring code closer to intention.
+
+When someone reads a Kof program, they should be able to understand not only how it works, but above all **what it intends to do**.
+
+Boilerplate is not depth.
+
+Configuration is not architecture.
+
+Ceremony is not engineering.
+
+Abstraction is not automatically quality.
+
+If a piece of code exists only because the tool requires it to exist, we should question its necessity.
+
+---
+
+## II. Simplicity does not mean limitation
+
+Kof follows the spirit of KISS:
 
 **Keep It Simple.**
 
-Mas simplicidade não significa remover capacidade.
+But simplicity does not mean removing capability.
 
-Sistemas reais são complexos.
+Real systems are complex.
 
-Redes são complexas.
-Sistemas distribuídos são complexos.
-Concorrência é complexa.
-Hardware é complexo.
-Memória é complexa.
-Segurança é complexa.
+Networks are complex.
+Distributed systems are complex.
+Concurrency is complex.
+Hardware is complex.
+Memory is complex.
+Security is complex.
 
-Kof não pretende esconder essa realidade.
+Kof does not intend to hide that reality.
 
-Pretende impedir que a linguagem adicione complexidade onde o problema não adicionou nenhuma.
+It intends to prevent the language from adding complexity where the problem added none.
 
-**A complexidade deve existir porque o problema exige, não porque a ferramenta exige.**
-
----
-
-## III. A máquina importa
-
-Abstração não deve significar ignorância.
-
-Kof pode permitir que alguém escreva software em alto nível sem pensar constantemente em registradores, ponteiros, syscalls ou detalhes de uma CPU.
-
-Mas esses detalhes continuam existindo.
-
-E devem continuar acessíveis quando forem importantes.
-
-O programador deve poder subir na abstração sem perder a capacidade de descer até a máquina.
-
-Queremos uma linguagem que seja confortável para construir uma aplicação web e suficientemente próxima do sistema para construir software de baixo nível.
-
-**High-level não precisa significar alienado do hardware.**
+**Complexity should exist because the problem demands it, not because the tool demands it.**
 
 ---
 
-## IV. Pequenas coisas, bem feitas
+## III. The machine matters
 
-Kof segue o espírito do Unix:
+Abstraction should not mean ignorance.
 
-**faça uma coisa e faça bem.**
+Kof can let someone write high-level software without constantly thinking about registers, pointers, syscalls or the details of a CPU.
 
-Ferramentas devem possuir responsabilidades claras.
+But those details continue to exist.
 
-Componentes devem ser composáveis.
+And they should remain accessible when they matter.
 
-Sistemas devem ser construídos a partir de partes que possam existir independentemente.
+The programmer should be able to rise in abstraction without losing the ability to descend to the machine.
 
-Não queremos uma única abstração gigantesca que resolva tudo.
+We want a language that is comfortable for building a web application and close enough to the system to build low-level software.
 
-Queremos componentes que possam trabalhar juntos.
-
-Um compilador deve compilar.
-
-Um debugger deve depurar.
-
-Um servidor deve servir.
-
-Uma biblioteca deve resolver seu problema.
-
-E quando várias ferramentas precisam trabalhar juntas, elas devem fazê-lo sem exigir que o desenvolvedor reconstrua o mundo para conectá-las.
-
-**Composição é uma forma de simplicidade.**
+**High-level does not have to mean alienated from the hardware.**
 
 ---
 
-## V. Não existe arquitetura sagrada
+## IV. Small things, well done
 
-Kof não deve decidir pelo desenvolvedor se seu sistema precisa ser monolítico, distribuído, modular, orientado a serviços ou qualquer outra arquitetura.
+Kof follows the spirit of Unix:
 
-Um sistema pequeno pode ser um monólito.
+**do one thing and do it well.**
 
-Um sistema grande pode ser dividido.
+Tools should have clear responsibilities.
 
-Uma aplicação pode possuir frontend e backend no mesmo projeto.
+Components should be composable.
 
-Outra pode separar tudo em serviços independentes.
+Systems should be built from parts that can exist independently.
 
-A arquitetura deve responder ao problema.
+We do not want a single gigantic abstraction that solves everything.
 
-Não à moda.
+We want components that can work together.
 
-Kof fornece ferramentas para construir sistemas.
+A compiler should compile.
 
-Não uma religião arquitetural.
+A debugger should debug.
+
+A server should serve.
+
+A library should solve its problem.
+
+And when several tools need to work together, they should do so without requiring the developer to rebuild the world to connect them.
+
+**Composition is a form of simplicity.**
 
 ---
 
-## VI. A plataforma deve trabalhar para o programador
+## V. There is no sacred architecture
 
-O computador é excelente em trabalho mecânico.
+Kof should not decide for the developer whether their system needs to be monolithic, distributed, modular, service-oriented or any other architecture.
 
-Devemos utilizá-lo para isso.
+A small system can be a monolith.
 
-O programador não deveria precisar administrar manualmente cada detalhe que pode ser determinado com segurança pelo compilador, runtime ou ferramenta.
+A large system can be divided.
 
-Imports triviais.
+An application can have frontend and backend in the same project.
+
+Another can separate everything into independent services.
+
+Architecture should respond to the problem.
+
+Not to fashion.
+
+Kof provides tools for building systems.
+
+Not an architectural religion.
+
+---
+
+## VI. The platform should work for the programmer
+
+The computer is excellent at mechanical work.
+
+We should use it for that.
+
+The programmer should not have to manually manage every detail that can be safely determined by the compiler, runtime or tool.
+
+Trivial imports.
 Boilerplate.
 Wiring.
-Configuração repetitiva.
-Geração mecânica.
-Detalhes administrativos.
+Repetitive configuration.
+Mechanical generation.
+Administrative details.
 
-Quando a máquina consegue resolver algo sem comprometer clareza, segurança ou controle, **deixe a máquina fazer o trabalho.**
+When the machine can resolve something without compromising clarity, safety or control, **let the machine do the work.**
 
-Automação deve remover burocracia.
+Automation should remove bureaucracy.
 
-Não autonomia.
-
----
-
-## VII. Poder sem cerimônia
-
-Kof não busca ser poderosa adicionando milhares de conceitos.
-
-Busca ser poderosa porque seus conceitos fundamentais conseguem compor.
-
-Uma linguagem não precisa de uma solução diferente para cada problema quando possui fundamentos suficientemente bons.
-
-Queremos expressividade sem verbosidade.
-
-Flexibilidade sem caos.
-
-Abstração sem aprisionamento.
-
-Performance sem exigir que todo programa seja escrito como código de máquina.
-
-**Poder não deveria exigir cerimônia.**
+Not autonomy.
 
 ---
 
-## VIII. A stdlib deve ser grande. O programa não.
+## VII. Power without ceremony
 
-Uma linguagem útil inevitavelmente acumula ferramentas.
+Kof does not seek to be powerful by adding thousands of concepts.
 
-Kof deve possuir uma biblioteca padrão capaz de lidar com aplicações reais: rede, dados, concorrência, sistemas, automação, segurança, interfaces e outras áreas que surgirem.
+It seeks to be powerful because its fundamental concepts can compose.
 
-Mas uma stdlib grande não deve significar programas grandes.
+A language does not need a different solution for each problem when it has sufficiently good foundations.
 
-O compilador deve conhecer o que está sendo utilizado e produzir somente aquilo que é necessário.
+We want expressiveness without verbosity.
 
-O desenvolvedor não deveria precisar administrar manualmente cada dependência interna.
+Flexibility without chaos.
 
-**A plataforma pode ser enorme. O executável deve ser tão pequeno quanto o problema permitir.**
+Abstraction without imprisonment.
 
-Isso vale desde um servidor até um microcontrolador.
+Performance without requiring every program to be written as machine code.
+
+**Power should not require ceremony.**
 
 ---
 
-## IX. Um ecossistema, diferentes máquinas
+## VIII. The stdlib should be big. The program should not.
 
-A intenção de um programa não deveria estar presa a uma única plataforma quando isso não for necessário.
+A useful language inevitably accumulates tools.
+
+Kof should have a standard library capable of handling real applications: networking, data, concurrency, systems, automation, security, interfaces and other areas that arise.
+
+But a big stdlib should not mean big programs.
+
+The compiler should know what is being used and produce only what is necessary.
+
+The developer should not have to manually manage every internal dependency.
+
+**The platform can be enormous. The executable should be as small as the problem allows.**
+
+This holds from a server to a microcontroller.
+
+---
+
+## IX. One ecosystem, different machines
+
+The intention of a program should not be tied to a single platform when that is not necessary.
 
 JVM.
 
@@ -214,293 +216,293 @@ ARM.
 
 RISC-V.
 
-Outras plataformas que ainda nem existem.
+Other platforms that do not even exist yet.
 
-Kof deve buscar preservar a semântica da linguagem enquanto adapta sua execução às características de cada ambiente.
+Kof should seek to preserve the semantics of the language while adapting its execution to the characteristics of each environment.
 
-Não fingimos que todas as máquinas são iguais.
+We do not pretend that all machines are the same.
 
-Respeitamos suas diferenças.
+We respect their differences.
 
-Mas também não aceitamos que cada diferença de plataforma obrigue o desenvolvedor a reaprender a expressar a mesma intenção.
+But we also do not accept that each platform difference forces the developer to relearn how to express the same intention.
 
-**Uma intenção. Diferentes formas de execução.**
+**One intention. Different forms of execution.**
 
 ---
 
-## X. Interoperabilidade é liberdade
+## X. Interoperability is freedom
 
-Nenhuma linguagem existe sozinha.
+No language exists alone.
 
-Kof deve conversar com o mundo existente.
+Kof should converse with the existing world.
 
 Java.
 
 C.
 
-Sistemas operacionais.
+Operating systems.
 
-Bibliotecas nativas.
+Native libraries.
 
 JavaScript.
 
-Outras linguagens.
+Other languages.
 
-Outras plataformas.
+Other platforms.
 
-FFI e interoperabilidade não são concessões.
+FFI and interoperability are not concessions.
 
-São liberdade.
+They are freedom.
 
-Uma linguagem que exige abandonar tudo o que veio antes para ser utilizada está impondo seu ecossistema ao desenvolvedor.
+A language that requires abandoning everything that came before in order to be used is imposing its ecosystem on the developer.
 
-Kof deve permitir que o desenvolvedor escolha quando começar algo novo e quando aproveitar aquilo que já existe.
-
----
-
-## XI. Código deve ser nobre
-
-Código nobre não é código sofisticado.
-
-É código que possui uma razão para existir.
-
-É código que expressa intenção.
-
-É código que não cria abstrações apenas para parecer arquitetural.
-
-É código que não esconde complexidade importante atrás de magia.
-
-É código que pode ser lido.
-
-Questionado.
-
-Testado.
-
-Otimizado.
-
-Depurado.
-
-Substituído.
-
-Código nobre não é o menor código possível.
-
-É o **menor código necessário para representar corretamente o problema.**
+Kof should let the developer choose when to start something new and when to take advantage of what already exists.
 
 ---
 
-## XII. Humanos primeiro
+## XI. Code should be noble
 
-Kof é uma ferramenta para pessoas.
+Noble code is not sophisticated code.
 
-A linguagem deve ser legível por humanos antes de qualquer outra coisa.
+It is code that has a reason to exist.
 
-Documentação deve ser compreensível.
+It is code that expresses intention.
 
-Erros devem explicar o problema.
+It is code that does not create abstractions just to look architectural.
 
-Ferramentas devem ajudar, não atrapalhar.
+It is code that does not hide important complexity behind magic.
 
-A linguagem deve ser consistente o suficiente para que uma pessoa consiga formar um modelo mental confiável do sistema.
+It is code that can be read.
 
-E justamente por ser bem estruturado para humanos, Kof também pode ser compreendido por ferramentas automatizadas.
+Questioned.
 
-LLMs, agentes, IDEs, compiladores, analisadores e outras ferramentas podem trabalhar melhor com uma linguagem cuja intenção seja explícita.
+Tested.
 
-**LLM-friendly deve ser consequência de ser human-friendly.**
+Optimized.
 
-Nunca o contrário.
+Debugged.
 
----
+Replaced.
 
-## XIII. IA é ferramenta, não autoridade
+Noble code is not the smallest possible code.
 
-Kof pode ser desenvolvido com inteligência artificial.
-
-Kof pode possuir agentes.
-
-Kof pode ser utilizado por agentes.
-
-Mas nenhuma IA possui autoridade sobre a filosofia da linguagem.
-
-IA pode implementar.
-
-Pode testar.
-
-Pode revisar.
-
-Pode documentar.
-
-Pode sugerir.
-
-Pode acelerar.
-
-A intenção, a arquitetura e os princípios continuam sendo responsabilidade humana.
-
-**Automatizar a implementação não significa terceirizar o pensamento.**
+It is the **smallest code necessary to correctly represent the problem.**
 
 ---
 
-## XIV. Não esconda o importante
+## XII. Humans first
 
-Kof deve esconder trabalho mecânico.
+Kof is a tool for people.
 
-Nunca deve esconder decisões importantes.
+The language should be readable by humans before anything else.
 
-Se uma operação possui custo relevante, comportamento relevante ou consequência relevante, o desenvolvedor deve poder entendê-la.
+Documentation should be understandable.
 
-Se algo pode causar uma falha séria, deve ser observável.
+Errors should explain the problem.
 
-Se algo afeta performance, deve poder ser analisado.
+Tools should help, not hinder.
 
-Se algo afeta segurança, deve poder ser auditado.
+The language should be consistent enough that a person can form a reliable mental model of the system.
 
-Abstração boa remove ruído.
+And precisely because it is well structured for humans, Kof can also be understood by automated tools.
 
-Abstração ruim remove entendimento.
+LLMs, agents, IDEs, compilers, analyzers and other tools can work better with a language whose intention is explicit.
 
-**Kof deve esconder detalhes. Nunca esconder a verdade.**
+**LLM-friendly should be a consequence of being human-friendly.**
 
----
-
-## XV. Evolução sem dogma
-
-Kof não precisa acertar tudo na primeira versão.
-
-Uma linguagem viva precisa poder mudar.
-
-Precisamos experimentar.
-
-Medir.
-
-Quebrar.
-
-Corrigir.
-
-Remover.
-
-Simplificar.
-
-Uma decisão antiga não se torna correta apenas porque foi tomada anteriormente.
-
-Código legado não é uma justificativa para perpetuar complexidade.
-
-Compatibilidade é importante.
-
-Estabilidade é importante.
-
-Mas quando uma decisão fundamentalmente ruim impede a evolução da linguagem, devemos ter coragem de corrigi-la.
-
-**O passado informa o projeto. Não governa o projeto.**
+Never the other way around.
 
 ---
 
-## XVI. A linguagem pertence a quem a utiliza
+## XIII. AI is a tool, not an authority
 
-Kof não deve ser construída em torno de uma elite de especialistas.
+Kof can be developed with artificial intelligence.
 
-Deve ser suficientemente poderosa para especialistas e suficientemente coerente para quem está começando.
+Kof can have agents.
 
-Não queremos uma linguagem que infantilize iniciantes.
+Kof can be used by agents.
 
-Também não queremos uma linguagem que exija sofrimento como prova de competência.
+But no AI has authority over the philosophy of the language.
 
-Conhecimento técnico deve ser conquistado porque o problema é difícil.
+AI can implement.
 
-Não porque a ferramenta decidiu criar obstáculos artificiais.
+It can test.
 
-**Programar deve ser difícil quando o problema é difícil. Não quando a linguagem é ruim.**
+It can review.
+
+It can document.
+
+It can suggest.
+
+It can accelerate.
+
+The intention, the architecture and the principles remain a human responsibility.
+
+**Automating the implementation does not mean outsourcing the thinking.**
 
 ---
 
-## XVII. Faça software real
+## XIV. Do not hide what matters
 
-Kof não existe para ganhar uma guerra de benchmarks de linguagens.
+Kof should hide mechanical work.
 
-Não existe para substituir todas as linguagens.
+It should never hide important decisions.
 
-Não existe para criar mais uma sintaxe bonita para os mesmos problemas.
+If an operation has relevant cost, relevant behavior or relevant consequence, the developer should be able to understand it.
 
-Existe para construir software.
+If something can cause a serious failure, it should be observable.
 
-Aplicações.
+If something affects performance, it should be analyzable.
 
-Serviços.
+If something affects security, it should be auditable.
 
-Ferramentas.
+Good abstraction removes noise.
 
-Sistemas.
+Bad abstraction removes understanding.
+
+**Kof should hide details. Never hide the truth.**
+
+---
+
+## XV. Evolution without dogma
+
+Kof does not have to get everything right in the first version.
+
+A living language needs to be able to change.
+
+We need to experiment.
+
+Measure.
+
+Break.
+
+Fix.
+
+Remove.
+
+Simplify.
+
+An old decision does not become correct just because it was made earlier.
+
+Legacy code is not a justification for perpetuating complexity.
+
+Compatibility matters.
+
+Stability matters.
+
+But when a fundamentally bad decision blocks the evolution of the language, we should have the courage to correct it.
+
+**The past informs the project. It does not govern the project.**
+
+---
+
+## XVI. The language belongs to those who use it
+
+Kof should not be built around an elite of specialists.
+
+It should be powerful enough for specialists and coherent enough for those just starting out.
+
+We do not want a language that infantilizes beginners.
+
+Nor do we want a language that demands suffering as proof of competence.
+
+Technical knowledge should be earned because the problem is difficult.
+
+Not because the tool decided to create artificial obstacles.
+
+**Programming should be hard when the problem is hard. Not when the language is bad.**
+
+---
+
+## XVII. Build real software
+
+Kof does not exist to win a language benchmark war.
+
+It does not exist to replace all languages.
+
+It does not exist to create yet another pretty syntax for the same problems.
+
+It exists to build software.
+
+Applications.
+
+Services.
+
+Tools.
+
+Systems.
 
 Interfaces.
 
-Infraestrutura.
+Infrastructure.
 
-Software embarcado.
+Embedded software.
 
-Experimentos.
+Experiments.
 
-Coisas pequenas.
+Small things.
 
-Coisas enormes.
+Enormous things.
 
-Coisas que ainda não sabemos que precisaremos construir.
+Things we do not yet know we will need to build.
 
-A melhor prova de uma linguagem não é quantas features ela possui.
+The best proof of a language is not how many features it has.
 
-É **o que as pessoas conseguem construir com ela.**
+It is **what people can build with it.**
 
 ---
 
-# O princípio central
+# The central principle
 
-Quando houver dúvida sobre uma decisão no Kof, devemos voltar à pergunta fundamental:
+When in doubt about a decision in Kof, we should return to the fundamental question:
 
-> **Isso reduz a distância entre a intenção do programador e o software executado pela máquina, ou aumenta essa distância?**
+> **Does this reduce the distance between the programmer's intention and the software executed by the machine, or does it increase that distance?**
 
-Se reduz, provavelmente estamos no caminho certo.
+If it reduces it, we are probably on the right path.
 
-Se aumenta, precisamos de uma boa razão.
+If it increases it, we need a good reason.
 
-Kof não busca eliminar a complexidade do software.
+Kof does not seek to eliminate the complexity of software.
 
-Busca colocar cada complexidade no lugar onde ela realmente pertence.
+It seeks to place each complexity where it truly belongs.
 
-No problema, quando ela é necessária.
+In the problem, when it is necessary.
 
-Na ferramenta, quando ela pode ser automatizada.
+In the tool, when it can be automated.
 
-E nunca no código apenas porque ninguém parou para questioná-la.
+And never in the code just because nobody stopped to question it.
 
 ---
 
 # Kof
 
-KISS nos lembra de manter as coisas simples.
+KISS reminds us to keep things simple.
 
-Unix nos lembra de construir sistemas através de partes pequenas, claras e composáveis.
+Unix reminds us to build systems through small, clear and composable parts.
 
-A engenharia nos lembra de respeitar a máquina.
+Engineering reminds us to respect the machine.
 
-A experiência nos lembra que abstrações possuem custos.
+Experience reminds us that abstractions have costs.
 
-E Kof adiciona uma pergunta:
+And Kof adds a question:
 
-> **Qual era a intenção?**
+> **What was the intention?**
 
-A partir dela, construímos uma linguagem.
+From it, we build a language.
 
-Uma plataforma.
+A platform.
 
-Um ecossistema.
+An ecosystem.
 
-Uma comunidade.
+A community.
 
-Não para escrever mais código.
+Not to write more code.
 
-Mas para gastar menos pensamento lutando contra o código que não deveria existir.
+But to spend less thought fighting the code that should not exist.
 
-**Menos complexidade acidental.**
-**Mais intenção.**
-**Mais controle.**
-**Mais software.**
+**Less accidental complexity.**
+**More intention.**
+**More control.**
+**More software.**
 
 **Koffie voor iedereen.**

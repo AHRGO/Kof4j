@@ -1,40 +1,42 @@
-<!--
-  POLÍTICA DE PULL REQUESTS DO KOFLANG / KOF4J
+[English](pull_request_template.md) | [Português](pull_request_template.pt_BR.md)
 
-  ⚠️ ATENÇÃO: NUNCA ABRA PULL REQUESTS DIRETAMENTE CONTRA A BRANCH `main`!
-  A branch `main` é reservada para releases estáveis e controladas pela mantenedora.
-  Todo desenvolvimento, correções e contribuições devem ser abertos contra a
-  branch `beta` ativa (exemplo atual: `beta-0.4.0`).
+<!--
+  KOFLANG / KOF4J PULL REQUEST POLICY
+
+  ⚠️ ATTENTION: NEVER OPEN PULL REQUESTS DIRECTLY AGAINST THE `main` BRANCH!
+  The `main` branch is reserved for stable releases controlled by the maintainer.
+  All development, fixes and contributions must be opened against the active
+  `beta` branch (current example: `beta-0.4.0`).
   
-  PRs abertos contra a branch `main` por contas não-autorizadas serão
-  bloqueados automaticamente pela action de guarda do repositório.
+  PRs opened against the `main` branch by unauthorized accounts will be
+  automatically blocked by the repository's guard action.
 -->
 
-## 🎯 Branch Base de Destino
-- [ ] Confirmo que este PR está apontando para uma branch **`beta-*`** (ex: `beta-0.4.0`) e **NÃO** para a `main`.
+## 🎯 Target Base Branch
+- [ ] I confirm that this PR targets a **`beta-*`** branch (e.g.: `beta-0.4.0`) and **NOT** `main`.
 
 ---
 
-## 📝 Descrição da Mudança
-<!-- Descreva de forma clara e concisa o que foi adicionado, corrigido ou refatorado. -->
+## 📝 Description of the Change
+<!-- Describe clearly and concisely what was added, fixed or refactored. -->
 
 ---
 
-## 🔗 Issue Relacionada
-<!-- Todo PR deve referenciar uma issue aberta (ex: Fixes #123, Closes #456). Regra 6 do AGENTS.md. -->
+## 🔗 Related Issue
+<!-- Every PR must reference an open issue (e.g.: Fixes #123, Closes #456). Rule 6 of AGENTS.md. -->
 Fixes #
 
 ---
 
-## 🧪 Como Foi Testado (Portão de Qualidade)
-<!-- O teste PROVA que o código funciona. Liste os comandos rodados e os testes adicionados. -->
-- [ ] `mvn -o -pl kof-compiler -am compile -q` rodou sem erros
-- [ ] Testes adicionados/alterados cobrindo o caminho feliz e bordas (Q3)
-- [ ] Suíte rodada e verde (`mvn test ...`)
+## 🧪 How It Was Tested (Quality Gate)
+<!-- The test PROVES that the code works. List the commands run and the tests added. -->
+- [ ] `mvn -o -pl kof-compiler -am compile -q` ran without errors
+- [ ] Tests added/changed covering the happy path and edge cases (Q3)
+- [ ] Suite run and green (`mvn test ...`)
 
 ---
 
-## 📋 Checklist de Pré-Submissão
-- [ ] Nenhuma alteração contém stubs ou TODOs de fachada (Q7)
-- [ ] Regras do `AGENTS.md` respeitadas (≤500 linhas/classe, zero regressão)
-- [ ] Documentação ou `DOING.md` atualizados se aplicável
+## 📋 Pre-Submission Checklist
+- [ ] No change contains stubs or facade TODOs (Q7)
+- [ ] `AGENTS.md` rules respected (≤500 lines/class, zero regression)
+- [ ] Documentation or `DOING.md` updated if applicable
