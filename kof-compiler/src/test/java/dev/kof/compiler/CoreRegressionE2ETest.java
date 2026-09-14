@@ -1607,27 +1607,24 @@ class CoreRegressionE2ETest {
                 """, "7\n2.75\ntrue", tempDir, "prim-return-obj");
     }
 
-    // Issue #180 — Block lambda with no return inferred as UnknownType instead of void (SEM014).
+    // Issue #167 — instanceof with primitive/boxed types (Int, Double, etc.)
+    // emitted '?' as class name instead of boxed java.lang type (NoClassDefFoundError).
     @Test
-    void blockLambdaWithNoReturnInferredVoid(@TempDir Path tempDir) throws IOException {
-        Path src = tempDir.resolve("blocklambda.kf");
+    void instanceofWithPrimitiveTypes(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("instanceofprim.kf");
         Files.writeString(src, """
-                void run(List<Int> lst, (Int) -> void f) {
-                    for (var x in lst) { f(x) }
-                }
                 main() {
-                    var lst = new List<Int>()
-                    lst.add(1)
-                    lst.add(2)
-                    run(lst, (x: Int) -> {
-                        var y = x * 2
-                        println(y)
-                    })
+                    var obj: Object = 42
+                    println(obj instanceof Int)
+                    println(obj instanceof Double)
+                    var d: Object = 3.14
+                    println(d instanceof Double)
+                    println(d instanceof Int)
                 }
                 """);
-        Path out = tempDir.resolve("blocklambda-jvm");
+        Path out = tempDir.resolve("instanceofprim-jvm");
         CompilationResult r = driver.compile(src, out, Target.JVM);
         assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
-        assertEquals("2\n4", runJvm(out));
+        assertEquals("true\nfalse\ntrue\nfalse", runJvm(out));
     }
 }

@@ -101,6 +101,12 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (14/09 ~10:10, dono = 192.168.100.22, lane compiler): fix issue #167 — instanceof with primitive/boxed types emits '?' as class name (NoClassDefFoundError).**
+> - Causa raiz: `JvmOpEmitter` em `KofInstanceOf` e `KofCheckCast` extraía o nome interno apenas se o tipo fosse `Type.ClassType`, caindo em `"?"` para tipos primitivos (`Type.PrimitiveType`).
+> - Correção: `JvmOpEmitter` mapeia `Type.PrimitiveType` para seu correspondente boxed (`TypeMetrics.boxedTypeFor`) antes de emitir a instrução `INSTANCEOF`/`CHECKCAST`.
+> - Prova: `CoreRegressionE2ETest#instanceofWithPrimitiveTypes` (testa `obj instanceof Int` e `obj instanceof Double`).
+> - Próximo: issues #168, #166, #165.
+
 > **✅ FEITO (14/09 ~09:50, dono = 192.168.100.22, lane compiler): fix issue #180 — Block lambda with no return inferred as UnknownType instead of void (SEM014).**
 > - Causa raiz: `SemExpressionTyper` inferia `returnType = UnknownType.UNKNOWN` quando a lambda de bloco não continha statement `ReturnStmt` com valor, disparando rejeição SEM014 ao passar para funções esperando `(T) -> void`.
 > - Correção: `SemExpressionTyper` agora detecta quando o corpo da lambda não possui nenhum `return` ou possui `return` sem valor e atribui `Type.PrimitiveType.VOID`.
