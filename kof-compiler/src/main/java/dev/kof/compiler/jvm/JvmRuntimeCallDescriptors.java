@@ -332,7 +332,7 @@ public final class JvmRuntimeCallDescriptors {
             case "kof_orm_delete_all" -> "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z";
             // ── kof.security (docs/stdlib/security.md §5) ───────────────────
             case "kof_sec_sha256", "kof_sec_sha512", "kof_sec_redact", "kof_sec_secret_get",
-                    "kof_sec_password_hash", "kof_sec_auth_user" -> "(Ljava/lang/String;)Ljava/lang/String;";
+                    "kof_sec_password_hash" -> "(Ljava/lang/String;)Ljava/lang/String;";
             case "kof_sec_hmac_sha256", "kof_sec_aesgcm_encrypt", "kof_sec_aesgcm_decrypt",
                     "kof_sec_chacha20_encrypt", "kof_sec_chacha20_decrypt",
                     "kof_sec_secret_get_default", "kof_sec_jwt_create", "kof_sec_jwt_verify"
@@ -431,7 +431,7 @@ public final class JvmRuntimeCallDescriptors {
             case "kof_sec_jwt_secret", "kof_sec_csrf_token", "kof_sec_csp_header",
                     "kof_sec_hsts_header", "kof_sec_content_type_options_header",
                     "kof_sec_frame_header", "kof_sec_referrer_header", "kof_sec_auth_token",
-                    "kof_sec_auth_claims" -> "()Ljava/lang/String;";
+                    "kof_sec_auth_claims", "kof_sec_auth_user" -> "()Ljava/lang/String;";
             default -> "(Ljava/lang/String;)Ljava/lang/Object;";
         };
     }

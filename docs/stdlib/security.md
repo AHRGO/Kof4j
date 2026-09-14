@@ -108,6 +108,20 @@ NOT APPLICABLE   → does not apply to the Kof architecture
 | Logout | logout | — | MISSING | MEDIUM |
 | Security events | events | — | MISSING | LOW |
 
+| Security context | SecurityContext | `kof.security.auth` (contexto de request) | **EXISTS (esta etapa)** | CRÍTICA |
+| CSRF | CsrfFilter | `kof.security.security.csrf*` | **EXISTS (esta etapa)** | ALTA |
+| CORS | CorsFilter | `kof.security.security.cors*` | **EXISTS (esta etapa)** | ALTA |
+| OAuth2 client | OAuth2Client | `kof.security.oauth` (arquitetura) | MISSING | MÉDIA |
+| OIDC | OIDC | idem | MISSING | MÉDIA |
+| JWT | Nimbus/JJWT | `kof.security.jwt` | **EXISTS (esta etapa)** | CRÍTICA |
+| Resource server | Bearer | `kof.security.jwt` + `auth` | **EXISTS (esta etapa)** | ALTA |
+| Method security | @PreAuthorize | `app.security({roles: ...})` + `auth.hasRole` | **EXISTS (C18, JVM)** | ALTA |
+| Security headers | headers | `app.security()` (composto) + `security.*` (helpers) | **EXISTS (C18, JVM)** | ALTA |
+| Request filtering | filter chain | `app.use` + `app.security()` (composto, ordem fixa) | **EXISTS (C18, JVM)** | CRÍTICA |
+| Remember-me | remember-me | — | MISSING | BAIXA |
+| Logout | logout | — | MISSING | MÉDIA |
+| Security events | events | — | MISSING | BAIXA |
+
 ## 2.4 Spring Data
 
 | Capability | Spring Data | Kof | Status | Priority |
@@ -256,6 +270,23 @@ Support per target (current state — `KofSecurity.supportedOn`):
 | `security.rateLimit/session*/apiKey*` (G9) | YES | YES (asm) | YES (JS) |
 | `security.cookieSet/cookieGet` (C11) | YES | — (SECN006) | YES (JS) |
 | `auth.*` (web context) | YES (Bearer JWT + ThreadLocal) | — | — |
+
+| `passwords.hash/verify/needsRehash` | SIM (javax.crypto PBKDF2) | SIM (asm PBKDF2-HMAC-SHA256) | SIM (PBKDF2 platform-delegated) |
+| `crypto.sha256/sha512` | SIM | SIM (asm, FIPS 180-4) | SIM (JS) |
+| `crypto.hmacSha256` | SIM | SIM (asm) | SIM (JS) |
+| `crypto.aesGcm` encrypt/decrypt | SIM | SIM (asm, GCM) | SIM (JS puro, 01/09) |
+| `crypto.randomHex/randomInt` | SIM (SecureRandom) | SIM (getrandom) | SIM (kof_platform) |
+| `jwt.create/verify/secret` | SIM | SIM (asm: base64url + HMAC) | SIM |
+| `secrets.get` | SIM (env) | SIM (`/proc/self/environ`) | SIM (kof_platform) |
+| `security.constantTimeEquals` | SIM | SIM (asm) | SIM (JS) |
+| `security.redact` | SIM | SIM (asm) | SIM |
+| `security.csrfToken/csrfValid` | SIM | — | — |
+| `security.corsAllowed` | SIM | — | — |
+| `security.cspHeader/hstsHeader/...` | SIM | — | — |
+| `security.rateLimit/session*/apiKey*` (G9) | SIM | SIM (asm) | SIM (JS) |
+| `security.cookieSet/cookieGet` (C11) | SIM | — (SECN006) | SIM (JS) |
+| `auth.*` (contexto web) | SIM (Bearer JWT + ThreadLocal) | — | — |
+| `app.security()` (C18, middleware composto) | SIM (JVM) | — (WEB006) | — (WEB006) |
 
 Real gaps with compile-time diagnostics: `SECN001` (passwords),
 `SECN003` (sha512), `SECN005` (G9) and `SECN006` (cookies in Native) — never

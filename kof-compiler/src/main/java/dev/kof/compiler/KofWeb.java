@@ -114,6 +114,21 @@ public final class KofWeb {
             case "use" -> argTypes.size() == 1
                     ? new WebCall("kof_web_use", VOID, List.of(STR, argTypes.get(0)))
                     : null;
+            // D-SEC C18: `app.security()` — middleware composto com ordem
+            // fixa (rate-limit → cors → headers → cookies/session → csrf →
+            // auth → RBAC → rota). Sem args = defaults seguros (headers
+            // hardening); com um Map = overrides documentados em
+            // docs/stdlib/stdlib-web.md. JVM primeiro; Native/JS = WEB006.
+            case "security" -> {
+                if (argTypes.isEmpty()) {
+                    yield new WebCall("kof_web_security", VOID, List.of(STR));
+                }
+                if (argTypes.size() == 1 && BuiltinTypes.isMap(argTypes.get(0))) {
+                    yield new WebCall("kof_web_security_opts", VOID,
+                            List.of(STR, BuiltinTypes.MAP));
+                }
+                yield null;
+            }
             // #102.2 (13/09): `listen` aceita SÓ Int — String virava
             // VerifyError em runtime. Com o gate aqui, `listen("8100")`
             // retorna null → o typer emite SEM025 em compile-time
@@ -178,6 +193,7 @@ public final class KofWeb {
         return switch (function) {
             case "kof_web_sse_route" -> "WEB003";
             case "kof_web_ws_route" -> "WEB004";
+            case "kof_web_security", "kof_web_security_opts" -> "WEB006";
             case "kof_web_listen_secure", "kof_web_listen_secure_pem" -> "WEB002";
             default -> "WEB001";
         };

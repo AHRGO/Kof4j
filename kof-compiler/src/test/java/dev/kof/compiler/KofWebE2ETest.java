@@ -423,12 +423,12 @@ class KofWebE2ETest {
     void securityRequiresValidBearerWhenAuthEnabled(@TempDir Path tempDir) throws Exception {
         int port = startServer(tempDir, """
                 main() {
-                    security.auth.secret("s3cret")
+                    auth.secret("s3cret")
                     var app = web.app()
                     var o = mapOf()
                     o.put("auth", true)
                     app.security(o)
-                    app.get("/me") { return "hi " + security.auth.user() }
+                    app.get("/me") { return "hi " + auth.user() }
                     app.listen(PORT)
                 }
                 """);
@@ -452,7 +452,7 @@ class KofWebE2ETest {
         // inválida NUNCA passa (evita "token ruim vira anônimo").
         int port = startServer(tempDir, """
                 main() {
-                    security.auth.secret("s3cret")
+                    auth.secret("s3cret")
                     var app = web.app()
                     app.security()
                     app.get("/open") { return "public" }
@@ -469,7 +469,7 @@ class KofWebE2ETest {
     void securityEnforcesRoles(@TempDir Path tempDir) throws Exception {
         int port = startServer(tempDir, """
                 main() {
-                    security.auth.secret("s3cret")
+                    auth.secret("s3cret")
                     var app = web.app()
                     var o = mapOf()
                     o.put("roles", "admin")
@@ -559,7 +559,7 @@ class KofWebE2ETest {
     }
 
     @Test
-    void securityGapOnNative(@TempDir Path tempDir) throws IOException {
+    void securityGapOnNativeAndJs(@TempDir Path tempDir) throws IOException {
         Path source = tempDir.resolve("App.kf");
         Files.writeString(source, """
                 main() {
@@ -568,9 +568,11 @@ class KofWebE2ETest {
                     app.listen(8100)
                 }
                 """);
-        CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.NATIVE);
-        var diagnostics = result.diagnostics().getDiagnostics();
-        assertTrue(diagnostics.stream().anyMatch(d -> d.code().equals("WEB005")),
-                "app.security() deve dar WEB005 no Native, got: " + diagnostics);
+        for (Target target : new Target[] {Target.NATIVE, Target.JS}) {
+            CompilationResult result = driver.compile(source, tempDir.resolve("out-" + target), target);
+            var diagnostics = result.diagnostics().getDiagnostics();
+            assertTrue(diagnostics.stream().anyMatch(d -> d.code().equals("WEB006")),
+                    "app.security() deve dar WEB006 no " + target + ", got: " + diagnostics);
+        }
     }
 }

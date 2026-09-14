@@ -132,6 +132,27 @@ the Application Model** (the order only makes sense with `app.use`):
 > **`app.security()` (C18) still NOT implemented** — it depends on the
 > `app.use` middleware of the app model (I2), which is the next unit of this front.
 
+> **✅ EXECUTED (14/09, step 3 complete — owner 192.168.100.18):**
+> `app.security()` (C18) implemented in **JVM** (`kof_web_security` /
+> `kof_web_security_opts`, `SecurityMiddleware` registered on `app.middlewares`).
+> Applies the **fixed order** rate-limit → CORS → headers → cookies/session →
+> csrf → auth → RBAC → route. No-arg = secure defaults (hardening headers:
+> CSP/nosniff/frame/referrer, HSTS only under TLS). Opts-map (all documented in
+> `docs/stdlib/stdlib-web.md`): `headers` (Bool), `cors` (String origin/CSV/`*`,
+> unlisted origin → 403, preflight → 204), `rateLimit` (`"limit/windowSeconds"`
+> per remote IP → 429 + `Retry-After`), `csrf` (double-submit cookie), `auth`
+> (require valid Bearer JWT), `roles` (String CSV or List). **Auth-if-present:**
+> a request carrying an invalid token never passes, even without `auth:true`.
+> **Security by default:** `listen`/`listenSecure` under `KOF_ENV=production`
+> without `app.security()` warns on `stderr`. **Native/JS report `WEB006`**
+> honestly (same precedent as WEB002/WEB005). Response headers from the
+> middleware survive the dispatch clear via `KOF_SEC_RESPONSE_HEADERS`. Refactor:
+> new fragment `JvmWebSecurityRuntime.java` keeps the §140 ratchet green
+> (`JvmWebCoreRuntime` 699→495). Tests: `KofWebE2ETest` 22/22 (security headers,
+> auth 401/200, auth-if-present, roles 403, CORS deny/preflight, CSRF, rate-limit
+> 429, WEB006 Native+JS). Also fixed a pre-existing descriptor bug:
+> `kof_sec_auth_user` was declared `(Ljava/lang/String;)` but takes no args.
+
 **OAuth2/OIDC (D layer 16) — locked sequence:** (1) **resource server**
 first (third-party JWT validation: JWKS + issuer/aud — cheap, closes
 "who is the Google user?"), (2) client authorization-code + PKCE later;

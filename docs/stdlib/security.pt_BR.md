@@ -101,9 +101,9 @@ NOT APPLICABLE   → não se aplica à arquitetura Kof
 | OIDC | OIDC | idem | MISSING | MÉDIA |
 | JWT | Nimbus/JJWT | `kof.security.jwt` | **EXISTS (esta etapa)** | CRÍTICA |
 | Resource server | Bearer | `kof.security.jwt` + `auth` | **EXISTS (esta etapa)** | ALTA |
-| Method security | @PreAuthorize | `auth.requireRole` (middleware) | **EXISTS (esta etapa)** | ALTA |
-| Security headers | headers | `kof.security.security.*` (helpers) | **EXISTS (esta etapa)** | ALTA |
-| Request filtering | filter chain | `app.use` (middleware) | **EXISTS** | CRÍTICA |
+| Method security | @PreAuthorize | `app.security({roles: ...})` + `auth.hasRole` | **EXISTS (C18, JVM)** | ALTA |
+| Security headers | headers | `app.security()` (composto) + `security.*` (helpers) | **EXISTS (C18, JVM)** | ALTA |
+| Request filtering | filter chain | `app.use` + `app.security()` (composto, ordem fixa) | **EXISTS (C18, JVM)** | CRÍTICA |
 | Remember-me | remember-me | — | MISSING | BAIXA |
 | Logout | logout | — | MISSING | MÉDIA |
 | Security events | events | — | MISSING | BAIXA |
@@ -256,6 +256,7 @@ Suporte por target (estado atual — `KofSecurity.supportedOn`):
 | `security.rateLimit/session*/apiKey*` (G9) | SIM | SIM (asm) | SIM (JS) |
 | `security.cookieSet/cookieGet` (C11) | SIM | — (SECN006) | SIM (JS) |
 | `auth.*` (contexto web) | SIM (Bearer JWT + ThreadLocal) | — | — |
+| `app.security()` (C18, middleware composto) | SIM (JVM) | — (WEB006) | — (WEB006) |
 
 Gaps reais com diagnóstico em compile-time: `SECN001` (passwords),
 `SECN003` (sha512), `SECN005` (G9) e `SECN006` (cookies no Native) — nunca

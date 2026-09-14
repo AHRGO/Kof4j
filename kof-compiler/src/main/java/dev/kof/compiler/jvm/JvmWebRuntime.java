@@ -12,6 +12,7 @@ public final class JvmWebRuntime {
     private JvmWebRuntime() {}
 
     static String source() {
-        return JvmWebCoreRuntime.source() + JvmWebHttpRuntime.source();
+        return JvmWebCoreRuntime.source() + JvmWebHttpRuntime.source()
+                + JvmWebSecurityRuntime.source();
     }
 }

@@ -188,14 +188,35 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > Registrado em `docs/bugs-and-gaps/known-bugs.md` §192.
 >
 > ChaCha20 (D-SEC) entregue pelo colega (`3e1d1ff7`); cookies C11 em
-> `521049aa`. **Fila restante de `DECISIONS`:** `app.security()` (C18,
-> middleware composto sobre `app.use` — `JvmRuntimeWebDispatch` já itera
-> `app.middlewares`; primitivas `security.rateLimit/corsAllowed/cspHeader/
-> csrfToken/session*/auth.*` já existem) e OAuth resource-server (JWKS +
-> issuer/aud). **PRÓXIMO PASSO:** `app.security()` (C18) — `KofWeb.java`
-> (`case "security"`) + runtime JVM/JS; prova = E2E com rota protegida
-> (401 sem credencial, 200 com). Antes: reler `docs/development/DECISIONS.md`
-> §D-SEC C18 e a §5 de `docs/stdlib/security.md`.
+> `521049aa`. **Fila restante de `DECISIONS`:** OAuth resource-server (JWKS +
+> issuer/aud).
+>
+> **✅ FEITO (14/09, dono = 192.168.100.18): `app.security()` (C18) — middleware
+> composto de segurança (JVM).** `app.security()` / `app.security(opts)`
+> (`KofWeb.java` `case "security"` → `kof_web_security`/`kof_web_security_opts`)
+> aplicam a **ordem fixa** rate-limit → CORS → headers → cookies/session → csrf
+> → auth → RBAC → rota via `SecurityMiddleware` registrado em
+> `app.middlewares`. Sem args = defaults seguros (CSP/nosniff/frame/referrer;
+> HSTS só sob TLS). Opts documentados: `headers` (Bool), `cors` (String/CSV/`*`,
+> não listada → 403, preflight → 204), `rateLimit` (`"limite/janelaSeg"` por IP
+> remoto → 429 + `Retry-After`), `csrf` (double-submit cookie), `auth` (Bearer
+> JWT obrigatório), `roles` (CSV/List). **Auth-if-present:** token inválido
+> nunca passa mesmo sem `auth:true`. **Security by default:** `KOF_ENV=
+> production` sem `app.security()` avisa em `stderr`. Headers de resposta
+> sobrevivem ao clear do dispatch (`KOF_SEC_RESPONSE_HEADERS`). **Native/JS
+> reportam `WEB006`** honesto. Novo fragmento `JvmWebSecurityRuntime.java`
+> mantém o ratchet §140 verde (`JvmWebCoreRuntime` 699→495). Bug de descriptor
+> pré-existente corrigido: `kof_sec_auth_user` estava `(Ljava/lang/String;)` mas
+> não recebe args. **Prova:** `KofWebE2ETest` **22/22** (headers, auth 401/200,
+> auth-if-present, roles 403, CORS deny/preflight, CSRF, rate-limit 429, WEB006
+> Native+JS) + `KofSecurityTest` 41/41 + web/HTTP 106/0/0 + `check_500` exit 0.
+> Docs no mesmo commit: `DECISIONS.md` §D-SEC, `docs/stdlib/stdlib-web.md`,
+> `docs/stdlib/security.md`, `backend-parity.md`, `docs/development/README.md`.
+>
+> **PRÓXIMO PASSO:** OAuth resource-server (D-SEC camada 16) — validação de JWT
+> de terceiro (JWKS + issuer/aud); única linha restante da fila §7 de
+> `docs/development/README.md`. Reler `docs/development/DECISIONS.md` §D-SEC
+> (OAuth) antes.
 
 > **✅ FEITO (14/09 ~03:45, dono = 192.168.100.22, lane repo-hygiene/.github):
 > pack segurança GitHub + merge na main (ordem da mantenedora, sem bump —
