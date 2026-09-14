@@ -188,6 +188,26 @@ class CoreRegressionE2ETest {
                 """, "true\n100", tempDir, "NewSetAndMap");
     }
 
+    // GitHub #139/#150 — `new Set<T>()`/`new Map<K,V>()`: o tipo não era
+    // pinado p/ `kof.Set`/`kof.Map`, então o `new` (KofNewObject) e os
+    // métodos (add/put/size) emitiam o nome Kof cru → NoClassDefFoundError
+    // (Set/Map) ou ClassFormatError (nome vazio). Agora baixam p/
+    // kof_set_new/kof_map_new (como setOf/mapOf) e o tipo resolve p/ HashSet/
+    // HashMap no descritor.
+    @Test
+    void setAndMapConstruction(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                main() {
+                    var s = new Set<String>()
+                    s.add("hello")
+                    println(s.size)
+                    var m = new Map<String, Int>()
+                    m.put("a", 1)
+                    println(m.size)
+                }
+                """, "1\n1", tempDir, "SetMapNew");
+    }
+
     // GitHub #30 — String.split + acesso ao array: .get(i) era baixado como
     // KofCall com owner ArrayType → JvmTypeMapper produzia internalName ""
     // → Methodref "" no constant pool → ClassFormatError: Illegal class name "".
