@@ -159,4 +159,16 @@ class CompareTest {
             assertEquals(Compare.Channel.DIVERGENT, v.stdout());
         }
     }
+
+    @Test
+    void flagWithoutValueIsUsageErrorNotThrow() {
+        // CodeQL java/index-out-of-bounds (Compare.java:77-78): `--stdin` /
+        // `--arg` no fim liam args[++i] sem checar (AIOOBE). Agora usage+exit 1.
+        assertEquals(1, Compare.run(new String[]{"compare", "a.class", "b.kf", "--stdin"}),
+                "stdin sem valor deve ser usage error, nunca throw");
+        assertEquals(1, Compare.run(new String[]{"compare", "a.class", "b.kf", "--arg"}),
+                "arg sem valor deve ser usage error, nunca throw");
+        assertEquals(1, Compare.run(new String[]{"compare", "a.class", "b.kf", "--arg", "x", "--stdin"}),
+                "stdin sem valor no fim deve ser usage error, nunca throw");
+    }
 }

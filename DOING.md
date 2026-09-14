@@ -82,18 +82,15 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
-> **✅ FEITO degrau-2 (14/09, dono = 192.168.100.22, lane repo-hygiene):
-> contradictory-type-checks ×3, ambos ramos mortos provados inalcançáveis
-> (remoção = zero mudança de comportamento).** (a) KofFormatter:297 — 2º
-> `instanceof DoWhileStmt` após o 1º no else-if (primeiro sempre casa) →
-> removido; trava-saída nova `doWhileUsesBlockBodyBranch` (golden medido).
-> Prova: KofFormatterTest 8/8. (b) TypeChecker:187 — `from instanceof
-> NullableType` após branch que sempre retorna p/ Nullable → removido.
-> Prova: SemanticResolution 27/27 + NullSafety 7/7 + CompilerDriver 252/252.
-> Commit código: 8281d549 (só KofFormatter/TypeChecker/KofFormatterTest).
-> **PRÓXIMO PASSO:** degrau-3 = Errors restantes em arqs livres
-> (unused-container ×5 fora de lanes, index OOB Compare — checar dono antes)
-> + triar warnings por lane p/ donos; fechar alerts no CI por push.
+> **✅ FEITO degrau-3 (14/09, dono = 192.168.100.22, lane repo-hygiene).**
+> (a) **Fix real:** Compare.java:77-78 — `--stdin`/`--arg` sem valor liam
+> `args[++i]` sem checar (AIOOBE) → guard + usage exit 1 (const USAGE
+> extraída, sem duplicar strings). Prova Q0: sem o fix o teste novo dá
+> `ArrayIndexOutOfBoundsException: Index 3` (o achado exato); com o fix,
+> CompareTest 7/7. (b) BytecodeReader OOB ×7 → false positive documentado
+> (guard `pc+len` domina; fix real já estava no skipVariable).
+> (c) WsFrameTest:77 → used-in-tests (helper de frames válidos).
+> **PRÓXIMO PASSO:** degrau-4 = unused-container ×5 + warnings (checar dono).
 
 > **✅ FEITO (14/09, dono = 192.168.100.18, lane development): blog E2E
 > (D-SPRING F12) + `--fat` (D-APP I3)** — commit `8eb156f4`; as duas últimas
@@ -300,31 +297,18 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > roundtrip JVM→JS + SECN006 cross). **Resta da C11/C18:** `app.security()`
 > (middleware composto) — depende de `app.use` no app model (I2).
 >
-> **PRÓXIMO PASSO (estabilização beta-0.4.0 → release):** **linha de base do
-> gate de release medida 14/09 (suíte limpa `rm -rf */target`, dono =
-> 192.168.100.17):** compiler 1552 + script 37 + kof-c 5 + cli 225 = **1819
-> testes / 3 falhas / 0 erros / 7 skip**. As 3 falhas são TODAS cross-arch de
-> OUTRAS lanes, catalogadas com evidência: **§181 residual** (`riscv64/
-> aarch64CastSaturation`: `(-inf) as Int`→`0`, deveria `MIN_VALUE` — só essa
-> linha diverge; lane nat) e **§189** (`parseOrDefaultCrossArch`: programa
-> TRAVA na 1ª `parseDoubleOrDefault` sob riscv — lane stdlib/nat). **Re-run
-> isolado 14/09 (~04:20, dono = 192.168.100.17) CRAVOU os dois como
-> DETERMINÍSTICOS (2/2, NÃO flake):** `riscv64CastSaturation` falhou em 2.2s
-> (linha única `(-inf) as Int`→`0` vs `MIN_VALUE`); `parseOrDefaultCrossArch`
-> pendurou o `qemu-riscv64` >5 min no mesmo `readAllBytes` (matei a `-9`) —
-> o golden exige 13 linhas+ec0 mas só as 8 Int/Long saem, o double trava.
-> O bloqueio de cache anterior foi RESOLVIDO: baixei online o surefire
-> 3.6.0 completo + mariadb/postgresql/junit bumpados pelo dependabot
-> (dependabot re-bumpou de novo → 3.5.10/42.7.13; todos no `.m2` agora;
-> `mvn -o test-compile -pl kof-compiler -am` = BUILD SUCCESS).
-> **Gate de release NÃO está 0-falhas:** os 3 vermelhos cross precisam de fix
-> das lanes nat/stdlib (regra 6 se tocar contrato) antes de congelar a
-> release. **NUNCA:** tocar `nat/` GC, lanes `.15`/`.22`; reabrir
-> decompiler/translator sem decisão (despriorizados — meta = estabilizar a
-> release). O gate offline agora roda: `mvn -o test -pl kof-compiler,kof-script,
-> kof-c-compiler,kof-cli -am -Dsurefire.failIfNoSpecifiedTests=false
-> -Dmaven.test.failure.ignore=true`. **Não relancei o gate completo (gasta
-> 2h+, e o parseOrDefault pendura sozinho — linha de base já medida).**
+> **PRÓXIMO PASSO (estabilização beta-0.4.0 → release):** rodar a suíte
+> COMPLETA limpa pós-push (`rm -rf */target && mvn -o test -pl
+> kof-compiler,kof-script,kof-c-compiler,kof-cli -am
+> -Dsurefire.failIfNoSpecifiedTests=false -Dmaven.test.failure.ignore=true`)
+> e registrar a linha de base em `docs/status.md` (gate de release = 0
+> FAILURE fora dos erros de `node`/BD ausente + das guardas de toolchain).
+> A fila `known-bugs.md` aberta (13 itens) é TODA de outras lanes (`.15`/
+> `.18`/Native) ou regra 6/decisão da mantenedora — **NÃO atacar sem don**
+> **o**; se a suíte verde confirmar estabilidade, seguir a condição de
+> ESTABILIDADE do AGENTS.md (recusar re-disparo, parar o cron). **NUNCA:**
+> tocar `nat/` GC, lanes `.15`/`.22`; reabrir decompiler/translator sem
+> decisão (despriorizados — meta = estabilizar a release).
 >
 >
 > **✅ FEITO (14/09 ~00:30, dono = 192.168.100.22): CI vermelho na beta
