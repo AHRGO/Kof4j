@@ -7225,7 +7225,7 @@ antes — lição da obsolescência do §206/§207), corpos-exatos das issues
 - **Pointer (lane compiler):** igual ao §224 — o lowering de member-call de
   interop precisa ler o descriptor do JDK, não adivinhar pelo contexto.
 
-### §226 — `for (var n: Int in lst)` → falso diagnostico "Undefined variable or type: 'in'" (issue #234)
+### §226 — `for (var n: Int in lst)` → falso diagnóstico "Undefined variable or type: 'in'" (issue #234)
 
 - **Sintoma (medido 14/09 ~14:50 no `7f9eb015` com classes FRESCAS, dono =
   192.168.100.17 — só catalogado, lane compiler):**
@@ -7236,19 +7236,19 @@ antes — lição da obsolescência do §206/§207), corpos-exatos das issues
   }
   ```
   `COMPILE FAIL: Undefined variable or type: 'in'` (SEM, file/line=0). O
-  parser/typer le a anotao `n: Int` e depois trata a palavra-chave `in` como
+  parser/typer le a anotação `n: Int` e depois trata a palavra-chave `in` como
   IDENTIFICADOR expressão. A forma SEM anotacao esta VERDE no mesmo build:
   `for (var n in listOf(1,2,3))` imprime `1|2|3` (v4a, ec=0).
-- **Familia:** falso-diagnostico (mesmo batch do §219/#151-#141: mensagem de
-  erro que nao descreve o problema real). O for-in anotado OU parseia (a
+- **Familia:** falso-diagnóstico (mesmo batch do §219/#151-#141: mensagem de
+  erro que não descreve o problema real). O for-in anotado OU parseia (a
   anotacao e redundante mas bem-definida) OU recebe PARSE/SEM preciso
   (`type annotation not allowed on for-in variable`) — nunca culpa a
   palavra-chave `in`.
 - **Pointer (lane compiler):** parse do cabecalho for-in — o `: Type` consumiu
   o stream de tokens antes do `in` ser casado; o match de `in` precisa casar
-  o token KEYWORD, nao via resolucao de expressao.
+  o token KEYWORD, não via resolucao de expressao.
 
-### §227 — chamada a metodo statico SOBRECARGADO é OMITIDA do IR → `println(Fmt.of(10))` nao imprime nada util / VerifyError com store em var (issue #235)
+### §227 — chamada a metodo statico SOBRECARGADO é OMITIDA do IR → `println(Fmt.of(10))` não imprime nada util / VerifyError com store em var (issue #235)
 
 - **Sintoma (medido 14/09 ~14:50 no `7f9eb015` com classes FRESCAS, dono =
   192.168.100.17 — só catalogado, lane compiler):**
@@ -7257,24 +7257,24 @@ antes — lição da obsolescência do §206/§207), corpos-exatos das issues
       static String of(Int n) { return "int=" + n }
       static String of(Double d) { return "dbl=" + d }
   }
-  main() { println(Fmt.of(10)) }        // nao imprime nada util
+  main() { println(Fmt.of(10)) }        // não imprime nada util
   ```
-  javap `Main.main`: SOMENTE `valueOf` + `println` — **a instrucao
+  javap `Main.main`: SOMENTE `valueOf` + `println` — **a instrução
   `invokestatic Fmt.of` ESTA AUSENTE do IR** (titulo da #235, provado aqui);
   o slot da pilha chega null/lixo. Com store em variavel
-  (`var r1 = Fmt.of(10); println(r1)`) o MESMO IR quebrado crasha no load:
+  (`var r1 = Fmt.of(10); println(r1)`) o MESMO IR quebrado cracha no load:
   `VerifyError: Operand stack underflow` (execucao por reflexao, anti-armadilha
   JavaFX), e o corpo com as 2 chamadas morre antes em `COMPUTE_FRAMES
   (visitMaxs)` (`frame crash em Default/Main.main ... n235.kf:9`). Classes com
-  overload UNICO funcionam — a resoluo escolhe a entrada, mas o caminho de
+  overload ÚNICO funcionam — a resoluo escolhe a entrada, mas o caminho de
   EMISSAO para staticos MULTI-overload descarta o no da chamada.
 - **Familia:** dispatch de sobrecarga (0.4.0 §131 p/ metodos) — o lowering de
   call statica do backend JVM para sobrecargas resolve o alvo mas NUNCA emite
   o `invokestatic` (ou emite em ramo perdido do IR). R6-silencioso + irmao do
   crash.
-- **Pointer (lane compiler):** emissao de call statica onde o calletem >1
-  candidato com o mesmo nome: o resultado da resoluao precisa chegar ao
-  emitter de instrucao (comparar com o caminho de overload unico que funciona).
+- **Pointer (lane compiler):** emissão de call statica onde o callee tem >1
+  candidato com o mesmo nome: o resultado da resolução precisa chegar ao
+  emitter de instrução (comparar com o caminho de overload unico que funciona).
 
 §193 — E2E blog (F12): `db.query` cru + `.get("col")`/recursos dentro de handler web derr
 
