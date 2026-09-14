@@ -619,27 +619,30 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > FEITA: `pathOracle` brute-force (definição de caminhos) vs passada rápida
 > em 300 classes REAIS = zero divergência, 6/6 (220064fc) + auditoria
 > doc-vs-código (machineRun:97 VIVA em 158c174b — doc corrigido b9996938);
-> (2) **UNIDADE 2b (PRÓXIMO PASSO EXATO):** em
-> `BytecodeStatements.struct()`, no ramo `cond == null && !loop0` (~linha
-> 287), ANTES do fallback de prefixo atual: calcular o idom-map uma vez por
-> método (cache no recoverStatements, passar p/ struct via um campo/parâmetro
-> — BytecodeStatements.java está em 538 linhas = ZONA TOLERADA, a adição vai
-> p/ classe NOVA `StructWalker.java` nomeada pela responsabilidade, regra 7
-> de nomenclatura); recuperar teste-com-computação SOMENTE quando
-> idom(then)==idom(senão)==P, P não é loop-header, nenhuma back-edge dos
-> braços cruza P; a computação do teste sai via `machineRun` (pré-requisito
-> vivo) em `if (...)` SEM hoisting p/ fora (hoisting = trap 1). PROVA
-> ESPERADA: (a) `diamondJoinShapesStayHonestStub` VERDE (lei vinculante),
-> (b) golden de execução novo p/ `contFor`-like (oracle JVM: 0 0 1 3 3 7 12
-> ou o medido à mão), (c) ROI cai (re-contagem com o MESMO harness
-> roi/Roi.java), (d) 63 DecompileTest + 6 PostDom VERDES, (e) se QUALQUER
-> um falhar: REVERT a fatia, o doc já travou as 2 rejeições anteriores.
-> `immediatePostDom` no `struct()` p/ o join estruturado, cada recuperação
-> guardando `diamondJoinShapesStayHonestStub` VERTO (lei do diamante é
-> vinculante — se quebrar, é stub honesto, nunca código errado compilável);
-> (3) golden de execução (oracle JVM) p/ cada nova forma recuperada. Meta:
-> reduzir stubs SEM novo falso-verde. Só mover DECOMPILER p/ `docs/` quando
-a Fase C fechar o corpo (hoje: recovery parcial honesto).
+> (2) ✅ **UNIDADE 2b RE-AVALIADA POR MEDIÇÃO (14/09 ~19:40) — DESCARTADA
+> como escopada, veredito em DECOMPILER.pt_BR.md §6 (re-medida 18:20):** o
+> proxy "1098" supercontou — o caminho prologue da 2a (`5c944709`) JÁ recupera
+> o fundido não-loop com temp (`computed`/`cmp` medidos: saem `if/else`), e dos
+> stubs com teste computado restantes, **646** têm invoke no teste (família
+> interop §234 — lane compiler, não CFG), **453** são loop-header com
+> `continue` (COLISÃO com a lei vinculante `diamondJoinShapesStayHonestStub`:
+> recuperar o cond do `contFor` faria `while (v2 <` voltar — provado no CFG
+> medido: B9=diamante do continue, preds(B22)={15,18}, B22→back-edge B4; Kof
+> não tem `continue` → regra 6, NÃO-edit) e só **8+2** são nits de opcode no
+> `loadValue` (sipush/lcmp — micro-fix compiler). Harness descartável
+> `Roi2.java`/`Roi3.java` (classifica pela CAUSA REAL do stub). PROVAS do
+> descarte: 63 DecompileTest + 6 PostDom VERDES FRESCOS 19:39 (unidades 1/2a
+> intactas, fonte não tocada — StructWalker rascunho deletado antes de nascer,
+> opcodes por memória = a lição que ele mesmo documenta). PRÓXIMO PASSO EXATO
+> da doc DECOMPILER: sem trabalho autônomo — o doc está em parada genuína
+> pedindo decisão da mantenedora (lei do diamante + `continue`), e as 646
+> interop são da lane compiler; mover DECOMPILER p/ `docs/` SÓ quando a
+> mantenedora decidir o destino da Fase C (a recovery atual é o teto honesto).
+> A meta original — reduzir stubs SEM novo falso-verde — foi atingida pelo
+> caminho inverso: a medição PROVOU que reduzir mais exige violar a lei
+> vinculante ou invadir a lane interop. DECOMPILER fica em `docs/development/`
+> aguardando a decisão da mantenedora (destino da Fase C; hoje: recovery no
+> teto honesto).
 
 > **⚠️ 5º RED NO PORTÃO (catalogado, para as lanes de bug — 14/09 ~16:45):**
 > `NativeStringCompareCrossTest` riscv+aarch → §233 no known-bugs (renumerado 17:40: §231 foi tomado pela lane .18 — colisao de rebase; fix
