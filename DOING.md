@@ -682,6 +682,14 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > VerifyError), #219 reproduz (→§212), #220/#221/#222 GREEN com prova
 > semântica, #213 continua reproduz (§209 OPEN), #218 continua (§208).
 > Fila medida real: 16 abertos (linha da OPEN Queue corrigida de 30→16).
+> **PRÓXIMO re-disparo (triagem pendente, na ordem):** issues antigas ainda
+> sem prova de face única: **#199** (guarded case T s — verificar se é o
+> §199 do known-bugs ou face nova), **#193** (lambda em container genérico —
+> a face `Function<() -> Void>` como tipo de parâmetro que mediram hoje em
+> e204c pode ser ESTA), #185/#168/#161/#160/#159/#156/#155/#153/#151/#148/
+> #141/#129 (mapeadas a seções known-bugs? conferir 1-para-1). Regra da
+> lição: `mvn -o compile` ANTES de medir; assir SEMÂNTICA do título
+> (weak-green-proof).
 > Versão anterior da triagem (10:20): medido no HEAD `75455529` com harness
 > JVM (`/tmp/opencode/r292/dev/cli/BJ`):
 > **#200/#201/#203/#204/#214 = GREEN** (casos exatos das issues rodam `ec=0`;
