@@ -80,6 +80,21 @@ final class TypeDeclarations {
         String name = ctx.expectId("Expected class name", "PARSE008");
         ctx.currentClassName = name;
         List<String> typeParams = TypeParser.parseTypeParameters(ctx);
+
+        List<RecordComponentNode> ctorParams = null;
+        if (ctx.check(TokenType.LPAREN)) {
+            ctorParams = new ArrayList<>();
+            ctx.advance();
+            if (!ctx.check(TokenType.RPAREN)) {
+                ctorParams.add(parseRecordComponent(ctx));
+                while (ctx.check(TokenType.COMMA)) {
+                    ctx.advance();
+                    ctorParams.add(parseRecordComponent(ctx));
+                }
+            }
+            ctx.expect(TokenType.RPAREN, "Expected ')' after constructor parameters", "PARSE013");
+        }
+
         String superClass = null;
         if (ctx.check(TokenType.EXTENDS)) {
             ctx.advance();
@@ -87,8 +102,17 @@ final class TypeDeclarations {
         }
         List<String> ifaces = parseImplementedInterfaces(ctx);
 
-        if (ctx.check(TokenType.LPAREN)) {
-            return parseRecordBody(ctx, name, mods, superClass, ifaces, typeParams);
+        if (ctorParams != null) {
+            List<AstNode> members = new ArrayList<>();
+            if (ctx.check(TokenType.LBRACE)) {
+                ctx.advance();
+                while (!ctx.check(TokenType.RBRACE) && !ctx.atEnd()) {
+                    members.add(ClassMemberParser.parseClassMember(ctx));
+                }
+                ctx.expect(TokenType.RBRACE, "Expected '}' after record body", "PARSE014");
+            }
+            return new RecordDeclarationNode(ctx.pos(), name, mods, superClass, ifaces,
+                    typeParams, List.copyOf(ctorParams), List.copyOf(members), annos);
         }
         List<AstNode> members = new ArrayList<>();
         if (ctx.check(TokenType.LBRACE)) {

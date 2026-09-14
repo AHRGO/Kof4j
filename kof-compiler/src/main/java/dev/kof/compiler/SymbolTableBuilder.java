@@ -32,8 +32,15 @@ public final class SymbolTableBuilder {
             sa.currentScope().define(sym);
         } else if (decl instanceof RecordDeclarationNode rec) {
             SymbolTable members = new SymbolTable();
+            String superQualified = rec.superClass();
+            if (superQualified != null && !"Object".equals(superQualified) && !"Record".equals(superQualified)) {
+                Type viaImports = MemberResolver.qualifyViaImports(sa.unit(), superQualified);
+                if (viaImports instanceof Type.ClassType qt) {
+                    superQualified = qt.packageName() + "." + qt.name();
+                }
+            }
             SymbolTable.ClassSymbol sym = new SymbolTable.ClassSymbol(rec.name(), sa.packageOf(rec),
-                    "Record", rec.interfaces(), members);
+                    rec.superClass() != null ? superQualified : "Record", rec.interfaces(), members);
             sa.allClasses().put(rec.name(), sym);
             sa.currentScope().define(sym);
         } else if (decl instanceof EntityDeclarationNode ent) {

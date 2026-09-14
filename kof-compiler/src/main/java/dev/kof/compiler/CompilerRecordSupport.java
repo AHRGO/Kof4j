@@ -154,11 +154,11 @@ public final class CompilerRecordSupport {
         List<KofOperation> ops = new ArrayList<>();
         List<IRLocalVariable> locals = new ArrayList<>();
         Type ownerType = CompilerTypes.ownerTypeFromInternal(owner, driver.semanticAnalyzer);
-        Type superType = new Type.ClassType("java.lang", "Record", List.of());
+        Type superType = rec.superClass() != null
+                ? CompilerTypes.ownerTypeFromInternal(driver.toInternalName("", rec.superClass()), driver.semanticAnalyzer)
+                : new Type.ClassType("java.lang", "Record", List.of());
         locals.add(new IRLocalVariable(0, "this", ownerType));
         if (driver.isJvmTarget()) {
-
-
             ops.add(new KofLoadLocal(ownerType, 0));
             ops.add(new KofCall(superType, "<init>", List.of(), Type.PrimitiveType.VOID, KofCallKind.CONSTRUCTOR));
         }

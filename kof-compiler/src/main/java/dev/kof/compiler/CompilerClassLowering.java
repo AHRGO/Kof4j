@@ -104,7 +104,7 @@ public final class CompilerClassLowering {
     static IRClass lowerRecord(CompilerDriver driver, RecordDeclarationNode rec,
                        String packageName, int typeId) {
         String internalName = driver.toInternalName(packageName, rec.name());
-        String superName = "java/lang/Record";
+        String superName = rec.superClass() != null ? driver.toInternalName("", rec.superClass()) : "java/lang/Record";
         List<String> ifaces = rec.interfaces().stream().map(n -> CompilerAnnotations.externalOrLocalInternalName(driver, n)).toList();
         int access = driver.computeAccess(rec.modifiers()) | AccessFlags.FINAL | AccessFlags.PUBLIC;
         List<IRField> fields = new ArrayList<>();

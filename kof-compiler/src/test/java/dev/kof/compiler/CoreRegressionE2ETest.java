@@ -1854,4 +1854,32 @@ class CoreRegressionE2ETest {
         assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
         assertEquals("12\n12", runJvm(out));
     }
+
+    // Issue #217 — class with constructor parameters cannot use extends or implements
+    @Test
+    void classWithConstructorParamsExtendsImplementsJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("paramclassext.kf");
+        Files.writeString(src, """
+                interface AreaNamed {
+                    String name()
+                }
+                class Shape {
+                    String kind = "shape"
+                }
+                class Circle(Double radius) extends Shape implements AreaNamed {
+                    String name() { return "Circle" }
+                    Double area() { return 3.14 * radius * radius }
+                }
+                main() {
+                    var c = new Circle(5.0)
+                    println(c.kind)
+                    println(c.name())
+                    println(c.area())
+                }
+                """);
+        Path out = tempDir.resolve("paramclassext-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("shape\nCircle\n78.5", runJvm(out));
+    }
 }
