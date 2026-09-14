@@ -1,51 +1,53 @@
+[English](13-nullability.md) | [Português](13-nullability.pt_BR.md)
+
 # 13 — Nullability
 
-> **Status: implementado (JVM / Native / JS) — 0.3.22-beta — exemplos verificados no compilador**
+> **Status: implemented (JVM / Native / JS) — 0.3.22-beta — examples verified in the compiler**
 >
-> `Tipo?` (ex.: `String?`) declara que um valor **pode** ser `null`. O
-> compilador exige um check (`if (x != null)`) antes de usar — e o narrowing
-> foi corrigido no JVM em 02/09 (antes `s.length` com narrowing emitia
-> bytecode inválido).
+> `Tipo?` (e.g.: `String?`) declares that a value **can** be `null`. The
+> compiler requires a check (`if (x != null)`) before using it — and narrowing
+> was fixed on the JVM on 02/09 (previously `s.length` with narrowing emitted
+> invalid bytecode).
 
-## O problema
+## The problem
 
-`NullPointerException` é a causa mais comum de erros em Java:
+`NullPointerException` is the most common cause of errors in Java:
 
 ```java
 String nome = null;
 System.out.println(nome.length());  // NullPointerException!
 ```
 
-## A solução: `?`
+## The solution: `?`
 
 ```kf
-String nome = "Mel"           // não pode ser null
-String? apelido = null        // pode ser null
-var outro: String? = "Kof"    // forma anotada (também válida)
+String nome = "Mel"           // cannot be null
+String? apelido = null        // can be null
+var outro: String? = "Kof"    // annotated form (also valid)
 ```
 
 ## Narrowing: `if (x != null)`
 
 ```kf
-String? nome = obterNome()    // pode vir null
+String? nome = obterNome()    // may come null
 if (nome != null) {
-    println(nome.length)      // seguro — o check libera o acesso
+    println(nome.length)      // safe — the check unlocks the access
 } else {
     println("sem nome")
 }
 ```
 
-Acessar **sem** o check é erro de compilação:
+Accessing **without** the check is a compilation error:
 
 ```kf
 var nome: String? = obterNome()
-println(nome.length)   // ERRO: nome pode ser null — exige if (nome != null)
+println(nome.length)   // ERROR: nome may be null — requires if (nome != null)
 ```
 
-## A stdlib devolve `?` (02/09)
+## The stdlib returns `?` (02/09)
 
-As funções de leitura da stdlib são tipadas de forma honesta — ausência é
-`null`, não sentinela:
+The stdlib read functions are honestly typed — absence is
+`null`, not a sentinel:
 
 ```kf
 main() {
@@ -56,24 +58,24 @@ main() {
         println("arquivo não existe")
     }
 
-    var linha = readLine()                     // String? — null no EOF
+    var linha = readLine()                     // String? — null at EOF
     if (linha != null) {
         println("linha: " + linha)
     }
 
     var m = mapOf("nome", "Mel")
-    var v = m.get("nome")                      // V? — valores de referência
+    var v = m.get("nome")                      // V? — reference values
     if (v != null) {
         println(v.length)                      // 3
     }
 }
 ```
 
-> `Map.get` devolve `V?` para valores de **referência** (`Map<String, String>`).
-> Para valores primitivos (`Map<String, Int>`) o tipo fica `V` — o modelo
-> atual não representa ausência nesse caso; cheque com `contains`/`containsKey`.
+> `Map.get` returns `V?` for **reference** values (`Map<String, String>`).
+> For primitive values (`Map<String, Int>`) the type stays `V` — the current
+> model does not represent absence in that case; check with `contains`/`containsKey`.
 
-## Nullable em funções e retornos
+## Nullable in functions and returns
 
 ```kf
 String? find(Int id) {
@@ -89,11 +91,11 @@ main() {
 }
 ```
 
-## Regra de ouro
+## Golden rule
 
-- **Ausência como valor** (o dado pode não existir) → `String?`/`Tipo?` +
+- **Absence as a value** (the data may not exist) → `String?`/`Tipo?` +
   `if (x != null)`.
-- **Erro real** (a ausência é um defeito) → `throw "mensagem"` + `catch`.
+- **Real error** (the absence is a defect) → `throw "mensagem"` + `catch`.
 
 ```kf
 String findOrThrow(Int id) {
@@ -102,24 +104,24 @@ String findOrThrow(Int id) {
 }
 ```
 
-## Onde estamos (0.3.22-beta)
+## Where we are (0.3.22-beta)
 
-- ✅ `String?`, `Int?`, `Tipo?` no parser e type system (`NullableType`).
-- ✅ Narrowing `if (x != null)` nos 3 targets — **JVM corrigido 02/09**
-  (antes `s.length`/`s.substring(...)` com narrowing emitiam
-  `getfield "?".length`/`"".substring` → erro de launcher/`ClassFormatError`).
+- ✅ `String?`, `Int?`, `Tipo?` in the parser and type system (`NullableType`).
+- ✅ Narrowing `if (x != null)` on the 3 targets — **JVM fixed 02/09**
+  (previously `s.length`/`s.substring(...)` with narrowing emitted
+  `getfield "?".length`/`"".substring` → launcher error/`ClassFormatError`).
 - ✅ `Map.get` → `V?`, `readFile`/`readText`/`readLine` → `String?`.
-- 🚧 Flow analysis mais profundo e operadores `?.` / `?:` ainda planejados.
+- 🚧 Deeper flow analysis and the `?.` / `?:` operators still planned.
 
-## Exercícios
+## Exercises
 
-1. Escreva `String? saudacao(String? nome)` que devolve `"oi, X"` quando
-   `nome != null` e `"oi"` caso contrário — use narrowing.
-2. Leia um arquivo que pode não existir e trate os dois casos com
+1. Write `String? saudacao(String? nome)` that returns `"oi, X"` when
+   `nome != null` and `"oi"` otherwise — use narrowing.
+2. Read a file that may not exist and handle both cases with
    `readFile`.
-3. Por que `Map.get` de `Map<String, Int>` **não** devolve `Int?`? (dica:
-   como `Int?` é armazenado no runtime).
+3. Why does `Map.get` of a `Map<String, Int>` **not** return `Int?`? (hint:
+   how `Int?` is stored at runtime).
 
-## Próximo passo
+## Next step
 
 [Exceptions →](14-exceptions.md)

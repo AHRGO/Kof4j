@@ -1,15 +1,17 @@
-# 08 — Campos e Acesso a Dados ("Propriedades")
+[English](08-properties.md) | [Português](08-properties.pt_BR.md)
 
-> **Status: implementado — acesso direto a campo, sem getters/setters (0.3.22-beta, exemplos verificados no compilador)**
+# 08 — Fields and Data Access ("Properties")
+
+> **Status: implemented — direct field access, no getters/setters (0.3.22-beta, examples verified in the compiler)**
 >
-> Kof **não** tem JavaBeans: não há getter/setter de convenção nem reflexão de
-> framework. Um campo é acessado direto: `u.name` (leitura) e `u.name = "Mel"`
-> (escrita). Isto é uma decisão de filosofia, não uma lacuna — ver
-> `docs/philosophy.md` e `training/anti-patterns/java-like-code.md`.
+> Kof does **not** have JavaBeans: there is no conventional getter/setter nor
+> framework reflection. A field is accessed directly: `u.name` (read) and
+> `u.name = "Mel"` (write). This is a philosophy decision, not a gap — see
+> `docs/philosophy.md` and `training/anti-patterns/java-like-code.md`.
 
-## O problema do Java
+## The Java problem
 
-Em Java, expor um campo exige cerimônia:
+In Java, exposing a field requires ceremony:
 
 ```java
 private String name;
@@ -18,41 +20,41 @@ public String getName() { return name; }
 public void setName(String name) { this.name = name; }
 ```
 
-Isso existe por causa de JavaBeans, serialização e frameworks de reflexão.
-**Kof não tem nenhuma dessas convenções** — então a cerimônia some.
+This exists because of JavaBeans, serialization and reflection frameworks.
+**Kof has none of these conventions** — so the ceremony disappears.
 
-## Dois modelos de "dado com parâmetros"
+## Two models of "data with parameters"
 
-Kof tem **dois** modelos, e é essencial distingui-los:
+Kof has **two** models, and it is essential to distinguish them:
 
-| Declaração | Runtime | Campos | Acesso | Mutável? |
+| Declaration | Runtime | Fields | Access | Mutable? |
 |-----------|---------|--------|--------|----------|
-| `record Point(Int x, Int y)` | record | privados `final` | `p.x()` (accessor) | não |
-| `class User(String name, Int age)` | **record** (idem) | privados `final` | `u.name` (→ accessor) | não |
-| `class Conta { String titular; constructor(...) }` | classe | públicos | `c.titular` | sim |
+| `record Point(Int x, Int y)` | record | private `final` | `p.x()` (accessor) | no |
+| `class User(String name, Int age)` | **record** (same) | private `final` | `u.name` (→ accessor) | no |
+| `class Conta { String titular; constructor(...) }` | class | public | `c.titular` | yes |
 
-> `class X(...)` é **alias de `record X(...)`** — compila para um
-> `java.lang.Record` (imutável). Para **estado mutável** com parâmetros, use
-> campos explícitos + `constructor(...)`.
+> `class X(...)` is an **alias of `record X(...)`** — it compiles to a
+> `java.lang.Record` (immutable). For **mutable state** with parameters, use
+> explicit fields + `constructor(...)`.
 
-## 1. Dados imutáveis → record (e `class X(...)`)
+## 1. Immutable data → record (and `class X(...)`)
 
 ```kf
 record Point(Int x, Int y)
-// class Point(Int x, Int y) — idêntico
+// class Point(Int x, Int y) — identical
 
 main() {
     var p = Point(10, 20)
-    println(p.x())        // 10 — accessor do record
+    println(p.x())        // 10 — record accessor
     println(p)            // Point[x=10, y=20] (JVM)
-    // p.x = 99           // ERRO de compilação SEM038: records são imutáveis
+    // p.x = 99           // COMPILATION ERROR SEM038: records are immutable
 }
 ```
 
-`u.name` (sem parênteses) em um record **também lê** — o compilador baixa para
-o accessor. Mas a **escrita** (`u.name = ...`) é inválida (campo final).
+`u.name` (without parentheses) in a record **also reads** — the compiler lowers
+it to the accessor. But **writing** (`u.name = ...`) is invalid (final field).
 
-## 2. Estado mutável → classe com `constructor(...)`
+## 2. Mutable state → class with `constructor(...)`
 
 ```kf
 class Conta {
@@ -71,19 +73,19 @@ class Conta {
 
 main() {
     var c = Conta("Mel", 100.0)
-    println(c.titular)          // "Mel" — campo público, leitura direta
-    c.saldo = 200.0             // escrita direta
+    println(c.titular)          // "Mel" — public field, direct read
+    c.saldo = 200.0             // direct write
     c.depositar(50.0)
     println(c.saldo)            // 250.0
 }
 ```
 
-Aqui os campos são **públicos** e **mutáveis** — leitura e escrita diretas,
-sem getters/setters.
+Here the fields are **public** and **mutable** — direct read and write,
+without getters/setters.
 
-## Campos sem construtor
+## Fields without a constructor
 
-Uma classe sem construtor explícito tem um construtor padrão sem argumentos:
+A class without an explicit constructor has a default no-argument constructor:
 
 ```kf
 class Usuario {
@@ -98,39 +100,39 @@ main() {
 }
 ```
 
-## Regras de acesso
+## Access rules
 
-- Campos são públicos por padrão (`private`/`protected` existem para quando
-  você realmente precisa encapsular).
-- Não escreva `getName()`/`setName()` por reflexo — é cerimônia sem semântica.
-- Métodos dentro da classe acessam os campos direto (`saldo = saldo + valor`).
+- Fields are public by default (`private`/`protected` exist for when
+  you really need to encapsulate).
+- Do not write `getName()`/`setName()` by reflex — it is ceremony without semantics.
+- Methods inside the class access the fields directly (`saldo = saldo + valor`).
 
-## Anti-padrão (o que NÃO fazer)
+## Anti-pattern (what NOT to do)
 
 ```kf
-// ❌ Java traduzido — getters/setters sem razão de existir
+// ❌ Translated Java — getters/setters with no reason to exist
 class User {
     private String name
     public getName(): String { return name }
     public setName(String name) { this.name = name }
 }
 
-// ✅ Kof — o campo é o dado
+// ✅ Kof — the field is the data
 class User {
     String name
 }
 ```
 
-## Exercícios
+## Exercises
 
-1. Crie `class Conta(String titular, Double saldo)` e tente
-   `c.saldo = 300.0`. O que acontece? Explique por quê (compare com o
+1. Create `class Conta(String titular, Double saldo)` and try
+   `c.saldo = 300.0`. What happens? Explain why (compare with the
    `record`).
-2. Escreva a mesma `Conta` como **classe mutável** (campos + `constructor`) e
-   implemente `depositar`/`sacar`. Valide com `kof run`.
-3. Converta o modelo de dados de um app simples (ex.: `User`, `Produto`)
-   para `record` quando imutável e classe quando mutável — decida caso a caso.
+2. Write the same `Conta` as a **mutable class** (fields + `constructor`) and
+   implement `depositar`/`sacar`. Validate with `kof run`.
+3. Convert the data model of a simple app (e.g.: `User`, `Produto`)
+   to `record` when immutable and class when mutable — decide case by case.
 
-## Próximo passo
+## Next step
 
 [Interfaces →](09-interfaces.md)

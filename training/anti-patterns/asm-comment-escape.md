@@ -1,73 +1,75 @@
-# Anti-pattern: asm-comment-escape (COMENTARIOS em asm-textblocks)
+[English](asm-comment-escape.md) | [Português](asm-comment-escape.pt_BR.md)
 
-## O que é
+# Anti-pattern: asm-comment-escape (COMMENTS in asm-textblocks)
 
-Os runtimes de geração asm (`NativeRuntime*.java`, `NativeWebRuntime.java`
-etc.) usam Java text blocks (`"""..."""`) com strings `asm` inline. Nessas
-cadeias quaisquer caracteres (incluindo `\r`, tabs, aspas, non-ASCII) são
-preservados ao gerar o arquivo `.s`. O assembler GNU (`as`) é estrito — um
-`\r` num comentário *não-em*`.asciz` quebra a linha e se torna "junk at end
+## What it is
+
+The asm generation runtimes (`NativeRuntime*.java`, `NativeWebRuntime.java`
+etc.) use Java text blocks (`"""..."""`) with inline `asm` strings. In these
+strings any characters (including `\r`, tabs, quotes, non-ASCII) are
+preserved when generating the `.s` file. The GNU assembler (`as`) is strict — a
+`\r` in a comment *not-in* `.asciz` breaks the line and becomes "junk at end
 of line".
 
-## Sintomas
+## Symptoms
 
 - **`Main.s:NNNNF: Error: junk at end of line, first unrecognized character
-  is `:'`/`(`**／ ou `invalid character (0xa) in mnemonic`
-- **Componente quebra logo após edição de comentário**
+  is `:'`/`(`**／ or `invalid character (0xa) in mnemonic`
+- **Component breaks right after a comment edit**
 
-## Regras para comentários em asm dentro de text blocks Java
+## Rules for asm comments inside Java text blocks
 
-1. **Apenas ASCII básico** (sem ç/á/é — veja bytes 0x80+ no `.s`)
-2. **Nunca `\r\n` ou `\n` literal** em comment. Mesmo que o `"""` Java
-   interprete, o `\r` fica no arquivo `.s` e quebra
-3. Se precisar documentar caractere especial, escreva `CRLF` ou `LF` em
-   ASCII puro, não o caractere literal
+1. **Basic ASCII only** (no ç/á/é — see bytes 0x80+ in the `.s`)
+2. **Never a literal `\r\n` or `\n`** in a comment. Even if Java's `"""`
+   interprets it, the `\r` stays in the `.s` file and breaks
+3. If you need to document a special character, write `CRLF` or `LF` in
+   pure ASCII, not the literal character
 
-## Exemplo ruim
-
-```java
-        sb.append("""
-            movq %rax, %rbx
-            # achou \r\n\r\n: body em rsi+4     <-- quebra o assembler
-            call handle_body
-        """);
-```
-
-## Exemplo bom
+## Bad example
 
 ```java
         sb.append("""
             movq %rax, %rbx
-            # achou CRLF CRLF; body em rsi+4
+            # found \r\n\r\n: body at rsi+4     <-- breaks the assembler
             call handle_body
         """);
 ```
 
-## Ferramenta de detecção rápida
+## Good example
 
-Antes de commit, compile o asm e busque por linhas com CR sem escape:
+```java
+        sb.append("""
+            movq %rax, %rbx
+            # found CRLF CRLF; body at rsi+4
+            call handle_body
+        """);
+```
+
+## Quick detection tool
+
+Before committing, compile the asm and look for lines with an unescaped CR:
 
 ```bash
 grep -a $'\r' out/Default/Main.s | grep -v 'asciz\|\.quad\|\.long\|\.byte'
 ```
 
-Se aparecer, ro is an asm-comment escape bug.
+If it shows up, it is an asm-comment escape bug.
 
-## Variante: dupla interpretação em STRINGS emitidas (`\n` vs `\\n`)
+## Variant: double interpretation in EMITTED STRINGS (`\n` vs `\\n`)
 
-A mesma família atinge **strings de código**, não só comentários: um text
-block que EMITE uma linha asm contendo `\n` literal para o `as` interpretar
-(p.ex. mensagem com newline em `.asciz`) precisa escrever `\\n` no Java — o
-primeiro `\` escapa o segundo no text block, e o `.s` recebe `\n` de verdade.
-Escrever só `\n` faz o Java comer o escape e o `as` receber a linha quebra
-(no histórico: `§107-x86` deslocou a região crítica e a montagem falhou em
-código non-mine; ver known-bugs §138). Convenção viva usada em
+The same family hits **code strings**, not just comments: a text
+block that EMITS an asm line containing a literal `\n` for `as` to interpret
+(e.g. a message with a newline in `.asciz`) must write `\\n` in Java — the
+first `\` escapes the second in the text block, and the `.s` receives a real `\n`.
+Writing only `\n` makes Java eat the escape and `as` receive the broken line
+(historically: `§107-x86` shifted the critical region and assembly failed in
+non-mine code; see known-bugs §138). Living convention used in
 `RuntimeMemory.java`, `RuntimeObservability3.java`, `RuntimeValidation.java`.
 
-## Referência
+## Reference
 
-- Discovered em 03/09 durante WEB002 T2/T3/Т4 (KofWebNativeE2ETest).
-- Variante de string documentada a partir da lição da Fase 1 do plano de
-  independência Spring (registro em `docs/development/DECISIONS.md`).
-- Relacionado: `fake-idioms.md` (o que NÃO existe em Kof); o comentário em
-  asm essencialmente **prejudica a build**, não a semântica Kof.
+- Discovered on 09/03 during WEB002 T2/T3/Т4 (KofWebNativeE2ETest).
+- String variant documented from the lesson of Phase 1 of the Spring
+  independence plan (record in `docs/development/DECISIONS.md`).
+- Related: `fake-idioms.md` (what does NOT exist in Kof); the asm comment
+  essentially **harms the build**, not Kof semantics.

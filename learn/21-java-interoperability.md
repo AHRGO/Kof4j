@@ -1,21 +1,23 @@
+[English](21-java-interoperability.md) | [Português](21-java-interoperability.pt_BR.md)
+
 # 21 — Java Interoperability
 
-> **Status: parcial — bytecode JVM compatível; chamada Java direta funciona
-> para o que está no classpath (verificado 02/09)**
+> **Status: partial — compatible JVM bytecode; direct Java call works
+> for what is on the classpath (verified 02/09)**
 >
-> O compilador gera bytecode JVM padrão (V21). **Antes de assumir que uma API
-> Java funciona, compile e rode.** Verificado em 02/09: `java.util` collections
-> ✅; `java.time`/`java.util.stream` ❌ (tipos não resolvem sem classpath
-> externo); `java.io.FileWriter.write` ❌ (resolução de overload errada →
+> The compiler generates standard JVM bytecode (V21). **Before assuming that a Java
+> API works, compile and run.** Verified on 02/09: `java.util` collections
+> ✅; `java.time`/`java.util.stream` ❌ (types do not resolve without an external
+> classpath); `java.io.FileWriter.write` ❌ (wrong overload resolution →
 > `NoSuchMethodError`).
 
-## A premissa
+## The premise
 
-Kof gera bytecode JVM padrão — V21, com exception table real e virtual
-threads. Bibliotecas Java podem funcionar, mas **o caminho idiomático é a
-stdlib Kof** (`listOf`/`mapOf`/`kof.io`/`json.*`).
+Kof generates standard JVM bytecode — V21, with a real exception table and virtual
+threads. Java libraries can work, but **the idiomatic path is the Kof
+stdlib** (`listOf`/`mapOf`/`kof.io`/`json.*`).
 
-## Usando Java Collections (verificado ✅)
+## Using Java Collections (verified ✅)
 
 ```kf
 import java.util.ArrayList;
@@ -33,9 +35,9 @@ main() {
 }
 ```
 
-## O idiomático: use as collections do Kof
+## The idiomatic way: use Kof's collections
 
-Para o caso comum, `List<T>`/`Map<K,V>` da linguagem já resolvem — sem
+For the common case, the language's `List<T>`/`Map<K,V>` already solve it — without
 `import java.util.*`:
 
 ```kf
@@ -44,48 +46,48 @@ println(lista.size)
 var mapa = mapOf("kof", 1)
 ```
 
-## Transformação de dados — use `map/filter`, não Java Streams
+## Data transformation — use `map/filter`, not Java Streams
 
 ```kf
-// ✅ Kof idiomático — sem Stream, sem Collectors
+// ✅ idiomatic Kof — no Stream, no Collectors
 var numeros = listOf(1, 2, 3, 4, 5)
 var pares = numeros.filter((n: Int) -> n % 2 == 0)
 println(pares.size)          // 2
 
-// ❌ Java Streams NÃO compila sem classpath externo:
+// ❌ Java Streams do NOT compile without an external classpath:
 //   var pares = numeros.stream().filter(...).collect(Collectors.toList())
 ```
 
-## Arquivos — use `kof.io`
+## Files — use `kof.io`
 
 ```kf
-// ✅ kof.io idiomático
+// ✅ idiomatic kof.io
 File("/tmp/x.txt").writeText("olá")
 println(File("/tmp/x.txt").readText())
 
-// ⚠️ java.io.FileWriter.write(String) → NoSuchMethodError (02/09, não usar)
+// ⚠️ java.io.FileWriter.write(String) → NoSuchMethodError (02/09, do not use)
 ```
 
-## O que requer classpath externo (parcial)
+## What requires an external classpath (partial)
 
-Tipos fora de `java.lang`/`java.util` (ex.: `java.time.*`, JDBC, Spring)
-precisam do classpath externo configurado (`setExternalClasspath` /
-`--classpath`) e ainda não têm paridade completa:
+Types outside `java.lang`/`java.util` (e.g.: `java.time.*`, JDBC, Spring)
+need the external classpath configured (`setExternalClasspath` /
+`--classpath`) and still do not have full parity:
 
 ```kf
-// Requer classpath externo + pode não resolver overloads
-var hoje = LocalDate.now()          // ❌ SEM011 sem classpath
-var conn = DriverManager.getConnection(url, user, pass)   // ❌ idem
+// Requires external classpath + may not resolve overloads
+var hoje = LocalDate.now()          // ❌ SEM011 without classpath
+var conn = DriverManager.getConnection(url, user, pass)   // ❌ same
 ```
 
-## Regras de interoperabilidade
+## Interoperability rules
 
-1. **Tipos Kof → Java**: mapeados diretamente (`Int` → `int`, `String` → `String`)
-2. **Generics**: funcionam entre as linguagens (collections ✅)
-3. **Annotations**: chegam ao bytecode corretamente (ver cap. 20)
-4. **Antes de usar API Java**: compile e rode — o suporte é parcial e a
-   resolução de overloads ainda tem falhas (02/09)
+1. **Kof types → Java**: mapped directly (`Int` → `int`, `String` → `String`)
+2. **Generics**: work between the languages (collections ✅)
+3. **Annotations**: reach the bytecode correctly (see ch. 20)
+4. **Before using a Java API**: compile and run — support is partial and
+   overload resolution still has flaws (02/09)
 
-## Próximo passo
+## Next step
 
 [JVM →](22-jvm.md)

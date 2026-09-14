@@ -1,25 +1,28 @@
-# 38 — Editores: do `kof` instalado ao `.kof` aberto
+[English](38-editors.md) | [Português](38-editors.pt_BR.md)
+
+# 38 — Editors: from the installed `kof` to the open `.kof`
 
 > **Kof 0.3.0-beta — `intention->Kof->frontend->IR->backend->runtime`**
 
-Instalar o Kof não é só ter compilador + runtime + CLI + stdlib. É abrir o
-seu editor e já ter **highlighting, diagnostics, autocomplete, hover, rename,
-formatação** — sem pesquisar "como configurar Kof no meu editor".
+Installing Kof is not just having compiler + runtime + CLI + stdlib. It is
+opening your editor and already having **highlighting, diagnostics,
+autocomplete, hover, rename, formatting** — without searching for "how to
+configure Kof in my editor".
 
-## A ideia em uma frase
+## The idea in one sentence
 
-Um comando detecta seus editores e instala a integração oficial de cada um;
-todos apontam para o **mesmo** `kof lsp` — nenhum editor tem parser próprio.
+One command detects your editors and installs the official integration for each
+one; all of them point to the **same** `kof lsp` — no editor has its own parser.
 
 ```
                     kof lsp  (LSP 3.x, stdio)
         ┌───────────────┼───────────────┐
       VS Code        Neovim         IntelliJ
         │              │              │
-       Vim           Emacs          outros
+       Vim           Emacs          others
 ```
 
-## Passo 1 — detectar
+## Step 1 — detect
 
 ```bash
 kof editor detect
@@ -46,18 +49,18 @@ Use:
 to install recommended integrations.
 ```
 
-A detecção usa PATH, executáveis conhecidos e diretórios de configuração —
-funciona em Linux, macOS e Windows, sem assumir caminho fixo. Versão ilegível
-vira `unknown`; o Kof **nunca inventa** versão.
+Detection uses PATH, known executables and configuration directories —
+it works on Linux, macOS and Windows, without assuming a fixed path. An
+unreadable version becomes `unknown`; Kof **never invents** a version.
 
-## Passo 2 — setup (com consentimento)
+## Step 2 — setup (with consent)
 
 ```bash
 kof editor setup
 ```
 
-O `setup` lista os editores detectados sem integração, mostra as recomendações
-e **pergunta antes de tocar no seu ambiente**:
+`setup` lists the detected editors without integration, shows the
+recommendations and **asks before touching your environment**:
 
 ```text
 Recommended Kof integrations:
@@ -67,11 +70,12 @@ Recommended Kof integrations:
 Install recommended integrations now? [Y/n]
 ```
 
-Recusou? Nada muda, e ele diz como fazer depois. Em ambiente sem console
-(CI, headless) ele não pergunta nem instala — só aponta o comando. A
-instalação é **idempotente**: rodar de novo não duplica nada.
+Declined? Nothing changes, and it tells you how to do it later. In an
+environment without a console (CI, headless) it neither asks nor installs — it
+just points to the command. The installation is **idempotent**: running it
+again duplicates nothing.
 
-## Passo 3 — um editor por vez
+## Step 3 — one editor at a time
 
 ```bash
 kof editor install neovim
@@ -82,25 +86,25 @@ kof editor install geany
 kof editor install nano
 ```
 
-O que cada um escreve (tudo no seu HOME; `uninstall` remove só o que o Kof
-criou):
+What each one writes (all in your HOME; `uninstall` removes only what Kof
+created):
 
-| Editor | Arquivos | O que dá |
+| Editor | Files | What it gives |
 |---|---|---|
-| VS Code | `~/.vscode/extensions/kof.kof/` | grammar TextMate + `package.json` com os comandos `Kof: Build/Run/Test/Check/Format/Serve/Select Target/Open Docs` |
-| Neovim | `~/.config/nvim/ftdetect/kof.lua` + `after/ftplugin/kof.lua` | filetype + `vim.lsp.start` apontando para `kof lsp` |
+| VS Code | `~/.vscode/extensions/kof.kof/` | TextMate grammar + `package.json` with the commands `Kof: Build/Run/Test/Check/Format/Serve/Select Target/Open Docs` |
+| Neovim | `~/.config/nvim/ftdetect/kof.lua` + `after/ftplugin/kof.lua` | filetype + `vim.lsp.start` pointing to `kof lsp` |
 | Vim | `~/.vim/ftdetect/kof.vim` + `after/{syntax,ftplugin,compiler}/kof.vim` | filetype, syntax, indent, `:make` → `kof build` |
 | Emacs | `~/.emacs.d/lisp/kof-mode.el` | `kof-mode` + `auto-mode-alist`; LSP via `eglot` |
-| Geany | `~/.config/geany/filedefs/filetypes.kof` | filetype, build/run, parsing de erros |
-| Nano | `~/.nano/kof.nanorc` | highlighting proporcional ao editor (sem LSP — nano não é IDE) |
+| Geany | `~/.config/geany/filedefs/filetypes.kof` | filetype, build/run, error parsing |
+| Nano | `~/.nano/kof.nanorc` | highlighting proportional to the editor (no LSP — nano is not an IDE) |
 
-IntelliJ: `kof editor install intellij` escreve filetype XML (`*.kf`/`*.kof`)
-+ External Tools (`kof build/run/test/fmt/check/lsp`) + README LSP4IJ sob
-`.config/JetBrains/kof/` (degrau 10, 13/09 — sem plugin; o plugin oficial é
-subprojeto próprio, issue #1). Manual extra: TextMate bundle + LSP4IJ
+IntelliJ: `kof editor install intellij` writes filetype XML (`*.kf`/`*.kof`)
++ External Tools (`kof build/run/test/fmt/check/lsp`) + LSP4IJ README under
+`.config/JetBrains/kof/` (step 10, 13/09 — no plugin; the official plugin is a
+subproject of its own, issue #1). Extra manual: TextMate bundle + LSP4IJ
 (`docs/editors/intellij.md`).
 
-## Passo 4 — status
+## Step 4 — status
 
 ```bash
 kof editor status
@@ -114,7 +118,7 @@ Kof:
   compiler: OK
   LSP: OK (kof lsp)
   formatter: OK (kof fmt)
-  debugger: PARTIAL (kof debug — DAP em evolução)
+  debugger: PARTIAL (kof debug — DAP in progress)
 
 Editors:
 ✓ Visual Studio Code
@@ -124,31 +128,31 @@ Editors:
 ...
 ```
 
-`debugger: PARTIAL` é honesto: o DAP ainda está em evolução — a flag não
-esconde isso.
+`debugger: PARTIAL` is honest: DAP is still in progress — the flag does not
+hide that.
 
-## Passo 5 — abrir e programar
+## Step 5 — open and program
 
-Abra um `.kf`/`.kof` num projeto com `kof.toml` na raiz. O LSP resolve o
-workspace subindo até o manifesto e usa os source roots, dependências e
-targets do projeto. Diagnostics aparecem enquanto você digita — são os
-**mesmos** do compilador, nunca um parser paralelo que divergiria.
+Open a `.kf`/`.kof` in a project with `kof.toml` at the root. The LSP resolves
+the workspace by walking up to the manifest and uses the project's source roots,
+dependencies and targets. Diagnostics appear as you type — they are the
+**same** ones as the compiler, never a parallel parser that would diverge.
 
-## O que viaja na distribuição
+## What ships in the distribution
 
 ```text
 kof/
-├── editor/kof.tmLanguage.json   # grammar oficial (sem rede)
-├── bin/kof                      # inclui editor + lsp + fmt + debug
-└── docs/editors/                # um guia por editor
+├── editor/kof.tmLanguage.json   # official grammar (no network)
+├── bin/kof                      # includes editor + lsp + fmt + debug
+└── docs/editors/                # one guide per editor
 ```
 
-Quando a marketplace de um editor exigir download externo, usa-se o mecanismo
-oficial do editor — o Kof nunca baixa código de URL arbitrária.
+When an editor's marketplace requires an external download, the editor's
+official mechanism is used — Kof never downloads code from an arbitrary URL.
 
-## Terminal é soberano
+## The terminal is sovereign
 
-A integração é conveniência sobre a CLI. Você sempre pode:
+The integration is convenience on top of the CLI. You can always:
 
 ```bash
 kof build
@@ -157,8 +161,8 @@ kof test
 kof serve
 ```
 
-## Próximo passo
+## Next step
 
-- Referência completa: `docs/editors/overview.md`
-- Plano/arquitetura: `docs/development/plan-editor-integration.md` (EDI001)
+- Full reference: `docs/editors/overview.md`
+- Plan/architecture: `docs/development/plan-editor-integration.md` (EDI001)
 - LSP: `docs/tooling/LSP.md`

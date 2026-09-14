@@ -1,13 +1,15 @@
+[English](25-spring.md) | [Português](25-spring.pt_BR.md)
+
 # 25 — Spring
 
-> **Status: futuro (pós 0.3.22-beta — `kof.web` + `kof_db` já cobrem o caso sem Spring)**
+> **Status: future (post 0.3.22-beta — `kof.web` + `kof_db` already cover the case without Spring)**
 >
-> A integração com Spring é um dos objetivos de longo prazo da Kof. Este capítulo documenta a visão planejada — e o que funciona hoje sem Spring.
+> Spring integration is one of Kof's long-term goals. This chapter documents the planned vision — and what works today without Spring.
 
-## O que funciona hoje (sem Spring)
+## What works today (without Spring)
 
-APIs web completas rodam com `kof.web` (stack nativa, sem container) +
-`kof.db`/`kof.orm` para persistência:
+Complete web APIs run with `kof.web` (native stack, no container) +
+`kof.db`/`kof.orm` for persistence:
 
 ```kf
 record User(String name, Int age)
@@ -40,18 +42,18 @@ main() {
 }
 ```
 
-- Rotas `get/post/put/delete/patch/options` + `ws` + `sse`, path params
+- Routes `get/post/put/delete/patch/options` + `ws` + `sse`, path params
   (`:id`), `query()`, `header()`, `body()`, `method()`, `path()`;
-- Resposta rica: `status(201, body)` + `headerSet("X", "y")`;
-- Cliente HTTP: `http.get/post/put/delete/patch/options` + `timeout`/
-  `retry`/`circuit` (JVM+JS; Native reporta `HTTP002`);
-- Web: `WEB002` no Native (sem servidor) — a stack web é JVM hoje.
+- Rich response: `status(201, body)` + `headerSet("X", "y")`;
+- HTTP client: `http.get/post/put/delete/patch/options` + `timeout`/
+  `retry`/`circuit` (JVM+JS; Native reports `HTTP002`);
+- Web: `WEB002` on Native (no server) — the web stack is JVM today.
 
-Ver `docs/stdlib/stdlib-web.md`.
+See `docs/stdlib/stdlib-web.md`.
 
-## A visão de longo prazo: o objetivo
+## The long-term vision: the goal
 
-Usar Spring Boot real, não um "Kof Spring".
+Use real Spring Boot, not a "Kof Spring".
 
 ```kf
 @SpringBootApplication
@@ -110,16 +112,16 @@ interface UserRepository extends CrudRepository<User, UUID> {
 }
 ```
 
-## Como funciona
+## How it works
 
-1. Kof gera bytecode JVM padrão
-2. Spring enxerga as annotations no bytecode
-3. Spring cria proxies normalmente
-4. Injeção de dependência funciona
-5. AOP funciona
-6. Transaction management funciona
+1. Kof generates standard JVM bytecode
+2. Spring sees the annotations in the bytecode
+3. Spring creates proxies normally
+4. Dependency injection works
+5. AOP works
+6. Transaction management works
 
-Kof não precisa de módulo especial para Spring. O bytecode é Java.
+Kof does not need a special module for Spring. The bytecode is Java.
 
 ## Configuration
 
@@ -133,7 +135,7 @@ class AppConfig {
 }
 ```
 
-## Testes com Spring
+## Testing with Spring
 
 ```kf
 @SpringBootTest
@@ -149,6 +151,6 @@ class UserServiceTest {
 }
 ```
 
-## Próximo passo
+## Next step
 
-[Aplicação Real →](26-real-world-application.md)
+[Real-World Application →](26-real-world-application.md)

@@ -1,30 +1,31 @@
-# 18 — Concorrência
+[English](18-concurrency.md) | [Português](18-concurrency.pt_BR.md)
 
-> **Status: implementado (JVM / Native / JS) — 0.3.22-beta — `spawn`/`await` nos 3 targets**
+# 18 — Concurrency
+
+> **Status: implemented (JVM / Native / JS) — 0.3.22-beta — `spawn`/`await` on the 3 targets**
 >
-> Kof não expõe `Thread`, `Runnable` nem `CompletableFuture`: a intenção é
-> `spawn` (rode em paralelo) e `await` (espere o resultado). JVM usa virtual
-> threads; Native roda em pthread (CONC001 fechado em 31/08); JS roda sobre
-> `async`/`await`/`Promise` reais do GraalJS (CONC003 fechado em 03/09,
-> `spawn`/`await` deferem de verdade via microtask). Os gaps
-> restantes são documentados, nunca silenciosos. Chain:
+> Kof does not expose `Thread`, `Runnable` nor `CompletableFuture`: the intention is
+> `spawn` (run in parallel) and `await` (wait for the result). JVM uses virtual
+> threads; Native runs on pthread (CONC001 closed on 31/08); JS runs over
+> real `async`/`await`/`Promise` from GraalJS (CONC003 closed on 03/09,
+> `spawn`/`await` really defer via microtask). The remaining
+> gaps are documented, never silent. Chain:
 > `intention->Kof->frontend->IR->backend->runtime`.
 
-## spawn — dispare e esqueça
+## spawn — fire and forget
 
 ```kf
 baixar(String url) {
-    // trabalho lento...
+    // slow work...
 }
 
 main() {
-    spawn baixar("https://example.com")   // roda em paralelo
+    spawn baixar("https://example.com")   // runs in parallel
     println("seguindo o fluxo principal")
 }
 ```
 
-O corpo pode ser qualquer expressão — o compilador embrulha numa tarefa
-sintética:
+The body can be any expression — the compiler wraps it in a synthetic task:
 
 ```kf
 spawn {
@@ -36,10 +37,10 @@ spawn {
 }
 ```
 
-## spawn + await — resultado tipado
+## spawn + await — typed result
 
-`spawn <expressão>` devolve um handle tipado `Handle<T>`; `await` bloqueia
-a virtual thread chamadora até o valor chegar:
+`spawn <expression>` returns a typed handle `Handle<T>`; `await` blocks
+the calling virtual thread until the value arrives:
 
 ```kf
 Int somar(a: Int, b: Int) {
@@ -48,13 +49,13 @@ Int somar(a: Int, b: Int) {
 
 main() {
     val r = spawn somar(2, 3)     // Handle<Int>
-    // ...trabalho enquanto a soma acontece...
-    val total = await r           // Int — unboxing automático
+    // ...work while the sum happens...
+    val total = await r           // Int — automatic unboxing
     println(total)                // 5
 }
 ```
 
-Primitivos (`Int`, `Bool`) e referências funcionam igualmente:
+Primitives (`Int`, `Bool`) and references work equally:
 
 ```kf
 String buscar() { return "dados" }
@@ -65,7 +66,7 @@ main() {
 }
 ```
 
-## poll / done — sem bloquear
+## poll / done — without blocking
 
 ```kf
 val r = spawn trabalho()
@@ -74,18 +75,18 @@ if (done(r)) {
 }
 ```
 
-- `poll(r)` devolve o valor se pronto; **default do tipo** (0/false) para
-  primitivos não-prontos, `null` para referências. Use `done()` para
-  distinguir "não pronto" de um valor default.
+- `poll(r)` returns the value if ready; the **type default** (0/false) for
+  primitives not ready, `null` for references. Use `done()` to
+  distinguish "not ready" from a default value.
 - `done(r)` → `Bool`.
-- `poll`/`done` funcionam em JVM, JS e Native x86_64 (no JS a execução é
-  sequencial, então `poll` sempre tem o valor e `done` é `true`); em
-  riscv64/aarch64 não existem (ver a tabela de gaps abaixo).
+- `poll`/`done` work on JVM, JS and Native x86_64 (on JS execution is
+  sequential, so `poll` always has the value and `done` is `true`); on
+  riscv64/aarch64 they do not exist (see the gaps table below).
 
-## Exceções atravessam await
+## Exceptions cross await
 
-A exceção lançada dentro da tarefa chega **com a mensagem original** no
-ponto do await — o runtime desembrulha o wrapper:
+The exception thrown inside the task arrives **with the original message** at
+the await point — the runtime unwraps the wrapper:
 
 ```kf
 Int quebra() { throw "boom" }
@@ -100,7 +101,7 @@ main() {
 }
 ```
 
-## Cancelamento cooperativo
+## Cooperative cancellation
 
 ```kf
 Int trabalho() {
@@ -115,115 +116,116 @@ Int trabalho() {
 main() {
     val r = spawn trabalho()
     time.sleep(30)
-    assert(cancel(r))       // marca a tarefa
-    await r                 // a tarefa sai do loop cedo
+    assert(cancel(r))       // marks the task
+    await r                 // the task leaves the loop early
 }
 ```
 
-- `cancel(r)` marca o handle; **a tarefa decide quando sair** consultando
-  `cancelled()` dentro do próprio corpo.
-- `cancelled()` fora de uma tarefa devolve `false`.
-- No JS é no-op marcado (`cancel` devolve `0`, `cancelled` devolve `false`) —
-  execução é sequencial.
+- `cancel(r)` marks the handle; **the task decides when to leave** by consulting
+  `cancelled()` inside its own body.
+- `cancelled()` outside a task returns `false`.
+- On JS it is a marked no-op (`cancel` returns `0`, `cancelled` returns `false`) —
+  execution is sequential.
 
-## selectAny — primeiro que chegar
+## selectAny — first to arrive
 
 ```kf
 val a = spawn lenta()      // 300ms
-val b = spawn rapida()     // imediata
-println(selectAny(a, b))   // valor da rapida
+val b = spawn rapida()     // immediate
+println(selectAny(a, b))   // value of the fast one
 ```
 
-Bloqueia até **qualquer** handle completar e devolve o valor dele. No JS é
-`Promise.race` sobre os handles (`js/JsRuntimeUiLayout.java:304`); no Native
-x86_64 funciona por polling de 1 ms sobre os handles; em riscv64/aarch64
-não existe.
+It blocks until **any** handle completes and returns its value. On JS it is
+`Promise.race` over the handles (`js/JsRuntimeUiLayout.java:304`); on Native
+x86_64 it works by 1 ms polling over the handles; on riscv64/aarch64 it
+does not exist.
 
-## Semântica
+## Semantics
 
-- JVM: cada `spawn` roda numa **virtual thread** (JDK 21+) — barato para
-  milhares de tarefas. Native: a tarefa roda numa **pthread** criada pelo
-  trampoline do runtime. JS: o corpo roda sequencialmente (sem paralelo).
-- O programa espera as tarefas antes de sair (join implícito no runtime).
-- Exceção dentro da tarefa é re-lançada no ponto do `await`.
-- `await` num handle duas vezes devolve o mesmo valor (o resultado é memoizado pelo runtime).
+- JVM: each `spawn` runs on a **virtual thread** (JDK 21+) — cheap for
+  thousands of tasks. Native: the task runs on a **pthread** created by the
+  runtime trampoline. JS: the body runs sequentially (no parallelism).
+- The program waits for the tasks before exiting (implicit join in the runtime).
+- An exception inside the task is re-thrown at the `await` point.
+- `await` on a handle twice returns the same value (the result is memoized by the runtime).
 
-## Gaps por target (nunca silenciosos)
+## Gaps per target (never silent)
 
-Cada `✅` cita o teste que o prova; cada `❌` significa que o símbolo do
-runtime **não é emitido** para aquele alvo. O `ConcurrencyGapsDocTest`
-trava esta tabela contra o código — ver nota ao final da seção.
+Each `✅` cites the test that proves it; each `❌` means the runtime
+symbol **is not emitted** for that target. `ConcurrencyGapsDocTest`
+locks this table against the code — see the note at the end of the section.
 
-| Construto | JVM | Native x86_64 | Native riscv64/aarch64 | JS |
+| Construct | JVM | Native x86_64 | Native riscv64/aarch64 | JS |
 |-----------|-----|----------------|-------------------------|----|
 | `spawn stmt` | ✅ `SpawnE2ETest.spawnRunsConcurrentlyAndJoins` | ✅ pthread — `SpawnE2ETest.nativeSpawnStmtRuns` | ✅ `clone` 220 — `NativeRiscv64E2ETest.riscv64SpawnFireAndForgetJoins` | ✅ microtask — `SpawnE2ETest.jsSpawnStmtRunsSequentially` |
 | `val r = spawn expr` | ✅ `KofAwaitTest.awaitJvm` | ✅ pthread — `SpawnE2ETest.nativeSpawnExprAwait` | ✅ `clone` 220 — `NativeRiscv64E2ETest.riscv64SpawnAwait` | ✅ microtask — `KofAwaitTest.awaitJs` |
-| `await r` | ✅ `KofAwaitTest.awaitJvm` | ✅ `pthread_join` — `KofAwaitTest.awaitNativeRuns` | ✅ futex sobre `done` — `NativeAarch64E2ETest.aarch64SpawnAwait` | ✅ `KofAwaitTest.awaitJs` |
-| `poll` / `done` | ✅ `KofAwaitTest.pollDoneJvm` | ✅ `KofConcurrency2Test.pollDoneNative` | ❌ `kof_poll`/`kof_done` não emitidos | ✅ `KofAwaitTest.pollDoneJs` |
-| `cancel` / `cancelled` | ✅ `KofConcurrency2Test.cancelCooperativeJvm` | ⚠️ `KofConcurrency2Test.cancelCooperativeNative` — mas ver **bug 101** | ❌ `kof_cancel` não emitido | ✅ no-op (`cancelled()` = `0`) — `KofConcurrency2Test.cancelJsSequential` |
-| `selectAny` | ✅ `KofConcurrency2Test.selectAnyJvm` | ✅ polling 1 ms — `KofConcurrency2Test.selectAnyNative` | ❌ `kof_select_any` não emitido | ✅ `Promise.race` — `KofConcurrency2Test.selectAnyJs` |
-| `awaitTimeout` | ✅ `KofConcurrency2Test.awaitTimeoutJvm` | ✅ polling 1 ms — `KofConcurrency2Test.awaitTimeoutNative` | ❌ `kof_await_timeout` não emitido | ✅ `KofConcurrency2Test.awaitTimeoutJs` |
+| `await r` | ✅ `KofAwaitTest.awaitJvm` | ✅ `pthread_join` — `KofAwaitTest.awaitNativeRuns` | ✅ futex over `done` — `NativeAarch64E2ETest.aarch64SpawnAwait` | ✅ `KofAwaitTest.awaitJs` |
+| `poll` / `done` | ✅ `KofAwaitTest.pollDoneJvm` | ✅ `KofConcurrency2Test.pollDoneNative` | ❌ `kof_poll`/`kof_done` not emitted | ✅ `KofAwaitTest.pollDoneJs` |
+| `cancel` / `cancelled` | ✅ `KofConcurrency2Test.cancelCooperativeJvm` | ⚠️ `KofConcurrency2Test.cancelCooperativeNative` — but see **bug 101** | ❌ `kof_cancel` not emitted | ✅ no-op (`cancelled()` = `0`) — `KofConcurrency2Test.cancelJsSequential` |
+| `selectAny` | ✅ `KofConcurrency2Test.selectAnyJvm` | ✅ 1 ms polling — `KofConcurrency2Test.selectAnyNative` | ❌ `kof_select_any` not emitted | ✅ `Promise.race` — `KofConcurrency2Test.selectAnyJs` |
+| `awaitTimeout` | ✅ `KofConcurrency2Test.awaitTimeoutJvm` | ✅ 1 ms polling — `KofConcurrency2Test.awaitTimeoutNative` | ❌ `kof_await_timeout` not emitted | ✅ `KofConcurrency2Test.awaitTimeoutJs` |
 
-`spawn`/`await` fecharam o `CONC001` no Native em 31/08 (pthread_create +
-trampoline + `pthread_join` + allocator thread-safe via futex), e os
-construtos auxiliares (`poll`/`done`/`cancel`/`cancelled`/`selectAny`/
-`awaitTimeout`) **também funcionam no x86_64** desde então — runtime em
-`runtime/RuntimeConcurrency.java:304`, prova em
+`spawn`/`await` closed `CONC001` on Native on 31/08 (pthread_create +
+trampoline + `pthread_join` + thread-safe allocator via futex), and the
+auxiliary constructs (`poll`/`done`/`cancel`/`cancelled`/`selectAny`/
+`awaitTimeout`) **also work on x86_64** since then — runtime in
+`runtime/RuntimeConcurrency.java:304`, proof in
 `KofConcurrency2Test.selectAnyNative`.
 
-No x86_64, `cancel`/`cancelled` funcionam mas carregam o **bug 101** (flag
-por `TID % 256` — dois workers podem herdar o cancel um do outro).
+On x86_64, `cancel`/`cancelled` work but carry **bug 101** (flag
+by `TID % 256` — two workers can inherit the cancel from each other).
 
-Em **riscv64/aarch64** esses auxiliares não existem:
-`nat/NativeRiscvSpawn.java` emite apenas `kof_spawn_result`, `kof_spawn`,
-`kof_await` e `kof_spawn_join_all`. Desde 11/09 a ausência é um gap R6
-honesto: `ExpressionStaticCallLowerer` detecta `poll`/`done`/`cancel`/
-`cancelled`/`selectAny`/`awaitTimeout` nesses alvos e emite **`CONC001` em
-compile-time** (antes caía no `sanitizeName` genérico de
-`NativeRiscvCrossOps.resolveCalleeNameRiscv` e o erro só aparecia no
-**link**, como símbolo indefinido — mesmo padrão do bug 59). Prova:
+On **riscv64/aarch64** these auxiliaries do not exist:
+`nat/NativeRiscvSpawn.java` emits only `kof_spawn_result`, `kof_spawn`,
+`kof_await` and `kof_spawn_join_all`. Since 11/09 the absence is an honest R6
+gap: `ExpressionStaticCallLowerer` detects `poll`/`done`/`cancel`/
+`cancelled`/`selectAny`/`awaitTimeout` on those targets and emits **`CONC001` at
+compile-time** (previously it fell into the generic `sanitizeName` of
+`NativeRiscvCrossOps.resolveCalleeNameRiscv` and the error only appeared at
+**link** time, as an undefined symbol — same pattern as bug 59). Proof:
 `KofConcurrency2Test.crossMissingConcurrencyHelpersReportConc001` (issue
-#91). O que falta para fechar de vez é portar os símbolos, não o diagnóstico.
+#91). What is missing to close it for good is porting the symbols, not the
+diagnostic.
 
-> **Esta tabela é travada por teste.** `ConcurrencyGapsDocTest` (em
-> `kof-compiler/src/test/java/dev/kof/compiler/`) quebra o build se uma
-> célula de suporte não citar um método de teste existente, ou se uma
-> célula marcada `❌` referir-se a um símbolo que os emissores cross de
-> fato emitem. É o mesmo padrão do `ConformanceMatrixDocTest`, que trava
-> `docs/bugs-and-gaps/conformance-matrix.md`. Motivo: esta tabela passou
-> meses dizendo que os auxiliares reportavam `CONC001` no Native — porque
-> nada a comparava com o código.
+> **This table is locked by test.** `ConcurrencyGapsDocTest` (in
+> `kof-compiler/src/test/java/dev/kof/compiler/`) breaks the build if a
+> support cell does not cite an existing test method, or if a
+> cell marked `❌` refers to a symbol that the cross emitters
+> actually emit. It is the same pattern as `ConformanceMatrixDocTest`, which locks
+> `docs/bugs-and-gaps/conformance-matrix.md`. Reason: this table spent
+> months saying that the auxiliaries reported `CONC001` on Native — because
+> nothing compared it with the code.
 >
-> Limite do guard, explícito: ele prova que a doc aponta para testes que
-> **existem**, não que esses testes **passam**. A prova de comportamento
-> continua sendo a suíte.
+> Guard limit, explicit: it proves that the doc points to tests that
+> **exist**, not that those tests **pass**. The behavior proof
+> remains the suite.
 >
-> **A coluna riscv64/aarch64 não tem o mesmo peso de prova das outras.**
-> `NativeRiscv64E2ETest` e `NativeAarch64E2ETest` são inteiramente
-> condicionados por `Assumptions.assumeTrue(...)` ao toolchain cruzado
-> (`riscv64-linux-gnu-as`, `riscv64-linux-gnu-ld`, `qemu-riscv64`) — sem
-> ele, **as 66 provas dessas duas classes pulam em silêncio**. Execução de
-> 11/09 numa máquina sem o toolchain: JVM, Native x86_64 e JS passaram
+> **The riscv64/aarch64 column does not have the same weight of proof as the others.**
+> `NativeRiscv64E2ETest` and `NativeAarch64E2ETest` are entirely
+> conditioned by `Assumptions.assumeTrue(...)` on the cross toolchain
+> (`riscv64-linux-gnu-as`, `riscv64-linux-gnu-ld`, `qemu-riscv64`) — without
+> it, **the 66 proofs of those two classes skip silently**. Execution of
+> 11/09 on a machine without the toolchain: JVM, Native x86_64 and JS passed
 > (`SpawnE2ETest` 10/10, `KofAwaitTest` 8/8, `KofConcurrency2Test` 29/29
-> com 1 skip de qemu, `ConcurrencyGapsDocTest` 3/3), e riscv/aarch
-> pularam 33/33 cada. Portanto o `✅` dessa coluna significa *"provado
-> onde o toolchain existe"*, não *"provado"*. Instalar `qemu-user` e os
-> assemblers cruzados no CI é o que fecharia essa lacuna — nos runners do
-> GitHub o `sudo apt-get` funciona sem senha (`ci.yml:41` já faz isso).
+> with 1 qemu skip, `ConcurrencyGapsDocTest` 3/3), and riscv/aarch
+> skipped 33/33 each. Therefore the `✅` of that column means *"proven
+> where the toolchain exists"*, not *"proven"*. Installing `qemu-user` and the
+> cross assemblers on CI is what would close that gap — on the GitHub
+> runners `sudo apt-get` works without a password (`ci.yml:41` already does that).
 
-No JS o modelo é
-single-threaded, mas concorrente de verdade sobre o event-loop: `spawn`
-enfileira a task como microtask (não roda na hora) e `await` de fato
-suspende até ela resolver — o programa espera todas as tasks spawnadas
-antes de sair, igual JVM/Native (`CONC003` fechado).
+On JS the model is
+single-threaded, but truly concurrent over the event loop: `spawn`
+enqueues the task as a microtask (it does not run right away) and `await` really
+suspends until it resolves — the program waits for all spawned tasks
+before exiting, like JVM/Native (`CONC003` closed).
 
 ## Target separation (0.2.0)
 
-`Target` enum separa `NATIVE` (x86-64) de `NATIVE_RISCV64` e `NATIVE_AARCH64`.
-`spawn`/`await` funcionam no Native (pthread) — a separação vale para
-codegen/linker (`as`/`ld` por arch), não muda a semântica de concorrência.
-Native usa free-list `kof_free_head` para reuso de `mmap`.
+The `Target` enum separates `NATIVE` (x86-64) from `NATIVE_RISCV64` and `NATIVE_AARCH64`.
+`spawn`/`await` work on Native (pthread) — the separation applies to
+codegen/linker (`as`/`ld` per arch), it does not change the concurrency semantics.
+Native uses the free-list `kof_free_head` for `mmap` reuse.
 
-## Próximo passo
+## Next step
 
-**[19 — Pacotes e Módulos](19-packages-and-modules.md)**
+**[19 — Packages and Modules](19-packages-and-modules.md)**

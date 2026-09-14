@@ -1,30 +1,32 @@
-# Kof Tooling — consumido por editores e ferramentas
+[English](README.md) | [Português](README.pt_BR.md)
 
-Este diretório viaja dentro da distribuição oficial do Kof (`tooling/`).
+# Kof Tooling — consumed by editors and tools
 
-O tooling do Kof é parte da plataforma: syntax definition, language server,
-formatter e diagnostics são distribuídos com a linguagem e consomem o mesmo
-frontend do compilador (Lexer → Parser → Symbol Table → Type System →
+This directory ships inside the official Kof distribution (`tooling/`).
+
+Kof's tooling is part of the platform: syntax definition, language server,
+formatter and diagnostics are distributed with the language and consume the same
+compiler frontend (Lexer → Parser → Symbol Table → Type System →
 Diagnostics).
 
-## O que existe
+## What exists
 
-| Componente | Onde | Uso |
+| Component | Where | Use |
 |-----------|------|-----|
-| Grammar TextMate | `editor/kof.tmLanguage.json` (scope `source.kof`) | VS Code, IntelliJ, highlighters TextMate |
-| Language Server | `kof lsp` (LSP 3.x, stdio) | qualquer editor com cliente LSP |
+| Grammar TextMate | `editor/kof.tmLanguage.json` (scope `source.kof`) | VS Code, IntelliJ, TextMate highlighters |
+| Language Server | `kof lsp` (LSP 3.x, stdio) | any editor with an LSP client |
 | Type-check | `kof check` | CLI |
-| Diagnóstico de ambiente | `kof info [--json]` | CLI / suporte |
+| Environment diagnostics | `kof info [--json]` | CLI / support |
 
-## Arquivos de referência
+## Reference files
 
-- `editor/kof.tmLanguage.json` — grammar oficial reutilizável.
-- Documentação completa: `docs/tooling/` na raiz do repositório.
+- `editor/kof.tmLanguage.json` — official reusable grammar.
+- Full documentation: `docs/tooling/` at the repository root.
 
-## Como um editor consome
+## How an editor consumes it
 
-1. Grammar: aponte para `editor/kof.tmLanguage.json` com scope `source.kof`.
-2. Semântica: configure `kof lsp` como language server.
+1. Grammar: point to `editor/kof.tmLanguage.json` with scope `source.kof`.
+2. Semantics: configure `kof lsp` as the language server.
 
-Nunca duplicar o parser da linguagem em um editor — o editor consome o
-tooling do Kof.
+Never duplicate the language parser in an editor — the editor consumes Kof's
+tooling.

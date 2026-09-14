@@ -1,13 +1,15 @@
-# 23 — Testes
+[English](23-testing.md) | [Português](23-testing.pt_BR.md)
 
-> **Status: implementado — `test "nome" { }`, `kof test` + `assert` — 0.3.22-beta**
+# 23 — Testing
+
+> **Status: implemented — `test "nome" { }`, `kof test` + `assert` — 0.3.22-beta**
 >
-> Testar Kof é escrever Kof. A suíte estruturada declara casos com
-> `test "nome" { }`; `kof test` roda cada teste isolado e reporta
-> PASS/FAIL **por nome**, com exit code pelo resultado. Dentro do teste,
-> `assert(cond[, "msg"])` marca a falha com mensagem clara.
+> Testing Kof is writing Kof. The structured suite declares cases with
+> `test "nome" { }`; `kof test` runs each test in isolation and reports
+> PASS/FAIL **by name**, with an exit code based on the result. Inside the
+> test, `assert(cond[, "msg"])` marks the failure with a clear message.
 
-## test "nome" { } — suíte estruturada
+## test "nome" { } — structured suite
 
 ```kf
 test "soma simples" {
@@ -19,7 +21,7 @@ test "string igual" {
 }
 
 main() {
-    // o programa real; o kof test o ignora (como cargo test)
+    // the real program; kof test ignores it (like cargo test)
 }
 ```
 
@@ -29,7 +31,7 @@ kof test Suite.kf --target native     # native
 kof test Suite.kf --target js         # js
 ```
 
-Saída:
+Output:
 
 ```text
 PASS soma simples
@@ -37,9 +39,10 @@ PASS string igual
 0 failed of 2 tests
 ```
 
-Cada teste roda **isolado** (um falhando não interrompe os demais). O
-compilador conhece os testes em compile-time — os nomes viram literais no
-runner gerado, sem reflection. Falha = exit code ≠ 0, sem stack trace.
+Each test runs **in isolation** (one failing does not interrupt the others).
+The compiler knows the tests at compile-time — the names become literals in
+the generated runner, without reflection. Failure = exit code ≠ 0, without a
+stack trace.
 
 ## assert
 
@@ -51,18 +54,18 @@ main() {
 }
 ```
 
-## kof test (programas inteiros)
+## kof test (whole programs)
 
-Arquivos `.kf` **sem** blocos `test` mantêm o contrato anterior: o arquivo é
-um programa; PASS = exit code 0.
+`.kf` files **without** `test` blocks keep the previous contract: the file is
+a program; PASS = exit code 0.
 
 ```bash
-kof test src/tests/            # diretório — um programa por arquivo
-kof test math.kf               # arquivo único
+kof test src/tests/            # directory — one program per file
+kof test math.kf               # single file
 kof test src/tests --target native
 ```
 
-Saída:
+Output:
 
 ```text
 PASS src/tests/math.kf
@@ -70,13 +73,13 @@ FAIL src/tests/broken.kf
 1 passed, 1 failed
 ```
 
-O teste falha quando: o programa não compila, o processo sai com código ≠ 0
-(ex.: um `assert` falso) ou o main não é encontrado.
+The test fails when: the program does not compile, the process exits with a
+code ≠ 0 (e.g. a false `assert`), or main is not found.
 
 ## process.exit(code)
 
-Para scripts e harnesses próprios: termina imediatamente com o código dado,
-nos três targets, sem stack trace.
+For scripts and your own harnesses: terminates immediately with the given
+code, on all three targets, without a stack trace.
 
 ```kf
 main() {
@@ -86,15 +89,16 @@ main() {
 }
 ```
 
-## Convenção
+## Convention
 
-Cada arquivo `.kf` de teste é um programa executável independente (tem
-`main()`). O `assert` é a primitive — não há framework nem annotations.
+Each `.kf` test file is an independent executable program (it has
+`main()`). `assert` is the primitive — there is no framework and no
+annotations.
 
-## Escrevendo uma suite
+## Writing a suite
 
 ```kf
-// math.kf — um arquivo por área
+// math.kf — one file per area
 Int soma(Int a, Int b) {
     return a + b
 }
@@ -105,20 +109,20 @@ main() {
 }
 ```
 
-## JUnit (não usar)
+## JUnit (do not use)
 
-O ecossistema Java/JUnit **não** faz parte da linguagem — sem annotations,
-sem framework. O teste Kof é a linguagem: `test "nome" { assert(...) }` é a
-unidade de teste em qualquer target.
+The Java/JUnit ecosystem is **not** part of the language — no annotations, no
+framework. The Kof test is the language: `test "nome" { assert(...) }` is the
+unit of testing on any target.
 
-## Executando testes
+## Running tests
 
 ```bash
-kof test src/test/                        # diretório — um programa por arquivo
-kof test math.kf                          # arquivo único
+kof test src/test/                        # directory — one program per file
+kof test math.kf                          # single file
 kof test src/test/ --target native        # target
 ```
 
-## Próximo passo
+## Next step
 
 [Build Tools →](24-build-tools.md)

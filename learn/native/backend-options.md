@@ -1,18 +1,20 @@
-# Opções de Backend Native
+[English](backend-options.md) | [Português](backend-options.pt_BR.md)
+
+# Native Backend Options
 
 > **0.3.22-beta — Native free-list GC, Target separation (native.risc/arm), kof_db SQLite+MySQL**
 
-## Status atual
+## Current status
 
-O backend nativo já está implementado e funcional (0.3.22-beta). Ele gera assembly x86-64 / riscv64 / aarch64 diretamente (Target separation), com free-list GC no x86-64 e `kof_db` MySQL WIP, sem usar LLVM ou outras bibliotecas externas.
+The native backend is already implemented and functional (0.3.22-beta). It generates x86-64 / riscv64 / aarch64 assembly directly (Target separation), with free-list GC on x86-64 and `kof_db` MySQL WIP, without using LLVM or other external libraries.
 
-## Abordagem implementada: Assembly direto
+## Implemented approach: Direct assembly
 
-### O que é
+### What it is
 
-Gerar código x86-64 e arquivos ELF manualmente em Java, sem dependências externas.
+Generating x86-64 code and ELF files by hand in Java, with no external dependencies.
 
-### Como funciona
+### How it works
 
 ```text
 Kof IR
@@ -21,121 +23,121 @@ Kof IR
 NativeBackend.emit()
     │
     ▼
-Assembly x86-64 (.s)
+x86-64 Assembly (.s)
     │
     ▼
-as → Objeto (.o)
+as → Object (.o)
     │
     ▼
-ld → Executável (ELF)
+ld → Executable (ELF)
 ```
 
-### Vantagens
+### Advantages
 
-- **Zero dependências** — não precisa de LLVM, JavaCPP ou qualquer biblioteca
-- **Controle total** — sabemos exatamente o que está sendo gerado
-- **Simplicidade** — assembly x86-64 é relativamente simples para operações básicas
-- **Portabilidade** — funciona em qualquer Linux x86-64
+- **Zero dependencies** — no need for LLVM, JavaCPP or any library
+- **Total control** — we know exactly what is being generated
+- **Simplicity** — x86-64 assembly is relatively simple for basic operations
+- **Portability** — works on any Linux x86-64
 
-### Desvantagens
+### Disadvantages
 
-- **Sem otimizações** — não temos register allocation, instruction scheduling, etc.
-- **Código manual** — cada instrução precisa ser implementada à mão
-- **Manutenção** — adicionar novas features requer trabalho manual
+- **No optimizations** — we have no register allocation, instruction scheduling, etc.
+- **Hand-written code** — every instruction must be implemented by hand
+- **Maintenance** — adding new features requires manual work
 
-### O que ganhamos de graça
+### What we get for free
 
-- Nada de uma biblioteca
+- Nothing from a library
 
-### O que precisamos implementar
+### What we need to implement
 
-- ~50+ instruções x86-64 (já implementadas)
-- Calling convention System V AMD64 (já implementada)
-- String/data sections (já implementado)
-- Syscalls Linux (já implementadas)
+- ~50+ x86-64 instructions (already implemented)
+- System V AMD64 calling convention (already implemented)
+- String/data sections (already implemented)
+- Linux syscalls (already implemented)
 
-## Opções avaliadas (historial)
+## Evaluated options (history)
 
-### 1. LLVM via JavaCPP (rejeitado)
+### 1. LLVM via JavaCPP (rejected)
 
-**O que é:** Wrapper Java para o LLVM C API usando JavaCPP.
+**What it is:** Java wrapper for the LLVM C API using JavaCPP.
 
-**Por que rejeitado:**
-- Dependência de ~100MB
-- Complexidade de integração
-- O projeto queria zero dependências
+**Why rejected:**
+- ~100MB dependency
+- Integration complexity
+- The project wanted zero dependencies
 
-### 2. Cranelift (rejeitado)
+### 2. Cranelift (rejected)
 
-**O que é:** Framework de code generation em Rust.
+**What it is:** Code generation framework in Rust.
 
-**Por que rejeitado:**
-- Não existe API Java madura
-- Requer binding Java → Rust
+**Why rejected:**
+- There is no mature Java API
+- Requires a Java → Rust binding
 
-### 3. Compilar para C (rejeitado)
+### 3. Compile to C (rejected)
 
-**O que é:** Gerar código C, usar GCC/Clang como backend.
+**What it is:** Generate C code, use GCC/Clang as the backend.
 
-**Por que rejeitado:**
-- Seria um transpiler, não um compilador nativo
-- Não permite controle fino do código gerado
+**Why rejected:**
+- It would be a transpiler, not a native compiler
+- It does not allow fine control of the generated code
 
-### 4. System Backend (escolhido)
+### 4. System Backend (chosen)
 
-**O que é:** Gerar código x86-64 e arquivos ELF manualmente em Java.
+**What it is:** Generate x86-64 code and ELF files by hand in Java.
 
-**Por que escolhido:**
-- Zero dependências
-- Controle total
-- Implementação incremental possível
-- Funciona para operações básicas
+**Why chosen:**
+- Zero dependencies
+- Total control
+- Incremental implementation possible
+- Works for basic operations
 
-## Matriz comparativa (historial)
+## Comparison matrix (history)
 
-| Critério | LLVM/JavaCPP | Cranelift | System ELF | C transpiler |
+| Criterion | LLVM/JavaCPP | Cranelift | System ELF | C transpiler |
 |----------|:---:|:---:|:---:|:---:|
-| Integração Java | 6 | 2 | 5 | 9 |
+| Java integration | 6 | 2 | 5 | 9 |
 | Performance | 10 | 7 | 5 | 10 |
-| Otimizações | 10 | 7 | 2 | 10 |
-| Dependências | 6 | 8 | 10 | 5 |
-| Manutenção | 7 | 3 | 3 | 8 |
-| **Ponderado** | **7.6** | **4.4** | **5.0** | — |
+| Optimizations | 10 | 7 | 2 | 10 |
+| Dependencies | 6 | 8 | 10 | 5 |
+| Maintenance | 7 | 3 | 3 | 8 |
+| **Weighted** | **7.6** | **4.4** | **5.0** | — |
 
-## Decisão final
+## Final decision
 
-**System Backend (assembly direto)** é a escolha correta para o primeiro backend native.
+**System Backend (direct assembly)** is the right choice for the first native backend.
 
-**Motivo principal:** queremos provar que Kof pode gerar código nativo. Assembly direto minimiza dependências e maximiza o controle.
+**Main reason:** we want to prove that Kof can generate native code. Direct assembly minimizes dependencies and maximizes control.
 
-**Quando reconsiderar:**
-- Se precisarmos de otimizações complexas → avaliar LLVM
-- Se precisarmos de suporte a múltiplas arquiteturas → avaliar LLVM
-- Se o código manual ficar incontrolável → avaliar LLVM
+**When to reconsider:**
+- If we need complex optimizations → evaluate LLVM
+- If we need support for multiple architectures → evaluate LLVM
+- If the hand-written code becomes unmanageable → evaluate LLVM
 
-## O que precisamos implementar
+## What we need to implement
 
-### Já implementado
+### Already implemented
 
-1. **Instruções básicas** — mov, add, sub, mul, div, cmp (+ FP XMM: `vcvtsi2sd`, `mulsd` — FLT001 fechado)
-2. **Chamadas de função** — calling convention System V AMD64
-3. **Strings** — string literals e operações
-4. **Records** — structs com campos
-5. **Funções** — declaração e chamada
-6. **Syscalls Linux** — write, exit, open, read, close...
-7. **Controle de fluxo, classes (herança/dispatch), exceptions (unwinding), generics (erasure)**
-8. **`spawn`/`await` via pthread** (31/08 — CONC001 fechado), allocator thread-safe (futex)
-9. **JSON completo** (objetos/records/arrays — JSN001/002/003 fechados) + **SQLite nativo**
+1. **Basic instructions** — mov, add, sub, mul, div, cmp (+ FP XMM: `vcvtsi2sd`, `mulsd` — FLT001 closed)
+2. **Function calls** — System V AMD64 calling convention
+3. **Strings** — string literals and operations
+4. **Records** — structs with fields
+5. **Functions** — declaration and call
+6. **Linux syscalls** — write, exit, open, read, close...
+7. **Control flow, classes (inheritance/dispatch), exceptions (unwinding), generics (erasure)**
+8. **`spawn`/`await` via pthread** (31/08 — CONC001 closed), thread-safe allocator (futex)
+9. **Full JSON** (objects/records/arrays — JSN001/002/003 closed) + **native SQLite**
 
-### Em desenvolvimento
+### In development
 
-1. **MySQL/MariaDB nativo** — wire protocol sobre sockets (auth scramble SHA-1 feito)
-2. **GC mark-sweep** — hoje free-list `kof_free_head`
-3. **riscv64/aarch64** — codegen ainda x86_64 (placeholders via qemu)
+1. **Native MySQL/MariaDB** — wire protocol over sockets (SHA-1 scramble auth done)
+2. **GC mark-sweep** — today free-list `kof_free_head`
+3. **riscv64/aarch64** — codegen still x86_64 (placeholders via qemu)
 
-## Exemplo de implementação
+## Implementation example
 
-### Geração de assembly para Hello World
+### Assembly generation for Hello World
 
 ```kf
 main() = print("Hello, World!")
@@ -161,7 +163,7 @@ _start:
     syscall
 ```
 
-### Geração de assembly para records
+### Assembly generation for records
 
 ```kf
 record Point(Int x, Int y)
@@ -187,19 +189,19 @@ Point_y:
     ret
 ```
 
-## Dependências
+## Dependencies
 
-### Runtime nativo (mínimo)
+### Native runtime (minimal)
 
-O backend nativo requer um runtime mínimo em C:
+The native backend requires a minimal runtime in C:
 
 - `kof_alloc.c` — arena allocator
-- `kof_string.c` — operações com strings
+- `kof_string.c` — string operations
 - `kof_io.c` — print, read
-- `kof_runtime.c` — inicialização
+- `kof_runtime.c` — initialization
 
-Compilado como `.a` estático, linkado pelo `ld`.
+Compiled as a static `.a`, linked by `ld`.
 
-## Próximo passo
+## Next step
 
 [Roadmap →](roadmap.md)
