@@ -3108,6 +3108,8 @@ Tier 1 ⇒ fechado ⇒ Tiers 2–12 (plataforma universal) abrem.
 
 - **≤500 linhas por classe** (refactor futuro de NativeRuntime: módulo novo por área, ex: `NativeHttpRuntime.java`).
 - Nunca duas frentes no mesmo arquivo gigante ao mesmo tempo — se for inevitável, combine no chat antes.
+- **Sem trocar de branch toda hora; nunca renomear branch compartilhada** (14/09, ordem da mantenedora): tudo entra pela `beta-*` ativa; `tmp-*` local nunca vira ref remota nem renomeia `beta/main` por baixo dos outros.
+- **Overlay i18n nunca apaga edição viva** (14/09, bug real corrigido em `scripts/docs-lang.sh`): o guard usava `git diff --quiet`, cego com skip-worktree — agora compara hash do worktree com o índice.
 - **Congelamento de comportamento** (AGENTS.md, obrigatório): zero regressão (suíte **910** é gate de merge), features novas **aditivas** (retrocompatibilidade), refactor de 500 linhas preserva semântica (mesma suíte + golden E2E; output mudou = bug do refactor), bugs em `docs/known-bugs.md` são corrigidos **no código** para atingir o comportamento previsto (nunca "documentar em volta"), paridade JVM/Native/JS é regra.
 
 ## Incidentes de processo (bronca registrada — 03/09, agente-switch-expr)

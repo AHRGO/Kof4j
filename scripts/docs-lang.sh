@@ -73,8 +73,12 @@ overlay_one() {
     [ -f "$pt" ] || return 0
     # Nunca sobrescreve edicao nao-commitada de nenhum agente (regra 8 do DOING):
     # so sobrepoe quando o working tree e identico ao indice (sem edicao viva).
+    # NOTA 14/09 (lane repo-hygiene): `git diff --quiet` é CEGO com skip-worktree
+    # (o próprio overlay seta o bit!) — compara hashes, que lêem bytes de verdade.
     if git ls-files --error-unmatch -- "$canon" >/dev/null 2>&1; then
-        git diff --quiet -- "$canon" 2>/dev/null || return 0
+        if [ "$(git hash-object -- "$canon" 2>/dev/null)" != "$(git rev-parse ":$canon" 2>/dev/null)" ]; then
+            return 0
+        fi
         git diff --cached --quiet -- "$canon" 2>/dev/null || return 0
     fi
     cp -- "$pt" "$canon"
