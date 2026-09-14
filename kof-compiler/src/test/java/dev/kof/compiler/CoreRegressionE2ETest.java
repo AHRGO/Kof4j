@@ -2334,4 +2334,23 @@ class CoreRegressionE2ETest {
         assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
         assertEquals("bool: true\nbool: false\nbool: true\nint: 42", runJvm(out));
     }
+
+    // Issue #237 — Wrong parameter type in method descriptor when argument is concrete class but method expects interface
+    @Test
+    void stringJoinWithListJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("string_join.kf");
+        Files.writeString(src, """
+                main() {
+                    var parts = new List<String>()
+                    parts.add("a")
+                    parts.add("b")
+                    parts.add("c")
+                    println(String.join(", ", parts))
+                }
+                """);
+        Path out = tempDir.resolve("string_join-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("a, b, c", runJvm(out));
+    }
 }
