@@ -292,18 +292,24 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > roundtrip JVM→JS + SECN006 cross). **Resta da C11/C18:** `app.security()`
 > (middleware composto) — depende de `app.use` no app model (I2).
 >
-> **PRÓXIMO PASSO (estabilização beta-0.4.0 → release):** rodar a suíte
-> COMPLETA limpa pós-push (`rm -rf */target && mvn -o test -pl
-> kof-compiler,kof-script,kof-c-compiler,kof-cli -am
-> -Dsurefire.failIfNoSpecifiedTests=false -Dmaven.test.failure.ignore=true`)
-> e registrar a linha de base em `docs/status.md` (gate de release = 0
-> FAILURE fora dos erros de `node`/BD ausente + das guardas de toolchain).
-> A fila `known-bugs.md` aberta (13 itens) é TODA de outras lanes (`.15`/
-> `.18`/Native) ou regra 6/decisão da mantenedora — **NÃO atacar sem don**
-> **o**; se a suíte verde confirmar estabilidade, seguir a condição de
-> ESTABILIDADE do AGENTS.md (recusar re-disparo, parar o cron). **NUNCA:**
-> tocar `nat/` GC, lanes `.15`/`.22`; reabrir decompiler/translator sem
-> decisão (despriorizados — meta = estabilizar a release).
+> **PRÓXIMO PASSO (estabilização beta-0.4.0 → release):** **linha de base do
+> gate de release medida 14/09 (suíte limpa `rm -rf */target`, dono =
+> 192.168.100.17):** compiler 1552 + script 37 + kof-c 5 + cli 225 = **1819
+> testes / 3 falhas / 0 erros / 7 skip**. As 3 falhas são TODAS cross-arch de
+> OUTRAS lanes, catalogadas com evidência: **§181 residual** (`riscv64/
+> aarch64CastSaturation`: `(-inf) as Int`→`0`, deveria `MIN_VALUE` — só essa
+> linha diverge; lane nat) e **§189** (`parseOrDefaultCrossArch`: programa
+> morre na 1ª `parseDoubleOrDefault` sob riscv — lane stdlib/nat). **Bloqueio
+> honesto (regra 7):** re-execução isolada pra cravar determinística está
+> travada — dependabot no HEAD bumpou mariadb 3.5.3 / postgresql 42.7.7 /
+> junit 6.1.3 e o `.m2` local tem 3.4.1 / 42.7.4 / 5.11.3 → `mvn -o` NÃO
+> resolve dependências (precisa de rede ou do cache novo; NÃO relaxei o gate).
+> **Gate de release NÃO está 0-falhas:** os 3 vermelhos cross precisam de fix
+> das lanes nat/stdlib (regra 6 se tocar contrato) antes de congelar a
+> release. **NUNCA:** tocar `nat/` GC, lanes `.15`/`.22`; reabrir
+> decompiler/translator sem decisão (despriorizados — meta = estabilizar a
+> release). Para re-rodar o gate isolado, primeiro `mvn -o dependency:go-offline`
+> ou prover os jars bumpados no `.m2`.
 >
 >
 > **✅ FEITO (14/09 ~00:30, dono = 192.168.100.22): CI vermelho na beta

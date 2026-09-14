@@ -1,27 +1,29 @@
-# Kof vs Spring — O Problema que Kof Resolve
+[English](KOF_VS_SPRING.md) | [Português](KOF_VS_SPRING.pt_BR.md)
 
-**Última atualização:** 12 de setembro de 2026
-**Versão:** 0.4.0-beta (web stack completa: ws/sse/middleware/cache; `kof.http` JVM+JS com retry/circuit; `kof.db` SQLite nativo + MySQL WIP)
+# Kof vs Spring — The Problem Kof Solves
 
----
-
-## A Pergunta Central
-
-> "O que o Spring resolve que deveria ser responsabilidade da linguagem?"
-
-Spring não é ruim. Spring resolve problemas reais. Mas muitos desses problemas existem porque Java não os resolve nativamente.
-
-Kof pergunta: **"Se a linguagem já resolvesse isso, precisaríamos do framework?"**
+**Last updated:** September 12, 2026
+**Version:** 0.4.0-beta (complete web stack: ws/sse/middleware/cache; `kof.http` JVM+JS with retry/circuit; `kof.db` native SQLite + MySQL WIP)
 
 ---
 
-## Mapeamento: Spring → Problema Real → Solução Kof
+## The Central Question
+
+> "What does Spring solve that should be the language's responsibility?"
+
+Spring is not bad. Spring solves real problems. But many of those problems exist because Java does not solve them natively.
+
+Kof asks: **"If the language already solved this, would we need the framework?"**
+
+---
+
+## Mapping: Spring → Real Problem → Kof Solution
 
 ### 1. Dependency Injection
 
-**Problema real:** Objetos precisam de outros objetos. Criar e conectar manualmente é verboso e acoplado.
+**Real problem:** Objects need other objects. Creating and wiring them manually is verbose and coupled.
 
-**Solução Spring:**
+**Spring solution:**
 ```java
 @Service
 public class UserService {
@@ -30,20 +32,20 @@ public class UserService {
 }
 ```
 
-**Solução Kof (PROPOSTA):**
+**Kof solution (PROPOSED):**
 ```kof
 service UserService {
     inject UserRepository repository
 }
 ```
 
-**Por que é melhor:** O compilador pode resolver o grafo de dependências em compile-time. Sem reflection, sem runtime magic.
+**Why it is better:** The compiler can resolve the dependency graph at compile-time. No reflection, no runtime magic.
 
 ### 2. Configuration
 
-**Problema real:** Aplicações precisam de configuração (portas, URLs, credenciais).
+**Real problem:** Applications need configuration (ports, URLs, credentials).
 
-**Solução Spring:**
+**Spring solution:**
 ```properties
 server.port=8080
 spring.datasource.url=jdbc:mysql://localhost/mydb
@@ -61,7 +63,7 @@ public class AppConfig {
 }
 ```
 
-**Solução Kof (PROPOSTA):**
+**Kof solution (PROPOSED):**
 ```kof
 config {
     port = 8080
@@ -69,13 +71,13 @@ config {
 }
 ```
 
-**Por que é melhor:** Configuração tipada pelo compilador. Erros de configuração capturados em compile-time.
+**Why it is better:** Configuration typed by the compiler. Configuration errors caught at compile-time.
 
 ### 3. HTTP Routing
 
-**Problema real:** Criar APIs REST requer muito boilerplate.
+**Real problem:** Creating REST APIs requires a lot of boilerplate.
 
-**Solução Spring:**
+**Spring solution:**
 ```java
 @RestController
 @RequestMapping("/api/users")
@@ -92,7 +94,7 @@ public class UserController {
 }
 ```
 
-**Solução Kof (implementada no JVM, Fase 1 — independência do Spring):**
+**Kof solution (implemented on the JVM, Phase 1 — independence from Spring):**
 ```kf
 var app = web.app()
 app.get("/users/:id") {
@@ -103,16 +105,16 @@ app.post("/users") {
 }
 app.use { ... }               // middleware (auth, logging, ...)
 app.ws("/chat") { ... }       // WebSocket (30/08, RFC 6455)
-app.listen(8080)              // servidor próprio, sem servlet container
+app.listen(8080)              // own server, no servlet container
 ```
 
-**Por que é melhor:** Routing é parte da linguagem. Sem annotations, sem ResponseEntity, sem boilerplate. Engine HTTP gerada no runtime do programa; cada conexão em virtual thread; WebSocket/SSE/middleware/`status`/`headerSet` nativos (30-31/08).
+**Why it is better:** Routing is part of the language. No annotations, no ResponseEntity, no boilerplate. HTTP engine generated in the program's runtime; each connection on a virtual thread; native WebSocket/SSE/middleware/`status`/`headerSet` (30-31/08).
 
 ### 4. Validation
 
-**Problema real:** Validação de dados é repetitiva e propensa a erros.
+**Real problem:** Data validation is repetitive and error-prone.
 
-**Solução Spring:**
+**Spring solution:**
 ```java
 public class User {
     @NotNull
@@ -125,7 +127,7 @@ public class User {
 }
 ```
 
-**Solução Kof (PROPOSTA):**
+**Kof solution (PROPOSED):**
 ```kof
 class User {
     name: String required size(2, 50)
@@ -133,13 +135,13 @@ class User {
 }
 ```
 
-**Por que é melhor:** Validação é parte da definição do tipo. O compilador pode gerar código de validação automaticamente.
+**Why it is better:** Validation is part of the type definition. The compiler can generate validation code automatically.
 
 ### 5. Serialization
 
-**Problema real:** Converter objetos para JSON/XML requer annotations ou configuração.
+**Real problem:** Converting objects to JSON/XML requires annotations or configuration.
 
-**Solução Spring:**
+**Spring solution:**
 ```java
 @Data
 public class User {
@@ -148,22 +150,22 @@ public class User {
 }
 ```
 
-**Solução Kof (PROPOSTA):**
+**Kof solution (PROPOSED):**
 ```kof
 class User {
     Long id
     String name
-    // Serialização automática para JSON
+    // Automatic serialization to JSON
 }
 ```
 
-**Por que é melhor:** Se a classe tem campos públicos, a serialização pode ser implícita.
+**Why it is better:** If the class has public fields, serialization can be implicit.
 
 ### 6. Lifecycle
 
-**Problema real:** Aplicações precisam de inicialização e finalização.
+**Real problem:** Applications need initialization and shutdown.
 
-**Solução Spring:**
+**Spring solution:**
 ```java
 @Component
 public class MyService {
@@ -175,7 +177,7 @@ public class MyService {
 }
 ```
 
-**Solução Kof (PROPOSTA):**
+**Kof solution (PROPOSED):**
 ```kof
 service MyService {
     lifecycle {
@@ -185,13 +187,13 @@ service MyService {
 }
 ```
 
-**Por que é melhor:** Lifecycle é parte da linguagem, não de annotations.
+**Why it is better:** Lifecycle is part of the language, not of annotations.
 
 ### 7. Testing
 
-**Problema real:** Testes em Java requerem frameworks (JUnit, Mockito, etc.).
+**Real problem:** Tests in Java require frameworks (JUnit, Mockito, etc.).
 
-**Solução Spring:**
+**Spring solution:**
 ```java
 @SpringBootTest
 public class UserServiceTest {
@@ -205,37 +207,37 @@ public class UserServiceTest {
 }
 ```
 
-**Solução Kof (implementada):**
+**Kof solution (implemented):**
 ```kf
 test "find user by id" {
     assert(users.find(1) != null)
 }
 ```
 
-**Por que é melhor:** Testing é parte da linguagem. Sem annotations, sem framework. `test "nome" { }` nos 3 targets; runner sintetizado em compile-time (zero reflection); `kof test` reporta PASS/FAIL por nome + exit code.
+**Why it is better:** Testing is part of the language. No annotations, no framework. `test "name" { }` on the 3 targets; runner synthesized at compile-time (zero reflection); `kof test` reports PASS/FAIL by name + exit code.
 
 ---
 
-## O Que Kof NÃO Deve Fazer
+## What Kof Should NOT Do
 
-1. **Não criar um Spring clone.** O objetivo é eliminar a necessidade do Spring, não reimplementá-lo.
+1. **Do not create a Spring clone.** The goal is to eliminate the need for Spring, not to reimplement it.
 
-2. **Não exigir configuração para recursos básicos.** Se algo pode ser inferido, não deve ser configurado.
+2. **Do not require configuration for basic resources.** If something can be inferred, it should not be configured.
 
-3. **Não criar abstrações desnecessárias.** Cada abstração deve justificar sua existência.
+3. **Do not create unnecessary abstractions.** Every abstraction must justify its existence.
 
-4. **Não copiar annotations.** Se a linguagem pode resolver algo, não use annotations.
+4. **Do not copy annotations.** If the language can solve something, do not use annotations.
 
 ---
 
-## Prioridade
+## Priority
 
-| Feature | Prioridade | Justificativa | Status (0.2.6-beta, 31/08) |
+| Feature | Priority | Justification | Status (0.2.6-beta, 31/08) |
 |---------|-----------|---------------|----------------------------|
-| DI | Alta | Elimina boilerplate massivo | planejado (proposta `service`) |
-| HTTP routing | Alta | Essencial para backends | ✅ `web.app()` JVM (rotas, middleware, JSON, ws/sse) |
-| Configuration | Média | Melhora DX significativamente | ✅ `kof.config` JVM/Native |
-| Validation | Média | Elimina beans validation | ✅ `kof.validation` 3 targets |
-| Serialization | Média | Essencial para APIs | ✅ `json.encode/decode` 3 targets |
-| Lifecycle | Baixa | Pode esperar | planejado (`application { onStart/onShutdown }`) |
-| Testing | Alta | Essencial para produtividade | ✅ `test "nome" { }` + `kof test` 3 targets |
+| DI | High | Eliminates massive boilerplate | planned (`service` proposal) |
+| HTTP routing | High | Essential for backends | ✅ `web.app()` JVM (routes, middleware, JSON, ws/sse) |
+| Configuration | Medium | Significantly improves DX | ✅ `kof.config` JVM/Native |
+| Validation | Medium | Eliminates beans validation | ✅ `kof.validation` 3 targets |
+| Serialization | Medium | Essential for APIs | ✅ `json.encode/decode` 3 targets |
+| Lifecycle | Low | Can wait | planned (`application { onStart/onShutdown }`) |
+| Testing | High | Essential for productivity | ✅ `test "name" { }` + `kof test` 3 targets |

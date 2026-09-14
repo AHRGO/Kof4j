@@ -1,45 +1,47 @@
-# Reconciliação planning-future ↔ beta-0.3.0
+[English](planning-future-reconcile.md) | [Português](planning-future-reconcile.pt_BR.md)
 
-**Data:** 05/09/2026 · **Branch:** `planning-future` (não sair dela; só sincronizar com `beta-0.3.0`)
+# Reconciliation planning-future ↔ beta-0.3.0
 
-## O que a `planning-future` entrega
+**Date:** 09/05/2026 · **Branch:** `planning-future` (do not leave it; only synchronize with `beta-0.3.0`)
 
-1. **Plataforma de migração legado** (docs/future, Fases A–H):
+## What `planning-future` delivers
+
+1. **Legacy migration platform** (docs/future, Phases A–H):
    `kof inspect` / `decompile` / `translate` / `compare` / `migrate` + `Confidence`.
-2. **FFI formalizado** (TIER 2.1): sintaxe `extern`, gap `FFI001`/`FFI002`,
-   binding real JVM (FFM) e Native x86-64 (dlopen/dlsym) — `abs`/`atoi`/`sqrt`.
+2. **Formalized FFI** (TIER 2.1): `extern` syntax, gap `FFI001`/`FFI002`,
+   real JVM binding (FFM) and Native x86-64 (dlopen/dlsym) — `abs`/`atoi`/`sqrt`.
 3. **Codegen hook** (TIER 2.2) `CodegenStep` + **ct-eval** (2.3) string-concat folding.
-4. **Decisões** 2.4 (scoped resources — design) e 2.5 (variance/sealed — deferir).
+4. **Decisions** 2.4 (scoped resources — design) and 2.5 (variance/sealed — defer).
 
-## Estado do merge (05/09)
+## Merge state (09/05)
 
-- `planning-future` mergeada com `origin/beta-0.3.0` (commit `4997e56`).
-- Conflitos resolvidos: `JvmRuntime` (gate preview = `usesExtern` + `version<22`)
-  e `DOING.md` (entradas de ambos agentes preservadas).
-- Versão agora `0.3.0-beta`.
+- `planning-future` merged with `origin/beta-0.3.0` (commit `4997e56`).
+- Conflicts resolved: `JvmRuntime` (preview gate = `usesExtern` + `version<22`)
+  and `DOING.md` (entries from both agents preserved).
+- Version now `0.3.0-beta`.
 
-## Falha pré-existente do beta-0.3.0 (NÃO é da planning-future)
+## Pre-existing failure of beta-0.3.0 (NOT from planning-future)
 
-`NativeE2ETest.execStringCharAt` → espera `72\n111`, obtém `H\no`.
-- Reproduz **igual** no `origin/beta-0.3.0` limpo (worktree isolado confirmado).
-- Causa: semântica de `println(char)`/`charAt` no Native mudou no refactor/String-methods.
-- **Dono:** agente do refactor no `beta-0.3.0` — não corrigir aqui (evita conflito).
+`NativeE2ETest.execStringCharAt` → expects `72\n111`, gets `H\no`.
+- Reproduces **identically** on the clean `origin/beta-0.3.0` (isolated worktree confirmed).
+- Cause: semantics of `println(char)`/`charAt` in Native changed in the refactor/String-methods.
+- **Owner:** refactor agent on `beta-0.3.0` — do not fix here (avoids conflict).
 
-## Checklist de normalização (quando o refactor ≤500 linhas fechar)
+## Normalization checklist (when the ≤500-line refactor closes)
 
-1. `git fetch` + merge `origin/beta-0.3.0` de novo na `planning-future`.
-2. Rearranchar minhas adições que o refactor mover (pontos de contato):
-   - `CompilerDriver`: `externSignatures`, `isExternBound`, branch de lowering
-     no `case MethodCallExpr`, `CodegenStep`/`runCodegen`.
-   - `SemanticAnalyzer.findExtern` · `Parser.parseExternDeclaration` (resolvem
-     o nome `extern` sem SEM015).
-   - Já isoladas em classes novas: `NativeFfiRuntime`, `JvmFfiRuntime` (≤100 linhas).
-3. Rodar a suíte completa + E2E: `FfiE2ETest`, `ClassFileE2ETest`,
+1. `git fetch` + merge `origin/beta-0.3.0` again into `planning-future`.
+2. Re-anchor my additions that the refactor moves (contact points):
+   - `CompilerDriver`: `externSignatures`, `isExternBound`, lowering branch
+     in `case MethodCallExpr`, `CodegenStep`/`runCodegen`.
+   - `SemanticAnalyzer.findExtern` · `Parser.parseExternDeclaration` (resolve
+     the `extern` name without SEM015).
+   - Already isolated in new classes: `NativeFfiRuntime`, `JvmFfiRuntime` (≤100 lines).
+3. Run the full suite + E2E: `FfiE2ETest`, `ClassFileE2ETest`,
    `DecompileTest`, `TranslateTest`, `CompareTest`, `MigrateTest`, `OptimizerTest`.
-4. Reportar/rastrear `execStringCharAt` (se ainda vermelho) ao dono do refactor.
+4. Report/track `execStringCharAt` (if still red) to the refactor owner.
 
-## Regra de convivência
+## Coexistence rule
 
-Não inchar as classes gigantes (`CompilerDriver`, `NativeRuntime`, `JvmRuntime`, …).
-Novo código FFI/migração vai em classes novas ≤500 linhas (padrão já seguido
-com `NativeFfiRuntime`/`JvmFfiRuntime`).
+Do not bloat the gigantic classes (`CompilerDriver`, `NativeRuntime`, `JvmRuntime`, …).
+New FFI/migration code goes into new classes ≤500 lines (a pattern already followed
+with `NativeFfiRuntime`/`JvmFfiRuntime`).

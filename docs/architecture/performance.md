@@ -1,62 +1,64 @@
-# KOF — PERFORMANCE, BENCHMARKS, RESOURCE SAFETY E GUIDELINES ARQUITETURAIS
+[English](performance.md) | [Português](performance.pt_BR.md)
 
-**Última atualização:** 12 de setembro de 2026
-**Versão:** 0.4.0-beta (37 benchmarks; `kof bench` + `benchmark.yml` threshold 1.20)
+# KOF — PERFORMANCE, BENCHMARKS, RESOURCE SAFETY AND ARCHITECTURAL GUIDELINES
 
-> Este documento define princípios arquiteturais permanentes do Kof.
+**Last updated:** September 12, 2026
+**Version:** 0.4.0-beta (37 benchmarks; `kof bench` + `benchmark.yml` threshold 1.20)
+
+> This document defines permanent architectural principles of Kof.
 >
-> Não são sugestões.
-> Não são features opcionais.
-> Não são objetivos cosméticos de marketing.
+> They are not suggestions.
+> They are not optional features.
+> They are not cosmetic marketing goals.
 >
-> Type system, IR, backends, runtime, standard library e tooling devem respeitar estas regras.
+> Type system, IR, backends, runtime, standard library and tooling must respect these rules.
 
 ---
 
-# 1. PRINCÍPIO FUNDAMENTAL
+# 1. FUNDAMENTAL PRINCIPLE
 
-Kof foi projetado para remover complexidade do código sem transferir essa complexidade para runtime.
+Kof was designed to remove complexity from code without transferring that complexity to runtime.
 
-A linguagem deve buscar simultaneamente:
+The language must simultaneously pursue:
 
 ```text
-alta expressividade
+high expressiveness
 +
-forte segurança de tipos
+strong type safety
 +
-baixo overhead
+low overhead
 +
-baixo consumo de recursos
+low resource consumption
 +
-alta performance
+high performance
 +
-excelente interoperabilidade
+excellent interoperability
 ```
 
-A abstração existe para beneficiar o programador.
+Abstraction exists to benefit the programmer.
 
-Quando uma abstração não é necessária em runtime, ela deve desaparecer durante a compilação.
+When an abstraction is not needed at runtime, it must disappear during compilation.
 
-A regra fundamental é:
+The fundamental rule is:
 
-> **Kof deve tentar gerar a representação mais eficiente semanticamente possível para cada construção.**
+> **Kof must try to generate the most semantically efficient representation possible for each construct.**
 
 ---
 
-# 2. JAVA NÃO É O TETO DE PERFORMANCE
+# 2. JAVA IS NOT THE PERFORMANCE CEILING
 
-Java é uma referência de:
+Java is a reference for:
 
-* ecossistema;
-* interoperabilidade;
-* semântica de plataforma;
-* bibliotecas;
+* ecosystem;
+* interoperability;
+* platform semantics;
+* libraries;
 * JVM;
-* compatibilidade.
+* compatibility.
 
-Java **não é o limite de performance do Kof**.
+Java **is not the performance limit of Kof**.
 
-A comparação conceitual é:
+The conceptual comparison is:
 
 ```text
 Java
@@ -68,7 +70,7 @@ JVM bytecode
 HotSpot/JIT
 ```
 
-contra:
+versus:
 
 ```text
 Kof
@@ -92,37 +94,37 @@ JVM bytecode
 HotSpot/JIT
 ```
 
-O Kof possui conhecimento semântico do programa antes da geração do bytecode.
+Kof has semantic knowledge of the program before bytecode generation.
 
-Esse conhecimento deve ser usado.
+This knowledge must be used.
 
 ---
 
-# 3. REGRA DE SUPERIORIDADE DE PERFORMANCE
+# 3. PERFORMANCE SUPERIORITY RULE
 
-Quando existir código Java e código Kof semanticamente equivalentes:
+When there is semantically equivalent Java code and Kof code:
 
 ```text
-Java idiomático
+Idiomatic Java
 vs
-Kof idiomático
+Idiomatic Kof
 ```
 
-o Kof deve procurar gerar uma representação:
+Kof must seek to generate a representation:
 
 ```text
-igual ou melhor
+equal or better
 ```
 
-em relação ao Java.
+relative to Java.
 
-Mais importante:
+More importantly:
 
-> **Nunca reproduzir overhead do Java simplesmente porque uma implementação Java tradicional faz dessa maneira.**
+> **Never reproduce Java's overhead simply because a traditional Java implementation does it that way.**
 
-Se o compilador puder provar que determinada abstração pode ser eliminada sem alterar a semântica, ela deve ser eliminada.
+If the compiler can prove that a given abstraction can be eliminated without changing semantics, it must be eliminated.
 
-Exemplos:
+Examples:
 
 ```text
 boxing
@@ -135,32 +137,32 @@ dispatch
 wrapper
 ```
 
-não devem existir simplesmente por conveniência da implementação do compilador.
+must not exist simply for the convenience of the compiler implementation.
 
 ---
 
 # 4. KOF/JVM
 
-A JVM não deve ser tratada como desculpa para gerar bytecode medíocre.
+The JVM must not be treated as an excuse to generate mediocre bytecode.
 
-O backend JVM deve buscar bytecode excelente para o HotSpot.
+The JVM backend must seek excellent bytecode for HotSpot.
 
-Priorizar:
+Prioritize:
 
-* tipos concretos;
-* acesso direto;
-* métodos simples;
-* dispatch previsível;
-* ausência de boxing desnecessário;
-* ausência de allocations desnecessárias;
-* ausência de reflection desnecessária;
-* loops eficientes;
-* control flow simples;
-* metadata correta;
-* StackMapTable correta;
-* estruturas amigáveis ao JIT.
+* concrete types;
+* direct access;
+* simple methods;
+* predictable dispatch;
+* absence of unnecessary boxing;
+* absence of unnecessary allocations;
+* absence of unnecessary reflection;
+* efficient loops;
+* simple control flow;
+* correct metadata;
+* correct StackMapTable;
+* JIT-friendly structures.
 
-Exemplo:
+Example:
 
 ```kof
 var total = 0
@@ -170,9 +172,9 @@ for (x in values) {
 }
 ```
 
-Se `values` permitir, o compilador deve buscar uma representação equivalente a um loop direto.
+If `values` allows it, the compiler must seek a representation equivalent to a direct loop.
 
-Não deve gerar automaticamente:
+It must not automatically generate:
 
 ```text
 Iterator allocation
@@ -186,117 +188,117 @@ boxing
 temporary objects
 ```
 
-apenas porque esse seria um caminho fácil de implementar.
+just because that would be an easy path to implement.
 
 ---
 
 # 5. KOF/NATIVE
 
-No Native o Kof possui controle ainda maior sobre a execução.
+In Native, Kof has even greater control over execution.
 
-Portanto, a expectativa de eficiência deve ser ainda mais agressiva.
+Therefore, the efficiency expectation must be even more aggressive.
 
-> **Estado (0.2.6-beta, 31/08):** alocação via free-list `kof_free_head`
-> (reuso `mmap` — reduz o custo de mmap por alocação); FP em XMM
-> (`vcvtsi2sd`/`mulsd`) em vez de fallback em int; dtoa via `snprintf`;
-> `spawn` em threads reais (`pthread`) — sobrecarga de contexto documentada
-> nos benchmarks de concorrência.
+> **State (0.2.6-beta, 08/31):** allocation via free-list `kof_free_head`
+> (reuse `mmap` — reduces the mmap cost per allocation); FP in XMM
+> (`vcvtsi2sd`/`mulsd`) instead of fallback to int; dtoa via `snprintf`;
+> `spawn` on real threads (`pthread`) — context overhead documented
+> in the concurrency benchmarks.
 
-Priorizar:
+Prioritize:
 
-* baixo startup;
-* baixo consumo de memória;
-* baixo número de allocations;
-* baixo overhead de chamadas;
-* baixo overhead de abstrações;
-* binaries enxutos quando possível;
-* syscalls eficientes;
-* uso eficiente de cache;
-* loops eficientes;
-* stack usage previsível;
-* gerenciamento de memória eficiente;
-* ausência de runtime desnecessariamente grande.
+* low startup;
+* low memory consumption;
+* low number of allocations;
+* low call overhead;
+* low abstraction overhead;
+* lean binaries when possible;
+* efficient syscalls;
+* efficient cache use;
+* efficient loops;
+* predictable stack usage;
+* efficient memory management;
+* absence of an unnecessarily large runtime.
 
-A meta arquitetural é que Kof/Native seja capaz de superar implementações equivalentes sempre que o controle adicional do backend permitir.
+The architectural goal is for Kof/Native to be capable of surpassing equivalent implementations whenever the backend's additional control allows it.
 
 ---
 
 # 6. KOF/JS
 
-O backend JS deve gerar JavaScript natural e eficiente.
+The JS backend must generate natural and efficient JavaScript.
 
-Evitar:
+Avoid:
 
-* wrappers desnecessários;
-* objetos temporários;
-* closures artificiais;
+* unnecessary wrappers;
+* temporary objects;
+* artificial closures;
 * boxing;
-* dispatch indireto;
-* runtime gigantesco;
-* abstrações que poderiam ser eliminadas.
+* indirect dispatch;
+* gigantic runtime;
+* abstractions that could be eliminated.
 
-Quando uma construção Kof puder ser traduzida diretamente para uma construção eficiente do ECMAScript, preferir a representação direta.
+When a Kof construct can be translated directly into an efficient ECMAScript construct, prefer the direct representation.
 
 ---
 
 # 7. KOF/SCRIPT
 
-Kof/Script deve continuar sendo baseado na infraestrutura existente do compilador.
+Kof/Script must continue to be based on the compiler's existing infrastructure.
 
-Não criar um segundo compilador apenas para script.
+Do not create a second compiler just for script.
 
-O modo Script deve priorizar:
+Script mode must prioritize:
 
-* startup rápido;
-* baixa latência;
-* baixo consumo;
-* execução previsível;
-* integração simples;
-* runtime mínimo;
-* reutilização do frontend;
-* reutilização do type system;
-* reutilização da IR.
+* fast startup;
+* low latency;
+* low consumption;
+* predictable execution;
+* simple integration;
+* minimal runtime;
+* reuse of the frontend;
+* reuse of the type system;
+* reuse of the IR.
 
-Script não significa lento.
-
----
-
-# 8. ZERO OVERHEAD DESNECESSÁRIO
-
-Toda feature nova deve responder:
-
-```text
-Qual é o custo dessa abstração em runtime?
-```
-
-Se a resposta for:
-
-```text
-nenhum
-```
-
-porque ela desaparece durante a compilação:
-
-ótimo.
-
-Se houver custo:
-
-```text
-qual?
-por quê?
-é realmente necessário?
-pode ser eliminado?
-```
-
-A implementação não deve esconder overhead.
+Script does not mean slow.
 
 ---
 
-# 9. ZERO BOXING DESNECESSÁRIO
+# 8. ZERO UNNECESSARY OVERHEAD
 
-Valores primitivos devem permanecer primitivos quando semanticamente possível.
+Every new feature must answer:
 
-Exemplo:
+```text
+What is the runtime cost of this abstraction?
+```
+
+If the answer is:
+
+```text
+none
+```
+
+because it disappears during compilation:
+
+great.
+
+If there is a cost:
+
+```text
+which one?
+why?
+is it really necessary?
+can it be eliminated?
+```
+
+The implementation must not hide overhead.
+
+---
+
+# 9. ZERO UNNECESSARY BOXING
+
+Primitive values must remain primitive when semantically possible.
+
+Example:
 
 ```kof
 Int
@@ -305,9 +307,9 @@ Bool
 Char
 ```
 
-não devem ser automaticamente transformados em objetos.
+must not be automatically transformed into objects.
 
-Preferir:
+Prefer:
 
 ```text
 ILOAD
@@ -315,7 +317,7 @@ ISTORE
 IADD
 ```
 
-a:
+over:
 
 ```text
 allocate Integer
@@ -327,38 +329,38 @@ operation
 box
 ```
 
-quando o boxing não for necessário.
+when boxing is not necessary.
 
-O type system e a IR devem preservar informação suficiente para o backend tomar essa decisão.
+The type system and the IR must preserve enough information for the backend to make this decision.
 
 ---
 
-# 10. ZERO REFLECTION DESNECESSÁRIA
+# 10. ZERO UNNECESSARY REFLECTION
 
-Reflection é necessária para:
+Reflection is necessary for:
 
-* interoperabilidade;
+* interoperability;
 * frameworks;
 * metadata;
-* APIs explicitamente reflexivas.
+* explicitly reflective APIs.
 
-Mas não deve ser usada para operações normais que possam ser resolvidas estaticamente.
+But it must not be used for normal operations that can be resolved statically.
 
-Exemplo:
+Example:
 
 ```kof
 user.name
 ```
 
-deve preferir:
+must prefer:
 
 ```text
 GETFIELD
 ```
 
-ou equivalente.
+or equivalent.
 
-Não:
+Not:
 
 ```text
 reflection
@@ -368,15 +370,15 @@ field lookup
 invoke
 ```
 
-sem necessidade.
+without need.
 
 ---
 
-# 11. ZERO DISPATCH DESNECESSÁRIO
+# 11. ZERO UNNECESSARY DISPATCH
 
-Se o compilador conhece o alvo de uma chamada, deve utilizar a forma mais direta possível.
+If the compiler knows the target of a call, it must use the most direct form possible.
 
-Por exemplo:
+For example:
 
 ```text
 INVOKESTATIC
@@ -385,19 +387,19 @@ INVOKEVIRTUAL
 INVOKEINTERFACE
 ```
 
-devem ser escolhidos de acordo com a semântica real.
+must be chosen according to the real semantics.
 
-Não criar dispatch dinâmico artificial.
+Do not create artificial dynamic dispatch.
 
-O mesmo princípio vale para Native e JS.
+The same principle applies to Native and JS.
 
 ---
 
-# 12. ABSTRAÇÕES DEVEM DESAPARECER
+# 12. ABSTRACTIONS MUST DISAPPEAR
 
-Construções de alto nível não devem necessariamente existir em runtime.
+High-level constructs must not necessarily exist at runtime.
 
-Isso vale para:
+This applies to:
 
 * loops;
 * ranges;
@@ -406,53 +408,53 @@ Isso vale para:
 * pipelines;
 * pattern matching;
 * properties;
-* interpolação;
+* interpolation;
 * collections;
 * generics;
 * extension-like syntax;
 * syntactic sugar;
-* constructors compactos;
-* outras abstrações futuras.
+* compact constructors;
+* other future abstractions.
 
-Pergunta obrigatória:
+Mandatory question:
 
-> Essa abstração ainda precisa existir depois da compilação?
+> Does this abstraction still need to exist after compilation?
 
-Se não:
+If not:
 
 ```text
-eliminar.
+eliminate.
 ```
 
 ---
 
-# 13. TYPE SYSTEM COMO FERRAMENTA DE PERFORMANCE
+# 13. TYPE SYSTEM AS A PERFORMANCE TOOL
 
-O type system não existe apenas para detectar erros.
+The type system does not exist only to detect errors.
 
-Ele também fornece informação para otimização.
+It also provides information for optimization.
 
-O compilador deve saber:
+The compiler must know:
 
 ```text
-tipo
-subtipo
-mutabilidade
+type
+subtype
+mutability
 escape
 dispatch
-nullability futura
-generic specialization futura
+future nullability
+future generic specialization
 ```
 
-quando essas informações estiverem disponíveis.
+when that information is available.
 
-Quanto mais informação semanticamente segura existir em compile-time, menos trabalho precisa ser realizado em runtime.
+The more semantically safe information exists at compile-time, the less work needs to be done at runtime.
 
 ---
 
-# 14. IR ORIENTADA À OTIMIZAÇÃO
+# 14. OPTIMIZATION-ORIENTED IR
 
-A Kof IR deve permitir:
+The Kof IR must allow:
 
 * constant folding;
 * dead code elimination;
@@ -461,24 +463,24 @@ A Kof IR deve permitir:
 * type propagation;
 * branch simplification;
 * allocation analysis;
-* escape analysis futura;
-* inlining futuro;
-* specialization futura;
-* scalar replacement futura;
+* future escape analysis;
+* future inlining;
+* future specialization;
+* future scalar replacement;
 * loop optimization;
 * dispatch optimization.
 
-Não é necessário implementar todas essas otimizações imediatamente.
+It is not necessary to implement all these optimizations immediately.
 
-Mas a arquitetura da IR **não pode impedir sua implementação futura**.
+But the IR architecture **must not prevent their future implementation**.
 
 ---
 
 # 15. ESCAPE ANALYSIS
 
-O compilador deve ser arquitetado para identificar objetos que não escapam do escopo.
+The compiler must be architected to identify objects that do not escape the scope.
 
-Exemplo:
+Example:
 
 ```kof
 class Point(
@@ -489,21 +491,21 @@ class Point(
 distance(Point(10, 20))
 ```
 
-Se o objeto não escapar e sua materialização não for semanticamente necessária, o compilador deve futuramente poder representar seus valores de forma mais eficiente.
+If the object does not escape and its materialization is not semantically necessary, the compiler must in the future be able to represent its values more efficiently.
 
-No JVM:
+On the JVM:
 
 ```text
 Kof analysis
 ↓
-bytecode otimizado
+optimized bytecode
 ↓
 HotSpot
 ↓
 further optimization
 ```
 
-No Native:
+In Native:
 
 ```text
 Kof analysis
@@ -515,28 +517,28 @@ direct machine representation
 
 # 16. MEMORY SAFETY
 
-Performance sem segurança de memória não é sucesso.
+Performance without memory safety is not success.
 
-Kof deve buscar impedir:
+Kof must seek to prevent:
 
 * memory leaks;
 * double free;
 * use-after-free;
-* acesso inválido;
-* corrupção de memória;
-* crescimento ilimitado de estruturas temporárias.
+* invalid access;
+* memory corruption;
+* unlimited growth of temporary structures.
 
-Especialmente no Native.
+Especially in Native.
 
-O gerenciamento de memória deve possuir ownership/lifetime suficientemente claros para permitir evolução futura sem transformar o runtime em uma coleção de `malloc()` esquecidos.
+Memory management must have sufficiently clear ownership/lifetime to allow future evolution without turning the runtime into a collection of forgotten `malloc()` calls.
 
 ---
 
 # 17. STACK SAFETY
 
-O compilador nunca deve introduzir recursão artificial.
+The compiler must never introduce artificial recursion.
 
-Loops devem continuar sendo loops.
+Loops must remain loops.
 
 ```kof
 while (...) {
@@ -544,26 +546,26 @@ while (...) {
 }
 ```
 
-deve ser compilado como controle iterativo.
+must be compiled as iterative control.
 
-Não transformar isso em chamadas recursivas.
+Do not turn this into recursive calls.
 
-Para recursão legítima:
+For legitimate recursion:
 
-* analisar tail position;
-* permitir tail-call optimization quando possível;
-* evitar frames artificiais;
-* detectar padrões perigosos quando possível.
+* analyze tail position;
+* allow tail-call optimization when possible;
+* avoid artificial frames;
+* detect dangerous patterns when possible.
 
-Objetivo:
+Objective:
 
-> **Nenhum stack overflow causado artificialmente pelo compilador ou runtime.**
+> **No stack overflow caused artificially by the compiler or runtime.**
 
 ---
 
 # 18. RESOURCE SAFETY
 
-Os mesmos princípios devem valer para:
+The same principles must apply to:
 
 ```text
 files
@@ -576,9 +578,9 @@ buffers
 processes
 ```
 
-Recursos devem possuir lifecycle previsível.
+Resources must have a predictable lifecycle.
 
-A evolução da linguagem deve permitir estruturas que garantam cleanup em:
+The language's evolution must allow structures that guarantee cleanup on:
 
 ```text
 normal completion
@@ -588,15 +590,15 @@ break
 continue
 ```
 
-quando semanticamente aplicável.
+when semantically applicable.
 
 ---
 
-# 19. BENCHMARKS SÃO PARTE DA ARQUITETURA
+# 19. BENCHMARKS ARE PART OF THE ARCHITECTURE
 
-Performance não pode ser avaliada por sensação.
+Performance cannot be evaluated by feeling.
 
-Criar:
+Create:
 
 ```text
 benchmarks/
@@ -618,7 +620,7 @@ benchmarks/
 └── applications/
 ```
 
-Cada benchmark deve ter:
+Each benchmark must have:
 
 ```text
 input
@@ -631,9 +633,9 @@ baseline
 
 ---
 
-# 20. BENCHMARKS DE MICROPERFORMANCE
+# 20. MICROPERFORMANCE BENCHMARKS
 
-Medir:
+Measure:
 
 * integer arithmetic;
 * long arithmetic;
@@ -659,9 +661,9 @@ Medir:
 
 ---
 
-# 21. BENCHMARKS DE ALGORITMOS
+# 21. ALGORITHM BENCHMARKS
 
-Criar casos reais para:
+Create real cases for:
 
 * sorting;
 * binary search;
@@ -676,13 +678,13 @@ Criar casos reais para:
 * JSON;
 * IO.
 
-Os programas devem ser semanticamente equivalentes entre implementações.
+The programs must be semantically equivalent across implementations.
 
 ---
 
-# 22. BENCHMARKS DE MEMÓRIA
+# 22. MEMORY BENCHMARKS
 
-Medir:
+Measure:
 
 ```text
 heap
@@ -695,33 +697,33 @@ file descriptors
 threads
 ```
 
-Não basta medir tempo.
+Measuring time alone is not enough.
 
-Um programa que termina 10% mais rápido consumindo 5x mais memória não é automaticamente melhor.
+A program that finishes 10% faster while consuming 5x more memory is not automatically better.
 
 ---
 
 # 23. STRESS TESTS
 
-Criar:
+Create:
 
 ```text
 benchmarks/stress/
 ```
 
-Testar:
+Test:
 
 ### CPU
 
-Execuções prolongadas.
+Prolonged executions.
 
 ### Memory
 
-Milhões de allocations.
+Millions of allocations.
 
 ### Collections
 
-Grandes volumes de:
+Large volumes of:
 
 ```text
 insert
@@ -732,7 +734,7 @@ iteration
 
 ### Strings
 
-Grandes volumes de:
+Large volumes of:
 
 ```text
 concat
@@ -744,13 +746,13 @@ parse
 
 ### Concurrency
 
-Grandes quantidades de:
+Large quantities of:
 
 ```kof
 spawn
 ```
 
-e futuramente:
+and in the future:
 
 ```kof
 await
@@ -758,7 +760,7 @@ await
 
 ### IO
 
-Grandes volumes de:
+Large volumes of:
 
 ```text
 open
@@ -769,7 +771,7 @@ close
 
 ### Exceptions
 
-Grandes volumes de:
+Large volumes of:
 
 ```text
 throw
@@ -779,9 +781,9 @@ finally
 
 ### HTTP
 
-Alto volume de requests.
+High volume of requests.
 
-Medir:
+Measure:
 
 ```text
 requests/sec
@@ -796,9 +798,9 @@ memory
 
 # 24. LONG-RUN TESTS
 
-Criar testes que mantenham aplicações executando por longos períodos.
+Create tests that keep applications running for long periods.
 
-O objetivo é verificar:
+The objective is to verify:
 
 ```text
 bounded memory growth
@@ -807,22 +809,22 @@ stable throughput
 stable latency
 ```
 
-Detectar:
+Detect:
 
 * memory leaks;
 * descriptor leaks;
 * thread leaks;
-* crescimento inesperado do heap;
-* degradação progressiva;
-* crescimento de latência.
+* unexpected heap growth;
+* progressive degradation;
+* latency growth.
 
 ---
 
 # 25. PERFORMANCE REGRESSION
 
-Cada versão deve possuir baseline.
+Each version must have a baseline.
 
-Exemplo (0.2.6-beta, 27/08/2026 — `mvn test` 810, golden 16/16):
+Example (0.2.6-beta, 08/27/2026 — `mvn test` 810, golden 16/16):
 
 ```text
 Kof 0.2.6-beta
@@ -831,30 +833,30 @@ sort:       42 ms
 json:       17 ms
 startup:    38 ms
 memory:     12 MB
-benchmarks: 37 em 17 categorias (kof bench PASS, baseline jvm/native/js)
+benchmarks: 37 in 17 categories (kof bench PASS, baseline jvm/native/js)
 ```
 
-Se uma alteração produzir:
+If a change produces:
 
 ```text
 sort: 61 ms
 ```
 
-o CI deve sinalizar:
+the CI must flag:
 
 ```text
 PERFORMANCE REGRESSION
 ```
 
-Utilizar thresholds e análise estatística para evitar falsos positivos.
+Use thresholds and statistical analysis to avoid false positives.
 
-Regressões significativas precisam ser investigadas.
+Significant regressions must be investigated.
 
 ---
 
-# 26. CI DE BENCHMARK
+# 26. BENCHMARK CI
 
-Criar:
+Create:
 
 ```text
 .github/workflows/benchmark.yml
@@ -876,13 +878,13 @@ compare baseline
 report regression
 ```
 
-Benchmarks podem ser informativos em PRs e bloqueantes quando uma regressão ultrapassar um limite significativo.
+Benchmarks may be informative on PRs and blocking when a regression exceeds a significant limit.
 
 ---
 
-# 27. PARIDADE MULTI-TARGET
+# 27. MULTI-TARGET PARITY
 
-Os targets:
+The targets:
 
 ```text
 Kof/JVM
@@ -891,7 +893,7 @@ Kof/JS
 Kof/Script
 ```
 
-devem compartilhar:
+must share:
 
 ```text
 frontend
@@ -900,15 +902,15 @@ semantic analysis
 IR
 ```
 
-quando possível.
+when possible.
 
-O que deve mudar são as necessidades específicas de cada backend/runtime.
+What must change are the specific needs of each backend/runtime.
 
 ---
 
-# 28. BENCHMARK MULTI-TARGET
+# 28. MULTI-TARGET BENCHMARK
 
-Benchmarks relevantes devem comparar:
+Relevant benchmarks must compare:
 
 ```text
 Java
@@ -918,26 +920,26 @@ Kof/JS
 Kof/Script
 ```
 
-O objetivo não é produzir marketing.
+The objective is not to produce marketing.
 
-O objetivo é responder:
+The objective is to answer:
 
 ```text
-onde Kof é mais rápido?
-onde é mais lento?
-por quê?
-qual componente é responsável?
+where is Kof faster?
+where is it slower?
+why?
+which component is responsible?
 ```
 
-Toda regressão relevante deve virar investigação técnica.
+Every relevant regression must become a technical investigation.
 
 ---
 
 # 29. JAVA → KOF
 
-Um dos objetivos estratégicos do Kof é permitir migração de sistemas Java.
+One of Kof's strategic objectives is to allow migration of Java systems.
 
-Ao portar:
+When porting:
 
 ```text
 Java
@@ -945,9 +947,9 @@ Java
 Kof
 ```
 
-o resultado não deve simplesmente preservar o overhead incidental do código Java original.
+the result must not simply preserve the incidental overhead of the original Java code.
 
-O compilador deve aproveitar:
+The compiler must take advantage of:
 
 ```text
 type information
@@ -956,31 +958,31 @@ ownership/lifetime information
 semantic information
 ```
 
-para produzir:
+to produce:
 
 ```text
-mesma semântica
+same semantics
 +
-menos código
+less code
 +
-menos abstrações runtime
+fewer runtime abstractions
 +
-menos allocations
+fewer allocations
 +
-melhor representação
+better representation
 ```
 
 ---
 
-# 30. PORTABILIDADE NÃO SIGNIFICA PRESERVAR INEFICIÊNCIA
+# 30. PORTABILITY DOES NOT MEAN PRESERVING INEFFICIENCY
 
-Se o Java original possui:
+If the original Java has:
 
 ```java
 new Iterator(...)
 ```
 
-mas a semântica Kof permite um loop direto:
+but Kof semantics allow a direct loop:
 
 ```kof
 for (x in values) {
@@ -988,55 +990,55 @@ for (x in values) {
 }
 ```
 
-o compilador não deve preservar o iterator apenas para manter uma equivalência estrutural.
+the compiler must not preserve the iterator just to maintain a structural equivalence.
 
-A equivalência necessária é:
+The necessary equivalence is:
 
 ```text
-semântica
+semantics
 ```
 
-não:
+not:
 
 ```text
-implementação interna
+internal implementation
 ```
 
 ---
 
-# 31. DEBUG E PERFORMANCE
+# 31. DEBUG AND PERFORMANCE
 
-Devem existir perfis distintos:
+There must be distinct profiles:
 
 ```text
 debug
 release
 ```
 
-Debug deve possuir:
+Debug must have:
 
 * source mapping;
 * line information;
 * local variables;
 * metadata;
 * stack traces;
-* observabilidade.
+* observability.
 
-Release deve possuir:
+Release must have:
 
-* otimizações;
-* menor overhead;
-* metadata apenas quando necessária.
+* optimizations;
+* lower overhead;
+* metadata only when necessary.
 
-A existência de debugging não pode obrigar o programa final a carregar overhead desnecessário.
+The existence of debugging cannot force the final program to carry unnecessary overhead.
 
 ---
 
 # 32. RUNTIME DEBUGGING
 
-Planejar uma infraestrutura de debugging runtime própria do Kof.
+Plan a Kof-native runtime debugging infrastructure.
 
-O runtime deve futuramente permitir:
+The runtime must in the future allow:
 
 ```text
 breakpoint
@@ -1053,13 +1055,13 @@ exceptions
 watch expressions
 ```
 
-Sem transformar o programa em um interpretador.
+Without turning the program into an interpreter.
 
-O programa continua sendo compilado.
+The program remains compiled.
 
-O debugger conversa com o processo em execução.
+The debugger talks to the running process.
 
-Arquitetura conceitual:
+Conceptual architecture:
 
 ```text
 Kof Editor
@@ -1078,20 +1080,20 @@ Kof Runtime Debug Interface
     └── JS
 ```
 
-Na JVM, integrar com mecanismos existentes quando possível.
+On the JVM, integrate with existing mechanisms when possible.
 
-No Native, criar uma camada própria de debug metadata/protocol.
+In Native, create its own layer of debug metadata/protocol.
 
-No JS, integrar com DevTools/Node quando possível.
+In JS, integrate with DevTools/Node when possible.
 
 ---
 
-# 33. DEBUGGING NO KOF EDITOR
+# 33. DEBUGGING IN THE KOF EDITOR
 
-O Kof Editor deve futuramente conseguir:
+The Kof Editor must in the future be able to:
 
 ```text
-abrir projeto
+open project
  ↓
 build
  ↓
@@ -1100,34 +1102,34 @@ run
 debug
 ```
 
-com:
+with:
 
-* breakpoints no código Kof;
-* execução linha a linha;
-* inspeção de variáveis;
+* breakpoints in Kof code;
+* line-by-line execution;
+* variable inspection;
 * stack trace;
-* avaliação de expressões;
+* expression evaluation;
 * threads/tasks;
 * exception breakpoints;
 * console;
 * restart;
 * attach.
 
-O editor não deve conhecer detalhes internos do backend.
+The editor must not know the backend's internal details.
 
-Ele deve falar com uma interface comum:
+It must speak to a common interface:
 
 ```text
 Kof Debug Protocol
 ```
 
-e o backend/runtime fornece a implementação específica.
+and the backend/runtime provides the specific implementation.
 
 ---
 
 # 34. PROFILING
 
-Planejar futuramente:
+Plan in the future:
 
 ```text
 kof bench
@@ -1135,13 +1137,13 @@ kof profile
 kof inspect
 ```
 
-Exemplo:
+Example:
 
 ```text
 kof bench app.kf
 ```
 
-deve apresentar:
+must present:
 
 ```text
 startup
@@ -1153,7 +1155,7 @@ allocations
 GC
 ```
 
-`kof profile` deve futuramente integrar ferramentas adequadas:
+`kof profile` must in the future integrate appropriate tools:
 
 ### JVM
 
@@ -1165,22 +1167,22 @@ GC
 
 * perf;
 * sampling profiler;
-* ferramentas nativas.
+* native tools.
 
 ### JS
 
 * Node profiler;
 * V8/DevTools.
 
-O objetivo é permitir descobrir **por que** o Kof está lento, e não apenas saber que está lento.
+The objective is to make it possible to discover **why** Kof is slow, and not just to know that it is slow.
 
 ---
 
-# 35. STANDARD LIBRARY TAMBÉM PRECISA SER RÁPIDA
+# 35. THE STANDARD LIBRARY ALSO NEEDS TO BE FAST
 
-Não adianta o compilador ser rápido e a stdlib ser uma âncora.
+It is no use for the compiler to be fast and the stdlib to be an anchor.
 
-APIs como:
+APIs such as:
 
 ```text
 kof.core
@@ -1191,7 +1193,7 @@ kof.json
 kof.concurrent
 ```
 
-devem ser desenhadas considerando:
+must be designed considering:
 
 * allocations;
 * cache locality;
@@ -1202,15 +1204,15 @@ devem ser desenhadas considerando:
 * throughput;
 * latency.
 
-A API pública pode ser simples.
+The public API may be simple.
 
-A implementação interna deve ser eficiente.
+The internal implementation must be efficient.
 
 ---
 
 # 36. IO
 
-IO deve possuir abstrações multiplataforma sem esconder custos importantes.
+IO must have cross-platform abstractions without hiding important costs.
 
 Targets:
 
@@ -1221,34 +1223,34 @@ Kof/JS
 Kof/Script
 ```
 
-devem possuir APIs consistentes.
+must have consistent APIs.
 
-O backend escolhe a implementação adequada.
+The backend chooses the appropriate implementation.
 
-Não criar uma API diferente apenas porque cada plataforma possui internamente uma tecnologia diferente.
+Do not create a different API just because each platform internally uses a different technology.
 
 ---
 
-# 37. CONCORRÊNCIA
+# 37. CONCURRENCY
 
-A concorrência deve priorizar:
+Concurrency must prioritize:
 
-* baixo overhead;
-* segurança;
-* previsibilidade;
-* ausência de vazamentos;
-* lifecycle correto;
-* ausência de threads abandonadas.
+* low overhead;
+* safety;
+* predictability;
+* absence of leaks;
+* correct lifecycle;
+* absence of abandoned threads.
 
-A linguagem não deve expor diretamente detalhes da implementação quando não forem necessários.
+The language must not directly expose implementation details when they are not necessary.
 
-Exemplo:
+Example:
 
 ```kof
 spawn processarFila()
 ```
 
-é preferível a obrigar o programador a manipular:
+is preferable to forcing the programmer to handle:
 
 ```text
 Thread
@@ -1257,15 +1259,15 @@ ExecutorService
 Future
 ```
 
-A abstração deve esconder a cerimônia, não esconder um custo absurdo.
+The abstraction must hide the ceremony, not hide an absurd cost.
 
 ---
 
 # 38. EXCEPTIONS
 
-Exceptions devem ser testadas sob carga.
+Exceptions must be tested under load.
 
-Medir:
+Measure:
 
 ```text
 throw/catch latency
@@ -1276,9 +1278,9 @@ finally
 propagation
 ```
 
-Exceptions não devem produzir corrupção de estado.
+Exceptions must not produce state corruption.
 
-No Native, a evolução do mecanismo de unwinding deve preservar:
+In Native, the evolution of the unwinding mechanism must preserve:
 
 ```text
 correctness
@@ -1289,9 +1291,9 @@ resource safety
 
 ---
 
-# 39. O COMPILADOR NÃO PODE INTRODUZIR BUGS DE RECURSO
+# 39. THE COMPILER MUST NOT INTRODUCE RESOURCE BUGS
 
-Nenhum backend pode introduzir:
+No backend may introduce:
 
 ```text
 memory leak
@@ -1302,29 +1304,29 @@ thread leak
 stack corruption
 ```
 
-como consequência de uma construção normal da linguagem.
+as a consequence of a normal language construct.
 
-Se uma feature não consegue garantir isso ainda:
+If a feature cannot yet guarantee this:
 
 ```text
-documentar
-testar
-limitar
+document
+test
+limit
 ```
 
-mas não esconder a limitação.
+but do not hide the limitation.
 
 ---
 
 # 40. DEFINITION OF DONE
 
-Uma feature não está pronta apenas porque:
+A feature is not ready just because:
 
 ```text
-compila
+it compiles
 ```
 
-Quando aplicável, ela precisa possuir:
+When applicable, it must have:
 
 ```text
 Parser
@@ -1345,7 +1347,7 @@ Resource Test
 Debug metadata
 ```
 
-E precisa preservar:
+And it must preserve:
 
 ```text
 correctness
@@ -1361,171 +1363,171 @@ debuggability
 
 ---
 
-# 41. REGRA PARA NOVAS FEATURES
+# 41. RULE FOR NEW FEATURES
 
-Toda nova feature deve responder:
+Every new feature must answer:
 
-### 1. O código fica mais simples para o programador?
+### 1. Does the code become simpler for the programmer?
 
-### 2. A semântica continua estaticamente verificável?
+### 2. Is the semantics still statically verifiable?
 
-### 3. A abstração pode desaparecer em compile-time?
+### 3. Can the abstraction disappear at compile-time?
 
-### 4. Qual é o custo de runtime?
+### 4. What is the runtime cost?
 
-### 5. Quantas allocations são introduzidas?
+### 5. How many allocations are introduced?
 
-### 6. Existe boxing?
+### 6. Is there boxing?
 
-### 7. Existe reflection?
+### 7. Is there reflection?
 
-### 8. Existe dispatch indireto?
+### 8. Is there indirect dispatch?
 
-### 9. Existe overhead de memória?
+### 9. Is there memory overhead?
 
-### 10. Existe risco de memory leak?
+### 10. Is there a risk of memory leak?
 
-### 11. Existe risco de stack overflow?
+### 11. Is there a risk of stack overflow?
 
-### 12. Existe benchmark?
+### 12. Is there a benchmark?
 
-### 13. Existe teste de stress?
+### 13. Is there a stress test?
 
-### 14. Funciona nos targets aplicáveis?
+### 14. Does it work on the applicable targets?
 
-### 15. O debugger consegue representar corretamente a execução?
+### 15. Can the debugger correctly represent the execution?
 
-Se a resposta for ruim:
+If the answer is bad:
 
 ```text
-revisar a arquitetura.
+review the architecture.
 ```
 
 ---
 
-# 42. REGRA DE OTIMIZAÇÃO
+# 42. OPTIMIZATION RULE
 
-O compilador deve sempre procurar a seguinte transformação:
+The compiler must always seek the following transformation:
 
 ```text
-intenção do programador
+programmer intent
         ↓
-semântica
+semantics
         ↓
-análise estática
+static analysis
         ↓
-eliminação de abstrações
+elimination of abstractions
         ↓
-representação mínima necessária
+minimum necessary representation
         ↓
-código eficiente
+efficient code
 ```
 
-Não:
+Not:
 
 ```text
-intenção
+intent
  ↓
-boilerplate escondido
+hidden boilerplate
  ↓
-objetos
+objects
  ↓
 wrappers
  ↓
 reflection
  ↓
-runtime gigante
+gigantic runtime
  ↓
-resultado
+result
 ```
 
 ---
 
-# 43. REGRA FINAL
+# 43. FINAL RULE
 
-Kof deve remover complexidade dos dois lados.
+Kof must remove complexity from both sides.
 
-Para o programador:
-
-```text
-alta intenção
-↓
-pouco código
-↓
-alta produtividade
-```
-
-Para a máquina:
+For the programmer:
 
 ```text
-alta abstração
+high intent
 ↓
-análise estática
+little code
 ↓
-otimização
-↓
-baixa representação
-↓
-baixo overhead
+high productivity
 ```
 
-O objetivo é:
+For the machine:
+
+```text
+high abstraction
+↓
+static analysis
+↓
+optimization
+↓
+low representation
+↓
+low overhead
+```
+
+The objective is:
 
 ```text
                     KOF
                      │
           ┌──────────┴──────────┐
           │                     │
-      PROGRAMADOR            MÁQUINA
+     PROGRAMMER             MACHINE
           │                     │
-    menos código          menos overhead
-    menos ceremony       menos allocation
-    type safety          menos boxing
-    intenção             menos dispatch
-    simplicidade         menos memória
+    less code             less overhead
+    less ceremony         less allocation
+    type safety           less boxing
+    intent                less dispatch
+    simplicity            less memory
           │                     │
           └──────────┬──────────┘
                      │
                      ▼
-              ALTA PERFORMANCE
+             HIGH PERFORMANCE
 ```
 
-A filosofia do Kof não deve ser:
+Kof's philosophy must not be:
 
-> "É rápido o suficiente."
+> "It's fast enough."
 
-Deve ser:
+It must be:
 
-> **"Se conseguimos fazer melhor, fazemos melhor."**
+> **"If we can do better, we do better."**
 
-Java continua sendo uma referência de interoperabilidade e uma plataforma extremamente poderosa.
+Java remains a reference for interoperability and an extremely powerful platform.
 
-Mas Kof não deve copiar suas limitações acidentais.
+But Kof must not copy its accidental limitations.
 
-Kof deve usar o conhecimento que possui em compile-time para produzir uma representação melhor.
+Kof must use the knowledge it has at compile-time to produce a better representation.
 
-No JVM:
+On the JVM:
 
-> **buscar ser mais eficiente que o Java equivalente sempre que tecnicamente possível.**
+> **seek to be more efficient than the equivalent Java whenever technically possible.**
 
-No Native:
+In Native:
 
-> **buscar explorar todo o controle do compilador para atingir eficiência ainda maior.**
+> **seek to exploit all of the compiler's control to achieve even greater efficiency.**
 
-No JS:
+In JS:
 
-> **gerar JavaScript eficiente e idiomático.**
+> **generate efficient and idiomatic JavaScript.**
 
-No Script:
+In Script:
 
-> **manter startup e overhead mínimos sem criar um segundo compilador.**
+> **keep startup and overhead minimal without creating a second compiler.**
 
-Em todos os targets:
+On all targets:
 
-> **correção primeiro, mas nunca aceitar overhead desnecessário como requisito arquitetural.**
+> **correctness first, but never accept unnecessary overhead as an architectural requirement.**
 
-Performance, segurança de memória, segurança de recursos, stack safety, observabilidade e debuggabilidade fazem parte da definição de qualidade da linguagem.
+Performance, memory safety, resource safety, stack safety, observability and debuggability are part of the language's definition of quality.
 
-Não são acabamento.
+They are not finishing touches.
 
-São Kof.
+They are Kof.

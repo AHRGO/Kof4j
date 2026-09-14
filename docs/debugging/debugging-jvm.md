@@ -1,12 +1,14 @@
-# DEBUGGING_JVM.md — Debug no target JVM
+[English](debugging-jvm.md) | [Português](debugging-jvm.pt_BR.md)
 
-**Status:** Implementado (Fases 1-3 do debugger: metadata + JDWP via `kof-debug`)
-**Data:** 27 de agosto de 2026
-**Versão:** 0.4.0-beta (7 targets; free-list + pthread spawn + FP XMM)
+# DEBUGGING_JVM.md — Debugging on the JVM target
+
+**Status:** Implemented (debugger Phases 1-3: metadata + JDWP via `kof-debug`)
+**Date:** August 27, 2026
+**Version:** 0.4.0-beta (7 targets; free-list + pthread spawn + FP XMM)
 
 ---
 
-## 1. Fluxo
+## 1. Flow
 
 ```text
 Kof Debug Info (IR)
@@ -22,34 +24,34 @@ kof-debug (DAP)
 Editor
 ```
 
-## 2. Metadata gerada (em modo debug)
+## 2. Generated metadata (in debug mode)
 
-- `SourceFile` — o arquivo .kf (via `IRModule.sourceName`);
-- `LineNumberTable` — mapeia bytecode → linha Kof: cada op da IR carrega
-  a posição (KofDebugInfo); o JvmBackend emite `visitLineNumber` quando a
-  linha muda;
-- `LocalVariableTable` — nomes Kof dos locals, span do método;
-- habilitada por `debugInfoEnabled` (default true).
+- `SourceFile` — the .kf file (via `IRModule.sourceName`);
+- `LineNumberTable` — maps bytecode → Kof line: each IR op carries
+  the position (KofDebugInfo); the JvmBackend emits `visitLineNumber` when the
+  line changes;
+- `LocalVariableTable` — Kof names of the locals, method span;
+- enabled by `debugInfoEnabled` (default true).
 
-## 3. Mapeamento
+## 3. Mapping
 
 ```text
 UserService.kf:42
     ↓
-método JVM correspondente + offset de bytecode
+corresponding JVM method + bytecode offset
 ```
 
-A tradução acontece no backend; o usuário nunca vê o bytecode.
+The translation happens in the backend; the user never sees the bytecode.
 
 ## 4. JDWP
 
-O programa é lançado com
-`-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=<porta>`
-e o adaptador conversa com o JDWP via wire protocol cru
-(`JdwpClient`, sem `jdk.jdi`): breakpoints por linha Kof (via
+The program is launched with
+`-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=<port>`
+and the adapter talks to JDWP over the raw wire protocol
+(`JdwpClient`, without `jdk.jdi`): breakpoints by Kof line (via
 LineNumberTable), stack frames, continue, dispose.
 
-Particularidades do JDK 25: ver `debug-adapter.md` §3.2.
+JDK 25 particularities: see `debug-adapter.md` §3.2.
 
-O usuário vê apenas a abstração Kof — bytecode, offsets e line tables
-são internos.
+The user sees only the Kof abstraction — bytecode, offsets and line tables
+are internal.

@@ -1,28 +1,30 @@
-# docs/audits/ — auditorias (foto de estado vs. realidade)
+[English](README.md) | [Português](README.pt_BR.md)
 
-> **Regra desta pasta** (criada 13/09, decisão da mantenedora): documento cujo
-> trabalho é **comparar o que os planos/docs afirmam contra o código, testes e
-> releases reais** — matriz de implementado-vs-planejado — mora aqui, não em
-> `development/` (que é fila de trabalho técnico pendente) nem em `bugs-and-gaps/`
-> (fila por alvo). A auditoria **não fecha sozinha**: ela aponta trabalho, que é
-> reivindicado nos planos/registros das outras pastas.
+# docs/audits/ — audits (snapshot of state vs. reality)
 
-## Estado atual
+> **Rule of this folder** (created 09/13, maintainer's decision): a document whose
+> work is to **compare what the plans/docs claim against the real code, tests and
+> releases** — an implemented-vs-planned matrix — lives here, not in
+> `development/` (which is the queue of pending technical work) nor in `bugs-and-gaps/`
+> (queue by target). The audit **does not close by itself**: it points to work, which is
+> claimed in the plans/records of the other folders.
 
-| Doc | O que audita | Vivacidade |
+## Current state
+
+| Doc | What it audits | Liveliness |
 |---|---|---|
-| `roadmap-audit.md` | roadmap × código (matriz + fila P0→P5) | **viva** — re-audit quando algo fecha |
-| `complexity-audit.md` | contagem de linhas/classe (02/09) | **snapshot** — gate vivo = `scripts/check_500.sh` (ratchet CI) |
-| `PLANNING-FUTURE-AUDIT.md` | branch `planning-future` × beta (07–08/09) | **encerrada** — R2 vive em `DECISIONS.md` x{a7}D-APP/x{a7}D-PLATFORM (ratificado 13/09), R5 no cluster migração |
-| `planning-future-reconcile.md` | merge da branch (05/09) | **encerrada** — checklist cumprido (port dos tiers) |
+| `roadmap-audit.md` | roadmap × code (matrix + P0→P5 queue) | **alive** — re-audit when something closes |
+| `complexity-audit.md` | line/class count (09/02) | **snapshot** — live gate = `scripts/check_500.sh` (CI ratchet) |
+| `PLANNING-FUTURE-AUDIT.md` | branch `planning-future` × beta (09/07–09/08) | **closed** — R2 lives in `DECISIONS.md` x{a7}D-APP/x{a7}D-PLATFORM (ratified 09/13), R5 in the migration cluster |
+| `planning-future-reconcile.md` | branch merge (09/05) | **closed** — checklist fulfilled (tiers port) |
 
-## Como usar
+## How to use
 
-1. **Nunca** atacar trabalho direto daqui — o que uma auditoria marca como
-   pendente tem que ter casa: bug → `docs/bugs-and-gaps/known-bugs.md`; plano
-   com código a escrever → doc do plano em `docs/development/`; decisão →
-   `docs/development/DECISIONS.md` (a pasta `decision-pending/` foi extinta 13/09).
-2. Ao fechar o que uma auditoria apontou, **atualize a linha da auditoria no
-   MESMO commit** (ela é registro, não opinião congelada).
-3. Auditoria encerrada (nada vivo apontando para trabalho não-casado) fica
-   aqui como histórico datado — não volta para `development/`.
+1. **Never** attack work directly from here — whatever an audit marks as
+   pending must have a home: bug → `docs/bugs-and-gaps/known-bugs.md`; plan
+   with code to write → the plan doc in `docs/development/`; decision →
+   `docs/development/DECISIONS.md` (the `decision-pending/` folder was extinguished 09/13).
+2. When closing what an audit pointed out, **update the audit's line in the
+   SAME commit** (it is a record, not a frozen opinion).
+3. A closed audit (nothing alive pointing to unmatched work) stays
+   here as a dated historical record — it does not go back to `development/`.

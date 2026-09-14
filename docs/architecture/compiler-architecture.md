@@ -1,59 +1,61 @@
-# Arquitetura do Compilador Kof
+[English](compiler-architecture.md) | [Português](compiler-architecture.pt_BR.md)
 
-**Versão:** 0.3.0-beta · **Evidência:** `kof-compiler/src/main/java/dev/kof/compiler/`
+# Kof Compiler Architecture
 
-Este documento descreve **como o compilador Kof implementa a linguagem**. Ele é
-**normativo sobre a implementação**, não sobre a linguagem — as regras da
-linguagem estão em [language-reference/](../language-reference/). Se esta
-arquitetura mudar (refatoração, novo backend), a **linguagem não muda**.
+**Version:** 0.3.0-beta · **Evidence:** `kof-compiler/src/main/java/dev/kof/compiler/`
+
+This document describes **how the Kof compiler implements the language**. It is
+**normative about the implementation**, not about the language — the language
+rules are in [language-reference/](../language-reference/). If this
+architecture changes (refactoring, new backend), the **language does not change**.
 
 ---
 
-## 1. Visão geral
+## 1. Overview
 
 ![alt text](image.png)
 
-**Módulos Maven relacionados:**
+**Related Maven modules:**
 
-| Módulo | Papel |
+| Module | Role |
 |---|---|
-| `kof-compiler` | O compilador (frontend + middle-end + backends) |
-| `kof-runtime` | Classes Java auxiliares (KofRuntime, KofHttp, KofDb, …) — **não** é usado pelo backend JVM (ver §5.1) |
+| `kof-compiler` | The compiler (frontend + middle-end + backends) |
+| `kof-runtime` | Auxiliary Java classes (KofRuntime, KofHttp, KofDb, …) — **not** used by the JVM backend (see §5.1) |
 | `kof-cli` | CLI `kof` (build/run/test/fmt/script/serve/debug/lsp) |
-| `kof-script` | KofScript (`.ks`, REPL) — **target de execução direta**: Kof puro no MESMO frontend, executado pelo `KofInterpreter` (IR) sem compilar |
-| `kof-c-compiler` | Compilador de subconjunto C → Native — **não** consome a IR Kof |
+| `kof-script` | KofScript (`.ks`, REPL) — **direct execution target**: pure Kof on the SAME frontend, executed by the `KofInterpreter` (IR) without compiling |
+| `kof-c-compiler` | C subset compiler → Native — **does not** consume the Kof IR |
 
 ---
 
-## 2. Pipeline real (ordem exata)
+## 2. Real pipeline (exact order)
 
 `CompilerDriver.compileSources` (`:141-323`):
 
 `text
 1. Lexer.tokenize()                    → List<Token>
-2. Parser.parse()                      → CompilationUnitNode (AST crua)
-3. CompilerImports.expandKofImports()  → AST (imports de diretório resolvidos)
-4. BuiltinTypes.registerEnum()         → registro global de enums
-5. CompilerDesugar.desugarTests()      → AST (blocos test → harness)
-6. CompilerDesugar.desugarApplication()→ AST (application → main embrulhado)
+2. Parser.parse()                      → CompilationUnitNode (raw AST)
+3. CompilerImports.expandKofImports()  → AST (directory imports resolved)
+4. BuiltinTypes.registerEnum()         → global enum registry
+5. CompilerDesugar.desugarTests()      → AST (test blocks → harness)
+6. CompilerDesugar.desugarApplication()→ AST (application → wrapped main)
 7. [ANDROID] appendAndroidHostIfNeeded → AST (+android-host.kf)
-8. SemanticAnalyzer.analyze()          → AST + maps laterais (tipos, métodos)
-   ├── preDeclareType                  (fase 1)
-   ├── defineMembers                   (fase 2)
-   ├── analyzeDeclaration              (fase 3, fixpoint ≤4 por classe)
-   └── resolveMethodCalls              (fase 4, no-op efetivo)
-9. [aborta se diagnostics.hasErrors()]
+8. SemanticAnalyzer.analyze()          → AST + side maps (types, methods)
+   ├── preDeclareType                  (phase 1)
+   ├── defineMembers                   (phase 2)
+   ├── analyzeDeclaration              (phase 3, fixpoint ≤4 per class)
+   └── resolveMethodCalls              (phase 4, effective no-op)
+9. [aborts if diagnostics.hasErrors()]
 10. LabelId.reset()
 11. lowerToIR()                        → IRModule
-12. applySuperBridges()                → IRModule (bridges de override)
+12. applySuperBridges()                → IRModule (override bridges)
 13. [if optimizeEnabled] Optimizer.optimize() → IRModule
 14. selectBackend(target)              → Backend
 15. backend.emit(irModule, outputDir, debugInfo)
 16. [ANDROID] AndroidProjectWriter.write()
 `
 
-**Nenhum passo é "type checking" separado** — a checagem de tipos está
-entrelaçada com a resolução de nomes dentro de `inferType` (passo 8). Ver
+**No step is a separate "type checking"** — type checking is
+intertwined with name resolution inside `inferType` (step 8). See
 [language-reference/type-system.md](../language-reference/type-system.md) §2.
 
 ---
@@ -62,60 +64,61 @@ entrelaçada com a resolução de nomes dentro de `inferType` (passo 8). Ver
 
 ### 3.1 Lexer (`Lexer.java`)
 
-Hand-written, single-pass, maximal munch com lookahead de 1–3 caracteres.
-Produz `List<Token>`; cada `Token` tem `type, value, file, line, column,
-offset, length`. Erros: `LEX001`–`LEX007`. A gramática léxica (o que a
-linguagem define) está em
+Hand-written, single-pass, maximal munch with 1–3 character lookahead.
+Produces `List<Token>`; each `Token` has `type, value, file, line, column,
+offset, length`. Errors: `LEX001`–`LEX007`. The lexical grammar (what the
+language defines) is in
 [language-reference/lexical-structure.md](../language-reference/lexical-structure.md).
 
 ### 3.2 Parser (`Parser.java`)
 
-Recursive descent com precedence-climbing para binários (`parseBinary(minPrec)`,
-`:1298`). Lookahead arbitrário via `check`/`checkNext`/varreduras (`looksLike*`).
-**Não** é LL(1) nem PEG nem gerado. Erros: `PARSE0xx`.
+Recursive descent with precedence-climbing for binaries (`parseBinary(minPrec)`,
+`:1298`). Arbitrary lookahead via `check`/`checkNext`/scans (`looksLike*`).
+It is **not** LL(1) nor PEG nor generated. Errors: `PARSE0xx`.
 
-O parser produz uma AST **crua** — tipos são `String`, sem resolução. A
-conversão para AST "final" (desugared) acontece no passo 5–6 do pipeline.
+The parser produces a **raw** AST — types are `String`, unresolved. The
+conversion to the "final" (desugared) AST happens in steps 5–6 of the pipeline.
 
 ### 3.3 AST (`AstNodes.java`)
 
-`sealed interface AstNode { SourcePosition position(); }` com 50 nós (53 records).
-**Não há typed AST**: os nós não carregam tipo resolvido. Os tipos vivem em
-`IdentityHashMap` laterais do analisador.
+`sealed interface AstNode { SourcePosition position(); }` with 50 nodes (53 records).
+**There is no typed AST**: nodes do not carry a resolved type. Types live in the
+analyzer's side `IdentityHashMap`s.
 
 ### 3.4 Desugaring (`CompilerDesugar.java`)
 
-- `desugarTests`: blocos `test "nome" { … }` viram funções sintetizadas +
-  harness de execução (modo `kof test`).
-- `desugarApplication`: `application { onStart {…} onShutdown {…} }` vira
-  funções sintetizadas que envolvem o `main` do usuário (prólogo/epílogo).
+- `desugarTests`: `test "name" { … }` blocks become synthesized functions +
+  execution harness (`kof test` mode).
+- `desugarApplication`: `application { onStart {…} onShutdown {…} }` becomes
+  synthesized functions that wrap the user's `main` (prologue/epilogue).
 
 ### 3.5 Imports (`CompilerImports.java`)
 
-`expandKofImports(unit, moduleRoot, …)`: para cada `import a.b`, se `a/b/` é
-**diretório** no module root, **puxa todos os `.kf` daquele diretório** para a
-unidade (fixpoint ≤256 rodadas). É como arquivos do mesmo pacote se enxergam.
+`expandKofImports(unit, moduleRoot, …)`: for each `import a.b`, if `a/b/` is a
+**directory** in the module root, it **pulls all `.kf` files from that directory**
+into the unit (fixpoint ≤256 rounds). This is how files of the same package see
+each other.
 
-### 3.6 Análise semântica (`SemanticAnalyzer.java`)
+### 3.6 Semantic analysis (`SemanticAnalyzer.java`)
 
-Quatro fases (`analyze`, `:89-106`):
+Four phases (`analyze`, `:89-106`):
 
-1. **`preDeclareType`** — cria `ClassSymbol` vazio por tipo; registra
-   `knownClasses`; sintetiza `values()/valueOf()/name()` em enums.
-2. **`defineMembers`** — preenche campos/métodos/construtores; accessors de
-   record; `TypeParameterSymbol`.
-3. **`analyzeDeclaration`** — analisa corpos; **fixpoint ≤4 passes por classe**
-   (inferência de retorno `void→T` via `MethodSymbol.setReturnType`).
-4. **`resolveMethodCalls`** — **no-op efetivo** (a resolução real já ocorreu
-   eager em `inferType`). Vestígio estrutural.
+1. **`preDeclareType`** — creates an empty `ClassSymbol` per type; registers
+   `knownClasses`; synthesizes `values()/valueOf()/name()` on enums.
+2. **`defineMembers`** — fills fields/methods/constructors; record accessors;
+   `TypeParameterSymbol`.
+3. **`analyzeDeclaration`** — analyzes bodies; **fixpoint ≤4 passes per class**
+   (return inference `void→T` via `MethodSymbol.setReturnType`).
+4. **`resolveMethodCalls`** — **effective no-op** (the real resolution already
+   happened eagerly in `inferType`). Structural vestige.
 
-**Maps laterais** (`:64-69`): `knownClasses`, `expressionTypes`,
+**Side maps** (`:64-69`): `knownClasses`, `expressionTypes`,
 `resolvedMethods`, `resolvedConstructors`, `classMemberScopes`.
 
-**Símbolos** (`SymbolTable.java`): `ParameterSymbol`, `TypeParameterSymbol`,
-`LocalVariableSymbol`, `FieldSymbol`, `MethodSymbol` (com `returnType`
-mutável), `ConstructorSet`, `ConstructorSymbol`, `ClassSymbol`,
-`FunctionSymbol` (nunca instanciada). `DispatchKind {INSTANCE, STATIC,
+**Symbols** (`SymbolTable.java`): `ParameterSymbol`, `TypeParameterSymbol`,
+`LocalVariableSymbol`, `FieldSymbol`, `MethodSymbol` (with mutable
+`returnType`), `ConstructorSet`, `ConstructorSymbol`, `ClassSymbol`,
+`FunctionSymbol` (never instantiated). `DispatchKind {INSTANCE, STATIC,
 INTERFACE}`.
 
 ---
@@ -124,12 +127,12 @@ INTERFACE}`.
 
 ### 4.1 IR (`IRNodes.java`)
 
-**Tipo de IR**: **máquina de pilha linear** — não three-address, não SSA, não
-árvore. Javadoc do otimizador (`Optimizer.java:14-15`): *"The IR is a linear,
+**IR type**: **linear stack machine** — not three-address, not SSA, not a
+tree. Optimizer Javadoc (`Optimizer.java:14-15`): *"The IR is a linear,
 stack-based op stream with label ops; every backend consumes it in that same
 order."*
 
-**Hierarquia**:
+**Hierarchy**:
 
 `text
 IRModule(name, classes, imports, sourceName)
@@ -143,73 +146,73 @@ IRModule(name, classes, imports, sourceName)
              └─ KofOperation (sealed, 30 records)
 `
 
-**⚠️ Basic blocks são nominais**: o lowering sempre emite **exatamente um**
-bloco por método (`new IRBasicBlock(0, ops)`); o otimizador achata e
-re-empacota. A unidade real é a **lista plana de ops com labels**.
+**⚠️ Basic blocks are nominal**: lowering always emits **exactly one**
+block per method (`new IRBasicBlock(0, ops)`); the optimizer flattens and
+repacks. The real unit is the **flat op list with labels**.
 
-**Os 30 ops** (`IRNodes.java:99-252`):
+**The 30 ops** (`IRNodes.java:99-252`):
 
-| Grupo | Ops |
+| Group | Ops |
 |---|---|
 | Load/Store | `KofLoadLiteral`, `KofLoadLocal`, `KofStoreLocal`, `KofLoadField`, `KofStoreField`, `KofGetStatic`, `KofPutStatic` |
-| Aritmética | `KofBinary` (18 ops), `KofUnary` (16 ops) |
-| Controle | `KofLabel`, `KofJump`, `KofConditionalJump`, `KofReturn`, `KofReturnVoid` |
-| Chamada | `KofCall` (com `KofCallKind {INSTANCE,STATIC,CONSTRUCTOR,FUNCTION,INTERFACE,SUPER}`) |
-| Objeto | `KofNewObject`, `KofCheckCast`, `KofInstanceOf` |
+| Arithmetic | `KofBinary` (18 ops), `KofUnary` (16 ops) |
+| Control | `KofLabel`, `KofJump`, `KofConditionalJump`, `KofReturn`, `KofReturnVoid` |
+| Call | `KofCall` (with `KofCallKind {INSTANCE,STATIC,CONSTRUCTOR,FUNCTION,INTERFACE,SUPER}`) |
+| Object | `KofNewObject`, `KofCheckCast`, `KofInstanceOf` |
 | Array | `KofNewArray`, `KofArrayLoad`, `KofArrayStore`, `KofArrayLength` |
-| Pilha | `KofDup`, `KofDupX1`, `KofDupX2`, `KofPop` |
-| Exceção | `KofThrow`, `KofTryStart`, `KofTryEnd`, `KofCatchStart` |
+| Stack | `KofDup`, `KofDupX1`, `KofDupX2`, `KofPop` |
+| Exception | `KofThrow`, `KofTryStart`, `KofTryEnd`, `KofCatchStart` |
 
-**A IR é tipada**: a maioria dos ops carrega `Type`. O tipo tem papel funcional
-no consumo (ex.: `KofConditionalJump.operandType` diz ao JVM qual `if_icmp*`
-usar). **Não tem semântica formal própria** (sem grafo de dependência, sem
-domínio de valores).
+**The IR is typed**: most ops carry a `Type`. The type has a functional role
+in consumption (e.g. `KofConditionalJump.operandType` tells the JVM which `if_icmp*`
+to use). **It has no formal semantics of its own** (no dependency graph, no
+value domain).
 
 **Debug info**: `KofDebugInfo(IdentityHashMap<KofOperation, SourcePosition>)`
-por método — a posição é registrada **antes** do backend, nunca sintetizada lá.
+per method — the position is recorded **before** the backend, never synthesized there.
 
 ### 4.2 Lowering AST→IR (`CompilerDriver.java` + `*Lowerer.java`)
 
 - **Statements** → `StatementLowerer.emitStatementInner` (`:14-477`).
-- **Expressões** → `ExpressionLowerer.emitExpression` (`:13-978`).
-- **Chamadas de método** → `ExpressionMethodCallLowerer.lower`.
+- **Expressions** → `ExpressionLowerer.emitExpression` (`:13-978`).
+- **Method calls** → `ExpressionMethodCallLowerer.lower`.
 - **Switch statement** → `SwitchStmtLowerer`; **switch expression** →
   `SwitchExprLowerer`.
-- **Lambdas** → `lambdaClass` (`CompilerDriver.java`, método `lambdaClass`): classe
-  sintética `Lambda<N>` (ou `LambdaTask<N>` para spawn) implementando interface
-  sintética `kof/Function<N>_<mangled>`; capturas viram campos `private final`;
-  capturas **mutadas** usam `Box<N>` (`BoxClassFactory`).
-- **`spawn`** → instância de `LambdaTask<N>` + `KofCall(KofRuntime, "kof_spawn",
-  …)` — **não há op dedicado de spawn na IR**.
-- **`try/catch`** → marcadores de região na lista de ops (`KofTryStart` +
-  `KofCatchStart` + labels), **não** exception table separada.
-- **`throw "msg"` no JVM** → `new RuntimeException(msg)` + `athrow`; nos outros
-  targets é `KofThrow()` direto.
+- **Lambdas** → `lambdaClass` (`CompilerDriver.java`, method `lambdaClass`): synthetic
+  class `Lambda<N>` (or `LambdaTask<N>` for spawn) implementing the synthetic
+  interface `kof/Function<N>_<mangled>`; captures become `private final` fields;
+  **mutated** captures use `Box<N>` (`BoxClassFactory`).
+- **`spawn`** → instance of `LambdaTask<N>` + `KofCall(KofRuntime, "kof_spawn",
+  …)` — **there is no dedicated spawn op in the IR**.
+- **`try/catch`** → region markers in the op list (`KofTryStart` +
+  `KofCatchStart` + labels), **not** a separate exception table.
+- **`throw "msg"` on the JVM** → `new RuntimeException(msg)` + `athrow`; on the other
+  targets it is `KofThrow()` directly.
 
-### 4.3 Otimizações (`Optimizer.java`)
+### 4.3 Optimizations (`Optimizer.java`)
 
-**Sempre ligadas por default** (`optimizeEnabled = true`, `:16`). Quatro passes
-por método (`passes`, `:68-74`):
+**Always on by default** (`optimizeEnabled = true`, `:16`). Four passes
+per method (`passes`, `:68-74`):
 
-1. **`OptimizerConstantFold.constantFold`** — aritmética, comparações, unários,
-   shifts com literais.
-2. **`deadEffects`** — remove pares puros `push+pop`, `dup+pop`, etc.
-3. **`reachability`** — código após `KofJump` incondicional sem label destino.
-4. **`removeJumpToNext`** — `KofJump(L)` seguido de `KofLabel(L)` → remove o
+1. **`OptimizerConstantFold.constantFold`** — arithmetic, comparisons, unaries,
+   shifts with literals.
+2. **`deadEffects`** — removes pure pairs `push+pop`, `dup+pop`, etc.
+3. **`reachability`** — code after an unconditional `KofJump` without a target label.
+4. **`removeJumpToNext`** — `KofJump(L)` followed by `KofLabel(L)` → removes the
    jump.
 
-**Não há**: inlining, loop unrolling, LICM, register allocation, escape
-analysis, devirtualization. O otimizador é **mínimo** — o trabalho pesado é
-delegado ao JIT do target (JVM) ou ao `as`/`ld` (Native).
+**There is no**: inlining, loop unrolling, LICM, register allocation, escape
+analysis, devirtualization. The optimizer is **minimal** — the heavy lifting is
+delegated to the target's JIT (JVM) or to `as`/`ld` (Native).
 
-### 4.4 Transformações pós-IR
+### 4.4 Post-IR transformations
 
-- **`applySuperBridges`** (`CompilerDriver.java`): gera métodos-ponte quando
-  um override tem assinatura mais específica que a da super (semântica JVM de
+- **`applySuperBridges`** (`CompilerDriver.java`): generates bridge methods when
+  an override has a more specific signature than the super's (JVM semantics of
   covariant return).
-- **Classes sintéticas** anexadas ao módulo no fim do lowering:
+- **Synthetic classes** attached to the module at the end of lowering:
   `classes.addAll(syntheticClasses)` (`:427`) — lambdas, boxes, SAM adapters,
-  interfaces de função.
+  function interfaces.
 
 ---
 
@@ -217,7 +220,7 @@ delegado ao JIT do target (JVM) ou ao `as`/`ld` (Native).
 
 Interface (`Backend.java:6-12`): `void emit(IRModule, Path, boolean debugInfo)`.
 
-Seleção (`CompilerDriver.selectBackend`, `:370-381`):
+Selection (`CompilerDriver.selectBackend`, `:370-381`):
 
 `java
 case JVM            -> backendWithClasspath(new JvmBackend());
@@ -230,18 +233,18 @@ case ANDROID        -> backendWithClasspath(new JvmBackend());
 
 ### 5.1 JVM (`JvmBackend.java`)
 
-- **ASM 9.8** (`ClassWriter` com `COMPUTE_FRAMES | COMPUTE_MAXS`).
-- **Saída**: um `.class` por classe + `KofRuntime` gerado/compilado na hora.
-- **Runtime**: **não usa o módulo `kof-runtime/`** — `JvmRuntime.ensureCompiled`
-  **gera `KofRuntime.java` no diretório de saída e o compila com `javac`**
-  (`ToolProvider.getSystemJavaCompiler()`) em `dev/kof/runtime/`. O source é
-  concatenação de blocos (`JvmRuntimeJson`, `JvmRuntimeUi`, `JvmRuntimeCore`,
+- **ASM 9.8** (`ClassWriter` with `COMPUTE_FRAMES | COMPUTE_MAXS`).
+- **Output**: one `.class` per class + `KofRuntime` generated/compiled on the fly.
+- **Runtime**: **does not use the `kof-runtime/` module** — `JvmRuntime.ensureCompiled`
+  **generates `KofRuntime.java` in the output directory and compiles it with `javac`**
+  (`ToolProvider.getSystemJavaCompiler()`) in `dev/kof/runtime/`. The source is a
+  concatenation of blocks (`JvmRuntimeJson`, `JvmRuntimeUi`, `JvmRuntimeCore`,
   `JvmRuntimeIo`, `JvmWebRuntime`, `JvmMediaRuntime`, `JvmRuntimeWebServer`,
   `JvmRuntimeWebDispatch`, `JvmConfigRuntime`, `JvmCacheRuntime`,
   `JvmOrmRuntime`, `JvmTimeRuntime`, `JvmStringRuntime`, `JvmVkRuntime`
-  condicional). **Link-por-uso**: só injeta o bloco se o programa usa a área.
-- **`getCommonSuperClass`** é sobrescrito para caminhar a hierarquia externa
-  (`android.*`) + JDK — "nunca um palpite que corrompa os frames".
+  conditional). **Link-by-use**: only injects the block if the program uses the area.
+- **`getCommonSuperClass`** is overridden to walk the external hierarchy
+  (`android.*`) + JDK — "never a guess that corrupts the frames".
 - **Box/unbox**: `boxedClassNameFor`/`unboxMethodName` (`:61-101`).
 - **Dispatch**: `KofCallKind` → opcode (`INSTANCE→INVOKEVIRTUAL`,
   `STATIC/FUNCTION→INVOKESTATIC`, `INTERFACE→INVOKEINTERFACE`,
@@ -249,111 +252,111 @@ case ANDROID        -> backendWithClasspath(new JvmBackend());
 
 ### 5.2 Native (`NativeBackend.java`, 8834L)
 
-Um único arquivo `.s` + um binário ELF por módulo.
+A single `.s` file + one ELF binary per module.
 
-- **x86_64** (`Target.NATIVE`): asm gerado como **strings em `StringBuilder`**
-  (`:243-261`). Máquina de pilha (`sp`=operandos, `s11`=frame pointer). Runtime
-  em asm puro embutido (`NativeRuntime.generateRuntimeAssembly()`). `_start` →
+- **x86_64** (`Target.NATIVE`): asm generated as **strings in `StringBuilder`**
+  (`:243-261`). Stack machine (`sp`=operands, `s11`=frame pointer). Runtime
+  in pure embedded asm (`NativeRuntime.generateRuntimeAssembly()`). `_start` →
   `SYS_exit_group (231)`.
-- **riscv64** (`Target.NATIVE_RISCV64`): **lowering riscv64 real**
-  (`emitRiscv`, `:1947`) — asm puro, raw syscalls, sem libc, binário estático.
-  `clone(220)` para spawn (qemu-riscv64 8.2.2 não tem clone3), `nanosleep(101)`
-  para sleep, `amoswap.w` para spinlock. `-mno-relax` no as + `--no-relax` no
-  ld (evita gp-relaxation com gp=0).
-- **aarch64** (`Target.NATIVE_AARCH64`): **tradução linha-a-linha do asm
-  riscv64** (`translateRiscvToAarch64`, `:8200`). Não é lowering independente
-  — é um tradutor ISA. `amoswap.w`→`swpal`, `amoadd.d`→`ldadd`, `fence`→`dmb
-  ish`, `movz` quando `lsl #16`.
+- **riscv64** (`Target.NATIVE_RISCV64`): **real riscv64 lowering**
+  (`emitRiscv`, `:1947`) — pure asm, raw syscalls, no libc, static binary.
+  `clone(220)` for spawn (qemu-riscv64 8.2.2 has no clone3), `nanosleep(101)`
+  for sleep, `amoswap.w` for spinlock. `-mno-relax` in as + `--no-relax` in
+  ld (avoids gp-relaxation with gp=0).
+- **aarch64** (`Target.NATIVE_AARCH64`): **line-by-line translation of the
+  riscv64 asm** (`translateRiscvToAarch64`, `:8200`). It is not independent lowering
+  — it is an ISA translator. `amoswap.w`→`swpal`, `amoadd.d`→`ldadd`, `fence`→`dmb
+  ish`, `movz` when `lsl #16`.
 
-**⚠️ `docs/architecture/architecture.md` antigo chama riscv64/aarch64 de "placeholder
-x86_64" — desatualizado** (SG-E1).
+**⚠️ The old `docs/architecture/architecture.md` calls riscv64/aarch64 "x86_64
+placeholder" — outdated** (SG-E1).
 
 ### 5.3 JS (`JsBackend.java`)
 
-- **Saída**: um `.mjs` por módulo (ESM ES2022+) + `kof-runtime.mjs` +
+- **Output**: one `.mjs` per module (ESM ES2022+) + `kof-runtime.mjs` +
   `index.html` + source map.
-- **Estratégia**: a IR stack-based é convertida para uma **árvore JS**
+- **Strategy**: the stack-based IR is converted into a **JS tree**
   (`JsIr.java:12-14`: *"Kof IR is stack-based; the lowering converts the stack
   discipline into this tree-shaped JS AST"*).
-- **Execução**: Node ou browser; `KofJsRunner` embute GraalJS para execução
-  server-side.
-- **Short-circuit `&&`/`||` desligado** (`ExpressionLowerer.java:147-148`) —
+- **Execution**: Node or browser; `KofJsRunner` embeds GraalJS for
+  server-side execution.
+- **Short-circuit `&&`/`||` disabled** (`ExpressionLowerer.java:147-148`) —
   SG-006.
 
 ### 5.4 Android (`Target.ANDROID`)
 
-**Variante de JVM**, não backend separado:
-- Backend: `JvmBackend` (mesmo bytecode).
-- Diferencial: `appendAndroidHostIfNeeded` injeta `dev/kof/android-host.kf`
-  (escrito **em Kof**, compilado pelo mesmo frontend) se o usuário não declara
+**JVM variant**, not a separate backend:
+- Backend: `JvmBackend` (same bytecode).
+- Differentiator: `appendAndroidHostIfNeeded` injects `dev/kof/android-host.kf`
+  (written **in Kof**, compiled by the same frontend) if the user does not declare
   `MainActivity`.
-- Pós-emit: `AndroidProjectWriter.write` gera `pom.xml`, `AndroidManifest.xml`,
+- Post-emit: `AndroidProjectWriter.write` generates `pom.xml`, `AndroidManifest.xml`,
   `assets/kof/` (KofJS), `libs/kof-app.jar`.
 
 ---
 
 ## 6. Targets (enum `Target.java`)
 
-| Valor | Backend | Saída |
+| Value | Backend | Output |
 |---|---|---|
 | `JVM` | JvmBackend | `.class` + `KofRuntime` |
 | `NATIVE` | NativeBackend(NATIVE) | ELF x86_64 |
-| `NATIVE_RISCV64` | NativeBackend(RISCV64) | ELF riscv64 estático |
-| `NATIVE_AARCH64` | NativeBackend(AARCH64) | ELF aarch64 (traduzido) |
+| `NATIVE_RISCV64` | NativeBackend(RISCV64) | static riscv64 ELF |
+| `NATIVE_AARCH64` | NativeBackend(AARCH64) | aarch64 ELF (translated) |
 | `JS` | JsBackend | `.mjs` + runtime + html |
 | `ANDROID` | JvmBackend + AndroidProjectWriter | bytecode + APK |
 
-Aliases CLI (`KofCliSupport.parseTarget`): `jvm`, `native`,
+CLI aliases (`KofCliSupport.parseTarget`): `jvm`, `native`,
 `native.risc|riscv64|riscv`, `native.arm|aarch64|aarch`, `js`, `android`.
 
 ---
 
-## 7. Terminologia — o que é o quê
+## 7. Terminology — what is what
 
-| Termo | É | Não é |
+| Term | Is | Is not |
 |---|---|---|
-| **Kof** | a linguagem (conjunto de regras) | o compilador, o binário |
-| **Kof Compiler** | a implementação (`kof-compiler`) | a definição da linguagem |
-| **Kof4J** | a linha JVM (backend + runtime) | uma linguagem separada |
-| **KofNative** | o backend nativo (asm) | uma linguagem separada |
-| **KofJS** | o backend JavaScript | uma linguagem separada |
-| **Kof IR** | máquina de pilha linear tipada, 30 ops | uma segunda AST |
-| **AST** | 50 nós sealed, tipos como String | typed AST |
-| **KofScript** (`.ks`) | target de execução direta (Kof puro → `KofInterpreter` na IR) | linguagem separada / Kof com `let` |
-| **KofC** (`kof-c-compiler`) | compilador de subconjunto C → Native | backend da IR Kof |
+| **Kof** | the language (set of rules) | the compiler, the binary |
+| **Kof Compiler** | the implementation (`kof-compiler`) | the language definition |
+| **Kof4J** | the JVM line (backend + runtime) | a separate language |
+| **KofNative** | the native backend (asm) | a separate language |
+| **KofJS** | the JavaScript backend | a separate language |
+| **Kof IR** | typed linear stack machine, 30 ops | a second AST |
+| **AST** | 50 sealed nodes, types as String | typed AST |
+| **KofScript** (`.ks`) | direct execution target (pure Kof → `KofInterpreter` on the IR) | separate language / Kof with `let` |
+| **KofC** (`kof-c-compiler`) | C subset compiler → Native | backend of the Kof IR |
 
-**"A IR possui uma AST própria?"** — **Não.** A IR é uma **lista linear de
-operações de máquina de pilha** com labels e marcadores de região de exceção.
-Chamá-la de "AST" seria tecnicamente incorreto: não há hierarquia de nós, não
-há recursão de subexpressões, não há árvore. O nome correto é **IR** (ou "op
-stream"). A **árvore** existe só no frontend (AST) e, no caso do JS, dentro do
-backend (`JsIr` — uma AST **do JS**, não do Kof).
+**"Does the IR have an AST of its own?"** — **No.** The IR is a **linear list
+of stack-machine operations** with labels and exception-region markers.
+Calling it an "AST" would be technically incorrect: there is no node hierarchy,
+no subexpression recursion, no tree. The correct name is **IR** (or "op
+stream"). The **tree** exists only in the frontend (AST) and, in the case of JS,
+inside the backend (`JsIr` — an AST **of JS**, not of Kof).
 
 ---
 
-## 8. Recomendações futuras (não implementadas)
+## 8. Future recommendations (not implemented)
 
-Problemas arquiteturais reais encontrados na auditoria — **documentados, não
-corrigidos** (regra 14):
+Real architectural problems found in the audit — **documented, not
+fixed** (rule 14):
 
-1. **`resolveMethodCalls` é no-op** (`SemanticAnalyzer.resolveMethodCalls`) —
-   percorre a AST sem fazer nada. Remover ou implementar.
-2. **`FunctionSymbol` nunca é instanciada** (`SymbolTable.java:195`) — funções
-   top-level são resolvidas por varredura da AST. Unificar com `MethodSymbol`.
-3. **`WildcardType` nunca é construída** (`Type.java:38`) — remover ou
-   implementar variance.
-4. **Lowering re-inferi tudo** (`MethodCallTyper.java:27-34`) — o cache do
-   analyzer é limpo a cada classe/passe, então `ExpressionTyper`/`MethodCallTyper`
-   refazem o trabalho. Unificar em uma passada.
-5. **Basic blocks nominais** — a IR tem `IRBasicBlock` mas sempre um bloco por
-   método. Ou implementar blocos reais (necessário para otimizações sérias), ou
-   remover o contêiner.
-6. **`kof-runtime/` não é usado pelo backend JVM** — o runtime é gerado como
-   string Java e compilado com `javac` no diretório de saída. Isso exige JDK
-   completo em runtime. Alternativa: empacotar `KofRuntime.class` pré-compilado.
-7. **`NativeBackend.java` tem 8834 linhas** — em refactor (REFACTOR-500 Fase 3).
-8. **`CompilerDriver.java` tinha 400KB** — em refactor (F2.x em curso).
-9. **Tradutor aarch64 é regex-based sobre strings de asm riscv** — frágil. Um
-   lowering aarch64 direto seria mais robusto.
-10. **Sem checagem de subtipagem** (`isAssignable` aceita `ClassType→ClassType`
-    sempre) — a maior lacuna de segurança. Ver SG-009.
+1. **`resolveMethodCalls` is a no-op** (`SemanticAnalyzer.resolveMethodCalls`) —
+   traverses the AST without doing anything. Remove or implement.
+2. **`FunctionSymbol` is never instantiated** (`SymbolTable.java:195`) — top-level
+   functions are resolved by scanning the AST. Unify with `MethodSymbol`.
+3. **`WildcardType` is never constructed** (`Type.java:38`) — remove or
+   implement variance.
+4. **Lowering re-infers everything** (`MethodCallTyper.java:27-34`) — the
+   analyzer's cache is cleared on each class/pass, so `ExpressionTyper`/`MethodCallTyper`
+   redo the work. Unify in a single pass.
+5. **Nominal basic blocks** — the IR has `IRBasicBlock` but always one block per
+   method. Either implement real blocks (needed for serious optimizations), or
+   remove the container.
+6. **`kof-runtime/` is not used by the JVM backend** — the runtime is generated as
+   a Java string and compiled with `javac` in the output directory. This requires a
+   full JDK at runtime. Alternative: package a pre-compiled `KofRuntime.class`.
+7. **`NativeBackend.java` has 8834 lines** — under refactor (REFACTOR-500 Phase 3).
+8. **`CompilerDriver.java` had 400KB** — under refactor (F2.x in progress).
+9. **The aarch64 translator is regex-based over riscv asm strings** — fragile. A
+   direct aarch64 lowering would be more robust.
+10. **No subtyping check** (`isAssignable` always accepts `ClassType→ClassType`)
+    — the biggest safety gap. See SG-009.

@@ -1,29 +1,31 @@
-# KofUI — Auditoria de cobertura (Fase 4 — ex-PLATFORM-PLAN, `docs/development/DECISIONS.md` §D-PLATFORM)
+[English](KOFUI-AUDIT.md) | [Português](KOFUI-AUDIT.pt_BR.md)
 
-> **Status:** AUDITORIA (07/09) — matriz de gaps `UI00x`. Fonte: código
-> (prova, não memória). Escopo: `kof.ui` (widgets/DOM). Web APIs de browser
-> (fetch/WS/storage) são **Fase 5 (KofJS)** — marcadas aqui só como fronteira.
-> Convenção (R6): todo gap tem código + diagnóstico; nunca no-op silencioso.
+# KofUI — Coverage audit (Phase 4 — ex-PLATFORM-PLAN, `docs/development/DECISIONS.md` §D-PLATFORM)
 
-## 1. Registry do compilador (`KofUi.java`, 539 linhas — era 383 na auditoria de 07/09)
+> **Status:** AUDIT (07/09) — matrix of gaps `UI00x`. Source: code
+> (proof, not memory). Scope: `kof.ui` (widgets/DOM). Browser Web APIs
+> (fetch/WS/storage) are **Phase 5 (KofJS)** — marked here only as a boundary.
+> Convention (R6): every gap has a code + diagnostic; never a silent no-op.
 
-> **⚠️ Snapshot 07/09 — inventário abaixo é histórico.** O registry cresceu
-> depois da auditoria: hoje `isUiType` cobre **30 tipos** (o texto lista 24),
-> incluindo `Textarea`/`Select`/`Ul`/`Ol`/`Table`/`Form`/`Fieldset`/`Iframe`/
-> `Video`/`Audio`/`Hr` (o `KofUi.java` tem 36 `new ClassType("kof.ui", ...)` —
-> alguns são helpers, não tipos do registry). A matriz de gaps `UI00x` e a
-> convenção R6 continuam válidas; **recontar `UI001/UI002` (Native/Script
-> no-op silencioso) contra o código atual** antes de tratá-los como abertos.
+## 1. Compiler registry (`KofUi.java`, 539 lines — was 383 in the 07/09 audit)
 
-**Tipos (24 na varredura de 07/09):** Color, Theme, Label, Button, Input, Column, Row, View, Style,
+> **⚠️ 07/09 snapshot — the inventory below is historical.** The registry grew
+> after the audit: today `isUiType` covers **30 types** (the text lists 24),
+> including `Textarea`/`Select`/`Ul`/`Ol`/`Table`/`Form`/`Fieldset`/`Iframe`/
+> `Video`/`Audio`/`Hr` (the `KofUi.java` has 36 `new ClassType("kof.ui", ...)` —
+> some are helpers, not registry types). The `UI00x` gap matrix and the
+> R6 convention remain valid; **recount `UI001/UI002` (Native/Script
+> silent no-op) against the current code** before treating them as open.
+
+**Types (24 in the 07/09 scan):** Color, Theme, Label, Button, Input, Column, Row, View, Style,
 Window, Link, Image, Icon, Font, Component, Event, Box, Stack, Spacer, Wrap,
 Grid, Center, Align, Store, Canvas + namespace `Router`.
 
-**Métodos por tipo (resumo):**
+**Methods per type (summary):**
 - `Color`: rgba, red/green/blue/alpha, toCss, withAlpha, isOpaque
 - `Theme`: light/dark; background/surface/primary/secondary/text/error/isDark
 - `Label`: text/setText, fontSize/setFontSize, bold/setBold, color/setColor, font, remove
-- `Button`: text/setText, (action no ctor), remove
+- `Button`: text/setText, (action in ctor), remove
 - `Input`: text/setText, remove
 - `Window`: title, bind, show, close, size
 - `Link`: text/setText, url/setUrl, remove · `Image`: src/setSrc, remove
@@ -33,137 +35,137 @@ Grid, Center, Align, Store, Canvas + namespace `Router`.
 - `Store`: get, set, subscribe, unsubscribe
 - `Canvas`: beginPath, closePath, moveTo, lineTo, arc, fill, stroke, setFill, setStroke, setLineWidth, clearRect, remove
 - `Router` (namespace): route, go, replace, back, forward, param, current, depth
-- Layout: Box/Stack/Spacer/Wrap/Grid/Center/Align (ctores) · `Palette.<name>` (15 cores)
+- Layout: Box/Stack/Spacer/Wrap/Grid/Center/Align (ctors) · `Palette.<name>` (15 colors)
 
-## 2. Implementação por target
+## 2. Implementation per target
 
-| Target | kof.ui | Estado | Prova |
+| Target | kof.ui | State | Proof |
 |---|---|---|---|
-| **KofJS (browser)** | DOM real | `JsRuntimeUi*.java` + `JsRuntimeOps` — createElement + `window.__kofNodes`; router real (31/08) | `KofJsBrowserE2ETest` (Chrome headless; pula se ausente), `KofUi*Test` |
-| **JVM** | no-op (por design) | `JvmRuntimeUi.java` — todos `kof_ui_*` vazios (compila, "roda", não renderiza) | `docs/backend-parity.md` ("JVM no-op"); `RouterE2ETest` |
-| **Native** | **no-op SILENCIOSO** | `RuntimeUi.java` emite stubs no-op em asm (113); **07/09: 21 stubs ausentes (Image/Link/Icon/Font) causavam link-error `undefined reference [COMP001]` — CORRIGIDO** (paridade com JVM). Sem diagnóstico p/ o no-op (R6 residual) | E2E manual 07/09 + `UiE2ETest.mediaWidgetsLinkOnAllTargets` (JVM+Native) |
-| **Script (interprete)** | **no-op SILENCIOSO** | `kof-script/` não conhece `kof.ui`; interpreta e executa sem efeito (R6 ❌) | E2E manual 07/09: `run --target script` → "feito" rc=0 |
-| **Android** | via WebView (KofJS) | `AndroidProjectWriter.java` — sai KofJS p/ `assets/kof/`, renderiza em WebView | docs `backend-parity.md` Fase 7 |
+| **KofJS (browser)** | real DOM | `JsRuntimeUi*.java` + `JsRuntimeOps` — createElement + `window.__kofNodes`; real router (31/08) | `KofJsBrowserE2ETest` (Chrome headless; skips if absent), `KofUi*Test` |
+| **JVM** | no-op (by design) | `JvmRuntimeUi.java` — all `kof_ui_*` empty (compiles, "runs", does not render) | `docs/backend-parity.md` ("JVM no-op"); `RouterE2ETest` |
+| **Native** | **SILENT no-op** | `RuntimeUi.java` emits no-op stubs in asm (113); **07/09: 21 missing stubs (Image/Link/Icon/Font) caused link-error `undefined reference [COMP001]` — FIXED** (parity with JVM). No diagnostic for the no-op (residual R6) | manual E2E 07/09 + `UiE2ETest.mediaWidgetsLinkOnAllTargets` (JVM+Native) |
+| **Script (interpreter)** | **SILENT no-op** | `kof-script/` does not know `kof.ui`; interprets and executes with no effect (R6 ❌) | manual E2E 07/09: `run --target script` → "done" rc=0 |
+| **Android** | via WebView (KofJS) | `AndroidProjectWriter.java` — outputs KofJS to `assets/kof/`, renders in WebView | docs `backend-parity.md` Phase 7 |
 
-## 3. KofJS — o que o DOM real cobre hoje
+## 3. KofJS — what the real DOM covers today
 
-- **Elementos → tags:** Label→span, Button→button, Input→input[type=text],
+- **Elements → tags:** Label→span, Button→button, Input→input[type=text],
   Column/Row/View→div, Link→a, Image→img, Icon→span, Style→style,
   Canvas→canvas. (Widgets: `JsRuntimeUiWidgets.java` 42/153/198/232/249/277.)
-- **Eventos:** `Component.on(type, handler)` → `KOF_UI_EV` (15: click, dblclick,
+- **Events:** `Component.on(type, handler)` → `KOF_UI_EV` (15: click, dblclick,
   mousedown/up, mousemove/enter/leave, wheel, keydown/up, focus, blur, input,
-  change) + fallback p/ tipo DOM arbitrário. `Button` action = click.
+  change) + fallback for arbitrary DOM type. `Button` action = click.
   `Event`: type + stopPropagation.
-- **Atributos:** value, type (input), href (link), src (img).
-- **Estilos inline:** color, fontSize, fontWeight, fontFamily, display,
+- **Attributes:** value, type (input), href (link), src (img).
+- **Inline styles:** color, fontSize, fontWeight, fontFamily, display,
   width/height (canvas).
 - **Canvas 2D:** beginPath/closePath/moveTo/lineTo/arc/fill/stroke/setFill/
-  setStroke/setLineWidth/clearRect — anexa ao `#kof-root` (CANVAS001 fechado
+  setStroke/setLineWidth/clearRect — attaches to `#kof-root` (CANVAS001 closed
   3 targets `5a9cac4`).
-- **Window:** `document.title` só (sem size/position).
-- **Router:** completo (route/go/replace/back/forward/param/current/depth).
-- **Store:** get/set/subscribe/unsubscribe (observable in-process).
+- **Window:** `document.title` only (no size/position).
+- **Router:** complete (route/go/replace/back/forward/param/current/depth).
+- **Store:** get/set/subscribe/unsubscribe (in-process observable).
 
-## 4. Matriz de gaps (Fase 4)
+## 4. Gap matrix (Phase 4)
 
-| Gap | Descrição | Target | Prioridade |
+| Gap | Description | Target | Priority |
 |---|---|---|---|
-| **UI001** | `kof.ui` no Native = no-op silencioso (binário roda sem diagnóstico). **PARCIALMENTE CORRIGIDO 07/09**: `Image/Link/Icon/Font` **não linkavam** (`undefined reference [COMP001]` — 21 stubs ausentes em `RuntimeUi`); adicionados (paridade no-op com JVM). Resta: diagnóstico p/ o no-op silencioso dos demais = decisão de design (regra 6) | Native | **P0 (R6)** → P2 (residual) |
-| **UI002** | `kof.ui` no Script = no-op silencioso (interprete executa sem efeito). **FEITO 08/09** (`7081551`): warning `UI002` **uma única vez** no stderr quando `KofInterpreter` resolve função `kof_ui_*` (mensagem aponta `--target=js`); aditivo — no-op preservado (retrocompat), sem erro (regra 6); teste `KofScriptTest.ui002WarnsOnceOnUiCalls` (verifica presença + contagem == 1) | Script | **P0 (R6)** → **FEITO** |
-| **UI003** | Elementos: textarea ✅ FEITO 07/09 (`Textarea`); table/tr/td ✅ FEITO 07/09 (`Table(header, rows)` data-driven); select/option ✅ (`Select`); ul/ol/li ✅ (`Ul`/`Ol` data-driven); fieldset/legend ✅, iframe ✅, video/audio ✅, hr ✅ (08/09, `358ec80` — `Fieldset(children[, legend])`/`Iframe(url)`/`Video(url)`/`Audio(url)`/`Hr()` + remove; DOM real provado no Chrome headless; `kofSerialize` ganhou `src` + void-tags) | KofJS | P1 **FEITO** |
-| **UI004** | Forms: `<form>` ✅ + submit handler ✅ FEITO 07/09 (`Form(children)`, `onSubmit`, `submit()` — handler roda no browser, prova por mutação de DOM); fieldset ✅ FEITO 08/09 (`Fieldset(children[, legend])`, `358ec80`). `Input` tipos ✅ (`setType`); checkbox/radio estado ✅ (`setChecked`/`checked`); select ✅ (`Select`/`setOptions`/`selected`/`setSelected`) | KofJS | P1 **FEITO** |
-| **UI005** | Atributos: id ✅ class ✅ disabled ✅ (FEITO 07/09 — `setId`/`setClass`/`setDisabled` em widgets DOM, família `kof_ui_widget_*`); placeholder ✅ (`Input.setPlaceholder`); checked ✅; alt/width/height ✅ (`Image.*`); readonly/name ✅ FEITO 07/09 (`Input`/`Textarea`.setReadonly(bool)/setName(String) — 6/6 pontos completos, prova browser: atributos `name=`/`readonly` no outerHTML) | KofJS | P1 **FEITO** |
-| **UI006** | Eventos: `Event.type()`/`stopPropagation()` ✅; `key()`/`value()`/`x()`/`y()` ✅ FEITO 08/09 (`f0907c2` — DOM event real: `key` do KeyboardEvent, `value` do input alvo, `clientX/Y`; `widget.on(type, handler)` exposto p/ widgets fora da árvore de Component; `kofUiWidgetOn` agora despacha o kofEv, antes chamava `fn()` sem evento); `target()`/`relatedTarget()` ✅ FEITO 08/09 (`3c241ae`+ — id do nó origem/relacionado com fallback tagName; prova browser: `t=campo-main` no DOM final) | KofJS | P2 **FEITO** |
-| **UI007** | `style` declarativo (CSS idiomático) — novo, com parse próprio (item do plano Fase 4) | KofJS | P1 |
-| **UI008** | Window: size/position só no-op JVM; KofJS só title (browser não controla window — ok por plataforma) | JVM/KofJS | P3 |
-| **UI009** | Canvas: fillText ✅ measureText ✅ save ✅ restore ✅ transform ✅ setGlobalAlpha ✅ (FEITO 07/09 — `UiE2ETest.canvasUi009LinksOnAllTargets` + `KofJsBrowserE2ETest.canvasUi009RunsInRealBrowser`); drawImage ✅ (07/09 — Image→canvas via elemento DOM) | KofJS | P2 **FEITO** |
+| **UI001** | `kof.ui` on Native = silent no-op (binary runs with no diagnostic). **PARTIALLY FIXED 07/09**: `Image/Link/Icon/Font` **did not link** (`undefined reference [COMP001]` — 21 missing stubs in `RuntimeUi`); added (no-op parity with JVM). Remaining: diagnostic for the silent no-op of the others = design decision (rule 6) | Native | **P0 (R6)** → P2 (residual) |
+| **UI002** | `kof.ui` on Script = silent no-op (interpreter executes with no effect). **DONE 08/09** (`7081551`): warning `UI002` **only once** on stderr when `KofInterpreter` resolves a `kof_ui_*` function (message points to `--target=js`); additive — no-op preserved (backward compat), no error (rule 6); test `KofScriptTest.ui002WarnsOnceOnUiCalls` (checks presence + count == 1) | Script | **P0 (R6)** → **DONE** |
+| **UI003** | Elements: textarea ✅ DONE 07/09 (`Textarea`); table/tr/td ✅ DONE 07/09 (`Table(header, rows)` data-driven); select/option ✅ (`Select`); ul/ol/li ✅ (`Ul`/`Ol` data-driven); fieldset/legend ✅, iframe ✅, video/audio ✅, hr ✅ (08/09, `358ec80` — `Fieldset(children[, legend])`/`Iframe(url)`/`Video(url)`/`Audio(url)`/`Hr()` + remove; real DOM proven in headless Chrome; `kofSerialize` gained `src` + void-tags) | KofJS | P1 **DONE** |
+| **UI004** | Forms: `<form>` ✅ + submit handler ✅ DONE 07/09 (`Form(children)`, `onSubmit`, `submit()` — handler runs in the browser, proof by DOM mutation); fieldset ✅ DONE 08/09 (`Fieldset(children[, legend])`, `358ec80`). `Input` types ✅ (`setType`); checkbox/radio state ✅ (`setChecked`/`checked`); select ✅ (`Select`/`setOptions`/`selected`/`setSelected`) | KofJS | P1 **DONE** |
+| **UI005** | Attributes: id ✅ class ✅ disabled ✅ (DONE 07/09 — `setId`/`setClass`/`setDisabled` in DOM widgets, `kof_ui_widget_*` family); placeholder ✅ (`Input.setPlaceholder`); checked ✅; alt/width/height ✅ (`Image.*`); readonly/name ✅ DONE 07/09 (`Input`/`Textarea`.setReadonly(bool)/setName(String) — 6/6 complete points, browser proof: `name=`/`readonly` attributes in outerHTML) | KofJS | P1 **DONE** |
+| **UI006** | Events: `Event.type()`/`stopPropagation()` ✅; `key()`/`value()`/`x()`/`y()` ✅ DONE 08/09 (`f0907c2` — real DOM event: `key` from KeyboardEvent, `value` from the target input, `clientX/Y`; `widget.on(type, handler)` exposed for widgets outside the Component tree; `kofUiWidgetOn` now dispatches the kofEv, before it called `fn()` without an event); `target()`/`relatedTarget()` ✅ DONE 08/09 (`3c241ae`+ — id of the origin/related node with tagName fallback; browser proof: `t=campo-main` in the final DOM) | KofJS | P2 **DONE** |
+| **UI007** | declarative `style` (idiomatic CSS) — new, with its own parser (Phase 4 plan item) | KofJS | P1 |
+| **UI008** | Window: size/position only JVM no-op; KofJS only title (browser does not control window — ok per platform) | JVM/KofJS | P3 |
+| **UI009** | Canvas: fillText ✅ measureText ✅ save ✅ restore ✅ transform ✅ setGlobalAlpha ✅ (DONE 07/09 — `UiE2ETest.canvasUi009LinksOnAllTargets` + `KofJsBrowserE2ETest.canvasUi009RunsInRealBrowser`); drawImage ✅ (07/09 — Image→canvas via DOM element) | KofJS | P2 **DONE** |
 
-**Fronteira Fase 5 (KofJS Web APIs — não é kof.ui):** fetch/`WebSocket`/
+**Phase 5 boundary (KofJS Web APIs — not kof.ui):** fetch/`WebSocket`/
 `EventSource`(SSE)/`localStorage`/`sessionStorage`/`navigator`/`location`/
-`history` no browser = matriz DOM/Fetch/Storage com supportedOn+gapCode do
-plano Fase 5 (hoje ausentes no runtime browser; o "web" JS atual é server
-GraalJS HttpServer — WEB001 residual ws/sse).
+`history` in the browser = DOM/Fetch/Storage matrix with supportedOn+gapCode of
+the Phase 5 plan (today absent in the browser runtime; the current JS "web" is a
+GraalJS HttpServer server — residual WEB001 ws/sse).
 
-## 5. Receita: método novo em kof.ui = **6 pontos** (aprendida na prática 07/09)
+## 5. Recipe: new method in kof.ui = **6 points** (learned in practice 07/09)
 
-Cada método de instância novo exige os 6 pontos abaixo — **faltar um quebra
-um target**. (Foi o 6º ponto — `JvmRuntimeCallDescriptors` — que faltou em
-3 commits: `setPlaceholder`/`setType`/`setChecked`/`checked` compilavam no
-JVM mas davam `NoSuchMethodError` em runtime; só o teste KofJS passava.)
+Every new instance method requires the 6 points below — **missing one breaks
+a target**. (It was the 6th point — `JvmRuntimeCallDescriptors` — that was
+missing in 3 commits: `setPlaceholder`/`setType`/`setChecked`/`checked` compiled
+on the JVM but gave `NoSuchMethodError` at runtime; only the KofJS test passed.)
 
-1. **Registry**: `KofUi.instanceMethod()` (case no switch do tipo).
-2. **Whitelist JS**: `JsRuntimeOps.java` (lista `name.equals("kof_ui_…")` —
-   exceto famílias já cobertas por prefixo: `link_`/`image_`/`icon_`/
+1. **Registry**: `KofUi.instanceMethod()` (case in the type switch).
+2. **JS whitelist**: `JsRuntimeOps.java` (list `name.equals("kof_ui_…")` —
+   except families already covered by prefix: `link_`/`image_`/`icon_`/
    `canvas_`/`widget_`/`font_`).
-3. **Impl JS**: `JsRuntimeUi*.java` (função exportada; nome via
+3. **JS impl**: `JsRuntimeUi*.java` (exported function; name via
    `JsTypeMapper.capitalizeUiFn`).
-4. **Stub JVM (source)**: `jvm/JvmRuntimeUi.java` (no-op; Bool=int 0/1;
+4. **JVM stub (source)**: `jvm/JvmRuntimeUi.java` (no-op; Bool=int 0/1;
    String getter → `return ""`).
-5. **Descriptor JVM**: `jvm/JvmRuntimeCallDescriptors.java`
-   (`callDescriptor`) — **sem isso o bytecode chama assinatura errada
+5. **JVM descriptor**: `jvm/JvmRuntimeCallDescriptors.java`
+   (`callDescriptor`) — **without this the bytecode calls the wrong signature
    (default = `(String)Object`) → `NoSuchMethodError`**.
-6. **Stub Native (asm)**: `runtime/RuntimeUi.java` (void: `ret`;
+6. **Native stub (asm)**: `runtime/RuntimeUi.java` (void: `ret`;
    int: `xorl/movl`+`ret`; String: `leaq .Lui_empty` + `jmp
    kof_io_make_string`).
 
-**Prova (obrigatória, 2 suítes)**: `UiE2ETest` (`both()` = JVM+Native) +
-`KofJsBrowserE2ETest` (Chrome headless, DOM real). Só testar JS = deixar o
-JVM quebrado (regra que falhou 07/09).
+**Proof (mandatory, 2 suites)**: `UiE2ETest` (`both()` = JVM+Native) +
+`KofJsBrowserE2ETest` (headless Chrome, real DOM). Testing JS only = leaving the
+JVM broken (rule that failed 07/09).
 
-## 6. Próximos passos (estado 07/09, após forms + UI001-Native)
+## 6. Next steps (state 07/09, after forms + UI001-Native)
 
-**FEITOS (07/09):** UI001-Native (21 stubs — `Image/Link/Icon/Font` linkavam
-de novo); UI004/5 `Input.setPlaceholder`/`setType`/`setChecked`/`checked`;
+**DONE (07/09):** UI001-Native (21 stubs — `Image/Link/Icon/Font` linked
+again); UI004/5 `Input.setPlaceholder`/`setType`/`setChecked`/`checked`;
 UI003/5 `Image.setAlt`/`setWidth`/`setHeight`; UI004 `Form(children)` +
-`onSubmit`/`submit()` (handler roda no browser — prova por mutação de DOM);
-UI005 `setId`/`setClass`/`setDisabled` (+ fix do código morto `acceptsFont`).
+`onSubmit`/`submit()` (handler runs in the browser — proof by DOM mutation);
+UI005 `setId`/`setClass`/`setDisabled` (+ dead code fix `acceptsFont`).
 
-**Próximos (minha lane, Fase 4):**
-1. `<form>`/`onSubmit` (UI004 headline) — novo tipo + ctor c/ lambda (padrão
-   `Button(text, action)` em `ExpressionUiStaticLowerer`); teste browser.
-2. Atributos `id`/`class`/`disabled` (UI005) + elementos `textarea`/`select`
-   (UI003) — mesmo padrão de 6 pontos.
-3. UI007 `style` declarativo (CSS idiomático, parse próprio) — o item maior.
-4. ~~UI002 (Script no-op silencioso)~~ **FEITO 08/09** (`7081551`): decisão
-   tomada como aditivo sem quebrar retrocompat — **warning** único no stderr
-   (nunca erro; regra 6 + congelamento); teste `KofScriptTest.ui002WarnsOnceOnUiCalls`.
+**Next (my lane, Phase 4):**
+1. `<form>`/`onSubmit` (UI004 headline) — new type + ctor with lambda (pattern
+   `Button(text, action)` in `ExpressionUiStaticLowerer`); browser test.
+2. `id`/`class`/`disabled` attributes (UI005) + `textarea`/`select`
+   elements (UI003) — same 6-point pattern.
+3. UI007 declarative `style` (idiomatic CSS, own parser) — the larger item.
+4. ~~UI002 (Script silent no-op)~~ **DONE 08/09** (`7081551`): decision
+   taken as additive without breaking backward compat — single **warning** on
+   stderr (never error; rule 6 + freezing); test `KofScriptTest.ui002WarnsOnceOnUiCalls`.
 
-### UI007 — proposta de design (aguarda maintainer; regra 6)
+### UI007 — design proposal (awaits maintainer; rule 6)
 
-O plano pede "`style` declarativo (CSS idiomático), parse próprio". A
-superfície exata é decisão de design (congelamento de API). Proposta
-mínima aditiva (não toca `Style(4 Ints)` existente — retrocompat):
+The plan asks for "declarative `style` (idiomatic CSS), own parser". The exact
+surface is a design decision (API freezing). Minimal additive proposal (does not
+touch the existing `Style(4 Ints)` — backward compat):
 
 ```kof
-// forma nova: CSS idiomático como string, parse no compilador
+// new form: idiomatic CSS as a string, parsed in the compiler
 var s = Style("background: #ff0000; padding: 8; border-radius: 4")
 var v = View(s)
 ```
 
-Open questions (não decidíveis sem maintainer):
-- Q1: cores — aceitar `#rrggbb`/nomes CSS, ou só o `Color`/`Palette` da
-  linguagem (conversão `toCss` já existe)?
-- Q2: unidades — `8` = px? aceitar `em`/`%`/`rem`?
-- Q3: propriedades — whitelist (background/padding/margin/radius/
-  border/font) ou qualquer `prop: valor` passado ao `node.style`?
-- Q4: parse no compilador (IR de estilo) ou no runtime (string → CSSStyle
-  declaration)? "parse próprio" sugere compilador.
-- Q5: `Style` é só para `View` ou todo widget DOM aceita (via
+Open questions (not decidable without maintainer):
+- Q1: colors — accept `#rrggbb`/CSS names, or only the language's
+  `Color`/`Palette` (the `toCss` conversion already exists)?
+- Q2: units — `8` = px? accept `em`/`%`/`rem`?
+- Q3: properties — whitelist (background/padding/margin/radius/
+  border/font) or any `prop: value` passed to `node.style`?
+- Q4: parse in the compiler (style IR) or at runtime (string → CSSStyle
+  declaration)? "own parser" suggests compiler.
+- Q5: is `Style` only for `View` or does every DOM widget accept it (via
   `setStyle`)?
 
-Implementação aguarda decisão; o parse em si (lexer de `prop: valor;`) é
-mecânico quando a superfície fechar.
+Implementation awaits decision; the parse itself (lexer of `prop: value;`) is
+mechanical once the surface is closed.
 
-**Fronteira Fase 5 (KofJS Web APIs — não é kof.ui):** fetch/WS/storage.
+**Phase 5 boundary (KofJS Web APIs — not kof.ui):** fetch/WS/storage.
 
-## 7. Notas de fidelidade
+## 7. Fidelity notes
 
-- ~~`docs/development/README.md:30` diz "CANVAS001 JS pendente (anexar ao
-  kof-root)"~~ — **RESOLVIDO (13/09):** o índice foi reescrito e não contém
-  mais a linha; `JsRuntimeUiWidgets.java` anexa ao `#kof-root` e o CANVAS001
-  está fechado `5a9cac46` (3 targets, reprovado verde 12/09 — `UiE2ETest`
-  29/29 sem exclusões). Nada a corrigir.
-- JVM no-op (UI008) é decisão de design documentada (backend-parity), não bug
-  — mas R6 sugere diagnóstico em log (low prio).
-- Native/Script no-op silencioso **não** é decisão documentada — é omissão
-  (R6 exige diagnóstico): UI001/UI002.
+- ~~`docs/development/README.md:30` says "CANVAS001 JS pending (attach to
+  kof-root)"~~ — **RESOLVED (13/09):** the index was rewritten and no longer
+  contains the line; `JsRuntimeUiWidgets.java` attaches to `#kof-root` and
+  CANVAS001 is closed `5a9cac46` (3 targets, re-proven green 12/09 — `UiE2ETest`
+  29/29 with no exclusions). Nothing to fix.
+- JVM no-op (UI008) is a documented design decision (backend-parity), not a bug
+  — but R6 suggests a diagnostic in the log (low prio).
+- Native/Script silent no-op is **not** a documented decision — it is an
+  omission (R6 requires a diagnostic): UI001/UI002.
