@@ -449,7 +449,11 @@ public final class JsRuntimeUiSecurity {
                     if (v === undefined || v === null) return d;
                     if (typeof v === "boolean") return v;
                     const s = String(v);
-                    return !(s === "false" || s === "0");
+                    // §191: paridade com o JVM (`equalsIgnoreCase`) — "FALSE"/
+                    // "False" também desligam a flag; sem isto só "false"
+                    // minúsculo funcionava e o JS mantinha Secure/HttpOnly
+                    // onde o JVM os removia (divergência cross-target silenciosa).
+                    return !(s.toLowerCase() === "false" || s === "0");
                 };
                 let s = name + "=" + (value === null || value === undefined ? "" : value);
                 const path = opt("path", "/");

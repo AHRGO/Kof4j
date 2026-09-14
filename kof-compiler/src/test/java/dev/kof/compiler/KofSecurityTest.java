@@ -6,6 +6,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Base64;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -487,6 +488,98 @@ class KofSecurityTest {
                 """, "true");
     }
 
+    // ORACLE EXTERNO (Q6): o ChaCha20-Poly1305 do PRÓPRIO JDK (RFC 8439) é a
+    // referência. Os testes acima só provam round-trip consigo mesmo (JVM↔JS
+    // concordam entre si — poderiam concordar num desvio da RFC). Aqui o JDK
+    // cifra e o Kof decifra (e o inverso), provando interop real: bloco de
+    // 15/16/17 bytes, vazio, multi-bloco (114) e unicode.
+    @Test
+    void chacha20InteropWithJdkRfc8439(@TempDir Path tempDir) throws Exception {
+        String keyHex = "808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f";
+        byte[] key = hexBytes(keyHex);
+        byte[] nonce = {0x07, 0, 0, 0, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47};
+        String[] plains = {
+            "0123456789abcde",
+            "",
+            "0123456789abcdef",
+            "0123456789abcdefg",
+            "Ladies and Gentlemen of the class of '99: If I could offer you only one tip for the future, sunscreen would be it.",
+            "café água 你好"
+        };
+        // JDK cifra (oracle) → Kof JVM decifra cada envelope do JDK.
+        StringBuilder kof = new StringBuilder("main() {\n    var key = \"").append(keyHex).append("\"\n");
+        for (String pt : plains) {
+            String env = "chacha20$" + Base64.getEncoder().encodeToString(nonce) + "$"
+                    + Base64.getEncoder().encodeToString(jdkChaChaEncrypt(pt, key, nonce));
+            kof.append("    println(crypto.decryptChacha20(\"").append(env).append("\", key))\n");
+        }
+        kof.append("}\n");
+        runJvm(tempDir, kof.toString(), String.join("\n", plains));
+
+        // JDK cifra → Kof JS decifra (mesmo oracle no runtime JS puro).
+        String env = "chacha20$" + Base64.getEncoder().encodeToString(nonce) + "$"
+                + Base64.getEncoder().encodeToString(jdkChaChaEncrypt("interop-js", key, nonce));
+        runJs(tempDir, """
+                main() {
+                    println(crypto.decryptChacha20("%s", "%s"))
+                }
+                """.formatted(env, keyHex), "interop-js");
+
+        // Inverso: Kof JVM cifra → o JDK decifra o envelope (AEAD + envelope
+        // RFC-corretos, não só "o Kof entende o Kof").
+        Path encSrc = tempDir.resolve("EncInterop.kf");
+        Files.writeString(encSrc, """
+            main() {
+                println(crypto.encryptChacha20("interop-jdk", "%s"))
+            }
+            """.formatted(keyHex));
+        CompilationResult enc = driver.compile(encSrc, tempDir.resolve("out-enc"), Target.JVM);
+        assertTrue(enc.success(), "JVM encrypt: " + enc.diagnostics().getDiagnostics());
+        String ct;
+        try {
+            Process p = new ProcessBuilder(System.getProperty("java.home") + "/bin/java",
+                    "-cp", tempDir.resolve("out-enc").toString(), "Default.Main")
+                    .redirectErrorStream(true).start();
+            ct = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8).trim();
+            assertEquals(0, p.waitFor(), "JVM encrypt exit");
+        } catch (InterruptedException e) {
+            throw new IOException("interrupted", e);
+        }
+        String[] parts = ct.split("\\$");
+        assertEquals(3, parts.length, "envelope: " + ct);
+        assertEquals("chacha20", parts[0], "prefixo do envelope");
+        byte[] kofNonce = Base64.getDecoder().decode(parts[1]);
+        byte[] kofCtTag = Base64.getDecoder().decode(parts[2]);
+        assertEquals("interop-jdk",
+                new String(jdkChaChaDecrypt(kofCtTag, key, kofNonce),
+                        java.nio.charset.StandardCharsets.UTF_8),
+                "o JDK decifra o ciphertext do Kof");
+    }
+
+    private static byte[] hexBytes(String h) {
+        byte[] b = new byte[h.length() / 2];
+        for (int i = 0; i < b.length; i++) {
+            b[i] = (byte) Integer.parseInt(h.substring(2 * i, 2 * i + 2), 16);
+        }
+        return b;
+    }
+
+    private static byte[] jdkChaChaEncrypt(String pt, byte[] key, byte[] nonce) throws Exception {
+        javax.crypto.Cipher c = javax.crypto.Cipher.getInstance("ChaCha20-Poly1305");
+        c.init(javax.crypto.Cipher.ENCRYPT_MODE,
+                new javax.crypto.spec.SecretKeySpec(key, "ChaCha20"),
+                new javax.crypto.spec.IvParameterSpec(nonce));
+        return c.doFinal(pt.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    private static byte[] jdkChaChaDecrypt(byte[] ctTag, byte[] key, byte[] nonce) throws Exception {
+        javax.crypto.Cipher c = javax.crypto.Cipher.getInstance("ChaCha20-Poly1305");
+        c.init(javax.crypto.Cipher.DECRYPT_MODE,
+                new javax.crypto.spec.SecretKeySpec(key, "ChaCha20"),
+                new javax.crypto.spec.IvParameterSpec(nonce));
+        return c.doFinal(ctTag);
+    }
+
     @Test
     void cookieSetDefaultsJvm(@TempDir Path tempDir) throws IOException {
         // D-SEC C11: defaults seguros (Path=/, SameSite=Lax, Secure, HttpOnly).
@@ -507,6 +600,38 @@ class KofSecurityTest {
                     println(security.cookieSet("session", "abc"))
                 }
                 """, "session=abc; Path=/; SameSite=Lax; Secure; HttpOnly");
+    }
+
+    // §191 (Q4 14/09): `secure`/`httpOnly` como STRING tinham paridade só no
+    // literal "false" minúsculo — o JVM usa `equalsIgnoreCase`+`"0"`, o JS
+    // comparava `=== "false"` cru. `"FALSE"`/`"False"` removiam a flag no JVM
+    // e a MANTINHAM no JS (divergência cross-target silenciosa, regra 5). Os
+    // testes antigos só usavam "false" minúsculo = verde falso. Golden único
+    // para os dois targets.
+    @Test
+    void cookieFlagStringCaseInsensitiveCrossTarget(@TempDir Path tempDir) throws IOException {
+        String src = """
+                main() {
+                    var s1 = mapOf()
+                    s1.put("secure", "FALSE")
+                    println(security.cookieSet("a", "v", s1))
+                    var s2 = mapOf()
+                    s2.put("httpOnly", "False")
+                    println(security.cookieSet("a", "v", s2))
+                    var s3 = mapOf()
+                    s3.put("secure", "0")
+                    println(security.cookieSet("a", "v", s3))
+                    var s4 = mapOf()
+                    s4.put("secure", false)
+                    println(security.cookieSet("a", "v", s4))
+                }
+                """;
+        String expected = "a=v; Path=/; SameSite=Lax; HttpOnly\n"
+                + "a=v; Path=/; SameSite=Lax; Secure\n"
+                + "a=v; Path=/; SameSite=Lax; HttpOnly\n"
+                + "a=v; Path=/; SameSite=Lax; HttpOnly";
+        runJvm(tempDir, src, expected);
+        runJs(tempDir, src, expected);
     }
 
     @Test
