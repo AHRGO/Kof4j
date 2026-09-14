@@ -1,20 +1,22 @@
-# kof.ui — Color, Palette e Theme
+[English](ui.md) | [Português](ui.pt_BR.md)
 
-Fatos sobre a fundação de UI do Kof. Use para responder perguntas sobre
-cores, paletas e temas.
+# kof.ui — Color, Palette and Theme
+
+Facts about Kof's UI foundation. Use it to answer questions about
+colors, palettes and themes.
 
 ## Color
 
-- `Color(r, g, b)` — canais 0-255, alpha 255.
-- `Color.rgba(r, g, b, a)` — com alpha.
-- `Color(valorEmpacotado)` — o valor cru `0xRRGGBBAA`.
+- `Color(r, g, b)` — channels 0-255, alpha 255.
+- `Color.rgba(r, g, b, a)` — with alpha.
+- `Color(packedValue)` — the raw value `0xRRGGBBAA`.
 - Layout: `(r << 24) | (g << 16) | (b << 8) | a`.
-- `red()`, `green()`, `blue()`, `alpha()` — canais 0-255.
+- `red()`, `green()`, `blue()`, `alpha()` — channels 0-255.
 - `isOpaque()` — Bool (alpha == 255).
-- `withAlpha(a)` — nova Color com alpha trocado.
-- `toCss()` — `rgb(r, g, b)` quando opaca, `rgba(r, g, b, a)` quando não.
+- `withAlpha(a)` — new Color with the alpha swapped.
+- `toCss()` — `rgb(r, g, b)` when opaque, `rgba(r, g, b, a)` when not.
 
-Exemplos:
+Examples:
 
 ```kof
 Color(255, 0, 0).toCss()            // rgb(255, 0, 0)
@@ -24,7 +26,7 @@ Color(0xFF0000FF).red()             // 255
 
 ## Palette
 
-Constantes nomeadas: `Palette.red`, `green`, `blue`, `yellow`, `cyan`,
+Named constants: `Palette.red`, `green`, `blue`, `yellow`, `cyan`,
 `magenta`, `black`, `white`, `gray`/`grey`, `orange`, `purple`, `pink`,
 `brown`, `transparent`.
 
@@ -35,9 +37,9 @@ Palette.transparent.alpha()   // 0
 
 ## Theme
 
-- `Theme.light()` / `Theme.dark()` — o tema (tag 0/1).
+- `Theme.light()` / `Theme.dark()` — the theme (tag 0/1).
 - `isDark()` — Bool.
-- Cores semânticas: `background()`, `surface()`, `primary()`,
+- Semantic colors: `background()`, `surface()`, `primary()`,
   `secondary()`, `text()`, `error()` — Color.
 
 Dark: background `rgb(18, 18, 18)`, text `rgb(255, 255, 255)`.
@@ -48,39 +50,39 @@ var dark = Theme.dark()
 dark.background().toCss()   // rgb(18, 18, 18)
 ```
 
-## Semântica entre targets
+## Semantics across targets
 
-- Color/Theme são valores Int de 32 bits — o compilador manipula os canais
-  com bitwise; `toCss()` usa helpers de runtime idênticos em JVM, Native e
+- Color/Theme are 32-bit Int values — the compiler manipulates the channels
+  with bitwise; `toCss()` uses runtime helpers identical on JVM, Native and
   JS.
-- A renderização (widgets → DOM) é **KofJS only** e está implementada:
+- Rendering (widgets → DOM) is **KofJS only** and is implemented:
   `Window`/`Label`/`Button`/`Input`, `Column`/`Row`, `View`+`Style`,
-  eventos por lambda com capturas, webview nativo (`bin/kof-webview`,
-  WebKitGTK). JVM/Native: handles no-ops.
-- Não há JavaFX, AWT ou dependência de GUI em nenhum backend.
+  events by lambda with captures, native webview (`bin/kof-webview`,
+  WebKitGTK). JVM/Native: no-op handles.
+- There is no JavaFX, AWT or GUI dependency in any backend.
 
-## Router (Fase 7)
+## Router (Phase 7)
 
-Navegação por troca de componente raiz: `Router` é namespace (não tipo).
+Navigation by swapping the root component: `Router` is a namespace (not a type).
 
-- `Router.route(name, component)` — registra rota.
-- `Router.go(name)` / `Router.go(name, param)` — navega (unmount do antigo + mount do novo).
-- `Router.replace(name[, param])` — navega sem empilhar no histórico.
-- `Router.back()` / `Router.forward()` — histórico (pilhas; `forwardStack` limpo ao ir para frente).
-- `Router.param()` — `String` do param da rota atual.
-- `Router.current()` — `String` da rota atual.
+- `Router.route(name, component)` — registers a route.
+- `Router.go(name)` / `Router.go(name, param)` — navigates (unmounts the old + mounts the new).
+- `Router.replace(name[, param])` — navigates without pushing onto the history.
+- `Router.back()` / `Router.forward()` — history (stacks; `forwardStack` cleared when going forward).
+- `Router.param()` — `String` of the current route's param.
+- `Router.current()` — `String` of the current route.
 - `Depth`: `Router.depth()` — `Int`.
-- Real no target JS (KofJS); JVM/Native: no-op handles.
-- Ver `docs/ui/architecture.md` §2.9 e `RouterE2ETest`.
+- Real on the JS target (KofJS); JVM/Native: no-op handles.
+- See `docs/ui/architecture.md` §2.9 and `RouterE2ETest`.
 
-## Idioma KofScript (0.3.22-beta)
+## KofScript idiom (0.3.22-beta)
 
 ```kof
 let x = 5
 var app = Window("Hi", Label("Olá"))
 ```
 
-## Referência
+## Reference
 
 - `learn/35-kof-ui.md`
-- `kof-compiler/src/test/java/dev/kof/compiler/UiE2ETest.java` (29 testes)
+- `kof-compiler/src/test/java/dev/kof/compiler/UiE2ETest.java` (29 tests)

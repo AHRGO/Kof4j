@@ -1,14 +1,16 @@
+[English](java-like-code.md) | [Português](java-like-code.pt_BR.md)
+
 # Anti-pattern — Java-like Code
 
 ## Name
 
-Código Java traduzido literalmente para Kof.
+Java code translated literally to Kof.
 
 ## Problem
 
-Transportar convenções de Java (getters/setters, builders, factories, utility
-classes, DTO ceremony, `equals`, `StringBuilder`, sentinelas) para Kof sem
-reavaliar se a convenção tem razão de existir na nova linguagem.
+Carrying Java conventions (getters/setters, builders, factories, utility
+classes, DTO ceremony, `equals`, `StringBuilder`, sentinels) to Kof without
+reevaluating whether the convention has a reason to exist in the new language.
 
 ## Bad example
 
@@ -33,9 +35,9 @@ class User {
 
 ## Why it is bad
 
-Java exige getters/setters por causa de JavaBeans, serialização, frameworks de
-reflection e convenções de ferramentas. Kof não possui nenhuma dessas
-convenções. O código duplica o estado com cerimônia sem semântica.
+Java requires getters/setters because of JavaBeans, serialization, reflection
+frameworks and tool conventions. Kof has none of those conventions. The code
+duplicates state with ceremony without semantics.
 
 ## Preferred approach
 
@@ -46,27 +48,27 @@ class User {
 }
 ```
 
-Acesso direto: `u.name`, `u.age = 30`.
+Direct access: `u.name`, `u.age = 30`.
 
-## Java pattern → decisão em Kof
+## Java pattern → decision in Kof
 
-| Padrão Java | Por que existe em Java | Kof precisa? | Alternativa idiomática |
+| Java pattern | Why it exists in Java | Does Kof need it? | Idiomatic alternative |
 |---|---|---|---|
-| Getter/setter | JavaBeans, frameworks, reflection | Não | Campo público |
-| Builder | Construtores com muitos args opcionais | Não (por enquanto) | Construtor com args ou record |
-| Factory estática | Construtores não podem ter nomes | Não | Chamar o construtor |
-| Utility class com static | Java não tem funções top-level | Não | Função top-level |
-| Service/Repository/Controller | Injeção de dependência, ciclos de vida | Não | Função top-level ou classe direta |
-| `StringBuilder` | `+` em loop era ineficiente | Não | `+` concatena |
-| `.equals()` | `==` não pode ser sobrecarregado | Não | `==` compara conteúdo |
-| DTO + mapper | Serialização exige no-arg + setters | Não | Record + json.encode |
-| Optional | `null` onipresente | Parcial (0.3.22-beta) | `String?` + `if (x != null)` narrowing; `Option<T>` ainda planned |
-| `instanceof` + cast | Type narrowing | Sim (0.3.22-beta) | `instanceof` + `as` e pattern `case String s:` / `case Point(x,y)` |
-| Loop manual para map | Java sem higher-order até streams | Não | `list.map/filter/reduce` (0.3.22-beta) |
-| `import java.util.*` | Java collections | Não | `listOf`/`mapOf`/`setOf` + `import a.b.C` file-specific (fix 27/08) |
+| Getter/setter | JavaBeans, frameworks, reflection | No | Public field |
+| Builder | Constructors with many optional args | No (for now) | Constructor with args or record |
+| Static factory | Constructors cannot have names | No | Call the constructor |
+| Utility class with static | Java has no top-level functions | No | Top-level function |
+| Service/Repository/Controller | Dependency injection, lifecycles | No | Top-level function or direct class |
+| `StringBuilder` | `+` in a loop was inefficient | No | `+` concatenates |
+| `.equals()` | `==` cannot be overloaded | No | `==` compares content |
+| DTO + mapper | Serialization requires no-arg + setters | No | Record + json.encode |
+| Optional | `null` is ubiquitous | Partial (0.3.22-beta) | `String?` + `if (x != null)` narrowing; `Option<T>` still planned |
+| `instanceof` + cast | Type narrowing | Yes (0.3.22-beta) | `instanceof` + `as` and pattern `case String s:` / `case Point(x,y)` |
+| Manual loop for map | Java without higher-order until streams | No | `list.map/filter/reduce` (0.3.22-beta) |
+| `import java.util.*` | Java collections | No | `listOf`/`mapOf`/`setOf` + file-specific `import a.b.C` (fix 27/08) |
 
 ## Exceptions
 
-Padrões que são exceções legítimas:
-- Interoperabilidade com bibliotecas Java (quando existir a camada de interop).
-- Convenções impostas por API externa.
+Patterns that are legitimate exceptions:
+- Interoperability with Java libraries (when the interop layer exists).
+- Conventions imposed by an external API.

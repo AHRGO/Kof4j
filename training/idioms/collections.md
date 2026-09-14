@@ -1,34 +1,36 @@
+[English](collections.md) | [Português](collections.pt_BR.md)
+
 # Idioms — Collections
 
 **Status:** available · **Introduced:** 0.0.4-alpha · **Updated:**  0.4.0-beta (Sep 2026) (02 Sep 2026)
 
 ## What it is
 
-`List<T>` é a coleção ordenada da linguagem. Criação: `listOf(...)` ou `new List<T>()`.
-Disponível em JVM (ArrayList), Native (implementação própria com free-list GC) e JS (Array) com a mesma API.
-`Map<K,V>` e `Set<T>` existem desde 0.1.0 nos 3 targets (JVM HashMap/HashSet, Native asm próprio, JS Map/Set).
+`List<T>` is the language's ordered collection. Creation: `listOf(...)` or `new List<T>()`.
+Available on JVM (ArrayList), Native (its own implementation with free-list GC) and JS (Array) with the same API.
+`Map<K,V>` and `Set<T>` have existed since 0.1.0 on the 3 targets (JVM HashMap/HashSet, Native own asm, JS Map/Set).
 
-## API real (verificada no compilador — 0.4.0-beta)
+## Real API (verified in the compiler — 0.4.0-beta)
 
 ```kof
 var l = listOf(1, 2, 3, 4)
 l.add(5)
-var x = l.get(0)        // bounds check nativo via kof_list_get — sem workaround manual
+var x = l.get(0)        // native bounds check via kof_list_get — no manual workaround
 l.set(0, 9)
-l.size                  // propriedade, não método
+l.size                  // property, not a method
 l.contains(3)
 l.isEmpty()
-var r = l.remove(1)       // remove por ÍNDICE (Int), devolve o elemento
-// NUNCA l.remove("x") (by-value do Java): SEM055 (bug 122) — para achar por
-// valor use contains(x); para achar posição, loop com get(i).
+var r = l.remove(1)       // remove by INDEX (Int), returns the element
+// NEVER l.remove("x") (Java's by-value): SEM055 (bug 122) — to find by
+// value use contains(x); to find the position, loop with get(i).
 l.clear()
 var vazio = listOf<Int>()
 
 // Higher-order (3 targets)
 var dobrados = l.map((x: Int) -> x * 2)
 var pares = l.filter((x: Int) -> x % 2 == 0)
-var soma = l.reduce((a: Int, b: Int) -> a + b, 0)   // ordem: (lambda, init)
-// `reduce(0, (a, b) -> ...)` (init, lambda) também é aceito
+var soma = l.reduce((a: Int, b: Int) -> a + b, 0)   // order: (lambda, init)
+// `reduce(0, (a, b) -> ...)` (init, lambda) is also accepted
 
 // Map / Set
 var m = mapOf("a", 1)
@@ -37,14 +39,14 @@ var v = m.get("a")
 var s = setOf(1, 2, 3)
 s.add(4)
 s.contains(2)
-// Coleções Kof são HOMOGÊNEAS: depois que o tipo PINA, add/put/set com tipo ≠
-// é rejeitado em compile-time (SEM056, bug 126 — não é só o Native que quebrava:
-// no JVM o add heterogêneo já dava VerifyError). Widening numérico (Int em
-// List<Long>) e o PRIMEIRO add (que pina um listOf()) passam. Buscar por tipo ≠
-// (m.get(5) num Map<String,Int>, s.contains("x") num Set<Int>) é MISS SEGURO
-// (null/false), nunca erro — só a ESCRITA é checada.
+// Kof collections are HOMOGENEOUS: after the type PINS, add/put/set with a type ≠
+// is rejected at compile-time (SEM056, bug 126 — it was not only Native that broke:
+// on the JVM the heterogeneous add already gave a VerifyError). Numeric widening
+// (Int in List<Long>) and the FIRST add (which pins a listOf()) pass. Querying by a
+// type ≠ (m.get(5) on a Map<String,Int>, s.contains("x") on a Set<Int>) is a SAFE
+// MISS (null/false), never an error — only WRITING is checked.
 
-// Como campo de classe, param de construtor e retorno de método (3 targets — 01/09)
+// As a class field, constructor param and method return (3 targets — 01/09)
 class Bag(Set<Int> tags) {
     Set<Int> all() {
         return tags
@@ -54,31 +56,31 @@ var b = Bag(setOf(1, 2, 3))
 println(b.all().size())
 ```
 
-Fix 01/09: `Set<T>`/`Map<K,V>` como campo/retorno de classe no JVM — o mapper mapeava só `List`→`ArrayList` (então `Set`/`Map` viravam `Lkof/Set;` → `NoClassDefFoundError`); agora `HashSet`/`HashMap`. Parser: método de classe com retorno genérico (`Set<Int> all(`) agora parseia (antes caía no ramo de campo). `KofMapSetTest.setMapAsFieldAndReturn`.
+Fix 01/09: `Set<T>`/`Map<K,V>` as a class field/return on the JVM — the mapper mapped only `List`→`ArrayList` (so `Set`/`Map` became `Lkof/Set;` → `NoClassDefFoundError`); now `HashSet`/`HashMap`. Parser: a class method with a generic return (`Set<Int> all(`) now parses (before it fell into the field branch). `KofMapSetTest.setMapAsFieldAndReturn`.
 
-## `Map.get` devolve `V?` para valores de referência (02/09)
+## `Map.get` returns `V?` for reference values (02/09)
 
-`m.get(chave)` retorna `V?` quando o valor é um tipo de referência
-(`Map<String, String>`, `Map<String, User>`): ausência = `null`, use
-`if (v != null)` para estreitar. Para valores **primitivos** (`Map<String, Int>`)
-o tipo fica `V` — o modelo atual armazena primitivos desembrulhados e não
-representa ausência (limitação documentada; usar `contains`/`containsKey`
-para checar antes).
+`m.get(chave)` returns `V?` when the value is a reference type
+(`Map<String, String>`, `Map<String, User>`): absence = `null`, use
+`if (v != null)` to narrow. For **primitive** values (`Map<String, Int>`)
+the type stays `V` — the current model stores primitives unboxed and does not
+represent absence (documented limitation; use `contains`/`containsKey`
+to check beforehand).
 
-Fix 27/08: `listOf(...).get(n)` e `size` em projetos grandes com `import a.b.C` agora resolvem corretamente (CompilerDriver file-specific imports). Não é necessário workaround manual de índice.
+Fix 27/08: `listOf(...).get(n)` and `size` in large projects with `import a.b.C` now resolve correctly (CompilerDriver file-specific imports). A manual index workaround is not necessary.
 
 ## When to use
 
-Qualquer problema que requer uma sequência de elementos:
-coleções, registros, filas simples, agrupamentos, acumuladores.
-`Map`/`Set` para associações e conjuntos. `map`/`filter`/`reduce` para transformação sem loop manual.
+Any problem that requires a sequence of elements:
+collections, records, simple queues, groupings, accumulators.
+`Map`/`Set` for associations and sets. `map`/`filter`/`reduce` for transformation without a manual loop.
 
 ## When not to use
 
-- Não reimplementar `map`/`filter`/`reduce` com loop quando a higher-order expressa a intenção.
-- Não usar `List<record>` com busca linear quando `Map<K,V>` resolve (quando há chave).
+- Do not reimplement `map`/`filter`/`reduce` with a loop when the higher-order expresses the intent.
+- Do not use `List<record>` with a linear search when `Map<K,V>` solves it (when there is a key).
 
-## BAD — estrutura manual
+## BAD — manual structure
 
 ```kof
 class Node {
@@ -91,7 +93,7 @@ class Registry {
 }
 ```
 
-## GOOD — coleção da linguagem
+## GOOD — the language's collection
 
 ```kof
 class Registry {
@@ -106,7 +108,7 @@ class Registry {
 }
 ```
 
-## GOOD — transformação declarativa (0.3.22-beta)
+## GOOD — declarative transformation (0.3.22-beta)
 
 ```kof
 var nomes = users.map((u: User) -> u.name)
@@ -114,23 +116,23 @@ var adultos = users.filter((u: User) -> u.age >= 18)
 var total = nums.reduce((a: Int, b: Int) -> a + b, 0)
 ```
 
-## GOOD — Box<T> com primitivos (0.1.0 fix)
+## GOOD — Box<T> with primitives (0.1.0 fix)
 
 ```kof
 class Box<T>(T value) {
     get(): T { return value }
 }
 var b = Box<Int>(42)
-println(b.get())   // 42 — substituteTypeVariable corrige T → Int no Native
+println(b.get())   // 42 — substituteTypeVariable fixes T → Int on Native
 ```
 
 ## WHY
 
-`Node`/`next`/`count` é implementação acidental. O domínio é "uma sequência de entradas".
-Kof possui a abstração. Represente o domínio, não a implementação.
-Higher-orders e `Box<T>` eliminam loops e wrappers manuais.
+`Node`/`next`/`count` is accidental implementation. The domain is "a sequence of entries".
+Kof has the abstraction. Represent the domain, not the implementation.
+Higher-orders and `Box<T>` eliminate manual loops and wrappers.
 
-## Iteração
+## Iteration
 
 ```kof
 var items = listOf("a", "b", "c")
@@ -139,19 +141,19 @@ for (var item in items) {
 }
 ```
 
-`for-in` funciona sobre `List<T>` e arrays (`new Int[5]`).
+`for-in` works over `List<T>` and arrays (`new Int[5]`).
 
-## Tipos de elementos
+## Element types
 
 ```kof
-var ids = listOf<Int>()          // lista vazia de Int
+var ids = listOf<Int>()          // empty list of Int
 var nomes = listOf("Ana", "Mel")
-var users = listOf<User>()       // lista de objetos (erasure)
+var users = listOf<User>()       // list of objects (erasure)
 var boxed: Box<Int> = Box(5)
 ```
 
-## Anti-patterns relacionados
+## Related anti-patterns
 
-- Linked list manual → `training/anti-patterns/manual-data-structures.md`
-- Array como substituto de coleção dinâmica → usar `List<T>`
-- Loop manual para map/filter → usar higher-order
+- Manual linked list → `training/anti-patterns/manual-data-structures.md`
+- Array as a substitute for a dynamic collection → use `List<T>`
+- Manual loop for map/filter → use higher-order

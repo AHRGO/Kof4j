@@ -28,6 +28,9 @@ public final class Compare {
     private Compare() {
     }
 
+    private static final String USAGE =
+            "usage: kof compare <legacy.class|legacy.jar> <file.kf> [--stdin <text>] [--arg <v>...] [--json]";
+
     record RunResult(int exitCode, String stdout, String stderr, Map<String, String> files) {
         boolean sameStdout(RunResult o) { return stdout.equals(o.stdout); }
         boolean sameStderr(RunResult o) { return stderr.equals(o.stderr); }
@@ -58,12 +61,12 @@ public final class Compare {
             args = java.util.Arrays.copyOfRange(args, 1, args.length);
         }
         if (args.length == 0 || "--help".equals(args[0]) || "-h".equals(args[0])) {
-            System.out.println("usage: kof compare <legacy.class|legacy.jar> <file.kf> [--stdin <text>] [--arg <v>...] [--json]");
+            System.out.println(USAGE);
             System.out.println("  runs both programs with identical inputs and compares stdout/stderr/exit code");
             return 0;
         }
         if (args.length < 2) {
-            System.err.println("usage: kof compare <legacy.class|legacy.jar> <file.kf> [--stdin <text>] [--arg <v>...] [--json]");
+            System.err.println(USAGE);
             return 1;
         }
         Path legacy = Path.of(args[0]);
@@ -74,8 +77,24 @@ public final class Compare {
         for (int i = 2; i < args.length; i++) {
             switch (args[i]) {
                 case "--json" -> json = true;
-                case "--stdin" -> stdin = args[++i];
-                case "--arg" -> programArgs.add(args[++i]);
+                // CodeQL java/index-out-of-bounds: flag sem valor lia
+                // args[++i] sem checar o fim (AIOOBE em vez de usage).
+                case "--stdin" -> {
+                    if (i + 1 >= args.length) {
+                        System.err.println("missing value for --stdin");
+                        System.err.println(USAGE);
+                        return 1;
+                    }
+                    stdin = args[++i];
+                }
+                case "--arg" -> {
+                    if (i + 1 >= args.length) {
+                        System.err.println("missing value for --arg");
+                        System.err.println(USAGE);
+                        return 1;
+                    }
+                    programArgs.add(args[++i]);
+                }
                 default -> System.err.println("unknown option: " + args[i]);
             }
         }

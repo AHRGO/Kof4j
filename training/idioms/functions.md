@@ -1,13 +1,15 @@
+[English](functions.md) | [Português](functions.pt_BR.md)
+
 # Idioms — Functions
 
-**Status:** available · **Introduced:** 0.0.4-alpha (sem `fun`) · **Updated:**  0.4.0-beta (Sep 2026)
+**Status:** available · **Introduced:** 0.0.4-alpha (without `fun`) · **Updated:**  0.4.0-beta (Sep 2026)
 
 ## What it is
 
-Kof não possui a palavra-chave `fun`. Funções são declaradas pelo nome,
-com o tipo de retorno antes do nome **ou** após os parâmetros.
+Kof does not have the `fun` keyword. Functions are declared by name,
+with the return type before the name **or** after the parameters.
 
-## Formas válidas (todas verificadas no compilador)
+## Valid forms (all verified in the compiler)
 
 ```kof
 main() {
@@ -43,27 +45,27 @@ int dobro(int x) {
 }
 ```
 
-## When to use funções top-level
+## When to use top-level functions
 
-- Lógica sem estado (helpers, validação, transformação).
-- Utility classes de Java viram funções top-level.
-- Handlers de `kof serve` (`handle(...)`) são funções top-level.
+- Stateless logic (helpers, validation, transformation).
+- Java utility classes become top-level functions.
+- Handlers of `kof serve` (`handle(...)`) are top-level functions.
 
 ## When not to use
 
-- Dados + comportamento → classe ou record.
-- `main()` é a única função sem tipo explícito e sem retorno.
+- Data + behavior → class or record.
+- `main()` is the only function without an explicit type and without a return.
 
-## Sobrecarga de função top-level (0.4.0-beta — oracle JVM)
+## Top-level function overloading (0.4.0-beta — oracle JVM)
 
-Funções top-level homônimas com **assinaturas diferentes** coexistem; a
-chamada resolve o candidato aplicável mais específico, como a JVM.
+Same-named top-level functions with **different signatures** coexist; the
+call resolves the most specific applicable candidate, like the JVM.
 
 ```kof
 Int g(Int x) { return x }
-Int g(Int x, Int y) { return x + y }        // ✅ aridade diferente
+Int g(Int x, Int y) { return x + y }        // ✅ different arity
 String twice(String s) { return s + s }
-Int twice(Int n) { return n * 2 }            // ✅ tipo de parâmetro diferente
+Int twice(Int n) { return n * 2 }            // ✅ different parameter type
 
 main() {
     println(g(5))          // 5   → g/Int
@@ -73,18 +75,18 @@ main() {
 }
 ```
 
-- **Duplicata exata é erro** (SEM047): mesmo nome + mesmos parâmetros.
-- **Só trocar o retorno NÃO é sobrecarga** (SEM047, como na JVM): `Int h(Int)`
-  e `String h(Int)` colidem.
-- **Chamada ambígua é erro** (SEM057): quando dois candidatos aplicáveis
-  empatam (ex.: argumento `Unknown` que caberia em ambos), dê um tipo ao
-  argumento (cast ou variável declarada) para escolher.
-- Mesma saída nos 5 targets (JVM/Script/JS/Native): a resolução é do frontend;
-  cada backend referencia o candidato pela assinatura.
-- **Sobrecarga de MÉTODO de classe ✅ existe** (0.4.0, §131 13/09): mesmo nome,
-  assinaturas diferentes (aridade/tipos) na mesma classe coexistem nos 4
-  backends; o typer seleciona por aridade+compatibilidade. O texto acima sobre
-  duplicata/retorno/ambiguidade vale igual para método de classe.
+- **Exact duplicate is an error** (SEM047): same name + same parameters.
+- **Changing only the return type is NOT overloading** (SEM047, as on the JVM): `Int h(Int)`
+  and `String h(Int)` collide.
+- **Ambiguous call is an error** (SEM057): when two applicable candidates
+  tie (e.g. an `Unknown` argument that would fit both), give the
+  argument a type (cast or declared variable) to choose.
+- Same output on the 5 targets (JVM/Script/JS/Native): the resolution is the frontend's;
+  each backend references the candidate by its signature.
+- **CLASS METHOD overloading ✅ exists** (0.4.0, §131 13/09): same name,
+  different signatures (arity/types) in the same class coexist on the 4
+  backends; the typer selects by arity+compatibility. The text above about
+  duplicate/return/ambiguity applies equally to class methods.
 
 ## BAD — utility class
 
@@ -96,7 +98,7 @@ class StringUtils {
 }
 ```
 
-## GOOD — função top-level
+## GOOD — top-level function
 
 ```kof
 String capitalizar(String s) {
@@ -106,10 +108,10 @@ String capitalizar(String s) {
 
 ## WHY
 
-A utility class de Java existe porque Java não tem funções fora de classes.
-Kof tem funções top-level. A camada extra de classe é ruído.
+Java's utility class exists because Java has no functions outside classes.
+Kof has top-level functions. The extra class layer is noise.
 
-## Lambdas (captura implementada)
+## Lambdas (capture implemented)
 
 ```kof
 var f = (x: Int) -> x * 2
@@ -121,23 +123,23 @@ println(g(3, 4))        // 7
 var h = () -> 99
 println(h())            // 99
 
-// Captura mutável — ✅ desde 0.2.6-beta via box sintético Box0
+// Mutable capture — ✅ since 0.2.6-beta via synthetic box Box0
 var offset = 10
 var f2 = (x: Int) -> x + offset
 println(f2(5))          // 15
 offset = 20
-println(f2(5))          // 25 — mutável
+println(f2(5))          // 25 — mutable
 
-// Higher-order com List
+// Higher-order with List
 var dobrados = listOf(1, 2, 3).map((x: Int) -> x * 2)
 var pares = listOf(1, 2, 3, 4).filter((x: Int) -> x % 2 == 0)
 ```
 
-- Lambdas compilam para classes sintéticas com método `invoke`.
-- Captura mutável via `BoxN` — sem limitação.
-- `Box<T>` erasure fix permite `Box<Int>` com primitivos.
+- Lambdas compile to synthetic classes with an `invoke` method.
+- Mutable capture via `BoxN` — no limitation.
+- `Box<T>` erasure fix allows `Box<Int>` with primitives.
 
-## BAD — utility class para transformação
+## BAD — utility class for transformation
 
 ```kof
 class ListUtils {
@@ -155,12 +157,12 @@ class ListUtils {
 var dobrados = nums.map((x: Int) -> x * 2)
 ```
 
-## WHY (captura)
+## WHY (capture)
 
-Captura era planned antes de 0.2.6-beta; hoje está implementada — usar lambdas com parâmetros, literais e capturas livremente.
+Capture was planned before 0.2.6-beta; today it is implemented — use lambdas with parameters, literals and captures freely.
 
-## Anti-patterns relacionados
+## Related anti-patterns
 
 - `java-like-code.md` — utility classes
 - `unnecessary-abstraction.md` — factory/wrapper
-- `fake-idioms.md` — conferir status de higher-orders
+- `fake-idioms.md` — check the status of higher-orders

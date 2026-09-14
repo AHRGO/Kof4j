@@ -1,11 +1,13 @@
+[English](classes.md) | [Português](classes.pt_BR.md)
+
 # Idioms — Classes
 
 **Status:** available · **Introduced:** 0.0.4-alpha · **Updated:**  0.4.0-beta (Sep 2026)
 
 ## What it is
 
-Classe com campos, métodos, construtor, herança e interfaces.
-Campos são declarados **sem** `var`/`val` e sem `;` obrigatório.
+A class with fields, methods, constructor, inheritance and interfaces.
+Fields are declared **without** `var`/`val` and without a mandatory `;`.
 
 ```kof
 class User {
@@ -14,9 +16,9 @@ class User {
 }
 ```
 
-## Construtores
+## Constructors
 
-### `class X(...)` é RECORD — dados imutáveis (verificado 02/09)
+### `class X(...)` is a RECORD — immutable data (verified 02/09)
 
 ```kof
 class User(String name, Int age) {
@@ -26,18 +28,18 @@ class User(String name, Int age) {
 }
 ```
 
-> **Atenção (02/09):** `class X(...)` é **alias de `record X(...)`** — o parser
-> o trata como record body (imutável, `extends java.lang.Record` no JVM). Os
-> "parâmetros" viram componentes com accessors: leitura `user.name` funciona
-> (vira `name()`), mas **escrita `user.name = "x"` NÃO** (campo final →
-> `IllegalAccessError`). Para dados imutáveis use `record` (a forma canônica);
-> para **estado mutável** use campos explícitos + `constructor(...)`.
+> **Careful (02/09):** `class X(...)` is an **alias of `record X(...)`** — the parser
+> treats it as a record body (immutable, `extends java.lang.Record` on the JVM). The
+> "parameters" become components with accessors: reading `user.name` works
+> (it becomes `name()`), but **writing `user.name = "x"` does NOT** (final field →
+> `IllegalAccessError`). For immutable data use `record` (the canonical form);
+> for **mutable state** use explicit fields + `constructor(...)`.
 
 ```kof
-var user = User("Mel", 26)   // record — leitura ok, escrita não
+var user = User("Mel", 26)   // record — reading ok, writing not
 ```
 
-### Construtor explícito — estado mutável (a forma de classe real)
+### Explicit constructor — mutable state (the real class form)
 
 ```kof
 class User {
@@ -51,23 +53,23 @@ class User {
 }
 ```
 
-Aqui os campos são **públicos e mutáveis**: `user.name = "Mel"` / `user.age = 30`.
+Here the fields are **public and mutable**: `user.name = "Mel"` / `user.age = 30`.
 
-`new User("Mel", 30)` continua válido, mas `User("Mel", 30)` é a forma
-recomendada — o compilador trata ambas como construção de instância.
+`new User("Mel", 30)` remains valid, but `User("Mel", 30)` is the
+recommended form — the compiler treats both as instance construction.
 
 ## When to use
 
-- Entidades com comportamento (métodos que operam sobre o estado).
-- Estado mutável.
-- Herança e polimorfismo.
+- Entities with behavior (methods that operate on the state).
+- Mutable state.
+- Inheritance and polymorphism.
 
 ## When not to use
 
-- Dados imutáveis sem comportamento → **record** (veja `records.md`).
-- Apenas agrupamento de valores → record.
+- Immutable data without behavior → **record** (see `records.md`).
+- Just grouping values → record.
 
-## BAD — cerimônia de getter
+## BAD — getter ceremony
 
 ```kof
 class User {
@@ -81,7 +83,7 @@ class User {
 }
 ```
 
-## GOOD — campo direto
+## GOOD — direct field
 
 ```kof
 class User {
@@ -89,15 +91,15 @@ class User {
 }
 ```
 
-Uso: `u.name = "Mel"` e `println(u.name)`.
+Usage: `u.name = "Mel"` and `println(u.name)`.
 
 ## WHY
 
-Getter/setter de Java existe por convenções de encapsulamento (JavaBeans, frameworks).
-Kof não possui essas convenções. Campo público é a forma idiomática até que exista
-uma razão real para encapsulamento. Não reproduza ceremony sem semântica.
+Java's getter/setter exists because of encapsulation conventions (JavaBeans, frameworks).
+Kof does not have those conventions. A public field is the idiomatic form until there is
+a real reason for encapsulation. Do not reproduce ceremony without semantics.
 
-## BAD — factory trivial
+## BAD — trivial factory
 
 ```kof
 createUser(String name): User {
@@ -113,9 +115,9 @@ User(name)
 
 ## WHY
 
-Uma factory que apenas delega ao construtor não adiciona informação. Chame o construtor.
+A factory that only delegates to the constructor adds no information. Call the constructor.
 
-## Herança
+## Inheritance
 
 ```kof
 class Animal {
@@ -133,9 +135,9 @@ class Dog extends Animal {
 }
 ```
 
-- `super(args)` é a primeira instrução do construtor da subclasse.
-- Override é implícito (mesmo nome de método).
-- Dispatch é virtual em ambos os targets.
+- `super(args)` is the first statement of the subclass constructor.
+- Override is implicit (same method name).
+- Dispatch is virtual on both targets.
 
 ## Generics Box<T> (0.3.22-beta)
 
@@ -147,9 +149,9 @@ var b: Box<Int> = Box(42)
 println(b.get())   // erasure + substituteTypeVariable — Native OK
 ```
 
-## Anti-patterns relacionados
+## Related anti-patterns
 
-- Utility class de métodos estáticos → funções top-level (`functions.md`)
-- Service layer sem estado → funções top-level
-- Factory trivial → chamar o construtor
-- `Box<T>` manual → usar generics nativo
+- Utility class of static methods → top-level functions (`functions.md`)
+- Stateless service layer → top-level functions
+- Trivial factory → call the constructor
+- Manual `Box<T>` → use native generics

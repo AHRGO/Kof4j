@@ -101,6 +101,10 @@ class KofBlogE2ETest {
                         return json.encode(rows.get(0))
                     }
 
+                    // C18 (D-SEC): middleware composto com sessão obrigatória
+                    // fora dos prefixes públicos (login/health)
+                    app.security(mapOf("sessionHeader", "authorization", "publicPaths", "/register,/login"))
+
                     app.listen(KOFE2EPORT)
                 }
                 """.replace("KOFE2EPORT", port);

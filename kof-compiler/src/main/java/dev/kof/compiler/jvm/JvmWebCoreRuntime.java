@@ -20,6 +20,12 @@ public final class JvmWebCoreRuntime {
                 private static final ThreadLocal<Integer> KOF_WEB_STATUS = new ThreadLocal<>();
                 private static final ThreadLocal<java.util.Map<String, String>> KOF_WEB_HEADERS =
                         ThreadLocal.withInitial(java.util.HashMap::new);
+                // D-SEC C18: headers de resposta do middleware de security
+                // (CSP/HSTS/CORS/Set-Cookie) — separados de KOF_WEB_HEADERS
+                // porque o dispatch limpa estes ANTES de invocar a rota; estes
+                // sobrevivem até o build da resposta.
+                private static final ThreadLocal<java.util.Map<String, String>> KOF_SEC_RESPONSE_HEADERS =
+                        ThreadLocal.withInitial(java.util.LinkedHashMap::new);
 
                 public static final java.util.concurrent.atomic.AtomicLong SSE_CONNECTIONS_ACTIVE =
                         new java.util.concurrent.atomic.AtomicLong();
@@ -379,12 +385,23 @@ public final class JvmWebCoreRuntime {
                     final String id;
                     final java.util.List<WebRoute> routes = new java.util.ArrayList<>();
                     final java.util.List<Object> middlewares = new java.util.ArrayList<>();
+                    // C18 (D-SEC): config do app.security() aplicada pelo
+                    // dispatch — ordem fixa rate-limit → cors → headers →
+                    // session → csrf → auth → RBAC, sempre antes das rotas
+                    // (security by default não depende do usuário lembrar de
+                    // compor). União das duas lanes que implementaram C18.
+                    volatile boolean securityConfigured;
+                    boolean securityHeaders = true;
+                    int securityRateLimit = 0;
+                    int securityRateWindow = 60;
+                    String securityCors = null;
+                    boolean securityCsrf = false;
+                    String securityAuthHeader = null;
+                    final java.util.List<String> securityPublicPaths = new java.util.ArrayList<>();
+                    boolean securityRequireAuth = false;
+                    final java.util.List<String> securityRoles = new java.util.concurrent.CopyOnWriteArrayList<>();
                     final java.util.List<StaticDir> staticDirs = new java.util.ArrayList<>();
                     final java.util.List<String> healthPaths = new java.util.ArrayList<>();
-                    // D-SEC C18: middleware composto registrado por
-                    // app.security() — guardado para o aviso de produção no
-                    // listen e para o dispatch não reexecutar a cadeia.
-                    volatile SecurityMiddleware security;
                     final java.util.concurrent.atomic.AtomicInteger activeConnections =
                             new java.util.concurrent.atomic.AtomicInteger();
                     public static final int DEFAULT_MAX_CONNECTIONS = 1024;

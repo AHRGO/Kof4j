@@ -42,9 +42,11 @@ jobs:
         uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
-          # security + quality: alimenta "code scanning" (vulns/erros)
-          # e "code quality findings" (qualidade) com o mesmo run.
-          queries: security-and-quality
+          # security-and-quality + paths-ignore (src/test) no config:
+          # harnesses de teste invocam java/gcc/qemu com Strings proprias do
+          # teste (relative-path/concatenated-command-line) e trust-all LOCAL
+          # (KofWebTlsTest) — nao sao superficie de producao. Ver o config.
+          config-file: .github/codeql/kof4j-config.yml
 
       - name: Autobuild
         uses: github/codeql-action/autobuild@v4

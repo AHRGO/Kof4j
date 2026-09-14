@@ -1,3 +1,5 @@
+[English](common-mistakes.md) | [Português](common-mistakes.pt_BR.md)
+
 # Kof Common Mistakes
 
 ## 1. Using Java-style getters/setters
@@ -15,13 +17,13 @@ class User {
 }
 ```
 
-## 2. String.valueOf(Int) achando que dá o caractere
+## 2. String.valueOf(Int) thinking it gives the character
 
 ```kof
-// WRONG — retorna DÍGITOS: "104"
+// WRONG — returns DIGITS: "104"
 var s = String.valueOf(104)
 
-// RIGHT — o caractere: "h"
+// RIGHT — the character: "h"
 var c = String.valueOf(104 as Char)
 ```
 
@@ -90,10 +92,10 @@ var x: String = "hello"
 
 ## 8. Unnecessary annotations
 
-Annotations existem no Kof para **interoperação** (frameworks JVM, Android). Para recursos da própria plataforma, use as APIs idiomáticas — annotation+container é vazar mecanismo na intenção.
+Annotations exist in Kof for **interoperability** (JVM frameworks, Android). For features of the platform itself, use the idiomatic APIs — annotation+container is leaking mechanism into intent.
 
 ```kof
-// WRONG — HTTP routing é intenção da linguagem, não annotation
+// WRONG — HTTP routing is language intent, not annotation
 @RestController
 class UserController {
     // ...
@@ -105,7 +107,7 @@ main() {
     app.get("/users") { ... }
 }
 
-// RIGHT — annotation como metadado de interop (o framework externo exige)
+// RIGHT — annotation as interop metadata (the external framework requires it)
 @Service
 class UserService {
     // ...
@@ -125,39 +127,39 @@ for (var i = 0; i < items.length; i++) {
 var result = "Items: " + items.length
 ```
 
-## 10. Manual List.get handling (fix 27/08 — removido)
+## 10. Manual List.get handling (fix 27/08 — removed)
 
 ```kof
-// WRONG (workaround histórico) — bounds check manual antes de get
+// WRONG (historical workaround) — manual bounds check before get
 if (i >= 0 && i < l.size) { var x = l.get(i) }
 
-// RIGHT (0.3.22-beta) — kof_list_get já faz bounds check com mensagem clara
-var x = l.get(1)   // ou l[1]
+// RIGHT (0.3.22-beta) — kof_list_get already does the bounds check with a clear message
+var x = l.get(1)   // or l[1]
 var y = listOf(1,2,3).get(1) // 2
 ```
 
-## 11. Manual import workarounds (fix 27/08 — removido)
+## 11. Manual import workarounds (fix 27/08 — removed)
 
 ```kof
-// WRONG — copiar arquivo C.kf para pasta raiz para evitar import a.b.C falhando
+// WRONG — copying file C.kf to the root folder to avoid import a.b.C failing
 // RIGHT (0.3.22-beta) — CompilerDriver expandKofImports file-specific
 import a.b.C
 import a.b.*
 ```
 
-## 12. Ignorar null safety (0.3.22-beta)
+## 12. Ignoring null safety (0.3.22-beta)
 
 ```kof
-// WRONG — sentinela para ausência
+// WRONG — sentinel for absence
 String find(String key) { return "" }
 
-// RIGHT — String? com narrowing
+// RIGHT — String? with narrowing
 String? find(String key) { if (found) return value; return null }
 var r = find("x")
 if (r != null) { println(r) }
 ```
 
-## 13. Loop manual quando higher-order existe (0.3.22-beta)
+## 13. Manual loop when higher-order exists (0.3.22-beta)
 
 ```kof
 // WRONG
@@ -170,45 +172,45 @@ var nomes = users.map((u: User) -> u.name)
 
 ---
 
-## (02 Sep 2026) Descobertas do koflama — gotchas reais do emit JVM
+## (02 Sep 2026) koflama discoveries — real JVM emit gotchas
 
-Descobertas validadas com o forward do TinyLlama 100% Kof
-(kof-agent M34). Todas fixadas no compiler; ficam aqui como
-lição de causa → efeito.
+Discoveries validated with the 100% Kof TinyLlama forward
+(kof-agent M34). All fixed in the compiler; they stay here as a
+cause → effect lesson.
 
-### 1. `new String[0]` emitia NEWARRAY T_BYTE (VerifyError)
-
-```kof
-return KofLmTokVocab(new String[0], new Long[0])   // ✅ agora ANEWARRAY
-```
-
-**Causa:** `JvmBackend.arrayTypeForType` só cobria primitivos e
-caía no default `T_BYTE` para tipos de referência. O bytecode
-passava pelo `check` mas o JVM rejeitava no Verify (frame `[B`
-vs `[Ljava/lang/String;`). O erro na tela era enganoso: o
-launcher JVM reporta "componentes de runtime do JavaFX não
-encontrados" quando o `main` falha no validate — sempre rodar
-`java -Xdiag -cp . Default.Main` para ver o VerifyError real.
-
-### 2. `Map<String, Int>` param emitia `Lkof/Map;` (NoClassDefFoundError)
-
-**Causa:** o `kof.jar` embutia a classe `JvmTypeMapper` antiga
-(shade não reprocessou depois do `mvn -pl ... -am` parcial).
-`classDescriptor` já mapeava `kof.Map → java/util/HashMap`, mas
-o jar desatualizado mascarava o fix. **Lição:** rebuild completo
-(`mvn clean package` na raiz) antes de culpar o código Kof; o
-classpath de `kof run` é só o tempDir — qualquer classe referen-
-ciada que não esteja lá vira NoClassDefFoundError *no launcher*
-(detalhe: o stack mostra `validateMainMethod`, não o call site).
-
-### 3. `Map.get` com unboxing NPE na atribuição
+### 1. `new String[0]` emitted NEWARRAY T_BYTE (VerifyError)
 
 ```kof
-var r = idx.get(sub)          // r é Int → unboxing imediato → NPE se ausente
-if (r != null) { ... }        // tarde demais
+return KofLmTokVocab(new String[0], new Long[0])   // ✅ now ANEWARRAY
 ```
 
-**Idiom correto:**
+**Cause:** `JvmBackend.arrayTypeForType` only covered primitives and
+fell through to the `T_BYTE` default for reference types. The bytecode
+passed `check` but the JVM rejected it at Verify (frame `[B`
+vs `[Ljava/lang/String;`). The on-screen error was misleading: the
+JVM launcher reports "JavaFX runtime components not
+found" when `main` fails at validate — always run
+`java -Xdiag -cp . Default.Main` to see the real VerifyError.
+
+### 2. `Map<String, Int>` param emitted `Lkof/Map;` (NoClassDefFoundError)
+
+**Cause:** `kof.jar` embedded the old `JvmTypeMapper` class
+(shade did not reprocess after the partial `mvn -pl ... -am`).
+`classDescriptor` already mapped `kof.Map → java/util/HashMap`, but
+the outdated jar masked the fix. **Lesson:** full rebuild
+(`mvn clean package` at the root) before blaming the Kof code; the
+classpath of `kof run` is only the tempDir — any referenced class
+that is not there becomes a NoClassDefFoundError *in the launcher*
+(detail: the stack shows `validateMainMethod`, not the call site).
+
+### 3. `Map.get` with unboxing NPE at the assignment
+
+```kof
+var r = idx.get(sub)          // r is Int → immediate unboxing → NPE if absent
+if (r != null) { ... }        // too late
+```
+
+**Correct idiom:**
 
 ```kof
 if (idx.contains(sub)) {
@@ -217,23 +219,23 @@ if (idx.contains(sub)) {
 }
 ```
 
-O compilador emite `intValue()` logo na atribuição quando a variá-
-vel é `Int`; o `!= null` depois não salva. Guarda com `contains`
-é a forma estável hoje (0.3.22-beta).
+The compiler emits `intValue()` right at the assignment when the
+variable is `Int`; the `!= null` afterwards does not save it. A guard with
+`contains` is the stable form today (0.3.22-beta).
 
-### 4. Soma de Int estoura silenciosamente em acumuladores largos
+### 4. Sum of Int silently overflows in wide accumulators
 
-SPM scores chegam a `-29613` (×1e6 micro = `-3e10`, fora do Int).
-O `dp[i] + scores[vi]` em `Int[]` dava wrap-around e o Viterbi
-escolhia caminhos absurdos (token "e" com score positivo fantasma).
+SPM scores reach `-29613` (×1e6 micro = `-3e10`, outside Int).
+`dp[i] + scores[vi]` in `Int[]` wrapped around and Viterbi
+chose absurd paths (token "e" with a phantom positive score).
 
-**Regra:** acumuladores que somam valores micro (×1e6) sempre em
-`Long[]`, com sentinelas `Long` (`-2e12`, não `-2e9`).
+**Rule:** accumulators that add micro values (×1e6) always in
+`Long[]`, with `Long` sentinels (`-2e12`, not `-2e9`).
 
-### 5. UTF-8: `String.valueOf(byte as Char)` é latin-1, não UTF-8
+### 5. UTF-8: `String.valueOf(byte as Char)` is latin-1, not UTF-8
 
-O vocab SPM tem `▁` (U+2581, bytes `E2 96 81`). Ler byte a byte
-com `as Char` produzia `â` + garbage e o match do vocab falhava
-silenciosamente (`contains` → false). Decode UTF-8 manual (2/3/4
-bytes → codepoint) antes de `as Char`. Mesmo princípio vale para
-qualquer byte vindo de File I/O que vira texto.
+The SPM vocab has `▁` (U+2581, bytes `E2 96 81`). Reading byte by byte
+with `as Char` produced `â` + garbage and the vocab match failed
+silently (`contains` → false). Manual UTF-8 decode (2/3/4
+bytes → codepoint) before `as Char`. The same principle applies to
+any byte coming from File I/O that becomes text.

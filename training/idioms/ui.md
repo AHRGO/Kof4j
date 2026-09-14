@@ -1,17 +1,19 @@
+[English](ui.md) | [Português](ui.pt_BR.md)
+
 # Idioms — kof.ui (Canvas 2D)
 
-## Canvas: gráfico de pizza
+## Canvas: pie chart
 
-**BAD — construir SVG manualmente com strings:**
+**BAD — building SVG manually with strings:**
 ```kof
-// ❌ NÃO — manipulação manual de string SVG
+// ❌ NO — manual SVG string manipulation
 var svg = "<svg viewBox='0 0 36 36'><circle cx='18' cy='18' r='15' fill='none' stroke='blue' stroke-dasharray='45 55'/></svg>"
 var img = Image("data:image/svg+xml," + svg)
 ```
 
-**GOOD — usar Canvas com beginPath/arc/fill:**
+**GOOD — use Canvas with beginPath/arc/fill:**
 ```kof
-// ✅ IDIOMÁTICO — Canvas desenha diretamente
+// ✅ IDIOMATIC — Canvas draws directly
 var c = Canvas(400, 300)
 var PI = 3.14159265358979
 c.setFill(Palette.blue)
@@ -22,135 +24,135 @@ c.closePath()
 c.fill()
 ```
 
-**Por quê:** Canvas é a primitiva de desenho 2D da plataforma. SVG manual
-é verboso e frágil; Canvas é declarativo e performático.
+**Why:** Canvas is the platform's 2D drawing primitive. Manual SVG
+is verbose and fragile; Canvas is declarative and performant.
 
-## Canvas: arco colorido
+## Canvas: colored arc
 
-**BAD — calcular coordenadas manualmente com sin/cos:**
+**BAD — calculating coordinates manually with sin/cos:**
 ```kof
-// ❌ NÃO — calcular pontos do arco na mão
+// ❌ NO — calculating the arc points by hand
 var x1 = cx + r * 0.707  // cos(45°)
 var y1 = cy - r * 0.707  // sin(45°)
 ```
 
-**GOOD — usar arc() com radianos:**
+**GOOD — use arc() with radians:**
 ```kof
-// ✅ IDIOMÁTICO — arc() calcula internamente
-c.arc(cx, cy, r, 0.0, 1.5708)  // 0 a π/2 (90°)
+// ✅ IDIOMATIC — arc() calculates internally
+c.arc(cx, cy, r, 0.0, 1.5708)  // 0 to π/2 (90°)
 ```
 
-**Por quê:** `arc()` faz a trigonometria internamente. Não reinventar a roda.
+**Why:** `arc()` does the trigonometry internally. Do not reinvent the wheel.
 
-## Canvas: limpando antes de redesenhar
+## Canvas: clearing before redrawing
 
-**BAD — criar novo Canvas a cada frame:**
+**BAD — creating a new Canvas every frame:**
 ```kof
-// ❌ NÃO — leak de elementos DOM
+// ❌ NO — DOM element leak
 c.remove()
 var c2 = Canvas(400, 300)
-// ... redesenhar
+// ... redraw
 ```
 
-**GOOD — usar clearRect:**
+**GOOD — use clearRect:**
 ```kof
-// ✅ IDIOMÁTICO — limpa e redesenha no mesmo canvas
+// ✅ IDIOMATIC — clears and redraws on the same canvas
 c.clearRect(0, 0, 400, 300)
-// ... redesenhar
+// ... redraw
 ```
 
-**Por quê:** `clearRect` é eficiente e preserva o elemento DOM.
+**Why:** `clearRect` is efficient and preserves the DOM element.
 
-## Forms: input com placeholder
+## Forms: input with placeholder
 
-**BAD — sem o idiom, o input nasce sem dica de entrada (placeholder é do
-widget, não da aplicação):**
+**BAD — without the idiom, the input is born without an input hint (the
+placeholder belongs to the widget, not the application):**
 ```kof
-// ❌ NÃO — input sem placeholder; a dica de uso fica no código, não na UI
+// ❌ NO — input without placeholder; the usage hint stays in the code, not in the UI
 var campo = Input("")
 ```
 
 **GOOD — `Input.setPlaceholder`:**
 ```kof
-// ✅ IDIOMÁTICO — placeholder declarativo no widget
+// ✅ IDIOMATIC — declarative placeholder on the widget
 var campo = Input("")
 campo.setPlaceholder("digite aqui")
 ```
 
-**Por quê:** `setPlaceholder` é o atributo do widget (renderiza
-`placeholder="..."` no DOM do KofJS). Usar string vazia ou esconder a dica
-na aplicação é reimplementar uma feature da plataforma (R2).
+**Why:** `setPlaceholder` is the widget attribute (renders
+`placeholder="..."` in the KofJS DOM). Using an empty string or hiding the hint
+in the application is reimplementing a platform feature (R2).
 
-## Forms: tipo do input (password/number/email/...)
+## Forms: input type (password/number/email/...)
 
-**BAD — input text genérico para senha/número (o tipo é do widget, não da
-aplicação):**
+**BAD — generic text input for password/number (the type belongs to the widget,
+not the application):**
 ```kof
-// ❌ NÃO — senha em input text; o browser não mascara
+// ❌ NO — password in a text input; the browser does not mask it
 var senha = Input("")
 ```
 
 **GOOD — `Input.setType`:**
 ```kof
-// ✅ IDIOMÁTICO — tipo declarativo no widget (text/number/email/password/date)
+// ✅ IDIOMATIC — declarative type on the widget (text/number/email/password/date)
 var senha = Input("")
 senha.setType("password")
 ```
 
-**Por quê:** `setType` define o atributo `type` do `<input>` (mascara senha,
-teclado numérico no mobile, validação de email). Usar text para tudo é
-reimplementar uma feature da plataforma (R2).
+**Why:** `setType` sets the `type` attribute of `<input>` (masks the password,
+numeric keyboard on mobile, email validation). Using text for everything is
+reimplementing a platform feature (R2).
 
 ## Forms: checkbox/radio (setChecked + checked)
 
-**BAD — simular estado de checkbox com variável à parte (o estado é do
-widget, não da aplicação):**
+**BAD — simulating checkbox state with a separate variable (the state belongs to
+the widget, not the application):**
 ```kof
-// ❌ NÃO — estado duplicado fora do DOM
+// ❌ NO — state duplicated outside the DOM
 var aceite = false
 var caixa = Input("")
 caixa.setType("checkbox")
 ```
 
-**GOOD — `setChecked`/`checked` no widget:**
+**GOOD — `setChecked`/`checked` on the widget:**
 ```kof
-// ✅ IDIOMÁTICO — estado do checkbox mora no widget
+// ✅ IDIOMATIC — the checkbox state lives in the widget
 var caixa = Input("")
 caixa.setType("checkbox")
 caixa.setChecked(true)
 if (caixa.checked()) { println("aceito") }
 ```
 
-**Por quê:** `setChecked`/`checked` leem/escrevem o estado real do
-`<input>` (property + atributo `checked`). Duplicar o estado em variável
-à parte diverge do DOM (R1: intenção, não mecanismo).
+**Why:** `setChecked`/`checked` read/write the real state of
+`<input>` (property + `checked` attribute). Duplicating the state in a separate
+variable diverges from the DOM (R1: intent, not mechanism).
 
-## Forms: imagem com alt + dimensões
+## Forms: image with alt + dimensions
 
-**BAD — `<img>` sem alt/dimensões (acessibilidade + layout quebrados):**
+**BAD — `<img>` without alt/dimensions (broken accessibility + layout):**
 ```kof
-// ❌ NÃO — imagem sem descrição alternativa nem tamanho
+// ❌ NO — image without alternative description or size
 var logo = Image("logo.png")
 ```
 
 **GOOD — `Image.setAlt/setWidth/setHeight`:**
 ```kof
-// ✅ IDIOMÁTICO — alt (a11y) + dimensões declarativas
+// ✅ IDIOMATIC — alt (a11y) + declarative dimensions
 var logo = Image("logo.png")
 logo.setAlt("logotipo")
 logo.setWidth(120)
 logo.setHeight(60)
 ```
 
-**Por quê:** `alt` é acessibilidade (screen readers); `width`/`height`
-evitam layout-shift. São atributos do widget (renderizam no DOM do
-KofJS), não da aplicação (R2).
+**Why:** `alt` is accessibility (screen readers); `width`/`height`
+avoid layout-shift. They are widget attributes (rendered in the KofJS DOM),
+not application ones (R2).
 
-## Forms: agrupar campos em <form>
+## Forms: grouping fields in <form>
 
-**BAD — campos soltos sem agrupamento (sem fronteira de formulário):**
+**BAD — loose fields without grouping (no form boundary):**
 ```kof
-// ❌ NÃO — inputs e botão fora de um <form>
+// ❌ NO — inputs and button outside a <form>
 var nome = Input("")
 var enviar = Button("enviar")
 var col = Column(listOf(nome, enviar))
@@ -158,197 +160,197 @@ var col = Column(listOf(nome, enviar))
 
 **GOOD — `Form(children)`:**
 ```kof
-// ✅ IDIOMÁTICO — campos agrupados em <form>
+// ✅ IDIOMATIC — fields grouped in <form>
 var nome = Input("")
 var enviar = Button("enviar")
 var f = Form(listOf(nome, enviar))
 ```
 
-**Por quê:** `Form` renderiza `<form>` (renderiza no DOM do KofJS) e
-agrupa os campos — fronteira semântica de formulário. Campos soltos
-perdem a semântica de submissão/acessibilidade (R1: intenção).
+**Why:** `Form` renders `<form>` (renders in the KofJS DOM) and
+groups the fields — a semantic form boundary. Loose fields
+lose the submission/accessibility semantics (R1: intent).
 
-## Widgets: id, class e disabled
+## Widgets: id, class and disabled
 
-**BAD — criar wrappers só para dar id/classe a um widget:**
+**BAD — creating wrappers only to give a widget an id/class:**
 ```kof
-// ❌ NÃO — View envolvendo o input só para "carregar" um id
+// ❌ NO — View wrapping the input only to "carry" an id
 var wrapper = View(campo)
 ```
 
-**GOOD — `setId`/`setClass`/`setDisabled` no próprio widget:**
+**GOOD — `setId`/`setClass`/`setDisabled` on the widget itself:**
 ```kof
-// ✅ IDIOMÁTICO — atributos são do widget (família compartilhada)
+// ✅ IDIOMATIC — attributes belong to the widget (shared family)
 var campo = Input("")
 campo.setId("nome")
 campo.setClass("destaque")
 campo.setDisabled(true)
 ```
 
-**Por quê:** id/class/disabled são atributos do elemento DOM; a família
-`widget_*` do kof.ui os expõe em qualquer widget (Label/Button/Input/View/
-Link/Image/Icon/Form/Column/Row). Envelopar para contornar é mecanismo,
-não intenção (R1).
+**Why:** id/class/disabled are attributes of the DOM element; the
+`widget_*` family of kof.ui exposes them on any widget (Label/Button/Input/View/
+Link/Image/Icon/Form/Column/Row). Wrapping to work around it is mechanism,
+not intent (R1).
 
-## Forms: onSubmit (handler de submissão)
+## Forms: onSubmit (submission handler)
 
-**BAD — botão avulso que chama a lógica (o form não tem dono da submissão):**
+**BAD — standalone button that calls the logic (the form has no owner of the submission):**
 ```kof
-// ❌ NÃO — submit solto num Button, sem Form
+// ❌ NO — submit loose on a Button, without a Form
 var enviar = Button("enviar", () -> salvar())
 ```
 
 **GOOD — `Form.onSubmit` + `submit()`:**
 ```kof
-// ✅ IDIOMÁTICO — o form é dono da submissão
+// ✅ IDIOMATIC — the form owns the submission
 var f = Form(listOf(nome, email))
 f.onSubmit(() -> salvar())
-f.submit()   // ou o usuário aperta Enter no browser
+f.submit()   // or the user presses Enter in the browser
 ```
 
-**Por quê:** `onSubmit` registra o handler no `<form>` (roda no evento
-submit, com `preventDefault` — sem recarregar a página); `submit()`
-submete programaticamente. A semântica de formulário fica no form (R1).
+**Why:** `onSubmit` registers the handler on the `<form>` (runs on the
+submit event, with `preventDefault` — without reloading the page); `submit()`
+submits programmatically. The form semantics stay in the form (R1).
 
-## Forms: texto multilinha (Textarea)
+## Forms: multiline text (Textarea)
 
-**BAD — Input com type=text para texto longo (sem quebras de linha):**
+**BAD — Input with type=text for long text (no line breaks):**
 ```kof
-// ❌ NÃO — input de linha única para descrição multilinha
+// ❌ NO — single-line input for a multiline description
 var obs = Input("")
 ```
 
 **GOOD — `Textarea(text)`:**
 ```kof
-// ✅ IDIOMÁTICO — widget de primeira classe para texto multilinha
+// ✅ IDIOMATIC — first-class widget for multiline text
 var obs = Textarea("descreva aqui")
 obs.setPlaceholder("máx. 500 caracteres")
 println(obs.text())
 ```
 
-**Por quê:** `Textarea` renderiza `<textarea>` (multilinha, redimensionável);
-`Input` é linha única. Usar o widget certo é intenção, não mecanismo (R1).
+**Why:** `Textarea` renders `<textarea>` (multiline, resizable);
+`Input` is single-line. Using the right widget is intent, not mechanism (R1).
 
-## Forms: escolha de opção (Select)
+## Forms: option choice (Select)
 
-**BAD — encadear Inputs/checkboxes para uma escolha única:**
+**BAD — chaining Inputs/checkboxes for a single choice:**
 ```kof
-// ❌ NÃO — 3 checkboxes para escolher 1 cor
+// ❌ NO — 3 checkboxes to choose 1 color
 var c1 = Input(""); c1.setType("checkbox")
 var c2 = Input(""); c2.setType("checkbox")
 ```
 
-**GOOD — `Select(opções)`:**
+**GOOD — `Select(options)`:**
 ```kof
-// ✅ IDIOMÁTICO — a lista É o widget
+// ✅ IDIOMATIC — the list IS the widget
 var cor = Select(listOf("vermelho", "verde", "azul"))
 cor.setSelected(1)
-println(cor.selected())   // índice da opção ativa
+println(cor.selected())   // index of the active option
 ```
 
-**Por quê:** `Select` renderiza `<select>`/`<option>` (escolha única de N);
-`setOptions` troca a lista, `selected`/`setSelected` leem/escrevem o índice.
-Representar o domínio (conjunto de opções) com a coleção da linguagem, não
-N widgets manuais (R3).
+**Why:** `Select` renders `<select>`/`<option>` (single choice out of N);
+`setOptions` swaps the list, `selected`/`setSelected` read/write the index.
+Representing the domain (set of options) with the language collection, not
+N manual widgets (R3).
 
-## Canvas: estado de desenho e texto (UI009)
+## Canvas: drawing and text state (UI009)
 
-**BAD — redesenhar sem preservar/limpar o estado do contexto:**
+**BAD — redrawing without preserving/clearing the context state:**
 ```kof
-// ❌ NÃO — alpha/transform vazam para os próximos desenhos
+// ❌ NO — alpha/transform leak into the next drawings
 c.setGlobalAlpha(0.3)
 c.fillText("rótulo", 10, 20)
-c.setFill(Palette.blue)   // ainda com alpha 0.3!
+c.setFill(Palette.blue)   // still with alpha 0.3!
 ```
 
-**GOOD — `save()`/`restore()` em volta do estado temporário:**
+**GOOD — `save()`/`restore()` around the temporary state:**
 ```kof
-// ✅ IDIOMÁTICO — o bloco salvo é descartado
+// ✅ IDIOMATIC — the saved block is discarded
 c.save()
 c.setGlobalAlpha(0.3)
 c.transform(1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
 c.fillText("rótulo", 10, 20)
 c.restore()
-var w = c.measureText("rótulo")   // Double — largura real do texto
+var w = c.measureText("rótulo")   // Double — real text width
 ```
 
-**Por quê:** `save`/`restore` empilham o estado do contexto (alpha, transform,
-cores) — sem eles, um ajuste vaza para todo o desenho seguinte.
-`measureText` devolve `Double` (largura em px) para layout de texto.
+**Why:** `save`/`restore` stack the context state (alpha, transform,
+colors) — without them, an adjustment leaks into all the following drawing.
+`measureText` returns a `Double` (width in px) for text layout.
 
-## Canvas: compor imagens (drawImage)
+## Canvas: composing images (drawImage)
 
 **GOOD — `drawImage(img, x, y)`:**
 ```kof
-// ✅ IDIOMÁTICO — o Image é o próprio elemento <img> do DOM
+// ✅ IDIOMATIC — the Image is the <img> element of the DOM itself
 var logo = Image("data:image/svg+xml,...")
 c.drawImage(logo, 5, 5)
 ```
 
-**Por quê:** `Image` já materializa um `<img>` no runtime; `drawImage` o
-compõe no bitmap do canvas sem round-trip por URL — a plataforma cuida do
-carregamento (R2).
+**Why:** `Image` already materializes an `<img>` at runtime; `drawImage` composes
+it into the canvas bitmap without a round-trip through a URL — the platform takes
+care of the loading (R2).
 
-## Listas de itens (Ul/Ol)
+## Item lists (Ul/Ol)
 
-**BAD — montar `<li>` na mão com Column + Labels:**
+**BAD — building `<li>` by hand with Column + Labels:**
 ```kof
-// ❌ NÃO — reimplementar a lista com widgets avulsos
+// ❌ NO — reimplementing the list with loose widgets
 var col = Column(listOf(Label("maçã"), Label("uva")))
 ```
 
-**GOOD — `Ul(itens)` / `Ol(itens)`:**
+**GOOD — `Ul(items)` / `Ol(items)`:**
 ```kof
-// ✅ IDIOMÁTICO — a coleção da linguagem VIRA a lista HTML
+// ✅ IDIOMATIC — the language collection BECOMES the HTML list
 var frutas = Ul(listOf("maçã", "uva"))
 frutas.setItems(listOf("manga"))
 var passos = Ol(listOf("primeiro", "segundo"))
 ```
 
-**Por quê:** `Ul`/`Ol` tomam `List<String>` e materializam `<ul>/<ol>` com
-um `<li>` por item — representar o domínio (lista ordenada/não-ordenada)
-com a coleção da linguagem, não N widgets manuais (R3).
+**Why:** `Ul`/`Ol` take a `List<String>` and materialize `<ul>/<ol>` with
+one `<li>` per item — representing the domain (ordered/unordered list)
+with the language collection, not N manual widgets (R3).
 
-## Tabelas de dados (Table)
+## Data tables (Table)
 
-**BAD — Column de Rows de Labels para dados tabulares:**
+**BAD — Column of Rows of Labels for tabular data:**
 ```kof
-// ❌ NÃO — grid manual
+// ❌ NO — manual grid
 var linha1 = Row(listOf(Label("mel"), Label("26")))
 ```
 
-**GOOD — `Table(cabeçalho, linhas)`:**
+**GOOD — `Table(header, rows)`:**
 ```kof
-// ✅ IDIOMÁTICO — a coleção aninhada VIRA a tabela
+// ✅ IDIOMATIC — the nested collection BECOMES the table
 var t = Table(listOf("nome", "idade"),
               listOf(listOf("mel", "26"), listOf("ana", "30")))
 t.setRows(listOf(listOf("bob", "41")))
 ```
 
-**Por quê:** `Table` toma `List<String>` (cabeçalho) + `List<List<String>>`
-(linhas) e materializa `<thead>/<tbody><tr><td>` — dados tabulares com a
-coleção da linguagem, não N widgets manuais (R3).
+**Why:** `Table` takes a `List<String>` (header) + `List<List<String>>`
+(rows) and materializes `<thead>/<tbody><tr><td>` — tabular data with the
+language collection, not N manual widgets (R3).
 
-## Agrupamento e mídia (Fieldset/Iframe/Video/Audio/Hr)
+## Grouping and media (Fieldset/Iframe/Video/Audio/Hr)
 
-**BAD — div com borda manual e Label de título para agrupar:**
+**BAD — div with a manual border and a title Label to group:**
 ```kof
-// ❌ NÃO — agrupamento fake
+// ❌ NO — fake grouping
 var g = Column(listOf(Label("credenciais"), user, pass))
 ```
 
-**GOOD — `Fieldset(children, legenda)`:**
+**GOOD — `Fieldset(children, legend)`:**
 ```kof
-// ✅ IDIOMÁTICO — o widget de agrupamento semântico
+// ✅ IDIOMATIC — the semantic grouping widget
 var fs = Fieldset(listOf(user, pass), "credenciais")
 ```
 
-**Por quê:** `Fieldset` materializa `<fieldset>` + `<legend>` — agrupamento
-semântico de formulário com título, não um div com borda inventada (R3).
+**Why:** `Fieldset` materializes `<fieldset>` + `<legend>` — semantic
+form grouping with a title, not an invented bordered div (R3).
 
-**Mídia e separadores:** `Iframe(url)` → `<iframe src>`, `Video(url)`/
-`Audio(url)` → `<video|audio controls src>`, `Hr()` → `<hr>` — cada um é
-um widget de primeira classe (com `.remove()`), não markup manual.
+**Media and separators:** `Iframe(url)` → `<iframe src>`, `Video(url)`/
+`Audio(url)` → `<video|audio controls src>`, `Hr()` → `<hr>` — each one is
+a first-class widget (with `.remove()`), not manual markup.
 
 ```kof
 var fr = Iframe("https://example.org")
@@ -357,28 +359,28 @@ var a = Audio("som.mp3")
 var h = Hr()
 ```
 
-## Eventos com payload (Event.key/value/x/y/target/relatedTarget)
+## Events with payload (Event.key/value/x/y/target/relatedTarget)
 
-**BAD — handler global sem payload, mutação manual:**
+**BAD — global handler without payload, manual mutation:**
 ```kof
-// ❌ NÃO — evento sem dados, estado global adivinhado
+// ❌ NO — event without data, guessed global state
 campo.on("keydown", () -> { processar("") })
 ```
 
-**GOOD — o handler lê o payload do DOM event real:**
+**GOOD — the handler reads the payload of the real DOM event:**
 ```kof
-// ✅ IDIOMÁTICO — o evento carrega tecla/valor/posição/alvo
+// ✅ IDIOMATIC — the event carries key/value/position/target
 campo.on("keydown", (e: Event) -> { campo.setPlaceholder("tecla: " + e.key()) })
 campo.on("input",   (e: Event) -> { filtro.set(e.value()) })
 campo.on("click",   (e: Event) -> { println(e.x()) })
-campo.on("click",   (e: Event) -> { println(e.target()) })        // id do nó origem
-campo.on("focus",   (e: Event) -> { println(e.relatedTarget()) }) // nó de onde veio
+campo.on("click",   (e: Event) -> { println(e.target()) })        // id of the origin node
+campo.on("focus",   (e: Event) -> { println(e.relatedTarget()) }) // node it came from
 ```
 
-**Por quê:** `Event.key()/value()/x()/y()/target()/relatedTarget()` leem o
-evento DOM real (KeyboardEvent.key, target.value, clientX/Y, target.id,
-relatedTarget.id) — o payload vem do browser, não de estado global manual
-(R3). `target()` retorna o **id** do nó que originou o evento (fallback
-`tagName` minúsculo quando o nó não tem `setId`; `""` fora do browser).
-`relatedTarget()` idem para o nó relacionado (foco/mouse). Funciona em
-qualquer widget DOM via `.on(type, handler)`.
+**Why:** `Event.key()/value()/x()/y()/target()/relatedTarget()` read the
+real DOM event (KeyboardEvent.key, target.value, clientX/Y, target.id,
+relatedTarget.id) — the payload comes from the browser, not from manual global
+state (R3). `target()` returns the **id** of the node that originated the event
+(fallback to the lowercase `tagName` when the node has no `setId`; `""` outside
+the browser). `relatedTarget()` likewise for the related node (focus/mouse).
+Works on any DOM widget via `.on(type, handler)`.

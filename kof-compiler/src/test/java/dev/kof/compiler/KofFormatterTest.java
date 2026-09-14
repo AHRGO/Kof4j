@@ -86,4 +86,15 @@ class KofFormatterTest {
         // código inválido → null (fallback token-based no CLI), nunca saída errada
         assertNull(KofFormatter.format("main() { ((( ", "Bad.kf"));
     }
+
+    @Test
+    void doWhileUsesBlockBodyBranch() {
+        // CodeQL contradictory-type-checks: havia DOIS `instanceof DoWhileStmt`
+        // no chain do formatStmt (o 2º, com formatStmt no corpo, inalcançável
+        // porque o 1º sempre casa antes). Removido o morto; resta o 1º, que
+        // formata o corpo via formatBody (bloco com chaves). Trava a saída.
+        String out = fmt("do { println(i) } while (i < 3)");
+        String expected = "main() {\n    do {\n        println(i)\n    }\n    while (i < 3)\n}\n";
+        assertEquals(expected, out, "do-while sai pelo ramo formatBody:\n" + out);
+    }
 }

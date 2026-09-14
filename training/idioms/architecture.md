@@ -1,35 +1,37 @@
+[English](architecture.md) | [Português](architecture.pt_BR.md)
+
 # Idioms — Architecture
 
 **Status:** available · **Introduced:** 0.0.4-alpha · **Updated:**  0.4.0-beta (Sep 2026)
 
 ## What it is
 
-A filosofia da linguagem aplicada a decisões de arquitetura.
+The language philosophy applied to architecture decisions.
 
-## Princípio central
+## Central principle
 
-> Represente o domínio, não a implementação acidental.
+> Represent the domain, not the accidental implementation.
 
-## 1. Complexidade pertence à plataforma
+## 1. Complexity belongs to the platform
 
-Se a complexidade pode ser absorvida pelo compilador, runtime ou stdlib,
-ela deve desaparecer do código do usuário.
+If the complexity can be absorbed by the compiler, runtime or stdlib,
+it must disappear from the user's code.
 
-## BAD — infraestrutura manual
+## BAD — manual infrastructure
 
 ```kof
 class JsonParser {
-    // parser JSON manual
+    // manual JSON parser
 }
 class Db {
-    // conexão manual
+    // manual connection
 }
 class Http {
-    // servidor manual
+    // manual server
 }
 ```
 
-## GOOD — plataforma (0.3.22-beta)
+## GOOD — platform (0.3.22-beta)
 
 ```kof
 var j = json.encode(user)
@@ -37,17 +39,17 @@ var dados = readFile("config.json")
 var html = http.get("https://example.com")   // kof.http JVM+JS (Java HttpClient)
 let x = 5                                    // KofScript top-level let → KofScriptGlobals
 // kof serve: handle(method, path, body) + web.app() + ws/sse + cache
-// kof c: C subset nativo-only para hot paths
+// kof c: native-only C subset for hot paths
 ```
 
 ## WHY
 
-JSON, arquivos e HTTP já existem na plataforma. Reimplementá-los à mão
-adiciona complexidade que o programador teria que manter.
+JSON, files and HTTP already exist in the platform. Reimplementing them by hand
+adds complexity that the programmer would have to maintain.
 
-## 2. Camadas sem necessidade
+## 2. Unnecessary layers
 
-## BAD — camadas de cerimônia
+## BAD — ceremony layers
 
 ```kof
 class UserController {
@@ -75,7 +77,7 @@ class UserRepository {
 }
 ```
 
-## GOOD — o que o problema exige
+## GOOD — what the problem requires
 
 ```kof
 String listarUsers() {
@@ -85,11 +87,11 @@ String listarUsers() {
 
 ## WHY
 
-Controller/Service/Repository existe em Java por convenções de framework
-(Spring, injeção, transações). Kof não possui essas convenções. Adicione uma
-camada somente quando ela resolve um problema real.
+Controller/Service/Repository exists in Java because of framework conventions
+(Spring, injection, transactions). Kof does not have those conventions. Add a
+layer only when it solves a real problem.
 
-## 3. Dados → record, comportamento → classe, lógica → função
+## 3. Data → record, behavior → class, logic → function
 
 ```kof
 record Product(String id, String name, Double price)
@@ -113,19 +115,18 @@ Double total(Cart cart) {
 }
 ```
 
-## 4. Módulos (0.3.22-beta)
+## 4. Modules (0.3.22-beta)
 
-`package`/`import` existem. `import a.b.C` file-specific fixado 27/08 — projetos grandes com `a/b/C.kf` agora compilam corretamente (CompilerDriver). `import a.b.*` para diretório. Targets: `jvm`, `native`, `native.risc`/`native.arm` (placeholder), `js`, `kofc`, `KofScript` (`.ks` com `let`).
+`package`/`import` exist. `import a.b.C` file-specific fixed 27/08 — large projects with `a/b/C.kf` now compile correctly (CompilerDriver). `import a.b.*` for a directory. Targets: `jvm`, `native`, `native.risc`/`native.arm` (placeholder), `js`, `kofc`, `KofScript` (`.ks` with `let`).
 
-Para programas pequenos, um único arquivo `.kf` é suficiente — o `main()` no topo.
+For small programs, a single `.kf` file is enough — the `main()` at the top.
 
-## 5. Construções de intenção (0.3.22-beta)
+## 5. Intent constructs (0.3.22-beta)
 
-O compilador reduz construções de intenção a código normal (mesmo padrão de
-`entity`/`test "nome" {}`): a sintaxe expressa *o quê*, o lowering decide *o
-como*.
+The compiler reduces intent constructs to normal code (the same pattern as
+`entity`/`test "nome" {}`): the syntax expresses *what*, the lowering decides *how*.
 
-Query DSL tipada (nível 3 do `kof.orm`, 01/09):
+Typed query DSL (level 3 of `kof.orm`, 01/09):
 
 ```kof
 entity User { id: Long generated; name: String; age: Int }
@@ -134,24 +135,24 @@ var adultos = User.query(db) { where age > 18 }   // → kof_orm_where_op
 var todos   = User.query(db) {}                    // → kof_orm_all
 ```
 
-- O campo do `where` é **validado em compile-time** (campo inexistente →
-  `ORM003`; entidade desconhecida → `ORM002`; target sem ORM → `ORM001`).
-- **Não** é uma mini-linguagem: é açúcar sobre `kof_orm_*` existentes.
-- `orderBy`/múltiplos `where` pendentes (evolução).
+- The field of `where` is **validated at compile-time** (nonexistent field →
+  `ORM003`; unknown entity → `ORM002`; target without ORM → `ORM001`).
+- It is **not** a mini-language: it is sugar over the existing `kof_orm_*`.
+- `orderBy`/multiple `where` pending (evolution).
 
 Lifecycle (01/09):
 
 ```kof
 application {
-    onStart    { println("starting") }    // → kof_app_on_start (prólogo do main)
-    onShutdown { println("stopping") }    // → kof_app_on_shutdown (epílogo do main)
+    onStart    { println("starting") }    // → kof_app_on_start (prologue of main)
+    onShutdown { println("stopping") }    // → kof_app_on_shutdown (epilogue of main)
 }
 ```
 
-- Desugar para funções sintetizadas — **zero container, zero reflection**
-  (mesmo padrão do `test "nome" {}`).
+- Desugars to synthesized functions — **zero container, zero reflection**
+  (the same pattern as `test "nome" {}`).
 
-Spans W3C com timing (01/09):
+W3C spans with timing (01/09):
 
 ```kof
 val h = observability.spanStart("op")     // handle traceId+spanId (48 hex)
@@ -161,11 +162,11 @@ val j = observability.spanEnd(h)          // JSON {traceId, spanId, durationMicr
 
 ## When not to use
 
-- Não crie "manager", "helper", "context", "handler" genéricos sem responsabilidade clara.
-- Não espelhe a estrutura de um framework Java (beans, autowired, config).
-- Não planeje microsserviços antes de ter um problema.
+- Do not create generic "manager", "helper", "context", "handler" without a clear responsibility.
+- Do not mirror the structure of a Java framework (beans, autowired, config).
+- Do not plan microservices before having a problem.
 
-## Anti-patterns relacionados
+## Related anti-patterns
 
 - `unnecessary-abstraction.md`
 - `java-like-code.md`

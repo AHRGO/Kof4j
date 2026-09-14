@@ -1,11 +1,13 @@
+[English](control-flow.md) | [Português](control-flow.pt_BR.md)
+
 # Idioms — Control Flow
 
 **Status:** available · **Introduced:** 0.0.4-alpha · **Updated:**  0.4.0-beta (Sep 2026)
 
 ## What it is
 
-Controle de fluxo sem cerimônia: `if`/`else`, `while`, `do-while`, `for`,
-`for-in`, `switch`, `break`/`continue` e **if como expressão**.
+Control flow without ceremony: `if`/`else`, `while`, `do-while`, `for`,
+`for-in`, `switch`, `break`/`continue` and **if as an expression**.
 
 ## if / else
 
@@ -17,15 +19,15 @@ if (x > 5) {
 }
 ```
 
-## if como expressão
+## if as an expression
 
 ```kof
 var status = if (ativo) "online" else "offline"
 ```
 
-O if-expr produz um valor; os dois branches devem produzir valores compatíveis.
+The if-expr produces a value; both branches must produce compatible values.
 
-## BAD — if-expr ignorado
+## BAD — ignored if-expr
 
 ```kof
 var status = ""
@@ -44,8 +46,8 @@ var status = if (ativo) "online" else "offline"
 
 ## WHY
 
-Declarar e depois atribuir em branches é mutação desnecessária.
-A expressão-if expressa a intenção e elimina o estado intermediário.
+Declaring and then assigning in branches is unnecessary mutation.
+The if-expression expresses the intent and eliminates the intermediate state.
 
 ## Loops
 
@@ -69,7 +71,7 @@ do {
 } while (falso())
 ```
 
-## for-in (coleções e arrays)
+## for-in (collections and arrays)
 
 ```kof
 var items = listOf("a", "b", "c")
@@ -84,7 +86,7 @@ for (var n in nums) {
 }
 ```
 
-## switch (pattern matching — desde 0.2.6-beta)
+## switch (pattern matching — since 0.2.6-beta)
 
 ```kof
 switch (x) {
@@ -98,7 +100,7 @@ switch (x) {
         println("outro")
 }
 
-// pattern matching com type + record destructuring
+// pattern matching with type + record destructuring
 switch (obj) {
     case String s:
         println(s)
@@ -113,21 +115,21 @@ switch (obj) {
 
 ## When not to use
 
-- Substituir um `for-in` por `for` com índice manual quando a ordem não importa.
-- `switch` para dois casos — `if/else` é mais direto.
+- Replacing a `for-in` with a `for` with a manual index when order does not matter.
+- `switch` for two cases — `if/else` is more direct.
 
-## switch: `break` é opcional (sem fallthrough — verificado 02/09)
+## switch: `break` is optional (no fallthrough — verified 02/09)
 
-Cada `case` **termina sozinho**: o compilador salta para o fim do `switch` ao
-concluir o corpo — não há fallthrough (nem o bug clássico de C/Java de
-esquecer o `break`). O `break` é **aceito mas não obrigatório**; escrevê-lo é
-opcional (alguns preferem explícito por clareza).
+Each `case` **terminates on its own**: the compiler jumps to the end of the
+`switch` when it finishes the body — there is no fallthrough (nor the classic
+C/Java bug of forgetting the `break`). The `break` is **accepted but not
+required**; writing it is optional (some prefer it explicit for clarity).
 
 ```kof
 switch (x) {
     case 1:
-        println("um")      // sem break — ok, não cai no próximo caso
-        break              // também ok (explícito)
+        println("um")      // no break — ok, does not fall into the next case
+        break              // also ok (explicit)
     case 2:
         println("dois")
     default:
@@ -135,19 +137,19 @@ switch (x) {
 }
 ```
 
-> **Nota (02/09):** documentações anteriores afirmavam que `break` era
-> obrigatório — verificado no compilador que é **opcional** (auto-termina).
-> `break`/`continue` continuam obrigatórios em loops (para sair/pular).
+> **Note (02/09):** previous documentation stated that `break` was
+> required — verified in the compiler that it is **optional** (auto-terminates).
+> `break`/`continue` remain required in loops (to exit/skip).
 
-## switch como expressão (SYN001 — `case ... ->`; implementado, verificado no compilador)
+## switch as an expression (SYN001 — `case ... ->`; implemented, verified in the compiler)
 
-Quando o `switch` **produz um valor**, use a forma expressão (`->`), não a
-statement (`:`). Cada caso é uma única expressão; não há `break`, não há
-escopo de bloco, e o `default` é obrigatório (ou exaustividade de enum —
-senão `SEM032`). É o mesmo dispositivo do `if`-expressão, elevado a N casos.
+When the `switch` **produces a value**, use the expression form (`->`), not the
+statement (`:`). Each case is a single expression; there is no `break`, there is
+no block scope, and `default` is required (or enum exhaustiveness —
+otherwise `SEM032`). It is the same device as the `if`-expression, raised to N cases.
 
 ```kof
-// ❌ BAD — switch statement + temporário + branches atribuindo
+// ❌ BAD — switch statement + temporary + branches assigning
 var label = ""
 switch (op) {
     case "GET":  label = "buscar"
@@ -155,21 +157,21 @@ switch (op) {
     default:     label = "desconhecido"
 }
 
-// ✅ GOOD — switch expressão: o valor É o switch
+// ✅ GOOD — switch expression: the value IS the switch
 var label = switch (op) {
     case "GET"  -> "buscar"
     case "POST" -> "criar"
     default    -> "desconhecido"
 }
 
-// pattern matching + destructuring como expressão
+// pattern matching + destructuring as an expression
 var desc = switch (obj) {
     case String s            -> "str:" + s
     case Point(var x, var y) -> x + "," + y
     default                  -> "outro"
 }
 
-// aninhado / em return — funciona em qualquer posição de expressão
+// nested / in return — works in any expression position
 String nome(Int n) = switch (n) {
     case 0 -> "zero"
     case 1 -> "um"
@@ -177,14 +179,14 @@ String nome(Int n) = switch (n) {
 }
 ```
 
-**Quando usar qual:** o `switch`-expressão (`->`) quando o resultado é um
-valor; o `switch`-statement (`:`) quando cada caso executa efeitos colaterais
-(println, chamadas). Os dois coexistem — a escolha é por token (`->` vs `:`).
+**When to use which:** the `switch`-expression (`->`) when the result is a
+value; the `switch`-statement (`:`) when each case performs side effects
+(println, calls). The two coexist — the choice is by token (`->` vs `:`).
 
-> **Verificado 03/09 (SYN001):** JVM, Native (x86_64/riscv64/aarch64) e JS.
-> No JS é renderizado como ternários aninhados; em String/enum a igualdade é
-> por conteúdo (nunca referência).
+> **Verified 03/09 (SYN001):** JVM, Native (x86_64/riscv64/aarch64) and JS.
+> On JS it is rendered as nested ternaries; for String/enum equality is
+> by content (never reference).
 
-## Anti-patterns relacionados
+## Related anti-patterns
 
-- `premature-optimization.md` — loops manuais sem necessidade
+- `premature-optimization.md` — manual loops when unnecessary

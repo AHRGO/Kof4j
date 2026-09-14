@@ -1,8 +1,11 @@
+[English](exceptions.md) | [Português](exceptions.pt_BR.md)
+
 # Kof Exceptions Reference
 
-**Exceptions são Strings** — `throw "mensagem"` / `catch (String e)`. Não há
-objeto de exceção nem `throw 42`/`catch (Int e)` (geram bytecode inválido no
-JVM — verificado 02/09). Para ausência como valor, use `String?` (não erro).
+**Exceptions are Strings** — `throw "message"` / `catch (String e)`. There is no
+exception object and no `throw 42`/`catch (Int e)` (they generate invalid
+bytecode on the JVM — verified 02/09). For absence as a value, use `String?`
+(not an error).
 
 ## Throw
 
@@ -43,10 +46,10 @@ try {
 }
 ```
 
-## Ausência vs erro
+## Absence vs error
 
-- **Ausência** (o dado pode não existir) → `String?` + `if (x != null)`.
-- **Erro real** (a ausência é um defeito) → `throw "not found: " + id`.
+- **Absence** (the data may not exist) → `String?` + `if (x != null)`.
+- **Real error** (the absence is a defect) → `throw "not found: " + id`.
 
 ```kof
 String? find(String key) { if (found) return value; return null }
@@ -75,6 +78,6 @@ String findOrThrow(String key) { if (found) return value; throw "not found: " + 
 ## Limitations (0.3.22-beta)
 
 - No stack traces in Native
-- Exceptions are **Strings** — `throw 42`/`catch (Int e)` geram bytecode
-  inválido no JVM (02/09); use `String?` para ausência como valor
+- Exceptions are **Strings** — `throw 42`/`catch (Int e)` generate invalid
+  bytecode on the JVM (02/09); use `String?` for absence as a value
 - Native exceptions propagate via unwinding (not fatal); `finally` always runs

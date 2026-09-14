@@ -294,10 +294,6 @@ public final class KofFormatter {
                 out.append(pad).append("}");
             }
             out.append("\n");
-        } else if (st instanceof DoWhileStmt dws) {
-            out.append(pad).append("do ");
-            formatStmt(dws.body(), out, indent);
-            out.append(pad).append("while (").append(formatExpr(dws.condition())).append(")\n");
         } else {
             out.append(pad).append(st.toString()).append("\n");
         }

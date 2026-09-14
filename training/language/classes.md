@@ -1,22 +1,24 @@
+[English](classes.md) | [Português](classes.pt_BR.md)
+
 # Kof Classes
 
 **Version:** 0.4.0-beta (Sep 2026)
 
-## Basic Class — dois modelos (verificado 02/09)
+## Basic Class — two models (verified 02/09)
 
-> `class User(String name, Int age)` é **alias de `record`** (imutável,
-> `extends java.lang.Record` no JVM; accessors `u.name()`; escrita `u.name =
-> "x"` NÃO). Para **estado mutável**, use campos + `constructor(...)` (campos
-> públicos, escrita direta).
+> `class User(String name, Int age)` is an **alias for `record`** (immutable,
+> `extends java.lang.Record` on the JVM; accessors `u.name()`; writing `u.name =
+> "x"` does NOT work). For **mutable state**, use fields + `constructor(...)`
+> (public fields, direct write).
 
 ```kof
-// Imutável (record-style): class X(...) == record X(...)
+// Immutable (record-style): class X(...) == record X(...)
 class User(String name, Int age) { }
 var u = User("Mel", 30)
-println(u.name)      // leitura ok (accessor)
-// u.age = 31         // ERRO de compilação SEM038: record é imutável
+println(u.name)      // read ok (accessor)
+// u.age = 31         // COMPILE error SEM038: record is immutable
 
-// Mutável — forma de classe real
+// Mutable — real class form
 class User2 {
     String name
     Int age
@@ -26,7 +28,7 @@ class User2 {
     }
 }
 var u2 = User2("Mel", 30)
-u2.age = 31           // ok — campo público mutável
+u2.age = 31           // ok — mutable public field
 ```
 
 ## Records (Immutable Data)

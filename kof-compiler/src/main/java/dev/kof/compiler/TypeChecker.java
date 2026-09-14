@@ -184,7 +184,8 @@ public final class TypeChecker {
             return false;
         }
         if (to instanceof Type.NullableType tn) {
-            if (from instanceof Type.NullableType) return isAssignable(((Type.NullableType)from).inner(), tn.inner());
+            // from nunca é NullableType aqui: o branch acima sempre retorna
+            // nesse caso (CodeQL contradictory-type-checks — ramo morto removido).
             return isAssignable(from, tn.inner());
         }
         if (from.equals(to)) return true;

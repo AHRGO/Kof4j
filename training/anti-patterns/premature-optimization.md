@@ -1,18 +1,20 @@
+[English](premature-optimization.md) | [Português](premature-optimization.pt_BR.md)
+
 # Anti-pattern — Premature Optimization
 
 ## Name
 
-Otimizar antes de medir, trocando simplicidade por micro-performance.
+Optimizing before measuring, trading simplicity for micro-performance.
 
 ## Problem
 
-Implementar arrays manuais, caching manual, estruturas de dados complexas ou
-truques de baixo nível — quando o programa ainda nem funciona direito.
+Implementing manual arrays, manual caching, complex data structures or
+low-level tricks — when the program does not even work properly yet.
 
 ## Bad example
 
 ```kof
-// BAD: micro-otimização sem necessidade
+// BAD: micro-optimization without need
 var buffer = new Char[1024]
 var len = 0
 for (var i = 0; i < input.length; i = i + 1) {
@@ -31,7 +33,7 @@ for (var i = 0; i < input.length; i = i + 1) {
 }
 ```
 
-Ou, quando a semântica permite:
+Or, when the semantics allow it:
 
 ```kof
 var result = input
@@ -39,23 +41,23 @@ var result = input
 
 ## Why it is bad
 
-O custo real raramente está onde o programador adivinha. A versão simples é
-mais legível, mais correta e mais fácil de evoluir. A versão otimizada só é
-justificável com medição.
+The real cost is rarely where the programmer guesses. The simple version is
+more readable, more correct and easier to evolve. The optimized version is only
+justifiable with measurement.
 
-## Regra
+## Rule
 
-1. Escreva a versão idiomática.
-2. Meça (se houver requisito de performance).
-3. Otimize apenas o ponto medido, com comentário explicando por quê.
+1. Write the idiomatic version.
+2. Measure (if there is a performance requirement).
+3. Optimize only the measured point, with a comment explaining why.
 
-## Performance real conhecida (medida 02 Sep 2026)
+## Known real performance (measured 02 Sep 2026)
 
-- Native: free-list `kof_free_head` first-fit thread-safe (lock futex) + `kof_gc_collect` mark-sweep conservador (27/08). Auto-GC desligado — memória só é devolvida no `munmap` fallback; GC mark-sweep automático pendente. `kof_free` push sem syscall. GC ainda não é completo — programas muito longos devem evitar vazamento.
-- Native strings: UTF-8 bytes; concatenação aloca nova string.
+- Native: free-list `kof_free_head` first-fit thread-safe (futex lock) + `kof_gc_collect` conservative mark-sweep (27/08). Auto-GC off — memory is only returned in the `munmap` fallback; automatic mark-sweep GC pending. `kof_free` push without a syscall. GC is not complete yet — very long programs should avoid leaking.
+- Native strings: UTF-8 bytes; concatenation allocates a new string.
 - JVM: ArrayList, String, GC, virtual threads.
 - JS: GraalJS ES Modules; `kof.http` via Java HttpClient interop.
 
 ## Exceptions
 
-- Algoritmos cuja complexidade é do domínio (ex.: ordenação, busca indexada).
+- Algorithms whose complexity is part of the domain (e.g.: sorting, indexed search).

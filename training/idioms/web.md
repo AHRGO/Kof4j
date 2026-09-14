@@ -1,17 +1,19 @@
+[English](web.md) | [Português](web.pt_BR.md)
+
 # Idioms — Web (kof.web)
 
 **Status:** available (JVM) · **Introduced:** 0.2.6-beta · **Updated:** 0.3.0-beta
 
 ## What it is
 
-`web.app()` cria a aplicação; cada `app.get/post/put/patch/delete(path) { … }`
-registra uma rota. O **retorno do handler é o contrato da resposta**:
+`web.app()` creates the application; each `app.get/post/put/patch/delete(path) { … }`
+registers a route. The **handler's return is the response contract**:
 
-- `return "texto"` → `200 OK` com o corpo (`String`).
-- `return null` → `404 Not Found` (ausência documentada, não erro).
-- `status(código)` / `headerSet(...)` antes do return → cabeçalhos + código.
+- `return "texto"` → `200 OK` with the body (`String`).
+- `return null` → `404 Not Found` (documented absence, not an error).
+- `status(code)` / `headerSet(...)` before the return → headers + code.
 
-## GOOD — handler com presença/ausência
+## GOOD — handler with presence/absence
 
 ```kof
 main() {
@@ -30,28 +32,28 @@ main() {
 }
 ```
 
-A forma idiomática `if (cond) { return valor } return null` funciona em qualquer
-ordem de pernas (bug 53, GitHub #28 — corrigido 07/09: o type do handler agora
-é inferido de TODOS os returns do corpo, não só do topo).
+The idiomatic form `if (cond) { return valor } return null` works in any
+order of branches (bug 53, GitHub #28 — fixed 07/09: the handler type is now
+inferred from ALL the body's returns, not just the top).
 
-## Quando usar
+## When to use
 
-- Rota REST/HTTP com o runtime `kof.web` (JVM).
-- Ausência de recurso → `return null` (404), não `throw`.
+- REST/HTTP route with the `kof.web` runtime (JVM).
+- Resource absence → `return null` (404), not `throw`.
 
-## Quando NÃO usar
+## When NOT to use
 
-- Erro real do handler → `throw "mensagem"` (o runtime vira 500 com o
-  diagnóstico, R6).
-- Resposta não-200/404 (ex.: 301, 401) → `status(código)` + return.
+- A real handler error → `throw "mensagem"` (the runtime turns it into a 500 with the
+  diagnostic, R6).
+- A non-200/404 response (e.g. 301, 401) → `status(code)` + return.
 
-## Notas
+## Notes
 
-- `app.listen` aceita SÓ Int (`app.listen(8080)` — #102.2 13/09: String
-  virava VerifyError em runtime; agora é SEM025 no `kof check`).
+- `app.listen` accepts ONLY Int (`app.listen(8080)` — #102.2 13/09: a String
+  turned into a VerifyError at runtime; now it is SEM025 in `kof check`).
 
-- `app.delete(path) { … }` é uma rota (verb HTTP), não `File.delete()` —
-  o nome colidido era o bug 54 (GitHub #29), corrigido 07/09 (guarda de
-  aridade no `KofIo`).
-- Middlewares (`app.use { … }`) seguem o MESMO contrato: `return null`
-  prossegue para o handler; `return "corpo"` responde e encerra (short-circuit).
+- `app.delete(path) { … }` is a route (HTTP verb), not `File.delete()` —
+  the collided name was bug 54 (GitHub #29), fixed 07/09 (arity guard in
+  `KofIo`).
+- Middlewares (`app.use { … }`) follow the SAME contract: `return null`
+  proceeds to the handler; `return "corpo"` responds and ends (short-circuit).
