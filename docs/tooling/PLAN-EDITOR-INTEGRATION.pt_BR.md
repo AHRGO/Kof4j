@@ -1,8 +1,8 @@
-[English](plan-editor-integration.md) | [Português](plan-editor-integration.pt_BR.md)
+[English](PLAN-EDITOR-INTEGRATION.md) | [Português](PLAN-EDITOR-INTEGRATION.pt_BR.md)
 
 # PLAN — Editor Integration (EDI001)
 
-> **Status:** `EM CURSO` (degraus 1-12 feitos; IntelliJ: conteúdo honesto
+> **Status:** `CONCLUÍDO (13/09)` (degraus 0-13 implementados e provados; movido para docs/tooling/PLAN-EDITOR-INTEGRATION.md) · **Gap:** `EDI001` · **Criado:** 07/09/2026
 > instalado 13/09 — filetype XML + External Tools + README LSP4IJ via
 > `KofEditorContent.intellij`, `EditorIntegrationTest` 17/17; plugin oficial
 > Gradle/Platform segue na issue #1 + degrau 13 gate final) · **Gap:** `EDI001` · **Criado:** 07/09/2026

@@ -16,7 +16,7 @@
 
 O plano S10 lista `randomBytes(n)` (retorna bytes) e `randomChoice(List)`
 (retorna elemento) no namespace `random`
-(`plan-stdlib-expansion.md:45`). As duas exigem que uma função **stdlib**
+(`docs/stdlib/PLAN-STDLIB-EXPANSION.md:45`). As duas exigem que uma função **stdlib**
 retorne um tipo composto pela camada de dispatch (`KofStd.StdCall` →
 `KofCall` → runtime dos 5 alvos). Hoje **nenhuma** função stdlib retorna
 Array/objeto — o vocabulário da camada é `Int/Bool/String/Void`:
