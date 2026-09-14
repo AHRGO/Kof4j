@@ -1,14 +1,16 @@
+[English](LSP.md) | [Português](LSP.pt_BR.md)
+
 # Kof Language Server
 
-`kof lsp` é o Language Server oficial do Kof, distribuído com a CLI.
+`kof lsp` is the official Kof Language Server, distributed with the CLI.
 
 ---
 
-## Arquitetura
+## Architecture
 
 ```text
 Editor
-   │  (LSP sobre stdio)
+   │  (LSP over stdio)
    ▼
 kof lsp
    │
@@ -21,58 +23,58 @@ Kof Compiler Frontend
    └── Diagnostics
 ```
 
-O servidor não possui parser próprio. Cada documento aberto é compilado com
-o `CompilerDriver` real (pipeline Lexer → Parser → Análise Semântica) e os
-diagnósticos produzidos são publicados ao editor via
-`textDocument/publishDiagnostics`, com os mesmos códigos (ex.: `PARSE041`,
-`JSN001`) e mensagens que `kof check`/`kof build` reportam.
+The server has no parser of its own. Each open document is compiled with the
+real `CompilerDriver` (pipeline Lexer → Parser → Semantic Analysis) and the
+diagnostics produced are published to the editor via
+`textDocument/publishDiagnostics`, with the same codes (e.g.: `PARSE041`,
+`JSN001`) and messages that `kof check`/`kof build` report.
 
 ---
 
-## Protocolo
+## Protocol
 
-- Transporte: stdio, framing `Content-Length`.
-- Mensagens: JSON-RPC 2.0.
-- Sync de documentos: completa (`change: 1`).
+- Transport: stdio, `Content-Length` framing.
+- Messages: JSON-RPC 2.0.
+- Document sync: full (`change: 1`).
 
-### Mensagens suportadas
+### Supported messages
 
-| Mensagem | Comportamento |
+| Message | Behavior |
 |----------|---------------|
-| `initialize` | Capacidades: textDocumentSync (full), serverInfo `kof-lsp` |
+| `initialize` | Capabilities: textDocumentSync (full), serverInfo `kof-lsp` |
 | `initialized` | no-op |
-| `textDocument/didOpen` | compila e publica diagnostics |
-| `textDocument/didChange` | recompila e publica diagnostics |
-| `shutdown` | responde `null` |
-| `exit` | encerra o processo |
+| `textDocument/didOpen` | compiles and publishes diagnostics |
+| `textDocument/didChange` | recompiles and publishes diagnostics |
+| `shutdown` | responds `null` |
+| `exit` | terminates the process |
 
-### Diagnósticos
+### Diagnostics
 
-Cada `Diagnostic` do compilador é mapeado para o formato LSP:
+Each compiler `Diagnostic` is mapped to the LSP format:
 
-- `line`/`column` (1-based) → posição LSP (0-based);
-- severidade ERROR → 1, demais → 2;
-- `source: "kof"`, `code` preservado;
-- mensagem igual à do compilador.
+- `line`/`column` (1-based) → LSP position (0-based);
+- ERROR severity → 1, others → 2;
+- `source: "kof"`, `code` preserved;
+- message same as the compiler's.
 
 ---
 
-## Uso
+## Usage
 
 ```bash
 kof lsp
 ```
 
-O servidor lê de `stdin` e escreve em `stdout` — integra-se a qualquer
-cliente LSP (`cmd: ["kof", "lsp"]`).
+The server reads from `stdin` and writes to `stdout` — it integrates with any
+LSP client (`cmd: ["kof", "lsp"]`).
 
 ---
 
-## Limitações atuais (Alpha)
+## Current limitations (Alpha)
 
-- Sem autocomplete, hover ou go-to-definition (planejado);
-- sync completa de documentos (incremental planejado);
-- sem formatação via LSP (o formatter `kof fmt` é planejado separadamente).
+- No autocomplete, hover or go-to-definition (planned);
+- full document sync (incremental planned);
+- no formatting via LSP (the `kof fmt` formatter is planned separately).
 
-O caminho de evolução é sempre o mesmo: **novas capacidades do LSP
-alimentam-se do frontend oficial**, nunca de um parser paralelo.
+The evolution path is always the same: **new LSP capabilities feed on the
+official frontend**, never on a parallel parser.

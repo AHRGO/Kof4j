@@ -1,63 +1,65 @@
-# Stdlib por alcançabilidade (tree-shaking)
+[English](stdlib-loading.md) | [Português](stdlib-loading.pt_BR.md)
 
-**Status:** implementado 12/09/2026 (`beta-0.4.0`, issue #97) · **Última
-atualização:** 13/09/2026
+# Stdlib by reachability (tree-shaking)
 
-> O desenvolvedor declara o que pretende utilizar; o compilador inclui
-> **somente** o que for realmente necessário para executar o programa. Nada
-> de microgerenciamento de dependências, nada de `--include=json.parser`,
-> nada de lista manual para evitar bloat.
+**Status:** implemented 12/09/2026 (`beta-0.4.0`, issue #97) · **Last
+updated:** 13/09/2026
 
-## Como funciona (por target)
+> The developer declares what they intend to use; the compiler includes
+> **only** what is really necessary to run the program. No
+> micromanagement of dependencies, no `--include=json.parser`,
+> no manual list to avoid bloat.
 
-| Target | Mecanismo | Granularidade | Sementes |
+## How it works (per target)
+
+| Target | Mechanism | Granularity | Seeds |
 |---|---|---|---|
-| Native x86_64 | poda por alcançabilidade sobre o texto do programa + fallback keep-all | 113 fatias (`RuntimeSlices`) | tokens `kof_*` no `.s` do programa |
-| Native riscv64/aarch64 | mesma poda (port `RiscvSlices`, 48 peças) + `ld --gc-sections` | peça + seção por função | idem (vocabulário completo incl. símbolos sem prefixo `kof_`) |
-| JS | poda por alcançabilidade ligada no writer | unidade de topo (`JsRuntimeSlices`, 17 blocos) | `runtimeImports`/`ioRuntimeImports` que o `JsBackend` já acumula |
+| Native x86_64 | reachability pruning over the program text + keep-all fallback | 113 slices (`RuntimeSlices`) | `kof_*` tokens in the program's `.s` |
+| Native riscv64/aarch64 | same pruning (`RiscvSlices` port, 48 pieces) + `ld --gc-sections` | piece + section per function | idem (full vocabulary incl. symbols without the `kof_` prefix) |
+| JS | reachability pruning enabled in the writer | top-level unit (`JsRuntimeSlices`, 17 blocks) | `runtimeImports`/`ioRuntimeImports` that `JsBackend` already accumulates |
 
-**Propriedades (todas travadas por teste):**
+**Properties (all locked by test):**
 
-- Fallback conservador: keep-all → byte-idêntico ao pré-poda; exceção no
-  mapa → runtime completo + aviso (nunca link quebrado silencioso).
-- Determinístico: mesma entrada → mesmo conjunto → mesma ordem → mesmo
-  artefato (sementes em `TreeSet`, emissão na ordem do inventário).
-- Multi-módulo JS = **união** dos fechamentos + reescrita do runtime
-  compartilhado (nunca "primeiro módulo vence"); cabeçalho observável
+- Conservative fallback: keep-all → byte-identical to pre-pruning; exception in
+  the map → full runtime + warning (never a silent broken link).
+- Deterministic: same input → same set → same order → same
+  artifact (seeds in `TreeSet`, emission in inventory order).
+- Multi-module JS = **union** of the closures + rewrite of the shared
+  runtime (never "first module wins"); observable header
   `// kof:seeds`, `// kof:units N/600`, `// kof:fallback <bloco>: <motivo>`.
-- Falso-negativo de call site real é impossível (seed por texto erra só
-  para MAIS — binário maior, link válido).
+- False negative of a real call site is impossible (text seed errs only
+  toward MORE — bigger binary, valid link).
 
-## Números (hello world — travados no `ArtifactSizeTest`)
+## Numbers (hello world — locked in `ArtifactSizeTest`)
 
-| Alvo | Antes | Depois | Queda |
+| Target | Before | After | Drop |
 |---|---|---|---|
 | x86_64 (bytes / syms) | 138.928 B / 627 | **32.520 B / 37** | −77% / −94% |
-| riscv64 (bytes / syms) | 144.000 B / 258 | **133.288 B / 18** | −82% syms (bytes caem pouco: `.bss` do heap bump ~260 KB é fixo sem mark-sweep) |
-| aarch64 (bytes / syms) | — / — | **133.112 B / 18** | baseline travado pela 1ª vez |
+| riscv64 (bytes / syms) | 144.000 B / 258 | **133.288 B / 18** | −82% syms (bytes drop little: the `.bss` of the bump heap ~260 KB is fixed without mark-sweep) |
+| aarch64 (bytes / syms) | — / — | **133.112 B / 18** | baseline locked for the 1st time |
 | JS (runtime) | 177.412 B | **6.873 B** | −96,1% |
 
-Tolerância unilateral +5% só para inchaço — encolher é a meta; sabotagem do
-baseline → FAIL. Gate: `ArtifactSizeTest` (tamanhos) + testes de ausência
-por família (`nativeFamilyAbsenceAfterPrune`, `riscvFamilyAbsenceAfterPrune`,
+One-sided tolerance +5% only for bloat — shrinking is the goal; sabotage of
+the baseline → FAIL. Gate: `ArtifactSizeTest` (sizes) + absence tests
+per family (`nativeFamilyAbsenceAfterPrune`, `riscvFamilyAbsenceAfterPrune`,
 `JsRuntimePruneWriterTest`).
 
-## Limites honestos
+## Honest limits
 
-- **x86 sem `--gc-sections`**: exige `kof_heap_root_end` + `emitStaticData`
-  dentro do intervalo de raízes do scan conservative (fila bugfix).
-- **Bytes riscv/aarch**: só caem de verdade com GC mark-sweep (o `.bss` do
-  heap bump é fixo) — ver `docs/development/native-multiarch.md`.
-- **`kof_platform` no JS** (issue #104): `uuid`/`random`/`security` fora do
-  host GraalJS dão `ReferenceError` — a poda **preserva** o comportamento,
-  não é regressão nem é corrigida aqui.
+- **x86 without `--gc-sections`**: requires `kof_heap_root_end` + `emitStaticData`
+  inside the root range of the conservative scan (bugfix queue).
+- **riscv/aarch bytes**: only really drop with GC mark-sweep (the `.bss` of the
+  bump heap is fixed) — see `docs/development/native-multiarch.md`.
+- **`kof_platform` in JS** (issue #104): `uuid`/`random`/`security` outside the
+  GraalJS host give `ReferenceError` — pruning **preserves** the behavior,
+  it is neither a regression nor fixed here.
 
-## Referências (código)
+## References (code)
 
 - `dev.kof.compiler.ArtifactSize` + `ArtifactSizeTest` (gate)
-- `dev.kof.compiler.nat.RuntimeSlices` / `RiscvSlices` (mapas)
-- `dev.kof.compiler.js.JsRuntimeSlices` + `JsArtifactWriter` (writer JS)
-- `kof build --print-sizes` (JSON estável, aditivo)
+- `dev.kof.compiler.nat.RuntimeSlices` / `RiscvSlices` (maps)
+- `dev.kof.compiler.js.JsRuntimeSlices` + `JsArtifactWriter` (JS writer)
+- `kof build --print-sizes` (stable, additive JSON)
 
-Plano original de desenvolvimento:
-`docs/stdlib/PLAN-TREE-SHAKING.md` (histórico da implementação S-1…S-6).
+Original development plan:
+`docs/stdlib/PLAN-TREE-SHAKING.md` (history of the S-1…S-6 implementation).

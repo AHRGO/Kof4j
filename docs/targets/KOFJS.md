@@ -1,16 +1,18 @@
-# KofJS — o backend JavaScript da Kof
+[English](KOFJS.md) | [Português](KOFJS.pt_BR.md)
 
-> **Status: alpha.** O pipeline `.kf → Kof IR → KofJS → .js → execução` funciona
-> e roda programas reais. O target JS não depende de Node.js: o próprio Kof
-> executa o JavaScript gerado com a engine embarcada.
+# KofJS — the Kof JavaScript backend
 
-## O que é
+> **Status: alpha.** The pipeline `.kf → Kof IR → KofJS → .js → execution` works
+> and runs real programs. The JS target does not depend on Node.js: Kof itself
+> runs the generated JavaScript with the embedded engine.
 
-KofJS é o backend da Kof que gera **JavaScript moderno** (ECMAScript 2022+,
-ES Modules) a partir da **mesma Kof IR** usada pelos backends JVM e Native.
+## What it is
 
-**Não é uma segunda linguagem.** Não existe parser, AST, type checker ou
-semântica alternativos. O frontend é um só; o backend muda:
+KofJS is the Kof backend that generates **modern JavaScript** (ECMAScript 2022+,
+ES Modules) from the **same Kof IR** used by the JVM and Native backends.
+
+**It is not a second language.** There is no alternative parser, AST, type
+checker or semantics. The frontend is one; the backend changes:
 
 ```text
                     Kof Source
@@ -31,7 +33,7 @@ semântica alternativos. O frontend é um só; o backend muda:
        .class          ELF           .mjs
 ```
 
-## Arquitetura do backend
+## Backend architecture
 
 ```text
 Kof IR
@@ -45,56 +47,56 @@ JsEmitter
 .mjs  (ESM, ES2022+)
 ```
 
-- **JsBackend** — converte o IR stack-based em um AST JavaScript (JsIr).
-  Os padrões de controle de fluxo emitidos pelo frontend (if/while/for/
-  do-while/for-in/switch/try) são reconstruídos como controle de fluxo
-  JavaScript nativo.
-- **JsIr** — AST próprio do backend (nunca parse de JavaScript).
-- **JsEmitter** — imprime o AST como texto ESM.
+- **JsBackend** — converts the stack-based IR into a JavaScript AST (JsIr).
+  The control-flow patterns emitted by the frontend (if/while/for/
+  do-while/for-in/switch/try) are reconstructed as native JavaScript
+  control flow.
+- **JsIr** — the backend's own AST (never a JavaScript parse).
+- **JsEmitter** — prints the AST as ESM text.
 
-## Execução — nada de Node
+## Execution — no Node
 
-O KofJS **não depende de Node.js nem de nenhum runtime externo**. O Kof
-embarca uma engine JavaScript (GraalJS) e executa o módulo gerado no próprio
-processo:
+KofJS **does not depend on Node.js nor on any external runtime**. Kof embeds
+a JavaScript engine (GraalJS) and runs the generated module in its own
+process:
 
-- `kof run main.kf --target=js` — compila e executa com a engine embarcada.
-- A suíte E2E também executa assim (sem processos externos).
+- `kof run main.kf --target=js` — compiles and runs with the embedded engine.
+- The E2E suite also runs this way (without external processes).
 
-O JavaScript gerado, porém, é **ESM padrão** — o mesmo `.mjs` roda em qualquer
-engine (browser, Node, Deno, Bun) quando o programa não usa operações de
-plataforma.
+The generated JavaScript, however, is **standard ESM** — the same `.mjs` runs
+in any engine (browser, Node, Deno, Bun) when the program does not use
+platform operations.
 
-## Camadas de runtime
+## Runtime layers
 
 ```text
-Default.mjs (programa gerado — JS puro)
+Default.mjs (generated program — pure JS)
    ├── kof-runtime.mjs     → core platform-neutral (print, List, String, JSON, time)
-   └── kof-runtime-io.mjs  → operações de plataforma (filesystem, stdin, stdout)
-                               delega para `kof_platform`, implementado em Java
+   └── kof-runtime-io.mjs  → platform operations (filesystem, stdin, stdout)
+                               delegates to `kof_platform`, implemented in Java
                                (dev.kof.runtime.KofJsRunner)
 ```
 
-O código gerado nunca chama `console.*`/`process.*` diretamente; tudo passa
-pelo runtime. Quando executado por outra engine, o núcleo (`kof-runtime.mjs`)
-funciona; as operações de IO precisam de um `kof_platform` correspondente
-(no browser: fallback com console para `print` e erro claro para IO).
+The generated code never calls `console.*`/`process.*` directly; everything
+goes through the runtime. When run by another engine, the core
+(`kof-runtime.mjs`) works; IO operations need a corresponding `kof_platform`
+(in the browser: fallback with console for `print` and a clear error for IO).
 
-## kof.ui no KofJS
+## kof.ui in KofJS
 
-A plataforma de UI (`Color`/`Theme`/`Palette`, `Window`/`Label`/`Button`/
-`Input`, `Column`/`Row`, `View`+`Style`) é renderizada pelo KofJS:
+The UI platform (`Color`/`Theme`/`Palette`, `Window`/`Label`/`Button`/
+`Input`, `Column`/`Row`, `View`+`Style`) is rendered by KofJS:
 
-1. `kof run --target=js` executa o programa na engine embarcada;
-2. escreve o app interativo (`index.html` + `Default.mjs` + runtimes);
-3. o webview nativo (`bin/kof-webview`, WebKitGTK) roda a página — o DOM
-   shim é browser-safe (mesmo código em GraalJS e no browser real);
-4. cliques/edição executam dentro da página; fechar a janela encerra o
-   programa.
+1. `kof run --target=js` runs the program in the embedded engine;
+2. writes the interactive app (`index.html` + `Default.mjs` + runtimes);
+3. the native webview (`bin/kof-webview`, WebKitGTK) runs the page — the DOM
+   shim is browser-safe (same code in GraalJS and in the real browser);
+4. clicks/editing execute inside the page; closing the window ends the
+   program.
 
-O DOM shim em `kof-runtime.mjs` usa o `document` real quando existe
-(browser/webview) e um DOM mínimo em memória na engine embarcada — a
-serialização (`kofUiFlush`) alimenta testes e o snapshot estático.
+The DOM shim in `kof-runtime.mjs` uses the real `document` when it exists
+(browser/webview) and a minimal in-memory DOM in the embedded engine — the
+serialization (`kofUiFlush`) feeds tests and the static snapshot.
 
 ## CLI
 
@@ -103,102 +105,103 @@ kof build src/ --target=js --output=build/js
 kof run main.kf --target=js
 ```
 
-O target JS está em desenvolvimento e o CLI informa isso no `--help`.
+The JS target is under development and the CLI reports this in `--help`.
 
-## Tipos e semântica
+## Types and semantics
 
-| Kof | JS | Observações |
+| Kof | JS | Notes |
 |---|---|---|
-| `Int` | `number` | aritmética com wrap 32-bit (`\| 0`), divisão trunca |
-| `Long` | `number` | precisão até 2^53; documentar valores maiores |
-| `Float` / `Double` | `number` | literal integral imprime sem `.0` (difere do JVM) |
-| `Bool` | `boolean` / `0\|1` | comparações/equals produzem `true/false`; operações bitwise coercem |
+| `Int` | `number` | arithmetic with 32-bit wrap (`\| 0`), division truncates |
+| `Long` | `number` | precision up to 2^53; document larger values |
+| `Float` / `Double` | `number` | integral literal prints without `.0` (differs from JVM) |
+| `Bool` | `boolean` / `0\|1` | comparisons/equals produce `true/false`; bitwise operations coerce |
 | `Char` | `number` | code unit; `charAt` → `charCodeAt` |
-| `String` | `string` | mapeamento direto na API |
-| `List<T>` | `Array` + runtime | bounds check em get/set/remove |
-| `Array` | `Array` + runtime | `new Int[n]` → `new Array(n).fill(0)`; leitura/escrita via `kofArrayGet`/`kofArraySet` (bounds check — KOF-SBD-001) |
-| classes | `class` | herança, super, override nativos |
-| records | `class` + accessors | campos internos `_name` para não colidir com accessor |
-| interfaces | — (type-level) | chamadas estruturais `recv.method(...)` |
-| generics | erasure | a informação de tipo fica no compilador |
+| `String` | `string` | direct mapping in the API |
+| `List<T>` | `Array` + runtime | bounds check on get/set/remove |
+| `Array` | `Array` + runtime | `new Int[n]` → `new Array(n).fill(0)`; read/write via `kofArrayGet`/`kofArraySet` (bounds check — KOF-SBD-001) |
+| classes | `class` | native inheritance, super, override |
+| records | `class` + accessors | internal fields `_name` to avoid colliding with accessor |
+| interfaces | — (type-level) | structural calls `recv.method(...)` |
+| generics | erasure | type information stays in the compiler |
 
-### Diferenças semânticas documentadas
+### Documented semantic differences
 
-- **Long além de 2^53** perde precisão (JS `number` é double).
-- **Bitwise em Long** trunca para 32 bits (operadores JS).
-- **Float/Double literal integral**: `println(1.0)` → `1` (JVM: `1.0`).
-- **Interface runtime** não existe em JS; a semântica é resolvida no
-  compile-time (chamadas estruturais).
-- **`hashCode`/`getClass`** de `Object` não têm equivalente direto.
+- **Long beyond 2^53** loses precision (JS `number` is double).
+- **Bitwise on Long** truncates to 32 bits (JS operators).
+- **Float/Double integral literal**: `println(1.0)` → `1` (JVM: `1.0`).
+- **Runtime interface** does not exist in JS; the semantics are resolved at
+  compile-time (structural calls).
+- **`hashCode`/`getClass`** of `Object` have no direct equivalent.
 
 ## JSON
 
 ```text
 json.encode   → JSON.stringify
-json.decode   → JSON.parse (com binding para classes/records via helper)
+json.decode   → JSON.parse (with binding to classes/records via helper)
 ```
 
-A informação de tipo permanece no compilador: `json.decode<User>` gera um
-helper `__kof_decode_User` que instancia a classe e atribui os campos.
+Type information remains in the compiler: `json.decode<User>` generates a
+helper `__kof_decode_User` that instantiates the class and assigns the fields.
 
 ## Source maps
 
-Cada módulo gera `<name>.mjs.map` (v3) com `sources` e `sourcesContent`.
-Precisão linha-a-linha depende de posições na Kof IR (trabalho futuro); o
-skeleton já é emitido desde o primeiro backend funcional.
+Each module generates `<name>.mjs.map` (v3) with `sources` and
+`sourcesContent`. Line-by-line accuracy depends on positions in the Kof IR
+(future work); the skeleton is already emitted since the first functional
+backend.
 
-## Exceções
+## Exceptions
 
-`throw "mensagem"` vira `throw <string>`; `try/catch/finally` é traduzido
-para o nativo do JS (o catch-all + rethrow emulado no IR é eliminado porque
-o `finally` do JS já cobre a semântica).
+`throw "message"` becomes `throw <string>`; `try/catch/finally` is translated
+to JS's native form (the catch-all + rethrow emulated in the IR is eliminated
+because JS's `finally` already covers the semantics).
 
-## Testes
+## Tests
 
-`KofJsE2ETest` compila `.kf` → `.mjs` → executa na engine embarcada e
-compara stdout/exit code. Cobre: hello world, aritmética, variáveis, if/else,
-loops, funções, lambdas, classes, construtores, herança, interfaces,
-generics, List, String API, arrays, JSON, exceções, ESM, múltiplos arquivos,
+`KofJsE2ETest` compiles `.kf` → `.mjs` → runs in the embedded engine and
+compares stdout/exit code. Covers: hello world, arithmetic, variables, if/else,
+loops, functions, lambdas, classes, constructors, inheritance, interfaces,
+generics, List, String API, arrays, JSON, exceptions, ESM, multiple files,
 kof.time/kof.io.
 
-## Estado atual (alpha)
+## Current state (alpha)
 
-**Funciona:**
-- Pipeline completo `.kf → IR → JS → execução` na engine embarcada
-- Classes, herança, construtores, records, interfaces (type-level)
-- List, String API, arrays, JSON (encode/decode com binding)
-- Exceções (try/catch/finally), lambdas **com capturas**, if-expressões
+**Works:**
+- Full pipeline `.kf → IR → JS → execution` in the embedded engine
+- Classes, inheritance, constructors, records, interfaces (type-level)
+- List, String API, arrays, JSON (encode/decode with binding)
+- Exceptions (try/catch/finally), lambdas **with captures**, if-expressions
 - kof.time (now/sleep; scheduler via `setInterval` — 27/08), kof.io (via `kof_platform`), `kof run --target=js`
-- **kof.http** via interop `Java HttpClient` no `KofJsRunner` (+ fetch
-  fallback); **retry/circuit breaker em paridade com o JVM** (30/08)
-- `spawn`/`await`/`channel<T>()` com concorrência real via `async`/`await`/
-  `Promise` do GraalJS (`CONC003` fechado, 03/09) — `KofJsRunner` drena a
-  fila de microtasks (`kofActiveTasks`) até todas as tasks spawnadas
-  terminarem, mesmo fire-and-forget nunca esperado; canal com `receive()`
-  bloqueante de verdade em canal vazio; `selectAny` via `Promise.race`;
-  `awaitTimeout` dispara de verdade contra task mais lenta (polling
-  cooperativo, sem timer real disponível no GraalJS embutido). Restrição:
-  só lambdas criadas direto num site de `spawn` podem virar `async`
-  (`CONC003-JS-01` — lambda comum passada a `list.map`/`filter`/`reduce`
-  não pode usar `await`, vira erro de compilação em vez de corromper dado
-  silenciosamente via `Array<Promise<T>>`). `cancelled()` sempre `0`
-  (limitação conhecida — sem thread-local pra contexto "task atual" em
-  async functions intercaladas). Ver `docs/language-reference/concurrency.md` seção 4.
-- **kof.ui**: widgets, layout, estilo, eventos — renderização em webview
-  nativo (WebKitGTK) e browser (`index.html` estático); **Fase 7 Router**
+- **kof.http** via `Java HttpClient` interop in `KofJsRunner` (+ fetch
+  fallback); **retry/circuit breaker in parity with the JVM** (30/08)
+- `spawn`/`await`/`channel<T>()` with real concurrency via GraalJS's
+  `async`/`await`/`Promise` (`CONC003` closed, 03/09) — `KofJsRunner` drains the
+  microtask queue (`kofActiveTasks`) until all spawned tasks finish, even
+  fire-and-forget never awaited; channel with truly blocking `receive()` on an
+  empty channel; `selectAny` via `Promise.race`; `awaitTimeout` really fires
+  against a slower task (cooperative polling, no real timer available in the
+  embedded GraalJS). Restriction: only lambdas created directly at a `spawn`
+  site can become `async` (`CONC003-JS-01` — a common lambda passed to
+  `list.map`/`filter`/`reduce` cannot use `await`, becoming a compilation error
+  instead of silently corrupting data via `Array<Promise<T>>`). `cancelled()`
+  always `0` (known limitation — no thread-local for "current task" context in
+  interleaved async functions). See `docs/language-reference/concurrency.md`
+  section 4.
+- **kof.ui**: widgets, layout, style, events — rendering in native webview
+  (WebKitGTK) and browser (static `index.html`); **Phase 7 Router**
   (`go/replace/back/forward/param/current/depth` — 31/08)
 
-**Em andamento / futuro:**
-- UI declarativa (components) e layout avançado
-- WebKit embutido multiplataforma (Windows WebView2 / macOS WKWebView)
-- `cancelled()` real no JS (precisaria de contexto por-task, sem
-  equivalente nativo em async functions intercaladas no GraalJS embutido)
-- Interoperabilidade (`js.import(...)` — sintaxe futura)
-- Source maps precisos (posições na IR) — debugging JS (Fase 6)
+**In progress / future:**
+- Declarative UI (components) and advanced layout
+- Cross-platform embedded WebKit (Windows WebView2 / macOS WKWebView)
+- Real `cancelled()` in JS (would need per-task context, with no native
+  equivalent in interleaved async functions in the embedded GraalJS)
+- Interoperability (`js.import(...)` — future syntax)
+- Accurate source maps (positions in the IR) — JS debugging (Phase 6)
 
 ## Debugging
 
-Erros de compilação apontam para o arquivo `.kf` (linha/coluna), nunca para
-o `.mjs` gerado. Erros de execução aparecem como mensagens da engine com o
-nome da função JS correspondente; o source map permite mapear ao `.kf`
-futuramente.
+Compilation errors point to the `.kf` file (line/column), never to the
+generated `.mjs`. Execution errors appear as engine messages with the name of
+the corresponding JS function; the source map will allow mapping to the `.kf`
+in the future.

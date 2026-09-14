@@ -1,21 +1,23 @@
-# stdlib web — Stack Web Nativa do Kof
+[English](stdlib-web.md) | [Português](stdlib-web.pt_BR.md)
 
-**Última atualização:** 4 de setembro de 2026
-**Versão:** 0.2.6-beta (`kof.http` JVM+JS + retry/circuit; WebSocket/SSE JVM + hardening)
-**Status:** implementado (Fase 1 do plano de independência do Spring) — `kof serve` + `kof.http` JVM+JS + `app.ws`/`app.sse` JVM + limites/contadores
+# stdlib web — Kof's Native Web Stack
+
+**Last updated:** September 4, 2026
+**Version:** 0.2.6-beta (`kof.http` JVM+JS + retry/circuit; WebSocket/SSE JVM + hardening)
+**Status:** implemented (Phase 1 of the Spring independence plan) — `kof serve` + `kof.http` JVM+JS + `app.ws`/`app.sse` JVM + limits/counters
 
 ---
 
-## 1. Filosofia
+## 1. Philosophy
 
-> Uma aplicação web Kof não precisa de Spring. HTTP, rotas, JSON, contexto de
-> request e middleware são parte do ecossistema Kof.
+> A Kof web application does not need Spring. HTTP, routes, JSON, request
+> context and middleware are part of the Kof ecosystem.
 
-Nenhuma dependência externa: o servidor HTTP é gerado dentro do runtime JVM do
-próprio programa compilado (`dev.kof.runtime.KofRuntime`). Sem servlet
-container, sem Spring MVC, sem annotations.
+No external dependency: the HTTP server is generated inside the JVM runtime of
+the compiled program itself (`dev.kof.runtime.KofRuntime`). No servlet
+container, no Spring MVC, no annotations.
 
-## 2. Exemplo completo
+## 2. Complete example
 
 ```kof
 record User(String name, Int age)
@@ -23,7 +25,7 @@ record User(String name, Int age)
 main() {
     var app = web.app()
 
-    // Middleware: retorna null para continuar; String para responder direto
+    // Middleware: returns null to continue; String to respond directly
     app.use {
         if (header("x-auth") == "secret") {
             return null
@@ -48,12 +50,12 @@ main() {
         return method() + " " + path()
     }
 
-    // Corpo da request
+    // Request body
     app.post("/echo") {
         return "got:" + body()
     }
 
-    // JSON tipado de ponta a ponta
+    // End-to-end typed JSON
     app.post("/user") {
         var user = json.decode<User>(body())
         return json.encode(user)
@@ -64,20 +66,20 @@ main() {
 ```
 
 ```bash
-kof serve app.kf              # compila e executa (a app chama app.listen)
-kof run app.kf                # idem — o programa inicia o próprio servidor
+kof serve app.kf              # compiles and runs (the app calls app.listen)
+kof run app.kf                # same — the program starts its own server
 ```
 
 ## 3. API
 
 ### `web.app()`
 
-Cria uma aplicação. O valor retornado (`kof.web.App`) é um handle; em runtime
-é um identificador de registro interno.
+Creates an application. The returned value (`kof.web.App`) is a handle; at
+runtime it is an internal registry identifier.
 
-### Rotas
+### Routes
 
-| Chamada | Método HTTP |
+| Call | HTTP method |
 |---------|-------------|
 | `app.get(path) { ... }` | GET |
 | `app.post(path) { ... }` | POST |
@@ -86,46 +88,47 @@ Cria uma aplicação. O valor retornado (`kof.web.App`) é um handle; em runtime
 | `app.patch(path) { ... }` | PATCH |
 | `app.options(path) { ... }` | OPTIONS |
 
-O corpo `{ ... }` é um lambda trailing — o handler da rota. Um handler pode
-também ser passado explicitamente: `app.get("/x", handler)`.
+The body `{ ... }` is a trailing lambda — the route handler. A handler can
+also be passed explicitly: `app.get("/x", handler)`.
 
-- `path` suporta segmentos com parâmetro: `/users/:id` (prefixo `:`).
-- O handler retorna `String` (corpo da resposta, 200) ou `null` (404).
-- A resposta detecta JSON automaticamente quando o corpo começa com `{` ou `[`
+- `path` supports segments with a parameter: `/users/:id` (`:` prefix).
+- The handler returns `String` (response body, 200) or `null` (404).
+- The response detects JSON automatically when the body starts with `{` or `[`
   (`Content-Type: application/json`).
 
 ### Middleware
 
-`app.use { ... }` registra um middleware executado antes do roteamento.
-Retorno `null` → continua; retorno `String` → resposta imediata (200).
+`app.use { ... }` registers a middleware executed before routing.
+Return `null` → continues; return `String` → immediate response (200).
 
-### Servidor
+### Server
 
-| Chamada | Descrição |
+| Call | Description |
 |---------|-----------|
-| `app.listen(port)` | Inicia o servidor (bloqueante) em `0.0.0.0` |
-| `app.listenSecure(port)` | Idem, com TLS (JVM; self-signed `keytool` + `SSLServerSocket`) |
-| `app.port()` | Porta efetivamente vinculada (útil com `listen(0)`) |
-| `app.close()` | Encerra o servidor (graceful shutdown) |
+| `app.listen(port)` | Starts the server (blocking) on `0.0.0.0` |
+| `app.listenSecure(port)` | Same, with TLS (JVM; self-signed `keytool` + `SSLServerSocket`) |
+| `app.port()` | Port actually bound (useful with `listen(0)`) |
+| `app.close()` | Shuts down the server (graceful shutdown) |
 
-`app.listen(0)` vincula uma porta efêmera; `app.port()` revela a porta real.
-`app.listenSecure` está disponível no JVM (Native/JS `WEB002`).
+`app.listen(0)` binds an ephemeral port; `app.port()` reveals the real port.
+`app.listenSecure` is available on the JVM (Native/JS `WEB002`).
 
-### Arquivos estáticos (`app.serveDir`) (31/08)
+### Static files (`app.serveDir`) (31/08)
 
-| Chamada | Descrição |
+| Call | Description |
 |---------|-----------|
-| `app.serveDir(prefix, dir)` | Serve os arquivos de `dir` sob `prefix` (fallback após as rotas dinâmicas) |
+| `app.serveDir(prefix, dir)` | Serves the files from `dir` under `prefix` (fallback after dynamic routes) |
 
-O handler devolve o **arquivo em binário** do disco com `Content-Type` pela
-extensão (HTML/CSS/JS, imagens, áudio, **vídeo**, fontes, PDF...),
-`Cache-Control` e proteção contra path-traversal (`..`). É a alternativa a
-colar base64/HTML/CSS em `String` literal no fonte — o app trata o ARQUIVO.
+The handler returns the **binary file** from disk with `Content-Type` by
+extension (HTML/CSS/JS, images, audio, **video**, fonts, PDF...),
+`Cache-Control` and protection against path traversal (`..`). It is the
+alternative to pasting base64/HTML/CSS into a `String` literal in the source —
+the app handles the FILE.
 
-**Range requests**: `serveDir` responde `Range: bytes=...` com `206 Partial
-Content` + `Content-Range` + `Accept-Ranges: bytes` (e `416` para range
-inválido). Isso é o que permite `<video>`/`<audio>` navegarem e seekarem no
-browser — sem Range, o player não consegue posicionar no meio do arquivo.
+**Range requests**: `serveDir` answers `Range: bytes=...` with `206 Partial
+Content` + `Content-Range` + `Accept-Ranges: bytes` (and `416` for an invalid
+range). This is what allows `<video>`/`<audio>` to navigate and seek in the
+browser — without Range, the player cannot position in the middle of the file.
 
 ```kof
 var app = web.app()
@@ -137,21 +140,21 @@ app.listen(8080)
 <video src="/media/clip.mp4" controls></video>
 ```
 
-Caminhos relativos do app resolvem contra a raiz do projeto
-(`-Dkof.root`, definido pelo CLI `run`/`serve`). **JVM-only** — Native/JS
-reportam `WEB005` (gap documentado).
+Relative paths of the app resolve against the project root
+(`-Dkof.root`, set by the `run`/`serve` CLI). **JVM-only** — Native/JS
+report `WEB005` (documented gap).
 
 ### Health (`app.health`) (01/09)
 
-| Chamada | Descrição |
+| Call | Description |
 |---------|-----------|
-| `app.health(path)` | Registra um endpoint de saúde built-in (ex.: `/health`) |
+| `app.health(path)` | Registers a built-in health endpoint (e.g.: `/health`) |
 
-`app.health("/health")` responde com o estado do app em JSON
-(`{"status":"UP","ready":true,"alive":true}` — valor de
-`observability.health()/readiness()/liveness()`) **antes dos middlewares**:
-sondas de load balancer/health-check não passam por auth/middleware. O app
-também pode montar o próprio: `app.get("/health") { return
+`app.health("/health")` responds with the app state in JSON
+(`{"status":"UP","ready":true,"alive":true}` — value of
+`observability.health()/readiness()/liveness()`) **before the middlewares**:
+load balancer/health-check probes do not go through auth/middleware. The app
+can also mount its own: `app.get("/health") { return
 observability.health() }`.
 
 ```kof
@@ -162,16 +165,16 @@ app.listen(8080)
 
 ### WebSocket (`app.ws`, RFC 6455) (30/08)
 
-| Chamada | Descrição |
+| Call | Description |
 |---------|-----------|
-| `app.ws(path) { ... }` | Rota WebSocket (route kind `WS`) |
-| `wsMessage()` | Texto da mensagem `TEXT` que acionou o handler (String) |
-| `wsSend(text)` | Envia um frame `TEXT` de volta pela conexão corrente |
+| `app.ws(path) { ... }` | WebSocket route (route kind `WS`) |
+| `wsMessage()` | Text of the `TEXT` message that triggered the handler (String) |
+| `wsSend(text)` | Sends a `TEXT` frame back over the current connection |
 
-O handshake RFC 6455 e o frame codec (com máscara cliente→servidor) são
-implementados dentro do engine HTTP gerado; o handler Kof é chamado por
-mensagem `TEXT`. O runtime também trata `PING`→`PONG`, `CLOSE` (ack) e
-descarta frames acima do limite configurável de frame (default 1 MiB, close
+The RFC 6455 handshake and the frame codec (with client→server masking) are
+implemented inside the generated HTTP engine; the Kof handler is called per
+`TEXT` message. The runtime also handles `PING`→`PONG`, `CLOSE` (ack) and
+discards frames above the configurable frame limit (default 1 MiB, close
 `1009`).
 
 ```kof
@@ -186,17 +189,17 @@ app.ws("/chat") {
 
 ### Server-Sent Events (`app.sse`) (30/08)
 
-| Chamada | Descrição |
+| Call | Description |
 |---------|-----------|
-| `app.sse(path) { ... }` | Rota SSE (route kind `SSE`); o handler recebe o sender como parâmetro `sse` |
-| `sse.send(data)` | Evento sem nome (`data: ...`) |
-| `sse.event(name, data)` | Evento com nome (`event: name\ndata: ...`) |
-| `sse.close()` | Encerra o stream do cliente |
-| `sse.isOpen()` | `Bool` — o stream segue aberto |
+| `app.sse(path) { ... }` | SSE route (route kind `SSE`); the handler receives the sender as the `sse` parameter |
+| `sse.send(data)` | Unnamed event (`data: ...`) |
+| `sse.event(name, data)` | Named event (`event: name\ndata: ...`) |
+| `sse.close()` | Ends the client stream |
+| `sse.isOpen()` | `Bool` — the stream is still open |
 
-Cada conexão SSE é independente (ThreadLocal por conexão); os headers
+Each SSE connection is independent (ThreadLocal per connection); the headers
 `Content-Type: text/event-stream`, `Cache-Control: no-cache`,
-`Connection: keep-alive` e `X-Accel-Buffering: no` são emitidos.
+`Connection: keep-alive` and `X-Accel-Buffering: no` are emitted.
 
 ```kof
 app.sse("/events") {
@@ -206,103 +209,103 @@ app.sse("/events") {
 }
 ```
 
-`app.ws` e `app.sse` estão disponíveis no **JVM**. Em outros targets são
-gaps documentados em compile-time: WebSocket → `WEB004`, SSE → `WEB003`
+`app.ws` and `app.sse` are available on the **JVM**. On other targets they are
+compile-time documented gaps: WebSocket → `WEB004`, SSE → `WEB003`
 (Native/JS).
 
-### Limites e observabilidade (`app.configure`, `app.stats`)
+### Limits and observability (`app.configure`, `app.stats`)
 
-| Chamada | Descrição |
+| Call | Description |
 |---------|-----------|
-| `app.configure("maxConnections", n)` | Cap de conexões concorrentes (default `1024`); acima disso responde `503` |
-| `app.configure("maxFrameBytes", n)` | Limite de frame WebSocket mutável (default `1 MiB`) |
-| `app.configure("maxMessageBytes", n)` | Limite de mensagem WebSocket mutável (default `8 MiB`) |
-| `app.configure("idleMs", n)` | Idle timeout aplicado a WebSocket e deadline SSE |
-| `stats("SSE_CONNECTIONS_ACTIVE")` | Conexões SSE ativas |
-| `stats("WS_CONNECTIONS_ACTIVE")` | Conexões WebSocket ativas |
-| `stats("SSE_EVENTS_SENT")` | Eventos SSE enviados |
-| `stats("WS_MESSAGES_RECEIVED")` / `stats("WS_MESSAGES_SENT")` | Mensagens WS recebidas/enviadas |
+| `app.configure("maxConnections", n)` | Cap on concurrent connections (default `1024`); above that it responds `503` |
+| `app.configure("maxFrameBytes", n)` | Mutable WebSocket frame limit (default `1 MiB`) |
+| `app.configure("maxMessageBytes", n)` | Mutable WebSocket message limit (default `8 MiB`) |
+| `app.configure("idleMs", n)` | Idle timeout applied to WebSocket and SSE deadline |
+| `stats("SSE_CONNECTIONS_ACTIVE")` | Active SSE connections |
+| `stats("WS_CONNECTIONS_ACTIVE")` | Active WebSocket connections |
+| `stats("SSE_EVENTS_SENT")` | SSE events sent |
+| `stats("WS_MESSAGES_RECEIVED")` / `stats("WS_MESSAGES_SENT")` | WS messages received/sent |
 
-`app.configure` atua no app corrente (por handle); as estatísticas são
-globais por JVM e devolvidas como `String`.
+`app.configure` acts on the current app (per handle); the statistics are
+global per JVM and returned as `String`.
 
-### Contexto de request (dentro de handlers/middleware)
+### Request context (inside handlers/middleware)
 
-| Função | Retorna |
+| Function | Returns |
 |--------|---------|
-| `param("id")` | Path parameter (`String` — só rota matchada chega ao handler) |
-| `query("name")` | Query parameter (`String?` — `null` se ausente; narrow antes de deref) |
-| `header("x-auth")` | Header case-insensitive (`String?` — `null` se ausente; narrow antes de deref) |
-| `body()` | Corpo cru da request |
-| `method()` | Método HTTP ("GET", "POST", ...) |
-| `path()` | Caminho da request |
-| `status(code, body)` | Define o status da resposta e retorna o corpo — use como retorno (ex.: `return status(201, "{\"ok\":true}")`) |
-| `headerSet(name, value)` | Adiciona um header de resposta (ex.: `headerSet("X-Total", "42")`) |
+| `param("id")` | Path parameter (`String` — only a matched route reaches the handler) |
+| `query("name")` | Query parameter (`String?` — `null` if absent; narrow before deref) |
+| `header("x-auth")` | Case-insensitive header (`String?` — `null` if absent; narrow before deref) |
+| `body()` | Raw request body |
+| `method()` | HTTP method ("GET", "POST", ...) |
+| `path()` | Request path |
+| `status(code, body)` | Sets the response status and returns the body — use as a return (e.g.: `return status(201, "{\"ok\":true}")`) |
+| `headerSet(name, value)` | Adds a response header (e.g.: `headerSet("X-Total", "42")`) |
 
-O contexto é por-request (ThreadLocal em runtime) — handlers podem ser
-concorrentes sem estado compartilhado. `status(code, body)` e
-`headerSet(name, value)` permitem respostas ricas (status customizado +
-headers) — antes os handlers só produziam 200/404 automáticos.
+The context is per-request (ThreadLocal at runtime) — handlers can be
+concurrent without shared state. `status(code, body)` and
+`headerSet(name, value)` allow rich responses (custom status + headers) —
+previously handlers only produced automatic 200/404.
 
-## 4. Concorrência
+## 4. Concurrency
 
-Cada conexão é tratada em uma virtual thread (JVM). O programador escreve
-handlers síncronos; o runtime decide a estratégia. Handlers SSE rodam no
-`KOF_SSE_HANDLERS` compartilhado e têm deadline `idleMs * 4`; em timeout o
-stream é fechado e a task cancelada.
+Each connection is handled on a virtual thread (JVM). The programmer writes
+synchronous handlers; the runtime decides the strategy. SSE handlers run on
+the shared `KOF_SSE_HANDLERS` and have a deadline of `idleMs * 4`; on timeout
+the stream is closed and the task cancelled.
 
-## 5. Limitações atuais (Fase 1, 0.2.6-beta)
+## 5. Current limitations (Phase 1, 0.2.6-beta)
 
-- O target `js` reporta `WEB001` para a stack web (gap documentado); `kof.http` já funciona no JS via `Java HttpClient`.
-- O target `native` (`x86_64`/`riscv64`/`aarch64`) não possui servidor web ainda (`WEB002` TLS também).
-- `app.ws`/`app.sse` são JVM-only (Native `WEB004`, JS `WEB003`).
-- `app.serveDir` (arquivos estáticos + Range 206/416) é JVM-only (Native/JS `WEB005`).
-- Hardening PR6 (connection cap, limites `maxFrameBytes`/`maxMessageBytes`,
-  `idleMs`, `app.stats`) é JVM; backpressure e fragmentação seguem follow-up.
-- `kof.http` client — ✅ JVM+JS (27/08; `timeout/retry/circuit` em paridade 30/08), Native `HTTP002` pendente.
-- Middleware/rotas de outros métodos HTTP além dos listados: futuramente.
+- The `js` target reports `WEB001` for the web stack (documented gap); `kof.http` already works on JS via `Java HttpClient`.
+- The `native` target (`x86_64`/`riscv64`/`aarch64`) does not have a web server yet (`WEB002` TLS either).
+- `app.ws`/`app.sse` are JVM-only (Native `WEB004`, JS `WEB003`).
+- `app.serveDir` (static files + Range 206/416) is JVM-only (Native/JS `WEB005`).
+- PR6 hardening (connection cap, `maxFrameBytes`/`maxMessageBytes` limits,
+  `idleMs`, `app.stats`) is JVM; backpressure and fragmentation remain follow-up.
+- `kof.http` client — ✅ JVM+JS (27/08; `timeout/retry/circuit` in parity 30/08), Native `HTTP002` pending.
+- Middleware/routes for HTTP methods other than those listed: in the future.
 
-> Fechas nesta fase (27–30/08): status codes + headers customizados
-> (`status(code, body)` / `headerSet(name, value)`); `kof.cache` nos 3
-> targets; `WebSocket` (`app.ws`) + `SSE` (`app.sse`) no JVM; `http.retry`/
-> `http.circuit` em paridade JVM+JS.
+> Closed in this phase (27–30/08): status codes + custom headers
+> (`status(code, body)` / `headerSet(name, value)`); `kof.cache` on the 3
+> targets; `WebSocket` (`app.ws`) + `SSE` (`app.sse`) on the JVM; `http.retry`/
+> `http.circuit` in JVM+JS parity.
 
-## 6. Testes (0.2.6-beta)
+## 6. Tests (0.2.6-beta)
 
 `KofWebE2ETest` 10 + `KofHttpServerTest` 8 + `KofHttpE2ETest` 4 (JVM+JS,
 27/08) + `KofWebTlsTest` 5 + `KofWebSseE2ETest` 7 + `KofWebWsE2ETest` 11 +
 `KofWebStreamE2ETest` 4 + `KofWsFrameTest` 7 + `KofHttpResilienceE2ETest` 3 +
 `KofWebHardeningTest` 6 —
-cada teste compila um programa Kof, executa o bytecode/JS como subprocesso e
-exercita o servidor/cliente com sockets reais (routing, path params, query,
-headers, body, JSON round-trip, middleware, 404, múltiplas rotas com lambda
-trailing, `http.get/post/put/delete` + TLS + `retry`/`circuit`, handshake
-WebSocket RFC 6455, frame codec com máscara, SSE eventos nomeados/multi-line,
-streaming WS/SSE concorrente).
+each test compiles a Kof program, runs the bytecode/JS as a subprocess and
+exercises the server/client with real sockets (routing, path params, query,
+headers, body, JSON round-trip, middleware, 404, multiple routes with trailing
+lambda, `http.get/post/put/delete` + TLS + `retry`/`circuit`, RFC 6455
+WebSocket handshake, frame codec with masking, named/multi-line SSE events,
+concurrent WS/SSE streaming).
 
-## 7. Arquitetura
+## 7. Architecture
 
 ```
 Kof source (.kf)
    ↓ CompilerDriver
 Kof IR (KofCall kof_web_*)
    ↓ JvmBackend
-bytecode JVM
+JVM bytecode
    ↓
-dev.kof.runtime.KofRuntime (gerado)  ← engine HTTP embutido no programa
-   ├── KOF_WEB_APPS (registro de apps)
+dev.kof.runtime.KofRuntime (generated)  ← HTTP engine embedded in the program
+   ├── KOF_WEB_APPS (app registry)
    ├── WebRoute (method, segments, params, handler, kind)
    ├── SseConnection / WsConnection / WsFrame
    ├── WebRequest (method, path, query, headers, body)
    └── accept loop (virtual threads) + dispatch
 ```
 
-As chamadas `kof_web_*` são resolvidas em compile-time pela tabela `KofWeb`
-(dança análoga a `KofIo`): o programador nunca vê threads, sockets ou parsing
-HTTP.
+The `kof_web_*` calls are resolved at compile-time by the `KofWeb` table
+(a dance analogous to `KofIo`): the programmer never sees threads, sockets or
+HTTP parsing.
 
-## 8. Referências
+## 8. References
 
-- Plano: `docs/development/DECISIONS.md` §D-SPRING (Fase 1)
+- Plan: `docs/development/DECISIONS.md` §D-SPRING (Phase 1)
 - Status: `docs/status.md`
-- Roadmap: `docs/development/roadmap.md` (Fase 3 — Web Platform)
+- Roadmap: `docs/development/roadmap.md` (Phase 3 — Web Platform)

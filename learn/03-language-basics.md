@@ -1,14 +1,16 @@
-# 03 — Fundamentos da Linguagem
+[English](03-language-basics.md) | [Português](03-language-basics.pt_BR.md)
+
+# 03 — Language Basics
 
 > **Kof 0.4.0-beta — `intention->Kof->frontend->IR->backend->runtime`**
 
-## O que você vai aprender
+## What you will learn
 
-Neste capítulo você vai entender como o código Kof é estruturado: statements, expressões, literais, comentários e a estrutura básica de um programa.
+In this chapter you will understand how Kof code is structured: statements, expressions, literals, comments and the basic structure of a program.
 
 ## Statements
 
-Um statement é uma instrução. Em Kof, o ponto e vírgula é **opcional** na maioria dos contextos:
+A statement is an instruction. In Kof, the semicolon is **optional** in most contexts:
 
 ```kf
 record User(String name)
@@ -19,27 +21,27 @@ var nome = "Mel"
 println(nome)
 ```
 
-O compilador aceita tanto com quanto sem ponto e vírgula. Escolha um estilo e seja consistente.
+The compiler accepts both with and without a semicolon. Choose a style and be consistent.
 
-## Comentários
+## Comments
 
-Comentários de linha:
-
-```kf
-// isso é um comentário
-```
-
-Comentários de bloco:
+Line comments:
 
 ```kf
-/* isso é um
-   comentário de
-   várias linhas */
+// this is a comment
 ```
 
-O compilador ignora comentários completamente.
+Block comments:
 
-## Literais (inclui `String?` para nullable — ver cap. 13)
+```kf
+/* this is a
+   multi-line
+   comment */
+```
+
+The compiler ignores comments completely.
+
+## Literals (includes `String?` for nullable — see ch. 13)
 
 ### Strings
 
@@ -49,7 +51,7 @@ O compilador ignora comentários completamente.
 "com \"aspas\""
 ```
 
-### Números
+### Numbers
 
 ```kf
 42          // Int
@@ -58,7 +60,7 @@ O compilador ignora comentários completamente.
 3.14f       // Float
 ```
 
-### Booleanos
+### Booleans
 
 ```kf
 true
@@ -71,68 +73,68 @@ false
 null
 ```
 
-## Tipos primitivos
+## Primitive types
 
-Kof usa os mesmos tipos primitivos da JVM:
+Kof uses the same primitive types as the JVM:
 
-| Tipo | Descrição | Tamanho |
+| Type | Description | Size |
 |------|-----------|---------|
-| `Bool` | booleano | 1 bit |
-| `Byte` | byte inteiro | 8 bits |
-| `Short` | inteiro curto | 16 bits |
-| `Int` | inteiro | 32 bits |
-| `Long` | inteiro longo | 64 bits |
-| `Float` | ponto flutuante | 32 bits |
-| `Double` | ponto flutuante duplo | 64 bits |
-| `Char` | caractere | 16 bits |
-| `Void` | sem valor | — |
+| `Bool` | boolean | 1 bit |
+| `Byte` | integer byte | 8 bits |
+| `Short` | short integer | 16 bits |
+| `Int` | integer | 32 bits |
+| `Long` | long integer | 64 bits |
+| `Float` | floating point | 32 bits |
+| `Double` | double floating point | 64 bits |
+| `Char` | character | 16 bits |
+| `Void` | no value | — |
 
 ## Strings
 
-Strings são objetos. São imutáveis (como em Java):
+Strings are objects. They are immutable (as in Java):
 
 ```kf
 String nome = "Kof"
 ```
 
-Concatenação funciona com `+`:
+Concatenation works with `+`:
 
 ```kf
 String saudacao = "Olá, " + nome
 ```
 
-## Operadores
+## Operators
 
-### Aritméticos
-
-```kf
-a + b     // soma
-a - b     // subtração
-a * b     // multiplicação
-a / b     // divisão
-a % b     // módulo
-```
-
-### Comparação
+### Arithmetic
 
 ```kf
-a == b    // igual
-a != b    // diferente
-a < b     // menor
-a <= b    // menor ou igual
-a > b     // maior
-a >= b    // maior ou igual
+a + b     // addition
+a - b     // subtraction
+a * b     // multiplication
+a / b     // division
+a % b     // modulo
 ```
 
-### Lógicos
+### Comparison
 
 ```kf
-a && b    // e lógico
-a || b    // ou lógico
-!a        // negação
+a == b    // equal
+a != b    // not equal
+a < b     // less than
+a <= b    // less than or equal
+a > b     // greater than
+a >= b    // greater than or equal
 ```
 
-### Atribuição
+### Logical
+
+```kf
+a && b    // logical and
+a || b    // logical or
+!a        // negation
+```
+
+### Assignment
 
 ```kf
 x = 5
@@ -143,16 +145,16 @@ x /= 2    // x = x / 2
 x %= 3    // x = x % 3
 ```
 
-## Estrutura de um arquivo Kof
+## Structure of a Kof file
 
-Um arquivo `.kf` contém:
+A `.kf` file contains:
 
-1. Declaração de package (opcional)
-2. Imports (opcional)
-3. Declarações de tipo (classes, records, interfaces)
-4. Funções
+1. Package declaration (optional)
+2. Imports (optional)
+3. Type declarations (classes, records, interfaces)
+4. Functions
 
-Exemplo:
+Example:
 
 ```kf
 package com.example
@@ -165,14 +167,14 @@ main() {
 }
 ```
 
-## Status atual
+## Current status
 
-✅ Lexer reconhece todos os literais e operadores
-✅ Ponto e vírgula opcional
-✅ Package e imports funcionam
-✅ Records funcionam
-✅ Funções com `main()` funcionam
+✅ Lexer recognizes all literals and operators
+✅ Optional semicolon
+✅ Package and imports work
+✅ Records work
+✅ Functions with `main()` work
 
-## Próximo passo
+## Next step
 
-[Variáveis e Tipos →](04-variables-and-types.md)
+[Variables and Types →](04-variables-and-types.md)

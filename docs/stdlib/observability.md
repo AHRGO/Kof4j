@@ -1,40 +1,42 @@
-# kof.observability — Health, Metrics e Request IDs (G5)
+[English](observability.md) | [Português](observability.pt_BR.md)
 
-**Última atualização:** 12 de setembro de 2026
-**Versão:** 0.4.0-beta (`VERSION` 0.4.0-beta)
+# kof.observability — Health, Metrics and Request IDs (G5)
 
-> **Status:** DONE (JVM/Native/JS) — `KofObservabilityTest` 3/3 (0.2.6-beta, free-list Native); API confirmada em `KofObservability.java`
-> **Módulo:** `kof.observability` — `observability.*`
-> **Targets:** JVM ✅ · Native x86_64 ✅ (free-list) · Native riscv64 ✅ · JS ✅ — sem gaps (G5 fechado, 0.2.6-beta)
+**Last updated:** September 12, 2026
+**Version:** 0.4.0-beta (`VERSION` 0.4.0-beta)
+
+> **Status:** DONE (JVM/Native/JS) — `KofObservabilityTest` 3/3 (0.2.6-beta, free-list Native); API confirmed in `KofObservability.java`
+> **Module:** `kof.observability` — `observability.*`
+> **Targets:** JVM ✅ · Native x86_64 ✅ (free-list) · Native riscv64 ✅ · JS ✅ — no gaps (G5 closed, 0.2.6-beta)
 
 ---
 
-## 1. Motivação
+## 1. Motivation
 
-Observar produção exige três primitivas mínimas: **saber se o serviço está saudável** (health/readiness/liveness), **contar/medir o que acontece** (metrics) e **rastrear uma requisição fim-a-fim** (request/correlation IDs). O `kof.log` já cobre logging estruturado (JVM/Native); o `kof.observability` fecha o ciclo P0 ao expor essas três famílias nos três backends com a mesma API.
+Observing production requires three minimal primitives: **knowing whether the service is healthy** (health/readiness/liveness), **counting/measuring what happens** (metrics) and **tracing a request end-to-end** (request/correlation IDs). `kof.log` already covers structured logging (JVM/Native); `kof.observability` closes the P0 cycle by exposing these three families on the three backends with the same API.
 
-Princípio mantido: *intenção → Kof → stdlib → runtime/backend → plataforma* — sem framework externo, sem agente, sem sidecar obrigatório. Quando a plataforma precisa de Prometheus/OpenTelemetry, ela consome as primitivas do `kof.observability`.
+Principle kept: *intent → Kof → stdlib → runtime/backend → platform* — no external framework, no agent, no mandatory sidecar. When the platform needs Prometheus/OpenTelemetry, it consumes the primitives of `kof.observability`.
 
 ---
 
 ## 2. API
 
-| Chamada | Assinatura Kof | Retorno | Descrição |
+| Call | Kof signature | Return | Description |
 |---------|----------------|---------|-----------|
-| `observability.health()` | `() -> String` | `"UP"` | Health agregado — compatível com Spring Boot Actuator `/health` |
-| `observability.readiness()` | `() -> Bool` | `true` | Pronto para receber tráfego |
-| `observability.liveness()` | `() -> Bool` | `true` | Processo vivo (não precisa restart) |
-| `observability.counter(name)` | `(String) -> Int` | novo valor | Incrementa contador nomeado em 1 |
-| `observability.increment(name, delta)` | `(String, Int) -> Int` | novo valor | Incrementa contador em `delta` |
-| `observability.gauge(name, value)` | `(String, Int) -> Void` | — | Define gauge nomeado |
- | `observability.requestId()` | `() -> String` | UUID/hex | Gera ID de requisição (16 bytes aleatórios → 32 hex) |
- | `observability.correlationId()` | `() -> String` | UUID/hex | Alias de `requestId()` — para propagação entre serviços |
- | `observability.traceId()` | `() -> String` | 32 hex | ID de trace (W3C Trace Context) — 16 bytes aleatórios |
- | `observability.spanId()` | `() -> String` | 16 hex | ID de span (W3C Trace Context) — 8 bytes aleatórios |
+| `observability.health()` | `() -> String` | `"UP"` | Aggregate health — compatible with Spring Boot Actuator `/health` |
+| `observability.readiness()` | `() -> Bool` | `true` | Ready to receive traffic |
+| `observability.liveness()` | `() -> Bool` | `true` | Process alive (no restart needed) |
+| `observability.counter(name)` | `(String) -> Int` | new value | Increments the named counter by 1 |
+| `observability.increment(name, delta)` | `(String, Int) -> Int` | new value | Increments the counter by `delta` |
+| `observability.gauge(name, value)` | `(String, Int) -> Void` | — | Sets the named gauge |
+ | `observability.requestId()` | `() -> String` | UUID/hex | Generates a request ID (16 random bytes → 32 hex) |
+ | `observability.correlationId()` | `() -> String` | UUID/hex | Alias of `requestId()` — for propagation between services |
+ | `observability.traceId()` | `() -> String` | 32 hex | Trace ID (W3C Trace Context) — 16 random bytes |
+ | `observability.spanId()` | `() -> String` | 16 hex | Span ID (W3C Trace Context) — 8 random bytes |
 
-Todas as chamadas são **disponíveis nos três targets** (JVM/Native/JS) — `supportedOn` retorna `true` sempre; não há `OBS001` em uso normal. Gaps futuros (ex.: export Prometheus) reportarão `OBS00x`.
+All calls are **available on the three targets** (JVM/Native/JS) — `supportedOn` always returns `true`; there is no `OBS001` in normal use. Future gaps (e.g., Prometheus export) will report `OBS00x`.
 
-### Exemplo
+### Example
 
 ```kof
 main() {
@@ -51,72 +53,72 @@ main() {
 
     // request tracking
     val req = observability.requestId()      // "a3f1c9e2b4d64a8f9c0e1d2f3a4b5c6d"
-    val corr = observability.correlationId() // outro ID, propagável em header
+    val corr = observability.correlationId() // another ID, propagatable in a header
     println(req + " " + corr)
 
-    // tracing (W3C Trace Context) — IDs puros, sem store, 3 targets
+    // tracing (W3C Trace Context) — pure IDs, no store, 3 targets
     val trace = observability.traceId() // 32 hex
     val span  = observability.spanId()  // 16 hex
-    println(trace + "-" + span) // ex.: header traceparent: 00-<trace>-<span>-01
+    println(trace + "-" + span) // e.g.: header traceparent: 00-<trace>-<span>-01
 }
 ```
 
 ---
 
-## 3. Semântica por target
+## 3. Semantics per target
 
 ### JVM
 
-- **Health/readiness/liveness:** constantes (`"UP"` / `true`) — prontas para customização futura (ex.: checar `kof.db`).
-- **Metrics:** `ConcurrentHashMap<String, AtomicInteger>` para counters, `ConcurrentHashMap<String, Integer>` para gauges — thread-safe, sem persistência (memória do processo, como Micrometer `simple`).
-- **Request IDs:** `UUID.randomUUID().toString()` (36 chars com hífens, variante 4).
+- **Health/readiness/liveness:** constants (`"UP"` / `true`) — ready for future customization (e.g., checking `kof.db`).
+- **Metrics:** `ConcurrentHashMap<String, AtomicInteger>` for counters, `ConcurrentHashMap<String, Integer>` for gauges — thread-safe, no persistence (process memory, like Micrometer `simple`).
+- **Request IDs:** `UUID.randomUUID().toString()` (36 chars with hyphens, variant 4).
 
-### Native (asm x86-64, sem libc)
+### Native (asm x86-64, without libc)
 
-- **Health:** aloca `KofString` "UP" via `kof_string_from_literal` (`.Lstr_obs_up`).
+- **Health:** allocates `KofString` "UP" via `kof_string_from_literal` (`.Lstr_obs_up`).
 - **Readiness/liveness:** `mov $1, %eax; ret`.
-- **Metrics:** `.bss` com 32 slots (`512` bytes) para counters e gauges — cada slot `16` bytes (`ptr` + `int` + pad). Busca linear com comparação de conteúdo (`length` em `16(%rdi)` + bytes em `24(%rdi)`); `counter`/`increment` incrementam, `gauge` sobrescreve. Sem persistência; overflow silencioso após 32 nomes distintos (retorna `0`).
-- **Request IDs:** tail-call para `kof_sec_random_hex(16)` — `getrandom(2)` → `32` hex chars (sem hífens, `318` syscall), mesma entropia do `kof.security`.
+- **Metrics:** `.bss` with 32 slots (`512` bytes) for counters and gauges — each slot `16` bytes (`ptr` + `int` + pad). Linear search with content comparison (`length` at `16(%rdi)` + bytes at `24(%rdi)`); `counter`/`increment` increment, `gauge` overwrites. No persistence; silent overflow after 32 distinct names (returns `0`).
+- **Request IDs:** tail-call to `kof_sec_random_hex(16)` — `getrandom(2)` → `32` hex chars (without hyphens, `318` syscall), same entropy as `kof.security`.
 
 ### JS (kof-runtime.mjs)
 
 - **Health/readiness/liveness:** `"UP"` / `1`.
-- **Metrics:** objetos `__kofObsCounters` / `__kofObsGauges` em closure — `counter`/`increment`/`gauge` manipulam o dicionário JS.
-- **Request IDs:** `crypto.randomUUID()` quando disponível, fallback `Math.random` com formato `xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx`.
+- **Metrics:** objects `__kofObsCounters` / `__kofObsGauges` in a closure — `counter`/`increment`/`gauge` manipulate the JS dictionary.
+- **Request IDs:** `crypto.randomUUID()` when available, fallback `Math.random` with the format `xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx`.
 
 ---
 
-## 4. Testes
+## 4. Tests
 
-`kof-compiler/src/test/java/dev/kof/compiler/KofObservabilityTest.java` — 3 testes (JVM/Native/JS):
+`kof-compiler/src/test/java/dev/kof/compiler/KofObservabilityTest.java` — 3 tests (JVM/Native/JS):
 
-- `observabilityJvm` — health/readiness/liveness, counter sequencial (`1→2→5`), gauge, `requestId`/`correlationId` não vazios e distintos.
-- `observabilityNative` — mesmo cenário em assembly (verifica `health() == "UP"` e incremento `1→2→7`).
-- `observabilityJs` — health `"UP"`, readiness/liveness `true`, counter `1→2→12`, requestIds com `length > 0`.
+- `observabilityJvm` — health/readiness/liveness, sequential counter (`1→2→5`), gauge, `requestId`/`correlationId` non-empty and distinct.
+- `observabilityNative` — same scenario in assembly (checks `health() == "UP"` and increment `1→2→7`).
+- `observabilityJs` — health `"UP"`, readiness/liveness `true`, counter `1→2→12`, requestIds with `length > 0`.
 
-Todos os testes passam com `KOF_KEEP_ASM=1` preservando `Main.s` para inspeção.
+All tests pass with `KOF_KEEP_ASM=1` preserving `Main.s` for inspection.
 
 ---
 
-## 5. Integração com o ecossistema
+## 5. Integration with the ecosystem
 
 ```
-kof.config ──► kof.observability (config de logging/metrics)
-kof.web ──► kof.observability (request IDs, metrics por rota)
-kof.security ──► kof.observability (audit logging futuro)
-kof.observability ──► kof.bench/profile (tooling já existente)
+kof.config ──► kof.observability (logging/metrics config)
+kof.web ──► kof.observability (request IDs, per-route metrics)
+kof.security ──► kof.observability (future audit logging)
+kof.observability ──► kof.bench/profile (existing tooling)
 ```
 
-Próximos passos (fora do P0-G5): export Prometheus (`/metrics`), `tracing`/`OpenTelemetry` (spans), `kof.observability.metrics()` dump JSON, health customizável com checks de `kof.db`/`kof.mq`.
+Next steps (outside P0-G5): Prometheus export (`/metrics`), `tracing`/`OpenTelemetry` (spans), `kof.observability.metrics()` JSON dump, customizable health with `kof.db`/`kof.mq` checks.
 
 ---
 
 ## 6. Definition of Done (G5)
 
-- ✅ API idiomática (`observability.*`) + type safety (dispatch compile-time)
-- ✅ Targets JVM/Native/JS (sem gaps, `supportedOn` = true)
-- ✅ Testes `KofObservabilityTest` 3/3 + `KofSecurityTest` 25/25 + `KofValidationTest` 3/3 sem regressão
-- ✅ Benchmark não aplicável (operações O(1) / syscall `getrandom`)
-- ✅ Security review: `requestId` usa `SecureRandom` (JVM) / `getrandom` (Native) / `crypto.randomUUID` (JS) — sem vazamento
-- ✅ Docs: este arquivo + `docs/bugs-and-gaps/ecosystem-coverage.md` §3.9/§4/§7 + `docs/stdlib/stdlib.md` §3
-- ✅ Exemplo real: snippet acima roda nos três targets
+- ✅ Idiomatic API (`observability.*`) + type safety (compile-time dispatch)
+- ✅ JVM/Native/JS targets (no gaps, `supportedOn` = true)
+- ✅ Tests `KofObservabilityTest` 3/3 + `KofSecurityTest` 25/25 + `KofValidationTest` 3/3 without regression
+- ✅ Benchmark not applicable (O(1) operations / `getrandom` syscall)
+- ✅ Security review: `requestId` uses `SecureRandom` (JVM) / `getrandom` (Native) / `crypto.randomUUID` (JS) — no leakage
+- ✅ Docs: this file + `docs/bugs-and-gaps/ecosystem-coverage.md` §3.9/§4/§7 + `docs/stdlib/stdlib.md` §3
+- ✅ Real example: snippet above runs on the three targets

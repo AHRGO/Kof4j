@@ -1,33 +1,35 @@
+[English](http.md) | [Português](http.pt_BR.md)
+
 # Web Architecture — `kof serve`
 
-**Data:** 2 de setembro de 2026
-> **Atualizado (0.2.6-beta):** `kof serve` com handlers top-level + stack web nativa `web.app()` (Fase 1 Spring independence) — rotas com lambda trailing, path params, query, headers, body, middleware, JSON tipado, status/headers customizados e servidor HTTP gerado no runtime; `kof.http` client `http.get/post/put/delete/patch/options/status` + `timeout/retry/circuit` funciona em **JVM + JS** (JS via `Java HttpClient` interop no `KofJsRunner`; retry/circuit em paridade JVM+JS, 30/08) — Native `HTTP002`; TLS `listenSecure` JVM. Ver [docs/stdlib/stdlib-web.md](stdlib-web.md) e `docs/status.md` (contagem corrente da suíte).
+**Date:** September 2, 2026
+> **Updated (0.2.6-beta):** `kof serve` with top-level handlers + native web stack `web.app()` (Spring independence Phase 1) — routes with trailing lambda, path params, query, headers, body, middleware, typed JSON, custom status/headers and HTTP server generated in the runtime; `kof.http` client `http.get/post/put/delete/patch/options/status` + `timeout/retry/circuit` works on **JVM + JS** (JS via `Java HttpClient` interop in `KofJsRunner`; retry/circuit at JVM+JS parity, 30/08) — Native `HTTP002`; TLS `listenSecure` JVM. See [docs/stdlib/stdlib-web.md](stdlib-web.md) and `docs/status.md` (current suite count).
 
-**Status:** Implementado (Fase H) — 0.2.6-beta `VERSION` 0.2.6-beta
-**Versão:** 0.2.6-beta
+**Status:** Implemented (Phase H) — 0.2.6-beta `VERSION` 0.2.6-beta
+**Version:** 0.2.6-beta
 
 ---
 
-## 1. Filosofia
+## 1. Philosophy
 
-> A complexidade de criar uma aplicação web deve ser resolvida pela linguagem, compilador e runtime — não por frameworks.
+> The complexity of creating a web application must be solved by the language, compiler and runtime — not by frameworks.
 
-Kof não é outro Spring. Kof é uma linguagem onde criar uma API HTTP deve ser tão simples quanto escrever uma função.
+Kof is not another Spring. Kof is a language where creating an HTTP API must be as simple as writing a function.
 
 ```kof
-// Conceitual — ainda não implementado
+// Conceptual — not yet implemented
 route GET "/users/{id}" {
     return users.find(id)
 }
 ```
 
-A pergunta guia é: **"O programador realmente precisa escrever isso?"**
+The guiding question is: **"Does the programmer really need to write this?"**
 
-Se a resposta for não, a linguagem deve resolver.
+If the answer is no, the language must solve it.
 
 ---
 
-## 2. Arquitetura Geral
+## 2. General Architecture
 
 ```
 Kof Source (.kf)
@@ -55,30 +57,30 @@ JVM GC   Kof Runtime
          Application
 ```
 
-### Camadas
+### Layers
 
-| Camada | Responsabilidade | Backend |
+| Layer | Responsibility | Backend |
 |--------|-----------------|---------|
-| **Language** | Sintaxe, tipos, semântica | Comum |
-| **Compiler** | Análise, IR, codegen | Comum |
-| **Runtime** | Memory, strings, arrays | Específico por backend |
-| **Net Layer** | Sockets, I/O | Específico por backend |
-| **HTTP Layer** | Request/Response parsing | Comum (usa Net Layer) |
-| **App Layer** | Routing, handlers | Comum (usa HTTP Layer) |
+| **Language** | Syntax, types, semantics | Common |
+| **Compiler** | Analysis, IR, codegen | Common |
+| **Runtime** | Memory, strings, arrays | Backend-specific |
+| **Net Layer** | Sockets, I/O | Backend-specific |
+| **HTTP Layer** | Request/Response parsing | Common (uses Net Layer) |
+| **App Layer** | Routing, handlers | Common (uses HTTP Layer) |
 
 ---
 
-## 3. O que pertence a cada camada
+## 3. What belongs to each layer
 
-### Linguagem
-- Sintaxe de rotas (futuro)
-- Declaração de handlers
-- Tipos de request/response
+### Language
+- Route syntax (future)
+- Handler declaration
+- Request/response types
 
 ### Compiler
-- Parsing de rotas (quando implementado)
-- Validação de assinaturas
-- Geração de IR para dispatch
+- Route parsing (when implemented)
+- Signature validation
+- IR generation for dispatch
 
 ### Runtime (Native)
 - Socket syscalls (bind, listen, accept, read, write)
@@ -89,7 +91,7 @@ JVM GC   Kof Runtime
 
 ### Runtime (JVM)
 - Java NIO / Netty equivalent
-- Virtual threads para concurrency
+- Virtual threads for concurrency
 - HTTP parsing
 
 ### Standard Library
@@ -101,13 +103,13 @@ JVM GC   Kof Runtime
 ### CLI
 - `kof serve` command
 - `--port`, `--host` flags
-- Watch mode (futuro)
+- Watch mode (future)
 
 ---
 
-## 4. `kof serve` — Comportamento
+## 4. `kof serve` — Behavior
 
-### Sintaxe
+### Syntax
 
 ```bash
 kof serve <file.kf> [--port <port>] [--host <host>]
@@ -115,28 +117,28 @@ kof serve <file.kf> [--port <port>] [--host <host>]
 
 ### Flags
 
-| Flag | Default | Descrição |
+| Flag | Default | Description |
 |------|---------|-----------|
-| `--port` | 8080 | Porta do servidor — **só no modo legacy** (`handle(...)`). Em app kof-native (`web.app()` + `app.listen`), a porta é do app; a CLI avisa que `--port` é ignorado (#35.3, R6) |
-| `--host` | 0.0.0.0 | Endereço de bind — idem: só modo legacy |
+| `--port` | 8080 | Server port — **legacy mode only** (`handle(...)`). In a kof-native app (`web.app()` + `app.listen`), the port belongs to the app; the CLI warns that `--port` is ignored (#35.3, R6) |
+| `--host` | 0.0.0.0 | Bind address — same: legacy mode only |
 
-### Comportamento
+### Behavior
 
-1. Compila o arquivo `.kf`
-2. **Modo legacy** (função `handle(...)`): inicia servidor HTTP na porta `--port`;
-   cada request chama o handler.
-3. **Modo kof-native** (`web.app()` + `app.listen(port)`): o **app** sobe e
-   escuta na porta que **ele** define; a CLI só compila e executa, e o banner
-   reporta a porta real do app (ou avisa que `--port` foi ignorado).
+1. Compiles the `.kf` file
+2. **Legacy mode** (`handle(...)` function): starts an HTTP server on the `--port` port;
+   each request calls the handler.
+3. **kof-native mode** (`web.app()` + `app.listen(port)`): the **app** starts and
+   listens on the port that **it** defines; the CLI only compiles and runs, and the banner
+   reports the app's real port (or warns that `--port` was ignored).
 
-### Modo de operação
+### Operation mode
 
 ```bash
-# Desenvolvimento (JVM)
+# Development (JVM)
 kof serve app.kf --port 8080
 
-# Produção (Native)
-kof serve app.kf --port 8080   # serve compila para JVM
+# Production (Native)
+kof serve app.kf --port 8080   # serve compiles to JVM
 ```
 
 ---
@@ -146,7 +148,7 @@ kof serve app.kf --port 8080   # serve compila para JVM
 ### Request
 
 ```kof
-// Conceitual
+// Conceptual
 request.method     // "GET", "POST", etc.
 request.path       // "/users/123"
 request.headers    // map of headers
@@ -157,7 +159,7 @@ request.query      // query parameters
 ### Response
 
 ```kof
-// Conceitual
+// Conceptual
 response.status(200)
 response.header("Content-Type", "application/json")
 response.body(jsonString)
@@ -166,7 +168,7 @@ response.body(jsonString)
 ### Handler
 
 ```kof
-// Conceitual — forma mínima
+// Conceptual — minimal form
 handle(request: Request): Response {
     return response(200, "Hello, World!")
 }
@@ -176,10 +178,10 @@ handle(request: Request): Response {
 
 ## 6. Routing
 
-### Modelo de rotas
+### Route model
 
 ```kof
-// Conceitual
+// Conceptual
 route GET "/users" { ... }
 route POST "/users" { ... }
 route GET "/users/{id}" { ... }
@@ -195,53 +197,53 @@ route GET "/users/{id}" {
 }
 ```
 
-### Validação em compile-time
+### Compile-time validation
 
 ```kof
-// Erro se dois routes têm o mesmo path+method
+// Error if two routes have the same path+method
 route GET "/users" { ... }
-route GET "/users" { ... }  // ERRO: rota duplicada
+route GET "/users" { ... }  // ERROR: duplicate route
 ```
 
 ---
 
 ## 7. JSON
 
-### Serialização
+### Serialization
 
 ```kof
-// Conceitual
+// Conceptual
 var user = User("Mel", 26)
 var json = encode(user)
 // → {"name":"Mel","age":26}
 ```
 
-### Deserialização
+### Deserialization
 
 ```kof
-// Conceitual
+// Conceptual
 var user = decode<User>(request.body)
 ```
 
 ### Schema generation
 
-O compiler pode gerar JSON schemas a partir de records/classes:
+The compiler can generate JSON schemas from records/classes:
 
 ```kof
 record User(String name, Int age)
-// → gera JSON schema automaticamente
+// → generates JSON schema automatically
 ```
 
 ---
 
 ## 8. Middleware
 
-### Modelo
+### Model
 
-Middleware como composição de funções:
+Middleware as function composition:
 
 ```kof
-// Conceitual
+// Conceptual
 auth(handler: Handler): Handler {
     return (req: Request) -> Response {
         if (!req.headers.has("Authorization")) {
@@ -252,7 +254,7 @@ auth(handler: Handler): Handler {
 }
 ```
 
-### Uso
+### Usage
 
 ```kof
 route GET "/admin" with auth {
@@ -262,31 +264,31 @@ route GET "/admin" with auth {
 
 ---
 
-## 9. Concorrência
+## 9. Concurrency
 
 ### JVM
 
 - Virtual threads (Java 21+)
-- Cada request em uma virtual thread
-- Structured concurrency para parallelismo
+- Each request on a virtual thread
+- Structured concurrency for parallelism
 
 ### Native
 
-- Thread pool com worker threads
-- ou event loop (futuro)
+- Thread pool with worker threads
+- or event loop (future)
 
-### Abstração comum
+### Common abstraction
 
 ```kof
-// Conceitual — o programador não escreve isso
-// O runtime decide a estratégia
+// Conceptual — the programmer does not write this
+// The runtime decides the strategy
 ```
 
-O programador escreve handlers síncronos. O runtime executa em threads assíncronas.
+The programmer writes synchronous handlers. The runtime executes them on asynchronous threads.
 
 ---
 
-## 10. Segurança
+## 10. Security
 
 ### Layer 1 — Runtime
 
@@ -303,8 +305,8 @@ O programador escreve handlers síncronos. O runtime executa em threads assíncr
 
 ### Layer 3 — Application
 
-- Validação de input
-- Sanitização
+- Input validation
+- Sanitization
 
 ---
 
@@ -313,50 +315,50 @@ O programador escreve handlers síncronos. O runtime executa em threads assíncr
 ```kof
 var app = web.app()
 app.get("/hello") { return "Hello TLS" }
-app.listenSecure(8443) // JVM: gera self-signed via keytool (SAN=IP:127.0.0.1,DNS:localhost), SSLServerSocket
+app.listenSecure(8443) // JVM: generates self-signed via keytool (SAN=IP:127.0.0.1,DNS:localhost), SSLServerSocket
 ```
 
-- **Server:** `app.listenSecure(port)` — `KofWeb.java:84` `kof_web_listen_secure` → `JvmRuntime.java:370` `SSLServerSocket` + `keytool -genkeypair` (JKS, `SAN=IP:127.0.0.1,DNS:localhost`); Native/JS reportam `WEB002`.
-- **Client:** `kof.http.get("https://...")` — `JvmWebRuntime.java:238` `KOF_HTTP_CLIENT_INSECURE` (`SSLContext` trust-all + `SSLParameters` sem `endpointIdentification`, `HttpClient` com `sslContext` insecure) — necessário para self-signed em testes.
-- **Teste:** `KofWebTlsTest.java:12` 5 testes (hello, headers, `http` over TLS, gaps Native/JS `WEB002`/`WEB001`).
+- **Server:** `app.listenSecure(port)` — `KofWeb.java:84` `kof_web_listen_secure` → `JvmRuntime.java:370` `SSLServerSocket` + `keytool -genkeypair` (JKS, `SAN=IP:127.0.0.1,DNS:localhost`); Native/JS report `WEB002`.
+- **Client:** `kof.http.get("https://...")` — `JvmWebRuntime.java:238` `KOF_HTTP_CLIENT_INSECURE` (`SSLContext` trust-all + `SSLParameters` without `endpointIdentification`, `HttpClient` with insecure `sslContext`) — needed for self-signed in tests.
+- **Test:** `KofWebTlsTest.java:12` 5 tests (hello, headers, `http` over TLS, Native/JS gaps `WEB002`/`WEB001`).
 
 ---
 
-## 10.2 `kof.http` client — resiliência (timeout/retry/circuit) (G2, 30/08)
+## 10.2 `kof.http` client — resilience (timeout/retry/circuit) (G2, 30/08)
 
-O client `kof.http` (JVM + JS) ganha três funções globais de resiliência que
-atuam sobre **todas** as chamadas `http.*` subsequentes:
+The `kof.http` client (JVM + JS) gains three global resilience functions that
+act on **all** subsequent `http.*` calls:
 
 ```kof
-http.timeout(30)      // timeout por request, em segundos (default 15)
-http.retry(2)         // repete a request em exceção E em HTTP 5xx (default 0)
-http.circuit(3)       // circuito abre após 3 falhas (default 0 = sem circuito)
-http.circuit(0)       // desliga o circuito e zera o estado de falhas
+http.timeout(30)      // timeout per request, in seconds (default 15)
+http.retry(2)         // retries the request on exception AND on HTTP 5xx (default 0)
+http.circuit(3)       // circuit opens after 3 failures (default 0 = no circuit)
+http.circuit(0)       // turns off the circuit and resets the failure state
 ```
 
-- **`timeout(s)`** — aplica `Duration.ofSeconds(s)` a cada request
+- **`timeout(s)`** — applies `Duration.ofSeconds(s)` to each request
   (`JvmWebRuntime.kof_http_timeout_set`). Default: 15 s.
-- **`retry(n)`** — `n` tentativas extras; repete a request quando lança
-  exceção (connexão recusada, timeout) **ou** quando o status HTTP é `>= 500`
-  (`JvmWebRuntime.kof_http_retry_set`). Default: 0. `retry(0)` desliga.
-- **`circuit(trips)`** — abre o circuito após `trips` falhas consecutivas
-  (exceção ou HTTP `>= 500`); enquanto aberto, as requests falham na hora
-  (fail-fast) com `IOException("kof.http circuit open (fail fast): <url>")`
-  por 30 s (`KOF_HTTP_CIRCUIT_WINDOW_MS`). `circuit(0)` desliga e zera
-  contador/falha. Default: 0 (desligado).
+- **`retry(n)`** — `n` extra attempts; retries the request when it throws
+  an exception (connection refused, timeout) **or** when the HTTP status is `>= 500`
+  (`JvmWebRuntime.kof_http_retry_set`). Default: 0. `retry(0)` turns it off.
+- **`circuit(trips)`** — opens the circuit after `trips` consecutive failures
+  (exception or HTTP `>= 500`); while open, requests fail immediately
+  (fail-fast) with `IOException("kof.http circuit open (fail fast): <url>")`
+  for 30 s (`KOF_HTTP_CIRCUIT_WINDOW_MS`). `circuit(0)` turns it off and resets
+  counter/failure. Default: 0 (off).
 
-A paridade JVM+JS é exercida por `KofHttpResilienceE2ETest` (3/3): retry
-recupera num endpoint flaky (2×500 → 200), circuito abre após falha e
-fail-fast, e `circuit(0)` recupera. Native reporta `HTTP002`.
+JVM+JS parity is exercised by `KofHttpResilienceE2ETest` (3/3): retry
+recovers on a flaky endpoint (2×500 → 200), the circuit opens after a failure and
+fail-fast, and `circuit(0)` recovers. Native reports `HTTP002`.
 
 ---
 
-## 11. Observabilidade
+## 11. Observability
 
 ### Logging
 
 ```kof
-// Conceitual
+// Conceptual
 log("Request received")
 log("Response sent", level=INFO)
 ```
@@ -364,56 +366,56 @@ log("Response sent", level=INFO)
 ### Metrics
 
 ```kof
-// Conceitual — coletado automaticamente
+// Conceptual — collected automatically
 // request_count, latency, error_rate
 ```
 
 ### Tracing
 
 ```kof
-// Conceitual — request ID propagado automaticamente
+// Conceptual — request ID propagated automatically
 ```
 
 ---
 
 ## 12. CLI
 
-### Comandos
+### Commands
 
-| Comando | Descrição |
+| Command | Description |
 |---------|-----------|
-| `kof serve` | Inicia servidor HTTP |
-| `kof serve --port 8080` | Define porta |
-| `kof serve --host 0.0.0.0` | Define endereço |
+| `kof serve` | Starts the HTTP server |
+| `kof serve --port 8080` | Sets the port |
+| `kof serve --host 0.0.0.0` | Sets the address |
 
 ### Flags
 
-| Flag | Default | Descrição |
+| Flag | Default | Description |
 |------|---------|-----------|
-| `--port` | 8080 | Porta |
-| `--host` | 0.0.0.0 | Endereço |
+| `--port` | 8080 | Port |
+| `--host` | 0.0.0.0 | Address |
 
 ---
 
 ## 13. Native Backend
 
-### Syscalls necessários
+### Required syscalls
 
-| Syscall | Número | Propósito |
+| Syscall | Number | Purpose |
 |---------|--------|-----------|
-| `socket` | 41 | Criar socket |
-| `bind` | 49 | Bind em endereço |
-| `listen` | 50 | Escutar conexões |
-| `accept` | 43 | Aceitar conexão |
-| `read` | 0 | Ler dados |
-| `write` | 1 | Enviar dados |
-| `close` | 3 | Fechar socket |
+| `socket` | 41 | Create socket |
+| `bind` | 49 | Bind to address |
+| `listen` | 50 | Listen for connections |
+| `accept` | 43 | Accept connection |
+| `read` | 0 | Read data |
+| `write` | 1 | Send data |
+| `close` | 3 | Close socket |
 
 ### Runtime functions
 
-| Função | Propósito |
+| Function | Purpose |
 |--------|-----------|
-| `kof_net_socket(domain, type, protocol)` | Criar socket |
+| `kof_net_socket(domain, type, protocol)` | Create socket |
 | `kof_net_bind(fd, port, addr)` | Bind |
 | `kof_net_listen(fd, backlog)` | Listen |
 | `kof_net_accept(fd)` | Accept |
@@ -425,21 +427,21 @@ log("Response sent", level=INFO)
 
 ## 14. JVM Backend
 
-### Implementação
+### Implementation
 
-- Usa Java NIO ou sockets padrão
-- Virtual threads para concorrência
-- `java.net.ServerSocket` para bind/listen/accept
-- `java.io.InputStream/OutputStream` para read/write
+- Uses Java NIO or standard sockets
+- Virtual threads for concurrency
+- `java.net.ServerSocket` for bind/listen/accept
+- `java.io.InputStream/OutputStream` for read/write
 
 ---
 
-## 15. Extensibilidade
+## 15. Extensibility
 
-### API comum
+### Common API
 
 ```kof
-// Conceitual
+// Conceptual
 interface HttpServer {
     start(port: Int)
     stop()
@@ -449,26 +451,26 @@ interface HttpServer {
 
 ### Backend-specific
 
-Cada backend pode ter implementações específicas se necessário, mas a API básica deve ser comum.
+Each backend may have specific implementations if needed, but the basic API must be common.
 
 ---
 
-## 16. Riscos Arquiteturais
+## 16. Architectural Risks
 
-1. **Hot reload** — implementar sem quebrar a semântica da linguagem
-2. **Graceful shutdown** — como o processo termina?
-3. **State management** — como lidar com estado entre requests?
-4. **Error handling** — como erros de runtime afetam o servidor?
-5. **Memory leaks** — como o GC lida com objetos de request/response?
+1. **Hot reload** — implementing it without breaking the language semantics
+2. **Graceful shutdown** — how does the process terminate?
+3. **State management** — how to handle state between requests?
+4. **Error handling** — how do runtime errors affect the server?
+5. **Memory leaks** — how does the GC handle request/response objects?
 
 ---
 
-## 17. Próximos Passos
+## 17. Next Steps
 
-1. Implementar syscalls de rede no NativeRuntime
-2. Adicionar `serve` ao CLI
-3. Implementar HTTP server mínimo (single-threaded)
-4. Implementar request/response parsing
-5. Conectar com função handler do programa Kof
-6. Adicionar testes E2E
-7. Documentar
+1. Implement network syscalls in NativeRuntime
+2. Add `serve` to the CLI
+3. Implement a minimal HTTP server (single-threaded)
+4. Implement request/response parsing
+5. Connect with the handler function of the Kof program
+6. Add E2E tests
+7. Document
