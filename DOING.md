@@ -806,7 +806,16 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > vinculante — se quebrar, é stub honesto, nunca código errado compilável);
 > (3) golden de execução (oracle JVM) p/ cada nova forma recuperada. Meta:
 > reduzir stubs SEM novo falso-verde. Só mover DECOMPILER p/ `docs/` quando
-> a Fase C fechar o corpo (hoje: recovery parcial honesto).
+a Fase C fechar o corpo (hoje: recovery parcial honesto).
+
+> **⚠️ 5º RED NO PORTÃO (catalogado, para as lanes de bug — 14/09 ~16:45):**
+> `NativeStringCompareCrossTest` riscv+aarch → §231 no known-bugs (fix
+> mecânico 4× `.get(N)`→`[N]` no SPLIT_PROGRAM:119/122/127/131, golden
+> idêntico PROVADO na JVM 16:40; owner = quem deve o blast-radius do
+> `602dcbc0` ou lane nat §111; NÃO editado por esta lane por diretriz de
+> 16:00). Portão atual: 4 failures vistos (2× CastSaturation + 2×
+> StringCompare; §192 parseOrDefaultCrossArch não re-medido neste sweep —
+> não rodar o harness que pendura sem ~1h35 de qemu).
 > #237 RETIFICADA: não é face do §225 — vira §228 (descriptor vazava o tipo
 > CONCRETO do argumento no PARAMETRO + retorno fabricado; comentario
 > publico corrigido na issue; a face errada removida do §225). #238→§230
