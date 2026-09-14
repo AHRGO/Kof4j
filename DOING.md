@@ -108,6 +108,29 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > arquivo principal `KofWeb.java`/`JvmRuntimeWebDispatch.java`; prova =
 > E2E com rota protegida (401 sem credencial, 200 com) em `KofBlogE2ETest`
 > ou teste próprio. Antes: reler `docs/development/DECISIONS.md` §D-SEC C18.
+> **EM CURSO (14/09 ~02:30, dono = 192.168.100.15, lane bugs-and-gaps):
+> unidade §186/#133 — fix estrutural completo do `<clinit>`.** Autostash
+> da unidade REAPROVEITADO (stash@{0} aplicado; conflito com e4613704
+> resolvido preservando os dois lados). Código: `CompilerClassLowering.
+> generateStaticInitializer` (IR) + emissão nos 4 backends (JVM/JVM nativo
+> `_start`, riscv/aarch `emitClinitCallsRiscv`, JS `_kof_clinit` no topo do
+> módulo). **Bug irmão corrigido na mesma unidade:** chamada sem receiver
+> a método static da MESMA classe emitia `aload_0`+`invokevirtual`
+> (IncompatibleClassChangeError/VerifyError) — flag STATIC no
+> `MethodSymbol` (SymbolTableBuilder) + `KofCallKind.STATIC` sem receiver
+> (ExpressionMethodCallLowerer). Prova: `CoreRegressionE2ETest.
+> staticNonConstantFieldInitializerClinit` + `.staticClinitMixedConstantAndNonConstant`
+> + `.receiverlessCallToSameClassStaticMethod` (JVM+JS verdes); célula
+> `10\n100\n42` via CLI em JVM/JS/x86; riscv `.s` contém `Math2_clinit`
+> chamado no `_start` (toolchain/qemu ausente no host — gate ambienta).
+> known-bugs §186 atualizado p/ CORRIGIDO. **FALTA p/ commit:** suíte
+> completa 4 módulos rodando em background; commit + push + fechar #133
+> com triagem. **Depois (fila .15):** triagem/fix #139+#150 (Set/Map
+> ClassFormatError), #143 (record == referencial), #145 (for-in String),
+#149/#152 (List[i] aaload), #141 (spawn{block}), #142 (ctor genérico),
+> #151 (is) — .17 assume #146/#147/#148 (família Jvm*Descriptors, arquivos
+> dele EM CURSO: KofSecurity/JvmRuntimeCallDescriptors/JvmRuntimeReturnDescriptors/
+> JvmStringSecurityRuntime — NÃO tocar).
 
 > **✅ FEITO (14/09 ~03:30, dono = 192.168.100.22): `CmdNew` (D-APP I1 +
 > D-SPRING F11).** `kof new <dir> [--type mono|backend|frontend|full-stack]`

@@ -217,6 +217,12 @@ public final class SymbolTableBuilder {
         int accessFlags = AccessFlags.PUBLIC;
         if (method.modifiers().contains("private")) accessFlags = AccessFlags.PRIVATE;
         else if (method.modifiers().contains("protected")) accessFlags = AccessFlags.PROTECTED;
+        // #133 (irmão): a flag STATIC precisa chegar ao símbolo — sem ela o
+        // lowering de chamada sem receiver não distingue método estático de
+        // instância e emitia aload_0 (this) + invokevirtual sobre método
+        // estático → IncompatibleClassChangeError (JVM, contexto de instância)
+        // / VerifyError (contexto estático, <clinit>).
+        if (method.modifiers().contains("static")) accessFlags |= AccessFlags.STATIC;
         SymbolTable.MethodSymbol methodSym = new SymbolTable.MethodSymbol(method.name(), className,
                 returnType, paramTypes, accessFlags, SymbolTable.DispatchKind.INSTANCE);
         classScope.define(methodSym);

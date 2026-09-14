@@ -132,12 +132,30 @@ public class JsBackend implements Backend {
             }
         }
         computeAsyncColoring(module);
+        // #133 (§186): clinit por classe (inclui Main) — chamado no topo do
+        // módulo, antes do main; JS não tem <clinit> nativo.
+        List<JsIr.JsExpression> clinitTargets = new ArrayList<>();
         for (IRClass clazz : module.classes()) {
             if (JsLoweringContext.skipClass(clazz)) continue;
             if (JsLoweringContext.isMainClass(clazz)) {
                 for (IRMethod method : clazz.methods()) {
                     if ("<init>".equals(method.name())) continue;
+                    if ("<clinit>".equals(method.name())) {
+                        JsIr.JsFunction f = parser.lowerFunction(method, null, false, true);
+                        functions.add(new JsIr.JsFunction("_kof_clinit", f.parameters(), f.body(),
+                                false, false, true, f.isAsync(), f.kofLine()));
+                        clinitTargets.add(new JsIr.JsIdentifier("_kof_clinit"));
+                        continue;
+                    }
                     functions.add(parser.lowerFunction(method, null, false, true));
+                }
+            } else {
+                for (IRMethod method : clazz.methods()) {
+                    if ("<clinit>".equals(method.name())) {
+                        clinitTargets.add(new JsIr.JsMember(
+                                new JsIr.JsIdentifier(JsTypeMapper.jsClassName(clazz.name())),
+                                "_kof_clinit"));
+                    }
                 }
             }
         }
@@ -152,6 +170,9 @@ public class JsBackend implements Backend {
             }
         }
         List<JsIr.JsStatement> moduleStatements = new ArrayList<>();
+        for (JsIr.JsExpression target : clinitTargets) {
+            moduleStatements.add(new JsIr.JsExprStmt(new JsIr.JsCall(target, List.of())));
+        }
         for (JsIr.JsFunction fn : functions) {
             if ("main".equals(fn.name())) {
                 JsIr.JsExpression entry = new JsIr.JsCall(

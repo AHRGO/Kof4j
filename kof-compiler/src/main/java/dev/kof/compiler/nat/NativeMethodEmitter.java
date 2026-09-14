@@ -55,7 +55,10 @@ final class NativeMethodEmitter {
     NativeMethodEmitter(NativeBackend nb) { this.nb = nb; }
 
     void emitMethod(StringBuilder sb, IRClass clazz, IRMethod method) {
-        if ("<clinit>".equals(method.name())) return;
+        // #133 (§186): <clinit> AGORA é emitido (método estático normal — sem
+        // `this`, sem parâmetros); era descartado, e os inicializadores
+        // estáticos não-constantes nunca rodavam (ficavam 0/null/undefined).
+        // O _start chama cada <clinit> antes de main.
 
         nb.currentClass = clazz;
 
@@ -342,6 +345,16 @@ final class NativeMethodEmitter {
             sb.append("    movl $8, %esi\n");
             sb.append("    call kof_array_alloc\n");
             sb.append("    movq %rax, %rdi\n");
+        }
+        // #133 (§186): chama cada <clinit> antes do main (ordem de classes no
+        // módulo — link-ordem estática; não há dependência dinâmica declarada).
+        for (IRClass c : nb.allClassesMap.values()) {
+            for (IRMethod m : c.methods()) {
+                if ("<clinit>".equals(m.name())) {
+                    sb.append("    call ").append(NativeSymbolMangling.fnSymbol(
+                            c.name(), m.name(), m.parameterTypes(), nb.allClassesMap)).append("\n");
+                }
+            }
         }
         sb.append("    call ").append(nb.sanitizeName(clazz.name())).append("_main\n");
         // M32.3: SYS_exit_group (231) — SYS_exit (60) só mata a thread

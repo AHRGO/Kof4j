@@ -54,6 +54,13 @@ public final class JsClassEmitter {
                 if (method == canonicalCtor) {
                     methods.add(lowerConstructor(clazz, method));
                 }
+            } else if ("<clinit>".equals(method.name())) {
+                // #133 (§186): <clinit> não é nome de método válido em JS —
+                // renomeia para o static `_kof_clinit()`, chamado pelo
+                // módulo antes do main (JsBackend).
+                JsIr.JsFunction clinit = p.lowerFunction(method, clazz, true);
+                methods.add(new JsIr.JsFunction("_kof_clinit", clinit.parameters(), clinit.body(),
+                        true, false, false, clinit.isAsync(), clinit.kofLine()));
             } else {
                 boolean isStatic = (method.accessFlags() & AccessFlags.STATIC) != 0;
                 methods.add(p.lowerFunction(method, clazz, isStatic));

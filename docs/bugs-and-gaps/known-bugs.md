@@ -6262,7 +6262,7 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   `KofInterpreterBuiltins` que os expõe são fachada não-invocada — catalogar
   a remoção junto do fix (não é stub de feature, é resto de refactor).
 
-### §186 — JVM/KofJS: inicializador de campo `static` com expressão não-constante é descartado silenciosamente (nenhum `<clinit>` é sintetizado) — ❌ ABERTO, ALTA PRIORIDADE, [issue #133](https://github.com/KofLang/Kof4j/issues/133) (colaborador Jonas Rocha, varredura KOF-SBD-001-STRESS; portado do `docs/development/known-bugs.md` do PR #130)
+### §186 — JVM/KofJS: inicializador de campo `static` com expressão não-constante é descartado silenciosamente (nenhum `<clinit>` é sintetizado) — ✅ CORRIGIDO 14/09, [issue #133](https://github.com/KofLang/Kof4j/issues/133) (colaborador Jonas Rocha, varredura KOF-SBD-001-STRESS; portado do `docs/development/known-bugs.md` do PR #130)
 
 - **Sintoma:** `static Int[] shared = new Int[3]` — `Holder.shared` é `null`
   no JVM e `undefined` no KofJS; `static Int x = compute()` imprime `0`.
@@ -6348,6 +6348,36 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   `<clinit>` nos backends compilados — o fix estrutural (que o
   `NativeMethodEmitter:58` ignora de propósito) segue como item de
   `docs/development/`. **Não fechar o §186 com o fix parcial.**
+- **✅ CORRIGIDO 14/09 (fix estrutural completo, lane bugs-and-gaps
+  `192.168.100.15`, fecha o residual):** `<clinit>` agora é **sintetizado no
+  IR** (`CompilerClassLowering.generateStaticInitializer`) para todo campo
+  estático cujo inicializador não foi dobrado a constante
+  (`initialValue == null`), na **ordem de declaração** — e os backends
+  passam a emití-lo: **JVM** emite `<clinit>()V` ACC_PUBLIC|ACC_STATIC
+  (JVMS §2.9 — a JVM roda na inicialização da classe, lazy como manda a
+  spec); **KofJS** renomeia para `_kof_clinit` e chama no topo do módulo
+  antes do `main` (`JsClassEmitter`+`JsBackend`); **Native x86** emite como
+  função normal e o `_start` chama cada `<clinit>` antes do `main`
+  (`NativeMethodEmitter`); **riscv64/aarch64** idem
+  (`NativeArchEmitter.emitClinitCallsRiscv`; aarch64 herda do tradutor
+  riscv). **Interpretador (Script)**: `ensureInit` já executava `<clinit>`
+  — agora há o método para executar (lazily, na primeira leitura).
+  **Bug irmão descoberto e corrigido na mesma unidade:** chamada **sem
+  receiver** a método `static` da MESMA classe emitia `aload_0` +
+  `invokevirtual` → `IncompatibleClassChangeError` (JVM, contexto de
+  instância: `D.m(){ return twice(21) }`) e `VerifyError` (contexto
+  estático: dentro do `<clinit>` — `static Int y = twice(21)`). Causa raiz:
+  o `MethodSymbol` nunca carregava a flag STATIC (`SymbolTableBuilder`)
+  e o lowering self-method (`ExpressionMethodCallLowerer`) sempre
+  empilhava `this`. Fix: flag STATIC no símbolo + `KofCallKind.STATIC` sem
+  receiver. **Prova:** `CoreRegressionE2ETest.staticNonConstantFieldInitializerClinit`
+  (reprodutor exato da #133, JVM+JS), `.staticClinitMixedConstantAndNonConstant`
+  (ConstantValue + `<clinit>` na mesma classe, ordem de execução) e
+  `.receiverlessCallToSameClassStaticMethod` (as 3 faces do bug irmão,
+  JVM+JS); célula via CLI `10\n100\n42` nos 4 targets compiláveis do host
+  (JVM/JS/x86; riscv64 `.s` contém `Math2_clinit` + `_start` chama antes do
+  `main` — toolchain/qemu ausente no host, gate ambienta). **Issue #133
+  fecha com esta unidade.**
 - **Workaround:** sem inicializador não-constante em `static`; atribuir
   explicitamente num método chamado antes do primeiro uso.
 - **Descoberto:** 13/09, KOF-SBD-001-STRESS (STRESS-016).

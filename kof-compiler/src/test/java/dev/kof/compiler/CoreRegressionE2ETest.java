@@ -56,6 +56,80 @@ class CoreRegressionE2ETest {
         assertEquals(expected, runJs(outJs), name + " JS output mismatch");
     }
 
+    // #133 — inicializador de campo static NÃO-constante era descartado
+    // silenciosamente: nenhum <clinit> era sintetizado, então
+    // `static Int[] shared = new Int[3]` ficava null/undefined e
+    // `static Int x = compute()` ficava 0 (R6: nunca silencioso).
+    // Prova: <clinit> existe no class file (JVMS §2.9 — a JVM roda na
+    // inicialização da classe); KofJS chama _kof_clinit no topo do módulo;
+    // Native x86 chama cada <clinit> no _start antes do main.
+    // Reprodutor exato da issue (Holder/Holder2/compute).
+    @Test
+    void staticNonConstantFieldInitializerClinit(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                class Holder {
+                    static Int[] shared = new Int[3]
+                }
+
+                Int compute() { return 42 }
+
+                class Holder2 {
+                    static Int x = compute()
+                }
+
+                main() {
+                    Holder.shared[1] = 7
+                    println(Holder.shared[1])
+                    println(Holder2.x)
+                }
+                """, "7\n42", tempDir, "StaticClinit");
+    }
+
+    // #133 — borda: mistura de estático constante (ConstantValue) e
+    // não-constante (clinit) na MESMA classe, + ordem de execução.
+    @Test
+    void staticClinitMixedConstantAndNonConstant(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                class Cfg {
+                    static Int version = 2
+                    static Int derived = version * 10
+                    static Int runtime = bump()
+                    static Int bump() { return version + 100 }
+                }
+
+                main() {
+                    println(Cfg.version)
+                    println(Cfg.derived)
+                    println(Cfg.runtime)
+                }
+                """, "2\n20\n102", tempDir, "StaticClinitMixed");
+    }
+
+    // Irmão de #133 — chamada SEM receiver a método static da MESMA classe
+    // emitia aload_0 (this) + invokevirtual: IncompatibleClassChangeError no
+    // JVM em contexto de instância, VerifyError no <clinit> (contexto
+    // estático — não há this). O <clinit> sintetizado por #133 expôs a 2ª
+    // face. Cobertura: chamada a partir de método de instância, método
+    // estático e inicializador de campo estático; com e sem argumento.
+    @Test
+    void receiverlessCallToSameClassStaticMethod(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                class Math2 {
+                    static Int twice(Int x) { return x * 2 }
+                    static Int y = twice(21)
+                    Int m() { return twice(5) }
+                    static Int n() { return twice(50) }
+                }
+
+                main() {
+                    var d = Math2()
+                    println(d.m())
+                    println(Math2.n())
+                    println(Math2.y)
+                }
+                """, "10\n100\n42", tempDir, "ReceiverlessStaticCall");
+    }
+
     // GitHub #30 — String.split + acesso ao array: .get(i) era baixado como
     // KofCall com owner ArrayType → JvmTypeMapper produzia internalName ""
     // → Methodref "" no constant pool → ClassFormatError: Illegal class name "".

@@ -31,18 +31,31 @@ public final class CompilerClassLowering {
         List<IRField> fields = new ArrayList<>();
         List<IRMethod> methods = new ArrayList<>();
         java.util.Map<String, ExpressionNode> fieldInits = new java.util.LinkedHashMap<>();
+        // #133 (issue do colaborador, §186): inicializadores de campos
+        // ESTÁTICOS com expressão não-constante não têm lugar no atributo
+        // ConstantValue do class file — precisam de um <clinit>. O código
+        // antigo jogava TODOs os inicializadores em `fieldInits` (que só o
+        // <init> de instância executa, como putfield) — o <clinit> jamais
+        // existiu: `static Int[] shared = new Int[3]` ficava null/undefined,
+        // `static Int x = compute()` ficava 0, silenciosamente (viola R6).
+        // Em putfield num campo static era AINDA pior: bytecode inválido
+        // (VerifyError) assim que a classe fosse instanciada. Separa por
+        // STATIC e sintetiza o <clinit> na ordem de declaração.
+        java.util.Map<String, ExpressionNode> staticFieldInits = new java.util.LinkedHashMap<>();
         for (AstNode member : cls.members()) {
             if (member instanceof FieldDeclarationNode field) {
                 IRField irField = CompilerClassLowering.lowerField(driver,field, cls.typeParameters());
                 fields.add(irField);
                 if (field.initializer() != null && irField.initialValue() == null) {
-                    // UIW052: inicializador NÃO-constante. Campo ESTÁTICO não
-                    // pode ser atribuído no construtor (virava `this.x = ...`,
-                    // PUTFIELD num campo estático → IncompatibleClassChangeError
-                    // no JVM; no-op no Native). Sem `<clinit>` sintetizado nos
-                    // backends compilados, o runtime fica de fora (residual
-                    // documentado) — nunca a escrita de instância errada.
-                    if ((irField.accessFlags() & AccessFlags.STATIC) == 0) {
+                    // UIW052/#133: inicializador NÃO-constante. Um campo
+                    // ESTÁTICO não pode ser atribuído no <init> de instância
+                    // (virava `this.x = ...` → PUTFIELD num campo estático =
+                    // IncompatibleClassChangeError no JVM; no-op no Native).
+                    // Vai para o <clinit> sintetizado abaixo; só o campo de
+                    // instância vai para fieldInits (run no <init>).
+                    if ((irField.accessFlags() & AccessFlags.STATIC) != 0) {
+                        staticFieldInits.put(field.name(), field.initializer());
+                    } else {
                         fieldInits.put(field.name(), field.initializer());
                     }
                 }
@@ -56,6 +69,9 @@ public final class CompilerClassLowering {
         }
         if (!methods.stream().anyMatch(m -> m.name().equals("<init>"))) {
             methods.add(0, CompilerClassLowering.generateDefaultConstructor(driver,internalName, superName, fields, fieldInits));
+        }
+        if (!staticFieldInits.isEmpty()) {
+            methods.add(CompilerClassLowering.generateStaticInitializer(driver, internalName, superName, fields, staticFieldInits));
         }
         // bug 104b-i: classe não-record chamada com `.equals()` precisa de
         // símbolo no Native — o JVM resolve no Object.equals herdado, o
@@ -424,6 +440,39 @@ public final class CompilerClassLowering {
         return new IRMethod("<init>", Type.PrimitiveType.VOID, paramTypes, access, ctor.thrownExceptions(),
                 List.of(new IRBasicBlock(0, ops)), localVars, KofDebugInfo.EMPTY,
                 CompilerAnnotations.lowerAnnotations(driver, ctor.annotations()), CompilerAnnotations.lowerParameterAnnotations(driver, ctor.parameters()));
+    }
+
+    /**
+     * #133 (§186): sintetiza o <clinit> da classe — coloca os inicializadores
+     * ESTÁTICOS não-constantes (expressões, chamadas, `new`) num método
+     * estático sem receiver, na ordem de declaração, usando KofPutStatic (o
+     * mesmo caminho que `C.f = v` no código-fonte usa nos 4 backends). O
+     * interpretador já roda <clinit> via ensureInit; JVM/Native/KofJS ganham
+     * o suporte correspondente nos backends.
+     */
+    static IRMethod generateStaticInitializer(CompilerDriver driver, String owner, String superName,
+                                              List<IRField> fields,
+                                              java.util.Map<String, ExpressionNode> staticFieldInits) {
+        List<KofOperation> ops = new ArrayList<>();
+        List<IRLocalVariable> locals = new ArrayList<>();
+        int localIdx = 0;
+        String prevOwner = driver.currentLoweringOwner;
+        driver.currentLoweringOwner = owner;
+        try {
+            for (var entry : staticFieldInits.entrySet()) {
+                Type fieldType = fields.stream().filter(f -> f.name().equals(entry.getKey())).findFirst()
+                        .map(f -> f.type()).orElse(Type.UnknownType.UNKNOWN);
+                localIdx = ExpressionLowerer.emitExpression(driver, entry.getValue(), ops, owner, localIdx, locals);
+                Type ownerType = CompilerTypes.ownerTypeFromInternal(owner, driver.semanticAnalyzer);
+                ops.add(new KofPutStatic(ownerType, entry.getKey(), fieldType));
+            }
+        } finally {
+            driver.currentLoweringOwner = prevOwner;
+        }
+        ops.add(new KofReturnVoid());
+        return new IRMethod("<clinit>", Type.PrimitiveType.VOID, List.of(),
+                AccessFlags.PUBLIC | AccessFlags.STATIC, List.of(),
+                List.of(new IRBasicBlock(0, ops)), locals);
     }
 
     static IRMethod generateDefaultConstructor(CompilerDriver driver, String owner, String superName,
