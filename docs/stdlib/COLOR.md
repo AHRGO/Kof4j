@@ -1,10 +1,12 @@
-# Color — paleta de 32 bits
+[English](COLOR.md) | [Português](COLOR.pt_BR.md)
 
-> Um `Color` é um `Int` de 32 bits com semântica ARGB (`0xAARRGGBB`).
-> Nada de converter hex ou ANSI na mão: a paleta nomeada já vem pronta
-> e o tipo sabe se apresentar.
+# Color — 32-bit palette
 
-## A classe
+> A `Color` is a 32-bit `Int` with ARGB semantics (`0xAARRGGBB`).
+> No converting hex or ANSI by hand: the named palette comes ready-made
+> and the type knows how to present itself.
+
+## The class
 
 ```kof
 class Color {
@@ -25,7 +27,7 @@ class Color {
 }
 ```
 
-## A paleta
+## The palette
 
 ```kof
 class Colors {
@@ -40,7 +42,7 @@ class Colors {
 }
 ```
 
-## Uso
+## Usage
 
 ```kof
 main() {
@@ -53,20 +55,20 @@ main() {
 }
 ```
 
-## Semântica
+## Semantics
 
-- O valor é um `Int` **signed de 32 bits**: `0xFF6750A4` armazena
-  `-10006364`. Os componentes usam shift + máscara, que funcionam
-  identicamente nos três backends (JVM, Native, KofJS).
-- Literais hex (`0xFF...`) são suportados pela linguagem desde a
-  implementação do Color.
-- A impressão direta do valor mostra o `Int` signed (`-10006364`);
-  use os componentes ou `ansi()` para apresentação.
+- The value is a **signed 32-bit** `Int`: `0xFF6750A4` stores
+  `-10006364`. The components use shift + mask, which work
+  identically across the three backends (JVM, Native, KofJS).
+- Hex literals (`0xFF...`) are supported by the language since the
+  Color implementation.
+- Printing the value directly shows the signed `Int` (`-10006364`);
+  use the components or `ansi()` for presentation.
 
-## Estilização orientada a objetos
+## Object-oriented styling
 
-A cor é um objeto entre objetos: o visual inteiro é uma árvore de objetos
-compostos — sem strings mágicas, sem conversão manual:
+Color is an object among objects: the entire visual is a tree of
+composed objects — no magic strings, no manual conversion:
 
 ```kof
 class Style {
@@ -84,5 +86,5 @@ class Style {
 }
 ```
 
-Ver também: `training/idioms/composition.md` (composição visual por objetos)
-e `learn/35-ui-and-styling.md`.
+See also: `training/idioms/composition.md` (visual composition through objects)
+and `learn/35-ui-and-styling.md`.

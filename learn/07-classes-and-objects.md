@@ -1,14 +1,16 @@
-# 07 — Classes e Objetos
+[English](07-classes-and-objects.md) | [Português](07-classes-and-objects.pt_BR.md)
 
-> **Kof 0.4.0-beta — exemplos verificados no compilador (02/09)**
+# 07 — Classes and Objects
+
+> **Kof 0.4.0-beta — examples verified in the compiler (02/09)**
 >
-> Kof tem **dois** modelos de "dado com parâmetros": `record`/`class X(...)`
-> (imutável, accessors) e classe com campos + `constructor(...)` (mutável,
-> campos diretos). **Sem getters/setters** — o campo é o dado.
+> Kof has **two** models of "data with parameters": `record`/`class X(...)`
+> (immutable, accessors) and a class with fields + `constructor(...)` (mutable,
+> direct fields). **No getters/setters** — the field is the data.
 
-## 1. Dados imutáveis → record
+## 1. Immutable data → record
 
-A forma canônica para dados imutáveis:
+The canonical form for immutable data:
 
 ```kf
 record User(String name, String email)
@@ -20,10 +22,10 @@ main() {
 }
 ```
 
-O compilador gera: construtor canônico, accessors (`name()`), e no JVM
-`toString`/`equals`/`hashCode`.
+The compiler generates: canonical constructor, accessors (`name()`), and on the
+JVM `toString`/`equals`/`hashCode`.
 
-Records podem ter métodos:
+Records can have methods:
 
 ```kf
 record Token(String kind, String text) {
@@ -33,10 +35,10 @@ record Token(String kind, String text) {
 }
 ```
 
-## 2. `class X(...)` = record (mesma coisa — verificado 02/09)
+## 2. `class X(...)` = record (the same thing — verified 02/09)
 
-`class User(String name, String email)` é **alias de `record`** — o parser o
-trata como record body (imutável, `extends java.lang.Record` no JVM):
+`class User(String name, String email)` is an **alias of `record`** — the parser
+treats it as a record body (immutable, `extends java.lang.Record` on the JVM):
 
 ```kf
 class User(String name, String email) {
@@ -48,16 +50,16 @@ class User(String name, String email) {
 main() {
     var u = User("Mel", "mel@kof.dev")
     println(u.greeting())      // Hello Mel
-    println(u.name)            // leitura ok (vira o accessor)
-    // u.name = "Ana"          // ERRO de compilação SEM038: record é imutável
+    println(u.name)            // read ok (becomes the accessor)
+    // u.name = "Ana"          // COMPILATION ERROR SEM038: record is immutable
 }
 ```
 
-> Prefira `record` (a intenção é explícita). `class X(...)` é retrocompatível.
+> Prefer `record` (the intention is explicit). `class X(...)` is backward-compatible.
 
-## 3. Estado mutável → classe com campos + `constructor(...)`
+## 3. Mutable state → class with fields + `constructor(...)`
 
-Para **mutar**, use campos públicos explícitos:
+To **mutate**, use explicit public fields:
 
 ```kf
 class Conta {
@@ -70,24 +72,24 @@ class Conta {
     }
 
     depositar(Double valor) {
-        saldo = saldo + valor     // acesso direto ao campo
+        saldo = saldo + valor     // direct field access
     }
 }
 
 main() {
     var c = Conta("Mel", 100.0)
-    c.saldo = 50.0                // escrita direta — sem setter
+    c.saldo = 50.0                // direct write — no setter
     c.depositar(25.0)
-    println(c.saldo)              // 75.0 — leitura direta, sem getter
+    println(c.saldo)              // 75.0 — direct read, no getter
 }
 ```
 
-**Sem getters/setters**: `c.saldo` lê, `c.saldo = x` escreve. `getSaldo()`/
-`setSaldo()` são cerimônia Java sem razão em Kof (ver cap. 08).
+**No getters/setters**: `c.saldo` reads, `c.saldo = x` writes. `getSaldo()`/
+`setSaldo()` are Java ceremony with no reason in Kof (see ch. 08).
 
-## Construtor padrão
+## Default constructor
 
-Sem `constructor(...)`, um construtor vazio é gerado:
+Without `constructor(...)`, an empty constructor is generated:
 
 ```kf
 class Config {
@@ -102,9 +104,9 @@ main() {
 }
 ```
 
-`new Config()` também é aceito (retrocompatível).
+`new Config()` is also accepted (backward-compatible).
 
-## Campos com inicializador
+## Fields with initializer
 
 ```kf
 class User {
@@ -113,12 +115,12 @@ class User {
 }
 ```
 
-Inicializadores rodam em todos os construtores (JVM, Native, JS).
+Initializers run in all constructors (JVM, Native, JS).
 
-## Modificadores de acesso
+## Access modifiers
 
-`private` existe para encapsulamento real — mas **não crie getter para
-expor**; ou o campo é público, ou o método tem semântica:
+`private` exists for real encapsulation — but **do not create a getter to
+expose**; either the field is public, or the method has semantics:
 
 ```kf
 class Conta {
@@ -126,22 +128,22 @@ class Conta {
 
     public constructor(Double saldo) { this.saldo = saldo }
 
-    // método com SEMÂNTICA, não getter
+    // method with SEMANTICS, not a getter
     Double totalComJuros(Double taxa) {
         return saldo * (1 + taxa)
     }
 }
 ```
 
-## Funções utilitárias → top-level (não classe static)
+## Utility functions → top-level (not a static class)
 
 ```kf
-// ❌ utility class com static (Java)
+// ❌ utility class with static (Java)
 class StringUtils {
     static String repetir(String texto, Int vezes) { ... }
 }
 
-// ✅ função top-level (Kof)
+// ✅ top-level function (Kof)
 String repetir(String texto, Int vezes) {
     var resultado = ""
     for (var i = 0; i < vezes; i++) {
@@ -151,7 +153,7 @@ String repetir(String texto, Int vezes) {
 }
 ```
 
-## this e super
+## this and super
 
 ```kf
 class Animal {
@@ -166,33 +168,33 @@ class Cachorro extends Animal {
     String raca
 
     public constructor(String nome, String raca) {
-        super(nome)          // super(args) é a 1ª instrução
+        super(nome)          // super(args) is the 1st statement
         this.raca = raca
     }
 }
 ```
 
-Override é implícito (mesmo nome de método); dispatch é virtual.
+Override is implicit (same method name); dispatch is virtual.
 
-## Status atual
+## Current status
 
-- ✅ `record` / `class X(...)` — dados imutáveis, accessors (3 targets)
-- ✅ Classe mutável — campos públicos + `constructor(...)`
-- ✅ Campos com inicializador (JVM, Native, JS)
-- ✅ Herança, virtual dispatch, interfaces
-- ✅ Sem getters/setters — campo direto
+- ✅ `record` / `class X(...)` — immutable data, accessors (3 targets)
+- ✅ Mutable class — public fields + `constructor(...)`
+- ✅ Fields with initializer (JVM, Native, JS)
+- ✅ Inheritance, virtual dispatch, interfaces
+- ✅ No getters/setters — direct field
 
-## Exercício 1
+## Exercise 1
 
-Crie `class ContaBancaria` com campos `titular` e `saldo`, construtor e
-métodos `depositar`/`sacar` — **sem** `getSaldo()`, acesse `c.saldo`
-diretamente. Valide com `kof run`.
+Create `class ContaBancaria` with fields `titular` and `saldo`, a constructor and
+methods `depositar`/`sacar` — **without** `getSaldo()`, access `c.saldo`
+directly. Validate with `kof run`.
 
-## Exercício 2
+## Exercise 2
 
-Crie `record Retangulo(Double largura, Double altura)` com um método
-`area()`. Teste. Depois tente `r.largura = 5.0` — o que acontece e por quê?
+Create `record Retangulo(Double largura, Double altura)` with a method
+`area()`. Test it. Then try `r.largura = 5.0` — what happens and why?
 
-## Próximo passo
+## Next step
 
-[Campos e Acesso a Dados →](08-properties.md)
+[Fields and Data Access →](08-properties.md)

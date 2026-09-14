@@ -1,10 +1,12 @@
+[English](classes.md) | [Português](classes.pt_BR.md)
+
 # Classes, Records, Enums, Interfaces, Entities
 
-**Status:** Stable (exceto onde etiquetado) · **Evidência:** Parser.parseTypeDeclaration, `SymbolTableBuilder`/`SemanticAnalyzer` (defineMembers), `SymbolTable.java`
+**Status:** Stable (except where labeled) · **Evidence:** Parser.parseTypeDeclaration, `SymbolTableBuilder`/`SemanticAnalyzer` (defineMembers), `SymbolTable.java`
 
 ---
 
-## 1. Classes (estado mutável)
+## 1. Classes (mutable state)
 
 `ebnf
 class-declaration = modifiers , "class" , identifier , [ type-parameters ] ,
@@ -22,71 +24,72 @@ class User {
     }
     String greeting() { return "Hello " + name }
 }
-var u = User("Mel", 26)     // sem `new` (new também é aceito)
-u.age = 27                  // campo direto — mutável
+var u = User("Mel", 26)     // without `new` (new is also accepted)
+u.age = 27                  // direct field — mutable
 `
 
-- **Campos são públicos por default** (sem `private`); escrita direta.
-- **Construtor**: `constructor(...)` ou bloco `{ ... }` (`parseConstructor`).
-  Se nenhum construtor é declarado, um **default 0-args** é sintetizado
+- **Fields are public by default** (no `private`); direct write.
+- **Constructor**: `constructor(...)` or `{ ... }` block (`parseConstructor`).
+  If no constructor is declared, a **default 0-args** one is synthesized
   (`defineClassMembers:145-147`).
-- **`new` é opcional**: `User(...)` e `new User(...)` ambos válidos.
-- **Instanciação sem `new` de classe com construtor de args**: `User("Mel",26)`
-  resolve via *construction implícita* (`:1083-1084`).
-- **Sem getters/setters** — campo direto (idiom da linguagem).
-- **Sem `val` em campo** (`val x = 1` em corpo de classe → `PARSE016`,
+- **`new` is optional**: `User(...)` and `new User(...)` are both valid.
+- **Instantiation without `new` of a class with an args constructor**:
+  `User("Mel",26)` resolves via *implicit construction* (`:1083-1084`).
+- **No getters/setters** — direct field (language idiom).
+- **No `val` on a field** (`val x = 1` in a class body → `PARSE016`,
   *probe*); use `final`.
 
-### 1.1 `class X(...)` é record, não classe
+### 1.1 `class X(...)` is a record, not a class
 
-`class User(String name, Int age) { }` **não** é classe com primary
-constructor — o parser roteia para `parseRecordBody` (Parser.parseRecordBody) e
-produz um **record** (imutável, accessors `u.name()`). Escrita `u.name = "x"`
-**não** funciona. Para dados imutáveis, a forma canônica é `record`.
-**Stable** (documentado em `AGENTS.md`, verificado).
+`class User(String name, Int age) { }` **is not** a class with a primary
+constructor — the parser routes to `parseRecordBody` (Parser.parseRecordBody)
+and produces a **record** (immutable, accessors `u.name()`). Writing
+`u.name = "x"` **does not** work. For immutable data, the canonical form is
+`record`. **Stable** (documented in `AGENTS.md`, verified).
 
 ---
 
-## 2. Herança
+## 2. Inheritance
 
 `ebnf
 implements-clause = "implements" , type-ref , { "," , type-ref }
 `
 
-- `extends` = **classe única** (sem múltipla herança de classe).
-- `implements` = lista de interfaces.
-- **Superclasse default**: `Object` (classes), `"Record"` sintético (records/
+- `extends` = **single class** (no multiple class inheritance).
+- `implements` = list of interfaces.
+- **Default superclass**: `Object` (classes), synthetic `"Record"` (records/
   entities).
-- **Resolução de membros na hierarquia**: BFS classe→super→interfaces→
-  super-super (`resolveInHierarchy:243-266`), primeiro encontrado vence.
-- **`super.method()`** e **`super(args)`** (construtor) funcionam (*probe*:
-  `B.g()` chamando `super.f()` → 1).
-- **Override**: método na subclasse com mesmo nome **substitui** (dispatch
-  virtual real no runtime: `A a = B(); a.f()` → 2, *probe*).
-- **`override` modifier** é aceito mas **não validado** (não há checagem de que
-  o método existe na super).
-- **Subtipagem não é checada no type checker** (SG-009) — ver
+- **Member resolution in the hierarchy**: BFS class→super→interfaces→
+  super-super (`resolveInHierarchy:243-266`), first found wins.
+- **`super.method()`** and **`super(args)`** (constructor) work (*probe*:
+  `B.g()` calling `super.f()` → 1).
+- **Override**: a method in the subclass with the same name **replaces** it
+  (real virtual dispatch at runtime: `A a = B(); a.f()` → 2, *probe*).
+- **`override` modifier** is accepted but **not validated** (there is no check
+  that the method exists in the super).
+- **Subtyping is not checked in the type checker** (SG-009) — see
   [type-system.md](type-system.md) §7.
 
 ---
 
-## 3. Visibilidade
+## 3. Visibility
 
-| Modificador | Efeito |
+| Modifier | Effect |
 |---|---|
-| `public` (default) | visível em todo lugar |
-| `private` | visível só na classe |
-| `protected` | visível no pacote/subclasse (semântica JVM) |
+| `public` (default) | visible everywhere |
+| `private` | visible only in the class |
+| `protected` | visible in the package/subclass (JVM semantics) |
 
-- **`private` NÃO é checado em compile-time**: acessar `p.x` de fora →
-  `IllegalAccessError` em **runtime** (*probe*). A visibilidade é emitida como
-  flag JVM; o compilador Kof não a impõe. **Implementation-defined** (SG-013).
-- Sem modificador → `public` (`accessFlagsFor:3388`).
-- `static` campo/método: acesso por nome de classe (`S.k`, `S.k()` — *probe*).
+- **`private` is NOT checked at compile-time**: accessing `p.x` from outside →
+  `IllegalAccessError` at **runtime** (*probe*). Visibility is emitted as a
+  JVM flag; the Kof compiler does not enforce it. **Implementation-defined**
+  (SG-013).
+- No modifier → `public` (`accessFlagsFor:3388`).
+- `static` field/method: access by class name (`S.k`, `S.k()` — *probe*).
 
 ---
 
-## 4. Records (dados imutáveis)
+## 4. Records (immutable data)
 
 `ebnf
 record-declaration = modifiers , "record" , identifier , [ type-parameters ] ,
@@ -99,21 +102,21 @@ record-component = [ modifiers ] , type-ref , identifier , [ "=" , expression ]
 `kof
 record Point(Int x, Int y)
 var p = Point(10, 20)
-println(p.x())          // accessor por método (probe)
-println(p.x)            // leitura direta também funciona (probe)
+println(p.x())          // accessor by method (probe)
+println(p.x)            // direct read also works (probe)
 println(p)              // JVM: Point[x=10, y=20]
 `
 
-- Cada componente gera: **field privado**, **accessor `name()`** (método
-  0-arg), e o **construtor canônico** (`defineRecordMembers:150-182`).
-- **`equals`/`hashCode`/`toString` são gerados** — `equals` compara campo a
-  campo (primitivos por valor, refs por `Objects.equals`), `JvmBackend:303-397`.
-- **Records são imutáveis**: não há setter; atribuição a `p.x` é **não
-  suportada** (o accessor é método).
-- **Record com métodos**: `record P(Int x, Int y) { Int sum() { return x+y } }`
-  funciona (*probe*).
-- **Record genérico**: `record Box<T>(T v)` funciona (*probe*).
-- **Default em componente**: `record C(Int x = 0)` gera overloads por aridade.
+- Each component generates: **private field**, **accessor `name()`** (0-arg
+  method), and the **canonical constructor** (`defineRecordMembers:150-182`).
+- **`equals`/`hashCode`/`toString` are generated** — `equals` compares field
+  by field (primitives by value, refs by `Objects.equals`), `JvmBackend:303-397`.
+- **Records are immutable**: there is no setter; assignment to `p.x` is **not
+  supported** (the accessor is a method).
+- **Record with methods**: `record P(Int x, Int y) { Int sum() { return x+y } }`
+  works (*probe*).
+- **Generic record**: `record Box<T>(T v)` works (*probe*).
+- **Default in a component**: `record C(Int x = 0)` generates overloads by arity.
 
 ---
 
@@ -131,19 +134,19 @@ var c = Color.Red
 println(c.name())         // "Red" (probe)
 `
 
-- **Só constantes** — sem métodos, campos, construtores, corpo (`enum E { A
+- **Constants only** — no methods, fields, constructors, body (`enum E { A
   String f(){…} }` → `PARSE032`, *probe*).
-- **Em runtime o valor do enum É o nome (`String`)** (`BuiltinTypes.java:95-98`).
-  `Color.Red` é a string `"Red"`. `==` compara conteúdo.
-- Métodos sintéticos: `values() → List<String>` (static), `valueOf(String) →
+- **At runtime the enum value IS the name (`String`)** (`BuiltinTypes.java:95-98`).
+  `Color.Red` is the string `"Red"`. `==` compares content.
+- Synthetic methods: `values() → List<String>` (static), `valueOf(String) →
   enum` (static), `name() → String` (instance) (`preDeclareType:299-314`).
-- **Switch sobre enum**: sem `default` exige cobertura total → senão `SEM031`.
-- Constante não-qualificada (`Red` dentro do contexto do enum) resolve
+- **Switch over enum**: without `default` it requires full coverage → otherwise `SEM031`.
+- Unqualified constant (`Red` within the enum context) resolves
   (`:869-876`).
 
 ---
 
-## 6. Pattern matching (em switch)
+## 6. Pattern matching (in switch)
 
 `ebnf
 pattern = type-name , identifier                          (* binding *)
@@ -158,15 +161,15 @@ switch (obj) {
 }
 `
 
-- **Binding**: `case Type var` — testa `instanceof` e vincula `var`.
-- **Destructuring**: `case Point(var x, var y)` — testa tipo + extrai campos
-  (records). `var`/`val` nos sub-bindings são opcionais (ExpressionParser (pattern)).
-- Implementado por `KofInstanceOf` + `KofCheckCast` + `KofLoadField` por
-  componente (`SwitchStmtLowerer.java:48-133`).
-- **Funciona nos 3 targets** (JVM/Native/JS — testado em
+- **Binding**: `case Type var` — tests `instanceof` and binds `var`.
+- **Destructuring**: `case Point(var x, var y)` — tests type + extracts fields
+  (records). `var`/`val` in the sub-bindings are optional (ExpressionParser (pattern)).
+- Implemented by `KofInstanceOf` + `KofCheckCast` + `KofLoadField` per
+  component (`SwitchStmtLowerer.java:48-133`).
+- **Works on all 3 targets** (JVM/Native/JS — tested in
   `KofPatternMatchingTest`, `KofSwitchExprE2ETest`).
-- **Não há** pattern em `if`/`while`, nem `when`, nem guardas (`case P(x) if
-  x>0`), nem patterns aninhados (`case List(P(a,b))`). **Unspecified** (SG-014).
+- **There is no** pattern in `if`/`while`, nor `when`, nor guards (`case P(x) if
+  x>0`), nor nested patterns (`case List(P(a,b))`). **Unspecified** (SG-014).
 
 ---
 
@@ -183,14 +186,14 @@ interface I { Int f() }
 class C implements I { Int f() { return 1 } }
 `
 
-- Métodos sem corpo → **abstratos** (`isAbstractMethod` = body null).
-- **`default Int f() { … }`** → método com corpo em interface funciona
+- Methods without a body → **abstract** (`isAbstractMethod` = body null).
+- **`default Int f() { … }`** → a method with a body in an interface works
   (*probe*).
-- **Não aceita type-parameters** (`interface F<T>` → `PARSE007`, *probe*).
-- **Não há checagem de implementação completa**: `class C implements I {}` sem
-  `f()` **compila** (*probe*) — falha só em runtime se `f()` for chamado
+- **Does not accept type-parameters** (`interface F<T>` → `PARSE007`, *probe*).
+- **There is no check for complete implementation**: `class C implements I {}` without
+  `f()` **compiles** (*probe*) — it fails only at runtime if `f()` is called
   (`AbstractMethodError`). **Unspecified** (SG-015).
-- **Não há** trait, nem interface com estado (campos), nem companion object.
+- **There is no** trait, nor interface with state (fields), nor companion object.
 
 ---
 
@@ -211,36 +214,36 @@ entity User {
 }
 `
 
-- **É um record gerado + schema para `kof.orm`** (`AstNodes.java:147-158`).
-- Constraints `generated`/`unique` são metadados de schema (compile-time, sem
+- **It is a generated record + schema for `kof.orm`** (`AstNodes.java:147-158`).
+- Constraints `generated`/`unique` are schema metadata (compile-time, without
   reflection).
-- Habilita o **Query DSL**: `User.query(db) { where age > 18; … }`.
-- **Experimental** (domínio ORM). Ver [../stdlib-database.md](../stdlib/stdlib-database.md).
+- Enables the **Query DSL**: `User.query(db) { where age > 18; … }`.
+- **Experimental** (ORM domain). See [../stdlib-database.md](../stdlib/stdlib-database.md).
 
 ---
 
-## 9. Classes aninhadas
+## 9. Nested classes
 
-`class A { class B { } }` — o parser aceita `type-declaration` como membro
-(`parseClassMember:740-742`). **Semântica de nomeamento/escopo do aninhamento
-é Unspecified** (SG-016) — não há teste dedicado que fixe `A.B` vs `B`.
+`class A { class B { } }` — the parser accepts `type-declaration` as a member
+(`parseClassMember:740-742`). **The naming/scoping semantics of nesting
+is Unspecified** (SG-016) — there is no dedicated test that fixes `A.B` vs `B`.
 
 ---
 
-## 10. O que NÃO existe em classes Kof
+## 10. What does NOT exist in Kof classes
 
-| Ausente | Nota |
+| Missing | Note |
 |---|---|
-| `sealed`/`permits` | keywords do lexer, não parseadas (SG-002) |
-| `abstract class` não-instanciável em compile-time | `new A()` compila, falha runtime (SG-017) |
-| `companion object` | não existe |
-| `object` (singleton) | não existe keyword `object` |
+| `sealed`/`permits` | lexer keywords, not parsed (SG-002) |
+| `abstract class` non-instantiable at compile-time | `new A()` compiles, fails at runtime (SG-017) |
+| `companion object` | does not exist |
+| `object` (singleton) | there is no `object` keyword |
 | `data class` | use `record` |
-| `value class`/`inline class` | não existe |
-| `operator fun` (sobrecarga de operador) | **não há** sobrecarga de operador customizada |
-| `init` block | inicialização via construtor |
-| `get()/set()` customizados | campo direto |
-| `lateinit` | não existe |
-| `open` (herança) | classes são abertas por default (sem `final` implícito) |
-| construtor primário Kotlin-style | `class X(...)` = record |
-| `super()` sem args implícito | construtor default chama `super()`? **Unspecified** |
+| `value class`/`inline class` | does not exist |
+| `operator fun` (operator overloading) | **there is no** custom operator overloading |
+| `init` block | initialization via constructor |
+| custom `get()/set()` | direct field |
+| `lateinit` | does not exist |
+| `open` (inheritance) | classes are open by default (no implicit `final`) |
+| Kotlin-style primary constructor | `class X(...)` = record |
+| implicit `super()` without args | does the default constructor call `super()`? **Unspecified** |

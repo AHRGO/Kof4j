@@ -1,31 +1,33 @@
+[English](nano.md) | [Português](nano.pt_BR.md)
+
 # Nano
 
-Integração **proporcional ao editor**: só syntax highlighting e reconhecimento
-de arquivo. Nano não é IDE — semântica (diagnostics/LSP) não se aplica aqui;
-para isso use um editor LSP.
+Integration **proportional to the editor**: only syntax highlighting and
+file recognition. Nano is not an IDE — semantics (diagnostics/LSP) do not
+apply here; for that, use an LSP editor.
 
-## Instalação automática
+## Automatic installation
 
 ```bash
 kof editor install nano
 ```
 
-Escreve `~/.nano/kof.nanorc` com cores para palavras-chave, tipos, constantes,
-strings e comentários.
+Writes `~/.nano/kof.nanorc` with colors for keywords, types, constants,
+strings and comments.
 
-## Configuração
+## Configuration
 
-Garanta que o nano lê o diretório de syntax (Linux: `nano` já procura
-`~/.nano/*.nanorc`; em outras plataformas, adicione ao seu `~/.nanorc`):
+Make sure nano reads the syntax directory (Linux: `nano` already looks for
+`~/.nano/*.nanorc`; on other platforms, add it to your `~/.nanorc`):
 
 ```
 include "~/.nano/kof.nanorc"
 ```
 
-## Uso
+## Usage
 
 ```bash
 nano Arquivo.kf
 ```
 
-Compile/rode pela CLI (`kof build` / `kof run`) — o nano é só edição.
+Compile/run via the CLI (`kof build` / `kof run`) — nano is editing only.

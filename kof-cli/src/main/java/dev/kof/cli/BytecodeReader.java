@@ -92,20 +92,33 @@ final class BytecodeReader {
     private static int skipVariable(byte[] code, int pc, int op) {
         if (op == 0xaa) { // tableswitch
             int pad = (4 - ((pc + 1) % 4)) % 4;
-            pc += 1 + pad;
-            readInt(code, pc); pc += 4;   // default
-            int low = readInt(code, pc);  pc += 4;
-            int high = readInt(code, pc); pc += 4;
-            for (int i = 0; i < high - low + 1; i++) { pc += 4; }
-            return pc;
+            // CodeQL java/index-out-of-bounds: os 3 readInt + o loop de jumps
+            // liam sem checar o fim do array — .class truncado lançava AIOOBE
+            // (e high/low corrompido podia estourar o pc). Contrato do decoder:
+            // truncado/corrompido PARA no fim (code.length), nunca lança.
+            long base = (long) pc + 1 + pad;
+            if (base + 12 > code.length) return code.length; // default+low+high
+            int p = (int) base + 4; // default
+            int low = readInt(code, p); p += 4;
+            int high = readInt(code, p); p += 4;
+            long count = (long) high - (long) low + 1;
+            if (count < 0) count = 0; // intervalo invertido: igual ao loop antigo (0 iterações)
+            long end = (long) p + count * 4;
+            if (end > code.length) return code.length;
+            return (int) end; // input válido: idêntico ao pc antigo
         }
         if (op == 0xab) { // lookupswitch
             int pad = (4 - ((pc + 1) % 4)) % 4;
-            pc += 1 + pad;
-            pc += 4;                     // default
-            int npairs = readInt(code, pc); pc += 4;
-            pc += npairs * 8;
-            return pc;
+            // Idem: npairs sem checagem + `pc += npairs * 8` com npairs
+            // negativo voltava o pc (risco de loop infinito no decode).
+            long base = (long) pc + 1 + pad;
+            if (base + 8 > code.length) return code.length; // default+npairs
+            int p = (int) base + 4; // default
+            int npairs = readInt(code, p); p += 4;
+            if (npairs < 0) return code.length; // corrompido: para, nunca volta o pc
+            long end = (long) p + (long) npairs * 8;
+            if (end > code.length) return code.length;
+            return (int) end; // input válido: idêntico ao pc antigo
         }
         // wide: opcode(1) + sub(1) + índice(2) — e iinc largo = +const(2).
         // op == 0x84 é IMPOSSÍVEL aqui (o op é 0xc4; 0x84 é o SUB-opcode

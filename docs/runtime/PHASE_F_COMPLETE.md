@@ -1,15 +1,17 @@
-# PHASE_F_COMPLETE.md — Fase F Concluída
+[English](PHASE_F_COMPLETE.md) | [Português](PHASE_F_COMPLETE.pt_BR.md)
 
-**Data:** 21 de agosto de 2026
-**Status:** Fase F — Runtime + Object Model COMPLETA
+# PHASE_F_COMPLETE.md — Phase F Complete
+
+**Date:** August 21, 2026
+**Status:** Phase F — Runtime + Object Model COMPLETE
 
 ---
 
-## Resumo
+## Summary
 
-A Fase F implementou o runtime e object model do Kof de forma completa e consistente entre JVM e Native.
+Phase F implemented the Kof runtime and object model completely and consistently between JVM and Native.
 
-| Subfase | Status | Testes |
+| Subphase | Status | Tests |
 |---------|--------|--------|
 | F.1 String Model | ✅ | 10 |
 | F.2 Array Model | ✅ | 25 |
@@ -18,11 +20,11 @@ A Fase F implementou o runtime e object model do Kof de forma completa e consist
 | F.5 Interfaces | ✅ | 13 |
 | F.6 Exceptions/Runtime Errors | ✅ | 14 |
 | F.7 Memory Management | ✅ | — |
-| **Total** | **✅** | **142 testes** |
+| **Total** | **✅** | **142 tests** |
 
 ---
 
-## Object Model Final
+## Final Object Model
 
 ### Header (16 bytes)
 
@@ -32,7 +34,7 @@ offset 4:  flags (4 bytes)
 offset 8:  method_table_ptr (8 bytes)
 ```
 
-### Layout de Objeto
+### Object Layout
 
 ```
 +---------------------+
@@ -50,7 +52,7 @@ offset 8:  method_table_ptr (8 bytes)
 +---------------------+
 ```
 
-### KofString (24 bytes header)
+### KofString (24-byte header)
 
 ```
 offset 0:  type_id (= 1)
@@ -61,7 +63,7 @@ offset 20: padding
 offset 24: UTF-8 data + \0
 ```
 
-### KofArray (24 bytes header)
+### KofArray (24-byte header)
 
 ```
 offset 0:  type_id (= 2)
@@ -76,87 +78,87 @@ offset 24: elements data
 
 ## Runtime ABI
 
-### Funções de Runtime
+### Runtime Functions
 
-| Função | Propósito |
+| Function | Purpose |
 |--------|-----------|
-| `kof_alloc(size)` | Aloca memória (mmap) |
-| `kof_free(ptr)` | No-op (memória reclaim pelo SO) |
-| `kof_panic(msg)` | Erro fatal com mensagem |
+| `kof_alloc(size)` | Allocates memory (mmap) |
+| `kof_free(ptr)` | No-op (memory reclaimed by the OS) |
+| `kof_panic(msg)` | Fatal error with message |
 | `kof_null_error()` | Null pointer access |
 | `kof_bounds_error(i, len)` | Array index out of bounds |
-| `kof_print(ptr)` | Imprime string null-terminated |
-| `kof_println(ptr)` | Imprime string + newline |
-| `kof_print_int(val)` | Imprime inteiro |
-| `kof_string_from_literal(data, len)` | Cria KofString |
-| `kof_string_length(str)` | Retorna byte length |
-| `kof_string_concat(s1, s2)` | Concatena strings |
-| `kof_string_equals(s1, s2)` | Compara strings |
-| `kof_print_string(str)` | Imprime KofString |
-| `kof_println_string(str)` | Imprime KofString + newline |
-| `kof_array_alloc(len, elem_size)` | Aloca array |
-| `kof_array_length(arr)` | Retorna length |
-| `kof_array_get(arr, index)` | Lê elemento |
-| `kof_array_set(arr, index, val)` | Escreve elemento |
-| `kof_init_object(ptr, type_id, vtable)` | Inicializa header |
-| `kof_memstats()` | Imprime estatísticas |
-| `kof_memcpy(dest, src, n)` | Copia n bytes |
+| `kof_print(ptr)` | Prints a null-terminated string |
+| `kof_println(ptr)` | Prints string + newline |
+| `kof_print_int(val)` | Prints an integer |
+| `kof_string_from_literal(data, len)` | Creates a KofString |
+| `kof_string_length(str)` | Returns byte length |
+| `kof_string_concat(s1, s2)` | Concatenates strings |
+| `kof_string_equals(s1, s2)` | Compares strings |
+| `kof_print_string(str)` | Prints a KofString |
+| `kof_println_string(str)` | Prints KofString + newline |
+| `kof_array_alloc(len, elem_size)` | Allocates an array |
+| `kof_array_length(arr)` | Returns length |
+| `kof_array_get(arr, index)` | Reads an element |
+| `kof_array_set(arr, index, val)` | Writes an element |
+| `kof_init_object(ptr, type_id, vtable)` | Initializes the header |
+| `kof_memstats()` | Prints statistics |
+| `kof_memcpy(dest, src, n)` | Copies n bytes |
 
 ---
 
-## Herança
+## Inheritance
 
-- `ClassLayout.buildWithSuper()` inclui fields herdados
-- `SemanticAnalyzer.resolveInHierarchy()` caminha hierarquia completa
-- Constructor chaining com `super(args)`
-- Fields herdados com offsets corretos
+- `ClassLayout.buildWithSuper()` includes inherited fields
+- `SemanticAnalyzer.resolveInHierarchy()` walks the complete hierarchy
+- Constructor chaining with `super(args)`
+- Inherited fields with correct offsets
 
 ---
 
 ## Virtual Dispatch
 
-- Method tables geradas por classe
-- Override mantém slot na vtable
-- Novos métodos recebem novos slots
-- Dispatch via `method_table_ptr` no header
-- JVM usa `INVOKEVIRTUAL`
+- Method tables generated per class
+- Override keeps the slot in the vtable
+- New methods receive new slots
+- Dispatch via `method_table_ptr` in the header
+- JVM uses `INVOKEVIRTUAL`
 
 ---
 
 ## Interfaces
 
-- `KofCallKind.INTERFACE` na IR
-- `INVOKEINTERFACE` no JVM
-- Dispatch via vtable no Native
-- `resolveInHierarchy()` caminha interfaces
+- `KofCallKind.INTERFACE` in the IR
+- `INVOKEINTERFACE` in the JVM
+- Dispatch via vtable in Native
+- `resolveInHierarchy()` walks interfaces
 
 ---
 
 ## Exceptions/Runtime Errors
 
 - `throw` → JVM: `ATHROW`, Native: `kof_panic`
-- `try/catch/finally` → parseado e analisado
+- `try/catch/finally` → parsed and analyzed
 - Runtime errors: `kof_null_error`, `kof_bounds_error`
 
 ---
 
 ## Memory Management
 
-- `kof_alloc` com tracking de alocações
-- `kof_free` é no-op (memória reclaim pelo SO)
-- `kof_memstats` para debug
-- Modelo: programa de curta duração, SO reivindica memória
+- `kof_alloc` with allocation tracking
+- `kof_free` is a no-op (memory reclaimed by the OS)
+- `kof_memstats` for debugging
+- Model: short-lived program, OS reclaims memory
 
-> **Atualizado (0.2.6-beta, 31/08):** `kof_alloc` usa free-list
-> `kof_free_head` (reuso `mmap`); GC mark-sweep pendente e auto-GC
-> desativado após hang (memória devolvida só no `munmap` fallback);
-> allocator thread-safe (futex) para o `spawn` em pthreads.
+> **Updated (0.2.6-beta, 31/08):** `kof_alloc` uses the free-list
+> `kof_free_head` (`mmap` reuse); mark-sweep GC pending and auto-GC
+> disabled after a hang (memory returned only on the `munmap` fallback);
+> thread-safe allocator (futex) for `spawn` on pthreads.
 
 ---
 
-## Arquivos Criados/Modificados
+## Files Created/Modified
 
-### Criados
+### Created
 - `docs/future/runtime/ARRAY_MODEL.md`
 - `docs/future/runtime/INHERITANCE_MODEL.md`
 - `docs/future/runtime/VIRTUAL_DISPATCH.md`
@@ -165,11 +167,11 @@ offset 24: elements data
 - `docs/future/runtime/MEMORY_MODEL.md`
 - `docs/future/runtime/PHASE_F_COMPLETE.md`
 
-### Modificados
+### Modified
 - `ClassLayout.java` — HEADER_SIZE=16, buildWithSuper()
-- `NativeRuntime.java` — funções de runtime completas
-- `NativeBackend.java` — dispatch virtual, interfaces, throw
-- `CompilerDriver.java` — herança, virtual dispatch, interfaces, exceptions
+- `NativeRuntime.java` — complete runtime functions
+- `NativeBackend.java` — virtual dispatch, interfaces, throw
+- `CompilerDriver.java` — inheritance, virtual dispatch, interfaces, exceptions
 - `SemanticAnalyzer.java` — resolveInHierarchy(), isInterfaceType()
 - `IRNodes.java` — KofCallKind.INTERFACE, TryCatchRegion
 - `Parser.java` — try/catch/finally, ClassName varName = value
@@ -177,40 +179,40 @@ offset 24: elements data
 
 ---
 
-## Limitações que Permanecem
+## Remaining Limitations
 
-1. Sem GC (memória não é liberada durante execução)
-2. Sem default methods em interfaces
-3. Sem static methods em interfaces
-4. Sem generics
-5. Sem collections
-6. Sem checked exceptions
-7. Sem stack traces
-8. Sem type casting (instanceof)
-9. Sem boxing/unboxing
+1. No GC (memory is not freed during execution)
+2. No default methods in interfaces
+3. No static methods in interfaces
+4. No generics
+5. No collections
+6. No checked exceptions
+7. No stack traces
+8. No type casting (instanceof)
+9. No boxing/unboxing
 
 ---
 
-## Critério de Conclusão
+## Completion Criteria
 
-| Critério | Status |
+| Criterion | Status |
 |----------|--------|
-| String Model funcionando | ✅ |
-| Array Model funcionando | ✅ |
-| Inheritance funcionando | ✅ |
-| Constructor chaining funcionando | ✅ |
-| Superclass fields funcionando | ✅ |
-| Virtual dispatch funcionando | ✅ |
-| Overrides funcionando | ✅ |
-| Interfaces básicas funcionando | ✅ |
-| Runtime errors funcionando | ✅ |
-| Exception model implementado | ✅ |
-| Memory management coerente | ✅ |
-| JVM E2E passando | ✅ |
-| Native E2E passando | ✅ |
-| Regressão zero | ✅ |
-| Documentação atualizada | ✅ |
-| ABI documentada | ✅ |
-| Object Model documentado | ✅ |
-| IR continua backend-agnostic | ✅ |
-| Nenhum hack escondido | ✅ |
+| String Model working | ✅ |
+| Array Model working | ✅ |
+| Inheritance working | ✅ |
+| Constructor chaining working | ✅ |
+| Superclass fields working | ✅ |
+| Virtual dispatch working | ✅ |
+| Overrides working | ✅ |
+| Basic interfaces working | ✅ |
+| Runtime errors working | ✅ |
+| Exception model implemented | ✅ |
+| Memory management coherent | ✅ |
+| JVM E2E passing | ✅ |
+| Native E2E passing | ✅ |
+| Zero regression | ✅ |
+| Documentation updated | ✅ |
+| ABI documented | ✅ |
+| Object Model documented | ✅ |
+| IR remains backend-agnostic | ✅ |
+| No hidden hacks | ✅ |

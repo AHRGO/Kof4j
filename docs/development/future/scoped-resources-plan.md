@@ -1,34 +1,36 @@
-# Scoped Resources — RAII leve (plano de design · TIER 2.4)
+[English](scoped-resources-plan.md) | [Português](scoped-resources-plan.pt_BR.md)
 
-**Status:** Plano (design) — implementação gated por bump de versão (  0.2.6-beta)
-**Fonte:** `PLAN-UNIVERSAL-PLATFORM.md` §7 · `roadmap.md` §23 TIER 2.4.1 (ex-`ACTION_PLAN.md`)
+# Scoped Resources — lightweight RAII (design plan · TIER 2.4)
 
-## 1. Objetivo
+**Status:** Plan (design) — implementation gated by version bump (  0.2.6-beta)
+**Source:** `PLAN-UNIVERSAL-PLATFORM.md` §7 · `roadmap.md` §23 TIER 2.4.1 (former `ACTION_PLAN.md`)
 
-Liberar **recursos escassos** (handle de FFI, arquivo, conexão, GPU) ao sair do
-escopo, sem introduzir `ownership`/`borrowing` (non-goal permanente).
+## 1. Objective
 
-A doutrina (UNIVERSAL §7) é explícita:
+Release **scarce resources** (FFI handle, file, connection, GPU) when leaving the
+scope, without introducing `ownership`/`borrowing` (permanent non-goal).
 
-> *"Resource management (RAII/scoped): Sim, **leve** — lidar com handles de
-> FFI, arquivos, GPU, conexões sem vazar. **B/C** — um `auto-closed`/scope leve
-> (**sem ownership**)."*
+The doctrine (UNIVERSAL §7) is explicit:
 
-Kof **já tem** o mecanismo (`try/finally` + GC). O scoped-resource é açúcar de
-**intenção** sobre o mecanismo — o mesmo padrão já usado por `test "name" {}`
-e `application { onStart/onShutdown }` (desugar em compile-time, zero runtime
-especial).
+> *"Resource management (RAII/scoped): Yes, **lightweight** — handle FFI handles,
+> files, GPU, connections without leaking. **B/C** — a lightweight
+> `auto-closed`/scope (**no ownership**)."*
 
-## 2. Proposta (sintaxe candidata)
+Kof **already has** the mechanism (`try/finally` + GC). The scoped-resource is
+**intent** sugar over the mechanism — the same pattern already used by
+`test "name" {}` and `application { onStart/onShutdown }` (compile-time desugar,
+zero special runtime).
+
+## 2. Proposal (candidate syntax)
 
 ```kof
 using (conn = db.connect(url)) {
     validate(conn)
     store(conn, record)
-}                       // conn.close() roda mesmo se `store` lançar
+}                       // conn.close() runs even if `store` throws
 ```
 
-Desugar (compile-time, idêntico ao `CodegenStep` já formalizado):
+Desugar (compile-time, identical to the already formalized `CodegenStep`):
 
 ```kof
 {
@@ -42,54 +44,54 @@ Desugar (compile-time, idêntico ao `CodegenStep` já formalizado):
 }
 ```
 
-### Variações consideradas
+### Variations considered
 
-| Nome | Síntaxe | Veredito |
+| Name | Syntax | Verdict |
 |------|---------|----------|
-| `using (x = expr) { }` | explícito, `close()` convenção | ✅ candidata (familiar, sem ownership) |
-| `scoped { }` | implícito (qualquer recurso no escopo) | ❌ mágica — exige análise de "recurse" |
-| `with` | colide com semântica de `switch`/pattern | ❌ |
+| `using (x = expr) { }` | explicit, `close()` convention | ✅ candidate (familiar, no ownership) |
+| `scoped { }` | implicit (any resource in scope) | ❌ magic — requires "recurse" analysis |
+| `with` | collides with `switch`/pattern semantics | ❌ |
 
-## 3. Semântica
+## 3. Semantics
 
-- `using (x = e) { body }` declara um vincolet `x` escopado ao bloco.
-- O cleanup é **uma função de convenção** `close()` no tipo do recurso
-  (compilada como `x.close()`); se o tipo não expõe `close()`, diagnóstico
-  compile-time (nunca fallback silencioso — R6).
-- O `finally` garante o fechamento em **ambos** os caminhos (sucesso/exceção).
-- Multiple resources: `using (a = f(); b = g()) { }` fecha em ordem reversa
-  (`b.close()` → `a.close()`), como `try-with-resources`.
-- **Sem** transfer of ownership; `x` não escapa do bloco (retorno/atributo
-  externo é erro — o compilador não tenta "mover").
+- `using (x = e) { body }` declares a binding `x` scoped to the block.
+- The cleanup is **a convention function** `close()` on the resource type
+  (compiled as `x.close()`); if the type does not expose `close()`, a
+  compile-time diagnostic (never silent fallback — R6).
+- The `finally` guarantees closing on **both** paths (success/exception).
+- Multiple resources: `using (a = f(); b = g()) { }` closes in reverse order
+  (`b.close()` → `a.close()`), like `try-with-resources`.
+- **No** transfer of ownership; `x` does not escape the block (return/external
+  assignment is an error — the compiler does not try to "move").
 
-## 4. Non-goals (não é isto)
+## 4. Non-goals (this is not it)
 
-- Não é `ownership`/`borrowing` (E, UNIVERSAL §7).
-- Não é effect system completo (D, pesquisa).
-- Não é annotation `@AutoClose`.
-- Não adiciona tipo `Resource`/interface na stdlib *antes* de decidir a forma
-  da fronteira FFI/GPU (2.1.6).
+- It is not `ownership`/`borrowing` (E, UNIVERSAL §7).
+- It is not a complete effect system (D, research).
+- It is not an `@AutoClose` annotation.
+- It does not add a `Resource` type/interface to the stdlib *before* deciding
+  the shape of the FFI/GPU boundary (2.1.6).
 
-## 5. Como pluga no codegen existente
+## 5. How it plugs into the existing codegen
 
-O desugar entra no pipeline `CodegenStep` (TIER 2.2.2, já implementado em
-`CompilerDriver.runCodegen`), ladeado por `desugarTests`/`desugarApplication`:
+The desugar enters the `CodegenStep` pipeline (TIER 2.2.2, already implemented in
+`CompilerDriver.runCodegen`), flanked by `desugarTests`/`desugarApplication`:
 
 ```text
 unit → desugarUsing → desugarTests → desugarApplication → lowering
 ```
 
-## 6. Gate e ordem
+## 6. Gate and order
 
-| Item | Estado |
+| Item | State |
 |------|--------|
-| Mecanismo (`try/finally` + GC) | ✅ já existe |
-| Hook de desugar (`CodegenStep`) | ✅ TIER 2.2.2 |
-| Sintaxe `using` | ⏳ **gated por  ** (bump 0.3.0) |
-| Convenção `close()` + diagnóstico | ⏳ mesmo gate |
+| Mechanism (`try/finally` + GC) | ✅ already exists |
+| Desugar hook (`CodegenStep`) | ✅ TIER 2.2.2 |
+| `using` syntax | ⏳ **gated by  ** (bump 0.3.0) |
+| `close()` convention + diagnostic | ⏳ same gate |
 
-> O estágio SYSTEMS (Tier 1) já fechou (03/09 — DOING.md), então o TIER 2 é
-> aberto. O gate real aqui não é R12: é a ** ** (0.2.6-beta).
-> Implementar a sintaxe agora violaria " " (AGENTS.md) —
-> mudança de linguagem exige **bump de versão + discussão**, nunca adição
-> silenciosa. Entrega-se o design + o desugar pronto para ativar no 0.3.0.
+> The SYSTEMS stage (Tier 1) has already closed (09/03 — DOING.md), so TIER 2 is
+> open. The real gate here is not R12: it is the ** ** (0.2.6-beta).
+> Implementing the syntax now would violate " " (AGENTS.md) —
+> a language change requires **version bump + discussion**, never silent
+> addition. What is delivered is the design + the desugar ready to activate in 0.3.0.

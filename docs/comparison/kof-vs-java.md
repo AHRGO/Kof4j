@@ -1,20 +1,22 @@
-# Kof vs Java — Comparação Técnica
+[English](kof-vs-java.md) | [Português](kof-vs-java.pt_BR.md)
 
-**Última atualização:** 12 de setembro de 2026
-**Versão:** 0.4.0-beta (7 targets; pattern matching + `String?` + spawn Native)
+# Kof vs Java — Technical Comparison
+
+**Last updated:** September 12, 2026
+**Version:** 0.4.0-beta (7 targets; pattern matching + `String?` + Native spawn)
 
 ---
 
-## Visão Geral
+## Overview
 
-| Aspecto | Java | Kof |
+| Aspect | Java | Kof |
 |---------|------|-----|
-| Tipagem | Forte, estática | Forte, estática (0.2.6-beta) |
+| Typing | Strong, static | Strong, static (0.2.6-beta) |
 | OO | Classes, interfaces, records | Classes, interfaces, records + `enum` + pattern matching `case String s`/`Point(x,y)` |
-| Herança | Simples + interfaces | Simples + interfaces (3 níveis) |
-| GC | Automático | JVM: automático / Native: free-list `kof_free_head` (mark-sweep pendente; auto-GC desativado — `munmap` fallback, 27-31/08) |
-| Compilação | javac → bytecode | Kof → IR → JVM/Native (x86_64; `native.risc`/`native.arm` placeholder) / JS (GraalJS) / KofC / KofScript / Android (Fase 1) |
-| Sintaxe | Verbosa | Concisa (`String?`, `map/filter/reduce`, `let` → `KofScriptGlobals`) |
+| Inheritance | Single + interfaces | Single + interfaces (3 levels) |
+| GC | Automatic | JVM: automatic / Native: free-list `kof_free_head` (mark-sweep pending; auto-GC disabled — `munmap` fallback, 27-31/08) |
+| Compilation | javac → bytecode | Kof → IR → JVM/Native (x86_64; `native.risc`/`native.arm` placeholder) / JS (GraalJS) / KofC / KofScript / Android (Phase 1) |
+| Syntax | Verbose | Concise (`String?`, `map/filter/reduce`, `let` → `KofScriptGlobals`) |
 
 ---
 
@@ -46,7 +48,7 @@ public class User {
 }
 ```
 
-### Kof (implementado)
+### Kof (implemented)
 
 ```kof
 class User(String name, Int age) {
@@ -54,10 +56,10 @@ class User(String name, Int age) {
 }
 ```
 
-**Diferença:** Kof não precisa de getters/setters. `class X(...)` é
-**record-style** (imutável — leitura `u.name` vira accessor; escrita `u.name =
-"x"` não). Para **estado mutável**, use campos + `constructor(...)` (acesso
-direto `u.name` / `u.age = 30`).
+**Difference:** Kof does not need getters/setters. `class X(...)` is
+**record-style** (immutable — reading `u.name` becomes an accessor; writing `u.name =
+"x"` does not). For **mutable state**, use fields + `constructor(...)` (direct
+access `u.name` / `u.age = 30`).
 
 ---
 
@@ -75,11 +77,11 @@ public record Point(int x, int y) {}
 record Point(Int x, Int y)
 ```
 
-**Diferença:** Praticamente idênticos. Kof é ligeiramente mais conciso.
+**Difference:** Practically identical. Kof is slightly more concise.
 
 ---
 
-## Herança
+## Inheritance
 
 ### Java
 
@@ -118,7 +120,7 @@ class Dog extends Animal {
 }
 ```
 
-**Diferença:** Kof é mais conciso. Sem `private`/`protected` em campos (acesso direto).
+**Difference:** Kof is more concise. No `private`/`protected` on fields (direct access).
 
 ---
 
@@ -127,17 +129,17 @@ class Dog extends Animal {
 ### Java
 
 ```java
-// Null pointer exception em runtime
+// Null pointer exception at runtime
 String s = null;
 s.length(); // NPE
 ```
 
 ### Kof
 
-Kof tem null safety **básica** (`String?`/`Int?`, 27/08): tipos nullable com
-`Type?` e `?`-check em compile-time (`var s: String? = null`, `s == null`).
+Kof has **basic** null safety (`String?`/`Int?`, 27/08): nullable types with
+`Type?` and `?`-check at compile-time (`var s: String? = null`, `s == null`).
 
-**Proposta futura:** checks avançados (smart casts, Option no core).
+**Future proposal:** advanced checks (smart casts, Option in the core).
 
 ---
 
@@ -159,7 +161,7 @@ list.add("!")
 var s = list.get(0)
 ```
 
-Generics por erasure (classes e funções). Bounds: planejados.
+Generics by erasure (classes and functions). Bounds: planned.
 
 ---
 
@@ -213,11 +215,11 @@ try {
 }
 ```
 
-**Diferença:** Kof tem try/catch/finally reais nos 3 targets (JVM exception table; Native unwinding pela cadeia de frames).
+**Difference:** Kof has real try/catch/finally on the 3 targets (JVM exception table; Native unwinding through the frame chain).
 
 ---
 
-## Concorrência
+## Concurrency
 
 ### Java
 
@@ -228,10 +230,10 @@ Future<String> future = executor.submit(() -> "result");
 
 ### Kof
 
-Implementado: `spawn` com join implícito (JVM: virtual threads; Native:
-`pthread_create` + trampoline + `pthread_join` com allocator thread-safe
-(futex), 31/08; JS: sequencial). `await`/handles tipados. Zero API de
-plataforma exposta (`Thread`/`Executor` são internos do runtime).
+Implemented: `spawn` with implicit join (JVM: virtual threads; Native:
+`pthread_create` + trampoline + `pthread_join` with a thread-safe allocator
+(futex), 31/08; JS: sequential). `await`/typed handles. Zero platform API
+exposed (`Thread`/`Executor` are runtime internals).
 
 ---
 
@@ -247,7 +249,7 @@ public class UserService {
 }
 ```
 
-### Kof (PROPOSTA)
+### Kof (PROPOSED)
 
 ```kof
 service UserService {
@@ -255,7 +257,7 @@ service UserService {
 }
 ```
 
-**Status:** Proposta apenas.
+**Status:** Proposal only.
 
 ---
 
@@ -287,12 +289,12 @@ app.ws("/chat") { ... }          // WebSocket (JVM, 30/08)
 app.listen(8080)
 ```
 
-**Status:** Implementado (JVM) — stack web nativa `web.app()` (rotas,
-middleware, JSON, WebSocket/SSE, `status`/`headerSet`); `kof serve` executa.
+**Status:** Implemented (JVM) — native web stack `web.app()` (routes,
+middleware, JSON, WebSocket/SSE, `status`/`headerSet`); `kof serve` runs it.
 
 ---
 
-## Configuração
+## Configuration
 
 ### Java (Spring Boot)
 
@@ -309,26 +311,26 @@ var port = config.int("server.port", 8080)
 var url = config.str("database.url", "jdbc:h2:mem")
 ```
 
-**Status:** Implementado — `kof.config` tipado (JVM/Native; precedência
-arquivo > env > profile > default; JS reporta CONF001).
+**Status:** Implemented — typed `kof.config` (JVM/Native; precedence
+file > env > profile > default; JS reports CONF001).
 
 ---
 
-## Resumo (0.2.6-beta, 31/08/2026 — `VERSION` 0.2.6-beta, `mvn test` 810, 7 targets)
+## Summary (0.2.6-beta, 31/08/2026 — `VERSION` 0.2.6-beta, `mvn test` 810, 7 targets)
 
-| Feature | Java | Kof 0.2.6-beta | Kof Futuro |
+| Feature | Java | Kof 0.2.6-beta | Kof Future |
 |---------|------|---------------|------------|
-| Classes / Records / Herança / Interfaces / Virtual dispatch | ✅ | ✅ (JVM/Native x86_64 + riscv64 + JS `kof.http`) | ✅ |
-| Null safety `String?` | ✅ (via `Optional`/checker) | ✅ básica `String?` (`Type?`) 27/08 | checks avançados |
+| Classes / Records / Inheritance / Interfaces / Virtual dispatch | ✅ | ✅ (JVM/Native x86_64 + riscv64 + JS `kof.http`) | ✅ |
+| Null safety `String?` | ✅ (via `Optional`/checker) | ✅ basic `String?` (`Type?`) 27/08 | advanced checks |
 | Generics `Box<T>` + `List<T>` | ✅ | ✅ `Box<T>` erasure (`substituteTypeVariable` `CompilerDriver.java:3972`) | bounds |
 | Collections `List`/`Map`/`Set` + `map/filter/reduce` | ✅ | ✅ `List map/filter/reduce` + `Map`/`Set` 3 targets 27/08 | — |
 | Exceptions `try/catch/finally` | ✅ | ✅ JVM unwinding + Native unwinding | — |
 | Pattern matching `case String s` + `Point(x,y)` | ✅ (17+) | ✅ JVM/Native/JS 27/08 | guards |
-| Concorrência `spawn`/`await` | ✅ | ✅ JVM + JS sequencial; Native `CONC001` | Native scheduler |
+| Concurrency `spawn`/`await` | ✅ | ✅ JVM + sequential JS; Native `CONC001` | Native scheduler |
 | HTTP `serve` + `kof.http` | Framework | ✅ `web.app()` JVM + `kof.http` JVM+JS | Native HTTP |
 | Config `kof.config` | Framework | ✅ JVM+Native (free-list 27/08) | JS `CONF001` |
 | Logging / Observability | Framework | ✅ `kof.log` JVM+Native + `kof.observability` 3 targets | tracing |
-| Database `kof.db`/`kof.orm` | Framework | ✅ JDBC + SQLite native + MySQL `kof_db_mysql_scramble` | query DSL |
-| DI | Framework | ❌ (planned `service`) | proposta |
+| Database `kof.db`/`kof.orm` | Framework | ✅ JDBC + native SQLite + MySQL `kof_db_mysql_scramble` | query DSL |
+| DI | Framework | ❌ (planned `service`) | proposal |
 | KofScript / KofC | — | ✅ `KofScript` `let`→`KofScriptGlobals` + `KofCcompiler` `kof c` | — |
-| Targets | — | JVM stable (ws/sse), native x86_64 stable (free-list + pthread spawn), native.risc/native.arm (placeholder via qemu), js alpha, kofc, android Fase 1 | — |
+| Targets | — | JVM stable (ws/sse), native x86_64 stable (free-list + pthread spawn), native.risc/native.arm (placeholder via qemu), js alpha, kofc, android Phase 1 | — |

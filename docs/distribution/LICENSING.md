@@ -1,159 +1,157 @@
-# Licenciamento do Kof
+[English](LICENSING.md) | [Português](LICENSING.pt_BR.md)
 
-**Última atualização:** 12 de setembro de 2026
-**Versão:** 0.4.0-beta (7 targets; free-list + pthread spawn + FP XMM)
+# Kof Licensing
 
----
-
-## 1. Código-fonte do Kof
-
-O código-fonte do projeto Kof — incluindo compilador, ferramentas, backends e demais componentes do repositório — é distribuído sob a **GNU General Public License v3.0** (GPLv3).
-
-Isso significa que qualquer pessoa pode usar, modificar e distribuir o código-fonte do Kof, desde que respeite os termos da GPLv3.
-
-O arquivo `LICENSE` na raiz do repositório contém o texto completo da GPLv3.
+**Last updated:** September 12, 2026
+**Version:** 0.4.0-beta (7 targets; free-list + pthread spawn + FP XMM)
 
 ---
 
-## 2. JDK embutido na distribuição oficial (0.2.6-beta, JDK 21)
+## 1. Kof Source Code
 
-O pacote oficial do Kof embarca um **OpenJDK Eclipse Temurin 21** (binários da
-Adoptium, Tooling API Level 21), distribuído sob a **GPLv2 com Classpath Exception**. O JDK
-embutido é um componente separado do código-fonte do Kof, empacotado apenas
-na distribuição (não no repositório), e mantém sua própria licença.
+The source code of the Kof project — including compiler, tools, backends and other repository components — is distributed under the **GNU General Public License v3.0** (GPLv3).
 
-O Kof não modifica o JDK embutido; o launcher (`bin/kof`/`bin/kof.bat`, Windows SIGPIPE fix 27/08) apenas o localiza
-e executa. `scripts/package.sh` gera layout dist + tar.gz/zip + SHA256SUMS, `release.yml` usa 2 jobs (`test-and-bump` exporta o SHA do commit de bump → `package-and-release` checkeia o commit de bump + sanity check de versão) com releases por plataforma (linux-x86_64/macos-arm64/windows-x86_64).
+This means that anyone may use, modify and distribute Kof's source code, as long as they respect the terms of the GPLv3.
+
+The `LICENSE` file at the repository root contains the full text of the GPLv3.
 
 ---
 
-## 2.1 Compilador (0.2.6-beta)
+## 2. JDK embedded in the official distribution (0.2.6-beta, JDK 21)
 
-O compilador Kof (módulos `kof-compiler` 793 testes + `kof-script` 8 + `kof-c-compiler` 5 = 806, `VERSION` 0.2.6-beta) é GPLv3.
+The official Kof package ships an **OpenJDK Eclipse Temurin 21** (Adoptium binaries, Tooling API Level 21), distributed under the **GPLv2 with Classpath Exception**. The embedded JDK is a component separate from Kof's source code, packaged only in the distribution (not in the repository), and keeps its own license.
 
-Ele contém:
+Kof does not modify the embedded JDK; the launcher (`bin/kof`/`bin/kof.bat`, Windows SIGPIPE fix 08/27) only locates and executes it. `scripts/package.sh` generates the dist layout + tar.gz/zip + SHA256SUMS, `release.yml` uses 2 jobs (`test-and-bump` exports the SHA of the bump commit → `package-and-release` checks out the bump commit + version sanity check) with per-platform releases (linux-x86_64/macos-arm64/windows-x86_64).
+
+---
+
+## 2.1 Compiler (0.2.6-beta)
+
+The Kof compiler (modules `kof-compiler` 793 tests + `kof-script` 8 + `kof-c-compiler` 5 = 806, `VERSION` 0.2.6-beta) is GPLv3.
+
+It contains:
 - Lexer / Parser (`case String s` + `Point(x,y)` + `String?`)
 - AST / `Type.java` (`String?` nullable)
-- Sistema de tipos / SymbolTable
-- Análise semântica (`CompilerDriver.java:243` import `a.b.C` fix)
-- IR (backend-agnóstica + `KofDebugInfo`)
+- Type system / SymbolTable
+- Semantic analysis (`CompilerDriver.java:243` import `a.b.C` fix)
+- IR (backend-agnostic + `KofDebugInfo`)
 - Backends: `JvmBackend` (ASM V21 + web ws/sse + cache + http retry/circuit), `NativeBackend` (x86_64 free-list + pthread spawn + FP XMM; `native.risc`/`native.arm` toolchain + qemu), `JsBackend` (GraalJS + `Java HttpClient` interop), `KofScript` (`let`→`KofScriptGlobals`), `KofCcompiler` (`kof_c`), `KofFormatter` (`kof fmt`)
-- Geração de código + `Optimizer` (constant folding etc.)
+- Code generation + `Optimizer` (constant folding etc.)
 
-Usar o compilador Kof para compilar seu código NÃO torna seu código GPLv3.
+Using the Kof compiler to compile your code does NOT make your code GPLv3.
 
 ---
 
 ## 3. Runtime
 
-O runtime do Kof possui duas implementações:
+The Kof runtime has two implementations:
 
-### Runtime JVM
+### JVM Runtime
 
-O backend JVM delega para as facilities da JVM (java.lang.String, arrays nativos, GC, etc.). O runtime JVM é a própria JVM — não há código Kof específico sendo incorporado ao executável.
+The JVM backend delegates to the JVM's facilities (java.lang.String, native arrays, GC, etc.). The JVM runtime is the JVM itself — there is no Kof-specific code being incorporated into the executable.
 
-### Runtime Nativo
+### Native Runtime
 
-O backend Nativo gera funções de runtime em assembly durante a compilação (0.2.6-beta: free-list `kof_free_head` com reuso `mmap` + `spawn`/`await` via `pthread_create`/`pthread_join` com allocator thread-safe (futex) + FP real em XMM + JSON objetos/arrays). Essas funções são:
+The Native backend generates runtime functions in assembly during compilation (0.2.6-beta: free-list `kof_free_head` with `mmap` reuse + `spawn`/`await` via `pthread_create`/`pthread_join` with a thread-safe allocator (futex) + real FP in XMM + JSON objects/arrays). These functions are:
 
-- `kof_alloc` / `kof_free_head` — alocação com reuso `mmap` (GC mark-sweep pendente)
-- `kof_print`, `kof_println`, `kof_print_int`, `kof_int_to_string` — saída
-- `kof_string_*`, `kof_array_*`, `kof_list_*` (`map/filter/reduce`), `kof_map_*` — coleções
-- JSON objetos/records + arrays `Int/Long/Bool/String/Double` (31/08)
-- trampoline de `pthread_create` + `pthread_join` (spawn/await, 31/08)
-- `kof_cache_*` (get/set/ttl/delete/clear, 30/08)
-- `kof_db_mysql_scramble` — MySQL auth scramble SHA-1 (wire protocol WIP, 31/08)
-- `kof_panic`, `kof_null_error`, `kof_bounds_error` — tratamento de erros
+- `kof_alloc` / `kof_free_head` — allocation with `mmap` reuse (mark-sweep GC pending)
+- `kof_print`, `kof_println`, `kof_print_int`, `kof_int_to_string` — output
+- `kof_string_*`, `kof_array_*`, `kof_list_*` (`map/filter/reduce`), `kof_map_*` — collections
+- JSON objects/records + `Int/Long/Bool/String/Double` arrays (08/31)
+- `pthread_create` + `pthread_join` trampoline (spawn/await, 08/31)
+- `kof_cache_*` (get/set/ttl/delete/clear, 08/30)
+- `kof_db_mysql_scramble` — MySQL auth scramble SHA-1 (wire protocol WIP, 08/31)
+- `kof_panic`, `kof_null_error`, `kof_bounds_error` — error handling
 
-**Importante:** Essas funções são **geradas pelo compilador** durante o processo de compilação. Elas não são distribuídas como uma biblioteca pré-compilada. São incorporadas ao executável final como parte do processo de compilação.
+**Important:** These functions are **generated by the compiler** during the compilation process. They are not distributed as a precompiled library. They are incorporated into the final executable as part of the compilation process.
 
-Sob a GPLv3, o output de um compilador NÃO é automaticamente GPLv3. As funções de runtime são geradas pelo compilador e fazem parte do output da compilação. Portanto, elas NÃO são automaticamente GPLv3.
+Under the GPLv3, a compiler's output is NOT automatically GPLv3. The runtime functions are generated by the compiler and are part of the compilation output. Therefore, they are NOT automatically GPLv3.
 
 ---
 
 ## 4. Standard Library
 
-Atualmente não existe uma standard library separada. As operações de string e array são implementadas como funções de runtime geradas pelo compilador.
+Currently there is no separate standard library. String and array operations are implemented as runtime functions generated by the compiler.
 
-No futuro, se uma standard library for criada, ela deverá ser licenciada separadamente se for necessário permitir software proprietário.
-
----
-
-## 5. Código escrito pelos usuários
-
-Programas escritos em Kof pertencem aos seus respectivos autores.
-
-**Escrever um programa em Kof NÃO transforma automaticamente esse programa em código GPLv3.**
-
-O autor do programa Kof mantém o direito de escolher a licença do próprio software.
+In the future, if a standard library is created, it should be licensed separately if it is necessary to allow proprietary software.
 
 ---
 
-## 6. Software proprietário
+## 5. Code written by users
 
-Software proprietário escrito em Kof é permitido.
+Programs written in Kof belong to their respective authors.
 
-O autor pode:
-- Manter o código-fonte fechado
-- Distribuir apenas o binário
-- Usar qualquer licença compatível com as dependências
+**Writing a program in Kof does NOT automatically turn that program into GPLv3 code.**
 
-Desde que o software não esteja incorporando componentes que imponham outra obrigação incompatível.
+The author of the Kof program retains the right to choose the license of their own software.
 
 ---
 
-## 7. Distribuição de binários
+## 6. Proprietary software
 
-### Target JVM
+Proprietary software written in Kof is allowed.
 
-O executável JVM (`.class` ou `.jar`) contém bytecode JVM. O runtime é a própria JVM. Não há código Kof sendo incorporado.
+The author may:
+- Keep the source code closed
+- Distribute only the binary
+- Use any license compatible with the dependencies
 
-### Target Nativo
-
-O executável nativo contém:
-- Código do usuário compilado
-- Funções de runtime geradas pelo compilador
-- Assembly gerado
-
-As funções de runtime são geradas pelo compilador e são parte do processo de compilação. Elas NÃO são distribuídas como uma biblioteca separada.
+As long as the software is not incorporating components that impose another incompatible obligation.
 
 ---
 
-## 8. Dependências de terceiros
+## 7. Binary distribution
 
-O compilador Kof usa as seguintes dependências:
+### JVM Target
 
-- **ASM** (org.objectweb.asm) — para geração de bytecode JVM
+The JVM executable (`.class` or `.jar`) contains JVM bytecode. The runtime is the JVM itself. There is no Kof code being incorporated.
 
-O ASM é usado apenas pelo backend JVM e não é incorporado ao executável final do target Nativo.
+### Native Target
 
-Programas escritos em Kof podem ter suas próprias dependências, que devem ser licenciadas de acordo com os termos de cada dependência.
+The native executable contains:
+- Compiled user code
+- Runtime functions generated by the compiler
+- Generated assembly
+
+The runtime functions are generated by the compiler and are part of the compilation process. They are NOT distributed as a separate library.
 
 ---
 
-## 9. O que a GPLv3 do Kof cobre
+## 8. Third-party dependencies
 
-A GPLv3 do Kof cobre:
-- Código-fonte do compilador
-- Ferramentas de linha de comando
+The Kof compiler uses the following dependencies:
+
+- **ASM** (org.objectweb.asm) — for JVM bytecode generation
+
+ASM is used only by the JVM backend and is not incorporated into the final executable of the Native target.
+
+Programs written in Kof may have their own dependencies, which must be licensed according to the terms of each dependency.
+
+---
+
+## 9. What Kof's GPLv3 covers
+
+Kof's GPLv3 covers:
+- Compiler source code
+- Command-line tools
 - Backends
-- Documentação do projeto
-- Testes
+- Project documentation
+- Tests
 
 ---
 
-## 10. O que ela NÃO cobre
+## 10. What it does NOT cover
 
-A GPLv3 do Kof NÃO cobre:
-- Programas escritos em Kof pelos usuários
-- Software produzido com o compilador Kof
-- Binários gerados para target JVM ou Nativo
+Kof's GPLv3 does NOT cover:
+- Programs written in Kof by users
+- Software produced with the Kof compiler
+- Binaries generated for the JVM or Native target
 
 ---
 
-## 11. Exemplos práticos
+## 11. Practical examples
 
-### Exemplo 1: Empresa proprietária
+### Example 1: Proprietary company
 
 ```
 empresa/
@@ -161,47 +159,47 @@ empresa/
   main.kf
 ```
 
-A empresa pode manter o código proprietário. Usar o compilador Kof não obriga a empresa a abrir seu código-fonte.
+The company may keep the code proprietary. Using the Kof compiler does not obligate the company to open its source code.
 
-### Exemplo 2: Projeto open source
+### Example 2: Open source project
 
-O autor pode escolher GPL, MIT, Apache-2.0, ou qualquer outra licença, respeitando as licenças das dependências que incorporar ao seu software.
+The author may choose GPL, MIT, Apache-2.0, or any other license, respecting the licenses of the dependencies incorporated into their software.
 
-### Exemplo 3: Aplicação comercial fechada
+### Example 3: Closed commercial application
 
-Pode ser proprietária, desde que a aplicação não esteja incorporando componentes que imponham outra obrigação incompatível com a licença escolhida.
+It may be proprietary, as long as the application is not incorporating components that impose another obligation incompatible with the chosen license.
 
-### Exemplo 4: Biblioteca Kof
+### Example 4: Kof library
 
-Se alguém criar uma biblioteca em Kof e quiser distribuí-la como open source, pode escolher GPL, MIT, Apache-2.0, etc.
+If someone creates a library in Kof and wants to distribute it as open source, they may choose GPL, MIT, Apache-2.0, etc.
 
-Se quiser distribuí-la como proprietária, pode fazê-lo.
-
----
-
-## 12. Analogia com compiladores tradicionais
-
-Assim como:
-- Programas compilados com GCC não são automaticamente GPLv3
-- Programas compilados com Clang não são automaticamente Apache 2.0
-- Programas compilados com javac não são automaticamente GPL
-
-Programas compilados com Kof NÃO são automaticamente GPLv3.
-
-O compilador é uma ferramenta. O código produzido com a ferramenta pertence ao autor.
+If they want to distribute it as proprietary, they may do so.
 
 ---
 
-## 13. Pontos que requerem atenção
+## 12. Analogy with traditional compilers
 
-1. **Dependências de terceiros**: Se o software Kof incorporar bibliotecas de terceiros com licenças específicas, o autor deve respeitar essas licenças.
+Just as:
+- Programs compiled with GCC are not automatically GPLv3
+- Programs compiled with Clang are not automatically Apache 2.0
+- Programs compiled with javac are not automatically GPL
 
-2. **Runtime nativo**: As funções de runtime são geradas pelo compilador e incorporadas ao executável. Elas são minimalistas e não constituem uma obra separada significativa.
+Programs compiled with Kof are NOT automatically GPLv3.
 
-3. **Futuro**: Se uma standard library for criada e distribuída separadamente, ela poderá ter uma licença diferente. Isso será documentado explicitamente.
+The compiler is a tool. The code produced with the tool belongs to the author.
 
 ---
 
-## 14. Contato
+## 13. Points requiring attention
 
-Para dúvidas sobre licenciamento, consulte o repositório do projeto ou abra uma issue.
+1. **Third-party dependencies**: If the Kof software incorporates third-party libraries with specific licenses, the author must respect those licenses.
+
+2. **Native runtime**: The runtime functions are generated by the compiler and incorporated into the executable. They are minimalistic and do not constitute a significant separate work.
+
+3. **Future**: If a standard library is created and distributed separately, it may have a different license. This will be documented explicitly.
+
+---
+
+## 14. Contact
+
+For questions about licensing, consult the project repository or open an issue.

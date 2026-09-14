@@ -1,0 +1,250 @@
+[English](KOFANDROID.md) | [Português](KOFANDROID.pt_BR.md)
+
+# KofAndroid — o target Android da Kof
+
+> **Status: Fases 1 e 2 implementadas (31/08).** `kof build --target android` gera o
+> projeto Maven + APK pipeline com o host Activity escrito EM KOF
+> (`dev/kof/android-host.kf`) — zero Java, zero Kotlin, zero Gradle no
+> projeto gerado; dependências resolvidas pelo Kof (ExternalClasspath).
+> Fase 2: label/permissões derivados do programa, `--apk` standalone
+> (aapt2/d8/apksigner direto do CLI) e release signing `--keystore`.
+> A base de compilador que isso exige está funcional: herança de classes
+> externas, `super(...)`/`super.metodo()` com INVOKESPECIAL correto,
+> chamadas encadeadas em receivers externos, construtores e campos
+> externos, annotations emitidas no bytecode.
+
+## O que é
+
+`kof-android` é o target que transforma um programa Kof em um **aplicativo
+Android instalável** — APK/AAB — mantendo a promessa central da linguagem:
+
+> **A linguagem não muda. O target muda.**
+
+O mesmo `.kf` que abre uma `Window` no desktop abre um app no celular:
+
+```kof
+main() {
+    var w = Window("Contador")
+    var label = Label("contagem: 0")
+    w.bind(label)
+    w.bind(Button("+1", () -> {
+        label.text = "contagem: " + App.count
+    }))
+    w.show()
+}
+```
+
+Nada de `Activity`, `Intent`, `LayoutInflater`, XML de layout ou
+`findViewById` no código do usuário. Se é essencial para qualquer programa,
+pertence à plataforma (linguagem + compilador + runtime) — nunca ao
+mecanismo vazando na intenção.
+
+## Por que NÃO é um novo compilador
+
+Android não tem linguagem própria: o ART executa **bytecode convertido para
+dex**. O pipeline reaproveita tudo o que existe:
+
+```text
+                    Kof Source
+                         │
+                         ▼
+                 ┌──────────────┐
+                 │ Kof Frontend │   (um só: lexer/parser/tipos/IR)
+                 └──────┬───────┘
+                        ▼
+                    Kof IR
+                        │
+                ┌───────┴────────┐
+                ▼                ▼
+          JvmBackend        validações AND*
+          (.class bytecode)
+                │
+        ┌───────┼──────────────────┐
+        ▼       ▼                  ▼
+   d8/dex    AndroidManifest   projeto/pacote
+   (dx)      sintético         (Gradle fase 1;
+   │                            aapt2+d8+apksigner fase 2)
+        ▼
+     APK/AAB → instalação → ART
+```
+
+**Não é transpilar para Java.** É o mesmo bytecode do backend JVM, com
+restrições e pós-processamento próprios do alvo — a mesma relação que
+KofJS tem com o frontend único.
+
+## Modelo de execução do kof.ui
+
+Hoje o `kof.ui` renderiza widgets como **DOM via KofJS** no webview nativo
+do desktop (WebKitGTK embutido). O Android já traz um WebView maduro
+(`android.webkit.WebView`). A realização por target, sem mudar o código:
+
+```text
+Window/Label/Button/Input/Column/Row/View/Style
+        │  (mesma IR, mesmos handles Int)
+        ▼
+MainActivity (sintetizada pelo target)
+  └── WebView (fullscreen, JS habilitado)
+        └── engine embarcada carrega o .mjs do programa
+              └── widgets → DOM (mesma camada de render do desktop)
+```
+
+A `MainActivity` é escrita **em Kof** (`dev/kof/android-host.kf`) e
+compilada junto com o programa pelo mesmo frontend — o usuário nunca
+escreve Activity em Java. Quem precisa de UI **nativa de verdade** usa
+interop direta: com `ExternalClasspath` no classpath, tudo isto compila
+hoje (ver [learn/10-inheritance.md](../../learn/10-inheritance.md)):
+
+```kof
+import android.widget.Button
+import android.view.View
+
+class MeuListener implements OnClickListener {
+    Void onClick(View v) {
+        println("clicado")
+    }
+}
+
+// SAM conversion: lambda vira o listener direto
+var b = new Button(this)
+b.setOnClickListener((v) -> println("clicou"))
+b.setOnLongClickListener((v, n) -> println("long " + n))
+var i = Button.inflate(this)      // método estático externo
+if (i instanceof View) { ... }
+var c = i as Button               // cast externo qualificado
+b.clicks = 5                      // campo externo (leitura/escrita)
+```
+
+## Ciclo de vida e convenções
+
+| Intenção | Como o usuário escreve | O que o target faz |
+|----------|------------------------|--------------------|
+| app de UI | `main()` com `Window(...)` | sintetiza host Activity + WebView |
+| componente Android | `class MinhaTela extends android.app.Activity` | respeita a hierarquia; exige assinaturas reais via classpath |
+| metadado de framework | `@Override`, `@NonNull`, ... | emite RuntimeVisible/Invisible no bytecode |
+| ponto de entrada lógico | `main()` | continua existindo e testável (`kof test`) |
+
+Regras de convenção (nenhuma configuração obrigatória):
+
+1. **Pacote/aplicação**: derivado do `package` do arquivo; default
+   `dev.kof.app`.
+2. **Label/ícone**: label vem do título da primeira `Window`; ícone default
+   do Kof (override futuro por metadado declarativo, não annotation).
+3. **minSdk/targetSdk**: defaults conservadores fixados pelo target
+   (ex.: minSdk 24); override por flag explícita do CLI, não arquivo mágico.
+
+## Fases
+
+### Fase 1 — implementada: pipeline Maven, código 100% Kof
+
+`kof build app.kf --target android` produz:
+
+```text
+<output>/
+├── pom.xml                          ← cola do pipeline SDK; NENHUMA <dependencies>
+├── src/main/AndroidManifest.xml     ← dados da plataforma (label, launcher)
+├── src/main/assets/kof/
+│   ├── index.html, Default.mjs      ← saída KofJS do MESMO programa
+│   └── kof-runtime*.mjs
+├── libs/kof-app.jar                 ← bytecode: programa + host Activity EM KOF
+└── README.txt
+```
+
+Pontos centrais:
+
+- **Zero Java. Zero Kotlin. Zero Gradle.** A host `MainActivity` é escrita
+  EM KOF (`kof-compiler/src/main/resources/dev/kof/android-host.kf`),
+  compilada junto pelo mesmo frontend e vai no jar. O usuário que quiser
+  um host próprio declara `class MainActivity extends Activity` em Kof —
+  a versão embutida cede o lugar.
+- **Dependências geridas pelo Kof**: assinaturas de `android.*` vêm do
+  ExternalClasspath (o android.jar que o fluxo do projeto fornecer). O
+  `pom.xml` não declara dependência nenhuma — ele só orquestra os
+  binários oficiais do SDK nas fases do Maven (antrun puro):
+  `d8 → aapt2 link -A assets → zipalign → apksigner`.
+- Uso:
+
+```bash
+# só o projeto Maven:
+kof build app.kf --target android --output app-android \
+    --classpath $ANDROID_HOME/platforms/android-34/android.jar
+
+# ou direto pro APK (standalone, sem Maven; precisa de build-tools 34):
+kof build app.kf --target android --output app-android --apk \
+    --classpath $ANDROID_HOME/platforms/android-34/android.jar
+```
+
+Permissões ficam NO CÓDIGO Kof — metadado consumido pelo target:
+
+```kof
+@Permissions(["android.permission.INTERNET", "android.permission.CAMERA"])
+class MainActivity extends Activity { ... }
+```
+
+O label do app é a primeira `Window("...")` do programa. O ícone é
+vetorial (`res/drawable/ic_launcher_kof.xml`) — nenhum binário gerado.
+
+### Fase 2 — implementada (31/08): refinamentos
+
+- ✅ **label derivado do programa**: título da primeira `Window("...")` vira
+  `android:label` do manifesto (`AndroidProjectWriter.detectAppLabel`);
+- ✅ **permissões declarativas**: `@Permissions([...])` numa classe Kof vira
+  `<uses-permission>` no manifesto (`detectPermissions`);
+- ✅ **modo standalone sem Maven**: `kof build --target android --apk` chama
+  `aapt2 → d8 → zip → zipalign → apksigner` direto do CLI (build-tools 34 +
+  `ANDROID_HOME`);
+- ✅ **release signing parametrizável**: `--keystore <ks> [--storepass <p>]
+  [--keypass <p>] [--alias <a>]` — sem `--keystore`, mantém o debug keystore
+  local gerado na primeira vez;
+- ícone: default vetorial do Kof (`res/drawable/ic_launcher_kof.xml`);
+  override declarativo por metadado segue planejado (nenhum binário gerado).
+
+## Restrições e gaps (diagnosticados em compile-time)
+
+O contrato é o mesmo dos outros targets: **a intenção compila em todos os
+alvos; o alvo que não consegue realizá-la diz isso na hora, com código.**
+
+| Código | Situação | Motivo |
+|--------|----------|--------|
+| ~~`AND001`~~ | ~~`spawn { ... }`~~ | ✅ **fechado 31/08**: ART não tem virtual threads (Java 21), mas o runtime cai em **platform threads** quando `Thread.startVirtualThread` não existe — `spawn`/`await`/`cancel`/`cancelled`/`selectAny`/`awaitTimeout`/`channel`/`scheduler` compilam e rodam (bytecode: `CompletableFuture` + `new Thread` + `LinkedBlockingQueue`; KofJS do WebView: sequencial). `KofConcurrency2Test`/`AndroidInteropE2ETest` |
+| `AND002` | `kof.web` (servidor embutido) | app mobile não escuta porta; usar interop |
+| `AND003` | reflexão dinâmica sobre classes Kof | desugaring/R8 pode remover símbolos |
+| `AND004` | android.jar ausente no ExternalClasspath | host Activity não incluída (warning) |
+| `SAM001` | aridade da lambda ≠ método SAM | interface externa exige N args |
+| `SUP001` | `super.metodo()` no Native | já coberto; ANDROID reusa o caminho JVM |
+
+Suportado no compilador: sobrecarga de **construtores** (despacho por
+aridade), `super.metodo()` **dentro de lambdas** via captura `$outer` +
+método-ponte `kof_super$*` na classe dona, valores `Classe.class` e
+enum (`@Anno(Pkg.Enum.CONST)`) resolvidos pelo classpath. Ainda faltando:
+sobrecarga de métodos comuns, checagem de generics externos.
+
+Bytecode: o JvmBackend emite nível moderno; o `d8` faz desugaring para
+dispositivos antigos. Se a Fase 2 precisar de nível menor, a flag vira
+parâmetro do backend — não um segundo backend.
+
+## Integração com o trabalho em andamento
+
+- **ExternalClasspath** (Gradle → `.jar`/`.aar`): fonte das assinaturas
+  para INVOKESPECIAL exato em `super.metodo()` contra `android.*`;
+  warnings `CP002` para entradas ilegíveis.
+- **Annotations**: `@Override`/`@NonNull`/androidx já emitidos com
+  retenção correta; frameworks Android que leem metadata em runtime
+  continuam funcionando.
+- **kof.ui**: nenhum widget novo; o WebView host substitui o WebKitGTK
+  desktop. `Palette`/`Theme` seguem idênticos.
+
+## Roadmap resumido
+
+1. `Target.ANDROID` no enum + dispatch no CLI (`--target android`) com as
+   validações `AND*` antes da emissão (reuso do JvmBackend).
+2. Gerador do projeto Maven (pom.xml, zero Gradle) + manifesto + assets
+   (`AndroidProjectWriter`).
+3. Host Activity + bridge WebView ↔ handles do `kof.ui` (reusar runtime.mjs).
+4. E2E: build → assembleDebug em CI com emulator smoke test.
+5. Fase 2: standalone aapt2/d8/apksigner.
+
+## Próximo passo
+
+Comparativo de filosofia entre backends:
+[KOFJS.md](KOFJS.md) · interop Java/Android:
+[../../learn/21-java-interoperability.md](../../learn/21-java-interoperability.md)

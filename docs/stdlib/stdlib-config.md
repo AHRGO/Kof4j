@@ -1,36 +1,38 @@
-# stdlib config — Configuração Nativa do Kof
+[English](stdlib-config.md) | [Português](stdlib-config.pt_BR.md)
 
-**Última atualização:** 12 de setembro de 2026
-**Versão:** 0.4.0-beta
-**Status:** implementado (Fase 3 do plano de independência do Spring) — 3 targets (JVM / Native asm próprio `/proc/self/environ` + free-list / JS `kof_platform`) + `required`/interpolação `${key}`/`kof config gen` (30/08)
+# stdlib config — Kof Native Configuration
+
+**Last updated:** September 12, 2026
+**Version:** 0.4.0-beta
+**Status:** implemented (Phase 3 of the Spring independence plan) — 3 targets (JVM / Native own asm `/proc/self/environ` + free-list / JS `kof_platform`) + `required`/`${key}` interpolation/`kof config gen` (30/08)
 
 ---
 
-## 1. Filosofia
+## 1. Philosophy
 
-> Configuração é uma capacidade da linguagem, não de um framework.
+> Configuration is a capability of the language, not of a framework.
 
-`kof.config` resolve valores de configuração com precedência explícita,
-tipagem em compile-time e zero dependência externa (sem Spring
-Environment/PropertySource, sem dotenv).
+`kof.config` resolves configuration values with explicit precedence,
+compile-time typing and zero external dependency (no Spring
+Environment/PropertySource, no dotenv).
 
 ## 2. API
 
 ```kof
-var port  = config.int("server.port", 8080)         // Int com default
-var url   = config.str("database.url", "jdbc:h2:mem") // String com default
-var debug = config.bool("app.debug", false)         // Bool com default
-var big   = config.long("app.timeoutMillis", 30000) // Long com default
+var port  = config.int("server.port", 8080)         // Int with default
+var url   = config.str("database.url", "jdbc:h2:mem") // String with default
+var debug = config.bool("app.debug", false)         // Bool with default
+var big   = config.long("app.timeoutMillis", 30000) // Long with default
 
-var raw   = config.get("server.port")               // String ou null
+var raw   = config.get("server.port")               // String or null
 var has   = config.has("server.port")               // Bool
-var home  = config.env("HOME")                      // variável de ambiente direta
-var need  = config.required("db.url")               // falha no startup se ausente
+var home  = config.env("HOME")                      // direct environment variable
+var need  = config.required("db.url")               // fails at startup if missing
 ```
 
-### 2.1 Interpolação `${key}` (P2 — implementada, 30/08)
+### 2.1 `${key}` interpolation (P2 — implemented, 30/08)
 
-Valores podem referenciar outras chaves do próprio config:
+Values can reference other keys of the config itself:
 
 ```text
 # kof.config
@@ -39,33 +41,33 @@ db.port = 5432
 db.url  = jdbc:pg://${db.host}:${db.port}/app
 ```
 
-- Resolução recursiva (referência a referência funciona), limite de 16 níveis.
-- **Ciclo** (`a=${b}`, `b=${a}`) → valor **literal inalterado** (`a` vale
-  `${b}`), nunca crash nem loop infinito.
-- Chave referenciada **inexistente** → literal inalterado.
-- Funciona igualmente para valores vindos de arquivo **e** de env
-  (`KOF_<KEY>`), nos 3 targets (JVM: `JvmConfigRuntime`; Native: asm
+- Recursive resolution (reference to reference works), limit of 16 levels.
+- **Cycle** (`a=${b}`, `b=${a}`) → value **left as the literal** (`a` is
+  `${b}`), never a crash or infinite loop.
+- Referenced key **nonexistent** → literal unchanged.
+- It works the same for values coming from a file **and** from env
+  (`KOF_<KEY>`), in the 3 targets (JVM: `JvmConfigRuntime`; Native: asm
   `kof_config_interpolate`; JS: `kofConfigInterpolate`).
 
-`config.int/bool/long/str` nunca falham: valor ausente ou inválido → default.
+`config.int/bool/long/str` never fail: missing or invalid value → default.
 
-## 3. Fontes e precedência
+## 3. Sources and precedence
 
-1. **Arquivo explícito** — `KOF_CONFIG` aponta para um arquivo
-   `chave=valor` (comentários com `#`). Maior precedência.
-2. **Variável de ambiente** — `KOF_<KEY>` com `.`/`-` → `_` e maiúsculas:
+1. **Explicit file** — `KOF_CONFIG` points to a `key=value` file
+   (comments with `#`). Highest precedence.
+2. **Environment variable** — `KOF_<KEY>` with `.`/`-` → `_` and uppercase:
    `server.port` → `KOF_SERVER_PORT`.
-3. **Arquivo de profile** — `kof.<KOF_PROFILE>.config` no diretório de
-   trabalho (ex.: `kof.prod.config`).
-4. **Arquivo padrão** — `kof.config` no diretório de trabalho.
+3. **Profile file** — `kof.<KOF_PROFILE>.config` in the working
+   directory (e.g.: `kof.prod.config`).
+4. **Default file** — `kof.config` in the working directory.
 
 ```bash
 KOF_CONFIG=/etc/app/config.properties kof run app.kf
-KOF_PROFILE=prod kof run app.kf            # usa kof.prod.config
-KOF_SERVER_PORT=9000 kof run app.kf        # env por convenção
+KOF_PROFILE=prod kof run app.kf            # uses kof.prod.config
+KOF_SERVER_PORT=9000 kof run app.kf        # env by convention
 ```
 
-## 4. Exemplo com a stack web
+## 4. Example with the web stack
 
 ```kof
 main() {
@@ -80,102 +82,102 @@ main() {
 
 ## 5. Targets (0.2.6-beta)
 
-| Target | Estado | Notas |
+| Target | Status | Notes |
 |--------|--------|-------|
-| JVM | ✅ completo | `KofRuntime` gerado |
-| Native x86_64 | ✅ completo (asm próprio, 27/08) | `/proc/self/environ` scan, trim, comentários, free-list `kof_free_head`, interpolação `kof_config_interpolate` |
+| JVM | ✅ complete | `KofRuntime` generated |
+| Native x86_64 | ✅ complete (own asm, 27/08) | `/proc/self/environ` scan, trim, comments, free-list `kof_free_head`, interpolation `kof_config_interpolate` |
 | Native riscv64/aarch64 | ✅/placeholder | riscv64 `li a7` syscalls; aarch64 placeholder |
-| JS | ✅ completo | `kof_platform` (`kofConfigLookup`/`kofConfigStr/Int/Bool/Long/Required` + `kofConfigInterpolate`); `KofConfig.supportedOn` = todos os targets (CONF001 fechado) |
+| JS | ✅ complete | `kof_platform` (`kofConfigLookup`/`kofConfigStr/Int/Bool/Long/Required` + `kofConfigInterpolate`); `KofConfig.supportedOn` = all targets (CONF001 closed) |
 
-## 6. Testes
+## 6. Tests
 
-`KofConfigE2ETest` — 11 testes E2E (0.2.6-beta): env por convenção, defaults,
-arquivo explícito, profiles, arquivo padrão no diretório de trabalho, `env()`,
-precedência completa, `required` (presente em todos os targets + falha rápida
-se ausente) e interpolação `${key}` (JVM/Native/JS).
+`KofConfigE2ETest` — 11 E2E tests (0.2.6-beta): env by convention, defaults,
+explicit file, profiles, default file in the working directory, `env()`,
+full precedence, `required` (present in all targets + fast fail
+if missing) and `${key}` interpolation (JVM/Native/JS).
 
-## 7. Arquitetura
+## 7. Architecture
 
 ```
-Kof source (.kf) → KofConfig (tabela compile-time)
-   → SemanticAnalyzer (tipos) → CompilerDriver (KofCall kof_config_*)
-   → dev.kof.runtime.KofRuntime (gerado): lookup com precedência + parsing
+Kof source (.kf) → KofConfig (compile-time table)
+   → SemanticAnalyzer (types) → CompilerDriver (KofCall kof_config_*)
+   → dev.kof.runtime.KofRuntime (generated): lookup with precedence + parsing
 ```
 
-O compilador conhece cada chamada em compile-time; o runtime nunca é
-descoberto por reflection.
+The compiler knows every call at compile-time; the runtime is never
+discovered by reflection.
 
-## 8. Onde estamos vs. o padrão ouro (Spring/Quarkus) — auditoria honesta
+## 8. Where we stand vs. the gold standard (Spring/Quarkus) — honest audit
 
-**Última revisão:** 30/08/2026 (0.2.6-beta, auditoria da Fase de Configuração)
+**Last review:** 30/08/2026 (0.2.6-beta, Configuration Phase audit)
 
-| Capacidade | kof.config hoje | Spring Boot | Status |
+| Capability | kof.config today | Spring Boot | Status |
 |------------|-----------------|-------------|--------|
-| Arquivo de config | `kof.config` (key=value) | `application.properties` | ✅ equivalente |
-| Profiles | `KOF_PROFILE` → `kof.prod.config` | `spring.profiles.active` | ✅ equivalente |
-| Env por convenção | `server.port` → `KOF_SERVER_PORT` | `SERVER_PORT` (relaxed binding) | ✅ equivalente |
-| Typed com default | `config.int/str/bool/long` | `@Value` / `@ConfigurationProperties` | ✅ equivalente |
-| Falhar cedo (required) | `config.required(key)` falha no startup | falha no boot | ✅ equivalente (P1, 30/08) |
-| Config declarativa tipada | ❌ (P3 planejado) | ❌ (reflection em runtime) | 🎯 vantagem planejada |
-| Interpolação | `${key}` nos 3 targets (P2, 30/08) | `${key}` | ✅ equivalente |
-| Descoberta de chaves | `kof config gen` gera template a partir das chaves do código | Actuator `/env` | ✅ equivalente (P3, 30/08) |
-| Secrets | separados (`kof.security.secrets.get`, env-only) | `Environment` mistura tudo | ✅ Kof é mais seguro |
+| Config file | `kof.config` (key=value) | `application.properties` | ✅ equivalent |
+| Profiles | `KOF_PROFILE` → `kof.prod.config` | `spring.profiles.active` | ✅ equivalent |
+| Env by convention | `server.port` → `KOF_SERVER_PORT` | `SERVER_PORT` (relaxed binding) | ✅ equivalent |
+| Typed with default | `config.int/str/bool/long` | `@Value` / `@ConfigurationProperties` | ✅ equivalent |
+| Fail early (required) | `config.required(key)` fails at startup | fails at boot | ✅ equivalent (P1, 30/08) |
+| Typed declarative config | ❌ (P3 planned) | ❌ (runtime reflection) | 🎯 planned advantage |
+| Interpolation | `${key}` in the 3 targets (P2, 30/08) | `${key}` | ✅ equivalent |
+| Key discovery | `kof config gen` generates a template from the code's keys | Actuator `/env` | ✅ equivalent (P3, 30/08) |
+| Secrets | separate (`kof.security.secrets.get`, env-only) | `Environment` mixes everything | ✅ Kof is safer |
 
-### 8.1 Decisões de projeto (firmes)
+### 8.1 Design decisions (firm)
 
-1. **O arquivo se chama `kof.config`** — não `application.properties` nem
-   `application.kof`. Consistência com `kof.log`, `kof.cache`, `kof.db`:
-   tudo do Kof vive no namespace `kof.*`. O "application.kof" da discussão
-   inicial já está atendido pelo nome certo.
-2. **Secret NUNCA vai no arquivo.** `kof.config` é comittável no git;
-   secrets vivem em env (`secrets.get`) — separação config/secret é
-   segurança, não conveniência. Padrão 12-factor; melhor que a prática
-   comum de misturar no mesmo arquivo.
-3. **Nunca reflection.** A precedência é implementada direto (JVM gerado,
-   asm nativo, `kof_platform` no JS). Sem PropertySource, sem relfection.
+1. **The file is called `kof.config`** — not `application.properties` nor
+   `application.kof`. Consistency with `kof.log`, `kof.cache`, `kof.db`:
+   everything in Kof lives in the `kof.*` namespace. The "application.kof" of the
+   initial discussion is already served by the right name.
+2. **A secret NEVER goes in the file.** `kof.config` is committable to git;
+   secrets live in env (`secrets.get`) — config/secret separation is
+   security, not convenience. 12-factor standard; better than the common
+   practice of mixing in the same file.
+3. **Never reflection.** Precedence is implemented directly (generated JVM,
+   native asm, `kof_platform` in JS). No PropertySource, no reflection.
 
-### 8.2 Roadmap (na ordem de valor)
+### 8.2 Roadmap (in order of value)
 
-**P1 — ✅ `config.required(key)` — IMPLEMENTADO (30/08).**
+**P1 — ✅ `config.required(key)` — IMPLEMENTED (30/08).**
 ```kof
-var url = config.required("database.url")   // erro de startup claro se ausente
+var url = config.required("database.url")   // clear startup error if missing
 ```
-Elimina a classe inteira de bugs de deploy ("rodou na minha máquina").
-JVM: `IllegalStateException` nomeando chave + precedência consultada;
-Native: panic asm; JS: throw. Testes: `requiredKeyPresentAllTargets`,
+Eliminates the whole class of deploy bugs ("it ran on my machine").
+JVM: `IllegalStateException` naming the key + precedence consulted;
+Native: asm panic; JS: throw. Tests: `requiredKeyPresentAllTargets`,
 `requiredKeyMissingFailsFast`.
 
-**P2 — ✅ Interpolação `${key}` — IMPLEMENTADA (30/08, ver §2.1).**
-Lookup recursivo com detecção de ciclo (ciclo → literal, nunca crash).
-JVM + Native (asm `kof_config_interpolate`) + JS. Funciona para valores de
-arquivo e de env. Testes: `interpolationResolvesReferences` (JVM),
-interpolação estendida em `nativeAndJsRunConfig` (Native + JS).
-Bônus: expôs e corrigiu um bug latente no asm de `kof_config_bool`
-(rsi nunca era setado antes de `.Lcb_ci_match`; funcionava por acaso).
+**P2 — ✅ `${key}` interpolation — IMPLEMENTED (30/08, see §2.1).**
+Recursive lookup with cycle detection (cycle → literal, never crash).
+JVM + Native (asm `kof_config_interpolate`) + JS. Works for values from
+file and from env. Tests: `interpolationResolvesReferences` (JVM),
+extended interpolation in `nativeAndJsRunConfig` (Native + JS).
+Bonus: exposed and fixed a latent bug in the `kof_config_bool` asm
+(rsi was never set before `.Lcb_ci_match`; it worked by chance).
 
-**P3 — ✅ `kof config gen` — IMPLEMENTADO (30/08).**
-O compilador conhece todas as chaves literais (compile-time dispatch, sem
-reflection). Subcomando:
+**P3 — ✅ `kof config gen` — IMPLEMENTED (30/08).**
+The compiler knows all literal keys (compile-time dispatch, no
+reflection). Subcommand:
 
 ```bash
-kof config gen src/                    # imprime o template no stdout
-kof config gen src/ --output kof.config  # escreve o arquivo
-kof config gen app.kf --target native    # qualquer target (só análise)
+kof config gen src/                    # prints the template to stdout
+kof config gen src/ --output kof.config  # writes the file
+kof config gen app.kf --target native    # any target (analysis only)
 ```
 
-Regras do template: chave com default vira **comentário** (o programa já
-tem valor; descomente para sobrescrever); `required`/`get` sem default
-viram **linha ativa** preencher-ou-falhar; chave computada (não literal)
-não aparece — nada é inferido em runtime. Chaves repetidas são dedup
-por (método, chave, default). Testes: `ConfigGenTest` (3 casos).
+Template rules: a key with a default becomes a **comment** (the program already
+has a value; uncomment to override); `required`/`get` without a default
+become an **active line** fill-or-fail; a computed key (not literal)
+does not appear — nothing is inferred at runtime. Repeated keys are deduped
+by (method, key, default). Tests: `ConfigGenTest` (3 cases).
 
-> **~~Gap conhecido (COMP002, pré-existente)~~ — fechado 31/08:** a causa
-> real eram descritores JVM faltando para funções de contexto web
-> (`kof_web_ws_message` caindo no default `(String)->Object` com 0 args —
-> underflow de pilha no `COMPUTE_FRAMES` do ASM). `config.*` com chave
-> não-literal compila e roda.
+> **~~Known gap (COMP002, pre-existing)~~ — closed 31/08:** the real
+> cause was missing JVM descriptors for web-context functions
+> (`kof_web_ws_message` falling into the default `(String)->Object` with 0 args —
+> stack underflow in the ASM `COMPUTE_FRAMES`). `config.*` with a
+> non-literal key compiles and runs.
 
-**P3 — Config declarativa tipada (a visão do KOF_VS_SPRING §2).**
+**P3 — Typed declarative config (the KOF_VS_SPRING §2 vision).**
 ```kof
 config App {
     port    = 8080
@@ -183,23 +185,23 @@ config App {
     debug   = false
 }
 ```
-Um bloco na linguagem; o compilador valida chaves/tipos em compile-time,
-emite a classe `AppConfig` e sabe TODAS as chaves. Erro de digitação em
-config vira erro de compilação — nada no mercado faz isso (Spring resolve
-em runtime por reflection; Quarkus usa anotações + APT).
-Depende: parser de blocos nomeados, codegen. Fase própria, grande.
+A block in the language; the compiler validates keys/types at compile-time,
+emits the `AppConfig` class and knows ALL the keys. A typo in
+config becomes a compilation error — nothing on the market does that (Spring resolves
+at runtime by reflection; Quarkus uses annotations + APT).
+Depends on: named-block parser, codegen. Own phase, large.
 
-**P4 — ✅ JS: CONF001 fechado (30/08).** `config.*` funciona no JS via
-`kof_platform` (`kofConfigLookup` lê `kof.config`/env; `kof_platform` expõe
-`getenv`); `KofConfig.supportedOn` agora retorna `true` para todos os targets.
+**P4 — ✅ JS: CONF001 closed (30/08).** `config.*` works in JS via
+`kof_platform` (`kofConfigLookup` reads `kof.config`/env; `kof_platform` exposes
+`getenv`); `KofConfig.supportedOn` now returns `true` for all targets.
 
-### 8.3 O que NÃO faremos
+### 8.3 What we will NOT do
 
-- Recarga automática de config (hot reload): complexidade de runtime alto,
-  valor baixo em ambientes containerizados (o pod reinicia).
-- Secrets em arquivo (mesmo cifrado): a env já é o contrato universal
-  (Kubernetes, systemd, CI). Nada de inventar formato de cofre.
-- YAML/TOML: o formato `key=value` com `#` cobre 100% dos casos reais de
-  config de app; YAML traz dependência e superfície de erro (indentação)
-  sem benefício. Se um dia precisar de estrutura, o P3 (bloco declarativo)
-  resolve com tipagem, não com indentação.
+- Automatic config reload (hot reload): high runtime complexity,
+  low value in containerized environments (the pod restarts).
+- Secrets in a file (even encrypted): env is already the universal contract
+  (Kubernetes, systemd, CI). No inventing a vault format.
+- YAML/TOML: the `key=value` format with `#` covers 100% of real app
+  config cases; YAML brings a dependency and error surface (indentation)
+  with no benefit. If structure is ever needed, P3 (declarative block)
+  solves it with typing, not with indentation.

@@ -1,10 +1,12 @@
-# 31 — Distribuição
+[English](31-distribution.md) | [Português](31-distribution.pt_BR.md)
 
-> **Kof 0.4.0-beta — set 2026 — targets jvm/native/native.risc/native.arm/js/android + kofc**
+# 31 — Distribution
 
-## Kof é uma plataforma, não apenas um JAR
+> **Kof 0.4.0-beta — Sep 2026 — targets jvm/native/native.risc/native.arm/js/android + kofc**
 
-A partir do 0.2.x-beta, o Kof se comporta como uma linguagem distribuível:
+## Kof is a platform, not just a JAR
+
+Starting with 0.2.x-beta, Kof behaves like a distributable language:
 
 ```text
 Kof 0.4.0-beta
@@ -17,44 +19,44 @@ Kof 0.4.0-beta
         ├── Tooling
         ├── Language Server / editor support
         ├── Embedded OpenJDK
-        └── documentação
+        └── documentation
 ```
 
-O usuário instala o Kof e recebe tudo o que precisa — **sem instalar Java
-separadamente**. A cadeia `intention->Kof->frontend->IR->backend->runtime` é a mesma para todos os targets.
+The user installs Kof and gets everything they need — **without installing
+Java separately**. The `intention->Kof->frontend->IR->backend->runtime` chain is the same for all targets.
 
-## Estrutura do pacote
+## Package structure
 
 ```text
 kof/
 ├── bin/
 │   ├── kof              # launcher (Unix)
 │   ├── kof.bat          # launcher (Windows)
-│   └── kof-webview      # webview nativo Linux (WebKitGTK embutido) —
-│                        #   usado por `kof run --target=js` para kof.ui
+│   └── kof-webview      # native Linux webview (embedded WebKitGTK) —
+│                        #   used by `kof run --target=js` for kof.ui
 ├── lib/
-│   └── kof.jar      # CLI + compiler + tooling (autocontido)
-├── jdk/             # OpenJDK embutido (pacote oficial)
-├── tooling/         # definições consumidas por editores
-├── editor/          # grammar TextMate oficial
+│   └── kof.jar      # CLI + compiler + tooling (self-contained)
+├── jdk/             # embedded OpenJDK (official package)
+├── tooling/         # definitions consumed by editors
+├── editor/          # official TextMate grammar
 ├── docs/
-└── VERSION          # `revision` (fonte única)
+└── VERSION          # `revision` (single source)
 ```
 
-O `kof-webview` é compilado por `scripts/build-webview.sh` (Linux, requer
-`libwebkit2gtk-4.1`); sem ele, `kof run --target=js` abre no browser do
-sistema. `kof script` e `kof c` não precisam de webview.
+`kof-webview` is compiled by `scripts/build-webview.sh` (Linux, requires
+`libwebkit2gtk-4.1`); without it, `kof run --target=js` opens in the system
+browser. `kof script` and `kof c` do not need a webview.
 
-## JDK embutido
+## Embedded JDK
 
-O Kof distribui seu próprio OpenJDK (Temurin 21 — alinhado ao Tooling API
-Level). O launcher `bin/kof`:
+Kof distributes its own OpenJDK (Temurin 21 — aligned with the Tooling API
+Level). The `bin/kof` launcher:
 
-1. localiza o JDK embutido em `jdk/`;
-2. se existir, usa-o (sem depender de `JAVA_HOME`/`PATH`);
-3. em builds de desenvolvimento, cai para `java` do sistema.
+1. locates the embedded JDK in `jdk/`;
+2. if it exists, uses it (without depending on `JAVA_HOME`/`PATH`);
+3. in development builds, falls back to the system `java`.
 
-Verificação:
+Verification:
 
 ```bash
 kof info
@@ -65,45 +67,45 @@ kof info
 
 ## Tooling API Level
 
-O baseline de API Java do tooling é **21**:
+The Java API baseline of the tooling is **21**:
 
-- versões posteriores do OpenJDK podem ser usadas internamente quando
-  apropriado (ex.: Virtual Threads com Java 25), sem virar requisito;
-- o pacote oficial carrega sua própria JVM.
+- later OpenJDK versions may be used internally when appropriate (e.g. Virtual
+  Threads with Java 25), without becoming a requirement;
+- the official package carries its own JVM.
 
-## Multi-target preservado (Target separation 0.2.0)
+## Multi-target preserved (Target separation 0.2.0)
 
-A distribuição não muda a arquitetura da linguagem:
+The distribution does not change the language architecture:
 
 ```text
 Kof Source → Frontend → Kof IR → JVM | Native (x86-64 / riscv64 / aarch64) | KofJS | KofScript | KofC
 ```
 
-`Target` enum: `JVM`, `NATIVE`, `NATIVE_RISCV64`, `NATIVE_AARCH64`, `JS`, `ANDROID`. `parseTarget` aceita `native.risc`/`native.riscv64` e `native.arm`/`native.aarch64` como aliases.
+`Target` enum: `JVM`, `NATIVE`, `NATIVE_RISCV64`, `NATIVE_AARCH64`, `JS`, `ANDROID`. `parseTarget` accepts `native.risc`/`native.riscv64` and `native.arm`/`native.aarch64` as aliases.
 
-A linguagem é a mesma; o backend muda. Para nativo, o programador nunca
-escreve `malloc`, `free` ou gerencia memória manualmente — o compilador/
-runtime absorvem isso com **free-list GC** (`kof_free_head`, reuso via `mmap`; mark-sweep pendente, memória devolvida só no `munmap` fallback).
+The language is the same; the backend changes. For native, the programmer
+never writes `malloc`, `free` or manages memory manually — the compiler/
+runtime absorb this with a **free-list GC** (`kof_free_head`, reuse via `mmap`; mark-sweep pending, memory returned only in the `munmap` fallback).
 
-## Instalação
+## Installation
 
-Baixe o pacote do **seu** sistema em
+Download the package for **your** system from
 [GitHub Releases](https://github.com/KofLang/Kof4j/releases/latest)
 (`linux-x86_64.tar.gz` / `macos-arm64.tar.gz` / `windows-x86_64.zip`).
-O nome muda a cada release — use o globo `*` para não depender da versão:
+The name changes with each release — use the `*` glob so you do not depend on the version:
 
 ```bash
 tar -xzf kof-*-linux-x86_64.tar.gz
 export PATH="$PWD/$(ls -d kof-*-linux-x86_64 | head -1)/bin:$PATH"
 kof info
-kof script --repl   # testa KofScript
-kof c --help        # testa KofC
+kof script --repl   # tests KofScript
+kof c --help        # tests KofC
 ```
 
-Verificar integridade: `sha256sum -c SHA256SUMS`.
-Guia completo por sistema: [INSTALL.md](../docs/distribution/INSTALL.md).
+Verify integrity: `sha256sum -c SHA256SUMS`.
+Full guide per system: [INSTALL.md](../docs/distribution/INSTALL.md).
 
-## Referências
+## References
 
 - [docs/distribution/ARCHITECTURE.md](../docs/distribution/ARCHITECTURE.md)
 - [docs/distribution/INSTALL.md](../docs/distribution/INSTALL.md)

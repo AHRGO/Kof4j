@@ -1,96 +1,98 @@
+[English](plan-editor-integration.md) | [Português](plan-editor-integration.pt_BR.md)
+
 # PLAN — Editor Integration (EDI001)
 
-> **Status:** `EM CURSO` (degraus 1-12 feitos; IntelliJ: conteúdo honesto
-> instalado 13/09 — filetype XML + External Tools + README LSP4IJ via
-> `KofEditorContent.intellij`, `EditorIntegrationTest` 17/17; plugin oficial
-> Gradle/Platform segue na issue #1 + degrau 13 gate final) · **Gap:** `EDI001` · **Criado:** 07/09/2026
-> **Prova degrau 12 (medido 13/09):** `docs/editors/` 8 docs (overview+7
-> editores) + `training/tooling/cli.md:25` (tabela `kof editor …`) +
-> `learn/38-editors.md` (detect/setup/install). Resta: IntelliJ plugin
-> (subprojeto Gradle próprio, §21) + degrau 13 (gate final).
-> **Prova degraus 6-9 (medido 13/09, dono = 192.168.100.22):** os providers
-> vim/emacs/geany/nano existiam desde os degraus, mas **só** vscode/neovim/
-> intellij tinham teste de instalação (Q1: feature sem prova). Agora
-> `EditorIntegrationTest` cobre o config gerado dos 4 (ftdetect+syntax+compiler
-> no vim; `kof-mode.el` com auto-mode-alist no emacs; `filetypes.kof` com
-> build/run no geany; `kof.nanorc` só syntax no nano) — **21/21**. Nenhum
-> provider toca o ambiente real (§24, DetectContext fake).
-> **Fix de contrato §6 (13/09):** `kof editor` sem subcomando era **usage**,
-> divergindo do §6 ("alias de `detect`"); corrigido + teste
-> (`bareEditorIsDetectAliasAndHelpShowsUsage`). `update` ganhou teste de
-> re-sincronização (`updateResyncsInstalledIntegrations`) — **23/23**.
-> **`workspace/executeCommand` (degrau 0 opcional, P2) permanece adiado:**
-> o VS Code delega `Kof: Build/Run/Test` à CLI em terminal (§15/§20), então
-> a capability não é necessária ao release gate; adicioná-la exige split do
-> `LspServer` (501 linhas, no ratchet). Registrar como gap separado.
-> **Origem:** briefing "KOF EDITOR INTEGRATION" (infra oficial de integração de
-> editores/IDEs). **Escopo desta doc:** especificação + ordem de implementação.
-> **A implementação é DEPOIS** — este documento é o contrato.
-> **Regra:** nada aqui é *ação* sobre o trabalho atual (R12); não inicia antes
-> de ser reivindicado no `DOING.md`. Reutiliza o que já existe; **nunca** um
-> segundo LSP/formatter/build (R9 interop-first, R6 nunca silencioso).
+> **Status:** `IN PROGRESS` (steps 1-12 done; IntelliJ: honest content
+> installed 13/09 — filetype XML + External Tools + README LSP4IJ via
+> `KofEditorContent.intellij`, `EditorIntegrationTest` 17/17; official plugin
+> Gradle/Platform continues in issue #1 + step 13 final gate) · **Gap:** `EDI001` · **Created:** 07/09/2026
+> **Proof step 12 (measured 13/09):** `docs/editors/` 8 docs (overview+7
+> editors) + `training/tooling/cli.md:25` (table `kof editor …`) +
+> `learn/38-editors.md` (detect/setup/install). Remaining: IntelliJ plugin
+> (own Gradle subproject, §21) + step 13 (final gate).
+> **Proof steps 6-9 (measured 13/09, owner = 192.168.100.22):** the providers
+> vim/emacs/geany/nano existed since the steps, but **only** vscode/neovim/
+> intellij had an installation test (Q1: feature without proof). Now
+> `EditorIntegrationTest` covers the generated config of the 4 (ftdetect+syntax+compiler
+> in vim; `kof-mode.el` with auto-mode-alist in emacs; `filetypes.kof` with
+> build/run in geany; `kof.nanorc` syntax only in nano) — **21/21**. No
+> provider touches the real environment (§24, fake DetectContext).
+> **Contract fix §6 (13/09):** `kof editor` without a subcommand was **usage**,
+> diverging from §6 ("alias of `detect`"); fixed + test
+> (`bareEditorIsDetectAliasAndHelpShowsUsage`). `update` gained a
+> re-synchronization test (`updateResyncsInstalledIntegrations`) — **23/23**.
+> **`workspace/executeCommand` (optional step 0, P2) remains deferred:**
+> VS Code delegates `Kof: Build/Run/Test` to the CLI in a terminal (§15/§20), so
+> the capability is not needed for the release gate; adding it requires splitting
+> `LspServer` (501 lines, in the ratchet). Register as a separate gap.
+> **Origin:** briefing "KOF EDITOR INTEGRATION" (official infrastructure for
+> editor/IDE integration). **Scope of this doc:** specification + implementation order.
+> **The implementation is LATER** — this document is the contract.
+> **Rule:** nothing here is an *action* on the current work (R12); it does not start before
+> being claimed in `DOING.md`. It reuses what already exists; **never** a
+> second LSP/formatter/build (R9 interop-first, R6 never silent).
 
 ---
 
-## 0. Estado real auditado (o que JÁ existe — não recriar)
+## 0. Audited real state (what ALREADY exists — do not recreate)
 
-| Capacidade | Onde hoje | Estado |
+| Capability | Where today | State |
 |---|---|---|
-| Grammar TextMate | `editor/kof.tmLanguage.json` (`source.kof`, `.kf`/`.kof`) | presente |
+| Grammar TextMate | `editor/kof.tmLanguage.json` (`source.kof`, `.kf`/`.kof`) | present |
 | Language Server | `kof-cli/.../LspServer.java` (LSP 3.x, stdio) | completion, hover, rename, references, publishDiagnostics |
-| Diagnostics | idênticos ao compilador, via LSP ou `kof check` | presente |
-| Formatter | `kof-cli/.../Fmt.java` (`kof fmt`) | presente |
-| Build/Run/Test | `kof build` / `run` / `test` / `serve` | presente |
+| Diagnostics | identical to the compiler, via LSP or `kof check` | present |
+| Formatter | `kof-cli/.../Fmt.java` (`kof fmt`) | present |
+| Build/Run/Test | `kof build` / `run` / `test` / `serve` | present |
 | Debugger (DAP) | `KofDebug.java` + `JdwpClient` (`kof debug`, JDWP) | PARTIAL |
-| Workspace detection | `ProjectLocator` (sobe até `kof.toml`) | presente |
-| Doc de suporte | `docs/tooling/EDITOR_SUPPORT.md` (grammar + LSP por editor) | presente, leve |
-| Installer | copia a pasta `editor/` para o prefix | presente (passivo) |
-| Comando `kof editor` | **NÃO existe** (sem `CmdEditor`) | ausente — é o miolo deste plano |
+| Workspace detection | `ProjectLocator` (walks up to `kof.toml`) | present |
+| Support doc | `docs/tooling/EDITOR_SUPPORT.md` (grammar + LSP per editor) | present, light |
+| Installer | copies the `editor/` folder to the prefix | present (passive) |
+| `kof editor` command | **Does NOT exist** (no `CmdEditor`) | absent — it is the core of this plan |
 
-**Conclusão da auditoria:** o plano NÃO parte do zero. O que falta é (a) a
-**infra de EditorIntegration** (detector/registry/installer), (b) o **comando
-`kof editor`**, (c) **integrações por editor** que empacotem grammar+LSP+fmt
-de forma idiomática, e (d) **docs**. O LSP já é a camada central (seção 15 do
-briefing) — este plano só a **expor**, nunca a duplicar.
-
----
-
-## 1. Objetivo
-
-Após instalar Kof, `kof editor detect` lista editores instalados + integrações
-disponíveis; `kof editor setup` instala as recomendadas (com consentimento);
-abrir um `.kof` dá LSP + autocomplete + diagnostics + formatter sem o usuário
-pesquisar "como configurar Kof no meu editor".
+**Audit conclusion:** the plan does NOT start from zero. What is missing is (a) the
+**EditorIntegration infra** (detector/registry/installer), (b) the **`kof editor`
+command**, (c) **per-editor integrations** that package grammar+LSP+fmt
+idiomatically, and (d) **docs**. The LSP is already the central layer (section 15 of
+the briefing) — this plan only **exposes** it, never duplicates it.
 
 ---
 
-## 2. NÃO acoplar o core a editores
+## 1. Objective
 
-Proibido `if (vscode)`/`if (vim)` espalhado pela CLI. Abstração de
-provider:
+After installing Kof, `kof editor detect` lists installed editors + available
+integrations; `kof editor setup` installs the recommended ones (with consent);
+opening a `.kof` gives LSP + autocomplete + diagnostics + formatter without the user
+having to search "how to configure Kof in my editor".
+
+---
+
+## 2. Do NOT couple the core to editors
+
+Forbidden `if (vscode)`/`if (vim)` spread across the CLI. Provider
+abstraction:
 
 ```
-EditorIntegration          (interface — o contrato)
+EditorIntegration          (interface — the contract)
 ├── id() / displayName()
-├── detect(): EditorInfo?     // null = não instalado
-├── integrationAvailable()    // existe pacote/config oficial?
-├── integrationInstalled()    // já configurado nesta máquina?
+├── detect(): EditorInfo?     // null = not installed
+├── integrationAvailable()    // does an official package/config exist?
+├── integrationInstalled()    // already configured on this machine?
 ├── install(ctx) / uninstall(ctx)
 ├── configure(ctx)            // LSP/formatter/filetype
 └── status(): IntegrationStatus
 ```
 
-Estrutura proposta (adaptada à arquitetura real — ver §3, o provider vive em
-`kof-cli`, não num módulo novo):
+Proposed structure (adapted to the real architecture — see §3, the provider lives in
+`kof-cli`, not in a new module):
 
 ```
 kof-cli/.../cli/editor/
 ├── EditorIntegration.java     (interface)
 ├── EditorInfo.java            (record: id, version, path, available, installed)
-├── EditorRegistry.java        (List<EditorIntegration> — registro, sem if-by-id)
-├── EditorDetector.java        (PATH + dirs por plataforma; sem /usr/bin hardcoded)
-├── EditorConfig.java          (o quê escrever: LSP cmd, root, filetype, formatter)
-├── EditorInstaller.java       (copia/configura; idempotente; consent)
+├── EditorRegistry.java        (List<EditorIntegration> — registry, no if-by-id)
+├── EditorDetector.java        (PATH + per-platform dirs; no /usr/bin hardcoded)
+├── EditorConfig.java          (what to write: LSP cmd, root, filetype, formatter)
+├── EditorInstaller.java       (copies/configures; idempotent; consent)
 ├── EditorStatus.java
 └── providers/
     ├── VscodeProvider.java
@@ -102,51 +104,51 @@ kof-cli/.../cli/editor/
     └── EmacsProvider.java
 ```
 
-`CmdEditor.java` (raiz de `cli/`) faz o dispatch `kof editor <sub>` para
+`CmdEditor.java` (root of `cli/`) dispatches `kof editor <sub>` to
 list/detect/status/setup/install/uninstall/update.
 
 ---
 
-## 3. Arquitetura de dependência (onde cada coisa vive)
+## 3. Dependency architecture (where each thing lives)
 
-- **Provider logic** → `kof-cli` (ele que conhece PATH, fs, instaladores).
-- **Conteúdo de integração** (grammar, config snippets) → pasta `editor/`
-  (já viaja na distribuição; §14: sem rede quando possível).
-- **LSP/formatter/debug** → **já existem** e são chamados via CLI; o provider
-  só aponta o editor para `kof lsp`/`kof fmt`/`kof debug`. **Nada de parser por
+- **Provider logic** → `kof-cli` (it knows PATH, fs, installers).
+- **Integration content** (grammar, config snippets) → `editor/` folder
+  (already travels in the distribution; §14: no network when possible).
+- **LSP/formatter/debug** → **already exist** and are called via CLI; the provider
+  only points the editor to `kof lsp`/`kof fmt`/`kof debug`. **No parser per
   editor.**
-- **Testes** → `kof-cli/src/test/.../editor/` (mocks/fakes, §23-24).
+- **Tests** → `kof-cli/src/test/.../editor/` (mocks/fakes, §23-24).
 
 ---
 
-## 4. Editores prioritários
+## 4. Priority editors
 
-| Editor | Pacote/config | Escopo mínimo | Notas |
+| Editor | Package/config | Minimum scope | Notes |
 |---|---|---|---|
-| VS Code | extensão local | grammar, LSP, diagnostics, completion, hover, go-to-def, references, rename, formatting, code actions, comandos, debug (quando DAP pronto) | consome `kof lsp`; snippets+commands via `package.json` |
-| IntelliJ | plugin (Platform) | `.kof` recognition, highlighting, LSP (LSP4IJ), diagnostics, completion, formatting, navigation, run/build | delega a `kof check/build/run/test/fmt/lsp` |
-| Vim | `ftplugin`+`syntax` | filetype, syntax, indent, compiler, LSP, formatting | config idiomática |
-| Neovim | plugin lua | filetype, syntax, indent, LSP, diagnostics, completion, formatting, code actions, navigation | `vim.lsp.start({cmd={"kof","lsp"}})` |
-| Geany | `.conf` | filetype, syntax, indent, build/run, compiler; LSP se suportado | |
-| Nano | `syntaxes/kof.nanorc` | syntax, filetype, config oficial | proporcional ao editor — **não** IDE no Nano |
-| Emacs | `kof-mode` | `kof-mode`, syntax, indent, LSP (eglot), diagnostics, formatting, commands | reutiliza eglot |
+| VS Code | local extension | grammar, LSP, diagnostics, completion, hover, go-to-def, references, rename, formatting, code actions, commands, debug (when DAP is ready) | consumes `kof lsp`; snippets+commands via `package.json` |
+| IntelliJ | plugin (Platform) | `.kof` recognition, highlighting, LSP (LSP4IJ), diagnostics, completion, formatting, navigation, run/build | delegates to `kof check/build/run/test/fmt/lsp` |
+| Vim | `ftplugin`+`syntax` | filetype, syntax, indent, compiler, LSP, formatting | idiomatic config |
+| Neovim | lua plugin | filetype, syntax, indent, LSP, diagnostics, completion, formatting, code actions, navigation | `vim.lsp.start({cmd={"kof","lsp"}})` |
+| Geany | `.conf` | filetype, syntax, indent, build/run, compiler; LSP if supported | |
+| Nano | `syntaxes/kof.nanorc` | syntax, filetype, official config | proportional to the editor — **not** an IDE in Nano |
+| Emacs | `kof-mode` | `kof-mode`, syntax, indent, LSP (eglot), diagnostics, formatting, commands | reuses eglot |
 
-Todos reconhecem `*.kof` (§16) e apontam para o **mesmo** LSP (§15).
+All recognize `*.kof` (§16) and point to the **same** LSP (§15).
 
 ---
 
-## 5. Detecção de editores
+## 5. Editor detection
 
-Multiplataforma (Linux/macOS/Windows). **Sem** `/usr/bin` hardcoded. Fontes:
-PATH, executáveis conhecidos, dirs de config conhecidos, mecanismos nativos.
-Informe `editor / version / path / integration available / installed`.
-**Não inventar versões** (se não souber, `unknown`).
+Cross-platform (Linux/macOS/Windows). **No** hardcoded `/usr/bin`. Sources:
+PATH, known executables, known config dirs, native mechanisms.
+Report `editor / version / path / integration available / installed`.
+**Do not invent versions** (if unknown, `unknown`).
 
-Probes por editor (a consolidar no `EditorDetector`):
+Probes per editor (to consolidate in `EditorDetector`):
 
 | Editor | Probe |
 |---|---|
-| VS Code | `code --version`; config em `~/.vscode`, `%APPDATA%\Code`, `~/Library/Application Support/Code` |
+| VS Code | `code --version`; config in `~/.vscode`, `%APPDATA%\Code`, `~/Library/Application Support/Code` |
 | Vim | `vim --version` |
 | Neovim | `nvim --version` |
 | IntelliJ | dirs `~/Library/Application Support/JetBrains`, `~/.config/JetBrains`, `%APPDATA%\JetBrains` |
@@ -156,106 +158,106 @@ Probes por editor (a consolidar no `EditorDetector`):
 
 ---
 
-## 6. Comandos `kof editor`
+## 6. `kof editor` commands
 
 ```
 kof editor                # = detect (alias)
-kof editor list           # integrações disponíveis (independe de detectado)
-kof editor detect         # editores + integrações detectados
-kof editor status         # detalhe: versão, path, instalado, LSP (ver §12)
-kof editor setup          # fluxo principal (ver §7)
+kof editor list           # available integrations (independent of detected)
+kof editor detect         # detected editors + integrations
+kof editor status         # detail: version, path, installed, LSP (see §12)
+kof editor setup          # main flow (see §7)
 kof editor install <id>   # vscode|intellij|vim|neovim|geany|nano|emacs
 kof editor uninstall <id>
-kof editor update         # re-sincroniza integrações instaladas
+kof editor update         # re-synchronizes installed integrations
 ```
 
-`setup`/`install`/`uninstall` **nunca** alteram o ambiente sem consentimento
-quando a operação é visível ao usuário (§12, §14).
+`setup`/`install`/`uninstall` **never** change the environment without consent
+when the operation is visible to the user (§12, §14).
 
 ---
 
-## 7. `kof editor setup` — fluxo
+## 7. `kof editor setup` — flow
 
 ```
-1. detectar editores
-2. detectar versões
-3. detectar integrações existentes
-4. verificar compatibilidade
-5. mostrar recomendações
-6. pedir confirmação
-7. instalar integrações
-8. configurar LSP/formatter
-9. validar instalação
-10. mostrar resultado
+1. detect editors
+2. detect versions
+3. detect existing integrations
+4. check compatibility
+5. show recommendations
+6. ask for confirmation
+7. install integrations
+8. configure LSP/formatter
+9. validate installation
+10. show result
 ```
 
-Idempotente: rodar de novo não duplica config. Recusou → mostra
-`kof editor setup` para depois. **Nunca** bloqueia a instalação do Kof.
+Idempotent: running again does not duplicate config. Declined → show
+`kof editor setup` for later. **Never** blocks the Kof installation.
 
 ---
 
-## 8. Installer oficial
+## 8. Official installer
 
-Durante o install do Kof, detectar editores e **oferecer** (com `Y/n`) as
-integrações recomendadas. Recusou → `kof editor setup` depois. Não bloqueia a
-instalação nem falha se nenhum editor existir.
-
----
-
-## 9. Sem rede quando possível
-
-Arquivos de integração **viajam na distribuição** (pasta `editor/`). Só usa o
-mecanismo oficial do editor quando um marketplace exigir download externo;
-**nunca** código arbitrário de URL desconhecida.
+During the Kof install, detect editors and **offer** (with `Y/n`) the
+recommended integrations. Declined → `kof editor setup` later. It does not block
+the installation nor fail if no editor exists.
 
 ---
 
-## 10. LSP como camada central
+## 9. No network when possible
+
+Integration files **travel in the distribution** (`editor/` folder). It only uses the
+editor's official mechanism when a marketplace requires an external download;
+**never** arbitrary code from an unknown URL.
+
+---
+
+## 10. LSP as the central layer
 
 ```
-                 Kof LSP (kof lsp — JÁ EXISTE)
+                 Kof LSP (kof lsp — ALREADY EXISTS)
         ┌───────────────┼───────────────┐
       VSCode         Neovim          IntelliJ
         │              │              │
-       Vim           Emacs          outros
+       Vim           Emacs          others
 ```
 
-Todos compartilham o que o LSP já expõe: diagnostics, hover, completion,
-references, rename, definition, formatting, code actions. **Nenhuma** regra
-semântica específica por editor (R6/R9).
+All share what the LSP already exposes: diagnostics, hover, completion,
+references, rename, definition, formatting, code actions. **No** semantic
+rule specific per editor (R6/R9).
 
-**LSP — capacidades hoje vs. alvo deste plano** (o LSP é o gargalo de
-semântica; o provider só consome):
+**LSP — capabilities today vs. target of this plan** (the LSP is the
+semantics bottleneck; the provider only consumes):
 
-| Capability | `LspServer.java` hoje | Ação |
+| Capability | `LspServer.java` today | Action |
 |---|---|---|
-| `textDocument/completion` | presente | — |
-| `textDocument/hover` | presente | — |
-| `textDocument/rename` | presente | — |
-| `textDocument/references` | presente | — |
-| `textDocument/publishDiagnostics` | presente | — |
-| `textDocument/definition` | **ausente** | adicionar (gap no LSP, não no provider) |
-| `textDocument/documentSymbol` | ausente | adicionar (opcional, P2) |
-| `textDocument/codeAction` | ausente | adicionar (opcional, P2) |
-| `textDocument/formatting` | ausente (fmt é CLI) | expor via LSP (P2) |
-| `workspace/executeCommand` | ausente | adicionar para `Kof: Build/Run/...` (§19) |
+| `textDocument/completion` | present | — |
+| `textDocument/hover` | present | — |
+| `textDocument/rename` | present | — |
+| `textDocument/references` | present | — |
+| `textDocument/publishDiagnostics` | present | — |
+| `textDocument/definition` | **absent** | add (gap in the LSP, not in the provider) |
+| `textDocument/documentSymbol` | absent | add (optional, P2) |
+| `textDocument/codeAction` | absent | add (optional, P2) |
+| `textDocument/formatting` | absent (fmt is CLI) | expose via LSP (P2) |
+| `workspace/executeCommand` | absent | add for `Kof: Build/Run/...` (§19) |
 
-> Regra: se uma capability falta, é **gap no LSP** (reivindicar à parte), não
-> algo para o provider "resolver" com parser próprio.
+> Rule: if a capability is missing, it is a **gap in the LSP** (claim separately), not
+> something for the provider to "solve" with its own parser.
 
 ---
 
 ## 11. File association + workspace
 
-`*.kof` → Kof em todos os editores. Workspace detectado por `kof.toml`
-(`ProjectLocator` já sobe até ele); o editor usa source roots/dependencies/
-targets/LSP/formatter/compiler/test runner a partir daí.
+`*.kof` → Kof in all editors. Workspace detected by `kof.toml`
+(`ProjectLocator` already walks up to it); the editor uses source roots/dependencies/
+targets/LSP/formatter/compiler/test runner from there.
 
 ---
 
-## 12. Status / diagnóstico
+## 12. Status / diagnostics
 
-`kof editor status` imprime:
+`kof editor status` prints:
 
 ```
 Kof Editor Environment
@@ -268,21 +270,21 @@ Editors:
   Vim          integration: installed
 ```
 
-`debugger` sempre `PARTIAL` até o DAP fechar (R6, nunca esconder).
+`debugger` always `PARTIAL` until the DAP closes (R6, never hide).
 
 ---
 
-## 13. Target selection + comandos do editor
+## 13. Target selection + editor commands
 
-Arquitetura **permite** (não exige UI complexa agora) escolher target
-(`kof build --backend=jvm --frontend=kofjs`). Comandos equivalentes, via
-mecanismo idiomático de cada editor:
+The architecture **allows** (does not require complex UI now) choosing a target
+(`kof build --backend=jvm --frontend=kofjs`). Equivalent commands, via the
+idiomatic mechanism of each editor:
 
 ```
 Kof: Build / Run / Test / Check / Format / Serve / Start LSP / Select Target / Open Docs
 ```
 
-**Terminal é soberano** (§20): a CLI sempre funciona; a integração é conveniência.
+**Terminal is sovereign** (§20): the CLI always works; the integration is convenience.
 
 ---
 
@@ -292,39 +294,39 @@ Kof: Build / Run / Test / Check / Format / Serve / Start LSP / Select Target / O
 Editor → DAP → Kof Debug Adapter → runtime/JVM
 ```
 
-Nada de debugger por editor. Usa `kof debug`/JDWP existente; **PARTIAL** até o
-DAP fechar.
+No debugger per editor. It uses the existing `kof debug`/JDWP; **PARTIAL** until the
+DAP closes.
 
 ---
 
-## 15. Testes
+## 15. Tests
 
-Cobrir: detection (presente/ausente/multi-version/PATH custom/Linux/macOS/
-Windows), installation (install/já-instalado/incompatível/uninstall/update/
-falha), configuration (LSP/file association/formatter/project root/exec path),
+Cover: detection (present/absent/multi-version/custom PATH/Linux/macOS/
+Windows), installation (install/already-installed/incompatible/uninstall/update/
+failure), configuration (LSP/file association/formatter/project root/exec path),
 CLI (list/detect/status/setup/install/uninstall).
 
-**Regra dura (§24):** testes usam fs temporário, mocks e fake editor
-installations. **Nunca** instalam plugins reais na máquina da suíte.
+**Hard rule (§24):** tests use a temporary fs, mocks and fake editor
+installations. They **never** install real plugins on the suite's machine.
 
 ---
 
-## 16. Plataformas (arquitetura)
+## 16. Platforms (architecture)
 
-Linux x86_64/ARM64, macOS x86_64/ARM64, Windows x86_64. O detector é a única
-ponta que conhece caminhos — isolá-la em `EditorDetector` para os 3 SO.
+Linux x86_64/ARM64, macOS x86_64/ARM64, Windows x86_64. The detector is the only
+end that knows paths — isolate it in `EditorDetector` for the 3 OSes.
 
 ---
 
-## 17. Extensibilidade
+## 17. Extensibility
 
-Adicionar editor = adicionar 1 `Provider` + 1 entrada no `EditorRegistry` +
-teste. **Sem** tocar no core da CLI. Futuros: Sublime, Helix, Zed, Kate,
+Adding an editor = adding 1 `Provider` + 1 entry in `EditorRegistry` +
+test. **Without** touching the CLI core. Future: Sublime, Helix, Zed, Kate,
 Eclipse, Fleet, Android Studio, Cursor, Windsurf.
 
 ---
 
-## 18. Documentação
+## 18. Documentation
 
 ```
 docs/editors/
@@ -333,74 +335,74 @@ docs/editors/
 ├── geany.md   nano.md      emacs.md
 ```
 
-Cada doc: instalação manual + automática, configuração, LSP, formatter,
-debugging, troubleshooting. **E** atualizar `training/` (ensinar agentes/LLMs a
-configurar ambiente Kof) + `learn/`.
+Each doc: manual + automatic installation, configuration, LSP, formatter,
+debugging, troubleshooting. **And** update `training/` (teach agents/LLMs to
+configure a Kof environment) + `learn/`.
 
 ---
 
-## 19. Release gate (não "fechou" com só VS Code)
+## 19. Release gate (not "closed" with only VS Code)
 
-**Infra:** detector multiplataforma, registry, CLI `kof editor`, install,
+**Infra:** cross-platform detector, registry, `kof editor` CLI, install,
 uninstall, status, setup.
-**Integrações:** VS Code, IntelliJ, Vim, Neovim, Geany, Nano, Emacs.
+**Integrations:** VS Code, IntelliJ, Vim, Neovim, Geany, Nano, Emacs.
 **Tooling:** `.kof` recognition, LSP, diagnostics, formatter, build, run, test.
-**Qualidade:** instalação idempotente, sem alterar ambiente indevidamente,
-testes automatizados, documentação, multiplataforma.
+**Quality:** idempotent installation, without improperly changing the environment,
+automated tests, documentation, cross-platform.
 
 ---
 
-## 20. Ordem de implementação (degraus commitáveis)
+## 20. Implementation order (committable steps)
 
-> Cada degrau = 1 unidade coesa com prova (teste verde). O degrau 0 é
-> **pré-condição** (gap no LSP, reivindicável à parte).
+> Each step = 1 cohesive unit with proof (green test). Step 0 is a
+> **precondition** (gap in the LSP, claimable separately).
 
-| # | Degrau | Entrega | Prova |
+| # | Step | Delivery | Proof |
 |---|---|---|---|
-| 0 | LSP `definition` (+ optional: documentSymbol, codeAction, formatting, workspace/executeCommand) | `LspServer.java` | teste de LSP por capability |
-| 1 | Abstração `EditorIntegration`/`EditorInfo`/`EditorRegistry`/`EditorDetector`/`EditorConfig` (sem provider concreto ainda) | infra em `cli/editor/` | teste do detector com PATH fake |
-| 2 | `CmdEditor` + `list`/`detect`/`status` (read-only) | CLI | teste de saída por mock |
-| 3 | `setup`/`install`/`uninstall`/`update` (idempotente + consent) | CLI + `EditorInstaller` | teste em fs temp (sem rede) |
-| 4 | Provider VS Code (grammar+LSP+snippets+commands) | `editor/` + provider | teste de config gerado |
-| 5 | Provider Neovim (lua LSP) | provider | teste de config gerado |
-| 6 | Provider Vim (ftplugin+syntax+indent+compiler) | provider | teste de config gerado |
-| 7 | Provider Emacs (`kof-mode`+eglot) | provider | teste de config gerado |
-| 8 | Provider Geany (`.conf`) | provider | teste de config gerado |
-| 9 | Provider Nano (`.nanorc`) | provider | teste de config gerado |
-| 10 | Provider IntelliJ (plugin LSP4IJ + language) | provider | teste de config gerado |
-| 11 | Installer hook (oferecer no install, §8) | installer | teste de fluxo |
-| 12 | Docs `docs/editors/*` + `training/` + `learn/` | docs | revisão + CI lint |
-| 13 | Gate final: suíte completa + release gate §19 | — | `mvn test` verde |
+| 0 | LSP `definition` (+ optional: documentSymbol, codeAction, formatting, workspace/executeCommand) | `LspServer.java` | LSP test per capability |
+| 1 | Abstraction `EditorIntegration`/`EditorInfo`/`EditorRegistry`/`EditorDetector`/`EditorConfig` (no concrete provider yet) | infra in `cli/editor/` | detector test with fake PATH |
+| 2 | `CmdEditor` + `list`/`detect`/`status` (read-only) | CLI | output test by mock |
+| 3 | `setup`/`install`/`uninstall`/`update` (idempotent + consent) | CLI + `EditorInstaller` | test in temp fs (no network) |
+| 4 | VS Code Provider (grammar+LSP+snippets+commands) | `editor/` + provider | generated config test |
+| 5 | Neovim Provider (lua LSP) | provider | generated config test |
+| 6 | Vim Provider (ftplugin+syntax+indent+compiler) | provider | generated config test |
+| 7 | Emacs Provider (`kof-mode`+eglot) | provider | generated config test |
+| 8 | Geany Provider (`.conf`) | provider | generated config test |
+| 9 | Nano Provider (`.nanorc`) | provider | generated config test |
+| 10 | IntelliJ Provider (LSP4IJ plugin + language) | provider | generated config test |
+| 11 | Installer hook (offer at install, §8) | installer | flow test |
+| 12 | Docs `docs/editors/*` + `training/` + `learn/` | docs | review + CI lint |
+| 13 | Final gate: complete suite + release gate §19 | — | green `mvn test` |
 
-> **Degrau 13 — gate rodado 13/09 15:22 (dono = 192.168.100.22):** suíte
-> 4-módulos verde — `kof-compiler` 1485/0 (156 skip), `kof-script` 31/0,
-> `kof-c-compiler` 5/0, `kof-cli` 181/0; `grep -rl FAILURE` vazio; BUILD
-> SUCCESS (10m37s). Os skips são qemu/BD externo. `check_500` OK.
-> **Residual do release gate §19:** IntelliJ plugin oficial (issue #1, §21) —
-> é decisão de escopo, não código; a distribuição local via `kof editor` está
-> completa para os 7 editores.
+> **Step 13 — gate run 13/09 15:22 (owner = 192.168.100.22):** 4-module suite
+> green — `kof-compiler` 1485/0 (156 skip), `kof-script` 31/0,
+> `kof-c-compiler` 5/0, `kof-cli` 181/0; `grep -rl FAILURE` empty; BUILD
+> SUCCESS (10m37s). The skips are qemu/external DB. `check_500` OK.
+> **Residual of release gate §19:** official IntelliJ plugin (issue #1, §21) —
+> it is a scope decision, not code; the local distribution via `kof editor` is
+> complete for the 7 editors.
 
-**Dependências:** 0 (LSP) é independente e pode ir primeiro/paralelo. 1→2→3 em
-sequência. 4-10 (providers) independentes entre si depois do 3 (paralelizáveis,
-um por agente). 11,12,13 no fim.
-
----
-
-## 21. Limitações / decisões de design (regra 6 — NÃO decidir aqui)
-
-- **IntelliJ plugin** exige build Gradle/IntelliJ Platform — é um subprojeto
-  próprio; o "provider" só orquestra/empacota. Decidir escopo (P2?) à parte.
-- **DAP** ainda PARTIAL — debug em editor fica `PARTIAL` até fechar.
-- **`definition`/`codeAction` no LSP** = mudança de capability (aditiva);
-  validar com a suíte de LSP antes.
-- **Marketplace** (VS Code/IntelliJ) envolve publicação externa — fora do
-  escopo do repo; a distribuição local (`editor/`) é o caminho sem rede.
+**Dependencies:** 0 (LSP) is independent and can go first/in parallel. 1→2→3 in
+sequence. 4-10 (providers) independent among themselves after 3 (parallelizable,
+one per agent). 11,12,13 at the end.
 
 ---
 
-## 22. Respostas exigidas ao final (contrato do briefing)
+## 21. Limitations / design decisions (rule 6 — do NOT decide here)
 
-Ao concluir, informar: (1) arquivos alterados, (2) arquitetura criada,
-(3) editores detectados, (4) integrações implementadas, (5) funcionalidades
-por editor, (6) testes adicionados, (7) resultado da suíte, (8) limitações
-restantes.
+- **IntelliJ plugin** requires a Gradle/IntelliJ Platform build — it is its own
+  subproject; the "provider" only orchestrates/packages. Decide scope (P2?) separately.
+- **DAP** still PARTIAL — editor debug stays `PARTIAL` until it closes.
+- **`definition`/`codeAction` in the LSP** = capability change (additive);
+  validate with the LSP suite first.
+- **Marketplace** (VS Code/IntelliJ) involves external publication — outside the
+  repo scope; the local distribution (`editor/`) is the network-free path.
+
+---
+
+## 22. Answers required at the end (briefing contract)
+
+On completion, report: (1) changed files, (2) architecture created,
+(3) detected editors, (4) implemented integrations, (5) features
+per editor, (6) added tests, (7) suite result, (8) remaining
+limitations.

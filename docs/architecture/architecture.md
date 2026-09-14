@@ -1,40 +1,42 @@
+[English](architecture.md) | [Português](architecture.pt_BR.md)
+
 # Architecture Decision Record
 
 ## Project: Kof
 
 ## Status: Accepted
 
-**Última atualização:** 13 de setembro de 2026
-**Versão:** 0.3.0-beta
+**Last updated:** September 13, 2026
+**Version:** 0.3.0-beta
 
-> **Melhoria visual 13/09 (issue #109):** os diagramas em ASCII deste ADR
-> (Pipeline, Type Representation, IR, backends e dispatch da stdlib) passaram
-> a **Mermaid** — o GitHub renderiza nativamente; conteúdo e fatos inalterados
-> (só a notação). Blocos de terminal (ex.: exemplo de diagnóstico) continuam
+> **Visual improvement 13/09 (issue #109):** the ASCII diagrams of this ADR
+> (Pipeline, Type Representation, IR, backends and stdlib dispatch) became
+> **Mermaid** — GitHub renders them natively; content and facts unchanged
+> (only the notation). Terminal blocks (e.g. diagnostics example) remain
 > `text`.
 
-> **Este ADR registra a decisão arquitetural (multi-target via frontend
-> compartilhado + backends plugáveis).** A descrição **completa e atual** da
-> implementação do compilador (pipeline real, IR, lowering, otimizações,
-> backends, targets, terminologia) está em
-> [`compiler-architecture.md`](compiler-architecture.md). A **especificação da
-> linguagem** (independente desta implementação) está em
+> **This ADR records the architectural decision (multi-target via shared
+> frontend + pluggable backends).** The **complete and current** description
+> of the compiler implementation (real pipeline, IR, lowering, optimizations,
+> backends, targets, terminology) is in
+> [`compiler-architecture.md`](compiler-architecture.md). The **language
+> specification** (independent of this implementation) is in
 > [`language-reference/`](../language-reference/).
 >
- > **Correções 06/09 (auditoria):** (a) riscv64 e aarch64 **não** são mais
- > "placeholder x86_64" — riscv64 tem lowering real (`NativeBackend.emitRiscv`)
- > e aarch64 é traduzido do riscv64 (`translateRiscvToAarch64`); (b) **KofC**
- > não consome a IR do Kof (subconjunto C → ELF); **KofScript consome o MESMO
- > frontend** (lexer→parser→AST→IR) e executa a IR otimizada no interpretador
- > (target de execução direta, 0.3.0-beta); (c) a IR é uma **máquina de pilha
- > linear** (30 ops), não uma "árvore". Ver SG-E1/SG-E3 em
+ > **Corrections 06/09 (audit):** (a) riscv64 and aarch64 are **no** longer
+ > "x86_64 placeholder" — riscv64 has real lowering (`NativeBackend.emitRiscv`)
+ > and aarch64 is translated from riscv64 (`translateRiscvToAarch64`); (b) **KofC**
+ > does not consume Kof's IR (C subset → ELF); **KofScript consumes the SAME
+ > frontend** (lexer→parser→AST→IR) and executes the optimized IR in the interpreter
+ > (direct execution target, 0.3.0-beta); (c) the IR is a **linear stack
+ > machine** (30 ops), not a "tree". See SG-E1/SG-E3 in
  > [`specification-gaps.md`](../bugs-and-gaps/specification-gaps.md).
 
 ## Context
 
-Kof é uma linguagem de programação estaticamente tipada e orientada a objetos. O compilador deve gerar código para múltiplos targets a partir de uma única IR.
+Kof is a statically typed, object-oriented programming language. The compiler must generate code for multiple targets from a single IR.
 
-Uma linguagem. Um compilador. Múltiplos targets.
+One language. One compiler. Multiple targets.
 
 ## Pipeline
 
@@ -42,27 +44,27 @@ Uma linguagem. Um compilador. Múltiplos targets.
 flowchart TD
     S["Source (.kf)"]
     S -->|"Lexer (hand-written, maximal munch, LEX00x)"| T["Token stream"]
-    T -->|"Parser (recursive descent + precedence climbing, PARSE0xx)"| AST["AST crua<br/>(39 nós sealed, tipos como String)"]
+    T -->|"Parser (recursive descent + precedence climbing, PARSE0xx)"| AST["raw AST<br/>(39 sealed nodes, types as String)"]
     AST --> DES["Desugar (test/application) + expand imports"]
-    DES --> SEM["Semantic analysis (SemanticAnalyzer)<br/>name resolution e type checking<br/>ENTRELACEADOS em inferType, NÃO fases separadas<br/>4 fases, fixpoint ≤4; SEM0xx<br/>NÃO há typed AST — tipos em IdentityHashMap laterais"]
-    SEM -->|"aborta se houver erro"| X([erro])
-    SEM -->|"Lowering AST→IR<br/>(StatementLowerer/ExpressionLowerer/lambdaClass)"| IR["Kof IR<br/>máquina de pilha linear, 30 ops, tipada,<br/>backend-agnostic, com KofDebugInfo;<br/>basic blocks nominais"]
+    DES --> SEM["Semantic analysis (SemanticAnalyzer)<br/>name resolution and type checking<br/>INTERTWINED in inferType, NOT separate phases<br/>4 phases, fixpoint ≤4; SEM0xx<br/>NO typed AST — types in side IdentityHashMap"]
+    SEM -->|"aborts if there is an error"| X([error])
+    SEM -->|"Lowering AST→IR<br/>(StatementLowerer/ExpressionLowerer/lambdaClass)"| IR["Kof IR<br/>linear stack machine, 30 ops, typed,<br/>backend-agnostic, with KofDebugInfo;<br/>nominal basic blocks"]
     IR --> OPT["Optimizer<br/>(constant folding, dead effects, reachability, jump-to-next)"]
     OPT --> JVM["Kof4J Backend (ASM, bytecode V21)"]
-    JVM --> JVMo[".class files →<br/>JVM (virtual threads, KofRuntime gerado)"]
+    JVM --> JVMo[".class files →<br/>JVM (virtual threads, generated KofRuntime)"]
     OPT --> X86["KofNative Backend (x86_64)"]
     X86 --> X86o["Assembly x86-64 → as + ld →<br/>ELF x86_64 (syscalls, free-list + kof_gc_collect) → OS"]
     OPT --> RISC["KofNative riscv64 (native.risc)"]
-    RISC --> RISCo["lowering riscv64 REAL (emitRiscv) —<br/>asm puro, raw syscalls, ELF estático →<br/>toolchain riscv64-linux-gnu-as/ld + qemu"]
+    RISC --> RISCo["REAL riscv64 lowering (emitRiscv) —<br/>pure asm, raw syscalls, static ELF →<br/>riscv64-linux-gnu-as/ld toolchain + qemu"]
     OPT --> ARM["KofNative aarch64 (native.arm)"]
-    ARM --> ARMo["asm riscv64 traduzido linha-a-linha<br/>(translateRiscvToAarch64) →<br/>toolchain aarch64-linux-gnu-as/ld + qemu"]
+    ARM --> ARMo["riscv64 asm translated line-by-line<br/>(translateRiscvToAarch64) →<br/>aarch64-linux-gnu-as/ld toolchain + qemu"]
     OPT --> JS["KofJS Backend (ESM ES2022+)"]
     JS --> JSo["ES Modules (ECMAScript 2022+) →<br/>kof-runtime.mjs + KofJsRunner (embedded GraalJS) →<br/>Node/Browser via kof_platform"]
     OPT --> AND["KofAndroid (Target.ANDROID)"]
-    AND --> ANDo["bytecode JVM + host Activity em Kof (android-host.kf) →<br/>projeto Maven (d8/aapt2/apksigner) + APK (Fase 1)"]
-    OPT --> SCR["KofScript (Target de execução direta — interpretador da IR)"]
-    SCR --> SCRo["Kof PURO consumindo o MESMO frontend<br/>(lexer→parser→AST→IR→opt); sem let/const/async/fn —<br/>não é JavaScript. único serviço do wrapper: statements de<br/>topo → main(), var/val de topo → KofScriptGlobals.<br/>KofInterpreter executa a IR otimizada SEM emitir bytecode<br/>e SEM fork de JVM — paridade por construção com o backend JVM."]
-    C["(fora da IR Kof) kof-c-compiler<br/>(subconjunto C → ELF x86_64)<br/>NÃO consome a IR do Kof"]
+    AND --> ANDo["JVM bytecode + host Activity in Kof (android-host.kf) →<br/>Maven project (d8/aapt2/apksigner) + APK (Phase 1)"]
+    OPT --> SCR["KofScript (direct execution target — IR interpreter)"]
+    SCR --> SCRo["PURE Kof consuming the SAME frontend<br/>(lexer→parser→AST→IR→opt); no let/const/async/fn —<br/>it is not JavaScript. the wrapper's only service: top-level<br/>statements → main(), top-level var/val → KofScriptGlobals.<br/>KofInterpreter executes the optimized IR WITHOUT emitting bytecode<br/>and WITHOUT forking a JVM — parity by construction with the JVM backend."]
+    C["(outside Kof IR) kof-c-compiler<br/>(C subset → ELF x86_64)<br/>does NOT consume Kof's IR"]
 ```
 
 ## Decision: Multiplatform via Shared Frontend + Pluggable Backends
@@ -95,14 +97,14 @@ Implementations:
 public enum Target {
     JVM,
     NATIVE,          // x86_64 stable (free-list + kof_gc_collect, pthread spawn 31/08)
-    NATIVE_RISCV64,  // native.risc: lowering riscv64 real (NativeBackend.emitRiscv) + toolchain riscv64 + qemu
-    NATIVE_AARCH64,  // native.arm: tradução do riscv64 (translateRiscvToAarch64) + toolchain aarch64 + qemu
+    NATIVE_RISCV64,  // native.risc: real riscv64 lowering (NativeBackend.emitRiscv) + riscv64 toolchain + qemu
+    NATIVE_AARCH64,  // native.arm: translation from riscv64 (translateRiscvToAarch64) + aarch64 toolchain + qemu
     JS,              // alpha (GraalJS)
-    ANDROID          // Fase 1: projeto Maven + APK (bytecode JVM + host Activity em Kof)
+    ANDROID          // Phase 1: Maven project + APK (JVM bytecode + host Activity in Kof)
 }
 ```
 
-CLI: `kof build/run --target jvm|native|native.risc|native.arm|js` (aliases `native.riscv64`/`native.aarch64`; `android` em Fase 1) (`CompilerDriver.java:1`, `Target.java:1`). `kof run`/`kof build --target js` executa JS sem Node.js (runtime embarcado). `kof c` usa `KofCcompiler` apenas para `native`.
+CLI: `kof build/run --target jvm|native|native.risc|native.arm|js` (aliases `native.riscv64`/`native.aarch64`; `android` in Phase 1) (`CompilerDriver.java:1`, `Target.java:1`). `kof run`/`kof build --target js` executes JS without Node.js (embedded runtime). `kof c` uses `KofCcompiler` only for `native`.
 
 ## Type System
 
@@ -190,13 +192,13 @@ The backend produces:
 - LineNumberTable (debugging)
 - LocalVariableTable (debugging)
 
-Runtime JVM (`KofRuntime` gerado) em 0.2.6-beta (30-31/08): web stack
-(`web.app()`, rotas, middleware, `status`/`headerSet`), **WebSocket**
-(`app.ws`, handshake RFC 6455 + frame codec com máscara) e **SSE**
+JVM Runtime (`KofRuntime` generated) in 0.2.6-beta (30-31/08): web stack
+(`web.app()`, routes, middleware, `status`/`headerSet`), **WebSocket**
+(`app.ws`, RFC 6455 handshake + frame codec with mask) and **SSE**
 (`sse.send/event/close`), `kof.cache` (get/set/ttl/delete/clear), `kof.http`
-client com **retry/circuit breaker** (`KOF_HTTP_RETRIES`/`KOF_HTTP_TRIPS`/
-`KOF_HTTP_FAILURES`/`KOF_HTTP_OPEN_UNTIL`, janela de 30s, fail-fast),
-`KofRuntime.close` (fechamento de descritores ws).
+client with **retry/circuit breaker** (`KOF_HTTP_RETRIES`/`KOF_HTTP_TRIPS`/
+`KOF_HTTP_FAILURES`/`KOF_HTTP_OPEN_UNTIL`, 30s window, fail-fast),
+`KofRuntime.close` (closing ws descriptors).
 
 ## Native Backend
 
@@ -212,29 +214,29 @@ flowchart TD
 ```
 
 Targets (0.2.6-beta, 31/08):
-- `native` (x86_64) **stable**: ELF x86_64, syscalls, free-list allocator (`kof_free_head`; mark-sweep pendente, auto-GC desativado — memória devolvida só no `munmap` fallback), strings/lists/JSON (objetos/records + arrays FP, 31/08), exceptions with unwinding, `spawn`/`await` via `pthread_create` + trampoline + `pthread_join` com allocator thread-safe (futex) — CONC001 (31/08), FP real em XMM (`vcvtsi2sd`/`mulsd`, dtoa via `snprintf`) — FLT001, `kof_db_mysql_scramble` + wire protocol em progresso
-- `native.risc` (riscv64) **real**: lowering riscv64 (`NativeBackend.emitRiscv`); `riscv64-linux-gnu-as/ld` + qemu
-- `native.arm` (aarch64) **real**: tradução do riscv64 (`translateRiscvToAarch64`); `aarch64-linux-gnu-as/ld` + qemu
+- `native` (x86_64) **stable**: ELF x86_64, syscalls, free-list allocator (`kof_free_head`; mark-sweep pending, auto-GC disabled — memory returned only in the `munmap` fallback), strings/lists/JSON (objects/records + FP arrays, 31/08), exceptions with unwinding, `spawn`/`await` via `pthread_create` + trampoline + `pthread_join` with thread-safe allocator (futex) — CONC001 (31/08), real FP in XMM (`vcvtsi2sd`/`mulsd`, dtoa via `snprintf`) — FLT001, `kof_db_mysql_scramble` + wire protocol in progress
+- `native.risc` (riscv64) **real**: riscv64 lowering (`NativeBackend.emitRiscv`); `riscv64-linux-gnu-as/ld` + qemu
+- `native.arm` (aarch64) **real**: translation from riscv64 (`translateRiscvToAarch64`); `aarch64-linux-gnu-as/ld` + qemu
 
 Current capabilities (x86_64):
 - Record structs with fields, constructors, accessors, inheritance 3 levels, virtual dispatch via vtable
-- Integer arithmetic, bitwise, floating-point real em XMM (`vcvtsi2sd`/`mulsd`), control flow (if/else, while/for/do-while/break/continue, switch with pattern matching)
-- Function calls (all forms), lambdas with captures (`BoxN`), exceptions (unwinding), `spawn`/`await` com threads (pthread, 31/08)
-- Strings, arrays, `List<T>` with `map/filter/reduce`, `Map<K,V>`, `Set<T>`, `Box<T>` (`kof_int_to_string`), JSON objetos/records + arrays (Int/Long/Bool/String/Double, 31/08)
-- `kof.io`, `kof.time` (now/sleep), `kof.config` (asm próprio, `/proc/self/environ`), `kof.log` (asm), `kof.security` (SHA-256/HMAC asm), `kof.cache` (30/08 — clobber de registradores corrigido), `kof.db` SQLite (`.so` direto) + MySQL wire protocol (scramble SHA-1, WIP)
+- Integer arithmetic, bitwise, real floating-point in XMM (`vcvtsi2sd`/`mulsd`), control flow (if/else, while/for/do-while/break/continue, switch with pattern matching)
+- Function calls (all forms), lambdas with captures (`BoxN`), exceptions (unwinding), `spawn`/`await` with threads (pthread, 31/08)
+- Strings, arrays, `List<T>` with `map/filter/reduce`, `Map<K,V>`, `Set<T>`, `Box<T>` (`kof_int_to_string`), JSON objects/records + arrays (Int/Long/Bool/String/Double, 31/08)
+- `kof.io`, `kof.time` (now/sleep), `kof.config` (own asm, `/proc/self/environ`), `kof.log` (asm), `kof.security` (SHA-256/HMAC asm), `kof.cache` (30/08 — register clobber fixed), `kof.db` SQLite (direct `.so`) + MySQL wire protocol (SHA-1 scramble, WIP)
 
 Runtime functions (x86-64, `NativeRuntime.java:1`):
-- `kof_alloc` / `kof_free_head` free-list (reuso mmap) / `kof_gc_collect` (mark-sweep pendente)
+- `kof_alloc` / `kof_free_head` free-list (mmap reuse) / `kof_gc_collect` (mark-sweep pending)
 - `kof_print` / `kof_println` / `kof_print_int` / `kof_int_to_string`
 - `kof_string_*`, `kof_array_*`, `kof_list_*`, `kof_map_*`, `kof_cache_*`, `kof_db_mysql_scramble`
-- trampoline de `pthread_create` + `pthread_join` (spawn/await, 31/08)
+- trampoline of `pthread_create` + `pthread_join` (spawn/await, 31/08)
 - `kof_panic`, `kof_null_error`, `kof_bounds_error`
 
 ## JsBackend
 
 - Generates ES Modules, executed by embedded GraalJS (`KofJsRunner`) — no Node.js required
-- Supports pattern matching (`case String s` + `Point(x,y)` via `typeof` + destructuring), `String?` basic, `kof.http` via `Java HttpClient` interop (+ fetch fallback; retry/circuit em paridade com o JVM, 30/08), `List map/filter/reduce`, `Box<T>` via `substituteTypeVariable`
-- Scheduler `kof.time` via `setInterval` (27/08); `spawn`/`await` com async/await/Promise reais (statement/expressão; CONC003 fechado 03/09)
+- Supports pattern matching (`case String s` + `Point(x,y)` via `typeof` + destructuring), `String?` basic, `kof.http` via `Java HttpClient` interop (+ fetch fallback; retry/circuit in parity with the JVM, 30/08), `List map/filter/reduce`, `Box<T>` via `substituteTypeVariable`
+- Scheduler `kof.time` via `setInterval` (27/08); `spawn`/`await` with real async/await/Promise (statement/expression; CONC003 closed 03/09)
 - Status alpha (0.2.6-beta)
 
 ## KofCcompiler
@@ -243,10 +245,10 @@ Runtime functions (x86-64, `NativeRuntime.java:1`):
 
 ## KofScript Runtime
 
-KofScript é um **target de execução direta**: Kof puro executado pelo
-interpretador da IR, sem etapa de compilação e sem fork de JVM
-(0.3.0-beta). **Não é JavaScript** — `let`/`const`/`async`/`fn` não
-existem; falham com o diagnóstico normal do parser Kof.
+KofScript is a **direct execution target**: pure Kof executed by the
+IR interpreter, with no compilation step and no JVM fork
+(0.3.0-beta). **It is not JavaScript** — `let`/`const`/`async`/`fn` do not
+exist; they fail with the normal Kof parser diagnostic.
 
 ```bash
 kof run program.kf
@@ -255,38 +257,38 @@ kof repl
 ```
 
 Implementation:
-- Mesmo frontend do compilador (lexer→parser→AST→semântica→lowering→IR
-  otimizada) via `CompilerDriver.interpret(...)`
-- `KofInterpreter` executa a IR como stack machine sobre valores reais do
-  JDK; classes Kof viram `KofObj` interpretado; builtins sem lambda são
-  despachados ao `KofRuntime` gerado — **paridade por construção** com o
-  backend JVM (mesma IR)
+- Same frontend as the compiler (lexer→parser→AST→semantics→lowering→optimized
+  IR) via `CompilerDriver.interpret(...)`
+- `KofInterpreter` executes the IR as a stack machine over real JDK values;
+  Kof classes become interpreted `KofObj`; builtins without lambda are
+  dispatched to the generated `KofRuntime` — **parity by construction** with the
+  JVM backend (same IR)
 - `var`/`val` at top-level desugars to `KofScriptGlobals` fields
-  (Kof não tem variável top-level — único serviço do wrapper)
-- Caminho compilado (`runFileCompiled`) permanece como fallback e é
-  usado nos testes de paridade; JS/Native continuam no caminho compilado
+  (Kof has no top-level variable — the wrapper's only service)
+- Compiled path (`runFileCompiled`) remains as a fallback and is
+  used in parity tests; JS/Native remain on the compiled path
 - Cleans up temp files; `--watch` re-executes on change; SIGPIPE handled on Windows
 
 ## Standard Library (compile-time dispatch)
 
-A Standard Library do Kof é implementada como **tabelas de dispatch
-compile-time** (docs/stdlib/stdlib.md): cada módulo é um descriptor no compilador
-(`KofIo.java`, `KofWeb.java`, `KofSecurity.java`, `KofUi.java`) que mapeia a
-intenção do programador para funções de runtime `kof_*`:
+Kof's Standard Library is implemented as **compile-time dispatch
+tables** (docs/stdlib/stdlib.md): each module is a descriptor in the compiler
+(`KofIo.java`, `KofWeb.java`, `KofSecurity.java`, `KofUi.java`) that maps the
+programmer's intent to `kof_*` runtime functions:
 
 ```mermaid
 flowchart TD
-    A["Kof source"] --> B["SemanticAnalyzer<br/>→ tipos das chamadas"]
-    B --> C["CompilerDriver<br/>→ lowering para KofCall(kof_*)"]
-    C --> D["JvmRuntime<br/>→ KofRuntime.java gerado<br/>(javax.crypto, java.nio..., HttpClient for kof.http JS)"]
-    C --> E["NativeRuntime<br/>→ assembly x86-64 / riscv64<br/>(syscalls, sem libc, free-list + kof_gc_collect)"]
-    C --> F["JsBackend<br/>→ kof-runtime.mjs<br/>(JS puro + kof_platform, GraalJS)"]
+    A["Kof source"] --> B["SemanticAnalyzer<br/>→ call types"]
+    B --> C["CompilerDriver<br/>→ lowering to KofCall(kof_*)"]
+    C --> D["JvmRuntime<br/>→ generated KofRuntime.java<br/>(javax.crypto, java.nio..., HttpClient for kof.http JS)"]
+    C --> E["NativeRuntime<br/>→ x86-64 / riscv64 assembly<br/>(syscalls, no libc, free-list + kof_gc_collect)"]
+    C --> F["JsBackend<br/>→ kof-runtime.mjs<br/>(pure JS + kof_platform, GraalJS)"]
 ```
 
-Gaps de target produzem **diagnósticos claros em compile-time** (SECN00x,
-CONC001, JSN00x, DB001, CONF001, LOG001) — nunca comportamento silenciosamente diferente.
+Target gaps produce **clear compile-time diagnostics** (SECN00x,
+CONC001, JSN00x, DB001, CONF001, LOG001) — never silently different behavior.
 
-Módulos (0.2.6-beta, 31/08/2026): `kof.core`, `kof.collections` (`List map/filter/reduce`, `Map/Set`, `Box<T>`), `kof.io`, `kof.time` (scheduler `every` JVM+JS via `setInterval`), `kof.json` (objetos/records + arrays nos 3 targets, 31/08), `kof.http` (JVM+JS via HttpClient; retry/circuit breaker 30/08), `kof.web` (rotas/middleware + WebSocket/SSE JVM, 30/08), `kof.cache` (3 targets, 30/08), `kof.security`, `kof.concurrent` (`spawn` — JVM virtual threads, Native pthread 31/08, JS sequencial), `kof.test`, `kof.cli` (18 comandos: `build/run/serve/check/test/script/repl/c/fmt/config/bench/profile/inspect/debug/info/lsp/install/version`), `kof.db`/`kof.orm` (SQLite nativo `.so` + MySQL wire protocol WIP), `kof.config`/`kof.log`. Estado completo em docs/stdlib/stdlib.md e docs/status.md (contagem corrente da suíte).
+Modules (0.2.6-beta, 31/08/2026): `kof.core`, `kof.collections` (`List map/filter/reduce`, `Map/Set`, `Box<T>`), `kof.io`, `kof.time` (scheduler `every` JVM+JS via `setInterval`), `kof.json` (objects/records + arrays on the 3 targets, 31/08), `kof.http` (JVM+JS via HttpClient; retry/circuit breaker 30/08), `kof.web` (routes/middleware + WebSocket/SSE JVM, 30/08), `kof.cache` (3 targets, 30/08), `kof.security`, `kof.concurrent` (`spawn` — JVM virtual threads, Native pthread 31/08, JS sequential), `kof.test`, `kof.cli` (18 commands: `build/run/serve/check/test/script/repl/c/fmt/config/bench/profile/inspect/debug/info/lsp/install/version`), `kof.db`/`kof.orm` (native SQLite `.so` + MySQL wire protocol WIP), `kof.config`/`kof.log`. Full state in docs/stdlib/stdlib.md and docs/status.md (current suite count).
 
 ## Diagnostics
 

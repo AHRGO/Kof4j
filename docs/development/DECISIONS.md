@@ -1,91 +1,93 @@
-# DECISIONS — registro de decisões da mantenedora + planos ratificados
+[English](DECISIONS.md) | [Português](DECISIONS.pt_BR.md)
 
-**Última atualização:** 13/09/2026 · **Quem decide:** Mel Santos (mantenedora)
-**Como decidir este tipo de item:** a mantenedora responde no chat ("pode
-seguir com a recomendada", ou escolhe outra opção); o agente trava a resposta
-aqui com data + opção escolhida — **a decisão não mora no chat, mora aqui**.
+# DECISIONS — record of the maintainer's decisions + ratified plans
 
-> Este documento **substitui** os 6 arquivos que viviam em
-> `docs/development/decision-pending/` (decisão da mantenedora 13/09:
-> "transformar eles num doc só pra development"). As decisões foram
-> inventariadas, auditadas contra o código (nunca memória) e **ratificadas
-> 13/09** com a recomendação técnica aceita. O que cada arquivo virou:
+**Last updated:** 13/09/2026 · **Who decides:** Mel Santos (maintainer)
+**How to decide this kind of item:** the maintainer answers in the chat ("you can
+go with the recommended one", or chooses another option); the agent locks the answer
+here with date + chosen option — **the decision does not live in the chat, it lives here**.
+
+> This document **replaces** the 6 files that lived in
+> `docs/development/decision-pending/` (maintainer's decision 13/09:
+> "turn them into a single doc for development"). The decisions were
+> inventoried, audited against the code (never memory) and **ratified
+> 13/09** with the accepted technical recommendation. What each file became:
 >
-> | Arquivo apagado | Virou |
+> | Deleted file | Became |
 > |---|---|
-> | `planning-stdlib-time-design.md` | §D-STDLIB — execução na fila STDLIB |
-> | `security-plan.md` | §D-SEC — camadas B/C/D viraram fila; arquitetura invariante em `docs/stdlib/security.md` |
-> | `plan-spring-independence.md` | §D-SPRING — fases 1–9 ✅ (histórico), 10–12 ratificadas aqui |
-> | `plan-platform-completion.md` | §D-PLAT — P0–P2 ✅ históricos; a fila real vive em `roadmap.md` §23 |
-> | `APPLICATION_MODEL.md` | §D-APP (Q1–Q10 travados) |
-> | `PLATFORM-PLAN.md` | §D-PLATFORM — **morto**: F1 absorvido pelo manifesto (já implementado, `KofProjectConfig`); F2–F9 já vivem em `roadmap.md` §23 |
+> | `planning-stdlib-time-design.md` | §D-STDLIB — execution in the STDLIB queue |
+> | `security-plan.md` | §D-SEC — layers B/C/D became a queue; invariant architecture in `docs/stdlib/security.md` |
+> | `plan-spring-independence.md` | §D-SPRING — phases 1–9 ✅ (history), 10–12 ratified here |
+> | `plan-platform-completion.md` | §D-PLAT — P0–P2 ✅ historical; the real queue lives in `roadmap.md` §23 |
+> | `APPLICATION_MODEL.md` | §D-APP (Q1–Q10 locked) |
+> | `PLATFORM-PLAN.md` | §D-PLATFORM — **dead**: F1 absorbed by the manifest (already implemented, `KofProjectConfig`); F2–F9 already live in `roadmap.md` §23 |
 >
-> Invariantes que nada aqui altera: congelamento 0.2.6-beta (operadores, `==`,
-> `spawn`, coleções), R1–R12 da visão universal, regra ≤500, suíte como gate.
+> Invariants that nothing here changes: 0.2.6-beta freeze (operators, `==`,
+> `spawn`, collections), R1–R12 of the universal vision, the ≤500 rule, suite as gate.
 
 ---
 
-## D-STDLIB — semântica de tempo/calendário (ratificado 13/09)
+## D-STDLIB — time/calendar semantics (ratified 13/09)
 
-**D1 (fuso) — UTC-only.** `today()`/`isToday` derivam de `now()` em UTC em
-TODOS os 5 alvos. Quem quiser fuso usa getter explícito `tzOffsetSeconds()`
-(JVM: host; JS: `Date.getTimezoneOffset`; Native: gap DIAG `TIME003` até
-haver `TZ`/`/etc/localtime` no asm). Sem paridade acidental de fuso — a
-divergência silenciosa cross-target está proibida por construção.
+**D1 (timezone) — UTC-only.** `today()`/`isToday` derive from `now()` in UTC in
+ALL 5 targets. Whoever wants a timezone uses the explicit getter `tzOffsetSeconds()`
+(JVM: host; JS: `Date.getTimezoneOffset`; Native: gap DIAG `TIME003` until
+there is `TZ`/`/etc/localtime` in the asm). No accidental timezone parity — silent
+cross-target divergence is forbidden by construction.
 
-**D2 (compostos) — sem retorno composto.** A trava DD-STDLIB-01 já fechou
-13/09, mas **não** é para reabri-la: o calendário entra **escalar puro sobre
-ISO** — a convenção `addDays("YYYY-MM-DD", n) -> String` já é a forma viva
-desde S7a (auditado em `KofTime.java:133`). Nada de `startOf` retornando
-tupla.
+**D2 (composites) — no composite return.** The DD-STDLIB-01 lock already closed
+13/09, but it is **not** to be reopened: the calendar enters as **pure scalar over
+ISO** — the convention `addDays("YYYY-MM-DD", n) -> String` is already the living form
+since S7a (audited in `KofTime.java:133`). No `startOf` returning a
+tuple.
 
-**D3 (`hoursBetween`) — completo, floor simétrico.** Consistente com
-`daysBetween` (truncado em direção a zero): conta dias-inteiros-completos +
-delta de horas. Sem float (FLT001), sem assinatura de 12 args.
+**D3 (`hoursBetween`) — complete, symmetric floor.** Consistent with
+`daysBetween` (truncated toward zero): counts full whole days +
+hour delta. No float (FLT001), no 12-arg signature.
 
-**D4 (formato) — zero pattern-DSL.** A stdlib expõe `formatDateIso(y,m,d) ->
-STR` (invalidez ⇒ `""`, face leniente documentada) e `parseDateIso(STR) ->
-Int` (serial `daysFromEpoch`; inválido ⇒ 0). Patterns `dd/MM/yyyy` **não
-entram na stdlib base** (R1/R12 — motor de parsing é pacote, não base).
+**D4 (format) — zero pattern-DSL.** The stdlib exposes `formatDateIso(y,m,d) ->
+STR` (invalidity ⇒ `""`, documented lenient face) and `parseDateIso(STR) ->
+Int` (serial `daysFromEpoch`; invalid ⇒ 0). Patterns `dd/MM/yyyy` **do not
+enter the base stdlib** (R1/R12 — a parsing engine is a package, not the base).
 
-**D5 (`isToday`) — entra**, dependência de D1 resolvida:
-`isToday(y,m,d) -> Bool` = igualdade com a data UTC de `now()`.
+**D5 (`isToday`) — enters**, D1 dependency resolved:
+`isToday(y,m,d) -> Bool` = equality with the UTC date of `now()`.
 
-### Fila STDLIB liberada (uma unidade-teste-commit cada)
+### STDLIB queue released (one unit-test-commit each)
 
-| Item | Assinatura | Alvos |
+| Item | Signature | Targets |
 |---|---|---|
 | `time.todayIso()` | `() -> STR` ("YYYY-MM-DD" UTC) | 5 |
-| `time.formatDateIso(y,m,d)` | `(I,I,I) -> STR` (inválido ⇒ `""`) | 5 |
+| `time.formatDateIso(y,m,d)` | `(I,I,I) -> STR` (invalid ⇒ `""`) | 5 |
 | `time.isToday(y,m,d)` | `(I,I,I) -> Bool` (UTC) | 5 |
-| `time.hoursBetween(y,m,d,H, y,m,d,H)` | `(I×8) -> Int`, floor simétrico | 5 |
-| `time.parseDateIso(STR)` | `(STR) -> Int` (serial; inválido ⇒ 0) | 5 |
+| `time.hoursBetween(y,m,d,H, y,m,d,H)` | `(I×8) -> Int`, symmetric floor | 5 |
+| `time.parseDateIso(STR)` | `(STR) -> Int` (serial; invalid ⇒ 0) | 5 |
 | `time.tzOffsetSeconds()` | `() -> Int` (Native = `TIME003` DIAG) | JVM/JS/SCRIPT; Native gap |
 
-Cada linha: golden do oracle JVM (medição real), dispatch em `KofTime`,
-`training/idioms`, matriz de conformidade, gap honesto onde houver.
+Each line: golden from the JVM oracle (real measurement), dispatch in `KofTime`,
+`training/idioms`, conformance matrix, honest gap where there is one.
 
-> **✅ EXECUTADO 13/09 (lane development, dono 192.168.100.18):** as 6
-> linhas acima implementadas e validadas — todayIso/formatDateIso/isToday
-> (S7e), hoursBetween (S7f + fix emit x86 7+ args), parseDateIso (S7g),
-> tzOffsetSeconds (S7h, Native gap honesto TIME003 — fila geral). Prova:
-> `KofTimeE2ETest` S7e-S7h (30/30) + matriz `stdtime3`/`stdtime4`/
-> `stdtime5`/`stdtime6` + parity Script. Suíte 1772/0/0. **Fila
-> D-STDLIB TIME FECHADA.**
+> **✅ EXECUTED 13/09 (development lane, owner 192.168.100.18):** the 6
+> lines above implemented and validated — todayIso/formatDateIso/isToday
+> (S7e), hoursBetween (S7f + x86 emit fix for 7+ args), parseDateIso (S7g),
+> tzOffsetSeconds (S7h, honest Native gap TIME003 — general queue). Proof:
+> `KofTimeE2ETest` S7e-S7h (30/30) + matrix `stdtime3`/`stdtime4`/
+> `stdtime5`/`stdtime6` + Script parity. Suite 1772/0/0. **D-STDLIB TIME
+> queue CLOSED.**
 
 ---
 
-## D-SEC — segurança (ratificado 13/09)
+## D-SEC — security (ratified 13/09)
 
-**Arquitetura invariante (não muda — já documentada em
-`docs/stdlib/security.md`):** 18 camadas; cripto nunca caseira (JCA/WebCrypto/
-asm auditado); `SECN00x` para gap por target; estado atual verificado no
-código 13/09: camada A e B ✅ (password/sha512/AES-GCM/JWT nos 3+alvos com
-`SECN001/2/3/4` honestos), C10/12/13/14/15 ✅, D17 parcial ✅.
+**Invariant architecture (does not change — already documented in
+`docs/stdlib/security.md`):** 18 layers; crypto never homegrown (JCA/WebCrypto/
+audited asm); `SECN00x` for gap per target; current state verified in the
+code 13/09: layer A and B ✅ (password/sha512/AES-GCM/JWT in the 3+targets with
+honest `SECN001/2/3/4`), C10/12/13/14/15 ✅, D17 partial ✅.
 
-**ChaCha20-Poly1305 — entra (RFC 8439), espelhando o envelope AES-GCM real**
-(auditado em `JvmStringSecurityRuntime.java:152-154` —
-`aesgcm$<ivB64>$<ct+tagB64>`, `(plaintext, keyHex)` com chave 32B em hex):
+**ChaCha20-Poly1305 — enters (RFC 8439), mirroring the real AES-GCM envelope**
+(audited in `JvmStringSecurityRuntime.java:152-154` —
+`aesgcm$<ivB64>$<ct+tagB64>`, `(plaintext, keyHex)` with a 32B key in hex):
 
 ```
 chacha20$<nonceB64(12B)>$<ct+tagB64(16B tag)>
@@ -93,234 +95,234 @@ security.chacha20Encrypt(String text, String keyHex) -> String
 security.chacha20Decrypt(String token, String keyHex) -> String
 ```
 
-Mesmo padrão `SecCall` de `kof_sec_aesgcm_*` (gap SECN002 nos alvos sem
-implementação). JS via WebCrypto `ChaCha20-Poly1305` (onde existir; restante
-= SECN002 honesto). Constante de tempo, nonce nunca reusado (documentado).
+Same `SecCall` pattern as `kof_sec_aesgcm_*` (gap SECN002 in targets without
+implementation). JS via WebCrypto `ChaCha20-Poly1305` (where it exists; the rest
+= honest SECN002). Constant time, nonce never reused (documented).
 
-> **✅ EXECUTADO (14/09, degrau 2 — dono 192.168.100.18):** chacha20 JVM+JS
-> (`kof_sec_chacha20_encrypt/decrypt`, SecCall idêntico ao aesgcm). JS é
-> implementação pura (WebCrypto **não** expõe ChaCha20 em nenhum engine
-> principal — a premissa "onde existir" caiu; prova: MDN
-> SubtleCrypto.algorithms). Validado byte a byte contra node:crypto e contra
-> o vetor RFC 8439 §2.8.2 (Poly1305 AEAD: r/s LE, mac_data
-> pad16(ct)||le64(0)||le64(ctLen)). **Native (x86/riscv/aarch64) segue gap
-> SECN002 honesto em compile-time** — asm puro de Poly1305 (aritmética
-> 130-bit) fica na fila, mesmo precedente do SECN000. Constante de tempo:
-> tag comparada com `MessageDigest.isEqual` (JVM) / XOR acumulado (JS).
-> Testes: KofSecurityTest 32/32 (`chacha20*`), suíte 4 módulos 0 falhas.
+> **✅ EXECUTED (14/09, step 2 — owner 192.168.100.18):** chacha20 JVM+JS
+> (`kof_sec_chacha20_encrypt/decrypt`, SecCall identical to aesgcm). JS is a
+> pure implementation (WebCrypto does **not** expose ChaCha20 in any
+> main engine — the "where it exists" premise fell; proof: MDN
+> SubtleCrypto.algorithms). Validated byte by byte against node:crypto and against
+> the RFC 8439 §2.8.2 vector (Poly1305 AEAD: r/s LE, mac_data
+> pad16(ct)||le64(0)||le64(ctLen)). **Native (x86/riscv/aarch64) remains an honest
+> SECN002 gap at compile-time** — pure Poly1305 asm (130-bit
+> arithmetic) stays in the queue, same precedent as SECN000. Constant time:
+> tag compared with `MessageDigest.isEqual` (JVM) / accumulated XOR (JS).
+> Tests: KofSecurityTest 32/32 (`chacha20*`), 4-module suite 0 failures.
 
-**Cookies (C11) + middleware de security (C18) — entram, EXECUTAM JUNTO com
-o Application Model** (a ordem só faz sentido com `app.use`):
+**Cookies (C11) + security middleware (C18) — enter, RUN TOGETHER with
+the Application Model** (the order only makes sense with `app.use`):
 
-- `security.cookies`: parse/set com defaults seguros (`HttpOnly`, `Secure`,
-  `SameSite=Lax`, `Path=/`); API `cookieSet(name, value, opts-map)` e
+- `security.cookies`: parse/set with secure defaults (`HttpOnly`, `Secure`,
+  `SameSite=Lax`, `Path=/`); API `cookieSet(name, value, opts-map)` and
   `cookieGet(request, name)`.
-- `app.security()` — middleware composto aplicando a **ordem fixa**:
-  rate-limit → cors → headers → cookies/session → csrf → auth → RBAC → rota.
-  Security by default: `listen` em produção exige `app.security()` explícito
-  ou warning.
+- `app.security()` — composite middleware applying the **fixed order**:
+  rate-limit → cors → headers → cookies/session → csrf → auth → RBAC → route.
+  Security by default: `listen` in production requires an explicit `app.security()`
+  or a warning.
 
-> **✅ EXECUTADO (14/09, degrau 3 parcial — dono 192.168.100.18):**
-> `security.cookieSet(name,value[,opts])` e `security.cookieGet(header,name)`
-> implementados em **JVM + JS** (`kof_sec_cookie_set/set_opts/get`), com
-> defaults seguros (`Path=/; SameSite=Lax; Secure; HttpOnly`) e opts-map
-> (`path/domain/maxAge/expires/sameSite/secure/httpOnly`). **Native segue gap
-> honesto SECN006** (mesmo precedente SECN000/002). Testes `KofSecurityTest`
-> 39/39 (cookieSetDefaults/opts/get Jvm+Js, roundtrip JVM→JS, SECN006 cross).
-> **`app.security()` (C18) ainda NÃO implementado** — depende do middleware
-> `app.use` do app model (I2), que é a próxima unidade desta frente.
+> **✅ EXECUTED (14/09, partial step 3 — owner 192.168.100.18):**
+> `security.cookieSet(name,value[,opts])` and `security.cookieGet(header,name)`
+> implemented in **JVM + JS** (`kof_sec_cookie_set/set_opts/get`), with
+> secure defaults (`Path=/; SameSite=Lax; Secure; HttpOnly`) and opts-map
+> (`path/domain/maxAge/expires/sameSite/secure/httpOnly`). **Native remains an honest
+> SECN006 gap** (same precedent SECN000/002). Tests `KofSecurityTest`
+> 39/39 (cookieSetDefaults/opts/get Jvm+Js, JVM→JS roundtrip, SECN006 cross).
+> **`app.security()` (C18) still NOT implemented** — it depends on the
+> `app.use` middleware of the app model (I2), which is the next unit of this front.
 
-**OAuth2/OIDC (D cam. 16) — sequência travada:** (1) **resource server**
-primeiro (validação de JWT de terceiro: JWKS + issuer/aud — barato, fecha
-"quem é usuário Google?"), (2) client authorization-code + PKCE depois;
-**provider nunca** (non-goal, fora de qualquer plano).
+**OAuth2/OIDC (D layer 16) — locked sequence:** (1) **resource server**
+first (third-party JWT validation: JWKS + issuer/aud — cheap, closes
+"who is the Google user?"), (2) client authorization-code + PKCE later;
+**provider never** (non-goal, outside any plan).
 
-**TLS com certificado próprio — entra:** `app.listenSecure(port, certPem,
-keyPem)` (PKCS#8 PEM; JVM primeiro; Native/JS continuam `WEB002` honesto).
-Self-signed atual permanece como conveniência de dev, não como produção.
+**TLS with own certificate — enters:** `app.listenSecure(port, certPem,
+keyPem)` (PKCS#8 PEM; JVM first; Native/JS remain honest `WEB002`).
+The current self-signed remains a dev convenience, not production.
 
 ---
 
-## D-APP — Application Model (ratificado 13/09)
+## D-APP — Application Model (ratified 13/09)
 
-Os 10 open questions da RFC viram decisão:
+The RFC's 10 open questions become decisions:
 
-| Q | Decisão |
+| Q | Decision |
 |---|---|
-| Q1 manifesto | **`kof.toml`** — ✅ já implementado (`KofProjectConfig` subconjunto INI; PKG006 usa como raiz de projeto). Decisão formalizada, sem código novo. |
-| Q2 bump | **0.4.0-beta** (capability nova; a linha 0.4.0 já está em curso). |
-| Q3 shared types | package local importado por front+backend, **depois** do package manager; não bloqueia nada. |
-| Q4 `kof serve --system` | **rejeitado** (confirmado) — alternativa: `kof serve --list` (apps+portas, sem subir). |
-| Q5 `[frontend].api` | **convenção documentada** (não feature de rewrite). |
-| Q6 fat jar | **flag `--fat` opcional** (I3); default = classpath explícito. ✅ **EXECUTADO 14/09**: `kof build --fat` (JVM) gera `kof-app.jar` (classes do app + runtime `dev.kof.runtime` + deps externas, `Main-Class` no manifesto, first-wins do app, assinaturas deps descartadas); prova `CmdBuildFatTest` 4/4 (`java -jar` roda o programa; sem a flag não há jar; `--fat` fora do JVM recusa honesto R6). |
-| Q7 Wasm | coluna ✅ frontend na tabela quando o target abrir; **modelo não muda**. |
-| Q8 `kof.proxy` | fora desta RFC; convenção hoje, stdlib só com 3+ apps pedindo. |
-| Q9 rebuild frontend | **sob demanda por hash** (I2); watcher = futuro. |
-| Q10 Android | **declarar ✅** na tabela (WebView + KofJS já é full-stack de fato; sem código novo). |
+| Q1 manifest | **`kof.toml`** — ✅ already implemented (`KofProjectConfig` INI subset; PKG006 uses it as the project root). Formalized decision, no new code. |
+| Q2 bump | **0.4.0-beta** (new capability; the 0.4.0 line is already underway). |
+| Q3 shared types | local package imported by front+backend, **after** the package manager; blocks nothing. |
+| Q4 `kof serve --system` | **rejected** (confirmed) — alternative: `kof serve --list` (apps+ports, without starting). |
+| Q5 `[frontend].api` | **documented convention** (not a rewrite feature). |
+| Q6 fat jar | optional **`--fat` flag** (I3); default = explicit classpath. ✅ **EXECUTED 14/09**: `kof build --fat` (JVM) generates `kof-app.jar` (app classes + `dev.kof.runtime` runtime + external deps, `Main-Class` in the manifest, app first-wins, dep signatures discarded); proof `CmdBuildFatTest` 4/4 (`java -jar` runs the program; without the flag there is no jar; `--fat` outside the JVM refuses honestly R6). |
+| Q7 Wasm | ✅ frontend column in the table when the target opens; **model does not change**. |
+| Q8 `kof.proxy` | outside this RFC; convention today, stdlib only with 3+ apps asking. |
+| Q9 frontend rebuild | **on demand by hash** (I2); watcher = future. |
+| Q10 Android | **declare ✅** in the table (WebView + KofJS is already full-stack de facto; no new code). |
 
-**Plano I1–I3 da RFC:** I1 (manifesto+`kof new`) — **manifesto já existe**;
-resta `CmdNew` (esqueletos backend/full-stack/frontend + validação `APP003`),
-escopo pequeno. I2 (full-stack serve/build) ✅ e I3 (fat/deploy) ✅ (`--fat`,
-14/09) executados com os incrementos da RFC §23. A matriz APP001–003 vai para
-`docs/backend-parity.md` (gap codes R6).
+**RFC Plan I1–I3:** I1 (manifest+`kof new`) — **manifest already exists**;
+`CmdNew` remains (backend/full-stack/frontend skeletons + `APP003` validation),
+small scope. I2 (full-stack serve/build) ✅ and I3 (fat/deploy) ✅ (`--fat`,
+14/09) executed with the RFC §23 increments. The APP001–003 matrix goes to
+`docs/backend-parity.md` (R6 gap codes).
 
-### D-APP.REF — o modelo em uma página (conteúdo de referência da RFC)
+### D-APP.REF — the model on one page (RFC reference content)
 
-**Definição.** Uma Kof Application é um diretório contendo um módulo Kof
-(conjunto de `.kf` com um `main()`) + manifesto opcional `kof.toml`
-descrevendo componentes (frontend, static) e execução (porta/host, target).
+**Definition.** A Kof Application is a directory containing a Kof module
+(set of `.kf` with a `main()`) + optional manifest `kof.toml`
+describing components (frontend, static) and execution (port/host, target).
 
 ```text
 my-app/
-├── kof.toml            # manifesto (OPCIONAL — sem ele, convenção atual 1:1)
-├── kofdeps             # dependências (existe hoje)
-├── src/main.kf         # entrypoint (main() único = backend)
-│   └── web/main.kf     # componente FRONTEND (outro módulo → bundle js)
-└── src/static/         # componente STATIC (css/img — copy puro)
+├── kof.toml            # manifest (OPTIONAL — without it, current 1:1 convention)
+├── kofdeps             # dependencies (exists today)
+├── src/main.kf         # entrypoint (single main() = backend)
+│   └── web/main.kf     # FRONTEND component (another module → js bundle)
+└── src/static/         # STATIC component (css/img — pure copy)
 ```
 
-Regras: (1) uma aplicação = um módulo = um `main()`; frontend é OUTRO módulo
-compilado para `js`; (2) componentes = zero/um/mais (backend, frontend,
-static); (3) menor unidade de `kof serve`/deploy (1 processo, 1 porta);
-(4) System = composição de deploy, não de compilação; (5) **sem `kof.toml`
-= comportamento exatamente atual**.
+Rules: (1) one application = one module = one `main()`; frontend is ANOTHER module
+compiled to `js`; (2) components = zero/one/more (backend, frontend,
+static); (3) smallest unit of `kof serve`/deploy (1 process, 1 port);
+(4) System = deploy composition, not compilation; (5) **without `kof.toml`
+= exactly current behavior**.
 
-Manifesto (subconjunto INI já lido por `KofProjectConfig`): `[app]`
-(name/version/entry/target), `[serve]` (port/host; flag sempre vence),
-`[frontend]` (path/entry/out/base/api/cors), `[static]` (path). Lido pela
-CLI, nunca pelo compilador; erro de manifesto = diagnóstico claro (R6).
+Manifest (INI subset already read by `KofProjectConfig`): `[app]`
+(name/version/entry/target), `[serve]` (port/host; flag always wins),
+`[frontend]` (path/entry/out/base/api/cors), `[static]` (path). Read by the
+CLI, never by the compiler; manifest error = clear diagnostic (R6).
 
-**Full-stack:** backend monta o bundle via `app.serveDir` (existe no JVM) e
-o frontend chama a API **por HTTP** (`kof.http` no js) — nunca chamada
-direta. Contrato front→back é sempre HTTP/JSON ⇒ "mesmo processo" e
-"serviço remoto" são intercambiáveis (base da portabilidade
-monólito↔distribuído).
+**Full-stack:** the backend mounts the bundle via `app.serveDir` (exists on the JVM) and
+the frontend calls the API **over HTTP** (`kof.http` in js) — never a direct
+call. The front→back contract is always HTTP/JSON ⇒ "same process" and
+"remote service" are interchangeable (basis of the
+monolith↔distributed portability).
 
-Topologias (o que muda é só o número de diretórios e quem orquestra —
-linguagem/compilador/CLI não mudam): monolith (default de hoje), modular
-monolith (organização de pacotes, nada do modelo), microservices (N apps
-backend-only), microfrontends (N bundles + shell), full-stack (meta I2),
-backend-only, frontend-only, full-stack distribuído (+ gateway = app que
-roteia).
+Topologies (what changes is only the number of directories and who orchestrates —
+language/compiler/CLI do not change): monolith (today's default), modular
+monolith (package organization, nothing of the model), microservices (N
+backend-only apps), microfrontends (N bundles + shell), full-stack (goal I2),
+backend-only, frontend-only, distributed full-stack (+ gateway = app that
+routes).
 
-**Regras estruturais permanentes (ex-spring, D-SPRING):** nenhum componente
-da stdlib depende de Spring; nenhum backend gera Java-source como passo
-obrigatório; capacidades fundamentais têm API Kof-native (Spring é
-alternativa consumida); o teste de independência (app Kof sem Spring) vale
-tanto quanto o de interoperabilidade.
+**Permanent structural rules (ex-spring, D-SPRING):** no stdlib component
+depends on Spring; no backend generates Java-source as a mandatory
+step; fundamental capabilities have a Kof-native API (Spring is a
+consumed alternative); the independence test (Kof app without Spring) is worth
+as much as the interoperability one.
 
 ---
 
-## D-SPRING — fases 10/11/12 (ratificado 13/09)
+## D-SPRING — phases 10/11/12 (ratified 13/09)
 
-- **Fase 10 (testing nativo):** escopo travado = `kof test` roda os testes do
-  projeto com **asserts Kof** (sem JUnit obrigatório; interoperável quando
-  JVM); unit + HTTP (via `web.app` em porta efêmera) primeiro; property/
-  stress/mocks são incrementos separados, nunca gate.
-- **Fase 11 (CLI completa):** consolidar o que existe (`run/build/test/serve/
-  fmt/deps/init/check` ✅ no `Main.java`) + `kof new` (I1 do D-APP); `kofdeps
-  add/remove/list/resolve` já landed (Deps.java) — falta só o elo com o
-  manifesto (deps no `kof.toml`).
-- **Fase 12 (blog E2E):** **AGORA** — é a validação da plataforma, e é o app
-  model canônico (backend + frontend + db + auth + validation num único
-  `kof.toml`); roda em JVM e Native sem mudar uma linha (gaps diagnosticados
-  contam como honestos, não como falha).
+- **Phase 10 (native testing):** locked scope = `kof test` runs the project's
+  tests with **Kof asserts** (no mandatory JUnit; interoperable when
+  JVM); unit + HTTP (via `web.app` on an ephemeral port) first; property/
+  stress/mocks are separate increments, never a gate.
+- **Phase 11 (complete CLI):** consolidate what exists (`run/build/test/serve/
+  fmt/deps/init/check` ✅ in `Main.java`) + `kof new` (I1 of D-APP); `kofdeps
+  add/remove/list/resolve` already landed (Deps.java) — only the link with the
+  manifest is missing (deps in `kof.toml`).
+- **Phase 12 (blog E2E):** **NOW** — it is the platform validation, and it is the canonical
+  app model (backend + frontend + db + auth + validation in a single
+  `kof.toml`); runs on JVM and Native without changing a line (diagnosed gaps
+  count as honest, not as failure).
 
-## D-PLAT — platform-completion (ratificado 13/09)
+## D-PLAT — platform-completion (ratified 13/09)
 
-P0–P2 ✅ fechados (histórico 0.1.0→0.2.6-beta). P3–P5 não são fila própria:
-**cada linha restante já tem casa** — DB/orm no roadmap §23 e
-`docs/stdlib/DATABASE_VISION.md`, observabilidade (OTLP) em
-`docs/backend-parity.md`, DX (`kof new`) no D-APP/I1. O documento morto.
-O **Definition of Done** do plano ("compila nos 3 targets ou gap com
-`supportedOn` + E2E por target + benchmark quando plausível + docs
-sincronizadas no mesmo commit + suíte verde") não se perdeu: mora em
-`docs/architecture/performance.md` §40–§41 (a fonte que o próprio plano
-citava) e ecoa no portão Q0–Q6 do `AGENTS.md`.
+P0–P2 ✅ closed (history 0.1.0→0.2.6-beta). P3–P5 are not their own queue:
+**each remaining line already has a home** — DB/orm in roadmap §23 and
+`docs/stdlib/DATABASE_VISION.md`, observability (OTLP) in
+`docs/backend-parity.md`, DX (`kof new`) in D-APP/I1. The document is dead.
+The plan's **Definition of Done** ("compiles on the 3 targets or gap with
+`supportedOn` + E2E per target + benchmark when plausible + docs
+synced in the same commit + green suite") was not lost: it lives in
+`docs/architecture/performance.md` §40–§41 (the source the plan itself
+cited) and echoes in the Q0–Q6 gate of `AGENTS.md`.
 
-## D-PLATFORM — PLATFORM-PLAN (morto 13/09)
+## D-PLATFORM — PLATFORM-PLAN (dead 13/09)
 
-F1 (raiz de projeto) **resolvido pelo manifesto** (`KofProjectConfig` +
+F1 (project root) **resolved by the manifest** (`KofProjectConfig` +
 PKG006); F2 targets = `docs/targets` + §23; F3 full-stack = D-APP I2; F4/F5 =
-`KOFUI-AUDIT`/`docs/stdlib/stdlib-web.md`; F6 wasm/F7 android = tabela do
-D-APP Q7/Q10; F8 script = `kof-cli CmdScript` ✅; F9 conformance =
-`docs/bugs-and-gaps/conformance-matrix.md`. **Nada restava de único — o arquivo foi absorvido, não descartado.**
+`KOFUI-AUDIT`/`docs/stdlib/stdlib-web.md`; F6 wasm/F7 android = D-APP
+Q7/Q10 table; F8 script = `kof-cli CmdScript` ✅; F9 conformance =
+`docs/bugs-and-gaps/conformance-matrix.md`. **Nothing unique remained — the file was absorbed, not discarded.**
 
-## D-RELEASE — gatilho de patch (0.4.1) por volume de fixes (14/09)
+## D-RELEASE — patch trigger (0.4.1) by volume of fixes (14/09)
 
-**Regra da mantenedora (14/09, após fechar a minor 0.4.0):** desenvolvimento
-agora é **estabilização de patch**, não feature. O critério objetivo de subir
-um patch:
+**Maintainer's rule (14/09, after closing the 0.4.0 minor):** development
+is now **patch stabilization**, not feature. The objective criterion to cut
+a patch:
 
-- **Gatilho:** quando a `beta` estiver **entre 100 e 150 commits à frente da
-  `main`**, avaliar o bump para **`0.4.1`** (patch — só fixes, zero capability
-  nova; a linha `0.4.0` já foi liberada no #138).
-- **Features NÃO param nem são descartadas na janela (adição da mantenedora
-  14/09):** entre 0.4.0 e o gatilho, **evolução real (features/melhorias)
-  concorre com os bugfixes** — o contador de 100–150 mistura os dois. A janela
-  de patch **não congela desenvolvimento** e o bump **não pode descartar /
-  reverter / segurar em branch** o trabalho de feature feito no período: tudo
-  que está na `beta` com suíte verde e prova entra no pacote. Se o volume de
-  **capability nova** acumulado na janela for material (mudou contrato/operador
-  — regra 6, ou superfície de API visível), o bump avaliado deixa de ser
-  patch: vira **0.5.0-minor** (semver decide pelo conteúdo, não pelo calendário
-  nem pelo gatilho). A nota de release lista fixes E features.
-- **Média de pacote estável:** 100–150 commits de fix acumulados = um pacote
-  estável o bastante para valer um release. Abaixo disso, é ruído; acima, o
-  backlog de correções já justifica o número de versão.
-- **Antes de bumpar:** **corrigir as issues abertas** (`gh issue list --state
-  open`) que forem da lane de bugs/paridade — o patch sai com as issues
-  conhecidas fechadas, não em cima delas. Issues de regra 6 (contrato) ficam
-  abertas com nota, não bloqueiam o patch.
-- **Depois do bump:** voltar ao desenvolvimento normal (a `beta` reabre para a
-  próxima minor/feature; o contador reinicia contra a nova `main`).
+- **Trigger:** when `beta` is **between 100 and 150 commits ahead of
+  `main`**, evaluate the bump to **`0.4.1`** (patch — only fixes, zero new
+  capability; the `0.4.0` line was already released in #138).
+- **Features do NOT stop nor are discarded in the window (maintainer's addition
+  14/09):** between 0.4.0 and the trigger, **real evolution (features/improvements)
+  competes with the bugfixes** — the 100–150 counter mixes the two. The patch
+  window **does not freeze development** and the bump **cannot discard /
+  revert / hold in a branch** the feature work done in the period: everything
+  that is in `beta` with a green suite and proof enters the package. If the volume of
+  **new capability** accumulated in the window is material (changed contract/operator
+  — rule 6, or visible API surface), the evaluated bump stops being a
+  patch: it becomes a **0.5.0-minor** (semver decides by content, not by calendar
+  nor by the trigger). The release note lists fixes AND features.
+- **Stable package average:** 100–150 accumulated fix commits = a package
+  stable enough to be worth a release. Below that, it is noise; above, the
+  fix backlog already justifies the version number.
+- **Before bumping:** **fix the open issues** (`gh issue list --state
+  open`) that belong to the bugs/parity lane — the patch ships with the known
+  issues closed, not on top of them. Rule 6 (contract) issues stay
+  open with a note, they do not block the patch.
+- **After the bump:** return to normal development (`beta` reopens for the
+  next minor/feature; the counter resets against the new `main`).
 
-**Estado do contador (medição 14/09, post-#138):** `main..beta = 1` (só
-`a5eedbe2`), `beta..main = 1` (o merge do PR). **Longe do gatilho** — o loop
-segue acumulando fixes na beta; nenhum agente bumpa versão enquanto não
-chegar perto de 100. Quem medir deve anotar aqui a contagem e a data.
+**Counter state (measurement 14/09, post-#138):** `main..beta = 1` (only
+`a5eedbe2`), `beta..main = 1` (the PR merge). **Far from the trigger** — the loop
+keeps accumulating fixes in beta; no agent bumps a version until it
+gets close to 100. Whoever measures should note the count and the date here.
 
-**Como medir:** `git rev-list --count origin/main..origin/beta-0.4.0`. Ao
-cruzar a faixa, abrir a issue "Release 0.4.1" (regra: toda PR vem com issue),
-rodar a suíte completa verde, fechar as issues da lane bugs, e só então bumpar
+**How to measure:** `git rev-list --count origin/main..origin/beta-0.4.0`. When
+crossing the range, open the issue "Release 0.4.1" (rule: every PR comes with an issue),
+run the full suite green, close the bugs lane issues, and only then bump
 `pom.xml` + `version.properties`.
 
 ---
 
-## D-ASM-GATE — gate de asm riscv/aarch OPCIONAL até o dev nativo fechar (14/09)
+## D-ASM-GATE — riscv/aarch asm gate OPTIONAL until native dev closes (14/09)
 
-**Decisão da mantenedora (14/09):** *"deixa o teste do riscv e arm opcional
-até o desenvolvimento estar completo"* — e o chão inegociável que a acompanha:
-*"não pode ter teste quebrado na main nem na beta"*.
+**Maintainer's decision (14/09):** *"leave the riscv and arm test optional
+until development is complete"* — and the non-negotiable floor that accompanies it:
+*"there can be no broken test on main nor on beta"*.
 
-- **Contexto (causa raiz medida):** os testes
-  `*CastSaturationLabelsAreUniquePerEmission` (trava de regressão do §181,
-  `67db6c50`) assertavam "o backend sempre mantém o `.s`". **Falso:** em host
-  COM toolchain, `as`+`ld` linkam com sucesso e o `NativeArchEmitter` APAGA o
-  `.s` (só mantém com `KOF_KEEP_ASM`). Resultado: verde no host de dev (sem
-  toolchain, ramo `ToolchainMissing` preserva o asm), **vermelho no CI**
-  (toolchain presente) — gate da beta quebrado desde `67db6c50`/`fdf0dd92`.
-- **Opção escolhida:** skip **honesto e explícito** (regra Q5, nunca "passa por
-  acidente"): `Assumptions.assumeTrue(KOF_ASM_GATE)` no início dos dois testes.
-  Padrão = skip (CI verde); reativa com `KOF_ASM_GATE=1` quando o gate cross
-  for exigido de novo. Corpo tornado **portável** (if `.s` existe → inspeção de
-  texto; senão → exige o binário linkado, prova mecânica).
-- **A regressão do §181 continua provada nos 42 E2Es riscv + 42 aarch sob qemu:**
-  label `.Lsat181` duplicada = `as` falha = `success()` false = teste E2E
-  vermelho. O gate de texto é redundante com qemu; só acrescenta em host SEM
-  toolchain — por isso pode ser opcional sem perder proteção real.
-- **Evidência:** `NativeRiscv64E2ETest.java`/`NativeAarch64E2ETest.java`
-  (`KOF_ASM_GATE`); prova local dupla — sem flag: `Skipped: 2`; com
+- **Context (measured root cause):** the tests
+  `*CastSaturationLabelsAreUniquePerEmission` (regression lock of §181,
+  `67db6c50`) asserted "the backend always keeps the `.s`". **False:** on a host
+  WITH toolchain, `as`+`ld` link successfully and `NativeArchEmitter` DELETES the
+  `.s` (it only keeps it with `KOF_KEEP_ASM`). Result: green on the dev host (without
+  toolchain, the `ToolchainMissing` branch preserves the asm), **red in CI**
+  (toolchain present) — beta gate broken since `67db6c50`/`fdf0dd92`.
+- **Chosen option:** **honest and explicit** skip (rule Q5, never "passes by
+  accident"): `Assumptions.assumeTrue(KOF_ASM_GATE)` at the start of the two tests.
+  Default = skip (green CI); reactivate with `KOF_ASM_GATE=1` when the cross gate
+  is required again. Body made **portable** (if `.s` exists → text
+  inspection; otherwise → require the linked binary, mechanical proof).
+- **The §181 regression remains proven in the 42 riscv + 42 aarch E2Es under qemu:**
+  duplicate `.Lsat181` label = `as` fails = `success()` false = red E2E
+  test. The text gate is redundant with qemu; it only adds on a host WITHOUT
+  toolchain — that is why it can be optional without losing real protection.
+- **Evidence:** `NativeRiscv64E2ETest.java`/`NativeAarch64E2ETest.java`
+  (`KOF_ASM_GATE`); double local proof — without the flag: `Skipped: 2`; with
   `KOF_ASM_GATE=1`: `Tests run: 2, Failures: 0, Errors: 0, Skipped: 0`.
-- **Condição de reativação:** quando o desenvolvimento nativo estiver completo
-  (bugs da lane Native — §184/§187/§181-adjacentes — fechados com matriz
-  5/5), o `assumeTrue` é removido e o gate volta a ser obrigatório no CI.
+- **Reactivation condition:** when native development is complete
+  (Native lane bugs — §184/§187/§181-adjacent — closed with matrix
+  5/5), the `assumeTrue` is removed and the gate becomes mandatory in CI again.
 
 ---
 
-## Como atualizar este doc
+## How to update this doc
 
-Decidiu mais alguma coisa no chat → trava aqui (data + opção + evidência de
-código quando houver). Item decidido que vira código: sai daqui para a fila
-do `roadmap.md` §23/DOING; a linha fica marcando `✅ decidido <data>` (o
-registro é permanente — a pasta `decision-pending/` não existe mais).
+Decided anything else in the chat → lock it here (date + option + code
+evidence when there is any). A decided item that becomes code: leaves here for the queue
+of `roadmap.md` §23/DOING; the line stays marking `✅ decided <date>` (the
+record is permanent — the `decision-pending/` folder no longer exists).

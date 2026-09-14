@@ -1,15 +1,17 @@
-# 06 — Funções
+[English](06-functions.md) | [Português](06-functions.pt_BR.md)
 
-> **Status: implementado (JVM / Native / JS) — 0.3.22-beta — exemplos verificados no compilador**
+# 06 — Functions
+
+> **Status: implemented (JVM / Native / JS) — 0.3.22-beta — examples verified in the compiler**
 >
-> Funções de nível superior, métodos, expression bodies, default parameters,
-> recursão e funções como valores (lambdas) funcionam nos targets JVM, Native
-> e KofJS.
+> Top-level functions, methods, expression bodies, default parameters,
+> recursion and functions as values (lambdas) work on the JVM, Native
+> and KofJS targets.
 
-## Funções de nível superior
+## Top-level functions
 
-Não existe `fun`/`func` — a função é declarada pelo nome, com o tipo de
-retorno **antes** do nome ou **depois** dos parâmetros:
+There is no `fun`/`func` — the function is declared by name, with the return
+type **before** the name or **after** the parameters:
 
 ```kf
 Int soma(Int a, Int b) {
@@ -21,18 +23,18 @@ main() {
 }
 ```
 
-## As formas válidas
+## The valid forms
 
 ```kf
-main() { println("entry point") }             // única sem tipo explícito
-String saudacao() { return "oi" }             // retorno antes do nome
-despedida(): String { return "tchau" }        // retorno depois dos parâmetros
-void fazIsso() { println("x") }               // void explícito
+main() { println("entry point") }             // the only one without an explicit type
+String saudacao() { return "oi" }             // return before the name
+despedida(): String { return "tchau" }        // return after the parameters
+void fazIsso() { println("x") }               // explicit void
 ```
 
 ## Expression body
 
-Para funções de uma expressão só:
+For single-expression functions:
 
 ```kf
 Bool positivo(Int x) = x > 0
@@ -43,7 +45,7 @@ main() {
 }
 ```
 
-## Parâmetros
+## Parameters
 
 ```kf
 void imprimir(String mensagem, Int vezes) {
@@ -64,16 +66,16 @@ void greet(String name = "world") {
 
 main() {
     greet("Mel")
-    greet()          // usa o default — "hello world"
+    greet()          // uses the default — "hello world"
 }
 ```
 
-`Server(8080)` / `Server()` para classes seguem a mesma semântica, resolvida
-em compile-time.
+`Server(8080)` / `Server()` for classes follow the same semantics, resolved
+at compile-time.
 
-## Retorno
+## Return
 
-Em funções `void`, `return` sozinho encerra o fluxo:
+In `void` functions, `return` alone ends the flow:
 
 ```kf
 void maybe(Bool condition) {
@@ -84,9 +86,9 @@ void maybe(Bool condition) {
 }
 ```
 
-`return;` também é aceito por compatibilidade.
+`return;` is also accepted for compatibility.
 
-## Recursão
+## Recursion
 
 ```kf
 Int fatorial(Int n) {
@@ -99,10 +101,10 @@ main() {
 }
 ```
 
-## Funções como valores
+## Functions as values
 
-Lambdas são valores de primeira classe — guarda-se em variável e passa-se
-como argumento (é assim que `map/filter/reduce` funcionam, ver cap. 12 e 16):
+Lambdas are first-class values — stored in a variable and passed
+as an argument (this is how `map/filter/reduce` work, see ch. 12 and 16):
 
 ```kf
 main() {
@@ -115,19 +117,19 @@ main() {
 }
 ```
 
-> **Nota:** não existe tipo de função **anotado** como parâmetro declarado
-> (`(Int) -> Int f` não compila). A função chega como lambda anônimo no ponto
-> de chamada.
+> **Note:** there is no **annotated** function type as a declared parameter
+> (`(Int) -> Int f` does not compile). The function arrives as an anonymous lambda at the
+> call site.
 
-## Exercícios
+## Exercises
 
-1. Escreva `Int maximo(Int a, Int b)` em expression body e use-a.
-2. Escreva `Int fib(Int n)` recursivo e imprima `fib(10)`.
-3. Crie `listOf(1,2,3,4).map(...)` que devolva os quadrados. Compare com um
-   loop manual — qual expressa melhor a intenção?
-4. Escreva uma função com default parameter que gere uma saudação
-   personalizada.
+1. Write `Int maximo(Int a, Int b)` as an expression body and use it.
+2. Write a recursive `Int fib(Int n)` and print `fib(10)`.
+3. Create `listOf(1,2,3,4).map(...)` that returns the squares. Compare with a
+   manual loop — which expresses the intention better?
+4. Write a function with a default parameter that generates a personalized
+   greeting.
 
-## Próximo passo
+## Next step
 
-[Classes e Objetos →](07-classes-and-objects.md)
+[Classes and Objects →](07-classes-and-objects.md)

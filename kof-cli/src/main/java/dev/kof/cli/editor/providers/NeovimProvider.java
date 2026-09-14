@@ -10,11 +10,17 @@ import java.util.regex.Pattern;
 
 /** Neovim — plugin lua apontando para `kof lsp` (degraus 5+). */
 public final class NeovimProvider extends AbstractEditorIntegration {
+    @Override
     public String id() { return "neovim"; }
+    @Override
     public String displayName() { return "Neovim"; }
+    @Override
     public String integrationName() { return "Kof for Neovim"; }
+    @Override
     protected List<String> executables() { return List.of("nvim"); }
+    @Override
     protected List<String> configDirs() { return List.of(".config/nvim"); }
+    @Override
     protected Pattern versionPattern() { return Pattern.compile("v(\\d+\\.\\d+\\.\\d+)"); }
 
     @Override

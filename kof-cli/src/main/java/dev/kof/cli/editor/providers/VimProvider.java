@@ -10,11 +10,17 @@ import java.util.regex.Pattern;
 
 /** Vim — filetype/syntax/indent/compiler + LSP (degraus 6+). */
 public final class VimProvider extends AbstractEditorIntegration {
+    @Override
     public String id() { return "vim"; }
+    @Override
     public String displayName() { return "Vim"; }
+    @Override
     public String integrationName() { return "Kof for Vim"; }
+    @Override
     protected List<String> executables() { return List.of("vim"); }
+    @Override
     protected List<String> configDirs() { return List.of(".vim"); }
+    @Override
     protected Pattern versionPattern() { return Pattern.compile("Vi IMproved (\\d+\\.\\d+)"); }
 
     @Override

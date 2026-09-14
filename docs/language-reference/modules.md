@@ -1,24 +1,26 @@
-# Módulos, Pacotes e Imports
+[English](modules.md) | [Português](modules.pt_BR.md)
 
-**Status:** Stable (exceto onde etiquetado) · **Evidência:** `Parser.parsePackage`/`parseImports`, `CompilerImports.java`, `MemberResolver.qualifyViaImports`, `CompilerTypes.java:48-138`
+# Modules, Packages and Imports
 
----
-
-## 1. Unidade de compilação
-
-A unidade de compilação é **um arquivo `.kf`** (ou `.ks` no KofScript). O
-parser produz um `CompilationUnitNode(packageName, imports, declarations)`.
-
-- **`package` é opcional**; ausente → pacote `""` (pacote "default", classe vai
-  para `Default/Main`).
-- **`import` vem depois de `package`, antes das declarações.**
-- **Não há** `module` keyword, nem `namespace`, nem arquivo de módulo separado.
-  O "módulo" do Kof é o **diretório raiz** passado ao compilador (module root),
-  usado para expandir imports de diretório.
+**Status:** Stable (except where labeled) · **Evidence:** `Parser.parsePackage`/`parseImports`, `CompilerImports.java`, `MemberResolver.qualifyViaImports`, `CompilerTypes.java:48-138`
 
 ---
 
-## 2. Pacotes
+## 1. Compilation unit
+
+The compilation unit is **one `.kf` file** (or `.ks` in KofScript). The
+parser produces a `CompilationUnitNode(packageName, imports, declarations)`.
+
+- **`package` is optional**; absent → package `""` (the "default" package, the class goes
+  to `Default/Main`).
+- **`import` comes after `package`, before the declarations.**
+- **There is no** `module` keyword, nor `namespace`, nor a separate module file.
+  Kof's "module" is the **root directory** passed to the compiler (module root),
+  used to expand directory imports.
+
+---
+
+## 2. Packages
 
 `ebnf
 package-declaration = "package" , identifier , { "." , identifier } , [ ";" ]
@@ -28,9 +30,9 @@ package-declaration = "package" , identifier , { "." , identifier } , [ ";" ]
 package com.dev.app
 `
 
-- Nome pontuado, semântica de namespace (mapeia para pacote JVM).
-- **Não há** diretivas de visibilidade de pacote além de `public`/`private`/
-  `protected` por membro.
+- Dotted name, namespace semantics (maps to a JVM package).
+- **There are no** package visibility directives besides `public`/`private`/
+  `protected` per member.
 
 ---
 
@@ -42,65 +44,65 @@ import-path = identifier , { "." , identifier } , [ ".*" ]
 `
 
 `kof
-import com.dev.NodeUI          // classe específica
-import com.dev.*               // wildcard de pacote
-import kof.json                // módulo stdlib
+import com.dev.NodeUI          // specific class
+import com.dev.*               // package wildcard
+import kof.json                // stdlib module
 `
 
-### 3.1 O que um import faz
+### 3.1 What an import does
 
-1. **Qualificação de nome simples**: `qualifyViaImports` resolve um nome simples
-   (sem `.`/`<`/`[]`) pelo **primeiro** import não-wildcard que termina em
-   `.<nome>` (`MemberResolver.qualifyViaImports`).
-   - **Wildcards `import a.b.*` NÃO qualificam nomes simples** (:57) — só
-     trazem as declarações para o escopo (item 3.2).
-   - Import **ambíguo** (dois imports com o mesmo nome simples) → **não chuta**:
-     o tipo é preservado sem qualificação (`simpleNamePackage` retorna `null`,
-     `CompilerTypes.java:102-122`). **Stable** (regra anti-chute do bug 32).
-2. **Type-arguments são qualificados recursivamente** (`qualifyDeep`,
-   `CompilerTypes.java:48-94`): `List<NodeUI>` com `import com.dev.NodeUI`
-   resolve para `List<com.dev.NodeUI>` (bug 32). Nome simples do arg resolvido
-   por imports → classes do módulo.
-3. **Expansão de diretório** (`CompilerImports.expandKofImports`,
-   chamada em `CompilerDriver.java`, método `compileSources`): `import a.b` onde `a/b/` é diretório no module
-   root **puxa todos os `.kf` daquele diretório** para a unidade (fixpoint ≤256
-   rodadas). É como arquivos separados do mesmo pacote se enxergam.
+1. **Simple name qualification**: `qualifyViaImports` resolves a simple name
+   (without `.`/`<`/`[]`) through the **first** non-wildcard import that ends in
+   `.<name>` (`MemberResolver.qualifyViaImports`).
+   - **`import a.b.*` wildcards do NOT qualify simple names** (:57) — they only
+     bring the declarations into scope (item 3.2).
+   - An **ambiguous** import (two imports with the same simple name) → **does not guess**:
+     the type is preserved without qualification (`simpleNamePackage` returns `null`,
+     `CompilerTypes.java:102-122`). **Stable** (the anti-guess rule of bug 32).
+2. **Type-arguments are qualified recursively** (`qualifyDeep`,
+   `CompilerTypes.java:48-94`): `List<NodeUI>` with `import com.dev.NodeUI`
+   resolves to `List<com.dev.NodeUI>` (bug 32). The simple name of the arg resolved
+   by imports → classes of the module.
+3. **Directory expansion** (`CompilerImports.expandKofImports`,
+   called in `CompilerDriver.java`, method `compileSources`): `import a.b` where `a/b/` is a directory in the module
+   root **pulls all the `.kf` of that directory** into the unit (fixpoint ≤256
+   rounds). This is how separate files of the same package see each other.
 
-### 3.2 Imports transitivos e colisões
+### 3.2 Transitive imports and collisions
 
-- Importar um pacote que importa outro **re-expõe** as declarações (import
-  transitivo não é colisão — PKG005 corrigido).
-- Dois `main()` em arquivos do mesmo módulo → **`PKG002`** (*probe*: "module
+- Importing a package that imports another **re-exposes** the declarations (a
+  transitive import is not a collision — PKG005 fixed).
+- Two `main()` in files of the same module → **`PKG002`** (*probe*: "module
   has 2 main() functions; expected exactly one").
 
 ---
 
-## 4. Resolução de nomes (ordem)
+## 4. Name resolution (order)
 
-Para um identificador `x` (ver [type-system.md](type-system.md) §6):
+For an identifier `x` (see [type-system.md](type-system.md) §6):
 
 `text
-escopo local (cadeia de pais)
-  → args em main
-  → constante de enum não-qualificada
-  → membro da classe corrente (resolveInHierarchy BFS)
-  → tipos/classes do módulo (knownClasses, fase preDeclareType)
+local scope (parent chain)
+  → args in main
+  → unqualified enum constant
+  → member of the current class (resolveInHierarchy BFS)
+  → types/classes of the module (knownClasses, preDeclareType phase)
   → imports (qualifyViaImports)
-  → namespaces builtin (json, process, KofWeb, …)
-  → senão SEM011
+  → builtin namespaces (json, process, KofWeb, …)
+  → otherwise SEM011
 `
 
-- **Não há** `import static`, nem renomeação (`import a.b as C`), nem
+- **There is no** `import static`, nor renaming (`import a.b as C`), nor
   `export`/re-export.
-- **Não há** resolução por wildcard de pacote para nome simples (item 3.1).
+- **There is no** package-wildcard resolution for a simple name (item 3.1).
 
 ---
 
 ## 5. Standard library (`kof.*`)
 
-A stdlib é um conjunto de **namespaces** acessíveis por `import kof.<área>` e
-usados via objeto global (`json.encode`, `http.get`, …). Os namespaces
-reconhecidos pelo analisador (`SemExpressionTyper`/`MemberResolver`, lista de namespaces builtin):
+The stdlib is a set of **namespaces** accessible via `import kof.<area>` and
+used through a global object (`json.encode`, `http.get`, …). The namespaces
+recognized by the analyzer (`SemExpressionTyper`/`MemberResolver`, builtin namespace list):
 
 `text
 json  process  KofWeb  KofConfig  KofCache  KofGpu  KofDb  KofOrm
@@ -108,27 +110,27 @@ KofLog  KofSecurity  KofValidation  KofObservability  KofHttp  KofMq
 KofTime  KofScheduler  KofTetris  KofMedia  KofUi  Theme
 `
 
-Cada área tem documento próprio em `docs/stdlib*.md` (não duplicados aqui). A
-**linguagem** define que esses nomes existem e como resolvem; a **biblioteca**
-define as assinaturas. **Experimental** como superfície (muda entre versões).
+Each area has its own document in `docs/stdlib*.md` (not duplicated here). The
+**language** defines that these names exist and how they resolve; the
+**library** defines the signatures. **Experimental** as a surface (changes between versions).
 
 ---
 
-## 6. Interop com o target
+## 6. Interop with the target
 
-- **JVM**: tipos Java são acessíveis por nome qualificado (`java.util.Date`)
-  quando no classpath (`ExternalClasspath.resolveMethod`, `:1535-1549`).
+- **JVM**: Java types are accessible by qualified name (`java.util.Date`)
+  when on the classpath (`ExternalClasspath.resolveMethod`, `:1535-1549`).
   **Target-specific.**
-- **Native/JS**: não há interop com tipos do host da mesma forma. **Unspecified.**
-- **Annotations** (`@Name`, `@JsonFormat`) são metadados de interop emitidos no
-  bytecode JVM. **Target-specific** (só JVM preserva).
+- **Native/JS**: there is no interop with host types the same way. **Unspecified.**
+- **Annotations** (`@Name`, `@JsonFormat`) are interop metadata emitted in the
+  JVM bytecode. **Target-specific** (only JVM preserves them).
 
 ---
 
-## 7. Arquivos e extensão
+## 7. Files and extension
 
-- **`.kf`** — Kof (compilável para todos os targets).
-- **`.ks`** — KofScript: **Kof puro executado direto** (sem `let`/`const`/
-  `async`/`fn` — não é JavaScript). O wrapper só adiciona o modelo de script
-  (`var`/`val` de topo → `KofScriptGlobals`; statements → `main()`).
-- **Não há** header/source separado, nem `.kfi`, nem pré-processador.
+- **`.kf`** — Kof (compilable to all targets).
+- **`.ks`** — KofScript: **pure Kof executed directly** (no `let`/`const`/
+  `async`/`fn` — it is not JavaScript). The wrapper only adds the script model
+  (top-level `var`/`val` → `KofScriptGlobals`; statements → `main()`).
+- **There is no** separate header/source, nor `.kfi`, nor preprocessor.

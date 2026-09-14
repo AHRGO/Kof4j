@@ -1,29 +1,31 @@
-# DEBUG-ADAPTER.md — kof-debug (Debug Adapter DAP)
+[English](debug-adapter.md) | [Português](debug-adapter.pt_BR.md)
 
-**Status:** MVP implementado e validado (JVM; JDWP cru, sem jdk.jdi)
-**Data:** 27 de agosto de 2026
-**Versão:** 0.4.0-beta (7 targets; free-list + pthread spawn + FP XMM)
+# DEBUG-ADAPTER.md — kof-debug (DAP Debug Adapter)
+
+**Status:** MVP implemented and validated (JVM; raw JDWP, without jdk.jdi)
+**Date:** August 27, 2026
+**Version:** 0.4.0-beta (7 targets; free-list + pthread spawn + FP XMM)
 
 ---
 
-## 1. Objetivo
+## 1. Objective
 
-Componente `kof-debug` que expõe a execução Kof via **DAP** (Debug Adapter
-Protocol) — o mesmo protocolo dos editores modernos (VS Code, Neovim,
+The `kof-debug` component exposes Kof execution via **DAP** (Debug Adapter
+Protocol) — the same protocol used by modern editors (VS Code, Neovim,
 IntelliJ, Kof Editor).
 
-Não criar protocolo proprietário.
+Do not create a proprietary protocol.
 
-## 2. Responsabilidades
+## 2. Responsibilities
 
-- iniciar programas (`launch`);
-- anexar a processos (`attach` — futuro);
-- controle de execução: continue, pause, step over/into/out, restart, terminate;
-- breakpoints (source; depois conditional, hit count, exception);
-- stack traces, scopes, locals, arguments, campos;
-- eventos de exceção;
-- inspeção de variáveis com tipos Kof;
-- avaliação de expressões (futuro — com type system, nunca Java/JS cru).
+- launch programs (`launch`);
+- attach to processes (`attach` — future);
+- execution control: continue, pause, step over/into/out, restart, terminate;
+- breakpoints (source; later conditional, hit count, exception);
+- stack traces, scopes, locals, arguments, fields;
+- exception events;
+- variable inspection with Kof types;
+- expression evaluation (future — with the type system, never raw Java/JS).
 
 ## 3. Interface
 
@@ -31,63 +33,63 @@ Não criar protocolo proprietário.
 kof-debug (DAP over stdio — Content-Length framing)
     ↓
 JVM: launch java -agentlib:jdwp + JDWP client (raw wire protocol)
-Native: launch binary + DWARF/frame info   (futuro)
-JS: launch node --inspect + Inspector protocol  (futuro)
+Native: launch binary + DWARF/frame info   (future)
+JS: launch node --inspect + Inspector protocol  (future)
 ```
 
-O CLI (`kof debug`) é apenas uma interface — a lógica vive no adaptador.
-O cliente JDWP é implementado sobre o **wire protocol cru** (sem
-dependência do módulo `jdk.jdi`) para manter o tooling autocontido.
+The CLI (`kof debug`) is only an interface — the logic lives in the adapter.
+The JDWP client is implemented over the **raw wire protocol** (without
+depending on the `jdk.jdi` module) to keep the tooling self-contained.
 
-## 3.1 Fluxo DAP implementado (JVM)
+## 3.1 Implemented DAP flow (JVM)
 
 ```text
 initialize            → capabilities (configurationDone, terminate)
-launch                → compila (JVM + debug info), porta livre,
+launch                → compiles (JVM + debug info), free port,
                         java -agentlib:jdwp=transport=dt_socket,server=y,
-                        suspend=y,address=<porta>, conecta e registra o
-                        ClassPrepare de Default.Main (suspend ALL)
-setBreakpoints        → registra as linhas Kof (aplicadas no ClassPrepare)
+                        suspend=y,address=<port>, connects and registers the
+                        ClassPrepare of Default.Main (suspend ALL)
+setBreakpoints        → registers the Kof lines (applied on ClassPrepare)
 configurationDone     → VM.Resume
-[evento] stopped      → breakpoint atingido (thread + motivo)
-stackTrace            → frames Kof: nome da função, arquivo, linha
+[event] stopped       → breakpoint hit (thread + reason)
+stackTrace            → Kof frames: function name, file, line
 continue              → VM.Resume
-disconnect/terminate  → VM.Dispose + kill do processo + limpeza
+disconnect/terminate  → VM.Dispose + process kill + cleanup
 ```
 
-## 3.2 Particularidades do JDWP (JDK 25) descobertas na implementação
+## 3.2 JDWP (JDK 25) particularities discovered during implementation
 
-- event kinds do JDK 25: `VMStart=90`, `VMDeath=99`, `ClassPrepare=8`
-  (os valores clássicos do spec — 0, 15, 6 — não são usados pelo HotSpot);
-- `ClassMatch` é o modifier **5** (o modifier 1 é `Count` — um erro aqui
-  faz o request ser aceito mas o evento nunca disparar);
-- `LocationOnly` é o modifier **7**, com o location `tag(1) + typeID +
-  methodID + codeIndex` (o tag é obrigatório — sem ele o JVM responde
+- JDK 25 event kinds: `VMStart=90`, `VMDeath=99`, `ClassPrepare=8`
+  (the classic spec values — 0, 15, 6 — are not used by HotSpot);
+- `ClassMatch` is modifier **5** (modifier 1 is `Count` — a mistake here
+  makes the request be accepted but the event never fires);
+- `LocationOnly` is modifier **7**, with the location `tag(1) + typeID +
+  methodID + codeIndex` (the tag is mandatory — without it the JVM responds
   `INVALID_OBJECT`);
-- `Method.LineTable` retorna `[codeIndex(long), lineCode(int)]` por
-  entrada (ordem long/line, não line/codeIndex);
-- `ReferenceType.Methods` retorna `methodID + name + signature +
-  modifiers` (4 campos);
-- `ThreadReference.Frames` é o command set **11** (o 10 é StackFrame) e
-  o HotSpot rejeita `length > 5` com `INVALID_LENGTH` (504);
-- o handler de eventos roda fora do event loop (dispatch em thread) —
-  comandos JDWP emitidos pelo handler precisam do loop para receber
-  replies (sem isso: deadlock de timeout);
-- eventos `Composite` têm `suspendPolicy + eventCount` antes dos kinds.
+- `Method.LineTable` returns `[codeIndex(long), lineCode(int)]` per
+  entry (order long/line, not line/codeIndex);
+- `ReferenceType.Methods` returns `methodID + name + signature +
+  modifiers` (4 fields);
+- `ThreadReference.Frames` is command set **11** (10 is StackFrame) and
+  HotSpot rejects `length > 5` with `INVALID_LENGTH` (504);
+- the event handler runs outside the event loop (dispatch on a thread) —
+  JDWP commands emitted by the handler need the loop to receive
+  replies (without it: timeout deadlock);
+- `Composite` events have `suspendPolicy + eventCount` before the kinds.
 
-## 3.3 Limitações do MVP
+## 3.3 MVP limitations
 
-- `stackTrace` retorna até 5 frames (limite do JDK 25) e o frame atual
-  mostra a função/linha Kof;
-- `scopes`/`variables` são placeholders (locals por frame ficam na
-  Fase 7, via `StackFrame.GetValues`);
-- breakpoints são reportados como `verified: false` (a verificação
-  efetiva via LineTable fica na Fase 7);
-- sem stepping, pause, attach, exception breakpoints nem avaliação.
+- `stackTrace` returns up to 5 frames (JDK 25 limit) and the current frame
+  shows the Kof function/line;
+- `scopes`/`variables` are placeholders (per-frame locals are left to
+  Phase 7, via `StackFrame.GetValues`);
+- breakpoints are reported as `verified: false` (the effective
+  verification via LineTable is left to Phase 7);
+- no stepping, pause, attach, exception breakpoints or evaluation.
 
-## 4. Tipos de runtime
+## 4. Runtime types
 
-O adaptador traduz representações de backend para tipos Kof:
+The adapter translates backend representations to Kof types:
 
 | Kof | JVM | Native | JS |
 |-----|-----|--------|-----|
@@ -95,11 +97,11 @@ O adaptador traduz representações de backend para tipos Kof:
 | `User` | User.class | struct | object |
 | `String` | java.lang.String | KofString | string |
 
-O usuário sempre vê o tipo Kof.
+The user always sees the Kof type.
 
-## 5. Fases
+## 5. Phases
 
-- Fase 3 (MVP): launch JVM + breakpoints por linha Kof + stack — ✅
-- Fase 7: locals por frame (`StackFrame.GetValues`), stepping, breakpoints
-  verificados, exception breakpoints, avaliação com o type system
-- Depois: attach, Native (DWARF), JS (source maps)
+- Phase 3 (MVP): JVM launch + breakpoints by Kof line + stack — ✅
+- Phase 7: per-frame locals (`StackFrame.GetValues`), stepping, verified
+  breakpoints, exception breakpoints, evaluation with the type system
+- Later: attach, Native (DWARF), JS (source maps)

@@ -1,159 +1,160 @@
+[English](specification-gaps-0.3.0-snapshot.md) | [Português](specification-gaps-0.3.0-snapshot.pt_BR.md)
+
 // Specification Gaps — Kof 0.3.0-beta
 
-Este documento lista gaps conhecidos na linguagem/Compilador Kof 
-(atualizado em 08/09/2026). Gaps abertos são acompanhados na roadmap 
-e podem bloquear ou limitar funcionalidades em algum target.
+This document lists known gaps in the Kof language/Compiler 
+(updated on 08/09/2026). Open gaps are tracked on the roadmap 
+and may block or limit functionality on some target.
 
 ## Gap conventions
 
-- **Códigos**: prefixes curtos como `R6`, `HW001`, `CONC001`, etc.
-- **Status**: `aberto`, `fechado`, `parcial`
+- **Codes**: short prefixes such as `R6`, `HW001`, `CONC001`, etc.
+- **Status**: `open`, `closed`, `partial`
 - **Targets**: `JVM`, `Native`, `JS`
-- **Referência**: cada gap deve ter issues/referências nos testes e docs
+- **Reference**: every gap must have issues/references in the tests and docs
 
 ---
 
-## Gap R6 — putfield de campos `Int`
+## Gap R6 — putfield of `Int` fields
 
-**Status**: aberto  
-**Plataforma**: JVM, Native, JS  
-**Desde**: 0.0.4-alpha  
-**Última atualização**: 08/09/2026  
+**Status**: open  
+**Platform**: JVM, Native, JS  
+**Since**: 0.0.4-alpha  
+**Last updated**: 08/09/2026  
 
-**Descrição**: O compilador Kof gera bytecode incorreto ao fazer atribuição 
-de valor `Int` a campo de classe (`putfield`). Isso causa `VerifyError` em 
-tempo de execução quando o código tenta atribuir um `Int` a um campo de classe 
-de um objeto.
+**Description**: The Kof compiler generates incorrect bytecode when assigning 
+an `Int` value to a class field (`putfield`). This causes a `VerifyError` at 
+runtime when the code tries to assign an `Int` to a class field 
+of an object.
 
-**Exemplo problemático**:
+**Problematic example**:
 ```kof
 class Foo {
     Int x = 0
-    void setX(Int v) { x = v }  // Pode gerar VerifyError em runtime
+    void setX(Int v) { x = v }  // May generate VerifyError at runtime
 }
 ```
 
-**Impacto**: Qualquer código Kof que tente atribuição de `Int` a campos de 
-classe em tempo de execução pode falhar com `VerifyError`. A maioria do código 
-seguro usa apenas variáveis locais ou `record` (dados imutáveis), que não 
-sofrem desse problema.
+**Impact**: Any Kof code that tries to assign an `Int` to class 
+fields at runtime may fail with `VerifyError`. Most safe code 
+uses only local variables or `record` (immutable data), which do not 
+suffer from this problem.
 
-**Workaround**: Use `record` para dados imutáveis ou variáveis locais em vez 
-de campos de classe mutáveis.
+**Workaround**: Use `record` for immutable data or local variables instead 
+of mutable class fields.
 
-**Roadmap**: Correção no backend de codegen do compilador Kof para evitar 
-`putfield` de `Int` em campos de classe. Priority: high.
-
----
-
-## Gap HW001 — Kernel bare-metal
-
-**Status**: documentado como decisão de design  
-**Plataforma**: Native  
-**Descrição**: O backend Native do Kof gera ELF x86-64 que depende do Linux + 
-glibc. O ponto de entrada `_start` usa `SYS_gettid`/`exit_group`, aloca com 
-`mmap`, usa `pthread_create`. Não configura GDT/IDT/paging/ring0 e não expõe 
-primitivos de hardware (`in/out`, `cli/sti`, `lgdt/lidt`, `int 0x80`, IRQ).
-
-**A IR do Kof tem 30 ops de alto nível; não há assembly inline nem acesso a 
-hardware.**
-
-**Decisão (design — não silencioso)**: O KofOS é portado como kernel hosted 
-em Kof puro, preservando a arquitetura e funcionalidade do VibeOS (scheduler, 
-processos, IPC, syscalls, serviços microkernel, VFS, AppFS, desktop, terminal, 
-file manager, editor, task manager, jogos) e o mesmo branding e fluxo de boot. 
-A camada de hardware (bootloader BIOS, GDT/IDT real, PIT, PIC, ports de I/O, 
-ring0/ring3 real) é abstraída.
-
-Quando o compilador Kof ganhar modo freestanding + primitivos de hardware, 
-o kernel pode ser retargetado a x86 real sem reescrever a lógica.
-
-**Impacto**: O KofOS preserva a arquitetura VibeOS (boot → scheduler → 
-memória → syscalls → IPC → VFS → userland), mas roda como aplicação hosted 
-no runtime Kof, não como kernel bare-metal.
+**Roadmap**: Fix in the Kof compiler codegen backend to avoid 
+`putfield` of `Int` on class fields. Priority: high.
 
 ---
 
-## Gap CONC001 — Concorrência no Native
+## Gap HW001 — Bare-metal kernel
 
-**Status**: fechado (31/08)  
-**Plataforma**: Native  
-**Desde**: 0.0.5-alpha  
-**Fechado**: 31/08  
+**Status**: documented as a design decision  
+**Platform**: Native  
+**Description**: The Kof Native backend generates ELF x86-64 that depends on Linux + 
+glibc. The entry point `_start` uses `SYS_gettid`/`exit_group`, allocates with 
+`mmap`, uses `pthread_create`. It does not configure GDT/IDT/paging/ring0 and does not expose 
+hardware primitives (`in/out`, `cli/sti`, `lgdt/lidt`, `int 0x80`, IRQ).
 
-**Descrição**: Native concurrency com `pthread_create` + trampoline + `await`/`pthread_join` + allocator thread-safe futex + join implícito no fim do `main`.
+**The Kof IR has 30 high-level ops; there is no inline assembly or hardware access.**
 
-**Estado**: Corrigido. O backend Native agora suporta concorrência via `spawn`/`await` 
-com threads nativas do sistema operacional.
+**Decision (design — not silent)**: KofOS is ported as a hosted kernel 
+in pure Kof, preserving the architecture and functionality of VibeOS (scheduler, 
+processes, IPC, syscalls, microkernel services, VFS, AppFS, desktop, terminal, 
+file manager, editor, task manager, games) and the same branding and boot flow. 
+The hardware layer (BIOS bootloader, real GDT/IDT, PIT, PIC, I/O ports, 
+real ring0/ring3) is abstracted.
+
+When the Kof compiler gains a freestanding mode + hardware primitives, 
+the kernel can be retargeted to real x86 without rewriting the logic.
+
+**Impact**: KofOS preserves the VibeOS architecture (boot → scheduler → 
+memory → syscalls → IPC → VFS → userland), but runs as a hosted application 
+on the Kof runtime, not as a bare-metal kernel.
 
 ---
 
-## Gap CONC003 — Async no JS
+## Gap CONC001 — Concurrency on Native
 
-**Status**: parcial  
-**Plataforma**: JS  
-**Desde**: 0.2.6-beta  
+**Status**: closed (31/08)  
+**Platform**: Native  
+**Since**: 0.0.5-alpha  
+**Closed**: 31/08  
 
-**Descrição**: Execução sequencial — `spawn`/`await` cobrem statement e expression; 
-async real de event-loop = CONC003 parcial.
+**Description**: Native concurrency with `pthread_create` + trampoline + `await`/`pthread_join` + futex thread-safe allocator + implicit join at the end of `main`.
 
-**Estado**: Em desenvolvimento. `spawn` e `await` funcionam para tarefas 
-independentes, mas async real de event-loop ainda não está completo.
+**State**: Fixed. The Native backend now supports concurrency via `spawn`/`await` 
+with native operating system threads.
 
 ---
 
-## Gap WEB001 — Web handler no Native/JS
+## Gap CONC003 — Async on JS
 
-**Status**: parcial (JVM: fechado 30/08)  
-**Plataforma**: Native, JS  
-**Desde**: 0.2.6-beta  
+**Status**: partial  
+**Platform**: JS  
+**Since**: 0.2.6-beta  
 
-**Descrição**: Web handler no JVM (`web.app()`) com rotas `get/post/put/delete/patch/options`, 
+**Description**: Sequential execution — `spawn`/`await` cover statement and expression; 
+real event-loop async = CONC003 partial.
+
+**State**: In development. `spawn` and `await` work for independent 
+tasks, but real event-loop async is not yet complete.
+
+---
+
+## Gap WEB001 — Web handler on Native/JS
+
+**Status**: partial (JVM: closed 30/08)  
+**Platform**: Native, JS  
+**Since**: 0.2.6-beta  
+
+**Description**: Web handler on the JVM (`web.app()`) with `get/post/put/delete/patch/options` routes, 
 `status(201, body)`, `headerSet`, WebSocket, SSE, `listenSecure` TLS — 30/08. 
 Native/JS: WEB001.
 
-**Estado**: JVM tem implementação completa. Native/JS ainda em desenvolvimento.
+**State**: JVM has a complete implementation. Native/JS still in development.
 
 ---
 
-## Gap MQ001 — Filas produtor/consumidor
+## Gap MQ001 — Producer/consumer queues
 
-**Status**: fechado (01/09)  
-**Plataforma**: JVM, Native, JS  
+**Status**: closed (01/09)  
+**Platform**: JVM, Native, JS  
 
-**Descrição**: Filas produtor/consumidor (`kof.mq`) nos 3 targets.
+**Description**: Producer/consumer queues (`kof.mq`) on the 3 targets.
 
-**Estado**: Corrigido. `kof.mq` funciona em todos os targets.
+**State**: Fixed. `kof.mq` works on all targets.
 
 ---
 
-## Convenções de gap
+## Gap conventions
 
-- **Códigos**: prefixes curtos como `R6`, `HW001`, `CONC001`, etc.
-- **Status**: `aberto`, `fechado`, `parcial`
+- **Codes**: short prefixes such as `R6`, `HW001`, `CONC001`, etc.
+- **Status**: `open`, `closed`, `partial`
 - **Targets**: `JVM`, `Native`, `JS`
-- **Referência**: cada gap deve ter issues/referências nos testes e docs
-- **Workaround**: documented em cada gap específico
+- **Reference**: every gap must have issues/references in the tests and docs
+- **Workaround**: documented in each specific gap
 
 ---
 
-## Roadmap de gaps pendentes
+## Roadmap of pending gaps
 
-1. **R6** — Corrigir putfield de Int no compilador (Priority: high)
-2. **CONC003** — Async real no JS (Priority: medium)
-3. **WEB001** — Web handler no Native/JS (Priority: medium)
-4. **HW001** — Kernel bare-metal (depende de freestanding no compilador)
-
----
-
-**Fonte**: Análise de bytecode compilado Kof 0.3.0-beta + verificação de runtime 
-`VerifyError` + roadmap da equipe KofLang.
-
-**Mantido por**: Equipe KofLang.  
-**Atualizado**: 08/09/2026.
+1. **R6** — Fix putfield of Int in the compiler (Priority: high)
+2. **CONC003** — Real async on JS (Priority: medium)
+3. **WEB001** — Web handler on Native/JS (Priority: medium)
+4. **HW001** — Bare-metal kernel (depends on freestanding in the compiler)
 
 ---
 
-Estratégia documentada conforme AGENTS.md — regras de modo autônomo, intenção não mecanismo, 
-complexidade pertence à plataforma, represente o domínio, zero cerimônia, null alucinação 
-evitada, multi-target honesto.
+**Source**: Analysis of compiled Kof 0.3.0-beta bytecode + runtime verification 
+`VerifyError` + KofLang team roadmap.
+
+**Maintained by**: KofLang Team.  
+**Updated**: 08/09/2026.
+
+---
+
+Strategy documented according to AGENTS.md — autonomous mode rules, intention not mechanism, 
+complexity belongs to the platform, represent the domain, zero ceremony, null hallucination 
+avoided, honest multi-target.

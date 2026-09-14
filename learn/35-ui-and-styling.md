@@ -1,15 +1,17 @@
-# 35 — UI e Estilização
+[English](35-ui-and-styling.md) | [Português](35-ui-and-styling.pt_BR.md)
 
-> O visual é orientado a objetos: uma interface é uma árvore de objetos
-> composta em código. A cor é um cidadão de 32 bits com paleta nomeada —
-> nada de converter hex ou ANSI na mão.
+# 35 — UI and Styling
 
-## A filosofia
+> The visual is object-oriented: an interface is a tree of objects
+> composed in code. Color is a 32-bit citizen with a named palette —
+> no converting hex or ANSI by hand.
 
-Em Kof, o visual não é um mundo à parte. Não há template, não há XML, não há
-linguagem de marcação. Há apenas **objetos compostos por objetos**, com o
-mesmo type system, o mesmo compilador e os mesmos backends do resto do
-código.
+## The philosophy
+
+In Kof, the visual is not a separate world. There is no template, no XML, no
+markup language. There are only **objects composed of objects**, with the
+same type system, the same compiler and the same backends as the rest of the
+code.
 
 ```text
 View
@@ -20,15 +22,15 @@ View
 └── Style { Color surface, ... }
 ```
 
-## Cor de 32 bits
+## 32-bit color
 
-Uma cor é um `Int` de 32 bits com semântica ARGB (`0xAARRGGBB`):
+A color is a 32-bit `Int` with ARGB semantics (`0xAARRGGBB`):
 
 ```kof
-var primary = 0xFF6750A4   // literais hex são nativos
+var primary = 0xFF6750A4   // hex literals are native
 ```
 
-A paleta nomeada evita conversões:
+The named palette avoids conversions:
 
 ```kof
 class Colors {
@@ -42,7 +44,7 @@ class Colors {
 }
 ```
 
-E o tipo sabe se apresentar:
+And the type knows how to present itself:
 
 ```kof
 class Color {
@@ -63,7 +65,7 @@ class Color {
 }
 ```
 
-## Estilo
+## Style
 
 ```kof
 class Style {
@@ -84,7 +86,7 @@ class Style {
 }
 ```
 
-## Composição de tela
+## Screen composition
 
 ```kof
 View homeView() {
@@ -98,24 +100,24 @@ View homeView() {
 }
 ```
 
-## Por que essa abordagem
+## Why this approach
 
-- **Um type system** — um estilo com campo errado não compila.
-- **Composição** — a tela é um valor: função, lista, condição, tudo vale.
-- **Multi-target** — a mesma árvore de objetos é desenhada por cada backend.
-- **Zero conversão** — a paleta é a API; hex e ANSI são detalhes internos.
+- **One type system** — a style with a wrong field does not compile.
+- **Composition** — the screen is a value: function, list, condition, everything counts.
+- **Multi-target** — the same object tree is drawn by each backend.
+- **Zero conversion** — the palette is the API; hex and ANSI are internal details.
 
-## Estado real (0.3.22-beta)
+## Actual state (0.3.22-beta)
 
-Esta visão está **implementada** como `kof.ui` (renderização KofJS):
-`Window`, `Label` (text/fontSize/bold/color), `Button` (ação por lambda com
-capturas), `Input`, `Column`/`Row`, `View`+`Style(background, foreground,
-padding, radius)`, `w.theme = Theme.dark()`, e o **Router** (Fase 7, 31/08:
-`Router.route/go/replace/back/forward/current/param/depth` + `Component` com
-lifecycle `onMount`/`onDispose`). A execução abre o webview
-nativo (WebKitGTK) e fechar a janela encerra o programa. Ver
-[`learn/35-kof-ui.md`](35-kof-ui.md) e [`learn/37-kofjs.md`](37-kofjs.md).
+This vision is **implemented** as `kof.ui` (KofJS rendering):
+`Window`, `Label` (text/fontSize/bold/color), `Button` (action via lambda with
+captures), `Input`, `Column`/`Row`, `View`+`Style(background, foreground,
+padding, radius)`, `w.theme = Theme.dark()`, and the **Router** (Phase 7, 31/08:
+`Router.route/go/replace/back/forward/current/param/depth` + `Component` with
+`onMount`/`onDispose` lifecycle). Execution opens the native webview
+(WebKitGTK) and closing the window terminates the program. See
+[`learn/35-kof-ui.md`](35-kof-ui.md) and [`learn/37-kofjs.md`](37-kofjs.md).
 
-Ver também: `docs/stdlib/COLOR.md` (paleta e semântica),
-`training/idioms/composition.md` (o padrão) e
+See also: `docs/stdlib/COLOR.md` (palette and semantics),
+`training/idioms/composition.md` (the pattern) and
 `training/idioms/collections.md`.

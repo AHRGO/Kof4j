@@ -1,43 +1,45 @@
-# Nomenclatura de Releases — Kof
+[English](release-naming.md) | [Português](release-naming.pt_BR.md)
 
-**Última atualização:** 30/08/2026
-**Versão atual:** 0.2.6-beta
+# Release Naming — Kof
+
+**Last updated:** 08/30/2026
+**Current version:** 0.2.6-beta
 
 ---
 
-## Formato da versão
+## Version format
 
 ```text
-MAJOR.MINOR.PATCH-<estágio>
+MAJOR.MINOR.PATCH-<stage>
 0.2.6-beta
 ```
 
-- `MAJOR.MINOR.PATCH` — semver padrão (`pom.xml` + arquivo `VERSION`).
-- **Estágio** — a **fase** (Alpha, Beta, RC, Stable) é sufixo; o **codinome** da
-  release vem da lista abaixo (futuro: `1.0.0-chevette`).
+- `MAJOR.MINOR.PATCH` — standard semver (`pom.xml` + `VERSION` file).
+- **Stage** — the **phase** (Alpha, Beta, RC, Stable) is a suffix; the release's
+  **codename** comes from the list below (future: `1.0.0-chevette`).
 
-## Estágios
+## Stages
 
-| Estágio | Significado | Status |
+| Stage | Meaning | Status |
 |---------|-------------|--------|
-| **Alpha** | Funcionalidades em construção, breaking changes esperadas, cobertura parcial | ✅ concluída |
-| **Beta** | Feature-complete nos alvos principais; quebras pontuais antes de 1.0 | ✅ **atual** |
-| **RC** | Paridade total dos targets, só correções de bug | futura |
-| **Stable** | 1.0 — compatibilidade garantida entre releases | futura | Releases ganham nome de codinome, em ordem alfabética, a partir do `Chevette` (ex.: `1.0.0-chevette`).
+| **Alpha** | Features under construction, breaking changes expected, partial coverage | ✅ completed |
+| **Beta** | Feature-complete on the main targets; occasional breaks before 1.0 | ✅ **current** |
+| **RC** | Full parity of targets, bug fixes only | future |
+| **Stable** | 1.0 — guaranteed compatibility between releases | future | Releases get a codename, in alphabetical order, starting from `Chevette` (e.g.: `1.0.0-chevette`).
 
 ---
 
-## Codinomes (lista completa, em ordem de uso)
+## Codenames (complete list, in order of use)
 
-Cada release de destaque ganha um codinome, em ordem alfabética — a lista já
-está definida de uma vez. Ao esgotar a lista, recomeça ou estende (decisão
-futura).
+Each notable release gets a codename, in alphabetical order — the list is
+already defined all at once. When the list runs out, it restarts or extends
+(future decision).
 
-| # | Codinome | Uso |
+| # | Codename | Use |
 |---|----------|-----|
-| 1 | Alpha | ✅ usada (fase inicial) |
-| 2 | Beta | ✅ usada (fase atual) |
-| 3 | Chevette | primeira release pós-Beta |
+| 1 | Alpha | ✅ used (initial phase) |
+| 2 | Beta | ✅ used (current phase) |
+| 3 | Chevette | first post-Beta release |
 | 4 | Diplomata | |
 | 5 | Escort | |
 | 6 | F-1000 | |
@@ -65,15 +67,15 @@ futura).
 
 ---
 
-## Regras
+## Rules
 
-1. **Codinome por release de destaque** — nem todo bump de patch ganha nome
-   (`0.2.6-beta` → `0.2.6-beta` não tem codinome; um corte marcante tipo
-   "Fase 6 Router + Fase 9 diffing fechadas" ganha).
-2. **`Alpha` e `Beta` já foram consumidos como fase**, não como codinome de
-   release específica — a lista de codinomes efetivamente começa no
+1. **Codename per notable release** — not every patch bump gets a name
+   (`0.2.6-beta` → `0.2.6-beta` has no codename; a landmark cut like
+   "Phase 6 Router + Phase 9 diffing closed" does).
+2. **`Alpha` and `Beta` have already been consumed as a phase**, not as a
+   codename for a specific release — the codename list effectively starts at
    `Chevette`.
-3. **Ordem é alfabética e fixa** — sem pular, sem reordenar, sem reservar
-   ("o Omega vai pra 1.0" não existe).
-4. O codinome aparece no `VERSION`, no changelog e no `kof version`
-   (ex.: `kof 1.0.0 (chevette)`).
+3. **The order is alphabetical and fixed** — no skipping, no reordering, no
+   reserving ("Omega goes to 1.0" does not exist).
+4. The codename appears in `VERSION`, in the changelog and in `kof version`
+   (e.g.: `kof 1.0.0 (chevette)`).

@@ -1,12 +1,14 @@
-# DEBUGGING_JS.md — Debug no target KofJS
+[English](debugging-js.md) | [Português](debugging-js.pt_BR.md)
 
-**Status:** Planejado — source maps futuros
-**Data:** 27 de agosto de 2026
-**Versão:** 0.4.0-beta (7 targets; free-list + pthread spawn + FP XMM)
+# DEBUGGING_JS.md — Debugging on the KofJS target
+
+**Status:** Planned — future source maps
+**Date:** August 27, 2026
+**Version:** 0.4.0-beta (7 targets; free-list + pthread spawn + FP XMM)
 
 ---
 
-## 1. Fluxo
+## 1. Flow
 
 ```text
 Kof Source
@@ -24,12 +26,12 @@ Editor
 
 ## 2. Source Maps
 
-O JsBackend gera `.mjs` + source maps que mapeiam cada linha JS para a
-linha Kof. Breakpoint em `main.kf:15` para na instrução JS correspondente.
+The JsBackend generates `.mjs` + source maps that map each JS line to the
+Kof line. A breakpoint at `main.kf:15` stops at the corresponding JS instruction.
 
-O usuário nunca procura o `.mjs` manualmente.
+The user never looks for the `.mjs` manually.
 
-## 3. Execução
+## 3. Execution
 
-`kof debug --target js app.kf` lança o runtime com `--inspect` e o
-adaptador conversa pelo protocolo do Inspector.
+`kof debug --target js app.kf` launches the runtime with `--inspect` and the
+adapter talks over the Inspector protocol.

@@ -1,18 +1,20 @@
-# 00 — Introdução
+[English](00-introduction.md) | [Português](00-introduction.pt_BR.md)
 
-> **Kof 0.4.0-beta — set 2026 — targets jvm/native/native.risc/native.arm/js/kofc**
+# 00 — Introduction
 
-## O que é Kof
+> **Kof 0.4.0-beta — Sep 2026 — targets jvm/native/native.risc/native.arm/js/kofc**
 
-Kof é uma linguagem de programação compilada para múltiplas plataformas.
+## What Kof is
 
-Ela existe por uma razão simples: Java é uma das plataformas mais poderosas do mundo, mas exige uma quantidade absurda de código para expressar ideias simples.
+Kof is a programming language compiled for multiple platforms.
 
-Kof mantém o poder da JVM e do ecossistema Java, mas remove a maior parte da ceremony. E agora, essa mesma linguagem gera binários nativos para Linux x86-64, RISC-V 64 (`native.risc`) e AArch64 (`native.arm`), ES Modules via KofJS (`js`) e binários C via **KofC** (`kof c <file.c>` nativo-only) — tudo a partir do mesmo frontend `intention->Kof->frontend->IR->backend->runtime`.
+It exists for a simple reason: Java is one of the most powerful platforms in the world, but it demands an absurd amount of code to express simple ideas.
 
-## A visão multiplatform
+Kof keeps the power of the JVM and the Java ecosystem, but removes most of the ceremony. And now, that same language generates native binaries for Linux x86-64, RISC-V 64 (`native.risc`) and AArch64 (`native.arm`), ES Modules via KofJS (`js`) and C binaries via **KofC** (`kof c <file.c>` native-only) — all from the same frontend `intention->Kof->frontend->IR->backend->runtime`.
 
-Kof não é apenas uma linguagem para a JVM. É uma linguagem que pode compilar para diferentes targets:
+## The multiplatform vision
+
+Kof is not just a language for the JVM. It is a language that can compile to different targets:
 
 ```text
                          KOF
@@ -33,22 +35,22 @@ Kof não é apenas uma linguagem para a JVM. É uma linguagem que pode compilar 
         JVM             OS/CPU         Engine JS    Kof Runtime
 ```
 
-**A linguagem não muda. O target muda.**
+**The language does not change. The target changes.**
 
-Isso significa que você pode escrever o mesmo código Kof e compilar para:
-- **JVM** — bytecode `.class` que roda em qualquer JVM
-- **Native** — executável ELF x86-64 (`--target=native`) que roda direto no Linux
-- **Native RISC-V** — ELF riscv64 via `--target=native.risc` (cross com `riscv64-linux-gnu-as/ld` + qemu, placeholder separado de `native`)
-- **Native ARM** — ELF aarch64 via `--target=native.arm` (cross com `aarch64-linux-gnu-as/ld` + qemu)
-- **KofJS** — ES Modules (ECMAScript 2022+) executados na engine JS
-  embarcada (sem Node); `kof.ui` renderiza em webview nativo ou browser.
-  Ver [capítulo 37](37-kofjs.md).
-- **KofScript** — execução direta com `kof script` / `kof repl`, `let`/`const` no topo viram `KofScriptGlobals` persistentes, `--watch` re-executa ao salvar
-- **KofC** — `kof c <file.c>` compila um subset de C (`int` globals, `void` funcs, `if`/`while`/`*(int*)`/`&`) direto para ELF x86-64 nativo-only
+This means you can write the same Kof code and compile it to:
+- **JVM** — `.class` bytecode that runs on any JVM
+- **Native** — ELF x86-64 executable (`--target=native`) that runs directly on Linux
+- **Native RISC-V** — ELF riscv64 via `--target=native.risc` (cross with `riscv64-linux-gnu-as/ld` + qemu, placeholder separate from `native`)
+- **Native ARM** — ELF aarch64 via `--target=native.arm` (cross with `aarch64-linux-gnu-as/ld` + qemu)
+- **KofJS** — ES Modules (ECMAScript 2022+) executed in the embedded
+  JS engine (without Node); `kof.ui` renders in a native webview or browser.
+  See [chapter 37](37-kofjs.md).
+- **KofScript** — direct execution with `kof script` / `kof repl`, top-level `let`/`const` become persistent `KofScriptGlobals`, `--watch` re-executes on save
+- **KofC** — `kof c <file.c>` compiles a subset of C (`int` globals, `void` funcs, `if`/`while`/`*(int*)`/`&`) straight to a native-only x86-64 ELF
 
-> **Target separation:** `Target` enum agora distingue `JVM | NATIVE | NATIVE_RISCV64 | NATIVE_AARCH64 | JS | ANDROID`; `parseTarget` aceita `native.risc`/`native.riscv64` e `native.arm`/`native.aarch64`.
+> **Target separation:** the `Target` enum now distinguishes `JVM | NATIVE | NATIVE_RISCV64 | NATIVE_AARCH64 | JS | ANDROID`; `parseTarget` accepts `native.risc`/`native.riscv64` and `native.arm`/`native.aarch64`.
 
-## A comparação visual
+## The visual comparison
 
 Java:
 
@@ -97,71 +99,71 @@ Kof:
 record User(String name, String email)
 ```
 
-O compilador gera exatamente a mesma coisa: uma classe JVM com campos, construtor, accessors, equals, hashCode e toString.
+The compiler generates exactly the same thing: a JVM class with fields, constructor, accessors, equals, hashCode and toString.
 
-## Filosofia
+## Philosophy
 
-> A cadeia que o Kof preserva: **intention->Kof->frontend->IR->backend->runtime**. Você escreve a intenção; o frontend (`lexer -> parser -> AST`) vira IR; o backend (`jvm/native/js/kofc`) decide o mecanismo. Ver `docs/philosophy.md` e `learn/28-language-design.md`.
+> The chain that Kof preserves: **intention->Kof->frontend->IR->backend->runtime**. You write the intention; the frontend (`lexer -> parser -> AST`) becomes IR; the backend (`jvm/native/js/kofc`) decides the mechanism. See `docs/philosophy.md` and `learn/28-language-design.md`.
 
-Kof segue três princípios:
+Kof follows three principles:
 
-**1. Menos código, mesma capacidade.**
+**1. Less code, same capability.**
 
-Cada linha que você escreve em Kof precisa ter o mesmo peso semântico que a equivalente em Java. Não removemos funcionalidade — removemos repetição.
+Every line you write in Kof must have the same semantic weight as the equivalent in Java. We don't remove functionality — we remove repetition.
 
-**2. Tipo forte, compilação estática.**
+**2. Strong typing, static compilation.**
 
-O compilador conhece seus tipos. Erros são encontrados antes de o programa rodar. Isso não muda — é uma das grandes forças da JVM.
+The compiler knows your types. Errors are found before the program runs. This does not change — it is one of the great strengths of the JVM.
 
-**3. A plataforma cuida do runtime.**
+**3. The platform takes care of the runtime.**
 
-Kof não inventa garbage collector, scheduler, ou modelo de memória no código do usuário. Na JVM, a JVM faz tudo. No Native, o runtime tem **free-list GC** (`kof_free_head`, reuso via `mmap`, mark-sweep pendente) e allocator próprio — o programa nunca chama `malloc`/`free`.
+Kof does not invent a garbage collector, scheduler, or memory model in the user's code. On the JVM, the JVM does everything. In Native, the runtime has a **free-list GC** (`kof_free_head`, reuse via `mmap`, mark-sweep pending) and its own allocator — the program never calls `malloc`/`free`.
 
-Novidades 0.2.0 que seguem a mesma filosofia: pattern matching com `case String s` e destructuring `Point(x,y)`, `String?` básico, `List map/filter/reduce`, `kof.http` em JVM+JS, imports `a.b.C` corrigidos para projetos grandes, e `kof_db` com **MySQL via `kof_db`** (wire protocol nativo em progresso) além do SQLite já estável.
+0.2.0 novelties that follow the same philosophy: pattern matching with `case String s` and destructuring `Point(x,y)`, basic `String?`, `List map/filter/reduce`, `kof.http` in JVM+JS, `a.b.C` imports fixed for large projects, and `kof_db` with **MySQL via `kof_db`** (native wire protocol in progress) in addition to the already stable SQLite.
 
-## Relação com Java
+## Relationship with Java
 
-Kof é **compatível com Java**, não é um substituto.
+Kof is **compatible with Java**, it is not a substitute.
 
-Código Kof gera bytecode JVM padrão. Esse bytecode pode:
-- ser chamado por código Java
-- chamar código Java
-- usar qualquer biblioteca Java
-- rodar em qualquer JVM
+Kof code generates standard JVM bytecode. That bytecode can:
+- be called by Java code
+- call Java code
+- use any Java library
+- run on any JVM
 
-Kof não reescreve o ecossistema Java. Kof se conecta a ele.
+Kof does not rewrite the Java ecosystem. Kof connects to it.
 
-## Relação com Kotlin
+## Relationship with Kotlin
 
-Kotlin resolve o mesmo problema (Java é verboso) de uma forma diferente.
+Kotlin solves the same problem (Java is verbose) in a different way.
 
-Kotlin adicionou muitas features novas à linguagem: data classes, sealed classes, coroutines, extension functions, null safety, etc.
+Kotlin added many new features to the language: data classes, sealed classes, coroutines, extension functions, null safety, etc.
 
-Kof tenta resolver o mesmo problema de uma forma mais minimalista. Em vez de adicionar muitas features novas, Kof tenta expressar as mesmas ideias do Java com menos código.
+Kof tries to solve the same problem in a more minimalist way. Instead of adding many new features, Kof tries to express the same ideas from Java with less code.
 
-Se uma ideia de outra linguagem for melhor, Kof pode adotar a ideia. Não há fanatismo aqui.
+If an idea from another language is better, Kof can adopt the idea. There is no fanaticism here.
 
-## O que Kof NÃO tenta resolver
+## What Kof does NOT try to solve
 
-Kof não tenta ser:
-- uma linguagem funcional
-- uma linguagem para sistemas distribuídos
-- uma linguagem para machine learning
+Kof does not try to be:
+- a functional language
+- a language for distributed systems
+- a language for machine learning
 
-Kof tenta ser a melhor forma de escrever código orientado a objetos para a
-JVM, para binários nativos (x86-64, riscv64, aarch64) e — via KofJS — para a web (frontend com
-`kof.ui` + `kof run --target=js`; ver [capítulo 37](37-kofjs.md)).
+Kof tries to be the best way to write object-oriented code for the
+JVM, for native binaries (x86-64, riscv64, aarch64) and — via KofJS — for the web (frontend with
+`kof.ui` + `kof run --target=js`; see [chapter 37](37-kofjs.md)).
 
-## Por que "Kof"
+## Why "Kof"
 
-O nome é curto, fácil de digitar, e não conflita com nenhuma biblioteca Java conhecida.
+The name is short, easy to type, and does not conflict with any known Java library.
 
-## Como funciona por baixo
+## How it works under the hood
 
 ```
-Você escreve:     record User(String name)          // intenção
+You write:        record User(String name)          // intention
                         ↓
-Compilador Kof:   lexer → parser → AST → IR → backend   // intention->Kof->frontend->IR->backend->runtime
+Kof compiler:     lexer → parser → AST → IR → backend   // intention->Kof->frontend->IR->backend->runtime
                         ↓
                   ┌──────┼──────┐
                   │      │      │
@@ -171,16 +173,16 @@ Compilador Kof:   lexer → parser → AST → IR → backend   // intention->Ko
              User.class ELF*  .mjs
                   │      │      │
                   ▼      ▼      ▼
-              funciona executável ES Module
-              como uma  direto no  na engine
-              classe    Linux      embarcada
+              works    executable ES Module
+              as a     directly on in the
+              class    Linux       embedded engine
               Java normal (x86-64/riscv/arm)
 ```
 
-`*` Native inclui `native` (x86-64), `native.risc` (riscv64) e `native.arm` (aarch64) — seleção via `Target` enum.
+`*` Native includes `native` (x86-64), `native.risc` (riscv64) and `native.arm` (aarch64) — selection via the `Target` enum.
 
-Não existe etapa de geração de Java. O compilador gera bytecode ou código nativo diretamente. Para o target **KofScript** (execução direta de script/REPL), a mesma IR otimizada é executada pelo `KofInterpreter` — sem emitir bytecode nem fork de JVM — com paridade por construção com o backend JVM (mesmo frontend, mesma IR).
+There is no Java generation step. The compiler generates bytecode or native code directly. For the **KofScript** target (direct script/REPL execution), the same optimized IR is executed by the `KofInterpreter` — without emitting bytecode or forking a JVM — with parity by construction with the JVM backend (same frontend, same IR).
 
-## Próximo passo
+## Next step
 
-[Vamos instalar tudo →](01-installation.md)
+[Let's install everything →](01-installation.md)

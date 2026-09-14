@@ -1,13 +1,15 @@
-# INHERITANCE_MODEL.md — Modelo de Herança do Kof
+[English](INHERITANCE_MODEL.md) | [Português](INHERITANCE_MODEL.pt_BR.md)
 
-**Data:** 21 de agosto de 2026
-**Status:** Implementado — Fase F.3
+# INHERITANCE_MODEL.md — Kof Inheritance Model
+
+**Date:** August 21, 2026
+**Status:** Implemented — Phase F.3
 
 ---
 
-## 1. Visão Geral
+## 1. Overview
 
-Kof suporta herança simples de classes. Uma classe pode estender uma única superclass.
+Kof supports single class inheritance. A class can extend a single superclass.
 
 ```kof
 class Animal {
@@ -32,9 +34,9 @@ class Dog extends Animal {
 
 ---
 
-## 2. Sintaxe
+## 2. Syntax
 
-### Declaração de classe com herança
+### Class declaration with inheritance
 
 ```kof
 class SubClasse extends SuperClasse {
@@ -42,51 +44,51 @@ class SubClasse extends SuperClasse {
 }
 ```
 
-### Chamada de super construtor
+### Super constructor call
 
 ```kof
 class Dog extends Animal {
     public constructor(String name) {
-        super(name)  // chamada explícita ao construtor da superclass
+        super(name)  // explicit call to the superclass constructor
     }
 }
 ```
 
-### Acesso a members herdados
+### Access to inherited members
 
 ```kof
 var dog = new Dog("Rex")
-println(dog.name)    // field herdados de Animal
-println(dog.speak()) // método herdado de Animal
-println(dog.bark())  // método próprio de Dog
+println(dog.name)    // field inherited from Animal
+println(dog.speak()) // method inherited from Animal
+println(dog.bark())  // method of Dog itself
 ```
 
 ---
 
 ## 3. Type System
 
-### Representação
+### Representation
 
-Classes são representadas como `ClassType(packageName, name, typeArguments)`.
+Classes are represented as `ClassType(packageName, name, typeArguments)`.
 
-A relação de herança NÃO é armazenada no `ClassType`. Ela é armazenada no `ClassSymbol`:
+The inheritance relation is NOT stored in `ClassType`. It is stored in `ClassSymbol`:
 
 ```java
 record ClassSymbol(String name, String packageName, String superClass,
                    List<String> interfaces, SymbolTable members)
 ```
 
-### Subtipificação
+### Subtyping
 
-`Dog` é subtipo de `Animal` se `Dog.superClass == "Animal"`.
+`Dog` is a subtype of `Animal` if `Dog.superClass == "Animal"`.
 
-A verificação de subtipificação é feita pelo `SemanticAnalyzer.resolveInHierarchy()`.
+The subtyping check is performed by `SemanticAnalyzer.resolveInHierarchy()`.
 
 ---
 
 ## 4. Symbol Resolution
 
-O `SemanticAnalyzer` resolve members (fields, methods) caminhando a cadeia de superclasses:
+`SemanticAnalyzer` resolves members (fields, methods) by walking the superclass chain:
 
 ```java
 SymbolTable.Symbol resolveInHierarchy(String className, String memberName) {
@@ -102,18 +104,18 @@ SymbolTable.Symbol resolveInHierarchy(String className, String memberName) {
 }
 ```
 
-### Ordem de resolução
+### Resolution order
 
-1. Members da classe atual
-2. Members da superclass
-3. Members da super-superclass
-4. ... até `Object`
+1. Members of the current class
+2. Members of the superclass
+3. Members of the super-superclass
+4. ... up to `Object`
 
 ---
 
 ## 5. Object Layout (Native)
 
-### Layout com herança
+### Layout with inheritance
 
 ```
 Animal:
@@ -132,29 +134,29 @@ Dog (extends Animal):
 +-------------------+
 | flags (4 bytes)   |
 +-------------------+
-| name (8 bytes)    |  → offset 8 (herdado de Animal)
+| name (8 bytes)    |  → offset 8 (inherited from Animal)
 +-------------------+
-| weight (8 bytes)  |  → offset 16 (próprio de Dog)
+| weight (8 bytes)  |  → offset 16 (own to Dog)
 +-------------------+
 Total: 24 bytes
 ```
 
-### Regras
+### Rules
 
-1. **Campos da superclass vêm primeiro** — na ordem de declaração
-2. **Campos da subclass vêm depois** — na ordem de declaração
-3. **Não duplicar campos herdados** — cada campo aparece apenas uma vez
-4. **Offset é determinístico** — calculado em compile-time pelo `ClassLayout`
+1. **Superclass fields come first** — in declaration order
+2. **Subclass fields come after** — in declaration order
+3. **Do not duplicate inherited fields** — each field appears only once
+4. **Offset is deterministic** — computed at compile-time by `ClassLayout`
 
 ### ClassLayout.buildWithSuper
 
 ```java
 public static ClassLayout buildWithSuper(IRClass clazz,
         Function<String, IRClass> superclassResolver) {
-    // 1. Caminhar a cadeia de superclasses
-    // 2. Adicionar fields da superclass (na ordem)
-    // 3. Adicionar fields da classe atual
-    // 4. Calcular offsets e tamanho total
+    // 1. Walk the superclass chain
+    // 2. Add the superclass fields (in order)
+    // 3. Add the fields of the current class
+    // 4. Compute offsets and total size
 }
 ```
 
@@ -162,30 +164,30 @@ public static ClassLayout buildWithSuper(IRClass clazz,
 
 ## 6. Constructor Chaining
 
-### Ordem de execução
+### Execution order
 
 ```kof
 var dog = new Dog("Rex")
 ```
 
-Resultado:
+Result:
 
-1. `Dog.<init>("Rex")` é chamado
-2. Dentro de `Dog.<init>`, `super("Rex")` chama `Animal.<init>("Rex")`
-3. `Animal.<init>` inicializa `this.name = "Rex"`
-4. `Dog.<init>` continua (corpo do construtor)
-5. Objeto Dog está pronto
+1. `Dog.<init>("Rex")` is called
+2. Inside `Dog.<init>`, `super("Rex")` calls `Animal.<init>("Rex")`
+3. `Animal.<init>` initializes `this.name = "Rex"`
+4. `Dog.<init>` continues (constructor body)
+5. The Dog object is ready
 
-### Regras
+### Rules
 
-1. `super(args)` DEVE ser a primeira instrução do construtor
-2. Se não houver `super(args)` explícito, um `super()` implícito é emitido
-3. Apenas uma chamada `super()` por construtor
+1. `super(args)` MUST be the first statement of the constructor
+2. If there is no explicit `super(args)`, an implicit `super()` is emitted
+3. Only one `super()` call per constructor
 
 ### IR
 
 ```java
-// super(name) é lowerado como:
+// super(name) is lowered as:
 KofLoadLocal(ownerType, 0)           // this
 [emit args]                          // name
 KofCall(superType, "<init>", args, VOID, CONSTRUCTOR)
@@ -195,50 +197,50 @@ KofCall(superType, "<init>", args, VOID, CONSTRUCTOR)
 
 ## 7. JVM vs Native
 
-| Aspecto | JVM | Native |
+| Aspect | JVM | Native |
 |---------|-----|--------|
-| Herança | `extends` bytecode | Field layout herdados |
+| Inheritance | `extends` bytecode | Inherited field layout |
 | Super constructor | `INVOKESPECIAL super.<init>` | `call SuperClass_init` |
-| Field access | `GETFIELD` com offset da hierarchy | `movq offset(%rax)` com offset do ClassLayout |
+| Field access | `GETFIELD` with hierarchy offset | `movq offset(%rax)` with ClassLayout offset |
 | Method access | `INVOKEVIRTUAL` | `call Class_method` (direct dispatch) |
-| Object size | JVM gerencia | ClassLayout calcula (header + fields herdados + próprios) |
+| Object size | JVM manages | ClassLayout computes (header + inherited + own fields) |
 
 ---
 
-> **Atualizado (0.2.6-beta, 31/08):** os itens 1 e 3 abaixo foram
-> superados — virtual dispatch (F.4) e interfaces (F.5) estão implementados
-> em JVM e Native; herança de 3 níveis segue validada por E2E. Com o
-> `spawn` em threads (pthread), o layout de objeto e os offsets calculados
-> em compile-time (ClassLayout) são inalterados e thread-safe.
+> **Updated (0.2.6-beta, 31/08):** items 1 and 3 below were
+> superseded — virtual dispatch (F.4) and interfaces (F.5) are implemented
+> in JVM and Native; 3-level inheritance remains validated by E2E. With
+> `spawn` on threads (pthread), the object layout and the offsets computed
+> at compile-time (ClassLayout) are unchanged and thread-safe.
 
-## 8. Limitações Conhecidas
+## 8. Known Limitations
 
-1. ~~**Sem virtual dispatch**~~ — ✅ F.4 (vtable)
-2. **Sem abstract classes** — todas as classes são concretas
-3. ~~**Sem interfaces**~~ — ✅ F.5 (dispatch via vtable)
-4. **Sem sealed classes** — não suportado ainda
-5. **Sem múltipla herança** — apenas herança simples
-6. **Sem diamond problem** — não aplicável com herança simples
+1. ~~**No virtual dispatch**~~ — ✅ F.4 (vtable)
+2. **No abstract classes** — all classes are concrete
+3. ~~**No interfaces**~~ — ✅ F.5 (dispatch via vtable)
+4. **No sealed classes** — not supported yet
+5. **No multiple inheritance** — single inheritance only
+6. **No diamond problem** — not applicable with single inheritance
 
 ---
 
-## 9. Arquivos
+## 9. Files
 
-| Arquivo | Papel |
+| File | Role |
 |---------|-------|
-| Type.java | ClassType (sem campo de herança) |
-| SymbolTable.java | ClassSymbol.armazena superClass |
-| SemanticAnalyzer.java | resolveInHierarchy() caminha a cadeia |
-| ClassLayout.java | buildWithSuper() inclui fields herdados |
-| NativeBackend.java | allClassesMap para resolver superclasses |
-| CompilerDriver.java | lowerConstructor com super(args), findSuperClass() |
+| Type.java | ClassType (no inheritance field) |
+| SymbolTable.java | ClassSymbol stores superClass |
+| SemanticAnalyzer.java | resolveInHierarchy() walks the chain |
+| ClassLayout.java | buildWithSuper() includes inherited fields |
+| NativeBackend.java | allClassesMap to resolve superclasses |
+| CompilerDriver.java | lowerConstructor with super(args), findSuperClass() |
 | IRNodes.java | IRClass.superName |
 
 ---
 
-## 10. Testes
+## 10. Tests
 
-| Teste | JVM | Native |
+| Test | JVM | Native |
 |-------|-----|--------|
 | simpleSubclass | ✅ | ✅ |
 | superclassField | ✅ | ✅ |

@@ -1,29 +1,31 @@
-# char literal em método String com formal String (bugs 99/100)
+[English](char-in-string-methods.md) | [Português](char-in-string-methods.pt_BR.md)
 
-**Name:** char literal (ou Int) como argumento de `String` method que espera
+# char literal in a String method with a String formal (bugs 99/100)
+
+**Name:** char literal (or Int) as an argument of a `String` method that expects
 String.
 
-**Problem:** o char literal do Kof **é** `Int` (não existe tipo char
-separado). Métodos String como `indexOf`/`contains`/`lastIndexOf`/
-`startsWith`/`endsWith` esperam **String** no 1º argumento — o registry
-resolve por aridade, então `'c'` atravessava e cada backend quebrou de um
-jeito (JVM `VerifyError`, Native SIGSEGV, JS `-1` silencioso, interpretador
-`ClassCastException`). Agora é erro de compilação. A rejeição foi
-generalizada (qualquer não-String — Int/Long/Double/coleção — em formal
-String, nos métodos `indexOf`/`lastIndexOf`/`contains`/`startsWith`/
+**Problem:** Kof's char literal **is** `Int` (there is no separate char
+type). String methods such as `indexOf`/`contains`/`lastIndexOf`/
+`startsWith`/`endsWith` expect a **String** in the 1st argument — the registry
+resolves by arity, so `'c'` slipped through and each backend broke in a
+different way (JVM `VerifyError`, Native SIGSEGV, JS silent `-1`, interpreter
+`ClassCastException`). It is now a compilation error. The rejection was
+generalized (any non-String — Int/Long/Double/collection — in a String
+formal, in the methods `indexOf`/`lastIndexOf`/`contains`/`startsWith`/
 `endsWith`/`split`/`concat`/`equalsIgnoreCase`/`compareTo`/
-`compareToIgnoreCase`) sob o código dedicado **SEM051**.
+`compareToIgnoreCase`) under the dedicated code **SEM051**.
 
-**Bad (não compila — SEM051):**
+**Bad (does not compile — SEM051):**
 ```kof
 var s = "abc"
-s.indexOf('c')      // ❌ SEM051: "String.indexOf não aceita Char como argumento 1"
-s.contains('b')     // ❌ idem
+s.indexOf('c')      // ❌ SEM051: "String.indexOf does not accept Char as argument 1"
+s.contains('b')     // ❌ same
 s.lastIndexOf('c')  // ❌
 s.startsWith('a')   // ❌
 s.endsWith('c')     // ❌
 var n = 42
-s.indexOf(n)        // ❌ Int também (o tipo importa, não a forma)
+s.indexOf(n)        // ❌ Int too (the type matters, not the form)
 ```
 
 **Preferred:**
@@ -36,12 +38,12 @@ s.startsWith("a")   // ✅ true
 s.endsWith("c")     // ✅ true
 ```
 
-**Why:** o idiom é unívoco — a API documentada (`type-system.md`) usa String;
-o overload char de `java.lang.String` não é superfície do Kof. Rejeitar no
-compile (R6 — nunca o "compila e quebra") em vez de converter Int→String em
-silêncio: definir a semântica (byte? code unit? code point?) de um char Kof
-num formal String seria mudança de contrato — decisão da mantenedora.
+**Why:** the idiom is unambiguous — the documented API (`type-system.md`) uses String;
+the char overload of `java.lang.String` is not part of Kof's surface. Rejecting at
+compile time (R6 — never the "compiles and breaks") instead of silently
+converting Int→String: defining the semantics (byte? code unit? code point?) of a Kof
+char in a String formal would be a contract change — the maintainer's decision.
 
-**Exceção (continua válida):** `replace(char, char)` — o registry tipa os 2
-formais como `CHAR` quando os args são char, e o idiom `s.replace('a', 'b')`
-é aceito em todos os backends.
+**Exception (still valid):** `replace(char, char)` — the registry types the 2
+formals as `CHAR` when the args are char, and the idiom `s.replace('a', 'b')`
+is accepted on all backends.

@@ -1,48 +1,50 @@
-# docs/future/ — só plano futuro (zero código)
+[English](README.md) | [Português](README.pt_BR.md)
 
-**Regra desta pasta:** aqui vive **apenas** o que é **plano para o futuro** —
-documento de arquitetura/visão **sem código implementado** (ou com código que
-é explicitamente não-entregável e fora do escopo atual).
+# docs/future/ — future plans only (zero code)
 
-> Se uma ideia **já está sendo implementada** (mesmo parcialmente), o doc
-> correspondente **não fica aqui** — ele vive em `docs/` e documenta o **estado
-> real** (o que já existe) + **como finalizar**. Assim quem lê sabe exatamente
-> onde a coisa está e o que falta.
+**Rule for this folder:** here lives **only** what is **a plan for the future** —
+an architecture/vision document **with no implemented code** (or with code that
+is explicitly non-deliverable and outside the current scope).
 
-## Exemplo recente (01/09)
+> If an idea **is already being implemented** (even partially), the
+> corresponding doc **does not stay here** — it lives in `docs/` and documents
+> the **real state** (what already exists) + **how to finish it**. That way the
+> reader knows exactly where the thing stands and what is missing.
 
-- `kof-native-risc-arm.md` **saiu daqui** para `docs/development/native-multiarch.md`: o
+## Recent example (09/01)
+
+- `kof-native-risc-arm.md` **left here** for `docs/development/native-multiarch.md`: the
   plumbing (enum `Target.NATIVE_RISCV64/AARCH64`, CLI `native.risc/arm`,
-  dispatch, cross-as/ld) já está no código, então o item é **em desenvolvimento**
-  e passou a ser documentado com estado real + plano de finalização.
+  dispatch, cross-as/ld) is already in the code, so the item is **under development**
+  and started being documented with real state + a finishing plan.
 
-## O que fica aqui (só plano, sem código)
+## What stays here (plan only, no code)
 
-| Doc | Tema | Por que fica em `future/` |
+| Doc | Topic | Why it stays in `future/` |
 |-----|------|---------------------------|
-| `PLAN-UNIVERSAL-PLATFORM.md` | visão de longo prazo (Kof como plataforma universal) | 100% visão/estratégia — não é ordem de implementação; nenhum pacote `ml`/`bio`/`hpc`/`infra-*` no código |
-| `scoped-resources-plan.md` | RAII leve (TIER 2.4, `using`/`resource_scope`) | design puro — zero ocorrências de `resource_scope`/`kof_resource`/`using` no lexer/parser/runtime; gated por bump |
-| ~~`planning-stdlib-array-returns.md`~~ → `docs/stdlib/DD-STDLIB-01-array-returns.md` | DD-STDLIB-01 | **FECHADO 13/09** — decisão 6a + implementação (`randomBytesHex`->String; choice=idiom), movido p/ docs/ |
+| `PLAN-UNIVERSAL-PLATFORM.md` | long-term vision (Kof as a universal platform) | 100% vision/strategy — it is not an implementation order; no `ml`/`bio`/`hpc`/`infra-*` package in the code |
+| `scoped-resources-plan.md` | lightweight RAII (TIER 2.4, `using`/`resource_scope`) | pure design — zero occurrences of `resource_scope`/`kof_resource`/`using` in the lexer/parser/runtime; gated by bump |
+| ~~`planning-stdlib-array-returns.md`~~ → `docs/stdlib/DD-STDLIB-01-array-returns.md` | DD-STDLIB-01 | **CLOSED 09/13** — decision 6a + implementation (`randomBytesHex`->String; choice=idiom), moved to docs/ |
 
-## Já caíram para `docs/development/` (iniciados — regra dos 3 estados, 12/09)
+## Already fell to `docs/development/` (started — rule of 3 states, 09/12)
 
-| Doc | Gatilho da queda |
+| Doc | Trigger for the fall |
 |-----|------------------|
-| `DECOMPILER.md`, `TRANSLATOR.md`, `LEGACY_MIGRATION.md` (os `IMPLEMENTATION_PLAN.md`+`ACTION_PLAN.md` desta lista foram FUNDIDOS p/ `roadmap.md` §23 e os `DIFFERENTIAL_TESTING.md`+`LEGACY_IR.md` p/ dentro do `LEGACY_MIGRATION.md`, tudo 13/09) | plataforma de migração com código+testes: `kof inspect/decompile/translate/compare/migrate` no `Main.java:25-29`, `Confidence.java`, `Type.fromJvmSignature` (contagem viva em `roadmap.md` §23) |
-| `PLATFORM-PLAN.md` | Fases 1–3, 8, 9 com código: `ProjectLocator`, `KofProjectConfig`, `Target.SCRIPT`, PKG006/PKG007, `conformance-matrix.md` travada por 11 testes |
-| `APPLICATION_MODEL.md` | `application { onStart/onShutdown }` parseado+desugared+E2E nos 3 targets; `KofProjectConfig` |
-| ~~`PLANNING-FUTURE-AUDIT.md`, `planning-future-reconcile.md`~~ → `docs/audits/` | auditorias **encerradas 13/09** (comparação branch×beta); R2→`DECISIONS.md` §D-APP/§D-PLATFORM (ratificado 13/09; os 6 arquivos foram apagados), R5→cluster migração |
-| ~~`planning-finally-return.md`~~ → `docs/decisions/DD-01-finally-return.md` | FECHADO 13/09 (FinallyFrame IR + gates finallyReturnJvm/Js; bug 45 CORRIGIDO) |
-| `planning-stdlib-time-design.md` | `addDays`/`diffDays` (o formato D2 do doc) implementados nos 5 alvos (TIME002 11/09) |
+| `DECOMPILER.md`, `TRANSLATOR.md`, `LEGACY_MIGRATION.md` (the `IMPLEMENTATION_PLAN.md`+`ACTION_PLAN.md` from this list were MERGED into `roadmap.md` §23 and the `DIFFERENTIAL_TESTING.md`+`LEGACY_IR.md` into `LEGACY_MIGRATION.md`, all 09/13) | migration platform with code+tests: `kof inspect/decompile/translate/compare/migrate` in `Main.java:25-29`, `Confidence.java`, `Type.fromJvmSignature` (live count in `roadmap.md` §23) |
+| `PLATFORM-PLAN.md` | Phases 1–3, 8, 9 with code: `ProjectLocator`, `KofProjectConfig`, `Target.SCRIPT`, PKG006/PKG007, `conformance-matrix.md` locked by 11 tests |
+| `APPLICATION_MODEL.md` | `application { onStart/onShutdown }` parsed+desugared+E2E on the 3 targets; `KofProjectConfig` |
+| ~~`PLANNING-FUTURE-AUDIT.md`, `planning-future-reconcile.md`~~ → `docs/audits/` | audits **closed 09/13** (branch×beta comparison); R2→`DECISIONS.md` §D-APP/§D-PLATFORM (ratified 09/13; the 6 files were deleted), R5→migration cluster |
+| ~~`planning-finally-return.md`~~ → `docs/decisions/DD-01-finally-return.md` | CLOSED 09/13 (FinallyFrame IR + gates finallyReturnJvm/Js; bug 45 FIXED) |
+| `planning-stdlib-time-design.md` | `addDays`/`diffDays` (the doc's D2 format) implemented on the 5 targets (TIME002 09/11) |
 
-## Quando mover de `future/` para `docs/`
+## When to move from `future/` to `docs/`
 
-Quando o item deixar de ser "só plano" e **houver código em desenvolvimento**,
-mesmo parcial:
+When the item stops being "plan only" and **there is code under development**,
+even partially:
 
-1. Mover/reescrever o doc em `docs/` com **status `EM DESENVOLVIMENTO`**;
-2. Documentar **o que já está feito** (arquivos/linhas reais) vs **o que falta**;
-3. Incluir seção **"como finalizar"** (passo a passo com dependências);
-4. Atualizar `docs/backend-parity.md` / `docs/status.md` para apontar o novo
-   caminho;
-5. Manter o gap-code (ex.: `NATIVE002`) até o item fechar.
+1. Move/rewrite the doc in `docs/` with **status `UNDER DEVELOPMENT`**;
+2. Document **what is already done** (real files/lines) vs **what is missing**;
+3. Include a **"how to finish"** section (step by step with dependencies);
+4. Update `docs/backend-parity.md` / `docs/status.md` to point to the new
+   path;
+5. Keep the gap-code (e.g.: `NATIVE002`) until the item closes.

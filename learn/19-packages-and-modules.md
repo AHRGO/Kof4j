@@ -1,12 +1,14 @@
-# 19 — Packages e Módulos
+[English](19-packages-and-modules.md) | [Português](19-packages-and-modules.pt_BR.md)
 
-> **Status: implementado — imports `a.b.C` corrigidos para projetos grandes (0.3.22-beta)**
+# 19 — Packages and Modules
+
+> **Status: implemented — imports `a.b.C` fixed for large projects (0.3.22-beta)**
 >
-> `package` + `import` funcionam end-to-end. Em 27/08 o `CompilerDriver` passou a tratar `import a.b.C` como import de arquivo **mais** import de diretório `a.b`, corrigindo a perda de imports em projetos com `a/b/C.kf`.
+> `package` + `import` work end-to-end. On 27/08 the `CompilerDriver` started treating `import a.b.C` as a file import **plus** a directory import `a.b`, fixing the loss of imports in projects with `a/b/C.kf`.
 
 ## Package
 
-Cada arquivo Kof pode declarar um package:
+Each Kof file can declare a package:
 
 ```kf
 package com.exemplo.users
@@ -14,33 +16,33 @@ package com.exemplo.users
 record User(String name, String email)
 ```
 
-Isso gera a classe no package `com.exemplo.users` (JVM: internal name `com/exemplo/users/User`).
+This generates the class in the package `com.exemplo.users` (JVM: internal name `com/exemplo/users/User`).
 
 ## Imports
 
 ```kf
-import a.b.C          // 0.2.0: resolve tanto o arquivo C.kf quanto o diretório a/b/
-import a.b.*          // diretório inteiro
+import a.b.C          // 0.2.0: resolves both the C.kf file and the a/b/ directory
+import a.b.*          // entire directory
 import kof.http       // stdlib
 ```
 
-> **`java.util.*` é interop, não o idiomático.** Para coleções Kof, `List<T>`/
-> `Map<K,V>`/`Set<T>` + `listOf`/`mapOf`/`setOf` vêm da stdlib **sem import**.
-> `import java.util.ArrayList` etc. só é necessário ao chamar APIs Java
-> diretamente (ver cap. 21).
+> **`java.util.*` is interop, not the idiomatic way.** For Kof collections, `List<T>`/
+> `Map<K,V>`/`Set<T>` + `listOf`/`mapOf`/`setOf` come from the stdlib **without an import**.
+> `import java.util.ArrayList` etc. is only necessary when calling Java APIs
+> directly (see ch. 21).
 
-`kof build` agora compila `largeproj` corretamente:
+`kof build` now compiles `largeproj` correctly:
 
 ```text
 src/
 ├── Main.kf          // import a.b.C
 └── a/b/C.kf         // package a.b; class C { ... }
-→ Main.class + a/b/C.class  (decls=2, ambos emitidos)
+→ Main.class + a/b/C.class  (decls=2, both emitted)
 ```
 
-Antes de 27/08, `import a.b.C` em projetos grandes podia perder a segunda declaração — o driver só registrava o arquivo, não o diretório. Agora (`CompilerDriver.java:243`) registra `file import` + `dir import`, e a cadeia `intention->Kof->frontend->IR->backend->runtime` preserva todos os `CompilationUnit`s até o backend.
+Before 27/08, `import a.b.C` in large projects could lose the second declaration — the driver only registered the file, not the directory. Now (`CompilerDriver.java:243`) it registers `file import` + `dir import`, and the chain `intention->Kof->frontend->IR->backend->runtime` preserves all `CompilationUnit`s up to the backend.
 
-### Exemplo runnable (multi-arquivo)
+### Runnable example (multi-file)
 
 ```kf
 // a/b/C.kf
@@ -61,42 +63,42 @@ main() {
 ```
 
 ```bash
-kof build src --target=jvm     # gera Main.class + a/b/C.class
-kof build src --target=js      # Default.mjs com import C
+kof build src --target=jvm     # generates Main.class + a/b/C.class
+kof build src --target=js      # Default.mjs with import C
 ```
 
-> ⚠️ **Native (x86_64) quebra com classe importada de outro pacote** — o
-> mangling do construtor usa o nome simples (`C_init_0`) em vez do internal
-> name (`a_b_C_init_0`) → `undefined reference`. Bug 22 em
-> `docs/bugs-and-gaps/known-bugs.md`. Use `--target=jvm`/`js` enquanto isso, ou corrija o
+> ⚠️ **Native (x86_64) breaks with a class imported from another package** — the
+> constructor mangling uses the simple name (`C_init_0`) instead of the internal
+> name (`a_b_C_init_0`) → `undefined reference`. Bug 22 in
+> `docs/bugs-and-gaps/known-bugs.md`. Use `--target=jvm`/`js` meanwhile, or fix the
 > `NativeBackend.java:1725`.
 
-> ⚠️ **Nomes iguais em pacotes diferentes são rejeitados** (PKG005) — `pkgA.Data`
-> + `pkgB.Data` não compilam juntos. Bug 21 em `docs/bugs-and-gaps/known-bugs.md`.
+> ⚠️ **Equal names in different packages are rejected** (PKG005) — `pkgA.Data`
+> + `pkgB.Data` do not compile together. Bug 21 in `docs/bugs-and-gaps/known-bugs.md`.
 
-### Import estático (planejado)
+### Static import (planned)
 
 ```kf
 import static java.lang.Math.PI
 import static java.lang.Math.sqrt
 ```
 
-### Import de módulo (planejado)
+### Module import (planned)
 
 ```kf
 import module java.base
 ```
 
-## Visibilidade
+## Visibility
 
-| Modificador | Mesmo package | Subclasses | Qualquer lugar |
+| Modifier | Same package | Subclasses | Anywhere |
 |-------------|:---:|:---:|:---:|
 | `public` | ✅ | ✅ | ✅ |
 | `protected` | ✅ | ✅ | ❌ |
-| (padrão) | ✅ | ❌ | ❌ |
+| (default) | ✅ | ❌ | ❌ |
 | `private` | ❌ | ❌ | ❌ |
 
-## Módulos JPMS (planejado)
+## JPMS modules (planned)
 
 ```kf
 module com.exemplo.app {
@@ -106,6 +108,6 @@ module com.exemplo.app {
 }
 ```
 
-## Próximo passo
+## Next step
 
 [Annotations →](20-annotations.md)

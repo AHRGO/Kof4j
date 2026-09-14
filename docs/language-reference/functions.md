@@ -1,110 +1,112 @@
-# Funções
+[English](functions.md) | [Português](functions.pt_BR.md)
 
-**Status:** Stable (exceto onde etiquetado) · **Evidência:** Parser.parseFunctionDeclaration, `SemanticAnalyzer.analyzeFunction`, `CompilerDriver.java` (`lowerFunction`/`lowerFunctionDefaults`)
+# Functions
+
+**Status:** Stable (except where labeled) · **Evidence:** Parser.parseFunctionDeclaration, `SemanticAnalyzer.analyzeFunction`, `CompilerDriver.java` (`lowerFunction`/`lowerFunctionDefaults`)
 
 ---
 
-## 1. Declaração
+## 1. Declaration
 
 `ebnf
 function-declaration = [ type-ref ] , identifier , [ type-parameters ] ,
                        "(" , [ parameter-list ] , ")" , [ ":" , type-ref ] , function-body
 `
 
-As formas canônicas (todas válidas e equivalentes):
+The canonical forms (all valid and equivalent):
 
 `kof
-main() { println("entry point") }            // sem tipo → void
-String saudacao() { return "oi" }            // tipo antes do nome
-despedida(): String { return "tchau" }       // tipo depois dos parênteses
-void fazIsso() { println("x") }              // void explícito
+main() { println("entry point") }            // no type → void
+String saudacao() { return "oi" }            // type before the name
+despedida(): String { return "tchau" }       // type after the parentheses
+void fazIsso() { println("x") }              // explicit void
 Int dobro(Int x) { return x * 2 }
 Bool positivo(Int x) = x > 0                 // expression body
 `
 
-- **Corpo**: bloco `{ … }`, ou `= expressão` (expression body — vira
-  `return expressão`), ou `;` (abstrato).
-- **Não existe keyword de declaração** (SG-001 resolvido 06/09): `fn`/`fun`/
-  `func` são **palavras reservadas** (tokens `FUN`/`FN`/`FUNC` no lexer) e
-  **não existem** no Kof — nem como prefixo de declaração (`PARSE085`), nem
-  como nome de função, variável, parâmetro ou campo. KofScript (`.ks`) mantém
-  KofScript (`.ks`) **não** tem `fn` próprio — é Kof puro; `fn` lá também dá
+- **Body**: block `{ … }`, or `= expression` (expression body — becomes
+  `return expression`), or `;` (abstract).
+- **There is no declaration keyword** (SG-001 resolved 06/09): `fn`/`fun`/
+  `func` are **reserved words** (tokens `FUN`/`FN`/`FUNC` in the lexer) and
+  **do not exist** in Kof — neither as a declaration prefix (`PARSE085`), nor
+  as a function, variable, parameter, or field name. KofScript (`.ks`) keeps
+  KofScript (`.ks`) **does not** have its own `fn` — it is pure Kof; `fn` there also gives
   `PARSE085`.
-- **Não há** `fun` como keyword, nem `def`, nem `lambda` keyword.
+- **There is no** `fun` as a keyword, nor `def`, nor `lambda` keyword.
 
 ---
 
-## 2. Parâmetros
+## 2. Parameters
 
 `ebnf
 parameter = ( type-ref , identifier | identifier , ":" , type-ref ) , [ "=" , expression ]
 `
 
-Duas ordens válidas:
+Two valid orders:
 
 `kof
 f(Int x, String s) { }      // type-first
-f(x: Int, s: String) { }    // anotado (idiomático p/ main)
+f(x: Int, s: String) { }    // annotated (idiomatic for main)
 `
 
-- **Default values**: `f(Int x = 10)` — geram **overloads sintéticos por
-  aridade decrescente** no lowering (`lowerFunctionDefaults`,
-  `CompilerDriver.java`, método `lowerFunctionDefaults`). A chamada com aridade reduzida é aceita.
-- **Parâmetros são passados por valor** (referências: o valor é a referência).
-- **Não há** parâmetros por referência (`ref`/`out`), nem varargs (`T...`),
-  nem spread (`f(*args)`).
+- **Default values**: `f(Int x = 10)` — generate **synthetic overloads by
+  decreasing arity** in the lowering (`lowerFunctionDefaults`,
+  `CompilerDriver.java`, method `lowerFunctionDefaults`). A call with reduced arity is accepted.
+- **Parameters are passed by value** (references: the value is the reference).
+- **There are no** by-reference parameters (`ref`/`out`), nor varargs (`T...`),
+  nor spread (`f(*args)`).
 
 ---
 
-## 3. Retorno
+## 3. Return
 
-- Tipo de retorno **antes do nome** ou **depois de `:`** após os parênteses.
-- **Sem tipo declarado → `void`** (default).
-- **Inferência de retorno**: uma função declarada `void` cujo corpo tem
-  `return <valor>` tem o retorno **inferido** no fixpoint (≤4 passes,
-  `analyzeMethodBody:470-477`). `Int f() { return 1 }` e `f() { return 1 }`
-  (void declarado, inferido Int) — o segundo é **Implementation-defined**.
-- `return` sem valor em função não-void → valor default do tipo (ver
+- Return type **before the name** or **after `:`** after the parentheses.
+- **No declared type → `void`** (default).
+- **Return inference**: a function declared `void` whose body has
+  `return <value>` has its return **inferred** in the fixpoint (≤4 passes,
+  `analyzeMethodBody:470-477`). `Int f() { return 1 }` and `f() { return 1 }`
+  (declared void, inferred Int) — the second is **Implementation-defined**.
+- `return` without a value in a non-void function → the type's default value (see
   [statements.md](statements.md) §3).
 
 ---
 
-## 4. Ponto de entrada (`main`)
+## 4. Entry point (`main`)
 
-Um programa Kof precisa de **exatamente um** `main` (PKG002 se 0 ou >1).
-Formas aceitas (*probe*, todas compilam):
+A Kof program needs **exactly one** `main` (PKG002 if 0 or >1).
+Accepted forms (*probe*, all compile):
 
 `kof
-main() { }                       // sem args, sem tipo
-void main() { }                  // void explícito
-Int main() { return 0 }          // retorna Int (o valor NÃO vira exit code automaticamente — Unspecified)
-main(args: List<String>) { }     // args como List
-main(args: String[]) { }         // args como array
+main() { }                       // no args, no type
+void main() { }                  // explicit void
+Int main() { return 0 }          // returns Int (the value does NOT become the exit code automatically — Unspecified)
+main(args: List<String>) { }     // args as List
+main(args: String[]) { }         // args as array
 `
 
-- `main` é **reconhecido por nome** (`"main".equals(func.name())` + aridade 0
-  ou 1-arg-`args`, `CompilerDriver.java`, método `lowerFunctionInner` (`isMain`)). Não é keyword.
-- O compilador **reescreve a assinatura** para `main(String[])` no emit
-  (injeta `String[]`); `List<String>` é convertido no prólogo (JVM) ou vira
-  lista vazia (Native/JS).
-- **Não há** `@main` annotation, nem `Main` class obrigatória, nem restrição de
-  visibilidade.
+- `main` is **recognized by name** (`"main".equals(func.name())` + arity 0
+  or 1-arg-`args`, `CompilerDriver.java`, method `lowerFunctionInner` (`isMain`)). It is not a keyword.
+- The compiler **rewrites the signature** to `main(String[])` at emit
+  (it injects `String[]`); `List<String>` is converted in the prologue (JVM) or
+  becomes an empty list (Native/JS).
+- **There is no** `@main` annotation, nor a mandatory `Main` class, nor a visibility
+  restriction.
 
 ---
 
-## 5. Recursão
+## 5. Recursion
 
-- **Recursão direta é suportada**: `Int fact(Int n) { … return n * fact(n-1) }`
+- **Direct recursion is supported**: `Int fact(Int n) { … return n * fact(n-1) }`
   → `120` (*probe*).
-- **Recursão mútua entre funções top-level** é suportada (a resolução de
-  chamada varre as declarações da unidade).
-- **Não há TCO** (tail-call optimization) garantido — recursão profunda pode
-  estourar a stack do target. **Implementation-defined / Target-specific.**
-- Recursão em **métodos** funciona (dispatch virtual normal).
+- **Mutual recursion between top-level functions** is supported (call
+  resolution scans the unit's declarations).
+- **There is no guaranteed TCO** (tail-call optimization) — deep recursion can
+  blow the target's stack. **Implementation-defined / Target-specific.**
+- Recursion in **methods** works (normal virtual dispatch).
 
 ---
 
-## 6. Funções genéricas
+## 6. Generic functions
 
 `ebnf
 function-declaration = … , identifier , type-parameters , …
@@ -116,46 +118,46 @@ T idf<T>(T x) { return x }
 main() { println(idf<Int>(7)) }     // → 7 (probe)
 `
 
-- Type-params de **função** são declarados antes dos parênteses.
-- **Não há inferência de type-args de função**: `idf(7)` sem `<Int>` —
-  **Unspecified** (a substituição posicional funciona para classes; para
-  funções top-level genéricas o retorno `TypeVariable` é inferido do argumento
-  correspondente, `MethodCallTyper.java:416-432`).
-- Bounds de type-var **não existem**.
+- Type-params of a **function** are declared before the parentheses.
+- **There is no function type-arg inference**: `idf(7)` without `<Int>` —
+  **Unspecified** (positional substitution works for classes; for
+  generic top-level functions the `TypeVariable` return is inferred from the
+  corresponding argument, `MethodCallTyper.java:416-432`).
+- Type-var bounds **do not exist**.
 
 ---
 
-## 7. Visibilidade e modificadores
+## 7. Visibility and modifiers
 
-- `public` (default se nenhum), `private`, `protected` — aplicados como flags
-  JVM (`computeAccess`, `CompilerDriver.java`).
-- `static` — função top-level é sempre `PUBLIC|STATIC` no emit; `static` em
-  método a torna chamada por nome de classe.
-- `abstract` — método sem corpo (`isAbstractMethod` = `body == null`,
+- `public` (default if none), `private`, `protected` — applied as JVM flags
+  (`computeAccess`, `CompilerDriver.java`).
+- `static` — a top-level function is always `PUBLIC|STATIC` at emit; `static` on a
+  method makes it callable by class name.
+- `abstract` — method without a body (`isAbstractMethod` = `body == null`,
   `:3393`).
-- `final`, `override` — aceitos como modificadores; `override` **não** é
-  validado (não há checagem de que o método existe na super).
-- **Não há** `internal`, `module`, `open`, `sealed` (função).
+- `final`, `override` — accepted as modifiers; `override` is **not**
+  validated (there is no check that the method exists in the super).
+- **There is no** `internal`, `module`, `open`, `sealed` (function).
 
 ---
 
-## 8. Onde funções vivem
+## 8. Where functions live
 
-- **Top-level**: compiladas para a classe `Main` (ou `<pkg>/Main`) como métodos
-  `static` (`CompilerDriver.java`, método `lowerToIR`).
-- **Membros de classe**: métodos normais.
-- **Não há** funções aninhadas (função dentro de função) — `main() { f() {} }`
-  não é parseado como declaração de função aninhada. **Unspecified** (SG-011).
-- **Não há** funções locais nomeadas; para comportamento nomeado local, use
-  lambda em `val`.
+- **Top-level**: compiled into the `Main` class (or `<pkg>/Main`) as `static`
+  methods (`CompilerDriver.java`, method `lowerToIR`).
+- **Class members**: normal methods.
+- **There are no** nested functions (function inside a function) — `main() { f() {} }`
+  is not parsed as a nested function declaration. **Unspecified** (SG-011).
+- **There are no** named local functions; for local named behavior, use a
+  lambda in a `val`.
 
 ---
 
-## 9. Sobrecarga de função
+## 9. Function overloading
 
-- **Não há sobrecarga de função top-level** — duas funções com o mesmo nome na
-  mesma unidade colidem (o `define` sobrescreve; `resolveInHierarchy` retorna
-  uma). **Unspecified** se é erro ou último-vence.
-- **Construtores** sobrecarregam por aridade (ver [classes.md](classes.md)).
-- **Métodos** de classe sobrecarregam por assinatura (§131 fechado 13/09 —
-  ver §11 de type-system.md).
+- **There is no top-level function overloading** — two functions with the same name in
+  the same unit collide (the `define` overwrites; `resolveInHierarchy` returns
+  one). **Unspecified** whether it is an error or last-wins.
+- **Constructors** overload by arity (see [classes.md](classes.md)).
+- **Methods** of a class overload by signature (§131 closed 13/09 —
+  see §11 of type-system.md).

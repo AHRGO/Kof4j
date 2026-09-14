@@ -1,340 +1,341 @@
-# Sistema de Tipos e Type Checking
+[English](type-system.md) | [Português](type-system.pt_BR.md)
 
-**Status:** Stable (regras) · **Evidência:** `SemanticAnalyzer.java`, `Type.java`, `CompilerTypes.java`, `TypeMetrics.java`, probes de execução
+# Type System and Type Checking
 
-> Este é o documento mais importante da referência. Ele evita o termo vago
-> "tipagem forte" e descreve **comportamento concreto**: o que é aceito, o que
-> é rejeitado, quando há inferência, o que é garantido e o que **não** é.
+**Status:** Stable (rules) · **Evidence:** `SemanticAnalyzer.java`, `Type.java`, `CompilerTypes.java`, `TypeMetrics.java`, execution probes
 
----
-
-## 1. Classificação do sistema
-
-Kof é **estaticamente tipada** (tipos resolvidos em compile-time), com
-**inferência local** (de `var`/`val` e de retorno `void`), **nominal** para
-classes (subtipagem por nome/herança, não estrutural) e **com erasure** para
-generics (type-args apagados no emit, como Java).
-
-O termo "strong typing" **não** é usado aqui como elogio. As propriedades
-concretas — e as **falhas de garantia** — estão nas seções seguintes. Onde o
-type checker **não** impede uma operação, isso está dito explicitamente.
-
-> **Atualização 09/09 (decisões do maintainer sobre os gaps B):** as garantias
-> de compilação se tornaram estritas nos pontos que faltavam — instanciação de
-> `abstract` (SEM041), tipo aninhado (SEM042), cobertura de `implements`
-> (SEM043), assinatura de `main` (SEM044), cláusula `throw` (SEM045) e
-> visibilidade `private`/`protected` (SEM046) são erros de compile-time.
-> Lambda em coleção herda o tipo do elemento sem anotação (SG-012); função
-> aninhada funciona com hoisting (SG-011); guardas em pattern matching
-> (`case T v if cond`) são suportadas (SG-014). Ver tabela de erros no §13.
+> This is the most important document in the reference. It avoids the vague term
+> "strong typing" and describes **concrete behavior**: what is accepted, what
+> is rejected, when there is inference, what is guaranteed and what is **not**.
 
 ---
 
-## 2. Onde o type checking acontece (pipeline real)
+## 1. System classification
+
+Kof is **statically typed** (types resolved at compile-time), with
+**local inference** (from `var`/`val` and `void` return), **nominal** for
+classes (subtyping by name/inheritance, not structural) and **with erasure** for
+generics (type-args erased at emit, like Java).
+
+The term "strong typing" is **not** used here as praise. The concrete
+properties — and the **guarantee failures** — are in the following sections. Where the
+type checker does **not** prevent an operation, that is stated explicitly.
+
+> **Update 09/09 (maintainer decisions on gaps B):** the compilation guarantees
+> became strict at the points that were missing — instantiation of
+> `abstract` (SEM041), nested type (SEM042), `implements` coverage
+> (SEM043), `main` signature (SEM044), `throw` clause (SEM045) and
+> `private`/`protected` visibility (SEM046) are compile-time errors.
+> Lambda in a collection inherits the element type without annotation (SG-012); a nested
+> function works with hoisting (SG-011); guards in pattern matching
+> (`case T v if cond`) are supported (SG-014). See the error table in §13.
+
+---
+
+## 2. Where type checking happens (real pipeline)
 
 `text
-Source ─▶ Lexer ─▶ Tokens ─▶ Parser ─▶ AST(crua)
+Source ─▶ Lexer ─▶ Tokens ─▶ Parser ─▶ AST(raw)
        ─▶ Desugar (test/application) ─▶ AST(desugared)
-       ─▶ SemanticAnalyzer.analyze ─▶ AST + maps laterais (tipos resolvidos)
-       ─▶ [aborta se houver erro] ─▶ Lowering AST→IR ─▶ Optimizer ─▶ Backend
+       ─▶ SemanticAnalyzer.analyze ─▶ AST + side maps (resolved types)
+       ─▶ [aborts if there is an error] ─▶ Lowering AST→IR ─▶ Optimizer ─▶ Backend
 `
 
-`CompilerDriver.java`, método `lowerAndEmit`. **Type checking e resolução de nomes NÃO são
-fases separadas**: acontecem entrelaçados dentro de `inferType`
-(`SemanticAnalyzer`/`SemExpressionTyper.inferType`), que resolve o nome e checa o tipo no mesmo
-ponto, emitindo diagnóstico inline.
+`CompilerDriver.java`, method `lowerAndEmit`. **Type checking and name resolution are NOT
+separate phases**: they happen interleaved inside `inferType`
+(`SemanticAnalyzer`/`SemExpressionTyper.inferType`), which resolves the name and checks the type at the same
+point, emitting a diagnostic inline.
 
-### 2.1 As 4 fases do analisador (`SemanticAnalyzer.analyze`)
+### 2.1 The analyzer's 4 phases (`SemanticAnalyzer.analyze`)
 
-| Fase | Método | O que faz |
+| Phase | Method | What it does |
 |---|---|---|
-| 1 | `preDeclareType` | Cria `ClassSymbol` vazio por tipo; registra `knownClasses`; sintetiza `values()/valueOf()/name()` em enums |
-| 2 | `defineMembers` | Preenche campos/métodos/construtores; accessors de record; type-params |
-| 3 | `analyzeDeclaration` | Analisa corpos; **fixpoint ≤4 passes por classe** (inferência de retorno void→T) |
-| 4 | `resolveMethodCalls` | **No-op efetivo** — a resolução real já ocorreu eager na fase 3 (`SemanticAnalyzer.resolveMethodCalls`) |
+| 1 | `preDeclareType` | Creates an empty `ClassSymbol` per type; registers `knownClasses`; synthesizes `values()/valueOf()/name()` in enums |
+| 2 | `defineMembers` | Fills fields/methods/constructors; record accessors; type-params |
+| 3 | `analyzeDeclaration` | Analyzes bodies; **fixpoint ≤4 passes per class** (void→T return inference) |
+| 4 | `resolveMethodCalls` | **Effectively a no-op** — the real resolution already happened eagerly in phase 3 (`SemanticAnalyzer.resolveMethodCalls`) |
 
-> **Nota pós-REFACTOR-500 F6:** as fases 1–2 foram extraídas para
-> `SymbolTableBuilder`; a checagem de tipos (`isAssignable`, `primitiveWidth`,
-> `checkArgTypes`, `inferBinaryResultType`) para `TypeChecker`; a análise de
-> statements (`IfStmt`/narrowing) para `StatementAnalyzer`; a inferência de
-> expressão para `SemExpressionTyper`. O `SemanticAnalyzer` orquestra. As
-> referências abaixo usam **método**, não linha (o refactor está em curso).
+> **Post-REFACTOR-500 F6 note:** phases 1–2 were extracted into
+> `SymbolTableBuilder`; type checking (`isAssignable`, `primitiveWidth`,
+> `checkArgTypes`, `inferBinaryResultType`) into `TypeChecker`; statement
+> analysis (`IfStmt`/narrowing) into `StatementAnalyzer`; expression
+> inference into `SemExpressionTyper`. `SemanticAnalyzer` orchestrates. The
+> references below use **method**, not line (the refactor is in progress).
 
-### 2.2 Não há "typed AST"
+### 2.2 There is no "typed AST"
 
-Os nós da AST **não carregam tipo resolvido** — tipos de declaração são
-`String` na AST. Os tipos resolvidos vivem em **maps laterais por identidade
-de nó** (`IdentityHashMap`): `expressionTypes`, `resolvedMethods`,
-`resolvedConstructors` (campos do `SemanticAnalyzer`). O lowering **re-inferi**
-tudo via `ExpressionTyper`/`MethodCallTyper` (o cache do analyzer é limpo a cada
-pass/classe — `MethodCallTyper.java:27-34`). **Implementation-defined.**
+The AST nodes **do not carry a resolved type** — declaration types are
+`String` in the AST. Resolved types live in **side maps by node
+identity** (`IdentityHashMap`): `expressionTypes`, `resolvedMethods`,
+`resolvedConstructors` (fields of `SemanticAnalyzer`). The lowering **re-infers**
+everything via `ExpressionTyper`/`MethodCallTyper` (the analyzer's cache is cleared each
+pass/class — `MethodCallTyper.java:27-34`). **Implementation-defined.**
 
-### 2.3 Quando erros são reportados
+### 2.3 When errors are reported
 
-Durante a análise, imediatamente (`diagnostics.error`), e o driver **aborta
-antes do lowering** se houver erro (`CompilerDriver.java`, guarda `diagnostics.hasErrors()` pós-`analyze`). Exceção:
-alguns códigos `SEM0xx` são **deferidos** para lowering/emit (SEM016/017/029/
-030/031/033/034, ARITH001) — só disparam se a análise passou.
+During analysis, immediately (`diagnostics.error`), and the driver **aborts
+before lowering** if there is an error (`CompilerDriver.java`, guard `diagnostics.hasErrors()` post-`analyze`). Exception:
+some `SEM0xx` codes are **deferred** to lowering/emit (SEM016/017/029/
+030/031/033/034, ARITH001) — they only fire if the analysis passed.
 
 ---
 
-## 3. Atribuição e compatibilidade (`TypeChecker.isAssignable`)
+## 3. Assignment and compatibility (`TypeChecker.isAssignable`)
 
-Uma atribuição `dest = src` (e argumentos, retornos) é aceita quando:
+An assignment `dest = src` (and arguments, returns) is accepted when:
 
-| Regra | Aceita? | Evidência |
+| Rule | Accepted? | Evidence |
 |---|---|---|
-| `T → T` (iguais) | ✅ | `from.equals(to)` |
-| `T → T?` (torna nullable) | ✅ | caso `NullableType` em `to` |
-| `T? → T?` (recursa no inner) | ✅ | recursão `inner()` |
-| **`T? → T`** (desembrulhar nullable) | ❌ `SEM021` | só após narrowing (§5) |
-| widening numérico (`primitiveWidth(from) ≤ primitiveWidth(to)`) | ✅ | `TypeChecker.primitiveWidth` |
-| `double → float` | ✅ (exceção explícita, D2F) | caso `double→float` |
-| narrowing numérico (`long→int`, `double→int`, `int→byte`) | ❌ `SEM021` | *probe*: `Long x; Int y = x` → SEM021 |
-| `primitivo → Object` (auto-box) | ✅ | caso primitivo→`java.lang.Object` |
-| `FunctionType → ClassType` (SAM) | ✅ (sempre; compatibilidade real adiada para emissão) | caso SAM |
-| `TypeVariable` em qualquer posição | ✅ | caso `TypeVariable` |
-| **`ClassType → ClassType` (qualquer par)** | ✅ **SEMPRE** | caso final `to instanceof ClassType` — ⚠️ ver §7 |
+| `T → T` (equal) | ✅ | `from.equals(to)` |
+| `T → T?` (makes nullable) | ✅ | `NullableType` case in `to` |
+| `T? → T?` (recurses on the inner) | ✅ | `inner()` recursion |
+| **`T? → T`** (unwrap nullable) | ❌ `SEM021` | only after narrowing (§5) |
+| numeric widening (`primitiveWidth(from) ≤ primitiveWidth(to)`) | ✅ | `TypeChecker.primitiveWidth` |
+| `double → float` | ✅ (explicit exception, D2F) | `double→float` case |
+| numeric narrowing (`long→int`, `double→int`, `int→byte`) | ❌ `SEM021` | *probe*: `Long x; Int y = x` → SEM021 |
+| `primitive → Object` (auto-box) | ✅ | primitive→`java.lang.Object` case |
+| `FunctionType → ClassType` (SAM) | ✅ (always; real compatibility deferred to emit) | SAM case |
+| `TypeVariable` in any position | ✅ | `TypeVariable` case |
+| **`ClassType → ClassType` (any pair)** | ✅ **ALWAYS** | final case `to instanceof ClassType` — ⚠️ see §7 |
 
 ### 3.1 `TypeChecker.primitiveWidth`
 
 `bool=0, char=1, {int,byte,short}=2, long=3, float=4, double=5`.
 
-Consequência observável: `bool → int` **passa na checagem** (width 0≤2) e
-**produz `1`/`0`** no emit — porque `bool` é armazenado como `int` 1/0 em Kof
-(`var i: Int = true; println(i)` → `1`, *probe*). Não é um "vazio": é coerção
-funcional por representação. Atribuições `bool → long/float/double` seguem a
-mesma via widening. **Implementation-defined** (a representação 1/0 é detalhe
-de implementação que vazou para a semântica observável).
+Observable consequence: `bool → int` **passes the check** (width 0≤2) and
+**produces `1`/`0`** at emit — because `bool` is stored as `int` 1/0 in Kof
+(`var i: Int = true; println(i)` → `1`, *probe*). It is not a "void": it is functional
+coercion by representation. Assignments `bool → long/float/double` follow the
+same widening path. **Implementation-defined** (the 1/0 representation is an implementation
+detail that leaked into observable semantics).
 
-### 3.2 Coerções em aritmética (`commonNumericType`, TypeMetrics.java:57-70)
+### 3.2 Coercions in arithmetic (`commonNumericType`, TypeMetrics.java:57-70)
 
-Para `+ - * / %` com dois numéricos: `double` domina, senão `float`, senão
-`long`, senão `int`. `7 / 2` → `int` = `3` (divisão inteira) (*probe*).
+For `+ - * / %` with two numerics: `double` dominates, else `float`, else
+`long`, else `int`. `7 / 2` → `int` = `3` (integer division) (*probe*).
 `1 + 1.5` → `double` = `2.5`.
 
 ---
 
-## 4. Conversões: `as` e `instanceof`
+## 4. Conversions: `as` and `instanceof`
 
-- **`x as T`** é **cast explícito**, nunca implícito. O resultado tem tipo `T`
-  (`TypeChecker.inferBinaryResultType`, caso `as").
-  - primitivo→primitivo: widening + narrowing (`I2C`, `L2I`, `F2I`, `D2I`, …)
-    — `Long x; x as Int` funciona (*probe*).
-  - referência: `checkcast` JVM (pode lançar `ClassCastException` em runtime).
-  - **`5 as String` NÃO faz parse de número**: emite `checkcast String` sobre
-    um `Integer` boxado → falha em runtime (*probe*). String↔número é só via
-    `toInt()/toLong()/toDouble()/toFloat()` (métodos de `string`).
-- **`x instanceof T`** → `bool` (`SemExpressionTyper`, caso `instanceof`). `o instanceof String` (*probe* ✅).
+- **`x as T`** is an **explicit cast**, never implicit. The result has type `T`
+  (`TypeChecker.inferBinaryResultType`, case `as`).
+  - primitive→primitive: widening + narrowing (`I2C`, `L2I`, `F2I`, `D2I`, …)
+    — `Long x; x as Int` works (*probe*).
+  - reference: JVM `checkcast` (may throw `ClassCastException` at runtime).
+  - **`5 as String` does NOT parse a number**: it emits `checkcast String` over
+    a boxed `Integer` → fails at runtime (*probe*). String↔number is only via
+    `toInt()/toLong()/toDouble()/toFloat()` (methods of `string`).
+- **`x instanceof T`** → `bool` (`SemExpressionTyper`, case `instanceof`). `o instanceof String` (*probe* ✅).
 
 ---
 
 ## 5. Nullability
 
-- Representação: wrapper `NullableType(inner)`. `T?` = "T ou null".
-- **Storage é o inner** — nullable é constraint de compile-time apenas
+- Representation: wrapper `NullableType(inner)`. `T?` = "T or null".
+- **Storage is the inner** — nullable is a compile-time constraint only
   (`StatementLowerer.java:47-51`).
-- **Narrowing**: a **única** forma reconhecida é `if (x != null)` (ou `null !=
-  x`) com `x` identificador de tipo `T?` → no **then-branch**, `x` passa a ter
-  tipo `T` (`StatementAnalyzer`, narrowing de `IfStmt`). **Não há** narrowing por `&&`,
-  `||`, ternário, ou `if (x == null)` no else.
-- **Deref de `T?` sem narrowing NÃO é erro**: `var s: String? = "x"; s.length`
-  **compila** (*probe*) — o lowering desembrulha o receiver
-  (`ExpressionTyper.java:143`). A segurança null é **advisory**, não garantida
-  pelo compilador (SG-005).
-- **Comparação com null**: primitivo `== null` → **constante** (`false`/`true`,
-  `ExpressionLowerer.java:256-268`); referência `== null` → `if_acmp`.
-  `Int? == Int?` compara valor (*probe*: `5 == 5` → true). **`Int? == null`
-  falha em runtime** (o unbox de um `Integer` null lança NPE — o erro do
-  "JavaFX launcher" é o wrapper do runtime para exceção não tratada; *probe*).
-  `String? == null` → `true` corretamente (*probe*). Comparar nullable de
-  primitivo com `null` é **bug de runtime** (SG-008), não regra de linguagem.
-- **Fontes de `T?`**: `Map.get(k)` para valor de referência, `readLine()`,
-  `readFile()`, literais `T?`.
+- **Narrowing**: the **only** recognized form is `if (x != null)` (or `null !=
+  x`) with `x` an identifier of type `T?` → in the **then-branch**, `x` now has
+  type `T` (`StatementAnalyzer`, `IfStmt` narrowing). There is **no** narrowing by `&&`,
+  `||`, ternary, or `if (x == null)` in the else.
+- **Deref of `T?` without narrowing is NOT an error**: `var s: String? = "x"; s.length`
+  **compiles** (*probe*) — the lowering unwraps the receiver
+  (`ExpressionTyper.java:143`). Null safety is **advisory**, not guaranteed
+  by the compiler (SG-005).
+- **Comparison with null**: primitive `== null` → **constant** (`false`/`true`,
+  `ExpressionLowerer.java:256-268`); reference `== null` → `if_acmp`.
+  `Int? == Int?` compares value (*probe*: `5 == 5` → true). **`Int? == null`
+  fails at runtime** (unboxing a null `Integer` throws NPE — the
+  "JavaFX launcher" error is the runtime wrapper for an unhandled exception; *probe*).
+  `String? == null` → `true` correctly (*probe*). Comparing a nullable
+  primitive with `null` is a **runtime bug** (SG-008), not a language rule.
+- **Sources of `T?`**: `Map.get(k)` for a reference value, `readLine()`,
+  `readFile()`, `T?` literals.
 
 ---
 
-## 6. Resolução de nomes e escopo
+## 6. Name resolution and scope
 
-`SymbolTable` é uma cadeia de escopos com `parent` (`SymbolTable.java:9-77`);
-`resolve(name)` busca do mais interno para o mais externo. Ordem de resolução
-de um identificador (`SemExpressionTyper`, case `IdentifierExpr`):
+`SymbolTable` is a chain of scopes with `parent` (`SymbolTable.java:9-77`);
+`resolve(name)` searches from the innermost to the outermost. Resolution order
+of an identifier (`SemExpressionTyper`, case `IdentifierExpr`):
 
-1. escopo local em cadeia (locais → params → campos da classe → raiz)
-2. `args` em `main` → `String[]`
-3. constante de enum não-qualificada (`Red` quando `enum Color{Red}`)
-4. membro da classe corrente via `resolveInHierarchy` (BFS: classe→super→interfaces)
-5. senão, se não é namespace builtin (`json`, `process`, `KofWeb`, …) nem tipo
-   builtin → **`SEM011`** (indefinido)
+1. local scope in the chain (locals → params → class fields → root)
+2. `args` in `main` → `String[]`
+3. unqualified enum constant (`Red` when `enum Color{Red}`)
+4. member of the current class via `resolveInHierarchy` (BFS: class→super→interfaces)
+5. otherwise, if it is not a builtin namespace (`json`, `process`, `KofWeb`, …) nor a
+   builtin type → **`SEM011`** (undefined)
 
-**Shadowing**: permitido por escopo (innermost-first). Redeclarar no **mesmo**
-escopo → `SEM024`. Em lambdas, params e declarações internas entram em
-`shadowed` e **não** capturam a externa homônima.
+**Shadowing**: allowed per scope (innermost-first). Redeclaring in the **same**
+scope → `SEM024`. In lambdas, params and inner declarations go into
+`shadowed` and do **not** capture the homonymous outer one.
 
-**Imports**: `qualifyViaImports` só resolve **nome simples** (sem `.`/`<`/`[]`)
-pelo **primeiro** import não-wildcard terminando em `.<nome>`
-(`MemberResolver.qualifyViaImports`). **Wildcards `import a.b.*` não são usados para
-qualificar nomes** (`MemberResolver.qualifyViaImports`). Type-arguments são qualificados recursivamente por
-`qualifyDeep` (bug 32, `CompilerTypes.java:48-94`): nome simples via imports →
-classes do módulo; **import ambíguo → não chuta** (tipo preservado).
+**Imports**: `qualifyViaImports` only resolves a **simple name** (without `.`/`<`/`[]`)
+by the **first** non-wildcard import ending in `.<name>`
+(`MemberResolver.qualifyViaImports`). **Wildcards `import a.b.*` are not used to
+qualify names** (`MemberResolver.qualifyViaImports`). Type-arguments are qualified recursively by
+`qualifyDeep` (bug 32, `CompilerTypes.java:48-94`): simple name via imports →
+module classes; **ambiguous import → does not guess** (type preserved).
 
 ---
 
-## 7. Subtipagem — a maior lacuna (SG-009)
+## 7. Subtyping — the biggest gap (SG-009)
 
-`isAssignable` aceita **`ClassType → ClassType` sempre** (caso final de `TypeChecker.isAssignable`). Não há
-checagem de que `to` é supertype de `from`. Consequências:
+`isAssignable` accepts **`ClassType → ClassType` always** (final case of `TypeChecker.isAssignable`). There is no
+check that `to` is a supertype of `from`. Consequences:
 
-- `B extends A; A a = b` funciona (*probe*) — mas por coincidência (o `checkcast`
-  do lowering salva o emit), não por regra de subtipagem.
-- **`A a = b_de_outra_classe` (não-relacionadas) também passa na checagem de
-  tipos.** A segurança é **delegada ao `checkcast`/runtime do target**, não ao
+- `B extends A; A a = b` works (*probe*) — but by coincidence (the lowering's
+  `checkcast` saves the emit), not by a subtyping rule.
+- **`A a = b_from_another_class` (unrelated) also passes the type
+  check.** Safety is **delegated to the target's `checkcast`/runtime**, not to the
   type checker.
-- `implements I` **não** exige cobrir todos os métodos: `class C implements I {}`
-  com `I` tendo `f()` abstrato **compila** (*probe*) — só falha se o método for
-  chamado (runtime `AbstractMethodError`).
-- `abstract class A; new A()` **compila** e falha em runtime com
-  `InstantiationError` (*probe*) — não é erro de tipo.
+- `implements I` does **not** require covering all methods: `class C implements I {}`
+  with `I` having an abstract `f()` **compiles** (*probe*) — it only fails if the method is
+  called (runtime `AbstractMethodError`).
+- `abstract class A; new A()` **compiles** and fails at runtime with
+  `InstantiationError` (*probe*) — it is not a type error.
 
-**Garantia real do type checker:** chamada a função/método **inexistente em tipo
-conhecido** é erro (`SEM015`/`SEM025`); aridade de argumentos/construtores é
-checada (`SEM013`/`SEM023`); tipo de retorno incompatível é erro (`SEM010`);
-`throw` só aceita `String` (`SEM026`); atribuição respeita `isAssignable`
-(`SEM012`/`SEM021`); redeclaração no mesmo escopo é erro (`SEM024`); switch-
-expressão exige default/exaustividade (`SEM032`); enum exaustivo em switch
+**Real guarantee of the type checker:** calling a function/method **that does not exist on a known type** is an error (`SEM015`/`SEM025`); argument/constructor arity is
+checked (`SEM013`/`SEM023`); an incompatible return type is an error (`SEM010`);
+`throw` only accepts `String` (`SEM026`); assignment respects `isAssignable`
+(`SEM012`/`SEM021`); redeclaration in the same scope is an error (`SEM024`); switch-
+expression requires default/exhaustiveness (`SEM032`); exhaustive enum in switch
 (`SEM031`).
 
-**Não garantido:** subtipagem correta; tipo de elemento em `list.add`/`map.put`
-(`l.add("x")` numa `List<Int>` **não é erro** — §8); cobertura de interface;
-instandabilidade de abstract; coerção `bool→numérico` (funciona por
-representação 1/0, mas é implementation-defined — §3.1).
+**Not guaranteed:** correct subtyping; element type in `list.add`/`map.put`
+(`l.add("x")` on a `List<Int>` **is not an error** — §8); interface
+coverage; instantiability of abstract; `bool→numeric` coercion (works by
+1/0 representation, but is implementation-defined — §3.1).
 
 ---
 
 ## 8. Generics (erasure-first)
 
-- Type-args vivem **só** em `ClassType.typeArguments`. **Erasure**: no emit,
+- Type-args live **only** in `ClassType.typeArguments`. **Erasure**: at emit,
   `TypeVariable → Object` (`JvmTypeMapper.java:16`).
-- **Substituição posicional** (`substituteTypeVariable`, `CompilerTypes.java:255`):
-  dado `Box<Int>` e type-var `T` (1º type-param de `Box`), retorna `Int`. Só
-  para type-params de **classe**, varrendo `currentUnit`.
-- **Sem variance** (sem `extends`/`super` em type-args — §3.4 de types.md).
-- **Sem bounds** de type-variable (não há `T extends X`).
-- **Sem inferência de type-args de construtor**: `new Box(42)` **não** infere
-  `Box<Int>` (`SemExpressionTyper`, caso `NewExpr` devolve type-args vazios).
-- **Sem checagem de elemento em coleção**: `List<Int>.add("x")` não é detectado
-  (`MemberCallTyper`/`CollectionMethodTyper`: `add` é tipado `Void` sem checagem). A falha aparece **só em runtime,
-  no `get` com tipo concreto**: `m.put("b","z")` num `Map<String,Int>` →
-  `ClassCastException` ao ler (*probe*); `l.add(9)` numa `List<Int>` funciona
-  normalmente (*probe* — o tipo inferido era `Int` e 9 é `Int`). **Unspecified**
-  como política.
-- `listOf(1,2)` → `List<Int>` (tipo do 1º arg); `mapOf(k1,v1,…)` → `Map<K,V>`
-  **pinned no 1º par**; `setOf(…)` → `Set<T>` (`SemExpressionTyper`, caso `setOf`).
+- **Positional substitution** (`substituteTypeVariable`, `CompilerTypes.java:255`):
+  given `Box<Int>` and type-var `T` (1st type-param of `Box`), returns `Int`. Only
+  for **class** type-params, scanning `currentUnit`.
+- **No variance** (no `extends`/`super` in type-args — §3.4 of types.md).
+- **No bounds** of type-variable (there is no `T extends X`).
+- **No constructor type-arg inference**: `new Box(42)` does **not** infer
+  `Box<Int>` (`SemExpressionTyper`, case `NewExpr` returns empty type-args).
+- **No element checking in collections**: `List<Int>.add("x")` is not detected
+  (`MemberCallTyper`/`CollectionMethodTyper`: `add` is typed `Void` without checking). The failure appears **only at runtime,
+  in `get` with a concrete type**: `m.put("b","z")` on a `Map<String,Int>` →
+  `ClassCastException` when reading (*probe*); `l.add(9)` on a `List<Int>` works
+  normally (*probe* — the inferred type was `Int` and 9 is `Int`). **Unspecified**
+  as policy.
+- `listOf(1,2)` → `List<Int>` (type of the 1st arg); `mapOf(k1,v1,…)` → `Map<K,V>`
+  **pinned to the 1st pair**; `setOf(…)` → `Set<T>` (`SemExpressionTyper`, case `setOf`).
 
 ---
 
 ## 9. Boxing / unboxing
 
-- **Auto-box** de primitivo para slot de referência no emit (`Integer`, `Long`,
+- **Auto-box** from primitive to reference slot at emit (`Integer`, `Long`,
   …; `JvmBackend.java:77-101`).
-- **Unbox** em `list.get(i)` conforme elemType (`JvmBackend.java:913-946`):
+- **Unbox** in `list.get(i)` according to elemType (`JvmBackend.java:913-946`):
   `listOf(1,2).get(0) + 1` → `2` (*probe*).
-- **Box de erasure** (primitivo atrás de type-var/Object): `kof_box`/`kof_unbox`.
-- **Captura mutável** de closure usa classe `Box<N>` sintética (ver
+- **Erasure box** (primitive behind type-var/Object): `kof_box`/`kof_unbox`.
+- **Mutable capture** of a closure uses a synthetic `Box<N>` class (see
   [closures.md](closures.md)).
 
 ---
 
-## 10. Comparação `==` (semântica por tipo — decidida no lowering)
+## 10. `==` comparison (per-type semantics — decided in lowering)
 
-| Operando | `==` compara | Evidência |
+| Operand | `==` compares | Evidence |
 |---|---|---|
-| `string` | **conteúdo** (`kof_string_equals`) | *probe*: `"ab" == "a"+"b"` → true |
-| `record` | **conteúdo** (equals gerado campo a campo) | *probe*: `P(1,2)==P(1,2)` → true |
-| `enum` | **conteúdo** (é String em runtime) | `ExpressionLowerer.java:285` |
-| primitivo | **valor** | `if_icmp`/`lcmp`/`fcmpl`/`dcmpl` |
-| referência (não-string/record/enum) | **identidade** (`if_acmp`) | *probe*: `C(1)==C(1)` → false |
+| `string` | **content** (`kof_string_equals`) | *probe*: `"ab" == "a"+"b"` → true |
+| `record` | **content** (equals generated field by field) | *probe*: `P(1,2)==P(1,2)` → true |
+| `enum` | **content** (it is String at runtime) | `ExpressionLowerer.java:285` |
+| primitive | **value** | `if_icmp`/`lcmp`/`fcmpl`/`dcmpl` |
+| reference (non-string/record/enum) | **identity** (`if_acmp`) | *probe*: `C(1)==C(1)` → false |
 
-`a.equals(b)` **funciona** em string (*probe*) mas é anti-pattern — use `==`.
+`a.equals(b)` **works** on string (*probe*) but is an anti-pattern — use `==`.
 
 ---
 
-## 11. Overload e resolução de método
+## 11. Overload and method resolution
 
-- **Construtores**: sobrecarga **por aridade** (`ConstructorSet`,
-  `SymbolTable.java:47-58`). Aridade errada → `SEM023`.
-- **Métodos**: **sobrecarga real por assinatura** (§131 fechado 13/09,
-  `18a64d45`): homônimos com aridade/tipos diferentes coexistem via
-  `MethodSet` (merge no `define`, `select(argCount, argTypes)`); o typer
-  (`MemberCallTyper`) escolhe o candidato e registra em `resolvedMethods()`.
-  Nos backends: descritor JVM por assinatura, símbolo/slot próprio por
-  overload no Native, mangle de assinatura no JS. Sem candidato compatível →
+- **Constructors**: overloading **by arity** (`ConstructorSet`,
+  `SymbolTable.java:47-58`). Wrong arity → `SEM023`.
+- **Methods**: **real overloading by signature** (§131 closed 13/09,
+  `18a64d45`): homonyms with different arity/types coexist via
+  `MethodSet` (merge in `define`, `select(argCount, argTypes)`); the typer
+  (`MemberCallTyper`) picks the candidate and records it in `resolvedMethods()`.
+  In the backends: JVM descriptor by signature, own symbol/slot per
+  overload in Native, signature mangle in JS. No compatible candidate →
   `SEM013`/`SEM057`.
-- **Default parameters** geram overloads sintéticos por aridade decrescente no
+- **Default parameters** generate synthetic overloads by decreasing arity in the
   lowering (`lowerFunctionDefaults`).
 - **Dispatch**: `KofCallKind {INSTANCE, STATIC, CONSTRUCTOR, FUNCTION,
-  INTERFACE, SUPER}` → opcode JVM (`INVOKEVIRTUAL`/`STATIC`/`SPECIAL`/
-  `INTERFACE`). **Dispatch virtual polimórfico é delegado ao runtime** — o
-  compilador só escolhe o opcode; não há vtable própria. *probe*: `A a = B();
-  a.f()` → `2` (override real).
+  INTERFACE, SUPER}` → JVM opcode (`INVOKEVIRTUAL`/`STATIC`/`SPECIAL`/
+  `INTERFACE`). **Polymorphic virtual dispatch is delegated to the runtime** — the
+  compiler only picks the opcode; there is no own vtable. *probe*: `A a = B();
+  a.f()` → `2` (real override).
 
 ---
 
-## 12. Métodos de tipos builtin
+## 12. Builtin type methods
 
-Não há `SymbolTable` para `List`/`Map`/`Set`/`String`/`Channel` — são **tabelas
-de assinatura hard-coded** em três camadas espelhadas (análise, lowering de
-tipagem, lowering de emissão). Exemplos de retorno:
+There is no `SymbolTable` for `List`/`Map`/`Set`/`String`/`Channel` — they are
+**hard-coded signature tables** in three mirrored layers (analysis, typing
+lowering, emit lowering). Return examples:
 
 - `List`: `get/remove`→elemType; `size/length/count`→Int; `contains/isEmpty`→
   Bool; `add/push/append/set/clear`→Void; `map/filter/reduce`→higher-order.
-- `Map`: `get`→`V?` (referência); `put/remove`→V; `keys`→`List<K>`; `values`→
+- `Map`: `get`→`V?` (reference); `put/remove`→V; `keys`→`List<K>`; `values`→
   `List<V>`.
 - `String`: `indexOf/length/compareTo/hashCode`→Int; `isEmpty`→Bool;
   `substring/split/replace/trim/toUpperCase/toLowerCase`→String/String[];
-  `toInt/toLong/toDouble/toFloat`→número (funções do **runtime**, não de
+  `toInt/toLong/toDouble/toFloat`→number (functions of the **runtime**, not of
   `java.lang.String`).
 
-`map((x:Int)->…)` → `List<R>`; `filter` → mesmo tipo do receiver; `reduce` →
-retorno do lambda (*probe*: map/filter/reduce corretos).
+`map((x:Int)->…)` → `List<R>`; `filter` → same type as the receiver; `reduce` →
+the lambda's return (*probe*: map/filter/reduce correct).
 
 ---
 
-## 13. Tabela de erros de tipo (SEM0xx)
+## 13. Type error table (SEM0xx)
 
-| Código | Detecta | Evidência |
+| Code | Detects | Evidence |
 |---|---|---|
-| `SEM001` | operador aritmético em String/não-numérico | `TypeChecker.inferBinaryResultType` |
-| `SEM002` | aritmética sobre `bool` | `TypeChecker.inferBinaryResultType` |
-| `SEM010` | `return` com tipo incompatível | `StatementAnalyzer` (case `ReturnStmt`) |
-| `SEM011` | variável/tipo indefinido | `SemExpressionTyper` (case `IdentifierExpr`) |
-| `SEM012` | atribuição incompatível (statement) | `StatementAnalyzer` (case `AssignStmt`) |
-| `SEM013` | nº de argumentos ≠ parâmetros | `TypeChecker.checkArgTypes` |
-| `SEM014` | argumento com tipo incompatível | `TypeChecker.checkArgTypes` |
-| `SEM015` | função indefinida / não-função chamada | `BuiltinCallTyper` |
-| `SEM020` | atribuição a variável nunca declarada | `SemExpressionTyper` (case `AssignExpr`) |
-| `SEM021` | tipo explícito ≠ tipo do inicializador | `StatementAnalyzer` (case `VarDeclStmt`) |
-| `SEM023` | construtor com aridade errada | `SemExpressionTyper` (case `NewExpr`) |
-| `SEM024` | redeclaração no mesmo escopo | `StatementAnalyzer` (case `VarDeclStmt`) |
-| `SEM025` | método inexistente em tipo conhecido | `MemberCallTyper` |
-| `SEM026` | `throw` de valor não-String | `StatementAnalyzer` (case `ThrowStmt`) |
-| `SEM027` | atribuição usada como expressão | `SemExpressionTyper` (case `AssignExpr`) |
-| `SEM028` | `.get()/.set()` em array | `SemMethodCallTyper` |
-| `SEM029` | `toArray()` em List/Set | driver:4052 |
-| `SEM030` | enum sem a constante acessada | driver:4859 |
-| `SEM031` | switch-statement sobre enum não exaustivo | SwitchStmtLowerer:32 |
-| `SEM032` | switch-expressão sem default | `SemExpressionTyper` (case `SwitchExpr`) |
-| `SEM033` | valor `void` usado como expressão | driver:2675 |
+| `SEM001` | arithmetic operator on String/non-numeric | `TypeChecker.inferBinaryResultType` |
+| `SEM002` | arithmetic on `bool` | `TypeChecker.inferBinaryResultType` |
+| `SEM010` | `return` with incompatible type | `StatementAnalyzer` (case `ReturnStmt`) |
+| `SEM011` | undefined variable/type | `SemExpressionTyper` (case `IdentifierExpr`) |
+| `SEM012` | incompatible assignment (statement) | `StatementAnalyzer` (case `AssignStmt`) |
+| `SEM013` | number of arguments ≠ parameters | `TypeChecker.checkArgTypes` |
+| `SEM014` | argument with incompatible type | `TypeChecker.checkArgTypes` |
+| `SEM015` | undefined function / non-function called | `BuiltinCallTyper` |
+| `SEM020` | assignment to a never-declared variable | `SemExpressionTyper` (case `AssignExpr`) |
+| `SEM021` | explicit type ≠ initializer type | `StatementAnalyzer` (case `VarDeclStmt`) |
+| `SEM023` | constructor with wrong arity | `SemExpressionTyper` (case `NewExpr`) |
+| `SEM024` | redeclaration in the same scope | `StatementAnalyzer` (case `VarDeclStmt`) |
+| `SEM025` | nonexistent method on a known type | `MemberCallTyper` |
+| `SEM026` | `throw` of a non-String value | `StatementAnalyzer` (case `ThrowStmt`) |
+| `SEM027` | assignment used as an expression | `SemExpressionTyper` (case `AssignExpr`) |
+| `SEM028` | `.get()/.set()` on array | `SemMethodCallTyper` |
+| `SEM029` | `toArray()` on List/Set | driver:4052 |
+| `SEM030` | enum without the accessed constant | driver:4859 |
+| `SEM031` | non-exhaustive switch-statement over enum | SwitchStmtLowerer:32 |
+| `SEM032` | switch-expression without default | `SemExpressionTyper` (case `SwitchExpr`) |
+| `SEM033` | `void` value used as an expression | driver:2675 |
 | `SEM034` | `sublist()`/`subSet()` | driver:4067 |
-| `SEM037` | reatribuição de `val` | parser (`type="val"`) + `StatementAnalyzer` |
-| `SEM038` | escrita em componente de record | `StatementAnalyzer` (DD-02) |
-| `SEM041` | instanciação de classe `abstract` (`new A()` e `A()`) | `SemExpressionTyper`/`BuiltinCallTyper` (SG-017) |
-| `SEM042` | tipo aninhado (class dentro de class) | `ClassMemberParser.parseClassMember` (SG-016) |
-| `SEM043` | `implements` sem cobrir método da interface / aridade errada | `SemanticAnalyzer.checkInterfaceImplementation` (SG-015) |
-| `SEM044` | `main()` com tipo de retorno declarado (`Int main()`) | `SemanticAnalyzer.analyzeFunction` (SG-018) |
-| `SEM045` | cláusula `throw X` com tipo desconhecido | `SemanticAnalyzer.checkThrowsClause` (SG-019) |
-| `SEM046` | acesso `private`/`protected` fora do permitido | `MemberCallTyper.checkMemberAccess` (SG-013) |
-| `ARITH001` | divisão/resto por zero **constante** | ExpressionLowerer:198 |
+| `SEM037` | reassignment of `val` | parser (`type="val"`) + `StatementAnalyzer` |
+| `SEM038` | write to a record component | `StatementAnalyzer` (DD-02) |
+| `SEM041` | instantiation of an `abstract` class (`new A()` and `A()`) | `SemExpressionTyper`/`BuiltinCallTyper` (SG-017) |
+| `SEM042` | nested type (class inside class) | `ClassMemberParser.parseClassMember` (SG-016) |
+| `SEM043` | `implements` without covering the interface method / wrong arity | `SemanticAnalyzer.checkInterfaceImplementation` (SG-015) |
+| `SEM044` | `main()` with a declared return type (`Int main()`) | `SemanticAnalyzer.analyzeFunction` (SG-018) |
+| `SEM045` | `throw X` clause with unknown type | `SemanticAnalyzer.checkThrowsClause` (SG-019) |
+| `SEM046` | `private`/`protected` access outside what is allowed | `MemberCallTyper.checkMemberAccess` (SG-013) |
+| `ARITH001` | division/remainder by a **constant** zero | ExpressionLowerer:198 |
 
-Divisão por zero **não-constante** (`7 / z` com `z=0`) → erro de **runtime**
-(`ArithmeticException` no JVM; *probe*), não compile-time.
+Division by a **non-constant** zero (`7 / z` with `z=0`) → **runtime**
+error (`ArithmeticException` on the JVM; *probe*), not compile-time.

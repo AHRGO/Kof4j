@@ -1,39 +1,41 @@
-# Integração de Editores — Visão Geral
+[English](overview.md) | [Português](overview.pt_BR.md)
 
-> Kof não é só compilador + runtime. Instalar o Kof deve deixar o seu
-> ambiente de desenvolvimento pronto para programar. Esta é a infraestrutura
-> oficial de integração de editores (EDI001).
+# Editor Integration — Overview
 
-A experiência desejada:
+> Kof is not just compiler + runtime. Installing Kof should leave your
+> development environment ready to program. This is the official editor
+> integration infrastructure (EDI001).
+
+The desired experience:
 
 ```
-instale Kof → kof detecta seu editor → oferece a integração → confirma →
-instala → abra um .kof → LSP + autocomplete + diagnostics + formatter →
-comece a programar.
+install Kof → kof detects your editor → offers the integration → confirm →
+install → open a .kof → LSP + autocomplete + diagnostics + formatter →
+start programming.
 ```
 
 ---
 
-## Camada central: o LSP
+## Central layer: the LSP
 
-Todos os editores compartilham o **mesmo** Language Server oficial (`kof lsp`).
-Nenhum editor implementa parser ou regra semântica própria — isso garantiria
-divergência (o editor "aceitaria" o que o compilador rejeita). O editor consome
-o tooling do Kof:
+All editors share the **same** official Language Server (`kof lsp`).
+No editor implements its own parser or semantic rule — that would guarantee
+divergence (the editor would "accept" what the compiler rejects). The editor
+consumes Kof's tooling:
 
 ```
                     kof lsp  (LSP 3.x, stdio)
         ┌───────────────┼───────────────┐
       VS Code        Neovim         IntelliJ
         │              │              │
-       Vim           Emacs          outros
+       Vim           Emacs          others
 ```
 
-| Recurso | Fonte |
+| Feature | Source |
 |---|---|
-| Syntax highlighting | grammar TextMate (`editor/kof.tmLanguage.json`) ou sintaxe nativa do editor |
+| Syntax highlighting | TextMate grammar (`editor/kof.tmLanguage.json`) or the editor's native syntax |
 | Diagnostics / completion / hover / rename / references | `kof lsp` |
-| Formatação | `kof fmt` |
+| Formatting | `kof fmt` |
 | Build / Run / Test / Check / Serve | `kof build` / `run` / `test` / `check` / `serve` |
 | Debugging | `kof debug` (DAP — **PARTIAL**) |
 
@@ -42,30 +44,30 @@ o tooling do Kof:
 ## CLI `kof editor`
 
 ```bash
-kof editor list       # integrações oficiais disponíveis
-kof editor detect     # editores instalados + integrações
-kof editor status     # ambiente de edição (versão, path, LSP, instalado)
-kof editor setup      # detecta e instala as recomendadas (com consentimento)
+kof editor list       # official integrations available
+kof editor detect     # installed editors + integrations
+kof editor status     # editing environment (version, path, LSP, installed)
+kof editor setup      # detects and installs the recommended ones (with consent)
 kof editor install <editor>     # vscode|vim|neovim|intellij|geany|nano|emacs
 kof editor uninstall <editor>
-kof editor update     # re-sincroniza integrações instaladas
+kof editor update     # re-syncs installed integrations
 ```
 
-`setup` e o hook pós-`kof install` **nunca** alteram o ambiente sem
-consentimento; em ambiente sem console (CI/headless) apenas apontam o comando.
-A instalação é **idempotente** e o `uninstall` remove só o que o Kof escreveu.
+`setup` and the post-`kof install` hook **never** change the environment without
+consent; in a console-less environment (CI/headless) they only point to the command.
+Installation is **idempotent** and `uninstall` removes only what Kof wrote.
 
 ---
 
-## Reconhecimento de arquivos e workspace
+## File and workspace recognition
 
-- Extensões: `*.kf` e `*.kof` (fonte Kof).
-- Workspace: um projeto é reconhecido pela presença de `kof.toml` na raiz
-  (o LSP e as integrações sobem até encontrá-lo).
+- Extensions: `*.kf` and `*.kof` (Kof source).
+- Workspace: a project is recognized by the presence of `kof.toml` at the root
+  (the LSP and the integrations go up until they find it).
 
 ---
 
-## Por editor
+## By editor
 
 - [VS Code](vscode.md)
 - [Neovim](neovim.md)
@@ -77,8 +79,8 @@ A instalação é **idempotente** e o `uninstall` remove só o que o Kof escreve
 
 ---
 
-## Terminal é soberano
+## Terminal is sovereign
 
-As integrações são uma camada de conveniência sobre a CLI. Você sempre pode
-rodar `kof build` / `kof test` / `kof run` / `kof serve` manualmente — nada é
-escondido atrás do editor.
+The integrations are a convenience layer over the CLI. You can always
+run `kof build` / `kof test` / `kof run` / `kof serve` manually — nothing is
+hidden behind the editor.

@@ -1,91 +1,93 @@
+[English](22-jvm.md) | [Português](22-jvm.pt_BR.md)
+
 # 22 — JVM
 
 > **Kof 0.4.0-beta — `intention->Kof->frontend->IR->backend->runtime`**
 
-## O que o compilador gera
+## What the compiler generates
 
-O backend JVM (`JvmBackend`, via ASM) gera **bytecode V21** (Tooling API
+The JVM backend (`JvmBackend`, via ASM) generates **V21 bytecode** (Tooling API
 Level 21):
 
-- **exception table real** — `try/catch/finally` com handlers no `.class`
-  (não exceções lançadas à mão);
-- **virtual threads** — `spawn` usa virtual threads; o programa espera as
-  tarefas (join implícito);
-- `SourceFile` + `LineNumberTable` (e `LocalVariableTable` quando há
-  metadata de debug) — `kof debug` consome isso (DAP MVP, target JVM).
+- **real exception table** — `try/catch/finally` with handlers in the `.class`
+  (not hand-thrown exceptions);
+- **virtual threads** — `spawn` uses virtual threads; the program waits for the
+  tasks (implicit join);
+- `SourceFile` + `LineNumberTable` (and `LocalVariableTable` when there is
+  debug metadata) — `kof debug` consumes this (DAP MVP, JVM target).
 
-## Como Kof roda (JVM é um dos backends — ver Target separation `native.risc/arm` em cap. 31)
+## How Kof runs (JVM is one of the backends — see Target separation `native.risc/arm` in ch. 31)
 
 ```
-Você escreve:  record Point(Int x, Int y)
+You write:     record Point(Int x, Int y)
                       ↓
-Compilador Kof: lexer → parser → AST → IR → bytecode
+Kof compiler:  lexer → parser → AST → IR → bytecode
                       ↓
-JVM recebe:    Point.class
+JVM receives:  Point.class
                       ↓
-Class Loader:  carrega Point.class na memória
+Class Loader:  loads Point.class into memory
                       ↓
-Bytecode Verifier: verifica se o bytecode é seguro
+Bytecode Verifier: verifies that the bytecode is safe
                       ↓
-JIT Compiler:  converte bytecode para machine code nativo
+JIT Compiler:  converts bytecode to native machine code
                       ↓
-Execução:      roda como qualquer programa Java
+Execution:     runs like any Java program
 ```
 
 ## Bytecode
 
-O bytecode é a representação intermediária do programa. É o que o compilador gera e a JVM executa.
+Bytecode is the intermediate representation of the program. It is what the compiler generates and the JVM executes.
 
-Cada instrução bytecode é muito simples:
+Each bytecode instruction is very simple:
 
 ```
-aload_0      → carrega a referência "this"
-iload_1      → carrega o inteiro do parâmetro 1
-putfield     → armazena um valor em um campo
-invokevirtual → chama um método
+aload_0      → loads the "this" reference
+iload_1      → loads the integer from parameter 1
+putfield     → stores a value in a field
+invokevirtual → calls a method
 ```
 
-Uma linha de Kof pode gerar várias instruções bytecode.
+One line of Kof can generate several bytecode instructions.
 
 ## Class Loading
 
-Quando a JVM encontra `Point.class`:
+When the JVM finds `Point.class`:
 
-1. **Loading**: lê o arquivo `.class` e cria uma representação interna
-2. **Linking**: verifica integridade, aloca memória para constantes
-3. **Initialization**: executa static initializers (se existirem)
+1. **Loading**: reads the `.class` file and creates an internal representation
+2. **Linking**: verifies integrity, allocates memory for constants
+3. **Initialization**: runs static initializers (if they exist)
 
 ## Bytecode Verification
 
-Antes de executar, a JVM verifica:
-- os tipos estão corretos
-- as instruções são válidas
-- o stack não transborda
-- os jumps apontam para posições válidas
+Before executing, the JVM verifies:
+- the types are correct
+- the instructions are valid
+- the stack does not overflow
+- the jumps point to valid positions
 
-Se a verificação falhar, o programa não roda.
+If verification fails, the program does not run.
 
 ## JIT (Just-In-Time) Compiler
 
-A JVM não executa bytecode diretamente. Ela compila para machine code nativo em runtime.
+The JVM does not execute bytecode directly. It compiles to native machine code at runtime.
 
-- Métodos que rodam pouco: executam como bytecode
-- Métodos que rodam muito (hot): compilados para nativo
-- O JIT otimiza baseado em profiling real
+- Methods that run little: execute as bytecode
+- Methods that run a lot (hot): compiled to native
+- The JIT optimizes based on real profiling
 
-Isso significa que código Kof pode ser tão rápido quanto código C++ após warmup.
+This means Kof code can be as fast as C++ code after warmup.
 
 ## Garbage Collection
 
-Kof não precisa de gerenciamento manual de memória. A JVM coleta automaticamente objetos que não são mais referenciados.
+Kof does not need manual memory management. The JVM automatically collects objects that are no longer referenced.
 
 ## Memory Model
 
-Kof respeita o Java Memory Model:
-- `volatile` garante visibilidade entre threads
-- `synchronized` garante atomicidade
-- Happens-before relationship é preservado
+Kof respects the Java Memory Model:
+- `volatile` guarantees visibility between threads
+- `synchronized` guarantees atomicity
+- Happens-before relationship is preserved
 
-## Próximo passo
+## Next step
 
-[Testes →](23-testing.md)
+[Testing →](23-testing.md)

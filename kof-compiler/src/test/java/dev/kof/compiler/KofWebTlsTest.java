@@ -88,8 +88,11 @@ class KofWebTlsTest {
         try {
             javax.net.ssl.SSLContext sc = javax.net.ssl.SSLContext.getInstance("TLS");
             sc.init(null, new javax.net.ssl.TrustManager[]{new javax.net.ssl.X509TrustManager() {
+                @Override
                 public java.security.cert.X509Certificate[] getAcceptedIssuers() { return new java.security.cert.X509Certificate[0]; }
+                @Override
                 public void checkClientTrusted(java.security.cert.X509Certificate[] c, String a) {}
+                @Override
                 public void checkServerTrusted(java.security.cert.X509Certificate[] c, String a) {}
             }}, new java.security.SecureRandom());
             return sc.getSocketFactory();

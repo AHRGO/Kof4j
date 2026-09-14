@@ -1,89 +1,91 @@
-# DD-01 — `finally` no caminho `return` do `try` (FECHADO 13/09 — movido p/ docs/)
+[English](DD-01-finally-return.md) | [Português](DD-01-finally-return.pt_BR.md)
 
-> **✅ DECIDIDO 13/09 (mantenedora, opção 4a):** aprova a proposta abaixo (lowering único com `FinallyFrame` na IR, espelho do bytecode JVM, parser JS reconstrói) + **bump 0.3.0→0.3.1**. Implementação liberada p/ lane lowerers.
+# DD-01 — `finally` on the `return` path of `try` (CLOSED 13/09 — moved to docs/)
+
+> **✅ DECIDED 13/09 (maintainer, option 4a):** approves the proposal below (single lowering with `FinallyFrame` in the IR, mirroring the JVM bytecode, JS parser reconstructs) + **bump 0.3.0→0.3.1**. Implementation released to the lowerers lane.
 >
-> **Status:** ✅ **IMPLEMENTADO 13/09** (opção 4a ratificada; a face JS do bug 45
-> já tinha sido corrigida em `c727fee`): `FinallyFrame` na IR
-> (`CompilerDriverState`), `ReturnStmt` com frame ativo → store `#retVal` + jump
-> `returnFinallyLabel`; epílogo do try roda o finally e retorna/encadeia p/ frame
-> externo; lambda/método/função salvam a pilha de frames; JS: try/finally nativo
-> + epílogo só com o return (evita finally duplicado), `#retVal` pre-declarado.
+> **Status:** ✅ **IMPLEMENTED 13/09** (option 4a ratified; the JS face of bug 45
+> had already been fixed in `c727fee`): `FinallyFrame` in the IR
+> (`CompilerDriverState`), `ReturnStmt` with active frame → store `#retVal` + jump
+> `returnFinallyLabel`; the try epilogue runs the finally and returns/chains to the
+> outer frame; lambda/method/function save the frame stack; JS: native try/finally
+> + epilogue only with the return (avoids duplicate finally), `#retVal` pre-declared.
 > Gates: `CoreRegressionE2ETest.finallyReturnJvm` (try-return, catch-return, void)
-> + `finallyReturnJs`. Suíte 4-módulos **1627/0**. Gap bug 45 FECHADO (JVM/Native/
-> interp/JS todos `fin`+valor). · **Gap:** bug 45 ·
-> **Lane:** lowerers · **Criado:** 08/09/2026 · **Bump proposto:** 0.3.0 → 0.3.1 ·
-> **Movido de `future/` p/ `development/` 12/09** (implementação iniciada — regra dos 3 estados)
+> + `finallyReturnJs`. 4-module suite **1627/0**. Bug gap 45 CLOSED (JVM/Native/
+> interp/JS all `fin`+value). · **Gap:** bug 45 ·
+> **Lane:** lowerers · **Created:** 08/09/2026 · **Proposed bump:** 0.3.0 → 0.3.1 ·
+> **Moved from `future/` to `development/` 12/09** (implementation started — rule of 3 states)
 
-## O conflito
+## The conflict
 
-`training/idioms/errors.md:107` documenta o comportamento **previsto**:
+`training/idioms/errors.md:107` documents the **expected** behavior:
 
-> `finally` roda no caminho normal, no caminho capturado e na propagação.
+> `finally` runs on the normal path, on the caught path and on propagation.
 
-`return` dentro de `try` **é** caminho normal. Esperado (Java/Kotlin e o corpus
-do Kof): o `finally` roda **e** o valor do `return` é preservado.
+`return` inside `try` **is** the normal path. Expected (Java/Kotlin and the Kof
+corpus): `finally` runs **and** the `return` value is preserved.
 
-O código atual, no entanto:
+The current code, however:
 
-| Target | `Int f(){ try { return 1 } finally { println("fin") } }` | Roda `fin`? | Valor |
+| Target | `Int f(){ try { return 1 } finally { println("fin") } }` | Runs `fin`? | Value |
 |---|---|---|---|
-| JVM | `1` | **não** | ok |
-| Native | `1` | **não** | ok |
-| Interpretador | `1` | **não** | ok |
-| JS | `fin` + `undefined` | sim | **perdido** |
+| JVM | `1` | **no** | ok |
+| Native | `1` | **no** | ok |
+| Interpreter | `1` | **no** | ok |
+| JS | `fin` + `undefined` | yes | **lost** |
 
-Os 3 primeiros **concordam no errado** (descartam o efeito colateral do
-`finally`); o JS roda o `finally` mas **perde o valor**. Nenhum dos 4 atinge o
-previsto. O agente anterior (07/09) rotulou os 3 de "congelado por construção"
-(regra 6), mas isso **contradiz o corpus** → pela regra 4, o previsto é lei:
-isto é **bug de código**, não decisão de design congelada.
+The first 3 **agree on the wrong** (they discard the side effect of the
+`finally`); JS runs the `finally` but **loses the value**. None of the 4 reaches
+the expected. The previous agent (07/09) labeled the 3 as "frozen by construction"
+(rule 6), but that **contradicts the corpus** → by rule 4, the expected is law:
+this is a **code bug**, not a frozen design decision.
 
-**Por que ainda é decisão de design *como implementá-lo*:** consertar muda a
-ordem de avaliação (regra 6 — "  0.2.6-beta": ordem de
-avaliação). A *direção* está no corpus (rodar `finally`); o *mecanismo* e o
-impacto nos 4 backends + no reconstructor JS exigem vivência → este DD pede
-bump + assinatura antes de editar o lowering.
+**Why it is still a design decision *how to implement it*:** fixing it changes the
+evaluation order (rule 6 — "  0.2.6-beta": evaluation
+order). The *direction* is in the corpus (run `finally`); the *mechanism* and the
+impact on the 4 backends + the JS reconstructor require experience → this DD asks
+for a bump + sign-off before editing the lowering.
 
-## Proposta de correção (lowering único, propaga via IR)
+## Fix proposal (single lowering, propagates via IR)
 
-Hoje o retorno-do-try faz `return` direto, pulando o bloco `finally`. Proposta
-(espelho do que o JVM bytecode real faz):
+Today the return-of-the-try does a direct `return`, skipping the `finally` block.
+Proposal (mirroring what the real JVM bytecode does):
 
-1. lowering de `TryStmt` com `finally` abre um **frame** na pilha do driver
-   (`Deque<FinallyFrame>` — análogo ao `breakLabels`):
-   `{ rethrowLabel, finallyLabel, slotValor (se a função retorna valor), returnType }`.
-2. lowering de `ReturnStmt` com frame ativo: em vez de `return` direto, faz
-   `KofStoreLocal(#retVal, slot)` → `KofJump(finallyLabel)`; o epílogo
-   `finally` termina com `KofLoadLocal(#retVal)` + `KofReturn`. (Void:
-   só `KofJump(finallyLabel)`, o epílogo cai em `doneLabel`.)
-3. `CompilerLambdaClass` (corpo de lambda lowered no mesmo driver) **salva e
-   zera** a pilha ao entrar, restaura ao sair — senão um `finally` do método
-   externo vazaria para dentro do lambda (mesmo padrão de `savedMutated`).
-4. `JsControlFlowParser.parseTryStatement`: reconhecer a nova forma de IR
-   (store→jump-finally→load+return) preservando o valor — o JS **reconstrói**
-   try/finally da IR, não emite raw; sem este ponto o JS regridiria.
+1. lowering of `TryStmt` with `finally` opens a **frame** in the driver stack
+   (`Deque<FinallyFrame>` — analogous to `breakLabels`):
+   `{ rethrowLabel, finallyLabel, valueSlot (if the function returns a value), returnType }`.
+2. lowering of `ReturnStmt` with an active frame: instead of a direct `return`, it does
+   `KofStoreLocal(#retVal, slot)` → `KofJump(finallyLabel)`; the `finally`
+   epilogue ends with `KofLoadLocal(#retVal)` + `KofReturn`. (Void:
+   only `KofJump(finallyLabel)`, the epilogue falls into `doneLabel`.)
+3. `CompilerLambdaClass` (lambda body lowered in the same driver) **saves and
+   zeroes** the stack on entry, restores on exit — otherwise a `finally` of the
+   outer method would leak into the lambda (same pattern as `savedMutated`).
+4. `JsControlFlowParser.parseTryStatement`: recognize the new IR form
+   (store→jump-finally→load+return) preserving the value — JS **reconstructs**
+   try/finally from the IR, does not emit raw; without this point JS would regress.
 
-Alternativa (menor risco de IR, maior risco de parser): o backend JVM já tem
-`finally` nativo; mas Native/interp/JS não têm um "finally real" — todos
-consomem a IR — então o fix **precisa** ser na IR (opção acima), não por
+Alternative (lower IR risk, higher parser risk): the JVM backend already has a
+native `finally`; but Native/interp/JS do not have a "real finally" — they all
+consume the IR — so the fix **must** be in the IR (option above), not per
 target.
 
-## Gate de aceite (regra 3: refactor preserva semântica; aqui é *correção*)
+## Acceptance gate (rule 3: refactor preserves semantics; here it is a *fix*)
 
-- Casos novos na `ConformanceMatrixTest` (4 targets): `fin`+`1` no
-  return-no-try; `fin`+`1` no catch-return; `fin`+`2` no try-normal;
-  propagação mantém o throw **depois** do finally.
-- `finally` com `return` **dentro** do próprio finally (sombra o do try) —
-  edge case a decidir (Java: finally return vence).
-- Golden/E2E por target; `BackendParityTest.finally-return` sai da exclusão.
-- Bump 0.3.1 no `KofVersion` + nota em `docs/` (mudança de ordem de avaliação).
+- New cases in `ConformanceMatrixTest` (4 targets): `fin`+`1` in the
+  return-in-try; `fin`+`1` in the catch-return; `fin`+`2` in the normal try;
+  propagation keeps the throw **after** the finally.
+- `finally` with `return` **inside** the finally itself (shadows the one of the try) —
+  edge case to decide (Java: finally return wins).
+- Golden/E2E per target; `BackendParityTest.finally-return` leaves the exclusion.
+- Bump 0.3.1 in `KofVersion` + note in `docs/` (evaluation order change).
 
-## Riscos
+## Risks
 
-- Ordem de avaliação é congelada (0.2.6-beta): qualquer mudança precisa de
-  bump + doc + migração. Este DD pede essa autorização; **não** editar o
-  lowering antes dela (regra 6 + modo autônomo condição de parada 1).
-- O `Optimizer` pode encolher/reordenar os ops do epílogo — validar que o
-  store/load do `#retVal` sobrevive à otimização (slot novo, sem outros
-  leitores → risco de DCE). Mitigação: `locals.add` nomeado `#retVal` + teste
-  com `-Xverify:all` (kitchen-sink já roda o verifier estrito).
+- Evaluation order is frozen (0.2.6-beta): any change needs a
+  bump + doc + migration. This DD asks for that authorization; **do not** edit the
+  lowering before it (rule 6 + autonomous mode stop condition 1).
+- The `Optimizer` may shrink/reorder the epilogue ops — validate that the
+  store/load of `#retVal` survives optimization (new slot, no other
+  readers → DCE risk). Mitigation: `locals.add` named `#retVal` + test
+  with `-Xverify:all` (kitchen-sink already runs the strict verifier).

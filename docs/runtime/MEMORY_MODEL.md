@@ -1,13 +1,15 @@
-# MEMORY_MODEL.md — Modelo de Memória do Kof
+[English](MEMORY_MODEL.md) | [Português](MEMORY_MODEL.pt_BR.md)
 
-**Data:** 2 de setembro de 2026
-**Status:** Implementado — Fase F.7 + evolução 0.0.5 (allocator com header) + 0.2.6-beta (free-list `kof_free_head` 27/08; mark-sweep pendente)
+# MEMORY_MODEL.md — Kof Memory Model
+
+**Date:** September 2, 2026
+**Status:** Implemented — Phase F.7 + 0.0.5 evolution (allocator with header) + 0.2.6-beta (free-list `kof_free_head` 27/08; mark-sweep pending)
 
 ---
 
-## 1. Visão Geral
+## 1. Overview
 
-O modelo de memória do Kof usa um **allocator com header de bloco** sobre mmap.
+The Kof memory model uses an **allocator with a block header** over mmap.
 
 ```
 kof_alloc(size)
@@ -15,74 +17,74 @@ kof_alloc(size)
 mmap (size + 16 header)
     ↓
 +0  total_size (16 bytes)
-+16 payload (objeto/array/string) — alinhado a 16
++16 payload (object/array/string) — aligned to 16
     ↓
-kof_free(ptr) → munmap(bloco exato)
+kof_free(ptr) → munmap(exact block)
 ```
 
-O usuário da linguagem nunca chama `free` — o gerenciamento é decisão do
-runtime/compiler. O código Kof é semanticamente independente do mecanismo
-de memória do target.
+The language user never calls `free` — management is a runtime/compiler
+decision. Kof code is semantically independent of the target's memory
+mechanism.
 
 ---
 
-## 2. Estratégia
+## 2. Strategy
 
-### Alocação
+### Allocation
 
-- `kof_alloc(size)` usa `mmap` (`MAP_PRIVATE | MAP_ANONYMOUS`)
-- Cada bloco tem header de 16 bytes: **tamanho total mapeado** (header + payload)
-- Payload devolvido ao chamador, alinhado a 16 bytes
-- Contadores globais: `alloc_count`, `free_count`, `alloc_bytes`, `free_bytes`
+- `kof_alloc(size)` uses `mmap` (`MAP_PRIVATE | MAP_ANONYMOUS`)
+- Each block has a 16-byte header: **total mapped size** (header + payload)
+- Payload returned to the caller, aligned to 16 bytes
+- Global counters: `alloc_count`, `free_count`, `alloc_bytes`, `free_bytes`
 
 ### Deallocation
 
-- `kof_free(ptr)` lê o tamanho do header e executa `munmap` do bloco exato
-- `kof_free(null)` é no-op seguro
-- Contadores atualizados em tempo real
+- `kof_free(ptr)` reads the size from the header and runs `munmap` on the exact block
+- `kof_free(null)` is a safe no-op
+- Counters updated in real time
 
 ### Ownership
 
-- Objetos são alocados via `kof_alloc`
-- Referências são ponteiros diretos
-- Sem reference counting (futuro)
-- Sem weak references (futuro)
+- Objects are allocated via `kof_alloc`
+- References are direct pointers
+- No reference counting (future)
+- No weak references (future)
 
 ---
 
-## 3. Lifetime de Objetos
+## 3. Object Lifetime
 
-| Tipo | Lifetime | Deallocation |
+| Type | Lifetime | Deallocation |
 |------|----------|--------------|
-| Objeto | Enquanto referenciado | `kof_free` / GC futuro |
-| Array | Enquanto referenciado | `kof_free` / GC futuro |
-| String | Enquanto referenciado | `kof_free` / GC futuro |
-| Method Table | Todo o programa | SO no exit |
+| Object | While referenced | `kof_free` / future GC |
+| Array | While referenced | `kof_free` / future GC |
+| String | While referenced | `kof_free` / future GC |
+| Method Table | Whole program | OS on exit |
 
-Sem GC nesta fase: a memória é devolvida ao SO no exit do processo.
-O allocator já possui a estrutura (header com tamanho + contadores) para
-a evolução futura: arenas, reference tracking, GC generacional.
+No GC in this phase: memory is returned to the OS on process exit.
+The allocator already has the structure (header with size + counters) for
+future evolution: arenas, reference tracking, generational GC.
 
 ---
 
 ## 4. Root References
 
-Roots são:
-- Variáveis locais na stack
-- Campos estáticos (se existirem)
-- Registradores durante execução
+Roots are:
+- Local variables on the stack
+- Static fields (if any)
+- Registers during execution
 
-Objetos referenciados por roots permanecem válidos durante toda a execução.
+Objects referenced by roots remain valid throughout execution.
 
 ---
 
 ## 5. Runtime Functions
 
-| Função | Propósito |
+| Function | Purpose |
 |--------|-----------|
-| `kof_alloc(size)` | Aloca bloco mmap com header de 16 bytes |
-| `kof_free(ptr)` | `munmap` do bloco exato (lê tamanho do header) |
-| `kof_memstats()` | Imprime `allocs`, `frees`, `live bytes` reais |
+| `kof_alloc(size)` | Allocates an mmap block with a 16-byte header |
+| `kof_free(ptr)` | `munmap` of the exact block (reads size from header) |
+| `kof_memstats()` | Prints real `allocs`, `frees`, `live bytes` |
 
 ---
 
@@ -94,47 +96,47 @@ offset 4:  flags (4 bytes)
 offset 8:  method_table_ptr (8 bytes)
 ```
 
-O header do objeto não contém informações de memória (sem mark bits,
-sem forwarding pointer) — o header de alocação fica 16 bytes antes do objeto.
+The object header does not contain memory information (no mark bits,
+no forwarding pointer) — the allocation header sits 16 bytes before the object.
 
 ---
 
-## 7. Arquivos
+## 7. Files
 
-| Arquivo | Papel |
+| File | Role |
 |---------|-------|
-| NativeRuntime.java | `kof_alloc`, `kof_free`, `kof_memstats`, contadores |
-| NativeBackend.java | Gera chamadas para funções de runtime |
-| ClassLayout.java | Cálculo de tamanho de objetos |
+| NativeRuntime.java | `kof_alloc`, `kof_free`, `kof_memstats`, counters |
+| NativeBackend.java | Generates calls to runtime functions |
+| ClassLayout.java | Object size calculation |
 
 ---
 
-## 8. Limitações
+## 8. Limitations
 
-1. Sem GC automático (mark-sweep pendente; auto-GC desativado após hang —
-   free-list reusa `mmap`, memória devolvida só no `munmap` fallback — ver §9)
-2. Sem reference counting
-3. Sem weak references
-4. Sem finalização de objetos
-5. Sem detecção de memory leaks (apenas contadores)
-6. `kof_free` ainda não é chamado pelo código gerado (fundação para GC)
+1. No automatic GC (mark-sweep pending; auto-GC disabled after a hang —
+   free-list reuses `mmap`, memory returned only on the `munmap` fallback — see §9)
+2. No reference counting
+3. No weak references
+4. No object finalization
+5. No memory leak detection (counters only)
+6. `kof_free` is not yet called by the generated code (foundation for GC)
 
 ---
 
-## 9. Futuro
+## 9. Future
 
-- Fase G: GC tracing (mark-and-sweep) sobre o header existente
-- Arenas internas para alocações curtas
-- Reference counting para objetos sem ciclos
+- Phase G: tracing GC (mark-and-sweep) over the existing header
+- Internal arenas for short-lived allocations
+- Reference counting for objects without cycles
 - Weak references
 - Memory compaction
 
-> **Atualizado (0.2.6-beta, 31/08):** a evolução do GC partiu do allocator
-> de header para uma **free-list** (`kof_free_head`) que reusa blocos já
-> `munmap`ados/reativados via `mmap` — reduz o custo de `mmap` por alocação
-> pequena (gargalo nº 1 do `language-state.md`). O **mark-sweep é pendente**:
-> `kof_gc_collect` existe, mas o GC automático foi **desativado após um hang**
-> durante a execução; a memória continua sendo devolvida ao SO no
-> `munmap` fallback (e no exit). O `spawn`/`await` de 31/08 (pthread) exigeu
-> que o allocator virasse **thread-safe** (futex), já que múltiplas threads
-> do programa alocam/concorrem sobre o heap.
+> **Updated (0.2.6-beta, 31/08):** the GC evolution started from the header
+> allocator toward a **free-list** (`kof_free_head`) that reuses blocks already
+> `munmap`ed/reactivated via `mmap` — reduces the cost of `mmap` per small
+> allocation (bottleneck #1 in `language-state.md`). **Mark-sweep is pending**:
+> `kof_gc_collect` exists, but automatic GC was **disabled after a hang**
+> during execution; memory continues to be returned to the OS on the
+> `munmap` fallback (and on exit). The `spawn`/`await` of 31/08 (pthread) required
+> the allocator to become **thread-safe** (futex), since multiple program
+> threads allocate/contend over the heap.

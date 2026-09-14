@@ -10,11 +10,17 @@ import java.util.regex.Pattern;
 
 /** Emacs — kof-mode + eglot (degraus 7+). */
 public final class EmacsProvider extends AbstractEditorIntegration {
+    @Override
     public String id() { return "emacs"; }
+    @Override
     public String displayName() { return "Emacs"; }
+    @Override
     public String integrationName() { return "Kof mode for Emacs"; }
+    @Override
     protected List<String> executables() { return List.of("emacs", "emacsclient"); }
+    @Override
     protected List<String> configDirs() { return List.of(".emacs.d", ".config/emacs"); }
+    @Override
     protected Pattern versionPattern() { return Pattern.compile("GNU Emacs (\\d+\\.\\d+)"); }
 
     @Override

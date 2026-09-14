@@ -1,130 +1,132 @@
-# Kof Standard Library — Arquitetura
+[English](stdlib.md) | [Português](stdlib.pt_BR.md)
 
-**Última atualização:** 12 de setembro de 2026
-**Versão:** 0.4.0-beta
+# Kof Standard Library — Architecture
 
-> A Standard Library do Kof é a plataforma: HTTP, REST, auth, autorização,
-> validação, serialização, database, messaging, observabilidade e testing
-> devem ser construídos com a própria plataforma — sem dependência
-> arquitetural de frameworks externos.
+**Last updated:** September 12, 2026
+**Version:** 0.4.0-beta
+
+> Kof's Standard Library is the platform: HTTP, REST, auth, authorization,
+> validation, serialization, database, messaging, observability and testing
+> must be built with the platform itself — with no architectural dependency
+> on external frameworks.
 
 ---
 
-# 1. PRINCÍPIO
+# 1. PRINCIPLE
 
 ```text
-intenção → Kof → resultado
+intent → Kof → result
 ```
 
-A API pública é simples; a implementação interna é eficiente. O compilador
-conhece cada chamada de stdlib em compile-time e a mapeia para o runtime
-mais direto de cada target (JVM bytecode, assembly nativo, JS idiomático).
+The public API is simple; the internal implementation is efficient. The
+compiler knows each stdlib call at compile-time and maps it to the most direct
+runtime of each target (JVM bytecode, native assembly, idiomatic JS).
 
 ---
 
-# 2. MECANISMO
+# 2. MECHANISM
 
-Cada módulo da stdlib é uma **tabela de dispatch compile-time**:
+Each stdlib module is a **compile-time dispatch table**:
 
 ```text
 KofSecurity.java / KofWeb.java / KofIo.java / KofUi.java
         │
-        ├── SemanticAnalyzer   → tipos das chamadas (inferência/checagem)
-        ├── CompilerDriver     → lowering para KofCall(kof_*)
-        ├── JvmRuntime         → KofRuntime gerado (javax.crypto, java.nio...)
-        ├── NativeRuntime      → assembly x86-64 (syscalls, sem libc)
-        └── JsBackend          → kof-runtime.mjs (JS puro + kof_platform)
+        ├── SemanticAnalyzer   → types of the calls (inference/checking)
+        ├── CompilerDriver     → lowering to KofCall(kof_*)
+        ├── JvmRuntime         → generated KofRuntime (javax.crypto, java.nio...)
+        ├── NativeRuntime      → x86-64 assembly (syscalls, no libc)
+        └── JsBackend          → kof-runtime.mjs (pure JS + kof_platform)
 ```
 
-Gaps de target produzem **diagnósticos claros em compile-time** (SECN00x,
-CONC001, JSN00x) — nunca comportamento silenciosamente diferente.
+Target gaps produce **clear compile-time diagnostics** (SECN00x, CONC001,
+JSN00x) — never silently different behavior.
 
-> **Entrega:** o compilador inclui só o que o programa usa (tree-shaking
-> por alcançabilidade — ver `docs/stdlib/stdlib-loading.md` com os números
-> travados no `ArtifactSizeTest`).
+> **Delivery:** the compiler includes only what the program uses (tree-shaking
+> by reachability — see `docs/stdlib/stdlib-loading.md` with the numbers
+> locked in `ArtifactSizeTest`).
 
 ---
 
-# 3. MÓDULOS
+# 3. MODULES
 
-| Módulo | Estado | Notas |
+| Module | Status | Notes |
 |--------|--------|-------|
-| `kof.core` | ✅ | println, strings, arrays, aritmética; `enum Name { A, B }` + `values()/valueOf()/name()` + `==` por conteúdo — 3 targets (`KofEnumTest`); **0.2.0**: pattern matching `case String s` + `Point(x,y)` e `String?` básica (3 targets) |
-| `kof.collections` | ✅ | `List<T>` `listOf` + `map/filter/reduce` (0.2.0, 3 targets); `Map<K,V>` (mapOf + put/get/remove/contains/size/keys/values/clear/isEmpty) e `Set<T>` (setOf + add/contains/remove/size/clear/isEmpty) — **3 targets** (Native: asm próprio sobre layout List; Set usa tag de tipo p/ equals); `Box<T>` via `substituteTypeVariable` `CompilerDriver.java:3972` |
+| `kof.core` | ✅ | println, strings, arrays, arithmetic; `enum Name { A, B }` + `values()/valueOf()/name()` + `==` by content — 3 targets (`KofEnumTest`); **0.2.0**: pattern matching `case String s` + `Point(x,y)` and basic `String?` (3 targets) |
+| `kof.collections` | ✅ | `List<T>` `listOf` + `map/filter/reduce` (0.2.0, 3 targets); `Map<K,V>` (mapOf + put/get/remove/contains/size/keys/values/clear/isEmpty) and `Set<T>` (setOf + add/contains/remove/size/clear/isEmpty) — **3 targets** (Native: own asm over the List layout; Set uses a type tag for equals); `Box<T>` via `substituteTypeVariable` `CompilerDriver.java:3972` |
 | `kof.io` | ✅ | `File/Path/Directory`, readFile/writeFile — JVM/Native/JS |
-| `kof.time` | ✅ | `now()`, `sleep`, `interval`/`cancel` (3 targets — JS via fila cooperativa bombeada por `time.sleep`, TIME001 fechado) + calendário civil `isLeapYear/daysInMonth/dayOfWeek/daysBetween` (4 alvos) + `addDays`/`diffDays` em data ISO (5 alvos: JVM/Script `java.time` + JS algoritmo civil + x86 asm `RuntimeTimeIso` + riscv/aarch B33 — TIME002 fechado 11/09) — `KofTimeE2ETest` |
-| `kof.json` | ✅ | encode/decode; objetos/records JVM+Native+JS (JSN002), Float/Double + arrays `Double[]`/`Float[]` (JSN001) e arrays `Int[]/Long[]/Bool[]/String[]` (JSN003) — Native completo 31/08 |
-| `kof.http` | ✅ | `kof serve` (KofHttpServer, thread pool) — JVM; `kof.http` client `http.get/post/put/delete/patch/options/status` — JVM/JS/**Native 03/09** (HTTP/1.1 asm, `NativeHttpRuntime`, IPv4 só; https→throw); retry/circuit/timeout aceitam chamada mas só implementados em JVM/JS (`HTTP003`). **Assíncrono:** `var h = spawn http.get(url); await h` → `Handle<String>` nos 3 targets — no Node/browser é o único caminho real (fetch→Promise, §133; a chamada síncrona lá devolve o Promise cru — face síncrona não existe em JS puro, §133/HTTP003) |
-| `kof.web` | ✅ | `web.app()`, rotas, middleware `app.use`, `listenSecure(port)` TLS, `status(code[, body])`/`headerSet`, `app.ws` (WebSocket RFC 6455) + `app.sse` (SSE) — JVM (Native `WEB001/002`, JS `WEB001`/`WEB003`/`WEB004`) |
-| `kof.security` | ✅ (v1 + G9) | passwords, crypto, jwt, secrets, auth, security, rateLimit, sessions, apiKeys — 3 targets; free-list Native 27/08 — ver `docs/stdlib/security.md` |
-| `kof.concurrent` | ✅ | `spawn` (statement) + `val r = spawn f()` / `await r` (handle tipado) — JVM (virtual threads) + Native (pthread, 31/08, `CONC001` fechado) + JS sequencial |
-| `kof.test` | ✅ | `kof test` (`test "nome" { }` nos 3 targets) + `assert` — `StructuredTestE2ETest` 11/11; golden 16/16 |
+| `kof.time` | ✅ | `now()`, `sleep`, `interval`/`cancel` (3 targets — JS via cooperative queue pumped by `time.sleep`, TIME001 closed) + civil calendar `isLeapYear/daysInMonth/dayOfWeek/daysBetween` (4 targets) + `addDays`/`diffDays` on ISO date (5 targets: JVM/Script `java.time` + JS civil algorithm + x86 asm `RuntimeTimeIso` + riscv/aarch B33 — TIME002 closed 11/09) — `KofTimeE2ETest` |
+| `kof.json` | ✅ | encode/decode; objects/records JVM+Native+JS (JSN002), Float/Double + `Double[]`/`Float[]` arrays (JSN001) and `Int[]/Long[]/Bool[]/String[]` arrays (JSN003) — Native complete 31/08 |
+| `kof.http` | ✅ | `kof serve` (KofHttpServer, thread pool) — JVM; `kof.http` client `http.get/post/put/delete/patch/options/status` — JVM/JS/**Native 03/09** (HTTP/1.1 asm, `NativeHttpRuntime`, IPv4 only; https→throw); retry/circuit/timeout accept the call but are only implemented on JVM/JS (`HTTP003`). **Asynchronous:** `var h = spawn http.get(url); await h` → `Handle<String>` on the 3 targets — on Node/browser it is the only real path (fetch→Promise, §133; the synchronous call there returns the raw Promise — the synchronous face does not exist in pure JS, §133/HTTP003) |
+| `kof.web` | ✅ | `web.app()`, routes, `app.use` middleware, `listenSecure(port)` TLS, `status(code[, body])`/`headerSet`, `app.ws` (WebSocket RFC 6455) + `app.sse` (SSE) — JVM (Native `WEB001/002`, JS `WEB001`/`WEB003`/`WEB004`) |
+| `kof.security` | ✅ (v1 + G9) | passwords, crypto, jwt, secrets, auth, security, rateLimit, sessions, apiKeys — 3 targets; Native free-list 27/08 — see `docs/stdlib/security.md` |
+| `kof.concurrent` | ✅ | `spawn` (statement) + `val r = spawn f()` / `await r` (typed handle) — JVM (virtual threads) + Native (pthread, 31/08, `CONC001` closed) + sequential JS |
+| `kof.test` | ✅ | `kof test` (`test "name" { }` on the 3 targets) + `assert` — `StructuredTestE2ETest` 11/11; golden 16/16 |
 | `kof.cli` | ✅ | `kof build/run/serve/check/test/bench/debug/info/lsp/install/script/repl/c` (debug DAP, `kof script --watch` SIGPIPE fix 27/08) |
-| `kof.script` | ✅ | `KofScript` top-level `let` → `KofScriptGlobals` + REPL (8 testes kof-script, 27/08) |
-| `kof.c` | ✅ | `KofCcompiler` C subset (`int` globals, `void` funcs, `if`/`while`/`*(int*)`/`&`) → native x86_64 (5 testes kof-c-compiler, 27/08) |
+| `kof.script` | ✅ | `KofScript` top-level `let` → `KofScriptGlobals` + REPL (8 kof-script tests, 27/08) |
+| `kof.c` | ✅ | `KofCcompiler` C subset (`int` globals, `void` funcs, `if`/`while`/`*(int*)`/`&`) → native x86_64 (5 kof-c-compiler tests, 27/08) |
 | `kof.metrics` | ✅ | `kof bench`/`kof profile` (harness + baseline, 37 benchmarks, `benchmark.yml` threshold 1.20) |
-| `kof.rest` | ⏳ | planejado |
-| `kof.database` | ✅ | `kof.db` (JVM JDBC: H2/MySQL/MariaDB/PostgreSQL; Native SQLite via `.so` direto + MySQL wire protocol WIP — auth scramble SHA-1; JS `DB001`) + `kof.orm` (entity, create/save/saveAll/find/where/count/page/delete/deleteAll/migrate; **coluna tipada em where/count: literal não-campo → `ORM003` em compile-time**; JVM + MongoDB; Native/JS `ORM001`) — ver `docs/stdlib/DATABASE_VISION.md` |
+| `kof.rest` | ⏳ | planned |
+| `kof.database` | ✅ | `kof.db` (JVM JDBC: H2/MySQL/MariaDB/PostgreSQL; Native SQLite via direct `.so` + MySQL wire protocol WIP — SHA-1 auth scramble; JS `DB001`) + `kof.orm` (entity, create/save/saveAll/find/where/count/page/delete/deleteAll/migrate; **typed column in where/count: non-field literal → `ORM003` at compile-time**; JVM + MongoDB; Native/JS `ORM001`) — see `docs/stdlib/DATABASE_VISION.md` |
 | `kof.messaging` | ✅ | `kof.mq` publish/subscribe/queue — **3 targets** (JVM in-memory; Native asm 01/09; JS in-process) — `KofMqE2ETest` 4/4 |
-| `kof.supervisor` | ✅ | Núcleo OTP (issue #83): `supervisor(name).child(id,fabrica,politica)`+`restartLimit`+`escalate`+`start`/`stop`/`stats` — host **puro-Kof** injetado por `import kof.supervisor` (mecanismo android-host). **JVM+Script ✅ 11/09**; NATIVE=OTP001 (§129), JS=OTP002 (§132) bloqueados no compile-time (R6). `KofSupervisorE2ETest` 6/6 |
+| `kof.supervisor` | ✅ | OTP core (issue #83): `supervisor(name).child(id,factory,policy)`+`restartLimit`+`escalate`+`start`/`stop`/`stats` — host **pure-Kof** injected by `import kof.supervisor` (android-host mechanism). **JVM+Script ✅ 11/09**; NATIVE=OTP001 (§129), JS=OTP002 (§132) blocked at compile-time (R6). `KofSupervisorE2ETest` 6/6 |
 | `kof.validation` | ✅ | `validation.required/notBlank/minLength/maxLength/lengthBetween/isEmail/isUrl/matches/isInt/isLong/inRange/min/max` — JVM/Native/JS (`KofValidationTest` 3/3) |
-| `kof.logging` | ✅ | `log.debug/info/warn/error`, níveis, off — JVM+Native (asm, `kof_log_*`, 27/08) — `KofLogE2ETest` + `NativeLogE2ETest` |
+| `kof.logging` | ✅ | `log.debug/info/warn/error`, levels, off — JVM+Native (asm, `kof_log_*`, 27/08) — `KofLogE2ETest` + `NativeLogE2ETest` |
 | `kof.observability` | ✅ | `observability.health/readiness/liveness`, `counter`/`increment`/`gauge`, `requestId()`/`correlationId()` — JVM/Native/JS (`KofObservabilityTest` 3/3) |
-| `kof.cache` | ✅ | `cache.get/set/set(key,v,ttl)/ttl/delete/clear` — 3 targets (fix nativo 30/08) — `KofCacheE2ETest` (5) |
+| `kof.cache` | ✅ | `cache.get/set/set(key,v,ttl)/ttl/delete/clear` — 3 targets (native fix 30/08) — `KofCacheE2ETest` (5) |
 | `kof.scheduler` | ✅ | `scheduler.every(n, fn)`/`at(cron, fn)`/`cancel(id)` — JVM (ScheduledExecutor) + JS (setInterval) — Native `SCHED001` |
-| `kof.process` | ✅ | `kof.process` (spawn de processos) — ver `docs/status.md` |
-| `kof.config` | ✅ | `config.get/env/has`, `config.str/int/long/bool(name, fallback)`, `config.required`; interpolação `${key}`; `kof config gen` gera template; precedência `KOF_CONFIG` > env `KOF_<KEY>` > profile > `kof.config` — 3 targets (JVM/Native asm `/proc/self/environ`/JS) — `KofConfigE2ETest` (11) |
-| **STDLIB** (`math`/`strings`/`encoding`/`uuid`/`validation`-ext/`time`-calendário/`net`; namespace via `KofStd`/`KofTime`/`KofValidation`) | ✅ S1–S8 (parcial nativos) | **plan-stdlib-expansion.** `math`: `clamp/abs/sign/min/max/isEven/isOdd/isPositive/isNegative/isZero` (Int, 4 alvos) + `sqrt(DOUBLE)->Double` (S1b, 10/09: PRIMEIRO Double — JVM/Script/JS/x86 `sqrtsd` + **riscv/aarch B32 `fsqrt.d` (MATH001 fechado 11/09)**; NaN em <0 = IEEE; bug 94 registra o `NaN==NaN` do interpretador) + `lerp(a,b,t)`/`percentage(part,total)` (Double->Double) + `isInteger`/`isDecimal(DOUBLE)->Bool` (S1b.1, 10/09: escalares Double **puros SSE2** — sem libm; 5 alvos — riscv/aarch B32 11/09; golden travado no oracle JVM medido, harness C isolado 18/18). `strings`: `isAlpha/isNumeric/isAlphaNumeric/isAscii/isUpperCase/isLowerCase/count/capitalize/uncapitalize (S11 — espelho do capitalize, 5 alvos)/reverse/repeat/truncate/padLeft/padRight` + `escapeHtml`/`escapeJson` (S3.1/S3.1c) + `removeWhitespace`/`normalizeWhitespace` (S3.2) + `indent(s, n)`/`dedent(s)` (S3.3, 5 alvos: JVM/Script/JS/x86/riscv64/aarch64 B37) + word-converters `toCamelCase/toPascalCase/toSnakeCase/toKebabCase/slugify` — **todos nos 4 alvos** (**STRN001 fechado 09/09**: port riscv B15 + diff golden no qemu). `encoding`: `hexEncode/Decode` + `urlEncode/Decode` (4 alvos); `base64Encode/Decode` + `base64UrlEncode/Decode` (JVM/Script/JS/x86 + **riscv/aarch — ENC002 fechado 09/09**: port riscv B23 + translator, spec tolerante idêntica). `uuid.v4` (JVM/x86/JS + **riscv/aarch — SECN000 fechado 09/09**: getrandom(2) via ecall 278 na fatia B25 + translator; R11 — só a primitiva do SO). `uuid.isUuid` (S3b-ext — shape canônico 36/hex/hífens fixos, **5 alvos — UUID001 fechado no merge beta→main 10/09**: fatia B25 + tradutor; não valida versão/variante). `uuid.v7` (S3b.2 10/09 — RFC 9562: unix-ts-ms 48 bits BE em b0..b5 + version='7' (char 14) + variante 10xx (char 19, máscara igual v4) + rand_a/rand_b; **5 alvos**: JVM/Script (SecureRandom+currentTimeMillis), JS (Date.now+randomBytesHex), x86_64 (RuntimeUuid), riscv64 B25b + aarch64 tradutor (getrandom+kof_time_now); ts<0=>null no riscv, ts>2^48 low-48; travado por KofUuidTest uuidV7{Jvm,Js,Native,CrossArch}). `random`: face beta `randomInt(bound)`/`randomBoolean` (S10a) + `randomString(n, alphabet)` (S10b) + face main `double()/boolean()/int(bound)/hex(n)` (S10, 10/09) — **duas faces convivem no dispatch** (retrocompat aditiva; `double`/`hex` riscv/aarch na fatia B27); **5 alvos**; entropia só do SO (x86 alias `kof_sec_random_int`/`hex`; riscv B27/B28 + translator; JS kof_platform/crypto; JVM SecureRandom); bordas lenientes (`b<=0→0`, `n<=0/alphabet vazio→""`, `hex n<=0→null` em JVM/JS). `validation` ext: BR `isCpf/isCnpj/isCep/isPis` (4) + `formatCpf/formatCep/formatCnpj` (S12/S12b — pontuação BR, 5 alvos, face leniente: nº errado de dígitos => original, nunca lança; formatPis fora — máscara 11-dígitos ambígua), rede `isIpv4/isIpv6/isMac/isPort` (4), Luhn `isCreditCard` (4), `isDomain` (4, RFC 1123 v1 sem ponto final/IDN). `time` calendário: `isLeapYear/daysInMonth/dayOfWeek/daysBetween` (4, sem gate) + `isWeekend` (S7-ext — wrapper dayOfWeek>=6, 5 alvos) + `addDays`/`diffDays` em data ISO (S7a JVM/Script via `java.time`, S7b JS algoritmo civil sem `Date`, S7c x86 asm `RuntimeTimeIso`, **riscv/aarch B33 — TIME002 fechado 11/09**; 5 alvos). `net` ext: 6 escalares `scheme/host/port/path/query/fragment(STR->STR)` + `queryEncode/queryDecode` (S8, decisão §4 do plano; RFC 3986 subset v1 — sem colchetes IPv6; ausente=>""; nunca lança) em JVM/Script/JS/x86 (RuntimeUri); riscv/aarch — **NET001 fechado 09/09** (B24 + translator). Semântica travada nas matrizes `stdmath`/`stdsqrt`/`stdmathdouble`/`stdstrings*`/`stdenc`/`stdvalidation*`/`stdluhn`/`stdipv6`/`stddomain`/`stdescape`/`stdtime`/`stdtime2`/`stduuidform` (ConformanceMatrixTest; riscv/aarch executam sob qemu). Tutorial: `learn/39-stdlib.md`. Gaps abertos: NAT-STR01 (UTF-8 nos conversores nativos), S10c FECHADO 13/09 (decisão 6a: `random.randomBytesHex` alias de `hex`; `randomBytes` reservado; choice=idiom), bug 94 (`==` NaN do interpretador — semântica congelada). MATH001 FECHADO 11/09 (Double math riscv/aarch B32) · TIME002 FECHADO 11/09 (ISO add/diff B33). |
+| `kof.process` | ✅ | `kof.process` (process spawn) — see `docs/status.md` |
+| `kof.config` | ✅ | `config.get/env/has`, `config.str/int/long/bool(name, fallback)`, `config.required`; `${key}` interpolation; `kof config gen` generates a template; precedence `KOF_CONFIG` > env `KOF_<KEY>` > profile > `kof.config` — 3 targets (JVM/Native asm `/proc/self/environ`/JS) — `KofConfigE2ETest` (11) |
+| **STDLIB** (`math`/`strings`/`encoding`/`uuid`/`validation`-ext/`time`-calendar/`net`; namespace via `KofStd`/`KofTime`/`KofValidation`) | ✅ S1–S8 (partial natives) | **plan-stdlib-expansion.** `math`: `clamp/abs/sign/min/max/isEven/isOdd/isPositive/isNegative/isZero` (Int, 4 targets) + `sqrt(DOUBLE)->Double` (S1b, 10/09: FIRST Double — JVM/Script/JS/x86 `sqrtsd` + **riscv/aarch B32 `fsqrt.d` (MATH001 closed 11/09)**; NaN on <0 = IEEE; bug 94 records the interpreter's `NaN==NaN`) + `lerp(a,b,t)`/`percentage(part,total)` (Double->Double) + `isInteger`/`isDecimal(DOUBLE)->Bool` (S1b.1, 10/09: **pure SSE2** Double scalars — no libm; 5 targets — riscv/aarch B32 11/09; golden locked to the measured JVM oracle, isolated C harness 18/18). `strings`: `isAlpha/isNumeric/isAlphaNumeric/isAscii/isUpperCase/isLowerCase/count/capitalize/uncapitalize (S11 — mirror of capitalize, 5 targets)/reverse/repeat/truncate/padLeft/padRight` + `escapeHtml`/`escapeJson` (S3.1/S3.1c) + `removeWhitespace`/`normalizeWhitespace` (S3.2) + `indent(s, n)`/`dedent(s)` (S3.3, 5 targets: JVM/Script/JS/x86/riscv64/aarch64 B37) + word-converters `toCamelCase/toPascalCase/toSnakeCase/toKebabCase/slugify` — **all on the 4 targets** (**STRN001 closed 09/09**: riscv port B15 + golden diff on qemu). `encoding`: `hexEncode/Decode` + `urlEncode/Decode` (4 targets); `base64Encode/Decode` + `base64UrlEncode/Decode` (JVM/Script/JS/x86 + **riscv/aarch — ENC002 closed 09/09**: riscv port B23 + translator, identical tolerant spec). `uuid.v4` (JVM/x86/JS + **riscv/aarch — SECN000 closed 09/09**: getrandom(2) via ecall 278 in slice B25 + translator; R11 — only the OS primitive). `uuid.isUuid` (S3b-ext — canonical shape 36/hex/fixed hyphens, **5 targets — UUID001 closed in the beta→main merge 10/09**: slice B25 + translator; does not validate version/variant). `uuid.v7` (S3b.2 10/09 — RFC 9562: unix-ts-ms 48 bits BE in b0..b5 + version='7' (char 14) + variant 10xx (char 19, mask same as v4) + rand_a/rand_b; **5 targets**: JVM/Script (SecureRandom+currentTimeMillis), JS (Date.now+randomBytesHex), x86_64 (RuntimeUuid), riscv64 B25b + aarch64 translator (getrandom+kof_time_now); ts<0=>null on riscv, ts>2^48 low-48; locked by KofUuidTest uuidV7{Jvm,Js,Native,CrossArch}). `random`: beta face `randomInt(bound)`/`randomBoolean` (S10a) + `randomString(n, alphabet)` (S10b) + main face `double()/boolean()/int(bound)/hex(n)` (S10, 10/09) — **two faces coexist in the dispatch** (additive retrocompat; `double`/`hex` riscv/aarch in slice B27); **5 targets**; entropy only from the OS (x86 alias `kof_sec_random_int`/`hex`; riscv B27/B28 + translator; JS kof_platform/crypto; JVM SecureRandom); lenient edges (`b<=0→0`, `n<=0/empty alphabet→""`, `hex n<=0→null` on JVM/JS). `validation` ext: BR `isCpf/isCnpj/isCep/isPis` (4) + `formatCpf/formatCep/formatCnpj` (S12/S12b — BR punctuation, 5 targets, lenient face: wrong number of digits => original, never throws; formatPis out — ambiguous 11-digit mask), network `isIpv4/isIpv6/isMac/isPort` (4), Luhn `isCreditCard` (4), `isDomain` (4, RFC 1123 v1 without trailing dot/IDN). `time` calendar: `isLeapYear/daysInMonth/dayOfWeek/daysBetween` (4, no gate) + `isWeekend` (S7-ext — dayOfWeek>=6 wrapper, 5 targets) + `addDays`/`diffDays` on ISO date (S7a JVM/Script via `java.time`, S7b JS civil algorithm without `Date`, S7c x86 asm `RuntimeTimeIso`, **riscv/aarch B33 — TIME002 closed 11/09**; 5 targets). `net` ext: 6 scalars `scheme/host/port/path/query/fragment(STR->STR)` + `queryEncode/queryDecode` (S8, decision §4 of the plan; RFC 3986 subset v1 — no IPv6 brackets; absent=>""; never throws) on JVM/Script/JS/x86 (RuntimeUri); riscv/aarch — **NET001 closed 09/09** (B24 + translator). Semantics locked in the matrices `stdmath`/`stdsqrt`/`stdmathdouble`/`stdstrings*`/`stdenc`/`stdvalidation*`/`stdluhn`/`stdipv6`/`stddomain`/`stdescape`/`stdtime`/`stdtime2`/`stduuidform` (ConformanceMatrixTest; riscv/aarch run under qemu). Tutorial: `learn/39-stdlib.md`. Open gaps: NAT-STR01 (UTF-8 in the native converters), S10c CLOSED 13/09 (decision 6a: `random.randomBytesHex` alias of `hex`; `randomBytes` reserved; choice=idiom), bug 94 (interpreter `==` NaN — frozen semantics). MATH001 CLOSED 11/09 (Double math riscv/aarch B32) · TIME002 CLOSED 11/09 (ISO add/diff B33). |
 
 ---
 
-# 4. REGRAS DE DESIGN
+# 4. DESIGN RULES
 
-1. **Intenção primeiro**: `passwords.verify(pw, hash)` — nunca primitivas
-   soltas para a aplicação montar segurança.
-2. **Secure by default**: escolhas seguras automáticas (PBKDF2 600k, HS256
-   fixo, salt aleatório, comparação constant-time).
-3. **Sem cerimônia**: sem injeção de container, sem annotations, sem
-   configuração XML/yml obrigatória.
-4. **Sem overhead escondido**: cada abstração precisa responder qual é seu
-   custo em runtime (docs/architecture/performance.md §8).
-5. **Diagnósticos claros**: gaps de target nunca silenciosos.
-6. **Java/Spring continuam válidos** como interoperabilidade — nunca como
-   dependência arquitetural.
+1. **Intent first**: `passwords.verify(pw, hash)` — never loose primitives
+   for the application to assemble security.
+2. **Secure by default**: automatic secure choices (PBKDF2 600k, fixed
+   HS256, random salt, constant-time comparison).
+3. **No ceremony**: no container injection, no annotations, no mandatory
+   XML/yml configuration.
+4. **No hidden overhead**: each abstraction must answer what its runtime
+   cost is (docs/architecture/performance.md §8).
+5. **Clear diagnostics**: target gaps are never silent.
+6. **Java/Spring remain valid** as interoperability — never as an
+   architectural dependency.
 
 ---
 
-# 5. AUDITORIA DO ECOSSISTEMA
+# 5. ECOSYSTEM AUDIT
 
-A matriz completa de cobertura (inventário, gaps, dependências,
-arquitetura, prioridade e estratégia) vive em **`docs/bugs-and-gaps/ecosystem-coverage.md`**
-— resultado da auditoria da stdlib contra as capacidades de uma
-plataforma moderna (checklist derivado do ecossistema Spring, usado como
-matriz de capacidades, não como especificação de API).
+The complete coverage matrix (inventory, gaps, dependencies,
+architecture, priority and strategy) lives in **`docs/bugs-and-gaps/ecosystem-coverage.md`**
+— the result of auditing the stdlib against the capabilities of a modern
+platform (a checklist derived from the Spring ecosystem, used as a
+capability matrix, not as an API specification).
 
-Resumo executivo (0.2.6-beta, 31/08):
+Executive summary (0.2.6-beta, 31/08):
 
-| Categoria | Estado |
+| Category | Status |
 |-----------|--------|
-| core/collections/io/time/json | DONE (3 targets; 0.2.0 acrescenta `map/filter/reduce` + pattern matching + `String?`) |
-| security (crypto, jwt, secrets, auth web + G9) | DONE (JVM/Native/JS core; web auth JVM; free-list Native 27/08) |
+| core/collections/io/time/json | DONE (3 targets; 0.2.0 adds `map/filter/reduce` + pattern matching + `String?`) |
+| security (crypto, jwt, secrets, web auth + G9) | DONE (JVM/Native/JS core; web auth JVM; Native free-list 27/08) |
 | web server (`web.app()`) + `kof.http` client | DONE (JVM; `kof.http` JVM+JS + retry/circuit; WebSocket/SSE JVM) |
-| concurrency (`spawn` + `await`) | DONE (JVM + Native pthread (31/08) + JS sequencial) |
-| test (`assert`, `kof test` `test "nome" {}`) | DONE (3 targets, 16/16 golden, 9/9 integration) |
+| concurrency (`spawn` + `await`) | DONE (JVM + Native pthread (31/08) + sequential JS) |
+| test (`assert`, `kof test` `test "name" {}`) | DONE (3 targets, 16/16 golden, 9/9 integration) |
 | observability | DONE (kof.observability: health/metrics/request IDs — JVM/Native/JS) |
-| `KofScript` / `KofCcompiler` / targets riscv64/aarch64 | DONE (KofScript 8, KofC 5, riscv64 toolchain estável) |
-| messaging (`kof.mq` 3 targets), scheduling (`scheduler` JVM+JS), sessions, rate limiting, TLS, WebSocket/SSE (JVM), `kof.cache` (3 targets) | DONE (gaps reais: `SCHED001` Native, `WEB002` TLS, `WEB003/004` WS/SSE) |
+| `KofScript` / `KofCcompiler` / riscv64/aarch64 targets | DONE (KofScript 8, KofC 5, riscv64 toolchain stable) |
+| messaging (`kof.mq` 3 targets), scheduling (`scheduler` JVM+JS), sessions, rate limiting, TLS, WebSocket/SSE (JVM), `kof.cache` (3 targets) | DONE (real gaps: `SCHED001` Native, `WEB002` TLS, `WEB003/004` WS/SSE) |
 | GC Native mark-sweep | DONE (03/09 `kof_gc_mark` + `kof_gc_sweep` + auto-collect on exhaustion; `KofGcE2ETest` 3/3) |
 
-# 6. PRÓXIMAS ETAPAS (residual pós-0.2.0)
+# 6. NEXT STEPS (residual post-0.2.0)
 
-1. Native aarch64 codegen completo (placeholder hoje)
-2. ~~GC mark-sweep completo~~ ✅ 03/09 (KofGcE2ETest 3/3)
-3. MySQL/MariaDB native completo (auth scramble SHA-1 + lenenc done; handshake/query/prepared pendentes — WIP)
-4. Query DSL tipada `User.query { where age > 18 }` (nível 3 DATABASE_VISION)
-5. `kof fmt` (P5) + LSP completo + Debugger DWARF/JS source maps
-6. tracing / OpenTelemetry (WebSocket/SSE ✅ JVM e `kof.cache` ✅ 3 targets fechados 30/08)
+1. Complete Native aarch64 codegen (placeholder today)
+2. ~~Complete GC mark-sweep~~ ✅ 03/09 (KofGcE2ETest 3/3)
+3. Complete native MySQL/MariaDB (SHA-1 auth scramble + lenenc done; handshake/query/prepared pending — WIP)
+4. Typed query DSL `User.query { where age > 18 }` (level 3 DATABASE_VISION)
+5. `kof fmt` (P5) + complete LSP + DWARF/JS source maps debugger
+6. tracing / OpenTelemetry (WebSocket/SSE ✅ JVM and `kof.cache` ✅ 3 targets closed 30/08)
 
-Histórico fechado: G7 SECN004, G6 `kof.test` estruturado, G3 `kof.config` (JVM+Native), G2 `kof.http` (JVM+JS), G1 `kof.db`/`kof.orm` (SQLite + MySQL scramble), G4 `kof.validation`, G5 `kof.observability`, G8 `kof.time sleep/interval`, G10 security Native, G9 rateLimit/session/apiKey, G12 TLS, 0.2.0 pattern matching + `String?` + `List map/filter/reduce`.
+Closed history: G7 SECN004, G6 structured `kof.test`, G3 `kof.config` (JVM+Native), G2 `kof.http` (JVM+JS), G1 `kof.db`/`kof.orm` (SQLite + MySQL scramble), G4 `kof.validation`, G5 `kof.observability`, G8 `kof.time sleep/interval`, G10 security Native, G9 rateLimit/session/apiKey, G12 TLS, 0.2.0 pattern matching + `String?` + `List map/filter/reduce`.
 
-Prioridades e estratégia completas: `docs/bugs-and-gaps/ecosystem-coverage.md` §7-§8.
+Complete priorities and strategy: `docs/bugs-and-gaps/ecosystem-coverage.md` §7-§8.

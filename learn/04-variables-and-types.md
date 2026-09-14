@@ -1,39 +1,41 @@
-# 04 — Variáveis e Tipos
+[English](04-variables-and-types.md) | [Português](04-variables-and-types.pt_BR.md)
 
-## O que você vai aprender
+# 04 — Variables and Types
 
-Neste capítulo você vai entender como declara variáveis, como o sistema de tipos funciona, e como a inferência de tipos opera.
+## What you will learn
 
-## Declaração de variáveis (0.3.22-beta)
+In this chapter you will understand how to declare variables, how the type system works, and how type inference operates.
 
-Em Kof existem duas palavras-chave para variáveis (mais `let`/`const` como alias no KofScript → `KofScriptGlobals`):
+## Variable declaration (0.3.22-beta)
 
-### `var` — variável mutável
+In Kof there are two keywords for variables (plus `let`/`const` as aliases in KofScript → `KofScriptGlobals`):
+
+### `var` — mutable variable
 
 ```kf
 var nome = "Mel"
-nome = "Outro"  // funciona
+nome = "Outro"  // works
 ```
 
-### `val` — Valor constante
+### `val` — constant value
 
 ```kf
 val PI = 3.14
-// PI = 2.0  // ERRO: não pode reatribuir
+// PI = 2.0  // ERROR: cannot reassign
 ```
 
-### `let` / `const` — alias KofScript (top-level → `KofScriptGlobals`)
+### `let` / `const` — KofScript alias (top-level → `KofScriptGlobals`)
 
 ```kf
-let nome = "Mel"   // topo de .ks vira KofScriptGlobals.nome
-const pi = 3.14   // alias para val, persistente no repl
+let nome = "Mel"   // top of .ks becomes KofScriptGlobals.nome
+const pi = 3.14   // alias for val, persistent in the repl
 ```
 
-No `.kf` tradicional use `var`/`val`; `let`/`const` existem para compatibilidade KofScript e viram o mesmo IR.
+In a traditional `.kf` use `var`/`val`; `let`/`const` exist for KofScript compatibility and become the same IR.
 
-## Tipagem explícita
+## Explicit typing
 
-Você pode especificar o tipo explicitamente:
+You can specify the type explicitly:
 
 ```kf
 Int idade = 26
@@ -41,26 +43,26 @@ String nome = "Mel"
 Bool ativo = true
 ```
 
-## Inferência de tipos
+## Type inference
 
-Quando você usa `var` ou `val`, o compilador infere o tipo:
+When you use `var` or `val`, the compiler infers the type:
 
 ```kf
-var idade = 26        // compilador sabe que é Int
-var nome = "Mel"      // compilador sabe que é String
-var pi = 3.14         // compilador sabe que é Double
-var ativo = true      // compilador sabe que é Bool
+var idade = 26        // compiler knows it is Int
+var nome = "Mel"      // compiler knows it is String
+var pi = 3.14         // compiler knows it is Double
+var ativo = true      // compiler knows it is Bool
 ```
 
-Isso **não** é tipagem dinâmica. O compilador conhece o tipo em compile-time. É apenas uma forma mais concisa de escrever.
+This **is not** dynamic typing. The compiler knows the type at compile-time. It is just a more concise way of writing.
 
 ```kf
-// Essas duas linhas são equivalentes:
+// These two lines are equivalent:
 var nome = "Mel"
 String nome = "Mel"
 ```
 
-## Tipos de referência
+## Reference types
 
 ### Records
 
@@ -76,8 +78,8 @@ class User(String name)
 
 ### Arrays
 
-Não existe literal de array (`{1, 2, 3}` / `[1, 2, 3]` não compilam). Use
-`new Tipo[n]` e preencha por índice:
+There is no array literal (`{1, 2, 3}` / `[1, 2, 3]` do not compile). Use
+`new Tipo[n]` and fill by index:
 
 ```kf
 var numeros = new Int[3]
@@ -87,7 +89,7 @@ numeros[2] = 3
 println(numeros.length)    // 3
 ```
 
-Para uma sequência dinâmica, use `listOf(1, 2, 3)` (ver cap. 12).
+For a dynamic sequence, use `listOf(1, 2, 3)` (see ch. 12).
 
 ### Enums
 
@@ -95,64 +97,64 @@ Para uma sequência dinâmica, use `listOf(1, 2, 3)` (ver cap. 12).
 enum Color { Red, Green, Blue }
 ```
 
-Um enum declara um conjunto fechado de constantes. O valor em runtime é o
-próprio nome — comparação é por conteúdo (`==` funciona como esperado) e
-`println(Color.Red)` imprime `Red`.
+An enum declares a closed set of constants. The runtime value is the
+name itself — comparison is by content (`==` works as expected) and
+`println(Color.Red)` prints `Red`.
 
-API embutida:
+Built-in API:
 
-| Chamada | Retorna | Descrição |
+| Call | Returns | Description |
 |---------|---------|-----------|
-| `Color.values()` | `List<String>` | todas as constantes, na ordem declarada |
-| `Color.valueOf("Red")` | `Color?` | constante pelo nome; `null` se inválida |
-| `c.name()` | `String` | o nome da constante |
+| `Color.values()` | `List<String>` | all constants, in declaration order |
+| `Color.valueOf("Red")` | `Color?` | constant by name; `null` if invalid |
+| `c.name()` | `String` | the name of the constant |
 
-Constante inexistente é erro de compilação:
+A nonexistent constant is a compilation error:
 
 ```kf
-Color.Nope   // SEM030: enum 'Color' não tem constante 'Nope'
+Color.Nope   // SEM030: enum 'Color' has no constant 'Nope'
 ```
 
-**Switch exaustivo**: um switch sobre enum precisa cobrir **todas** as
-constantes ou ter `default` — senão vira erro `SEM031` listando os casos
-faltantes:
+**Exhaustive switch**: a switch over an enum must cover **all** the
+constants or have a `default` — otherwise it becomes error `SEM031` listing the
+missing cases:
 
 ```kf
 String nome(Color c) {
     var r = ""
     switch (c) {
         case Color.Red:   { r = "vermelho" }
-        case Green:       { r = "verde" }      // não-qualificado também vale
+        case Green:       { r = "verde" }      // unqualified also works
         case Color.Blue:  { r = "azul" }
     }
     return r
-}   // sem os três casos e sem default → SEM031
+}   // without the three cases and without default → SEM031
 ```
 
-## Conversões
+## Conversions
 
-### Widening (automática)
+### Widening (automatic)
 
-O compilador converte automaticamente tipos menores para maiores:
+The compiler automatically converts smaller types to larger ones:
 
 ```kf
 Int i = 42
-Long l = i     // Int → Long (automático)
-Double d = i   // Int → Double (automático)
+Long l = i     // Int → Long (automatic)
+Double d = i   // Int → Double (automatic)
 ```
 
 ### Narrowing (casting)
 
-A conversão de maior para menor precisa de cast explícito:
+Conversion from larger to smaller needs an explicit cast:
 
 ```kf
 Double d = 3.14
-Int i = d as Int   // Double → Int (precisa de 'as')
+Int i = d as Int   // Double → Int (needs 'as')
 ```
 
-## Compatibilidade com tipos Java
+## Compatibility with Java types
 
-Kof usa os mesmos tipos da JVM:
+Kof uses the same types as the JVM:
 
 | Kof | Java | JVM |
 |-----|------|-----|
@@ -169,30 +171,30 @@ Kof usa os mesmos tipos da JVM:
 ## KofScript let/const + String? (0.2.0)
 
 ```kf
-let x = 5            // KofScript topo: KofScriptGlobals.x
-String? s = null     // nullable básico
+let x = 5            // KofScript top-level: KofScriptGlobals.x
+String? s = null     // basic nullable
 if (s != null) { println(s.length()) }
 ```
 
-## Status atual (0.3.22-beta)
+## Current status (0.3.22-beta)
 
-✅ `var` e `val` funcionam
-✅ `let`/`const` (alias → `KofScriptGlobals` no KofScript)
-✅ `String?` nullable básico
-✅ Inferência de tipos funciona
-✅ Records funcionam
-✅ Classes com campos funcionam
-✅ Type checking (análise semântica, erros `SEM` em compile-time)
-✅ Conversões automáticas (widening: `Int→Long`, `Int→Double`)
+✅ `var` and `val` work
+✅ `let`/`const` (alias → `KofScriptGlobals` in KofScript)
+✅ Basic nullable `String?`
+✅ Type inference works
+✅ Records work
+✅ Classes with fields work
+✅ Type checking (semantic analysis, `SEM` errors at compile-time)
+✅ Automatic conversions (widening: `Int→Long`, `Int→Double`)
 
-## Exercício 1
+## Exercise 1
 
-Declare variáveis de todos os tipos primitivos (Int, Double, Bool, Char...) e imprima seus valores com println.
+Declare variables of all primitive types (Int, Double, Bool, Char...) and print their values with println.
 
-## Exercício 2
+## Exercise 2
 
-Crie um record `Produto` com campos `nome String`, `preco Double` e `quantidade Int`. Crie uma instância e acesse seus valores.
+Create a record `Produto` with fields `nome String`, `preco Double` and `quantidade Int`. Create an instance and access its values.
 
-## Próximo passo
+## Next step
 
-[Controle de Fluxo →](05-control-flow.md)
+[Control Flow →](05-control-flow.md)

@@ -1,15 +1,17 @@
-# Composição visual por objetos
+[English](composition.md) | [Português](composition.pt_BR.md)
+
+# Visual composition by objects
 
 **Updated:**  0.4.0-beta (Sep 2026) (02 Sep 2026)
 
-> O visual é um grafo de objetos. Nada de templates, XML ou strings mágicas:
-> a interface é código Kof tipado, compilado e verificado como qualquer outro.
+> The visual is a graph of objects. No templates, XML or magic strings:
+> the interface is Kof code, typed, compiled and verified like any other.
 
-## A ideia
+## The idea
 
-Uma interface é uma **árvore de objetos** composta em código. Cada elemento
-visual é um objeto; cada objeto carrega seu próprio estilo; o estilo é feito
-de `Color`, `Int` e `String` — tipos da linguagem, nunca textos soltos.
+An interface is a **tree of objects** composed in code. Each visual element
+is an object; each object carries its own style; the style is made of
+`Color`, `Int` and `String` — language types, never loose text.
 
 ```kof
 class Style {
@@ -30,7 +32,7 @@ class Style {
 }
 ```
 
-## Composição
+## Composition
 
 ```kof
 class View {
@@ -54,9 +56,9 @@ class Text {
 }
 ```
 
-## A paleta
+## The palette
 
-Cores de 32 bits (`0xAARRGGBB`) com nomes, não códigos:
+32-bit colors (`0xAARRGGBB`) with names, not codes:
 
 ```kof
 class Colors {
@@ -67,7 +69,7 @@ class Colors {
 }
 ```
 
-## Montando uma tela
+## Building a screen
 
 ```kof
 View homeView() {
@@ -81,12 +83,12 @@ View homeView() {
 }
 ```
 
-## Por que objetos
+## Why objects
 
-- **Tipado**: um estilo com campo errado não compila.
-- **Composável**: a tela é um valor como qualquer outro — pode vir de função,
-  de lista, de condição.
-- **Multi-target**: a mesma árvore de objetos vira o que cada backend souber
-  desenhar (terminal, web, nativo).
+- **Typed**: a style with the wrong field does not compile.
+- **Composable**: the screen is a value like any other — it can come from a
+  function, from a list, from a condition.
+- **Multi-target**: the same tree of objects becomes whatever each backend
+  knows how to draw (terminal, web, native).
 
-Ver também: `docs/stdlib/COLOR.md` e `learn/35-ui-and-styling.md`.
+See also: `docs/stdlib/COLOR.md` and `learn/35-ui-and-styling.md`.

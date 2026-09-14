@@ -1,39 +1,41 @@
+[English](vscode.md) | [Português](vscode.pt_BR.md)
+
 # VS Code
 
-Integração: extensão local com grammar TextMate + comandos; semântica via
+Integration: local extension with TextMate grammar + commands; semantics via
 `kof lsp`.
 
-## Instalação automática
+## Automatic installation
 
 ```bash
 kof editor install vscode
 ```
 
-Escreve em `~/.vscode/extensions/kof.kof/`:
+Writes to `~/.vscode/extensions/kof.kof/`:
 
-- `syntaxes/kof.tmLanguage.json` — a grammar oficial (lida da distribuição;
-  fallback embutido se ausente — nunca baixa da internet).
-- `language-configuration.json` — comentários, colchetes, auto-close.
-- `extension.js` — registra os comandos da Command Palette (`Kof: Build/Run/
-  Test/Check/Format/Serve/Start LSP/Select Target/Open Docs`), cada um
-  delegando à CLI oficial num terminal integrado. O Kof **não** reimplementa
-  build/run/format dentro do editor — a CLI é a fonte (§15/§20).
-- `snippets/kof.json` — snippets idiomáticos (`main`, `fn`, `rec`, `cls`,
+- `syntaxes/kof.tmLanguage.json` — the official grammar (read from the distribution;
+  embedded fallback if absent — never downloads from the internet).
+- `language-configuration.json` — comments, brackets, auto-close.
+- `extension.js` — registers the Command Palette commands (`Kof: Build/Run/
+  Test/Check/Format/Serve/Start LSP/Select Target/Open Docs`), each
+  delegating to the official CLI in an integrated terminal. Kof does **not**
+  reimplement build/run/format inside the editor — the CLI is the source (§15/§20).
+- `snippets/kof.json` — idiomatic snippets (`main`, `fn`, `rec`, `cls`,
   `ife` (if-expression), `for`, `sw` (switch-expression), `sp` (spawn), `try`).
-- `package.json` — registra a linguagem (`*.kf`/`*.kof`, `source.kof`), os
-  snippets, a config (`kof.executable`, `kof.target`) e os comandos.
+- `package.json` — registers the language (`*.kf`/`*.kof`, `source.kof`), the
+  snippets, the config (`kof.executable`, `kof.target`) and the commands.
 
-Depois, recarregue o VS Code. Para o LSP, configure o cliente (ex.: extensão
-"vscode-languageserver-node" ou similar) com o comando `["kof", "lsp"]`.
+Then, reload VS Code. For LSP, configure the client (e.g.: the
+"vscode-languageserver-node" extension or similar) with the command `["kof", "lsp"]`.
 
-## Instalação manual
+## Manual installation
 
-Copie a pasta da extensão para `~/.vscode/extensions/` e aponte o cliente LSP
-para `kof lsp`.
+Copy the extension folder to `~/.vscode/extensions/` and point the LSP client
+to `kof lsp`.
 
 ## Troubleshooting
 
-- **Sem highlight:** confirme que a extensão foi carregada (`Developer: Show
+- **No highlight:** confirm that the extension was loaded (`Developer: Show
   Running Extensions`).
-- **Sem diagnostics:** o LSP precisa estar rodando — teste `kof lsp` no
-  terminal (deve esperar em stdio, não erro).
+- **No diagnostics:** the LSP must be running — test `kof lsp` in the
+  terminal (it should wait on stdio, not error).

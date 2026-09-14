@@ -1,22 +1,24 @@
+[English](14-exceptions.md) | [Português](14-exceptions.pt_BR.md)
+
 # 14 — Exceptions
 
-> **Status: implementado (JVM / Native / JS) — 0.3.22-beta — exemplos verificados no compilador**
+> **Status: implemented (JVM / Native / JS) — 0.3.22-beta — examples verified in the compiler**
 >
-> `throw`/`try`/`catch`/`finally` com unwinding real em JVM, Native e KofJS.
-> Kof lança **Strings** (`throw "mensagem"` / `catch (String e)`), não
-> instâncias de classe de exceção.
+> `throw`/`try`/`catch`/`finally` with real unwinding on JVM, Native and KofJS.
+> Kof throws **Strings** (`throw "mensagem"` / `catch (String e)`), not
+> exception class instances.
 
 ## throw
 
-Kof lança um valor (a mensagem vai direto para o `catch`):
+Kof throws a value (the message goes straight to the `catch`):
 
 ```kf
 throw "valor inválido"
 ```
 
-> **Importante (verificado 02/09):** a exceção é **String**.
-> `throw 42` / `catch (Int e)` geram bytecode inválido no JVM — não use.
-> Para ausência como valor, use `String?` (cap. 13).
+> **Important (verified 02/09):** the exception is a **String**.
+> `throw 42` / `catch (Int e)` generate invalid bytecode on the JVM — do not use.
+> For absence as a value, use `String?` (ch. 13).
 
 ## try/catch/finally
 
@@ -27,14 +29,14 @@ main() {
     } catch (String e) {
         println("erro: " + e)
     } finally {
-        println("cleanup")    // roda sempre
+        println("cleanup")    // always runs
     }
 }
 ```
 
-## Lançando valores contextualizados
+## Throwing contextualized values
 
-A "identidade" da falha vem da própria mensagem:
+The "identity" of the failure comes from the message itself:
 
 ```kf
 User findUser(Int id) {
@@ -58,38 +60,38 @@ main() {
 }
 ```
 
-## Ausência vs erro
+## Absence vs error
 
 ```kf
-// Ausência (dado pode não existir) → String?
+// Absence (data may not exist) → String?
 String? find(Int id) {
     if (id == 1) { return "mel" }
     return null
 }
 
-// Erro real (ausência é defeito) → throw
+// Real error (absence is a defect) → throw
 String findOrThrow(Int id) {
     if (id == 1) { return "mel" }
     throw "not found: " + id
 }
 ```
 
-## Limitações (02/09, verificadas)
+## Limitations (02/09, verified)
 
-- Exceções são **Strings** apenas — sem objeto de exceção.
-- No Native, o primeiro `catch` de um `try` captura (sem despacho por tipo
-  entre múltiplos catches).
-- Sem stack trace no Native.
+- Exceptions are **Strings** only — no exception object.
+- On Native, the first `catch` of a `try` captures (no dispatch by type
+  among multiple catches).
+- No stack trace on Native.
 
-## Exercícios
+## Exercises
 
-1. Escreva `Double divide(Int a, Int b)` que lança `"division by zero"` quando
-   `b == 0`; trate com `try/catch` no `main`.
-2. Converta uma função que retorna `""` como "não encontrado" para `String?`
-   (cap. 13) e depois para `throw` — explique quando usar cada um.
-3. Verifique que `finally` roda no caminho normal, no capturado e no
-   propagado.
+1. Write `Double divide(Int a, Int b)` that throws `"division by zero"` when
+   `b == 0`; handle it with `try/catch` in `main`.
+2. Convert a function that returns `""` as "not found" to `String?`
+   (ch. 13) and then to `throw` — explain when to use each one.
+3. Verify that `finally` runs on the normal path, on the caught one and on the
+   propagated one.
 
-## Próximo passo
+## Next step
 
 [Pattern Matching →](15-pattern-matching.md)

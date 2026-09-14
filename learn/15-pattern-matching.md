@@ -1,14 +1,16 @@
+[English](15-pattern-matching.md) | [Português](15-pattern-matching.pt_BR.md)
+
 # 15 — Pattern Matching
 
-> **Status: implementado (JVM / Native / JS) — 0.3.22-beta**
+> **Status: implemented (JVM / Native / JS) — 0.3.22-beta**
 >
-> `switch case String s` (type pattern) e destructuring de records `case Point(x, y):` funcionam nos três targets. Parser + Semantic + CompilerDriver com `Native rbx→rcx` fix e `JS typeof`.
+> `switch case String s` (type pattern) and record destructuring `case Point(x, y):` work on the three targets. Parser + Semantic + CompilerDriver with `Native rbx→rcx` fix and `JS typeof`.
 >
-> **Atenção:** o padrão com variável (`case String s`) existe **só dentro de `switch`**. A forma `if (obj instanceof String s)` **não é suportada** — `instanceof` é um operador booleano simples e não faz *binding* de variável; para capturar, use `switch` com `case` ou `as` (cast).
+> **Attention:** the pattern with a variable (`case String s`) exists **only inside `switch`**. The form `if (obj instanceof String s)` is **not supported** — `instanceof` is a simple boolean operator and does not *bind* a variable; to capture, use `switch` with `case` or `as` (cast).
 
-## `instanceof` (checagem de tipo)
+## `instanceof` (type check)
 
-`instanceof` verifica o tipo (booleano) — ele **não** declara uma variável:
+`instanceof` checks the type (boolean) — it does **not** declare a variable:
 
 ```kf
 main() {
@@ -33,10 +35,10 @@ main() {
 }
 ```
 
-Para capturar a variável tipada num único passo, use o pattern de `switch`
-(seção seguinte).
+To capture the typed variable in a single step, use the `switch` pattern
+(next section).
 
-## switch com padrões — type pattern
+## switch with patterns — type pattern
 
 ```kf
 record Circulo(Double raio)
@@ -56,17 +58,17 @@ main() {
 }
 ```
 
-> **Duas formas:**
-> - **Statement** — `case Tipo var:` com corpo de statements (efeitos colaterais).
-> - **Expressão (SYN001, 03/09)** — `case Tipo var ->` produzindo **valor**:
+> **Two forms:**
+> - **Statement** — `case Tipo var:` with a statement body (side effects).
+> - **Expression (SYN001, 03/09)** — `case Tipo var ->` producing a **value**:
 >   `var desc = switch (forma) { case Circulo c -> "raio " + c.raio(); default -> "?" }`.
->   Cada caso é uma única expressão; `default` é obrigatório (ou exaustividade de
->   enum, senão `SEM032`); sem `break`, sem escopo de bloco. Funciona nos 3
+>   Each case is a single expression; `default` is mandatory (or enum
+>   exhaustiveness, otherwise `SEM032`); no `break`, no block scope. It works on the 3
 >   targets (JVM/Native/JS) + riscv64/aarch64.
 
 ## Record destructuring — `Point(x, y)`
 
-0.2.0 suporta desestruturação direta do record no `case`:
+0.2.0 supports direct destructuring of the record in the `case`:
 
 ```kf
 record Ponto(Int x, Int y)
@@ -89,7 +91,7 @@ main() {
         }
     }
 
-    // destructuring com var explícito também vale:
+    // destructuring with explicit var also works:
     switch (Ponto(1, 2)) {
         case Ponto(var a, var b): { println(a + b) }  // 3
         default: {}
@@ -97,13 +99,13 @@ main() {
 }
 ```
 
-Compile e rode nos três targets — a cadeia `intention->Kof->frontend->IR->backend->runtime` mantém a semântica: o frontend normaliza `Ponto(x, y)` para `PatternExpr`, o IR emite `instanceof`+`checkcast`+`getfield` (JVM) / loads diretos (Native) / `typeof`+field access (JS).
+Compile and run on the three targets — the chain `intention->Kof->frontend->IR->backend->runtime` keeps the semantics: the frontend normalizes `Ponto(x, y)` to `PatternExpr`, the IR emits `instanceof`+`checkcast`+`getfield` (JVM) / direct loads (Native) / `typeof`+field access (JS).
 
-## Padrões em sealed hierarchies (planejado)
+## Patterns in sealed hierarchies (planned)
 
-`sealed ... permits` ainda não é consumido pelo parser (ver cap. 10). O
-exemplo ilustra como o pattern de `switch` cobriria a hierarquia quando sealed
-for implementado:
+`sealed ... permits` is not yet consumed by the parser (see ch. 10). The
+example illustrates how the `switch` pattern would cover the hierarchy when sealed
+is implemented:
 
 ```kf
 sealed class Resultado<T> permits Sucesso<T>, Erro<T> {}
@@ -117,9 +119,9 @@ String mensagem(Resultado<String> r) {
 }
 ```
 
-O compilador verifica se todos os casos foram cobertos quando houver sealed (exhaustiveness check em evolução).
+The compiler verifies whether all cases have been covered when there is sealed (exhaustiveness check in evolution).
 
-## Padrões com guards (planejado)
+## Patterns with guards (planned)
 
 ```kf
 switch (nota) {
@@ -130,8 +132,8 @@ switch (nota) {
 }
 ```
 
-> `when` ainda é desugar futuro — hoje use `if` dentro do `case`.
+> `when` is still a future desugar — today use `if` inside the `case`.
 
-## Próximo passo
+## Next step
 
 [Lambdas →](16-lambdas.md)

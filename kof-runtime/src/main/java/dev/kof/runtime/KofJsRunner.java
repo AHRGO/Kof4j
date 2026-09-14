@@ -31,6 +31,8 @@ import java.util.List;
  */
 public final class KofJsRunner {
 
+    private static final java.security.SecureRandom SECURE_RANDOM = new java.security.SecureRandom();
+
     private KofJsRunner() {}
 
     /**
@@ -193,7 +195,7 @@ public final class KofJsRunner {
                 cmd.add(program);
                 if (args.length > 1 && !args[1].isNull() && args[1].hasArrayElements()) {
                     long n = args[1].getArraySize();
-                    for (int i = 0; i < n; i++) {
+                    for (long i = 0; i < n; i++) {
                         Value v = args[1].getArrayElement(i);
                         cmd.add(v.isString() ? v.asString() : String.valueOf(v));
                     }
@@ -297,14 +299,14 @@ public final class KofJsRunner {
         platform.put("randomBytesHex", (ProxyExecutable) args -> {
             int n = args[0].asInt();
             byte[] buf = new byte[Math.max(0, Math.min(n, 4096))];
-            new java.security.SecureRandom().nextBytes(buf);
+            SECURE_RANDOM.nextBytes(buf);
             StringBuilder sb = new StringBuilder(buf.length * 2);
             for (byte b : buf) sb.append(String.format("%02x", b));
             return sb.toString();
         });
         platform.put("randomInt", (ProxyExecutable) args -> {
             int bound = args[0].asInt();
-            return bound <= 0 ? 0 : new java.security.SecureRandom().nextInt(bound);
+            return bound <= 0 ? 0 : SECURE_RANDOM.nextInt(bound);
         });
         platform.put("pbkdf2Hex", (ProxyExecutable) args -> {
             String password = args[0].asString();
