@@ -653,10 +653,12 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > não desta lane); **#202** = face R6 morta (SEM058 honesto, §194), resta
 > decisão de design (regra 6); **#205** = REPRODUZ, catalogado **§203**
 > (known-bugs) com pointer (`internalName` de primitivo → `checkcast "?"` +
-> `istore` sem unbox). Restam sem triagem: #207/#209/#210/#213/#215–#218
-> (compiler lane; triagem Q4 read-only é o trabalho contínuo desta lane a
-> cada re-disparo). O item (b) "caça Q4" do bloco anterior = feito para a
-> leva #200–#214. A linha de base COMPLETA limpa foi **RODADA e REGISTRADA** em
+> `istore` sem unbox). Leva #205–#218 COMPLETA (14/09
+> ~11:20): #207 GREEN (prova no comentário); #209 fechado (fix `1c13d982`);
+> #213→§209, #215→§206, #216→§210, #217→§207, #218→§208 catalogados no
+> known-bugs com pointer (fix = lane compiler, regra 6); #210 já foi fixado
+> pela watcher (`e2df59b5`). Triagem Q4 read-only = trabalho contínuo da
+> lane a cada re-disparo (novas issues chegam pelo watcher 9094). A linha de base COMPLETA limpa foi **RODADA e REGISTRADA** em
 > `docs/status.md` (topo, 14/09): **1819 testes / 3 falhas / 0 erros / 7 skips**.
 > As 3 falhas são TODAS cross-arch de outras lanes, com repro + causa raiz no
 > `known-bugs.md` (re-confirmed no HEAD atual): §181 residual (`(-inf) as Int`
