@@ -7246,7 +7246,9 @@ antes — lição da obsolescência do §206/§207), corpos-exatos das issues
       for (var n: Int in lst) { println(n) }
   }
   ```
-  `COMPILE FAIL: Undefined variable or type: 'in'` (SEM, file/line=0). O
+  `COMPILE FAIL: Undefined variable or type: 'in' [SEM011]` (file/line=0). O
+  relator lista TODAS as variantes anotadas falhando identico (`String`,
+  `Object`, `Color` sobre `Color.values()`) — sistêmico, não Int-específico. O
   parser/typer le a anotação `n: Int` e depois trata a palavra-chave `in` como
   IDENTIFICADOR expressão. A forma SEM anotacao esta VERDE no mesmo build:
   `for (var n in listOf(1,2,3))` imprime `1|2|3` (v4a, ec=0).
@@ -7276,7 +7278,10 @@ antes — lição da obsolescência do §206/§207), corpos-exatos das issues
   (`var r1 = Fmt.of(10); println(r1)`) o MESMO IR quebrado cracha no load:
   `VerifyError: Operand stack underflow` (execucao por reflexao, anti-armadilha
   JavaFX), e o corpo com as 2 chamadas morre antes em `COMPUTE_FRAMES
-  (visitMaxs)` (`frame crash em Default/Main.main ... n235.kf:9`). Classes com
+  (visitMaxs)`: `ArrayIndexOutOfBoundsException: Index -1 ... [COMP002]` — o
+  dump IR do relator corrobora exatamente: `KofStoreLocal[type=String]` SEM
+  `KofCall[of]` antes (o nó da chamada some ANTES do bytecode — bug de
+  lowering/IR, não do ASM). Classes com
   overload ÚNICO funcionam — a resoluo escolhe a entrada, mas o caminho de
   EMISSAO para staticos MULTI-overload descarta o no da chamada.
 - **Familia:** dispatch de sobrecarga (0.4.0 §131 p/ metodos) — o lowering de
