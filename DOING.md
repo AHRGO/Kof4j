@@ -727,7 +727,16 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > Regra da lição gravada (4e0957ee + cdda27d9): `mvn -o compile`
 > IMEDIATAMENTE antes de medir (falso-vermelho de classe obsoleta queimou
 > meu primeiro "#218 ainda reproduz"); assir SEMÂNTICA do título.
-> **Gatilhos do próximo disparo (estado 14/09 ~15:00, ciclo 14:42–15:00):**
+> **Gatilhos do próximo disparo (estado 14/09 ~15:10, ciclo 15:00–15:10):**
+> Anexo faces novas: #236→2ª face do §214 (get(0)() inline pula SEM015 e
+> emite invokevirtual "" → ClassFormatError owner vazio, 5448551c) e
+> #237→2ª face do §225 (String.join estatico → retorno Object fabricado;
+> 3a ocorrencia familia §224/§225/#237 = um fix fecha as tres). Provas
+> javap postadas nas duas. Fila=24 (faces anexas a raizes ABERTAS nao
+> incrementam a contagem). fix alheio recente na fila: 23bf99bd
+> (resolve super() overloaded — possivel face da #226/§... verificar na
+> proxima re-medicao), 93b5ec26 (SEM054 subscript List write). Nenhuma
+> das minhas §213-§227 ainda tem fix.
 > Neste ciclo: #234→§226 e #235→§227 catalogadas c/ prova javap
 > (for-in anotado culpa `in`; static overload perde o invokestatic →
 > VerifyError/COMPUTE_FRAMES), prova postada nas duas. RE-MEDIÇÃO dos
