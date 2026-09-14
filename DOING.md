@@ -60,6 +60,31 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (14/09 ~02:00, lane estabilização — dono = 192.168.100.17): §176
+> CORRIGIDO** (`08351ba6`) — `KofWebJsE2ETest.jsWebServesRoutes` era artifact de
+> build (constant-fold de `UI_WEB_RUNTIME` no `JsRuntimeSlices.class` stale; a
+> correção já estava na fonte desde `abbde60b`). Fix: slice não-constante (método
+> inicializador → `getstatic` vivo) + §176b morto (teste anexa stderr do runner).
+> **Prova:** WebJs 1/1 + SliceRegistry 6/6 + KofTime S7e 5/5 (rebuild limpo,
+> sem `touch` manual). **Também:** KofTimeE2ETest S7e sem bomba-relógio de
+> calendário (a lane .18 já o corrigiu como §183 com math.parseInt — meu
+> patch idêntico foi descartado no rebase em favor do upstream) + **§188
+> catalogado** (regra 6: `String as Int` compila → `VerifyError` no JVM;
+> NÃO corrigido — reparse canônico é `parseDateIso`, não cast).
+> **PRÓXIMO PASSO (estabilização beta-0.4.0 → release):** rodar a suíte
+> COMPLETA limpa pós-push (`rm -rf */target && mvn -o test -pl
+> kof-compiler,kof-script,kof-c-compiler,kof-cli -am
+> -Dsurefire.failIfNoSpecifiedTests=false -Dmaven.test.failure.ignore=true`)
+> e registrar a linha de base em `docs/status.md` (gate de release = 0
+> FAILURE fora dos erros de `node`/BD ausente + das guardas de toolchain).
+> A fila `known-bugs.md` aberta (13 itens) é TODA de outras lanes (`.15`/
+> `.18`/Native) ou regra 6/decisão da mantenedora — **NÃO atacar sem don**
+> **o**; se a suíte verde confirmar estabilidade, seguir a condição de
+> ESTABILIDADE do AGENTS.md (recusar re-disparo, parar o cron). **NUNCA:**
+> tocar `nat/` GC, lanes `.15`/`.22`; reabrir decompiler/translator sem
+> decisão (despriorizados — meta = estabilizar a release).
+>
+>
 > **✅ FEITO (14/09 ~00:30, dono = 192.168.100.22): CI vermelho na beta
 > corrigido — gate de asm riscv/aarch OPCIONAL (ordem da mantenedora,
 > D-ASM-GATE em DECISIONS.md).** Os testes §181

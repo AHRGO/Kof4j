@@ -113,12 +113,15 @@ class KofWebJsE2ETest {
                 + result.diagnostics().getDiagnostics());
 
         // listen é bloqueante (idem JVM) — roda o runner em thread daemon.
+        // §176b: o stderr do runner é CAPTURADO e anexado às asserções —
+        // sem isto, morte do listener virava "porta não abriu" às cegas.
+        java.io.ByteArrayOutputStream serverErr = new java.io.ByteArrayOutputStream();
         Thread serverThread = new Thread(() -> {
             try {
                 dev.kof.runtime.KofJsRunner.run(findJsEntry(outDir),
                         java.io.OutputStream.nullOutputStream(),
                         java.io.InputStream.nullInputStream(),
-                        new java.io.ByteArrayOutputStream());
+                        serverErr);
             } catch (Exception ignored) {
                 // o socket fechar no fim do teste interrompe o accept/poll
             }
@@ -139,7 +142,8 @@ class KofWebJsE2ETest {
             }
             attempt++;
         }
-        assertTrue(listening, "server JS não abriu a porta " + port);
+        assertTrue(listening, "server JS não abriu a porta " + port
+                + " | stderr do runner: " + serverErr.toString(StandardCharsets.UTF_8));
 
         String hello = request(port, "GET /hello HTTP/1.0\r\nHost: x\r\n\r\n");
         assertTrue(hello.startsWith("HTTP/1.1 200") || hello.startsWith("HTTP/1.0 200"), hello);
