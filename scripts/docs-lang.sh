@@ -71,10 +71,14 @@ is_clean() {
 overlay_one() {
     local canon="$1" pt="${1%$EN_SUFFIX}$PT_SUFFIX"
     [ -f "$pt" ] || return 0
-    if is_clean "$canon"; then
-        cp -- "$pt" "$canon"
-        git update-index --skip-worktree -- "$canon" 2>/dev/null || true
+    # Nunca sobrescreve edicao nao-commitada de nenhum agente (regra 8 do DOING):
+    # so sobrepoe quando o working tree e identico ao indice (sem edicao viva).
+    if git ls-files --error-unmatch -- "$canon" >/dev/null 2>&1; then
+        git diff --quiet -- "$canon" 2>/dev/null || return 0
+        git diff --cached --quiet -- "$canon" 2>/dev/null || return 0
     fi
+    cp -- "$pt" "$canon"
+    git update-index --skip-worktree -- "$canon" 2>/dev/null || true
 }
 
 is_skip_worktree() {
