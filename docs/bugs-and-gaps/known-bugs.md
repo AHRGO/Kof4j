@@ -6897,3 +6897,49 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   flatten the tests (use `parts[0]`) OR accept `.get` on `ArrayType` —
   the lane owner's choice, not this lane's; the test corpus that used `.get` on
   an array is in `KofTimeE2ETest` (S7e) and needs to align with whatever is decided.
+
+### §203 — `if`-statement ELSE branch was NOT analyzed → invalid JVM frames (`Supervisor.lacoUnico` frame crash) — ✅ FIXED 14/09 (introduced by `a892b3c5`, lane CodeQL; root fixed by lane development `192.168.100.18`)
+
+- **Symptom (JVM):** `Internal compiler error: frame crash em
+  Supervisor.lacoUnico (super=java/lang/Object)` — ASM
+  `ArrayIndexOutOfBoundsException: Index 0 out of bounds for length 0` in
+  `COMPUTE_FRAMES`. 3 red in `KofSupervisorE2ETest`
+  (`supervisorReiniciaWorkerQueFalhaECompleta`,
+  `limiteDeReiniciosParaSemEscalarSemCallback`,
+  `supervisorS2TresFilhosUmLacoSelectAny`).
+- **Bisection (proven):** `0448ef5d` (pre-merge) GREEN; `ed409ff9` GREEN;
+  `752dc5df` (merge that absorbs `a892b3c5`) RED; `75e38d35` RED. Clean-build
+  worktrees, `mvn -o test -pl kof-compiler -Dtest=KofSupervisorE2ETest`.
+- **Root cause (measured):** the CodeQL cleanup `a892b3c5` removed the
+  `Type condType = SemExpressionTyper.inferType(...)` binding **together with the
+  live line** `if (ifStmt.elseBranch() != null) analyzeStatement(sa, ..., scope,
+  ...)`. The binding was unread, but the `analyzeStatement` call was not: without
+  it the ELSE branch's expression types never reach `sa.expressionTypes()`, and
+  the JVM lowering emits a join with inconsistent frames. The
+  `#forInitVar`/`#forInVar` (#182) rename only made it visible in
+  `Supervisor.lacoUnico` (a `while` whose body has `if/else` + `spawn`).
+- **Fix (root):** restore the ELSE-branch `analyzeStatement` in
+  `StatementAnalyzer` (the unused `condType` binding stays removed, per CodeQL).
+  Verified: supervisor 8/8, plus `BackendParityTest` 19/19, `ArrayBoundsStressTest`
+  15/15, `CoreRegressionE2ETest` 79/79.
+- **Note:** JVM/Native/Script are affected (the analyzer is target-agnostic); JS
+  escaped because the parser resolved the types on its own path.
+
+### §204 — heterogeneous `if`-expression prints `Object` in Native → SIGSEGV (exit 139) — 🔴 OPEN 14/09 (introduced by `ed409ff9` #183, owner = #183 lane)
+
+- **Symptom (Native):** `ConformanceMatrixTest#conformanceCoreControl` case
+  `ifexpr-heterogeneous-direct` (`println(if (s == "") 1 else "s")`) exits 139 on
+  Native (JVM/Script/JS fine).
+- **Bisection (proven):** `0448ef5d` GREEN / `ed409ff9` (#183) RED (clean-build
+  worktree, `mvn -o test -pl kof-compiler -Dtest=ConformanceMatrixTest#conformanceCoreControl`).
+- **Mechanism:** #183 makes `inferExprType` of a heterogeneous `IfExpr`/
+  `SwitchExpr` return `java.lang.Object` (the correct Java-like join). The
+  runtime print path then dispatches `println(Object)` and the Native backend
+  segfaults (same family as §107's collection-print pointer garbage: the native
+  print of a boxed/`Object` value is not implemented). JVM boxes to the branch's
+  own type and prints correctly, so only Native diverges.
+- **Contract (rule 6):** the fix belongs to the #183 lane — either implement the
+  Native `println(Object)` dispatch or gate the heterogeneous case honestly on
+  Native (R6), aligning with the §107/§104b-ii decision. The `ifexpr` cell was
+  green before #183 because the typer returned the THEN type and never reached
+  the `Object` print path.

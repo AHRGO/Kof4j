@@ -189,6 +189,13 @@ public final class StatementAnalyzer {
                     analyzeStatement(sa, ifStmt.elseBranch(), elseScope, returnType);
                 } else {
                     analyzeStatement(sa, ifStmt.thenBranch(), ifScope, returnType);
+                    // a892b3c5 (lane CodeQL) removeu esta linha junto com a var
+                    // `condType` marcada como unread — mas ela NÃO era unread:
+                    // sem analisar o ELSE, os tipos das expressões do ramo else
+                    // não entram em sa.expressionTypes() e o lowering JVM gera
+                    // frames inválidos (Supervisor.lacoUnico: AIOOBE em
+                    // COMPUTE_FRAMES). Restaurado (fix-forward, regra 8).
+                    if (ifStmt.elseBranch() != null) analyzeStatement(sa, ifStmt.elseBranch(), scope, returnType);
                 }
             }
             case WhileStmt ws -> {
