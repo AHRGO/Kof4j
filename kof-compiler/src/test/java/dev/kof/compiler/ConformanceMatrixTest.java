@@ -1541,6 +1541,33 @@ class ConformanceMatrixTest {
                     println(b[1])
                 }
                 """, "65\n66\ntrue\nfalse", Set.of("script"), tempDir);
+        // §186 (13/09): inicializador de campo `static` NÃO-literal. O
+        // front-end só levava `LiteralExpr` direto ao `initialValue`; `-1`
+        // (unário) e `2 + 3` (binário dobrado) ficavam de fora e, no JVM,
+        // viravam `this.x = ...` no construtor (PUTFIELD em campo estático →
+        // IncompatibleClassChangeError) — liam 0/undefined. Fix: dobrar
+        // expressões constantes em `lowerField` + não injetar estáticos no
+        // construtor. Cobre os 4 targets.
+        matrix("staticinit", """
+                class H {
+                    static Int neg = -1
+                    static Int fold = 2 + 3
+                    static Long wide = -7L
+                    static Double frac = -1.5
+                    static String cat = "a" + "b"
+                    static Bool yes = !false
+                    static Int lit = 7
+                }
+                main() {
+                    println(H.neg)
+                    println(H.fold)
+                    println(H.wide)
+                    println(H.frac)
+                    println(H.cat)
+                    println(H.yes)
+                    println(H.lit)
+                }
+                """, "-1\n5\n-7\n-1.5\nab\ntrue\n7", Set.of(), tempDir);
         // §187 (13/09): `Char[]` NÃO estreita a 16 bits no Native (o
         // `elementTypeSize` mapeia char→4 e o `kof_array_set` faz `movl`
         // cru) nem no JS (Array puro, §184); o cast escalar `as Char` está

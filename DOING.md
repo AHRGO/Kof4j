@@ -2762,6 +2762,30 @@ no upstream).
 > arrays 2D/3D de Char/Byte; interop) OU sincronizar `ecosystem-coverage`/
 > `specification-gaps`. Se nada novo e suíte verde → **RECUSAR**.
 > **NUNCA:** `nat/` GC viva; fila de outras lanes; push `main`.
+>
+> **✅ FEITO (14/09, lane bugs-and-gaps, dono = 192.168.100.15): §186 FIX
+> PARCIAL — inicializador `static` constante nos 4 targets.** Caça Q4 sobre o
+> §186 recém-chegado (colaborador Jonas Rocha, issue #133) + continuidade do
+> fix que destravava a suíte de biblioteca: `static Int x = -1` lia `0` no
+> JVM/Native/Script e `undefined` no JS, e `static Int[] = new Int[3]`
+> derrubava o JVM com `IncompatibleClassChangeError` (PUTFIELD num campo
+> estático). **Raiz:** `CompilerClassLowering.lowerField` só levava
+> `LiteralExpr` DIRETO ao `initialValue`; qualquer expressão (mesmo dobrada:
+> `-1`, `2+3`, `"a"+"b"`) ia para `fieldInits` e era emitida no construtor
+> como `this.x = ...`. **Fix:** (a) `foldConstantExpr` dobra unário
+> (`-`/`+`/`~`/`!`) e binário aritmético/bitwise/lógico sobre literais para o
+> `initialValue`; (b) campo `static` não entra mais em `fieldInits` (nada de
+> PUTFIELD em estático). **Prova Q1:** célula `staticinit` (4 targets, golden
+> `-1\n5\n-7\n-1.5\nab\ntrue\n7`) + linha na matriz; `ConformanceMatrixTest`
+> 11/11 + `ConformanceMatrixDocTest` 1/1. Suíte 4 módulos: 0 falhas fora do
+> `node`. **Residual ABERTO (não fechar o §186):** inicializador de **runtime**
+> (`new`, chamada de função) continua sem `<clinit>` nos backends compilados
+> (`NativeMethodEmitter:58` ignora `<clinit>` de propósito) — fix estrutural,
+> item de `docs/development/`. **PRÓXIMO PASSO:** continuar Q4 (Float/
+> científico §180; arrays 2D/3D de Char/Byte; interop) OU sincronizar
+> `ecosystem-coverage.md`/`specification-gaps.md`. Se nada novo e suíte verde
+> → **RECUSAR** o re-disparo. **NUNCA:** `nat/` GC viva; fila de outras lanes;
+> push `main`.
 
 ---
 

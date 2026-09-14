@@ -6335,6 +6335,19 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   classe tem ≥1 estático não-constante (atribuições na ordem de declaração —
   mesma semântica que o interpretador já simula). Escopo estrutural: item de
   `docs/development/`, não bugfix de 1 commit.
+- **Fix PARCIAL 13/09 (lane bugs-and-gaps `192.168.100.15`, `e886bea1`):**
+  (a) `FieldConstantFolder.foldConstantExpr` dobra expressões **constantes**
+  (unário `-`/`+`/`~`/`!` e binário aritmético/bitwise/lógico sobre literais)
+  para o `initialValue` — `-1`, `2 + 3`, `-7L`, `-1.5`, `"a" + "b"`, `!false`
+  agora valem nos **4 targets** (antes: `0`/`undefined`); (b) campo `static`
+  não é mais injetado no construtor como `this.x = ...` (era PUTFIELD em
+  campo estático → `IncompatibleClassChangeError` no JVM, no-op no Native).
+  **Prova:** célula `staticinit` (4 targets, golden
+  `-1\n5\n-7\n-1.5\nab\ntrue\n7`). **Residual ABERTO:** inicializador de
+  **runtime** (`static Int[] a = new Int[3]`, `static X = f()`) continua sem
+  `<clinit>` nos backends compilados — o fix estrutural (que o
+  `NativeMethodEmitter:58` ignora de propósito) segue como item de
+  `docs/development/`. **Não fechar o §186 com o fix parcial.**
 - **Workaround:** sem inicializador não-constante em `static`; atribuir
   explicitamente num método chamado antes do primeiro uso.
 - **Descoberto:** 13/09, KOF-SBD-001-STRESS (STRESS-016).

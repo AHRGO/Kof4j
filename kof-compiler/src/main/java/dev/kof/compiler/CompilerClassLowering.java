@@ -36,7 +36,15 @@ public final class CompilerClassLowering {
                 IRField irField = CompilerClassLowering.lowerField(driver,field, cls.typeParameters());
                 fields.add(irField);
                 if (field.initializer() != null && irField.initialValue() == null) {
-                    fieldInits.put(field.name(), field.initializer());
+                    // UIW052: inicializador NÃO-constante. Campo ESTÁTICO não
+                    // pode ser atribuído no construtor (virava `this.x = ...`,
+                    // PUTFIELD num campo estático → IncompatibleClassChangeError
+                    // no JVM; no-op no Native). Sem `<clinit>` sintetizado nos
+                    // backends compilados, o runtime fica de fora (residual
+                    // documentado) — nunca a escrita de instância errada.
+                    if ((irField.accessFlags() & AccessFlags.STATIC) == 0) {
+                        fieldInits.put(field.name(), field.initializer());
+                    }
                 }
             } else if (member instanceof MethodDeclarationNode method) {
                 methods.add(CompilerClassLowering.lowerMethod(driver,method, internalName, false, cls.typeParameters()));
@@ -169,18 +177,8 @@ public final class CompilerClassLowering {
     static IRField lowerField(CompilerDriver driver, FieldDeclarationNode field,
                      List<String> typeParams) {
         Type fieldType = CompilerTypes.resolveWithTypeParams(field.type(), typeParams, driver.currentUnit, driver.semanticAnalyzer);
-        Object initVal = null;
-        if (field.initializer() instanceof LiteralExpr lit) {
-            initVal = switch (lit.kind()) {
-                case ConcreteLiteralKind.INT -> driver.parseIntLiteral(lit.value());
-                case ConcreteLiteralKind.LONG -> Long.parseLong(driver.stripSuffix(lit.value()));
-                case ConcreteLiteralKind.FLOAT -> Float.parseFloat(driver.stripSuffix(lit.value()));
-                case ConcreteLiteralKind.DOUBLE -> Double.parseDouble(driver.stripSuffix(lit.value()));
-                case ConcreteLiteralKind.STRING -> lit.value();
-                case ConcreteLiteralKind.BOOLEAN -> Boolean.parseBoolean(lit.value()) ? 1 : 0;
-                default -> null;
-            };
-        }
+        Object initVal = FieldConstantFolder.coerceFieldConstant(
+                FieldConstantFolder.foldConstantExpr(driver, field.initializer()), fieldType);
         warnMechanismModifiers(driver, field.modifiers(), field.position());
         return new IRField(field.name(), fieldType, driver.computeAccess(field.modifiers()), initVal,
                 CompilerAnnotations.lowerAnnotations(driver, field.annotations()));
