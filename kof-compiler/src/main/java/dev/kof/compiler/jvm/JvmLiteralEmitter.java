@@ -226,47 +226,38 @@ public final class JvmLiteralEmitter {
         int depth = 0;
         int max = 0;
         for (KofOperation op : ops) {
-            if (op instanceof KofLoadLocal ll) {
-                depth++;
-                if (isDoubleWidth(ll.type())) depth++;
-            } else if (op instanceof KofLoadLiteral || op instanceof KofNewObject || op instanceof KofArrayLength || op instanceof KofInstanceOf || op instanceof KofGetStatic) {
-                depth++;
-                Type loaded = op instanceof KofLoadLiteral lit ? lit.type()
-                        : op instanceof KofGetStatic gs ? gs.fieldType()
-                        : Type.UnknownType.UNKNOWN;
-                if (isDoubleWidth(loaded)) depth++;
-            } else if (op instanceof KofDup) {
-                depth++;
-            } else if (op instanceof KofDup2) {
-                depth += 2;
-            } else if (op instanceof KofPop) {
-                depth--;
-            } else if (op instanceof KofPop2) {
-                // categoria-2: mesmo efeito no modelo de 1 slot do emitter
-                depth--;
-            } else if (op instanceof KofStoreLocal || op instanceof KofStoreField || op instanceof KofPutStatic) {
-                depth -= 2;
-            } else if (op instanceof KofLoadField || op instanceof KofUnary || op instanceof KofCheckCast) {
-            } else if (op instanceof KofBinary) {
-                depth--;
-            } else if (op instanceof KofReturn kr) {
-                if (!Type.isVoid(kr.returnType())) depth--;
-            } else if (op instanceof KofReturnVoid) {
-            } else if (op instanceof KofNewArray) {
-                depth--;
-            } else if (op instanceof KofNewMultiArray ma) {
-                depth -= ma.dims() - 1;
-            } else if (op instanceof KofArrayLoad) {
-                depth--;
-            } else if (op instanceof KofArrayStore) {
-                depth -= 3;
-            } else if (op instanceof KofThrow) {
-                depth--;
-            } else if (op instanceof KofLabel || op instanceof KofJump) {
-            } else if (op instanceof KofConditionalJump) {
-                depth -= 2;
-            } else if (op instanceof KofCall) {
-                depth -= 1;
+            switch (op) {
+                case KofLoadLocal ll -> {
+                    depth++;
+                    if (isDoubleWidth(ll.type())) depth++;
+                }
+                case KofLoadLiteral _, KofNewObject _, KofArrayLength _, KofInstanceOf _, KofGetStatic _ -> {
+                    depth++;
+                    Type loaded = op instanceof KofLoadLiteral lit ? lit.type()
+                            : op instanceof KofGetStatic gs ? gs.fieldType()
+                            : Type.UnknownType.UNKNOWN;
+                    if (isDoubleWidth(loaded)) depth++;
+                }
+                case KofDup _ -> depth++;
+                case KofDup2 _ -> depth += 2;
+                case KofPop _ -> depth--;
+                case KofPop2 _ -> depth--; // categoria-2: mesmo efeito no modelo de 1 slot do emitter
+                case KofStoreLocal _, KofStoreField _, KofPutStatic _ -> depth -= 2;
+                case KofLoadField _, KofUnary _, KofCheckCast _ -> { }
+                case KofBinary _ -> depth--;
+                case KofReturn kr -> {
+                    if (!Type.isVoid(kr.returnType())) depth--;
+                }
+                case KofReturnVoid _ -> { }
+                case KofNewArray _ -> depth--;
+                case KofNewMultiArray ma -> depth -= ma.dims() - 1;
+                case KofArrayLoad _ -> depth--;
+                case KofArrayStore _ -> depth -= 3;
+                case KofThrow _ -> depth--;
+                case KofLabel _, KofJump _ -> { }
+                case KofConditionalJump _ -> depth -= 2;
+                case KofCall _ -> depth -= 1;
+                case null, default -> { }
             }
             max = Math.max(max, depth);
             if (depth < 0) depth = 0;
