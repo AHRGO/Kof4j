@@ -88,7 +88,6 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
         && CompilerTypes.qualifyViaImports(rid.name(), driver.currentUnit,
                 driver.externalClasspath) instanceof Type.ClassType extQ
         && !extQ.packageName().isEmpty()
-        && driver.externalClasspath != null
         && driver.externalClasspath.knows(extQ.internalName())
         && driver.externalClasspath.resolveMethod(extQ.internalName(), mc.methodName(),
                 mc.arguments().size()) != null) {

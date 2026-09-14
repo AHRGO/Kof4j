@@ -1,10 +1,10 @@
 538	kof-cli/src/main/java/dev/kof/cli/BytecodeStatements.java
-501	kof-cli/src/main/java/dev/kof/cli/LspServer.java
+511	kof-cli/src/main/java/dev/kof/cli/LspServer.java
 506	kof-cli/src/main/java/dev/kof/cli/TranslateExpr.java
 562	kof-compiler/src/main/java/dev/kof/compiler/CompilerClassLowering.java
 522	kof-compiler/src/main/java/dev/kof/compiler/ExpressionAssignmentLowerer.java
-514	kof-compiler/src/main/java/dev/kof/compiler/ExpressionInstanceCallLowerer.java
-535	kof-compiler/src/main/java/dev/kof/compiler/ExpressionLowerer.java
+513	kof-compiler/src/main/java/dev/kof/compiler/ExpressionInstanceCallLowerer.java
+533	kof-compiler/src/main/java/dev/kof/compiler/ExpressionLowerer.java
 558	kof-compiler/src/main/java/dev/kof/compiler/js/JsControlFlowParser.java
 523	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeCore.java
 518	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeUiLayout.java

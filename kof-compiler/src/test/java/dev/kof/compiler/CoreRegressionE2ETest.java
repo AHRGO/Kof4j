@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -1960,5 +1961,26 @@ class CoreRegressionE2ETest {
         CompilationResult r = driver.compile(src, out, Target.JVM);
         assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
         assertEquals("[LOG] test\n[LOG] custom: 7", runJvm(out));
+    }
+
+    // Issue #224 — abstract method in non-abstract class is accepted without error (AbstractMethodError at runtime)
+    @Test
+    void abstractMethodInNonAbstractClassRejected(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("abstractnonabs.kf");
+        Files.writeString(src, """
+                class Broken {
+                    abstract Int compute()
+                }
+
+                main() {
+                    var b = new Broken()
+                    println(b.compute())
+                }
+                """);
+        Path out = tempDir.resolve("abstractnonabs-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertFalse(r.success());
+        assertTrue(r.diagnostics().getDiagnostics().stream().anyMatch(d -> "SEM041".equals(d.code())),
+                "Expected SEM041 diagnostic but got: " + r.diagnostics().getDiagnostics());
     }
 }

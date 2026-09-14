@@ -51,7 +51,7 @@ public final class CompilerEmission2 {
             // SAM conversion: lambda → interface funcional externa
             // (setOnClickListener(v -> ...) com OnClickListener no classpath)
             if (args.get(i) instanceof LambdaExpr le && formal instanceof Type.ClassType ct
-                    && !ct.packageName().isEmpty() && driver.externalClasspath != null
+                    && !ct.packageName().isEmpty()
                     && driver.externalClasspath.isInterface(ct.internalName())) {
                 ExternalClasspath.Sam sam = driver.externalClasspath.resolveSam(ct.internalName());
                 if (sam != null) {

@@ -262,7 +262,7 @@ if (ae.target() instanceof FieldAccessExpr fa) {
     if (recvType instanceof Type.ClassType ct) {
         SymbolTable.Symbol fs = HierarchyResolver.resolveFieldInHierarchy(ct.name(), fa.fieldName(), driver.semanticAnalyzer);
         if (fs != null) fieldType = fs.type();
-        else if (!ct.packageName().isEmpty() && driver.externalClasspath != null
+        else if (!ct.packageName().isEmpty()
                 && driver.externalClasspath.knows(ct.internalName())) {
             String desc = driver.externalClasspath.resolveFieldType(
                     ct.internalName(), fa.fieldName());

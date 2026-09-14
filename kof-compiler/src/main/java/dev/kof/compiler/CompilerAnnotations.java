@@ -48,7 +48,7 @@ public final class CompilerAnnotations {
         }
         if (value instanceof AnnotationEnumRef ref) {
             int lastDot = ref.qualifiedConstant().lastIndexOf('.');
-            if (lastDot > 0 && driver.externalClasspath != null) {
+            if (lastDot > 0) {
                 String internal = CompilerAnnotations.resolveAnnotationInternalName(driver,
                         ref.qualifiedConstant().substring(0, lastDot));
                 String constant = ref.qualifiedConstant().substring(lastDot + 1);

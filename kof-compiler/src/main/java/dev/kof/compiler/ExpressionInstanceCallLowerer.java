@@ -160,7 +160,7 @@ public final class ExpressionInstanceCallLowerer {
         Type returnType;
         StringMethodRegistry.Sig osig = StringMethodRegistry.objectMethodSignature(mc.methodName(), mc.arguments().size());
         ExternalClasspath.MethodSignature extSig = null;
-        if (superMethod == null && osig == null && driver.externalClasspath != null) {
+        if (superMethod == null && osig == null) {
             extSig = driver.externalClasspath.resolveMethod(superInternal, mc.methodName(),
                     mc.arguments().size());
         }
@@ -453,7 +453,6 @@ public final class ExpressionInstanceCallLowerer {
             rt2 = ExpressionTyper.inferExprType(driver, mc.receiver(), locals);
         }
         if (rt2 instanceof Type.ClassType ct2 && !ct2.packageName().isEmpty()
-                && driver.externalClasspath != null
                 && driver.externalClasspath.knows(ct2.internalName())) {
             ExternalClasspath.MethodSignature sig = driver.externalClasspath.resolveMethod(
                     ct2.internalName(), mc.methodName(), mc.arguments().size());

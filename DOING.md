@@ -127,6 +127,12 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > quentes. O codemod dos 17 locals puros restantes ficou p/ depois (varios
 > carregam chamada com efeito — deletar linha = mudanca de comportamento).## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (14/09 ~14:30, dono = 192.168.100.22, lane compiler): fix issue #224 — abstract method in non-abstract class is accepted without error (AbstractMethodError at runtime).**
+> - Causa raiz: em `SemanticAnalyzer.analyzeClass()`, não havia verificação estática que exigisse que uma classe contendo métodos com modificador `abstract` fosse ela própria declarada com o modificador `abstract`. Isso permitia que classes concretas fossem compiladas com métodos sem corpo, instanciadas normalmente em runtime, e gerassem `AbstractMethodError` quando o método era invocado.
+> - Correção: adicionada validação em `SemanticAnalyzer.analyzeClass` que rejeita em tempo de compilação métodos `abstract` declarados dentro de classes não-abstratas com o erro `SEM041`.
+> - Prova: `CoreRegressionE2ETest#abstractMethodInNonAbstractClassRejected`.
+> - Próximo: issues #216, #226.
+
 > **✅ FEITO (14/09 ~14:00, dono = 192.168.100.22, lane compiler): fix issue #225 — Instance method shadowed by built-in when name matches print/println.**
 > - Causa raiz: `ExpressionStaticCallLowerer.lower`, `MethodCallTyper.inferType` e `BuiltinCallTyper.inferType` tratavam qualquer chamada `print` ou `println` com 1 argumento como a função builtin global, sem verificar se `mc.receiver() == null`. Quando uma classe definia um método de instância `print` ou `println`, chamadas com receiver explícito (ex: `log.print("test")` ou `f.println(7)`) eram interceptadas e despachadas diretamente para `java/io/PrintStream.print/println`, ignorando o receiver e o método de instância definido.
 > - Correção: adicionada checagem `mc.receiver() == null` em `ExpressionStaticCallLowerer`, `MethodCallTyper` e `BuiltinCallTyper` para os ramos `print`/`println`, garantindo que chamadas com receiver explícito prossigam para a resolução normal de métodos de instância.

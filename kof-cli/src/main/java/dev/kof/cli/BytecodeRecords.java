@@ -81,7 +81,6 @@ final class BytecodeRecords {
         if (!ir.attributes.containsKey("Record")) return null;
         if (typeParams(ir.classSignature) == null) return null;
         if (ir.fields == null || ir.fields.isEmpty()) return null;
-        if (ir.fields == null || ir.fields.isEmpty()) return null;
         for (var f : ir.fields) {
             if ((f.accessFlags & 0x0008) != 0) return null;           // static — não é componente
             if ((f.accessFlags & 0x0010) == 0) return null;           // componente de record é final
