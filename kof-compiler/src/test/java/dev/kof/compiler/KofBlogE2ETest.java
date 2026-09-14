@@ -40,7 +40,7 @@ class KofBlogE2ETest {
 
     private static String blogApp(String port) {
         return """
-                record Post(Int id, String title, String body)
+                record Post(String id, String title, String body)
                 record Credentials(String user, String password)
                 record Session(String user, String token)
                 record PwRow(String pwhash)
@@ -53,7 +53,7 @@ class KofBlogE2ETest {
                     var app = web.app()
                     var h = db.connect("jdbc:h2:mem:blog;DB_CLOSE_DELAY=-1")
                     db.execute(h, "create table users(usr varchar(50), pwhash varchar(200))")
-                    db.execute(h, "create table posts(id identity, author varchar(50), title varchar(100), body varchar(10000))")
+                    db.execute(h, "create table posts(id varchar(50), author varchar(50), title varchar(100), body varchar(10000))")
 
                     app.post("/register") {
                         var c = json.decode<Credentials>(body())
@@ -87,7 +87,7 @@ class KofBlogE2ETest {
                         var p = json.decode<Post>(body())
                         if (!validTitle(p.title())) { return status(400, "{\\"error\\":\\"invalid title\\"}") }
                         if (!validBody(p.body())) { return status(400, "{\\"error\\":\\"invalid body\\"}") }
-                        db.execute(h, "insert into posts(author, title, body) values (?, ?, ?)", author, p.title(), p.body())
+                        db.execute(h, "insert into posts(id, author, title, body) values (?, ?, ?, ?)", crypto.randomHex(8), author, p.title(), p.body())
                         return status(201, "{\\"ok\\":true}")
                     }
 
@@ -104,14 +104,6 @@ class KofBlogE2ETest {
                     app.listen(KOFE2EPORT)
                 }
                 """.replace("KOFE2EPORT", port);
-    }
-
-    private String readAppLog(Path tempDir) {
-        try {
-            return Files.readString(tempDir.resolve("app.log"));
-        } catch (IOException e) {
-            return "(no app.log)";
-        }
     }
 
     private String post(int port, String path, String jsonBody) throws IOException {
@@ -175,19 +167,12 @@ class KofBlogE2ETest {
     }
 
     private String http(int port, String request) throws IOException {
-        String reqLine = request.split("\r\n", 2)[0];
         try (Socket s = new Socket("127.0.0.1", port)) {
             s.setSoTimeout(30000);
             OutputStream out = s.getOutputStream();
             out.write(request.getBytes(StandardCharsets.UTF_8));
             out.flush();
-            InputStream in = s.getInputStream();
-            byte[] buf = in.readAllBytes();
-            System.err.println("[KofBlogE2E] " + reqLine + " -> " + buf.length + " bytes");
-            return new String(buf, StandardCharsets.UTF_8);
-        } catch (java.net.SocketTimeoutException e) {
-            System.err.println("[KofBlogE2E] TIMEOUT on " + reqLine);
-            throw e;
+            return new String(s.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         }
     }
 
@@ -223,11 +208,11 @@ class KofBlogE2ETest {
             assertEquals("HTTP/1.1 401 Unauthorized", getStatus(r), r);
 
             // 4. criar post com sessão → 201
-            String post = "{\"id\":1,\"title\":\"Kof\",\"body\":\"validação da plataforma\"}";
+            String post = "{\"id\":\"ignored\",\"title\":\"Kof\",\"body\":\"validação da plataforma\"}";
             r = http(port, "POST /posts HTTP/1.1\r\nHost: x\r\nauthorization: " + token
                     + "\r\nContent-Length: " + post.getBytes(StandardCharsets.UTF_8).length
                     + "\r\n\r\n" + post);
-            assertEquals("HTTP/1.1 201 Created", getStatus(r), r + " | appLog: " + readAppLog(tempDir));
+            assertEquals("HTTP/1.1 201 Created", getStatus(r), r);
 
             // 5. post sem sessão → 401
             r = http(port, "POST /posts HTTP/1.1\r\nHost: x\r\nContent-Length: "

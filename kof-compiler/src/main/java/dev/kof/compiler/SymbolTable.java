@@ -168,6 +168,7 @@ public class SymbolTable {
             return returnType;
         }
 
+        @Override
         public String name() {
             return name;
         }

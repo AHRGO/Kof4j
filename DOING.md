@@ -80,6 +80,18 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **EM CURSO (14/09, dono = 192.168.100.22, lane repo-hygiene): degrau-1
+> CodeQL-segurança (ordem da mantenedora, 18 rules, 495 alerts).**
+> Escopo: findings de SEGURANÇA em arquivos SEM dono (BytecodeReader,
+> KofWebTlsTest, harness de testes) — **NÃO tocar** lanes (ExpressionLowerer/
+> Typer — Typer WIP guardado pelo dono .15 em stash@{1}, MethodCallTyper,
+> BlogE2ETest, Translate*, Decompile*, providers, nat/, known-bugs —
+> conflito do pop resolvido preservando os dois §189; **colisão de numeração:
+> dois §189 distintos** (parseOrDefault-cross .17 × blog-db.query .18) p/
+> donos renumerarem). Degrau-1: skipVariable OOB (fix+teste) + dismiss
+> documentado de trustmanager-localhost e 27 command-concat de harness.
+> Prova: teste novo + CodeQL CI no push.
+
 > **✅ FEITO (14/09, dono = 192.168.100.18, lane development): blog E2E
 > (D-SPRING F12) + `--fat` (D-APP I3)** — commit `8eb156f4`; as duas últimas
 > linhas executáveis da fila `DECISIONS.md` (§7 de `docs/development/README.md`).

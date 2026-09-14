@@ -10,13 +10,19 @@ import java.util.regex.Pattern;
 
 /** IntelliJ IDEA — plugin LSP4IJ + language (degraus 10+; issue #1). */
 public final class IntelliJProvider extends AbstractEditorIntegration {
+    @Override
     public String id() { return "intellij"; }
+    @Override
     public String displayName() { return "IntelliJ IDEA"; }
+    @Override
     public String integrationName() { return "Kof for IntelliJ IDEA"; }
+    @Override
     protected List<String> executables() { return List.of("idea"); }
+    @Override
     protected List<String> configDirs() {
         return List.of("Library/Application Support/JetBrains", ".config/JetBrains", "AppData/Roaming/JetBrains");
     }
+    @Override
     protected Pattern versionPattern() { return Pattern.compile("(20\\d\\d\\.\\d+(\\.\\d+)?)"); }
 
     @Override

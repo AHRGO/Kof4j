@@ -10,11 +10,17 @@ import java.util.regex.Pattern;
 
 /** VS Code — integração completa via grammar TextMate + `kof lsp` (degraus 4+). */
 public final class VscodeProvider extends AbstractEditorIntegration {
+    @Override
     public String id() { return "vscode"; }
+    @Override
     public String displayName() { return "Visual Studio Code"; }
+    @Override
     public String integrationName() { return "Kof for VS Code"; }
+    @Override
     protected List<String> executables() { return List.of("code", "code-insiders"); }
+    @Override
     protected List<String> configDirs() { return List.of(".vscode", ".vscode-oss"); }
+    @Override
     protected Pattern versionPattern() { return Pattern.compile("(\\d+\\.\\d+\\.\\d+)"); }
 
     @Override

@@ -10,13 +10,19 @@ import java.util.regex.Pattern;
 
 /** Geany — filetype/syntax/build commands (degraus 8+). */
 public final class GeanyProvider extends AbstractEditorIntegration {
+    @Override
     public String id() { return "geany"; }
+    @Override
     public String displayName() { return "Geany"; }
+    @Override
     public String integrationName() { return "Kof for Geany"; }
+    @Override
     protected List<String> executables() { return List.of("geany"); }
+    @Override
     protected List<String> configDirs() { return List.of(".config/geany"); }
     // "geany 2.0 (construído ... com GTK 3.24.41, GLib 2.80.0)" — ancora no
     // "geany" para não pegar a versão do GTK/GLib.
+    @Override
     protected Pattern versionPattern() {
         return Pattern.compile("geany (\\d+\\.\\d+(?:\\.\\d+)?)", Pattern.CASE_INSENSITIVE);
     }

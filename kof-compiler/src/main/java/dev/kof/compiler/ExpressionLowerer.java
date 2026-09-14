@@ -247,8 +247,15 @@ public final class ExpressionLowerer {
                  // (CollectionCallLowerer: kof_list_get/kof_map_get, INSTANCE).
                  if (BuiltinTypes.isList(recvType) || BuiltinTypes.isMap(recvType)) {
                      String fn = BuiltinTypes.isList(recvType) ? "kof_list_get" : "kof_map_get";
+                     // elemType real (idem CollectionCallLowerer) — o retorno
+                     // Unknown fazia o desugar de println tratar Int como
+                     // Object cru (VerifyError: integer na pilha do println).
+                     Type elem = BuiltinTypes.isList(recvType)
+                             ? driver.listElementType(recvType)
+                             : (recvType instanceof Type.ClassType ct && ct.typeArguments().size() > 1
+                                 ? ct.typeArguments().get(1) : Type.UnknownType.UNKNOWN);
                      ops.add(new KofCall(recvType, fn,
-                             List.of(Type.UnknownType.UNKNOWN), Type.UnknownType.UNKNOWN,
+                             List.of(Type.PrimitiveType.INT), elem,
                              KofCallKind.INSTANCE));
                      yield localIdx;
                  }

@@ -6601,3 +6601,37 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   3.4.1/42.7.4/5.11.3 (offline: dependências NÃO resolvem; re-run do gate
   fica bloqueado até o cache ter os jars — declaração explícita, regra 7).
 
+## §189 — E2E blog (F12): `db.query` cru + `.get("col")`/recursos dentro de handler web derrubam a conexão com `VerifyError`/`connection closed before headers` — catalogado 14/09 (lane development, dono = 192.168.100.18, descoberto no blog E2E D-SPRING F12)
+
+**Causa raiz (typer × bytecode, família SEM049/SEM048):** o resultado cru de
+`db.query(...)` (`List<Map<String,Object>>` no typer) chega ao bytecode como
+`Object` — chamar `.get("col")` no row ou passar o resultado direto a um
+runtime call (`passwords.verify`) desalinha typer e emitter:
+`VerifyError: Bad type on operand stack` (`Lambda1.invoke()Ljava/lang/String;`
+— `invokestatic` recebe `java/lang/Object` onde espera `String`). No handler
+web, a exceção estoura no invoke e a conexão morre sem resposta
+(`kof web connection error: connection closed before headers`), R6 violado —
+o cliente recebe `Read timed out`, não diagnóstico.
+
+**Menor repro (medido, `/tmp/opencode/blogrepro/B7.kf`):**
+```
+app.post("/login") {
+    var rows = db.query(h, "select pwhash from users where usr = ?", c.user())
+    var rec = rows.get(0)
+    var hash = rec.get("pwhash")          // Object no bytecode, String no typer
+    if (!passwords.verify(c.password(), hash)) { ... }   // VerifyError
+}
+```
+**Correção da causa raiz (esta unidade):** tipagem real do element-type de
+`List` no typer — `new List<Int>()` propaga o type-argument (antes caía em
+`BuiltinTypes.LIST` sem `type-args`, e `list[0]`/`get` viravam `Unknown` no
+typer mas `ArrayList.get → Object` no bytecode); `map/filter/reduce`
+inferred em `MethodCallTyper`. Testes: `i149a-d` (`list[0]` no `println`/
+`var`/`String.valueOf`) e `i152a-d` (`r.get(0)`), todos verdes na suíte
+completa (1816/0/0).
+
+**Fila ainda aberta (dono: lane compiler):** o `db.query` CRU continuar
+expondo `Object` nos values do Map — o handler precisa de `db.query<Record>`
+tipado (caminho canônico, usado pelo E2E) ou do `"" + rec.get(...)` como
+workaround. O `VerifyError` no bytecode emitido é erro do COMPILER, não do
+usuário — diagnostic em compile-time é a meta (regra 6).

@@ -33,19 +33,27 @@ class EditorIntegrationTest {
     private static DetectContext fake(Set<String> installed, Map<String, String> versions,
                                       Set<String> configDirs) {
         return new DetectContext() {
+            @Override
             public boolean whichExists(String exe) { return installed.contains(exe); }
+            @Override
             public String whichPath(String exe) {
                 return installed.contains(exe) ? "/fake/bin/" + exe : null;
             }
+            @Override
             public String readVersion(String exe) {
                 return versions.getOrDefault(exe, exe + ": not found");
             }
+            @Override
             public boolean dirExists(Path dir) {
                 return dir != null && configDirs.contains(dir.toString().replaceFirst("^/fake/home/", ""));
             }
+            @Override
             public boolean fileExists(Path file) { return false; }
+            @Override
             public Path home() { return Path.of("/fake/home"); }
+            @Override
             public List<String> candidateExes() { return List.of(); }
+            @Override
             public String osName() { return "linux"; }
         };
     }

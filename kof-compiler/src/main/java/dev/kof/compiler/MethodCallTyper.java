@@ -193,6 +193,25 @@ if (mc.receiver() instanceof IdentifierExpr ridR && KofUi.isRouterNamespace(ridR
 if ("listOf".equals(mc.methodName()) && mc.receiver() == null) {
     return new Type.ClassType("kof", "List", List.of(driver.listOfElementType(mc, locals)));
 }
+// #149: resultado de List.map/filter/reduce precisa de tipo REAL — cair em
+// Unknown fazia `r[i]` sobre o resultado emitir AALOAD (o typer do
+// ArrayAccessExpr não sabia que é List) e `r.get(i)`/`r.size` perdiam o
+// dispatch de coleção. Espelha o emit do CollectionCallLowerer.
+if (mc.receiver() != null
+        && ("map".equals(mc.methodName()) || "filter".equals(mc.methodName())
+            || "reduce".equals(mc.methodName()))
+        && ExpressionTyper.inferExprType(driver, mc.receiver(), locals) instanceof Type.ClassType lt
+        && "kof".equals(lt.packageName()) && "List".equals(lt.name())) {
+    if ("filter".equals(mc.methodName())) return lt;
+    if (mc.arguments().isEmpty()) return Type.UnknownType.UNKNOWN;
+    Type lamT = ExpressionTyper.inferExprType(driver, mc.arguments().get(0), locals);
+    if ("map".equals(mc.methodName())) {
+        Type elem = (lamT instanceof Type.FunctionType ft && !(ft.returnType() instanceof Type.UnknownType))
+                ? ft.returnType() : Type.UnknownType.UNKNOWN;
+        return new Type.ClassType("kof", "List", List.of(elem));
+    }
+    return (lamT instanceof Type.FunctionType ft) ? ft.returnType() : Type.UnknownType.UNKNOWN;
+}
 if ("mapOf".equals(mc.methodName()) && mc.receiver() == null) {
     // pinning do tipo no primeiro par — espelha o emit (mapOf(k1,v1,...))
     Type keyType = mc.arguments().isEmpty() ? Type.UnknownType.UNKNOWN
