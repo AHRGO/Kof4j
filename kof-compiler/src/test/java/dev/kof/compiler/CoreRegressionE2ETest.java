@@ -2268,4 +2268,28 @@ class CoreRegressionE2ETest {
         assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
         assertEquals("caught: boom\nio: io-error", runJvm(out));
     }
+
+    // Issue #247 — Boolean overload resolution selects Int overload when both show(Int) and show(Boolean) exist
+    @Test
+    void booleanOverloadResolutionPrefersBooleanJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("boolean_overload.kf");
+        Files.writeString(src, """
+                class Printer {
+                    void show(Int n)     { println("int: " + n) }
+                    void show(Boolean b) { println("bool: " + b) }
+                }
+                main() {
+                    var p = new Printer()
+                    p.show(true)
+                    p.show(false)
+                    var b: Boolean = true
+                    p.show(b)
+                    p.show(42)
+                }
+                """);
+        Path out = tempDir.resolve("boolean_overload-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("bool: true\nbool: false\nbool: true\nint: 42", runJvm(out));
+    }
 }
