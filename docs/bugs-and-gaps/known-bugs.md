@@ -7067,6 +7067,11 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   `StatementAnalyzer` (the unused `condType` binding stays removed, per CodeQL).
   Verified: supervisor 8/8, plus `BackendParityTest` 19/19, `ArrayBoundsStressTest`
   15/15, `CoreRegressionE2ETest` 79/79.
+- **Regression test (added 14/09 by lane bugs-and-gaps `192.168.100.15`, Q1 gap):**
+  `CompilerDriverTest.elseBranchIsAnalyzedBothBranches` — a type error
+  (`Int s = "not an int"`) inside the else branch must be DIAGNOSED (SEM021), not
+  emitted as broken bytecode. Red without the restored analysis, green with it
+  (proven on a clean build of `origin/beta-0.4.0`). The lane `.18` fix had no test.
 - **Note:** JVM/Native/Script are affected (the analyzer is target-agnostic); JS
   escaped because the parser resolved the types on its own path.
 

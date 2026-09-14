@@ -7049,6 +7049,12 @@ usuário — diagnostic em compile-time é a meta (regra 6).
   `StatementAnalyzer` (o binding `condType` não usado continua removido, como o
   CodeQL pediu). Verificado: supervisor 8/8, mais `BackendParityTest` 19/19,
   `ArrayBoundsStressTest` 15/15, `CoreRegressionE2ETest` 79/79.
+- **Teste de regressão (adicionado 14/09 pela lane bugs-and-gaps `192.168.100.15`,
+  lacuna Q1):** `CompilerDriverTest.elseBranchIsAnalyzedBothBranches` — um erro
+  de tipo (`Int s = "not an int"`) dentro do ramo else deve ser DIAGNOSTICADO
+  (SEM021), não emitido como bytecode quebrado. Vermelho sem a análise
+  restaurada, verde com ela (provado em build limpo de `origin/beta-0.4.0`). O
+  fix da lane `.18` não tinha teste.
 - **Nota:** JVM/Native/Script são afetados (o analyzer é target-agnóstico); o JS
   escapou porque o parser resolvia os tipos no seu próprio caminho.
 
