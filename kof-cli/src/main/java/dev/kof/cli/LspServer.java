@@ -39,7 +39,17 @@ final class LspServer {
                 if (line == null) return;
                 if (line.isBlank()) break;
                 if (line.toLowerCase().startsWith("content-length:")) {
-                    contentLength = Integer.parseInt(line.substring("content-length:".length()).trim());
+                    // §CodeQL uncaught-NFE: header malformado nao pode matar o
+                    // servidor com stack-trace (R6: diagnostico + saida limpa;
+                    // sem length valido o framing esta perdido — encerra a
+                    // conexao em vez de continuar lendo lixo).
+                    String raw = line.substring("content-length:".length()).trim();
+                    try {
+                        contentLength = Integer.parseInt(raw);
+                    } catch (NumberFormatException e) {
+                        System.err.println("kof lsp: Content-Length invalido: '" + raw + "'");
+                        return;
+                    }
                 }
             }
             if (contentLength < 0) continue;
