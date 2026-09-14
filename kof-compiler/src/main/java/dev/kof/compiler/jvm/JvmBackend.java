@@ -357,6 +357,10 @@ public class JvmBackend implements Backend {
 
     private String exceptionJvmType(String kofType) {
         if ("String".equals(kofType)) return "java/lang/RuntimeException";
+        // #241: nome QUALIFICADO no catch (java.lang.RuntimeException) era
+        // concatenado cego → "java/lang/java.lang.RuntimeException" →
+        // ClassFormatError. Nome com ponto ja carrega o pacote: so traduz.
+        if (kofType.indexOf('.') >= 0) return kofType.replace('.', '/');
         return "java/lang/" + kofType;
     }
 
