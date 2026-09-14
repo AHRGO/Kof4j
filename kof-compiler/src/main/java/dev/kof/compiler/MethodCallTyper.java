@@ -90,6 +90,12 @@ if (mc.receiver() != null && "toString".equals(mc.methodName()) && mc.arguments(
 // `Integer.parseInt(...)Ljava/lang/String;` (NoSuchMethodError). O retorno é
 // o primitivo correspondente; a sobrecarga com radix `(String, Int)` também.
 if (mc.receiver() instanceof IdentifierExpr srid && driver.findLocalVar(srid.name(), locals) == null
+        && ("Double".equals(srid.name()) || "Float".equals(srid.name()))
+        && ("isNaN".equals(mc.methodName()) || "isInfinite".equals(mc.methodName()) || "isFinite".equals(mc.methodName()))
+        && mc.arguments().size() == 1) {
+    return Type.PrimitiveType.BOOL;
+}
+if (mc.receiver() instanceof IdentifierExpr srid && driver.findLocalVar(srid.name(), locals) == null
         && switch (mc.methodName()) {
             case "parseInt", "parseLong", "parseDouble", "parseFloat", "parseBoolean" -> true;
             default -> false;

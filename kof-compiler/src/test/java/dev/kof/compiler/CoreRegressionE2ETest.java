@@ -2198,13 +2198,20 @@ class CoreRegressionE2ETest {
                     var d: Double = 0.0 / 0.0
                     println(Double.isNaN(d))
                     println(Double.isInfinite(d))
+                    println(Double.isFinite(d))
                     var norm: Double = 42.0
                     println(Double.isNaN(norm))
+                    println(Double.isFinite(norm))
+                    var inf: Double = 1.0 / 0.0
+                    println(Double.isInfinite(inf))
+                    var f: Float = 0.0f / 0.0f
+                    println(Float.isNaN(f))
+                    println(Float.isInfinite(f))
                 }
                 """);
         Path out = tempDir.resolve("double_static-jvm");
         CompilationResult r = driver.compile(src, out, Target.JVM);
         assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
-        assertEquals("true\nfalse\nfalse", runJvm(out));
+        assertEquals("true\nfalse\nfalse\nfalse\ntrue\ntrue\ntrue\nfalse", runJvm(out));
     }
 }

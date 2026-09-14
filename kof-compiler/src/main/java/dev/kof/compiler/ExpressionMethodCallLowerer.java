@@ -112,8 +112,7 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
 } else if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.name(), locals)
         && ("Double".equals(rid.name()) || "Float".equals(rid.name()) || "Long".equals(rid.name())
             || "Integer".equals(rid.name()) || "Int".equals(rid.name()) || "Boolean".equals(rid.name())
-            || "Bool".equals(rid.name()) || "String".equals(rid.name()))
-        && driver.externalClasspath != null) {
+            || "Bool".equals(rid.name()) || "String".equals(rid.name()))) {
     String javaClass = switch (rid.name()) {
         case "Int", "Integer" -> "java/lang/Integer";
         case "Long" -> "java/lang/Long";
@@ -122,8 +121,9 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
         case "Bool", "Boolean" -> "java/lang/Boolean";
         default -> "java/lang/String";
     };
-    ExternalClasspath.MethodSignature extSig = driver.externalClasspath.resolveMethod(
-            javaClass, mc.methodName(), mc.arguments().size());
+    ExternalClasspath.MethodSignature extSig = driver.externalClasspath != null
+            ? driver.externalClasspath.resolveMethod(javaClass, mc.methodName(), mc.arguments().size())
+            : null;
     if (extSig != null) {
         List<Type> extFormal = new ArrayList<>();
         for (String d : extSig.parameterDescriptors()) {
@@ -134,6 +134,16 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
         KofCallKind extKind = extSig.isStatic() ? KofCallKind.STATIC : KofCallKind.INSTANCE;
         ops.add(new KofCall(new Type.ClassType("java.lang", javaClass.substring(javaClass.lastIndexOf('/') + 1), List.of()),
                 mc.methodName(), extFormal, extRet, extKind));
+        return localIdx;
+    } else if (mc.arguments().size() == 1
+            && ("isNaN".equals(mc.methodName()) || "isInfinite".equals(mc.methodName()) || "isFinite".equals(mc.methodName()))
+            && ("Double".equals(rid.name()) || "Float".equals(rid.name()))) {
+        Type argType = "Double".equals(rid.name()) ? Type.PrimitiveType.DOUBLE : Type.PrimitiveType.FLOAT;
+        List<Type> extFormal = List.of(argType);
+        Type extRet = Type.PrimitiveType.BOOL;
+        localIdx = driver.emitArgumentsWithFormalTypes(mc.arguments(), extFormal, ops, owner, localIdx, locals);
+        ops.add(new KofCall(new Type.ClassType("java.lang", javaClass.substring(javaClass.lastIndexOf('/') + 1), List.of()),
+                mc.methodName(), extFormal, extRet, KofCallKind.STATIC));
         return localIdx;
     }
 } else if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.name(), locals)

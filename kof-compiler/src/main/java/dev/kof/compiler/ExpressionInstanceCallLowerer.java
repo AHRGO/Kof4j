@@ -512,6 +512,11 @@ public final class ExpressionInstanceCallLowerer {
                     }
                     methodParamTypes = formal;
                 }
+            } else if (mc.arguments().size() == 1
+                    && ("isNaN".equals(mc.methodName()) || "isInfinite".equals(mc.methodName()) || "isFinite".equals(mc.methodName()))
+                    && ("Double".equals(brid.name()) || "Float".equals(brid.name()))) {
+                methodReturnType = Type.PrimitiveType.BOOL;
+                methodParamTypes = List.of("Double".equals(brid.name()) ? Type.PrimitiveType.DOUBLE : Type.PrimitiveType.FLOAT);
             } else if ("valueOf".equals(mc.methodName()) && methodParamTypes.size() == 1
                     && methodParamTypes.get(0) instanceof Type.PrimitiveType) {
                 // valueOf(I) direto do JDK — sem boxing duplo
