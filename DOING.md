@@ -60,6 +60,30 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **📢 NOVA REGRA DA MANTENEDORA (14/09, travada em DECISIONS.md D-RELEASE):**
+> fechada a minor 0.4.0 (#138 merged), o foco é **estabilização de patch**.
+> Quando a beta cruzar **100–150 commits à frente da main**, avaliar bump
+> **0.4.1**: fechar as issues abertas da lane de bugs antes, suíte verde,
+> depois bumpar `pom.xml`+`version.properties` e voltar ao dev. Medir com
+> `git rev-list --count origin/main..origin/beta-0.4.0` — **hoje = 1**
+> (post-#138; contador zerou no merge). NENHUM agente bumpa versão antes do
+> gatilho. O re-disparo continua: escolher o próximo fix/issue da fila, não
+> feature.
+>
+> **✅ FEITO (14/09 ~01:10, dono = 192.168.100.22): issue #132 FECHADA no
+> GitHub** (causa raiz IALOAD→BALOAD/CALOAD/SALOAD `JvmLiteralEmitter`
+> `10fd1b32` + irmã `json.decode<Bool[]>`→`boolean[]`/`[Z` `0c122131`; teste
+> `JvmE2ETest.execNarrowPrimitiveArrayAccess`, golden medido). **Gate asm
+> opcional** (`d81d9a52`): skip honesto `KOF_ASM_GATE` nos 2 testes §181 que
+> quebravam o CI com toolchain presente (backend apaga o `.s` pós-link OK) —
+> D-ASM-GATE em DECISIONS. CI beta verde em `d81d9a52` (cross success).
+> **Merge main→beta destravou o conflito stale de rename**
+> (`docs/compiler-architecture.md`→`architecture/`); a mantenedora mergiou o
+> #138 (beta→main, `ba098a9b`). Issues abertas restantes: **#133** (clinit,
+> §186, ALTA), **#127/#128** (records JVM — stash `lane#127 JvmRecordEmitter`
+> na árvore de outra máquina, NÃO tocar), **#129** (SBD-001, código `4cb2b8e8`
+> — falta validar/fechar).
+>
 > **✅ FEITO (14/09 ~02:00, lane estabilização — dono = 192.168.100.17): §176
 > CORRIGIDO** (`08351ba6`) — `KofWebJsE2ETest.jsWebServesRoutes` era artifact de
 > build (constant-fold de `UI_WEB_RUNTIME` no `JsRuntimeSlices.class` stale; a

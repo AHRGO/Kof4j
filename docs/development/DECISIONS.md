@@ -224,6 +224,37 @@ PKG006); F2 targets = `docs/targets` + §23; F3 full-stack = D-APP I2; F4/F5 =
 D-APP Q7/Q10; F8 script = `kof-cli CmdScript` ✅; F9 conformance =
 `docs/bugs-and-gaps/conformance-matrix.md`. **Nada restava de único — o arquivo foi absorvido, não descartado.**
 
+## D-RELEASE — gatilho de patch (0.4.1) por volume de fixes (14/09)
+
+**Regra da mantenedora (14/09, após fechar a minor 0.4.0):** desenvolvimento
+agora é **estabilização de patch**, não feature. O critério objetivo de subir
+um patch:
+
+- **Gatilho:** quando a `beta` estiver **entre 100 e 150 commits à frente da
+  `main`**, avaliar o bump para **`0.4.1`** (patch — só fixes, zero capability
+  nova; a linha `0.4.0` já foi liberada no #138).
+- **Média de pacote estável:** 100–150 commits de fix acumulados = um pacote
+  estável o bastante para valer um release. Abaixo disso, é ruído; acima, o
+  backlog de correções já justifica o número de versão.
+- **Antes de bumpar:** **corrigir as issues abertas** (`gh issue list --state
+  open`) que forem da lane de bugs/paridade — o patch sai com as issues
+  conhecidas fechadas, não em cima delas. Issues de regra 6 (contrato) ficam
+  abertas com nota, não bloqueiam o patch.
+- **Depois do bump:** voltar ao desenvolvimento normal (a `beta` reabre para a
+  próxima minor/feature; o contador reinicia contra a nova `main`).
+
+**Estado do contador (medição 14/09, post-#138):** `main..beta = 1` (só
+`a5eedbe2`), `beta..main = 1` (o merge do PR). **Longe do gatilho** — o loop
+segue acumulando fixes na beta; nenhum agente bumpa versão enquanto não
+chegar perto de 100. Quem medir deve anotar aqui a contagem e a data.
+
+**Como medir:** `git rev-list --count origin/main..origin/beta-0.4.0`. Ao
+cruzar a faixa, abrir a issue "Release 0.4.1" (regra: toda PR vem com issue),
+rodar a suíte completa verde, fechar as issues da lane bugs, e só então bumpar
+`pom.xml` + `version.properties`.
+
+---
+
 ## D-ASM-GATE — gate de asm riscv/aarch OPCIONAL até o dev nativo fechar (14/09)
 
 **Decisão da mantenedora (14/09):** *"deixa o teste do riscv e arm opcional
