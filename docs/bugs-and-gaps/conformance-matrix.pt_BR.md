@@ -77,7 +77,7 @@
 | function type as generic argument `List<(Int) -> Int>` (§155) | `6` | DONE | DONE | DONE | DONE | `fntypegeneric` |
 | heterogeneous list of lambdas (same signature, §156) | `10` / `6` | DONE | DONE | DONE | DONE | `lambdalisthet` |
 | cast to function type `x as () -> Int` (§127-JVM) | `true` | DONE | DONE | DONE | DONE | `castfn` |
-| class method overload by signature (§131, decision 10a) | `42` / `7` | DONE | DONE | DONE | DONE | `methodoverload` |
+| class method overload by signature (§131, decision 10a) | `42` / `7` | DONE | DONE | DONE | DONE | `methodoverload` (somente instância; face overload ESTÁTICO NÃO coberta — chamada omitida do IR, `§227`/issue #235 em aberto) |
 | method overload with SAME arity and different types (§131-residual) | `42` / `abab` | DONE | DONE | DONE | DONE | `methodoverloadtype` |
 | wide parameter (`Long`) not first in the interpreter (§163) | `10000000002` / `10000000007` / `10000000000` / `10000000005` | DONE | DONE | DONE | DONE | `wideparams` |
 | mutable capture lambda | `3` | DONE | DONE | DONE | DONE | `lambdacapture` |
