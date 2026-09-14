@@ -384,7 +384,8 @@ public final class JvmConfigRuntime {
                             while (rs.next()) {
                                 java.util.LinkedHashMap<String, Object> row = new java.util.LinkedHashMap<>();
                                 for (int i = 1; i <= cols; i++) {
-                                    row.put(md.getColumnLabel(i).toLowerCase(), rs.getObject(i));
+                                    row.put(md.getColumnLabel(i).toLowerCase(),
+                                            kof_db_value(rs.getObject(i)));
                                 }
                                 if (className == null) {
                                     rows.add(kof_db_row_to_json(row));
@@ -395,6 +396,20 @@ public final class JvmConfigRuntime {
                         }
                     }
                     return rows;
+                }
+
+                /** Normaliza tipos JDBC para valores JSON naturais: CLOB→String
+                 *  (H2 devolvia o wrapper "clob0: U&'...'"), BLOB→base64. Sem
+                 *  isso o read path devolve a representação interna do driver. */
+                private static Object kof_db_value(Object value) throws Exception {
+                    if (value instanceof java.sql.Clob clob) {
+                        return clob.getSubString(1, (int) clob.length());
+                    }
+                    if (value instanceof java.sql.Blob blob) {
+                        return java.util.Base64.getEncoder().encodeToString(
+                                blob.getBytes(1, (int) blob.length()));
+                    }
+                    return value;
                 }
 
                 private static String kof_db_row_to_json(java.util.Map<String, Object> row) {

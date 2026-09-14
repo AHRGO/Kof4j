@@ -231,6 +231,12 @@ final class NativeOpHelpers {
         sb.append("    popq %rdx\n");
         sb.append("    popq %rsi\n");
         sb.append("    popq %rdi\n");
+        // §187: `Char[]` trunca a 16 bits no store (JVM `CASTORE`). O
+        // `elementTypeSize` mantém 4 (stride/aloc/JSON intactos) e o load
+        // `movslq` continua correto porque o valor gravado fica em [0,65535].
+        if (NativeTypeKinds.isCharType(as.elementType())) {
+            sb.append("    movzwl %dx, %edx\n");
+        }
         sb.append("    call kof_array_set\n");
     }
 

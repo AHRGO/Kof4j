@@ -84,6 +84,14 @@ public final class JvmTypeMapper {
      * type-args (assinatura == descriptor, redundante).
      */
     static String toGenericSignature(Type type) {
+        // §128/§187-Native: NullableType (`List<T>?`) NÃO tinha assinatura —
+        // o Signature do record component/field ficava ausente e
+        // `RecordComponent.getGenericType()` devolvia `List` cru → o decoder
+        // JSON não bindava os elementos (`LinkedHashMap` cru →
+        // ClassCastException). A nullability foge ao modelo de generics do
+        // Java (não há `?` de null): a assinatura é a do inner.
+        // (rebase: mesmo fato do df10e71b `type = n.inner()` — uma redação.)
+        if (type instanceof Type.NullableType n) return toGenericSignature(n.inner());
         if (type instanceof Type.ClassType c) {
             // tipos apagados p/ int (UI/handle de media): sem assinatura
             // genérica — o descriptor não é L...; e a erasure divergiria

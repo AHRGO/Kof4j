@@ -99,7 +99,6 @@ final class NativeArchEmitter {
         for (IRClass c : module.classes()) {
             nb.currentClass = c;
             for (IRMethod m : c.methods()) {
-                if ("<clinit>".equals(m.name())) continue;
                 nb.crossEmit().emitCrossMethodRiscv(sb, c, m, usesSpawn && "main".equals(m.name()));
             }
         }
@@ -112,6 +111,7 @@ final class NativeArchEmitter {
         sb.append("\n.globl _start\n");
         sb.append("_start:\n");
         sb.append("    andi sp, sp, -16\n");
+        emitClinitCallsRiscv(sb, module);
         sb.append("    call ").append(mainEntry).append("\n");
         sb.append("    li a0, 0\n");
         sb.append("    li a7, 94\n");
@@ -241,7 +241,6 @@ final class NativeArchEmitter {
         for (IRClass c : module.classes()) {
             nb.currentClass = c;
             for (IRMethod m : c.methods()) {
-                if ("<clinit>".equals(m.name())) continue;
                 nb.crossEmit().emitCrossMethodRiscv(riscvSb, c, m, usesSpawnA && "main".equals(m.name()));
             }
         }
@@ -249,6 +248,7 @@ final class NativeArchEmitter {
         riscvSb.append("\n.globl _start\n");
         riscvSb.append("_start:\n");
         riscvSb.append("    andi sp, sp, -16\n");
+        emitClinitCallsRiscv(riscvSb, module);
         riscvSb.append("    call ").append(mainEntry).append("\n");
         riscvSb.append("    li a0, 0\n");
         riscvSb.append("    li a7, 93\n");
@@ -390,4 +390,16 @@ final class NativeArchEmitter {
         return r;
     }
 
+
+    /** #133 (§186): chama cada <clinit> do módulo antes do main (riscv64/aarch64). */
+    private void emitClinitCallsRiscv(StringBuilder sb, IRModule module) {
+        for (IRClass c : module.classes()) {
+            for (IRMethod m : c.methods()) {
+                if ("<clinit>".equals(m.name())) {
+                    sb.append("    call ").append(NativeSymbolMangling.fnSymbol(
+                            c.name(), m.name(), m.parameterTypes(), nb.allClassesMap)).append("\n");
+                }
+            }
+        }
+    }
 }

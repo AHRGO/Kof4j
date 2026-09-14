@@ -331,6 +331,7 @@ public final class JvmRuntimeCallDescriptors {
             case "kof_sec_sha256", "kof_sec_sha512", "kof_sec_redact", "kof_sec_secret_get",
                     "kof_sec_password_hash", "kof_sec_auth_user" -> "(Ljava/lang/String;)Ljava/lang/String;";
             case "kof_sec_hmac_sha256", "kof_sec_aesgcm_encrypt", "kof_sec_aesgcm_decrypt",
+                    "kof_sec_chacha20_encrypt", "kof_sec_chacha20_decrypt",
                     "kof_sec_secret_get_default", "kof_sec_jwt_create", "kof_sec_jwt_verify"
                     -> "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;";
             case "kof_sec_jwt_create_ttl" -> "(Ljava/lang/String;Ljava/lang/String;I)Ljava/lang/String;";
@@ -410,6 +411,10 @@ public final class JvmRuntimeCallDescriptors {
             case "kof_sec_session_destroy" -> "(Ljava/lang/String;)Z";
             case "kof_sec_api_key_generate" -> "()Ljava/lang/String;";
             case "kof_sec_api_key_valid" -> "(Ljava/lang/String;)Z";
+            // ── kof.security C11 (cookies, D-SEC 14/09) ──
+            case "kof_sec_cookie_set" -> "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;";
+            case "kof_sec_cookie_set_opts" -> "(Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;)Ljava/lang/String;";
+            case "kof_sec_cookie_get" -> "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;";
             case "kof_enum_value_of" -> "(Ljava/util/List;Ljava/lang/String;)Ljava/lang/String;";
             case "kof_list_map", "kof_list_filter" -> "(Ljava/util/ArrayList;Ljava/lang/Object;)Ljava/util/ArrayList;";
             case "kof_list_reduce" -> "(Ljava/util/ArrayList;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;";

@@ -83,7 +83,8 @@
 | store `Int` em slot `Long[]` (widening, 1-D e 2-D) | `9` / `3` / `0` | DONE (bug 121 ✅ 11/09 — era **frame crash** no `COMPUTE_FRAMES`: o bloco de conversão do `ExpressionAssignmentLowerer` era um `if {}` que só comentava a promessa, nunca emitia `I2L`) | DONE | DONE | DONE | `arrlongstore` |
 | store em `Byte[]`/`Short[]` FORA de faixa (narrowing 8/16 bits com sinal) — §184 | `-126` / `4464` | DONE | DONE | DONE | PARTIAL (bug §184 — `kofArraySet` grava o valor cru: `b[0]=130`→`130`; divergência silenciosa) | `narrowarr` |
 | store em elemento de `Char[]`/`Bool[]` — §185 | `65` / `66` / `true` / `false` | DONE | DONE | PARTIAL (bug §185 — interpretador: `coerceFor` devolve `Integer`; `Array.set(char[]/boolean[],…)` lança `argument type mismatch`, exit 1) | DONE | `chararr` |
-| `Char[]` fora de faixa (`c[0]=70000`, `c[1]=-1`) — §187 | `4464` / `65535` | DONE | PARTIAL (bug §187 — `elementTypeSize` mapeia `char`→4; `kof_array_set` faz `movl` sem máscara 0xFFFF) | PARTIAL (bug §185 — crash no store) | PARTIAL (bug §184 — `Array` JS puro sem tag de tipo) | `charnarrow` |
+| `Char[]` fora de faixa (`c[0]=70000`, `c[1]=-1`) em 1-D e 2-D + controle `Short[] -1` — §187 | `4464` / `65535` / `4464` / `65535` / `-1` | DONE | DONE | PARTIAL (bug §185 — crash no store de `Char[]`) | PARTIAL (bug §184 — `Array` JS puro sem tag de tipo) | `charnarrow` |
+| inicializador `static` de expressão CONSTANTE (`-1`, `2+3`, `-7L`, `-1.5`, `"a"+"b"`, `!false`) — §186 ✅ 13/09 | `-1` / `5` / `-7` / `-1.5` / `ab` / `true` / `7` | DONE | DONE | DONE | DONE | `staticinit` |
 | campo estático + bump | `1` / `2` / `2` | DONE | DONE (bug 41 corrigido 07/09) | DONE | DONE | `staticfield` |
 | campo estático `+=` | `2` / `4` / `4` | DONE | DONE (bug 41) | DONE | DONE | `staticpluseq` |
 | concat string+num (ordem) | `n=42` / `3x` / `x12` | DONE | DONE | DONE | DONE | `concat` |

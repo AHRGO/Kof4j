@@ -116,7 +116,8 @@ public final class JvmRuntimeReturnDescriptors {
             // ── kof.security (docs/stdlib/security.md §5) ───────────────────
             case "kof_sec_sha256", "kof_sec_sha512", "kof_sec_hmac_sha256", "kof_sec_redact",
                     "kof_sec_secret_get", "kof_sec_secret_get_default", "kof_sec_password_hash",
-                    "kof_sec_aesgcm_encrypt", "kof_sec_aesgcm_decrypt", "kof_sec_jwt_create",
+                    "kof_sec_aesgcm_encrypt", "kof_sec_aesgcm_decrypt",
+                    "kof_sec_chacha20_encrypt", "kof_sec_chacha20_decrypt", "kof_sec_jwt_create",
                     "kof_sec_jwt_create_ttl", "kof_sec_jwt_verify", "kof_sec_jwt_verify_iss_aud",
                     "kof_sec_jwt_secret", "kof_sec_random_hex", "kof_sec_csrf_token",
                     "kof_sec_csp_header", "kof_sec_hsts_header", "kof_sec_content_type_options_header",
@@ -190,6 +191,8 @@ public final class JvmRuntimeReturnDescriptors {
             case "kof_sec_session_create", "kof_sec_api_key_generate" -> "Ljava/lang/String;";
             case "kof_sec_rate_limit", "kof_sec_session_destroy", "kof_sec_api_key_valid" -> "I";
             case "kof_sec_session_get", "kof_enum_value_of" -> "Ljava/lang/String;";
+            // ── kof.security C11 (cookies, D-SEC 14/09) ──
+            case "kof_sec_cookie_set", "kof_sec_cookie_set_opts", "kof_sec_cookie_get" -> "Ljava/lang/String;";
             case "kof_spawn_result", "kof_await", "kof_poll" -> "Ljava/lang/Object;";
             case "kof_await_timeout" -> "Ljava/lang/Object;";
             case "kof_done", "kof_cancel", "kof_cancelled" -> "I";

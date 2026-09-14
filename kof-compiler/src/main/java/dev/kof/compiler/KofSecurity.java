@@ -78,6 +78,10 @@ public final class KofSecurity {
                         ? new SecCall("kof_sec_aesgcm_encrypt", STR, List.of(STR, STR)) : null;
                 case "decryptAesGcm" -> argc == 2
                         ? new SecCall("kof_sec_aesgcm_decrypt", STR, List.of(STR, STR)) : null;
+                case "encryptChacha20" -> argc == 2
+                        ? new SecCall("kof_sec_chacha20_encrypt", STR, List.of(STR, STR)) : null;
+                case "decryptChacha20" -> argc == 2
+                        ? new SecCall("kof_sec_chacha20_decrypt", STR, List.of(STR, STR)) : null;
                 case "randomHex" -> argc == 1
                         ? new SecCall("kof_sec_random_hex", STR, List.of(INT)) : null;
                 case "randomInt" -> argc == 1
@@ -149,6 +153,17 @@ public final class KofSecurity {
                         ? new SecCall("kof_sec_api_key_generate", STR, List.of()) : null;
                 case "apiKeyValid" -> argc == 1
                         ? new SecCall("kof_sec_api_key_valid", BOOL, List.of(STR)) : null;
+                // D-SEC C11 (cookies): set com defaults seguros
+                // (HttpOnly, Secure, SameSite=Lax, Path=/) ou com opts-map;
+                // get faz o parse do header Cookie do request.
+                case "cookieSet" -> argc == 2
+                        ? new SecCall("kof_sec_cookie_set", STR, List.of(STR, STR))
+                        : (argc == 3
+                                ? new SecCall("kof_sec_cookie_set_opts", STR,
+                                        List.of(STR, STR, BuiltinTypes.MAP))
+                                : null);
+                case "cookieGet" -> argc == 2
+                        ? new SecCall("kof_sec_cookie_get", STR, List.of(STR, STR)) : null;
                 default -> null;
             };
             case "auth" -> switch (name) {
@@ -188,6 +203,11 @@ public final class KofSecurity {
         return switch (function) {
             case "kof_sec_aesgcm_encrypt", "kof_sec_aesgcm_decrypt" ->
                     target == Target.JVM || target == Target.JS || target.isNative();
+            // D-SEC chacha (13/09): JVM+JS nesta unidade (asm x86 de
+            // ChaCha20+Poly1305 p/ NATIVE fica na fila — SECN002 com
+            // diagnóstico em compile-time até o port, igual SECN000).
+            case "kof_sec_chacha20_encrypt", "kof_sec_chacha20_decrypt" ->
+                    target == Target.JVM || target == Target.JS;
             case "kof_sec_password_hash", "kof_sec_password_verify", "kof_sec_password_needs_rehash" ->
                     target == Target.JVM || target == Target.JS || target.isNative();
             case "kof_sec_sha512" -> target == Target.JVM || target == Target.JS || target.isNative();
@@ -200,6 +220,10 @@ public final class KofSecurity {
                     "kof_sec_auth_secret", "kof_sec_auth_token", "kof_sec_auth_authenticated",
                     "kof_sec_auth_claims", "kof_sec_auth_user", "kof_sec_auth_has_role",
                     "kof_sec_auth_has_permission" -> target == Target.JVM;
+            // D-SEC C11 (14/09): cookies parse/set — JVM+JS nesta unidade
+            // (Native segue gap honesto em compile-time, igual SECN000/002).
+            case "kof_sec_cookie_set", "kof_sec_cookie_set_opts", "kof_sec_cookie_get" ->
+                    target == Target.JVM || target == Target.JS;
             // G9: available on all targets (JVM/Native/JS)
             case "kof_sec_rate_limit", "kof_sec_session_create", "kof_sec_session_get", "kof_sec_session_destroy",
                     "kof_sec_api_key_generate", "kof_sec_api_key_valid" -> true;
@@ -210,13 +234,15 @@ public final class KofSecurity {
     /** Diagnostic code for target gaps (analogous to CONC001/JSN00x). */
     static String gapCode(String function) {
         return switch (function) {
-            case "kof_sec_aesgcm_encrypt", "kof_sec_aesgcm_decrypt" -> "SECN002";
+            case "kof_sec_aesgcm_encrypt", "kof_sec_aesgcm_decrypt",
+                    "kof_sec_chacha20_encrypt", "kof_sec_chacha20_decrypt" -> "SECN002";
             case "kof_sec_password_hash", "kof_sec_password_verify", "kof_sec_password_needs_rehash" -> "SECN001";
             case "kof_sec_sha512" -> "SECN003";
             case "kof_sec_jwt_create", "kof_sec_jwt_create_ttl", "kof_sec_jwt_verify",
                     "kof_sec_jwt_verify_iss_aud", "kof_sec_jwt_secret" -> "SECN004";
             case "kof_sec_rate_limit", "kof_sec_session_create", "kof_sec_session_get", "kof_sec_session_destroy",
                     "kof_sec_api_key_generate", "kof_sec_api_key_valid" -> "SECN005";
+            case "kof_sec_cookie_set", "kof_sec_cookie_set_opts", "kof_sec_cookie_get" -> "SECN006";
             default -> "SECN000";
         };
     }

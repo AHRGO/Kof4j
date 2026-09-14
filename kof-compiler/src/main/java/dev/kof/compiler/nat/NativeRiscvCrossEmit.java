@@ -247,6 +247,13 @@ public final class NativeRiscvCrossEmit {
                 sb.append("    pop a2\n");   // val
                 sb.append("    pop a1\n");   // idx
                 sb.append("    pop a0\n");   // arr
+                // §187: `Char[]` trunca a 16 bits no store (JVM `CASTORE`).
+                // O `elementTypeSize` segue 4 (stride/aloc/JSON intactos) e o
+                // load `lw` continua correto porque o valor fica em [0,65535].
+                if (NativeTypeKinds.isCharType(as.elementType())) {
+                    sb.append("    slli a2, a2, 48\n");
+                    sb.append("    srli a2, a2, 48\n");
+                }
                 sb.append("    call kof_array_set\n");
             }
             case KofArrayLength al -> {

@@ -331,9 +331,12 @@ public final class JsRuntimeUiComponents {
                 kofUiFlushQueue();
             }
 
-            export function kofUiEventType(type) {
-                // kof.ui.Event identity: the event kind as registered.
-                return type || "";
+            export function kofUiEventType(ev) {
+                // kof.ui.Event identity: o IR baixa e.type() para
+                // kof_ui_event_type(ev); o evento é o objeto de kofUiMakeEvent.
+                // Aceita também a string de tipo (uso histórico).
+                if (ev && typeof ev.type === "function") return ev.type();
+                return ev || "";
             }
 
             // ── Link ────────────────────────────────────────────

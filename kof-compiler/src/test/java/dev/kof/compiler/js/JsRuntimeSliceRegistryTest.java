@@ -24,6 +24,7 @@ class JsRuntimeSliceRegistryTest {
                 .append(JsRuntimeUiSupport.UI_SUPPORT_RUNTIME)
                 .append(JsRuntimeUiSecurity.UI_SECURITY_RUNTIME)
                 .append(JsRuntimeUiCrypto.UI_CRYPTO_RUNTIME)
+                .append(JsRuntimeUiChacha.UI_CHACHA_RUNTIME)
                 .append(JsRuntimeUiValidation.UI_VALIDATION_RUNTIME)
                 .append(JsRuntimeUiStdlib.STDLIB_RUNTIME)
                 .append(JsRuntimeUiRandom.RANDOM_RUNTIME)

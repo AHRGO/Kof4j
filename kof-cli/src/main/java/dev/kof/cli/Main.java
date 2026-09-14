@@ -34,6 +34,7 @@ public final class Main {
             case "script" -> System.exit(CmdScript.run(args));
             case "repl" -> System.exit(CmdScript.repl(args));
             case "init" -> System.exit(init(args));
+            case "new" -> System.exit(CmdNew.run(args));
             case "deps" -> System.exit(Deps.run(args));
             case "c" -> c(args);
             case "fmt" -> System.exit(Fmt.run(args));

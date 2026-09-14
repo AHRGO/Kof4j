@@ -19,6 +19,14 @@ final class JsComparisons {
             // boolean conditions: (cond, 0) CJump(NE) — truthiness in JS
             return left;
         }
+        if (comp == KofComparison.EQ && right instanceof JsIr.JsNumber n && "0".equals(n.text())) {
+            // UIW052: `(cond == 0)` é a condição de falha do assert e o teste
+            // de "falso" de um Bool. No JS um Bool é `true`/`false` real, e
+            // `false === 0` é `false` — o assert falso PASSARIA. `!left` é o
+            // teste de zero/truthiness correto tanto p/ int (0/1) quanto p/
+            // bool (false/true).
+            return new JsIr.JsUnary("!", left);
+        }
         // §93 paridade: Bool no JS pode chegar como 1/0 (stdlib funcs, instanceof)
         // ou true/false (literais). === cru faz 1===true ser false. Normaliza
         // os dois lados com !! para truthiness booleana (JVM/Native usam Z real).

@@ -1541,11 +1541,42 @@ class ConformanceMatrixTest {
                     println(b[1])
                 }
                 """, "65\n66\ntrue\nfalse", Set.of("script"), tempDir);
-        // §187 (13/09): `Char[]` NÃO estreita a 16 bits no Native (o
-        // `elementTypeSize` mapeia char→4 e o `kof_array_set` faz `movl`
+        // §186 (13/09): inicializador de campo `static` NÃO-literal. O
+        // front-end só levava `LiteralExpr` direto ao `initialValue`; `-1`
+        // (unário) e `2 + 3` (binário dobrado) ficavam de fora e, no JVM,
+        // viravam `this.x = ...` no construtor (PUTFIELD em campo estático →
+        // IncompatibleClassChangeError) — liam 0/undefined. Fix: dobrar
+        // expressões constantes em `lowerField` + não injetar estáticos no
+        // construtor. Cobre os 4 targets.
+        matrix("staticinit", """
+                class H {
+                    static Int neg = -1
+                    static Int fold = 2 + 3
+                    static Long wide = -7L
+                    static Double frac = -1.5
+                    static String cat = "a" + "b"
+                    static Bool yes = !false
+                    static Int lit = 7
+                }
+                main() {
+                    println(H.neg)
+                    println(H.fold)
+                    println(H.wide)
+                    println(H.frac)
+                    println(H.cat)
+                    println(H.yes)
+                    println(H.lit)
+                }
+                """, "-1\n5\n-7\n-1.5\nab\ntrue\n7", Set.of(), tempDir);
+        // §187 (13/09): `Char[]` NÃO estreitava a 16 bits no Native (o
+        // `elementTypeSize` mapeia char→4 e o `kof_array_set` fazia `movl`
         // cru) nem no JS (Array puro, §184); o cast escalar `as Char` está
-        // certo nos 4. JVM `CASTORE`/`CALOAD` trunca/zero-estende. PARTIAL
-        // native+js (§187) e script (§185, crash no store).
+        // certo nos 4. JVM `CASTORE`/`CALOAD` trunca/zero-estende. **Face
+        // Native CORRIGIDA 13/09** (máscara 16-bit no store x86 `movzwl` e
+        // riscv/aarch `slli 48`/`srli 48` — stride 4 mantido, load `movslq`
+        // segue correto). A 2-D trava o `kof_multi_alloc`; o `Short[]`
+        // negativo é o controle de SINAL (prova que a máscara não virou
+        // zero-extend genérico). PARTIAL js (§184) e script (§185, crash).
         matrix("charnarrow", """
                 main() {
                     var c = new Char[2]
@@ -1553,8 +1584,16 @@ class ConformanceMatrixTest {
                     c[1] = -1
                     println(c[0])
                     println(c[1])
+                    var d = new Char[2][2]
+                    d[0][0] = 70000
+                    d[1][1] = -1
+                    println(d[0][0])
+                    println(d[1][1])
+                    var s = new Short[1]
+                    s[0] = -1
+                    println(s[0])
                 }
-                """, "4464\n65535", Set.of("native", "script", "js"), tempDir);
+                """, "4464\n65535\n4464\n65535\n-1", Set.of("script", "js"), tempDir);
         // §131 (decisão 10a, 13/09): sobrecarga de MÉTODO de classe por
         // assinatura (aridade/tipos). Antes: SEM013 no JVM (último def
         // sobrescrevia) e colisão de símbolo no Native. Prova só JVM+JS

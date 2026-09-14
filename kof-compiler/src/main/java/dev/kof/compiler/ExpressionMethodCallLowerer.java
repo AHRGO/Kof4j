@@ -411,6 +411,18 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
             && !"<init>".equals(selfMethod.name())
             && selfMethod.ownerClass() != null) {
         Type ownerType = CompilerTypes.ownerTypeFromInternal(selfMethod.ownerClass(), driver.semanticAnalyzer);
+        // Método ESTÁTICO da própria classe chamado sem receiver (ex.:
+        // `twice(21)` dentro de outra static, ou no <clinit> de um campo
+        // estático): invokestatic SEM receiver — antes emitia aload_0 +
+        // invokevirtual → IncompatibleClassChangeError (contexto de
+        // instância) / VerifyError (contexto estático).
+        if ((selfMethod.accessFlags() & AccessFlags.STATIC) != 0) {
+            localIdx = driver.emitArgumentsWithFormalTypes(mc.arguments(), selfMethod.parameterTypes(),
+                    ops, owner, localIdx, locals);
+            ops.add(new KofCall(ownerType, mc.methodName(), selfMethod.parameterTypes(),
+                    selfMethod.returnType(), KofCallKind.STATIC));
+            return localIdx;
+        }
         ops.add(new KofLoadLocal(ownerType, 0));
         localIdx = driver.emitArgumentsWithFormalTypes(mc.arguments(), selfMethod.parameterTypes(),
                 ops, owner, localIdx, locals);

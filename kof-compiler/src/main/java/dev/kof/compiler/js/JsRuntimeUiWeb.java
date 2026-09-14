@@ -5,7 +5,15 @@ public final class JsRuntimeUiWeb {
     private JsRuntimeUiWeb() {
     }
 
-    static final String UI_WEB_RUNTIME = """
+    // §176: inicializado via método (NÃO literal constante) para que o valor
+    // NÃO seja inlined/constant-folded nos consumidores (JsRuntimeSlices). Um
+    // `static final` literal embute a string no .class do Slices, e o rebuild
+    // incremental não recompila dependentes quando só a fonte-mestre muda —
+    // o slice quebrado antigo sobrevive no gerador. getstatic lê o valor vivo.
+    static final String UI_WEB_RUNTIME = uiWebRuntime();
+
+    private static String uiWebRuntime() {
+        return """
             // ── Web runtime (WEB001) — GraalJS HttpServer com handler invoke
             // Handler lambda tem metodo invoke(); usamos Value para interop.
             const kofWebApps = new Map();
@@ -517,5 +525,6 @@ public final class JsRuntimeUiWeb {
             }
 
             """;
+    }
 
 }

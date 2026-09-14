@@ -230,7 +230,8 @@ kof.security
 ├── jwt              → create/verify (HS256, exp/iss/aud, sem confusão de algoritmo)
 ├── secrets          → get (env), redact
 ├── security         → constantTimeEquals, randomHex, redact, csrfToken/csrfValid, corsAllowed, headers helpers,
-│                      rateLimit, sessionCreate/sessionGet/sessionDestroy, apiKeyGenerate/apiKeyValid (G9)
+│                      rateLimit, sessionCreate/sessionGet/sessionDestroy, apiKeyGenerate/apiKeyValid (G9),
+│                      cookieSet/cookieGet (C11, defaults seguros)
 └── auth             → contexto web: secret, token, authenticated, claims, user, hasRole, hasPermission
 ```
 
@@ -251,11 +252,13 @@ Suporte por target (estado atual — `KofSecurity.supportedOn`):
 | `security.corsAllowed` | SIM | — | — |
 | `security.cspHeader/hstsHeader/...` | SIM | — | — |
 | `security.rateLimit/session*/apiKey*` (G9) | SIM | SIM (asm) | SIM (JS) |
+| `security.cookieSet/cookieGet` (C11) | SIM | — (SECN006) | SIM (JS) |
 | `auth.*` (contexto web) | SIM (Bearer JWT + ThreadLocal) | — | — |
 
 Gaps reais com diagnóstico em compile-time: `SECN001` (passwords),
-`SECN003` (sha512) e `SECN005` (G9) — nunca comportamento silenciosamente
-diferente. `SECN002` (AES-GCM no JS) e `SECN004` (jwt) fechados.
+`SECN003` (sha512), `SECN005` (G9) e `SECN006` (cookies no Native) — nunca
+comportamento silenciosamente diferente. `SECN002` (AES-GCM no JS) e
+`SECN004` (jwt) fechados.
 
 **Regra**: qualquer gap emite diagnóstico claro em compile-time (ex.
 `SECN001: passwords.hash não está disponível no target Native ainda`).
@@ -266,6 +269,7 @@ Nunca comportamento silenciosamente diferente (§16 do doc de performance).
 ```text
 passwords:   pbkdf2$sha256$<iterations>$<salt-b64>$<hash-b64>
 crypto:      aesgcm$<iv-b64>$<ciphertext+tag-b64>
+             chacha20$<nonce-b64>$<ciphertext+tag-b64>   (14/09, D-SEC)
 jwt:         RFC 7519 HS256 (alg fixado, nunca aceito do token)
 ```
 
@@ -296,6 +300,8 @@ jwt:         RFC 7519 HS256 (alg fixado, nunca aceito do token)
 | `crypto.hmacSha256(key, data)` | ✅ | ✅ (asm) | ✅ (JS puro) | hex |
 | `crypto.encryptAesGcm(plain, keyHex)` | ✅ AES/GCM/NoPadding | ✅ (asm GCM, round-trip E2E) | ✅ (JS puro, round-trip E2E) | `aesgcm$iv$ct` |
 | `crypto.decryptAesGcm(ct, keyHex)` | ✅ (falha em tamper) | ✅ (asm, falha em tamper) | ✅ (JS puro, falha em tamper) | |
+| `crypto.encryptChacha20(plain, keyHex)` | ✅ (RFC 8439, **interop com o JDK** validado 14/09) | SECN002 honesto (asm 130-bit na fila) | ✅ (JS puro, interop com o JDK validado) | `chacha20$nonce$ct` |
+| `crypto.decryptChacha20(ct, keyHex)` | ✅ (tag constant-time, falha em tamper) | SECN002 honesto | ✅ (JS puro, tag constant-time) | |
 | `crypto.randomHex(n)` | ✅ SecureRandom | ✅ getrandom (`li a7 318` x86_64 / `214` riscv64) | ✅ platform | hex |
 | `crypto.randomInt(bound)` | ✅ | ✅ getrandom + rejection | ✅ platform | |
 | `jwt.create(claims, secret[, ttl])` | ✅ HS256 + iat/exp | ✅ (asm: base64url + HMAC + kof_now) | ✅ | RFC 7519 HS256 |

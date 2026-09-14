@@ -426,6 +426,64 @@ public final class JsRuntimeUiSecurity {
                 return kofSecJwtVerifyIssAud(token, secret, null, null);
             }
 
+            // ── D-SEC C11 (cookies) ────────────────────────────────────
+            // Set com defaults seguros (Path=/, HttpOnly, Secure,
+            // SameSite=Lax); opts-map sobrepõe. Paridade JVM.
+            export function kofSecCookieSet(name, value) {
+                return kofSecCookieSetOpts(name, value, null);
+            }
+
+            export function kofSecCookieSetOpts(name, value, opts) {
+                if (!name) throw new Error("cookie name required");
+                const get = (k) => {
+                    if (!opts) return undefined;
+                    if (typeof opts.get === "function") return opts.get(k);
+                    return opts[k];
+                };
+                const opt = (k, d) => {
+                    const v = get(k);
+                    return v === undefined || v === null ? d : String(v);
+                };
+                const flag = (k, d) => {
+                    const v = get(k);
+                    if (v === undefined || v === null) return d;
+                    if (typeof v === "boolean") return v;
+                    const s = String(v);
+                    // §191: paridade com o JVM (`equalsIgnoreCase`) — "FALSE"/
+                    // "False" também desligam a flag; sem isto só "false"
+                    // minúsculo funcionava e o JS mantinha Secure/HttpOnly
+                    // onde o JVM os removia (divergência cross-target silenciosa).
+                    return !(s.toLowerCase() === "false" || s === "0");
+                };
+                let s = name + "=" + (value === null || value === undefined ? "" : value);
+                const path = opt("path", "/");
+                if (path !== null) s += "; Path=" + path;
+                const domain = opt("domain", null);
+                if (domain !== null) s += "; Domain=" + domain;
+                const maxAge = opt("maxAge", null);
+                if (maxAge !== null) s += "; Max-Age=" + maxAge;
+                const expires = opt("expires", null);
+                if (expires !== null) s += "; Expires=" + expires;
+                const sameSite = opt("sameSite", "Lax");
+                if (sameSite !== null && String(sameSite).toLowerCase() !== "none") {
+                    s += "; SameSite=" + sameSite;
+                }
+                if (flag("secure", true)) s += "; Secure";
+                if (flag("httpOnly", true)) s += "; HttpOnly";
+                return s;
+            }
+
+            export function kofSecCookieGet(cookieHeader, name) {
+                if (cookieHeader === null || cookieHeader === undefined || name === null) return "";
+                for (const part of String(cookieHeader).split(";")) {
+                    const p = part.trim();
+                    const eq = p.indexOf("=");
+                    if (eq <= 0) continue;
+                    if (p.slice(0, eq).trim() === name) return p.slice(eq + 1).trim();
+                }
+                return "";
+            }
+
             export function kofSecJwtVerifyIssAud(token, secret, issuer, audience) {
                 if (token === null || token === undefined || secret === null || secret === undefined) {
                     throw new Error("invalid token or secret");

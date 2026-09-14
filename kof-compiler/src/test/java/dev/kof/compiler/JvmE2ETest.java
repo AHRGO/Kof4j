@@ -582,6 +582,82 @@ class JvmE2ETest {
     }
 
     @Test
+    void execRecordNullablePrimitiveEquals(@TempDir Path tempDir) throws IOException {
+        // #127: record com campo Int? gerava equals() com bytecode inválido —
+        // dois `int` crus na pilha chamando Objects.equals(Object,Object) →
+        // VerifyError "integer not assignable to java/lang/Object" (issue do
+        // colaborador, distro oficial 0.3.23-beta). Fix: JvmRecordEmitter erases
+        // Nullable(primitivo) p/ primitivo em equals/hashCode/toString. Este
+        // teste PROVA a morte: no código velho falha com exit != 0 (VerifyError).
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            record Pair(Int? x, Int? y)
+            main() {
+                var a = Pair(1, 2)
+                var b = Pair(1, 2)
+                println(a == b)
+                println(a == a)
+                println(a.hashCode() == b.hashCode())
+                println(a)
+            }
+            """);
+        runJvm(source, tempDir.resolve("out"), "true\ntrue\ntrue\nPair[x=1, y=2]");
+    }
+
+    @Test
+    void execRecordListFieldDecode(@TempDir Path tempDir) throws IOException {
+        // #128: json.decode<Container> com campo List<Item>? ANINHADO. O caso
+        // top-level (decode<List<Record>>) já funcionava; o aninhado devolvia
+        // LinkedHashMap cru → ClassCastException no acesso. Menor repro da issue.
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            record Item(String? name)
+            record Container(String? title, List<Item>? items)
+            main() {
+                var c = json.decode<Container>("{\\"title\\":\\"t\\",\\"items\\":[{\\"name\\":\\"a\\"},{\\"name\\":\\"b\\"}]}")
+                var items = c.items()
+                if (items != null) {
+                    var first = items.get(0)
+                    println(first.name())
+                    println(items.get(1).name())
+                }
+                println(c.title())
+            }
+            """);
+        runJvm(source, tempDir.resolve("out"), "a\nb\nt");
+    }
+
+    // §189: a assinatura genérica de campo RECORD nullable (`List<Item>?`) era
+    // omitida (`toGenericSignature` não desembrulhava `NullableType`), então
+    // `RecordComponent.getGenericType()` devolvia `ArrayList` cru e o decoder
+    // JSON não bindava os elementos → `LinkedHashMap` cru → ClassCastException.
+    // O #128 (`76ca3dd4`) subiu com esse teste VERMELHO — a correção é esta
+    // unidade. Prova: nullable populado, nullable AUSENTE (null honesto, não
+    // crash) e o controle NÃO-nullable (que já funcionava via #34/bug 58).
+    @Test
+    void execRecordNullableGenericListFieldDecode(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            record Item(String? name)
+            record NullableBox(String? title, List<Item>? items)
+            record PlainBox(String? title, List<Item> items)
+            main() {
+                var n = json.decode<NullableBox>("{\\"title\\":\\"n\\",\\"items\\":[{\\"name\\":\\"x\\"}]}")
+                var ni = n.items()
+                if (ni != null) {
+                    println(ni.get(0).name())
+                }
+                var absent = json.decode<NullableBox>("{\\"title\\":\\"z\\"}")
+                println(absent.items() == null)
+                var p = json.decode<PlainBox>("{\\"title\\":\\"p\\",\\"items\\":[{\\"name\\":\\"y\\"}]}")
+                println(p.items().get(0).name())
+                println(p.title())
+            }
+            """);
+        runJvm(source, tempDir.resolve("out"), "x\ntrue\ny\np");
+    }
+
+    @Test
     void execRecordValueMethods(@TempDir Path tempDir) throws IOException {
         Path source = tempDir.resolve("Main.kf");
         Files.writeString(source, """

@@ -1,6 +1,8 @@
+[English](README.md) | [Português](README.pt_BR.md)
+
 # Benchmarks
 
-Performance não é avaliada por sensação. Cada benchmark deve possuir:
+Performance is not evaluated by feeling. Every benchmark must have:
 
 ```text
 input
@@ -11,14 +13,14 @@ metrics
 baseline
 ```
 
-## Estrutura
+## Structure
 
 ```text
 benchmarks/
 ├── micro/          # arithmetic, calls, branches, loops, field/array access, allocation, boxing, strings, exceptions, lambdas, collections
 ├── algorithms/     # sorting, binary search, hash lookup, graph/tree traversal, matrix multiplication, parsing, serialization, hashing, compression, JSON, IO
-├── collections/    # insert, lookup, remove, iteration sob volume
-├── strings/        # concat, split, replace, search, parse sob volume
+├── collections/    # insert, lookup, remove, iteration under volume
+├── strings/        # concat, split, replace, search, parse under volume
 ├── math/           # integer/long/float point, bitwise, comparisons
 ├── objects/        # allocation, field access, temporaries
 ├── inheritance/    # virtual dispatch
@@ -26,19 +28,19 @@ benchmarks/
 ├── generics/       # generic code, boxing/unboxing
 ├── json/           # serialization/deserialization
 ├── io/             # open, read, write, close
-├── concurrency/    # spawn, futuramente await, locks, threads
-├── startup/        # tempo de inicialização por target
+├── concurrency/    # spawn, future await, locks, threads
+├── startup/        # startup time per target
 ├── memory/         # heap, peak RSS, allocation rate, object count, GC activity, temporary allocations, file descriptors, threads
-├── stress/         # testes prolongados de CPU, memory, collections, strings, concurrency, IO, exceptions, HTTP
-└── applications/   # programas completos reais
+├── stress/         # extended tests of CPU, memory, collections, strings, concurrency, IO, exceptions, HTTP
+└── applications/   # real complete programs
 ```
 
-## Regras
+## Rules
 
-- Programas semanticamente equivalentes entre implementações (Java, Kof/JVM, Kof/Native, Kof/JS, Kof/Script).
-- Validar `expected output` antes de coletar métricas.
-- Comparar contra baseline (docs/architecture/performance.md seção 25) e sinalizar regressões.
-- Stress tests medem também requests/sec, p50, p95, p99, CPU e memória (HTTP).
-- Long-run tests verificam memory growth bounded, resource usage bounded, throughput e latência estáveis (docs/architecture/performance.md seção 24).
+- Programs semantically equivalent across implementations (Java, Kof/JVM, Kof/Native, Kof/JS, Kof/Script).
+- Validate `expected output` before collecting metrics.
+- Compare against baseline (docs/architecture/performance.md section 25) and flag regressions.
+- Stress tests also measure requests/sec, p50, p95, p99, CPU and memory (HTTP).
+- Long-run tests verify bounded memory growth, bounded resource usage, stable throughput and latency (docs/architecture/performance.md section 24).
 
-Referência arquitetural completa: docs/architecture/performance.md
+Full architectural reference: docs/architecture/performance.md

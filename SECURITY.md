@@ -1,79 +1,82 @@
+[English](SECURITY.md) | [Português](SECURITY.pt_BR.md)
+
 # Security Policy — Kof4j
 
-> **PT-BR:** vulnerabilidade de segurança **nunca** vai em issue/PR pública.
-> Reporte pelo canal privado abaixo. **EN summary at the bottom.**
+> **EN:** a security vulnerability **never** goes into a public issue/PR.
+> Report it through the private channel below. **EN summary at the bottom.**
 
-## Como reportar (canal privado)
+## How to report (private channel)
 
-1. **Preferencial — Private vulnerability reporting do GitHub:**
+1. **Preferred — GitHub Private vulnerability reporting:**
    [Report a vulnerability](https://github.com/KofLang/Kof4j/security/advisories/new)
-   (`Security` → `Advisories` → `Report a vulnerability`). Só a mantenedora
-   e colaboradores designados veem o conteúdo.
-2. O que incluir: versão (`cat VERSION`, hoje `0.4.0-beta`), target afetado
-   (`jvm`/`native`/`native.risc`/`native.arm`/`js`), **menor repro**
-   (`.kf` mínimo + comando `kof run|build|serve`), output real vs esperado,
-   impacto estimado (RCE, bypass de auth, vazamento de segredo, DoS…).
-   PoC é bem-vindo; exploit weaponizado, não.
-3. **Não abra issue pública, PR pública, nem comente em thread aberta**
-   antes do fix coordenado — isso expõe os usuários.
+   (`Security` → `Advisories` → `Report a vulnerability`). Only the maintainer
+   and designated collaborators see the content.
+2. What to include: version (`cat VERSION`, currently `0.4.0-beta`), affected
+   target (`jvm`/`native`/`native.risc`/`native.arm`/`js`), **minimal repro**
+   (minimal `.kf` + `kof run|build|serve` command), actual vs expected output,
+   estimated impact (RCE, auth bypass, secret leak, DoS…). PoC is welcome;
+   weaponized exploit, not.
+3. **Do not open a public issue, a public PR, or comment in an open thread**
+   before the coordinated fix — that exposes users.
 
-## Escopo
+## Scope
 
-**No escopo** (mantido neste repo, GPLv3):
+**In scope** (maintained in this repo, GPLv3):
 
-- Compilador e backends (`kof-compiler`: JVM/Native/JS, KofScript, KofC),
-  CLI (`kof-cli`), runtime nativo (`kof-runtime/`, `native/`).
-- Stdlib com superfície de segurança: `kof.security` (passwords/PBKDF2,
+- Compiler and backends (`kof-compiler`: JVM/Native/JS, KofScript, KofC),
+  CLI (`kof-cli`), native runtime (`kof-runtime/`, `native/`).
+- Stdlib with a security surface: `kof.security` (passwords/PBKDF2,
   crypto AES-GCM/ChaCha20, JWT HS256, secrets, `auth.*`, CSRF/CORS/headers,
-  rateLimit/sessions/API keys — ver `docs/stdlib/security.md`), `kof.web`
+  rateLimit/sessions/API keys — see `docs/stdlib/security.md`), `kof.web`
   (serve/engine, TLS), `kof.http` (client, retry/circuit), `kof.db`/`kof.orm`
-  (SQL binds, migrations), `kof.config` (env/arquivos), distribuição
-  (`scripts/package.sh`, `bin/kof`, workflows em `.github/`).
-- Dependências declaradas (`pom.xml`, GitHub Actions) e imagens/serviços
-  usados no CI.
+  (SQL binds, migrations), `kof.config` (env/files), distribution
+  (`scripts/package.sh`, `bin/kof`, workflows in `.github/`).
+- Declared dependencies (`pom.xml`, GitHub Actions) and images/services
+  used in CI.
 
-**Fora de escopo:** programas escritos *em* Kof por terceiros (código do
-usuário), deploy/infra de quem usa o Kof, engenharia social, phishing, DoS
-volumétrico sem PoC de amplificação no nosso código, e qualquer associação
-com a franquia The King of Fighters (ver disclaimer no `README.md` — não é
-um problema de segurança).
+**Out of scope:** programs written *in* Kof by third parties (user code),
+deploy/infra of those who use Kof, social engineering, phishing, volumetric
+DoS without a PoC of amplification in our code, and any association with the
+The King of Fighters franchise (see disclaimer in `README.md` — it is not
+a security problem).
 
-## Compromisso de resposta (best-effort, open source)
+## Response commitment (best-effort, open source)
 
-- **Triagem em até 5 dias úteis**, pela mantenedora
+- **Triage within 5 business days**, by the maintainer
   ([@aminadojava](https://github.com/aminadojava), CODEOWNERS).
-- Severidade pelo impacto real (execução remota > bypass de auth >
-  vazamento de segredo > DoS local > hardening). Reportes de `kof.security`
-  (cripto/auth) têm prioridade máxima — a regra do repo é **cripto nunca
-  caseira, default seguro, falha com diagnóstico** (`SECN00x`), e o fix segue
-  o mesmo padrão.
-- Correção na branch ativa (`beta-*`) com **teste de regressão no mesmo
-  commit** (portão de qualidade do repo), advisory publicado em
+- Severity by real impact (remote execution > auth bypass >
+  secret leak > local DoS > hardening). Reports on `kof.security`
+  (crypto/auth) have top priority — the repo rule is **crypto never
+  homemade, secure default, failure with diagnostic** (`SECN00x`), and the fix
+  follows the same pattern.
+- Fix on the active branch (`beta-*`) with a **regression test in the same
+  commit** (repo quality gate), advisory published in
   [Security advisories](https://github.com/KofLang/Kof4j/security/advisories)
-  após o patch, com crédito ao reporter (salvo pedido de anonimato).
-- Divulgação coordenada: pedimos **até 90 dias** entre o reporte privado e
-  a divulgação pública; o advisory sai junto com a release que contém o fix.
+  after the patch, with credit to the reporter (unless anonymity is requested).
+- Coordinated disclosure: we ask for **up to 90 days** between the private
+  report and public disclosure; the advisory goes out together with the release
+  containing the fix.
 
 ## Safe harbor
 
-Pesquisa de boa-fé sobre este repo é bem-vinda: não tomaremos medidas
-contra quem seguir esta policy (escopo respeitado, sem exfiltração de dados
-de terceiros, sem degradação de serviço, sem divulgação antes do fix).
-Testes automatizados agressivos contra `github.com/KofLang/*` fora do seu
-próprio fork/clone não são pesquisa — são abuso.
+Good-faith research on this repo is welcome: we will not take action
+against those who follow this policy (scope respected, no third-party data
+exfiltration, no service degradation, no disclosure before the fix).
+Aggressive automated testing against `github.com/KofLang/*` outside your
+own fork/clone is not research — it is abuse.
 
-## Hardening que já vale neste repo
+## Hardening already in effect in this repo
 
-- Segredos por ambiente (`KOF_JWT_SECRET`, `KOF_<KEY>`, `kof.config`),
-  nunca hardcoded; `*.env` está no `.gitignore`.
-- `kof.security`: PBKDF2-HMAC-SHA256 600k, AES-GCM/ChaCha20 com falha em
-  tamper, JWT HS256 com `alg` fixado (sem confusão de algoritmo),
-  comparação em tempo constante, redact de segredos em logs.
-- Formatos versionados (`pbkdf2$…`, `aesgcm$…`, `chacha20$…`) — detalhe em
+- Secrets per environment (`KOF_JWT_SECRET`, `KOF_<KEY>`, `kof.config`),
+  never hardcoded; `*.env` is in `.gitignore`.
+- `kof.security`: PBKDF2-HMAC-SHA256 600k, AES-GCM/ChaCha20 failing on
+  tamper, JWT HS256 with `alg` pinned (no algorithm confusion),
+  constant-time comparison, secret redaction in logs.
+- Versioned formats (`pbkdf2$…`, `aesgcm$…`, `chacha20$…`) — details in
   `docs/stdlib/security.md`.
-- CI com CodeQL (`.github/workflows/codeql.yml`),
-  varredura de segredos com Gitleaks
-  (`.github/workflows/secret-scan.yml`) e Dependabot
+- CI with CodeQL (`.github/workflows/codeql.yml`),
+  secret scanning with Gitleaks
+  (`.github/workflows/secret-scan.yml`) and Dependabot
   (`.github/dependabot.yml`).
 
 ---

@@ -97,6 +97,18 @@ Mesmo padrão `SecCall` de `kof_sec_aesgcm_*` (gap SECN002 nos alvos sem
 implementação). JS via WebCrypto `ChaCha20-Poly1305` (onde existir; restante
 = SECN002 honesto). Constante de tempo, nonce nunca reusado (documentado).
 
+> **✅ EXECUTADO (14/09, degrau 2 — dono 192.168.100.18):** chacha20 JVM+JS
+> (`kof_sec_chacha20_encrypt/decrypt`, SecCall idêntico ao aesgcm). JS é
+> implementação pura (WebCrypto **não** expõe ChaCha20 em nenhum engine
+> principal — a premissa "onde existir" caiu; prova: MDN
+> SubtleCrypto.algorithms). Validado byte a byte contra node:crypto e contra
+> o vetor RFC 8439 §2.8.2 (Poly1305 AEAD: r/s LE, mac_data
+> pad16(ct)||le64(0)||le64(ctLen)). **Native (x86/riscv/aarch64) segue gap
+> SECN002 honesto em compile-time** — asm puro de Poly1305 (aritmética
+> 130-bit) fica na fila, mesmo precedente do SECN000. Constante de tempo:
+> tag comparada com `MessageDigest.isEqual` (JVM) / XOR acumulado (JS).
+> Testes: KofSecurityTest 32/32 (`chacha20*`), suíte 4 módulos 0 falhas.
+
 **Cookies (C11) + middleware de security (C18) — entram, EXECUTAM JUNTO com
 o Application Model** (a ordem só faz sentido com `app.use`):
 
@@ -107,6 +119,16 @@ o Application Model** (a ordem só faz sentido com `app.use`):
   rate-limit → cors → headers → cookies/session → csrf → auth → RBAC → rota.
   Security by default: `listen` em produção exige `app.security()` explícito
   ou warning.
+
+> **✅ EXECUTADO (14/09, degrau 3 parcial — dono 192.168.100.18):**
+> `security.cookieSet(name,value[,opts])` e `security.cookieGet(header,name)`
+> implementados em **JVM + JS** (`kof_sec_cookie_set/set_opts/get`), com
+> defaults seguros (`Path=/; SameSite=Lax; Secure; HttpOnly`) e opts-map
+> (`path/domain/maxAge/expires/sameSite/secure/httpOnly`). **Native segue gap
+> honesto SECN006** (mesmo precedente SECN000/002). Testes `KofSecurityTest`
+> 39/39 (cookieSetDefaults/opts/get Jvm+Js, roundtrip JVM→JS, SECN006 cross).
+> **`app.security()` (C18) ainda NÃO implementado** — depende do middleware
+> `app.use` do app model (I2), que é a próxima unidade desta frente.
 
 **OAuth2/OIDC (D cam. 16) — sequência travada:** (1) **resource server**
 primeiro (validação de JWT de terceiro: JWKS + issuer/aud — barato, fecha
@@ -130,7 +152,7 @@ Os 10 open questions da RFC viram decisão:
 | Q3 shared types | package local importado por front+backend, **depois** do package manager; não bloqueia nada. |
 | Q4 `kof serve --system` | **rejeitado** (confirmado) — alternativa: `kof serve --list` (apps+portas, sem subir). |
 | Q5 `[frontend].api` | **convenção documentada** (não feature de rewrite). |
-| Q6 fat jar | **flag `--fat` opcional** (I3); default = classpath explícito. |
+| Q6 fat jar | **flag `--fat` opcional** (I3); default = classpath explícito. ✅ **EXECUTADO 14/09**: `kof build --fat` (JVM) gera `kof-app.jar` (classes do app + runtime `dev.kof.runtime` + deps externas, `Main-Class` no manifesto, first-wins do app, assinaturas deps descartadas); prova `CmdBuildFatTest` 4/4 (`java -jar` roda o programa; sem a flag não há jar; `--fat` fora do JVM recusa honesto R6). |
 | Q7 Wasm | coluna ✅ frontend na tabela quando o target abrir; **modelo não muda**. |
 | Q8 `kof.proxy` | fora desta RFC; convenção hoje, stdlib só com 3+ apps pedindo. |
 | Q9 rebuild frontend | **sob demanda por hash** (I2); watcher = futuro. |
@@ -138,8 +160,8 @@ Os 10 open questions da RFC viram decisão:
 
 **Plano I1–I3 da RFC:** I1 (manifesto+`kof new`) — **manifesto já existe**;
 resta `CmdNew` (esqueletos backend/full-stack/frontend + validação `APP003`),
-escopo pequeno. I2 (full-stack serve/build) e I3 (fat/deploy) seguem na fila
-com os incrementos da RFC §23. A matriz APP001–003 vai para
+escopo pequeno. I2 (full-stack serve/build) ✅ e I3 (fat/deploy) ✅ (`--fat`,
+14/09) executados com os incrementos da RFC §23. A matriz APP001–003 vai para
 `docs/backend-parity.md` (gap codes R6).
 
 ### D-APP.REF — o modelo em uma página (conteúdo de referência da RFC)
@@ -223,6 +245,47 @@ PKG006); F2 targets = `docs/targets` + §23; F3 full-stack = D-APP I2; F4/F5 =
 `KOFUI-AUDIT`/`docs/stdlib/stdlib-web.md`; F6 wasm/F7 android = tabela do
 D-APP Q7/Q10; F8 script = `kof-cli CmdScript` ✅; F9 conformance =
 `docs/bugs-and-gaps/conformance-matrix.md`. **Nada restava de único — o arquivo foi absorvido, não descartado.**
+
+## D-RELEASE — gatilho de patch (0.4.1) por volume de fixes (14/09)
+
+**Regra da mantenedora (14/09, após fechar a minor 0.4.0):** desenvolvimento
+agora é **estabilização de patch**, não feature. O critério objetivo de subir
+um patch:
+
+- **Gatilho:** quando a `beta` estiver **entre 100 e 150 commits à frente da
+  `main`**, avaliar o bump para **`0.4.1`** (patch — só fixes, zero capability
+  nova; a linha `0.4.0` já foi liberada no #138).
+- **Features NÃO param nem são descartadas na janela (adição da mantenedora
+  14/09):** entre 0.4.0 e o gatilho, **evolução real (features/melhorias)
+  concorre com os bugfixes** — o contador de 100–150 mistura os dois. A janela
+  de patch **não congela desenvolvimento** e o bump **não pode descartar /
+  reverter / segurar em branch** o trabalho de feature feito no período: tudo
+  que está na `beta` com suíte verde e prova entra no pacote. Se o volume de
+  **capability nova** acumulado na janela for material (mudou contrato/operador
+  — regra 6, ou superfície de API visível), o bump avaliado deixa de ser
+  patch: vira **0.5.0-minor** (semver decide pelo conteúdo, não pelo calendário
+  nem pelo gatilho). A nota de release lista fixes E features.
+- **Média de pacote estável:** 100–150 commits de fix acumulados = um pacote
+  estável o bastante para valer um release. Abaixo disso, é ruído; acima, o
+  backlog de correções já justifica o número de versão.
+- **Antes de bumpar:** **corrigir as issues abertas** (`gh issue list --state
+  open`) que forem da lane de bugs/paridade — o patch sai com as issues
+  conhecidas fechadas, não em cima delas. Issues de regra 6 (contrato) ficam
+  abertas com nota, não bloqueiam o patch.
+- **Depois do bump:** voltar ao desenvolvimento normal (a `beta` reabre para a
+  próxima minor/feature; o contador reinicia contra a nova `main`).
+
+**Estado do contador (medição 14/09, post-#138):** `main..beta = 1` (só
+`a5eedbe2`), `beta..main = 1` (o merge do PR). **Longe do gatilho** — o loop
+segue acumulando fixes na beta; nenhum agente bumpa versão enquanto não
+chegar perto de 100. Quem medir deve anotar aqui a contagem e a data.
+
+**Como medir:** `git rev-list --count origin/main..origin/beta-0.4.0`. Ao
+cruzar a faixa, abrir a issue "Release 0.4.1" (regra: toda PR vem com issue),
+rodar a suíte completa verde, fechar as issues da lane bugs, e só então bumpar
+`pom.xml` + `version.properties`.
+
+---
 
 ## D-ASM-GATE — gate de asm riscv/aarch OPCIONAL até o dev nativo fechar (14/09)
 
