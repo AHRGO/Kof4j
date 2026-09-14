@@ -96,8 +96,10 @@ public final class StatementAnalyzer {
                 for (CatchClause cc : tryStmt.catchClauses()) {
                     SymbolTable catchScope = scope.enterScope();
                     if (cc.exceptionName() != null) {
-                        Type excType = "String".equals(cc.exceptionType()) ? BuiltinTypes.STRING
-                                : Type.of(cc.exceptionType());
+                        // #163: `catch (RuntimeException e)` precisa do tipo
+                        // qualificado (java.lang) para o dispatch de método e
+                        // o descriptor JVM não saírem `LRuntimeException;`.
+                        Type excType = CompilerTypes.exceptionType(cc.exceptionType(), sa.unit());
                         catchScope.define(new SymbolTable.LocalVariableSymbol(cc.exceptionName(), excType, 0));
                     }
                     for (StatementNode s : cc.body()) analyzeStatement(sa, s, catchScope, returnType);

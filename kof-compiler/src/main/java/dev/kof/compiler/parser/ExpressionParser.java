@@ -324,6 +324,9 @@ public class ExpressionParser {
             ExpressionNode elseExpr = ExpressionParser.parseExpression(ctx);
             return new IfExpr(p, condition, thenExpr, elseExpr);
         }
+        if (ctx.check(TokenType.SWITCH)) {
+            return ExpressionParser.parseSwitchExpression(ctx);
+        }
         if (ctx.check(TokenType.LBRACE)) {
             List<FormalParameterNode> params = new ArrayList<>();
             List<StatementNode> body = StatementParser.parseBlock(ctx);

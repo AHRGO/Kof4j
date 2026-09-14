@@ -485,7 +485,7 @@ public final class StatementLowerer {
                 int primaryExcLocal = localIdx++;
                 if (hasCatch) {
                     locals.add(new IRLocalVariable(primaryExcLocal, ts.catchClauses().getFirst().exceptionName(),
-                            CompilerTypes.toType(primaryExcType, driver.currentUnit)));
+                            CompilerTypes.exceptionType(primaryExcType, driver.currentUnit)));
                 } else if (hasFinally) {
                     locals.add(new IRLocalVariable(primaryExcLocal, "#excTmp",
                             new Type.ClassType("java.lang", "Throwable", List.of())));
@@ -515,7 +515,8 @@ public final class StatementLowerer {
                     LabelId handlerLabel = ci == 0 ? primaryHandler : LabelId.create();
                     int excIdx = ci == 0 ? primaryExcLocal : localIdx++;
                     if (ci > 0) {
-                        locals.add(new IRLocalVariable(excIdx, cc.exceptionName(), CompilerTypes.toType(cc.exceptionType(), driver.currentUnit)));
+                        locals.add(new IRLocalVariable(excIdx, cc.exceptionName(),
+                                CompilerTypes.exceptionType(cc.exceptionType(), driver.currentUnit)));
                     }
                     ops.add(new KofCatchStart(handlerLabel, cc.exceptionType(), excIdx));
                     // o corpo do catch deve enxergar apenas os locals ATÉ este

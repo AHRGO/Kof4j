@@ -54,6 +54,31 @@ public final class CompilerTypes {
     }
 
     /**
+     * #163: tipos de exceção de `java.lang` escritos pelo nome simples no
+     * `catch` (`catch (RuntimeException e)` — o corpus documenta
+     * `catch (Exception e)`, `learn/27:86`). Sem qualificar, o tipo do local
+     * ficava `ClassType("", "RuntimeException")` e o descriptor JVM saía
+     * `LRuntimeException;` → `NoClassDefFoundError: RuntimeException` ao
+     * chamar qualquer método no `e`. `String` continua sendo a exceção de
+     * Kof (mensagem, `RuntimeException` em runtime).
+     */
+    private static final java.util.Set<String> JAVA_LANG_THROWABLES = java.util.Set.of(
+            "Throwable", "Exception", "RuntimeException", "IllegalArgumentException",
+            "IllegalStateException", "IndexOutOfBoundsException", "NumberFormatException",
+            "ArithmeticException", "NullPointerException", "UnsupportedOperationException",
+            "ClassCastException", "Error", "OutOfMemoryError", "StackOverflowError");
+
+    static Type exceptionType(String typeName, CompilationUnitNode currentUnit) {
+        if ("String".equals(typeName)) return BuiltinTypes.STRING;
+        Type t = toType(typeName, currentUnit);
+        if (t instanceof Type.ClassType ct && ct.packageName().isEmpty()
+                && JAVA_LANG_THROWABLES.contains(ct.name())) {
+            return new Type.ClassType("java.lang", ct.name(), List.of());
+        }
+        return t;
+    }
+
+    /**
      * Qualificação profunda de tipos: separa nomes pontuados no campo `name`
      * ("com.dev.NodeUI" → pkg "com.dev" + name "NodeUI") e resolve nomes simples
      * sem pacote usando imports → classes declaradas no módulo (SymbolTable).

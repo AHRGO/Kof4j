@@ -127,6 +127,12 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > quentes. O codemod dos 17 locals puros restantes ficou p/ depois (varios
 > carregam chamada com efeito — deletar linha = mudanca de comportamento).## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (14/09 ~10:30, dono = 192.168.100.22, lane compiler): fix issue #200 — switch expression rejected as RHS of assignment statement (PARSE041).**
+> - Causa raiz: `ExpressionParser.parsePrimary` não reconhecia `TokenType.SWITCH`, e `parseAssignment` para o lado direito chamava `parseAssignment` (que descia para `parsePrimary`), disparando `PARSE041` ao encontrar `switch`.
+> - Correção: adicionada verificação de `TokenType.SWITCH` em `ExpressionParser.parsePrimary` delegando para `parseSwitchExpression(ctx)`.
+> - Prova: `CoreRegressionE2ETest#switchExpressionAsRhsOfAssignment` (atribuição para variável local existente e para campo de classe).
+> - Próximo: issues #168, #166, #165.
+
 > **✅ FEITO (14/09 ~10:10, dono = 192.168.100.22, lane compiler): fix issue #167 — instanceof with primitive/boxed types emits '?' as class name (NoClassDefFoundError).**
 > - Causa raiz: `JvmOpEmitter` em `KofInstanceOf` e `KofCheckCast` extraía o nome interno apenas se o tipo fosse `Type.ClassType`, caindo em `"?"` para tipos primitivos (`Type.PrimitiveType`).
 > - Correção: `JvmOpEmitter` mapeia `Type.PrimitiveType` para seu correspondente boxed (`TypeMetrics.boxedTypeFor`) antes de emitir a instrução `INSTANCEOF`/`CHECKCAST`.

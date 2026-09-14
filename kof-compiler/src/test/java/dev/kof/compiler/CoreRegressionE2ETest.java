@@ -1627,4 +1627,31 @@ class CoreRegressionE2ETest {
         assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
         assertEquals("true\nfalse\ntrue\nfalse", runJvm(out));
     }
+
+    // Issue #200 — switch expression rejected as RHS of assignment statement (PARSE041).
+    @Test
+    void switchExpressionAsRhsOfAssignment(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("switchassign.kf");
+        Files.writeString(src, """
+                class Box {
+                    Int code
+                    public constructor(Int code) {
+                        this.code = code
+                    }
+                }
+                main() {
+                    var n = 2
+                    var x = 0
+                    x = switch (n) { case 2 -> 99 default -> 0 }
+                    var b = Box(0)
+                    b.code = switch (n) { case 2 -> 77 default -> 0 }
+                    println(x)
+                    println(b.code)
+                }
+                """);
+        Path out = tempDir.resolve("switchassign-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("99\n77", runJvm(out));
+    }
 }
