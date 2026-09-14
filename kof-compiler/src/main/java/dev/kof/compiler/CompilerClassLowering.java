@@ -538,29 +538,37 @@ public final class CompilerClassLowering {
             Object v = field.initialValue();
             String fieldName = field.type() instanceof Type.PrimitiveType pt
                     ? Type.canonicalPrimitiveName(pt.name()) : "";
-            if (v instanceof Integer) {
-                int iv = (Integer) v;
-                if ("long".equals(fieldName)) {
-                    ops.add(new KofLoadLiteral(Type.PrimitiveType.LONG, (long) iv));
-                } else if ("double".equals(fieldName)) {
-                    ops.add(new KofLoadLiteral(Type.PrimitiveType.DOUBLE, (double) iv));
-                } else if ("float".equals(fieldName)) {
-                    ops.add(new KofLoadLiteral(Type.PrimitiveType.FLOAT, (float) iv));
-                } else {
-                    ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, iv));
+            switch (v) {
+                case Integer _ -> {
+                    int iv = (Integer) v;
+                    if ("long".equals(fieldName)) {
+                        ops.add(new KofLoadLiteral(Type.PrimitiveType.LONG, (long) iv));
+                    } else if ("double".equals(fieldName)) {
+                        ops.add(new KofLoadLiteral(Type.PrimitiveType.DOUBLE, (double) iv));
+                    } else if ("float".equals(fieldName)) {
+                        ops.add(new KofLoadLiteral(Type.PrimitiveType.FLOAT, (float) iv));
+                    } else {
+                        ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, iv));
+                    }
                 }
-            } else if (v instanceof Long) {
-                ops.add(new KofLoadLiteral(Type.PrimitiveType.LONG, (Long) v));
-            } else if (v instanceof String) {
-                ops.add(new KofLoadLiteral(BuiltinTypes.STRING, (String) v));
-            } else if (v instanceof Double) {
-                ops.add(new KofLoadLiteral(Type.PrimitiveType.DOUBLE, (Double) v));
-            } else if (v instanceof Float) {
-                ops.add(new KofLoadLiteral(Type.PrimitiveType.FLOAT, (Float) v));
-            } else if (v instanceof Boolean) {
-                ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, ((Boolean) v) ? 1 : 0));
-            } else {
-                continue;
+                case Long _ -> {
+                    ops.add(new KofLoadLiteral(Type.PrimitiveType.LONG, (Long) v));
+                }
+                case String _ -> {
+                    ops.add(new KofLoadLiteral(BuiltinTypes.STRING, (String) v));
+                }
+                case Double _ -> {
+                    ops.add(new KofLoadLiteral(Type.PrimitiveType.DOUBLE, (Double) v));
+                }
+                case Float _ -> {
+                    ops.add(new KofLoadLiteral(Type.PrimitiveType.FLOAT, (Float) v));
+                }
+                case Boolean _ -> {
+                    ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, ((Boolean) v) ? 1 : 0));
+                }
+                case null, default -> {  // null cai aqui (como no if-else: instanceof null == false)
+                    continue;
+                }
             }
             ops.add(new KofStoreField(ownerType, field.name(), field.type()));
         }
