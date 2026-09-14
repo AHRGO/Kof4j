@@ -715,7 +715,13 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > Regra da lição gravada (4e0957ee + cdda27d9): `mvn -o compile`
 > IMEDIATAMENTE antes de medir (falso-vermelho de classe obsoleta queimou
 > meu primeiro "#218 ainda reproduz"); assir SEMÂNTICA do título.
-> **Gatilhos do próximo disparo (estado 14/09 ~14:20):** (1) fix de §213–§224
+> **Gatilhos do próximo disparo (estado 14/09 ~14:42, após ciclo 14:20–14:42):**
+> Neste ciclo: §190+§195 ✅ (KofBlogE2ETest verde re-medido 14:35, fix
+> test-side a689cbd2 lane .18 já no HEAD), §220 ✅ (8a38faa4 lane analyzer,
+> prova postada #224 — issue fechada 17:37), fila sincronizada corpo=linha
+> (22), audit docs/development/: DECOMPILER/TRANSLATOR/LEGACY_MIGRATION/
+> OTP/native-multiarch todos CORRETOS como IN DEVELOPMENT (fases abertas
+> documentadas — não mover p/ docs/ nem future/).  (1) fix de §213–§224
 > aparecer no log → re-medir com classes frescas e marcar FIXED + comentar
 > na issue (assim foi §221: `769371c2` → `[LOG] test` + `invokevirtual
 > Logger.print`, `21e68a55`). #225 fechável; #230→§223, #231→§224 com prova
