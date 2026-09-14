@@ -130,6 +130,48 @@ class CoreRegressionE2ETest {
                 """, "10\n100\n42", tempDir, "ReceiverlessStaticCall");
     }
 
+    // GitHub #152 — `list[i]` sobre List<T> era baixado como array access
+    // (KofArrayLoad → aaload) → VerifyError. Agora é roteado p/
+    // kof_list_get (INSTANCE), com o tipo do elemento inferido. Cobre
+    // String (ref) e Int (primitivo, unbox+rebox no println).
+    @Test
+    void listIndexAccess(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                main() {
+                    var strs = new List<String>()
+                    strs.add("a"); strs.add("b"); strs.add("c")
+                    println(strs[0])
+                    println(strs[2])
+                    var ints = new List<Int>()
+                    ints.add(10); ints.add(20)
+                    println(ints[1])
+                }
+                """, "a\nc\n20", tempDir, "IndexAccess");
+    }
+
+    // GitHub #149 — `nums[i]` sobre List<Int> (e sobre o resultado de
+    // map/filter): o elemento precisa voltar como Int (unbox) e o consumo
+    // por println precisa re-boxar. `var n = nums[0]` e `println(nums[0])`
+    // caíam em VerifyError: Bad type on operand stack.
+    @Test
+    void listIndexPrimitiveUnbox(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                main() {
+                    var nums = new List<Int>()
+                    nums.add(7); nums.add(8); nums.add(9)
+                    Int explicit = nums[0]
+                    var inferred = nums[1]
+                    println(explicit)
+                    println(inferred)
+                    println(nums[2])
+                    var doubled = nums.map((x: Int) -> x * 2)
+                    println(doubled[0])
+                    var evens = nums.filter((x: Int) -> x % 2 == 0)
+                    println(evens[0])
+                }
+                """, "7\n8\n9\n14\n8", tempDir, "IndexPrimitive");
+    }
+
     // GitHub #30 — String.split + acesso ao array: .get(i) era baixado como
     // KofCall com owner ArrayType → JvmTypeMapper produzia internalName ""
     // → Methodref "" no constant pool → ClassFormatError: Illegal class name "".

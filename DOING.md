@@ -71,6 +71,18 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > codigo Kof NAO sao traduzidos (so prosa/titulos/rotulos). Nao tocar `nat/`,
 > nem lanes de bugs/feature de outros donos.
 >
+> **STATUS i18n medido 14/09 (~05:40, dono = 192.168.100.17):** cobertura de
+> par PT = **214/214 (100%)**; switcher pendente = **6** (todos os demais já
+> comutaram no lote resgatado `11780dc1`): `AGENTS.md`, `CHANGELOG.md`,
+> `docs/bugs-and-gaps/known-bugs.md`, `docs/bugs-and-gaps/conformance-matrix.md`,
+> `docs/status.md`, `docs/development/future/PLAN-UNIVERSAL-PLATFORM.md` — os
+> **meta-vivos** da repo (8k+ linhas editadas por TODAS as lanes todo dia).
+> Traduzi-los AGORA = colisão garantida com todas as lanes durante a
+> estabilização da release (a meta atual). **Plano:** manter os canônicos
+> desses 6 em PT até o corte da release; pós-release, um lote dedicado os
+> traduz para EN + insere o switcher (a paridade `check` fecha 0). Não é
+> esquecimento: é ordem de prioridade da mantenedora (estabilizar → i18n).
+>
 > **⚠️ CUIDADO (14/09 ~01:30, dono = 192.168.100.18):** este commit carrega
 > wips de OUTRAS lanes resgatados do working tree compartilhado (regra 8 —
 > commitar tudo, nunca descartar): **UIW050-JS** (`kofUiEventValue/Key/X/Y/
@@ -81,6 +93,40 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > do §186 e4613704). Suíte completa re-provada depois do rebase.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
+
+> **✅ FEITO CodeQL testes-fora-do-scan (14/09 ~05:10, dono = 192.168.100.22,
+> lane repo-hygiene): 495→270.** (a) commit `804a03ea`: `.github/codeql/
+> kof4j-config.yml` (security-and-quality + `paths-ignore: "**/src/test/**"`;
+> workflow `queries:`→`config-file:`) + **132 dismissals `used in tests`**
+> (relative-path ×87, concat-cmd ×2, trustmanager/TLS-localhost ×1,
+> input-resource-leak ×5, +quality triviais) — harnesses invocam java/gcc/qemu/CLI
+> com Strings proprias do teste (PATH fake DetectContext, @TempDir); trust-all
+> LOCAL e o contrato do teste TLS self-signed. Scan 34820186056 confirmou o
+> config carregado. (b) commit `c669990f` seguranca main: comparison-with-wider-
+> type ×2 (KofJsRunner loop int→long getArrayElement(long); LspServer.offsetOf
+> 'l'→long) + random-used-once ×2 (SecureRandom static final) — LspServerTest
+> 19/19, compila OK. (c) Os **270 restantes = 100% src/main**: local-var ×82,
+> unused-param ×81, NF-exception ×23, chained-type ×21, useless-null ×11, IRE ×11,
+> indent ×10, deref-null ×8, +~24. **bloqueio (regra 6):** fix 100%-seguro
+> p/ local-var-never-read (unnamed pattern `_`, JEP 443) NAO compila no baseline
+> `--release 21` (medido: javac recusa); sem bump, reestruturar caso-a-caso.
+> unused-param idem (remover parametro = mudar assinatura/fronteira contrato).
+> **PROXIMO PASSO (esta lane):** continuar degraus por arquivo LIVRE (checar dono
+> + issue #185): deref-null/IOB/NF-exception (bugs reais, um teste cada); seg
+> main restante KofJsWebview relative-path ×3 + temp-path KofInterpreter ×1.
+> Testar antes de tocar: `git log --oneline -5 -- <arq>`.
+> **✅ FEITO degrau-4 (14/09, dono = 192.168.100.22, lane repo-hygiene):
+> unused-container write-only ×3 removidos (zero efeito observável).**
+> (a) JdwpClient:178 — lista `methods` só append, retorno usa o id;
+> (b) SymbolTable — campo `symbolOrder` + 3 adds, zero leituras no repo;
+> (c) CollectionCallLowerer:429 — lista descartada, chamadas
+> `inferExprType` (efeito útil) preservadas. Prova: CompilerDriver 252/252 +
+> MapSet 14/14 + Semantic 27/27. **NÃO tocados:** SemExpressionTyper:301
+> (lane quente), KofInterpreterConcurrency (lane interpreter) → issue #185.
+> Dismiss #114/#503 (harness) e #505 (já-dismissed). **Issue #185 aberta:**
+> fila de triagem por lane (notes mecânicas por arquivo).
+> **PRÓXIMO PASSO:** warnings livres (useless-null-check ×12 etc., checar
+> dono) ou pausa p/ lanes absorverem #185.
 
 > **✅ FEITO (14/09, dono = 192.168.100.18, lane development): blog E2E
 > (D-SPRING F12) + `--fat` (D-APP I3)** — commit `8eb156f4`; as duas últimas
@@ -259,6 +305,24 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > #151 (is) — .17 assume #146/#147/#148 (família Jvm*Descriptors, arquivos
 > dele EM CURSO: KofSecurity/JvmRuntimeCallDescriptors/JvmRuntimeReturnDescriptors/
 > JvmStringSecurityRuntime — NÃO tocar).
+
+> **✅ FEITO (14/09 ~05:50, lane bugs-and-gaps, dono = 192.168.100.15):
+> #149 + #152 — `list[i]` sobre `List<T>` (aaload/VerifyError).** Causa raiz:
+> o lowering de `ArrayAccessExpr` emitia `KofArrayLoad` (aaload) p/ receptor
+> que é referência (`java/util/ArrayList`) → `VerifyError: Bad type on operand
+> stack`. Fix em 3 pontos (código já no HEAD, commitado junto da lane codeql
+> em `497486a4`/`901f5dea`): (a) `ExpressionLowerer` roteia List/Map p/
+> `kof_list_get`/`kof_map_get` (INSTANCE) com tipo do elemento real; (b)
+> `MethodCallTyper` infere `map`/`filter`/`reduce` sobre `kof/List` (retorno
+> `List<elem>`, não array); (c) `ExpressionTyper` infere o elemento de
+> `ArrayAccessExpr`. `Set[i]` → `SEM025` honesto (R6). Prova NOVA desta
+> unidade: `CoreRegressionE2ETest.listIndexAccess` + `.listIndexPrimitiveUnbox`
+> (String/Int, unbox+rebox no println, map/filter) — 62/62 verde na classe,
+> JVM+JS; repro exato da issue verde nos 3 targets (JVM/JS/x86). Removido
+> `DBG-PRINT` temporário que tinha vazado no `ExpressionPrintLowerer`.
+> **FALTA:** triagem+close #149/#152 (comentário cita este commit) e seguir a
+> fila #139/#150 (Set/Map ctor), #143 (record `==`), #145 (for-in String),
+> #141 (`spawn{block}`), #142 (ctor genérico), #151 (`is`).
 
 > **✅ FEITO (14/09 ~03:30, dono = 192.168.100.22): `CmdNew` (D-APP I1 +
 > D-SPRING F11).** `kof new <dir> [--type mono|backend|frontend|full-stack]`
@@ -3160,7 +3224,7 @@ Tier 1 ⇒ fechado ⇒ Tiers 2–12 (plataforma universal) abrem.
 - **≤500 linhas por classe** (refactor futuro de NativeRuntime: módulo novo por área, ex: `NativeHttpRuntime.java`).
 - Nunca duas frentes no mesmo arquivo gigante ao mesmo tempo — se for inevitável, combine no chat antes.
 - **Sem trocar de branch toda hora; nunca renomear branch compartilhada** (14/09, ordem da mantenedora): tudo entra pela `beta-*` ativa; `tmp-*` local nunca vira ref remota nem renomeia `beta/main` por baixo dos outros.
-- **Overlay i18n nunca apaga edição viva** (14/09, bug real corrigido em `scripts/docs-lang.sh`): o guard usava `git diff --quiet`, cego com skip-worktree — agora compara hash do worktree com o índice. Regra durável: editar o espelho `.pt_BR.md` junto (é ele que o overlay copia).
+- **Overlay i18n nunca apaga edição viva** (14/09, bug real corrigido em `scripts/docs-lang.sh`): o guard usava `git diff --quiet`, cego com skip-worktree — agora compara hash do worktree com o índice.
 - **Congelamento de comportamento** (AGENTS.md, obrigatório): zero regressão (suíte **910** é gate de merge), features novas **aditivas** (retrocompatibilidade), refactor de 500 linhas preserva semântica (mesma suíte + golden E2E; output mudou = bug do refactor), bugs em `docs/known-bugs.md` são corrigidos **no código** para atingir o comportamento previsto (nunca "documentar em volta"), paridade JVM/Native/JS é regra.
 
 ## Incidentes de processo (bronca registrada — 03/09, agente-switch-expr)

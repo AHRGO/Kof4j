@@ -35,7 +35,6 @@ if (("print".equals(mc.methodName()) || "println".equals(mc.methodName())) && mc
             "out", new Type.ClassType("java.io", "PrintStream", List.of())));
     localIdx = ExpressionLowerer.emitExpression(driver, mc.arguments().get(0), ops, owner, localIdx, locals);
     Type argType = ExpressionTyper.inferExprType(driver, mc.arguments().get(0), locals);
-    System.err.println("DBG-PRINT argType=" + argType);
     // (#57: IfExpr/switch heterogêneo já boxeou in-branch → pular o box)
     if (TypeMetrics.isPrimitiveType(argType)
             && !ExpressionTyper.boxesOwnBranches(driver, mc.arguments().get(0), locals)) {
