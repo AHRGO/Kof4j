@@ -238,11 +238,25 @@ public final class ExpressionLowerer {
             }
             case ArrayAccessExpr aa -> {
                 localIdx = ExpressionLowerer.emitExpression(driver, aa.receiver(), ops, owner, localIdx, locals);
-                localIdx = ExpressionLowerer.emitExpression(driver, aa.index(), ops, owner, localIdx, locals);
-                Type recvType = ExpressionTyper.inferExprType(driver, aa.receiver(), locals);
-                Type elemType = Type.arrayElementType(recvType);
-                ops.add(new KofArrayLoad(elemType));
-                yield localIdx;
+                 localIdx = ExpressionLowerer.emitExpression(driver, aa.index(), ops, owner, localIdx, locals);
+                 Type recvType = ExpressionTyper.inferExprType(driver, aa.receiver(), locals);
+                 // #152/#149: `list[i]` sobre List/Map/Set NÃO é array — emitir
+                 // KofArrayLoad gerava AALOAD sobre java/util/ArrayList →
+                 // VerifyError (o receptor é referência, não array). Baixa p/
+                 // as mesmas funções de runtime do `.get()`/`.get(k)`
+                 // (CollectionCallLowerer: kof_list_get/kof_map_get/kof_set_*).
+                 if (BuiltinTypes.isList(recvType) || BuiltinTypes.isMap(recvType)
+                         || BuiltinTypes.isSet(recvType)) {
+                     String fn = BuiltinTypes.isList(recvType) ? "kof_list_get"
+                             : BuiltinTypes.isMap(recvType) ? "kof_map_get" : "kof_set_get";
+                     ops.add(new KofCall(recvType, fn,
+                             List.of(Type.UnknownType.UNKNOWN), Type.UnknownType.UNKNOWN,
+                             KofCallKind.INSTANCE));
+                     yield localIdx;
+                 }
+                 Type elemType = Type.arrayElementType(recvType);
+                 ops.add(new KofArrayLoad(elemType));
+                 yield localIdx;
             }
             case FieldAccessExpr fa -> {
                 if (fa.receiver() instanceof IdentifierExpr pId && KofUi.isPalette(pId.name())) {

@@ -69,6 +69,7 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+<<<<<<< HEAD
 > **✅ FEITO (14/09, dono = 192.168.100.18, lane development): blog E2E
 > (D-SPRING F12) + `--fat` (D-APP I3)** — commit `8eb156f4`; as duas últimas
 > linhas executáveis da fila `DECISIONS.md` (§7 de `docs/development/README.md`).
@@ -108,6 +109,7 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > arquivo principal `KofWeb.java`/`JvmRuntimeWebDispatch.java`; prova =
 > E2E com rota protegida (401 sem credencial, 200 com) em `KofBlogE2ETest`
 > ou teste próprio. Antes: reler `docs/development/DECISIONS.md` §D-SEC C18.
+
 > **EM CURSO (14/09 ~02:30, dono = 192.168.100.15, lane bugs-and-gaps):
 > unidade §186/#133 — fix estrutural completo do `<clinit>`.** Autostash
 > da unidade REAPROVEITADO (stash@{0} aplicado; conflito com e4613704

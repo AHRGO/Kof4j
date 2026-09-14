@@ -1,0 +1,52 @@
+# CodeQL — code scanning + code quality (Kof4j)
+# Cobre "Code scanning alerts" e "Code quality findings" da aba Security.
+# Alertas em: https://github.com/KofLang/Kof4j/security/code-scanning
+name: CodeQL
+
+on:
+  push:
+    branches: [main, beta-0.4.0]
+  pull_request:
+    branches: [main, beta-0.4.0]
+  schedule:
+    - cron: "0 6 * * 1"
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [java, javascript]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21 (Tooling API baseline)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          # security + quality: alimenta "code scanning" (vulns/erros)
+          # e "code quality findings" (qualidade) com o mesmo run.
+          queries: security-and-quality
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
