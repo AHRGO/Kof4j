@@ -150,6 +150,13 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
                 mc.methodName(), extFormal, extRet, KofCallKind.STATIC));
         return localIdx;
     }
+    // #233 regression (found by lane bugs-and-gaps): when the classpath is
+    // present but the wrapper class is NOT in it (or the method does not
+    // resolve), this branch used to fall out and emit NOTHING — the call was
+    // silently dropped (R6) and the enclosing expression broke (JVM frame
+    // crash on the outer valueOf with a missing argument). Fall back to the
+    // instance lowerer, which owns the builtin wrapper/`valueOf` handling.
+    return ExpressionInstanceCallLowerer.lower(driver, mc, ops, owner, localIdx, locals);
 } else if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.name(), locals)
         && "json".equals(rid.name())) {
     return ExpressionJsonCallLowerer.lower(driver, mc, ops, owner, localIdx, locals);
