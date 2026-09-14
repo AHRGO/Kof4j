@@ -2610,10 +2610,15 @@ no upstream).
 > riscv/aarch 2 casts → labels `_1`/`_2` únicos (antes: 4× cada = duplicado).
 > **Docs sync (lane):** `known-bugs.md` §181/§182 → ✅ CORRIGIDO (cabeçalho da
 > fila + seções) + **§183 NOVO** (flaky de relógio `KofTimeE2ETest`, fix
-> `a13665f7`); `conformance-matrix.md` já estava sync no remoto.
-> **PRÓXIMO PASSO:** rodar a suíte 4-módulos + `check_500`, commitar e pushar
-> (branch `beta-0.4.0`, nunca `main`). Depois: caça Q4 em células de cobertura
-> estreita/landings recentes; se nada novo e suíte verde → atualizar este
+> `a13665f7`); `conformance-matrix.md` — removida a linha DUPLICADA/estale de
+> `castrange` (a §181 já estava marcada DONE na linha do lote S7) e `numconv`
+> com residual atualizado. Suíte 4-módulos pós-rebase: compiler 1531/0/13-node
+> (164 skip), script 37, c 5, cli 213 — 0 falhas fora do `node`; `check_500`
+> exit 0. **Pushado: `67db6c50`** (rebase sobre `0c122131`).
+> **PRÓXIMO PASSO:** caça Q4 em células de cobertura estreita/landings recentes
+> (foco: §180 double→string Native — célula `doubleprint` já prova a
+> divergência; faces de `Float` e do científico; e a célula `cast`/`castrange`
+> agora têm prova cross-arch). Se nada novo e suíte verde → atualizar este
 > DOING e **RECUSAR** o re-disparo (estabilidade parcial — §179/§180 abertos
 > de outras lanes). **NUNCA:** `nat/` GC viva; fila de outras lanes; push
 > `main`.
