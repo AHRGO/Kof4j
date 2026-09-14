@@ -411,6 +411,10 @@ public final class JvmRuntimeCallDescriptors {
             case "kof_sec_session_destroy" -> "(Ljava/lang/String;)Z";
             case "kof_sec_api_key_generate" -> "()Ljava/lang/String;";
             case "kof_sec_api_key_valid" -> "(Ljava/lang/String;)Z";
+            // ── kof.security C11 (cookies, D-SEC 14/09) ──
+            case "kof_sec_cookie_set" -> "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;";
+            case "kof_sec_cookie_set_opts" -> "(Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;)Ljava/lang/String;";
+            case "kof_sec_cookie_get" -> "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;";
             case "kof_enum_value_of" -> "(Ljava/util/List;Ljava/lang/String;)Ljava/lang/String;";
             case "kof_list_map", "kof_list_filter" -> "(Ljava/util/ArrayList;Ljava/lang/Object;)Ljava/util/ArrayList;";
             case "kof_list_reduce" -> "(Ljava/util/ArrayList;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;";

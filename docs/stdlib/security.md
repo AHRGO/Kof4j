@@ -230,7 +230,8 @@ kof.security
 ├── jwt              → create/verify (HS256, exp/iss/aud, sem confusão de algoritmo)
 ├── secrets          → get (env), redact
 ├── security         → constantTimeEquals, randomHex, redact, csrfToken/csrfValid, corsAllowed, headers helpers,
-│                      rateLimit, sessionCreate/sessionGet/sessionDestroy, apiKeyGenerate/apiKeyValid (G9)
+│                      rateLimit, sessionCreate/sessionGet/sessionDestroy, apiKeyGenerate/apiKeyValid (G9),
+│                      cookieSet/cookieGet (C11, defaults seguros)
 └── auth             → contexto web: secret, token, authenticated, claims, user, hasRole, hasPermission
 ```
 
@@ -251,11 +252,13 @@ Suporte por target (estado atual — `KofSecurity.supportedOn`):
 | `security.corsAllowed` | SIM | — | — |
 | `security.cspHeader/hstsHeader/...` | SIM | — | — |
 | `security.rateLimit/session*/apiKey*` (G9) | SIM | SIM (asm) | SIM (JS) |
+| `security.cookieSet/cookieGet` (C11) | SIM | — (SECN006) | SIM (JS) |
 | `auth.*` (contexto web) | SIM (Bearer JWT + ThreadLocal) | — | — |
 
 Gaps reais com diagnóstico em compile-time: `SECN001` (passwords),
-`SECN003` (sha512) e `SECN005` (G9) — nunca comportamento silenciosamente
-diferente. `SECN002` (AES-GCM no JS) e `SECN004` (jwt) fechados.
+`SECN003` (sha512), `SECN005` (G9) e `SECN006` (cookies no Native) — nunca
+comportamento silenciosamente diferente. `SECN002` (AES-GCM no JS) e
+`SECN004` (jwt) fechados.
 
 **Regra**: qualquer gap emite diagnóstico claro em compile-time (ex.
 `SECN001: passwords.hash não está disponível no target Native ainda`).

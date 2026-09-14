@@ -158,6 +158,16 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 
 
+> **✅ FEITO (14/09, lane development, dono = 192.168.100.18):
+> D-SEC degrau 3 (parcial) — `security.cookieSet/cookieGet` (C11).**
+> Set com defaults seguros (`Path=/; SameSite=Lax; Secure; HttpOnly`) +
+> opts-map (`path/domain/maxAge/expires/sameSite/secure/httpOnly`); get faz
+> parse do header `Cookie`. JVM (`JvmStringSecurityRuntime`) + JS
+> (`JsRuntimeUiSecurity`), gap **SECN006** honesto no Native (igual
+> SECN000/002). Testes: `KofSecurityTest` 39/39 (defaults/opts/get Jvm+Js +
+> roundtrip JVM→JS + SECN006 cross). **Resta da C11/C18:** `app.security()`
+> (middleware composto) — depende de `app.use` no app model (I2).
+>
 > **PRÓXIMO PASSO (estabilização beta-0.4.0 → release):** rodar a suíte
 > COMPLETA limpa pós-push (`rm -rf */target && mvn -o test -pl
 > kof-compiler,kof-script,kof-c-compiler,kof-cli -am

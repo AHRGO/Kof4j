@@ -120,6 +120,16 @@ o Application Model** (a ordem só faz sentido com `app.use`):
   Security by default: `listen` em produção exige `app.security()` explícito
   ou warning.
 
+> **✅ EXECUTADO (14/09, degrau 3 parcial — dono 192.168.100.18):**
+> `security.cookieSet(name,value[,opts])` e `security.cookieGet(header,name)`
+> implementados em **JVM + JS** (`kof_sec_cookie_set/set_opts/get`), com
+> defaults seguros (`Path=/; SameSite=Lax; Secure; HttpOnly`) e opts-map
+> (`path/domain/maxAge/expires/sameSite/secure/httpOnly`). **Native segue gap
+> honesto SECN006** (mesmo precedente SECN000/002). Testes `KofSecurityTest`
+> 39/39 (cookieSetDefaults/opts/get Jvm+Js, roundtrip JVM→JS, SECN006 cross).
+> **`app.security()` (C18) ainda NÃO implementado** — depende do middleware
+> `app.use` do app model (I2), que é a próxima unidade desta frente.
+
 **OAuth2/OIDC (D cam. 16) — sequência travada:** (1) **resource server**
 primeiro (validação de JWT de terceiro: JWKS + issuer/aud — barato, fecha
 "quem é usuário Google?"), (2) client authorization-code + PKCE depois;

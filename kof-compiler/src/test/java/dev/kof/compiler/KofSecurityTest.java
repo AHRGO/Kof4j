@@ -488,6 +488,96 @@ class KofSecurityTest {
     }
 
     @Test
+    void cookieSetDefaultsJvm(@TempDir Path tempDir) throws IOException {
+        // D-SEC C11: defaults seguros (Path=/, SameSite=Lax, Secure, HttpOnly).
+        runJvm(tempDir, """
+                main() {
+                    println(security.cookieSet("session", "abc"))
+                    println(security.cookieSet("theme", "dark"))
+                }
+                """,
+                "session=abc; Path=/; SameSite=Lax; Secure; HttpOnly\n"
+                        + "theme=dark; Path=/; SameSite=Lax; Secure; HttpOnly");
+    }
+
+    @Test
+    void cookieSetDefaultsJs(@TempDir Path tempDir) throws IOException {
+        runJs(tempDir, """
+                main() {
+                    println(security.cookieSet("session", "abc"))
+                }
+                """, "session=abc; Path=/; SameSite=Lax; Secure; HttpOnly");
+    }
+
+    @Test
+    void cookieSetOptsOverridesJvm(@TempDir Path tempDir) throws IOException {
+        // opts-map sobrepõe os defaults; secure/httpOnly "false" removem a flag.
+        runJvm(tempDir, """
+                main() {
+                    var opts = mapOf()
+                    opts.put("sameSite", "Strict")
+                    opts.put("maxAge", "3600")
+                    opts.put("secure", "false")
+                    opts.put("path", "/app")
+                    println(security.cookieSet("session", "xyz", opts))
+                }
+                """, "session=xyz; Path=/app; Max-Age=3600; SameSite=Strict; HttpOnly");
+    }
+
+    @Test
+    void cookieGetParsesHeaderJvm(@TempDir Path tempDir) throws IOException {
+        // parse do header Cookie; ausente → "" (nunca null).
+        runJvm(tempDir, """
+                main() {
+                    var header = "a=1; session=xyz; b=2"
+                    println(security.cookieGet(header, "session"))
+                    println(security.cookieGet(header, "a"))
+                    println(security.cookieGet(header, "missing") == "")
+                }
+                """, "xyz\n1\ntrue");
+    }
+
+    @Test
+    void cookieGetParsesHeaderJs(@TempDir Path tempDir) throws IOException {
+        runJs(tempDir, """
+                main() {
+                    var header = "a=1; session=xyz; b=2"
+                    println(security.cookieGet(header, "session"))
+                    println(security.cookieGet(header, "missing") == "")
+                }
+                """, "xyz\ntrue");
+    }
+
+    @Test
+    void cookieRoundTripCrossTargetJvmToJs(@TempDir Path tempDir) throws IOException {
+        // Paridade: o Set-Cookie do JVM é parseável pelo get do JS (mesmo
+        // formato name=value; ...).
+        runJs(tempDir, """
+                main() {
+                    var set = security.cookieSet("session", "abc")
+                    println(security.cookieGet(set, "session"))
+                }
+                """, "abc");
+    }
+
+    @Test
+    void cookieReportsSecn006OnCrossNative(@TempDir Path tmp) throws IOException {
+        // R6: cookies não têm runtime nos nativos cross — gap honesto SECN006.
+        Path source = tmp.resolve("Main.kf");
+        Files.writeString(source, """
+            main() {
+                println(security.cookieSet("s", "v"))
+            }
+            """);
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            CompilationResult r = driver.compile(source, tmp.resolve("cross-" + t), t);
+            assertFalse(r.success(), t + " deve reportar SECN006");
+            assertTrue(r.diagnostics().getDiagnostics().toString().contains("SECN006"),
+                    t + ": " + r.diagnostics().getDiagnostics());
+        }
+    }
+
+    @Test
     void aesGcmCrossTargetParityJvmToJs(@TempDir Path tempDir) throws IOException {
         // Paridade byte-a-byte: o ciphertext produzido no JVM (AES/GCM do JDK)
         // é decifrado pelo runtime JS puro — mesma chave, mesmo formato.

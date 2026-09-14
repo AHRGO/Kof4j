@@ -153,6 +153,17 @@ public final class KofSecurity {
                         ? new SecCall("kof_sec_api_key_generate", STR, List.of()) : null;
                 case "apiKeyValid" -> argc == 1
                         ? new SecCall("kof_sec_api_key_valid", BOOL, List.of(STR)) : null;
+                // D-SEC C11 (cookies): set com defaults seguros
+                // (HttpOnly, Secure, SameSite=Lax, Path=/) ou com opts-map;
+                // get faz o parse do header Cookie do request.
+                case "cookieSet" -> argc == 2
+                        ? new SecCall("kof_sec_cookie_set", STR, List.of(STR, STR))
+                        : (argc == 3
+                                ? new SecCall("kof_sec_cookie_set_opts", STR,
+                                        List.of(STR, STR, BuiltinTypes.MAP))
+                                : null);
+                case "cookieGet" -> argc == 2
+                        ? new SecCall("kof_sec_cookie_get", STR, List.of(STR, STR)) : null;
                 default -> null;
             };
             case "auth" -> switch (name) {
@@ -209,6 +220,10 @@ public final class KofSecurity {
                     "kof_sec_auth_secret", "kof_sec_auth_token", "kof_sec_auth_authenticated",
                     "kof_sec_auth_claims", "kof_sec_auth_user", "kof_sec_auth_has_role",
                     "kof_sec_auth_has_permission" -> target == Target.JVM;
+            // D-SEC C11 (14/09): cookies parse/set — JVM+JS nesta unidade
+            // (Native segue gap honesto em compile-time, igual SECN000/002).
+            case "kof_sec_cookie_set", "kof_sec_cookie_set_opts", "kof_sec_cookie_get" ->
+                    target == Target.JVM || target == Target.JS;
             // G9: available on all targets (JVM/Native/JS)
             case "kof_sec_rate_limit", "kof_sec_session_create", "kof_sec_session_get", "kof_sec_session_destroy",
                     "kof_sec_api_key_generate", "kof_sec_api_key_valid" -> true;
@@ -227,6 +242,7 @@ public final class KofSecurity {
                     "kof_sec_jwt_verify_iss_aud", "kof_sec_jwt_secret" -> "SECN004";
             case "kof_sec_rate_limit", "kof_sec_session_create", "kof_sec_session_get", "kof_sec_session_destroy",
                     "kof_sec_api_key_generate", "kof_sec_api_key_valid" -> "SECN005";
+            case "kof_sec_cookie_set", "kof_sec_cookie_set_opts", "kof_sec_cookie_get" -> "SECN006";
             default -> "SECN000";
         };
     }

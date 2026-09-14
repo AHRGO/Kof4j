@@ -397,6 +397,64 @@ public final class JvmStringSecurityRuntime {
                 public static String kof_sec_referrer_header() {
                     return "no-referrer";
                 }
+
+                // ── D-SEC C11 (cookies) ────────────────────────────────────
+                // Set com defaults seguros; opts-map sobrepõe chaves
+                // (path/domain/maxAge/expires/sameSite/secure/httpOnly).
+                // `Secure`+`HttpOnly`+`SameSite=Lax`+`Path=/` por padrão —
+                // nunca emitir cookie inseguro por omissão.
+                public static String kof_sec_cookie_set(String name, String value) {
+                    return kof_sec_cookie_set_opts(name, value, null);
+                }
+
+                public static String kof_sec_cookie_set_opts(String name, String value, java.util.Map<?, ?> opts) {
+                    if (name == null || name.isEmpty()) throw new IllegalArgumentException("cookie name required");
+                    StringBuilder sb = new StringBuilder();
+                    sb.append(name).append('=').append(value == null ? "" : value);
+                    String path = kof_sec_cookie_opt(opts, "path", "/");
+                    if (path != null) sb.append("; Path=").append(path);
+                    String domain = kof_sec_cookie_opt(opts, "domain", null);
+                    if (domain != null) sb.append("; Domain=").append(domain);
+                    String maxAge = kof_sec_cookie_opt(opts, "maxAge", null);
+                    if (maxAge != null) sb.append("; Max-Age=").append(maxAge);
+                    String expires = kof_sec_cookie_opt(opts, "expires", null);
+                    if (expires != null) sb.append("; Expires=").append(expires);
+                    String sameSite = kof_sec_cookie_opt(opts, "sameSite", "Lax");
+                    if (sameSite != null && !"none".equalsIgnoreCase(sameSite)) {
+                        sb.append("; SameSite=").append(sameSite);
+                    }
+                    if (kof_sec_cookie_flag(opts, "secure", true)) sb.append("; Secure");
+                    if (kof_sec_cookie_flag(opts, "httpOnly", true)) sb.append("; HttpOnly");
+                    return sb.toString();
+                }
+
+                private static String kof_sec_cookie_opt(java.util.Map<?, ?> opts, String key, String dflt) {
+                    if (opts == null) return dflt;
+                    Object v = opts.get(key);
+                    return v == null ? dflt : String.valueOf(v);
+                }
+
+                private static boolean kof_sec_cookie_flag(java.util.Map<?, ?> opts, String key, boolean dflt) {
+                    if (opts == null) return dflt;
+                    Object v = opts.get(key);
+                    if (v == null) return dflt;
+                    if (v instanceof Boolean b) return b;
+                    String s = String.valueOf(v);
+                    return !("false".equalsIgnoreCase(s) || "0".equals(s));
+                }
+
+                public static String kof_sec_cookie_get(String cookieHeader, String name) {
+                    if (cookieHeader == null || name == null) return "";
+                    for (String part : cookieHeader.split(";")) {
+                        String p = part.trim();
+                        int eq = p.indexOf('=');
+                        if (eq <= 0) continue;
+                        if (p.substring(0, eq).trim().equals(name)) {
+                            return p.substring(eq + 1).trim();
+                        }
+                    }
+                    return "";
+                }
 """;
     }
 }
