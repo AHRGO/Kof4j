@@ -1,3 +1,5 @@
+[English](syntax.md) | [Português](syntax.pt_BR.md)
+
 # Kof Syntax Reference
 
 **Version:** 0.4.0-beta (Sep 2026)
@@ -12,12 +14,12 @@ package com.example
 ### Import (fix 0.2.6-beta: file-specific)
 
 ```kof
-import a.b.C          // arquivo a/b/C.kf — fix 27/08 CompilerDriver expandKofImports
-import a.b.*          // diretório a/b
+import a.b.C          // file a/b/C.kf — fix 27/08 CompilerDriver expandKofImports
+import a.b.*          // directory a/b
 import kof.http
 ```
 
-Projetos grandes com `import a.b.C` agora geram `Main.class` + `a/b/C.class` corretamente. Evitar `import java.util.List` — use `listOf`/`List<T>` da stdlib.
+Large projects with `import a.b.C` now generate `Main.class` + `a/b/C.class` correctly. Avoid `import java.util.List` — use `listOf`/`List<T>` from the stdlib.
 
 ### Function
 ```kof
@@ -32,14 +34,14 @@ despedida(): String { return "tchau" }
 Bool positivo(Int x) = x > 0
 ```
 
-Sem `fun` keyword.
+No `fun` keyword.
 
 ### Class
 ```kof
 class User(String name, Int age) {
     greeting(): String { return "Hello " + name }
 }
-// verboso ainda válido
+// verbose still valid
 class User2 {
     String name
     public constructor(String name) {
@@ -75,7 +77,7 @@ var x = 10
 val y = 20
 String name = "Mel"
 String? maybe = null        // nullable
-Box<Int> b = Box(42)        // generics com primitivo
+Box<Int> b = Box(42)        // generics with primitive
 ```
 
 ### Nullable (0.3.22-beta)
@@ -85,7 +87,7 @@ String? s = null
 if (s != null) {
     println(s.length)   // narrowing
 }
-String t = s            // erro SEM014 se sem check
+String t = s            // SEM014 error if no check
 ```
 
 ### KofScript top-level let (0.3.22-beta)
@@ -116,12 +118,12 @@ if (p instanceof Point) {
 ### Spawn / Await
 
 ```kof
-spawn expr();            // fire-and-forget (JVM virtual thread / Native pthread / JS sequencial)
+spawn expr();            // fire-and-forget (JVM virtual thread / Native pthread / JS sequential)
 val r = spawn expr();    // Handle<T> typed handle
 val v = await r;         // blocks; T (primitives unboxed)
 ```
 
-3 targets: JVM virtual threads, Native pthread (CONC001 fechado 31/08), JS sequencial (CONC003 parcial). Android: AND001.
+3 targets: JVM virtual threads, Native pthread (CONC001 closed 31/08), JS sequential (CONC003 partial). Android: AND001.
 
 ### kof.http (0.3.22-beta)
 
@@ -129,12 +131,12 @@ val v = await r;         // blocks; T (primitives unboxed)
 var html = http.get("https://example.com")
 var resp = http.post(api, json.encode(body), "Content-Type: application/json")
 if (http.status(url) == 404) { }
-http.timeout(30)         // timeout global (ms)
-http.retry(3)            // repete em exceção + HTTP 5xx
-http.circuit(5)          // abre circuito após N falhas por 30s; circuit(0) recupera
+http.timeout(30)         // global timeout (ms)
+http.retry(3)            // retries on exception + HTTP 5xx
+http.circuit(5)          // opens the circuit after N failures for 30s; circuit(0) recovers
 ```
 
-Métodos: `get/post/put/delete/patch/options/status` + resiliência `timeout/retry/circuit`. JVM + JS (Java HttpClient interop); Native HTTP002.
+Methods: `get/post/put/delete/patch/options/status` + resilience `timeout/retry/circuit`. JVM + JS (Java HttpClient interop); Native HTTP002.
 
 ## Statements
 

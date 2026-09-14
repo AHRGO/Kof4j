@@ -1,63 +1,65 @@
+[English](stdlib.md) | [Português](stdlib.pt_BR.md)
+
 # Idioms — STDLIB (math / strings / encoding / uuid)
 
 **Status:** available · **Introduced:** 0.3.0-beta (STDLIB track, 08/09/2026) · **Updated:** 08/09/2026
 
 ## What it is
 
-Quatro namespaces de utilitários puros, chamados **sem prefixo `kof.`**
-(estilo `math.clamp(...)`, `strings.slugify(...)`, `encoding.hexEncode(...)`,
-`uuid.v4()`). Mesma API nos targets JVM / interpretador (Script) / Native
-(x86_64) / JS; gaps cross-arch são **diagnóstico em compile-time**, nunca
-stub silencioso (R6).
+Four namespaces of pure utilities, called **without the `kof.` prefix**
+(style `math.clamp(...)`, `strings.slugify(...)`, `encoding.hexEncode(...)`,
+`uuid.v4()`). Same API on the targets JVM / interpreter (Script) / Native
+(x86_64) / JS; cross-arch gaps are **compile-time diagnostics**, never a
+silent stub (R6).
 
 ## math — Int-only (S1)
 
 ```kof
-math.clamp(v, lo, hi)      // hi < lo => comportamento de swap NÃO garantido: valide antes
+math.clamp(v, lo, hi)      // hi < lo => swap behavior NOT guaranteed: validate beforehand
 math.abs(x)  math.sign(x)
-math.min(a, b)  math.max(a, b)     // aritmético; ≠ validation.min/max (predicado de tamanho)
+math.min(a, b)  math.max(a, b)     // arithmetic; ≠ validation.min/max (size predicate)
 math.isEven(x) math.isOdd(x) math.isPositive(x) math.isNegative(x) math.isZero(x)
 math.sqrt(2.0)                          // Double; -1.0 => NaN (IEEE); riscv/aarch = MATH001
-math.lerp(0.0, 10.0, 0.5)               // a + (b - a) * t — interpolação linear (S1b.1)
-math.percentage(3.0, 4.0)               // 75.0; total == 0 => NaN (nunca lança) (S1b.1)
+math.lerp(0.0, 10.0, 0.5)               // a + (b - a) * t — linear interpolation (S1b.1)
+math.percentage(3.0, 4.0)               // 75.0; total == 0 => NaN (never throws) (S1b.1)
 math.isInteger(4.0)                     // true; 4.5/NaN/Inf => false (S1b.1)
 math.isDecimal(4.5)                     // !isInteger (S1b.1)
 ```
 
 Double: `math.sqrt(x)` (S1b) + `lerp`/`percentage`/`isInteger`/`isDecimal`
-(S1b.1, 10/09 — escalares Double **puros**, sem libm) existem em
-JVM/Script/JS/x86; NaN em <0 = IEEE; riscv64/aarch64 = `MATH001`, não
-compilam. Os args são **Double explícitos** — `math.lerp(0, 10, 0.5)` (Int)
-**não** compila (SEM025; sem widening silencioso). `roundTo`/`parse*`/`pow`
-ficam em degrau próprio — **não invente** esses ainda: não compilam (`pow`
-precisa de decisão de link libm; `roundTo` de floor asm).
+(S1b.1, 10/09 — **pure** Double scalars, without libm) exist on
+JVM/Script/JS/x86; NaN at <0 = IEEE; riscv64/aarch64 = `MATH001`, they do not
+compile. The args are **explicit Doubles** — `math.lerp(0, 10, 0.5)` (Int)
+**does not** compile (SEM025; no silent widening). `roundTo`/`parse*`/`pow`
+stay on their own step — **do not invent** these yet: they do not compile (`pow`
+needs a libm link decision; `roundTo` needs floor asm).
 
-## strings — predicados e conversores (S2)
+## strings — predicates and converters (S2)
 
 ```kof
-strings.isAlpha("Hello")           // só letras, não-vazio; "abc123" => false
+strings.isAlpha("Hello")           // letters only, non-empty; "abc123" => false
 strings.isNumeric("123")  strings.isAlphaNumeric("abc123")
-strings.isAscii("ola")             // bytes >=128 => false (café => false nos 4 targets)
-strings.isUpperCase("HELLO")       // >=1 letra e nenhuma minúscula; "123" => false
-strings.isLowerCase("abc-123")     // demais chars ignorados
-strings.count("aabaabaa", "ab")    // 2 — NÃO-sobrepostas; sub vazio => 0
-strings.capitalize("hello")        // "Hello" (ASCII; 1º byte a-z)
-strings.uncapitalize("Hello")      // "hello" — espelho exato do capitalize (S11)
-strings.reverse("abc")             // "cba" (byte-reverso no Native — ver NAT-STR01)
+strings.isAscii("ola")             // bytes >=128 => false (café => false on the 4 targets)
+strings.isUpperCase("HELLO")       // >=1 letter and no lowercase; "123" => false
+strings.isLowerCase("abc-123")     // other chars ignored
+strings.count("aabaabaa", "ab")    // 2 — NON-overlapping; empty sub => 0
+strings.capitalize("hello")        // "Hello" (ASCII; 1st byte a-z)
+strings.uncapitalize("Hello")      // "hello" — exact mirror of capitalize (S11)
+strings.reverse("abc")             // "cba" (byte-reverse on Native — see NAT-STR01)
 strings.repeat("ab", 3)            // "ababab"; n<=0 => ""
 strings.truncate("hello", 3)       // "hel"; n>=len => original; n<=0 => ""
-strings.padLeft("7", 3, "0")       // "007" — pad é STRING, usa a 1ª char
+strings.padLeft("7", 3, "0")       // "007" — pad is a STRING, uses the 1st char
 strings.toCamelCase("hello_world") // "helloWorld"
 strings.toPascalCase("hello world")// "HelloWorld"
-strings.toSnakeCase("HTTPServer")  // "http_server" — boundary em maiúscula+minúscula!
+strings.toSnakeCase("HTTPServer")  // "http_server" — boundary at uppercase+lowercase!
 strings.toKebabCase("XMLParser")   // "xml-parser"
-strings.slugify("Hello, World!!")  // "hello-world" (não-ASCII vira separador)
+strings.slugify("Hello, World!!")  // "hello-world" (non-ASCII becomes a separator)
 ```
 
-## BAD — reimplementar o que a stdlib tem
+## BAD — reimplementing what the stdlib has
 
 ```kof
-// ❌ Java disfarçado
+// ❌ Java in disguise
 Bool isAlpha(String s) {
     if (s.length == 0) { return false }
     for (var i = 0; i < s.length; i++) {
@@ -68,7 +70,7 @@ Bool isAlpha(String s) {
 }
 ```
 
-## GOOD — a abstração existe
+## GOOD — the abstraction exists
 
 ```kof
 // ✅
@@ -77,106 +79,106 @@ var ok = strings.isAlpha(s)
 
 ## WHY
 
-A regra de ferro é "complexidade pertence à plataforma". O loop de bytes
-acima existe em 4 backends diferentes dentro do compilador — escrito uma vez,
-testado na matriz de conformidade (`stdstrings`), paridade travada. Reusar é
-mais curto, mais rápido e cross-target por construção.
+The iron rule is "complexity belongs to the platform". The byte loop
+above exists in 4 different backends inside the compiler — written once,
+tested in the conformance matrix (`stdstrings`), parity locked. Reusing is
+shorter, faster and cross-target by construction.
 
 ## encoding — hex / base64 / url (S4)
 
 ```kof
-encoding.hexEncode("café")            // "636166c3a9" (UTF-8 por bytes, minúsculo)
-encoding.hexDecode("4869")            // "Hi"; dígito inválido => 0; ímpar => último é nibble ALTO
-encoding.base64Encode("Man")          // "TWFu" (com padding)
-encoding.base64Decode("TWFu")         // TOLERANTE: ignora inválidos, para em '='
-encoding.base64UrlEncode(bytes...)    // alfabeto -_, SEM padding (JWT-style)
-encoding.base64UrlDecode(s)           // aceita os 2 alfabetos + padding opcional
-encoding.urlEncode("a b")             // "a%20b" — espaço => %20, NÃO '+'
-encoding.urlDecode("caf%C3%A9")       // "café"; '%' sem 2 dígitos passa literal
+encoding.hexEncode("café")            // "636166c3a9" (UTF-8 by bytes, lowercase)
+encoding.hexDecode("4869")            // "Hi"; invalid digit => 0; odd => last is HIGH nibble
+encoding.base64Encode("Man")          // "TWFu" (with padding)
+encoding.base64Decode("TWFu")         // TOLERANT: ignores invalid ones, stops at '='
+encoding.base64UrlEncode(bytes...)    // alphabet -_, WITHOUT padding (JWT-style)
+encoding.base64UrlDecode(s)           // accepts both alphabets + optional padding
+encoding.urlEncode("a b")             // "a%20b" — space => %20, NOT '+'
+encoding.urlDecode("caf%C3%A9")       // "café"; '%' without 2 digits passes literally
 ```
 
 ## uuid (S3b)
 
 ```kof
-var id = uuid.v4()   // ex.: "xxxxxxxx-xxxx-4xxx-[89ab]xxx-xxxxxxxxxxxx" (shape RFC 4122)
-uuid.isUuid(id)      // true — valida o SHAPE (traços 8/13/18/23 + resto hex); NÃO checa versão/variante
+var id = uuid.v4()   // e.g.: "xxxxxxxx-xxxx-4xxx-[89ab]xxx-xxxxxxxxxxxx" (RFC 4122 shape)
+uuid.isUuid(id)      // true — validates the SHAPE (dashes 8/13/18/23 + rest hex); does NOT check version/variant
 ```
 
-Não-determinístico: valide pelo **shape** (`isUuid`, ou à mão: traços em 8/13/18/23,
-dígito 14='4', dígito 19∈{8,9,a,b}), nunca por igualdade. v7/ulid ainda não existem.
+Non-deterministic: validate by **shape** (`isUuid`, or by hand: dashes at 8/13/18/23,
+digit 14='4', digit 19∈{8,9,a,b}), never by equality. v7/ulid do not exist yet.
 
 ## random (S10a/b)
 
 ```kof
-// ❌ BAD — PRNG próprio, LCG de internet
+// ❌ BAD — own PRNG, internet LCG
 var seed = 12345
 seed = (seed * 1103515245 + 12345) % 32768
 ```
 
 ```kof
-// ✅ GOOD — entropia da plataforma, face de intenção
+// ✅ GOOD — platform entropy, intent face
 var roll = random.randomInt(6) + 1
 var pass = random.randomString(12, "abcdefghijkmnpqrstuvwxyz23456789")
-var flip = random.randomBoolean()              // sorteio de moeda
+var flip = random.randomBoolean()              // coin toss
 var pick = colors[random.randomInt(colors.size)]   // choice = idiom
 ```
 
-**WHY:** `random.*` = sorteio (não-críptográfico); `security.*` = tokens
-(rejeição + validação). A escolha de lista **não** é função da stdlib —
-`list[random.randomInt(list.size)]` é o idiom; `randomChoice` exigiria
-retorno Object na camada de dispatch (DD-STDLIB-01 — FECHADO 13/09, decisão
-6a: `randomBytesHex` alias de `hex` + choice=idiom; `randomBytes` reservado).
+**WHY:** `random.*` = draw (non-cryptographic); `security.*` = tokens
+(rejection + validation). List choice **is not** a stdlib function —
+`list[random.randomInt(list.size)]` is the idiom; `randomChoice` would require
+an Object return in the dispatch layer (DD-STDLIB-01 — CLOSED 13/09, decision
+6a: `randomBytesHex` alias of `hex` + choice=idiom; `randomBytes` reserved).
 
-## validation — formatar NÃO é validar (S12/S12b)
+## validation — formatting is NOT validating (S12/S12b)
 
 ```kof
-// ❌ BAD — pontuar à mão, e lançar quando o CPF tem dígitos demais
+// ❌ BAD — scoring by hand, and throwing when the CPF has too many digits
 var out = ""
 for (var i = 0; i < cpf.length; i++) {
     out = out + cpf.charAt(i)
     if (i == 2 || i == 5) { out = out + "." }
 }
 
-// ✅ GOOD — as duas faces, cada uma no seu lugar
-validation.isCpf("52998224725")     // STRICTA: false se dígitos verificação não batem
-validation.formatCpf("529.982.247-25") // "529.982.247-25" — LENIENTE: só pontua
+// ✅ GOOD — the two faces, each in its place
+validation.isCpf("52998224725")     // STRICT: false if check digits do not match
+validation.formatCpf("529.982.247-25") // "529.982.247-25" — LENIENT: only punctuates
 ```
 
-**WHY:** `formatCpf`/`formatCep`/`formatCnpj` **formam, não validam**: tiram
-pontuação existente e reimponhem a máscara; se o número de dígitos não bate
-(ou é `null`), devolvem a **entrada original** — nunca lançam, nunca truncam.
-Quem decide se o documento é *válido* é a face stricta (`isCpf`/`isCnpj`/
-`isCep`). Separar as duas é a regra "represente a intenção": formatar
-apresentação é uma coisa, checar legitimidade é outra. O mesmo vale p/
-`time.isWeekend(y,m,d)` (só calendário, sem relógio — data inválida => `false`
-porque `dayOfWeek` dá 0).
+**WHY:** `formatCpf`/`formatCep`/`formatCnpj` **form, they do not validate**: they remove
+existing punctuation and reapply the mask; if the number of digits does not match
+(or is `null`), they return the **original input** — never throw, never truncate.
+Whoever decides whether the document is *valid* is the strict face (`isCpf`/`isCnpj`/
+`isCep`). Separating the two is the "represent the intent" rule: formatting
+presentation is one thing, checking legitimacy is another. The same applies to
+`time.isWeekend(y,m,d)` (calendar only, no clock — invalid date => `false`
+because `dayOfWeek` gives 0).
 
-## Nota por target (gates honestos)
+## Note per target (honest gates)
 
-| função | JVM/Script | Native x86_64 | Native riscv64/aarch64 | JS |
+| function | JVM/Script | Native x86_64 | Native riscv64/aarch64 | JS |
 |---|---|---|---|---|
 | math.*, strings.is*/count/capitalize/uncapitalize/reverse/repeat/truncate/pad*, encoding.hex*/url*, time.isLeapYear/daysInMonth/dayOfWeek/daysBetween/isWeekend, validation.isCpf/isCnpj/isCep/isPis/isIpv4/isIpv6/isMac/isPort/isCreditCard/isDomain/formatCpf/formatCep/formatCnpj | ✅ | ✅ | ✅ | ✅ |
-| strings.toCamel/Pascal/Snake/Kebab/slugify | ✅ | ✅ | ✅ (STRN001 fechado 09/09 — B15, diff golden qemu) | ✅ |
-| strings.escapeHtml/escapeJson (5 entidades; >=128 cópia) | ✅ | ✅ | ✅ (B20, diff golden qemu) | ✅ |
+| strings.toCamel/Pascal/Snake/Kebab/slugify | ✅ | ✅ | ✅ (STRN001 closed 09/09 — B15, golden diff qemu) | ✅ |
+| strings.escapeHtml/escapeJson (5 entities; >=128 copy) | ✅ | ✅ | ✅ (B20, golden diff qemu) | ✅ |
 | strings.removeWhitespace/normalizeWhitespace | ✅ | ✅ | ✅ (B21) | ✅ |
-| encoding.base64* / base64Url* | ✅ | ✅ | ✅ (ENC002 fechado 09/09) | ✅ |
-| net.scheme/host/port/path/query/fragment + queryEncode/Decode | ✅ | ✅ | ✅ (NET001 fechado 09/09) | ✅ |
-| uuid.v4 | ✅ | ✅ | ✅ (SECN000 fechado 09/09) | ✅ |
-| uuid.isUuid (forma 8-4-4-4-12; version/variant não verificadas) | ✅ | ✅ | ✅ (B25, UUID001 fechado no merge beta→main 10/09) | ✅ |
-| math.sqrt (S1b — primeiro Double; NaN em <0 = IEEE) | ✅ | ✅ | ❌ `MATH001` | ✅ |
-| math.lerp/percentage/isInteger/isDecimal (S1b.1 — SSE2 puro, sem libm) | ✅ | ✅ | ❌ `MATH001` | ✅ |
-| random.randomInt/randomBoolean/randomString (face beta S10a/b) | ✅ | ✅ | ✅ (B27/B28, getrandom/lemire) | ✅ |
-| random.double/boolean/int/hex (face main S10) | ✅ | ✅ | ✅ (B27) | ✅ |
+| encoding.base64* / base64Url* | ✅ | ✅ | ✅ (ENC002 closed 09/09) | ✅ |
+| net.scheme/host/port/path/query/fragment + queryEncode/Decode | ✅ | ✅ | ✅ (NET001 closed 09/09) | ✅ |
+| uuid.v4 | ✅ | ✅ | ✅ (SECN000 closed 09/09) | ✅ |
+| uuid.isUuid (form 8-4-4-4-12; version/variant not checked) | ✅ | ✅ | ✅ (B25, UUID001 closed in the beta→main merge 10/09) | ✅ |
+| math.sqrt (S1b — first Double; NaN at <0 = IEEE) | ✅ | ✅ | ❌ `MATH001` | ✅ |
+| math.lerp/percentage/isInteger/isDecimal (S1b.1 — pure SSE2, without libm) | ✅ | ✅ | ❌ `MATH001` | ✅ |
+| random.randomInt/randomBoolean/randomString (beta face S10a/b) | ✅ | ✅ | ✅ (B27/B28, getrandom/lemire) | ✅ |
+| random.double/boolean/int/hex (main face S10) | ✅ | ✅ | ✅ (B27) | ✅ |
 
-`strings.reverse` em não-ASCII: byte-reverso no Native vs UTF-16 no JVM/JS —
-gap **NAT-STR01** (paridade só travada em ASCII na matriz).
+`strings.reverse` on non-ASCII: byte-reverse on Native vs UTF-16 on JVM/JS —
+gap **NAT-STR01** (parity only locked on ASCII in the matrix).
 
-## Limitações
+## Limitations
 
-- `charAt(i)` devolve o **código** do char (Int), não um char literal — por
-  isso `padLeft` recebe pad como String.
-- Predicados `strings.*` são **ASCII**: acentos => false (decisão travada na
-  matriz `stdstrings`, não bug).
-- `encoding.hexDecode`/`base64Decode` são **tolerantes por especificação**
-  (mesmo comportamento nos 4 backends); se você precisa rejeitar entrada
-  inválida, valide antes (`strings.isNumeric`/`isAlphaNumeric`).
+- `charAt(i)` returns the **code** of the char (Int), not a char literal — that is
+  why `padLeft` receives pad as a String.
+- `strings.*` predicates are **ASCII**: accents => false (decision locked in the
+  `stdstrings` matrix, not a bug).
+- `encoding.hexDecode`/`base64Decode` are **tolerant by specification**
+  (same behavior on the 4 backends); if you need to reject invalid input,
+  validate beforehand (`strings.isNumeric`/`isAlphaNumeric`).

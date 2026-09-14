@@ -1,3 +1,5 @@
+[English](common-patterns.md) | [Português](common-patterns.pt_BR.md)
+
 # Kof Common Patterns
 
 **Version:** 0.4.0-beta (Sep 2026)
@@ -9,10 +11,10 @@ record User(String name, String email)
 var u = User("Mel", "mel@kof.dev")
 ```
 
-## Service Pattern — prefer funções top-level (0.4.0-beta)
+## Service Pattern — prefer top-level functions (0.4.0-beta)
 
 ```kof
-// Kof não precisa de Service/Repository ceremony — função top-level é idiomática
+// Kof doesn't need Service/Repository ceremony — a top-level function is idiomatic
 User findUser(Int id) {
     // implementation
 }
@@ -21,33 +23,33 @@ String createUser(String name, String email): String {
 }
 ```
 
-Se estado for necessário, use classe com `Map`:
+If state is needed, use a class with a `Map`:
 
 ```kof
 class UserService {
     Map<Int, User> store
     constructor() { store = mapOf() }
     put(Int id, User u) { store.put(id, u) }
-    get(Int id): User? { return store.get(id) } // String?/User? se ausente
+    get(Int id): User? { return store.get(id) } // String?/User? if absent
 }
 ```
 
-## Web Handler — legada + nativa
+## Web Handler — legacy + native
 
 ```kof
-// Legada (ainda suportada)
+// Legacy (still supported)
 handle(String method, String path, String body): String {
     if (path == "/users") return "{\"users\": []}"
     return "Not found"
 }
 
-// Nativa (idiomática) — JVM
+// Native (idiomatic) — JVM
 var app = web.app()
 app.get("/users") { return json.encode(users) }
 app.get("/users/:id") { return param("id") }
 app.post("/users") { var u = json.decode<User>(body()); return json.encode(u) }
-return status(201, json.encode(u))   // status code customizado
-headerSet("X-Custom", "value")       // header customizado
+return status(201, json.encode(u))   // custom status code
+headerSet("X-Custom", "value")       // custom header
 app.use { ... }                      // middleware
 app.ws("/chat") { wsSend("echo: " + wsMessage()) }        // WebSocket
 app.sse("/events") { sse.send("tick"); sse.event("ev", "dados"); sse.close() }  // SSE
@@ -55,8 +57,8 @@ app.listen(8080)
 app.listenSecure(8443)               // TLS
 ```
 
-`web.app()` completo no JVM (rotas `get/post/put/delete/patch/options`, `status(201, body)`,
-`headerSet`, `app.use`, WebSocket `app.ws`, SSE `app.sse` com `sse.send/event/close`,
+Complete `web.app()` on the JVM (routes `get/post/put/delete/patch/options`, `status(201, body)`,
+`headerSet`, `app.use`, WebSocket `app.ws`, SSE `app.sse` with `sse.send/event/close`,
 `listenSecure` TLS) — 30/08. Native/JS: WEB001.
 
 ## HTTP client (0.4.0-beta)
@@ -66,9 +68,9 @@ var html = http.get("https://example.com")
 var resp = http.post(api, json.encode(body), "Content-Type: application/json")
 if (http.status(url) == 200) { println(resp) }
 http.timeout(30)    // ms
-http.retry(3)       // repete em exceção + HTTP 5xx
-http.circuit(5)     // abre circuito após N falhas por 30s; circuit(0) recupera
-// verbos: get/post/put/delete/patch/options
+http.retry(3)       // retries on exception + HTTP 5xx
+http.circuit(5)     // opens the circuit after N failures for 30s; circuit(0) recovers
+// verbs: get/post/put/delete/patch/options
 // JVM + JS (Java HttpClient interop); Native HTTP002
 ```
 
@@ -84,7 +86,7 @@ try {
     println("Cleanup")
 }
 
-// Ausência como valor — String? (0.3.22-beta)
+// Absence as a value — String? (0.3.22-beta)
 String? maybe = find("key")
 if (maybe != null) {
     println(maybe)
@@ -100,7 +102,7 @@ var nomes = users.map((u: User) -> u.name)
 var adultos = users.filter((u: User) -> u.age >= 18)
 var soma = nums.reduce((a: Int, b: Int) -> a + b, 0)
 
-// Sem workaround manual de List.get
+// No manual workaround for List.get
 var x = listOf(1,2,3).get(1)   // 2
 ```
 
@@ -124,7 +126,7 @@ for (var i = 0; i < items.length; i++) {
     items[i] = i * 2
 }
 for (var n in items) {
-    println(n)   // for-in também para arrays
+    println(n)   // for-in also works for arrays
 }
 ```
 
@@ -167,7 +169,7 @@ const prefix: String = "ola"
 println(prefix + " " + x)   // KofScript → KofScriptGlobals
 ```
 
-## KofC — C subset nativo-only
+## KofC — native-only C subset
 
 ```c
 int counter;
