@@ -2651,13 +2651,18 @@ no upstream).
 > `4464` vs **JS `70000`** (divergência silenciosa, regra 5; `kofArraySet`
 > não conhece o tipo do elemento — família #132/KOF-SBD-001). **(b) §185** —
 > o interpretador **derruba** ao gravar em `Char[]` (`c[0]='A'` → stderr
-> `argument type mismatch`, exit 1) — `KofInterpreterOps.arrayStore` só trata
-> `bool`, o `Array.set(char[], …)` genérico rejeita o valor Kof. JVM/Native/JS
-> imprimem `65`. Ambos catalogados com menor repro + causa raiz + fix proposto
-> em `known-bugs.md`. **PRÓXIMO PASSO:** continuar Q4 (Float/científico do
-> §180; arrays de record/String) OU sincronizar `ecosystem-coverage.md`/
-> `specification-gaps.md`. Se nada novo e suíte verde → **RECUSAR** o
-> re-disparo. **NUNCA:** `nat/` GC viva; fila de outras lanes; push `main`.
+> `argument type mismatch`, exit 1). **Causa raiz REVISADA (2ª passada, bloco
+> FEITO abaixo):** o caminho vivo é `KofInterpreter:306` +
+> `KofInterpreterValues.coerceFor` (não coage `char`/`bool` → `Array.set`
+> rejeita o `Integer`); **`KofInterpreterOps.arrayStore` é CÓDIGO MORTO** (sem
+> caller). Também afeta `Bool[]`. JVM/Native/JS corretos. Ambos catalogados
+> com menor repro + causa raiz + fix proposto em `known-bugs.md`; célula
+> `narrowarr`/`chararr` na matriz. Pushado `14d822ac`.
+> **PRÓXIMO PASSO:** §185 com face `Bool[]` incluída na célula `chararr`;
+> continuar Q4 (Float/científico do §180; arrays de record/String) OU
+> sincronizar `ecosystem-coverage.md`/`specification-gaps.md`. Se nada novo e
+> suíte verde → **RECUSAR** o re-disparo. **NUNCA:** `nat/` GC viva; fila de
+> outras lanes; push `main`.
 
 ---
 

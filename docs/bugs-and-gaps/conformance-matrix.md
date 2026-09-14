@@ -82,7 +82,7 @@
 | array 2D/3D: alloc + length + store/load + zero-fill | `60`/`3`/`2`/`3`/`0`/`7`/`2`/`2`/`9`/`0` | DONE | DONE (bug 113 ✅ 11/09 x86 — `new Int[a][b]` NÃO alocava nada: `KofNewMultiArray` caía no `default->{}` → SIGSEGV; agora `kof_multi_alloc` recursivo; faces riscv/aarch ✅ 11/09 — fatia B37 + roteio cross, golden JVM sob qemu) | DONE (B37, port 0.3.0→0.4.0 ✅) | DONE (tradutor, ✅) | `array2d` |
 | store `Int` em slot `Long[]` (widening, 1-D e 2-D) | `9` / `3` / `0` | DONE (bug 121 ✅ 11/09 — era **frame crash** no `COMPUTE_FRAMES`: o bloco de conversão do `ExpressionAssignmentLowerer` era um `if {}` que só comentava a promessa, nunca emitia `I2L`) | DONE | DONE | DONE | `arrlongstore` |
 | store em `Byte[]`/`Short[]` FORA de faixa (narrowing 8/16 bits com sinal) — §184 | `-126` / `4464` | DONE | DONE | DONE | PARTIAL (bug §184 — `kofArraySet` grava o valor cru: `b[0]=130`→`130`; divergência silenciosa) | `narrowarr` |
-| store em elemento de `Char[]` — §185 | `65` / `66` | DONE | DONE | PARTIAL (bug §185 — interpretador: `Array.set(char[],…)` lança `argument type mismatch`, exit 1) | DONE | `chararr` |
+| store em elemento de `Char[]`/`Bool[]` — §185 | `65` / `66` / `true` / `false` | DONE | DONE | PARTIAL (bug §185 — interpretador: `coerceFor` devolve `Integer`; `Array.set(char[]/boolean[],…)` lança `argument type mismatch`, exit 1) | DONE | `chararr` |
 | campo estático + bump | `1` / `2` / `2` | DONE | DONE (bug 41 corrigido 07/09) | DONE | DONE | `staticfield` |
 | campo estático `+=` | `2` / `4` / `4` | DONE | DONE (bug 41) | DONE | DONE | `staticpluseq` |
 | concat string+num (ordem) | `n=42` / `3x` / `x12` | DONE | DONE | DONE | DONE | `concat` |
