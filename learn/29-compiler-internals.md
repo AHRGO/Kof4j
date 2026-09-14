@@ -1,8 +1,10 @@
-# 29 — Internals do Compilador
+[English](29-compiler-internals.md) | [Português](29-compiler-internals.pt_BR.md)
+
+# 29 — Compiler Internals
 
 > **Kof 0.4.0-beta — targets jvm/native/native.risc/native.arm/js/kofc — `intention->Kof->frontend->IR->backend->runtime`**
 
-## Arquitetura
+## Architecture
 
 ```
 .kf source
@@ -12,71 +14,71 @@
   ↓ AST            (AstNodes.java)
   ↓ Type system    (Type.java)
   ↓ IR             (IRNodes.java)
-  ↓ Optimizer      (Optimizer.java, sempre ativo)
-  ↓ Backend        (JvmBackend.java ou NativeBackend.java)
-  ↓ Output         (.class ou ELF)
+  ↓ Optimizer      (Optimizer.java, always active)
+  ↓ Backend        (JvmBackend.java or NativeBackend.java)
+  ↓ Output         (.class or ELF)
 ```
 
-Cada estágio tem uma responsabilidade clara.
+Each stage has a clear responsibility.
 
-O **otimizador de IR** (`Optimizer.java`) roda em todo build: constant
-folding, branch simplification (condições constantes → jumps diretos), dead
-stack effects, unreachable code elimination (com regiões try/catch
-preservadas), jump-to-next elimination e identidades aritméticas. Debug
-positions dos ops sobreviventes são preservados. `kof inspect` expõe as
-estatísticas (ops antes/depois).
+The **IR optimizer** (`Optimizer.java`) runs on every build: constant
+folding, branch simplification (constant conditions → direct jumps), dead
+stack effects, unreachable code elimination (with try/catch regions
+preserved), jump-to-next elimination and arithmetic identities. Debug
+positions of the surviving ops are preserved. `kof inspect` exposes the
+statistics (ops before/after).
 
 ## Lexer (Lexer.java)
 
-**Responsabilidade**: converter texto em tokens.
+**Responsibility**: convert text into tokens.
 
-**Entrada**: string com o código fonte
-**Saída**: lista de `Token`
+**Input**: string with the source code
+**Output**: list of `Token`
 
-O lexer é hand-written (escrito à mão, não gerado). Cada caractere é analisado sequencialmente.
+The lexer is hand-written (not generated). Each character is analyzed sequentially.
 
-Exemplo de tokens:
+Example tokens:
 ```
 "record" → RECORD
 "Point"  → IDENTIFIER
 "("      → LPAREN
-"Int"    → INT (tipo)
+"Int"    → INT (type)
 "x"      → IDENTIFIER
 ")"      → RPAREN
 ```
 
-**Arquivo**: `kof-compiler/src/main/java/dev/kof/compiler/Lexer.java`
+**File**: `kof-compiler/src/main/java/dev/kof/compiler/Lexer.java`
 
 ## Parser (Parser.java)
 
-**Responsabilidade**: converter tokens em AST (Abstract Syntax Tree).
+**Responsibility**: convert tokens into an AST (Abstract Syntax Tree).
 
-**Entrada**: lista de `Token`
-**Saída**: `CompilationUnitNode`
+**Input**: list of `Token`
+**Output**: `CompilationUnitNode`
 
-O parser é um parser recursivo descendente. Cada regra da gramática é um método Java.
+The parser is a recursive descent parser. Each grammar rule is a Java method.
 
-Exemplo:
+Example:
 ```kf
 record Point(Int x, Int y)
 ```
 
-O parser reconhece:
-- `record` → início de RecordDeclarationNode
-- `Point` → nome
-- `(` → início dos componentes
+The parser recognizes:
+- `record` → start of RecordDeclarationNode
+- `Point` → name
+- `(` → start of the components
 - `Int x` → RecordComponentNode
-- `,` → separador
+- `,` → separator
 - `Int y` → RecordComponentNode
-- `)` → fim dos componentes
+- `)` → end of the components
 
-**Arquivo**: `kof-compiler/src/main/java/dev/kof/compiler/Parser.java`
+**File**: `kof-compiler/src/main/java/dev/kof/compiler/Parser.java`
 
 ## AST (AstNodes.java)
 
-**Responsabilidade**: representar a estrutura sintática do código.
+**Responsibility**: represent the syntactic structure of the code.
 
-A AST é uma árvore de nós. Cada nó representa uma construção da linguagem.
+The AST is a tree of nodes. Each node represents a language construct.
 
 ```
 CompilationUnitNode
@@ -88,13 +90,13 @@ CompilationUnitNode
         └── members: []
 ```
 
-**Arquivo**: `kof-compiler/src/main/java/dev/kof/compiler/AstNodes.java`
+**File**: `kof-compiler/src/main/java/dev/kof/compiler/AstNodes.java`
 
 ## IR (IRNodes.java)
 
-**Responsabilidade**: representação intermediária adequada para geração de código.
+**Responsibility**: intermediate representation suitable for code generation.
 
-O IR é uma representação mais baixa que a AST. Cada operação IR mapeia diretamente para uma ou poucas instruções de baixo nível.
+The IR is a lower-level representation than the AST. Each IR operation maps directly to one or a few low-level instructions.
 
 ```
 IRClass(name="Point", superName="java/lang/Record")
@@ -115,37 +117,37 @@ IRClass(name="Point", superName="java/lang/Record")
               └── Return("I")
 ```
 
-**Arquivo**: `kof-compiler/src/main/java/dev/kof/compiler/IRNodes.java`
+**File**: `kof-compiler/src/main/java/dev/kof/compiler/IRNodes.java`
 
 ## JVM Backend (JvmBackend.java)
 
-**Responsabilidade**: converter IR em bytecode JVM usando ASM.
+**Responsibility**: convert IR into JVM bytecode using ASM.
 
-O backend usa a biblioteca ASM para gerar classes `.class` válidas.
+The backend uses the ASM library to generate valid `.class` files.
 
-Para cada `IRMethod`, ele:
-1. Cria um `MethodVisitor`
-2. Visita cada operação IR
-3. Emite a instrução bytecode correspondente
+For each `IRMethod`, it:
+1. Creates a `MethodVisitor`
+2. Visits each IR operation
+3. Emits the corresponding bytecode instruction
 
-**Arquivo**: `kof-compiler/src/main/java/dev/kof/compiler/JvmBackend.java`
+**File**: `kof-compiler/src/main/java/dev/kof/compiler/JvmBackend.java`
 
 ## Native Backend (NativeBackend.java)
 
-**Responsabilidade**: converter IR em código nativo x86-64.
+**Responsibility**: convert IR into native x86-64 code.
 
-O backend gera assembly x86-64, que é montado e linkado para criar um executável ELF.
+The backend generates x86-64 assembly, which is assembled and linked to create an ELF executable.
 
 Pipeline:
-1. IR → Assembly x86-64
-2. Assembly → Objeto (via `as`)
-3. Objeto → Executável (via `ld`)
+1. IR → x86-64 Assembly
+2. Assembly → Object (via `as`)
+3. Object → Executable (via `ld`)
 
-**Arquivo**: `kof-compiler/src/main/java/dev/kof/compiler/NativeBackend.java`
+**File**: `kof-compiler/src/main/java/dev/kof/compiler/NativeBackend.java`
 
 ## Backend Interface (Backend.java)
 
-**Responsabilidade**: abstrair diferentes backends de geração de código.
+**Responsibility**: abstract different code generation backends.
 
 ```java
 interface Backend {
@@ -153,13 +155,13 @@ interface Backend {
 }
 ```
 
-Isso permite que o compilador suporte múltiplos targets sem acoplamento.
+This lets the compiler support multiple targets without coupling.
 
-**Arquivo**: `kof-compiler/src/main/java/dev/kof/compiler/Backend.java`
+**File**: `kof-compiler/src/main/java/dev/kof/compiler/Backend.java`
 
 ## Target Enum (Target.java)
 
-**Responsabilidade**: identificar o target de compilação (Target separation 0.2.0: `NATIVE` vs `NATIVE_RISCV64`/`NATIVE_AARCH64`, `JS`, `ANDROID`, `KofC` separado).
+**Responsibility**: identify the compilation target (Target separation 0.2.0: `NATIVE` vs `NATIVE_RISCV64`/`NATIVE_AARCH64`, `JS`, `ANDROID`, `KofC` separate).
 
 ```java
 enum Target {
@@ -169,34 +171,34 @@ enum Target {
     NATIVE_AARCH64,   // aarch64 (--target=native.arm)
     JS,
     ANDROID,
-    // kofc = KofCCompiler (C subset → ELF x86-64 nativo-only, separado)
+    // kofc = KofCCompiler (C subset → native-only x86-64 ELF, separate)
 }
 ```
 
-**Arquivo**: `kof-compiler/src/main/java/dev/kof/compiler/Target.java`
+**File**: `kof-compiler/src/main/java/dev/kof/compiler/Target.java`
 
 ## CompilerDriver (CompilerDriver.java)
 
-**Responsabilidade**: orquestrar todo o pipeline.
+**Responsibility**: orchestrate the whole pipeline.
 
 ```
 compile(sourceFile, outputDir, target):
-  1. Ler arquivo
+  1. Read file
   2. Lexer → tokens
   3. Parser → AST
   4. Lowering → IR
-  5. Selecionar backend baseado no target
+  5. Select backend based on the target
   6. Backend → output
-  7. Gravar arquivo
+  7. Write file
 ```
 
-**Arquivo**: `kof-compiler/src/main/java/dev/kof/compiler/CompilerDriver.java`
+**File**: `kof-compiler/src/main/java/dev/kof/compiler/CompilerDriver.java`
 
 ## Diagnostics (Diagnostic.java, DiagnosticCollector.java)
 
-**Responsabilidade**: coletar e reportar erros.
+**Responsibility**: collect and report errors.
 
-Erros apontam para a posição original no arquivo `.kf`:
+Errors point to the original position in the `.kf` file:
 
 ```
 error: type mismatch
@@ -206,29 +208,29 @@ error: type mismatch
    |     ^^^^ expected String, found Int
 ```
 
-**Arquivos**: `Diagnostic.java`, `DiagnosticCollector.java`
+**Files**: `Diagnostic.java`, `DiagnosticCollector.java`
 
-## Estado atual do compilador
+## Current state of the compiler
 
-| Componente | Status |
-|------------|--------|
-| Lexer | ✅ Completo (55+ keywords, `String?`, `let`/`const` alias para KofScript) |
-| Parser | ✅ Funcional (records, classes, interfaces, funções, `case String s`, `Point(x,y)`, `String?`) |
-| AST | ✅ Completo para constructs suportados |
-| Type system | ✅ `String?` nullable, `List<T>` inference, imports `a.b.C` fix |
-| Symbol table | ⚠️ Definido mas não usado completamente |
-| IR | ✅ Definido, lowering funcional (`intention->Kof->frontend->IR->backend->runtime`) |
-| Optimizer | ✅ Passes sempre ativos (constant folding, dead code, branch simplification) |
-| JVM Backend | ✅ Funcional (via ASM, bytecode V21, exception table, virtual threads; ) |
-| Native Backend | ✅ Funcional (x86-64 free-list GC + spawn/pthread + FP XMM; riscv/arm placeholders via qemu) |
-| Diagnostics | ✅ Funcional |
-| KofScript (`KofScriptGlobals`) | ✅ `let`/`const` topo, repl, --watch |
-| KofC (`KofCCompiler`) | ✅ C subset → ELF nativo-only (`kof c`) |
-| CLI | ✅ Funcional (18 comandos: build, run, serve, check, test, script, repl, c, fmt, config gen, bench, profile, inspect, debug, info, lsp, install, version) |
+| Component | Status |
+|-----------|--------|
+| Lexer | ✅ Complete (55+ keywords, `String?`, `let`/`const` alias for KofScript) |
+| Parser | ✅ Functional (records, classes, interfaces, functions, `case String s`, `Point(x,y)`, `String?`) |
+| AST | ✅ Complete for supported constructs |
+| Type system | ✅ `String?` nullable, `List<T>` inference, imports `a.b.C` fixed |
+| Symbol table | ⚠️ Defined but not fully used |
+| IR | ✅ Defined, functional lowering (`intention->Kof->frontend->IR->backend->runtime`) |
+| Optimizer | ✅ Passes always active (constant folding, dead code, branch simplification) |
+| JVM Backend | ✅ Functional (via ASM, bytecode V21, exception table, virtual threads; ) |
+| Native Backend | ✅ Functional (x86-64 free-list GC + spawn/pthread + FP XMM; riscv/arm placeholders via qemu) |
+| Diagnostics | ✅ Functional |
+| KofScript (`KofScriptGlobals`) | ✅ `let`/`const` top, repl, --watch |
+| KofC (`KofCCompiler`) | ✅ C subset → native-only ELF (`kof c`) |
+| CLI | ✅ Functional (18 commands: build, run, serve, check, test, script, repl, c, fmt, config gen, bench, profile, inspect, debug, info, lsp, install, version) |
 
 ## Multiplatform architecture
 
-A arquitetura do compilador foi projetada para suportar múltiplos backends:
+The compiler architecture was designed to support multiple backends:
 
 ```text
                     Kof Source (.kf / .ks / .c)
@@ -243,7 +245,7 @@ A arquitetura do compilador foi projetada para suportar múltiplos backends:
                          AST (+ KofScriptGlobals, KofC AST)
                           │
                           ▼
-                     Kof IR (compartilhado) — intention->Kof->frontend->IR->backend->runtime
+                     Kof IR (shared) — intention->Kof->frontend->IR->backend->runtime
                       /       |       \      \
                      /        |        \      \
                     ▼         ▼         ▼       ▼
@@ -253,11 +255,11 @@ A arquitetura do compilador foi projetada para suportar múltiplos backends:
                 .class       ELF .o          .mjs   ELF
                     │           │               │     │
                     ▼           ▼               ▼     ▼
-                javac/jar     ld → executável  GraalJS  ld
+                javac/jar     ld → executable  GraalJS  ld
 ```
 
-O IR compartilhado permite que o mesmo código seja compilado para diferentes targets sem modificações.
+The shared IR lets the same code be compiled to different targets without modifications.
 
-## Próximo passo
+## Next step
 
-[Contribuindo →](30-contributing.md)
+[Contributing →](30-contributing.md)

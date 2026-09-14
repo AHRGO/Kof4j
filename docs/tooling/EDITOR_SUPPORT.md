@@ -1,26 +1,28 @@
-# Suporte a Editores
+[English](EDITOR_SUPPORT.md) | [Português](EDITOR_SUPPORT.pt_BR.md)
 
-O suporte de editores para Kof é distribuído com a própria linguagem:
+# Editor Support
 
-- **Grammar TextMate** — `editor/kof.tmLanguage.json` (scope `source.kof`)
-- **Language Server** — `kof lsp` (LSP 3.x sobre stdio)
-- **Diagnostics** — os mesmos do compilador, via LSP ou `kof check`
+Editor support for Kof is distributed with the language itself:
 
-Nenhum editor precisa de um parser próprio. O editor consome o tooling do Kof.
+- **TextMate Grammar** — `editor/kof.tmLanguage.json` (scope `source.kof`)
+- **Language Server** — `kof lsp` (LSP 3.x over stdio)
+- **Diagnostics** — the same as the compiler's, via LSP or `kof check`
 
-> **Instalação automática:** `kof editor setup` detecta seus editores e
-> instala as integrações recomendadas (com consentimento). Documentação por
-> editor em [`docs/editors/`](../editors/overview.md). Infra e plano:
+No editor needs its own parser. The editor consumes Kof's tooling.
+
+> **Automatic installation:** `kof editor setup` detects your editors and
+> installs the recommended integrations (with consent). Documentation per
+> editor in [`docs/editors/`](../editors/overview.md). Infra and plan:
 > `docs/development/plan-editor-integration.md` (EDI001).
 
 ---
 
 ## VS Code
 
-Crie uma extensão local apontando para a grammar oficial:
+Create a local extension pointing to the official grammar:
 
 ```json
-// .vscode/extensions.json (ou extension/package.json)
+// .vscode/extensions.json (or extension/package.json)
 {
   "contributes": {
     "languages": [{
@@ -38,8 +40,8 @@ Crie uma extensão local apontando para a grammar oficial:
 }
 ```
 
-Para diagnostics em tempo de edição, configure o `kof lsp` como servidor de
-linguagem (ex.: via extensão de cliente LSP genérica ou `vscode-languageserver-node`):
+For edit-time diagnostics, configure `kof lsp` as the language server (e.g.:
+via a generic LSP client extension or `vscode-languageserver-node`):
 
 ```json
 {
@@ -49,16 +51,16 @@ linguagem (ex.: via extensão de cliente LSP genérica ou `vscode-languageserver
 
 ## IntelliJ
 
-- O IntelliJ consome grammars TextMate em `Settings → Editor → TextMate Bundles`.
-- Para experiência completa, use um plugin LSP (ex.: LSP4IJ) apontando para
+- IntelliJ consumes TextMate grammars in `Settings → Editor → TextMate Bundles`.
+- For the full experience, use an LSP plugin (e.g.: LSP4IJ) pointing to
   `kof lsp`.
 
 ## Neovim
 
 ```lua
--- grammar via vim/helix-style TextMate é suportada por treesitter? Não —
--- para syntax highlighting use o plugin nvim-treesitter com um parser
--- dedicado OU o LSP para semântica.
+-- grammar via vim/helix-style TextMate is supported by treesitter? No —
+-- for syntax highlighting use the nvim-treesitter plugin with a dedicated
+-- parser OR the LSP for semantics.
 vim.lsp.start({
   name = "kof",
   cmd = { "kof", "lsp" },
@@ -66,29 +68,30 @@ vim.lsp.start({
 })
 ```
 
-O caminho recomendado para Neovim é o LSP: highlights semânticos e
-diagnostics vêm do frontend oficial, sem duplicar o parser.
+The recommended path for Neovim is the LSP: semantic highlights and
+diagnostics come from the official frontend, without duplicating the parser.
 
-## Editores LSP genéricos (Helix, Kakoune, Emacs Eglot, etc.)
+## Generic LSP editors (Helix, Kakoune, Emacs Eglot, etc.)
 
-Configure o comando `kof lsp` como language server para `source.kof`.
-
----
-
-## Por que grammar + LSP e não um parser por editor?
-
-Porque duplicar o parser em cada editor garante divergência: o editor
-"aceitaria" código que o compilador rejeita e vice-versa. Com o LSP
-consumindo o frontend real, o editor vê exatamente o que o compilador vê.
+Configure the `kof lsp` command as the language server for `source.kof`.
 
 ---
 
-## O que viaja na distribuição
+## Why grammar + LSP and not a parser per editor?
+
+Because duplicating the parser in each editor guarantees divergence: the
+editor would "accept" code that the compiler rejects and vice versa. With the
+LSP consuming the real frontend, the editor sees exactly what the compiler
+sees.
+
+---
+
+## What ships in the distribution
 
 ```text
 kof/
-├── tooling/           # este documento + convenções
+├── tooling/           # this document + conventions
 ├── editor/
 │   └── kof.tmLanguage.json
-└── bin/kof            # inclui o comando `lsp`
+└── bin/kof            # includes the `lsp` command
 ```

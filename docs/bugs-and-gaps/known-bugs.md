@@ -6577,12 +6577,16 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
 
 ### §189 — `math.parse*OrDefault` no cross riscv/aarch: programa ABORTA (ec≠0) na 1ª chamada `parseDoubleOrDefault`
 
-- **Sintoma (medido 14/09 no run limpo da suíte de release, dono =
+- **Sintoma (medido 14/09 no run limpo da suíte de release + isolado, dono =
   192.168.100.17 — só catalogado, é lane stdlib/nat):**
   `KofMathTest.parseOrDefaultCrossArch` falha no riscv: o golden exige 13
   linhas + `ec 0`; o programa imprime as **8 linhas** dos `parse{Int,Long}`
-  corretamente (42/-1/7/15/3/9007199254740993/-5/8) e **morre na 9ª**
-  (`parseDoubleOrDefault("2.5", 0.0) == 2.5`) com exit code ≠ 0.
+  corretamente (42/-1/7/15/3/9007199254740993/-5/8) e **TRAVA na 9ª**
+  (`parseDoubleOrDefault("2.5", 0.0) == 2.5`): no gate o teste queimou
+  **5737 s** em `readAllBytes` do qemu (sem exit code); no re-run isolado o
+  `qemu-riscv64` do mesmo binário pendurou >5 min e precisou ser morto a
+  `-9`. DETERMÍNISTICO (2/2). Não é flake de host: é loop/bloqueio no
+  caminho double do S13b sob riscv.
 - **Hipótese (não confirmada — fora da minha lane):** o wrapper S13b
   (`dc9e0875`, B41 com handler no `exc_chain` sobre B30/B31) tem a face
   DOUBLE com caminho de exceção/default errado no cross — possivelmente a

@@ -1,33 +1,35 @@
-# 27 — Boas Práticas
+[English](27-best-practices.md) | [Português](27-best-practices.pt_BR.md)
+
+# 27 — Best Practices
 
 > **Kof 0.4.0-beta — `String?`, `Point(x,y)`, `map/filter/reduce`, `intention->Kof->frontend->IR->backend->runtime`**
 
-## Novidades 0.2.0 que afetam estilo
+## 0.2.0 news that affect style
 
-- Use `String?` para nullable em vez de comentários sobre null.
-- Prefira `case Point(x, y):` a `if` cascata quando desestruturar records.
-- Use `list.map/filter/reduce` em vez de `for` manual quando a intenção for transformar.
-- `let`/`const` no topo só em `.ks` (KofScript → `KofScriptGlobals`); em `.kf` use `var`/`val`.
-- Web: um app `web.app()` por processo; middleware em `app.use { }` antes das rotas;
-  respostas ricas com `status(código, body)` + `headerSet(...)` em vez de strings crues.
+- Use `String?` for nullable instead of comments about null.
+- Prefer `case Point(x, y):` over a cascading `if` when destructuring records.
+- Use `list.map/filter/reduce` instead of a manual `for` when the intent is to transform.
+- `let`/`const` at the top only in `.ks` (KofScript → `KofScriptGlobals`); in `.kf` use `var`/`val`.
+- Web: one `web.app()` app per process; middleware in `app.use { }` before the routes;
+  rich responses with `status(code, body)` + `headerSet(...)` instead of raw strings.
 - HTTP client: `http.get/post/put/delete/patch/options` + `timeout`/`retry`/`circuit`
-  (JVM+JS) — nunca raw sockets para HTTP.
-- `spawn` para paralelismo; `await` para o resultado. Sem API de thread exposta.
-- Formate com `kof fmt -w` (31/08) — o formatter é idempotente.
+  (JVM+JS) — never raw sockets for HTTP.
+- `spawn` for parallelism; `await` for the result. No exposed thread API.
+- Format with `kof fmt -w` (31/08) — the formatter is idempotent.
 
 ## Naming
 
 - **Classes**: PascalCase (`UserService`, `TaskRepository`)
 - **Records**: PascalCase (`User`, `Point`)
-- **Métodos**: camelCase (`findUser`, `isActive`)
-- **Campos**: camelCase (`userName`, `createdAt`)
-- **Variáveis locais**: camelCase (`indice`, `tamanho`)
+- **Methods**: camelCase (`findUser`, `isActive`)
+- **Fields**: camelCase (`userName`, `createdAt`)
+- **Local variables**: camelCase (`indice`, `tamanho`)
 - **Constants**: SCREAMING_SNAKE_CASE (`MAX_SIZE`, `DEFAULT_TIMEOUT`)
 - **Packages**: lowercase (`com.exemplo.users`)
 
-## Organização
+## Organization
 
-Um arquivo `.kf` deve conter uma principal declaração de tipo.
+A `.kf` file should contain one main type declaration.
 
 ```
 src/main/kof/
@@ -48,59 +50,59 @@ src/main/kof/
 
 ## Composition vs Inheritance
 
-Prefira composição:
+Prefer composition:
 
 ```kf
-// BOM
+// GOOD
 class Motorista(Carro carro) {
     void dirigir() {
         carro.mover();
     }
 }
 
-// EVITAR (quando não faz sentido)
+// AVOID (when it does not make sense)
 class Motorista extends Carro {
     // ...
 }
 ```
 
-Use herança apenas quando a relação for "é um tipo de":
-- `Cachorro` é um `Animal`
-- `Exception` é um `Exception`
-- `AdminController` é um `Controller`
+Use inheritance only when the relationship is "is a type of":
+- `Cachorro` is an `Animal`
+- `Exception` is an `Exception`
+- `AdminController` is a `Controller`
 
 ## Error Handling
 
 ```kf
-// BOM: tratamento explícito
+// GOOD: explicit handling
 User findUser(UUID id) {
     return repository.findById(id)
         .orElseThrow(() -> new UserNotFound(id.toString()));
 }
 
-// EVITAR: swallowed exceptions
+// AVOID: swallowed exceptions
 try {
     riskyOperation();
 } catch (Exception e) {
-    // silenciosamente ignorado
+    // silently ignored
 }
 ```
 
-## Imutabilidade
+## Immutability
 
-Prefira `val` sobre `var`:
-
-```kf
-val nome = "Mel";        // bom
-var nome = "Mel";        // ok se precisar reatribuir
-```
-
-Prefira records sobre classes mutáveis para dados:
+Prefer `val` over `var`:
 
 ```kf
-record User(String name, String email)  // imutável
+val nome = "Mel";        // good
+var nome = "Mel";        // ok if you need to reassign
 ```
 
-## Próximo passo
+Prefer records over mutable classes for data:
 
-[Design da Linguagem →](28-language-design.md)
+```kf
+record User(String name, String email)  // immutable
+```
+
+## Next step
+
+[Language Design →](28-language-design.md)

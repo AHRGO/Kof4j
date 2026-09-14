@@ -1,16 +1,18 @@
+[English](16-lambdas.md) | [Português](16-lambdas.pt_BR.md)
+
 # 16 — Lambdas
 
-> **Status: implementado (JVM / Native / JS) — 0.3.22-beta — exemplos verificados no compilador**
+> **Status: implemented (JVM / Native / JS) — 0.3.22-beta — examples verified in the compiler**
 >
-> Lambdas `(x: Int) -> expr` com capturas funcionam nos três targets;
-> `map/filter/reduce` em `List<T>` usam lambdas.
+> Lambdas `(x: Int) -> expr` with captures work on the three targets;
+> `map/filter/reduce` on `List<T>` use lambdas.
 
-## O que são lambdas
+## What lambdas are
 
-Lambdas são funções anônimas — blocos de código que podem ser passados como
-argumentos ou guardados em variáveis.
+Lambdas are anonymous functions — blocks of code that can be passed as
+arguments or stored in variables.
 
-## Sintaxe
+## Syntax
 
 ```kf
 main() {
@@ -26,7 +28,7 @@ main() {
 }
 ```
 
-## Com collections
+## With collections
 
 ```kf
 var nomes = listOf("Ana", "Bob", "Carlos")
@@ -38,9 +40,9 @@ var longos = nomes.filter((nome: String) -> nome.length > 3)
 // ["Carlos"]
 ```
 
-## Captura (closures)
+## Capture (closures)
 
-Uma lambda captura variáveis do escopo onde foi criada:
+A lambda captures variables from the scope where it was created:
 
 ```kf
 var fator = 2
@@ -48,44 +50,44 @@ var dobro = (x: Int) -> x * fator
 println(dobro(5))    // 10
 ```
 
-## Captura mutável (02/09 — JVM verificado)
+## Mutable capture (02/09 — JVM verified)
 
-Uma variável capturada que é **mutada** (dentro ou fora da lambda) é
-**boxada** — a lambda vê o valor atualizado:
+A captured variable that is **mutated** (inside or outside the lambda) is
+**boxed** — the lambda sees the updated value:
 
 ```kf
 main() {
     var offset = 10
     var f2 = (x: Int) -> x + offset
     println(f2(5))        // 15
-    offset = 20           // mutação FORA da lambda
-    println(f2(5))        // 25 — a lambda enxerga o novo valor
+    offset = 20           // mutation OUTSIDE the lambda
+    println(f2(5))        // 25 — the lambda sees the new value
 
     var counter = 0
-    var inc = () -> { counter = counter + 1 }   // lambda ESCREVE na externa
+    var inc = () -> { counter = counter + 1 }   // lambda WRITES to the outer one
     inc()
     inc()
     println(counter)      // 2
 }
 ```
 
-> **Histórico (02/09):** antes a mutação fora da lambda não era detectada — a
-> variável era capturada **por valor** e a leitura ficava desatualizada
-> (retornava 15 em vez de 25). Corrigido no `CompilerDriver`
-> (`collectMutatedCaptures`). **Native:** a direção "lambda escreve na
-> variável externa" funciona; a direção "lê a variável externa após ela ser
-> mutada fora da lambda" ainda é um bug conhecido (produz valor errado) —
-> usar com cautela no target nativo.
+> **History (02/09):** previously the mutation outside the lambda was not detected — the
+> variable was captured **by value** and the read stayed outdated
+> (it returned 15 instead of 25). Fixed in `CompilerDriver`
+> (`collectMutatedCaptures`). **Native:** the direction "lambda writes to the
+> outer variable" works; the direction "reads the outer variable after it is
+> mutated outside the lambda" is still a known bug (it produces the wrong value) —
+> use with caution on the native target.
 
-## Regra prática
+## Practical rule
 
-- Lambda que **só lê** uma variável: captura por valor, sem surpresas.
-- Variável **mutada** + lambda: o compilador boxa — funciona no JVM; no
-  Native, prefira que a mutação aconteça **dentro** da lambda.
+- A lambda that **only reads** a variable: capture by value, no surprises.
+- A **mutated** variable + lambda: the compiler boxes it — it works on the JVM; on
+  Native, prefer that the mutation happens **inside** the lambda.
 
-## Referência a método — planejado
+## Method reference — planned
 
-`::nome` não é suportado ainda. Use um lambda explícito:
+`::nome` is not supported yet. Use an explicit lambda:
 
 ```kf
 for (var nome in listOf("Ana", "Bob")) {
@@ -93,14 +95,14 @@ for (var nome in listOf("Ana", "Bob")) {
 }
 ```
 
-## Exercícios
+## Exercises
 
-1. Escreva um lambda `(x: Int) -> x * x` e use com `listOf(1,2,3,4).map`.
-2. Capture uma variável, chame a lambda, mude a variável e chame de novo —
-   verifique que o JVM reflete a mudança.
-3. Use `filter` para extrair só os pares de `listOf(1,2,3,4,5,6,7,8,9,10)` e
-   `reduce` para somá-los.
+1. Write a lambda `(x: Int) -> x * x` and use it with `listOf(1,2,3,4).map`.
+2. Capture a variable, call the lambda, change the variable and call it again —
+   verify that the JVM reflects the change.
+3. Use `filter` to extract only the even numbers from `listOf(1,2,3,4,5,6,7,8,9,10)` and
+   `reduce` to sum them.
 
-## Próximo passo
+## Next step
 
-[Programação Funcional →](17-functional-programming.md)
+[Functional Programming →](17-functional-programming.md)

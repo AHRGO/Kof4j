@@ -1,12 +1,14 @@
-# 17 — Programação Funcional
+[English](17-functional-programming.md) | [Português](17-functional-programming.pt_BR.md)
 
-> **Status: implementado — `map/filter/reduce` em `List<T>` (0.3.22-beta) — JVM/Native/JS — exemplos verificados no compilador**
+# 17 — Functional Programming
+
+> **Status: implemented — `map/filter/reduce` on `List<T>` (0.3.22-beta) — JVM/Native/JS — examples verified in the compiler**
 >
-> Kof não é uma linguagem funcional, mas `List<T>` oferece
-> `map/filter/reduce` idiomáticos — a transformação é uma expressão, não um
-> loop manual.
+> Kof is not a functional language, but `List<T>` offers
+> idiomatic `map/filter/reduce` — the transformation is an expression, not a
+> manual loop.
 
-## map — transformar cada elemento
+## map — transform each element
 
 ```kf
 var nums = listOf(1, 2, 3, 4, 5)
@@ -15,21 +17,21 @@ println(dobrados.get(0))   // 2
 println(dobrados.size)     // 5
 ```
 
-## filter — selecionar elementos
+## filter — select elements
 
 ```kf
 var pares = nums.filter((x: Int) -> x % 2 == 0)
 println(pares.size)        // 2 — [2, 4]
 ```
 
-## reduce — acumular
+## reduce — accumulate
 
 ```kf
 var soma = nums.reduce((acc: Int, x: Int) -> acc + x, 0)
 println(soma)              // 15
 ```
 
-## Combinando
+## Combining
 
 ```kf
 record User(String nome, Int idade)
@@ -48,50 +50,50 @@ main() {
 }
 ```
 
-## Por que não loop manual
+## Why not a manual loop
 
 ```kf
-// ❌ Loop manual — o "o quê" (mapear) fica escondido no "como" (iterar)
+// ❌ Manual loop — the "what" (mapping) is hidden in the "how" (iterating)
 var nomes = listOf()
 for (var u in usuarios) { nomes.add(u.nome()) }
 
-// ✅ map — expressa a intenção
+// ✅ map — expresses the intention
 var nomes2 = usuarios.map((u: User) -> u.nome())
 ```
 
-## Imutabilidade e `val`
+## Immutability and `val`
 
-`val` impede a reatribuição da variável, mas `List` continua mutável por
-métodos (`add`, `set`):
+`val` prevents reassignment of the variable, but `List` remains mutable through
+methods (`add`, `set`):
 
 ```kf
 val lista = listOf(1, 2, 3)
-lista.add(4)              // funciona — a lista é mutável
-// lista = listOf(9)      // erro — val não pode ser reatribuído
+lista.add(4)              // works — the list is mutable
+// lista = listOf(9)      // error — val cannot be reassigned
 ```
 
-Para dados imutáveis de verdade, use `record` + `json.encode`/`json.decode`
-(ver cap. 12 e `docs/stdlib/stdlib.md`).
+For truly immutable data, use `record` + `json.encode`/`json.decode`
+(see ch. 12 and `docs/stdlib/stdlib.md`).
 
-## Funções puras
+## Pure functions
 
-Uma função pura não tem efeitos colaterais — mesmo input, mesmo output:
+A pure function has no side effects — same input, same output:
 
 ```kf
 Int dobro(Int x) = x * 2
 ```
 
-Prefira funções puras em `map/filter/reduce` (sem mutar estado externo).
+Prefer pure functions in `map/filter/reduce` (without mutating external state).
 
-## Exercícios
+## Exercises
 
-1. Dado `listOf(1,2,3,4,5,6)`, calcule a soma dos quadrados dos pares com uma
-   cadeia `filter(...).map(...).reduce(...)`.
-2. Ordene mentalmente a saída de `usuarios.filter((u) -> u.idade() < 30)
-   .map((u) -> u.nome())` — confirme com `kof run`.
-3. Reescreva um `for` que monta uma lista de nomes usando `map` (exercício do
-   cap. 12).
+1. Given `listOf(1,2,3,4,5,6)`, compute the sum of the squares of the even numbers with a
+   chain `filter(...).map(...).reduce(...)`.
+2. Mentally order the output of `usuarios.filter((u) -> u.idade() < 30)
+   .map((u) -> u.nome())` — confirm with `kof run`.
+3. Rewrite a `for` that builds a list of names using `map` (exercise from
+   ch. 12).
 
-## Próximo passo
+## Next step
 
-[Concorrência →](18-concurrency.md)
+[Concurrency →](18-concurrency.md)

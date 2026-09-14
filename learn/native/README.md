@@ -1,10 +1,12 @@
-# Multiplatform — Uma Linguagem, Múltiplos Mundos
+[English](README.md) | [Português](README.pt_BR.md)
 
-> **Kof 0.4.0-beta — set 2026 — targets jvm/native/native.risc/native.arm/js/kofc — `intention->Kof->frontend->IR->backend->runtime`**
+# Multiplatform — One Language, Multiple Worlds
 
-## A visão
+> **Kof 0.4.0-beta — Sep 2026 — targets jvm/native/native.risc/native.arm/js/kofc — `intention->Kof->frontend->IR->backend->runtime`**
 
-Kof não é apenas uma linguagem para a JVM. É uma linguagem que pode compilar para diferentes targets, mantendo a mesma sintaxe e semântica.
+## The vision
+
+Kof is not just a language for the JVM. It is a language that can compile to different targets while keeping the same syntax and semantics.
 
 ```text
                          KOF
@@ -22,11 +24,11 @@ Kof não é apenas uma linguagem para a JVM. É uma linguagem que pode compilar 
        .class      ELF   ELF  ELF      .mjs        repl/kof c
 ```
 
-## Os backends
+## The backends
 
 ### Kof4J (JVM)
 
-O backend JVM gera bytecode `.class` que roda em qualquer JVM.
+The JVM backend generates `.class` bytecode that runs on any JVM.
 
 ```kf
 record Point(Int x, Int y)
@@ -34,19 +36,19 @@ record Point(Int x, Int y)
 
 ```bash
 kof build point.kf --target=jvm
-# Gera: Point.class
+# Generates: Point.class
 ```
 
-**Vantagens:**
-- Compatibilidade total com ecossistema Java
-- Acesso a milhões de bibliotecas
+**Advantages:**
+- Full compatibility with the Java ecosystem
+- Access to millions of libraries
 - JIT compilation
-- Garbage collection sofisticada
-- Portabilidade (qualquer JVM)
+- Sophisticated garbage collection
+- Portability (any JVM)
 
-### KofNative (Nativo: x86-64 / riscv64 / aarch64)
+### KofNative (Native: x86-64 / riscv64 / aarch64)
 
-O backend nativo gera ELF x86-64 (`native`), riscv64 (`native.risc`) e aarch64 (`native.arm`). x86-64 é estável: free-list GC (`kof_free_head`, reuso `mmap`; mark-sweep pendente), `spawn`/`await` via pthread (31/08 — CONC001 fechado), ponto flutuante XMM real (`FLT001` fechado), JSON completo (objetos/records/arrays — JSN001/002/003 fechados), SQLite nativo e MySQL em progresso (wire protocol, auth scramble SHA-1). riscv/arm são placeholders (codegen ainda x86_64, cross via `as`/`ld` + qemu).
+The native backend generates x86-64 ELF (`native`), riscv64 (`native.risc`) and aarch64 (`native.arm`). x86-64 is stable: free-list GC (`kof_free_head`, `mmap` reuse; mark-sweep pending), `spawn`/`await` via pthread (31/08 — CONC001 closed), real XMM floating point (`FLT001` closed), full JSON (objects/records/arrays — JSN001/002/003 closed), native SQLite and MySQL in progress (wire protocol, SHA-1 scramble auth). riscv/arm are placeholders (codegen still x86_64, cross via `as`/`ld` + qemu).
 
 ```kf
 main() = print("Hello, World!")
@@ -54,50 +56,50 @@ main() = print("Hello, World!")
 
 ```bash
 kof build main.kf --target=native
-# Gera: main (executável ELF)
+# Generates: main (ELF executable)
 ./main
 # Output: Hello, World!
 ```
 
-**Vantagens:**
-- Sem necessidade de JVM instalada
-- Executável standalone
-- Performance nativa
-- Distribuição simples (apenas o binário)
-- Ideal para ferramentas CLI e sistemas
+**Advantages:**
+- No need for an installed JVM
+- Standalone executable
+- Native performance
+- Simple distribution (just the binary)
+- Ideal for CLI tools and systems
 
 ### KofScript (0.3.22-beta)
 
-`kof script` / `kof repl` — `let`/`const` no topo viram `KofScriptGlobals` persistentes, `--watch` re-executa; targets jvm/native/js.
+`kof script` / `kof repl` — top-level `let`/`const` become persistent `KofScriptGlobals`, `--watch` re-executes; jvm/native/js targets.
 
 ```bash
 kof run script.kf
-# Executa diretamente sem compilar
+# Runs directly without compiling
 ```
 
-**Vantagens:**
-- Sem build step
-- Execução imediata
-- Ideal para automação e experimentos
+**Advantages:**
+- No build step
+- Immediate execution
+- Ideal for automation and experiments
 
 ### KofJS (JS) + KofC (kofc)
 
-KofJS gera ES Modules via GraalJS (`kof.http` JVM+JS, HTTP002 Native). KofC (`kof c <file.c>`) compila subset C (`int` globals, `void` funcs, `if`/`while`/`*(int*)`/`&`) → ELF x86-64 nativo-only.
+KofJS generates ES Modules via GraalJS (`kof.http` JVM+JS, HTTP002 Native). KofC (`kof c <file.c>`) compiles a C subset (`int` globals, `void` funcs, `if`/`while`/`*(int*)`/`&`) → native-only x86-64 ELF.
 
 ```bash
 kof build app.kf --target=js   # ES Module
 kof script app.ks --watch      # KofScript
-kof c app.c --run               # KofC nativo-only
+kof c app.c --run               # KofC native-only
 ```
 
-**Vantagens:**
-- Mesma linguagem para backend e frontend
-- Sem necessidade de aprender JavaScript
-- Acesso ao DOM e APIs do navegador
+**Advantages:**
+- Same language for backend and frontend
+- No need to learn JavaScript
+- Access to the DOM and browser APIs
 
-## Como funciona
+## How it works
 
-### Pipeline de compilação
+### Compilation pipeline
 
 ```text
 Kof Source (.kf)
@@ -109,7 +111,7 @@ Kof Source (.kf)
   Parser → AST
     │
     ▼
-  IR (compartilhado, intention->Kof->frontend->IR->backend->runtime)
+  IR (shared, intention->Kof->frontend->IR->backend->runtime)
     │
     ├──────────► JVM Backend → .class
     │
@@ -119,19 +121,19 @@ Kof Source (.kf)
     │
     ├──────────► KofScript → Globals+IR→backend
     │
-    └──────────► KofC → ELF nativo-only
+    └──────────► KofC → native-only ELF
 ```
 
-### IR compartilhada
+### Shared IR
 
-A representação intermediária (IR) é compartilhada entre todos os backends. Isso permite:
+The intermediate representation (IR) is shared across all backends. This allows:
 
-1. **Mesma linguagem** — não existem dialetos para diferentes targets
-2. **Mesma semântica** — o significado do código não muda
-3. **Otimizações compartilhadas** — melhorias na IR beneficiam todos os backends
-4. **Fácil adição de novos backends** — basta implementar a tradução IR → target
+1. **Same language** — there are no dialects for different targets
+2. **Same semantics** — the meaning of the code does not change
+3. **Shared optimizations** — improvements to the IR benefit all backends
+4. **Easy addition of new backends** — just implement the IR → target translation
 
-### Exemplo multiplatform
+### Multiplatform example
 
 ```kf
 record Point(Int x, Int y)
@@ -149,35 +151,35 @@ java -cp . main
 # Output: Point[x=3, y=7]
 ```
 
-**Nativo:**
+**Native:**
 ```bash
 kof build main.kf --target=native
 ./main
 # Output: Point[x=3, y=7]
 ```
 
-**Mesmo código. Mesmo output. Targets diferentes.**
+**Same code. Same output. Different targets.**
 
-## Quando usar cada backend
+## When to use each backend
 
-| Backend | Use quando | Exemplos |
-|---------|------------|----------|
-| **JVM** | Precisa de ecossistema Java, bibliotecas, frameworks | APIs Spring, microserviços, aplicações corporativas |
-| **Nativo** | Precisa de executável standalone, sem JVM | Ferramentas CLI, containers, sistemas, utilitários |
-| **Script** | Precisa de execução rápida, sem build | Automação, scripts, prototipação |
-| **JS** | Precisa de frontend web | Interfaces web, SPAs, PWAs |
+| Backend | Use when | Examples |
+|---------|----------|----------|
+| **JVM** | You need the Java ecosystem, libraries, frameworks | Spring APIs, microservices, enterprise applications |
+| **Native** | You need a standalone executable, no JVM | CLI tools, containers, systems, utilities |
+| **Script** | You need fast execution, no build | Automation, scripts, prototyping |
+| **JS** | You need a web frontend | Web interfaces, SPAs, PWAs |
 
-## Status atual
+## Current status
 
-| Backend | Status | Descrição |
-|---------|--------|-----------|
-| **JVM** | ✅ Funcional | Gera `.class` via ASM (bytecode V21, exception table, virtual threads) |
-| **Nativo** | ✅ Funcional | Gera ELF x86-64 via assembly (free-list GC, spawn/pthread, FP XMM, SQLite); riscv/arm placeholders |
-| **Script** | ✅ KofScript (let→Globals, repl, --watch) | Runtime interativo |
-| **KofJS** | ✅ alpha | ES Modules via GraalJS embarcada; `kof.http` por interop Java HttpClient |
-| **KofC** | ✅ nativo-only | C subset → ELF x86-64 |
+| Backend | Status | Description |
+|---------|--------|-------------|
+| **JVM** | ✅ Functional | Generates `.class` via ASM (V21 bytecode, exception table, virtual threads) |
+| **Native** | ✅ Functional | Generates x86-64 ELF via assembly (free-list GC, spawn/pthread, FP XMM, SQLite); riscv/arm placeholders |
+| **Script** | ✅ KofScript (let→Globals, repl, --watch) | Interactive runtime |
+| **KofJS** | ✅ alpha | ES Modules via embedded GraalJS; `kof.http` through Java HttpClient interop |
+| **KofC** | ✅ native-only | C subset → x86-64 ELF |
 
-## Arquitetura do compilador
+## Compiler architecture
 
 ```text
                     Kof Source (.kf)
@@ -195,7 +197,7 @@ kof build main.kf --target=native
                      Semantic Analysis
                           │
                           ▼
-                     Kof IR (compartilhada)
+                     Kof IR (shared)
                       /       \
                      /         \
                     ▼           ▼
@@ -205,15 +207,15 @@ kof build main.kf --target=native
                 .class       ELF .o
                     │           │
                     ▼           ▼
-                javac/jar     ld → executável
+                javac/jar     ld → executable
 ```
 
-## Documentação
+## Documentation
 
-- [Arquitetura do KofNative](architecture.md) — detalhes da arquitetura multiplatform
-- [Opções de Backend](backend-options.md) — análise das opções de backend nativo
-- [Roadmap](roadmap.md) — plano de desenvolvimento do backend nativo
+- [KofNative Architecture](architecture.md) — details of the multiplatform architecture
+- [Backend Options](backend-options.md) — analysis of the native backend options
+- [Roadmap](roadmap.md) — development plan for the native backend
 
-## Próximo passo
+## Next step
 
-[Arquitetura do KofNative →](architecture.md)
+[KofNative Architecture →](architecture.md)

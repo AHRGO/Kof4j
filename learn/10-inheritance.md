@@ -1,11 +1,13 @@
-# 10 — Herança
+[English](10-inheritance.md) | [Português](10-inheritance.pt_BR.md)
 
-> **Status: implementado (JVM / JS — Native SUP001) — 0.3.22-beta — Target separation `native.risc/arm` preserva dispatch**
+# 10 — Inheritance
+
+> **Status: implemented (JVM / JS — Native SUP001) — 0.3.22-beta — Target separation `native.risc/arm` preserves dispatch**
 >
-> `extends`, virtual dispatch, sobrescrita, construtor `super(...)` e
-> `super.metodo()` funcionam nos targets JVM e KofJS; no Native, herança e
-> `super(...)` funcionam, mas `super.metodo()` reporta o gap `SUP001`
-> (o compilador ainda não emite a chamada não-virtual sobre a vtable).
+> `extends`, virtual dispatch, overriding, `super(...)` constructor and
+> `super.metodo()` work on the JVM and KofJS targets; on Native, inheritance and
+> `super(...)` work, but `super.metodo()` reports the gap `SUP001`
+> (the compiler does not yet emit the non-virtual call over the vtable).
 
 ## Extends
 
@@ -30,19 +32,19 @@ class Cachorro extends Animal {
 }
 ```
 
-## super(...) — construtor da superclasse
+## super(...) — superclass constructor
 
-O construtor da subclasse chama `super(args)` como **primeira instrução** do corpo. Sem chamada explícita, o compilador insere `super()` automaticamente (quando a superclasse não é `Object`).
+The subclass constructor calls `super(args)` as the **first statement** of the body. Without an explicit call, the compiler inserts `super()` automatically (when the superclass is not `Object`).
 
 ```kf
 constructor(String n) {
-    super(n)          // explícito: repassa o argumento
+    super(n)          // explicit: forwards the argument
 }
 ```
 
-## super.metodo() — implementação da superclasse
+## super.metodo() — superclass implementation
 
-Para invocar a implementação sobrescrita (não a própria), use `super.metodo(args)`:
+To invoke the overridden implementation (not its own), use `super.metodo(args)`:
 
 ```kf
 class Cachorro extends Animal {
@@ -52,9 +54,9 @@ class Cachorro extends Animal {
 }
 ```
 
-No backend JVM isso vira um `invokespecial` com owner na superclasse direta — dispatch não virtual, igual ao `javac`. Funciona também contra superclasses externas vindas do classpath (`android.view.View` etc.): o compilador lê a assinatura real do `.jar`/`.aar` para emitir o descritor exato.
+On the JVM backend this becomes an `invokespecial` with owner at the direct superclass — non-virtual dispatch, just like `javac`. It also works against external superclasses coming from the classpath (`android.view.View` etc.): the compiler reads the real signature from the `.jar`/`.aar` to emit the exact descriptor.
 
-## Hierarquia
+## Hierarchy
 
 ```
 Object
@@ -63,7 +65,7 @@ Object
         └── Gato
 ```
 
-## Classes abstratas
+## Abstract classes
 
 ```kf
 abstract class Forma {
@@ -83,10 +85,10 @@ class Retangulo(Double largura, Double altura) extends Forma {
 }
 ```
 
-## sealed classes (planejado — ainda não implementado)
+## sealed classes (planned — not yet implemented)
 
-A palavra-chave existe no lexer, mas o parser ainda não consome `sealed ...
-permits` numa declaração de classe. Exemplo ilustrativo do que se pretende:
+The keyword exists in the lexer, but the parser does not yet consume `sealed ...
+permits` in a class declaration. Illustrative example of what is intended:
 
 ```kf
 sealed class Resultado<T> permits Sucesso<T>, Erro<T> {}
@@ -95,9 +97,9 @@ class Sucesso<T>(T valor) extends Resultado<T> {}
 class Erro<T>(String mensagem) extends Resultado<T> {}
 ```
 
-Isso garante que `Resultado` só pode ser implementado por `Sucesso` e `Erro`. O compilador pode verificar a completude do `switch`.
+This guarantees that `Resultado` can only be implemented by `Sucesso` and `Erro`. The compiler can verify the completeness of the `switch`.
 
-## Polimorfismo
+## Polymorphism
 
 ```kf
 void imprimirArea(Forma forma) {
@@ -111,6 +113,6 @@ imprimirArea(c)   // 78.53975
 imprimirArea(r)   // 12.0
 ```
 
-## Próximo passo
+## Next step
 
 [Generics →](11-generics.md)

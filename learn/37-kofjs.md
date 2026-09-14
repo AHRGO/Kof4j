@@ -1,16 +1,18 @@
-# 37 — KofJS: o caminho da Web
+[English](37-kofjs.md) | [Português](37-kofjs.pt_BR.md)
+
+# 37 — KofJS: the Web path
 
 > **Kof 0.4.0-beta — targets jvm/native/native.risc/native.arm/js/kofc — `intention->Kof->frontend->IR->backend->runtime`**
 
-KofJS é o target `js` da Kof: a mesma linguagem, o mesmo frontend e a
-mesma Kof IR gerando **ES Modules (ECMAScript 2022+)** — sem Node.js, sem
-runtime externo. Com ele vem a plataforma de UI (`kof.ui`) que renderiza em
-webview nativo (WebKitGTK) ou no browser.
+KofJS is Kof's `js` target: the same language, the same frontend and the
+same Kof IR generating **ES Modules (ECMAScript 2022+)** — without Node.js,
+without an external runtime. With it comes the UI platform (`kof.ui`) that
+renders in a native webview (WebKitGTK) or in the browser.
 
-## A ideia em uma frase
+## The idea in one sentence
 
-Uma linguagem, seis alvos: `kof build --target=jvm|native|native.risc|native.arm|js` + `kof c`/`kof script`. O que muda é
-o backend; o código Kof é o mesmo (`intention->Kof->frontend->IR->backend->runtime`).
+One language, six targets: `kof build --target=jvm|native|native.risc|native.arm|js` + `kof c`/`kof script`. What changes is
+the backend; the Kof code is the same (`intention->Kof->frontend->IR->backend->runtime`).
 
 ```text
                     Kof Source
@@ -31,47 +33,47 @@ o backend; o código Kof é o mesmo (`intention->Kof->frontend->IR->backend->run
        .class          ELF           .mjs
 ```
 
-## Roteiro
+## Roadmap
 
-1. **[Fundamentos da linguagem](03-language-basics.md)** — qualquer programa
-   Kof compila para JS; comece por aqui.
-2. **[Funções](06-functions.md) e [Lambdas](16-lambdas.md)** — lambdas
-   compilam para classes sintéticas com `invoke()`; **capturas** (foto
-   somente-leitura do valor) funcionam nos três alvos.
-3. **[Classes](07-classes-and-objects.md)** — campos estáticos são o
-   estado global de uma aplicação KofJS (o padrão dos contadores de UI).
-4. **Executar JS**:
+1. **[Language fundamentals](03-language-basics.md)** — any Kof program
+   compiles to JS; start here.
+2. **[Functions](06-functions.md) and [Lambdas](16-lambdas.md)** — lambdas
+   compile to synthetic classes with `invoke()`; **captures** (read-only
+   snapshot of the value) work on all three targets.
+3. **[Classes](07-classes-and-objects.md)** — static fields are the
+   global state of a KofJS application (the pattern for UI counters).
+4. **Running JS**:
    ```bash
-   kof build src --target=js            # gera Default.mjs + kof-runtime.mjs
-   kof run src --target=js              # executa na engine embarcada (GraalJS)
+   kof build src --target=js            # generates Default.mjs + kof-runtime.mjs
+   kof run src --target=js              # runs on the embedded engine (GraalJS)
    ```
-   O alvo JS não precisa de Node: o próprio Kof executa o módulo. Programas
-   com janela de `kof.ui` abrem o **webview nativo** (`bin/kof-webview`).
-5. **[kof.ui — a plataforma de UI](35-kof-ui.md)** — `Window`, `Label`,
-   `Button` (com ações), `Input`, `Column`/`Row`, `View`+`Style`.
-6. **Deploy** — `kof build --target=js` gera `index.html` + módulos: sirva a
-   pasta como uma aplicação web estática (qualquer servidor HTTP).
+   The JS target does not need Node: Kof itself runs the module. Programs
+   with a `kof.ui` window open the **native webview** (`bin/kof-webview`).
+5. **[kof.ui — the UI platform](35-kof-ui.md)** — `Window`, `Label`,
+   `Button` (with actions), `Input`, `Column`/`Row`, `View`+`Style`.
+6. **Deploy** — `kof build --target=js` generates `index.html` + modules: serve the
+   folder as a static web application (any HTTP server).
 
-## O que funciona hoje (estado real)
+## What works today (actual state)
 
-Backend **alpha**. KofJS gera ES Modules rodados na GraalJS embutida do Kof
-— sem Node.js; `kof.http` vem por interop com o `Java HttpClient`.
+Backend **alpha**. KofJS generates ES Modules run on Kof's embedded GraalJS
+— without Node.js; `kof.http` comes through interop with the `Java HttpClient`.
 
-| Área | Estado |
+| Area | State |
 |------|--------|
-| Linguagem completa (classes, herança, generics, exceptions, List, JSON) | ✅ |
-| Lambdas com capturas | ✅ (3 alvos) |
-| `spawn`/`await`/`channel<T>()` (concorrência) | ✅ real (async/await/Promise, CONC003 fechado 03/09) |
+| Complete language (classes, inheritance, generics, exceptions, List, JSON) | ✅ |
+| Lambdas with captures | ✅ (3 targets) |
+| `spawn`/`await`/`channel<T>()` (concurrency) | ✅ real (async/await/Promise, CONC003 closed 03/09) |
 | `kof http` client (get/post/put/delete/patch/options + timeout/retry/circuit) | ✅ (interop Java HttpClient) |
-| `kof.ui`: cores, temas, widgets, layout, estilo, eventos | ✅ (JS render) |
-| Router (`Router.route/go/replace/back/forward/...`) | ✅ (JS real; 31/08) |
-| Webview nativo `bin/kof-webview` (WebKitGTK embutido) | ✅ Linux |
-| `kof run --target=js` (GraalJS embarcado) | ✅ |
-| `kof build --target=js` + `index.html` (deploy estático) | ✅ |
+| `kof.ui`: colors, themes, widgets, layout, styling, events | ✅ (JS render) |
+| Router (`Router.route/go/replace/back/forward/...`) | ✅ (real JS; 31/08) |
+| Native webview `bin/kof-webview` (embedded WebKitGTK) | ✅ Linux |
+| `kof run --target=js` (embedded GraalJS) | ✅ |
+| `kof build --target=js` + `index.html` (static deploy) | ✅ |
 | `kof.db` | ❌ (DB001) |
-| io de arquivos no browser | ~ (io real só no runner embarcado; browser cai em erro claro) |
+| file io in the browser | ~ (real io only in the embedded runner; the browser falls back to a clear error) |
 
-## Aplicação de exemplo: contador
+## Example application: counter
 
 ```kof
 class App {
@@ -94,20 +96,20 @@ main() {
 kof run contador.kf --target=js
 ```
 
-A janela abre com o WebKit de verdade; cada clique atualiza o label ao vivo;
-**fechar a janela encerra o programa**.
+The window opens with real WebKit; each click updates the label live;
+**closing the window terminates the program**.
 
-## Limitações e gaps
+## Limitations and gaps
 
-- **JVM/Native**: os handles de `kof.ui` são no-ops (renderização é KofJS).
-- **Browser**: io de arquivos lança erro claro (`kof_platform` só existe no
-  runner embarcado); `print` cai no console do browser.
-- **Capturas** são fotos: para estado mutável use campos estáticos.
-- **Estáticos no Native**: não são suportados (no-op).
+- **JVM/Native**: the `kof.ui` handles are no-ops (rendering is KofJS).
+- **Browser**: file io throws a clear error (`kof_platform` only exists in the
+  embedded runner); `print` goes to the browser console.
+- **Captures** are snapshots: for mutable state use static fields.
+- **Statics on Native**: not supported (no-op).
 
-## Referências
+## References
 
-- `docs/targets/KOFJS.md` — arquitetura do backend JS
-- `docs/status.md` — estado do projeto (seção kof.ui)
-- `native/webview/kof-webview.c` — shell WebKitGTK sem headers
-- Testes: `UiE2ETest`, `WindowE2ETest`, `KofJsE2ETest`, `BackendParityTest`
+- `docs/targets/KOFJS.md` — JS backend architecture
+- `docs/status.md` — project state (kof.ui section)
+- `native/webview/kof-webview.c` — headerless WebKitGTK shell
+- Tests: `UiE2ETest`, `WindowE2ETest`, `KofJsE2ETest`, `BackendParityTest`

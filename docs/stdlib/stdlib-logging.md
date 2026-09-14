@@ -1,15 +1,17 @@
-# stdlib log — Logging Nativo do Kof
+[English](stdlib-logging.md) | [Português](stdlib-logging.pt_BR.md)
 
-**Última atualização:** 3 de setembro de 2026
-**Versão:** 0.2.6-beta  (840 testes, 03/09)
-**Status:** implementado (Fase 4 do plano de independência do Spring) — JVM+Native (Native asm UTC `kof_log_*`, 27/08); JS `console.*` (LOG001 fechado 01/09)
+# stdlib log — Kof Native Logging
+
+**Last updated:** September 3, 2026
+**Version:** 0.2.6-beta  (840 tests, 03/09)
+**Status:** implemented (Phase 4 of the Spring independence plan) — JVM+Native (Native asm UTC `kof_log_*`, 27/08); JS `console.*` (LOG001 closed 01/09)
 
 ---
 
-## 1. Filosofia
+## 1. Philosophy
 
-> Logging é parte da plataforma Kof, não de um framework (SLF4J/Logback são
-> interoperabilidade, nunca requisito).
+> Logging is part of the Kof platform, not of a framework (SLF4J/Logback are
+> interoperability, never a requirement).
 
 ## 2. API
 
@@ -20,7 +22,7 @@ log.warn("slow response: " + ms)
 log.error("failed: " + message)
 ```
 
-Cada chamada aceita uma `String` (concatene com `+`). Formato da linha:
+Each call accepts a `String` (concatenate with `+`). Line format:
 
 ```
 2026-08-23 12:09:22.715 INFO hello from kof
@@ -29,27 +31,27 @@ Cada chamada aceita uma `String` (concatene com `+`). Formato da linha:
 - `info`/`debug` → stdout
 - `warn`/`error` → stderr
 
-## 3. Níveis
+## 3. Levels
 
-Controlados pela variável de ambiente `KOF_LOG_LEVEL`
+Controlled by the `KOF_LOG_LEVEL` environment variable
 (`debug < info < warn < error < off`; default `info`).
 
-| Nível | Mensagens exibidas |
+| Level | Messages displayed |
 |-------|--------------------|
 | `debug` | debug, info, warn, error |
 | `info` (default) | info, warn, error |
 | `warn` | warn, error |
 | `error` | error |
-| `off` | nenhuma |
+| `off` | none |
 
 ```bash
 KOF_LOG_LEVEL=debug kof run app.kf
 KOF_LOG_LEVEL=off kof run app.kf
 ```
 
-## 4. Contexto web
+## 4. Web context
 
-Funciona dentro de handlers da stack web (mesmo runtime gerado):
+Works inside handlers of the web stack (same generated runtime):
 
 ```kof
 app.get("/users") {
@@ -60,28 +62,28 @@ app.get("/users") {
 
 ## 5. Targets (0.2.6-beta)
 
-| Target | Estado | Notas |
+| Target | Status | Notes |
 |--------|--------|-------|
-| JVM | ✅ completo | `KofRuntime` gerado, JSON + correlation ID |
-| Native x86_64 | ✅ completo (asm, 27/08) | `kof_log_*` asm próprio (data civil Hinnant, env scan), timestamp UTC; `KOF_LOG_JSON` sem efeito ainda |
+| JVM | ✅ complete | `KofRuntime` generated, JSON + correlation ID |
+| Native x86_64 | ✅ complete (asm, 27/08) | own `kof_log_*` asm (Hinnant civil date, env scan), UTC timestamp; `KOF_LOG_JSON` has no effect yet |
 | Native riscv64/aarch64 | ✅/placeholder | riscv64 `li a7`; aarch64 placeholder |
-| JS | ✅ 01/09 (LOG001 fechado) | `kofLog*` console.* com `KOF_LOG_LEVEL`; warn→console.warn, error→console.error |
+| JS | ✅ 01/09 (LOG001 closed) | `kofLog*` console.* with `KOF_LOG_LEVEL`; warn→console.warn, error→console.error |
 
-## 6. Testes
+## 6. Tests
 
 `KofLogE2ETest` 11 (JVM + JS, 01/09) + `NativeLogE2ETest` 7 (Native asm, 0.2.6-beta) —
-nível default, debug visível com `KOF_LOG_LEVEL=debug`, supressão em
-`error`, `off` silencioso, warn no stderr, log dentro de handler web, JSON
-estruturado + correlation ID (JVM) e JS via `console.*`.
+default level, debug visible with `KOF_LOG_LEVEL=debug`, suppression at
+`error`, silent `off`, warn on stderr, log inside a web handler, structured JSON
++ correlation ID (JVM) and JS via `console.*`.
 
-## 7. Arquitetura
+## 7. Architecture
 
 ```
-Kof source (.kf) → KofLog (tabela compile-time)
-   → SemanticAnalyzer (tipos) → CompilerDriver (KofCall kof_log_*)
-   → JvmRuntime (gerado): nível + timestamp + stream
+Kof source (.kf) → KofLog (compile-time table)
+   → SemanticAnalyzer (types) → CompilerDriver (KofCall kof_log_*)
+   → JvmRuntime (generated): level + timestamp + stream
    → NativeRuntime (asm): kof_log_* + env scan + Hinnant date (NativeRuntime.java:1)
    → JsBackend (kof-runtime.mjs): kofLog* console.* + KOF_LOG_LEVEL
 ```
 
-Evolução planejada (Fase 4 completa): structured logging JSON `KOF_LOG_JSON` no Native, correlation ID por request, contexto por tarefa.
+Planned evolution (complete Phase 4): structured JSON logging `KOF_LOG_JSON` in Native, correlation ID per request, context per task.

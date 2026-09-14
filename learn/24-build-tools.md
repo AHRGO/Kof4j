@@ -1,20 +1,22 @@
+[English](24-build-tools.md) | [Português](24-build-tools.pt_BR.md)
+
 # 24 — Build Tools
 
-> **Status: parcial — Maven/Gradle via `kof build` + `kof test` (0.3.22-beta)**
+> **Status: partial — Maven/Gradle via `kof build` + `kof test` (0.3.22-beta)**
 >
-> `kof build`/`kof test` são os build tools nativos (); integração Maven/Gradle como plugin externo ainda é visão planejada, mas coexistência `src/main/java` + `src/main/kof` já funciona para gerar `.class` interoperáveis.
+> `kof build`/`kof test` are the native build tools (); Maven/Gradle integration as an external plugin is still a planned vision, but the coexistence of `src/main/java` + `src/main/kof` already works to generate interoperable `.class` files.
 
 ## Maven
 
-### Estrutura de projeto
+### Project structure
 
 ```
 meu-projeto/
 ├── pom.xml
 ├── src/
 │   ├── main/
-│   │   ├── java/          ← código Java
-│   │   └── kof/           ← código Kof
+│   │   ├── java/          ← Java code
+│   │   └── kof/           ← Kof code
 │   └── test/
 │       ├── java/
 │       └── kof/
@@ -39,28 +41,26 @@ meu-projeto/
 </project>
 ```
 
-### Compilando
+### Compiling
 
-Não existe plugin Maven/Gradle de Kof ainda (visão planejada). O caminho
-nativo é:
+There is no Kof Maven/Gradle plugin yet (planned vision). The native path is:
 
 ```bash
 kof build src/main/kof --target jvm --output out/classes
 ```
 
-O output cai no classpath ao lado dos `.class` do Java — o Maven/Gradle
-continuem cuidando do Java, e o `kof build` cuida do Kof. `kof test`
-roda a suíte `test "nome" { assert(...) }` nos targets jvm/native/js.
+The output lands on the classpath alongside the Java `.class` files — Maven/Gradle keep handling Java, and `kof build` handles Kof. `kof test`
+runs the `test "nome" { assert(...) }` suite on the jvm/native/js targets.
 
 ## Gradle
 
-Mesma estratégia que no Maven: o build do Java segue no Gradle; o código
-Kof compila com `kof build` para o mesmo classpath. Um plugin Gradle
-(`dev.kof.kof`) é visão planejada, não existe hoje.
+Same strategy as in Maven: the Java build continues in Gradle; the Kof code
+compiles with `kof build` to the same classpath. A Gradle plugin
+(`dev.kof.kof`) is a planned vision, it does not exist today.
 
-## Coexistência com Java
+## Coexistence with Java
 
-Kof e Java podem coexistir no mesmo projeto:
+Kof and Java can coexist in the same project:
 
 ```
 src/
@@ -75,8 +75,8 @@ src/
 │               └── NewService.kf
 ```
 
-O compilador Kof gera `.class` que o Java pode chamar normalmente.
+The Kof compiler generates `.class` files that Java can call normally.
 
-## Próximo passo
+## Next step
 
 [Spring →](25-spring.md)

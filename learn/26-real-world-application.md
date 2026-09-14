@@ -1,12 +1,14 @@
-# 26 — Aplicação Real
+[English](26-real-world-application.md) | [Português](26-real-world-application.pt_BR.md)
 
-> **Status: futuro (pós 0.2 — `kof.web` + `kof_db` já cobrem o caso sem Spring)**
+# 26 — Real-World Application
+
+> **Status: future (post 0.2 — `kof.web` + `kof_db` already cover the case without Spring)**
 >
-> Este capítulo mostra como construir uma aplicação completa em Kof com Spring Boot.
+> This chapter shows how to build a complete application in Kof with Spring Boot.
 
-## Task Manager hoje (sem Spring)
+## Task Manager today (without Spring)
 
-A mesma API roda hoje com `kof.web` + `kof.orm` — um arquivo, um `main()`:
+The same API runs today with `kof.web` + `kof.orm` — one file, one `main()`:
 
 ```kf
 entity Task {
@@ -48,16 +50,16 @@ main() {
 record CreateTaskRequest(String title, String description)
 ```
 
-- `kof serve tasks.kf` sobe a API; testes com a suíte estruturada
-  (`test "nome" { assert(...) }`) + `KofWebE2ETest`-style sockets reais.
-- O `entity` declara o schema na linguagem — o compilador conhece campos,
-  tipos e constraints em compile-time (sem reflection).
+- `kof serve tasks.kf` brings up the API; tests with the structured suite
+  (`test "nome" { assert(...) }`) + `KofWebE2ETest`-style real sockets.
+- The `entity` declares the schema in the language — the compiler knows the
+  fields, types and constraints at compile-time (no reflection).
 
-## A visão de longo prazo: Task Manager com Spring
+## The long-term vision: Task Manager with Spring
 
-Vamos construir uma API simples de gerenciamento de tarefas.
+Let's build a simple task management API.
 
-### Estrutura
+### Structure
 
 ```
 src/main/kof/com/exemplo/tasks/
@@ -160,7 +162,7 @@ class Application {
 }
 ```
 
-### Testes
+### Tests
 
 ```kf
 @SpringBootTest
@@ -184,6 +186,6 @@ class TaskServiceTest {
 }
 ```
 
-## Próximo passo
+## Next step
 
-[Boas Práticas →](27-best-practices.md)
+[Best Practices →](27-best-practices.md)

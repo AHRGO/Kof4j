@@ -1,120 +1,122 @@
-# Roadmap KofNative
+[English](roadmap.md) | [Português](roadmap.pt_BR.md)
 
-> **0.3.22-beta — set 2026 — free-list GC done, Target separation done, MySQL via kof_db WIP**
+# KofNative Roadmap
 
-## Princípios
+> **0.3.22-beta — Sep 2026 — free-list GC done, Target separation done, MySQL via kof_db WIP**
 
-1. **Não quebrar Kof4J** — toda mudança deve ser validada contra o backend JVM
-2. **Incremental** — cada milestone é pequeno, testável, rollbackável
-3. **Correto primeiro** — não otimizar antes de funcionar
-4. **Documentado** — cada milestone tem documentação e testes
+## Principles
 
-## Status atual
+1. **Don't break Kof4J** — every change must be validated against the JVM backend
+2. **Incremental** — each milestone is small, testable, rollbackable
+3. **Correct first** — don't optimize before it works
+4. **Documented** — each milestone has documentation and tests
 
-O backend nativo já está funcional. Aqui está o que já foi implementado:
+## Current status
 
-### ✅ Concluído
+The native backend is already functional. Here is what has already been implemented:
 
-- **Milestone 0 — Baseline**: Todos os testes JVM passando
-- **Milestone 1 — Target Abstraction**: Enum `Target`, interface `Backend`, CLI com `--target`
-- **Milestone 2 — Native Backend Skeleton**: Estrutura do NativeBackend
-- **Milestone 3 — Native Hello World**: ELF x86-64 que imprime "Hello World"
+### ✅ Completed
+
+- **Milestone 0 — Baseline**: All JVM tests passing
+- **Milestone 1 — Target Abstraction**: `Target` enum, `Backend` interface, CLI with `--target`
+- **Milestone 2 — Native Backend Skeleton**: NativeBackend structure
+- **Milestone 3 — Native Hello World**: x86-64 ELF that prints "Hello World"
 - **Milestone 4 — Primitive Values**: Int, Long, Float, Double, Bool, Char
-- **Milestone 5 — Functions**: Declaração e chamada de funções
-- **Milestone 6 — Strings**: String literals e operações básicas
+- **Milestone 5 — Functions**: Function declaration and call
+- **Milestone 6 — Strings**: String literals and basic operations
 - **Milestone 7 — Control Flow**: If/else, while, for ✅
-- **Milestone 8 — Arrays**: Arrays nativos ✅
-- **Milestone 9 — Value Types / Structs**: Records como structs nativos ✅
-- **Milestone 10 — Objects**: Classes com herança e dispatch ✅
-- **Milestone 11 — Exceptions**: Try/catch nativo (unwinding) ✅
-- **Milestone 12 — Generics**: Erasure (como JVM; `Box<T>` com `T` primitivo) ✅
+- **Milestone 8 — Arrays**: Native arrays ✅
+- **Milestone 9 — Value Types / Structs**: Records as native structs ✅
+- **Milestone 10 — Objects**: Classes with inheritance and dispatch ✅
+- **Milestone 11 — Exceptions**: Native try/catch (unwinding) ✅
+- **Milestone 12 — Generics**: Erasure (like JVM; `Box<T>` with primitive `T`) ✅
 - **Milestone 13 — Target separation**: `NATIVE_RISCV64/AARCH64` + `parseTarget native.risc/arm` ✅
-- **Milestone 14 — Free-list GC**: `kof_free_head` reuso `mmap` ✅
+- **Milestone 14 — Free-list GC**: `kof_free_head` `mmap` reuse ✅
 - **Milestone 15 — kof_db**: SQLite via `.so` ✅
-- **Milestone 16 — `spawn`/`await` via pthread** (31/08 — CONC001 fechado): trampoline + join implícito + allocator thread-safe (futex) ✅
-- **Milestone 17 — FP real (XMM)** (31/08 — FLT001/JSN001 fechados): `vcvtsi2sd`/`mulsd`, dtoa via snprintf ✅
-- **Milestone 18 — JSON completo**: objetos/records + arrays (JSN002/JSN003/JSN001 fechados) ✅
+- **Milestone 16 — `spawn`/`await` via pthread** (31/08 — CONC001 closed): trampoline + implicit join + thread-safe allocator (futex) ✅
+- **Milestone 17 — Real FP (XMM)** (31/08 — FLT001/JSN001 closed): `vcvtsi2sd`/`mulsd`, dtoa via snprintf ✅
+- **Milestone 18 — Full JSON**: objects/records + arrays (JSN002/JSN003/JSN001 closed) ✅
 
-### 🔄 Em desenvolvimento
+### 🔄 In development
 
-- **MySQL/MariaDB nativo**: wire protocol sobre sockets (auth scramble SHA-1 feito; falta handshake completo, query e prepared statements)
-- **GC mark-sweep**: pendente (memória devolvida hoje só no `munmap` fallback)
-- **riscv64/aarch64**: codegen ainda x86_64 (placeholders via qemu)
+- **Native MySQL/MariaDB**: wire protocol over sockets (SHA-1 scramble auth done; full handshake, query and prepared statements still missing)
+- **GC mark-sweep**: pending (memory returned today only on the `munmap` fallback)
+- **riscv64/aarch64**: codegen still x86_64 (placeholders via qemu)
 
-## Milestones detalhados
+## Detailed milestones
 
 ### Milestone 0 — Baseline ✅
 
-**Objetivo:** Garantir que tudo funciona antes de modificar.
+**Objective:** Ensure everything works before modifying.
 
-**Ações:**
-- [x] Executar todos os testes existentes
-- [x] Compilar todos os exemplos
-- [x] Validar records (x()=3, y()=7)
-- [x] Registrar estado atual como baseline
-- [x] Criar branch `feature/native`
+**Actions:**
+- [x] Run all existing tests
+- [x] Compile all examples
+- [x] Validate records (x()=3, y()=7)
+- [x] Record the current state as baseline
+- [x] Create branch `feature/native`
 
-**Critério de sucesso:** zero regressions, build limpo.
+**Success criterion:** zero regressions, clean build.
 
 ---
 
 ### Milestone 1 — Target Abstraction ✅
 
-**Objetivo:** Introduzir a abstração mínima para distinguir JVM/Native.
+**Objective:** Introduce the minimal abstraction to distinguish JVM/Native.
 
-**Mudanças:**
-- [x] Criar enum `Target { JVM, NATIVE }`
-- [x] Criar interface `Backend`
-- [x] Parametrizar `CompilerDriver.compile()` com target
-- [x] Default continua sendo JVM
+**Changes:**
+- [x] Create `Target { JVM, NATIVE }` enum
+- [x] Create `Backend` interface
+- [x] Parameterize `CompilerDriver.compile()` with target
+- [x] Default remains JVM
 
-**Arquivos novos:**
+**New files:**
 - `Target.java`
 - `Backend.java`
 
-**Arquivos modificados:**
-- `CompilerDriver.java` — parametrizar compile(), extrair interface
-- `Main.java` (CLI) — adicionar flag `--target`
+**Modified files:**
+- `CompilerDriver.java` — parameterize compile(), extract interface
+- `Main.java` (CLI) — add `--target` flag
 
-**Testes:**
-- [x] Todos os testes JVM passam (regression)
-- [x] `--target jvm` gera o mesmo output que antes
-- [x] `--target native` gera executável
+**Tests:**
+- [x] All JVM tests pass (regression)
+- [x] `--target jvm` generates the same output as before
+- [x] `--target native` generates an executable
 
-**Critério de sucesso:** zero regressions, target flag funcional.
+**Success criterion:** zero regressions, functional target flag.
 
 ---
 
 ### Milestone 2 — Native Backend Skeleton ✅
 
-**Objetivo:** Criar a estrutura do NativeBackend sem gerar código.
+**Objective:** Create the NativeBackend structure without generating code.
 
-**Mudanças:**
-- [x] Criar `NativeBackend implements Backend`
-- [x] Implementar `emit()` vazio
-- [x] NativeBackend.emit() retorna erro "not yet implemented"
+**Changes:**
+- [x] Create `NativeBackend implements Backend`
+- [x] Implement empty `emit()`
+- [x] NativeBackend.emit() returns "not yet implemented" error
 
-**Arquivos novos:**
+**New files:**
 - `NativeBackend.java`
 
-**Testes:**
-- [x] JVM continua funcionando
-- [x] NativeBackend aceita IR e retorna erro claro
-- [x] CLI `--target native` mostra mensagem apropriada
+**Tests:**
+- [x] JVM keeps working
+- [x] NativeBackend accepts IR and returns a clear error
+- [x] CLI `--target native` shows an appropriate message
 
-**Critério de sucesso:** arquitetura validada, zero regressions.
+**Success criterion:** validated architecture, zero regressions.
 
 ---
 
 ### Milestone 3 — Native Hello World ✅
 
-**Objetivo:** Gerar um ELF x86-64 que imprime "Hello World".
+**Objective:** Generate an x86-64 ELF that prints "Hello World".
 
-**Requisitos:**
-- [x] Gerar assembly x86-64
-- [x] Montar com `as`
-- [x] Linkar com `ld`
-- [x] Gerar ELF válido
+**Requirements:**
+- [x] Generate x86-64 assembly
+- [x] Assemble with `as`
+- [x] Link with `ld`
+- [x] Generate a valid ELF
 
 **Input:**
 ```kof
@@ -127,21 +129,21 @@ $ ./hello
 Hello World
 ```
 
-**Arquivos modificados:**
-- `NativeBackend.java` — implementar emission via assembly
+**Modified files:**
+- `NativeBackend.java` — implement emission via assembly
 
-**Testes:**
-- [x] JVM continua funcionando
-- [x] Native gera ELF válido
-- [x] Executável roda e imprime "Hello World"
+**Tests:**
+- [x] JVM keeps working
+- [x] Native generates a valid ELF
+- [x] Executable runs and prints "Hello World"
 
-**Critério de sucesso:** hello world nativo sem JVM.
+**Success criterion:** native hello world without JVM.
 
 ---
 
 ### Milestone 4 — Primitive Values ✅
 
-**Objetivo:** Suportar valores primitivos nativos.
+**Objective:** Support native primitive values.
 
 **Features:**
 - [x] Int (32-bit)
@@ -151,7 +153,7 @@ Hello World
 - [x] Bool (1-bit, extended to i32)
 - [x] Char (16-bit)
 
-**Exemplo:**
+**Example:**
 ```kof
 main() {
     var x = 42
@@ -160,7 +162,7 @@ main() {
 }
 ```
 
-**Mapeamento tipos:**
+**Type mapping:**
 | Kof | x86-64 |
 |-----|--------|
 | Int | %edi, %esi, etc. |
@@ -169,27 +171,27 @@ main() {
 | Double | %xmm0, %xmm1, etc. |
 | Bool | zero-extended to i32 |
 
-**Testes:**
-- [x] Parser: tipos reconhecidos
-- [x] IR: operações com tipos corretos
-- [x] Native: valores passados corretamente
-- [x] JVM: regressão zero
+**Tests:**
+- [x] Parser: types recognized
+- [x] IR: operations with correct types
+- [x] Native: values passed correctly
+- [x] JVM: zero regression
 
-**Critério de sucesso:** primitivos funcionam em ambos os backends.
+**Success criterion:** primitives work on both backends.
 
 ---
 
 ### Milestone 5 — Functions ✅
 
-**Objetivo:** Suportar declaração e chamada de funções.
+**Objective:** Support function declaration and call.
 
 **Features:**
-- [x] Funções com retorno
-- [x] Parâmetros
-- [x] Chamada de função
-- [x] Call convention System V AMD64
+- [x] Functions with return
+- [x] Parameters
+- [x] Function call
+- [x] System V AMD64 call convention
 
-**Exemplo:**
+**Example:**
 ```kof
 add(Int a, Int b): Int {
     return a + b
@@ -201,35 +203,35 @@ main() {
 }
 ```
 
-**Mapeamento calling convention:**
-| Parânero | Register |
+**Calling convention mapping:**
+| Parameter | Register |
 |----------|----------|
-| 1º Int/Long | %rdi |
-| 2º Int/Long | %rsi |
-| 3º Int/Long | %rdx |
-| 4º Int/Long | %rcx |
-| 5º Int/Long | %r8 |
-| 6º Int/Long | %r9 |
+| 1st Int/Long | %rdi |
+| 2nd Int/Long | %rsi |
+| 3rd Int/Long | %rdx |
+| 4th Int/Long | %rcx |
+| 5th Int/Long | %r8 |
+| 6th Int/Long | %r9 |
 | Float/Double | %xmm0-%xmm7 |
-| Retorno | %rax (Int/Long), %xmm0 (Float/Double) |
+| Return | %rax (Int/Long), %xmm0 (Float/Double) |
 
-**Testes:**
-- [x] Funções com 0, 1, 2, 3+ parâmetros
-- [x] Retorno de todos os tipos
+**Tests:**
+- [x] Functions with 0, 1, 2, 3+ parameters
+- [x] Return of all types
 - [x] Nested calls
-- [x] JVM regressão
+- [x] JVM regression
 
-**Critério de sucesso:** funções nativas funcionam.
+**Success criterion:** native functions work.
 
 ---
 
 ### Milestone 6 — Strings ✅
 
-**Objetivo:** Suportar strings nativas.
+**Objective:** Support native strings.
 
-**Decisão de design:** strings nativas são diferentes de java.lang.String.
+**Design decision:** native strings are different from java.lang.String.
 
-**Representação:**
+**Representation:**
 ```
 struct String {
     i64 length;
@@ -237,12 +239,12 @@ struct String {
 }
 ```
 
-**Runtime mínimo:**
-- `kof_string_create(const char* data, i64 length)` — aloca string
-- `kof_string_print(String* s)` — imprime
-- `kof_string_concat(String* a, String* b)` — concatena
+**Minimal runtime:**
+- `kof_string_create(const char* data, i64 length)` — allocates a string
+- `kof_string_print(String* s)` — prints
+- `kof_string_concat(String* a, String* b)` — concatenates
 
-**Exemplo:**
+**Example:**
 ```kof
 main() {
     var name = "World"
@@ -250,27 +252,27 @@ main() {
 }
 ```
 
-**Testes:**
-- [x] String literal → objeto String
-- [x] Concatenação
+**Tests:**
+- [x] String literal → String object
+- [x] Concatenation
 - [x] Print
-- [x] JVM regressão
+- [x] JVM regression
 
-**Critério de sucesso:** strings funcionam nativamente.
+**Success criterion:** strings work natively.
 
 ---
 
 ### Milestone 7 — Control Flow ✅
 
-**Objetivo:** Suportar if/else, while, for.
+**Objective:** Support if/else, while, for.
 
 **Features:**
-- [x] If/else com branching
+- [x] If/else with branching
 - [x] While loop
 - [x] For loop
-- [x] Comparisons (incluindo long/float/double)
+- [x] Comparisons (including long/float/double)
 
-**Exemplo:**
+**Example:**
 ```kof
 main() {
     var i = 0
@@ -281,40 +283,40 @@ main() {
 }
 ```
 
-**Critério de sucesso:** controle de fluxo nativo funcional.
+**Success criterion:** functional native control flow.
 
 ---
 
 ### Milestone 8 — Arrays ✅
 
-**Objetivo:** Suportar arrays nativos.
+**Objective:** Support native arrays.
 
-**Representação:**
+**Representation:**
 ```
 struct Array {
     i64 length;
-    i8* data;      // dados brutos
+    i8* data;      // raw data
 }
 ```
 
-**Testes:**
-- [x] Criação de array
-- [x] Acesso por índice
+**Tests:**
+- [x] Array creation
+- [x] Access by index
 - [x] Array length
-- [x] JVM regressão
+- [x] JVM regression
 
 ---
 
 ### Milestone 9 — Value Types / Structs ✅
 
-**Objetivo:** Records como structs nativos.
+**Objective:** Records as native structs.
 
-**Representação:**
+**Representation:**
 ```kof
 record Point(Int x, Int y)
 ```
 
-Gera:
+Generates:
 ```
 struct Point {
     i32 x;
@@ -322,29 +324,29 @@ struct Point {
 }
 ```
 
-**Alocação:**
-- Stack allocation para tamanhos conhecidos
+**Allocation:**
+- Stack allocation for known sizes
 - Heap allocation via runtime
 
-**Testes:**
-- [x] Criação de struct
-- [x] Acesso a campos
-- [x] Passagem por valor
-- [x] JVM regressão
+**Tests:**
+- [x] Struct creation
+- [x] Field access
+- [x] Pass by value
+- [x] JVM regression
 
 ---
 
 ### Milestone 10 — Objects ✅
 
-**Objetivo:** Classes com herança e dispatch.
+**Objective:** Classes with inheritance and dispatch.
 
 **Features:**
 - [x] Object layout + virtual dispatch
 - [x] Field access
 - [x] Constructors
-- [ ] `super.metodo()` contra classes do classpath (SUP001)
+- [ ] `super.metodo()` against classpath classes (SUP001)
 
-**Exemplo:**
+**Example:**
 ```kof
 class Animal(String nome) {
     falar(): String {
@@ -359,33 +361,33 @@ class Cachorro(String raca) extends Animal {
 }
 ```
 
-**Dispatch:** vtable para virtual dispatch.
+**Dispatch:** vtable for virtual dispatch.
 
-**Critério de sucesso:** polimorfismo nativo funcional.
+**Success criterion:** functional native polymorphism.
 
 ---
 
 ### Milestone 11 — Exceptions ✅
 
-**Objetivo:** Suportar try/catch nativo.
+**Objective:** Support native try/catch.
 
-**Mecanismo:** implementação manual (sem LLVM) — unwinding próprio,
-`try/catch/finally` com cleanup.
+**Mechanism:** hand-written implementation (no LLVM) — custom unwinding,
+`try/catch/finally` with cleanup.
 
-**Testes:**
+**Tests:**
 - [x] Throw/catch
 - [x] Finally
 - [x] Stack unwinding
-- [x] JVM regressão
+- [x] JVM regression
 
 ---
 
 ### Milestone 12 — Generics ✅
 
-**Objetivo:** Suportar generics nativos.
+**Objective:** Support native generics.
 
-**Estratégia:** erasure (idêntica ao JVM), com `T` primitivo/Boxed
-substituído em compile-time (`Box<Int>` → `Int`).
+**Strategy:** erasure (identical to the JVM), with primitive/Boxed `T`
+substituted at compile-time (`Box<Int>` → `Int`).
 
 ```kof
 class Box<T>(T value) {
@@ -393,34 +395,34 @@ class Box<T>(T value) {
 }
 ```
 
-**Testes:**
-- [x] Tipos genéricos básicos
-- [x] Múltiplas instanciações
-- [x] `Box<T>` com `T` primitivo (`Box<Int>` + `println` nativo)
-- [x] JVM regressão
+**Tests:**
+- [x] Basic generic types
+- [x] Multiple instantiations
+- [x] `Box<T>` with primitive `T` (`Box<Int>` + native `println`)
+- [x] JVM regression
 
 ---
 
-## Dependências
+## Dependencies
 
-### Runtime nativo (mínimo)
+### Native runtime (minimal)
 
-Módulo `kof-runtime` com:
+`kof-runtime` module with:
 - `kof_alloc.c` — arena allocator
 - `kof_string.c` — string operations
 - `kof_io.c` — print, read
 - `kof_runtime.c` — initialization
 
-Compilado como `.a` estático, linkado pelo `ld`.
+Compiled as a static `.a`, linked by `ld`.
 
-## Plano de testes
+## Test plan
 
 ```
 tests/
 ├── jvm/
-│   ├── records/        ← testes existentes
+│   ├── records/        ← existing tests
 │   ├── classes/
-│   └── regression/     ← TODOS devem passar
+│   └── regression/     ← ALL must pass
 ├── native/
 │   ├── hello/
 │   ├── primitives/
@@ -433,55 +435,55 @@ tests/
 │   ├── exceptions/
 │   └── generics/
 └── regression/
-    ├── jvm-and-native/ ← testes que validam ambos
-    └── jvm-only/       ← testes específicos JVM
+    ├── jvm-and-native/ ← tests that validate both
+    └── jvm-only/       ← JVM-specific tests
 ```
 
-**Regra:** toda mudança no type system ou AST roda testes de JVM e Native.
+**Rule:** every change to the type system or AST runs JVM and Native tests.
 
 ---
 
-## Riscos e mitigações
+## Risks and mitigations
 
-| Risco | Milestone | Mitigação |
+| Risk | Milestone | Mitigation |
 |-------|-----------|-----------|
-| Assembly manual complexo | 7+ | Implementar incrementalmente |
-| Calling convention incorreta | 5 | Testes exaustivos com muitos parâmetros |
-| Strings nativas diferentes de Java | 6 | Documentar claramente, não misturar |
-| GC precisa ser implementado | 9+ | Começar com arena, evoluir para tracing GC |
-| Exceptions nativas complexas | 11 | Implementação manual, não usar LLVM |
-| Regressão JVM | Todos | Testes de regressão obrigatórios |
+| Complex hand-written assembly | 7+ | Implement incrementally |
+| Incorrect calling convention | 5 | Exhaustive tests with many parameters |
+| Native strings different from Java | 6 | Document clearly, don't mix |
+| GC needs to be implemented | 9+ | Start with arena, evolve to tracing GC |
+| Complex native exceptions | 11 | Hand-written implementation, don't use LLVM |
+| JVM regression | All | Mandatory regression tests |
 
 ---
 
-## Timeline estimada
+## Estimated timeline
 
-| Milestone | Status | Esforço |
+| Milestone | Status | Effort |
 |-----------|--------|---------|
-| 0 — Baseline | ✅ Concluído | 0.5 dia |
-| 1 — Target Abstraction | ✅ Concluído | 1 dia |
-| 2 — Backend Skeleton | ✅ Concluído | 1 dia |
-| 3 — Hello World | ✅ Concluído | 3-5 dias |
-| 4 — Primitives | ✅ Concluído | 2-3 dias |
-| 5 — Functions | ✅ Concluído | 3-5 dias |
-| 6 — Strings | ✅ Concluído | 3-5 dias |
-| 7 — Control Flow | ✅ Concluído | 3-5 dias |
-| 8 — Arrays | ✅ Concluído | 2-3 dias |
-| 9 — Value Types | ✅ Concluído | 5-7 dias |
-| 10 — Objects | ✅ Concluído | 7-10 dias |
-| 11 — Exceptions | ✅ Concluído | 5-7 dias |
-| 12 — Generics | ✅ Concluído | 5-7 dias |
-| 13 — Target separation | ✅ Concluído | — |
-| 14 — Free-list GC | ✅ Concluído | — |
-| 15 — kof_db SQLite | ✅ Concluído | — |
-| 16 — spawn/await pthread | ✅ Concluído (31/08) | — |
-| 17 — FP real (XMM) | ✅ Concluído (31/08) | — |
-| 18 — JSON completo | ✅ Concluído (31/08) | — |
+| 0 — Baseline | ✅ Completed | 0.5 day |
+| 1 — Target Abstraction | ✅ Completed | 1 day |
+| 2 — Backend Skeleton | ✅ Completed | 1 day |
+| 3 — Hello World | ✅ Completed | 3-5 days |
+| 4 — Primitives | ✅ Completed | 2-3 days |
+| 5 — Functions | ✅ Completed | 3-5 days |
+| 6 — Strings | ✅ Completed | 3-5 days |
+| 7 — Control Flow | ✅ Completed | 3-5 days |
+| 8 — Arrays | ✅ Completed | 2-3 days |
+| 9 — Value Types | ✅ Completed | 5-7 days |
+| 10 — Objects | ✅ Completed | 7-10 days |
+| 11 — Exceptions | ✅ Completed | 5-7 days |
+| 12 — Generics | ✅ Completed | 5-7 days |
+| 13 — Target separation | ✅ Completed | — |
+| 14 — Free-list GC | ✅ Completed | — |
+| 15 — kof_db SQLite | ✅ Completed | — |
+| 16 — spawn/await pthread | ✅ Completed (31/08) | — |
+| 17 — Real FP (XMM) | ✅ Completed (31/08) | — |
+| 18 — Full JSON | ✅ Completed (31/08) | — |
 
-**Em desenvolvimento:** MySQL nativo completo, GC mark-sweep, riscv64/aarch64 (codegen).
+**In development:** full native MySQL, GC mark-sweep, riscv64/aarch64 (codegen).
 
 ---
 
-## Próximo passo
+## Next step
 
-[Arquitetura do KofNative →](architecture.md)
+[KofNative Architecture →](architecture.md)

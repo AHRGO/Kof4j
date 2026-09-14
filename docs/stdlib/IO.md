@@ -1,17 +1,19 @@
+[English](IO.md) | [Português](IO.pt_BR.md)
+
 # kof.io — Filesystem API
 
-`kof.io` é a API oficial de filesystem do Kof: arquivos, diretórios e
-caminhos com uma única semântica nos targets JVM e Native.
+`kof.io` is the official Kof filesystem API: files, directories and
+paths with a single semantics on the JVM and Native targets.
 
-## Tipos
+## Types
 
-`File`, `Path` e `Directory` representam um caminho (a string do path).
-Todas as operações de `kof.io` funcionam nos três tipos — o tipo apenas
-orienta a intenção.
+`File`, `Path` and `Directory` represent a path (the path string).
+All `kof.io` operations work on the three types — the type only
+guides the intent.
 
 ## Path
 
-| Operação | Exemplo | Resultado (Linux/macOS) |
+| Operation | Example | Result (Linux/macOS) |
 |----------|---------|--------------------------|
 | `resolve` | `Path("data").resolve("users.txt")` | `data/users.txt` |
 | `parent` | `Path("data/users.txt").parent()` | `data` |
@@ -19,37 +21,37 @@ orienta a intenção.
 | `extension` | `Path("data/users.txt").extension()` | `txt` |
 | `normalize` | `Path("a/./b/../c").normalize()` | `a/c` |
 | `isAbsolute` | `Path("/x").isAbsolute()` | `true` |
-| `toAbsolute` | `Path("x").toAbsolute()` | caminho absoluto |
+| `toAbsolute` | `Path("x").toAbsolute()` | absolute path |
 
-No Windows o separador é `\`; o código Kof nunca concatena separadores.
+On Windows the separator is `\`; Kof code never concatenates separators.
 
 ## File
 
-| Operação | Descrição |
+| Operation | Description |
 |----------|-----------|
 | `exists()` | Bool |
 | `isFile()` / `isDirectory()` | Bool |
-| `readText()` | `String?` — `null` se falhar (JVM e Native) |
+| `readText()` | `String?` — `null` on failure (JVM and Native) |
 | `writeText(s)` / `appendText(s)` | Bool, UTF-8 |
-| `readBytes()` | `Int[]` (0-255), `null` se falhar |
+| `readBytes()` | `Int[]` (0-255), `null` on failure |
 | `writeBytes(b)` / `appendBytes(b)` | Bool |
-| `size()` | Long; lança exceção se o arquivo não existe (02/09 — sem sentinela `-1`) |
-| `delete()` | Bool (arquivo ou diretório vazio) |
+| `size()` | Long; throws an exception if the file does not exist (02/09 — no `-1` sentinel) |
+| `delete()` | Bool (file or empty directory) |
 | `name()` / `path()` | String |
 
-Formas estáticas: `File.exists(p)`, `File.readText(p)`,
+Static forms: `File.exists(p)`, `File.readText(p)`,
 `File.writeText(p, s)`, `File.appendText(p, s)`, `File.delete(p)`,
 `File.size(p)`, `File.name(p)`.
 
 ## Directory
 
-| Operação | Descrição |
+| Operation | Description |
 |----------|-----------|
 | `exists()` | Bool |
-| `create()` | cria; falha se já existe |
-| `createDirectories()` | cria recursivamente |
-| `list()` | `List<String>` dos nomes, ordenado |
-| `delete()` | remove diretório vazio |
+| `create()` | creates; fails if it already exists |
+| `createDirectories()` | creates recursively |
+| `list()` | `List<String>` of names, sorted |
+| `delete()` | removes an empty directory |
 
 ```kof
 var dir = Directory("data")
@@ -59,9 +61,9 @@ for (var entry in dir.list()) {
 }
 ```
 
-`entry.name` e `entry.path` retornam o próprio entry.
+`entry.name` and `entry.path` return the entry itself.
 
-## Exemplo completo
+## Complete example
 
 ```kof
 var path = Path("data/users.txt")
@@ -72,15 +74,15 @@ println(text)
 println(path.size())
 ```
 
-## Erros e encoding
+## Errors and encoding
 
-- Texto: UTF-8 sempre.
-- Ausência como valor (02/09): `readText()`/`readFile()` devolvem `String?`
-  (`null` para arquivo inexistente) em JVM e Native; `size()` lança exceção
-  recuperável (`catch (String e)`) — o `-1` sentinela foi removido.
-- Booleanas: `true`/`false`. `size()` lança exceção quando o arquivo não existe (sem `-1`).
+- Text: UTF-8 always.
+- Absence as a value (02/09): `readText()`/`readFile()` return `String?`
+  (`null` for a nonexistent file) on JVM and Native; `size()` throws a
+  recoverable exception (`catch (String e)`) — the `-1` sentinel was removed.
+- Booleans: `true`/`false`. `size()` throws an exception when the file does not exist (without `-1`).
 
-## Referência
+## Reference
 
 - [learn/34-file-system.md](../../learn/34-file-system.md)
-- Testes: `kof-compiler/src/test/java/dev/kof/compiler/IoE2ETest.java`
+- Tests: `kof-compiler/src/test/java/dev/kof/compiler/IoE2ETest.java`

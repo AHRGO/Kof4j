@@ -1,275 +1,277 @@
-# kof.ui — Arquitetura
+[English](architecture.md) | [Português](architecture.pt_BR.md)
 
-> **Status:** Fase 1 (inspeção) concluída; Fases 2-7 implementadas (Component
-> Core + Navegação/Router — `go/replace/back/forward/param/current/depth`,
-> real no JS, no-op no JVM — 30-31/08); Fases 8-11 em progresso.
-> **Última atualização:** 12 de setembro de 2026
-> **Versão:** 0.2.6-beta
+# kof.ui — Architecture
 
-Este documento é o mapa da arquitetura do `kof.ui`: o estado real encontrado na
-inspeção, os problemas, e a fundação que a UI precisa antes de qualquer widget
-novo. A regra que governa tudo: **kof.ui é uma plataforma de interface, não uma
-coleção de widgets.**
+> **Status:** Phase 1 (inspection) completed; Phases 2-7 implemented (Component
+> Core + Navigation/Router — `go/replace/back/forward/param/current/depth`,
+> real in JS, no-op in the JVM — 30-31/08); Phases 8-11 in progress.
+> **Last updated:** September 12, 2026
+> **Version:** 0.2.6-beta
+
+This document is the map of the `kof.ui` architecture: the real state found in
+the inspection, the problems, and the foundation the UI needs before any new
+widget. The rule that governs everything: **kof.ui is an interface platform, not
+a collection of widgets.**
 
 ---
 
-## 1. O que é kof.ui hoje
+## 1. What kof.ui is today
 
-`kof.ui` é uma **stdlib intrinsic** do compilador: os tipos de UI não existem
-como classes Kof no source — são **descritos no compilador** e baixados para
-funções de runtime `kof_ui_*`. A renderização é **KofJS only**: widgets viram
-DOM, desenhados no webview nativo (WebKitGTK) ou no browser. Nos alvos JVM e
-Native os handles são **no-ops** (documentado; a intenção compila em todos, a
-realização é JS).
+`kof.ui` is a **stdlib intrinsic** of the compiler: the UI types do not exist
+as Kof classes in the source — they are **described in the compiler** and lowered to
+`kof_ui_*` runtime functions. Rendering is **KofJS only**: widgets become
+DOM, drawn in the native webview (WebKitGTK) or in the browser. In the JVM and
+Native targets the handles are **no-ops** (documented; the intention compiles in all, the
+realization is JS).
 
-### Pipeline do kof.ui
+### The kof.ui pipeline
 
 ```text
 Kof source
   │  Window("título"), Button("+1", () -> ...), Column(listOf(...))
   ▼
-SemanticAnalyzer        → reconhece os tipos kof.ui.* (KofUi.isUiType)
+SemanticAnalyzer        → recognizes the kof.ui.* types (KofUi.isUiType)
   ▼
 CompilerDriver
-  ├── construtores: match por NOME (mc.methodName == "Window" | "Label" | ...)
+  ├── constructors: match by NAME (mc.methodName == "Window" | "Label" | ...)
   │     → KofCall(kof_ui_*_new, ...)          [emitExpression, receiver==null]
-  └── métodos:      match por (tipo, nome, aridade)
+  └── methods:      match by (type, name, arity)
         → KofUi.instanceMethod → KofCall(kof_ui_*, ...)   [emitUiInstance]
   ▼
 Backend
-  ├── JvmBackend    → KofRuntime.java gerado, kof_ui_* no-ops (JVM/Native)
-  ├── NativeBackend → assembly kof_ui_* no-ops
-  └── JsBackend     → kof-runtime.mjs (CORE_RUNTIME): a implementação DOM real
+  ├── JvmBackend    → generated KofRuntime.java, kof_ui_* no-ops (JVM/Native)
+  ├── NativeBackend → kof_ui_* no-op assembly
+  └── JsBackend     → kof-runtime.mjs (CORE_RUNTIME): the real DOM implementation
 ```
 
-### Os 4 pontos de implementação (arquivos reais)
+### The 4 implementation points (real files)
 
-| Papel | Arquivo | Responsabilidade |
+| Role | File | Responsibility |
 |-------|---------|------------------|
-| Registro de tipos/métodos | `kof-compiler/src/main/java/dev/kof/compiler/KofUi.java` | tipos `kof.ui.*`, construtores, `staticMethod`, `instanceMethod`, `paletteColor`, `themeColor` |
-| Lowering | `kof-compiler/src/main/java/dev/kof/compiler/CompilerDriver.java` | construtores por nome (~2405-2519), `emitUiInstance` (~5891), `inferExprType` (~4998) |
-| Runtime JVM/Native | `JvmRuntime.java` / `NativeRuntime.java` | no-ops `kof_ui_*` |
-| Runtime JS (o real) | `JsBackend.java` → `CORE_RUNTIME` | DOM: `kof_ui_*New/Bind/Show/...`, tema, ícones, font |
+| Type/method registry | `kof-compiler/src/main/java/dev/kof/compiler/KofUi.java` | `kof.ui.*` types, constructors, `staticMethod`, `instanceMethod`, `paletteColor`, `themeColor` |
+| Lowering | `kof-compiler/src/main/java/dev/kof/compiler/CompilerDriver.java` | constructors by name (~2405-2519), `emitUiInstance` (~5891), `inferExprType` (~4998) |
+| JVM/Native runtime | `JvmRuntime.java` / `NativeRuntime.java` | `kof_ui_*` no-ops |
+| JS runtime (the real one) | `JsBackend.java` → `CORE_RUNTIME` | DOM: `kof_ui_*New/Bind/Show/...`, theme, icons, font |
 
-### Widgets existentes (inventário)
+### Existing widgets (inventory)
 
-| Categoria | Tipos | Notas |
+| Category | Types | Notes |
 |-----------|-------|-------|
-| Cor/tema | `Color`, `Palette`, `Theme` | Color = Int 32-bit `(r<<24|g<<16|b<<8|a)`; Theme light/dark com cores semânticas |
-| Janela | `Window` | título, bind, show/close, size, theme |
-| Folha | `Label`, `Button`, `Input`, `Link`, `Image`, `Icon` | text/fontSize/bold/color; Button tem ação (lambda c/ capturas); Icon = SVG embutidos |
-| Layout | `Column`, `Row`, `View`+`Style` | CSS flexbox; gap **fixo 8px**; Style(bg, fg, padding, radius) |
-| Desenho | `Canvas` | 2D context: beginPath/closePath/moveTo/lineTo/arc/fill/stroke/setFill/setStroke/setLineWidth/clearRect; renderiza em `<canvas>` no KofJS |
-| Fonte | `Font` | family, size, bold |
+| Color/theme | `Color`, `Palette`, `Theme` | Color = 32-bit Int `(r<<24|g<<16|b<<8|a)`; Theme light/dark with semantic colors |
+| Window | `Window` | title, bind, show/close, size, theme |
+| Leaf | `Label`, `Button`, `Input`, `Link`, `Image`, `Icon` | text/fontSize/bold/color; Button has an action (lambda w/ captures); Icon = embedded SVG |
+| Layout | `Column`, `Row`, `View`+`Style` | CSS flexbox; gap **fixed 8px**; Style(bg, fg, padding, radius) |
+| Drawing | `Canvas` | 2D context: beginPath/closePath/moveTo/lineTo/arc/fill/stroke/setFill/setStroke/setLineWidth/clearRect; renders in `<canvas>` in KofJS |
+| Font | `Font` | family, size, bold |
 
-### Abstrações fundamentais que JÁ existem
+### Fundamental abstractions that ALREADY exist
 
-- **Cor empacotada** (Int) com paleta nomeada e tema semântico.
-- **Árvore de DOM** implícita via `bind` (janela/contêiner → filhos).
-- **Eventos de clique** em `Button` via lambda com capturas.
-- **Tema** light/dark aplicado na janela.
-- **Múltiplos alvos** com gap diagnosticado (JVM/Native = no-op).
+- **Packed color** (Int) with named palette and semantic theme.
+- **DOM tree** implicit via `bind` (window/container → children).
+- **Click events** on `Button` via lambda with captures.
+- **Theme** light/dark applied to the window.
+- **Multiple targets** with diagnosed gap (JVM/Native = no-op).
 
-### Abstrações fundamentais que NÃO existem (o gap real)
+### Fundamental abstractions that do NOT exist (the real gap)
 
-| Pilar | Estado | Consequência |
+| Pillar | State | Consequence |
 |-------|--------|--------------|
-| **Componente** | não existe | cada widget é um handle solto; não há nó de UI com filhos/estado/identidade |
-| **Ciclo de vida** | não existe | só `bind`/`show`/`remove`; não há mount/unmount/dispose, nem cleanup |
-| **Layout** | parcial | só `Column`/`Row` (flexbox, gap fixo); não há Stack/Box/Spacer/Scroll/Grid/Wrap/Center/Align, nem gap/padding/flex por widget |
-| **Eventos** | parcial | só clique no Button, cada um a sua maneira (DOM `addEventListener` espalhado); não há target/propagação/stopPropagation/foco/teclado |
-| **Foco** | não existe | nenhum gerenciamento global; Tab/Shift+Tab, traversal, restoration ausentes |
-| **Navegação** | não existe | sem Route/Router; uma janela só |
-| **Estado** | ad-hoc | estado em **campos estáticos de classes** + lambda que atualiza label na mão; não há estado de componente nem invalidação |
-| **Renderização/invalidação** | imperativo | cada clique faz `label.text = ...` à mão; não há re-render, diffing, scheduling |
-| **Design system** | parcial | só Theme light/dark; não há tokens de Typography/Spacing/Border/Radius/Elevation |
+| **Component** | does not exist | each widget is a loose handle; there is no UI node with children/state/identity |
+| **Lifecycle** | does not exist | only `bind`/`show`/`remove`; there is no mount/unmount/dispose, nor cleanup |
+| **Layout** | partial | only `Column`/`Row` (flexbox, fixed gap); there is no Stack/Box/Spacer/Scroll/Grid/Wrap/Center/Align, nor per-widget gap/padding/flex |
+| **Events** | partial | only click on Button, each in its own way (scattered DOM `addEventListener`); there is no target/propagation/stopPropagation/focus/keyboard |
+| **Focus** | does not exist | no global management; Tab/Shift+Tab, traversal, restoration absent |
+| **Navigation** | does not exist | no Route/Router; a single window |
+| **State** | ad-hoc | state in **static class fields** + lambda that updates the label by hand; there is no component state nor invalidation |
+| **Rendering/invalidation** | imperative | each click does `label.text = ...` by hand; there is no re-render, diffing, scheduling |
+| **Design system** | partial | only Theme light/dark; there are no Typography/Spacing/Border/Radius/Elevation tokens |
 
-### Problemas encontrados (diagnóstico)
+### Problems found (diagnosis)
 
-1. **Árvore não é rastreada pelo framework.** O DOM é a estrutura, mas o
-   runtime não conhece parent/child (só `window.__kofNodes[id]` → el). Sem
-   árvore não há lifecycle, foco, propagação de eventos ou navegação.
-2. **Cada widget implementa infraestrutura própria.** `kofUiSetAction` faz o
-   próprio `addEventListener`; `View`/`Column`/`Row` fazem seu próprio
-   `appendChild`; cor é re-convertida a CSS em vários pontos.
-3. **Estado em estáticos é anti-idiomático e não escala.** Capturas são fotos;
-   o contador do exemplo usa `App.count` estático + `label.text = ...` manual.
-4. **Layout é CSS fixo.** `gap: 8px` hardcoded; sem margin/fill/grow/shrink,
-   sem Stack/Scroll/Grid.
-5. **Sem limpeza.** `remove()` só apaga o el; não há desmontagem de árvore,
-   nem liberação de listeners/timers → risco de leak.
+1. **The tree is not tracked by the framework.** The DOM is the structure, but the
+   runtime does not know parent/child (only `window.__kofNodes[id]` → el). Without
+   a tree there is no lifecycle, focus, event propagation or navigation.
+2. **Each widget implements its own infrastructure.** `kofUiSetAction` does its
+   own `addEventListener`; `View`/`Column`/`Row` do their own
+   `appendChild`; color is re-converted to CSS in several places.
+3. **State in statics is anti-idiomatic and does not scale.** Captures are photos;
+   the example's counter uses static `App.count` + manual `label.text = ...`.
+4. **Layout is fixed CSS.** `gap: 8px` hardcoded; no margin/fill/grow/shrink,
+   no Stack/Scroll/Grid.
+5. **No cleanup.** `remove()` only deletes the el; there is no tree unmounting,
+   nor release of listeners/timers → risk of leak.
 
 ---
 
-## 2. Arquitetura proposta (a fundação)
+## 2. Proposed architecture (the foundation)
 
-> Widgets são a camada visível construída em cima de **nove pilares**.
-> Este documento define os pilares; cada um vira uma fase com implementação,
-> testes e docs próprios. **A Fase 2 (Component Core) entrega o pilar 1 e a
-> espinha dos pilares 3/4/5/8/9** (árvore + estado + invalidação + lifecycle),
-> que é a base sobre a qual os demais se assentam.
+> Widgets are the visible layer built on top of **nine pillars**.
+> This document defines the pillars; each becomes a phase with its own implementation,
+> tests and docs. **Phase 2 (Component Core) delivers pillar 1 and the
+> backbone of pillars 3/4/5/8/9** (tree + state + invalidation + lifecycle),
+> which is the base on which the others rest.
 
-### 2.1 Os nove pilares
+### 2.1 The nine pillars
 
 ```text
    ┌───────────────────────────────────────────────────────────┐
-   │                    kof.ui — plataforma                     │
+   │                    kof.ui — platform                       │
    └───────────────────────────────────────────────────────────┘
-        Widgets (camada visível, construídos DEPOIS)
+        Widgets (visible layer, built LATER)
    ┌───────────────────────────────────────────────────────────┐
-   │ 1 Component   2 Lifecycle   3 Layout    4 Eventos         │
-   │ 5 Foco        6 Navegação   7 Estado    8 Renderização    │
+   │ 1 Component   2 Lifecycle   3 Layout    4 Events          │
+   │ 5 Focus       6 Navigation  7 State     8 Rendering       │
    │ 9 Design system (Theme/Token)                             │
    └───────────────────────────────────────────────────────────┘
 ```
 
-| # | Pilar | Entregável | Fase |
+| # | Pillar | Deliverable | Phase |
 |---|-------|-----------|------|
-| 1 | Component model | nó de UI com identidade, filhos, estado, composição, render | 2 |
-| 2 | Lifecycle | mount/update/unmount/dispose + cleanup automático | 3 |
+| 1 | Component model | UI node with identity, children, state, composition, render | 2 |
+| 2 | Lifecycle | mount/update/unmount/dispose + automatic cleanup | 3 |
 | 3 | Layout | Row/Column/Stack/Box/Spacer/Scroll/Grid/Wrap/Center/Align; gap/padding/flex | 4 |
-| 4 | Eventos | Event/InputEvent/KeyEvent/MouseEvent; target/propagação/stop | 5 |
-| 5 | Foco | foco global, traversal Tab/Shift+Tab, restoration | 6 |
-| 6 | Navegação | Route/Router; go/back/forward/replace; params | 7 |
-| 7 | Estado | local/compartilhado/app; invalidação mínima | 8 |
-| 8 | Renderização | construção, scheduling, invalidation, partial update | 9 |
+| 4 | Events | Event/InputEvent/KeyEvent/MouseEvent; target/propagation/stop | 5 |
+| 5 | Focus | global focus, Tab/Shift+Tab traversal, restoration | 6 |
+| 6 | Navigation | Route/Router; go/back/forward/replace; params | 7 |
+| 7 | State | local/shared/app; minimal invalidation | 8 |
+| 8 | Rendering | construction, scheduling, invalidation, partial update | 9 |
 | 9 | Design system | Theme + tokens (Color/Type/Spacing/Border/Radius/Elevation) | 10 |
 
-### 2.2 O Component Core (Fase 2) — o que será implementado
+### 2.2 The Component Core (Phase 2) — what will be implemented
 
-**Um `Component` é um nó na árvore de UI.** Todo widget é um componente. O
-core entrega a espinha: árvore + estado reativo + invalidação + renderização
-+ lifecycle + events + efeitos com cleanup automático.
+**A `Component` is a node in the UI tree.** Every widget is a component. The
+core delivers the backbone: tree + reactive state + invalidation + rendering
++ lifecycle + events + effects with automatic cleanup.
 
-Modelo (idiomático Kof, API pequena, sem boilerplate):
+Model (idiomatic Kof, small API, no boilerplate):
 
 ```kof
-// estado reativo de componente + view builder + lifecycle + effects
+// component reactive state + view builder + lifecycle + effects
 var app = Component("App")
-app.state(0)                                  // estado inicial (Int)
-app.view { s ->                               // view: re-executado a cada mudança de estado
+app.state(0)                                  // initial state (Int)
+app.view { s ->                               // view: re-executed on every state change
     Column([
         Label("count: " + s),
-        Button("+1", () -> { app.state(s + 1) })   // set estado => invalida => re-render
+        Button("+1", () -> { app.state(s + 1) })   // set state => invalidates => re-render
     ])
 }
-app.onMount { /* roda 1x ao montar */ }
-app.onDispose { /* roda 1x ao desmontar */ }
-app.effect { /* registro de listener/timer/subscription; cleanup automático no dispose */ }
-window.bind(app)                              // monta
+app.onMount { /* runs once on mount */ }
+app.onDispose { /* runs once on unmount */ }
+app.effect { /* registration of listener/timer/subscription; automatic cleanup on dispose */ }
+window.bind(app)                              // mounts
 ```
 
-Regras que o core garante:
+Rules the core guarantees:
 
-- **Árvore rastreada.** O framework conhece parent/child de cada nó (fonte da
-  verdade), não só o DOM.
-- **Composição.** `bind`/filhos formam a árvore; um componente compõe outros.
-- **Estado encapsulado.** estado vive no componente; `state(...)` é o único
-  caminho de mutação (sem 5 formas de guardar estado).
-- **Invalidação mínima.** `state(...)` marca **só o componente** como dirty e
-  agenda re-render (scheduling), sem tocar a aplicação inteira.
-- **Re-render por reconciliação.** o view builder re-rodou, mas os nós
-  estáveis (mesma posição + kind) **reaproveitam o DOM existente** — só o que
-  mudou é atualizado (texto, props, handlers). Arquitetura preparada para
-  diffing completo (Fase 9), sem recriar a árvore.
-- **Lifecycle determinístico.** mount (view + `onMount`), update (reconcile),
-  unmount (`onDispose` + **efeitos em ordem reversa** + remoção do DOM).
-- **Cleanup automático.** listener/timer/subscription registrados via `effect`
-  são liberados no unmount — nenhum vazamento, sem o usuário lembrar.
-- **Eventos com propagação.** `on(type, handler)` centralizado; base para
-  bubbling/stopPropagation (Fase 5).
+- **Tracked tree.** The framework knows the parent/child of each node (source of
+  truth), not just the DOM.
+- **Composition.** `bind`/children form the tree; one component composes others.
+- **Encapsulated state.** state lives in the component; `state(...)` is the only
+  mutation path (no 5 ways to store state).
+- **Minimal invalidation.** `state(...)` marks **only the component** as dirty and
+  schedules a re-render (scheduling), without touching the whole application.
+- **Re-render by reconciliation.** the view builder re-ran, but the stable
+  nodes (same position + kind) **reuse the existing DOM** — only what
+  changed is updated (text, props, handlers). Architecture prepared for
+  full diffing (Phase 9), without recreating the tree.
+- **Deterministic lifecycle.** mount (view + `onMount`), update (reconcile),
+  unmount (`onDispose` + **effects in reverse order** + DOM removal).
+- **Automatic cleanup.** listener/timer/subscription registered via `effect`
+  are released on unmount — no leak, without the user having to remember.
+- **Events with propagation.** `on(type, handler)` centralized; basis for
+  bubbling/stopPropagation (Phase 5).
 
-### 2.3 Relação entre componentes
+### 2.3 Relationship between components
 
 ```text
-Window (raiz/host)
- └── Component "App"            (componente raiz do app)
+Window (root/host)
+ └── Component "App"            (app root component)
       └── Column                (layout)
-           ├── Label            (folha)
-           └── Button           (folha + ação)
-                └── (ação => state => re-render do App)
+           ├── Label            (leaf)
+           └── Button           (leaf + action)
+                └── (action => state => re-render of App)
 ```
 
-- **Container/Layout** (`Window`, `Column`, `Row`, `Box`, `Stack`...) têm
-  filhos; **folha** (`Label`, `Button`, `Input`...) não.
-- **Componente** (`Component`) é o nó que carrega **estado + view +
-  lifecycle + effects**; é a unidade de re-render.
-- O grafo é uma **árvore** (cada nó tem um único parent), raiz na janela.
+- **Container/Layout** (`Window`, `Column`, `Row`, `Box`, `Stack`...) have
+  children; **leaf** (`Label`, `Button`, `Input`...) do not.
+- **Component** (`Component`) is the node that carries **state + view +
+  lifecycle + effects**; it is the unit of re-render.
+- The graph is a **tree** (each node has a single parent), rooted at the window.
 
-### 2.4 Renderização
+### 2.4 Rendering
 
-1. **Construção:** `view { s -> ... }` executa → devolve a raiz da view (um nó
-   de layout/folha com a árvore de filhos).
-2. **Quando renderiza:** na montagem (1x) e a cada `state(...)`/`text(...)`/
-   `flag(...)` (invalidação agendada, em lote — *batching* via fila de dirty).
-3. **Como as mudanças são detectadas:** a mutação de estado **é** a detecção —
-   o próprio `state(...)` é o ponto de invalidação (sem polling, sem reflexão).
-4. **Invalidation:** `state(...)` marca o componente dirty na fila; um flush
-   (agendado, não síncrono) reconcilia só os componentes dirty.
-5. **Updates aplicados:** reconciliação por **posição + kind**, reaproveitando
-   el existente e atualizando só o diff (texto/props/handlers). Preparado para
-   diffing por chave (Fase 9).
+1. **Construction:** `view { s -> ... }` executes → returns the view root (a
+   layout/leaf node with the child tree).
+2. **When it renders:** on mount (once) and on every `state(...)`/`text(...)`/
+   `flag(...)` (scheduled invalidation, in batch — *batching* via dirty queue).
+3. **How changes are detected:** the state mutation **is** the detection —
+   `state(...)` itself is the invalidation point (no polling, no reflection).
+4. **Invalidation:** `state(...)` marks the component dirty in the queue; a flush
+   (scheduled, not synchronous) reconciles only the dirty components.
+5. **Updates applied:** reconciliation by **position + kind**, reusing the
+   existing el and updating only the diff (text/props/handlers). Prepared for
+   key-based diffing (Phase 9).
 
-### 2.5 Eventos
+### 2.5 Events
 
-Eventos vivem no nó e são centralizados no engine (não no DOM de cada widget).
-`on(type, handler)` registra no nó; o engine liga ao DOM. Propagação (Fase 5):
-target → bubbles para os pais, com `stopPropagation`/cancelamento. O core já
-registra handlers por nó (base da propagação) e os **limpa no unmount**.
+Events live on the node and are centralized in the engine (not in the DOM of each widget).
+`on(type, handler)` registers on the node; the engine wires it to the DOM. Propagation (Phase 5):
+target → bubbles to the parents, with `stopPropagation`/cancellation. The core already
+registers handlers per node (basis of propagation) and **clears them on unmount**.
 
-### 2.6 Estado
+### 2.6 State
 
-Três escopos (Fase 8 define o modelo oficial; o core entrega o **local**):
+Three scopes (Phase 8 defines the official model; the core delivers the **local** one):
 
-- **Local de componente:** `state`/`text`/`flag` no `Component` (entregue).
-- **Compartilhado:** um `Store` observável entre componentes (Fase 8).
-- **Aplicação:** raiz/`AppState` (Fase 8).
+- **Component local:** `state`/`text`/`flag` on the `Component` (delivered).
+- **Shared:** an observable `Store` between components (Phase 8).
+- **Application:** root/`AppState` (Phase 8).
 
-Mudança de estado invalida **apenas o componente dono** — não a aplicação.
+A state change invalidates **only the owning component** — not the application.
 
-### 2.7 Ciclo de vida (Fase 3 detalha; o core já implementa)
+### 2.7 Lifecycle (Phase 3 details it; the core already implements it)
 
-Ordem determinística:
+Deterministic order:
 
 ```text
-mount:   (monta a view) -> onMount()                      [top-down depois de montar]
-update:  state mudou   -> re-render (reconcile)
-unmount: onDispose() -> effects() em ordem REVERSA -> remove DOM
+mount:   (mounts the view) -> onMount()                    [top-down after mounting]
+update:  state changed   -> re-render (reconcile)
+unmount: onDispose() -> effects() in REVERSE order -> remove DOM
 ```
 
-Efeitos (listener/timer/subscription/stream/task) registrados via `effect` são
-**liberados automaticamente** no unmount. Sem vazamento, sem lembrete manual.
+Effects (listener/timer/subscription/stream/task) registered via `effect` are
+**released automatically** on unmount. No leak, no manual reminder.
 
-### 2.8 Layout (Fase 4 detalha; o core já traz primitivas)
+### 2.8 Layout (Phase 4 details it; the core already brings primitives)
 
-O core adiciona as primitivas estruturais faltando, todas com
-**gap/padding/alignment/flex** via CSS (sem o widget calcular posição):
-`Box`, `Stack`, `Spacer`, `Wrap`, `Grid`, `Center`, `Align` (além do `Row`/
-`Column`/`View` existentes). `Scroll` entra com a camada de layout.
+The core adds the missing structural primitives, all with
+**gap/padding/alignment/flex** via CSS (without the widget calculating position):
+`Box`, `Stack`, `Spacer`, `Wrap`, `Grid`, `Center`, `Align` (in addition to the existing
+`Row`/`Column`/`View`). `Scroll` comes with the layout layer.
 
-### 2.9 Navegação (Fase 7) — implementada
+### 2.9 Navigation (Phase 7) — implemented
 
 `Router` namespace: `route(name, component)`, `go(name[, param])`,
 `replace(name[, param])`, `back()`, `forward()`, `param()`, `current()`,
-`depth()`. Navegar = **trocar o componente raiz**: o engine desmonta o antigo
-(lifecycle correto + cleanup) e monta o novo. A espinha de componente do core é
-o que torna isso possível (árvore + lifecycle + cleanup).
+`depth()`. Navigating = **swapping the root component**: the engine unmounts the old
+one (correct lifecycle + cleanup) and mounts the new one. The component backbone of the core is
+what makes this possible (tree + lifecycle + cleanup).
 
-Detalhes de implementação (alvo JS):
+Implementation details (JS target):
 
-- `kofUiRouterShow` desmonta **qualquer rota montada** que não seja o destino
-  (cobre o bind inicial de `Window.bind`, que monta um componente raiz sem
-  registrar `current`). Padrão suportado: configurar o component (`view`,
-  `onMount`, ...) **antes** de `win.bind`/`Router.go`.
-- `Router.go`/`replace` aceitam 1 ou 2 argumentos (com ou sem param).
-- `back()`/`forward()` usam pilhas de histórico; `forwardStack` é limpo ao
-  navegar para frente.
-- Testes: `RouterE2ETest` (go com lifecycle, back/forward, rota unknown).
+- `kofUiRouterShow` unmounts **any mounted route** that is not the destination
+  (covers the initial bind of `Window.bind`, which mounts a root component without
+  registering `current`). Supported pattern: configure the component (`view`,
+  `onMount`, ...) **before** `win.bind`/`Router.go`.
+- `Router.go`/`replace` accept 1 or 2 arguments (with or without param).
+- `back()`/`forward()` use history stacks; `forwardStack` is cleared when
+  navigating forward.
+- Tests: `RouterE2ETest` (go with lifecycle, back/forward, unknown route).
 
-### 2.10 Estrutura de módulos (Fase 11)
+### 2.10 Module structure (Phase 11)
 
 ```text
-kof-ui/  (conceitual — hoje vive no compilador; o motor é o CORE_RUNTIME JS)
+kof-ui/  (conceptual — today it lives in the compiler; the engine is the JS CORE_RUNTIME)
   core/       component · state · lifecycle · render · events · input · focus
   layout/     row · column · stack · box · scroll · grid · wrap · spacer
   navigation/ router · route · navigation
@@ -279,25 +281,25 @@ kof-ui/  (conceitual — hoje vive no compilador; o motor é o CORE_RUNTIME JS)
 
 ---
 
-## 3. Decisões e limites honestos
+## 3. Decisions and honest limits
 
-- **Renderização é KofJS.** JVM/Native continuam no-op para UI (gap
-  documentado, como hoje). O core roda e é testado no alvo JS (GraalJS).
-- **API pode evoluir.** o `view { ... }` + `state(...)` é a forma atual; o
-  formato final do "componente declarativo" pode mudar, mas a **arquitetura**
-  (árvore, composição, estado, invalidação, lifecycle) é estável.
-- **Sem mágica de reatividade.** Kof não tem observer de propriedade; a
-  detecção de mudança de estado **é** a chamada a `state(...)`. Isso é
-  explícito mas mínimo (um método), encapsulado e automático (sem
-  invalidate manual, sem cleanup manual).
-- **Não reescrever o que funciona.** `Color`/`Palette`/`Theme`, os widgets
-  existentes e seus testes são preservados; o core os **estende** (árvore,
-  estado, lifecycle) sem quebrar o comportamento atual.
+- **Rendering is KofJS.** JVM/Native remain no-op for UI (documented
+  gap, as today). The core runs and is tested on the JS target (GraalJS).
+- **API may evolve.** `view { ... }` + `state(...)` is the current form; the
+  final format of the "declarative component" may change, but the **architecture**
+  (tree, composition, state, invalidation, lifecycle) is stable.
+- **No reactivity magic.** Kof has no property observer; the
+  state change detection **is** the call to `state(...)`. This is
+  explicit but minimal (one method), encapsulated and automatic (no
+  manual invalidate, no manual cleanup).
+- **Don't rewrite what works.** `Color`/`Palette`/`Theme`, the existing
+  widgets and their tests are preserved; the core **extends** them (tree,
+  state, lifecycle) without breaking the current behavior.
 
-## 4. Planos de teste (Fase 2)
+## 4. Test plans (Phase 2)
 
-- **Componentes:** mount, update, unmount.
-- **Lifecycle:** ordem correta (mount→update→unmount), cleanup, dispose.
-- **Eventos:** propagação, cancelamento, foco (base).
-- **Memória:** desmontar libera listeners; effects rodam 1x; **stress 10.000
-  mount/unmount** + **10.000 event dispatches** sem leak.
+- **Components:** mount, update, unmount.
+- **Lifecycle:** correct order (mount→update→unmount), cleanup, dispose.
+- **Events:** propagation, cancellation, focus (basis).
+- **Memory:** unmounting releases listeners; effects run once; **10,000
+  mount/unmount stress** + **10,000 event dispatches** without leak.

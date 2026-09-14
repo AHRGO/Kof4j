@@ -1,10 +1,12 @@
-# 05 — Controle de Fluxo
+[English](05-control-flow.md) | [Português](05-control-flow.pt_BR.md)
 
-> **Status: implementado (JVM / Native / JS) — 0.3.22-beta**
+# 05 — Control Flow
+
+> **Status: implemented (JVM / Native / JS) — 0.3.22-beta**
 >
-> `if/else`, `while`, `for`, `for-in`, `switch`, `break/continue` funcionam nos três targets. Pattern matching (`case String s`, `Point(x,y)`) ver capítulo 15.
+> `if/else`, `while`, `for`, `for-in`, `switch`, `break/continue` work on the three targets. Pattern matching (`case String s`, `Point(x,y)`) see chapter 15.
 
-## Condicional
+## Conditional
 
 ### if / else
 
@@ -16,7 +18,7 @@ if (idade >= 18) {
 }
 ```
 
-### if como expressão
+### if as an expression
 
 ```kf
 String mensagem = if (ativo) "sim" else "não";
@@ -50,7 +52,7 @@ for (var nome in nomes) {
 }
 ```
 
-Funciona sobre `List<T>` e arrays (sintaxe `for (var x in colecao)`).
+Works over `List<T>` and arrays (syntax `for (var x in colecao)`).
 
 ## switch
 
@@ -65,17 +67,17 @@ switch (dia) {
 }
 ```
 
-> Nota: cada `case` termina sozinho (não há *fallthrough* entre casos — o
-> compilador salta para o fim do `switch` ao concluir o corpo), então `break`
-> **não é necessário** dentro de `switch`. Use `break`/`continue` apenas em
-> loops. If-expr é a forma preferida para valores condicionais:
-> `var x = if (c) a else b`. Quando o `switch` produz valor, use a forma
-> **expressão** (SYN001, 0.3.22-beta): `var r = switch (dia) { case 1 -> "seg";
-> default -> "outro" }` — sem `break`, sem escopo de bloco, `default`
-> obrigatório. Switch com padrões (type pattern / destructuring) ver capítulo
+> Note: each `case` ends on its own (there is no *fallthrough* between cases —
+> the compiler jumps to the end of the `switch` when the body finishes), so `break`
+> **is not needed** inside `switch`. Use `break`/`continue` only in
+> loops. If-expr is the preferred form for conditional values:
+> `var x = if (c) a else b`. When the `switch` produces a value, use the
+> **expression** form (SYN001, 0.3.22-beta): `var r = switch (dia) { case 1 -> "seg";
+> default -> "outro" }` — no `break`, no block scope, `default`
+> required. Switch with patterns (type pattern / destructuring) see chapter
 > 15.
 
-## break e continue
+## break and continue
 
 ```kf
 for (var i = 0; i < 100; i++) {
@@ -85,6 +87,6 @@ for (var i = 0; i < 100; i++) {
 }
 ```
 
-## Próximo passo
+## Next step
 
-[Funções →](06-functions.md)
+[Functions →](06-functions.md)

@@ -1,85 +1,87 @@
-# 02 — Primeiro Programa
+[English](02-first-program.md) | [Português](02-first-program.pt_BR.md)
 
-> **Kof 0.4.0-beta — set 2026 — targets jvm/native/native.risc/native.arm/js/kofc**
+# 02 — First Program
 
-## O construto mais básico
+> **Kof 0.4.0-beta — Sep 2026 — targets jvm/native/native.risc/native.arm/js/kofc**
 
-Em Kof, o construto mais simples que o compilador gera bytecode válido é o **record**:
+## The most basic construct
+
+In Kof, the simplest construct for which the compiler generates valid bytecode is the **record**:
 
 ```kf
 record Ponto(Int x, Int y)
 ```
 
-Isso cria uma classe JVM com:
-- dois campos privados e finais (`x`, `y`)
-- um construtor público que aceita `Int` e `Int`
-- dois métodos públicos `x()` e `y()` que retornam os valores
-- um método `toString()`
+This creates a JVM class with:
+- two private final fields (`x`, `y`)
+- a public constructor that accepts `Int` and `Int`
+- two public methods `x()` and `y()` that return the values
+- a `toString()` method
 
-No Native vira struct com fields e métodos equivalentes; no JS, classe ES — a cadeia `intention->Kof->frontend->IR->backend->runtime` mantém a semântica.
+In Native it becomes a struct with equivalent fields and methods; in JS, an ES class — the `intention->Kof->frontend->IR->backend->runtime` chain preserves the semantics.
 
-## Entendendo cada parte
+## Understanding each part
 
 ```
-record      → palavra-chave: define um record
-Ponto       → nome da classe
-(           → início dos componentes
-Int x       → primeiro componente: tipo Int, nome x
-,           → separador
-Int y       → segundo componente: tipo Int, nome y
-)           → fim dos componentes
+record      → keyword: defines a record
+Ponto       → class name
+(           → start of the components
+Int x       → first component: type Int, name x
+,           → separator
+Int y       → second component: type Int, name y
+)           → end of the components
 ```
 
-## Criando instâncias
+## Creating instances
 
-Em Java, para criar uma instância você escreve `new User("Mel", ...)`. Em Kof,
-a construção é `Classe(args)` **sem o `new`** (a forma idiomática); `new`
-continua aceito por retrocompatibilidade, com a mesma semântica:
+In Java, to create an instance you write `new User("Mel", ...)`. In Kof,
+construction is `Classe(args)` **without the `new`** (the idiomatic form); `new`
+is still accepted for backward compatibility, with the same semantics:
 
 ```kf
-var p = Ponto(3, 7)      // forma idiomática (recomendada)
-var old = new Ponto(3, 7) // forma explícita (retrocompatível)
+var p = Ponto(3, 7)      // idiomatic form (recommended)
+var old = new Ponto(3, 7) // explicit form (backward compatible)
 ```
 
-O compilador gera o construtor e os accessors automaticamente.
+The compiler generates the constructor and the accessors automatically.
 
-## Acessando valores
+## Accessing values
 
-Os métodos de acesso são gerados automaticamente:
+The accessor methods are generated automatically:
 
 ```java
 Ponto p = new Ponto(3, 7);
-p.x()  // retorna 3
-p.y()  // retorna 7
+p.x()  // returns 3
+p.y()  // returns 7
 ```
 
-## Um programa completo
+## A complete program
 
-Agora Kof suporta `main()`. Você pode criar um programa completo:
+Now Kof supports `main()`. You can create a complete program:
 
-Arquivo `main.kf`:
+File `main.kf`:
 
 ```kf
 main() = print("Olá, mundo!")
 ```
 
-Compilando e executando:
+Compiling and running:
 
 ```bash
-kof run main.kf                 # jvm (padrão)
+kof run main.kf                 # jvm (default)
 kof run main.kf --target=native # ELF x86-64
-kof run main.kf --target=js     # ES Module via GraalJS embarcado
+kof run main.kf --target=js     # ES Module via embedded GraalJS
 ```
 
-Resultado:
+Result:
 
 ```
 Olá, mundo!
 ```
 
-## Um programa com records
+## A program with records
 
-Arquivo `ponto.kf`:
+File `ponto.kf`:
 
 ```kf
 record Ponto(Int x, Int y)
@@ -90,21 +92,21 @@ main() {
 }
 ```
 
-Executando:
+Running:
 
 ```bash
 kof run ponto.kf
 ```
 
-Resultado:
+Result:
 
 ```
 Ponto[x=3, y=7]
 ```
 
-### Pattern matching com destructuring (0.2.0)
+### Pattern matching with destructuring (0.2.0)
 
-Records já desestruturam em `switch`:
+Records already destructure in `switch`:
 
 ```kf
 record Ponto(Int x, Int y)
@@ -118,8 +120,8 @@ String descreve(Object o) {
 }
 
 main() {
-    println(descreve(Ponto(3, 7)))  // ponto 3,7
-    println(descreve("kof"))        // texto kof
+    println(descreve(Ponto(3, 7)))  // point 3,7
+    println(descreve("kof"))        // text kof
 }
 ```
 
@@ -129,11 +131,11 @@ kof run ponto.kf --target=native  # Native rbx→rcx fix
 kof run ponto.kf --target=js      # JS typeof
 ```
 
-### KofScript: `let` no topo vira global
+### KofScript: top-level `let` becomes global
 
-No `kof script` / `kof repl`, `let`/`const` no nível do arquivo não são locais de `main` — viram `KofScriptGlobals`:
+In `kof script` / `kof repl`, `let`/`const` at file level are not `main` locals — they become `KofScriptGlobals`:
 
-Arquivo `demo.ks`:
+File `demo.ks`:
 
 ```kf
 let nome = "Mel"
@@ -145,14 +147,14 @@ main() {
 ```
 
 ```bash
-kof script demo.ks                # execução direta
-kof script --repl                 # REPL incremental (digite 'exit' para sair)
-kof script demo.ks --watch        # re-executa ao salvar
+kof script demo.ks                # direct execution
+kof script --repl                 # incremental REPL (type 'exit' to quit)
+kof script demo.ks --watch        # re-executes on save
 ```
 
-### KofC: C subset nativo-only
+### KofC: native-only C subset
 
-`kof c` não compila Kof — compila um subset de C para ELF x86-64:
+`kof c` does not compile Kof — it compiles a subset of C to an x86-64 ELF:
 
 ```c
 // hello.c
@@ -169,42 +171,42 @@ int main() {
 ```
 
 ```bash
-kof c hello.c --run               # compila via GAS+LD e executa
-kof c hello.c --output ./bin      # só compila (native-only, sem --target jvm/js)
+kof c hello.c --run               # compiles via GAS+LD and executes
+kof c hello.c --output ./bin      # only compiles (native-only, no --target jvm/js)
 ```
 
-## Variáveis e inferência
+## Variables and inference
 
-Kof suporta inferência de tipos:
+Kof supports type inference:
 
 ```kf
 var nome = "Mel"
 var idade = 26
 var pi = 3.14
-var apelido: String? = null   // String? básico (0.2.0): nullable com verificação em compile-time
+var apelido: String? = null   // basic String? (0.2.0): nullable with compile-time check
 ```
 
-O compilador entende os tipos automaticamente.
+The compiler understands the types automatically.
 
-## Exercício 1
+## Exercise 1
 
-1. Crie um arquivo `coordenada.kf`
-2. Defina um record com dois campos: `lat Double` e `lon Double`
-3. Compile com a CLI
-4. Verifique com `javap -v Coordenada.class`
+1. Create a file `coordenada.kf`
+2. Define a record with two fields: `lat Double` and `lon Double`
+3. Compile with the CLI
+4. Check with `javap -v Coordenada.class`
 
-## Exercício 2
+## Exercise 2
 
-1. Crie um record `Pessoa` com campos `nome String` e `idade Int`
-2. Crie uma função main que crie uma pessoa e imprima seus dados
-3. Execute com `kof run`
+1. Create a record `Pessoa` with fields `nome String` and `idade Int`
+2. Create a main function that creates a person and prints their data
+3. Run it with `kof run`
 
-## Exercício 3 — destructuring + KofScript
+## Exercise 3 — destructuring + KofScript
 
-1. Crie `ponto.kf` com `record Ponto(Int x, Int y)` e um `switch` com `case Ponto(x, y):`
-2. Rode com `kof run --target=jvm` e `--target=js`
-3. Crie `demo.ks` com `let n = 10` no topo e use `n` dentro de `main()` via `kof script demo.ks`
+1. Create `ponto.kf` with `record Ponto(Int x, Int y)` and a `switch` with `case Ponto(x, y):`
+2. Run it with `kof run --target=jvm` and `--target=js`
+3. Create `demo.ks` with top-level `let n = 10` and use `n` inside `main()` via `kof script demo.ks`
 
-## Próximo passo
+## Next step
 
-[Fundamentos da Linguagem →](03-language-basics.md)
+[Language Basics →](03-language-basics.md)

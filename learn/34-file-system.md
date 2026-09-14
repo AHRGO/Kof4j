@@ -1,9 +1,11 @@
+[English](34-file-system.md) | [Português](34-file-system.pt_BR.md)
+
 # 34 — Filesystem (kof.io)
 
 > **Kof 0.4.0-beta — `intention->Kof->frontend->IR->backend->runtime` — kof.io + kof.http (JVM+JS)**
 
-`kof.io` é a API oficial de filesystem do Kof. Uma única API para JVM e
-Native, Linux, macOS e Windows — sem expor POSIX, `java.nio` ou syscalls.
+`kof.io` is Kof's official filesystem API. A single API for JVM and
+Native, Linux, macOS and Windows — without exposing POSIX, `java.nio` or syscalls.
 
 ```kof
 var path = Path("data/users.txt")
@@ -13,11 +15,11 @@ println(path.readText())
 println(path.size())
 ```
 
-## Valores
+## Values
 
-`File`, `Path` e `Directory` são tipos de `kof.io` que representam um
-caminho. As operações são as mesmas para os três — o tipo apenas orienta a
-intenção:
+`File`, `Path` and `Directory` are `kof.io` types that represent a
+path. The operations are the same for all three — the type only guides the
+intention:
 
 ```kof
 var file = File("hello.txt")
@@ -27,38 +29,38 @@ var dir = Directory("data")
 
 ## Path
 
-Operações de caminho (sem tocar o filesystem):
+Path operations (without touching the filesystem):
 
-| Operação | Descrição |
+| Operation | Description |
 |----------|-----------|
-| `resolve(outro)` | junta dois caminhos com o separador da plataforma |
-| `parent()` | diretório pai (ou `null`) |
-| `fileName()` | nome do último componente |
-| `extension()` | extensão (sem o ponto) |
-| `normalize()` | resolve `.` e `..` |
-| `isAbsolute()` | caminho absoluto? |
-| `toAbsolute()` | resolve contra o working directory |
+| `resolve(outro)` | joins two paths with the platform separator |
+| `parent()` | parent directory (or `null`) |
+| `fileName()` | name of the last component |
+| `extension()` | extension (without the dot) |
+| `normalize()` | resolves `.` and `..` |
+| `isAbsolute()` | absolute path? |
+| `toAbsolute()` | resolves against the working directory |
 
 ```kof
 Path("a/./b/../c").normalize()   // a/c
-Path("data").resolve("users")    // data/users (ou data\users no Windows)
+Path("data").resolve("users")    // data/users (or data\users on Windows)
 ```
 
 ## File
 
-| Operação | Descrição |
+| Operation | Description |
 |----------|-----------|
-| `exists()` | existe? |
-| `isFile()` / `isDirectory()` | tipo |
-| `readText()` | conteúdo como texto (UTF-8); `null` se falhar |
-| `writeText(s)` / `appendText(s)` | grava / anexa texto (UTF-8) |
-| `readBytes()` | conteúdo como `Int[]` (bytes 0-255) |
-| `writeBytes(b)` / `appendBytes(b)` | grava / anexa bytes |
-| `size()` | tamanho em bytes |
-| `delete()` | remove (arquivo ou diretório vazio) |
-| `name()` / `path()` | nome do arquivo / caminho |
+| `exists()` | exists? |
+| `isFile()` / `isDirectory()` | type |
+| `readText()` | content as text (UTF-8); `null` if it fails |
+| `writeText(s)` / `appendText(s)` | writes / appends text (UTF-8) |
+| `readBytes()` | content as `Int[]` (bytes 0-255) |
+| `writeBytes(b)` / `appendBytes(b)` | writes / appends bytes |
+| `size()` | size in bytes |
+| `delete()` | removes (file or empty directory) |
+| `name()` / `path()` | file name / path |
 
-Formas estáticas equivalentes:
+Equivalent static forms:
 
 ```kof
 File.exists("x.txt")
@@ -68,13 +70,13 @@ File.writeText("x.txt", "conteúdo")
 
 ## Directory
 
-| Operação | Descrição |
+| Operation | Description |
 |----------|-----------|
-| `exists()` | existe? |
-| `create()` | cria (falha se já existe) |
-| `createDirectories()` | cria recursivamente |
-| `list()` | `List<String>` com os nomes dos itens (ordenado) |
-| `delete()` | remove diretório vazio |
+| `exists()` | exists? |
+| `create()` | creates (fails if it already exists) |
+| `createDirectories()` | creates recursively |
+| `list()` | `List<String>` with the item names (sorted) |
+| `delete()` | removes empty directory |
 
 ```kof
 var dir = Directory("data")
@@ -86,7 +88,7 @@ for (var entry in dir.list()) {
 
 ## Bytes
 
-Bytes usam a representação `Int[]` (cada elemento 0-255):
+Bytes use the `Int[]` representation (each element 0-255):
 
 ```kof
 var b = new Int[4]
@@ -99,31 +101,31 @@ var data = File("bin.dat").readBytes()
 
 ## Encoding
 
-`readText`/`writeText`/`appendText` usam **UTF-8** sempre. O encoding do
-sistema operacional nunca é usado.
+`readText`/`writeText`/`appendText` always use **UTF-8**. The operating
+system encoding is never used.
 
-## Erros
+## Errors
 
-- `readText`/`readBytes`: `null` quando o arquivo não pode ser lido.
-- Operações booleanas (`writeText`, `delete`, `create`, ...): `true` no
-  sucesso, `false` na falha.
-- `size`: `-1` quando o arquivo não existe.
-- No target **Native**, `readText` de um arquivo inexistente encerra o
-  programa com erro (`kof_panic`); no JVM/JS retorna `null`.
-  Verifique com `exists()` antes de ler.
+- `readText`/`readBytes`: `null` when the file cannot be read.
+- Boolean operations (`writeText`, `delete`, `create`, ...): `true` on
+  success, `false` on failure.
+- `size`: `-1` when the file does not exist.
+- On the **Native** target, `readText` of a nonexistent file terminates the
+  program with an error (`kof_panic`); on the JVM/JS it returns `null`.
+  Check with `exists()` before reading.
 
-## Comportamento por plataforma
+## Behavior by platform
 
-- Separadores: `kof.io` usa o separador da plataforma (`/` no Linux/macOS,
-  `\` no Windows) — o programa nunca concatena separadores manualmente.
-- Case sensitivity: respeita o filesystem.
-- O target Native (x86-64 Linux) usa syscalls POSIX; o JVM usa `java.nio`.
-  A API é a mesma.
+- Separators: `kof.io` uses the platform separator (`/` on Linux/macOS,
+  `\` on Windows) — the program never concatenates separators manually.
+- Case sensitivity: respects the filesystem.
+- The Native target (x86-64 Linux) uses POSIX syscalls; the JVM uses `java.nio`.
+  The API is the same.
 
-## Referência
+## Reference
 
 - [docs/stdlib/IO.md](../docs/stdlib/IO.md)
 
-## Próximo passo
+## Next step
 
-[Versionamento e Releases →](33-versioning-releases.md)
+[Versioning and Releases →](33-versioning-releases.md)

@@ -1,22 +1,24 @@
-# Anti-pattern — Chained-OR Membership (cadeia de `==`/`||`)
+[English](chained-or-membership.md) | [Português](chained-or-membership.pt_BR.md)
+
+# Anti-pattern — Chained-OR Membership (chain of `==`/`||`)
 
 ## Name
 
-Testar pertencimento a um conjunto de valores com uma cadeia de comparações
-(`x == "A" || x == "B" || x == "C" ...`) em vez de um conjunto.
+Testing membership in a set of values with a chain of comparisons
+(`x == "A" || x == "B" || x == "C" ...`) instead of a set.
 
 ## Problem
 
-Cadeias extensas de `||` para verificar se um valor está em um grupo. É o
-anti-idioma mais visível de "Java traduzido para Kof": ilegível, verboso,
-fácil esquecer/duplicar uma entrada, intenção escondida, escala pessimamente.
+Extensive chains of `||` to check whether a value belongs to a group. It is the
+most visible anti-idiom of "Java translated to Kof": unreadable, verbose,
+easy to forget/duplicate an entry, hidden intent, scales poorly.
 
-> Kof deve deixar o código dizer **o que** está sendo feito (pertencimento a
-> um conjunto), não **como** o programador implementou a busca. Se alguém
-> escreve 50 `||` seguidos em Kof, a resposta não é "escreva melhor" — é
-> "por que a Kof deixou isso passar?".
+> Kof should let the code say **what** is being done (membership in
+> a set), not **how** the programmer implemented the search. If someone
+> writes 50 `||` in a row in Kof, the answer is not "write better" — it is
+> "why did Kof let that through?".
 
-## Bad example (NUNCA)
+## Bad example (NEVER)
 
 ```kof
 Bool isQueryOperation(String operation) {
@@ -33,9 +35,9 @@ Bool isQueryOperation(String operation) {
 }
 ```
 
-## Preferred approach (IDIOMÁTICO — verificado nos 3 targets)
+## Preferred approach (IDIOMATIC — verified on the 3 targets)
 
-`Set<T>` + `setOf(...)` variádico + `.contains(...)`:
+`Set<T>` + variadic `setOf(...)` + `.contains(...)`:
 
 ```kof
 Bool isQueryOperation(String operation) {
@@ -55,10 +57,10 @@ Bool isQueryOperation(String operation) {
 }
 ```
 
-Quando o conjunto é reutilizado, extraia para uma função que o devolve **ou**
-declare como campo de classe — `Set<T>` como tipo declarado (campo, retorno
-de função ou parâmetro) funciona nos 3 targets desde 0.2.6-beta (02/09, o
-descriptor JVM de `kof.Set` foi mapeado para `java/util/HashSet`):
+When the set is reused, extract it into a function that returns it **or**
+declare it as a class field — `Set<T>` as a declared type (field, function
+return or parameter) works on the 3 targets since 0.2.6-beta (09/02, the JVM
+descriptor of `kof.Set` was mapped to `java/util/HashSet`):
 
 ```kof
 Set<String> knownOperations() {
@@ -70,42 +72,42 @@ Bool isQueryOperation(String operation) {
 }
 ```
 
-> **Histórico (fechado 02/09):** `setOf(...)` local sempre funcionou nos 3
-> targets; mas `Set<T>` como **tipo declarado** (campo de classe ou retorno de
-> função) falhava no **JVM** em runtime (`NoClassDefFoundError: kof/Set` —
-> o descriptor `Lkof/Set;` não era materializado). Corrigido no
-> `JvmTypeMapper` (mapeamento `kof.Set` → `java/util/HashSet`) + parser
-> de membros de classe com retorno genérico (`Set<Int> foo()`, `List<String> bar()`).
+> **History (closed 09/02):** local `setOf(...)` always worked on the 3
+> targets; but `Set<T>` as a **declared type** (class field or function
+> return) failed on the **JVM** at runtime (`NoClassDefFoundError: kof/Set` —
+> the `Lkof/Set;` descriptor was not materialized). Fixed in
+> `JvmTypeMapper` (`kof.Set` → `java/util/HashSet` mapping) + parser
+> of class members with generic return (`Set<Int> foo()`, `List<String> bar()`).
 
 ## Why it is bad
 
-| Cadeia de `||` | `setOf(...).contains(...)` |
-|---|---|
-| 10 linhas para 10 valores | 1 linha de intenção + os valores em lista |
-| esquecer/duplicar entrada = bug silencioso | conjunto deduplica; adicionar = 1 linha |
-| busca O(n) linear, intenção escondida | `Set` (hash) O(1) médio, intenção explícita |
-| parece código gerado | parece código escrito por humano |
+| Chain of `||` | `setOf(...).contains(...)` |
+|---|---|---|
+| 10 lines for 10 values | 1 line of intent + the values in a list |
+| forgetting/duplicating an entry = silent bug | the set deduplicates; adding = 1 line |
+| O(n) linear search, hidden intent | `Set` (hash) O(1) average, explicit intent |
+| looks like generated code | looks like human-written code |
 
-## Quando a cadeia curta é aceitável
+## When the short chain is acceptable
 
-Até **2** valores, `||` é mais direto do que criar um `Set`:
+Up to **2** values, `||` is more direct than creating a `Set`:
 
 ```kof
-if (status == "active" || status == "pending") { ... }   // ok — 2 casos
+if (status == "active" || status == "pending") { ... }   // ok — 2 cases
 ```
 
-Acima disso → `setOf(...).contains(...)`.
+Beyond that → `setOf(...).contains(...)`.
 
-## O que AINDA NÃO existe (não alucine)
+## What STILL does NOT exist (don't hallucinate)
 
-- **NÃO** existe operador `x in [...]` nem literal de conjunto `{"a","b"}` na
-  linguagem hoje — usar isso **não compila** (ver `fake-idioms.md`).
-- O idiom real e compilável é **`setOf(...).contains(x)`** (JVM/Native/JS,
-  0.2.6-beta). Sintaxe `in` / literal de conjunto é evolução futura do
-  compilador (planejamento de expressividade), não API atual.
+- There is **NO** `x in [...]` operator nor a set literal `{"a","b"}` in the
+  language today — using that **does not compile** (see `fake-idioms.md`).
+- The real, compilable idiom is **`setOf(...).contains(x)`** (JVM/Native/JS,
+  0.2.6-beta). The `in` syntax / set literal is a future evolution of the
+  compiler (expressiveness planning), not a current API.
 
-## Anti-patterns relacionados
+## Related anti-patterns
 
-- `java-like-code.md` — Java traduzido literalmente para Kof
-- `fake-idioms.md` — não ensinar/`in`, literal de conjunto, etc. (ainda não existe)
-- Idiom correspondente: `training/idioms/collections.md` (seção "Membership")
+- `java-like-code.md` — Java translated literally to Kof
+- `fake-idioms.md` — do not teach `in`, set literal, etc. (does not exist yet)
+- Corresponding idiom: `training/idioms/collections.md` (section "Membership")

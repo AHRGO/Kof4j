@@ -1,38 +1,40 @@
-# Standard Library — Proposta
+[English](README.md) | [Português](README.pt_BR.md)
 
-**Última atualização:** 12 de setembro de 2026
-> **Atualizado (0.2.6-beta):** a stdlib está amplamente implementada nos 3
+# Standard Library — Proposal
+
+**Last updated:** September 12, 2026
+> **Updated (0.2.6-beta):** the stdlib is largely implemented on the 3
 > targets (JVM/Native/JS) — `kof.core`, `kof.collections`, `kof.io`,
-> `kof.time`, `kof.json` (FP + arrays completos no Native, 31/08),
-> `kof.http` (client + resiliência JVM+JS), `kof.web` (`web.app()` +
+> `kof.time`, `kof.json` (FP + full arrays on Native, 31/08),
+> `kof.http` (client + resilience JVM+JS), `kof.web` (`web.app()` +
 > WebSocket/SSE JVM), `kof.db`/`kof.orm`, `kof.security`, `kof.config`,
 > `kof.logging`, `kof.observability`, `kof.mq`, `kof.cache`,
 > `kof.scheduler`, `kof.validation`, `kof.test`, `kof.ui` (Color/Theme/
-> Palette + widgets). **Esta página é o plano original; o estado atual, a
-> matriz de módulos e a arquitetura vivem em `docs/stdlib/stdlib.md`** (fonte de
-> referência). A tabela abaixo é o plano completo.
+> Palette + widgets). **This page is the original plan; the current state, the
+> module matrix and the architecture live in `docs/stdlib/stdlib.md`** (source of
+> reference). The table below is the complete plan.
 
-**Status:** amplamente implementado (0.2.6-beta; ver `docs/stdlib/stdlib.md`)
-
----
-
-## Filosofia
-
-> Se é essencial para qualquer programa, pertence à plataforma.
-
-A standard library deve ser:
-- Mínima
-- Coerente
-- Sem dependências externas
-- Disponível em todos os backends
+**Status:** largely implemented (0.2.6-beta; see `docs/stdlib/stdlib.md`)
 
 ---
 
-## Módulos Propostos
+## Philosophy
+
+> If it is essential to any program, it belongs to the platform.
+
+The standard library must be:
+- Minimal
+- Coherent
+- Without external dependencies
+- Available on all backends
+
+---
+
+## Proposed Modules
 
 ### kof.core
 
-Tipos e operações básicas.
+Basic types and operations.
 
 ```
 String.length()
@@ -52,7 +54,7 @@ String.split(delimiter)
 
 ### kof.io
 
-Entrada/saída básica.
+Basic input/output.
 
 ```
 println(value)
@@ -62,7 +64,7 @@ input() → String
 
 ### kof.time
 
-Data e hora.
+Date and time.
 
 ```
 DateTime.now()
@@ -72,7 +74,7 @@ duration.hours()
 
 ### kof.json
 
-Serialização JSON.
+JSON serialization.
 
 ```
 json.encode(obj)
@@ -81,7 +83,7 @@ json.decode(str, Type)
 
 ### kof.sql
 
-Acesso a banco de dados (futuro).
+Database access (future).
 
 ```
 users.find(1)
@@ -90,7 +92,7 @@ users.where(User.age > 18)
 
 ### kof.http
 
-Cliente HTTP (futuro).
+HTTP client (future).
 
 ```
 http.get("https://api.example.com/users")
@@ -99,18 +101,18 @@ http.post("https://api.example.com/users", data)
 
 ### kof.concurrent
 
-Concorrência — `spawn` implementado (JVM, virtual threads).
+Concurrency — `spawn` implemented (JVM, virtual threads).
 
 ```kof
 spawn processarFila()
 spawn { ... }
 ```
 
-`await`/resultado de tarefa: planejado. Ver `docs/language-reference/concurrency.md`.
+`await`/task result: planned. See `docs/language-reference/concurrency.md`.
 
 ### kof.test
 
-Testes — `assert(cond[, "msg"])` + `kof test <file.kf|dir>` implementados.
+Tests — `assert(cond[, "msg"])` + `kof test <file.kf|dir>` implemented.
 
 ```kof
 main() {
@@ -118,32 +120,32 @@ main() {
 }
 ```
 
-Suite estruturada (`test "soma" { ... }`): planejada.
+Structured suite (`test "soma" { ... }`): planned.
 
 ---
 
-## Prioridade
+## Priority
 
-| Módulo | Prioridade | Status |
+| Module | Priority | Status |
 |--------|-----------|--------|
-| kof.core | Alta | Parcial (String ops, println, tipos) |
-| kof.io | Alta | Implementado (File/Path/Directory) |
-| kof.web | Alta | Planejado |
-| kof.http | Alta | Implementado (`kof serve` + KofHttpServer) |
-| kof.json | Média | Implementado (`json.encode`/`decode`) |
-| kof.time | Média | Implementado (`now()`) |
-| kof.concurrent | Alta | Parcial (`spawn` JVM) |
-| kof.test | Alta | Parcial (`assert` + `kof test`) |
-| kof.sql | Alta | Não implementado |
-| kof.concurrent | Média | Não implementado |
-| kof.test | Alta | Não implementado |
+| kof.core | High | Partial (String ops, println, types) |
+| kof.io | High | Implemented (File/Path/Directory) |
+| kof.web | High | Planned |
+| kof.http | High | Implemented (`kof serve` + KofHttpServer) |
+| kof.json | Medium | Implemented (`json.encode`/`decode`) |
+| kof.time | Medium | Implemented (`now()`) |
+| kof.concurrent | High | Partial (`spawn` JVM) |
+| kof.test | High | Partial (`assert` + `kof test`) |
+| kof.sql | High | Not implemented |
+| kof.concurrent | Medium | Not implemented |
+| kof.test | High | Not implemented |
 
 ---
 
-## Princípios
+## Principles
 
-1. **Mínimo necessário** — não criar bibliotecas que ninguém usa
-2. **Coerência** — APIs devem seguir padrões consistentes
-3. **Backend-agnostic** — mesma API em JVM e Native
-4. **Sem dependências** — standard library não depende de bibliotecas externas
-5. **Evolução** — APIs podem ser estendidas sem quebrar código existente
+1. **Minimum necessary** — do not create libraries nobody uses
+2. **Coherence** — APIs must follow consistent patterns
+3. **Backend-agnostic** — same API on JVM and Native
+4. **No dependencies** — the standard library does not depend on external libraries
+5. **Evolution** — APIs can be extended without breaking existing code

@@ -1,79 +1,81 @@
-# 35 — kof.ui — Cores, Widgets e Janelas
+[English](35-kof-ui.md) | [Português](35-kof-ui.pt_BR.md)
 
-`kof.ui` é a plataforma de UI do Kof. A renderização é **KofJS**: o mesmo
-programa compila para JVM, Native e JS, mas somente o alvo JS desenha (via
-webview nativo com WebKit embutido, ou no browser). Nos outros alvos os
-handles são no-ops — o programa executa sem renderizar.
+# 35 — kof.ui — Colors, Widgets and Windows
 
-## Cores, Paletas e Temas
+`kof.ui` is Kof's UI platform. Rendering is **KofJS**: the same program
+compiles to JVM, Native and JS, but only the JS target draws (via a native
+webview with embedded WebKit, or in the browser). On the other targets the
+handles are no-ops — the program runs without rendering.
 
-Cores são valores de 32 bits (`0xRRGGBBAA`) com canais 0-255:
+## Colors, Palettes and Themes
+
+Colors are 32-bit values (`0xRRGGBBAA`) with channels 0-255:
 
 ```kof
 var red = Color(255, 0, 0)          // r, g, b (alpha = 255)
 var rgba = Color.rgba(10, 20, 30, 128)
-var v = Color(0xFF0000FF)           // valor empacotado direto
+var v = Color(0xFF0000FF)           // packed value directly
 red.red()        // 255
 red.isOpaque()   // true
 red.withAlpha(64).toCss()           // rgba(255, 0, 0, 64)
 Palette.red.toCss()                 // rgb(255, 0, 0)
 ```
 
-Cores nomeadas: `Palette.red/green/blue/yellow/cyan/magenta/black/white/
+Named colors: `Palette.red/green/blue/yellow/cyan/magenta/black/white/
 gray/orange/purple/pink/brown/transparent`.
 
-Temas com cores semânticas:
+Themes with semantic colors:
 
 ```kof
-var dark = Theme.dark()             // ou Theme.light()
+var dark = Theme.dark()             // or Theme.light()
 dark.isDark()                       // true
 dark.background().toCss()           // rgb(18, 18, 18)
 dark.primary()                      // Color
 ```
 
-## Janelas e Widgets
+## Windows and Widgets
 
 ```kof
 main() {
     var w = Window("Minha Janela")
     var label = Label("Olá, Kof!")
 
-    w.title = "Kof App"             // bind do título
-    w.bind(label)                   // monta o label na janela
-    w.show()                        // serializa e exibe
+    w.title = "Kof App"             // title bind
+    w.bind(label)                   // mounts the label in the window
+    w.show()                        // serializes and displays
 }
 ```
 
-| Operação | Descrição |
+| Operation | Description |
 |----------|-----------|
-| `Window("título")` | cria uma janela (uma por handle) |
-| `w.title = v` / `w.title()` | bind do título |
-| `w.bind(widget)` | monta um widget na janela |
-| `w.show()` / `w.close()` | exibe/fecha a janela (a própria) |
-| `w.size(largura, altura)` | dimensiona o conteúdo da janela |
-| `w.theme = Theme.dark()` | aplica o tema (fundo/texto do conteúdo) |
+| `Window("título")` | creates a window (one per handle) |
+| `w.title = v` / `w.title()` | title bind |
+| `w.bind(widget)` | mounts a widget in the window |
+| `w.show()` / `w.close()` | shows/closes the window (the window itself) |
+| `w.size(largura, altura)` | sizes the window content |
+| `w.theme = Theme.dark()` | applies the theme (background/text of the content) |
 
 ### Label
 
 ```kof
 var l = Label("texto")
-l.text = "novo"                     // bind do texto
+l.text = "novo"                     // text bind
 l.fontSize = 24                     // px
-l.bold = true                       // negrito
-l.color = Palette.red               // cor do texto
-l.text()                            // lê o texto
+l.bold = true                       // bold
+l.color = Palette.red               // text color
+l.text()                            // reads the text
 l.remove()
 ```
 
-### Button (com ação)
+### Button (with action)
 
 ```kof
 var b = Button("Salvar", () -> salvar())
 b.text = "Salvando..."
 ```
 
-O segundo argumento é uma **lambda**; ela pode **capturar** variáveis do
-escopo externo (cópias somente-leitura):
+The second argument is a **lambda**; it can **capture** variables from the
+outer scope (read-only copies):
 
 ```kof
 class App {
@@ -92,59 +94,59 @@ main() {
 }
 ```
 
-Estado mutável entre cliques vive em **campos estáticos de classes** (a
-captura é uma foto do valor no momento da criação). Cada clique atualiza o
-label — ao vivo, no webview.
+Mutable state between clicks lives in **static class fields** (the capture is
+a snapshot of the value at creation time). Each click updates the label —
+live, in the webview.
 
 ### Input
 
 ```kof
-var i = Input("digite aqui")        // campo de texto editável
-i.text = "preenchido"               // bind do valor
-i.text()                            // lê o valor atual
+var i = Input("digite aqui")        // editable text field
+i.text = "preenchido"               // value bind
+i.text()                            // reads the current value
 i.remove()
 ```
 
-### Composição: Column, Row, View e Style
+### Composition: Column, Row, View and Style
 
 ```kof
-var col = Column(listOf(l1, l2))    // empilha verticalmente
-var row = Row(listOf(l1, l2))       // alinha horizontalmente
+var col = Column(listOf(l1, l2))    // stacks vertically
+var row = Row(listOf(l1, l2))       // aligns horizontally
 
 var style = Style(Palette.black, Palette.white, 16, 8)
-var view = View(style)              // caixa com fundo/padding/raio
-view.bind(col)                      // compõe em árvore
+var view = View(style)              // box with background/padding/radius
+view.bind(col)                      // composes in a tree
 w.bind(view)
 ```
 
-`Style(background, foreground, padding, radius)` — cores via `Color`,
-`padding`/`radius` em px.
+`Style(background, foreground, padding, radius)` — colors via `Color`,
+`padding`/`radius` in px.
 
 ## Canvas 2D
 
-Canvas permite desenho 2D livre — gráficos, visualizações, jogos.
-Renderiza em `<canvas>` no DOM (KofJS). JVM/Native são no-ops.
+Canvas allows free 2D drawing — graphics, visualizations, games.
+It renders into `<canvas>` in the DOM (KofJS). JVM/Native are no-ops.
 
 ```kof
-var c = Canvas(400, 300)         // cria canvas
+var c = Canvas(400, 300)         // creates canvas
 
-c.setFill(Palette.blue)         // cor de preenchimento
-c.setStroke(Palette.black)      // cor do traço
-c.setLineWidth(2)               // espessura do traço
+c.setFill(Palette.blue)         // fill color
+c.setStroke(Palette.black)      // stroke color
+c.setLineWidth(2)               // stroke width
 
-c.beginPath()                    // início de caminho
-c.moveTo(200, 150)              // move caneta
-c.lineTo(300, 200)              // desenha linha
-c.arc(200, 150, 100, 0.0, 3.14) // arco (radianos)
-c.closePath()                    // fecha caminho
-c.fill()                         // preenche
-c.stroke()                       // contorna
+c.beginPath()                    // path start
+c.moveTo(200, 150)              // moves pen
+c.lineTo(300, 200)              // draws line
+c.arc(200, 150, 100, 0.0, 3.14) // arc (radians)
+c.closePath()                    // closes path
+c.fill()                         // fills
+c.stroke()                       // outlines
 
-c.clearRect(0, 0, 400, 300)    // limpa retângulo
-c.remove()                       // remove do DOM
+c.clearRect(0, 0, 400, 300)    // clears rectangle
+c.remove()                       // removes from DOM
 ```
 
-### Gráfico de pizza
+### Pie chart
 
 ```kof
 var c = Canvas(400, 300)
@@ -170,21 +172,21 @@ for (var i in dados) {
 }
 ```
 
-| Operação | Descrição |
+| Operation | Description |
 |----------|-----------|
-| `Canvas(largura, altura)` | cria canvas 2D |
-| `c.beginPath()` / `c.closePath()` | gerencia caminho |
-| `c.moveTo(x, y)` / `c.lineTo(x, y)` | desenha com a caneta |
-| `c.arc(x, y, r, inicio, fim)` | arco em radianos |
-| `c.fill()` / `c.stroke()` | preenche/contorna caminho |
-| `c.setFill(cor)` / `c.setStroke(cor)` | define cores |
-| `c.setLineWidth(largura)` | espessura do traço |
-| `c.clearRect(x, y, w, h)` | limpa retângulo |
-| `c.remove()` | remove do DOM |
+| `Canvas(largura, altura)` | creates 2D canvas |
+| `c.beginPath()` / `c.closePath()` | manages path |
+| `c.moveTo(x, y)` / `c.lineTo(x, y)` | draws with the pen |
+| `c.arc(x, y, r, inicio, fim)` | arc in radians |
+| `c.fill()` / `c.stroke()` | fills/outlines path |
+| `c.setFill(cor)` / `c.setStroke(cor)` | sets colors |
+| `c.setLineWidth(largura)` | stroke width |
+| `c.clearRect(x, y, w, h)` | clears rectangle |
+| `c.remove()` | removes from DOM |
 
-## Router (Fase 7, 31/08)
+## Router (Phase 7, 31/08)
 
-Navegação por troca de componente raiz (unmount do antigo + mount do novo):
+Navigation by swapping the root component (unmount the old + mount the new):
 
 ```kf
 var home = Component(0)
@@ -196,51 +198,52 @@ var w = Window("App")
 w.bind(home)
 Router.route("home", home)
 Router.route("detail", detail)
-Router.go("detail", "42")   // navega com parâmetro
+Router.go("detail", "42")   // navigates with a parameter
 ```
 
-| Operação | Descrição |
+| Operation | Description |
 |----------|-----------|
-| `Router.route("nome", component)` | registra a rota |
-| `Router.go("nome")` / `Router.go("nome", "param")` | navega (`false` se a rota não existe) |
-| `Router.replace("nome"[, "param"])` | navega sem empilhar no histórico |
-| `Router.back()` / `Router.forward()` | histórico (stacks) |
-| `Router.current()` | rota ativa |
-| `Router.param()` | parâmetro da navegação atual |
-| `Router.depth()` | profundidade do histórico |
+| `Router.route("nome", component)` | registers the route |
+| `Router.go("nome")` / `Router.go("nome", "param")` | navigates (`false` if the route does not exist) |
+| `Router.replace("nome"[, "param"])` | navigates without pushing onto history |
+| `Router.back()` / `Router.forward()` | history (stacks) |
+| `Router.current()` | active route |
+| `Router.param()` | parameter of the current navigation |
+| `Router.depth()` | history depth |
 
-`Component` (`.view`, `.onMount`, `.onDispose`) é a unidade montável —
-o router desmonta o componente antigo e monta o novo. JS real; nos alvos
-JVM/Native o router é no-op (como o resto do `kof.ui`).
+`Component` (`.view`, `.onMount`, `.onDispose`) is the mountable unit —
+the router unmounts the old component and mounts the new one. Real JS; on the
+JVM/Native targets the router is a no-op (like the rest of `kof.ui`).
 
-## Execução
+## Execution
 
 `kof run --target=js`:
 
-1. compila o programa para `Default.mjs` + `kof-runtime.mjs`;
-2. executa no runner embarcado (GraalJS) — validação e snapshot;
-3. escreve o **app interativo** (`index.html` + módulos) e abre no webview
-   nativo (`bin/kof-webview`, WebKitGTK embutido) — a página roda o programa
-   de verdade: DOM real, eventos de clique, edição de input;
-4. **fecha a janela = encerra o programa** (o runner aguarda o webview).
+1. compiles the program to `Default.mjs` + `kof-runtime.mjs`;
+2. runs it in the embedded runner (GraalJS) — validation and snapshot;
+3. writes the **interactive app** (`index.html` + modules) and opens it in the
+   native webview (`bin/kof-webview`, embedded WebKitGTK) — the page runs the
+   program for real: real DOM, click events, input editing;
+4. **closing the window = terminating the program** (the runner waits for the webview).
 
-Sem o webview nativo, cai no browser do sistema (`xdg-open`/`open`/
-`rundll32`). No JVM e Native os handles são no-ops (nada é renderizado).
+Without the native webview, it falls back to the system browser (`xdg-open`/
+`open`/`rundll32`). On JVM and Native the handles are no-ops (nothing is
+rendered).
 
-## Representação
+## Representation
 
-- `Color`, `Theme` e todos os handles de widget são `Int` — sem objetos.
-- Canais de cor são manipulação de bits no compilador — zero custo.
-- `toCss()` é o único ponto com runtime (idêntico nos três alvos).
-- JVM: handles de kof.ui são empacotados/desempacotados em slots de objeto
-  (ex.: `List<Label>`) via `Integer`.
-- Lambdas com capturas: campos privados finais + construtor na classe
-  sintética; `invoke()` copia os campos para locals (foto somente-leitura).
+- `Color`, `Theme` and all widget handles are `Int` — no objects.
+- Color channels are bit manipulation in the compiler — zero cost.
+- `toCss()` is the only point with runtime (identical across the three targets).
+- JVM: kof.ui handles are boxed/unboxed into object slots
+  (e.g.: `List<Label>`) via `Integer`.
+- Lambdas with captures: private final fields + constructor in the synthetic
+  class; `invoke()` copies the fields into locals (read-only snapshot).
 
-## Referências
+## References
 
 - `kof-compiler/src/main/java/dev/kof/compiler/KofUi.java` (registry)
 - `kof-compiler/src/main/java/dev/kof/compiler/JsBackend.java` (runtime JS)
-- `native/webview/kof-webview.c` (shell WebKitGTK sem headers)
-- Testes: `kof-compiler/src/test/java/dev/kof/compiler/UiE2ETest.java`,
+- `native/webview/kof-webview.c` (headerless WebKitGTK shell)
+- Tests: `kof-compiler/src/test/java/dev/kof/compiler/UiE2ETest.java`,
   `WindowE2ETest.java`

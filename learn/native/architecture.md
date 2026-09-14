@@ -1,10 +1,12 @@
-# Arquitetura do KofNative
+[English](architecture.md) | [Português](architecture.pt_BR.md)
+
+# KofNative Architecture
 
 > **Kof 0.4.0-beta — Target separation + free-list GC + kof_db MySQL**
 
-## Visão geral
+## Overview
 
-KofNative é a extensão do compilador Kof para gerar binários nativos Linux x86-64. Não substitui o backend JVM — funciona em paralelo.
+KofNative is the extension of the Kof compiler to generate native Linux x86-64 binaries. It does not replace the JVM backend — it works in parallel.
 
 ```
                    Kof Source (.kf)
@@ -22,7 +24,7 @@ KofNative é a extensão do compilador Kof para gerar binários nativos Linux x8
                  Semantic Analysis
                          │
                          ▼
-                    Kof IR (compartilhado) — intention->Kof->frontend->IR->backend->runtime
+                    Kof IR (shared) — intention->Kof->frontend->IR->backend->runtime
                      /       |       \
                     /         \
                    ▼           ▼
@@ -32,38 +34,38 @@ KofNative é a extensão do compilador Kof para gerar binários nativos Linux x8
                .class       ELF .o
                    │           │
                    ▼           ▼
-               javac/jar     ld → executável
+               javac/jar     ld → executable
 ```
 
-## Componentes do compilador atual
+## Components of the current compiler
 
-### Backend-agnostic (reutilizáveis sem alteração)
+### Backend-agnostic (reusable without change)
 
-| Componente | Arquivo | Status |
+| Component | File | Status |
 |------------|---------|--------|
-| Token | `Token.java` | ✅ Reutilizável |
-| TokenType | `TokenType.java` | ✅ Reutilizável |
-| Lexer | `Lexer.java` | ✅ Reutilizável |
-| AST | `AstNodes.java` | ✅ Reutilizável |
-| Parser | `Parser.java` | ✅ Reutilizável |
-| SourcePosition | `SourcePosition.java` | ✅ Reutilizável |
-| Diagnostic | `Diagnostic.java` | ✅ Reutilizável |
-| DiagnosticCollector | `DiagnosticCollector.java` | ✅ Reutilizável |
-| CompilationResult | `CompilationResult.java` | ✅ Reutilizável |
-| Type | `Type.java` | ✅ Reutilizável |
-| SymbolTable | `SymbolTable.java` | ✅ Reutilizável |
+| Token | `Token.java` | ✅ Reusable |
+| TokenType | `TokenType.java` | ✅ Reusable |
+| Lexer | `Lexer.java` | ✅ Reusable |
+| AST | `AstNodes.java` | ✅ Reusable |
+| Parser | `Parser.java` | ✅ Reusable |
+| SourcePosition | `SourcePosition.java` | ✅ Reusable |
+| Diagnostic | `Diagnostic.java` | ✅ Reusable |
+| DiagnosticCollector | `DiagnosticCollector.java` | ✅ Reusable |
+| CompilationResult | `CompilationResult.java` | ✅ Reusable |
+| Type | `Type.java` | ✅ Reusable |
+| SymbolTable | `SymbolTable.java` | ✅ Reusable |
 
-### Backend-coupled (específicos de cada target)
+### Backend-coupled (specific to each target)
 
-| Componente | Arquivo | Target | Status |
+| Component | File | Target | Status |
 |------------|---------|--------|--------|
-| Backend | `Backend.java` | Ambos | ✅ Interface comum |
-| Target | `Target.java` | Todos | ✅ Enum `JVM/NATIVE/NATIVE_RISCV64/NATIVE_AARCH64/JS/ANDROID` + `isNative()`/`nativeArch()` + `parseTarget native.risc/arm` |
-| CompilerDriver | `CompilerDriver.java` | Ambos | ✅ Orquestrador parametrizado |
-| JvmBackend | `JvmBackend.java` | JVM | ✅ Funcional via ASM |
-| NativeBackend | `NativeBackend.java` | Nativo | ✅ Funcional via assembly |
+| Backend | `Backend.java` | Both | ✅ Common interface |
+| Target | `Target.java` | All | ✅ Enum `JVM/NATIVE/NATIVE_RISCV64/NATIVE_AARCH64/JS/ANDROID` + `isNative()`/`nativeArch()` + `parseTarget native.risc/arm` |
+| CompilerDriver | `CompilerDriver.java` | Both | ✅ Parameterized orchestrator |
+| JvmBackend | `JvmBackend.java` | JVM | ✅ Functional via ASM |
+| NativeBackend | `NativeBackend.java` | Native | ✅ Functional via assembly |
 
-## O pipeline de compilação
+## The compilation pipeline
 
 ```text
 Kof Source (.kf)
@@ -75,14 +77,14 @@ Kof Source (.kf)
   Parser → AST
     │
     ▼
-  IR (compartilhada)
+  IR (shared)
     │
     ├──────────► JVM Backend → .class
     │
     └──────────► Native Backend → ELF
 ```
 
-## Onde o NativeBackend se conecta
+## Where NativeBackend plugs in
 
 ```
 CompilerDriver.compile(sourceFile, outputDir, target)
@@ -92,14 +94,14 @@ CompilerDriver.compile(sourceFile, outputDir, target)
   └─── target == NATIVE → lowerToIR() → NativeBackend.emit()
 ```
 
-### Mudanças implementadas em CompilerDriver
+### Changes implemented in CompilerDriver
 
-1. **Parâmetro `target`** no método `compile()`
-2. **Interface `Backend`** para desacoplar
-3. **Seleção baseada no target** — `new JvmBackend()` ou `new NativeBackend()`
-4. **Helpers separados** — `toDescriptor()`, `toInternalName()`, `computeAccess()` ficam nos backends
+1. **`target` parameter** in the `compile()` method
+2. **`Backend` interface** for decoupling
+3. **Target-based selection** — `new JvmBackend()` or `new NativeBackend()`
+4. **Separate helpers** — `toDescriptor()`, `toInternalName()`, `computeAccess()` stay in the backends
 
-### Estrutura atual
+### Current structure
 
 ```java
 // Backend.java (interface)
@@ -107,9 +109,9 @@ interface Backend {
     void emit(Object irModule, Path outputDir) throws IOException;
 }
 
-// CompilerDriver.java (modificado)
+// CompilerDriver.java (modified)
 public CompilationResult compile(Path sourceFile, Path outputDir, Target target) {
-    // lexer, parser, AST — inalterados
+    // lexer, parser, AST — unchanged
     // ...
     
     Backend backend = switch (target) {
@@ -122,9 +124,9 @@ public CompilationResult compile(Path sourceFile, Path outputDir, Target target)
 }
 ```
 
-## O backend nativo atual
+## The current native backend
 
-O backend nativo gera assembly x86-64, que é montado e linkado:
+The native backend generates x86-64 assembly, which is assembled and linked:
 
 ```text
 Kof IR
@@ -133,16 +135,16 @@ Kof IR
 NativeBackend.emit()
     │
     ▼
-Assembly x86-64 (.s)
+x86-64 Assembly (.s)
     │
     ▼
-as → Objeto (.o)
+as → Object (.o)
     │
     ▼
-ld → Executável (ELF)
+ld → Executable (ELF)
 ```
 
-### Exemplo de assembly gerado
+### Example of generated assembly
 
 ```kf
 main() = print("Hello")
@@ -168,52 +170,52 @@ _start:
 
 ### Calling convention
 
-O backend nativo usa a System V AMD64 ABI:
+The native backend uses the System V AMD64 ABI:
 
-| Parânero | Registrador |
+| Parameter | Register |
 |----------|-------------|
-| 1º Int/Long | %rdi |
-| 2º Int/Long | %rsi |
-| 3º Int/Long | %rdx |
-| 4º Int/Long | %rcx |
-| 5º Int/Long | %r8 |
-| 6º Int/Long | %r9 |
+| 1st Int/Long | %rdi |
+| 2nd Int/Long | %rsi |
+| 3rd Int/Long | %rdx |
+| 4th Int/Long | %rcx |
+| 5th Int/Long | %r8 |
+| 6th Int/Long | %r9 |
 | Float/Double | %xmm0-%xmm7 |
-| Retorno | %rax (Int/Long), %xmm0 (Float/Double) |
+| Return | %rax (Int/Long), %xmm0 (Float/Double) |
 
-## Riscos
+## Risks
 
-| Risco | Impacto | Mitigação |
+| Risk | Impact | Mitigation |
 |-------|---------|-----------|
-| Assembly manual complexo | Alto | Implementar incrementalmente |
-| Calling convention incorreta | Alto | Testes exaustivos |
-| Strings nativas diferentes de Java | Médio | Runtime mínimo em C |
-| GC nativo precisa ser implementado | Alto | Começar com arena allocator |
-| ABI Linux x86-64 precisa ser correta | Alto | Usar Linux syscalls diretos |
+| Complex hand-written assembly | High | Implement incrementally |
+| Incorrect calling convention | High | Exhaustive tests |
+| Native strings different from Java | Medium | Minimal runtime in C |
+| Native GC needs to be implemented | High | Start with an arena allocator |
+| Linux x86-64 ABI must be correct | High | Use direct Linux syscalls |
 
-## Checklist de funcionalidade
+## Feature checklist
 
-- [x] Lexer funcional
-- [x] Parser funcional
-- [x] IR definida
-- [x] Backend nativo funcional
-- [x] CLI com --target=native
-- [x] Records geram structs (free-list GC em 0.2.0)
-- [x] Funções main funcionam
-- [x] Strings funcionam
-- [x] println funciona
-- [x] Controle de fluxo
-- [x] Classes com herança (virtual dispatch; `super.metodo()` = SUP001)
+- [x] Functional lexer
+- [x] Functional parser
+- [x] IR defined
+- [x] Functional native backend
+- [x] CLI with --target=native
+- [x] Records generate structs (free-list GC in 0.2.0)
+- [x] main functions work
+- [x] Strings work
+- [x] println works
+- [x] Control flow
+- [x] Classes with inheritance (virtual dispatch; `super.metodo()` = SUP001)
 - [x] Exceptions (try/catch/finally + unwinding)
-- [x] Generics (erasure; `Box<T>` com `T` primitivo/Boxed)
-- [x] `spawn`/`await` via pthread (31/08 — CONC001 fechado)
-- [x] Ponto flutuante XMM real (`vcvtsi2sd`/`mulsd`, dtoa via snprintf — FLT001/JSN001 fechados)
-- [x] JSON objetos/records + arrays completos (JSN002/JSN003/JSN001 fechados)
-- [x] SQLite nativo (link direto da `.so`)
-- [ ] MySQL/MariaDB nativo (wire protocol: auth scramble SHA-1 feito; WIP)
-- [ ] GC mark-sweep (hoje free-list `kof_free_head`)
-- [ ] riscv64/aarch64 (codegen ainda x86_64 — placeholder via qemu)
+- [x] Generics (erasure; `Box<T>` with primitive/Boxed `T`)
+- [x] `spawn`/`await` via pthread (31/08 — CONC001 closed)
+- [x] Real XMM floating point (`vcvtsi2sd`/`mulsd`, dtoa via snprintf — FLT001/JSN001 closed)
+- [x] JSON objects/records + complete arrays (JSN002/JSN003/JSN001 closed)
+- [x] Native SQLite (direct link to the `.so`)
+- [ ] Native MySQL/MariaDB (wire protocol: SHA-1 scramble auth done; WIP)
+- [ ] GC mark-sweep (today free-list `kof_free_head`)
+- [ ] riscv64/aarch64 (codegen still x86_64 — placeholder via qemu)
 
-## Próximo passo
+## Next step
 
-[Opções de Backend →](backend-options.md)
+[Backend Options →](backend-options.md)

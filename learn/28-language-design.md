@@ -1,44 +1,46 @@
-# 28 — Design da Linguagem
+[English](28-language-design.md) | [Português](28-language-design.pt_BR.md)
 
-> **Kof 0.4.0-beta — set 2026 — `intention->Kof->frontend->IR->backend->runtime`**
+# 28 — Language Design
 
-## Filosofia
+> **Kof 0.4.0-beta — Sep 2026 — `intention->Kof->frontend->IR->backend->runtime`**
 
-Kof existe porque Java é uma das plataformas mais poderosas do mundo, mas exige uma quantidade absurda de código para expressar ideias simples.
+## Philosophy
 
-A pergunta central de Kof é:
+Kof exists because Java is one of the most powerful platforms in the world, but it demands an absurd amount of code to express simple ideas.
 
-> "Estamos eliminando complexidade real ou apenas escondendo complexidade?"
+Kof's central question is:
 
-Se estamos apenas escondendo complexidade, a feature precisa ser reconsiderada.
+> "Are we eliminating real complexity or just hiding complexity?"
 
-## O paradigma da intenção
+If we are just hiding complexity, the feature needs to be reconsidered.
 
-> Não é um paradigma formal — é a orientação a objetos levada ao extremo.
+## The intention paradigm
 
-A cadeia: **intenção → Kof → compilador → backend**. O programador escreve
-*o que* quer; o compilador e o runtime decidem *como*, por target e por
-convenção. O mecanismo nunca sobe para o código do usuário:
+> It is not a formal paradigm — it is object orientation taken to the extreme.
 
-| Intenção | Você escreve | O mecanismo fica com |
-|----------|--------------|----------------------|
-| paralelismo | `spawn tarefa()` | virtual threads (JVM) / pthread (Native, 31/08) |
-| HTTP | `app.get("/users/:id") { ... }` | servidor próprio, sem container |
+The chain: **intention → Kof → compiler → backend**. The programmer writes
+*what* they want; the compiler and the runtime decide *how*, per target and by
+convention. The mechanism never rises into the user's code:
+
+| Intention | You write | The mechanism stays with |
+|-----------|-----------|--------------------------|
+| parallelism | `spawn tarefa()` | virtual threads (JVM) / pthread (Native, 31/08) |
+| HTTP | `app.get("/users/:id") { ... }` | own server, no container |
 | HTTP client | `http.get(url)` | `kof.http` JVM+JS (HTTP002 Native) |
-| UI | `Window(...)`, `Button("+1", () -> ...)` | KofJS + webview nativo |
-| JSON | `json.decode<User>(body)` | engine + binding por tipo |
-| cor | `Palette.red` | Int 32-bit, canais por bitwise |
-| nullable | `String?` | verificação em compile-time |
-| pattern | `case String s` / `Point(x,y)` | instanceof+checkcast / field loads por backend |
-| script | `let x = 5` no topo | `KofScriptGlobals` (repl --watch) |
+| UI | `Window(...)`, `Button("+1", () -> ...)` | KofJS + native webview |
+| JSON | `json.decode<User>(body)` | engine + binding per type |
+| color | `Palette.red` | 32-bit Int, channels via bitwise |
+| nullable | `String?` | compile-time check |
+| pattern | `case String s` / `Point(x,y)` | instanceof+checkcast / field loads per backend |
+| script | `let x = 5` at the top | `KofScriptGlobals` (repl --watch) |
 
-A intenção compila em todos os alvos; o alvo que não consegue realizá-la
-reporta em compile-time com código de gap (`HTTP002`, `DB001`, `WEB002`) — nunca
-silenciosamente. Detalhes em `docs/philosophy.md`.
+The intention compiles on all targets; the target that cannot realize it
+reports at compile-time with a gap code (`HTTP002`, `DB001`, `WEB002`) — never
+silently. Details in `docs/philosophy.md`.
 
-## A visão multiplatform
+## The multiplatform vision
 
-Kof não é apenas uma linguagem para a JVM. É uma linguagem que pode compilar para diferentes targets:
+Kof is not just a language for the JVM. It is a language that can compile to different targets:
 
 ```text
                          KOF
@@ -56,20 +58,20 @@ Kof não é apenas uma linguagem para a JVM. É uma linguagem que pode compilar 
        .class      ELF   ELF  ELF      .mjs        repl/kof c
 ```
 
-**A linguagem não muda. O target muda.**
+**The language does not change. The target changes.**
 
-Isso é uma decisão de design fundamental. A mesma fonte Kof pode gerar (0.3.22-beta):
-- Bytecode JVM para aplicações que precisam do ecossistema Java
-- Executáveis nativos x86-64 / riscv64 (`native.risc`) / aarch64 (`native.arm`) para ferramentas CLI e sistemas (Target separation)
-- ES Modules para o navegador/webview via KofJS (ver [capítulo 37](37-kofjs.md))
-- Execução direta via KofScript (`let`→`KofScriptGlobals`) e C via KofC (`kof c` nativo-only)
+This is a fundamental design decision. The same Kof source can generate (0.3.22-beta):
+- JVM bytecode for applications that need the Java ecosystem
+- Native executables x86-64 / riscv64 (`native.risc`) / aarch64 (`native.arm`) for CLI tools and systems (Target separation)
+- ES Modules for the browser/webview via KofJS (see [chapter 37](37-kofjs.md))
+- Direct execution via KofScript (`let`→`KofScriptGlobals`) and C via KofC (`kof c` native-only)
 
-## Decisões de design
+## Design decisions
 
-### Menos ceremony, não menos informação
+### Less ceremony, not less information
 
 ```java
-// Java: 40 linhas
+// Java: 40 lines
 public final class User {
     private final String name;
     public User(String name) { this.name = name; }
@@ -77,54 +79,54 @@ public final class User {
     // equals, hashCode, toString...
 }
 
-// Kof: 1 linha
+// Kof: 1 line
 record User(String name)
 ```
 
-A segunda forma gera exatamente a mesma coisa que a primeira. Não removemos informação — removemos repetição.
+The second form generates exactly the same thing as the first. We did not remove information — we removed repetition.
 
-### A JVM é o runtime
+### The JVM is the runtime
 
-Kof não inventa:
+Kof does not invent:
 - garbage collector
 - scheduler
-- modelo de memória
-- sistema de threads
+- memory model
+- thread system
 
-A JVM já faz isso. Kof usa o que já existe.
+The JVM already does this. Kof uses what already exists.
 
-Para o backend nativo, Kof usa:
-- assembly x86-64 direto
+For the native backend, Kof uses:
+- direct x86-64 assembly
 - Linux syscall conventions
-- Runtime mínimo em C
+- minimal runtime in C
 
 ### Native runtime (0.2.0)
 
-Native usa **free-list GC** (`kof_free_head`, reuso `mmap`, mark-sweep pendente), `spawn` via **pthread** (31/08 — `CONC001` fechado), ponto flutuante **XMM real** (`vcvtsi2sd`/`mulsd`, `FLT001` fechado) e JSON completo (objetos/records/arrays — `JSN001/002/003` fechados). `kof_db` traz **SQLite nativo** e MySQL em progresso (wire protocol, auth scramble SHA-1). Nada disso vaza para o código Kof — é `intention->Kof->frontend->IR->backend->runtime`.
+Native uses a **free-list GC** (`kof_free_head`, `mmap` reuse, mark-sweep pending), `spawn` via **pthread** (31/08 — `CONC001` closed), **real XMM** floating point (`vcvtsi2sd`/`mulsd`, `FLT001` closed) and full JSON (objects/records/arrays — `JSN001/002/003` closed). `kof_db` brings **native SQLite** and MySQL in progress (wire protocol, SHA-1 auth scramble). None of this leaks into Kof code — it is `intention->Kof->frontend->IR->backend->runtime`.
 
 ### Compile-time > runtime
 
-Se algo pode ser resolvido em compile-time, deve ser.
+If something can be resolved at compile-time, it must be.
 
 ```kf
 var user = User("Mel")
 ```
 
-O compilador sabe que `user` é um `User`. Isso não precisa de reflection em runtime.
+The compiler knows that `user` is a `User`. This does not need reflection at runtime.
 
-### Java interoperability é sagrada
+### Java interoperability is sacred
 
-Código Kof:
-- chama código Java
-- é chamado por código Java
-- usa bibliotecas Java
-- funciona com frameworks Java
+Kof code:
+- calls Java code
+- is called by Java code
+- uses Java libraries
+- works with Java frameworks
 
-Isso não é negociável.
+This is not negotiable.
 
-### Um frontend, múltiplos backends
+### One frontend, multiple backends
 
-O compilador possui um frontend único que gera uma representação intermediária (IR). A partir dessa IR, diferentes backends podem transformar o mesmo programa:
+The compiler has a single frontend that generates an intermediate representation (IR). From that IR, different backends can transform the same program:
 
 ```text
 Kof Source
@@ -137,13 +139,13 @@ Lexer → Parser → AST → IR
     └──────────► Script Backend → Runtime
 ```
 
-Isso permite que a linguagem cresça sem se fragmentar.
+This lets the language grow without fragmenting.
 
-## Sintaxe
+## Syntax
 
 ### Records
 
-Escolhemos `record` porque é o construto mais simples para dados imutáveis:
+We chose `record` because it is the simplest construct for immutable data:
 
 ```kf
 record Point(Int x, Int y)
@@ -151,7 +153,7 @@ record Point(Int x, Int y)
 
 ### Modifiers
 
-Modifiers são explícitos quando importantes:
+Modifiers are explicit when important:
 
 ```kf
 public class User(String name) { ... }
@@ -159,10 +161,10 @@ private String password
 static Int count
 ```
 
-### Funções
+### Functions
 
-Funções são declaradas sem palavra-chave — o nome vem primeiro. O tipo de
-retorno pode ser prefixado (`String nome()`) ou sufixado (`nome(): String`):
+Functions are declared without a keyword — the name comes first. The return
+type can be prefixed (`String nome()`) or suffixed (`nome(): String`):
 
 ```kf
 main() = print("Hello")
@@ -176,39 +178,39 @@ somar(Int a, Int b): Int {
 
 ## Type System
 
-Kof é fortemente e estaticamente tipado.
+Kof is strongly and statically typed.
 
 ```kf
-var nome = "Mel"     // tipo: String (inferido)
-String nome = "Mel"  // tipo: String (explícito)
+var nome = "Mel"     // type: String (inferred)
+String nome = "Mel"  // type: String (explicit)
 ```
 
-Ambos são estaticamente tipados. A inferência não muda isso.
+Both are statically typed. Inference does not change that.
 
-## O que não fazemos
+## What we do not do
 
-- Não criamos macros
-- Não criamos metaclasses
-- Não criamos macros em compile-time
-- Não criamos VM própria (usamos a JVM)
-- Não criamos runtime próprio (usamos o sistema operacional)
+- We do not create macros
+- We do not create metaclasses
+- We do not create compile-time macros
+- We do not create our own VM (we use the JVM)
+- We do not create our own runtime (we use the operating system)
 
-Cada feature precisa provar que vale a complexidade.
+Each feature must prove that it is worth the complexity.
 
 ## Multiplatform philosophy
 
-A filosofia multiplatform de Kof é baseada em três princípios:
+Kof's multiplatform philosophy is based on three principles:
 
-1. **Um compilador, múltiplos targets** — o mesmo código fonte pode gerar código para diferentes plataformas
-2. **A linguagem não muda** — não existem "dialetos" para diferentes targets
-3. **O backend é uma decisão do compilador** — o desenvolvedor escolhe o target, não a linguagem
+1. **One compiler, multiple targets** — the same source code can generate code for different platforms
+2. **The language does not change** — there are no "dialects" for different targets
+3. **The backend is a compiler decision** — the developer chooses the target, not the language
 
-Isso permite que Kof seja usada para:
-- Aplicações corporativas na JVM
-- Ferramentas CLI nativas
-- Scripts interativos
-- Aplicações web via KofJS
+This lets Kof be used for:
+- Corporate applications on the JVM
+- Native CLI tools
+- Interactive scripts
+- Web applications via KofJS
 
-## Próximo passo
+## Next step
 
-[Internals do Compilador →](29-compiler-internals.md)
+[Compiler Internals →](29-compiler-internals.md)

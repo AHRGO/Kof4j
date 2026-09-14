@@ -1,17 +1,19 @@
+[English](20-annotations.md) | [Português](20-annotations.pt_BR.md)
+
 # 20 — Annotations
 
-> **Status: implementado (JVM/KofJS) — 0.3.22-beta**
+> **Status: implemented (JVM/KofJS) — 0.3.22-beta**
 >
-> O parser aceita `@Name` e `@Name(valor | key = valor, ...)` em classes,
-> records, interfaces, entities, campos, métodos, construtores, funções,
-> componentes de record e parâmetros. O backend JVM emite as annotations
-> no bytecode; Native ignora metadados.
+> The parser accepts `@Name` and `@Name(valor | key = valor, ...)` on classes,
+> records, interfaces, entities, fields, methods, constructors, functions,
+> record components and parameters. The JVM backend emits the annotations
+> into the bytecode; Native ignores metadata.
 
-## O que são annotations
+## What annotations are
 
-Annotations são metadados que podem ser adicionados a classes, métodos, campos e parâmetros. No Kof elas existem para **interoperação** — quando um target externo (Android, framework JVM) exige metadata no bytecode. O código idiomático Kof continua preferindo intenção explícita (`app.get(...)`, `entity { ... }`) a annotations+container.
+Annotations are metadata that can be added to classes, methods, fields and parameters. In Kof they exist for **interoperation** — when an external target (Android, JVM framework) requires metadata in the bytecode. Idiomatic Kof code still prefers explicit intention (`app.get(...)`, `entity { ... }`) over annotations+container.
 
-## Annotations em Kof
+## Annotations in Kof
 
 ```kf
 @Entity
@@ -24,7 +26,7 @@ class User {
 }
 ```
 
-## Annotations com parâmetros
+## Annotations with parameters
 
 ```kf
 @GetMapping("/users/{id}")
@@ -33,52 +35,52 @@ User findUser(@PathVariable UUID id) {
 }
 ```
 
-Formas aceitas:
+Accepted forms:
 
-| Forma | Exemplo |
+| Form | Example |
 |-------|---------|
-| simples | `@Override` |
-| valor único (vai para `value`) | `@Column("user_name")` |
-| pares `key = value` | `@JsonFormat(pattern = "yyyy")` |
-| array de literais | `@Roles({"admin", "dev"})` |
-| qualificada por pacote | `@androidx.annotation.NonNull` |
+| simple | `@Override` |
+| single value (goes to `value`) | `@Column("user_name")` |
+| `key = value` pairs | `@JsonFormat(pattern = "yyyy")` |
+| array of literals | `@Roles({"admin", "dev"})` |
+| package-qualified | `@androidx.annotation.NonNull` |
 
-Valores precisam ser **constantes em compile-time**: literais `String`, `Int`, `Long`, `Float`, `Double`, `Bool`, `Char`, `null`, ou arrays `{...}` desses literais. Identificadores não constantes viram diagnóstico `ANNOT001` — nunca um valor silenciosamente errado.
+Values must be **compile-time constants**: literals `String`, `Int`, `Long`, `Float`, `Double`, `Bool`, `Char`, `null`, or arrays `{...}` of those literals. Non-constant identifiers become the diagnostic `ANNOT001` — never a silently wrong value.
 
-## O que o compilador gera no bytecode
+## What the compiler generates in the bytecode
 
 - `RuntimeVisibleAnnotations` / `RuntimeInvisibleAnnotations`
-- Anotações em parâmetros (`RuntimeVisible/InvisibleParameterAnnotations`)
-- Anotações em campos
+- Annotations on parameters (`RuntimeVisible/InvisibleParameterAnnotations`)
+- Annotations on fields
 
-A retenção é decidida por tabela: `@Override` e `@SuppressWarnings` e os pacotes
-de metadata (`androidx.annotation.*`, `javax.annotation.*`,
-`org.jetbrains.annotations.*`, `edu.umd.cs.findbugs.annotations.*`) são
-emitidos como **invisíveis** (`RuntimeInvisible`); todo o resto — incluindo
-`@Deprecated`, `@FunctionalInterface` e `@SafeVarargs` — vai como **visível**
-(`RuntimeVisible`). É uma escolha conservadora para frameworks que leem as
-annotations em runtime (JUnit, Android).
+Retention is decided by table: `@Override` and `@SuppressWarnings` and the metadata
+packages (`androidx.annotation.*`, `javax.annotation.*`,
+`org.jetbrains.annotations.*`, `edu.umd.cs.findbugs.annotations.*`) are
+emitted as **invisible** (`RuntimeInvisible`); everything else — including
+`@Deprecated`, `@FunctionalInterface` and `@SafeVarargs` — goes as **visible**
+(`RuntimeVisible`). It is a conservative choice for frameworks that read the
+annotations at runtime (JUnit, Android).
 
-## Resolução do nome
+## Name resolution
 
-Nomes qualificados (`androidx.annotation.NonNull`) vão direto para o bytecode. Nomes simples usam os imports do arquivo (`import androidx.annotation.NonNull` torna `@NonNull` resolvível) e os embutidos de `java.lang`.
+Qualified names (`androidx.annotation.NonNull`) go straight to the bytecode. Simple names use the file's imports (`import androidx.annotation.NonNull` makes `@NonNull` resolvable) and the built-ins from `java.lang`.
 
-## Interoperabilidade com frameworks Java
+## Interoperability with Java frameworks
 
-Annotations funcionam normalmente com:
+Annotations work normally with:
 - Spring (`@Service`, `@Autowired`, `@RestController`)
 - JPA (`@Entity`, `@Table`, `@Column`)
 - Jackson (`@JsonProperty`, `@JsonIgnore`)
 - JUnit (`@Test`, `@BeforeEach`)
-- Android (`@Override`, `@NonNull`, ciclo de vida via superclasses)
+- Android (`@Override`, `@NonNull`, lifecycle via superclasses)
 
-O Spring enxerga `@Service` normalmente porque a annotation está no bytecode.
+Spring sees `@Service` normally because the annotation is in the bytecode.
 
-## Limitações conhecidas
+## Known limitations
 
-- Valores enum ou `Class<?>` ainda não suportados (`ANNOT001`).
-- O Native ignora annotations (metadado não tem semântica executável lá).
+- Enum or `Class<?>` values are not supported yet (`ANNOT001`).
+- Native ignores annotations (metadata has no executable semantics there).
 
-## Próximo passo
+## Next step
 
 [Java Interoperability →](21-java-interoperability.md)

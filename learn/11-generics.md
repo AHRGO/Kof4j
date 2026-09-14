@@ -1,30 +1,32 @@
+[English](11-generics.md) | [Português](11-generics.pt_BR.md)
+
 # 11 — Generics
 
-> **Status: implementado (JVM / Native / JS) — 0.3.22-beta — erasure + `Box<T>` com `T` primitivo**
+> **Status: implemented (JVM / Native / JS) — 0.3.22-beta — erasure + `Box<T>` with primitive `T`**
 >
-> Generics por erasure funcionam nos três targets; `Box<Int>` com `substituteTypeVariable` + `kof_int_to_string` nativo já está em 0.2.0.
+> Generics by erasure work on the three targets; `Box<Int>` with `substituteTypeVariable` + native `kof_int_to_string` is already in 0.2.0.
 
-## O problema
+## The problem
 
-Sem generics, você precisa de casts:
+Without generics, you need casts:
 
 ```java
 List lista = new ArrayList();
 lista.add("texto");
-String texto = (String) lista.get(0);  // cast manual
+String texto = (String) lista.get(0);  // manual cast
 ```
 
-Com generics, o compilador sabe o tipo:
+With generics, the compiler knows the type:
 
 ```java
 List<String> lista = new ArrayList<String>();
 lista.add("texto");
-String texto = lista.get(0);  // sem cast
+String texto = lista.get(0);  // no cast
 ```
 
-## Generics em Kof
+## Generics in Kof
 
-### Classes genéricas
+### Generic classes
 
 ```kf
 class Box<T> {
@@ -40,24 +42,24 @@ class Box<T> {
 }
 ```
 
-Uso:
+Usage:
 
 ```kf
 var caixaTexto = new Box<String>()
 caixaTexto.set("olá")
 var caixaNumero = new Box<Int>()
 caixaNumero.set(42)
-println(caixaNumero.get())   // 42 — Box<T> com T primitivo
+println(caixaNumero.get())   // 42 — Box<T> with primitive T
 ```
 
-`Box<T>` com `T` primitivo (`Box<Int>`) funciona nos três targets — no Native
-o `get()` que devolve `T` tem o tipo substituído em compile-time
-(`substituteTypeVariable`), então `println(b.get())` imprime o valor e não
-vira segfault.
+`Box<T>` with primitive `T` (`Box<Int>`) works on the three targets — on Native
+the `get()` returning `T` has its type substituted at compile-time
+(`substituteTypeVariable`), so `println(b.get())` prints the value and does not
+become a segfault.
 
-### Métodos genéricos
+### Generic methods
 
-Os parâmetros de tipo vêm **depois** do nome da função:
+The type parameters come **after** the function name:
 
 ```kf
 identity<T>(T x): T {
@@ -70,11 +72,11 @@ main() {
 }
 ```
 
-### Bounds (planejado)
+### Bounds (planned)
 
-`extends` em parâmetros de tipo ainda não é resolvido em compile-time.
+`extends` on type parameters is not yet resolved at compile-time.
 
-## Variância (planejado)
+## Variance (planned)
 
 ```kf
 void copiar(List<? extends Animal> origem, List<? super Animal> destino) {
@@ -84,15 +86,15 @@ void copiar(List<? extends Animal> origem, List<? super Animal> destino) {
 }
 ```
 
-## Interoperabilidade com generics Java
+## Interoperability with Java generics
 
 ```kf
-// Kof usando generics Java
+// Kof using Java generics
 var lista = new java.util.ArrayList<String>();
 lista.add("hello");
 String item = lista.get(0);
 ```
 
-## Próximo passo
+## Next step
 
 [Collections →](12-collections.md)

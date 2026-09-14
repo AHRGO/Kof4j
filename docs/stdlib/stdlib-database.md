@@ -1,16 +1,18 @@
-# stdlib database — Banco de Dados Nativo do Kof
+[English](stdlib-database.md) | [Português](stdlib-database.pt_BR.md)
 
-**Última atualização:** 12 de setembro de 2026
-**Versão:** 0.4.0-beta
-**Status:** implementado (Fase 5 do plano de independência do Spring) — JVM (JDBC) + Native (SQLite via `.so` direto + MySQL wire protocol WIP) + `kof.orm` (JVM + MongoDB); JS `DB001`
+# stdlib database — Kof Native Database
+
+**Last updated:** September 12, 2026
+**Version:** 0.4.0-beta
+**Status:** implemented (Phase 5 of the Spring independence plan) — JVM (JDBC) + Native (SQLite via direct `.so` + MySQL wire protocol WIP) + `kof.orm` (JVM + MongoDB); JS `DB001`
 
 ---
 
-## 1. Filosofia
+## 1. Philosophy
 
-> Acesso a banco é uma capacidade da plataforma. JDBC é o mecanismo interno
-> (interoperabilidade JVM); a API exposta é Kof-idomática — sem
-> `EntityManager`, `Session`, `PersistenceContext` ou `@Transactional`.
+> Database access is a capability of the platform. JDBC is the internal
+> mechanism (JVM interoperability); the exposed API is Kof-idiomatic — no
+> `EntityManager`, `Session`, `PersistenceContext` or `@Transactional`.
 
 ## 2. API
 
@@ -22,15 +24,15 @@ main() {
     db.execute(db, "insert into users values (?, ?)", 1, "Mel")
     db.execute(db, "insert into users values (?, ?)", 2, "Kof")
 
-    // Consulta sem tipo: cada linha vira um objeto JSON
+    // Untyped query: each row becomes a JSON object
     var rows = db.query(db, "select * from users where id = ?", 1)
     println(rows.get(0))     // {"id":1,"name":"Mel"}
 
-    // Consulta tipada: bind automático para records/classes
+    // Typed query: automatic bind to records/classes
     var users = db.query<User>(db, "select * from users order by id")
     println(users.get(0).name)
 
-    // Transação: commit automático; rollback em erro
+    // Transaction: automatic commit; rollback on error
     transaction {
         db.execute(db, "insert into users values (3, 'Ada')")
     }
@@ -39,24 +41,24 @@ main() {
 }
 ```
 
-## 3. Funções
+## 3. Functions
 
-| Chamada | Descrição |
+| Call | Description |
 |---------|-----------|
-| `db.connect(url)` | Conecta e retorna o handle |
-| `db.connect(url, user, pass)` | Conecta com credenciais |
-| `db.execute(handle, sql[, args...])` | UPDATE/INSERT/DELETE; retorna linhas afetadas |
-| `db.query(handle, sql[, args...])` | SELECT; `List<String>` — cada linha em JSON |
-| `db.query<T>(handle, sql[, args...])` | SELECT; `List<T>` — bind por nome de coluna |
-| `transaction { ... }` | Bloco transacional (usa a última conexão) |
-| `db.close(handle)` | Fecha a conexão |
+| `db.connect(url)` | Connects and returns the handle |
+| `db.connect(url, user, pass)` | Connects with credentials |
+| `db.execute(handle, sql[, args...])` | UPDATE/INSERT/DELETE; returns affected rows |
+| `db.query(handle, sql[, args...])` | SELECT; `List<String>` — each row as JSON |
+| `db.query<T>(handle, sql[, args...])` | SELECT; `List<T>` — bind by column name |
+| `transaction { ... }` | Transactional block (uses the last connection) |
+| `db.close(handle)` | Closes the connection |
 
-- Bind com `?` placeholders; args de `Int/Long/Bool/String` são convertidos
-  automaticamente (boxing).
-- Colunas são normalizadas para minúsculas (H2/Postgres devolvem maiúsculas).
-- Até 4 argumentos de bind por chamada (overloads de aridade fixa).
+- Bind with `?` placeholders; `Int/Long/Bool/String` args are converted
+  automatically (boxing).
+- Columns are normalized to lowercase (H2/Postgres return uppercase).
+- Up to 4 bind arguments per call (fixed-arity overloads).
 
-## 4. Exemplo com a stack web
+## 4. Example with the web stack
 
 ```kof
 record User(Int id, String name)
@@ -81,47 +83,47 @@ main() {
 
 ## 5. Drivers
 
-JDBC por `java.sql.DriverManager` — qualquer driver JDBC no classpath
-funciona (H2, MySQL, MariaDB, PostgreSQL, SQLite) no JVM. O driver é resolvido
-pelo `ServiceLoader` do JDK; nenhum acoplamento de biblioteca no runtime Kof.
+JDBC through `java.sql.DriverManager` — any JDBC driver on the classpath
+works (H2, MySQL, MariaDB, PostgreSQL, SQLite) on the JVM. The driver is resolved
+by the JDK's `ServiceLoader`; no library coupling in the Kof runtime.
 
 Native:
-- **SQLite** — link direto da `libsqlite3.so.0` (sem driver JDBC), DSN
-  `sqlite:/path.db`; `execute`/`query`/bind tipado com roundtrip E2E real.
-- **MySQL/MariaDB** — wire protocol próprio sobre sockets nativos (WIP):
-  handshake + auth `mysql_native_password` (scramble SHA-1, `kof_db_mysql_scramble`)
-  + `lenenc` + parse de `user:pass@` na DSN `mysql://[user[:pass]@]host[:port][/db]`.
-  O link inclui a lib do MySQL apenas quando o programa a usa (DSN literal
-  detectado em compile-time). Handshake completo, query e prepared statements
-  ainda em progresso (P3).
+- **SQLite** — direct link to `libsqlite3.so.0` (no JDBC driver), DSN
+  `sqlite:/path.db`; `execute`/`query`/typed bind with real E2E roundtrip.
+- **MySQL/MariaDB** — own wire protocol over native sockets (WIP):
+  handshake + `mysql_native_password` auth (SHA-1 scramble, `kof_db_mysql_scramble`)
+  + `lenenc` + parse of `user:pass@` in the DSN `mysql://[user[:pass]@]host[:port][/db]`.
+  The link includes the MySQL lib only when the program uses it (literal DSN
+  detected at compile-time). Full handshake, query and prepared statements
+  still in progress (P3).
 
 ## 6. Targets (0.2.6-beta)
 
-| Target | Estado | Notas |
+| Target | Status | Notes |
 |--------|--------|-------|
-| JVM | ✅ completo (JDBC) | `db.connect`/`execute`/`query<T>`/`transaction` (H2/MySQL/MariaDB/PostgreSQL/SQLite) + `orm.*` (entity, `saveAll`, `where` operadores, `page`, `count` filtrado, `deleteAll`, `migrate`, MongoDB) |
-| Native x86_64 | ✅ SQLite; MySQL WIP | `sqlite:` DSN completo; MySQL wire protocol (scramble SHA-1 + lenenc + `user:pass@`) — handshake/query/prepared pendentes |
+| JVM | ✅ complete (JDBC) | `db.connect`/`execute`/`query<T>`/`transaction` (H2/MySQL/MariaDB/PostgreSQL/SQLite) + `orm.*` (entity, `saveAll`, `where` operators, `page`, filtered `count`, `deleteAll`, `migrate`, MongoDB) |
+| Native x86_64 | ✅ SQLite; MySQL WIP | `sqlite:` DSN complete; MySQL wire protocol (SHA-1 scramble + lenenc + `user:pass@`) — handshake/query/prepared pending |
 | Native riscv64 | ✅ SQLite (riscv64) | `li a7` syscalls |
-| JS | DB001 (gap documentado) | reporta `DB001`/`ORM001` em compile-time |
+| JS | DB001 (documented gap) | reports `DB001`/`ORM001` at compile-time |
 
-## 7. Testes (0.2.6-beta)
+## 7. Tests (0.2.6-beta)
 
-`KofDbE2ETest` 8 + `KofOrmE2ETest` 16 (inclui MariaDB/PostgreSQL/MongoDB com skip condicional + SQLite native) — execute + query JSON,
-query tipada com bind, transação com commit, rollback em exceção,
-credenciais, e DB001 no JS (Native SQLite ✅).
+`KofDbE2ETest` 8 + `KofOrmE2ETest` 16 (includes MariaDB/PostgreSQL/MongoDB with conditional skip + native SQLite) — execute + JSON query,
+typed query with bind, transaction with commit, rollback on exception,
+credentials, and DB001 in JS (Native SQLite ✅).
 
-## 8. Evolução planejada (residual)
+## 8. Planned evolution (residual)
 
-- Query DSL tipada `User.query { where age > 18 }` (nível 3 DATABASE_VISION)
-- Connection pooling + `kof.db`/`kof.orm` fora do JVM (JS via WASM, Native ORM sobre SQLite)
-- MySQL/MariaDB native completo — WIP: auth scramble SHA-1 + `lenenc` + parse
-  `user:pass@` done; falta handshake completo, query e prepared statements
-- `repository<User>` / abstração de repositório
+- Typed query DSL `User.query { where age > 18 }` (level 3 DATABASE_VISION)
+- Connection pooling + `kof.db`/`kof.orm` outside the JVM (JS via WASM, Native ORM over SQLite)
+- Complete native MySQL/MariaDB — WIP: SHA-1 scramble auth + `lenenc` + `user:pass@`
+  parse done; full handshake, query and prepared statements still missing
+- `repository<User>` / repository abstraction
 
-## 9. `kof.orm` (resumo)
+## 9. `kof.orm` (summary)
 
-O ORM da própria linguagem (`entity` na linguagem → DDL + CRUD). Full API,
-backends e testes em `docs/stdlib/DATABASE_VISION.md`.
+The language's own ORM (`entity` in the language → DDL + CRUD). Full API,
+backends and tests in `docs/stdlib/DATABASE_VISION.md`.
 
 ```kof
 entity User {
@@ -133,28 +135,28 @@ entity User {
 
 main() {
     var db = db.connect("jdbc:h2:mem:app;DB_CLOSE_DELAY=-1")
-    orm.create<User>(db)                                   // DDL do schema
+    orm.create<User>(db)                                   // schema DDL
     orm.save(db, User(0, "Mel", "mel@kof.dev", 30))        // insert/update
     var u = orm.find<User>(db, 1)                          // PK
-    var adultos = orm.where<User>(db, "age", ">", 30)      // operadores
-    orm.saveAll<User>(db, l)                               // batch (upsert por PK)
-    var pg = orm.page<User>(db, 20, 40)                    // paginação
+    var adultos = orm.where<User>(db, "age", ">", 30)      // operators
+    orm.saveAll<User>(db, l)                               // batch (upsert by PK)
+    var pg = orm.page<User>(db, 20, 40)                    // pagination
     println(orm.count<User>(db))
     orm.delete<User>(db, 1)
     orm.migrate(db, "add-phone", "ALTER TABLE user ADD phone VARCHAR")
 }
 ```
 
-| Chamada | Descrição |
+| Call | Description |
 |---------|-----------|
-| `orm.create<T>(db)` | Gera o DDL a partir do `entity` |
-| `orm.save(db, t)` / `orm.saveAll<T>(db, list)` | insert/update (upsert por PK) |
-| `orm.find<T>(db, pk)` / `orm.all<T>(db)` | por PK / todas |
-| `orm.where<T>(db, field, value[, op])` | filtro (op: `=` `>` `<` `>=` `<=` `!=` `LIKE`) |
-| `orm.count<T>(db[, field, value])` | contagem (com filtro opcional) |
-| `orm.page<T>(db, limit, offset)` | paginação |
-| `orm.delete<T>(db, pk)` / `orm.deleteAll<T>(db)` | exclusão |
-| `orm.migrate(db, name, sql)` | migration versionada (roda uma vez) |
+| `orm.create<T>(db)` | Generates the DDL from the `entity` |
+| `orm.save(db, t)` / `orm.saveAll<T>(db, list)` | insert/update (upsert by PK) |
+| `orm.find<T>(db, pk)` / `orm.all<T>(db)` | by PK / all |
+| `orm.where<T>(db, field, value[, op])` | filter (op: `=` `>` `<` `>=` `<=` `!=` `LIKE`) |
+| `orm.count<T>(db[, field, value])` | count (with optional filter) |
+| `orm.page<T>(db, limit, offset)` | pagination |
+| `orm.delete<T>(db, pk)` / `orm.deleteAll<T>(db)` | deletion |
+| `orm.migrate(db, name, sql)` | versioned migration (runs once) |
 
-Backends: SQL via JDBC (JVM) + **MongoDB** (driver oficial, E2E com
-container real, skip condicional). Native/JS reportam `ORM001`.
+Backends: SQL via JDBC (JVM) + **MongoDB** (official driver, E2E with a real
+container, conditional skip). Native/JS report `ORM001`.
