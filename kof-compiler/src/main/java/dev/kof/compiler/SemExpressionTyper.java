@@ -507,12 +507,9 @@ public final class SemExpressionTyper {
             }
             case IfExpr ie -> {
                 Type thenType = inferType(sa, ie.thenExpr(), scope);
-                Type elseType = inferType(sa, ie.elseExpr(), scope);
+                Type elseType = ie.elseExpr() != null ? inferType(sa, ie.elseExpr(), scope) : Type.UnknownType.UNKNOWN;
                 if (thenType.equals(elseType)) yield thenType;
-                if (thenType instanceof Type.PrimitiveType && elseType instanceof Type.PrimitiveType) {
-                    yield thenType;
-                }
-                yield thenType;
+                yield HierarchyResolver.commonSupertype(sa, thenType, elseType);
             }
             case SwitchExpr se -> {
                 Type subjectType = inferType(sa, se.expression(), scope);

@@ -127,6 +127,12 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > quentes. O codemod dos 17 locals puros restantes ficou p/ depois (varios
 > carregam chamada com efeito — deletar linha = mudanca de comportamento).## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (14/09 ~10:45, dono = 192.168.100.22, lane compiler): fix issue #206 — if-expression type fixed to true-branch type (VerifyError).**
+> - Causa raiz: `SemExpressionTyper` fixava o tipo de `IfExpr` incondicionalmente no `thenType`, ignorando `elseType` e a hierarquia de tipos; e `ExpressionTyper` não calculava o ancestral comum (LCA) para classes. Ao chamar métodos na variável inferida com uma subclasse enquanto o ramo false instanciava a superclasse, o bytecode emitia `invokevirtual Subclasse.metodo` causando `VerifyError: Type 'A' is not assignable to 'B'`.
+> - Correção: `HierarchyResolver.commonSupertype` implementado para encontrar o LCA de classes via `TypeChecker.isAssignable` e cadeias de superclasses. `SemExpressionTyper` e `ExpressionTyper` agora usam `commonSupertype`.
+> - Prova: `CoreRegressionE2ETest#ifExpressionBranchTypesLca` e `#ifExpressionBranchTypesMixedNumeric`.
+> - Próximo: issues #168, #165, #162.
+
 > **✅ FEITO (14/09 ~10:35, dono = 192.168.100.22, lane compiler): fix issue #208 — switch expression over Boolean rejects exhaustive true/false coverage (SEM032).**
 > - Causa raiz: `SemExpressionTyper` exigia `default` incondicionalmente a menos que `subjectType` fosse enum, disparando `SEM032` mesmo com cobertura exaustiva de `true` e `false`.
 > - Correção: `MemberResolver.checkSwitchExprExhaustiveness` reconhece `Boolean`/`Bool` e valida se os casos cobrem `true` e `false`.

@@ -23,5 +23,5 @@
 524	kof-compiler/src/main/java/dev/kof/compiler/parser/ExpressionParser.java
 579	kof-compiler/src/main/java/dev/kof/compiler/runtime/RuntimeTimeIso.java
 557	kof-compiler/src/main/java/dev/kof/compiler/runtime/RuntimeUi.java
-575	kof-compiler/src/main/java/dev/kof/compiler/SemExpressionTyper.java
+572	kof-compiler/src/main/java/dev/kof/compiler/SemExpressionTyper.java
 592	kof-compiler/src/main/java/dev/kof/compiler/StatementLowerer.java

@@ -1682,4 +1682,41 @@ class CoreRegressionE2ETest {
         assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
         assertEquals("T\nno", runJvm(out));
     }
+
+    // Issue #206 — if-expression type fixed to true-branch type
+    @Test
+    void ifExpressionBranchTypesLca(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("ifexprtypes.kf");
+        Files.writeString(src, """
+                class A {
+                    String tag() { return "A" }
+                }
+                class B extends A {
+                    String tag() { return "B" }
+                }
+                main() {
+                    var r = if (false) new B() else new A()
+                    println(r.tag())
+                }
+                """);
+        Path out = tempDir.resolve("ifexprtypes-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("A", runJvm(out));
+    }
+
+    @Test
+    void ifExpressionBranchTypesMixedNumeric(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("ifmixed.kf");
+        Files.writeString(src, """
+                main() {
+                    var r = if (true) 1 else 1L
+                    println(r)
+                }
+                """);
+        Path out = tempDir.resolve("ifmixed-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("1", runJvm(out));
+    }
 }

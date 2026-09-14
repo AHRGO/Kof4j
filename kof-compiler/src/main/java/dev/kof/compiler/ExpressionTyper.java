@@ -261,6 +261,10 @@ public final class ExpressionTyper {
             case IfExpr ie -> {
                 Type thenType = inferExprType(driver, ie.thenExpr(), locals);
                 Type elseType = ie.elseExpr() != null ? inferExprType(driver, ie.elseExpr(), locals) : Type.UnknownType.UNKNOWN;
+                if (thenType.equals(elseType)) yield thenType;
+                if (driver.semanticAnalyzer != null) {
+                    yield HierarchyResolver.commonSupertype(driver.semanticAnalyzer, thenType, elseType);
+                }
                 List<Type> bts = ifBranchTypes(driver, ie, locals);
                 if (branchTypesDiffer(bts)) {
                     yield new Type.ClassType("java.lang", "Object", List.of());
