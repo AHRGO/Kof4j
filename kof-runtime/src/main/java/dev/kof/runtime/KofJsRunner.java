@@ -193,7 +193,7 @@ public final class KofJsRunner {
                 cmd.add(program);
                 if (args.length > 1 && !args[1].isNull() && args[1].hasArrayElements()) {
                     long n = args[1].getArraySize();
-                    for (int i = 0; i < n; i++) {
+                    for (long i = 0; i < n; i++) {
                         Value v = args[1].getArrayElement(i);
                         cmd.add(v.isString() ? v.asString() : String.valueOf(v));
                     }

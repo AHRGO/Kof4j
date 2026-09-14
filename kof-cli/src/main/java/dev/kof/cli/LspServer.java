@@ -227,7 +227,8 @@ final class LspServer {
 
     /** Offset (0-based) a partir de line/character LSP. */
     private static int offsetOf(String text, long line, long character) {
-        int l = 0, i = 0, n = text.length();
+        long l = 0;
+        int i = 0, n = text.length();
         while (i < n && l < line) {
             if (text.charAt(i) == '\n') l++;
             i++;

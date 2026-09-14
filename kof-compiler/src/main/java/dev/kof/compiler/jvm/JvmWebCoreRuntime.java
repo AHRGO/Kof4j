@@ -368,6 +368,15 @@ public final class JvmWebCoreRuntime {
                     final String id;
                     final java.util.List<WebRoute> routes = new java.util.ArrayList<>();
                     final java.util.List<Object> middlewares = new java.util.ArrayList<>();
+                    // C18 (D-SEC): config do app.security() aplicada pelo
+                    // dispatch — ordem fixa rate-limit → cors → headers →
+                    // session → csrf, sempre antes das rotas (security by
+                    // default não depende do usuário lembrar de compor).
+                    int securityRateLimit = 0;
+                    String securityCorsOrigin = null;
+                    boolean securityCsrf = false;
+                    String securityAuthHeader = null;
+                    final java.util.List<String> securityPublicPaths = new java.util.ArrayList<>();
                     final java.util.List<StaticDir> staticDirs = new java.util.ArrayList<>();
                     final java.util.List<String> healthPaths = new java.util.ArrayList<>();
                     final java.util.concurrent.atomic.AtomicInteger activeConnections =
@@ -457,6 +466,37 @@ public final class JvmWebCoreRuntime {
                 public static void kof_web_use(String appId, Object handler) {
                     if (handler == null) throw new IllegalArgumentException("middleware is null");
                     kof_web_app(appId).middlewares.add(handler);
+                }
+
+                /**
+                 * C18 (D-SEC): {@code app.security([opts])} — middleware
+                 * composto de ordem fixa ratificada no DECISIONS §D-SEC:
+                 * rate-limit → cors → headers de segurança → session →
+                 * csrf. Os opts (Map) alimentam campos no WebApp; a
+                 * APLICAÇÃO acontece no dispatch (JvmRuntimeWebDispatch),
+                 * que já tem a WebRequest em mão — nada de handler-reflect.
+                 */
+                @SuppressWarnings("unchecked")
+                public static void kof_web_security(String appId, Object opts) {
+                    WebApp app = kof_web_app(appId);
+                    if (opts instanceof java.util.Map<?, ?> m) {
+                        Object rl = m.get("rateLimit");
+                        if (rl instanceof Number n) app.securityRateLimit = n.intValue();
+                        Object co = m.get("corsOrigin");
+                        if (co instanceof String s && !s.isBlank()) app.securityCorsOrigin = s;
+                        Object c = m.get("csrf");
+                        if (c instanceof Boolean b) app.securityCsrf = b;
+                        Object ah = m.get("sessionHeader");
+                        if (ah instanceof String s && !s.isBlank()) app.securityAuthHeader = s.toLowerCase();
+                        Object pp = m.get("publicPaths");
+                        if (pp instanceof String csv && !csv.isBlank()) {
+                            for (String p : csv.split(",")) {
+                                if (!p.isBlank()) app.securityPublicPaths.add(p.trim());
+                            }
+                        }
+                    } else if (opts != null) {
+                        throw new IllegalArgumentException("app.security opts must be a Map");
+                    }
                 }
 
                 public static int kof_web_port(String appId) {

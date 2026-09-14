@@ -198,6 +198,7 @@ public final class JvmRuntimeCallDescriptors {
             case "kof_web_sse_route" -> "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)V";
             case "kof_web_ws_route" -> "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)V";
             case "kof_web_use" -> "(Ljava/lang/String;Ljava/lang/Object;)V";
+            case "kof_web_security" -> "(Ljava/lang/String;Ljava/lang/Object;)V";
             case "kof_web_listen" -> "(Ljava/lang/String;I)V";
             case "kof_web_listen_secure" -> "(Ljava/lang/String;I)V";
             case "kof_web_serve_dir" -> "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V";

@@ -34,6 +34,68 @@ public final class JvmRuntimeWebDispatch {
                     return false;
                 }
 
+                /**
+                 * C18 (D-SEC): pipeline do app.security() — ordem fixa
+                 * rate-limit → cors → headers de segurança → session → csrf.
+                 * Retorna a resposta de rejeição (429/403/401) ou null p/ seguir.
+                 */
+                private static String kof_web_security_pipeline(WebApp app, WebRequest req) {
+                    // 1. rate-limit: chave por origem (X-Forwarded-For | UA),
+                    // janela de 60s
+                    if (app.securityRateLimit > 0) {
+                        String ip = req.headers.getOrDefault("x-forwarded-for", "local");
+                        String key = ip + "|" + req.headers.getOrDefault("user-agent", "");
+                        if (!kof_sec_rate_limit(key, app.securityRateLimit, 60)) {
+                            return kof_web_build(429, "Too Many Requests",
+                                    "{\\"error\\":\\"rate limit exceeded\\"}");
+                        }
+                    }
+                    // 2. cors: origem presente e fora da allow-list = 403
+                    if (app.securityCorsOrigin != null) {
+                        String origin = req.headers.get("origin");
+                        if (origin != null && !origin.isBlank()
+                                && !kof_sec_cors_allowed(origin, app.securityCorsOrigin)) {
+                            return kof_web_build(403, "Forbidden",
+                                    "{\\"error\\":\\"forbidden origin\\"}");
+                        }
+                    }
+                    // 3. headers de segurança (CSP/HSTS/nosniff/frame/referrer)
+                    KOF_WEB_HEADERS.get().put("content-security-policy",
+                            kof_sec_csp_header());
+                    KOF_WEB_HEADERS.get().put("strict-transport-security",
+                            kof_sec_hsts_header());
+                    KOF_WEB_HEADERS.get().put("x-content-type-options",
+                            kof_sec_content_type_options_header());
+                    KOF_WEB_HEADERS.get().put("x-frame-options",
+                            kof_sec_frame_header());
+                    KOF_WEB_HEADERS.get().put("referrer-policy",
+                            kof_sec_referrer_header());
+                    // 4. session: header de auth obrigatório quando exigido,
+                    // EXCETO nos prefixes públicos (login/health)
+                    if (app.securityAuthHeader != null) {
+                        boolean isPublic = app.securityPublicPaths.stream()
+                                .anyMatch(p -> req.path.equals(p) || req.path.startsWith(p));
+                        if (!isPublic) {
+                            String tok = req.headers.get(app.securityAuthHeader);
+                            if (tok == null || tok.isBlank()
+                                    || kof_sec_session_get(tok) == null) {
+                                return kof_web_build(401, "Unauthorized",
+                                        "{\\"error\\":\\"unauthorized\\"}");
+                            }
+                        }
+                    }
+                    // 5. csrf: mutações exigem X-CSRF-Token válido
+                    if (app.securityCsrf && !"GET".equals(req.method) && !"HEAD".equals(req.method)) {
+                        String tok = req.headers.get("x-csrf-token");
+                        if (tok == null || tok.isBlank()
+                                || !kof_sec_csrf_valid(tok)) {
+                            return kof_web_build(403, "Forbidden",
+                                    "{\\"error\\":\\"csrf required\\"}");
+                        }
+                    }
+                    return null;
+                }
+
                 private static WebDispatchResult kof_web_dispatch(WebApp app, WebRequest req) {
                     KOF_WEB_REQUEST.set(req);
                     KOF_WEB_STATUS.remove();
@@ -64,6 +126,17 @@ public final class JvmRuntimeWebDispatch {
                                 KOF_WEB_HEADERS.get().clear();
                                 return new WebDispatchResult(RouteKind.HTTP, resp, null);
                             }
+                        }
+                        // C18 (D-SEC): app.security() — ordem fixa rate-limit
+                        // → cors → headers → session → csrf, SEMPRE antes das
+                        // rotas (security by default não depende de o usuário
+                        // compor a ordem à mão). Falha = resposta curta
+                        // (429/403/401), nunca silenciosa (R6).
+                        String securityReject = kof_web_security_pipeline(app, req);
+                        if (securityReject != null) {
+                            KOF_WEB_STATUS.remove();
+                            KOF_WEB_HEADERS.get().clear();
+                            return new WebDispatchResult(RouteKind.HTTP, securityReject, null);
                         }
                         for (WebRoute route : app.routes) {
                             if (route.kind == RouteKind.HTTP && !route.method.equals(req.method)) continue;

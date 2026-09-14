@@ -159,6 +159,18 @@ public final class ExpressionTyper {
             }
             case ArrayAccessExpr aa -> {
                 Type recvType = inferExprType(driver, aa.receiver(), locals);
+                // #152/#149: `list[i]`/`m[k]` sobre coleção = get do elemento
+                // (o emit baixa p/ kof_list_get/kof_map_get — espelha aqui).
+                if (BuiltinTypes.isList(recvType)) {
+                    Type elem = recvType instanceof Type.ClassType ct && !ct.typeArguments().isEmpty()
+                            ? ct.typeArguments().get(0) : Type.UnknownType.UNKNOWN;
+                    yield elem;
+                }
+                if (BuiltinTypes.isMap(recvType)) {
+                    Type val = recvType instanceof Type.ClassType ct && ct.typeArguments().size() > 1
+                            ? ct.typeArguments().get(1) : Type.UnknownType.UNKNOWN;
+                    yield val;
+                }
                 if (recvType instanceof Type.ArrayType at) yield at.componentType();
                 yield Type.UnknownType.UNKNOWN;
             }
