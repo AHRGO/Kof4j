@@ -1105,14 +1105,12 @@ class ConformanceMatrixTest {
                     println(s - e)
                 }
                 """, "0\n20709\n19782\n-719162\n2932896\n0\n0\n0\n0\n20709", Set.of(), tempDir);
-        // §182: parse ISO com campo de SINAL (`+999`/`+1`). O contrato é
-        // ESTRITO (dígitos) — o próprio comentário/teste dizem "estrito" e o
-        // Native é o único que cumpre. JVM/Script usam Integer.parseInt/
-        // parseInt (aceitam `+`/`-`) e o JS é inconsistente: kofTimeParseIso
-        // (addDays/diffDays) é leniente, kofTimeParseDateIso é estrito.
-        // Golden = consenso estrito (todos devem rejeitar => 0/""). JVM e JS
-        // excluídos (lenientes); Native é a referência. Script também usa
-        // Integer.parseInt → excluído até o fix.
+        // §182 ✅ CORRIGIDO 13/09 (lane development .18): parse ISO ESTRITO
+        // em TODOS os alvos (Native era a referência; JVM/Script trocaram
+        // Integer.parseInt por checagem dígito a dígito; JS kofTimeParseIso
+        // reusa o helper estrito do parseDateIso — inconsistência interna
+        // do JS eliminada). Golden = consenso estrito, 4 targets SEM
+        // exclusão (antes: jvm/script/js excluídos por serem lenientes).
         matrix("parseisostrict", """
                 main() {
                     println(time.parseDateIso("+999-01-01"))
@@ -1122,7 +1120,7 @@ class ConformanceMatrixTest {
                     println(time.addDays("+999-01-01", 1))
                     println(time.diffDays("+999-01-01", "1000-01-01"))
                 }
-                """, "0\n0\n0\n20454\n\n0", Set.of("jvm", "script", "js"), tempDir);
+                """, "0\n0\n0\n20454\n\n0", Set.of(), tempDir);
         // STDLIB S7h (D1): tzOffsetSeconds — fuso do HOST como getter
         // explícito; paridade JVM×JS (mesmo host, MESMO oracle ZoneId);
         // NÃO-determinístico entre hosts => o valor vem do oracle JVM

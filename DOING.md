@@ -136,6 +136,20 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > Prova Q1: `KofTimeE2ETest.parseDateIso{Jvm,Js,Native,CrossArch,
 > CompilesOnAllTargets}` (28/28) + `stdtime5` matriz (11/11) +
 > `timeParseDateIsoParity` Script (11/11). Suíte: **1764/0/0, 161 skip**.
+> **✅ FEITO (13/09 ~21:25, lane development, dono = 192.168.100.18):
+> §182 CORRIGIDO — parse ISO ESTRITO nos 4 targets (consenso declarado;
+> Native era a referência).** JVM `kof_time_digits` (dígito a dígito,
+> rejeita `+`/`-`) substitui `Integer.parseInt`; JS `kofTimeDigits` —
+> `kofTimeParseIso` (addDays/diffDays) reusa o MESMO contrato do
+> `kofTimeParseDateIso` (inconsistência interna do JS eliminada). Prova
+> Q1: célula `parseisostrict` SEM exclusões (4 targets; antes
+> jvm/script/js excluídos por serem lenientes). **Q4 self-catch:** os 3
+> testes S7e usavam `isToday(2026,9,13)==true` literal — quebraram à
+> meia-noite UTC 13→14/09 (verde-falso dependente de relógio, meu).
+> Blindados: `isToday(partes de todayIso())` via `math.parseInt` (prova
+> de consistência S7e×S7g×S13a independente do dia; `var p0: String =
+> parts.get(0)` — o guard SEM025 de S13a rejeita elemento UNKNOWN de
+> `split` sem anotação). Suíte: **1772/0/0, 161 skip**.
 > **✅ FEITO (13/09 ~20:35, lane development, dono = 192.168.100.18):
 > D-STDLIB degrau 4 — `time.tzOffsetSeconds()` (S7h, D1, 3 alvos + gap
 > honesto TIME003 no Native).** Dispatch `KofTime` (()→INT) + gate

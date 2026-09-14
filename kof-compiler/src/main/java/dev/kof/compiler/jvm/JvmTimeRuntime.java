@@ -86,18 +86,29 @@ public final class JvmTimeRuntime {
                 // ── kof.time (STDLIB S7a) — data ISO (String) add/diff ─────
                 // "YYYY-MM-DD" estrito; inválido => "" (add) / 0 (diff) —
                 // mesma política "invalid => 0" do calendário wedge.
+                // §182 (13/09): parse ESTRITO dígito a dígito — contrato
+                // declarado "YYYY-MM-DD … dígitos" (Native é a referência).
+                // Integer.parseInt aceitava sinal (+999/-9) = desvio do
+                // contrato e divergência silenciosa cross-target (regra 5).
+                private static int kof_time_digits(String s, int from, int len) {
+                    int v = 0;
+                    for (int i = from; i < from + len; i++) {
+                        char c = s.charAt(i);
+                        if (c < '0' || c > '9') return -1;
+                        v = v * 10 + (c - '0');
+                    }
+                    return v;
+                }
+
                 private static java.time.LocalDate kof_time_parseIso(String iso) {
                     if (iso == null || iso.length() != 10) return null;
                     if (iso.charAt(4) != '-' || iso.charAt(7) != '-') return null;
-                    try {
-                        int y = Integer.parseInt(iso.substring(0, 4));
-                        int m = Integer.parseInt(iso.substring(5, 7));
-                        int d = Integer.parseInt(iso.substring(8, 10));
-                        if (!kof_time_validDate(y, m, d)) return null;
-                        return java.time.LocalDate.of(y, m, d);
-                    } catch (RuntimeException e) {
-                        return null;
-                    }
+                    int y = kof_time_digits(iso, 0, 4);
+                    int m = kof_time_digits(iso, 5, 2);
+                    int d = kof_time_digits(iso, 8, 2);
+                    if (y < 0 || m < 0 || d < 0) return null;
+                    if (!kof_time_validDate(y, m, d)) return null;
+                    return java.time.LocalDate.of(y, m, d);
                 }
 
                 public static String kof_time_addDays(String iso, int days) {

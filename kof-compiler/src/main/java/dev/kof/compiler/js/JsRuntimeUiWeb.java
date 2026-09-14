@@ -428,13 +428,26 @@ public final class JsRuntimeUiWeb {
                 const m = mp + (mp < 10 ? 3 : -9);
                 return { y: y + (m <= 2 ? 1 : 0), m: m, d: d };
             }
+            // §182 (13/09): parse ESTRITO dígito a dígito — MESMO contrato do
+            // kofTimeParseDateIso (l. acima) e do Native (referência). O
+            // parseInt aceitava sinal (+999/-9) = inconsistência interna do
+            // JS (addDays/diffDays divergiam de parseDateIso) e cross-target.
+            function kofTimeDigits(s, from, len) {
+                let v = 0;
+                for (let i = from; i < from + len; i++) {
+                    const c = s.charCodeAt(i);
+                    if (c < 48 || c > 57) return -1;
+                    v = v * 10 + (c - 48);
+                }
+                return v;
+            }
             function kofTimeParseIso(s) {
                 if (typeof s !== "string" || s.length !== 10) return null;
                 if (s.charCodeAt(4) !== 45 || s.charCodeAt(7) !== 45) return null;
-                const y = parseInt(s.slice(0, 4), 10);
-                const m = parseInt(s.slice(5, 7), 10);
-                const d = parseInt(s.slice(8, 10), 10);
-                if (isNaN(y) || isNaN(m) || isNaN(d) || !kofTimeValidDate(y, m, d)) return null;
+                const y = kofTimeDigits(s, 0, 4);
+                const m = kofTimeDigits(s, 5, 2);
+                const d = kofTimeDigits(s, 8, 2);
+                if (y < 0 || m < 0 || d < 0 || !kofTimeValidDate(y, m, d)) return null;
                 return { y: y, m: m, d: d };
             }
             function kofTimePad2(n) { return (n < 10 ? "0" : "") + n; }

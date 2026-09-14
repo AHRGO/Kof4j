@@ -515,11 +515,20 @@ class KofTimeE2ETest {
                     println(time.formatDateIso(2026, 0, 1))
                     println(time.formatDateIso(2026, 1, 0))
                     println(time.formatDateIso(2026, 4, 31))
-                    println(time.isToday(2026, 9, 13))
+                    // Q4: isToday(y,m,d)==true NUNCA literal (o dia vira à
+                    // meia-noite UTC — quebrou 14/09). Consistência interna
+                    // independente do relogio: as partes de todayIso() sao
+                    // hoje => isToday delas = true (parseDateIso fecha com S7g).
+                    var parts = today.split("-")
+                    var p0: String = parts.get(0)
+                    var p1: String = parts.get(1)
+                    var p2: String = parts.get(2)
+                    println(time.isToday(math.parseInt(p0),
+                                         math.parseInt(p1),
+                                         math.parseInt(p2)))
                     println(time.isToday(2026, 9, 12))
                     println(time.isToday(2026, 2, 30))
                     println(time.isToday(0, 1, 1))
-                    var parts = today.split("-")
                     println(parts.size)
                     println(parts.get(0).length)
                     println(parts.get(1).length)
@@ -540,10 +549,16 @@ class KofTimeE2ETest {
                     println(time.formatDateIso(0, 1, 1))
                     println(time.formatDateIso(2026, 13, 1))
                     println(time.formatDateIso(2026, 4, 31))
-                    println(time.isToday(2026, 9, 13))
+                    // Q4: consistencia interna (relogio-independente)
+                    var parts = today.split("-")
+                    var p0: String = parts.get(0)
+                    var p1: String = parts.get(1)
+                    var p2: String = parts.get(2)
+                    println(time.isToday(math.parseInt(p0),
+                                         math.parseInt(p1),
+                                         math.parseInt(p2)))
                     println(time.isToday(2026, 9, 12))
                     println(time.isToday(2026, 2, 30))
-                    var parts = today.split("-")
                     println(parts.size)
                     println(parts.get(0).length)
                     println(parts.get(1).length)
@@ -564,11 +579,17 @@ class KofTimeE2ETest {
                     println(time.formatDateIso(10000, 1, 1))
                     println(time.formatDateIso(2026, 13, 1))
                     println(time.formatDateIso(2026, 4, 31))
-                    println(time.isToday(2026, 9, 13))
+                    // Q4: consistencia interna (relogio-independente)
+                    var parts = today.split("-")
+                    var p0: String = parts.get(0)
+                    var p1: String = parts.get(1)
+                    var p2: String = parts.get(2)
+                    println(time.isToday(math.parseInt(p0),
+                                         math.parseInt(p1),
+                                         math.parseInt(p2)))
                     println(time.isToday(2026, 9, 12))
                     println(time.isToday(2026, 2, 30))
                     println(time.isToday(0, 1, 1))
-                    var parts = today.split("-")
                     println(parts.size)
                     println(parts.get(0).length)
                     println(parts.get(1).length)

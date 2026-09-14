@@ -6081,3 +6081,15 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   com sinal + o caso válido `2026-01-01`, golden do consenso estrito.
   **Não corrigido nesta sessão** (o fix toca a unidade recém-entregue por
   outra lane — `.18`; aqui a unidade segura é catalogar + travar o golden).
+- **✅ CORREÇÃO (13/09, lane .18 — mesma sessão da unidade S7e-S7h):** consenso
+  ESTRITO adotado (é o que o contrato declarado e o Native já faziam — a
+  alternativa leniente mudaria contrato = regra 6, desnecessário).
+  - JVM: `JvmTimeRuntime.kof_time_parseIso` troca `Integer.parseInt` por
+    `kof_time_digits` (dígito a dígito, rejeita `+`/`-`).
+  - JS: `kofTimeParseIso` (addDays/diffDays) troca `parseInt` por
+    `kofTimeDigits` — MESMO helper/contrato do `kofTimeParseDateIso`;
+    inconsistência interna do JS eliminada.
+  - Native: já estrito (referência) — zero mudança.
+  - **Prova Q1 (falhava antes, passa agora):** célula `parseisostrict`
+    SEM exclusões (4 targets, antes jvm/script/js excluídos) — golden do
+    consenso estrito `0/0/0/20454//0`; suíte 1772/0/0.
