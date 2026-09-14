@@ -1757,4 +1757,22 @@ class CoreRegressionE2ETest {
         assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
         assertEquals("1", runJvm(out));
     }
+
+    // Issue #154 — strings.padLeft / padRight crash with Char literal (VerifyError)
+    @Test
+    void stringsPadWithCharLiteralJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("padchar.kf");
+        Files.writeString(src, """
+                main() {
+                    var s1 = strings.padLeft("42", 5, '0')
+                    var s2 = strings.padRight("hi", 5, '-')
+                    println(s1)
+                    println(s2)
+                }
+                """);
+        Path out = tempDir.resolve("padchar-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("00042\nhi---", runJvm(out));
+    }
 }

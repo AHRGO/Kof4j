@@ -71,6 +71,12 @@ public final class CompilerEmission2 {
                     && !ExpressionTyper.boxesOwnBranches(driver, args.get(i), locals)) {
                 driver.emitErasureBox(ops, argType);
             }
+            if (formal != null && BuiltinTypes.isString(formal)
+                    && argType instanceof Type.PrimitiveType pt
+                    && "char".equals(Type.canonicalPrimitiveName(pt.name()))) {
+                ops.add(new KofCall(BuiltinTypes.STRING, "valueOf",
+                        List.of(Type.PrimitiveType.CHAR), BuiltinTypes.STRING, KofCallKind.STATIC));
+            }
         }
         return localIdx;
     }

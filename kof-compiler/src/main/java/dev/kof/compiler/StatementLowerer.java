@@ -259,6 +259,7 @@ public final class StatementLowerer {
                 LabelId bodyLabel = LabelId.create();
                 int initLocalEntryIdx = locals.size();
                 if (fs.init() != null) localIdx = driver.emitStatement(fs.init(), ops, owner, localIdx, locals, returnType);
+                int initLocalEndIdx = locals.size();
                 ops.add(new KofLabel(startLabel));
                 if (fs.condition() != null) {
                     if (fs.condition() instanceof BinaryExpr bin && driver.isComparisonShortcut(bin, locals)) {
@@ -309,8 +310,13 @@ public final class StatementLowerer {
                 }
                 ops.add(new KofJump(startLabel));
                 ops.add(new KofLabel(endLabel));
-                if (fs.init() != null && locals.size() > initLocalEntryIdx) {
-                    for (int li = initLocalEntryIdx; li < locals.size(); li++) {
+                // #182: libera SOMENTE os nomes declarados pelo init (ex.: `var i`).
+                // Varrer ate locals.size() renomeava tbem as variaveis do CORPO
+                // (ja empilhadas durante o loop) para o sentinel '#forInitVar',
+                // que o backend JS trata como temp nao-declaravel (isCompilerTemp)
+                // -> o `let` sumia e as leituras davam ReferenceError (#201).
+                if (fs.init() != null) {
+                    for (int li = initLocalEntryIdx; li < initLocalEndIdx; li++) {
                         IRLocalVariable lv = locals.get(li);
                         locals.set(li, new IRLocalVariable(lv.index(), "#forInitVar", lv.type()));
                     }

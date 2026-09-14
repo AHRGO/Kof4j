@@ -127,6 +127,12 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > quentes. O codemod dos 17 locals puros restantes ficou p/ depois (varios
 > carregam chamada com efeito — deletar linha = mudanca de comportamento).## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (14/09 ~11:20, dono = 192.168.100.22, lane compiler): fix issue #154 — strings.padLeft / padRight crash with Char literal (VerifyError).**
+> - Causa raiz: `ExpressionMethodCallLowerer` emitia chamadas estáticas `strings.padLeft/padRight` usando `emitArgs` cru sem coerção de argumentos para os tipos formais `(String, Int, String)`. Ao passar literal `Char` (`'0'`), o valor `int` era deixado na pilha para um parâmetro que esperava `Ljava/lang/String;`, resultando em `VerifyError`.
+> - Correção: `ExpressionMethodCallLowerer` agora utiliza `driver.emitArgumentsWithFormalTypes` para chamadas `KofStd`. Em `CompilerEmission2`, quando o parâmetro formal espera `String` e o argumento é `Char`, é emitido `String.valueOf(char)`.
+> - Prova: `CoreRegressionE2ETest#stringsPadWithCharLiteralJvm`.
+> - Próximo: issues #162, #161, #160.
+
 > **✅ FEITO (14/09 ~11:00, dono = 192.168.100.22, lane compiler): fix issue #165 — for-in over EnumType.values() mistyped loop variable (NoSuchMethodError).**
 > - Causa raiz: `SymbolTableBuilder` sintetizava `values()` com tipo de retorno `List<String>` em vez de `List<EnumType>`, fazendo com que o typer inferisse a variável do laço `for (var c in EnumType.values())` como `String`. Ao chamar `c.name()` ou `c.toString()`, o compilador procurava o método em `String` e emitia `invokevirtual java/lang/String.<method>()Ljava/lang/Object;`, resultando em `NoSuchMethodError`.
 > - Correção: `SymbolTableBuilder` sintetiza `values()` retornando `List<EnumType>` e adiciona suporte explícito a `toString()` e `name()` no tipo enum. `ExpressionStaticCallLowerer`, `MethodCallTyper` e `ExpressionBuiltinInstanceCalls` atualizados para reconhecer `EnumType` com `name()` e `toString()` como identidade de runtime.
