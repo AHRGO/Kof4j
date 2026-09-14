@@ -64,7 +64,6 @@ final class Fmt {
         StringBuilder out = new StringBuilder();
         int indent = 0;
         StringBuilder line = new StringBuilder();
-        boolean pendingBlank = false;
 
         for (int i = 0; i < tokens.size(); i++) {
             String t = tokens.get(i);
@@ -73,7 +72,6 @@ final class Fmt {
                 if (line.length() > 0) {
                     emit(out, indent, line);
                     line.setLength(0);
-                    pendingBlank = false;
                 }
                 continue;
             }
