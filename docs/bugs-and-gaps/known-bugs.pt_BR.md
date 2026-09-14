@@ -6689,6 +6689,15 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   `ec=1` + `VerifyError` via launcher por reflection (regra JavaFX — o
   launcher direto engole atrás da mensagem falsa do JavaFX). O fix deve
   imprimir `8` + caso em `CoreRegressionE2ETest`.
+- **✅ CORRIGIDO (medido 14/09 ~12:35 em `c252a983`, fix `8af810c5` "map
+  primitive types to boxed classes in instanceof and checkcast"):** o javap do
+  repro §203 agora emite `checkcast java/lang/Integer` VÁLIDO +
+  `invokevirtual intValue()` + `istore` (sem `?`, sem istore cru). A alegação
+  exata da issue está morta. Dois residuais DIFERENTES continuam abertos e NÃO
+  são §203: (i) `o as Int` com `o` contendo uma `String` real → runtime
+  `ClassCastException` (a face de design do §188 — regra 6, decisão parse vs
+  cast da mantenedora); (ii) `i as Object` com `i` Int → NOVO §213
+  (boxing ausente — `bipush` + `checkcast Object` → `VerifyError`).
 
 ### §206 ✅ CORRIGIDO 14/09 — classe com parâmetros de construtor: campos/métodos extras no corpo não resolvem (issue #215)
 
@@ -7276,22 +7285,35 @@ usuário — diagnostic em compile-time é a meta (regra 6).
   `BackendParityTest` 19/19, `CoreRegressionE2ETest` 75/75. JVM/Native/Script
   não tocados (só o parser JS).
 
-### §202 — `String.split(...).get(i)` → SEM028 "array não tem método get()" (typer passou a cravar `String[]` do split; o `.get` era aceito antes por tipagemUnknown) — 🔴 ABERTO 14/09 (introduzido por `e6e5c9b8`, dono = lane de inferência de tipos/String methods)
+### §202 — `String.split(...).get(i)` → SEM028 "array não tem método get()" — ✅ CORRIGIDO 14/09 (introduzido por `e6e5c9b8`; corpus alinhado por `602dcbc0`, lane `192.168.100.17`)
 
 - **Sintoma:** `Compilation should succeed: [Diagnostic ... code=SEM028]` em
   `KofTimeE2ETest#todayIsoFormatDateIsoIsToday{Jvm,Js,Native}` (o programa
   usa `parts.get(0)` após `today.split("-")`), `CodegenKitchenSinkTest`
-  (strings), e família em `ConformanceMatrixTest`. 6–9 vermelhos.
+  (strings), `NativeE2ETest` (2), `KofScriptStdlibParityTest` e família em
+  `ConformanceMatrixTest`. 6–9 vermelhos.
 - **Bisseção (provada):** `e6e5c9b8` RED / `75e38d35` GREEN (`git worktree`
   com `mvn -o test -pl kof-compiler -Dtest=...`).
 - **Mecanismo:** `e6e5c9b8` deu retorno real ao `split`/`toCharArray`/etc. no
   typer (`CollectionMethodTyper`/`StringMethodRegistry`), então o receiver de
   `.get(i)` virou `Type.ArrayType` e caiu no ramo SEM028 (diagnóstico por
   design: arrays crus não têm `get()`; o idiom é `arr[i]`). Antes o receiver
-  era desconhecido e o `.get` passava. **Decisão de contrato (regra 6):**
-  arrasar os testes (usar `parts[0]`) OU aceitar `.get` em `ArrayType` —
-  escolha do dono da lane, não desta; o test-corpus que usou `.get` em array
-  está em `KofTimeE2ETest` (S7e) e precisa de align com o que for decidido.
+  era desconhecido e o `.get` passava — os testes antigos eram **verde-falso**
+  dependendo do buraco de tipagem.
+- **Resolução (decisão regra 6 — manter SEM028, alinhar o corpus):** `602dcbc0`
+  alinhou os 4 programas de teste ao contrato documentado (`split` retorna
+  `String[]`; acesso é `arr[i]` — `training/idioms/strings.md:132`, e o guard
+  `CompilerDriverTest.arrayMethodCallGivesCleanDiagnostic` exige SEM028 em
+  `arr.get()`). A alternativa "aceitar `.get` no caminho semântico" foi rejeitada
+  (quebraria o guard + o contrato). **Verificado 14/09 em `79bd7ac6`:**
+  `KofTimeE2ETest` 30 (0 fail, 6 skip = DB externa), `NativeE2ETest` 65/65,
+  `CodegenKitchenSinkTest` 1/1, guard SEM028 1/1.
+- **Residual (NÃO é §202, catalogado):** `MethodCallTyper.java:18` (lado do emit)
+  ainda ACEITA `.get(i)`/`.size` em array enquanto `SemMethodCallTyper` rejeita
+  `.get` com SEM028 — inconsistência latente typer/emit: quando o tipo do receiver
+  só é cravado no emit (Unknown no sema), um `.get` de array ainda pode escapar e
+  emitir AALOAD silenciosamente. Inofensivo hoje (`split` é cravado `String[]`),
+  mas é exatamente o buraco que produziu este bug. Dono = lane de inferência.
 
 ### §204 — o ramo ELSE do `if`-statement NÃO era analisado → frames JVM inválidos (`Supervisor.lacoUnico` frame crash) — ✅ CORRIGIDO 14/09 (introduzido por `a892b3c5`, lane CodeQL; raiz corrigida pela lane development `192.168.100.18`)
 
