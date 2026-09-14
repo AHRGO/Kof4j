@@ -642,7 +642,7 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 a Fase C fechar o corpo (hoje: recovery parcial honesto).
 
 > **⚠️ 5º RED NO PORTÃO (catalogado, para as lanes de bug — 14/09 ~16:45):**
-> `NativeStringCompareCrossTest` riscv+aarch → §231 no known-bugs (fix
+> `NativeStringCompareCrossTest` riscv+aarch → §233 no known-bugs (renumerado 17:40: §231 foi tomado pela lane .18 — colisao de rebase; fix
 > mecânico 4× `.get(N)`→`[N]` no SPLIT_PROGRAM:119/122/127/131, golden
 > idêntico PROVADO na JVM 16:40; owner = quem deve o blast-radius do
 > `602dcbc0` ou lane nat §111; NÃO editado por esta lane por diretriz de
