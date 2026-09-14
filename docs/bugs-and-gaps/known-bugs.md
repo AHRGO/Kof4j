@@ -6821,3 +6821,10 @@ usuário — diagnostic em compile-time é a meta (regra 6).
 - **Causa raiz:** `CompilerComparisons.isComparisonShortcut` só desativava shortcut para `String` e `enum`. Para records e classes, retornava `true` no shortcut, gerando `KofConditionalJump` com `operandType` do record → `JvmOpEmitter` emitia `if_acmpeq` (igualdade referencial de ponteiro).
 - **Fix:** `CompilerComparisons.isComparisonShortcut` desativa shortcut se `left` ou `right` for record type (`CompilerTypes.isRecordType(...) == true`), forçando a cair no lowering normal de `ExpressionBinaryLowerer` que emite `record.equals(other)`.
 - **Prova:** `CoreRegressionE2ETest.recordEqualityInDirectIfCondition` prova `if (t1 == t2)` e `if-expression` com `Tag("hi") == Tag("hi")` avaliando para `true` e `"equal"`.
+
+### §199 — Record destructuring com campos `Double` ou `Long` causava colisão de slots no frame JVM (VerifyError / COMP002) — ✅ CORRIGIDO 14/09 ([issue #187](https://github.com/KofLang/Kof4j/issues/187), dono = lane `192.168.100.22`)
+
+- **Sintoma (issue #187):** Desestruturar um record com campos `Double` ou `Long` em `switch` gerava `VerifyError: Bad local variable type ... Reason: Type top is not assignable to double` ou crash `COMP002`.
+- **Causa raiz:** Ao desestruturar os componentes de um record (`case Rect(var w, var h)`), `SwitchExprLowerer` e `SwitchStmtLowerer` incrementavam `localIdx` de 1 em 1 (`localIdx++`), ignorando que `Double` e `Long` são de 2 slots no frame JVM (categoria-2).
+- **Fix:** Alocação de slots locais em `SwitchExprLowerer.emitPatternBinding` e `SwitchStmtLowerer` ajustada para avançar `TypeMetrics.isDoubleWidth(fieldType) ? 2 : 1`.
+- **Prova:** `CoreRegressionE2ETest.recordDestructuringDoubleAndLong` passando nos targets (JVM e JS).

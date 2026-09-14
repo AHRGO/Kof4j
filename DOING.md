@@ -98,7 +98,12 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > `CompilerComparisons.isComparisonShortcut` desativa shortcut se `left` ou `right` for `Record` (`CompilerTypes.isRecordType`), caindo no lowering completo de `ExpressionBinaryLowerer` com chamada a `record.equals(other)` e comparação de conteúdo.
 > Prova: `CoreRegressionE2ETest.recordEqualityInDirectIfCondition` provando `t1 == t2` em `if` e em ternário avaliando verdadeiro.
 > Suíte `CoreRegressionE2ETest` 65/65 verde, `check_500.sh` sem classes críticas.
-> **PRÓXIMO PASSO:** Continuar triagem da fila de issues abertas (#187, #183, #182, #181, #180).
+> **✅ FEITO (14/09 ~07:25, dono = 192.168.100.22, lane compiler): fix issue #187 — Record destructuring com campos Double/Long causava colisão de slots no frame JVM (VerifyError / COMP002).**
+> `SwitchExprLowerer.emitPatternBinding` e `SwitchStmtLowerer` incrementavam `localIdx` em 1 para cada campo do pattern, corrompendo variáveis seguintes quando o campo era `Double` ou `Long` (2 slots).
+> Ajustado para `localIdx += TypeMetrics.isDoubleWidth(fieldType) ? 2 : 1`.
+> Prova: `CoreRegressionE2ETest.recordDestructuringDoubleAndLong` provando `Rect(Double, Double)` e `Box(Long)` destructuring em `switch`.
+> **PRÓXIMO PASSO:** Continuar triagem da fila de issues abertas (#183, #182, #181, #180).
+
 
 
 > **✅ FEITO CodeQL testes-fora-do-scan (14/09 ~05:10, dono = 192.168.100.22,

@@ -53,27 +53,60 @@ if (ae.target() instanceof IdentifierExpr ie && !owner.isEmpty()) {
                 ops.add(new KofDup());
                 ops.add(new KofLoadField(ownerType, ie.name(), fieldSym.type()));
             }
-            localIdx = ExpressionLowerer.emitExpression(driver, ae.value(), ops, owner, localIdx, locals);
             boolean compoundAsgn = isCompoundOp(op);
+            // #194 — `s += t` em campo String de INSTÂNCIA: o caminho de
+            // campo de instância não tinha o tratamento de concatenação que
+            // o de campo estático já tinha (linhas ~98-126), então caía em
+            // KofBinary(ADD, String) → `iadd` → VerifyError. Espelha o
+            // caminho estático: box do primitivo + valueOf + kof_string_concat.
+            Type instValType = ExpressionTyper.inferExprType(driver, ae.value(), locals);
+            boolean instConcat = compoundAsgn && "+=".equals(op)
+                    && (Type.isString(fieldSym.type()) || Type.isString(instValType));
+            if (instConcat) {
+                if (!Type.isString(fieldSym.type()) && TypeMetrics.isPrimitiveType(fieldSym.type())) {
+                    TypeEmitter.boxPrimitive(ops, fieldSym.type());
+                }
+                if (!Type.isString(fieldSym.type())) {
+                    ops.add(new KofCall(BuiltinTypes.STRING, "valueOf",
+                            List.of(driver.target.isNative() && !Type.isString(fieldSym.type())
+                                    && !(fieldSym.type() instanceof Type.PrimitiveType)
+                                    ? fieldSym.type() : Type.UnknownType.UNKNOWN),
+                            BuiltinTypes.STRING, KofCallKind.STATIC));
+                }
+            }
+            localIdx = ExpressionLowerer.emitExpression(driver, ae.value(), ops, owner, localIdx, locals);
             // §103.2 (#103): widening do valor p/ o tipo do CAMPO — Int→Long
             // putfield sem I2L → VerifyError (this.value = n, campo Long,
             // param Int). O caminho estático (~158) e o de array-store já
             // faziam; o de campo de instância não fazia NEM simples NEM
             // composto (RHS Int num LADD também quebra o frame).
-            if (TypeMetrics.isPrimitiveType(fieldSym.type()) && compoundAsgn) {
-                emitCompoundRhsConv(driver, ops, op, fieldSym.type(),
-                        ExpressionTyper.inferExprType(driver, ae.value(), locals));
+            if (instConcat) {
+                if (!Type.isString(instValType) && TypeMetrics.isPrimitiveType(instValType)) {
+                    TypeEmitter.boxPrimitive(ops, instValType);
+                }
+                if (!Type.isString(instValType)) {
+                    ops.add(new KofCall(BuiltinTypes.STRING, "valueOf",
+                            List.of(driver.target.isNative() && !Type.isString(instValType)
+                                    && !(instValType instanceof Type.PrimitiveType)
+                                    ? instValType : Type.UnknownType.UNKNOWN),
+                            BuiltinTypes.STRING, KofCallKind.STATIC));
+                }
+                ops.add(new KofCall(BuiltinTypes.STRING, "kof_string_concat",
+                        List.of(BuiltinTypes.STRING, BuiltinTypes.STRING),
+                        BuiltinTypes.STRING, KofCallKind.FUNCTION));
+            } else if (TypeMetrics.isPrimitiveType(fieldSym.type()) && compoundAsgn) {
+                emitCompoundRhsConv(driver, ops, op, fieldSym.type(), instValType);
             } else if ("=".equals(op)) {
-                Type faValT = ExpressionTyper.inferExprType(driver, ae.value(), locals);
-                if (TypeMetrics.isPrimitiveType(faValT)
+                if (TypeMetrics.isPrimitiveType(instValType)
                         && TypeMetrics.isPrimitiveType(fieldSym.type())) {
-                    driver.emitWideningIfNeeded(ops, faValT, fieldSym.type());
+                    driver.emitWideningIfNeeded(ops, instValType, fieldSym.type());
                 }
             }
-            if (compoundAsgn) {
+            if (compoundAsgn && !instConcat) {
                 ops.add(new KofBinary(compoundBinaryOp(op), fieldSym.type()));
             }
-            ops.add(new KofStoreField(ownerType, ie.name(), fieldSym.type()));
+            ops.add(new KofStoreField(ownerType, ie.name(),
+                    instConcat ? BuiltinTypes.STRING : fieldSym.type()));
             return localIdx;
         }
     }

@@ -1453,4 +1453,29 @@ class CoreRegressionE2ETest {
                 }
                 """, "equal\ntrue\nyes", tempDir, "record-equality-if");
     }
+
+    // Issue #187: Record destructuring com campos Double ou Long alocava slots
+    // com passo 1 em vez de 2, gerando VerifyError / colisão de slots no frame JVM.
+    @Test
+    void recordDestructuringDoubleAndLong(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                record Rect(Double w, Double h)
+                record Box(Long n)
+                main() {
+                    var obj: Object = new Rect(3.5, 4.0)
+                    var area = switch (obj) {
+                        case Rect(var w, var h) -> w * h
+                        default -> 0.0
+                    }
+                    println(area > 13.9 && area < 14.1)
+
+                    var obj2: Object = new Box(10L)
+                    var r = switch (obj2) {
+                        case Box(var n) -> n * 2L
+                        default -> 0L
+                    }
+                    println(r)
+                }
+                """, "true\n20", tempDir, "record-destructuring-wide");
+    }
 }
