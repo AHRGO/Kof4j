@@ -6925,11 +6925,22 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   not a function`, e204c 12:35) — mesma raiz: o type-argument genérico que
   carrega um tipo-função não é recuperado no ponto de uso (lista/campo/
   parâmetro).
+- **2ª face — chamada inline (issue #236, medida 14/09 ~15:05 no `1f4ca5c9`
+  com classes FRESCAS):** `println(fns.get(0)())` (chamada SEM a variável
+  intermediária) NÃO passa pelo check SEM015 — o tipo de elemento apagado
+  flui direto pro emissor de call e produz `invokevirtual ""."":()Ljava/lang/Object;`
+  (owner+nome VAZIOS, entrada `#45 = Class ""` no constant pool) →
+  `ClassFormatError: Illegal class name "" in class file Default/Main` no
+  LOAD. Miscompile silencioso → crash (pior que o SEM015 honesto da 1ª face;
+  R6). Mesma raiz, mesmo fix (recuperar o FunctionType na leitura de `.get()`)
+  fecha as duas faces.
 - **Pointer (lane compiler):** caminho do typer que mapeia o tipo de elemento
   de `List<T>` e os type-args de `Function<...>` de volta para `FunctionType`
   na leitura de `.get()`/parâmetro (cf. o `toGenericSignature` do §189 que
   desembrulha `NullableType` — o caso de função-argumento é o buraco irmão).
-- **Estado:** reproduz no `7ba7e48d`.
+  O caminho de chamada inline precisa ALSO guardar: um callee não-resolvido
+  deve diagnosticar, nunca emitir `""` como owner.
+- **Estado:** reproduz no `7ba7e48d` (1ª face) e no `1f4ca5c9` (2ª).
 
 ### §215 — padrão de vinculação com guarda (`case String s if cond -> s`) omite o store da variável vinculada → `VerifyError: Bad local variable type` na entrada do ramo (issue #199)
 
@@ -7222,6 +7233,15 @@ antes — lição da obsolescência do §206/§207), corpos-exatos das issues
   lá era call de instância (`StringBuilder.append` → `Object`), aqui é call
   estática (`Double.isNaN` → `String`). Um único fix (resolver descriptor por
   reflexão para `java.*`, R9/R6) fecha §224 E §225.
+- **2ª face (issue #237, medida 14/09 ~15:05 no `1f4ca5c9` com classes
+  FRESCAS):** `String.join(", ", parts)` (um ESTÁTICO `java.*` fora da tabela
+  de interop) → `NoSuchMethodError: java.lang.Object
+  java.lang.String.join(...)` — javap: descriptor `(Ljava/lang/CharSequence;
+  Ljava/util/Collection;)Ljava/lang/Object;`; o real retorna `String`.
+  MESMO mecanismo de retorno fabricado: 3ª ocorrência da família (§224
+  instância→Object, §225 estático→String, #237 estático→Object — o "chute"
+  nem é determinístico, outra prova de que é INVENTADO, não resolvido). Um
+  único fix (descriptor-do-JDK p/ `java.*`) fecha §224, §225 e #237.
 - **Pointer (lane compiler):** igual ao §224 — o lowering de member-call de
   interop precisa ler o descriptor do JDK, não adivinhar pelo contexto.
 

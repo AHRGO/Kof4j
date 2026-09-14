@@ -6942,11 +6942,21 @@ to the label) is the correct predicate and **was already used** in `parseStateme
   type also fails (`runIt(f: Function<() -> Void>)` → `variable 'f' is not a
   function`, e204c 12:35) — same root: the generic type-argument carrying a
   function type is not recovered at the use site (list/field/param).
+- **2nd face — inline call (issue #236, measured 14/09 ~15:05 on `1f4ca5c9`
+  FRESH classes):** `println(fns.get(0)())` (call WITHOUT the intermediate
+  variable) does NOT hit the SEM015 check — the erased element type flows
+  straight to the call emitter and produces `invokevirtual ""."":()Ljava/lang/Object;`
+  (empty owner+name, constant-pool entry `#45 = Class ""`) →
+  `ClassFormatError: Illegal class name "" in class file Default/Main` at
+  LOAD. Silent miscompile → crash (worse than the honest SEM015 of the 1st
+  face; R6). Same root, same fix (recover the FunctionType at `.get()` read)
+  closes both faces.
 - **Pointer (compiler lane):** typer path that maps `List<T>` element type
   and `Function<...>` type-args back to `FunctionType` on `.get()`/parameter
   read (cf. §189's `toGenericSignature` unwrap of `NullableType` — the
-  function-type case is the sibling hole).
-- **Status:** reproduces on `7ba7e48d`.
+  function-type case is the sibling hole). The inline-call path must ALSO
+  guard: an un-resolved callee must diagnostic, never emit `""` as owner.
+- **Status:** reproduces on `7ba7e48d` (1st face) and `1f4ca5c9` (2nd).
 
 ### §215 — guarded type-binding pattern (`case String s if cond -> s`) omits the store of the bound variable → `VerifyError: Bad local variable type` at arm entry (issue #199)
 
@@ -7240,6 +7250,16 @@ of the issues (repros kept in the issue comments):
   (println context?), but the mechanism is the table-miss fallback of §224.
   A single fix (resolve descriptor by reflection for `java.*`, R9/R6) closes
   §224 AND §225.
+- **2nd face (issue #237, measured 14/09 ~15:05 on `1f4ca5c9` FRESH
+  classes):** `String.join(", ", parts)` (a `java.*` STATIC not in the
+  interop table) → `NoSuchMethodError: java.lang.Object
+  java.lang.String.join(...)` — javap: descriptor `(Ljava/lang/CharSequence;
+  Ljava/util/Collection;)Ljava/lang/Object;`; the real returns `String`.
+  Same fabricated-return mechanism: 3rd occurrence of the family
+  (§224 instance→Object, §225 static→String, #237 static→Object — the
+  "guess" is not even deterministic, another proof it is invented, not
+  resolved). One fix (descriptor-from-JDK for `java.*`) closes §224, §225
+  and #237.
 - **Pointer (lane compiler):** same as §224 — interop member-call lowering
   must read the descriptor from the JDK, not guess from the call context.
 
