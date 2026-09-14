@@ -129,8 +129,12 @@ the Application Model** (the order only makes sense with `app.use`):
 > (`path/domain/maxAge/expires/sameSite/secure/httpOnly`). **Native remains an honest
 > SECN006 gap** (same precedent SECN000/002). Tests `KofSecurityTest`
 > 39/39 (cookieSetDefaults/opts/get Jvm+Js, JVM→JS roundtrip, SECN006 cross).
-> **`app.security()` (C18) still NOT implemented** — it depends on the
-> `app.use` middleware of the app model (I2), which is the next unit of this front.
+> **✅ EXECUTED (14/09, step 4 — owner 192.168.100.22):**
+> `app.security([opts])` (C18) implemented in the JVM runtime (`WebApp` fields +
+> `kof_web_security` + `kof_web_security_pipeline` in `JvmRuntimeWebDispatch`).
+> Ratified fixed order: rate-limit → cors → security headers (CSP/HSTS/nosniff/frame/referrer)
+> → session (authHeader + publicPaths) → csrf. Proof: `KofWebE2ETest#appSecurityPipelineE2E`
+> + full E2E validation in `KofBlogE2ETest`.
 
 **OAuth2/OIDC (D layer 16) — locked sequence:** (1) **resource server**
 first (third-party JWT validation: JWKS + issuer/aud — cheap, closes

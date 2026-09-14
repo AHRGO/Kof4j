@@ -157,16 +157,14 @@ public final class JvmRuntimeWebDispatch {
                             if (route.kind != RouteKind.HTTP) {
                                 KOF_WEB_STATUS.remove();
                                 KOF_WEB_HEADERS.get().clear();
-                                return new WebDispatchResult(route.kind, null, route);
+                                 return new WebDispatchResult(route.kind, null, route);
                             }
-                            KOF_WEB_STATUS.remove();
-                            KOF_WEB_HEADERS.get().clear();
                             Object result = kof_web_invoke(route.handler, req);
                             if (result == null) {
                                 KOF_WEB_STATUS.remove();
                                 KOF_WEB_HEADERS.get().clear();
                                 return new WebDispatchResult(RouteKind.HTTP,
-                                        kof_web_build(404, "Not Found", "{\\"error\\": \\"not found\\"}"), null);
+                                        kof_web_build(404, "Not Found", "{\\\"error\\\": \\\"not found\\\"}"), null);
                             }
                             Integer st2 = KOF_WEB_STATUS.get();
                             int code2 = st2 != null ? st2 : 200;

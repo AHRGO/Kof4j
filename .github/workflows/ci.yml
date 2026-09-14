@@ -20,11 +20,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Set up JDK 21 (Tooling API baseline)
+      - name: Set up JDK 25 (Tooling API baseline)
         uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: '25'
 
       - name: Verify version sources agree
         run: |
@@ -66,11 +66,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Set up JDK 21 (Tooling API baseline)
+      - name: Set up JDK 25 (Tooling API baseline)
         uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: '25'
 
       - name: kof.io E2E over the real filesystem
         shell: bash
@@ -88,11 +88,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Set up JDK 21
+      - name: Set up JDK 25
         uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: '25'
 
       - name: Install cross toolchains + qemu
         run: |

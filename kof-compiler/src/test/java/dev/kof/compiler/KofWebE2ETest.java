@@ -366,4 +366,37 @@ class KofWebE2ETest {
         assertTrue(diagnostics.stream().anyMatch(d -> d.code().equals("SEM025")),
                 "listen(String) deve dar SEM025, got: " + diagnostics);
     }
+
+    // C18 (D-SEC, DECISIONS.md): app.security() middleware composto de ordem fixa
+    // rate-limit → cors → headers de segurança → session → csrf.
+    @Test
+    void appSecurityPipelineE2E(@TempDir Path tempDir) throws IOException {
+        int port = startServer(tempDir, """
+                main() {
+                    var app = web.app()
+                    var opts = mapOf("sessionHeader", "authorization", "publicPaths", "/public,/login")
+                    app.security(opts)
+                    app.get("/public") { return "public content" }
+                    app.get("/secret") { return "secret content" }
+                    app.listen(PORT)
+                }
+                """);
+
+        // 1. Rota pública responde 200 sem credencial + injeta security headers
+        String pub = request(port, "GET /public HTTP/1.1\r\nHost: x\r\n\r\n");
+        assertTrue(pub.startsWith("HTTP/1.1 200 OK"), pub);
+        assertEquals("public content", bodyOf(pub));
+        assertTrue(pub.contains("content-security-policy:"), pub);
+        assertTrue(pub.contains("x-content-type-options: nosniff"), pub);
+        assertTrue(pub.contains("x-frame-options: DENY"), pub);
+
+        // 2. Rota protegida sem header de auth é rejeitada com 401
+        String secNoAuth = request(port, "GET /secret HTTP/1.1\r\nHost: x\r\n\r\n");
+        assertTrue(secNoAuth.startsWith("HTTP/1.1 401 Unauthorized"), secNoAuth);
+        assertTrue(bodyOf(secNoAuth).contains("unauthorized"), secNoAuth);
+
+        // 3. Rota protegida com token inválido é rejeitada com 401
+        String secBadAuth = request(port, "GET /secret HTTP/1.1\r\nHost: x\r\nauthorization: invalid-token\r\n\r\n");
+        assertTrue(secBadAuth.startsWith("HTTP/1.1 401 Unauthorized"), secBadAuth);
+    }
 }
