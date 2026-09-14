@@ -136,6 +136,8 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > `ai_findings_option=on_push` via API. Code scanning entrega findings na main
 > (CodeQL success; 4 grupos Error p/ triagem das lanes de código — array-index,
 > container-never-accessed, contradictory-checks, self-assignment — NÃO desta lane).
+> **Sync 14/09 (ordem dela): main→beta aqui (junit 6 da beta + bumps #171 da main;
+> mariadb 3.5.10/postgres 42.7.13 vencem 3.5.3/42.7.7); beta→main por PR na sequência.**
 
 > **EM CURSO (14/09 ~02:30, dono = 192.168.100.15, lane bugs-and-gaps):
 > unidade §186/#133 — fix estrutural completo do `<clinit>`.** Autostash
