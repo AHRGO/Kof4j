@@ -605,6 +605,29 @@ class JvmE2ETest {
     }
 
     @Test
+    void execRecordListFieldDecode(@TempDir Path tempDir) throws IOException {
+        // #128: json.decode<Container> com campo List<Item>? ANINHADO. O caso
+        // top-level (decode<List<Record>>) já funcionava; o aninhado devolvia
+        // LinkedHashMap cru → ClassCastException no acesso. Menor repro da issue.
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            record Item(String? name)
+            record Container(String? title, List<Item>? items)
+            main() {
+                var c = json.decode<Container>("{\\"title\\":\\"t\\",\\"items\\":[{\\"name\\":\\"a\\"},{\\"name\\":\\"b\\"}]}")
+                var items = c.items()
+                if (items != null) {
+                    var first = items.get(0)
+                    println(first.name())
+                    println(items.get(1).name())
+                }
+                println(c.title())
+            }
+            """);
+        runJvm(source, tempDir.resolve("out"), "a\nb\nt");
+    }
+
+    @Test
     void execRecordValueMethods(@TempDir Path tempDir) throws IOException {
         Path source = tempDir.resolve("Main.kf");
         Files.writeString(source, """
