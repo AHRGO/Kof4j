@@ -709,12 +709,17 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > Regra da lição gravada (4e0957ee + cdda27d9): `mvn -o compile`
 > IMEDIATAMENTE antes de medir (falso-vermelho de classe obsoleta queimou
 > meu primeiro "#218 ainda reproduz"); assir SEMÂNTICA do título.
-> **Gatilhos do próximo disparo:** (1) fix de §213–§222 aparecer no log →
-> re-medir e marcar FIXED + fechar issue; (2) lane nat fechar os 3
-> cross-arch (§181-idx4 `-inf`; §192 B41 aliasing) → RE-MEDIR baseline
-> completa (`rm -rf */target`) e atualizar docs/status.md — gate de release
-> = 0 FAILURE fora de node/BD/guardas; (3) issues novas do watcher → triagem
-> padrão (caso-exato + javap + hora/SHA).
+> **Gatilhos do próximo disparo (estado 14/09 ~14:20):** (1) fix de §213–§224
+> aparecer no log → re-medir com classes frescas e marcar FIXED + comentar
+> na issue (assim foi §221: `769371c2` → `[LOG] test` + `invokevirtual
+> Logger.print`, `21e68a55`). #225 fechável; #230→§223, #231→§224 com prova
+> javap postada. Fila atual: 23 abertos. (2) lane nat fechar os 3 cross-arch
+> (re-confirmados vermelhos 13:51: riscv `CastSaturation` idx4 `-inf`→0 +
+> §192 B41 hang) → RE-MEDIR baseline completa e atualizar docs/status.md —
+> gate de release = 0 FAILURE fora de node/BD/guardas; nat commitou 08:50
+> mas NÃO tocou os 3. (3) issues novas do watcher → triagem padrão
+> (caso-exato + javap + hora/SHA + SEMÂNTICA do título; lição gravada). #229
+> re-confirmada e FECHADA pelo usuário externo.
 > Versão anterior da triagem (10:20): medido no HEAD `75455529` com harness
 > JVM (`/tmp/opencode/r292/dev/cli/BJ`):
 > **#200/#201/#203/#204/#214 = GREEN** (casos exatos das issues rodam `ec=0`;
