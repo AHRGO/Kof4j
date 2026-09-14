@@ -500,7 +500,19 @@ public final class ExpressionInstanceCallLowerer {
         if (!(jdkOwner instanceof Type.UnknownType)) {
             recvType = jdkOwner;
             callKind = KofCallKind.STATIC;
-            if (methodParamTypes.size() == 1
+            if (jdkOwner instanceof Type.ClassType jct && driver.externalClasspath != null
+                    && driver.externalClasspath.knows(jct.internalName())) {
+                ExternalClasspath.MethodSignature extSig = driver.externalClasspath.resolveMethod(
+                        jct.internalName(), mc.methodName(), mc.arguments().size());
+                if (extSig != null) {
+                    methodReturnType = ExternalClasspath.typeFromDescriptor(extSig.returnDescriptor());
+                    List<Type> formal = new ArrayList<>();
+                    for (String d : extSig.parameterDescriptors()) {
+                        formal.add(ExternalClasspath.typeFromDescriptor(d));
+                    }
+                    methodParamTypes = formal;
+                }
+            } else if ("valueOf".equals(mc.methodName()) && methodParamTypes.size() == 1
                     && methodParamTypes.get(0) instanceof Type.PrimitiveType) {
                 // valueOf(I) direto do JDK — sem boxing duplo
                 methodReturnType = BuiltinTypes.STRING;

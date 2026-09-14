@@ -270,9 +270,7 @@ public final class Translate {
             out.append(" {\n");
             while (!p.at("}")) {
                 // method signature ending in ';'
-                boolean isStatic = false;
                 while (TranslateTypes.isModifier(p.peek().text)) {
-                    if (p.at("static")) isStatic = true;
                     p.next();
                 }
                 String ret = parseType();

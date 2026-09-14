@@ -110,6 +110,33 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
     ops.add(new KofCall(extQ, mc.methodName(), extFormal, extRet, extKind));
     return localIdx;
 } else if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.name(), locals)
+        && ("Double".equals(rid.name()) || "Float".equals(rid.name()) || "Long".equals(rid.name())
+            || "Integer".equals(rid.name()) || "Int".equals(rid.name()) || "Boolean".equals(rid.name())
+            || "Bool".equals(rid.name()) || "String".equals(rid.name()))
+        && driver.externalClasspath != null) {
+    String javaClass = switch (rid.name()) {
+        case "Int", "Integer" -> "java/lang/Integer";
+        case "Long" -> "java/lang/Long";
+        case "Float" -> "java/lang/Float";
+        case "Double" -> "java/lang/Double";
+        case "Bool", "Boolean" -> "java/lang/Boolean";
+        default -> "java/lang/String";
+    };
+    ExternalClasspath.MethodSignature extSig = driver.externalClasspath.resolveMethod(
+            javaClass, mc.methodName(), mc.arguments().size());
+    if (extSig != null) {
+        List<Type> extFormal = new ArrayList<>();
+        for (String d : extSig.parameterDescriptors()) {
+            extFormal.add(ExternalClasspath.typeFromDescriptor(d));
+        }
+        Type extRet = ExternalClasspath.typeFromDescriptor(extSig.returnDescriptor());
+        localIdx = driver.emitArgumentsWithFormalTypes(mc.arguments(), extFormal, ops, owner, localIdx, locals);
+        KofCallKind extKind = extSig.isStatic() ? KofCallKind.STATIC : KofCallKind.INSTANCE;
+        ops.add(new KofCall(new Type.ClassType("java.lang", javaClass.substring(javaClass.lastIndexOf('/') + 1), List.of()),
+                mc.methodName(), extFormal, extRet, extKind));
+        return localIdx;
+    }
+} else if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.name(), locals)
         && "json".equals(rid.name())) {
     return ExpressionJsonCallLowerer.lower(driver, mc, ops, owner, localIdx, locals);
 } else if (mc.receiver() instanceof IdentifierExpr rid && KofDb.isDbNamespace(rid.name())) {

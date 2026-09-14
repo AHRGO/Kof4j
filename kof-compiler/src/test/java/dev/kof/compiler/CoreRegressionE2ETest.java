@@ -1801,7 +1801,6 @@ class CoreRegressionE2ETest {
         assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
         assertEquals("2\n1", runJvm(out));
     }
-
     // Issue #214 — Map, HashMap, Set, HashSet, LinkedList compile with unqualified class names
     @Test
     void standardCollectionInstantiationJvm(@TempDir Path tempDir) throws IOException {
@@ -2188,5 +2187,24 @@ class CoreRegressionE2ETest {
         CompilationResult r = driver.compile(src, out, Target.JVM);
         assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
         assertEquals("16\ntrue\nfalse", runJvm(out));
+    }
+
+    // Issue #233 — Static boolean-returning methods on Double generate String return type in bytecode
+    @Test
+    void doubleStaticMethodsJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("double_static.kf");
+        Files.writeString(src, """
+                main() {
+                    var d: Double = 0.0 / 0.0
+                    println(Double.isNaN(d))
+                    println(Double.isInfinite(d))
+                    var norm: Double = 42.0
+                    println(Double.isNaN(norm))
+                }
+                """);
+        Path out = tempDir.resolve("double_static-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("true\nfalse\nfalse", runJvm(out));
     }
 }
