@@ -273,6 +273,54 @@ class KofMapSetTest {
             """, "missing\ndone");
     }
 
+    // §150: constante de enum é lowering p/ String em runtime, então a
+    // membership de coleção tem de comparar por CONTEÚDO (kof_string_equals),
+    // não por ponteiro. O tag do Native (`stringTag`) não reconhecia enum →
+    // `listOf(Color.Red).contains(Color.Green)` dava `false` no Native e
+    // `true` no JVM/Script/JS (paridade R5). `==` de enum já era por conteúdo.
+
+    @Test
+    void listContainsEnumNative(@TempDir Path tmp) throws Exception {
+        runNative(tmp, """
+            enum Color { Red, Green, Blue }
+            main() {
+                var l = listOf(Color.Red, Color.Green)
+                println(l.contains(Color.Green))
+                println(l.contains(Color.Blue))
+                var s = setOf(Color.Red, Color.Blue)
+                println(s.contains(Color.Blue))
+            }
+            """, "true\nfalse\ntrue");
+    }
+
+    @Test
+    void listContainsEnumJvm(@TempDir Path tmp) throws Exception {
+        runJvm(tmp, """
+            enum Color { Red, Green, Blue }
+            main() {
+                var l = listOf(Color.Red, Color.Green)
+                println(l.contains(Color.Green))
+                println(l.contains(Color.Blue))
+                var s = setOf(Color.Red, Color.Blue)
+                println(s.contains(Color.Blue))
+            }
+            """, "true\nfalse\ntrue");
+    }
+
+    @Test
+    void listContainsEnumJs(@TempDir Path tmp) throws Exception {
+        runJs(tmp, """
+            enum Color { Red, Green, Blue }
+            main() {
+                var l = listOf(Color.Red, Color.Green)
+                println(l.contains(Color.Green))
+                println(l.contains(Color.Blue))
+                var s = setOf(Color.Red, Color.Blue)
+                println(s.contains(Color.Blue))
+            }
+            """, "true\nfalse\ntrue");
+    }
+
     private String runNative(Path tempDir, String source, String expected) throws java.io.IOException {
         Path file = tempDir.resolve("Main-" + System.nanoTime() + ".kf");
         Files.writeString(file, source);

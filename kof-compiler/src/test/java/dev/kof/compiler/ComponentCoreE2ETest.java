@@ -96,6 +96,7 @@ class ComponentCoreE2ETest {
         // append the probe to the generated module (it re-runs main; the
         // probe asserts on the resulting runtime state and prints the result)
         Files.writeString(module, Files.readString(module) + "\n" + probeJs + "\n");
+        dev.kof.compiler.js.JsRuntimeTestSupport.includeImportsOf(module.getParent(), probeJs);
         java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
         int code = dev.kof.runtime.KofJsRunner.run(module, out,
                 new java.io.ByteArrayInputStream(new byte[0]), out);

@@ -101,6 +101,56 @@ class KofInterpreterParityTest {
     }
 
     @Test
+    void wideParametersOccupyTwoSlots() throws IOException {
+        // §163: parâmetros largos (Double/Long) ocupam DOIS slots no layout da
+        // IR. O interpretador copiava `args` compacto nos locais, então o 2º
+        // parâmetro largo era lido como `null` (NPE) — divergência silenciosa
+        // de JVM/Native/JS. Cobre função, método de instância, construtor,
+        // parâmetro largo não lido (limite do array de locais) e ordem mista.
+        parity("wide-params", """
+                Double g(Double a, Double b) { return a + b }
+                Double unread(Double a, Double b) { return a }
+                Double mixed(Int a, Double b, Double c) { return b + c }
+                Long wideLong(Long a, Long b, Long c) { return a + c }
+                class Box {
+                    Double v
+                    public constructor(Double v) { this.v = v }
+                    Double add(Double x) { return this.v + x }
+                    Long addLong(Long x) { return 10000000000L + x }
+                }
+                main() {
+                    println(g(1.5, 2.5))
+                    println(unread(1.5, 2.5))
+                    println(mixed(9, 1.25, 2.25))
+                    println(wideLong(10000000000L, 5L, 7L))
+                    var b = Box(10.5)
+                    println(b.add(0.5))
+                    println(b.addLong(1L))
+                }
+                """);
+    }
+
+    @Test
+    void doubleIeeeEquality() throws IOException {
+        // §94: EQ/NE de Double/Float no interpretador usava Double.compare
+        // (ordenação total) — NaN == NaN dava true e +0.0 == -0.0 dava false,
+        // divergindo dos 3 compilados (IEEE). Agora usa == primitivo.
+        parity("double-ieee", """
+                main() {
+                    println(math.sqrt(-1.0) == math.sqrt(-1.0))
+                    println(math.sqrt(-1.0) != math.sqrt(-1.0))
+                    if (math.sqrt(-1.0) == math.sqrt(-1.0)) { println("eq") } else { println("ne") }
+                    var x = math.sqrt(-1.0)
+                    var y = math.sqrt(-1.0)
+                    println(x == y)
+                    println(x != y)
+                    println(0.0 == -0.0)
+                    println(0.0 != -0.0)
+                }
+                """);
+    }
+
+    @Test
     void stringsAndChars() throws IOException {
         parity("string", """
                 main() {
@@ -149,6 +199,34 @@ class KofInterpreterParityTest {
                 """);
     }
 
+    // §108: o interpretador guarda Bool como Integer 0/1 na fronteira da
+    // coleção → println(listOf(true)) dava [1, 0] vs JVM [true, false].
+    // Box/unbox espelhando JvmOpCollections (Boolean ↔ Integer) na inclusão
+    // e extração, nos 3 contêineres. Char NÃO precisa (JVM imprime [97,98]).
+    // O discriminador é o toString do contêiner (println(l)) — println do
+    // ELEMENTO individual passa pelo normalizeReturn do IR (dá "true" de
+    // qualquer forma); o ArrayList.toString usa o toString do objeto cru.
+    @Test
+    void boolInCollectionsPrintsLikeJvm() throws IOException {
+        parity("boolcoll", """
+                main() {
+                    var l = listOf(true, false)
+                    println(l)
+                    println(l.get(0))
+                    println(l.contains(true))
+                    var m = mapOf("yes", true)
+                    println(m)
+                    println(m.get("yes"))
+                    println(m.containsKey("yes"))
+                    var s = setOf(true)
+                    println(s)
+                    println(s.contains(true))
+                    l.set(0, false)
+                    println(l)
+                }
+                """);
+    }
+
     @Test
     void recordsAndClasses() throws IOException {
         parity("rec", """
@@ -172,6 +250,25 @@ class KofInterpreterParityTest {
                     c.inc()
                     c.inc()
                     println(c.get())
+                }
+                """);
+    }
+
+    @Test
+    void recordsInCollectionsUseContentEquals() throws IOException {
+        // bug 104a: KofObj de record precisa de equals/hashCode/toString VIRTUAIS
+        // — o JDK chama Object.* dentro de ArrayList.contains, HashMap e
+        // List.toString; sem o override o interpretador batia por identidade.
+        parity("reccoll", """
+                record Point(Int x, Int y)
+                main() {
+                    var p1 = Point(1, 2)
+                    var p2 = Point(1, 2)
+                    println(listOf(p1).contains(p2))
+                    println(setOf(p1).contains(p2))
+                    println(mapOf(p1, 7).get(p2))
+                    println(listOf(p1))
+                    println(listOf(p1, Point(9, 9)).contains(p2))
                 }
                 """);
     }
@@ -390,6 +487,185 @@ class KofInterpreterParityTest {
                     println(l.size())
                     println(l.get(0).x)
                     println(l.get(1).x)
+                }
+                """);
+    }
+
+    @Test
+    void printNullableStringNull() throws IOException {
+        // §124: println(String? null) NPEava no interpretador (o scorer de
+        // assinatura do invokeExternal empatava valueOf(char[]) com
+        // valueOf(Object) p/ arg null e a ordem do getMethods() escolhia o
+        // array). JVM/Native imprimem "null" — o interpretador tem de imprimir.
+        parity("print-null-str", """
+                String? nd() { return null }
+                main() {
+                    println(nd())
+                }
+                """);
+        parity("map-miss-print", """
+                main() {
+                    var m = mapOf(1, "um")
+                    m.remove(1)
+                    println(m.get(1))
+                }
+                """);
+    }
+
+    @Test
+    void printNullablePrimitiveNull() throws IOException {
+        // §125 (decisão da mantenedora 12/09, opção A): println(<primitivo>?
+        // null) imprime o DEFAULT do primitivo (precedente do map-miss,
+        // SG-008), nunca "null". Antes o return de Int? crashava o bytecode
+        // (VerifyError no JVM) e o interpretador (NoSuchMethodError
+        // Integer.valueOf/1); agora o IR emite o default direto no return-site.
+        parity("print-null-int", """
+                Int? ni() { return null }
+                main() {
+                    println(ni())
+                }
+                """);
+        parity("print-null-bool", """
+                Bool? nb() { return null }
+                main() {
+                    println(nb())
+                }
+                """);
+        parity("print-null-double", """
+                Double? nd() { return null }
+                main() {
+                    println(nd())
+                }
+                """);
+        parity("print-int-nullable-value", """
+                Int? ni() { return 5 }
+                main() {
+                    println(ni() + 1)
+                }
+                """);
+        // §125(A) extensão (12/09): expression-body e slot anotado — o null
+        // mora num RAMO do if/switch, não no topo do return; o fold colapsa
+        // o ramo p/ default do primitivo (mesmo contrato da forma block).
+        parity("expr-body-null-branch", """
+                Int? en(Int x) = if (x > 0) x else null
+                main() {
+                    println(en(7))
+                    println(en(-7))
+                }
+                """);
+        parity("expr-body-switch-null-branch", """
+                Int? sw(Int x) = switch (x) { case 1 -> 10 default -> null }
+                main() {
+                    println(sw(1))
+                    println(sw(2))
+                }
+                """);
+        parity("annotated-slot-null-branch", """
+                main() {
+                    Int? v = if (false) 9 else null
+                    println(v)
+                }
+                """);
+    }
+
+    @Test
+    void longBitwiseShiftMixed() throws IOException {
+        // §167: bitwise/shift com Int e Long misturados + overflow/wrap de
+        // Long. O interpretador já estava correto; o JVM emitia VerifyError
+        // (inferência INT p/ `int & long` + `land` sobre int). Paridade
+        // interpretado×JVM byte-a-byte (o JS tem cobertura em BackendParityTest).
+        parity("longbitshift", """
+                main() {
+                    var l = 5L
+                    println(l & 3)
+                    println(l | 3)
+                    println(l ^ 3)
+                    var i = 5
+                    println(i & l)
+                    var neg = -1
+                    var big = 4294967295L
+                    println(neg & big)
+                    println(neg | big)
+                    println(neg ^ big)
+                    println(l << 2L)
+                    println(l << 70)
+                    println(l << 70L)
+                    println(l >> 65L)
+                    var one = 1
+                    println(one << 40L)
+                    println(one >> 40L)
+                    println(one >>> 40L)
+                    var n = -1L
+                    println(n >>> 1)
+                    println(n >>> 64L)
+                    println(n >>> 65L)
+                    var max = 9223372036854775807L
+                    println(max + 1L)
+                    println(max * 2L)
+                    var min = -9223372036854775807L - 1L
+                    println(-min)
+                    var w = 5000000000L
+                    var t = w as Int
+                    println(t)
+                    println(t + 1)
+                    println((l as Int) & 3)
+                }
+                """);
+    }
+
+    @Test
+    void incrementWideTypesAndArrayElement() throws IOException {
+        // §168: `++`/`--`/compound em long/double + incremento de elemento de
+        // array. O JVM emitia VerifyError (literal INT 1 em binário de 2 slots,
+        // DUP de 1 slot, arraystore sem [array,index]); o interpretador era o
+        // oracle. Paridade interpretado×JVM byte-a-byte (JS/native em
+        // BackendParityTest/conformance).
+        parity("incrwide", """
+                main() {
+                    var c = 1L
+                    c++
+                    println(c)
+                    ++c
+                    println(c)
+                    c--
+                    println(c)
+                    var d = 1.5
+                    d++
+                    println(d)
+                    ++d
+                    println(d)
+                    d--
+                    println(d)
+                    var f = 1.5f
+                    f++
+                    println(f)
+                    var i = 5
+                    i++
+                    println(i)
+                    var l = 100L
+                    l /= 3
+                    println(l)
+                    l += 2L
+                    println(l)
+                    d /= 2.0
+                    println(d)
+                    var max = 9223372036854775807L
+                    max++
+                    println(max)
+                    var a = new Long[2]
+                    a[0] = 7L
+                    a[0]++
+                    println(a[0])
+                    println(++a[0])
+                    a[1] = 40L
+                    a[1]--
+                    println(a[1])
+                    var b = new Int[2]
+                    b[0] = 7
+                    b[0]++
+                    println(b[0])
+                    println(b[0]--)
+                    println(b[0])
                 }
                 """);
     }

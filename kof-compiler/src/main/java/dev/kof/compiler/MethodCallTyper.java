@@ -56,6 +56,26 @@ if (mc.receiver() == null && driver.semanticAnalyzer != null
         && driver.semanticAnalyzer.getClass(mc.methodName()) != null) {
     return driver.semanticAnalyzer.getClass(mc.methodName()).type();
 }
+// §89 (decisão 3a, 13/09): conversão numérica em receiver primitivo/unknown
+// (String recebe dispatch próprio ANTES no lowering, sem colisão) = alias
+// do `as` — o TIPO da expressão é o alvo da conversão, senão o `var d =
+// n.toDouble()` fica Unknown e o EQ seguinte compara Object (dava false).
+if (mc.receiver() != null && mc.arguments().isEmpty()
+        && switch (mc.methodName()) {
+            case "toInt", "toLong", "toFloat", "toDouble" -> true;
+            default -> false;
+        }) {
+    Type rv89 = ExpressionTyper.inferExprType(driver, mc.receiver(), locals);
+    if (rv89 instanceof Type.NullableType nt89) rv89 = nt89.inner();
+    if (TypeMetrics.isPrimitiveType(rv89) || rv89 instanceof Type.UnknownType) {
+        return switch (mc.methodName()) {
+            case "toInt" -> Type.PrimitiveType.INT;
+            case "toLong" -> Type.PrimitiveType.LONG;
+            case "toFloat" -> Type.PrimitiveType.FLOAT;
+            default -> Type.PrimitiveType.DOUBLE;
+        };
+    }
+}
 if (mc.receiver() != null && "toString".equals(mc.methodName()) && mc.arguments().isEmpty()) {
     Type rv = ExpressionTyper.inferExprType(driver, mc.receiver(), locals);
     if (TypeMetrics.isPrimitiveType(rv) || rv instanceof Type.ArrayType) return BuiltinTypes.STRING;
@@ -249,140 +269,8 @@ if (mc.receiver() == null && "awaitTimeout".equals(mc.methodName())
     }
     return Type.UnknownType.UNKNOWN;
 }
-if (mc.receiver() instanceof IdentifierExpr rid && CompilerTypes.isEnumName(rid.name(), driver.currentUnit)
-        && driver.findLocalVar(rid.name(), locals) == null) {
-    java.util.List<String> consts = CompilerTypes.enumConstantsOf(rid.name(), driver.currentUnit);
-    Type enumT = new Type.ClassType("", rid.name(), List.of());
-    // MVP: elementos tipados como String (runtime do enum é o nome);
-    // comparação com constantes funciona via string-equals
-    if ("values".equals(mc.methodName()) && mc.arguments().isEmpty()) {
-        return new Type.ClassType("kof", "List", List.of(BuiltinTypes.STRING));
-    }
-    if ("valueOf".equals(mc.methodName()) && mc.arguments().size() == 1) {
-        return enumT;
-    }
-    // constante via sintaxe de método? Color.Red() — não suportado
-    if (consts.contains(mc.methodName())) return enumT;
-    return Type.UnknownType.UNKNOWN;
-}
-if (mc.receiver() instanceof IdentifierExpr rid && "json".equals(rid.name())) {
-    if ("encode".equals(mc.methodName())) return BuiltinTypes.STRING;
-    if ("decode".equals(mc.methodName()) && !mc.typeArguments().isEmpty()) {
-        return CompilerTypes.toType(mc.typeArguments().get(0), driver.currentUnit);
-    }
-    return Type.UnknownType.UNKNOWN;
-}
-if (mc.receiver() instanceof IdentifierExpr rid && KofWeb.isWebNamespace(rid.name())) {
-    if ("app".equals(mc.methodName()) && mc.arguments().isEmpty()) {
-        return KofWeb.APP;
-    }
-    return Type.UnknownType.UNKNOWN;
-}
-if (mc.receiver() instanceof IdentifierExpr rid && KofDb.isDbNamespace(rid.name())) {
-    List<Type> argTypes = new ArrayList<>();
-    for (ExpressionNode arg : mc.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
-    boolean typed = KofDb.isQuery(mc.methodName()) && !mc.typeArguments().isEmpty();
-    KofDb.DbCall dbCall = KofDb.staticCall(mc.methodName(), argTypes, typed);
-    if (dbCall != null) {
-        if (typed && !mc.typeArguments().isEmpty()) {
-            return new Type.ClassType("kof", "List",
-                    List.of(CompilerTypes.toType(mc.typeArguments().get(0), driver.currentUnit)));
-        }
-        return dbCall.returnType();
-    }
-    return Type.UnknownType.UNKNOWN;
-}
-if (mc.receiver() instanceof IdentifierExpr rid && KofHttp.isHttpNamespace(rid.name())) {
-    List<Type> argTypes = new ArrayList<>();
-    for (ExpressionNode arg : mc.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
-    KofHttp.HttpCall httpCall = KofHttp.staticCall(mc.methodName(), argTypes);
-    if (httpCall != null) return httpCall.returnType();
-    return Type.UnknownType.UNKNOWN;
-}
-if (mc.receiver() instanceof IdentifierExpr rid && KofMq.isMqNamespace(rid.name())) {
-    List<Type> argTypes = new ArrayList<>();
-    for (ExpressionNode arg : mc.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
-    KofMq.MqCall mqCall = KofMq.staticCall(mc.methodName(), argTypes);
-    if (mqCall != null) return mqCall.returnType();
-    return Type.UnknownType.UNKNOWN;
-}
-if (mc.receiver() instanceof IdentifierExpr rid && KofTime.isTimeNamespace(rid.name())) {
-    List<Type> argTypes = new ArrayList<>();
-    for (ExpressionNode arg : mc.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
-    KofTime.TimeCall timeCall = KofTime.staticCall(mc.methodName(), argTypes);
-    if (timeCall != null) return timeCall.returnType();
-    return Type.UnknownType.UNKNOWN;
-}
-if (mc.receiver() instanceof IdentifierExpr rid && KofScheduler.isSchedulerNamespace(rid.name())) {
-    List<Type> argTypes = new ArrayList<>();
-    for (ExpressionNode arg : mc.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
-    KofScheduler.SchedulerCall sc = KofScheduler.staticCall(mc.methodName(), argTypes);
-    if (sc != null) return sc.returnType();
-    return Type.UnknownType.UNKNOWN;
-}
-if (mc.receiver() == null && KofScheduler.isSchedulerMethod(mc.methodName())) {
-    List<Type> argTypes = new ArrayList<>();
-    for (ExpressionNode arg : mc.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
-    KofScheduler.SchedulerCall sc = KofScheduler.staticCall(mc.methodName(), argTypes);
-    if (sc != null) return sc.returnType();
-    // fall through
-}
-if (mc.receiver() instanceof IdentifierExpr rid && KofLog.isLogNamespace(rid.name())) {
-    List<Type> argTypes = new ArrayList<>();
-    for (ExpressionNode arg : mc.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
-    KofLog.LogCall logCall = KofLog.staticCall(mc.methodName(), argTypes);
-    if (logCall != null) return logCall.returnType();
-    return Type.UnknownType.UNKNOWN;
-}
-if (mc.receiver() instanceof IdentifierExpr rid && KofOrm.isOrmNamespace(rid.name())) {
-    List<Type> argTypes = new ArrayList<>();
-    for (ExpressionNode arg : mc.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
-    boolean typed = !mc.typeArguments().isEmpty();
-    String entityName = typed ? mc.typeArguments().get(0) : null;
-    KofOrm.OrmCall ormCall = KofOrm.staticCall(mc.methodName(), argTypes, typed, entityName);
-    if (ormCall != null) {
-        if ("save".equals(mc.methodName()) && !argTypes.isEmpty()) {
-            return argTypes.get(argTypes.size() - 1);
-        }
-        if (typed && !mc.typeArguments().isEmpty()) {
-            if ("all".equals(mc.methodName()) || "where".equals(mc.methodName())
-                    || "page".equals(mc.methodName())) {
-                return new Type.ClassType("kof", "List",
-                        List.of(CompilerTypes.toType(mc.typeArguments().get(0), driver.currentUnit)));
-            }
-            if ("find".equals(mc.methodName())) {
-                return CompilerTypes.toType(mc.typeArguments().get(0), driver.currentUnit);
-            }
-        }
-        return ormCall.returnType();
-    }
-    return Type.UnknownType.UNKNOWN;
-}
-if (mc.receiver() instanceof IdentifierExpr rid && "process".equals(rid.name())
-        && driver.findLocalVar(rid.name(), locals) == null) {
-    List<Type> argTypes = new ArrayList<>();
-    for (ExpressionNode arg : mc.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
-    KofProcess.ProcessCall procCall = KofProcess.entryCall(mc.methodName(), argTypes);
-    if (procCall != null) return procCall.returnType();
-    return Type.UnknownType.UNKNOWN;
-}
-if (mc.receiver() instanceof IdentifierExpr rid && KofConfig.isConfigNamespace(rid.name())) {
-    List<Type> argTypes = new ArrayList<>();
-    for (ExpressionNode arg : mc.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
-    KofConfig.ConfigCall cfgCall = KofConfig.staticCall(mc.methodName(), argTypes);
-    if (cfgCall != null) return cfgCall.returnType();
-    return Type.UnknownType.UNKNOWN;
-}
-if (mc.receiver() instanceof IdentifierExpr rid && KofTetris.isTetrisNamespace(rid.name())) {
-    KofTetris.TetrisCall tetrisCall = KofTetris.staticMethod(rid.name(), mc.methodName(),
-            mc.arguments().size());
-    if (tetrisCall != null) return tetrisCall.returnType();
-    return Type.UnknownType.UNKNOWN;
-}
-if (mc.receiver() instanceof IdentifierExpr rid2 && KofIo.isConstructor(rid2.name())) {
-    KofIo.IoCall ioCall = KofIo.staticMethod(rid2.name(), mc.methodName(), mc.arguments().size());
-    if (ioCall != null) return ioCall.returnType();
-}
+Type nsType = MethodCallNamespaces.inferStatic(driver, mc, locals);
+if (nsType != null) return nsType;
 if (mc.receiver() != null) {
     Type recvType = ExpressionTyper.inferExprType(driver, mc.receiver(), locals);
     // narrowing de null-safety: `if (x != null) { x.metodo() }`
@@ -456,8 +344,33 @@ if (mc.receiver() != null) {
     if (lambdaVar != null && lambdaVar.type() instanceof Type.FunctionType lft) {
         return lft.returnType();
     }
+    // SG-011B: coletar candidatos homônimos; único → caminho original
+    // (genéricos incluídos); ≥2 → seleção por assinatura (mesmo veredicto do
+    // BuiltinCallTyper/lowering — frontend único, mesma mensagem nos 5 targets).
+    List<FunctionDeclarationNode> tloFns = new ArrayList<>();
     for (AstNode d : driver.currentUnit.declarations()) {
-        if (d instanceof FunctionDeclarationNode fn && fn.name().equals(mc.methodName())) {
+        if (d instanceof FunctionDeclarationNode fn && fn.name().equals(mc.methodName())) tloFns.add(fn);
+    }
+    List<TopLevelOverload.Candidate> tloCands = new ArrayList<>();
+    if (tloFns.size() > 1) {
+        List<Type> tloArgTypes = new ArrayList<>();
+        for (ExpressionNode arg : mc.arguments()) tloArgTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
+        for (FunctionDeclarationNode fn : tloFns) {
+            if (!fn.typeParameters().isEmpty()) continue;
+            List<Type> pt = new ArrayList<>();
+            boolean seenDefault = false;
+            for (var p : fn.parameters()) {
+                pt.add(CompilerTypes.toType(p.type(), driver.currentUnit));
+                if (p.defaultExpression() != null) seenDefault = true;
+            }
+            tloCands.add(new TopLevelOverload.Candidate(fn, pt, pt.size()));
+        }
+        TopLevelOverload.Status[] st = new TopLevelOverload.Status[1];
+        int sel = TopLevelOverload.pick(tloCands, tloArgTypes, st);
+        if (sel >= 0) tloFns = List.of(tloCands.get(sel).fn());
+        else tloFns = List.of(tloFns.get(0)); // erro já reportado no typer semântico (SEM013/14/56)
+    }
+    for (FunctionDeclarationNode fn : tloFns) {
             Type returnType = CompilerTypes.toType(fn.returnType(), driver.currentUnit);
             if (fn.typeParameters().contains(fn.returnType())) {
                 returnType = new Type.TypeVariable(fn.returnType());
@@ -471,7 +384,6 @@ if (mc.receiver() != null) {
                 return Type.UnknownType.UNKNOWN;
             }
             return returnType;
-        }
     }
 }
 SymbolTable.MethodSymbol resolvedMethod = driver.semanticAnalyzer.getResolvedMethod(mc);

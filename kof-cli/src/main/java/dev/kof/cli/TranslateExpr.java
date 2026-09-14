@@ -14,6 +14,24 @@ class TranslateExpr {
 
     TranslateExpr(Parser p) { this.p = p; }
 
+    /**
+     * Hook para o corpo em bloco de lambda: os statements vivem em
+     * {@link TranslateStatements} (subclasse), então reaproveitamos a
+     * implementação de lá via override. Sem isto o {@code parseLambda}
+     * (aqui na base) não enxerga {@code parseBlock}.
+     */
+    protected List<String> parseStatementBlock() {
+        throw new TranslateException("lambda com corpo em bloco indisponível nesta camada");
+    }
+
+    /**
+     * Hook para switch-EXPRESSÃO Java (`switch (x) { case 1 -> ... }`): os
+     * corpo/statements vivem em {@link TranslateStatements} (subclasse).
+     */
+    protected String parseSwitchExprHook() {
+        throw new TranslateException("switch expressão indisponível nesta camada");
+    }
+
         String parseExpr() {
             return parseTernary();
         }
@@ -39,6 +57,26 @@ class TranslateExpr {
             if (t == T.STAREQ) { p.next(); return lhs + " *= " + parseAssignment(); }
             if (t == T.SLASHEQ) { p.next(); return lhs + " /= " + parseAssignment(); }
             if (t == T.PERCENTEQ) { p.next(); return lhs + " %= " + parseAssignment(); }
+            // Compostos bitwise/shift (`x &= 3`, `x <<= 2`, `x >>>= 1`): o
+            // lexer os emite como operador + `=`. Kof aceita os compostos.
+            if (p.at(T.AMP) && p.peek(1).type == T.EQ) {
+                p.next(); p.next(); return lhs + " &= " + parseAssignment();
+            }
+            if (p.at(T.PIPE) && p.peek(1).type == T.EQ) {
+                p.next(); p.next(); return lhs + " |= " + parseAssignment();
+            }
+            if (p.at(T.CARET) && p.peek(1).type == T.EQ) {
+                p.next(); p.next(); return lhs + " ^= " + parseAssignment();
+            }
+            if (p.at(T.LT) && p.peek(1).type == T.LT && p.peek(2).type == T.EQ) {
+                p.next(); p.next(); p.next(); return lhs + " <<= " + parseAssignment();
+            }
+            if (p.at(T.GT) && p.peek(1).type == T.GT && p.peek(2).type == T.GT && p.peek(3).type == T.EQ) {
+                p.next(); p.next(); p.next(); p.next(); return lhs + " >>>= " + parseAssignment();
+            }
+            if (p.at(T.GT) && p.peek(1).type == T.GT && p.peek(2).type == T.EQ) {
+                p.next(); p.next(); p.next(); return lhs + " >>= " + parseAssignment();
+            }
             return lhs;
         }
 
@@ -49,8 +87,24 @@ class TranslateExpr {
         }
 
         String parseAnd() {
+            String e = parseBitOr();
+            while (p.at(T.ANDAND)) { p.next(); e = e + " && " + parseBitOr(); }
+            return e;
+        }
+
+        String parseBitOr() {
+            String e = parseBitAnd();
+            while ((p.at(T.PIPE) && p.peek(1).type != T.EQ)
+                    || (p.at(T.CARET) && p.peek(1).type != T.EQ)) {
+                String op = p.next().text;
+                e = e + " " + op + " " + parseBitAnd();
+            }
+            return e;
+        }
+
+        String parseBitAnd() {
             String e = parseEquality();
-            while (p.at(T.ANDAND)) { p.next(); e = e + " && " + parseEquality(); }
+            while (p.at(T.AMP) && p.peek(1).type != T.EQ) { p.next(); e = e + " & " + parseEquality(); }
             return e;
         }
 
@@ -64,10 +118,50 @@ class TranslateExpr {
         }
 
         String parseRel() {
+            String e = parseShift();
+            while (p.at("instanceof") || p.at(T.LE) || p.at(T.GE)
+                    || (p.at(T.LT) && p.peek(1).type != T.LT)
+                    || (p.at(T.GT) && p.peek(1).type != T.GT)) {
+                if (p.at("instanceof")) {
+                    // `o instanceof String` → `o instanceof String` (Kof tem
+                    // instanceof nativo, training/language/overview.md).
+                    p.next();
+                    String ty = parseType();
+                    // Pattern matching `o instanceof String s` (binding) — Kof
+                    // não tem binding de pattern; introduzir a variável muda
+                    // o fluxo → gap honesto R6 (antes: `expected ')' but
+                    // found 's'` confuso).
+                    if (p.peek().type == T.IDENT && !p.at("instanceof")) {
+                        throw new TranslateException(
+                                "pattern matching `instanceof Tipo var` (binding) não tem equivalente "
+                                + "direto em Kof (use `instanceof` + cast/`as`) — revisão manual");
+                    }
+                    e = e + " instanceof " + ty;
+                } else {
+                    String op = p.next().text;
+                    e = e + " " + op + " " + parseShift();
+                }
+            }
+            return e;
+        }
+
+        String parseShift() {
             String e = parseAdd();
-            while (p.at(T.LT) || p.at(T.LE) || p.at(T.GT) || p.at(T.GE)) {
-                String op = p.next().text;
-                e = e + " " + op + " " + parseAdd();
+            while (true) {
+                if (p.at(T.LT) && p.peek(1).type == T.LT && p.peek(2).type != T.EQ) {
+                    p.next(); p.next();
+                    e = e + " << " + parseAdd();
+                } else if (p.at(T.GT) && p.peek(1).type == T.GT && p.peek(2).type == T.GT
+                        && p.peek(3).type != T.EQ) {
+                    p.next(); p.next(); p.next();
+                    e = e + " >>> " + parseAdd();
+                } else if (p.at(T.GT) && p.peek(1).type == T.GT
+                        && p.peek(2).type != T.GT && p.peek(2).type != T.EQ) {
+                    p.next(); p.next();
+                    e = e + " >> " + parseAdd();
+                } else {
+                    break;
+                }
             }
             return e;
         }
@@ -92,8 +186,17 @@ class TranslateExpr {
 
         String parseUnary() {
             if (p.at(T.NOT)) { p.next(); return "!" + parseUnary(); }
+            if (p.at("~")) {
+                // Complemento bit a bit `~x`: Kof não tem `~` (PARSE041), mas
+                // a identidade `~x == -x - 1` é exata em complemento de dois
+                // → emite `(-x - 1)` com parênteses (precedência preservada).
+                p.next();
+                return "(-" + parseUnary() + " - 1)";
+            }
             if (p.at(T.MINUS)) { p.next(); return "-" + parseUnary(); }
             if (p.at(T.PLUS)) { p.next(); return "+" + parseUnary(); }
+            if (p.at(T.INC)) { p.next(); return "++" + parseUnary(); }
+            if (p.at(T.DEC)) { p.next(); return "--" + parseUnary(); }
             return parsePostfix();
         }
 
@@ -106,6 +209,13 @@ class TranslateExpr {
                     if (p.at("(")) {
                         // method call on receiver
                         e = translateCall(e, field);
+                    } else if (e.equals("Math")) {
+                        // `Math.PI` / `Math.E` — constantes JDK sem equivalente
+                        // garantido em Kof (`math.*` cobre funções) → gap
+                        // honesto R6 em vez de `Math.PI` = SEM011 silencioso.
+                        throw new TranslateException(
+                                "constante `Math." + field + "` não é resolvida pelo translator "
+                                + "(Kof não expõe as constantes da classe Math do JDK) — revisão manual");
                     } else {
                         e = e + "." + field;
                     }
@@ -114,6 +224,20 @@ class TranslateExpr {
                     String idx = parseExpr();
                     p.expect("]");
                     e = e + "[" + idx + "]";
+                } else if (p.at("(")) {
+                    // bare call: foo(args) — sem receiver. Sem este ramo,
+                    // `boom("x");` caía em parseExprOrDecl → "expected ';'
+                    // but found '('" (descoberto via try/catch 13/09: o corpo
+                    // do try quase sempre chama métodos).
+                    String args = parseCallArgs();
+                    e = e + "(" + args + ")";
+                } else if (p.at(":") && p.peek(1).text.equals(":")) {
+                    // Method reference `Tipo::metodo` / `obj::metodo` — Kof
+                    // não tem referência de método (só lambda) → gap honesto
+                    // R6 (antes: `expected ')' but found ':'` confuso).
+                    throw new TranslateException(
+                            "method reference (`::`) não tem equivalente direto em Kof "
+                            + "(use lambda `(x) -> ...`) — revisão manual");
                 } else if (p.at(T.INC)) { p.next(); e += "++"; }
                 else if (p.at(T.DEC)) { p.next(); e += "--"; }
                 else break;
@@ -129,6 +253,19 @@ class TranslateExpr {
             if (receiver.equals("System.out") && method.equals("print")) {
                 String args = parseCallArgs();
                 return "print(" + args + ")";
+            }
+            if (receiver.equals("Math")) {
+                // `Math.<fn>(...)`: Kof expõe a stdlib em `math.<fn>` mas
+                // `math.min/max/abs` são **Int-only** (SEM025 p/ Double, sem
+                // widening) e o translator não tem tipos p/ escolher o
+                // overload → mapear cegamente geraria Kof que não compila;
+                // emitir `Math.x(...)` dava `Math` undefined = SEM011
+                // silencioso. Mapear Java→stdlib é decisão de design
+                // (regra 6) → gap honesto R6 (Q4 13/09).
+                throw new TranslateException(
+                        "chamada a `Math." + method + "(...)` não é resolvida pelo translator "
+                        + "(Kof usa o namespace `math.*`, mas os overloads Double/Int não mapeiam "
+                        + "automaticamente) — revisão manual");
             }
             if (method.equals("equals")) {
                 String arg = parseSingleArg();
@@ -164,24 +301,59 @@ class TranslateExpr {
             Tok t = p.next();
             return switch (t.type) {
                 case INT, FLOAT -> t.text;
-                case STR -> "\"" + t.text + "\"";
-                case CHAR -> "'" + t.text + "'";
+                case STR -> "\"" + TranslateLexer.escapeKofString(t.text) + "\"";
+                case CHAR -> "'" + TranslateLexer.escapeKofChar(t.text) + "'";
                 case IDENT -> switch (t.text) {
                     case "true" -> "true";
                     case "false" -> "false";
                     case "null" -> "null";
-                    case "new" -> parseNew();
+                    case "new" -> TranslateNew.parse(this);
                     case "this" -> "this";
-                    default -> t.text;
+                    case "throw" -> "throw " + parseExpr();
+                    case "switch" -> parseSwitchExprHook();
+                    default -> {
+                        // Referência a tipo QUALIFICADO em expressão
+                        // (`java.util.List.of(...)`, `javax.foo.Bar.x`): o
+                        // translator ignora imports e Kof referencia por nome
+                        // simples — mapear Java→stdlib é decisão de design
+                        // (regra 6) → gap honesto R6 (antes: emitia
+                        // `java.util.List.of(...)` = Kof inválido/SEM011).
+                        if ((t.text.equals("java") || t.text.equals("javax")) && p.at(".")) {
+                            throw new TranslateException(
+                                    "tipo qualificado em expressão (`" + t.text
+                                    + ".…`) não é resolvido pelo translator (imports ignorados) — "
+                                    + "revisão manual");
+                        }
+                        if (p.at(T.ARROW)) {
+                            // Lambda de um parâmetro SEM parênteses (`x -> expr`):
+                            // Java permite, Kof exige parênteses (probe: `x -> x`
+                            // é PARSE041) → emite `(x) -> expr`. Antes dava
+                            // `expected ';' but found '->'` (bug latente Q4).
+                            p.next(); // ->
+                            String body = p.at("{")
+                                    ? "{ " + String.join(" ", parseStatementBlock()) + " }"
+                                    : parseExpr();
+                            yield "(" + t.text + ") -> " + body;
+                        }
+                        yield t.text;
+                    }
                 };
                 case P -> {
                     if (t.text.equals("(")) {
                         if (isLambdaAhead()) {
                             yield parseLambda();
                         }
+                        if (isCastAhead()) {
+                            yield parseCast();
+                        }
                         String e = parseExpr();
                         p.expect(")");
-                        yield e;
+                        // PRESERVAR os parênteses: descartá-los muda a
+                        // semântica (`(1+2)*3` → `1+2*3` = 7, não 9) — bug
+                        // latente de correção achado 13/09 (R6/Q0: compilável
+                        // + semântica errada é o pior bug). Kof aceita
+                        // parênteses redundantes.
+                        yield "(" + e + ")";
                     }
                     yield t.text;
                 }
@@ -206,12 +378,12 @@ class TranslateExpr {
             List<String> params = new ArrayList<>();  // '(' já consumido pelo parsePrimary
             if (!p.at(")")) {
                 // (Type name, ...) — tipado; (name) — não-tipado (fallback)
-                boolean typed = isPrimitiveOrType(p.peek().text) && p.peek(1).type == T.IDENT;
+                boolean typed = TranslateTypes.isPrimitiveOrType(p.peek().text) && p.peek(1).type == T.IDENT;
                 if (typed) {
-                    String ty = kofType(p.next().text);
+                    String ty = TranslateTypes.kofType(p.next().text);
                     String nm = p.next().text;
                     params.add(nm + ": " + ty);
-                    while (p.at(",")) { p.next(); String t2 = kofType(p.next().text); String n2 = p.next().text; params.add(n2 + ": " + t2); }
+                    while (p.at(",")) { p.next(); String t2 = TranslateTypes.kofType(p.next().text); String n2 = p.next().text; params.add(n2 + ": " + t2); }
                 } else {
                     String nm = p.next().text;
                     params.add(nm);
@@ -220,28 +392,75 @@ class TranslateExpr {
             }
             p.expect(")");
             p.expect("->");
-            String body = parseExpr();
+            // Corpo em BLOCO `() -> { ... }` — Kof aceita corpo de bloco em
+            // lambda (verificado 13/09: `() -> { counter = counter + 1 }`).
+            // Antes o parser só aceitava expressão → `expected ';' but found
+            // 'System'` (bug latente Q4).
+            String body;
+            if (p.at("{")) {
+                List<String> stmts = parseStatementBlock();
+                body = "{ " + String.join(" ", stmts) + " }";
+            } else {
+                body = parseExpr();
+            }
             return "(" + String.join(", ", params) + ") -> " + body;
         }
 
-        String parseNew() {
-            String typeName = p.next().text;
-            if (p.at("[")) {
-                // array creation: new int[n] or new int[]{...}
-                p.next();
-                p.next(); // ]
-                String size = parseExpr();
-                return "new " + kofType(typeName) + "[" + size + "]";
+        /** Lookahead: `(Type) expr` — cast Java. Kof usa `expr as Type`. */
+        boolean isCastAhead() {
+            // já consumimos '('; olha o próximo token
+            String first = p.peek().text;
+            if (!TranslateTypes.isPrimitiveOrType(first) && !first.equals("int") && !first.equals("boolean")
+                    && !first.equals("char") && !first.equals("long") && !first.equals("double")) {
+                return false;
             }
-            String args = parseCallArgs();
-            return kofType(typeName) + "(" + args + ")";
+            int i = p.pos + 1;
+            // genéricos: (List<String>) x
+            if (i < p.toks.size() && p.toks.get(i).text.equals("<")) {
+                int depth = 0;
+                while (i < p.toks.size()) {
+                    String t = p.toks.get(i).text;
+                    if (t.equals("<")) depth++;
+                    else if (t.equals(">")) { depth--; if (depth == 0) { i++; break; } }
+                    i++;
+                }
+            }
+            while (i + 1 < p.toks.size() && p.toks.get(i).text.equals("[")
+                    && p.toks.get(i + 1).text.equals("]")) {
+                i += 2;
+            }
+            return i < p.toks.size() && p.toks.get(i).text.equals(")");
+        }
+
+        /** `(String) o` → `o as String` (cast de conversão Kof). */
+        String parseCast() {
+            String type = parseType();
+            p.expect(")");
+            String operand = parseUnary();
+            return operand + " as " + type;
         }
 
         // ── types ───────────────────────────────────────────────────────────
 
         String parseType() {
+            if (p.at("?")) {
+                // Wildcard genérico Java `?`/`? extends X`/`? super X` — Kof
+                // rejeita (PARSE086: "Wildcard types ... not supported; use a
+                // concrete type or nullable T?"). Sem equivalente direto →
+                // gap honesto R6 (bug latente Q4 13/09).
+                throw new TranslateException(
+                        "wildcard genérico (`?`, `? extends`, `? super`) não é suportado em Kof "
+                        + "(PARSE086; use tipo concreto ou `T?`) — revisão manual");
+            }
             String base = p.next().text;
-            StringBuilder sb = new StringBuilder(kofType(base));
+            // Tipo qualificado `java.util.Map` → `Map` (stripa o pacote; o
+            // translator ignora imports e Kof referencia tipos pelo nome
+            // simples). `Map`/`List`/`Set` são builtins Kof.
+            while (p.at(".") && p.peek(1).type == T.IDENT) {
+                p.next();
+                base = p.next().text;
+            }
+            StringBuilder sb = new StringBuilder(TranslateTypes.kofType(base));
             // generic args <...>
             if (p.at("<")) {
                 p.next();
@@ -258,58 +477,30 @@ class TranslateExpr {
             p.expect("(");
             List<String> params = new ArrayList<>();
             if (!p.at(")")) {
-                params.add(parseType());
-                String pname = p.next().text;
-                params.set(params.size() - 1, params.get(params.size() - 1) + " " + pname);
-                while (p.at(",")) { p.next(); String ty = parseType(); String nm = p.next().text; params.add(ty + " " + nm); }
+                params.add(parseParam());
+                while (p.at(",")) { p.next(); params.add(parseParam()); }
             }
             p.expect(")");
             return params;
         }
 
+        private String parseParam() {
+            // `final T x` — Kof não tem final em parâmetro → descarta.
+            while (p.at("final")) p.next();
+            String ty = parseType();
+            if (p.at(".") && p.peek(1).text.equals(".") && p.peek(2).text.equals(".")) {
+                // Java varargs `T...` não tem equivalente em função Kof
+                // (só builtins setOf/listOf são variádicos). Revisão manual
+                // (R6: nunca silencioso).
+                throw new TranslateException(
+                        "varargs (`T...`) não tem equivalente direto em Kof "
+                        + "(use `List<T>` ou `T[]`) — revisão manual");
+            }
+            String nm = p.next().text;
+            return ty + " " + nm;
+        }
+
         String paramList(List<String> params) {
             return String.join(", ", params);
-        }
-
-        // ── static helpers ──────────────────────────────────────────────────
-
-        static boolean isModifier(String s) {
-            return switch (s) {
-                case "public", "private", "protected", "static", "final",
-                     "abstract", "synchronized", "native", "transient", "volatile",
-                     "default" -> true;
-                default -> false;
-            };
-        }
-
-        static boolean isTypekeyword(String s) {
-            return switch (s) {
-                case "int", "long", "float", "double", "boolean", "char", "byte",
-                     "short", "void", "String" -> true;
-                default -> false;
-            };
-        }
-
-        static boolean isPrimitiveOrType(String s) {
-            return isTypekeyword(s) || (!isKeyword(s) && Character.isUpperCase(s.charAt(0)));
-        }
-
-        static boolean isKeyword(String s) {
-            return TranslateLexer.KEYWORDS.contains(s);
-        }
-
-        static String kofType(String javaType) {
-            return switch (javaType) {
-                case "int", "Integer" -> "Int";
-                case "long", "Long" -> "Long";
-                case "float", "Float" -> "Float";
-                case "double", "Double" -> "Double";
-                case "boolean", "Boolean" -> "Bool";
-                case "char", "Character" -> "Char";
-                case "byte", "Byte" -> "Byte";
-                case "short", "Short" -> "Short";
-                case "void" -> "void";
-                default -> javaType;
-            };
         }
 }

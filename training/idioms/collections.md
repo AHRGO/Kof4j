@@ -1,6 +1,6 @@
 # Idioms — Collections
 
-**Status:** available · **Introduced:** 0.0.4-alpha · **Updated:** 0.2.6-beta (02 Sep 2026)
+**Status:** available · **Introduced:** 0.0.4-alpha · **Updated:**  0.4.0-beta (Sep 2026) (02 Sep 2026)
 
 ## What it is
 
@@ -8,7 +8,7 @@
 Disponível em JVM (ArrayList), Native (implementação própria com free-list GC) e JS (Array) com a mesma API.
 `Map<K,V>` e `Set<T>` existem desde 0.1.0 nos 3 targets (JVM HashMap/HashSet, Native asm próprio, JS Map/Set).
 
-## API real (verificada no compilador — 0.2.6-beta)
+## API real (verificada no compilador — 0.4.0-beta)
 
 ```kof
 var l = listOf(1, 2, 3, 4)
@@ -18,11 +18,13 @@ l.set(0, 9)
 l.size                  // propriedade, não método
 l.contains(3)
 l.isEmpty()
-var r = l.remove(1)
+var r = l.remove(1)       // remove por ÍNDICE (Int), devolve o elemento
+// NUNCA l.remove("x") (by-value do Java): SEM055 (bug 122) — para achar por
+// valor use contains(x); para achar posição, loop com get(i).
 l.clear()
 var vazio = listOf<Int>()
 
-// Higher-order (0.2.6-beta, 3 targets)
+// Higher-order (3 targets)
 var dobrados = l.map((x: Int) -> x * 2)
 var pares = l.filter((x: Int) -> x % 2 == 0)
 var soma = l.reduce((a: Int, b: Int) -> a + b, 0)   // ordem: (lambda, init)
@@ -35,6 +37,12 @@ var v = m.get("a")
 var s = setOf(1, 2, 3)
 s.add(4)
 s.contains(2)
+// Coleções Kof são HOMOGÊNEAS: depois que o tipo PINA, add/put/set com tipo ≠
+// é rejeitado em compile-time (SEM056, bug 126 — não é só o Native que quebrava:
+// no JVM o add heterogêneo já dava VerifyError). Widening numérico (Int em
+// List<Long>) e o PRIMEIRO add (que pina um listOf()) passam. Buscar por tipo ≠
+// (m.get(5) num Map<String,Int>, s.contains("x") num Set<Int>) é MISS SEGURO
+// (null/false), nunca erro — só a ESCRITA é checada.
 
 // Como campo de classe, param de construtor e retorno de método (3 targets — 01/09)
 class Bag(Set<Int> tags) {
@@ -98,7 +106,7 @@ class Registry {
 }
 ```
 
-## GOOD — transformação declarativa (0.2.6-beta)
+## GOOD — transformação declarativa (0.3.22-beta)
 
 ```kof
 var nomes = users.map((u: User) -> u.name)

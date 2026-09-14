@@ -49,6 +49,15 @@ public final class CompilerClassLowering {
         if (!methods.stream().anyMatch(m -> m.name().equals("<init>"))) {
             methods.add(0, CompilerClassLowering.generateDefaultConstructor(driver,internalName, superName, fields, fieldInits));
         }
+        // bug 104b-i: classe não-record chamada com `.equals()` precisa de
+        // símbolo no Native — o JVM resolve no Object.equals herdado, o
+        // backend não tem java.lang.Object. Sintetiza identidade (oracle JVM).
+        if ((driver.target == Target.NATIVE || driver.target == Target.NATIVE_RISCV64
+                || driver.target == Target.NATIVE_AARCH64)
+                && "java/lang/Object".equals(superName)
+                && !methods.stream().anyMatch(m -> "equals".equals(m.name()))) {
+            methods.add(CompilerRecordSupport.buildClassIdentityEqualsMethod(driver, internalName));
+        }
         return new IRClass(internalName, superName, ifaces, access, fields, methods, List.of(), null,
                 typeId, CompilerAnnotations.lowerAnnotations(driver, cls.annotations()));
     }
@@ -127,6 +136,36 @@ public final class CompilerClassLowering {
     }
 
 
+    // #125: o parser aceita os modificadores de mecanismo da gramática
+    // (synchronized/volatile/transient/native), mas computeAccess os descarta
+    // — e o programa compilava em silêncio com SEM o efeito pedido (falsa
+    // sensação de segurança: contador "synchronized" sem monitor). O memory
+    // model RATIFICADO (concurrency-memory-model.md §5) os declara non-goals
+    // na superfície — a abstração é Channel/spawn. Decisão de design é
+    // intocável (regra 6), o que muda aqui é R6: nunca silencioso. O warning
+    // não-fatal conserva retrocompat (código que compila hoje continua) e
+    // aponta o substituto.
+    private static final java.util.Set<String> MECHANISM_MODIFIERS =
+            java.util.Set.of("synchronized", "volatile", "transient", "native");
+
+    static void warnMechanismModifiers(CompilerDriver driver, List<String> modifiers,
+                                       SourcePosition pos) {
+        if (driver.currentDiagnostics == null) return;
+        for (String mod : modifiers) {
+            if (MECHANISM_MODIFIERS.contains(mod)) {
+                driver.currentDiagnostics.warning(
+                        pos != null ? pos.file() : "",
+                        pos != null ? pos.line() : 0,
+                        pos != null ? pos.column() : 0, 0,
+                        "modificador '" + mod + "' não tem efeito no Kof (non-goal do "
+                                + "memory model — concurrency-memory-model.md §5); use a "
+                                + "abstração da linguagem: spawn/await/Channel p/ concorrência"
+                                + (pos != null ? " (linha " + pos.line() + ")" : ""),
+                        "SEM091");
+            }
+        }
+    }
+
     static IRField lowerField(CompilerDriver driver, FieldDeclarationNode field,
                      List<String> typeParams) {
         Type fieldType = CompilerTypes.resolveWithTypeParams(field.type(), typeParams, driver.currentUnit, driver.semanticAnalyzer);
@@ -142,6 +181,7 @@ public final class CompilerClassLowering {
                 default -> null;
             };
         }
+        warnMechanismModifiers(driver, field.modifiers(), field.position());
         return new IRField(field.name(), fieldType, driver.computeAccess(field.modifiers()), initVal,
                 CompilerAnnotations.lowerAnnotations(driver, field.annotations()));
     }
@@ -203,6 +243,7 @@ public final class CompilerClassLowering {
             }
         }
         int access = driver.computeAccess(method.modifiers());
+        warnMechanismModifiers(driver, method.modifiers(), method.position());
         if (isInterface && !method.modifiers().contains("default")) access |= AccessFlags.ABSTRACT;
         List<IRBasicBlock> body = List.of();
         List<IRLocalVariable> locals = List.of();
@@ -223,9 +264,12 @@ public final class CompilerClassLowering {
             }
             java.util.Set<String> savedMutated = driver.mutatedCapturedNames;
             driver.mutatedCapturedNames = new java.util.HashSet<>();
+            java.util.Deque<CompilerDriverState.FinallyFrame> savedFrames = driver.finallyFrames;
+            driver.finallyFrames.clear(); // DD-01: frame do finally externo não vaza p/ dentro
             CompilerCaptureScanner.collectMutatedCaptures(driver, method.body(), localVars);
             for (StatementNode stmt : method.body()) localIdx = driver.emitStatement(stmt, ops, owner, localIdx, localVars, returnType);
             driver.mutatedCapturedNames = savedMutated;
+            driver.finallyFrames.addAll(savedFrames); // DD-01: restaura
             KofOperation lastOp = ops.isEmpty() ? null : ops.get(ops.size() - 1);
             if (lastOp == null || !(lastOp instanceof KofReturn || lastOp instanceof KofReturnVoid)) {
                 if (Type.isVoid(returnType)) ops.add(new KofReturnVoid());

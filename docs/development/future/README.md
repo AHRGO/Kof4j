@@ -11,7 +11,7 @@ documento de arquitetura/visão **sem código implementado** (ou com código que
 
 ## Exemplo recente (01/09)
 
-- `kof-native-risc-arm.md` **saiu daqui** para `docs/native-multiarch.md`: o
+- `kof-native-risc-arm.md` **saiu daqui** para `docs/development/native-multiarch.md`: o
   plumbing (enum `Target.NATIVE_RISCV64/AARCH64`, CLI `native.risc/arm`,
   dispatch, cross-as/ld) já está no código, então o item é **em desenvolvimento**
   e passou a ser documentado com estado real + plano de finalização.
@@ -20,13 +20,20 @@ documento de arquitetura/visão **sem código implementado** (ou com código que
 
 | Doc | Tema | Por que fica em `future/` |
 |-----|------|---------------------------|
-| `APPLICATION_MODEL.md` | Kof Application Model (monólito ↔ distribuído, `kof.toml`, packaging, System) | RFC auditada — implementa nos incrementos I1–I4 (§23); move para `docs/` no I1 |
-| `PLAN-UNIVERSAL-PLATFORM.md` | visão de longo prazo (Kof como plataforma universal) | 100% visão/estratégia — não é ordem de implementação |
-| `DECOMPILER.md` | Kof Decompiler (bytecode/asm → Kof) | não há código de decompiler |
-| `DIFFERENTIAL_TESTING.md` | teste diferencial de migrações | não há código |
-| `LEGACY_IR.md` | Legacy Semantic IR | não há código (o "legacy" no `CompilerDriver` é genérico, não este) |
-| `LEGACY_MIGRATION.md` | plataforma de migração de software legado | fora do escopo 0.0.x, sem código |
-| `TRANSLATOR.md` | Kof Translator (Kof → outra linguagem) | não há código |
+| `PLAN-UNIVERSAL-PLATFORM.md` | visão de longo prazo (Kof como plataforma universal) | 100% visão/estratégia — não é ordem de implementação; nenhum pacote `ml`/`bio`/`hpc`/`infra-*` no código |
+| `scoped-resources-plan.md` | RAII leve (TIER 2.4, `using`/`resource_scope`) | design puro — zero ocorrências de `resource_scope`/`kof_resource`/`using` no lexer/parser/runtime; gated por bump |
+| ~~`planning-stdlib-array-returns.md`~~ → `docs/stdlib/DD-STDLIB-01-array-returns.md` | DD-STDLIB-01 | **FECHADO 13/09** — decisão 6a + implementação (`randomBytesHex`->String; choice=idiom), movido p/ docs/ |
+
+## Já caíram para `docs/development/` (iniciados — regra dos 3 estados, 12/09)
+
+| Doc | Gatilho da queda |
+|-----|------------------|
+| `DECOMPILER.md`, `TRANSLATOR.md`, `LEGACY_MIGRATION.md` (os `IMPLEMENTATION_PLAN.md`+`ACTION_PLAN.md` desta lista foram FUNDIDOS p/ `roadmap.md` §23 e os `DIFFERENTIAL_TESTING.md`+`LEGACY_IR.md` p/ dentro do `LEGACY_MIGRATION.md`, tudo 13/09) | plataforma de migração com código+testes: `kof inspect/decompile/translate/compare/migrate` no `Main.java:25-29`, `Confidence.java`, `Type.fromJvmSignature` (contagem viva em `roadmap.md` §23) |
+| `PLATFORM-PLAN.md` | Fases 1–3, 8, 9 com código: `ProjectLocator`, `KofProjectConfig`, `Target.SCRIPT`, PKG006/PKG007, `conformance-matrix.md` travada por 11 testes |
+| `APPLICATION_MODEL.md` | `application { onStart/onShutdown }` parseado+desugared+E2E nos 3 targets; `KofProjectConfig` |
+| ~~`PLANNING-FUTURE-AUDIT.md`, `planning-future-reconcile.md`~~ → `docs/audits/` | auditorias **encerradas 13/09** (comparação branch×beta); R2→`DECISIONS.md` §D-APP/§D-PLATFORM (ratificado 13/09; os 6 arquivos foram apagados), R5→cluster migração |
+| ~~`planning-finally-return.md`~~ → `docs/decisions/DD-01-finally-return.md` | FECHADO 13/09 (FinallyFrame IR + gates finallyReturnJvm/Js; bug 45 CORRIGIDO) |
+| `planning-stdlib-time-design.md` | `addDays`/`diffDays` (o formato D2 do doc) implementados nos 5 alvos (TIME002 11/09) |
 
 ## Quando mover de `future/` para `docs/`
 

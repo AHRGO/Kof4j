@@ -146,6 +146,40 @@ class NativeE2ETest {
     }
 
     @Test
+    void execCollectionPrintMatchesJvmGolden(@TempDir Path tempDir) throws IOException {
+        // §107: println(<coleção>) imprimia LIXO de ponteiro no nativo (o
+        // dispatch valueOf não achava vtable toString em List/Map/Set e não
+        // emitia nada). Golden = oracle JVM MEDIDO (regra §107: medir, não
+        // adivinhar), caso a caso. multi-entry Map/Set ficam fora de propósito:
+        // o JVM usa hash-order, o runtime Kof usa storage linear (insertion)
+        // — divergência de arquitetura registrada no §107, não lixo.
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            main() {
+                println(listOf(1, 2, 3))
+                println(setOf(1, 2))
+                println(mapOf("k", 9))
+                println(listOf("a", "b"))
+                println(listOf(true, false))
+                println(listOf(1.5, 2.0))
+                println(listOf(100000000000L, 2L))
+                println(listOf('a', 'b'))
+                println(listOf())
+                println(listOf(listOf(1), listOf(2)))
+                println(mapOf("a", 1, "b", 2))
+            }
+            """);
+        runNative(source, tempDir.resolve("out"),
+            "[1, 2, 3]\n[1, 2]\n{k=9}\n[a, b]\n[true, false]\n[1.5, 2.0]\n"
+            + "[100000000000, 2]\n[97, 98]\n[]\n[?, ?]\n{a=1, b=2}");
+        // A linha aninhada vale `?` (não `[1], [2]`) até o §104b-ii — o
+        // placeholder é a recusa HONESTA (R6): imprimia lixo de ponteiro
+        // antes; hoje marca o buraco sem esconder. multi-entry Set/Map com
+        // ordem de hash do JVM também ficam de fora do golden (arquitetura
+        // linear nativa vs HashSet/HashMap — divergência registrada §107).
+    }
+
+    @Test
     void execVirtualDispatchOverride(@TempDir Path tempDir) throws IOException {
         Path source = tempDir.resolve("Main.kf");
         Files.writeString(source, """
@@ -1076,5 +1110,125 @@ class NativeE2ETest {
                 }
                 """);
         runNative(source, tempDir.resolve("out"), "true\nfalse\ntrue\ntrue\nfalse\ntrue");
+    }
+
+    // bug 100: hijack de método de usuário. 14 dos 16 ramos INSTANCE do
+    // NativeX86StringCalls casavam SÓ por nome — `p.trim()` numa classe do
+    // usuário era roteado p/ o intrínseco String (deref do receiver como
+    // KofString) → LIXO silencioso (ex.: -103849952), não crash. JVM despacha
+    // pela classe; JS gateia isStringOp; riscv gateia isString. Fix: guard
+    // BuiltinTypes.isString(ownerType) nos 14 ramos (FUNCTION kof_string_to_*
+    // / kof_json_* não colidem — prefixo não-atingível). Guard isString já
+    // existia só em length/equals (e charAt, meio-guardado).
+    @Test
+    void nativeUserClassMethodsNotHijackedByStringOps(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+                class P {
+                    Int trim() { return 42 }
+                    Int indexOf(Int n) { return n + 1 }
+                    String split(Int n) { return "s" + n }
+                    Int toUpperCase() { return 7 }
+                }
+                main() {
+                    var p = P()
+                    println(p.trim())
+                    println(p.indexOf(1))
+                    println(p.split(9))
+                    println(p.toUpperCase())
+                    println(" x ".trim() + "|")
+                    println("abc".indexOf("c"))
+                    println("a,b".split(",").get(1))
+                    println("ab".toUpperCase())
+                }
+                """);
+        runNative(source, tempDir.resolve("out"),
+                "42\n2\ns9\n7\nx|\n2\nb\nAB");
+    }
+
+    // §102 (paridade absoluta): indexOf/lastIndexOf/startsWith com índice
+    // inicial — o helper de aridade 1 IGNORAVA o 2º arg (o roteador já
+    // empilhava em %rdx). `"aXb".indexOf("X",2)` dava 1 no Native vs -1 no
+    // JVM/Script. Agora: kof_string_index_of2/_last_index_of2/_starts_with2
+    // (UTF-16 code units + clampagens do JDK 21, oracle travado neste teste;
+    // astrais cobrem o corte de par). Faces riscv/aarch: residuais honestos
+    // (env cross ausente aqui; bug 59).
+    @Test
+    void nativeStringSearchFromIndex(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+                main() {
+                    println("aXb".indexOf("X",2))
+                    println("aXb".indexOf("X",1))
+                    println("aXb".indexOf("X",-3))
+                    println("aXb".indexOf("X",4))
+                    println("abc".indexOf("",2))
+                    println("abc".indexOf("",5))
+                    println("abc".indexOf("",-1))
+                    println("aXa".lastIndexOf("a",1))
+                    println("aXa".lastIndexOf("a",-1))
+                    println("aXa".lastIndexOf("a",9))
+                    println("abc".lastIndexOf("",2))
+                    println("abc".lastIndexOf("",5))
+                    println("abc".lastIndexOf("",-1))
+                    println("aXb".startsWith("X",1))
+                    println("aXb".startsWith("X",2))
+                    println("aXb".startsWith("X",-1))
+                    println("abc".startsWith("",3))
+                    println("abc".startsWith("",4))
+                    var s = "a😀b"
+                    println(s.indexOf("b",2))
+                    println(s.indexOf("b",1))
+                    println(s.indexOf("😀",1))
+                    println(s.indexOf("😀",2))
+                    println(s.indexOf("",2))
+                    println(s.lastIndexOf("b",2))
+                    println(s.lastIndexOf("b",3))
+                    println(s.lastIndexOf("a",2))
+                    println(s.lastIndexOf("😀",1))
+                    println(s.startsWith("b",2))
+                    println(s.startsWith("b",3))
+                    println(s.startsWith("😀",1))
+                    println(s.startsWith("😀",2))
+                }
+                """);
+        runNative(source, tempDir.resolve("out"),
+                "-1\n1\n1\n-1\n2\n3\n0\n0\n-1\n2\n2\n3\n-1\ntrue\nfalse\nfalse\ntrue\nfalse"
+                + "\n3\n3\n1\n-1\n2\n-1\n3\n0\n1\nfalse\ntrue\ntrue\nfalse");
+    }
+
+    @Test
+    void nativeMultiDimArray(@TempDir Path tempDir) throws IOException {
+        // §113: `new Int[a][b]` não alocava NADA no Native (KofNewMultiArray
+        // caía no default -> {} → SIGSEGV). JVM/Script/JS: 2 / 7.
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            main() {
+                var m = new Int[2][3]
+                m[1][2] = 7
+                println(m.length)
+                println(m[1][2])
+            }
+            """);
+        runNative(source, tempDir.resolve("out"), "2\n7");
+    }
+
+    @Test
+    void nativeMapPutDiscardedLongValueKeepsStackBalanced(@TempDir Path tempDir) throws IOException {
+        // §142: `m.put("b", 2L)` como STATEMENT descartava o valor (Long)
+        // com KofPop2 = `addq $16` — mas a pilha nativa é 8 bytes/slot, então
+        // o cleanup removia 2 slots p/ 1 valor empilhado e TODO código depois
+        // lia lixo (SIGSEGV no `get` seguinte, ec=139). O IR está certo p/ a
+        // JVM categoria-2; o fix é no emissor native (Pop2 = 1 slot).
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            main() {
+                var m = mapOf("a", 1L)
+                m.put("b", 2L)
+                println(m.get("b"))
+                println(m.get("a"))
+            }
+            """);
+        runNative(source, tempDir.resolve("out"), "2\n1");
     }
 }

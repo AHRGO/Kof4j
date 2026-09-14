@@ -53,34 +53,12 @@ class KofStringParseTest {
         runTarget(tmp, Target.NATIVE, "bin");
     }
 
-    // JS: toLong usa Number (double 53-bit) — overflow >2^53 NÃO lança e
-    // imprime com precisão de double. É DIVERGÊNCIA R5 de OUTRO bug (modelo
-    // numérico JS, design), não do 79 (asm nativo). Cobrindo aqui só o que o
-    // JS casa com o contrato: toInt (32-bit cabe no double) + toLong de
-    // valores até 2^53. Longos 64-exatos = golden JVM/Native (KofStringParseTest)
-    // e riscv/aarch (E2E qemu).
-    private static final String GOLDEN_JS = """
-            main() {
-                println("42".toInt())
-                println("-7".toInt())
-                println("0".toInt())
-                try { println("abc".toInt()); println("S1") } catch (String e) { println("T1") }
-                try { println("12a34".toInt()); println("S2") } catch (String e) { println("T2") }
-                println(" -42 ".toInt())
-                println("+7".toInt())
-                println("-2147483648".toInt())
-                try { println("2147483648".toInt()); println("S3") } catch (String e) { println("T3") }
-                try { println("999999999999".toInt()); println("S4") } catch (String e) { println("T4") }
-                try { println("".toInt()); println("S5") } catch (String e) { println("T5") }
-                println("1234567890".toLong())
-                println("-9007199254740991".toLong())
-                try { println("abc".toLong()); println("S6") } catch (String e) { println("T6") }
-                println("0".toLong())
-            }
-            """;
-    private static final String EXPECTED_JS =
-            "42\n-7\n0\nT1\nT2\n-42\n7\n-2147483648\nT3\nT4\nT5\n1234567890\n"
-            + "-9007199254740991\nT6\n0";
+    // §81 (5b, 13/09): toLong no JS = BigInt — paridade 64-bit REAL. O golden
+    // JS é agora IDÊNTICO ao JVM/Native (GOLDEN/EXPECTED): 2^63-1 exato,
+    // overflow de Long lança (range check ±2^63), "-9223372036854775808" ok.
+    // (Antes: Number double 53-bit — bug 81; a limitação ±2^53 acabou.)
+    private static final String GOLDEN_JS = GOLDEN;
+    private static final String EXPECTED_JS = EXPECTED;
 
     @Test
     void toIntToLongContractJs(@TempDir Path tmp) throws Exception {
@@ -207,9 +185,15 @@ main() {
     try { println("1.2.3".toDouble()); println("S7") } catch (String e) { println("T7") }
     println("7".toDouble() == 7.0)
     println("1e3".toFloat() == 1000.0)
+    try { println("".toDouble()); println("S8") } catch (String e) { println("T8") }
+    try { println("   ".toDouble()); println("S9") } catch (String e) { println("T9") }
 }    """;
 
-    private static final String FP_EXPECTED = "true\ntrue\ntrue\ntrue\ntrue\ntrue\nT1\nT2\ntrue\ntrue\nT3\ntrue\ntrue\ntrue\ntrue\ntrue\nfalse\ntrue\ntrue\ntrue\nT5\nT6\nT7\ntrue\ntrue";
+    // §175 (13/09): ""/"   " LANÇAM nos 5 alvos (T8/T9) — no x86/riscv era
+    // 0.0 silencioso (.Lpdd_vazio/.Lpd_vazio devolviam xorpd/li a0,0), JVM
+    // lança NumberFormatException. R6/paridade fechada; a prova do OrDefault
+    // com vazio fica em KofMathTest.PARSEORD (linha `parseDoubleOrDefault("", d)`).
+    private static final String FP_EXPECTED = "true\ntrue\ntrue\ntrue\ntrue\ntrue\nT1\nT2\ntrue\ntrue\nT3\ntrue\ntrue\ntrue\ntrue\ntrue\nfalse\ntrue\ntrue\ntrue\nT5\nT6\nT7\ntrue\ntrue\nT8\nT9";
     // === bug 82 (face cross): riscv64/aarch64 definem kof_string_to_double/float
     // (NativeRiscvAsmRtB31, espelho do x86 RuntimeStringParseFp). Oracle SEM
     // print de double (print double segue FLT001 no cross) — throw vira var +

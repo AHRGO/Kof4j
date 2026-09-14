@@ -11,27 +11,30 @@ O modelo pode inventar `users.map(...)`, `Option<T>`, `async/await`,
 porque existem em outras linguagens. Código assim **não compila** ou
 **compila por acidente** com semântica errada.
 
-## Status real (verificado no compilador — 0.2.6-beta, 02 Sep 2026, 810 testes)
+## Status real (verificado no compilador — 0.4.0-beta, Sep 2026)
 
 | Feature | Status |
 |---|---|
 | `List<T>` (add/get/set/size/contains/isEmpty/remove/clear/listOf) | ✅ Implemented (3 targets, free-list GC no Native) |
 | `for (var x in coll)` | ✅ Implemented |
 | `Map<K,V>` / `Set<T>` + `mapOf`/`setOf` | ✅ Implemented (JVM HashMap, Native asm, JS Map/Set desde 0.1.0) |
-| Higher-order `list.map/filter/reduce` | ✅ Implemented (0.2.6-beta, 3 targets) |
+| Higher-order `list.map/filter/reduce` | ✅ Implemented (desde 0.2.6-beta, 3 targets) |
 | `Box<T>` generics com `T` primitivo (ex.: `Box<Int>`) | ✅ Implemented (fix substituteTypeVariable 25/08) |
 | Lambdas `(x: Int) -> expr` com captura mutável (via box sintético Box0) | ✅ Implemented |
 | If-expr `if (c) a else b` | ✅ Implemented |
 | `json.encode` / `json.decode<T>` | ✅ Implemented (3 targets; JSN001/002/003 fechados 31/08 — objetos/records/arrays, FP XMM no Native) |
 | `throw "msg"` / `try/catch/finally` | ✅ Implemented (JVM + Native unwinding) |
-| `String?` / `Int?` null safety + `if (x != null)` narrowing | ✅ Implemented (0.2.6-beta, NullableType + isAssignable) |
+| `String?` / `Int?` null safety + `if (x != null)` narrowing | ✅ Implemented (desde 0.2.6-beta, NullableType + isAssignable) |
 | Pattern matching `switch (x) { case String s: ... }` + `instanceof`/`as` | ✅ Implemented |
-| Pattern record destructuring `case Point(x, y):` | ✅ Implemented (Parser PatternExpr fieldVars, 0.2.6-beta) |
+| Pattern record destructuring `case Point(x, y):` | ✅ Implemented (Parser PatternExpr fieldVars, desde 0.2.6-beta) |
 | Switch como expressão `var r = switch (x) { case A -> b; default -> c }` | ✅ Implemented (SYN001, 03/09 — 3 targets + riscv64/aarch64; `default` obrigatório ou exaustividade de enum, senão `SEM032`) |
 | `spawn` / `await` com `Handle<T>` e unboxing | ✅ 3 targets (JVM virtual threads; Native pthread — CONC001 fechado 31/08; JS sequencial — CONC003 parcial) |
 | Primary constructor `class X(...)` / `record` | ✅ Implemented (record-style desde 0.0.5) |
 | `Thread` / `Executor` (APIs de plataforma) | ❌ Unavailable — nunca use (`spawn` é a intenção) |
 | `Option<T>` genérico | ❌ Planned — use `String?` para nulabilidade |
+| `Int.MAX_VALUE` / `Long.MIN_VALUE` / `Int.SIZE` / `Int.<campo>` | ❌ Unavailable (bug 99, 10/09) — tipos primitivos **não têm campos/constantes estáticas**. `SEM050`: rejeitado no typer (era aceito em silêncio e gerava `NoClassDefFoundError "?"`/SIGSEGV, e `var x = Int.MAX_VALUE` **crashava o compilador**). Use o **literal** (`2147483647`, `9223372036854775807`, `-2147483648`) ou `as`. (`String.valueOf(42)`/`String.format(...)` são o caminho oposto: **métodos** com parênteses, implementados — a isenção vale só p/ posição de *tipo*, `x: Int`/`x as Int`, não p/ *field access*.) |
+| `l.remove(elemento)` por VALOR (Java `List.remove(Object)`) | ❌ Unavailable — `remove/get/set` de List pegam **índice Int** e `remove` devolve o elemento (learn/12). Por valor use `contains(x)` / loop com `get(i)`. `SEM055` rejeita não-Int no índice (bug 122: era aceito → JVM VerifyError, Native pointer-as-index) |
+| `listOf("a").add(5)` / `setOf("a").add(5)` / `mapOf("k",1).put(5,"v")` (coleta HETEROGÊNEA) | ❌ Unavailable — coleções Kof são **HOMOGÊNEAS** (bug 126 decisão da mantenedora 11/09): depois que o tipo PINA (pelo literal `listOf("a")` ou pelo primeiro add/put), escrever tipo ≠ é rejeitado em compile-time com `SEM056`. Não é só o Native que quebra (scan tag String sobre Int cru → SIGSEGV): no JVM `List.add` hetero já dá **VerifyError** na carga e `Map.put` valor-hetero dá **ClassCastException** no get. A rejeição é universal (erro de tipo é erro em todo alvo). **O que NÃO é rejeitado:** query-side (`get(k)`/`contains(x)` com tipo ≠ → miss seguro: null/false, nunca crash); widening numérico (`Int` em `List<Long>`); o **primeiro** add/put num container `Unknown` (pina, não polui); e `Unknown`/nullable de função (SG-008). Use coleções do mesmo tipo — se precisa de "tipos diferentes", modelem **records/unions**, não um `List<Object>` |
 | `for user in users` (sem var) | ❌ Unavailable |
 | Array literals `{1, 2, 3}` / `[1,2,3]` | ❌ Unavailable — use `new Int[n]` + `listOf` |
 | `async`/`await` (JS-style), `let`/`const` | ❌ Unavailable — use `spawn`/`await` e `var`/`val` (KofScript **não** é JavaScript) |
@@ -58,7 +61,7 @@ var maybe = Option.of(x)
 for (user in users) { }
 ```
 
-## Good example — o que existe em 0.2.6-beta
+## Good example — o que existe hoje
 
 ```kof
 // map/filter/reduce — implementado
@@ -111,7 +114,7 @@ var u = User("Mel", 30)
 
 Um modelo que "aprende" features inexistentes produz código que o compilador
 rejeita — ou pior, código que compila com outra semântica. O corpus deve
-ensinar a fronteira exata do que existe em 0.2.6-beta.
+ensinar a fronteira exata do que existe.
 
 ## Regra
 

@@ -1,20 +1,85 @@
 #!/usr/bin/env bash
-# Gate REFACTOR-500: nenhuma classe acima de 500 linhas.
-# Uso: scripts/check_500.sh [limite]   (padrão 500)
-# Sai 1 se houver violação, listando os arquivos.
+# Gate REFACTOR-500 (decisão da mantenedora, 13/09): alvo ≤500 linhas/classe;
+# 500–599 é TOLERADO (dívida viva — o gate AVISA, não falha); ≥600 é CRÍTICO
+# (falha o CI, refactor/split obrigatório antes do merge).
+#
+# MODO RATCHET (12/9, §140): dívida listada em
+# scripts/check_500-baseline.txt nunca deve crescer dentro da faixa tolerada —
+# crescimento é AVISADO nominalmente (é o refactor adiado indo em direção a
+# 600). Classes ≥600 travadas no baseline são críticos avós: congeladas no
+# número do dia (não podem crescer) e listadas como pendência obrigatória.
+#   - PASSA quando a dívida diminui, mas AVISA (o split feito deve ser
+#     removido do baseline: ./scripts/check_500.sh --update-baseline).
+# Uso: scripts/check_500.sh [--update-baseline]
 set -uo pipefail
 
-LIMIT="${1:-500}"
+LIMIT=500    # alvo da regra — acima disto é dívida (aviso)
+CRITICAL=600 # 13/09: >=600 = crítico, refactor obrigatório (falha o build)
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+BASELINE="$ROOT/scripts/check_500-baseline.txt"
 
-violations=$(find "$ROOT"/kof-*/src/main/java -name '*.java' -exec wc -l {} + \
-    | awk -v lim="$LIMIT" '$1 > lim && $2 != "total" {print $1"\t"$2}' \
-    | sort -rn)
+current=$(find "$ROOT"/kof-*/src/main/java -name '*.java' -exec wc -l {} + \
+    | awk -v lim="$LIMIT" -v root="$ROOT/" '$1 > lim && $2 != "total" {gsub(root, "", $2); print $1"\t"$2}' \
+    | sort -k2)
 
-if [ -n "$violations" ]; then
-    echo "check_500: FALHOU — classes acima de $LIMIT linhas:"
-    printf '%s\n' "$violations" | awk -F'\t' '{printf "  %5d  %s\n", $1, $2}'
+if [ "${1:-}" = "--update-baseline" ]; then
+    printf '%s\n' "$current" > "$BASELINE"
+    echo "check_500: baseline atualizado ($(printf '%s\n' "$current" | grep -c . || true) dívidas)."
+    exit 0
+fi
+
+if [ ! -f "$BASELINE" ]; then
+    echo "check_500: FALHOU — baseline de dívida ausente ($BASELINE)."
     exit 1
 fi
 
-echo "check_500: OK — nenhuma classe acima de $LIMIT linhas."
+fail=0
+note=""
+while IFS=$'\t' read -r count file; do
+    [ -z "$file" ] && continue
+    base=$(awk -F'\t' -v f="$file" '$2==f {print $1}' "$BASELINE")
+    if [ "$count" -ge "$CRITICAL" ]; then
+        if [ -n "$base" ] && [ "$base" -ge "$CRITICAL" ]; then
+            # avô crítico: congelado no número do baseline, não pode crescer
+            if [ "$count" -gt "$base" ]; then
+                echo "check_500: FALHOU — avô crítico $file cresceu $base -> $count (>= $CRITICAL): split obrigatório."
+                fail=1
+            else
+                echo "check_500: avô crítico $file: $count linhas (>= $CRITICAL; congelado em $base, pendência de split planejado)."
+            fi
+        else
+            # novo crítico OU baselizado <600 que cresceu até o crítico
+            if [ -z "$base" ]; then
+                echo "check_500: FALHOU — $file tem $count linhas (>= $CRITICAL): classe NOVA crítica, split antes do merge."
+            else
+                echo "check_500: FALHOU — $file tinha $base (< $CRITICAL) no baseline, agora $count (>= $CRITICAL): cruzou a linha vermelha, split obrigatório."
+            fi
+            fail=1
+        fi
+    elif [ -z "$base" ]; then
+        echo "check_500: dívida tolerada (nova) — $file tem $count linhas (alvo $LIMIT; tolerado até $((CRITICAL-1)))."
+    elif [ "$count" -gt "$base" ]; then
+        echo "check_500: aviso — $file cresceu $base -> $count (tolerado até $((CRITICAL-1)); a $((CRITICAL-count)) linhas do crítico — planeje o split)."
+    elif [ "$count" -lt "$base" ]; then
+        note="$note\n    $file: $base -> $count (remova do baseline com --update-baseline)"
+    fi
+done <<< "$current"
+
+while IFS=$'\t' read -r count file; do
+    [ -z "$file" ] && continue
+    if ! grep -qF "	$file" <<< "$current"; then
+        note="$note\n    $file: $count -> 0 (split concluído! remova do baseline)"
+    fi
+done < <(grep -v '^#' "$BASELINE")
+
+if [ "$fail" -ne 0 ]; then
+    echo "check_500: FALHOU — classe crítica (>= $CRITICAL linhas); refactor/split antes do merge."
+    exit 1
+fi
+
+if [ -n "$note" ]; then
+    echo "check_500: OK (dívida diminuiu — atualize o baseline):"
+    printf "$note\n"
+else
+    echo "check_500: OK — nenhuma classe crítica (>= $CRITICAL)."
+fi

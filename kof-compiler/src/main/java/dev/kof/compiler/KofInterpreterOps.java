@@ -121,6 +121,10 @@ public final class KofInterpreterOps {
         }
         if (KofInterpreterValues.isFloatType(t) || KofInterpreterValues.isDoubleType(t)) {
             double x = ((Number) a).doubleValue(), y = ((Number) b).doubleValue();
+            if (cmp == KofComparison.EQ || cmp == KofComparison.NE) {
+                boolean eq = x == y;
+                return cmp == KofComparison.EQ ? eq : !eq;
+            }
             int c = Double.compare(x, y);
             return switch (cmp) {
                 case EQ -> c == 0; case NE -> c != 0; case LT -> c < 0;

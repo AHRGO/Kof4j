@@ -8,7 +8,7 @@ import java.util.List;
 
 /**
  * `kof translate` — translate a subset of Java source into idiomatic Kof
- * (docs/future/TRANSLATOR.md, Fase F).
+ * (docs/development/TRANSLATOR.md, Fase F).
  *
  * Understands structure (classes, fields, methods, control flow) rather than
  * doing textual substitution. Static methods become top-level functions;
@@ -61,9 +61,11 @@ public final class Translate {
         return new Emitter(p).translate();
     }
 
-    static final class Emitter extends TranslateExpr {
+    static final class Emitter extends TranslateStatements {
         final StringBuilder out = new StringBuilder();
         final StringBuilder topFns = new StringBuilder();
+        /** Campos `static` da classe em parse — p/ qualificar em funções hoisted. */
+        private final java.util.Set<String> staticFields = new java.util.HashSet<>();
 
         Emitter(Parser p) { super(p); }
 
@@ -74,8 +76,28 @@ public final class Translate {
                 p.next(); // ;
             }
             while (p.at("import")) {
-                while (!p.at(";")) p.next();
+                boolean isStatic = p.peek(1) != null && "static".equals(p.peek(1).text);
+                // FQN do import (após `import`/`import static`).
                 p.next();
+                if (isStatic) { p.next(); }
+                String fqn = "";
+                while (!p.at(";") && !p.at(T.EOF)) {
+                    fqn += p.next().text;
+                }
+                if (!p.at(T.EOF)) { p.next(); } // ;
+                // `import static java.lang.Math.max` / `java.lang.Math.*`:
+                // o translator ignora imports e Kof não mapeia a stdlib JDK —
+                // emitir a chamada nua (`max(3,4)`) gera Kof inválido
+                // (SEM011), silenciosamente. Mapear Java→stdlib é decisão de
+                // design (regra 6) → gap honesto R6 (Q4 13/09). Imports
+                // estáticos de classes do PRÓPRIO programa ficam de fora
+                // (o static method vira função top-level Kof e resolve).
+                if (isStatic && (fqn.startsWith("java.") || fqn.startsWith("javax."))) {
+                    throw new TranslateException(
+                            "`import static " + fqn + "` não é resolvido pelo translator "
+                            + "(Kof não mapeia membros estáticos da stdlib JDK; imports são ignorados) — "
+                            + "revisão manual");
+                }
             }
             // Parse all top-level type declarations.
             while (!p.at(T.EOF)) {
@@ -87,8 +109,10 @@ public final class Translate {
         }
 
         private void parseTypeDeclaration() {
-            // modifiers
-            while (isModifier(p.peek().text)) p.next();
+            // modifiers + annotations (@Override, @SuppressWarnings(...)) —
+            // Kof ignora anotações no translator (não são semântica p/ o
+            // subconjunto; a anotação some junto com o `@Nome` e args).
+            skipAnnotationsAndModifiers();
             if (p.at("class")) {
                 parseClass();
             } else if (p.at("interface")) {
@@ -102,6 +126,33 @@ public final class Translate {
             }
         }
 
+        /**
+         * Consome modificadores e anotações Java (`@Override`,
+         * `@SuppressWarnings("x")`, `@Deprecated(...)`). Anotações não têm
+         * semântica no subconjunto traduzido → descartadas (Kof as ignora,
+         * verificado 13/09).
+         */
+        private void skipAnnotationsAndModifiers() {
+            while (true) {
+                if (TranslateTypes.isModifier(p.peek().text)) { p.next(); continue; }
+                if (p.at(T.AT)) {
+                    p.next();                 // @
+                    p.next();                 // Nome
+                    while (p.at(".")) { p.next(); p.next(); }  // @a.b.C
+                    if (p.at("(")) {          // args
+                        int depth = 0;
+                        do {
+                            if (p.at("(")) depth++;
+                            else if (p.at(")")) depth--;
+                            p.next();
+                        } while (depth > 0 && !p.at(T.EOF));
+                    }
+                    continue;
+                }
+                break;
+            }
+        }
+
         private void parseEnum() {
             p.expect("enum");
             String name = p.next().text;
@@ -109,39 +160,70 @@ public final class Translate {
             p.expect("{");
             while (!p.at("}") && !p.at(";")) {
                 constants.add(p.next().text);
-                if (p.at("(")) { p.next(); while (!p.at(")")) p.next(); p.next(); }  // args ignorados (MVP)
-                if (p.at("{")) skipBlock();                                          // corpo de constante ignorado
+                if (p.at("(") || p.at("{")) {
+                    // Argumentos de constante (`A(1)`) ou corpo de constante
+                    // (`A { ... }`) exigem construtor/override — Kof enum é
+                    // só o NOME. Antes era pulado em SILÊNCIO (R6/Q7).
+                    throw new TranslateException(
+                            "enum com construtor/corpo de constante (`" + constants.get(constants.size() - 1)
+                            + "(…)` / `{ … }`) não tem equivalente em Kof "
+                            + "(enum = só constantes) — revisão manual");
+                }
                 if (p.at(",")) p.next();
             }
-            if (p.at(";")) { p.next(); while (!p.at("}")) skipBlock(); }             // métodos/campos ignorados
+            if (p.at(";")) {
+                p.next();
+                // `enum E { A, B; }` (só o `;` de fechamento) é no-op; com
+                // conteúdo, Kof enum tem SÓ constantes, sem corpo — antes era
+                // pulado em SILÊNCIO → `E.A.get()`/`E.A.v` sumiam (R6).
+                if (!p.at("}")) {
+                    throw new TranslateException(
+                            "enum com corpo (campos/métodos/construtor) não tem equivalente em Kof "
+                            + "(enum = só constantes; use `class` com `static` se precisar de dados) — "
+                            + "revisão manual");
+                }
+            }
             p.expect("}");
             out.append("enum ").append(name).append(" { ")
                .append(String.join(", ", constants)).append(" }\n");
         }
 
         private void parseRecord() {
-            p.expect("record");
-            String name = p.next().text;
+            p.expect("record");            String name = p.next().text;
+            String typeParams = p.at("<") ? parseTypeParams() : "";
             List<String> components = new ArrayList<>();
             if (p.at("(")) {
                 p.next();
                 while (!p.at(")")) {
-                    String type = kofType(p.next().text);
+                    String type = TranslateTypes.kofType(p.next().text);
                     String cname = p.next().text;
                     components.add(type + " " + cname);
                     if (p.at(",")) p.next();
                 }
                 p.expect(")");
             }
-            if (p.at("{")) skipBlock();
-            else p.expect(";");
-            out.append("record ").append(name).append('(')
+            if (p.at("{")) {
+                // Corpo do record (construtor compacto, accessors, métodos) —
+                // Kof record é só os componentes. Corpo VAZIO `{}` é no-op;
+                // corpo com conteúdo era pulado em SILÊNCIO → validações/
+                // overrides sumiam (R6, Q4 13/09).
+                if (!p.peek(1).text.equals("}")) {
+                    throw new TranslateException(
+                            "record com corpo (construtor compacto/accessors/métodos) não tem "
+                            + "equivalente em Kof (record = só componentes) — revisão manual");
+                }
+                skipBlock();
+            } else {
+                p.expect(";");
+            }
+            out.append("record ").append(name).append(typeParams).append('(')
                .append(String.join(", ", components)).append(")\n");
         }
 
         private void parseClass() {
             p.expect("class");
             String name = p.next().text;
+            String typeParams = p.at("<") ? parseTypeParams() : "";
             String superCls = null;
             List<String> ifaces = new ArrayList<>();
             if (p.at("extends")) { p.next(); superCls = p.next().text; }
@@ -150,11 +232,15 @@ public final class Translate {
                 while (!p.at("{")) { ifaces.add(p.next().text); if (p.at(",")) p.next(); }
             }
             p.expect("{");
-            out.append("class ").append(kofType(name));
-            if (superCls != null) out.append(" extends ").append(kofType(superCls));
+            // Pré-varre os campos `static` (p/ qualificar refs nas funções
+            // hoisted — `X` → `Classe.X`; ver TranslateStatics).
+            staticFields.clear();
+            staticFields.addAll(TranslateStatics.scanFieldNames(p, p.pos));
+            out.append("class ").append(TranslateTypes.kofType(name)).append(typeParams);
+            if (superCls != null) out.append(" extends ").append(TranslateTypes.kofType(superCls));
             if (!ifaces.isEmpty()) {
                 out.append(" implements ");
-                out.append(ifaces.stream().map(Emitter::kofType).collect(java.util.stream.Collectors.joining(", ")));
+                out.append(ifaces.stream().map(TranslateTypes::kofType).collect(java.util.stream.Collectors.joining(", ")));
             }
             out.append(" {\n");
 
@@ -168,18 +254,52 @@ public final class Translate {
         private void parseInterface() {
             p.expect("interface");
             String name = p.next().text;
+            String typeParams = p.at("<") ? parseTypeParams() : "";
+            List<String> ext = new ArrayList<>();
+            if (p.at("extends")) {
+                // Kof interface suporta `extends A, B` (verificado 13/09).
+                p.next();
+                ext.add(p.next().text);
+                while (p.at(",")) { p.next(); ext.add(p.next().text); }
+            }
             p.expect("{");
-            out.append("interface ").append(name).append(" {\n");
+            out.append("interface ").append(name).append(typeParams);
+            if (!ext.isEmpty()) {
+                out.append(" extends ").append(String.join(", ", ext));
+            }
+            out.append(" {\n");
             while (!p.at("}")) {
                 // method signature ending in ';'
                 int save = p.pos;
                 boolean isStatic = false;
-                while (isModifier(p.peek().text)) { if (p.at("static")) isStatic = true; p.next(); }
+                while (TranslateTypes.isModifier(p.peek().text)) { if (p.at("static")) isStatic = true; p.next(); }
                 String ret = parseType();
                 String mname = p.next().text;
+                if (!p.at("(")) {
+                    // Campo/constante de interface Java (`int X = 1;` é
+                    // implicitamente `static final`). Kof aceita declarar, mas
+                    // não resolve o campo (`I.X` → SEM025, verificado 13/09) e
+                    // não há constante top-level → revisão manual (R6).
+                    throw new TranslateException(
+                            "constante de interface (`Type NOME = ...` em interface) não tem "
+                            + "equivalente direto em Kof (campo de interface não é resolvível, "
+                            + "SEM025) — revisão manual");
+                }
                 List<String> params = parseParams();
-                if (p.at("{")) { skipBlock(); }
-                else p.expect(";");
+                if (p.at("{")) {
+                    // Método de interface COM corpo = `default` (ou `static`)
+                    // method Java. Kof NÃO tem default method: o corpo é
+                    // IGNORADO e o implementador falha com SEM043
+                    // (re-verificado 13/09 — a nota anterior "Kof aceita corpo"
+                    // era verificação falsa). Emitir o corpo seria um Kof que
+                    // não compila; dropá-lo silenciosamente muda o
+                    // comportamento → gap honesto (R6).
+                    throw new TranslateException(
+                            "método de interface com corpo (`default`/`static` method) não tem "
+                            + "equivalente direto em Kof (sem default method; o implementador "
+                            + "falharia com SEM043) — mova o corpo para a classe — revisão manual");
+                }
+                p.expect(";");
                 out.append("    ").append(ret).append(' ').append(mname).append('(')
                    .append(paramList(params)).append("): ").append(ret).append('\n');
             }
@@ -187,198 +307,183 @@ public final class Translate {
             out.append("}\n");
         }
 
+        /**
+         * Tipo genérico Java `<T>` / `<K, V>` → Kof `<T>` / `<K, V>`.
+         * Bounds (`<T extends X>`) não têm equivalente direto → revisão
+         * manual (R6).
+         */
+        private String parseTypeParams() {
+            p.expect("<");
+            List<String> tps = new ArrayList<>();
+            while (!p.at(">") && !p.at(T.EOF)) {
+                String tp = p.next().text;
+                if (p.at("extends")) {
+                    throw new TranslateException(
+                            "type parameter com bound (`<T extends X>`) não tem equivalente "
+                            + "direto em Kof — revisão manual");
+                }
+                tps.add(tp);
+                if (p.at(",")) p.next();
+            }
+            p.expect(">");
+            return "<" + String.join(", ", tps) + ">";
+        }
+
         private void parseMember(String className) {
             int save = p.pos;
             boolean isStatic = false;
-            while (isModifier(p.peek().text)) { if (p.at("static")) isStatic = true; p.next(); }
-            if (p.at("{")) { // static initializer block — skip
-                skipBlock();
+            while (true) {
+                if (TranslateTypes.isModifier(p.peek().text)) { if (p.at("static")) isStatic = true; p.next(); continue; }
+                if (p.at(T.AT)) {
+                    p.next(); p.next();
+                    while (p.at(".")) { p.next(); p.next(); }
+                    if (p.at("(")) {
+                        int depth = 0;
+                        do { if (p.at("(")) depth++; else if (p.at(")")) depth--; p.next(); }
+                        while (depth > 0 && !p.at(T.EOF));
+                    }
+                    continue;
+                }
+                break;
+            }
+            if (p.at("{")) {
+                // Bloco de inicialização. AMBOS têm efeito: o de INSTÂNCIA
+                // roda antes do construtor; o `static {}` inicializa campos
+                // estáticos (que agora EMITIMOS como `static Int X`) — pulá-lo
+                // em silêncio deixaria X com o default errado (R6, Q4 13/09).
+                throw new TranslateException(
+                        (isStatic
+                                ? "bloco de inicialização `static { ... }` não tem equivalente direto em Kof "
+                                  + "(mova p/ o inicializador do campo `static` ou p/ um método)"
+                                : "bloco de inicialização de instância `{ ... }` (não-static) roda antes "
+                                  + "do construtor — sem equivalente direto em Kof; mova o corpo para o "
+                                  + "`constructor(...)`")
+                        + " — revisão manual");
+            }
+            if (p.at("class") || p.at("interface") || p.at("record") || p.at("enum")) {
+                // Kof não suporta tipo aninhado (SEM042). Hoisting p/ o topo
+                // exige renomear referências (`Outer.Inner` → `Inner`) —
+                // transformação semântica, decisão de design → revisão manual
+                // (R6), nunca parse error confuso.
+                throw new TranslateException(
+                        "tipo aninhado (`class`/`interface`/`record`/`enum` dentro de classe) "
+                        + "não tem equivalente direto em Kof (SEM042; declare no top level) — revisão manual");
+            }
+            // Construtor Java: `[mods] ClassName ( params ) { body }` — sem tipo
+            // de retorno. Precisa ser detectado ANTES de parseType, senão o nome
+            // da classe vira "tipo" e o `(` vira "nome do membro" → o ramo de
+            // campo escaneia até o `;` (que não existe) e trava no EOF
+            // (bug latente achado 13/09: loop infinito em `kof translate`).
+            if (p.peek().text.equals(className) && p.peek(1).text.equals("(")) {
+                p.next(); // nome da classe
+                List<String> params = parseParams();
+                if (p.at("throws")) {
+                    p.next();
+                    while (!p.at("{") && !p.at(";") && !p.at(T.EOF)) p.next();
+                }
+                if (p.at(";")) { p.next(); return; }
+                List<String> body = parseBlock();
+                emitConstructor(params, body);
                 return;
+            }
+            String typeParams = "";
+            if (p.at("<")) {
+                typeParams = parseTypeParams();
             }
             String typeName = parseType();
             String memberName = p.next().text;
             if (p.at("(")) {
-                // method or constructor
+                // method
                 List<String> params = parseParams();
-                boolean isConstructor = memberName.equals(className);
-                if (p.at(";")) { p.next(); return; } // abstract/native signature
+                // `throws E1, E2` — Kof não declara throws (exceções são
+                // Strings, sempre propagáveis) → consumir e descartar.
+                if (p.at("throws")) {
+                    p.next();
+                    while (!p.at("{") && !p.at(";") && !p.at(T.EOF)) p.next();
+                }
+                if (p.at(";")) {
+                    // Método sem corpo (`abstract`/`native`) em CLASSE: Kof
+                    // não tem — toda função tem corpo. Antes era dropado em
+                    // SILÊNCIO → a chamada virava SEM011 (Kof inválido), Q4.
+                    throw new TranslateException(
+                            "método sem corpo (`abstract`/`native` `" + memberName + "`) em classe "
+                            + "não tem equivalente em Kof (toda função tem corpo) — revisão manual");
+                }
                 List<String> body = parseBlock();
-                emitMethod(isStatic, isConstructor, typeName, memberName, params, body);
+                emitMethod(isStatic, typeName, className, memberName, typeParams, params, body);
             } else {
                 // field: "Type name [= expr];"
                 String init = "";
                 if (p.at("=")) {
                     p.next();
+                    if (p.at("{")) {
+                        // Array initializer em CAMPO `int[] xs = {1,2,3}` — mesmo
+                        // gap honesto do local (TranslateStatements); sem o guard
+                        // o output saía TRUNCADO (`Int[] xs = {`) = Kof inválido
+                        // (bug latente achado 13/09 no probe Q4).
+                        throw new TranslateException(
+                                "array initializer `{...}` não tem equivalente direto em Kof "
+                                + "(use `new Int[n]` + atribuições ou `listOf(...)`) — revisão manual");
+                    }
                     init = " = " + parseExpr();
                 }
-                while (!p.at(";")) p.next();
-                p.next();
-                if (isStatic) return; // static field → skip (no top-level state in Kof)
-                out.append("    ").append(kofType(typeName)).append(' ').append(memberName).append(init).append('\n');
+                while (!p.at(";") && !p.at(T.EOF)) p.next();
+                if (p.at(";")) p.next();
+                // Campo estático Java → `static` em Kof (Kof suporta campo
+                // estático de classe — verificado 13/09: `static Int X = 5` +
+                // `A.X` compila e roda). Antes era SKIPADO silenciosamente →
+                // referência virava `Undefined variable or type: 'X'`
+                // (SEM011) = Kof inválido (bug latente Q4).
+                out.append("    ").append(isStatic ? "static " : "")
+                   .append(TranslateTypes.kofType(typeName)).append(' ').append(memberName).append(init).append('\n');
             }
         }
 
-        private void emitMethod(boolean isStatic, boolean isConstructor, String retType,
-                                String name, List<String> params, List<String> body) {
+        private void emitConstructor(List<String> params, List<String> body) {
+            out.append("    constructor(").append(paramList(params)).append(") {\n");
+            for (String stmt : body) out.append("        ").append(stmt).append('\n');
+            out.append("    }\n");
+        }
+
+        private void emitMethod(boolean isStatic, String retType, String owner,
+                                String name, String typeParams, List<String> params, List<String> body) {
             StringBuilder sb = isStatic ? topFns : out;
-            if (isConstructor) {
-                sb.append("    constructor(").append(paramList(params)).append(") {}\n");
-                return;
+            // Função hoisted: refs a campo estático ficam fora de escopo →
+            // qualifica `X` → `Owner.X` (o Kof aceita `Classe.campo`).
+            java.util.Set<String> shadowed = new java.util.HashSet<>();
+            for (String prm : params) {
+                int sp = prm.lastIndexOf(' ');
+                shadowed.add(sp >= 0 ? prm.substring(sp + 1) : prm);
+            }
+            List<String> emitBody = new ArrayList<>(body.size());
+            for (String stmt : body) {
+                emitBody.add(isStatic
+                        ? TranslateStatics.qualify(stmt, owner, staticFields, shadowed)
+                        : stmt);
             }
             if (isStatic && name.equals("main")) {
-                // Java main(String[] args) → top-level Kof main()
-                sb.append("main() {\n");
-                for (String stmt : body) sb.append("    ").append(stmt).append('\n');
+                // Java `main(String[] args)` → top-level Kof `main(args)`.
+                // Bug latente (Q4 13/09): os parâmetros eram DESCARTADOS
+                // (`main()`), mas o corpo podia referenciar `args` → Kof
+                // inválido (SEM011 silencioso). Kof aceita `main(String[] args)`
+                // (verificado no binário: `println(args.length)` roda e dá 0).
+                sb.append("main(").append(paramList(params)).append(") {\n");
+                for (String stmt : emitBody) sb.append("    ").append(stmt).append('\n');
                 sb.append("}\n");
                 return;
             }
-            sb.append("    ").append(kofType(retType)).append(' ').append(name)
-              .append('(').append(paramList(params)).append(')');
-            if (body.size() == 1 && body.get(0).startsWith("return ")) {
-                String expr = body.get(0).substring("return ".length());
+            sb.append("    ").append(TranslateTypes.kofType(retType)).append(' ').append(name)
+              .append(typeParams).append('(').append(paramList(params)).append(')');
+            if (emitBody.size() == 1 && emitBody.get(0).startsWith("return ")) {
+                String expr = emitBody.get(0).substring("return ".length());
                 sb.append(" = ").append(expr).append('\n');
             } else {
                 sb.append(" {\n");
-                for (String stmt : body) sb.append("        ").append(stmt).append('\n');
+                for (String stmt : emitBody) sb.append("        ").append(stmt).append('\n');
                 sb.append("    }\n");
             }
         }
 
-        // ── statements ─────────────────────────────────────────────────────
-
-        private List<String> parseBlock() {
-            p.expect("{");
-            List<String> stmts = new ArrayList<>();
-            while (!p.at("}")) {
-                stmts.add(parseStatement());
-            }
-            p.expect("}");
-            return stmts;
-        }
-
-        private void skipBlock() {
-            p.expect("{");
-            int depth = 1;
-            while (depth > 0) {
-                if (p.at("{")) depth++;
-                if (p.at("}")) depth--;
-                p.next();
-            }
-        }
-
-        private String parseStatement() {
-            if (p.at("{")) {
-                List<String> body = parseBlock();
-                StringBuilder sb = new StringBuilder("{ ");
-                for (String s : body) sb.append(s).append(' ');
-                return sb.append('}').toString().trim();
-            }
-            if (p.at("return")) {
-                p.next();
-                if (p.at(";")) { p.next(); return "return"; }
-                String e = parseExpr();
-                p.expect(";");
-                return "return " + e;
-            }
-            if (p.at("if")) {
-                p.next();
-                p.expect("(");
-                String cond = parseExpr();
-                p.expect(")");
-                String thenBranch = parseStatement();
-                String out = "if (" + cond + ") { " + thenBranch + " }";
-                if (p.at("else")) {
-                    p.next();
-                    String elseBranch = parseStatement();
-                    out += " else { " + elseBranch + " }";
-                }
-                return out;
-            }
-            if (p.at("while")) {
-                p.next();
-                p.expect("(");
-                String cond = parseExpr();
-                p.expect(")");
-                String body = parseStatement();
-                return "while (" + cond + ") { " + body + " }";
-            }
-            if (p.at("for")) {
-                return parseFor();
-            }
-            // local variable declaration or expression statement.
-            return parseExprOrDecl();
-        }
-
-        private String parseFor() {
-            p.next();
-            p.expect("(");
-            if (forHasColon()) {
-                // enhanced for: [Type] ident ':' expr
-                String type = parseType();
-                String varName = p.next().text;
-                p.expect(":");
-                String coll = parseExpr();
-                p.expect(")");
-                String body = parseStatement();
-                return "for (var " + varName + " in " + coll + ") { " + body + " }";
-            }
-            String init = "";
-            if (!p.at(";")) init = parseForInit();
-            p.expect(";");
-            String cond = "";
-            if (!p.at(";")) cond = parseExpr();
-            p.expect(";");
-            String incr = "";
-            if (!p.at(")")) incr = parseExpr();
-            p.expect(")");
-            String body = parseStatement();
-            return "for (" + init + "; " + cond + "; " + incr + ") { " + body + " }";
-        }
-
-        private boolean forHasColon() {
-            int depth = 0;
-            for (int i = p.pos; i < p.toks.size(); i++) {
-                String t = p.toks.get(i).text;
-                if (t.equals("(")) depth++;
-                else if (t.equals(")")) { if (depth == 0) return false; depth--; }
-                else if (depth == 0 && t.equals(":")) return true;
-                else if (depth == 0 && t.equals(";")) return false;
-            }
-            return false;
-        }
-
-        private String parseForInit() {
-            if (isPrimitiveOrType(p.peek().text) && p.peek(1).type == T.IDENT) {
-                p.next(); // type
-                String name = p.next().text;
-                String expr = "";
-                if (p.at("=")) { p.next(); expr = parseExpr(); }
-                return "var " + name + (expr.isEmpty() ? "" : " = " + expr);
-            }
-            return parseExpr();
-        }
-
-        private String parseExprOrDecl() {
-            int save = p.pos;
-            // Detect "Type name [= expr];"   — but also plain "name = expr;" 
-            // Consume first ident; if next is an identifier (not operator) it's a decl.
-            if (isPrimitiveOrType(p.peek().text) && p.peek(1).type == T.IDENT) {
-                p.next(); // type
-                String name = p.next().text;
-                if (p.at("=")) {
-                    p.next();
-                    String e = parseExpr();
-                    p.expect(";");
-                    return "var " + name + " = " + e;
-                }
-                p.expect(";");
-                return "var " + name;
-            }
-            p.pos = save;
-            String e = parseExpr();
-            p.expect(";");
-            return e;
-        }
     }
 
     private static String optionValue(String[] args, String opt) {

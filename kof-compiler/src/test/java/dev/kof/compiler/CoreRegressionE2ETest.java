@@ -666,6 +666,29 @@ class CoreRegressionE2ETest {
                 """, "8\n5\n1\n30\n15\n10\n10", tempDir, "compound-order");
     }
 
+    // §172 — compound SHIFT assignments (`<<=`, `>>=`, `>>>=`) were parsed
+    // but the lowering never recognized them as compound (only +=,-=,*=,/=,
+    // %=,&=,|=,^=): they fell into the plain-assignment path and stored just
+    // the RHS (`x = 6; x <<= 2` produced 2, not 24) — silent miscompilation
+    // found 13/09 while hunting Q4 in the translator, which emits `<<=`.
+    // A 2ª face (achada no gate da lane bugs-and-gaps): o RHS largo não era
+    // narrowado p/ int — `g = 1L; g <<= 40L` emitia `lshl` (long,long) →
+    // VerifyError; fechada pelo `emitCompoundRhsConv` (L2I).
+    @Test
+    void compoundShiftAssignments(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                main() {
+                    var a = 6; a <<= 2; println(a)
+                    var b = 6; b >>= 1; println(b)
+                    var c = -8; c >>>= 1; println(c)
+                    var d = 6; d &= 3; println(d)
+                    var e = 6; e |= 8; println(e)
+                    var f = 6; f ^= 1; println(f)
+                    var g = 1L; g <<= 40L; println(g)
+                }
+                """, "24\n3\n2147483644\n2\n14\n7\n1099511627776", tempDir, "compound-shift");
+    }
+
     // known-bugs #27 — String.valueOf(char) parity: JVM/Native return the UTF-8
     // char ("h"); JS was returning the numeric codepoint ("104"). Now aligned.
     @Test
@@ -740,6 +763,80 @@ class CoreRegressionE2ETest {
         assertTrue(rjs.success(), "JS compile failed: " + rjs.diagnostics().getDiagnostics());
     }
 
+    // known-bugs §174 — `return`/`throw` dentro de um `if` dentro do `try`
+    // deixava o KofCatchStart solto no statement level (COMP002): o
+    // JsIfThrowElse.parseElse consumia o endLabel do try envolvente ao tratar
+    // o then incondicional como if-else. JVM/Native/Script já funcionavam.
+    @Test
+    void returnInsideIfInsideTryJs(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                String f(String s) {
+                    try {
+                        if (s == "x") { return "X" }
+                        return "Y"
+                    } catch (String e) { return "ERR" }
+                }
+                String g(String s) {
+                    try {
+                        if (s == "x") { throw "boom" }
+                        return "Y"
+                    } catch (String e) { return "caught:" + e }
+                }
+                main() {
+                    println(f("x"))
+                    println(f("z"))
+                    println(g("x"))
+                    println(g("z"))
+                }
+                """, "X\nY\ncaught:boom\nY", tempDir, "tryifreturn");
+    }
+
+    // known-bugs §176 — compound em ELEMENTO de array (`values[0] += 5`,
+    // `a[0] <<= 2`, `d[0] += 0.25`) no KofJS: o op `KofDup2` não constava em
+    // `isExpressionOp`, então o parser abortava antes de consumir o par
+    // [array,index] (`COMP002 unexpected op ... KofDup2`). JVM/Native/Script ok.
+    @Test
+    void compoundOnArrayElementJs(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                main() {
+                    var a = new Long[2]
+                    a[0] = 10L
+                    a[0] += 5L
+                    a[1] = 3L
+                    a[1] <<= 2
+                    println(a[0])
+                    println(a[1])
+                    var d = new Double[1]
+                    d[0] = 1.5
+                    d[0] += 0.25
+                    println(d[0] == 1.75)
+                    var i = new Int[1]
+                    i[0] = 10
+                    i[0] += 5
+                    println(i[0])
+                }
+                """, "15\n12\ntrue\n15", tempDir, "arrcompound");
+    }
+
+    // known-bugs §176 — lambda com `var` local + `return x` no corpo: a
+    // varredura de tipo de retorno não enxergava os locais declarados no
+    // corpo, então a lambda tipava VOID e o backend descartava o valor
+    // (JVM VerifyError `Bad type on operand stack`, Native `0`, Script
+    // `Long.valueOf/1`, JS COMP002). O JVM/Native/Script/JS agora concordam.
+    @Test
+    void lambdaReturnLocalVar(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                main() {
+                    val f = () -> { var x = 1L; x++; return x }
+                    println(f())
+                    val g = (y: Int) -> { var z = y + 1; return z * 2 }
+                    println(g(4))
+                    val s = () -> { var t = "hi"; return t }
+                    println(s())
+                }
+                """, "2\n10\nhi", tempDir, "lambdalocal");
+    }
+
     // known-bugs #51 — CompilerDriver reutilizado vazava classes sintéticas
     // (syntheticClasses/lambdaCounter não resetavam): compilar programa com
     // spawn e DEPOIS outro sem spawn no MESMO driver quebrava o link Native
@@ -808,7 +905,81 @@ class CoreRegressionE2ETest {
         assertEquals("fin\n1", runJs(outJs), "JS finally+return output mismatch");
     }
 
-    // known-bugs #5/#24 — FP→Int/Long casts and Double→Float narrowing were
+    // known-bugs #45 — JVM/Native/interp: DD-01 opção 4a (13/09) — FinallyFrame
+    // na IR: return no try/catch salta o finally, que termina loadando #retVal.
+    // JVM agora roda fin e preserva 1; interpretador idem (mesma IR).
+    @Test
+    void finallyReturnJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("finretjvm.kf");
+        Files.writeString(src, """
+                Int f() {
+                    try { return 1 } finally { println("fin") }
+                }
+                Int g() {
+                    try { throw "x" } catch (String e) { return 2 } finally { println("fin2") }
+                }
+                Void h() {
+                    try { return } finally { println("fin3") }
+                }
+                main() {
+                    println(f())
+                    println(g())
+                    h()
+                }
+                """);
+        Path outJvm = tempDir.resolve("jvm");
+        CompilationResult rjvm = driver.compile(src, outJvm, Target.JVM);
+        assertTrue(rjvm.success(), "JVM compile failed: " + rjvm.diagnostics().getDiagnostics());
+        assertEquals("fin\n1\nfin2\n2\nfin3", runJvm(outJvm), "JVM finally+return output mismatch");
+    }
+
+    // known-bugs §131 (decisão 10a, 13/09) — sobrecarga de MÉTODO por
+    // aridade/assinatura na mesma classe. Antes: SEM013 no JVM (só o último
+    // def sobrevivia na symtable) e `symbol B_m is already defined` no
+    // nativo (vtable dedup por nome + .globl colidindo). Agora: MethodSet
+    // na symtable + vtable com slot próprio por assinatura.
+    // Cenários Q3: aridade 1 e 2, chamada interna this.m(a,1), ordem de defs.
+    @Test
+    void methodOverloadByArity(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                class B {
+                    Int m(Int a) { return this.m(a, 1) }
+                    Int m(Int a, Int b) { return a + b }
+                }
+                main() {
+                    var b = B()
+                    println(b.m(5))
+                    println(b.m(5, 2))
+                }
+                """, "6\n7", tempDir, "method-overload");
+    }
+
+    // known-bugs §89 (decisão 3a, 13/09) — conversão numérica em receiver
+    // primitivo (n.toInt()/toDouble()/toFloat()/toLong()) = alias do `as`
+    // (trunc para zero, paridade JVM). Antes: JVM compilado quebrava
+    // (ClassFormatError owner "") e nativo dava undefined reference.
+    // Cenários Q3: trunc (3.7→3), negativo (-2.5→-2), toLong, Float round-trip,
+    // String.toInt NÃO é afetado (dispatch próprio antes).
+    @Test
+    void numericConvertMethodAliasOfAs(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                main() {
+                    var d = 3.7
+                    println(d.toInt())
+                    var d2 = -2.5
+                    println(d2.toInt())
+                    var n = 7
+                    println(n.toLong())
+                    var d3 = 2.5
+                    println(d3.toFloat())
+                    var n2 = 5
+                    var dd = n2.toDouble()
+                    println(dd == 5.0)
+                }
+                """, "3\n-2\n7\n2.5\ntrue", tempDir, "num-convert-alias");
+    }
+
+    // The wide parameter belongs to an instance method (slot 0 is `this`), so
     // missing conversion ops → invalid bytecode (ClassFormatError). Now D2I/
     // F2I/D2L/F2L (truncate toward zero) and D2F are emitted.
     @Test

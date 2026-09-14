@@ -92,6 +92,13 @@ class KofScriptTest {
 
     @Test
     void evalNativeTarget() throws Exception {
+        // Regressão #113: este é o caminho onde o bug do GC aparece. O
+        // KofScript roda fora do módulo kof-compiler, então o prune de fatias
+        // do runtime cai no fallback (emite o runtime COMPLETO, incluindo
+        // RuntimeGc) — se NativeBackend.emit não emitir kof_heap_root_start, o
+        // ld quebra com "undefined reference" no menor programa nativo. O mesmo
+        // programa no kof-compiler passa porque lá o prune remove a fatia GC;
+        // por isso o teste de regressão mora AQUI.
         Path tmp = Files.createTempDirectory("nativetest");
         Path f = tmp.resolve("Main.kf");
         Files.writeString(f, "main() { println(7) }");
@@ -284,7 +291,7 @@ class KofScriptTest {
      * semântica do bytecode em superfícies além dos 16 casos do gate.
      *
      * GRUPO B (complementar): casos onde o caminho COMPILADO tem bug
-     * pré-existente registrado em docs/known-bugs.md (VerifyError do
+     * pré-existente registrado em docs/bugs-and-gaps/known-bugs.md (VerifyError do
      * emitter/lowering) — aqui o interpretador é o oráculo e o teste trava
      * a saída CORRETA dele, documentando o bug do compilado.
      */
@@ -345,7 +352,7 @@ class KofScriptTest {
     /**
      * Grupo B (estrutura pronta p/ regressões): casos onde o caminho
      * COMPILADO tem bug pré-existente (VerifyError do emitter/lowering,
-     * docs/known-bugs.md) e o interpretador é o oráculo — trava a saída
+     * docs/bugs-and-gaps/known-bugs.md) e o interpretador é o oráculo — trava a saída
      * correta enquanto o compilado espera correção. VAZIO desde 06/09:
      * empty-list (bug 35) e null-eq (bug 36) foram CORRIGIDOS no compilado
      * e promovidos ao grupo A (paridade total).

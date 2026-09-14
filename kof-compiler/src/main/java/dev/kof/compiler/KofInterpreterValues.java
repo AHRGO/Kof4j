@@ -99,7 +99,7 @@ public final class KofInterpreterValues {
         if (a instanceof Number x && b instanceof Number y) {
             if (a instanceof Long || b instanceof Long) return x.longValue() == y.longValue();
             if (a instanceof Double || b instanceof Double || a instanceof Float || b instanceof Float) {
-                return Double.compare(x.doubleValue(), y.doubleValue()) == 0;
+                return x.doubleValue() == y.doubleValue();
             }
             return x.intValue() == y.intValue();
         }
@@ -126,5 +126,32 @@ public final class KofInterpreterValues {
             case "int", "char", "bool", "byte", "short" -> v instanceof Number n ? n.intValue() : v;
             default -> v;
         };
+    }
+
+    /**
+     * Monta o array de locais de um frame a partir dos argumentos compactos:
+     * `this` no slot 0 (quando `hasThis`) e cada parâmetro no slot REAL da IR
+     * — `Double`/`Long` ocupam DOIS slots, igual ao bytecode JVM
+     * ({@link TypeMetrics#isDoubleWidth}). Copiar `args` contíguo colocava o
+     * 2º parâmetro largo no índice errado (lido como `null`) — §163.
+     *
+     * @param minSize tamanho já exigido pelos locais que a IR toca
+     */
+    static Object[] bindLocals(IRMethod m, Object[] args, boolean hasThis, int minSize) {
+        int size = minSize;
+        int paramExtent = hasThis ? 1 : 0;
+        for (Type pt : m.parameterTypes()) paramExtent += TypeMetrics.isDoubleWidth(pt) ? 2 : 1;
+        if (paramExtent > size) size = paramExtent;
+        Object[] locals = new Object[size];
+        int argi = 0;
+        int slot = 0;
+        if (hasThis && argi < args.length) locals[slot++] = args[argi++];
+        for (Type pt : m.parameterTypes()) {
+            if (argi >= args.length) break;
+            locals[slot] = args[argi++];
+            slot += TypeMetrics.isDoubleWidth(pt) ? 2 : 1;
+        }
+        for (; argi < args.length; argi++) locals[slot++] = args[argi];
+        return locals;
     }
 }

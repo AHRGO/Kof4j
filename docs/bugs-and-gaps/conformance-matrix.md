@@ -1,0 +1,308 @@
+# Conformance Matrix — Feature × Target (Fase 9, plano de plataforma)
+
+> **Criado:** 07/09/2026 · **Dono:** lane KOFSCRIPT (fixes-for-kofagent)
+> **Plano:** Fase 9 (ex-PLATFORM-PLAN; decisão registrada em `docs/development/DECISIONS.md` §D-PLATFORM) ·
+> **Roadmap-audit:** linha 12 "Conformance Suite — NOT STARTED (BackendParityTest é proxy)" + fila P4.
+>
+> **Regra:** cada célula é travada por teste em `ConformanceMatrixTest`
+> (kof-compiler/src/test). **DONE** = os 4 targets concordam com a saída
+> esperada. **PARTIAL** = divergência com bug registrado em
+> `docs/bugs-and-gaps/known-bugs.md` (ref na célula). **UNSUPPORTED** = gap
+> honesto (R6: diagnóstico, nunca stub silencioso).
+>
+> Targets: **JVM** (bytecode compilado), **Native** (x86_64 ELF; riscv64/
+> aarch64 via qemu = follow-up), **Script** (interpretador de IR — o alvo
+> de execução direta), **KofJS** (GraalJS). Casos determinísticos apenas:
+> (a) linguagem sem efeito colateral; (b) concorrência com ordem garantida
+> por `await`/FIFO (lote 3). O que tem ordem NÃO-garantida (fire-and-forget
+> sem `await`) e o que depende de tempo real (sleep/interval) ficam em
+> `KofConcurrency2Test`/`KofTimeE2ETest`/`KofMqE2ETest` com asserções
+> frouxas — não entram na matriz.
+
+## Matriz (lote 1 — linguagem core)
+
+| Feature | Saída esperada | JVM | Native | Script | KofJS | Caso (ConformanceMatrixTest) |
+|---|---|---|---|---|---|---|
+| aritmética int + overflow | `-2147483648` / `-1` / `1` | DONE | DONE | DONE | DONE | `arith` |
+| long div/mod | `3333333333` / `4` | DONE | DONE | DONE | DONE | `longdiv` |
+| conversão numérica em primitivo `n.toInt()/toLong()/toDouble()/toFloat()` (§89, decisão 3a) | `true` / `3` / `-2` / `5` / `2.5` | DONE | DONE (residual fora-de-faixa = §181) | DONE | DONE (residual fora-de-faixa = §181) | `numconv` |
+| `Double %` (mod de variáveis; + NaN/±Inf) | `1.5` / `1.0` / `0.5` / `-1.5` / `NaN` | DONE | DONE (bug 146 ✅ 12/09 `718ae5cf` — `NativeX86Arith` emite o fmod real) | DONE | PARTIAL (test exclui js; §146 shape `JsBackend`) | `doublemod` |
+| cast `d as Int` / `L as Int` / `66 as Char` | `9` / `70000` / `66` | DONE | DONE | DONE | DONE | `cast` |
+| cast FP→Int/Long FORA de faixa/NaN/Inf (JLS 5.1.3 satura) | `2147483647` / `0` / `2147483647` / `9223372036854775807` / `0` / `9223372036854775807` | DONE | PARTIAL (bug §181 — `cvttsd2si` cru: `3.0e9 as Int` → `-2147483648`; `NaN`→`INT_MIN`; `1.0e19 as Long`→`Long.MIN`) | DONE | PARTIAL (bug §181 — `Math.trunc`/`BigInt` sem saturação: `3.0e9 as Int`→`3000000000`, `NaN as Int`→`NaN`; `NaN as Long` **lança `RangeError`**) | `castrange` |
+| float println | `0.3333333333333333` / `5.0` / `3.5` | DONE | DONE (bug 44 ✅ 10/09 x86) | DONE | PARTIAL (doc: `5` vs `5.0`) | `floatprint` |
+| double println shortest-repr + científico | `0.30000000000000004` / `1.0E7` / `1.0E-5` / `33.333333333333336` / `0.33333334` / `1.0E20` / `NaN` | DONE | PARTIAL (bug §180 — `%.16g` trunca p/ `0.3`/`10000000.0`/`1e-05`; Float vira expansão double `0.3333333432674408`; `-nan` de libm fica `-nan`) | DONE | PARTIAL (doc: `Number.toString` não emite `.0`/científico no limiar JDK) | `doubleprint` |
+| infinity/NaN println+String.valueOf | `Infinity` / `-Infinity` / `NaN` | DONE | DONE (bug 44 residual ✅ 11/09 x86) | DONE | PARTIAL (doc: `5` vs `5.0`) | `infinityprint` |
+| String.equals(não-String) → false | `true` / `false` / `false` / `false` | DONE | DONE (bug 100 ✅ 11/09 x86 — era SIGSEGV/vazio) | DONE | DONE (fold `false`) | `equalsfold` |
+| indexOf/lastIndexOf/startsWith `from` | `-1` / `3` / `-1` / `2` / `true` / `false` | DONE | DONE (bug 102 ✅ 11/09 x86 — era ignorado) | DONE | DONE (nativo) | `searchfrom` |
+| record em coleção (contains/set/map/toString por conteúdo) | `true` / `true` / `7` / `[Point[x=1, y=2]]` | DONE | PARTIAL (era LINK_FAIL §104b-i ✅ CORRIGIDO 11/09; o que BLOQUEIA AGORA é §104b-ii — equals/hashCode por CONTEÚDO de record no storage asm nativo, lane bugfixer, unidade GRANDE; vtable/link já ok) | DONE (bug 104a ✅ 11/09 — KofObj sem override → identidade) | DONE (bug 104c ✅ 11/09 — `kofValEq` conteúdo p/ record via `.equals` sintético; Map/Set/List lookup por conteúdo) | `objmethods` |
+| `println(coleção)` formato do contêiner | `[1, 2]` / `[a, b]` / `[1.5, 2.25]` / `{k=1}` / `[1]` / `[Point[..], Point[..]]` / `[[1], [2]]` | DONE | PARTIAL (**bug 107 CORRIGIDO 12/09** — era lixo de ponteiro cru/vtable `-1`; `kof_{list,set,map}_to_string` + tag compile-time nos 3 targets nativos, golden JVM byte-idêntico p/ escalares int/string/bool/long/char e Map/empty; restam record/aninhado=`?` HONESTO até §104b-ii e FP-coleção no cross=FLT001 em compilação — nunca mais lixo silencioso; `Native{,Riscv64,Aarch64}E2ETest#*CollectionPrint*`) | DONE | DONE (bug 107-JS ✅ 11/09 — `kofFormat` espelha ArrayList/HashMap/HashSet.toString) | `collprint` |
+| classe não-record: `equals`/`==` por identidade | `false` / `true` / `false` / `true` | DONE | DONE (bug 104b-i ✅ 11/09 — era LINK_FAIL: `Object.equals` herdado sem símbolo; síntese de identidade) | DONE | DONE (nativo JS) | `classequals` |
+| `map.get` com valor primitivo (guard do unbox) | `true`/`true`/`8`/`9000000001`/`true`/`97`/`false` | DONE (bug 109 ✅ 11/09 — era JVM CRASH: `Boolean.intValue()Z` → `NoSuchMethodError`; `unboxMethodName` só tratava ClassType; §104b-ii JVM 11/09: char guardava `Integer` mas unbox chamava `charValue()/()C` inexistente — unbox agora coerente com a caixa) | DONE (bug 104b-ii ✅ 11/09 — era SIGSEGV/`a`: `println(char-em-coleção)`; `ExpressionPrintLowerer` mapeava char→Int só p/ CHAR cru, nunca `Nullable(CHAR)`; cast `as Char` pinava `Unknown` no `mapOf` — SemExpressionTyper agora espelha o repair do ExpressionTyper) | DONE | DONE (`d*2`→predicado `d>1.0` p/ não colidir com floatprint §44) | `mapgetprim` |
+| signed zero (`-0.0` literal/negado/foldado) | `0.0` / `-0.0` / `-0.0` / `-0.0` / `-0.0` / `true` | DONE (bug 110 ✅ 11/09 — era `0.0`: `emitLoadDouble/Float` colapsava -0.0 em `DCONST_0` via `value == 0.0` IEEE) | DONE (guard raw bits sempre presente) | DONE | PARTIAL (doc §44: JS `String(-0.0)` = `0` sem `.0`) | `negzero` |
+| `split` remove trailing-empties (Java, não JS) + `substring(0,0)` | `1` / `0` / `2` / `1` / `3` / `0` / `llo` / `0` | DONE (oracle Java) | DONE (bug 111 ✅ 11/09 x86 — era `2`/`3`/`3`; trim no `.Lkof_split_done`; substring sentinela 0→-1) | DONE | DONE (bug 111 ✅ 11/09 — era trailing-preserve JS; helper `kofSplit`) | `strsplit` |
+| `put`/`remove` devolvem prev (null-safe p/ primitivo) + `set.add` | `false/true/3/true/false/1/2/2/0/0` | DONE (bug 112 ✅ 11/09 — era **VerifyError** no put e **NPE** no remove-miss; `emitPrevValueUnbox` guard) | DONE (bug 112 ✅ 11/09 — remove-miss **SIGSEGV**: `kof_map_remove` rota de miss dava 3 popq p/ 5 pushq; guard do unbox já existia) | DONE (bug 112 ✅ 11/09 — `s.add` já-presente devolvia **true** (add+contains) e NPE no remove-miss; `prevOrDefault` + `HashSet.add` real) | DONE (bug 112-JS ✅ 11/09 — era `null`: prev ausente embrulhado em `?? default` no handler map + `KofPop` estendido p/ preservar o side-effect embrulhado) | `mapmutret` |
+| string unicode length/charAt | `4` / `233` / `café!` | DONE | DONE (bug 43 ✅ 10/09 x86) | DONE | DONE | `unicode` |
+| string unicode astral (surrogate pair) | `4` / `55357` / `56832` / `98` | DONE | DONE (bug 43 ✅ 10/09 x86) | DONE | DONE | `unicode-astral` |
+| string unicode substring (code units, fronteiras bem-formadas) | `afé` / `é` / `😀` / `3` / `b` | DONE | DONE (bug 43 ✅ 10/09 x86) | DONE | DONE | `unicode-substring` |
+| string unicode indexOf/lastIndexOf (code units) | `6` / `-1` / `4` / `3` | DONE | DONE (bug 43 ✅ 10/09 x86) | DONE | DONE | `unicode-indexof` |
+| string ops split/toLowerCase/trim | `4` / `hello world` / `x\|` | DONE | DONE | DONE | DONE | `strops` |
+| `String.isEmpty()` (+ trim-composto, `!isEmpty` em if) | `false` / `false` / `true` / `ok` | DONE (bug 145 ✅ 12/09 `718ae5cf` — `isEmpty` no registro de String) | DONE | DONE | DONE | `strisempty` |
+| map put/get/size | `1` / `2` | DONE | DONE | DONE | DONE | `map` |
+| `Set.remove` por valor (String no índice 0 + Int) | dedup + `true`/`false`/tamanho corretos | DONE | DONE (bug 129 ✅ 11/09 — era silent-corruption: `kof_set_remove` passava a TAG (r13) como índice ao `kof_list_remove`, apagando o vizinho) | DONE | DONE | `setdedup` |
+| `Map<Int,V>` put/get/remove + get-miss `null` | `um`/`dois`/`2`/`um`/`null` | DONE | DONE (bug 123 ✅ 11/09 — era **SIGSEGV**: `kof_map_find` com `kof_string_equals` no chave Int → ponteiro; tag de chave no header off 40, espelhando o Set) | DONE (bug 124 ✅ 11/09 — era NPE "value is null": `println` do miss baixava `valueOf(Unknown)`, o scorer do `invokeExternal` empatava `valueOf(char[])`/`valueOf(Object)` e pegava o array) | DONE | `mapint` |
+| chave errada como ARG de query (Map/Set/List) | `null`/`false`/`false`/`0` | DONE | DONE (bug 126 ✅ parcial 11/09 — era SIGSEGV no arg do tipo errado; tag é CONJUNÇÃO elem×arg: String-equals só quando ambos String, senão raw cmpq = miss como o JVM) | DONE | DONE (bug 127 ✅ 12/09 — get-miss de valor primitivo embrulha `?? default` no lowering; Bool-miss agora `false`, não `0`) | `wrongkey` |
+| `println(f())` c/ `T? f()` null + `f()==null` direto (primitivo) + ramo null if/switch (`Int? f() = if(c) x else null`) + `"a" + f()` nullable | `0` / `false` / `0` / `6` / `false` ×4 + `7/0/0/false` + `a0/0b` | DONE (bug 125 ✅ 12/09, decisão A — era VerifyError: `Int? f(){...}` emitia descritor `I` + `ARETURN` + `aconst_null.intValue`; agora return de `Nullable(primitivo)` apaga p/ o default do primitivo, mesmo precedente do map-miss SG-008; isDoubleWidth desempacota Nullable p/ POP2 correto em `Long?`/`Double?`) | DONE (bug 125 ✅ 12/09 — já imprimia `0`, alinhado) | DONE (bug 125 ✅ 12/09 — era NoSuchMethodError `Integer.valueOf/1` no boxing do null) | DONE (bug 125 ✅ 12/09 — imprimia `null`, agora `0`; o PRINT de `Double?` fica fora da célula = floatprint §44, valor correto. bug 139 ✅ 12/09 — era COMP002 "stack underflow" na forma-DIRETA `f() == null`: o fold `call;POP;false` não tinha contrapartida no parser JS; descarte mid-expression agora consome o topo e preserva side-effect no preamble. **EXTENSÃO 12/09:** ramo `null` de if/switch em retorno/slot `Nullable(primitivo)` (`Int? f() = if(c) x else null`) dava VerifyError JVM + `Integer.valueOf/1` Script (o fold `isNullablePrimNullReturn` só pegava literal no topo); `foldNullablePrimBranches` colapsa o ramo p/ default → 4/4 `7/0/0/false` (`var`/`val` inferido intocado = §68a) | `nullableprint` |
+| list empty/isEmpty/contains | `true` / `0` / `false` | DONE | DONE | DONE | DONE | `emptylist` |
+| widening abençoado §126 em escrita de List pinada (`listOf(1L).add(3)` / `.set`) | `3` / `4` / `3` | DONE (bug 143 ✅ 12/09 — era VerifyError: o box do store era pelo tipo PINADO sobre arg cru width-1; `coerceStoreWiden` aplica o §121/array-store p/ coleção) | DONE (bug 143 ✅ 12/09 — heap nativo já 8-byte, I2L é no-op de semântica; imprimia certo) | DONE (bug 143 ✅ 12/09 — já dava `[1,2,3]`; agora 4/4 idênticos) | DONE (bug 143 ✅ 12/09) | `collwiden` |
+| widening no VALOR do `Map.put` pinado (`mapOf(_,Long).put(_,Int)`) | `2` / `1` | DONE (bug 143 ✅ 12/09 — era VerifyError/CCE no get; coerção + paramTypes ajustado ao tipo pinado) | DONE (bug 143 ✅ 12/09 + bug 142 ✅ 12/09 — o widening nativo já era no-op, mas o `put` como statement descartava o prev `Long` com POP2 de 16 bytes sobre 1 qword empilhado → pisava o local `m` = SIGSEGV; POP2 nativo agora descarta 1 qword) | DONE (bug 143 ✅ 12/09) | DONE (bug 143 ✅ 12/09) | `mapwiden` |
+| `mapOf()` vazio + 1º `put` de valor `Long` (pin-alinha, §157) | `9000000001` / `1` | DONE | DONE | DONE | DONE | `mapputlong` |
+| descarte de expressão `Long`/`Double` (POP2 nativo) | `2` / `false` / `false` | DONE | DONE (bug 142 ✅ 12/09 — era SIGSEGV: `m.put(_,2L)` statement e `d==null`/`x==null`; POP2 herdado do JVM descartava 2 qwords num stack onde todo valor é 1 qword) | DONE | DONE | `longdiscard` |
+| `null == null` / `!=` | `true` / `false` | DONE | DONE | DONE | DONE | `nulleq` |
+| if-expr curto-circuito null | `iguais` / `nao-ne` | DONE | DONE | DONE | DONE | `nulleqshortcut` |
+| set dedup/contains | `3` / `true` / `false` | DONE | DONE | DONE | DONE | `setdedup` |
+| if-expression aninhada | `small` | DONE | DONE | DONE | DONE | `nestedif` |
+| switch-expression `case ->` | `three` | DONE | DONE | DONE | DONE | `switchexpr` |
+| if-expr heterogêneo Int/String (issue #57) | `1` | DONE | DONE | DONE | DONE (bug 69 corrigido) | `ifexpr-heterogeneous-direct` |
+| switch-expr heterogêneo Int/String (issue #57) | `1` | DONE | DONE | DONE | DONE (bug 69 corrigido) | `switchexpr-heterogeneous-direct` |
+| if-expr heterogêneo Int/Long (§70, crash de join) | `1` | DONE | DONE | DONE | DONE (bug 69 corrigido) | `ifexpr-intlong-direct` |
+| if-expr heterogêneo Long/Double (§70) | `2` | DONE | DONE | DONE | DONE (bug 69 corrigido) | `ifexpr-longdouble-direct` |
+| `if` com branch `throw` + `else` (epílogo do método após o if) | `else` / `after` | DONE | DONE | DONE | DONE (bug 147 ✅ 12/09 `718ae5cf` — `JsIfThrowElse` isola o epílogo) | `ifthrowelse` |
+| if-expr heterogêneo Int/null (§70) | `1` | DONE | DONE | DONE | DONE (bug 69 corrigido) | `ifexpr-intnull-direct` |
+| for-in + break/continue | `4` | DONE | DONE | DONE | DONE | `breakcont` |
+| record `==` conteúdo + toString + accessor | `true` / `P[x=1, y=2]` / `1` | DONE | DONE | DONE | DONE | `record` |
+| record `hashCode()` igual | `true` | DONE | DONE (bug 42 Native corrigido) | DONE | DONE (bug 42 JS corrigido `1ecfb3d`) | `recordhash` |
+| record com campo String `==` por conteúdo (null-safe) | `true` / `false` / `true` / `false` | DONE | DONE (bug 114 ✅ 11/09 Native — era **ponteiro** (`S("ab")==S("ab")` false); campo String agora via `kof_string_equals`; campo record aninhado/hash-ref/coleção ficam §104b-ii) | DONE | DONE | `recordstrfield` |
+| lambda filter/map/reduce | `90` | DONE | DONE | DONE | DONE | `lambdachain` |
+| tipo-função como argumento genérico `List<(Int) -> Int>` (§155) | `6` | DONE | DONE | DONE | DONE | `fntypegeneric` |
+| lista heterogênea de lambdas (mesma assinatura, §156) | `10` / `6` | DONE | DONE | DONE | DONE | `lambdalisthet` |
+| cast para tipo-função `x as () -> Int` (§127-JVM) | `true` | DONE | DONE | DONE | DONE | `castfn` |
+| sobrecarga de método de classe por assinatura (§131, decisão 10a) | `42` / `7` | DONE | DONE | DONE | DONE | `methodoverload` |
+| sobrecarga de método de MESMA aridade e tipos diferentes (§131-residual) | `42` / `abab` | DONE | DONE | DONE | DONE | `methodoverloadtype` |
+| parâmetro largo (`Long`) não-primeiro no interpretador (§163) | `10000000002` / `10000000007` / `10000000000` / `10000000005` | DONE | DONE | DONE | DONE | `wideparams` |
+| lambda captura mutável | `3` | DONE | DONE | DONE | DONE | `lambdacapture` |
+| array 2D/3D: alloc + length + store/load + zero-fill | `60`/`3`/`2`/`3`/`0`/`7`/`2`/`2`/`9`/`0` | DONE | DONE (bug 113 ✅ 11/09 x86 — `new Int[a][b]` NÃO alocava nada: `KofNewMultiArray` caía no `default->{}` → SIGSEGV; agora `kof_multi_alloc` recursivo; faces riscv/aarch ✅ 11/09 — fatia B37 + roteio cross, golden JVM sob qemu) | DONE (B37, port 0.3.0→0.4.0 ✅) | DONE (tradutor, ✅) | `array2d` |
+| store `Int` em slot `Long[]` (widening, 1-D e 2-D) | `9` / `3` / `0` | DONE (bug 121 ✅ 11/09 — era **frame crash** no `COMPUTE_FRAMES`: o bloco de conversão do `ExpressionAssignmentLowerer` era um `if {}` que só comentava a promessa, nunca emitia `I2L`) | DONE | DONE | DONE | `arrlongstore` |
+| campo estático + bump | `1` / `2` / `2` | DONE | DONE (bug 41 corrigido 07/09) | DONE | DONE | `staticfield` |
+| campo estático `+=` | `2` / `4` / `4` | DONE | DONE (bug 41) | DONE | DONE | `staticpluseq` |
+| concat string+num (ordem) | `n=42` / `3x` / `x12` | DONE | DONE | DONE | DONE | `concat` |
+| lógica booleana + comparação | `false` / `true` / `false` / `true` | DONE | DONE | DONE | DONE | `boollogic` |
+| bitwise & \|\| ^ << >> | `2` / `7` / `5` / `16` / `64` | DONE | DONE | DONE | DONE | `bitwise` |
+| bitwise/shift com `Long` misturado + overflow 64-bit (§167 ✅ 13/09) | `1` / `7` / `6` / `5` / `4294967295` / `320` / `2` / `-9223372036854775808` / `705032704` … | DONE | DONE | DONE | DONE | `bitwise` (estendido) |
+| incremento `++`/`--`/compound em `Long`/`Double`/`Float` + elemento de array (§173 ✅ 13/09) | `2` / `3` / `2` / `2.5` / `3.5` / `2.5` / `2.5` / `6` / `33` / `35` / `1.25` / `-9223372036854775808` / `8` / `9` / `39` / `8` / `8` / `7` | DONE | DONE | DONE | DONE | `increment` |
+| compound shift `<<=`/`>>=`/`>>>=` com RHS largo (§172 ✅ 13/09) | `24` / `6` / `2147483644` / … / `1099511627776` | DONE | DONE | DONE | DONE | `compound-shift` |
+| stdlib kof.math (S1: clamp/abs/sign/min/max/isEven/isOdd/isZero + `==true`/`==false` §93) | `10` / `0` / `7` / `-1` / `3` / `8` / `true` / `false` / `true` / `true` / `false` | DONE | DONE | DONE | DONE | `stdmath` |
+| stdlib kof.math (S1b: sqrt — primeiro Double; comparações Bool, NaN em <0 = IEEE; riscv/aarch = B32 `fsqrt.d`, MATH001 fechado 11/09; §94 fechado 13/09 — interp agora IEEE) | `true` / `true` / `true` / `true` / `false` / `true` | DONE | DONE | DONE | DONE | `stdsqrt` |
+| stdlib kof.math (S1b.1: lerp/percentage/isInteger/isDecimal — Double puro, SSE2; subset determinístico, NaN só nos compilados via KofMathTest; riscv/aarch = B32, MATH001 fechado 11/09) | `true` ×15 | DONE | DONE | DONE | DONE | `stdmathdouble` |
+| stdlib kof.math (S1b.2: `pow` — primeiro libm no native x86 `pow@PLT` + `-lm`; JVM/JS `Math.pow`; riscv/aarch = MATH001, link estático sem libc) | `true` ×10 | DONE | DONE | DONE | DONE | `stdmathpow` |
+| stdlib kof.math (S13a: `parseInt`/`parseLong`/`parseDouble` — fachada de namespace sobre as runtime fns `kof_string_to_*` EXISTENTES nos 4 backends (regra 2, zero runtime novo); contrato JDK com trim, inválido/overflow lança; Long > 2^53 prova Long real pós-§81 BigInt; Double via == Bool bug 44; cross-arch = B30/B31, golden byte-idêntico sob qemu em KofMathTest.parseCrossArch) | `42` / `-7` / `13` / `0` / `-2147483648` / `9007199254740993` / `-9223372036854775807` / `true` ×3 / `T1`–`T5` | DONE | DONE (cobertura estreita — hex-float/`d`-sufixo rejeitados, bug 82 limite) | DONE | DONE (cobertura estreita — hex-float/`d`-sufixo rejeitados) | `stdmathparse` |
+| stdlib kof.math (S13b: `parse*OrDefault` — briefing §43: falha de parse DEVOLVE o default, nunca lança; backends = JVM try/catch, JS wrapper, x86 wrapper c/ handler no exc_chain, riscv B41 + aarch tradutor; literal Int em param Long prova widening I2L do KofStd; linha `""` do Double fora do golden = §169) | `42` / `-1` / `7` / `15` / `3` / `9007199254740993` / `-5` / `8` / `true` ×3 | DONE | DONE | DONE | DONE | `stdmathparseord` |
+| stdlib kof.strings (S2a: isAlpha/isNumeric/isAlphaNumeric/isAscii/isUpper/isLower/count + `==true` §93) | `true` / `false` / `false` / `true` / `false` / `false` / `true` / `false` / `true` / `true` / `true` / `false` / `true` / `false` / `2` / `1` / `true` | DONE | DONE | DONE | DONE | `stdstrings` |
+| stdlib kof.strings (S2b: capitalize/reverse/repeat/truncate/pad — ASCII) | `Hello world` / `1abc` / `321cba` / `kayak` / `ababab` / `hello` / `abc` / `007` / `ab---` | DONE | DONE | DONE | DONE | `stdstrings2b` |
+| stdlib kof.validation (S12/S12b: formatCpf/formatCep/formatCnpj — pontuação BR, face leniente; formatPis NÃO entra — máscara ambígua = decisão) | `529.982.247-25` / `123` (no-op) / `01310-100` / `34.546.401/0001-63` | DONE | DONE | DONE | DONE | `formatBr*`/`formatCnpj*` (KofValidationTest; riscv/aarch sob qemu, assert) |
+| stdlib kof.strings (S11: uncapitalize — espelho do capitalize, ASCII) | `hello World` / `hELLO` / `1abc` / `hello` | DONE | DONE | DONE | DONE | `uncapitalizeAllTargets` (KofStringsTest; riscv B7 + aarch sob qemu) |
+| stdlib kof.strings (S2b.4: toCamelCase/toPascalCase/toSnakeCase/toKebabCase/slugify — word-split HTTPServer/XMLParser) | `http_server` / `xml_parser` / `helloWorld` / `HelloWorld` / `hello-world` / `hello-world-42` | DONE | DONE | DONE | DONE | `stdstrings2b4` |
+| stdlib kof.validation BR (S5: isCpf/isCnpj/isCep/isPis — pesos aritméticos, mod-11 por subtração; + `==true`/`==false` §93) | `true` / `false` / `true` / `false` / `true` / `false` / `true` / `false` / `true` / `true` | DONE | DONE | DONE | DONE | `stdvalidation` |
+| stdlib kof.validation rede (S6a: isIpv4/isMac/isPort — dotted-quad sem zero à esquerda; MAC 6 hex sep : ou - consistente; porta 1..65535) | `true` / `false` / `false` / `true` / `false` / `true` / `false` | DONE | DONE | DONE | DONE | `stdvalidationnet` |
+| stdlib kof.validation Luhn (S6b: isCreditCard — dígitos extraídos, 12..19, soma de Luhn %10; 20+ dígitos => false) | `true` / `true` / `true` / `false` / `false` / `false` | DONE | DONE | DONE | DONE | `stdluhn` |
+| stdlib kof.validation IPv6 (S6b.3: isIpv6 — subconjunto RFC 5952; '::' no máx uma vez; sem forma mista/zona) | `true` / `true` / `true` / `false` / `false` / `false` | DONE | DONE | DONE | DONE | `stdipv6` |
+| stdlib kof.net (S8: 6 campos URI v1 + fachada query*) | `https\|host.io\|8443\|/p\|q\|f` / `/only/path\|onlyquery` / `a%20b%26c%3D1` / `a b&c=1` | DONE | DONE | DONE | DONE | `stdnet` |
+| stdlib kof.strings unescapeHtml (S3.1b: 5 nomeadas + &#DDD;/&#xHH;→UTF-8; outro & LITERAL; 0/surrogate/overflow LITERAL) | `a&b` / `<x>` / `café` / `☃` / `&&` / `&notreal;` | DONE | DONE | DONE | DONE | `stdunescape` |
+| stdlib kof.strings whitespace (S3.2: removeWhitespace/normalizeWhitespace — WS=9..13+32; >=128 não-WS; colapso p/ 1 espaço) | `abc\|Caféé` / `a b\|a b` / `\|[]` | DONE | DONE | DONE | DONE | `stdws` |
+| stdlib kof.strings escapeHtml (S3.1: 5 entidades; >=128 cópia; null/"" => original) | `a&lt;b&gt;&amp;&quot;&#39;c` / `Café &amp; ç` / `&amp;amp;lt;` / `&lt;a href=&quot;u&quot;&gt;y&lt;/a&gt;` | DONE | DONE | DONE | DONE | `stdescape` |
+| stdlib kof.strings escapeJson (S3.1c: corpo de literal JSON RFC 8259 — backslash dobra, aspas escape, ctrl 2-char/backslash-u, demais cópia; null/"" => original; golden 5 backends em KofStringsTest) | `plain` / `quote \" inside` / `back\\\\slash` / `a\\u0001b` | DONE | DONE | DONE | DONE | KofStringsTest |
+| stdlib kof.validation domínio (S6c: isDomain — RFC 1123 labels, TLD>=2 letras, >=2 labels; v1 sem ponto final/IDN) | `true` / `true` / `false` / `false` / `false` / `false` | DONE | DONE | DONE | DONE | `stddomain` |
+| stdlib kof.time (S7: isLeapYear/daysInMonth/dayOfWeek/daysBetween — calendário civil; ano<1 ou >9999 ou data inexistente => false/0; dia 1=seg..7=dom) | `true` / `false` / `true` / `false` / `29` / `28` / `30` / `0` / `4` / `3` / `0` / `60` / `-60` / `0` | DONE | DONE | DONE | DONE | `stdtime` |
+| stdlib kof.* (S10–S12b, S3b-ext, S7-ext: paridade kof-script × JVM compilado — fachada random, format BR, uncapitalize, isUuid, isWeekend) | (asserts de contrato + golden; não-determinístico só via fachada) | DONE | DONE | — | — | `KofScriptStdlibParityTest` (kof-script, 5) |
+| stdlib kof.uuid (S3b-ext: isUuid — shape RFC 4122, 8-4-4-4-12 hex, hífens 8/13/18/23; sem checar versão/variante) | `true` / `true`(maj) / `false`(sem traço/tam/g/empty) | DONE | DONE | DONE | DONE | `isUuid*` (KofUuidTest; riscv/aarch assert sob qemu) |
+| stdlib kof.time (S7-ext: isWeekend — dayOfWeek>=6, wrapper nos 5 alvos; data inválida => false) | `true`(sáb) / `false`(qua) / `false`(inválida) | DONE | DONE | DONE | DONE | `calendar*` (KofTimeE2ETest; riscv/aarch assert sob qemu) |
+| stdlib kof.time (S7a/b/c: addDays/diffDays em data ISO String — parse estrito YYYY-MM-DD, inválido => ""/0; JVM/java.time + JS algoritmo civil sem Date + x86 asm `RuntimeTimeIso` + riscv/aarch **B33** (TIME002 fechado 11/09)) ⁴ | `2024-02-29` / `2023-03-01` / `2025-01-01` / `2023-12-31` / `''` / `''` / `60` / `-60` / `0` | DONE | DONE ⁴ | DONE | DONE | `stdtime2` |
+| stdlib kof.time (S7e: todayIso/formatDateIso/isToday — UTC-only (D1); formato zero-DSL, invalidade => "" (D4); isToday = igualdade c/ data UTC de now() (D5); JVM/java.time + JS civil + x86 `RuntimeTimeIso` + riscv/aarch **B33-ext**; todayIso por formato — dia vira) | `10` / `2026-09-13` / `2024-02-29` / `''`×5 / `false`×2 / `3`/`4`/`2`/`2` | DONE | DONE | DONE | DONE | `stdtime3` |
+| stdlib kof.time (S7f: hoursBetween(y,m,d,H,y,m,d,H) — floor simétrico (D3: truncado a zero, consistente daysBetween); data inválida/hora fora 0..23 => 0; sem float (FLT001); JVM + JS civil + x86 emit genérico 7+ args FIXADO + riscv **B33-ext**; aarch tradutor) | `26` / `-26` / `23` / `1` / `0`×3 / `24` / `0` / `8760` | DONE | DONE | DONE | DONE | `stdtime4` |
+| stdlib kof.time (S7g: parseDateIso(STR) -> Int serial daysFromEpoch — parse estrito YYYY-MM-DD, inválido ⇒ 0 (D4); MESMO serial de hoursBetween/daysBetween (recomposição fecha); JVM + JS civil + x86 `.Lka_parse2`/`.Lkd_epoch` + riscv **B33-ext**; aarch tradutor) | `0` / `20709` / `19782` / `-719162` / `2932896` / `0`×4 / `20709` | DONE | DONE | DONE | DONE | `stdtime5` |
+| parse ISO ESTRITO rejeita campo com sinal (`+999`/`+1`) — §182 ✅ CORRIGIDO 13/09 (contrato "estrito" declarado em S7a/S7g; JVM/Script dígito a dígito, JS helper único estrito; Native era a referência) | `0` / `0` / `0` / `20454` / `` / `0` | DONE | DONE (referência) | DONE | DONE | `parseisostrict` |
+| stdlib kof.time (S7h: tzOffsetSeconds() — fuso do HOST como getter explícito (D1); JVM `ZoneId`/JS `getTimezoneOffset` invertido (paridade por oracle JVM no host); **Native = gap honesto TIME003** — recusa com diagnóstico (R6); não-determinístico entre hosts, célula fixa oracle JVM) ⁵ | `0` (mód 60) / `true` / `<oracle>` | DONE | PARTIAL ⁵ | DONE | DONE | `stdtime6` |
+| cast Double/Float as Int/Long FORA de faixa/NaN/Inf — §181 ✅ CORRIGIDO 13/09 (saturação JLS 5.1.3: NaN ⇒ 0, >MAX ⇒ MAX, <MIN ⇒ MIN; x86 guard ucomisd NaN-1º + clamp; JS helpers `kofD2I/kofD2L` (registerRuntime); riscv feq NaN-check + clamp; aarch tradutor) | `2147483647` / `0`×2 / `2147483647` / `-2147483648` / `9223372036854775807` / `true` / `100` / `-100` / `2147483647` / `-1` | DONE | DONE | DONE | DONE | `castrange` |
+| stdlib kof.encoding (S4: hex + base64 + url + base64url — UTF-8 por bytes) | `4869` / `Hi` / `636166c3a9` / `café` / `TWFu` / `café` / `a%20b` / `café` / `ZmImTy0-Zg` / `fb&O->f` / `E` | DONE | DONE² | DONE | DONE | `stdenc` |
+
+> ¹ **STRN001 FECHADO 09/09:** joinWords portado p/ riscv64 (fatia B15) + aarch64
+> (mesmo asm traduzido) — paridade byte-a-byte com o x86_64 provada por diff do
+> golden oracle no qemu (16 vetores, incl. delimitadores UTF-8 `>=128`).
+> `KofStringsTest.wordConvertersClosedOnCrossArch`.
+
+> ⁵ **TIME003 (13/09, D-STDLIB D1):** `tzOffsetSeconds` = fuso do HOST —
+> JVM/Script/KofJS DONE (paridade por oracle JVM no host); **Native (x86/
+> riscv/aarch) PARTIAL por design**: sem `TZ`//etc/localtime no asm,
+> implementar seria paridade acidental (D1 proíbe). O backend NATIVE RECUSA
+> com diagnóstico `TIME003` (R6 — gap honesto, nunca "0 fingido").
+> Fechamento = parser de TZ//etc/localtime em asm (escopo próprio, fila
+> geral).
+FECHADO 11/09 (riscv64/aarch64)**: `addDays`/`diffDays` rodam nos 5 alvos —
+> JVM/Script/JS + native **x86** (`RuntimeTimeIso`) + riscv64/aarch64 (fatia
+> **B33**: `.Lu8_parse2`/`.Lu8_civil`/`.Lu8_put*` port 1:1 do spec x86 reusando
+> `kdv_valid`/`kdv_epoch` da B14; aarch via tradutor). Prova:
+> `KofTimeE2ETest.timeAddDaysDiffDaysJvmShapeAndCrossArch` (golden de execução) +
+> `timeAddDaysDiffDaysCompilesOnAllTargets` (gate de compilação sempre-verde, sem qemu) — golden
+> byte-idêntico (9 linhas) sob qemu-riscv64 + qemu-aarch64, invertendo o
+> antigo gate TIME002 (precedente NET001: x86 fecha primeiro, cross depois).
+> LIÇÕES riscv do port: `call` sobrescreve `ra` (jalr, não pilha) — helper
+> que termina em `call h; ret` deve fazer **tail-jmp** `j h`; e `kdv_valid`
+> clobbers `s0` (daysInMonth) — nenhum valor vivo em `s0` entre calls.
+> ³ **NET001 FECHADO 09/09:** `net.*` roda nos 3 nativos — x86 (RuntimeUri) +
+> riscv64 (fatia B24) + aarch64 (mesmo asm traduzido); paridade byte-a-byte
+> nos 17 vetores do oracle (`KofNetTest.netOnCrossArch`, qemu).
+
+> ² `encoding.hex*`/`encoding.url*` (B10/B11) e `encoding.base64*`/`base64Url*`
+> (B23, **ENC002 fechado 09/09** — port riscv com alfabeto aritmético + decode
+> tolerante, spec única do x86/JVM/JS; `KofEncodingTest.base64RunsOnCrossArch`
+> prova riscv+aarch sob qemu) rodam nos 3 nativos + JVM + JS + Script.
+| stdlib kof.uuid (S3b: v4 — não-determinístico, SEM caso de matriz) | shape `xxxxxxxx-xxxx-4xxx-[89ab]xxx-xxxxxxxxxxxx` | ✅ assert | ✅ assert¹ | ✅ | ✅ assert (+riscv/aarch qemu) | `KofUuidTest` 4/4 |
+| stdlib kof.uuid (S3b.1: isUuid — predicado de forma 8-4-4-4-12, hex min/maiúsc, version/variant não verificadas; riscv/aarch = fatia B25, UUID001 fechado no merge beta→main 10/09) | `true` / `true` / `false` / `false` / `false` / `false` / `true` | DONE | DONE | DONE | DONE | `stduuidform` |
+| stdlib kof.uuid (S3b.2: v7 — RFC 9562 time-ordered, SEM caso de matriz; riscv/aarch = UUID002) | shape `xxxxxxxx-xxxx-7xxx-[89ab]xxx-xxxxxxxxxxxx` | ✅ assert | ✅ assert | ✅ | ✅ assert | `KofUuidTest` (v7) |
+| stdlib kof.random (S10/S10a/S10b — não-determinístico, SEM caso de matriz) | contrato `0<=randomInt(b)<b` / `randomBoolean∈{0,1}` / `randomString: len==n, chars∈alphabet` + face main `double∈[0,1)` / `hex: 2n chars, n<=0→null (JVM/JS; x86 →""` pré-existente da crypto lane) + bordas lenientes (`b<=0→0`) | ✅ assert | ✅ assert | ✅ | ✅ assert (+riscv/aarch qemu) | `KofRandomTest` 12/12 |
+
+> `random.*` não entra na matriz equality (entropia — mesma razão do uuid):
+> paridade provada por ASSERTS DE CONTRATO nos 5 alvos (JVM SecureRandom, JS
+> kof_platform/crypto, x86/riscv/aarch getrandom(2)). **S10a 09/09** (beta):
+> `randomInt`/`randomBoolean`. **S10b 09/09** (beta): `randomString(n,
+> alphabet)` (borda leniente `""`). **S10 10/09** (main, fix §92): `double/
+> boolean/int/hex` — o `double` chegou a riscv/aarch na fatia B27
+> (fcvt.d.l/fdiv + tradutor ucvtf/fld), encerrando o FLT001 para a família
+> random. As duas faces convivem no dispatch (retrocompat aditiva).
+> `randomBytes`/`randomChoice` eram S10c (retorno Array/objeto
+> sem precedente na camada de dispatch — DD-STDLIB-01): **DECIDIDO 13/09
+> (opção 6a) + IMPLEMENTADO nesta unidade** — `random.randomBytesHex(n)->String`
+> (alias aditivo de `random.hex`, mesma runtime fn `kof_random_hex`, 5 alvos,
+> `KofRandomTest.randomBytesHex{Jvm,Js,Native}`); `randomBytes` binário
+> segue RESERVADO (não entra); choice = idiom
+> `l[random.randomInt(l.size)]` (learn/39 + training/idioms).
+
+> `uuid.v4()` não entra na matriz equality (entropia): paridade provada por
+> ASSERTS DE SHAPE nos 3 targets testáveis (JVM/Native-x86/JS: length=36,
+> traços em 8/13/18/23, dígito 14='4', dígito 19∈{8,9,a,b}, unicidade de 2
+> draws; **riscv64/aarch64 SECN000 FECHADO 09/09** — getrandom(2) via ecall
+> (syscall 278, probe em ambos os qemu) na fatia riscv B25 + aarch translator;
+> KofUuidTest.uuidV4CrossArch roda o shape+unicidade sob qemu nos dois).
+> ¹ variant por MÁSCARA nos 5 backends (b[8]=(b[8]&0x3f)|0x80 ⇒ char ∈
+> {8,9,a,b}) — x86 parity corrigida 09/09 com o fechamento do SECN000 (antes
+> fixava '8', subset do RFC com distribuição divergente — regra 5).
+>
+> `uuid.v7()` (RFC 9562 time-ordered, S3b.2): paridade provada por asserções
+> de shape (length=36, traços em 8/13/18/23, dígito 14='7', variante 10xx
+> dígito 19∈{8,9,a,b}, monotonicidade de timestamp e unicidade) em JVM,
+> Native x86 e JS. Gate UUID002 (R6 — nunca silencioso) ativo em riscv64 e aarch64.
+
+> **S2b ASCII:** `capitalize` usa a MESMA regra nos 4 targets (byte 0 `a-z`→`A-Z`).
+> `reverse` é byte-reverso no Native e UTF-16/UTF-8 nos demais — coincidem em ASCII
+> (caso `stdstrings2b`). Casos não-ASCII: **NAT-STR01** (gap do UTF-8 nativo,
+> `plan-stdlib-expansion.md` §5; **seção de registro:** `known-bugs.md` §161)
+> — não entram na matriz até corrigido (R5/R6).
+> **Extensão NAT-STR01 (10/09, varredura String parte 2):** os métodos de
+> INSTÂNCIA `"café".toUpperCase()`/`"CAFÉ".toLowerCase()` são **ASCII-only no
+> x86_64** (`RuntimeStringOps` só faz ±0x20 em `a-z`/`A-Z`; é→`É` não é tocado)
+> enquanto JVM/interpretador fazem case-fold Unicode completo ("café"→"CAFÉ").
+> Medido 13/09 (paridade 4-target): JVM/Script/JS `CAFÉ`/`café` × Native x86
+> `CAFé`/`cafÉ`. Paridade R5 quebrada em método do reference
+> (`type-system.md:290`). Latin-1 é
+> factível (é/É têm 2 bytes no UTF-8 → comprimento preservado); scripts além de
+> Latin-1 precisam de tabela Unicode (multi-sessão). NÃO travado na matriz até o
+> port; menor repro `sw2b.kf`.
+| recursão profunda (fact 10) | `3628800` | DONE | DONE | DONE | DONE | `recursion` |
+| list add/set/remove | `99` / `4` / `2` / `3` | DONE | DONE | DONE | DONE | `listops` |
+| map keys() + iteração | `6` | DONE | DONE | DONE | DONE | `mapiter` |
+
+## Matriz (lote 2 — erros/null/JSON)
+
+| Feature | Saída esperada | JVM | Native | Script | KofJS | Caso |
+|---|---|---|---|---|---|---|
+| try/catch throw-as-String | `caught:not found: x` / `after` | DONE | DONE | DONE | DONE | `trycatch` |
+| try/catch/finally (sem throw) | `in` / `fin` / `after` | DONE | DONE | DONE | DONE | `trycatchfin` |
+| throw propagando p/ catch externo | `got:kaboom` | DONE | DONE | DONE | DONE | `throwprop` |
+| try aninhado | `caught-inner:inner` / `end` | DONE | DONE | DONE | DONE (fix 07/09) | `nestedtry` |
+| re-throw dentro de catch | `outer:re:x` / `end` | DONE | DONE | DONE | DONE (bug 52 — fix colateral do bug 45, `c727fee`) | `catchrethrow` |
+| null-safety narrowing (`!= null`) | `val=1` / `null-ok` | DONE | DONE | DONE | DONE | `nullnarrow` |
+| json.encode int/string/bool | `42` / `"oi"` / `true` | DONE | DONE | DONE | DONE | `jsonenc-int` |
+| json.encode lista | `[1,2,3]` | DONE | DONE | DONE | DONE | `jsonenc-list` |
+| json.encode record | `{"x":1,"y":2}` | DONE | DONE | DONE | DONE | `jsonenc-record` |
+| json.encode Map (chaves SORTED — §106, decisão 2b) | `{"a":1,"b":2}` | DONE | DONE | DONE | DONE | `jsonenc-map` |
+| json.decode int/string/bool | `7` / `oi` / `true` | DONE | DONE | DONE | DONE | `jsondec-int` |
+| json.decode lista de primitivo | `3` / `2` | DONE | DONE | DONE | DONE | `jsondec-list` |
+| json.decode record | `1` / `2` | DONE | DONE | DONE (fix 07/09) | DONE | `jsondec-record` |
+| json.decode lista de record | `2` / `2` | DONE | PARTIAL (bug 48 ✅ 09/09 → gap honesto **JSN004**: `ExpressionJsonCallLowerer` recusa `List<Record>` no Native em compilação, nunca stub-lixo; R6) | DONE (fix 07/09) | DONE | `jsondec-recordlist` |
+| json.decode map de record | `2` / `Magician` | DONE (fix #103.1) | PARTIAL (**JSN004**: `ExpressionJsonCallLowerer` recusa `Map<String,T>` no Native em compilação — antes link-fail `kof_json_decode_Map` inexistente; R6) | DONE (fix #103.1) | DONE (fix #103.1) | `jsondec-map` |
+| json.decode map de string | `2` / `y` | DONE (fix #103.1) | PARTIAL (**JSN004**: idem acima) | DONE (fix #103.1) | DONE (fix #103.1) | `jsondec-mapscalar` |
+
+> **Fix 07/09 (lane interpreter):** `json.decode<Record>` no interpretador
+> dava exit 1 + stderr só `Point` (R6) — o método gerado `kof_json_decode_Point`
+> faz `Class.forName`, mas no interpretador a classe Kof é `KofObj`. Corrigido
+> em `KofInterpreterRuntime.decodeKofValue` (espelha `encodeKof`). O caso
+> `jsondec-record` passou de PARTIAL(Script) → DONE.
+
+## Matriz (lote 3 — concorrência DETERMINÍSTICA)
+
+> Casos de `spawn`/`await`/`channel` onde a ordem é garantida (await
+> bloqueia; FIFO na mesma thread). O **fire-and-forget** sem `await` é
+> NÃO-determinístico por design (ordem de agendamento) e fica em
+> `KofConcurrency2Test` com asserções frouxas — não entra na matriz.
+
+| Feature | Saída esperada | JVM | Native | Script | KofJS | Caso |
+|---|---|---|---|---|---|---|
+| `spawn fn` + `await` (resultado) | `42` | DONE | DONE | DONE | DONE | `spawnawait-fn` |
+| `spawn { return ... }` (lambda-literal com retorno, bug 46) + `await` | `42` | DONE | DONE | DONE | DONE | `spawnexpr-return` |
+| 2 handles: cada `await` devolve o SEU | `2` / `11` | DONE | DONE | DONE (fix race 07/09) | DONE | `spawnawait-two` |
+| channel mesma-thread (FIFO Int+String) | `s=11` / `ab` | DONE | DONE | DONE | DONE | `channel-samethread` |
+| channel send-em-spawn + receive | `42` | DONE | DONE (bug 50 fix 09/09) | DONE | DONE | `channel-spawn` |
+| channel 2 sends em spawn + 2 receives | `1` / `2` | DONE | DONE (bug 50 fix 09/09) | DONE | DONE | `channel-spawn-two` |
+
+> **Fix race 07/09 (lane interpreter):** `KofInterpreter.lastReturned` era um
+> ÚNICO campo de instância sobrescrito por cada `KofReturn`; com 2 `spawn`
+> concorrentes (virtual threads) o `await` do handle 2 podia ler o retorno do
+> handle 1 (reproduzido 3/120: `11|11`/`2|2`). Correção: retorno vive na
+> `KofInterpreterFrame.Frame.returnValue` (per-invocação/per-thread). Prova
+> `KofScriptTest.concurrentAwaitReturnsOwnTaskResult` (25 tasks × 8 runs).
+> **Bug 51** (vazamento de estado de `CompilerDriver` reutilizado → link
+> Native quebrado) descoberto durante o lote 3: o teste usa driver fresco por
+> caso (como o CLI — 1 processo/compilação).
+
+## Alvos fora da matriz (Android / WebAssembly)
+
+A matriz cobre os 4 alvos de execução de programa (JVM/Native/Script/KofJS).
+Dois alvos nomeados na plataforma **não** entram nas células — cada um por um
+motivo diferente, ambos honestos (R6):
+
+- **`android`** — não é um backend de execução: é **empacotamento do app
+  inteiro**. Compila no pipeline JVM e produz APK via SDK oficial (d8 → aapt2
+  → zip → zipalign → apksigner; ver `CmdBuild.runApkPipeline`). A matriz de
+  conformidade **linguagem×target** já vale para o bytecode JVM que o APK
+  empacota; o que Android acrescenta é toolchain de empacotamento, não
+  semântica. Requisito de ambiente: `ANDROID_HOME` + build-tools 34 — sem
+  SDK a CLI reporta o erro (nunca simula o APK). A compilação no target é
+  coberta por `AndroidInteropE2ETest` (semântica JVM em `Target.ANDROID`);
+  o pipeline de APK em si exige SDK e não tem E2E na suíte.
+
+- **`wasm` / `kofwebassembly`** — **WASM001: ainda não existe**. Não há
+  `Target.WASM`; `TargetMatrix.frontendGapFor` mapeia os nomes pedidos
+  (`wasm`, `kofwasm`, `kofwebasm`, `kofwebassembly`, `webassembly`) ao gap
+  **WASM001**, planejado na Fase 6 do plano de plataforma
+  (`docs/development/DECISIONS.md` §D-PLATFORM). Os dois caminhos da CLI
+  diagnosticam igual: `--frontend=wasm`/`kof.toml` →
+  `TargetMatrix.parse` com o gap; `--target=wasm` (flag legado) → a mesma
+  mensagem via `KofCliSupport.parseTarget`. Nunca compila como JVM por
+  engano. Prova: `TargetMatrixTest.wasmGapMessagePointsToRealPlanPath` +
+  `SelectTargetsTest.wasmFrontendIsHonestGap`.
+
+## Notas de método
+
+- **Oráculo:** a saída esperada é a do **comportamento documentado**
+  (corpus `training/`/`learn/` + `docs/backend-parity.md`), não "o que o
+  JVM imprime" — onde o JVM diverge do documento, é bug do JVM, não
+  do target.
+- **Native x86_64** é o "runtime de referência" do Native; riscv64/aarch64
+  herdam via `translateRiscvToAarch64` e são cobertos por
+  `NativeRiscv64E2ETest`/`NativeAarch64E2ETest` (42/42 cada em 13/09, sob qemu) — o follow-up
+  desta matriz é estender os casos aqui para qemu.
+- **Script = JVM no interpretador** (`runFile(f, Target.JVM)`/`SCRIPT`):
+  por construção roda a MESMA IR otimizada do frontend — divergência
+  Script×JVM-compilado é bug do interpretador OU do lowering (ambos
+  têm gate de paridade próprio: `KofInterpreterParityTest` 22/22).
+- **Riscar célula** = editar a matriz + commit; o teste é a prova, a
+  matriz é o índice (R6: o teste falha antes da doc divergir).

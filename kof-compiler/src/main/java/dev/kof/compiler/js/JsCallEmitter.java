@@ -61,6 +61,16 @@ void handleCall(MethodCtx ctx, List<Object> stack,
                 // "h", não o codepoint numérico). Ver known-bugs #27.
                 stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("String.fromCharCode"),
                         List.of(args.get(0))));
+            } else if (!kc.parameterTypes().isEmpty()
+                    && kc.parameterTypes().get(0) instanceof Type.ClassType ct
+                    && "kof".equals(ct.packageName())
+                    && (ct.name().equals("List") || ct.name().equals("Map") || ct.name().equals("Set"))) {
+                // §107-JS: String.valueOf(coleção) = toString do contêiner
+                // (JVM: ArrayList/HashMap/HashSet.toString → "[1, 2]", "{k=1}").
+                // String() do JS dava "1,2" (Array) / "[object Map]" — sem
+                // colchetes/ordem errada. kofFormat espelha o formato JVM.
+                p.lc.registerRuntime("kofFormat");
+                stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofFormat"), List.of(args.get(0))));
             } else if (BuiltinTypes.isString(kc.ownerType())) {
                 stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("String"), List.of(args.get(0))));
             } else if (!kc.parameterTypes().isEmpty()
@@ -104,7 +114,7 @@ void handleCall(MethodCtx ctx, List<Object> stack,
         if (kc.kind() == KofCallKind.FUNCTION) {
             // top-level function call (arity routes default-parameter wrappers)
             finishCall(stack, kc, new JsIr.JsCall(
-                    new JsIr.JsIdentifier(p.lc.jsFunctionName(kc.methodName(), kc.parameterTypes().size())),
+                    new JsIr.JsIdentifier(p.lc.jsFunctionName(kc.methodName(), kc.parameterTypes(), kc.parameterTypes().size())),
                     args));
             return;
         }
@@ -130,8 +140,13 @@ void handleCall(MethodCtx ctx, List<Object> stack,
             stack.add(new JsIr.JsBinary(receiver, "===", args.get(0)));
             return;
         }
+        // §131: método de classe sobrecarregado tem nome JS tageado por
+        // assinatura (o MESMO mangle do lowerFunction) — structural dispatch
+        // precisa usar o nome exato; não-sobrecarregado volta o nome cru.
+        String calleeJsName = p.lc.jsFunctionName(kc.methodName(), kc.parameterTypes(),
+                kc.parameterTypes().size());
         finishCall(stack, kc, new JsIr.JsCall(
-                new JsIr.JsMember(receiver, JsTypeMapper.sanitizeName(kc.methodName())), args));
+                new JsIr.JsMember(receiver, JsTypeMapper.sanitizeName(calleeJsName)), args));
     }
 
 JsIr.JsExpression maybeAwait(KofCall kc, JsIr.JsExpression call) {
@@ -192,6 +207,27 @@ boolean isStringOp(KofCall kc) {
 void handleStringOp(MethodCtx ctx, List<Object> stack,
                                 List<JsIr.JsExpression> preambleExprs, KofCall kc,
                                 JsIr.JsExpression receiver, List<JsIr.JsExpression> args) {
+        // §102 (paridade absoluta): com 2 args (needle + from), o
+        // String.prototype do JS diverge do JDK no clamp do `from`
+        // (lastIndexOf(from<0) JS=0 vs JDK=-1; startsWith(from>len) JS=true vs
+        // JDK=false; vazio+from JS difere). Baixa p/ helper top-level com os
+        // clamps do JDK. 1-arg cai no default (nativo, bate o JDK).
+        if (args.size() >= 2) {
+            String s2fn = switch (kc.methodName()) {
+                case "indexOf" -> "kof_string_index_of2";
+                case "lastIndexOf" -> "kof_string_last_index_of2";
+                case "startsWith" -> "kof_string_starts_with2";
+                default -> null;
+            };
+            if (s2fn != null) {
+                ctx.lc.registerRuntime(s2fn);
+                List<JsIr.JsExpression> full = new ArrayList<>();
+                full.add(receiver);
+                full.addAll(args);
+                stack.add(new JsIr.JsCall(new JsIr.JsIdentifier(s2fn), full));
+                return;
+            }
+        }
         switch (kc.methodName()) {
             case "kof_string_concat" -> stack.add(new JsIr.JsBinary(args.get(0), "+", args.get(1)));
             case "kof_string_equals" -> stack.add(new JsIr.JsConditional(
@@ -201,6 +237,11 @@ void handleStringOp(MethodCtx ctx, List<Object> stack,
             case "charAt" -> stack.add(new JsIr.JsCall(
                     new JsIr.JsMember(receiver, "charCodeAt"), List.of(args.get(0))));
             case "length" -> stack.add(new JsIr.JsMember(receiver, "length"));
+            // §145 (12/09, #101): String.prototype NÃO tem isEmpty (é Java);
+            // o default gerava `t.isEmpty()` = TypeError. length === 0.
+            case "isEmpty" -> stack.add(new JsIr.JsBinary(
+                    new JsIr.JsMember(receiver, "length"), "===",
+                    new JsIr.JsNumber("0")));
             case "equals" -> stack.add(new JsIr.JsBinary(receiver, "===", args.get(0)));
             case "equalsIgnoreCase" -> stack.add(new JsIr.JsBinary(
                     new JsIr.JsCall(new JsIr.JsMember(receiver, "toUpperCase"), List.of()),
@@ -251,6 +292,16 @@ void handleStringOp(MethodCtx ctx, List<Object> stack,
                 stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofStringCompareTo"),
                         List.of(receiver, args.get(0))));
             }
+            case "split" -> {
+                // §111: JS String.prototype.split PRESERVA vazios trailing
+                // ("a,".split(",")=["a",""]) mas o contrato é o Java
+                // (remove trailing, exceto input "" → [""]). helper kofSplit.
+                ctx.lc.registerRuntime("kofSplit");
+                List<JsIr.JsExpression> sa = new ArrayList<>();
+                sa.add(receiver);
+                sa.addAll(args);
+                stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofSplit"), sa));
+            }
             default -> {
                 // substring, contains, indexOf, trim, toUpperCase, toLowerCase,
                 // startsWith, endsWith, concat, split — direct JS mapping.
@@ -262,7 +313,11 @@ void handleStringOp(MethodCtx ctx, List<Object> stack,
         }
     }
 
-JsIr.JsExpression binaryExpr(KofBinary kb, JsIr.JsExpression left, JsIr.JsExpression right) {
+    JsIr.JsExpression binaryExpr(KofBinary kb, JsIr.JsExpression left, JsIr.JsExpression right) {
+        // §81 (5b): binário de LONG no JS = BigInt. Os lados podem chegar como
+        // Number (literal Int promovido, var Int) — BigInt() é idempotente e
+        // garante a promoção Int->Long do JVM (mistura BigInt/Number lança).
+        if (JsTypeMapper.isLongType(kb.operandType())) return JsLongEmitter.longBinaryExpr(kb, left, right);
         return switch (kb.op()) {
             case ADD -> intWrap(kb.operandType(), new JsIr.JsBinary(left, "+", right));
             case SUB -> intWrap(kb.operandType(), new JsIr.JsBinary(left, "-", right));
@@ -270,11 +325,6 @@ JsIr.JsExpression binaryExpr(KofBinary kb, JsIr.JsExpression left, JsIr.JsExpres
             case DIV -> {
                 if (JsTypeMapper.isIntFamily(kb.operandType())) {
                     yield intWrap(kb.operandType(), new JsIr.JsBinary(left, "/", right));
-                }
-                if (JsTypeMapper.isLongType(kb.operandType())) {
-                    // JS / yields doubles; truncate toward zero like JVM LIDIV
-                    yield new JsIr.JsCall(new JsIr.JsMember(new JsIr.JsIdentifier("Math"), "trunc"),
-                            List.of(new JsIr.JsBinary(left, "/", right)));
                 }
                 yield new JsIr.JsBinary(left, "/", right);
             }
@@ -296,9 +346,12 @@ JsIr.JsExpression binaryExpr(KofBinary kb, JsIr.JsExpression left, JsIr.JsExpres
                     ? new JsIr.JsBinary(left, "||", right)
                     : new JsIr.JsBinary(left, "|", right);
             case XOR -> new JsIr.JsBinary(left, "^", right);
-            case SHL -> new JsIr.JsBinary(left, "<<", right);
-            case SHR -> new JsIr.JsBinary(left, ">>", right);
-            case USHR -> new JsIr.JsBinary(left, ">>>", right);
+            // §167: `int << long` tem tipo int (JLS 15.19) mas o RHS pode
+            // chegar como BigInt (literal Long ou var Long) → TypeError no JS.
+            // Normaliza o contador p/ Number 32-bit (o JS já mascara em 0x1f).
+            case SHL -> new JsIr.JsBinary(JsLongEmitter.int32(left), "<<", JsLongEmitter.toNumber32(right));
+            case SHR -> new JsIr.JsBinary(JsLongEmitter.int32(left), ">>", JsLongEmitter.toNumber32(right));
+            case USHR -> new JsIr.JsBinary(JsLongEmitter.int32(left), ">>>", JsLongEmitter.toNumber32(right));
         };
     }
 
@@ -306,7 +359,7 @@ JsIr.JsExpression binaryExpr(KofBinary kb, JsIr.JsExpression left, JsIr.JsExpres
      * Kof Int is a signed 32-bit type; JavaScript numbers are doubles. Wrap
      * int arithmetic with ToInt32 (| 0) to preserve Kof/JVM 32-bit semantics.
      */
-JsIr.JsExpression intWrap(Type operandType, JsIr.JsExpression inner) {
+    JsIr.JsExpression intWrap(Type operandType, JsIr.JsExpression inner) {
         if (JsTypeMapper.isIntFamily(operandType)) {
             return new JsIr.JsBinary(inner, "|", new JsIr.JsNumber("0"));
         }
@@ -327,11 +380,41 @@ JsIr.JsExpression boolEq(JsIr.JsExpression left, JsIr.JsExpression right, boolea
 
 JsIr.JsExpression unaryExpr(KofUnary ku, JsIr.JsExpression operand) {
         return switch (ku.op()) {
-            case NEG -> new JsIr.JsUnary("-", operand);
+            case NEG -> JsTypeMapper.isLongType(ku.operandType())
+                    ? JsLongEmitter.wrap64(new JsIr.JsUnary("-", JsLongEmitter.longOperand(operand)))
+                    : new JsIr.JsUnary("-", operand);
             case NOT -> new JsIr.JsConditional(operand, new JsIr.JsNumber("0"), new JsIr.JsNumber("1"));
-            case I2L, I2F, I2D, I2C, L2I, L2F, L2D, F2D, D2F -> operand;
-            case D2I, F2I, D2L, F2L -> new JsIr.JsCall(new JsIr.JsIdentifier("Math.trunc"),
-                    List.of(operand));
+            case I2F, I2D, I2C, L2F, L2D, F2D, D2F -> operand;
+            case I2L -> new JsIr.JsCall(new JsIr.JsIdentifier("BigInt"), List.of(operand));   // §81
+            // §81/§167: Long(BigInt)->Int — truncamento EXATO sobre BigInt
+            // (BigInt.asIntN(32,...) faz o wrap signed do JVM; Number() direto
+            // perderia precisão >2^53 e daria 0 onde o JVM dá 1). O resultado
+            // volta a Number: Int no JS é Number, e um BigInt fluindo p/
+            // aritmética Int lançava `Cannot mix BigInt and other types` (§167).
+            case L2I -> new JsIr.JsCall(new JsIr.JsIdentifier("Number"),
+                    List.of(new JsIr.JsCall(
+                            new JsIr.JsMember(new JsIr.JsIdentifier("BigInt"), "asIntN"),
+                            List.of(new JsIr.JsNumber("32"), operand))));
+            // §181 (13/09): saturação JLS 5.1.3 via helpers do runtime —
+            // Math.trunc cru divergia do JVM (3e9, NaN, Infinity).
+            // registerRuntime é OBRIGATÓRIO (sem isso o helper não entra no
+            // kof-runtime.mjs — ReferenceError na execução).
+            case D2I -> {
+                p.lc.registerRuntime("kofD2I");
+                yield new JsIr.JsCall(new JsIr.JsIdentifier("kofD2I"), List.of(operand));
+            }
+            case F2I -> {
+                p.lc.registerRuntime("kofF2I");
+                yield new JsIr.JsCall(new JsIr.JsIdentifier("kofF2I"), List.of(operand));
+            }
+            case D2L -> {
+                p.lc.registerRuntime("kofD2L");
+                yield new JsIr.JsCall(new JsIr.JsIdentifier("kofD2L"), List.of(operand));
+            }
+            case F2L -> {
+                p.lc.registerRuntime("kofF2L");
+                yield new JsIr.JsCall(new JsIr.JsIdentifier("kofF2L"), List.of(operand));
+            }
         };
     }
 
@@ -342,7 +425,9 @@ JsIr.JsExpression literalExpr(KofLoadLiteral lit) {
             return new JsIr.JsIdentifier((v instanceof Integer i && i != 0) ? "true" : "false");
         }
         if (lit.value() instanceof Integer i) return new JsIr.JsNumber(Integer.toString(i));
-        if (lit.value() instanceof Long l) return new JsIr.JsNumber(Long.toString(l));
+        // §81 (5b, 13/09): Long no JS = BigInt (paridade 64-bit real); o
+        // sufixo `n` fabrica o literal BigInt.
+        if (lit.value() instanceof Long l) return new JsIr.JsNumber(Long.toString(l) + "n");
         if (lit.value() instanceof Float f) return new JsIr.JsNumber(Float.toString(f));
         if (lit.value() instanceof Double d) return new JsIr.JsNumber(Double.toString(d));
         if (lit.value() instanceof String s) return new JsIr.JsString(s);

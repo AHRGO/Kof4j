@@ -327,8 +327,29 @@ class KofSwitchExprE2ETest {
                 "deveria reportar SEM032: " + result.diagnostics().getDiagnostics());
     }
 
-    // ── enum: exaustivo sem default (SEM031/SEM032) ─────────────────
+    // ── corpo de case em BLOCO → diagnóstico PARSE094 (R6) ──────────
 
+    @Test
+    void blockCaseBodyFailsWithDiagnostic(@TempDir Path tmp) throws Exception {
+        Path file = tmp.resolve("Main.kf");
+        Files.writeString(file, """
+                enum E { A, B }
+                main() {
+                    var e = E.A
+                    var x = switch (e) {
+                        case A -> { println("a"); "aa" }
+                        default -> "other"
+                    }
+                    println(x)
+                }
+                """);
+        CompilationResult result = driver.compile(file, tmp.resolve("out"), Target.JVM);
+        assertFalse(result.success(), "case -> { } deve ser rejeitado (sem escopo de bloco)");
+        assertTrue(result.diagnostics().getDiagnostics().toString().contains("PARSE094"),
+                "deveria reportar PARSE094: " + result.diagnostics().getDiagnostics());
+    }
+
+    // ── enum: exaustivo sem default (SEM031/SEM032) ─────────────────
     @Test
     void enumExhaustiveJvm(@TempDir Path tmp) throws Exception {
         runJvm(tmp, """
@@ -346,6 +367,143 @@ class KofSwitchExprE2ETest {
                     println(cor(Color.Blue))
                 }
                 """, "vermelho\nverde\nazul");
+    }
+
+    // bug 145: `Color.Red` como EXPRESSÃO (enum constante) tipava UNKNOWN → o
+    // switch-expr exaustivo caía no SEM032 genérico quando o scrutinee vinha de
+    // `var` ou era o literal direto. Com o tipo certo, a exaustividade volta a valer.
+
+    @Test
+    void enumExhaustiveVarSubjectJvm(@TempDir Path tmp) throws Exception {
+        runJvm(tmp, """
+                enum Color { Red, Green, Blue }
+                main() {
+                    var c = Color.Blue
+                    var r = switch (c) {
+                        case Color.Red -> "vermelho"
+                        case Color.Green -> "verde"
+                        case Color.Blue -> "azul"
+                    }
+                    println(r)
+                }
+                """, "azul");
+    }
+
+    @Test
+    void enumExhaustiveLiteralSubjectJvm(@TempDir Path tmp) throws Exception {
+        runJvm(tmp, """
+                enum Color { Red, Green, Blue }
+                main() {
+                    var r = switch (Color.Green) {
+                        case Color.Red -> "vermelho"
+                        case Color.Green -> "verde"
+                        case Color.Blue -> "azul"
+                    }
+                    println(r)
+                }
+                """, "verde");
+    }
+
+    @Test
+    void enumExhaustiveVarSubjectNative(@TempDir Path tmp) throws Exception {
+        runNative(tmp, """
+                enum Color { Red, Green, Blue }
+                main() {
+                    var c = Color.Red
+                    var r = switch (c) {
+                        case Color.Red -> "vermelho"
+                        case Color.Green -> "verde"
+                        case Color.Blue -> "azul"
+                    }
+                    println(r)
+                }
+                """, "vermelho");
+    }
+
+    // §149: switch-expr EXAUSTIVO sobre enum (sem default) com corpo PRIMITIVO.
+    // O fallback sintético usava o tipo do SUBJECT (enum = referência) como tipo
+    // do resultado, então `branchTypesDiffer` boxeava os braços primitivos →
+    // VerifyError no JVM (Integer vs int) e crash COMP002 em Double/Long. O
+    // fallback agora usa o tipo do RESULTADO (inferExprType do switch).
+
+    @Test
+    void enumExhaustiveIntBodyJvm(@TempDir Path tmp) throws Exception {
+        runJvm(tmp, """
+                enum Color { Red, Green, Blue }
+                main() {
+                    var c = Color.Blue
+                    var r = switch (c) {
+                        case Color.Red -> 1
+                        case Color.Green -> 2
+                        case Color.Blue -> 3
+                    }
+                    println(r)
+                }
+                """, "3");
+    }
+
+    @Test
+    void enumExhaustiveDoubleBodyJvm(@TempDir Path tmp) throws Exception {
+        runJvm(tmp, """
+                enum Color { Red, Green, Blue }
+                main() {
+                    var c = Color.Blue
+                    var r = switch (c) {
+                        case Color.Red -> 1.5
+                        case Color.Green -> 2.5
+                        case Color.Blue -> 3.5
+                    }
+                    println(r)
+                }
+                """, "3.5");
+    }
+
+    @Test
+    void enumExhaustiveLongBodyJvm(@TempDir Path tmp) throws Exception {
+        runJvm(tmp, """
+                enum Color { Red, Green, Blue }
+                main() {
+                    var c = Color.Blue
+                    var r = switch (c) {
+                        case Color.Red -> 1L
+                        case Color.Green -> 2L
+                        case Color.Blue -> 3L
+                    }
+                    println(r)
+                }
+                """, "3");
+    }
+
+    @Test
+    void enumExhaustiveBoolBodyJvm(@TempDir Path tmp) throws Exception {
+        runJvm(tmp, """
+                enum Color { Red, Green, Blue }
+                main() {
+                    var c = Color.Green
+                    var r = switch (c) {
+                        case Color.Red -> true
+                        case Color.Green -> false
+                        case Color.Blue -> true
+                    }
+                    println(r)
+                }
+                """, "false");
+    }
+
+    @Test
+    void enumExhaustiveIntBodyNative(@TempDir Path tmp) throws Exception {
+        runNative(tmp, """
+                enum Color { Red, Green, Blue }
+                main() {
+                    var c = Color.Green
+                    var r = switch (c) {
+                        case Color.Red -> 1
+                        case Color.Green -> 2
+                        case Color.Blue -> 3
+                    }
+                    println(r)
+                }
+                """, "2");
     }
 
     @Test
@@ -402,7 +560,6 @@ class KofSwitchExprE2ETest {
     }
 
     // ── harness ────────────────────────────────────────────────────
-
     private String runJvm(Path tempDir, String source, String expected) throws Exception {
         Path file = tempDir.resolve("Main-" + System.nanoTime() + ".kf");
         Files.writeString(file, source);

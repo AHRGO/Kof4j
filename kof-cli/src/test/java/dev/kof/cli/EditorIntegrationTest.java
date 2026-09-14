@@ -126,6 +126,26 @@ class EditorIntegrationTest {
     }
 
     @Test
+    void bareEditorIsDetectAliasAndHelpShowsUsage() {
+        // §6: `kof editor` (sem subcomando) = alias de `detect`.
+        var ctx = fake(Set.of("code"), Map.of("code", "1.102.3"), Set.of(".vscode"));
+        ByteArrayOutputStream bo = new ByteArrayOutputStream();
+        PrintStream out = new PrintStream(bo, true, StandardCharsets.UTF_8);
+        BufferedReader in = new BufferedReader(new StringReader(""));
+
+        assertEquals(0, CmdEditor.run(new String[]{"editor"}, ctx, null, in, out, out));
+        String bare = bo.toString(StandardCharsets.UTF_8);
+        assertTrue(bare.contains("✓ Visual Studio Code"), "bare = detect: " + bare);
+        assertFalse(bare.contains("usage: kof editor"), "bare NÃO mostra usage: " + bare);
+
+        // --help continua mostrando o uso (não detecta)
+        bo.reset();
+        assertEquals(0, CmdEditor.run(new String[]{"editor", "--help"}, ctx, null, in, out, out));
+        String help = bo.toString(StandardCharsets.UTF_8);
+        assertTrue(help.contains("usage: kof editor"), "help mostra usage: " + help);
+    }
+
+    @Test
     void unknownSubcommandFails() {
         var ctx = fake(Set.of(), Map.of(), Set.of());
         ByteArrayOutputStream bo = new ByteArrayOutputStream();
@@ -243,6 +263,111 @@ class EditorIntegrationTest {
         String pkg = Files.readString(ext.resolve("package.json"));
         assertTrue(pkg.contains("\"main\": \"./extension.js\""), "declara entrypoint");
         assertTrue(pkg.contains("kof.startLsp"), "comando Start LSP (§19)");
+    }
+
+    @Test
+    void intellijInstallsHonestContentDelegatingToCli(@TempDir Path home) throws IOException {
+        // Degrau 10 (conteúdo honesto, sem plugin — issue #1): filetype XML
+        // (*.kf/*.kof) + External Tools delegando à CLI + README LSP4IJ.
+        var ctx = fake(Set.of("idea"), Map.of("idea", "2024.1.2"), Set.of());
+        ByteArrayOutputStream bo = new ByteArrayOutputStream();
+        PrintStream out = new PrintStream(bo, true, StandardCharsets.UTF_8);
+        assertEquals(0, CmdEditor.run(new String[]{"editor", "install", "intellij"}, ctx, home,
+                new BufferedReader(new StringReader("")), out, out));
+        assertTrue(EditorInstaller.isInstalled(home, "intellij"), "marker deve existir: " + bo);
+        Path ft = home.resolve(".config/JetBrains/kof/filetypes/Kof.xml");
+        Path tools = home.resolve(".config/JetBrains/kof/tools/Kof.xml");
+        Path readme = home.resolve(".config/JetBrains/kof/README.txt");
+        assertTrue(Files.isRegularFile(ft), "filetype: " + bo);
+        assertTrue(Files.isRegularFile(tools), "external tools: " + bo);
+        assertTrue(Files.isRegularFile(readme), "readme LSP4IJ: " + bo);
+        assertTrue(Files.readString(ft).contains("kf;kof"), "reconhece *.kf/*.kof");
+        String t = Files.readString(tools);
+        assertTrue(t.contains("kof build") && t.contains("kof run")
+                && t.contains("kof test") && t.contains("kof fmt"), "delega à CLI: " + t);
+        assertTrue(Files.readString(readme).contains("LSP4IJ"), "aponta p/ LSP4IJ");
+    }
+
+    // ---- degraus 6-9: providers vim / emacs / geany / nano ----------------
+    // Prova de instalação idiômica (config gerado), delegando ao LSP/CLI —
+    // antes só vscode/neovim/intellij tinham teste (§15/Q1).
+
+    @Test
+    void vimInstallsFtdetectSyntaxAndCompiler(@TempDir Path home) throws IOException {
+        var ctx = fake(Set.of("vim"), Map.of("vim", "VIM - Vi IMproved 9.1"), Set.of());
+        ByteArrayOutputStream bo = new ByteArrayOutputStream();
+        PrintStream out = new PrintStream(bo, true, StandardCharsets.UTF_8);
+        assertEquals(0, CmdEditor.run(new String[]{"editor", "install", "vim"}, ctx, home,
+                new BufferedReader(new StringReader("")), out, out));
+        assertTrue(EditorInstaller.isInstalled(home, "vim"), "marker: " + bo);
+        assertTrue(Files.isRegularFile(home.resolve(".vim/ftdetect/kof.vim")), "ftdetect: " + bo);
+        assertTrue(Files.isRegularFile(home.resolve(".vim/after/syntax/kof.vim")), "syntax: " + bo);
+        Path compiler = home.resolve(".vim/after/compiler/kof.vim");
+        assertTrue(Files.isRegularFile(compiler), "compiler: " + bo);
+        assertTrue(Files.readString(compiler).contains("build"), "compiler delega à CLI: "
+                + Files.readString(compiler));
+    }
+
+    @Test
+    void emacsInstallsKofMode(@TempDir Path home) throws IOException {
+        var ctx = fake(Set.of("emacs"), Map.of("emacs", "GNU Emacs 29.3"), Set.of());
+        ByteArrayOutputStream bo = new ByteArrayOutputStream();
+        PrintStream out = new PrintStream(bo, true, StandardCharsets.UTF_8);
+        assertEquals(0, CmdEditor.run(new String[]{"editor", "install", "emacs"}, ctx, home,
+                new BufferedReader(new StringReader("")), out, out));
+        assertTrue(EditorInstaller.isInstalled(home, "emacs"), "marker: " + bo);
+        Path mode = home.resolve(".emacs.d/lisp/kof-mode.el");
+        assertTrue(Files.isRegularFile(mode), "kof-mode.el: " + bo);
+        String c = Files.readString(mode);
+        assertTrue(c.contains("define-derived-mode kof-mode"), "modo: " + c);
+        assertTrue(c.contains("auto-mode-alist") && c.contains("kof"), "associação *.kof: " + c);
+    }
+
+    @Test
+    void geanyInstallsFiletypeWithBuildRun(@TempDir Path home) throws IOException {
+        var ctx = fake(Set.of("geany"), Map.of("geany", "geany 2.0"), Set.of());
+        ByteArrayOutputStream bo = new ByteArrayOutputStream();
+        PrintStream out = new PrintStream(bo, true, StandardCharsets.UTF_8);
+        assertEquals(0, CmdEditor.run(new String[]{"editor", "install", "geany"}, ctx, home,
+                new BufferedReader(new StringReader("")), out, out));
+        assertTrue(EditorInstaller.isInstalled(home, "geany"), "marker: " + bo);
+        Path ft = home.resolve(".config/geany/filedefs/filetypes.kof");
+        assertTrue(Files.isRegularFile(ft), "filetypes.kof: " + bo);
+        String c = Files.readString(ft);
+        assertTrue(c.contains("compiler=") && c.contains("execute="), "build/run delegam: " + c);
+    }
+
+    @Test
+    void nanoInstallsSyntaxOnly(@TempDir Path home) throws IOException {
+        var ctx = fake(Set.of("nano"), Map.of("nano", "GNU nano, versão 7.2"), Set.of());
+        ByteArrayOutputStream bo = new ByteArrayOutputStream();
+        PrintStream out = new PrintStream(bo, true, StandardCharsets.UTF_8);
+        assertEquals(0, CmdEditor.run(new String[]{"editor", "install", "nano"}, ctx, home,
+                new BufferedReader(new StringReader("")), out, out));
+        assertTrue(EditorInstaller.isInstalled(home, "nano"), "marker: " + bo);
+        Path rc = home.resolve(".nano/kof.nanorc");
+        assertTrue(Files.isRegularFile(rc), "kof.nanorc: " + bo);
+        String c = Files.readString(rc);
+        assertTrue(c.contains("syntax") && c.contains(".kof"), "filetype *.kof: " + c);
+        assertTrue(c.contains("color"), "syntax highlighting: " + c);
+    }
+
+    @Test
+    void updateResyncsInstalledIntegrations(@TempDir Path home) throws IOException {
+        var ctx = fake(Set.of("nvim"), Map.of("nvim", "NVIM v0.10.0"), Set.of());
+        ByteArrayOutputStream bo = new ByteArrayOutputStream();
+        PrintStream out = new PrintStream(bo, true, StandardCharsets.UTF_8);
+        CmdEditor.run(new String[]{"editor", "install", "neovim"}, ctx, home,
+                new BufferedReader(new StringReader("")), out, out);
+        assertTrue(EditorInstaller.isInstalled(home, "neovim"), "pré-condição: instalado");
+
+        // update re-sincroniza as instaladas (não mexe nas ausentes)
+        bo.reset();
+        assertEquals(0, CmdEditor.run(new String[]{"editor", "update"}, ctx, home,
+                new BufferedReader(new StringReader("")), out, out));
+        String s = bo.toString(StandardCharsets.UTF_8);
+        assertTrue(s.contains("Neovim"), "reporta a instalada: " + s);
+        assertFalse(EditorInstaller.isInstalled(home, "vscode"), "não instala as ausentes");
     }
 
     // ---- degrau 11: hook pós-instalador (§13) -----------------------------

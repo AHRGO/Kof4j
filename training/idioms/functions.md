@@ -1,13 +1,13 @@
 # Idioms — Functions
 
-**Status:** available · **Introduced:** 0.0.4-alpha (sem `fun`) · **Updated:** 0.2.6-beta
+**Status:** available · **Introduced:** 0.0.4-alpha (sem `fun`) · **Updated:**  0.4.0-beta (Sep 2026)
 
 ## What it is
 
 Kof não possui a palavra-chave `fun`. Funções são declaradas pelo nome,
 com o tipo de retorno antes do nome **ou** após os parâmetros.
 
-## Formas válidas (todas verificadas — 0.2.6-beta)
+## Formas válidas (todas verificadas no compilador)
 
 ```kof
 main() {
@@ -54,6 +54,38 @@ int dobro(int x) {
 - Dados + comportamento → classe ou record.
 - `main()` é a única função sem tipo explícito e sem retorno.
 
+## Sobrecarga de função top-level (0.4.0-beta — oracle JVM)
+
+Funções top-level homônimas com **assinaturas diferentes** coexistem; a
+chamada resolve o candidato aplicável mais específico, como a JVM.
+
+```kof
+Int g(Int x) { return x }
+Int g(Int x, Int y) { return x + y }        // ✅ aridade diferente
+String twice(String s) { return s + s }
+Int twice(Int n) { return n * 2 }            // ✅ tipo de parâmetro diferente
+
+main() {
+    println(g(5))          // 5   → g/Int
+    println(g(5, 6))       // 11  → g/Int,Int
+    println(twice("ab"))   // abab
+    println(twice(21))     // 42
+}
+```
+
+- **Duplicata exata é erro** (SEM047): mesmo nome + mesmos parâmetros.
+- **Só trocar o retorno NÃO é sobrecarga** (SEM047, como na JVM): `Int h(Int)`
+  e `String h(Int)` colidem.
+- **Chamada ambígua é erro** (SEM057): quando dois candidatos aplicáveis
+  empatam (ex.: argumento `Unknown` que caberia em ambos), dê um tipo ao
+  argumento (cast ou variável declarada) para escolher.
+- Mesma saída nos 5 targets (JVM/Script/JS/Native): a resolução é do frontend;
+  cada backend referencia o candidato pela assinatura.
+- **Sobrecarga de MÉTODO de classe ✅ existe** (0.4.0, §131 13/09): mesmo nome,
+  assinaturas diferentes (aridade/tipos) na mesma classe coexistem nos 4
+  backends; o typer seleciona por aridade+compatibilidade. O texto acima sobre
+  duplicata/retorno/ambiguidade vale igual para método de classe.
+
 ## BAD — utility class
 
 ```kof
@@ -77,7 +109,7 @@ String capitalizar(String s) {
 A utility class de Java existe porque Java não tem funções fora de classes.
 Kof tem funções top-level. A camada extra de classe é ruído.
 
-## Lambdas (0.2.6-beta — captura implementada)
+## Lambdas (captura implementada)
 
 ```kof
 var f = (x: Int) -> x * 2
@@ -125,7 +157,7 @@ var dobrados = nums.map((x: Int) -> x * 2)
 
 ## WHY (captura)
 
-Antes de 0.2.6-beta captura era planned. Em 0.2.6-beta está implementada — usar lambdas com parâmetros, literais e capturas livremente.
+Captura era planned antes de 0.2.6-beta; hoje está implementada — usar lambdas com parâmetros, literais e capturas livremente.
 
 ## Anti-patterns relacionados
 

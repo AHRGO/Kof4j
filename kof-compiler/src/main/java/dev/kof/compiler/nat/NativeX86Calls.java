@@ -13,6 +13,25 @@ import dev.kof.compiler.Type;
  */
 public final class NativeX86Calls {
 
+    /** §107: tag de elemento/vetor de coleção → argumento do
+     *  kof_{list,set,map}_to_string. 0=int/char/short/byte, 1=String, 2=Long,
+     *  3=Bool, 4=Double, 5=Float, 6=desconhecido/record/aninhado (→ "?",
+     *  face do §104b-ii). SEM056 garante homogeneidade, então UMA tag basta. */
+    static int collectionTag(Type t) {
+        Type e = t instanceof Type.NullableType nt ? nt.inner() : t;
+        if (e instanceof Type.PrimitiveType pt) {
+            switch (pt.name()) {
+                case "int", "char", "short", "byte": return 0;
+                case "long": return 2;
+                case "bool": return 3;
+                case "float": return 5;
+                default: return NativeTypeKinds.isDoubleType(pt) ? 4 : 6;
+            }
+        }
+        if (BuiltinTypes.isString(e)) return 1;
+        return 6;
+    }
+
     private final NativeBackend nb;
 
     NativeX86Calls(NativeBackend nb) { this.nb = nb; }
@@ -96,6 +115,12 @@ public final class NativeX86Calls {
             sb.append("    pushq %rax\n");
             return;
         }
+        // STDLIB S1b.2 (decisão 7a): pow(a,b) = pow@PLT (libm — flag -lm no
+        // NativeAssembler quando usesPow). Vai pelo caminho GENÉRICO (igual
+        // percentage): base→%rdi, exp→%rsi como 8 bits crus cada (pilha
+        // 1-slot), shim RuntimeMath.kof_math_pow movimenta p/ xmm0/xmm1,
+        // alinha a pilha e chama pow; retorno = bits crus em %rax (pushq do
+        // genérico). Recusado em riscv/aarch via KofMath.supportedOn (MATH001).
         // CONC001: spawn/await no Native
         if ("kof_spawn".equals(kc.methodName()) || "kof_spawn_result".equals(kc.methodName())) {
             sb.append("    popq %rdi\n");
@@ -177,10 +202,34 @@ public final class NativeX86Calls {
                 sb.append("    movq %rdi, %xmm0\n");
                 sb.append("    call kof_double_to_string\n");
                 sb.append("    pushq %rax\n");
+            } else if (dispatchType instanceof Type.ClassType ct && BuiltinTypes.isList(ct)) {
+                // §107: List/Map/Set são tipos de RUNTIME (sem vtable) — o
+                // ramo genérico abaixo achava tosIdx=-1 e NÃO EMITIA NADA:
+                // o ponteiro cru caía em kof_println_string = lixo (R6).
+                // A tag do elemento vem do typer (SEM056: homogênea).
+                sb.append("    popq %rdi\n");
+                sb.append("    movl $").append(collectionTag(BuiltinTypes.listElement(ct)))
+                  .append(", %esi\n");
+                sb.append("    call kof_list_to_string\n");
+                sb.append("    pushq %rax\n");
+            } else if (dispatchType instanceof Type.ClassType ct && BuiltinTypes.isSet(ct)) {
+                sb.append("    popq %rdi\n");
+                sb.append("    movl $").append(collectionTag(BuiltinTypes.setElement(ct)))
+                  .append(", %esi\n");
+                sb.append("    call kof_set_to_string\n");
+                sb.append("    pushq %rax\n");
+            } else if (dispatchType instanceof Type.ClassType ct && BuiltinTypes.isMap(ct)) {
+                sb.append("    popq %rdi\n");
+                sb.append("    movl $").append(collectionTag(BuiltinTypes.mapKey(ct)))
+                  .append(", %esi\n");
+                sb.append("    movl $").append(collectionTag(BuiltinTypes.mapValue(ct)))
+                  .append(", %edx\n");
+                sb.append("    call kof_map_to_string\n");
+                sb.append("    pushq %rax\n");
             } else if (dispatchType instanceof Type.ClassType ct && !BuiltinTypes.isString(dispatchType)) {
                 // valueOf(objeto) → obj.toString() via vtable (records têm
                 // toString no IR; String é identity). Paridade com o JVM.
-                int tosIdx = nb.findVirtualMethodIndex(ct.name(), "toString");
+                int tosIdx = nb.findVirtualMethodIndex(ct.name(), "toString", java.util.List.of());
                 if (tosIdx >= 0) {
                     sb.append("    popq %rax\n");
                     sb.append("    pushq %rax\n");
@@ -248,6 +297,34 @@ public final class NativeX86Calls {
                 }
                 sb.append("    popq %rax\n");
                 sb.append("    movq %rax, %rdi\n");
+                // §123: tag de chave no header do map (off 40). 1=String
+                // (kof_string_equals), 0=raw cmpq. Unknown NÃO toca (mantém o
+                // default 1 — String é o caso histórico).
+                // §126(a): CONJUNÇÃO receptor×arg — equals de String só quando
+                // AMBOS os tipos conhecidos são String. Qualquer outro par
+                // (tipos errados em qualquer direção: A1 Int-arg em String-map,
+                // A2 String-arg em Int-map) cai no raw cmpq, que NUNCA deref e
+                // produz exatamente o miss do JVM (0/null) — sem SIGSEGV, sem
+                // rejeição, sem regressão dos targets que já rodavam.
+                if (collFn.startsWith("kof_map_")) {
+                    Type mkt = BuiltinTypes.mapKey(kc.ownerType());
+                    Type mat = argCount >= 1 ? kc.parameterTypes().get(0) : null;
+                    if (mkt instanceof Type.NullableType nt) mkt = nt.inner();
+                    if (mat instanceof Type.NullableType nt) mat = nt.inner();
+                    boolean ktKnown = mkt != null && !(mkt instanceof Type.UnknownType);
+                    boolean atKnown = mat != null && !(mat instanceof Type.UnknownType);
+                    if (ktKnown && atKnown) {
+                        sb.append("    movl $").append(
+                                BuiltinTypes.isString(mkt) && BuiltinTypes.isString(mat) ? 1 : 0)
+                          .append(", 40(%rdi)\n");
+                    } else if (ktKnown) {
+                        sb.append("    movl $").append(BuiltinTypes.isString(mkt) ? 1 : 0)
+                          .append(", 40(%rdi)\n");
+                    } else if (atKnown) {
+                        sb.append("    movl $").append(BuiltinTypes.isString(mat) ? 1 : 0)
+                          .append(", 40(%rdi)\n");
+                    }
+                }
                 sb.append("    call ").append(collFn).append("\n");
                 if (!Type.isVoid(kc.returnType())) {
                     sb.append("    pushq %rax\n");
@@ -291,7 +368,7 @@ public final class NativeX86Calls {
             }
         }
         if (kc.kind() == KofCallKind.INSTANCE && kc.ownerType() instanceof Type.ClassType ct) {
-            int vtableIdx = nb.findVirtualMethodIndex(ct.name(), kc.methodName());
+            int vtableIdx = nb.findVirtualMethodIndex(ct.name(), kc.methodName(), kc.parameterTypes());
             if (vtableIdx >= 0) {
                 int argCount = kc.parameterTypes().size();
                 String[] intRegs = {"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"};
@@ -330,7 +407,7 @@ public final class NativeX86Calls {
             }
         }
         if (kc.kind() == KofCallKind.INTERFACE && kc.ownerType() instanceof Type.ClassType ct) {
-            int vtableIdx = nb.findVirtualMethodIndex(ct.name(), kc.methodName());
+            int vtableIdx = nb.findVirtualMethodIndex(ct.name(), kc.methodName(), kc.parameterTypes());
             if (vtableIdx >= 0) {
                 int argCount = kc.parameterTypes().size();
                 String[] intRegs = {"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"};
@@ -373,15 +450,37 @@ public final class NativeX86Calls {
         String[] intRegs = {"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"};
         int stackArgs = Math.max(0, argCount - 6);
         if (stackArgs > 0) {
-            sb.append("    addq $").append(stackArgs * 8).append(", %rsp\n");
+            // S7f (13/09): funções com 7+ args NÃO são descartadas — o emit
+            // anterior fazia addq $stackArgs*8 (perdia os args silenciosamente
+            // e o callee lia lixo na stack). ABI SysV: args 7..N na stack do
+            // callee, arg7 no menor endereço (0(%rsp) na entry) => na pilha do
+            // emitter, arg7 tem que ficar NO TOPO no call. Salvo os args
+            // 8..N (topo da pilha) em slots do frame, popo os 6 regs, e
+            // re-empilho em ordem reversa (argN primeiro => arg7 no topo).
+            for (int s = stackArgs - 1; s >= 0; s--) {
+                // slots altos do frame local (padrão do ramo CONSTRUCTOR)
+                int off = 256 + s * 8;
+                sb.append("    popq %r10\n");
+                sb.append("    movq %r10, -").append(off).append("(%rbp)\n");
+            }
         }
-        for (int i = 5; i >= 0; i--) {
-            if (i < argCount) {
-                sb.append("    popq ").append(intRegs[i]).append("\n");
+        for (int i = Math.min(argCount, 6) - 1; i >= 0; i--) {
+            sb.append("    popq ").append(intRegs[i]).append("\n");
+        }
+        if (stackArgs > 0) {
+            // re-push: argN primeiro ... arg7 por último (topo = 0(%rsp))
+            for (int s = stackArgs - 1; s >= 0; s--) {
+                int off = 256 + s * 8;
+                sb.append("    pushq -").append(off).append("(%rbp)\n");
             }
         }
         String callee = nb.resolveCalleeName(kc);
         sb.append("    call ").append(callee).append("\n");
+        if (stackArgs > 0) {
+            // limpa os stack args após o call (caller-cleanup, padrão dos
+            // ramos INSTANCE/INTERFACE acima)
+            sb.append("    addq $").append(stackArgs * 8).append(", %rsp\n");
+        }
         if (!Type.isVoid(kc.returnType())) {
             sb.append("    pushq %rax\n");
         }

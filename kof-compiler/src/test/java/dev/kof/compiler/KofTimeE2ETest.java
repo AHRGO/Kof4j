@@ -88,6 +88,28 @@ class KofTimeE2ETest {
                 """, "true");
     }
 
+    // #108 (13/09): `sleep(ms)` sem receiver resolve como `time.sleep(ms)`
+    // (opção 1 — espelha o `now()` sem receiver). Paridade JVM+Native+JS.
+    @Test
+    void sleepUnqualifiedResolvesAsTimeSleep(@TempDir Path tempDir) throws IOException {
+        runJvm(tempDir, """
+                main() {
+                    var t0 = now()
+                    sleep(250)
+                    var t1 = now()
+                    println(t1 - t0 >= 200)
+                }
+                """, "true");
+        runNative(tempDir, """
+                main() {
+                    var t0 = now()
+                    sleep(250)
+                    var t1 = now()
+                    println(t1 - t0 >= 200)
+                }
+                """, "true");
+    }
+
     @Test
     void intervalRunsPeriodicallyUntilCancelled(@TempDir Path tempDir) throws IOException {
         String src = """
@@ -403,7 +425,7 @@ class KofTimeE2ETest {
      * (erro claro no compile, nunca fallback silencioso — R6).
      */
     @Test
-    void timeAddDaysDiffDaysJvmShapeAndTime002Gate(@TempDir Path tempDir) throws IOException {
+    void timeAddDaysDiffDaysJvmShapeAndCrossArch(@TempDir Path tempDir) throws IOException {
         String src = """
             main() {
                 println(time.addDays("2024-02-28", 1))
@@ -423,15 +445,524 @@ class KofTimeE2ETest {
         Path gateSrc = tempDir.resolve("Gate.kf");
         Files.writeString(gateSrc, src);
         // S7b: JS FECHADO; S7c: x86 FECHADO (matriz stdtime2 roda local).
-        // Restam riscv64/aarch64 (TIME002) com erro claro no compile (R6).
+        // S7d (TIME002 fechado 11/09): riscv64/aarch64 — B33 (.Lu8_parse2/
+        // .Lu8_civil/.Lu8_put*) port 1:1 do RuntimeTimeIso x86 reusando
+        // kdv_valid/kdv_epoch (B14). Golden byte-idêntico sob qemu.
+        String expected = "2024-02-29\n2023-03-01\n2025-01-01\n2023-12-31\n\n\n60\n-60\n0";
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            String qemu = t == Target.NATIVE_RISCV64 ? "qemu-riscv64" : "qemu-aarch64";
+            String[] tools = t == Target.NATIVE_RISCV64
+                    ? new String[]{"riscv64-linux-gnu-as", "riscv64-linux-gnu-ld", "qemu-riscv64"}
+                    : new String[]{"aarch64-linux-gnu-as", "aarch64-linux-gnu-ld", "qemu-aarch64"};
+            assumeToolchain(tools);
+            Path file = tempDir.resolve("Ad-" + t + "-" + System.nanoTime() + ".kf");
+            Files.writeString(file, src);
+            Path outDir = tempDir.resolve("ad-" + t + "-" + System.nanoTime());
+            CompilationResult r = new CompilerDriver().compile(file, outDir, t);
+            assertTrue(r.success(), t + " compile: " + r.diagnostics().getDiagnostics());
+            Process p = new ProcessBuilder(qemu, outDir.resolve("Default/Main").toString())
+                    .redirectErrorStream(true).start();
+            String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8)
+                    .replace("\r\n", "\n").trim();
+            int ec;
+            try {
+                ec = p.waitFor();
+            } catch (InterruptedException e) {
+                throw new IOException("interrupted", e);
+            }
+            assertEquals(0, ec, t + " qemu exit, out: " + out);
+            assertEquals(expected, out, t + " golden addDays/diffDays");
+        }
+    }
+
+    @Test
+    void timeAddDaysDiffDaysCompilesOnAllTargets(@TempDir Path tempDir) throws IOException {
+        // Gate SEMPRE-verde (mesmo sem qemu): o backend cross EMITE o asm; a
+        // EXECUCAO e provada sob qemu no teste acima (S7c-1/TIME002 fechado).
+        String src = """
+            main() {
+                println(time.addDays("2024-02-28", 1))
+                println(time.diffDays("2024-01-01", "2024-03-01"))
+            }
+            """;
+        Path gateSrc = tempDir.resolve("GateTime.kf");
+        Files.writeString(gateSrc, src);
         for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
             CompilationResult r = new CompilerDriver().compile(gateSrc, tempDir.resolve("gate-" + t), t);
-            assertFalse(r.success(), t + " deve rejeitar addDays/diffDays (TIME002)");
-            boolean hasTime002 = r.diagnostics().getDiagnostics().stream()
-                    .anyMatch(d -> "TIME002".equals(d.code())
-                            && d.severity() == Diagnostic.Severity.ERROR);
-            assertTrue(hasTime002, t + " deve reportar TIME002, veio: "
+            assertTrue(r.success(), t + " deve compilar addDays/diffDays (TIME002 fechado): "
                     + r.diagnostics().getDiagnostics());
+        }
+    }
+
+    // ── STDLIB S7e (D-STDLIB ratificado 13/09): todayIso/formatDateIso/
+    // isToday — UTC-only (D1), formato zero-DSL com invalidade => "" (D4),
+    // isToday = igualdade com a data UTC de now() (D5). Vetores
+    // determinísticos (formatDateIso/isToday não dependem do relógio);
+    // todayIso validado por FORMATO+CONSISTÊNCIA (prefixo/len/regex),
+    // nunca por valor literal (o dia pode virar no meio do teste).
+    @Test
+    void todayIsoFormatDateIsoIsTodayJvm(@TempDir Path tempDir) throws IOException {
+        runJvm(tempDir, """
+                main() {
+                    var today = time.todayIso()
+                    println(today.length)
+                    println(time.formatDateIso(2026, 9, 13))
+                    println(time.formatDateIso(2024, 2, 29))
+                    println(time.formatDateIso(2023, 2, 29))
+                    println(time.formatDateIso(0, 1, 1))
+                    println(time.formatDateIso(10000, 1, 1))
+                    println(time.formatDateIso(2026, 13, 1))
+                    println(time.formatDateIso(2026, 0, 1))
+                    println(time.formatDateIso(2026, 1, 0))
+                    println(time.formatDateIso(2026, 4, 31))
+                    // Q4: isToday(y,m,d)==true NUNCA literal (o dia vira à
+                    // meia-noite UTC — quebrou 14/09). Consistência interna
+                    // independente do relogio: as partes de todayIso() sao
+                    // hoje => isToday delas = true (parseDateIso fecha com S7g).
+                    var parts = today.split("-")
+                    var p0: String = parts.get(0)
+                    var p1: String = parts.get(1)
+                    var p2: String = parts.get(2)
+                    println(time.isToday(math.parseInt(p0),
+                                         math.parseInt(p1),
+                                         math.parseInt(p2)))
+                    println(time.isToday(2026, 9, 12))
+                    println(time.isToday(2026, 2, 30))
+                    println(time.isToday(0, 1, 1))
+                    println(parts.size)
+                    println(parts.get(0).length)
+                    println(parts.get(1).length)
+                    println(parts.get(2).length)
+                }
+                """, "10\n2026-09-13\n2024-02-29\n\n\n\n\n\n\n\ntrue\nfalse\nfalse\nfalse\n3\n4\n2\n2");
+    }
+
+    @Test
+    void todayIsoFormatDateIsoIsTodayJs(@TempDir Path tempDir) throws IOException {
+        runJs(tempDir, """
+                main() {
+                    var today = time.todayIso()
+                    println(today.length)
+                    println(time.formatDateIso(2026, 9, 13))
+                    println(time.formatDateIso(2024, 2, 29))
+                    println(time.formatDateIso(2023, 2, 29))
+                    println(time.formatDateIso(0, 1, 1))
+                    println(time.formatDateIso(2026, 13, 1))
+                    println(time.formatDateIso(2026, 4, 31))
+                    // Q4: consistencia interna (relogio-independente)
+                    var parts = today.split("-")
+                    var p0: String = parts.get(0)
+                    var p1: String = parts.get(1)
+                    var p2: String = parts.get(2)
+                    println(time.isToday(math.parseInt(p0),
+                                         math.parseInt(p1),
+                                         math.parseInt(p2)))
+                    println(time.isToday(2026, 9, 12))
+                    println(time.isToday(2026, 2, 30))
+                    println(parts.size)
+                    println(parts.get(0).length)
+                    println(parts.get(1).length)
+                }
+                """, "10\n2026-09-13\n2024-02-29\n\n\n\n\ntrue\nfalse\nfalse\n3\n4\n2");
+    }
+
+    @Test
+    void todayIsoFormatDateIsoIsTodayNative(@TempDir Path tempDir) throws IOException {
+        runNative(tempDir, """
+                main() {
+                    var today = time.todayIso()
+                    println(today.length)
+                    println(time.formatDateIso(2026, 9, 13))
+                    println(time.formatDateIso(2024, 2, 29))
+                    println(time.formatDateIso(2023, 2, 29))
+                    println(time.formatDateIso(0, 1, 1))
+                    println(time.formatDateIso(10000, 1, 1))
+                    println(time.formatDateIso(2026, 13, 1))
+                    println(time.formatDateIso(2026, 4, 31))
+                    // Q4: consistencia interna (relogio-independente)
+                    var parts = today.split("-")
+                    var p0: String = parts.get(0)
+                    var p1: String = parts.get(1)
+                    var p2: String = parts.get(2)
+                    println(time.isToday(math.parseInt(p0),
+                                         math.parseInt(p1),
+                                         math.parseInt(p2)))
+                    println(time.isToday(2026, 9, 12))
+                    println(time.isToday(2026, 2, 30))
+                    println(time.isToday(0, 1, 1))
+                    println(parts.size)
+                    println(parts.get(0).length)
+                    println(parts.get(1).length)
+                }
+                """, "10\n2026-09-13\n2024-02-29\n\n\n\n\n\ntrue\nfalse\nfalse\nfalse\n3\n4\n2");
+    }
+
+    @Test
+    void todayIsoFormatDateIsoIsTodayCrossArch(@TempDir Path tempDir) throws Exception {
+        // Vetores determinísticos + formato do todayIso (len/parts) — sem
+        // valor literal do dia (pode virar entre backends). isToday com data
+        // fixa SÓ é assertado para a resposta false (independe do relógio);
+        // o caminho true é coberto pela igualdade formatDateIso==todayIso
+        // implícita no gate de formato. Qemu prova byte-idêntico.
+        String src = """
+            main() {
+                var today = time.todayIso()
+                println(today.length)
+                println(time.formatDateIso(2026, 9, 13))
+                println(time.formatDateIso(2023, 2, 29))
+                println(time.formatDateIso(2024, 2, 29))
+                println(time.formatDateIso(0, 1, 1))
+                println(time.formatDateIso(10000, 1, 1))
+                println(time.formatDateIso(2026, 13, 1))
+                println(time.isToday(2026, 9, 12))
+                println(time.isToday(2026, 2, 30))
+                var parts = today.split("-")
+                println(parts.size)
+                println(parts.get(0).length)
+                println(parts.get(1).length)
+                println(parts.get(2).length)
+            }
+            """;
+        String expected = "10\n2026-09-13\n\n2024-02-29\n\n\n\nfalse\nfalse\n3\n4\n2\n2";
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            String qemu = t == Target.NATIVE_RISCV64 ? "qemu-riscv64" : "qemu-aarch64";
+            String[] tools = t == Target.NATIVE_RISCV64
+                    ? new String[]{"riscv64-linux-gnu-as", "riscv64-linux-gnu-ld", "qemu-riscv64"}
+                    : new String[]{"aarch64-linux-gnu-as", "aarch64-linux-gnu-ld", "qemu-aarch64"};
+            assumeToolchain(tools);
+            Path file = tempDir.resolve("T7e-" + t + "-" + System.nanoTime() + ".kf");
+            Files.writeString(file, src);
+            Path outDir = tempDir.resolve("t7e-" + t + "-" + System.nanoTime());
+            CompilationResult r = new CompilerDriver().compile(file, outDir, t);
+            assertTrue(r.success(), t + " compile: " + r.diagnostics().getDiagnostics());
+            Process p = new ProcessBuilder(qemu, outDir.resolve("Default/Main").toString())
+                    .redirectErrorStream(true).start();
+            String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8)
+                    .replace("\r\n", "\n").trim();
+            int ec;
+            try {
+                ec = p.waitFor();
+            } catch (InterruptedException e) {
+                throw new IOException("interrupted", e);
+            }
+            assertEquals(0, ec, t + " qemu exit, out: " + out);
+            assertEquals(expected, out, t + " golden S7e");
+        }
+    }
+
+    @Test
+    void todayIsoFormatDateIsoIsTodayCompilesOnAllTargets(@TempDir Path tempDir) throws IOException {
+        // Gate SEMPRE-verde (mesmo sem qemu): o backend cross EMITE o asm;
+        // a EXECUCAO e provada sob qemu no teste acima.
+        String src = """
+            main() {
+                println(time.todayIso().length)
+                println(time.formatDateIso(2026, 9, 13))
+                println(time.isToday(2026, 9, 13))
+            }
+            """;
+        Path gateSrc = tempDir.resolve("GateT7e.kf");
+        Files.writeString(gateSrc, src);
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            CompilationResult r = new CompilerDriver().compile(gateSrc, tempDir.resolve("gate-t7e-" + t), t);
+            assertTrue(r.success(), t + " deve compilar todayIso/formatDateIso/isToday (S7e): "
+                    + r.diagnostics().getDiagnostics());
+        }
+    }
+
+    // ── STDLIB S7f (D3): hoursBetween — floor simétrico (truncado a
+    // zero, consistente com daysBetween); datas inválidas/hora fora de
+    // 0..23 => 0 (paridade do gating do wedge). Sem float (FLT001).
+    // Totalmente determinístico — vetor cru incl. diferenças negativas,
+    // virada de dia/mês/ano-bissexto e bounds 9999/1.
+    @Test
+    void hoursBetweenJvm(@TempDir Path tempDir) throws IOException {
+        runJvm(tempDir, """
+                main() {
+                    println(time.hoursBetween(2026, 1, 1, 10, 2026, 1, 2, 12))
+                    println(time.hoursBetween(2026, 1, 2, 12, 2026, 1, 1, 10))
+                    println(time.hoursBetween(2026, 1, 1, 0, 2026, 1, 1, 23))
+                    println(time.hoursBetween(2026, 1, 1, 23, 2026, 1, 2, 0))
+                    println(time.hoursBetween(2026, 1, 1, 5, 2026, 1, 1, 5))
+                    println(time.hoursBetween(2026, 2, 30, 5, 2026, 3, 1, 5))
+                    println(time.hoursBetween(2026, 1, 1, 24, 2026, 1, 2, 5))
+                    println(time.hoursBetween(2026, 1, 1, 5, 2026, 1, 1, 25))
+                    println(time.hoursBetween(2024, 2, 29, 1, 2024, 3, 1, 1))
+                    println(time.hoursBetween(9999, 12, 31, 0, 1, 1, 0, 23))
+                    println(time.hoursBetween(2026, 1, 1, 10, 2027, 1, 1, 10))
+                }
+                """, "26\n-26\n23\n1\n0\n0\n0\n0\n24\n0\n8760");
+    }
+
+    @Test
+    void hoursBetweenJs(@TempDir Path tempDir) throws IOException {
+        runJs(tempDir, """
+                main() {
+                    println(time.hoursBetween(2026, 1, 1, 10, 2026, 1, 2, 12))
+                    println(time.hoursBetween(2026, 1, 2, 12, 2026, 1, 1, 10))
+                    println(time.hoursBetween(2026, 1, 1, 0, 2026, 1, 1, 23))
+                    println(time.hoursBetween(2026, 1, 1, 23, 2026, 1, 2, 0))
+                    println(time.hoursBetween(2026, 1, 1, 5, 2026, 1, 1, 5))
+                    println(time.hoursBetween(2026, 2, 30, 5, 2026, 3, 1, 5))
+                    println(time.hoursBetween(2026, 1, 1, 24, 2026, 1, 2, 5))
+                    println(time.hoursBetween(2024, 2, 29, 1, 2024, 3, 1, 1))
+                    println(time.hoursBetween(2026, 1, 1, 10, 2027, 1, 1, 10))
+                }
+                """, "26\n-26\n23\n1\n0\n0\n0\n24\n8760");
+    }
+
+    @Test
+    void hoursBetweenNative(@TempDir Path tempDir) throws IOException {
+        runNative(tempDir, """
+                main() {
+                    println(time.hoursBetween(2026, 1, 1, 10, 2026, 1, 2, 12))
+                    println(time.hoursBetween(2026, 1, 2, 12, 2026, 1, 1, 10))
+                    println(time.hoursBetween(2026, 1, 1, 0, 2026, 1, 1, 23))
+                    println(time.hoursBetween(2026, 1, 1, 23, 2026, 1, 2, 0))
+                    println(time.hoursBetween(2026, 1, 1, 5, 2026, 1, 1, 5))
+                    println(time.hoursBetween(2026, 2, 30, 5, 2026, 3, 1, 5))
+                    println(time.hoursBetween(2026, 1, 1, 24, 2026, 1, 2, 5))
+                    println(time.hoursBetween(2024, 2, 29, 1, 2024, 3, 1, 1))
+                    println(time.hoursBetween(2026, 1, 1, 10, 2027, 1, 1, 10))
+                }
+                """, "26\n-26\n23\n1\n0\n0\n0\n24\n8760");
+    }
+
+    @Test
+    void hoursBetweenCrossArch(@TempDir Path tempDir) throws Exception {
+        String src = """
+            main() {
+                println(time.hoursBetween(2026, 1, 1, 10, 2026, 1, 2, 12))
+                println(time.hoursBetween(2026, 1, 2, 12, 2026, 1, 1, 10))
+                println(time.hoursBetween(2026, 1, 1, 0, 2026, 1, 1, 23))
+                println(time.hoursBetween(2026, 1, 1, 23, 2026, 1, 2, 0))
+                println(time.hoursBetween(2026, 1, 1, 5, 2026, 1, 1, 5))
+                println(time.hoursBetween(2026, 2, 30, 5, 2026, 3, 1, 5))
+                println(time.hoursBetween(2026, 1, 1, 24, 2026, 1, 2, 5))
+                println(time.hoursBetween(2024, 2, 29, 1, 2024, 3, 1, 1))
+                println(time.hoursBetween(2026, 1, 1, 10, 2027, 1, 1, 10))
+            }
+            """;
+        String expected = "26\n-26\n23\n1\n0\n0\n0\n24\n8760";
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            String qemu = t == Target.NATIVE_RISCV64 ? "qemu-riscv64" : "qemu-aarch64";
+            String[] tools = t == Target.NATIVE_RISCV64
+                    ? new String[]{"riscv64-linux-gnu-as", "riscv64-linux-gnu-ld", "qemu-riscv64"}
+                    : new String[]{"aarch64-linux-gnu-as", "aarch64-linux-gnu-ld", "qemu-aarch64"};
+            assumeToolchain(tools);
+            Path file = tempDir.resolve("T7f-" + t + "-" + System.nanoTime() + ".kf");
+            Files.writeString(file, src);
+            Path outDir = tempDir.resolve("t7f-" + t + "-" + System.nanoTime());
+            CompilationResult r = new CompilerDriver().compile(file, outDir, t);
+            assertTrue(r.success(), t + " compile: " + r.diagnostics().getDiagnostics());
+            Process p = new ProcessBuilder(qemu, outDir.resolve("Default/Main").toString())
+                    .redirectErrorStream(true).start();
+            String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8)
+                    .replace("\r\n", "\n").trim();
+            int ec;
+            try {
+                ec = p.waitFor();
+            } catch (InterruptedException e) {
+                throw new IOException("interrupted", e);
+            }
+            assertEquals(0, ec, t + " qemu exit, out: " + out);
+            assertEquals(expected, out, t + " golden S7f");
+        }
+    }
+
+    @Test
+    void hoursBetweenCompilesOnAllTargets(@TempDir Path tempDir) throws IOException {
+        String src = """
+            main() {
+                println(time.hoursBetween(2026, 1, 1, 10, 2026, 1, 2, 12))
+            }
+            """;
+        Path gateSrc = tempDir.resolve("GateT7f.kf");
+        Files.writeString(gateSrc, src);
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            CompilationResult r = new CompilerDriver().compile(gateSrc, tempDir.resolve("gate-t7f-" + t), t);
+            assertTrue(r.success(), t + " deve compilar hoursBetween (S7f): "
+                    + r.diagnostics().getDiagnostics());
+        }
+    }
+
+    // ── STDLIB S7g (D4): parseDateIso — "YYYY-MM-DD" estrito -> serial
+    // daysFromEpoch; inválido => 0. MESMO serial de hoursBetween/
+    // daysBetween (recomposição s - e = diff fecha com os vetores de cima).
+    // Totalmente determinístico.
+    @Test
+    void parseDateIsoJvm(@TempDir Path tempDir) throws IOException {
+        runJvm(tempDir, """
+                main() {
+                    println(time.parseDateIso("1970-01-01"))
+                    println(time.parseDateIso("2026-09-13"))
+                    println(time.parseDateIso("2024-02-29"))
+                    println(time.parseDateIso("0001-01-01"))
+                    println(time.parseDateIso("9999-12-31"))
+                    println(time.parseDateIso("2023-02-29"))
+                    println(time.parseDateIso("2026-13-01"))
+                    println(time.parseDateIso("garbage"))
+                    println(time.parseDateIso(""))
+                    println(time.parseDateIso("2026-9-13"))
+                    var s = time.parseDateIso("2026-09-13")
+                    var e = time.parseDateIso("1970-01-01")
+                    println(s - e)
+                }
+                """, "0\n20709\n19782\n-719162\n2932896\n0\n0\n0\n0\n0\n20709");
+    }
+
+    @Test
+    void parseDateIsoJs(@TempDir Path tempDir) throws IOException {
+        runJs(tempDir, """
+                main() {
+                    println(time.parseDateIso("1970-01-01"))
+                    println(time.parseDateIso("2026-09-13"))
+                    println(time.parseDateIso("2024-02-29"))
+                    println(time.parseDateIso("0001-01-01"))
+                    println(time.parseDateIso("9999-12-31"))
+                    println(time.parseDateIso("2023-02-29"))
+                    println(time.parseDateIso("2026-13-01"))
+                    println(time.parseDateIso("garbage"))
+                    println(time.parseDateIso(""))
+                    println(time.parseDateIso("2026-9-13"))
+                }
+                """, "0\n20709\n19782\n-719162\n2932896\n0\n0\n0\n0\n0");
+    }
+
+    @Test
+    void parseDateIsoNative(@TempDir Path tempDir) throws IOException {
+        runNative(tempDir, """
+                main() {
+                    println(time.parseDateIso("1970-01-01"))
+                    println(time.parseDateIso("2026-09-13"))
+                    println(time.parseDateIso("2024-02-29"))
+                    println(time.parseDateIso("0001-01-01"))
+                    println(time.parseDateIso("9999-12-31"))
+                    println(time.parseDateIso("2023-02-29"))
+                    println(time.parseDateIso("2026-13-01"))
+                    println(time.parseDateIso("garbage"))
+                    println(time.parseDateIso(""))
+                    println(time.parseDateIso("2026-9-13"))
+                }
+                """, "0\n20709\n19782\n-719162\n2932896\n0\n0\n0\n0\n0");
+    }
+
+    @Test
+    void parseDateIsoCrossArch(@TempDir Path tempDir) throws Exception {
+        String src = """
+            main() {
+                println(time.parseDateIso("1970-01-01"))
+                println(time.parseDateIso("2026-09-13"))
+                println(time.parseDateIso("2024-02-29"))
+                println(time.parseDateIso("0001-01-01"))
+                println(time.parseDateIso("9999-12-31"))
+                println(time.parseDateIso("2023-02-29"))
+                println(time.parseDateIso("2026-13-01"))
+                println(time.parseDateIso("garbage"))
+                println(time.parseDateIso("2026-9-13"))
+                var s = time.parseDateIso("2026-09-13")
+                var e = time.parseDateIso("1970-01-01")
+                println(s - e)
+            }
+            """;
+        String expected = "0\n20709\n19782\n-719162\n2932896\n0\n0\n0\n0\n20709";
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            String qemu = t == Target.NATIVE_RISCV64 ? "qemu-riscv64" : "qemu-aarch64";
+            String[] tools = t == Target.NATIVE_RISCV64
+                    ? new String[]{"riscv64-linux-gnu-as", "riscv64-linux-gnu-ld", "qemu-riscv64"}
+                    : new String[]{"aarch64-linux-gnu-as", "aarch64-linux-gnu-ld", "qemu-aarch64"};
+            assumeToolchain(tools);
+            Path file = tempDir.resolve("T7g-" + t + "-" + System.nanoTime() + ".kf");
+            Files.writeString(file, src);
+            Path outDir = tempDir.resolve("t7g-" + t + "-" + System.nanoTime());
+            CompilationResult r = new CompilerDriver().compile(file, outDir, t);
+            assertTrue(r.success(), t + " compile: " + r.diagnostics().getDiagnostics());
+            Process p = new ProcessBuilder(qemu, outDir.resolve("Default/Main").toString())
+                    .redirectErrorStream(true).start();
+            String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8)
+                    .replace("\r\n", "\n").trim();
+            int ec;
+            try {
+                ec = p.waitFor();
+            } catch (InterruptedException e) {
+                throw new IOException("interrupted", e);
+            }
+            assertEquals(0, ec, t + " qemu exit, out: " + out);
+            assertEquals(expected, out, t + " golden S7g");
+        }
+    }
+
+    @Test
+    void parseDateIsoCompilesOnAllTargets(@TempDir Path tempDir) throws IOException {
+        String src = """
+            main() {
+                println(time.parseDateIso("2026-09-13"))
+            }
+            """;
+        Path gateSrc = tempDir.resolve("GateT7g.kf");
+        Files.writeString(gateSrc, src);
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            CompilationResult r = new CompilerDriver().compile(gateSrc, tempDir.resolve("gate-t7g-" + t), t);
+            assertTrue(r.success(), t + " deve compilar parseDateIso (S7g): "
+                    + r.diagnostics().getDiagnostics());
+        }
+    }
+
+    // ── STDLIB S7h (D1): tzOffsetSeconds — fuso do HOST como getter
+    // explícito. NÃO-determinístico entre máquinas: a prova valida o
+    // CONTRATO (múltiplo de 900s na prática, range UTC-12..UTC+14, e
+    // consistência interna: now()+tz alinhado em minutos com civil UTC)
+    // e a PARIDADE JVM×JS (mesma saída nas 2 execuções — mesmo host).
+    // Native/riscv/aarch = gap honesto TIME003 (diagnóstico, R6).
+    @Test
+    void tzOffsetSecondsJvmAndJsParity(@TempDir Path tempDir) throws IOException {
+        String src = """
+                main() {
+                    var tz = time.tzOffsetSeconds()
+                    println(tz % 60)
+                    println(tz >= -43200 && tz <= 50400)
+                    println(tz)
+                }
+                """;
+        // Oracle JVM (medição real, nunca memória): offset ATUAL da zona do
+        // host (com DST). getTimezoneOffset() do JS = mesmo instante.
+        int jvmTz = java.time.ZoneId.systemDefault().getRules()
+                .getOffset(java.time.Instant.now()).getTotalSeconds();
+        String expected = "0\ntrue\n" + jvmTz;
+        // JVM e JS rodam NO MESMO HOST => a paridade JVM×JS (D1: sem
+        // divergência acidental) é provada por AMBOS baterem com o oracle.
+        runJvm(tempDir, src, expected);
+        runJs(tempDir, src, expected);
+    }
+
+    @Test
+    void tzOffsetSecondsNativeRefusedWithDiagnostic(@TempDir Path tempDir) throws IOException {
+        // Gap honesto TIME003 (R6): Native recusa com diagnóstico — nunca
+        // fallback silencioso, nunca "0 fingido".
+        Path source = tempDir.resolve("Tz.kf");
+        Files.writeString(source, """
+                main() {
+                    println(time.tzOffsetSeconds())
+                }
+                """);
+        CompilationResult r = driver.compile(source, tempDir.resolve("out-tz-nat"), Target.NATIVE);
+        assertFalse(r.success(), "Native deve RECUSAR tzOffsetSeconds (TIME003)");
+        assertTrue(r.diagnostics().getDiagnostics().stream()
+                        .anyMatch(d -> d.message().contains("TIME003")),
+                "diagnóstico deve citar TIME003: " + r.diagnostics().getDiagnostics());
+    }
+
+    private void assumeToolchain(String... tools) {
+        for (String c : tools) {
+            try {
+                Process p = new ProcessBuilder("sh", "-c", "command -v " + c)
+                        .redirectErrorStream(true).start();
+                String o = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8).trim();
+                org.junit.jupiter.api.Assumptions.assumeTrue(
+                        p.waitFor() == 0 && !o.isEmpty(), "toolchain ausente: " + c);
+            } catch (Exception e) {
+                org.junit.jupiter.api.Assumptions.assumeTrue(false, "toolchain ausente: " + c);
+            }
         }
     }
 }

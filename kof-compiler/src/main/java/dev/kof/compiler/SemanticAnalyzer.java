@@ -60,25 +60,32 @@ public class SemanticAnalyzer {
         this.currentPackage = unit.packageName();
         this.currentScope = new SymbolTable();
         this.currentUnit = unit;
-        // SG-011B (SEM047): sobrecarga top-level não existe em Kof — duas
-        // funções homônimas eram sobrescritas silenciosamente (a última
-        // vencia); agora é erro de compilação nomeando ambas as aridades.
+        // SG-011B (SEM047): sobrecarga de função top-level É permitida (oracle
+        // JVM): nomes iguais com ASSINATURAS diferentes coexistem e a chamada
+        // resolve o candidato no typer (TopLevelOverload). O que continua ERRO é
+        // DUPLICATA EXATA — mesmo nome e mesmos tipos de parâmetro (a JVM também
+        // rejeita; retorno diferente não conta como assinatura, igual ao JVM).
+        // Antes (≤11/09) QUALQUER par homônimo era SEM047; afrouxar não regride
+        // nada porque todo programa compilável tinha no máximo um candidato por
+        // nome (a seleção multi-candidato só roda em código novo).
         if (diagnostics != null) {
-            Map<String, String> fnNames = new HashMap<>();
+            Map<String, SourcePosition> fnSigs = new HashMap<>();
             for (AstNode decl : unit.declarations()) {
                 if (decl instanceof FunctionDeclarationNode f) {
-                    String prev = fnNames.get(f.name());
+                    List<String> pt = new ArrayList<>();
+                    for (var p : f.parameters()) pt.add(p.type() != null ? p.type() : "?");
+                    String sig = f.name() + "(" + String.join(",", pt) + ")";
+                    SourcePosition prev = fnSigs.get(sig);
                     if (prev != null) {
                         diagnostics.error(f.position().file(), f.position().line(),
                                 f.position().column(), 0,
-                                "function '" + f.name() + "' is already defined (" + prev
-                                        + "); top-level functions cannot be overloaded"
-                                        + " — use a different name",
+                                "function '" + f.name() + "' with parameters ("
+                                        + String.join(", ", pt) + ") is already defined at line "
+                                        + prev.line() + "; duplicate signatures are not allowed"
+                                        + " — overload requires a DIFFERENT parameter list",
                                 "SEM047");
                     } else {
-                        List<String> arities = new ArrayList<>();
-                        for (var p : f.parameters()) arities.add(p.type() != null ? p.type() : "?");
-                        fnNames.put(f.name(), "with parameters (" + String.join(", ", arities) + ")");
+                        fnSigs.put(sig, f.position());
                     }
                 }
             }
@@ -225,7 +232,13 @@ public class SemanticAnalyzer {
         currentScope = ctorScope;
         boolean prevCtor = inConstructor;
         inConstructor = true;
-        StatementAnalyzer.analyzeBody(this, ctor.body(), ctorScope, Type.PrimitiveType.VOID);
+        // §130: o laço de 4 passes (inference de return-type) chama isto de novo
+        // no MESMO escopo — sem filho, o 2º pass reclama SEM024 de cada `var`
+        // já definido no 1º. Escopo-filho por análise: params/`this`/campos
+        // continuam visíveis via resolve() pai-acima; locals não vazam entre
+        // passes (só o pinning de tipo SG-008 é por-pass, e o codegen lê
+        // expressionTypes, não estes escopos).
+        StatementAnalyzer.analyzeBody(this, ctor.body(), ctorScope.enterScope(), Type.PrimitiveType.VOID);
         inConstructor = prevCtor;
         currentScope = prevScope;
     }
@@ -246,7 +259,10 @@ public class SemanticAnalyzer {
         if (method.body() == null || method.body().isEmpty()) return;
         SymbolTable prevScope = currentScope;
         currentScope = methodScope;
-        StatementAnalyzer.analyzeBody(this, method.body(), methodScope, returnType);
+        // §130: ver analyzeConstructorBody — o laço de 4 passes re-executa o
+        // corpo (quando um `return <expr>` void reinfer o tipo via bug 26) e o
+        // MESMO escopo reclamava SEM024 de cada var do pass anterior.
+        StatementAnalyzer.analyzeBody(this, method.body(), methodScope.enterScope(), returnType);
         currentScope = prevScope;
         if (Type.isVoid(returnType) && method.body().getLast() instanceof ReturnStmt ret
                 && ret.value() != null) {
@@ -443,77 +459,15 @@ public class SemanticAnalyzer {
 
 
     private void resolveMethodCalls(CompilationUnitNode unit) {
-        for (AstNode decl : unit.declarations()) {
-            if (decl instanceof FunctionDeclarationNode func && func.body() != null) {
-                for (StatementNode stmt : func.body()) resolveInStatement(stmt);
-            } else if (decl instanceof ClassDeclarationNode cls) {
-                for (AstNode member : cls.members()) {
-                    if (member instanceof MethodDeclarationNode method && method.body() != null) {
-                        for (StatementNode stmt : method.body()) resolveInStatement(stmt);
-                    } else if (member instanceof ConstructorDeclarationNode ctor) {
-                        for (StatementNode stmt : ctor.body()) resolveInStatement(stmt);
-                    }
-                }
-            } else if (decl instanceof RecordDeclarationNode rec) {
-                for (AstNode member : rec.members()) {
-                    if (member instanceof MethodDeclarationNode method && method.body() != null) {
-                        for (StatementNode stmt : method.body()) resolveInStatement(stmt);
-                    }
-                }
-            }
-        }
+        // §140 (12/09): este visitor era NO-OP — resolvia chamadas mas nunca
+        // populava resolvedMethods/expressionTypes nem reportava diagnóstico.
+        // Desligá-lo mantém a suíte semântica inteira verde (CompilerDriverTest
+        // 252 + SemanticResolutionTest 25 + TopLevelOverload 6 + CoreRegression
+        // 50 + Exceptions 9 + KofEnumSwitch 4 = 346, medido 12/09). A resolução
+        // REAL de sobrecarga hoje vive em MethodCallTyper/OverloadSelector
+        // (SG-011B, 40abd0ed/b55c24c0) — o visitor era resíduo de 05e10140.
+        // Mantido o método (e a chamada em analyze()) como contrato de fase do
+        // pipeline; corpo vazio até a decisão de deletar a fase por completo.
     }
 
-    private void resolveInStatement(StatementNode stmt) {
-        switch (stmt) {
-            case BlockStmt block -> {
-                for (StatementNode s : block.statements()) resolveInStatement(s);
-            }
-            case IfStmt ifStmt -> {
-                resolveInStatement(ifStmt.thenBranch());
-                if (ifStmt.elseBranch() != null) resolveInStatement(ifStmt.elseBranch());
-            }
-            case WhileStmt ws -> resolveInStatement(ws.body());
-            case DoWhileStmt dws -> resolveInStatement(dws.body());
-            case ForStmt fs -> {
-                if (fs.init() != null) resolveInStatement(fs.init());
-                if (fs.update() != null) resolveInExpression(fs.update());
-                resolveInStatement(fs.body());
-            }
-            case ExpressionStmt es -> resolveInExpression(es.expression());
-            case ReturnStmt ret -> {
-                if (ret.value() != null) resolveInExpression(ret.value());
-            }
-            default -> {}
-        }
-    }
-
-    private void resolveInExpression(ExpressionNode expr) {
-        if (expr == null) return;
-        switch (expr) {
-            case MethodCallExpr mc -> {
-                if (mc.receiver() != null) resolveInExpression(mc.receiver());
-                for (ExpressionNode arg : mc.arguments()) resolveInExpression(arg);
-            }
-            case BinaryExpr bin -> {
-                // iterate the left-associative chain (huge concat trees)
-                ExpressionNode cur = bin;
-                while (cur instanceof BinaryExpr be) {
-                    resolveInExpression(be.right());
-                    cur = be.left();
-                }
-                resolveInExpression(cur);
-            }
-            case UnaryExpr ue -> resolveInExpression(ue.operand());
-            case AssignmentExpr ae -> {
-                resolveInExpression(ae.target());
-                resolveInExpression(ae.value());
-            }
-            case NewExpr ne -> {
-                for (ExpressionNode arg : ne.arguments()) resolveInExpression(arg);
-            }
-            case FieldAccessExpr fa -> resolveInExpression(fa.receiver());
-            default -> {}
-        }
-    }
 }

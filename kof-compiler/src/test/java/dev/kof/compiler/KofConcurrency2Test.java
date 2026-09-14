@@ -81,6 +81,25 @@ class KofConcurrency2Test {
     }
 
     @Test
+    void selectAnyPrimitiveJvm(@TempDir Path tmp) throws Exception {
+        // §128-JVM: selectAny de Handle<Int> atribuído a var e usado como Int
+        // dava VerifyError "Type 'java/lang/Object' is not assignable to
+        // integer" no istore — o lowerer roteava await/awaitTimeout p/ unbox
+        // mas NÃO selectAny (mesmo retorno Object do runtime). O caso String
+        // (selectAnyJvm) não pegava: referência não precisa de unbox.
+        runJvm(tmp, """
+                Int um() { return 7 }
+                Int outro() { time.sleep(200); return 9 }
+                main() {
+                    val a = spawn um()
+                    val b = spawn outro()
+                    val v = selectAny(a, b)
+                    println(v + 1)
+                }
+                """, "8");
+    }
+
+    @Test
     void selectAnyNative(@TempDir Path tmp) throws Exception {
         // CONC001 residual fechado: selectAny nativo (polling 1ms sobre o handle).
         // Os handles são criados JUNTOS (spawn-all-up-front) e o selectAny vem
@@ -137,6 +156,56 @@ class KofConcurrency2Test {
         String output = new String(p.getInputStream().readAllBytes()).trim();
         assertEquals(0, p.waitFor(), "exit code, output: " + output);
         assertEquals("cancelado\nfim", output, "o worker deve ver o cancel e encerrar cedo");
+    }
+
+    // §117 (decisão 8a, 13/09): tabela de cancel por TID REAL (probe linear)
+    // — colisão forçada: N workers VIVOS em sequência; o cancel do worker k
+    // NÃO pode afetar o worker k+1 (bug antigo: slot por hash truncado
+    // reutilizado + `movb $0` cego no trampoline apagava flag alheia).
+    @Test
+    void cancelDoesNotLeakAcrossWorkersNative(@TempDir Path tmp) throws Exception {
+        // 30 iterações: worker longo cancelado; após await, novo worker
+        // VERIFICA que a própria flag nasce limpa (cancelled() == false).
+        Path f = tmp.resolve("MC.kf");
+        Files.writeString(f, """
+                Int longo() {
+                    var i = 0
+                    while (i < 100000 && !cancelled()) {
+                        time.sleep(1)
+                        i++
+                    }
+                    return i
+                }
+                Int curto() {
+                    if (cancelled()) { return 999 }
+                    time.sleep(5)
+                    if (cancelled()) { return 999 }
+                    return 1
+                }
+                main() {
+                    var ok = true
+                    var k = 0
+                    while (k < 20) {
+                        val a = spawn longo()
+                        time.sleep(15)
+                        assert(cancel(a))
+                        await a
+                        val b = spawn curto()
+                        val v = await b
+                        if (v == 999) { ok = false }
+                        k++
+                    }
+                    if (ok) { println("sem-vazamento") } else { println("VAZOU") }
+                }
+                """);
+        CompilationResult r = driver.compile(f, tmp.resolve("out"), Target.NATIVE);
+        assertTrue(r.success(), "Native §117 deve compilar: " + r.diagnostics().getDiagnostics());
+        Path bin = tmp.resolve("out").resolve("Default/Main");
+        Process p = new ProcessBuilder(bin.toString()).redirectErrorStream(true).start();
+        String output = new String(p.getInputStream().readAllBytes()).trim();
+        assertEquals(0, p.waitFor(), "exit code, output: " + output);
+        assertEquals("sem-vazamento", output,
+                "cancel do worker k não pode marcar o worker k+1 (§117)");
     }
 
     @Test
@@ -823,6 +892,82 @@ class KofConcurrency2Test {
                 assertEquals(expected, output, "JS output");
             }
             return output;
+        }
+    }
+
+    @Test
+    void crossMissingConcurrencyHelpersReportConc001(@TempDir Path tmp) throws Exception {
+        // #91 (R6): nat/NativeRiscvSpawn.java só emite kof_spawn_result/kof_spawn/
+        // kof_await/kof_spawn_join_all. Antes do gate, selectAny/poll/done/cancel/
+        // cancelled/awaitTimeout compilavam e só falhavam no LINK como símbolo
+        // indefinido. Agora: diagnóstico CONC001 em compile-time nos 6 construtos.
+        Path f = tmp.resolve("M.kf");
+        Files.writeString(f, """
+                Int trabalho() { return 1 }
+                main() {
+                    val a = spawn trabalho()
+                    val b = spawn trabalho()
+                    println(selectAny(a, b))
+                    println(done(a))
+                    println(poll(b))
+                    cancel(a)
+                    println(cancelled())
+                    println(awaitTimeout(a, 10))
+                }
+                """);
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            CompilationResult r = driver.compile(f, tmp.resolve("cross-" + t), t);
+            assertFalse(r.success(), t + " deve reportar CONC001");
+            String diags = r.diagnostics().getDiagnostics().toString();
+            assertTrue(diags.contains("CONC001"), t + ": " + diags);
+            for (String m : new String[]{"selectAny", "done", "poll", "cancel", "cancelled", "awaitTimeout"}) {
+                assertTrue(diags.contains(m + ":"), t + ": falta diagnóstico para " + m + " em " + diags);
+            }
+        }
+    }
+
+    @Test
+    void spawnAwaitStillGreenOnCrossTargets(@TempDir Path tmp) throws Exception {
+        // O gate #91 não pode tocar spawn/await (existem em riscv/aarch via
+        // clone+futex) nem pode silenciar o que já funcionava: programa só com
+        // spawn/await/join continua compilando nos alvos cruzados.
+        Path f = tmp.resolve("M.kf");
+        Files.writeString(f, """
+                Int trabalho() { return 42 }
+                main() {
+                    val r = spawn trabalho()
+                    println(await r)
+                }
+                """);
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            CompilationResult r = driver.compile(f, tmp.resolve("cross-ok-" + t), t);
+            assertTrue(r.success(), t + " não deve reportar CONC001: " + r.diagnostics().getDiagnostics());
+        }
+    }
+
+    @Test
+    void crossNativeHelpersUnchangedOnX86JvmJs(@TempDir Path tmp) throws Exception {
+        // Retroscompatibilidade (regra 2): o gate é só dos alvos cruzados.
+        // O mesmo programa que falha em riscv/aarch continua compilando em
+        // x86/JVM (helpers reais, provados por selectAnyNative/cancelCooperative
+        // /awaitTimeout acima).
+        Path f = tmp.resolve("M.kf");
+        Files.writeString(f, """
+                Int trabalho() { return 1 }
+                main() {
+                    val a = spawn trabalho()
+                    val b = spawn trabalho()
+                    println(selectAny(a, b))
+                    println(done(a))
+                    println(poll(b))
+                    cancel(a)
+                    println(cancelled())
+                    println(awaitTimeout(a, 10))
+                }
+                """);
+        for (Target t : new Target[]{Target.NATIVE, Target.JVM}) {
+            CompilationResult r = driver.compile(f, tmp.resolve("x-" + t), t);
+            assertTrue(r.success(), t + " não deve reportar CONC001: " + r.diagnostics().getDiagnostics());
         }
     }
 

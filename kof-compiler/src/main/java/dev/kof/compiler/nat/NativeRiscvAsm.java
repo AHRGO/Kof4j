@@ -11,8 +11,27 @@ public final class NativeRiscvAsm {
 
     private NativeRiscvAsm() {}
 
-    static final String RISCV_RUNTIME_ASM = NativeRiscvAsmRt0.RISCV_RUNTIME_ASM_0 + NativeRiscvAsmRt1.RISCV_RUNTIME_ASM_1;
-    static final String RISCV_STRN002_ASM = NativeRiscvAsmStrn0.RISCV_STRN002_ASM_0 + NativeRiscvAsmStrn1.RISCV_STRN002_ASM_1;
+    // String concatenação literal = variável-constante (JLS 15.28): o javac
+    // DOBRA o valor no constant pool de quem referencia. Editar só
+    // NativeRiscvAsmRt0 (ex.: G-0 do GC cross) e recompilar incremental deixa
+    // o valor antigo embutido em classes-consumidoras não-recompiladas (test
+    // de slice via getstatic = bytes velhos; RiscvSlices via reflection =
+    // bytes novos) → split-brain FALSO. StringBuilder = mesmo bytes,
+    // resolvido no <clinit> a cada JVM (mesma razão do runtimeB() abaixo).
+    static final String RISCV_RUNTIME_ASM = runtimeRt();
+    private static String runtimeRt() {
+        return new StringBuilder()
+                .append(NativeRiscvAsmRt0.RISCV_RUNTIME_ASM_0)
+                .append(NativeRiscvAsmRt1.RISCV_RUNTIME_ASM_1)
+                .toString();
+    }
+    static final String RISCV_STRN002_ASM = runtimeStrn();
+    private static String runtimeStrn() {
+        return new StringBuilder()
+                .append(NativeRiscvAsmStrn0.RISCV_STRN002_ASM_0)
+                .append(NativeRiscvAsmStrn1.RISCV_STRN002_ASM_1)
+                .toString();
+    }
     // A cadeia B_0..B_9 ultrapassa o limite de 64KB de string-constante do pool
     // quando dobrada em compile-time (javac "constant string too long" no uso).
     // Concatenar via StringBuilder = mesmo bytes, calculado no <clinit>.
@@ -45,13 +64,33 @@ public final class NativeRiscvAsm {
                 .append(NativeRiscvAsmRtB23.RISCV_RUNTIME_ASM_B_23)
                 .append(NativeRiscvAsmRtB24.RISCV_RUNTIME_ASM_B_24)
                 .append(NativeRiscvAsmRtB25.RISCV_RUNTIME_ASM_B_25)
+                .append(NativeRiscvAsmRtB25b.RISCV_RUNTIME_ASM_B_25B)
                 .append(NativeRiscvAsmRtB26.RISCV_RUNTIME_ASM_B_26)
                 .append(NativeRiscvAsmRtB27.RISCV_RUNTIME_ASM_B_27)
                 .append(NativeRiscvAsmRtB28.RISCV_RUNTIME_ASM_B_28)
                 .append(NativeRiscvAsmRtB29.RISCV_RUNTIME_ASM_B_29)
                 .append(NativeRiscvAsmRtB30.RISCV_RUNTIME_ASM_B_30)
                 .append(NativeRiscvAsmRtB31.RISCV_RUNTIME_ASM_B_31)
+                .append(NativeRiscvAsmRtB32.RISCV_RUNTIME_ASM_B_32)
+                .append(NativeRiscvAsmRtB33.RISCV_RUNTIME_ASM_B_33)
+                .append(NativeRiscvAsmRtB34.RISCV_RUNTIME_ASM_B_34)
+                .append(NativeRiscvAsmRtB35.RISCV_RUNTIME_ASM_B_35)
+                .append(NativeRiscvAsmRtB36.RISCV_RUNTIME_ASM_B_36)
+                .append(NativeRiscvAsmRtB37.RISCV_RUNTIME_ASM_B_37)
+                .append(NativeRiscvAsmRtB38.RISCV_RUNTIME_ASM_B_38)
+                .append(NativeRiscvAsmRtB39.RISCV_RUNTIME_ASM_B_39)
+                .append(NativeRiscvAsmRtB40.RISCV_RUNTIME_ASM_B_40)
+                // S13b (plan-stdlib-expansion): parse com default (§43) —
+                // wrapper c/ handler no exc_chain; B34–B39 = outras lanes.
+                .append(NativeRiscvAsmRtB41.RISCV_RUNTIME_ASM_B_41)
                 .toString();
     }
-    static final String RISCV_MAPSET_ASM = NativeRiscvAsmMapset0.RISCV_MAPSET_ASM_0 + NativeRiscvAsmMapset1.RISCV_MAPSET_ASM_1 + NativeRiscvAsmMapset2.RISCV_MAPSET_ASM_2;
+    static final String RISCV_MAPSET_ASM = runtimeMapset();
+    private static String runtimeMapset() {
+        return new StringBuilder()
+                .append(NativeRiscvAsmMapset0.RISCV_MAPSET_ASM_0)
+                .append(NativeRiscvAsmMapset1.RISCV_MAPSET_ASM_1)
+                .append(NativeRiscvAsmMapset2.RISCV_MAPSET_ASM_2)
+                .toString();
+    }
 }

@@ -42,8 +42,8 @@ final class BytecodeKofTypes {
             case 0xbb -> { // new de DOMÍNIO (mirror do path linear):
                 // `new java.lang.X` nunca é idiomático (R6). Cross-package
                 // registra import (§7 degrau 3); emissão = nome simples.
-                String cn = BytecodeDecoder.resolveClassName(cp, in.operands()[0]);
-                if (cn == null || BytecodeDecoder.isJdkClass(cp, in.operands()[0])) return false;
+                String cn = BytecodeCp.resolveClassName(cp, in.operands()[0]);
+                if (cn == null || BytecodeCp.isJdkClass(cp, in.operands()[0])) return false;
                 if (frame != null && frame.treeScope != null) {
                     String internal = indexInternalName(cp, in.operands()[0]);
                     if (internal != null) frame.treeScope.resolve(internal);
@@ -59,9 +59,9 @@ final class BytecodeKofTypes {
                 return true;
             }
             case 0xb7 -> { // invokespecial <init> (mirror do linear)
-                String[] m = BytecodeDecoder.resolveMethodRef(cp, in.operands()[0]);
+                String[] m = BytecodeCp.resolveMethodRef(cp, in.operands()[0]);
                 if (m == null || !"<init>".equals(m[1])) return false;
-                int argc = BytecodeDecoder.argCount(m[2]);
+                int argc = BytecodeCp.argCount(m[2]);
                 if (stack.size() < argc + 2) return false;
                 var callArgs = new java.util.ArrayList<String>();
                 for (int i = 0; i < argc; i++) callArgs.add(0, stack.pop());
@@ -150,7 +150,7 @@ final class BytecodeKofTypes {
      * domínio, Number, List/Map/Set — precisam de import/contexto
      * multi-classe do §7) → o emissor recusa → stub honesto.
      */
-    static String inlineKofType(String[] cp, int classIdx) {        String n = BytecodeDecoder.resolveClassName(cp, classIdx);
+    static String inlineKofType(String[] cp, int classIdx) {        String n = BytecodeCp.resolveClassName(cp, classIdx);
         if (n == null || !n.matches("[A-Za-z_][A-Za-z0-9_]*")) return null;
         return switch (n) {
             case "String" -> "String";
@@ -172,7 +172,7 @@ final class BytecodeKofTypes {
      * malformados caem no regex do índice.
      */
     static String arrayElementType(String[] cp, int classIdx, BytecodeFrame frame) {
-        String n = BytecodeDecoder.resolveClassName(cp, classIdx);
+        String n = BytecodeCp.resolveClassName(cp, classIdx);
         if (n == null) return null;
         if (n.equals("String") || n.equals("Object")) return n;
         if (frame == null) return null;
@@ -191,7 +191,7 @@ final class BytecodeKofTypes {
         if (classIdx <= 0 || classIdx >= cp.length || cp[classIdx] == null) return null;
         String e = cp[classIdx];
         if (!e.startsWith("#") || e.indexOf('#', 1) >= 0) return null;   // Class = 1 ref (não NameAndType)
-        Integer nameIdx = BytecodeDecoder.parseCp(e.substring(1));
+        Integer nameIdx = BytecodeCp.parseCp(e.substring(1));
         if (nameIdx == null || nameIdx >= cp.length || cp[nameIdx] == null) return null;
         return frame.treeScope.resolve(cp[nameIdx]);
     }
@@ -204,7 +204,7 @@ final class BytecodeKofTypes {
         if (classIdx <= 0 || classIdx >= cp.length || cp[classIdx] == null) return null;
         String e = cp[classIdx];
         if (!e.startsWith("#") || e.indexOf('#', 1) >= 0) return null;
-        Integer nameIdx = BytecodeDecoder.parseCp(e.substring(1));
+        Integer nameIdx = BytecodeCp.parseCp(e.substring(1));
         if (nameIdx == null || nameIdx >= cp.length || cp[nameIdx] == null) return null;
         return cp[nameIdx];
     }

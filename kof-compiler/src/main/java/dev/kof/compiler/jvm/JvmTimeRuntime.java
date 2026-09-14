@@ -86,18 +86,29 @@ public final class JvmTimeRuntime {
                 // ── kof.time (STDLIB S7a) — data ISO (String) add/diff ─────
                 // "YYYY-MM-DD" estrito; inválido => "" (add) / 0 (diff) —
                 // mesma política "invalid => 0" do calendário wedge.
+                // §182 (13/09): parse ESTRITO dígito a dígito — contrato
+                // declarado "YYYY-MM-DD … dígitos" (Native é a referência).
+                // Integer.parseInt aceitava sinal (+999/-9) = desvio do
+                // contrato e divergência silenciosa cross-target (regra 5).
+                private static int kof_time_digits(String s, int from, int len) {
+                    int v = 0;
+                    for (int i = from; i < from + len; i++) {
+                        char c = s.charAt(i);
+                        if (c < '0' || c > '9') return -1;
+                        v = v * 10 + (c - '0');
+                    }
+                    return v;
+                }
+
                 private static java.time.LocalDate kof_time_parseIso(String iso) {
                     if (iso == null || iso.length() != 10) return null;
                     if (iso.charAt(4) != '-' || iso.charAt(7) != '-') return null;
-                    try {
-                        int y = Integer.parseInt(iso.substring(0, 4));
-                        int m = Integer.parseInt(iso.substring(5, 7));
-                        int d = Integer.parseInt(iso.substring(8, 10));
-                        if (!kof_time_validDate(y, m, d)) return null;
-                        return java.time.LocalDate.of(y, m, d);
-                    } catch (RuntimeException e) {
-                        return null;
-                    }
+                    int y = kof_time_digits(iso, 0, 4);
+                    int m = kof_time_digits(iso, 5, 2);
+                    int d = kof_time_digits(iso, 8, 2);
+                    if (y < 0 || m < 0 || d < 0) return null;
+                    if (!kof_time_validDate(y, m, d)) return null;
+                    return java.time.LocalDate.of(y, m, d);
                 }
 
                 public static String kof_time_addDays(String iso, int days) {
@@ -115,6 +126,80 @@ public final class JvmTimeRuntime {
                     long diff = java.time.temporal.ChronoUnit.DAYS.between(a, b);
                     return (diff < Integer.MIN_VALUE || diff > Integer.MAX_VALUE)
                             ? 0 : (int) diff;
+                }
+
+                // ── kof.time (STDLIB S7e) — hoje/formato UTC (D-STDLIB) ────
+                // D1: UTC-only em TODOS os alvos (deriva de now() em UTC).
+                // D4: zero pattern-DSL; invalidade => "". D5: isToday =
+                // igualdade com a data UTC de now(). Serial = dias-civil
+                // (epochDay Hinnant acima — MESMA base do add/diffDays).
+                public static String kof_time_todayIso() {
+                    long epochDay = Math.floorDiv(System.currentTimeMillis(), 86400000L);
+                    long[] ymd = kof_time_civilFromEpochDay(epochDay);
+                    return String.format("%04d-%02d-%02d", ymd[0], ymd[1], ymd[2]);
+                }
+
+                public static String kof_time_formatDateIso(int year, int month, int day) {
+                    if (!kof_time_validDate(year, month, day)) return "";
+                    return String.format("%04d-%02d-%02d", year, month, day);
+                }
+
+                public static boolean kof_time_isToday(int year, int month, int day) {
+                    return kof_time_isValidIso(year, month, day)
+                            && kof_time_formatDateIso(year, month, day).equals(kof_time_todayIso());
+                }
+
+                private static boolean kof_time_isValidIso(int y, int m, int d) {
+                    return kof_time_validDate(y, m, d);
+                }
+
+                // Inversa Hinnant (dias-civil -> [y,m,d]) — MESMO algoritmo do
+                // .Lka_civil x86 (RuntimeTimeIso) e .Lu8_civil riscv (B33).
+                private static long[] kof_time_civilFromEpochDay(long z) {
+                    z += 719468;
+                    long era = Math.floorDiv(z, 146097);
+                    long doe = z - era * 146097;
+                    long yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+                    long y = yoe + era * 400;
+                    long doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+                    long mp = (5 * doy + 2) / 153;
+                    long d = doy - (153 * mp + 2) / 5 + 1;
+                    long m = mp < 10 ? mp + 3 : mp - 9;
+                    return new long[]{m <= 2 ? y + 1 : y, m, d};
+                }
+
+                // ── kof.time (STDLIB S7f) — hoursBetween (D3) ──────────────
+                // floor simétrico: conta horas COMPLETAS entre os instantes
+                // (data+hora), truncado em direção a zero (mesma convenção
+                // daysBetween). Datas inválidas => 0; hora fora de 0..23
+                // também invalida o instante (paridade do gating do wedge).
+                public static int kof_time_hoursBetween(int y1, int m1, int d1, int h1,
+                                                        int y2, int m2, int d2, int h2) {
+                    if (!kof_time_validDate(y1, m1, d1) || !kof_time_validDate(y2, m2, d2)) return 0;
+                    if (h1 < 0 || h1 > 23 || h2 < 0 || h2 > 23) return 0;
+                    long hours1 = kof_time_epochDay(y1, m1, d1) * 24 + h1;
+                    long hours2 = kof_time_epochDay(y2, m2, d2) * 24 + h2;
+                    long diff = hours2 - hours1;
+                    return (diff < Integer.MIN_VALUE || diff > Integer.MAX_VALUE)
+                            ? 0 : (int) diff;
+                }
+
+                // ── kof.time (STDLIB S7g) — parseDateIso (D4) ──────────────
+                // STR "YYYY-MM-DD" estrito -> serial daysFromEpoch; inválido
+                // => 0 (mesma política do calendário wedge). Serial = MESMO
+                // domínio de hoursBetween/daysBetween (recomposição fecha).
+                public static int kof_time_parseDateIso(String iso) {
+                    java.time.LocalDate ld = kof_time_parseIso(iso);
+                    if (ld == null) return 0;
+                    return (int) kof_time_epochDay(ld.getYear(), ld.getMonthValue(), ld.getDayOfMonth());
+                }
+
+                // ── kof.time (STDLIB S7h) — tzOffsetSeconds (D1) ───────────
+                // Fuso do HOST como getter explícito (segundos leste+).
+                // D1: todayIso/isToday NUNCA usam isto (UTC-only em todos
+                // os alvos) — sem paridade acidental de fuso.
+                public static int kof_time_tzOffsetSeconds() {
+                    return java.time.ZoneId.systemDefault().getRules().getOffset(java.time.Instant.now()).getTotalSeconds();
                 }
 
                 public static String kof_time_interval(int ms, Object fn) {

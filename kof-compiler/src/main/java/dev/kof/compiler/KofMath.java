@@ -19,6 +19,8 @@ public final class KofMath {
     private static final Type INT = Type.PrimitiveType.INT;
     private static final Type BOOL = Type.PrimitiveType.BOOL;
     private static final Type DOUBLE = Type.PrimitiveType.DOUBLE;
+    private static final Type LONG = Type.PrimitiveType.LONG;
+    private static final Type STR = BuiltinTypes.STRING;
 
     static final List<String> NAMESPACES = List.of("math");
 
@@ -46,8 +48,7 @@ public final class KofMath {
                     ? new MathCall("kof_math_" + name, BOOL, List.of(INT)) : null;
             // S1b wedge: sqrt = PRIMEIRO Double em kof.math (x86 sqrtsd — FLT
             // fechado 31/08 via XMM). NaN em <0 paridade JVM/JS (Math.sqrt).
-            // riscv64/aarch64 = MATH001 (fsqrt.d portável mas a lane não tem
-            // cross-assembler/qemu p/ montar+rodar — regra: nunca asm sem prova).
+            // riscv64/aarch64 = fatia B32 (fsqrt.d) — MATH001 fechado 11/09.
             case "sqrt" -> argc == 1 && isDouble(argTypes.get(0))
                     ? new MathCall("kof_math_sqrt", DOUBLE, List.of(DOUBLE)) : null;
             // S1b.1: escalares Double puros (SSE2 — sem libm, sem floor).
@@ -62,19 +63,54 @@ public final class KofMath {
                     ? new MathCall("kof_math_percentage", DOUBLE, List.of(DOUBLE, DOUBLE)) : null;
             case "isInteger", "isDecimal" -> argc == 1 && isDouble(argTypes.get(0))
                     ? new MathCall("kof_math_" + name, BOOL, List.of(DOUBLE)) : null;
+            // S1b.2 (decisão 7a da mantenedora 13/09): pow = PRIMEIRO caso que
+            // exige libm no native (call pow@PLT + link -lm no x86, que já é
+            // dinâmico). JVM/SCRIPT/JS = Math.pow / ** (exato). riscv/aarch =
+            // MATH001 (link cross é estático sem libc — ligar libm mudaria o
+            // modelo de runtime da lane nat; recusa honesta aqui, nunca link
+            // quebrado silencioso).
+            case "pow" -> argc == 2 && isDouble(argTypes.get(0)) && isDouble(argTypes.get(1))
+                    ? new MathCall("kof_math_pow", DOUBLE, List.of(DOUBLE, DOUBLE)) : null;
+            // S13a (plan-stdlib-expansion §2, P0): parse numérico como fachada
+            // de namespace sobre as runtime fns EXISTENTES kof_string_to_*
+            // (regra 2 — zero runtime novo nos 4 alvos). Contrato = JDK
+            // Integer.parseInt/Long.parseLong/Double.parseDouble com trim
+            // (idem `.toInt()`); inválido/overflow LANÇA (String runtime fn
+            // kof_throw_string no native, exceção nos demais). Guard de tipo:
+            // arg STR obrigatório (número não alarga de/para String em
+            // silêncio — SEM025, R6). OrNull/OrDefault = S13b/S13c.
+            case "parseInt" -> argc == 1 && isStr(argTypes.get(0))
+                    ? new MathCall("kof_string_to_int", INT, List.of(STR)) : null;
+            case "parseLong" -> argc == 1 && isStr(argTypes.get(0))
+                    ? new MathCall("kof_string_to_long", LONG, List.of(STR)) : null;
+            case "parseDouble" -> argc == 1 && isStr(argTypes.get(0))
+                    ? new MathCall("kof_string_to_double", DOUBLE, List.of(STR)) : null;
+            // S13b (plan-stdlib-expansion §2, P0): parse com default —
+            // briefing §43 ("falha de parse = OrNull/OrDefault"). Mesmo
+            // contrato do parse (JDK + trim); falha DEVOLVE o default
+            // (nunca lança — paridade: JVM try/catch, JS wrapper, x86/riscv
+            // handler local no exc_chain). Default tipado (Int/Long/Double
+            // literal ou expressão — número não alarga p/ String, SEM025).
+            case "parseIntOrDefault" -> argc == 2 && isStr(argTypes.get(0)) && isInt(argTypes.get(1))
+                    ? new MathCall("kof_string_to_int_or_default", INT, List.of(STR, INT)) : null;
+            case "parseLongOrDefault" -> argc == 2 && isStr(argTypes.get(0))
+                    && (isLong(argTypes.get(1)) || isInt(argTypes.get(1)))
+                ? new MathCall("kof_string_to_long_or_default", LONG, List.of(STR, LONG)) : null;
+            case "parseDoubleOrDefault" -> argc == 2 && isStr(argTypes.get(0)) && isDouble(argTypes.get(1))
+                    ? new MathCall("kof_string_to_double_or_default", DOUBLE, List.of(STR, DOUBLE)) : null;
             default -> null;
         };
     }
 
-    /** S1 (Int) + S1b (Double) em todos os targets; sqrt/lerp/percentage/
-     * isInteger/isDecimal = JVM/Script/JS/x86, gate MATH001 nos cross
-     * (sem cross-assembler na lane — prova impossível). */
+    /** S1 (Int) + S1b/S1b.1 (Double) em TODOS os targets (MATH001 fechado
+     * 11/09 — fatia riscv B32 + tradutor aarch fsqrt.d/fcvtzs; prova qemu).
+     * S1b.2 pow (decisão 7a): x86 sim (pow@PLT + -lm); riscv/aarch NÃO —
+     * o link cross é estático sem libc (invariante "asm puro" da lane nat;
+     * ligar libm = decisão de arquitetura, regra 6). Recusa com código
+     * MATH001 (R6), nunca undefined-reference silencioso. */
     static boolean supportedOn(String function, Target target) {
-        boolean fp = function.equals("kof_math_sqrt") || function.equals("kof_math_lerp")
-                || function.equals("kof_math_percentage")
-                || function.equals("kof_math_isInteger") || function.equals("kof_math_isDecimal");
-        if (fp && (target == Target.NATIVE_RISCV64 || target == Target.NATIVE_AARCH64)) {
-            return false;
+        if ("kof_math_pow".equals(function)) {
+            return target != Target.NATIVE_RISCV64 && target != Target.NATIVE_AARCH64;
         }
         return true;
     }
@@ -89,5 +125,13 @@ public final class KofMath {
 
     private static boolean isDouble(Type t) {
         return t == DOUBLE || "double".equals(t.toString()) || "Double".equals(t.toString());
+    }
+
+    private static boolean isStr(Type t) {
+        return BuiltinTypes.STRING.equals(t) || "String".equals(t.toString());
+    }
+
+    private static boolean isLong(Type t) {
+        return t == LONG || "long".equals(t.toString()) || "Long".equals(t.toString());
     }
 }

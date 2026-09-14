@@ -85,8 +85,10 @@ public final class NativeRiscvAsmRtB31 {
                 addi s3, s3, -1
                 j    .Lpd_th0
             .Lpd_vazio:
-                li   a0, 0
-                j    .Lpd_ret
+                # §175 (paridade): "" (ou só espaços) LANÇA como o JVM
+                # (Double.parseDouble("") = NumberFormatException) — era 0
+                # silencioso (R6/paridade; fila do §175, fechado 13/09).
+                j .Lpd_throw
             .Lpd_lit:
                 # NaN (len 3) / [+/-]Infinity (len 8/9/10), idem x86/JDK
                 sub  t1, s3, s2

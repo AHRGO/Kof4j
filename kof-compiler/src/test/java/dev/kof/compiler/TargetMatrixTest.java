@@ -61,23 +61,27 @@ class TargetMatrixTest {
 
     @Test
     void wasmGapMessagePointsToRealPlanPath() {
-        // R6: diagnóstico honesto com referência CORRETA — o plano vive em
-        // docs/development/future/PLATFORM-PLAN.md (docs/future/ é caminho
-        // morto pós-reorganização do repo).
+        // R6: diagnóstico honesto com referência CORRETA — o plano de origem
+        // (PLATFORM-PLAN) foi consolidado em docs/development/DECISIONS.md
+        // §D-PLATFORM 13/09 (caminho morto = mensagem mentirosa para o usuário).
         java.util.List<String> errs = new java.util.ArrayList<>();
         Target t = TargetMatrix.parse("kofwasm", errs);
         assertNull(t, "wasm não existe → null");
         assertEquals(1, errs.size());
         String msg = errs.get(0);
         assertTrue(msg.contains("WASM001"), msg);
-        assertTrue(msg.contains("docs/development/future/PLATFORM-PLAN.md"),
+        assertTrue(msg.contains("docs/development/DECISIONS.md"),
                 "referência do plano deve apontar para o arquivo real: " + msg);
         // caminho relativo ao repo root (cwd do teste é o módulo)
+        java.util.List<String> candidates = java.util.List.of(
+                "docs/development/DECISIONS.md");
         java.nio.file.Path p = java.nio.file.Path.of(System.getProperty("user.dir")).toAbsolutePath();
         java.nio.file.Path plan = null;
-        for (int i = 0; i < 6 && p != null; i++, p = p.getParent()) {
-            java.nio.file.Path cand = p.resolve("docs/development/future/PLATFORM-PLAN.md");
-            if (java.nio.file.Files.exists(cand)) { plan = cand; break; }
+        for (int i = 0; i < 6 && p != null && plan == null; i++, p = p.getParent()) {
+            for (String c : candidates) {
+                java.nio.file.Path cand = p.resolve(c);
+                if (java.nio.file.Files.exists(cand)) { plan = cand; break; }
+            }
         }
         assertTrue(plan != null, "plano citado na mensagem deve existir no repo");
     }

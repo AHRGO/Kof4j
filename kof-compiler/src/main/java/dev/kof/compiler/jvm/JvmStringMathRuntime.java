@@ -72,6 +72,12 @@ public final class JvmStringMathRuntime {
                     return part / total * 100.0;
                 }
 
+                // S1b.2 (decisão 7a): pow = Math.pow — exato JVM==JS==native
+                // glibc nos finitos (mesma fórmula IEEE 754, travado em teste).
+                public static double kof_math_pow(double base, double exp) {
+                    return Math.pow(base, exp);
+                }
+
                 public static boolean kof_math_isInteger(double v) {
                     return v == Math.floor(v) && !Double.isInfinite(v);
                 }
@@ -347,7 +353,6 @@ public final class JvmStringMathRuntime {
                     if (v == null) return null;
                     return kof_encoding_base64Decode(v.replace('-', '+').replace('_', '/'));
                 }
-
 
                 // ── kof.encoding (STDLIB S4.2b) — percent-encoding (RFC 3986) ──
                 // unreserved [A-Za-z0-9-_.~] preservado; todo outro byte UTF-8

@@ -20,7 +20,9 @@ public final class JvmRuntimeReturnDescriptors {
             case "kof_json_decode_int_list", "kof_json_decode_string_list", "kof_json_decode_list"
                     -> "Ljava/util/ArrayList;";
             case "kof_json_decode_object_list" -> "Ljava/util/ArrayList;";
-            case "kof_json_decode_int_array", "kof_json_decode_bool_array" -> "[I";
+            case "kof_json_decode_map", "kof_json_decode_object_map" -> "Ljava/util/Map;";
+            case "kof_json_decode_int_array" -> "[I";
+            case "kof_json_decode_bool_array" -> "[Z";
             case "kof_json_decode_long_array" -> "[J";
             case "kof_json_decode_double_array" -> "[D";
             case "kof_json_decode_string_array" -> "[Ljava/lang/String;";
@@ -89,6 +91,10 @@ public final class JvmRuntimeReturnDescriptors {
             case "kof_string_to_long" -> "J";
             case "kof_string_to_double" -> "D";
             case "kof_string_to_float" -> "F";
+            // S13b (plan-stdlib-expansion): parse com default — briefing §43
+            case "kof_string_to_int_or_default" -> "I";
+            case "kof_string_to_long_or_default" -> "J";
+            case "kof_string_to_double_or_default" -> "D";
             case "kof_orm_create", "kof_orm_delete", "kof_orm_migrate" -> "Z";
             case "kof_orm_save", "kof_orm_find" -> "Ljava/lang/Object;";
             case "kof_orm_count" -> "J";
@@ -107,7 +113,7 @@ public final class JvmRuntimeReturnDescriptors {
              case "kof_ui_router_param", "kof_ui_router_current" -> "Ljava/lang/String;";
              case "kof_ui_label_set_font_size", "kof_ui_label_set_bold", "kof_ui_label_set_color",
                      "kof_ui_window_set_theme" -> "V";
-            // ── kof.security (docs/security.md §5) ───────────────────
+            // ── kof.security (docs/stdlib/security.md §5) ───────────────────
             case "kof_sec_sha256", "kof_sec_sha512", "kof_sec_hmac_sha256", "kof_sec_redact",
                     "kof_sec_secret_get", "kof_sec_secret_get_default", "kof_sec_password_hash",
                     "kof_sec_aesgcm_encrypt", "kof_sec_aesgcm_decrypt", "kof_sec_jwt_create",
@@ -136,6 +142,7 @@ public final class JvmRuntimeReturnDescriptors {
                     "kof_math_isNegative", "kof_math_isZero", "kof_strings_isAlpha", "kof_strings_isNumeric", "kof_strings_isAlphaNumeric", "kof_strings_isAscii" -> "I";
             case "kof_math_sqrt" -> "D";
             case "kof_math_lerp", "kof_math_percentage" -> "D";
+            case "kof_math_pow" -> "D";
             case "kof_math_isInteger", "kof_math_isDecimal" -> "I";
             case "kof_strings_isUpperCase", "kof_strings_isLowerCase",
                     "kof_strings_count" -> "I";
@@ -143,9 +150,9 @@ public final class JvmRuntimeReturnDescriptors {
                     "kof_strings_toPascalCase", "kof_strings_toSnakeCase", "kof_strings_toKebabCase",
                     "kof_strings_slugify", "kof_strings_escapeHtml", "kof_strings_unescapeHtml",
                     "kof_strings_escapeJson", "kof_strings_removeWhitespace",
-                    "kof_strings_normalizeWhitespace",
+                    "kof_strings_normalizeWhitespace", "kof_strings_dedent",
                     "kof_validation_formatCnpj", "kof_validation_formatCpf", "kof_validation_formatCep" -> "Ljava/lang/String;";
-            case "kof_strings_repeat", "kof_strings_truncate" -> "Ljava/lang/String;";
+            case "kof_strings_repeat", "kof_strings_truncate", "kof_strings_indent" -> "Ljava/lang/String;";
             case "kof_strings_padLeft", "kof_strings_padRight" -> "Ljava/lang/String;";
             case "kof_net_scheme", "kof_net_host", "kof_net_port",
                     "kof_net_path", "kof_net_query", "kof_net_fragment",

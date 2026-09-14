@@ -4,6 +4,7 @@ import dev.kof.compiler.KofConditionalJump;
 import dev.kof.compiler.KofLabel;
 import dev.kof.compiler.KofOperation;
 import dev.kof.compiler.KofPop;
+import dev.kof.compiler.KofPop2;
 import dev.kof.compiler.KofPutStatic;
 import dev.kof.compiler.KofReturn;
 import dev.kof.compiler.KofStoreField;
@@ -83,17 +84,37 @@ final class JsExpressionStatementParser {
                 preamble.add(stmt);
                 continue;
             }
-            if (op instanceof KofPop) {
+            if (op instanceof KofPop || op instanceof KofPop2) {
                 pos[0]++;
                 JsIr.JsExpression dropped = null;
                 if (!stack.isEmpty()) {
                     dropped = parser.pop(stack);
                 }
+                boolean sideEffecting = dropped instanceof JsIr.JsCall
+                        || dropped instanceof JsIr.JsSequence
+                        || dropped instanceof JsIr.JsAwait
+                        || (dropped instanceof JsIr.JsBinary jb
+                                && (jb.left() instanceof JsIr.JsCall
+                                        || jb.right() instanceof JsIr.JsCall));
+                if (!stack.isEmpty()) {
+                    // §139: POP no MEIO de uma expressão (o fold `f() == null`
+                    // emite call;POP;false com o receiver $kofOut embaixo na
+                    // pilha). Descartar o topo, preservar o efeito colateral no
+                    // preamble e CONTINUAR a statement — antes o clear()+return
+                    // perdia o receiver e quebrava o merge de frames (COMP002).
+                    if (sideEffecting) preambleExprs.add(dropped);
+                    continue;
+                }
                 stack.clear();
-                if (dropped instanceof JsIr.JsCall || dropped instanceof JsIr.JsSequence
-                        || dropped instanceof JsIr.JsAwait) {
+                if (sideEffecting) {
                     // Side-effecting call, sequence, or await used as statement
                     // (e.g. `await r;` / `await spawn tick();`) must survive POP.
+                    // §112-JS: `m.put(k,v)` como statement tem o prev (null p/
+                    // chave nova) embrulhado em `(call ?? default)` pelo
+                    // JsCollectionOps — o JsBinary NÃO sobrevivia ao POP e o
+                    // side-effect se PERDIA (put não rodava → size errado na
+                    // célula `map`). Uma expressão com JsCall filho é sempre
+                    // side-effecting em Kof (sem short-circuit).
                     return parser.finishExpressionStatement(preamble, preambleExprs,
                             new JsIr.JsExprStmt(dropped));
                 }
@@ -101,6 +122,12 @@ final class JsExpressionStatementParser {
             }
             if (op instanceof KofReturn kr) {
                 pos[0]++;
+                // DD-01: KofReturn inalcançável no epílogo do método (o valor
+                // já retornou via return-finally) — sem ops de carga antes:
+                // stack vazia → return null (equivalente JVM de areturn vazio).
+                if (stack.isEmpty() && preamble.isEmpty() && preambleExprs.isEmpty()) {
+                    return parser.finishExpressionStatement(preamble, preambleExprs, new JsIr.JsReturn(null));
+                }
                 if (Type.isVoid(kr.returnType()) && !stack.isEmpty()) {
                     // A void call's result is still a side-effecting
                     // expression (default-parameter wrapper returning a
@@ -125,7 +152,7 @@ final class JsExpressionStatementParser {
                 pos[0]++;
                 JsIr.JsExpression right = parser.pop(stack);
                 JsIr.JsExpression left = parser.pop(stack);
-                JsIr.JsExpression condition = parser.p.flow.comparisonExpr(cj.comparison(), left, right, cj.operandType());
+                JsIr.JsExpression condition = JsComparisons.comparisonExpr(cj.comparison(), left, right, cj.operandType());
                 JsIr.JsExpression ifExpr = parser.p.flow.tryParseIfExpr(ctx, pos, cj, condition);
                 if (ifExpr != null) {
                     stack.add(ifExpr);

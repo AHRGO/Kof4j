@@ -11,13 +11,13 @@ import java.util.List;
 
 /**
  * `kof decompile` — structural decompilation of a JVM {@code .class} into
- * idiomatic Kof source (docs/future/DECOMPILER.md, Fase E).
+ * idiomatic Kof source (docs/development/DECOMPILER.md, Fase E).
  *
  * This is a structural skeleton: class name, superclass, interfaces, fields
  * and method signatures are recovered exactly from the class file. Method
  * bodies are NOT recovered yet (Control Flow / Data Flow recovery are later
  * phases), so every body is emitted as an honest {@code throw} stub instead
- * of fabricating behavior (per LEGACY_IR: never invent silently).
+ * of fabricating behavior (per LEGACY_MIGRATION §4: never invent silently).
  */
 public final class Decompile {
 
@@ -204,6 +204,42 @@ public final class Decompile {
         sb.append('\n');
 
         String simpleName = simpleName(ir.thisClass);
+        // Fase E (fila 13/09): Java record PURO → `record Nome implements I(T a, T b)`
+        // (o frontend gera ctor/accessors/equals/hashCode/toString; a ordem do
+        // header é name/typeParams/extends/implements/COMPONENTES — probe R7).
+        // Os corpos dos 3 sintéticos NÃO existem no bytecode (invokedynamic
+        // ObjectMethods) — no esqueleto `class X extends Record` cada um era um
+        // stub silencioso (~215 records no corpus = a maior fonte única de
+        // stubs). Qualquer desvio do shape (interface não-resolvida, método
+        // extra, nome reservado, bound genérico) → null → esqueleto de hoje
+        // (zero-drift por construção).
+        BytecodeRecords.Rec rec = BytecodeRecords.pureRecord(ir, scope);
+        if (rec != null) {
+            List<dev.kof.compiler.parser.ClassFileParser.FieldInfo> comps = rec.components();
+            sb.append("record ").append(simpleName);
+            var tps = BytecodeRecords.typeParams(ir.classSignature);
+            if (!tps.isEmpty()) sb.append('<').append(String.join(", ", tps)).append('>');
+            if (!rec.interfaces().isEmpty())
+                sb.append(" implements ").append(String.join(", ", rec.interfaces()));
+            sb.append('(');
+            for (int k = 0; k < comps.size(); k++) {
+                if (k > 0) sb.append(", ");
+                var f = comps.get(k);
+                String ctype = f.signature != null
+                        ? methodKofType(dev.kof.compiler.Type.describe(
+                                dev.kof.compiler.Type.fromJvmSignature(f.signature)))
+                        : fieldKofType(f.descriptor);
+                recordSignatureUses(fieldTypeTree(f.descriptor, f.signature), scope);
+                sb.append(ctype).append(' ').append(f.name);
+            }
+            sb.append(")\n\n");
+            if (scope != null) {
+                var lines = new StringBuilder();
+                for (String imp : scope.usedImports()) lines.append("import ").append(imp).append('\n');
+                if (lines.length() > 0) sb.insert(importPos, lines.toString());
+            }
+            return sb.toString();
+        }
         sb.append("class ").append(simpleName);
         if (ir.superClass != null && !ir.superClass.equals("java/lang/Object")) {
             sb.append(" extends ").append(resolveSuperName(ir.superClass, scope));
@@ -242,10 +278,14 @@ public final class Decompile {
             }
             String ret = methodKofType(m.returnTypeName());
             String params = paramList(m.parameterTypeNames());
+            // bug 134: o modificador `static` era computado só p/ o frame e
+            // NUNCA emitido → `S.staticMethod(x)` baixava como chamada de
+            // instância → crash no 1º teste que EXECUTA saída decompilada.
+            boolean isStatic = (m.accessFlags & 0x0008) != 0;
+            String stat = isStatic ? "static " : "";
             String body = null;
             List<String> stmts = null;
             if (m.code != null) {
-                boolean isStatic = (m.accessFlags & 0x0008) != 0;
                 BytecodeFrame frame = new BytecodeFrame(m.descriptor, isStatic);
                 frame.treeScope = scope;
                 boolean hasHandlers = m.code.exceptionHandlers != null && !m.code.exceptionHandlers.isEmpty();
@@ -263,18 +303,18 @@ public final class Decompile {
                 }
             }
             if (body == null && stmts == null) {
-                sb.append("    ").append(ret).append(' ').append(m.name)
+                sb.append("    ").append(stat).append(ret).append(' ').append(m.name)
                   .append('(').append(params).append(") {\n");
                 sb.append("        throw \"body not recovered\"   // ").append(Confidence.UNKNOWN.label()).append('\n');
                 sb.append("    }\n");
             } else if (stmts != null) {
-                sb.append("    ").append(ret).append(' ').append(m.name).append('(').append(params).append(") {\n");
+                sb.append("    ").append(stat).append(ret).append(' ').append(m.name).append('(').append(params).append(") {\n");
                 for (String s : stmts) sb.append("        ").append(s).append('\n');
                 sb.append("    }\n");
             } else if (body.isEmpty()) {
-                sb.append("    ").append(ret).append(' ').append(m.name).append('(').append(params).append(") {\n    }\n");
+                sb.append("    ").append(stat).append(ret).append(' ').append(m.name).append('(').append(params).append(") {\n    }\n");
             } else {
-                sb.append("    ").append(ret).append(' ').append(m.name).append('(').append(params)
+                sb.append("    ").append(stat).append(ret).append(' ').append(m.name).append('(').append(params)
                   .append(") = ").append(body).append('\n');
             }
         }

@@ -27,6 +27,7 @@ public final class JsonDispatch {
         }
         if (BuiltinTypes.isString(type)) return "kof_json_encode_string";
         if (BuiltinTypes.isList(type)) return "kof_json_encode_list";
+        if (BuiltinTypes.isMap(type)) return "kof_json_encode_map";
         if (type instanceof Type.ArrayType) return "kof_json_encode_array";
         return "kof_json_encode";
     }

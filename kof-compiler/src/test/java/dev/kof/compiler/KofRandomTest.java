@@ -185,9 +185,56 @@ class KofRandomTest {
         runNative(tmp, SHAPE_NATIVE_SRC);
     }
 
+    /** DD-STDLIB-01 (decisão 6a 13/09): `randomBytesHex(n)` = alias aditivo
+     *  de `random.hex(n)` — mesma runtime fn `kof_random_hex`, mesmo
+     *  contrato (2n hex minúsculo; n<=0 => null em JVM/JS). Native usa
+     *  o shape sem null (kof_sec_random_hex pré-existente devolve ""). */
+    private static final String BYTES_HEX_SRC = """
+        main() {
+            var h = random.randomBytesHex(8)
+            assert(h.length() == 16)
+            var k = 0
+            while (k < h.length()) {
+                var c = h.charAt(k)
+                assert((c >= 48 && c <= 57) || (c >= 97 && c <= 102))
+                k = k + 1
+            }
+            assert(random.randomBytesHex(0) == null)
+            println("OK")
+        }
+        """;
+
+    private static final String BYTES_HEX_NATIVE_SRC = """
+        main() {
+            var h = random.randomBytesHex(8)
+            assert(h.length() == 16)
+            var k = 0
+            while (k < h.length()) {
+                var c = h.charAt(k)
+                assert((c >= 48 && c <= 57) || (c >= 97 && c <= 102))
+                k = k + 1
+            }
+            println("OK")
+        }
+        """;
+
     @Test
-    void randomShapeCrossArch(@TempDir Path tmp) throws Exception {
-        // RAND001: getrandom(2) ecall 278 (primitiva SECN000/B25 confirmada
+    void randomBytesHexJvm(@TempDir Path tmp) throws Exception {
+        runJvm(tmp, BYTES_HEX_SRC);
+    }
+
+    @Test
+    void randomBytesHexJs(@TempDir Path tmp) throws Exception {
+        runJs(tmp, BYTES_HEX_SRC);
+    }
+
+    @Test
+    void randomBytesHexNative(@TempDir Path tmp) throws Exception {
+        runNative(tmp, BYTES_HEX_NATIVE_SRC);
+    }
+
+    @Test
+    void randomShapeCrossArch(@TempDir Path tmp) throws Exception {        // RAND001: getrandom(2) ecall 278 (primitiva SECN000/B25 confirmada
         // no qemu). Shape idêntico ao x86 — assert-only, sem golden.
         assumeToolchain("riscv64-linux-gnu-as", "riscv64-linux-gnu-ld", "qemu-riscv64");
         runQemu(tmp, Target.NATIVE_RISCV64, SHAPE_NATIVE_SRC);
