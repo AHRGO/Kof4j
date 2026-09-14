@@ -511,6 +511,26 @@ Phase E  Kof Decompiler          (generate Kof source)
 > block joining at the increment) — each recovery must keep
 > `diamondJoinShapesStayHonestStub` green (the diamond law is binding).
 
+>
+> **State (14/09 ~16:25, this commit, owner = 192.168.100.17): ROI of the
+> step-3 walker MEASURED (harness `/tmp/opencode/roi/dev/kof/cli/Roi.java`,
+> throwaway in the package `dev.kof.cli` like Orient/Why0/StoreCat — practice
+> of the lane: measure before writing).** Corpus REAL today
+> (`kof-compiler/target/classes`): 699 classes (0 parse failures), 3899 methods,
+> **2628 stubbed** (67%). Of these, **1098** have at least one shape
+> "succ==2 block with `blockCondition==null` and computation in the test block"
+> (test-block size 1..20 insns before the cond — fused init/store/irem of a
+> `for`/`while`) — the upper bound of what the walker with `immediatePostDom`
+> unlocks (many will still resist the law of the diamond; the real yield is
+> reached slice by slice). ROI ≫ 30 → **decision: build the walker**.
+> Unit 2 scope (locked by the measurement): consume `immediatePostDom` in the
+> `cond == null` branch of `struct()` — recover test-with-computation ONLY
+> when the join P = idom(then) = idom(else-path), P is NOT loop header and the
+> back-edges of the arms do not cross P (the construction that makes trap 1
+> impossible — criterion of step 2a extended to non-pure test); each slice
+> keeps `diamondJoinShapesStayHonestStub` VERDE (binding law) and adds
+> runtime golden (JVM oracle).
+
 ## 7. Relationship with the Compiler
 
 The decompiler feeds the existing pipeline:

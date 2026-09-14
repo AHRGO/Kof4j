@@ -771,7 +771,10 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > (padrão Orient/Why0/StoreCat) sobre os 851 `.class` do kof-compiler/target:
 > contar quantos dos 1402 stubs têm bloco NÃO-header com `succ.size()==2` e
 > cond==null (a forma teste-com-computação que o walker de pós-dominador
-> destrava) — mede antes de escrever; (2) se ROI > ~30: ligar
+> destrava) — ✅ **FEITO 14/09 ~16:25: ROI medido (harness roi/Roi.java no
+> package do cli, corpus real 699 classes / 3899 métodos / 2628 stubs;
+> **1098** stubs têm a forma bloco-teste-com-computação succ==2 cond==null =
+> teto do walker; ROI ≫ 30 → **DECIDIDO: construir**).** (2) ligar
 > `immediatePostDom` no `struct()` p/ o join estruturado, cada recuperação
 > guardando `diamondJoinShapesStayHonestStub` VERTO (lei do diamante é
 > vinculante — se quebrar, é stub honesto, nunca código errado compilável);

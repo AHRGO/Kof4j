@@ -512,6 +512,26 @@ Fase E  Kof Decompiler          (gerar Kof source)
 > precisa manter `diamondJoinShapesStayHonestStub` verde (a lei do diamante
 > é vinculante).
 
+>
+> **Estado (14/09 ~16:25, este commit, dono = 192.168.100.17): ROI do walker
+> do passo 3 MEDIDO (harness `/tmp/opencode/roi/dev/kof/cli/Roi.java`,
+> descartável no package `dev.kof.cli` como Orient/Why0/StoreCat — prática da
+> lane: medir antes de escrever).** Corpus REAL hoje
+> (`kof-compiler/target/classes`): 699 classes (0 falhas de parse), 3899
+> métodos, **2628 stubados** (67%). Destes, **1098** têm ao menos uma forma
+> "bloco succ==2 com `blockCondition==null` e computação no bloco-teste"
+> (tam do bloco-teste 1..20 insns antes do cond — init/store/irem fundidos de
+> `for`/`while`) — teto do que o walker com `immediatePostDom` destrava (muitos
+> ainda vão resistir à lei do diamante; o rendimento real vem fatia a fatia).
+> ROI ≫ 30 → **decisão: construir o walker**. Escopo da unidade 2 (travado
+> pela medição): consumir `immediatePostDom` no ramo `cond == null` do `struct()`
+> — recuperar teste-com-computação SOMENTE quando o join P = idom(then) =
+> idom(senão-caminho), P NÃO é loop-header e as back-edges dos braços não
+> cruzam P (a construção que torna trap 1 impossível — critério do passo 2a
+> estendido a teste não-puro); cada fatia mantém
+> `diamondJoinShapesStayHonestStub` VERDE (lei vinculante) e adiciona golden
+> de execução (oracle JVM).
+
 ## 7. Relação com o Compilador
 
 O decompiler alimenta o pipeline existente:
