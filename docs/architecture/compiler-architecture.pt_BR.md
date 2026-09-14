@@ -13,7 +13,7 @@ arquitetura mudar (refatoração, novo backend), a **linguagem não muda**.
 
 ## 1. Visão geral
 
-![alt text](image.png)
+![Arquitetura do compilador Kof — diagrama do fluxo](../image.png)
 
 **Módulos Maven relacionados:**
 
