@@ -289,8 +289,13 @@ public class Lexer {
             while (pos < source.length() && isHexDigit(source.charAt(pos))) {
                 advance();
             }
+            if (pos < source.length() && (source.charAt(pos) == 'l' || source.charAt(pos) == 'L')) {
+                isLong = true;
+                advance();
+            }
             String hexValue = source.substring(startOffset, pos);
-            addToken(TokenType.INT_LITERAL, hexValue, startLine, startCol, startOffset, pos - startOffset);
+            TokenType type = isLong ? TokenType.LONG_LITERAL : TokenType.INT_LITERAL;
+            addToken(type, hexValue, startLine, startCol, startOffset, pos - startOffset);
             return;
         }
         while (pos < source.length() && Character.isDigit(source.charAt(pos))) {

@@ -275,7 +275,12 @@ public class ExpressionParser {
             // aqui vira diagnóstico limpo (bug 25).
             if (t.type() == TokenType.LONG_LITERAL) {
                 try {
-                    Long.parseLong(t.value().replaceAll("[lL]$", ""));
+                    String raw = t.value().replaceAll("[lL]$", "");
+                    if (raw.startsWith("0x") || raw.startsWith("0X")) {
+                        Long.parseUnsignedLong(raw.substring(2), 16);
+                    } else {
+                        Long.parseLong(raw);
+                    }
                 } catch (NumberFormatException e) {
                     ctx.error("numeric literal out of range: " + t.value(), "PARSE084");
                     return new LiteralExpr(ctx.pos(), ConcreteLiteralKind.NULL, "0");

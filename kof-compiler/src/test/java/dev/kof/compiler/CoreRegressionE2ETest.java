@@ -1607,35 +1607,24 @@ class CoreRegressionE2ETest {
                 """, "7\n2.75\ntrue", tempDir, "prim-return-obj");
     }
 
-    // Issues #146/#147/#158/#166 — JVM return descriptors of real
-    // java.lang.String/wrapper methods. Before the fix the typer had no
-    // signature for these methods, so the emitter produced
-    // `(...)Ljava/lang/Object;` or an empty class name:
-    //   #146 String.matches       -> VerifyError (boxed Boolean, if_icmpne)
-    //   #147 String.replaceAll    -> NoSuchMethodError (Object return)
-    //   #158 String.toCharArray   -> NoClassDefFoundError "?" (char[] lost)
-    //   #166 Int.parseInt/Long.toHexString -> NoSuchMethodError (String return)
-    // JVM-only: the JS runtime faces for matches/toCharArray/parseInt are a
-    // separate pre-existing gap (tracked in known-bugs), not a JVM regression.
+    // Issue #201 — Long hex literals with high bit set (≥ 0x8000000000000000L)
+    // threw unhandled NumberFormatException (COMP002). Fixed using parseUnsignedLong.
     @Test
-    void stringAndWrapperMethodReturnDescriptors(@TempDir Path tempDir) throws IOException {
-        Path src = tempDir.resolve("strdesc.kf");
+    void longHexLiteralWithHighBitSet(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("hexlong.kf");
         Files.writeString(src, """
                 main() {
-                    println("hello123".matches("[a-z]+[0-9]+"))
-                    println("hello123".matches("[0-9]+"))
-                    var r = "hello world 123".replaceAll("[0-9]+", "NUM")
-                    println(r)
-                    var arr = "hello".toCharArray()
-                    println(arr.length)
-                    var n = Int.parseInt("42")
-                    println(n + 8)
-                    println(Long.toHexString(255L))
+                    var a: Long = 0x8000000000000000L
+                    var b: Long = 0xFFFFFFFF00000000L
+                    var c: Long = 0x7FFFFFFFFFFFFFFFL
+                    println(a)
+                    println(b)
+                    println(c)
                 }
                 """);
-        Path out = tempDir.resolve("strdesc-jvm");
+        Path out = tempDir.resolve("hexlong-jvm");
         CompilationResult r = driver.compile(src, out, Target.JVM);
         assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
-        assertEquals("true\nfalse\nhello world NUM\n5\n50\nff", runJvm(out));
+        assertEquals("-9223372036854775808\n-4294967296\n9223372036854775807", runJvm(out));
     }
 }

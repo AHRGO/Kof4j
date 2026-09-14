@@ -16,7 +16,7 @@ public final class ExpressionLowerer {
             case LiteralExpr lit -> {
                 switch (lit.kind()) {
                     case ConcreteLiteralKind.INT -> ops.add(KofLoadLiteral.ofInt(driver.parseIntLiteral(lit.value())));
-                    case ConcreteLiteralKind.LONG -> ops.add(KofLoadLiteral.ofLong(Long.parseLong(driver.stripSuffix(lit.value()))));
+                    case ConcreteLiteralKind.LONG -> ops.add(KofLoadLiteral.ofLong(driver.parseLongLiteral(lit.value())));
                     case ConcreteLiteralKind.FLOAT -> ops.add(KofLoadLiteral.ofFloat(Float.parseFloat(driver.stripSuffix(lit.value()))));
                     case ConcreteLiteralKind.DOUBLE -> ops.add(KofLoadLiteral.ofDouble(Double.parseDouble(driver.stripSuffix(lit.value()))));
                     case ConcreteLiteralKind.STRING -> ops.add(KofLoadLiteral.ofString(lit.value()));

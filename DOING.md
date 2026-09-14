@@ -101,6 +101,12 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (14/09 ~09:15, dono = 192.168.100.22, lane compiler): fix issue #201 — Long hex literals with high bit set (>= 0x8000000000000000L) crash compiler (COMP002).**
+> - Causa raiz: `CompilerTypeSupport.parseIntLiteral` e `ExpressionLowerer` usavam `Long.parseLong(...)` que falha para valores hexadecimais de 64 bits com bit mais significativo setado.
+> - Correção: `CompilerTypeSupport.parseLongLiteral` e `parseIntLiteral` usam `Long.parseUnsignedLong(hex, 16)`. Em `Lexer.java`, detecção de literal hexadecimal com sufixo `L/l` agora emite `TokenType.LONG_LITERAL`. Em `ExpressionParser`, faixa de literais `LONG_LITERAL` hex valida com `parseUnsignedLong`.
+> - Prova: `CoreRegressionE2ETest#longHexLiteralWithHighBitSet` (JVM E2E com `0x8000000000000000L`, `0xFFFFFFFF00000000L`, `0x7FFFFFFFFFFFFFFFL`).
+> - Próximo: issues #180, #168 ou #167.
+
 > **✅ FEITO (14/09 ~08:15, dono = 192.168.100.22, lane compiler): fix issue #182 — for-in / for loop variable shadowing outer variable corrupts outer slot lookup after loop.**
 > Ao sair de `ForInStmt` e `ForStmt`, as variáveis de iteração (`fis.varName()`) e de inicialização (`fs.init()`) tinham seus nomes mantidos na lista `locals`, fazendo com que leituras posteriores da variável externa homônima resolvessem para o slot da variável do loop (que no final do loop fica undefined/top no frame JVM, gerando `VerifyError: Bad local variable type`).
 > Ajustado para renomear a entrada de `locals` no término do loop para `#forInVar` / `#forInitVar`, preservando o índice/slot alocado para metadados de backends (JS/Native) enquanto libera o nome original para resolver a variável do escopo externo.

@@ -169,9 +169,17 @@ public final class CompilerTypeSupport {
     static int parseIntLiteral(String value) {
         if (value.startsWith("0x") || value.startsWith("0X")) {
             // no suffix stripping: hex digits may end in a..f
-            return (int) Long.parseLong(value.substring(2), 16);
+            return (int) Long.parseUnsignedLong(value.substring(2), 16);
         }
         return Integer.parseInt(CompilerTypeSupport.stripSuffix(value));
+    }
+
+    static long parseLongLiteral(String value) {
+        String stripped = CompilerTypeSupport.stripSuffix(value);
+        if (stripped.startsWith("0x") || stripped.startsWith("0X")) {
+            return Long.parseUnsignedLong(stripped.substring(2), 16);
+        }
+        return Long.parseLong(stripped);
     }
 
     static String stripSuffix(String value) {

@@ -132,7 +132,6 @@ public final class ExpressionTyper {
                                 ? Type.PrimitiveType.LONG : Type.PrimitiveType.INT;
                         continue;
                     }
-                    leftType = leftType;
                 }
                 yield leftType;
             }
