@@ -151,6 +151,18 @@ public final class ExpressionLowerer {
                     ops.add(new KofCall(BuiltinTypes.LIST, "kof_list_new", argTypes, BuiltinTypes.LIST, KofCallKind.FUNCTION));
                     yield localIdx;
                 }
+                // #139/#150 — `new Set<T>()`/`new Map<K,V>()` são COLEÇÕES
+                // (não classes JVM reais): baixam p/ kof_set_new/kof_map_new,
+                // como setOf/mapOf. Sem isto caíam em KofNewObject com o nome
+                // Kof (`kof/Set`/`kof/Map`) → NoClassDefFound/ClassFormatError.
+                if (BuiltinTypes.isSet(type)) {
+                    ops.add(new KofCall(type, "kof_set_new", List.of(), type, KofCallKind.FUNCTION));
+                    yield localIdx;
+                }
+                if (BuiltinTypes.isMap(type)) {
+                    ops.add(new KofCall(type, "kof_map_new", List.of(), type, KofCallKind.FUNCTION));
+                    yield localIdx;
+                }
                 List<Type> argTypes = new ArrayList<>();
                 for (ExpressionNode arg : ne.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
                 SymbolTable.ConstructorSymbol resolvedCtor = driver.semanticAnalyzer.getResolvedConstructor(ne);

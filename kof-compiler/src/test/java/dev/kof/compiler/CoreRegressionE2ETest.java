@@ -172,6 +172,22 @@ class CoreRegressionE2ETest {
                 """, "7\n8\n9\n14\n8", tempDir, "IndexPrimitive");
     }
 
+    // GitHub #139/#150 — `new Set<T>()` e `new Map<K,V>()`
+    @Test
+    void newSetAndMapCollections(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                main() {
+                    var s = new Set<String>()
+                    s.add("alpha")
+                    s.add("beta")
+                    println(s.contains("alpha"))
+                    var m = new Map<String, Int>()
+                    m.put("k1", 100)
+                    println(m.get("k1"))
+                }
+                """, "true\n100", tempDir, "NewSetAndMap");
+    }
+
     // GitHub #30 — String.split + acesso ao array: .get(i) era baixado como
     // KofCall com owner ArrayType → JvmTypeMapper produzia internalName ""
     // → Methodref "" no constant pool → ClassFormatError: Illegal class name "".
