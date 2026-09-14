@@ -588,7 +588,10 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > aparecer no log → re-medir com classes frescas e marcar FIXED + comentar
 > na issue (assim foi §221: `769371c2` → `[LOG] test` + `invokevirtual
 > Logger.print`, `21e68a55`). #225 fechável; #230→§223, #231→§224 com prova
-> javap postada. Fila atual: 23 abertos. (2) lane nat fechar os 3 cross-arch
+> javap postada. #233→§225 (mesma raiz tabela-miss do §224 — um fix
+> fecha as duas) e #232→ sub-face `ordinal()` do §211 (SEM025,
+> `Cannot resolve method 'ordinal' on type 'Dir'`), prova postada nas duas.
+> Fila atual: 24 abertos. (2) lane nat fechar os 3 cross-arch
 > (re-confirmados vermelhos 13:51: riscv `CastSaturation` idx4 `-inf`→0 +
 > §192 B41 hang) → RE-MEDIR baseline completa e atualizar docs/status.md —
 > gate de release = 0 FAILURE fora de node/BD/guardas; nat commitou 08:50
