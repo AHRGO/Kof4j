@@ -350,8 +350,14 @@ if (ae.target() instanceof IdentifierExpr ieBox) {
             IRLocalVariable boxLv = locals.get(i);
             String op = ae.operator();
             Type valType = driver.boxFactory.boxValueType(boxLv.type());
+            // #192 — compound (`+=`/`-=`/`*=`) e concat em variável capturada:
+            // o `getfield value` consome a referência do box e o `putfield`
+            // precisa dela de novo — duplicar antes (o caminho de campo de
+            // instância já fazia; aqui faltava → VerifyError "Operand stack
+            // underflow" no putfield do invoke() da lambda).
             if ("+=".equals(op) && BuiltinTypes.isString(valType)) {
                 ops.add(new KofLoadLocal(boxLv.type(), boxLv.index()));
+                ops.add(new KofDup());
                 ops.add(new KofLoadField(boxLv.type(), "value", valType));
                 localIdx = ExpressionLowerer.emitExpression(driver, ae.value(), ops, owner, localIdx, locals);
                 ops.add(new KofCall(BuiltinTypes.STRING, "valueOf",
@@ -363,6 +369,7 @@ if (ae.target() instanceof IdentifierExpr ieBox) {
                 ops.add(new KofStoreField(boxLv.type(), "value", valType));
             } else if (isCompoundOp(op)) {
                 ops.add(new KofLoadLocal(boxLv.type(), boxLv.index()));
+                ops.add(new KofDup());
                 ops.add(new KofLoadField(boxLv.type(), "value", valType));
                 localIdx = ExpressionLowerer.emitExpression(driver, ae.value(), ops, owner, localIdx, locals);
                 emitCompoundRhsConv(driver, ops, op, valType,
