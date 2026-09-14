@@ -306,11 +306,11 @@ final class JdwpClient {
                     }
                     continue;
                 }
-                int sp = evt.readByte(); // suspendPolicy
+                evt.readByte(); // suspendPolicy (lido p/ avançar o cursor; valor não usado)
                 int eventCount = evt.readInt();
                 for (int e = 0; e < eventCount; e++) {
                     int kind = evt.readByte();
-                    evt.readInt(); // requestId
+                    evt.readInt(); // requestId (lido p/ avançar o cursor)
                     if (kind == 8) { // ClassPrepare: threadID, tag, typeID, signature, status
                         long threadId = evt.readReference();
                         evt.readByte();

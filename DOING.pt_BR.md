@@ -3011,6 +3011,7 @@ no upstream).
 
 | Gap/Item | Estado | Dono | Data | Prova |
 |---|---|---|---|---|
+| **CodeQL health (degraus 1–6)** — BytecodeReader OOB (fix+teste), contradictory ×3, Compare OOB (fix+Q0), unused-container ×3, unread-variable ×3 tooling, secret-scan OSS (licença), 51 dismissals documentados, triagem por lane | `FEITO` 14/09 | lane repo-hygiene (.22) | 14/09 | BytecodeReaderTest/KofFormatterTest/CompareTest verdes + Q0; **issue #185**; fixes = `fixed`-on-beta na API |
 | **KOF-SBD-001** — Array Bounds Safety no KofJS (`kofArrayGet`/`kofArraySet` bounds-checked, fecha divergência JS crua de `array[index]`) | `FEITO` (commit local; push/Issue/PR aguardando revisão) | agente-sbd001 | 13/09 | `ArrayBoundsSafetyE2ETest` 10/10 verde (era 6 FAIL); `kof-compiler` 361→355 falhas (−6, diff das 355 restantes idêntico antes/depois); branch `fix/sbd-001-array-bounds-kofjs` |
 | **Plataforma de migração legado** — Fases A–H (`kof inspect/decompile/translate/compare/migrate` + `Confidence`) | `FEITO` | agente-planning | 05/09 | branch `planning-future`; `ClassFileParser`+`Confidence`+CLIs; suíte **855/0**; commits `34ded81`→`98a4d8b` |
 | **FFI formalizado** — TIER 2.1 (`extern` + gap FFI001/002 + binding real JVM(FFM)+Native(dlopen/dlsym)) | `FEITO` | agente-planning | 05/09 | `FfiE2ETest` 5/5 (libc `abs`/`atoi`, libm `sqrt`); suíte 855/0 |
@@ -3062,6 +3063,8 @@ Tier 1 ⇒ fechado ⇒ Tiers 2–12 (plataforma universal) abrem.
 
 - **≤500 linhas por classe** (refactor futuro de NativeRuntime: módulo novo por área, ex: `NativeHttpRuntime.java`).
 - Nunca duas frentes no mesmo arquivo gigante ao mesmo tempo — se for inevitável, combine no chat antes.
+- **Sem trocar de branch toda hora; nunca renomear branch compartilhada** (14/09, ordem da mantenedora): tudo entra pela `beta-*` ativa; `tmp-*` local nunca vira ref remota nem renomeia `beta/main` por baixo dos outros.
+- **Overlay i18n nunca apaga edição viva** (14/09, bug real corrigido em `scripts/docs-lang.sh`): o guard usava `git diff --quiet`, cego com skip-worktree — agora compara hash do worktree com o índice. Regra durável: editar o espelho `.pt_BR.md` junto (é ele que o overlay copia).
 - **Congelamento de comportamento** (AGENTS.md, obrigatório): zero regressão (suíte **910** é gate de merge), features novas **aditivas** (retrocompatibilidade), refactor de 500 linhas preserva semântica (mesma suíte + golden E2E; output mudou = bug do refactor), bugs em `docs/known-bugs.md` são corrigidos **no código** para atingir o comportamento previsto (nunca "documentar em volta"), paridade JVM/Native/JS é regra.
 
 ## Incidentes de processo (bronca registrada — 03/09, agente-switch-expr)

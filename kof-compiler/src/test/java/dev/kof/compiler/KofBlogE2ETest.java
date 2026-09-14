@@ -223,13 +223,13 @@ class KofBlogE2ETest {
                     + post.getBytes(StandardCharsets.UTF_8).length + "\r\n\r\n" + post);
             assertEquals("HTTP/1.1 401 Unauthorized", getStatus(r), r);
 
-            // 6. listar posts → JSON com o post criado
-            r = http(port, "GET /posts HTTP/1.1\r\nHost: x\r\n\r\n");
+            // 6. listar posts com sessão → JSON com o post criado
+            r = http(port, "GET /posts HTTP/1.1\r\nHost: x\r\nauthorization: " + token + "\r\n\r\n");
             assertEquals("HTTP/1.1 200 OK", getStatus(r), r);
             assertTrue(getBody(r).contains("validação da plataforma"), getBody(r));
 
-            // 7. post inexistente → 404
-            r = http(port, "GET /posts/999 HTTP/1.1\r\nHost: x\r\n\r\n");
+            // 7. post inexistente com sessão → 404
+            r = http(port, "GET /posts/999 HTTP/1.1\r\nHost: x\r\nauthorization: " + token + "\r\n\r\n");
             assertEquals("HTTP/1.1 404 Not Found", getStatus(r), r);
         } finally {
             app.destroyForcibly();

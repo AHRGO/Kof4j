@@ -367,7 +367,7 @@ kof info | lsp | install | version
 
 # Compilando e instalando a partir do source
 
-**Requisitos:** JDK 21+ (Temurin recomendado — é a Tooling API baseline) e
+**Requisitos:** JDK 25+ (Temurin recomendado — é a Tooling API baseline) e
 Maven 3.9+. Para o target `native`: `as`/`ld` (binutils). O target `js` não
 exige nada externo (GraalJS embarcado no jar).
 
@@ -389,13 +389,13 @@ bin/kof install ~/.kof
 export PATH="$HOME/.kof/bin:$PATH"
 kof version
 
-# 5. Empacotar a distribuição oficial (com OpenJDK 21 embutido)
+# 5. Empacotar a distribuição oficial (com OpenJDK 25 embutido)
 scripts/package.sh --jdk      # gera dist/kof-<versão>-<os>-<arch>.tar.gz
 ```
 
 O `kof install <dir>` copia o `kof.jar` para `<dir>/lib/` e gera o launcher
 `<dir>/bin/kof` (usa o JDK embutido de `<dir>/jdk/` quando presente; senão o
-`java` do sistema). O `scripts/package.sh --jdk` baixa o Temurin 21 do
+`java` do sistema). O `scripts/package.sh --jdk` baixa o Temurin 25 do
 Adoptium e monta o layout completo de distribuição.
 
 Versionamento centralizado em `VERSION` — ver
