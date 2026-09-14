@@ -60,6 +60,33 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (14/09 ~00:30, dono = 192.168.100.22): CI vermelho na beta
+> corrigido — gate de asm riscv/aarch OPCIONAL (ordem da mantenedora,
+> D-ASM-GATE em DECISIONS.md).** Os testes §181
+> `*CastSaturationLabelsAreUniquePerEmission` (`67db6c50`) assertavam "asm
+> should be kept" sempre; falso — com toolchain o backend APAGA o `.s` após
+> link OK, verde só em host sem toolchain, CI com toolchain = vermelho
+> (runs 34797329739/34799992551/34800663031). Fix: `assumeTrue(KOF_ASM_GATE)`
+> (skip honesto) + corpo portável (if `.s` existe → texto; senão → exige
+> binário). A regressão §181 continua provada nos E2Es qemu (label duplicada
+> = `as` falha). Prova local dupla: sem flag `Skipped: 2`; com
+> `KOF_ASM_GATE=1` `Tests run: 2, F:0, E:0, S:0`. **Nota de colisão:** o
+> commit local `fdf0dd92` (dono mel, mesmo fix if/else + sujo da lane #127
+> `JvmRecordEmitter` erased + submodule lixo `base`) foi **desfeito por
+> reset ao remoto** sem descartar trabalho: o if/else foi reaproveitado aqui
+> (parte da mesma unidade gate) e o #127 ficou em stash
+> (`stash@{0}` "lane#127 JvmRecordEmitter...") + cópia em
+> `/tmp/opencode/lane127/` — **a lane #127 (records/erased) deve
+> reaproveitar o stash, não está perdido.**
+>
+> **PRÓXIMO PASSO (lane .22):** fechar issue #132 no GitHub (prova
+> `10fd1b32`+`0c122131` — #100/#101/#102 do Jonas já mergiados no #137); em
+> seguida fila D-STDLIB/D-SEC de `docs/development/DECISIONS.md` (P0 da beta)
+> por célula ainda pendente. Re-avaliar mergeable do #135 após este push
+> (GitHub dizia CONFLICTING em `docs/compiler-architecture.md` só porque o
+> `baseRefOid` do PR estava em `8a470a92`, atrás do `86b03ac4` (merge #134);
+> `merge-tree origin/main origin/beta-0.4.0` = exit 0, limpo).
+>
 > **✅ FEITO (13/09 ~23:00, lane development, dono = 192.168.100.18):
 > §181 — cast `Double/Float as Int/Long` SATURANTE (JLS 5.1.3) 4 targets.**
 > x86 `emitSatConv` (NaN-check 1º + clamp c/ limites double `cvtsi2sdq`;

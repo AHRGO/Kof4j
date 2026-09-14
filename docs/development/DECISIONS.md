@@ -224,6 +224,35 @@ PKG006); F2 targets = `docs/targets` + §23; F3 full-stack = D-APP I2; F4/F5 =
 D-APP Q7/Q10; F8 script = `kof-cli CmdScript` ✅; F9 conformance =
 `docs/bugs-and-gaps/conformance-matrix.md`. **Nada restava de único — o arquivo foi absorvido, não descartado.**
 
+## D-ASM-GATE — gate de asm riscv/aarch OPCIONAL até o dev nativo fechar (14/09)
+
+**Decisão da mantenedora (14/09):** *"deixa o teste do riscv e arm opcional
+até o desenvolvimento estar completo"* — e o chão inegociável que a acompanha:
+*"não pode ter teste quebrado na main nem na beta"*.
+
+- **Contexto (causa raiz medida):** os testes
+  `*CastSaturationLabelsAreUniquePerEmission` (trava de regressão do §181,
+  `67db6c50`) assertavam "o backend sempre mantém o `.s`". **Falso:** em host
+  COM toolchain, `as`+`ld` linkam com sucesso e o `NativeArchEmitter` APAGA o
+  `.s` (só mantém com `KOF_KEEP_ASM`). Resultado: verde no host de dev (sem
+  toolchain, ramo `ToolchainMissing` preserva o asm), **vermelho no CI**
+  (toolchain presente) — gate da beta quebrado desde `67db6c50`/`fdf0dd92`.
+- **Opção escolhida:** skip **honesto e explícito** (regra Q5, nunca "passa por
+  acidente"): `Assumptions.assumeTrue(KOF_ASM_GATE)` no início dos dois testes.
+  Padrão = skip (CI verde); reativa com `KOF_ASM_GATE=1` quando o gate cross
+  for exigido de novo. Corpo tornado **portável** (if `.s` existe → inspeção de
+  texto; senão → exige o binário linkado, prova mecânica).
+- **A regressão do §181 continua provada nos 42 E2Es riscv + 42 aarch sob qemu:**
+  label `.Lsat181` duplicada = `as` falha = `success()` false = teste E2E
+  vermelho. O gate de texto é redundante com qemu; só acrescenta em host SEM
+  toolchain — por isso pode ser opcional sem perder proteção real.
+- **Evidência:** `NativeRiscv64E2ETest.java`/`NativeAarch64E2ETest.java`
+  (`KOF_ASM_GATE`); prova local dupla — sem flag: `Skipped: 2`; com
+  `KOF_ASM_GATE=1`: `Tests run: 2, Failures: 0, Errors: 0, Skipped: 0`.
+- **Condição de reativação:** quando o desenvolvimento nativo estiver completo
+  (bugs da lane Native — §184/§187/§181-adjacentes — fechados com matriz
+  5/5), o `assumeTrue` é removido e o gate volta a ser obrigatório no CI.
+
 ---
 
 ## Como atualizar este doc

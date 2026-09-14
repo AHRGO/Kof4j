@@ -1008,10 +1008,18 @@ main() {
     }
 
     /** §181 (13/09, regressão do c90e85ee): labels de saturação únicos por
-     *  emissão (o aarch herda os labels do riscv via tradutor). Não exige
-     *  toolchain — inspeciona o `.s`. */
+     *  emissão (o aarch herda os labels do riscv via tradutor). A inspeção do
+     *  `.s` NÃO funciona em host COM toolchain: o backend apaga o `.s` após
+     *  link OK (NativeArchEmitter, exceto KOF_KEEP_ASM) — "asm should be kept"
+     *  era verde só sem toolchain e vermelha no CI (14/09). OPCIONAL por
+     *  decisão da mantenedora (14/09, DECISIONS.md): skip honesto até o dev
+     *  nativo estar completo; reativa com KOF_ASM_GATE=1 + KOF_KEEP_ASM=1.
+     *  A unicidade continua provada mecanicamente nos E2ES sob qemu (label
+     *  duplicada = `as` falha = `success()` false). */
     @Test
     void aarchCastSaturationLabelsAreUniquePerEmission(@TempDir Path tempDir) throws IOException {
+        Assumptions.assumeTrue(System.getenv("KOF_ASM_GATE") != null,
+                "§181 gate de asm aarch OPCIONAL até dev nativo completo (14/09, DECISIONS); reativa com KOF_ASM_GATE=1 + KOF_KEEP_ASM=1");
         Path src = tempDir.resolve("Main.kf");
         Files.writeString(src, """
             main() {
@@ -1025,15 +1033,23 @@ main() {
         CompilationResult result = driver.compile(src, outDir, Target.NATIVE_AARCH64);
         assertTrue(result.success(), "Compilation should succeed: " + result.diagnostics().getDiagnostics());
         Path asm = outDir.resolve("Default/Main.s");
-        assertTrue(Files.exists(asm), "asm should be kept at " + asm);
-        java.util.Map<String, Integer> defs = new java.util.HashMap<>();
-        for (String line : Files.readAllLines(asm)) {
-            String t = line.strip();
-            if (t.startsWith(".Lsat181") && t.endsWith(":")) defs.merge(t, 1, Integer::sum);
+        if (Files.exists(asm)) {
+            java.util.Map<String, Integer> defs = new java.util.HashMap<>();
+            for (String line : Files.readAllLines(asm)) {
+                String t = line.strip();
+                if (t.startsWith(".Lsat181") && t.endsWith(":")) defs.merge(t, 1, Integer::sum);
+            }
+            assertFalse(defs.isEmpty(), "esperava labels .Lsat181_* no asm do aarch");
+            List<String> dups = defs.entrySet().stream()
+                    .filter(e -> e.getValue() > 1).map(java.util.Map.Entry::getKey).sorted().toList();
+            assertEquals(List.of(), dups, "§181: labels de saturação duplicados (assembler falha)");
+        } else {
+            // toolchain presente: as+ld linkaram e apagaram o .s — prova
+            // mecânica de unicidade (label duplicada = `as` falha = success()
+            // false, já assertado acima). Exige o binário existir (nunca
+            // success=true sem binário, R6).
+            assertTrue(Files.exists(outDir.resolve("Default/Main")),
+                    "sem .s E sem binário linkado — nem prova mecânica nem de texto");
         }
-        assertFalse(defs.isEmpty(), "esperava labels .Lsat181_* no asm do aarch");
-        List<String> dups = defs.entrySet().stream()
-                .filter(e -> e.getValue() > 1).map(java.util.Map.Entry::getKey).sorted().toList();
-        assertEquals(List.of(), dups, "§181: labels de saturação duplicados (assembler falha)");
     }
 }

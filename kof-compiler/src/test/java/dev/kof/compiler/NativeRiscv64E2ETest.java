@@ -1040,11 +1040,18 @@ main() {
 
     /** §181 (13/09, regressão do c90e85ee): dois casts no MESMO método emitiam
      *  labels FIXOS `.Lsat181_*` e o GNU as falhava com símbolo duplicado. O fix
-     *  sufixa cada emissão (`_<seq>`). Este teste NÃO exige toolchain — só
-     *  inspeciona o `.s` (sempre mantido pelo backend) para travar a regressão
-     *  em qualquer ambiente. */
+     *  sufixa cada emissão (`_<seq>`). A inspeção do `.s` NÃO funciona em host
+     *  COM toolchain: após `as`+`ld` linkarem com sucesso o backend APAGA o
+     *  `.s` (NativeArchEmitter, exceto KOF_KEEP_ASM) — a asserção "asm should
+     *  be kept" era verde só em host sem toolchain e vermelha no CI (14/09).
+     *  OPCIONAL por decisão da mantenedora (14/09, DECISIONS.md): skip honesto
+     *  até o desenvolvimento nativo estar completo; reativa com KOF_ASM_GATE=1.
+     *  A unicidade continua provada mecanicamente nos 42 E2ES sob qemu (label
+     *  duplicada = `as` falha = `success()` false). */
     @Test
     void riscvCastSaturationLabelsAreUniquePerEmission(@TempDir Path tempDir) throws IOException {
+        Assumptions.assumeTrue(System.getenv("KOF_ASM_GATE") != null,
+                "§181 gate de asm riscv OPCIONAL até dev nativo completo (14/09, DECISIONS); reativa com KOF_ASM_GATE=1");
         Path src = tempDir.resolve("Main.kf");
         Files.writeString(src, """
             main() {
@@ -1058,15 +1065,23 @@ main() {
         CompilationResult result = driver.compile(src, outDir, Target.NATIVE_RISCV64);
         assertTrue(result.success(), "Compilation should succeed: " + result.diagnostics().getDiagnostics());
         Path asm = outDir.resolve("Default/Main.s");
-        assertTrue(Files.exists(asm), "asm should be kept at " + asm);
-        java.util.Map<String, Integer> defs = new java.util.HashMap<>();
-        for (String line : Files.readAllLines(asm)) {
-            String t = line.strip();
-            if (t.startsWith(".Lsat181") && t.endsWith(":")) defs.merge(t, 1, Integer::sum);
+        if (Files.exists(asm)) {
+            java.util.Map<String, Integer> defs = new java.util.HashMap<>();
+            for (String line : Files.readAllLines(asm)) {
+                String t = line.strip();
+                if (t.startsWith(".Lsat181") && t.endsWith(":")) defs.merge(t, 1, Integer::sum);
+            }
+            assertFalse(defs.isEmpty(), "esperava labels .Lsat181_* no asm do riscv");
+            List<String> dups = defs.entrySet().stream()
+                    .filter(e -> e.getValue() > 1).map(java.util.Map.Entry::getKey).sorted().toList();
+            assertEquals(List.of(), dups, "§181: labels de saturação duplicados (assembler falha)");
+        } else {
+            // toolchain presente: as+ld linkaram e apagaram o .s — prova
+            // mecânica de unicidade (label duplicada = `as` falha = success()
+            // false, já assertado acima). Exige o binário existir (nunca
+            // success=true sem binário, R6).
+            assertTrue(Files.exists(outDir.resolve("Default/Main")),
+                    "sem .s E sem binário linkado — nem prova mecânica nem de texto");
         }
-        assertFalse(defs.isEmpty(), "esperava labels .Lsat181_* no asm do riscv");
-        List<String> dups = defs.entrySet().stream()
-                .filter(e -> e.getValue() > 1).map(java.util.Map.Entry::getKey).sorted().toList();
-        assertEquals(List.of(), dups, "§181: labels de saturação duplicados (assembler falha)");
     }
 }
