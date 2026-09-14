@@ -70,8 +70,8 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
 > **✅ FEITO (14/09, dono = 192.168.100.18, lane development): blog E2E
-> (D-SPRING F12) + `--fat` (D-APP I3)** — as duas últimas linhas executáveis
-> da fila `DECISIONS.md` (§7 de `docs/development/README.md`).
+> (D-SPRING F12) + `--fat` (D-APP I3)** — commit `8eb156f4`; as duas últimas
+> linhas executáveis da fila `DECISIONS.md` (§7 de `docs/development/README.md`).
 >
 > **Blog E2E (F12):** `KofBlogE2ETest` verde — app canônico (web.app + H2 +
 > passwords + security sessions + validation + json num único app) provado
