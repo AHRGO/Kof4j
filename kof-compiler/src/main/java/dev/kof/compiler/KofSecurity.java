@@ -181,6 +181,14 @@ public final class KofSecurity {
                         ? new SecCall("kof_sec_auth_has_role", BOOL, List.of(STR)) : null;
                 case "hasPermission" -> argc == 1
                         ? new SecCall("kof_sec_auth_has_permission", BOOL, List.of(STR)) : null;
+                // D-SEC layer 16: OAuth2 resource server — valida JWT de
+                // TERCEIRO (RS256/ES256 via JWKS + issuer/aud). JVM primeiro.
+                case "resourceServer" -> argc == 3
+                        ? new SecCall("kof_sec_auth_resource_server", BOOL, List.of(STR, STR, STR))
+                        : null;
+                case "resourceServerVerify" -> argc == 1
+                        ? new SecCall("kof_sec_auth_resource_server_verify", STR, List.of(STR))
+                        : null;
                 default -> null;
             };
             default -> null;
@@ -220,6 +228,10 @@ public final class KofSecurity {
                     "kof_sec_auth_secret", "kof_sec_auth_token", "kof_sec_auth_authenticated",
                     "kof_sec_auth_claims", "kof_sec_auth_user", "kof_sec_auth_has_role",
                     "kof_sec_auth_has_permission" -> target == Target.JVM;
+            // D-SEC camada 16 (14/09): OAuth2 resource-server (JWKS + RSA/EC)
+            // — JVM-only nesta unidade; Native/JS seguem gap honesto.
+            case "kof_sec_auth_resource_server", "kof_sec_auth_resource_server_verify" ->
+                    target == Target.JVM;
             // D-SEC C11 (14/09): cookies parse/set — JVM+JS nesta unidade
             // (Native segue gap honesto em compile-time, igual SECN000/002).
             case "kof_sec_cookie_set", "kof_sec_cookie_set_opts", "kof_sec_cookie_get" ->
@@ -243,6 +255,7 @@ public final class KofSecurity {
             case "kof_sec_rate_limit", "kof_sec_session_create", "kof_sec_session_get", "kof_sec_session_destroy",
                     "kof_sec_api_key_generate", "kof_sec_api_key_valid" -> "SECN005";
             case "kof_sec_cookie_set", "kof_sec_cookie_set_opts", "kof_sec_cookie_get" -> "SECN006";
+            case "kof_sec_auth_resource_server", "kof_sec_auth_resource_server_verify" -> "SECN007";
             default -> "SECN000";
         };
     }

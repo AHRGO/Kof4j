@@ -193,6 +193,9 @@ public final class JvmRuntimeReturnDescriptors {
             case "kof_sec_session_get", "kof_enum_value_of" -> "Ljava/lang/String;";
             // ── kof.security C11 (cookies, D-SEC 14/09) ──
             case "kof_sec_cookie_set", "kof_sec_cookie_set_opts", "kof_sec_cookie_get" -> "Ljava/lang/String;";
+            // ── kof.security camada 16 (OAuth2 resource server, D-SEC 14/09) ──
+            case "kof_sec_auth_resource_server" -> "I";
+            case "kof_sec_auth_resource_server_verify" -> "Ljava/lang/String;";
             case "kof_spawn_result", "kof_await", "kof_poll" -> "Ljava/lang/Object;";
             case "kof_await_timeout" -> "Ljava/lang/Object;";
             case "kof_done", "kof_cancel", "kof_cancelled" -> "I";

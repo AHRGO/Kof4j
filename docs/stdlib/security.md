@@ -248,7 +248,8 @@ kof.security
 ├── security         → constantTimeEquals, randomHex, redact, csrfToken/csrfValid, corsAllowed, headers helpers,
 │                      rateLimit, sessionCreate/sessionGet/sessionDestroy, apiKeyGenerate/apiKeyValid (G9),
 │                      cookieSet/cookieGet (C11, secure defaults)
-└── auth             → web context: secret, token, authenticated, claims, user, hasRole, hasPermission
+└── auth             → web context: secret, token, authenticated, claims, user, hasRole, hasPermission,
+                       resourceServer/resourceServerVerify (layer 16: JWKS RS/ES)
 ```
 
 Support per target (current state — `KofSecurity.supportedOn`):
@@ -287,6 +288,7 @@ Support per target (current state — `KofSecurity.supportedOn`):
 | `security.cookieSet/cookieGet` (C11) | SIM | — (SECN006) | SIM (JS) |
 | `auth.*` (contexto web) | SIM (Bearer JWT + ThreadLocal) | — | — |
 | `app.security()` (C18, middleware composto) | SIM (JVM) | — (WEB006) | — (WEB006) |
+| `auth.resourceServer(jwksUrl, issuer, aud)` / `resourceServerVerify(token)` (camada 16) | SIM (JVM) | — (SECN007) | — (SECN007) |
 
 Real gaps with compile-time diagnostics: `SECN001` (passwords),
 `SECN003` (sha512), `SECN005` (G9) and `SECN006` (cookies in Native) — never

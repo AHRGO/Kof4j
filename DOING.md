@@ -213,10 +213,30 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > Docs no mesmo commit: `DECISIONS.md` §D-SEC, `docs/stdlib/stdlib-web.md`,
 > `docs/stdlib/security.md`, `backend-parity.md`, `docs/development/README.md`.
 >
-> **PRÓXIMO PASSO:** OAuth resource-server (D-SEC camada 16) — validação de JWT
-> de terceiro (JWKS + issuer/aud); única linha restante da fila §7 de
-> `docs/development/README.md`. Reler `docs/development/DECISIONS.md` §D-SEC
-> (OAuth) antes.
+> **✅ FEITO (14/09, dono = 192.168.100.18): OAuth2 resource-server (D-SEC
+> camada 16) — ÚLTIMA linha da fila §7.** `auth.resourceServer(jwksUrl, issuer,
+> audience)` + `auth.resourceServerVerify(token)` (JVM): JWKS RS256/384/512 +
+> ES256/384/512 (nunca `none`/HS*, sem confusão de algoritmo), chaves JWK RSA/EC,
+> `exp`/`iss`/`aud`, re-busca em `kid` desconhecido (rotação), cache em memória;
+> integra com `auth.authenticated()`/`app.security({auth:true})` (fallback
+> HS256→JWKS). Novo fragmento `JvmStringOAuthRuntime.java`. **Native/JS =
+> `SECN007`**. **Prova:** `KofOAuthResourceServerTest` 4/4 (token RS256 real +
+> JWKS local; iss/aud; alg=none/tamper; integração `app.security` 401/200;
+> SECN007 Native+JS). Docs: `DECISIONS.md` §D-SEC, `docs/stdlib/security.md`,
+> `backend-parity.md`, `docs/development/README.md` (EN+PT).
+>
+> **⚠️ COLISÃO C18 RESOLVIDA (14/09, dono = 192.168.100.18):** o rebase trouxe
+> o WIP da lane .22 (`57428c50`) com um `case "security"` incompleto (sem
+> runtime, descriptor divergente) + o meu `case "security"` completo → `case`
+> DUPLICADO que não compilava (`Duplicate case`). Mantida a implementação
+> completa (runtime + testes); o bloco órfão da .22 foi removido. Se a lane .22
+> tinha runtime em curso, ele não está no tree (grep `kof_web_security` só acha
+> o meu). Registrado para a .22 não retrabalhar.
+>
+> **PRÓXIMO PASSO:** fila §7 de `docs/development/README.md` **VAZIA**. Restam
+> apenas itens de outras lanes / decisão da mantenedora (`docs/development/` §3-6
+> EM CURSO por outros donos; `future/` bloqueado pela regra R12). Reler
+> `docs/development/README.md` §7 e a regra de ESTABILIDADE antes de re-disparar.
 
 > **✅ FEITO (14/09 ~03:45, dono = 192.168.100.22, lane repo-hygiene/.github):
 > pack segurança GitHub + merge na main (ordem da mantenedora, sem bump —

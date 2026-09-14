@@ -338,6 +338,11 @@ public final class JvmRuntimeCallDescriptors {
                     "kof_sec_secret_get_default", "kof_sec_jwt_create", "kof_sec_jwt_verify"
                     -> "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;";
             case "kof_sec_jwt_create_ttl" -> "(Ljava/lang/String;Ljava/lang/String;I)Ljava/lang/String;";
+            // D-SEC camada 16: OAuth2 resource server (JWKS).
+            case "kof_sec_auth_resource_server"
+                    -> "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z";
+            case "kof_sec_auth_resource_server_verify"
+                    -> "(Ljava/lang/String;)Ljava/lang/String;";
             case "kof_sec_jwt_verify_iss_aud"
                     -> "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;";
             case "kof_sec_random_hex" -> "(I)Ljava/lang/String;";

@@ -158,6 +158,24 @@ first (third-party JWT validation: JWKS + issuer/aud — cheap, closes
 "who is the Google user?"), (2) client authorization-code + PKCE later;
 **provider never** (non-goal, outside any plan).
 
+> **✅ EXECUTED (14/09, owner 192.168.100.18):** step 1 — **OAuth2 resource
+> server** in the JVM. `auth.resourceServer(jwksUrl, issuer, audience)` configures
+> third-party JWT validation (fetches the public keys from the JWKS URL; empty
+> issuer/audience = not required) and `auth.resourceServerVerify(token)` returns
+> the claims JSON or `null`. Fixed allowlist **RS256/384/512 + ES256/384/512** —
+> never `none` nor HS* (algorithm confusion rejected); RSA (`n`/`e`) and EC
+> (`crv` P-256/384/521, `x`/`y`) JWK keys; `exp` + `iss` + `aud` (string or
+> array). On an unknown `kid`, the JWKS is re-fetched once (key rotation). The
+> resource server plugs into `auth.authenticated()`/`app.security({auth:true})`:
+> after configuration, a token that fails HS256 falls back to JWKS validation.
+> JWKS is cached in memory. **Native/JS report `SECN007`** honestly. Tests:
+> `KofOAuthResourceServerTest` 4/4 (real RS256 token + local JWKS via
+> `com.sun.net.httpserver`; iss/aud rejection; alg=none/tamper; integration with
+> `app.security` 401/200; SECN007 Native+JS). API documented in
+> `docs/stdlib/security.md`.
+
+**TLS with own certificate — enters:** `app.listenSecure(port, certPem,
+
 **TLS with own certificate — enters:** `app.listenSecure(port, certPem,
 keyPem)` (PKCS#8 PEM; JVM first; Native/JS remain honest `WEB002`).
 The current self-signed remains a dev convenience, not production.
