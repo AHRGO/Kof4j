@@ -276,7 +276,9 @@ public final class CompilerClassLowering {
         }
         int access = driver.computeAccess(method.modifiers());
         warnMechanismModifiers(driver, method.modifiers(), method.position());
-        if (isInterface && !method.modifiers().contains("default")) access |= AccessFlags.ABSTRACT;
+        if (isInterface && !method.modifiers().contains("default") && !method.modifiers().contains("static")) {
+            access |= AccessFlags.ABSTRACT;
+        }
         List<IRBasicBlock> body = List.of();
         List<IRLocalVariable> locals = List.of();
         if (method.body() != null && !method.body().isEmpty() && !driver.isAbstractMethod(method)) {

@@ -178,7 +178,7 @@ public class SymbolTable {
         }
 
         public List<Type> parameterTypes() {
-            return parameterTypes;
+            return parameterTypes == null ? List.of() : java.util.Collections.unmodifiableList(parameterTypes);
         }
 
         public int accessFlags() {

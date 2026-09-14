@@ -161,9 +161,18 @@ public final class JvmOpEmitter {
                 owner = JvmTypeMapper.toInternalName(ct.packageName(), ct.name());
             }
             String desc = JvmTypeMapper.toMethodDescriptor(kc.returnType(), kc.parameterTypes());
+            boolean isInterfaceOwner = false;
+            if (c.module() != null) {
+                for (IRClass irc : c.module().classes()) {
+                    if (irc.name().equals(owner)) {
+                        isInterfaceOwner = (irc.accessFlags() & org.objectweb.asm.Opcodes.ACC_INTERFACE) != 0;
+                        break;
+                    }
+                }
+            }
             switch (kc.kind()) {
                 case INSTANCE -> c.mv().visitMethodInsn(INVOKEVIRTUAL, owner, kc.methodName(), desc, false);
-                case STATIC -> c.mv().visitMethodInsn(INVOKESTATIC, owner, kc.methodName(), desc, false);
+                case STATIC -> c.mv().visitMethodInsn(INVOKESTATIC, owner, kc.methodName(), desc, isInterfaceOwner);
                 case CONSTRUCTOR -> c.mv().visitMethodInsn(INVOKESPECIAL, owner, kc.methodName(), desc, false);
                 case FUNCTION -> c.mv().visitMethodInsn(INVOKESTATIC, owner, kc.methodName(), desc, false);
                 case INTERFACE -> c.mv().visitMethodInsn(INVOKEINTERFACE, owner, kc.methodName(), desc, true);

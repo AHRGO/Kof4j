@@ -2090,4 +2090,36 @@ class CoreRegressionE2ETest {
         assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
         assertEquals("1\n2\n3\nalpha\nbeta\nRED\nGREEN\nBLUE", runJvm(out));
     }
+
+    // Issue #230 — Static method in interface compiled with ACC_ABSTRACT flag causing ClassFormatError
+    @Test
+    void staticMethodInInterfaceJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("interface_static.kf");
+        Files.writeString(src, """
+                interface Calc {
+                    static Int add(Int a, Int b) {
+                        return a + b
+                    }
+                }
+
+                interface MathUtils {
+                    static Int square(Int n) {
+                        return n * n
+                    }
+                    static String tag() {
+                        return "utils"
+                    }
+                }
+
+                main() {
+                    println(Calc.add(3, 4))
+                    println(MathUtils.square(5))
+                    println(MathUtils.tag())
+                }
+                """);
+        Path out = tempDir.resolve("interface_static-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("7\n25\nutils", runJvm(out));
+    }
 }
