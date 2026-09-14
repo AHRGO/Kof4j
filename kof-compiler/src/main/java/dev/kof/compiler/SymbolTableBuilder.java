@@ -46,12 +46,15 @@ public final class SymbolTableBuilder {
             SymbolTable members = new SymbolTable();
             Type self = new Type.ClassType("", en.name(), List.of());
             members.define(new SymbolTable.MethodSymbol("values", en.name(),
-                    new Type.ClassType("kof", "List", List.of(BuiltinTypes.STRING)), List.of(),
+                    new Type.ClassType("kof", "List", List.of(self)), List.of(),
                     AccessFlags.STATIC, SymbolTable.DispatchKind.STATIC));
             members.define(new SymbolTable.MethodSymbol("valueOf", en.name(),
                     self, List.of(BuiltinTypes.STRING),
                     AccessFlags.STATIC, SymbolTable.DispatchKind.STATIC));
             members.define(new SymbolTable.MethodSymbol("name", en.name(),
+                    BuiltinTypes.STRING, List.of(),
+                    0, SymbolTable.DispatchKind.INSTANCE));
+            members.define(new SymbolTable.MethodSymbol("toString", en.name(),
                     BuiltinTypes.STRING, List.of(),
                     0, SymbolTable.DispatchKind.INSTANCE));
             SymbolTable.ClassSymbol sym = new SymbolTable.ClassSymbol(en.name(), sa.packageOf(en),

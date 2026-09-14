@@ -252,4 +252,30 @@ class ExceptionsE2ETest {
             """);
         runJvm(source, tempDir.resolve("out"), "boom");
     }
+
+    // Issue #211 — same root as #163: the caught-variable type of ANY
+    // java.lang throwable written by its simple name (Exception, Throwable,
+    // ...) stayed unqualified, so e.getMessage() emitted
+    // `invokevirtual Exception.getMessage` (default package) -> COMP002 /
+    // NoClassDefFoundError. The catch header is now qualified to java.lang
+    // for every throwable in CompilerTypes.JAVA_LANG_THROWABLES.
+    @Test
+    void typedCatchExceptionAndThrowable(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            main() {
+                try {
+                    throw "boom"
+                } catch (Exception e) {
+                    println(e.getMessage())
+                }
+                try {
+                    throw "deep"
+                } catch (Throwable t) {
+                    println(t.getMessage())
+                }
+            }
+            """);
+        runJvm(source, tempDir.resolve("out"), "boom\ndeep");
+    }
 }

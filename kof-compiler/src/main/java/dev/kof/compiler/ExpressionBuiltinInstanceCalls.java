@@ -17,7 +17,7 @@ final class ExpressionBuiltinInstanceCalls {
     /** enum .name(): o valor do enum JÁ é o nome (String em runtime) — identidade. */
     static boolean isEnumIdentityName(CompilerDriver driver, Type recvType, MethodCallExpr mc) {
         return CompilerTypes.isEnumType(recvType, driver.currentUnit)
-                && "name".equals(mc.methodName()) && mc.arguments().isEmpty();
+                && ("name".equals(mc.methodName()) || "toString".equals(mc.methodName())) && mc.arguments().isEmpty();
     }
 
     static int lowerWeb(CompilerDriver driver, MethodCallExpr mc, List<KofOperation> ops,

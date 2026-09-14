@@ -127,6 +127,13 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > quentes. O codemod dos 17 locals puros restantes ficou p/ depois (varios
 > carregam chamada com efeito — deletar linha = mudanca de comportamento).## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (14/09 ~11:00, dono = 192.168.100.22, lane compiler): fix issue #165 — for-in over EnumType.values() mistyped loop variable (NoSuchMethodError).**
+> - Causa raiz: `SymbolTableBuilder` sintetizava `values()` com tipo de retorno `List<String>` em vez de `List<EnumType>`, fazendo com que o typer inferisse a variável do laço `for (var c in EnumType.values())` como `String`. Ao chamar `c.name()` ou `c.toString()`, o compilador procurava o método em `String` e emitia `invokevirtual java/lang/String.<method>()Ljava/lang/Object;`, resultando em `NoSuchMethodError`.
+> - Correção: `SymbolTableBuilder` sintetiza `values()` retornando `List<EnumType>` e adiciona suporte explícito a `toString()` e `name()` no tipo enum. `ExpressionStaticCallLowerer`, `MethodCallTyper` e `ExpressionBuiltinInstanceCalls` atualizados para reconhecer `EnumType` com `name()` e `toString()` como identidade de runtime.
+> - Prova: `KofEnumTest#enumForInValuesMethodCallsJvm` (`RED`, `GREEN`, `BLUE`).
+> - Nota sobre #207: em Kof, enums são representados intencionalmente e congelados em runtime como String (`BuiltinTypes`, `JvmTypeMapper`, `classes.md §5`); alterar enums para classes JDK getstatic seria uma quebra ampla de arquitetura (regra 6).
+> - Próximo: issues #168, #162, #161.
+
 > **✅ FEITO (14/09 ~10:45, dono = 192.168.100.22, lane compiler): fix issue #206 — if-expression type fixed to true-branch type (VerifyError).**
 > - Causa raiz: `SemExpressionTyper` fixava o tipo de `IfExpr` incondicionalmente no `thenType`, ignorando `elseType` e a hierarquia de tipos; e `ExpressionTyper` não calculava o ancestral comum (LCA) para classes. Ao chamar métodos na variável inferida com uma subclasse enquanto o ramo false instanciava a superclasse, o bytecode emitia `invokevirtual Subclasse.metodo` causando `VerifyError: Type 'A' is not assignable to 'B'`.
 > - Correção: `HierarchyResolver.commonSupertype` implementado para encontrar o LCA de classes via `TypeChecker.isAssignable` e cadeias de superclasses. `SemExpressionTyper` e `ExpressionTyper` agora usam `commonSupertype`.

@@ -371,7 +371,7 @@ if (mc.receiver() != null) {
     if (recvType instanceof Type.FunctionType ft) {
         return ft.returnType();
     }
-    if (CompilerTypes.isEnumType(recvType, driver.currentUnit) && "name".equals(mc.methodName()) && mc.arguments().isEmpty()) {
+    if (CompilerTypes.isEnumType(recvType, driver.currentUnit) && ("name".equals(mc.methodName()) || "toString".equals(mc.methodName())) && mc.arguments().isEmpty()) {
         return BuiltinTypes.STRING;
     }
     if (BuiltinTypes.isList(recvType) || BuiltinTypes.isMap(recvType) || BuiltinTypes.isSet(recvType) || Type.isString(recvType)) {

@@ -298,6 +298,7 @@ public final class SemExpressionTyper {
                                 "cannot instantiate abstract class '" + ne.typeName() + "'",
                                 "SEM041");
                     }
+                    // codeql[unused-container] - argTypes used as parameter types for constructorFor lookup
                     List<Type> argTypes = new ArrayList<>();
                     for (ExpressionNode arg : ne.arguments()) {
                         argTypes.add(inferType(sa, arg, scope));
