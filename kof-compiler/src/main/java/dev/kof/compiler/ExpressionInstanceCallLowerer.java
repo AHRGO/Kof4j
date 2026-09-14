@@ -512,6 +512,20 @@ public final class ExpressionInstanceCallLowerer {
                         formal.add(ExternalClasspath.typeFromDescriptor(d));
                     }
                     methodParamTypes = formal;
+                } else if ("valueOf".equals(mc.methodName()) && methodParamTypes.size() == 1
+                        && methodParamTypes.get(0) instanceof Type.PrimitiveType) {
+                    // valueOf(I) direto do JDK — sem boxing duplo
+                    methodReturnType = BuiltinTypes.STRING;
+                } else if (methodParamTypes.size() == 1
+                        && switch (mc.methodName()) {
+                            case "isNaN", "isInfinite", "isFinite" -> true;
+                            default -> false;
+                        }
+                        && jdkOwner instanceof Type.ClassType fpOwner
+                        && ("Double".equals(fpOwner.name()) || "Float".equals(fpOwner.name()))) {
+                    // #233: Double.isNaN(d)/isInfinite/isFinite (e Float) —
+                    // estáticos JDK reais, retorno BOOL (não String/Unknown)
+                    methodReturnType = Type.PrimitiveType.BOOL;
                 }
             } else if (mc.arguments().size() == 1
                     && ("isNaN".equals(mc.methodName()) || "isInfinite".equals(mc.methodName()) || "isFinite".equals(mc.methodName()))

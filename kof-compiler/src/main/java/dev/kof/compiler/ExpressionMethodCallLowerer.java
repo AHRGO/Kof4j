@@ -150,6 +150,12 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
                 mc.methodName(), extFormal, extRet, KofCallKind.STATIC));
         return localIdx;
     }
+    Type extRet = ExternalClasspath.typeFromDescriptor(extSig.returnDescriptor());
+    localIdx = driver.emitArgumentsWithFormalTypes(mc.arguments(), extFormal, ops, owner, localIdx, locals);
+    KofCallKind extKind = extSig.isStatic() ? KofCallKind.STATIC : KofCallKind.INSTANCE;
+    ops.add(new KofCall(new Type.ClassType("java.lang", javaClass.substring(javaClass.lastIndexOf('/') + 1), List.of()),
+            mc.methodName(), extFormal, extRet, extKind));
+    return localIdx;
 } else if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.name(), locals)
         && "json".equals(rid.name())) {
     return ExpressionJsonCallLowerer.lower(driver, mc, ops, owner, localIdx, locals);
