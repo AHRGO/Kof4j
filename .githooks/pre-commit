@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+#
+# pre-commit — garante que o commit grave SEMPRE o ingles canonico em X.md,
+# mesmo que a arvore esteja com a sobreposicao PT (skip-worktree).
+root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+[ -x "$root/scripts/docs-lang.sh" ] || exit 0
+"$root/scripts/docs-lang.sh" restore >/dev/null 2>&1 || true
+exit 0

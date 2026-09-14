@@ -58,6 +58,17 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ---
 
+> **NOVA FRENTE — documentacao bilingue EN/PT (14/09, pedido da mantenedora):
+> dono = 192.168.100.17 (lane docs/i18n).** Convencao: `X.md` = INGLES canonico
+> (padrao do GitHub e de qualquer maquina nao-portuguesa) + `X.pt_BR.md` =
+> portugues; switcher na 1a linha. Mecanismo: hooks versionados em `.githooks/`
+> (`post-checkout`/`post-merge`/`pre-commit`/`post-commit`) + `scripts/docs-lang.sh`
+> (detecta `pt_*` -> PT, senao EN; `check` = gate de paridade par+switcher).
+> Traducao dos 212 `.md` em lotes por subagents, cada lote commitado com
+> `scripts/docs-lang.sh check`. Docs tecnicos, comandos, identificadores e
+> codigo Kof NAO sao traduzidos (so prosa/titulos/rotulos). Nao tocar `nat/`,
+> nem lanes de bugs/feature de outros donos.
+>
 > **⚠️ CUIDADO (14/09 ~01:30, dono = 192.168.100.18):** este commit carrega
 > wips de OUTRAS lanes resgatados do working tree compartilhado (regra 8 —
 > commitar tudo, nunca descartar): **UIW050-JS** (`kofUiEventValue/Key/X/Y/

@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+#
+# post-checkout — reaplica o idioma da maquina na arvore de documentacao.
+# Nao fatal: uma falha aqui nunca pode quebrar um checkout.
+root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+[ -x "$root/scripts/docs-lang.sh" ] || exit 0
+"$root/scripts/docs-lang.sh" apply auto >/dev/null 2>&1 || true
+exit 0
