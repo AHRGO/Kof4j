@@ -1935,4 +1935,30 @@ class CoreRegressionE2ETest {
         assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
         assertEquals("0\n1\n2\n3\n2\n1", runJvm(out));
     }
+
+    // Issue #225 — Instance method shadowed by built-in when name matches print/println
+    @Test
+    void instanceMethodNamedPrintOrPrintlnJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("customprint.kf");
+        Files.writeString(src, """
+                class Logger {
+                    void print(String msg) {
+                        println("[LOG] " + msg)
+                    }
+                    void println(Int n) {
+                        this.print("custom: " + n)
+                    }
+                }
+
+                main() {
+                    var log = new Logger()
+                    log.print("test")
+                    log.println(7)
+                }
+                """);
+        Path out = tempDir.resolve("customprint-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("[LOG] test\n[LOG] custom: 7", runJvm(out));
+    }
 }

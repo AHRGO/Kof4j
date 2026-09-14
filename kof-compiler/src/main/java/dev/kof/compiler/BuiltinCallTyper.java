@@ -91,7 +91,7 @@ public final class BuiltinCallTyper {
             }
             return new Type.ClassType(ctorClass.packageName(), ctorClass.name(), List.of());
         }
-        if ("println".equals(mc.methodName()) || "print".equals(mc.methodName())) {
+        if (mc.receiver() == null && ("println".equals(mc.methodName()) || "print".equals(mc.methodName()))) {
             for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
             return Type.PrimitiveType.VOID;
         }

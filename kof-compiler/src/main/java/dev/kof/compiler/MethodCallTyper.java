@@ -112,7 +112,7 @@ if (mc.receiver() instanceof IdentifierExpr srid && mc.arguments().size() == 1
         }) {
     return BuiltinTypes.STRING;
 }
-if ("println".equals(mc.methodName()) || "print".equals(mc.methodName())) return Type.PrimitiveType.VOID;
+if (mc.receiver() == null && ("println".equals(mc.methodName()) || "print".equals(mc.methodName()))) return Type.PrimitiveType.VOID;
 if ("now".equals(mc.methodName()) && mc.receiver() == null && mc.arguments().isEmpty()) {
     return Type.PrimitiveType.LONG;
 }

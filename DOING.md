@@ -127,6 +127,12 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > quentes. O codemod dos 17 locals puros restantes ficou p/ depois (varios
 > carregam chamada com efeito — deletar linha = mudanca de comportamento).## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (14/09 ~14:00, dono = 192.168.100.22, lane compiler): fix issue #225 — Instance method shadowed by built-in when name matches print/println.**
+> - Causa raiz: `ExpressionStaticCallLowerer.lower`, `MethodCallTyper.inferType` e `BuiltinCallTyper.inferType` tratavam qualquer chamada `print` ou `println` com 1 argumento como a função builtin global, sem verificar se `mc.receiver() == null`. Quando uma classe definia um método de instância `print` ou `println`, chamadas com receiver explícito (ex: `log.print("test")` ou `f.println(7)`) eram interceptadas e despachadas diretamente para `java/io/PrintStream.print/println`, ignorando o receiver e o método de instância definido.
+> - Correção: adicionada checagem `mc.receiver() == null` em `ExpressionStaticCallLowerer`, `MethodCallTyper` e `BuiltinCallTyper` para os ramos `print`/`println`, garantindo que chamadas com receiver explícito prossigam para a resolução normal de métodos de instância.
+> - Prova: `CoreRegressionE2ETest#instanceMethodNamedPrintOrPrintlnJvm`.
+> - Próximo: issues #216, #224, #226.
+
 > **✅ FEITO (14/09 ~13:30, dono = 192.168.100.22, lane compiler): fix issue #223 — for-loop update expression ++ / -- on Long or Double generates iconst_1 instead of lconst_1 / dconst_1 (VerifyError).**
 > - Causa raiz: em `StatementLowerer.java` (caso `ForStmt`), o tratamento de `fs.update()` para expressões unárias `++` e `--` emitia estritamente `KofLoadLiteral(Type.PrimitiveType.INT, 1)` hardcoded, independentemente de `var.type()`. Quando a variável de controle do laço for `Long` ou `Double`, o `KofBinary(ADD/SUB, var.type())` gerava `ladd`/`dadd` esperando dois operandos `long`/`double`, mas encontrava `int` na pilha, resultando em `VerifyError`.
 > - Correção: `StatementLowerer` unificado para utilizar `CompilerEmissionHelpers.emitIncrementOne(ops, var.type())`, emitindo o literal `1L`, `1.0f`, `1.0` ou `1` estritamente de acordo com o tipo da variável. Linhas de `StatementLowerer` reduzidas de 598 para 592 e baseline do `check_500.sh` atualizado.

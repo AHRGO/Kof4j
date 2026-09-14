@@ -64,15 +64,19 @@ public final class CompilerImports {
                                 silent, fileName);
                         CompilationUnitNode libUnit = parser.parse();
                         if (silent.hasErrors()) {
-                            for (Diagnostic d : silent.getDiagnostics()) currentDiagnostics.report(d);
+                            // §CodeQL deref-null: same null-tolerance of the
+                            // PKG003/PKG004 branches below (lines 74/95/126).
+                            if (currentDiagnostics != null) {
+                                for (Diagnostic d : silent.getDiagnostics()) currentDiagnostics.report(d);
+                            }
                             continue;
                         }
-                        String expectedPkg = dirKey.equals(moduleRoot.toAbsolutePath().normalize().toString())
+                        String expectedPkg = (moduleRoot != null
+                                && dirKey.equals(moduleRoot.toAbsolutePath().normalize().toString()))
                                 ? "" : imp;
                         if (!libUnit.packageName().isEmpty()
                                 && !libUnit.packageName().equals(expectedPkg)
                                 && currentDiagnostics != null) {
-                            SourcePosition p0 = libUnit.position();
                             currentDiagnostics.error(kf.toString(), 0, 0, 0,
                                     "package '" + libUnit.packageName()
                                             + "' não corresponde ao diretório do import ('"
@@ -118,7 +122,9 @@ public final class CompilerImports {
                         Parser parser = new Parser(new Lexer(code, fileName, silent).tokenize(), silent, fileName);
                         CompilationUnitNode libUnit = parser.parse();
                         if (silent.hasErrors()) {
-                            for (Diagnostic d : silent.getDiagnostics()) currentDiagnostics.report(d);
+                            if (currentDiagnostics != null) {
+                                for (Diagnostic d : silent.getDiagnostics()) currentDiagnostics.report(d);
+                            }
                             continue;
                         }
                         if (!libUnit.packageName().isEmpty()

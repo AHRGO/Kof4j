@@ -436,7 +436,7 @@ if ("setOf".equals(mc.methodName()) && mc.receiver() == null) {
     }
     return localIdx;
 }
-    if (("print".equals(mc.methodName()) || "println".equals(mc.methodName())) && mc.arguments().size() == 1) {
+    if (mc.receiver() == null && ("print".equals(mc.methodName()) || "println".equals(mc.methodName())) && mc.arguments().size() == 1) {
         return ExpressionPrintLowerer.lower(driver, mc, ops, owner, localIdx, locals);
     }
     return -1;
