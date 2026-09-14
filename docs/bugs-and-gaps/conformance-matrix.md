@@ -25,10 +25,9 @@
 |---|---|---|---|---|---|---|
 | aritmética int + overflow | `-2147483648` / `-1` / `1` | DONE | DONE | DONE | DONE | `arith` |
 | long div/mod | `3333333333` / `4` | DONE | DONE | DONE | DONE | `longdiv` |
-| conversão numérica em primitivo `n.toInt()/toLong()/toDouble()/toFloat()` (§89, decisão 3a) | `true` / `3` / `-2` / `5` / `2.5` | DONE | DONE (residual fora-de-faixa = §181) | DONE | DONE (residual fora-de-faixa = §181) | `numconv` |
+| conversão numérica em primitivo `n.toInt()/toLong()/toDouble()/toFloat()` (§89, decisão 3a) | `true` / `3` / `-2` / `5` / `2.5` | DONE | DONE (residual fora-de-faixa §181 ✅ 13/09) | DONE | DONE (residual fora-de-faixa §181 ✅ 13/09) | `numconv` |
 | `Double %` (mod de variáveis; + NaN/±Inf) | `1.5` / `1.0` / `0.5` / `-1.5` / `NaN` | DONE | DONE (bug 146 ✅ 12/09 `718ae5cf` — `NativeX86Arith` emite o fmod real) | DONE | PARTIAL (test exclui js; §146 shape `JsBackend`) | `doublemod` |
 | cast `d as Int` / `L as Int` / `66 as Char` | `9` / `70000` / `66` | DONE | DONE | DONE | DONE | `cast` |
-| cast FP→Int/Long FORA de faixa/NaN/Inf (JLS 5.1.3 satura) | `2147483647` / `0` / `2147483647` / `9223372036854775807` / `0` / `9223372036854775807` | DONE | PARTIAL (bug §181 — `cvttsd2si` cru: `3.0e9 as Int` → `-2147483648`; `NaN`→`INT_MIN`; `1.0e19 as Long`→`Long.MIN`) | DONE | PARTIAL (bug §181 — `Math.trunc`/`BigInt` sem saturação: `3.0e9 as Int`→`3000000000`, `NaN as Int`→`NaN`; `NaN as Long` **lança `RangeError`**) | `castrange` |
 | float println | `0.3333333333333333` / `5.0` / `3.5` | DONE | DONE (bug 44 ✅ 10/09 x86) | DONE | PARTIAL (doc: `5` vs `5.0`) | `floatprint` |
 | double println shortest-repr + científico | `0.30000000000000004` / `1.0E7` / `1.0E-5` / `33.333333333333336` / `0.33333334` / `1.0E20` / `NaN` | DONE | PARTIAL (bug §180 — `%.16g` trunca p/ `0.3`/`10000000.0`/`1e-05`; Float vira expansão double `0.3333333432674408`; `-nan` de libm fica `-nan`) | DONE | PARTIAL (doc: `Number.toString` não emite `.0`/científico no limiar JDK) | `doubleprint` |
 | infinity/NaN println+String.valueOf | `Infinity` / `-Infinity` / `NaN` | DONE | DONE (bug 44 residual ✅ 11/09 x86) | DONE | PARTIAL (doc: `5` vs `5.0`) | `infinityprint` |
@@ -82,6 +81,8 @@
 | lambda captura mutável | `3` | DONE | DONE | DONE | DONE | `lambdacapture` |
 | array 2D/3D: alloc + length + store/load + zero-fill | `60`/`3`/`2`/`3`/`0`/`7`/`2`/`2`/`9`/`0` | DONE | DONE (bug 113 ✅ 11/09 x86 — `new Int[a][b]` NÃO alocava nada: `KofNewMultiArray` caía no `default->{}` → SIGSEGV; agora `kof_multi_alloc` recursivo; faces riscv/aarch ✅ 11/09 — fatia B37 + roteio cross, golden JVM sob qemu) | DONE (B37, port 0.3.0→0.4.0 ✅) | DONE (tradutor, ✅) | `array2d` |
 | store `Int` em slot `Long[]` (widening, 1-D e 2-D) | `9` / `3` / `0` | DONE (bug 121 ✅ 11/09 — era **frame crash** no `COMPUTE_FRAMES`: o bloco de conversão do `ExpressionAssignmentLowerer` era um `if {}` que só comentava a promessa, nunca emitia `I2L`) | DONE | DONE | DONE | `arrlongstore` |
+| store em `Byte[]`/`Short[]` FORA de faixa (narrowing 8/16 bits com sinal) — §184 | `-126` / `4464` | DONE | DONE | DONE | PARTIAL (bug §184 — `kofArraySet` grava o valor cru: `b[0]=130`→`130`; divergência silenciosa) | `narrowarr` |
+| store em elemento de `Char[]`/`Bool[]` — §185 | `65` / `66` / `true` / `false` | DONE | DONE | PARTIAL (bug §185 — interpretador: `coerceFor` devolve `Integer`; `Array.set(char[]/boolean[],…)` lança `argument type mismatch`, exit 1) | DONE | `chararr` |
 | campo estático + bump | `1` / `2` / `2` | DONE | DONE (bug 41 corrigido 07/09) | DONE | DONE | `staticfield` |
 | campo estático `+=` | `2` / `4` / `4` | DONE | DONE (bug 41) | DONE | DONE | `staticpluseq` |
 | concat string+num (ordem) | `n=42` / `3x` / `x12` | DONE | DONE | DONE | DONE | `concat` |

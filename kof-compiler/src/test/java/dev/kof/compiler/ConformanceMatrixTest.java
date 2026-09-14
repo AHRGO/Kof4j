@@ -1508,6 +1508,39 @@ class ConformanceMatrixTest {
                     println(e[0])
                 }
                 """, "9\n3\n0", Set.of(), tempDir);
+        // §184 (13/09): store em `Byte[]`/`Short[]` com valor FORA de faixa —
+        // JVM/Native/Script truncam (BASTORE/SASTORE, 8/16 bits com sinal); o
+        // JS grava o valor cru (kofArraySet não conhece o tipo do elemento).
+        // PARTIAL js (bug §184; célula de cobertura estreita — Q5).
+        matrix("narrowarr", """
+                main() {
+                    var b = new Byte[1]
+                    b[0] = 130
+                    println(b[0])
+                    var s = new Short[1]
+                    s[0] = 70000
+                    println(s[0])
+                }
+                """, "-126\n4464", Set.of("js"), tempDir);
+        // §185 (13/09): store em elemento de `Char[]`/`Bool[]` — o
+        // interpretador (Script) LANÇA "argument type mismatch" no caminho
+        // vivo `KofInterpreter:306` (`coerceFor` devolve Integer; `Array.set`
+        // de `char[]`/`boolean[]` exige Character/Boolean). JVM/Native/JS
+        // imprimem o code unit/bool. PARTIAL script.
+        matrix("chararr", """
+                main() {
+                    var c = new Char[2]
+                    c[0] = 'A'
+                    c[1] = 66 as Char
+                    println(c[0])
+                    println(c[1])
+                    var b = new Bool[2]
+                    b[0] = true
+                    b[1] = false
+                    println(b[0])
+                    println(b[1])
+                }
+                """, "65\n66\ntrue\nfalse", Set.of("script"), tempDir);
         // §131 (decisão 10a, 13/09): sobrecarga de MÉTODO de classe por
         // assinatura (aridade/tipos). Antes: SEM013 no JVM (último def
         // sobrescrevia) e colisão de símbolo no Native. Prova só JVM+JS

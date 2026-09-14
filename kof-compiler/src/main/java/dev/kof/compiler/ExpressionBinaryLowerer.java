@@ -16,6 +16,13 @@ public final class ExpressionBinaryLowerer {
                 || (t instanceof Type.NullableType nt && nt.inner() instanceof Type.UnknownType);
     }
 
+    /** Int (ou Nullable(Int)) — alvo de cast que handle de UI/mídia satisfaz. */
+    private static boolean isIntPrimitive(Type t) {
+        if (t instanceof Type.NullableType nt) return isIntPrimitive(nt.inner());
+        return t instanceof Type.PrimitiveType pt
+                && ("int".equals(pt.name()) || "Int".equals(pt.name()));
+    }
+
     /** §167: bitwise inteiro `& | ^` (o `&&`/`||` lógico já saiu antes). */
     private static boolean isBitwiseOp(String op) {
         return "&".equals(op) || "|".equals(op) || "^".equals(op);
@@ -35,12 +42,20 @@ if ("instanceof".equals(bin.operator()) || "as".equals(bin.operator())) {
         // toType resolve imports ("View" + import → android.view.View)
         targetType = CompilerTypes.toType(ie.name(), driver.currentUnit);
     }
+    Type fromCastType = ExpressionTyper.inferExprType(driver, bin.left(), locals);
+    // UIW050: handle de UI/mídia APAGA para int no runtime (JvmTypeMapper
+    // .toDescriptor → "I"). `label as Int` é IDENTITY, não checkcast — um
+    // CHECKCAST sobre um valor int é inválido e derrubava o verifier
+    // ("Bad type on operand stack") em qualquer função que monta UI.
+    boolean handleAsInt = isIntPrimitive(targetType)
+            && (KofUi.isUiType(fromCastType) || KofMedia.isHandleType(fromCastType));
     if ("instanceof".equals(bin.operator())) {
         ops.add(new KofInstanceOf(targetType));
-    } else if (TypeMetrics.isPrimitiveType(targetType) && TypeMetrics.isPrimitiveType(ExpressionTyper.inferExprType(driver, bin.left(), locals))) {
+    } else if (TypeMetrics.isPrimitiveType(targetType)
+            && (TypeMetrics.isPrimitiveType(fromCastType) || handleAsInt)) {
         // cast primitivo (x as Char/Int/…): conversão numérica,
         // NÃO checkcast (que exigiria um objeto na pilha)
-        Type fromT = ExpressionTyper.inferExprType(driver, bin.left(), locals);
+        Type fromT = fromCastType;
         driver.emitWideningIfNeeded(ops, fromT, targetType);
         if (targetType instanceof Type.PrimitiveType tp2
                 && ("char".equals(tp2.name()) || "Char".equals(tp2.name()))) {

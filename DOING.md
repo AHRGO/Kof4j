@@ -60,6 +60,26 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (13/09 ~23:00, lane development, dono = 192.168.100.18):
+> §181 — cast `Double/Float as Int/Long` SATURANTE (JLS 5.1.3) 4 targets.**
+> x86 `emitSatConv` (NaN-check 1º + clamp c/ limites double `cvtsi2sdq`;
+> Float convertido p/ double antes de comparar — 3 faces de bug de
+> float-bits/denormal resolvidas), JS helpers `kofD2I/kofD2L/kofF2I/kofF2L`
+> (trunc 1×, saturação 32/64, BigInt; `registerRuntime` obrigatório),
+> riscv `feq` NaN-check + clamp em double (`fcvt.d.w`/`fcvt.d.l`), aarch
+> tradutor. Prova: célula `castrange` 4 targets SEM exclusões (12 vetores
+> golden JVM) + `cast` em-faixa verde + suíte 4 módulos **1784/0/161-skip**.
+> Doc: known-bugs §181 → CORRIGIDO; matriz `castrange`/`numconv` DONE 4/4.
+> **Nota:** baseline JS re-medido 8.297→13.007 (`HELLO_JS_BYTES`) — causa =
+> #132 (shim DOM expandido, lane JS), mesmo processo do §166/#104.
+>
+> **PRÓXIMO PASSO (lane .18):** fila de estabilização release: avaliar
+> §180 (println double Native ≠ JDK — verificar se a lane nat pegou; se
+> livre no DOING, é o próximo bug de paridade da matriz `doubleprint`) ou
+> varredura de PARTIALs restantes em `docs/bugs-and-gaps/conformance-matrix.md`
+> que não sejam lane alheia/regra 6 — cada PARTIAL atacável = unidade com
+> teste. DECOMPILER/TRANSLATOR/EDITOR não puxar (despriorizados).
+
 > **📢 DIRETRIZ DE PRIORIDADE PARA ESTA BETA (13/09 ~21:00, da mantenedora —
 > vale para TODOS os agentes; leia ANTES de escolher tarefa).**
 > **Foco da `0.4.0-beta` = fechar `DECISIONS`, `stdlib` e `OTP`.**
@@ -2579,6 +2599,71 @@ divergência), `ARRAY_MODEL.md` (coluna KofJS). Branch
 `8a470a92`) — commit local feito, push/Issue/PR **aguardando revisão do
 maintainer/usuário** antes de publicar (não presumir permissão de escrita
 no upstream).
+---
+
+> **✅ FEITO (13/09 ~22:20, lane bugs-and-gaps, dono = 192.168.100.15):
+> §181 corrigido/verificado (regressão do fix x86 + riscv/aarch) + §182/§183
+> sincronizados + docs.**
+> **Contexto:** o remoto supersedeu meu commit local (`091e8632` dropado via
+> `reset --hard origin`), que trazia o fix §181-JS + §183 + split `check_500`.
+> O remoto já tinha `25854680` (split `ui-config`), `a13665f7` (§182 estrito +
+> testes de relógio), `c90e85ee` (§181 casts saturantes 4 targets) e
+> `10fd1b32`/`0c122131` (JVM arrays). Trabalho dele PRESERVADO (regra 8).
+> **P0 ACHADO E CORRIGIDO (caça Q4):** o `c90e85ee` **quebrou a célula `cast`**
+> no x86 — `NativeX86Arith.emitSatConv` carregava os limites com os **bits
+> INTEIROS** (`movq $2147483647, %rdx; movq %rdx, %xmm2`) = **denormal
+> (~1e-314)** lido como double → QUALQUER valor positivo saturava (`9.9 as
+> Int` → `2147483647`). O `castrange` não pegou porque só testava
+> fora-de-faixa (**verde falso Q5**). **Fix:** padrões de bit do double
+> (`2^31=0x41E0000000000000`, `-2^31=0xC1E0000000000000`,
+> `2^63=0x43E0000000000000`, `-2^63=0xC3E0000000000000`), comparando com
+> `2^31`/`2^63` (preserva `2147483647.0` limítrofe) + **promoção Float→Double
+> ANTES** do NaN-check. **Regressão irmã riscv/aarch:** labels `.Lsat181_*`
+> FIXOS → 2 casts no mesmo método = **símbolo duplicado** (GNU as falha); e
+> `F2L` usava `fcvt.l.s`/`feq.s` sobre double. **Fix:** sufixo único por
+> emissão (`_<seq>`, igual ao x86) + `feq.d`/`fcvt.l.d`. **Prova Q1:**
+> `ConformanceMatrixTest` 11/11 (célula `cast` pegava, `castrange` trava) +
+> novos `NativeRiscv64E2ETest.riscv64CastSaturation` /
+> `NativeAarch64E2ETest.aarch64CastSaturation` (qemu) e
+> `…CastSaturationLabelsAreUniquePerEmission` (inspeção do `.s`, roda SEM
+> toolchain — prova os labels únicos em qualquer host). Probes manuais:
+> riscv/aarch 2 casts → labels `_1`/`_2` únicos (antes: 4× cada = duplicado).
+> **Docs sync (lane):** `known-bugs.md` §181/§182 → ✅ CORRIGIDO (cabeçalho da
+> fila + seções) + **§183 NOVO** (flaky de relógio `KofTimeE2ETest`, fix
+> `a13665f7`); `conformance-matrix.md` — removida a linha DUPLICADA/estale de
+> `castrange` (a §181 já estava marcada DONE na linha do lote S7) e `numconv`
+> com residual atualizado. Suíte 4-módulos pós-rebase: compiler 1531/0/13-node
+> (164 skip), script 37, c 5, cli 213 — 0 falhas fora do `node`; `check_500`
+> exit 0. **Pushado: `67db6c50`** (rebase sobre `0c122131`).
+> **PRÓXIMO PASSO:** caça Q4 em células de cobertura estreita/landings recentes
+> (foco: §180 double→string Native — célula `doubleprint` já prova a
+> divergência; faces de `Float` e do científico; e a célula `cast`/`castrange`
+> agora têm prova cross-arch). Se nada novo e suíte verde → atualizar este
+> DOING e **RECUSAR** o re-disparo (estabilidade parcial — §179/§180 abertos
+> de outras lanes). **NUNCA:** `nat/` GC viva; fila de outras lanes; push
+> `main`.
+>
+> **✅ FEITO (13/09 ~22:40, lane bugs-and-gaps, dono = 192.168.100.15):
+> caça Q4 pós-#132 — §184 + §185 (arrays de tipo estreito) catalogados.**
+> Probe `Narrow.kf` (4 targets) no código de `10fd1b32`/`0c122131`:
+> **(a) §184** — `new Byte[n]`/`new Short[n]` NÃO estreitam o valor no JS:
+> `b[0]=130` → JVM/Native/Script `-126`, **JS `130`**; `s[0]=70000` →
+> `4464` vs **JS `70000`** (divergência silenciosa, regra 5; `kofArraySet`
+> não conhece o tipo do elemento — família #132/KOF-SBD-001). **(b) §185** —
+> o interpretador **derruba** ao gravar em `Char[]` (`c[0]='A'` → stderr
+> `argument type mismatch`, exit 1). **Causa raiz REVISADA (2ª passada, bloco
+> FEITO abaixo):** o caminho vivo é `KofInterpreter:306` +
+> `KofInterpreterValues.coerceFor` (não coage `char`/`bool` → `Array.set`
+> rejeita o `Integer`); **`KofInterpreterOps.arrayStore` é CÓDIGO MORTO** (sem
+> caller). Também afeta `Bool[]`. JVM/Native/JS corretos. Ambos catalogados
+> com menor repro + causa raiz + fix proposto em `known-bugs.md`; célula
+> `narrowarr`/`chararr` na matriz. Pushado `14d822ac`.
+> **PRÓXIMO PASSO:** §185 com face `Bool[]` incluída na célula `chararr`;
+> continuar Q4 (Float/científico do §180; arrays de record/String) OU
+> sincronizar `ecosystem-coverage.md`/`specification-gaps.md`. Se nada novo e
+> suíte verde → **RECUSAR** o re-disparo. **NUNCA:** `nat/` GC viva; fila de
+> outras lanes; push `main`.
+
 ---
 
 ## REGRA DE SINCRONIZAÇÃO (07/09, obrigatória)

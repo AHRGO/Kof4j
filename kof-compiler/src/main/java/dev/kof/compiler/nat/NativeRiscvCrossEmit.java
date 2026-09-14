@@ -53,6 +53,10 @@ import java.util.List;
  */
 public final class NativeRiscvCrossEmit {
 
+    /** §181: sequência para labels ÚNICOS de saturação (2+ casts por método). */
+    private static final java.util.concurrent.atomic.AtomicLong SAT181_SEQ =
+            new java.util.concurrent.atomic.AtomicLong();
+
     private final NativeBackend nb;
 
     private final NativeRiscvCrossOps other;
@@ -350,58 +354,72 @@ public final class NativeRiscvCrossEmit {
             // limite). fcvt.*.rtz cru devolvia o "indefinite" riscv para
             // NaN/overflow (padrão de divergência do §181/x86). Ordem:
             // NaN PRIMEIRO (feq self => 0 sse NaN), depois clamp hi/lo.
+            // FIX 13/09: labels ÚNICOS por emissão (`_<seq>`) — dois casts no
+            // MESMO método (ex. `a as Int` + `b as Int`) geravam labels
+            // duplicados e o GNU as falhava ("symbol already defined").
+            // Float é promovido a double ANTES (NaN/faixa idênticos).
             case D2I, F2I -> {
                 boolean isF = ku.op() == KofUnaryOp.F2I;
-                if (isF) sb.append("    fmv.w.x f0, t0\n");
+                String sfx = Long.toString(SAT181_SEQ.incrementAndGet());
+                if (isF) sb.append("    fmv.w.x f0, t0\n    fcvt.d.s f0, f0\n");
                 else sb.append("    fmv.d.x f0, t0\n");
-                String fcvt = isF ? "fcvt.w.s t0, f0, rtz" : "fcvt.w.d t0, f0, rtz";
-                String fcmp = isF ? "feq.s t1, f0, f0" : "feq.d t1, f0, f0";
-                String fmax = isF ? "fmv.w.x f1, t2\n    fcvt.s.w f1, f1" : "fmv.x.d f1, t2";
-                String fmin = isF ? "fmv.w.x f1, t2\n    fcvt.s.w f1, f1" : "fmv.x.d f1, t2";
-                sb.append("    ").append(fcmp).append("\n");       // t1=0 sse NaN
-                sb.append("    beqz t1, .Lsat181_nan\n");
-                sb.append("    ").append(fcvt).append("\n");
+                sb.append("    feq.d t1, f0, f0\n");              // t1=0 sse NaN
+                sb.append("    beqz t1, .Lsat181_nan_").append(sfx).append("\n");
+                // FIX 13/09: compara em DOUBLE contra ±2^31 ANTES de converter.
+                // `fcvt.w.d` devolve o "indefinite" (0x80000000) p/ fora-de-faixa,
+                // então comparar o inteiro já convertido nunca detecta o estouro
+                // (ex.: 3.0e9 caía em INT_MIN em vez de INT_MAX). Padrões de bit
+                // do double: +2^31=0x41E0000000000000, -2^31=0xC1E0000000000000.
+                sb.append("    li t2, 0x41E0000000000000\n");    // +2^31
+                sb.append("    fmv.d.x f1, t2\n");
+                sb.append("    flt.d t1, f0, f1\n");              // t1=0 => f0 >= 2^31
+                sb.append("    beqz t1, .Lsat181_hi_").append(sfx).append("\n");
+                sb.append("    li t2, 0xC1E0000000000000\n");    // -2^31
+                sb.append("    fmv.d.x f1, t2\n");
+                sb.append("    flt.d t1, f0, f1\n");              // t1=1 => f0 < -2^31
+                sb.append("    bnez t1, .Lsat181_lo_").append(sfx).append("\n");
+                sb.append("    fcvt.w.d t0, f0, rtz\n");
                 sb.append("    sext.w t0, t0\n");                  // estende sinal
-                sb.append("    li t1, 2147483647\n");
-                sb.append("    blt t1, t0, .Lsat181_hi\n");        // t0 > MAX
-                sb.append("    li t1, -2147483648\n");
-                sb.append("    blt t0, t1, .Lsat181_lo\n");        // t0 < MIN
-                sb.append("    j .Lsat181_end\n");
-                sb.append(".Lsat181_hi:\n");
+                sb.append("    j .Lsat181_end_").append(sfx).append("\n");
+                sb.append(".Lsat181_hi_").append(sfx).append(":\n");
                 sb.append("    li t0, 2147483647\n");
-                sb.append("    j .Lsat181_end\n");
-                sb.append(".Lsat181_lo:\n");
+                sb.append("    j .Lsat181_end_").append(sfx).append("\n");
+                sb.append(".Lsat181_lo_").append(sfx).append(":\n");
                 sb.append("    li t0, -2147483648\n");
-                sb.append("    j .Lsat181_end\n");
-                sb.append(".Lsat181_nan:\n");
+                sb.append("    j .Lsat181_end_").append(sfx).append("\n");
+                sb.append(".Lsat181_nan_").append(sfx).append(":\n");
                 sb.append("    li t0, 0\n");
-                sb.append(".Lsat181_end:\n");
+                sb.append(".Lsat181_end_").append(sfx).append(":\n");
             }
             case D2L, F2L -> {
                 boolean isF = ku.op() == KofUnaryOp.F2L;
+                String sfx = Long.toString(SAT181_SEQ.incrementAndGet());
                 if (isF) sb.append("    fmv.w.x f0, t0\n    fcvt.d.s f0, f0\n");
                 else sb.append("    fmv.d.x f0, t0\n");
-                String fcmp = isF ? "feq.s t1, f0, f0" : "feq.d t1, f0, f0";
-                sb.append("    ").append(fcmp).append("\n");
-                sb.append("    beqz t1, .Lsat181L_nan\n");
-                sb.append(isF ? "    fcvt.l.s t0, f0, rtz\n" : "    fcvt.l.d t0, f0, rtz\n");
-                sb.append("    li t1, 9223372036854775807\n");     // Long.MAX
-                sb.append("    blt t1, t0, .Lsat181L_hi\n");
-                // Long.MIN em li: -9223372036854775808 cabe em imm? li aceita
-                // 64-bit; usar seq com addi (imm de 12 bits não alcança) —
-                // li do assembler expande p/ lui+addiw: ok.
-                sb.append("    li t1, -9223372036854775808\n");
-                sb.append("    blt t0, t1, .Lsat181L_lo\n");
-                sb.append("    j .Lsat181L_end\n");
-                sb.append(".Lsat181L_hi:\n");
+                sb.append("    feq.d t1, f0, f0\n");              // double (F2L já promoveu)
+                sb.append("    beqz t1, .Lsat181L_nan_").append(sfx).append("\n");
+                // FIX 13/09: mesma estratégia do D2I — compara em double contra
+                // ±2^63 (fcvt.l.d também devolve indefinido p/ fora-de-faixa).
+                // Padrões de bit: +2^63=0x43E0000000000000, -2^63=0xC3E0000000000000.
+                sb.append("    li t2, 0x43E0000000000000\n");    // +2^63
+                sb.append("    fmv.d.x f1, t2\n");
+                sb.append("    flt.d t1, f0, f1\n");              // t1=0 => f0 >= 2^63
+                sb.append("    beqz t1, .Lsat181L_hi_").append(sfx).append("\n");
+                sb.append("    li t2, 0xC3E0000000000000\n");    // -2^63
+                sb.append("    fmv.d.x f1, t2\n");
+                sb.append("    flt.d t1, f0, f1\n");              // t1=1 => f0 < -2^63
+                sb.append("    bnez t1, .Lsat181L_lo_").append(sfx).append("\n");
+                sb.append("    fcvt.l.d t0, f0, rtz\n");
+                sb.append("    j .Lsat181L_end_").append(sfx).append("\n");
+                sb.append(".Lsat181L_hi_").append(sfx).append(":\n");
                 sb.append("    li t0, 9223372036854775807\n");
-                sb.append("    j .Lsat181L_end\n");
-                sb.append(".Lsat181L_lo:\n");
+                sb.append("    j .Lsat181L_end_").append(sfx).append("\n");
+                sb.append(".Lsat181L_lo_").append(sfx).append(":\n");
                 sb.append("    li t0, -9223372036854775808\n");
-                sb.append("    j .Lsat181L_end\n");
-                sb.append(".Lsat181L_nan:\n");
+                sb.append("    j .Lsat181L_end_").append(sfx).append("\n");
+                sb.append(".Lsat181L_nan_").append(sfx).append(":\n");
                 sb.append("    li t0, 0\n");
-                sb.append(".Lsat181L_end:\n");
+                sb.append(".Lsat181L_end_").append(sfx).append(":\n");
             }
         }
         pushRiscv(sb, "t0");

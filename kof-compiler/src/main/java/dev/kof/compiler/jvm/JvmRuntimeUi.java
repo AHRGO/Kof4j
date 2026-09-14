@@ -212,38 +212,40 @@ public final class JvmRuntimeUi {
                 public static void kof_ui_flush_ui() {
                 }
 
-                public static String kof_ui_event_type(String type) {
-                    return type == null ? "" : type;
-                }
-
-                public static String kof_ui_event_key(String type) {
+                // UIW050: o receiver de Event é o id int do evento (handle
+                // apagado), não String/Object — paridade com o descriptor.
+                public static String kof_ui_event_type(int ev) {
                     return "";
                 }
 
-                public static String kof_ui_event_value(String type) {
+                public static String kof_ui_event_key(int ev) {
                     return "";
                 }
 
-                public static String kof_ui_event_target(String type) {
+                public static String kof_ui_event_value(int ev) {
                     return "";
                 }
 
-                public static String kof_ui_event_related_target(String type) {
+                public static String kof_ui_event_target(int ev) {
                     return "";
                 }
 
-                public static int kof_ui_event_x(String type) {
+                public static String kof_ui_event_related_target(int ev) {
+                    return "";
+                }
+
+                public static int kof_ui_event_x(int ev) {
                     return 0;
                 }
 
-                public static int kof_ui_event_y(String type) {
+                public static int kof_ui_event_y(int ev) {
                     return 0;
                 }
 
                 public static void kof_ui_emit(int c, String type) {
                 }
 
-                public static void kof_ui_event_stop(Object ev) {
+                public static void kof_ui_event_stop(int ev) {
                 }
 
                 // ── Fase 8: Store observável (no-ops) ──

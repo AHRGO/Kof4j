@@ -37,16 +37,31 @@ public final class JsRuntimeCore {
 
             if (typeof document === "undefined") {
                 function kofMakeEl(tag) {
-                    return {
+                    const attrs = {};
+                    const el = {
                         tagName: String(tag).toUpperCase(),
                         id: null,
                         className: "",
                         textContent: "",
+                        value: "",
+                        checked: false,
+                        readOnly: false,
+                        disabled: false,
+                        selectedIndex: -1,
+                        href: "",
+                        target: "",
+                        rel: "",
+                        src: "",
+                        alt: "",
+                        width: 0,
+                        height: 0,
+                        type: "",
+                        placeholder: "",
                         children: [],
                         parentNode: null,
                         style: {},
                         dataset: {},
-                        disabled: false,
+                        _attrs: attrs,
                         classList: {
                             _set: new Set(),
                             add(cls) { this._set.add(cls); },
@@ -54,28 +69,108 @@ public final class JsRuntimeCore {
                             toggle(cls) { if (this._set.has(cls)) { this._set.delete(cls); return false; } this._set.add(cls); return true; },
                             contains(cls) { return this._set.has(cls); }
                         },
+                        setAttribute(name, value) {
+                            attrs[String(name)] = String(value);
+                            if (name === "id") el.id = String(value);
+                            else if (name === "class") el.className = String(value);
+                            else if (name === "width") el.width = parseInt(value, 10) || 0;
+                            else if (name === "height") el.height = parseInt(value, 10) || 0;
+                        },
+                        getAttribute(name) {
+                            if (name === "id") return el.id;
+                            if (name === "class") return el.className;
+                            if (name === "width") return el.width;
+                            if (name === "height") return el.height;
+                            return Object.prototype.hasOwnProperty.call(attrs, name) ? attrs[name] : null;
+                        },
+                        hasAttribute(name) { return el.getAttribute(name) !== null; },
+                        removeAttribute(name) { delete attrs[name]; },
+                        querySelector(sel) {
+                            const want = String(sel).toUpperCase();
+                            const stack = el.children.slice();
+                            while (stack.length > 0) {
+                                const n = stack.shift();
+                                if (n.tagName === want) return n;
+                                if (n.children) stack.push.apply(stack, n.children);
+                            }
+                            return null;
+                        },
+                        querySelectorAll(sel) {
+                            const want = String(sel).toUpperCase();
+                            const found = [];
+                            const stack = el.children.slice();
+                            while (stack.length > 0) {
+                                const n = stack.shift();
+                                if (n.tagName === want) found.push(n);
+                                if (n.children) stack.push.apply(stack, n.children);
+                            }
+                            return found;
+                        },
                         appendChild(child) {
                             if (child && child.parentNode) child.parentNode.removeChild(child);
-                            child.parentNode = this;
-                            this.children.push(child);
+                            child.parentNode = el;
+                            el.children.push(child);
+                            return child;
+                        },
+                        insertBefore(child, ref) {
+                            if (child && child.parentNode) child.parentNode.removeChild(child);
+                            child.parentNode = el;
+                            const i = el.children.indexOf(ref);
+                            if (i < 0) el.children.push(child);
+                            else el.children.splice(i, 0, child);
                             return child;
                         },
                         removeChild(child) {
-                            const i = this.children.indexOf(child);
-                            if (i >= 0) { this.children.splice(i, 1); child.parentNode = null; }
+                            const i = el.children.indexOf(child);
+                            if (i >= 0) { el.children.splice(i, 1); child.parentNode = null; }
                             return child;
                         },
-                        remove() { if (this.parentNode) this.parentNode.removeChild(this); },
+                        remove() { if (el.parentNode) el.parentNode.removeChild(el); },
+                        focus() {},
+                        blur() {},
+                        click() {
+                            const hs = (el._handlers && el._handlers.click) || [];
+                            for (const fn of hs) fn({ target: el, preventDefault() {}, stopPropagation() {} });
+                        },
                         getContext(type) {
                             if (type !== "2d") return null;
                             return {
                                 fillStyle: "#000", strokeStyle: "#000", lineWidth: 1,
+                                globalAlpha: 1, font: "10px sans-serif",
+                                textAlign: "left", textBaseline: "alphabetic",
                                 beginPath() {}, closePath() {}, moveTo() {}, lineTo() {},
-                                arc() {}, fill() {}, stroke() {}, clearRect() {}
+                                arc() {}, fill() {}, stroke() {}, clearRect() {},
+                                fillRect() {}, strokeRect() {}, rect() {},
+                                save() {}, restore() {}, translate() {}, rotate() {}, scale() {},
+                                transform() {}, setTransform() {},
+                                fillText() {}, strokeText() {},
+                                measureText(text) { return { width: String(text).length * 6 }; },
+                                drawImage() {},
+                                createLinearGradient() { return { addColorStop() {} }; }
                             };
                         },
-                        addEventListener(type, fn) { this._handlers = this._handlers || {}; (this._handlers[type] = this._handlers[type] || []).push(fn); }
+                        addEventListener(type, fn) { el._handlers = el._handlers || {}; (el._handlers[type] = el._handlers[type] || []).push(fn); },
+                        removeEventListener(type, fn) {
+                            const hs = el._handlers && el._handlers[type];
+                            if (!hs) return;
+                            const i = hs.indexOf(fn);
+                            if (i >= 0) hs.splice(i, 1);
+                        }
                     };
+                    Object.defineProperty(el, "options", {
+                        get() { return el.children.filter(function (c) { return c.tagName === "OPTION"; }); },
+                        configurable: true
+                    });
+                    Object.defineProperty(el, "firstChild", {
+                        get() { return el.children.length > 0 ? el.children[0] : null; },
+                        configurable: true
+                    });
+                    Object.defineProperty(el, "innerHTML", {
+                        get() { return ""; },
+                        set(v) { if (v === "") { el.children.length = 0; } },
+                        configurable: true
+                    });
+                    return el;
                 }
                 const kofRoot = kofMakeEl("div");
                 kofRoot.id = "kof-root";
@@ -86,9 +181,14 @@ public final class JsRuntimeCore {
                 globalThis.document = {
                     title: "",
                     head: kofHead,
+                    body: kofRoot,
                     documentElement: kofHtml,
                     createElement(tag) { return kofMakeEl(tag); },
-                    getElementById(id) { return kofElements[id] || null; }
+                    createElementNS(ns, tag) { return kofMakeEl(tag); },
+                    createTextNode(text) { const t = kofMakeEl("#text"); t.textContent = String(text); return t; },
+                    getElementById(id) { return kofElements[id] || null; },
+                    querySelector(sel) { return kofRoot.querySelector(sel); },
+                    querySelectorAll(sel) { return kofRoot.querySelectorAll(sel); }
                 };
                 globalThis.window = globalThis;
                 globalThis.__kofRegisterElement = function (id, el) { kofElements[id] = el; };
