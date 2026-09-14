@@ -64,11 +64,14 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > fechada a minor 0.4.0 (#138 merged), o foco é **estabilização de patch**.
 > Quando a beta cruzar **100–150 commits à frente da main**, avaliar bump
 > **0.4.1**: fechar as issues abertas da lane de bugs antes, suíte verde,
-> depois bumpar `pom.xml`+`version.properties` e voltar ao dev. Medir com
-> `git rev-list --count origin/main..origin/beta-0.4.0` — **hoje = 1**
-> (post-#138; contador zerou no merge). NENHUM agente bumpa versão antes do
-> gatilho. O re-disparo continua: escolher o próximo fix/issue da fila, não
-> feature.
+> depois bumpar `pom.xml`+`version.properties` e voltar ao dev. **Features
+> NÃO são descartadas nem congeladas na janela** — evolução real concorre com
+> bugfixes; tudo que está na beta verde+provado entra no pacote; se o volume
+> de capability nova for material, o bump vira **0.5.0-minor** (semver pelo
+> conteúdo). Medir com `git rev-list --count origin/main..origin/beta-0.4.0`
+> — **hoje = 1** (post-#138; contador zerou no merge). NENHUM agente bumpa
+> versão antes do gatilho. O re-disparo continua: escolher o próximo
+> fix/issue da fila, não feature.
 >
 > **✅ FEITO (14/09 ~01:10, dono = 192.168.100.22): issue #132 FECHADA no
 > GitHub** (causa raiz IALOAD→BALOAD/CALOAD/SALOAD `JvmLiteralEmitter`

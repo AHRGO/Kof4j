@@ -233,6 +233,16 @@ um patch:
 - **Gatilho:** quando a `beta` estiver **entre 100 e 150 commits à frente da
   `main`**, avaliar o bump para **`0.4.1`** (patch — só fixes, zero capability
   nova; a linha `0.4.0` já foi liberada no #138).
+- **Features NÃO param nem são descartadas na janela (adição da mantenedora
+  14/09):** entre 0.4.0 e o gatilho, **evolução real (features/melhorias)
+  concorre com os bugfixes** — o contador de 100–150 mistura os dois. A janela
+  de patch **não congela desenvolvimento** e o bump **não pode descartar /
+  reverter / segurar em branch** o trabalho de feature feito no período: tudo
+  que está na `beta` com suíte verde e prova entra no pacote. Se o volume de
+  **capability nova** acumulado na janela for material (mudou contrato/operador
+  — regra 6, ou superfície de API visível), o bump avaliado deixa de ser
+  patch: vira **0.5.0-minor** (semver decide pelo conteúdo, não pelo calendário
+  nem pelo gatilho). A nota de release lista fixes E features.
 - **Média de pacote estável:** 100–150 commits de fix acumulados = um pacote
   estável o bastante para valer um release. Abaixo disso, é ruído; acima, o
   backlog de correções já justifica o número de versão.
