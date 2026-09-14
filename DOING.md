@@ -82,15 +82,18 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
-> **✅ FEITO degrau-3 (14/09, dono = 192.168.100.22, lane repo-hygiene).**
-> (a) **Fix real:** Compare.java:77-78 — `--stdin`/`--arg` sem valor liam
-> `args[++i]` sem checar (AIOOBE) → guard + usage exit 1 (const USAGE
-> extraída, sem duplicar strings). Prova Q0: sem o fix o teste novo dá
-> `ArrayIndexOutOfBoundsException: Index 3` (o achado exato); com o fix,
-> CompareTest 7/7. (b) BytecodeReader OOB ×7 → false positive documentado
-> (guard `pc+len` domina; fix real já estava no skipVariable).
-> (c) WsFrameTest:77 → used-in-tests (helper de frames válidos).
-> **PRÓXIMO PASSO:** degrau-4 = unused-container ×5 + warnings (checar dono).
+> **✅ FEITO degrau-4 (14/09, dono = 192.168.100.22, lane repo-hygiene):
+> unused-container write-only ×3 removidos (zero efeito observável).**
+> (a) JdwpClient:178 — lista `methods` só append, retorno usa o id;
+> (b) SymbolTable — campo `symbolOrder` + 3 adds, zero leituras no repo;
+> (c) CollectionCallLowerer:429 — lista descartada, chamadas
+> `inferExprType` (efeito útil) preservadas. Prova: CompilerDriver 252/252 +
+> MapSet 14/14 + Semantic 27/27. **NÃO tocados:** SemExpressionTyper:301
+> (lane quente), KofInterpreterConcurrency (lane interpreter) → issue #185.
+> Dismiss #114/#503 (harness) e #505 (já-dismissed). **Issue #185 aberta:**
+> fila de triagem por lane (notes mecânicas por arquivo).
+> **PRÓXIMO PASSO:** warnings livres (useless-null-check ×12 etc., checar
+> dono) ou pausa p/ lanes absorverem #185.
 
 > **✅ FEITO (14/09, dono = 192.168.100.18, lane development): blog E2E
 > (D-SPRING F12) + `--fat` (D-APP I3)** — commit `8eb156f4`; as duas últimas

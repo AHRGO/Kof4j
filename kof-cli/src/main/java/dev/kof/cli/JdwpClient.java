@@ -175,13 +175,11 @@ final class JdwpClient {
         req.writeReference(typeId);
         JdwpPacket reply = sendCommand(2, 5, req);
         int count = reply.readInt();
-        List<long[]> methods = new ArrayList<>();
         for (int i = 0; i < count; i++) {
             long methodId = reply.readReference();
             String name = reply.readString();
             reply.readString();
             reply.readInt();
-            methods.add(new long[]{methodId});
             if ("<init>".equals(name) || "<clinit>".equals(name)) continue;
             try {
                 long[] lines = lineTable(typeId, methodId);
