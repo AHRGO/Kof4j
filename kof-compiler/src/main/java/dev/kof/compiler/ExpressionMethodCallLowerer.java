@@ -71,7 +71,11 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
     // Desconto.aplicar(c) -> invokestatic vendas/regras/Desconto.aplicar
     SymbolTable.MethodSymbol ksm = null;
     SymbolTable.Symbol ks = driver.semanticAnalyzer.resolveInHierarchy(rid.name(), mc.methodName());
-    if (ks instanceof SymbolTable.MethodSymbol ms0
+    if (ks instanceof SymbolTable.MethodSet set) {
+        List<Type> argTypes0 = new ArrayList<>();
+        for (ExpressionNode arg : mc.arguments()) argTypes0.add(ExpressionTyper.inferExprType(driver, arg, locals));
+        ksm = set.select(mc.arguments().size(), argTypes0);
+    } else if (ks instanceof SymbolTable.MethodSymbol ms0
             && ms0.parameterTypes().size() == mc.arguments().size()) {
         ksm = ms0;
     }

@@ -434,7 +434,8 @@ if (mc.receiver() != null) {
             return returnType;
     }
 }
-SymbolTable.MethodSymbol resolvedMethod = driver.semanticAnalyzer.getResolvedMethod(mc);
+SymbolTable.MethodSymbol resolvedMethod = driver.semanticAnalyzer != null
+        ? driver.semanticAnalyzer.getResolvedMethod(mc) : null;
 if (resolvedMethod != null) {
     Type rt = resolvedMethod.returnType();
     if (rt instanceof Type.TypeVariable tv && mc.receiver() != null) {

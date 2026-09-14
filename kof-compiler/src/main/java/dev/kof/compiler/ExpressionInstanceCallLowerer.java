@@ -275,7 +275,8 @@ public final class ExpressionInstanceCallLowerer {
     for (ExpressionNode arg : mc.arguments()) {
         methodParamTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
     }
-    SymbolTable.MethodSymbol resolvedMethod = driver.semanticAnalyzer.getResolvedMethod(mc);
+    SymbolTable.MethodSymbol resolvedMethod = driver.semanticAnalyzer != null
+            ? driver.semanticAnalyzer.getResolvedMethod(mc) : null;
     if (resolvedMethod != null) {
         recvType = CompilerTypes.ownerTypeFromInternal(resolvedMethod.ownerClass(), driver.semanticAnalyzer);
         methodReturnType = resolvedMethod.returnType();

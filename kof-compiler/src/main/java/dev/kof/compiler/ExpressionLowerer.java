@@ -165,7 +165,8 @@ public final class ExpressionLowerer {
                 }
                 List<Type> argTypes = new ArrayList<>();
                 for (ExpressionNode arg : ne.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
-                SymbolTable.ConstructorSymbol resolvedCtor = driver.semanticAnalyzer.getResolvedConstructor(ne);
+                SymbolTable.ConstructorSymbol resolvedCtor = driver.semanticAnalyzer != null
+                        ? driver.semanticAnalyzer.getResolvedConstructor(ne) : null;
                 if (resolvedCtor == null && type instanceof Type.ClassType ct
                         && driver.semanticAnalyzer != null) {
                     // fallback: resolver por assignability quando o registro

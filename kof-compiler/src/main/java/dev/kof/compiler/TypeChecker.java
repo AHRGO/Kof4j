@@ -190,6 +190,9 @@ public final class TypeChecker {
         }
         if (from.equals(to)) return true;
         if (from instanceof Type.PrimitiveType fp && to instanceof Type.PrimitiveType tp) {
+            if ("bool".equals(Type.canonicalPrimitiveName(fp.name())) || "bool".equals(Type.canonicalPrimitiveName(tp.name()))) {
+                return "bool".equals(Type.canonicalPrimitiveName(fp.name())) && "bool".equals(Type.canonicalPrimitiveName(tp.name()));
+            }
             // double → float: o lowering emite D2F; sem isso literais
             // decimais (1000.0) não atribuem a campos Float
             if ("double".equals(fp.name()) && "float".equals(tp.name())) return true;

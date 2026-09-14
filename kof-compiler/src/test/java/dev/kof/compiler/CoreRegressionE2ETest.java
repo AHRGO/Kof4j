@@ -2214,4 +2214,34 @@ class CoreRegressionE2ETest {
         assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
         assertEquals("true\nfalse\nfalse\nfalse\ntrue\ntrue\ntrue\nfalse", runJvm(out));
     }
+
+    // Issue #235 — Overloaded static methods: call instruction omitted from IR, causing COMP002
+    @Test
+    void overloadedStaticMethodsJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("overloaded_static.kf");
+        Files.writeString(src, """
+                class Fmt {
+                    static String of(Int n) { return "int=" + n }
+                    static String of(Double d) { return "dbl=" + d }
+                }
+                class Converter {
+                    static String show(Int n) { return "int=" + n }
+                    static String show(Double d) { return "double=" + d }
+                    static String show(Bool b) { return "bool=" + b }
+                }
+                main() {
+                    var r1 = Fmt.of(10)
+                    var r2 = Fmt.of(2.5)
+                    println(r1)
+                    println(r2)
+                    println(Converter.show(42))
+                    println(Converter.show(3.14))
+                    println(Converter.show(true))
+                }
+                """);
+        Path out = tempDir.resolve("overloaded_static-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("int=10\ndbl=2.5\nint=42\ndouble=3.14\nbool=true", runJvm(out));
+    }
 }

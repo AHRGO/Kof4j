@@ -34,6 +34,20 @@ public final class MemberCallTyper {
                 && !SemExpressionTyper.isLocalName(scope, krid.name())
                 && sa.allClasses().containsKey(krid.name())) {
             SymbolTable.Symbol km = MemberResolver.resolveInHierarchy(sa, krid.name(), mc.methodName());
+            if (km instanceof SymbolTable.MethodSet set) {
+                List<Type> argTypes0 = new ArrayList<>();
+                for (ExpressionNode arg : mc.arguments()) argTypes0.add(SemExpressionTyper.inferType(sa, arg, scope));
+                SymbolTable.MethodSymbol kms = set.select(mc.arguments().size(), argTypes0);
+                if (kms != null) {
+                    SymbolTable.ClassSymbol kt = sa.allClasses().get(krid.name());
+                    sa.resolvedMethods().put(mc, new SymbolTable.MethodSymbol(
+                            kms.name(), kt.internalName(), kms.returnType(),
+                            kms.parameterTypes(), kms.accessFlags(),
+                            SymbolTable.DispatchKind.STATIC));
+                    TypeChecker.checkArgTypes(sa.diagnostics(), mc.methodName(), argTypes0, kms.parameterTypes());
+                    return kms.returnType();
+                }
+            }
             if (km instanceof SymbolTable.MethodSymbol kms
                     && kms.parameterTypes().size() == mc.arguments().size()) {
                 SymbolTable.ClassSymbol kt = sa.allClasses().get(krid.name());
