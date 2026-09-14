@@ -560,8 +560,17 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > (middleware composto) — depende de `app.use` no app model (I2).
 >
 > **PRÓXIMO PASSO (estabilização beta-0.4.0 → release, atualizado 14/09
-> ~10:20 — TRIAGEM DA FILA DE ISSUES FEITA, provas nos comentários):**
-> medido no HEAD `75455529` com harness JVM (`/tmp/opencode/r292/dev/cli/BJ`):
+> ~12:50 — TRIAGEM ATÉ #222 FEITA; ⚠️ LIÇÃO DA MEDIÇÃO OBSOLETA: o harness
+> lê `kof-compiler/target/classes` — SEMPRE `mvn -o compile -pl kof-compiler
+> -am` antes de provar qualquer face (a 1a medição da #217 "reproduz" era
+> classe velha; `c57431b9` já tinha consertado). Re-medição fresca no
+> `c252a983`: §203/§206/§207 FIXED (prova javap/exec + comentário nas
+> issues #205/#215 fechada/#217 fechada), §213 NOVA (`i as Object` sem box →
+> VerifyError), #219 reproduz (→§212), #220/#221/#222 GREEN com prova
+> semântica, #213 continua reproduz (§209 OPEN), #218 continua (§208).
+> Fila medida real: 16 abertos (linha da OPEN Queue corrigida de 30→16).
+> Versão anterior da triagem (10:20): medido no HEAD `75455529` com harness
+> JVM (`/tmp/opencode/r292/dev/cli/BJ`):
 > **#200/#201/#203/#204/#214 = GREEN** (casos exatos das issues rodam `ec=0`;
 > prova + pointer do fix em cada comentário — fechar = ação do dono/watcher,
 > não desta lane); **#202** = face R6 morta (SEM058 honesto, §194), resta
