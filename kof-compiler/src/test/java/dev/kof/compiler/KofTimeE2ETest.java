@@ -520,9 +520,9 @@ class KofTimeE2ETest {
                     // independente do relogio: as partes de todayIso() sao
                     // hoje => isToday delas = true (parseDateIso fecha com S7g).
                     var parts = today.split("-")
-                    var p0: String = parts.get(0)
-                    var p1: String = parts.get(1)
-                    var p2: String = parts.get(2)
+                    var p0: String = parts[0]
+                    var p1: String = parts[1]
+                    var p2: String = parts[2]
                     println(time.isToday(math.parseInt(p0),
                                          math.parseInt(p1),
                                          math.parseInt(p2)))
@@ -530,9 +530,9 @@ class KofTimeE2ETest {
                     println(time.isToday(2026, 2, 30))
                     println(time.isToday(0, 1, 1))
                     println(parts.size)
-                    println(parts.get(0).length)
-                    println(parts.get(1).length)
-                    println(parts.get(2).length)
+                    println(parts[0].length)
+                    println(parts[1].length)
+                    println(parts[2].length)
                 }
                 """, "10\n2026-09-13\n2024-02-29\n\n\n\n\n\n\n\ntrue\nfalse\nfalse\nfalse\n3\n4\n2\n2");
     }
@@ -551,17 +551,17 @@ class KofTimeE2ETest {
                     println(time.formatDateIso(2026, 4, 31))
                     // Q4: consistencia interna (relogio-independente)
                     var parts = today.split("-")
-                    var p0: String = parts.get(0)
-                    var p1: String = parts.get(1)
-                    var p2: String = parts.get(2)
+                    var p0: String = parts[0]
+                    var p1: String = parts[1]
+                    var p2: String = parts[2]
                     println(time.isToday(math.parseInt(p0),
                                          math.parseInt(p1),
                                          math.parseInt(p2)))
                     println(time.isToday(2026, 9, 12))
                     println(time.isToday(2026, 2, 30))
                     println(parts.size)
-                    println(parts.get(0).length)
-                    println(parts.get(1).length)
+                    println(parts[0].length)
+                    println(parts[1].length)
                 }
                 """, "10\n2026-09-13\n2024-02-29\n\n\n\n\ntrue\nfalse\nfalse\n3\n4\n2");
     }
@@ -581,9 +581,9 @@ class KofTimeE2ETest {
                     println(time.formatDateIso(2026, 4, 31))
                     // Q4: consistencia interna (relogio-independente)
                     var parts = today.split("-")
-                    var p0: String = parts.get(0)
-                    var p1: String = parts.get(1)
-                    var p2: String = parts.get(2)
+                    var p0: String = parts[0]
+                    var p1: String = parts[1]
+                    var p2: String = parts[2]
                     println(time.isToday(math.parseInt(p0),
                                          math.parseInt(p1),
                                          math.parseInt(p2)))
@@ -591,8 +591,8 @@ class KofTimeE2ETest {
                     println(time.isToday(2026, 2, 30))
                     println(time.isToday(0, 1, 1))
                     println(parts.size)
-                    println(parts.get(0).length)
-                    println(parts.get(1).length)
+                    println(parts[0].length)
+                    println(parts[1].length)
                 }
                 """, "10\n2026-09-13\n2024-02-29\n\n\n\n\n\ntrue\nfalse\nfalse\nfalse\n3\n4\n2");
     }
@@ -618,9 +618,9 @@ class KofTimeE2ETest {
                 println(time.isToday(2026, 2, 30))
                 var parts = today.split("-")
                 println(parts.size)
-                println(parts.get(0).length)
-                println(parts.get(1).length)
-                println(parts.get(2).length)
+                println(parts[0].length)
+                println(parts[1].length)
+                println(parts[2].length)
             }
             """;
         String expected = "10\n2026-09-13\n\n2024-02-29\n\n\n\nfalse\nfalse\n3\n4\n2\n2";

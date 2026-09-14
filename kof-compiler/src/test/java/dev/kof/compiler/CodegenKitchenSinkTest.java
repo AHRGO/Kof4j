@@ -76,7 +76,7 @@ class CodegenKitchenSinkTest {
                     println(s.startsWith("Hello"))
                     var parts = "a,b,c".split(",")
                     println(parts.size)
-                    println(parts.get(0))
+                    println(parts[0])
                 }
                 """, "11\n101\nWorld\ntrue\ntrue\n3\na"));
         l.add(new Case("collections", """
@@ -238,7 +238,7 @@ class CodegenKitchenSinkTest {
                 main() {
                     var parts = "a,b,c".split(",")
                     println(parts.size)
-                    println(parts.get(0))
+                    println(parts[0])
                     println(parts.length)
                 }
                 """, "3\na\n3"));

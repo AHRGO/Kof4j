@@ -1053,7 +1053,7 @@ class NativeE2ETest {
                     var a = "x,y".split(",").length
                     var b = "p,q,r".split(",").length
                     println(a + b)
-                    println("m,n".split(",").get(1))
+                    println("m,n".split(",")[1])
                 }
                 """);
         runNative(source, tempDir.resolve("out"), "5\nn");
@@ -1138,7 +1138,7 @@ class NativeE2ETest {
                     println(p.toUpperCase())
                     println(" x ".trim() + "|")
                     println("abc".indexOf("c"))
-                    println("a,b".split(",").get(1))
+                    println("a,b".split(",")[1])
                     println("ab".toUpperCase())
                 }
                 """);
