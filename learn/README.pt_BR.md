@@ -163,7 +163,7 @@ Native (x86-64 free-list), Native.risc, Native.arm, KofJS e KofC (0.3.22-beta).
 - `KofScript` (`let`/`const` no topo → `KofScriptGlobals`, `kof script --repl`, `--watch`), `KofC` (`kof c <file.c>` nativo-only)
 - CLI (18 comandos): `build, run, serve, check, test, script, repl, c, fmt, config gen, bench, profile, inspect, debug, info, lsp, install, version` + `--target=jvm|native|native.risc|native.arm|js|android`
 - `kof serve` (`web.app()` nativa + API legada `handle()`; cada conexão em virtual thread), `kof test` (suíte `test "nome" {}` nos 3 targets), `kof bench`/`kof profile`/`kof inspect`/`kof debug`
-- Distribuição oficial (Temurin 21 embutido, package, CI/release) — Target separation (`Target.NATIVE_RISCV64/AARCH64`)
+- Distribuição oficial (Temurin 25 embutido, package, CI/release) — Target separation (`Target.NATIVE_RISCV64/AARCH64`)
 
 
 **O que está planejado / gaps reais:**

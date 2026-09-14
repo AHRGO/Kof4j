@@ -154,7 +154,7 @@ mkdir -p lib && cp kof-cli/target/kof-cli-$(cat VERSION).jar lib/kof.jar
 bin/kof version
 ```
 
-Em builds de desenvolvimento, o launcher usa o `java` do sistema (JDK 21+).
+Em builds de desenvolvimento, o launcher usa o `java` do sistema (JDK 25+ — o baseline da toolchain do repo; o *programa* Kof compilado continua com alvo JVM 21+).
 No pacote oficial, o JDK embutido é usado automaticamente.
 
 ## Problemas comuns

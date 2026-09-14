@@ -49,8 +49,9 @@ browser. `kof script` and `kof c` do not need a webview.
 
 ## Embedded JDK
 
-Kof distributes its own OpenJDK (Temurin 21 — aligned with the Tooling API
-Level). The `bin/kof` launcher:
+Kof distributes its own OpenJDK (Temurin **25** — the repo build baseline since
+D-BASELINE 14/09; the CLI classes are `--release 25`, so they need a 25 JVM to
+run). The `bin/kof` launcher:
 
 1. locates the embedded JDK in `jdk/`;
 2. if it exists, uses it (without depending on `JAVA_HOME`/`PATH`);
@@ -62,13 +63,19 @@ Verification:
 kof info
 # Kof 0.3.22-beta
 # Targets: jvm, native, js (alpha)
-# JVM: Eclipse Temurin 21.0.x (embedded)
+# JVM: Eclipse Temurin 25.0.x (embedded)
 ```
 
 ## Tooling API Level
 
-The Java API baseline of the tooling is **21**:
+The Java API baseline of the **emitted program** is **21** (`KofVersion.TOOLING_API`,
+reported by `kof info` — it is the floor of the Kof bytecode `JvmBackend` emits,
+`V21`):
 
+- **do not confuse the layers (D-BASELINE 14/09):** building the repo and
+  running the CLI require **JDK 25** (toolchain); a compiled Kof program still
+  runs on **JVM 21+** (language contract, frozen — rule 6). Raising the repo
+  toolchain does NOT raise the minimum runtime of your programs;
 - later OpenJDK versions may be used internally when appropriate (e.g. Virtual
   Threads with Java 25), without becoming a requirement;
 - the official package carries its own JVM.

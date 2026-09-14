@@ -367,9 +367,23 @@ kof info | lsp | install | version
 
 # Compilando e instalando a partir do source
 
-**Requisitos:** JDK 25+ (Temurin recomendado — é a Tooling API baseline) e
-Maven 3.9+. Para o target `native`: `as`/`ld` (binutils). O target `js` não
-exige nada externo (GraalJS embarcado no jar).
+**Requisitos:** **JDK 25** (Temurin recomendado — é o baseline de build do
+repo desde D-BASELINE 14/09; `--release 25`) e Maven 3.9+. Para o target
+`native`: `as`/`ld` (binutils). O target `js` não exige nada externo (GraalJS
+embarcado no jar).
+
+> **Três camadas de JDK, não confunda (D-BASELINE):**
+> - **Compilar este repo:** exige JDK **25** (`pom.xml` `release=25`; o código
+>   do compilador usa unnamed patterns `_` = JEP 443, finalizado no 22 — o JDK
+>   21 NÃO compila os sources).
+> - **Rodar o CLI `kof`:** as classes são `release 25`, então o próprio CLI roda
+>   em JDK **25**; `scripts/package.sh --jdk` embute o Temurin 25 para a
+>   distribuição empacotada levar a própria JVM.
+> - **Seus programas Kof (o contrato da LINGUAGEM — congelado, regra 6):**
+>   inalterado. O backend JVM continua emitindo bytecode **`V21`**
+>   (`JvmBackend`) e o template Android continua `release 21` — um `.kf` seu
+>   roda em **JVM 21+**. Subir a toolchain do repo NÃO sobe o runtime mínimo da
+>   linguagem.
 
 ```bash
 # 1. Compilar tudo (compilador, runtime, CLI com GraalJS embarcado)

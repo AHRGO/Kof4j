@@ -492,6 +492,35 @@ define. Célula golden cross-target (`floatprint`).
 
 ---
 
+## D-BASELINE — baseline da toolchain 21 → 25 (✅ decidido 14/09, mantenedora)
+
+- **Decisão:** o baseline de build da toolchain do repo sobe de **Java 21**
+  para **Java 25** (LTS), pedida pela mantenedora na sessão da lane CodeQL
+  (14/09) para destravar o codemod 100% preservador de comportamento dos
+  findings `java/local-variable-is-never-read` (×82) e parte de
+  `java/unused-parameter` (×81): **unnamed patterns/variables, JEP 443,
+  finalizado no Java 22** (medido: `javac --release 21` recusa
+  `case WhileStmt _ -> false;`).
+- **O que muda (toolchain do repo, NÃO a linguagem):** `pom.xml` `release=25`;
+  `setup-java` 21→25 em ci/codeql/release/benchmark/android; Temurin embutido
+  do `package.sh --jdk` 21→25; README canônico + PT "JDK 25+"; CHANGELOG EN/PT
+  (seção Build de 0.4.0-beta); `learn/31-distribution` EN/PT com a nota das
+  três camadas.
+- **O que NÃO muda (regra 6 — alvo de runtime de programa Kof, congelado):**
+  `JvmBackend` continua emitindo `V21`; template Android continua
+  `release="21"`; `KofVersion.TOOLING_API=21` (piso do programa emitido,
+  reportado por `kof info`); a guarda `--release 21 --enable-preview` do
+  `JvmRuntime` (caminho vk/extern em JDK <22) segue correta em 21..25.
+  **Programa Kof compilado hoje roda em JVM 21+** — subir a toolchain do repo
+  não sobe o runtime mínimo da linguagem.
+- **Evidência:** `mvn -o -pl kof-compiler -am compile` verde com
+  `Compiling ... with javac [debug release 25]`; suíte do kof-compiler em JDK
+  25: 1464/0 (162 skip) antes do codemod, e worktree b3ab9858+codemod
+  61-bindings: 1574/1 (a única fail é o flake SSE documentado da família §90,
+  verde 6/6 isolado).
+
+---
+
 ## Como atualizar este doc
 
 Decidiu mais alguma coisa no chat → trava aqui (data + opção + evidência de

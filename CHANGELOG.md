@@ -1492,6 +1492,15 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 ### Build
 
   - 0.4.0-beta naming (maintainer request - next version when stable)
+  - **D-BASELINE (14/09): the repo toolchain baseline goes 21 → 25** (maintainer
+    decision — `pom.xml` `release=25`, CI/CodeQL/release/benchmark/android JDK
+    25, `package.sh --jdk` embeds Temurin 25). It unlocks the behavior-preserving
+    codemod of CodeQL's `local-variable-is-never-read` (unnamed patterns `_`,
+    JEP 443 — final in 22, refused by `javac --release 21`). **The language
+    contract does not change:** `JvmBackend` still emits `V21` bytecode and the
+    Android template still targets `release 21` — a Kof program keeps running on
+    JVM 21+ (`KofVersion.TOOLING_API=21` unchanged). Layers: build the repo /
+    run the CLI = JDK 25; your compiled `.kf` = JVM 21+.
 
 <!-- NEXT-RELEASE -->
 
