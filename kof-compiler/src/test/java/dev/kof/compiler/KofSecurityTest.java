@@ -366,6 +366,128 @@ class KofSecurityTest {
     }
 
     @Test
+    void chacha20RoundTripJvm(@TempDir Path tempDir) throws IOException {
+        // D-SEC (13/09): ChaCha20-Poly1305 RFC 8439 — envelope
+        // chacha20$<nonceB64>$<ct+tagB64>. Roundtrip + tamper + chave errada
+        // + vazio + unicode (mesmo contrato do aesGcmRoundTripJvm).
+        runJvm(tempDir, """
+                main() {
+                    var key = crypto.randomHex(32)
+                    var ct = crypto.encryptChacha20("segredo", key)
+                    println(crypto.decryptChacha20(ct, key) == "segredo")
+                    var bad = false
+                    try {
+                        var x = crypto.decryptChacha20(ct + "AA", key)
+                        println("never")
+                    } catch (String e) {
+                        bad = true
+                    }
+                    println(bad)
+                    var bad2 = false
+                    try {
+                        var y = crypto.decryptChacha20(ct, crypto.randomHex(32))
+                        println("never2")
+                    } catch (String e) {
+                        bad2 = true
+                    }
+                    println(bad2)
+                    println(crypto.decryptChacha20(crypto.encryptChacha20("", key), key) == "")
+                    var uni = crypto.encryptChacha20("ção ☕ usuário", key)
+                    println(crypto.decryptChacha20(uni, key) == "ção ☕ usuário")
+                }
+                """, "true\ntrue\ntrue\ntrue\ntrue");
+    }
+
+    @Test
+    void chacha20JsRoundTrip(@TempDir Path tempDir) throws IOException {
+        // Mesmo contrato no backend JS (implementação pura — WebCrypto não
+        // tem ChaCha20): roundtrip + tamper + chave errada.
+        runJs(tempDir, """
+                main() {
+                    var key = crypto.randomHex(32)
+                    var ct = crypto.encryptChacha20("segredo", key)
+                    println(crypto.decryptChacha20(ct, key) == "segredo")
+                    var bad = false
+                    try {
+                        var x = crypto.decryptChacha20(ct + "AA", key)
+                        println("never")
+                    } catch (String e) {
+                        bad = true
+                    }
+                    println(bad)
+                    var bad2 = false
+                    try {
+                        var y = crypto.decryptChacha20(ct, crypto.randomHex(32))
+                        println("never2")
+                    } catch (String e) {
+                        bad2 = true
+                    }
+                    println(bad2)
+                }
+                """, "true\ntrue\ntrue");
+    }
+
+    @Test
+    void chacha20CrossTargetParityJvmToJs(@TempDir Path tempDir) throws IOException {
+        // Paridade byte-a-byte: ct JVM decifrado pelo runtime JS puro.
+        String key = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f";
+        Path encSrc = tempDir.resolve("Enc.kf");
+        Files.writeString(encSrc, """
+            main() {
+                var ct = crypto.encryptChacha20("paridade-jvm-js", "%s")
+                println(ct)
+            }
+            """ .formatted(key));
+        CompilationResult enc = driver.compile(encSrc, tempDir.resolve("out-enc"), Target.JVM);
+        assertTrue(enc.success(), "JVM encrypt: " + enc.diagnostics().getDiagnostics());
+        String ct;
+        try {
+            Process ep = new ProcessBuilder(System.getProperty("java.home") + "/bin/java",
+                    "-cp", tempDir.resolve("out-enc").toString(), "Default.Main")
+                    .redirectErrorStream(true).start();
+            ct = new String(ep.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8).trim();
+            assertEquals(0, ep.waitFor(), "JVM encrypt exit");
+        } catch (InterruptedException e) {
+            throw new IOException("interrupted", e);
+        }
+        assertTrue(ct.startsWith("chacha20$"), "envelope: " + ct);
+        Path decSrc = tempDir.resolve("Dec.kf");
+        Files.writeString(decSrc, """
+            main() {
+                var ct = "%s"
+                var key = "%s"
+                println(crypto.decryptChacha20(ct, key))
+            }
+            """ .formatted(ct, key));
+        CompilationResult dec = driver.compile(decSrc, tempDir.resolve("out-dec"), Target.JS);
+        assertTrue(dec.success(), "JS decrypt: " + dec.diagnostics().getDiagnostics());
+        runJs(tempDir, """
+            main() {
+                var ct = "%s"
+                var key = "%s"
+                println(crypto.decryptChacha20(ct, key))
+            }
+            """ .formatted(ct, key), "paridade-jvm-js");
+    }
+
+    @Test
+    void chacha20RejectsBadKeyJvm(@TempDir Path tempDir) throws IOException {
+        // Borda Q3: chave != 32 bytes → erro explícito (R6), nunca silêncio.
+        runJvm(tempDir, """
+                main() {
+                    var bad = false
+                    try {
+                        var x = crypto.encryptChacha20("msg", "aabb")
+                        println("never")
+                    } catch (String e) {
+                        bad = true
+                    }
+                    println(bad)
+                }
+                """, "true");
+    }
+
+    @Test
     void aesGcmCrossTargetParityJvmToJs(@TempDir Path tempDir) throws IOException {
         // Paridade byte-a-byte: o ciphertext produzido no JVM (AES/GCM do JDK)
         // é decifrado pelo runtime JS puro — mesma chave, mesmo formato.

@@ -266,6 +266,7 @@ Nunca comportamento silenciosamente diferente (§16 do doc de performance).
 ```text
 passwords:   pbkdf2$sha256$<iterations>$<salt-b64>$<hash-b64>
 crypto:      aesgcm$<iv-b64>$<ciphertext+tag-b64>
+             chacha20$<nonce-b64>$<ciphertext+tag-b64>   (14/09, D-SEC)
 jwt:         RFC 7519 HS256 (alg fixado, nunca aceito do token)
 ```
 
@@ -296,6 +297,8 @@ jwt:         RFC 7519 HS256 (alg fixado, nunca aceito do token)
 | `crypto.hmacSha256(key, data)` | ✅ | ✅ (asm) | ✅ (JS puro) | hex |
 | `crypto.encryptAesGcm(plain, keyHex)` | ✅ AES/GCM/NoPadding | ✅ (asm GCM, round-trip E2E) | ✅ (JS puro, round-trip E2E) | `aesgcm$iv$ct` |
 | `crypto.decryptAesGcm(ct, keyHex)` | ✅ (falha em tamper) | ✅ (asm, falha em tamper) | ✅ (JS puro, falha em tamper) | |
+| `crypto.encryptChacha20(plain, keyHex)` | ✅ (RFC 8439, node-validated 14/09) | SECN002 honesto (asm 130-bit na fila) | ✅ (JS puro, node-validated) | `chacha20$nonce$ct` |
+| `crypto.decryptChacha20(ct, keyHex)` | ✅ (tag constant-time, falha em tamper) | SECN002 honesto | ✅ (JS puro, tag constant-time) | |
 | `crypto.randomHex(n)` | ✅ SecureRandom | ✅ getrandom (`li a7 318` x86_64 / `214` riscv64) | ✅ platform | hex |
 | `crypto.randomInt(bound)` | ✅ | ✅ getrandom + rejection | ✅ platform | |
 | `jwt.create(claims, secret[, ttl])` | ✅ HS256 + iat/exp | ✅ (asm: base64url + HMAC + kof_now) | ✅ | RFC 7519 HS256 |

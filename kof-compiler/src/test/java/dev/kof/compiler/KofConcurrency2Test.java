@@ -648,8 +648,8 @@ class KofConcurrency2Test {
                 Int t() { return 9 }
                 main() {
                     val r = spawn t()
-                    assert(cancel(r) == 0)
-                    assert(cancelled() == 0)
+                    assert(cancel(r))
+                    assert(!cancelled())
                     println(await r)
                 }
                 """, "9");

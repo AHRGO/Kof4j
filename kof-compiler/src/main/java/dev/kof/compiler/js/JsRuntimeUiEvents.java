@@ -92,6 +92,40 @@ public final class JsRuntimeUiEvents {
                 if (ev && typeof ev.stopPropagation === "function") ev.stopPropagation();
             }
 
+            // UIW050: acessores de `e: Event` como funções de runtime. O IR
+            // baixa `e.value()/e.key()/e.x()/e.y()/e.type()/e.target()/
+            // e.relatedTarget()` para `kof_ui_event_*` (receiver = evento) em
+            // todos os alvos; aqui o evento é o objeto de kofUiMakeEvent.
+            export function kofUiEventValue(ev) {
+                if (!ev) return "";
+                return typeof ev.value === "function" ? ev.value() : "";
+            }
+
+            export function kofUiEventKey(ev) {
+                if (!ev) return "";
+                return typeof ev.key === "function" ? ev.key() : "";
+            }
+
+            export function kofUiEventX(ev) {
+                if (!ev) return 0;
+                return typeof ev.x === "function" ? ev.x() : 0;
+            }
+
+            export function kofUiEventY(ev) {
+                if (!ev) return 0;
+                return typeof ev.y === "function" ? ev.y() : 0;
+            }
+
+            export function kofUiEventTarget(ev) {
+                if (!ev) return "";
+                return typeof ev.target === "function" ? String(ev.target()) : "";
+            }
+
+            export function kofUiEventRelatedTarget(ev) {
+                if (!ev) return "";
+                return typeof ev.relatedTarget === "function" ? String(ev.relatedTarget()) : "";
+            }
+
             // ── Store: shared observable state (docs/ui/architecture.md §2.6)
             // One Store, many component subscribers. set() notifies every
             // subscriber; a component that re-renders on its own state stays

@@ -78,6 +78,10 @@ public final class KofSecurity {
                         ? new SecCall("kof_sec_aesgcm_encrypt", STR, List.of(STR, STR)) : null;
                 case "decryptAesGcm" -> argc == 2
                         ? new SecCall("kof_sec_aesgcm_decrypt", STR, List.of(STR, STR)) : null;
+                case "encryptChacha20" -> argc == 2
+                        ? new SecCall("kof_sec_chacha20_encrypt", STR, List.of(STR, STR)) : null;
+                case "decryptChacha20" -> argc == 2
+                        ? new SecCall("kof_sec_chacha20_decrypt", STR, List.of(STR, STR)) : null;
                 case "randomHex" -> argc == 1
                         ? new SecCall("kof_sec_random_hex", STR, List.of(INT)) : null;
                 case "randomInt" -> argc == 1
@@ -188,6 +192,11 @@ public final class KofSecurity {
         return switch (function) {
             case "kof_sec_aesgcm_encrypt", "kof_sec_aesgcm_decrypt" ->
                     target == Target.JVM || target == Target.JS || target.isNative();
+            // D-SEC chacha (13/09): JVM+JS nesta unidade (asm x86 de
+            // ChaCha20+Poly1305 p/ NATIVE fica na fila — SECN002 com
+            // diagnóstico em compile-time até o port, igual SECN000).
+            case "kof_sec_chacha20_encrypt", "kof_sec_chacha20_decrypt" ->
+                    target == Target.JVM || target == Target.JS;
             case "kof_sec_password_hash", "kof_sec_password_verify", "kof_sec_password_needs_rehash" ->
                     target == Target.JVM || target == Target.JS || target.isNative();
             case "kof_sec_sha512" -> target == Target.JVM || target == Target.JS || target.isNative();
@@ -210,7 +219,8 @@ public final class KofSecurity {
     /** Diagnostic code for target gaps (analogous to CONC001/JSN00x). */
     static String gapCode(String function) {
         return switch (function) {
-            case "kof_sec_aesgcm_encrypt", "kof_sec_aesgcm_decrypt" -> "SECN002";
+            case "kof_sec_aesgcm_encrypt", "kof_sec_aesgcm_decrypt",
+                    "kof_sec_chacha20_encrypt", "kof_sec_chacha20_decrypt" -> "SECN002";
             case "kof_sec_password_hash", "kof_sec_password_verify", "kof_sec_password_needs_rehash" -> "SECN001";
             case "kof_sec_sha512" -> "SECN003";
             case "kof_sec_jwt_create", "kof_sec_jwt_create_ttl", "kof_sec_jwt_verify",

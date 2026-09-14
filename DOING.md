@@ -58,6 +58,15 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ---
 
+> **⚠️ CUIDADO (14/09 ~01:30, dono = 192.168.100.18):** este commit carrega
+> wips de OUTRAS lanes resgatados do working tree compartilhado (regra 8 —
+> commitar tudo, nunca descartar): **UIW050-JS** (`kofUiEventValue/Key/X/Y/
+> Target/RelatedTarget` em `JsRuntimeUiEvents` + `kofUiEventType(ev)` por
+> objeto em `JsRuntimeUiComponents` — paridade JS do UIW050 JVM commitado em
+> `45a2caf5`) e **UIW052-JS** (`JsComparisons` `(cond == 0)` → `!left` +
+> `KofConcurrency2Test.cancelJsSequential` asserts ajustados — paridade JS
+> do §186 e4613704). Suíte completa re-provada depois do rebase.
+
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
 > **✅ FEITO (14/09 ~03:30, dono = 192.168.100.22): `CmdNew` (D-APP I1 +
@@ -118,6 +127,26 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > patch idêntico foi descartado no rebase em favor do upstream) + **§188
 > catalogado** (regra 6: `String as Int` compila → `VerifyError` no JVM;
 > NÃO corrigido — reparse canônico é `parseDateIso`, não cast).
+> **✅ FEITO (14/09 ~00:40, lane development, dono = 192.168.100.18):
+> D-SEC degrau 2 — `crypto.chacha20Encrypt/Decrypt` (RFC 8439, DECISIONS.md
+> §D-SEC ratificado).** Envelope `chacha20$<nonceB64(12B)$<ct+tagB64(16B)>`
+> nos backends **JVM** (`JvmStringChachaRuntime` novo, plugado em
+> `JvmStringRuntime.source()`; dispatch `KofSecurity` + descriptors) e
+> **JS** (`JsRuntimeUiChacha` novo, slice "crypto"; split do
+> `JsRuntimeUiCrypto` p/ gate ≤500). **Native x86/riscv/aarch: gap SECN002
+> honesto em compile-time** (asm 130-bit fica na fila — igual SECN000).
+> Validado byte a byte contra node:crypto (ct e tag; bug do macInput: ctLen
+> vai no byte 8 do bloco final, le64(aadLen=0)||le64(ctLen); poly r/s
+> LITTLE-ENDIAN + tag LE). Testes: `chacha20RoundTripJvm` (roundtrip+tamper+
+> chave errada+vazio+unicode), `chacha20JsRoundTrip`,
+> `chacha20CrossTargetParityJvmToJs` (ct JVM → decrypt JS),
+> `chacha20RejectsBadKeyJvm` — KofSecurityTest 32/32. Suíte 4 módulos:
+> 1557/0 + 37/0 + 5/0 + 213/0 (163 skips = qemu/BD externos). Poly1305 AEAD
+> conferido contra o vetor §2.8.2 do RFC em python (tag
+> 1ae10b594f09e26a7e902ecbd0600691 MATCH).
+
+
+
 > **PRÓXIMO PASSO (estabilização beta-0.4.0 → release):** rodar a suíte
 > COMPLETA limpa pós-push (`rm -rf */target && mvn -o test -pl
 > kof-compiler,kof-script,kof-c-compiler,kof-cli -am

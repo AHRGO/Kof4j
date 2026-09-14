@@ -116,7 +116,8 @@ public final class JvmRuntimeReturnDescriptors {
             // ── kof.security (docs/stdlib/security.md §5) ───────────────────
             case "kof_sec_sha256", "kof_sec_sha512", "kof_sec_hmac_sha256", "kof_sec_redact",
                     "kof_sec_secret_get", "kof_sec_secret_get_default", "kof_sec_password_hash",
-                    "kof_sec_aesgcm_encrypt", "kof_sec_aesgcm_decrypt", "kof_sec_jwt_create",
+                    "kof_sec_aesgcm_encrypt", "kof_sec_aesgcm_decrypt",
+                    "kof_sec_chacha20_encrypt", "kof_sec_chacha20_decrypt", "kof_sec_jwt_create",
                     "kof_sec_jwt_create_ttl", "kof_sec_jwt_verify", "kof_sec_jwt_verify_iss_aud",
                     "kof_sec_jwt_secret", "kof_sec_random_hex", "kof_sec_csrf_token",
                     "kof_sec_csp_header", "kof_sec_hsts_header", "kof_sec_content_type_options_header",

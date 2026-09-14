@@ -97,6 +97,18 @@ Mesmo padrão `SecCall` de `kof_sec_aesgcm_*` (gap SECN002 nos alvos sem
 implementação). JS via WebCrypto `ChaCha20-Poly1305` (onde existir; restante
 = SECN002 honesto). Constante de tempo, nonce nunca reusado (documentado).
 
+> **✅ EXECUTADO (14/09, degrau 2 — dono 192.168.100.18):** chacha20 JVM+JS
+> (`kof_sec_chacha20_encrypt/decrypt`, SecCall idêntico ao aesgcm). JS é
+> implementação pura (WebCrypto **não** expõe ChaCha20 em nenhum engine
+> principal — a premissa "onde existir" caiu; prova: MDN
+> SubtleCrypto.algorithms). Validado byte a byte contra node:crypto e contra
+> o vetor RFC 8439 §2.8.2 (Poly1305 AEAD: r/s LE, mac_data
+> pad16(ct)||le64(0)||le64(ctLen)). **Native (x86/riscv/aarch64) segue gap
+> SECN002 honesto em compile-time** — asm puro de Poly1305 (aritmética
+> 130-bit) fica na fila, mesmo precedente do SECN000. Constante de tempo:
+> tag comparada com `MessageDigest.isEqual` (JVM) / XOR acumulado (JS).
+> Testes: KofSecurityTest 32/32 (`chacha20*`), suíte 4 módulos 0 falhas.
+
 **Cookies (C11) + middleware de security (C18) — entram, EXECUTAM JUNTO com
 o Application Model** (a ordem só faz sentido com `app.use`):
 
