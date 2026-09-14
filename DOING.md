@@ -345,17 +345,24 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > OUTRAS lanes, catalogadas com evidência: **§181 residual** (`riscv64/
 > aarch64CastSaturation`: `(-inf) as Int`→`0`, deveria `MIN_VALUE` — só essa
 > linha diverge; lane nat) e **§189** (`parseOrDefaultCrossArch`: programa
-> morre na 1ª `parseDoubleOrDefault` sob riscv — lane stdlib/nat). **Bloqueio
-> honesto (regra 7):** re-execução isolada pra cravar determinística está
-> travada — dependabot no HEAD bumpou mariadb 3.5.3 / postgresql 42.7.7 /
-> junit 6.1.3 e o `.m2` local tem 3.4.1 / 42.7.4 / 5.11.3 → `mvn -o` NÃO
-> resolve dependências (precisa de rede ou do cache novo; NÃO relaxei o gate).
+> TRAVA na 1ª `parseDoubleOrDefault` sob riscv — lane stdlib/nat). **Re-run
+> isolado 14/09 (~04:20, dono = 192.168.100.17) CRAVOU os dois como
+> DETERMINÍSTICOS (2/2, NÃO flake):** `riscv64CastSaturation` falhou em 2.2s
+> (linha única `(-inf) as Int`→`0` vs `MIN_VALUE`); `parseOrDefaultCrossArch`
+> pendurou o `qemu-riscv64` >5 min no mesmo `readAllBytes` (matei a `-9`) —
+> o golden exige 13 linhas+ec0 mas só as 8 Int/Long saem, o double trava.
+> O bloqueio de cache anterior foi RESOLVIDO: baixei online o surefire
+> 3.6.0 completo + mariadb/postgresql/junit bumpados pelo dependabot
+> (dependabot re-bumpou de novo → 3.5.10/42.7.13; todos no `.m2` agora;
+> `mvn -o test-compile -pl kof-compiler -am` = BUILD SUCCESS).
 > **Gate de release NÃO está 0-falhas:** os 3 vermelhos cross precisam de fix
 > das lanes nat/stdlib (regra 6 se tocar contrato) antes de congelar a
 > release. **NUNCA:** tocar `nat/` GC, lanes `.15`/`.22`; reabrir
 > decompiler/translator sem decisão (despriorizados — meta = estabilizar a
-> release). Para re-rodar o gate isolado, primeiro `mvn -o dependency:go-offline`
-> ou prover os jars bumpados no `.m2`.
+> release). O gate offline agora roda: `mvn -o test -pl kof-compiler,kof-script,
+> kof-c-compiler,kof-cli -am -Dsurefire.failIfNoSpecifiedTests=false
+> -Dmaven.test.failure.ignore=true`. **Não relancei o gate completo (gasta
+> 2h+, e o parseOrDefault pendura sozinho — linha de base já medida).**
 >
 >
 > **✅ FEITO (14/09 ~00:30, dono = 192.168.100.22): CI vermelho na beta
