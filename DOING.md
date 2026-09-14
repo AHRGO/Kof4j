@@ -69,16 +69,45 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
-> **EM CURSO (14/09, dono = 192.168.100.18, lane development): blog E2E
-> (D-SPRING F12)** — app model canônico (backend + frontend + db + auth +
-> validation num único app Kof), conforme DECISIONS.md §D-SPRING F12
-> ("AGORA — validação da plataforma"). Arquivos que vou tocar:
-> `kof-compiler/src/test/java/dev/kof/compiler/KofBlogE2ETest.java` (novo),
-> `DOING.md`, `docs/development/README.md` (fila). Padrões usados: web.app
-> (`KofWebWsE2ETest`), db H2 (`KofDbE2ETest`), security sessions/passwords
-> (`KofSecurityTest`). ChaCha20 (D-SEC) foi entregue pelo colega
-> (`3e1d1ff7`) — unidade duplicada minha descartada, diff preservado em
-> `/tmp/opencode/chacha20-duplicate-work.diff` (nada a reaproveitar).
+> **✅ FEITO (14/09, dono = 192.168.100.18, lane development): blog E2E
+> (D-SPRING F12) + `--fat` (D-APP I3)** — as duas últimas linhas executáveis
+> da fila `DECISIONS.md` (§7 de `docs/development/README.md`).
+>
+> **Blog E2E (F12):** `KofBlogE2ETest` verde — app canônico (web.app + H2 +
+> passwords + security sessions + validation + json num único app) provado
+> por HTTP real (login certo/errado, write sem sessão, validação, persistência
+> e read path). A caçada expôs **dois bugs reais de runtime JVM** (não do
+> teste), ambos corrigidos neste commit:
+> 1. `JvmRuntimeWebDispatch.readRequest` contava o corpo em **chars** mas
+>    `Content-Length` é **bytes** — corpo UTF-8 multibyte (`"Olá"`,
+>    `"conteúdo"`) tinha menos chars que bytes, o loop `body.length() <
+>    contentLength` lia além do fim e **travava a conexão até o timeout**
+>    (o `Content-Length` do POST do blog nunca era satisfeito). Fix: acumular
+>    em `ByteArrayOutputStream`, localizar o fim do header em BYTES
+>    (`indexOfHeaderEnd`) e truncar o corpo em bytes. Regressão: suíte
+>    web/HTTP 120/0/2 + `KofDbE2ETest` 16/0/2.
+> 2. `JvmConfigRuntime.kof_db_query_n` devolvia o wrapper JDBC cru de CLOB
+>    (`"clob0: U&'...'"` no H2) no read path. Fix: `kof_db_value` normaliza
+>    `Clob`→`String` e `Blob`→base64. `KofDbE2ETest` segue verde.
+>
+> **`--fat` (I3):** `kof build --fat` (JVM) gera `kof-app.jar` executável
+> (classes do app + runtime `dev.kof.runtime` + deps externas, `Main-Class`
+> no manifesto, first-wins do app, assinaturas de deps descartadas);
+> `--fat` fora do JVM recusa honesto (R6). Prova: `CmdBuildFatTest` 4/4
+> (incl. `java -jar` rodando o programa; sem a flag não há jar; dep entra no
+> jar). Docs atualizadas no mesmo commit: `DECISIONS.md` (Q6 + plano I1–I3),
+> `backend-parity.md`, `docs/development/README.md` (fila §7).
+>
+> ChaCha20 (D-SEC) foi entregue pelo colega (`3e1d1ff7`) — unidade duplicada
+> descartada, diff em `/tmp/opencode/chacha20-duplicate-work.diff`. Cookies
+> C11 entregues em `521049aa`. **Fila restante de `DECISIONS`:** `app.security()`
+> (C18, depende do app model I2/`app.use`), OAuth resource-server,
+> `listenSecure` (JVM TLS já existe — falta doc/paridade), `--fat` ✅.
+> **PRÓXIMO PASSO:** `app.security()` (C18) — middleware composto sobre
+> `app.use` (`JvmRuntimeWebDispatch` já itera `app.middlewares`);
+> arquivo principal `KofWeb.java`/`JvmRuntimeWebDispatch.java`; prova =
+> E2E com rota protegida (401 sem credencial, 200 com) em `KofBlogE2ETest`
+> ou teste próprio. Antes: reler `docs/development/DECISIONS.md` §D-SEC C18.
 
 > **✅ FEITO (14/09 ~03:30, dono = 192.168.100.22): `CmdNew` (D-APP I1 +
 > D-SPRING F11).** `kof new <dir> [--type mono|backend|frontend|full-stack]`

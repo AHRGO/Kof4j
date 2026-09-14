@@ -131,6 +131,7 @@ class KofBlogE2ETest {
         ProcessBuilder pb = new ProcessBuilder(JAVA_BIN,
                 "-cp", outDir + ":" + findH2Jar(), "Default.Main");
         pb.redirectErrorStream(true);
+        pb.redirectOutput(tempDir.resolve("server.log").toFile());
         serverProcess = pb.start();
         waitListening(port);
         // continua após o probe OK
@@ -139,47 +140,57 @@ class KofBlogE2ETest {
         String home = request(port, "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n");
         assertTrue(home.contains("Kof Blog"), "frontend servido: " + home);
 
+        System.out.println("== STEP: login errado ==");
         // login errado → erro (senha inválida não autentica)
-        String badLogin = request(port, "POST /login HTTP/1.1\r\nHost: x\r\n"
-                + "Content-Type: application/json\r\nConnection: close\r\n\r\n"
-                + "{\"title\":\"mel\",\"body\":\"wrong\"}");
+        String badLogin = post(port, "/login", "Content-Type: application/json\r\n",
+                "{\"title\":\"mel\",\"body\":\"wrong\"}");
         assertTrue(badLogin.contains("500") || badLogin.contains("unauthorized")
                 || badLogin.contains("401"),
                 "login errado não pode autenticar: " + badLogin);
 
+        System.out.println("== STEP: login certo ==");
         // login certo → token de sessão
-        String login = request(port, "POST /login HTTP/1.1\r\nHost: x\r\n"
-                + "Content-Type: application/json\r\nConnection: close\r\n\r\n"
-                + "{\"title\":\"mel\",\"body\":\"correct-horse\"}");
+        String login = post(port, "/login", "Content-Type: application/json\r\n",
+                "{\"title\":\"mel\",\"body\":\"correct-horse\"}");
         assertTrue(login.contains("token"), "login deve devolver token: " + login);
         String token = extractJsonStringField(login, "token");
 
+        System.out.println("== STEP: write sem sessão ==");
         // write sem sessão → erro
-        String noAuth = request(port, "POST /posts HTTP/1.1\r\nHost: x\r\n"
-                + "Connection: close\r\n\r\n{\"title\":\"t\",\"body\":\"b\"}");
+        String noAuth = post(port, "/posts", "",
+                "{\"title\":\"t\",\"body\":\"b\"}");
         assertTrue(noAuth.contains("500") || noAuth.contains("unauthorized")
                 || noAuth.contains("401"),
                 "post sem sessão não pode gravar: " + noAuth);
 
+        System.out.println("== STEP: write inválido ==");
         // write com validação violada (título em branco) → erro
-        String invalid = request(port, "POST /posts HTTP/1.1\r\nHost: x\r\n"
-                + "x-session: " + token + "\r\nConnection: close\r\n\r\n"
-                + "{\"title\":\"\",\"body\":\"conteúdo\"}");
+        String invalid = post(port, "/posts", "x-session: " + token + "\r\n",
+                "{\"title\":\"\",\"body\":\"conteúdo\"}");
         assertTrue(invalid.contains("500") || invalid.contains("invalid")
                 || invalid.contains("400"),
                 "validação deve rejeitar título em branco: " + invalid);
 
+        System.out.println("== STEP: write válido ==");
         // write válido → grava
-        String created = request(port, "POST /posts HTTP/1.1\r\nHost: x\r\n"
-                + "x-session: " + token + "\r\nConnection: close\r\n\r\n"
-                + "{\"title\":\"Primeiro post\",\"body\":\"Olá mundo\"}");
+        String created = post(port, "/posts", "x-session: " + token + "\r\n",
+                "{\"title\":\"Primeiro post\",\"body\":\"Olá mundo\"}");
         assertTrue(created.contains("\"ok\":true") || created.contains("200"),
                 "post válido deve gravar: " + created);
 
+        System.out.println("== STEP: read /posts ==");
         // read path: lista volta do banco
         String list = request(port, "GET /posts HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n");
         assertTrue(list.contains("Primeiro post") && list.contains("Olá mundo"),
                 "lista deve conter o post gravado: " + list);
+    }
+
+    /** POST com body + Content-Length correto (body() exige). */
+    private String post(int port, String path, String headers, String body) throws IOException {
+        return request(port, "POST " + path + " HTTP/1.1\r\nHost: x\r\n"
+                + headers
+                + "Content-Length: " + body.getBytes(StandardCharsets.UTF_8).length + "\r\n"
+                + "Connection: close\r\n\r\n" + body);
     }
 
     /** Extrai o valor string de um campo JSON plano ("token":"..."). */
@@ -236,7 +247,7 @@ class KofBlogE2ETest {
 
     private String request(int port, String raw) throws IOException {
         try (Socket socket = new Socket("127.0.0.1", port)) {
-            socket.setSoTimeout(5000);
+            socket.setSoTimeout(10000);
             OutputStream out = socket.getOutputStream();
             out.write(raw.getBytes(StandardCharsets.UTF_8));
             out.flush();

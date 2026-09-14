@@ -152,7 +152,7 @@ Os 10 open questions da RFC viram decisão:
 | Q3 shared types | package local importado por front+backend, **depois** do package manager; não bloqueia nada. |
 | Q4 `kof serve --system` | **rejeitado** (confirmado) — alternativa: `kof serve --list` (apps+portas, sem subir). |
 | Q5 `[frontend].api` | **convenção documentada** (não feature de rewrite). |
-| Q6 fat jar | **flag `--fat` opcional** (I3); default = classpath explícito. |
+| Q6 fat jar | **flag `--fat` opcional** (I3); default = classpath explícito. ✅ **EXECUTADO 14/09**: `kof build --fat` (JVM) gera `kof-app.jar` (classes do app + runtime `dev.kof.runtime` + deps externas, `Main-Class` no manifesto, first-wins do app, assinaturas deps descartadas); prova `CmdBuildFatTest` 4/4 (`java -jar` roda o programa; sem a flag não há jar; `--fat` fora do JVM recusa honesto R6). |
 | Q7 Wasm | coluna ✅ frontend na tabela quando o target abrir; **modelo não muda**. |
 | Q8 `kof.proxy` | fora desta RFC; convenção hoje, stdlib só com 3+ apps pedindo. |
 | Q9 rebuild frontend | **sob demanda por hash** (I2); watcher = futuro. |
@@ -160,8 +160,8 @@ Os 10 open questions da RFC viram decisão:
 
 **Plano I1–I3 da RFC:** I1 (manifesto+`kof new`) — **manifesto já existe**;
 resta `CmdNew` (esqueletos backend/full-stack/frontend + validação `APP003`),
-escopo pequeno. I2 (full-stack serve/build) e I3 (fat/deploy) seguem na fila
-com os incrementos da RFC §23. A matriz APP001–003 vai para
+escopo pequeno. I2 (full-stack serve/build) ✅ e I3 (fat/deploy) ✅ (`--fat`,
+14/09) executados com os incrementos da RFC §23. A matriz APP001–003 vai para
 `docs/backend-parity.md` (gap codes R6).
 
 ### D-APP.REF — o modelo em uma página (conteúdo de referência da RFC)

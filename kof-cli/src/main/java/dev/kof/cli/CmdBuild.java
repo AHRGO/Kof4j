@@ -23,9 +23,9 @@ final class CmdBuild {
     }
 
     static void run(String[] args) {
-        if (args.length < 2) { System.err.println("usage: kof build <source-dir> [--target jvm|native|js|android] [--backend <t>] [--frontend <t>] [--output <dir>] [--release] [--apk] [--print-sizes] [--classpath <jars>] [--keystore <ks> [--storepass <p>] [--keypass <p>] [--alias <a>]]");
+        if (args.length < 2) { System.err.println("usage: kof build <source-dir> [--target jvm|native|js|android] [--backend <t>] [--frontend <t>] [--output <dir>] [--release] [--apk] [--fat] [--print-sizes] [--classpath <jars>] [--keystore <ks> [--storepass <p>] [--keypass <p>] [--alias <a>]]");
         if ("--help".equals(args[1]) || "-h".equals(args[1]) || "--version".equals(args[1])) {
-            System.out.println("usage: kof build <source-dir> [--target jvm|native|js|android] [--backend <t>] [--frontend <t>] [--output <dir>] [--release] [--apk] [--print-sizes] [--classpath <jars>] [--keystore <ks> [--storepass <p>] [--keypass <p>] [--alias <a>]]");
+            System.out.println("usage: kof build <source-dir> [--target jvm|native|js|android] [--backend <t>] [--frontend <t>] [--output <dir>] [--release] [--apk] [--fat] [--print-sizes] [--classpath <jars>] [--keystore <ks> [--storepass <p>] [--keypass <p>] [--alias <a>]]");
             return;
         } return; }
         Path src = Path.of(args[1]);
@@ -38,6 +38,7 @@ final class CmdBuild {
         boolean outFlagged = false;
         boolean release = false;
         boolean apk = false;
+        boolean fat = false;
         String classpath = null;
         String keystore = null;
         String storepass = null;
@@ -73,6 +74,8 @@ final class CmdBuild {
                 release = true;
             } else if (arg.equals("--apk")) {
                 apk = true;
+            } else if (arg.equals("--fat")) {
+                fat = true;
             } else if (arg.equals("--deps")) {
                 useDeps = true;
             } else if (arg.equals("--print-sizes")) {
@@ -115,28 +118,36 @@ final class CmdBuild {
                 return;
             }
         }
+        // D-APP I3 (Q6): --fat só faz sentido no JVM (native/js já saem como
+        // artefato único). Honesto e cedo (R6), antes de compilar.
+        if (fat && target != Target.JVM) {
+            System.err.println("build: --fat só se aplica a --target jvm ("
+                    + TargetMatrix.name(target) + " já gera artefato único)");
+            System.exit(1);
+            return;
+        }
         CompilerDriver driver = new CompilerDriver();
         if (release) driver.setDebugInfoEnabled(false);
         // dependências externas (android.jar etc.) geridas pelo Kof via
         // ExternalClasspath — separadas por ':' ou ';'
+        List<Path> externalEntries = new ArrayList<>();
         if (classpath != null && !classpath.isBlank()) {
-            List<Path> entries = new ArrayList<>();
             for (String part : classpath.split("[:;]")) {
-                if (!part.isBlank()) entries.add(Path.of(part));
+                if (!part.isBlank()) externalEntries.add(Path.of(part));
             }
-            driver.setExternalClasspath(entries);
+            driver.setExternalClasspath(externalEntries);
         }
         // kofdeps: dependências Maven resolvidas no cache ~/.kof/deps
         if (useDeps) {
             try {
                 String depsCp = Deps.classpath();
                 if (!depsCp.isBlank()) {
-                    List<Path> entries = new ArrayList<>();
+                    externalEntries = new ArrayList<>();
                     for (String part : depsCp.split(java.util.regex.Pattern.quote(
                             System.getProperty("os.name", "").toLowerCase().contains("win") ? ";" : ":"))) {
-                        if (!part.isBlank()) entries.add(Path.of(part));
+                        if (!part.isBlank()) externalEntries.add(Path.of(part));
                     }
-                    driver.setExternalClasspath(entries);
+                    driver.setExternalClasspath(externalEntries);
                 }
             } catch (IOException e) {
                 System.err.println("build: falha ao ler kofdeps: " + e.getMessage());
@@ -166,6 +177,19 @@ final class CmdBuild {
         for (Diagnostic d : module.diagnostics().getDiagnostics()) System.out.println(d.format());
         if (!module.success()) System.exit(1);
         if (printSizes) printSizes(target, backendOut);
+        // D-APP I3 (Q6): fat jar opcional — classes do app + runtime +
+        // dependências num único .jar executável (java -jar). Default (sem a
+        // flag) permanece classpath explícito, como hoje.
+        if (fat) {
+            try {
+                Path jar = buildFatJar(backendOut, externalEntries);
+                System.out.println("fat jar → " + jar);
+            } catch (IOException e) {
+                System.err.println("build: falha ao gerar fat jar: " + e.getMessage());
+                System.exit(1);
+                return;
+            }
+        }
         if (layout.fullStack()) {
             if (frontendTarget == null) frontendTarget = Target.JS;
             KofCliSupport.buildFrontend(driver, layout, frontendTarget, outFlagged ? out : Path.of("build"));
@@ -176,6 +200,77 @@ final class CmdBuild {
         if (target == Target.ANDROID && apk) {
             runApkPipeline(backendOut, keystore, storepass, keypass, keyalias);
         }
+    }
+
+    /**
+     * D-APP I3: empacota as classes compiladas + o runtime {@code dev.kof.runtime}
+     * (que vive dentro de {@code classesDir}) + as dependências externas num
+     * único {@code kof-app.jar} com {@code Main-Class} no manifesto. Entradas
+     * do app têm precedência sobre as de dependências (first-wins) e arquivos
+     * de assinatura de jars deps são descartados (não fazem sentido num fat
+     * jar). Retorna o caminho do jar gerado.
+     */
+    static Path buildFatJar(Path classesDir, List<Path> deps) throws IOException {
+        String mainClass = KofCliSupport.findMainClass(classesDir);
+        if (mainClass == null) throw new IOException("no main class found em " + classesDir);
+        Path jar = classesDir.resolve("kof-app.jar");
+        java.util.jar.Manifest manifest = new java.util.jar.Manifest();
+        manifest.getMainAttributes().put(java.util.jar.Attributes.Name.MANIFEST_VERSION, "1.0");
+        manifest.getMainAttributes().put(java.util.jar.Attributes.Name.MAIN_CLASS, mainClass);
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        try (java.util.jar.JarOutputStream jos =
+                     new java.util.jar.JarOutputStream(Files.newOutputStream(jar), manifest)) {
+            addClassesToJar(jos, classesDir, classesDir, seen);
+            for (Path dep : deps) {
+                if (Files.isDirectory(dep)) {
+                    addClassesToJar(jos, dep, dep, seen);
+                } else if (dep.toString().endsWith(".jar") && Files.isRegularFile(dep)) {
+                    addJarEntriesToJar(jos, dep, seen);
+                }
+            }
+        }
+        return jar;
+    }
+
+    private static void addClassesToJar(java.util.jar.JarOutputStream jos, Path root, Path dir,
+                                        java.util.Set<String> seen) throws IOException {
+        try (var s = Files.walk(dir)) {
+            for (Path p : s.filter(Files::isRegularFile).sorted().toList()) {
+                String name = root.relativize(p).toString().replace(java.io.File.separatorChar, '/');
+                if (skipJarEntry(name) || !seen.add(name)) continue;
+                java.util.jar.JarEntry e = new java.util.jar.JarEntry(name);
+                e.setTime(Files.getLastModifiedTime(p).toMillis());
+                jos.putNextEntry(e);
+                Files.copy(p, jos);
+                jos.closeEntry();
+            }
+        }
+    }
+
+    private static void addJarEntriesToJar(java.util.jar.JarOutputStream jos, Path dep,
+                                           java.util.Set<String> seen) throws IOException {
+        try (var zip = new java.util.zip.ZipFile(dep.toFile())) {
+            for (var entries = zip.entries(); entries.hasMoreElements(); ) {
+                var entry = entries.nextElement();
+                if (entry.isDirectory()) continue;
+                String name = entry.getName();
+                if (skipJarEntry(name) || !seen.add(name)) continue;
+                java.util.jar.JarEntry e = new java.util.jar.JarEntry(name);
+                e.setTime(entry.getTime());
+                jos.putNextEntry(e);
+                try (var in = zip.getInputStream(entry)) {
+                    in.transferTo(jos);
+                }
+                jos.closeEntry();
+            }
+        }
+    }
+
+    private static boolean skipJarEntry(String name) {
+        if (name.equals("META-INF/MANIFEST.MF") || name.startsWith("META-INF/versions/")) return true;
+        if (!name.startsWith("META-INF/")) return false;
+        return name.endsWith(".SF") || name.endsWith(".RSA") || name.endsWith(".DSA")
+                || name.endsWith(".EC");
     }
 
     /** Issue #97 / T0: imprime o tamanho medido do artefato (bytes por seção
