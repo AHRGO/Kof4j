@@ -69,7 +69,6 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
-<<<<<<< HEAD
 > **✅ FEITO (14/09, dono = 192.168.100.18, lane development): blog E2E
 > (D-SPRING F12) + `--fat` (D-APP I3)** — commit `8eb156f4`; as duas últimas
 > linhas executáveis da fila `DECISIONS.md` (§7 de `docs/development/README.md`).
@@ -109,6 +108,22 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > arquivo principal `KofWeb.java`/`JvmRuntimeWebDispatch.java`; prova =
 > E2E com rota protegida (401 sem credencial, 200 com) em `KofBlogE2ETest`
 > ou teste próprio. Antes: reler `docs/development/DECISIONS.md` §D-SEC C18.
+=======
+> **EM CURSO (14/09, dono = 192.168.100.22, lane repo-hygiene/.github):
+> pack segurança GitHub (pedido da mantenedora) → ordem nova: pull+push+
+> merge NA MAIN (sem bump de versão — D-RELEASE segue: trigger 100–150,
+> hoje ~5; arquivos fazem efeito sem bump).** Arquivos (`a445f450`+`2eeb9eec`,
+> commitados de WIP varrido cf. regra 8): `SECURITY.md`, `.github/dependabot.yml`,
+> `.github/workflows/codeql.yml` (v4, só java — JS_COUNT=0),
+> `.github/workflows/secret-scan.yml`. **Ativado via API (gh, conta melmonfre):
+> Code Quality=configured (run 34812416286 CodeQL Setup), secret_scanning=enabled,
+> private_vulnerability_reporting enabled=true.** Prova: YAML parse OK +
+> `mvn -o -pl kof-compiler -am compile -q` verde. Falta: rebase no
+> origin/beta + push beta + PR só-com-4-arquivos → merge main + FEITO.
+> **NÃO é bump:** push protection, dependabot-security-updates e AI findings
+> ficam DESLIGADOS (opt-in da mantenedora). Stash@{0} (autostash) e stash@{1}
+> (lane#127) são de outras lanes — NUNCA dropar.
+>>>>>>> cf9797a4 (docs(doing): sec-pack — Code Quality + secret scanning + private reporting ativados via API; missão merge-na-main sem bump (D-RELEASE mantido))
 
 > **EM CURSO (14/09 ~02:30, dono = 192.168.100.15, lane bugs-and-gaps):
 > unidade §186/#133 — fix estrutural completo do `<clinit>`.** Autostash
