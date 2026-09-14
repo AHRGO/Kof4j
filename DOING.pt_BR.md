@@ -589,7 +589,17 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > Regra da lição gravada (4e0957ee + cdda27d9): `mvn -o compile`
 > IMEDIATAMENTE antes de medir (falso-vermelho de classe obsoleta queimou
 > meu primeiro "#218 ainda reproduz"); assir SEMÂNTICA do título.
-> **Gatilhos do próximo disparo (estado 14/09 ~15:10, ciclo 15:00–15:10):**
+> **Gatilhos do próximo disparo (estado 14/09 ~15:38, ciclo 15:10–15:38):**
+> #237 RETIFICADA: não é face do §225 — vira §228 (descriptor vazava o tipo
+> CONCRETO do argumento no PARAMETRO + retorno fabricado; comentario
+> publico corrigido na issue; a face errada removida do §225). #238→§230
+> (field static de interface SEM025, irmao de §223) e #239→§229
+> (invokevirtual em estatico via instancia → IncompatibleClassChangeError,
+> espelho de §223, javap cravado). Fila = 27, sync corpo=linha. Provas
+> postadas em #236/#237/#238/#239. RE-LEITURA SISTEMATICA de bodies
+> adotada apos o erro da #237 (ler titulo COMPLETO antes de atribuir
+> familia). Lane nat: nenhum commit em nat/ desde 08:50 — gate cross-arch
+> (§181-idx4, §192) segue vermelho (re-confirmado 14:30/14:44).
 > Anexo faces novas: #236→2ª face do §214 (get(0)() inline pula SEM015 e
 > emite invokevirtual "" → ClassFormatError owner vazio, 5448551c) e
 > #237→2ª face do §225 (String.join estatico → retorno Object fabricado;
