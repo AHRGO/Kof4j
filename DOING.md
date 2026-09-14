@@ -69,6 +69,17 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **EM CURSO (14/09, dono = 192.168.100.18, lane development): blog E2E
+> (D-SPRING F12)** — app model canônico (backend + frontend + db + auth +
+> validation num único app Kof), conforme DECISIONS.md §D-SPRING F12
+> ("AGORA — validação da plataforma"). Arquivos que vou tocar:
+> `kof-compiler/src/test/java/dev/kof/compiler/KofBlogE2ETest.java` (novo),
+> `DOING.md`, `docs/development/README.md` (fila). Padrões usados: web.app
+> (`KofWebWsE2ETest`), db H2 (`KofDbE2ETest`), security sessions/passwords
+> (`KofSecurityTest`). ChaCha20 (D-SEC) foi entregue pelo colega
+> (`3e1d1ff7`) — unidade duplicada minha descartada, diff preservado em
+> `/tmp/opencode/chacha20-duplicate-work.diff` (nada a reaproveitar).
+
 > **✅ FEITO (14/09 ~03:30, dono = 192.168.100.22): `CmdNew` (D-APP I1 +
 > D-SPRING F11).** `kof new <dir> [--type mono|backend|frontend|full-stack]`
 > — esqueletos por tipo nascendo **compiláveis** (prova: compile JVM real do
