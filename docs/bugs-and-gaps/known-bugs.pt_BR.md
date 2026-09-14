@@ -7076,6 +7076,82 @@ antes — lição da obsolescência do §206/§207), corpos-exatos das issues
   narrowing de null no fluxo while (#159), tipagem de resultado do Handle-
   await (#141 — perto do lowering §29 de spawn já consertado).
 
+### §220 — método `abstract` em classe NÃO-abstrata compila → `AbstractMethodError` em runtime (issue #224)
+
+- **Sintoma (medido 14/09 ~13:45 no `cdda27d9` com classes FRESCAS, dono =
+  192.168.100.17 — só catalogado, lane compiler):**
+  ```kof
+  class Broken {
+      abstract Int compute()   // a classe NÃO é abstrata
+  }
+  main() {
+      var b = new Broken()     // instanciação aceita
+      println(b.compute())     // AbstractMethodError em runtime
+  }
+  ```
+  `new Broken()` + a chamada compilam; em runtime: `AbstractMethodError:
+  Receiver class Broken does not define or inherit an implementation`.
+  javap: `Main` faz `new Broken` + `invokevirtual Broken.compute()I` —
+  `Broken` é classe CONCRETA (sem ACC_ABSTRACT) segurando um método
+  ACC_ABSTRACT.
+- **Esperado (regra R6 + spec JVM):** OU um diagnóstico em compile-time
+  (`SEM: class 'Broken' is not abstract but has abstract method 'compute'`
+  — a JVMS diz que tal classe DEVE ser abstrata; a JVM até rejeitaria o LOAD
+  em modo estrito) OU a classe fica implicitamente abstrata e `new` é
+  rejeitado. Compilar e crashar na primeira chamada é R6-silencioso.
+- **Pointer (lane compiler):** validação de classe no typer/sema — onde os
+  implementadores de interface são checados por métodos faltantes (o caminho
+  SEM043 do §209), a mesma auditoria falta para membros `abstract` de uma
+  classe não-abstrata.
+
+### §221 — método de instância cujo nome colide com um built-in (`print`) é ENGLUTIDO: `log.print("test")` baixa para `System.out.print` (issue #225)
+
+- **Sintoma (medido 14/09 ~13:45 no `cdda27d9` com classes FRESCAS, dono =
+  192.168.100.17 — só catalogado, lane compiler):** o método do usuário
+  existe na classe mas o sítio de chamada ignora o receptor:
+  ```kof
+  class Logger {
+      void print(String msg) { println("[LOG] " + msg) }
+  }
+  main() { var log = new Logger(); log.print("test") }
+  ```
+  imprime `test` — o prefixo `[LOG] ` É PERDIDO. javap: `Logger.print(String)`
+  existe na classe, mas `Main.main` emite `invokestatic String.valueOf` +
+  `invokevirtual java/io/PrintStream.print` — o built-in `print` sequestrou a
+  chamada de membro, receptor descartado. Comportamento silenciosamente
+  errado (R6/freeze-4), mesma família do bug 116 (`Native x86: hijack of a
+  user method named like a String-op`) mas no backend JVM.
+- **Esperado:** `log.print(...)` → `invokevirtual Logger.print`. A tabela de
+  built-ins se aplica a chamadas NUAS (`print(x)` em nível de
+  expressão/stmt), NUNCA a member-call num receptor tipado que declara o nome.
+- **Pointer (lane compiler):** ordem do lowering de member-call — o dispatch
+  de built-in/namespace (`MemberCallNamespaces`?) é consultado ANTES da
+  tabela de métodos da classe para nomes como `print`/`println`.
+
+### §222 — if-EXPRESSION com BLOCOS de chaves (`if (flag) { "yes" } else { "no" }`) compila como LAMBDAS — o valor atribuído é `Lambda0@...` (issue #228)
+
+- **Sintoma (medido 14/09 ~13:45 no `cdda27d9` com classes FRESCAS, dono =
+  192.168.100.17 — só catalogado, lane compiler):**
+  ```kof
+  main() {
+      var flag = true
+      var a = if (flag) { "yes" } else { "no" }
+      println(a)     // imprime: Lambda0@7ad041f3 — esperado: yes
+  }
+  ```
+  javap: `Main` faz `new Lambda0`/`new Lambda1` (os dois ramos viraram
+  closures `kof.Function0_void`) e `println` recebe um Object — imprime
+  `Lambda0@...`. Lixo silencioso (R6). O if-expr PARENTEZADO
+  (`if (flag) "yes" else "no"`) funciona; o parser/typer confunde `{...}`
+  depois da condição com corpo de lambda na posição de expressão.
+  Relacionado: §200 (LCA dos ramos) e efda67b2 (block lambdas) — a
+  ambiguidade gramatical `cond { ... }` é resolvida para criar lambda.
+- **Decisão esperada (regra 6 p/ a mantenedora):** OU forma de if-expressão
+  com chaves (avaliar o bloco como o valor) OU um diagnóstico explícito
+  rejeitando-a — nunca compilar para lambdas em silêncio.
+- **Pointer (lane compiler):** ramo do parser para if-EXPRESSION onde a parte
+  `then` começa com `{` — hoje cai no caminho de produção de lambda.
+
 ## §193 — E2E blog (F12): `db.query` cru + `.get("col")`/recursos dentro de handler web derr
 
 > **Renumerado de §189→§193 (14/09, dono = 192.168.100.17):** colisão tripla
