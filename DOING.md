@@ -109,28 +109,18 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > E2E com rota protegida (401 sem credencial, 200 com) em `KofBlogE2ETest`
 > ou teste próprio. Antes: reler `docs/development/DECISIONS.md` §D-SEC C18.
 
-> **EM CURSO (14/09, dono = 192.168.100.22, lane repo-hygiene/.github):
-> pack segurança GitHub (pedido da mantenedora) → ordem nova: pull+push+
-> merge NA MAIN (sem bump de versão — D-RELEASE segue: trigger 100–150,
-> hoje ~5; arquivos fazem efeito sem bump).** Arquivos (`a445f450`+`2eeb9eec`,
-> commitados de WIP varrido cf. regra 8): `SECURITY.md`, `.github/dependabot.yml`,
-> `.github/workflows/codeql.yml` (v4, só java — JS_COUNT=0),
-> `.github/workflows/secret-scan.yml`. **Ativado via API (gh, conta melmonfre):
-> Code Quality=configured (run 34812416286 CodeQL Setup), secret_scanning=enabled,
-> private_vulnerability_reporting enabled=true.** Prova: YAML parse OK +
-> `mvn -o -pl kof-compiler -am compile -q` verde. Falta: rebase no
-> origin/beta + push beta + PR só-com-4-arquivos → merge main + FEITO.
-> **NÃO é bump:** push protection, dependabot-security-updates e AI findings
-> ficam DESLIGADOS (opt-in da mantenedora). Stash@{0} (autostash) e stash@{1}
-> (lane#127) são de outras lanes — NUNCA dropar.
-> **Rebase 14/09 ~03:30:** beta remontada sobre origin/beta (0271c9cd):
-> df10e71b' (clinit; hunk JvmTypeMapper = mesmo fato, redação HEAD) +
-> a445f450' (sec-pack) + 2eeb9eec' + 5c9b8654' + este. **Nota p/ lane .18:**
-> o replay teve add/add em `KofBlogE2ETest.java` (8eb156f4=b54e6d × WIP da
-> árvore=fa479efb, 464 linhas de diff) — mantida a da árvore (fa479efb, sem
-> perda: as duas seguem no histórico); conferir qual é a canônica e
-> reconciliar. **Nota rebase:** os rounds deixaram marcadores residuais em
-> DOING (fóssil em a689cbd2:72, limpo aqui; zero impacto em código/build).
+> **✅ FEITO (14/09 ~03:45, dono = 192.168.100.22, lane repo-hygiene/.github):
+> pack segurança GitHub + merge na main (ordem da mantenedora, sem bump —
+> D-RELEASE mantido).** Commit main `9e289d84` (só 4 arquivos):
+> `SECURITY.md`, `.github/dependabot.yml`, `.github/workflows/codeql.yml`
+> (v4, só java), `.github/workflows/secret-scan.yml`. **Ativo via API:**
+> Code Quality=configured, secret_scanning=enabled, private_reporting=enabled.
+> Prova: YAML parse + compile verde + issue #170 aberta/fechada + main==9e289d84
+> (FF; branch sec-pack-main apagada). Beta: rebase sobre 0271c9cd + push OK
+> (00033c44). Segue DESLIGADO (opt-in dela): push protection,
+> dependabot-security-updates, AI findings. (Histórico: a445f450 varreu WIP da
+> árvore cf. regra 8; rebase com DOING+JvmTypeMapper+blog add/add resolvidos
+> preservando os dois lados; fóssil de marcador em a689cbd2:72, tip limpo.)
 
 > **EM CURSO (14/09 ~02:30, dono = 192.168.100.15, lane bugs-and-gaps):
 > unidade §186/#133 — fix estrutural completo do `<clinit>`.** Autostash
