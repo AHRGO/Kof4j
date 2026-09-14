@@ -1,14 +1,16 @@
-# DEBUGGING.md — Depuração Kof (visão de uso)
+[English](debugging.md) | [Português](debugging.pt_BR.md)
 
-**Status:** MVP funcional no target JVM (`kof debug app.kf`)
-**Data:** 27 de agosto de 2026
-**Versão:** 0.4.0-beta (7 targets; free-list + pthread spawn + FP XMM)
+# DEBUGGING.md — Kof Debugging (usage view)
+
+**Status:** Functional MVP on the JVM target (`kof debug app.kf`)
+**Date:** August 27, 2026
+**Version:** 0.4.0-beta (7 targets; free-list + pthread spawn + FP XMM)
 
 ---
 
-## 1. Experiência
+## 1. Experience
 
-Depurar Kof é depurar Kof — em qualquer target:
+Debugging Kof is debugging Kof — on any target:
 
 ```text
   40 | User find(Int id) {
@@ -17,7 +19,7 @@ Depurar Kof é depurar Kof — em qualquer target:
   43 | }
 ```
 
-Ao parar:
+When it stops:
 
 ```text
 CALL STACK
@@ -36,41 +38,41 @@ user    User
   active           true
 ```
 
-O usuário nunca precisa saber JVM bytecode, assembly ou JavaScript.
+The user never needs to know JVM bytecode, assembly or JavaScript.
 
-## 2. Comandos
+## 2. Commands
 
 ```bash
-kof debug app.kf                 # ✅ JVM (servidor DAP sobre stdio)
-kof debug --target native app.kf # futuro (DWARF)
-kof debug --target js app.kf     # futuro (source maps + Inspector)
-kof debug --attach <pid>         # futuro
-kof build app.kf --debug         # metadata extra (padrão: debug info ligado)
+kof debug app.kf                 # ✅ JVM (DAP server over stdio)
+kof debug --target native app.kf # future (DWARF)
+kof debug --target js app.kf     # future (source maps + Inspector)
+kof debug --attach <pid>         # future
+kof build app.kf --debug         # extra metadata (default: debug info on)
 kof build app.kf --release
 ```
 
-A sessão compila com metadata de debug, lança o JVM com
-`-agentlib:jdwp` (suspend=y) e responde ao protocolo DAP.
+The session compiles with debug metadata, launches the JVM with
+`-agentlib:jdwp` (suspend=y) and responds to the DAP protocol.
 
-## 3. Capacidades
+## 3. Capabilities
 
-**MVP implementado (target JVM — Fase 3):**
+**Implemented MVP (JVM target — Phase 3):**
 
-- launch (compila com metadata de debug + lança o JVM com JDWP)
-- breakpoints por linha Kof (`UserService.kf:42`)
-- evento `stopped` ao atingir breakpoint
-- stack traces com nomes e linhas Kof (via LineNumberTable)
-- `continue` e `disconnect`
+- launch (compiles with debug metadata + launches the JVM with JDWP)
+- breakpoints by Kof line (`UserService.kf:42`)
+- `stopped` event when a breakpoint is hit
+- stack traces with Kof names and lines (via LineNumberTable)
+- `continue` and `disconnect`
 
-**Planejadas (Fases 4-7 — ver `debug-adapter.md`):**
+**Planned (Phases 4-7 — see `debug-adapter.md`):**
 
 - step over/into/out, pause, restart
-- scopes/locals por frame (`StackFrame.GetValues`)
-- exceções (break on throw / uncaught) com stack Kof
-- avaliação de expressões (com respeito ao type system)
-- Native (DWARF — Fase 5) e JS (source maps — Fase 6)
+- scopes/locals per frame (`StackFrame.GetValues`)
+- exceptions (break on throw / uncaught) with Kof stack
+- expression evaluation (respecting the type system)
+- Native (DWARF — Phase 5) and JS (source maps — Phase 6)
 
-## 4. Integração
+## 4. Integration
 
 ```text
 Kof Editor
@@ -81,15 +83,15 @@ Kof Editor
                       └── JS (Node Inspector)
 ```
 
-LSP e DAP não se misturam: LSP = código; DAP = execução.
+LSP and DAP do not mix: LSP = code; DAP = execution.
 
-## 5. Estado
+## 5. State
 
-- Fase 1 (DebugInfo na IR) — ✅
-- Fase 2 (JVM: SourceFile, LineNumberTable, LocalVariableTable) — ✅
-- Fase 3 (`kof-debug` MVP: DAP + JDWP cru) — ✅
-  - requests DAP: `initialize`, `launch`, `setBreakpoints`,
+- Phase 1 (DebugInfo in the IR) — ✅
+- Phase 2 (JVM: SourceFile, LineNumberTable, LocalVariableTable) — ✅
+- Phase 3 (`kof-debug` MVP: raw DAP + JDWP) — ✅
+  - DAP requests: `initialize`, `launch`, `setBreakpoints`,
     `configurationDone`, `continue`, `threads`, `stackTrace`, `disconnect`
-  - evento `stopped` quando um breakpoint Kof é atingido
-  - call stack com funções Kof, arquivo e linha (via LineNumberTable)
-- Fases 4-7 — planejadas; ver `debugger-architecture.md`
+  - `stopped` event when a Kof breakpoint is hit
+  - call stack with Kof functions, file and line (via LineNumberTable)
+- Phases 4-7 — planned; see `debugger-architecture.md`

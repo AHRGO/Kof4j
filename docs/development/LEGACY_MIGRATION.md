@@ -1,44 +1,45 @@
-# LEGACY_MIGRATION.md — Plataforma de Migração de Software Legado
+[English](LEGACY_MIGRATION.md) | [Português](LEGACY_MIGRATION.pt_BR.md)
 
-**Status:** EM DESENVOLVIMENTO — **doc central e único da plataforma de
-migração** (caiu de `future/` em 12/09; FUNDIU `LEGACY_IR.md` no §4 e
-`DIFFERENTIAL_TESTING.md` no §8 em 13/09 — conceitos duplicados, zero
-conteúdo único; work-logs técnicos vivem em `DECOMPILER.md`/`TRANSLATOR.md`).
-A plataforma existe: `kof inspect/decompile/translate/compare/migrate`
-registrados no `Main.java` (contagem de testes = fonte única em
-`roadmap.md` §23 TIER 3–5; `inspect` é o comando de IR stats, sem classe de
-teste própria). Recuperação de corpo de método ainda é parcial — relatório
-rastreável o expõe de forma honesta)
-**Escopo:** plataforma de migração (implementação iniciada na 0.3.x)
-**Criado:** 22 de agosto de 2026 · **Última consolidação:** 13/09/2026
+# LEGACY_MIGRATION.md — Legacy Software Migration Platform
 
----
-
-## 1. Visão
-
-Kof não é apenas uma linguagem para criar software novo.
-
-A visão de longo prazo é uma plataforma capaz de **analisar, recuperar,
-traduzir e modernizar sistemas legados para Kof**:
-
-> Preservar a funcionalidade de software legado enquanto modernizamos sua
-> implementação para Kof.
-
-A plataforma deve trabalhar tanto com código-fonte disponível quanto com
-sistemas onde o código original foi perdido — utilizando bytecode, binários,
-metadados, artefatos de build e comportamento observável como fontes de
-informação.
-
-**Esta documentação é arquitetura + estado de implementação (§3 tem a tabela
-real: comandos ✅ no CLI, cobertura parcial honesta).**
+**Status:** IN DEVELOPMENT — **central and single doc of the migration
+platform** (dropped from `future/` on 12/09; MERGED `LEGACY_IR.md` into §4 and
+`DIFFERENTIAL_TESTING.md` into §8 on 13/09 — duplicated concepts, zero
+unique content; technical work-logs live in `DECOMPILER.md`/`TRANSLATOR.md`).
+The platform exists: `kof inspect/decompile/translate/compare/migrate`
+registered in `Main.java` (test count = single source in
+`roadmap.md` §23 TIER 3–5; `inspect` is the IR stats command, with no test
+class of its own). Method body recovery is still partial — the traceable
+report exposes it honestly)
+**Scope:** migration platform (implementation started in 0.3.x)
+**Created:** August 22, 2026 · **Last consolidation:** 13/09/2026
 
 ---
 
-## 2. Princípio Fundamental
+## 1. Vision
 
-A plataforma não assume `Legacy → Java → Kof`.
+Kof is not just a language for creating new software.
 
-Quando possível, utiliza o caminho direto:
+The long-term vision is a platform capable of **analyzing, recovering,
+translating and modernizing legacy systems to Kof**:
+
+> Preserve the functionality of legacy software while we modernize its
+> implementation to Kof.
+
+The platform must work both with available source code and with systems where
+the original code was lost — using bytecode, binaries, metadata, build
+artifacts and observable behavior as sources of information.
+
+**This documentation is architecture + implementation state (§3 has the real
+table: commands ✅ in the CLI, honest partial coverage).**
+
+---
+
+## 2. Fundamental Principle
+
+The platform does not assume `Legacy → Java → Kof`.
+
+When possible, it uses the direct path:
 
 ```text
 Legacy
@@ -50,7 +51,7 @@ Kof AST
 Kof IR
 ```
 
-Para JVM:
+For JVM:
 
 ```text
 JVM Bytecode
@@ -62,38 +63,38 @@ Legacy Semantic IR
 Kof AST
 ```
 
-Java pode ser uma **origem suportada** (via translator), mas nunca uma
-**representação intermediária obrigatória**. Isso evita uma etapa artificial
-de geração de Java entre o artefato legado e o Kof.
+Java can be a **supported origin** (via translator), but never a
+**mandatory intermediate representation**. This avoids an artificial Java
+generation step between the legacy artifact and Kof.
 
 ---
 
-## 3. Componentes Planejados
+## 3. Planned Components
 
-| Comando | Propósito | Status |
+| Command | Purpose | Status |
 |---------|-----------|--------|
-| `kof inspect <input>` | Análise estrutural de `.class`/`.jar`/binários | ✅ `Inspect.java` (Main.java:25) |
-| `kof decompile <input>` | Recuperação de código Kof a partir de artefatos compilados | ✅ `Decompile.java` (Main.java:26; corpo parcial → stub honesto) |
-| `kof translate <input>` | Migração de código-fonte (primeiro alvo: Java → Kof) | ✅ `Translate.java` (Main.java:27; subconjunto Java) |
-| `kof migrate <input>` | Migração completa com relatório | ✅ `Migrate.java` (Main.java:29; relatório rastreável) |
-| `kof compare <legacy> <kof>` | Teste diferencial entre sistemas | ✅ `Compare.java` (Main.java:28; stdout/exit/stderr) |
+| `kof inspect <input>` | Structural analysis of `.class`/`.jar`/binaries | ✅ `Inspect.java` (Main.java:25) |
+| `kof decompile <input>` | Recovery of Kof code from compiled artifacts | ✅ `Decompile.java` (Main.java:26; partial body → honest stub) |
+| `kof translate <input>` | Source-code migration (first target: Java → Kof) | ✅ `Translate.java` (Main.java:27; Java subset) |
+| `kof migrate <input>` | Full migration with report | ✅ `Migrate.java` (Main.java:29; traceable report) |
+| `kof compare <legacy> <kof>` | Differential testing between systems | ✅ `Compare.java` (Main.java:28; stdout/exit/stderr) |
 
-**Todos os comandos existem no CLI** (verificados 12/09 — `Main.java:25-29`;
-contagem de testes = fonte única em `roadmap.md` §23 TIER 3–5). O que
-permanece em desenvolvimento é a
-**cobertura** da recuperação (corpos de método complexos → stub UNKNOWN
-honesto; subconjunto Java do translator).
+**All commands exist in the CLI** (verified 12/09 — `Main.java:25-29`;
+test count = single source in `roadmap.md` §23 TIER 3–5). What remains
+in development is the
+**coverage** of recovery (complex method bodies → honest UNKNOWN stub;
+translator's Java subset).
 
-### 3.1 `kof inspect` (implementado)
+### 3.1 `kof inspect` (implemented)
 
-Análise de sistemas existentes. Responsabilidades:
-identificar formato, plataforma, versão; analisar dependências; identificar
-classes, métodos, interfaces, campos, tipos; identificar chamadas externas,
-reflection, carregamento dinâmico, JNI/FFM/native calls; identificar metadata,
-debug information, serialization, recursos; estimar recuperabilidade.
+Analysis of existing systems. Responsibilities:
+identify format, platform, version; analyze dependencies; identify
+classes, methods, interfaces, fields, types; identify external calls,
+reflection, dynamic loading, JNI/FFM/native calls; identify metadata,
+debug information, serialization, resources; estimate recoverability.
 
-Saída conceitual (valores ilustrativos — nenhuma métrica é real sem
-implementação e metodologia definidas):
+Conceptual output (illustrative values — no metric is real without defined
+implementation and methodology):
 
 ```text
 Classes:              1842
@@ -110,9 +111,9 @@ Local Names            LOW
 Comments               NONE
 ```
 
-### 3.2 `kof decompiler` (implementado)
+### 3.2 `kof decompiler` (implemented)
 
-Destinado à recuperação de código Kof a partir de `.class`/`.jar`/`.war`.
+Intended for recovering Kof code from `.class`/`.jar`/`.war`.
 
 Pipeline:
 
@@ -136,17 +137,17 @@ Kof AST
 Kof Source
 ```
 
-O decompiler prioriza: equivalência semântica, legibilidade, estrutura, tipos,
-controle de fluxo, chamadas, herança, interfaces, generics recuperáveis,
+The decompiler prioritizes: semantic equivalence, readability, structure, types,
+control flow, calls, inheritance, interfaces, recoverable generics,
 exceptions, annotations, metadata.
 
-**Não tenta reconstruir artificialmente o Java original.** O objetivo é
-produzir **Kof idiomático equivalente**, não fingir que o fonte original
-foi recuperado.
+**It does not try to artificially reconstruct the original Java.** The goal is
+to produce **equivalent idiomatic Kof**, not to pretend the original source
+was recovered.
 
-### 3.3 `kof translate` (implementado)
+### 3.3 `kof translate` (implemented)
 
-Migração de código-fonte (primeiro alvo: Java → Kof).
+Source-code migration (first target: Java → Kof).
 
 ```text
 Java Source
@@ -164,73 +165,73 @@ Kof AST
 Kof Source
 ```
 
-O translator **não funciona por substituição textual** (`public → ...`).
-Ele compreende a estrutura semântica do programa.
+The translator **does not work by textual substitution** (`public → ...`).
+It understands the program's semantic structure.
 
-Suporte progressivo planejado: classes, interfaces, inheritance, generics,
+Planned progressive support: classes, interfaces, inheritance, generics,
 overloads, constructors, exceptions, annotations, records, enums, lambdas,
 nested classes, anonymous classes, static initialization, access modifiers,
-Java standard library, chamadas de bibliotecas externas.
+Java standard library, external library calls.
 
 ---
 
-## 4. Legacy Semantic IR (era `LEGACY_IR.md` — FUNDIDA aqui 13/09)
+## 4. Legacy Semantic IR (was `LEGACY_IR.md` — MERGED here 13/09)
 
-A Legacy Semantic IR é a representação intermediária entre o formato de
-origem e o AST Kof. Ela existe para que cada adaptador (bytecode JVM, Java,
-COBOL, etc.) produza a MESMA representação semântica — permitindo que o
-restante do pipeline (decompilador, translator, differential testing) seja
-independente da origem.
+The Legacy Semantic IR is the intermediate representation between the origin
+format and the Kof AST. It exists so that each adapter (JVM bytecode, Java,
+COBOL, etc.) produces the SAME semantic representation — allowing the
+rest of the pipeline (decompiler, translator, differential testing) to be
+independent of the origin.
 
-Conceitos representados: types, functions, methods, fields, inheritance,
+Concepts represented: types, functions, methods, fields, inheritance,
 interfaces, calls, control flow, exceptions, memory/external operations,
-constants, data flow, metadata, dynamic behavior e **unknown operations** —
-informação desconhecida fica `UnknownType`/`UnknownCall`/`UnknownField`/
-`UnknownBehavior`, nunca código fabricado "que parece válido".
+constants, data flow, metadata, dynamic behavior and **unknown operations** —
+unknown information stays `UnknownType`/`UnknownCall`/`UnknownField`/
+`UnknownBehavior`, never fabricated code "that looks valid".
 
-### 4.1 Confidence Model (implementado — `Confidence.java`, 5 níveis)
+### 4.1 Confidence Model (implemented — `Confidence.java`, 5 levels)
 
 ```text
-Recovered exactly        — observado diretamente no artefato
-Recovered with metadata  — observado + metadata (debug info, signatures)
-Inferred                 — derivado de análise (data flow, tipos)
-Heuristic                — plausível, baseado em heurística
-Unknown                  — não recuperável (vira stub honesto no .kf)
+Recovered exactly        — observed directly in the artifact
+Recovered with metadata  — observed + metadata (debug info, signatures)
+Inferred                 — derived from analysis (data flow, types)
+Heuristic                — plausible, based on heuristics
+Unknown                  — unrecoverable (becomes an honest stub in the .kf)
 ```
 
-Cada elemento recuperado carrega o nível; a ferramenta distingue sempre
-**observado** de **inferido**.
+Each recovered element carries the level; the tool always distinguishes
+**observed** from **inferred**.
 
 ### 4.2 Source Mapping
 
-A IR preserva as relações `Legacy Source ↕ Legacy Semantic IR ↕ Kof AST ↕
-Kof Source ↕ Kof IR` — base de diagnostics, auditoria, comparação e do
-relatório rastreável do `kof migrate` (§8.1).
+The IR preserves the relations `Legacy Source ↕ Legacy Semantic IR ↕ Kof AST ↕
+Kof Source ↕ Kof IR` — the basis of diagnostics, auditing, comparison and the
+traceable report of `kof migrate` (§8.1).
 
-### 4.3 Estado implementado (medido, nunca de memória)
+### 4.3 Implemented state (measured, never from memory)
 
-- Fase B/C/D (JVM): `BytecodeReader/Decoder/Statements/Frame` +
-  `Type.fromJvmDescriptor`/`fromJvmSignature` (atributo `Signature`, JVMS
-  4.7.9.1 — genéricos/wildcards/type-variables, `367d6c4`); prova
-  `ClassFileE2ETest.genericSignatureRecovery` + `DecompileTest` (contagem
-  viva em `roadmap.md` §23 TIER 3–5).
-- Recovery de **outras plataformas** (Native/JS/binários): não iniciada —
-  é a Fase I (§9), gated por R12.
+- Phase B/C/D (JVM): `BytecodeReader/Decoder/Statements/Frame` +
+  `Type.fromJvmDescriptor`/`fromJvmSignature` (`Signature` attribute, JVMS
+  4.7.9.1 — generics/wildcards/type-variables, `367d6c4`); proof
+  `ClassFileE2ETest.genericSignatureRecovery` + `DecompileTest` (live count
+  in `roadmap.md` §23 TIER 3–5).
+- Recovery of **other platforms** (Native/JS/binaries): not started —
+  it is Phase I (§9), gated by R12.
 
-### 4.4 Informação Irrecuperável (era §5/`LEGACY_IR.md` §3)
+### 4.4 Unrecoverable Information (was §5/`LEGACY_IR.md` §3)
 
-Compilação é transformação com perda. Após `Source → Compiler → Bytecode`
-desaparecem: comentários, nomes locais (sem debug info), estrutura sintática
-original, formatação, informação genérica (erasure), intenção do programador e
-abstrações eliminadas. **Decompilação não é recuperação do fonte original** —
-é recuperação de comportamento e estrutura; o irrecuperável é EXPLÍCITO
-(stub UNKNOWN), nunca inventado.
+Compilation is a transformation with loss. After `Source → Compiler → Bytecode`
+the following disappear: comments, local names (without debug info), original
+syntactic structure, formatting, generic information (erasure), programmer
+intent and eliminated abstractions. **Decompilation is not recovery of the
+original source** — it is recovery of behavior and structure; the
+unrecoverable is EXPLICIT (UNKNOWN stub), never invented.
 
 ---
 
-## 5. Relação com o Compilador Kof
+## 5. Relationship with the Kof Compiler
 
-A plataforma não duplica componentes existentes. Reutiliza:
+The platform does not duplicate existing components. It reuses:
 Kof Lexer, Kof Parser, Kof AST, Kof Type System, Kof Semantic Model,
 Kof IR, Kof Backend.
 
@@ -258,24 +259,24 @@ JVM Bytecode ─────────┤
                JVM / Native
 ```
 
-A ferramenta de migração é uma **extensão natural do compilador**,
-não um segundo compilador independente.
+The migration tool is a **natural extension of the compiler**,
+not a second independent compiler.
 
-## 6. Segurança e Legalidade
+## 6. Security and Legality
 
-A plataforma é uma **ferramenta de engenharia de software**. O usuário deve
-possuir autorização e direitos adequados sobre o software analisado.
+The platform is a **software engineering tool**. The user must
+have adequate authorization and rights over the software analyzed.
 
-A plataforma não promete contornar: DRM, proteção contra cópia, controles de
-acesso, mecanismos de segurança, licenciamento.
+The platform does not promise to circumvent: DRM, copy protection, access
+controls, security mechanisms, licensing.
 
-Foco: preservação, interoperabilidade e modernização autorizada.
+Focus: preservation, interoperability and authorized modernization.
 
 ---
 
-## 7. Formatos Futuros
+## 7. Future Formats
 
-A arquitetura prepara adaptadores de formatos além da JVM:
+The architecture prepares format adapters beyond the JVM:
 
 ```text
 Source / Binary
@@ -287,37 +288,37 @@ Legacy Semantic IR
 Kof
 ```
 
-Exemplos potenciais (NÃO implementar no início): COBOL, PL/I, Assembly,
-binários legados, bytecode proprietário, VMs customizadas.
+Potential examples (do NOT implement at the beginning): COBOL, PL/I, Assembly,
+legacy binaries, proprietary bytecode, custom VMs.
 
-O objetivo é impedir que o projeto fique conceitualmente preso à JVM.
+The goal is to prevent the project from becoming conceptually stuck to the JVM.
 
 ---
 
-## 8. Teste Diferencial (era `DIFFERENTIAL_TESTING.md` — FUNDIDO aqui 13/09)
+## 8. Differential Testing (was `DIFFERENTIAL_TESTING.md` — MERGED here 13/09)
 
-Valida que uma migração preserva comportamento: mesmo vetor de entrada no
-programa original e no Kof, comparando **saídas observáveis**.
+Validates that a migration preserves behavior: same input vector in the
+original program and in Kof, comparing **observable outputs**.
 
-- **O que comparar (`kof compare`, implementado):** stdout, stderr, exit code
-  (`Compare.java`, `--stdin`/`--arg`; prova `CompareTest` 6/6). Além de stdout
-  comparável — exceptions tipadas, return values, arquivos, DB mutations,
-  protocolos, side effects — é o pendente da Fase G.
-- **Classificação de divergência:** equivalente · divergente dentro do escopo
-  · divergente fora do escopo · comportamento indefinido.
-- **Critério de aceite de um sistema crítico:**
+- **What to compare (`kof compare`, implemented):** stdout, stderr, exit code
+  (`Compare.java`, `--stdin`/`--arg`; proof `CompareTest` 6/6). Beyond comparable
+  stdout — typed exceptions, return values, files, DB mutations,
+  protocols, side effects — is what remains pending in Phase G.
+- **Divergence classification:** equivalent · divergent within scope
+  · divergent outside scope · undefined behavior.
+- **Acceptance criterion for a critical system:**
   `compile + static analysis + behavioral testing + differential testing +
-  manual review + migration report` — "compilou" não basta.
-- **Sistemas sem código-fonte:** quando o fonte foi perdido, o comportamento
-  observável do binário original é a fonte de verdade (binary + metadata +
-  dependencies + configuration + database + observed behavior). Isso é
-  **software archaeology**, não conversão trivial.
+  manual review + migration report` — "it compiled" is not enough.
+- **Systems without source code:** when the source was lost, the observable
+  behavior of the original binary is the source of truth (binary + metadata +
+  dependencies + configuration + database + observed behavior). This is
+  **software archaeology**, not trivial conversion.
 
-### 8.1 Migration Report (`kof migrate`, Fase H)
+### 8.1 Migration Report (`kof migrate`, Phase H)
 
-Relatório com rastreabilidade da migração. Estrutura conceitual (os números
-abaixo são ILUSTRATIVOS — nenhuma métrica é real sem implementação e
-metodologia definidas):
+Report with migration traceability. Conceptual structure (the numbers
+below are ILLUSTRATIVE — no metric is real without defined implementation and
+methodology):
 
 ```text
 Kof Migration Report
@@ -325,7 +326,7 @@ Kof Migration Report
 Input:     legacy-application.jar
 Output:    kof-application/
 
-Recovered:     94.2%        ← % de unidades SEM stub UNKNOWN
+Recovered:     94.2%        ← % of units WITHOUT an UNKNOWN stub
 Warnings:      17
 Unrecoverable: 3
 Manual review: 12 locations
@@ -337,30 +338,30 @@ Behavioral tests:
 
 ---
 
-## 9. Ordem de Implementação
+## 9. Implementation Order
 
-Não começar tentando suportar todos os sistemas legados.
+Do not start by trying to support all legacy systems.
 
 ```text
-Fase A  JVM Inspection          (.class/.jar + análise estrutural)
-Fase B  JVM Bytecode IR         (Class File → Bytecode IR)
-Fase C  Control Flow Recovery   (basic blocks, branches, loops, switches, exception regions)
-Fase D  Type Recovery           (primitives, references, arrays, generics, inheritance)
-Fase E  Kof Decompiler          (gerar Kof source)
-Fase F  Java Translator         (Java Source → Kof)
-Fase G  Differential Testing    (Legacy vs Kof)
-Fase H  Migration Reports       (relatórios completos)
-Fase I  Additional Frontends    (COBOL, PL/I, Assembly, formatos proprietários)
+Phase A  JVM Inspection          (.class/.jar + structural analysis)
+Phase B  JVM Bytecode IR         (Class File → Bytecode IR)
+Phase C  Control Flow Recovery   (basic blocks, branches, loops, switches, exception regions)
+Phase D  Type Recovery           (primitives, references, arrays, generics, inheritance)
+Phase E  Kof Decompiler          (generate Kof source)
+Phase F  Java Translator         (Java Source → Kof)
+Phase G  Differential Testing    (Legacy vs Kof)
+Phase H  Migration Reports       (complete reports)
+Phase I  Additional Frontends    (COBOL, PL/I, Assembly, proprietary formats)
 ```
 
-Antes de implementar: definir a arquitetura, validar com protótipos pequenos,
-e só então transformar os protótipos em componentes oficiais.
+Before implementing: define the architecture, validate with small prototypes,
+and only then turn the prototypes into official components.
 
 ---
 
-## 10. Critério de Sucesso
+## 10. Success Criterion
 
-A iniciativa é bem-sucedida quando um sistema legado real produz:
+The initiative is successful when a real legacy system produces:
 
 ```text
 Legacy System
@@ -376,27 +377,27 @@ Behavioral Verification
 Modern Deployment
 ```
 
-com: rastreabilidade, diagnostics, relatório de limitações, testes
-diferenciais, revisão humana, código Kof legível, compilação nativa/JVM,
-comportamento compatível dentro do escopo definido.
+with: traceability, diagnostics, limitations report, differential tests,
+human review, readable Kof code, native/JVM compilation, compatible behavior
+within the defined scope.
 
-**Pergunta central:**
+**Central question:**
 
-> Estamos recuperando comportamento real ou apenas fabricando código que
-> parece plausível?
+> Are we recovering real behavior or merely fabricating code that
+> looks plausible?
 
-Se a ferramenta não consegue distinguir essas duas coisas, a migração não é
-confiável.
+If the tool cannot distinguish these two things, the migration is not
+reliable.
 
 ---
 
-## 11. Documentação Relacionada
+## 11. Related Documentation
 
-- `DECOMPILER.md` — work-log técnico da recuperação de corpo (Fase E/§7:
-  pipeline, joins estruturais, records, drift-check no corpus)
-- `TRANSLATOR.md` — subconjunto Java → Kof (Fase F; dono ativo da lane tradutor)
-- ~~`LEGACY_IR.md`~~ → §4 deste doc (FUNDIDA 13/09 — concepts+status; não
-  havia conteúdo único além do work-log do decompiler)
-- ~~`DIFFERENTIAL_TESTING.md`~~ → §8 deste doc (FUNDIDO 13/09)
-- `roadmap.md` §23 (TIER 3–5) — ordem/prioridades com status medido
-- `docs/audits/PLANNING-FUTURE-AUDIT.md` — auditoria planejado×realizado
+- `DECOMPILER.md` — technical work-log of body recovery (Phase E/§7:
+  pipeline, structural joins, records, drift-check on the corpus)
+- `TRANSLATOR.md` — Java → Kof subset (Phase F; active owner of the translator lane)
+- ~~`LEGACY_IR.md`~~ → §4 of this doc (MERGED 13/09 — concepts+status; there
+  was no unique content beyond the decompiler work-log)
+- ~~`DIFFERENTIAL_TESTING.md`~~ → §8 of this doc (MERGED 13/09)
+- `roadmap.md` §23 (TIER 3–5) — order/priorities with measured status
+- `docs/audits/PLANNING-FUTURE-AUDIT.md` — planned×actual audit

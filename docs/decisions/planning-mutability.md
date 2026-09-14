@@ -1,162 +1,164 @@
-# Planning — Validadores de mutabilidade: `val` e record (DD-02, GitHub #42)
+[English](planning-mutability.md) | [Português](planning-mutability.pt_BR.md)
 
-> **Status:** `APLICADO` (erro direto, `cd0da824`+`ed0475c8`; reversão p/ warning = 1 linha) · **Issues:** #42 (FECHADA), #53 (aberta: record+ctor explícito → ClassFormatError JVM, pré-existente) ·
-> **Bump:** 0.3.1 → 0.3.2-beta · **Gate:** suíte completa + corpus sincronizado ·
-> **Criado:** 09/09/2026 (análise da sessão da lane migração/issues)
+# Planning — Mutability validators: `val` and record (DD-02, GitHub #42)
 
-## O conflito (regra 6: isto é decisão de design, não edição)
+> **Status:** `APPLIED` (direct error, `cd0da824`+`ed0475c8`; reverting to warning = 1 line) · **Issues:** #42 (CLOSED), #53 (open: record+explicit ctor → ClassFormatError JVM, pre-existing) ·
+> **Bump:** 0.3.1 → 0.3.2-beta · **Gate:** full suite + synced corpus ·
+> **Created:** 09/09/2026 (analysis of the migration/issues lane session)
 
-O corpus **promete** mutabilidade controlada:
+## The conflict (rule 6: this is a design decision, not an edit)
 
-- `learn/04-variables-and-types.md:22` — `// PI = 2.0  // ERRO: não pode reatribuir`
-- `learn/07-classes-and-objects.md:52` — `// u.name = "Ana"  // ERRO de runtime: record é imutável`
-- AGENTS.md — `record` = "dados **imutáveis**"; `class X(...)` = record (imutável)
+The corpus **promises** controlled mutability:
 
-O compilador **não aplica** nada disso (bug #42):
+- `learn/04-variables-and-types.md:22` — `// PI = 2.0  // ERROR: cannot reassign`
+- `learn/07-classes-and-objects.md:52` — `// u.name = "Ana"  // runtime ERROR: record is immutable`
+- AGENTS.md — `record` = "**immutable** data"; `class X(...)` = record (immutable)
 
-| programa | corpus diz | JVM hoje | KofJS hoje | interp hoje |
+The compiler **does not enforce** any of that (bug #42):
+
+| program | corpus says | JVM today | KofJS today | interp today |
 |---|---|---|---|---|
-| `val x = 1; x = 2` | ERRO | `2` (muta) | `2` (muta) | `2` (muta) |
-| `record P(Int x); p.x = 9` | ERRO | `IllegalAccessError` | `TypeError` | `9` (**muta!**) |
+| `val x = 1; x = 2` | ERROR | `2` (mutates) | `2` (mutates) | `2` (mutates) |
+| `record P(Int x); p.x = 9` | ERROR | `IllegalAccessError` | `TypeError` | `9` (**mutates!**) |
 
-Três defeitos separados, uma raiz: a informação de mutabilidade é **destruída
-no parser**. `StatementParser.parseVarDecl` (kof-compiler/.../parser/
-StatementParser.java:354-357) aceita `VAL` mas grava `type="var"` — o AST não
-diferencia `val`/`var`. O `SymbolTable.LocalVariableSymbol` (register
-`name, type, index`) não tem flag de mutabilidade, então o
-`StatementAnalyzer.analyzeAssignmentStatement` nem *poderia* checar hoje.
+Three separate defects, one root: the mutability information is **destroyed
+in the parser**. `StatementParser.parseVarDecl` (kof-compiler/.../parser/
+StatementParser.java:354-357) accepts `VAL` but stores `type="var"` — the AST does not
+differentiate `val`/`var`. The `SymbolTable.LocalVariableSymbol` (register
+`name, type, index`) has no mutability flag, so
+`StatementAnalyzer.analyzeAssignmentStatement` could not even *check* today.
 
-**Por que exige decisão:** hoje `val x = 1; x = 2` **compila**. Adicionar o
-guard quebra código que roda — retrocompatibilidade é lei (regra 2), exceto por
-bump deliberado. Este DD propõe o **caminho aditivo de dois estágios**.
+**Why it requires a decision:** today `val x = 1; x = 2` **compiles**. Adding the
+guard breaks code that runs — backward compatibility is law (rule 2), except by
+deliberate bump. This DD proposes the **additive two-stage path**.
 
-## O design — "funciona em 100% dos casos" = 100% do que é DECIDÍVEL
+## The design — "works in 100% of cases" = 100% of what is DECIDABLE
 
-A primeira proposta ingênua ("um guard SEM cobre tudo") **não fecha o problema
-em 100%**. O problema tem uma fronteira formal: reatribuição em loop de
-control-flow arbitrário é **indecidível** em geral (halting — a atribuição pode
-nunca executar). Todo design honesto precisa de uma aproximação estática. O
-padrão consolidado na indústria (Java `final`/effectively-final, Kotlin
-comp-time, Rust `mut` no binding, JS `const` no parser) resolve assim:
+The first naive proposal ("one SEM guard covers everything") **does not close the
+problem in 100%**. The problem has a formal boundary: reassignment in an arbitrary
+control-flow loop is **undecidable** in general (halting — the assignment may
+never execute). Every honest design needs a static approximation. The
+consolidated industry pattern (Java `final`/effectively-final, Kotlin
+comp-time, Rust `mut` on the binding, JS `const` in the parser) solves it like this:
 
-> **Regra decidível:** a atribuição é ilegal **se o sintaxe do programa aponta
-> para o binding imutável** (nome resolvido lexicalmente a um `val`/parâmetro
-> largo/componente de record). Não importa se o ramo "nunca roda": código que
-> *pode* reatribuir um imutável não é código válido — é o contrato de
-> `val` ("valor constante", learn/04).
+> **Decidable rule:** the assignment is illegal **if the program syntax points
+> to the immutable binding** (name resolved lexically to a `val`/wide
+> parameter/record component). It does not matter whether the branch "never runs": code that
+> *can* reassign an immutable is not valid code — it is the contract of
+> `val` ("constant value", learn/04).
 
-Sob essa regra, 100% dos programas Kof são classificados corretamente (não há
-falso negativo: toda atribuição tem um alvo sintático que resolve a um symbol;
-e não há falso positivo: atribuir a `val` é sempre inválido pelo corpus). A
-aproximação é EXATA para a linguagem — o "100%" pedido não tem custo.
+Under this rule, 100% of Kof programs are classified correctly (there is no
+false negative: every assignment has a syntactic target that resolves to a symbol;
+and there is no false positive: assigning to a `val` is always invalid per the corpus). The
+approximation is EXACT for the language — the requested "100%" has no cost.
 
-### Escopo do que é imutável (tabela normativa)
+### Scope of what is immutable (normative table)
 
-| binding | mutável? | reatribuir o nome | escrever componente |
+| binding | mutable? | reassign the name | write component |
 |---|---|---|---|
-| `var x` / tipo explícito (`Int x`) | sim | ok | ok (se campo de class) |
-| `val x` | **não** | **SEM037** | n/a (referência aponta p/ objeto; estado interno do objeto segue as regras dele) |
-| parâmetro de função/método | **decisão DD-02a** | hoje muta ok | n/a |
-| `record R(...)` / `class R(campos)` | componentes **não** | n/a | **SEM038** |
-| campo de `class` (com `constructor`) | sim | ok | ok |
-| receiver `this` | não | **SEM039** (bônus) | ok |
+| `var x` / explicit type (`Int x`) | yes | ok | ok (if class field) |
+| `val x` | **no** | **SEM037** | n/a (reference points to object; the object's internal state follows its own rules) |
+| function/method parameter | **decision DD-02a** | mutates ok today | n/a |
+| `record R(...)` / `class R(fields)` | components **no** | n/a | **SEM038** |
+| `class` field (with `constructor`) | yes | ok | ok |
+| receiver `this` | no | **SEM039** (bonus) | ok |
 
-Decisão pendente **DD-02a** (parâmetros): o corpus não fala. Java permite
-reatribuir parâmetro; JS também; Kotlin proíbe. Recomendação: **permitir**
-(paridade com o que os 4 backends já fazem hoje, zero código quebrado;
-imutabilidade de parâmetro é estilo, não semântica — pode virar lint depois).
+Pending decision **DD-02a** (parameters): the corpus does not speak. Java allows
+reassigning a parameter; JS too; Kotlin forbids it. Recommendation: **allow**
+(parity with what the 4 backends already do today, zero broken code;
+parameter immutability is style, not semantics — it can become lint later).
 
-### Implementação (uma fase só, três guardas no analyzer — não no parser)
+### Implementation (a single phase, three guards in the analyzer — not in the parser)
 
-O local correto é **compilação** (estático), não runtime: o erro aparece em
-`kof check`, nos 4 alvos com uma única implementação (single source of truth
-no analyzer — regra 3 de plataforma; nada de checar no lowering de cada
-backend, o que criaria divergência de novo).
+The correct place is **compile time** (static), not runtime: the error appears in
+`kof check`, in the 4 targets with a single implementation (single source of truth
+in the analyzer — platform rule 3; no checking in each backend's
+lowering, which would create divergence again).
 
-1. **Carregar a informação (aditivo ao AST, retrocompatível):**
-   `VarDeclStmt` ganha `boolean mutable` (parser: `ctx.check(TokenType.VAL)` →
-   `mutable=false`; demais → `true`). Record é Java: o construtor canônico com
-   `mutable=true` preserva todos os ~40 call-sites existentes (inclusive
-   desugars — que são código gerado e sempre mutável). Alternativa recusada:
-   token `type="val"` (frágil, stringly-typed — regra "intenção, não
-   mecanismo" vale p/ nós internos também).
+1. **Carry the information (additive to the AST, backward compatible):**
+   `VarDeclStmt` gains `boolean mutable` (parser: `ctx.check(TokenType.VAL)` →
+   `mutable=false`; others → `true`). Record is Java: the canonical constructor with
+   `mutable=true` preserves all the ~40 existing call-sites (including
+   desugars — which are generated code and always mutable). Rejected alternative:
+   token `type="val"` (fragile, stringly-typed — the rule "intention, not
+   mechanism" applies to internal nodes too).
 
-2. **Persistir no symbol:** `LocalVariableSymbol(name, type, index, mutable)`
-   e `FieldSymbol(..., immutable)` — p/ record/componentes e `this` o analyzer
-   marca `immutable=true` na definição.
+2. **Persist in the symbol:** `LocalVariableSymbol(name, type, index, mutable)`
+   and `FieldSymbol(..., immutable)` — for record/components and `this` the analyzer
+   marks `immutable=true` at definition.
 
-3. **Os três guardas em `analyzeAssignmentStatement`**
-   (kof-compiler/.../StatementAnalyzer.java:24 — o checkpoint ÚNICO de toda
-   atribuição-statement dos 4 caminhos: JVM/JS/Native/interpretador passam
-   todos pelo `CompilerPipeline.java:301-304`, que aborta antes do lowering):
-   - alvo `IdentifierExpr` → symbol com `mutable=false` → **SEM037**
+3. **The three guards in `analyzeAssignmentStatement`**
+   (kof-compiler/.../StatementAnalyzer.java:24 — the SINGLE checkpoint of every
+   assignment-statement of the 4 paths: JVM/JS/Native/interpreter all pass
+   through `CompilerPipeline.java:301-304`, which aborts before lowering):
+   - target `IdentifierExpr` → symbol with `mutable=false` → **SEM037**
      `"cannot assign to 'x': declared val"`;
-   - alvo `MemberExpr` cujo receiver resolve a record/componente — reusar o
-     predicado EXISTENTE `CompilerTypes.isRecordType(Type, unit, analyzer)`
-     (kof-compiler/.../CompilerTypes.java:188; já distingue record canônico de
+   - target `MemberExpr` whose receiver resolves to a record/component — reuse the
+     EXISTING predicate `CompilerTypes.isRecordType(Type, unit, analyzer)`
+     (kof-compiler/.../CompilerTypes.java:188; already distinguishes canonical record from
      `class X(...)`-record) → **SEM038** `"cannot assign to 'p.x': record is
      immutable"`;
-   - alvo `this` (nome `this` em contexto que não construtor) → **SEM039**.
-   - `+=`/`-=`/etc. passam pelo MESMO caminho (AssignmentExpr com operator
-     composto — StatementParser reusa o nó) → cobertos sem código extra.
+   - target `this` (name `this` in a context that is not a constructor) → **SEM039**.
+   - `+=`/`-=`/etc. pass through the SAME path (AssignmentExpr with a
+     compound operator — StatementParser reuses the node) → covered without extra code.
 
-   Códigos **SEM037/038/039** já reservados nesta análise: os maiores usados
-   hoje são SEM033-SEM036 (livres a partir de 037).
+   Codes **SEM037/038/039** already reserved in this analysis: the highest used
+   today are SEM033-SEM036 (free from 037 on).
 
-### Porque fecha o caso do interpretador e o cross-target (regras 4 e 5)
+### Why it closes the interpreter case and the cross-target case (rules 4 and 5)
 
-- **Interpretador**: roda `analyze()` antes (mesmo pipeline) → a divergência
-  "`interp muta em silêncio`" morre na origem: o programa nem chega a
-  interpretar (erro SEM, não runtime).
-- **JVM/JS hoje lançam erro de runtime** (`IllegalAccessError`/`TypeError`):
-  com o guard, esses programas passam a falhar em compile — o runtime-err
-  deixa de ser alcançável por código novo; não há mudança de output de código
-  que roda hoje (só código inválido pelo corpus passa a não compilar).
-- **Paridade**: um único guard no frontend → os 4 backends herdam
-  byte-identical (mesmo diagnóstico).
+- **Interpreter**: runs `analyze()` first (same pipeline) → the divergence
+  "`interp mutates silently`" dies at the source: the program does not even reach
+  interpreting (SEM error, not runtime).
+- **JVM/JS today throw a runtime error** (`IllegalAccessError`/`TypeError`):
+  with the guard, these programs start failing at compile — the runtime-err
+  stops being reachable by new code; there is no output change for code
+  that runs today (only code invalid per the corpus stops compiling).
+- **Parity**: a single guard in the frontend → the 4 backends inherit it
+  byte-identical (same diagnostic).
 
-### Migração em dois estágios (retrocompatibilidade, regra 2)
+### Two-stage migration (backward compatibility, rule 2)
 
-- **0.3.2-beta (este DD):** SEM037/038/039 como **WARNING** (novo código:
-  `kof check` avisa; `--strict` promove p/ erro). Código existente NÃO quebra
-  (só ganha aviso) — a linguagem fica honesta sem trair a promessa "roda hoje,
-  roda amanhã". `training/` + `learn/` atualizados no mesmo release
-  (regra corpus).
-- **0.4.0:** warn → **error** (bump maior = quebra deliberada documentada,
-  migration note com regex p/ `sed` nos casos que realmente precisam de `var`).
+- **0.3.2-beta (this DD):** SEM037/038/039 as **WARNING** (new code:
+  `kof check` warns; `--strict` promotes to error). Existing code does NOT break
+  (it only gains a warning) — the language becomes honest without betraying the promise "runs today,
+  runs tomorrow". `training/` + `learn/` updated in the same release
+  (corpus rule).
+- **0.4.0:** warn → **error** (major bump = documented deliberate break,
+  migration note with a regex for `sed` in the cases that really need `var`).
 
-### Casos de teste DoD (100% das classes de decisão)
+### DoD test cases (100% of the decision classes)
 
-1. `val x=1; x=2` → SEM037; `var`/tipo explícito → ok (não regredir).
-2. `val x=1; x+=2` → SEM037 (composto passa pelo mesmo nó).
-3. `record P(Int x); p.x=9` → SEM038 nos 4 caminhos (pipeline único; teste
-   interpreta o mesmo source e exige a MESMA falha SEM antes de run).
-4. `class X(...)`-record → SEM038 (parser já classifica como record — reusar).
-5. `val l = listOf(1); l.add(2)` → **ok** (imutável é o binding, não o objeto
-   — learn/17:64 é literal sobre isso; o teste trava essa fronteira).
-6. `this` em método de record (`bump(){ this.x=9 }`) → SEM038/039.
-7. Parâmetro reatribuído → ok (DD-02a) + lint futuro opcional.
-8. Sombra lexical: `val x=1; { var x=2; x=3 }` → ok (resolve p/ symbol do
-   escopo interno — `scope.resolve` já faz isso; teste prova que o guard não é
-   por nome, é por symbol).
-9. Campos de class mutável direta `u.age=27` → ok (não confundir com #4).
-10. Golden cross-target: programa inválido → os 4 backends emitindo a mesma
-    lista de diagnósticos SEM (paridade).
+1. `val x=1; x=2` → SEM037; `var`/explicit type → ok (do not regress).
+2. `val x=1; x+=2` → SEM037 (compound passes through the same node).
+3. `record P(Int x); p.x=9` → SEM038 in the 4 paths (single pipeline; the test
+   interprets the same source and requires the SAME SEM failure before run).
+4. `class X(...)`-record → SEM038 (parser already classifies it as a record — reuse).
+5. `val l = listOf(1); l.add(2)` → **ok** (the immutable is the binding, not the object
+   — learn/17:64 is literal about that; the test locks that boundary).
+6. `this` in a record method (`bump(){ this.x=9 }`) → SEM038/039.
+7. Reassigned parameter → ok (DD-02a) + optional future lint.
+8. Lexical shadowing: `val x=1; { var x=2; x=3 }` → ok (resolves to the inner
+   scope's symbol — `scope.resolve` already does that; the test proves the guard is not
+   by name, it is by symbol).
+9. Direct mutable class fields `u.age=27` → ok (do not confuse with #4).
+10. Cross-target golden: invalid program → the 4 backends emitting the same
+    list of SEM diagnostics (parity).
 
-## O que este design NÃO resolve (honestidade R6)
+## What this design does NOT solve (R6 honesty)
 
-- Mutabilidade profunda (`val` de container): fora — o corpus define o binding,
-  não o objeto (learn/17).
-- Fluxo de dados (definite assignment de `val` sem inicializador): `val x; x=1;`
-  hoje cria symbol com init null; o guard SEM037 proíbe o segundo passo,
-  deixando `val x;` vazio — aceitável (mesmo resultado Kotlin); "val deve ter
-  inicializador" é lint (SEM0xx reservado, fase 2).
-- `let`/`const` do KofScript (aliases) → herdam: `const` → `val`, `let` → `var`
-  (parser do .ks só precisa mapear p/ o mesmo booleano).
+- Deep mutability (`val` of a container): out — the corpus defines the binding,
+  not the object (learn/17).
+- Data flow (definite assignment of `val` without an initializer): `val x; x=1;`
+  today creates a symbol with init null; the SEM037 guard forbids the second step,
+  leaving `val x;` empty — acceptable (same Kotlin result); "val must have
+  an initializer" is lint (SEM0xx reserved, phase 2).
+- KofScript's `let`/`const` (aliases) → inherit: `const` → `val`, `let` → `var`
+  (the .ks parser only needs to map to the same boolean).
 
-## Arquivos tocados (quando aprovado)
+## Files touched (when approved)
 
 `parser/StatementParser.java` (flag `VAL`), `VarDeclStmt.java`,
-`SymbolTable.java` (flags), `StatementAnalyzer.java` (3 guardas ~40 linhas),
-reservas em `docs/diagnostics*`, `training/idioms/classes|records.md`
-+ `learn/04|07` (nota do dois-estágios), `KofSemanticTest`/E2E cross-target.
+`SymbolTable.java` (flags), `StatementAnalyzer.java` (3 guards ~40 lines),
+reservations in `docs/diagnostics*`, `training/idioms/classes|records.md`
++ `learn/04|07` (two-stage note), `KofSemanticTest`/cross-target E2E.

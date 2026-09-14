@@ -1,113 +1,115 @@
-# Filosofia do Kof
+[English](philosophy.md) | [Português](philosophy.pt_BR.md)
 
-**Última atualização:** 12 de setembro de 2026
-**Versão:** 0.4.0-beta (7 targets; `VERSION` 0.4.0-beta)
+# Kof Philosophy
 
----
-
-## Princípio Central
-
-> O programador deve escrever a intenção.
-> A linguagem e o runtime cuidam da complexidade.
-
-Kof não existe para ser "mais um Java". Kof existe para resolver problemas que Java não resolve bem — ou que resolve apenas com frameworks complexos.
+**Last updated:** September 12, 2026
+**Version:** 0.4.0-beta (7 targets; `VERSION` 0.4.0-beta)
 
 ---
 
-## O "Paradigma" da Intenção
+## Central Principle
 
-> **Aviso honesto:** não é um paradigma de verdade. Não existe em catálogo de
-> paradigmas, não tem definição formal e ninguém publicou um paper sobre ele.
-> É a **orientação a objetos levada ao extremo**: o código expressa *o que*
-> quer acontecer, e a plataforma (linguagem + compilador + runtime + stdlib)
-> decide *como* — por target, por plataforma, por convenção.
+> The programmer should write the intention.
+> The language and the runtime take care of the complexity.
 
-### A cadeia da intenção
+Kof does not exist to be "yet another Java". Kof exists to solve problems that Java does not solve well — or that it solves only with complex frameworks.
+
+---
+
+## The "Paradigm" of Intention
+
+> **Honest warning:** it is not a real paradigm. It does not exist in any
+> paradigm catalog, it has no formal definition and nobody has published a
+> paper about it. It is **object orientation taken to the extreme**: the code
+> expresses *what* should happen, and the platform (language + compiler +
+> runtime + stdlib) decides *how* — per target, per platform, by convention.
+
+### The chain of intention
 
 ```text
 intenção → Kof → compilador → backend
 ```
 
-O programador escreve a intenção em Kof. O compilador traduz para a IR única.
-O backend (JVM, Native, KofJS) decide os mecanismos. Nada de mecanismo vaza
-para cima da linha da intenção.
+The programmer writes the intention in Kof. The compiler translates it to the single IR.
+The backend (JVM, Native, KofJS) decides the mechanisms. No mechanism leaks
+above the intention line.
 
-### O que a intenção parece na prática
+### What intention looks like in practice
 
-| Intenção | Código Kof | O que a plataforma decide |
+| Intention | Kof Code | What the platform decides |
 |----------|-----------|---------------------------|
-| "roda isso em paralelo" | `spawn processar()` | JVM: virtual threads; Native: pthread (CONC001 fechado) |
-| "responda /users/:id" | `app.get("/users/:id") { ... }` | servidor HTTP próprio, sem servlet container |
-| "deserialize isto" | `json.decode<User>(body)` | engine JSON + binding por tipo |
-| "mostre uma janela com um botão que soma" | `Window`, `Button("+1", () -> ...)` | KofJS renderiza no webview nativo; JVM/Native são no-ops |
-| "esta cor é vermelha" | `Color(255, 0, 0)` | Int de 32 bits; canais por bitwise no compilador |
-| "isto é um teste" | `assert(2 + 2 == 4)` | exit code, `kof test`, harness |
-| "leia este arquivo" | `File("x.txt")` | IO do backend (JVM/Native/JS) |
+| "run this in parallel" | `spawn processar()` | JVM: virtual threads; Native: pthread (CONC001 closed) |
+| "respond /users/:id" | `app.get("/users/:id") { ... }` | own HTTP server, no servlet container |
+| "deserialize this" | `json.decode<User>(body)` | JSON engine + binding by type |
+| "show a window with a button that sums" | `Window`, `Button("+1", () -> ...)` | KofJS renders in the native webview; JVM/Native are no-ops |
+| "this color is red" | `Color(255, 0, 0)` | 32-bit Int; channels by bitwise in the compiler |
+| "this is a test" | `assert(2 + 2 == 4)` | exit code, `kof test`, harness |
+| "read this file" | `File("x.txt")` | backend IO (JVM/Native/JS) |
 
-Em nenhum desses casos o programador escreve `Thread`, `HttpServer`,
-`JsonParser`, `WebView`, `0xAARRGGBB` ou `FileInputStream`.
+In none of these cases does the programmer write `Thread`, `HttpServer`,
+`JsonParser`, `WebView`, `0xAARRGGBB` or `FileInputStream`.
 
-### Por que é o extremo da OO — não um paradigma novo
+### Why it is the extreme of OO — not a new paradigm
 
-A orientação a objetos já diz: objetos respondem a mensagens; o *como* é do
-objeto. A intenção radicaliza esse contrato em três saltos:
+Object orientation already says: objects respond to messages; the *how* belongs
+to the object. Intention radicalizes this contract in three leaps:
 
-1. **Do objeto para a linguagem** — não é só o objeto que esconde o como; a
-   *linguagem* esconde infraestrutura inteira (concorrência, HTTP, IO, UI).
-2. **Do runtime para o compilador** — parte do "como" é decidida em
-   compile-time (canais de cor por bitwise, packing de handles, lambdas com
-   capturas como campos+construtor sintéticos).
-3. **Do código para a plataforma** — o que não é intenção do programa não
-   existe no código. Se é essencial para qualquer programa, pertence à
-   stdlib; se é essencial para a linguagem, pertence ao compilador.
+1. **From the object to the language** — it is not only the object that hides the how; the
+   *language* hides entire infrastructure (concurrency, HTTP, IO, UI).
+2. **From the runtime to the compiler** — part of the "how" is decided at
+   compile-time (color channels by bitwise, handle packing, lambdas with
+   captures as synthetic fields+constructor).
+3. **From the code to the platform** — what is not the program's intention does
+   not exist in the code. If it is essential to any program, it belongs to the
+   stdlib; if it is essential to the language, it belongs to the compiler.
 
-### A linha entre intenção e mecanismo
+### The line between intention and mechanism
 
-A regra prática: **se um programador precisa conhecer o mecanismo para
-escrever a intenção, o design falhou.** Exemplos de vazamento que Kof rejeita:
+The practical rule: **if a programmer needs to know the mechanism to write the
+intention, the design failed.** Examples of leakage that Kof rejects:
 
-- `new Thread(...).start()` → rejeitado; escreva `spawn`.
-- Anotações + container para HTTP → rejeitado; escreva `app.get(...)`.
-- WebView/JavaFX no código de UI → rejeitado; escreva `Window(...)`.
-- Conversão manual de cores → rejeitada; escreva `Palette.red`.
+- `new Thread(...).start()` → rejected; write `spawn`.
+- Annotations + container for HTTP → rejected; write `app.get(...)`.
+- WebView/JavaFX in UI code → rejected; write `Window(...)`.
+- Manual color conversion → rejected; write `Palette.red`.
 
-### Limites honestos da intenção
+### Honest limits of intention
 
-A intenção é única, mas o backend nem sempre consegue realizá-la — e isso é
-**diagnosticado em compile-time, com código de gap**, não silenciosamente:
+Intention is single, but the backend cannot always realize it — and that is
+**diagnosed at compile-time, with a gap code**, not silently:
 
-- ~~`spawn` no Native → `CONC001`~~ — fechado 31/08 (pthread)
-- JSON de objetos no Native → `JSN002`
-- estaticidade no Native → no-op documentado
-- `kof.ui` no JVM/Native → handles no-ops (a renderização é KofJS)
+- ~~`spawn` on Native → `CONC001`~~ — closed 31/08 (pthread)
+- JSON of objects on Native → `JSN002`
+- staticity on Native → documented no-op
+- `kof.ui` on JVM/Native → no-op handles (rendering is KofJS)
 
-O contrato: a intenção compila em todos os alvos; o alvo que não consegue
-executá-la diz isso na hora, com código e documentação.
+The contract: the intention compiles on all targets; the target that cannot
+execute it says so right away, with a code and documentation.
 
-### Consequências práticas
+### Practical consequences
 
-- **Anti-padrão:** escrever Java dentro de Kof (`training/anti-patterns/
-  java-like-code.md`) — é vazar mecanismo na intenção.
-- **Idioma:** representar o domínio, não a implementação acidental
+- **Anti-pattern:** writing Java inside Kof (`training/anti-patterns/
+  java-like-code.md`) — it is leaking mechanism into the intention.
+- **Idiom:** represent the domain, not the accidental implementation
   (`training/idioms/architecture.md`).
-- **Multi-target:** o mesmo código é a mesma intenção; mudar de target não
-  muda o código (apenas a realização).
+- **Multi-target:** the same code is the same intention; changing target does
+  not change the code (only the realization).
 
 ---
 
-## Princípios Arquiteturais
+## Architectural Principles
 
-### 1. Simplicidade por Padrão
+### 1. Simplicity by Default
 
-O caso comum deve ser o mais simples possível. Se o programador precisa escrever mais de 3 linhas para algo comum, algo está errado.
+The common case should be as simple as possible. If the programmer needs to write more than 3 lines for something common, something is wrong.
 
 ```kof
-// Kof: simples
+// Kof: simple
 main() {
     println("Hello")
 }
 
-// Java equivalente:
+// Java equivalent:
 public class Main {
     public static void main(String[] args) {
         System.out.println("Hello");
@@ -117,143 +119,143 @@ public class Main {
 
 ### 2. Zero Boilerplate
 
-Se o compilador pode deduzir algo, o programador não deve precisar escrever.
+If the compiler can infer something, the programmer should not need to write it.
 
-- Construtores: gerados automaticamente quando possível
-- Getters/Setters: não necessários (fields são acessíveis diretamente)
-- toString: gerado para records
-- Igualdade: gerada para records
+- Constructors: generated automatically when possible
+- Getters/Setters: not needed (fields are directly accessible)
+- toString: generated for records
+- Equality: generated for records
 
-### 3. Runtime Esconde Complexidade
+### 3. Runtime Hides Complexity
 
-O programador NÃO deve conhecer:
+The programmer should NOT know:
 - malloc/free
-- Ponteiros
+- Pointers
 - GC
 - ABI
 - Calling conventions
-- Layout de memória
-- Detalhes da JVM
-- Detalhes do Native runtime
+- Memory layout
+- JVM details
+- Native runtime details
 
 ```kof
-var a = new Int[100]  // aloca, inicializa, gerencia
-var s = "Hello"       // aloca KofString
+var a = new Int[100]  // allocates, initializes, manages
+var s = "Hello"       // allocates KofString
 ```
 
-### 4. Mesmo Código, Múltiplos Targets
+### 4. Same Code, Multiple Targets
 
-O mesmo programa Kof deve funcionar semanticamente em JVM e Native. O programador não deve precisar alterar seu código para mudar de target.
+The same Kof program should work semantically on JVM and Native. The programmer should not need to change their code to switch targets.
 
-### 5. Memória é Responsabilidade do Runtime
+### 5. Memory is the Runtime's Responsibility
 
-O programador NÃO deve precisar:
-- Liberar memória manualmente
-- Gerenciar ownership
-- Evitar memory leaks
-- Conhecer o ciclo de vida dos objetos
+The programmer should NOT need to:
+- Free memory manually
+- Manage ownership
+- Avoid memory leaks
+- Know the object lifecycle
 
-O runtime deve resolver isso automaticamente.
+The runtime should solve this automatically.
 
-### 6. Compilador Elimina Classes de Problemas
+### 6. Compiler Eliminates Classes of Problems
 
-Erros que podem ser detectados em compile-time NÃO devem existir em runtime:
-- Tipos incompatíveis
-- Métodos inexistentes
-- Campos inexistentes
-- Quantidade errada de argumentos
+Errors that can be detected at compile-time should NOT exist at runtime:
+- Incompatible types
+- Nonexistent methods
+- Nonexistent fields
+- Wrong number of arguments
 
-### 7. Convenção > Configuração
+### 7. Convention > Configuration
 
-Se algo pode ser resolvido por convenção, não precisa de configuração.
+If something can be solved by convention, it does not need configuration.
 
 ```kof
-// Por convenção, main() é o ponto de entrada
+// By convention, main() is the entry point
 main() {
     // ...
 }
 
-// Por convenção, o nome do arquivo define o módulo
+// By convention, the file name defines the module
 ```
 
-### 8. Segurança de Tipos em Compile-time
+### 8. Type Safety at Compile-time
 
-Erros de tipo devem ser capturados antes da execução. O compilador deve ser rigoroso.
+Type errors should be caught before execution. The compiler should be rigorous.
 
-### 9. APIs Pequenas
+### 9. Small APIs
 
-Menos é mais. Uma API com 5 métodos úteis é melhor que uma com 50 métodos dos quais 40 são raramente usados.
+Less is more. An API with 5 useful methods is better than one with 50 methods of which 40 are rarely used.
 
-### 10. Linguagem Resolve, Framework Não
+### 10. Language Solves, Framework Doesn't
 
-Se a linguagem pode resolver um problema diretamente, não crie um framework para isso.
+If the language can solve a problem directly, do not create a framework for it.
 
-| Problema | Solução Framework | Solução Kof |
+| Problem | Framework Solution | Kof Solution |
 |----------|------------------|-------------|
-| HTTP routing | Spring MVC | ✅ `app.get("/users") { ... }` (implementado — `web.app()` no JVM) |
-| Validação | Bean Validation | ✅ `kof.validation` (13 predicados, 3 targets) — sintaxe `name: String required` é **proposta futura** |
-| Serialização | Jackson | ✅ `json.encode/decode` (3 targets) |
-| Configuração | application.properties | ✅ `config.int("server.port", 8080)` — bloco `config { port = 8080 }` é **proposta futura** |
+| HTTP routing | Spring MVC | ✅ `app.get("/users") { ... }` (implemented — `web.app()` on JVM) |
+| Validation | Bean Validation | ✅ `kof.validation` (13 predicates, 3 targets) — the syntax `name: String required` is a **future proposal** |
+| Serialization | Jackson | ✅ `json.encode/decode` (3 targets) |
+| Configuration | application.properties | ✅ `config.int("server.port", 8080)` — the block `config { port = 8080 }` is a **future proposal** |
 
-### 11. Não Copiar o Java
+### 11. Don't Copy Java
 
-Kof não deve copiar features do Java apenas porque elas existem. Cada feature deve ser questionada:
+Kof should not copy Java features just because they exist. Every feature should be questioned:
 
-- "Isso resolve um problema real?"
-- "Existe uma forma mais simples?"
-- "A complexidade vale a pena?"
+- "Does this solve a real problem?"
+- "Is there a simpler way?"
+- "Is the complexity worth it?"
 
-### 12. Não Exigir Infraestrutura para Recursos Básicos
+### 12. Don't Require Infrastructure for Basic Features
 
-Criar um servidor HTTP não deve exigir:
+Creating an HTTP server should not require:
 - Spring Boot
 - Tomcat
 - Servlet container
-- XML de configuração
+- Configuration XML
 - Annotations
 
-Deveria ser algo como:
+It should be something like:
 ```kof
 var app = web.app()
 app.get("/users") { return users.all() }
 ```
-(implementado no JVM — ver `docs/stdlib/stdlib-web.md`)
+(implemented on JVM — see `docs/stdlib/stdlib-web.md`)
 
-### 13. Performance Sem Sacrificar Ergonomia
+### 13. Performance Without Sacrificing Ergonomics
 
-A linguagem deve ser ergonômica E performática. Não deve ser necessário escrever código feio para ter performance.
+The language should be ergonomic AND performant. It should not be necessary to write ugly code to get performance.
 
-### 14. Native e JVM Compartilham Semântica
+### 14. Native and JVM Share Semantics
 
-A semântica da linguagem é única. Os backends implementam essa semântica de forma diferente, mas o comportamento observável deve ser o mesmo.
-
----
-
-## O que Kof NÃO é
-
-- Não é Java com outra sintaxe
-- Não é Kotlin 2
-- Não é um transpiler para Java
-- Não é um interpretador (o compilador é real: bytecode/ELF/ESM; o `KofInterpreter` do target KofScript executa a MESMA IR otimizada do frontend — paridade por construção, não um disfarce)
-- Não é uma linguagem para scripts (embora possa ser usada para isso)
-- Não é uma linguagem para web (embora possa ser usada para isso)
-
-Kof é uma linguagem de programação geral, compilada, com múltiplos backends.
+The language semantics are single. The backends implement that semantics differently, but the observable behavior should be the same.
 
 ---
 
-## Distribuição
+## What Kof Is NOT
 
-Kof não é "um projeto Java que você monta" — é **uma linguagem que você
-instala**. O pacote oficial inclui compilador, CLI, runtime, stdlib,
-tooling, editor support e um OpenJDK 21 embutido (Temurin 21, `release.yml`
-com 2 jobs — `test-and-bump` → `package-and-release` — por plataforma
-linux-x86_64/macos-arm64/windows-x86_64, `scripts/package.sh` PASS). A
-instalação não depende de Java externo, `JAVA_HOME` ou SDKMAN. Build
+- It is not Java with another syntax
+- It is not Kotlin 2
+- It is not a transpiler to Java
+- It is not an interpreter (the compiler is real: bytecode/ELF/ESM; the `KofInterpreter` of the KofScript target executes the SAME optimized frontend IR — parity by construction, not a disguise)
+- It is not a language for scripts (although it can be used for that)
+- It is not a language for the web (although it can be used for that)
+
+Kof is a general-purpose, compiled programming language with multiple backends.
+
+---
+
+## Distribution
+
+Kof is not "a Java project you assemble" — it is **a language you
+install**. The official package includes the compiler, CLI, runtime, stdlib,
+tooling, editor support and a bundled OpenJDK 21 (Temurin 21, `release.yml`
+with 2 jobs — `test-and-bump` → `package-and-release` — per platform
+linux-x86_64/macos-arm64/windows-x86_64, `scripts/package.sh` PASS). The
+installation does not depend on external Java, `JAVA_HOME` or SDKMAN. Build
 `mvn test` 810 (793+8+5+4), golden 16/16, integration 9/9.
 
-O usuário que instala o Kof recebe tudo o que precisa para desenvolver,
-compilar, executar e usar o tooling da linguagem (18 comandos:
+The user who installs Kof gets everything they need to develop,
+compile, run and use the language tooling (18 commands:
 `kof build/run/serve/check/test/script/repl/c/fmt/config/bench/profile/inspect/debug/info/lsp/install/version`).
 
 ---
@@ -262,28 +264,27 @@ compilar, executar e usar o tooling da linguagem (18 comandos:
 
 > **Human First, LLM Friendly by Consequence.**
 
-Kof não é projetada "para IA". A consistência do design (menos ceremony,
-menos arquivos, menos abstrações artificiais, menos configuração, mais
-intenção) faz com que humanos e LLMs entendam a mesma linguagem da mesma
-forma. O que é explícito para uma pessoa é explícito para um modelo — e
-vice-versa.
+Kof is not designed "for AI". The consistency of the design (less ceremony,
+fewer files, fewer artificial abstractions, less configuration, more
+intention) makes humans and LLMs understand the same language in the same
+way. What is explicit to a person is explicit to a model — and vice versa.
 
-O diretório `training/` é parte oficial dessa estratégia: um corpus
-estruturado para que modelos produzam Kof idiomático.
+The `training/` directory is an official part of that strategy: a structured
+corpus so that models produce idiomatic Kof.
 
 ---
 
-## Visão de Futuro
+## Future Vision
 
-Kof deve evoluir para ser uma plataforma onde:
+Kof should evolve into a platform where:
 
-1. **Backend APIs** são construídas na linguagem, não em frameworks
-2. **Persistência** é parte da linguagem, não de um ORM
-3. **Segurança** é parte da linguagem, não de um framework
-4. **Observabilidade** é parte da linguagem, não de bibliotecas
-5. **Concorrência** é parte da linguagem, não de APIs
+1. **Backend APIs** are built in the language, not in frameworks
+2. **Persistence** is part of the language, not of an ORM
+3. **Security** is part of the language, not of a framework
+4. **Observability** is part of the language, not of libraries
+5. **Concurrency** is part of the language, not of APIs
 
-O objetivo é que a complexidade que hoje vive em Spring, Hibernate, e dezenas de outras bibliotecas, seja resolvida pelo compilador e runtime do Kof.
+The goal is that the complexity that today lives in Spring, Hibernate, and dozens of other libraries be solved by the Kof compiler and runtime.
 
-E, no limite, **Kof escrito em Kof** — não como demonstração, mas como
-evolução arquitetural real.
+And, at the limit, **Kof written in Kof** — not as a demonstration, but as
+real architectural evolution.
