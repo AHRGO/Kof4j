@@ -6653,6 +6653,43 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   do chain é fracilo. **Prova esperada pós-fix:** `dev.cli.BR` do repro
   de 2 linhas → `ec=0 out=[-1|true]` + os 3 vermelhos da suíte verde.
 
+
+### §203 — as-cast para tipo primitivo emite `CHECKCAST "?"` inválido e omite o unboxing — `VerifyError` (issue #205)
+
+- **Sintoma (medido 14/09 ~09:40, dono = 192.168.100.17 — só catalogado,
+  lane compiler):** `o as Int` onde `o` é um valor boxed/`Object` compila
+  mas quebra no class-load:
+  ```kof
+  main() {
+      var o = "7" as Object
+      var i = o as Int
+      println(i + 1)
+  }
+  ```
+  `VerifyError: Bad type on operand stack` em `istore_2` (javap do
+  `Main.main` emitido): `0: ldc "7"` → `2: checkcast Object` → `6: aload_1`
+  → **`7: checkcast class "?"`** → **`10: istore_2`**. Dois bugs numa
+  emissão só: (a) o alvo do cast resolve para o **internal name inválido
+  `"?"`** (`ClassType` de primitivo renderiza `?` em vez de ser
+  descartado/traduzido); (b) nenhum unboxing (`Integer.intValue()`) entre o
+  valor de referência e o `istore` — mesmo com classe válida os tipos de
+  pilha não bateriam (regra R6: código que compila e não carrega).
+- **Esperado (contrato, § freeze + corpus):** `o as Int` sobre
+  `Number`/`String` deve OU emitir `checkcast Integer` + `intValue()`
+  (estilo JLS: cast para a box e depois unbox) OU rejeitar em compile-time
+  com diagnóstico (família `COMP002`) — nunca emitir bytecode quebrado.
+- **Relacionado:** mesma família do §188 (`String as Int` → `VerifyError`,
+  a face `checkcast`-sem-parse) e do título da issue #205.
+- **Pointer (lane compiler):** emissão de `CastExpr` com alvo primitivo —
+  procurar `CHECKCAST` + tratamento de primitivo na região
+  `ExpressionBinaryLowerer.java:48` / lowering de `as` no bytecode
+  lowerer; o nome `?` vem do `internalName` de primitivo em
+  `JvmTypeMapper`/`ClassType`.
+- **Prova Q1:** o repro roda no HEAD `3edaf792` com `dev.cli.BJ` (JVM):
+  `ec=1` + `VerifyError` via launcher por reflection (regra JavaFX — o
+  launcher direto engole atrás da mensagem falsa do JavaFX). O fix deve
+  imprimir `8` + caso em `CoreRegressionE2ETest`.
+
 ## §193 — E2E blog (F12): `db.query` cru + `.get("col")`/recursos dentro de handler web derr
 
 > **Renumerado de §189→§193 (14/09, dono = 192.168.100.17):** colisão tripla
