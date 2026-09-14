@@ -298,6 +298,11 @@ public class SemanticAnalyzer {
                 inferType(comp.initializer(), classScope);
             }
         }
+        for (AstNode member : rec.members()) {
+            if (member instanceof FieldDeclarationNode field && field.initializer() != null) {
+                inferType(field.initializer(), classScope);
+            }
+        }
         for (int pass = 0; pass < 4; pass++) {
             boolean changed = false;
             expressionTypes.clear();

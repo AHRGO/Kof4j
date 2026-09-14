@@ -1833,4 +1833,25 @@ class CoreRegressionE2ETest {
         assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
         assertEquals("1\n2\ntrue\ntrue\nx", runJvm(out));
     }
+
+    // Issue #215 — fields declared in body of constructor-param class are unresolvable
+    @Test
+    void classWithConstructorParamsExtraFieldsJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("paramclass.kf");
+        Files.writeString(src, """
+                class Box(Int w, Int h) {
+                    Int area = w * h
+                    Int getArea() { return area }
+                }
+                main() {
+                    var b = new Box(3, 4)
+                    println(b.area)
+                    println(b.getArea())
+                }
+                """);
+        Path out = tempDir.resolve("paramclass-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("12\n12", runJvm(out));
+    }
 }

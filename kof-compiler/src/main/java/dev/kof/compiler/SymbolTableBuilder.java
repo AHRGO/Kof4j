@@ -146,6 +146,19 @@ public final class SymbolTableBuilder {
             classScope.define(ms);
         }
         for (AstNode member : rec.members()) {
+            if (member instanceof FieldDeclarationNode field) {
+                Type fieldType = MemberResolver.resolveType(sa, field.type(), classScope);
+                int flags = field.modifiers().contains("static") ? AccessFlags.STATIC : 0;
+                SymbolTable.FieldSymbol fs = new SymbolTable.FieldSymbol(field.name(), fieldType, flags, rec.name());
+                classSym.members().define(fs);
+                classScope.define(fs);
+                SymbolTable.MethodSymbol ms = new SymbolTable.MethodSymbol(field.name(), rec.name(),
+                        fieldType, List.of(), 1, SymbolTable.DispatchKind.INSTANCE);
+                classSym.members().define(ms);
+                classScope.define(ms);
+            }
+        }
+        for (AstNode member : rec.members()) {
             if (member instanceof MethodDeclarationNode method) {
                 defineMethodSymbol(sa, method, rec.name(), classScope);
             }

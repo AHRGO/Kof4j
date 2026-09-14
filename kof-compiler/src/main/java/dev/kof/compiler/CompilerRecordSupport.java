@@ -171,6 +171,15 @@ public final class CompilerRecordSupport {
             ops.add(new KofStoreField(ownerType, comp.name(), compType));
             localIdx += TypeMetrics.isDoubleWidth(compType) ? 2 : 1;
         }
+        for (AstNode member : rec.members()) {
+            if (member instanceof FieldDeclarationNode field && field.initializer() != null
+                    && !field.modifiers().contains("static")) {
+                Type fieldType = CompilerTypes.resolveWithTypeParams(field.type(), typeParams, driver.currentUnit, driver.semanticAnalyzer);
+                ops.add(new KofLoadLocal(ownerType, 0));
+                localIdx = ExpressionLowerer.emitExpression(driver, field.initializer(), ops, owner, localIdx, locals);
+                ops.add(new KofStoreField(ownerType, field.name(), fieldType));
+            }
+        }
         ops.add(new KofReturnVoid());
         return new IRMethod("<init>", Type.PrimitiveType.VOID, compTypes, AccessFlags.PUBLIC, List.of(),
                 List.of(new IRBasicBlock(0, ops)), locals);

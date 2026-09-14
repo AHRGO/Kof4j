@@ -127,6 +127,12 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > quentes. O codemod dos 17 locals puros restantes ficou p/ depois (varios
 > carregam chamada com efeito — deletar linha = mudanca de comportamento).## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (14/09 ~12:15, dono = 192.168.100.22, lane compiler): fix issue #215 — fields declared in body of constructor-param class are unresolvable (SEM011/SEM025).**
+> - Causa raiz: classes com parâmetros de construtor no cabeçalho (`class Box(Int w, Int h)`) são parseadas como `RecordDeclarationNode`. Em `SymbolTableBuilder.defineRecordMembers`, apenas os componentes do cabeçalho eram definidos na `SymbolTable`; campos declarados no corpo (`FieldDeclarationNode`) eram ignorados, gerando `SEM011` / `SEM025`. Adicionalmente, em `CompilerClassLowering.lowerRecord`, `CompilerRecordSupport.generateRecordConstructor` e `JvmBackend.emitClass`, os campos adicionais não eram incluídos no IR do construtor, nem geravam métodos assessores correspondentes.
+> - Correção: `SymbolTableBuilder` agora define símbolos de campos e assessores para campos adicionais de records. `SemanticAnalyzer` analisa inicializadores desses campos. `CompilerClassLowering` adiciona os campos e métodos assessores ao `IRClass`, `CompilerRecordSupport` emite a inicialização dos campos no construtor gerado, e `JvmBackend` registra como `RecordComponent` apenas os componentes finais não-estáticos.
+> - Prova: `CoreRegressionE2ETest#classWithConstructorParamsExtraFieldsJvm`.
+> - Próximo: issues #217, #218, #216.
+
 > **✅ FEITO (14/09 ~12:00, dono = 192.168.100.22, lane compiler): fix issue #214 — Map, HashMap, Set, HashSet, LinkedList compile with unqualified class names (NoClassDefFoundError at runtime).**
 > - Causa raiz: `new Map()`, `new HashMap()`, `new Set()`, `new HashSet()`, e `new LinkedList()` produziam `ClassType("", "Map")` etc., sem mapeamento prévio em `CompilerTypes.toType`, `SemExpressionTyper` ou `ExpressionTyper`. No JVM, eram instanciadas diretamente como classes não-qualificadas sem pacote (`new Map`, `new HashMap`), resultando em `NoClassDefFoundError: Map`.
 > - Correção: `CompilerTypes.toType`, `ExpressionTyper` e `SemExpressionTyper` agora mapeiam `LinkedList` para `BuiltinTypes.LIST`, `HashSet` para `BuiltinTypes.SET` e `HashMap` para `BuiltinTypes.MAP`. `SemExpressionTyper` também sincronizado para permitir indexação `List[i]` (introduzida em #149/#152) sem falso-positivo SEM054.

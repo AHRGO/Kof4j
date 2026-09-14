@@ -115,6 +115,12 @@ public final class CompilerClassLowering {
                     AccessFlags.PRIVATE | AccessFlags.FINAL,
                     null, CompilerAnnotations.lowerAnnotations(driver, comp.annotations())));
         }
+        for (AstNode member : rec.members()) {
+            if (member instanceof FieldDeclarationNode field) {
+                IRField irField = CompilerClassLowering.lowerField(driver, field, typeParams);
+                fields.add(irField);
+            }
+        }
         // bug #53: se o record declara um construtor explícito com a MESMA
         // aridade do canônico (número de componentes), NÃO gerar o automático —
         // senão dois <init> no JVM → ClassFormatError. O canônico explícito é
@@ -137,6 +143,18 @@ public final class CompilerClassLowering {
             methods.add(new IRMethod(comp.name(), compType, List.of(), AccessFlags.PUBLIC, List.of(),
                     List.of(new IRBasicBlock(0, body)),
                     List.of(new IRLocalVariable(0, "this", ownerType))));
+        }
+        for (AstNode member : rec.members()) {
+            if (member instanceof FieldDeclarationNode field && !field.modifiers().contains("static")) {
+                Type fieldType = CompilerTypes.resolveWithTypeParams(field.type(), typeParams, driver.currentUnit, driver.semanticAnalyzer);
+                List<KofOperation> body = new ArrayList<>();
+                body.add(new KofLoadLocal(ownerType, 0));
+                body.add(new KofLoadField(ownerType, field.name(), fieldType));
+                body.add(new KofReturn(fieldType));
+                methods.add(new IRMethod(field.name(), fieldType, List.of(), AccessFlags.PUBLIC, List.of(),
+                        List.of(new IRBasicBlock(0, body)),
+                        List.of(new IRLocalVariable(0, "this", ownerType))));
+            }
         }
         for (AstNode member : rec.members()) {
             if (member instanceof MethodDeclarationNode method) {
