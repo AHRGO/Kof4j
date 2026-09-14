@@ -309,14 +309,16 @@ public final class KofJsRunner {
             return bound <= 0 ? 0 : SECURE_RANDOM.nextInt(bound);
         });
         platform.put("pbkdf2Hex", (ProxyExecutable) args -> {
+            // Fronteira de interop: o guest JS chama com qualquer string. O
+            // parseInt por par de hex estava FORA do try e derramava NFE crua
+            // no contexto do programa (CodeQL uncaught-number-format-exception
+            // #255). Contrato do proxy: null = falha (ja era o caminho do
+            // SecretKeyFactory); hex invalido vira null, nunca stack-trace.
             String password = args[0].asString();
             String saltHex = args[1].asString();
             int iterations = args[2].asInt();
-            byte[] salt = new byte[saltHex.length() / 2];
-            for (int i = 0; i < salt.length; i++) {
-                salt[i] = (byte) Integer.parseInt(saltHex.substring(i * 2, i * 2 + 2), 16);
-            }
             try {
+                byte[] salt = decodeHexStrict(saltHex);
                 byte[] dk = javax.crypto.SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
                         .generateSecret(new javax.crypto.spec.PBEKeySpec(
                                 password.toCharArray(), salt, iterations, 256))
@@ -329,6 +331,27 @@ public final class KofJsRunner {
             }
         });
         bindings.putMember("kof_platform", ProxyObject.fromMap(platform));
+    }
+
+    /**
+     * Hex estrito: comprimento par + somente [0-9a-fA-F]. Lanca
+     * NumberFormatException em entrada invalida (o contrato null do proxy
+     * pbkdf2Hex cuida do resto). Testavel sem GraalJS.
+     */
+    static byte[] decodeHexStrict(String hex) {
+        if (hex == null || (hex.length() & 1) != 0) {
+            throw new NumberFormatException("hex invalido: " + hex);
+        }
+        byte[] out = new byte[hex.length() / 2];
+        for (int i = 0; i < out.length; i++) {
+            int hi = Character.digit(hex.charAt(i * 2), 16);
+            int lo = Character.digit(hex.charAt(i * 2 + 1), 16);
+            if (hi < 0 || lo < 0) {
+                throw new NumberFormatException("hex invalido: " + hex);
+            }
+            out[i] = (byte) ((hi << 4) | lo);
+        }
+        return out;
     }
 
     private static String readLine(InputStream in) {

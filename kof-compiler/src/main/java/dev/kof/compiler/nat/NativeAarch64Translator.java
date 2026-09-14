@@ -135,7 +135,9 @@ public final class NativeAarch64Translator {
             String fd = "d" + args[0].trim().substring(1);
             java.util.regex.Matcher m = java.util.regex.Pattern.compile("^(-?\\d+)\\((\\w+)\\)$").matcher(args[1].trim());
             if (!m.matches()) return List.of(line);
-            int off = Integer.parseInt(m.group(1));
+            Integer offBoxed = NativeAarch64Helpers.parseOffInt(m.group(1));
+            if (offBoxed == null) return List.of(line);
+            int off = offBoxed;
             String base = R.apply(m.group(2));
             if (off >= -256 && off <= 255) {
                 String addr = off == 0 ? "[" + base + "]" : "[" + base + ", #" + off + "]";
@@ -335,7 +337,9 @@ public final class NativeAarch64Translator {
             String mem = args[1].trim();
             java.util.regex.Matcher m = java.util.regex.Pattern.compile("^(-?\\d+)\\((\\w+)\\)$").matcher(mem);
             if (!m.matches()) return List.of(line);
-            int off = Integer.parseInt(m.group(1));
+            Integer offBoxed = NativeAarch64Helpers.parseOffInt(m.group(1));
+            if (offBoxed == null) return List.of(line);
+            int off = offBoxed;
             String base = R.apply(m.group(2));
             // sp como destino não é encodável como Rt -> usar temp
             if (rdRaw.equals("sp")) {
@@ -376,7 +380,9 @@ public final class NativeAarch64Translator {
             String mem = args[1].trim();
             java.util.regex.Matcher m = java.util.regex.Pattern.compile("^(-?\\d+)\\((\\w+)\\)$").matcher(mem);
             if (!m.matches()) return List.of(line);
-            int off = Integer.parseInt(m.group(1));
+            Integer offBoxed = NativeAarch64Helpers.parseOffInt(m.group(1));
+            if (offBoxed == null) return List.of(line);
+            int off = offBoxed;
             String base = R.apply(m.group(2));
             // sp como fonte não é encodável como Rt -> mov temp, sp
             if (rsRaw.equals("sp")) {

@@ -13,6 +13,22 @@ final class NativeAarch64Helpers {
     private NativeAarch64Helpers() {}
 
 // ---- tradutor riscv -> aarch64 (mesmo usado no probe Python) ----
+    /**
+     * Offset de memória riscv ("(-?\\d+)") com seguranca de range: o regex
+     * aceita digitos que estouram int ("-99999999999"); em vez de NFE crua
+     * no tradutor, null = nao encodable -> chamador faz passthrough da linha
+     * (mesma saida do no-match). CodeQL uncaught-number-format-exception #244-246.
+     */
+    static Integer parseOffInt(String s) {
+        try {
+            long v = Long.parseLong(s);
+            if (v < Integer.MIN_VALUE || v > Integer.MAX_VALUE) return null;
+            return (int) v;
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
     static long parseImm(String s) {
         s = s.trim();
         if (s.startsWith("0x") || s.startsWith("0X")) return Long.parseUnsignedLong(s.substring(2), 16);
