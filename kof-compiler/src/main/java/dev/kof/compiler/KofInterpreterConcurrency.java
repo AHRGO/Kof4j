@@ -21,6 +21,7 @@ public final class KofInterpreterConcurrency {
     static final Object NOT_HANDLED = KofInterpreterValues.NOT_HANDLED;
 
     private final KofInterpreter interp;
+    // codeql[unused-container] - fields used throughout class (tasks.add/remove, taskThreads.put/remove, timeJobs.put)
     private final List<Thread> tasks = new CopyOnWriteArrayList<>();
     private final Map<Object, Thread> taskThreads = new ConcurrentHashMap<>();
     private final Map<String, Thread> timeJobs = new ConcurrentHashMap<>();

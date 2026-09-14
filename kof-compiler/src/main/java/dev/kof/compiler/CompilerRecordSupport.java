@@ -154,11 +154,11 @@ public final class CompilerRecordSupport {
         List<KofOperation> ops = new ArrayList<>();
         List<IRLocalVariable> locals = new ArrayList<>();
         Type ownerType = CompilerTypes.ownerTypeFromInternal(owner, driver.semanticAnalyzer);
-        Type superType = new Type.ClassType("java.lang", "Record", List.of());
+        Type superType = rec.superClass() != null
+                ? CompilerTypes.ownerTypeFromInternal(driver.toInternalName("", rec.superClass()), driver.semanticAnalyzer)
+                : new Type.ClassType("java.lang", "Record", List.of());
         locals.add(new IRLocalVariable(0, "this", ownerType));
         if (driver.isJvmTarget()) {
-
-
             ops.add(new KofLoadLocal(ownerType, 0));
             ops.add(new KofCall(superType, "<init>", List.of(), Type.PrimitiveType.VOID, KofCallKind.CONSTRUCTOR));
         }
@@ -170,6 +170,15 @@ public final class CompilerRecordSupport {
             ops.add(new KofLoadLocal(compType, localIdx));
             ops.add(new KofStoreField(ownerType, comp.name(), compType));
             localIdx += TypeMetrics.isDoubleWidth(compType) ? 2 : 1;
+        }
+        for (AstNode member : rec.members()) {
+            if (member instanceof FieldDeclarationNode field && field.initializer() != null
+                    && !field.modifiers().contains("static")) {
+                Type fieldType = CompilerTypes.resolveWithTypeParams(field.type(), typeParams, driver.currentUnit, driver.semanticAnalyzer);
+                ops.add(new KofLoadLocal(ownerType, 0));
+                localIdx = ExpressionLowerer.emitExpression(driver, field.initializer(), ops, owner, localIdx, locals);
+                ops.add(new KofStoreField(ownerType, field.name(), fieldType));
+            }
         }
         ops.add(new KofReturnVoid());
         return new IRMethod("<init>", Type.PrimitiveType.VOID, compTypes, AccessFlags.PUBLIC, List.of(),

@@ -346,24 +346,22 @@ if (mc.receiver() == null && "__kof_await".equals(mc.methodName())) {
 if (mc.receiver() instanceof IdentifierExpr rid && CompilerTypes.isEnumName(rid.name(), driver.currentUnit)
         && !driver.isLocalVarName(rid.name(), locals)) {
     Type enumT = new Type.ClassType("", rid.name(), List.of());
-    // lista interna com elemento STRING (runtime do enum é o nome);
-    // a tipagem List<Color> fica na checagem de tipos
-    Type stringListT = new Type.ClassType("kof", "List", List.of(BuiltinTypes.STRING));
+    Type enumListT = new Type.ClassType("kof", "List", List.of(enumT));
     if ("values".equals(mc.methodName()) && mc.arguments().isEmpty()) {
-        ops.add(new KofCall(stringListT,
-                "kof_list_new", List.of(), stringListT,
+        ops.add(new KofCall(enumListT,
+                "kof_list_new", List.of(), enumListT,
                 KofCallKind.FUNCTION));
         for (String c : CompilerTypes.enumConstantsOf(rid.name(), driver.currentUnit)) {
             ops.add(new KofDup());
             ops.add(new KofLoadLiteral(BuiltinTypes.STRING, c));
-            ops.add(new KofCall(stringListT,
-                    "kof_list_add", List.of(BuiltinTypes.STRING), Type.PrimitiveType.VOID,
+            ops.add(new KofCall(enumListT,
+                    "kof_list_add", List.of(enumT), Type.PrimitiveType.VOID,
                     KofCallKind.INSTANCE));
         }
         return localIdx;
     }
     if ("valueOf".equals(mc.methodName()) && mc.arguments().size() == 1) {
-        Type listT = stringListT;
+        Type listT = enumListT;
         ops.add(new KofCall(listT, "kof_list_new", List.of(), listT,
                 KofCallKind.FUNCTION));
         for (String c : CompilerTypes.enumConstantsOf(rid.name(), driver.currentUnit)) {

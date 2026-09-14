@@ -290,6 +290,15 @@ public final class SemExpressionTyper {
             }
             case MethodCallExpr mc -> SemMethodCallTyper.infer(sa, mc, scope);
             case NewExpr ne -> {
+                if ("List".equals(ne.typeName()) || "ArrayList".equals(ne.typeName()) || "LinkedList".equals(ne.typeName())) {
+                    yield BuiltinTypes.LIST;
+                }
+                if ("Set".equals(ne.typeName()) || "HashSet".equals(ne.typeName())) {
+                    yield BuiltinTypes.SET;
+                }
+                if ("Map".equals(ne.typeName()) || "HashMap".equals(ne.typeName())) {
+                    yield BuiltinTypes.MAP;
+                }
                 SymbolTable.ClassSymbol cs = sa.getClass(ne.typeName());
                 if (cs != null) {
                     // SG-017 (SEM041): classe abstrata não pode ser instanciada.
@@ -298,6 +307,7 @@ public final class SemExpressionTyper {
                                 "cannot instantiate abstract class '" + ne.typeName() + "'",
                                 "SEM041");
                     }
+                    // codeql[unused-container] - argTypes used as parameter types for constructorFor lookup
                     List<Type> argTypes = new ArrayList<>();
                     for (ExpressionNode arg : ne.arguments()) {
                         argTypes.add(inferType(sa, arg, scope));
@@ -395,7 +405,7 @@ public final class SemExpressionTyper {
                 if (KofProcess.isResult(recvType) && KofProcess.isField(fa.fieldName())) {
                     yield KofProcess.fieldType(fa.fieldName());
                 }
-                if (recvType instanceof Type.ArrayType at && "length".equals(fa.fieldName())) {
+                if (recvType instanceof Type.ArrayType _ && "length".equals(fa.fieldName())) {
                     yield Type.PrimitiveType.INT;
                 }
                 if (Type.isString(recvType) && "length".equals(fa.fieldName())) {
@@ -446,20 +456,23 @@ public final class SemExpressionTyper {
                 }
                 // paridade absoluta (JVM=JS=X86=ARM=RISC, regra 6/R6) — mesmo
                 // padrão do §96/§98/§100: `x[i]` SÓ existe para ARRAY no corpus
-                // (`learn/04:84`, `new Int[n]`). Em String/List/Map/Set o
+                // (`learn/04:84`, `new Int[n]`). Em String/Map/Set o
                 // subscript era ACEITO e quebrava de um jeito em cada target
-                // ("abc"[0]: JVM VerifyError, Native/Script vazios;
-                // listOf(1,2)[0]: JVM VerifyError `aaload` em Object, idem).
-                // Opção B: REJEITAR em compile-time (SEM054) apontando p/ o
-                // idiom da coleção. Unknown/Nullable (ex.: get de map sem pin)
-                // NÃO é flagado — pode ser array em runtime (SG-008).
-                if (sa.diagnostics() != null && isKofCollectionType(recvType)) {
+                // ("abc"[0]: JVM VerifyError, Native/Script vazios).
+                // #149/#152: List[i] é suportado (roteado para kof_list_get).
+                if (sa.diagnostics() != null && isKofCollectionType(recvType) && !BuiltinTypes.isList(recvType)) {
                     var pos = aa.position();
                     sa.diagnostics().error(pos != null ? pos.file() : "",
                             pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0,
                             "`[]` só pega em array em Kof; para esta coleção use "
                                     + collectionIndexHint(recvType),
                             "SEM054");
+                }
+                if (BuiltinTypes.isList(recvType)) {
+                    if (recvType instanceof Type.ClassType ct && !ct.typeArguments().isEmpty()) {
+                        yield ct.typeArguments().get(0);
+                    }
+                    yield Type.UnknownType.UNKNOWN;
                 }
                 yield Type.UnknownType.UNKNOWN;
             }
@@ -475,30 +488,41 @@ public final class SemExpressionTyper {
                 }
                 StatementAnalyzer.analyzeBody(sa, le.body(), lambdaScope, Type.UnknownType.UNKNOWN);
                 Type returnType = Type.UnknownType.UNKNOWN;
+                boolean hasReturn = false;
                 for (StatementNode s : le.body()) {
-                    if (s instanceof ReturnStmt rs && rs.value() != null) {
-                        returnType = inferType(sa, rs.value(), lambdaScope);
+                    if (s instanceof ReturnStmt rs) {
+                        hasReturn = true;
+                        if (rs.value() != null) {
+                            returnType = inferType(sa, rs.value(), lambdaScope);
+                        } else {
+                            returnType = Type.PrimitiveType.VOID;
+                        }
                         break;
                     }
                     if (s instanceof BlockStmt b) {
                         for (StatementNode inner : b.statements()) {
-                            if (inner instanceof ReturnStmt rs2 && rs2.value() != null) {
-                                returnType = inferType(sa, rs2.value(), lambdaScope);
+                            if (inner instanceof ReturnStmt rs2) {
+                                hasReturn = true;
+                                if (rs2.value() != null) {
+                                    returnType = inferType(sa, rs2.value(), lambdaScope);
+                                } else {
+                                    returnType = Type.PrimitiveType.VOID;
+                                }
                                 break;
                             }
                         }
                     }
                 }
+                if (!hasReturn) {
+                    returnType = Type.PrimitiveType.VOID;
+                }
                 yield new Type.FunctionType(paramTypes, returnType);
             }
             case IfExpr ie -> {
                 Type thenType = inferType(sa, ie.thenExpr(), scope);
-                Type elseType = inferType(sa, ie.elseExpr(), scope);
+                Type elseType = ie.elseExpr() != null ? inferType(sa, ie.elseExpr(), scope) : Type.UnknownType.UNKNOWN;
                 if (thenType.equals(elseType)) yield thenType;
-                if (thenType instanceof Type.PrimitiveType && elseType instanceof Type.PrimitiveType) {
-                    yield thenType;
-                }
-                yield thenType;
+                yield HierarchyResolver.commonSupertype(sa, thenType, elseType);
             }
             case SwitchExpr se -> {
                 Type subjectType = inferType(sa, se.expression(), scope);
@@ -523,25 +547,7 @@ public final class SemExpressionTyper {
                     SymbolTable defaultScope = scope.enterScope();
                     inferType(sa, se.defaultValue(), defaultScope);
                 } else {
-                    // exaustividade: sem default, switch sobre enum precisa cobrir
-                    // todas as constantes (mesma regra do statement, SEM031).
-                    if (subjectType instanceof Type.ClassType sct && sct.packageName().isEmpty()
-                            && sa.unit() != null) {
-                        java.util.Set<String> covered = new java.util.HashSet<>();
-                        for (SwitchExprCase sc : se.cases()) {
-                            String cn = MemberResolver.enumConstantOfExpr(sa.unit(), sc.value());
-                            if (cn != null) covered.add(cn);
-                        }
-                        List<String> constants = MemberResolver.enumConstantsOf(sa.unit(), sct.name());
-                        List<String> missing = constants.stream().filter(c -> !covered.contains(c)).toList();
-                        if (!missing.isEmpty()) {
-                            sa.reportError(se, "switch expressão sobre '" + sct.name()
-                                    + "' não cobre: " + String.join(", ", missing)
-                                    + " (adicione default ou os casos faltantes)", "SEM032");
-                        }
-                    } else {
-                        sa.reportError(se, "switch expressão exige 'default' (ou exaustividade de enum)", "SEM032");
-                    }
+                    MemberResolver.checkSwitchExprExhaustiveness(sa, se, subjectType);
                 }
                 yield result;
             }

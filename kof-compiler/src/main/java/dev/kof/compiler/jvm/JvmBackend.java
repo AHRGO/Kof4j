@@ -1,4 +1,5 @@
 package dev.kof.compiler.jvm;
+import dev.kof.compiler.AccessFlags;
 import dev.kof.compiler.backend.Backend;
 import dev.kof.compiler.ExternalClasspath;
 import dev.kof.compiler.IRBasicBlock;
@@ -177,8 +178,10 @@ public class JvmBackend implements Backend {
 
         if ("java/lang/Record".equals(superName)) {
             for (IRField field : clazz.fields()) {
-                cw.visitRecordComponent(field.name(), JvmTypeMapper.toDescriptor(field.type()),
-                        JvmTypeMapper.toGenericSignature(field.type())).visitEnd();
+                if ((field.accessFlags() & (AccessFlags.STATIC)) == 0 && (field.accessFlags() & AccessFlags.FINAL) != 0) {
+                    cw.visitRecordComponent(field.name(), JvmTypeMapper.toDescriptor(field.type()),
+                            JvmTypeMapper.toGenericSignature(field.type())).visitEnd();
+                }
             }
         }
 

@@ -207,6 +207,12 @@ public class ExpressionParser {
                 ctx.expect(TokenType.RBRACKET, "Expected ']'", "PARSE045");
                 expr = new ArrayAccessExpr(p, expr, index);
             } else if (ctx.check(TokenType.LPAREN)) {
+                // Previne chamada acidental se '(' está em outra linha e expr é literal ou terminador
+                Token prevToken = ctx.pos > 0 ? ctx.tokens.get(ctx.pos - 1) : null;
+                if (prevToken != null && prevToken.line() != ctx.peek().line()
+                        && (expr instanceof LiteralExpr || expr instanceof LambdaExpr)) {
+                    break;
+                }
                 List<ExpressionNode> args = ExpressionParser.parseArguments(ctx);
                 if (ctx.check(TokenType.LBRACE)) {
                     // Query DSL tipada: `Entity.query(db) { where ...; }` — o `{`
@@ -275,7 +281,12 @@ public class ExpressionParser {
             // aqui vira diagnóstico limpo (bug 25).
             if (t.type() == TokenType.LONG_LITERAL) {
                 try {
-                    Long.parseLong(t.value().replaceAll("[lL]$", ""));
+                    String raw = t.value().replaceAll("[lL]$", "");
+                    if (raw.startsWith("0x") || raw.startsWith("0X")) {
+                        Long.parseUnsignedLong(raw.substring(2), 16);
+                    } else {
+                        Long.parseLong(raw);
+                    }
                 } catch (NumberFormatException e) {
                     ctx.error("numeric literal out of range: " + t.value(), "PARSE084");
                     return new LiteralExpr(ctx.pos(), ConcreteLiteralKind.NULL, "0");
@@ -318,6 +329,9 @@ public class ExpressionParser {
             ctx.expect(TokenType.ELSE, "Expected 'else'", "PARSE044");
             ExpressionNode elseExpr = ExpressionParser.parseExpression(ctx);
             return new IfExpr(p, condition, thenExpr, elseExpr);
+        }
+        if (ctx.check(TokenType.SWITCH)) {
+            return ExpressionParser.parseSwitchExpression(ctx);
         }
         if (ctx.check(TokenType.LBRACE)) {
             List<FormalParameterNode> params = new ArrayList<>();

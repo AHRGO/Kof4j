@@ -61,8 +61,8 @@ public final class CompilerEmission2 {
             }
             localIdx = ExpressionLowerer.emitExpression(driver, args.get(i), ops, owner, localIdx, locals);
             Type argType = ExpressionTyper.inferExprType(driver, args.get(i), locals);
-            if (formal != null && formal instanceof Type.PrimitiveType fpt
-                    && argType instanceof Type.PrimitiveType apt
+            if (formal != null && formal instanceof Type.PrimitiveType _
+                    && argType instanceof Type.PrimitiveType _
                     && !BuiltinTypes.isString(formal)) {
                 driver.emitWideningIfNeeded(ops, argType, formal);
             }
@@ -70,6 +70,12 @@ public final class CompilerEmission2 {
                     && !BuiltinTypes.isString(formal)
                     && !ExpressionTyper.boxesOwnBranches(driver, args.get(i), locals)) {
                 driver.emitErasureBox(ops, argType);
+            }
+            if (formal != null && BuiltinTypes.isString(formal)
+                    && argType instanceof Type.PrimitiveType pt
+                    && "char".equals(Type.canonicalPrimitiveName(pt.name()))) {
+                ops.add(new KofCall(BuiltinTypes.STRING, "valueOf",
+                        List.of(Type.PrimitiveType.CHAR), BuiltinTypes.STRING, KofCallKind.STATIC));
             }
         }
         return localIdx;
@@ -115,6 +121,9 @@ public final class CompilerEmission2 {
                 SymbolTable.Symbol fieldSym = HierarchyResolver.resolveFieldInHierarchy(className, ie.name(), driver.semanticAnalyzer);
                 if (fieldSym instanceof SymbolTable.FieldSymbol fs) {
                     Type ownerType = CompilerTypes.ownerTypeFromInternal(owner, driver.semanticAnalyzer);
+                    if ((fs.accessFlags() & AccessFlags.STATIC) != 0) {
+                        return emitStaticFieldIncrement(ownerType, ie.name(), fs.type(), prefix, op, ops, localIdx, locals);
+                    }
                     ops.add(new KofLoadLocal(ownerType, 0));
                     localIdx = driver.emitFieldIncrement(ownerType, ie.name(), fs.type(), prefix, op,
                             ops, localIdx, locals);
@@ -123,13 +132,20 @@ public final class CompilerEmission2 {
             }
         }
         if (target instanceof FieldAccessExpr fa) {
-            localIdx = ExpressionLowerer.emitExpression(driver, fa.receiver(), ops, owner, localIdx, locals);
             Type recvType = ExpressionTyper.inferExprType(driver, fa.receiver(), locals);
             Type fieldType = Type.UnknownType.UNKNOWN;
-            if (recvType instanceof Type.ClassType ct) {
-                SymbolTable.Symbol fs = HierarchyResolver.resolveFieldInHierarchy(ct.name(), fa.fieldName(), driver.semanticAnalyzer);
-                if (fs != null) fieldType = fs.type();
+            SymbolTable.FieldSymbol fs = null;
+            if (recvType instanceof Type.ClassType ct && driver.semanticAnalyzer != null) {
+                SymbolTable.Symbol sym = HierarchyResolver.resolveFieldInHierarchy(ct.name(), fa.fieldName(), driver.semanticAnalyzer);
+                if (sym instanceof SymbolTable.FieldSymbol f) {
+                    fs = f;
+                    fieldType = f.type();
+                }
             }
+            if (fs != null && (fs.accessFlags() & AccessFlags.STATIC) != 0) {
+                return emitStaticFieldIncrement(recvType, fa.fieldName(), fieldType, prefix, op, ops, localIdx, locals);
+            }
+            localIdx = ExpressionLowerer.emitExpression(driver, fa.receiver(), ops, owner, localIdx, locals);
             localIdx = driver.emitFieldIncrement(recvType, fa.fieldName(), fieldType, prefix, op,
                     ops, localIdx, locals);
             return localIdx;
@@ -174,6 +190,28 @@ public final class CompilerEmission2 {
         localIdx = ExpressionLowerer.emitExpression(driver, ue.operand(), ops, owner, localIdx, locals);
         CompilerEmissionHelpers.emitIncrementOne(ops, operandType);
         ops.add(new KofBinary(op, operandType));
+        return localIdx;
+    }
+
+    private static int emitStaticFieldIncrement(Type ownerType, String fieldName, Type fieldType,
+                                                boolean prefix, KofBinaryOp op,
+                                                List<KofOperation> ops, int localIdx,
+                                                List<IRLocalVariable> locals) {
+        int valTmp = localIdx;
+        localIdx += TypeMetrics.isDoubleWidth(fieldType) ? 2 : 1;
+        int newTmp = localIdx;
+        localIdx += TypeMetrics.isDoubleWidth(fieldType) ? 2 : 1;
+        locals.add(new IRLocalVariable(valTmp, "#sinc", fieldType));
+        locals.add(new IRLocalVariable(newTmp, "#snew", fieldType));
+        ops.add(new KofGetStatic(ownerType, fieldName, fieldType));
+        ops.add(new KofStoreLocal(fieldType, valTmp));
+        ops.add(new KofLoadLocal(fieldType, valTmp));
+        CompilerEmissionHelpers.emitIncrementOne(ops, fieldType);
+        ops.add(new KofBinary(op, fieldType));
+        ops.add(new KofStoreLocal(fieldType, newTmp));
+        ops.add(new KofLoadLocal(fieldType, newTmp));
+        ops.add(new KofPutStatic(ownerType, fieldName, fieldType));
+        ops.add(new KofLoadLocal(fieldType, prefix ? newTmp : valTmp));
         return localIdx;
     }
 }

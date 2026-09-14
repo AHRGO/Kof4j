@@ -36,8 +36,8 @@ public final class ReturnPathAnalyzer {
     /** true se o statement pode completar normalmente (cai no fim do corpo). */
     static boolean reachesEnd(StatementNode stmt) {
         return switch (stmt) {
-            case ReturnStmt r -> false;
-            case ThrowStmt t -> false;
+            case ReturnStmt _ -> false;
+            case ThrowStmt _ -> false;
             case BlockStmt b -> b.statements().isEmpty()
                     || reachesEnd(b.statements().get(b.statements().size() - 1));
             // if SEM else: o caminho else-implícito cai no fim (true sempre);
@@ -46,12 +46,12 @@ public final class ReturnPathAnalyzer {
                     || (reachesEnd(i.thenBranch()) && reachesEnd(i.elseBranch()));
             // loops podem ser infinitos com return dentro (while(true){return}
             // funciona hoje); try/switch têm muitos caminhos — conservador.
-            case WhileStmt w -> false;
-            case DoWhileStmt d -> false;
-            case ForStmt f -> false;
-            case ForInStmt fi -> false;
-            case TryStmt t -> false;
-            case SwitchStmt s -> false;
+            case WhileStmt _ -> false;
+            case DoWhileStmt _ -> false;
+            case ForStmt _ -> false;
+            case ForInStmt _ -> false;
+            case TryStmt _ -> false;
+            case SwitchStmt _ -> false;
             default -> true; // declarações, atribuições, chamadas: caem no fim
         };
     }

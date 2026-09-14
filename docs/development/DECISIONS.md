@@ -136,14 +136,73 @@ the Application Model** (the order only makes sense with `app.use`):
 > → session (authHeader + publicPaths) → csrf. Proof: `KofWebE2ETest#appSecurityPipelineE2E`
 > + full E2E validation in `KofBlogE2ETest`.
 
+> **✅ MERGED (14/09, owner 192.168.100.18): the two C18 implementations were
+> unified as a superset** (aggregation pact — neither side discarded). The `.22`
+> API (`rateLimit` Number, `corsOrigin`, `sessionHeader`, `publicPaths`) and the
+> `.18` API (`headers`, `cors`, `rateLimit` String, `csrf`, `auth`, `roles`) now
+> live in a single `kof_web_security`/`kof_web_security_opts` + one pipeline
+> (rate-limit → cors → headers → session → csrf → auth → RBAC) writing response
+> headers to `KOF_SEC_RESPONSE_HEADERS`. Session is enforced on mutations
+> (reads are public; an invalid session header never passes); `auth`/`roles`
+> require a valid Bearer JWT. Proof: `KofWebE2ETest` 22/22 + `KofBlogE2ETest`
+> 1/1 + `KofOAuthResourceServerTest` 4/4 + `KofSecurityTest` 41/41 = 68/0/0.
+
+> **✅ EXECUTED (14/09, step 3 complete — owner 192.168.100.18):**
+> `app.security()` (C18) implemented in **JVM** (`kof_web_security` /
+> `kof_web_security_opts`, `SecurityMiddleware` registered on `app.middlewares`).
+> Applies the **fixed order** rate-limit → CORS → headers → cookies/session →
+> csrf → auth → RBAC → route. No-arg = secure defaults (hardening headers:
+> CSP/nosniff/frame/referrer, HSTS only under TLS). Opts-map (all documented in
+> `docs/stdlib/stdlib-web.md`): `headers` (Bool), `cors` (String origin/CSV/`*`,
+> unlisted origin → 403, preflight → 204), `rateLimit` (`"limit/windowSeconds"`
+> per remote IP → 429 + `Retry-After`), `csrf` (double-submit cookie), `auth`
+> (require valid Bearer JWT), `roles` (String CSV or List). **Auth-if-present:**
+> a request carrying an invalid token never passes, even without `auth:true`.
+> **Security by default:** `listen`/`listenSecure` under `KOF_ENV=production`
+> without `app.security()` warns on `stderr`. **Native/JS report `WEB006`**
+> honestly (same precedent as WEB002/WEB005). Response headers from the
+> middleware survive the dispatch clear via `KOF_SEC_RESPONSE_HEADERS`. Refactor:
+> new fragment `JvmWebSecurityRuntime.java` keeps the §140 ratchet green
+> (`JvmWebCoreRuntime` 699→495). Tests: `KofWebE2ETest` 22/22 (security headers,
+> auth 401/200, auth-if-present, roles 403, CORS deny/preflight, CSRF, rate-limit
+> 429, WEB006 Native+JS). Also fixed a pre-existing descriptor bug:
+> `kof_sec_auth_user` was declared `(Ljava/lang/String;)` but takes no args.
+
 **OAuth2/OIDC (D layer 16) — locked sequence:** (1) **resource server**
 first (third-party JWT validation: JWKS + issuer/aud — cheap, closes
 "who is the Google user?"), (2) client authorization-code + PKCE later;
 **provider never** (non-goal, outside any plan).
 
+> **✅ EXECUTED (14/09, owner 192.168.100.18):** step 1 — **OAuth2 resource
+> server** in the JVM. `auth.resourceServer(jwksUrl, issuer, audience)` configures
+> third-party JWT validation (fetches the public keys from the JWKS URL; empty
+> issuer/audience = not required) and `auth.resourceServerVerify(token)` returns
+> the claims JSON or `null`. Fixed allowlist **RS256/384/512 + ES256/384/512** —
+> never `none` nor HS* (algorithm confusion rejected); RSA (`n`/`e`) and EC
+> (`crv` P-256/384/521, `x`/`y`) JWK keys; `exp` + `iss` + `aud` (string or
+> array). On an unknown `kid`, the JWKS is re-fetched once (key rotation). The
+> resource server plugs into `auth.authenticated()`/`app.security({auth:true})`:
+> after configuration, a token that fails HS256 falls back to JWKS validation.
+> JWKS is cached in memory. **Native/JS report `SECN007`** honestly. Tests:
+> `KofOAuthResourceServerTest` 4/4 (real RS256 token + local JWKS via
+> `com.sun.net.httpserver`; iss/aud rejection; alg=none/tamper; integration with
+> `app.security` 401/200; SECN007 Native+JS). API documented in
+> `docs/stdlib/security.md`.
+
+**TLS with own certificate — enters:** `app.listenSecure(port, certPem,
+
 **TLS with own certificate — enters:** `app.listenSecure(port, certPem,
 keyPem)` (PKCS#8 PEM; JVM first; Native/JS remain honest `WEB002`).
 The current self-signed remains a dev convenience, not production.
+
+> **✅ EXECUTADO (14/09, dono 192.168.100.18):** `app.listenSecure(port,
+> certPem, keyPem)` no JVM — `kof_web_listen_secure_pem` monta o `SSLContext`
+> a partir do cert X.509 PEM + chave PKCS#8 PEM (RSA/EC/DSA, via KeyFactory),
+> sem `keytool` (produção não depende de toolchain externa). A variante de 1
+> arg (self-signed de dev) fica intacta. Native/JS seguem `WEB002` honesto em
+> compile-time (mesmo gate). Prova: `KofWebTlsTest` 7/7 (incl.
+> `tlsOwnCertificateServesHttps` — handshake + 200 com cert gerado no teste;
+> `tlsOwnCertificateGapOnNative` — WEB002).
 
 ---
 
@@ -359,6 +418,121 @@ until development is complete"* — and the non-negotiable floor that accompanie
 - **Bump de versão da linguagem?** Não — **0.4.0-beta segue**: é mudança de
   *build da toolchain*, não de contrato da Kof (programa Kof compilado hoje
   compila e roda amanhã em JVM 21+).
+
+---
+
+## D-ENGINEERING — do not reinvent the wheel (14/09, maintainer's principle)
+
+**Maintainer's rule (14/09):** *"about the compiler's internal logic, always take
+inspiration from the way **Java and C** solve the problems, as long as the
+frontend and the way of writing stay idiomatic and the output stays
+deterministic; you may take inspiration from how other languages solve the
+backend. We do not want to reinvent the wheel."*
+
+- **Scope:** internal compiler/backend logic (lowering, runtime helpers,
+  codegen, semantics). **Not** the Kof frontend: syntax and the way the user
+  writes stay idiomatic Kof (rule 6 — frozen surface is not changed by this).
+- **Reference order:** (1) **Java** (JLS/JVMS + `java.lang`/`java.math`
+  behaviour — the strongest anchor, since the JVM backend already targets it),
+  (2) **C** (ISO C / libm semantics for the native backend), (3) other
+  languages only for *backend* technique (never for the Kof surface).
+- **Invariants kept:** deterministic output (same input → same bytes/result on
+  every target) and the honest-gap rule (R6: never a silent wrong answer; an
+  unimplemented face reports a code, it does not guess).
+- **First applications (same day):** §D-BACKEND-SEMANTICS below.
+
+---
+
+## D-BACKEND-SEMANTICS — 6 decisions from the 14/09 chat (owner 192.168.100.18)
+
+The maintainer answered the open list. Options chosen and their execution:
+
+### 1. §101 — relational operators with NaN → **option A (pure IEEE 754)**
+All targets must agree with IEEE 754: **every relational comparison with NaN is
+`false`** (and `!=` is `true`). The riscv/aarch behaviour is the reference
+(it is already IEEE); **JVM/x86/JS are aligned to it**. Concretely: the JVM
+lowering must not rely on the `dcmpl`/`dcmpg` quirk that returns `true` for
+`1.0 < NaN` / `1.0 <= NaN`; the comparison result is computed IEEE-correctly
+(an unordered result forces `false` for `<`, `<=`, `>`, `>=` and `true` for
+`!=`). JS follows IEEE by construction (`<` with NaN is `false`). This is
+Java's own contract (JLS 15.20.1: NaN comparisons are all `false`), so the
+JVM was the outlier, not the reference.
+
+**Done (14/09, owner 192.168.100.18):** JVM uses `FCMPG`/`DCMPG` for `<`/`<=`
+and `FCMPL`/`DCMPL` for `>`/`>=` (`JvmOpEmitter` via
+`JvmLiteralEmitter.floatCmpIsG`/`condCmpIsG`); Native x86 fixed in
+`NativeX86Arith` (value path) and `NativeOpHelpers` (jump path) — the `setb`/`jb`
+of `LT` lacked the unordered guard that `LE`/`GE` already had. riscv/aarch
+already IEEE. Proof: `BackendParityTest.parityNanRelationalIeee` (JVM×JS) and
+`ComponentCoreE2ETest.nanRelationalIsIeeeOnAllTargets` (JVM+Native+JS, value and
+jump paths, Double and Float).
+
+### 2. §129 — cross-thread unwind in Native → **option B (frame per thread)**
+Give the Native unwinder a **per-thread exception frame** (not a single global
+`kof_exc_chain`, not TLS-by-TID-as-shared-chain): each thread owns its
+handler/frame chain, so a `throw` with no handler inside a `spawn` worker marks
+the worker's handle as exceptionally-complete instead of `longjmp`-ing out of
+the thread. Inspected from Java (per-thread exception state) and C
+(`setjmp`/`longjmp` frames are stack-local). Affects the shared runtime
+(`RuntimeDb4`/GC); the chain becomes thread-scoped. Unblocks **OTP S2-Native**
+(§129), whose gate is `OTP001` until this closes.
+
+### 3. `roundTo` — **implement, rational (inspired by Java + C)**
+Approved for implementation (the 13/09 `pow` ratification had left it open).
+Rational design, Java+C-inspired:
+- **C `round()` family** = round-half-away-from-zero (`round(2.5)=3`,
+  `round(-2.5)=-3`) — the C floor is the anchor for the *rounding mode*.
+- **Java `BigDecimal.setScale(n, RoundingMode.HALF_UP)`** = the anchor for the
+  *decimal scale* (rounding a `Double`/`Float` to N decimal places).
+- **Surface (Kof-idiomatic):** `math.roundTo(value, decimals)` returns the same
+  numeric type as `value`, `decimals` an `Int` (0 = integer rounding).
+  Deterministic: pure decimal scaling, no locale, no pattern DSL (same
+  precedent as `time.format`, §D-STDLIB). Cross-target golden cell.
+
+### 4. §179 — declared `kof.ui`/`kof.media` type → **option A (map the builtin)**
+`MemberResolver.resolveType`, after `qualifyDeep`, maps `ClassType("", name)`
+to `KofUi.constructorType(name)`/`KofMedia` when `name` is a builtin UI/media
+type **and** it was not resolved by an import/module class — **user shadowing
+is preserved** (a user class named `Label` still wins). Fixes the JVM
+`VerifyError` (`LLabel;` descriptor vs `int` handle) for declared
+var/param/field/return of UI/media types.
+
+**Done (14/09, owner 192.168.100.18):** the mapping lives in
+`CompilerTypes.qualifyDeep` (step 2b: after `simpleNamePackage` returns null and
+neither the module nor the `SymbolTable` declares the name), via
+`builtinDeclaredType` (`KofUi.typeByName` for every UI type + `KofMedia.IMAGE_DATA`)
+and the `unitDeclaresType` shadowing guard; `MemberResolver.resolveType` routes
+through `qualifyDeep`, and `StatementLowerer`'s `VarDeclStmt` now resolves with
+the semantic analyzer (the 2-arg `toType` skipped `qualifyDeep`, so a declared
+local kept the empty package). Proof: `ComponentCoreE2ETest.
+declaredUiAndMediaTypesCompileAndRun` + `userClassShadowsBuiltinUiTypeName`
+(JVM+Native+JS).
+
+### 5. `app.security()` → **inspired by Spring Security (option: framework model)**
+Refine the composite middleware to the **Spring Security mental model**, keeping
+the Kof surface idiomatic and the output deterministic:
+- **`HttpSecurity`-style chain:** the middleware order is fixed and
+  framework-owned (not hand-composed by the user) — the current fixed order
+  (rate-limit → CORS → headers → session → CSRF → auth → RBAC) is exactly
+  Spring's filter-chain idea.
+- **`authorizeHttpRequests`:** public paths are an **allow-list** of matchers;
+  everything not matched requires authentication. Reads are NOT implicitly
+  public: **the default is authenticated** (Spring's `anyRequest().authenticated()`),
+  with explicit `permitAll` matchers. This reverses the interim "reads public"
+  choice from the merge — the blog E2E sends the session token on its GETs.
+- **CSRF:** on by default for state-changing methods (Spring enables it by
+  default); safe methods issue the cookie. **Session:** header-token mode stays
+  (Kof has no servlet session), same "authenticated by default" rule.
+- **Native/JS:** remain an honest gap (`WEB006`).
+
+### 6. §180 — `println(double/float)` in Native x86 → **inspired by Java**
+Align the Native to **`Double.toString`/`Float.toString` (Java)**:
+shortest round-trip decimal, `Float` printed with its own shortest form (not
+the double expansion), Java's scientific-notation threshold (`1e7`→`1.0E7`,
+`1e-3`→`0.001`). Inspected from Java (Ryu/Grisu-style shortest representation;
+a bounded `%.{1..17}g`+`strtod` round-trip loop is an acceptable deterministic
+implementation) — no reinvention of the algorithm beyond what the JDK already
+defines. Cross-target golden cell (`floatprint`).
 
 ---
 

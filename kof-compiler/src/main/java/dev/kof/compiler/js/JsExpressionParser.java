@@ -77,7 +77,14 @@ boolean isIncTmpLoadAhead(MethodCtx ctx, int[] pos) {
 
 boolean isCompilerTemp(MethodCtx ctx, int index) {
         String raw = ctx.rawLocalNames.get(index);
-        return raw != null && raw.startsWith("#");
+        if (raw == null || !raw.startsWith("#")) return false;
+        // #scopedVar$... (#aadc0176) and #forInitVar / #forInVar (#75e38d35)
+        // are scope-exit renames of real user variables — they have a
+        // persistent binding throughout the enclosing scope and MUST be
+        // declared in JS. Dropping them causes ReferenceError (§201).
+        if (raw.startsWith("#scopedVar$")) return false;
+        if (raw.equals("#forInitVar") || raw.equals("#forInVar")) return false;
+        return true;
     }
 
 JsIr.JsExpression wrapStack(List<Object> stack) {
@@ -250,7 +257,7 @@ void consumeExpressionOp(MethodCtx ctx, int[] pos, List<Object> stack,
             }
             p.lc.registerRuntime("kofMultiArray");
             stack.add(new JsIr.JsNestedArray(sizes, JsTypeMapper.arrayFill(ma.baseType())));
-        } else if (op instanceof KofArrayLoad al) {
+        } else if (op instanceof KofArrayLoad _) {
             // KOF-SBD-001: bounds-checked read (raw JsIndex would inherit JS
             // array semantics — out-of-bounds returns `undefined` instead of
             // being rejected, diverging from the JVM's aaload/iaload/...).

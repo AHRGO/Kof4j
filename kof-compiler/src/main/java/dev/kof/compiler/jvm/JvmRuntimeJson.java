@@ -316,11 +316,22 @@ public final class JvmRuntimeJson {
                 private static Object kof_json_bind(Class<?> type, java.lang.reflect.Type generic, Object value) throws Exception {
                     if (value == null) return null;
                     if (type == String.class) return value instanceof String s ? s : String.valueOf(value);
-                    if (type == int.class || type == Integer.class || type == long.class || type == Long.class
-                            || type == byte.class || type == short.class || type == float.class || type == double.class
-                            || type == Number.class) {
-                        return value;
-                    }
+                    // Numéricos: COERGE ao tipo do alvo (H2 `identity` → Long
+                    // num record `Int` dava "argument type mismatch" na
+                    // reflexão do record — read path do blog E2E F12).
+                    if (type == int.class || type == Integer.class)
+                        return value instanceof Number n ? n.intValue() : Integer.parseInt(String.valueOf(value));
+                    if (type == long.class || type == Long.class)
+                        return value instanceof Number n ? n.longValue() : Long.parseLong(String.valueOf(value));
+                    if (type == byte.class || type == Byte.class)
+                        return value instanceof Number n ? n.byteValue() : Byte.parseByte(String.valueOf(value));
+                    if (type == short.class || type == Short.class)
+                        return value instanceof Number n ? n.shortValue() : Short.parseShort(String.valueOf(value));
+                    if (type == float.class || type == Float.class)
+                        return value instanceof Number n ? n.floatValue() : Float.parseFloat(String.valueOf(value));
+                    if (type == double.class || type == Double.class)
+                        return value instanceof Number n ? n.doubleValue() : Double.parseDouble(String.valueOf(value));
+                    if (type == Number.class) return value;
                     if (type == boolean.class || type == Boolean.class) {
                         return value instanceof Boolean b ? b : Boolean.parseBoolean(String.valueOf(value));
                     }

@@ -130,7 +130,6 @@ class FfiE2ETest {
             String javaHome = System.getProperty("java.home");
             ProcessBuilder pb = new ProcessBuilder(
                     Path.of(javaHome, "bin", "java").toString(),
-                    "--enable-preview",
                     "--enable-native-access=ALL-UNNAMED",
                     "-cp", outDir.toString(),
                     "Default.Main");

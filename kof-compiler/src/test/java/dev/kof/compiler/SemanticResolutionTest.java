@@ -675,4 +675,47 @@ class SemanticResolutionTest {
                 """);
         assertTrue(r.success(), "array deve compilar: " + r.diagnostics().getDiagnostics());
     }
+
+    // ---- bug 145: `for (var c in "abc")` era ACEITO e quebrava de um jeito
+    // por target (JVM VerifyError `arraylength` em String — a classe nem
+    // carregava; Native SIGSEGV; Script "Argument is not an array"; JS iterava
+    // chars em silêncio — divergência cross-target). `for-in` só itera
+    // List<T>/array no corpus (statements.md §5.4); SEM058 rejeita o resto em
+    // compile-time (família SEM054 do bug 103). Unknown/generic NÃO são
+    // flagados (podem ser List/array em runtime, SG-008). ----
+
+    @Test
+    void forInNonIterableRejected(@TempDir Path tmp) throws IOException {
+        String[] exprs = {
+            "var s = \"abc\"; for (var c in s) { println(c) }",
+            "var m = mapOf(\"a\", 1); for (var e in m) { println(e) }",
+            "var st = setOf(\"a\"); for (var e in st) { println(e) }",
+            "var n = 3; for (var x in n) { println(x) }" };
+        for (String e : exprs) {
+            CompilationResult r = compile(tmp, "e.kf", "main() { " + e + " }");
+            assertFalse(r.success(), "deve falhar: " + e);
+            boolean found = r.diagnostics().getDiagnostics().stream()
+                    .anyMatch(d -> "SEM058".equals(d.code()) && d.message().contains("for-in"));
+            assertTrue(found, "esperava SEM058 p/ '" + e + "', foi: "
+                    + r.diagnostics().getDiagnostics());
+        }
+    }
+
+    @Test
+    void forInListAndArrayStillCompiles(@TempDir Path tmp) throws IOException {
+        // List/array (as duas formas iteráveis do corpus) e List vinda de
+        // função (Unknown-element) não regridem (regra 1).
+        CompilationResult r = compile(tmp, "ok.kf", """
+                List<Int> mk() { return listOf(4, 5) }
+                main() {
+                    for (var x in listOf(1, 2)) { println(x) }
+                    var arr = new Int[2]
+                    arr[0] = 7
+                    for (var a in arr) { println(a) }
+                    for (var y in mk()) { println(y) }
+                }
+                """);
+        assertTrue(r.success(), "List/array não devem regredir: "
+                + r.diagnostics().getDiagnostics());
+    }
 }

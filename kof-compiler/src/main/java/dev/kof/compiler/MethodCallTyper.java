@@ -84,6 +84,25 @@ if (mc.receiver() != null && "toString".equals(mc.methodName()) && mc.arguments(
 // do tipo builtin (estático). Sem tipo aqui o concat após um
 // "s = s + String.valueOf(x)" aplicava box+valueOf duplicado
 // no resultado (frame crash — 3 valueOf na pilha)
+// #166: os `parse*` estáticos dos wrappers (`Int.parseInt`, `Long.parseLong`,
+// `Double.parseDouble`, `Boolean.parseBoolean`) caíam no ramo de `valueOf`
+// abaixo e tinham o retorno tipado como String → o JVM emitia
+// `Integer.parseInt(...)Ljava/lang/String;` (NoSuchMethodError). O retorno é
+// o primitivo correspondente; a sobrecarga com radix `(String, Int)` também.
+if (mc.receiver() instanceof IdentifierExpr srid && driver.findLocalVar(srid.name(), locals) == null
+        && switch (mc.methodName()) {
+            case "parseInt", "parseLong", "parseDouble", "parseFloat", "parseBoolean" -> true;
+            default -> false;
+        }
+        && (mc.arguments().size() == 1 || mc.arguments().size() == 2)) {
+    return switch (mc.methodName()) {
+        case "parseInt" -> Type.PrimitiveType.INT;
+        case "parseLong" -> Type.PrimitiveType.LONG;
+        case "parseFloat" -> Type.PrimitiveType.FLOAT;
+        case "parseBoolean" -> Type.PrimitiveType.BOOL;
+        default -> Type.PrimitiveType.DOUBLE;
+    };
+}
 if (mc.receiver() instanceof IdentifierExpr srid && mc.arguments().size() == 1
         && driver.findLocalVar(srid.name(), locals) == null
         && switch (srid.name()) {
@@ -352,7 +371,7 @@ if (mc.receiver() != null) {
     if (recvType instanceof Type.FunctionType ft) {
         return ft.returnType();
     }
-    if (CompilerTypes.isEnumType(recvType, driver.currentUnit) && "name".equals(mc.methodName()) && mc.arguments().isEmpty()) {
+    if (CompilerTypes.isEnumType(recvType, driver.currentUnit) && ("name".equals(mc.methodName()) || "toString".equals(mc.methodName())) && mc.arguments().isEmpty()) {
         return BuiltinTypes.STRING;
     }
     if (BuiltinTypes.isList(recvType) || BuiltinTypes.isMap(recvType) || BuiltinTypes.isSet(recvType) || Type.isString(recvType)) {

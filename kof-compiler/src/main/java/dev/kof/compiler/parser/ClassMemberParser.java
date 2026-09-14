@@ -37,7 +37,43 @@ public class ClassMemberParser {
             Parser.rejectFunctionKeyword(ctx);
             return new FieldDeclarationNode(ctx.pos(), List.of(), "Object", "error", null, annos);
         }
+        if (ctx.check(TokenType.LPAREN)) {
+            // Function type as field or method return type: `(Int) -> Int transform` (issue #218)
+            String type = TypeParser.parseTypeRef(ctx);
+            String name = ctx.expectId("Expected member name", "PARSE018");
+            if (ctx.check(TokenType.LPAREN)) {
+                ctx.advance();
+                List<FormalParameterNode> params = new ArrayList<>();
+                if (!ctx.check(TokenType.RPAREN)) {
+                    params.add(TypeParser.parseFormalParameter(ctx));
+                    while (ctx.check(TokenType.COMMA)) { ctx.advance(); params.add(TypeParser.parseFormalParameter(ctx)); }
+                }
+                ctx.expect(TokenType.RPAREN, "Expected ')' after parameters", "PARSE019");
+                String returnType = type;
+                if (ctx.check(TokenType.COLON)) {
+                    ctx.advance();
+                    returnType = TypeParser.parseTypeRef(ctx);
+                }
+                List<String> thrown = TypeParser.parseThrows(ctx);
+                return finishMethod(ctx, mods, annos, name, params, returnType, thrown);
+            }
+            FieldDeclarationNode f = (FieldDeclarationNode) parseField(ctx, mods, type, name);
+            return new FieldDeclarationNode(f.position(), f.modifiers(), f.type(), f.name(),
+                    f.initializer(), annos);
+        }
         if ((ctx.check(TokenType.IDENTIFIER) || ctx.check(TokenType.AWAIT) || ctx.check(TokenType.SPAWN)) && ctx.checkNext(TokenType.LPAREN)) {
+            // #142/#157/#164: construtor com o NOME DA CLASSE (forma Java,
+            // sem a keyword `constructor`). A gramática torna `constructor`
+            // opcional (`constructor-declaration = [ "constructor" ] , "("`);
+            // sem esta rota o membro virava um MÉTODO void homônimo
+            // (`public void Box(int)`) e o `new Box(42)` morria em
+            // `NoSuchMethodError: Box.<init>(int)`.
+            if (ctx.check(TokenType.IDENTIFIER) && ctx.currentClassName != null
+                    && ctx.peek().value().equals(ctx.currentClassName)) {
+                ConstructorDeclarationNode ctor = parseConstructor(ctx, mods);
+                return new ConstructorDeclarationNode(ctor.position(), ctor.modifiers(), ctor.name(),
+                        ctor.parameters(), ctor.thrownExceptions(), ctor.body(), annos);
+            }
             String name = ctx.advance().value();
             ctx.expect(TokenType.LPAREN, "Expected '('", "PARSE011");
             List<FormalParameterNode> params = new ArrayList<>();
@@ -59,8 +95,7 @@ public class ClassMemberParser {
                 TokenType.CHAR_TYPE, TokenType.STRING_TYPE, TokenType.VOID)) {
             // Campo ou método com tipo de retorno explícito: `Type name(...)`.
             // parseTypeRef cobre retornos genéricos (`Set<Int>`, `List<String>`,
-            // `Map<K,V>`) e nullable (`String?`) — o lookahead antigo de 2 tokens
-            // quebrava porque assumia retorno de um token só.
+            // `Map<K,V>`), nullable (`String?`) e primitive types.
             String type = TypeParser.parseTypeRef(ctx);
             String name = ctx.expectId("Expected member name", "PARSE018");
             if (ctx.check(TokenType.LPAREN)) {

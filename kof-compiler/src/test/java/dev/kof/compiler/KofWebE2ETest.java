@@ -367,8 +367,217 @@ class KofWebE2ETest {
                 "listen(String) deve dar SEM025, got: " + diagnostics);
     }
 
+    // ── D-SEC C18: app.security() — middleware composto ──────────────
+
+    private String headerLine(String rawResponse, String name) {
+        for (String line : rawResponse.split("\r\n")) {
+            int colon = line.indexOf(':');
+            if (colon > 0 && line.substring(0, colon).equalsIgnoreCase(name)) {
+                return line.substring(colon + 1).trim();
+            }
+        }
+        return null;
+    }
+
+    /** HS256 JWT no mesmo formato de {@code kof_sec_jwt_create} (para o teste
+     *  forjar credenciais sem depender de uma rota pública de emissão). */
+    private String hs256(String claimsJson, String secret) throws Exception {
+        java.util.Base64.Encoder b64 = java.util.Base64.getUrlEncoder().withoutPadding();
+        long now = System.currentTimeMillis() / 1000;
+        String head = claimsJson.substring(0, claimsJson.lastIndexOf('}')).trim();
+        String sep = head.isEmpty() || head.endsWith("{") ? "" : ",";
+        String payload = head + sep + "\"iat\":" + now + ",\"exp\":" + (now + 3600) + "}";
+        String headerB64 = b64.encodeToString(
+                "{\"alg\":\"HS256\",\"typ\":\"JWT\"}".getBytes(StandardCharsets.UTF_8));
+        String payloadB64 = b64.encodeToString(payload.getBytes(StandardCharsets.UTF_8));
+        javax.crypto.Mac mac = javax.crypto.Mac.getInstance("HmacSHA256");
+        mac.init(new javax.crypto.spec.SecretKeySpec(
+                secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+        String sig = b64.encodeToString(mac.doFinal(
+                (headerB64 + "." + payloadB64).getBytes(StandardCharsets.UTF_8)));
+        return headerB64 + "." + payloadB64 + "." + sig;
+    }
+
+    @Test
+    void securityHeadersByDefault(@TempDir Path tempDir) throws IOException {
+        int port = startServer(tempDir, """
+                main() {
+                    var app = web.app()
+                    app.security()
+                    app.get("/hello") { return "ok" }
+                    app.listen(PORT)
+                }
+                """);
+        String r = request(port, "GET /hello HTTP/1.1\r\nHost: x\r\n\r\n");
+        assertTrue(r.startsWith("HTTP/1.1 200 OK"), r);
+        assertEquals("ok", bodyOf(r));
+        assertNotNull(headerLine(r, "Content-Security-Policy"), r);
+        assertEquals("nosniff", headerLine(r, "X-Content-Type-Options"), r);
+        assertEquals("DENY", headerLine(r, "X-Frame-Options"), r);
+        assertEquals("no-referrer", headerLine(r, "Referrer-Policy"), r);
+        // HTTP simples (não TLS): HSTS não deve ser emitido.
+        assertNull(headerLine(r, "Strict-Transport-Security"), r);
+    }
+
+    @Test
+    void securityRequiresValidBearerWhenAuthEnabled(@TempDir Path tempDir) throws Exception {
+        int port = startServer(tempDir, """
+                main() {
+                    auth.secret("s3cret")
+                    var app = web.app()
+                    var o = mapOf()
+                    o.put("auth", true)
+                    app.security(o)
+                    app.get("/me") { return "hi " + auth.user() }
+                    app.listen(PORT)
+                }
+                """);
+        String noAuth = request(port, "GET /me HTTP/1.1\r\nHost: x\r\n\r\n");
+        assertTrue(noAuth.startsWith("HTTP/1.1 401 Unauthorized"), noAuth);
+        assertEquals("Bearer", headerLine(noAuth, "WWW-Authenticate"), noAuth);
+
+        String bad = request(port, "GET /me HTTP/1.1\r\nHost: x\r\nAuthorization: Bearer nope\r\n\r\n");
+        assertTrue(bad.startsWith("HTTP/1.1 401 Unauthorized"), bad);
+
+        String good = hs256("{\"sub\":\"u1\"}", "s3cret");
+        String ok = request(port, "GET /me HTTP/1.1\r\nHost: x\r\nAuthorization: Bearer " + good + "\r\n\r\n");
+        assertTrue(ok.startsWith("HTTP/1.1 200 OK"), ok);
+        assertEquals("hi u1", bodyOf(ok));
+    }
+
+    @Test
+    void securityRejectsInvalidTokenIfPresentEvenWithoutAuthRequired(@TempDir Path tempDir)
+            throws IOException {
+        // auth-if-present: sem `auth:true` uma credencial presente mas
+        // inválida NUNCA passa (evita "token ruim vira anônimo").
+        int port = startServer(tempDir, """
+                main() {
+                    auth.secret("s3cret")
+                    var app = web.app()
+                    app.security()
+                    app.get("/open") { return "public" }
+                    app.listen(PORT)
+                }
+                """);
+        String anonymous = request(port, "GET /open HTTP/1.1\r\nHost: x\r\n\r\n");
+        assertTrue(anonymous.startsWith("HTTP/1.1 200 OK"), anonymous);
+        String bad = request(port, "GET /open HTTP/1.1\r\nHost: x\r\nAuthorization: Bearer nope\r\n\r\n");
+        assertTrue(bad.startsWith("HTTP/1.1 401 Unauthorized"), bad);
+    }
+
+    @Test
+    void securityEnforcesRoles(@TempDir Path tempDir) throws Exception {
+        int port = startServer(tempDir, """
+                main() {
+                    auth.secret("s3cret")
+                    var app = web.app()
+                    var o = mapOf()
+                    o.put("roles", "admin")
+                    app.security(o)
+                    app.get("/admin") { return "secret" }
+                    app.listen(PORT)
+                }
+                """);
+        String noRole = hs256("{\"sub\":\"u1\",\"roles\":[\"user\"]}", "s3cret");
+        String forbidden = request(port,
+                "GET /admin HTTP/1.1\r\nHost: x\r\nAuthorization: Bearer " + noRole + "\r\n\r\n");
+        assertTrue(forbidden.startsWith("HTTP/1.1 403 Forbidden"), forbidden);
+
+        String admin = hs256("{\"sub\":\"u1\",\"roles\":[\"admin\"]}", "s3cret");
+        String ok = request(port,
+                "GET /admin HTTP/1.1\r\nHost: x\r\nAuthorization: Bearer " + admin + "\r\n\r\n");
+        assertTrue(ok.startsWith("HTTP/1.1 200 OK"), ok);
+        assertEquals("secret", bodyOf(ok));
+    }
+
+    @Test
+    void securityCorsDeniesUnknownOriginAndAnswersPreflight(@TempDir Path tempDir) throws IOException {
+        int port = startServer(tempDir, """
+                main() {
+                    var app = web.app()
+                    var o = mapOf()
+                    o.put("cors", "https://app.example")
+                    app.security(o)
+                    app.get("/x") { return "ok" }
+                    app.listen(PORT)
+                }
+                """);
+        String evil = request(port, "GET /x HTTP/1.1\r\nHost: x\r\nOrigin: https://evil.example\r\n\r\n");
+        assertTrue(evil.startsWith("HTTP/1.1 403 Forbidden"), evil);
+
+        String allowed = request(port,
+                "GET /x HTTP/1.1\r\nHost: x\r\nOrigin: https://app.example\r\n\r\n");
+        assertTrue(allowed.startsWith("HTTP/1.1 200 OK"), allowed);
+        assertEquals("https://app.example", headerLine(allowed, "Access-Control-Allow-Origin"), allowed);
+
+        String preflight = request(port, "OPTIONS /x HTTP/1.1\r\nHost: x\r\n"
+                + "Origin: https://app.example\r\nAccess-Control-Request-Method: POST\r\n\r\n");
+        assertTrue(preflight.startsWith("HTTP/1.1 204 No Content"), preflight);
+        assertNotNull(headerLine(preflight, "Access-Control-Allow-Methods"), preflight);
+    }
+
+    @Test
+    void securityCsrfDoubleSubmit(@TempDir Path tempDir) throws IOException {
+        int port = startServer(tempDir, """
+                main() {
+                    var app = web.app()
+                    var o = mapOf()
+                    o.put("csrf", true)
+                    app.security(o)
+                    app.post("/p") { return "posted" }
+                    app.listen(PORT)
+                }
+                """);
+        String blocked = request(port, "POST /p HTTP/1.1\r\nHost: x\r\nContent-Length: 0\r\n\r\n");
+        assertTrue(blocked.startsWith("HTTP/1.1 403 Forbidden"), blocked);
+
+        String token = "deadbeef";
+        String ok = request(port, "POST /p HTTP/1.1\r\nHost: x\r\n"
+                + "Cookie: csrf=" + token + "\r\nX-CSRF-Token: " + token + "\r\n"
+                + "Content-Length: 0\r\n\r\n");
+        assertTrue(ok.startsWith("HTTP/1.1 200 OK"), ok);
+        assertEquals("posted", bodyOf(ok));
+    }
+
+    @Test
+    void securityRateLimitByRemoteAddress(@TempDir Path tempDir) throws IOException {
+        int port = startServer(tempDir, """
+                main() {
+                    var app = web.app()
+                    var o = mapOf()
+                    o.put("rateLimit", "2/60")
+                    app.security(o)
+                    app.get("/r") { return "ok" }
+                    app.listen(PORT)
+                }
+                """);
+        assertTrue(request(port, "GET /r HTTP/1.1\r\nHost: x\r\n\r\n").startsWith("HTTP/1.1 200 OK"));
+        assertTrue(request(port, "GET /r HTTP/1.1\r\nHost: x\r\n\r\n").startsWith("HTTP/1.1 200 OK"));
+        String third = request(port, "GET /r HTTP/1.1\r\nHost: x\r\n\r\n");
+        assertTrue(third.startsWith("HTTP/1.1 429 Too Many Requests"), third);
+        assertEquals("60", headerLine(third, "Retry-After"), third);
+    }
+
+    @Test
+    void securityGapOnNativeAndJs(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("App.kf");
+        Files.writeString(source, """
+                main() {
+                    var app = web.app()
+                    app.security()
+                    app.listen(8100)
+                }
+                """);
+        for (Target target : new Target[] {Target.NATIVE, Target.JS}) {
+            CompilationResult result = driver.compile(source, tempDir.resolve("out-" + target), target);
+            var diagnostics = result.diagnostics().getDiagnostics();
+            assertTrue(diagnostics.stream().anyMatch(d -> d.code().equals("WEB006")),
+                    "app.security() deve dar WEB006 no " + target + ", got: " + diagnostics);
+        }
+    }
+
     // C18 (D-SEC, DECISIONS.md): app.security() middleware composto de ordem fixa
-    // rate-limit → cors → headers de segurança → session → csrf.
+    // rate-limit → cors → headers de segurança → session → csrf (lane .22).
     @Test
     void appSecurityPipelineE2E(@TempDir Path tempDir) throws IOException {
         int port = startServer(tempDir, """
@@ -378,6 +587,7 @@ class KofWebE2ETest {
                     app.security(opts)
                     app.get("/public") { return "public content" }
                     app.get("/secret") { return "secret content" }
+                    app.post("/secret") { return "secret content" }
                     app.listen(PORT)
                 }
                 """);
@@ -386,17 +596,21 @@ class KofWebE2ETest {
         String pub = request(port, "GET /public HTTP/1.1\r\nHost: x\r\n\r\n");
         assertTrue(pub.startsWith("HTTP/1.1 200 OK"), pub);
         assertEquals("public content", bodyOf(pub));
-        assertTrue(pub.contains("content-security-policy:"), pub);
-        assertTrue(pub.contains("x-content-type-options: nosniff"), pub);
-        assertTrue(pub.contains("x-frame-options: DENY"), pub);
+        assertNotNull(headerLine(pub, "Content-Security-Policy"), pub);
+        assertEquals("nosniff", headerLine(pub, "X-Content-Type-Options"), pub);
+        assertEquals("DENY", headerLine(pub, "X-Frame-Options"), pub);
 
-        // 2. Rota protegida sem header de auth é rejeitada com 401
-        String secNoAuth = request(port, "GET /secret HTTP/1.1\r\nHost: x\r\n\r\n");
+        // 2. Rota protegida fora de publicPaths sem credencial é rejeitada (401).
+        String readOpen = request(port, "GET /secret HTTP/1.1\r\nHost: x\r\n\r\n");
+        assertTrue(readOpen.startsWith("HTTP/1.1 401 Unauthorized"), readOpen);
+        String secNoAuth = request(port,
+                "POST /secret HTTP/1.1\r\nHost: x\r\nContent-Length: 0\r\n\r\n");
         assertTrue(secNoAuth.startsWith("HTTP/1.1 401 Unauthorized"), secNoAuth);
         assertTrue(bodyOf(secNoAuth).contains("unauthorized"), secNoAuth);
 
-        // 3. Rota protegida com token inválido é rejeitada com 401
-        String secBadAuth = request(port, "GET /secret HTTP/1.1\r\nHost: x\r\nauthorization: invalid-token\r\n\r\n");
+        // 3. Sessão presente mas inválida nunca passa.
+        String secBadAuth = request(port,
+                "GET /secret HTTP/1.1\r\nHost: x\r\nauthorization: invalid-token\r\n\r\n");
         assertTrue(secBadAuth.startsWith("HTTP/1.1 401 Unauthorized"), secBadAuth);
     }
 }

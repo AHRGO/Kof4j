@@ -26,6 +26,12 @@ public final class StringMethodRegistry {
             case "equals" -> argCount == 1 ? sig(BOOL, List.of(object)) : null;
             case "getClass" -> argCount == 0 ? sig(
                     new Type.ClassType("java.lang", "Class", List.of()), List.of()) : null;
+            // #163: `e.getMessage()` em variável de catch caía no fallback
+            // `()Object` (NoClassDefFoundError/noSuchMethod). São métodos de
+            // Throwable, cujo retorno o registro não conhecia.
+            case "getMessage", "getLocalizedMessage" ->
+                    argCount == 0 ? sig(BuiltinTypes.STRING, List.of()) : null;
+            case "getCause" -> argCount == 0 ? sig(object, List.of()) : null;
             default -> null;
         };
     }
@@ -69,6 +75,14 @@ public final class StringMethodRegistry {
             case "toFloat" -> argCount == 0 ? sig(Type.PrimitiveType.FLOAT, List.of()) : null;
             case "toUpperCase", "toLowerCase" -> argCount == 0 ? sig(str, List.of()) : null;
             case "replace" -> argCount == 2 ? replaceSignature(argTypes, str, CHAR, charSeq) : null;
+            // #147/#146/#158: métodos reais de java.lang.String que não estavam
+            // no registro — o retorno caía em Unknown → descritor JVM
+            // `()Object` (NoSuchMethodError / VerifyError / class name "").
+            case "replaceAll", "replaceFirst" -> argCount == 2 ? sig(str, List.of(str, str)) : null;
+            case "matches" -> argCount == 1 ? sig(BOOL, List.of(str)) : null;
+            case "toCharArray" -> argCount == 0 ? sig(new Type.ArrayType(CHAR), List.of()) : null;
+            case "compareTo" -> argCount == 1 ? sig(INT, List.of(str)) : null;
+            case "compareToIgnoreCase" -> argCount == 1 ? sig(INT, List.of(str)) : null;
             case "split" -> argCount == 1 ? sig(strArray, List.of(str))
                     : argCount == 2 ? sig(strArray, List.of(str, INT)) : null;
             default -> null;

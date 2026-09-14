@@ -16,7 +16,7 @@ public final class ExpressionLowerer {
             case LiteralExpr lit -> {
                 switch (lit.kind()) {
                     case ConcreteLiteralKind.INT -> ops.add(KofLoadLiteral.ofInt(driver.parseIntLiteral(lit.value())));
-                    case ConcreteLiteralKind.LONG -> ops.add(KofLoadLiteral.ofLong(Long.parseLong(driver.stripSuffix(lit.value()))));
+                    case ConcreteLiteralKind.LONG -> ops.add(KofLoadLiteral.ofLong(driver.parseLongLiteral(lit.value())));
                     case ConcreteLiteralKind.FLOAT -> ops.add(KofLoadLiteral.ofFloat(Float.parseFloat(driver.stripSuffix(lit.value()))));
                     case ConcreteLiteralKind.DOUBLE -> ops.add(KofLoadLiteral.ofDouble(Double.parseDouble(driver.stripSuffix(lit.value()))));
                     case ConcreteLiteralKind.STRING -> ops.add(KofLoadLiteral.ofString(lit.value()));
@@ -151,6 +151,18 @@ public final class ExpressionLowerer {
                     ops.add(new KofCall(BuiltinTypes.LIST, "kof_list_new", argTypes, BuiltinTypes.LIST, KofCallKind.FUNCTION));
                     yield localIdx;
                 }
+                // #139/#150 — `new Set<T>()`/`new Map<K,V>()` são COLEÇÕES
+                // (não classes JVM reais): baixam p/ kof_set_new/kof_map_new,
+                // como setOf/mapOf. Sem isto caíam em KofNewObject com o nome
+                // Kof (`kof/Set`/`kof/Map`) → NoClassDefFound/ClassFormatError.
+                if (BuiltinTypes.isSet(type)) {
+                    ops.add(new KofCall(type, "kof_set_new", List.of(), type, KofCallKind.FUNCTION));
+                    yield localIdx;
+                }
+                if (BuiltinTypes.isMap(type)) {
+                    ops.add(new KofCall(type, "kof_map_new", List.of(), type, KofCallKind.FUNCTION));
+                    yield localIdx;
+                }
                 List<Type> argTypes = new ArrayList<>();
                 for (ExpressionNode arg : ne.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
                 SymbolTable.ConstructorSymbol resolvedCtor = driver.semanticAnalyzer.getResolvedConstructor(ne);
@@ -254,8 +266,14 @@ public final class ExpressionLowerer {
                              ? driver.listElementType(recvType)
                              : (recvType instanceof Type.ClassType ct && ct.typeArguments().size() > 1
                                  ? ct.typeArguments().get(1) : Type.UnknownType.UNKNOWN);
+                     // #150: o param do get é o ÍNDICE (List → Int) ou a CHAVE
+                     // (Map → tipo da chave). Hardcodar INT boxava a chave String
+                     // como Integer → VerifyError (`Integer.valueOf(String)`).
+                     Type indexOrKey = BuiltinTypes.isList(recvType)
+                             ? Type.PrimitiveType.INT
+                             : BuiltinTypes.mapKey(recvType);
                      ops.add(new KofCall(recvType, fn,
-                             List.of(Type.PrimitiveType.INT), elem,
+                             List.of(indexOrKey), elem,
                              KofCallKind.INSTANCE));
                      yield localIdx;
                  }

@@ -487,4 +487,122 @@ class ComponentCoreE2ETest {
         assertEquals("5\n10\n1", runJs(tempDir, "store2", program),
                 "both components must be driven by the store");
     }
+
+    @Test
+    void declaredUiAndMediaTypesCompileAndRun(@TempDir Path tempDir) throws IOException {
+        // §179 (D-BACKEND-SEMANTICS #4): tipo kof.ui/kof.media DECLARADO
+        // (var/param/campo/retorno) — antes o descritor JVM saía `LLabel;`
+        // enquanto o valor do handle é int → VerifyError no load. Agora o
+        // builtin é resolvido quando nada mais resolve o nome.
+        String program = """
+            Label makeLabel() {
+                Label l = Label("x")
+                return l
+            }
+            main() {
+                Label l = makeLabel()
+                println("ok")
+            }
+            """;
+        Path source = tempDir.resolve("declui.kf");
+        Files.writeString(source, program);
+        runJvm(source, tempDir.resolve("jvm-declui"), "ok");
+        runNative(source, tempDir.resolve("native-declui"), "ok");
+        assertEquals("ok", runJs(tempDir, "declui", program),
+                "declared kof.ui type must run on JS too");
+    }
+
+    @Test
+    void nanRelationalIsIeeeOnAllTargets(@TempDir Path tempDir) throws IOException {
+        // §101 (D-BACKEND-SEMANTICS #1): todo relacional com NaN é false e
+        // `!=` é true (IEEE 754 / JLS 15.20.1). Cobre o caminho de VALOR e o
+        // de SALTO (if/else) nos 3 alvos — x86 usava `setb`/`jb` sem o guard
+        // de unordered (CF=1 no NaN) e dava `true`.
+        String program = """
+            Double nan(Double zero) {
+                return zero / zero
+            }
+            Float nanf(Float zero) {
+                return zero / zero
+            }
+            main() {
+                var n = nan(0.0)
+                println(n < 1.0)
+                println(n <= 1.0)
+                println(n > 1.0)
+                println(n >= 1.0)
+                println(n == 1.0)
+                println(n != 1.0)
+                println(n == n)
+                println(n != n)
+                println(1.0 < n)
+                println(1.0 <= n)
+                println(1.0 > n)
+                println(1.0 >= n)
+                var f = nanf(0.0f)
+                println(f < 1.0f)
+                println(f <= 1.0f)
+                println(f > 1.0f)
+                println(f >= 1.0f)
+                println(f == 1.0f)
+                println(f != 1.0f)
+                if (n < 1.0) { println(1) } else { println(0) }
+                if (n <= 1.0) { println(1) } else { println(0) }
+                if (n > 1.0) { println(1) } else { println(0) }
+                if (n >= 1.0) { println(1) } else { println(0) }
+                if (n == n) { println(1) } else { println(0) }
+                if (n != n) { println(1) } else { println(0) }
+                if (1.0 < n) { println(1) } else { println(0) }
+                if (1.0 > n) { println(1) } else { println(0) }
+            }
+            """;
+        String expected = """
+            false
+            false
+            false
+            false
+            false
+            true
+            false
+            true
+            false
+            false
+            false
+            false
+            false
+            false
+            false
+            false
+            false
+            true
+            0
+            0
+            0
+            0
+            0
+            1
+            0
+            0""";
+        both(tempDir, "nanrel", program, expected);
+        assertEquals(expected, runJs(tempDir, "nanrel", program),
+                "NaN relational must be IEEE on JS too");
+    }
+
+    @Test
+    void userClassShadowsBuiltinUiTypeName(@TempDir Path tempDir) throws IOException {
+        // §179: o shadowing do usuário é preservado — uma classe de módulo
+        // chamada `Label` vence o builtin kof.ui.Label.
+        String program = """
+            class Label {
+                String value
+                Label(String value) { this.value = value }
+                String get() { return this.value }
+            }
+            main() {
+                Label l = Label("meu")
+                println(l.get())
+            }
+            """;
+        both(tempDir, "shadow", program, "meu");
+    }
 }

@@ -125,6 +125,8 @@ public final class MemberResolver {
         // `import com.dev.NodeUI` precisa do pacote no ARG (senão o receiver
         // do `.get()` fica ClassType("","NodeUI") e o checkcast sai sem pacote
         // → NoClassDefFoundError). Idempotente; não toca builtin/enum/nome local.
+        // §179: qualifyDeep mapeia o builtin kof.ui/kof.media quando nada mais
+        // resolve o nome (preservando shadowing por import/classe do módulo).
         return CompilerTypes.qualifyDeep(qualifiedType(Type.of(name)), sa.unit(), sa);
     }
 
@@ -178,5 +180,52 @@ public final class MemberResolver {
             }
         }
         return null;
+    }
+
+    static boolean isBooleanType(Type t) {
+        if (t == Type.PrimitiveType.BOOL) return true;
+        if (t instanceof Type.ClassType ct) {
+            String n = ct.name();
+            String p = ct.packageName();
+            return ("Boolean".equals(n) || "Bool".equals(n)) && ("java.lang".equals(p) || p.isEmpty());
+        }
+        return false;
+    }
+
+    static boolean isBooleanExhaustive(List<SwitchExprCase> cases) {
+        boolean hasTrue = false;
+        boolean hasFalse = false;
+        for (SwitchExprCase sc : cases) {
+            if (sc.value() instanceof LiteralExpr l && l.kind() == ConcreteLiteralKind.BOOLEAN) {
+                if ("true".equals(l.value())) hasTrue = true;
+                if ("false".equals(l.value())) hasFalse = true;
+            }
+        }
+        return hasTrue && hasFalse;
+    }
+
+    static void checkSwitchExprExhaustiveness(SemanticAnalyzer sa, SwitchExpr se, Type subjectType) {
+        if (isBooleanType(subjectType)) {
+            if (!isBooleanExhaustive(se.cases())) {
+                sa.reportError(se, "switch expressão sobre Boolean não cobre todos os valores (true e false)", "SEM032");
+            }
+            return;
+        }
+        if (subjectType instanceof Type.ClassType sct && sct.packageName().isEmpty() && sa.unit() != null) {
+            java.util.Set<String> covered = new java.util.HashSet<>();
+            for (SwitchExprCase sc : se.cases()) {
+                String cn = enumConstantOfExpr(sa.unit(), sc.value());
+                if (cn != null) covered.add(cn);
+            }
+            List<String> constants = enumConstantsOf(sa.unit(), sct.name());
+            List<String> missing = constants.stream().filter(c -> !covered.contains(c)).toList();
+            if (!missing.isEmpty()) {
+                sa.reportError(se, "switch expressão sobre '" + sct.name()
+                        + "' não cobre: " + String.join(", ", missing)
+                        + " (adicione default ou os casos faltantes)", "SEM032");
+            }
+        } else {
+            sa.reportError(se, "switch expressão exige 'default' (ou exaustividade de enum)", "SEM032");
+        }
     }
 }

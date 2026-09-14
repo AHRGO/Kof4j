@@ -96,8 +96,10 @@ public final class StatementAnalyzer {
                 for (CatchClause cc : tryStmt.catchClauses()) {
                     SymbolTable catchScope = scope.enterScope();
                     if (cc.exceptionName() != null) {
-                        Type excType = "String".equals(cc.exceptionType()) ? BuiltinTypes.STRING
-                                : Type.of(cc.exceptionType());
+                        // #163: `catch (RuntimeException e)` precisa do tipo
+                        // qualificado (java.lang) para o dispatch de método e
+                        // o descriptor JVM não saírem `LRuntimeException;`.
+                        Type excType = CompilerTypes.exceptionType(cc.exceptionType(), sa.unit());
                         catchScope.define(new SymbolTable.LocalVariableSymbol(cc.exceptionName(), excType, 0));
                     }
                     for (StatementNode s : cc.body()) analyzeStatement(sa, s, catchScope, returnType);
@@ -168,10 +170,9 @@ public final class StatementAnalyzer {
                     }
                 }
             }
-            case BreakStmt ignored -> {}
-            case ContinueStmt ignored -> {}
+            case BreakStmt _ -> {}
+            case ContinueStmt _ -> {}
             case IfStmt ifStmt -> {
-                Type condType = SemExpressionTyper.inferType(sa, ifStmt.condition(), scope);
                 // Nullability narrowing (SG-005):
                 //   if (x != null) → x: T no THEN
                 //   if (x == null) → x: T no ELSE
@@ -188,6 +189,12 @@ public final class StatementAnalyzer {
                     analyzeStatement(sa, ifStmt.elseBranch(), elseScope, returnType);
                 } else {
                     analyzeStatement(sa, ifStmt.thenBranch(), ifScope, returnType);
+                    // a892b3c5 (lane CodeQL) removeu esta linha junto com a var
+                    // `condType` marcada como unread — mas ela NÃO era unread:
+                    // sem analisar o ELSE, os tipos das expressões do ramo else
+                    // não entram em sa.expressionTypes() e o lowering JVM gera
+                    // frames inválidos (Supervisor.lacoUnico: AIOOBE em
+                    // COMPUTE_FRAMES). Restaurado (fix-forward, regra 8).
                     if (ifStmt.elseBranch() != null) analyzeStatement(sa, ifStmt.elseBranch(), scope, returnType);
                 }
             }
@@ -226,6 +233,19 @@ public final class StatementAnalyzer {
                     elemType = ct.typeArguments().get(0);
                 } else if (collType instanceof Type.ArrayType at) {
                     elemType = at.componentType();
+                } else if (sa.diagnostics() != null && isNonIterableForIn(collType)) {
+                    // bug 145 (espelha o bug 103/SEM054): `for (var c in "abc")`
+                    // era ACEITO e quebrava de um jeito em cada target — JVM
+                    // VerifyError `arraylength` em String (a classe nem carrega),
+                    // Native SIGSEGV, Script "Argument is not an array" e JS
+                    // iterava chars em silêncio (divergência cross-target, R6).
+                    // `for-in` só itera List<T>/array; rejeitar em compile-time.
+                    SourcePosition pos = fis.position();
+                    sa.diagnostics().error(pos != null ? pos.file() : "",
+                            pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0,
+                            "`for-in` só itera sobre `List<T>` ou array em Kof; para String use "
+                                    + "`s.charAt(i)` num loop numérico",
+                            "SEM058");
                 }
                 forScope.define(new SymbolTable.LocalVariableSymbol(fis.varName(), elemType, 0));
                 analyzeStatement(sa, fis.body(), forScope, returnType);
@@ -375,5 +395,21 @@ public final class StatementAnalyzer {
             case "==" -> elseNarrow.add(narrowed);
             default -> {}
         }
+    }
+
+    /**
+     * bug 145: `for-in` só itera `List<T>` ou array. Tipos conhecidamente NÃO
+     * iteráveis (String, primitivos, Map/Set, record/classe) são rejeitados em
+     * compile-time (SEM058) em vez de virar bytecode inválido/lixo cross-target.
+     * `Unknown`/`TypeVariable`/`Nullable` de coleção NÃO são flagados — podem
+     * ser List/array em runtime (SG-008) ou genérico.
+     */
+    static boolean isNonIterableForIn(Type t) {
+        if (t instanceof Type.NullableType nt) t = nt.inner();
+        if (t instanceof Type.ArrayType) return false;
+        if (t instanceof Type.UnknownType) return false;
+        if (t instanceof Type.TypeVariable) return false;
+        if (BuiltinTypes.isList(t)) return false;
+        return true;
     }
 }

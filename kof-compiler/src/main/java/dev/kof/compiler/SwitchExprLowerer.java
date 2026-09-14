@@ -152,7 +152,8 @@ public final class SwitchExprLowerer {
             if (fieldType instanceof Type.UnknownType) fieldType = BuiltinTypes.STRING;
             ops.add(new KofLoadLocal(patType, castTmp));
             ops.add(new KofLoadField(patType, fieldName, fieldType));
-            int varIdx = localIdx++;
+            int varIdx = localIdx;
+            localIdx += TypeMetrics.isDoubleWidth(fieldType) ? 2 : 1;
             locals.add(new IRLocalVariable(varIdx, fieldVar, fieldType));
             ops.add(new KofStoreLocal(fieldType, varIdx));
         }

@@ -13,7 +13,7 @@ architecture changes (refactoring, new backend), the **language does not change*
 
 ## 1. Overview
 
-![alt text](image.png)
+![Kof compiler architecture — workflow diagram](../image.png)
 
 **Related Maven modules:**
 

@@ -49,6 +49,20 @@ class KofEnumTest {
     }
 
     @Test
+    void enumForInValuesMethodCallsJvm(@TempDir Path tmp) throws Exception {
+        // Issue #165 — for-in over EnumType.values() method calls (name() / toString())
+        runJvm(tmp, """
+                enum Color { RED, GREEN, BLUE }
+                main() {
+                    for (var c in Color.values()) {
+                        println(c.name())
+                        println(c.toString())
+                    }
+                }
+                """, "RED\nRED\nGREEN\nGREEN\nBLUE\nBLUE");
+    }
+
+    @Test
     void enumTypeSafetyJvm(@TempDir Path tmp) throws Exception {
         // constante desconhecida deve falhar (SEM/field não resolvido)
         Path file = tmp.resolve("Main-" + System.nanoTime() + ".kf");
