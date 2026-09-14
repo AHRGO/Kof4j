@@ -8,7 +8,7 @@
 > fmt/check/lsp` — delegam à CLI, §15) e `README.txt` com o passo LSP4IJ
 > manual abaixo. O plugin oficial continua sendo um **subprojeto próprio**
 > (IntelliJ Platform / Gradle), rastreado na issue **#1** e no plano
-> `docs/development/plan-editor-integration.md` (§21).
+> `docs/tooling/PLAN-EDITOR-INTEGRATION.md` (§21).
 
 ## O que já funciona hoje (manual)
 

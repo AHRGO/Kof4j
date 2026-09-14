@@ -6587,12 +6587,23 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   `qemu-riscv64` do mesmo binário pendurou >5 min e precisou ser morto a
   `-9`. DETERMÍNISTICO (2/2). Não é flake de host: é loop/bloqueio no
   caminho double do S13b sob riscv.
-- **Hipótese (não confirmada — fora da minha lane):** o wrapper S13b
-  (`dc9e0875`, B41 com handler no `exc_chain` sobre B30/B31) tem a face
-  DOUBLE com caminho de exceção/default errado no cross — possivelmente a
-  MESMA família do §175 (`84c1e651`, `"".toDouble()` lança nos 5 alvos) que
-  o S13b engole mal na rota double. O JVM/Script/js passam; só riscv (e
-  possivelmente aarch) morrem.
+- **Causa raiz (parcial, lida no código — `NativeRiscvAsmRtB41.java`):** o
+  TEMPLATE do wrapper usa o MESMO slot duas vezes: `sd t2, 24(sp)` salva o
+  chain antigo do handler, e logo `sd a1, 24(sp)` grava o DEFAULT no MESMO
+  offset (o frame é de 48B com ra@40/s0@32 e handler@0..24 — não sobra slot
+  pro default). Consequência mecânica: (a) no sucesso E no handler, `ld t2,
+  24(sp)` restaura `kof_exc_chain` com os BITS DO DEFAULT, não o chain
+  antigo — a chain global fica lixo entre calls (ex.: default `-1` → chain
+  = -1); (b) QUALQUER throw fora do wrapper com chain corrompido faz o
+  desempacotador (`ld handler, 0(t2)`) ler endereço inválido → trap sem
+  handler → hang/`SIGSEGV` sob qemu. A face DOUBLE (9ª linha do vetor) é
+  onde o programa encontra o caminho que trava (throw com chain pré-corrompido);
+  o Int/Long 'sobrevive' porque cada wrapper reinstala o próprio frame antes
+  de tocar a chain. JVM/Script/JS/x86 não têm este template (usa try/catch
+  host-side) — daí só riscv/aarch falharem. **Fix na lane nat:** slot
+  separado pro default (frame 56B ou mover ra/s0) — a causa do hang exato
+  (por que a 9ª e não a 3ª) pede `gdb-multiarch`/qemu -singlestep no binário
+  do menor repro; o aliasing é bug REAL independentemente dele.
 - **Menor repro:** `main(){ println(math.parseDoubleOrDefault("2.5", 0.0)
   == 2.5) }` compilado p/ `NATIVE_RISCV64`, rodado sob qemu → esperar
   `true`/`ec 0`.

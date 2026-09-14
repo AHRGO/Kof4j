@@ -1,18 +1,41 @@
 #!/usr/bin/env bash
 #
-# pre-commit — documentacao bilingue: reaplica/restaura o idioma da maquina.
-# No-op durante rebase/merge/cherry-pick (mexer na arvore ali quebra o git).
+# pre-commit — documentacao bilingue: protege contra perda de trabalho.
+#
+# Na maquina PT o canônico X.md aparece sobreposto (skip-worktree). Se alguem
+# editou esse arquivo visivel, a edicao nao esta em X.pt_BR.md e seria perdida
+# silenciosamente (skip-worktree faz o git ignora-la). Este hook RECUSA o commit
+# nesse caso, mandando a pessoa gravar a edicao no par correto.
+#
+# No-op durante rebase/merge/cherry-pick.
 root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
 [ -x "$root/scripts/docs-lang.sh" ] || exit 0
 for marker in rebase-merge rebase-apply MERGE_HEAD CHERRY_PICK_HEAD REVERT_HEAD; do
     [ -e "$root/.git/$marker" ] && exit 0
 done
-"$root/scripts/docs-lang.sh" restore >/dev/null 2>&1 || true
-# PACTO DE AGREGAÇÃO (14/09, ordem da mantenedora): bloqueia commit com
-# marcador de conflito / whitespace error no staged (precedente 14/09:
-# rebase entre lanes commitou `<<<<<<<`). Bypass: --no-verify + motivo no DOING.
-if ! git diff --cached --check --; then
-    echo "pre-commit: marcadores de conflito / whitespace errors no staged. Resolva e tente de novo." >&2
+
+cd "$root" || exit 0
+dirty=""
+while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    case "$f" in
+        *.pt_BR.md) continue ;;
+        *.md) ;;
+        *) continue ;;
+    esac
+    pt="${f%.md}.pt_BR.md"
+    [ -f "$pt" ] || continue
+    git ls-files -v -- "$f" 2>/dev/null | grep -q '^S' || continue
+    if ! cmp -s -- "$f" "$pt"; then
+        dirty="$dirty  $f
+"
+    fi
+done < <(git ls-files -v 2>/dev/null | awk '$1=="S"{print $2}')
+
+if [ -n "$dirty" ]; then
+    printf '\ndocs-i18n: commit RECUSADO — documento(s) sobreposto(s) com edicao nao salva no par:\n' >&2
+    printf '%s' "$dirty" >&2
+    printf 'Grave a edicao em X.pt_BR.md (o canônico X.md e o espelho em ingles).\n\n' >&2
     exit 1
 fi
 exit 0

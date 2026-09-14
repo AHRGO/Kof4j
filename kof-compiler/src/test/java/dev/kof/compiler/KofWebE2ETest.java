@@ -575,4 +575,42 @@ class KofWebE2ETest {
                     "app.security() deve dar WEB006 no " + target + ", got: " + diagnostics);
         }
     }
+
+    // C18 (D-SEC, DECISIONS.md): app.security() middleware composto de ordem fixa
+    // rate-limit → cors → headers de segurança → session → csrf (lane .22).
+    @Test
+    void appSecurityPipelineE2E(@TempDir Path tempDir) throws IOException {
+        int port = startServer(tempDir, """
+                main() {
+                    var app = web.app()
+                    var opts = mapOf("sessionHeader", "authorization", "publicPaths", "/public,/login")
+                    app.security(opts)
+                    app.get("/public") { return "public content" }
+                    app.get("/secret") { return "secret content" }
+                    app.post("/secret") { return "secret content" }
+                    app.listen(PORT)
+                }
+                """);
+
+        // 1. Rota pública responde 200 sem credencial + injeta security headers
+        String pub = request(port, "GET /public HTTP/1.1\r\nHost: x\r\n\r\n");
+        assertTrue(pub.startsWith("HTTP/1.1 200 OK"), pub);
+        assertEquals("public content", bodyOf(pub));
+        assertNotNull(headerLine(pub, "Content-Security-Policy"), pub);
+        assertEquals("nosniff", headerLine(pub, "X-Content-Type-Options"), pub);
+        assertEquals("DENY", headerLine(pub, "X-Frame-Options"), pub);
+
+        // 2. Rota protegida fora de publicPaths sem credencial é rejeitada (401).
+        String readOpen = request(port, "GET /secret HTTP/1.1\r\nHost: x\r\n\r\n");
+        assertTrue(readOpen.startsWith("HTTP/1.1 401 Unauthorized"), readOpen);
+        String secNoAuth = request(port,
+                "POST /secret HTTP/1.1\r\nHost: x\r\nContent-Length: 0\r\n\r\n");
+        assertTrue(secNoAuth.startsWith("HTTP/1.1 401 Unauthorized"), secNoAuth);
+        assertTrue(bodyOf(secNoAuth).contains("unauthorized"), secNoAuth);
+
+        // 3. Sessão presente mas inválida nunca passa.
+        String secBadAuth = request(port,
+                "GET /secret HTTP/1.1\r\nHost: x\r\nauthorization: invalid-token\r\n\r\n");
+        assertTrue(secBadAuth.startsWith("HTTP/1.1 401 Unauthorized"), secBadAuth);
+    }
 }

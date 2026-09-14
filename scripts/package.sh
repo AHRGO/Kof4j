@@ -7,14 +7,14 @@
 #     bin/kof, bin/kof.bat
 #     lib/kof.jar
 #     tooling/  editor/  docs/  LICENSE  VERSION
-#     jdk/                  (only with --jdk: embedded OpenJDK 21)
+#     jdk/                  (only with --jdk: embedded OpenJDK 25)
 #   kof-<version>-<os>-<arch>.tar.gz | .zip
 #   SHA256SUMS
 #
 # Usage:
 #   scripts/package.sh [--jdk] [--output <dir>] [--skip-build]
 #
-# The embedded JDK is downloaded from Adoptium (Eclipse Temurin 21) — the
+# The embedded JDK is downloaded from Adoptium (Eclipse Temurin 25) — the
 # Tooling API baseline. It is only fetched when --jdk is passed, so a local
 # package build stays fast.
 set -euo pipefail
@@ -109,7 +109,7 @@ cp -r "$ROOT/docs/distribution/." "$DIST_DIR/docs/distribution/" 2>/dev/null || 
 cp "$ROOT/docs/distribution/LICENSING.md" "$DIST_DIR/docs/" 2>/dev/null || true
 
 if [ "$WITH_JDK" = true ]; then
-    echo "package: fetching embedded OpenJDK 21 (Temurin) for $TARGET ..."
+    echo "package: fetching embedded OpenJDK 25 (Temurin) for $TARGET ..."
     case "$OS" in
         linux)  JDK_OS="linux"; JDK_EXT="tar.gz" ;;
         macos)  JDK_OS="mac";   JDK_EXT="tar.gz" ;;
@@ -117,7 +117,7 @@ if [ "$WITH_JDK" = true ]; then
         *) echo "package: no JDK mapping for $OS — skipping embedded JDK" >&2 ;;
     esac
     if [ -n "${JDK_OS:-}" ]; then
-        URL="https://api.adoptium.net/v3/binary/latest/21/ga/$JDK_OS/$JDK_ARCH/jdk/hotspot/normal/eclipse"
+        URL="https://api.adoptium.net/v3/binary/latest/25/ga/$JDK_OS/$JDK_ARCH/jdk/hotspot/normal/eclipse"
         TMP_JDK="$OUT/.jdk-download.$JDK_EXT"
         curl -fL --retry 3 -o "$TMP_JDK" "$URL"
         mkdir -p "$DIST_DIR/jdk"

@@ -71,6 +71,18 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > codigo Kof NAO sao traduzidos (so prosa/titulos/rotulos). Nao tocar `nat/`,
 > nem lanes de bugs/feature de outros donos.
 >
+> **STATUS i18n medido 14/09 (~05:40, dono = 192.168.100.17):** cobertura de
+> par PT = **214/214 (100%)**; switcher pendente = **6** (todos os demais já
+> comutaram no lote resgatado `11780dc1`): `AGENTS.md`, `CHANGELOG.md`,
+> `docs/bugs-and-gaps/known-bugs.md`, `docs/bugs-and-gaps/conformance-matrix.md`,
+> `docs/status.md`, `docs/development/future/PLAN-UNIVERSAL-PLATFORM.md` — os
+> **meta-vivos** da repo (8k+ linhas editadas por TODAS as lanes todo dia).
+> Traduzi-los AGORA = colisão garantida com todas as lanes durante a
+> estabilização da release (a meta atual). **Plano:** manter os canônicos
+> desses 6 em PT até o corte da release; pós-release, um lote dedicado os
+> traduz para EN + insere o switcher (a paridade `check` fecha 0). Não é
+> esquecimento: é ordem de prioridade da mantenedora (estabilizar → i18n).
+>
 > **⚠️ CUIDADO (14/09 ~01:30, dono = 192.168.100.18):** este commit carrega
 > wips de OUTRAS lanes resgatados do working tree compartilhado (regra 8 —
 > commitar tudo, nunca descartar): **UIW050-JS** (`kofUiEventValue/Key/X/Y/
@@ -82,6 +94,27 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO CodeQL testes-fora-do-scan (14/09 ~05:10, dono = 192.168.100.22,
+> lane repo-hygiene): 495→270.** (a) commit `804a03ea`: `.github/codeql/
+> kof4j-config.yml` (security-and-quality + `paths-ignore: "**/src/test/**"`;
+> workflow `queries:`→`config-file:`) + **132 dismissals `used in tests`**
+> (relative-path ×87, concat-cmd ×2, trustmanager/TLS-localhost ×1,
+> input-resource-leak ×5, +quality triviais) — harnesses invocam java/gcc/qemu/CLI
+> com Strings proprias do teste (PATH fake DetectContext, @TempDir); trust-all
+> LOCAL e o contrato do teste TLS self-signed. Scan 34820186056 confirmou o
+> config carregado. (b) commit `c669990f` seguranca main: comparison-with-wider-
+> type ×2 (KofJsRunner loop int→long getArrayElement(long); LspServer.offsetOf
+> 'l'→long) + random-used-once ×2 (SecureRandom static final) — LspServerTest
+> 19/19, compila OK. (c) Os **270 restantes = 100% src/main**: local-var ×82,
+> unused-param ×81, NF-exception ×23, chained-type ×21, useless-null ×11, IRE ×11,
+> indent ×10, deref-null ×8, +~24. **bloqueio (regra 6):** fix 100%-seguro
+> p/ local-var-never-read (unnamed pattern `_`, JEP 443) NAO compila no baseline
+> `--release 21` (medido: javac recusa); sem bump, reestruturar caso-a-caso.
+> unused-param idem (remover parametro = mudar assinatura/fronteira contrato).
+> **PROXIMO PASSO (esta lane):** continuar degraus por arquivo LIVRE (checar dono
+> + issue #185): deref-null/IOB/NF-exception (bugs reais, um teste cada); seg
+> main restante KofJsWebview relative-path ×3 + temp-path KofInterpreter ×1.
+> Testar antes de tocar: `git log --oneline -5 -- <arq>`.
 > **✅ FEITO degrau-4 (14/09, dono = 192.168.100.22, lane repo-hygiene):
 > unused-container write-only ×3 removidos (zero efeito observável).**
 > (a) JdwpClient:178 — lista `methods` só append, retorno usa o id;
@@ -3172,6 +3205,8 @@ Tier 1 ⇒ fechado ⇒ Tiers 2–12 (plataforma universal) abrem.
 
 - **≤500 linhas por classe** (refactor futuro de NativeRuntime: módulo novo por área, ex: `NativeHttpRuntime.java`).
 - Nunca duas frentes no mesmo arquivo gigante ao mesmo tempo — se for inevitável, combine no chat antes.
+- **Sem trocar de branch toda hora; nunca renomear branch compartilhada** (14/09, ordem da mantenedora): tudo entra pela `beta-*` ativa; `tmp-*` local nunca vira ref remota nem renomeia `beta/main` por baixo dos outros.
+- **Overlay i18n nunca apaga edição viva** (14/09, bug real corrigido em `scripts/docs-lang.sh`): o guard usava `git diff --quiet`, cego com skip-worktree — agora compara hash do worktree com o índice.
 - **Congelamento de comportamento** (AGENTS.md, obrigatório): zero regressão (suíte **910** é gate de merge), features novas **aditivas** (retrocompatibilidade), refactor de 500 linhas preserva semântica (mesma suíte + golden E2E; output mudou = bug do refactor), bugs em `docs/known-bugs.md` são corrigidos **no código** para atingir o comportamento previsto (nunca "documentar em volta"), paridade JVM/Native/JS é regra.
 
 ## Incidentes de processo (bronca registrada — 03/09, agente-switch-expr)

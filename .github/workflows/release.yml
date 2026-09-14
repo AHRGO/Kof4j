@@ -27,11 +27,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up JDK 21 (Tooling API baseline)
+      - name: Set up JDK 25 (Tooling API baseline)
         uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: '25'
 
       - name: Test + package (gate; golden/integration scripts need the CLI jar)
         run: mvn clean package
@@ -120,11 +120,11 @@ jobs:
           # (pré-bump) e o pacote saíria com a versão anterior.
           ref: ${{ needs.test-and-bump.outputs.bump_sha }}
 
-      - name: Set up JDK 21 (Tooling API baseline)
+      - name: Set up JDK 25 (Tooling API baseline)
         uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: '25'
 
       - name: Build
         run: mvn clean package -DskipTests

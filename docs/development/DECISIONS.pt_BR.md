@@ -129,8 +129,24 @@ o Application Model** (a ordem só faz sentido com `app.use`):
 > (`path/domain/maxAge/expires/sameSite/secure/httpOnly`). **Native segue gap
 > honesto SECN006** (mesmo precedente SECN000/002). Testes `KofSecurityTest`
 > 39/39 (cookieSetDefaults/opts/get Jvm+Js, roundtrip JVM→JS, SECN006 cross).
-> **`app.security()` (C18) ainda NÃO implementado** — depende do middleware
-> `app.use` do app model (I2), que é a próxima unidade desta frente.
+> **✅ EXECUTADO (14/09, degrau 4 — dono 192.168.100.22):**
+> `app.security([opts])` (C18) implementado no runtime JVM (`WebApp` fields +
+> `kof_web_security` + `kof_web_security_pipeline` em `JvmRuntimeWebDispatch`).
+> Ordem fixa ratificada: rate-limit → cors → security headers (CSP/HSTS/nosniff/frame/referrer)
+> → session (authHeader + publicPaths) → csrf. Prova: `KofWebE2ETest#appSecurityPipelineE2E`
+> + validação E2E completa no `KofBlogE2ETest`.
+
+> **✅ MESCLADO (14/09, dono 192.168.100.18): as duas implementações de C18 foram
+> unificadas como superconjunto** (pacto de agregação — nenhum lado descartado).
+> A API da `.22` (`rateLimit` Number, `corsOrigin`, `sessionHeader`,
+> `publicPaths`) e a da `.18` (`headers`, `cors`, `rateLimit` String, `csrf`,
+> `auth`, `roles`) agora vivem num único `kof_web_security`/`kof_web_security_opts`
+> + um pipeline (rate-limit → cors → headers → session → csrf → auth → RBAC)
+> gravando headers de resposta em `KOF_SEC_RESPONSE_HEADERS`. Sessão é exigida em
+> mutações (leituras públicas; header de sessão inválido nunca passa);
+> `auth`/`roles` exigem Bearer JWT válido. Prova: `KofWebE2ETest` 22/22 +
+> `KofBlogE2ETest` 1/1 + `KofOAuthResourceServerTest` 4/4 + `KofSecurityTest`
+> 41/41 = 68/0/0.
 
 > **✅ EXECUTADO (14/09, degrau 3 completo — dono 192.168.100.18):**
 > `app.security()` (C18) implementado em **JVM** (`kof_web_security` /

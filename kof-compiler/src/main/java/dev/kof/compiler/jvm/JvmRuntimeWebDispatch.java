@@ -90,27 +90,16 @@ public final class JvmRuntimeWebDispatch {
                             kof_web_sec_header("Strict-Transport-Security", kof_sec_hsts_header());
                         }
                     }
-                    // 4. session: header de auth obrigatório para MUTAÇÕES
-                    //    (POST/PUT/PATCH/DELETE) fora dos prefixos públicos
-                    //    (login/health). Leituras (GET/HEAD/OPTIONS) são
-                    //    públicas; se trouxerem o header, ele é validado
-                    //    (sessão inválida nunca passa).
+                    // 4. session: header de auth obrigatório fora dos prefixos
+                    //    públicos (login/health). Sem header → 401; header
+                    //    presente mas sessão inválida → 401 (nunca passa).
                     if (app.securityAuthHeader != null) {
-                        boolean safe = "GET".equals(req.method)
-                                || "HEAD".equals(req.method)
-                                || "OPTIONS".equals(req.method);
-                        String tok = req.headers.get(app.securityAuthHeader);
-                        if (safe) {
-                            if (tok != null && !tok.isBlank()
-                                    && kof_sec_session_get(tok) == null) {
-                                return kof_web_build(401, "Unauthorized",
-                                        "{\\"error\\":\\"unauthorized\\"}");
-                            }
-                        } else {
-                            boolean isPublic = app.securityPublicPaths.stream()
-                                    .anyMatch(p -> req.path.equals(p) || req.path.startsWith(p));
-                            if (!isPublic && (tok == null || tok.isBlank()
-                                    || kof_sec_session_get(tok) == null)) {
+                        boolean isPublic = app.securityPublicPaths.stream()
+                                .anyMatch(p -> req.path.equals(p) || req.path.startsWith(p));
+                        if (!isPublic) {
+                            String tok = req.headers.get(app.securityAuthHeader);
+                            if (tok == null || tok.isBlank()
+                                    || kof_sec_session_get(tok) == null) {
                                 return kof_web_build(401, "Unauthorized",
                                         "{\\"error\\":\\"unauthorized\\"}");
                             }
@@ -240,16 +229,14 @@ public final class JvmRuntimeWebDispatch {
                             if (route.kind != RouteKind.HTTP) {
                                 KOF_WEB_STATUS.remove();
                                 KOF_WEB_HEADERS.get().clear();
-                                return new WebDispatchResult(route.kind, null, route);
+                                 return new WebDispatchResult(route.kind, null, route);
                             }
-                            KOF_WEB_STATUS.remove();
-                            KOF_WEB_HEADERS.get().clear();
                             Object result = kof_web_invoke(route.handler, req);
                             if (result == null) {
                                 KOF_WEB_STATUS.remove();
                                 KOF_WEB_HEADERS.get().clear();
                                 return new WebDispatchResult(RouteKind.HTTP,
-                                        kof_web_build(404, "Not Found", "{\\"error\\": \\"not found\\"}"), null);
+                                        kof_web_build(404, "Not Found", "{\\\"error\\\": \\\"not found\\\"}"), null);
                             }
                             Integer st2 = KOF_WEB_STATUS.get();
                             int code2 = st2 != null ? st2 : 200;

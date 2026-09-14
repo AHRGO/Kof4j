@@ -129,8 +129,23 @@ the Application Model** (the order only makes sense with `app.use`):
 > (`path/domain/maxAge/expires/sameSite/secure/httpOnly`). **Native remains an honest
 > SECN006 gap** (same precedent SECN000/002). Tests `KofSecurityTest`
 > 39/39 (cookieSetDefaults/opts/get Jvm+Js, JVM→JS roundtrip, SECN006 cross).
-> **`app.security()` (C18) still NOT implemented** — it depends on the
-> `app.use` middleware of the app model (I2), which is the next unit of this front.
+> **✅ EXECUTED (14/09, step 4 — owner 192.168.100.22):**
+> `app.security([opts])` (C18) implemented in the JVM runtime (`WebApp` fields +
+> `kof_web_security` + `kof_web_security_pipeline` in `JvmRuntimeWebDispatch`).
+> Ratified fixed order: rate-limit → cors → security headers (CSP/HSTS/nosniff/frame/referrer)
+> → session (authHeader + publicPaths) → csrf. Proof: `KofWebE2ETest#appSecurityPipelineE2E`
+> + full E2E validation in `KofBlogE2ETest`.
+
+> **✅ MERGED (14/09, owner 192.168.100.18): the two C18 implementations were
+> unified as a superset** (aggregation pact — neither side discarded). The `.22`
+> API (`rateLimit` Number, `corsOrigin`, `sessionHeader`, `publicPaths`) and the
+> `.18` API (`headers`, `cors`, `rateLimit` String, `csrf`, `auth`, `roles`) now
+> live in a single `kof_web_security`/`kof_web_security_opts` + one pipeline
+> (rate-limit → cors → headers → session → csrf → auth → RBAC) writing response
+> headers to `KOF_SEC_RESPONSE_HEADERS`. Session is enforced on mutations
+> (reads are public; an invalid session header never passes); `auth`/`roles`
+> require a valid Bearer JWT. Proof: `KofWebE2ETest` 22/22 + `KofBlogE2ETest`
+> 1/1 + `KofOAuthResourceServerTest` 4/4 + `KofSecurityTest` 41/41 = 68/0/0.
 
 > **✅ EXECUTED (14/09, step 3 complete — owner 192.168.100.18):**
 > `app.security()` (C18) implemented in **JVM** (`kof_web_security` /
@@ -365,6 +380,44 @@ until development is complete"* — and the non-negotiable floor that accompanie
 - **Reactivation condition:** when native development is complete
   (Native lane bugs — §184/§187/§181-adjacent — closed with matrix
   5/5), the `assumeTrue` is removed and the gate becomes mandatory in CI again.
+
+---
+
+## D-BASELINE — Toolchain baseline 21 → 25 (✅ decided 14/09, mantenedora)
+
+- **Decisão:** o baseline de build da toolchain do repo sobe de **Java 21**
+  para **Java 25** (LTS), pedida pela mantenedora na sessão da lane CodeQL
+  (14/09) para destravar o codemod 100% preservador de comportamento dos
+  findings `java/local-variable-is-never-read` (×82) e parte de
+  `java/unused-parameter` (×81): **unnamed patterns/variables, JEP 443,
+  finalizado no Java 22** (medido: `javac --release 21` recusa
+  `case WhileStmt _ -> false;`).
+- **O que muda (toolchain do repo, NÃO a linguagem):**
+  - `pom.xml`: `<maven.compiler.release>`/`<release>` **21 → 25**.
+  - `.github/workflows/*.yml` (ci/codeql/release/benchmark/android):
+    `setup-java` `java-version` **21 → 25**.
+  - `scripts/package.sh` (`--jdk`): Temurin embutido **21 → 25**.
+  - README canônico + `.pt_BR`: "Requisitos: JDK 21+" → **25+**.
+  - `codeql.yml`: o setup-JDK também (a análise passa a ser em 25).
+- **O que NÃO muda (regra 6 — alvo de runtime de programa Kof, congelado):**
+  - `JvmBackend.java:163` continua emitindo `V21` (version V21). Programas Kof
+    compilados seguem rodando em **JVM 21+** — a toolchain do repo é uma
+    coisa, o bytecode emitido ao usuário é outra (retrocompatibilidade
+    aditiva, AGENTS.md Congelamento 1/2). Subir o bytecode emitido seria
+    exigir JVM 25 do usuário do Kof = **não foi isso que foi pedido**.
+  - O template Android (`AndroidProjectWriter` `<javac release="21">`) fica
+    **21** — alvo do APK do usuário (API/level próprio), não a toolchain.
+  - `JvmRuntime.java:95` guarda `--release 21 --enable-preview` só quando
+    `Runtime.version().feature() < 22` (caminho do vulkan preview) —
+    intocado: continua correto em qualquer JDK 21..25.
+- **Evidência:** `mvn -o -pl kof-compiler -am compile` verde com
+  `Compiling ... with javac [debug release 25]`.
+- **Fila aberta pela decisão (mesmo commit DOING):** (1) gate completo 4
+  módulos em JDK 25; (2) codemod `_` nos 82 local-var + callers dos 81
+  unused-param; (3) CHANGELOG/STATUS notam o novo baseline.
+- **Bump de versão da linguagem?** Não — **0.4.0-beta segue**: é mudança de
+  *build da toolchain*, não de contrato da Kof (programa Kof compilado hoje
+  compila e roda amanhã em JVM 21+).
 
 ---
 
