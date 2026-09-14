@@ -396,6 +396,10 @@ if (mc.receiver() != null) {
         for (FunctionDeclarationNode fn : tloFns) {
             if (!fn.typeParameters().isEmpty()) continue;
             List<Type> pt = new ArrayList<>();
+            // §231 (gap catalogado): seenDefault nao alimenta o requiredArity
+            // do Candidate ainda — overload top-level com default + call curto
+            // da SEM014 em vez de selecionar o candidato com default. Nao deletar
+            // aqui: o wire e a feature.
             boolean seenDefault = false;
             for (var p : fn.parameters()) {
                 pt.add(CompilerTypes.toType(p.type(), driver.currentUnit));

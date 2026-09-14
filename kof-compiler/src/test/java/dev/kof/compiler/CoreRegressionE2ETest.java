@@ -2162,4 +2162,31 @@ class CoreRegressionE2ETest {
         assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
         assertEquals("42\n100\nlimit\n10\nok", runJvm(out));
     }
+
+    // Issue #239 — static method called via instance reference generates invokevirtual -> IncompatibleClassChangeError
+    @Test
+    void staticMethodCalledViaInstanceReferenceJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("static_instance_call.kf");
+        Files.writeString(src, """
+                class Util {
+                    static Int square(Int n) {
+                        return n * n
+                    }
+                    static Bool isEven(Int n) {
+                        return n % 2 == 0
+                    }
+                }
+
+                main() {
+                    var u = new Util()
+                    println(u.square(4))
+                    println(u.isEven(4))
+                    println(u.isEven(5))
+                }
+                """);
+        Path out = tempDir.resolve("static_instance_call-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("16\ntrue\nfalse", runJvm(out));
+    }
 }

@@ -173,9 +173,8 @@ import java.util.List;
     static int scanNumber(String s, int start) {
         int n = s.length();
         int j = start;
-        boolean hex = false;
         if (s.charAt(j) == '0' && j + 1 < n && (s.charAt(j + 1) == 'x' || s.charAt(j + 1) == 'X')) {
-            hex = true; j += 2;
+            j += 2;
             while (j < n && (isHex(s.charAt(j)) || s.charAt(j) == '_')) j++;
             if (j < n && s.charAt(j) == '.') {
                 j++;

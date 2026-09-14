@@ -445,6 +445,7 @@ public class SemanticAnalyzer {
                 "função '" + func.name() + "'");
         StatementAnalyzer.analyzeBody(this, func.body(), funcScope, returnType);
         currentScope = prevScope;
+        currentFunctionName = prevFunction;
     }
 
     /**

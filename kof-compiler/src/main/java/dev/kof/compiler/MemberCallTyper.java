@@ -175,9 +175,6 @@ public final class MemberCallTyper {
             }
         }
         if (BuiltinTypes.isSet(recvType)) {
-            Type elemType = Type.UnknownType.UNKNOWN;
-            if (recvType instanceof Type.ClassType ct && !ct.typeArguments().isEmpty())
-                elemType = ct.typeArguments().get(0);
             String mn = mc.methodName();
             for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
             if ("size".equals(mn) || "length".equals(mn) || "count".equals(mn))

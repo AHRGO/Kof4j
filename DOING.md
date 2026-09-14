@@ -127,6 +127,12 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > quentes. O codemod dos 17 locals puros restantes ficou p/ depois (varios
 > carregam chamada com efeito — deletar linha = mudanca de comportamento).## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (14/09 ~17:00, dono = 192.168.100.22, lane compiler): fix issue #239 — static method called via instance reference generates invokevirtual -> IncompatibleClassChangeError.**
+> - Causa raiz: em `ExpressionInstanceCallLowerer.java`, chamadas originadas a partir de referências de instância (`u.square(4)`) assumiam incondicionalmente `KofCallKind.INSTANCE` gerando `invokevirtual` na JVM. Quando o método resolvido possuía o modificador `static` (`AccessFlags.STATIC`), a chamada causava `IncompatibleClassChangeError: Expecting non-static method` em tempo de execução.
+> - Correção: `ExpressionInstanceCallLowerer` detecta se `(resolvedMethod.accessFlags() & AccessFlags.STATIC) != 0`, alternando a chamada para `KofCallKind.STATIC` (gerando `invokestatic`) e descartando o valor do receiver previamente avaliado na pilha (`KofPop`) para preservar o balanço da pilha JVM.
+> - Prova: `CoreRegressionE2ETest#staticMethodCalledViaInstanceReferenceJvm`.
+> - Próximo: issues #233, #235, #236.
+
 > **✅ FEITO (14/09 ~16:20, dono = 192.168.100.22, lane compiler): fix issue #238 — interface static fields not accessible — SEM025 on access.**
 > - Causa raiz: (1) em `SymbolTableBuilder.defineInterfaceMembers()`, os membros de interface do tipo `FieldDeclarationNode` não eram registrados na tabela de símbolos (`classSym.members()` / `classScope`), causando falha `SEM025` na checagem semântica ao resolver `Interface.FIELD`. (2) no lowering em `CompilerClassLowering.lowerInterface()`, campos de interface eram gerados sem as flags obrigatórias exigidas pela especificação JVM (`ACC_PUBLIC | ACC_STATIC | ACC_FINAL`), gerando `ClassFormatError: Illegal field modifiers in class K: 0x9`.
 > - Correção: `SymbolTableBuilder.defineInterfaceMembers()` agora registra campos em interfaces com `AccessFlags.STATIC` tanto no escopo da classe quanto em `classSym.members()`. `CompilerClassLowering.lowerInterface()` assegura os modificadores `ACC_PUBLIC | ACC_STATIC | ACC_FINAL` em todos os campos de interface emitidos no bytecode.

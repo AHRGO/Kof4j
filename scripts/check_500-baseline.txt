@@ -1,9 +1,10 @@
-538	kof-cli/src/main/java/dev/kof/cli/BytecodeStatements.java
+537	kof-cli/src/main/java/dev/kof/cli/BytecodeStatements.java
 511	kof-cli/src/main/java/dev/kof/cli/LspServer.java
 506	kof-cli/src/main/java/dev/kof/cli/TranslateExpr.java
-562	kof-compiler/src/main/java/dev/kof/compiler/CompilerClassLowering.java
+503	kof-cli/src/main/java/dev/kof/cli/Translate.java
+568	kof-compiler/src/main/java/dev/kof/compiler/CompilerClassLowering.java
 522	kof-compiler/src/main/java/dev/kof/compiler/ExpressionAssignmentLowerer.java
-513	kof-compiler/src/main/java/dev/kof/compiler/ExpressionInstanceCallLowerer.java
+525	kof-compiler/src/main/java/dev/kof/compiler/ExpressionInstanceCallLowerer.java
 533	kof-compiler/src/main/java/dev/kof/compiler/ExpressionLowerer.java
 558	kof-compiler/src/main/java/dev/kof/compiler/js/JsControlFlowParser.java
 523	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeCore.java
@@ -19,8 +20,9 @@
 566	kof-compiler/src/main/java/dev/kof/compiler/KofUi.java
 507	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeRiscvAsmMapset0.java
 581	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeRiscvAsmRtB33.java
-530	kof-compiler/src/main/java/dev/kof/compiler/parser/ExpressionParser.java
+557	kof-compiler/src/main/java/dev/kof/compiler/parser/ExpressionParser.java
+519	kof-compiler/src/main/java/dev/kof/compiler/parser/StatementParser.java
 579	kof-compiler/src/main/java/dev/kof/compiler/runtime/RuntimeTimeIso.java
 557	kof-compiler/src/main/java/dev/kof/compiler/runtime/RuntimeUi.java
-585	kof-compiler/src/main/java/dev/kof/compiler/SemExpressionTyper.java
+597	kof-compiler/src/main/java/dev/kof/compiler/SemExpressionTyper.java
 592	kof-compiler/src/main/java/dev/kof/compiler/StatementLowerer.java

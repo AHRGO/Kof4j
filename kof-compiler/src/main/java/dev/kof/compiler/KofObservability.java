@@ -69,7 +69,8 @@ public final class KofObservability {
         };
     }
 
-    static boolean supportedOn(String function, Target target) {
+    static boolean supportedOn(@SuppressWarnings("unused") String function,
+            @SuppressWarnings("unused") Target target) {
         // OBS002 fechado: histogram/metrics (store + export Prometheus) agora
         // estão nos 3 targets (JVM/JS/Native).
         return true;

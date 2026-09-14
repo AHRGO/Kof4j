@@ -270,7 +270,6 @@ public final class Translate {
             out.append(" {\n");
             while (!p.at("}")) {
                 // method signature ending in ';'
-                int save = p.pos;
                 boolean isStatic = false;
                 while (TranslateTypes.isModifier(p.peek().text)) {
                     if (p.at("static")) isStatic = true;
@@ -333,7 +332,6 @@ public final class Translate {
         }
 
         private void parseMember(String className) {
-            int save = p.pos;
             boolean isStatic = false;
             while (true) {
                 if (TranslateTypes.isModifier(p.peek().text)) {

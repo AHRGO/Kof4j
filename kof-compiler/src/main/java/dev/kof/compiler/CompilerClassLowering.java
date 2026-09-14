@@ -367,7 +367,6 @@ public final class CompilerClassLowering {
         List<Type> canonicalTypes = new ArrayList<>();
         for (FormalParameterNode p : params) canonicalTypes.add(CompilerTypes.resolveWithTypeParams(p.type(), typeParams, driver.currentUnit, driver.semanticAnalyzer));
         Type ownerType = CompilerTypes.ownerTypeFromInternal(owner, driver.semanticAnalyzer);
-        Type superType = CompilerTypes.ownerTypeFromInternal(superName, driver.semanticAnalyzer);
         for (int drop = 1; drop <= n - firstDefault; drop++) {
             int paramCount = n - drop;
             List<Type> paramTypes = canonicalTypes.subList(0, paramCount);

@@ -62,8 +62,6 @@ public final class CollectionMethodTyper {
     }
     if (BuiltinTypes.isSet(recvType)) {
         String mn = mc.methodName();
-        Type elemType = Type.UnknownType.UNKNOWN;
-        if (recvType instanceof Type.ClassType ct && !ct.typeArguments().isEmpty()) elemType = ct.typeArguments().get(0);
         if ("size".equals(mn) || "length".equals(mn) || "count".equals(mn)) return Type.PrimitiveType.INT;
         if ("contains".equals(mn) || "isEmpty".equals(mn)) return Type.PrimitiveType.BOOL;
         if ("add".equals(mn) || "remove".equals(mn)) return Type.PrimitiveType.BOOL;

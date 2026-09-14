@@ -64,8 +64,14 @@ public final class SymbolTableBuilder {
             members.define(new SymbolTable.MethodSymbol("toString", en.name(),
                     BuiltinTypes.STRING, List.of(),
                     0, SymbolTable.DispatchKind.INSTANCE));
+            members.define(new SymbolTable.MethodSymbol("ordinal", en.name(),
+                    Type.PrimitiveType.INT, List.of(),
+                    0, SymbolTable.DispatchKind.INSTANCE));
+            members.define(new SymbolTable.MethodSymbol("compareTo", en.name(),
+                    Type.PrimitiveType.INT, List.of(self),
+                    0, SymbolTable.DispatchKind.INSTANCE));
             SymbolTable.ClassSymbol sym = new SymbolTable.ClassSymbol(en.name(), sa.packageOf(en),
-                    "Object", List.of(), members);
+                    "Enum", List.of(), members);
             sa.allClasses().put(en.name(), sym);
             sa.currentScope().define(sym);
         } else if (decl instanceof InterfaceDeclarationNode iface) {

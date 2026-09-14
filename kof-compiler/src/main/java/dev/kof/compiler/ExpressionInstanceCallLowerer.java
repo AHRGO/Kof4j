@@ -216,6 +216,7 @@ public final class ExpressionInstanceCallLowerer {
             return localIdx;
         }
     }
+    int beforeRecvOps = ops.size();
     localIdx = ExpressionLowerer.emitExpression(driver, mc.receiver(), ops, owner, localIdx, locals);
     Type recvType = ExpressionTyper.inferExprType(driver, mc.receiver(), locals);
     // narrowing de null-safety (`if (x != null) { x.substring(...) }`):
@@ -427,17 +428,28 @@ public final class ExpressionInstanceCallLowerer {
     }
     localIdx = driver.emitArgumentsWithFormalTypes(mc.arguments(), methodParamTypes, ops, owner, localIdx, locals);
     KofCallKind callKind = KofCallKind.INSTANCE;
-    if (recvType instanceof Type.ClassType rt && driver.semanticAnalyzer != null) {
+    if (callKind == KofCallKind.INSTANCE && resolvedMethod != null && driver.semanticAnalyzer != null) {
+        if ((resolvedMethod.accessFlags() & AccessFlags.STATIC) != 0) {
+            callKind = KofCallKind.STATIC;
+        } else {
+            String ownerName = resolvedMethod.ownerClass();
+            if (ownerName.contains("/")) ownerName = ownerName.substring(ownerName.lastIndexOf('/') + 1);
+            if (driver.semanticAnalyzer.isInterfaceType(ownerName)) {
+                callKind = KofCallKind.INTERFACE;
+            }
+        }
+    }
+    if (callKind == KofCallKind.INSTANCE && recvType instanceof Type.ClassType rt && driver.semanticAnalyzer != null) {
         if (driver.semanticAnalyzer.isInterfaceType(rt.name())) {
             callKind = KofCallKind.INTERFACE;
         }
     }
-    if (callKind == KofCallKind.INSTANCE && resolvedMethod != null && driver.semanticAnalyzer != null) {
-        String ownerName = resolvedMethod.ownerClass();
-        if (ownerName.contains("/")) ownerName = ownerName.substring(ownerName.lastIndexOf('/') + 1);
-        if (driver.semanticAnalyzer.isInterfaceType(ownerName)) {
-            callKind = KofCallKind.INTERFACE;
-        }
+    if (callKind == KofCallKind.STATIC) {
+        // Para método estático chamado em receiver (u.square(4)), o valor do
+        // receiver avaliado na pilha antes dos argumentos precisa ser descartado
+        // (POP) antes da chamada INVOKESTATIC, para manter o stack balance.
+        // A inserção do POP ocorre antes de empilhar os argumentos.
+        ops.add(beforeRecvOps + (ops.size() - beforeRecvOps - mc.arguments().size()), new KofPop());
     }
     String runtimeMethod = BuiltinTypes.isString(recvType)
             ? StringMethodRegistry.stringRuntimeMethod(mc.methodName()) : null;

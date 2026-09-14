@@ -296,7 +296,7 @@ public final class OptimizerConstantFold {
         KofOperation a = ops.get(i - 2);
         KofOperation b = ops.get(i - 1);
         if (!(a instanceof KofLoadLiteral la) || !(b instanceof KofLoadLiteral lb)) return null;
-        if (!(la.value() instanceof Number) || !(lb.value() instanceof Number nb)) {
+        if (!(la.value() instanceof Number) || !(lb.value() instanceof Number)) {
             if (la.value() == null && lb.value() == null) {
                 return new KofJump(cj.comparison() == KofComparison.EQ
                         ? cj.trueLabel() : cj.falseLabel());

@@ -290,14 +290,26 @@ public final class SemExpressionTyper {
             }
             case MethodCallExpr mc -> SemMethodCallTyper.infer(sa, mc, scope);
             case NewExpr ne -> {
+                Type coll = null;
                 if ("List".equals(ne.typeName()) || "ArrayList".equals(ne.typeName()) || "LinkedList".equals(ne.typeName())) {
-                    yield BuiltinTypes.LIST;
+                    coll = BuiltinTypes.LIST;
+                } else if ("Set".equals(ne.typeName()) || "HashSet".equals(ne.typeName())) {
+                    coll = BuiltinTypes.SET;
+                } else if ("Map".equals(ne.typeName()) || "HashMap".equals(ne.typeName())) {
+                    coll = BuiltinTypes.MAP;
                 }
-                if ("Set".equals(ne.typeName()) || "HashSet".equals(ne.typeName())) {
-                    yield BuiltinTypes.SET;
-                }
-                if ("Map".equals(ne.typeName()) || "HashMap".equals(ne.typeName())) {
-                    yield BuiltinTypes.MAP;
+                if (coll != null) {
+                    // #193/#198: aplicar os type-arguments no tipo da colecao,
+                    // espelhando o ExpressionTyper do emit (que sempre aplicou).
+                    // Sem isso `new List<() -> Int>()` tipava como List<Unknown>
+                    // no SEMANTICO e o get(0) devolvia Unknown -> `f()` dava
+                    // SEM015 (#193) e o call-chainado `get(0)()` emitia Methodref
+                    // vazio (ClassFormatError, #198).
+                    if (!ne.typeArguments().isEmpty() && coll instanceof Type.ClassType ct) {
+                        coll = new Type.ClassType(ct.packageName(), ct.name(),
+                                ne.typeArguments().stream().map(Type::of).toList());
+                    }
+                    yield coll;
                 }
                 SymbolTable.ClassSymbol cs = sa.getClass(ne.typeName());
                 if (cs != null) {

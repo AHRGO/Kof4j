@@ -141,10 +141,9 @@ final class BytecodeStatements {
                                               String[] cp, BytecodeFrame frame) {
         // localiza o switch
         int swOff = -1;
-        int swOp = -1;
         for (int pc = 0; pc < code.length; ) {
             int op = code[pc] & 0xFF;
-            if (op == 0xaa || op == 0xab) { swOff = pc; swOp = op; break; }
+            if (op == 0xaa || op == 0xab) { swOff = pc; break; }
             int l = BytecodeReader.length(op);
             pc += (l == -1) ? 1 : l;
         }
