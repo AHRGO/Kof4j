@@ -78,6 +78,34 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > `KofConcurrency2Test.cancelJsSequential` asserts ajustados — paridade JS
 > do §186 e4613704). Suíte completa re-provada depois do rebase.
 
+## PACTO DE AGREGAÇÃO (14/09, ordem da mantenedora: agregar, nunca destruir)
+
+> Fatos que motivaram (sessão 14/09): dois agentes no mesmo task; WIP alheio
+> varrido p/ commit de outro tópico; rebase sobre commit de outra lane que
+> commitou `<<<<<<<`; pushes rejeitados em série; claim do DOING sumida.
+> O paralelo também acertou (stash rotulado "guardado antes da lane codeql",
+> sweeps que preservaram conteúdo, resoluções preservando os dois lados) —
+> o pacto padroniza o acerto e proíbe o erro:
+
+> 1. **Rebase/revert só no que é seu.** Commit de outra lane nunca é
+>    rebasado, amendado nem droppado. Precisa sincronizar e o remoto tem
+>    commit alheio? `merge`, nunca `rebase` por cima dele.
+> 2. **WIP alheio não entra no seu commit.** Varredura (regra 8) de arquivo
+>    de outro dono vai em commit SEPARADO "resguardo lane X (dono), sem
+>    alteração" — jamais misturado no commit do seu tópico, jamais editado.
+> 3. **Checar antes de mutar o git:** `git status` + `stash list` + topo do
+>    DOING antes de rebase/push/commit grande. Rebase alheio em andamento
+>    (`.git/rebase-merge`, tip movendo a cada minuto)? Afaste-se: só leitura,
+>    tente depois.
+> 4. **Anunciar antes de operação global:** linha no DOING ("vou rebasar/
+>    mergear X em ~2min") ANTES de rebase/merge/push em branch compartilhada.
+> 5. **Push rejeitado = alguém vivo:** fetch + merge preservando os dois
+>    lados (ou backoff e outro task); nunca `--force`, nunca rebase por cima
+>    de commit que outro empurrou.
+> 6. **Portão pré-commit:** hook `.githooks/pre-commit` instalado
+>    (`scripts/install-git-hooks.sh`) bloqueia marcador de conflito no staged.
+>    Bypass só com `--no-verify` + motivo no DOING.
+
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
 > **✅ FEITO degrau-1 (14/09, dono = 192.168.100.22, lane repo-hygiene):
@@ -129,11 +157,14 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > C11 entregues em `521049aa`. **Fila restante de `DECISIONS`:** `app.security()`
 > (C18, depende do app model I2/`app.use`), OAuth resource-server,
 > `listenSecure` (JVM TLS já existe — falta doc/paridade), `--fat` ✅.
-> **PRÓXIMO PASSO:** `app.security()` (C18) — middleware composto sobre
-> `app.use` (`JvmRuntimeWebDispatch` já itera `app.middlewares`);
-> arquivo principal `KofWeb.java`/`JvmRuntimeWebDispatch.java`; prova =
-> E2E com rota protegida (401 sem credencial, 200 com) em `KofBlogE2ETest`
-> ou teste próprio. Antes: reler `docs/development/DECISIONS.md` §D-SEC C18.
+>
+> **EM CURSO (14/09, dono = 192.168.100.22, lane development): `app.security()`
+> (C18)** — middleware composto sobre `app.use` (`JvmRuntimeWebDispatch` já
+> itera `app.middlewares`); arquivos: `KofWeb.java` (dispatch do
+> `app.security`), `JvmWebCoreRuntime.java` (rota/middleware), E2E novo
+> (`KofBlogE2ETest` ou teste próprio) com 401 sem credencial / 200 com.
+> Esta sessão = 192.168.100.22; blog E2E (F12) concluído e absorvido no
+> `bdbe4be7` (dono .18). Antes de commitar: reler `DECISIONS.md` §D-SEC C18.
 
 > **✅ FEITO (14/09 ~03:45, dono = 192.168.100.22, lane repo-hygiene/.github):
 > pack segurança GitHub + merge na main (ordem da mantenedora, sem bump —

@@ -1,11 +1,14 @@
-#!/usr/bin/env bash
-#
-# pre-commit — documentacao bilingue: reaplica/restaura o idioma da maquina.
-# No-op durante rebase/merge/cherry-pick (mexer na arvore ali quebra o git).
-root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
-[ -x "$root/scripts/docs-lang.sh" ] || exit 0
-for marker in rebase-merge rebase-apply MERGE_HEAD CHERRY_PICK_HEAD REVERT_HEAD; do
-    [ -e "$root/.git/$marker" ] && exit 0
-done
-"$root/scripts/docs-lang.sh" restore >/dev/null 2>&1 || true
+#!/bin/bash
+# Pre-commit guard do Kof4j (PACTO DE AGREGAÇÃO, 14/09 — ordem da mantenedora).
+# Barato (<2s) e sem falso-positivo: só impede commit QUEBRADO.
+# Bypass em emergência: git commit --no-verify (e registre o motivo no DOING.md).
+set -u
+
+# 1. Marcadores de conflito e erros de whitespace no que está staged.
+#    (Precedente: rebase entre lanes commitou `<<<<<<<` no DOING em 14/09.)
+if ! git diff --cached --check --; then
+    echo "pre-commit: marcadores de conflito / whitespace errors no staged. Resolva e tente de novo." >&2
+    exit 1
+fi
+
 exit 0
