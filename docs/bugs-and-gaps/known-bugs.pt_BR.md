@@ -6746,6 +6746,54 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
 - **Estado:** reproduz no `1c13d982`. Nível de gramática (parser), uma única
   produção: tipo-função liderando posição de retorno/campo.
 
+### §209 — corpo de default method de interface descartado silenciosamente → compila como abstrato → falso positivo `SEM043` na classe implementadora (issue #213)
+
+- **Sintoma (medido 14/09 ~11:20, dono = 192.168.100.17 — só catalogado,
+  lane compiler):** um método de interface COM corpo (default method) é
+  compilado como ABSTRATO — o corpo é descartado. A classe que implementa
+  sem sobrescrevê-lo é rejeitada: `class 'SimpleGreeter' implements
+  Greeter` → `SEM043` (método abstrato faltando), apesar de a interface
+  fornecer implementação real:
+  ```kof
+  interface Greeter {
+      String greet(String name)
+      String greetLoud(String name) { return greet(name).toUpperCase() }
+  }
+  class SimpleGreeter implements Greeter {
+      String greet(String name) { return "Hello " + name }
+  }
+  ```
+  Esperado: `g.greetLoud("kof")` imprime `HELLO KOF` (default methods,
+  Java/2016). Atual: `SEM043` em compile-time.
+- **Pointer (lane compiler):** lowering de interface — o corpo dos default
+  methods deve ser emitido (flag `default` no MethodElement); o conjunto de
+  métodos abstratos usado no check `SEM043` deve EXCLUIR os que têm corpo.
+- **Estado:** reproduz no `2d3b8fdf`. Nenhum alvo suporta ainda; o corpus
+  `training/` não tem exemplo de default method (gap de spec também).
+
+### §210 — chamada a método Java VARARGS (`String.format`) gera descritor errado: args não empacotados em array, retorno inferido como Object — `NoSuchMethodError` (issue #216)
+
+- **Sintoma (medido 14/09 ~11:20, dono = 192.168.100.17 — só catalogado,
+  lane compiler):** interop com método varargs é emitido sem preencher o
+  slot varargs (cada arg extra passado individualmente) e com o tipo de
+  retorno inferido como `Object`:
+  ```kof
+  main() {
+      var s = String.format("Hello %s, age %d", "Alice", 30)
+      println(s)
+  }
+  ```
+  → `NoSuchMethodError: 'java.lang.Object java.lang.String.format(...)'`.
+  Real JVM: `format` = `(String, Object[])` retornando `String`. Dois bugs:
+  (a) o rabo varargs não vira `Object[]`; (b) o retorno do varargs interop
+  cai em Object. R6 (compila, nunca roda).
+- **Relacionado:** #156 (`String.format` em outros corpos — mesma família);
+  §166 (retorno de estático `parse*` emitido como String — face inversa).
+- **Pointer (lane compiler):** lowering de `MethodCall` interop — detectar
+  `isVarArgs()`, juntar os args finais em `anewarray Object` e resolver o
+  descritor de retorno não-varargs.
+- **Estado:** reproduz no `2d3b8fdf`.
+
 ## §193 — E2E blog (F12): `db.query` cru + `.get("col")`/recursos dentro de handler web derr
 
 > **Renumerado de §189→§193 (14/09, dono = 192.168.100.17):** colisão tripla
