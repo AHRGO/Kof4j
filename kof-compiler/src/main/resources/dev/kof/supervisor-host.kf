@@ -17,6 +17,47 @@ class KofSupStats {
     Int vivos
 }
 
+// ===== S3 (DD-OTP-02/10 ratificados 13/09): janela deslizante por filho =====
+// Anel fixo (capacidade maxReinicios): guardo o timestamp de cada falha que
+// consome um reinicio; a contagem "na janela" expira entradas antigas
+// (timestamp + windowMillis <= agora). Relógio injetável (.clock) torna o
+// gate determinístico — default time.now().
+class KofSupWindow {
+    Int[] stamp
+    Int size = 0
+    Int head = 0
+    Int windowMs = 0
+    () -> Long clock = null
+
+    public constructor(Int cap, Int windowMs, () -> Long clock) {
+        if (cap < 1) { cap = 1 }
+        this.stamp = new Int[cap]
+        this.windowMs = windowMs
+        this.clock = clock
+    }
+
+    Void falha(Long agora) {
+        var idx = (head + size) % stamp.length
+        var t: Int = agora / 1000 as Int
+        stamp[idx] = t
+        if (size < stamp.length) { size = size + 1 } else { head = (head + 1) % stamp.length }
+    }
+
+    // reinicios disponíveis na janela = falhas ainda vivas nela
+    // (while + índice: `stamp[i]` dentro de for-range tropeça no parser,
+    //  catalogado à parte — não é semântica desta unidade)
+    Int naJanela(Long agora) {
+        var vivos = 0
+        var i = 0
+        while (i < size) {
+            var t = stamp[(head + i) % stamp.length]
+            if (!(windowMs > 0 && t + windowMs <= agora)) { vivos = vivos + 1 }
+            i = i + 1
+        }
+        return vivos
+    }
+}
+
 class KofSupNode {
     String id
     KofWorkerFactory fabrica
@@ -24,12 +65,16 @@ class KofSupNode {
     Handle<Object> h = null
     Bool running = false
     Int reinicios = 0
+    KofSupWindow janela = null
+    Bool dropada = false
 }
 
 class Supervisor {
     String nome
     List<KofSupNode> filhos
     Int maxReinicios = 0
+    Int janelaMs = 0
+    () -> Long clockFn = null
     Bool vivo = false
     Bool drenando = false
     KofEscalate escalar = null
@@ -60,6 +105,40 @@ class Supervisor {
         return this
     }
 
+    // S3: limite COM janela deslizante (DD-OTP-02). windowMs <= 0 = janela
+    // infinita (equivalente ao restartLimit(max) de 1 arg).
+    Supervisor restartLimitWindow(Int max, Int windowMs) {
+        restartLimit(max)
+        if (windowMs < 0) { throw "supervisor '" + nome + "': windowMs negativo" }
+        janelaMs = windowMs
+        return this
+    }
+
+    // S3/DD-OTP-10: relógio injetável p/ gate determinístico (default time.now).
+    Supervisor clock(() -> Long nowFn) {
+        if (vivo) { throw "supervisor '" + nome + "': clock() depois de start()" }
+        if (nowFn == null) { throw "supervisor '" + nome + "': clock nulo" }
+        clockFn = nowFn
+        return this
+    }
+
+    Long agora() {
+        // copia o campo p/ local: chamada direta do field de function-type
+        // dentro da classe não é resolvida como função (SEM015)
+        var tickFn = this.clockFn
+        if (tickFn != null) { return tickFn() }
+        return time.now()
+    }
+
+    KofSupWindow janelaDe(KofSupNode n) {
+        if (n.janela == null) {
+            var cap = maxReinicios
+            if (cap < 1) { cap = 1 }
+            n.janela = KofSupWindow(cap, janelaMs, clock)
+        }
+        return n.janela
+    }
+
     Supervisor escalate(KofEscalate callback) {
         escalar = callback
         return this
@@ -81,6 +160,7 @@ class Supervisor {
         while (n.running) {
             var w = n.fabrica.novo()
             n.reinicios = n.reinicios + 1
+            this.anotarReinicio(n)
             n.h = spawn { w.run() }
             var motivo = "normal"
             var falhou = false
@@ -97,16 +177,17 @@ class Supervisor {
             }
             var reiniciosUsados = n.reinicios - 1
             if (n.politica == "temporary") {
-                relatar(n, motivo, reiniciosUsados, true)
+                n.dropada = true
+                this.relatar(n, motivo, reiniciosUsados, true)
                 n.running = false
                 return
             }
-            if (maxReinicios > 0 && reiniciosUsados >= maxReinicios) {
-                relatar(n, motivo, reiniciosUsados, true)
+            if (this.excedeuLimite(n)) {
+                this.relatar(n, motivo, reiniciosUsados, true)
                 n.running = false
                 return
             }
-            relatar(n, motivo, reiniciosUsados, false)
+            this.relatar(n, motivo, reiniciosUsados, false)
             time.sleep(1)
         }
     }
@@ -120,6 +201,25 @@ class Supervisor {
         if (excedeu) { extra = " — limite excedido, nao reinicia (R6)" }
         println("supervisor '" + nome + "': child '" + n.id + "' (" + motivo
             + ", reinicios=" + reinicios + extra + ")")
+    }
+
+    // S3: limite com janela deslizante — cada REINICIO lançado registra o
+    // timestamp no anel do filho; a falha atual excede o limite quando os
+    // reinicios ainda vivos na janela alcançam maxReinicios. Com janelaMs==0
+    // nada expira → contagem total = semântica antiga (restartLimit(max)).
+    Bool excedeuLimite(KofSupNode n) {
+        if (maxReinicios <= 0) { return false }
+        if (janelaMs <= 0) {
+            var usados = n.reinicios - 1
+            return usados >= maxReinicios
+        }
+        var j = janelaDe(n)
+        return j.naJanela(agora()) >= maxReinicios
+    }
+
+    Void anotarReinicio(KofSupNode n) {
+        if (maxReinicios <= 0 || janelaMs <= 0) { return }
+        janelaDe(n).falha(agora())
     }
 
     Void stop(Int deadlineMs) {
@@ -160,7 +260,7 @@ class Supervisor {
         for (var n in filhos) {
             if (n.reinicios > 0) { s.restarts = s.restarts + n.reinicios - 1 }
             if (n.running) { s.vivos = s.vivos + 1 }
-            if (n.politica == "temporary") { s.dropped = s.dropped + 1 }
+            if (n.dropada) { s.dropped = s.dropped + 1 }
         }
         return s
     }
@@ -186,6 +286,7 @@ Void lacoUnico() {
         for (var n in vivos) {
             var w = n.fabrica.novo()
             n.reinicios = n.reinicios + 1
+            this.anotarReinicio(n)
             var wrap = KofSupWrap(n.id, w)
             n.h = spawn kofSupRun(wrap)
             handles.add(n.h)
@@ -196,7 +297,7 @@ Void lacoUnico() {
             for (var n in vivos) {
                 if (n.id == id) {
                     if (n.politica == "permanent") {
-                        relatar(n, "normal", n.reinicios - 1, false)
+                        this.relatar(n, "normal", n.reinicios - 1, false)
                         time.sleep(1)
                     } else {
                         n.running = false
@@ -215,13 +316,14 @@ Void lacoUnico() {
                     achou = true
                     var reiniciosUsados = n.reinicios - 1
                     if (n.politica == "temporary") {
-                        relatar(n, motivo2, reiniciosUsados, true)
+                        n.dropada = true
+                        this.relatar(n, motivo2, reiniciosUsados, true)
                         n.running = false
-                    } else if (maxReinicios > 0 && reiniciosUsados >= maxReinicios) {
-                        relatar(n, motivo2, reiniciosUsados, true)
+                    } else if (this.excedeuLimite(n)) {
+                        this.relatar(n, motivo2, reiniciosUsados, true)
                         n.running = false
                     } else {
-                        relatar(n, motivo2, reiniciosUsados, false)
+                        this.relatar(n, motivo2, reiniciosUsados, false)
                         time.sleep(1)
                     }
                 }

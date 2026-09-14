@@ -126,6 +126,8 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > SEMPRE checando `git log -5 -- <arq>` p/ nao colidir c/ lanes §201/§202
 > quentes. O codemod dos 17 locals puros restantes ficou p/ depois (varios
 > carregam chamada com efeito — deletar linha = mudanca de comportamento).
+<<<<<<< HEAD
+> **✅ FEITO (14/09 ~16:50, dono = 192.168.100.18, lane development): OTP S3 (DECISIONS/planning-otp) — `supervisorStats` + janela deslizante + `.clock()` + drop `temporary`.** Deltas no host `dev/kof/supervisor-host.kf` (puro-Kof, zero backend): (1) **`restartLimitWindow(max, windowMs)`** — janela deslizante por filho (anel `Int[]` cap=maxReinicios, expira `timestamp + windowMs <= agora`); `restartLimit(max)` de 1 arg segue idêntico (§131 overload, janela=0 = semântica antiga preservada, gate existente verde). (2) **`.clock(nowFn)`** (DD-OTP-10) — relógio injetável `() -> Long` default `time.now`; gate determinístico sem wall-clock. Cada REINICIO lançado anota o timestamp no anel (`anotarReinicio`); a falha excede quando os reinicios vivos na janela alcançam `maxReinicios`. (3) **`stats().dropped`** agora conta `temporary` que FALHARAM e foram descartados (`dropada=true` no nó), não apenas temporaries existentes. (4) workaround no host p/ §232 (chamada implicit-this de método da própria classe → `invokestatic Default/Main` inexistente): `this.` explícito em TODAS as chamadas internas (`relatar`/`excedeuLimite`/`agora`), field `clockFn` renomeado (colisão field/método mesmo nome → SEM015, catalogado), `stamp[idx] = Long as Int` (iastore com long_2nd → VerifyError, catalogado). **Prova:** `KofSupervisorE2ETest` 11/11 (novos `supervisorS3JanelaExpiraComClockInjetado` — relógio virtual +2000ms/tentativa vs janela 1000ms → NUNCA corta, `supervisorS3TemporaryDropContabilizado` dropped=1 esc=1, `supervisorS3TemporaryDropNoInterpretador` paridade Script). Suíte 4 módulos 1947/1/166 (o 1 = §205, lane #183, pré-existente). **Q4 hunt:** §231 catalogado (implicit-this Bool em if → VerifyError; workaround `this.`); mini-faces (for-range+subscript PARSE039; `fn` reservado; field function-type com mesmo nome de método) catalogadas em known-bugs. Docs: planning-otp S3 ✅ (EN+PT), stdlib (EN+PT), native-multiarch OTP001 nota intacta. **Próximo:** decisão 6 (§180 Native toString) → decisão 2 (§129 frame-per-thread).
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
@@ -490,7 +492,7 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > - **Toolchain:** JDK 25 confirmado em `/home/mel/tools/jdk-25` — baseline
 >   `release 25` compila limpo (`JAVA_HOME=/home/mel/tools/jdk-25`); o
 >   workaround do pom em 21 não é mais necessário.
-> **Restantes (4/6):** `roundTo` (decisão 3), `app.security()` modelo Spring
+> **Restantes (1/6):** §129 frame por thread (decisão 2) — `roundTo` (3), `app.security()` Spring (5), §101 (1), §179 (4) FEITOS 14/09; §180 (6) sem dono
 > (decisão 5, reverte reads públicas), §180 Native x86 double/float toString
 > (decisão 6), §129 frame por thread (decisão 2).
 

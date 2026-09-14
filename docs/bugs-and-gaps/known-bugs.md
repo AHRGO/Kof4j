@@ -7759,3 +7759,50 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   — mesma lógica para função top-level), nos 3 sítios; regressão: um caso
   `h(Int,Int=) + h(String)` chamando `h(5)` → 15 em 4 targets + SEM057
   quando ambíguo de verdade.
+### §232 — implicit-this instance method call inside its own class lowers to `invokestatic Default/Main.<name>` (missing function) → JVM `VerifyError` (if-condition face)
+
+- **Symptom (measured 14/09 ~16:40 on fresh classes of the rebase of
+  `197ac491`; found in the S3 OTP Q4 hunt, owner = 192.168.100.18):**
+  ```kof
+  class P {
+      Bool limite() { return true }
+      Void usa() {
+          if (limite()) { println("sim") }
+      }
+  }
+  main() { var p = P(); p.usa() }
+  ```
+  compiles (`ec=0`) and dies at load: `VerifyError: Bad type on operand
+  stack @if_icmpne`. `javap` ground truth: `usa()` emits
+  `invokestatic Default/Main.limite:()Ljava/lang/Object;` — but `Default/Main`
+  has NO `limite` method at all (`javap Default.Main`: only `main`).
+- **Root cause:** with `receiver() == null` inside a class body, the
+  resolution path used by the lowerer (`SemanticAnalyzer.getResolvedMethod`)
+  is EMPTY since §140 (the `resolveMethodCalls` visitor became a no-op;
+  `resolvedMethods` is only populated by `MemberCallTyper` for calls WITH a
+  receiver). `ExpressionMethodCallLowerer` then falls through to the
+  top-level-FUNCTION branch, which emits `KofCall(mainClassType, name,
+  FUNCTION)` with the TYPER's return type erased to `Object` — and no such
+  top-level function exists → silent-R6 (compiles green, breaks at load).
+- **Faces:** statement `var b = limite()` is FINE (a different path lowers
+  it to `invokevirtual limite:()Z` — to be understood when fixing); the
+  `if (limite())` CONDITION face is broken. Same family as §227 (static
+  overload omitted from the IR) — the two share the root "unqualified call
+  resolution is not wired from the typer to the lowerer".
+- **Workaround (used in `supervisor-host.kf` S3, works):** qualify with
+  `this.` — `if (this.limite())` lowers correctly (`invokevirtual`).
+- **Q4 mini-faces found during this hunt (same session, not separate
+  sections — reproducible 3-liners, compiler lane):**
+  (a) `stamp[i]` array access inside `for (var i in 0..n)` body →
+  `PARSE039 Expected field name` (the range loop + subscript interplay);
+  `while` + subscript works. (b) `fn` is a reserved word: `var fn = ...` →
+  `PARSE037 Expected variable name` (harmless but undocumented in
+  fake-idioms). (c) field of function-type with the SAME NAME as a method
+  → `this.field` resolves as the METHOD → `SEM015 not a function` on
+  invocation (`clock` field vs `.clock()` method in the S3 host; worked
+  around by renaming the field `clockFn`).
+- **Fix pointer (compiler lane):** populate `resolvedMethods` for
+  `receiver() == null` calls against the enclosing class in the semantic
+  pass (or resolve directly in `ExpressionMethodCallLowerer` before the
+  top-level fallthrough); the wrapper-function emission for FUNCTION kind
+  must never reference a method that is not emitted (assert/diagnostic).
