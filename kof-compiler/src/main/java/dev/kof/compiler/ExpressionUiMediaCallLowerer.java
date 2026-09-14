@@ -12,7 +12,7 @@ public final class ExpressionUiMediaCallLowerer {
 
     static int lower(CompilerDriver driver, MethodCallExpr mc, List<KofOperation> ops,
                       String owner, int localIdx, List<IRLocalVariable> locals) {
-if (mc.receiver() instanceof IdentifierExpr _ && KofIo.isConstructor(((IdentifierExpr) mc.receiver()).name())) {
+if (mc.receiver() instanceof IdentifierExpr && KofIo.isConstructor(((IdentifierExpr) mc.receiver()).name())) {
     KofIo.IoCall ioCall = KofIo.staticMethod(((IdentifierExpr) mc.receiver()).name(), mc.methodName(), mc.arguments().size());
     if (ioCall != null) {
         for (ExpressionNode arg : mc.arguments()) {
@@ -22,7 +22,7 @@ if (mc.receiver() instanceof IdentifierExpr _ && KofIo.isConstructor(((Identifie
                 ioCall.function(), ioCall.parameterTypes(), ioCall.returnType(), KofCallKind.FUNCTION));
     }
     return localIdx;
-} else if (mc.receiver() instanceof IdentifierExpr _ && KofMedia.isStaticNamespace(((IdentifierExpr) mc.receiver()).name())) {
+} else if (mc.receiver() instanceof IdentifierExpr && KofMedia.isStaticNamespace(((IdentifierExpr) mc.receiver()).name())) {
     KofMedia.MediaCall mediaCall = KofMedia.staticCall(((IdentifierExpr) mc.receiver()).name(), mc.methodName(), mc.arguments().size());
     if (mediaCall != null) {
         if (driver.target != Target.JVM && driver.target != Target.ANDROID) {
@@ -46,9 +46,9 @@ if (mc.receiver() instanceof IdentifierExpr _ && KofIo.isConstructor(((Identifie
                 mediaCall.returnType(), KofCallKind.FUNCTION));
     }
     return localIdx;
-} else if (mc.receiver() instanceof IdentifierExpr _ && KofUi.isPalette(((IdentifierExpr) mc.receiver()).name())) {
+} else if (mc.receiver() instanceof IdentifierExpr && KofUi.isPalette(((IdentifierExpr) mc.receiver()).name())) {
     return localIdx;
-} else if (mc.receiver() instanceof IdentifierExpr _ && KofUi.isConstructor(((IdentifierExpr) mc.receiver()).name())) {
+} else if (mc.receiver() instanceof IdentifierExpr && KofUi.isConstructor(((IdentifierExpr) mc.receiver()).name())) {
     KofUi.UiCall uiCall = KofUi.staticMethod(((IdentifierExpr) mc.receiver()).name(), mc.methodName(), mc.arguments().size());
     if (uiCall != null && "kof_ui_color_rgba".equals(uiCall.function())) {
         localIdx = driver.emitPackedColor(mc.arguments(), ops, owner, localIdx, locals);
@@ -63,7 +63,7 @@ if (mc.receiver() instanceof IdentifierExpr _ && KofIo.isConstructor(((Identifie
         return localIdx;
     }
     return localIdx;
-} else if (mc.receiver() instanceof IdentifierExpr _ && KofUi.isRouterNamespace(((IdentifierExpr) mc.receiver()).name())) {
+} else if (mc.receiver() instanceof IdentifierExpr && KofUi.isRouterNamespace(((IdentifierExpr) mc.receiver()).name())) {
     // Fase 7 (docs/ui/architecture.md §2.9): Router.*
     KofUi.UiCall routerCall = KofUi.staticMethod("Router", mc.methodName(), mc.arguments().size());
     if (routerCall != null) {

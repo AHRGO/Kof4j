@@ -279,21 +279,15 @@ public final class StatementLowerer {
                 driver.continueLabels.pop();
                 ops.add(new KofLabel(continueLabel));
                 if (fs.update() != null) {
-                    if (fs.update() instanceof UnaryExpr ue && "++".equals(ue.operator()) && ue.operand() instanceof IdentifierExpr id) {
+                    if (fs.update() instanceof UnaryExpr ue
+                            && ("++".equals(ue.operator()) || "--".equals(ue.operator()))
+                            && ue.operand() instanceof IdentifierExpr id) {
                         IRLocalVariable var = driver.findLocalVar(id.name(), locals);
                         if (var != null) {
                             ops.add(new KofLoadLocal(var.type(), var.index()));
-                            ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 1));
-                            ops.add(new KofBinary(KofBinaryOp.ADD, var.type()));
+                            CompilerEmissionHelpers.emitIncrementOne(ops, var.type());
+                            ops.add(new KofBinary("++".equals(ue.operator()) ? KofBinaryOp.ADD : KofBinaryOp.SUB, var.type()));
                             ops.add(new KofStoreLocal(var.type(), var.index()));
-                        }
-                    } else if (fs.update() instanceof UnaryExpr ue2 && "--".equals(ue2.operator()) && ue2.operand() instanceof IdentifierExpr id2) {
-                        IRLocalVariable var2 = driver.findLocalVar(id2.name(), locals);
-                        if (var2 != null) {
-                            ops.add(new KofLoadLocal(var2.type(), var2.index()));
-                            ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 1));
-                            ops.add(new KofBinary(KofBinaryOp.SUB, var2.type()));
-                            ops.add(new KofStoreLocal(var2.type(), var2.index()));
                         }
                     } else {
                         localIdx = ExpressionLowerer.emitExpression(driver, fs.update(), ops, owner, localIdx, locals);

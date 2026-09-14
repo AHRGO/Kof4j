@@ -1,7 +1,7 @@
 538	kof-cli/src/main/java/dev/kof/cli/BytecodeStatements.java
 501	kof-cli/src/main/java/dev/kof/cli/LspServer.java
 506	kof-cli/src/main/java/dev/kof/cli/TranslateExpr.java
-544	kof-compiler/src/main/java/dev/kof/compiler/CompilerClassLowering.java
+562	kof-compiler/src/main/java/dev/kof/compiler/CompilerClassLowering.java
 522	kof-compiler/src/main/java/dev/kof/compiler/ExpressionAssignmentLowerer.java
 514	kof-compiler/src/main/java/dev/kof/compiler/ExpressionInstanceCallLowerer.java
 535	kof-compiler/src/main/java/dev/kof/compiler/ExpressionLowerer.java
@@ -19,8 +19,8 @@
 566	kof-compiler/src/main/java/dev/kof/compiler/KofUi.java
 507	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeRiscvAsmMapset0.java
 581	kof-compiler/src/main/java/dev/kof/compiler/nat/NativeRiscvAsmRtB33.java
-524	kof-compiler/src/main/java/dev/kof/compiler/parser/ExpressionParser.java
+530	kof-compiler/src/main/java/dev/kof/compiler/parser/ExpressionParser.java
 579	kof-compiler/src/main/java/dev/kof/compiler/runtime/RuntimeTimeIso.java
 557	kof-compiler/src/main/java/dev/kof/compiler/runtime/RuntimeUi.java
-573	kof-compiler/src/main/java/dev/kof/compiler/SemExpressionTyper.java
-598	kof-compiler/src/main/java/dev/kof/compiler/StatementLowerer.java
+585	kof-compiler/src/main/java/dev/kof/compiler/SemExpressionTyper.java
+592	kof-compiler/src/main/java/dev/kof/compiler/StatementLowerer.java

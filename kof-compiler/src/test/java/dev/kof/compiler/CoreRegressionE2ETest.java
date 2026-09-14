@@ -1915,4 +1915,24 @@ class CoreRegressionE2ETest {
         assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
         assertEquals("10\n17\n17", runJvm(out));
     }
+
+    // Issue #223 — for-loop update expression ++ / -- on Long or Double generates iconst_1 instead of lconst_1 / dconst_1 (VerifyError)
+    @Test
+    void forLoopUpdateLongAndDoubleJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("forupdate.kf");
+        Files.writeString(src, """
+                main() {
+                    for (var i: Long = 0L; i < 3L; i++) {
+                        println(i)
+                    }
+                    for (var j: Long = 3L; j > 0L; j--) {
+                        println(j)
+                    }
+                }
+                """);
+        Path out = tempDir.resolve("forupdate-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("0\n1\n2\n3\n2\n1", runJvm(out));
+    }
 }

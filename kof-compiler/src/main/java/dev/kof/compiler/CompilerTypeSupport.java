@@ -97,7 +97,7 @@ public final class CompilerTypeSupport {
             // (kof_json_encode_double + kof_string_to_double, FP XMM).
             return true;
         }
-        if (isDecode && type instanceof Type.ArrayType _) {
+        if (isDecode && type instanceof Type.ArrayType) {
             // JSN003 fechado: int/long/bool/string[] tem decoders nativos.
             // JSN001: float/double[] também decodifica no Native.
             return true;

@@ -262,7 +262,7 @@ JsIr.JsStatement parsePatternSwitch(MethodCtx ctx, int[] pos) {
             // If we broke without consuming Jump because next is body label, then default was empty and Jump was already consumed?
             // For empty default (no default body), the IR is Label default (= end) then Jump end - but default==end, so label is end
             // Handle empty default case: if we didn't capture endLabel yet, scan for it
-            if (endLabel == null && pos[0] < ctx.ops.size() && ctx.ops.get(pos[0]) instanceof KofLabel _) {
+            if (endLabel == null && pos[0] < ctx.ops.size() && ctx.ops.get(pos[0]) instanceof KofLabel) {
                 // Might be end label already
                 // Need to find the Jump's target from earlier; it should have been the Jump after default
                 // If default is empty, the label default is also end, and the Jump after default is Jump end (self)

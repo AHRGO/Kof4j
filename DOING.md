@@ -127,6 +127,12 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > quentes. O codemod dos 17 locals puros restantes ficou p/ depois (varios
 > carregam chamada com efeito — deletar linha = mudanca de comportamento).## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (14/09 ~13:30, dono = 192.168.100.22, lane compiler): fix issue #223 — for-loop update expression ++ / -- on Long or Double generates iconst_1 instead of lconst_1 / dconst_1 (VerifyError).**
+> - Causa raiz: em `StatementLowerer.java` (caso `ForStmt`), o tratamento de `fs.update()` para expressões unárias `++` e `--` emitia estritamente `KofLoadLiteral(Type.PrimitiveType.INT, 1)` hardcoded, independentemente de `var.type()`. Quando a variável de controle do laço for `Long` ou `Double`, o `KofBinary(ADD/SUB, var.type())` gerava `ladd`/`dadd` esperando dois operandos `long`/`double`, mas encontrava `int` na pilha, resultando em `VerifyError`.
+> - Correção: `StatementLowerer` unificado para utilizar `CompilerEmissionHelpers.emitIncrementOne(ops, var.type())`, emitindo o literal `1L`, `1.0f`, `1.0` ou `1` estritamente de acordo com o tipo da variável. Linhas de `StatementLowerer` reduzidas de 598 para 592 e baseline do `check_500.sh` atualizado.
+> - Prova: `CoreRegressionE2ETest#forLoopUpdateLongAndDoubleJvm`.
+> - Próximo: issues #216, #225, #224.
+
 > **✅ FEITO (14/09 ~12:45, dono = 192.168.100.22, lane compiler): fix issue #218 — function type syntax accepted in parameter/var-annotation but rejected in return type and field type positions.**
 > - Causa raiz: (1) `Parser.parse()` e `parseFunctionDeclaration()` não aceitavam `TokenType.LPAREN` como início de tipo de retorno top-level `(Int) -> Int makeDoubler()`, caindo em `PARSE007`/`PARSE010`. (2) `ClassMemberParser.parseClassMember` não reconhecia `LPAREN` como início de membro (campo ou método com tipo de retorno função), caindo em `PARSE016`. (3) `ExpressionParser` no parsing pós-primário consumia `(` na linha seguinte como chamada invocada sobre literal/expressão anterior na ausência de ponto-e-vírgula.
 > - Correção: `Parser` e `ClassMemberParser` agora aceitam tipo de função `(T) -> R` como tipo de retorno de função/método e como tipo de campo de classe. `ExpressionParser` previne agrupamento acidental de chamada quando o `(` ocorre em linha posterior após literal ou lambda.
