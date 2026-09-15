@@ -400,6 +400,10 @@ backend. Não queremos reinventar a roda."*
 
 ## D-BACKEND-SEMANTICS — 6 decisões do chat de 14/09 (dono 192.168.100.18)
 
+**✅ FILA FECHADA — 6/6 implementadas:** §101 (1), §129 (2), `roundTo` (3),
+§179 (4), `app.security()`/Spring (5), §180 (6). A fila `## 7` do
+`docs/development/README.md` está vazia; esta seção agora é registro, não backlog.
+
 A mantenedora respondeu a lista aberta. Opções escolhidas e a execução:
 
 ### 1. §101 — operadores relacionais com NaN → **opção A (IEEE 754 puro)**

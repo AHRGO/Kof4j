@@ -445,6 +445,10 @@ backend. We do not want to reinvent the wheel."*
 
 ## D-BACKEND-SEMANTICS — 6 decisions from the 14/09 chat (owner 192.168.100.18)
 
+**✅ QUEUE CLOSED — 6/6 implemented:** §101 (1), §129 (2), `roundTo` (3),
+§179 (4), `app.security()`/Spring (5), §180 (6). The `## 7` queue of
+`docs/development/README.md` is empty; this section is now a record, not a backlog.
+
 The maintainer answered the open list. Options chosen and their execution:
 
 ### 1. §101 — relational operators with NaN → **option A (pure IEEE 754)**
