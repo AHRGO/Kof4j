@@ -1,5 +1,6 @@
 package dev.kof.runtime;
 
+import java.io.IOException;
 import java.util.concurrent.BlockingQueue;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -21,7 +22,14 @@ public final class KofJsWebQueue implements HttpHandler {
     }
 
     @Override
-    public void handle(HttpExchange exchange) {
-        pending.offer(exchange);
+    public void handle(HttpExchange exchange) throws IOException {
+        if (!pending.offer(exchange)) {
+            // fila cheia/bounded: nunca descartar em silencio (R6) — responde 503
+            // e libera o exchange (senao o cliente pendura e o dispatcher vaza).
+            byte[] msg = "queue full".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(503, msg.length);
+            exchange.getResponseBody().write(msg);
+            exchange.close();
+        }
     }
 }

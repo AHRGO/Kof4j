@@ -140,4 +140,24 @@ public final class BuiltinTypes {
         }
         return false;
     }
+
+
+    /**
+     * §249: nome simples (sem type-args) de um tipo builtin de coleção/
+     * concorrência — `List`, `Map`, `Set`, `Channel`, `Handle` e os apelidos
+     * `ArrayList`/`HashMap`/`HashSet`. O {@code Type.of} só mapeia esses nomes
+     * na forma parametrizada (`List<Int>`); a forma nua (`List xs = listOf(...)`)
+     * também é válida e não pode cair no guard de tipo não resolvido.
+     * Retorna {@code null} se não for builtin.
+     */
+    public static String baseTypeName(String name) {
+        return switch (name) {
+            case "List", "ArrayList" -> "List";
+            case "Map", "HashMap" -> "Map";
+            case "Set", "HashSet" -> "Set";
+            case "Channel" -> "Channel";
+            case "Handle" -> "Handle";
+            default -> null;
+        };
+    }
 }

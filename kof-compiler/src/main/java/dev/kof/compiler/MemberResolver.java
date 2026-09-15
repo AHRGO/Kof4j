@@ -156,6 +156,36 @@ public final class MemberResolver {
         return CompilerTypes.qualifyDeep(qualifiedType(Type.of(name)), sa.unit(), sa);
     }
 
+    /**
+     * §249: o nome simples declarado NÃO resolve para nenhum tipo conhecido?
+     * Um tipo explícito de `VarDeclStmt` (`Foo x`, `s length`) caía em
+     * {@code Type.of(name)} = {@code ClassType("", name)} sem diagnóstico algum
+     * — o programa compilava e o statement virava lixo em silêncio (R6).
+     * Espelha as isenções de SEM011 em {@code SemExpressionTyper} (case
+     * IdentifierExpr): builtin, tipo UI/media declarado, coleção nua, classe/
+     * record/enum do módulo, classe externa (--classpath), type-param do escopo
+     * e import simples.
+     * Conservador: só casa NOME SIMPLES (sem `.`/`<`/`?`/`[]`/`(`) — as formas
+     * compostas (`List<Int>`, `Int[]`, `String?`, `(Int) -> Int`) são resolvidas
+     * por {@code Type.of} e nunca caem aqui.
+     */
+    static boolean isUnresolvedSimpleType(SemanticAnalyzer sa, String name, SymbolTable scope) {
+        if (name == null || name.isEmpty()) return false;
+        if (name.contains(".") || name.contains("<") || name.contains("?")
+                || name.contains("[") || name.contains("(")) return false;
+        if (isBuiltinTypeName(name)) return false;
+        // `List xs = listOf(...)`: o Type.of só mapeia a forma parametrizada.
+        if (BuiltinTypes.baseTypeName(name) != null) return false;
+        // UI/media (`Label`, `ImageData`) — §179.
+        if (CompilerTypes.builtinDeclaredType(name) != null) return false;
+        if (BuiltinTypes.isEnumName(name)) return false;
+        if (scope != null && scope.resolve(name) instanceof SymbolTable.TypeParameterSymbol) return false;
+        if (sa.allClasses().containsKey(name)) return false;
+        if (CompilerTypes.unitDeclaresType(sa.unit(), name)) return false;
+        if (qualifyViaImports(sa.unit(), name, sa.externalTypes()) != null) return false;
+        return true;
+    }
+
     /** Constantes de um enum declarado na unit (vazio se não for enum). */
     static List<String> enumConstantsOf(CompilationUnitNode unit, String name) {
         if (name == null || unit == null) return List.of();
