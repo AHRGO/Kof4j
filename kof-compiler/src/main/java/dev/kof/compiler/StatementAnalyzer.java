@@ -199,6 +199,13 @@ public final class StatementAnalyzer {
                 SymbolTable ifScope = scope.enterScope();
                 java.util.List<SymbolTable.LocalVariableSymbol> thenNarrow = new java.util.ArrayList<>();
                 java.util.List<SymbolTable.LocalVariableSymbol> elseNarrow = new java.util.ArrayList<>();
+                // A condição do `if` PRECISA ser tipada (como while/for/assert):
+                // sem inferType, chamadas dentro dela não entram em
+                // resolvedMethods/expressionTypes e o lowering cai no fallback
+                // que usa o tipo SUBSTITUÍDO (T→String) como descriptor do call
+                // — `Box<String>.get()` virava `()Ljava/lang/String;` em vez do
+                // apagado `()Ljava/lang/Object;` → NoSuchMethodError (#161 face 2).
+                SemExpressionTyper.inferType(sa, ifStmt.condition(), scope);
                 collectNarrowing(sa, ifStmt.condition(), scope, thenNarrow, elseNarrow, false);
                 for (SymbolTable.LocalVariableSymbol s : thenNarrow) ifScope.define(s);
                 if (!elseNarrow.isEmpty() && ifStmt.elseBranch() != null) {
