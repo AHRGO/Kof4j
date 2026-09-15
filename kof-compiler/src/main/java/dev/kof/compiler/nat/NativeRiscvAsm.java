@@ -83,6 +83,9 @@ public final class NativeRiscvAsm {
                 // S13b (plan-stdlib-expansion): parse com default (§43) —
                 // wrapper c/ handler no exc_chain; B34–B39 = outras lanes.
                 .append(NativeRiscvAsmRtB41.RISCV_RUNTIME_ASM_B_41)
+                // G-1 (NATIVE002 face 1, 15/09): kof_alloc (free-list) +
+                // kof_free + kof_memstats — memória riscv64.
+                .append(NativeRiscvAsmRtB42.RISCV_RUNTIME_ASM_B_42)
                 .toString();
     }
     static final String RISCV_MAPSET_ASM = runtimeMapset();

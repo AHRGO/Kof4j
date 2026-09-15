@@ -32,7 +32,10 @@
 > effect" is SUPERSEDED); what still does not run (DB/security/UI/record-decode)
 > is diagnosed with a gap code at compile time, not silently.
 > **Real remaining gap `NATIVE002`:** (1) cross GC mark-sweep (riscv is
-> bump-pointer without collector — leak on long heap, non-crash); (2) the
+> bump-pointer without collector — leak on long heap, non-crash) —
+> **G-0 header-block + G-1 free-list/memstats DONE 15/09** (see the
+> decomposition below); G-2..G-5 pending, the collector (G-4) is what
+> actually reclaims; (2) the
 > DB001/SECN000/CONC001/JSN004 refusals above; (3) FP-collection on cross
 > (FLT001 at compile §107); (4) `backend-parity.md` per-arch columns
 > still to be separated; (5) cross CI does not exist (host-dependent toolchain) —
@@ -67,25 +70,40 @@
 > `riscvHeapExhaustionPanicsHonest`/`aarch64HeapExhaustionPanicsHonest`,
 > sabotage-without-guard = zero output FAIL) + x86 GC 3/3 + Artifact 6/6 +
 > ratchet ≤500 OK (Rt0 with exactly 500; design prose lives here).
-> **G-1 riscv free-list** — port of the x86 free-block list ON TOP of the
-> G-0 layout (header 32B: size/flags/gc-list/free-next); proof: cycle
-> alloc/free/alloc (free still manual, no GC) reuses the slot — new riscv
-> E2E test with memstats (`kof_memstats` port included here, it is the observation
-> lever for the following steps).
-> ⚠️ **Correction 12/09 ~20:05 (doc-vs-reality, count in the source — refutes the
-> justification "free without caller = dead code" of the 19:44 refusal):** the
-> riscv slices make **57 `call kof_alloc`** (Mapset0 ×4, Rt0 ×3, RtB0-log ×3,
-> B10/B11/B12/B20/B21/B22 ×2, B1/B15 ×1…) and **ZERO `call kof_free`** — whereas
-> x86 has 4 real callers (`RuntimeChannel:132` channel node,
-> `RuntimeLog2:98` log node, `RuntimeObservability1:426`/`2:247`). riscv
-> LEAKS on every log/b64/map-rebuild node: the bump never returns (it is the reason for the
-> ~260KB fixed `.bss`). G-1 is NOT dead code — it is what closes the leak
-> of the 57 allocations. **Missing to execute: host with toolchain** (the new
-> free/memstats asm is only deliverable with qemu proof — guard `assumeTrue`, never
-> non-executed asm). Port order (proposed): riscv `kof_free` (1:1 port
-> of `RuntimeMemory.emitFree` — G-0 32B header already has size/flags/next) →
-> `kof_memstats` (counters + print) → wire free into the log nodes (RtB0,
-> mirroring `RuntimeLog2:98`) → E2E alloc/free/alloc cycle reuses slot.
+> **G-1 riscv free-list (DONE 15/09, dev session):** port of the x86
+> free-block list ON TOP of the G-0 layout (header 32B:
+> size/flags/gc-list/free-next). New slice `NativeRiscvAsmRtB42` holds
+> `kof_alloc` (MOVED out of `Rt0`, which dropped 500→478 — the ratchet room),
+> `kof_free` and `kof_memstats`; the alloc now first-fits the free list (LIFO,
+> re-enqueue on alloc, `flags=0`) and only bumps on a miss; an `amoswap.w`
+> spin-lock guards the shared free list + counters (main × spawn workers).
+> `kof_free` is a 1:1 port of `RuntimeMemory.emitFree` (flags bit1 = in free
+> list). `kof_memstats` prints `allocs`/`frees`/`live bytes` — the observation
+> lever for the following steps. Proof (qemu riscv64 **and** aarch64, toolchain
+> present, tests never skip): `NativeRiscvGcFreeListTest` assembles the
+> PRODUCTION runtime (`RiscvSlices.renderRuntime()`) with a raw `_start` that
+> alloc(64)→free→alloc(64) and asserts p2==p1 (reuse) + `allocs: 2`/`frees: 1`
+> — 2/2 green; `NativeRiscvRuntimeSliceRegistryTest` 8/8 (concat still
+> byte-identical); cross suites riscv 44 + aarch 44, only the pre-existing
+> `CastSaturation` red; `ArtifactSizeTest` 6/6 (the internal lock/head are
+> `.L`-local so the hello `.symtab` does NOT grow — was the one real
+> regression found and fixed here); `KofGcE2ETest` 3/3 x86 untouched;
+> `check_500` OK.
+> ⚠️ **G-1 proof correction (15/09, doc-vs-reality — the plan's proof had no
+> reachable path):** the 12/09 proposal said "wire free into the log nodes
+> (RtB0, mirroring `RuntimeLog2:98`)" and "alloc/free/alloc reuses the slot".
+> Counting in the source refutes BOTH halves: (a) the riscv log node
+> (`NativeRiscvAsmRtB0:242`) writes label+msg **directly via `write()` and never
+> allocates**, and observability uses fixed `.bss` slots — so there is NO node
+> to free; (b) across the compiler **no riscv slice calls `kof_free`** (x86 has
+> 4 real callers: `RuntimeChannel:132`, `RuntimeLog2:98`,
+> `RuntimeObservability1:426`/`2:247`) and there is **no Kof-level free/GC API**,
+> so a Kof E2E cannot exercise it. Conclusion: the riscv free-list is the
+> correct x86-parity infrastructure, but on riscv it is **latent until G-4**
+> (sweep feeds it) — the G-1 proof is therefore the raw asm harness, not a Kof
+> program. Wiring free into the 57 existing alloc sites is a **G-4 concern**
+> (they must free dead objects, which only the collector can identify), NOT
+> G-1. This also means the ~260KB `.bss` leak is closed by G-4, not G-1.
 > **G-2 header flags/mark bits + GC list** — the block allocates with flag=0 and enters
 > the global gc-list (`kof_gc_head` riscv); proof: program with N allocs and
 > `KOF_GC_DEBUG` dump of the list (write syscalls) with correct size/flag.
@@ -102,9 +120,10 @@
 > impossible (alloc loop that would overflow the 260KB bump runs and memory
 > does not grow monotonically — measure via G-1 memstats).
 > **G-5 aarch64** — inherits everything via translator (the riscv directives/labels pass
-> unscathed — same path as the S-4 prune; `amoadd.d`→`ldadd` already translated,
-> `NativeAarch64Translator.java:299`); gate: aarch suite 39/39 under qemu +
-> the G-4 leak test also on aarch.
+> unscathed — same path as the S-4 prune; `amoadd.d`→`ldadd`, `amoswap.w`→`swpal` already
+> translated, `NativeAarch64Translator.java:299`); gate: aarch suite under qemu +
+> the G-4 leak test also on aarch. **G-1 ALREADY proved the inheritance for the
+> free-list** (`NativeRiscvGcFreeListTest.freeListReusesSlotAndMemstatsCountsAarch64`).
 > Each step: commit with the complete cross suite green + DOING.md on the line.
 > Do NOT mix with S-5-x86/root_end (bugfix queue) — but G-3 DEPENDS on it;
 > G-0/G-1/G-2 move ahead without root_end.
@@ -212,9 +231,11 @@ Main.s  (program: kof_main + .data/.rodata sections)
 ```
 
 Runtime details for riscv64/aarch64 (inc-0 02/09 + 03/09):
-- allocation: **bump allocator** in `.bss` (no `mmap` — avoids problems with
-  static qemu; x86_64 uses `mmap`+free-list, and riscv64/aarch64 follow the model
-  with bump until GC parity).
+- allocation: **bump allocator + free-list** in `.bss` (no `mmap` — avoids
+  problems with static qemu; x86_64 uses `mmap`+free-list, and riscv64/aarch64
+  follow the model). G-1 (15/09) added the x86-style free-list + `kof_free` +
+  `kof_memstats`; the bump remains the fallback and the collector (G-4) is what
+  feeds the free list.
 - strings: layout **identical to x86_64** — `[typeId@0 i32][super@4 i32]
   [vtable@8 ptr][len@16 i32][data@24 …]` (`KOF_STRING_TYPE_ID=1`).
 - output: raw syscall `write(1, …)` (`a7=64` riscv / `x8=64` arm) + `exit` (`a7/x8=93`) — **static** binary, no libc/PLT.
