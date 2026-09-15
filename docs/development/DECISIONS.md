@@ -724,6 +724,66 @@ completes D-NULL from the same day):
 
 ---
 
+## D-PRINT — `println` prints strings as strings; numeric char is EXPLICIT only (✅ decided 15/09, maintainer, in person — closes #168)
+
+> **Maintainer's words:** *"Sempre no println independente de estar com aspas
+> simples ou duplas, string sempre imprime string. A não ser que seja
+> `ascii.valueOf('a')`."*
+
+The contract (supersedes `training/language/strings.md:25`
+"`println(s.charAt(0)) // 72`" and the frozen numeric-char half of §216
+face 2 / #168):
+
+1. `println(c)` with `c: Char` prints **`A`** — never `65`. Same across
+   targets and same for concatenation (`"char: " + 'A'` → `char: A`); the
+   `toString()` half is already fixed (`69bc0f73`, #153) — this decision
+   unifies the remaining implicit-stringification sites
+   (`ExpressionPrintLowerer:63`, `ExpressionBinaryLowerer:253/261`).
+2. The code point is reachable ONLY through an explicit named conversion
+   (`ascii.valueOf('a')` is the sketch; the concrete spelling —
+   `Int.fromChar` / `ascii(...)` / etc. — is picked by the implementation
+   unit, documented in `strings.md` in the same commit). The old
+   `72`-style example in `strings.md:25` is rewritten to the explicit form.
+3. Collection boxing of `char` (`listOf('A')` → `Integer` storage) is a
+   different contract (§104b-ii) and is NOT touched by this decision.
+
+> **✅ DECIDED 15/09** — additive-safe: it REMOVES silent-wrong output
+> (`65` where the user wrote a char); rule 4 of the freeze applies. Bump
+> note: the corpus line `strings.md:25` changes in the SAME commit as the
+> fix + `CharToStringE2ETest` edges (Q1/Q3).
+
+## D-NULL-QUEUE — #266/#259: the maintainer implements the intent-logic (✅ stated 15/09 night — lanes don't attack)
+
+Per the maintainer 15/09 night: the intent-logic for D-NULL-INTENT is
+**being implemented by the maintainer herself** ("estou trabalhando numa
+logica pra..."). Lanes must NOT attack #266/#259's boxed-nullable core
+until she lands it; the lanes' job stays: SEM048/SEM049 audit (N4) +
+catalog of the silent paths (map-miss `0`, uninit field `0`) — no
+overlapping the implementation.
+
+## D-NARROW-WHILE — flow-narrowing for `while`/fields: IMPLEMENT (✅ decided 15/09 — closes the #159 option question)
+
+> **Maintainer's answer to "(a) implementa narrowing de fluxo no 0.4.1 ou
+> (b) congela 'só if' como contrato?":** *"A implementa."*
+
+#159 becomes an implementation queue item: the narrowing that `if` already
+does (`StatementAnalyzer.collectNarrowing`) extends to `while`-condition
+bodies and class-field receivers; reassignment inside the narrowed scope
+keeps the nullability of the DECLARATION (the SEM012 false-positive of the
+repro dies). Cross-target: the 4 backends share the analyzer, so the fix
+is one face + parity proof (Q3).
+
+## D-ENUM207 — #207 reassigned (✅ decided 15/09, maintainer, in person)
+
+The other agent touching enum identity is CLOSED ("ja fechei o outro
+agente que tava mexendo") — enum identity (getstatic instances, `Dir.class`,
+`==` between enum and String) is now owned by the bugs-and-gaps lane
+(192.168.100.15) per the reopening body's own spec. Rule-6 note: the
+SEMANTIC change (`Dir.N == "N"` currently `true` → false/error) is the
+maintainer's decision recorded here, not the lane's.
+
+---
+
 ## How to update this doc
 
 Decided anything else in the chat → lock it here (date + option + code

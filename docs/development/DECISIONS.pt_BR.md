@@ -714,6 +714,65 @@ completa o D-NULL do mesmo dia):
 
 ---
 
+## D-PRINT — `println` imprime string como string; char numérico é só EXPLÍCITO (✅ decidido 15/09, mantenedora, pessoal — fecha #168)
+
+> **Palavras da mantenedora:** *"Sempre no println independente de estar com
+> aspas simples ou duplas, string sempre imprime string. A não ser que seja
+> `ascii.valueOf('a')`."*
+
+O contrato (substitui `training/language/strings.md:25`
+"`println(s.charAt(0)) // 72`" e a metade congelada do §216 face 2 / #168):
+
+1. `println(c)` com `c: Char` imprime **`A`** — nunca `65`. Mesmo nos
+   targets e mesmo na concatenação (`"char: " + 'A'` → `char: A`); a face
+   `toString()` já está corrigida (`69bc0f73`, #153) — esta decisão unifica
+   os sítios restantes de stringificação implícita
+   (`ExpressionPrintLowerer:63`, `ExpressionBinaryLowerer:253/261`).
+2. O code point só é alcançável por conversão explícita nomeada
+   (`ascii.valueOf('a')` é o rascunho; a grafia concreta —
+   `Int.fromChar` / `ascii(...)` / etc. — fica com a unidade de
+   implementação, documentada em `strings.md` no MESMO commit). O exemplo
+   `72` em `strings.md:25` é reescrito na forma explícita.
+3. O box de `char` em COLEÇÃO (`listOf('A')` → storage `Integer`) é outro
+   contrato (§104b-ii) e NÃO é tocado por esta decisão.
+
+> **✅ DECIDIDO 15/09** — removal de saída silenciosa-errada (`65` onde o
+> usuário escreveu char); regra 4 do freeze. A linha do corpus
+> `strings.md:25` muda no MESMO commit do fix + arestas do
+> `CharToStringE2ETest` (Q1/Q3).
+
+## D-NULL-QUEUE — #266/#259: a mantenedora implementa a lógica de intenção (✅ declarado 15/09 noite — lanes não atacam)
+
+Palavra da mantenedora (15/09 noite): a lógica de intenção do
+D-NULL-INTENT **está sendo implementada por ela mesma** ("estou trabalhando
+numa logica pra..."). As lanes NÃO atacam o núcleo boxed-nullable de
+#266/#259 até ela landar; o papel da lane fica: auditoria SEM048/SEM049
+(N4) + catálogo dos caminhos silenciosos (map-miss `0`, campo não-inic.
+`0`) — sem sobreposição com a implementação dela.
+
+## D-NARROW-WHILE — narrowing de fluxo em `while`/campo: IMPLEMENTAR (✅ decidido 15/09 — fecha a pergunta da #159)
+
+> **Resposta da mantenedora para "(a) implementa o narrowing de fluxo no
+> 0.4.1 ou (b) congela 'só if' como contrato?":** *"A implementa."*
+
+#159 vira item de fila de implementação: o narrowing que o `if` já faz
+(`StatementAnalyzer.collectNarrowing`) se estende ao corpo da condição
+`while` e a receptores de campo de classe; re-atribuição dentro do escopo
+estreitado mantém a nullabilidade da DECLARAÇÃO (o falso-positivo SEM012
+do repro morre). Cross-target: os 4 backends compartilham o analisador —
+fix numa face só + prova de paridade (Q3).
+
+## D-ENUM207 — #207 reatribuída (✅ decidido 15/09, mantenedora, pessoal)
+
+O outro agente que mexia em enum identity foi **ENCERRADO** ("já fechei o
+outro agente que tava mexendo") — identidade de enum (instâncias `getstatic`,
+`Dir.class`, `==` entre enum e String) passa a ser da lane bugs-and-gaps
+(192.168.100.15) conforme o corpo da própria reabertura. Nota regra 6: a
+mudança SEMÂNTICA (`Dir.N == "N"` hoje `true` → false/erro) é decisão da
+mantenedora registrada aqui, não da lane.
+
+---
+
 ## Como atualizar este doc
 
 Decidiu mais alguma coisa no chat → trava aqui (data + opção + evidência de
