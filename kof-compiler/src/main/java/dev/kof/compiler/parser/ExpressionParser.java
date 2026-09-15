@@ -352,9 +352,9 @@ public class ExpressionParser {
             ctx.expect(TokenType.LPAREN, "Expected '(' after if", "PARSE043");
             ExpressionNode condition = ExpressionParser.parseExpression(ctx);
             ctx.expect(TokenType.RPAREN, "Expected ')'", "PARSE040");
-            ExpressionNode thenExpr = ExpressionParser.parseExpression(ctx);
+            ExpressionNode thenExpr = parseIfExprBranch(ctx);
             ctx.expect(TokenType.ELSE, "Expected 'else'", "PARSE044");
-            ExpressionNode elseExpr = ExpressionParser.parseExpression(ctx);
+            ExpressionNode elseExpr = parseIfExprBranch(ctx);
             return new IfExpr(p, condition, thenExpr, elseExpr);
         }
         if (ctx.check(TokenType.SWITCH)) {
@@ -483,6 +483,17 @@ public class ExpressionParser {
                     + "(sem escopo de bloco); use o switch-statement (`case ...:`) para "
                     + "múltiplos statements", "PARSE094");
         }
+    }
+
+    private static ExpressionNode parseIfExprBranch(ParseContext ctx) {
+        if (ctx.check(TokenType.LBRACE)) {
+            ctx.advance();
+            ExpressionNode expr = ExpressionParser.parseExpression(ctx);
+            if (ctx.check(TokenType.SEMICOLON)) ctx.advance();
+            ctx.expect(TokenType.RBRACE, "Expected '}' after if-expression branch", "PARSE045");
+            return expr;
+        }
+        return ExpressionParser.parseExpression(ctx);
     }
 
     static List<ExpressionNode> parseArguments(ParseContext ctx) {
