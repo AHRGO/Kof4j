@@ -145,6 +145,7 @@ final class NativeMethodEmitter {
         }
     }
 
+    @SuppressWarnings("unused")
     void emitOperation(StringBuilder sb, KofOperation op, IRMethod currentMethod) {
         if (nb.debugInfo && currentMethod.debugInfo() != null) {
             SourcePosition dbg = currentMethod.debugInfo().positions().get(op);

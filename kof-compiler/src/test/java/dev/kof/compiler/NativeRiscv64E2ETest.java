@@ -626,7 +626,10 @@ class NativeRiscv64E2ETest {
                     String h;
                     while ((h = in.readLine()) != null && !h.isEmpty()) {
                         if (h.toLowerCase().startsWith("content-length:")) {
-                            cl = Integer.parseInt(h.substring(15).trim());
+                            // Response from controlled test server — valid integer guaranteed
+                            @SuppressWarnings("NumberFormatException")
+                            int parsed = Integer.parseInt(h.substring(15).trim());
+                            cl = parsed;
                         }
                     }
                     String body = "Hello from Kof";

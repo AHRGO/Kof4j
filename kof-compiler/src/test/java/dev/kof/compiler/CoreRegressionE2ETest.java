@@ -2388,4 +2388,22 @@ class CoreRegressionE2ETest {
         assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
         assertEquals("child\ntrue", runJvm(out));
     }
+
+    // Issue #232 — enum.ordinal() and enum.compareTo() not accessible — SEM025
+    @Test
+    void enumOrdinalAndCompareToJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("enum_ordinal.kf");
+        Files.writeString(src, """
+                enum Dir { N, S, E, W }
+                main() {
+                    println(Dir.N.ordinal())
+                    println(Dir.W.ordinal())
+                    println(Dir.N.compareTo(Dir.S))
+                }
+                """);
+        Path out = tempDir.resolve("enum_ordinal-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("0\n3\n-1", runJvm(out));
+    }
 }
