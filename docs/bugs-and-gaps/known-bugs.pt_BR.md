@@ -3845,6 +3845,18 @@ int de índice) — verificados na varredura.
   `KofInterpreterParityTest.{expr-body-null-branch, expr-body-switch-null-branch,
   annotated-slot-null-branch}` (3 paridades); suíte compiler 1405/0-fail (13
   err=`node` ambiente, +1 skip cross), script/kof-c/cli inalterados.
+- **⚠️ REVOGADA 15/09 por DECISIONS §D-NULL-INTENT (mantenedora, em pessoa):**
+  a "opção A" (o `null` dobra para o default do primitivo, `ni()==null` é
+  `false`, `println(ni())` é `0`) NÃO é mais o contrato. Medido o colapso
+  silencioso: `Int? maybe(){return null}` → `maybe(2)==null` dá `false` e
+  imprime `0` (JVM+Native); `Int f(){return null}` → `0` SEM diagnóstico.
+  Ambos são violações R6. Nullability agora é por INTENÇÃO EXPLÍCITA (a
+  própria comparação `== null` é o sinal); onde a intenção existe, null é
+  REAL nos 4 targets; onde não existe, null nunca chega em silêncio. A fila
+  é N1→N4 do D-NULL-INTENT (roadmap §23). A célula `nullableprint` da matriz
+  e as 3 paridades null-branch do `KofInterpreterParityTest` codificam a
+  opção A e DEVEM virar quando N1 pousar (não tocá-las antes — regra 1: a
+  suíte é o gate; mudar o oracle no MESMO commit do comportamento).
 
 ### 126. Chave do TIPO ERRADO em Map/Set/`contains`-de-List pinados → Native SIGSEGV (JVM tolera com miss/false) — ✅ CORRIGIDO 11/09 (decisão da mantenedora: opção ii — SEM056 em compile-time)
 
