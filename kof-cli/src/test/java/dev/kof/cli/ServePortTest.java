@@ -61,13 +61,14 @@ class ServePortTest {
     /** Lê a saída do processo até aparecer a marca (ou timeout). */
     private String readUntil(Process p, String marker, long timeoutMs) throws IOException, InterruptedException {
         StringBuilder all = new StringBuilder();
-        BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8));
-        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
-        String line;
-        while ((line = r.readLine()) != null) {
-            all.append(line).append('\n');
-            if (all.indexOf(marker) >= 0) return all.toString();
-            if (System.nanoTime() > deadline) break;
+        try (BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {
+            long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
+            String line;
+            while ((line = r.readLine()) != null) {
+                all.append(line).append('\n');
+                if (all.indexOf(marker) >= 0) return all.toString();
+                if (System.nanoTime() > deadline) break;
+            }
         }
         return all.toString();
     }
