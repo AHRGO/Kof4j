@@ -64,7 +64,11 @@
 | nested if-expression | `small` | DONE | DONE | DONE | DONE | `nestedif` |
 | switch-expression `case ->` | `three` | DONE | DONE | DONE | DONE | `switchexpr` |
 | heterogeneous if-expr Int/String (issue #57) | `1` | DONE | DONE | DONE | DONE (bug 69 fixed) | `ifexpr-heterogeneous-direct` |
+| heterogeneous if-expr Int/String, false branch (§205) | `s` | DONE | DONE | DONE | DONE | `ifexpr-heterogeneous-direct-else` |
 | heterogeneous switch-expr Int/String (issue #57) | `1` | DONE | DONE | DONE | DONE (bug 69 fixed) | `switchexpr-heterogeneous-direct` |
+| heterogeneous switch-expr Int/String, false branch (§205) | `s` | DONE | DONE | DONE | DONE | `switchexpr-heterogeneous-direct-else` |
+| heterogeneous switch-expr multi-arms (§205) | `2` | DONE | DONE | DONE | DONE | `switchexpr-heterogeneous-multi` |
+| heterogeneous switch-expr multi-arms, default (§205) | `d` | DONE | DONE | DONE | DONE | `switchexpr-heterogeneous-multi-default` |
 | heterogeneous if-expr Int/Long (§70, join crash) | `1` | DONE | DONE | DONE | DONE (bug 69 fixed) | `ifexpr-intlong-direct` |
 | heterogeneous if-expr Long/Double (§70) | `2` | DONE | DONE | DONE | DONE (bug 69 fixed) | `ifexpr-longdouble-direct` |
 | `if` with `throw` branch + `else` (method epilogue after the if) | `else` / `after` | DONE | DONE | DONE | DONE (bug 147 ✅ 12/09 `718ae5cf` — `JsIfThrowElse` isolates the epilogue) | `ifthrowelse` |

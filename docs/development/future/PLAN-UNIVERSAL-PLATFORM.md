@@ -1082,10 +1082,15 @@ embedded/edge systems, local HPC, forensics.
   blocking pthread) — **D** (necessary for HPC/edge servers);
   (e) **RISC/ARM codegen** (today placeholder via qemu) — **C** (already
   in progress); (f) **GPU** (Vulkan via FFI; CUDA via FFI) — **D/A**.
+  **(g) bare-metal / bootable** (microcontroller, legacy BIOS, UEFI) — see
+  `PLAN-BAREMETAL-BOOT.md` (15/09 maintainer directive): a **platform seam
+  (`kof_plat_*`) + freestanding link profile**, not a new language. Classified
+  B-0…B-5; the 32-bit MCU face is research-class and depends on the collector.
 - **Verdict:** Native is the target for **systems domains** (edge infra,
   forensics, automation, embedded). The HPC/numeric path is **FFI to
   C/C++/Rust** (non-GC zone), not reimplementation. Cost: medium-high
-  (GC mark-sweep + event-loop are the two expensive items).
+  (GC mark-sweep + event-loop are the two expensive items; bare-metal adds the
+  HAL seam + 32-bit codegen per `PLAN-BAREMETAL-BOOT.md`).
 
 ## 8.3 JS (the "web/browser" target)
 

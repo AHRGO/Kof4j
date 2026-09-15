@@ -261,6 +261,11 @@ embedded real exige RTOS/bare-metal backend — fica em `future/` sem degrau
 agendado. O que T1 entrega para ele hoje: o runtime **subsetável por fatia**
 (a arquitetura que impede o monólito), que é exatamente o requisito do
 briefing ("a solução não pode depender de runtime monolítico").
+**Rota agora registada (diretiva da mantenedora 15/09):** os três bloqueios
+medidos acima estão decompostos em faces **B-0…B-5** (costura HAL `kof_plat_*` +
+perfil freestanding + UEFI/BIOS/MCU) em
+`docs/development/future/PLAN-BAREMETAL-BOOT.md` — ainda só plano, sem degrau
+agendado.
 
 ### T4 — JVM (baixa prioridade, honestidade)
 

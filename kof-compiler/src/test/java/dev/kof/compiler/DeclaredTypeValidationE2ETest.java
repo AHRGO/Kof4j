@@ -142,6 +142,30 @@ class DeclaredTypeValidationE2ETest {
     }
 
     @Test
+    void genericInterfaceTypeVariableAccepted(@TempDir Path tmp) throws Exception {
+        // Q4 regression guard: a generic INTERFACE's type params (T) are valid
+        // declared types in its methods — the §160 lane added typeParameters to
+        // InterfaceDeclarationNode; the checker must whitelist them.
+        CompilationResult r = compile(tmp, """
+                interface Mapper<T> { T map(T input) }
+                class Identity implements Mapper<String> {
+                    String map(String input) { return input }
+                }
+                main() { println("ok") }
+                """);
+        assertTrue(r.success(), "generic interface type-param must compile: " + r.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void genericInterfaceMultiParamAccepted(@TempDir Path tmp) throws Exception {
+        CompilationResult r = compile(tmp, """
+                interface Fn<A, B> { B apply(A a) }
+                main() { println("ok") }
+                """);
+        assertTrue(r.success(), "generic interface A/B must compile: " + r.diagnostics().getDiagnostics());
+    }
+
+    @Test
     void moduleClassAndInterfaceTypesAccepted(@TempDir Path tmp) throws Exception {
         CompilationResult r = compile(tmp, """
                 interface Shape { Int area() }

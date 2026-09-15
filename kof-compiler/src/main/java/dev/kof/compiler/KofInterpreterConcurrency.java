@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -21,9 +20,6 @@ public final class KofInterpreterConcurrency {
     static final Object NOT_HANDLED = KofInterpreterValues.NOT_HANDLED;
 
     private final KofInterpreter interp;
-    // codeql[unused-container] - fields used throughout class (tasks.add/remove, taskThreads.put/remove, timeJobs.put)
-    private final List<Thread> tasks = new CopyOnWriteArrayList<>();
-    private final Map<Object, Thread> taskThreads = new ConcurrentHashMap<>();
     private final Map<String, Thread> timeJobs = new ConcurrentHashMap<>();
     private static final AtomicInteger timeSeq = new AtomicInteger();
     private static final AtomicInteger activeTasks = new AtomicInteger();
@@ -177,9 +173,7 @@ public final class KofInterpreterConcurrency {
             }
         };
         activeTasks.incrementAndGet();
-        Thread t = startVirtualOrPlatform(wrapped);
-        tasks.add(t);
-        if (handle != null) taskThreads.put(handle, t);
+        startVirtualOrPlatform(wrapped);
     }
 
     interface ThrowingRunnable {

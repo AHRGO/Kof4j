@@ -650,6 +650,80 @@ API that returns `T?`. Two consequences, both now the contract:
 
 ---
 
+## D-NULL-INTENT — nullability by EXPLICIT INTENT; silent `null→0` is DEAD (✅ decided 15/09, maintainer, in person)
+
+> **Maintainer's words:** *"null safety nunca deve retornar null, mas vamos adicionar
+> uma função semântica pro compilador entender a intenção quando o dev quer que
+> volte null — compara por exemplo um int com `if (i == null)`, então isso é a
+> intenção mandando no escopo: deve poder ser null nesse quesito, quando a
+> intenção fica explícita. O mesmo pra string, boolean, todos os tipos. Caso
+> contrário, null nunca é esperado."*
+
+The contract, now frozen (supersedes the "option A — fold to 0" of §125 and
+completes D-NULL from the same day):
+
+1. **Null is NEVER expected by default.** A declaration without an explicit
+   null-intent (`Int`, `String`, `Foo` …) cannot produce or carry `null`.
+   Returning/passing `null` where there is no intent is a **compile-time
+   diagnostic** — never the silent `null→0`/`null→false` fold that §125
+   "option A" ratified (measured 15/09: `Int? maybe(){return null}` →
+   `maybe(2)==null` = **false**, `println` = `0`; `Int f(){return null}` → `0`
+   with NO diagnostic — both are R6 violations and are now bugs to fix, not
+   behavior to preserve).
+2. **The intent is the `== null` / `!= null` comparison.** A program that
+   writes `if (i == null)` on a non-nullable `Int` is declaring intent:
+   *"this may be null, handle it"*. The compiler must understand it on ALL
+   types (Int, Long, Bool, Double, String, class …): the compared place
+   accepts null in that scope (the branch narrows; the other branch is
+   non-null). No syntax ceremony is required to *ask* for null — asking is
+   the comparison itself.
+3. **When intent exists, null is REAL, on every target.** `Int?`/`Long?`/
+   `Bool?`/`Double?` genuinely hold `null`: `x == null` answers `true` for a
+   null and `false` for a value; `println(x)` prints `null` — JVM, Script,
+   JS and Native with the SAME output (rule 5). This is exactly the boxed
+   `T?` face D-NULL released from rule 6 (queue §241/#266/#259) — now with a
+   DEADLINE: it is the implementation of this decision, not a parked idea.
+4. **What does NOT change (freeze holds):** the `null` LITERAL is still not
+   assignable to a non-nullable place (SEM048 stays: `f(null)` on `f(Int)` is
+   an error — intent comes from `== null` comparisons and `T?` declarations,
+   not from shoving `null` into a non-null slot); `==` content semantics,
+   operators and precedence are untouched (the comparison `i == null` is a
+   *use* of frozen `==`, not a change to it); reference types keep today's
+   behavior where it already matches (`String?` already returns real null).
+
+**Implementation queue (roadmap §23, in this order):**
+
+- **N1 (JVM+Script+JS):** `Nullable(primitive)` carries real null — method
+  return type becomes the boxed class (`maybe` emits `Integer`, not `int`),
+  locals/slots typed `T?` are boxed with null-allowed, `== null` lowers to
+  reference-compare on the boxed; remove the `foldNullablePrimBranches`
+  (§125 extension) and the `null→0` folding in the return/assignment paths.
+  Regression: `Int?` null matrix cells (`nullprim-true`: `maybe(2)==null` →
+  `true`, `println(maybe(2))` → `null`) on 3 targets + Script.
+- **N2 (Native):** the same via the boxed-ABI §104b-ii (tagged box + real
+  `kof_box`/`kof_unbox` + `object_to_string`) — Native prints `null`/`1`
+  identically. Cells re-open with Native included ONLY when byte-identical.
+- **N3 (intent on NON-nullable):** `i == null` where `i` is declared `Int`
+  (no `?`): today compiles to constant `false` (measured 15/09). Contract:
+  the comparison is legal and REAL — if `i` can observe null it answers the
+  truth, otherwise it is a constant the optimizer may fold; NO diagnostic is
+  added (intent must never break compiling code — backward compatibility
+  rule 2: code that compiles today keeps compiling).
+- **N4 (no-silent-null enforcement):** a `return null` / `x = null` in a
+  non-nullable signature/declaration already SEM048/§125 for the LITERAL —
+  audit the REMAINING silent paths (map-miss `0`, uninitialized field `0`,
+  unboxing-null `0`) and give each a decided face: honest null (when the
+  place is `T?` / intent) or diagnostic; never a value out of thin air.
+
+> **✅ DECIDED 15/09** — this entry is the law for the null family; §125
+> "option A" is REVOKED as behavior (its catalog entry points here). The
+> queue N1→N4 is additive to the language only in the sense D-NULL already
+> sanctioned (completing `T?` across targets); it REMOVES silent-wrong
+> behavior, which the freeze never protected (rule 4 of the freeze: a bug is
+> fixed to reach the expected, never the opposite).
+
+---
+
 ## How to update this doc
 
 Decided anything else in the chat → lock it here (date + option + code

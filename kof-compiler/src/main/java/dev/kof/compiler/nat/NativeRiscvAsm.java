@@ -86,6 +86,9 @@ public final class NativeRiscvAsm {
                 // G-1 (NATIVE002 face 1, 15/09): kof_alloc (free-list) +
                 // kof_free + kof_memstats — memória riscv64.
                 .append(NativeRiscvAsmRtB42.RISCV_RUNTIME_ASM_B_42)
+                // G-3 (NATIVE002 face 1, 15/09): mark conservador riscv64
+                // (kof_gc_try_mark/mark_transitive/mark) sobre a gc-list do G-2.
+                .append(NativeRiscvAsmRtB43.RISCV_RUNTIME_ASM_B_43)
                 .toString();
     }
     static final String RISCV_MAPSET_ASM = runtimeMapset();

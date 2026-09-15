@@ -55,6 +55,11 @@ class NativeRiscvGcFreeListTest {
     /** _start cru: p1 = alloc(64); free(p1); p2 = alloc(64); exige p2 == p1. */
     private static final String HARNESS = """
             .option arch, rv64g
+            .section .data
+            .align 3
+            .Lkof_heap_root_start:
+                .quad 0
+            .Lkof_heap_root_end:
             .section .text
             .globl _start
             _start:

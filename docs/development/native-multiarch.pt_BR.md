@@ -33,9 +33,9 @@
 > é diagnosticado com código de gap em compilação, não silenciosamente.
 > **Gap real `NATIVE002` que sobra:** (1) GC mark-sweep cross (riscv é
 > bump-pointer sem coletor — vazamento em heap longo, não-crash) —
-> **G-0 bloco-header + G-1 free-list/memstats + G-2 gc-list/dump FEITOS 15/09**
-> (ver a decomposição abaixo); G-3..G-5 pendentes, o coletor (G-4) é quem
-> de fato recupera; (2) as
+> **G-0 bloco-header + G-1 free-list/memstats + G-2 gc-list/dump + G-3 mark
+> conservative FEITOS 15/09** (ver a decomposição abaixo); G-4..G-5 pendentes,
+> o coletor (G-4) é quem de fato recupera; (2) as
 > recusas DB001/SECN000/CONC001/JSN004 acima; (3) FP-coleção no cross
 > (FLT001 em compilação §107); (4) `backend-parity.md` colunas por-arch
 > ainda por separar; (5) CI cross não existe (toolchain host-dependente) —
@@ -117,14 +117,27 @@
 > vazia. Slice-registry 8/8 (concat ainda byte-idêntica), cross riscv 44 +
 > aarch 44 (só o `CastSaturation` pré-existente vermelho), `ArtifactSizeTest`
 > 6/6, `KofGcE2ETest` 3/3 x86 intocado, `check_500` OK.
-> **G-3 mark conservative riscv** — port de `kof_gc_mark`: walk `sp..fp`
-> (riscv: `sp` até o limite do frame, fallback 4KB como o x86) + scan de
-> raízes estáticas EXPLÍCITO no intervalo `.data..kof_heap_root_end`
-> (o `kof_heap_root_end` da #97 S-5-x86 é PRÉ-REQUISITO compartilhado —
-> coordenar com a fila bugfix, não duplicar o emissor); transitive = walk dos
-> campos por tamanho (size/8). Prova: objeto alcançado só pela stack sobrevive,
-> inalcançado some (teste com `KOF_GC_DEBUG` antes/depois; SEM sweep ainda —
-> mark-only é observável, inofensivo).
+> **G-3 mark conservative riscv (FEITO 15/09, sessão dev):** port do
+> `kof_gc_mark`/`kof_gc_try_mark`/`kof_gc_mark_transitive` na fatia nova
+> `NativeRiscvAsmRtB43` sobre o header de 32B do G-0 e a gc-list do G-2.
+> Raízes de pilha = `sp..s11` (fp riscv; fallback 4KB como o x86) com `s0-s11`
+> derramados para que ponteiros em registrador apareçam; raízes estáticas = o
+> intervalo entre os rótulos LOCAIS riscv-only `.Lkof_heap_root_start`/
+> `.Lkof_heap_root_end` emitidos pelo `NativeArchEmitter` em volta do `.data`
+> do programa (sentinel `.quad 0` na abertura). **Correção ao plano:** o
+> `kof_heap_root_end` x86 (fila bugfix S-5) NÃO foi necessário — o riscv agora
+> emite os próprios marcadores `.L`-locais (fora do `.symtab`, a lição do G-1
+> no ArtifactSizeTest) e o intervalo EXCLUI de propósito a arena do bump
+> (`_kof_heap`, em `.bss`), ao contrário do x86 que varre até `_end` porque lá
+> o heap é mmap. Logo o G-3 avançou SEM o pré-requisito compartilhado; os
+> rótulos são declarados program-side em `RiscvSlices.programSideLocals()`.
+> Prova (qemu riscv64 **e** aarch64, nunca skip): `NativeRiscvGcMarkTest` 2/2 —
+> `_start` aloca A(raiz estática)→B(pilha)→C(inalcançável)→D(via campo0 de A),
+> chama `kof_gc_mark`, despeja: `gc 96 1`/`gc 96 0`/`gc 96 1`/`gc 96 1` (D/A
+> alcançáveis, C não); sabotagem (remover a varredura transitiva de campos) =
+> 2/2 vermelho com D=0. Harnesses G-1/G-2 e slice-registry 8/8 ainda verdes;
+> `ArtifactSizeTest` 6/6 (rótulos `.L`-locais, sem inchar o symtab);
+> `KofGcE2ETest` 3/3 x86 intocado; `check_500` OK.
 > **G-4 sweep + collect no alloc** — free-list recebe mortos; `kof_gc_collect`
 > portado (tick 4096 como o x86); prova: teste de VASAMENTO que hoje é
 > impossível (loop de alloc que estouraria o bump de 260KB roda e a memória
@@ -135,8 +148,17 @@
 > o teste de vazamento G-4 também no aarch. **O G-1 JÁ provou a herança da
 > free-list** (`NativeRiscvGcFreeListTest.freeListReusesSlotAndMemstatsCountsAarch64`).
 > Cada degrau: commit com suíte cross completa verde + DOING.md na linha.
-> NÃO misturar com S-5-x86/root_end (fila bugfix) — mas G-3 DEPENDE dele;
-> G-0/G-1/G-2 adiantam sem root_end.
+> G-0/G-1/G-2 adiantam sem root_end; **o G-3 também adiantou** (emite os
+> próprios marcadores `.L`-locais riscv — NÃO precisou do `kof_heap_root_end`
+> x86 da S-5); G-4 (sweep+collect) é o próximo e não depende dele.
+>
+> **Além do GC (futuro, sem degrau agendado):** a diretiva da mantenedora de
+> 15/09 ("todo código nativo deve se comunicar direto com barebones — código
+> bootável para microcontroladores, legado e UEFI com Kof") está registada,
+> decomposta e mantida só-plano em
+> `docs/development/future/PLAN-BAREMETAL-BOOT.md` (faces B-0…B-5: costura HAL
+> `kof_plat_*` + perfil freestanding + UEFI/BIOS/MCU). A face MCU depende do
+> coletor (G-4/G-5) acima.
 >
 > **Status:** `EM DESENVOLVIMENTO (parcial)` — **riscv64 + aarch64 com core completo (03/09)**: classes/arrays/List/strings/instanceof/switch/try-catch/FP/recursão em asm puro nos dois; paridade avançada pendente *(ver re-auditoria 12/09 acima — muito do que estava "pendente" já roda sob qemu; o que falta tem código de gap honesto)*.
 > **Versão:** 0.2.6-beta · **Data:** 2026-09-03
@@ -356,3 +378,9 @@ compila e roda **idêntico** em `x86_64`, `aarch64 (qemu)`, `riscv64 (qemu)` e
 
 - `GC` mark-sweep avançado, `float/double` no Native (`F2D`), `kof.web`
   `listen` nativo, `macOS` Mach-O / `Windows` PE.
+- **Bare-metal / bootável** (microcontrolador, BIOS legado, UEFI) — diretiva da
+  mantenedora 15/09 ("todo código nativo deve se comunicar direto com barebones").
+  O runtime riscv64/aarch64 em asm puro (sem libc) é a base natural, mas os
+  emitters estão fixados a `ecall`/`syscall` Linux e a uma ABI `_start`, e não há
+  perfil de link freestanding. Só plano, sem agendamento:
+  `docs/development/future/PLAN-BAREMETAL-BOOT.md` (faces B-0…B-5).

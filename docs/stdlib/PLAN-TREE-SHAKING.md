@@ -261,6 +261,10 @@ real embedded requires an RTOS/bare-metal backend — it stays in `future/` with
 scheduled step. What T1 delivers for it today: the runtime **subsettable per slice**
 (the architecture that prevents the monolith), which is exactly the briefing's
 requirement ("the solution cannot depend on a monolithic runtime").
+**Route now recorded (15/09 maintainer directive):** the three measured blockers
+above are decomposed as faces **B-0…B-5** (HAL seam `kof_plat_*` + freestanding
+profile + UEFI/BIOS/MCU) in `docs/development/future/PLAN-BAREMETAL-BOOT.md` — still
+plan only, no scheduled step.
 
 ### T4 — JVM (low priority, honesty)
 

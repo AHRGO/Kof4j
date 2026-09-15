@@ -312,10 +312,13 @@ public final class SemExpressionTyper {
                                 "cannot instantiate abstract class '" + ne.typeName() + "'",
                                 "SEM041");
                     }
-                    // codeql[unused-container] - argTypes used as parameter types for constructorFor lookup
-                    List<Type> argTypes = new ArrayList<>();
+                    // Inferencia dos argumentos: o efeito colateral importa
+                    // (cache expressionTypes + diagnostics de SEM nas exprs), a
+                    // resolucao do construtor e por aridade (constructorFor
+                    // aceita int) — o container de tipos era write-only
+                    // (CodeQL unused-container: achado real, nao FP).
                     for (ExpressionNode arg : ne.arguments()) {
-                        argTypes.add(inferType(sa, arg, scope));
+                        inferType(sa, arg, scope);
                     }
                     SymbolTable.ConstructorSymbol ctor3 =
                             SymbolTable.constructorFor(cs.members(), ne.arguments().size());

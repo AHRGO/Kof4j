@@ -186,6 +186,64 @@ public final class MemberResolver {
         return true;
     }
 
+    /**
+     * §251: um tipo DECLARADO pode ser composto — {@code List<Foo>}, {@code Foo?},
+     * {@code Foo[]}, {@code (Int) -> Foo}. Valida os nomes simples recursivamente
+     * contra {@link #isUnresolvedSimpleType}, exceto os type-params de
+     * {@code typeParams} (classe/record/função genérica — `T`, `K`, `V`…).
+     * Conservador com nomes qualificados (`java.lang.Foo`) e tipos-função: o
+     * miolo é validado, o qualificado nunca é acusado.
+     */
+    static boolean declaredTypeUnresolved(SemanticAnalyzer sa, String declType,
+                                          java.util.Set<String> typeParams) {
+        if (declType == null) return false;
+        String t = declType.trim();
+        if (t.isEmpty() || "var".equals(t) || "val".equals(t) || "void".equals(t)) return false;
+        if (t.contains(" -> ")) {
+            int rp = t.indexOf(')');
+            String ps = t.startsWith("(") && rp > 0 ? t.substring(1, rp) : "";
+            String ret = t.substring(t.indexOf(" -> ") + 4).trim();
+            if (!ps.isEmpty()) {
+                for (String p : splitTopLevelTypes(ps)) {
+                    if (declaredTypeUnresolved(sa, p, typeParams)) return true;
+                }
+            }
+            return declaredTypeUnresolved(sa, ret, typeParams);
+        }
+        if (t.endsWith("?")) return declaredTypeUnresolved(sa, t.substring(0, t.length() - 1), typeParams);
+        if (t.endsWith("[]")) return declaredTypeUnresolved(sa, t.substring(0, t.length() - 2), typeParams);
+        int lt = t.indexOf('<');
+        if (lt > 0 && t.endsWith(">")) {
+            if (declaredTypeUnresolved(sa, t.substring(0, lt), typeParams)) return true;
+            String args = t.substring(lt + 1, t.length() - 1);
+            for (String a : splitTopLevelTypes(args)) {
+                if (declaredTypeUnresolved(sa, a, typeParams)) return true;
+            }
+            return false;
+        }
+        if (t.contains(".") || t.contains("(")) return false;
+        if (typeParams != null && typeParams.contains(t)) return false;
+        return isUnresolvedSimpleType(sa, t, null);
+    }
+
+    /** Divide `A, B<C, D>, E` em topo-de-nível (respeita o aninhamento de `<...>`). */
+    private static List<String> splitTopLevelTypes(String s) {
+        List<String> out = new java.util.ArrayList<>();
+        int depth = 0;
+        int start = 0;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == '<') depth++;
+            else if (c == '>') depth--;
+            else if (c == ',' && depth == 0) {
+                out.add(s.substring(start, i).trim());
+                start = i + 1;
+            }
+        }
+        if (start < s.length()) out.add(s.substring(start).trim());
+        return out;
+    }
+
     /** Constantes de um enum declarado na unit (vazio se não for enum). */
     static List<String> enumConstantsOf(CompilationUnitNode unit, String name) {
         if (name == null || unit == null) return List.of();

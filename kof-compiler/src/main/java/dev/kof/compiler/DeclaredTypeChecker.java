@@ -48,7 +48,7 @@ final class DeclaredTypeChecker {
                     }
                     checkMembers(sa, dc, r.typeParameters(), r.members());
                 }
-                case InterfaceDeclarationNode i -> checkMembers(sa, dc, List.of(), i.members());
+                case InterfaceDeclarationNode i -> checkMembers(sa, dc, i.typeParameters(), i.members());
                 case EntityDeclarationNode e -> {
                     for (EntityFieldNode f : e.fields()) {
                         report(dc, sa, f.type(), Set.of(),
