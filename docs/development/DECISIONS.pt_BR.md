@@ -593,6 +593,50 @@ define. Célula golden cross-target (`floatprint`).
 
 ---
 
+## D-NULL — emenda §125/SEM048: "null pra primitivo" foi LEITURA ERRADA (✅ decidido 15/09, mantenedora, pessoal)
+
+> **A mantenedora corrigiu o registro diretamente: "eu NÃO proíbo null pra
+> primitivo, proíbo null pra quando tem null safety. Vocês entenderam errado."**
+> Todo registro do catálogo que leu §125/SEM048 como *"um primitivo nunca pode
+> carregar null, portanto `Int?` boxed é proibido (regra 6)"* está **errado**, e o
+> raciocínio *"`T?` boxed reabre o §125 → regra 6"* que estacionou #259/#266/#252
+> (e justificou o revert `6553ac2e` do §241) é **nulo**.
+
+O que §125/SEM048 realmente proíbe é **fabricar `null` num ponto sem
+null-safety** — o `null` **literal** em atribuição / retorno / argumento. Null
+safety é por **narrowing** (`if (x != null)`); `null` só chega de API que devolve
+`T?`. Duas consequências, ambas o contrato agora:
+
+- **(a) `Int?`/`Boolean?`/`Double?` PODEM carregar `null` de verdade.** A face
+  `Nullable(primitivo)` boxed (família #252) é **frente legítima de
+  implementação**, NÃO um congelamento regra-6. O trabalho é *"completar o box
+  nos 4 targets"* (JVM + Script + JS + Native em lockstep — exatamente o que a
+  meia-implementação `c0cf805e` do §241 falhou em fazer), rastreado como a fila
+  §241/#266/#259, **não** estacionado atrás de uma decisão que não existe.
+- **(b) Um `Int` pelado (sem `?`) continua sem null** — e o compilador deve DIZER
+  isso em **compile-time**, nunca um `VerifyError` silencioso no load. `f(null)`
+  onde `f` recebe um `Int` não-nullable é **SEM048** (espelha o guard da
+  atribuição `x = null` e o do retorno §125). Implementado 15/09 pela lane
+  bugs-and-gaps `192.168.100.15`: guard compartilhado
+  `SemanticAnalyzer.checkNullArgs` + pós-pass sobre
+  `resolvedMethods`/`resolvedConstructors` (método de instância + construtor) +
+  check no ramo top-level do `BuiltinCallTyper` (os mapas resolvidos nunca veem
+  chamadas top-level). Um formal `NullableType` NUNCA cai no guard —
+  `handle(Boolean? flag)` + `handle(null)` deve compilar (isso é (a), o caso-core
+  do #266). Prova: `NullArgPrimitiveParamE2ETest` 7/7 (4 rejeições
+  instância/construtor/top-level/Long + 2 não-regressões "sem SEM048 em
+  Boolean?/String? + null" + valor real passa); cross-target o diagnóstico é
+  idêntico em jvm/js/native e sob `kof run --target script` (frontend
+  compartilhado).
+
+> **✅ DECIDIDO 15/09** — o §125 segue CONGELADO como "null literal não é
+> fabricável", mas seu *escopo* foi corrigido: ele nunca proibiu `T?` boxed. O
+> trabalho boxed-4-targets é uma **fila de implementação ABERTA** (regra 6 não se
+> aplica mais a ela). Catálogo conexo: §250 (parte (c), corrigida),
+> §241/#252/#259/#266 (a fila do box).
+
+---
+
 ## Como atualizar este doc
 
 Decidiu mais alguma coisa no chat → trava aqui (data + opção + evidência de

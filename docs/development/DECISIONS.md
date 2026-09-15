@@ -608,6 +608,47 @@ defines. Cross-target golden cell (`floatprint`).
 
 ---
 
+## D-NULL — §125/SEM048 amendment: "null for primitives" was a MISREAD (✅ decided 15/09, maintainer, in person)
+
+> **The maintainer corrected the record directly: "I do NOT forbid null for
+> primitives — I forbid null when there is null safety. You all understood it
+> wrong."** Every catalog entry that read §125/SEM048 as *"a primitive can never
+> hold null, therefore a boxed `Int?` is forbidden (rule 6)"* is **wrong**, and
+> the "boxed `T?` reopens §125 → rule 6" reasoning that parked #259/#266/#252
+> (and that justified the `6553ac2e` revert of §241) is **void**.
+
+What §125/SEM048 actually forbids is **fabricating `null` at a site that has no
+null-safety** — the `null` **literal** in an assignment / return / argument.
+Null safety is by **narrowing** (`if (x != null)`); `null` arrives only from an
+API that returns `T?`. Two consequences, both now the contract:
+
+- **(a) `Int?`/`Boolean?`/`Double?` CAN genuinely hold `null`.** The boxed
+  `Nullable(primitive)` face (the #252 family) is a **legitimate implementation
+  front**, NOT a rule-6 freeze. The work is *"complete the boxing across the 4
+  targets"* (JVM + Script + JS + Native in lockstep — exactly what §241's
+  half-landed change failed to do), tracked as the §241/#266/#259 queue, **not**
+  parked behind a decision that doesn't exist.
+- **(b) A bare `Int` (no `?`) still has no null** — and the compiler must say so
+  at **compile time**, never a silent `VerifyError` at load. `f(null)` where `f`
+  takes a non-nullable `Int` is **SEM048** (mirrors the `x = null` assignment
+  guard and the `return null` §125 guard). Implemented 15/09 by lane
+  bugs-and-gaps `192.168.100.15`: `SemanticAnalyzer.checkNullArgs` shared guard
+  + post-pass over `resolvedMethods`/`resolvedConstructors` (instance method +
+  constructor) + a call-site check in `BuiltinCallTyper`'s top-level branch (the
+  resolved maps never see top-level calls). A `NullableType` formal NEVER hits
+  the guard — `handle(Boolean? flag)` + `handle(null)` must compile (that's
+  (a), the #266 core case). Proof: `NullArgPrimitiveParamE2ETest` 7/7 (4 rejects
+  instance/ctor/top-level/Long + 2 non-regression "no SEM048 on Boolean?/String?
+  + null" + real-value pass); cross-target the diagnostic is identical on
+  jvm/js/native and under `kof run --target script` (shared frontend).
+
+> **✅ DECIDED 15/09** — §125 stays FROZEN as "no fabricated null literal", but
+> its *scope* is corrected: it never banned boxed `T?` null. The boxed-4-targets
+> work is an **open implementation queue** (rule 6 no longer applies to it).
+> Related catalog: §250 (part (c), fixed), §241/#252/#259/#266 (the boxing queue).
+
+---
+
 ## How to update this doc
 
 Decided anything else in the chat → lock it here (date + option + code
