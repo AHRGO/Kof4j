@@ -55,6 +55,49 @@ public final class RuntimeEnum {
                 popq %rbx
                 ret
 
+            .globl kof_enum_ordinal
+            .type kof_enum_ordinal, @function
+            kof_enum_ordinal:
+                pushq %rbx
+                pushq %r12
+                pushq %r13
+                pushq %r14
+                movq %rdi, %r12              # name
+                movq %rsi, %rbx              # list
+                testq %rbx, %rbx
+                jz .Lenum_ord_fail
+                testq %r12, %r12
+                jz .Lenum_ord_fail
+                xorq %r13, %r13              # i = 0
+            .Lenum_ord_loop:
+                cmpl 16(%rbx), %r13d
+                jge .Lenum_ord_fail
+                movq 24(%rbx), %rdi          # data array
+                movq (%rdi,%r13,8), %rsi     # item
+                testq %rsi, %rsi
+                jz .Lenum_ord_next
+                movq %r12, %rdi
+                call kof_string_equals
+                testl %eax, %eax
+                jnz .Lenum_ord_found
+            .Lenum_ord_next:
+                incq %r13
+                jmp .Lenum_ord_loop
+            .Lenum_ord_found:
+                movl %r13d, %eax
+                popq %r14
+                popq %r13
+                popq %r12
+                popq %rbx
+                ret
+            .Lenum_ord_fail:
+                movl $-1, %eax
+                popq %r14
+                popq %r13
+                popq %r12
+                popq %rbx
+                ret
+
             .section .text
 
             .section .text

@@ -291,6 +291,13 @@ public final class JsRuntimeUiWeb {
                 return null;
             }
 
+            export function kofEnumOrdinal(name, values) {
+                if (values != null && name != null) {
+                    return values.indexOf(name);
+                }
+                return -1;
+            }
+
             export function kofNow() {
                 return Date.now();
             }

@@ -14,10 +14,48 @@ final class ExpressionBuiltinInstanceCalls {
 
     private ExpressionBuiltinInstanceCalls() {}
 
-    /** enum .name(): o valor do enum JÁ é o nome (String em runtime) — identidade. */
-    static boolean isEnumIdentityName(CompilerDriver driver, Type recvType, MethodCallExpr mc) {
-        return CompilerTypes.isEnumType(recvType, driver.currentUnit)
-                && ("name".equals(mc.methodName()) || "toString".equals(mc.methodName())) && mc.arguments().isEmpty();
+    /**
+     * Lowering de métodos em instância de enum (name, toString, ordinal, compareTo).
+     * Retorna >= 0 se o método foi consumido, ou -1 se não é método de enum tratado aqui.
+     */
+    static int lowerEnum(CompilerDriver driver, MethodCallExpr mc, List<KofOperation> ops,
+                         String owner, int localIdx, List<IRLocalVariable> locals, Type recvType) {
+        if (!CompilerTypes.isEnumType(recvType, driver.currentUnit)) return -1;
+        String mn = mc.methodName();
+        if (("name".equals(mn) || "toString".equals(mn)) && mc.arguments().isEmpty()) {
+            // o valor do enum JÁ é o nome (String em runtime): identidade
+            return localIdx;
+        }
+        Type.ClassType ct = (Type.ClassType) recvType;
+        Type enumListT = new Type.ClassType("kof", "List", List.of(ct));
+        List<String> consts = CompilerTypes.enumConstantsOf(ct.name(), driver.currentUnit);
+        if ("ordinal".equals(mn) && mc.arguments().isEmpty()) {
+            emitEnumValuesList(ops, ct, enumListT, consts);
+            ops.add(new KofCall(ct, "kof_enum_ordinal",
+                    List.of(BuiltinTypes.STRING, enumListT), Type.PrimitiveType.INT, KofCallKind.FUNCTION));
+            return localIdx;
+        }
+        if ("compareTo".equals(mn) && mc.arguments().size() == 1) {
+            emitEnumValuesList(ops, ct, enumListT, consts);
+            ops.add(new KofCall(ct, "kof_enum_ordinal",
+                    List.of(BuiltinTypes.STRING, enumListT), Type.PrimitiveType.INT, KofCallKind.FUNCTION));
+            localIdx = ExpressionLowerer.emitExpression(driver, mc.arguments().get(0), ops, owner, localIdx, locals);
+            emitEnumValuesList(ops, ct, enumListT, consts);
+            ops.add(new KofCall(ct, "kof_enum_ordinal",
+                    List.of(BuiltinTypes.STRING, enumListT), Type.PrimitiveType.INT, KofCallKind.FUNCTION));
+            ops.add(new KofBinary(KofBinaryOp.SUB, Type.PrimitiveType.INT));
+            return localIdx;
+        }
+        return -1;
+    }
+
+    private static void emitEnumValuesList(List<KofOperation> ops, Type enumT, Type listT, List<String> consts) {
+        ops.add(new KofCall(listT, "kof_list_new", List.of(), listT, KofCallKind.FUNCTION));
+        for (String c : consts) {
+            ops.add(new KofDup());
+            ops.add(new KofLoadLiteral(BuiltinTypes.STRING, c));
+            ops.add(new KofCall(listT, "kof_list_add", List.of(enumT), Type.PrimitiveType.VOID, KofCallKind.INSTANCE));
+        }
     }
 
     static int lowerWeb(CompilerDriver driver, MethodCallExpr mc, List<KofOperation> ops,

@@ -226,9 +226,9 @@ public final class ExpressionInstanceCallLowerer {
         localIdx = driver.emitUiInstance(recvType, mc, ops, owner, localIdx, locals);
         return localIdx;
     }
-    if (ExpressionBuiltinInstanceCalls.isEnumIdentityName(driver, recvType, mc)) {
-        // o valor do enum JÁ é o nome (String em runtime): identidade
-        return localIdx;
+    int enumHandled = ExpressionBuiltinInstanceCalls.lowerEnum(driver, mc, ops, owner, localIdx, locals, recvType);
+    if (enumHandled >= 0) {
+        return enumHandled;
     }
     if (KofWeb.isAppType(recvType)) {
         return ExpressionBuiltinInstanceCalls.lowerWeb(driver, mc, ops, owner, localIdx, locals, recvType);

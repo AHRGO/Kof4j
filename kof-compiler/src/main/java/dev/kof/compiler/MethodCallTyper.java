@@ -392,8 +392,16 @@ if (mc.receiver() != null) {
     if (recvType instanceof Type.FunctionType ft) {
         return ft.returnType();
     }
-    if (CompilerTypes.isEnumType(recvType, driver.currentUnit) && ("name".equals(mc.methodName()) || "toString".equals(mc.methodName())) && mc.arguments().isEmpty()) {
-        return BuiltinTypes.STRING;
+    if (CompilerTypes.isEnumType(recvType, driver.currentUnit)) {
+        if (("name".equals(mc.methodName()) || "toString".equals(mc.methodName())) && mc.arguments().isEmpty()) {
+            return BuiltinTypes.STRING;
+        }
+        if ("ordinal".equals(mc.methodName()) && mc.arguments().isEmpty()) {
+            return Type.PrimitiveType.INT;
+        }
+        if ("compareTo".equals(mc.methodName()) && mc.arguments().size() == 1) {
+            return Type.PrimitiveType.INT;
+        }
     }
     if (BuiltinTypes.isList(recvType) || BuiltinTypes.isMap(recvType) || BuiltinTypes.isSet(recvType) || Type.isString(recvType)) {
         return CollectionMethodTyper.inferCollectionType(driver, recvType, mc, locals);

@@ -113,6 +113,13 @@ public final class JvmStringMiscRuntime {
                     return null;
                 }
 
+                public static int kof_enum_ordinal(String name, java.util.List<?> values) {
+                    if (name != null && values != null) {
+                        return values.indexOf(name);
+                    }
+                    return -1;
+                }
+
                 // ── kof.tetris — hidden easter egg ────────────────────
                 // `tetris.run()` starts a simplified terminal tetris.
                 // Keys: a=left d=right s=down w=rotate space=hard drop
