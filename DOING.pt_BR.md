@@ -101,6 +101,14 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (14/09 ~19:30, dono = 192.168.100.15, lane bugs-and-gaps): REGRESSÃO de suíte corrigida na causa raiz — `String.valueOf(char)` (e a família de estáticos de wrapper) dropada em silêncio quando o classpath externo existe mas não contém a classe (residual da issue #233).**
+> - **Sintoma/prova:** `CoreRegressionE2ETest.stringValueOfCharParity` VERMELHO no tip (`cd010bf1`): `Internal compiler error: frame crash … ASM COMPUTE_FRAMES NegativeArraySizeException: -1`. Bissecção em worktree limpo: verde `59359935`, vermelho `1e88309b` (commit rotulado "codeql" que trouxe o dispatch de wrapper). `doubleStaticMethodsJvm` já fora corrigido upstream (`036e5140`); a face `valueOf` ficou.
+> - **Causa raiz:** o novo ramo de receptor-builtin em `ExpressionMethodCallLowerer` (`1e88309b`) casa `String`/`Int`/`Double`/… mesmo quando o `externalClasspath` NÃO conhece a classe (caso comum), e só emite para `extSig != null` ou `isNaN/isInfinite/isFinite`. Para `String.valueOf(...)`/`parse*` o ramo saía **sem emitir nada** (R6 violado — drop silencioso); o `println` externo então emitia seu `String.valueOf(Object)` sem valor na pilha → crash do ASM.
+> - **Fix (Q0, causa raiz):** `ExpressionMethodCallLowerer` delega a `ExpressionInstanceCallLowerer.lower(...)` quando não há `extSig` nem é `isNaN` — restaurando o caminho pré-`1e88309b` (que já tratava `valueOf`/`parse*` no ramo de receptor-builtin). `ExpressionInstanceCallLowerer` inalterado.
+> - **Prova (Q1, no MESMO commit):** `WrapperStaticCallsE2ETest` (arquivo DEDICADO): `stringValueOfCharInsidePrintln` (repro exato, JVM+JS), `stringValueOfPrimitivesInsidePrintln` (JVM+JS), `wrapperIsAndParseStatics` (**só JVM**, honesto: o JS de wrapper-statics é gap pré-existente catalogado como §235). + `CoreRegressionE2ETest#stringValueOfCharParity` 1/1 e `#doubleStaticMethodsJvm` 1/1. Gate `check_500` OK (538 tolerado). Suíte 4-módulos: kof-script 38/38, kof-c 5/5, kof-compiler 1691 (1 fail = §205 aberto, 13 err = node), kof-cli 248 (1 fail pré-existente `DecompileTest.wideParamsMapToCorrectSlots`, confirmado vermelho em origin limpo).
+> - **Catalogado (§235, EN+PT):** backend JS emite `java_lang_Double.isNaN(...)`/`java_lang_Integer.parseInt(...)` → `ReferenceError` (pré-existente, reproduzido em `59359935`; lane JS).
+> - **NÃO tocado:** `DecompileTest.wideParamsMapToCorrectSlots` (pré-existente, lane decompiler) e `ConformanceMatrixTest.conformanceCoreControl` (§205 Native ifexpr, lane do #183).
+>
 > **✅ FEITO (14/09 ~10:20, dono = 192.168.100.15, lane bugs-and-gaps): §201 CORRIGIDO — regressão JS do fix #182 (`_forInitVar_*`/`_forInVar` ReferenceError).**
 > A `beta-0.4.0` estava VERMELHA (5-6 testes JS) e o §201 tinha sido catalogado como "regra 6 + lane alheia, não tocar". **Não é regra 6** — é bug de backend puro (regra 1/3 de Freeze), sem decisão de contrato, então o gate de qualidade desta lane assumiu. **Causa raiz medida (worktree isolado em `c160ae5c`):** o rename de saída de loop p/ `#forInitVar`/`#forInVar` (#182, `75e38d35`) e de bloco p/ `#scopedVar$…` (#203, `aadc0176`) é correto — mas o backend JS resolve por NOME e `JsExpressionParser.isCompilerTemp` trata TODO local cru com prefixo `#` como temporário descartável; o store da variável de loop entra no `preamble` e é descartado quando o próximo op é `if` (`parseIfBody` retorna sem o preamble) → `ReferenceError`. Corpos simples escapavam por acaso; corpos começando com `if` quebravam. **Fix (root, 1 método):** `isCompilerTemp` deixa de classificar `#forInitVar`/`#forInVar`/`#scopedVar$…` como temporários (são renames de var de USUÁRIO); os temporários reais (`#retVal`/`#switch`/`#idx`/`#coll`/`#inc`/`#excTmp`) intactos. Arquivo `js/JsExpressionParser.java` (não toca `StatementLowerer` da lane .22 — zero colisão). **Prova:** `CoreRegressionE2ETest.loopBodyLocalsBeforeIfAreDeclaredInJs` (vermelho sem o fix = `ReferenceError: _forInitVar_2 is not defined`; verde com ele) + `ArrayBoundsStressTest` 15/15, `ArrayBoundsDeepStressTest` 6/6, `BackendParityTest` 19/19, `CoreRegressionE2ETest` 75/75. JVM/Native/Script não afetados. known-bugs §201 → FIXED.
 > **PRÓXIMO PASSO:** rodar a suíte 4-módulos COMPLETA + `check_500.sh` e pushar; depois re-avaliar §202 (`split().get` → SEM028, ESSE sim é decisão de contrato da lane de inferência String) e seguir a fila de issues.
@@ -619,27 +627,32 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > FEITA: `pathOracle` brute-force (definição de caminhos) vs passada rápida
 > em 300 classes REAIS = zero divergência, 6/6 (220064fc) + auditoria
 > doc-vs-código (machineRun:97 VIVA em 158c174b — doc corrigido b9996938);
-> (2) **UNIDADE 2b (PRÓXIMO PASSO EXATO):** em
-> `BytecodeStatements.struct()`, no ramo `cond == null && !loop0` (~linha
-> 287), ANTES do fallback de prefixo atual: calcular o idom-map uma vez por
-> método (cache no recoverStatements, passar p/ struct via um campo/parâmetro
-> — BytecodeStatements.java está em 538 linhas = ZONA TOLERADA, a adição vai
-> p/ classe NOVA `StructWalker.java` nomeada pela responsabilidade, regra 7
-> de nomenclatura); recuperar teste-com-computação SOMENTE quando
-> idom(then)==idom(senão)==P, P não é loop-header, nenhuma back-edge dos
-> braços cruza P; a computação do teste sai via `machineRun` (pré-requisito
-> vivo) em `if (...)` SEM hoisting p/ fora (hoisting = trap 1). PROVA
-> ESPERADA: (a) `diamondJoinShapesStayHonestStub` VERDE (lei vinculante),
-> (b) golden de execução novo p/ `contFor`-like (oracle JVM: 0 0 1 3 3 7 12
-> ou o medido à mão), (c) ROI cai (re-contagem com o MESMO harness
-> roi/Roi.java), (d) 63 DecompileTest + 6 PostDom VERDES, (e) se QUALQUER
-> um falhar: REVERT a fatia, o doc já travou as 2 rejeições anteriores.
-> `immediatePostDom` no `struct()` p/ o join estruturado, cada recuperação
-> guardando `diamondJoinShapesStayHonestStub` VERTO (lei do diamante é
-> vinculante — se quebrar, é stub honesto, nunca código errado compilável);
-> (3) golden de execução (oracle JVM) p/ cada nova forma recuperada. Meta:
-> reduzir stubs SEM novo falso-verde. Só mover DECOMPILER p/ `docs/` quando
-a Fase C fechar o corpo (hoje: recovery parcial honesto).
+> (2) ✅ **UNIDADE 2b RE-AVALIADA + FECHADA POR MEDIÇÃO (14/09, veredito em
+> DECOMPILER.pt_BR.md §6):** o proxy "1098" supercontou (harness Roi2/Roi3).
+> Dos stubs com teste computado: 646 invoke-interop (lane compiler), 453
+> loop/continue (lei do diamante + Kof sem `continue` = regra 6), 8+2 nits.
+> A caça ao 5º-red expôs DUAS coisas reais na lane do decompiler, ambas com
+> re-producao medida:
+> **§236 ✅ CORRIGIDA nesta sessao** — `comparisonReturn` dobrava o shape
+> ambiguo cmp/iconst1/goto/iconst0/ireturn para Bool CRU, entao
+> `return a<b?1:0` num corpo Int virava saida NAO-compilavel (SEM010); porta
+> por `retType` (Z→cru, I→if-expr) + pino consertado + teste novo
+> `comparisonReturnRespectsBoolVsIntReturnType` (recompila); DecompileTest
+> 64/64 + PostDom 6/6 VERDES 20:55, exec V=1|0|0==oracle.
+> **PROXIMA UNIDADE (2c, minha lane, sem colidir c/ a lei nem regra 6):**
+> §238 — o `pureIfElse` da 2a (`5c944709`) emite o `var` do local na PRIMEIRA
+> atribuicao, que fica DENTRO do ramo then, e o else/pos-join leem um `v2`
+> nao declarado → saida NAO-compilavel (SEM000). Nenhum teste da suite pega
+> (o `E.java` pre-inicializa `int r=1`; o pino so checa string). FIX = içar
+> declaracao honesta ANTES do `if` no caminho `pureIfElse`/`pureIfThen` de
+> `BytecodeStatements.struct()` (classe NOVA ou fatia em StructWalker, regra
+> 7; BytecodeStatements.java em 538 = TOLERADA), default-init pelo tipo do
+> frame; se nao der de içar com seguranca → RECUSAR p/ stub honesto (R6).
+> PROVA: re-producao `/tmp/opencode/w2b/Comp.java` (`computed`/`cmp`) +
+> `Mid.java` (`big`) decompilam e RECOMPILAM (Runner2 compile=true) com
+> golden de execucao (oracle JVM medido 11|21|11|11 / 1|2|2), lei do diamante
+> VERDE, suite DecompileTest+PostDom VERDE. §237 (StringValueOfChar,
+> 6º-red) = lane .22, NAO atacar.
 
 > **⚠️ 5º RED NO PORTÃO (catalogado, para as lanes de bug — 14/09 ~16:45):**
 > `NativeStringCompareCrossTest` riscv+aarch → §233 no known-bugs (renumerado 17:40: §231 foi tomado pela lane .18 — colisao de rebase; fix

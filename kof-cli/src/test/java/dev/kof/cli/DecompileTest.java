@@ -140,6 +140,42 @@ class DecompileTest {
     }
 
     @Test
+    void comparisonReturnRespectsBoolVsIntReturnType(@TempDir Path dir) throws Exception {
+        // §236 (14/09): o shape cmp/iconst_1/goto/iconst_0/ireturn e AMBIGUO na
+        // raiz — `return x > 0` (Bool) e `return a < b ? 1 : 0` (Int) temo MESMO
+        // bytecode. O fold antigo sempre devolvia o Bool cru: num corpo Int a
+        // saida decompilada virava Bool e o typer rejeitava (SEM010 —
+        // nao-compilavel, anti-R6). O fold agora PORTA pelo retType: Z → cru,
+        // I → if-expression de inteiros. Prova: as DUAS formas no MESMO arquivo
+        // + RECOMPILACAO (string so nao basta — foi o pino errado que escondeu
+        // o bug por um dia).
+        Path javaFile = dir.resolve("Cmp2.java");
+        Files.writeString(javaFile, """
+                public class Cmp2 {
+                    public static boolean gt(int x) { return x > 0; }
+                    public static int oneIfLt(int a, int b) { return a < b ? 1 : 0; }
+                    public static int oneIfNe(int x) { return x != 0 ? 1 : 0; }
+                }
+                """);
+        runJavac(javaFile, dir);
+        String kof = Decompile.decompile(dir.resolve("Cmp2.class"));
+
+        assertTrue(kof.contains("Bool gt(Int arg0) = arg0 > 0"),
+                "corpo Z preserva o Bool cru (byte-identico ao que ja passava):\n" + kof);
+        assertTrue(kof.contains("Int oneIfLt(Int arg0, Int arg1) = if (arg0 < arg1) 1 else 0"),
+                "corpo I dobra ternario como if-expression (nao Bool cru):\n" + kof);
+        assertTrue(kof.contains("Int oneIfNe(Int arg0) = if (arg0 != 0) 1 else 0"),
+                "face unaria (ifne) tambem porta p/ Int:\n" + kof);
+        assertFalse(kof.contains("= arg0 != 0\n"), "nunca emitir `= <bool>` num corpo Int:\n" + kof);
+
+        Path out = dir.resolve("Cmp2.kf");
+        Files.writeString(out, kof);
+        CompilationResult result = new CompilerDriver().compile(out, dir.resolve("out"), Target.JVM);
+        assertTrue(result.success(), "as 3 formas decompiladas devem compilar:\n" + kof
+                + "\n" + result.diagnostics());
+    }
+
+    @Test
     void recoversIfElseReturn(@TempDir Path dir) throws Exception {
         Path javaFile = dir.resolve("Max.java");
         Files.writeString(javaFile, """
@@ -1210,8 +1246,14 @@ class DecompileTest {
         // mapeamento de 1-slot, `iload_2` (segundo int, slot 2) virava nome de
         // parâmetro ERRADO (arg2) / local inexistente (v3) → decompilado que
         // NÃO compila (SEM011). BytecodeFrame resolve pelo descriptor.
-        assertTrue(kof.contains("Int m(Long arg0, Int arg1, Int arg2) = arg1 < arg2"),
-                "wide long empurra slots dos ints:\n" + kof);
+        // §236 (14/09): corpo Int com shape cmp/iconst_1/goto/iconst_0/ireturn
+        // (ternario `a < b ? 1 : 0` do javac) NAo pode dobrar p/ Bool cru
+        // (SEM010, nao-compilavel) — o pino antigo guardava a saida errada que o
+        // compilador tolerava; agora = if-expression de inteiros, e o teste
+        // compila a saida (a linha 1230 sempre tentou — era o pino que estava
+        // errado, nao o fold).
+        assertTrue(kof.contains("Int m(Long arg0, Int arg1, Int arg2) = if (arg1 < arg2) 1 else 0"),
+                "wide long empurra slots + ternario int (nao Bool cru):\n" + kof);
         assertFalse(kof.contains(" v3") && kof.contains("Int m("),
                 "slot 2 não é mais arg0-shift:\n" + kof);
         // lload_0 devolve arg0 (não v0): corpo de 2 slots wide

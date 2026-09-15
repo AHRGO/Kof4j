@@ -16,8 +16,13 @@ public final class SymbolTableBuilder {
             SymbolTable members = new SymbolTable();
             // superclasse qualificada pelos imports: "extends Activity" com
             // "import android.app.Activity" vira "android.app.Activity" —
-            // sem isso a resolução externa (classpath) nunca encontra a classe
+            // sem isso a resolução externa (classpath) nunca encontra a classe.
+            // Para classes genéricas ("Container<String>"), o nome base da superclasse
+            // é extraído ("Container") antes da resolução e herança (Issue #246).
             String superQualified = cls.superClass();
+            if (superQualified != null && superQualified.contains("<")) {
+                superQualified = superQualified.substring(0, superQualified.indexOf('<')).trim();
+            }
             if (superQualified != null && !"Object".equals(superQualified)) {
                 Type viaImports = MemberResolver.qualifyViaImports(sa.unit(), superQualified);
                 if (viaImports instanceof Type.ClassType qt) {

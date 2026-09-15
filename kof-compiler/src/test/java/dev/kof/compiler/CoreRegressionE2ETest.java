@@ -2245,6 +2245,48 @@ class CoreRegressionE2ETest {
         assertEquals("int=10\ndbl=2.5\nint=42\ndouble=3.14\nbool=true", runJvm(out));
     }
 
+    // Issue #246 — Extending a generic class writes angle-bracketed name as super_class
+    @Test
+    void extendGenericClassJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("extend_generic.kf");
+        Files.writeString(src, """
+                class Container<T> {
+                    T item
+                    T get() { return item }
+                    void set(T v) { item = v }
+                }
+                class StringBox extends Container<String> {
+                    void hello() { println("hi") }
+                }
+                class TypedBox<T> extends Container<T> {
+                    void test() { println("typed") }
+                }
+                class IntBox extends Container<Int> {
+                    void num() { println("int") }
+                }
+                main() {
+                    var sb = new StringBox()
+                    sb.hello()
+                    sb.set("world")
+                    println(sb.get())
+
+                    var tb = new TypedBox<String>()
+                    tb.test()
+                    tb.set("box")
+                    println(tb.get())
+
+                    var ib = new IntBox()
+                    ib.num()
+                    ib.set(123)
+                    println(ib.get())
+                }
+                """);
+        Path out = tempDir.resolve("extend_generic-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("hi\nworld\ntyped\nbox\nint\n123", runJvm(out));
+    }
+
     // Issue #241 — Catch clause with qualified exception name generates illegal class name in exception table
     @Test
     void qualifiedExceptionInCatchClauseJvm(@TempDir Path tempDir) throws IOException {
@@ -2291,5 +2333,33 @@ class CoreRegressionE2ETest {
         CompilationResult r = driver.compile(src, out, Target.JVM);
         assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
         assertEquals("bool: true\nbool: false\nbool: true\nint: 42", runJvm(out));
+    }
+
+    // Issue #249 — assigning to static field via instance reference emits putfield instead of putstatic — IncompatibleClassChangeError
+    @Test
+    void assignToStaticFieldViaInstanceReferenceJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("static_field_asgn.kf");
+        Files.writeString(src, """
+                class Cfg { static Int MAX = 100 }
+                class App { static String name = "v1" }
+                class Flags { static Boolean debug = false }
+                main() {
+                    var c = new Cfg()
+                    c.MAX = 200
+                    println(Cfg.MAX)
+                    c.MAX += 50
+                    println(Cfg.MAX)
+                    var a = new App()
+                    a.name = "v2"
+                    println(App.name)
+                    var f = new Flags()
+                    f.debug = true
+                    println(Flags.debug)
+                }
+                """);
+        Path out = tempDir.resolve("static_field_asgn-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("200\n250\nv2\ntrue", runJvm(out));
     }
 }

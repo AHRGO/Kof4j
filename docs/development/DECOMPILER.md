@@ -529,7 +529,9 @@ Phase E  Kof Decompiler          (generate Kof source)
 > (test-block size 1..20 insns before the cond — fused init/store/irem of a
 > `for`/`while`) — the upper bound of what the walker with `immediatePostDom`
 > unlocks (many will still resist the law of the diamond; the real yield is
-> reached slice by slice). ROI ≫ 30 → **decision: build the walker**.
+> reached slice by slice). ROI ≫ 30 → **decision: build the walker**. *(→
+> superseded by the RE-MEASUREMENT below, 14/09 ~18:20: the proxy over-counted,
+> the walker as scoped has no net-new target — read it before building.)*
 > Unit 2 scope (locked by the measurement): consume `immediatePostDom` in the
 > `cond == null` branch of `struct()` — recover test-with-computation ONLY
 > when the join P = idom(then) = idom(else-path), P is NOT loop header and the
@@ -543,6 +545,58 @@ Phase E  Kof Decompiler          (generate Kof source)
 > fast bit-set pass on REAL corpus CFGs (300 classes of `kof-compiler/target
 > classes`, blocks ≤40) — 6/6 green, 4.28s, zero divergence block by block.
 > The walker can now consume `immediatePostDom` with the pass trusted.
+
+> **RE-MEASURED (14/09 ~18:20, owner = 192.168.100.17): the "1098" above was a
+> PROXY that over-counted — the walker has NO net-new target (harness
+> `/tmp/opencode/w2b/dev/kof/cli/Roi2.java` + `Roi3.java`, throwaway
+> package-private like Roi.java; the classifier is by the REAL cause of the
+> stub, not the blockCondition shape).** The 1098 counted every
+> "succ==2 block with `blockCondition==null`" without checking whether the
+> method still decompiles via the prologue path added in unit 2a (`5c944709`:
+> a fused `int x=…; if (x%3==0){}else{}` non-loop is ALREADY *shape*-recovered
+> today — measured: `computed`/`cmp` emit `if (v1 == 0) { … } else { … }`
+> BUT the emitted output is NOT COMPILABLE: the local's `var` is hoisted to its
+> FIRST assignment which is INSIDE the then-branch, then read after the join →
+> `SEM000 Undefined variable` (measured 19:50 via Runner2 on the recompiled
+> HEAD — pre-existing 2a defect, catalogued §238, NOT a walker target). So 2a
+> "recovers" only when the local is initialised BEFORE the if (the passing
+> `E.java` test has `int r=1` pre-if). Splitting
+> the 2642 stubs by the cause that actually makes `recoverStatements` return
+> null, among those WITH a computed 2-succ test:
+>
+> | cause of the stub (measured, corpus 699 classes / 3899 methods / 2642 stubs) | count | whose lane |
+> |---|---|---|
+> | test has an `invoke`/`getfield`/`new` in its computation (`.equals`, `.size`, `String.join`…) | **646** | interop descriptor (§234/§224/§225) — **compiler lane**, NOT a CFG problem |
+> | the computed test sits in a LOOP header (a `continue`/back-edge diamond) | **453** | **blocked by the binding diamond law** + Kof has no `continue` → rule 6 (contract), NOT an edit |
+> | non-loop, prefix pure load/const/arith but an opcode `loadValue` misses (sipush/lcmp/ldc_w) | 8 (+2 store) | opcode-coverage gap, not the walker |
+>
+> **Verdict: the unit-2b walker as scoped (consume `immediatePostDom` to
+> recover a non-pure test) is DISCARDED — measurement shows the non-loop
+> fused case is already covered by 2a and the remaining computed-test stubs are
+> either interop (646, §234) or the diamond-law/`continue` collision (453, rule
+> 6).** The `PostDominator` + `pathOracle` (units 1/2a) stay as the trusted
+> foundation (green, 6/6, no regression); they are simply not wired because
+> there is nothing left in their scope that the law permits and 2a does not
+> already do. Honest re-scope, NOT a silent drop: the 453 loop-diamond + 646
+> interop faces are recorded here as the real (deferred/other-lane) work so the
+> next agent does not re-pay the ROI archaeology.
+>
+> **NEXT STEP for this doc:** the decompiler's recoverable surface is
+> effectively at its honest ceiling for structured shapes. The open decompiler
+> work is now (a) the `continue`/`break`-in-`for` recovery IF the maintainer
+> lifts the diamond law (rule 6 — needs a language `continue`, a contract
+> decision, NOT this lane) and (b) opcode-coverage nits (sipush/lcmp in
+> `loadValue`) which are a compiler-lane micro-fix, not a structural walker.
+> Neither is autonomous-mode work in `docs/development/`. **UPDATE (14/09
+> ~20:55, same session):** the 5th-red hunt that produced this re-measurement
+> ALSO exposed a real in-lane defect — §236 (the ambiguous Bool-vs-Int
+> comparison fold) FOUND & FIXED with a new recompile test (`comparisonReturn-
+> RespectsBoolVsIntReturnType`, DecompileTest 64/64 green), and §238 (the 2a
+> `pureIfElse` join emitting `var` inside the branch → non-compilable output)
+> catalogued with a measured repro — §238 is the next autonomous unit (2c),
+> fixable here without touching the diamond law or rule 6. The structural
+> WALKER stays discarded (453 loop+continue = rule 6; 646 invoke-test = interop
+> lane §234).
 
 ## 7. Relationship with the Compiler
 

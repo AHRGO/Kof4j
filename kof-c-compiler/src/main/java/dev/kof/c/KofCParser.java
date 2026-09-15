@@ -6,8 +6,12 @@ import java.util.List;
 public final class KofCParser {
     private final List<KofCToken> toks;
     private int pos = 0;
+    private final List<String> errors = new ArrayList<>();
 
     public KofCParser(List<KofCToken> toks) { this.toks = toks; }
+
+    public boolean hasErrors() { return !errors.isEmpty(); }
+    public List<String> errors() { return List.copyOf(errors); }
 
     public KofCAst.Program parseProgram() {
         List<KofCAst.VarDecl> globals = new ArrayList<>();
@@ -228,5 +232,8 @@ public final class KofCParser {
         return new KofCToken(t, "", 0, 0);
     }
     private void expect(KofCTokenType t, String msg) { if (!check(t)) error(msg); else advance(); }
-    private void error(String msg) { /* could collect diagnostics */ }
+    private void error(String msg) {
+        KofCToken t = (pos < toks.size()) ? toks.get(pos) : toks.get(toks.size() - 1);
+        errors.add("line " + t.line() + ", col " + t.col() + ": " + msg);
+    }
 }

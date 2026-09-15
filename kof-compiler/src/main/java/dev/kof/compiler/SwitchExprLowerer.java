@@ -69,11 +69,22 @@ public final class SwitchExprLowerer {
             ops.add(new KofLoadLocal(switchType, switchTmp));
             ops.add(new KofInstanceOf(patType));
             ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 0));
-            ops.add(new KofConditionalJump(KofComparison.NE, bodyLabel, elseLabel));
-            ops.add(new KofLabel(bodyLabel));
+            // #199: com GUARDA, o alvo do instanceof-true é o PROLOGO do
+            // binding (bindingLabel), NÃO o corpo — senão o mesmo Label é
+            // visitado antes (instanceof) e depois (guarda true) e todas as
+            // resoluções de label caem na ULTIMA visita: o instanceof-true
+            // pulava o `astore` da var bound → VerifyError "Bad local
+            // variable type" no corpo (slot nunca escrito). Sem guarda,
+            // bindingLabel == bodyLabel (queda direta, uma visita só — como
+            // antes). Um ajuste na IR compartilhada cura os 4 backends
+            // (regra 5: a raiz é do lowerer, não do backend JVM).
+            boolean guarded = pe.guard() != null;
+            LabelId bindingLabel = guarded ? LabelId.create() : bodyLabel;
+            ops.add(new KofConditionalJump(KofComparison.NE, bindingLabel, elseLabel));
+            ops.add(new KofLabel(bindingLabel));
             localIdx = emitPatternBinding(driver, pe, patType, switchType, switchTmp, ops, localIdx, locals);
             // SG-014: guarda — avaliada com a var JÁ bound; false → próximo braço
-            if (pe.guard() != null) {
+            if (guarded) {
                 localIdx = ExpressionLowerer.emitExpression(driver, pe.guard(), ops, owner, localIdx, locals);
                 ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 0));
                 ops.add(new KofConditionalJump(KofComparison.EQ, elseLabel, bodyLabel));

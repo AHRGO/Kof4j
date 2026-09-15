@@ -122,4 +122,34 @@ class KofCCompilerTest {
         p.waitFor();
         assertEquals("13", out.trim());
     }
+
+    @Test
+    void malformedSourceReportsDiagnosticAndEmitsNoBinary(@TempDir Path tmp) throws Exception {
+        // Bug (achado pela lane CodeQL, alert #485): KofCParser.error() era um
+        // stub vazio — engolia o diagnostico e o compile() emitia um binario a
+        // partir de uma AST lixo em silencio (R6/Q7). Agora o parser coleta os
+        // erros e compile() aborta antes de montar o binario.
+        Path c = tmp.resolve("bad.c");
+        Files.writeString(c, "int x;\nvoid main) { x = 1;\n"); // '(' faltando
+        var res = KofCCompiler.compile(c, tmp.resolve("outbad"));
+        assertFalse(res.success(), "entrada malformada deve falhar, nao binarizar AST lixo");
+        assertNull(res.binary(), "nenhum binario deve ser produzido");
+        assertTrue(res.diagnostics().contains("Expected"),
+                "diagnostico deve dizer o que era esperado, veio: " + res.diagnostics());
+    }
+
+    @Test
+    void validSourceStillCompilesWithEmptyDiagnostics(@TempDir Path tmp) throws Exception {
+        // Q3 edge: o error() novo nao pode introduzir falsos-positivos — o
+        // caminho feliz continua com diagnostics vazio e success=true.
+        Path c = tmp.resolve("ok.c");
+        Files.writeString(c, "int x;\nvoid main() {\n  x = 7;\n  print_arg = x;\n  print();\n}\n");
+        var res = KofCCompiler.compile(c, tmp.resolve("outok"));
+        assertTrue(res.success(), "valido nao deve reportar erro: " + res.diagnostics());
+        assertEquals("", res.diagnostics().trim(), "caminho feliz nao deve gerar diagnostico");
+        Process p = new ProcessBuilder(res.binary().toString()).start();
+        String out = new String(p.getInputStream().readAllBytes());
+        p.waitFor();
+        assertEquals("7", out.trim());
+    }
 }

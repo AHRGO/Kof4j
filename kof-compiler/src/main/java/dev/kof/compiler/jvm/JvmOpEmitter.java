@@ -61,183 +61,227 @@ public final class JvmOpEmitter {
     }
 
     static void emit(JvmBackend ctx, OpContext c, KofOperation op) {
-        if (op instanceof KofLoadLiteral lit) {
-            JvmLiteralEmitter.emitLoadLiteral(c.mv(), lit);
-        } else if (op instanceof KofLoadLocal ll) {
-            c.mv().visitVarInsn(JvmLiteralEmitter.loadVarOpcode(ll.type()), ll.index());
-        } else if (op instanceof KofStoreLocal sl) {
-            c.mv().visitVarInsn(JvmLiteralEmitter.storeVarOpcode(sl.type()), sl.index());
-        } else if (op instanceof KofLoadField lf) {
-            if (BuiltinTypes.isString(lf.ownerType()) && "length".equals(lf.name())) {
-                c.mv().visitMethodInsn(INVOKEVIRTUAL, "java/lang/String", "length", "()I", false);
-            } else {
-                String owner = JvmTypeMapper.toInternalName(
-                        lf.ownerType() instanceof Type.ClassType ct ? ct.packageName() : "",
-                        lf.ownerType() instanceof Type.ClassType ct ? ct.name() : "?");
-                if (KofProcess.isResult(lf.ownerType())) {
-                    owner = "dev/kof/runtime/KofRuntime$ProcessResult";
-                }
-                boolean isRecord = false;
-                boolean isSelfRecordAccess = false;
-                if (lf.ownerType() instanceof Type.ClassType ct) {
-                    String internal = JvmTypeMapper.toInternalName(ct.packageName(), ct.name());
-                    if (c.module() != null) {
-                        for (IRClass k : c.module().classes()) {
-                            if (k.name().equals(internal) && "java/lang/Record".equals(k.superName())) {
-                                isRecord = true;
-                                // If we are inside the record's own accessor, use GETFIELD directly to avoid recursion
-                                if (c.currentClass() != null && c.currentClass().name().equals(internal)) {
-                                    isSelfRecordAccess = true;
+        switch (op) {
+            case KofLoadLiteral lit -> {
+                JvmLiteralEmitter.emitLoadLiteral(c.mv(), lit);
+            }
+            case KofLoadLocal ll -> {
+                c.mv().visitVarInsn(JvmLiteralEmitter.loadVarOpcode(ll.type()), ll.index());
+            }
+            case KofStoreLocal sl -> {
+                c.mv().visitVarInsn(JvmLiteralEmitter.storeVarOpcode(sl.type()), sl.index());
+            }
+            case KofLoadField lf -> {
+                if (BuiltinTypes.isString(lf.ownerType()) && "length".equals(lf.name())) {
+                    c.mv().visitMethodInsn(INVOKEVIRTUAL, "java/lang/String", "length", "()I", false);
+                } else {
+                    String owner = JvmTypeMapper.toInternalName(
+                            lf.ownerType() instanceof Type.ClassType ct ? ct.packageName() : "",
+                            lf.ownerType() instanceof Type.ClassType ct ? ct.name() : "?");
+                    if (KofProcess.isResult(lf.ownerType())) {
+                        owner = "dev/kof/runtime/KofRuntime$ProcessResult";
+                    }
+                    boolean isRecord = false;
+                    boolean isSelfRecordAccess = false;
+                    if (lf.ownerType() instanceof Type.ClassType ct) {
+                        String internal = JvmTypeMapper.toInternalName(ct.packageName(), ct.name());
+                        if (c.module() != null) {
+                            for (IRClass k : c.module().classes()) {
+                                if (k.name().equals(internal) && "java/lang/Record".equals(k.superName())) {
+                                    isRecord = true;
+                                    // If we are inside the record's own accessor, use GETFIELD directly to avoid recursion
+                                    if (c.currentClass() != null && c.currentClass().name().equals(internal)) {
+                                        isSelfRecordAccess = true;
+                                    }
+                                    break;
                                 }
+                            }
+                        }
+                    }
+                    if (isRecord && !isSelfRecordAccess) {
+                        c.mv().visitMethodInsn(INVOKEVIRTUAL, owner, lf.name(), "()" + JvmTypeMapper.toDescriptor(lf.fieldType()), false);
+                    } else {
+                        c.mv().visitFieldInsn(GETFIELD, owner, lf.name(), JvmTypeMapper.toDescriptor(lf.fieldType()));
+                    }
+                }
+            }
+            case KofStoreField sf -> {
+                String owner = JvmTypeMapper.toInternalName(
+                        sf.ownerType() instanceof Type.ClassType ct ? ct.packageName() : "",
+                        sf.ownerType() instanceof Type.ClassType ct ? ct.name() : "?");
+                c.mv().visitFieldInsn(PUTFIELD, owner, sf.name(), JvmTypeMapper.toDescriptor(sf.fieldType()));
+            }
+            case KofGetStatic gs -> {
+                String owner = JvmTypeMapper.toInternalName(
+                        gs.ownerType() instanceof Type.ClassType ct ? ct.packageName() : "",
+                        gs.ownerType() instanceof Type.ClassType ct ? ct.name() : "?");
+                c.mv().visitFieldInsn(GETSTATIC, owner, gs.name(), JvmTypeMapper.toDescriptor(gs.fieldType()));
+            }
+            case KofPutStatic ps -> {
+                String owner = JvmTypeMapper.toInternalName(
+                        ps.ownerType() instanceof Type.ClassType ct ? ct.packageName() : "",
+                        ps.ownerType() instanceof Type.ClassType ct ? ct.name() : "?");
+                c.mv().visitFieldInsn(PUTSTATIC, owner, ps.name(), JvmTypeMapper.toDescriptor(ps.fieldType()));
+            }
+            case KofBinary kb -> {
+                emitBinary(c.mv(), kb);
+            }
+            case KofUnary ku -> {
+                emitUnary(c.mv(), ku);
+            }
+            case KofLabel kl -> {
+                c.mv().visitLabel(ctx.resolveLabel(kl.label()));
+            }
+            case KofJump kj -> {
+                c.mv().visitJumpInsn(GOTO, ctx.resolveLabel(kj.target()));
+            }
+            case KofConditionalJump kc -> {
+                emitConditionalJump(ctx, c.mv(), kc);
+            }
+            case KofCall kc -> {
+                if (("kof_box".equals(kc.methodName()) || "kof_unbox".equals(kc.methodName()))) {
+                    if ("kof_box".equals(kc.methodName())) {
+                        Type boxed = kc.ownerType();
+                        String boxedName = JvmTypeMapper.toInternalName(
+                                boxed instanceof Type.ClassType ct ? ct.packageName() : "java.lang",
+                                boxed instanceof Type.ClassType ct ? ct.name() : "Object");
+                        c.mv().visitMethodInsn(INVOKESTATIC, boxedName, "valueOf",
+                                "(" + JvmTypeMapper.toDescriptor(kc.parameterTypes().get(0)) + ")L" + boxedName + ";", false);
+                    } else {
+                        Type boxed = kc.parameterTypes().get(0);
+                        String boxedName = JvmTypeMapper.toInternalName(
+                                boxed instanceof Type.ClassType ct ? ct.packageName() : "java.lang",
+                                boxed instanceof Type.ClassType ct ? ct.name() : "Object");
+                        c.mv().visitTypeInsn(CHECKCAST, boxedName);
+                        c.mv().visitMethodInsn(INVOKEVIRTUAL, boxedName, JvmOpCollections.unboxMethodName(boxed),
+                                "()" + JvmTypeMapper.toDescriptor(kc.returnType()), false);
+                    }
+                }
+                else if (JvmRuntime.hasRuntimeFn(kc.methodName())) {
+                    JvmOpCollections.emitKofRuntimeCall(ctx, c.mv(), kc);
+                }
+                else if (BuiltinTypes.isString(kc.ownerType())
+                && ("kof_string_concat".equals(kc.methodName()) || "kof_string_equals".equals(kc.methodName()))) {
+                    JvmOpCollections.emitStringCall(c.mv(), kc);
+                }
+                else if (BuiltinTypes.isList(kc.ownerType())) {
+                    JvmOpCollections.emitListCall(c.mv(), kc);
+                }
+                else if (BuiltinTypes.isChannel(kc.ownerType())) {
+                    JvmOpCollections.emitChannelCall(c.mv(), kc);
+                }
+                else if (BuiltinTypes.isMap(kc.ownerType())) {
+                    JvmOpCollections.emitMapCall(c.mv(), kc);
+                }
+                else if (BuiltinTypes.isSet(kc.ownerType())) {
+                    JvmOpCollections.emitSetCall(c.mv(), kc);
+                }
+                else {
+                    String owner = "";
+                    if (kc.ownerType() instanceof Type.ClassType ct) {
+                        owner = JvmTypeMapper.toInternalName(ct.packageName(), ct.name());
+                    }
+                    String desc = JvmTypeMapper.toMethodDescriptor(kc.returnType(), kc.parameterTypes());
+                    boolean isInterfaceOwner = false;
+                    if (c.module() != null) {
+                        for (IRClass irc : c.module().classes()) {
+                            if (irc.name().equals(owner)) {
+                                isInterfaceOwner = (irc.accessFlags() & org.objectweb.asm.Opcodes.ACC_INTERFACE) != 0;
                                 break;
                             }
                         }
                     }
-                }
-                if (isRecord && !isSelfRecordAccess) {
-                    c.mv().visitMethodInsn(INVOKEVIRTUAL, owner, lf.name(), "()" + JvmTypeMapper.toDescriptor(lf.fieldType()), false);
-                } else {
-                    c.mv().visitFieldInsn(GETFIELD, owner, lf.name(), JvmTypeMapper.toDescriptor(lf.fieldType()));
-                }
-            }
-        } else if (op instanceof KofStoreField sf) {
-            String owner = JvmTypeMapper.toInternalName(
-                    sf.ownerType() instanceof Type.ClassType ct ? ct.packageName() : "",
-                    sf.ownerType() instanceof Type.ClassType ct ? ct.name() : "?");
-            c.mv().visitFieldInsn(PUTFIELD, owner, sf.name(), JvmTypeMapper.toDescriptor(sf.fieldType()));
-        } else if (op instanceof KofGetStatic gs) {
-            String owner = JvmTypeMapper.toInternalName(
-                    gs.ownerType() instanceof Type.ClassType ct ? ct.packageName() : "",
-                    gs.ownerType() instanceof Type.ClassType ct ? ct.name() : "?");
-            c.mv().visitFieldInsn(GETSTATIC, owner, gs.name(), JvmTypeMapper.toDescriptor(gs.fieldType()));
-        } else if (op instanceof KofPutStatic ps) {
-            String owner = JvmTypeMapper.toInternalName(
-                    ps.ownerType() instanceof Type.ClassType ct ? ct.packageName() : "",
-                    ps.ownerType() instanceof Type.ClassType ct ? ct.name() : "?");
-            c.mv().visitFieldInsn(PUTSTATIC, owner, ps.name(), JvmTypeMapper.toDescriptor(ps.fieldType()));
-        } else if (op instanceof KofBinary kb) {
-            emitBinary(c.mv(), kb);
-        } else if (op instanceof KofUnary ku) {
-            emitUnary(c.mv(), ku);
-        } else if (op instanceof KofLabel kl) {
-            c.mv().visitLabel(ctx.resolveLabel(kl.label()));
-        } else if (op instanceof KofJump kj) {
-            c.mv().visitJumpInsn(GOTO, ctx.resolveLabel(kj.target()));
-        } else if (op instanceof KofConditionalJump kc) {
-            emitConditionalJump(ctx, c.mv(), kc);
-        } else if (op instanceof KofCall kc && ("kof_box".equals(kc.methodName()) || "kof_unbox".equals(kc.methodName()))) {
-            if ("kof_box".equals(kc.methodName())) {
-                Type boxed = kc.ownerType();
-                String boxedName = JvmTypeMapper.toInternalName(
-                        boxed instanceof Type.ClassType ct ? ct.packageName() : "java.lang",
-                        boxed instanceof Type.ClassType ct ? ct.name() : "Object");
-                c.mv().visitMethodInsn(INVOKESTATIC, boxedName, "valueOf",
-                        "(" + JvmTypeMapper.toDescriptor(kc.parameterTypes().get(0)) + ")L" + boxedName + ";", false);
-            } else {
-                Type boxed = kc.parameterTypes().get(0);
-                String boxedName = JvmTypeMapper.toInternalName(
-                        boxed instanceof Type.ClassType ct ? ct.packageName() : "java.lang",
-                        boxed instanceof Type.ClassType ct ? ct.name() : "Object");
-                c.mv().visitTypeInsn(CHECKCAST, boxedName);
-                c.mv().visitMethodInsn(INVOKEVIRTUAL, boxedName, JvmOpCollections.unboxMethodName(boxed),
-                        "()" + JvmTypeMapper.toDescriptor(kc.returnType()), false);
-            }
-        } else if (op instanceof KofCall kc && JvmRuntime.hasRuntimeFn(kc.methodName())) {
-            JvmOpCollections.emitKofRuntimeCall(ctx, c.mv(), kc);
-        } else if (op instanceof KofCall kc && BuiltinTypes.isString(kc.ownerType())
-                && ("kof_string_concat".equals(kc.methodName()) || "kof_string_equals".equals(kc.methodName()))) {
-            JvmOpCollections.emitStringCall(c.mv(), kc);
-        } else if (op instanceof KofCall kc && BuiltinTypes.isList(kc.ownerType())) {
-            JvmOpCollections.emitListCall(c.mv(), kc);
-        } else if (op instanceof KofCall kc && BuiltinTypes.isChannel(kc.ownerType())) {
-            JvmOpCollections.emitChannelCall(c.mv(), kc);
-        } else if (op instanceof KofCall kc && BuiltinTypes.isMap(kc.ownerType())) {
-            JvmOpCollections.emitMapCall(c.mv(), kc);
-        } else if (op instanceof KofCall kc && BuiltinTypes.isSet(kc.ownerType())) {
-            JvmOpCollections.emitSetCall(c.mv(), kc);
-        } else if (op instanceof KofCall kc) {
-            String owner = "";
-            if (kc.ownerType() instanceof Type.ClassType ct) {
-                owner = JvmTypeMapper.toInternalName(ct.packageName(), ct.name());
-            }
-            String desc = JvmTypeMapper.toMethodDescriptor(kc.returnType(), kc.parameterTypes());
-            boolean isInterfaceOwner = false;
-            if (c.module() != null) {
-                for (IRClass irc : c.module().classes()) {
-                    if (irc.name().equals(owner)) {
-                        isInterfaceOwner = (irc.accessFlags() & org.objectweb.asm.Opcodes.ACC_INTERFACE) != 0;
-                        break;
+                    switch (kc.kind()) {
+                        case INSTANCE -> c.mv().visitMethodInsn(INVOKEVIRTUAL, owner, kc.methodName(), desc, false);
+                        case STATIC -> c.mv().visitMethodInsn(INVOKESTATIC, owner, kc.methodName(), desc, isInterfaceOwner);
+                        case CONSTRUCTOR -> c.mv().visitMethodInsn(INVOKESPECIAL, owner, kc.methodName(), desc, false);
+                        case FUNCTION -> c.mv().visitMethodInsn(INVOKESTATIC, owner, kc.methodName(), desc, false);
+                        case INTERFACE -> c.mv().visitMethodInsn(INVOKEINTERFACE, owner, kc.methodName(), desc, true);
+                        case SUPER -> c.mv().visitMethodInsn(INVOKESPECIAL, owner, kc.methodName(), desc, false);
                     }
                 }
             }
-            switch (kc.kind()) {
-                case INSTANCE -> c.mv().visitMethodInsn(INVOKEVIRTUAL, owner, kc.methodName(), desc, false);
-                case STATIC -> c.mv().visitMethodInsn(INVOKESTATIC, owner, kc.methodName(), desc, isInterfaceOwner);
-                case CONSTRUCTOR -> c.mv().visitMethodInsn(INVOKESPECIAL, owner, kc.methodName(), desc, false);
-                case FUNCTION -> c.mv().visitMethodInsn(INVOKESTATIC, owner, kc.methodName(), desc, false);
-                case INTERFACE -> c.mv().visitMethodInsn(INVOKEINTERFACE, owner, kc.methodName(), desc, true);
-                case SUPER -> c.mv().visitMethodInsn(INVOKESPECIAL, owner, kc.methodName(), desc, false);
+            case KofNewObject no -> {
+                String type = no.type() instanceof Type.ClassType ct
+                        ? JvmTypeMapper.toInternalName(ct.packageName(), ct.name()) : "?";
+                c.mv().visitTypeInsn(NEW, type);
             }
-        } else if (op instanceof KofNewObject no) {
-            String type = no.type() instanceof Type.ClassType ct
-                    ? JvmTypeMapper.toInternalName(ct.packageName(), ct.name()) : "?";
-            c.mv().visitTypeInsn(NEW, type);
-        } else if (op instanceof KofDup) {
-            c.mv().visitInsn(DUP);
-        } else if (op instanceof KofDup2) {
-            c.mv().visitInsn(DUP2);
-        } else if (op instanceof KofDupX1) {
-            c.mv().visitInsn(DUP_X1);
-        } else if (op instanceof KofDupX2) {
-            c.mv().visitInsn(DUP_X2);
-        } else if (op instanceof KofPop) {
-            c.mv().visitInsn(POP);
-        } else if (op instanceof KofPop2) {
-            c.mv().visitInsn(POP2);
-        } else if (op instanceof KofReturn kr) {
-            c.mv().visitInsn(JvmLiteralEmitter.returnOpcode(kr.returnType()));
-        } else if (op instanceof KofReturnVoid) {
-            c.mv().visitInsn(RETURN);
-        } else if (op instanceof KofThrow) {
-            c.mv().visitInsn(ATHROW);
-        } else if (op instanceof KofTryStart kts) {
-            c.mv().visitLabel(ctx.resolveLabel(kts.startLabel()));
-            ctx.pushTryRegion(kts.startLabel(), kts.endLabel());
-        } else if (op instanceof KofTryEnd) {
-            ctx.popTryRegion();
-        } else if (op instanceof KofCatchStart kcs) {
-            c.mv().visitLabel(ctx.resolveLabel(kcs.handlerLabel()));
-            ctx.registerTryCatch(kcs);
-            if ("String".equals(kcs.exceptionType())) {
-                c.mv().visitMethodInsn(INVOKEVIRTUAL, "java/lang/RuntimeException", "getMessage",
-                        "()Ljava/lang/String;", false);
+            case KofDup _ -> {
+                c.mv().visitInsn(DUP);
             }
-            c.mv().visitVarInsn(ASTORE, kcs.localIndex());
-        } else if (op instanceof KofCheckCast cc) {
-            Type castT = cc.type() instanceof Type.PrimitiveType pt ? TypeMetrics.boxedTypeFor(pt) : cc.type();
-            String type = castT instanceof Type.ClassType ct
-                    ? JvmTypeMapper.toInternalName(ct.packageName(), ct.name()) : "?";
-            c.mv().visitTypeInsn(CHECKCAST, type);
-        } else if (op instanceof KofInstanceOf io) {
-            Type checkT = io.type() instanceof Type.PrimitiveType pt ? TypeMetrics.boxedTypeFor(pt) : io.type();
-            String type = checkT instanceof Type.ClassType ct
-                    ? JvmTypeMapper.toInternalName(ct.packageName(), ct.name()) : "?";
-            c.mv().visitTypeInsn(INSTANCEOF, type);
-        } else if (op instanceof KofNewArray na) {
-            if (na.elementType() instanceof Type.ClassType ct) {
-                // array de referência: ANEWARRAY (NEWARRAY é só primitivo)
-                c.mv().visitTypeInsn(ANEWARRAY, JvmTypeMapper.toInternalName(ct.packageName(), ct.name()));
-            } else {
-                c.mv().visitIntInsn(NEWARRAY, JvmLiteralEmitter.arrayTypeForType(na.elementType()));
+            case KofDup2 _ -> {
+                c.mv().visitInsn(DUP2);
             }
-        } else if (op instanceof KofNewMultiArray ma) {
-            c.mv().visitMultiANewArrayInsn(JvmTypeMapper.toDescriptor(arrayTypeOf(ma.baseType(), ma.dims())), ma.dims());
-        } else if (op instanceof KofArrayLoad al) {
-            c.mv().visitInsn(JvmLiteralEmitter.arrayLoadOpcode(al.elementType()));
-        } else if (op instanceof KofArrayStore as) {
-            c.mv().visitInsn(JvmLiteralEmitter.arrayStoreOpcode(as.elementType()));
-        } else if (op instanceof KofArrayLength) {
-            c.mv().visitInsn(ARRAYLENGTH);
+            case KofDupX1 _ -> {
+                c.mv().visitInsn(DUP_X1);
+            }
+            case KofDupX2 _ -> {
+                c.mv().visitInsn(DUP_X2);
+            }
+            case KofPop _ -> {
+                c.mv().visitInsn(POP);
+            }
+            case KofPop2 _ -> {
+                c.mv().visitInsn(POP2);
+            }
+            case KofReturn kr -> {
+                c.mv().visitInsn(JvmLiteralEmitter.returnOpcode(kr.returnType()));
+            }
+            case KofReturnVoid _ -> {
+                c.mv().visitInsn(RETURN);
+            }
+            case KofThrow _ -> {
+                c.mv().visitInsn(ATHROW);
+            }
+            case KofTryStart kts -> {
+                c.mv().visitLabel(ctx.resolveLabel(kts.startLabel()));
+                ctx.pushTryRegion(kts.startLabel(), kts.endLabel());
+            }
+            case KofTryEnd _ -> {
+                ctx.popTryRegion();
+            }
+            case KofCatchStart kcs -> {
+                c.mv().visitLabel(ctx.resolveLabel(kcs.handlerLabel()));
+                ctx.registerTryCatch(kcs);
+                if ("String".equals(kcs.exceptionType())) {
+                    c.mv().visitMethodInsn(INVOKEVIRTUAL, "java/lang/RuntimeException", "getMessage",
+                            "()Ljava/lang/String;", false);
+                }
+                c.mv().visitVarInsn(ASTORE, kcs.localIndex());
+            }
+            case KofCheckCast cc -> {
+                Type castT = cc.type() instanceof Type.PrimitiveType pt ? TypeMetrics.boxedTypeFor(pt) : cc.type();
+                String type = castT instanceof Type.ClassType ct
+                        ? JvmTypeMapper.toInternalName(ct.packageName(), ct.name()) : "?";
+                c.mv().visitTypeInsn(CHECKCAST, type);
+            }
+            case KofInstanceOf io -> {
+                Type checkT = io.type() instanceof Type.PrimitiveType pt ? TypeMetrics.boxedTypeFor(pt) : io.type();
+                String type = checkT instanceof Type.ClassType ct
+                        ? JvmTypeMapper.toInternalName(ct.packageName(), ct.name()) : "?";
+                c.mv().visitTypeInsn(INSTANCEOF, type);
+            }
+            case KofNewArray na -> {
+                if (na.elementType() instanceof Type.ClassType ct) {
+                    // array de referência: ANEWARRAY (NEWARRAY é só primitivo)
+                    c.mv().visitTypeInsn(ANEWARRAY, JvmTypeMapper.toInternalName(ct.packageName(), ct.name()));
+                } else {
+                    c.mv().visitIntInsn(NEWARRAY, JvmLiteralEmitter.arrayTypeForType(na.elementType()));
+                }
+            }
+            case KofNewMultiArray ma -> {
+                c.mv().visitMultiANewArrayInsn(JvmTypeMapper.toDescriptor(arrayTypeOf(ma.baseType(), ma.dims())), ma.dims());
+            }
+            case KofArrayLoad al -> {
+                c.mv().visitInsn(JvmLiteralEmitter.arrayLoadOpcode(al.elementType()));
+            }
+            case KofArrayStore as -> {
+                c.mv().visitInsn(JvmLiteralEmitter.arrayStoreOpcode(as.elementType()));
+            }
+            case KofArrayLength _ -> {
+                c.mv().visitInsn(ARRAYLENGTH);
+            }
+            case null, default -> { }  // no-op p/ null ou tipo nao-casado
         }
     }
 

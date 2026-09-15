@@ -130,6 +130,14 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (14/09 ~19:30, dono = 192.168.100.15, lane bugs-and-gaps): REGRESSÃO de suíte corrigida na causa raiz — `String.valueOf(char)` (e toda a família de estáticos de wrapper) dropada em silêncio quando o classpath externo existe mas não contém a classe (issue #233 residual).**
+> - **Sintoma/prova:** `CoreRegressionE2ETest.stringValueOfCharParity` VERMELHO no tip (`cd010bf1`/`323cf88e`): `Internal compiler error: frame crash … ASM COMPUTE_FRAMES NegativeArraySizeException: -1`. Bissecção em worktree limpo: verde `59359935`, vermelho `1e88309b` (commit rotulado "codeql" que na verdade trouxe o dispatch de wrapper). `doubleStaticMethodsJvm` já tinha sido corrigido upstream (`036e5140`); a face `valueOf` ficou.
+> - **Causa raiz:** o novo ramo de receptor-builtin em `ExpressionMethodCallLowerer` (1e88309b) casa `String`/`Int`/`Double`/… mesmo quando `externalClasspath` NÃO conhece a classe (o caso comum), e só emite para `extSig != null` ou `isNaN/isInfinite/isFinite`. Para `String.valueOf(...)`/`parse*` o ramo saía **sem emitir nada** (R6 violado — drop silencioso); o `println` externo então emitia seu `String.valueOf(Object)` sem valor na pilha → crash do ASM.
+> - **Fix (Q0, causa raiz):** `ExpressionMethodCallLowerer` delega a `ExpressionInstanceCallLowerer.lower(...)` quando não há `extSig` nem é `isNaN` — restaurando exatamente o caminho pré-1e88309b (que já tratava `valueOf`/`parse*` no ramo de receptor-builtin). `ExpressionInstanceCallLowerer` inalterado.
+> - **Prova (Q1, no MESMO commit):** `WrapperStaticCallsE2ETest` (arquivo DEDICADO — zero colisão de tail): `stringValueOfCharInsidePrintln` (o repro exato, JVM+JS), `stringValueOfPrimitivesInsidePrintln` (JVM+JS), `wrapperIsAndParseStatics` (isNaN/isInfinite/parse* — **só JVM**, honesto: o JS de wrapper-statics é gap pré-existente catalogado como §235). + `CoreRegressionE2ETest#stringValueOfCharParity` 1/1 e `#doubleStaticMethodsJvm` 1/1. Gate `check_500` OK (538 tolerado). Suíte 4-módulos: **kof-script 38/38, kof-c 5/5, kof-compiler 1691 (1 fail = §205 open, 13 err = node), kof-cli 248 (1 fail pré-existente `DecompileTest.wideParamsMapToCorrectSlots`, confirmado vermelho em origin limpo sem meus arquivos)**.
+> - **Catalogado (§235, EN+PT):** JS backend emite `java_lang_Double.isNaN(...)`/`java_lang_Integer.parseInt(...)` → `ReferenceError` (pré-existente, reproduzido em `59359935`; lane JS).
+> - **NÃO tocado:** `DecompileTest.wideParamsMapToCorrectSlots` (pré-existente, lane decompiler) e `ConformanceMatrixTest.conformanceCoreControl` (§205 Native ifexpr, lane do #183).
+>
 > **✅ FEITO (14/09 ~17:10, dono = 192.168.100.15, lane bugs-and-gaps): batch de issues fechadas com prova — #211, #204, #205, #193, #198 (+ #163/#167/#214 verificadas fechadas pelas lanes .22/.17).**
 > - **#211/#163** (catch sem `java.lang`): fix `CompilerTypes.exceptionType()` em HEAD; prova `ExceptionsE2ETest.typedCatchExceptionMethodCall` + `typedCatchExceptionAndThrowable` (11/11) — issue fechada.
 > - **#204** (block-lambda `() -> void`): já funcionava (fix raiz = #180 `efda67b2`); prova aditiva `LambdaVoidInferenceE2ETest` 2/2 (no-arg exato da issue).
@@ -137,8 +145,35 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > - **#193/#198** (tipo-função como type-arg de `new List<() -> T>()`): raiz dupla (parser descartava `(`/`)`/`->` silenciosamente + `SemExpressionTyper` NewExpr dropsava type-args vs emit). Fix source `59359935` + prova `LambdaInGenericContainerE2ETest` 5/5 JVM+JS `40c18e89`. **Lição worktree:** meu commit `6856709a` nunca pushou (a lane .17 rebasou com o source fix dentro do codeql dela); o teste existia SÓ no meu commit órfão — origin tinha o fix SEM prova; extraí o teste p/ worktree limpo e pusho `40c18e89`. Suite completa no worktree: 1662, 2 falhas PRÉ-EXISTENTES em origin limpo (matriz ifexpr NATIVE exit=139 + exclusões doc — bissectadas sem meus arquivos).
 >
 > **PRÓXIMO PASSO (esta lane):** fila aberta (27): atacar na ordem **#156/#216 (String.format varargs — descriptor `(String,Object[])V` + packing dos args; já reproduzido com jar fresco: `NoSuchMethodError: String.format(String,String,String)`)**, depois #161 (call genérico sem checkcast no call-site — reproduzido: `NoClassDefFoundError: ?`), #141 (spawn block SEM033), #153/#168 (Char), #148 (família .17 — NÃO tocar), #199 (guard pattern), #213/#219/#220/#221. Método: repro com jar fresco ANTES (lição #214: fix de outra lane + jar stale = falso-positivo de bug vivo), worktree limpo p/ suíte, teste em arquivo DEDICADO novo (zero colisão de tail com CoreRegressionE2ETest — 3 colisões hoje).
+>
+> **✅ FEITO (14/09 ~20:30, dono = 192.168.100.15, lane bugs-and-gaps): batch 2 de issues fechadas com prova — #155, #221, #236, #241, #242, #243, #220, #245, #141 (+ #246/#233 fechadas pelas lanes .22/.18; fila aberta agora 18).**
+> - **#155** (2ª interface com retorno primitivo): já funcionava; prova aditiva `MultipleInterfaceReturnTypeE2ETest` 2/2 (Boolean/Int no 2º método — o teste pré-existente só usava String). `d8773590`.
+> - **#221** (static field com inicializador de expressão): família `<clinit>` do #133; prova `StaticFieldInitializerE2ETest` 1/1 (as 4 células do corpo exato: 100/8/foobar/100). `073c0816`.
+> - **#236** (tipo-função em `new List<() -> Int>()` → ClassFormatError): já corrigido pelo fix de #193/#198 (parser + typer NewExpr); `LambdaInGenericContainerE2ETest.chainedCallOnGetResult` É o repro exato. Fechada sem commit novo (prova já existia no HEAD).
+> - **#241** (catch QUALIFICADO `java.lang.RuntimeException` → ClassFormatError): raiz `JvmBackend.exceptionJvmType()` concatenava `java/lang/` cego no nome já pontuado. Fix na raiz: nome com `.` → traduz `.`→`/` (idempotente). Prova `QualifiedCatchE2ETest` 2/2 + exception table no javap = `Class java/lang/RuntimeException`. **Colisão de lane:** outra instância pushou fix paralelo (`64e3298e`, `if indexOf('/')`) sobre o meu (`7ce67a6a`) — ambos na beta, harmless. Borda honesta registrada na issue: `e.getMessage()` em catch tipado falha no ALVO JS (pre-existente, catálogo separado — R6).
+> - **#242** (ctor parametrizado sem `constructor` → `<init>` ausente): MESMA raiz do #142/#157/#164 (gramática `constructor` opcional); já verde em `CoreRegressionE2ETest.constructorNamedLikeClass`. Fechada com prova do javap + JVM/JS rodando o repro exato.
+> - **#243/#220** (primitivo em campo `T` apagado → VerifyError): boxing do store de campo já no HEAD (`javap`: `Integer.valueOf` antes do `putfield`). Prova `GenericFieldPrimitiveBoxE2ETest` 2/2 (repro exato + matriz Int/Double/Bool/String, paridade JVM×JS). `cd010bf1`.
+> - **#245** (`for-in` sobre String → VerifyError arraylength): já corrigido 14/09 como SEM058 honesto (regra 6 — `for-in` só itera List/array; §194 da minha lane). Fechada com o repro da issue emitindo SEM058.
+> - **#141** (`spawn { expr }` → `await` perdia valor): **FIX PRÓPRIO**. Raiz: a conversão corpo-1-expressão→retorno existia SÓ na emissão (`CompilerLambdaClass:128`); NENHUM dos 3 typers do caminho spawn espelhava → `Handle<Void>` → SEM033 falso-positivo (a FACE mudou: 0.3.x = null em runtime; hoje = rejeição em compile-time; triagem da mantenedora = "veredito errado, gap do typer, 0.4.1"). Fix nos 3 pontos GATEADOS a `__kof_spawn_expr` (BuiltinCallTyper, ExpressionTyper.inferLambdaBodyType, StatementLowerer pin) — contrato geral de lambda (closures.md §1) intocado. Prova `SpawnAwaitBlockE2ETest` 5/5 JVM×JS + repro roda 4 targets (JVM/JS/Script/Native-x86 = `OK: ok`). `3c16c044`. Vizinhos verdes: KofConcurrency2Test 34, LambdaE2ETest 26, ExceptionsE2ETest 11.
+> **⚠️ REGRESSÃO PRÉ-EXISTENTE NA BETA (não minha, NÃO corrigi):** `CoreRegressionE2ETest.stringValueOfCharParity` (String.valueOf(char) → frame crash ASM `NegativeArraySizeException: -1`) está VERMELHO no HEAD LIMPO da origin (cravado como "marker pre-existente da lane .22" no commit `8e4b34d3` do codeql sweep, e re-confirmado red em `52fa5127` SEM minhas mudanças — stash-test provou). Suspeita forte: os switches de `computeStack`/emissores de literal da série #292/#295/#297 (o KofCall `String.valueOf:(C)` 2-slot não abatido no modelo de depth → estouro). DONO = lane .22 (JvmLiteralEmitter/NativeOpHelpers). Registrando aqui (regra 3: nunca "fixar" o teste afrouxando; stop-cond 3: red que não introduzi).
+>
+> **✅ FEITO (14/09 ~21:15, dono = 192.168.100.15, lane bugs-and-gaps): #199 CORRIGIDA c/ fix na raiz — commit `1f56ee3a`.**
+> `SwitchExprLowerer.emitSwitchChain` (só a forma-EXPRESSION; a STATEMENT já fazia certo com `#guardCast` separado): com GUARDA o MESMO `bodyLabel` era visitado 2× (instanceof-true ANTES do binding + guarda-true DEPOIS) → resolução de label pega a ÚLTIMA visita → o caminho instanceof-true caía DEPOIS do `astore` → var bound nunca escrita no ramo que a lê → `VerifyError: Bad local variable type` no LOAD. **Fix na IR compartilhada** (regra 5, cura JVM/Native/Script de uma): com guarda, `bindingLabel` NOVO recebe o instanceof-true (prólogo do binding); guarda-true pula p/ `bodyLabel` (corpo). Sem guarda `bindingLabel == bodyLabel` (queda direta, UMA visita — byte-compat). **Prova:** `GuardedPatternSwitchExprE2ETest` 3/3 (repro exato `3/1/0` + var lida no CORPO do braço c/ pattern de classe de domínio `100/5/-1` + paridade Script). Vizinhos: `KofPatternMatchingTest` 12/12, `CoreRegressionE2ETest` **99/99 (a red pré-existente `stringValueOfCharParity` foi RESOLVIDA pelo `5ad494b7` upstream — o registro de risco da batch-2 está CERRADO)**, `BackendParityTest` 19/19. **Borda JS catalogada na issue:** frontend próprio do KofJS (`parseExpressionFragment`) chuta `KofConditionalJump` em statement — COMP002 pré-existente (medido no jar pré-#199), NÃO é regressão minha, R6-compliant.
+> **PRÓXIMO PASSO (re-dispacho lê isto):** da fila, restam: **#156/#216 (String.format varargs — packing dos args em `Object[]` + descriptor `(String,Object[])String`; leia a assinatura REAL do callee via reflection/ExternalClasspath, conserta parâmetro E retorno de uma vez — família §234/§224/§225 = interop-descriptor, NÃO atacar os arquivos em WIP da lane .22)**, depois #161 (call genérico sem checkcast no call-site), #153/#168 (Char → `Character.valueOf`, gateado só ao caminho concat/toString, NÃO quebrar storage `char`-as-`Integer` de coleção documentado em JvmOpCollections:362-391) (#199 FEITA acima `1f56ee3a`). #148/#233 família Jvm*Descriptor = lane .17 (NÃO tocar). #151 (`is`)/#159/#207/#213/#219/#228 = regra 6 / decisão / lane alheia. Método: worktree NOVO por unidade (`git worktree add --detach wtN origin/beta-0.4.0` + `update-index --no-skip-worktree` ANTES de reset; push `HEAD:beta-0.4.0`; cherry-pick do meu commit se a origin andar no meio — a beta anda a cada ~5 min, 10 commits no meio do #141), jar SEMPRE `clean package` após mexer no compiler (trap do fat-jar stale mordeu 2× hoje), teste em arquivo DEDICADO. **LIÇÃO DOING.md (14/09 ~22:00, dono = esta lane): editar DOING.md num WORKTREE é ARMADILHA c/ sparse-checkout+skip-worktree — o working copy pode vir CORTADO (3541/3767 vs o TIP 3770) e commitar editando-o apaga linhas de outras lanes (meu `8e5ccd8a` dropou o bloco CodeQL da lane .22; `84831344` restaurou c/ fix-forward, histórico NÃO reescrito). Regra: SEMPRE partir do blob do TIP (`git show origin/beta-0.4.0:DOING.md`), NUNCA do working copy; conferir contagem esperada ANTES de `git add`; `git add` SÓ DOING.md (nunca `-A` c/ smudge pendente).** **Antes de fechar qualquer issue do lote §219/interop: rodar o REPRO com o jar do commit de origem da fix — 6 das 15 fechadas hoje já estavam corrigidas por outras lanes (jar fresco + javap = prova, não memória).**
 
 > **✅ FEITO (14/09 ~15:25, dono = 192.168.100.18, lane development): DECISIONS §5 — `app.security()` adota o modelo Spring (`authorizeHttpRequests` + CSRF on by default).** Deltas concretos: (1) **CSRF LIGADO por default** quando `app.security()` é configurado (`kof_web_security_opts` seta `securityCsrf = true`; `csrf:false` desliga). Apps SEM `app.security()` não mudam (o default do campo segue `false`, senão o `KofWebE2ETest` base quebraria com 403). (2) **Leitura autenticada por default**: a guarda de sessão JÁ rejeita toda request fora de `publicPaths` (GET incluído) — a nota "reads públicas" do merge C18 (DECISIONS §5, linha do merge) era DESATUALIZADA e foi corrigida; nada a mudar no código. (3) **`permitAll`** aceito como alias de `publicPaths` (allow-list de matchers). `app.security()` sem args segue headers-only (GET `/hello` → 200). **Prova:** `KofWebE2ETest` 25/25 (novos `securityCsrfIsOnByDefault`, `securityPermitAllAliasIsPublicPaths`) + `KofBlogE2ETest` 1/1 (POSTs agora fazem o double-submit: GET público → cookie `csrf` → `Cookie` + `X-CSRF-Token`) + `KofOAuthResourceServerTest` 4/4 + `KofWebHardeningTest` 6/6. Docs: DECISIONS §5 Done (EN+PT), known-bugs §195 RE-CONFIRMADO (EN+PT), stdlib-web (EN+PT: `csrf` default `true`, `sessionHeader`/`publicPaths`/`permitAll`, leitura autenticada). **Próximo:** decisão 6 (§180 Native `println(double/float)` toString) → decisão 2 (§129 frame-per-thread).
+> **✅ FEITO (14/09 ~21:15, dono = 192.168.100.22, lane compiler): fix issue #249 — assigning to static field via instance reference emits putfield instead of putstatic — IncompatibleClassChangeError.**
+> - Causa raiz: em `ExpressionAssignmentLowerer.java`, quando o alvo da atribuição era um `FieldAccessExpr` (`instance.FIELD = value`), o lowering emitia incondicionalmente a avaliação da expressão do receiver (`aload`) e a instrução `KofStoreField` (que gera `putfield` na JVM). Quando o campo resolvido na hierarquia possuía o modificador `static` (`AccessFlags.STATIC`), a JVM falhava com `IncompatibleClassChangeError: Expected non-static field` em tempo de execução.
+> - Correção: `ExpressionAssignmentLowerer` agora inspeciona se o campo resolvido em `HierarchyResolver.resolveFieldInHierarchy()` é estático (`(fldSym.accessFlags() & AccessFlags.STATIC) != 0`). Se for estático, a avaliação do receiver na pilha é omitida (não empilha `aload` desnecessário), operações de atribuição composta emitem `KofGetStatic` e o armazenamento final emite `KofPutStatic` (gerando `putstatic`), espelhando perfeitamente o comportamento já adotado para leitura em `ExpressionLowerer`.
+> - Prova: `CoreRegressionE2ETest#assignToStaticFieldViaInstanceReferenceJvm` cobrindo campos estáticos de diferentes tipos (`Int`, `String`, `Boolean`) e atribuição composta (`+=`).
+> - Próximo: issues #237, #232, #231.
+
+> **✅ FEITO (14/09 ~19:15, dono = 192.168.100.22, lane compiler): fix issue #246 — extending a generic class writes angle-bracketed name as super_class — NoClassDefFoundError + inherited methods unresolved.**
+> - Causa raiz: (1) em `SymbolTableBuilder.java`, ao declarar uma classe que estende tipo genérico (`class StringBox extends Container<String>`), `cls.superClass()` continha a string com parâmetros de tipo (`Container<String>`). Ao registrar `SymbolTable.ClassSymbol`, a superclasse ficava `Container<String>`, impedindo que o `MemberResolver.resolveInHierarchy()` encontrasse o `SymbolTable.ClassSymbol` do pai (`Container`) e emitindo `SEM025` em chamadas a métodos herdados (`sb.set()`, `sb.get()`). (2) em `CompilerClassLowering.java`, `superName` mantinha o nome com `<...>`, emitindo `super_class` bruto no class file e gerando `NoClassDefFoundError: Container<String>` na JVM ao carregar a subclasse.
+> - Correção: normalizado `superQualified` e `superName` em `SymbolTableBuilder.java` e `CompilerClassLowering.java` para extrair o nome base da classe (`substring(0, indexOf('<'))`), preservando a superclasse apagada/erased no bytecode e permitindo a resolução semântica dos membros da hierarquia.
+> - Prova: `CoreRegressionE2ETest#extendGenericClassJvm` cobrindo herança de genérico com argumento concreto (`String`), argumento tipo primitivo (`Int`) e repasse de parâmetro genérico (`TypedBox<T> extends Container<T>`).
+> - Próximo: issues #237, #232, #231.
+
 > **✅ FEITO (14/09 ~18:45, dono = 192.168.100.22, lane compiler): fix issue #247 — Boolean overload resolution selects Int overload when both show(Int) and show(Boolean) exist.**
 > - Causa raiz: em `SymbolTable.MethodSet#select(int argCount, List<Type> argTypes)`, a iteração retornava imediatamente o primeiro método compatível por aridade cujos parâmetros aceitassem os argumentos (`TypeChecker.isAssignable`). Como `bool` podia ser avaliado primeiro contra `Int` se este viesse antes na lista de métodos e fosse aceito por compatibilidade/coerção ampla, o overload de `Int` era retornado antes de inspecionar o overload com tipo exato `Boolean`.
 > - Correção: `MethodSet#select()` agora acumula todos os candidatos aplicáveis da aridade requerida e, quando há múltiplos aplicáveis, calcula a pontuação por correspondência exata de tipos (`arg.equals(par)`), selecionando o overload mais específico (espelhando a lógica de `TopLevelOverload.pick()`).
@@ -820,27 +855,33 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > FEITA: `pathOracle` brute-force (definição de caminhos) vs passada rápida
 > em 300 classes REAIS = zero divergência, 6/6 (220064fc) + auditoria
 > doc-vs-código (machineRun:97 VIVA em 158c174b — doc corrigido b9996938);
-> (2) **UNIDADE 2b (PRÓXIMO PASSO EXATO):** em
-> `BytecodeStatements.struct()`, no ramo `cond == null && !loop0` (~linha
-> 287), ANTES do fallback de prefixo atual: calcular o idom-map uma vez por
-> método (cache no recoverStatements, passar p/ struct via um campo/parâmetro
-> — BytecodeStatements.java está em 538 linhas = ZONA TOLERADA, a adição vai
-> p/ classe NOVA `StructWalker.java` nomeada pela responsabilidade, regra 7
-> de nomenclatura); recuperar teste-com-computação SOMENTE quando
-> idom(then)==idom(senão)==P, P não é loop-header, nenhuma back-edge dos
-> braços cruza P; a computação do teste sai via `machineRun` (pré-requisito
-> vivo) em `if (...)` SEM hoisting p/ fora (hoisting = trap 1). PROVA
-> ESPERADA: (a) `diamondJoinShapesStayHonestStub` VERDE (lei vinculante),
-> (b) golden de execução novo p/ `contFor`-like (oracle JVM: 0 0 1 3 3 7 12
-> ou o medido à mão), (c) ROI cai (re-contagem com o MESMO harness
-> roi/Roi.java), (d) 63 DecompileTest + 6 PostDom VERDES, (e) se QUALQUER
-> um falhar: REVERT a fatia, o doc já travou as 2 rejeições anteriores.
-> `immediatePostDom` no `struct()` p/ o join estruturado, cada recuperação
-> guardando `diamondJoinShapesStayHonestStub` VERTO (lei do diamante é
-> vinculante — se quebrar, é stub honesto, nunca código errado compilável);
-> (3) golden de execução (oracle JVM) p/ cada nova forma recuperada. Meta:
-> reduzir stubs SEM novo falso-verde. Só mover DECOMPILER p/ `docs/` quando
-a Fase C fechar o corpo (hoje: recovery parcial honesto).
+> (2) ✅ **UNIDADE 2b RE-AVALIADA + FECHADA POR MEDIÇÃO (14/09, veredito
+> em DECOMPILER.md §6):** o proxy "1098" supercontou (harness Roi2/Roi3).
+> Dos stubs com teste computado: 646 invoke-interop (lane compiler), 453
+> loop/continue (lei do diamante + Kof sem `continue` = regra 6), 8+2 nits.
+> A caça ao 5º-red expôs DUAS coisas reais na lane do decompiler, ambas com
+> re-producao medida:
+> **§236 ✅ CORRIGIDA nesta sessao** — `comparisonReturn` dobrava o shape
+> ambiguo cmp/iconst1/goto/iconst0/ireturn para Bool CRU, entao
+> `return a<b?1:0` num corpo Int virava saida NAO-compilavel (SEM010); porta
+> por `retType` (Z→cru, I→if-expr) + pino consertado + teste novo
+> `comparisonReturnRespectsBoolVsIntReturnType` (recompila); DecompileTest
+> 64/64 + PostDom 6/6 VERDES 20:55, exec V=1|0|0==oracle.
+> **PRÓXIMA UNIDADE (2c, minha lane, sem colidir c/ a lei nem regra 6):**
+> §238 — o `pureIfElse` da 2a (`5c944709`) emite o `var` do local na PRIMEIRA
+> atribuicao, que fica DENTRO do ramo then, e o else/pos-join leem um `v2`
+> nao declarado → saida NAO-compilavel (SEM000). Nenhum teste da suíte pega
+> (o `E.java` pre-inicializa `int r=1`; o pino so checa string). FIX = icao
+> honesta ANTES do `if` no caminho `pureIfElse`/`pureIfThen` de
+> `BytecodeStatements.struct()` (classe NOVA ou fatia em StructWalker, regra
+> 7; BytecodeStatements.java em 538 = TOLERADA), default-init pelo tipo do
+> frame; se nao der de istrar com seguranca → RECUSAR p/ stub honesto
+> (R6). PROVA: re-producao `/tmp/opencode/w2b/Comp.java` (`computed`/`cmp`)
+> + `Mid.java` (`big`) decompilam e RECOMPILAM (Runner2 compile=true) com
+> golden de execucao (oracle JVM medido 11|21|11|11 / 1|2|2), lei do diamante
+> VERDE, suíte DecompileTest+PostDom VERDE. §237 (StringValueOfChar,
+> 6º-red) = lane .22, NAO atacar.
+
 
 > **⚠️ 5º RED NO PORTÃO (catalogado, para as lanes de bug — 14/09 ~16:45):**
 > `NativeStringCompareCrossTest` riscv+aarch → §233 no known-bugs (renumerado 17:40: §231 foi tomado pela lane .18 — colisao de rebase; fix

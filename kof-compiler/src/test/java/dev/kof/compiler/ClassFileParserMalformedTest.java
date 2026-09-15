@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class ClassFileParserMalformedTest {
 
-    private static byte[] utf8(DataOutputStream out, int idx, String s) throws IOException {
+    private static byte[] utf8(DataOutputStream out, String s) throws IOException {
         byte[] b = s.getBytes(java.nio.charset.StandardCharsets.UTF_8);
         out.writeByte(1);
         out.writeShort(b.length);
@@ -38,10 +38,10 @@ class ClassFileParserMalformedTest {
         out.writeShort(0);          // minor
         out.writeShort(52);         // major
         out.writeShort(5);          // constant_pool_count (slots 1..4)
-        utf8(out, 1, "#abc");       // slot1: this_class aponta aqui -> "#abc"
+        utf8(out, "#abc");       // slot1: this_class aponta aqui -> "#abc"
         out.writeByte(7);           // slot2: Class -> 3
         out.writeShort(3);
-        utf8(out, 3, "Foo");        // slot3
+        utf8(out, "Foo");        // slot3
         out.writeByte(3);           // slot4: Integer
         out.writeInt(42);
         out.writeShort(0x21);       // accessFlags
@@ -62,8 +62,8 @@ class ClassFileParserMalformedTest {
         out.writeShort(0);
         out.writeShort(52);
         out.writeShort(4);          // slots 1..3
-        utf8(out, 1, "#99999999999999"); // decimal puro, estoura int (parseInt -> NFE)
-        utf8(out, 2, "Bar");
+        utf8(out, "#99999999999999"); // decimal puro, estoura int (parseInt -> NFE)
+        utf8(out, "Bar");
         out.writeByte(3);
         out.writeInt(7);
         out.writeShort(0x21);

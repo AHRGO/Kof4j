@@ -130,8 +130,15 @@ public final class StatementLowerer {
                                 && "kof.concurrent".equals(hct.packageName())
                                 && (hct.typeArguments().isEmpty()
                                     || hct.typeArguments().get(0) instanceof Type.UnknownType)) {
-                            varType = new Type.ClassType("kof.concurrent", "Handle",
-                                    List.of(ExpressionTyper.inferExprType(driver, sm.arguments().get(0), locals)));
+                            // #141: usa inferLambdaBodyType (mesmo chokepoint do
+                            // MethodCallTyper/lowerer), NÃO inferExprType direto —
+                            // no corpo-bloco de expressão única este dava VOID e
+                            // Handle<Void> poluía o local p/ o `await`.
+                            ExpressionNode spawnBody = sm.arguments().get(0);
+                            Type t = spawnBody instanceof LambdaExpr sle
+                                    ? ExpressionTyper.inferLambdaBodyType(driver, sle, locals)
+                                    : ExpressionTyper.inferExprType(driver, spawnBody, locals);
+                            varType = new Type.ClassType("kof.concurrent", "Handle", List.of(t));
                         }
                     } else {
                         Type initT = ExpressionTyper.inferExprType(driver, vdInit, locals);

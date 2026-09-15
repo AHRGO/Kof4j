@@ -7,11 +7,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 /**
  * §CodeQL uncaught-number-format-exception na CLI (mesma familia do fix do
@@ -73,7 +70,7 @@ class CliNumberFormatTest {
     }
 
     @Test
-    void serveWithoutArgumentsDoesNotThrowArrayIndexOutOfBounds(@TempDir Path tmp) {
+    void serveWithoutArgumentsDoesNotThrowArrayIndexOutOfBounds() {
         // Bug pre-existente (achado pela lane CodeQL): o bloco de usage lia
         // args[1] ANTES de conferir args.length < 2 -> AIOOBE em `kof serve`.
         ByteArrayOutputStream out = new ByteArrayOutputStream();

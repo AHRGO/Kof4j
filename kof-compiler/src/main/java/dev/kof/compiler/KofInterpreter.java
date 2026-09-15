@@ -220,106 +220,141 @@ public final class KofInterpreter {
         while (f.pc < f.ops.size()) {
             KofOperation op = f.ops.get(f.pc++);
             try {
-                if (op instanceof KofLoadLiteral kl) {
-                    st.push(kl.value());
-                } else if (op instanceof KofLoadLocal ll) {
-                    st.push(f.locals[ll.index()]);
-                } else if (op instanceof KofStoreLocal sl) {
-                    f.locals[sl.index()] = st.pop();
-                } else if (op instanceof KofLoadField lf) {
-                    st.push(members.loadField(lf, st.pop()));
-                } else if (op instanceof KofStoreField sf) {
-                    Object v = st.pop();
-                    Object recv = st.pop();
-                    members.storeField(sf, recv, v);
-                } else if (op instanceof KofGetStatic gs) {
-                    st.push(members.getStatic(gs));
-                } else if (op instanceof KofPutStatic ps) {
-                    members.putStatic(ps, st.pop());
-                } else if (op instanceof KofBinary kb) {
-                    Object b = st.pop();
-                    Object a = st.pop();
-                    st.push(builtins.binary(kb, a, b));
-                } else if (op instanceof KofUnary ku) {
-                    st.push(builtins.unary(ku, st.pop()));
-                } else if (op instanceof KofLabel) {
-                    // no-op
-                } else if (op instanceof KofJump kj) {
-                    f.pc = f.labels.get(kj.target());
-                } else if (op instanceof KofConditionalJump cj) {
-                    Object b = st.pop();
-                    Object a = st.pop();
-                    boolean taken = builtins.compare(cj.comparison(), cj.operandType(), a, b);
-                    f.pc = f.labels.get(taken ? cj.trueLabel() : cj.falseLabel());
-                } else if (op instanceof KofCall kc) {
-                    call(f, kc);
-                } else if (op instanceof KofNewObject no) {
-                    IRClass k = members.kofClassOrNull(no.type());
-                    st.push(k != null ? new KofObj(k) : new PendingNew(no.type()));
-                } else if (op instanceof KofReturn kr) {
-                    f.returnValue = Type.isVoid(kr.returnType()) ? null : st.pop();
-                    return;
-                } else if (op instanceof KofReturnVoid) {
-                    f.returnValue = null;
-                    return;
-                } else if (op instanceof KofDup) {
-                    st.push(st.peek());
-                } else if (op instanceof KofDup2) {
-                    Object top = st.pop();
-                    Object below = st.pop();
-                    st.push(below);
-                    st.push(top);
-                    st.push(below);
-                    st.push(top);
-                } else if (op instanceof KofDupX1) {
-                    Object top = st.pop();
-                    Object below = st.pop();
-                    st.push(top);
-                    st.push(below);
-                    st.push(top);
-                } else if (op instanceof KofDupX2) {
-                    Object top = st.pop();
-                    Object b = st.pop();
-                    Object a = st.pop();
-                    st.push(top);
-                    st.push(a);
-                    st.push(b);
-                    st.push(top);
-                } else if (op instanceof KofPop) {
-                    st.pop();
-                } else if (op instanceof KofPop2) {
-                    // categoria-2 (Long/Double ocupa 2 slots)
-                    st.pop();
-                } else if (op instanceof KofCheckCast) {
-                    // cast sem efeito observável na pilha do interpretador
-                } else if (op instanceof KofInstanceOf ki) {
-                    st.push(builtins.instanceOf(ki.type(), st.pop()) ? 1 : 0);
-                } else if (op instanceof KofArrayLoad al) {
-                    int idx = unboxInt(st.pop());
-                    Object arr = st.pop();
-                    st.push(Array.get(arr, idx));
-                    if (al.elementType() != null) { /* unbox é no-op na representação */ }
-                } else if (op instanceof KofArrayStore as) {
-                    Object v = st.pop();
-                    int idx = unboxInt(st.pop());
-                    Object arr = st.pop();
-                    Array.set(arr, idx, builtins.coerceFor(as.elementType(), v));
-                } else if (op instanceof KofNewArray na) {
-                    st.push(builtins.newArray(na.elementType(), unboxInt(st.pop())));
-                } else if (op instanceof KofNewMultiArray ma) {
-                    int[] lens = new int[ma.dims()];
-                    for (int i = ma.dims() - 1; i >= 0; i--) lens[i] = unboxInt(st.pop());
-                    st.push(builtins.newMultiArray(ma.baseType(), lens));
-                } else if (op instanceof KofArrayLength) {
-                    st.push(Array.getLength(st.pop()));
-                } else if (op instanceof KofThrow) {
-                    throw KofInterpreterFrame.asThrowable(st.pop());
-                } else if (op instanceof KofTryStart ts) {
-                    f.tryStack.push(frames.newTryRegion(f, ts, st.size()));
-                } else if (op instanceof KofTryEnd) {
-                    if (!f.tryStack.isEmpty()) f.tryStack.pop();
-                } else if (op instanceof KofCatchStart cs) {
-                    f.locals[cs.localIndex()] = st.pop();
+                switch (op) {
+                    case KofLoadLiteral kl -> {
+                        st.push(kl.value());
+                    }
+                    case KofLoadLocal ll -> {
+                        st.push(f.locals[ll.index()]);
+                    }
+                    case KofStoreLocal sl -> {
+                        f.locals[sl.index()] = st.pop();
+                    }
+                    case KofLoadField lf -> {
+                        st.push(members.loadField(lf, st.pop()));
+                    }
+                    case KofStoreField sf -> {
+                        Object v = st.pop();
+                        Object recv = st.pop();
+                        members.storeField(sf, recv, v);
+                    }
+                    case KofGetStatic gs -> {
+                        st.push(members.getStatic(gs));
+                    }
+                    case KofPutStatic ps -> {
+                        members.putStatic(ps, st.pop());
+                    }
+                    case KofBinary kb -> {
+                        Object b = st.pop();
+                        Object a = st.pop();
+                        st.push(builtins.binary(kb, a, b));
+                    }
+                    case KofUnary ku -> {
+                        st.push(builtins.unary(ku, st.pop()));
+                    }
+                    case KofLabel _ -> {
+                        // no-op
+                    }
+                    case KofJump kj -> {
+                        f.pc = f.labels.get(kj.target());
+                    }
+                    case KofConditionalJump cj -> {
+                        Object b = st.pop();
+                        Object a = st.pop();
+                        boolean taken = builtins.compare(cj.comparison(), cj.operandType(), a, b);
+                        f.pc = f.labels.get(taken ? cj.trueLabel() : cj.falseLabel());
+                    }
+                    case KofCall kc -> {
+                        call(f, kc);
+                    }
+                    case KofNewObject no -> {
+                        IRClass k = members.kofClassOrNull(no.type());
+                        st.push(k != null ? new KofObj(k) : new PendingNew(no.type()));
+                    }
+                    case KofReturn kr -> {
+                        f.returnValue = Type.isVoid(kr.returnType()) ? null : st.pop();
+                        return;
+                    }
+                    case KofReturnVoid _ -> {
+                        f.returnValue = null;
+                        return;
+                    }
+                    case KofDup _ -> {
+                        st.push(st.peek());
+                    }
+                    case KofDup2 _ -> {
+                        Object top = st.pop();
+                        Object below = st.pop();
+                        st.push(below);
+                        st.push(top);
+                        st.push(below);
+                        st.push(top);
+                    }
+                    case KofDupX1 _ -> {
+                        Object top = st.pop();
+                        Object below = st.pop();
+                        st.push(top);
+                        st.push(below);
+                        st.push(top);
+                    }
+                    case KofDupX2 _ -> {
+                        Object top = st.pop();
+                        Object b = st.pop();
+                        Object a = st.pop();
+                        st.push(top);
+                        st.push(a);
+                        st.push(b);
+                        st.push(top);
+                    }
+                    case KofPop _ -> {
+                        st.pop();
+                    }
+                    case KofPop2 _ -> {
+                        // categoria-2 (Long/Double ocupa 2 slots)
+                        st.pop();
+                    }
+                    case KofCheckCast _ -> {
+                        // cast sem efeito observável na pilha do interpretador
+                    }
+                    case KofInstanceOf ki -> {
+                        st.push(builtins.instanceOf(ki.type(), st.pop()) ? 1 : 0);
+                    }
+                    case KofArrayLoad al -> {
+                        int idx = unboxInt(st.pop());
+                        Object arr = st.pop();
+                        st.push(Array.get(arr, idx));
+                        if (al.elementType() != null) { /* unbox é no-op na representação */ }
+                    }
+                    case KofArrayStore as -> {
+                        Object v = st.pop();
+                        int idx = unboxInt(st.pop());
+                        Object arr = st.pop();
+                        Array.set(arr, idx, builtins.coerceFor(as.elementType(), v));
+                    }
+                    case KofNewArray na -> {
+                        st.push(builtins.newArray(na.elementType(), unboxInt(st.pop())));
+                    }
+                    case KofNewMultiArray ma -> {
+                        int[] lens = new int[ma.dims()];
+                        for (int i = ma.dims() - 1; i >= 0; i--) lens[i] = unboxInt(st.pop());
+                        st.push(builtins.newMultiArray(ma.baseType(), lens));
+                    }
+                    case KofArrayLength _ -> {
+                        st.push(Array.getLength(st.pop()));
+                    }
+                    case KofThrow _ -> {
+                        throw KofInterpreterFrame.asThrowable(st.pop());
+                    }
+                    case KofTryStart ts -> {
+                        f.tryStack.push(frames.newTryRegion(f, ts, st.size()));
+                    }
+                    case KofTryEnd _ -> {
+                        if (!f.tryStack.isEmpty()) f.tryStack.pop();
+                    }
+                    case KofCatchStart cs -> {
+                        f.locals[cs.localIndex()] = st.pop();
+                    }
+                    case null, default -> { }  // no-op p/ null ou tipo nao-casado (paridade com o if-else)
                 }
             } catch (Throwable t) {
                 if (!frames.handleException(f, t)) throw t;
