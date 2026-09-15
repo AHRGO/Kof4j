@@ -449,6 +449,12 @@ public final class BuiltinCallTyper {
                     if (sel < 0) sel = 0; // NO_MATCH → reporta SEM013/SEM014 no candidato 0, como antes
                     TopLevelOverload.Candidate chosen = cands.get(sel);
                     TypeChecker.checkArgTypes(sa.diagnostics(), mc.methodName(), argTypes, chosen.paramTypes());
+                    // #266 (c) — DECISIONS §7: `null` literal em parâmetro
+                    // primitivo NÃO-nullable é SEM048 em compile-time, nunca
+                    // VerifyError silencioso no load (a chamada top-level não
+                    // passa por resolvedMethods, por isso o check direto aqui).
+                    SemanticAnalyzer.checkNullArgs(sa.diagnostics(), mc.arguments(),
+                            mc.position(), chosen.paramTypes(), mc.methodName());
                     // registra o tipo de retorno da função top-level para o var
                     // local inferir (evita Unknown que quebra a resolução de
                     // métodos do receiver)
