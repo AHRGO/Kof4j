@@ -229,11 +229,33 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > familia r14 (519/566 prefixos com TRAP `0xb6/0xb9/0xb8/0xc1` no teste =
 > zona do walker de post-dominador, lei step-3a) — ROI de qualquer guard
 > local ≈ 0 neste corpus. Fila da migreicao NAO e mais da lane.
-> **PRÓXIMO PASSO:** voltar a fila da lane (docs/development/): auditar o
-> pendente REAL de `docs/development/` contra o code (regra dos tres estados —
-> concluido→docs/, planeado→future/), comecando pelos `.md` soltos sem dono
-> (regra 09/13 do prioridade). N1..N4 (D-NULL-INTENT) e §205 fatia 2 =
-> lane compiler; registrar na fila do roadmap §23 se ainda nao estao.
+> (I) **FILA DA LANE docs/development/ EXECUTADA 15/09 (noite, `192.168.100.17`):**
+> auditoria completa dos `.md` soltos contra o code (tres estados):
+> — DECOMPILER/TRANSLATOR/LEGACY_MIGRATION EN+PT (6 arquivos) → `future/`
+>   por ordem direta dela ("decompiler e translator foram despriorizados"),
+>   codigo fica em kof-cli, fila pausa; referencias sincronizadas no mesmo
+>   commit (README/roadmap §21/AGENTS corpus-table, EN+PT; `d4213220`).
+> — auto-correcao de 2 lacadas minhas: fila N1→N4 agora TEM entrada no
+>   roadmap §23 (2.6, EN+PT, `949dc2e4`) e o ponteiro de revogacao do §125
+>   agora existe no PT (`22feb34a`).
+> — sincronia de registro (regra 5/6, lane docs): §205 fatia 1 na tabela de
+>   deltas do backend-parity (EN+PT, `bf8f10df`); linha "1 red §205" do
+>   status .18 anotada como FECHADO 15/09 pela fatia 1 (EN+PT, `25d5bdf4`);
+>   AGENTS corpus-table DD-STDLIB-01→docs/stdlib (EN+PT, `8228eb06`).
+> — `native-multiarch.md` e `planning-otp-supervision.md` auditados: headers
+>   batem com o code (G-0…G-5 + link-by-use `986f28e7` / S2-Native .18),
+>   classificacao correta em development/, donos de OUTRAS lanes ativos —
+>   nao-atacar (regra 2).
+> **PRÓXIMO PASSO:** a fila docs/development/ esta VAZIA de item sem dono —
+> re-trigger desta lane so ataca se aparecer (a) novo `.md` solto com
+> implementacao pendente em development/, (b) decisao em DECISIONS.md sem
+> fila no roadmap §23 (regra "decisao trava + abre fila no mesmo commit"),
+> (c) registro de code/docs fora de sincronia (regra 5/6 da lane docs:
+> backend-parity/status/conformance-matrix vs tip), ou (d) bug da fila de
+> docs (docs-lang gate, par PT atrasado, contagem do check_500). N1..N4,
+> §205 fatia 2, §181, §213, §252 = outras lanes (compiler/nat) — registrar
+> gap e NAO atacar. Se nada disso aparecer e a suíte estiver verde como
+> hoje: **RECUSAR o re-trigger** (condicao STABILITY da lane docs).
 
 > **✅ FEITO (15/09 ~03:30, dono = 192.168.100.22, lane compiler): §241 RESOLVIDO — REVERT-do-contrato-boxed-meio-impl à causa raiz (gap honesto R6). O PORTÃO DE RELEASE ESTÁ DESBLOQUEADO.**
 > - **Decisão:** o próprio registro §241 oferecia "terminar o contrato em todas as faces OU reverter ao gap honesto (R6)". Escolhi o **revert** porque terminar colide de frente com o **§125 CONGELADO** (decisão da mantenedora 12/09, opção A: `return null` de `Nullable(primitivo)` → default do primitivo, nunca `null` — `CompilerTypes.defaultValueOp`, `KofInterpreterParityTest.printNullablePrimitiveNull`, célula `nullableprint`). Um `Int?` boxed de verdade exigiria `null` de primeira classe em semântica→IR→4 backends, desfazendo o §125 = decisão de contrato (regra 6), não patch de call-site. Meio-implementar é exatamente o que o §241 condena.
