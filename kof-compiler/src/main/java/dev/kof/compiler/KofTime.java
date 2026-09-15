@@ -61,6 +61,7 @@ public final class KofTime {
     /** kof.time: now/sleep em todos targets; interval/cancel em JVM+Native
      *  (reaproveita o scheduler — SCHED001) + JS (fila cooperativa bombeada
      *  por time.sleep — GraalJS não expõe setInterval; TIME001 fechado). */
+    @SuppressWarnings({"java/unused-parameter", "unused"})
     static boolean supportedOn(@SuppressWarnings("unused") Target target) {
         return true;
     }

@@ -29,6 +29,7 @@ class GenericFieldAccessE2ETest {
 
     private final CompilerDriver driver = new CompilerDriver();
 
+    @SuppressWarnings({"java/relative-path-command", "java/concatenated-command-line"})
     private String runJvm(Path tempDir, String source) throws IOException {
         Path file = tempDir.resolve("Main-" + System.nanoTime() + ".kf");
         Files.writeString(file, source);

@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class NativeRiscvGcMarkTest {
 
+    @SuppressWarnings({"relative-path-command", "concatenated-command-line"})
     private static boolean has(String... cmds) {
         for (String c : cmds) {
             try {
