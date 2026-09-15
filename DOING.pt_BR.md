@@ -101,6 +101,70 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+
+> **🔧 CAMPANHA DE ESTABILIZAÇÃO do gate de release (15/09, ordem direta da
+> mantenedora "estabilize o repo", dono = 192.168.100.17) — resultado HONESTO
+> medido, com auto-correção registrada:**
+> (A) **§240:** eu tinha corrigido a regressao do `8935c8a7` no
+> `MemberCallTyper` (guard `!isString(ct)`); o push rival `5e996312` (lane
+> .15) fez o MESMO na RAIZ (`isKofBuiltinJavaLang` no `knows()`) com escopo
+> MAIOR (String + Throwables + `repeat`/`indexOf`, teste dedicado). Medido no
+> remoto puro: minha versao ficou REDUNDANTE → **descartei os 2 commits locais
+> NUNCA-pushados** (`git reset --hard origin`) antes de publicar. Lição: o
+> pull--rebase ANTES da entrega detectou a corrida; quem chegou na raiz primeiro
+> fica com o numero.
+> (B) **§241-MEU (ERRADO, auto-corrigido por medicao):** migrei
+> `QualifiedCatchE2ETest`/`CoreRegressionE2ETest#qualifiedExceptionInCatchClauseJvm`
+> de `throw new <Throwable>` p/ `throw String` achando-os merged-red. Medido no
+> remoto puro: o `5e996312` restaurou o lancamento de Throwable REAL (compila
+> e roda) — os testes estao VERDES la; minha migracao ENFRAQUECERIA cobertura
+> verde. **Descartada.** O "merged-red" era verdade so na janela
+> `8935c8a7..5e996312` (ja fechada). §241 no remoto = OUTRO bug (Nullable,
+> da lane .22).
+> (C) **§233 ✅ (unica entrega de codigo desta campanha):** migração 4×
+> `.get(N)`→`[N]` em `NativeStringCompareCrossTest` (blast-radius do contrato
+> §202/`602dcbc0` esquecido ha ~1 dia; nem o `5e996312` migrou). Takeover
+> legitimo: o cross estava **2/2 VERMELHO medido no remoto puro `3a0826df`** e
+> ficou **2/2 VERDE sob qemu** com o golden `SPLIT_GOLDEN` byte-identico
+> (nao relaxado — Q5). Lane nat encerrada, lane .15 nao tocou o arquivo.
+> (D) **§237 ✅ registro:** medido 1/1 VERDE no remoto puro; fechado de fato
+> pelo `8935c8a7` ("Closes #237") — o catalogador sou eu, o credit e da lane
+> .15.
+> CONTAGEM DA FILA: 32→30 (delta meu = §233/§237; a lista base de 32 e da
+> lane .15 — nao reescrevi a contagem deles). RED CONHECIDO DO GATE: §205
+> (SIGSEGV NAT if-expr heterogeneo, lane nat, pre-existente a tudo) + o que a
+> suíte-completa em execucao apontar. **PRÓXIMO PASSO:** ler o resultado da
+> suíte 4-modulos limpa no tip com §233; se so restam §205 + reds de outras
+> lanes catalogados, o gate desta lane esta estabilizado — reportar e voltar
+> a fila docs.
+
+> **TRIAGEM DA ONDA #266–#267 (15/09 ~05:20, tip fresco, jar + reflexão):** **#266 REPRODUZ** = face PARÂMETRO do mesmo contrato boxed do §241 (raiz única: `Nullable(primitivo)` mantém descritor primitivo em campo/retorno/parâmetro; boxed exige `null` de 1ª classe → reabre §125, regra 6); **#267 REPRODUZ e é NOVO → catalogado §244** (`+` com DOIS operandos genéricos apagados `Object` emite `iadd` no `else` de `ExpressionBinaryLowerer` → VerifyError; o caso com um lado `String` funciona). Fix = lowering compartilhado de operador (arquivo quente da lane compiler) — sinalizado, não editado. Evidência postada nas 2 issues.
+> **§245 ✅ CORRIGIDO (15/09 ~07:30, dono = 192.168.100.15, lane bugs-and-gaps): teste `KofConcurrency2Test.stopFlagFieldWriteObservedBySpinReader` mal dimensionado — NÃO é bug do compilador (o `ACC_VOLATILE` do SG-020 funciona).** `mvn test` no tip dava **2** vermelhos no compiler: §205 + este teste (3/3 vermelho em isolamento, `nao-observou`). **Causa raiz:** o laço `Int` de 500M do leitor é fechado pelo C2 em ~83 ms, ANTES do `time.sleep(100)` do escritor → o leitor termina o orçamento e sai sem ver a flag (corrida de relógio, não do modelo de memória). **Fix (Q0):** orçamento sobe p/ `Long` 5B (~1,55 s = margem ~15× sobre os 100 ms) — com o fix o laço volátil não é eliminável e o leitor vê a flag; sem o fix o laço é fechado e termina antes. **Prova (Q1/Q5):** `stopFlagFieldWriteObservedBySpinReader` 3/3 VERMELHO com a emissão `ACC_VOLATILE` desabilitada e 3/3 VERDE com ela; `KofConcurrency2Test` 36/36 (1 skip qemu). Catalogado §245 EN+PT. **Portão resultante = 1 fail (§205).** **§243 ✅ fechado upstream (`9efba38d`, #261) e §244 ✅ fechado upstream (`7137d978`, #267) pela lane compiler.**
+> **PORTÃO DA RELEASE (RE-MEDIDO 15/09 ~10:30 no tip `abc908ee`, jar fresco, `clean test-compile` 4 módulos):** kof-compiler **1782 run / 1 fail / 14 err (node) / 167 skip**, kof-script 38/0, kof-c 7/0, kof-cli 252/0. **O ÚNICO fail é o §205** (lane #183, pré-existente). Os 14 err são todos `*Js` = `node` ausente. **§240/§241/§243/§244/§245 todos ✅; gate desta lane ESTÁVEL (só o §205 alheio).**
+> **TRIAGEM DA ONDA #268–#269 (15/09 ~10:15, tip `f3a34805`, jar + reflexão):** as DUAS reproduzem e são NOVAS → catalogadas. **#268 → §246** (acesso encadeado a campo genérico apagado a `Object`: owner JVM inválido — campo vira `"?"` → `NoClassDefFoundError: ?`; chamada vira `""` → `ClassFormatError`; raiz = `ExpressionTyper`/`SemExpressionTyper` devolvem o `TypeVariable` cru sem `substituteTypeVariable`, e os lowerers deixam receptor não-`ClassType` chegar ao `JvmOpEmitter:78-80/180-183`). **#269 → §247** (escrita por receptor NULÁVEL aceita em silêncio, sem SEM049 — a leitura é rejeitada; emite `putfield Field "?".num:Ljava/lang/Object;` → VerifyError; raiz = sem guarda nulável no `StatementAnalyzer` de atribuição + `ExpressionAssignmentLowerer:259-262` não desembrulha `NullableType`, ao contrário de `ExpressionLowerer:402`). Família apagado/nulável do §243/§244/§246; fix = arquivos quentes da lane compiler — sinalizado, não editado. Evidência postada nas 2 issues.
+> **PRÓXIMO PASSO (re-dispacho lê isto, lane bugs-and-gaps):** portão = **1 fail, SÓ o §205** (lane #183) — ESTÁVEL. Onda nova **#268/#269 triada e catalogada** (§246/§247, lane compiler — sinalizado, não editado). **#261/#267 ✅ fechadas**; **#266/#259** = regra 6 (reabre §125); #168/#153 (Char, lane .17), #160 (lane .22), #159/#151 (decisão), #148 (lane .17) = regra 6/lane alheia. Próximo: re-checar se a lane compiler landa §246/§247 (reconciliar catálogo) e re-varrer issues novas; se nada novo → **recusar re-trigger**.
+> **TRIAGEM DA ONDA #259–#263 (15/09 ~03:00, tip `5e996312`, jar fresco + launcher por reflexão):** **#259 REPRODUZ** = §241 face 1 (`Int?` retorno → `VerifyError @ istore_1`) — **face-crash FECHADA pelo revert `6553ac2e`; o front de design boxed `T?` segue aberto (regra 6, reabre §125)**; **#260/#262/#263 NÃO reproduzem** (já corrigidas — família ctor #222/#242 + boxing em campo `T` #243/#220 `cd010bf1`) → **FECHADAS** com prova; **#261 REPRODUZ e é NOVO → catalogado §243**: **o veredito JÁ existe** (`DECISIONS.md` §4/§179 ratifica "o shadowing do usuário é preservado — uma classe chamada `Label` vence") → logo é **BUG contra contrato decidido**; os pins `List`/`Set`/`Map`/`Channel` de `CompilerTypes.toType` + `String` de `exceptionType` (e os gêmeos em `ExpressionLowerer:143`/`ExpressionTyper:150-154`/`SemExpressionTyper:294-298`) não têm o guard §179. **Sinalizado ao dono da resolução de nomes** (arquivos quentes da lane compiler, fix multi-site — não editado por mim p/ não colidir). Evidência postada nas 5 issues.
+>
+> **✅ FEITO (15/09, dono = 192.168.100.15, lane bugs-and-gaps): §240 CORRIGIDA na causa raiz — a regressão de 39 fails do `8935c8a7` (separa builtin Kof × interop JDK).**
+> - **Sintoma/prova (Q0):** `ExternalClasspath.knows()` ganhou `|| JdkReflectionResolver.isJdkClass(internalName)` → todo tipo `java/*` virou "externo conhecido"; `MemberCallTyper`/`SemanticAnalyzer.isExternal` passaram a tomar o caminho de reflexão do JDK para `String`/exceções, contornando o registro de builtins: `'"abc".indexOf('c')'` → SEM025 (em vez de SEM051), `throw RuntimeException` → SEM026, `"ab".repeat(3)` ACEITO. 53 fails medidos no tip limpo (`ada6acf1`).
+> - **Fix (Q0, causa raiz):** novo `CompilerTypes.isKofBuiltinJavaLang(internalName)` (cache) = true para `java/lang/String` e todo subtipo de `Throwable` (`RuntimeException`, `java/io/IOException`, …). `knows()` = entries reais **OU** (classe JDK **E NÃO** builtin Kof) — a separação que o próprio registro §240 pedia. O interop de `StringBuilder`/`String.join` segue resolvido por reflexão em `resolveMethodWithArgs` (não passa por `knows()`).
+> - **Prova (Q1, MESMO commit):** `KofBuiltinJdkSeparationE2ETest` (DEDICADO, 4 casos) — **provado VERMELHO 3/4 pré-fix** (`repeat` aceito, `indexOf`→SEM025, `throw`→SEM026) e verde pós-fix; 4º caso (interop `StringBuilder`/`String.join`) verde nas DUAS direções = trava que a separação não regride #237/#231. Suíte completa do compiler: **53 fails (tip limpo) → 15** (os 15 = 14 do §241 + §205, nenhum do §240). `check_500` OK.
+> - **Docs:** §240 marcado ✅ FIXED/CORRIGIDO (EN+PT), header da fila atualizado. **O portão de release não tem mais vermelhos do §240**; resta o §241 (14 reds, lane compiler).
+>
+> **✅ FEITO (15/09, dono = 192.168.100.15, lane bugs-and-gaps): §216 (Char) — causa raiz MEDIDA + triagem de duas faces (uma é bug, outra é congelada).**
+> - **Medido (classes frescas `212a8dbc`, javap):** `TypeEmitter.boxPrimitive` mapeia `char` → `java.lang.Integer` e força `valueOf(I)` (l.27/32); println/concat/`toString` boxam char como `Integer` e chamam `String.valueOf(Object)` → `"65"`. Sítios: `ExpressionPrintLowerer:63`, `ExpressionBinaryLowerer:253/261`, `ExpressionInstanceCallLowerer:411`.
+> - **Face 1 — `Char.toString()` → `"A"` é BUG de paridade real:** a mantenedora na triagem da #153 (14/09) diz "`println(Char)` numérico é comportamento documentado; `Char.toString()` não" — logo alinhar ao `Character.toString` é bugfix (regra 4 do Freeze), sítio `ExpressionInstanceCallLowerer:411`. **Correção adiada pela mantenedora para a 0.4.1** (patch de estabilização) — não furar a fila na `beta-0.4.0`.
+> - **Face 2 — `println(char)`/concat é CONTRATO CONGELADO (regra 6):** `training/language/strings.md:25` `// 72 (H)`; §27. Mudar a stringificação implícita do char é mudança de semântica → bump + corpus + migração, exige ratificação. NÃO tocar.
+> - **Docs:** §216 EN+PT sincronizados (duas faces). Escalado à mantenedora 15/09; comentário de triagem postado em #168 e #153.
+>
+> **✅ FEITO (14/09 ~23:15, dono = 192.168.100.15, lane bugs-and-gaps): #161 CORRIGIDA na causa raiz — retorno de método genérico (`Box<T>.get(): T`) sem adaptação de erasure no call-site (§217).**
+> - **Sintoma/prova (Q0):** `Box<String>.get().length()` → bytecode `invokevirtual Box.get:()Ljava/lang/String;` (descritor com o tipo SUBSTITUÍDO) → `NoSuchMethodError: 'java.lang.String Box.get()'`; quando o descritor estava certo, o `Object` apagado subia à pilha sem `checkcast` → `VerifyError: Bad type on operand stack`. Duas faces, uma raiz.
+> - **Causa raiz (2 faces):** (1) o lowering do call-site propagava o tipo substituído (`T`→`String`) como descritor do `KofCall`, em vez do apagado `()Ljava/lang/Object;`; (2) quando a chamada estava DENTRO de uma condição `if`, a condição nunca era tipada (`SemExpressionTyper.inferType` ausente, diferente de `while`/`for`/`assert`), então `resolvedMethods` não tinha entrada e o fallback inferia o tipo substituído como descritor.
+> - **Fix (Q0, causa raiz):** novo arquivo DEDICADO `GenericReturnAdapter` (regra 7; mantém `ExpressionInstanceCallLowerer` a 552 linhas, tolerado ≤599): adapta o retorno `Object` apagado ao tipo EFETIVO — unbox p/ primitivos, `KofCheckCast` p/ referências concretas (JS/Native tratam como no-op); + `StatementAnalyzer` IfStmt agora tipa a condição, espelhando `while`/`for`/`assert`.
+> - **Prova (Q1, MESMO commit):** `GenericMethodReturnCastE2ETest` (arquivo DEDICADO, 4 casos: chamada direta, anotação explícita + encadeamento, paridade, condição). **Provado VERMELHO pré-fix 4/4** (3× `VerifyError` + 1× `NoSuchMethodError`, via harness de reflexão que contorna o launcher JavaFX); pós-fix 4/4 verde. Re-provado vermelho também contra a base nova após rebase.
+> - **Suíte 4-módulos (worktree, tip rebasado):** kof-compiler run=1719 fail=1 err=13 skip=167; kof-script 38/0/0; kof-c 7/0/0; kof-cli 249/0/0 — **único fail = §205 (`ConformanceMatrixTest.conformanceCoreControl`, Native ifexpr, lane #183, pré-existente)**; 13 err = node ausente (ambiental). Gate `check_500` OK.
+> - **Docs:** known-bugs §217 marcado ✅ FIXED EN+PT (fila 32→31); #161 fechada com comentário de prova.
+>
 > **✅ FEITO (14/09 ~21:40, dono = 192.168.100.15, lane bugs-and-gaps): #156/#216 CORRIGIDAS na causa raiz — `String.format(String, Object...)` varargs (descriptor errado → `NoSuchMethodError`).**
 > - **Sintoma/prova (Q0):** `String.format("Hello %s, age %d", "Alice", 30)` → bytecode `invokestatic String.format:(Ljava/lang/String;Ljava/lang/String;I)Ljava/lang/Object;` → `NoSuchMethodError`. Variante 0-args → `(Ljava/lang/String;)Ljava/lang/String;` (overload inexistente). Reproduzido com classes frescas no tip `aa78eba0`.
 > - **Causa raiz:** `ExternalClasspath.findDeclared`/`resolveMethod` casam por **name+arity apenas**, sem `ACC_VARARGS`, e o JDK não está nos entries → o ramo de receptor-builtin de `ExpressionMethodCallLowerer` caía no descriptor fabricado (params individuais + retorno `Object`).
@@ -338,9 +402,12 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > - **Toolchain:** JDK 25 confirmado em `/home/mel/tools/jdk-25` — baseline
 >   `release 25` compila limpo (`JAVA_HOME=/home/mel/tools/jdk-25`); o
 >   workaround do pom em 21 não é mais necessário.
-> **Restantes (4/6):** `roundTo` (decisão 3), `app.security()` modelo Spring
-> (decisão 5, reverte reads públicas), §180 Native x86 double/float toString
-> (decisão 6), §129 frame por thread (decisão 2).
+> **Restantes (1/6):** §129 frame por thread (decisão 2) — `roundTo` (3),
+> `app.security()` Spring (5), §101 (1), §179 (4) FEITOS 14/09; **§180 Native
+> x86 double/float toString (6) FEITO 15/09** (lane development `.18`,
+> `RuntimeDtoa`; riscv/aarch = FLT001).
+
+> **✅ FEITO (15/09 ~01:20, dono = 192.168.100.18, lane development): DECISIONS §6 — §180 Native `println(double/float)` = JDK `Double.toString`/`Float.toString` (x86_64).** Novo fragmento DEDICADO `RuntimeDtoa` (`kof_dtoa_format`/`kof_double_to_string`/`kof_float_to_string`): loop limitado `%.{0..16}e`+`strtod` para o shortest round-trip bit-exato + reformatação ao estilo Java (limiar científico `1e7`/`1e-3`, `E` maiúsculo, mantissa sempre com parte fracionária, `Float` com forma própria, NaN/±Inf normalizados); cada entry point alinha a pilha em 16B (`andq $-16,%rsp`) antes das chamadas à libc (glibc `movaps` exige 16B — era a causa do SIGSEGV). `RuntimePrintNum` (print cru), `RuntimeJsonEncode` (NaN/±Inf→`null`) e `RuntimeCollectionToString` delegam a ela; `RuntimeStringConv` mantém só int/char/long/bool. **Prova:** `ConformanceMatrixTest.doubleprint` com o **Native INCLUÍDO** (11 vetores: `0.1+0.2`→`0.30000000000000004`, `1e7`→`1.0E7`, `1e-5`→`1.0E-5`, `1.0f/3.0f`→`0.33333334`, `1.0e20f`→`1.0E20`, `1e-3`→`0.001`, `1e-4`→`1.0E-4`, `3.4028235e38f`→`3.4028235E38`, `-0.0`→`-0.0`, NaN) + `infinityprint` + `KofMathTest` 29/29 + `JsonE2ETest`/`JsonCompleteE2ETest` + `NativeRuntimeSliceRegistryTest` 7/7 + `ConformanceMatrixDocTest` 1/1. Paridade JVM==Native confirmada manualmente. **Borda:** riscv/aarch seguem `FLT001` (precisam de `snprintf`/`strtod` da libc). Docs: DECISIONS §6 Done (EN+PT), conformance-matrix `doubleprint` (EN+PT), known-bugs §180 ✅ (EN+PT), backend-parity (EN+PT), CHANGELOG (EN+PT). **Próximo:** decisão 2 (§129 frame por thread).
 
 > **✅ FEITO (14/09 ~03:45, dono = 192.168.100.22, lane repo-hygiene/.github):
 > pack segurança GitHub + merge na main (ordem da mantenedora, sem bump —
@@ -711,6 +778,27 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > **LANE docs/development AGORA EXAUSTA** (re-varrer a cada re-disparo: se
 > outra lane mover gate/bugs, podem nascer syncs novos; o repo NAO esta
 > stable — 32 abertas + reds de gate alheios — mas nada disso e desta lane).
+> (6) **⏸️ RECUSA de re-disparo (14/09 ~23:59, dono = 192.168.100.17, lane
+> docs/development exclusiva):** re-varredura executada: tip do remoto ==
+> tip local (nenhuma lane nova empurrou apos meu `f0a0a13c`); os fixes de
+> compiler das outras lanes (8935c8a7/3cb4bd30/79ab6e0e/d6101bf9 — signatures,
+> if-expr braces, field-vs-method, reject-abstract) NAO tocam nenhum doc da
+> lane (grep objetivo: nenhuma cita como gap/pendente); guardas de doc
+> 13/13 VERDES (ConformanceMatrixDoc/ConcurrencyGaps/TargetMatrix rodados no
+> HEAD real); fila-13 32=32 EN/PT conferida por parse do corpo (nao memoria);
+> P0 da mantenedora (DECISIONS/stdlib/OTP) tem dono ativo .18 e NADA
+> acionavel sem dono; DECOMPILER = regra 6/lanes alheias; TRANSLATOR/LEGACY =
+> diretriz encerrada. **AVALIACAO: lane sem trabalho acionavel — recusa
+> registrada. CRON CONTINUA (repo NAO esta stable: 32 abertas na fila +
+> reds de gate de outras lanes).**
+> **PRÓXIMO PASSO (re-trigger le isto, proxima varredura da lane):** repetir
+> o protocolo do bloco (6): `git fetch` + diff do tip; se as outras lanes
+> empurrarem fix/mudanca de contrato, checar `grep -rniE "<feature>"
+> docs/development/*.md` por dessincronizacao da lane + rodar os 3 guardas
+> (`mvn -o -pl kof-compiler -am test -Dtest=ConformanceMatrixDocTest,
+> ConcurrencyGapsDocTest,TargetMatrixTest -Dsurefire.failIfNoSpecifiedTests=false`);
+> nascer sync novo = unidade com prova no mesmo commit; senao, recusar de
+> novo. Dono = 192.168.100.17.
 
 > **⚠️ 5º RED NO PORTÃO (catalogado, para as lanes de bug — 14/09 ~16:45):**
 > `NativeStringCompareCrossTest` riscv+aarch → §233 no known-bugs (renumerado 17:40: §231 foi tomado pela lane .18 — colisao de rebase; fix

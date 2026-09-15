@@ -851,6 +851,69 @@ class KofConcurrency2Test {
         assertEquals("9998", lines[lines.length - 1], "valor final do escritor");
     }
 
+    // §4.5-amendment (14/09): padrão STOP-FLAG — o fluxo A escreve `Bool = true`,
+    // o fluxo B lê em laço fechado até observar. É a prova que faltava da
+    // regra 5 (SC de campos de objetos compartilhados) e destrava o
+    // DD-OTP-08 (`.stop()` do supervisor). Pré-fix (campo mutável sem
+    // ACC_VOLATILE) o C2 hoistava o getfield fora do laço — leitor NUNCA
+    // observava ("nao-observou" 3/3 medido); pós-fix "observou".
+    // §245 (15/09): o orçamento de 500M iterações INT é fechado pelo C2
+    // (~83 ms de laço vs 100 ms de sleep do escritor) → `nao-observou`
+    // determinístico em host rápido, sem relação com o modelo de memória.
+    // Orçamento subido para 5B (long): com o fix (leitura volátil, laço NÃO
+    // eliminável) o leitor gira até ver `pode` aos +100ms (medido ~1,55 s para
+    // 5B = ~15× a margem); sem o fix (getfield hoistado) o laço é fechado e
+    // termina antes → "nao-observou". Q0 medido: vermelho sem o ACC_VOLATILE,
+    // verde com ele.
+    @Test
+    void stopFlagFieldWriteObservedBySpinReader(@TempDir Path tmp) throws Exception {
+        runJvm(tmp, """
+                class Sinalizador {
+                    Bool pode = false
+                }
+                main() {
+                    var estado = Sinalizador()
+                    var t = spawn {
+                        var i = 0L
+                        var visto = false
+                        while (i < 5000000000L) {
+                            if (estado.pode) { visto = true; i = 5000000001L }
+                            i = i + 1L
+                        }
+                        if (visto) {
+                            println("observou")
+                        } else {
+                            println("nao-observou")
+                        }
+                    }
+                    time.sleep(100)
+                    estado.pode = true
+                    await t
+                }
+                """, "observou");
+    }
+
+    // mesma prova pelo caminho da CAPTURA de lambda (Box sintético — a forma
+    // que o `.stop()` do supervisor usa: `var parar` capturada pelo spawn).
+    @Test
+    void stopFlagCapturedBoxObservedBySpinReader(@TempDir Path tmp) throws Exception {
+        runJvm(tmp, """
+                main() {
+                    var parar = false
+                    var t = spawn {
+                        while (!parar) {
+                            var x = 1
+                            x = x + 1
+                        }
+                        println("observou")
+                    }
+                    time.sleep(100)
+                    parar = true
+                    await t
+                }
+                """, "observou");
+    }
+
     private String runJvm(Path tempDir, String source, String expected) throws java.io.IOException {
         Path file = tempDir.resolve("Main-" + System.nanoTime() + ".kf");
         Files.writeString(file, source);

@@ -199,7 +199,7 @@ public final class KofSecurity {
      * Target support matrix. Unsupported calls produce a compile-time
      * diagnostic; never silently different behavior.
      */
-    static boolean supportedOn(String function, Target target) {
+    static boolean supportedOn(@SuppressWarnings("unused") String function, @SuppressWarnings("unused") Target target) {
         // SECN000: o runtime riscv64/aarch64 (asm puro, sem libc) não tem
         // NENHUMA primitiva kof_sec_* (sha/hmac/aes/random/jwt/password/
         // session/api-key). Sem gate, a chamada quebrava no link com

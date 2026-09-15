@@ -73,8 +73,9 @@ class ConcreteClassMissingAbstractMethodTest {
         assertTrue(result.success(), "Compilation must succeed when all abstract methods are implemented: "
                 + result.diagnostics().getDiagnostics());
 
-        Process p = new ProcessBuilder(System.getProperty("java.home") + "/bin/java",
-                "-cp", outDir.toString(), "Default.Main").redirectErrorStream(true).start();
+        String javaCmd = System.getProperty("java.home") + "/bin/java";
+        Process p = new ProcessBuilder(javaCmd, "-cp", outDir.toString(), "Default.Main")
+                .redirectErrorStream(true).start();
         String output = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
                 .replace("\r\n", "\n").trim();
         int ec = p.waitFor();
@@ -127,5 +128,52 @@ class ConcreteClassMissingAbstractMethodTest {
         assertTrue(result.diagnostics().getDiagnostics().stream()
                         .anyMatch(d -> "SEM043".equals(d.code()) && d.message().contains("area")),
                 "Must report SEM043 naming the missing transitive abstract method: " + result.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void wrongSignatureDoesNotSatisfyAbstractMethod(@TempDir Path tempDir) throws IOException {
+        // §242 residual: the match must be by SIGNATURE, not by arity. A
+        // same-arity overload with a different parameter type does NOT implement
+        // the abstract — before this it compiled clean and blew up at runtime
+        // with AbstractMethodError.
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+                abstract class Svc {
+                    abstract Int run(String cmd)
+                }
+                class Impl extends Svc {
+                    Int run(Int code) { return code }
+                }
+                main() { }
+                """);
+        CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.JVM);
+        assertFalse(result.success(), "Same-arity wrong-type overload must NOT satisfy abstract 'run(String)'");
+        assertTrue(result.diagnostics().getDiagnostics().stream()
+                        .anyMatch(d -> "SEM043".equals(d.code())),
+                "Must report SEM043 for the unimplemented 'run(String)': " + result.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void correctSignatureAmongSameArityOverloadsSatisfiesAbstractMethod(@TempDir Path tempDir) throws IOException {
+        // The positive edge of §242: the concrete class declares several
+        // same-arity overloads, one of which matches by type — the abstract is
+        // satisfied.
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+                abstract class Svc {
+                    abstract Int run(String cmd)
+                }
+                class Impl extends Svc {
+                    Int run(Int code) { return code }
+                    Int run(String cmd) { return cmd.length }
+                }
+                main() {
+                    var s = new Impl()
+                    println(s.run("abcd"))
+                }
+                """);
+        CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.JVM);
+        assertTrue(result.success(), "A matching signature among same-arity overloads must satisfy the abstract: "
+                + result.diagnostics().getDiagnostics());
     }
 }

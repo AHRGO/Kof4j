@@ -78,32 +78,34 @@ of §2 with the E2Es of §4 before leaving `experimental`.
 > partial value) IMPLEMENTED** — `KofConcurrency2Test:699/:737`, green in the
 > suite (29/0/1-skip qemu). All 5 HB edges of §2 have proof.
 
-> **⚠️ Amendment 11/09 — rule 5 still has no proof.** Review of
-> `KofConcurrency2Test:699` (`staticsAreSequentiallyConsistent`): the program
-> declares `Resultado.r1..r4` and **never uses them** — the four tasks call
-> `soma1000()`, a pure function with no shared state, and the parent sums the values
-> returned by the `await`s. There is **no concurrent write to a shared field**
-> in the test. What it demonstrates is edge **2 (await)**, not rule
-> **5 (SC for statics and object fields)**. The test's own comment already
-> acknowledges the limit: *"read-modify-write data race is NOT atomic
-> by the model's definition"*.
+> **Current state of the proofs (validated 10/09):** (1)(2)(5) already covered by
+> `SpawnE2ETest`/`KofConcurrency2Test` (channel JVM+Native, spawn/await
+> cross-target). **(3) `staticsAreSequentiallyConsistent` (4×sum 0..999 =
+> 1998000, HB of await) and (4) `noWordTearingOnLong` (reader never observes a
+> partial value) IMPLEMENTED** — `KofConcurrency2Test`, green in the
+> suite. All 5 HB edges of §2 have proof.
 >
-> `noWordTearingOnLong` (`:737`) **is** a real proof of rule 6 — there is a
-> concurrent write to `Estado.v` with a read in a loop.
->
-> **Gap that matters for `docs/development/planning-otp-supervision.md`
-> (DD-OTP-08):** the **stop-flag** pattern — one flow writes `Bool = true`, another
-> reads in a loop until it observes it — is not covered by any test. `Estado.pronto` is
-> written in `noWordTearingOnLong` and never read. Since `volatile` is a non-goal
-> (§5) and `BoxClassFactory.java:25` creates the field as a plain
-> `AccessFlags.PUBLIC` (`ACC_VOLATILE` does not appear anywhere in the compiler),
-> on the JVM the visibility of the flag depends entirely on rule 5 holding —
-> precisely the one that lacks proof. Without it, `.stop()` may never be observed by a
-> long-running worker: a failure that **passes** in a short test and **hangs** in production.
->
-> **Pending (unblocks DD-OTP-08):** either an E2E of the stop-flag pattern
-> (writer + reader in a loop, with a deadline that fails if the write is never
-> observed), or rewriting rule 5 to what the proofs actually cover.
+> **⚠️ Amendment 14/09 — rule 5 now has a proof and a backend fix.**
+> `stopFlagFieldWriteObservedBySpinReader` +
+> `stopFlagCapturedBoxObservedBySpinReader` (`KofConcurrency2Test`) are the
+> stop-flag pattern of DD-OTP-08: instance field (and captured-Box closure
+> field) written by one flow, spun on by another, with the writer's write at
+> +100ms inside a 500M-iteration loop. **Pre-fix (measured, 3/3):** the field
+> was emitted plain (`BoxClassFactory` `AccessFlags.PUBLIC`; no `ACC_VOLATILE`
+> anywhere in the compiler) and C2 hoisted the `getfield` out of the loop —
+> the reader output `nao-observou`, i.e. `.stop()` would never be observed by
+> a long-lived worker. **Fix (root cause, same unit):** every **mutable**
+> (non-`final`) field of a Kof class is now emitted with `ACC_VOLATILE`
+> (`JvmBackend` field emission; `AccessFlags.VOLATILE = 0x0040`, the §4.7
+> field-flag bit that shares the `BRIDGE` method-flag value). `final`
+> fields (records, closure refs) keep their semantics. This makes the CODE
+> conform to rule 5 of §2 (ratified 09/09) — the spec was already law, the
+> code was the deviation. Post-fix, `observou` proves the edge on the JVM.
+> JS/interpreter ride the JVM runtime (§3); x86-TSO needed no fence for this
+> pattern (rule 5's SC); riscv/aarch inherit via the translator (§3).
+> **DD-OTP-08 (supervisor `.stop()`) is UNBLOCKED**: the flag the supervisor
+> sets is now guaranteed visible to the worker without `volatile` as language
+> surface (still a §5 non-goal; the abstraction carries the proof).
 
 ## 5. What is NOT specified (non-goals)
 

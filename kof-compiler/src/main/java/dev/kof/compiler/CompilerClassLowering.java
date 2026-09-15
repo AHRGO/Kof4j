@@ -288,7 +288,12 @@ public final class CompilerClassLowering {
         }
         int access = driver.computeAccess(method.modifiers());
         warnMechanismModifiers(driver, method.modifiers(), method.position());
-        if (isInterface && !method.modifiers().contains("default") && !method.modifiers().contains("static")) {
+        // #213: método de interface COM corpo é default (não-abstract); só o
+        // método sem corpo vira abstract. Antes o corpo era baixado na IR mas
+        // a flag ABSTRACT fazia o backend pular o Code attribute.
+        boolean hasBody = method.body() != null && !method.body().isEmpty();
+        if (isInterface && !method.modifiers().contains("default") && !method.modifiers().contains("static")
+                && !hasBody) {
             access |= AccessFlags.ABSTRACT;
         }
         List<IRBasicBlock> body = List.of();

@@ -324,4 +324,53 @@ class KofSupervisorE2ETest {
         assertEquals(0, ir.exitCode(), "script S3 roda limpo: " + os);
         assertTrue(os.contains("dropped=1"), "S3 drop paridade interpretador: " + os);
     }
+
+    // ===== DD-OTP-08 (implementação 15/09): stop cooperativo por FLAG =====
+    // Worker LONGEVO em laço que consulta kofSupShouldStop (a flag capturada
+    // do wrap — campo mutável = ACC_VOLATILE, SG-020). stop() escreve
+    // wrap.parar=true; o worker sai do laço; o dreno com deadline encerra.
+    // Prova o par "escrita observável + worker que checa" — o que o gate
+    // KofConcurrency2Test.stopFlagCapturedBox* prova em unidade isolada.
+    private static final String APP_S4_STOPFLAG = """
+            import kof.supervisor
+
+            class WLongo implements KofWorker {
+                KofSupWrap wrap
+                constructor(KofSupWrap wrap) { this.wrap = wrap }
+                Object run() {
+                    var voltas = 0
+                    while (!kofSupShouldStop(wrap) && voltas < 100000) {
+                        voltas = voltas + 1
+                    }
+                    return "voltas=" + voltas
+                }
+            }
+            class WFLongo implements KofWorkerFactory {
+                KofSupWrap atual = null
+                KofWorker novo() { return WLongo(atual) }
+            }
+            main() {
+                var s = supervisor("s4").child("loop", WFLongo(), "permanent")
+                s.startAll()
+                time.sleep(100)
+                s.stop(2000)
+                println("parou vivos=" + s.stats().vivos)
+            }
+            """;
+
+    @Test
+    void stopFlagWorkerParaNoDrenoComDeadline(@TempDir Path tmp) throws IOException {
+        String os = runJvm(tmp, APP_S4_STOPFLAG);
+        assertTrue(os.contains("parou vivos=0"),
+                "worker longevo observou a flag do stop e o dreno encerrou no prazo: " + os);
+    }
+
+    @Test
+    void stopFlagWorkerNoInterpretador(@TempDir Path tmp) throws IOException {
+        Path main = write(tmp, APP_S4_STOPFLAG);
+        KofInterpreter.Result ir = driver.interpret(List.of(main), tmp, new String[0]);
+        String os = ir.stdout() + ir.stderr();
+        assertEquals(0, ir.exitCode(), "script S4 roda limpo: " + os);
+        assertTrue(os.contains("parou vivos=0"), "S4 paridade interpretador: " + os);
+    }
 }

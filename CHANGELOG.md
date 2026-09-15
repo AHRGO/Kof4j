@@ -1095,6 +1095,7 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 ### Bugfixes
 
+  - §180 Native x86_64 `println(double/float)` now JDK `Double.toString`/`Float.toString` (RuntimeDtoa: `%.*e`+`strtod` shortest round-trip + Java reformat; Float own form) — `doubleprint` Native included
   - §181 doc-sync + HELLO_JS baseline 8.297→13.007 (#132) + UIW050 event-handle in progress
   - §181 saturating cast regression — double bits on x86 + unique riscv/aarch labels
   - Bool[] unified as boolean[] (json.decode<Bool[]> was the int[] outlier) + golden of the ui-config block in the JS registry — #132

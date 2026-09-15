@@ -46,7 +46,7 @@ public final class KofDb {
      *  O link dinâmico de libsqlite3 exige libc — os cross estáticos
      *  (riscv64/aarch64, asm puro sem C) reportam DB001 em compile-time (R6:
      *  nunca undefined-reference silencioso no ld). JS reporta DB001. */
-    static boolean supportedOn(Target target) {
+    static boolean supportedOn(@SuppressWarnings("unused") Target target) {
         return target == Target.JVM || target == Target.NATIVE;
     }
 

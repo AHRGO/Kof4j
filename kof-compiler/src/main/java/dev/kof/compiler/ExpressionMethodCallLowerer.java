@@ -81,6 +81,41 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
     }
     if (ksm != null) {
         SymbolTable.ClassSymbol kt = driver.semanticAnalyzer.getClass(rid.name());
+        // #258: `Calc.instanceMethod(x)` NAO é estática — o dispatcher anterior
+        // emitia KofCallKind.STATIC sempre → invokestatic sem `this` →
+        // IncompatibleClassChangeError em runtime. Regra (espelha o Java oracle):
+        // só vale como chamada de instância DENTRO de um método de instância da
+        // MESMA classe (equivale a `this.method(x)`). Fora disso (contexto
+        // estático, ou classe diferente) é erro honesto SEM060, nunca invokestatic
+        // silencioso (R6). Chamada REALMENTE estática mantém o caminho de antes.
+        boolean calleeStatic = (ksm.accessFlags() & AccessFlags.STATIC) != 0;
+        IRLocalVariable thisVar = calleeStatic ? null : driver.findLocalVar("this", locals);
+        boolean sameClass = thisVar != null && owner != null
+                && owner.substring(owner.lastIndexOf('/') + 1).equals(rid.name());
+        if (!calleeStatic && !sameClass) {
+            if (driver.currentDiagnostics != null) {
+                SourcePosition p = mc.position();
+                driver.currentDiagnostics.error(p != null ? p.file() : "",
+                        p != null ? p.line() : 0, p != null ? p.column() : 0, 0,
+                        "cannot call instance method '" + rid.name() + "." + mc.methodName()
+                                + "()' without a receiver — use 'this." + mc.methodName()
+                                + "()' inside an instance method of '" + rid.name()
+                                + "' or call it on an instance (method() is not static)",
+                                "SEM060");
+            }
+            return localIdx;
+        }
+        if (!calleeStatic) {
+            // this.method(x): empilha `this` (slot 0 do método de instância) e
+            // baixa como INSTANCE — o back-end JVM faz invokevirtual, o
+            // interpretador/JS/Native despacham pela classe do receiver (polimorfismo real).
+            ops.add(new KofLoadLocal(thisVar.type(), thisVar.index()));
+            localIdx = driver.emitArgumentsWithFormalTypes(mc.arguments(), ksm.parameterTypes(),
+                    ops, owner, localIdx, locals);
+            ops.add(new KofCall(kt.type(), mc.methodName(), ksm.parameterTypes(),
+                    ksm.returnType(), KofCallKind.INSTANCE));
+            return localIdx;
+        }
         localIdx = driver.emitArgumentsWithFormalTypes(mc.arguments(), ksm.parameterTypes(),
                 ops, owner, localIdx, locals);
         ops.add(new KofCall(kt.type(), mc.methodName(), ksm.parameterTypes(),
@@ -456,8 +491,17 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
         ops.add(new KofLoadLocal(ownerType, 0));
         localIdx = driver.emitArgumentsWithFormalTypes(mc.arguments(), selfMethod.parameterTypes(),
                 ops, owner, localIdx, locals);
+        // #213: chamada nua dentro de default method de interface resolve p/ a
+        // PRÓPRIA interface — invokestatic/invokevirtual não valem; o JVM exige
+        // invokeinterface (senão IncompatibleClassChangeError "Found interface").
+        KofCallKind selfKind = KofCallKind.INSTANCE;
+        if (driver.semanticAnalyzer != null) {
+            String selfOwner = selfMethod.ownerClass();
+            if (selfOwner.contains("/")) selfOwner = selfOwner.substring(selfOwner.lastIndexOf('/') + 1);
+            if (driver.semanticAnalyzer.isInterfaceType(selfOwner)) selfKind = KofCallKind.INTERFACE;
+        }
         ops.add(new KofCall(ownerType, mc.methodName(), selfMethod.parameterTypes(),
-                selfMethod.returnType(), KofCallKind.INSTANCE));
+                selfMethod.returnType(), selfKind));
         return localIdx;
     }
     SymbolTable.ClassSymbol cs = driver.semanticAnalyzer != null ? driver.semanticAnalyzer.getClass(mc.methodName()) : null;

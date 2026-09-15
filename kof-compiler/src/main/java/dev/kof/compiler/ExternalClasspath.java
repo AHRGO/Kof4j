@@ -164,7 +164,8 @@ public final class ExternalClasspath {
     /** Classe externa presente nos entries (por nome interno)? */
     public synchronized boolean knows(String internalName) {
         return (loaded && internalName != null && classBytes.containsKey(internalName))
-                || JdkReflectionResolver.isJdkClass(internalName);
+                || (JdkReflectionResolver.isJdkClass(internalName)
+                        && !CompilerTypes.isKofBuiltinJavaLang(internalName));
     }
 
     /**

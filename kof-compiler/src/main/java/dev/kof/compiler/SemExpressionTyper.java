@@ -290,14 +290,7 @@ public final class SemExpressionTyper {
             }
             case MethodCallExpr mc -> SemMethodCallTyper.infer(sa, mc, scope);
             case NewExpr ne -> {
-                Type coll = null;
-                if ("List".equals(ne.typeName()) || "ArrayList".equals(ne.typeName()) || "LinkedList".equals(ne.typeName())) {
-                    coll = BuiltinTypes.LIST;
-                } else if ("Set".equals(ne.typeName()) || "HashSet".equals(ne.typeName())) {
-                    coll = BuiltinTypes.SET;
-                } else if ("Map".equals(ne.typeName()) || "HashMap".equals(ne.typeName())) {
-                    coll = BuiltinTypes.MAP;
-                }
+                Type coll = CompilerTypes.builtinCollectionType(ne.typeName(), sa.unit(), sa);
                 if (coll != null) {
                     // #193/#198: aplicar os type-arguments no tipo da colecao,
                     // espelhando o ExpressionTyper do emit (que sempre aplicou).
@@ -428,7 +421,9 @@ public final class SemExpressionTyper {
                 }
                 if (recvType instanceof Type.ClassType ct) {
                     SymbolTable.Symbol field = MemberResolver.resolveFieldInHierarchy(sa, ct.name(), fa.fieldName());
-                    if (field != null) yield field.type();
+                    if (field != null) {
+                        yield CompilerTypes.substituteTypeVariableIn(field.type(), recvType, sa.unit());
+                    }
                     if (sa.isExternal(ct)) {
                         String desc = sa.externalTypes().resolveFieldType(ct.internalName(), fa.fieldName());
                         if (desc != null) {

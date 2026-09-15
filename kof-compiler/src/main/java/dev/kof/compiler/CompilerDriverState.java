@@ -227,6 +227,14 @@ IRModule currentModule;
         return CompilerTypeSupport.parseLongLiteral(value);
     }
 
+    float parseFloatLiteral(String value) {
+        return CompilerTypeSupport.parseFloatLiteral(value);
+    }
+
+    double parseDoubleLiteral(String value) {
+        return CompilerTypeSupport.parseDoubleLiteral(value);
+    }
+
     String stripSuffix(String value) {
         return CompilerTypeSupport.stripSuffix(value);
     }

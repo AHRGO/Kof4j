@@ -517,6 +517,28 @@ Ryu/Grisu; um loop limitado `%.{1..17}g`+`strtod` é implementação
 determinística aceitável) — sem reinventar o algoritmo além do que o JDK já
 define. Célula golden cross-target (`floatprint`).
 
+> **✅ EXECUTADO (15/09, dono 192.168.100.18):** o Native x86_64 agora usa o
+> loop limitado `%.*e`+`strtod` (a opção sancionada acima). Nova fatia de
+> runtime `RuntimeDtoa` emite `kof_dtoa_format`, `kof_double_to_string` e
+> `kof_float_to_string`: para cada precisão `0..16` (double) / `0..8` (float)
+> formata com `snprintf("%.*e")` e re-parseia com `strtod`, guardando a
+> **menor** precisão que faz round-trip bit-exato; depois reformata no estilo
+> Java (científica só quando `|x|>=1e7` ou `<1e-3`, `E` maiúsculo, mantissa
+> sempre com parte fracionária) e `Float` mantém a **própria** forma mais curta
+> (não a expansão double). `RuntimePrintNum` (o `print` sem box),
+> `RuntimeJsonEncode` (NaN/±Inf → `null`) e os ramos `.Lce_double`/`.Lce_float`
+> do `RuntimeCollectionToString` delegam a ela; o `RuntimeStringConv` não
+> carrega mais a conversão de float/double (só int/char/long/bool).
+> **Restrição libc:** `snprintf`/`strtod` são necessários, então isto é **só
+> x86_64**; riscv/aarch seguem `FLT001`. O `_start` do runtime Kof **não**
+> garante alinhamento de pilha de 16 bytes, então cada entry point do dtoa faz
+> `andq $-16, %rsp` antes das chamadas libc (o `movaps` da glibc precisa de
+> 16B — o desalinhamento era a causa-raiz do SIGSEGV). Prova:
+> `ConformanceMatrixTest.doubleprint` (exclusão do Native removida, estendida
+> com `0.001`/`1.0E-4`/`3.4028235E38`/`-0.0`) — Native == JVM byte a byte;
+> `KofMathTest` 29/29, `JsonE2ETest` 18/18, `JsonCompleteE2ETest` 9/9,
+> `NativeRuntimeSliceRegistryTest` 7/7, `ConformanceMatrixDocTest` verde.
+
 ---
 
 ## D-BASELINE — baseline da toolchain 21 → 25 (✅ decidido 14/09, mantenedora)

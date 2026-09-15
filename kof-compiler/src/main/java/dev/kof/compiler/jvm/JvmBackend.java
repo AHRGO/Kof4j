@@ -171,7 +171,16 @@ public class JvmBackend implements Backend {
         for (IRField field : clazz.fields()) {
             String desc = JvmTypeMapper.toDescriptor(field.type());
             String sig = JvmTypeMapper.toGenericSignature(field.type());
-            var fv = cw.visitField(field.accessFlags(), field.name(), desc, sig, field.initialValue());
+            // SG-020 regra 5 (lei desde 09/09): campos MUTÁVEIS (não-final) de
+            // classes Kof seguem SC — sem ACC_VOLATILE o C2 hoista o getfield
+            // fora do laço e o padrão stop-flag nunca observa a escrita
+            // (repro: laço 500M iterações + escrita de outro fluxo aos 100ms →
+            // nunca vê). Campos FINAL (records, refs de closure) intocados.
+            int fieldFlags = field.accessFlags();
+            if ((fieldFlags & AccessFlags.FINAL) == 0) {
+                fieldFlags |= AccessFlags.VOLATILE;
+            }
+            var fv = cw.visitField(fieldFlags, field.name(), desc, sig, field.initialValue());
             JvmAnnotations.emitAnnotations(fv::visitAnnotation, field.annotations());
             fv.visitEnd();
         }

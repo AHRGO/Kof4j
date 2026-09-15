@@ -29,7 +29,7 @@ public final class KofGpu {
 
     record GpuCall(String function, Type returnType, List<Type> parameterTypes) {}
 
-    static boolean supportedOn(Target target) {
+    static boolean supportedOn(@SuppressWarnings("unused") Target target) {
         // JVM: FFM real. Nativos: stubs asm (available=false, dispatch=1).
         // JS: sem suporte (GPU001).
         return target.isNative() || target == Target.JVM;

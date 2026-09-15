@@ -237,14 +237,15 @@ class ConformanceMatrixTest {
                 }
                 """, "Infinity\n-Infinity\nNaN\nInfinity\nInfinity NaN\nv=NaN",
                 Set.of("js"), tempDir);
-        // §180 (residual/overclaim do bug 44, x86_64): o contrato é JDK
+        // §180 ✅ CORRIGIDO 14/09 (DECISIONS §6): o contrato é JDK
         // Double.toString/Float.toString — shortest-round-trip
         // (0.1+0.2 = 0.30000000000000004), notação científica (|x|>=1e7 ou
         // <1e-3, spelling 1.0E7/1.0E-5) e Float com repr própria
         // (1.0f/3.0f = 0.33333334, não a expansão double 0.3333333432674408).
-        // O glibc %.16g + cvtss2sd do Native falha nas 3 faces. Native
-        // excluído (§180, lane Native); JS excluído (Number.toString não
-        // emite '.0' nem notação científica no mesmo limiar — §44).
+        // O x86_64 agora usa `kof_dtoa` (RuntimeDtoa: loop `%.*e`+strtod p/ o
+        // shortest + reformat p/ o limiar/estilo do Java); a exclusão do Native
+        // CAIU. JS segue excluído (Number.toString não emite '.0' nem notação
+        // científica no mesmo limiar — §44).
         matrix("doubleprint", """
                 main() {
                     println(0.1 + 0.2)
@@ -254,9 +255,14 @@ class ConformanceMatrixTest {
                     println(1.0f / 3.0f)
                     println(1.0e20f)
                     println(math.pow(-1.0, 0.5))
+                    println(1e-3)
+                    println(1e-4)
+                    println(3.4028235e38f)
+                    println(-0.0)
                 }
-                """, "0.30000000000000004\n1.0E7\n1.0E-5\n33.333333333333336\n0.33333334\n1.0E20\nNaN",
-                Set.of("native", "js"), tempDir);
+                """, "0.30000000000000004\n1.0E7\n1.0E-5\n33.333333333333336\n0.33333334\n1.0E20\nNaN"
+                + "\n0.001\n1.0E-4\n3.4028235E38\n-0.0",
+                Set.of("js"), tempDir);
         // bug 100 (paridade absoluta): `String.equals(não-String)` é `false` em
         // todo target — o JVM sempre deu false (Objects.equals), mas o Native
         // CRASHAVA (SIGSEGV/vazio) ao ler o Int-boxado como ponteiro-String.

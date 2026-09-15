@@ -22,7 +22,7 @@
 | 05 | Plan or tree | ✅ closed |
 | 06 | State on restart | ✅ closed |
 | 07 | Escalation | ✅ closed (text contradiction resolved) |
-| 08 | Shutdown | 🚫 **BLOCKED** — rule 5 of SG-020 without proof |
+| 08 | Shutdown | ✅ IMPLEMENTED 15/09 — cooperative flag live in the host (`KofSupWrap.parar` + `kofSupShouldStop`), `stop()` writes the flag before `cancel`; S4 E2E JVM+interpreter 13/13 |
 | 09 | Targets | ❌ **OPEN** — depends on 03 |
 | 10 | Injectable clock | ✅ closed |
 | 11 | Success metric | ✅ closed (four gates) |
@@ -237,26 +237,35 @@ never silent). The runtime's `cancel(handle)` is a bonus where it works (JVM/
 x86), never the only lever. The implicit join is released when the supervisor's
 loop ends — nothing new here, just honesty in the deadline.
 
-> ⚠️ **11/09 Amendment — BLOCKED: the flag has no visibility guarantee.**
-> The claim *"a `Bool` captured in `Box` is visible to the worker on ALL
-> targets"* depends on **rule 5 of SG-020** (SC for statics and shared
-> fields). That rule **is not yet proven**: the cited test,
-> `KofConcurrency2Test.staticsAreSequentiallyConsistent:699`, has no
-> concurrent write to a shared field at all — it declares
-> `Resultado.r1..r4` and never uses them; what it proves is the edge of **await**. And
-> `volatile` is a non-goal of the language (SG-020 §5), with
-> `BoxClassFactory.java:25` creating the field as plain
-> `AccessFlags.PUBLIC` (`ACC_VOLATILE` does not appear anywhere in the compiler).
-> On the JVM, therefore, `while (!parar.value)` may have the read hoisted out of the loop
-> and **never observe the `stop()`** — a failure that passes a short test and hangs
-> in a long-lived worker, exactly the feature's use case.
-> **Unblocks with:** an E2E of the stop-flag pattern (writer + reader in a loop,
-> with a deadline that fails if the write is not observed), or a rewrite of
-> rule 5. If the dedicated flag falls, the alternative is the runtime's `cancel` —
-> and then **bug 101 ceases to be independent and becomes blocking**
-> (see DD-OTP-13).
+> ⚠️ **14/09 — UNBLOCKED (supersedes the 11/09 BLOCKED note below, kept for
+> history).** The missing proof now exists: `stopFlagFieldWriteObservedBySpinReader`
+> + `stopFlagCapturedBoxObservedBySpinReader` (`KofConcurrency2Test`) reproduce
+> the stop-flag pattern and, pre-fix, FAIL exactly as the amendment predicted —
+> the plain field let C2 hoist the `getfield` (measured: `nao-observou` 3/3 with
+> the write at +100ms inside a 500M-iteration loop). Root-cause fix in the same
+> unit: **every mutable (non-final) field of a Kof class is emitted
+> `ACC_VOLATILE`** (`JvmBackend`; the spec's rule 5 was already law — the code
+> was the deviation). Post-fix: `observou`, both paths. The volatile field the
+> supervisor's stop-flag rides on is therefore guaranteed visible on the JVM;
+> details in the SG-020 amendment 14/09. What remains here is **implementation
+> only**: wire the captured flag into `supervisor-host.kf`'s worker contract
+> (factory-reconstructible worker that checks it) + deadline drain E2E.
+>
+> ✅ **15/09 — IMPLEMENTED (lane development, dono 192.168.100.18).** The
+> cooperative flag is live in the host: `KofSupWrap.parar` (mutable field →
+> `ACC_VOLATILE` per SG-020) + `kofSupShouldStop(wrap)` query for the worker's
+> loop + `stop()` writes `wrap.parar = true` on every live child **before**
+> `cancel(handle)` (cancel stays the bonus lever, flag is the contract one).
+> `KofSupNode.wrap` carries the current lap's wrap so `stop()` reaches the
+> running worker even between laps. Proof: `KofSupervisorE2ETest` 11→13
+> (`stopFlagWorkerParaNoDrenoComDeadline` JVM + `stopFlagWorkerNoInterpretador`
+> — long-running worker in a loop consulting the flag exits the loop on
+> `stop()`, drain finishes inside the deadline, both targets green). The
+> **worker contract is now written in the host**: a cooperative worker loops on
+> `kofSupShouldStop(wrap)`; a worker that never checks is still drained by the
+> deadline with the R6 diagnostic (pre-existing behavior, unchanged).
 
-### DD-OTP-09 — Targets
+> ⚠️ **11/09 Amendment — BLOCKED: the flag has no visibility guarantee.**### DD-OTP-09 — Targets
 Pure-Kof (DD-OTP-01-A) = **JVM + Script + JS + Native x86 + riscv/aarch for
 free** (everything uses only the already existing spawn/await/selectAny). Without `OTP001` —
 no new gap is born from this feature (the JS-01 restriction does not reach

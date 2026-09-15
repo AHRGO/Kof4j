@@ -546,12 +546,7 @@ public final class ExpressionInstanceCallLowerer {
     ops.add(new KofCall(recvType,
             runtimeMethod != null ? runtimeMethod : mc.methodName(),
             methodParamTypes, methodReturnType, callKind));
-    if (methodReturnType instanceof Type.TypeVariable) {
-        Type effective = ExpressionTyper.inferExprType(driver, mc, locals);
-        if (TypeMetrics.isPrimitiveType(effective)) {
-            driver.emitErasureUnbox(ops, effective);
-        }
-    }
+    GenericReturnAdapter.emit(driver, mc, ops, locals, methodReturnType);
         return localIdx;
     }
 

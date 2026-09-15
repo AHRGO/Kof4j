@@ -43,7 +43,7 @@ public final class KofLog {
     record LogCall(String function, Type returnType, List<Type> parameterTypes) {}
 
     /** kof.log: JVM + Native (asm próprio) + JS (console.* com nível). */
-    static boolean supportedOn(Target target) {
+    static boolean supportedOn(@SuppressWarnings("unused") Target target) {
         return target == Target.JVM || target.isNative() || target == Target.JS;
     }
 

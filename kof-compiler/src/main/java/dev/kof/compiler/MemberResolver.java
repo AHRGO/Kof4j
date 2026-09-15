@@ -271,19 +271,20 @@ public final class MemberResolver {
             for (java.util.Map.Entry<String, SymbolTable.Symbol> e : superCs.members().localSymbols().entrySet()) {
                 if (!(e.getValue() instanceof SymbolTable.MethodSymbol am)) continue;
                 if ((am.accessFlags() & AccessFlags.ABSTRACT) == 0) continue;
-                String methodKey = am.name() + "/" + am.parameterTypes().size();
+                // §242: a chave é a ASSINATURA (nome + tipos de parâmetro), não
+                // a aridade — duas sobrecargas de mesma aridade mas tipos
+                // diferentes são abstratos DISTINTOS. Sem isto, o dedup
+                // colapsava-as e um `Int run(Int)` podia "satisfazer"
+                // `abstract Int run(String)` (AbstractMethodError em runtime).
+                String methodKey = am.name() + TopLevelOverload.sigTag(am.parameterTypes());
                 if (!checkedMethods.add(methodKey)) continue;
                 SymbolTable.Symbol local = resolveInHierarchy(sa, cls.name(), am.name());
                 boolean implemented = false;
                 if (local instanceof SymbolTable.MethodSymbol lm) {
-                    if ((lm.accessFlags() & AccessFlags.ABSTRACT) == 0
-                            && lm.parameterTypes().size() == am.parameterTypes().size()) {
-                        implemented = true;
-                    }
+                    implemented = satisfiesAbstract(lm, am);
                 } else if (local instanceof SymbolTable.MethodSet set) {
                     for (SymbolTable.MethodSymbol lm : set.methods()) {
-                        if ((lm.accessFlags() & AccessFlags.ABSTRACT) == 0
-                                && lm.parameterTypes().size() == am.parameterTypes().size()) {
+                        if (satisfiesAbstract(lm, am)) {
                             implemented = true;
                             break;
                         }
@@ -298,5 +299,20 @@ public final class MemberResolver {
             }
             curSuper = superCs.superClass();
         }
+    }
+
+    /**
+     * §242: um método concreto satisfaz um abstrato quando NÃO é abstrato e a
+     * assinatura casa — mesma aridade E mesmos tipos de parâmetro (o que a JVM
+     * exige para o override). Antes o check comparava só a ARIDADE: um
+     * `Int run(Int)` "satisfazia" `abstract Int run(String)` e o
+     * `AbstractMethodError` voltava em runtime.
+     */
+    private static boolean satisfiesAbstract(SymbolTable.MethodSymbol concrete,
+                                             SymbolTable.MethodSymbol abstractMethod) {
+        if ((concrete.accessFlags() & AccessFlags.ABSTRACT) != 0) return false;
+        if (concrete.parameterTypes().size() != abstractMethod.parameterTypes().size()) return false;
+        return TopLevelOverload.sigTag(concrete.parameterTypes())
+                .equals(TopLevelOverload.sigTag(abstractMethod.parameterTypes()));
     }
 }

@@ -1096,6 +1096,7 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 ### Bugfixes
 
+  - §180 `println(double/float)` no Native x86_64 agora é JDK `Double.toString`/`Float.toString` (RuntimeDtoa: `%.*e`+`strtod` shortest round-trip + reformatação Java; Float com forma própria) — `doubleprint` com Native incluído
   - §181 doc-sync + baseline HELLO_JS 8.297→13.007 (#132) + UIW050 event-handle em estágio
   - §181 regressão do cast saturante — bits de double no x86 + labels únicos riscv/aarch
   - Bool[] unificado como boolean[] (json.decode<Bool[]> era o outlier int[]) + golden do bloco ui-config no registry JS — #132

@@ -40,7 +40,7 @@ public final class KofConfig {
     }
 
     /** kof.config: JVM + Native + JS (via process.env / kof_platform). */
-    static boolean supportedOn(Target target) {
+    static boolean supportedOn(@SuppressWarnings("unused") Target target) {
         return true;
     }
 
