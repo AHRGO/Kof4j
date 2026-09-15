@@ -7064,20 +7064,30 @@ to the label) is the correct predicate and **was already used** in `parseStateme
   → `"65"`. Affected sites: `ExpressionPrintLowerer:63` (println),
   `ExpressionBinaryLowerer:253/261` (concat), `ExpressionInstanceCallLowerer:411`
   (primitive `toString`).
-- **⚠️ RULE 6 — do NOT fix without a maintainer decision.** `println(char)` is
-  a **frozen** contract: `training/language/strings.md:25` documents
-  `println(s.charAt(0)) // 72 (H)` (numeric) and §27 of this file restates it
-  ("`println(char)` is numeric (`72`) in the 3 targets (frozen)"). Issues
-  #168/#153 request the opposite (`println(c)` → `A`) — that is a
-  **semantics change** to the frozen char-display contract, not a plain bug
-  fix. The face that IS a real parity bug is the **standalone**
-  `String.valueOf(char)`, which must yield the character (`"h"`) — already
-  fixed in §27 (07/09). Fixing #168/#153 as filed needs a version bump +
-  corpus update + migration (rule 6), or a maintainer ratification that
-  `println(Char)` shows the character while `charAt` stays numeric.
-  Collection storage must keep boxing char as `Integer`
-  (`JvmOpCollections.boxedClassNameFor` default + `unboxMethodName`
-  char→`intValue`) — the §104b-ii face-char fix depends on it.
+- **Two faces — one is a bug, one is frozen (maintainer triage on #153,
+  14/09):**
+  1. **`Char.toString()` → `"A"` is a REAL parity bug** (the maintainer's
+     #153 triage: "`println(Char)` numérico é comportamento documentado;
+     `Char.toString()` não"). No corpus documents `Char.toString()` as
+     numeric, so aligning it to Java's `Character.toString` is a plain bug
+     fix (Freeze rule 4), not a semantics change. The standalone
+     `String.valueOf(char)` (`(C)` overload) already yields the character —
+     fixed in §27 (07/09) — so `toString` must match it. Fix site:
+     `ExpressionInstanceCallLowerer:411` (primitive `toString`).
+  2. **`println(char)` / concat is a FROZEN contract (rule 6):**
+     `training/language/strings.md:25` documents
+     `println(s.charAt(0)) // 72 (H)` (numeric) and §27 of this file restates
+     it ("`println(char)` is numeric (`72`) in the 3 targets (frozen)").
+     Changing the implicit stringification of char to the character is a
+     **semantics change** → bump + corpus + migration, needs maintainer
+     ratification. Do NOT touch without it.
+  - The maintainer deferred the correction of both issues to **0.4.1**
+    (stabilization patch), so this lane records the root cause + escalation
+    and does not jump the queue on `beta-0.4.0`.
+  - Collection storage must keep boxing char as `Integer`
+    (`JvmOpCollections.boxedClassNameFor` default + `unboxMethodName`
+    char→`intValue`) — the §104b-ii face-char fix depends on it; the narrow
+    `toString` fix must not disturb it.
 - **Status:** reproduces on `212a8dbc` (both #168 and #153 cases), silent
   (`ec=0`). Blocked on rule 6 (frozen contract) — escalated to the maintainer
   15/09; not fixed by this lane.

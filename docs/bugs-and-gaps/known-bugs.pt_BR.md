@@ -7048,23 +7048,34 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   → `"65"`. Sítios afetados: `ExpressionPrintLowerer:63` (println),
   `ExpressionBinaryLowerer:253/261` (concat), `ExpressionInstanceCallLowerer:411`
   (`toString` de primitivo).
-- **⚠️ REGRA 6 — NÃO corrigir sem decisão da mantenedora.** `println(char)` é
-  contrato **congelado**: `training/language/strings.md:25` documenta
-  `println(s.charAt(0)) // 72 (H)` (numérico) e o §27 deste arquivo reafirma
-  ("`println(char)` é numérico (`72`) nos 3 targets (congelado)"). As issues
-  #168/#153 pedem o OPOSTO (`println(c)` → `A`) — é uma **mudança de
-  semântica** do contrato congelado de exibição de char, não um bugfix
-  simples. A face que É bug de paridade é o **standalone**
-  `String.valueOf(char)`, que deve dar o caractere (`"h"`) — já corrigido no
-  §27 (07/09). Corrigir #168/#153 como pedem exige bump + atualização do
-  corpus + migração (regra 6), ou ratificação da mantenedora de que
-  `println(Char)` mostra o caractere enquanto `charAt` continua numérico. O
-  storage de coleção deve continuar boxando char como `Integer`
-  (`JvmOpCollections.boxedClassNameFor` default + `unboxMethodName`
-  char→`intValue`) — o fix §104b-ii face-char depende disso.
+- **Duas faces — uma é bug, outra é congelada (triagem da mantenedora na
+  #153, 14/09):**
+  1. **`Char.toString()` → `"A"` é bug de paridade REAL** (triagem da
+     mantenedora na #153: "`println(Char)` numérico é comportamento
+     documentado; `Char.toString()` não"). Nenhum documento do corpus fixa
+     `Char.toString()` como numérico, então alinhá-lo ao
+     `Character.toString` do Java é bugfix simples (regra 4 do Freeze), não
+     mudança de semântica. O `String.valueOf(char)` standalone (overload
+     `(C)`) já dá o caractere — corrigido no §27 (07/09) —, então o
+     `toString` deve casar com ele. Sítio do fix:
+     `ExpressionInstanceCallLowerer:411` (`toString` de primitivo).
+  2. **`println(char)` / concat é contrato CONGELADO (regra 6):**
+     `training/language/strings.md:25` documenta
+     `println(s.charAt(0)) // 72 (H)` (numérico) e o §27 deste arquivo
+     reafirma ("`println(char)` é numérico (`72`) nos 3 targets
+     (congelado)"). Mudar a stringificação implícita do char para o
+     caractere é **mudança de semântica** → bump + corpus + migração, exige
+     ratificação da mantenedora. NÃO tocar sem ela.
+  - A mantenedora adiou a correção das duas issues para a **0.4.1** (patch
+    de estabilização); esta lane registra a causa raiz + escalação e não
+    fura a fila na `beta-0.4.0`.
+  - O storage de coleção deve continuar boxando char como `Integer`
+    (`JvmOpCollections.boxedClassNameFor` default + `unboxMethodName`
+    char→`intValue`) — o fix §104b-ii face-char depende disso; o fix
+    estreito do `toString` não pode perturbá-lo.
 - **Estado:** reproduz no `212a8dbc` (casos #168 e #153), silencioso
-  (`ec=0`). Bloqueado na regra 6 (contrato congelado) — escalado à mantenedora
-  15/09; não corrigido por esta lane.
+  (`ec=0`). Face `Char.toString()` = bug real (0.4.1); face
+  `println`/concat = congelada regra 6. Escalado à mantenedora 15/09.
 
 ### §217 — retorno de método de classe genérica não faz downcast: `Box<String>.get(): T` emite `()Object`, chamar método nele → `VerifyError` no primeiro uso (issue #161)
 
