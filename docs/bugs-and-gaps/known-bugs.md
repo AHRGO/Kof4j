@@ -3839,9 +3839,21 @@ index int) — verified in the sweep.
   extraction `CapturedVarBox` kept `StatementLowerer` at 499 (< gate 500).
   **Proof:** `nullableprint` cell extended (+`en(7)`/`en(-7)`, slot `Int? v
   = if(false)9 else null`, `bn(-1)` → `7/0/0/false`, 4/4 without exclusion) +
-  `KofInterpreterParityTest.{expr-body-null-branch, expr-body-switch-null-branch,
-  annotated-slot-null-branch}` (3 parities); compiler suite 1405/0-fail (13
-  err=`node` environment, +1 cross skip), script/kof-c/cli unchanged.
+   `KofInterpreterParityTest.{expr-body-null-branch, expr-body-switch-null-branch,
+   annotated-slot-null-branch}` (3 parities); compiler suite 1405/0-fail (13
+   err=`node` environment, +1 cross skip), script/kof-c/cli unchanged.
+- **⚠️ REVOKED 15/09 by DECISIONS §D-NULL-INTENT (maintainer, in person):**
+  the "option A" (`null` folds to the primitive default, `ni()==null` =
+  `false`, `println(ni())` = `0`) is NO LONGER the contract. Measured the
+  silent collapse: `Int? maybe(){return null}` → `maybe(2)==null` gives
+  `false` and prints `0` — nullability is now by EXPLICIT INTENT (the
+  `== null` comparison itself); where intent exists, null is REAL on the 4
+  targets; where it does not, null never arrives silently. The queue is
+  N1→N4 of D-NULL-INTENT (roadmap §23). The `nullableprint` matrix cell and
+  the three `KofInterpreterParityTest` null-branch parities encode option A
+  and MUST be flipped to the new oracle when N1 lands (do not touch them
+  before — rule 1: the suite is the merge gate; change the oracle in the
+  SAME commit as the behavior).
 
 ### 126. WRONG-TYPE key in Map/Set/`contains`-of-List pinned → Native SIGSEGV (JVM tolerates with miss/false) — ✅ FIXED 11/09 (maintainer decision: option ii — SEM056 at compile-time)
 
@@ -8107,7 +8119,7 @@ the user's — a compile-time diagnostic is the goal (rule 6).
 - **Note:** JVM/Native/Script are affected (the analyzer is target-agnostic); JS
   escaped because the parser resolved the types on its own path.
 
-### §205 — heterogeneous `if`-expression prints `Object` in Native → SIGSEGV (exit 139) — 🔴 OPEN 14/09 (introduced by `ed409ff9` #183, owner = #183 lane)
+### §205 — heterogeneous `if`-expression prints `Object` in Native → SIGSEGV (exit 139) — 🟡 PARTIAL 15/09 (direct case FIXED, slice 1; boxed-print face = §104b-ii)
 
 - **Symptom (Native):** `ConformanceMatrixTest#conformanceCoreControl` case
   `ifexpr-heterogeneous-direct` (`println(if (s == "") 1 else "s")`) exits 139 on
@@ -8120,9 +8132,34 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   segfaults (same family as §107's collection-print pointer garbage: the native
   print of a boxed/`Object` value is not implemented). JVM boxes to the branch's
   own type and prints correctly, so only Native diverges.
-- **Contract (rule 6):** the fix belongs to the #183 lane — either implement the
-  Native `println(Object)` dispatch or gate the heterogeneous case honestly on
-  Native (R6), aligning with the §107/§104b-ii decision. The `ifexpr` cell was
+- **✅ FIXED 15/09 — slice 1, DIRECT case (real behavior, not a gate):** the
+  maintainer rejected the R6-gate draft ("gate breaks rule 5 — same behavior
+  on all targets"): the fix re-lowers `println`/`print` of a **direct**
+  heterogeneous `if`/`switch` argument as a **per-branch print** (`ExpressionPrint-
+  Lowerer.lowerHeterogeneousDirect`): the condition/subject is evaluated ONCE,
+  and each branch prints its own value through the branch's static type —
+  the primitive/String/record native dispatch that already exists and is
+  tested in x86, riscv64 and aarch64 (aarch64 inherits via the translator).
+  No new ABI, no boxed-object format. Proof (measured): the 4 SIGSEGV cells
+  (`ifexpr-heterogeneous-direct`, `switchexpr-heterogeneous-direct`,
+  `ifexpr-intlong-direct`, `ifexpr-longdouble-direct`) now print
+  byte-identical to the JVM in **both** branch directions (measured 8/8:
+  `1|s|7|d|1|d|2|d`), + 3 new matrix cells (`-direct-else`, `-multi`,
+  `-multi-default`) and matrix doc rows (EN+PT, gate DocTest green). Q0:
+  the SAME tests exit 139 on the pre-fix build (proven by stash + rerun).
+  `conformanceCoreControl` 1/1 with Native included; neighbors 46/46
+  (IfExprBraces/SwitchExpr/EnumSwitch/GuardedPattern/SwitchRhs/MatrixDoc).
+- **🟡 STILL OPEN (slice 2 = §104b-ii face print):** `Object` that reaches the
+  print NOT via the direct syntax — `var x = if (c) 1 else "s"; println(x)`
+  (SIGSEGV — the raw int on the stack has no tag) and `println(<prim> as
+  Object)` (SIGSEGV `7 as Object`; `record as Object` prints EMPTY vs JVM
+  `P[x=1, y=2]`; `String as Object` prints by luck). These need the real
+  tagged-box + `object_to_string` polymorphic dispatch (the §104b-ii ABI
+  queue, D-NULL/D-NULL-INTENT N2). The direct-case fix deliberately does NOT
+  gate them: they compile today and keep compiling (rule 2).
+- **Contract (rule 6):** resolved by implementation (option "implement the
+  Native dispatch" of the original contract — the gate option was rejected by
+  the maintainer on 15/09 as a parity break). The `ifexpr` cell was
   green before #183 because the typer returned the THEN type and never reached
   the `Object` print path.
 

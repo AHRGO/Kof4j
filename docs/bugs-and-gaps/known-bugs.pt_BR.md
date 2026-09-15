@@ -8087,7 +8087,7 @@ usuário — diagnostic em compile-time é a meta (regra 6).
 - **Nota:** JVM/Native/Script são afetados (o analyzer é target-agnóstico); o JS
   escapou porque o parser resolvia os tipos no seu próprio caminho.
 
-### §205 — `if`-expression heterogêneo imprime `Object` no Native → SIGSEGV (exit 139) — 🔴 ABERTO 14/09 (introduzido por `ed409ff9` #183, dono = lane do #183)
+### §205 — `if`-expression heterogêneo imprime `Object` no Native → SIGSEGV (exit 139) — 🟡 PARCIAL 15/09 (caso direto CORRIGIDO, fatia 1; face boxed-print = §104b-ii)
 
 - **Sintoma (Native):** `ConformanceMatrixTest#conformanceCoreControl` caso
   `ifexpr-heterogeneous-direct` (`println(if (s == "") 1 else "s")`) sai 139 no
@@ -8100,11 +8100,35 @@ usuário — diagnostic em compile-time é a meta (regra 6).
   segfaulta (mesma família do lixo-de-ponteiro de print de coleção do §107: o
   print nativo de um valor boxeado/`Object` não está implementado). O JVM boxeia
   para o tipo do próprio ramo e imprime corretamente, então só o Native diverge.
-- **Contrato (regra 6):** o fix pertence à lane do #183 — ou implementa o
-  dispatch `println(Object)` no Native, ou gateia o caso heterogêneo de forma
-  honesta no Native (R6), alinhado à decisão §107/§104b-ii. A célula `ifexpr`
-  era verde antes do #183 porque o typer devolvia o tipo do THEN e nunca
-  chegava ao caminho de print de `Object`.
+- **✅ CORRIGIDO 15/09 — fatia 1, caso DIRETO (comportamento real, não gate):**
+  a mantenedora rejeitou o rascunho de gate R6 ("gate quebra a regra 5 — mesmo
+  comportamento em todos os targets"). O fix rebaixa `println`/`print` de um
+  `if`/`switch` heterogêneo **direto** como **print por-ramo**
+  (`ExpressionPrintLowerer.lowerHeterogeneousDirect`): a condição/subject é
+  avaliada UMA vez, e cada ramo imprime seu próprio valor pelo tipo estático do
+  ramo — o dispatch nativo de primitivo/String/record que já existe e é testado
+  em x86, riscv64 e aarch64 (aarch64 herda via tradutor). Sem ABI novo, sem
+  formato de boxed-object. Prova (medido): as 4 células SIGSEGV
+  (`ifexpr-heterogeneous-direct`, `switchexpr-heterogeneous-direct`,
+  `ifexpr-intlong-direct`, `ifexpr-longdouble-direct`) agora imprimem
+  byte-idêntico ao JVM nas DUAS direções do ramo (medido 8/8:
+  `1|s|7|d|1|d|2|d`), + 3 células novas de matriz (`-direct-else`, `-multi`,
+  `-multi-default`) e linhas da matriz doc (EN+PT, gate DocTest verde). Q0:
+  os MESMOS testes dão exit 139 no build pré-fix (provado por stash + rerun).
+  `conformanceCoreControl` 1/1 com Native incluído; vizinhos 46/46.
+- **🟡 AINDA ABERTO (fatia 2 = face print do §104b-ii):** `Object` que chega ao
+  print NÃO pela sintaxe direta — `var x = if (c) 1 else "s"; println(x)`
+  (SIGSEGV — o int bruto na pilha não tem tag) e `println(<primitivo> as
+  Object)` (SIGSEGV `7 as Object`; `record as Object` imprime VAZIO vs JVM
+  `P[x=1, y=2]`; `String as Object` imprime por sorte). Estes precisam do box
+  com tag real + dispatch polimórfico `object_to_string` (a fila de ABI §104b-ii,
+  D-NULL/D-NULL-INTENT N2). O fix do caso direto deliberadamente NÃO gateia
+  estes: compilam hoje e continuam compilando (regra 2).
+- **Contrato (regra 6):** resolvido por implementação (a opção "implementar o
+  dispatch Native" do contrato original — a opção de gate foi rejeitada pela
+  mantenedora em 15/09 como quebra de paridade). A célula `ifexpr` era verde
+  antes do #183 porque o typer devolvia o tipo do THEN e nunca chegava ao
+  caminho de print de `Object`.
 
 ### §231 — sobrecarga top-level com parâmetro default: `requiredArity` não considera defaults → chamada curta dá SEM014 em vez de selecionar o candidato com default — 🟡 catalogado 14/09 (achado na triagem CodeQL local-variable #160, dono = fila de overload/§131)
 

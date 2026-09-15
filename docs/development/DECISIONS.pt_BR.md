@@ -638,6 +638,82 @@ safety é por **narrowing** (`if (x != null)`); `null` só chega de API que devo
 
 ---
 
+## D-NULL-INTENT — nullabilidade por INTENÇÃO EXPLÍCITA; o colapso silencioso `null→0` está MORTO (✅ decidido 15/09, mantenedora, pessoal)
+
+> **Palavras da mantenedora:** *"null safety nunca deve retornar null, mas vamos
+> adicionar uma função semântica pro compilador entender a intenção quando o dev
+> quer que volte null — compara por exemplo um int com `if (i == null)`, então
+> isso é a intenção mandando no escopo: deve poder ser null nesse quesito, quando
+> a intenção fica explícita. O mesmo pra string, boolean, todos os tipos. Caso
+> contrário, null nunca é esperado."*
+
+O contrato, agora congelado (substitui a "opção A — dobra em 0" do §125 e
+completa o D-NULL do mesmo dia):
+
+1. **Null NUNCA é esperado por default.** Uma declaração sem intenção de null
+   explícita (`Int`, `String`, `Foo` …) não pode produzir nem carregar `null`.
+   Retornar/passar `null` onde não há intenção é **diagnóstico de
+   compile-time** — nunca a dobra silenciosa `null→0`/`null→false` que a
+   "opção A" do §125 ratificou (medido 15/09: `Int? maybe(){return null}` →
+   `maybe(2)==null` = **false**, `println` = `0`; `Int f(){return null}` → `0`
+   sem NENHUM diagnóstico — ambos são violações de R6 e agora são bugs a
+   corrigir, não comportamento a preservar).
+2. **A intenção é a comparação `== null` / `!= null`.** Um programa que escreve
+   `if (i == null)` num `Int` não-nullable está declarando intenção: *"isto pode
+   ser null, trate"*. O compilador deve entendê-la em TODOS os tipos (Int,
+   Long, Bool, Double, String, classe …): o ponto comparado aceita null
+   naquele escopo (o ramo narroweia; o outro ramo é não-null). Nenhuma
+   cerimônia sintática é exigida para *pedir* null — pedir é a própria
+   comparação.
+3. **Quando há intenção, null é REAL, em todo target.** `Int?`/`Long?`/`Bool?`/
+   `Double?` carregam `null` de verdade: `x == null` responde `true` para null
+   e `false` para valor; `println(x)` imprime `null` — JVM, Script, JS e
+   Native com a MESMA saída (regra 5). É exatamente a face `T?` boxed que o
+   D-NULL liberou da regra 6 (fila §241/#266/#259) — agora com PRAZO: é a
+   implementação desta decisão, não uma ideia estacionada.
+4. **O que NÃO muda (o congelamento segura):** o `null` LITERAL continua não
+   atribuível a um ponto não-nullable (SEM048 fica: `f(null)` em `f(Int)` é
+   erro — a intenção vem das comparações `== null` e das declarações `T?`, não
+   de enfiar `null` num slot não-null); a semântica de conteúdo do `==`,
+   operadores e precedência estão intocados (a comparação `i == null` é um
+   *uso* do `==` congelado, não uma mudança nele); tipos de referência mantêm
+   o comportamento atual onde já bate (`String?` já devolve null real).
+
+**Fila de implementação (roadmap §23, nesta ordem):**
+
+- **N1 (JVM+Script+JS):** `Nullable(primitivo)` carrega null de verdade — o
+  tipo de retorno do método vira a classe boxed (`maybe` emite `Integer`, não
+  `int`), slots/locais tipados `T?` são boxed com null permitido, `== null`
+  abaixa para comparação de referência sobre o boxed; remover
+  `foldNullablePrimBranches` (extensão do §125) e as dobras `null→0` nos
+  caminhos de retorno/atribuição. Regressão: células da matriz `Int?` null
+  (`nullprim-true`: `maybe(2)==null` → `true`, `println(maybe(2))` → `null`)
+  em 3 targets + Script.
+- **N2 (Native):** o mesmo pela ABI boxed do §104b-ii (box com tag +
+  `kof_box`/`kof_unbox` reais + `object_to_string`) — o Native imprime
+  `null`/`1` identicamente. As células reabrem com Native incluído SOMENTE
+  quando byte-idêntico.
+- **N3 (intenção em NÃO-nullable):** `i == null` onde `i` é declarado `Int`
+  (sem `?`): hoje compila para `false` constante (medido 15/09). Contrato: a
+  comparação é legal e REAL — se `i` pode observar null ela responde a
+  verdade, senão é constante que o otimizador pode dobrar; NENHUM diagnóstico
+  é adicionado (a intenção nunca pode quebrar código que compila — retro-
+  compatibilidade, regra 2: código que compila hoje continua compilando).
+- **N4 (fim do null silencioso):** um `return null` / `x = null` em assinatura/
+  declaração não-nullable já é SEM048/§125 para o LITERAL — auditar os
+  caminhos silenciosos RESTANTES (map-miss `0`, campo não-inicializado `0`,
+  unbox-de-null `0`) e dar a cada um uma face DECIDIDA: null honesto (quando o
+  ponto é `T?` / tem intenção) ou diagnóstico; nunca um valor tirado do nada.
+
+> **✅ DECIDIDO 15/09** — esta entrada é a lei da família null; a "opção A" do
+> §125 está REVOGADA como comportamento (o registro no catálogo aponta para
+> cá). A fila N1→N4 é aditiva ao idioma apenas no sentido que o D-NULL já
+> sancionou (completar `T?` nos 4 targets); ela REMOVE comportamento
+> silencioso-errado, que o congelamento nunca protegeu (regra 4 do freeze:
+> bug se corrige para alcançar o esperado, nunca o contrário).
+
+---
+
 ## Como atualizar este doc
 
 Decidiu mais alguma coisa no chat → trava aqui (data + opção + evidência de
