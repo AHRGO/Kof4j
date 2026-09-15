@@ -43,23 +43,23 @@ public final class RuntimeStringParseOrDefault {
                 movq %rax, 0(%rsp)
                 movq %rsp, 8(%rsp)
                 movq %rbp, 16(%rsp)
-                movq kof_exc_chain(%rip), %rax
+                movq %fs:kof_exc_chain@tpoff, %rax
                 movq %rax, 24(%rsp)
-                movq %rsp, kof_exc_chain(%rip)
+                movq %rsp, %fs:kof_exc_chain@tpoff
                 # args do parse: %rdi já é a String; default fica salvo no rbp
                 movq %rsi, -8(%rbp)
                 call kof_string_to_int
                 # sucesso: restaura chain e devolve %rax
                 movq 24(%rsp), %rcx
-                movq %rcx, kof_exc_chain(%rip)
+                movq %rcx, %fs:kof_exc_chain@tpoff
                 movq %rbp, %rsp
                 popq %rbp
                 ret
             .Lkof_stiod_handler:
                 # chega com a String do erro em %rdi; devolve o default
-                movq kof_exc_chain(%rip), %rax
+                movq %fs:kof_exc_chain@tpoff, %rax
                 movq 24(%rsp), %rcx
-                movq %rcx, kof_exc_chain(%rip)
+                movq %rcx, %fs:kof_exc_chain@tpoff
                 movq -8(%rbp), %rax
                 movq %rbp, %rsp
                 popq %rbp
@@ -80,20 +80,20 @@ public final class RuntimeStringParseOrDefault {
                 movq %rax, 0(%rsp)
                 movq %rsp, 8(%rsp)
                 movq %rbp, 16(%rsp)
-                movq kof_exc_chain(%rip), %rax
+                movq %fs:kof_exc_chain@tpoff, %rax
                 movq %rax, 24(%rsp)
-                movq %rsp, kof_exc_chain(%rip)
+                movq %rsp, %fs:kof_exc_chain@tpoff
                 movq %rsi, -8(%rbp)
                 call kof_string_to_long
                 movq 24(%rsp), %rcx
-                movq %rcx, kof_exc_chain(%rip)
+                movq %rcx, %fs:kof_exc_chain@tpoff
                 movq %rbp, %rsp
                 popq %rbp
                 ret
             .Lkof_stlod_handler:
-                movq kof_exc_chain(%rip), %rax
+                movq %fs:kof_exc_chain@tpoff, %rax
                 movq 24(%rsp), %rcx
-                movq %rcx, kof_exc_chain(%rip)
+                movq %rcx, %fs:kof_exc_chain@tpoff
                 movq -8(%rbp), %rax
                 movq %rbp, %rsp
                 popq %rbp
@@ -117,22 +117,22 @@ public final class RuntimeStringParseOrDefault {
                 movq %rax, 0(%rsp)
                 movq %rsp, 8(%rsp)
                 movq %rbp, 16(%rsp)
-                movq kof_exc_chain(%rip), %rax
+                movq %fs:kof_exc_chain@tpoff, %rax
                 movq %rax, 24(%rsp)
-                movq %rsp, kof_exc_chain(%rip)
+                movq %rsp, %fs:kof_exc_chain@tpoff
                 # default (bits crus em %rsi) salvo no rbp; parse lê %rdi
                 movq %rsi, -8(%rbp)
                 call kof_string_to_double
                 movq 24(%rsp), %rcx
-                movq %rcx, kof_exc_chain(%rip)
+                movq %rcx, %fs:kof_exc_chain@tpoff
                 movq %xmm0, %rax
                 movq %rbp, %rsp
                 popq %rbp
                 ret
             .Lkof_stdod_handler:
-                movq kof_exc_chain(%rip), %rax
+                movq %fs:kof_exc_chain@tpoff, %rax
                 movq 24(%rsp), %rcx
-                movq %rcx, kof_exc_chain(%rip)
+                movq %rcx, %fs:kof_exc_chain@tpoff
                 # devolve o default por xmm0 (bits crus do rbp)
                 movq -8(%rbp), %rax
                 movq %rax, %xmm0

@@ -243,10 +243,16 @@ Estado 13/09: concorrência real **JVM** (virtual threads) + **Native**
 1ms) + **JS** ✅ 03/09 (CONC003 fechado — stmt/expr/cancel/selectAny com
 async/await/Promise reais) + **supervisão OTP** (`kof.supervisor`: 1ª fatia
 11/09 núcleo JVM+Script, **S2-JVM 13/09** `startAll`/`lacoUnico` — ver
-`planning-otp-supervision.md`; Native=OTP001 §129, JS=OTP002 §132 gates
-honestos). ⚠️ Bug pré-existente separado: `spawn→await→spawn`
-corrompe a pilha da main (SIGSEGV no próximo `pthread_create`); reproduz sem
-o feature de cancel/select (suspeito: `pthread_join` no `kof_await`).
+`planning-otp-supervision.md`; **Native x86 ✅ 15/09** — §129 fechado via
+DECISIONS §2 opção B, então `kof.supervisor` roda no Native x86; riscv/aarch=OTP001,
+JS=OTP002 §132 gates honestos). O SIGSEGV anterior de `spawn→await→spawn` (pilha
+desalinhada no site do `pthread_create`) foi corrigido 01/09 com `andq $-16` em
+`kof_spawn_handle_new`. Um defeito latente relacionado apareceu e foi corrigido
+15/09 na mesma unidade do §129: `kof_await` não limpava o TID do handle após o
+join, então o `kof_spawn_join_all` implícito no fim da `main` **dava double join**
+em todo handle já awaited — SIGSEGV em `__pthread_clockjoin_ex` assim que o TCB era
+reciclado (reproduzido no HEAD com 50 spawns + 50 awaits, 3/3 crash; limpo após o
+fix).
 
 | Item | Descrição | Prioridade |
 |------|-----------|------------|

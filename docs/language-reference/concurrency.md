@@ -225,9 +225,12 @@ supervisor("net")                       // new object per system
 - **Controlled shutdown:** `stop(deadlineMs)` cancels cooperatively
   (`cancelled()` flag on targets with threads) and waits for the deadline; children that
   ignore the cancel are reported.
-- **Parity (rule 6):** JVM ✅ · KofScript ✅ · Native = `OTP001` (§129: throw
-  in a task longjmps into the global handler chain) · JS = `OTP002` (§132: event-loop
-  does not schedule task-of-task) — both blocked at compile-time with a diagnostic.
+- **Parity (rule 6):** JVM ✅ · KofScript ✅ · Native x86 ✅ (since §129 closed,
+  15/09: the handler chain is TLS per-thread and a `throw` in a task publishes the
+  cause on the handle; `await`/`selectAny` rethrow it in the consumer) · Native
+  riscv/aarch = `OTP001` (raw `clone`, no TLS) · JS = `OTP002` (§132: event-loop
+  does not schedule task-of-task) — the cross/JS cases blocked at compile-time with
+  a diagnostic.
 
 ## 5. Concurrent I/O
 

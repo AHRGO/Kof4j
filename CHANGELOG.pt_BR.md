@@ -1096,6 +1096,7 @@ de commits do projeto (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 ### Bugfixes
 
+  - §129 `throw` dentro de worker `spawn` no Native x86_64 não faz mais longjmp no handler da thread main — `kof_exc_chain` agora é TLS por thread (`.tbss`+`%fs:@tpoff`) e o trampolim do spawn instala handler próprio do worker que publica a causa no handle; `await`/`awaitTimeout`/`selectAny` a relançam (riscv/aarch seguem OTP001)
   - §180 `println(double/float)` no Native x86_64 agora é JDK `Double.toString`/`Float.toString` (RuntimeDtoa: `%.*e`+`strtod` shortest round-trip + reformatação Java; Float com forma própria) — `doubleprint` com Native incluído
   - §181 doc-sync + baseline HELLO_JS 8.297→13.007 (#132) + UIW050 event-handle em estágio
   - §181 regressão do cast saturante — bits de double no x86 + labels únicos riscv/aarch

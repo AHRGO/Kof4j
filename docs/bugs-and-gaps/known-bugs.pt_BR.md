@@ -4015,7 +4015,7 @@ int de índice) — verificados na varredura.
   supervisor consegue viver sem selectAny no núcleo 1ª fatia).
 
 
-### 129. [OTP] Native x86_64: `throw` dentro de worker `spawn` → unwinder faz longjmp no handler da THREAD MAIN (crash/hang cross-thread) — 🟢 ABERTO POR DECISÃO 13/09 (mantenedora mandou abrir — impeditivo do OTP-Native; lane nat implementável)
+### 129. [OTP] Native x86_64: `throw` dentro de worker `spawn` → unwinder faz longjmp no handler da THREAD MAIN (crash/hang cross-thread) — ✅ CORRIGIDO 15/09 (lane development `192.168.100.18`, DECISIONS §2 opção B; só x86_64)
 - **Reprodução (M2, deterministicamente travado/crashado no native):**
   `main(){ var i=0; while(i<3){ var h=spawn { throw "x" }; try { await h }
   catch(String e){println("cap")} i=i+1 } println("fim3") }` → imprime
@@ -4052,6 +4052,33 @@ int de índice) — verificados na varredura.
   Escopo grande (afeta RuntimeDb4/Gc que compartilham o chain). **Ação:**
   registrar §129 + na 1ª fatia OTP, o gate Native é `OTP001` honesto (R6) até
   §129 fechado; JVM+Script+JS entregam o núcleo.
+- **RESOLUÇÃO (15/09, lane development `192.168.100.18`) — opção B, DECISIONS §2:**
+  a chain agora é **TLS local-exec** (`.section .tbss,"awT",@nobits` +
+  `%fs:kof_exc_chain@tpoff`) em vez de um `.data` global: `RuntimeGc.emitPanic`,
+  `NativeMethodEmitter` (`KofTryStart`/`KofTryEnd`), `RuntimeDb4` (frames de tx) e
+  `RuntimeStringParseOrDefault` (os 4 emissores da stack do root cause do §129). O
+  binário x86 é dinamicamente ligado (`-lc`), então o `ld.so` inicializa o TLS da
+  main e o `pthread_create` o do worker (validado experimentalmente: um worker que
+  escreve na chain não toca no valor da main). O `kof_spawn_trampoline` instala um
+  **frame de handler por worker** e, num `throw` sem handler interno, publica a
+  causa no handle (`handle->exc`, offset 40) em vez de desenrolar para a main;
+  `kof_await`/`kof_await_timeout`/`kof_select_any` a relançam no consumidor
+  (paridade JVM). Dois sub-defeitos achados e corrigidos no caminho: (a) o frame do
+  handler guarda o handle em `32(%rsp)` porque o worker pode clobberar o `%r12`
+  callee-saved em que o código antigo confiava; (b) `kof_await` agora zera o TID já
+  juntado para o `kof_spawn_join_all` implícito no fim da `main` nunca dar double
+  join (SIGSEGV em `__pthread_clockjoin_ex` com TCB reciclado — reproduzido com 50
+  throwers spawnados). `CompilerSupervisor` só emite `OTP001` para **riscv/aarch**
+  (clone cru, sem TLS, + `selectAny`/CONC001) — esses seguem gate honesto. Prova:
+  `KofConcurrency2Test.spawnWorkerThrow{AwaitedAndCaught,UnhandledThrowPropagates,IsolatedFromSiblings,PropagatesThroughSelectAny}Native`
+  (4/4, + 10× repetição do stress de 50 workers sem SIGSEGV),
+  `KofSupervisorE2ETest.supervisorNativeParityX86` (restarts=2/escaladas=2/fabrica=3)
+  e `supervisorNativeS2ParityX86` (3 filhos, laço selectAny único),
+  `crossGateOtp001` (riscv+aarch); `KofSupervisorE2ETest` 15/15,
+  `KofConcurrency2Test` 40/0 (1 skip), `ExceptionsE2ETest` 11/0, `NativeE2ETest`
+  65/0; suíte completa do `kof-compiler` 1777 testes / 1 falha = o
+  `[ifexpr-heterogeneous-direct]` Native SIGSEGV pré-existente (§205, outra lane;
+  idêntico no HEAD `3a0826df`).
 
 
 ### 130. Frontend: re-análise do corpo de método no mesmo escopo → SEM024 falso ("variable already defined") — ✅ CORRIGIDO 11/09 (impeditivo do host OTP puro-Kof)

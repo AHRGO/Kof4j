@@ -432,6 +432,25 @@ e no C (frames `setjmp`/`longjmp` são locais à pilha). Afeta o runtime
 compartilhado (`RuntimeDb4`/GC); a chain vira thread-scoped. Destrava o
 **OTP S2-Native** (§129), cujo gate é `OTP001` até isto fechar.
 
+**Feito (15/09, owner 192.168.100.18) — Native x86:** a chain agora é TLS
+local-exec (`.section .tbss,"awT",@nobits` + `%fs:kof_exc_chain@tpoff`) em
+`RuntimeGc.emitPanic`, `NativeMethodEmitter` (`KofTryStart`/`KofTryEnd`),
+`RuntimeDb4` (frames de tx) e `RuntimeStringParseOrDefault`; o `ld.so` inicializa
+o TLS da main e o `pthread_create` o do worker (validado: um worker que escreve
+na chain não toca na da main). O `kof_spawn_trampoline` instala um frame de
+handler por worker e, num `throw` sem handler interno, publica a causa no handle
+(`handle->exc` em 40) em vez de desenrolar para a pilha da main;
+`kof_await`/`kof_await_timeout`/`kof_select_any` a relançam no consumidor
+(paridade JVM), e `kof_await` zera o TID já juntado para o
+`kof_spawn_join_all` implícito nunca dar double join (SIGSEGV com TCB
+reciclado). O frame do handler guarda o handle em `32(%rsp)` porque o worker
+pode clobberar o `%r12` callee-saved. `CompilerSupervisor` agora só emite
+`OTP001` para riscv/aarch (clone cru, sem TLS + `selectAny`/CONC001). Prova:
+`KofConcurrency2Test.spawnWorkerThrow*Native` (4), `KofSupervisorE2ETest`
+`supervisorNativeParityX86`/`supervisorNativeS2ParityX86` + `crossGateOtp001`;
+`KofSupervisorE2ETest` 15/15, `KofConcurrency2Test` 40/0, `ExceptionsE2ETest`
+11/0, `NativeE2ETest` 65/0.
+
 ### 3. `roundTo` — **implementar, racional (inspirado em Java + C)**
 Aprovado para implementação (a ratificação do `pow` de 13/09 o deixou aberto).
 Design racional, inspirado em Java+C:

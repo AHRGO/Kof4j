@@ -243,10 +243,15 @@ State 13/09: real concurrency **JVM** (virtual threads) + **Native**
 + **JS** ✅ 03/09 (CONC003 closed — stmt/expr/cancel/selectAny with real
 async/await/Promise) + **OTP supervision** (`kof.supervisor`: 1st slice
 11/09 JVM+Script core, **S2-JVM 13/09** `startAll`/`lacoUnico` — see
-`planning-otp-supervision.md`; Native=OTP001 §129, JS=OTP002 §132 honest
-gates). ⚠️ Separate pre-existing bug: `spawn→await→spawn`
-corrupts main's stack (SIGSEGV on the next `pthread_create`); reproduces without
-the cancel/select feature (suspect: `pthread_join` in `kof_await`).
+`planning-otp-supervision.md`; **Native x86 ✅ 15/09** — §129 closed via DECISIONS
+§2 option B, so `kof.supervisor` runs on Native x86; riscv/aarch=OTP001, JS=OTP002
+§132 honest gates). The earlier `spawn→await→spawn` SIGSEGV (misaligned stack at
+the `pthread_create` call site) was fixed 01/09 by `andq $-16` in
+`kof_spawn_handle_new`. A related latent defect surfaced and was fixed 15/09 in the
+same §129 unit: `kof_await` did not clear the handle's TID after joining, so the
+implicit `kof_spawn_join_all` at the end of `main` **double-joined** every awaited
+handle — a SIGSEGV in `__pthread_clockjoin_ex` once the TCB was recycled
+(reproduced at HEAD with 50 spawns + 50 awaits, 3/3 crash; clean after the fix).
 
 | Item | Description | Priority |
 |------|-----------|------------|

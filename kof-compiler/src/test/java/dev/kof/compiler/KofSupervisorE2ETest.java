@@ -21,9 +21,12 @@ import static org.junit.jupiter.api.Assertions.*;
  * reiniciar individualmente, respeitar limite e encerrar controlado — nunca
  * árvore/heartbeat (DD-OTP-04/05 adiados no plano).
  *
- * Paridade honesta (regra 6 / R6): NATIVE e JS bloqueiam no compile-time com
- * OTP001 (§129 longjmp cross-thread) / OTP002 (§132 event-loop single-thread),
- * nunca fallback silencioso. JVM (runJvm) + Script (interpret) executam o núcleo.
+ * Paridade honesta (regra 6 / R6): o Native **x86** executa o núcleo desde
+ * §129 (DECISIONS §2, opção B: handler chain per-thread — o throw do worker
+ * marca o handle como excepcional e o await/selectAny relança). riscv/aarch
+ * bloqueiam no compile-time com OTP001 (clone cru sem TLS) e JS com OTP002
+ * (§132 event-loop single-thread), nunca fallback silencioso. JVM (runJvm) +
+ * Script (interpret) + Native x86 (runNative) executam o núcleo.
  */
 class KofSupervisorE2ETest {
 
@@ -149,14 +152,51 @@ class KofSupervisorE2ETest {
         assertTrue(os.contains("fabrica=3"), "3 tentativas = 1 + 2 reinicios (max=2): " + os);
     }
 
-    // ---- R6: nativos/JS bloqueiam no compile-time com codigo claro, nunca silencio ----
+    // ---- §129 (DECISIONS §2, opção B): Native x86 roda o núcleo (handler per-thread) ----
+    private String runNative(Path tmp, String name, String src) throws IOException {
+        Path out = tmp.resolve("on-" + name);
+        CompilationResult r = driver.compile(writeNamed(tmp, name + ".kf", src), out, Target.NATIVE);
+        assertTrue(r.success(), "NATIVE compila: " + r.diagnostics().getDiagnostics());
+        Path bin = out.resolve("Default/Main");
+        try {
+            Process p = new ProcessBuilder(bin.toString()).redirectErrorStream(true).start();
+            String os = new String(p.getInputStream().readAllBytes(),
+                    java.nio.charset.StandardCharsets.UTF_8).replace("\r\n", "\n");
+            int ec = p.waitFor();
+            assertEquals(0, ec, "NATIVE roda limpo: " + os);
+            return os;
+        } catch (InterruptedException e) {
+            throw new IOException(e);
+        }
+    }
+
     @Test
-    void nativeGateOtp001(@TempDir Path tmp) throws IOException {
-        CompilationResult r = driver.compile(writeNamed(tmp, "N.kf", "import kof.supervisor\nmain(){ supervisor(\"x\") }"),
-                tmp.resolve("o"), Target.NATIVE);
-        assertFalse(r.success(), "NATIVE nao deve compilar supervisor hoje");
-        assertTrue(r.diagnostics().getDiagnostics().stream().anyMatch(d -> "OTP001".equals(d.code())),
-                "esperava OTP001, foi: " + r.diagnostics().getDiagnostics());
+    void supervisorNativeParityX86(@TempDir Path tmp) throws IOException {
+        String os = runNative(tmp, "n1", APP);
+        assertTrue(os.contains("restarts=2"), "2 reinicios (worker chamado 3x) no Native: " + os);
+        assertTrue(os.contains("escaladas=2"), "escalate a cada falha no Native: " + os);
+        assertTrue(os.contains("fabrica=3"), "factory NOVA por reinicio no Native: " + os);
+        assertTrue(os.contains("parou vivos=0"), "stop encerra controlado no Native: " + os);
+    }
+
+    @Test
+    void supervisorNativeS2ParityX86(@TempDir Path tmp) throws IOException {
+        String os = runNative(tmp, "n2", APP_S2);
+        assertTrue(os.contains("esc="), "escalate disparou no Native: " + os);
+        assertTrue(os.contains("parou vivos=0"), "stop encerra o laço único no Native: " + os);
+    }
+
+    // ---- R6: riscv/aarch e JS bloqueiam no compile-time com codigo claro ----
+    @Test
+    void crossGateOtp001(@TempDir Path tmp) throws IOException {
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            CompilationResult r = driver.compile(writeNamed(tmp, "X" + t + ".kf",
+                            "import kof.supervisor\nmain(){ supervisor(\"x\") }"),
+                    tmp.resolve("o" + t), t);
+            assertFalse(r.success(), t + " nao deve compilar supervisor");
+            assertTrue(r.diagnostics().getDiagnostics().stream().anyMatch(d -> "OTP001".equals(d.code())),
+                    t + ": esperava OTP001, foi: " + r.diagnostics().getDiagnostics());
+        }
     }
 
     @Test

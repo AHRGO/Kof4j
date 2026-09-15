@@ -2,7 +2,7 @@
 
 # planning-otp-supervision.md — OTP-style worker supervision (`one_for_one`) — IN DEVELOPMENT
 
-**Owner:** CONC lane · **Status:** 1st slice implemented 11/09 (core on JVM+Script; Native=OTP001 §129, JS=OTP002 §132 — honest gates). Maintainer's authorization (issue #83, 11/09): implement the smallest functional core with tests.
+**Owner:** CONC lane · **Status:** 1st slice implemented 11/09 (core on JVM+Script; **S2-JVM ✅ 13/09** and **S2-Native x86 ✅ 15/09** — §129 closed via DECISIONS §2 option B; riscv/aarch=OTP001, JS=OTP002 §132 — honest gates). Maintainer's authorization (issue #83, 11/09): implement the smallest functional core with tests.
 **Created:** 10/09 · **Amended:** 11/09 · **Issue:** #83 (ViniciusKoiti)
 
 > **11/09 amendments** (verified in the `beta-0.4.0` code, marked
@@ -396,13 +396,15 @@ lane; small and isolated. It does not block OTP (which uses its own flag).
 - **Impediments that had to be resolved/workaround:** §130 fixed
   (false SEM024 in a re-analyzed method body — it blocked the fluent builder);
   §131 worked around (overload by arity broken → single 3-arg `child`).
-- **Honest parity:** JVM + Script run the core; Native/JS block at
-  compile-time (OTP001/OTP002) due to §129/§132 — NEVER a binary that hangs (rule
-  6). **S2-JVM of the plan IMPLEMENTED 13/09** (`020be966`, option 1a):
-  `Supervisor.startAll()` + single selectAny loop with an identity wrapper
-  (id/reason); S2 JVM+interpreter gates; `KofSupervisorE2ETest` 8/8, gate
-  1620/0. **S2-Native/JS** remain pending (§129/§132). The
-  document stays in `docs/development/` until Native closes.
+- **Honest parity:** JVM + Script + **Native x86** run the core; riscv/aarch
+  block at compile-time (`OTP001`) and JS (`OTP002`) due to §132 — NEVER a binary
+  that hangs (rule 6). **S2-JVM of the plan IMPLEMENTED 13/09** (`020be966`,
+  option 1a): `Supervisor.startAll()` + single selectAny loop with an identity
+  wrapper (id/reason); S2 JVM+interpreter gates; `KofSupervisorE2ETest` 8/8, gate
+  1620/0. **S2-Native x86 ✅ IMPLEMENTED 15/09** (§129 closed, DECISIONS §2
+  option B; `supervisorNativeParityX86`/`supervisorNativeS2ParityX86`). OTP002-JS
+  (§132) and riscv/aarch remain. The document stays in `docs/development/` until
+  those faces close.
 
 ## Update 12/09 — REAL state of the S2 impediments (doc-vs-reality)
 
@@ -413,9 +415,11 @@ lane; small and isolated. It does not block OTP (which uses its own flag).
   as a type-ref; the "is broken" note in the block above is historical) and
   **§131-overload ✅ DECIDED 13/09** (option 10a: implement — the workaround
   "single 3-arg `child`" can be revisited when the types lane implements it).
-- **§129-longjmp Native 🔴 remains OPEN** (S2-Native x86 impediment) and
-  **§132 event-loop JS 🔴 remains OPEN** (S2-JS impediment) — both
-  bugs/UI lanes, rule 6.
+- **§129-longjmp Native ✅ FIXED 15/09** (DECISIONS §2 option B: TLS per-thread
+  `kof_exc_chain` + per-worker handler frame in `kof_spawn_trampoline`; the worker
+  publishes the cause on the handle and `await`/`selectAny` rethrow it — x86_64;
+  riscv/aarch stay `OTP001`, raw `clone` without TLS) — S2-Native x86 unblocked.
+  **§132 event-loop JS 🔴 remains OPEN** (S2-JS impediment) — bugs/UI lane, rule 6.
 - **Design hole that the §128 fix does NOT close (measured, not
   memory):** the JVM `selectAny` (`JvmRuntimeCore.kof_select_any` →
   `CompletableFuture.anyOf().get()`) returns the **value** of the first ready
@@ -426,4 +430,4 @@ lane; small and isolated. It does not block OTP (which uses its own flag).
   `(id, result)`) — **DECIDED 13/09 (option 1a)** + **IMPLEMENTED**
   (`020be966`: `Supervisor.startAll()` + single selectAny loop; 1 supervisor
   thread; `KofSupervisorE2ETest` 8/8).
-- **Ratification:** ~~awaiting~~ **✅ RATIFIED 13/09** (see top of the doc). **S2-JVM IMPLEMENTED 13/09** (option 1a): `Supervisor.startAll()` + `lacoUnico()` in `supervisor-host.kf` — 1 supervisor thread, `selectAny(handles)` over the live children; **identity wrapper** `kofSupRun` returns the id (normal termination) or throws `"id: reason"` (failure → parse of the pair `(id, reason)` in the loop). New gates: `KofSupervisorE2ETest.supervisorS2TresFilhosUmLacoSelectAny` + `supervisorS2NoInterpretador` (8/8 green). riscv/aarch = PARTIAL (OTP001 gate already blocks the package — honest R6). S2-Native x86 pending on §129-TLS (OPEN by decision 13/09).
+- **Ratification:** ~~awaiting~~ **✅ RATIFIED 13/09** (see top of the doc). **S2-JVM IMPLEMENTED 13/09** (option 1a): `Supervisor.startAll()` + `lacoUnico()` in `supervisor-host.kf` — 1 supervisor thread, `selectAny(handles)` over the live children; **identity wrapper** `kofSupRun` returns the id (normal termination) or throws `"id: reason"` (failure → parse of the pair `(id, reason)` in the loop). New gates: `KofSupervisorE2ETest.supervisorS2TresFilhosUmLacoSelectAny` + `supervisorS2NoInterpretador` (8/8 green). riscv/aarch = PARTIAL (OTP001 gate already blocks the package — honest R6). **S2-Native x86 ✅ IMPLEMENTED 15/09** (§129-TLS closed — DECISIONS §2 option B).

@@ -225,9 +225,12 @@ supervisor("net")                       // objeto novo por sistema
 - **Encerramento controlado:** `stop(deadlineMs)` cancela cooperativamente
   (flag `cancelled()` nos targets com threads) e espera o deadline; filhos que
   ignoram o cancel são reportados.
-- **Paridade (regra 6):** JVM ✅ · KofScript ✅ · Native = `OTP001` (§129: throw
-  em task longjmpa no handler chain global) · JS = `OTP002` (§132: event-loop
-  não agenda task-de-task) — ambos bloqueados no compile-time com diagnóstico.
+- **Paridade (regra 6):** JVM ✅ · KofScript ✅ · Native x86 ✅ (desde o §129
+  fechado, 15/09: o handler chain é TLS por thread e um `throw` em task publica a
+  causa no handle; `await`/`selectAny` a relançam no consumidor) · Native
+  riscv/aarch = `OTP001` (clone cru, sem TLS) · JS = `OTP002` (§132: event-loop
+  não agenda task-de-task) — os casos cross/JS bloqueados no compile-time com
+  diagnóstico.
 
 ## 5. I/O Concorrente
 

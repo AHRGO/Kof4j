@@ -477,6 +477,25 @@ the thread. Inspected from Java (per-thread exception state) and C
 (`RuntimeDb4`/GC); the chain becomes thread-scoped. Unblocks **OTP S2-Native**
 (§129), whose gate is `OTP001` until this closes.
 
+**Done (15/09, owner 192.168.100.18) — Native x86:** the chain is now TLS
+local-exec (`.section .tbss,"awT",@nobits` + `%fs:kof_exc_chain@tpoff`) in
+`RuntimeGc.emitPanic`, `NativeMethodEmitter` (`KofTryStart`/`KofTryEnd`),
+`RuntimeDb4` (tx frames) and `RuntimeStringParseOrDefault`; `ld.so` initialises
+the main thread's TLS and `pthread_create` the worker's (validated: a worker
+that writes the chain does not touch main's). `kof_spawn_trampoline` installs a
+per-worker handler frame and, on `throw` with no inner handler, publishes the
+cause on the handle (`handle->exc` at 40) instead of unwinding into main's
+stack; `kof_await`/`kof_await_timeout`/`kof_select_any` rethrow it on the
+consumer (JVM parity), and `kof_await` zeroes the joined TID so the implicit
+`kof_spawn_join_all` never double-joins (SIGSEGV with a recycled TCB). The
+handler frame keeps the handle at `32(%rsp)` because the worker may clobber the
+callee-saved `%r12`. `CompilerSupervisor` now emits `OTP001` only for
+riscv/aarch (raw `clone`, no TLS + `selectAny`/CONC001). Proof:
+`KofConcurrency2Test.spawnWorkerThrow*Native` (4), `KofSupervisorE2ETest`
+`supervisorNativeParityX86`/`supervisorNativeS2ParityX86` + `crossGateOtp001`;
+`KofSupervisorE2ETest` 15/15, `KofConcurrency2Test` 40/0, `ExceptionsE2ETest`
+11/0, `NativeE2ETest` 65/0.
+
 ### 3. `roundTo` — **implement, rational (inspired by Java + C)**
 Approved for implementation (the 13/09 `pow` ratification had left it open).
 Rational design, Java+C-inspired:
