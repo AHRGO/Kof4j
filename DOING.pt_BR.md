@@ -101,6 +101,8 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **TRIAGEM DA ONDA #259–#263 (15/09 ~03:00, tip `5e996312`, jar fresco + launcher por reflexão):** **#259 REPRODUZ** = §241 face 1 (`Int?` retorno → `VerifyError @ istore_1`); **#260/#262/#263 NÃO reproduzem** (já corrigidas — família ctor #222/#242 + boxing em campo `T` #243/#220 `cd010bf1`); **#261 REPRODUZ e é NOVO → catalogado §243** (classe do usuário com nome de builtin `List`/`String`/`Set`/`Map` é ignorada, alias builtin vence; resolução de nomes/regra 6, precisa veredito). Evidência postada nas 5 issues.
+>
 > **✅ FEITO (15/09, dono = 192.168.100.15, lane bugs-and-gaps): §240 CORRIGIDA na causa raiz — a regressão de 39 fails do `8935c8a7` (separa builtin Kof × interop JDK).**
 > - **Sintoma/prova (Q0):** `ExternalClasspath.knows()` ganhou `|| JdkReflectionResolver.isJdkClass(internalName)` → todo tipo `java/*` virou "externo conhecido"; `MemberCallTyper`/`SemanticAnalyzer.isExternal` passaram a tomar o caminho de reflexão do JDK para `String`/exceções, contornando o registro de builtins: `'"abc".indexOf('c')'` → SEM025 (em vez de SEM051), `throw RuntimeException` → SEM026, `"ab".repeat(3)` ACEITO. 53 fails medidos no tip limpo (`ada6acf1`).
 > - **Fix (Q0, causa raiz):** novo `CompilerTypes.isKofBuiltinJavaLang(internalName)` (cache) = true para `java/lang/String` e todo subtipo de `Throwable` (`RuntimeException`, `java/io/IOException`, …). `knows()` = entries reais **OU** (classe JDK **E NÃO** builtin Kof) — a separação que o próprio registro §240 pedia. O interop de `StringBuilder`/`String.join` segue resolvido por reflexão em `resolveMethodWithArgs` (não passa por `knows()`).
