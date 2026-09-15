@@ -1,6 +1,7 @@
 package dev.kof.compiler;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Resolução de tipos do lado do driver (toType/qualifyViaImports/
@@ -76,6 +77,35 @@ public final class CompilerTypes {
             return new Type.ClassType("java.lang", ct.name(), List.of());
         }
         return t;
+    }
+
+    /**
+     * §240: tipos do JDK que o Kof trata como BUILTIN (não como classe externa
+     * de interop): `String` (a exceção de Kof é String) e QUALQUER throwable
+     * (`java.lang.*`, `java.io.IOException`, ...). O
+     * {@code ExternalClasspath.knows()} passou a devolver true para TODO
+     * `java/*` (para o interop de `StringBuilder`/`String.join`), mas isso
+     * fazia {@code SemanticAnalyzer.isExternal} classificar `String` e as
+     * exceções como externas, contornando o registro de builtins do Kof
+     * (39 reds de suíte: `indexOf`→SEM025, `throw RuntimeException`→SEM026).
+     * A separação: externo = JDK MENOS estes; builtin = estes.
+     */
+    private static final Map<String, Boolean> KOF_BUILTIN_JDK_CACHE =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    static boolean isKofBuiltinJavaLang(String internalName) {
+        if (internalName == null) return false;
+        if ("java/lang/String".equals(internalName)) return true;
+        return KOF_BUILTIN_JDK_CACHE.computeIfAbsent(internalName, n -> {
+            if (!(n.startsWith("java/") || n.startsWith("javax/") || n.startsWith("jdk/"))) {
+                return false;
+            }
+            try {
+                return Throwable.class.isAssignableFrom(Class.forName(n.replace('/', '.')));
+            } catch (Throwable t) {
+                return false;
+            }
+        });
     }
 
     /**
