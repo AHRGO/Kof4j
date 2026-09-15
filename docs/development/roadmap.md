@@ -899,9 +899,10 @@ domain (`INFRA00x`/`DATA00x`/`SCI00x`/`BIO00x`/`SECPQ`) + parity matrix;
 
 `kof inspect/decompile/translate/compare/migrate` in the CLI (`Main.java`);
 Legacy Semantic IR with Confidence Model (5 levels) + "never invent". Proof
-measured 13/09 at HEAD: **Decompile 57, Translate 33, Compare 6, Migrate 3**
-(Translate has 1 red cell — `qualifiedLocalTypeTranslates`, WIP from the
-`.22` lane, unrelated to this plan). Method body recovery still partial
+measured 15/09 at HEAD (`7b0bfbe0`, fresh classes): **Decompile 67 + PostDom 6,
+Translate 61, Compare 7, Migrate 3** — all green (the 13/09 numbers 57/33/6/3
+were stale; the former "1 red cell" `qualifiedLocalTypeTranslates` is GREEN
+since the `.22` lane closed it). Method body recovery still partial
 (structural joins = Phase C, the biggest measured bottleneck: 2452 methods). The
 detailed technical history lives in `LEGACY_MIGRATION.md` + `DECOMPILER.md`
 (§7) — **do not duplicate here**; this table only gives the order.
