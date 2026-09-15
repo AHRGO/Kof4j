@@ -6766,8 +6766,9 @@ to the label) is the correct predicate and **was already used** in `parseStateme
 - **Pointer (compiler lane):** desugaring of `class X(params)` WITH an
   explicit body — field resolution order between ctor-param scope and
   body-scope fields; `ClassTyper`/field-table registration.
-- **Status:** reproduces on `1c13d982`. Not a contract change (the form is
-  in `learn/`/`training/` as supported); pure compiler bug.
+- **Status:** ✅ FIXED 14/09 (`6f7f55bc`, "register and lower fields declared
+  in constructor-param classes"); repro re-verified green on the tip 15/09
+  (`class Box(Int w, Int h) { Int area = w * h }` → `getArea()` prints `12`).
 
 ### §207 ✅ FIXED 14/09 — `class Circle(Double r) extends Shape` → PARSE007 after the closing paren (issue #217)
 
@@ -6930,7 +6931,9 @@ to the label) is the correct predicate and **was already used** in `parseStateme
   getfield vs accessor-call vs method-reflection; likely
   `MemberCallTyper`/`FieldAccessExpr` path or `CompilerClassLowering`
   property resolution preferring `methods()` over `fields()` on collision.
-- **Status:** reproduces on `4e0957ee` (case-exato of the issue).
+- **Status:** ✅ FIXED 14/09 (`79ab6e0e`, "resolve field access to field when
+  method has same name (#219)"); repro re-verified green on the tip 15/09
+  (`b.size` prints `7`, `b.size()` prints `99`).
 - **Triage note (same session, #220/#221/#222 → GREEN with javap proof):**
   #220 (box generic field) `Integer.valueOf` before `putfield` = correct;
   #221 (non-constant static) runs `100|8|foobar|100` — closes §186
@@ -6997,7 +7000,8 @@ to the label) is the correct predicate and **was already used** in `parseStateme
   read (cf. §189's `toGenericSignature` unwrap of `NullableType` — the
   function-type case is the sibling hole). The inline-call path must ALSO
   guard: an un-resolved callee must diagnostic, never emit `""` as owner.
-- **Status:** reproduces on `7ba7e48d` (1st face) and `1f4ca5c9` (2nd).
+- **Status:** ✅ FIXED (issues #193/#236 closed 14/09); repro re-verified green
+  on the tip 15/09 (`new List<() -> Int>().get(0)` → `f()` prints `42`).
 
 ### §215 — guarded type-binding pattern (`case String s if cond -> s`) omits the store of the bound variable → `VerifyError: Bad local variable type` at arm entry (issue #199) — ✅ FIXED 15/09 (issue #199 closed; repro re-verified green on the tip 15/09)
 
@@ -7026,7 +7030,9 @@ to the label) is the correct predicate and **was already used** in `parseStateme
   `SwitchExprLowerer`/`KofInterpreterMembers` guard path missing the
   binding emit that the non-guarded path does; sibling of §199 (record
   destructuring slots, which WAS fixed by `1bef9281`).
-- **Status:** reproduces on `7ba7e48d`.
+- **Status:** ✅ FIXED 14/09 (`1f56ee3a`, "#199 — switch-EXPR com padrão
+  guardado omitia o store da var bound (VerifyError)"; issue #199 closed);
+  repro re-verified green on the tip 15/09 (prints `hello`).
 
 ### §216 — `Char` is boxed as `Integer`: `println(c)` / `c.toString()` show the code point (`65`) not the character (`A`) (issues #168 + #153, one root)
 

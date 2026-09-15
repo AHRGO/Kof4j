@@ -6752,8 +6752,9 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
 - **Pointer (lane compiler):** desugar de `class X(params)` COM corpo
   explícito — ordem de resolução entre o escopo dos parâmetros do ctor e os
   campos do corpo; registro da tabela de campos no `ClassTyper`.
-- **Estado:** reproduz no `1c13d982`. Não é mudança de contrato (a forma
-  está em `learn/`/`training/` como suportada); bug puro do compiler.
+- **Estado:** ✅ CORRIGIDO 14/09 (`6f7f55bc`, "register and lower fields
+  declared in constructor-param classes"); repro re-verificado verde no tip
+  15/09 (`class Box(Int w, Int h) { Int area = w * h }` → `getArea()` imprime `12`).
 
 ### §207 ✅ CORRIGIDO 14/09 — `class Circle(Double r) extends Shape` → PARSE007 depois do parêntese de fechamento (issue #217)
 
@@ -6911,7 +6912,9 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   getfield vs chamada-de-acessor vs method-reflection; provavelmente o caminho
   `MemberCallTyper`/`FieldAccessExpr` ou a resolução de propriedade em
   `CompilerClassLowering` preferindo `methods()` a `fields()` na colisão.
-- **Estado:** reproduz no `4e0957ee` (caso exato da issue).
+- **Estado:** ✅ CORRIGIDO 14/09 (`79ab6e0e`, "resolve field access to field
+  when method has same name (#219)"); repro re-verificado verde no tip 15/09
+  (`b.size` imprime `7`, `b.size()` imprime `99`).
 - **Nota de triagem (mesma sessão, #220/#221/#222 → GREEN com prova javap):**
   #220 (box de campo genérico) `Integer.valueOf` antes do `putfield` = correto;
   #221 (static não-constante) roda `100|8|foobar|100` — fecha a face residual
@@ -6980,7 +6983,8 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   desembrulha `NullableType` — o caso de função-argumento é o buraco irmão).
   O caminho de chamada inline precisa ALSO guardar: um callee não-resolvido
   deve diagnosticar, nunca emitir `""` como owner.
-- **Estado:** reproduz no `7ba7e48d` (1ª face) e no `1f4ca5c9` (2ª).
+- **Estado:** ✅ CORRIGIDO (issues #193/#236 fechadas 14/09); repro re-verificado
+  verde no tip 15/09 (`new List<() -> Int>().get(0)` → `f()` imprime `42`).
 
 ### §215 — padrão de vinculação com guarda (`case String s if cond -> s`) omite o store da variável vinculada → `VerifyError: Bad local variable type` na entrada do ramo (issue #199) — ✅ CORRIGIDO 15/09 (issue #199 fechada; repro re-verificado verde no tip 15/09)
 
@@ -7009,7 +7013,9 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   guarda — `SwitchExprLowerer`/`KofInterpreterMembers` no caminho da guarda
   sem o emit de vinculação que o caminho sem guarda faz; irmão do §199
   (slots de destructuring de record, que FOI consertado por `1bef9281`).
-- **Estado:** reproduz no `7ba7e48d`.
+- **Estado:** ✅ CORRIGIDO 14/09 (`1f56ee3a`, "#199 — switch-EXPR com padrão
+  guardado omitia o store da var bound (VerifyError)"; issue #199 fechada);
+  repro re-verificado verde no tip 15/09 (imprime `hello`).
 
 ### §216 — `Char` é boxado como `Integer`: `println(c)` / `c.toString()` mostram o code point (`65`) em vez do caractere (`A`) (issues #168 + #153, uma raiz)
 
