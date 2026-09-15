@@ -33,8 +33,8 @@
 > é diagnosticado com código de gap em compilação, não silenciosamente.
 > **Gap real `NATIVE002` que sobra:** (1) GC mark-sweep cross (riscv é
 > bump-pointer sem coletor — vazamento em heap longo, não-crash) —
-> **G-0 bloco-header + G-1 free-list/memstats FEITOS 15/09** (ver a
-> decomposição abaixo); G-2..G-5 pendentes, o coletor (G-4) é quem
+> **G-0 bloco-header + G-1 free-list/memstats + G-2 gc-list/dump FEITOS 15/09**
+> (ver a decomposição abaixo); G-3..G-5 pendentes, o coletor (G-4) é quem
 > de fato recupera; (2) as
 > recusas DB001/SECN000/CONC001/JSN004 acima; (3) FP-coleção no cross
 > (FLT001 em compilação §107); (4) `backend-parity.md` colunas por-arch
@@ -104,9 +104,19 @@
 > G-4** (eles precisam liberar objetos mortos, que só o coletor identifica),
 > NÃO do G-1. Isso também significa que o vazamento do `.bss` de ~260KB é
 > fechado pelo G-4, não pelo G-1.
-> **G-2 header flags/mark bits + lista GC** — o bloco aloca com flag=0 e entra
-> na gc-list global (`kof_gc_head` riscv); prova: programa com N allocs e
-> `KOF_GC_DEBUG` dump da lista (syscalls write) com tamanho/flag corretos.
+> **G-2 header flags/mark bits + lista GC (FEITO 15/09, sessão dev):** cada
+> bloco RESERVADO do bump agora entra na gc-list global
+> (`.Lkof_gc_head`, LIFO, `gc_next`@16, flags=0) na mesma fatia
+> `NativeRiscvAsmRtB42`; um free+realloc NÃO re-entra (o bloco nunca saiu da
+> lista). Novo `kof_gc_dump` imprime uma linha `gc <size> <flags>` por bloco —
+> o "dump `KOF_GC_DEBUG`" do plano (asm puro não tem gatilho por env, então a
+> alavanca é uma chamada explícita; honesto e testável). Prova (qemu riscv64
+> **e** aarch64, nunca skip): `NativeRiscvGcListTest` 4/4 — alloc(16/32/64) ⇒
+> dump `gc 96 0`/`gc 64 0`/`gc 48 0` (total = align16+32, LIFO); free+realloc ⇒
+> um único `gc 96 0`; sabotagem (remover o link) = 4/4 vermelho com saída
+> vazia. Slice-registry 8/8 (concat ainda byte-idêntica), cross riscv 44 +
+> aarch 44 (só o `CastSaturation` pré-existente vermelho), `ArtifactSizeTest`
+> 6/6, `KofGcE2ETest` 3/3 x86 intocado, `check_500` OK.
 > **G-3 mark conservative riscv** — port de `kof_gc_mark`: walk `sp..fp`
 > (riscv: `sp` até o limite do frame, fallback 4KB como o x86) + scan de
 > raízes estáticas EXPLÍCITO no intervalo `.data..kof_heap_root_end`

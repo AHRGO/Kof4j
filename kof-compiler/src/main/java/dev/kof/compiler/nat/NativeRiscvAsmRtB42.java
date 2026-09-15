@@ -1,11 +1,13 @@
 package dev.kof.compiler.nat;
 
-// G-1 (NATIVE002 face 1, 15/09): memória riscv64 — kof_alloc com free-list
+// G-1/G-2 (NATIVE002 face 1, 15/09): memória riscv64 — kof_alloc com free-list
 // (port do RuntimeMemory.emitAlloc/emitFree do x86 sobre o header de bloco de
-// 32B do G-0) + kof_free + kof_memstats (contadores + print — a alavanca de
-// observação dos passos seguintes do GC cross). kof_alloc SAIU de Rt0 (que
-// ficou ≤500) e vive aqui com o lock da free-list e os contadores. aarch64
-// herda linha-a-linha no tradutor (amoswap.w→swpal, amoadd.d→ldadd).
+// 32B do G-0) + kof_free + kof_memstats (contadores + print) + G-2: cada bloco
+// novo entra na gc-list global (`.Lkof_gc_head`, LIFO, flags=0) e kof_gc_dump
+// despeja a lista (`gc <size> <flags>` por linha — a alavanca de observação do
+// G-2/G-3). kof_alloc SAIU de Rt0 (que ficou ≤500) e vive aqui com o lock da
+// free-list e os contadores. aarch64 herda linha-a-linha no tradutor
+// (amoswap.w→swpal, amoadd.d→ldadd).
 //
 // ⚠️ Correção doc-vs-realidade (15/09): o plano do G-1 dizia "wire free into
 // the log nodes (RtB0, mirroring RuntimeLog2:98)" — MEDIDO: o nó de log riscv
@@ -23,6 +25,7 @@ public final class NativeRiscvAsmRtB42 {
             .Lkof_alloc_lock: .word 0
             .align 3
             .Lkof_free_head: .quad 0
+            .Lkof_gc_head: .quad 0
             .Lkof_alloc_count: .quad 0
             .Lkof_free_count: .quad 0
             .Lkof_alloc_bytes: .quad 0
@@ -95,8 +98,12 @@ public final class NativeRiscvAsmRtB42 {
             .Lkof_alloc_bok:
                 sd   s0, 0(t0)           # size total
                 sd   zero, 8(t0)         # free_next = 0
-                sd   zero, 16(t0)        # gc_next = 0
-                sd   zero, 24(t0)        # flags = 0
+                # G-2: entra na gc-list global (LIFO) com flags=0.
+                la   t2, .Lkof_gc_head
+                ld   t3, 0(t2)
+                sd   t3, 16(t0)          # gc_next = cabeca antiga
+                sd   t0, 0(t2)           # head = bloco novo
+                sd   zero, 24(t0)        # flags = 0 (bit0 mark, bit1 free-list)
                 la   t4, .Lkof_alloc_count
                 ld   t2, 0(t4)
                 addi t2, t2, 1
@@ -187,6 +194,73 @@ public final class NativeRiscvAsmRtB42 {
                 addi sp, sp, 32
                 ret
 
+            # kof_gc_dump() — G-2 (NATIVE002 face 1): despeja a gc-list na
+            # saída padrão, uma linha por bloco: `gc <size_total> <flags>`.
+            # É a alavanca de observação do G-2 (listagem) e do G-3 (mark bit
+            # aparece no <flags>). NÃO aloca (usa .Lgc_put_uint em buffer de
+            # pilha), então não perturba a lista que percorre. O plano chama
+            # isto de "KOF_GC_DEBUG dump" — no asm riscv puro o gatilho é a
+            # chamada explícita (não há env-var), honesto e testável.
+            .globl kof_gc_dump
+            kof_gc_dump:
+                addi sp, sp, -32
+                sd   ra, 24(sp)
+                sd   s0, 16(sp)
+                sd   s1, 8(sp)
+                la   s0, .Lkof_gc_head
+                ld   s1, 0(s0)
+            .Lgcd_loop:
+                beqz s1, .Lgcd_done
+                la   a0, .Lms_lbl_gc
+                call .Lms_puts
+                ld   a0, 0(s1)
+                call .Lgc_put_uint
+                la   a0, .Lms_sp
+                call .Lms_puts
+                ld   a0, 24(s1)
+                call .Lgc_put_uint
+                la   a0, .Lms_nl
+                call .Lms_puts
+                ld   s1, 16(s1)          # gc_next
+                j    .Lgcd_loop
+            .Lgcd_done:
+                ld   s1, 8(sp)
+                ld   s0, 16(sp)
+                ld   ra, 24(sp)
+                addi sp, sp, 32
+                ret
+
+            # helper local: a0 = uint -> write(1, decimal). Buffer de 24B na
+            # pilha (sem alloc); clobbera t0..t3, a0/a1/a2.
+            .Lgc_put_uint:
+                addi sp, sp, -32
+                addi t0, sp, 31
+                sb   zero, 0(t0)
+                mv   t1, a0
+                li   t2, 10
+                beqz t1, .Lgpu_zero
+            .Lgpu_loop:
+                rem  t3, t1, t2
+                addi t3, t3, 48
+                addi t0, t0, -1
+                sb   t3, 0(t0)
+                div  t1, t1, t2
+                bnez t1, .Lgpu_loop
+                j    .Lgpu_write
+            .Lgpu_zero:
+                addi t0, t0, -1
+                li   t3, 48
+                sb   t3, 0(t0)
+            .Lgpu_write:
+                addi a2, sp, 31
+                sub  a2, a2, t0
+                mv   a1, t0
+                li   a0, 1
+                li   a7, 64
+                ecall
+                addi sp, sp, 32
+                ret
+
             # helper local: a0 = asciz -> write(1, ...). Não faz call; clobbera
             # t0..t3 e a0/a1/a2 (caller-saved).
             .Lms_puts:
@@ -210,6 +284,8 @@ public final class NativeRiscvAsmRtB42 {
             .Lms_lbl_alloc: .asciz "allocs: "
             .Lms_lbl_free: .asciz "frees: "
             .Lms_lbl_live: .asciz "live bytes: "
+            .Lms_lbl_gc: .asciz "gc "
+            .Lms_sp: .asciz " "
             .Lms_nl: .asciz "\\n"
 
             .section .text

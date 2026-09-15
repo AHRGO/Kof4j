@@ -33,8 +33,8 @@
 > is diagnosed with a gap code at compile time, not silently.
 > **Real remaining gap `NATIVE002`:** (1) cross GC mark-sweep (riscv is
 > bump-pointer without collector — leak on long heap, non-crash) —
-> **G-0 header-block + G-1 free-list/memstats DONE 15/09** (see the
-> decomposition below); G-2..G-5 pending, the collector (G-4) is what
+> **G-0 header-block + G-1 free-list/memstats + G-2 gc-list/dump DONE 15/09**
+> (see the decomposition below); G-3..G-5 pending, the collector (G-4) is what
 > actually reclaims; (2) the
 > DB001/SECN000/CONC001/JSN004 refusals above; (3) FP-collection on cross
 > (FLT001 at compile §107); (4) `backend-parity.md` per-arch columns
@@ -104,9 +104,19 @@
 > program. Wiring free into the 57 existing alloc sites is a **G-4 concern**
 > (they must free dead objects, which only the collector can identify), NOT
 > G-1. This also means the ~260KB `.bss` leak is closed by G-4, not G-1.
-> **G-2 header flags/mark bits + GC list** — the block allocates with flag=0 and enters
-> the global gc-list (`kof_gc_head` riscv); proof: program with N allocs and
-> `KOF_GC_DEBUG` dump of the list (write syscalls) with correct size/flag.
+> **G-2 header flags/mark bits + GC list (DONE 15/09, dev session):** every
+> block RESERVED from the bump now enters the global gc-list
+> (`.Lkof_gc_head`, LIFO, `gc_next`@16, flags=0) inside the same slice
+> `NativeRiscvAsmRtB42`; a free+realloc does NOT re-enter (the block never left
+> the list). New `kof_gc_dump` prints one `gc <size> <flags>` line per block —
+> the plan's "`KOF_GC_DEBUG` dump" (pure asm has no env trigger, so the lever is
+> an explicit call; honest and testable). Proof (qemu riscv64 **and** aarch64,
+> never skip): `NativeRiscvGcListTest` 4/4 — alloc(16/32/64) ⇒ dump
+> `gc 96 0`/`gc 64 0`/`gc 48 0` (total = align16+32, LIFO); free+realloc ⇒ a
+> single `gc 96 0`; sabotage (drop the link) = 4/4 red with empty output.
+> Slice-registry 8/8 (concat still byte-identical), cross riscv 44 + aarch 44
+> (only the pre-existing `CastSaturation` red), `ArtifactSizeTest` 6/6,
+> `KofGcE2ETest` 3/3 x86 untouched, `check_500` OK.
 > **G-3 conservative mark riscv** — port of `kof_gc_mark`: walk `sp..fp`
 > (riscv: `sp` up to the frame limit, 4KB fallback like x86) + scan of
 > static roots EXPLICIT in the `.data..kof_heap_root_end` interval
