@@ -23,14 +23,11 @@ public final class CompilerClassLowering {
             }
         }
         if (superName == null) {
-            String rawSuper = cls.superClass();
-            if (rawSuper != null && rawSuper.contains("<")) {
-                rawSuper = rawSuper.substring(0, rawSuper.indexOf('<')).trim();
-            }
+            String rawSuper = eraseTypeArgs(cls.superClass());
             superName = rawSuper != null ? driver.toInternalName("", rawSuper)
                     : "java/lang/Object";
         }
-        List<String> ifaces = cls.interfaces().stream().map(n -> CompilerAnnotations.externalOrLocalInternalName(driver, n)).toList();
+        List<String> ifaces = cls.interfaces().stream().map(n -> CompilerAnnotations.externalOrLocalInternalName(driver, eraseTypeArgs(n))).toList();
         int access = driver.computeAccess(cls.modifiers());
         List<IRField> fields = new ArrayList<>();
         List<IRMethod> methods = new ArrayList<>();
@@ -96,7 +93,7 @@ public final class CompilerClassLowering {
     static IRClass lowerInterface(CompilerDriver driver, InterfaceDeclarationNode iface,
                             String packageName, int typeId) {
         String internalName = driver.toInternalName(packageName, iface.name());
-        List<String> ifaces = iface.interfaces().stream().map(n -> CompilerAnnotations.externalOrLocalInternalName(driver, n)).toList();
+        List<String> ifaces = iface.interfaces().stream().map(n -> CompilerAnnotations.externalOrLocalInternalName(driver, eraseTypeArgs(n))).toList();
         int access = driver.computeAccess(iface.modifiers()) | AccessFlags.ABSTRACT | AccessFlags.INTERFACE;
         List<IRMethod> methods = new ArrayList<>();
         List<IRField> fields = new ArrayList<>();
@@ -116,8 +113,8 @@ public final class CompilerClassLowering {
     static IRClass lowerRecord(CompilerDriver driver, RecordDeclarationNode rec,
                        String packageName, int typeId) {
         String internalName = driver.toInternalName(packageName, rec.name());
-        String superName = rec.superClass() != null ? driver.toInternalName("", rec.superClass()) : "java/lang/Record";
-        List<String> ifaces = rec.interfaces().stream().map(n -> CompilerAnnotations.externalOrLocalInternalName(driver, n)).toList();
+        String superName = rec.superClass() != null ? driver.toInternalName("", eraseTypeArgs(rec.superClass())) : "java/lang/Record";
+        List<String> ifaces = rec.interfaces().stream().map(n -> CompilerAnnotations.externalOrLocalInternalName(driver, eraseTypeArgs(n))).toList();
         int access = driver.computeAccess(rec.modifiers()) | AccessFlags.FINAL | AccessFlags.PUBLIC;
         List<IRField> fields = new ArrayList<>();
         List<IRMethod> methods = new ArrayList<>();
@@ -584,6 +581,19 @@ public final class CompilerClassLowering {
             }
             ops.add(new KofStoreField(ownerType, field.name(), field.type()));
         }
+    }
+
+
+    /**
+     * #160: `Mapper<String>` → `Mapper` — o superinterface/super-classe no
+     * class file é o nome APAGADO (JVMS: signature é atributo à parte); o
+     * parser preserva os type-args no type-ref (lição §155), e o emit de
+     * interfaces não apagava → `NoClassDefFoundError: Mapper<String>`.
+     */
+    static String eraseTypeArgs(String typeName) {
+        if (typeName == null) return null;
+        int lt = typeName.indexOf('<');
+        return lt < 0 ? typeName : typeName.substring(0, lt).trim();
     }
 
 }
