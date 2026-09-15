@@ -44,7 +44,7 @@ public final class KofOrm {
     }
 
     /** JVM: JDBC via kof.db. Native (SQLite) e JS reportam ORM001. */
-    static boolean supportedOn(Target target) {
+    static boolean supportedOn(@SuppressWarnings("unused") Target target) {
         return target == Target.JVM;
     }
 

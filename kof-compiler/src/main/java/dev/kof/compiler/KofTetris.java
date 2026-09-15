@@ -39,7 +39,7 @@ public final class KofTetris {
     }
 
     /** Only the JVM target can render an interactive terminal session. */
-    static boolean supportedOn(Target target) {
+    static boolean supportedOn(@SuppressWarnings("unused") Target target) {
         return target == Target.JVM;
     }
 

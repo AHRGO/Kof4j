@@ -119,7 +119,7 @@ public final class KofMath {
      * o link cross é estático sem libc (invariante "asm puro" da lane nat;
      * ligar libm = decisão de arquitetura, regra 6). Recusa com código
      * MATH001 (R6), nunca undefined-reference silencioso. */
-    static boolean supportedOn(String function, Target target) {
+    static boolean supportedOn(@SuppressWarnings("unused") String function, @SuppressWarnings("unused") Target target) {
         if ("kof_math_pow".equals(function)) {
             return target != Target.NATIVE_RISCV64 && target != Target.NATIVE_AARCH64;
         }

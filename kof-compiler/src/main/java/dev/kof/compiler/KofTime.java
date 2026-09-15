@@ -61,11 +61,11 @@ public final class KofTime {
     /** kof.time: now/sleep em todos targets; interval/cancel em JVM+Native
      *  (reaproveita o scheduler — SCHED001) + JS (fila cooperativa bombeada
      *  por time.sleep — GraalJS não expõe setInterval; TIME001 fechado). */
-    static boolean supportedOn(Target target) {
+    static boolean supportedOn(@SuppressWarnings("unused") Target target) {
         return true;
     }
 
-    static boolean supportedOn(String method, Target target) {
+    static boolean supportedOn(@SuppressWarnings("unused") String method, @SuppressWarnings("unused") Target target) {
         // TIME001 FEITO no cross (05/09): kof_time_interval/cancel são alias
         // de kof_scheduler_every/cancel no runtime riscv64/aarch64 (thread por
         // job via clone+nanosleep — mesmo mecanismo do spawn).

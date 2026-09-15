@@ -18,7 +18,7 @@ public final class KofCache {
         };
     }
     record CacheCall(String function, Type returnType, List<Type> parameterTypes) {}
-    static boolean supportedOn(Target target) { return true; }
+    static boolean supportedOn(@SuppressWarnings("unused") Target target) { return true; }
     static CacheCall staticCall(String name, List<Type> argTypes) {
         return switch (name) {
             case "get" -> argTypes.size() == 1 ? new CacheCall("kof_cache_get", STR, List.of(STR)) : null;

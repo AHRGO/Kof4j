@@ -61,7 +61,7 @@ public final class KofStd {
         return null;
     }
 
-    static boolean supportedOn(StdCall call, Target target) {
+    static boolean supportedOn(@SuppressWarnings("unused") StdCall call, @SuppressWarnings("unused") Target target) {
         if ("kof.math".equals(call.ownerPackage())) return KofMath.supportedOn(call.function(), target);
         if ("kof.strings".equals(call.ownerPackage())) return KofStrings.supportedOn(call.function(), target);
         if ("kof.encoding".equals(call.ownerPackage())) return KofEncoding.supportedOn(call.function(), target);

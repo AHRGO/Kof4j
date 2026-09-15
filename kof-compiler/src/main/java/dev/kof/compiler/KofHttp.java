@@ -50,7 +50,7 @@ public final class KofHttp {
     /** kof.http: JVM + JS (JS via Java HttpClient interop / fetch),
      *  Native via HTTP/1.1 puro em asm (HTTP002 parcial — http somente,
      *  https em TLS gap; DNS host≠IPv4 cai em 127.0.0.1). */
-    static boolean supportedOn(Target target) {
+    static boolean supportedOn(@SuppressWarnings("unused") Target target) {
         return true;
     }
 
