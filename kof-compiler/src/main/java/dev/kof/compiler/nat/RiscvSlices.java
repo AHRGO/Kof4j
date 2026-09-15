@@ -82,9 +82,18 @@ public final class RiscvSlices {
     }
 
     /** O runtime riscv NÃO referencia rótulos `.L` do programa (medido 12/09:
-     *  órfãos = ∅). Mantido p/ simetria com o modelo x86. */
+     *  órfãos = ∅). Mantido p/ simetria com o modelo x86.
+     *
+     *  <p>G-3 (15/09): o mark conservador passou a varrer as raízes estáticas
+     *  emitidas pelo NativeArchEmitter no .data do programa — os rótulos
+     *  LOCAIS `.Lkof_heap_root_start`/`.Lkof_heap_root_end` (espelho riscv do
+     *  `kof_heap_root_start` x86, mas `.L` p/ não inchar o .symtab — a lição
+     *  do G-1 no ArtifactSizeTest). Eles são program-side: o emitter define-os
+     *  e o runtime apenas os lê (a BFS de poda do keepForProgramText não pode
+     *  podar a peça-dona nem marcar labels como órfãos que já existem no asm
+     *  do programa). */
     public static Set<String> programSideLocals() {
-        return Set.of();
+        return Set.of(".Lkof_heap_root_start", ".Lkof_heap_root_end");
     }
 
     private static volatile List<Piece> cached;

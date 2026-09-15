@@ -13,17 +13,18 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * G-2 (NATIVE002 face 1): gc-list + flags riscv64 provados por harness asm.
- * O G-1 ligou kof_alloc na free list; o G-2 liga cada bloco NOVO na gc-list
- * global (`.Lkof_gc_head`, LIFO) com flags=0, e expõe `kof_gc_dump` (o "dump
- * KOF_GC_DEBUG" do plano — no asm puro o gatilho é a chamada explícita).
+ * G-3 (NATIVE002 face 1): mark CONSERVATIVO riscv64 provado por harness asm.
+ * O G-2 listou os blocos; o G-3 seta o bit0 (mark) nos alcançáveis por (a)
+ * raiz estática em .data, (b) raiz de PILHA, (c) fecho TRANSITIVO por campo —
+ * e deixa o inalcançável com flags=0. Sem sweep (G-4), o bit é observado pelo
+ * `kof_gc_dump` do G-2 ANTES/DEPOIS do mark.
  *
  * <p>Prova (qemu riscv64 + aarch64, toolchain presente, NUNCA skip): monta o
  * runtime de PRODUÇÃO ({@link RiscvSlices#renderRuntime()}) com um `_start`
- * que aloca N blocos e chama `kof_gc_dump`; a saída lista cada bloco com o
- * tamanho TOTAL (align16(size)+32, header G-0) e os flags, na ordem LIFO.
+ * que aloca A(estático)→B(pilha)→C(inalcançável)→D(via campo de A), chama
+ * `kof_gc_mark` e despeja a gc-list (LIFO): D=1, C=0, B=1, A=1.
  */
-class NativeRiscvGcListTest {
+class NativeRiscvGcMarkTest {
 
     private static boolean has(String... cmds) {
         for (String c : cmds) {
@@ -41,61 +42,51 @@ class NativeRiscvGcListTest {
 
     private void assumeToolchain() {
         Assumptions.assumeTrue(has("riscv64-linux-gnu-as", "riscv64-linux-gnu-ld", "qemu-riscv64"),
-                "cross toolchain riscv64 + qemu ausente — pulando (NATIVE002 G-2)");
+                "cross toolchain riscv64 + qemu ausente — pulando (NATIVE002 G-3)");
     }
 
     private void assumeAarch64() {
         Assumptions.assumeTrue(has("aarch64-linux-gnu-as", "aarch64-linux-gnu-ld", "qemu-aarch64"),
-                "cross toolchain aarch64 + qemu ausente — pulando (NATIVE002 G-2)");
+                "cross toolchain aarch64 + qemu ausente — pulando (NATIVE002 G-3)");
     }
 
-    /** _start cru: 3 allocs de tamanhos distintos + dump da gc-list. */
-    private static final String HARNESS_ALLOCS = """
+    // _start cru. O intervalo de raízes estáticas é definido AQUI com os mesmos
+    // rótulos locais que o NativeArchEmitter emite no .data do programa (o
+    // harness não passa pelo emitter; o contrato é o nome `.Lkof_heap_root_*`).
+    private static final String HARNESS = """
             .option arch, rv64g
             .section .data
             .align 3
             .Lkof_heap_root_start:
+                .quad 0
+            .Lroot_a:
                 .quad 0
             .Lkof_heap_root_end:
             .section .text
             .globl _start
             _start:
                 andi sp, sp, -16
-                li   a0, 16
-                call kof_alloc
-                li   a0, 32
-                call kof_alloc
+                # A: só por raiz estática
                 li   a0, 64
                 call kof_alloc
-                call kof_gc_dump
-                li   a0, 0
-                li   a7, 93
-                ecall
-            .globl kof_super_table
-            kof_super_table:
-                .word 0
-            """;
-
-    /** _start: alloc(64) -> free -> alloc(64): a reutilização NÃO duplica a
-     *  entrada na gc-list (o bloco já estava nela) e os flags voltam a 0. */
-    private static final String HARNESS_REUSE = """
-            .option arch, rv64g
-            .section .data
-            .align 3
-            .Lkof_heap_root_start:
-                .quad 0
-            .Lkof_heap_root_end:
-            .section .text
-            .globl _start
-            _start:
-                andi sp, sp, -16
+                la   t0, .Lroot_a
+                sd   a0, 0(t0)
+                # B: só na pilha
                 li   a0, 64
                 call kof_alloc
-                mv   s0, a0
-                mv   a0, s0
-                call kof_free
+                sd   a0, 0(sp)
+                # C: inalcançável (nenhum ponteiro guardado)
                 li   a0, 64
                 call kof_alloc
+                # D: alcançável só transitivamente, via campo 0 de A
+                li   a0, 64
+                call kof_alloc
+                mv   t1, a0
+                la   t0, .Lroot_a
+                ld   t2, 0(t0)           # payload de A
+                sd   t1, 32(t2)          # A.campo0 = D
+                # marca e despeja
+                call kof_gc_mark
                 call kof_gc_dump
                 li   a0, 0
                 li   a7, 93
@@ -120,9 +111,9 @@ class NativeRiscvGcListTest {
         return out;
     }
 
-    private String buildRiscv(Path tempDir, String harness, String name) throws IOException {
+    private String buildRiscv(Path tempDir, String name) throws IOException {
         Path asm = tempDir.resolve(name + ".s");
-        Files.writeString(asm, harness + "\n" + RiscvSlices.renderRuntime());
+        Files.writeString(asm, HARNESS + "\n" + RiscvSlices.renderRuntime());
         Path obj = tempDir.resolve(name + ".o");
         Path bin = tempDir.resolve(name);
         runCapture("riscv64-linux-gnu-as", "-mno-relax", "-o", obj.toString(), asm.toString());
@@ -131,8 +122,8 @@ class NativeRiscvGcListTest {
         return runCapture("qemu-riscv64", bin.toString());
     }
 
-    private String buildAarch64(Path tempDir, String harness, String name) throws IOException {
-        String riscv = harness + "\n" + RiscvSlices.renderRuntime();
+    private String buildAarch64(Path tempDir, String name) throws IOException {
+        String riscv = HARNESS + "\n" + RiscvSlices.renderRuntime();
         StringBuilder arm = new StringBuilder();
         for (String line : riscv.split("\n", -1)) {
             List<String> tr = NativeAarch64Translator.translateRiscvToAarch64(line);
@@ -148,38 +139,21 @@ class NativeRiscvGcListTest {
         return runCapture("qemu-aarch64", bin.toString());
     }
 
-    private void assertList(String out) {
-        // LIFO: 64->96, 32->64, 16->48 (total = align16(size)+32)
-        assertEquals("gc 96 0\ngc 64 0\ngc 48 0", out,
-                "gc-list deveria listar 96/64/48 com flags 0 (LIFO); saída: " + out);
-    }
-
-    private void assertReuse(String out) {
-        assertEquals("gc 96 0", out,
-                "free+realloc NÃO deve duplicar a entrada na gc-list; saída: " + out);
+    private void assertMark(String out) {
+        // LIFO: D(1), C(0), B(1), A(1) — todos 96B (align16(64)+32).
+        assertEquals("gc 96 1\ngc 96 0\ngc 96 1\ngc 96 1", out,
+                "mark deveria setar bit0 em D/B/A e deixar C=0; saída: " + out);
     }
 
     @Test
-    void gcListLinksNewBlocksWithFlags(@TempDir Path tempDir) throws IOException {
+    void conservativeMarkMarksReachable(@TempDir Path tempDir) throws IOException {
         assumeToolchain();
-        assertList(buildRiscv(tempDir, HARNESS_ALLOCS, "g2list"));
+        assertMark(buildRiscv(tempDir, "g3mark"));
     }
 
     @Test
-    void gcListReuseDoesNotDuplicate(@TempDir Path tempDir) throws IOException {
-        assumeToolchain();
-        assertReuse(buildRiscv(tempDir, HARNESS_REUSE, "g2reuse"));
-    }
-
-    @Test
-    void gcListLinksNewBlocksWithFlagsAarch64(@TempDir Path tempDir) throws IOException {
+    void conservativeMarkMarksReachableAarch64(@TempDir Path tempDir) throws IOException {
         assumeAarch64();
-        assertList(buildAarch64(tempDir, HARNESS_ALLOCS, "g2lista"));
-    }
-
-    @Test
-    void gcListReuseDoesNotDuplicateAarch64(@TempDir Path tempDir) throws IOException {
-        assumeAarch64();
-        assertReuse(buildAarch64(tempDir, HARNESS_REUSE, "g2reusea"));
+        assertMark(buildAarch64(tempDir, "g3marka"));
     }
 }

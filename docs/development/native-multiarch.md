@@ -33,9 +33,9 @@
 > is diagnosed with a gap code at compile time, not silently.
 > **Real remaining gap `NATIVE002`:** (1) cross GC mark-sweep (riscv is
 > bump-pointer without collector — leak on long heap, non-crash) —
-> **G-0 header-block + G-1 free-list/memstats + G-2 gc-list/dump DONE 15/09**
-> (see the decomposition below); G-3..G-5 pending, the collector (G-4) is what
-> actually reclaims; (2) the
+> **G-0 header-block + G-1 free-list/memstats + G-2 gc-list/dump + G-3
+> conservative mark DONE 15/09** (see the decomposition below); G-4..G-5
+> pending, the collector (G-4) is what actually reclaims; (2) the
 > DB001/SECN000/CONC001/JSN004 refusals above; (3) FP-collection on cross
 > (FLT001 at compile §107); (4) `backend-parity.md` per-arch columns
 > still to be separated; (5) cross CI does not exist (host-dependent toolchain) —
@@ -117,14 +117,26 @@
 > Slice-registry 8/8 (concat still byte-identical), cross riscv 44 + aarch 44
 > (only the pre-existing `CastSaturation` red), `ArtifactSizeTest` 6/6,
 > `KofGcE2ETest` 3/3 x86 untouched, `check_500` OK.
-> **G-3 conservative mark riscv** — port of `kof_gc_mark`: walk `sp..fp`
-> (riscv: `sp` up to the frame limit, 4KB fallback like x86) + scan of
-> static roots EXPLICIT in the `.data..kof_heap_root_end` interval
-> (the `kof_heap_root_end` of #97 S-5-x86 is a SHARED PREREQUISITE —
-> coordinate with the bugfix queue, do not duplicate the emitter); transitive = walk of the
-> fields by size (size/8). Proof: object reached only by the stack survives,
-> unreachable one disappears (test with `KOF_GC_DEBUG` before/after; WITHOUT sweep yet —
-> mark-only is observable, harmless).
+> **G-3 conservative mark riscv (DONE 15/09, dev session):** port of
+> `kof_gc_mark`/`kof_gc_try_mark`/`kof_gc_mark_transitive` in the new slice
+> `NativeRiscvAsmRtB43` over the G-0 32B header and the G-2 gc-list. Stack
+> roots = `sp..s11` (riscv fp; 4KB fallback like x86) with `s0-s11` spilled so
+> register-held pointers are visible; static roots = the interval between the
+> NEW riscv-only local labels `.Lkof_heap_root_start`/`.Lkof_heap_root_end`
+> emitted by `NativeArchEmitter` around the program `.data` (sentinel `.quad 0`
+> at the opening). **Correction to the plan:** the x86 `kof_heap_root_end`
+> (S-5 bugfix queue) was NOT needed — riscv now emits its own `.L`-local
+> markers (outside `.symtab`, the G-1 ArtifactSizeTest lesson) and the interval
+> DELIBERATELY excludes the bump arena (`_kof_heap`, in `.bss`), unlike x86
+> which scans to `_end` because there the heap is mmap'd. So G-3 advanced
+> WITHOUT the shared prerequisite; the labels are declared program-side in
+> `RiscvSlices.programSideLocals()`. Proof (qemu riscv64 **and** aarch64, never
+> skip): `NativeRiscvGcMarkTest` 2/2 — `_start` allocs A(static root)→B(stack)
+> →C(unreachable)→D(via field0 of A), calls `kof_gc_mark`, dumps: `gc 96 1`/
+> `gc 96 0`/`gc 96 1`/`gc 96 1` (D/A reachable, C not); sabotage (drop the
+> transitive field walk) = 2/2 red with D=0. G-1/G-2 harnesses and the
+> slice-registry 8/8 still green; `ArtifactSizeTest` 6/6 (labels `.L`-local, no
+> symtab bloat); `KofGcE2ETest` 3/3 x86 untouched; `check_500` OK.
 > **G-4 sweep + collect on alloc** — free-list receives the dead; `kof_gc_collect`
 > ported (tick 4096 like x86); proof: LEAK test that today is
 > impossible (alloc loop that would overflow the 260KB bump runs and memory
@@ -135,8 +147,10 @@
 > the G-4 leak test also on aarch. **G-1 ALREADY proved the inheritance for the
 > free-list** (`NativeRiscvGcFreeListTest.freeListReusesSlotAndMemstatsCountsAarch64`).
 > Each step: commit with the complete cross suite green + DOING.md on the line.
-> Do NOT mix with S-5-x86/root_end (bugfix queue) — but G-3 DEPENDS on it;
-> G-0/G-1/G-2 move ahead without root_end.
+> Do NOT mix with S-5-x86/root_end (bugfix queue). G-0/G-1/G-2 move ahead
+> without root_end; **G-3 also advanced** (emits its own riscv `.L`-local
+> markers — did NOT need the x86 `kof_heap_root_end` of S-5); G-4 (sweep+
+> collect) is next and does not depend on it either.
 >
 > **Status:** `IN DEVELOPMENT (partial)` — **riscv64 + aarch64 with complete core (03/09)**: classes/arrays/List/strings/instanceof/switch/try-catch/FP/recursion in pure asm on both; advanced parity pending *(see re-audit 12/09 above — much of what was "pending" already runs under qemu; what remains has an honest gap code)*.
 > **Version:** 0.2.6-beta · **Date:** 2026-09-03

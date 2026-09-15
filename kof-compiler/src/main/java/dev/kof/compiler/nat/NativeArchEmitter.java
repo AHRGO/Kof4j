@@ -49,6 +49,14 @@ final class NativeArchEmitter {
         StringBuilder sb = new StringBuilder();
         sb.append(".option arch, rv64g\n");
         sb.append(".section .data\n");
+        // G-3 (NATIVE002 face 1): abertura do intervalo de raízes estáticas do
+        // mark conservador riscv. Rótulo LOCAL (`.L`, fora do .symtab — a lição
+        // do G-1 no ArtifactSizeTest), espelho riscv-only do #113 x86
+        // (NativeBackend.emit:212). O sentinel .quad 0 é a 1ª palavra varrida
+        // (nunca pointer-plausível, o mark ignora). O fecho (.Lkof_heap_root_end)
+        // vem logo antes do .text dos métodos, excluindo a arena .bss do bump.
+        sb.append(".Lkof_heap_root_start:\n");
+        sb.append(".quad 0\n");
         for (IRClass c : module.classes()) {
             nb.currentClass = c;
             nb.collectStrings(c);
@@ -89,6 +97,10 @@ final class NativeArchEmitter {
             nb.currentClass = c;
             nb.crossEmit().emitMethodTableRiscv(sb, c);
         }
+        // G-3: fecho do intervalo de raízes estáticas (ver abertura acima).
+        // Ainda em .data, no ponto mais alto ANTES do .text: cobre literais,
+        // campos estáticos, super_table e method tables — e NÃO a arena .bss.
+        sb.append(".Lkof_heap_root_end:\n");
         sb.append(".section .text\n");
         // pop <reg>: desempilha o topo da pilha de operandos (sp) em <reg>
         sb.append(".macro pop r\n");
@@ -197,6 +209,10 @@ final class NativeArchEmitter {
         StringBuilder riscvSb = new StringBuilder();
         riscvSb.append(".option arch, rv64g\n");
         riscvSb.append(".section .data\n");
+        // G-3: abertura do intervalo de raízes estáticas riscv (o aarch64 herda
+        // via tradutor). Ver comentário em emitRiscv.
+        riscvSb.append(".Lkof_heap_root_start:\n");
+        riscvSb.append(".quad 0\n");
         for (IRClass c : module.classes()) {
             nb.currentClass = c;
             nb.collectStrings(c);
@@ -231,6 +247,8 @@ final class NativeArchEmitter {
             nb.currentClass = c;
             nb.crossEmit().emitMethodTableRiscv(riscvSb, c);
         }
+        // G-3: fecho do intervalo de raízes estáticas (ver emitRiscv).
+        riscvSb.append(".Lkof_heap_root_end:\n");
         riscvSb.append(".section .text\n");
         riscvSb.append(".macro pop r\n");
         riscvSb.append("    ld \\r, 0(sp)\n");
