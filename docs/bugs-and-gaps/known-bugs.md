@@ -5746,7 +5746,7 @@ to the label) is the correct predicate and **was already used** in `parseStateme
 - **Files:** `kof-compiler/src/main/java/dev/kof/compiler/js/JsControlFlowParser.java`,
   `.../js/JsIfThrowElse.java`.
 
-## §175 — kof_string_to_double("") returns 0.0 in Native (JVM throws) — PARITY — ✅ FIXED 13/09 (lane development .18, same session as S13b)
+### §175 — kof_string_to_double("") returns 0.0 in Native (JVM throws) — PARITY — ✅ FIXED 13/09 (lane development .18, same session as S13b)
 - **Symptom:** `math.parseDoubleOrDefault("", d)` in Native x86/riscv returns 0.0 (the comparison with d fails); JVM/JS return the default `d` (the parse throws NumberFormatException, the wrapper catches). The same applies to direct `.toDouble()`: `"".toDouble()` in Native = silent 0.0; in JVM = exception (R6 — violates parity).
 - **Root cause:** the `.Lpdd_vazio` path (RuntimeStringParseFp x86, line ~67) and `.Lpd_vazio` (NativeRiscvAsmRtB31 riscv, line ~87) return `xorpd %xmm0,%xmm0` (0.0) instead of jumping to `.Lpd*_throw`. The empty trim is treated as "success with value 0" — inherited from the pre-S13 behavior (not covered by the KofStringParseTest golden, which does not test `"".toDouble()`).
 - **Minimal repro:** `main() { try { println("".toDouble()); } catch (String e) { println("T") } }` → JVM: exception→T; Native x86/riscv: `0.0` (or `println("".toDouble() == 0.0)` → true in Native, exception in JVM).
@@ -5754,7 +5754,6 @@ to the label) is the correct predicate and **was already used** in `parseStateme
 - **Fix (13/09, same day as the open):** `RuntimeStringParseFp.java` — `.Lpdd_vazio` replaced with `jmp .Lpdd_throw` (was `xorpd %xmm0,%xmm0` + pop×4 + ret); `NativeRiscvAsmRtB31.java` — `.Lpd_vazio` replaced with `j .Lpd_throw` (was `li a0,0; j .Lpd_ret`); aarch inherits line-by-line in the translator (j already supported). Contract = JDK: `Double.parseDouble("")`/`"   "` throws.
 - **Proof (Q1 — failed on the old code):** vectors T8/T9 in the `FP_GOLDEN` of `KofStringParseTest` (`"".toDouble()`/`"   ".toDouble()` → T on the 4 targets — x86 gave `0.0` + `S8` on the old code); lines `parseDoubleOrDefault("", 1.5) == 1.5` and `("   ", -0.25)` added to the PARSEORD golden (KofMathTest 24/24), cell `stdmathparseord` (5 Double vectors now, matrix 4/4) and `mathParseOrDefaultParity` (Script×JVM). Manual repro JVM/x86/JS: `T1/T2/true/true` byte-identical. Gate: suite **1725/0/0** (158 skip = qemu guard + external DB; cross toolchain absent on this host — riscv/aarch use the SAME B31 template, and `ok-riscv/ok-aarch=true` in the compiler proves the syntax; the cross golden still uses `assumeToolchain`).
 - **Status:** CLOSED 13/09 (fix + proof in the SAME commit).
-- **Status:** OPEN — fix in its own unit (parity bug of the base parse, not of the S13b wrapper); golden `stdmathparseord` in KofMathTest uses this line as proof of the wrapper AFTER the fix (until then, x86 diverges on the "" line of the golden — test stays skipped? NO: the line is removed from the golden UNTIL the fix, and this §175 is the queue).
 
 ### 176. WEB001-T1: `KofWebJsE2ETest.jsWebServesRoutes` — JS server never opens the port (TypeError `InetSocketAddress.create` swallowed by the test) — ✅ FIXED 13/09 (fresh build + §176b dead)
 
