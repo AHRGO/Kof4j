@@ -75,9 +75,12 @@ class GenericOperandConcatE2ETest {
     }
 
     @Test
-    void erasedGenericIntOperandsConcatenateAsStrings(@TempDir Path tmp) throws IOException {
-        // ambos apagados: o contrato é String + anything → String, logo `2 + 3`
-        // sobre Object stringifica (não soma) — mesma resposta do interpretador.
+    void erasedGenericIntOperandsAddNumerically(@TempDir Path tmp) throws IOException {
+        // Com a substituição §245 (`Pair<Int,Int>.first` → `Int`), os dois
+        // operandos são numéricos e `+` é SOMA (não concatenação) — o campo
+        // erasure `Object` é desboxado no load. O oráculo do interpretador
+        // (`KofInterpreterOps`) dá 5; antes da §245 o tipo ficava TypeVariable
+        // (não-numérico) e caía no concat → "23", que era comportamento errado.
         String out = runJvm(tmp, """
                 class Pair<A, B> {
                     A first
@@ -90,7 +93,24 @@ class GenericOperandConcatE2ETest {
                     println(p.first + p.second)
                 }
                 """);
-        assertEquals("23", out, "genéricos apagados concatenam como String (contrato String + anything)");
+        assertEquals("5", out, "genéricos Int apagados somam (oráculo do interpretador)");
+    }
+
+    @Test
+    void genuinelyErasedObjectOperandsConcatenate(@TempDir Path tmp) throws IOException {
+        // o caso do §244 em estado PURO: dois operandos `Object` (sem
+        // substituição) — nenhum é String nem numérico, então o ramo de concat
+        // stringifica os dois (String + anything → String).
+        String out = runJvm(tmp, """
+                main() {
+                    var x = new Object()
+                    var y = new Object()
+                    println(x + y)
+                }
+                """);
+        assertTrue(out.startsWith("java.lang.Object@"), "Object+Object deve stringificar: " + out);
+        assertTrue(out.indexOf("java.lang.Object@") != out.lastIndexOf("java.lang.Object@"),
+                "os dois operandos devem aparecer concatenados: " + out);
     }
 
     @Test

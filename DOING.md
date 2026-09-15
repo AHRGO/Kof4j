@@ -191,6 +191,13 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 >
 > **PRÓXIMO PASSO seguinte (lane compiler):** §243/#261 ✅ FEITO (ver abaixo). Seguir com a auditoria de `docs/development/` (regra dos 3 estados do AGENTS.md) e o gap cross-target do #213 (JS/Native default methods de interface) — avaliar se fecha ou vira gap honesto R6 por alvo.
 >
+> **✅ FEITO (15/09, dono = 192.168.100.22, lane compiler): §246/#268 + §247/#269 CORRIGIDOS — campo genérico `T` sem substituição + escrita por receiver nullable aceita em silêncio (numeração: §246/#268 e §247/#269; §245 ficou com o fix de teste da lane .15).**
+> - **#268 causa raiz:** `ExpressionTyper`/`SemExpressionTyper` não substituíam campo declarado como parâmetro genérico (`T wrapped`) pelo type-argument do receiver (`Wrapper<Point>` → `Point`) → acesso encadeado com owner `?`/`""` (`NoClassDefFoundError`/`ClassFormatError`); depois do tipo certo, o valor apagado (`Object`) ainda precisava de `checkcast`/`kof_unbox`.
+> - **#269 causa raiz:** `StatementAnalyzer` não tinha o guard SEM049 no caminho de ESCRITA (o read já tinha) e `ExpressionAssignmentLowerer` não desembrulhava o `NullableType` narrowed → `putfield "?"` → VerifyError.
+> - **Fix:** novo `CompilerTypes.substituteTypeVariableIn`; `ExpressionLowerer` adapta o load (checkcast/unbox); `StatementAnalyzer` rejeita a escrita nullable com SEM049; `ExpressionAssignmentLowerer` desembrulha o nullable.
+> - **Prova (Q1, MESMO commit):** `GenericFieldAccessE2ETest` (DEDICADO, 6 casos) — **VERMELHO 5/6 pré-fix** e verde pós-fix; `GenericFieldPrimitiveBoxE2ETest` (boxing) segue verde. JVM+JS medidos. Suíte 4-módulos = 1 fail (só §205 pré-existente). `check_500` OK.
+> - **Docs:** §246/§247 ✅ FIXED EN+PT (header da fila); #268/#269 fechadas.
+>
 > **✅ FEITO (15/09, dono = 192.168.100.22, lane compiler): §244/#267 CORRIGIDO — `+` com dois operandos genéricos apagados concatenava como `iadd` → VerifyError.**
 > - **Causa raiz:** o ramo de concat de `ExpressionBinaryLowerer` só disparava com um lado `String`; com AMBOS apagados (`Object`/TypeVariable/unknown) o controle caía no `else` final que emitia `KofBinaryOp.ADD` sobre referências → `opcodeForArithmetic` default `IADD` → `VerifyError: Bad type on operand stack`.
 > - **Fix:** o ramo de concat agora também dispara quando ambos são não-numéricos (contrato `String + anything → String`, `training/language/types.md:151`), stringificando os dois lados (`String.valueOf` + `kof_string_concat`).

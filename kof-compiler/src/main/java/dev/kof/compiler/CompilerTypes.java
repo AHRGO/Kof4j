@@ -435,6 +435,22 @@ public final class CompilerTypes {
         }
         return null;
     }
+
+    /**
+     * §245/#268: tipo de um campo/método cujo tipo declarado é um parâmetro
+     * genérico (`T wrapped`) — substitui o type-variable pelo argumento real do
+     * RECEIVER (`Wrapper<Point>.wrapped` → `Point`). Sem isto o tipo ficava
+     * `TypeVariable(T)`/erased e o próximo acesso (`.x`) emitia owner `?`/`""`
+     * (`NoClassDefFoundError`/`ClassFormatError`). Não muda nada quando o tipo
+     * não é um type-variable ou o receiver não traz argumentos.
+     */
+    static Type substituteTypeVariableIn(Type memberType, Type recvType, CompilationUnitNode currentUnit) {
+        if (memberType instanceof Type.TypeVariable tv) {
+            Type sub = substituteTypeVariable(tv.name(), recvType, currentUnit);
+            if (sub != null) return sub;
+        }
+        return memberType;
+    }
     static Type resolveWithTypeParams(String typeName, List<String> typeParams, CompilationUnitNode currentUnit) {
         if (typeParams.contains(typeName)) return new Type.TypeVariable(typeName);
         return CompilerTypes.toType(typeName, currentUnit);

@@ -233,9 +233,11 @@ public final class ExpressionTyper {
                 }
                 if (recvType instanceof Type.ClassType ct && driver.semanticAnalyzer != null) {
                     SymbolTable.Symbol s = HierarchyResolver.resolveFieldInHierarchy(ct.name(), fa.fieldName(), driver.semanticAnalyzer);
-                    if (s instanceof SymbolTable.FieldSymbol fs) yield fs.type();
+                    if (s instanceof SymbolTable.FieldSymbol fs) {
+                        yield CompilerTypes.substituteTypeVariableIn(fs.type(), recvType, driver.currentUnit);
+                    }
                     if (s instanceof SymbolTable.MethodSymbol ms && ms.parameterTypes().isEmpty()) {
-                        yield ms.returnType();
+                        yield CompilerTypes.substituteTypeVariableIn(ms.returnType(), recvType, driver.currentUnit);
                     }
                 }
                 yield Type.UnknownType.UNKNOWN;

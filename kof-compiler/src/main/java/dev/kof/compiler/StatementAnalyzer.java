@@ -60,6 +60,18 @@ public final class StatementAnalyzer {
             // muta em silêncio. O guard no analyzer alinha os 4 caminhos.
             Type recvType = SemExpressionTyper.inferType(sa, fa.receiver(), scope);
             targetType = recvType;
+            // §246/#269: escrita em campo por receiver NULLABLE tem o mesmo
+            // contrato do READ (SEM049 em SemExpressionTyper): o acesso direto
+            // seria NPE em runtime. Sem este guard o analyzer aceitava em
+            // silêncio e o lowering emitia `putfield` com descritor errado
+            // (`Field "?".num:Ljava/lang/Object;` → VerifyError no load).
+            if (recvType instanceof Type.NullableType && sa.diagnostics() != null) {
+                SourcePosition faPos = fa.position();
+                sa.diagnostics().error(faPos != null ? faPos.file() : "",
+                        faPos != null ? faPos.line() : 0, faPos != null ? faPos.column() : 0, 0,
+                        "receiver is nullable (T?); narrow first: if (x != null) { x.field = v }",
+                        "SEM049");
+            }
             // DD-02/#42: escrita em componente de record é SEM038. Para o
             // receiver explícito, o tipo resolve normalmente; para `this`,
             // inferType não tipa o identificador — usa-se currentClassName.
