@@ -101,6 +101,14 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (14/09 ~21:40, dono = 192.168.100.15, lane bugs-and-gaps): #156/#216 CORRIGIDAS na causa raiz — `String.format(String, Object...)` varargs (descriptor errado → `NoSuchMethodError`).**
+> - **Sintoma/prova (Q0):** `String.format("Hello %s, age %d", "Alice", 30)` → bytecode `invokestatic String.format:(Ljava/lang/String;Ljava/lang/String;I)Ljava/lang/Object;` → `NoSuchMethodError`. Variante 0-args → `(Ljava/lang/String;)Ljava/lang/String;` (overload inexistente). Reproduzido com classes frescas no tip `aa78eba0`.
+> - **Causa raiz:** `ExternalClasspath.findDeclared`/`resolveMethod` casam por **name+arity apenas**, sem `ACC_VARARGS`, e o JDK não está nos entries → o ramo de receptor-builtin de `ExpressionMethodCallLowerer` caía no descriptor fabricado (params individuais + retorno `Object`).
+> - **Fix (Q0):** novo `StringFormatCallLowerer` (arquivo DEDICADO — mantém `ExpressionMethodCallLowerer` a 546 linhas): empilha o format string, cria `Object[]` (primitivos boxados), `Dup`/`IASTORE` por elemento, emite o descritor REAL `(Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/String;`.
+> - **Prova (Q1, MESMO commit):** `StringFormatVarargsE2ETest` 9/9 (DEDICADO); **provado vermelho pré-fix** (7 casos falham em `aa78eba0` com o `NoSuchMethodError` exato).
+> - **Catalogado §236 (EN+PT):** JS sem lowering de `String.format` → `COMP002 unknown JS expression: null` (pré-existente, lane JS; teste só JVM, não verde-falso).
+> - **Suíte 4-módulos:** run=1996 fail=2 err=13 skip=167 — 2 fail = §205 (lane #183) + `DecompileTest` (kof-cli, pré-existente); 13 err = node ausente.
+>
 > **✅ FEITO (14/09 ~19:30, dono = 192.168.100.15, lane bugs-and-gaps): REGRESSÃO de suíte corrigida na causa raiz — `String.valueOf(char)` (e a família de estáticos de wrapper) dropada em silêncio quando o classpath externo existe mas não contém a classe (residual da issue #233).**
 > - **Sintoma/prova:** `CoreRegressionE2ETest.stringValueOfCharParity` VERMELHO no tip (`cd010bf1`): `Internal compiler error: frame crash … ASM COMPUTE_FRAMES NegativeArraySizeException: -1`. Bissecção em worktree limpo: verde `59359935`, vermelho `1e88309b` (commit rotulado "codeql" que trouxe o dispatch de wrapper). `doubleStaticMethodsJvm` já fora corrigido upstream (`036e5140`); a face `valueOf` ficou.
 > - **Causa raiz:** o novo ramo de receptor-builtin em `ExpressionMethodCallLowerer` (`1e88309b`) casa `String`/`Int`/`Double`/… mesmo quando o `externalClasspath` NÃO conhece a classe (caso comum), e só emite para `extSig != null` ou `isNaN/isInfinite/isFinite`. Para `String.valueOf(...)`/`parse*` o ramo saía **sem emitir nada** (R6 violado — drop silencioso); o `println` externo então emitia seu `String.valueOf(Object)` sem valor na pilha → crash do ASM.
