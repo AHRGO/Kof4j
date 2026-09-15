@@ -44,6 +44,11 @@
 > `NativeRiscv64E2ETest,NativeAarch64E2ETest` (they execute under qemu, do not skip —
 > the job EXISTS to prove; binary names match `NativeArchEmitter:151
 > -282`; local: riscv 39/39 + aarch 39/39 green on this host with qemu).
+> **➕ Dynamic link ON DEMAND DONE 15/09** (directive "liga dinamicamente"):
+> `NativeCrossLink` links libc (`-dynamic-linker … -lc`) only when the pruned
+> runtime calls libc; the current 84 cross binaries stay static/portable.
+> See §2.3; the first production consumer (port of `RuntimeDtoa`, FLT001) is
+> still pending.
 > This doc remains in `development/` (NATIVE002 does not close while (1)–(5)
 > remain); when (1)–(5) reach zero → move to `docs/`.
 >
@@ -260,6 +265,25 @@ Main.s  (program: kof_main + .data/.rodata sections)
    └─ <arch>-as → <arch>-ld -dynamic-linker /lib/ld-linux-<arch>.so.1 -lc
    └─ qemu-<arch> → expected output (exit 0)
 ```
+
+**🔗 Dynamic link ON DEMAND (link-by-use) — DONE 15/09 (maintainer directive
+"liga dinamicamente"):** the cross link *was* static (pure asm, no libc) even
+though the 02/09 decision above always said dynamic. `NativeCrossLink` implements
+the realignment: the binary stays **static** while the *pruned* runtime calls no
+libc symbol; the moment a libc-dependent capability enters (double→string/FLT001
+via `snprintf`/`strtod`, `kof.db` via `.so`, …) `NativeArchEmitter` switches to
+`<arch>-ld --allow-shlib-undefined [--no-relax riscv] --sysroot=<s> -dynamic-linker
+/lib/ld-linux-<arch>.so.1 -o <bin> <obj> -lc`. This preserves the portability of
+the current 84 cross binaries (nothing changes without a libc consumer) and
+unblocks the libc gaps on demand. `--allow-shlib-undefined` is required (the
+sysroot `libc.so.6` references `GLIBC_PRIVATE` loader symbols; the runtime
+resolves them). Sysroot resolution: `KOF_CROSS_SYSROOT` env → system install
+(`/usr/<arch>-linux-gnu`, no `--sysroot`) → `/tmp/opencode/x` (this host) →
+none (stays static + stderr, R6). Proven by `NativeCrossDynamicLinkTest` (5/5,
+riscv64 **and** aarch64 under qemu: `snprintf`+`write` resolved at runtime; the
+static-link sabotage of the same harness fails with undefined `snprintf`). The
+first production consumer (port of `RuntimeDtoa` to the cross runtime, closing
+FLT001) is the next unit — the infra is in, the port is not.
 
 Runtime details for riscv64/aarch64 (inc-0 02/09 + 03/09):
 - allocation: **bump allocator + free-list** in `.bss` (no `mmap` — avoids

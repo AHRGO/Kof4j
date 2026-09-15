@@ -154,8 +154,22 @@ final class NativeArchEmitter {
         Path asmFile = outputDir.resolve(className + ".s");
         Path binFile = outputDir.resolve(className);
         Files.createDirectories(asmFile.getParent());
-        Files.writeString(asmFile, pruneRiscvRuntime(sb, rtStart, rtEnd, "riscv64"));
+        String prunedRiscv = pruneRiscvRuntime(sb, rtStart, rtEnd, "riscv64");
+        Files.writeString(asmFile, prunedRiscv);
         System.err.println("NativeBackend: generated riscv64 " + asmFile);
+
+        // link dinâmico SOB DEMANDA (diretriz 15/09): estático p/ sempre até o
+        // runtime (podado) referenciar libc; aí vira -lc + --dynamic-linker.
+        boolean dynamic = NativeCrossLink.needsLibc(prunedRiscv);
+        String sysroot = NativeCrossLink.sysrootFor("riscv64");
+        if (dynamic && sysroot == null) {
+            // R6: sem libc-cross não há como ligar dinâmico — segue estático,
+            // mas avisa (o consumidor libc ficará sem .so → provável ld aborta,
+            // que já é propagado como erro de compilação).
+            System.err.println("NativeBackend: riscv64 pede libc mas KOF_CROSS_SYSROOT/" +
+                    "/tmp/opencode/x/usr/riscv64-linux-gnu ausente — tentando link estático");
+        }
+        if (dynamic) System.err.println("NativeBackend: riscv64 link dinâmico (libc detectada)");
 
         try {
             Path objFile = asmFile.resolveSibling("kof.o");
@@ -170,7 +184,8 @@ final class NativeArchEmitter {
             // gc-sections até a fase `kof_heap_root_end` (root-scan varre
             // root_start.._end; seção deletada fora do intervalo = raiz que
             // o coletor nunca vê — precisa primeiro o fim explícito).
-            nb.runCommand(new String[]{"riscv64-linux-gnu-ld", "--no-relax", "--gc-sections", "-o", binFile.toString(), objFile.toString()}, "riscv64-ld");
+            nb.runCommand(NativeCrossLink.ldArgs("riscv64-linux-gnu-ld", binFile, objFile,
+                    "riscv64", dynamic, sysroot), "riscv64-ld");
             Files.deleteIfExists(objFile);
             if (System.getenv("KOF_KEEP_ASM") == null) Files.deleteIfExists(asmFile);
             binFile.toFile().setExecutable(true);
@@ -306,10 +321,14 @@ final class NativeArchEmitter {
         Files.createDirectories(asmFile.getParent());
         Files.writeString(asmFile, sb.toString());
         System.err.println("NativeBackend: generated aarch64 " + asmFile);
+        boolean dynamic = NativeCrossLink.needsLibc(prunedRiscv);
+        String sysroot = NativeCrossLink.sysrootFor("aarch64");
+        if (dynamic) System.err.println("NativeBackend: aarch64 link dinâmico (libc detectada)");
         try {
             Path objFile = asmFile.resolveSibling("kof.o");
             nb.runCommand(new String[]{"aarch64-linux-gnu-as", "-o", objFile.toString(), asmFile.toString()}, "aarch64-as");
-            nb.runCommand(new String[]{"aarch64-linux-gnu-ld", "--gc-sections", "-o", binFile.toString(), objFile.toString()}, "aarch64-ld");
+            nb.runCommand(NativeCrossLink.ldArgs("aarch64-linux-gnu-ld", binFile, objFile,
+                    "aarch64", dynamic, sysroot), "aarch64-ld");
             Files.deleteIfExists(objFile);
             if (System.getenv("KOF_KEEP_ASM") == null) Files.deleteIfExists(asmFile);
             binFile.toFile().setExecutable(true);
