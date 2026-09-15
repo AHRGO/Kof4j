@@ -122,18 +122,12 @@ public final class StatementLowerer {
                     localIdx = ExpressionLowerer.emitExpression(driver, vdInit, ops, owner, localIdx, locals);
                     if ("var".equals(vds.type()) || "val".equals(vds.type())) {
                         varType = ExpressionTyper.inferExprType(driver, vdInit, locals);
-                        // spawn-expr: pina Handle<T> com T do corpo (a inferência
-                        // genérica pode ter perdido o typeArgument)
-                        if (vdInit instanceof MethodCallExpr sm
-                                && "__kof_spawn_expr".equals(sm.methodName())
-                                && varType instanceof Type.ClassType hct
-                                && "kof.concurrent".equals(hct.packageName())
-                                && (hct.typeArguments().isEmpty()
-                                    || hct.typeArguments().get(0) instanceof Type.UnknownType)) {
-                            // #141: usa inferLambdaBodyType (mesmo chokepoint do
-                            // MethodCallTyper/lowerer), NÃO inferExprType direto —
-                            // no corpo-bloco de expressão única este dava VOID e
-                            // Handle<Void> poluía o local p/ o `await`.
+                        if (varType instanceof Type.NullableType nt && TypeMetrics.isPrimitiveType(nt.inner())) varType = nt.inner();
+                        // spawn-expr: pina Handle<T> com T do corpo (a inferência genérica pode ter perdido typeArgument)
+                        if (vdInit instanceof MethodCallExpr sm && "__kof_spawn_expr".equals(sm.methodName())
+                                && varType instanceof Type.ClassType hct && "kof.concurrent".equals(hct.packageName())
+                                && (hct.typeArguments().isEmpty() || hct.typeArguments().get(0) instanceof Type.UnknownType)) {
+                            // #141: usa inferLambdaBodyType (mesmo chokepoint do MethodCallTyper/lowerer), NÃO inferExprType
                             ExpressionNode spawnBody = sm.arguments().get(0);
                             Type t = spawnBody instanceof LambdaExpr sle
                                     ? ExpressionTyper.inferLambdaBodyType(driver, sle, locals)
