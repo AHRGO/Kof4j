@@ -853,30 +853,33 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > FEITA: `pathOracle` brute-force (definição de caminhos) vs passada rápida
 > em 300 classes REAIS = zero divergência, 6/6 (220064fc) + auditoria
 > doc-vs-código (machineRun:97 VIVA em 158c174b — doc corrigido b9996938);
-> (2) ✅ **UNIDADE 2b RE-AVALIADA POR MEDIÇÃO (14/09 ~19:40) — DESCARTADA
-> como escopada, veredito em DECOMPILER.md §6 (re-medida 18:20):** o proxy
-> "1098" supercontou — o caminho prologue da 2a (`5c944709`) JÁ recupera o
-> fundido não-loop com temp (`computed`/`cmp` medidos: saem `if/else`), e dos
-> stubs com teste computado restantes, **646** têm invoke no teste (família
-> interop §234 — lane compiler, não CFG), **453** são loop-header com
-> `continue` (COLISÃO com a lei vinculante `diamondJoinShapesStayHonestStub`:
-> recuperar o cond do `contFor` faria `while (v2 <` voltar — provado no CFG
-> medido: B9=diamante do continue, preds(B22)={15,18}, B22→back-edge B4; Kof
-> não tem `continue` → regra 6, NÃO-edit) e só **8+2** são nits de opcode no
-> `loadValue` (sipush/lcmp — micro-fix compiler). Harness descartável
-> `Roi2.java`/`Roi3.java` (classifica pela CAUSA REAL do stub). PROVAS do
-> descarte: 63 DecompileTest + 6 PostDom VERDES FRESCOS 19:39 (unidades 1/2a
-> intactas, fonte não tocada — StructWalker rascunho deletado antes de nascer,
-> opcodes por memória = a lição que ele mesmo documenta). PRÓXIMO PASSO
-> EXATO da doc DECOMPILER: sem trabalho autônomo — o doc está em parada
-> genuína pedindo decisão da mantenedora (lei do diamante + `continue`), e as
-> 646 interop são da lane compiler; mover DECOMPILER p/ `docs/` SÓ quando a
-> mantenedora decidir o destino da Fase C (a recovery atual é o teto honesto).
-> A meta original — reduzir stubs SEM novo falso-verde — foi atingida pelo
-> caminho inverso: a medição PROVOU que reduzir mais exige violar a lei
-> vinculante ou invadir a lane interop. DECOMPILER fica em `docs/development/`
-> aguardando a decisão da mantenedora (destino da Fase C; hoje: recovery no
-> teto honesto).
+> (2) ✅ **UNIDADE 2b RE-AVALIADA + FECHADA POR MEDIÇÃO (14/09, veredito
+> em DECOMPILER.md §6):** o proxy "1098" supercontou (harness Roi2/Roi3).
+> Dos stubs com teste computado: 646 invoke-interop (lane compiler), 453
+> loop/continue (lei do diamante + Kof sem `continue` = regra 6), 8+2 nits.
+> A caça ao 5º-red expôs DUAS coisas reais na lane do decompiler, ambas com
+> re-producao medida:
+> **§236 ✅ CORRIGIDA nesta sessao** — `comparisonReturn` dobrava o shape
+> ambiguo cmp/iconst1/goto/iconst0/ireturn para Bool CRU, entao
+> `return a<b?1:0` num corpo Int virava saida NAO-compilavel (SEM010); porta
+> por `retType` (Z→cru, I→if-expr) + pino consertado + teste novo
+> `comparisonReturnRespectsBoolVsIntReturnType` (recompila); DecompileTest
+> 64/64 + PostDom 6/6 VERDES 20:55, exec V=1|0|0==oracle.
+> **PRÓXIMA UNIDADE (2c, minha lane, sem colidir c/ a lei nem regra 6):**
+> §238 — o `pureIfElse` da 2a (`5c944709`) emite o `var` do local na PRIMEIRA
+> atribuicao, que fica DENTRO do ramo then, e o else/pos-join leem um `v2`
+> nao declarado → saida NAO-compilavel (SEM000). Nenhum teste da suíte pega
+> (o `E.java` pre-inicializa `int r=1`; o pino so checa string). FIX = icao
+> honesta ANTES do `if` no caminho `pureIfElse`/`pureIfThen` de
+> `BytecodeStatements.struct()` (classe NOVA ou fatia em StructWalker, regra
+> 7; BytecodeStatements.java em 538 = TOLERADA), default-init pelo tipo do
+> frame; se nao der de istrar com seguranca → RECUSAR p/ stub honesto
+> (R6). PROVA: re-producao `/tmp/opencode/w2b/Comp.java` (`computed`/`cmp`)
+> + `Mid.java` (`big`) decompilam e RECOMPILAM (Runner2 compile=true) com
+> golden de execucao (oracle JVM medido 11|21|11|11 / 1|2|2), lei do diamante
+> VERDE, suíte DecompileTest+PostDom VERDE. §237 (StringValueOfChar,
+> 6º-red) = lane .22, NAO atacar.
+
 
 > **⚠️ 5º RED NO PORTÃO (catalogado, para as lanes de bug — 14/09 ~16:45):**
 > `NativeStringCompareCrossTest` riscv+aarch → §233 no known-bugs (renumerado 17:40: §231 foi tomado pela lane .18 — colisao de rebase; fix

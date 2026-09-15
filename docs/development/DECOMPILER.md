@@ -553,8 +553,14 @@ Phase E  Kof Decompiler          (generate Kof source)
 > stub, not the blockCondition shape).** The 1098 counted every
 > "succ==2 block with `blockCondition==null`" without checking whether the
 > method still decompiles via the prologue path added in unit 2a (`5c944709`:
-> a fused `int x=…; if (x%3==0){}else{}` non-loop is ALREADY recovered today —
-> measured: `computed`/`cmp` emit `if (v1 == 0) { … } else { … }`). Splitting
+> a fused `int x=…; if (x%3==0){}else{}` non-loop is ALREADY *shape*-recovered
+> today — measured: `computed`/`cmp` emit `if (v1 == 0) { … } else { … }`
+> BUT the emitted output is NOT COMPILABLE: the local's `var` is hoisted to its
+> FIRST assignment which is INSIDE the then-branch, then read after the join →
+> `SEM000 Undefined variable` (measured 19:50 via Runner2 on the recompiled
+> HEAD — pre-existing 2a defect, catalogued §238, NOT a walker target). So 2a
+> "recovers" only when the local is initialised BEFORE the if (the passing
+> `E.java` test has `int r=1` pre-if). Splitting
 > the 2642 stubs by the cause that actually makes `recoverStatements` return
 > null, among those WITH a computed 2-succ test:
 >
@@ -581,8 +587,16 @@ Phase E  Kof Decompiler          (generate Kof source)
 > lifts the diamond law (rule 6 — needs a language `continue`, a contract
 > decision, NOT this lane) and (b) opcode-coverage nits (sipush/lcmp in
 > `loadValue`) which are a compiler-lane micro-fix, not a structural walker.
-> Neither is autonomous-mode work in `docs/development/` → this doc is at a
-> genuine stopping point pending a maintainer decision.
+> Neither is autonomous-mode work in `docs/development/`. **UPDATE (14/09
+> ~20:55, same session):** the 5th-red hunt that produced this re-measurement
+> ALSO exposed a real in-lane defect — §236 (the ambiguous Bool-vs-Int
+> comparison fold) FOUND & FIXED with a new recompile test (`comparisonReturn-
+> RespectsBoolVsIntReturnType`, DecompileTest 64/64 green), and §238 (the 2a
+> `pureIfElse` join emitting `var` inside the branch → non-compilable output)
+> catalogued with a measured repro — §238 is the next autonomous unit (2c),
+> fixable here without touching the diamond law or rule 6. The structural
+> WALKER stays discarded (453 loop+continue = rule 6; 646 invoke-test = interop
+> lane §234).
 
 ## 7. Relationship with the Compiler
 

@@ -555,8 +555,14 @@ Fase E  Kof Decompiler          (gerar Kof source)
 > não pela forma do blockCondition).** Os 1098 contaram cada
 > "bloco succ==2 com `blockCondition==null`" sem checar se o método ainda é
 > descompilado pelo caminho prologue adicionado na unidade 2a (`5c944709`:
-> um `int x=…; if (x%3==0){}else{}` não-loop fundido JÁ É recuperado hoje —
-> medido: `computed`/`cmp` emitem `if (v1 == 0) { … } else { … }`). Separando
+> um `int x=…; if (x%3==0){}else{}` não-loop fundido JÁ tem a FORMA
+> recuperada hoje — medido: `computed`/`cmp` emitem `if (v1 == 0) { … } else
+> { … }`, mas a saída emitida NÃO COMPILA: o `var` do local sobe na sua
+> PRIMEIRA atribuição, que fica DENTRO do ramo then, e é lido depois do join →
+> `SEM000 Undefined variable` (medido 19:50 via Runner2 no HEAD recompilado —
+> defeito PRE-EXISTENTE da 2a, catalogado §238, NÃO é alvo do walker). Logo a
+> 2a "recupera" só quando o local é inicializado ANTES do if (o teste `E.java`
+> que passa tem `int r=1` pré-if). Separando
 > os 2642 stubs pela causa que FAZ o `recoverStatements` devolver null, entre
 > os que TÊM um teste computado 2-succ:
 >
@@ -583,8 +589,16 @@ Fase E  Kof Decompiler          (gerar Kof source)
 > lei do diamante (regra 6 — precisa de um `continue` na linguagem, decisão de
 > contrato, NÃO esta lane) e (b) nits de cobertura de opcode (sipush/lcmp no
 > `loadValue`) que são micro-fix da lane compiler, não um walker estrutural.
-> Nenhum dos dois é trabalho de modo autônomo em `docs/development/` → este doc
-> está num ponto de parada genuíno aguardando decisão da mantenedora.
+> Nenhum dos dois é trabalho de modo autônomo em `docs/development/`. **ATUALIZA
+> ÇAO (14/09 ~20:55, mesma sessao):** a caça ao 5º-red que produziu esta
+> re-medicao TAMBEM expôs um defeito real da lane — §236 (a dobra ambigua
+> Bool-vs-Int da comparacao) ACHADA & CORRIGIDA com teste novo de recompile
+> (`comparisonReturnRespectsBoolVsIntReturnType`, DecompileTest 64/64 verde),
+> e §238 (o join `pureIfElse` da 2a emitindo `var` dentro do ramo → saida
+> nao-compilavel) catalogado com repro medido — §238 e a proxima unidade
+> autonoma (2c), consertavel aqui sem tocar a lei do diamante nem regra 6. O
+> walker ESTRUTURAL segue descartado (453 loop+continue = regra 6; 646 teste
+> com invoke = lane interop §234).
 
 ## 7. Relação com o Compilador
 
