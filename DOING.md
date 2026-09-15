@@ -175,6 +175,47 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > suíte 4-modulos limpa no tip com §233; se so restam §205 + reds de outras
 > lanes catalogados, o gate desta lane esta estabilizado — reportar e voltar
 > a fila docs.
+>
+> **ATUALIZACAO 15/09 (noite, dono = 192.168.100.17) — a previsao do paragrafo
+> acima cumpriu-se, com um RED a menos:**
+> (E) **§205 fatia 1 ENTREGUE (`97d08e54`):** o red do gate agora tem conserto
+> no print DIRETO. O if/switch heterogeneo (`println(if(c) 1 else "s")`) e
+> rebaixado RAMO-A-RAMO (cada ramo pelo SEU tipo — a mesma regra que o JVM ja
+> aplica no box de ramo), nao por gate R6: a mantenedora rejeitou o gate
+> ("faz suportar o print polimorfico no native... isso q vc fez quebra a regra
+> fundamental de mesmo comportamento em todos os targets") — regra 5 do freeze
+> e lei, o gate era paridade quebrada disfarcada de diagnostico. Prova (Q0):
+> stash+rerun = exit 139 no pre-fix; com o fix, celulas `ifexpr-heterogeneous-
+> direct`/`-else`/`-multi`/`-multi-default` 4/4 byte-identicais JVM×Native,
+> `conformanceCoreControl` 1/1, `ConformanceMatrixTest` 11/11, vizinhos
+> (IfExpr/SwitchExpr/ExpressionTyper/NullablePrimitive) 46/46. Residual
+> honesto catalogado PARTIAL (EN+PT): `viavar`/`as Object` = ABI boxed
+> polimorfico no Native (§104b-ii / D-NULL-INTENT N2) — fatia 2, unit grande.
+> (F) **D-NULL-INTENT TRAVADO (`e04f10ff`, EN+PT):** decisao da mantenedora em
+> pessoa 15/09 — a "opcao A" do §125 (null→0 silencioso) esta REVOGADA;
+> nullability passa a ser por INTENCAO EXPLICITA (o `== null` e o sinal).
+> Registrado em `DECISIONS.md` com a fila N1→N4 e ponteiro de revogacao na
+> entrada §125; a celula `nullableprint` + as 3 paridades null-branch do
+> `KofInterpreterParityTest` codificam a opcao A e SO viram com o
+> comportamento (mesmo commit, regra 1). N1..N4 = trabalho de contrato nos 4
+> backends — para a lane compiler, nao para a lane docs.
+> (G) **Build quebrado do tip §251 — corrida perdida com honestidade:** eu
+> tinha escrito `declaredTypeUnresolved` + o wiring e medido 1809/3F; ao puxar,
+> o remoto `fc0ccfde` (lane .22) fechou o MESMO com escopo igual. Meus 2
+> commits de codigo ficaram redundantes → **descartados antes do push**
+> (mesma licao da (A): medir no remoto puro, quem chegou na raiz primeiro fica
+> com o numero). So publiquei o que era meu e nao estava la: slice 1 (a) e
+> docs (f).
+> SUITE NO TIP COM A SLICE 1: `conformanceCoreControl` 1/1 (era o 1-fail do
+> gate `.22`/`e97f0b08` — o gate deles foi medido ANTES do meu push, o §205
+> direto agora esta verde). REDS RESTANTES DO GATE = pre-existentes catalogados
+> por outras lanes: §181 riscv/aarch `CastSaturation` (2) + `validationBrJs`
+> (node env) + `parseOrDefaultCrossArch` (§192 hang, excluido por -Dtest).
+> **PRÓXIMO PASSO:** voltar a fila da lane (docs/development/): auditar o
+> pendente REAL de `docs/development/` contra o code (regra dos tres estados —
+> concluido→docs/, planeado→future/), comecando pelos `.md` soltos sem dono
+> (regra 09/13 do prioridade). N1..N4 (D-NULL-INTENT) e §205 fatia 2 =
+> lane compiler; registrar na fila do roadmap §23 se ainda nao estao.
 
 > **✅ FEITO (15/09 ~03:30, dono = 192.168.100.22, lane compiler): §241 RESOLVIDO — REVERT-do-contrato-boxed-meio-impl à causa raiz (gap honesto R6). O PORTÃO DE RELEASE ESTÁ DESBLOQUEADO.**
 > - **Decisão:** o próprio registro §241 oferecia "terminar o contrato em todas as faces OU reverter ao gap honesto (R6)". Escolhi o **revert** porque terminar colide de frente com o **§125 CONGELADO** (decisão da mantenedora 12/09, opção A: `return null` de `Nullable(primitivo)` → default do primitivo, nunca `null` — `CompilerTypes.defaultValueOp`, `KofInterpreterParityTest.printNullablePrimitiveNull`, célula `nullableprint`). Um `Int?` boxed de verdade exigiria `null` de primeira classe em semântica→IR→4 backends, desfazendo o §125 = decisão de contrato (regra 6), não patch de call-site. Meio-implementar é exatamente o que o §241 condena.
