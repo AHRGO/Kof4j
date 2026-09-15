@@ -56,12 +56,22 @@ package-compiler) opens before SYSTEMS closes (parity + GC + stability).
 
 ---
 
-## 2. Open bugs (queue in `docs/bugs-and-gaps/known-bugs.md`) — triage 13/09
+## 2. Open bugs (queue in `docs/bugs-and-gaps/known-bugs.md`) — triage 13/09,
+resynced 14/09 ~22:15 (docs lane — living record, the rule of §1 of the
+three-states table)
 
-**8 items in the open queue** (§101, §107 🟡, §104b-ii, §114, §129, §132, §161,
-§165) — and the honest conclusion (`known-bugs.md:11`): **open queue = 8 items,
-all with a decision/owner/blocker — ZERO pure-code-without-decision item in this
-lane**. Closed 13/09: §89, §106 (+JS `ab85cfae`), §117, §131 (+residual
+**32 items in the open queue** (counted from the file on 14/09; the 13/09 list
+below was taken BEFORE the §220–§239 wave). The conclusion holds WITH
+correction: the items still open are owner/blocked/rule-6 — but the "ZERO
+pure-code item" was REFUTED by the 14/09 wave itself: §236 (comparisonReturn
+Bool×Int) and §238 (hoist of escaping local + sipush) were pure-code items of
+the decompiler and **were fixed in the development lane** (unidades 2c,
+`8719e304`+`f2371212`), while §233/§234 (test migration `split()->String[]` —
+compiler lane) and §237 (`computeStack` — lane .22) catalogued as owned. The
+rest of the 13/09 wave (§220–§232, §235, §239) belongs to lanes .15/.18/.22
+or rule 6. Items from the 13/09 list that changed since: §129-[collection]
+✅ 11/09 (`3645` — the OPEN §129 is the OTP one, number collision), the rest
+continue as described. Closed 13/09: §89, §106 (+JS `ab85cfae`), §117, §131 (+residual
 `73ca2d58`), §127-JVM, §155, §94, §156, §81 (BigInt), §163 (interpreter
 2nd wide parameter); §157-160 and §65 closed/DOES-NOT-REPRODUCE.
 All hanging on:
