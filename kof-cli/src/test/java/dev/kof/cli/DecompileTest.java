@@ -172,7 +172,7 @@ class DecompileTest {
         Files.writeString(out, kof);
         CompilationResult result = new CompilerDriver().compile(out, dir.resolve("out"), Target.JVM);
         assertTrue(result.success(), "as 3 formas decompiladas devem compilar:\n" + kof
-                + "\n" + result.diagnostics());
+                + "\n" + result.diagnostics().getDiagnostics());
     }
 
     @Test
