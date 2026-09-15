@@ -175,7 +175,7 @@ public class SemanticAnalyzer {
     }
 
     Map<String, SymbolTable.ClassSymbol> allClasses() {
-        return knownClasses;
+        return java.util.Collections.unmodifiableMap(knownClasses);
     }
 
     boolean isInterfaceType(String name) {
@@ -276,16 +276,28 @@ public class SemanticAnalyzer {
     String currentFunctionName() { return currentFunctionName; }
     String currentPackage() { return currentPackage; }
     DiagnosticCollector diagnostics() { return diagnostics; }
-    java.util.Set<String> interfaceNames() { return interfaceNames; }
+    java.util.Set<String> interfaceNames() { return java.util.Collections.unmodifiableSet(interfaceNames); }
 
-    java.util.Set<String> abstractClasses() { return abstractClasses; }
-    Map<ExpressionNode, Type> expressionTypes() { return expressionTypes; }
-    Map<MethodCallExpr, SymbolTable.MethodSymbol> resolvedMethods() { return resolvedMethods; }
-    Map<NewExpr, SymbolTable.ConstructorSymbol> resolvedConstructors() { return resolvedConstructors; }
-    Map<String, SymbolTable> classMemberScopes() { return classMemberScopes; }
-    java.util.IdentityHashMap<ConstructorDeclarationNode, SymbolTable> ctorScopes() { return ctorScopes; }
-    java.util.IdentityHashMap<MethodDeclarationNode, SymbolTable> methodScopes() { return methodScopes; }
-    java.util.IdentityHashMap<MethodDeclarationNode, SymbolTable.MethodSymbol> methodSymbols() { return methodSymbols; }
+    java.util.Set<String> abstractClasses() { return java.util.Collections.unmodifiableSet(abstractClasses); }
+    Map<ExpressionNode, Type> expressionTypes() { return java.util.Collections.unmodifiableMap(expressionTypes); }
+    Map<MethodCallExpr, SymbolTable.MethodSymbol> resolvedMethods() { return java.util.Collections.unmodifiableMap(resolvedMethods); }
+    Map<NewExpr, SymbolTable.ConstructorSymbol> resolvedConstructors() { return java.util.Collections.unmodifiableMap(resolvedConstructors); }
+    Map<String, SymbolTable> classMemberScopes() { return java.util.Collections.unmodifiableMap(classMemberScopes); }
+    Map<ConstructorDeclarationNode, SymbolTable> ctorScopes() { return java.util.Collections.unmodifiableMap(ctorScopes); }
+    Map<MethodDeclarationNode, SymbolTable> methodScopes() { return java.util.Collections.unmodifiableMap(methodScopes); }
+    Map<MethodDeclarationNode, SymbolTable.MethodSymbol> methodSymbols() { return java.util.Collections.unmodifiableMap(methodSymbols); }
+
+    // Package-private mutable accessors for internal use (CodeQL: avoid exposing internal mutable state)
+    Map<ExpressionNode, Type> mutableExpressionTypes() { return expressionTypes; }
+    Map<MethodCallExpr, SymbolTable.MethodSymbol> mutableResolvedMethods() { return resolvedMethods; }
+    Map<NewExpr, SymbolTable.ConstructorSymbol> mutableResolvedConstructors() { return resolvedConstructors; }
+    Map<String, SymbolTable> mutableClassMemberScopes() { return classMemberScopes; }
+    java.util.IdentityHashMap<ConstructorDeclarationNode, SymbolTable> mutableCtorScopes() { return ctorScopes; }
+    java.util.IdentityHashMap<MethodDeclarationNode, SymbolTable> mutableMethodScopes() { return methodScopes; }
+    java.util.IdentityHashMap<MethodDeclarationNode, SymbolTable.MethodSymbol> mutableMethodSymbols() { return methodSymbols; }
+    Map<String, SymbolTable.ClassSymbol> mutableAllClasses() { return knownClasses; }
+    java.util.Set<String> mutableInterfaceNames() { return interfaceNames; }
+    java.util.Set<String> mutableAbstractClasses() { return abstractClasses; }
 
     private void analyzeConstructorBody(ConstructorDeclarationNode ctor) {
         SymbolTable ctorScope = ctorScopes.get(ctor);

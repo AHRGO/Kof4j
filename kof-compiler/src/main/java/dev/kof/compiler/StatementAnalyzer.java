@@ -200,7 +200,7 @@ public final class StatementAnalyzer {
             case ReturnStmt ret -> {
                 if (ret.value() != null) {
                     Type valueType = SemExpressionTyper.inferType(sa, ret.value(), scope);
-                    sa.expressionTypes().put(ret.value(), valueType);
+                    sa.mutableExpressionTypes().put(ret.value(), valueType);
                     if (sa.diagnostics() != null && !Type.isUnknown(returnType) && !Type.isVoid(returnType)
                             && !Type.isUnknown(valueType) && !TypeChecker.isAssignable(sa, valueType, returnType)) {
                         sa.diagnostics().error("", 0, 0, 0,
@@ -370,11 +370,11 @@ public final class StatementAnalyzer {
                     // (SEM012) sem o SEM027 (que é só para uso como VALOR —
                     // bug 12). Mesmo helper usado pelo update do for.
                     if (es.expression() instanceof AssignmentExpr ae) {
-                        sa.expressionTypes().put(es.expression(),
+                        sa.mutableExpressionTypes().put(es.expression(),
                                 analyzeAssignmentStatement(sa, ae, scope));
                     } else {
                         Type exprType = SemExpressionTyper.inferType(sa, es.expression(), scope);
-                        sa.expressionTypes().put(es.expression(), exprType);
+                        sa.mutableExpressionTypes().put(es.expression(), exprType);
                     }
                 }
             }

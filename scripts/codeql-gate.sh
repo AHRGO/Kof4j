@@ -24,24 +24,34 @@ BRANCHES=("main" "beta-0.4.0")
 FAILED=0
 
 echo "== GATE 1: CodeQL alerts (security/code-scanning) =="
+# VERDADE POR-BRANCH (licao 15/09 ~20:30): o filtro `?state=open` e o campo
+# `most_recent_instance` da LISTA mentem — CodeQL guarda UMA instancia por
+# ref, o scan de uma branch REABRE o que foi dismissado em outra (412
+# instancias reabertas na main com a UI cheia e o gate dizendo 0). O unico
+# retrato honesto e /alerts/{n}/instances filtrando refs/heads/ das branches
+# ativas. Custo: 1 chamada/alerta (cache TTL 60s da API ajuda a 2a corrida).
 for br in "${BRANCHES[@]}"; do
-  n=1; hits=0; open_list=""
-  while :; do
-    page=$(gh api "/repos/$REPO/code-scanning/alerts?per_page=100&page=$n" \
-      --jq '.[] | select((.state=="open") or (.state==null and .fixed_at==null and .dismissed_at==null)) |
-            "#\(.number) \(.rule.id) \(.most_recent_instance.location.path):\(.most_recent_instance.location.start_line)"' 2>/dev/null) || { echo "  [erro] API indisponivel para $br"; FAILED=1; break; }
-    [ -z "$page" ] && break
-    hits=$((hits + $(printf '%s\n' "$page" | grep -c .)))
-    open_list="$open_list$(printf '%s\n' "$page")"
-    n=$((n+1))
-    [ "$n" -gt 12 ] && break   # teto de seguranca: ~1200 alertas
+  open_n=0; open_list=""
+  for p in $(seq 1 12); do
+    nums=$(gh api "/repos/$REPO/code-scanning/alerts?per_page=100&page=$p" --jq '.[].number' 2>/dev/null) || { echo "  [erro] API lista indisponivel"; FAILED=1; break; }
+    [ -z "$nums" ] && break
+    for n in $nums; do
+      hit=$(gh api "/repos/$REPO/code-scanning/alerts/$n/instances?per_page=100" --paginate \
+        --jq --arg br "refs/heads/$br" 'first(.[] | select(.ref==$br and .state=="open") | .location.path + ":" + (.location.start_line|tostring))' 2>/dev/null)
+      if [ -n "$hit" ]; then
+        open_n=$((open_n+1))
+        [ "$open_n" -le 25 ] && open_list="$open_list  #$n $hit
+"
+      fi
+    done
+    [ "$(printf '%s\n' "$nums" | wc -l)" -lt 100 ] && break
   done
-  if [ "$hits" -gt 0 ]; then
-    echo "  RED — $hits alerta(s) open na branch $br:"
-    printf '%s\n' "$open_list" | sed 's/^/    /'
+  if [ "$open_n" -gt 0 ]; then
+    echo "  RED — $open_n alerta(s) open na branch $br (top 25):"
+    printf '%s' "$open_list" | sed 's/^/  /'
     FAILED=1
   else
-    echo "  green — $br: 0 open"
+    echo "  green — $br: 0 open (por-branch)"
   fi
 done
 
