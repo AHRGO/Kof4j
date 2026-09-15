@@ -139,6 +139,43 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+
+> **🔧 CAMPANHA DE ESTABILIZAÇÃO do gate de release (15/09, ordem direta da
+> mantenedora "estabilize o repo", dono = 192.168.100.17) — resultado HONESTO
+> medido, com auto-correção registrada:**
+> (A) **§240:** eu tinha corrigido a regressao do `8935c8a7` no
+> `MemberCallTyper` (guard `!isString(ct)`); o push rival `5e996312` (lane
+> .15) fez o MESMO na RAIZ (`isKofBuiltinJavaLang` no `knows()`) com escopo
+> MAIOR (String + Throwables + `repeat`/`indexOf`, teste dedicado). Medido no
+> remoto puro: minha versao ficou REDUNDANTE → **descartei os 2 commits locais
+> NUNCA-pushados** (`git reset --hard origin`) antes de publicar. Lição: o
+> pull--rebase ANTES da entrega detectou a corrida; quem chegou na raiz primeiro
+> fica com o numero.
+> (B) **§241-MEU (ERRADO, auto-corrigido por medicao):** migrei
+> `QualifiedCatchE2ETest`/`CoreRegressionE2ETest#qualifiedExceptionInCatchClauseJvm`
+> de `throw new <Throwable>` p/ `throw String` achando-os merged-red. Medido no
+> remoto puro: o `5e996312` restaurou o lancamento de Throwable REAL (compila
+> e roda) — os testes estao VERDES la; minha migracao ENFRAQUECERIA cobertura
+> verde. **Descartada.** O "merged-red" era verdade so na janela
+> `8935c8a7..5e996312` (ja fechada). §241 no remoto = OUTRO bug (Nullable,
+> da lane .22).
+> (C) **§233 ✅ (unica entrega de codigo desta campanha):** migração 4×
+> `.get(N)`→`[N]` em `NativeStringCompareCrossTest` (blast-radius do contrato
+> §202/`602dcbc0` esquecido ha ~1 dia; nem o `5e996312` migrou). Takeover
+> legitimo: o cross estava **2/2 VERMELHO medido no remoto puro `3a0826df`** e
+> ficou **2/2 VERDE sob qemu** com o golden `SPLIT_GOLDEN` byte-identico
+> (nao relaxado — Q5). Lane nat encerrada, lane .15 nao tocou o arquivo.
+> (D) **§237 ✅ registro:** medido 1/1 VERDE no remoto puro; fechado de fato
+> pelo `8935c8a7` ("Closes #237") — o catalogador sou eu, o credit e da lane
+> .15.
+> CONTAGEM DA FILA: 32→30 (delta meu = §233/§237; a lista base de 32 e da
+> lane .15 — nao reescrevi a contagem deles). RED CONHECIDO DO GATE: §205
+> (SIGSEGV NAT if-expr heterogeneo, lane nat, pre-existente a tudo) + o que a
+> suíte-completa em execucao apontar. **PRÓXIMO PASSO:** ler o resultado da
+> suíte 4-modulos limpa no tip com §233; se so restam §205 + reds de outras
+> lanes catalogados, o gate desta lane esta estabilizado — reportar e voltar
+> a fila docs.
+
 > **✅ FEITO (15/09 ~03:30, dono = 192.168.100.22, lane compiler): §241 RESOLVIDO — REVERT-do-contrato-boxed-meio-impl à causa raiz (gap honesto R6). O PORTÃO DE RELEASE ESTÁ DESBLOQUEADO.**
 > - **Decisão:** o próprio registro §241 oferecia "terminar o contrato em todas as faces OU reverter ao gap honesto (R6)". Escolhi o **revert** porque terminar colide de frente com o **§125 CONGELADO** (decisão da mantenedora 12/09, opção A: `return null` de `Nullable(primitivo)` → default do primitivo, nunca `null` — `CompilerTypes.defaultValueOp`, `KofInterpreterParityTest.printNullablePrimitiveNull`, célula `nullableprint`). Um `Int?` boxed de verdade exigiria `null` de primeira classe em semântica→IR→4 backends, desfazendo o §125 = decisão de contrato (regra 6), não patch de call-site. Meio-implementar é exatamente o que o §241 condena.
 > - **O que reverti:** `c0cf805e` (descritor boxed global em `JvmTypeMapper.toDescriptor` + compensação só-de-campo em `ExpressionAssignmentLowerer`/`ExpressionBinaryLowerer`/`ExpressionPrintLowerer`/`CompilerEmissionHelpers`) + `432cb552` (normalização de var local) + `NullablePrimitiveFieldsE2ETest`. Volta à forma pré-`c0cf805e`: campo/param/local/retorno `Int?` mantém descritor primitivo — o sintoma do #252/#259 volta como **gap CONHECIDO honesto** (não meia-ABI silenciosa).
