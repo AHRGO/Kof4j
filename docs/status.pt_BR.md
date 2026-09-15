@@ -18,7 +18,7 @@
 > (`supervisorNativeParityX86`/`supervisorNativeS2ParityX86`), `KofConcurrency2Test`
 > 40/0 incl. 4 casos novos de throw em worker no native, `ExceptionsE2ETest` 11/0,
 > `NativeE2ETest` 65/0. Suíte 1777/1 (o 1 = SIGSEGV Native pré-existente
-> `[ifexpr-heterogeneous-direct]`, §205, outra lane).
+> `[ifexpr-heterogeneous-direct]`, §205, outra lane). **Atualização 15/09: esse vermelho foi FECHADO no mesmo dia pela §205 fatia 1** (`97d08e54`, rebaixamento ramo-a-ramo no print direto — `conformanceCoreControl` 1/1 medido no tip; o residual `via-var`/`as Object` fica como PARCIAL, catalogado no §205).
 >
 > **14/09 — LINHA DE BASE DA ESTABILIZAÇÃO DE RELEASE (dono = 192.168.100.17,
 > lane docs/estabilização).** Run limpo 4-módulos (`rm -rf */target`): **1819
