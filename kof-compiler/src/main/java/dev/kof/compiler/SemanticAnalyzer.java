@@ -103,6 +103,11 @@ public class SemanticAnalyzer {
         }
         resolveMethodCalls(unit);
         checkNullLiteralArguments();
+        // §251: tipos DECLARADOS (retorno/param/campo/componente) que não
+        // resolvem nunca eram validados — a classe nem carregava
+        // (`NoClassDefFoundError`), silencioso (R6). DEDICADO p/ manter este
+        // arquivo quente longe do limite de 500 linhas.
+        DeclaredTypeChecker.check(this);
     }
 
     /**

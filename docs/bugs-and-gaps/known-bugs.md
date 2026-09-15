@@ -8494,7 +8494,7 @@ the user's — a compile-time diagnostic is the goal (rule 6).
 - **Proof (Q1, same commit):** `NullArgPrimitiveParamE2ETest` 7/7 — 4 rejects (instance/constructor/top-level/`Long`) + 2 non-regressions asserting NO SEM048 on `Boolean?`/`String?` params + real-value pass. Q3 edges: `println(null)` still prints `null`, `null` to a reference (`String`) param unchanged (accepted, runtime null-check works), `Long` fires. Q4 cross-target: the diagnostic is identical on JVM/JS/Native builds and under `kof run --target script` (shared frontend). Compiler suite green except the 2 pre-existing tip reds (set-exact without the diff).
 - **Status:** ✅ FIXED 15/09 (this unit, `fix(compiler)` commit of the same wave). #266 itself stays OPEN for the PRIMARY face (boxed `Nullable(primitive)` parameters across the 4 targets — the §241/#252 queue).
 
-### §251 — declared types are NEVER validated: an undefined type in a return/param silently compiles and makes the class unloadable (`NoClassDefFoundError`); in a local/field it is silently ignored
+### §251 — declared types are NEVER validated: an undefined type in a return/param silently compiles and makes the class unloadable (`NoClassDefFoundError`); in a local/field it is silently ignored — ✅ FIXED 15/09 (SEM011 at every declaration site; lane compiler `192.168.100.22`)
 
 - **Symptom (measured 15/09 on fresh classes, `Triage` on the JVM — owner = compiler lane; catalogued by lane bugs-and-gaps `192.168.100.15`; first seen investigating §249):**
   ```kof
@@ -8531,11 +8531,29 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   **parser** consequence of this same non-validation (an undefined `<ident>`
   followed by an `<ident>` is read as `Type name`), so the two sections are
   fixed by different layers and neither subsumes the other.
-- **Pointer (compiler lane):** add a shared `declaredTypeResolves(name, sa, scope)`
-  (≈`checkThrowsClause`) applied at the VarDeclStmt / param / return / field
-  sites. Owner = **compiler lane** (`SemanticAnalyzer`/`StatementAnalyzer` — hot
-  files).
-- **Status:** 🔴 OPEN — catalogued 15/09 by lane bugs-and-gaps `192.168.100.15`.
-  Related: **§249** (the `<ident> <ident>` statement-loss face), §179/§243 (the
-  shadowing guard that decides when a builtin name is a user type). No suite test
-  covers undefined declared types; not a release-gate red.
+- **Status:** ✅ FIXED 15/09 (lane compiler `192.168.100.22`).
+- **Fix (Q0, root cause):** new DEDICATED `DeclaredTypeChecker` (rule 7 —
+  keeps hot `SemanticAnalyzer`/`StatementAnalyzer` well below the 500 line
+  gate) walks every declaration site — function/method return + parameters,
+  constructor parameters, fields, record components, entity fields — and calls
+  `MemberResolver.declaredTypeUnresolved`, which decomposes composed types
+  (`List<Foo>`, `Foo?`, `Foo[]`, `(Int) -> Foo`) and validates each simple name
+  via the same §249 `isUnresolvedSimpleType` predicate, with the **type-variable
+  whitelist** the catalog warned about (`class Box<T> { T value }`,
+  `T id<T>(T x)`, `Pair<K,V>`, `Node<T>?`). Builtins, bare collections,
+  `kof.ui`/`kof.media` (§179), enums, module classes/records/interfaces,
+  imports and external types stay exempt; qualified names (`a.b.C`) are never
+  accused. Fires from `SemanticAnalyzer.analyze` after `checkNullLiteralArguments`.
+- **Proof (Q1, same commit):** `DeclaredTypeValidationE2ETest` 14/14 — 7
+  rejection faces (function return, param, field, record component, method
+  return, constructor param, nested type-arg `List<Foo>`) all SEM011; 7
+  legitimate forms green (generic class/function/`Pair<K,V>`, module
+  class/interface, collections, nullable/array, `Object`/`String`).
+  **RED pre-fix**: 7/14 fail with the `DeclaredTypeChecker` wiring reverted
+  (measured — the 7 rejection faces compiled `success=true`). The diagnostic is
+  identical on JVM/JS/Native builds (shared frontend).
+- **Related:** **§249** (the `<ident> <ident>` statement-loss face, fixed
+  separately at the parser/analyzer layer — the local `VarDeclStmt` face is
+  closed there); §179/§243 (the shadowing guard that decides when a builtin name
+  is a user type). No suite test covers undefined declared types before this
+  unit; not a release-gate red.
