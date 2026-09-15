@@ -805,13 +805,15 @@ maps, advanced) planned. See: `docs/debugging/debugger-architecture.md`,
 Long-term initiative to analyze, recover, translate and modernize
 legacy systems into Kof — **outside the 0.0.x scope**.
 
-- Central document: `LEGACY_MIGRATION.md` (§4 = Legacy Semantic IR/Confidence;
-  §8 = differential test + migration report)
+- Central document: `future/LEGACY_MIGRATION.md` (§4 = Legacy Semantic
+  IR/Confidence; §8 = differential test + migration report) — **DEPRIORITIZED
+  by the maintainer 15/09: the trio + work-logs went back to `future/`; code in
+  kof-cli stays, promotion needs her explicit decision**
 - Planned components: `kof inspect`, `kof decompile`, `kof translate`,
   `kof migrate`, `kof compare`
 - Architecture: `Legacy Input → Legacy Semantic IR → Kof AST → Kof IR → Backend`
 - Java is a supported source, never a mandatory intermediate representation
-- Related documents: `DECOMPILER.md`, `TRANSLATOR.md` (the old
+- Related documents: `future/DECOMPILER.md`, `future/TRANSLATOR.md` (the old
   `LEGACY_IR.md` and `DIFFERENTIAL_TESTING.md` were merged into the central one 13/09;
   `IMPLEMENTATION_PLAN.md`/`ACTION_PLAN.md` became §23 of this roadmap)
 
@@ -910,8 +912,9 @@ Translate 61, Compare 7, Migrate 3** — all green (the 13/09 numbers 57/33/6/3
 were stale; the former "1 red cell" `qualifiedLocalTypeTranslates` is GREEN
 since the `.22` lane closed it). Method body recovery still partial
 (structural joins = Phase C, the biggest measured bottleneck: 2452 methods). The
-detailed technical history lives in `LEGACY_MIGRATION.md` + `DECOMPILER.md`
-(§7) — **do not duplicate here**; this table only gives the order.
+detailed technical history lives in `future/LEGACY_MIGRATION.md` +
+`future/DECOMPILER.md` (§7) — **do not duplicate here**; this table only gives
+the order. **DEPRIORITIZED 15/09 (maintainer): TIER 3–5 is not current work.**
 
 ### TIER 6–12 — Universal platform (not started; governed by `future/PLAN-UNIVERSAL-PLATFORM.md`)
 

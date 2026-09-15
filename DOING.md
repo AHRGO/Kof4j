@@ -214,6 +214,21 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > direto agora esta verde). REDS RESTANTES DO GATE = pre-existentes catalogados
 > por outras lanes: §181 riscv/aarch `CastSaturation` (2) + `validationBrJs`
 > (node env) + `parseOrDefaultCrossArch` (§192 hang, excluido por -Dtest).
+> (H) **MIGRACAO LEGADO DESPRIORIZADA (15/09, ordem direta da mantenedora):
+> `DECOMPILER.md`/`TRANSLATOR.md`/`LEGACY_MIGRATION.md` (EN+PT) voltaram para
+> `docs/development/future/` (git mv — 6 arquivos). Codigo em kof-cli FICA
+> (DecompileTest 67/67, TranslateTest 61/61 verdes no tip); so a FILA para —
+> promoting precisa de decisao explicita dela (regra dos tres estados).
+> Referencias sincronizadas no mesmo commit: README (EN+PT, linha ~~riscada~~),
+> roadmap §21 (EN+PT, trio → `future/`), AGENTS.md corpus-table (EN+PT:
+> "back to future/ 15/09 — DEPRIORITIZED"). Docs-lang gate verde.
+> ULTIMA MEDICAO honesta da lane antes de soltar a fila (registrada no header
+> do DECOMPILER EN+PT): "attack plan" 13/09 ja estava OBSOLETA no tip (join
+> if-then puro recuperado — fixture g/h golden `106,100,106,100` byte-
+> identico via `e17ac9e1`/`8719e304`); o gargalo real de 1793 stubs =
+> familia r14 (519/566 prefixos com TRAP `0xb6/0xb9/0xb8/0xc1` no teste =
+> zona do walker de post-dominador, lei step-3a) — ROI de qualquer guard
+> local ≈ 0 neste corpus. Fila da migreicao NAO e mais da lane.
 > **PRÓXIMO PASSO:** voltar a fila da lane (docs/development/): auditar o
 > pendente REAL de `docs/development/` contra o code (regra dos tres estados —
 > concluido→docs/, planeado→future/), comecando pelos `.md` soltos sem dono

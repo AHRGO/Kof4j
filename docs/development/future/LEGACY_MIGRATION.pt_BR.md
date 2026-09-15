@@ -2,7 +2,10 @@
 
 # LEGACY_MIGRATION.md — Plataforma de Migração de Software Legado
 
-**Status:** EM DESENVOLVIMENTO — **doc central e único da plataforma de
+**Status:** **DESPRIORIZADO pela mantenedora (15/09) — movido de volta a
+`future/` junto com seus work-logs (`DECOMPILER.md`, `TRANSLATOR.md`).
+Não é trabalho atual; promoção exige decisão explícita dela.** O código já
+no repo fica. — **doc central e único da plataforma de
 migração** (caiu de `future/` em 12/09; FUNDIU `LEGACY_IR.md` no §4 e
 `DIFFERENTIAL_TESTING.md` no §8 em 13/09 — conceitos duplicados, zero
 conteúdo único; work-logs técnicos vivem em `DECOMPILER.md`/`TRANSLATOR.md`).

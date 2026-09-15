@@ -1,13 +1,21 @@
 [English](DECOMPILER.md) | [Português](DECOMPILER.pt_BR.md)
 
-# DECOMPILER.md — Kof Decompiler (plan → IN DEVELOPMENT)
+# DECOMPILER.md — Kof Decompiler (DEPRIORITIZED 15/09 — back to future/)
 
-**Status:** IN DEVELOPMENT (dropped from `future/` on 12/09 — implemented:
+**Status:** **DEPRIORITIZED by the maintainer (15/09) — moved back to
+`future/`. Not current work; promotion needs her explicit decision** (the
+three-states rule). Code already in the repo stays (kof-cli `Decompile.java` +
+decoders, `DecompileTest` 67/67) — only the *queue* stops here; the full
+work-log below remains as the record for a future session. Implemented:
 `Decompile.java` + bytecode decoders, Phases A–E with code; proof:
 `DecompileTest` **67/67** green + `DecompilePostDominatorTest` 6/6
 (re-measured 15/09 on tip `7b0bfbe0`; the header's 45/45 was the 22/08
-baseline). Full-body recovery phases still
-open — that is why it does not go to `docs/`)
+baseline). The remaining gap
+(measured 15/09: 1793 stubs on the 706-class corpus; the biggest one —
+struct joins with computation/invokes in the test, 519 TRAPs of the `r14`
+family — needs the post-dominator walker = a dedicated future session; the
+local "stop/join" guards and the naive expression-fallback were tried and
+REJECTED, steps 1–3a of the work-log below)
 **Date:** August 22, 2026
 
 ---
