@@ -47,7 +47,6 @@ class ConcreteClassMissingAbstractMethodTest {
     }
 
     @Test
-    @SuppressWarnings("ProcessBuilderCommandInjection")
     void completeAbstractMethodImplementationCompilesAndRuns(@TempDir Path tempDir) throws Exception {
         Path source = tempDir.resolve("Main.kf");
         Files.writeString(source, """
@@ -74,8 +73,9 @@ class ConcreteClassMissingAbstractMethodTest {
         assertTrue(result.success(), "Compilation must succeed when all abstract methods are implemented: "
                 + result.diagnostics().getDiagnostics());
 
-        Process p = new ProcessBuilder(System.getProperty("java.home") + "/bin/java",
-                "-cp", outDir.toString(), "Default.Main").redirectErrorStream(true).start();
+        String javaCmd = System.getProperty("java.home") + "/bin/java";
+        Process p = new ProcessBuilder(javaCmd, "-cp", outDir.toString(), "Default.Main")
+                .redirectErrorStream(true).start();
         String output = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
                 .replace("\r\n", "\n").trim();
         int ec = p.waitFor();

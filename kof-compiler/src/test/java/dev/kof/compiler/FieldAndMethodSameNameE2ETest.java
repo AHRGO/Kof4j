@@ -19,7 +19,7 @@ class FieldAndMethodSameNameE2ETest {
 
     private final CompilerDriver driver = new CompilerDriver();
 
-    @SuppressWarnings("ProcessBuilderCommandInjection")
+@SuppressWarnings("ProcessBuilderCommandInjection")
     private String runJvm(Path tempDir, String source, String expected) throws IOException {
         Path file = tempDir.resolve("Main-" + System.nanoTime() + ".kf");
         Files.writeString(file, source);
@@ -27,8 +27,9 @@ class FieldAndMethodSameNameE2ETest {
         CompilationResult result = driver.compile(file, outDir, Target.JVM);
         assertTrue(result.success(), "JVM compile failed: " + result.diagnostics().getDiagnostics());
         try {
-            Process p = new ProcessBuilder(System.getProperty("java.home") + "/bin/java",
-                    "-cp", outDir.toString(), "Default.Main").redirectErrorStream(true).start();
+            String javaCmd = System.getProperty("java.home") + "/bin/java";
+            Process p = new ProcessBuilder(javaCmd, "-cp", outDir.toString(), "Default.Main")
+                    .redirectErrorStream(true).start();
             String output = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
                     .replace("\r\n", "\n").trim();
             int ec = p.waitFor();
