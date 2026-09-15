@@ -351,9 +351,12 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > - **Toolchain:** JDK 25 confirmado em `/home/mel/tools/jdk-25` — baseline
 >   `release 25` compila limpo (`JAVA_HOME=/home/mel/tools/jdk-25`); o
 >   workaround do pom em 21 não é mais necessário.
-> **Restantes (4/6):** `roundTo` (decisão 3), `app.security()` modelo Spring
-> (decisão 5, reverte reads públicas), §180 Native x86 double/float toString
-> (decisão 6), §129 frame por thread (decisão 2).
+> **Restantes (1/6):** §129 frame por thread (decisão 2) — `roundTo` (3),
+> `app.security()` Spring (5), §101 (1), §179 (4) FEITOS 14/09; **§180 Native
+> x86 double/float toString (6) FEITO 15/09** (lane development `.18`,
+> `RuntimeDtoa`; riscv/aarch = FLT001).
+
+> **✅ FEITO (15/09 ~01:20, dono = 192.168.100.18, lane development): DECISIONS §6 — §180 Native `println(double/float)` = JDK `Double.toString`/`Float.toString` (x86_64).** Novo fragmento DEDICADO `RuntimeDtoa` (`kof_dtoa_format`/`kof_double_to_string`/`kof_float_to_string`): loop limitado `%.{0..16}e`+`strtod` para o shortest round-trip bit-exato + reformatação ao estilo Java (limiar científico `1e7`/`1e-3`, `E` maiúsculo, mantissa sempre com parte fracionária, `Float` com forma própria, NaN/±Inf normalizados); cada entry point alinha a pilha em 16B (`andq $-16,%rsp`) antes das chamadas à libc (glibc `movaps` exige 16B — era a causa do SIGSEGV). `RuntimePrintNum` (print cru), `RuntimeJsonEncode` (NaN/±Inf→`null`) e `RuntimeCollectionToString` delegam a ela; `RuntimeStringConv` mantém só int/char/long/bool. **Prova:** `ConformanceMatrixTest.doubleprint` com o **Native INCLUÍDO** (11 vetores: `0.1+0.2`→`0.30000000000000004`, `1e7`→`1.0E7`, `1e-5`→`1.0E-5`, `1.0f/3.0f`→`0.33333334`, `1.0e20f`→`1.0E20`, `1e-3`→`0.001`, `1e-4`→`1.0E-4`, `3.4028235e38f`→`3.4028235E38`, `-0.0`→`-0.0`, NaN) + `infinityprint` + `KofMathTest` 29/29 + `JsonE2ETest`/`JsonCompleteE2ETest` + `NativeRuntimeSliceRegistryTest` 7/7 + `ConformanceMatrixDocTest` 1/1. Paridade JVM==Native confirmada manualmente. **Borda:** riscv/aarch seguem `FLT001` (precisam de `snprintf`/`strtod` da libc). Docs: DECISIONS §6 Done (EN+PT), conformance-matrix `doubleprint` (EN+PT), known-bugs §180 ✅ (EN+PT), backend-parity (EN+PT), CHANGELOG (EN+PT). **Próximo:** decisão 2 (§129 frame por thread).
 
 > **✅ FEITO (14/09 ~03:45, dono = 192.168.100.22, lane repo-hygiene/.github):
 > pack segurança GitHub + merge na main (ordem da mantenedora, sem bump —

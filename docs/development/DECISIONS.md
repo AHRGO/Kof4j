@@ -561,6 +561,28 @@ a bounded `%.{1..17}g`+`strtod` round-trip loop is an acceptable deterministic
 implementation) — no reinvention of the algorithm beyond what the JDK already
 defines. Cross-target golden cell (`floatprint`).
 
+> **✅ EXECUTED (15/09, owner 192.168.100.18):** the Native x86_64 now uses the
+> bounded `%.*e`+`strtod` round-trip loop (the option sanctioned above). New
+> runtime fragment `RuntimeDtoa` emits `kof_dtoa_format`,
+> `kof_double_to_string` and `kof_float_to_string`: for each precision `0..16`
+> (double) / `0..8` (float) it formats with `snprintf("%.*e")` and re-parses
+> with `strtod`, keeping the **shortest** precision that round-trips bit-exact;
+> then it reformats to Java's style (scientific only when `|x|>=1e7` or
+> `<1e-3`, uppercase `E`, mantissa always with a fractional part) and `Float`
+> keeps **its own** shortest form (not the double expansion). `RuntimePrintNum`
+> (the unboxed `print`), `RuntimeJsonEncode` (NaN/±Inf → `null`) and the
+> `RuntimeCollectionToString` `.Lce_double`/`.Lce_float` branches delegate to it;
+> `RuntimeStringConv` no longer carries the float/double conversion (int/char/
+> long/bool only). **libc constraint:** `snprintf`/`strtod` are needed, so this
+> is **x86_64 only**; riscv/aarch stay `FLT001`. The Kof runtime `_start` does
+> **not** guarantee 16-byte stack alignment, so each dtoa entry point does
+> `andq $-16, %rsp` before the libc calls (glibc `movaps` needs 16B — the
+> misalignment was the SIGSEGV root cause). Proof: `ConformanceMatrixTest.doubleprint`
+> (Native exclusion removed, extended with `0.001`/`1.0E-4`/`3.4028235E38`/`-0.0`)
+> — Native == JVM byte-for-byte; `KofMathTest` 29/29, `JsonE2ETest` 18/18,
+> `JsonCompleteE2ETest` 9/9, `NativeRuntimeSliceRegistryTest` 7/7,
+> `ConformanceMatrixDocTest` green.
+
 ---
 
 ## How to update this doc

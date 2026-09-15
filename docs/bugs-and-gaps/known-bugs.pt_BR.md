@@ -20,7 +20,7 @@
 > | **§168 ✅ CORRIGIDO 13/09 (lane development/translator, `3ab4c99e`)** | SEM025 ausente em namespace `json` para método inexistente: `json.metodoRuim()` compilava com sucesso (deveria falhar com SEM025). O handler do #126 (`61495f69`) validava aridade de `encode/decode` mas não rejeitava método desconhecido; `MemberCallNamespaces` mudou de `if (known && !valid)` para `if (!valid)` (rejeita QUALQUER método ≠ encode/decode) + `return null` no caminho válido. Re-verificado no binário (`kof check` → SEM025; `json.encode(42)` → no errors); `SemanticResolutionTest` 27/27. |
 > | **§179 ❌ ABERTO 13/09 (lane bugs-and-gaps, 192.168.100.15 — catalogado na caça Q4 do §178)** | Tipo `kof.ui`/`kof.media` DECLARADO numa assinatura/var/param/campo quebra o backend JVM (VerifyError `Bad type on operand stack`): `MemberResolver.resolveType("Label")` cai em `Type.of("Label")` = `ClassType("", "Label")` — NÃO reconhece o builtin `kof.ui.Label` — então o descritor sai `LLabel;` enquanto o valor real do handle é um `int` (`kof_ui_label_new` devolve int). Menor repro `main(){ Label l = Label("x"); println(uiNodesLive()) }` → JVM VerifyError; Native/Script/JS OK. Mesma raiz: `Label make(){...}`, param `void use(Label l)`, campo `Label field`. **NÃO corrigido** (toca resolução de nomes — shadowing de classe de usuário homônima; regra 6, precisa decisão). Fix proposto: em `MemberResolver.resolveType`, após `qualifyDeep`, mapear `ClassType("", name)` p/ `KofUi.constructorType(name)`/`KofMedia` quando `name` é builtin UI/media E não foi resolvido por import/classe do módulo (shadowing preservado). |
 > | **§181 ✅ CORRIGIDO 13/09 (catalogado pela lane bugs-and-gaps, 192.168.100.15; fix `c90e85ee` + regressão x86/riscv corrigida pela mesma lane `192.168.100.15`)** | Cast `Double/Float as Int/Long` FORA de faixa / `NaN` / `Infinity`: o contrato é o JVM (JLS 5.1.3 — satura: NaN→0, >MAX→MAX, <MIN→MIN) e **JVM+Script concordam**. **Native x86** usava `cvttsd2si` cru → "integer indefinite" `INT_MIN` (`3.0e9 as Int`→`-2147483648`, `NaN`→`INT_MIN`, `1.0e19 as Long`→`Long.MIN`). **JS** usava `Math.trunc`/`BigInt(Math.trunc)` sem 32-bit (`3.0e9 as Int`→`3000000000`, `NaN as Int`→`NaN`, `Infinity as Int`→`Infinity`; `1.0e19 as Long`→`10000000000000000000`; e **`NaN as Long` LANÇAVA `RangeError`**). Incoerente até com a aritmética Int do JS (que faz wrap 32-bit). Célula `cast` só testava valores EM FAIXA = **verde falso (Q5)**. Fix entregue: JS = helpers saturantes (`kofD2I`/`kofD2L`/`kofF2I`/`kofF2L`); Native = guard `ucomisd`+saturação (`emitSatConv`) espelhado riscv/aarch. **A célula `cast` pegou a regressão do x86** (bits inteiros lidos como double) e o `castrange` (4 targets) trava o golden. |
-> | **§180 ❌ ABERTO 13/09 (lane bugs-and-gaps, 192.168.100.15 — residual/overclaim do bug 44)** | `println(double/float)` no Native x86_64 NÃO é JDK `Double.toString`/`Float.toString`: `%.16g` trunca o shortest-round-trip (`println(0.1+0.2)` → JVM/Script/JS `0.30000000000000004`, Native `0.3`; `100.0/3.0` → `33.333333333333336` vs `33.33333333333334`), diverge na notação científica (`1e7` → `1.0E7` vs `10000000.0`; `1e-5` → `1.0E-5` vs `1e-05`) e o `Float` imprime a expansão double (`1.0f/3.0f` → JVM `0.33333334`, Native `0.3333333432674408`). Só o Native x86 diverge (regra 5, silencioso). Célula `floatprint` só testava 3 valores que coincidem = **verde falso (Q5)**. Causa: `RuntimeStringConv.emitDoubleToString`/`emitFloatToString`/`RuntimePrintNum` usam `snprintf("%.16g")` + `cvtss2sd`. Fix = shortest-round-trip JDK (Ryu/Grisu ou loop `%.{1..17}g`+`strtod`) + normalizar científico + `Float.toString` próprio — **unidade GRANDE, lane Native**, não corrigido aqui. |
+> | **§180 ✅ CORRIGIDO 15/09 x86_64 (lane bugs-and-gaps `192.168.100.15` catalogou, lane development `192.168.100.18` executou — residual/overclaim do bug 44)** | `println(double/float)` no Native x86_64 NÃO era JDK `Double.toString`/`Float.toString`: `%.16g` truncava o shortest-round-trip (`println(0.1+0.2)` → JVM/Script/JS `0.30000000000000004`, Native `0.3`; `100.0/3.0` → `33.333333333333336` vs `33.33333333333334`), divergia na notação científica (`1e7` → `1.0E7` vs `10000000.0`; `1e-5` → `1.0E-5` vs `1e-05`) e o `Float` imprimia a expansão double (`1.0f/3.0f` → JVM `0.33333334`, Native `0.3333333432674408`). Fix: `RuntimeDtoa` com o loop `%.*e`+`strtod` (shortest round-trip bit-exato) + reformatação ao estilo Java; só x86_64 (libc), riscv/aarch seguem `FLT001`. Célula `doubleprint` com o Native incluído (Native == JVM). |
 
 > | Antiga "varredura 08/09" (apócrifa — corrigida 12/09) | os "abertos" 39/62/63/64/46/48/50/59/61 estão ✅ CORRIGIDO nos próprios cabeçalhos (39/62/63/64 JVM/JS; 46/50/59 Native; 48/61 gap honesto JSN004/FFI001); contagem real na linha acima. |
 > | Paridade interpretador × compilados (semântica `==` congelada — regra 6) | **0** — bug 94 ✅ CORRIGIDO 13/09 (EQ/NE de Double/Float no interpretador agora IEEE; a "decisão" era alinhar ao previsto, que os 3 compilados + corpus já definiam) |
@@ -5911,7 +5911,33 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   `JvmLiteralEmitter.returnOpcode` emite `IRETURN`) sem tocar a resolução de
   nomes.
 
-### §180 — `println(double/float)` no Native x86_64 NÃO é JDK `Double.toString`/`Float.toString`: `%.16g` trunca o shortest-round-trip (`0.1+0.2` → `0.3`), a notação científica diverge (`1e7` → `10000000.0`) e o `Float` imprime a expansão double (`1.0f/3.0f` → `0.3333333432674408`) — ❌ ABERTO 13/09 (residual/overclaim do bug 44; lane bugs-and-gaps `192.168.100.15`)
+### §180 — `println(double/float)` no Native x86_64 NÃO é JDK `Double.toString`/`Float.toString`: `%.16g` trunca o shortest-round-trip (`0.1+0.2` → `0.3`), a notação científica diverge (`1e7` → `10000000.0`) e o `Float` imprime a expansão double (`1.0f/3.0f` → `0.3333333432674408`) — ✅ CORRIGIDO 15/09 x86_64 (residual/overclaim do bug 44; catalogado pela lane bugs-and-gaps `192.168.100.15`, executado pela lane development `192.168.100.18`; DECISIONS §6)
+
+> **✅ CORRIGIDO 15/09 (dono 192.168.100.18, x86_64):** nova fatia de runtime
+> `RuntimeDtoa` (`kof_dtoa_format`, `kof_double_to_string`,
+> `kof_float_to_string`) implementa o contrato do JDK via o loop limitado
+> `%.*e`+`strtod`: para precisão `0..16` (double) / `0..8` (float) formata com
+> `snprintf("%.*e")` e re-parseia com `strtod`, guardando a menor precisão que
+> faz round-trip **bit-exato**; depois reformata no estilo Java (científica só
+> quando `|x|>=1e7` ou `<1e-3`, `E` maiúsculo, mantissa sempre com parte
+> fracionária) e `Float` mantém a **própria** forma mais curta (não a expansão
+> double). `RuntimePrintNum` (o `print` sem box), `RuntimeJsonEncode`
+> (NaN/±Inf → `null`) e os ramos `.Lce_double`/`.Lce_float` do
+> `RuntimeCollectionToString` delegam a ela; o `RuntimeStringConv` não carrega
+> mais a conversão de float/double (só int/char/long/bool). As quatro faces
+> (a)–(d) fechadas: `0.1+0.2` → `0.30000000000000004`, `1e7` → `1.0E7`,
+> `1e-5` → `1.0E-5`, `1e-3` → `0.001`, `1e-4` → `1.0E-4`, `1.0f/3.0f` →
+> `0.33333334`, `1.0e20f` → `1.0E20`, `3.4028235e38f` → `3.4028235E38`,
+> `math.pow(-1.0,0.5)` → `NaN` (a face `-nan`), `-0.0` → `-0.0`. Prova:
+> `ConformanceMatrixTest.doubleprint` com a exclusão do Native **removida**
+> (Native == JVM byte a byte) + `KofMathTest` 29/29, `JsonE2ETest` 18/18,
+> `JsonCompleteE2ETest` 9/9, `NativeRuntimeSliceRegistryTest` 7/7.
+> **Duas restrições:** (1) `snprintf`/`strtod` exigem libc, então o fix é
+> **só x86_64** — riscv/aarch seguem `FLT001`; (2) o `_start` do runtime Kof
+> **não** garante alinhamento de pilha de 16 bytes, então cada entry point do
+> dtoa faz `andq $-16, %rsp` antes das chamadas libc (o `movaps` da glibc
+> precisa de 16B — o desalinhamento era a causa-raiz do SIGSEGV, descoberta
+> ao aterrissar este fix).
 
 - **Sintoma (medido 13/09, x86_64, 4 targets):** o bug 44 foi fechado 10/09
   com a nota "16 casas + `.0` casa com o JVM", mas o `%.16g` do glibc **não**
@@ -5970,11 +5996,12 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   de verificação de round-trip) + normalizar a notação científica ao formato
   JDK (`E`, sem `+`, sem zero à esquerda no expoente, mantissa com `.0`).
   Toca `RuntimeStringConv` + `RuntimePrintNum` + o espelho cross (riscv/aarch,
-  família FLT001). **Não corrigido nesta sessão** (fora do escopo de uma
-  unidade segura; é lane Native, e a família FLT001 já documenta que
-  double→string bit-exato exige o algoritmo big-int do JDK).
+  família FLT001). **✅ IMPLEMENTADO 15/09 x86_64** via a opção
+  `%.{1..17}g`+`strtod` acima (ver a nota de fix no topo): `RuntimeDtoa`
+  carrega `kof_dtoa_format`/`kof_double_to_string`/`kof_float_to_string`;
+  riscv/aarch seguem FLT001 (precisam de `snprintf`/`strtod` da libc).
 - **Overclaim corrigido:** o cabeçalho do bug 44 e a linha `floatprint` da
-  matriz diziam "DONE"; passam a apontar este residual.
+  matriz diziam "DONE"; passam a apontar este residual (agora fechado no x86_64).
 
 
 ### §181 — `Double/Float as Int` e `as Long` FORA DE FAIXA / `NaN` / `Infinity`: JVM+Script saturam (JLS 5.1.3), Native usa `cvttsd2si` cru (`INT_MIN`) e JS usa `Math.trunc`/`BigInt` sem 32-bit (dá `3000000000`/`NaN`/`Infinity`, e `NaN as Long` lança `RangeError`) — ✅ CORRIGIDO 13/09 (catalogado pela lane bugs-and-gaps `192.168.100.15`; implementado em `c90e85ee` — JS `kofD2I/kofD2L/…` + Native `emitSatConv` + riscv/aarch — e **regressão do fix x86 corrigida + verificada** pela mesma lane `192.168.100.15`)

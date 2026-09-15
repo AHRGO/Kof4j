@@ -72,168 +72,31 @@ public final class RuntimePrintNum {
     }
 
     public static void emitPrintFloat(StringBuilder sb) {
+        // §180 (DECISIONS §6): o print cru (sem box) delega ao MESMO
+        // kof_float_to_string/kof_double_to_string do RuntimeDtoa (contrato JDK
+        // shortest-round-trip + notação científica + Float com forma própria) e
+        // imprime via kof_print_string. Antes reimplementava o %.16g + pós-fix
+        // de ".0"/inf/nan — o contrato agora é único (zero duplicação).
         sb.append("""
-            .section .data
-            .Lfmt_float: .asciz "%.16g"
-            .Lfmt_double: .asciz "%.16g"
             .section .text
             .globl kof_print_float
             .type kof_print_float, @function
             kof_print_float:
                 pushq %rbp
                 movq %rsp, %rbp
-                pushq %rbx
-                pushq %r12
-                subq $80, %rsp
-                cvtss2sd %xmm0, %xmm0
-                leaq -72(%rbp), %r12
-                movq %r12, %rdi
-                movq $64, %rsi
-                leaq .Lfmt_float(%rip), %rdx
-                movl $1, %eax
-                movq %rsp, %rbx
-                andq $-16, %rsp             # alinha para snprintf
-                call snprintf
-                movq %rbx, %rsp
-                jmp kof_print_dbl_emit      # +6: float imprime como double
+                call kof_float_to_string
+                movq %rax, %rdi
+                call kof_print_string
+                popq %rbp
+                ret
             .globl kof_print_double
             .type kof_print_double, @function
             kof_print_double:
                 pushq %rbp
                 movq %rsp, %rbp
-                pushq %rbx
-                pushq %r12
-                subq $80, %rsp
-                leaq -72(%rbp), %r12
-                movq %r12, %rdi
-                movq $64, %rsi
-                leaq .Lfmt_double(%rip), %rdx
-                movl $1, %eax
-                movq %rsp, %rbx
-                andq $-16, %rsp             # alinha para snprintf
-                call snprintf
-                movq %rbx, %rsp
-            kof_print_dbl_emit:
-                # bug 44: NaN/Infinity passam retos (JVM idem).
-                # inteiro-válido (sem '.', 'e', 'n'/'i' de nan/inf) → append ".0"
-                # (JDK Double.toString: println(5.0) == "5.0", não "5").
-                # write via syscall (NÃO printf) — bug 44 face (b): misturar
-                # stdout-buffered (printf) com write direto (Int/String)
-                # REORDENAVA a saída inteira do programa.
-                xorl %ecx, %ecx             # rc = len
-            .Lkof_dbl_emit_len:
-                cmpb $0, (%r12,%rcx)
-                je .Lkof_dbl_emit_have
-                incq %rcx
-                jmp .Lkof_dbl_emit_len
-            .Lkof_dbl_emit_have:
-                xorl %ebx, %ebx             # precisa .0? (0 = ainda não achou)
-                testq %rcx, %rcx
-                jz .Lkof_dbl_emit_write     # vazio → imprime como está
-                xorl %edx, %edx             # idx
-            .Lkof_dbl_emit_scan:
-                movb (%r12,%rdx), %al
-                cmpb $46, %al               # '.' → decimal, ok
-                je .Lkof_dbl_emit_write
-                cmpb $101, %al              # 'e' → notação científica, ok
-                je .Lkof_dbl_emit_write
-                cmpb $110, %al              # 'n' de nan
-                je .Lkof_dbl_emit_write
-                cmpb $105, %al              # 'i' de inf/Infinity
-                je .Lkof_dbl_emit_write
-                incq %rdx
-                cmpq %rcx, %rdx
-                jb .Lkof_dbl_emit_scan
-                movl $1, %ebx               # inteiro-válido → precisa .0
-            .Lkof_dbl_emit_write:
-                testq %rbx, %rbx
-                jz .Lkof_dbl_emit_special
-                # append ".0" ao buffer (64 bytes: %.16g de 1 dígito ocupa
-                # no máx ~24 — sempre cabe) — o mesmo buffer é reaproveitado
-                # pelo kof_double_to_string (String) via .Lkof_dbl_str_done
-                leaq (%r12,%rcx), %rsi
-                movw $12334, (%rsi)         # 0x302E = ".0" little-endian ('.','0')
-                movb $0, 2(%rsi)
-                addq $2, %rcx
-                movb $0, (%r12,%rcx)
-                jmp .Lkof_dbl_emit_ok
-            .Lkof_dbl_emit_special:
-                # bug 44 (residual — paridade regra 5, x86_64): o glibc %.16g
-                # escreve 'inf'/'-inf'/'nan' mas o contrato é JDK Double.toString
-                # → 'Infinity'/'-Infinity'/'NaN' (o que JVM/Script imprimem). O
-                # código antigo "passava reto" o spelling do glibc — DIVERGIA do
-                # JVM. Reescreve in-place (buffer tem 64 bytes; os 3 cabem).
-                # Só os 3 spellings EXATOS do glibc casam (verificação char a
-                # char) — decimal/científico/".0" têm dígito na posição e não
-                # reescrevem.
-                testq %rcx, %rcx
-                jz .Lkof_dbl_emit_ok
-                cmpq $3, %rcx
-                je .Lkof_dbl_emit_sp3
-                cmpq $4, %rcx
-                je .Lkof_dbl_emit_sp4
-                jmp .Lkof_dbl_emit_ok
-            .Lkof_dbl_emit_sp3:
-                cmpb $105, (%r12)           # 'i' de inf
-                je .Lkof_dbl_emit_chk3i
-                cmpb $110, (%r12)           # 'n' de nan
-                je .Lkof_dbl_emit_chk3n
-                jmp .Lkof_dbl_emit_ok
-            .Lkof_dbl_emit_chk3i:
-                cmpb $110, 1(%r12)          # 'n'
-                jne .Lkof_dbl_emit_ok
-                cmpb $102, 2(%r12)          # 'f'
-                jne .Lkof_dbl_emit_ok
-                movb $73, (%r12)            # 'I'
-                movb $110, 1(%r12)          # 'n'
-                movb $102, 2(%r12)          # 'f'
-                movb $105, 3(%r12)          # 'i'
-                movb $110, 4(%r12)          # 'n'
-                movb $105, 5(%r12)          # 'i'
-                movb $116, 6(%r12)          # 't'
-                movb $121, 7(%r12)          # 'y'
-                movb $0, 8(%r12)
-                movq $8, %rcx               # "Infinity"
-                jmp .Lkof_dbl_emit_ok
-            .Lkof_dbl_emit_chk3n:
-                cmpb $97, 1(%r12)           # 'a'
-                jne .Lkof_dbl_emit_ok
-                cmpb $110, 2(%r12)          # 'n'
-                jne .Lkof_dbl_emit_ok
-                movb $78, (%r12)            # 'N'
-                movb $97, 1(%r12)           # 'a'
-                movb $78, 2(%r12)           # 'N'
-                movb $0, 3(%r12)
-                movq $3, %rcx               # "NaN"
-                jmp .Lkof_dbl_emit_ok
-            .Lkof_dbl_emit_sp4:
-                cmpb $45, (%r12)            # '-' de -inf
-                jne .Lkof_dbl_emit_ok
-                cmpb $105, 1(%r12)          # 'i'
-                jne .Lkof_dbl_emit_ok
-                cmpb $110, 2(%r12)          # 'n'
-                jne .Lkof_dbl_emit_ok
-                cmpb $102, 3(%r12)          # 'f'
-                jne .Lkof_dbl_emit_ok
-                movb $73, 1(%r12)           # 'I' (buf[0] '-' já está)
-                movb $110, 2(%r12)          # 'n'
-                movb $102, 3(%r12)          # 'f'
-                movb $105, 4(%r12)          # 'i'
-                movb $110, 5(%r12)          # 'n'
-                movb $105, 6(%r12)          # 'i'
-                movb $116, 7(%r12)          # 't'
-                movb $121, 8(%r12)          # 'y'
-                movb $0, 9(%r12)
-                movq $9, %rcx               # "-Infinity"
-            .Lkof_dbl_emit_ok:
-                movq $1, %rax               # SYS_write
-                movq $1, %rdi               # stdout
-                leaq -72(%rbp), %rsi
-                movq %rcx, %rdx
-                syscall
-                addq $80, %rsp
-                popq %r12
-                popq %rbx
+                call kof_double_to_string
+                movq %rax, %rdi
+                call kof_print_string
                 popq %rbp
                 ret
             """);

@@ -11,6 +11,9 @@ public final class RuntimeJsonEncode {
 
     public static void emitJsonEncode(StringBuilder sb) {
         sb.append("""
+            .section .rodata
+            .Ljson_null: .asciz "null"
+            .section .text
             .globl kof_json_encode_int
             .type kof_json_encode_int, @function
             kof_json_encode_int:
@@ -29,42 +32,47 @@ public final class RuntimeJsonEncode {
             .globl kof_json_encode_double
             .type kof_json_encode_double, @function
             kof_json_encode_double:
-                # xmm0 = double -> KofString* com o texto (%g via snprintf)
+                # §180 (DECISIONS §6): NaN/±Infinity → JSON null (JSON não tem
+                # esses valores); caso contrário o MESMO kof_double_to_string do
+                # RuntimeDtoa (contrato JDK) — antes reimplementava o %.16g.
                 pushq %rbp
                 movq %rsp, %rbp
-                pushq %rbx
-                pushq %r12
-                subq $80, %rsp
-                leaq -72(%rbp), %r12        # buffer (acima do rsp real, no frame)
-                movq %r12, %rdi
-                movq $64, %rsi
-                leaq .Lfmt_double(%rip), %rdx
-                movl $1, %eax
-                movq %rsp, %rbx
-                andq $-16, %rsp             # alinha para snprintf
-                call snprintf
-                movq %rbx, %rsp             # restaura rsp real
-                xorl %edx, %edx
-            .Lkof_je_dbl_len:
-                cmpb $0, (%r12,%rdx)
-                je .Lkof_je_dbl_gotlen
-                incq %rdx
-                jmp .Lkof_je_dbl_len
-            .Lkof_je_dbl_gotlen:
-                movl %edx, %esi
-                movq %r12, %rdi
+                movq %xmm0, %rax
+                movq %rax, %rcx
+                shrq $52, %rcx
+                andl $0x7ff, %ecx
+                cmpl $0x7ff, %ecx
+                je .Lkof_je_dbl_null
+                call kof_double_to_string
+                popq %rbp
+                ret
+            .Lkof_je_dbl_null:
+                leaq .Ljson_null(%rip), %rdi
+                movl $4, %esi
                 call kof_string_from_literal
-                addq $80, %rsp
-                popq %r12
-                popq %rbx
                 popq %rbp
                 ret
 
             .globl kof_json_encode_float
             .type kof_json_encode_float, @function
             kof_json_encode_float:
-                cvtss2sd %xmm0, %xmm0
-                jmp kof_json_encode_double
+                pushq %rbp
+                movq %rsp, %rbp
+                movd %xmm0, %eax
+                movl %eax, %ecx
+                shrl $23, %ecx
+                andl $0xff, %ecx
+                cmpl $0xff, %ecx
+                je .Lkof_je_flt_null
+                call kof_float_to_string
+                popq %rbp
+                ret
+            .Lkof_je_flt_null:
+                leaq .Ljson_null(%rip), %rdi
+                movl $4, %esi
+                call kof_string_from_literal
+                popq %rbp
+                ret
 
             .globl kof_json_encode_string
             .type kof_json_encode_string, @function
