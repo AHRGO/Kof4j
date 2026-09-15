@@ -183,6 +183,7 @@ class KofWebHardeningTest {
 
         @Override
         public void close() throws IOException {
+            in.close();
             socket.close();
         }
     }
@@ -191,15 +192,19 @@ class KofWebHardeningTest {
         private final Socket socket;
         final String status;
         final List<String> headers;
+        private final java.io.BufferedReader reader;
 
-        WsResponse(Socket socket, String status, List<String> headers) {
+        WsResponse(Socket socket, String status, List<String> headers,
+                java.io.BufferedReader reader) {
             this.socket = socket;
             this.status = status;
             this.headers = headers;
+            this.reader = reader;
         }
 
         @Override
         public void close() throws IOException {
+            reader.close();
             socket.close();
         }
     }
@@ -220,7 +225,7 @@ class KofWebHardeningTest {
         while ((line = in.readLine()) != null && !line.isEmpty()) {
             headers.add(line);
         }
-        return new WsResponse(socket, status, headers);
+        return new WsResponse(socket, status, headers, in);
     }
 
     private static void writeMaskedFrame(OutputStream out, int opcode, byte[] payload) throws IOException {

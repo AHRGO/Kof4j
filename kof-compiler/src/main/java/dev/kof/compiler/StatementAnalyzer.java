@@ -160,6 +160,14 @@ public final class StatementAnalyzer {
                     Type viaImports = MemberResolver.qualifyViaImports(sa.unit(), vds.type(),
                             sa.externalTypes());
                     varType = viaImports != null ? viaImports : Type.of(vds.type());
+                    // §249: tipo explícito que não resolve para NENHUM tipo
+                    // conhecido era aceito em silêncio (`Foo x`/`s length` viravam
+                    // uma declaração-lixo invisível, R6). Diagnostica na raiz.
+                    if (sa.diagnostics() != null
+                            && MemberResolver.isUnresolvedSimpleType(sa, vds.type(), scope)) {
+                        sa.diagnostics().error("", 0, 0, 0,
+                                "Undefined variable or type: '" + vds.type() + "'", "SEM011");
+                    }
                 } else if (vds.initializer() != null) {
                     varType = SemExpressionTyper.inferType(sa, vds.initializer(), scope);
                 } else {
