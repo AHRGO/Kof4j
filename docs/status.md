@@ -2,9 +2,24 @@
 
 # Kof Project Status
 
-**Last updated:** September 14, 2026
+**Last updated:** September 15, 2026
 **Version:** 0.4.0-beta (pom `revision`)
 
+> **15/09 — §129 CLOSED (DECISIONS §2 option B) — Native x86 unwinds per thread
+> (owner = 192.168.100.18, development lane).** The `kof_exc_chain` is now **TLS
+> per-thread** (`.section .tbss,"awT",@nobits` + `%fs:kof_exc_chain@tpoff`) instead
+> of a `.data` global, and `kof_spawn_trampoline` installs a per-worker handler
+> frame: a `throw` with no inner handler publishes the cause on the handle instead
+> of longjmp-ing into the main thread's `try` (the cross-thread crash/hang). The
+> consumer's `await`/`awaitTimeout`/`selectAny` rethrow the cause (JVM parity).
+> `CompilerSupervisor` now emits `OTP001` only for riscv/aarch (raw `clone`, no
+> TLS). This **unblocks OTP S2-Native** — the pure-Kof supervisor now runs on
+> Native x86. Proof: `KofSupervisorE2ETest` 15/15
+> (`supervisorNativeParityX86`/`supervisorNativeS2ParityX86`), `KofConcurrency2Test`
+> 40/0 incl. 4 new native worker-throw cases, `ExceptionsE2ETest` 11/0,
+> `NativeE2ETest` 65/0. Suite 1777/1 (the 1 = pre-existing
+> `[ifexpr-heterogeneous-direct]` Native SIGSEGV, §205, other lane).
+>
 > **14/09 — RELEASE-STABILIZATION BASELINE (owner = 192.168.100.17, docs/stab
 > lane).** Clean 4-module run (`rm -rf */target`): **1819 tests, 3 failures,
 > 0 errors, 7 skips** (compiler 1552 + script 37 + kof-c 5 + cli 225). All 3

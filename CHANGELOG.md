@@ -1095,6 +1095,7 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
 
 ### Bugfixes
 
+  - §129 Native x86_64 `throw` inside a `spawn` worker no longer longjmps into the main thread's handler — `kof_exc_chain` is now TLS per-thread (`.tbss`+`%fs:@tpoff`) and the spawn trampoline installs a per-worker handler that publishes the cause on the handle; `await`/`awaitTimeout`/`selectAny` rethrow it (riscv/aarch remain OTP001)
   - §180 Native x86_64 `println(double/float)` now JDK `Double.toString`/`Float.toString` (RuntimeDtoa: `%.*e`+`strtod` shortest round-trip + Java reformat; Float own form) — `doubleprint` Native included
   - §181 doc-sync + HELLO_JS baseline 8.297→13.007 (#132) + UIW050 event-handle in progress
   - §181 saturating cast regression — double bits on x86 + unique riscv/aarch labels

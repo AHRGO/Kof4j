@@ -97,9 +97,9 @@ public final class RuntimeDb4 {
                 movq %rax, 0(%rsp)
                 movq %rsp, 8(%rsp)
                 movq %rbp, 16(%rsp)
-                movq kof_exc_chain(%rip), %rcx
+                movq %fs:kof_exc_chain@tpoff, %rcx
                 movq %rcx, 24(%rsp)
-                movq %rsp, kof_exc_chain(%rip)
+                movq %rsp, %fs:kof_exc_chain@tpoff
                 movl %r14d, 32(%rsp)               # nested (frame p/ o handler)
                 # invoca a lambda (vtable[0] = invoke); rdi = this (a lambda,
                 # onde ficam as capturas) — mesmo padrão do sched_trampoline.
@@ -110,7 +110,7 @@ public final class RuntimeDb4 {
                 # ── try end / commit ── (nested NÃO comita — o externo decide).
                 # Flag re-lido do FRAME: a lambda pode ter clobberado regs.
                 movq 24(%rsp), %rcx
-                movq %rcx, kof_exc_chain(%rip)
+                movq %rcx, %fs:kof_exc_chain@tpoff
                 movl 32(%rsp), %r14d
                 addq $48, %rsp
                 testl %r14d, %r14d

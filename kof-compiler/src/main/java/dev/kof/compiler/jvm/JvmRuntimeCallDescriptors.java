@@ -357,7 +357,7 @@ public final class JvmRuntimeCallDescriptors {
             case "kof_validation_required", "kof_validation_notBlank", "kof_validation_isEmail",
                     "kof_validation_isUrl", "kof_validation_isInt", "kof_validation_isLong",
                     "kof_validation_isCpf", "kof_validation_isCnpj", "kof_validation_isCep",
-                    "kof_validation_isPis", "kof_validation_isIpv4", "kof_validation_isMac",
+                    "kof_validation_isPis", "kof_validation_isNis", "kof_validation_isIpv4", "kof_validation_isMac",
                     "kof_validation_isCreditCard", "kof_validation_isIpv6",
                     "kof_validation_isDomain" -> "(Ljava/lang/String;)Z";
             case "kof_validation_formatCnpj", "kof_validation_formatCpf", "kof_validation_formatCep" -> "(Ljava/lang/String;)Ljava/lang/String;";

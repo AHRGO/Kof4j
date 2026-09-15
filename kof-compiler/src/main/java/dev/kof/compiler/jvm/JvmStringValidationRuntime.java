@@ -181,6 +181,13 @@ public final class JvmStringValidationRuntime {
                     return dv == d[10];
                 }
 
+                // S12c (STDLIB): NIS — MESMO checksum mod-11 do PIS (mesmos
+                // pesos 3..2; o NIS é o número de identificação social da
+                // Caixa, validado pelo mesmo DV do PIS). Reuso 1:1 (regra 7).
+                public static boolean kof_validation_isNis(String s) {
+                    return kof_validation_isPis(s);
+                }
+
                 // ── kof.validation (STDLIB S6a) — rede ──────────────────────
                 // IPv4 dotted-quad: 4 octetos, só dígitos, sem zero à esquerda
                 // ("0" ok, "01" não), 0..255. Sem CIDR, sem forma compacta.

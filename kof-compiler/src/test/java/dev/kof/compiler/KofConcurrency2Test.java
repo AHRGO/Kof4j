@@ -752,6 +752,108 @@ class KofConcurrency2Test {
         }
     }
 
+    // ===== §129 (DECISIONS §2, opção B): handler chain PER-THREAD no Native =====
+    // Antes o chain era um `.data` global: um `throw` sem try DENTRO de um
+    // worker longjmpava para o try da MAIN (frame de outra thread) — crash/hang
+    // (known-bugs §129, provado por GDB). Agora o chain é TLS e o trampolim do
+    // spawn instala handler próprio: o worker marca o handle como excepcional e
+    // o await/selectAny relança no consumidor (paridade JVM).
+    @Test
+    void spawnWorkerThrowAwaitedAndCaughtNative(@TempDir Path tmp) throws Exception {
+        runNative(tmp, """
+                Object falha() { throw "boom" }
+                main() {
+                    val h = spawn falha()
+                    try {
+                        await h
+                        println("nao-deveria")
+                    } catch (String e) {
+                        println("cap=" + e)
+                    }
+                    println("fim")
+                }
+                """, "cap=boom\nfim");
+    }
+
+    @Test
+    void spawnWorkerUnhandledThrowPropagatesNative(@TempDir Path tmp) throws Exception {
+        // a falha sobe pelo worker INTERMEDIÁRIO (sem try) até o try da main —
+        // era exatamente o cenário do longjmp cross-thread do §129.
+        runNative(tmp, """
+                Object falha() { throw "boom" }
+                Void vigiar() {
+                    val h = spawn falha()
+                    var r = await h
+                    println("nao-deveria")
+                }
+                main() {
+                    val v = spawn vigiar()
+                    try {
+                        await v
+                        println("nao-deveria2")
+                    } catch (String e) {
+                        println("main-capturou=" + e)
+                    }
+                    println("fim")
+                }
+                """, "main-capturou=boom\nfim");
+    }
+
+    @Test
+    void spawnWorkerThrowIsolatedFromSiblingsNative(@TempDir Path tmp) throws Exception {
+        // a falha de UM worker não pode contaminar os irmãos (o chain global
+        // fazia o throw atravessar threads). 3 workers: um falha, dois somam.
+        runNative(tmp, """
+                Object falha() { throw "boom" }
+                Int a42() { time.sleep(30); return 42 }
+                Int a3() { return 3 }
+                main() {
+                    val f = spawn falha()
+                    val s1 = spawn a42()
+                    val s2 = spawn a3()
+                    var ok = true
+                    try { await f; ok = false } catch (String e) { }
+                    println("s1=" + await s1 + " s2=" + await s2 + " ok=" + ok)
+                }
+                """, "s1=42 s2=3 ok=true");
+    }
+
+    @Test
+    void spawnWorkerThrowPropagatesThroughSelectAnyNative(@TempDir Path tmp) throws Exception {
+        // selectAny também relança a causa do handle excepcional.
+        runNative(tmp, """
+                Object falha() { throw "boom" }
+                Int rapida() { return 7 }
+                main() {
+                    val a = spawn falha()
+                    val b = spawn rapida()
+                    var ok = true
+                    try { selectAny(a, b); ok = false } catch (String e) { println("sel=" + e) }
+                    println("ok=" + ok)
+                }
+                """, "sel=boom\nok=true");
+    }
+
+    private String runNative(Path tempDir, String source, String expected) throws java.io.IOException {
+        Path file = tempDir.resolve("Main-" + System.nanoTime() + ".kf");
+        Files.writeString(file, source);
+        Path outDir = tempDir.resolve("out-" + System.nanoTime());
+        CompilationResult r = driver.compile(file, outDir, Target.NATIVE);
+        assertTrue(r.success(), "Native compile failed: " + r.diagnostics().getDiagnostics());
+        Path bin = outDir.resolve("Default/Main");
+        try {
+            Process p = new ProcessBuilder(bin.toString()).redirectErrorStream(true).start();
+            String output = new String(p.getInputStream().readAllBytes(),
+                    StandardCharsets.UTF_8).replace("\r\n", "\n").trim();
+            int ec = p.waitFor();
+            assertEquals(0, ec, "Native exit code, output: " + output);
+            if (expected != null) assertEquals(expected, output, "Native output");
+            return output;
+        } catch (InterruptedException e) {
+            throw new java.io.IOException("interrupted", e);
+        }
+    }
+
     // ── helpers ──
     private String runJvm(Path tempDir, String source) throws java.io.IOException {
         return runJvm(tempDir, source, null);

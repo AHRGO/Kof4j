@@ -129,6 +129,11 @@ final class TypeDeclarations {
     static InterfaceDeclarationNode parseInterfaceDeclaration(ParseContext ctx, List<String> mods, List<AnnotationNode> annos) {
         ctx.advance();
         String name = ctx.expectId("Expected interface name", "PARSE010");
+        // #160: interface genérica — o ramo de classe já parseava a lista de
+        // type-params (`class Box<T>`); o de interface não, então `interface
+        // Mapper<T>` morria em PARSE007 ("Expected type declaration"). Espelha
+        // parseClassDeclaration.
+        List<String> typeParams = TypeParser.parseTypeParameters(ctx);
         List<String> ifaces = new ArrayList<>();
         if (ctx.check(TokenType.EXTENDS)) {
             ctx.advance();
@@ -146,7 +151,7 @@ final class TypeDeclarations {
             }
             ctx.expect(TokenType.RBRACE, "Expected '}' after interface body", "PARSE011");
         }
-        return new InterfaceDeclarationNode(ctx.pos(), name, mods, ifaces, List.copyOf(members), annos);
+        return new InterfaceDeclarationNode(ctx.pos(), name, mods, ifaces, typeParams, List.copyOf(members), annos);
     }
 
     static EntityDeclarationNode parseEntityDeclaration(ParseContext ctx, List<String> mods, List<AnnotationNode> annos) {

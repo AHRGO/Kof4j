@@ -116,7 +116,7 @@ class GenericOperandConcatE2ETest {
     @Test
     void interpreterAgreesWithJvmForErasedGenericPlus(@TempDir Path tmp) throws Exception {
         // paridade interpretador × JVM no mesmo programa (oráculo do contrato)
-        Path d = Files.createTempDirectory("goc-" + System.nanoTime());
+        Path d = tmp;
         Path f = d.resolve("Main.kf");
         Files.writeString(f, """
                 class Pair<A, B> {

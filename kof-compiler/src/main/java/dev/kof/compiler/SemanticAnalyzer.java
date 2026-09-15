@@ -102,6 +102,49 @@ public class SemanticAnalyzer {
             analyzeDeclaration(decl);
         }
         resolveMethodCalls(unit);
+        checkNullLiteralArguments();
+    }
+
+    /**
+     * #266 (c) — emenda da mantenedora 15/09 (DECISIONS §7): o `null` literal
+     * NUNCA é fabricável em posição alguma (SG-005/SEM048: null safety é por
+     * narrowing; null só chega de API que devolve `T?`). Num parâmetro
+     * NÃO-nullable PRIMITIVO (`f(Int n)` chamado `f(null)`) o call-site empurrava
+     * `aconst_null` contra slot `int` e a classe só morria no load
+     * (`VerifyError: Type null ... not assignable to integer`) — R6: zero
+     * diagnóstico no compile. Agora é SEM048 honesto no `null` (espelha a
+     * atribuição `x = null` em StatementAnalyzer e o return §125).
+     * UM `T?` (NullableType) NUNCA cai aqui — passar null a ele é LEGÍTIMO
+     * (a frente boxed dos 4 targets é a fila §241/#266/#259, não este guard).
+     */
+    private void checkNullLiteralArguments() {
+        if (diagnostics == null) return;
+        for (var e : resolvedMethods.entrySet()) {
+            checkNullArgs(diagnostics, e.getKey().arguments(), e.getKey().position(),
+                    e.getValue().parameterTypes(), e.getValue().name());
+        }
+        for (var e : resolvedConstructors.entrySet()) {
+            checkNullArgs(diagnostics, e.getKey().arguments(), e.getKey().position(),
+                    e.getValue().parameterTypes(), e.getValue().ownerClass());
+        }
+    }
+
+    static void checkNullArgs(DiagnosticCollector diagnostics, List<ExpressionNode> args,
+                              SourcePosition pos, List<Type> formals, String callee) {
+        if (diagnostics == null || args == null || formals == null) return;
+        for (int i = 0; i < args.size() && i < formals.size(); i++) {
+            Type formal = formals.get(i);
+            if (formal instanceof Type.PrimitiveType
+                    && CompilerComparisons.isNullLiteral(args.get(i))) {
+                diagnostics.error(pos != null ? pos.file() : "",
+                        pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0,
+                        "null cannot be passed as argument " + (i + 1) + " of '" + callee
+                                + "()': primitive parameter is non-nullable and null is never"
+                                + " fabricable — declare the parameter '" + Type.describe(formal)
+                                + "?' to accept an absent value, or pass a real value",
+                        "SEM048");
+            }
+        }
     }
 
     Type getExpressionType(ExpressionNode expr) {

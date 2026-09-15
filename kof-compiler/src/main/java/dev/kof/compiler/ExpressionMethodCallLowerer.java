@@ -426,7 +426,7 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
     return ExpressionInstanceCallLowerer.lower(driver, mc, ops, owner, localIdx, locals);
 } else {
     if (("super".equals(mc.methodName()) || "driver".equals(mc.methodName()))
-            && driver.semanticAnalyzer != null && !owner.isEmpty()) {
+            && driver.semanticAnalyzer != null && owner != null && !owner.isEmpty()) {
         // super(args): construtor da superclasse (Object quando
         // a classe não tem extends). driver(args): delegação para
         // outro construtor da própria classe — o alvo executa
@@ -472,7 +472,7 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
     }
     SymbolTable.MethodSymbol selfMethod = driver.semanticAnalyzer != null
             ? driver.semanticAnalyzer.getResolvedMethod(mc) : null;
-    if (selfMethod != null && !owner.isEmpty()
+    if (selfMethod != null && owner != null && !owner.isEmpty()
             && !"<init>".equals(selfMethod.name())
             && selfMethod.ownerClass() != null) {
         Type ownerType = CompilerTypes.ownerTypeFromInternal(selfMethod.ownerClass(), driver.semanticAnalyzer);
@@ -495,11 +495,12 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
         // PRÓPRIA interface — invokestatic/invokevirtual não valem; o JVM exige
         // invokeinterface (senão IncompatibleClassChangeError "Found interface").
         KofCallKind selfKind = KofCallKind.INSTANCE;
-        if (driver.semanticAnalyzer != null) {
-            String selfOwner = selfMethod.ownerClass();
-            if (selfOwner.contains("/")) selfOwner = selfOwner.substring(selfOwner.lastIndexOf('/') + 1);
-            if (driver.semanticAnalyzer.isInterfaceType(selfOwner)) selfKind = KofCallKind.INTERFACE;
-        }
+        // selfMethod != null so aqui SOMENTE porque o ternario acima passou por
+        // driver.semanticAnalyzer != null — o re-check era dead-code (CodeQL #716,
+        // confirmado pelo proprio dominance). Removido; nenhum caminho alterado.
+        String selfOwner = selfMethod.ownerClass();
+        if (selfOwner.contains("/")) selfOwner = selfOwner.substring(selfOwner.lastIndexOf('/') + 1);
+        if (driver.semanticAnalyzer.isInterfaceType(selfOwner)) selfKind = KofCallKind.INTERFACE;
         ops.add(new KofCall(ownerType, mc.methodName(), selfMethod.parameterTypes(),
                 selfMethod.returnType(), selfKind));
         return localIdx;

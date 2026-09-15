@@ -25,11 +25,13 @@ public final class RuntimeConcurrency {
             .type kof_spawn_trampoline, @function
             kof_spawn_trampoline:
                 # rdi = bloco {task, handle}
-                # 2 pushes -> site do call rsp ≡ 0 (mesmo padrão do pthread_create
-                # em kof_spawn_handle_new). Sem subq: mantém pthread_self e o
-                # call *task no alinhamento que já funciona.
+                # 2 pushes + subq 48 -> site do call rsp ≡ 0 (mesmo padrão do
+                # pthread_create em kof_spawn_handle_new). Frame de handler de
+                # 48B: [0]=handler, [8]=rsp, [16]=rbp, [24]=chain anterior,
+                # [32]=handle — o catch lê DAQUI (o task clobbera callee-saved).
                 pushq %rbx
                 pushq %r12
+                subq $48, %rsp                  # §129: nó de handler do worker
                 movq %rdi, %rbx
                 # §117 (8a): registra (TID real, flag=0) na tabela de slots
                 # com CHAVE = pthread_self (probe linear) — zero colisão: a
@@ -40,14 +42,39 @@ public final class RuntimeConcurrency {
                 call kof_cancel_slot_insert     # rax = entry ptr (flag=0)
                 movq 8(%rbx), %r12              # handle
                 movq %rax, 32(%r12)             # handle->cancelEntry (trampoline SEMPRE tem handle)
+                movq %r12, 32(%rsp)             # frame->handle (o catch lê daqui)
+                # §129 (DECISIONS §2, opção B): handler POR WORKER. O chain é
+                # TLS (RuntimeGc), então um `throw` sem try no worker longjmpa
+                # AQUI (não no try da main) e marca o handle como excepcional;
+                # await/selectAny do consumidor relança a causa.
+                leaq .Lkof_spawn_catch(%rip), %rax
+                movq %rax, 0(%rsp)
+                movq %rsp, 8(%rsp)
+                movq %rbp, 16(%rsp)
+                movq %fs:kof_exc_chain@tpoff, %rax
+                movq %rax, 24(%rsp)
+                movq %rsp, %fs:kof_exc_chain@tpoff
                 movq 0(%rbx), %rdi              # task
                 movq 8(%rdi), %rax              # task vtable
                 movq (%rax), %rax               # vtable[0] = invoke
                 call *%rax
+                # término normal: desinstala o handler e publica o resultado
+                movq 24(%rsp), %rcx
+                movq %rcx, %fs:kof_exc_chain@tpoff
+                addq $48, %rsp
                 testq %r12, %r12
                 jz .Lkof_spawn_thr_done
                 movq %rax, 16(%r12)             # handle->result
                 movl $1, 4(%r12)                # handle->done = 1
+                jmp .Lkof_spawn_thr_done
+            .Lkof_spawn_catch:
+                # kof_throw_string já desempilhou o chain e restaurou rsp/rbp
+                # ao frame base; %rsi = mensagem. O handle vem do FRAME
+                # (32(%rsp)) — NÃO de %r12, que o task pode ter clobberado.
+                movq 32(%rsp), %r12
+                movq %rsi, 40(%r12)             # handle->exc
+                movl $1, 4(%r12)                # handle->done = 1
+                addq $48, %rsp
             .Lkof_spawn_thr_done:
                 # §117: remove a entry deste TID (tid=0) — slot volta a vazio
                 # sem tocar em worker alheio (o bug do `movb $0` por hash).
@@ -192,8 +219,10 @@ public final class RuntimeConcurrency {
                 popq %r15                       # r15c ; rsp=A (frame restaurado)
                 testl %eax, %eax
                 jz .Lkof_spawn_ok
-                # falha no pthread: roda inline (degradacao segura)
-                movq %r13, %rdi
+                # falha no pthread: roda inline (degradacao segura). Passa o
+                # BLOCO {task,handle} (handle->block em 24), não a task: o
+                # trampolim lê 8(%rdi) como handle.
+                movq 24(%rbx), %rdi
                 call kof_spawn_trampoline
                 movl $1, 4(%rbx)
                 jmp .Lkof_spawn_next
@@ -247,9 +276,21 @@ public final class RuntimeConcurrency {
                 xorl %esi, %esi
                 call pthread_join
                 popq %rdi                       # restaura handle base
+                movq $0, 8(%rdi)                # §129: join feito -> zera o TID
+                                                # (join_all no fim do main não
+                                                # re-join — double join é UB e
+                                                # segfaulta com TCB reciclado)
             .Lkof_await_val:
+                # §129: task que falhou publica a causa no handle (40); o
+                # await RELANÇA no thread do consumidor (paridade JVM).
+                movq 40(%rdi), %rcx
+                testq %rcx, %rcx
+                jnz .Lkof_await_throw
                 movq 16(%rdi), %rax
                 ret
+            .Lkof_await_throw:
+                movq %rcx, %rdi
+                jmp kof_throw_string
             .Lkof_await_null:
                 xorl %eax, %eax
                 ret
@@ -307,10 +348,17 @@ public final class RuntimeConcurrency {
                 decl %r12d
                 jmp .Lkat_poll
             .Lkat_result:
+                # §129: falha do worker relança no consumidor
+                movq 40(%rbx), %rcx
+                testq %rcx, %rcx
+                jnz .Lkat_throw
                 movq 16(%rbx), %rax
                 popq %r12
                 popq %rbx
                 ret
+            .Lkat_throw:
+                movq %rcx, %rdi
+                jmp kof_throw_string
             .Lkat_timeout:
                 leaq .Lstr_await_timeout(%rip), %rdi
                 call kof_throw_string               # longjmp p/ o try; panic se não houver
@@ -435,11 +483,17 @@ public final class RuntimeConcurrency {
                 cmpl $1, 4(%rax)
                 jne .Lkof_sel_next
                 mfence                          # visibilidade do done/result escrito pelo worker
+                movq 40(%rax), %rcx             # §129: handle excepcional?
+                testq %rcx, %rcx
+                jnz .Lkof_sel_rethrow
                 movq 16(%rax), %rax             # pronto: devolve resultado
                 addq $16, %rsp
                 popq %r12
                 popq %rbx
                 ret
+            .Lkof_sel_rethrow:
+                movq %rcx, %rdi
+                jmp kof_throw_string
             .Lkof_sel_next:
                 incq %r12
                 jmp .Lkof_sel_scan

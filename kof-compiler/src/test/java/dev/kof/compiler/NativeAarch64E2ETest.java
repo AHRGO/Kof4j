@@ -313,9 +313,9 @@ class NativeAarch64E2ETest {
         int port = ss.getLocalPort();
         Thread t = new Thread(() -> {
             while (true) {
-                try (java.net.Socket s = ss.accept()) {
-                    java.io.BufferedReader in = new java.io.BufferedReader(
-                            new java.io.InputStreamReader(s.getInputStream(), StandardCharsets.UTF_8));
+                try (java.net.Socket s = ss.accept();
+                        java.io.BufferedReader in = new java.io.BufferedReader(
+                                new java.io.InputStreamReader(s.getInputStream(), StandardCharsets.UTF_8))) {
                     String line = in.readLine();
                     if (line == null) continue;
                     String method = line.split(" ")[0];

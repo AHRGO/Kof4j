@@ -246,13 +246,13 @@ final class NativeMethodEmitter {
                 sb.append("    movq %rax, 0(%rsp)\n");
                 sb.append("    movq %rsp, 8(%rsp)\n");
                 sb.append("    movq %rbp, 16(%rsp)\n");
-                sb.append("    movq kof_exc_chain(%rip), %rcx\n");
+                sb.append("    movq %fs:kof_exc_chain@tpoff, %rcx\n");
                 sb.append("    movq %rcx, 24(%rsp)\n");
-                sb.append("    movq %rsp, kof_exc_chain(%rip)\n");
+                sb.append("    movq %rsp, %fs:kof_exc_chain@tpoff\n");
             }
             case KofTryEnd _ -> {
                 sb.append("    movq 24(%rsp), %rcx\n");
-                sb.append("    movq %rcx, kof_exc_chain(%rip)\n");
+                sb.append("    movq %rcx, %fs:kof_exc_chain@tpoff\n");
                 sb.append("    addq $32, %rsp\n");
             }
             case KofJump kj -> sb.append("    jmp ").append(nb.resolveLabel(kj.target())).append("\n");

@@ -243,10 +243,16 @@ Estado 13/09: concorrência real **JVM** (virtual threads) + **Native**
 1ms) + **JS** ✅ 03/09 (CONC003 fechado — stmt/expr/cancel/selectAny com
 async/await/Promise reais) + **supervisão OTP** (`kof.supervisor`: 1ª fatia
 11/09 núcleo JVM+Script, **S2-JVM 13/09** `startAll`/`lacoUnico` — ver
-`planning-otp-supervision.md`; Native=OTP001 §129, JS=OTP002 §132 gates
-honestos). ⚠️ Bug pré-existente separado: `spawn→await→spawn`
-corrompe a pilha da main (SIGSEGV no próximo `pthread_create`); reproduz sem
-o feature de cancel/select (suspeito: `pthread_join` no `kof_await`).
+`planning-otp-supervision.md`; **Native x86 ✅ 15/09** — §129 fechado via
+DECISIONS §2 opção B, então `kof.supervisor` roda no Native x86; riscv/aarch=OTP001,
+JS=OTP002 §132 gates honestos). O SIGSEGV anterior de `spawn→await→spawn` (pilha
+desalinhada no site do `pthread_create`) foi corrigido 01/09 com `andq $-16` em
+`kof_spawn_handle_new`. Um defeito latente relacionado apareceu e foi corrigido
+15/09 na mesma unidade do §129: `kof_await` não limpava o TID do handle após o
+join, então o `kof_spawn_join_all` implícito no fim da `main` **dava double join**
+em todo handle já awaited — SIGSEGV em `__pthread_clockjoin_ex` assim que o TCB era
+reciclado (reproduzido no HEAD com 50 spawns + 50 awaits, 3/3 crash; limpo após o
+fix).
 
 | Item | Descrição | Prioridade |
 |------|-----------|------------|
@@ -899,9 +905,11 @@ tiers `stable`/`experimental` (`docs/backend-parity.md`).
 
 `kof inspect/decompile/translate/compare/migrate` no CLI (`Main.java`);
 Legacy Semantic IR com Confidence Model (5 níveis) + "nunca inventar". Prova
-medida 13/09 em HEAD: **Decompile 57, Translate 33, Compare 6, Migrate 3**
-(Translate tem 1 célula vermelha — `qualifiedLocalTypeTranslates`, WIP da lane
-`.22`, alheia a este plano). Recuperação de corpo de método ainda parcial
+medida 15/09 em HEAD (`7b0bfbe0`, classes frescas): **Decompile 67 + PostDom 6,
+Translate 61, Compare 7, Migrate 3** — todas verdes (os números de 13/09
+57/33/6/3 estavam defasados; a então "1 célula vermelha"
+`qualifiedLocalTypeTranslates` está VERDE desde que a lane `.22` a fechou).
+Recuperação de corpo de método ainda parcial
 (joins estruturais = Fase C, o maior gargalo medido: 2452 métodos). O
 histórico técnico detalhado vive em `LEGACY_MIGRATION.md` + `DECOMPILER.md`
 (§7) — **não duplicar aqui**; esta tabela só dá a ordem.

@@ -4,7 +4,9 @@
 
 **Status:** EM DESENVOLVIMENTO (caiu de `future/` em 12/09 — implementado:
 `Decompile.java` + decoders de bytecode, Fases A–E com código; prova:
-`DecompileTest` 45/45 verdes. Fases de recuperação de corpo completo ainda
+`DecompileTest` **67/67** verdes + `DecompilePostDominatorTest` 6/6
+(re-medido 15/09 no tip `7b0bfbe0`; o 45/45 do cabeçalho era a linha de base
+de 22/08). Fases de recuperação de corpo completo ainda
 abertas — por isso não vai para `docs/`)
 **Data:** 22 de agosto de 2026
 

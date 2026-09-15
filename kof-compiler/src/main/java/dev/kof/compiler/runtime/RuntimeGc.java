@@ -305,8 +305,16 @@ public final class RuntimeGc {
     }
 
     public static void emitPanic(StringBuilder sb) {
+        // §129 (DECISIONS §2, option B): o handler chain é PER-THREAD (TLS
+        // local-exec, `%fs:...@tpoff`) — cada thread tem o próprio topo. Antes
+        // era um `.data` global compartilhado: um `throw` sem handler dentro de
+        // um worker fazia longjmp no frame da MAIN (corrompia a pilha dela).
+        // O x86 é dinamicamente ligado (-lc), então o ld.so já inicializa o
+        // TLS da main thread e o pthread_create o das novas. riscv/aarch
+        // seguem OTP001 (clone cru sem TLS).
         sb.append("""
-            .section .data
+            .section .tbss,"awT",@nobits
+            .balign 8
             kof_exc_chain: .quad 0
             .section .text
             .globl kof_panic
@@ -322,13 +330,13 @@ public final class RuntimeGc {
             .type kof_throw_string, @function
             kof_throw_string:
                 movq %rdi, %rsi
-                movq kof_exc_chain(%rip), %rax
+                movq %fs:kof_exc_chain@tpoff, %rax
                 testq %rax, %rax
                 jz .Lkof_throw_panic
                 movq 8(%rax), %rsp
                 movq 16(%rax), %rbp
                 movq 24(%rax), %rcx
-                movq %rcx, kof_exc_chain(%rip)
+                movq %rcx, %fs:kof_exc_chain@tpoff
                 movq 0(%rax), %rcx
                 testq %rcx, %rcx
                 jz .Lkof_throw_panic

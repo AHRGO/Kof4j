@@ -119,11 +119,14 @@ class KofWebWsE2ETest {
         private final Socket socket;
         private final String status;
         private final List<String> headers;
+        private final java.io.BufferedReader reader;
 
-        WsResponse(Socket socket, String status, List<String> headers) {
+        WsResponse(Socket socket, String status, List<String> headers,
+                java.io.BufferedReader reader) {
             this.socket = socket;
             this.status = status;
             this.headers = headers;
+            this.reader = reader;
         }
 
         String header(String name) {
@@ -138,6 +141,7 @@ class KofWebWsE2ETest {
 
         @Override
         public void close() throws IOException {
+            reader.close();
             socket.close();
         }
     }
@@ -158,7 +162,7 @@ class KofWebWsE2ETest {
         while ((line = in.readLine()) != null && !line.isEmpty()) {
             headers.add(line);
         }
-        return new WsResponse(socket, status, headers);
+        return new WsResponse(socket, status, headers, in);
     }
 
     private String wsApp() {

@@ -326,6 +326,13 @@ public final class NativeRiscvAsmRtB12 {
                 addi sp, sp, 64
                 ret
 
+            # kof_validation_isNis(a0=str) -> 0/1 (S12c)
+            # MESMO checksum mod-11 do PIS — tail-jmp (lição B33: call+ret
+            # sobrescreveria o ra do chamador).
+            .globl kof_validation_isNis
+            kof_validation_isNis:
+                j    kof_validation_isPis
+
             # kof_validation_formatCep(a0=str) -> String (S12)
             # 8 dígitos => DDDDD-DDDD; senão (incl. null) => original (no-op).
             # Frame: buf sp+0..15; s1 = str original (caminho no-op).

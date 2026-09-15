@@ -400,6 +400,10 @@ backend. Não queremos reinventar a roda."*
 
 ## D-BACKEND-SEMANTICS — 6 decisões do chat de 14/09 (dono 192.168.100.18)
 
+**✅ FILA FECHADA — 6/6 implementadas:** §101 (1), §129 (2), `roundTo` (3),
+§179 (4), `app.security()`/Spring (5), §180 (6). A fila `## 7` do
+`docs/development/README.md` está vazia; esta seção agora é registro, não backlog.
+
 A mantenedora respondeu a lista aberta. Opções escolhidas e a execução:
 
 ### 1. §101 — operadores relacionais com NaN → **opção A (IEEE 754 puro)**
@@ -431,6 +435,25 @@ worker `spawn` marca o handle do worker como excepcionalmente-completo em vez de
 e no C (frames `setjmp`/`longjmp` são locais à pilha). Afeta o runtime
 compartilhado (`RuntimeDb4`/GC); a chain vira thread-scoped. Destrava o
 **OTP S2-Native** (§129), cujo gate é `OTP001` até isto fechar.
+
+**Feito (15/09, owner 192.168.100.18) — Native x86:** a chain agora é TLS
+local-exec (`.section .tbss,"awT",@nobits` + `%fs:kof_exc_chain@tpoff`) em
+`RuntimeGc.emitPanic`, `NativeMethodEmitter` (`KofTryStart`/`KofTryEnd`),
+`RuntimeDb4` (frames de tx) e `RuntimeStringParseOrDefault`; o `ld.so` inicializa
+o TLS da main e o `pthread_create` o do worker (validado: um worker que escreve
+na chain não toca na da main). O `kof_spawn_trampoline` instala um frame de
+handler por worker e, num `throw` sem handler interno, publica a causa no handle
+(`handle->exc` em 40) em vez de desenrolar para a pilha da main;
+`kof_await`/`kof_await_timeout`/`kof_select_any` a relançam no consumidor
+(paridade JVM), e `kof_await` zera o TID já juntado para o
+`kof_spawn_join_all` implícito nunca dar double join (SIGSEGV com TCB
+reciclado). O frame do handler guarda o handle em `32(%rsp)` porque o worker
+pode clobberar o `%r12` callee-saved. `CompilerSupervisor` agora só emite
+`OTP001` para riscv/aarch (clone cru, sem TLS + `selectAny`/CONC001). Prova:
+`KofConcurrency2Test.spawnWorkerThrow*Native` (4), `KofSupervisorE2ETest`
+`supervisorNativeParityX86`/`supervisorNativeS2ParityX86` + `crossGateOtp001`;
+`KofSupervisorE2ETest` 15/15, `KofConcurrency2Test` 40/0, `ExceptionsE2ETest`
+11/0, `NativeE2ETest` 65/0.
 
 ### 3. `roundTo` — **implementar, racional (inspirado em Java + C)**
 Aprovado para implementação (a ratificação do `pow` de 13/09 o deixou aberto).
@@ -567,6 +590,51 @@ define. Célula golden cross-target (`floatprint`).
   25: 1464/0 (162 skip) antes do codemod, e worktree b3ab9858+codemod
   61-bindings: 1574/1 (a única fail é o flake SSE documentado da família §90,
   verde 6/6 isolado).
+
+---
+
+## D-NULL — emenda §125/SEM048: "null pra primitivo" foi LEITURA ERRADA (✅ decidido 15/09, mantenedora, pessoal)
+
+> **A mantenedora corrigiu o registro diretamente: "eu NÃO proíbo null pra
+> primitivo, proíbo null pra quando tem null safety. Vocês entenderam errado."**
+> Todo registro do catálogo que leu §125/SEM048 como *"um primitivo nunca pode
+> carregar null, portanto `Int?` boxed é proibido (regra 6)"* está **errado**, e o
+> raciocínio *"`T?` boxed reabre o §125 → regra 6"* que estacionou #259/#266/#252
+> (e justificou o revert `6553ac2e` do §241) é **nulo**.
+
+O que §125/SEM048 realmente proíbe é **fabricar `null` num ponto sem
+null-safety** — o `null` **literal** em atribuição / retorno / argumento. Null
+safety é por **narrowing** (`if (x != null)`); `null` só chega de API que devolve
+`T?`. Duas consequências, ambas o contrato agora:
+
+- **(a) `Int?`/`Boolean?`/`Double?` PODEM carregar `null` de verdade.** A face
+  `Nullable(primitivo)` boxed (família #252) **NÃO é um congelamento regra-6** —
+  o §125 nunca a proibiu. O trabalho é *"completar o box
+  nos 4 targets"* (JVM + Script + JS + Native em lockstep — exatamente o que a
+  meia-implementação `c0cf805e` do §241 falhou em fazer), rastreado como a fila
+  §241/#266/#259, **não** estacionado atrás de uma decisão que não existe.
+- **(b) Um `Int` pelado (sem `?`) continua sem null** — e o compilador deve DIZER
+  isso em **compile-time**, nunca um `VerifyError` silencioso no load. `f(null)`
+  onde `f` recebe um `Int` não-nullable é **SEM048** (espelha o guard da
+  atribuição `x = null` e o do retorno §125). Implementado 15/09 pela lane
+  bugs-and-gaps `192.168.100.15`: guard compartilhado
+  `SemanticAnalyzer.checkNullArgs` + pós-pass sobre
+  `resolvedMethods`/`resolvedConstructors` (método de instância + construtor) +
+  check no ramo top-level do `BuiltinCallTyper` (os mapas resolvidos nunca veem
+  chamadas top-level). Um formal `NullableType` NUNCA cai no guard —
+  `handle(Boolean? flag)` + `handle(null)` deve compilar (isso é (a), o caso-core
+  do #266). Prova: `NullArgPrimitiveParamE2ETest` 7/7 (4 rejeições
+  instância/construtor/top-level/Long + 2 não-regressões "sem SEM048 em
+  Boolean?/String? + null" + valor real passa); cross-target o diagnóstico é
+  idêntico em jvm/js/native e sob `kof run --target script` (frontend
+  compartilhado).
+
+> **✅ DECIDIDO 15/09** — o §125 segue CONGELADO como "null literal não é
+> fabricável", mas seu *escopo* foi corrigido: ele nunca proibiu `T?` boxed. O
+> trabalho boxed-4-targets **não está bloqueado pela regra 6** — mas *abrir* essa
+> frente como fila é **decisão da mantenedora** (a lane só registra a correção de
+> escopo, §regra 6). Catálogo conexo: §250 (parte (c), corrigida),
+> §241/#252/#259/#266 (a fila do box).
 
 ---
 

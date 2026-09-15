@@ -66,7 +66,7 @@ public final class KofValidation {
             // formatPis NAO entra — mascara 11-digitos ambigua = decisao).
             case "formatCnpj" -> argc == 1
                     ? new ValidationCall("kof_validation_formatCnpj", STR, List.of(STR)) : null;
-            case "isCpf", "isCnpj", "isCep", "isPis" -> argc == 1
+            case "isCpf", "isCnpj", "isCep", "isPis", "isNis" -> argc == 1
                     ? new ValidationCall("kof_validation_" + name, BOOL, List.of(STR)) : null;
             // S6a (STDLIB): predicados de rede — dotted-quad / MAC (6 hex com
             // separador : ou -) / porta 1..65535. Sem ambiguidade de design.

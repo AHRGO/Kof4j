@@ -295,6 +295,12 @@ public final class SymbolTableBuilder {
         SymbolTable.ClassSymbol classSym = sa.allClasses().get(iface.name());
         SymbolTable classScope = classSym.members().enterScope();
         sa.classMemberScopes().put(iface.name(), classScope);
+        // #160: type-params de interface genérica entram no escopo ANTES dos
+        // membros, igual a defineClassMembers — sem isso `map(T input)` não
+        // resolve o T.
+        for (String tp : iface.typeParameters()) {
+            classScope.define(new SymbolTable.TypeParameterSymbol(tp));
+        }
         for (AstNode member : iface.members()) {
             if (member instanceof FieldDeclarationNode field) {
                 Type fieldType = MemberResolver.resolveType(sa, field.type(), classScope);

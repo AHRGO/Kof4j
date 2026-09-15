@@ -17,13 +17,15 @@ import java.util.List;
  * {@link CompilerImports#expandKofImports} reclamar PKG006 — não há diretório).
  *
  * <p>Paridade honesta (regra 6 / R6): o núcleo observa falha de worker via
- * {@code try { await h } catch} no laço por filho. No Native x86/risv/aarch o
- * {@code throw} dentro de task longjmpa no {@code kof_exc_chain} GLOBAL (bug
- * §129 → crash/hang), e no JS o modelo single-thread não roda tasks spawned de
- * dentro de outra task sem ceder o event-loop (§132 → worker nunca dispara).
- * Então esses targets dão diagnóstico claro (OTP001/OTP002) no lugar de um
- * binário que trava — NUNCA fallback silencioso. JVM/ANDROID (JvmBackend) e
- * Script (interpretador) entregam o núcleo.
+ * {@code try { await h } catch} no laço por filho. Desde §129 (DECISIONS §2,
+ * opção B) o handler chain do Native x86 é PER-THREAD (TLS) e o trampolim do
+ * spawn instala handler próprio: o {@code throw} de um worker marca o handle
+ * como excepcional e {@code await}/{@code selectAny} relançam no consumidor —
+ * x86 entrega o núcleo. riscv/aarch seguem {@code OTP001} (clone cru sem TLS)
+ * e JS {@code OTP002} (§132 event-loop single-thread: task spawned de dentro
+ * de outra task não dispara). Nesses casos o diagnóstico é claro — NUNCA
+ * fallback silencioso. JVM/ANDROID (JvmBackend), Script (interpretador) e
+ * Native x86 entregam o núcleo.
  */
 final class CompilerSupervisor {
 
@@ -45,15 +47,19 @@ final class CompilerSupervisor {
                         && ("Supervisor".equals(t.name()) || "KofWorker".equals(t.name())
                                 || "KofWorkerFactory".equals(t.name())));
         if (collision) return unit;
-        if (driver.target == Target.NATIVE || driver.target == Target.NATIVE_RISCV64
-                || driver.target == Target.NATIVE_AARCH64) {
+        // §129 (DECISIONS §2, opção B) FECHADO no x86: o handler chain é TLS
+        // (per-thread) e o trampolim do spawn instala handler próprio — um
+        // throw em worker marca o handle como excepcional e await/selectAny
+        // relança. riscv/aarch seguem OTP001 (clone cru sem TLS + selectAny
+        // ausente/CONC001).
+        if (driver.target == Target.NATIVE_RISCV64 || driver.target == Target.NATIVE_AARCH64) {
             diagnostics.error(driver.currentSourceName, 0, 0, 0,
                     "kof.supervisor no target " + driver.target + ": o laço de "
                             + "supervisao usa 'try { await } catch' sobre tasks que "
-                            + "falham, e no Native um throw em task longjmpa no "
-                            + "handler chain GLOBAL da thread main (crash/hang — "
-                            + "known-bugs §129). Nucleo OTP disponivel em JVM e "
-                            + "Script (kof run --target script).",
+                            + "falham, e no cross riscv/aarch o throw em task "
+                            + "longjmpa no handler chain GLOBAL da thread main "
+                            + "(crash/hang — known-bugs §129, x86 corrigido). "
+                            + "Nucleo OTP disponivel em JVM, Script e Native x86.",
                     "OTP001");
             return null;
         }
