@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+#
+# pre-push — roda scripts/codeql-gate.sh --fast (só o GATE 1: API de alerts,
+# sem build) antes de QUALQUER push. A suíte completa continua sendo a porta
+# do commit (AGENTS.md Q1/Q2); este hook pega o caso barato: alerta novo que
+# ninguém abriu na UI.
+#
+# Bypass honesto (usar só com causa declarada no commit): CODEQL_GATE_SKIP=1
+set -uo pipefail
+root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+[ -x "$root/scripts/codeql-gate.sh" ] || exit 0
+[ "${CODEQL_GATE_SKIP:-0}" = "1" ] && { echo "pre-push: gate pulado (CODEQL_GATE_SKIP=1)"; exit 0; }
+for marker in rebase-merge rebase-apply MERGE_HEAD CHERRY_PICK_HEAD REVERT_HEAD; do
+    [ -e "$root/.git/$marker" ] && exit 0
+done
+exec "$root/scripts/codeql-gate.sh" --fast

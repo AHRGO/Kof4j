@@ -784,6 +784,33 @@ maintainer's decision recorded here, not the lane's.
 
 ---
 
+## D-GATE — simulate the two GitHub security gates before every commit (✅ decided 15/09, maintainer, in person)
+
+Directive (chat 15/09): before any commit the agent must clear BOTH tabs of
+"Security and quality" — **security/code-scanning** (0 open CodeQL alerts) and
+**security/quality** (green build with no ECJ stub + `check_500`). This is a
+restatement of the Quality gate (§"no bug ships", AGENTS.md) with the CodeQL
+dimension made concrete and automatable.
+
+Implementation: `scripts/codeql-gate.sh` (Gate 1 = the alerts API; Gate 2 = the
+4-module compile with `javap` stub-check + `check_500`) + `.githooks/pre-push`
+(`codeql-gate.sh --fast`, bypass honest via `CODEQL_GATE_SKIP=1`). First run
+15/09: main 0 open, beta 0 open, build 0 stubs, check_500 green.
+
+**The API trap this gate exists to catch** (measured 15/09): freshly-created
+alerts return `state: null` — neither `open` nor `dismissed` — and a
+`?state=open` filter HIDES them; only the Security tab shows them. The
+"3 unused-container + array-index" the maintainer saw in the UI were exactly
+this class, PLUS a worse one: #394/#395/#396 had been **dismissed as "false
+positive" that were NOT false positives** (write-only `tasks`/`taskThreads`
+leaking one `Thread` per spawn; `argTypes` never read). Q5 forbids false-green
+dismissals — they were reversed to `open` and fixed at the root (`7a501054`);
+the next scan closed all three as `fixed` on the real code. Lesson for the
+corpus: a dismissal must be re-tested against the actual data-flow, never
+against the comment that justified it.
+
+---
+
 ## How to update this doc
 
 Decided anything else in the chat → lock it here (date + option + code
