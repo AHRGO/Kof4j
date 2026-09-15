@@ -95,6 +95,33 @@ class NativeCrossDynamicLinkTest {
         assertFalse(List.of(dynA).contains("--no-relax"), "aarch64 sem --no-relax");
     }
 
+    // ---- unit: detecção do consumidor SQLite + -lsqlite3 (DB001) ----
+
+    @Test
+    void needsSqliteDetectsCallsButNotComments() {
+        assertFalse(NativeCrossLink.needsSqlite("_start:\n    call kof_println_string\n    call kof_alloc\n"),
+                "runtime puro não consome sqlite → estático");
+        assertTrue(NativeCrossLink.needsSqlite("    call sqlite3_open\n"),
+                "call sqlite3_open → dinâmico + -lsqlite3");
+        assertTrue(NativeCrossLink.needsSqlite("    call sqlite3_prepare_v2\n"));
+        assertFalse(NativeCrossLink.needsSqlite("    # call sqlite3_open no comentário\n"),
+                "comentário não conta");
+        assertFalse(NativeCrossLink.needsSqlite("    call kof_db_connect\n"),
+                "wrapper kof_db_* não é símbolo libsqlite3 (a detecção é do .so real)");
+    }
+
+    @Test
+    void ldArgsSqliteAddsLsqlite3() {
+        Path bin = Path.of("/tmp/x");
+        Path obj = Path.of("/tmp/x.o");
+        String[] plain = NativeCrossLink.ldArgs("riscv64-linux-gnu-ld", bin, obj, "riscv64", true, "/tmp/opencode/x");
+        assertFalse(List.of(plain).contains("-lsqlite3"),
+                "sem consumidor sqlite não leva -lsqlite3: " + List.of(plain));
+        String[] sq = NativeCrossLink.ldArgs("riscv64-linux-gnu-ld", bin, obj, "riscv64", true, "/tmp/opencode/x", true);
+        assertTrue(List.of(sq).contains("-lc"), "sqlite implica libc: " + List.of(sq));
+        assertTrue(List.of(sq).contains("-lsqlite3"), "consumidor sqlite leva -lsqlite3: " + List.of(sq));
+    }
+
     // ---- E2E: o binário dinâmico roda sob qemu e imprime via libc ----
 
     private String runCapture(java.util.Map<String, String> env, String... cmd) throws IOException {
@@ -181,5 +208,71 @@ class NativeCrossDynamicLinkTest {
         String out = runCapture(java.util.Map.of("QEMU_LD_PREFIX", NativeCrossLink.qemuPrefixFor("aarch64")),
                 "qemu-aarch64", bin.toString());
         assertEquals("v=42", out, "libc dinâmica deveria formatar via snprintf: " + out);
+    }
+
+    // ---- E2E DB001: o binário resolve libsqlite3 (-lsqlite3) sob qemu ----
+
+    /** _start que chama sqlite3_libversion() e imprime o retorno via libc
+     *  (strlen+write): prova o link `-lc -lsqlite3` e a resolução da .so. */
+    private static final String HARNESS_SQLITE = """
+            .option arch, rv64g
+            .section .text
+            .globl _start
+            _start:
+                andi sp, sp, -16
+                addi sp, sp, -16
+                call sqlite3_libversion
+                mv   s0, a0
+                mv   a0, s0
+                call strlen
+                mv   a2, a0
+                li   a0, 1
+                mv   a1, s0
+                call write
+                li   a0, 0
+                call exit
+            """;
+
+    @Test
+    void riscv64DynamicLinksSqliteAndRuns(@TempDir Path tempDir) throws IOException {
+        Assumptions.assumeTrue(has("riscv64-linux-gnu-as", "riscv64-linux-gnu-ld", "qemu-riscv64"),
+                "toolchain riscv64 ausente — pulando");
+        Assumptions.assumeTrue(NativeCrossLink.sqliteAvailable("riscv64"),
+                "libsqlite3 riscv64-cross ausente (KOF_CROSS_SYSROOT) — pulando");
+        assertTrue(NativeCrossLink.needsSqlite(HARNESS_SQLITE), "harness deve detectar sqlite3_*");
+        Path asm = tempDir.resolve("sq.s");
+        Path obj = tempDir.resolve("sq.o");
+        Path bin = tempDir.resolve("sq");
+        Files.writeString(asm, HARNESS_SQLITE);
+        runCapture(null, "riscv64-linux-gnu-as", "-mno-relax", "-o", obj.toString(), asm.toString());
+        runCapture(null, NativeCrossLink.ldArgs("riscv64-linux-gnu-ld", bin, obj,
+                "riscv64", true, NativeCrossLink.sysrootFor("riscv64"), true));
+        bin.toFile().setExecutable(true);
+        String out = runCapture(java.util.Map.of("QEMU_LD_PREFIX", NativeCrossLink.qemuPrefixFor("riscv64")),
+                "qemu-riscv64", bin.toString());
+        assertEquals("3.45.1", out, "libsqlite3 dinâmica deveria devolver a versão: " + out);
+    }
+
+    @Test
+    void aarch64DynamicLinksSqliteAndRuns(@TempDir Path tempDir) throws IOException {
+        Assumptions.assumeTrue(has("aarch64-linux-gnu-as", "aarch64-linux-gnu-ld", "qemu-aarch64"),
+                "toolchain aarch64 ausente — pulando");
+        Assumptions.assumeTrue(NativeCrossLink.sqliteAvailable("aarch64"),
+                "libsqlite3 aarch64-cross ausente (KOF_CROSS_SYSROOT) — pulando");
+        StringBuilder arm = new StringBuilder();
+        for (String line : HARNESS_SQLITE.split("\n", -1)) {
+            for (String t : NativeAarch64Translator.translateRiscvToAarch64(line)) arm.append(t).append('\n');
+        }
+        Path asm = tempDir.resolve("sqa.s");
+        Path obj = tempDir.resolve("sqa.o");
+        Path bin = tempDir.resolve("sqa");
+        Files.writeString(asm, arm.toString());
+        runCapture(null, "aarch64-linux-gnu-as", "-o", obj.toString(), asm.toString());
+        runCapture(null, NativeCrossLink.ldArgs("aarch64-linux-gnu-ld", bin, obj,
+                "aarch64", true, NativeCrossLink.sysrootFor("aarch64"), true));
+        bin.toFile().setExecutable(true);
+        String out = runCapture(java.util.Map.of("QEMU_LD_PREFIX", NativeCrossLink.qemuPrefixFor("aarch64")),
+                "qemu-aarch64", bin.toString());
+        assertEquals("3.45.1", out, "libsqlite3 dinâmica deveria devolver a versão: " + out);
     }
 }

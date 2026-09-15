@@ -912,10 +912,16 @@ class ConformanceMatrixTest {
                     println(validation.isCep("0131010"))
                     println(validation.isPis("123.4567.890-0"))
                     println(validation.isPis("12345678901"))
+                    // S12c: NIS — MESMO checksum mod-11 do PIS (reuso 1:1).
+                    println(validation.isNis("12056412278"))
+                    println(validation.isNis("120.5641.227-8"))
+                    println(validation.isNis("12056412279"))
+                    println(validation.isNis("12345678901"))
+                    println(validation.isNis(""))
                     println(validation.isCpf("529.982.247-25") == true)
                     println(validation.isCpf("111.111.111-11") == false)
                 }
-                """, "true\nfalse\ntrue\nfalse\ntrue\nfalse\ntrue\nfalse\ntrue\ntrue", Set.of(), tempDir);
+                """, "true\nfalse\ntrue\nfalse\ntrue\nfalse\ntrue\nfalse\ntrue\ntrue\ntrue\ntrue\nfalse\nfalse\nfalse", Set.of(), tempDir);
         matrix("stdvalidationnet", """
                 main() {
                     println(validation.isIpv4("192.168.0.1"))

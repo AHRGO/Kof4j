@@ -159,8 +159,10 @@ final class NativeArchEmitter {
         System.err.println("NativeBackend: generated riscv64 " + asmFile);
 
         // link dinâmico SOB DEMANDA (diretriz 15/09): estático p/ sempre até o
-        // runtime (podado) referenciar libc; aí vira -lc + --dynamic-linker.
-        boolean dynamic = NativeCrossLink.needsLibc(prunedRiscv);
+        // runtime (podado) referenciar libc/libsqlite3; aí vira -lc/-lsqlite3 +
+        // --dynamic-linker. DB001: o consumidor SQLite arrasta a libc junto.
+        boolean sqlite = NativeCrossLink.needsSqlite(prunedRiscv);
+        boolean dynamic = sqlite || NativeCrossLink.needsLibc(prunedRiscv);
         String sysroot = NativeCrossLink.sysrootFor("riscv64");
         if (dynamic && sysroot == null) {
             // R6: sem libc-cross não há como ligar dinâmico — segue estático,
@@ -169,7 +171,12 @@ final class NativeArchEmitter {
             System.err.println("NativeBackend: riscv64 pede libc mas KOF_CROSS_SYSROOT/" +
                     "/tmp/opencode/x/usr/riscv64-linux-gnu ausente — tentando link estático");
         }
-        if (dynamic) System.err.println("NativeBackend: riscv64 link dinâmico (libc detectada)");
+        if (sqlite && !NativeCrossLink.sqliteAvailable("riscv64")) {
+            System.err.println("NativeBackend: riscv64 usa kof.db mas libsqlite3.so não está no " +
+                    "sysroot (CI instala só libc6-*-cross) — o ld vai abortar com undefined reference");
+        }
+        if (dynamic) System.err.println("NativeBackend: riscv64 link dinâmico (" +
+                (sqlite ? "libc+libsqlite3 detectadas" : "libc detectada") + ")");
 
         try {
             Path objFile = asmFile.resolveSibling("kof.o");
@@ -185,7 +192,7 @@ final class NativeArchEmitter {
             // root_start.._end; seção deletada fora do intervalo = raiz que
             // o coletor nunca vê — precisa primeiro o fim explícito).
             nb.runCommand(NativeCrossLink.ldArgs("riscv64-linux-gnu-ld", binFile, objFile,
-                    "riscv64", dynamic, sysroot), "riscv64-ld");
+                    "riscv64", dynamic, sysroot, sqlite), "riscv64-ld");
             Files.deleteIfExists(objFile);
             if (System.getenv("KOF_KEEP_ASM") == null) Files.deleteIfExists(asmFile);
             binFile.toFile().setExecutable(true);
@@ -321,14 +328,20 @@ final class NativeArchEmitter {
         Files.createDirectories(asmFile.getParent());
         Files.writeString(asmFile, sb.toString());
         System.err.println("NativeBackend: generated aarch64 " + asmFile);
-        boolean dynamic = NativeCrossLink.needsLibc(prunedRiscv);
+        boolean sqlite = NativeCrossLink.needsSqlite(prunedRiscv);
+        boolean dynamic = sqlite || NativeCrossLink.needsLibc(prunedRiscv);
         String sysroot = NativeCrossLink.sysrootFor("aarch64");
-        if (dynamic) System.err.println("NativeBackend: aarch64 link dinâmico (libc detectada)");
+        if (sqlite && !NativeCrossLink.sqliteAvailable("aarch64")) {
+            System.err.println("NativeBackend: aarch64 usa kof.db mas libsqlite3.so não está no " +
+                    "sysroot (CI instala só libc6-*-cross) — o ld vai abortar com undefined reference");
+        }
+        if (dynamic) System.err.println("NativeBackend: aarch64 link dinâmico (" +
+                (sqlite ? "libc+libsqlite3 detectadas" : "libc detectada") + ")");
         try {
             Path objFile = asmFile.resolveSibling("kof.o");
             nb.runCommand(new String[]{"aarch64-linux-gnu-as", "-o", objFile.toString(), asmFile.toString()}, "aarch64-as");
             nb.runCommand(NativeCrossLink.ldArgs("aarch64-linux-gnu-ld", binFile, objFile,
-                    "aarch64", dynamic, sysroot), "aarch64-ld");
+                    "aarch64", dynamic, sysroot, sqlite), "aarch64-ld");
             Files.deleteIfExists(objFile);
             if (System.getenv("KOF_KEEP_ASM") == null) Files.deleteIfExists(asmFile);
             binFile.toFile().setExecutable(true);
