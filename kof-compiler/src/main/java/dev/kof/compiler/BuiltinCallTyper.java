@@ -86,7 +86,7 @@ public final class BuiltinCallTyper {
             SymbolTable.ConstructorSymbol ctor = SymbolTable.constructorFor(
                     ctorClass.members(), mc.arguments().size());
             if (ctor != null) {
-                sa.mutableResolvedMethods().put(mc, new SymbolTable.MethodSymbol("<init>", mc.methodName(),
+                sa.putResolvedMethod(mc, new SymbolTable.MethodSymbol("<init>", mc.methodName(),
                         ctor.type(), ctor.parameterTypes(), ctor.accessFlags(), SymbolTable.DispatchKind.STATIC));
             }
             return new Type.ClassType(ctorClass.packageName(), ctorClass.name(), List.of());
@@ -278,7 +278,7 @@ public final class BuiltinCallTyper {
                     List<Type> argTypes = new ArrayList<>();
                     for (ExpressionNode arg : mc.arguments()) argTypes.add(SemExpressionTyper.inferType(sa, arg, scope));
                     TypeChecker.checkArgTypes(sa.diagnostics(), mc.methodName(), argTypes, ms.parameterTypes());
-                    sa.mutableResolvedMethods().put(mc, ms);
+                    sa.putResolvedMethod(mc, ms);
                     return ms.returnType();
                 }
                 // chamada implícita (this) herdada de SUPERCLASSE
@@ -296,7 +296,7 @@ public final class BuiltinCallTyper {
                             params.add(ExternalClasspath.typeFromDescriptor(d));
                         }
                         Type ret = ExternalClasspath.typeFromDescriptor(sig.returnDescriptor());
-                        sa.mutableResolvedMethods().put(mc, new SymbolTable.MethodSymbol(mc.methodName(),
+                        sa.putResolvedMethod(mc, new SymbolTable.MethodSymbol(mc.methodName(),
                                 superInternal, ret, params, 1,
                                 SymbolTable.DispatchKind.INSTANCE));
                         return ret;
@@ -428,7 +428,7 @@ public final class BuiltinCallTyper {
                     found = true;
                     Type extRet = MemberResolver.resolveType(sa, ext.returnType(), scope);
                     if (!Type.isVoid(extRet)) {
-                        sa.mutableExpressionTypes().put(mc, extRet);
+                        sa.putExpressionType(mc, extRet);
                         return extRet;
                     }
                 }
@@ -460,7 +460,7 @@ public final class BuiltinCallTyper {
                     // métodos do receiver)
                     Type fnRet = MemberResolver.resolveType(sa, chosen.fn().returnType(), scope);
                     if (!Type.isVoid(fnRet)) {
-                        sa.mutableExpressionTypes().put(mc, fnRet);
+                        sa.putExpressionType(mc, fnRet);
                         return fnRet;
                     }
                 }
@@ -476,7 +476,7 @@ public final class BuiltinCallTyper {
             SymbolTable.ConstructorSymbol ctor = SymbolTable.constructorFor(
                     ctorClass.members(), mc.arguments().size());
             if (ctor != null) {
-                sa.mutableResolvedMethods().put(mc, new SymbolTable.MethodSymbol("<init>", mc.methodName(),
+                sa.putResolvedMethod(mc, new SymbolTable.MethodSymbol("<init>", mc.methodName(),
                         ctor.type(), ctor.parameterTypes(), ctor.accessFlags(), SymbolTable.DispatchKind.STATIC));
             }
             return new Type.ClassType(ctorClass.packageName(), ctorClass.name(), List.of());

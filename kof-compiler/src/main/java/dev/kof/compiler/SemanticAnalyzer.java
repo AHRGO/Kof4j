@@ -287,17 +287,20 @@ public class SemanticAnalyzer {
     Map<MethodDeclarationNode, SymbolTable> methodScopes() { return java.util.Collections.unmodifiableMap(methodScopes); }
     Map<MethodDeclarationNode, SymbolTable.MethodSymbol> methodSymbols() { return java.util.Collections.unmodifiableMap(methodSymbols); }
 
-    // Package-private mutable accessors for internal use (CodeQL: avoid exposing internal mutable state)
-    Map<ExpressionNode, Type> mutableExpressionTypes() { return expressionTypes; }
-    Map<MethodCallExpr, SymbolTable.MethodSymbol> mutableResolvedMethods() { return resolvedMethods; }
-    Map<NewExpr, SymbolTable.ConstructorSymbol> mutableResolvedConstructors() { return resolvedConstructors; }
-    Map<String, SymbolTable> mutableClassMemberScopes() { return classMemberScopes; }
-    java.util.IdentityHashMap<ConstructorDeclarationNode, SymbolTable> mutableCtorScopes() { return ctorScopes; }
-    java.util.IdentityHashMap<MethodDeclarationNode, SymbolTable> mutableMethodScopes() { return methodScopes; }
-    java.util.IdentityHashMap<MethodDeclarationNode, SymbolTable.MethodSymbol> mutableMethodSymbols() { return methodSymbols; }
-    Map<String, SymbolTable.ClassSymbol> mutableAllClasses() { return knownClasses; }
-    java.util.Set<String> mutableInterfaceNames() { return interfaceNames; }
-    java.util.Set<String> mutableAbstractClasses() { return abstractClasses; }
+    // Mutadores package-private para as classes extraídas (REFACTOR-500 fase 6).
+    // NÃO expõem a coleção interna (CodeQL `java/internal-representation-exposure`):
+    // a mutação acontece AQUI, dentro do dono do estado. Os leitores usam os
+    // getters read-only (`unmodifiable*`) acima.
+    void putExpressionType(ExpressionNode expr, Type type) { expressionTypes.put(expr, type); }
+    void putResolvedMethod(MethodCallExpr call, SymbolTable.MethodSymbol sym) { resolvedMethods.put(call, sym); }
+    void putResolvedConstructor(NewExpr expr, SymbolTable.ConstructorSymbol sym) { resolvedConstructors.put(expr, sym); }
+    void putClassMemberScope(String className, SymbolTable scope) { classMemberScopes.put(className, scope); }
+    void putCtorScope(ConstructorDeclarationNode ctor, SymbolTable scope) { ctorScopes.put(ctor, scope); }
+    void putMethodScope(MethodDeclarationNode method, SymbolTable scope) { methodScopes.put(method, scope); }
+    void putMethodSymbol(MethodDeclarationNode method, SymbolTable.MethodSymbol sym) { methodSymbols.put(method, sym); }
+    void putClass(String name, SymbolTable.ClassSymbol sym) { knownClasses.put(name, sym); }
+    void addInterface(String name) { interfaceNames.add(name); }
+    void addAbstractClass(String name) { abstractClasses.add(name); }
 
     private void analyzeConstructorBody(ConstructorDeclarationNode ctor) {
         SymbolTable ctorScope = ctorScopes.get(ctor);

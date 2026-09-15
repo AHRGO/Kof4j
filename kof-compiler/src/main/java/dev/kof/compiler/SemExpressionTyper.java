@@ -16,7 +16,7 @@ public final class SemExpressionTyper {
         Type cached = sa.expressionTypes().get(expr);
         if (cached != null && !Type.isUnknown(cached)) return cached;
         Type result = inferTypeInternal(sa, expr, scope);
-        sa.mutableExpressionTypes().put(expr, result);
+        sa.putExpressionType(expr, result);
         return result;
     }
 
@@ -144,7 +144,7 @@ public final class SemExpressionTyper {
                 if (sa.currentClassName() != null && !sa.currentClassName().isEmpty()) {
                     SymbolTable.Symbol fieldSym = MemberResolver.resolveInHierarchy(sa, sa.currentClassName(), ie.name());
                     if (fieldSym != null) {
-                        sa.mutableExpressionTypes().put(ie, fieldSym.type());
+                        sa.putExpressionType(ie, fieldSym.type());
                         yield fieldSym.type();
                     }
                 }
@@ -323,7 +323,7 @@ public final class SemExpressionTyper {
                     SymbolTable.ConstructorSymbol ctor3 =
                             SymbolTable.constructorFor(cs.members(), ne.arguments().size());
                     if (ctor3 != null) {
-                        sa.mutableResolvedConstructors().put(ne, ctor3);
+                        sa.putResolvedConstructor(ne, ctor3);
                     } else if (sa.diagnostics() != null) {
                         SymbolTable.Symbol anyInit = cs.members().resolve("<init>");
                         if (anyInit instanceof SymbolTable.ConstructorSymbol c) {
@@ -363,7 +363,7 @@ public final class SemExpressionTyper {
                             for (String d : sig.parameterDescriptors()) {
                                 params.add(ExternalClasspath.typeFromDescriptor(d));
                             }
-                            sa.mutableResolvedConstructors().put(ne, new SymbolTable.ConstructorSymbol(
+                            sa.putResolvedConstructor(ne, new SymbolTable.ConstructorSymbol(
                                     internal.substring(internal.lastIndexOf('/') + 1), params, 1));
                         }
                         int lastDot = qname.lastIndexOf('.');
