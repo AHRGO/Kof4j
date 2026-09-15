@@ -325,6 +325,13 @@ public final class RuntimeValidationBr {
                 popq %rbx
                 ret
 
+            # kof_validation_isNis(rdi=str) -> Bool (S12c)
+            # MESMO checksum mod-11 do PIS (mesmos pesos) — tail-jmp 1:1.
+            .globl kof_validation_isNis
+            .type kof_validation_isNis, @function
+            kof_validation_isNis:
+                jmp kof_validation_isPis
+
             # kof_validation_formatCep(rdi=str) -> String (S12)
             # 8 dígitos => DDDDD-DDDD; senão (incl. null) => original (no-op).
             .globl kof_validation_formatCep

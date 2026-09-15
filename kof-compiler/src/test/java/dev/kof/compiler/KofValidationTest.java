@@ -84,8 +84,14 @@ class KofValidationTest {
                 println(validation.isCep("0131010"))
                 println(validation.isPis("123.4567.890-0"))
                 println(validation.isPis("12345678901"))
+                // S12c: NIS — MESMO checksum mod-11 do PIS (reuso 1:1).
+                println(validation.isNis("12056412278"))
+                println(validation.isNis("120.5641.227-8"))
+                println(validation.isNis("12056412279"))
+                println(validation.isNis("12345678901"))
+                println(validation.isNis(""))
             }
-            """, "true\ntrue\nfalse\nfalse\nfalse\nfalse\ntrue\nfalse\ntrue\nfalse\ntrue\nfalse");
+            """, "true\ntrue\nfalse\nfalse\nfalse\nfalse\ntrue\nfalse\ntrue\nfalse\ntrue\nfalse\ntrue\ntrue\nfalse\nfalse\nfalse");
     }
 
     @Test
@@ -105,6 +111,10 @@ class KofValidationTest {
                 assert(!validation.isCep("0131010"))
                 assert(validation.isPis("123.4567.890-0"))
                 assert(!validation.isPis("12345678901"))
+                // S12c: NIS
+                assert(validation.isNis("12056412278"))
+                assert(!validation.isNis("12056412279"))
+                assert(!validation.isNis(""))
                 println("ok")
             }
             """, "ok");
@@ -120,8 +130,10 @@ class KofValidationTest {
                 println(validation.isCep("01310-100"))
                 println(validation.isCep("0131010"))
                 println(validation.isPis("123.4567.890-0"))
+                println(validation.isNis("12056412278"))
+                println(validation.isNis("12056412279"))
             }
-            """, "true\nfalse\ntrue\ntrue\nfalse\ntrue");
+            """, "true\nfalse\ntrue\ntrue\nfalse\ntrue\ntrue\nfalse");
     }
 
     // S5 cross-arch: é a PRIMEIRA verificação que EXECUTA código runtime
@@ -145,6 +157,10 @@ class KofValidationTest {
                 assert(!validation.isCep("0131010"))
                 assert(validation.isPis("123.4567.890-0"))
                 assert(!validation.isPis("12345678901"))
+                // S12c: NIS (tail-jmp pro isPis — mesmo mod-11)
+                assert(validation.isNis("12056412278"))
+                assert(!validation.isNis("12056412279"))
+                assert(!validation.isNis(""))
             }
             """);
     }
@@ -162,6 +178,9 @@ class KofValidationTest {
                 assert(!validation.isCep("0131010"))
                 assert(validation.isPis("123.4567.890-0"))
                 assert(!validation.isPis("12345678901"))
+                assert(validation.isNis("12056412278"))
+                assert(!validation.isNis("12056412279"))
+                assert(!validation.isNis(""))
             }
             """);
     }

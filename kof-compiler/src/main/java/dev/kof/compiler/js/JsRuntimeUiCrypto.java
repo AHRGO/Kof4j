@@ -304,6 +304,10 @@ public final class JsRuntimeUiCrypto {
                 for (let i = 0; i < 10; i++) r += d[i] * w[i];
                 r %= 11; return (r < 2 ? 0 : 11 - r) === d[10] ? 1 : 0;
             }
+            // S12c: NIS = MESMO checksum mod-11 do PIS (reuso 1:1).
+            export function kofValidationIsNis(s) {
+                return kofValidationIsPis(s);
+            }
 
             // ── kof.observability (G5) ──────────────────────────────
 

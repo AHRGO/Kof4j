@@ -133,7 +133,8 @@ public final class JvmRuntimeReturnDescriptors {
                     "kof_validation_minLength", "kof_validation_maxLength", "kof_validation_lengthBetween",
                     "kof_validation_matches", "kof_validation_inRange", "kof_validation_min",
                     "kof_validation_max", "kof_validation_isCpf", "kof_validation_isCnpj",
-                    "kof_validation_isCep", "kof_validation_isPis", "kof_validation_isIpv4",
+                    "kof_validation_isCep", "kof_validation_isPis", "kof_validation_isNis",
+                    "kof_validation_isIpv4",
                     "kof_validation_isMac", "kof_validation_isPort",
                     "kof_validation_isCreditCard", "kof_validation_isIpv6",
                     "kof_validation_isDomain" -> "I";
