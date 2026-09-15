@@ -7208,7 +7208,14 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   de formatação numérica de Int; quando não há extensão do usuário, cai num
   owner `""` não-resolvido em vez de um estático do JDK ou um erro `SEM`.
   Irmão de §203/§213/§161 (família `as`/cast de descriptor quebrado).
-- **Estado:** reproduz no `d2d025f4`.
+- **Estado:** reproduz no `d2d025f4`; **RE-MEDIDO 15/09 ~18:40 pela lane
+  bugs-and-gaps `192.168.100.15` no tip `2fc7d6e0`** (classes frescas,
+  `Triage` JVM): `n.toHexString()` (n=255) → `ClassFormatError: Illegal class
+  name ""` (exit 1), owner ainda vazio. **ADIADO p/ 0.4.1 pela mantenedora**
+  (triagem da #148 em 14/09 09:51: "Correção entra na 0.4.1 — patch de
+  estabilização"); ABERTO, não é bloqueador do portão 0.4.0. Fix = a resolução
+  do helper de formatação numérica de Int (família de qualificação,
+  §203/§166).
 
 ### §219 — batch (triagem 14/09): 5 issues abertas cujo código é REJEITADO por falsos positivos de diagnóstico em compile-time (formas legítimas do corpus bloqueadas — diagnóstico honesto, veredito errado, logo não R6-silencioso; cada uma precisa de fix no compiler, não de fix de crash)
 

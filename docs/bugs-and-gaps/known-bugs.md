@@ -7223,7 +7223,13 @@ to the label) is the correct predicate and **was already used** in `parseStateme
   number-format helpers; when no user extension exists it falls through to
   an unresolved owner `""` instead of a JDK static or a `SEM` error. Sibling
   of §203/§213/§161 (broken `as`/cast descriptor family).
-- **Status:** reproduces on `d2d025f4`.
+- **Status:** reproduces on `d2d025f4`; **RE-MEASURED 15/09 ~18:40 by lane
+  bugs-and-gaps `192.168.100.15` on the tip `2fc7d6e0`** (fresh classes,
+  `Triage` JVM): `n.toHexString()` (n=255) → `ClassFormatError: Illegal class
+  name ""` (exit 1), owner still empty. **DEFERRED to 0.4.1 by the maintainer**
+  (issue #148 triage 14/09 09:51: "Correção entra na 0.4.1 — patch de
+  estabilização"); OPEN, not a 0.4.0 release-gate blocker. Fix = the
+  Int number-format helper resolution (qualification family, §203/§166).
 
 ### §219 — batch (triage 14/09): 5 open issues whose code is REJECTED by false-positive compile diagnostics (legitimate corpus forms blocked — honest diagnostic, wrong verdict, so not R6-silent; each needs a compiler fix, not a crash-fix)
 
