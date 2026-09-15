@@ -34,7 +34,7 @@ import java.util.Set;
  * Sem nenhum sysroot → mantém ESTÁTICO + stderr (R6: nunca link quebrado
  * silencioso).
  */
-final class NativeCrossLink {
+public final class NativeCrossLink {
 
     private NativeCrossLink() {}
 
@@ -91,8 +91,14 @@ final class NativeCrossLink {
     }
 
     /** true se dá para ligar `-lsqlite3` no alvo (sysroot com a lib). */
-    static boolean sqliteAvailable(String arch) {
+    public static boolean sqliteAvailable(String arch) {
         return sqliteLibFor(arch) != null;
+    }
+
+    /** Sysroot cross resolvido (null se não há libc-cross) — bridge de leitura
+     *  p/ os E2E de outros pacotes (KofDbE2ETest). */
+    public static String sysrootOrNull(String arch) {
+        return sysrootFor(arch);
     }
 
     /** Arquivo `libsqlite3.so*` disponível no sysroot (dev symlink ou soname),

@@ -20,8 +20,9 @@
 > (§113), UTF-16 String search (§43/§102/§111). **OPEN — HONEST refusal at
 > compile-time (NEVER silent binary; rule R6 — the "exit 0 with no effect" stub
 > of 03/09 no longer describes the state, unknown ops give a gap code):**
-> `kof.db` → **DB001** (`KofDbE2ETest` proves `assertFalse(success)` + DB001
-> diags on the 6 targets), `kof.security` crypto-heavy → **SECN000**, the 6
+> `kof.db` → **DB001 CLOSED 15/09 on riscv64/aarch64** (link-by-use `libsqlite3` +
+> runtime `kof_db_*` in slices `RtB46/RtB47`; `KofDbE2ETest.crossNativeSqliteRoundtrip`
+> proves the full path under qemu on both arches; JS keeps `DB001`), `kof.security` crypto-heavy → **SECN000**, the 6
 > higher-order concurrency constructs (supervisor/`selectAny`
 > multi/cancel cross …) → **CONC001** (`spawn`/`await`/`sleep`/`interval`
 > GREEN on cross — gate #91 does not touch them), UI (`kof.ui`) **without any
@@ -37,7 +38,8 @@
 > conservative mark + G-4 sweep/collect DONE 15/09** (see the decomposition
 > below); G-5 aarch64 satisfied by G-4 (both arches run the sweep proof);
 > the collector (G-4) is what actually reclaims; (2) the
-> DB001/SECN000/CONC001/JSN004 refusals above; (3) FP-collection on cross
+> DB001 cross face CLOSED 15/09 (SQLite; JS keeps DB001) — remaining
+> SECN000/CONC001/JSN004 refusals; (3) FP-collection on cross
 > (FLT001 CLOSED 15/09 — slice `RtB45`; §107 remaining face = record/nested `?`); (4) `backend-parity.md` per-arch columns
 > still to be separated; (5) cross CI does not exist (host-dependent toolchain) —
 > **face (5) CLOSED 12/09**: job `cross-native` in `.github/workflows/ci.yml`

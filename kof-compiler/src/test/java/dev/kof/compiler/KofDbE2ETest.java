@@ -472,9 +472,92 @@ class KofDbE2ETest {
     }
 
     @Test
-    void crossNativeReportsDb001(@TempDir Path tempDir) throws IOException {        // R6: db exige link dinâmico de libsqlite3 (libc) — os cross estáticos
-        // (asm puro, sem C) reportam DB001 em compile-time, nunca undefined-
-        // reference silencioso no ld.
+    void crossNativeSqliteRoundtrip(@TempDir Path tempDir) throws IOException {        // DB001 fechado no cross (15/09): o frontend compila db.* e o runtime
+        // RtB46/RtB47 liga dinamicamente a libsqlite3 (link-by-use). Mesmo
+        // programa do nativeSqliteRoundtrip, riscv64 + aarch64 sob qemu.
+        Path source = tempDir.resolve("Cross.kf");
+        Files.writeString(source, """
+            main() {
+                var db = db.connect("sqlite:%s/kof.db")
+                db.execute(db, "create table if not exists u(id int, name varchar)")
+                db.execute(db, "delete from u")
+                db.execute(db, "insert into u values (?, ?)", 7, "Nativa")
+                var rows = db.query(db, "select id, name from u where id = ?", 7)
+                for (var r in rows) {
+                    println(r)
+                }
+                db.close(db)
+            }
+            """.formatted(tempDir));
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            String arch = t.nativeArch();
+            String as = arch.equals("riscv64") ? "riscv64-linux-gnu-as" : "aarch64-linux-gnu-as";
+            String ld = arch.equals("riscv64") ? "riscv64-linux-gnu-ld" : "aarch64-linux-gnu-ld";
+            assumeTrue(has(as, ld, "qemu-" + arch), "cross toolchain " + arch + " ausente — pulando");
+            assumeTrue(dev.kof.compiler.nat.NativeCrossLink.sysrootOrNull(arch) != null,
+                    "sysroot cross " + arch + " ausente — pulando");
+            assumeTrue(dev.kof.compiler.nat.NativeCrossLink.sqliteAvailable(arch),
+                    "libsqlite3 " + arch + " ausente no sysroot — pulando");
+            Path out = tempDir.resolve("out-" + t);
+            CompilationResult r = driver.compile(source, out, t);
+            assertTrue(r.success(), t + " deveria compilar db.*: " + r.diagnostics().getDiagnostics());
+            Path binFile = out.resolve("Default/Main");
+            assertTrue(Files.exists(binFile), "binário " + t + " deveria existir");
+            ProcessBuilder pb = new ProcessBuilder("qemu-" + arch, binFile.toString());
+            String prefix = qemuPrefix(arch);
+            if (prefix != null) pb.environment().put("QEMU_LD_PREFIX", prefix);
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            String output = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+                    .replace("\r\n", "\n").trim();
+            int ec;
+            try {
+                ec = p.waitFor();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IOException("Interrupted running " + t + " binary", e);
+            }
+            assertEquals(0, ec, t + " exit code, output: '" + output + "'");
+            assertEquals("{\"id\":7,\"name\":\"Nativa\"}", output, t + " SQLite query output");
+        }
+    }
+
+    /** has() do padrão dos testes cross (command -v). */
+    private static boolean has(String... cmds) {
+        for (String c : cmds) {
+            try {
+                Process p = new ProcessBuilder("sh", "-c", "command -v " + c)
+                        .redirectErrorStream(true).start();
+                String out = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8).trim();
+                if (p.waitFor() != 0 || out.isEmpty()) return false;
+            } catch (Exception e) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** QEMU_LD_PREFIX p/ o loader dinâmico (espelho de NativeRiscv64E2ETest). */
+    private static String qemuPrefix(String arch) {
+        String env = System.getenv("KOF_CROSS_SYSROOT");
+        String loader = arch.equals("riscv64") ? "ld-linux-riscv64-lp64d.so.1" : "ld-linux-aarch64.so.1";
+        if (env != null && !env.isBlank()
+                && Files.exists(Path.of(env, "usr", arch + "-linux-gnu", "lib", loader))) {
+            return env + "/usr/" + arch + "-linux-gnu";
+        }
+        for (String root : new String[]{"/tmp/opencode/x", "/"}) {
+            Path p = Path.of(root, "usr", arch + "-linux-gnu");
+            if (Files.exists(p.resolve("lib").resolve(loader))) {
+                return root.equals("/") ? p.toString() : root + "/usr/" + arch + "-linux-gnu";
+            }
+        }
+        return null;
+    }
+
+    @Test
+    void crossNativeSqliteNowCompiles(@TempDir Path tempDir) throws IOException {
+        // DB001 fechado no cross (15/09): o gate caiu — db.* compila nos dois
+        // alvos cross (sem sysroot, o ld falha ALTO — R6, nunca silencioso).
         Path source = tempDir.resolve("Main.kf");
         Files.writeString(source, """
             main() {
@@ -483,9 +566,22 @@ class KofDbE2ETest {
             """);
         for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
             CompilationResult r = new CompilerDriver().compile(source, tempDir.resolve("cross-" + t), t);
-            assertFalse(r.success(), t + " should report DB001");
-            assertTrue(r.diagnostics().getDiagnostics().toString().contains("DB001"),
-                    t + ": " + r.diagnostics().getDiagnostics());
+            assertTrue(r.success(), t + " db.* agora compila (DB001 fechado): "
+                    + r.diagnostics().getDiagnostics());
         }
+    }
+
+    @Test
+    void jsStillReportsDb001(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            main() {
+                var db = db.connect("sqlite:/tmp/x.db")
+            }
+            """);
+        CompilationResult r = driver.compile(source, tempDir.resolve("js-out"), Target.JS);
+        assertFalse(r.success(), "JS should still report DB001");
+        assertTrue(r.diagnostics().getDiagnostics().toString().contains("DB001"),
+                r.diagnostics().getDiagnostics().toString());
     }
 }

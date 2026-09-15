@@ -97,6 +97,10 @@ public final class NativeRiscvAsm {
                 // (snprintf/strtod) — link dinâmico sob demanda. Fecha o gap
                 // FLT001 no riscv64/aarch64.
                 .append(NativeRiscvAsmRtB45.RISCV_RUNTIME_ASM_B_45)
+                // DB001 (15/09): builder JSON + strlen — port RuntimeIo1/RuntimeJsonBuilder.
+                .append(NativeRiscvAsmRtB46.RISCV_RUNTIME_ASM_B_46)
+                // DB001 (15/09): runtime kof.db SQLite — port Db2/Db4/Db5 (gerado).
+                .append(NativeRiscvAsmRtB47.RISCV_RUNTIME_ASM_B_47)
                 .toString();
     }
     static final String RISCV_MAPSET_ASM = runtimeMapset();
