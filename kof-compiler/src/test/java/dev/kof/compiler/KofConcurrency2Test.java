@@ -857,6 +857,14 @@ class KofConcurrency2Test {
     // DD-OTP-08 (`.stop()` do supervisor). Pré-fix (campo mutável sem
     // ACC_VOLATILE) o C2 hoistava o getfield fora do laço — leitor NUNCA
     // observava ("nao-observou" 3/3 medido); pós-fix "observou".
+    // §245 (15/09): o orçamento de 500M iterações INT é fechado pelo C2
+    // (~83 ms de laço vs 100 ms de sleep do escritor) → `nao-observou`
+    // determinístico em host rápido, sem relação com o modelo de memória.
+    // Orçamento subido para 5B (long): com o fix (leitura volátil, laço NÃO
+    // eliminável) o leitor gira até ver `pode` aos +100ms (medido ~1,55 s para
+    // 5B = ~15× a margem); sem o fix (getfield hoistado) o laço é fechado e
+    // termina antes → "nao-observou". Q0 medido: vermelho sem o ACC_VOLATILE,
+    // verde com ele.
     @Test
     void stopFlagFieldWriteObservedBySpinReader(@TempDir Path tmp) throws Exception {
         runJvm(tmp, """
@@ -866,11 +874,11 @@ class KofConcurrency2Test {
                 main() {
                     var estado = Sinalizador()
                     var t = spawn {
-                        var i = 0
+                        var i = 0L
                         var visto = false
-                        while (i < 500000000) {
-                            if (estado.pode) { visto = true; i = 600000000 }
-                            i = i + 1
+                        while (i < 5000000000L) {
+                            if (estado.pode) { visto = true; i = 5000000001L }
+                            i = i + 1L
                         }
                         if (visto) {
                             println("observou")
