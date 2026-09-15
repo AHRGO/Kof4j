@@ -136,9 +136,10 @@ public final class CompilerEmissionHelpers {
 
     static void emitErasureBox(CompilerDriver driver, List<KofOperation> ops, Type primitive) {
         if (!driver.needsErasureBoxing()) return;
-        Type boxed = TypeMetrics.boxedTypeFor(primitive);
-        Type boxParam = primitive instanceof Type.PrimitiveType pt
-                && ("char".equals(pt.name()) || "Char".equals(pt.name())) ? Type.PrimitiveType.INT : primitive;
+        Type unwrapped = primitive instanceof Type.NullableType nt ? nt.inner() : primitive;
+        Type boxed = TypeMetrics.boxedTypeFor(unwrapped);
+        Type boxParam = unwrapped instanceof Type.PrimitiveType pt
+                && ("char".equals(pt.name()) || "Char".equals(pt.name())) ? Type.PrimitiveType.INT : unwrapped;
         ops.add(new KofCall(boxed, "kof_box", List.of(boxParam), boxed, KofCallKind.FUNCTION));
     }
 

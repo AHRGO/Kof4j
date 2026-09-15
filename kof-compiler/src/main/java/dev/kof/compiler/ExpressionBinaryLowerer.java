@@ -271,10 +271,12 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
     } else if (("==".equals(be.operator()) || "!=".equals(be.operator()))
             && ((be.right() instanceof LiteralExpr rl
                     && rl.kind() == ConcreteLiteralKind.NULL
-                    && TypeMetrics.isPrimitiveType(accType))
+                    && TypeMetrics.isPrimitiveType(accType)
+                    && !(accType instanceof Type.NullableType))
                 || (be.left() instanceof LiteralExpr ll
                     && ll.kind() == ConcreteLiteralKind.NULL
-                    && TypeMetrics.isPrimitiveType(rightType)))) {
+                    && TypeMetrics.isPrimitiveType(rightType)
+                    && !(rightType instanceof Type.NullableType)))) {
         // primitivo nunca é null: == → false, != → true
         // (o lado não-nulo já está na pilha — descarta; 2 slots = POP2,
         //  SG-020/bug 79 — POP de Double/Long deixa o 2º slot e o
@@ -319,7 +321,8 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
         // O box do lado primitivo acontece ANTES do emit do lado oposto
         // (boxa o valor no topo da pilha, na ordem certa).
         boolean boxLeftNow = ("==".equals(be.operator()) || "!=".equals(be.operator()))
-                && isMaybeNullType(rightType) && TypeMetrics.isPrimitiveType(accType);
+                && isMaybeNullType(rightType) && TypeMetrics.isPrimitiveType(accType)
+                && !(accType instanceof Type.NullableType);
         if (boxLeftNow) TypeEmitter.boxPrimitive(ops, accType);
         localIdx = ExpressionLowerer.emitExpression(driver, be.right(), ops, owner, localIdx, locals);
         Type operandType = accType;
@@ -327,7 +330,7 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
                 && (driver.isNullLiteral(be.left()) || driver.isNullLiteral(be.right()))) {
             Type other = driver.isNullLiteral(be.left()) ? rightType : accType;
             operandType = (other instanceof Type.ClassType || other instanceof Type.ArrayType
-                    || other instanceof Type.TypeVariable || other instanceof Type.NullableType)
+                    || other instanceof Type.TypeVariable)
                     ? other : new Type.ClassType("java.lang", "Object", List.of());
         } else if (("==".equals(be.operator()) || "!=".equals(be.operator()))
                 && ((isMaybeNullType(accType) && TypeMetrics.isPrimitiveType(rightType))

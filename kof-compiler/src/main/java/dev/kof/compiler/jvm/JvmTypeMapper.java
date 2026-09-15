@@ -23,7 +23,12 @@ public final class JvmTypeMapper {
             case Type.FunctionType ft -> ft.className() != null
                     ? "L" + ft.className() + ";" : "Ljava/lang/Object;";
             case Type.UnknownType _ -> "Ljava/lang/Object;";
-            case Type.NullableType n -> toDescriptor(n.inner());
+            case Type.NullableType n -> {
+                if (n.inner() instanceof Type.PrimitiveType p) {
+                    yield "L" + boxedInternalName(p.name()) + ";";
+                }
+                yield toDescriptor(n.inner());
+            }
             default -> "Ljava/lang/Object;";
         };
     }

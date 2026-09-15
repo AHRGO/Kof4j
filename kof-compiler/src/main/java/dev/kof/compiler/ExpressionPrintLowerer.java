@@ -37,6 +37,7 @@ if (("print".equals(mc.methodName()) || "println".equals(mc.methodName())) && mc
     Type argType = ExpressionTyper.inferExprType(driver, mc.arguments().get(0), locals);
     // (#57: IfExpr/switch heterogêneo já boxeou in-branch → pular o box)
     if (TypeMetrics.isPrimitiveType(argType)
+            && !(argType instanceof Type.NullableType)
             && !ExpressionTyper.boxesOwnBranches(driver, mc.arguments().get(0), locals)) {
         if (driver.target.isNative()) {
             // println(char) é NUMÉRICO (congelado: strings.md
