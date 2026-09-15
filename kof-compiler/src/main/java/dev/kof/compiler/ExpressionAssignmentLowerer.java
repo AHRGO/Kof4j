@@ -98,14 +98,12 @@ if (ae.target() instanceof IdentifierExpr ie && !owner.isEmpty()) {
                 emitCompoundRhsConv(driver, ops, op, fieldSym.type(), instValType);
             } else if ("=".equals(op)) {
                 if (TypeMetrics.isPrimitiveType(instValType)
-                        && TypeMetrics.isPrimitiveType(fieldSym.type())
-                        && !(fieldSym.type() instanceof Type.NullableType)) {
+                        && TypeMetrics.isPrimitiveType(fieldSym.type())) {
                     driver.emitWideningIfNeeded(ops, instValType, fieldSym.type());
-                } else if ((driver.erasesToReference(fieldSym.type()) || fieldSym.type() instanceof Type.NullableType)
+                } else if (driver.erasesToReference(fieldSym.type())
                         && TypeMetrics.isPrimitiveType(instValType)
-                        && !(instValType instanceof Type.NullableType)
                         && !ExpressionTyper.boxesOwnBranches(driver, ae.value(), locals)) {
-                    // Issue #181: campo de instância declarado Object ou Nullable(primitivo) (#252) recebendo primitivo
+                    // Issue #181: campo de instância declarado Object recebendo primitivo (this.item = 99)
                     driver.emitErasureBox(ops, instValType);
                 }
             }
@@ -172,15 +170,12 @@ if (ae.target() instanceof FieldAccessExpr fa) {
                 emitCompoundRhsConv(driver, ops, sfaOp, fld.type(), sfaValueType);
                 ops.add(new KofBinary(compoundBinaryOp(sfaOp), fld.type()));
             } else if ("=".equals(sfaOp)) {
-                if (TypeMetrics.isPrimitiveType(sfaValueType)
-                        && TypeMetrics.isPrimitiveType(fld.type())
-                        && !(fld.type() instanceof Type.NullableType)) {
+                if (TypeMetrics.isPrimitiveType(sfaValueType) && TypeMetrics.isPrimitiveType(fld.type())) {
                     driver.emitWideningIfNeeded(ops, sfaValueType, fld.type());
-                } else if ((driver.erasesToReference(fld.type()) || fld.type() instanceof Type.NullableType)
+                } else if (driver.erasesToReference(fld.type())
                         && TypeMetrics.isPrimitiveType(sfaValueType)
-                        && !(sfaValueType instanceof Type.NullableType)
                         && !ExpressionTyper.boxesOwnBranches(driver, ae.value(), locals)) {
-                    // Issue #181: campo estático Object ou Nullable(primitivo) (#252) recebendo primitivo
+                    // Issue #181: campo estático Object recebendo primitivo (Holder.item = 99)
                     driver.emitErasureBox(ops, sfaValueType);
                 }
             }
@@ -298,17 +293,16 @@ if (ae.target() instanceof FieldAccessExpr fa) {
         // Int→Long); no shift (`<<=`) a contagem é int (L2I) — regra do §167.
         emitCompoundRhsConv(driver, ops, faOp, fieldType, faValType);
         ops.add(new KofBinary(compoundBinaryOp(faOp), fieldType));
-        } else if ("=".equals(faOp)) {
-            if (TypeMetrics.isPrimitiveType(fieldType) && !(fieldType instanceof Type.NullableType)) {
-                driver.emitWideningIfNeeded(ops, faValType, fieldType);
-            } else if ((driver.erasesToReference(fieldType) || fieldType instanceof Type.NullableType)
-                    && TypeMetrics.isPrimitiveType(faValType)
-                    && !(faValType instanceof Type.NullableType)
-                    && !ExpressionTyper.boxesOwnBranches(driver, ae.value(), locals)) {
-                // Issue #181: atribuição de primitivo a campo tipo Object ou Nullable(primitivo) (#252)
-                driver.emitErasureBox(ops, faValType);
-            }
+    } else if ("=".equals(faOp)) {
+        if (TypeMetrics.isPrimitiveType(fieldType)) {
+            driver.emitWideningIfNeeded(ops, faValType, fieldType);
+        } else if (driver.erasesToReference(fieldType)
+                && TypeMetrics.isPrimitiveType(faValType)
+                && !ExpressionTyper.boxesOwnBranches(driver, ae.value(), locals)) {
+            // Issue #181: atribuição de primitivo a campo tipo Object (h.field = 99)
+            driver.emitErasureBox(ops, faValType);
         }
+    }
     if (isStaticField) {
         ops.add(new KofPutStatic(recvType, fa.fieldName(), fieldType));
     } else {
