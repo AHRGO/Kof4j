@@ -467,8 +467,12 @@ public final class ExpressionInstanceCallLowerer {
         }
         if (rt2 instanceof Type.ClassType ct2 && !ct2.packageName().isEmpty()
                 && driver.externalClasspath.knows(ct2.internalName())) {
-            ExternalClasspath.MethodSignature sig = driver.externalClasspath.resolveMethod(
-                    ct2.internalName(), mc.methodName(), mc.arguments().size());
+            List<Type> actualArgTypes = new ArrayList<>();
+            for (ExpressionNode arg : mc.arguments()) {
+                actualArgTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
+            }
+            ExternalClasspath.MethodSignature sig = driver.externalClasspath.resolveMethodWithArgs(
+                    ct2.internalName(), mc.methodName(), mc.arguments().size(), actualArgTypes);
             if (sig != null) {
                 List<Type> formal = new ArrayList<>();
                 for (String d : sig.parameterDescriptors()) {
