@@ -6967,7 +6967,7 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   do §186 via `814f44da`; #222 (método estilo-ctor) emite `<init>(II)` de
   verdade. Comentários postados.
 
-### §213 — `as Object` / cast primitivo→referência NÃO emite boxing → `bipush`+`checkcast Object` → `VerifyError` em @2: checkcast (NOVO 14/09, achado ao re-medir §203)
+### §213 — `as Object` / cast primitivo→referência NÃO emite boxing → `bipush`+`checkcast Object` → `VerifyError` em @2: checkcast (NOVO 14/09, achado ao re-medir §203) — ✅ CORRIGIDO 15/09 (box na fonte do cast `as`; lane compiler `192.168.100.22`)
 
 - **Sintoma (medido 14/09 ~12:40 no `c252a983`, dono = 192.168.100.17 — só
   catalogado, lane compiler):** fazer cast de uma expressão/valor primitivo
@@ -6994,6 +6994,19 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   etc.), espelhando o que o caminho de atribuição `var o: Object = 7` já faz.
 - **Prova Q1:** os repros `e205c/e205e` acima → pós-fix devem imprimir `7`
   (sem VerifyError); `var o: Object = 7` (`e205d`) continua `ec=0`.
+- **Correção (Q0, causa-raiz — lane compiler `192.168.100.22`, 15/09):** o ramo
+  else do cast `as` em `ExpressionBinaryLowerer.lower` emitia o operando cru de
+  `bin.left()` e depois `KofCheckCast(castTarget)`. Quando o tipo de origem é
+  primitivo e o alvo é referência, agora um `kof_box`
+  (`driver.emitErasureBox`) é inserido antes do checkcast — exatamente o
+  caminho que o `StatementLowerer` já usava para `var o: Object = 7`.
+- **Prova (Q1, teste dedicado):** `PrimitiveToReferenceCastE2ETest` 6/6 — Int
+  local/literal, todas as larguras de primitivo (Int/Double/Bool/Long),
+  referência→referência, primitivo→primitivo (`i as Long`/`i as Char` seguem
+  numéricos) e referência→primitivo com unbox (§205). **VERMELHO pré-fix: 4/6
+  falham** (as faces `as Object` morriam com `VerifyError` no checkcast, medido
+  com o emissor revertido); os 2 guards (cast numérico, unbox) já estavam
+  verdes. Cross-target: JVM/JS/Script imprimem o mesmo valor; Native compila.
 
 ### §214 — tipo de lambda perdido ao ler de container genérico: `List<() -> Int>.get(0)` → SEM015 "not a function" (issue #193) — ✅ CORRIGIDO 15/09 (issues #193/#236 fechadas; repro re-verificado verde no tip 15/09)
 

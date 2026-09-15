@@ -289,6 +289,14 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > - **Suíte 4-módulos no tip:** **1 fail, SÓ o §205** (Native ifexpr, lane #183) — kof-compiler 1841/1/0/172 (não regrediu nada); `check_500` OK (sem crítico ≥600).
 > - **Docs:** §251 ✅ FIXED EN+PT (seção + header da fila); §249 FIXED reconcilia acima.
 
+> **✅ FEITO (15/09, dono = 192.168.100.22, lane compiler): §213 CORRIGIDO na causa-raiz — cast `as` de primitivo → referência não boxava (`VerifyError` no load, R6).**
+> - **Sintoma (do catálogo, tip `c252a983`):** `var i = 7; var o = i as Object` compilava e o JVM morria no load: `VerifyError: Bad type on operand stack` no `checkcast` (`bipush 7` → `checkcast java/lang/Object`); idem literal `7 as Object`.
+> - **Causa-raiz:** o ramo else do cast em `ExpressionBinaryLowerer.lower` emitia o operando cru + `KofCheckCast` — sem box quando a origem é primitivo e o alvo é referência. O caminho `var o: Object = 7` já boxava via `StatementLowerer`; só o operador `as` faltava.
+> - **Fix (Q0):** inserir `driver.emitErasureBox(ops, fromCastType)` antes do checkcast quando `isPrimitiveType(from)` && `!isPrimitiveType(target)` (JS/Native untyped — kof_box é identidade lá).
+> - **Prova (Q1, teste DEDICADO):** `PrimitiveToReferenceCastE2ETest` 6/6 — Int local/literal, todas as larguras, ref→ref, prim→prim (`i as Long`/`i as Char` seguem numéricos) e ref→prim unbox (§205). **VERMELHO 4/6 pré-fix** (medido com o emissor revertido). Cross-target: JVM/JS/Script iguais; Native compila.
+> - **Suíte 4-módulos:** 2 fails, AMBOS alheios — §205 (Native ifexpr, lane #183) + §252 (flake Native do §129, catalogado); kof-compiler 1862/2/0/174; zero regressão do meu diff. `check_500` a verificar.
+> - **Docs:** §213 ✅ FIXED EN+PT (seção + header já marcava).
+
 > **✅ FEITO (15/09, dono = 192.168.100.15, lane bugs-and-gaps): §240 CORRIGIDA na causa raiz — a regressão de 39 fails do `8935c8a7` (separa builtin Kof × interop JDK).**
 > - **Sintoma/prova (Q0):** `ExternalClasspath.knows()` ganhou `|| JdkReflectionResolver.isJdkClass(internalName)` → todo tipo `java/*` virou "externo conhecido"; `MemberCallTyper`/`SemanticAnalyzer.isExternal` passaram a tomar o caminho de reflexão do JDK para `String`/exceções, contornando o registro de builtins: `'"abc".indexOf('c')'` → SEM025 (em vez de SEM051), `throw RuntimeException` → SEM026, `"ab".repeat(3)` ACEITO. 53 fails medidos no tip limpo (`ada6acf1`).
 > - **Fix (Q0, causa raiz):** novo `CompilerTypes.isKofBuiltinJavaLang(internalName)` (cache) = true para `java/lang/String` e todo subtipo de `Throwable` (`RuntimeException`, `java/io/IOException`, …). `knows()` = entries reais **OU** (classe JDK **E NÃO** builtin Kof) — a separação que o próprio registro §240 pedia. O interop de `StringBuilder`/`String.join` segue resolvido por reflexão em `resolveMethodWithArgs` (não passa por `knows()`).

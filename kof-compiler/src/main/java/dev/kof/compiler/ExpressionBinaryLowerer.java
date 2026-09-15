@@ -74,6 +74,16 @@ if ("instanceof".equals(bin.operator()) || "as".equals(bin.operator())) {
         if (targetType instanceof Type.FunctionType ft) {
             castTarget = CompilerLambdaClass.lambdaInterfaceType(driver, ft);
         }
+        if (TypeMetrics.isPrimitiveType(fromCastType)
+                && !TypeMetrics.isPrimitiveType(targetType)) {
+            // §213: cast de PRIMITIVO → REFERÊNCIA (`i as Object`, `7 as Object`)
+            // emitia o primitivo cru seguido de checkcast → VerifyError
+            // ("Bad type on operand stack" — um int não é assignable a
+            // referência). Boxa primeiro (mirror `var o: Object = 7` que já
+            // faz kof_box via StatementLowerer). JS/Native são untyped — o
+            // kof_box é identidade lá.
+            driver.emitErasureBox(ops, fromCastType);
+        }
         ops.add(new KofCheckCast(castTarget));
         // #205: cast de REFERÊNCIA → PRIMITIVO (`obj as Int` com obj Object)
         // chegava aqui com targetType primitivo (from não é primitivo → o ramo

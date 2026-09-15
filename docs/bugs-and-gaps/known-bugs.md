@@ -6986,7 +6986,7 @@ to the label) is the correct predicate and **was already used** in `parseStateme
   residual face via `814f44da`; #222 (ctor-like method) emits real
   `<init>(II)`. Comments posted.
 
-### §213 — `as Object` / primitive→reference cast emits NO boxing → `bipush`+`checkcast Object` → `VerifyError` at @2: checkcast (NEW 14/09, side found while re-measuring §203)
+### §213 — `as Object` / primitive→reference cast emits NO boxing → `bipush`+`checkcast Object` → `VerifyError` at @2: checkcast (NEW 14/09, side found while re-measuring §203) — ✅ FIXED 15/09 (box on the `as`-cast source; lane compiler `192.168.100.22`)
 
 - **Symptom (measured 14/09 ~12:40 on `c252a983`, owner = 192.168.100.17 —
   catalogued, compiler lane):** casting a primitive expression/value to a
@@ -7013,6 +7013,19 @@ to the label) is the correct predicate and **was already used** in `parseStateme
   path).
 - **Proof Q1:** `e205c/e205e` harness repros above → after fix must print `7`
   (no VerifyError); `var o: Object = 7` (`e205d`) stays `ec=0`.
+- **Fix (Q0, root cause — lane compiler `192.168.100.22`, 15/09):** the
+  `as`-cast else branch in `ExpressionBinaryLowerer.lower` emitted the raw
+  operand of `bin.left()` and then `KofCheckCast(castTarget)`. When the source
+  type is a primitive and the target is a reference, a `kof_box`
+  (`driver.emitErasureBox`) is now inserted before the checkcast — the exact
+  path `StatementLowerer` already used for `var o: Object = 7`.
+- **Proof (Q1, dedicated test):** `PrimitiveToReferenceCastE2ETest` 6/6 — Int
+  local/literal, every primitive width (Int/Double/Bool/Long), reference→reference,
+  primitive→primitive (`i as Long`/`i as Char` stay numeric) and
+  reference→primitive unbox (§205). **RED pre-fix: 4/6 fail** (the `as Object`
+  faces died with `VerifyError` at the checkcast, measured with the emitter
+  reverted); the 2 guards (numeric cast, unbox) were already green. Cross-target:
+  JVM/JS/Script print the same value; Native builds.
 
 ### §214 — lambda type lost when read from a generic container: `List<() -> Int>.get(0)` → SEM015 "not a function" (issue #193) — ✅ FIXED 15/09 (issues #193/#236 closed; repro re-verified green on the tip 15/09)
 
