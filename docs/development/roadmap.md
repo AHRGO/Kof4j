@@ -2,7 +2,10 @@
 
 # Kof — Long-Term Roadmap
 
-**Last updated:** September 13, 2026 (plan merger: §23 = the SINGLE
+**Last updated:** September 15, 2026 (§23 gains 2.6 = D-NULL-INTENT queue
+N1→N4 [compiler lane, maintainer decision 15/09]; TIER 3–5 marked
+DEPRIORITIZED by the maintainer 15/09 — trio back to `future/`).
+(older: plan merger: §23 = the SINGLE
 implementation plan (ex-`ACTION_PLAN`+`IMPLEMENTATION_PLAN`); migration
 cluster consolidated — `LEGACY_IR`+`DIFFERENTIAL_TESTING` merged into
 `LEGACY_MIGRATION.md`)
@@ -901,8 +904,21 @@ domain (`INFRA00x`/`DATA00x`/`SCI00x`/`BIO00x`/`SECPQ`) + parity matrix;
 | 2.3.1 | Constant-folding of domain constants | ✅ `"a"+"b"→"ab"` (`OptimizerConstantFold:100`) |
 | 2.3.2 | Cycle detection in the `infra` graph at compile-time | ❌ blocked by 2.2.4 |
 | 2.4.1 | Scoped resources (lightweight RAII over `try/finally`) | 🟡 design only (`future/scoped-resources-plan.md`); `using` syntax gated by bump |
+
 | 2.5 | Variance / sealed | ✅ **DECIDED TO POSTPONE** — `enum`+`record`/`interface` cover the case; opens only with the scientific pipeline (bump) |
 
+#### 2.6 — Nullability by EXPLICIT INTENT (queue N1→N4 of DECISIONS §D-NULL-INTENT, 15/09)
+
+**Decided by the maintainer in person 15/09** (record: `DECISIONS.md`
+§D-NULL-INTENT, EN+PT — the §125 "option A" silent `null→0` fold is REVOKED).
+Lane: **compiler** (contract on the 4 backends — not the docs lane).
+
+| # | Step | Scope (one line) | Depends on |
+|---|------|------------------|------------|
+| 2.6.1 | **N1** — JVM+Script+JS: `Nullable(primitive)` carries REAL null | boxed `T?` return/field/slot on the 3 targets that have boxed types; flip `nullableprint` cell + the 3 `KofInterpreterParityTest` null-branch parities in the SAME commit as the behavior (rule 1) | — |
+| 2.6.2 | **N2** — Native: real null via the tagged-box ABI §104b-ii | `typeId=3` box + `object_to_string`/unbox dispatch; x86 hand-written + riscv hand-written + aarch64 via translator | §104b-ii / §205 slice 2 share this ABI |
+| 2.6.3 | **N3** — `== null` on a NON-nullable: legal, constant-foldable, NEVER a diagnostic | intent reads the comparison itself; rule 2 (backward compat): existing code that compares keeps compiling | N1 |
+| 2.6.4 | **N4** — audit the remaining silent-null faces | map-miss `0` (SG-008), uninitialized field `0`, unbox-of-null `0` — each gets a decision or an honest diagnostic (R6) | N1–N3 |
 ### TIER 3–5 — Legacy migration platform (Phases A–H) ✅ code+tests
 
 `kof inspect/decompile/translate/compare/migrate` in the CLI (`Main.java`);
@@ -911,7 +927,10 @@ measured 15/09 at HEAD (`7b0bfbe0`, fresh classes): **Decompile 67 + PostDom 6,
 Translate 61, Compare 7, Migrate 3** — all green (the 13/09 numbers 57/33/6/3
 were stale; the former "1 red cell" `qualifiedLocalTypeTranslates` is GREEN
 since the `.22` lane closed it). Method body recovery still partial
-(structural joins = Phase C, the biggest measured bottleneck: 2452 methods). The
+(structural joins = Phase C; re-measured 15/09 with an instrumented probe:
+1793 stubs, the biggest family is if-test prefixes with computation/invokes —
+519/566 TRAPs needing the post-dominator walker; the old "2452" StoreCat
+number is stale, the pure if-then join sub-case already recovered). The
 detailed technical history lives in `future/LEGACY_MIGRATION.md` +
 `future/DECOMPILER.md` (§7) — **do not duplicate here**; this table only gives
 the order. **DEPRIORITIZED 15/09 (maintainer): TIER 3–5 is not current work.**
