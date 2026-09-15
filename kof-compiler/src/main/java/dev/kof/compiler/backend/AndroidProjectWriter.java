@@ -84,7 +84,7 @@ public final class AndroidProjectWriter {
                 build-tools;%1$s e platforms;android-%2$s
                 (ANDROID_HOME apontando pro SDK).
 
-                    cd %4$s
+                    cd %3$s
                     mvn verify
 
                 O APK de debug fica em target/kof-app.apk — instalar:
@@ -96,10 +96,10 @@ public final class AndroidProjectWriter {
                   foi compilada junto pelo próprio compilador — nada de Java.
                 - Dependências são geridas pelo Kof (ExternalClasspath);
                   o pom.xml NÃO declara dependências.
-                - Label do app: "%5$s" (primeira Window do programa).
+                - Label do app: "%4$s" (primeira Window do programa).
                   Permissões: declare @Permissions(["android.permission.X"])
                   numa classe Kof.
-                """.formatted(BUILD_TOOLS, API_LEVEL, APP_PACKAGE, APP_PACKAGE, appLabel));
+                """.formatted(BUILD_TOOLS, API_LEVEL, APP_PACKAGE, appLabel));
     }
 
     /** Primeiro literal String passado a kof_ui_window_new vira o label. */
