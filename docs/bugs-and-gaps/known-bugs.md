@@ -7190,7 +7190,7 @@ of the issues (repros kept in the issue comments):
 
 | Issue | Form | Verdict today | Why it's wrong (expected) |
 |---|---|---|---|
-| #151 | `if (d is Dog) { }` (corpus: `is` operator, §78) | `PARSE029: Expected ')'` @5:11 | parser: `is` accepted elsewhere (println/`var`) but not leading an `if` condition — grammar hole in the cond parser |
+| #151 | `if (d is Dog) { }` | `PARSE029: Expected ')'` @5:11 | **CORRECT rejection** — `is` is NOT a Kof operator: it is absent from `Lexer.KEYWORDS` and from the grammar (which documents `instanceof`/`as`/`case Type v`); no `is` operator exists anywhere in `training/`, `learn/` or `docs/`. Verified `if (d instanceof Dog)` → `true`. **But the diagnostic is not the whole story — the same construct is SILENT outside `if` (see the 15/09 addendum below the table).** Deferred to 0.4.1. |
 | #155 | two interfaces, `save(): Boolean` second | `SEM: println recebeu void` @10 | second implemented method typed void (the §155 title says SEM033 order-dependent) — typer/`SymbolTableBuilder` collision, `print()` works, `save()` reads void |
 | #159 | `String? s; while (s != null) { s.length(); s = nextVal(i) }` | `SEM049 receiver is nullable` @9:27 | null-narrowing works in `if` but NOT across a `while`-condition + re-assignment loop — narrowing flow gap (§159 title's face confirmed) |
 | #160 | `interface Mapper<T> { map(T input): String }` | `PARSE007` @1:17 | generic INTERFACE doesn't parse (generic CLASS parses fine — §217/#161 compiles `Box<T>`) — interface decl branch lacks the type-param list |
@@ -7204,6 +7204,38 @@ of the issues (repros kept in the issue comments):
   params (#160); typer — multi-interface method typing (#155), null-narrowing
   in while-flow (#159), Handle-await result typing (#141 — near the §29 spawn
   lowering already fixed).
+
+- **ADDENDUM 15/09 (lane bugs-and-gaps `192.168.100.15`, fresh classes on the
+  tip `d372242b`): the `is` construct is SILENT (not just rejected) outside an
+  `if` — this REFUTES the "these 5 are NOT silent bugs" caveat for #151.**
+  Measured with `Triage` on the JVM (`is` is an ordinary IDENTIFIER, so the
+  parser reads `<expr> is <Type>` as two tokens it never joins):
+  ```kof
+  main() {                       // (a) expression face: `is Dog` dropped
+      var d = new Dog()          //     r = d, no diagnostic, exit 0
+      var r = d is Dog           //     → prints `Dog@14dad5dc`
+      println(r)
+  }
+  main() {                       // (b) statement face: statement LOSS
+      var x = 1                  //     `x is Dog` vanishes AND eats the
+      x is Dog                   //     NEXT statement
+      println("one")             //     → prints only `two`, exit 0
+      println("two")
+  }
+  ```
+  - (a) `var r = d is Dog` → `r` = `d`; the `is Dog` tail is discarded in
+    silence (same for `var r = 5 is Dog` → `5`).
+  - (b) `<ident> is Type` as a statement → the statement **and the following
+    statement** are swallowed with no diagnostic; `println("one")` never runs.
+    This is a **silent miscompile of valid Kof**, i.e. exactly the R6 class the
+    caveat claimed #151 did not belong to.
+  - Root is the **statement/expression terminator**, not the `is` keyword: the
+    parser starts a type-first declaration at the identifier and consumes one
+    following statement when it cannot form one. `kof check` reports nothing.
+  - Rule-6 boundary: adding an `is` operator would be a **new feature**
+    (maintainer decision), so the *feature* face stays deferred to 0.4.1; the
+    **silent-loss face is a pure bug** (a construct that must be rejected) and
+    is fixable without a contract change. Owner = compiler lane.
 
 ### §220 ✅ FIXED 14/09 (`8a38faa4` analyzer lane, re-measured green 14:38: compile-time diagnostic replaces the runtime AbstractMethodError — exactly the expected of this catalog) — `abstract` method in a NON-abstract class compiles → `AbstractMethodError` at runtime (issue #224)
 

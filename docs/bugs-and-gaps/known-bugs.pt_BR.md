@@ -7176,7 +7176,7 @@ antes — lição da obsolescência do §206/§207), corpos-exatos das issues
 
 | Issue | Forma | Veredito hoje | Por que está errado (esperado) |
 |---|---|---|---|
-| #151 | `if (d is Dog) { }` (corpus: operador `is`, §78) | `PARSE029: Expected ')'` @5:11 | parser: `is` aceito noutros sítios (println/`var`) mas não liderando condição de `if` — buraco de gramática no parser de cond |
+| #151 | `if (d is Dog) { }` | `PARSE029: Expected ')'` @5:11 | **Rejeição CORRETA** — `is` NÃO é operador de Kof: está ausente de `Lexer.KEYWORDS` e da gramática (que documenta `instanceof`/`as`/`case Type v`); não existe operador `is` em `training/`, `learn/` nem `docs/`. Verificado `if (d instanceof Dog)` → `true`. **Mas o diagnóstico não é a história toda — o mesmo construto é SILENCIOSO fora do `if` (ver o adendo 15/09 abaixo da tabela).** Adiado p/ 0.4.1. |
 | #155 | duas interfaces, `save(): Boolean` segunda | `SEM: println recebeu void` @10 | o segundo método implementado é tipado void (o título da #155 diz SEM033 ordem-dependente) — colisão de typer/`SymbolTableBuilder`, `print()` funciona, `save()` lê void |
 | #159 | `String? s; while (s != null) { s.length(); s = nextVal(i) }` | `SEM049 receiver is nullable` @9:27 | o narrowing de null funciona em `if` mas NÃO ao longo de condição `while` + re-atribuição em loop — gap de fluxo de narrowing (face do título da #159 confirmada) |
 | #160 | `interface Mapper<T> { map(T input): String }` | `PARSE007` @1:17 | interface genérica NÃO parseia (CLASSE genérica parseia bem — §217/#161 compila `Box<T>`) — o ramo de declaração de interface não tem a lista de type-param |
@@ -7191,6 +7191,38 @@ antes — lição da obsolescência do §206/§207), corpos-exatos das issues
   interface (#160); typer — tipagem de método multi-interface (#155),
   narrowing de null no fluxo while (#159), tipagem de resultado do Handle-
   await (#141 — perto do lowering §29 de spawn já consertado).
+
+- **ADENDO 15/09 (lane bugs-and-gaps `192.168.100.15`, classes frescas no tip
+  `d372242b`): o construto `is` é SILENCIOSO (não só rejeitado) fora do `if` —
+  isto REFUTA a ressalva "estas 5 NÃO são bugs silenciosos" para a #151.**
+  Medido com o `Triage` na JVM (`is` é um IDENTIFICADOR comum, então o parser
+  lê `<expr> is <Type>` como dois tokens que nunca junta):
+  ```kof
+  main() {                       // (a) face expressão: `is Dog` descartado
+      var d = new Dog()          //     r = d, sem diagnóstico, exit 0
+      var r = d is Dog           //     → imprime `Dog@14dad5dc`
+      println(r)
+  }
+  main() {                       // (b) face statement: PERDA de statement
+      var x = 1                  //     `x is Dog` some E come o statement
+      x is Dog                   //     SEGUINTE
+      println("one")             //     → imprime só `two`, exit 0
+      println("two")
+  }
+  ```
+  - (a) `var r = d is Dog` → `r` = `d`; a cauda `is Dog` é descartada em
+    silêncio (idem `var r = 5 is Dog` → `5`).
+  - (b) `<ident> is Type` como statement → o statement **e o seguinte** são
+    engolidos sem diagnóstico; `println("one")` nunca roda. É uma
+    **miscompilação silenciosa de Kof válido**, exatamente a classe R6 que a
+    ressalva dizia não ser a da #151.
+  - A raiz é o **terminador de statement/expressão**, não a keyword `is`: o
+    parser inicia uma declaração type-first no identificador e consome um
+    statement seguinte quando não consegue formá-la. `kof check` não reporta.
+  - Fronteira regra 6: adicionar um operador `is` seria **feature nova**
+    (decisão da mantenedora), então a face *feature* segue adiada p/ 0.4.1; a
+    **face de perda silenciosa é bug puro** (um construto que deve ser
+    rejeitado) e é corrigível sem mudança de contrato. Dono = lane compiler.
 
 ### §220 ✅ CORRIGIDO 14/09 (`8a38faa4` lane analyzer, re-medido verde 14:38: diagnostico de compile-time substitui o AbstractMethodError de runtime — exatamente o esperado do catálogo) — método `abstract` em classe NÃO-abstrata compila → `AbstractMethodError` em runtime (issue #224)
 
