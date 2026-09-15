@@ -623,8 +623,8 @@ Null safety is by **narrowing** (`if (x != null)`); `null` arrives only from an
 API that returns `T?`. Two consequences, both now the contract:
 
 - **(a) `Int?`/`Boolean?`/`Double?` CAN genuinely hold `null`.** The boxed
-  `Nullable(primitive)` face (the #252 family) is a **legitimate implementation
-  front**, NOT a rule-6 freeze. The work is *"complete the boxing across the 4
+  `Nullable(primitive)` face (the #252 family) is **NOT a rule-6 freeze** — §125 never
+  banned it. The work is *"complete the boxing across the 4
   targets"* (JVM + Script + JS + Native in lockstep — exactly what §241's
   half-landed change failed to do), tracked as the §241/#266/#259 queue, **not**
   parked behind a decision that doesn't exist.
@@ -644,7 +644,8 @@ API that returns `T?`. Two consequences, both now the contract:
 
 > **✅ DECIDED 15/09** — §125 stays FROZEN as "no fabricated null literal", but
 > its *scope* is corrected: it never banned boxed `T?` null. The boxed-4-targets
-> work is an **open implementation queue** (rule 6 no longer applies to it).
+> work is **not blocked by rule 6** — but whether/when to open it as a work front is
+> the **maintainer's decision** (the lane only records the corrected scope, §rule 6).
 > Related catalog: §250 (part (c), fixed), §241/#252/#259/#266 (the boxing queue).
 
 ---

@@ -608,8 +608,8 @@ safety é por **narrowing** (`if (x != null)`); `null` só chega de API que devo
 `T?`. Duas consequências, ambas o contrato agora:
 
 - **(a) `Int?`/`Boolean?`/`Double?` PODEM carregar `null` de verdade.** A face
-  `Nullable(primitivo)` boxed (família #252) é **frente legítima de
-  implementação**, NÃO um congelamento regra-6. O trabalho é *"completar o box
+  `Nullable(primitivo)` boxed (família #252) **NÃO é um congelamento regra-6** —
+  o §125 nunca a proibiu. O trabalho é *"completar o box
   nos 4 targets"* (JVM + Script + JS + Native em lockstep — exatamente o que a
   meia-implementação `c0cf805e` do §241 falhou em fazer), rastreado como a fila
   §241/#266/#259, **não** estacionado atrás de uma decisão que não existe.
@@ -631,8 +631,9 @@ safety é por **narrowing** (`if (x != null)`); `null` só chega de API que devo
 
 > **✅ DECIDIDO 15/09** — o §125 segue CONGELADO como "null literal não é
 > fabricável", mas seu *escopo* foi corrigido: ele nunca proibiu `T?` boxed. O
-> trabalho boxed-4-targets é uma **fila de implementação ABERTA** (regra 6 não se
-> aplica mais a ela). Catálogo conexo: §250 (parte (c), corrigida),
+> trabalho boxed-4-targets **não está bloqueado pela regra 6** — mas *abrir* essa
+> frente como fila é **decisão da mantenedora** (a lane só registra a correção de
+> escopo, §regra 6). Catálogo conexo: §250 (parte (c), corrigida),
 > §241/#252/#259/#266 (a fila do box).
 
 ---
