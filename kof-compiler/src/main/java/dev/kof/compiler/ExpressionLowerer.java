@@ -140,7 +140,8 @@ public final class ExpressionLowerer {
             case NewExpr ne -> {
                 Type type = CompilerTypes.toType(ne.typeName(), driver.currentUnit,
                         driver.externalClasspath);
-                if ("List".equals(ne.typeName()) || "ArrayList".equals(ne.typeName())) {
+                Type collBuiltin = CompilerTypes.builtinCollectionType(ne.typeName(), driver.currentUnit, driver.semanticAnalyzer);
+                if (collBuiltin == BuiltinTypes.LIST) {
                     type = BuiltinTypes.LIST;
                 }
                 if (!ne.typeArguments().isEmpty() && type instanceof Type.ClassType cts) {

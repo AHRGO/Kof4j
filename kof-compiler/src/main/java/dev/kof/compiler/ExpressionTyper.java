@@ -147,12 +147,9 @@ public final class ExpressionTyper {
             }
             case NewExpr ne -> {
                 Type t = CompilerTypes.toType(ne.typeName(), driver.currentUnit);
-                if ("List".equals(ne.typeName()) || "ArrayList".equals(ne.typeName()) || "LinkedList".equals(ne.typeName())) {
-                    t = BuiltinTypes.LIST;
-                } else if ("Set".equals(ne.typeName()) || "HashSet".equals(ne.typeName())) {
-                    t = BuiltinTypes.SET;
-                } else if ("Map".equals(ne.typeName()) || "HashMap".equals(ne.typeName())) {
-                    t = BuiltinTypes.MAP;
+                Type coll = CompilerTypes.builtinCollectionType(ne.typeName(), driver.currentUnit, driver.semanticAnalyzer);
+                if (coll != null) {
+                    t = coll;
                 }
                 if (!ne.typeArguments().isEmpty() && t instanceof Type.ClassType cts) {
                     t = new Type.ClassType(cts.packageName(), cts.name(),

@@ -290,14 +290,7 @@ public final class SemExpressionTyper {
             }
             case MethodCallExpr mc -> SemMethodCallTyper.infer(sa, mc, scope);
             case NewExpr ne -> {
-                Type coll = null;
-                if ("List".equals(ne.typeName()) || "ArrayList".equals(ne.typeName()) || "LinkedList".equals(ne.typeName())) {
-                    coll = BuiltinTypes.LIST;
-                } else if ("Set".equals(ne.typeName()) || "HashSet".equals(ne.typeName())) {
-                    coll = BuiltinTypes.SET;
-                } else if ("Map".equals(ne.typeName()) || "HashMap".equals(ne.typeName())) {
-                    coll = BuiltinTypes.MAP;
-                }
+                Type coll = CompilerTypes.builtinCollectionType(ne.typeName(), sa.unit(), sa);
                 if (coll != null) {
                     // #193/#198: aplicar os type-arguments no tipo da colecao,
                     // espelhando o ExpressionTyper do emit (que sempre aplicou).

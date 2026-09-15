@@ -22,15 +22,31 @@ public final class CompilerTypes {
       *  silencioso em runtime). Aditivo: sem cp, comportamento antigo. */
      static Type toType(String typeName, CompilationUnitNode currentUnit,
                         ExternalClasspath external) {
+         return toType(typeName, currentUnit, external, !unitDeclaresType(currentUnit, typeName));
+     }
+
+     /**
+      * §243 (DECISIONS §4/§179): um tipo DECLARADO pelo usuário vence o alias
+      * builtin. Sem isto, `class List { … }` era ignorada em todo ponto de uso
+      * (o `new List()` virava `java.util.ArrayList` → IllegalAccessError /
+      * NoSuchFieldError), apesar de o compilador emitir o `List.class` do
+      * usuário. Os pins existem para `new List()`/`Set()`/`Map()` não
+      * qualificados (#139/#150/#214); aqui eles só se aplicam quando NÃO há
+      * sombra do usuário.
+      */
+     private static Type toType(String typeName, CompilationUnitNode currentUnit,
+                        ExternalClasspath external, boolean allowBuiltinPins) {
          // SG-012: param de lambda sem anotação — Unknown (nunca Object)
          if (typeName == null) return Type.UnknownType.UNKNOWN;
-         if ("List".equals(typeName) || "ArrayList".equals(typeName) || "LinkedList".equals(typeName)) return BuiltinTypes.LIST;
-         // #139/#150/#214 — `new Set<T>()`/`new Map<K,V>()`: sem este pin o tipo
-         // ficava ClassType("", "Set"/"Map") → os métodos (add/size/put)
-         // emitiam owner `Set`/`Map` cru → NoClassDefFoundError/ClassFormatError.
-         if ("Set".equals(typeName) || "HashSet".equals(typeName)) return BuiltinTypes.SET;
-         if ("Map".equals(typeName) || "HashMap".equals(typeName)) return BuiltinTypes.MAP;
-         if ("Channel".equals(typeName)) return BuiltinTypes.CHANNEL;
+         if (allowBuiltinPins) {
+             if ("List".equals(typeName) || "ArrayList".equals(typeName) || "LinkedList".equals(typeName)) return BuiltinTypes.LIST;
+             // #139/#150/#214 — `new Set<T>()`/`new Map<K,V>()`: sem este pin o tipo
+             // ficava ClassType("", "Set"/"Map") → os métodos (add/size/put)
+             // emitiam owner `Set`/`Map` cru → NoClassDefFoundError/ClassFormatError.
+             if ("Set".equals(typeName) || "HashSet".equals(typeName)) return BuiltinTypes.SET;
+             if ("Map".equals(typeName) || "HashMap".equals(typeName)) return BuiltinTypes.MAP;
+             if ("Channel".equals(typeName)) return BuiltinTypes.CHANNEL;
+         }
          Type viaImports = qualifyViaImports(typeName, currentUnit, external);
          if (viaImports != null) return viaImports;
          int lastDot = typeName.lastIndexOf('.');
@@ -38,6 +54,9 @@ public final class CompilerTypes {
              return new Type.ClassType(typeName.substring(0, lastDot),
                      typeName.substring(lastDot + 1), List.of());
          }
+         // §243: o usuário declarou um tipo com este nome → ele vence o alias
+         // primitivo/builtin que `Type.of` mapearia (`String` → java.lang.String).
+         if (!allowBuiltinPins) return new Type.ClassType("", typeName, List.of());
          return Type.of(typeName);
      }
 
@@ -50,7 +69,9 @@ public final class CompilerTypes {
      * sem pacote (NoClassDefFoundError) ou com pontos (ClassFormatError).
      */
     static Type toType(String typeName, CompilationUnitNode currentUnit, SemanticAnalyzer sa) {
-        Type t = toType(typeName, currentUnit);
+        boolean userDeclares = unitDeclaresType(currentUnit, typeName)
+                || (sa != null && sa.getClass(typeName) != null);
+        Type t = toType(typeName, currentUnit, null, !userDeclares);
         return qualifyDeep(t, currentUnit, sa);
     }
 
@@ -70,7 +91,9 @@ public final class CompilerTypes {
             "ClassCastException", "Error", "OutOfMemoryError", "StackOverflowError");
 
     static Type exceptionType(String typeName, CompilationUnitNode currentUnit) {
-        if ("String".equals(typeName)) return BuiltinTypes.STRING;
+        // §243: a exceção de Kof é String — mas um `class String` do usuário
+        // (DECISIONS §4) vence o builtin.
+        if ("String".equals(typeName) && !unitDeclaresType(currentUnit, typeName)) return BuiltinTypes.STRING;
         Type t = toType(typeName, currentUnit);
         if (t instanceof Type.ClassType ct && ct.packageName().isEmpty()
                 && JAVA_LANG_THROWABLES.contains(ct.name())) {
@@ -225,6 +248,28 @@ public final class CompilerTypes {
             if (d instanceof EnumDeclarationNode e && e.name().equals(name)) return true;
         }
         return false;
+    }
+
+    /**
+     * §243: o usuário declara um tipo com este nome (mesmo arquivo ou módulo)?
+     * Usado para o guard de shadowing dos pins de builtin (DECISIONS §4/§179).
+     */
+    static boolean userDeclaresType(CompilationUnitNode unit, SemanticAnalyzer sa, String name) {
+        if (name == null) return false;
+        return unitDeclaresType(unit, name) || (sa != null && sa.getClass(name) != null);
+    }
+
+    /**
+     * §243: tipo de coleção builtin para `new List/Set/Map` — {@code null}
+     * quando o usuário declara um tipo homônimo (o dele vence, DECISIONS §4).
+     * Centraliza o pin que antes estava duplicado em 3 typers/lowerers.
+     */
+    static Type builtinCollectionType(String typeName, CompilationUnitNode unit, SemanticAnalyzer sa) {
+        if (userDeclaresType(unit, sa, typeName)) return null;
+        if ("List".equals(typeName) || "ArrayList".equals(typeName) || "LinkedList".equals(typeName)) return BuiltinTypes.LIST;
+        if ("Set".equals(typeName) || "HashSet".equals(typeName)) return BuiltinTypes.SET;
+        if ("Map".equals(typeName) || "HashMap".equals(typeName)) return BuiltinTypes.MAP;
+        return null;
     }
 
     /** Espelho driver-side do qualifyViaImports do SemanticAnalyzer. */
