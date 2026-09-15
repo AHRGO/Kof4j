@@ -64,7 +64,6 @@ public final class KofJsRunner {
         // o contexto NÃO pode fechar antes da extração do sentinel de
         // process.exit (o guest object só é legível com o contexto vivo)
         Context context = Context.newBuilder("js")
-                .allowIO(true)
                 .allowAllAccess(true)
                 .option("engine.WarnInterpreterOnly", "false")
                 .out(out)
@@ -133,7 +132,6 @@ public final class KofJsRunner {
     public static String runCaptureHtml(Path moduleFile, OutputStream out, InputStream in,
                                         OutputStream err) throws IOException {
         try (Context context = Context.newBuilder("js")
-                .allowIO(true)
                 .allowAllAccess(true)
                 .option("engine.WarnInterpreterOnly", "false")
                 .out(out)

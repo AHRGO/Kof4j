@@ -57,29 +57,53 @@ final class BytecodeReader {
             }
             int[] operands = new int[0];
             int target = -1;
-            if (pc + len > code.length) {
-                // instrução truncada no fim do Code (bytes insuficientes p/ os
-                // operandos): marcador -1 — todo decoder cai no default →
-                // null → stub honesto (ferramenta nunca lança em .class real).
-                out.add(new Insn(pc, -1, operands, -1));
-                break;
-            }
-            // CodeQL: garante que pc+1, pc+2, pc+3 estão dentro dos limites
-            // (já verificado pc+len <= code.length acima; len >= 2 aqui).
+            // CodeQL: bounds check done per-branch since len depends on op
             if (len == 2) {
+                if (pc + 2 > code.length) {
+                    out.add(new Insn(pc, -1, operands, -1));
+                    break;
+                }
                 operands = new int[]{code[pc + 1] & 0xFF};
             } else if (len == 3) {
+                if (pc + 3 > code.length) {
+                    out.add(new Insn(pc, -1, operands, -1));
+                    break;
+                }
                 int w = ((code[pc + 1] & 0xFF) << 8) | (code[pc + 2] & 0xFF);
                 operands = new int[]{w};
                 if (isBranch(op)) {
                     target = pc + (short) w;
                 }
             } else if (len == 5 && (op == 0xc8 || op == 0xc9)) {
+                if (pc + 5 > code.length) {
+                    out.add(new Insn(pc, -1, operands, -1));
+                    break;
+                }
                 target = pc + readInt(code, pc + 1);
             } else if (len == 5 && op == 0xb9) { // invokeinterface: índice CP nos 2 bytes
+                if (pc + 5 > code.length) {
+                    out.add(new Insn(pc, -1, operands, -1));
+                    break;
+                }
                 operands = new int[]{((code[pc + 1] & 0xFF) << 8) | (code[pc + 2] & 0xFF)};
             } else if (len == 5 && op == 0xba) { // invokedynamic: índice CP nos 2 bytes (depois, 2 zeros)
+                if (pc + 5 > code.length) {
+                    out.add(new Insn(pc, -1, operands, -1));
+                    break;
+                }
                 operands = new int[]{((code[pc + 1] & 0xFF) << 8) | (code[pc + 2] & 0xFF)};
+            } else if (pc + len > code.length) {
+                // instrução truncada no fim do Code (bytes insuficientes p/ os
+                // operandos): marcador -1 — todo decoder cai no default →
+                // null → stub honesto (ferramenta nunca lança em .class real).
+                out.add(new Insn(pc, -1, operands, -1));
+                break;
+            } else {
+                // len desconhecido (op não tratado acima): usa check genérico
+                if (pc + len > code.length) {
+                    out.add(new Insn(pc, -1, operands, -1));
+                    break;
+                }
             }
             out.add(new Insn(pc, op, operands, target));
             pc += len;

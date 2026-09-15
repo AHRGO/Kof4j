@@ -171,17 +171,33 @@ public final class CompilerTypeSupport {
     static int parseIntLiteral(String value) {
         if (value.startsWith("0x") || value.startsWith("0X")) {
             // no suffix stripping: hex digits may end in a..f
-            return (int) Long.parseUnsignedLong(value.substring(2), 16);
+            try {
+                return (int) Long.parseUnsignedLong(value.substring(2), 16);
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Invalid integer literal: " + value, e);
+            }
         }
-        return Integer.parseInt(CompilerTypeSupport.stripSuffix(value));
+        try {
+            return Integer.parseInt(CompilerTypeSupport.stripSuffix(value));
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid integer literal: " + value, e);
+        }
     }
 
     static long parseLongLiteral(String value) {
         String stripped = CompilerTypeSupport.stripSuffix(value);
         if (stripped.startsWith("0x") || stripped.startsWith("0X")) {
-            return Long.parseUnsignedLong(stripped.substring(2), 16);
+            try {
+                return Long.parseUnsignedLong(stripped.substring(2), 16);
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Invalid long literal: " + value, e);
+            }
         }
-        return Long.parseLong(stripped);
+        try {
+            return Long.parseLong(stripped);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid long literal: " + value, e);
+        }
     }
 
     static String stripSuffix(String value) {

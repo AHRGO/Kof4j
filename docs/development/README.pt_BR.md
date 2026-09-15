@@ -56,12 +56,22 @@ package-compiler) abre antes de SYSTEMS fechar (paridade + GC + estabilidade).
 
 ---
 
-## 2. Bugs abertos (fila em `docs/bugs-and-gaps/known-bugs.md`) — triagem 13/09
+## 2. Bugs abertos (fila em `docs/bugs-and-gaps/known-bugs.md`) — triagem
+13/09, ressincronizada 14/09 ~22:15 (lane docs — registro vivo, regra §1 da
+tabela três-estados)
 
-**8 itens na fila aberta** (§101, §107 🟡, §104b-ii, §114, §129, §132, §161,
-§165) — e a conclusão honesta (`known-bugs.md:11`): **fila aberta = 8 itens,
-todos com decisão/dono/bloqueio — ZERO item código-puro-sem-decisão nesta
-lane**. Fechados 13/09: §89, §106 (+JS `ab85cfae`), §117, §131 (+residual
+**32 itens na fila aberta** (contados do arquivo em 14/09; a lista de 13/09
+abaixo foi tirada ANTES da onda §220–§239). A conclusão permanece COM
+correção: os itens ainda abertos têm dono/bloqueio/regra-6 — mas o "ZERO item
+código-puro" foi REFUTADO pela própria onda de 14/09: §236 (comparisonReturn
+Bool×Int) e §238 (hoist de local escapante + sipush) eram itens código-puro do
+decompiler e **foram consertados na lane de desenvolvimento** (unidades 2c,
+`8719e304`+`f2371212`), enquanto §233/§234 (migração de teste
+`split()->String[]` — lane compiler) e §237 (`computeStack` — lane .22) foram
+catalogados com dono. O resto da onda de 14/09 (§220–§232, §235, §239) pertence
+às lanes .15/.18/.22 ou regra 6. Itens da lista de 13/09 que mudaram desde
+então: §129-[coleção] ✅ 11/09 (`3645` — o §129 ABERTO é o do OTP, colisão de
+número), os demais seguem como descrito. Fechados 13/09: §89, §106 (+JS `ab85cfae`), §117, §131 (+residual
 `73ca2d58`), §127-JVM, §155, §94, §156, §81 (BigInt), §163 (interpretador
 2º parâmetro largo); §157-160 e §65 fechados/NÃO-REPRODUZ.
 Todos pendurados em:

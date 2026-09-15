@@ -127,6 +127,37 @@ void handleCall(MethodCtx ctx, List<Object> stack,
             return;
         }
         if (kc.kind() == KofCallKind.STATIC) {
+            // #233 (JS): Double/Float.isNaN/isInfinite/isFinite — estáticos
+            // JDK reais; o backend JS não tem java_lang_Double — map para
+            // Number.is* (paridade JVM: (D)Z).
+            String ownerName = JsTypeMapper.jsClassName(
+                    JsTypeMapper.ownerInternalName(kc.ownerType()));
+            if (kc.parameterTypes().size() == 1
+                    && ("java_lang_Double".equals(ownerName) || "java_lang_Float".equals(ownerName))) {
+                String jsPredicate = switch (kc.methodName()) {
+                    case "isNaN" -> "Number.isNaN";
+                    case "isInfinite" -> null; // tratado abaixo (JS não tem Number.isInfinite)
+                    case "isFinite" -> "Number.isFinite";
+                    default -> null;
+                };
+                if (jsPredicate != null) {
+                    finishCall(stack, kc, new JsIr.JsCall(
+                            new JsIr.JsIdentifier(jsPredicate), args));
+                    return;
+                }
+                if ("isInfinite".equals(kc.methodName())) {
+                    // Number.isFinite(v) && !Number.isNaN(v) ≡ isInfinite? Não —
+                    // isInfinite(v) = !Number.isNaN(v) && !Number.isFinite(v)
+                    // (NaN: isFinite=false, isInfinite=false — coberto).
+                    JsIr.JsExpression arg = args.get(0);
+                    JsIr.JsExpression notFinite = new JsIr.JsUnary("!",
+                            new JsIr.JsCall(new JsIr.JsIdentifier("Number.isFinite"), List.of(arg)));
+                    JsIr.JsExpression notNaN = new JsIr.JsUnary("!",
+                            new JsIr.JsCall(new JsIr.JsIdentifier("Number.isNaN"), List.of(arg)));
+                    finishCall(stack, kc, new JsIr.JsBinary(notFinite, "&&", notNaN));
+                    return;
+                }
+            }
             String owner = JsTypeMapper.jsClassName(JsTypeMapper.ownerInternalName(kc.ownerType()));
             finishCall(stack, kc, new JsIr.JsCall(
                     new JsIr.JsMember(new JsIr.JsIdentifier(owner), JsTypeMapper.sanitizeName(kc.methodName())), args));

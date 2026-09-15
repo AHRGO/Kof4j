@@ -12,7 +12,11 @@ prova: `TranslateTest` 30/30 (output compila e roda; +do-while +switch
 +try/catch/throw +arrays +cast/instanceof +throws +generics +constructor
 +enum-body/multi-decl +interface-extends +bitwise/shift +parênteses
 +tipos qualificados +assert +annotations +var +interface-default 13/09).
-Subconjunto Java ampliado ainda pendente)
+Subconjunto Java ampliado ainda pendente — **MAS ver a diretriz da
+> mantenedora de 13/09 ~21:00 (tabela de prioridade no DOING.md): esta lane
+> esta DESPRIORIZADA ("lane encerrada; gaps restantes = regra 6") — o
+> subconjunto ampliado NAO e fila atual; retoma-lo so por nova decisao da
+> mantenedora.**)
 **Data:** 22 de agosto de 2026
 
 ---

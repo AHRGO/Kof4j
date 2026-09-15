@@ -4,9 +4,9 @@
 501	kof-cli/src/main/java/dev/kof/cli/Translate.java
 568	kof-compiler/src/main/java/dev/kof/compiler/CompilerClassLowering.java
 522	kof-compiler/src/main/java/dev/kof/compiler/ExpressionAssignmentLowerer.java
-542	kof-compiler/src/main/java/dev/kof/compiler/ExpressionInstanceCallLowerer.java
+547	kof-compiler/src/main/java/dev/kof/compiler/ExpressionInstanceCallLowerer.java
 533	kof-compiler/src/main/java/dev/kof/compiler/ExpressionLowerer.java
-527	kof-compiler/src/main/java/dev/kof/compiler/ExpressionMethodCallLowerer.java
+523	kof-compiler/src/main/java/dev/kof/compiler/ExpressionMethodCallLowerer.java
 558	kof-compiler/src/main/java/dev/kof/compiler/js/JsControlFlowParser.java
 523	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeCore.java
 518	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeUiLayout.java

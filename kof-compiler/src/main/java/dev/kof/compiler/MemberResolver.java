@@ -36,6 +36,32 @@ public final class MemberResolver {
         return null;
     }
 
+    /** BFS pela hierarquia buscando campo com prioridade sobre métodos de mesmo nome. */
+    static SymbolTable.Symbol resolveFieldInHierarchy(SemanticAnalyzer sa, String className, String fieldName) {
+        java.util.Set<String> visited = new java.util.HashSet<>();
+        java.util.Queue<String> queue = new java.util.LinkedList<>();
+        queue.add(className);
+        visited.add(className);
+        while (!queue.isEmpty()) {
+            String current = queue.poll();
+            SymbolTable.ClassSymbol cs = sa.getClass(current);
+            if (cs == null) continue;
+            SymbolTable.FieldSymbol fs = cs.members().resolveField(fieldName);
+            if (fs != null) return fs;
+            if (cs.superClass() != null && !"Object".equals(cs.superClass()) && !visited.contains(cs.superClass())) {
+                visited.add(cs.superClass());
+                queue.add(cs.superClass());
+            }
+            for (String iface : cs.interfaces()) {
+                if (!visited.contains(iface)) {
+                    visited.add(iface);
+                    queue.add(iface);
+                }
+            }
+        }
+        return resolveInHierarchy(sa, className, fieldName);
+    }
+
     static boolean isObjectMethod(String name, int argCount) {
         return switch (name) {
             case "hashCode", "toString", "getClass" -> argCount == 0;
@@ -226,6 +252,51 @@ public final class MemberResolver {
             }
         } else {
             sa.reportError(se, "switch expressão exige 'default' (ou exaustividade de enum)", "SEM032");
+        }
+    }
+
+    /**
+     * SG-015 (#256): classe concreta que estende classe abstrata deve implementar
+     * todos os métodos abstratos herdados da cadeia de superclasses.
+     */
+    static void checkAbstractClassImplementation(SemanticAnalyzer sa, ClassDeclarationNode cls) {
+        if (sa.diagnostics() == null || cls.modifiers().contains("abstract")) return;
+        String curSuper = cls.superClass();
+        java.util.Set<String> checkedMethods = new java.util.HashSet<>();
+        while (curSuper != null && !curSuper.isEmpty() && !"Object".equals(curSuper)) {
+            String simpleSuper = curSuper.contains("/") ? curSuper.substring(curSuper.lastIndexOf("/") + 1) : curSuper;
+            if (simpleSuper.contains("<")) simpleSuper = simpleSuper.substring(0, simpleSuper.indexOf("<"));
+            SymbolTable.ClassSymbol superCs = sa.allClasses().get(simpleSuper);
+            if (superCs == null) break;
+            for (java.util.Map.Entry<String, SymbolTable.Symbol> e : superCs.members().localSymbols().entrySet()) {
+                if (!(e.getValue() instanceof SymbolTable.MethodSymbol am)) continue;
+                if ((am.accessFlags() & AccessFlags.ABSTRACT) == 0) continue;
+                String methodKey = am.name() + "/" + am.parameterTypes().size();
+                if (!checkedMethods.add(methodKey)) continue;
+                SymbolTable.Symbol local = resolveInHierarchy(sa, cls.name(), am.name());
+                boolean implemented = false;
+                if (local instanceof SymbolTable.MethodSymbol lm) {
+                    if ((lm.accessFlags() & AccessFlags.ABSTRACT) == 0
+                            && lm.parameterTypes().size() == am.parameterTypes().size()) {
+                        implemented = true;
+                    }
+                } else if (local instanceof SymbolTable.MethodSet set) {
+                    for (SymbolTable.MethodSymbol lm : set.methods()) {
+                        if ((lm.accessFlags() & AccessFlags.ABSTRACT) == 0
+                                && lm.parameterTypes().size() == am.parameterTypes().size()) {
+                            implemented = true;
+                            break;
+                        }
+                    }
+                }
+                if (!implemented) {
+                    sa.diagnostics().error("", 0, 0, 0,
+                            "class '" + cls.name() + "' does not implement abstract method '"
+                                    + am.name() + "()' from superclass '" + superCs.name() + "'",
+                            "SEM043");
+                }
+            }
+            curSuper = superCs.superClass();
         }
     }
 }

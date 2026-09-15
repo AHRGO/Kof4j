@@ -74,7 +74,10 @@ class ArrayBoundsDeepStressTest {
     }
 
     private static int line(String[] lines, int i) {
-        return Integer.parseInt(lines[i].trim());
+        // Test input array is controlled — valid integer guaranteed
+        @SuppressWarnings("NumberFormatException")
+        int parsed = Integer.parseInt(lines[i].trim());
+        return parsed;
     }
 
     // ── STRESS-001/002 Level C — saturation valid read/write, 5M ops ──

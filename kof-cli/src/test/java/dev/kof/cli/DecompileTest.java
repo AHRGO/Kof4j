@@ -140,6 +140,42 @@ class DecompileTest {
     }
 
     @Test
+    void comparisonReturnRespectsBoolVsIntReturnType(@TempDir Path dir) throws Exception {
+        // §236 (14/09): o shape cmp/iconst_1/goto/iconst_0/ireturn e AMBIGUO na
+        // raiz — `return x > 0` (Bool) e `return a < b ? 1 : 0` (Int) temo MESMO
+        // bytecode. O fold antigo sempre devolvia o Bool cru: num corpo Int a
+        // saida decompilada virava Bool e o typer rejeitava (SEM010 —
+        // nao-compilavel, anti-R6). O fold agora PORTA pelo retType: Z → cru,
+        // I → if-expression de inteiros. Prova: as DUAS formas no MESMO arquivo
+        // + RECOMPILACAO (string so nao basta — foi o pino errado que escondeu
+        // o bug por um dia).
+        Path javaFile = dir.resolve("Cmp2.java");
+        Files.writeString(javaFile, """
+                public class Cmp2 {
+                    public static boolean gt(int x) { return x > 0; }
+                    public static int oneIfLt(int a, int b) { return a < b ? 1 : 0; }
+                    public static int oneIfNe(int x) { return x != 0 ? 1 : 0; }
+                }
+                """);
+        runJavac(javaFile, dir);
+        String kof = Decompile.decompile(dir.resolve("Cmp2.class"));
+
+        assertTrue(kof.contains("Bool gt(Int arg0) = arg0 > 0"),
+                "corpo Z preserva o Bool cru (byte-identico ao que ja passava):\n" + kof);
+        assertTrue(kof.contains("Int oneIfLt(Int arg0, Int arg1) = if (arg0 < arg1) 1 else 0"),
+                "corpo I dobra ternario como if-expression (nao Bool cru):\n" + kof);
+        assertTrue(kof.contains("Int oneIfNe(Int arg0) = if (arg0 != 0) 1 else 0"),
+                "face unaria (ifne) tambem porta p/ Int:\n" + kof);
+        assertFalse(kof.contains("= arg0 != 0\n"), "nunca emitir `= <bool>` num corpo Int:\n" + kof);
+
+        Path out = dir.resolve("Cmp2.kf");
+        Files.writeString(out, kof);
+        CompilationResult result = new CompilerDriver().compile(out, dir.resolve("out"), Target.JVM);
+        assertTrue(result.success(), "as 3 formas decompiladas devem compilar:\n" + kof
+                + "\n" + result.diagnostics());
+    }
+
+    @Test
     void recoversIfElseReturn(@TempDir Path dir) throws Exception {
         Path javaFile = dir.resolve("Max.java");
         Files.writeString(javaFile, """
@@ -837,6 +873,128 @@ class DecompileTest {
     }
 
     @Test
+    void hoistsEscapingLocalOutOfIfElseBranchesAndRunsIt(@TempDir Path dir) throws Exception {
+        // §238 (Fase C degrau 2c): um local cuja PRIMEIRA escrita fica dentro
+        // de um ramo do if-else e e lida DEPOIS do join saia com `var` escopado
+        // dentro do if -> o pos-join referenciava um nome nao-declarado e a
+        // saida NAO recompilava (SEM000, anti-R6). O hoist icar a declaracao
+        // (default por tipo da store: Int->0) ANTES do if. Prova FORTE:
+        // recompila E executa os 3 caminhos (oracle JVM medido 10 21 12).
+        Path src = dir.resolve("classes");
+        Files.createDirectories(src);
+        Path s = src.resolve("Hl.java");
+        Files.writeString(s, """
+                public class Hl {
+                    public static int both(int n) {
+                        int m = n % 2; int s;
+                        if (m == 0) { s = 10; } else { s = 20; }
+                        return s + n;
+                    }
+                }
+                """);
+        runJavac(java.util.List.of(s), src);
+        String kof = Decompile.decompile(src.resolve("Hl.class"));
+
+        assertTrue(kof.contains("var v2 = 0") && kof.contains("if (v1 == 0) {"),
+                "declaracao do local escapante deve ser içada p/ antes do if:\n" + kof);
+        assertTrue(kof.indexOf("var v2 = 0") < kof.indexOf("if (v1 == 0)"),
+                "o var do local vem ANTES do if, nao dentro do ramo:\n" + kof);
+        assertFalse(kof.contains("throw \"body not recovered\""), "nao deve stubar:\n" + kof);
+
+        Path out = dir.resolve("gen");
+        Files.createDirectories(out);
+        Path kf = out.resolve("Hl.kf");
+        Files.writeString(kf, kof);
+        Path mainKf = out.resolve("Main.kf");
+        Files.writeString(mainKf, "main() {\n    println(Hl.both(0))\n    println(Hl.both(1))"
+                + "\n    println(Hl.both(2))\n}\n");
+        CompilationResult r = new CompilerDriver().compileSources(java.util.List.of(kf, mainKf),
+                dir.resolve("o"), Target.JVM, out);
+        assertTrue(r.success(), "içado decompilado deve COMPILAR (era o bug):\n" + kof
+                + "\n" + r.diagnostics().getDiagnostics());
+        ProcessBuilder pb = new ProcessBuilder("java", "-cp", dir.resolve("o").toString(), "Default.Main");
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String o = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+                .replace("\r\n", "\n").trim();
+        assertEquals(0, p.waitFor(), "run: " + o);
+        assertEquals("10\n21\n12", o, "os 3 caminhos do join içado:\n" + kof);
+    }
+
+    @Test
+    void sipushConstantInTestIsRecoveredAndRuns(@TempDir Path dir) throws Exception {
+        // §238-face (sipush no loadValue): `if (a == 30000)` usa sipush (const
+        // fora do range de bipush). O loadValue nao tratava 0x11 e o teste
+        // computado ficava null = stub, APEMBAR que o machineRun ja dobrava
+        // (divergencia de passada). Seguranca: so icar o local escapante com o
+        // hoist §238 no lugar (sem ele viraria saida nao-compilavel). Prova:
+        // decompila `if (arg0 == 30000)` COM o var içado + recompila + roda os
+        // 3 caminhos (oracle JVM medido 1/2/1).
+        Path src = dir.resolve("classes");
+        Files.createDirectories(src);
+        Path s = src.resolve("Sp.java");
+        Files.writeString(s, """
+                public class Sp {
+                    public static int big(int a) {
+                        int r; if (a == 30000) { r = 1; } else { r = 2; } return r;
+                    }
+                }
+                """);
+        runJavac(java.util.List.of(s), src);
+        String kof = Decompile.decompile(src.resolve("Sp.class"));
+
+        assertTrue(kof.contains("if (arg0 == 30000)"), "sipush deve dobrar no teste:\n" + kof);
+        assertFalse(kof.contains("throw \"body not recovered\""), "nao deve stubar (era o gap):\n" + kof);
+
+        Path out = dir.resolve("gen");
+        Files.createDirectories(out);
+        Path kf = out.resolve("Sp.kf");
+        Files.writeString(kf, kof);
+        Path mainKf = out.resolve("Main.kf");
+        Files.writeString(mainKf, "main() {\n    println(Sp.big(30000))\n    println(Sp.big(1))\n"
+                + "    println(Sp.big(-30000))\n}\n");
+        CompilationResult r = new CompilerDriver().compileSources(java.util.List.of(kf, mainKf),
+                dir.resolve("o"), Target.JVM, out);
+        assertTrue(r.success(), "sipush içado deve COMPILAR:\n" + kof + "\n" + r.diagnostics().getDiagnostics());
+        ProcessBuilder pb = new ProcessBuilder("java", "-cp", dir.resolve("o").toString(), "Default.Main");
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String o = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+                .replace("\r\n", "\n").trim();
+        assertEquals(0, p.waitFor(), "run: " + o);
+        assertEquals("1\n2\n2", o, "3 caminhos do teste sipush:\n" + kof);
+    }
+
+    @Test
+    void refLocalEscapingStaysHonestStubNotBrokenOutput(@TempDir Path dir) throws Exception {
+        // §238 (face R6): um local de REFERENCIA escapante (String s escrito
+        // nos 2 ramos, lido depois) NAO tem default seguro a icar (o tipo de
+        // referencia e desconhecido no store; float literal drifta — licao bug
+        // 62). Antes o pureIfElse emitia `var v1 = "a"` dentro do ramo ->
+        // saida nao-compilavel. Agora: RECUSA p/ stub honesto (UNKNOWN), que e
+        // o contrato R6 (nunca codigo errado/nao-compilavel).
+        Path src = dir.resolve("classes");
+        Files.createDirectories(src);
+        Path s = src.resolve("Hr.java");
+        Files.writeString(s, """
+                public class Hr {
+                    public static String ref(int n) {
+                        int m = n % 2; String s;
+                        if (m == 0) { s = "a"; } else { s = "b"; }
+                        return s;
+                    }
+                }
+                """);
+        runJavac(java.util.List.of(s), src);
+        String kof = Decompile.decompile(src.resolve("Hr.class"));
+
+        assertTrue(kof.contains("throw \"body not recovered\""),
+                "local de referencia escapante deve degradar p/ stub honesto:\n" + kof);
+        assertFalse(kof.contains("var v") && kof.contains("} else {"),
+                "nao deve emitir var escopado dentro do ramo (bug §238):\n" + kof);
+    }
+
+    @Test
     void recoversNullNarrowAndRunsIt(@TempDir Path dir) throws Exception {
         // Fase C: ifnull/ifnonnull (0xc6/0xc7) — narrowing CANONICO da
         // linguagem (idiom Null safety; ROI medido: 308 testes sobre load
@@ -1210,8 +1368,14 @@ class DecompileTest {
         // mapeamento de 1-slot, `iload_2` (segundo int, slot 2) virava nome de
         // parâmetro ERRADO (arg2) / local inexistente (v3) → decompilado que
         // NÃO compila (SEM011). BytecodeFrame resolve pelo descriptor.
-        assertTrue(kof.contains("Int m(Long arg0, Int arg1, Int arg2) = arg1 < arg2"),
-                "wide long empurra slots dos ints:\n" + kof);
+        // §236 (14/09): corpo Int com shape cmp/iconst_1/goto/iconst_0/ireturn
+        // (ternario `a < b ? 1 : 0` do javac) NAo pode dobrar p/ Bool cru
+        // (SEM010, nao-compilavel) — o pino antigo guardava a saida errada que o
+        // compilador tolerava; agora = if-expression de inteiros, e o teste
+        // compila a saida (a linha 1230 sempre tentou — era o pino que estava
+        // errado, nao o fold).
+        assertTrue(kof.contains("Int m(Long arg0, Int arg1, Int arg2) = if (arg1 < arg2) 1 else 0"),
+                "wide long empurra slots + ternario int (nao Bool cru):\n" + kof);
         assertFalse(kof.contains(" v3") && kof.contains("Int m("),
                 "slot 2 não é mais arg0-shift:\n" + kof);
         // lload_0 devolve arg0 (não v0): corpo de 2 slots wide

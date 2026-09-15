@@ -385,6 +385,31 @@ class AndroidInteropE2ETest {
     }
 
     @Test
+    void androidReadmePlaceholdersResolve(@TempDir Path tempDir) throws IOException {
+        // CodeQL #357 (unused-format-argument): o README.txt usava %1$s %2$s %4$s
+        // %5$s mas passava 5 args (um APP_PACKAGE duplicado, %3$s nunca lido).
+        // Corrigido para 4 args + placeholders 1..4. Este teste prova que a
+        // saida continua resolvida (nenhum '%N$s' cru escapa) e que o reindex
+        // manteve os MESMOS valores (build-tools, api-level, cd <pkg>, label).
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            main() {
+                println("oi")
+            }
+            """);
+        CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.ANDROID);
+        assertTrue(result.success(),
+                "main trivial deve compilar no Android: " + result.diagnostics().getDiagnostics());
+        String readme = Files.readString(tempDir.resolve("out").resolve("README.txt"));
+        assertFalse(java.util.regex.Pattern.compile("%\\d+\\$s").matcher(readme).find(),
+                "nenhum placeholder cru (%N$s) deve sobrar em:\n" + readme);
+        assertTrue(readme.contains("build-tools;34.0.0"), "arg1 BUILD_TOOLS resolvido: " + readme);
+        assertTrue(readme.contains("platforms;android-34"), "arg2 API_LEVEL resolvido: " + readme);
+        assertTrue(readme.contains("cd dev.kof.app"), "arg3 APP_PACKAGE resolvido: " + readme);
+        assertTrue(readme.contains("dev.kof.app"), "pacote presente: " + readme);
+    }
+
+    @Test
     void androidTargetSupportsSpawnAwaitChannel(@TempDir Path tempDir) throws IOException {
         // AND001 fechado 31/08: ART não tem virtual threads, mas o runtime
         // cai para platform threads (Thread.startVirtualThread detectado em

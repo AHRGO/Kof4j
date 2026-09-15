@@ -235,7 +235,7 @@ public final class ExpressionTyper {
                     yield recvType;
                 }
                 if (recvType instanceof Type.ClassType ct && driver.semanticAnalyzer != null) {
-                    SymbolTable.Symbol s = driver.semanticAnalyzer.resolveInHierarchy(ct.name(), fa.fieldName());
+                    SymbolTable.Symbol s = HierarchyResolver.resolveFieldInHierarchy(ct.name(), fa.fieldName(), driver.semanticAnalyzer);
                     if (s instanceof SymbolTable.FieldSymbol fs) yield fs.type();
                     if (s instanceof SymbolTable.MethodSymbol ms && ms.parameterTypes().isEmpty()) {
                         yield ms.returnType();

@@ -69,8 +69,10 @@ public final class MemberCallTyper {
                 q = MemberResolver.qualifiedType(Type.of(rid.name()));
             }
             if (q instanceof Type.ClassType qt && sa.isExternal(qt)) {
-                ExternalClasspath.MethodSignature sig = sa.externalTypes().resolveMethod(
-                        qt.internalName(), mc.methodName(), mc.arguments().size());
+                List<Type> argTypes = new ArrayList<>();
+                for (ExpressionNode arg : mc.arguments()) argTypes.add(SemExpressionTyper.inferType(sa, arg, scope));
+                ExternalClasspath.MethodSignature sig = sa.externalTypes().resolveMethodWithArgs(
+                        qt.internalName(), mc.methodName(), mc.arguments().size(), argTypes);
                 if (sig != null) {
                     List<Type> params = new ArrayList<>();
                     for (String d : sig.parameterDescriptors()) {
@@ -252,8 +254,10 @@ public final class MemberCallTyper {
             // vem do classpath — sem isso o lowering emitiria
             // invokevirtual com owner vazio
             if (sa.isExternal(ct)) {
-                ExternalClasspath.MethodSignature sig = sa.externalTypes().resolveMethod(
-                        ct.internalName(), mc.methodName(), mc.arguments().size());
+                List<Type> argTypes = new ArrayList<>();
+                for (ExpressionNode arg : mc.arguments()) argTypes.add(SemExpressionTyper.inferType(sa, arg, scope));
+                ExternalClasspath.MethodSignature sig = sa.externalTypes().resolveMethodWithArgs(
+                        ct.internalName(), mc.methodName(), mc.arguments().size(), argTypes);
                 if (sig != null) {
                     List<Type> params = new ArrayList<>();
                     for (String d : sig.parameterDescriptors()) {

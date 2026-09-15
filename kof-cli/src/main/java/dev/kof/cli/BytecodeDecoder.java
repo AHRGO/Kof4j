@@ -280,11 +280,26 @@ import java.util.Set;
             if (v == null) return null;
             operands.add(v);
         }
+        String cond;
         if (cmp.opcode() >= 0x9f && cmp.opcode() <= 0xa4) {
             if (operands.size() != 2) return null;
-            return operands.get(0) + " " + inv + " " + operands.get(1);
+            cond = operands.get(0) + " " + inv + " " + operands.get(1);
+        } else {
+            if (operands.isEmpty()) return null;
+            cond = operands.get(0) + " " + inv;
         }
-        return operands.isEmpty() ? null : operands.get(0) + " " + inv;
+        // §236 (14/09): o shape cmp/iconst_1/goto/iconst_0/ireturn e AMBIGUO na
+        // raiz — `return x > 0` (Bool, Z no descriptor) e `return a < b ? 1 : 0`
+        // (Int, I) temo MESMO bytecode. O fold cru `= cond` so vale p/ Bool;
+        // num corpo Int virava Bool→SEM010 (nao-compilavel, anti-R6). Porta:
+        // I → if-expression de inteiros (mesma forma do ifElseReturn:
+        // `= if (c) 1 else 0`); Z → cond puro (byte-identico ao que passava);
+        // outros (S/B/C do ireturn) → recusar (stub honesto).
+        String ret = frame.retType();
+        if (ret == null) return null;
+        if (ret.equals("Z")) return cond;
+        if (ret.equals("I")) return "if (" + cond + ") 1 else 0";
+        return null;
     }
 
     // ── if/else de retorno (via CFG) ─────────────────────────────────────
@@ -373,6 +388,13 @@ import java.util.Set;
             case 0x02 -> "-1";
             case 0x01 -> "null";
             case 0x10 -> String.valueOf((byte) in.operands()[0]);
+            case 0x11 -> String.valueOf((short) in.operands()[0]);   // sipush — 14/09
+            // espelha o machineRun (linha 114 ja tratava 0x11): o loadValue SEM
+            // sipush fazia `if (a == 30000)` (const > bipush-range) stubar em
+            // blockCondition/comparisonReturn = DIVERGENCIA de passada, nao
+            // forma-nova. Seguranca: so e emitido COM o hoist §238 no lugar (sem
+            // ele, o `int r` escapante viraria saida nao-compilavel — o que o
+            // re-medidor Roi3 marcou como pre-requisito).
             default -> null;
         };
     }

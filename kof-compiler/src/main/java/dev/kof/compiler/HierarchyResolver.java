@@ -21,7 +21,7 @@ public final class HierarchyResolver {
     static SymbolTable.Symbol resolveFieldInHierarchy(String className, String fieldName,
                                                       SemanticAnalyzer semanticAnalyzer) {
         if (semanticAnalyzer == null) return null;
-        return semanticAnalyzer.resolveInHierarchy(className, fieldName);
+        return MemberResolver.resolveFieldInHierarchy(semanticAnalyzer, className, fieldName);
     }
 
     static String findSuperClass(String internalName, SemanticAnalyzer semanticAnalyzer) {

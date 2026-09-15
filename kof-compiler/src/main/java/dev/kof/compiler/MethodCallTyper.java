@@ -89,6 +89,21 @@ if (mc.receiver() != null && "toString".equals(mc.methodName()) && mc.arguments(
 // abaixo e tinham o retorno tipado como String → o JVM emitia
 // `Integer.parseInt(...)Ljava/lang/String;` (NoSuchMethodError). O retorno é
 // o primitivo correspondente; a sobrecarga com radix `(String, Int)` também.
+// #233: mesma família — `Double.isNaN(d)`/`isInfinite`/`isFinite` (e Float)
+// são estáticos JDK reais com retorno BOOL; sem isso o retorno caía em
+// String e o JVM emitia `Double.isNaN(D)Ljava/lang/String;` (NoSuchMethodError).
+if (mc.receiver() instanceof IdentifierExpr fpKid && driver.findLocalVar(fpKid.name(), locals) == null
+        && switch (fpKid.name()) {
+            case "Double", "Float" -> true;
+            default -> false;
+        }
+        && switch (mc.methodName()) {
+            case "isNaN", "isInfinite", "isFinite" -> true;
+            default -> false;
+        }
+        && mc.arguments().size() == 1) {
+    return Type.PrimitiveType.BOOL;
+}
 if (mc.receiver() instanceof IdentifierExpr srid && driver.findLocalVar(srid.name(), locals) == null
         && ("Double".equals(srid.name()) || "Float".equals(srid.name()))
         && ("isNaN".equals(mc.methodName()) || "isInfinite".equals(mc.methodName()) || "isFinite".equals(mc.methodName()))
@@ -377,8 +392,16 @@ if (mc.receiver() != null) {
     if (recvType instanceof Type.FunctionType ft) {
         return ft.returnType();
     }
-    if (CompilerTypes.isEnumType(recvType, driver.currentUnit) && ("name".equals(mc.methodName()) || "toString".equals(mc.methodName())) && mc.arguments().isEmpty()) {
-        return BuiltinTypes.STRING;
+    if (CompilerTypes.isEnumType(recvType, driver.currentUnit)) {
+        if (("name".equals(mc.methodName()) || "toString".equals(mc.methodName())) && mc.arguments().isEmpty()) {
+            return BuiltinTypes.STRING;
+        }
+        if ("ordinal".equals(mc.methodName()) && mc.arguments().isEmpty()) {
+            return Type.PrimitiveType.INT;
+        }
+        if ("compareTo".equals(mc.methodName()) && mc.arguments().size() == 1) {
+            return Type.PrimitiveType.INT;
+        }
     }
     if (BuiltinTypes.isList(recvType) || BuiltinTypes.isMap(recvType) || BuiltinTypes.isSet(recvType) || Type.isString(recvType)) {
         return CollectionMethodTyper.inferCollectionType(driver, recvType, mc, locals);

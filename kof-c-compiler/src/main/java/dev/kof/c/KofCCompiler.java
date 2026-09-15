@@ -23,6 +23,13 @@ public final class KofCCompiler {
         var parser = new KofCParser(toks);
         var prog = parser.parseProgram();
 
+        // nunca emitir binario a partir de uma AST lixo (R6/Q7): o parser
+        // sincroniza apos o erro, mas o resultado nao e valido — reporta e para.
+        if (parser.hasErrors()) {
+            return new CompileResult(false,
+                    String.join("\n", parser.errors()), null);
+        }
+
         // basic validation: need main
         boolean hasMain = prog.funcs().stream().anyMatch(f -> f.name().equals("main"));
         if (!hasMain) {

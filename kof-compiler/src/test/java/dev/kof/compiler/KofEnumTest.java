@@ -28,8 +28,13 @@ class KofEnumTest {
                 assert(vs.get(0) == Color.Red)
                 assert(vs.get(2) == Color.Blue)
                 assert(Color.valueOf("Green") == Color.Green)
+                println(Color.Red.ordinal())
+                println(Color.Green.ordinal())
+                println(Color.Blue.ordinal())
+                println(Color.Red.compareTo(Color.Green))
+                println(Color.Blue.compareTo(Color.Red))
                 println("ok")
-                }"""), "Red\nGreen\nok");
+                }"""), "Red\nGreen\n0\n1\n2\n-1\n2\nok");
     }
 
     @Test
@@ -39,13 +44,37 @@ class KofEnumTest {
                 println(vs.size())
                 println(Color.valueOf("Blue") == Color.Blue)
                 println(Color.valueOf("nope") == null)
+                println(Color.Red.ordinal())
+                println(Color.Blue.ordinal())
+                println(Color.Red.compareTo(Color.Green))
                 println("done")
-                }"""), "Red\nGreen\n3\ntrue\ntrue\ndone");
+                }"""), "Red\nGreen\n3\ntrue\ntrue\n0\n2\n-1\ndone");
     }
 
     @Test
     void enumNative(@TempDir Path tmp) throws Exception {
-        runNative(tmp, ENUM_HEAD.replace("//MORE", "\n}"), "Red\nGreen");
+        runNative(tmp, ENUM_HEAD.replace("//MORE", """
+                println(Color.Red.ordinal())
+                println(Color.Green.ordinal())
+                println(Color.Blue.ordinal())
+                println(Color.Red.compareTo(Color.Green))
+                println(Color.Blue.compareTo(Color.Red))
+                }"""), "Red\nGreen\n0\n1\n2\n-1\n2");
+    }
+
+    @Test
+    void enumInterpreter(@TempDir Path tmp) throws Exception {
+        Path file = tmp.resolve("Main-" + System.nanoTime() + ".kf");
+        Files.writeString(file, ENUM_HEAD.replace("//MORE", """
+                println(Color.Red.ordinal())
+                println(Color.Green.ordinal())
+                println(Color.Blue.ordinal())
+                println(Color.Red.compareTo(Color.Green))
+                println(Color.Blue.compareTo(Color.Red))
+                }"""));
+        KofInterpreter.Result r = driver.interpret(java.util.List.of(file), tmp, new String[0]);
+        assertEquals(0, r.exitCode());
+        assertEquals("Red\nGreen\n0\n1\n2\n-1\n2", r.stdout().trim().replace("\r\n", "\n"));
     }
 
     @Test

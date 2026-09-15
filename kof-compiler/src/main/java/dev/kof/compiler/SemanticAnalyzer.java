@@ -208,6 +208,7 @@ public class SemanticAnalyzer {
             }
         }
         checkInterfaceImplementation(cls, classScope);
+        MemberResolver.checkAbstractClassImplementation(this, cls);
         currentScope = prevScope;
         currentClassName = prevClass;
     }

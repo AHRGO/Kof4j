@@ -31,8 +31,18 @@ final class NativeAarch64Helpers {
 
     static long parseImm(String s) {
         s = s.trim();
-        if (s.startsWith("0x") || s.startsWith("0X")) return Long.parseUnsignedLong(s.substring(2), 16);
-        return Long.parseLong(s);
+        if (s.startsWith("0x") || s.startsWith("0X")) {
+            try {
+                return Long.parseUnsignedLong(s.substring(2), 16);
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Invalid immediate: " + s, e);
+            }
+        }
+        try {
+            return Long.parseLong(s);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid immediate: " + s, e);
+        }
     }
 
     static String aarch64Reg(String r) {

@@ -555,8 +555,14 @@ Fase E  Kof Decompiler          (gerar Kof source)
 > não pela forma do blockCondition).** Os 1098 contaram cada
 > "bloco succ==2 com `blockCondition==null`" sem checar se o método ainda é
 > descompilado pelo caminho prologue adicionado na unidade 2a (`5c944709`:
-> um `int x=…; if (x%3==0){}else{}` não-loop fundido JÁ É recuperado hoje —
-> medido: `computed`/`cmp` emitem `if (v1 == 0) { … } else { … }`). Separando
+> um `int x=…; if (x%3==0){}else{}` não-loop fundido JÁ tem a FORMA
+> recuperada hoje — medido: `computed`/`cmp` emitem `if (v1 == 0) { … } else
+> { … }`, mas a saída emitida NÃO COMPILA: o `var` do local sobe na sua
+> PRIMEIRA atribuição, que fica DENTRO do ramo then, e é lido depois do join →
+> `SEM000 Undefined variable` (medido 19:50 via Runner2 no HEAD recompilado —
+> defeito PRE-EXISTENTE da 2a, catalogado §238, NÃO é alvo do walker). Logo a
+> 2a "recupera" só quando o local é inicializado ANTES do if (o teste `E.java`
+> que passa tem `int r=1` pré-if). Separando
 > os 2642 stubs pela causa que FAZ o `recoverStatements` devolver null, entre
 > os que TÊM um teste computado 2-succ:
 >
@@ -583,8 +589,31 @@ Fase E  Kof Decompiler          (gerar Kof source)
 > lei do diamante (regra 6 — precisa de um `continue` na linguagem, decisão de
 > contrato, NÃO esta lane) e (b) nits de cobertura de opcode (sipush/lcmp no
 > `loadValue`) que são micro-fix da lane compiler, não um walker estrutural.
-> Nenhum dos dois é trabalho de modo autônomo em `docs/development/` → este doc
-> está num ponto de parada genuíno aguardando decisão da mantenedora.
+> Nenhum dos dois é trabalho de modo autônomo em `docs/development/`. **ATUALIZA
+> ÇAO (14/09 ~20:55, mesma sessao):** a caça ao 5º-red que produziu esta
+> re-medicao TAMBEM expôs um defeito real da lane — §236 (a dobra ambigua
+> Bool-vs-Int da comparacao) ACHADA & CORRIGIDA com teste novo de recompile
+> (`comparisonReturnRespectsBoolVsIntReturnType`, DecompileTest 64/64 verde),
+> e §238 (o join `pureIfElse` da 2a emitindo `var` dentro do ramo → saida
+> nao-compilavel) catalogado com repro medido — §238 virou a proxima unidade
+> autonoma (2c). **ATUALIZACAO 2 (14/09 ~21:35): §238 ✅ CORRIGIDO (unidade
+> 2c)** — classe NOVA `StructWalker.hoistEscapingLocals` içar `var`
+> default-init (0/0L/0.0 por opcode da store; fstore/astore → recusar p/
+> stub honesto) antes do `if` nos caminhos `pureIfElse`; 2 testes novos que
+> FALHAM no codigo antigo (prova Q0: 2/2 red com o revert) + executam com
+> oracle JVM medido (`10/21/12`); DecompileTest 66/66, PostDom 6/6, kof-cli
+> COMPLETO 251/251 BUILD SUCCESS, lei do diamante VERDE, check_500 OK
+> (537→547 TOLERADA, StructWalker 84 linhas). O que resta na lane
+> estrutural: a face lei-do-diamante + `continue` (453, regra 6 — decisao da
+> mantenedora) e os testes interop (646, lane compiler §234) — o doc volta
+> a um ponto de parada genuino. **ATUALIZACAO 3 (14/09 ~22:05, mesma
+> unidade): face sipush FECHADA** — `loadValue` espelha o `machineRun`
+> (0x11 to short), seguro so DEPOIS do hoist §238 (antes, um fix
+> so-de-sipush virava stub em saida nao-compilavel — a re-medida 18:20
+> marcou §238 como pre-requisito); `if (a == 30000)` agora recupera
+> COMPILAVEL + executavel (`sipushConstantInTestIsRecoveredAndRuns`,
+> oracle JVM `1|2|2`); DecompileTest 67/67. Fechando divergencia de
+> passada, nao forma nova. A lane estrutural esta agora exausta.
 
 ## 7. Relação com o Compilador
 

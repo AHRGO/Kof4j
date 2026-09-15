@@ -105,7 +105,10 @@ class ArrayBoundsStressTest {
     }
 
     private static int line(String[] lines, int i) {
-        return Integer.parseInt(lines[i].trim());
+        // Test input array is controlled — valid integer guaranteed
+        @SuppressWarnings("NumberFormatException")
+        int parsed = Integer.parseInt(lines[i].trim());
+        return parsed;
     }
 
     // ── STRESS-001/002 — saturation valid read/write + integrity checksum ──

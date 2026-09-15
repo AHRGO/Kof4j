@@ -117,6 +117,14 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
         && ("Double".equals(rid.name()) || "Float".equals(rid.name()) || "Long".equals(rid.name())
             || "Integer".equals(rid.name()) || "Int".equals(rid.name()) || "Boolean".equals(rid.name())
             || "Bool".equals(rid.name()) || "String".equals(rid.name()))) {
+    // #156/#216: String.format(String, Object...) é varargs do JDK — o
+    // classpath externo só casa name+arity e o descritor fabricado
+    // `(String,String,int)Object` dava NoSuchMethodError. Ver
+    // StringFormatCallLowerer (packing em Object[] + descritor real).
+    if ("String".equals(rid.name()) && "format".equals(mc.methodName())
+            && StringFormatCallLowerer.matches(driver, mc, locals)) {
+        return StringFormatCallLowerer.lower(driver, mc, ops, owner, localIdx, locals);
+    }
     String javaClass = switch (rid.name()) {
         case "Int", "Integer" -> "java/lang/Integer";
         case "Long" -> "java/lang/Long";
@@ -125,9 +133,12 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
         case "Bool", "Boolean" -> "java/lang/Boolean";
         default -> "java/lang/String";
     };
-    ExternalClasspath.MethodSignature extSig = driver.externalClasspath != null
-            ? driver.externalClasspath.resolveMethod(javaClass, mc.methodName(), mc.arguments().size())
-            : null;
+    List<Type> actualArgTypes = new ArrayList<>();
+    for (ExpressionNode arg : mc.arguments()) {
+        actualArgTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
+    }
+    ExternalClasspath.MethodSignature extSig = driver.externalClasspath
+            .resolveMethodWithArgs(javaClass, mc.methodName(), mc.arguments().size(), actualArgTypes);
     if (extSig != null) {
         List<Type> extFormal = new ArrayList<>();
         for (String d : extSig.parameterDescriptors()) {

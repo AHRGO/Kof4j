@@ -101,6 +101,14 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
+> **✅ FEITO (14/09 ~21:40, dono = 192.168.100.15, lane bugs-and-gaps): #156/#216 CORRIGIDAS na causa raiz — `String.format(String, Object...)` varargs (descriptor errado → `NoSuchMethodError`).**
+> - **Sintoma/prova (Q0):** `String.format("Hello %s, age %d", "Alice", 30)` → bytecode `invokestatic String.format:(Ljava/lang/String;Ljava/lang/String;I)Ljava/lang/Object;` → `NoSuchMethodError`. Variante 0-args → `(Ljava/lang/String;)Ljava/lang/String;` (overload inexistente). Reproduzido com classes frescas no tip `aa78eba0`.
+> - **Causa raiz:** `ExternalClasspath.findDeclared`/`resolveMethod` casam por **name+arity apenas**, sem `ACC_VARARGS`, e o JDK não está nos entries → o ramo de receptor-builtin de `ExpressionMethodCallLowerer` caía no descriptor fabricado (params individuais + retorno `Object`).
+> - **Fix (Q0):** novo `StringFormatCallLowerer` (arquivo DEDICADO — mantém `ExpressionMethodCallLowerer` a 546 linhas): empilha o format string, cria `Object[]` (primitivos boxados), `Dup`/`IASTORE` por elemento, emite o descritor REAL `(Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/String;`.
+> - **Prova (Q1, MESMO commit):** `StringFormatVarargsE2ETest` 9/9 (DEDICADO); **provado vermelho pré-fix** (7 casos falham em `aa78eba0` com o `NoSuchMethodError` exato).
+> - **Catalogado §236 (EN+PT):** JS sem lowering de `String.format` → `COMP002 unknown JS expression: null` (pré-existente, lane JS; teste só JVM, não verde-falso).
+> - **Suíte 4-módulos:** run=1996 fail=2 err=13 skip=167 — 2 fail = §205 (lane #183) + `DecompileTest` (kof-cli, pré-existente); 13 err = node ausente.
+>
 > **✅ FEITO (14/09 ~19:30, dono = 192.168.100.15, lane bugs-and-gaps): REGRESSÃO de suíte corrigida na causa raiz — `String.valueOf(char)` (e a família de estáticos de wrapper) dropada em silêncio quando o classpath externo existe mas não contém a classe (residual da issue #233).**
 > - **Sintoma/prova:** `CoreRegressionE2ETest.stringValueOfCharParity` VERMELHO no tip (`cd010bf1`): `Internal compiler error: frame crash … ASM COMPUTE_FRAMES NegativeArraySizeException: -1`. Bissecção em worktree limpo: verde `59359935`, vermelho `1e88309b` (commit rotulado "codeql" que trouxe o dispatch de wrapper). `doubleStaticMethodsJvm` já fora corrigido upstream (`036e5140`); a face `valueOf` ficou.
 > - **Causa raiz:** o novo ramo de receptor-builtin em `ExpressionMethodCallLowerer` (`1e88309b`) casa `String`/`Int`/`Double`/… mesmo quando o `externalClasspath` NÃO conhece a classe (caso comum), e só emite para `extSig != null` ou `isNaN/isInfinite/isFinite`. Para `String.valueOf(...)`/`parse*` o ramo saía **sem emitir nada** (R6 violado — drop silencioso); o `println` externo então emitia seu `String.valueOf(Object)` sem valor na pilha → crash do ASM.
@@ -627,30 +635,82 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > FEITA: `pathOracle` brute-force (definição de caminhos) vs passada rápida
 > em 300 classes REAIS = zero divergência, 6/6 (220064fc) + auditoria
 > doc-vs-código (machineRun:97 VIVA em 158c174b — doc corrigido b9996938);
-> (2) ✅ **UNIDADE 2b RE-AVALIADA POR MEDIÇÃO (14/09 ~19:40) — DESCARTADA
-> como escopada, veredito em DECOMPILER.pt_BR.md §6 (re-medida 18:20):** o
-> proxy "1098" supercontou — o caminho prologue da 2a (`5c944709`) JÁ recupera
-> o fundido não-loop com temp (`computed`/`cmp` medidos: saem `if/else`), e dos
-> stubs com teste computado restantes, **646** têm invoke no teste (família
-> interop §234 — lane compiler, não CFG), **453** são loop-header com
-> `continue` (COLISÃO com a lei vinculante `diamondJoinShapesStayHonestStub`:
-> recuperar o cond do `contFor` faria `while (v2 <` voltar — provado no CFG
-> medido: B9=diamante do continue, preds(B22)={15,18}, B22→back-edge B4; Kof
-> não tem `continue` → regra 6, NÃO-edit) e só **8+2** são nits de opcode no
-> `loadValue` (sipush/lcmp — micro-fix compiler). Harness descartável
-> `Roi2.java`/`Roi3.java` (classifica pela CAUSA REAL do stub). PROVAS do
-> descarte: 63 DecompileTest + 6 PostDom VERDES FRESCOS 19:39 (unidades 1/2a
-> intactas, fonte não tocada — StructWalker rascunho deletado antes de nascer,
-> opcodes por memória = a lição que ele mesmo documenta). PRÓXIMO PASSO EXATO
-> da doc DECOMPILER: sem trabalho autônomo — o doc está em parada genuína
-> pedindo decisão da mantenedora (lei do diamante + `continue`), e as 646
-> interop são da lane compiler; mover DECOMPILER p/ `docs/` SÓ quando a
-> mantenedora decidir o destino da Fase C (a recovery atual é o teto honesto).
-> A meta original — reduzir stubs SEM novo falso-verde — foi atingida pelo
-> caminho inverso: a medição PROVOU que reduzir mais exige violar a lei
-> vinculante ou invadir a lane interop. DECOMPILER fica em `docs/development/`
-> aguardando a decisão da mantenedora (destino da Fase C; hoje: recovery no
-> teto honesto).
+> (2) ✅ **UNIDADE 2b RE-AVALIADA + FECHADA POR MEDIÇÃO (14/09, veredito em
+> DECOMPILER.pt_BR.md §6):** o proxy "1098" supercontou (harness Roi2/Roi3).
+> Dos stubs com teste computado: 646 invoke-interop (lane compiler), 453
+> loop/continue (lei do diamante + Kof sem `continue` = regra 6), 8+2 nits.
+> A caça ao 5º-red expôs DUAS coisas reais na lane do decompiler, ambas com
+> re-producao medida:
+> **§236 ✅ CORRIGIDA nesta sessao** — `comparisonReturn` dobrava o shape
+> ambiguo cmp/iconst1/goto/iconst0/ireturn para Bool CRU, entao
+> `return a<b?1:0` num corpo Int virava saida NAO-compilavel (SEM010); porta
+> por `retType` (Z→cru, I→if-expr) + pino consertado + teste novo
+> `comparisonReturnRespectsBoolVsIntReturnType` (recompila); DecompileTest
+> 64/64 + PostDom 6/6 VERDES 20:55, exec V=1|0|0==oracle.
+> **PROXIMA UNIDADE (2c, minha lane, sem colidir c/ a lei nem regra 6):**
+> §238 — o `pureIfElse` da 2a (`5c944709`) emite o `var` do local na PRIMEIRA
+> atribuicao, que fica DENTRO do ramo then, e o else/pos-join leem um `v2`
+> nao declarado → saida NAO-compilavel (SEM000). Nenhum teste da suite pega
+> (o `E.java` pre-inicializa `int r=1`; o pino so checa string). FIX = içar
+> declaracao honesta ANTES do `if` no caminho `pureIfElse`/`pureIfThen` de
+> `BytecodeStatements.struct()` (classe NOVA ou fatia em StructWalker, regra
+> 7; BytecodeStatements.java em 538 = TOLERADA), default-init pelo tipo do
+> frame; se nao der de içar com seguranca → RECUSAR p/ stub honesto (R6).
+> PROVA: re-producao `/tmp/opencode/w2b/Comp.java` (`computed`/`cmp`) +
+> `Mid.java` (`big`) decompilam e RECOMPILAM (Runner2 compile=true) com
+> golden de execucao (oracle JVM medido 11|21|11|11 / 1|2|2), lei do diamante
+> VERDE, suite DecompileTest+PostDom VERDE. §237 (StringValueOfChar,
+> 6º-red) = lane .22, NAO atacar.
+> **PLANO DA 2c FECHADO (turno 14/09 ~21:20, contexto no fim — NAO iniciado
+> para nao deixar meio-edit):** nos ramos `pureIfElse`/`pureIfThen` de
+> `struct()` (~linhas 316-331/348-361), PRE-VARRER os insns dos blocos entre
+> then/else e o tail: slot escrita por `xstore` e AINDA NAO em `declared` →
+> emitir `var <nome> = <default>` ANTES do `if` e `declared.add(slot)`.
+> Default pelo OPCODE da store: istore→`0`, lstore→`0L`, dstore→`0.0`;
+> fstore/astore (ref) → RECUSAR p/ stub honesto (sem default seguro). Slots ja
+> em declared (init pre-if como o `E.java`) = zero mudanca (byte-identico).
+> Guarda da lei: o pre-scan so roda nos caminhos ja existentes; contFor nao e
+> tocado (o cond computado recusa ANTES, e o `s` ja esta em declared).
+> A funcao de hoist vai p/ `StructWalker.java` NOVA (regra 7;
+> BytecodeStatements.java 538 = TOLERADA, nao engordar p/ >=600). Rodar:
+> 64 DecompileTest + 6 PostDom + Runner2 em Comp/Mid (compile=true) + CallM
+> golden 11|21|11|11 / 1|2|2 + docs-lang check.
+> (3) ✅ **UNIDADE 2c FEITA (14/09 ~21:35, dono = 192.168.100.17):** §238
+> CORRIGIDA — `StructWalker.hoistEscapingLocals` (classe NOVA, 84 linhas)
+> içar `var` default-init (istore→0, lstore→0L, dstore→0.0; fstore/astore →
+> RECUSAR p/ stub honesto) antes do `if` so no caminho `pureIfElse` de
+> `struct()` (pureIfThen intocado; pre-declarados byte-identicos); 2 testes
+> novos (hoistsEscaping…RunsIt golden medido 10/21/12 +
+> refLocalEscapingStaysHonestStub) que FALHAM 2/2 no codigo antigo (prova
+> Q0) e passam com o fix; DecompileTest 66/66 + PostDom 6/6 + kof-cli
+> COMPLETO 251/251 BUILD SUCCESS + check_500 exit 0. BytecodeStatements
+> 537→547 (TOLERADA; nao aproximar de 600 — proximo acrescimo exige split
+> por responsabilidade). DECOMPILER AGORA: parada genuina — as faces
+> restantes sao regra 6 (diamante+continue, 453) e lane compiler (interop
+> 646/§234); mover p/ `docs/` depende de decisao da mantenedora sobre o
+> destino da Fase C. **PRÓXIMO PASSO desta lane (docs/development
+> exclusiva):** re-varrer `docs/development/` a cada re-disparo — se nenhum
+> doc tiver trabalho acionavel sem dono na lane, registrar recusa DA LANE.
+> **NAO e STABILITY do repo** (fila com 32 abertas + 3 reds de gate de outras
+> lanes: §181 residual, §233 migracao de teste, §237 `computeStack` lane .22)
+> — o cron NAO para com o repo instavel; so registrar recusa + reportar.
+> (4) ✅ **FACE sipush FECHADA na unidade 2c (14/09 ~22:05):** `loadValue`
+> espelhado ao `machineRun` (0x11→short) — seguro so DEPOIS do hoist §238
+> (antes converteria stub em saida quebrada; a re-medida Roi3 marcou §238
+> como pre-requisito; prova Q0 = dump medido pre-fix com big/neg/edge em
+> `throw "body not recovered"`); `if (a == 30000)` agora recupera
+> COMPILAVEL+executavel (teste `sipushConstantInTestIsRecoveredAndRuns`,
+> golden JVM medido `1|2|2`); DecompileTest 67/67 + PostDom 6/6 verdes,
+> check_500 exit 0 (BytecodeDecoder 412).
+ > (5) ✅ **TRANSLATOR.md status resync (docs lane, 14/09 ~22:30):** a nota
+> "Expanded Java subset still pending" do header estava VIVA mas a diretriz
+> da mantenedora 13/09 ~21:00 ja declaram a lane DESPRIORIZADA — a nota agora
+> aponta a diretriz (nao e fila atual; retoma so por nova decisao). Nenhum
+> outro registro vivo em desencontro conhecido: fila-13 EN+PT 32=32 com onda
+> §2xx, README §2 ressinc, DECOMPILER ATUALIZACAO 3, §238 nota follow-up.
+> **LANE docs/development AGORA EXAUSTA** (re-varrer a cada re-disparo: se
+> outra lane mover gate/bugs, podem nascer syncs novos; o repo NAO esta
+> stable — 32 abertas + reds de gate alheios — mas nada disso e desta lane).
 
 > **⚠️ 5º RED NO PORTÃO (catalogado, para as lanes de bug — 14/09 ~16:45):**
 > `NativeStringCompareCrossTest` riscv+aarch → §233 no known-bugs (renumerado 17:40: §231 foi tomado pela lane .18 — colisao de rebase; fix

@@ -425,6 +425,7 @@ public final class JvmRuntimeCallDescriptors {
             case "kof_sec_cookie_set_opts" -> "(Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;)Ljava/lang/String;";
             case "kof_sec_cookie_get" -> "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;";
             case "kof_enum_value_of" -> "(Ljava/util/List;Ljava/lang/String;)Ljava/lang/String;";
+            case "kof_enum_ordinal" -> "(Ljava/lang/String;Ljava/util/List;)I";
             case "kof_list_map", "kof_list_filter" -> "(Ljava/util/ArrayList;Ljava/lang/Object;)Ljava/util/ArrayList;";
             case "kof_list_reduce" -> "(Ljava/util/ArrayList;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;";
             case "kof_spawn_result", "kof_await" -> "(Ljava/lang/Object;)Ljava/lang/Object;";

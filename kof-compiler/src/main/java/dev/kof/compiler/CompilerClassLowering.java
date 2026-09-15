@@ -86,6 +86,9 @@ public final class CompilerClassLowering {
                 && !methods.stream().anyMatch(m -> "equals".equals(m.name()))) {
             methods.add(CompilerRecordSupport.buildClassIdentityEqualsMethod(driver, internalName));
         }
+        if (driver.target == Target.JVM) {
+            methods.addAll(CompilerRecordSupport.generateCovariantReturnBridges(driver, internalName, superName, methods));
+        }
         return new IRClass(internalName, superName, ifaces, access, fields, methods, List.of(), null,
                 typeId, CompilerAnnotations.lowerAnnotations(driver, cls.annotations()));
     }

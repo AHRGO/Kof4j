@@ -2334,4 +2334,76 @@ class CoreRegressionE2ETest {
         assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
         assertEquals("bool: true\nbool: false\nbool: true\nint: 42", runJvm(out));
     }
+
+    // Issue #249 — assigning to static field via instance reference emits putfield instead of putstatic — IncompatibleClassChangeError
+    @Test
+    void assignToStaticFieldViaInstanceReferenceJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("static_field_asgn.kf");
+        Files.writeString(src, """
+                class Cfg { static Int MAX = 100 }
+                class App { static String name = "v1" }
+                class Flags { static Boolean debug = false }
+                main() {
+                    var c = new Cfg()
+                    c.MAX = 200
+                    println(Cfg.MAX)
+                    c.MAX += 50
+                    println(Cfg.MAX)
+                    var a = new App()
+                    a.name = "v2"
+                    println(App.name)
+                    var f = new Flags()
+                    f.debug = true
+                    println(Flags.debug)
+                }
+                """);
+        Path out = tempDir.resolve("static_field_asgn-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("200\n250\nv2\ntrue", runJvm(out));
+    }
+
+    // Issue #248 — covariant return override missing bridge method — virtual dispatch silently calls superclass method
+    @Test
+    void covariantReturnOverrideBridgeMethodJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("covariant_return.kf");
+        Files.writeString(src, """
+                class Base {
+                    Base create() { return new Base() }
+                    String name()  { return "base" }
+                }
+                class Child extends Base {
+                    Child create() { return new Child() }
+                    String name()  { return "child" }
+                }
+                main() {
+                    var b: Base = new Child()
+                    var c = b.create()
+                    println(c.name())
+                    println(c instanceof Child)
+                }
+                """);
+        Path out = tempDir.resolve("covariant_return-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("child\ntrue", runJvm(out));
+    }
+
+    // Issue #232 — enum.ordinal() and enum.compareTo() not accessible — SEM025
+    @Test
+    void enumOrdinalAndCompareToJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("enum_ordinal.kf");
+        Files.writeString(src, """
+                enum Dir { N, S, E, W }
+                main() {
+                    println(Dir.N.ordinal())
+                    println(Dir.W.ordinal())
+                    println(Dir.N.compareTo(Dir.S))
+                }
+                """);
+        Path out = tempDir.resolve("enum_ordinal-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("0\n3\n-1", runJvm(out));
+    }
 }

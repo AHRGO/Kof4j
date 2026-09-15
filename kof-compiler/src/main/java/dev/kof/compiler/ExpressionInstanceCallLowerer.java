@@ -226,9 +226,9 @@ public final class ExpressionInstanceCallLowerer {
         localIdx = driver.emitUiInstance(recvType, mc, ops, owner, localIdx, locals);
         return localIdx;
     }
-    if (ExpressionBuiltinInstanceCalls.isEnumIdentityName(driver, recvType, mc)) {
-        // o valor do enum JÁ é o nome (String em runtime): identidade
-        return localIdx;
+    int enumHandled = ExpressionBuiltinInstanceCalls.lowerEnum(driver, mc, ops, owner, localIdx, locals, recvType);
+    if (enumHandled >= 0) {
+        return enumHandled;
     }
     if (KofWeb.isAppType(recvType)) {
         return ExpressionBuiltinInstanceCalls.lowerWeb(driver, mc, ops, owner, localIdx, locals, recvType);
@@ -467,8 +467,12 @@ public final class ExpressionInstanceCallLowerer {
         }
         if (rt2 instanceof Type.ClassType ct2 && !ct2.packageName().isEmpty()
                 && driver.externalClasspath.knows(ct2.internalName())) {
-            ExternalClasspath.MethodSignature sig = driver.externalClasspath.resolveMethod(
-                    ct2.internalName(), mc.methodName(), mc.arguments().size());
+            List<Type> actualArgTypes = new ArrayList<>();
+            for (ExpressionNode arg : mc.arguments()) {
+                actualArgTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
+            }
+            ExternalClasspath.MethodSignature sig = driver.externalClasspath.resolveMethodWithArgs(
+                    ct2.internalName(), mc.methodName(), mc.arguments().size(), actualArgTypes);
             if (sig != null) {
                 List<Type> formal = new ArrayList<>();
                 for (String d : sig.parameterDescriptors()) {
@@ -501,7 +505,7 @@ public final class ExpressionInstanceCallLowerer {
         if (!(jdkOwner instanceof Type.UnknownType)) {
             recvType = jdkOwner;
             callKind = KofCallKind.STATIC;
-            if (jdkOwner instanceof Type.ClassType jct && driver.externalClasspath != null
+            if (jdkOwner instanceof Type.ClassType jct
                     && driver.externalClasspath.knows(jct.internalName())) {
                 ExternalClasspath.MethodSignature extSig = driver.externalClasspath.resolveMethod(
                         jct.internalName(), mc.methodName(), mc.arguments().size());
@@ -512,6 +516,20 @@ public final class ExpressionInstanceCallLowerer {
                         formal.add(ExternalClasspath.typeFromDescriptor(d));
                     }
                     methodParamTypes = formal;
+                } else if ("valueOf".equals(mc.methodName()) && methodParamTypes.size() == 1
+                        && methodParamTypes.get(0) instanceof Type.PrimitiveType) {
+                    // valueOf(I) direto do JDK — sem boxing duplo
+                    methodReturnType = BuiltinTypes.STRING;
+                } else if (methodParamTypes.size() == 1
+                        && switch (mc.methodName()) {
+                            case "isNaN", "isInfinite", "isFinite" -> true;
+                            default -> false;
+                        }
+                        && jdkOwner instanceof Type.ClassType fpOwner
+                        && ("Double".equals(fpOwner.name()) || "Float".equals(fpOwner.name()))) {
+                    // #233: Double.isNaN(d)/isInfinite/isFinite (e Float) —
+                    // estáticos JDK reais, retorno BOOL (não String/Unknown)
+                    methodReturnType = Type.PrimitiveType.BOOL;
                 }
             } else if (mc.arguments().size() == 1
                     && ("isNaN".equals(mc.methodName()) || "isInfinite".equals(mc.methodName()) || "isFinite".equals(mc.methodName()))

@@ -256,27 +256,34 @@ if (ae.target() instanceof FieldAccessExpr fa) {
                 Type.PrimitiveType.VOID, KofCallKind.FUNCTION));
         return localIdx;
     }
-    localIdx = ExpressionLowerer.emitExpression(driver, fa.receiver(), ops, owner, localIdx, locals);
     Type recvType = ExpressionTyper.inferExprType(driver, fa.receiver(), locals);
     Type fieldType = Type.UnknownType.UNKNOWN;
+    boolean isStaticField = false;
     if (recvType instanceof Type.ClassType ct) {
         SymbolTable.Symbol fs = HierarchyResolver.resolveFieldInHierarchy(ct.name(), fa.fieldName(), driver.semanticAnalyzer);
-        if (fs != null) fieldType = fs.type();
-        else if (!ct.packageName().isEmpty()
+        if (fs instanceof SymbolTable.FieldSymbol fldSym) {
+            fieldType = fldSym.type();
+            isStaticField = (fldSym.accessFlags() & AccessFlags.STATIC) != 0;
+        } else if (fs != null) {
+            fieldType = fs.type();
+        } else if (!ct.packageName().isEmpty()
                 && driver.externalClasspath.knows(ct.internalName())) {
             String desc = driver.externalClasspath.resolveFieldType(
                     ct.internalName(), fa.fieldName());
             if (desc != null) fieldType = ExternalClasspath.typeFromDescriptor(desc);
         }
     }
+    if (!isStaticField) {
+        localIdx = ExpressionLowerer.emitExpression(driver, fa.receiver(), ops, owner, localIdx, locals);
+    }
     String faOp = ae.operator();
     if (isCompoundOp(faOp)) {
-        // compound em CAMPO (via variável, ex.: b.n -= 2): o getfield
-        // consome o receiver e o putfield precisa dele de novo — duplica
-        // (bug 40: putfield com stack underflow). O tipo do campo REAL
-        // (não Unknown) evita getfield de Object + aritmética inválida.
-        ops.add(new KofDup());
-        ops.add(new KofLoadField(recvType, fa.fieldName(), fieldType));
+        if (isStaticField) {
+            ops.add(new KofGetStatic(recvType, fa.fieldName(), fieldType));
+        } else {
+            ops.add(new KofDup());
+            ops.add(new KofLoadField(recvType, fa.fieldName(), fieldType));
+        }
     }
     localIdx = ExpressionLowerer.emitExpression(driver, ae.value(), ops, owner, localIdx, locals);
     boolean faCompound = isCompoundOp(faOp);
@@ -296,7 +303,11 @@ if (ae.target() instanceof FieldAccessExpr fa) {
             driver.emitErasureBox(ops, faValType);
         }
     }
-    ops.add(new KofStoreField(recvType, fa.fieldName(), fieldType));
+    if (isStaticField) {
+        ops.add(new KofPutStatic(recvType, fa.fieldName(), fieldType));
+    } else {
+        ops.add(new KofStoreField(recvType, fa.fieldName(), fieldType));
+    }
     return localIdx;
 }
 if (ae.target() instanceof ArrayAccessExpr aa) {

@@ -150,8 +150,12 @@ public final class KofInterpreter {
     }
 
     private void ensureRuntimeForModule() throws Exception {
-        Path workDir = Path.of(System.getProperty("java.io.tmpdir"),
-                "kof-interp-" + System.nanoTime());
+        // #125 (seguranca): createTempDirectory = 700 + nome aleatorio;
+        // Path.of(tmp, "kof-interp-" + nanoTime) era previsivel (nanoTime
+        // chutavel) e o mkdirs posterior herdava 755 -> outro usuario local
+        // podia pre-criar ou ler o dir. Nao e so teste: o interpretador roda
+        // o codigo do USUARIO aqui.
+        Path workDir = java.nio.file.Files.createTempDirectory("kof-interp-");
         builtins.prepareRuntime(workDir, usesVk());
     }
 

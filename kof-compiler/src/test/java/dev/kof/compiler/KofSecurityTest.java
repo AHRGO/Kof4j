@@ -559,7 +559,10 @@ class KofSecurityTest {
     private static byte[] hexBytes(String h) {
         byte[] b = new byte[h.length() / 2];
         for (int i = 0; i < b.length; i++) {
-            b[i] = (byte) Integer.parseInt(h.substring(2 * i, 2 * i + 2), 16);
+            // Test input is controlled hex string — NumberFormatException impossible here
+            @SuppressWarnings("NumberFormatException")
+            int v = Integer.parseInt(h.substring(2 * i, 2 * i + 2), 16);
+            b[i] = (byte) v;
         }
         return b;
     }

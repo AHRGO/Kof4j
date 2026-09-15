@@ -10,6 +10,7 @@ public class SymbolTable {
 
     private final SymbolTable parent;
     private final Map<String, Symbol> symbols = new HashMap<>();
+    private final Map<String, FieldSymbol> fields = new HashMap<>();
 
     SymbolTable() {
         this(null);
@@ -55,6 +56,9 @@ public class SymbolTable {
             }
             return;
         }
+        if (symbol instanceof FieldSymbol fs) {
+            fields.put(fs.name(), fs);
+        }
         symbols.put(symbol.name(), symbol);
     }
 
@@ -76,6 +80,13 @@ public class SymbolTable {
         Symbol s = symbols.get(name);
         if (s != null) return s;
         if (parent != null) return parent.resolve(name);
+        return null;
+    }
+
+    FieldSymbol resolveField(String name) {
+        FieldSymbol fs = fields.get(name);
+        if (fs != null) return fs;
+        if (parent != null) return parent.resolveField(name);
         return null;
     }
 
