@@ -427,7 +427,7 @@ public final class SemExpressionTyper {
                     yield BuiltinTypes.STRING;
                 }
                 if (recvType instanceof Type.ClassType ct) {
-                    SymbolTable.Symbol field = MemberResolver.resolveInHierarchy(sa, ct.name(), fa.fieldName());
+                    SymbolTable.Symbol field = MemberResolver.resolveFieldInHierarchy(sa, ct.name(), fa.fieldName());
                     if (field != null) yield field.type();
                     if (sa.isExternal(ct)) {
                         String desc = sa.externalTypes().resolveFieldType(ct.internalName(), fa.fieldName());

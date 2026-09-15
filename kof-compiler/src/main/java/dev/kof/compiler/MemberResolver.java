@@ -36,6 +36,32 @@ public final class MemberResolver {
         return null;
     }
 
+    /** BFS pela hierarquia buscando campo com prioridade sobre métodos de mesmo nome. */
+    static SymbolTable.Symbol resolveFieldInHierarchy(SemanticAnalyzer sa, String className, String fieldName) {
+        java.util.Set<String> visited = new java.util.HashSet<>();
+        java.util.Queue<String> queue = new java.util.LinkedList<>();
+        queue.add(className);
+        visited.add(className);
+        while (!queue.isEmpty()) {
+            String current = queue.poll();
+            SymbolTable.ClassSymbol cs = sa.getClass(current);
+            if (cs == null) continue;
+            SymbolTable.FieldSymbol fs = cs.members().resolveField(fieldName);
+            if (fs != null) return fs;
+            if (cs.superClass() != null && !"Object".equals(cs.superClass()) && !visited.contains(cs.superClass())) {
+                visited.add(cs.superClass());
+                queue.add(cs.superClass());
+            }
+            for (String iface : cs.interfaces()) {
+                if (!visited.contains(iface)) {
+                    visited.add(iface);
+                    queue.add(iface);
+                }
+            }
+        }
+        return resolveInHierarchy(sa, className, fieldName);
+    }
+
     static boolean isObjectMethod(String name, int argCount) {
         return switch (name) {
             case "hashCode", "toString", "getClass" -> argCount == 0;
