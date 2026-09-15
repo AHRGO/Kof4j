@@ -254,4 +254,49 @@ public final class MemberResolver {
             sa.reportError(se, "switch expressão exige 'default' (ou exaustividade de enum)", "SEM032");
         }
     }
+
+    /**
+     * SG-015 (#256): classe concreta que estende classe abstrata deve implementar
+     * todos os métodos abstratos herdados da cadeia de superclasses.
+     */
+    static void checkAbstractClassImplementation(SemanticAnalyzer sa, ClassDeclarationNode cls) {
+        if (sa.diagnostics() == null || cls.modifiers().contains("abstract")) return;
+        String curSuper = cls.superClass();
+        java.util.Set<String> checkedMethods = new java.util.HashSet<>();
+        while (curSuper != null && !curSuper.isEmpty() && !"Object".equals(curSuper)) {
+            String simpleSuper = curSuper.contains("/") ? curSuper.substring(curSuper.lastIndexOf("/") + 1) : curSuper;
+            if (simpleSuper.contains("<")) simpleSuper = simpleSuper.substring(0, simpleSuper.indexOf("<"));
+            SymbolTable.ClassSymbol superCs = sa.allClasses().get(simpleSuper);
+            if (superCs == null) break;
+            for (java.util.Map.Entry<String, SymbolTable.Symbol> e : superCs.members().localSymbols().entrySet()) {
+                if (!(e.getValue() instanceof SymbolTable.MethodSymbol am)) continue;
+                if ((am.accessFlags() & AccessFlags.ABSTRACT) == 0) continue;
+                String methodKey = am.name() + "/" + am.parameterTypes().size();
+                if (!checkedMethods.add(methodKey)) continue;
+                SymbolTable.Symbol local = resolveInHierarchy(sa, cls.name(), am.name());
+                boolean implemented = false;
+                if (local instanceof SymbolTable.MethodSymbol lm) {
+                    if ((lm.accessFlags() & AccessFlags.ABSTRACT) == 0
+                            && lm.parameterTypes().size() == am.parameterTypes().size()) {
+                        implemented = true;
+                    }
+                } else if (local instanceof SymbolTable.MethodSet set) {
+                    for (SymbolTable.MethodSymbol lm : set.methods()) {
+                        if ((lm.accessFlags() & AccessFlags.ABSTRACT) == 0
+                                && lm.parameterTypes().size() == am.parameterTypes().size()) {
+                            implemented = true;
+                            break;
+                        }
+                    }
+                }
+                if (!implemented) {
+                    sa.diagnostics().error("", 0, 0, 0,
+                            "class '" + cls.name() + "' does not implement abstract method '"
+                                    + am.name() + "()' from superclass '" + superCs.name() + "'",
+                            "SEM043");
+                }
+            }
+            curSuper = superCs.superClass();
+        }
+    }
 }

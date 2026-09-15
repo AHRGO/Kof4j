@@ -266,6 +266,7 @@ public final class SymbolTableBuilder {
         // estático → IncompatibleClassChangeError (JVM, contexto de instância)
         // / VerifyError (contexto estático, <clinit>).
         if (method.modifiers().contains("static")) accessFlags |= AccessFlags.STATIC;
+        if (method.modifiers().contains("abstract")) accessFlags |= AccessFlags.ABSTRACT;
         SymbolTable.MethodSymbol methodSym = new SymbolTable.MethodSymbol(method.name(), className,
                 returnType, paramTypes, accessFlags, SymbolTable.DispatchKind.INSTANCE);
         classScope.define(methodSym);
