@@ -230,4 +230,95 @@ public final class CompilerRecordSupport {
         return overloads;
     }
 
+    /**
+     * Issue #248: Gera métodos bridge sintéticos para métodos sobrescritos com
+     * tipo de retorno covariante (subtipo do retorno da superclasse).
+     * O bridge possui o descritor da superclasse e delega ao método covariante.
+     */
+    static List<IRMethod> generateCovariantReturnBridges(CompilerDriver driver, String internalName,
+                                                        String superName, List<IRMethod> methods) {
+        if (driver.semanticAnalyzer == null || superName == null
+                || "java/lang/Object".equals(superName) || superName.isEmpty()) {
+            return List.of();
+        }
+        String superSimple = superName.contains("/")
+                ? superName.substring(superName.lastIndexOf('/') + 1) : superName;
+        SymbolTable.ClassSymbol superSym = driver.semanticAnalyzer.getClass(superSimple);
+        if (superSym == null) return List.of();
+
+        Type ownerType = CompilerTypes.ownerTypeFromInternal(internalName, driver.semanticAnalyzer);
+        List<IRMethod> bridges = new ArrayList<>();
+
+        for (IRMethod m : methods) {
+            if ("<init>".equals(m.name()) || "<clinit>".equals(m.name())
+                    || (m.accessFlags() & AccessFlags.STATIC) != 0
+                    || (m.accessFlags() & AccessFlags.PRIVATE) != 0) {
+                continue;
+            }
+            SymbolTable.Symbol superMember = MemberResolver.resolveInHierarchy(driver.semanticAnalyzer,
+                    superSimple, m.name());
+            List<SymbolTable.MethodSymbol> candidates = new ArrayList<>();
+            if (superMember instanceof SymbolTable.MethodSymbol ms) {
+                candidates.add(ms);
+            } else if (superMember instanceof SymbolTable.MethodSet set) {
+                candidates.addAll(set.methods());
+            }
+
+            for (SymbolTable.MethodSymbol parentMethod : candidates) {
+                if ((parentMethod.accessFlags() & AccessFlags.STATIC) != 0
+                        || (parentMethod.accessFlags() & AccessFlags.PRIVATE) != 0) {
+                    continue;
+                }
+                if (parentMethod.parameterTypes().size() != m.parameterTypes().size()) {
+                    continue;
+                }
+                boolean paramsMatch = true;
+                for (int i = 0; i < m.parameterTypes().size(); i++) {
+                    if (!m.parameterTypes().get(i).equals(parentMethod.parameterTypes().get(i))) {
+                        paramsMatch = false;
+                        break;
+                    }
+                }
+                if (!paramsMatch) continue;
+
+                Type parentRet = parentMethod.returnType();
+                Type childRet = m.returnType();
+
+                if (!childRet.equals(parentRet) && TypeChecker.isAssignable(driver.semanticAnalyzer, childRet, parentRet)) {
+                    // Já existe um método na classe com a mesma assinatura do pai?
+                    boolean alreadyExists = methods.stream().anyMatch(existing ->
+                            existing.name().equals(m.name())
+                            && existing.returnType().equals(parentRet)
+                            && existing.parameterTypes().equals(parentMethod.parameterTypes()));
+                    if (alreadyExists) continue;
+
+                    List<KofOperation> ops = new ArrayList<>();
+                    List<IRLocalVariable> locals = new ArrayList<>();
+                    locals.add(new IRLocalVariable(0, "this", ownerType));
+                    ops.add(new KofLoadLocal(ownerType, 0));
+
+                    int localIdx = 1;
+                    for (int i = 0; i < m.parameterTypes().size(); i++) {
+                        Type pt = m.parameterTypes().get(i);
+                        locals.add(new IRLocalVariable(localIdx, "arg" + i, pt));
+                        ops.add(new KofLoadLocal(pt, localIdx));
+                        localIdx += TypeMetrics.isDoubleWidth(pt) ? 2 : 1;
+                    }
+
+                    ops.add(new KofCall(ownerType, m.name(), m.parameterTypes(), childRet, KofCallKind.INSTANCE));
+                    if (Type.isVoid(parentRet)) {
+                        ops.add(new KofReturnVoid());
+                    } else {
+                        ops.add(new KofReturn(parentRet));
+                    }
+
+                    int bridgeFlags = AccessFlags.PUBLIC | AccessFlags.BRIDGE | AccessFlags.SYNTHETIC;
+                    bridges.add(new IRMethod(m.name(), parentRet, parentMethod.parameterTypes(),
+                            bridgeFlags, List.of(), List.of(new IRBasicBlock(0, ops)), locals));
+                }
+            }
+        }
+        return bridges;
+    }
+
 }

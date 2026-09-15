@@ -8,8 +8,10 @@ public final class AccessFlags {
     public static final int STATIC     = 0x0008;
     public static final int FINAL      = 0x0010;
     public static final int SUPER      = 0x0020;
+    public static final int BRIDGE     = 0x0040;
     public static final int ABSTRACT   = 0x0400;
     public static final int INTERFACE  = 0x0200;
+    public static final int SYNTHETIC  = 0x1000;
 
     private AccessFlags() {}
 }
