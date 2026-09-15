@@ -1,0 +1,138 @@
+name: kof-issues-agent
+
+on:
+  issues:
+    types: [opened, reopened, labeled]
+  issue_comment:
+    types: [created]
+  pull_request:
+    types: [opened, reopened, labeled, synchronize]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  triage:
+    name: Triage Issue
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.event_name == 'issues' && (github.event.action == 'opened' || github.event.action == 'reopened')
+    steps:
+      - name: Auto-label by content
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const body = (issue.body || '').toLowerCase();
+            const labels = [];
+
+            // Security-related
+            if (body.includes('security') || body.includes('vulnerability') || body.includes('exploit') || body.includes('rce') || body.includes('xss') || body.includes('sql injection')) {
+              labels.push('security');
+            }
+
+            // Bug vs Feature
+            if (body.includes('bug') || body.includes('crash') || body.includes('error') || body.includes('exception') || body.includes('fail') || body.includes('broken')) {
+              labels.push('bug');
+            } else if (body.includes('feature') || body.includes('request') || body.includes('enhancement') || body.includes('improve')) {
+              labels.push('enhancement');
+            }
+
+            // Documentation
+            if (body.includes('doc') || body.includes('documentation') || body.includes('readme') || body.includes('typo')) {
+              labels.push('documentation');
+            }
+
+            // Platform/Target
+            if (body.includes('native') || body.includes('riscv') || body.includes('aarch64') || body.includes('arm64')) {
+              labels.push('native');
+            }
+            if (body.includes('js') || body.includes('javascript') || body.includes('browser') || body.includes('node')) {
+              labels.push('js');
+            }
+            if (body.includes('jvm') || body.includes('java')) {
+              labels.push('jvm');
+            }
+
+            if (labels.length > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels
+              });
+            }
+
+      - name: Assign to maintainer if security
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const body = (issue.body || '').toLowerCase();
+            if (body.includes('security') || body.includes('vulnerability') || body.includes('exploit') || body.includes('rce')) {
+              await github.rest.issues.addAssignees({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                assignees: ['aminadojava']
+              });
+            }
+
+  respond:
+    name: Auto-respond to comments
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.event_name == 'issue_comment' && github.event.action == 'created'
+    steps:
+      - name: Auto-reply to new issues
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = context.payload.comment;
+            const issue = context.payload.issue;
+
+            // Don't reply to bot comments
+            if (comment.user.type === 'Bot') return;
+
+            // Thank you for new issues
+            if (github.event.action === 'created' && context.payload.action === 'opened') {
+              const body = `Obrigado pelo reporte! 🤖
+
+              Este issue foi triado automaticamente pelo **kof-issues-agent**.
+
+              **Próximos passos:**
+              1. A mantenedora (@aminadojava) fará a triagem completa
+              2. Se for bug de segurança, será priorizado
+              4. Se for feature request, entrará na fila de prioridades
+
+              Enquanto isso, sinta-se à vontade para adicionar mais detalhes.`;
+
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.issue.number,
+                body
+              });
+            }
+
+  stale:
+    name: Stale Bot
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Mark stale issues/PRs
+        uses: actions/stale@v9
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          stale-issue-message: 'Esta issue está inativa há 60 dias. Será fechada em 7 dias se não houver atividade. Comente para manter aberta.'
+          stale-pr-message: 'Este PR está inativo há 60 dias. Será fechado em 7 dias se não houver atividade.'
+          days-before-stale: 60
+          days-before-close: 7
+          exempt-all-milestones: true
+          exempt-all-assignees: true
+          exempt-all-projects: true
+          exempt-all-labels: true

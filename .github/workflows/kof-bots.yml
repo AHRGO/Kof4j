@@ -1,0 +1,70 @@
+name: kof-bots-orchestrator
+
+on:
+  push:
+    branches: [main, beta-*]
+  pull_request:
+    branches: [main, beta-*]
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"  # Weekly Monday 6am
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+  issues: write
+  checks: write
+
+jobs:
+  orchestrate:
+    name: Orchestrate Bots
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Trigger kof-quality-bot
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'kof-quality-bot.yml',
+              ref: context.ref
+            });
+
+      - name: Trigger kof-warning-bot
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'kof-warning-bot.yml',
+              ref: context.ref
+            });
+
+      - name: Trigger kof-security-bot
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'kof-security-bot.yml',
+              ref: context.ref
+            });
+
+  aggregate-results:
+    name: Aggregate Bot Results
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: orchestrate
+    if: always()
+    steps:
+      - name: Aggregate Status
+        run: |
+          echo "Bot orchestration complete"
+          echo "Quality: ${{ needs.orchestrate.result }}"
+          echo "Warning: ${{ needs.orchestrate.result }}"
+          echo "Security: ${{ needs.orchestrate.result }}"
