@@ -31,6 +31,12 @@ public final class TypeChecker {
         return BuiltinTypes.isString(t);
     }
 
+    /** Enum OU Nullable(enum) — D-ENUM207 (a comparação enum×String é SEM062). */
+    private static boolean isEnumRef(Type t) {
+        if (t instanceof Type.NullableType nt) return isEnumRef(nt.inner());
+        return BuiltinTypes.isEnumType(t);
+    }
+
     static Type inferBinaryResultType(DiagnosticCollector diagnostics, String operator, Type left, Type right) {
         // bug 98 (paridade absoluta JVM=JS=X86=ARM=RISC, opção B da mantenedora):
         // `<`/`<=`/`>`/`>=` entre Strings — a ordem era UNspecified no reference
@@ -58,6 +64,22 @@ public final class TypeChecker {
                         "SEM053");
             }
             return Type.UnknownType.UNKNOWN;
+        }
+        // §211 / D-ENUM207: um valor de enum NÃO é uma String. `Dir.N == "N"`
+        // compilava e devolvia `true` (o valor era `ldc "N"`), quebrando a
+        // identidade que a issue #207 exige. A mantenedora ratificou o erro de
+        // tipo (DECISIONS D-ENUM207). Rejeitado no frontend COMPARTILHADO —
+        // o mesmo SEM062 nos 4 alvos (sem divergência, freeze regra 5).
+        if (("==".equals(operator) || "!=".equals(operator))
+                && (isEnumRef(left) && isMaybeString(right) || isMaybeString(left) && isEnumRef(right))) {
+            if (diagnostics != null) {
+                diagnostics.error("", 0, 0, 0,
+                        "Cannot compare an enum value to a String: an enum constant is not "
+                                + "a String (D-ENUM207). Compare two enum values, or use "
+                                + ".name() explicitly to get the name",
+                        "SEM062");
+            }
+            return Type.PrimitiveType.BOOL;
         }
         if ("==".equals(operator) || "!=".equals(operator) || "<".equals(operator) ||
                 ">".equals(operator) || "<=".equals(operator) || ">=".equals(operator)) {

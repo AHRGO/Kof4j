@@ -54,6 +54,7 @@ atribuição.
   - `string`, `record`, `enum` → **conteúdo**
   - primitivo → **valor**
   - referência (outros) → **identidade**
+  - um valor de enum **não** é uma String: `Dir.N == "N"` → `SEM062` (D-ENUM207)
   - ver [type-system.md](type-system.md) §10.
 - `< <= > >=` só fazem sentido em numéricos/char. Em **String é rejeitado em
   tempo de compilação (SEM053)** — a ordem lexicográfica era **Unspecified** e

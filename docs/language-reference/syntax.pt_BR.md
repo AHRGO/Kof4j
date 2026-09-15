@@ -83,6 +83,7 @@ println(p.x())                         // 10
 
 enum Color { Red, Blue }               // só constantes; valor = String
 println(Color.Red)                     // "Red"
+// Color.Red == "Red"                  // SEM062: um valor de enum não é String
 
 interface Shape { Double area() }
 class Circle(Double r) implements Shape {   // ⚠ class X(...) = record!

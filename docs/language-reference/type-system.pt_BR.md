@@ -253,9 +253,13 @@ representação 1/0, mas é implementation-defined — §3.1).
 |---|---|---|
 | `string` | **conteúdo** (`kof_string_equals`) | *probe*: `"ab" == "a"+"b"` → true |
 | `record` | **conteúdo** (equals gerado campo a campo) | *probe*: `P(1,2)==P(1,2)` → true |
-| `enum` | **conteúdo** (é String em runtime) | `ExpressionLowerer.java:285` |
-| primitivo | **valor** | `if_icmp`/`lcmp`/`fcmpl`/`dcmpl` |
+| `enum` | **conteúdo** entre dois valores de enum (é String em runtime) | `ExpressionLowerer.java:285` |
 | referência (não-string/record/enum) | **identidade** (`if_acmp`) | *probe*: `C(1)==C(1)` → false |
+
+Um valor de enum **não** é uma String: `Dir.N == "N"` é rejeitado em
+compile-time com `SEM062` (D-ENUM207 / issue #207). Compare dois valores de
+enum, ou chame `.name()` explicitamente para obter o nome.
+
 
 `a.equals(b)` **funciona** em string (*probe*) mas é anti-pattern — use `==`.
 

@@ -137,7 +137,10 @@ println(c.name())         // "Red" (probe)
 - **Constants only** — no methods, fields, constructors, body (`enum E { A
   String f(){…} }` → `PARSE032`, *probe*).
 - **At runtime the enum value IS the name (`String`)** (`BuiltinTypes.java:95-98`).
-  `Color.Red` is the string `"Red"`. `==` compares content.
+  `Color.Red` is the string `"Red"`. `==` compares content between two enum
+  values. An enum value is **not** a String: `Color.Red == "Red"` is rejected
+  at compile time with `SEM062` (D-ENUM207 / issue #207) — compare two enum
+  values or call `.name()` explicitly.
 - Synthetic methods: `values() → List<String>` (static), `valueOf(String) →
   enum` (static), `name() → String` (instance) (`preDeclareType:299-314`).
 - **Switch over enum**: without `default` it requires full coverage → otherwise `SEM031`.

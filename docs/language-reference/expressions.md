@@ -54,6 +54,7 @@ context.
   - `string`, `record`, `enum` → **content**
   - primitive → **value**
   - reference (others) → **identity**
+  - an enum value is **not** a String: `Dir.N == "N"` → `SEM062` (D-ENUM207)
   - see [type-system.md](type-system.md) §10.
 - `< <= > >=` only make sense on numerics/char. On **String it is rejected at
   compile time (SEM053)** — lexicographic order was **Unspecified** and
