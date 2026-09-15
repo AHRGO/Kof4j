@@ -78,32 +78,28 @@ de HB da §2 com os E2Es da §4 antes de sair de `experimental`.
 > valor parcial) IMPLEMENTADOS** — `KofConcurrency2Test:699/:737`, verde na
 > suíte (29/0/1-skip qemu). Todas as 5 bordas de HB da §2 têm prova.
 
-> **⚠️ Emenda 11/09 — a regra 5 ainda não tem prova.** Revisão de
-> `KofConcurrency2Test:699` (`staticsAreSequentiallyConsistent`): o programa
-> declara `Resultado.r1..r4` e **nunca os usa** — as quatro tarefas chamam
-> `soma1000()`, função pura sem estado compartilhado, e o pai soma os valores
-> devolvidos pelos `await`. Não há **nenhuma escrita concorrente em campo
-> compartilhado** no teste. O que ele demonstra é a borda **2 (await)**, não a
-> regra **5 (SC para statics e campos de objetos)**. O comentário do próprio
-> teste já reconhece o limite: *"data race de read-modify-write NÃO é atômico
-> por definição do modelo"*.
->
-> `noWordTearingOnLong` (`:737`) **é** prova real da regra 6 — há escrita
-> concorrente em `Estado.v` com leitura em laço.
->
-> **Lacuna que importa para `docs/development/planning-otp-supervision.md`
-> (DD-OTP-08):** o padrão **stop-flag** — um fluxo escreve `Bool = true`, outro
-> lê em laço até observar — não é coberto por teste nenhum. `Estado.pronto` é
-> escrito em `noWordTearingOnLong` e nunca lido. Como `volatile` é non-goal
-> (§5) e `BoxClassFactory.java:25` cria o campo como `AccessFlags.PUBLIC`
-> simples (`ACC_VOLATILE` não aparece em nenhum ponto do compilador), na JVM a
-> visibilidade da flag depende inteiramente de a regra 5 valer — justamente a
-> que falta provar. Sem isso, `.stop()` pode nunca ser observado por um worker
-> de longa duração: falha que **passa** em teste curto e **trava** em produção.
->
-> **Pendência (destrava o DD-OTP-08):** ou um E2E do padrão stop-flag
-> (escritor + leitor em laço, com deadline que falha se a escrita nunca for
-> observada), ou reescrever a regra 5 para o que as provas de fato cobrem.
+> **⚠️ Emenda 14/09 — a regra 5 agora tem prova E correção de backend.**
+> `stopFlagFieldWriteObservedBySpinReader` +
+> `stopFlagCapturedBoxObservedBySpinReader` (`KofConcurrency2Test`) são o
+> padrão stop-flag do DD-OTP-08: campo de instância (e campo de Box capturada
+> por closure) escrito por um fluxo, girado em laço por outro, com a escrita
+> do escritor aos +100ms dentro de um laço de 500M iterações. **Pré-fix
+> (medido, 3/3):** o campo era emitido simples (`BoxClassFactory`
+> `AccessFlags.PUBLIC`; nenhum `ACC_VOLATILE` em ponto algum do compilador) e
+> o C2 hoistava o `getfield` fora do laço — o leitor imprimia
+> `nao-observou`, i.e. `.stop()` jamais seria observado por um worker longevo.
+> **Fix (causa raiz, mesma unidade):** todo campo **mutável** (não-`final`) de
+> classe Kof agora é emitido com `ACC_VOLATILE` (emissão de campos de
+> `JvmBackend`; `AccessFlags.VOLATILE = 0x0040`, o bit de field-flags da §4.7
+> que divide valor com o `BRIDGE` de method-flags). Campos `final` (records,
+> refs de closure) mantêm a semântica. Isso conforma o CÓDIGO à regra 5 da §2
+> (ratificada 09/09) — a spec já era lei, o código era o desvio. Pós-fix,
+> `observou` prova a borda na JVM. JS/interpretador andam no runtime da JVM
+> (§3); x86-TSO não precisava de fence para este padrão (SC da regra 5);
+> riscv/aarch herdam via tradutor (§3). **DD-OTP-08 (`.stop()` do supervisor)
+> está DESTRAVADO**: a flag que o supervisor seta agora é garantidamente
+> visível ao worker sem `volatile` como superfície de linguagem (segue
+> non-goal §5; a abstração carrega a prova).
 
 ## 5. O que NÃO é especificado (non-goals)
 

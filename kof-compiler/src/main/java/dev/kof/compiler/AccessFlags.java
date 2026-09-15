@@ -9,6 +9,9 @@ public final class AccessFlags {
     public static final int FINAL      = 0x0010;
     public static final int SUPER      = 0x0020;
     public static final int BRIDGE     = 0x0040;
+    // 0x0040 no espaço de FIELD flags (JVM spec §4.7) — mesmo bit de BRIDGE,
+    // que só existe no espaço de METHOD flags (§4.6). (SG-020 regra 5)
+    public static final int VOLATILE   = 0x0040;
     public static final int ABSTRACT   = 0x0400;
     public static final int INTERFACE  = 0x0200;
     public static final int SYNTHETIC  = 0x1000;

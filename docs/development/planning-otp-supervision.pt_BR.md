@@ -22,7 +22,7 @@
 | 05 | Plano ou árvore | ✅ fechada |
 | 06 | Estado no restart | ✅ fechada |
 | 07 | Escalonamento | ✅ fechada (contradição do texto resolvida) |
-| 08 | Shutdown | 🚫 **BLOQUEADA** — regra 5 do SG-020 sem prova |
+| 08 | Shutdown | ✅ destravada 14/09 — stop-flag provado (`KofConcurrency2Test`), campos mutáveis agora `ACC_VOLATILE` (ver emenda 14/09 do SG-020); implementação ainda pendente |
 | 09 | Alvos | ❌ **ABERTA** — depende do 03 |
 | 10 | Relógio injetável | ✅ fechada |
 | 11 | Métrica de sucesso | ✅ fechada (quatro gates) |
@@ -237,26 +237,22 @@ nunca silencioso). `cancel(handle)` do runtime é bônus onde funciona (JVM/
 x86), nunca a única alavanca. O join implícito é liberado quando o laço da
 supervisora termina — nada novo aqui, só honestidade no deadline.
 
-> ⚠️ **Emenda 11/09 — BLOQUEADA: a flag não tem garantia de visibilidade.**
-> A afirmação *"uma `Bool` capturada em `Box` é visível ao worker em TODOS
-> os targets"* depende da **regra 5 do SG-020** (SC para statics e campos
-> compartilhados). Essa regra **ainda não está provada**: o teste citado,
-> `KofConcurrency2Test.staticsAreSequentiallyConsistent:699`, não tem
-> nenhuma escrita concorrente em campo compartilhado — declara
-> `Resultado.r1..r4` e nunca os usa; o que prova é a borda do **await**. E
-> `volatile` é non-goal da linguagem (SG-020 §5), com
-> `BoxClassFactory.java:25` criando o campo como `AccessFlags.PUBLIC`
-> simples (`ACC_VOLATILE` não aparece em nenhum ponto do compilador).
-> Na JVM, portanto, `while (!parar.value)` pode ter a leitura içada do laço
-> e **nunca observar o `stop()`** — falha que passa em teste curto e trava
-> em worker de longa duração, exatamente o caso de uso da feature.
-> **Destrava com:** um E2E do padrão stop-flag (escritor + leitor em laço,
-> com deadline que falha se a escrita não for observada), ou reescrita da
-> regra 5. Se a flag própria cair, a alternativa é o `cancel` do runtime —
-> e aí o **bug 101 deixa de ser independente e passa a bloquear**
-> (ver DD-OTP-13).
+> ⚠️ **14/09 — DESTRAVADA (substitui a nota BLOQUEADA de 11/09 abaixo,
+> mantida por história).** A prova que faltava existe:
+> `stopFlagFieldWriteObservedBySpinReader` +
+> `stopFlagCapturedBoxObservedBySpinReader` (`KofConcurrency2Test`) reproduzem
+> o padrão stop-flag e, pré-fix, FALHAM exatamente como a emenda previa — o
+> campo simples deixava o C2 hoistar o `getfield` (medido: `nao-observou` 3/3
+> com a escrita aos +100ms dentro de laço de 500M iterações). Fix de causa raiz
+> na mesma unidade: **todo campo mutável (não-final) de classe Kof é emitido
+> `ACC_VOLATILE`** (`JvmBackend`; a regra 5 da spec já era lei — o código era o
+> desvio). Pós-fix: `observou`, nos dois caminhos. O campo volátil que a
+> stop-flag do supervisor usa é portanto garantidamente visível na JVM;
+> detalhes na emenda 14/09 do SG-020. O que resta aqui é só **implementação**:
+> ligar a flag capturada ao contrato do worker de `supervisor-host.kf`
+> (worker reconstrutível pela fábrica que a checa) + E2E do dreno com deadline.
 
-### DD-OTP-09 — Alvos
+> ⚠️ **Emenda 11/09 — BLOQUEADA: a flag não tem garantia de visibilidade.**### DD-OTP-09 — Alvos
 Puro-Kof (DD-OTP-01-A) = **JVM + Script + JS + Native x86 + riscv/aarch de
 graça** (tudo usa só spawn/await/selectAny já existentes). Sem `OTP001` —
 nenhum gap novo nasce desta feature (a restrição JS-01 não alcança
