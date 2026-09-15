@@ -922,6 +922,50 @@ class DecompileTest {
     }
 
     @Test
+    void sipushConstantInTestIsRecoveredAndRuns(@TempDir Path dir) throws Exception {
+        // §238-face (sipush no loadValue): `if (a == 30000)` usa sipush (const
+        // fora do range de bipush). O loadValue nao tratava 0x11 e o teste
+        // computado ficava null = stub, APEMBAR que o machineRun ja dobrava
+        // (divergencia de passada). Seguranca: so icar o local escapante com o
+        // hoist §238 no lugar (sem ele viraria saida nao-compilavel). Prova:
+        // decompila `if (arg0 == 30000)` COM o var içado + recompila + roda os
+        // 3 caminhos (oracle JVM medido 1/2/1).
+        Path src = dir.resolve("classes");
+        Files.createDirectories(src);
+        Path s = src.resolve("Sp.java");
+        Files.writeString(s, """
+                public class Sp {
+                    public static int big(int a) {
+                        int r; if (a == 30000) { r = 1; } else { r = 2; } return r;
+                    }
+                }
+                """);
+        runJavac(java.util.List.of(s), src);
+        String kof = Decompile.decompile(src.resolve("Sp.class"));
+
+        assertTrue(kof.contains("if (arg0 == 30000)"), "sipush deve dobrar no teste:\n" + kof);
+        assertFalse(kof.contains("throw \"body not recovered\""), "nao deve stubar (era o gap):\n" + kof);
+
+        Path out = dir.resolve("gen");
+        Files.createDirectories(out);
+        Path kf = out.resolve("Sp.kf");
+        Files.writeString(kf, kof);
+        Path mainKf = out.resolve("Main.kf");
+        Files.writeString(mainKf, "main() {\n    println(Sp.big(30000))\n    println(Sp.big(1))\n"
+                + "    println(Sp.big(-30000))\n}\n");
+        CompilationResult r = new CompilerDriver().compileSources(java.util.List.of(kf, mainKf),
+                dir.resolve("o"), Target.JVM, out);
+        assertTrue(r.success(), "sipush içado deve COMPILAR:\n" + kof + "\n" + r.diagnostics().getDiagnostics());
+        ProcessBuilder pb = new ProcessBuilder("java", "-cp", dir.resolve("o").toString(), "Default.Main");
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String o = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+                .replace("\r\n", "\n").trim();
+        assertEquals(0, p.waitFor(), "run: " + o);
+        assertEquals("1\n2\n2", o, "3 caminhos do teste sipush:\n" + kof);
+    }
+
+    @Test
     void refLocalEscapingStaysHonestStubNotBrokenOutput(@TempDir Path dir) throws Exception {
         // §238 (face R6): um local de REFERENCIA escapante (String s escrito
         // nos 2 ramos, lido depois) NAO tem default seguro a icar (o tipo de

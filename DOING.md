@@ -948,9 +948,19 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > restantes sao regra 6 (diamante+continue, 453) e lane compiler (interop
 > 646/§234); mover p/ `docs/` depende de decisao da mantenedora sobre o
 > destino da Fase C. **PRÓXIMO PASSO desta lane (docs/development
-> exclusiva):** re-varrer `docs/development/` — se nenhum doc tiver
-> trabalho acionavel sem dono, STABILITY: registrar recusa + parar cron
-> (scripts/auto-loop.sh stop) e reportar ao maintainer.
+> exclusiva):** re-varrer `docs/development/` a cada re-disparo — se nenhum
+> doc tiver trabalho acionavel sem dono na lane, registrar recusa DA LANE.
+> **NAO e STABILITY do repo** (fila com 32 abertas + 3 reds de gate de outras
+> lanes: §181 residual, §233 migracao de teste, §237 `computeStack` lane .22)
+> — o cron NAO para com o repo instavel; so registrar recusa + reportar.
+> (4) ✅ **FACE sipush FECHADA na unidade 2c (14/09 ~22:05):** `loadValue`
+> espelhado ao `machineRun` (0x11→short) — seguro so DEPOIS do hoist §238
+> (antes converteria stub em saida quebrada; a re-medida Roi3 marcou §238
+> como pre-requisito; prova Q0 = dump medido pre-fix com big/neg/edge em
+> `throw "body not recovered"`); `if (a == 30000)` agora recupera
+> COMPILAVEL+executavel (teste `sipushConstantInTestIsRecoveredAndRuns`,
+> golden JVM medido `1|2|2`); DecompileTest 67/67 + PostDom 6/6 verdes,
+> check_500 exit 0 (BytecodeDecoder 412).
 
 
 

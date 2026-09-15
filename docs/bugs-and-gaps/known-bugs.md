@@ -7550,7 +7550,14 @@ of the issues (repros kept in the issue comments):
   exit=0 (nenhuma classe >=600). O caso `longLocal` fica stub (causa outra —
   return long, nao o hoist; nao regrediu — diff antes/depois so mostra
   bothWrite recuperado + refLocal honesto).
-
+- **Follow-up face (mesma unidade, ~22:05): sipush no `loadValue`.** A
+  re-medida anotou que um `sipush`-only fix seria inseguro ANTES do hoist
+  (converteria stub em saida quebrada). COM o §238 no lugar, o `loadValue` foi
+  espelhado ao `machineRun` (0x11→`short`): `if (a == 30000)` (const >
+  bipush-range) deixa de stubar e sai em forma COMPILAVEL + executavel (face
+  `Sp.big`: `int r` escapante icado por §238, teste `sipushConstantInTest-
+  IsRecoveredAndRuns`, exec 1/2/2 == oracle). E o fechamento de uma
+  DIVERGENCIA de passada, nao um ganho de forma nova. DecompileTest 67/67.
 
 ### §236 ✅ FIXED 14/09 (unidade da própria caça ao 5º-red) — `comparisonReturn` dobra shape ambíguo para Bool cru: `return a < b ? 1 : 0` num corpo `Int` virava saída NÃO-compilável (SEM010); trava `wideParamsMapToCorrectSlots` quando o typer endureceu
 

@@ -606,7 +606,14 @@ Fase E  Kof Decompiler          (gerar Kof source)
 > (537→547 TOLERADA, StructWalker 84 linhas). O que resta na lane
 > estrutural: a face lei-do-diamante + `continue` (453, regra 6 — decisao da
 > mantenedora) e os testes interop (646, lane compiler §234) — o doc volta
-> a um ponto de parada genuino.
+> a um ponto de parada genuino. **ATUALIZACAO 3 (14/09 ~22:05, mesma
+> unidade): face sipush FECHADA** — `loadValue` espelha o `machineRun`
+> (0x11 to short), seguro so DEPOIS do hoist §238 (antes, um fix
+> so-de-sipush virava stub em saida nao-compilavel — a re-medida 18:20
+> marcou §238 como pre-requisito); `if (a == 30000)` agora recupera
+> COMPILAVEL + executavel (`sipushConstantInTestIsRecoveredAndRuns`,
+> oracle JVM `1|2|2`); DecompileTest 67/67. Fechando divergencia de
+> passada, nao forma nova. A lane estrutural esta agora exausta.
 
 ## 7. Relação com o Compilador
 

@@ -604,6 +604,13 @@ Phase E  Kof Decompiler          (generate Kof source)
 > StructWalker 84 linhas). Remaining in the structural lane: the diamond law +
 > `continue` face (453, rule 6 — maintainer decision) and the interop tests
 > (646, §234 lane compiler) — the doc returns to a genuine stopping point.
+> **UPDATE 3 (14/09 ~22:05, same unit): sipush face CLOSED** — `loadValue`
+> mirrors `machineRun` (0x11 to short), safe only AFTER the §238 hoist
+> (before it, a sipush-only fix turned stubs into non-compilable output —
+> the 18:20 re-measure marked §238 as the prerequisite); `if (a == 30000)`
+> now recovers COMPILABLE + runnable (`sipushConstantInTestIsRecoveredAnd
+> Runs`, JVM oracle `1|2|2`); DecompileTest 67/67. Closing a PAST
+> divergence, not a new shape. The structural lane is now exhausted.
 
 ## 7. Relationship with the Compiler
 
