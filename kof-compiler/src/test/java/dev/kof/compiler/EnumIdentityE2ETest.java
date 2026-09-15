@@ -94,4 +94,84 @@ class EnumIdentityE2ETest {
         assertTrue(r.success(), "enum vs nullable enum must keep compiling: "
                 + r.diagnostics().getDiagnostics());
     }
+
+    // ---- faces 2..n: enum is a real instance (slice 2, D-ENUM207) ----
+
+    @Test
+    void enumHasRealIdentityOnJvm(@TempDir Path tmp) throws Exception {
+        Path out = tmp.resolve("out-" + System.nanoTime());
+        CompilationResult r = compileInto(tmp, """
+                enum Dir { N, S, E }
+                main() {
+                    println(Dir.N.getClass())
+                    println(Dir.N == Dir.N)
+                    println(Dir.N == Dir.S)
+                    var d: Dir = Dir.S
+                    println(d instanceof Dir)
+                    println(Dir.N.name())
+                    println(Dir.S.ordinal())
+                    println(Dir.N.compareTo(Dir.S))
+                    val vs = Dir.values()
+                    println(vs.size())
+                    println(vs.get(0) == Dir.N)
+                    println(Dir.valueOf("S") == Dir.S)
+                    println(Dir.valueOf("nope") == null)
+                }
+                """, out);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        // a real enum class is emitted (was: no Dir.class at all)
+        assertTrue(Files.exists(out.resolve("Dir.class")),
+                "the enum class Dir.class must be emitted");
+        String output = runJvm(out);
+        assertEquals("""
+                class Dir
+                true
+                false
+                true
+                N
+                1
+                -1
+                3
+                true
+                true
+                true""", output);
+    }
+
+    @Test
+    void enumConstantCompilesToGetstatic(@TempDir Path tmp) throws Exception {
+        Path out = tmp.resolve("out-" + System.nanoTime());
+        CompilationResult r = compileInto(tmp, """
+                enum Dir { N, S }
+                main() {
+                    println(Dir.N)
+                }
+                """, out);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        // javap proof: `Dir.N` is a getstatic of the enum class, not `ldc "N"`.
+        Process p = new ProcessBuilder(System.getProperty("java.home") + "/bin/javap",
+                "-c", "-p", "-cp", out.toString(), "Default.Main")
+                .redirectErrorStream(true).start();
+        String disasm = new String(p.getInputStream().readAllBytes(),
+                java.nio.charset.StandardCharsets.UTF_8);
+        assertTrue(disasm.contains("getstatic") && disasm.contains("Dir.N:LDir;"),
+                "expected `getstatic Dir.N:LDir;`, got:\n" + disasm);
+        assertFalse(disasm.contains("String N"),
+                "the old `ldc // String N` must be gone:\n" + disasm);
+    }
+
+    private CompilationResult compileInto(Path dir, String source, Path out) throws Exception {
+        Path file = dir.resolve("Main-" + System.nanoTime() + ".kf");
+        Files.writeString(file, source);
+        return driver.compile(file, out, Target.JVM);
+    }
+
+    private String runJvm(Path out) throws Exception {
+        Process p = new ProcessBuilder(System.getProperty("java.home") + "/bin/java",
+                "-cp", out.toString(), "Default.Main").redirectErrorStream(true).start();
+        String output = new String(p.getInputStream().readAllBytes(),
+                java.nio.charset.StandardCharsets.UTF_8).replace("\r\n", "\n").trim();
+        int ec = p.waitFor();
+        assertEquals(0, ec, "JVM exit code, output: " + output);
+        return output;
+    }
 }

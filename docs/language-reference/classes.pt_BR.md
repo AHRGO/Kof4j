@@ -135,13 +135,18 @@ println(c.name())         // "Red" (probe)
 
 - **Só constantes** — sem métodos, campos, construtores, corpo (`enum E { A
   String f(){…} }` → `PARSE032`, *probe*).
-- **Em runtime o valor do enum É o nome (`String`)** (`BuiltinTypes.java:95-98`).
-  `Color.Red` é a string `"Red"`. `==` compara conteúdo entre dois valores de
-  enum. Um valor de enum **não** é uma String: `Color.Red == "Red"` é rejeitado
-  em compile-time com `SEM062` (D-ENUM207 / issue #207) — compare dois valores
-  de enum ou chame `.name()` explicitamente.
-- Métodos sintéticos: `values() → List<String>` (static), `valueOf(String) →
-  enum` (static), `name() → String` (instance) (`preDeclareType:299-314`).
+- **Um valor de enum é uma INSTÂNCIA real (D-ENUM207, issue #207)** — o
+  compilador emite uma classe enum real (`Dir.class`) com as constantes como
+  instâncias `static final` criadas no `<clinit>`; `Dir.N` compila para
+  `getstatic Dir.N : LDir;` (não `ldc "N"`). `getClass()` devolve `Dir` e
+  `instanceof Dir` é uma checagem real. `==`/`!=` entre dois valores de enum
+  compara **identidade** (`if_acmp`) — correto porque as constantes são
+  singletons. Um valor de enum **não** é uma String: `Color.Red == "Red"` é
+  rejeitado em compile-time com `SEM062` — compare dois valores de enum ou
+  chame `.name()`.
+- Métodos sintéticos: `values() → List<Dir>` (static), `valueOf(String) →
+  Dir` (static, null no miss), `name() → String`, `ordinal() → Int`,
+  `toString() → String` (o nome), `compareTo(Dir) → Int` (instância).
 - **Switch sobre enum**: sem `default` exige cobertura total → senão `SEM031`.
 - Constante não-qualificada (`Red` dentro do contexto do enum) resolve
   (`:869-876`).

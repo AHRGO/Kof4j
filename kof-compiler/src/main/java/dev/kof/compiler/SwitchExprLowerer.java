@@ -94,12 +94,14 @@ public final class SwitchExprLowerer {
             ops.add(new KofLoadLocal(switchType, switchTmp));
             localIdx = ExpressionLowerer.emitExpression(driver, sc.value(), ops, owner, localIdx, locals);
             Type caseType = ExpressionTyper.inferExprType(driver, sc.value(), locals);
-            if (Type.isString(switchType) || CompilerTypes.isEnumType(switchType, driver.currentUnit) || CompilerTypes.isEnumType(caseType, driver.currentUnit)) {
-                // igualdade de String/enum é por conteúdo (bug 4 do statement)
+            if (Type.isString(switchType)) {
+                // igualdade de String é por conteúdo (bug 4 do statement)
                 ops.add(new KofCall(BuiltinTypes.STRING, "kof_string_equals",
                         List.of(BuiltinTypes.STRING, BuiltinTypes.STRING),
                         Type.PrimitiveType.BOOL, KofCallKind.FUNCTION));
             } else {
+                // D-ENUM207: enum = instâncias (singletons) → identidade (if_acmp);
+                // primitivo/outros → EQ. kof_string_equals sobre Dir seria CCE/SIGSEGV.
                 ops.add(new KofBinary(KofBinaryOp.EQ, switchType));
             }
             ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 0));

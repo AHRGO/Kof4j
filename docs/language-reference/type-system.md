@@ -252,7 +252,7 @@ coverage; instantiability of abstract; `bool→numeric` coercion (works by
 |---|---|---|
 | `string` | **content** (`kof_string_equals`) | *probe*: `"ab" == "a"+"b"` → true |
 | `record` | **content** (equals generated field by field) | *probe*: `P(1,2)==P(1,2)` → true |
-| `enum` | **content** between two enum values (it is String at runtime) | `ExpressionLowerer.java:285` |
+| `enum` | **identity** between two enum values (each constant is a singleton instance) | `CompilerEnumLowering` |
 | primitive | **value** | `if_icmp`/`lcmp`/`fcmpl`/`dcmpl` |
 | reference (non-string/record/enum) | **identity** (`if_acmp`) | *probe*: `C(1)==C(1)` → false |
 

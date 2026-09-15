@@ -29,8 +29,9 @@ public final class CompilerComparisons {
                     || CompilerTypes.isRecordType(right, driver.currentUnit, driver.semanticAnalyzer)) {
                 return false;
             }
-            // enum == enum compara conteúdo (string) — nunca identidade
-            if (CompilerTypes.isEnumType(left, driver.currentUnit) || CompilerTypes.isEnumType(right, driver.currentUnit)) return false;
+            // enum == enum: D-ENUM207 — as constantes são INSTÂNCIAS (singletons
+            // de <clinit>), então a igualdade é por IDENTIDADE (if_acmp), não por
+            // conteúdo String. Deixa o caminho de referência assumir.
             // primitivo vs null → constante (caminho da cadeia binária)
             boolean leftNull = bin.left() instanceof LiteralExpr ll2 && ll2.kind() == ConcreteLiteralKind.NULL;
             boolean rightNull = bin.right() instanceof LiteralExpr rl2 && rl2.kind() == ConcreteLiteralKind.NULL;

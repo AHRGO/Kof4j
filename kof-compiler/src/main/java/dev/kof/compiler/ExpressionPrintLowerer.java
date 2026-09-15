@@ -50,7 +50,13 @@ if (("print".equals(mc.methodName()) || "println".equals(mc.methodName())) && mc
     localIdx = ExpressionLowerer.emitExpression(driver, mc.arguments().get(0), ops, owner, localIdx, locals);
     Type argType = ExpressionTyper.inferExprType(driver, mc.arguments().get(0), locals);
     // (#57: IfExpr/switch heterogêneo já boxeou in-branch → pular o box)
-    if (TypeMetrics.isPrimitiveType(argType)
+    if (CompilerTypes.isEnumType(argType, driver.currentUnit)) {
+        // D-ENUM207: enum é instância real; imprime o NOME via toString()
+        // da própria classe (paridade JVM/Script/JS/Native — o intérprete e
+        // o JS não stringificam um objeto custom por valueOf(Object)).
+        ops.add(new KofCall(argType, "toString", List.of(), BuiltinTypes.STRING,
+                KofCallKind.INSTANCE));
+    } else if (TypeMetrics.isPrimitiveType(argType)
             && !ExpressionTyper.boxesOwnBranches(driver, mc.arguments().get(0), locals)) {
         if (driver.target.isNative()) {
             // println(char) é NUMÉRICO (congelado: strings.md
@@ -177,11 +183,12 @@ if (("print".equals(mc.methodName()) || "println".equals(mc.methodName())) && mc
         LabelId elseLabel = LabelId.create();
         ops.add(new KofLoadLocal(switchType, switchTmp));
         localIdx = ExpressionLowerer.emitExpression(driver, sc.value(), ops, owner, localIdx, locals);
-        if (Type.isString(switchType) || CompilerTypes.isEnumType(switchType, driver.currentUnit)) {
+        if (Type.isString(switchType)) {
             ops.add(new KofCall(BuiltinTypes.STRING, "kof_string_equals",
                     List.of(BuiltinTypes.STRING, BuiltinTypes.STRING),
                     Type.PrimitiveType.BOOL, KofCallKind.FUNCTION));
         } else {
+            // D-ENUM207: enum = instâncias → identidade (if_acmp).
             ops.add(new KofBinary(KofBinaryOp.EQ, switchType));
         }
         ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 0));

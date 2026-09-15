@@ -78,15 +78,16 @@ public final class CollectionWrites {
     }
 
     /**
-     * §150: uma constante de enum é lowering p/ String literal (representação
-     * de runtime), então comparação por CONTEÚDO vale — mesmo princípio do
-     * `==` de enum (CompilerComparisons:27). Sem isto, `listOf(Color.Red).
-     * contains(Color.Green)` no Native usava raw cmpq sobre dois ponteiros
-     * String distintos → false, enquanto JVM/Script/JS davam true.
-     * Só enum entra: record/objeto NÃO é String em runtime (deref → SIGSEGV).
+     * §150 / D-ENUM207: String é o único tipo comparado por CONTEÚDO no
+     * Native (kof_string_equals). Uma constante de enum agora é uma INSTÂNCIA
+     * real (singleton de {@code <clinit>}) — o raw {@code cmpq} por PONTEIRO
+     * acerta (as constantes são o mesmo objeto em toda a execução), como o
+     * JVM faz com identity-equals. Marcar enum como string-like fazia o
+     * Native chamar {@code kof_string_equals} sobre o ponteiro do objeto →
+     * SIGSEGV (exit 135).
      */
     private static boolean isStringLike(Type t, CompilationUnitNode unit) {
-        return BuiltinTypes.isString(t) || CompilerTypes.isEnumType(t, unit);
+        return BuiltinTypes.isString(t);
     }
 
     public static String typeNameFor(Type t) {

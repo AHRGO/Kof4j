@@ -348,31 +348,12 @@ if (mc.receiver() instanceof IdentifierExpr rid && CompilerTypes.isEnumName(rid.
     Type enumT = new Type.ClassType("", rid.name(), List.of());
     Type enumListT = new Type.ClassType("kof", "List", List.of(enumT));
     if ("values".equals(mc.methodName()) && mc.arguments().isEmpty()) {
-        ops.add(new KofCall(enumListT,
-                "kof_list_new", List.of(), enumListT,
-                KofCallKind.FUNCTION));
-        for (String c : CompilerTypes.enumConstantsOf(rid.name(), driver.currentUnit)) {
-            ops.add(new KofDup());
-            ops.add(new KofLoadLiteral(BuiltinTypes.STRING, c));
-            ops.add(new KofCall(enumListT,
-                    "kof_list_add", List.of(enumT), Type.PrimitiveType.VOID,
-                    KofCallKind.INSTANCE));
-        }
+        ops.add(new KofCall(enumT, "values", List.of(), enumListT, KofCallKind.STATIC));
         return localIdx;
     }
     if ("valueOf".equals(mc.methodName()) && mc.arguments().size() == 1) {
-        Type listT = enumListT;
-        ops.add(new KofCall(listT, "kof_list_new", List.of(), listT,
-                KofCallKind.FUNCTION));
-        for (String c : CompilerTypes.enumConstantsOf(rid.name(), driver.currentUnit)) {
-            ops.add(new KofDup());
-            ops.add(new KofLoadLiteral(BuiltinTypes.STRING, c));
-            ops.add(new KofCall(listT, "kof_list_add", List.of(enumT),
-                    Type.PrimitiveType.VOID, KofCallKind.INSTANCE));
-        }
         localIdx = ExpressionLowerer.emitExpression(driver, mc.arguments().get(0), ops, owner, localIdx, locals);
-        ops.add(new KofCall(enumT, "kof_enum_value_of",
-                List.of(listT, BuiltinTypes.STRING), enumT, KofCallKind.FUNCTION));
+        ops.add(new KofCall(enumT, "valueOf", List.of(BuiltinTypes.STRING), enumT, KofCallKind.STATIC));
         return localIdx;
     }
     return localIdx;

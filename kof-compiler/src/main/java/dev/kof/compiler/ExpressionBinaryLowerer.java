@@ -317,8 +317,7 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
         }
         accType = Type.PrimitiveType.BOOL;
     } else if (("==".equals(be.operator()) || "!=".equals(be.operator()))
-            && (Type.isString(accType) || Type.isString(rightType)
-                || CompilerTypes.isEnumType(accType, driver.currentUnit) || CompilerTypes.isEnumType(rightType, driver.currentUnit))) {
+            && (Type.isString(accType) || Type.isString(rightType))) {
         localIdx = ExpressionLowerer.emitExpression(driver, be.right(), ops, owner, localIdx, locals);
         ops.add(new KofCall(BuiltinTypes.STRING, "kof_string_equals",
                 List.of(BuiltinTypes.STRING, BuiltinTypes.STRING),

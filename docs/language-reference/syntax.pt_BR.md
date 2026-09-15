@@ -81,7 +81,7 @@ record Point(Int x, Int y)             // imutável, accessors
 var p = Point(10, 20)
 println(p.x())                         // 10
 
-enum Color { Red, Blue }               // só constantes; valor = String
+enum Color { Red, Blue }               // constantes; cada uma é instância singleton
 println(Color.Red)                     // "Red"
 // Color.Red == "Red"                  // SEM062: um valor de enum não é String
 

@@ -51,7 +51,7 @@ atribuição.
 
 - Resultado sempre `bool`.
 - **`==` tem semântica por tipo** (decidida no lowering, não no type checker):
-  - `string`, `record`, `enum` → **conteúdo**
+  - `string`, `record` → **conteúdo**; `enum` → **identidade** (instâncias singleton)
   - primitivo → **valor**
   - referência (outros) → **identidade**
   - um valor de enum **não** é uma String: `Dir.N == "N"` → `SEM062` (D-ENUM207)

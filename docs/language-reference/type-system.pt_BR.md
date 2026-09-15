@@ -253,7 +253,7 @@ representação 1/0, mas é implementation-defined — §3.1).
 |---|---|---|
 | `string` | **conteúdo** (`kof_string_equals`) | *probe*: `"ab" == "a"+"b"` → true |
 | `record` | **conteúdo** (equals gerado campo a campo) | *probe*: `P(1,2)==P(1,2)` → true |
-| `enum` | **conteúdo** entre dois valores de enum (é String em runtime) | `ExpressionLowerer.java:285` |
+| `enum` | **identidade** entre dois valores de enum (cada constante é uma instância singleton) | `CompilerEnumLowering` |
 | referência (não-string/record/enum) | **identidade** (`if_acmp`) | *probe*: `C(1)==C(1)` → false |
 
 Um valor de enum **não** é uma String: `Dir.N == "N"` é rejeitado em

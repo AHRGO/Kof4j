@@ -17,33 +17,30 @@ final class ExpressionBuiltinInstanceCalls {
     /**
      * Lowering de métodos em instância de enum (name, toString, ordinal, compareTo).
      * Retorna >= 0 se o método foi consumido, ou -1 se não é método de enum tratado aqui.
+     *
+     * <p>D-ENUM207 (#207): o valor agora é uma INSTÂNCIA de enum real com os
+     * métodos {@code name()}/{@code ordinal()}/{@code toString()}/{@code
+     * compareTo()} emitidos por {@link CompilerEnumLowering}. O receiver já
+     * está na pilha — basta o INVOKEVIRTUAL; o caminho antigo (lista de
+     * Strings + {@code kof_enum_ordinal}) empilhava tipo errado.
      */
     static int lowerEnum(CompilerDriver driver, MethodCallExpr mc, List<KofOperation> ops,
                          String owner, int localIdx, List<IRLocalVariable> locals, Type recvType) {
         if (!CompilerTypes.isEnumType(recvType, driver.currentUnit)) return -1;
         String mn = mc.methodName();
         if (("name".equals(mn) || "toString".equals(mn)) && mc.arguments().isEmpty()) {
-            // o valor do enum JÁ é o nome (String em runtime): identidade
+            ops.add(new KofCall(recvType, mn, List.of(), BuiltinTypes.STRING, KofCallKind.INSTANCE));
             return localIdx;
         }
-        Type.ClassType ct = (Type.ClassType) recvType;
-        Type enumListT = new Type.ClassType("kof", "List", List.of(ct));
-        List<String> consts = CompilerTypes.enumConstantsOf(ct.name(), driver.currentUnit);
         if ("ordinal".equals(mn) && mc.arguments().isEmpty()) {
-            emitEnumValuesList(ops, ct, enumListT, consts);
-            ops.add(new KofCall(ct, "kof_enum_ordinal",
-                    List.of(BuiltinTypes.STRING, enumListT), Type.PrimitiveType.INT, KofCallKind.FUNCTION));
+            ops.add(new KofCall(recvType, "ordinal", List.of(),
+                    Type.PrimitiveType.INT, KofCallKind.INSTANCE));
             return localIdx;
         }
         if ("compareTo".equals(mn) && mc.arguments().size() == 1) {
-            emitEnumValuesList(ops, ct, enumListT, consts);
-            ops.add(new KofCall(ct, "kof_enum_ordinal",
-                    List.of(BuiltinTypes.STRING, enumListT), Type.PrimitiveType.INT, KofCallKind.FUNCTION));
             localIdx = ExpressionLowerer.emitExpression(driver, mc.arguments().get(0), ops, owner, localIdx, locals);
-            emitEnumValuesList(ops, ct, enumListT, consts);
-            ops.add(new KofCall(ct, "kof_enum_ordinal",
-                    List.of(BuiltinTypes.STRING, enumListT), Type.PrimitiveType.INT, KofCallKind.FUNCTION));
-            ops.add(new KofBinary(KofBinaryOp.SUB, Type.PrimitiveType.INT));
+            ops.add(new KofCall(recvType, "compareTo", List.of(recvType),
+                    Type.PrimitiveType.INT, KofCallKind.INSTANCE));
             return localIdx;
         }
         return -1;
@@ -53,7 +50,7 @@ final class ExpressionBuiltinInstanceCalls {
         ops.add(new KofCall(listT, "kof_list_new", List.of(), listT, KofCallKind.FUNCTION));
         for (String c : consts) {
             ops.add(new KofDup());
-            ops.add(new KofLoadLiteral(BuiltinTypes.STRING, c));
+            ops.add(new KofGetStatic(enumT, c, enumT));
             ops.add(new KofCall(listT, "kof_list_add", List.of(enumT), Type.PrimitiveType.VOID, KofCallKind.INSTANCE));
         }
     }

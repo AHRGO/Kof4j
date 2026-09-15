@@ -51,7 +51,7 @@ context.
 
 - Result always `bool`.
 - **`==` has per-type semantics** (decided in the lowering, not in the type checker):
-  - `string`, `record`, `enum` → **content**
+  - `string`, `record` → **content**; `enum` → **identity** (singleton instances)
   - primitive → **value**
   - reference (others) → **identity**
   - an enum value is **not** a String: `Dir.N == "N"` → `SEM062` (D-ENUM207)
