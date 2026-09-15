@@ -22,36 +22,65 @@ cd "$(git rev-parse --show-toplevel)"
 REPO="${CODEQL_GATE_REPO:-KofLang/Kof4j}"
 BRANCHES=("main" "beta-0.4.0")
 FAILED=0
+GATE1_OK=1
 
 echo "== GATE 1: CodeQL alerts (security/code-scanning) =="
-# VERDADE POR-BRANCH (licao 15/09 ~20:30): o filtro `?state=open` e o campo
-# `most_recent_instance` da LISTA mentem — CodeQL guarda UMA instancia por
-# ref, o scan de uma branch REABRE o que foi dismissado em outra (412
-# instancias reabertas na main com a UI cheia e o gate dizendo 0). O unico
-# retrato honesto e /alerts/{n}/instances filtrando refs/heads/ das branches
-# ativas. Custo: 1 chamada/alerta (cache TTL 60s da API ajuda a 2a corrida).
-for br in "${BRANCHES[@]}"; do
-  open_n=0; open_list=""
-  for p in $(seq 1 12); do
-    nums=$(gh api "/repos/$REPO/code-scanning/alerts?per_page=100&page=$p" --jq '.[].number' 2>/dev/null) || { echo "  [erro] API lista indisponivel"; FAILED=1; break; }
-    [ -z "$nums" ] && break
-    for n in $nums; do
-      hit=$(gh api "/repos/$REPO/code-scanning/alerts/$n/instances?per_page=100" --paginate \
-        --jq --arg br "refs/heads/$br" 'first(.[] | select(.ref==$br and .state=="open") | .location.path + ":" + (.location.start_line|tostring))' 2>/dev/null)
-      if [ -n "$hit" ]; then
-        open_n=$((open_n+1))
-        [ "$open_n" -le 25 ] && open_list="$open_list  #$n $hit
-"
-      fi
+# VERDADE NO NIVEL DO ALERTA (licao 15/09 ~22:40, corrige o falso RED de 412):
+# /alerts/{n}/instances devolve state="open" para TODO alerta ja detectado —
+# inclusive DISMISSADOS (o #743 "won't fix" tinha instance.state="open"). Logo
+# contar instancias gera falso positivo. O estado vigente e o `state` do
+# /alerts/{n}: "open" (com dismissed_at/fixed_at nulos) OU `null` recem-criado
+# SEM dismissed_at/fixed_at = aberto; "dismissed"/"fixed" = fechado. O list
+# pagina com atraso (consistencia eventual) — por isso unimos os numeros do
+# list com os de `?state=open&ref=` das branches ativas. Custo: 1 GET/alerta.
+# CUSTO (licao 15/09 ~18:40): 1 GET por alerta x 731 alertas = 8min de hang no
+# pre-push. O LIST paginado vem COM state/dismissed_at/fixed_at/
+# most_recent_instance — 1 chamada resolve o gate inteiro. O `?state=open`
+# sozinho esconde o `state:null` recem-criado; o list SEM filtro pega todos.
+ROWS=$(gh api "/repos/$REPO/code-scanning/alerts?per_page=100" --paginate \
+  --jq '.[] | [(.number|tostring), (.state // "null"), (.dismissed_at // "-"), (.fixed_at // "-"), (.most_recent_instance.ref // "-"), (.rule.id), ((.most_recent_instance.location.path // "-") + ":" + ((.most_recent_instance.location.start_line // "-")|tostring))] | @tsv' 2>/dev/null) \
+  || { echo "  [aviso] API indisponivel (rate limit?) — GATE 1 NAO verificado; o CI (codeql.yml) continua sendo a porta real"; ROWS=""; }
+
+# A LISTA omite os alertas recem-criados com `state:null` (consistencia eventual:
+# o #746 nao veio no list, so no `/alerts/{n}` e no `?state=open&ref=`). Sem esta
+# uniao o gate dava FALSO-VERDE. 1 chamada/branch + 1 GET individual so para os
+# que faltam = barato (nao os 731 do v1, que travava o pre-push ~8min).
+if [ -n "$ROWS" ]; then
+  for br in "${BRANCHES[@]}"; do
+    for n in $(gh api "/repos/$REPO/code-scanning/alerts?ref=refs/heads/$br&state=open&per_page=100" --paginate --jq '.[].number' 2>/dev/null); do
+      printf '%s\n' "$ROWS" | cut -f1 | grep -qx "$n" && continue
+      extra=$(gh api "/repos/$REPO/code-scanning/alerts/$n" \
+        --jq '[(.number|tostring), (.state // "null"), (.dismissed_at // "-"), (.fixed_at // "-"), (.most_recent_instance.ref // "-"), .rule.id, ((.most_recent_instance.location.path // "-") + ":" + ((.most_recent_instance.location.start_line // "-")|tostring))] | @tsv' 2>/dev/null)
+      [ -n "$extra" ] && ROWS="$ROWS
+$extra"
     done
-    [ "$(printf '%s\n' "$nums" | wc -l)" -lt 100 ] && break
   done
+fi
+
+for br in "${BRANCHES[@]}"; do
+  if [ -z "$ROWS" ]; then
+    echo "  NAO-AVALIADO — $br (API fora; nada foi verificado)"
+    GATE1_OK=0
+    continue
+  fi
+  open_n=0; open_list=""
+  while IFS=$'\t' read -r n st dis fix ref rule loc; do
+    [ "$ref" = "refs/heads/$br" ] || continue
+    isopen=0
+    [ "$st" = "open" ] && isopen=1
+    [ "$st" = "null" ] && [ "$dis" = "-" ] && [ "$fix" = "-" ] && isopen=1
+    if [ "$isopen" = 1 ]; then
+      open_n=$((open_n+1))
+      [ "$open_n" -le 25 ] && open_list="$open_list  #$n [$rule] $loc
+"
+    fi
+  done <<< "$ROWS"
   if [ "$open_n" -gt 0 ]; then
     echo "  RED — $open_n alerta(s) open na branch $br (top 25):"
     printf '%s' "$open_list" | sed 's/^/  /'
     FAILED=1
   else
-    echo "  green — $br: 0 open (por-branch)"
+    echo "  green — $br: 0 open"
   fi
 done
 
@@ -83,5 +112,9 @@ fi
 if [ "$FAILED" = 1 ]; then
   echo "== RESULTADO: PORTAO VERMELHO — nao commitar sem fechar o achado =="
   exit 1
+fi
+if [ "$GATE1_OK" = 0 ]; then
+  echo "== RESULTADO: INCONCLUSIVO — GATE 1 nao avaliado (API fora); os demais gates passaram =="
+  exit 2
 fi
 echo "== RESULTADO: os dois gates verdes =="
