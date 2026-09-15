@@ -2362,4 +2362,30 @@ class CoreRegressionE2ETest {
         assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
         assertEquals("200\n250\nv2\ntrue", runJvm(out));
     }
+
+    // Issue #248 — covariant return override missing bridge method — virtual dispatch silently calls superclass method
+    @Test
+    void covariantReturnOverrideBridgeMethodJvm(@TempDir Path tempDir) throws IOException {
+        Path src = tempDir.resolve("covariant_return.kf");
+        Files.writeString(src, """
+                class Base {
+                    Base create() { return new Base() }
+                    String name()  { return "base" }
+                }
+                class Child extends Base {
+                    Child create() { return new Child() }
+                    String name()  { return "child" }
+                }
+                main() {
+                    var b: Base = new Child()
+                    var c = b.create()
+                    println(c.name())
+                    println(c instanceof Child)
+                }
+                """);
+        Path out = tempDir.resolve("covariant_return-jvm");
+        CompilationResult r = driver.compile(src, out, Target.JVM);
+        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
+        assertEquals("child\ntrue", runJvm(out));
+    }
 }
