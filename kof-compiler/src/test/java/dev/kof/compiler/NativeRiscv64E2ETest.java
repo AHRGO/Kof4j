@@ -931,7 +931,9 @@ main() {
     void riscvHeapExhaustionPanicsHonest(@TempDir Path tempDir) throws IOException, InterruptedException {
         assumeToolchain();
         Path src = tempDir.resolve("Main.kf");
-        // sem GC (riscv é bump), a lista retém tudo → o bump estoura os 256KB.
+        // mesmo com o coletor (G-4), a lista `l` é uma raiz VIVA (alcançável
+        // pela pilha): tudo que ela referencia é marcado, então o bump estoura
+        // os 256KB e o kof_alloc panica honestamente.
         Files.writeString(src, """
             main() {
                 val l = listOf("")

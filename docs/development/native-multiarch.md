@@ -34,8 +34,9 @@
 > **Real remaining gap `NATIVE002`:** (1) cross GC mark-sweep (riscv is
 > bump-pointer without collector — leak on long heap, non-crash) —
 > **G-0 header-block + G-1 free-list/memstats + G-2 gc-list/dump + G-3
-> conservative mark DONE 15/09** (see the decomposition below); G-4..G-5
-> pending, the collector (G-4) is what actually reclaims; (2) the
+> conservative mark + G-4 sweep/collect DONE 15/09** (see the decomposition
+> below); G-5 aarch64 satisfied by G-4 (both arches run the sweep proof);
+> the collector (G-4) is what actually reclaims; (2) the
 > DB001/SECN000/CONC001/JSN004 refusals above; (3) FP-collection on cross
 > (FLT001 at compile §107); (4) `backend-parity.md` per-arch columns
 > still to be separated; (5) cross CI does not exist (host-dependent toolchain) —
@@ -104,11 +105,12 @@
 > 4 real callers: `RuntimeChannel:132`, `RuntimeLog2:98`,
 > `RuntimeObservability1:426`/`2:247`) and there is **no Kof-level free/GC API**,
 > so a Kof E2E cannot exercise it. Conclusion: the riscv free-list is the
-> correct x86-parity infrastructure, but on riscv it is **latent until G-4**
+> correct x86-parity infrastructure, but on riscv it stayed **latent until G-4**
 > (sweep feeds it) — the G-1 proof is therefore the raw asm harness, not a Kof
 > program. Wiring free into the 57 existing alloc sites is a **G-4 concern**
 > (they must free dead objects, which only the collector can identify), NOT
-> G-1. This also means the ~260KB `.bss` leak is closed by G-4, not G-1.
+> G-1. **G-4 (15/09) closed this**: the collector now feeds the free-list and
+> the ~260KB `.bss` leak is bounded by recycling (proof in the G-4 block below).
 > **G-2 header flags/mark bits + GC list (DONE 15/09, dev session):** every
 > block RESERVED from the bump now enters the global gc-list
 > (`.Lkof_gc_head`, LIFO, `gc_next`@16, flags=0) inside the same slice
@@ -142,15 +144,33 @@
 > transitive field walk) = 2/2 red with D=0. G-1/G-2 harnesses and the
 > slice-registry 8/8 still green; `ArtifactSizeTest` 6/6 (labels `.L`-local, no
 > symtab bloat); `KofGcE2ETest` 3/3 x86 untouched; `check_500` OK.
-> **G-4 sweep + collect on alloc** — free-list receives the dead; `kof_gc_collect`
-> ported (tick 4096 like x86); proof: LEAK test that today is
-> impossible (alloc loop that would overflow the 260KB bump runs and memory
-> does not grow monotonically — measure via G-1 memstats).
+> **G-4 sweep + collect DONE 15/09** — the free-list now receives the dead:
+> `kof_gc_sweep` (mark==1 → clear bit0; mark==0 & !free → free-list + bit1 +
+> counters) + `kof_gc_collect_now` (mark+sweep unconditional) +
+> `kof_gc_collect` (tick-guarded, `tick & 4095`, called at `kof_alloc` ENTRY) +
+> `kof_gc_tick` (new slice `NativeRiscvAsmRtB44`). The OOM path of `kof_alloc`
+> (B42) also runs ONE `kof_gc_collect_now` and re-searches the free-list before
+> panicking. **The x86 disables collect-inside-alloc on purpose**
+> (`RuntimeMemory:122-131`: the free-block pointer lives in a register and the
+> conservative mark misses it → double-use); **riscv is safe** because the
+> value-stack IS the machine stack (`pushRiscv`: `addi sp,-8; sd`) and
+> `kof_gc_mark` spills `s0-s11` — every live temporary is on the scanned stack.
+> **Proof (qemu riscv64 AND aarch64, no skip):** `NativeRiscvGcSweepTest` 5/5 —
+> (1) mark+sweep+dump requires `gc 96 0 / gc 96 2 / gc 96 0 / gc 96 0` +
+> `frees: 1` (C recovered, D/A/B survive); (2) a 10000-alloc loop (arena
+> 256KB ≈ 2730 blocks of 96B) COMPLETES because the collector recycles the dead
+> (frees > 0); (3) **sabotage** (strip the collector hooks) = the same loop
+> panics `out of memory` (non-vacuity). `ArtifactSizeTest` baseline updated
+> 18→24 hello syms (the collector chain is now reachable from `kof_alloc` —
+> the price of closing the leak); cross 44+44, G-1/G-2/G-3, registry 8/8,
+> `KofGcE2ETest` 3/3 x86 untouched; `check_500` OK.
 > **G-5 aarch64** — inherits everything via translator (the riscv directives/labels pass
 > unscathed — same path as the S-4 prune; `amoadd.d`→`ldadd`, `amoswap.w`→`swpal` already
 > translated, `NativeAarch64Translator.java:299`); gate: aarch suite under qemu +
-> the G-4 leak test also on aarch. **G-1 ALREADY proved the inheritance for the
-> free-list** (`NativeRiscvGcFreeListTest.freeListReusesSlotAndMemstatsCountsAarch64`).
+> the G-4 leak test also on aarch. **G-4 ALREADY proved the inheritance for the
+> sweep+collect** (`NativeRiscvGcSweepTest` runs both arches), so G-5 is
+> effectively satisfied for the collector too; a dedicated G-5 aarch step is no
+> longer a separate face.
 > Each step: commit with the complete cross suite green + DOING.md on the line.
 > Do NOT mix with S-5-x86/root_end (bugfix queue). G-0/G-1/G-2 move ahead
 > without root_end; **G-3 also advanced** (emits its own riscv `.L`-local
@@ -289,8 +309,9 @@ Runtime details for riscv64/aarch64 (inc-0 02/09 + 03/09):
 - allocation: **bump allocator + free-list** in `.bss` (no `mmap` — avoids
   problems with static qemu; x86_64 uses `mmap`+free-list, and riscv64/aarch64
   follow the model). G-1 (15/09) added the x86-style free-list + `kof_free` +
-  `kof_memstats`; the bump remains the fallback and the collector (G-4) is what
-  feeds the free list.
+  `kof_memstats`; G-4 (15/09) closed the loop: `kof_gc_collect` runs at
+  `kof_alloc` entry (tick 4096) and `kof_gc_sweep` feeds the free-list with the
+  dead, so a long alloc loop recycles instead of exhausting the `.bss`.
 - strings: layout **identical to x86_64** — `[typeId@0 i32][super@4 i32]
   [vtable@8 ptr][len@16 i32][data@24 …]` (`KOF_STRING_TYPE_ID=1`).
 - output: raw syscall `write(1, …)` (`a7=64` riscv / `x8=64` arm) + `exit` (`a7/x8=93`) — **static** binary, no libc/PLT.
