@@ -125,9 +125,8 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
         case "Bool", "Boolean" -> "java/lang/Boolean";
         default -> "java/lang/String";
     };
-    ExternalClasspath.MethodSignature extSig = driver.externalClasspath != null
-            ? driver.externalClasspath.resolveMethod(javaClass, mc.methodName(), mc.arguments().size())
-            : null;
+    ExternalClasspath.MethodSignature extSig = driver.externalClasspath
+            .resolveMethod(javaClass, mc.methodName(), mc.arguments().size());
     if (extSig != null) {
         List<Type> extFormal = new ArrayList<>();
         for (String d : extSig.parameterDescriptors()) {

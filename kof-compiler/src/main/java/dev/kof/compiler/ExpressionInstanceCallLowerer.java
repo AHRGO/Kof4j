@@ -501,7 +501,7 @@ public final class ExpressionInstanceCallLowerer {
         if (!(jdkOwner instanceof Type.UnknownType)) {
             recvType = jdkOwner;
             callKind = KofCallKind.STATIC;
-            if (jdkOwner instanceof Type.ClassType jct && driver.externalClasspath != null
+            if (jdkOwner instanceof Type.ClassType jct
                     && driver.externalClasspath.knows(jct.internalName())) {
                 ExternalClasspath.MethodSignature extSig = driver.externalClasspath.resolveMethod(
                         jct.internalName(), mc.methodName(), mc.arguments().size());

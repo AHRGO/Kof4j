@@ -130,7 +130,7 @@ public final class ExternalClasspath {
         MethodSignature direct = findDeclared(ownerInternalName, methodName, argumentCount, 0);
         if (direct != null) return direct;
         // membro herdado: segue a cadeia de superclasses nos entries
-        String sup = superclassOf(ownerInternalName);
+        String sup = declaredSuperclassOf(ownerInternalName);
         int hops = 0;
         while (sup != null && !sup.equals("java/lang/Object") && hops++ < 32) {
             if (!classBytes.containsKey(sup)) {
@@ -144,7 +144,7 @@ public final class ExternalClasspath {
             }
             MethodSignature inherited = findDeclared(sup, methodName, argumentCount, 0);
             if (inherited != null) return inherited;
-            sup = superclassOf(sup);
+            sup = declaredSuperclassOf(sup);
         }
         return null;
     }
@@ -301,7 +301,7 @@ public final class ExternalClasspath {
 
     /** Superclasse declarada da classe externa (nome interno), ou null. */
     public synchronized String superClassOf(String internalName) {
-        return superclassOf(internalName);
+        return declaredSuperclassOf(internalName);
     }
 
     /**
@@ -320,7 +320,7 @@ public final class ExternalClasspath {
         if (!loaded || ownerInternalName == null) return null;
         String direct = findFieldDeclared(ownerInternalName, fieldName, 0);
         if (direct != null) return direct;
-        String sup = superclassOf(ownerInternalName);
+        String sup = declaredSuperclassOf(ownerInternalName);
         int hops = 0;
         while (sup != null && !sup.equals("java/lang/Object") && hops++ < 32) {
             if (!classBytes.containsKey(sup)) {
@@ -331,7 +331,7 @@ public final class ExternalClasspath {
             }
             String inherited = findFieldDeclared(sup, fieldName, 0);
             if (inherited != null) return inherited;
-            sup = superclassOf(sup);
+            sup = declaredSuperclassOf(sup);
         }
         return null;
     }
@@ -397,7 +397,7 @@ public final class ExternalClasspath {
         }
     }
 
-    private String superclassOf(String internalName) {
+    private String declaredSuperclassOf(String internalName) {
         byte[] bytes = classBytes.get(internalName);
         if (bytes == null) return null;
         try {
