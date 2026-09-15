@@ -232,7 +232,7 @@ public final class SemExpressionTyper {
                         }
                     }
                     if (sym != null) {
-                        targetType = sym.type();
+                        targetType = Narrowing.assignTarget(scope, ie.name(), sym).type();
                         if (sa.diagnostics() != null && !Type.isUnknown(targetType) && !Type.isUnknown(valueType)
                                 && !TypeChecker.isAssignable(sa, valueType, targetType)) {
                             sa.diagnostics().error("", 0, 0, 0,
@@ -378,6 +378,8 @@ public final class SemExpressionTyper {
                 String en = MemberResolver.enumNameOfConstant(sa.unit(), fa);
                 if (en != null) yield new Type.ClassType("", en, List.of());
                 Type recvType = inferType(sa, fa.receiver(), scope);
+                Type nf = Narrowing.narrowedField(scope, Narrowing.pathOf(fa));
+                if (nf != null) yield nf;
                 // bug 99 (R6, nunca silencioso): `Int.MAX_VALUE`/`Long.foo` etc.
                 // — acesso a campo num NOME DE TIPO PRIMITIVO. `Int` resolve p/
                 // UNKNOWN (a isenção isBuiltinTypeName de SEM011 existe p/ posição
