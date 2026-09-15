@@ -43,6 +43,12 @@ public final class NativeAarch64Translator {
             if (s.startsWith(".option")) return List.of(indent + ".arch armv8.1-a");
             return List.of(line);
         }
+        // FLT001/B45 (15/09): normaliza os apelidos ABI FP `fa0..fa7` (arg e
+        // retorno) para `f0..f7` — o tradutor constrói o nome aarch como
+        // "d"<número>, então `fa0` viraria "da0" (inválido). `fa0` no riscv é
+        // f10, mas o contrato aarch64 é d0 (arg/retorno) — por isso a
+        // normalização para f0..f7 (e não f10..f17).
+        s = s.replaceAll("\\bfa([0-7])\\b", "f$1");
         // split mnemonic e resto
         String mn;
         String rest = "";
@@ -82,8 +88,8 @@ public final class NativeAarch64Translator {
             if (parts.length == 3 && (parts[1].equals("s") || parts[1].equals("d")) && (parts[2].equals("s") || parts[2].equals("d"))) {
                 // RV fcvt.<dst>.<src> (dest=parts[1]); bug 82: dst/src trocados.
                 String[] args = rest.split(",");
-                String dst = parts[1].equals("s") ? "s" + args[0].trim().substring(1) : "d" + args[0].trim().substring(1);
-                String src = parts[2].equals("s") ? "s" + args[1].trim().substring(1) : "d" + args[1].trim().substring(1);
+                String dst = (parts[1].equals("s") ? "s" : "d") + NativeAarch64Helpers.fpNum(args[0]);
+                String src = (parts[2].equals("s") ? "s" : "d") + NativeAarch64Helpers.fpNum(args[1]);
                 return List.of(indent + "fcvt " + dst + ", " + src);
             }
         }
@@ -102,23 +108,23 @@ public final class NativeAarch64Translator {
                     String a1 = args[1].trim();
                     if ((p1.equals("w") || p1.equals("s")) && p2.equals("x")) {
                         // f0, t0  -> fmov s0, w9
-                        String dst = "s" + a0.substring(1);
+                        String dst = "s" + NativeAarch64Helpers.fpNum(a0);
                         String src = "w" + R.apply(a1).substring(1);
                         return List.of(indent + "fmov " + dst + ", " + src);
                     }
                     if (p1.equals("d") && p2.equals("x")) {
-                        String dst = "d" + a0.substring(1);
+                        String dst = "d" + NativeAarch64Helpers.fpNum(a0);
                         String src = R.apply(a1);
                         return List.of(indent + "fmov " + dst + ", " + src);
                     }
                     if (p1.equals("x") && (p2.equals("w") || p2.equals("s"))) {
                         String dst = "w" + R.apply(a0).substring(1);
-                        String src = "s" + a1.substring(1);
+                        String src = "s" + NativeAarch64Helpers.fpNum(a1);
                         return List.of(indent + "fmov " + dst + ", " + src);
                     }
                     if (p1.equals("x") && p2.equals("d")) {
                         String dst = R.apply(a0);
-                        String src = "d" + a1.substring(1);
+                        String src = "d" + NativeAarch64Helpers.fpNum(a1);
                         return List.of(indent + "fmov " + dst + ", " + src);
                     }
                 }
@@ -126,13 +132,13 @@ public final class NativeAarch64Translator {
             // fell through: try generic fmov
             if (mn.equals("fmv.w.x") || mn.equals("fmv.s.x")) {
                 String[] args = rest.split(",");
-                return List.of(indent + "fmov s" + args[0].trim().substring(1) + ", w" + R.apply(args[1].trim()).substring(1));
+                return List.of(indent + "fmov s" + NativeAarch64Helpers.fpNum(args[0]) + ", w" + R.apply(args[1].trim()).substring(1));
             }
         }
         if (mn.equals("fld")) {
             // fld f1, 0(t1)  ->  ldr d1, [x10]  (FP load de .rodata; S10 B27)
             String[] args = rest.split(",");
-            String fd = "d" + args[0].trim().substring(1);
+            String fd = "d" + NativeAarch64Helpers.fpNum(args[0]);
             java.util.regex.Matcher m = java.util.regex.Pattern.compile("^(-?\\d+)\\((\\w+)\\)$").matcher(args[1].trim());
             if (!m.matches()) return List.of(line);
             Integer offBoxed = NativeAarch64Helpers.parseOffInt(m.group(1));

@@ -2123,8 +2123,9 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
   **dst/src invertidos** (todo F2D/D2F do aarch corromperia) + operadores
   `fdiv.`/`fmul.` com ponto extra. Prova: oracle de 25 vetores **JVM==x86==
   riscv==aarch==JS** byte-a-byte (`KofStringParseTest` 8/8, os 2 cross via
-  qemu). Print de Double no cross segue FLT001 (double→string exige
-  snprintf); `Int/Long.toDouble()` boxing segue `toDouble` undefined (gap
+  qemu). Print de Double no cross **✅ FECHADO 15/09** (fatia `RtB45`:
+  `kof_dtoa` via libc `snprintf`/`strtod`, link dinâmico sob demanda — ver §180);
+  `Int/Long.toDouble()` boxing segue `toDouble` undefined (gap
   separado, família FLT001). Menor repro pré-fix: riscv `"2.5".toDouble()` →
   COMP001 `undefined reference to kof_string_to_double`.
 
@@ -2943,10 +2944,11 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
   `call` pisava o slot do acumulador, SIGSEGV).
   **Cross (riscv64 + aarch64):** fatia nova `NativeRiscvAsmRtB39`
   (0 colisões .L/.globl) com os MESMOS helpers e a MESMA semântica de tag;
-  o dispatcher `NativeRiscvCrossOps` (ramos `valueOf` List/Map/Set) levanta
-  **FLT001 em tempo de compilação** para coleção de Double/Float (mesma
-  recusa do valueOf escalar cross — R6/R7: diagnóstico, nunca `?` silencioso
-  nem lixo). Disciplina: **todo estado do laço vive em SLOT do frame**
+  o dispatcher `NativeRiscvCrossOps` (ramos `valueOf` List/Map/Set) roteia
+  coleção de Double/Float para `kof_elem_to_string` tags 4/5 →
+  `kof_double_to_string`/`kof_float_to_string` — **FLT001 FECHADO 15/09** (fatia
+  `RtB45`, libc via link dinâmico); antes levantava FLT001 em tempo de
+  compilação (R6/R7: diagnóstico, nunca `?` silencioso nem lixo). Disciplina: **todo estado do laço vive em SLOT do frame**
   (registrador nenhum sobrevive aos `call` — cada helper do runtime riscv
   salva um SUBCONJUNTO INCONSISTENTE dos s-regs: `from_literal` preserva
   s0/s1/s3, `int_to_string` preserva s0/s1/s3/s4/s5, `bool_to_string` só
@@ -2958,9 +2960,10 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
   Provas: `NativeE2ETest#execCollectionPrintMatchesJvmGolden` +
   `NativeRiscv64E2ETest`/`NativeAarch64E2ETest#nativeCollectionPrintMatchesJvmGolden`
   (golden = oracle JVM MEDIDO, byte-idêntico nos 3 targets; sabotagem do
-  separador → FAIL); `nativeCollectionPrintFloatDoubleRefusedHonest` (riscv
-  + aarch) prova que a recusa FLT001 de coleção FP acontece em COMPILAÇÃO
-  com a mensagem FLT001.
+  separador → FAIL); `nativeCollectionPrintMatchesJvmGolden` agora inclui uma
+  linha `listOf(1.5, 2.0)` / `listOf(1.5f, 2.5f)` (FLT001 fechado 15/09 — fatia
+  `RtB45`), o antigo `nativeCollectionPrintFloatDoubleRefusedHonest` virou
+  `nativeValueOfDoubleFloatMatchesJvmGolden` (oracle riscv + aarch).
 - **Faces que FICAM ABERTAS neste bug (paridade parcial, diagnosticada R6):**
   - **`?` honesto (não lixo):** elemento **record** ou **coleção aninhada**
     (tag 6) imprime `?` nos 3 targets nativos — é a recusa visível, nunca
@@ -2968,8 +2971,9 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
     conteúdo) + propagação de tag recursiva na emissão (dispatch-time hoje
     só conhece o tipo estático do elem; record/nested precisa vtable
     `toString` + sub-tag).
-  - **Double/Float no cross:** compilam FLT001 (recusa honesta); só o x86
-    tem FP (RuntimeStringConv tem kof_double_to_string x86).
+  - **Double/Float no cross:** **✅ FECHADO 15/09** — `println`/`valueOf`/concat
+    e coleções (tags 4/5) convertem FP→string via `kof_dtoa` (fatia `RtB45`,
+    libc `snprintf`/`strtod`, link dinâmico); o x86 já tinha.
   - **Map/Set multi-entry:** ordem de ARMAZENAMENTO (inserção) nos nativos
     vs hash-order do `HashMap`/`HashSet` do JVM — divergência de
     arquitetura, single-entry é idêntico. Teste multi-entry fica fora do
@@ -5974,12 +5978,15 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
 > `ConformanceMatrixTest.doubleprint` com a exclusão do Native **removida**
 > (Native == JVM byte a byte) + `KofMathTest` 29/29, `JsonE2ETest` 18/18,
 > `JsonCompleteE2ETest` 9/9, `NativeRuntimeSliceRegistryTest` 7/7.
-> **Duas restrições:** (1) `snprintf`/`strtod` exigem libc, então o fix é
-> **só x86_64** — riscv/aarch seguem `FLT001`; (2) o `_start` do runtime Kof
-> **não** garante alinhamento de pilha de 16 bytes, então cada entry point do
-> dtoa faz `andq $-16, %rsp` antes das chamadas libc (o `movaps` da glibc
-> precisa de 16B — o desalinhamento era a causa-raiz do SIGSEGV, descoberta
-> ao aterrissar este fix).
+> **Cross fechado 15/09** (`RtB45`): a MESMA `RuntimeDtoa` portada ao
+> riscv64/aarch64, consumindo libc `snprintf`/`strtod` pelo link dinâmico sob
+> demanda (`NativeCrossLink`) — o `FLT001` acabou (`NativeRiscvDtoaTest` oracle
+> JVM nos 2 arches). **Duas restrições:** (1) `snprintf`/`strtod` exigem libc →
+> o binário cross liga dinamicamente só quando imprime FP; (2) o `_start` do
+> runtime Kof **não** garante alinhamento de pilha de 16 bytes, então cada
+> entry point do dtoa alinha a pilha antes das chamadas libc (o `movaps` da
+> glibc precisa de 16B — o desalinhamento era a causa-raiz do SIGSEGV no x86;
+> no cross os entry points fazem `andi sp,sp,-16`).
 
 - **Sintoma (medido 13/09, x86_64, 4 targets):** o bug 44 foi fechado 10/09
   com a nota "16 casas + `.0` casa com o JVM", mas o `%.16g` do glibc **não**
@@ -6038,10 +6045,11 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   de verificação de round-trip) + normalizar a notação científica ao formato
   JDK (`E`, sem `+`, sem zero à esquerda no expoente, mantissa com `.0`).
   Toca `RuntimeStringConv` + `RuntimePrintNum` + o espelho cross (riscv/aarch,
-  família FLT001). **✅ IMPLEMENTADO 15/09 x86_64** via a opção
-  `%.{1..17}g`+`strtod` acima (ver a nota de fix no topo): `RuntimeDtoa`
-  carrega `kof_dtoa_format`/`kof_double_to_string`/`kof_float_to_string`;
-  riscv/aarch seguem FLT001 (precisam de `snprintf`/`strtod` da libc).
+  família FLT001). **✅ IMPLEMENTADO 15/09 x86_64 E cross** via a opção
+  `%.*e`+`strtod` acima (ver a nota de fix no topo): `RuntimeDtoa` carrega
+  `kof_dtoa_format`/`kof_double_to_string`/`kof_float_to_string`; o runtime
+  cross porta a MESMA máquina como fatia `RtB45` (libc `snprintf`/`strtod` via
+  link dinâmico sob demanda), então o `FLT001` do riscv/aarch está **fechado**.
 - **Overclaim corrigido:** o cabeçalho do bug 44 e a linha `floatprint` da
   matriz diziam "DONE"; passam a apontar este residual (agora fechado no x86_64).
 

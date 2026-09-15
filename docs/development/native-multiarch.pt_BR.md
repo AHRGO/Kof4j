@@ -38,7 +38,7 @@
 > G-5 aarch64 satisfeito pelo G-4 (as 2 arches rodam a prova do sweep);
 > o coletor (G-4) é quem de fato recupera; (2) as
 > recusas DB001/SECN000/CONC001/JSN004 acima; (3) FP-coleção no cross
-> (FLT001 em compilação §107); (4) `backend-parity.md` colunas por-arch
+> (FLT001 FECHADO 15/09 — fatia `RtB45`; face restante do §107 = record/aninhado `?`); (4) `backend-parity.md` colunas por-arch
 > ainda por separar; (5) CI cross não existe (toolchain host-dependente) —
 > **face (5) FECHADA 12/09**: job `cross-native` em `.github/workflows/ci.yml`
 > instala `binutils-riscv64/aarch64-linux-gnu` + `qemu-user-static` e roda
@@ -48,7 +48,8 @@
 > **➕ Link dinâmico SOB DEMANDA FEITO 15/09** (diretriz "liga dinamicamente"):
 > `NativeCrossLink` liga libc (`-dynamic-linker … -lc`) só quando o runtime
 > podado chama libc; os 84 binários cross atuais seguem estáticos/portáveis.
-> Ver §2.3; falta o 1º consumidor de produção (port do `RuntimeDtoa`, FLT001).
+> **➕ 1º consumidor de produção FEITO 15/09**: `RuntimeDtoa` portado ao runtime
+> cross como fatia `RtB45` (`snprintf`/`strtod`), fechando o **FLT001**. Ver §2.3.
 > Este doc continua em `development/` (NATIVE002 não fecha enquanto restam
 > (1)–(5)); quando (1)–(5) zerarem → mover para `docs/`.
 >
@@ -298,8 +299,12 @@ Resolução do sysroot: env `KOF_CROSS_SYSROOT` → instalação de sistema
 nenhum (segue estático + stderr, R6). Provado por `NativeCrossDynamicLinkTest`
 (5/5, riscv64 **e** aarch64 sob qemu: `snprintf`+`write` resolvidos em runtime; a
 sabotagem de ligar o mesmo harness estático falha com `snprintf` indefinido). O
-primeiro consumidor de produção (port do `RuntimeDtoa` para o runtime cross,
-fechando FLT001) é a próxima unidade — a infra está, o port não.
+primeiro consumidor de produção chegou em 15/09: `RuntimeDtoa` portado ao
+runtime cross como fatia `RtB45` (`kof_dtoa_format`/`kof_double_to_string`/
+`kof_float_to_string`), fechando o **FLT001** — provado por `NativeRiscvDtoaTest`
+(tabela oracle JVM no riscv64 **e** aarch64) mais o E2E
+`nativeValueOfDoubleFloat` nos 2 arches. O aarch64 herda automaticamente assim
+que o tradutor mapeia os apelidos ABI `fa0..fa7` → `d0..d7`.
 
 Detalhes do runtime riscv64/aarch64 (inc-0 02/09 + 03/09):
 - alocação: **bump allocator + free-list** em `.bss` (sem `mmap` — evita

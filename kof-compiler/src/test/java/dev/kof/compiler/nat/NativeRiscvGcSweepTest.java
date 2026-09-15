@@ -203,19 +203,19 @@ class NativeRiscvGcSweepTest {
     @Test
     void sweepRecoversDeadAndMarksLive(@TempDir Path tempDir) throws IOException {
         assumeToolchain();
-        assertSweep(buildRiscv(tempDir, "g4sweep", HARNESS, RiscvSlices.renderRuntime()));
+        assertSweep(buildRiscv(tempDir, "g4sweep", HARNESS, RiscvGcTestRuntimes.prunedFor(HARNESS)));
     }
 
     @Test
     void sweepRecoversDeadAndMarksLiveAarch64(@TempDir Path tempDir) throws IOException {
         assumeAarch64();
-        assertSweep(buildAarch64(tempDir, "g4sweepa", HARNESS, RiscvSlices.renderRuntime()));
+        assertSweep(buildAarch64(tempDir, "g4sweepa", HARNESS, RiscvGcTestRuntimes.prunedFor(HARNESS)));
     }
 
     @Test
     void longAllocLoopSurvivesArenaExhaustionViaCollect(@TempDir Path tempDir) throws IOException {
         assumeToolchain();
-        String out = buildRiscv(tempDir, "g4loop", HARNESS_LOOP, RiscvSlices.renderRuntime());
+        String out = buildRiscv(tempDir, "g4loop", HARNESS_LOOP, RiscvGcTestRuntimes.prunedFor(HARNESS_LOOP));
         assertTrue(out.contains("allocs: 10000"),
                 "o laço deveria completar as 10000 allocs (arena reciclada pelo G-4): " + out);
         assertTrue(out.matches("(?s).*frees: [1-9][0-9]*.*"),
@@ -225,7 +225,7 @@ class NativeRiscvGcSweepTest {
     @Test
     void longAllocLoopSurvivesArenaExhaustionViaCollectAarch64(@TempDir Path tempDir) throws IOException {
         assumeAarch64();
-        String out = buildAarch64(tempDir, "g4loopa", HARNESS_LOOP, RiscvSlices.renderRuntime());
+        String out = buildAarch64(tempDir, "g4loopa", HARNESS_LOOP, RiscvGcTestRuntimes.prunedFor(HARNESS_LOOP));
         assertTrue(out.contains("allocs: 10000"),
                 "o laço deveria completar as 10000 allocs no aarch64 (arena reciclada): " + out);
         assertTrue(out.matches("(?s).*frees: [1-9][0-9]*.*"),
@@ -236,7 +236,7 @@ class NativeRiscvGcSweepTest {
     void longAllocLoopOomsWithoutCollector(@TempDir Path tempDir) throws IOException {
         assumeToolchain();
         // Sabotagem: remove TODOS os hooks do coletor (entry + OOM) do runtime.
-        String sabotaged = RiscvSlices.renderRuntime()
+        String sabotaged = RiscvGcTestRuntimes.prunedFor(HARNESS_LOOP)
                 .replace("    call kof_gc_collect\n", "")
                 .replace("    call kof_gc_collect_now\n", "");
         Path asm = tempDir.resolve("g4sab.s");

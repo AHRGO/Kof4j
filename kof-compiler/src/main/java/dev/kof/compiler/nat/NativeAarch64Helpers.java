@@ -29,6 +29,26 @@ final class NativeAarch64Helpers {
         }
     }
 
+    /**
+     * Numero do registrador FP aarch64 (sem prefixo s/d) a partir de um
+     * registrador riscv. Cobre `fN` (identidade) e os apelidos ABI `fa0..fa7`
+     * (= f10..f17), que o tradutor antes renderizava como "da0" (lixo).
+     * FLT001/B45: `strtod` retorna em `fa0` no riscv e em `d0` no aarch64 —
+     * o apelido ABI `faN` mapeia para `dN` (regs de arg/retorno), nao para o
+     * numero fisico f(10+N). E este mapeamento que faz a MESMA slice valer nos
+     * dois alvos (regra 5).
+     */
+    static String fpNum(String r) {
+        r = r.trim();
+        if (r.length() > 2 && r.startsWith("fa") && Character.isDigit(r.charAt(2))) {
+            return r.substring(2);
+        }
+        if (r.length() > 1 && r.charAt(0) == 'f' && Character.isDigit(r.charAt(1))) {
+            return r.substring(1);
+        }
+        return r.substring(1);
+    }
+
     static long parseImm(String s) {
         s = s.trim();
         if (s.startsWith("0x") || s.startsWith("0X")) {

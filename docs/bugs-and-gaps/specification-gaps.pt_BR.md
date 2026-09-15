@@ -396,7 +396,7 @@ recomendações futuras (regra 14 da tarefa: não alterar comportamento).
 | SG-C1 | Short-circuit `&&`/`\|\|` | ✅ | ✅ | ✅ CORRIGIDO 09/09 | SG-006 ✅ |
 | SG-C2 | Exceção (representação) | RuntimeException | kof_panic | throw string | Stable efeito |
 | SG-C3 | GC | JVM | free-list/mark-sweep (x86); bump (riscv) | engine | Target-specific |
-| SG-C4 | FP extremo | IEEE | IEEE (FLT001) | IEEE | FLT001 |
+| SG-C4 | FP extremo | IEEE | IEEE (cross ✅ 15/09) | IEEE | FLT001 FECHADO (FP→string cross) |
 | SG-C5 | Interop tipos host | ✅ | ❌ | ❌ | Target-specific |
 | SG-C6 | `println(null)` | "null" | ✅ (R6) | "null" | — |
 | SG-C7 | Map/Set type-arg classe | ✅ CORRIGIDO 06/09 (era bug#33 — causa real: nullable inferido) | ✅ | ✅ | — |

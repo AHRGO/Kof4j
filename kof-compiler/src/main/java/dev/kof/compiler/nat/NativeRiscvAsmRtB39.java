@@ -5,9 +5,9 @@ package dev.kof.compiler.nat;
  * Port 1:1 do {@code RuntimeCollectionToString} x86_64: mesmos helpers,
  * mesma ABI (a0=container, a1=tag do elem; Map: a1=tag chave, a2=tag
  * valor) e MESMA semântica de tag (0=int/char/short/byte, 1=String,
- * 2=Long, 3=Bool, 6=desconhecido/record/aninhado → "?"). Double/Float
- * (tags 4/5) são barrados em tempo de compilação pelo dispatch cross
- * (FLT001 — mesma recusa do valueOf escalar, sem snprintf no asm puro).
+ * 2=Long, 3=Bool, 4=Double, 5=Float, 6=desconhecido/record/aninhado → "?").
+ * Double/Float (tags 4/5) chamam kof_double_to_string/kof_float_to_string
+ * (slice B45, FLT001 fechado em 15/09) — idêntico ao x86.
  *
  * <p>Disciplina de frame: os helpers do runtime riscv salvam SUBCONJUNTOS
  * INCONSISTENTES dos callee-saved ({@code kof_string_from_literal} preserva
@@ -39,11 +39,15 @@ final class NativeRiscvAsmRtB39 {
 
             # kof_elem_to_string(a0=&slot, a1=tag) -> a0 String*
             # tag 0=int/char/short/byte (word), 1=String (ponteiro), 2=Long
-            # (doubleword), 3=Bool; QUALQUER outra (record/aninhado/FP que
-            # o dispatcher já barraria) → "?" — recusa honesta, nunca lixo.
-            # Guarda `ra`: os ramos 0/2/3 e o `?` fazem `call` (o call esmaga
-            # ra — sem save/restore o ret voltaria p/ lixo; só tag 1, que é
-            # puro ld, não chama).
+            # (doubleword), 3=Bool, 4=Double (doubleword), 5=Float (word);
+            # QUALQUER outra (record/aninhado) → "?" — recusa honesta, nunca
+            # lixo.
+            # Guarda `ra`: os ramos 0/2/3/4/5 e o `?` fazem `call` (o call
+            # esmaga ra — sem save/restore o ret voltaria p/ lixo; só tag 1,
+            # que é puro ld, não chama).
+            # FLT001 (15/09): tags 4/5 agora são suportadas — kof_double_to_string
+            # /kof_float_to_string (slice B45, libc snprintf/strtod + link
+            # dinâmico sob demanda). Espelha o RuntimeCollectionToString x86.
             .globl kof_elem_to_string
             kof_elem_to_string:
                 addi sp, sp, -16
@@ -54,6 +58,10 @@ final class NativeRiscvAsmRtB39 {
                 beq  a1, t0, .Lce_long
                 li   t0, 3
                 beq  a1, t0, .Lce_bool
+                li   t0, 4
+                beq  a1, t0, .Lce_double
+                li   t0, 5
+                beq  a1, t0, .Lce_float
                 li   t0, 0
                 beq  a1, t0, .Lce_int
                 j    .Lce_q
@@ -71,6 +79,14 @@ final class NativeRiscvAsmRtB39 {
             .Lce_bool:
                 lw   a0, 0(a0)
                 call kof_bool_to_string
+                j    .Lce_ret
+            .Lce_double:
+                ld   a0, 0(a0)
+                call kof_double_to_string
+                j    .Lce_ret
+            .Lce_float:
+                lw   a0, 0(a0)
+                call kof_float_to_string
                 j    .Lce_ret
             .Lce_q:
                 la   a0, .Lc2s_q

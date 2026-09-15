@@ -106,5 +106,5 @@ jobs:
       - name: riscv64 + aarch64 E2E (executam sob qemu; falha se o codegen regredir)
         run: >
           mvn -B test -pl kof-compiler -am
-          -Dtest='NativeRiscv64E2ETest,NativeAarch64E2ETest,NativeCrossDynamicLinkTest,NativeRiscvGcListTest,NativeRiscvGcMarkTest,NativeRiscvGcFreeListTest'
+          -Dtest='NativeRiscv64E2ETest,NativeAarch64E2ETest,NativeCrossDynamicLinkTest,NativeRiscvDtoaTest,NativeRiscvGcListTest,NativeRiscvGcMarkTest,NativeRiscvGcFreeListTest,NativeRiscvGcSweepTest'
           -Dsurefire.failIfNoSpecifiedTests=false

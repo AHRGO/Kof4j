@@ -2123,8 +2123,9 @@ EXTERNAL mutation produced garbage (JVM correct) — the cause was the prologue 
   **dst/src swapped** (every F2D/D2F on aarch would corrupt) + `fdiv.`/`fmul.`
   operators with an extra dot. Proof: oracle of 25 vectors **JVM==x86==
   riscv==aarch==JS** byte-by-byte (`KofStringParseTest` 8/8, the 2 cross via
-  qemu). Double print on the cross follows FLT001 (double→string requires
-  snprintf); `Int/Long.toDouble()` boxing still has `toDouble` undefined (separate
+  qemu). Double print on the cross **✅ CLOSED 15/09** (slice `RtB45`:
+  `kof_dtoa` via libc `snprintf`/`strtod`, on-demand dynamic link — see §180);
+  `Int/Long.toDouble()` boxing still has `toDouble` undefined (separate
   gap, FLT001 family). Smallest pre-fix repro: riscv `"2.5".toDouble()` →
   COMP001 `undefined reference to kof_string_to_double`.
 
@@ -2941,10 +2942,11 @@ EXTERNAL mutation produced garbage (JVM correct) — the cause was the prologue 
   overwrote the accumulator slot, SIGSEGV).
   **Cross (riscv64 + aarch64):** new slice `NativeRiscvAsmRtB39`
   (0 .L/.globl collisions) with the SAME helpers and the SAME tag semantics;
-  the `NativeRiscvCrossOps` dispatcher (`valueOf` List/Map/Set branches) raises
-  **FLT001 at compile time** for a Double/Float collection (the same
-  refusal as the cross scalar valueOf — R6/R7: diagnosis, never a silent `?`
-  nor garbage). Discipline: **all loop state lives in a frame SLOT**
+  the `NativeRiscvCrossOps` dispatcher (`valueOf` List/Map/Set branches) routes
+  a Double/Float collection to `kof_elem_to_string` tags 4/5 →
+  `kof_double_to_string`/`kof_float_to_string` — **FLT001 CLOSED 15/09** (slice
+  `RtB45`, libc via dynamic link); before it raised FLT001 at compile time
+  (R6/R7: diagnosis, never a silent `?` nor garbage). Discipline: **all loop state lives in a frame SLOT**
   (no register survives the `call`s — each riscv runtime helper
   saves an INCONSISTENT SUBSET of the s-regs: `from_literal` preserves
   s0/s1/s3, `int_to_string` preserves s0/s1/s3/s4/s5, `bool_to_string` only
@@ -2956,9 +2958,10 @@ EXTERNAL mutation produced garbage (JVM correct) — the cause was the prologue 
   Proofs: `NativeE2ETest#execCollectionPrintMatchesJvmGolden` +
   `NativeRiscv64E2ETest`/`NativeAarch64E2ETest#nativeCollectionPrintMatchesJvmGolden`
   (golden = MEASURED JVM oracle, byte-identical in the 3 targets; sabotage of the
-  separator → FAIL); `nativeCollectionPrintFloatDoubleRefusedHonest` (riscv
-  + aarch) proves that the FLT001 refusal of an FP collection happens at COMPILATION
-  with the FLT001 message.
+  separator → FAIL); `nativeCollectionPrintMatchesJvmGolden` now includes a
+  `listOf(1.5, 2.0)` / `listOf(1.5f, 2.5f)` line (FLT001 closed 15/09 — slice
+  `RtB45`), the previous `nativeCollectionPrintFloatDoubleRefusedHonest`
+  became `nativeValueOfDoubleFloatMatchesJvmGolden` (riscv + aarch oracle).
 - **Faces that REMAIN OPEN in this bug (partial parity, diagnosed R6):**
   - **Honest `?` (not garbage):** **record** or **nested collection** element
     (tag 6) prints `?` in the 3 native targets — it is the visible refusal, never
@@ -2966,8 +2969,9 @@ EXTERNAL mutation produced garbage (JVM correct) — the cause was the prologue 
     + recursive tag propagation in the emission (dispatch-time today
     only knows the static type of the elem; record/nested needs a `toString` vtable
     + sub-tag).
-  - **Double/Float in cross:** they compile FLT001 (honest refusal); only x86
-    has FP (RuntimeStringConv has kof_double_to_string x86).
+  - **Double/Float in cross:** **✅ CLOSED 15/09** — `println`/`valueOf`/concat
+    and collections (tags 4/5) convert FP→string via `kof_dtoa` (slice `RtB45`,
+    libc `snprintf`/`strtod`, dynamic link); x86 already had it.
   - **Multi-entry Map/Set:** STORAGE (insertion) order in the natives
     vs the hash-order of the JVM's `HashMap`/`HashSet` — architecture
     divergence, single-entry is identical. The multi-entry test stays outside the
@@ -5978,12 +5982,15 @@ to the label) is the correct predicate and **was already used** in `parseStateme
 > (the `-nan` face), `-0.0` → `-0.0`. Proof: `ConformanceMatrixTest.doubleprint`
 > with the Native exclusion **removed** (Native == JVM byte-for-byte) +
 > `KofMathTest` 29/29, `JsonE2ETest` 18/18, `JsonCompleteE2ETest` 9/9,
-> `NativeRuntimeSliceRegistryTest` 7/7. **Two constraints:** (1)
-> `snprintf`/`strtod` need libc, so the fix is **x86_64 only** — riscv/aarch
-> remain `FLT001`; (2) the Kof runtime `_start` does **not** guarantee 16-byte
-> stack alignment, so each dtoa entry point does `andq $-16, %rsp` before the
-> libc calls (glibc `movaps` needs 16B — the misalignment was the SIGSEGV root
-> cause, found while landing this fix).
+> `NativeRuntimeSliceRegistryTest` 7/7. **Cross closed 15/09** (`RtB45`): the
+> same `RuntimeDtoa` ported to riscv64/aarch64, consuming libc `snprintf`/
+> `strtod` through the on-demand dynamic link (`NativeCrossLink`) — `FLT001`
+> is gone (`NativeRiscvDtoaTest` JVM-oracle both arches). **Two constraints:**
+> (1) `snprintf`/`strtod` need libc → the cross binary links dynamically only
+> when it prints FP; (2) the Kof runtime `_start` does **not** guarantee
+> 16-byte stack alignment, so each dtoa entry point aligns the stack before
+> the libc calls (glibc `movaps`/`strtod` need 16B — the misalignment was the
+> x86 SIGSEGV root cause; on cross the entry points `andi sp,sp,-16`).
 
 - **Symptom (measured 13/09, x86_64, 4 targets):** bug 44 was closed 10/09
   with the note "16 places + `.0` matches the JVM", but glibc `%.16g` does **not**
@@ -6042,10 +6049,11 @@ to the label) is the correct predicate and **was already used** in `parseStateme
   round-trip verification) + normalize scientific notation to the JDK
   format (`E`, no `+`, no leading zero in the exponent, mantissa with `.0`).
   Touches `RuntimeStringConv` + `RuntimePrintNum` + the cross mirror (riscv/aarch,
-  FLT001 family). **✅ IMPLEMENTED 15/09 x86_64** via the `%.{1..17}g`+`strtod`
-  option above (see the fix-note at the top): `RuntimeDtoa` carries
-  `kof_dtoa_format`/`kof_double_to_string`/`kof_float_to_string`; riscv/aarch
-  stay FLT001 (libc `snprintf`/`strtod` needed).
+  FLT001 family). **✅ IMPLEMENTED 15/09 x86_64 AND cross** via the `%.*e`+`strtod`
+  option above (see the fix-note at the top): `RuntimeDtoa` (x86) carries
+  `kof_dtoa_format`/`kof_double_to_string`/`kof_float_to_string`; the cross
+  runtime ports it as slice `RtB45` (libc `snprintf`/`strtod` through the
+  on-demand dynamic link), so riscv/aarch `FLT001` is **closed**.
 - **Overclaim corrected:** the header of bug 44 and the `floatprint` row of the
   matrix said "DONE"; they now point to this residual (now closed for x86_64).
 

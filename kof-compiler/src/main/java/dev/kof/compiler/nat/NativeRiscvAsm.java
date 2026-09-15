@@ -93,6 +93,10 @@ public final class NativeRiscvAsm {
                 // (kof_gc_sweep/collect_now/collect/tick). O kof_alloc do B42
                 // chama kof_gc_collect (forward ref resolvido pelo `as`).
                 .append(NativeRiscvAsmRtB44.RISCV_RUNTIME_ASM_B_44)
+                // FLT001 (NATIVE002, 15/09): Double/Float -> String via libc
+                // (snprintf/strtod) — link dinâmico sob demanda. Fecha o gap
+                // FLT001 no riscv64/aarch64.
+                .append(NativeRiscvAsmRtB45.RISCV_RUNTIME_ASM_B_45)
                 .toString();
     }
     static final String RISCV_MAPSET_ASM = runtimeMapset();
