@@ -99,21 +99,217 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > `KofConcurrency2Test.cancelJsSequential` asserts ajustados — paridade JS
 > do §186 e4613704). Suíte completa re-provada depois do rebase.
 
+
+
+> **FEITO (14/09 ~09:30, dono = 192.168.100.22, lane CodeQL/health): baseline
+> 25 + codemod `_` (agregados no main pela agregacao do cluster).** (a)
+> `b3ab9858` D-BASELINE: toolchain do repo 21→25 (pom+workflows+package.sh+
+> README EN/PT); DECISIONS.md registra a decisao da mantenedora; `V21` do
+> JvmBackend e release=21 do template Android NAO tocados (alvo do usuario,
+> regra 6). Prova: worktree limpo `b3ab9858` suíte compiler 1464/0 (162 skip)
+> em JDK 25 + 61 bindings `case T x ->`/`instanceof T x` → `_` (JEP 443) em 19
+> arquivos → kof-compiler 1574/1-fail, onde a única fail é o FLAKE sse_connection_counter
+> (passa 6/6 isolado; classe inteira 6/6 com a mudanca; nao toca arquivos web).
+> (b) Os 61 bindings estao no HEAD via `a892b3c5`/`752dc5df` + agregacao
+> `e6e5c9b8`/`663ded3a` (o cluster absorbou; conferido por-arquivo: worktree
+> == HEAD nos 19). Isso FECHA ~61 alerts `local-variable-is-never-read` no
+> proximo scan CodeQL. (c) **REGRESSOS DE OUTRAS LANES CATALOGADOS COM
+> BISSECAO PROVADA: §201 (`75e38d35` #182 → JS `_forInitVar` ReferenceError;
+> 4-5 vermelhos ArrayBounds*/BackendParity) e §202 (`e6e5c9b8` → split()
+> agora e ArrayType e `.get(i)` cai em SEM028; 6-9 vermelhos KofTime/Kitchen/
+> ConformanceMatrix).** Donos = lanes do #182 e da inferencia String — NAO
+> tocar sem coordenação (regra 6: decisão de contrato em §202). Suíte da
+> árvore hoje: ~1601/16 — os 16 sao os dois grupos acima + flake; ZERO dos
+> meus. **PROXIMO PASSO (esta lane):** seguir fila livre CodeQL apos scan
+> re-contar: unused-parameter ×81 (por caso, conferir callers), useless-null
+> ×11, indent ×10, deref-null ×8, IOB ×2 (Compare), chained-type ×21 —
+> SEMPRE checando `git log -5 -- <arq>` p/ nao colidir c/ lanes §201/§202
+> quentes. O codemod dos 17 locals puros restantes ficou p/ depois (varios
+> carregam chamada com efeito — deletar linha = mudanca de comportamento).
 ## PRÓXIMO PASSO (re-dispacho lê isto)
 
-> **✅ FEITO (14/09 ~19:30, dono = 192.168.100.15, lane bugs-and-gaps): REGRESSÃO de suíte corrigida na causa raiz — `String.valueOf(char)` (e a família de estáticos de wrapper) dropada em silêncio quando o classpath externo existe mas não contém a classe (residual da issue #233).**
-> - **Sintoma/prova:** `CoreRegressionE2ETest.stringValueOfCharParity` VERMELHO no tip (`cd010bf1`): `Internal compiler error: frame crash … ASM COMPUTE_FRAMES NegativeArraySizeException: -1`. Bissecção em worktree limpo: verde `59359935`, vermelho `1e88309b` (commit rotulado "codeql" que trouxe o dispatch de wrapper). `doubleStaticMethodsJvm` já fora corrigido upstream (`036e5140`); a face `valueOf` ficou.
-> - **Causa raiz:** o novo ramo de receptor-builtin em `ExpressionMethodCallLowerer` (`1e88309b`) casa `String`/`Int`/`Double`/… mesmo quando o `externalClasspath` NÃO conhece a classe (caso comum), e só emite para `extSig != null` ou `isNaN/isInfinite/isFinite`. Para `String.valueOf(...)`/`parse*` o ramo saía **sem emitir nada** (R6 violado — drop silencioso); o `println` externo então emitia seu `String.valueOf(Object)` sem valor na pilha → crash do ASM.
-> - **Fix (Q0, causa raiz):** `ExpressionMethodCallLowerer` delega a `ExpressionInstanceCallLowerer.lower(...)` quando não há `extSig` nem é `isNaN` — restaurando o caminho pré-`1e88309b` (que já tratava `valueOf`/`parse*` no ramo de receptor-builtin). `ExpressionInstanceCallLowerer` inalterado.
-> - **Prova (Q1, no MESMO commit):** `WrapperStaticCallsE2ETest` (arquivo DEDICADO): `stringValueOfCharInsidePrintln` (repro exato, JVM+JS), `stringValueOfPrimitivesInsidePrintln` (JVM+JS), `wrapperIsAndParseStatics` (**só JVM**, honesto: o JS de wrapper-statics é gap pré-existente catalogado como §235). + `CoreRegressionE2ETest#stringValueOfCharParity` 1/1 e `#doubleStaticMethodsJvm` 1/1. Gate `check_500` OK (538 tolerado). Suíte 4-módulos: kof-script 38/38, kof-c 5/5, kof-compiler 1691 (1 fail = §205 aberto, 13 err = node), kof-cli 248 (1 fail pré-existente `DecompileTest.wideParamsMapToCorrectSlots`, confirmado vermelho em origin limpo).
-> - **Catalogado (§235, EN+PT):** backend JS emite `java_lang_Double.isNaN(...)`/`java_lang_Integer.parseInt(...)` → `ReferenceError` (pré-existente, reproduzido em `59359935`; lane JS).
+> **✅ FEITO (14/09 ~19:30, dono = 192.168.100.15, lane bugs-and-gaps): REGRESSÃO de suíte corrigida na causa raiz — `String.valueOf(char)` (e toda a família de estáticos de wrapper) dropada em silêncio quando o classpath externo existe mas não contém a classe (issue #233 residual).**
+> - **Sintoma/prova:** `CoreRegressionE2ETest.stringValueOfCharParity` VERMELHO no tip (`cd010bf1`/`323cf88e`): `Internal compiler error: frame crash … ASM COMPUTE_FRAMES NegativeArraySizeException: -1`. Bissecção em worktree limpo: verde `59359935`, vermelho `1e88309b` (commit rotulado "codeql" que na verdade trouxe o dispatch de wrapper). `doubleStaticMethodsJvm` já tinha sido corrigido upstream (`036e5140`); a face `valueOf` ficou.
+> - **Causa raiz:** o novo ramo de receptor-builtin em `ExpressionMethodCallLowerer` (1e88309b) casa `String`/`Int`/`Double`/… mesmo quando `externalClasspath` NÃO conhece a classe (o caso comum), e só emite para `extSig != null` ou `isNaN/isInfinite/isFinite`. Para `String.valueOf(...)`/`parse*` o ramo saía **sem emitir nada** (R6 violado — drop silencioso); o `println` externo então emitia seu `String.valueOf(Object)` sem valor na pilha → crash do ASM.
+> - **Fix (Q0, causa raiz):** `ExpressionMethodCallLowerer` delega a `ExpressionInstanceCallLowerer.lower(...)` quando não há `extSig` nem é `isNaN` — restaurando exatamente o caminho pré-1e88309b (que já tratava `valueOf`/`parse*` no ramo de receptor-builtin). `ExpressionInstanceCallLowerer` inalterado.
+> - **Prova (Q1, no MESMO commit):** `WrapperStaticCallsE2ETest` (arquivo DEDICADO — zero colisão de tail): `stringValueOfCharInsidePrintln` (o repro exato, JVM+JS), `stringValueOfPrimitivesInsidePrintln` (JVM+JS), `wrapperIsAndParseStatics` (isNaN/isInfinite/parse* — **só JVM**, honesto: o JS de wrapper-statics é gap pré-existente catalogado como §235). + `CoreRegressionE2ETest#stringValueOfCharParity` 1/1 e `#doubleStaticMethodsJvm` 1/1. Gate `check_500` OK (538 tolerado). Suíte 4-módulos: **kof-script 38/38, kof-c 5/5, kof-compiler 1691 (1 fail = §205 open, 13 err = node), kof-cli 248 (1 fail pré-existente `DecompileTest.wideParamsMapToCorrectSlots`, confirmado vermelho em origin limpo sem meus arquivos)**.
+> - **Catalogado (§235, EN+PT):** JS backend emite `java_lang_Double.isNaN(...)`/`java_lang_Integer.parseInt(...)` → `ReferenceError` (pré-existente, reproduzido em `59359935`; lane JS).
 > - **NÃO tocado:** `DecompileTest.wideParamsMapToCorrectSlots` (pré-existente, lane decompiler) e `ConformanceMatrixTest.conformanceCoreControl` (§205 Native ifexpr, lane do #183).
 >
+> **✅ FEITO (14/09 ~17:10, dono = 192.168.100.15, lane bugs-and-gaps): batch de issues fechadas com prova — #211, #204, #205, #193, #198 (+ #163/#167/#214 verificadas fechadas pelas lanes .22/.17).**
+> - **#211/#163** (catch sem `java.lang`): fix `CompilerTypes.exceptionType()` em HEAD; prova `ExceptionsE2ETest.typedCatchExceptionMethodCall` + `typedCatchExceptionAndThrowable` (11/11) — issue fechada.
+> - **#204** (block-lambda `() -> void`): já funcionava (fix raiz = #180 `efda67b2`); prova aditiva `LambdaVoidInferenceE2ETest` 2/2 (no-arg exato da issue).
+> - **#205** (as-cast p/ primitivo sem unbox): fix `ExpressionBinaryLowerer` (+kof_unbox pós-checkcast; Char→INT, §104b-ii); prova `CastPrimitivesE2ETest` 6/6 JVM/JS/Native medidos. Commit `febf8dc7`.
+> - **#193/#198** (tipo-função como type-arg de `new List<() -> T>()`): raiz dupla (parser descartava `(`/`)`/`->` silenciosamente + `SemExpressionTyper` NewExpr dropsava type-args vs emit). Fix source `59359935` + prova `LambdaInGenericContainerE2ETest` 5/5 JVM+JS `40c18e89`. **Lição worktree:** meu commit `6856709a` nunca pushou (a lane .17 rebasou com o source fix dentro do codeql dela); o teste existia SÓ no meu commit órfão — origin tinha o fix SEM prova; extraí o teste p/ worktree limpo e pusho `40c18e89`. Suite completa no worktree: 1662, 2 falhas PRÉ-EXISTENTES em origin limpo (matriz ifexpr NATIVE exit=139 + exclusões doc — bissectadas sem meus arquivos).
+>
+> **PRÓXIMO PASSO (esta lane):** fila aberta (27): atacar na ordem **#156/#216 (String.format varargs — descriptor `(String,Object[])V` + packing dos args; já reproduzido com jar fresco: `NoSuchMethodError: String.format(String,String,String)`)**, depois #161 (call genérico sem checkcast no call-site — reproduzido: `NoClassDefFoundError: ?`), #141 (spawn block SEM033), #153/#168 (Char), #148 (família .17 — NÃO tocar), #199 (guard pattern), #213/#219/#220/#221. Método: repro com jar fresco ANTES (lição #214: fix de outra lane + jar stale = falso-positivo de bug vivo), worktree limpo p/ suíte, teste em arquivo DEDICADO novo (zero colisão de tail com CoreRegressionE2ETest — 3 colisões hoje).
+>
+> **✅ FEITO (14/09 ~20:30, dono = 192.168.100.15, lane bugs-and-gaps): batch 2 de issues fechadas com prova — #155, #221, #236, #241, #242, #243, #220, #245, #141 (+ #246/#233 fechadas pelas lanes .22/.18; fila aberta agora 18).**
+> - **#155** (2ª interface com retorno primitivo): já funcionava; prova aditiva `MultipleInterfaceReturnTypeE2ETest` 2/2 (Boolean/Int no 2º método — o teste pré-existente só usava String). `d8773590`.
+> - **#221** (static field com inicializador de expressão): família `<clinit>` do #133; prova `StaticFieldInitializerE2ETest` 1/1 (as 4 células do corpo exato: 100/8/foobar/100). `073c0816`.
+> - **#236** (tipo-função em `new List<() -> Int>()` → ClassFormatError): já corrigido pelo fix de #193/#198 (parser + typer NewExpr); `LambdaInGenericContainerE2ETest.chainedCallOnGetResult` É o repro exato. Fechada sem commit novo (prova já existia no HEAD).
+> - **#241** (catch QUALIFICADO `java.lang.RuntimeException` → ClassFormatError): raiz `JvmBackend.exceptionJvmType()` concatenava `java/lang/` cego no nome já pontuado. Fix na raiz: nome com `.` → traduz `.`→`/` (idempotente). Prova `QualifiedCatchE2ETest` 2/2 + exception table no javap = `Class java/lang/RuntimeException`. **Colisão de lane:** outra instância pushou fix paralelo (`64e3298e`, `if indexOf('/')`) sobre o meu (`7ce67a6a`) — ambos na beta, harmless. Borda honesta registrada na issue: `e.getMessage()` em catch tipado falha no ALVO JS (pre-existente, catálogo separado — R6).
+> - **#242** (ctor parametrizado sem `constructor` → `<init>` ausente): MESMA raiz do #142/#157/#164 (gramática `constructor` opcional); já verde em `CoreRegressionE2ETest.constructorNamedLikeClass`. Fechada com prova do javap + JVM/JS rodando o repro exato.
+> - **#243/#220** (primitivo em campo `T` apagado → VerifyError): boxing do store de campo já no HEAD (`javap`: `Integer.valueOf` antes do `putfield`). Prova `GenericFieldPrimitiveBoxE2ETest` 2/2 (repro exato + matriz Int/Double/Bool/String, paridade JVM×JS). `cd010bf1`.
+> - **#245** (`for-in` sobre String → VerifyError arraylength): já corrigido 14/09 como SEM058 honesto (regra 6 — `for-in` só itera List/array; §194 da minha lane). Fechada com o repro da issue emitindo SEM058.
+> - **#141** (`spawn { expr }` → `await` perdia valor): **FIX PRÓPRIO**. Raiz: a conversão corpo-1-expressão→retorno existia SÓ na emissão (`CompilerLambdaClass:128`); NENHUM dos 3 typers do caminho spawn espelhava → `Handle<Void>` → SEM033 falso-positivo (a FACE mudou: 0.3.x = null em runtime; hoje = rejeição em compile-time; triagem da mantenedora = "veredito errado, gap do typer, 0.4.1"). Fix nos 3 pontos GATEADOS a `__kof_spawn_expr` (BuiltinCallTyper, ExpressionTyper.inferLambdaBodyType, StatementLowerer pin) — contrato geral de lambda (closures.md §1) intocado. Prova `SpawnAwaitBlockE2ETest` 5/5 JVM×JS + repro roda 4 targets (JVM/JS/Script/Native-x86 = `OK: ok`). `3c16c044`. Vizinhos verdes: KofConcurrency2Test 34, LambdaE2ETest 26, ExceptionsE2ETest 11.
+> **⚠️ REGRESSÃO PRÉ-EXISTENTE NA BETA (não minha, NÃO corrigi):** `CoreRegressionE2ETest.stringValueOfCharParity` (String.valueOf(char) → frame crash ASM `NegativeArraySizeException: -1`) está VERMELHO no HEAD LIMPO da origin (cravado como "marker pre-existente da lane .22" no commit `8e4b34d3` do codeql sweep, e re-confirmado red em `52fa5127` SEM minhas mudanças — stash-test provou). Suspeita forte: os switches de `computeStack`/emissores de literal da série #292/#295/#297 (o KofCall `String.valueOf:(C)` 2-slot não abatido no modelo de depth → estouro). DONO = lane .22 (JvmLiteralEmitter/NativeOpHelpers). Registrando aqui (regra 3: nunca "fixar" o teste afrouxando; stop-cond 3: red que não introduzi).
+>
+> **✅ FEITO (14/09 ~21:15, dono = 192.168.100.15, lane bugs-and-gaps): #199 CORRIGIDA c/ fix na raiz — commit `1f56ee3a`.**
+> `SwitchExprLowerer.emitSwitchChain` (só a forma-EXPRESSION; a STATEMENT já fazia certo com `#guardCast` separado): com GUARDA o MESMO `bodyLabel` era visitado 2× (instanceof-true ANTES do binding + guarda-true DEPOIS) → resolução de label pega a ÚLTIMA visita → o caminho instanceof-true caía DEPOIS do `astore` → var bound nunca escrita no ramo que a lê → `VerifyError: Bad local variable type` no LOAD. **Fix na IR compartilhada** (regra 5, cura JVM/Native/Script de uma): com guarda, `bindingLabel` NOVO recebe o instanceof-true (prólogo do binding); guarda-true pula p/ `bodyLabel` (corpo). Sem guarda `bindingLabel == bodyLabel` (queda direta, UMA visita — byte-compat). **Prova:** `GuardedPatternSwitchExprE2ETest` 3/3 (repro exato `3/1/0` + var lida no CORPO do braço c/ pattern de classe de domínio `100/5/-1` + paridade Script). Vizinhos: `KofPatternMatchingTest` 12/12, `CoreRegressionE2ETest` **99/99 (a red pré-existente `stringValueOfCharParity` foi RESOLVIDA pelo `5ad494b7` upstream — o registro de risco da batch-2 está CERRADO)**, `BackendParityTest` 19/19. **Borda JS catalogada na issue:** frontend próprio do KofJS (`parseExpressionFragment`) chuta `KofConditionalJump` em statement — COMP002 pré-existente (medido no jar pré-#199), NÃO é regressão minha, R6-compliant.
+> **PRÓXIMO PASSO (re-dispacho lê isto):** da fila, restam: **#156/#216 (String.format varargs — packing dos args em `Object[]` + descriptor `(String,Object[])String`; leia a assinatura REAL do callee via reflection/ExternalClasspath, conserta parâmetro E retorno de uma vez — família §234/§224/§225 = interop-descriptor, NÃO atacar os arquivos em WIP da lane .22)**, depois #161 (call genérico sem checkcast no call-site), #153/#168 (Char → `Character.valueOf`, gateado só ao caminho concat/toString, NÃO quebrar storage `char`-as-`Integer` de coleção documentado em JvmOpCollections:362-391) (#199 FEITA acima `1f56ee3a`). #148/#233 família Jvm*Descriptor = lane .17 (NÃO tocar). #151 (`is`)/#159/#207/#213/#219/#228 = regra 6 / decisão / lane alheia. Método: worktree NOVO por unidade (`git worktree add --detach wtN origin/beta-0.4.0` + `update-index --no-skip-worktree` ANTES de reset; push `HEAD:beta-0.4.0`; cherry-pick do meu commit se a origin andar no meio — a beta anda a cada ~5 min, 10 commits no meio do #141), jar SEMPRE `clean package` após mexer no compiler (trap do fat-jar stale mordeu 2× hoje), teste em arquivo DEDICADO. **Antes de fechar qualquer issue do lote §219/interop: rodar o REPRO com o jar do commit de origem da fix — 6 das 15 fechadas hoje já estavam corrigidas por outras lanes (jar fresco + javap = prova, não memória).**
+
+> **✅ FEITO (14/09 ~15:25, dono = 192.168.100.18, lane development): DECISIONS §5 — `app.security()` adota o modelo Spring (`authorizeHttpRequests` + CSRF on by default).** Deltas concretos: (1) **CSRF LIGADO por default** quando `app.security()` é configurado (`kof_web_security_opts` seta `securityCsrf = true`; `csrf:false` desliga). Apps SEM `app.security()` não mudam (o default do campo segue `false`, senão o `KofWebE2ETest` base quebraria com 403). (2) **Leitura autenticada por default**: a guarda de sessão JÁ rejeita toda request fora de `publicPaths` (GET incluído) — a nota "reads públicas" do merge C18 (DECISIONS §5, linha do merge) era DESATUALIZADA e foi corrigida; nada a mudar no código. (3) **`permitAll`** aceito como alias de `publicPaths` (allow-list de matchers). `app.security()` sem args segue headers-only (GET `/hello` → 200). **Prova:** `KofWebE2ETest` 25/25 (novos `securityCsrfIsOnByDefault`, `securityPermitAllAliasIsPublicPaths`) + `KofBlogE2ETest` 1/1 (POSTs agora fazem o double-submit: GET público → cookie `csrf` → `Cookie` + `X-CSRF-Token`) + `KofOAuthResourceServerTest` 4/4 + `KofWebHardeningTest` 6/6. Docs: DECISIONS §5 Done (EN+PT), known-bugs §195 RE-CONFIRMADO (EN+PT), stdlib-web (EN+PT: `csrf` default `true`, `sessionHeader`/`publicPaths`/`permitAll`, leitura autenticada). **Próximo:** decisão 6 (§180 Native `println(double/float)` toString) → decisão 2 (§129 frame-per-thread).
+> **✅ FEITO (14/09 ~19:15, dono = 192.168.100.22, lane compiler): fix issue #246 — extending a generic class writes angle-bracketed name as super_class — NoClassDefFoundError + inherited methods unresolved.**
+> - Causa raiz: (1) em `SymbolTableBuilder.java`, ao declarar uma classe que estende tipo genérico (`class StringBox extends Container<String>`), `cls.superClass()` continha a string com parâmetros de tipo (`Container<String>`). Ao registrar `SymbolTable.ClassSymbol`, a superclasse ficava `Container<String>`, impedindo que o `MemberResolver.resolveInHierarchy()` encontrasse o `SymbolTable.ClassSymbol` do pai (`Container`) e emitindo `SEM025` em chamadas a métodos herdados (`sb.set()`, `sb.get()`). (2) em `CompilerClassLowering.java`, `superName` mantinha o nome com `<...>`, emitindo `super_class` bruto no class file e gerando `NoClassDefFoundError: Container<String>` na JVM ao carregar a subclasse.
+> - Correção: normalizado `superQualified` e `superName` em `SymbolTableBuilder.java` e `CompilerClassLowering.java` para extrair o nome base da classe (`substring(0, indexOf('<'))`), preservando a superclasse apagada/erased no bytecode e permitindo a resolução semântica dos membros da hierarquia.
+> - Prova: `CoreRegressionE2ETest#extendGenericClassJvm` cobrindo herança de genérico com argumento concreto (`String`), argumento tipo primitivo (`Int`) e repasse de parâmetro genérico (`TypedBox<T> extends Container<T>`).
+> - Próximo: issues #237, #232, #231.
+
+> **✅ FEITO (14/09 ~18:45, dono = 192.168.100.22, lane compiler): fix issue #247 — Boolean overload resolution selects Int overload when both show(Int) and show(Boolean) exist.**
+> - Causa raiz: em `SymbolTable.MethodSet#select(int argCount, List<Type> argTypes)`, a iteração retornava imediatamente o primeiro método compatível por aridade cujos parâmetros aceitassem os argumentos (`TypeChecker.isAssignable`). Como `bool` podia ser avaliado primeiro contra `Int` se este viesse antes na lista de métodos e fosse aceito por compatibilidade/coerção ampla, o overload de `Int` era retornado antes de inspecionar o overload com tipo exato `Boolean`.
+> - Correção: `MethodSet#select()` agora acumula todos os candidatos aplicáveis da aridade requerida e, quando há múltiplos aplicáveis, calcula a pontuação por correspondência exata de tipos (`arg.equals(par)`), selecionando o overload mais específico (espelhando a lógica de `TopLevelOverload.pick()`).
+> - Prova: `CoreRegressionE2ETest#booleanOverloadResolutionPrefersBooleanJvm`.
+> - Próximo: issues #242, #243, #245.
+
+> **✅ FEITO (14/09 ~18:35, dono = 192.168.100.22, lane compiler): fix issue #241 — catch clause with qualified exception name generates illegal class name in exception table — ClassFormatError.**
+> - Causa raiz: em `JvmBackend.java:exceptionJvmType(String kofType)`, quando `kofType` era um nome qualificado completo de exceção (ex.: `java.lang.RuntimeException` ou `java.io.IOException`), o método concatenava cegamente `"java/lang/" + kofType`, resultando em `"java/lang/java.lang.RuntimeException"` e disparando `ClassFormatError` na JVM ao carregar a classe.
+> - Correção: `JvmBackend.exceptionJvmType()` agora detecta nomes pontuados (`contains(".")`) ou com barra (`contains("/")`), normalizando pontos para barras (`kofType.replace('.', '/')`) e mantendo o prefixo `java/lang/` apenas para nomes simples não qualificados.
+> - Prova: `CoreRegressionE2ETest#qualifiedExceptionInCatchClauseJvm` cobrindo `java.lang.RuntimeException` e `java.io.IOException`.
+> - Próximo: issues #242, #243, #245.
+
+> **✅ FEITO (14/09 ~18:25, dono = 192.168.100.22, lane compiler): fix issue #235 — Overloaded static methods: call instruction omitted from IR, causing COMP002.**
+> - Causa raiz: (1) em `MemberCallTyper.java`, quando o receiver era o nome de uma classe Kof estática (`Fmt.of(x)`), o typer checava apenas `km instanceof SymbolTable.MethodSymbol` com tamanho de parâmetro exato, falhando quando múltiplos métodos estáticos homônimos eram agrupados num `SymbolTable.MethodSet`. Sem registrar o método em `sa.resolvedMethods()`, o tipo inferido caía em `UNKNOWN`. (2) em `ExpressionMethodCallLowerer.java`, o bloco estático para classes do módulo também esperava somente `SymbolTable.MethodSymbol` e ignorava `SymbolTable.MethodSet`, deixando de emitir o `KofCall` correspondente no IR e gerando crash `COMP002` no ASM COMPUTE_FRAMES. (3) em `TypeChecker.isAssignable()`, tipos primitivos `bool` estavam sujeitos à comparação por `primitiveWidth()`, onde `bool` (width 0) era erroneamente considerado atribuível a `int` (width 2).
+> - Correção: `MemberCallTyper.java` e `ExpressionMethodCallLowerer.java` agora suportam `SymbolTable.MethodSet`, utilizando `set.select(argCount, argTypes)` para selecionar o overload correto por aridade e tipos de argumentos. `TypeChecker.isAssignable()` isola estritamente `bool` de conversões numéricas primitivas.
+> - Prova: `CoreRegressionE2ETest#overloadedStaticMethodsJvm`.
+> - Próximo: issues #232, #236, #237.
+
+> **✅ FEITO (14/09 ~18:10, dono = 192.168.100.22, lane compiler): fix issue #233 — Static boolean-returning methods on Double generate String return type in bytecode.**
+> - Causa raiz: (1) em `ExpressionInstanceCallLowerer.java`, quando o receiver era um identificador de tipo estático (`Double`, `Float`, etc.) sem variável local correspondente, a expressão do receiver não devia empilhar valor na pilha e as chamadas precisavam resolver o tipo de retorno estático correto da JDK em vez do fallback `BuiltinTypes.STRING`. (2) em `ExpressionMethodCallLowerer.java`, o bloco de despacho para wrappers primitivos JDK (`Double.isNaN`, `Double.isInfinite`, `Double.isFinite`, `Float.*`) dependia estritamente de `driver.externalClasspath != null` e `knows(...)` de jars carregados, caindo no fallback onde métodos estáticos de booleanos tinham tipo inferido como `String` e geravam chamadas de bytecode inválidas `(D)Ljava/lang/String;` e `Boolean.valueOf(Z)` desbalanceado no stack frame. (3) em `MethodCallTyper.java`, adicionada a inferência correta de `Type.PrimitiveType.BOOL` para métodos `isNaN`, `isInfinite` e `isFinite` sobre `Double` e `Float`.
+> - Correção: `MethodCallTyper.java` agora infere `BOOL` para `Double.isNaN` / `Double.isInfinite` / `Double.isFinite` e correspondentes de `Float`. `ExpressionMethodCallLowerer` emite a chamada `KofCallKind.STATIC` com o tipo de retorno `BOOL` e parâmetros adequados (`double`/`float`) mesmo na ausência de JARs externos adicionais.
+> - Prova: `CoreRegressionE2ETest#doubleStaticMethodsJvm`.
+> - Próximo: issues #235, #236, #232.
+
+> **✅ FEITO (14/09 ~17:00, dono = 192.168.100.22, lane compiler): fix issue #239 — static method called via instance reference generates invokevirtual -> IncompatibleClassChangeError.**
+> - Causa raiz: em `ExpressionInstanceCallLowerer.java`, chamadas originadas a partir de referências de instância (`u.square(4)`) assumiam incondicionalmente `KofCallKind.INSTANCE` gerando `invokevirtual` na JVM. Quando o método resolvido possuía o modificador `static` (`AccessFlags.STATIC`), a chamada causava `IncompatibleClassChangeError: Expecting non-static method` em tempo de execução.
+> - Correção: `ExpressionInstanceCallLowerer` detecta se `(resolvedMethod.accessFlags() & AccessFlags.STATIC) != 0`, alternando a chamada para `KofCallKind.STATIC` (gerando `invokestatic`) e descartando o valor do receiver previamente avaliado na pilha (`KofPop`) para preservar o balanço da pilha JVM.
+> - Prova: `CoreRegressionE2ETest#staticMethodCalledViaInstanceReferenceJvm`.
+> - Próximo: issues #233, #235, #236.
+
+> **✅ FEITO (14/09 ~16:20, dono = 192.168.100.22, lane compiler): fix issue #238 — interface static fields not accessible — SEM025 on access.**
+> - Causa raiz: (1) em `SymbolTableBuilder.defineInterfaceMembers()`, os membros de interface do tipo `FieldDeclarationNode` não eram registrados na tabela de símbolos (`classSym.members()` / `classScope`), causando falha `SEM025` na checagem semântica ao resolver `Interface.FIELD`. (2) no lowering em `CompilerClassLowering.lowerInterface()`, campos de interface eram gerados sem as flags obrigatórias exigidas pela especificação JVM (`ACC_PUBLIC | ACC_STATIC | ACC_FINAL`), gerando `ClassFormatError: Illegal field modifiers in class K: 0x9`.
+> - Correção: `SymbolTableBuilder.defineInterfaceMembers()` agora registra campos em interfaces com `AccessFlags.STATIC` tanto no escopo da classe quanto em `classSym.members()`. `CompilerClassLowering.lowerInterface()` assegura os modificadores `ACC_PUBLIC | ACC_STATIC | ACC_FINAL` em todos os campos de interface emitidos no bytecode.
+> - Prova: `CoreRegressionE2ETest#interfaceStaticFieldAccessJvm`.
+> - Próximo: issues #232, #239.
+
+> **✅ FEITO (14/09 ~16:00, dono = 192.168.100.22, lane compiler): fix issue #230 — Static method in interface compiled with ACC_ABSTRACT flag causing ClassFormatError.**
+> - Causa raiz: (1) em `CompilerClassLowering.lowerMethodInner()`, qualquer método em interface sem modificador `default` recebia automaticamente `access |= AccessFlags.ABSTRACT`, mesmo quando continha modificador `static` e corpo concreto, resultando na flag combinada ilegal `0x409` (`ACC_PUBLIC | ACC_STATIC | ACC_ABSTRACT`) rejeitada pela especificação da JVM §4.6. (2) em `JvmOpEmitter.emit()`, na instrução `INVOKESTATIC`, o parâmetro `isInterface` de `visitMethodInsn` era fixado em `false`, o que para métodos estáticos em interfaces causava `IncompatibleClassChangeError: Method ... must be InterfaceMethodref constant` no bytecode da chamada.
+> - Correção: (1) em `CompilerClassLowering`, métodos estáticos de interfaces (`method.modifiers().contains("static")`) não recebem mais `AccessFlags.ABSTRACT`. (2) em `JvmOpEmitter`, quando `kc.kind() == STATIC`, verifica-se se a classe dona é uma interface no módulo (`ACC_INTERFACE`), passando `isInterface = true` para `visitMethodInsn(INVOKESTATIC, ...)`.
+> - Prova: `CoreRegressionE2ETest#staticMethodInInterfaceJvm`.
+> - Próximo: issues #232, #233, #239.
+
+> **✅ FEITO (14/09 ~15:37, dono = 192.168.100.22, lane compiler): fix issue #234 — for-in loop with explicit type annotation on iterator variable fails with SEM011.**
+> - Causa raiz: em `StatementParser.parseForStatement()`, a verificação de for-in avaliava apenas `for (var x in ...)` diretamente com lookahead de offset fixo `ctx.pos + 2` para o identificador `"in"`. Quando o loop continha uma anotação de tipo explícita na variável do iterador (`for (var n: Int in lst)` ou `for (val s: String in strs)`), o lookahead não reconhecia a estrutura for-in e desviava o fluxo para a declaração de variável tradicional no estilo C `for (init; cond; update)`. Nessa rota, o parser aguardava `=` para inicialização e acabava tratando o token `in` como parte da expressão ou identificador indefinido, disparando `SEM011`.
+> - Correção: `StatementParser.parseForStatement()` agora inspeciona tokens subsequentes após `:` para localizar o separador `in` da iteração for-in, permitindo que tipos explícitos sejam consumidos via `TypeParser.parseTypeRef(ctx)` e vinculados corretamente à variável do iterador.
+> - Prova: `CoreRegressionE2ETest#forInWithExplicitTypeAnnotationJvm`.
+> - Próximo: issues #230, #232, #233, #239.
+
+> **✅ FEITO (14/09 ~15:15, dono = 192.168.100.22, lane compiler): fix issue #222 — constructor-like method inside class body compiled as void instance method instead of <init>.**
+> - Verificado e validado com teste E2E `CoreRegressionE2ETest#classNamedConstructorInBodyJvm`. Construtores com o nome da classe no corpo da classe já são compilados diretamente como construtores `<init>` da JVM. Issue #222 fechada.
+
+> **✅ FEITO (14/09 ~15:05, dono = 192.168.100.22, lane compiler): fix issue #226 — super() constructor call always fails with SEM017 regardless of parent constructor.**
+> - Causa raiz: (1) em `SymbolTableBuilder.defineClassMembers()`, quando uma classe não declarava construtor explícito (`!hasCtor`), o construtor padrão sintético sem argumentos era registrado apenas em `classScope`, mas não em `classSym.members()`, tornando-o invisível para consultas na superclasse. (2) em `ExpressionMethodCallLowerer.java`, a resolução do construtor da superclasse (`super(...)`) usava `targetCs.members().resolve("<init>")` diretamente sem tratar `ConstructorSet` (quando a superclasse possuía múltiplos construtores sobrecarregados), fazendo com que `ctor` ficasse nulo e disparasse falso-positivo `SEM017`.
+> - Correção: `SymbolTableBuilder` agora define o construtor padrão tanto em `classScope` quanto em `classSym.members()`. `ExpressionMethodCallLowerer` passa a utilizar `SymbolTable.constructorFor(targetCs.members(), mc.arguments().size())`, que suporta tanto `ConstructorSymbol` único quanto `ConstructorSet` sobrecarregado por aridade.
+> - Prova: `CoreRegressionE2ETest#superConstructorCallResolvesCorrectlyJvm`.
+> - Próximo: issues #216, #222, #221.
+
+> **✅ FEITO (14/09 ~14:30, dono = 192.168.100.22, lane compiler): fix issue #224 — abstract method in non-abstract class is accepted without error (AbstractMethodError at runtime).**
+> - Causa raiz: em `SemanticAnalyzer.analyzeClass()`, não havia verificação estática que exigisse que uma classe contendo métodos com modificador `abstract` fosse ela própria declarada com o modificador `abstract`. Isso permitia que classes concretas fossem compiladas com métodos sem corpo, instanciadas normalmente em runtime, e gerassem `AbstractMethodError` quando o método era invocado.
+> - Correção: adicionada validação em `SemanticAnalyzer.analyzeClass` que rejeita em tempo de compilação métodos `abstract` declarados dentro de classes não-abstratas com o erro `SEM041`.
+> - Prova: `CoreRegressionE2ETest#abstractMethodInNonAbstractClassRejected`.
+> - Próximo: issues #216, #226.
+
+> **✅ FEITO (14/09 ~15:00, dono = 192.168.100.18, lane development): S1b.3 — `math.roundTo(value: Double, decimals: Int) -> Double` nos 5 alvos (DECISIONS §3).** Half-away-from-zero (âncora C `round()`) por escala decimal determinística, SEM libm: `p=10^|d|` por multiplicação REPETIDA (cada passo 1 op IEEE corretamente arredondada → byte-idêntico 5 alvos); `d>=0`: `roundHalfAway(v*p)/p`, `d<0`: `roundHalfAway(v/p)*p` (decimals negativo arredonda p/ dezenas/centenas); `|d|` satura em 308; overflow de `v*p` → devolve `v`. `roundHalfAway` = trunc + correção do resto (`|f|>=0.5` → ±1; evita o double-rounding do `floor(x+0.5)`). Contrato ARITMÉTICO travado (não decimal-string): `roundTo(2.675,2)==2.68` (o double `2.675*100` arredonda a `267.5`). Backends: JVM (`JvmStringMathRuntime`, reflexão p/ SCRIPT), JS (`kofMathRoundTo`), x86 (`RuntimeMath`), riscv (fatia B32 — inline `fcvt.l.d`/`fcvt.d.l`/`feq`/`flt`; aarch herda via tradutor). Guard de tipo: `decimals` Int obrigatório (SEM025). **Prova:** `KofMathTest.roundTo{Jvm,Native,Js,CrossArch}` + `roundToTypeGuardRefused` (28/28 na classe, o hang do §192 `parseOrDefaultCrossArch` é PRÉ-EXISTENTE/lane nat, provado com o meu diff stashed) + `ConformanceMatrixTest.stdmathround` (4 targets + doc-gate) + `KofScriptStdlibParityTest.mathRoundToParity` + slice-registry (x86/riscv/JS) 21/21. Docs: DECISIONS §3 Done (EN+PT), backend-parity, learn/39-stdlib, training/idioms/stdlib, stdlib.md, PLAN-STDLIB-EXPANSION (S1b.3), conformance-matrix (EN+PT), CHANGELOG (EN+PT). `JvmStringMathRuntime` ficou em 495 (o roundTo saiu para o fragmento novo `JvmMathRoundRuntime`, 54 — gate ≤500 limpo, zero dívida nova). **Próximo:** decisão 5 (`app.security()` modelo Spring) → decisão 6 (§180 Native toString) → decisão 2 (§129 frame-per-thread).
+> **✅ FEITO (14/09 ~14:00, dono = 192.168.100.22, lane compiler): fix issue #225 — Instance method shadowed by built-in when name matches print/println.**
+> - Causa raiz: `ExpressionStaticCallLowerer.lower`, `MethodCallTyper.inferType` e `BuiltinCallTyper.inferType` tratavam qualquer chamada `print` ou `println` com 1 argumento como a função builtin global, sem verificar se `mc.receiver() == null`. Quando uma classe definia um método de instância `print` ou `println`, chamadas com receiver explícito (ex: `log.print("test")` ou `f.println(7)`) eram interceptadas e despachadas diretamente para `java/io/PrintStream.print/println`, ignorando o receiver e o método de instância definido.
+> - Correção: adicionada checagem `mc.receiver() == null` em `ExpressionStaticCallLowerer`, `MethodCallTyper` e `BuiltinCallTyper` para os ramos `print`/`println`, garantindo que chamadas com receiver explícito prossigam para a resolução normal de métodos de instância.
+> - Prova: `CoreRegressionE2ETest#instanceMethodNamedPrintOrPrintlnJvm`.
+> - Próximo: issues #216, #224, #226.
+
+> **✅ FEITO (14/09 ~13:30, dono = 192.168.100.22, lane compiler): fix issue #223 — for-loop update expression ++ / -- on Long or Double generates iconst_1 instead of lconst_1 / dconst_1 (VerifyError).**
+> - Causa raiz: em `StatementLowerer.java` (caso `ForStmt`), o tratamento de `fs.update()` para expressões unárias `++` e `--` emitia estritamente `KofLoadLiteral(Type.PrimitiveType.INT, 1)` hardcoded, independentemente de `var.type()`. Quando a variável de controle do laço for `Long` ou `Double`, o `KofBinary(ADD/SUB, var.type())` gerava `ladd`/`dadd` esperando dois operandos `long`/`double`, mas encontrava `int` na pilha, resultando em `VerifyError`.
+> - Correção: `StatementLowerer` unificado para utilizar `CompilerEmissionHelpers.emitIncrementOne(ops, var.type())`, emitindo o literal `1L`, `1.0f`, `1.0` ou `1` estritamente de acordo com o tipo da variável. Linhas de `StatementLowerer` reduzidas de 598 para 592 e baseline do `check_500.sh` atualizado.
+> - Prova: `CoreRegressionE2ETest#forLoopUpdateLongAndDoubleJvm`.
+> - Próximo: issues #216, #225, #224.
+
+> **✅ FEITO (14/09 ~12:45, dono = 192.168.100.22, lane compiler): fix issue #218 — function type syntax accepted in parameter/var-annotation but rejected in return type and field type positions.**
+> - Causa raiz: (1) `Parser.parse()` e `parseFunctionDeclaration()` não aceitavam `TokenType.LPAREN` como início de tipo de retorno top-level `(Int) -> Int makeDoubler()`, caindo em `PARSE007`/`PARSE010`. (2) `ClassMemberParser.parseClassMember` não reconhecia `LPAREN` como início de membro (campo ou método com tipo de retorno função), caindo em `PARSE016`. (3) `ExpressionParser` no parsing pós-primário consumia `(` na linha seguinte como chamada invocada sobre literal/expressão anterior na ausência de ponto-e-vírgula.
+> - Correção: `Parser` e `ClassMemberParser` agora aceitam tipo de função `(T) -> R` como tipo de retorno de função/método e como tipo de campo de classe. `ExpressionParser` previne agrupamento acidental de chamada quando o `(` ocorre em linha posterior após literal ou lambda.
+> - Prova: `CoreRegressionE2ETest#functionTypeAsReturnTypeAndFieldTypeJvm`.
+> - Próximo: issues #216, #213.
+
+> **✅ FEITO (14/09 ~12:30, dono = 192.168.100.22, lane compiler): fix issue #217 — class with constructor parameters cannot use extends or implements (PARSE007).**
+> - Causa raiz: `TypeDeclarations.parseClassDeclaration` esperava que `extends` e `implements` aparecessem antes do `(`, tratando classes como `class Circle(Double r) extends Shape implements AreaNamed` como `PARSE007` ao encontrar tokens após o fecha-parênteses. Adicionalmente, `SymbolTableBuilder.preDeclareType`, `CompilerClassLowering.lowerRecord` e `CompilerRecordSupport.generateRecordConstructor` assumiam estritamente `"Record"` como superclasse sem propagar `superClass` nem `interfaces`.
+> - Correção: `TypeDeclarations.parseClassDeclaration` agora parseia parâmetros de construtor `(...)` e em seguida as cláusulas `extends` e `implements`. `SymbolTableBuilder.preDeclareType` qualifica e preserva a superclasse informada e interfaces implementadas, `CompilerClassLowering.lowerRecord` gera a superclasse correta e `CompilerRecordSupport.generateRecordConstructor` invoca o `<init>` da superclasse correspondente.
+> - Prova: `CoreRegressionE2ETest#classWithConstructorParamsExtendsImplementsJvm`.
+> - Próximo: issues #218, #216, #213.
+
+> **✅ FEITO (14/09 ~12:15, dono = 192.168.100.22, lane compiler): fix issue #215 — fields declared in body of constructor-param class are unresolvable (SEM011/SEM025).**
+> - Causa raiz: classes com parâmetros de construtor no cabeçalho (`class Box(Int w, Int h)`) são parseadas como `RecordDeclarationNode`. Em `SymbolTableBuilder.defineRecordMembers`, apenas os componentes do cabeçalho eram definidos na `SymbolTable`; campos declarados no corpo (`FieldDeclarationNode`) eram ignorados, gerando `SEM011` / `SEM025`. Adicionalmente, em `CompilerClassLowering.lowerRecord`, `CompilerRecordSupport.generateRecordConstructor` e `JvmBackend.emitClass`, os campos adicionais não eram incluídos no IR do construtor, nem geravam métodos assessores correspondentes.
+> - Correção: `SymbolTableBuilder` agora define símbolos de campos e assessores para campos adicionais de records. `SemanticAnalyzer` analisa inicializadores desses campos. `CompilerClassLowering` adiciona os campos e métodos assessores ao `IRClass`, `CompilerRecordSupport` emite a inicialização dos campos no construtor gerado, e `JvmBackend` registra como `RecordComponent` apenas os componentes finais não-estáticos.
+> - Prova: `CoreRegressionE2ETest#classWithConstructorParamsExtraFieldsJvm`.
+> - Próximo: issues #217, #218, #216.
+
+> **✅ FEITO (14/09 ~12:00, dono = 192.168.100.22, lane compiler): fix issue #214 — Map, HashMap, Set, HashSet, LinkedList compile with unqualified class names (NoClassDefFoundError at runtime).**
+> - Causa raiz: `new Map()`, `new HashMap()`, `new Set()`, `new HashSet()`, e `new LinkedList()` produziam `ClassType("", "Map")` etc., sem mapeamento prévio em `CompilerTypes.toType`, `SemExpressionTyper` ou `ExpressionTyper`. No JVM, eram instanciadas diretamente como classes não-qualificadas sem pacote (`new Map`, `new HashMap`), resultando em `NoClassDefFoundError: Map`.
+> - Correção: `CompilerTypes.toType`, `ExpressionTyper` e `SemExpressionTyper` agora mapeiam `LinkedList` para `BuiltinTypes.LIST`, `HashSet` para `BuiltinTypes.SET` e `HashMap` para `BuiltinTypes.MAP`. `SemExpressionTyper` também sincronizado para permitir indexação `List[i]` (introduzida em #149/#152) sem falso-positivo SEM054.
+> - Prova: `CoreRegressionE2ETest#standardCollectionInstantiationJvm`.
+> - Próximo: issues #215, #217, #218.
+
+> **✅ FEITO (14/09 ~11:40, dono = 192.168.100.22, lane compiler): fix issue #210 — static field ++ / -- emits instance field opcodes (getfield/putfield) instead of getstatic/putstatic.**
+> - Causa raiz: `CompilerEmission2.emitIncrement` tratava acessos a campos em `IdentifierExpr` e `FieldAccessExpr` exclusivamente como instâncias (emitia `KofLoadLocal(ownerType, 0)` ou `emitExpression(receiver)` seguido de `KofLoadField`/`KofStoreField`), gerando `getfield`/`putfield` que causavam `IncompatibleClassChangeError: Expected non-static field`.
+> - Correção: detectado modificador `STATIC` no `FieldSymbol` em `emitIncrement` (para referências diretas ou qualificadas `Class.field`), delegando para `emitStaticFieldIncrement` que opera via `KofGetStatic` e `KofPutStatic` sem receiver de instância na pilha.
+> - Prova: `CoreRegressionE2ETest#staticFieldIncrementJvm`.
+> - Próximo: issues #214, #215, #217.
+
+> **✅ FEITO (14/09 ~11:30, dono = 192.168.100.18, lane development): §204 — fix-forward do ELSE do `if`-statement (frame crash `Supervisor.lacoUnico`).** A limpeza CodeQL `a892b3c5` removeu, junto com o binding unread `condType`, a linha VIVA `if (ifStmt.elseBranch() != null) analyzeStatement(sa, ..., scope, ...)` em `StatementAnalyzer`. Sem analisar o ELSE, os tipos das expressões do ramo não entram em `sa.expressionTypes()` e o lowering JVM gera frames inválidos (ASM `COMPUTE_FRAMES` AIOOBE) — visível em `Supervisor.lacoUnico` (3 vermelhos em `KofSupervisorE2ETest`). **Bisseção provada em worktree limpo:** `0448ef5d` GREEN / `ed409ff9` GREEN / `752dc5df` RED / `75e38d35` RED. Fix: restaura a chamada (binding `condType` segue removido). Prova: `KofSupervisorE2ETest` 8/8 + `BackendParityTest` 19/19 + `ArrayBoundsStressTest` 15/15 + `CoreRegressionE2ETest` 79/79 (121/0/0). Registrado em `known-bugs.md` §204 (EN+PT). **§205 catalogado:** `ifexpr-heterogeneous-direct` Native SIGSEGV (exit 139) introduzido por `ed409ff9` (#183) — `println(Object)` nativo; dono = lane do #183 (contrato regra 6), NÃO desta.
+
+> **✅ FEITO (14/09 ~11:20, dono = 192.168.100.22, lane compiler): fix issue #154 — strings.padLeft / padRight crash with Char literal (VerifyError).**
+> - Causa raiz: `ExpressionMethodCallLowerer` emitia chamadas estáticas `strings.padLeft/padRight` usando `emitArgs` cru sem coerção de argumentos para os tipos formais `(String, Int, String)`. Ao passar literal `Char` (`'0'`), o valor `int` era deixado na pilha para um parâmetro que esperava `Ljava/lang/String;`, resultando em `VerifyError`.
+> - Correção: `ExpressionMethodCallLowerer` agora utiliza `driver.emitArgumentsWithFormalTypes` para chamadas `KofStd`. Em `CompilerEmission2`, quando o parâmetro formal espera `String` e o argumento é `Char`, é emitido `String.valueOf(char)`.
+> - Prova: `CoreRegressionE2ETest#stringsPadWithCharLiteralJvm`.
+> - Próximo: issues #162, #161, #160.
+>
+> **✅ FEITO (14/09 ~11:00, dono = 192.168.100.22, lane compiler): fix issue #165 — for-in over EnumType.values() mistyped loop variable (NoSuchMethodError).**
+> - Causa raiz: `SymbolTableBuilder` sintetizava `values()` com tipo de retorno `List<String>` em vez de `List<EnumType>`, fazendo com que o typer inferisse a variável do laço `for (var c in EnumType.values())` como `String`. Ao chamar `c.name()` ou `c.toString()`, o compilador procurava o método em `String` e emitia `invokevirtual java/lang/String.<method>()Ljava/lang/Object;`, resultando em `NoSuchMethodError`.
+> - Correção: `SymbolTableBuilder` sintetiza `values()` retornando `List<EnumType>` e adiciona suporte explícito a `toString()` e `name()` no tipo enum. `ExpressionStaticCallLowerer`, `MethodCallTyper` e `ExpressionBuiltinInstanceCalls` atualizados para reconhecer `EnumType` com `name()` e `toString()` como identidade de runtime.
+> - Prova: `KofEnumTest#enumForInValuesMethodCallsJvm` (`RED`, `GREEN`, `BLUE`).
+> - Nota sobre #207: em Kof, enums são representados intencionalmente e congelados em runtime como String (`BuiltinTypes`, `JvmTypeMapper`, `classes.md §5`); alterar enums para classes JDK getstatic seria uma quebra ampla de arquitetura (regra 6).
+> - Próximo: issues #168, #162, #161.
+
+> **✅ FEITO (14/09 ~10:45, dono = 192.168.100.22, lane compiler): fix issue #206 — if-expression type fixed to true-branch type (VerifyError).**
+> - Causa raiz: `SemExpressionTyper` fixava o tipo de `IfExpr` incondicionalmente no `thenType`, ignorando `elseType` e a hierarquia de tipos; e `ExpressionTyper` não calculava o ancestral comum (LCA) para classes. Ao chamar métodos na variável inferida com uma subclasse enquanto o ramo false instanciava a superclasse, o bytecode emitia `invokevirtual Subclasse.metodo` causando `VerifyError: Type 'A' is not assignable to 'B'`.
+> - Correção: `HierarchyResolver.commonSupertype` implementado para encontrar o LCA de classes via `TypeChecker.isAssignable` e cadeias de superclasses. `SemExpressionTyper` e `ExpressionTyper` agora usam `commonSupertype`.
+> - Prova: `CoreRegressionE2ETest#ifExpressionBranchTypesLca` e `#ifExpressionBranchTypesMixedNumeric`.
+> - Próximo: issues #168, #165, #162.
+
+> **✅ FEITO (14/09 ~10:35, dono = 192.168.100.22, lane compiler): fix issue #208 — switch expression over Boolean rejects exhaustive true/false coverage (SEM032).**
+> - Causa raiz: `SemExpressionTyper` exigia `default` incondicionalmente a menos que `subjectType` fosse enum, disparando `SEM032` mesmo com cobertura exaustiva de `true` e `false`.
+> - Correção: `MemberResolver.checkSwitchExprExhaustiveness` reconhece `Boolean`/`Bool` e valida se os casos cobrem `true` e `false`.
+> - Prova: `CoreRegressionE2ETest#switchExpressionOverBooleanExhaustive`.
+> - Próximo: issues #168, #165, #162.
+
+> **✅ FEITO (14/09 ~10:30, dono = 192.168.100.22, lane compiler): fix issue #200 — switch expression rejected as RHS of assignment statement (PARSE041).**
+> - Causa raiz: `ExpressionParser.parsePrimary` não reconhecia `TokenType.SWITCH`, e `parseAssignment` para o lado direito chamava `parseAssignment` (que descia para `parsePrimary`), disparando `PARSE041` ao encontrar `switch`.
+> - Correção: adicionada verificação de `TokenType.SWITCH` em `ExpressionParser.parsePrimary` delegando para `parseSwitchExpression(ctx)`.
+> - Prova: `CoreRegressionE2ETest#switchExpressionAsRhsOfAssignment` (atribuição para variável local existente e para campo de classe).
+> - Próximo: issues #168, #166, #165.
+
 > **✅ FEITO (14/09 ~10:20, dono = 192.168.100.15, lane bugs-and-gaps): §201 CORRIGIDO — regressão JS do fix #182 (`_forInitVar_*`/`_forInVar` ReferenceError).**
 > A `beta-0.4.0` estava VERMELHA (5-6 testes JS) e o §201 tinha sido catalogado como "regra 6 + lane alheia, não tocar". **Não é regra 6** — é bug de backend puro (regra 1/3 de Freeze), sem decisão de contrato, então o gate de qualidade desta lane assumiu. **Causa raiz medida (worktree isolado em `c160ae5c`):** o rename de saída de loop p/ `#forInitVar`/`#forInVar` (#182, `75e38d35`) e de bloco p/ `#scopedVar$…` (#203, `aadc0176`) é correto — mas o backend JS resolve por NOME e `JsExpressionParser.isCompilerTemp` trata TODO local cru com prefixo `#` como temporário descartável; o store da variável de loop entra no `preamble` e é descartado quando o próximo op é `if` (`parseIfBody` retorna sem o preamble) → `ReferenceError`. Corpos simples escapavam por acaso; corpos começando com `if` quebravam. **Fix (root, 1 método):** `isCompilerTemp` deixa de classificar `#forInitVar`/`#forInVar`/`#scopedVar$…` como temporários (são renames de var de USUÁRIO); os temporários reais (`#retVal`/`#switch`/`#idx`/`#coll`/`#inc`/`#excTmp`) intactos. Arquivo `js/JsExpressionParser.java` (não toca `StatementLowerer` da lane .22 — zero colisão). **Prova:** `CoreRegressionE2ETest.loopBodyLocalsBeforeIfAreDeclaredInJs` (vermelho sem o fix = `ReferenceError: _forInitVar_2 is not defined`; verde com ele) + `ArrayBoundsStressTest` 15/15, `ArrayBoundsDeepStressTest` 6/6, `BackendParityTest` 19/19, `CoreRegressionE2ETest` 75/75. JVM/Native/Script não afetados. known-bugs §201 → FIXED.
 > **PRÓXIMO PASSO:** rodar a suíte 4-módulos COMPLETA + `check_500.sh` e pushar; depois re-avaliar §202 (`split().get` → SEM028, ESSE sim é decisão de contrato da lane de inferência String) e seguir a fila de issues.
 
-> **✅ FEITO (14/09 ~11:40, dono = 192.168.100.15, lane bugs-and-gaps): §204 — teste de regressão adicionado (lacuna Q1 da lane .18).**
+> **✅ FEITO (14/09 ~11:40, dono = 192.168.100.15, lane bugs-and-gaps): §204 — teste de regressão adicionado (Q1 gap da lane .18).**
 > A lane `.18` fixou `fe947b07` (restaura a análise do ramo ELSE do `if` em `StatementAnalyzer`, removida por engano pela limpeza CodeQL `a892b3c5`) **sem teste** (violação Q1). Este lane (gate de qualidade) contribuiu o guard que faltava: `CompilerDriverTest.elseBranchIsAnalyzedBothBranches` — um erro de tipo (`Int s = "not an int"`) no `else` deve ser DIAGNOSTICADO (SEM021), nunca virar bytecode quebrado. **Bisseção independente confirmada:** com a linha viva removida o teste fica VERMELHO (`expected false but was true`); com o fix restaurado, VERDE. Prova: teste 1/1 + `KofSupervisorE2ETest` 8/8. known-bugs §204 (EN+PT) atualizado com o teste na MESMA commit. Não toquei `StatementAnalyzer` (trabalho do .18 preservado, regra 8).
 
 > **✅ FEITO (14/09 ~13:20, dono = 192.168.100.15, lane bugs-and-gaps): §202 — registro sincronizado com o fix da lane `.17` (`602dcbc0`).**
@@ -124,6 +320,30 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > Achei na varredura da suíte no tip `9048a366`: `l[0] = 9` num List era ACEITO e gerava `VerifyError: Bad type on operand stack @aastore` no JVM, exit 139 no Native, silêncio no JS (regra 5/6). Causa raiz: `ExpressionAssignmentLowerer` trata alvo `ArrayAccessExpr` com `KofArrayStore` cru; #149/#152 (`6d7ac697`) só roteou a LEITURA `l[i]`→`kof_list_get`; a escrita nunca foi baixada. Ficou mascarada porque `listOf(...)` era `List` (SEM054) e `new List<T>()` era `Unknown`; `0ab25887` (#214, lane .17) mapeou `new List<T>()` p/ `BuiltinTypes.LIST` e isentou List do SEM054 → expôs a escrita. **Fix (raiz, `StatementAnalyzer.analyzeAssignmentStatement`):** alvo `ArrayAccessExpr` com receiver List → SEM054 apontando `l.set(i, v)` (arrays intactos; String/Map/Set já cobertos pelo guard de leitura — sem duplicar diagnóstico). **Prova 4 alvos:** `a[0]=7`→8, `l.set(0,9)`→9, `l[1]`→20, `l[0]=9`/`l[0]+=10`→SEM054. `SemanticResolutionTest` 30/30; suíte 4-módulos `fail=1` (só §205, lane #183) + 13 err=node. known-bugs §228 (EN+PT).
 > **Q5 weak-green da lane `.17` (`de38f7b5`):** aquele commit reescreveu `subscriptOnCollectionsRejected` afirmando "List[i] (leitura e escrita) compila" e **removou o `l2[0] = 9` da lista** — mas só provou que COMPILA, não que EXECUTA. Re-medido no tip fresco (`origin/beta-0.4.0`): `l2[0]=9` ainda `VerifyError` no JVM / SIGSEGV no Native. Restaurei o caso (a escrita segue SEM054) + `listSubscriptReadIsSupported` (a leitura é válida). A asserção deles era verde-falso (Q5).
 > **§202 residual:** o `KofScriptStdlibParityTest.timeTodayParity` (kof-script) ainda usava `parts.get(0)`/`get(1)` — o alinhamento de `602dcbc0` cobriu só o kof-compiler. Alinhado p/ `parts[0]`/`parts[1]` (mesmo contrato); kof-script 12/12.
+
+> **✅ FEITO (14/09 ~10:10, dono = 192.168.100.22, lane compiler): fix issue #167 — instanceof with primitive/boxed types emits '?' as class name (NoClassDefFoundError).**
+> - Causa raiz: `JvmOpEmitter` em `KofInstanceOf` e `KofCheckCast` extraía o nome interno apenas se o tipo fosse `Type.ClassType`, caindo em `"?"` para tipos primitivos (`Type.PrimitiveType`).
+> - Correção: `JvmOpEmitter` mapeia `Type.PrimitiveType` para seu correspondente boxed (`TypeMetrics.boxedTypeFor`) antes de emitir a instrução `INSTANCEOF`/`CHECKCAST`.
+> - Prova: `CoreRegressionE2ETest#instanceofWithPrimitiveTypes` (testa `obj instanceof Int` e `obj instanceof Double`).
+> - Próximo: issues #168, #166, #165.
+
+> **✅ FEITO (14/09 ~09:50, dono = 192.168.100.22, lane compiler): fix issue #180 — Block lambda with no return inferred as UnknownType instead of void (SEM014).**
+> - Causa raiz: `SemExpressionTyper` inferia `returnType = UnknownType.UNKNOWN` quando a lambda de bloco não continha statement `ReturnStmt` com valor, disparando rejeição SEM014 ao passar para funções esperando `(T) -> void`.
+> - Correção: `SemExpressionTyper` agora detecta quando o corpo da lambda não possui nenhum `return` ou possui `return` sem valor e atribui `Type.PrimitiveType.VOID`.
+> - Prova: `CoreRegressionE2ETest#blockLambdaWithNoReturnInferredVoid` (chamada passando block lambda `(Int) -> void` sem return para função receptora).
+> - Próximo: issues #168 ou #167.
+
+> **✅ FEITO (14/09 ~09:40, dono = 192.168.100.22, lane compiler): fix issue #203 — Inner var declaration shadows outer variable beyond block scope.**
+> - Causa raiz: variáveis declaradas dentro de `BlockStmt` permaneciam no escopo `locals` após a saída do bloco, fazendo com que `findLocalVar` resolvesse o nome para o slot interno e tornasse a variável externa inacessível.
+> - Correção: `StatementLowerer` em `BlockStmt` renomeia as variáveis introduzidas no bloco para `#scopedVar$<nome>` ao sair do bloco, preservando seus slots e restaurando a visibilidade da variável externa.
+> - Prova: `CoreRegressionE2ETest#innerVarDeclarationScopeRollback` (casos `if`, `else` e `while`).
+> - Próximo: issues #180, #168 ou #167.
+
+> **✅ FEITO (14/09 ~09:15, dono = 192.168.100.22, lane compiler): fix issue #201 — Long hex literals with high bit set (>= 0x8000000000000000L) crash compiler (COMP002).**
+> - Causa raiz: `CompilerTypeSupport.parseIntLiteral` e `ExpressionLowerer` usavam `Long.parseLong(...)` que falha para valores hexadecimais de 64 bits com bit mais significativo setado.
+> - Correção: `CompilerTypeSupport.parseLongLiteral` e `parseIntLiteral` usam `Long.parseUnsignedLong(hex, 16)`. Em `Lexer.java`, detecção de literal hexadecimal com sufixo `L/l` agora emite `TokenType.LONG_LITERAL`. Em `ExpressionParser`, faixa de literais `LONG_LITERAL` hex valida com `parseUnsignedLong`.
+> - Prova: `CoreRegressionE2ETest#longHexLiteralWithHighBitSet` (JVM E2E com `0x8000000000000000L`, `0xFFFFFFFF00000000L`, `0x7FFFFFFFFFFFFFFFL`).
+> - Próximo: issues #180, #168 ou #167.
 
 > **✅ FEITO (14/09 ~08:15, dono = 192.168.100.22, lane compiler): fix issue #182 — for-in / for loop variable shadowing outer variable corrupts outer slot lookup after loop.**
 > Ao sair de `ForInStmt` e `ForStmt`, as variáveis de iteração (`fis.varName()`) e de inicialização (`fs.init()`) tinham seus nomes mantidos na lista `locals`, fazendo com que leituras posteriores da variável externa homônima resolvessem para o slot da variável do loop (que no final do loop fica undefined/top no frame JVM, gerando `VerifyError: Bad local variable type`).
@@ -330,7 +550,7 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > - **Toolchain:** JDK 25 confirmado em `/home/mel/tools/jdk-25` — baseline
 >   `release 25` compila limpo (`JAVA_HOME=/home/mel/tools/jdk-25`); o
 >   workaround do pom em 21 não é mais necessário.
-> **Restantes (4/6):** `roundTo` (decisão 3), `app.security()` modelo Spring
+> **Restantes (1/6):** §129 frame por thread (decisão 2) — `roundTo` (3), `app.security()` Spring (5), §101 (1), §179 (4) FEITOS 14/09; §180 (6) sem dono
 > (decisão 5, reverte reads públicas), §180 Native x86 double/float toString
 > (decisão 6), §129 frame por thread (decisão 2).
 
@@ -628,9 +848,9 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > em 300 classes REAIS = zero divergência, 6/6 (220064fc) + auditoria
 > doc-vs-código (machineRun:97 VIVA em 158c174b — doc corrigido b9996938);
 > (2) ✅ **UNIDADE 2b RE-AVALIADA POR MEDIÇÃO (14/09 ~19:40) — DESCARTADA
-> como escopada, veredito em DECOMPILER.pt_BR.md §6 (re-medida 18:20):** o
-> proxy "1098" supercontou — o caminho prologue da 2a (`5c944709`) JÁ recupera
-> o fundido não-loop com temp (`computed`/`cmp` medidos: saem `if/else`), e dos
+> como escopada, veredito em DECOMPILER.md §6 (re-medida 18:20):** o proxy
+> "1098" supercontou — o caminho prologue da 2a (`5c944709`) JÁ recupera o
+> fundido não-loop com temp (`computed`/`cmp` medidos: saem `if/else`), e dos
 > stubs com teste computado restantes, **646** têm invoke no teste (família
 > interop §234 — lane compiler, não CFG), **453** são loop-header com
 > `continue` (COLISÃO com a lei vinculante `diamondJoinShapesStayHonestStub`:
@@ -641,10 +861,10 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > `Roi2.java`/`Roi3.java` (classifica pela CAUSA REAL do stub). PROVAS do
 > descarte: 63 DecompileTest + 6 PostDom VERDES FRESCOS 19:39 (unidades 1/2a
 > intactas, fonte não tocada — StructWalker rascunho deletado antes de nascer,
-> opcodes por memória = a lição que ele mesmo documenta). PRÓXIMO PASSO EXATO
-> da doc DECOMPILER: sem trabalho autônomo — o doc está em parada genuína
-> pedindo decisão da mantenedora (lei do diamante + `continue`), e as 646
-> interop são da lane compiler; mover DECOMPILER p/ `docs/` SÓ quando a
+> opcodes por memória = a lição que ele mesmo documenta). PRÓXIMO PASSO
+> EXATO da doc DECOMPILER: sem trabalho autônomo — o doc está em parada
+> genuína pedindo decisão da mantenedora (lei do diamante + `continue`), e as
+> 646 interop são da lane compiler; mover DECOMPILER p/ `docs/` SÓ quando a
 > mantenedora decidir o destino da Fase C (a recovery atual é o teto honesto).
 > A meta original — reduzir stubs SEM novo falso-verde — foi atingida pelo
 > caminho inverso: a medição PROVOU que reduzir mais exige violar a lei
