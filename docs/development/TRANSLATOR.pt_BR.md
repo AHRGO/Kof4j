@@ -8,7 +8,8 @@
 
 **Status:** EM DESENVOLVIMENTO (caiu de `future/` em 12/09 — Fase F
 implementada: `Translate.java` + `TranslateLexer`/`TranslateExpr`;
-prova: `TranslateTest` 30/30 (output compila e roda; +do-while +switch
+prova: `TranslateTest` **61/61** (re-medido 15/09 no tip `7b0bfbe0`;
+o 30/30 do cabeçalho era a linha de base de 22/08) — output compila e roda; +do-while +switch
 +try/catch/throw +arrays +cast/instanceof +throws +generics +constructor
 +enum-body/multi-decl +interface-extends +bitwise/shift +parênteses
 +tipos qualificados +assert +annotations +var +interface-default 13/09).

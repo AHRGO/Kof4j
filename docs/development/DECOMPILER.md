@@ -4,7 +4,9 @@
 
 **Status:** IN DEVELOPMENT (dropped from `future/` on 12/09 — implemented:
 `Decompile.java` + bytecode decoders, Phases A–E with code; proof:
-`DecompileTest` 45/45 green. Full-body recovery phases still
+`DecompileTest` **67/67** green + `DecompilePostDominatorTest` 6/6
+(re-measured 15/09 on tip `7b0bfbe0`; the header's 45/45 was the 22/08
+baseline). Full-body recovery phases still
 open — that is why it does not go to `docs/`)
 **Date:** August 22, 2026
 

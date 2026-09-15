@@ -229,7 +229,13 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
         ops.add(new KofBinary(shiftOp, resultType));
         accType = resultType;
     } else if ("+".equals(be.operator())
-            && (Type.isString(accType) || Type.isString(rightType))) {
+            && (Type.isString(accType) || Type.isString(rightType)
+                    // §244/#267: operandos NÃO numéricos e NÃO String (genéricos
+                    // apagados p/ `Object`, Unknown, referências): o contrato
+                    // Kof `String + anything → String` manda stringificar os
+                    // dois lados e concatenar. Sem este ramo o `else` final
+                    // emitia `ADD` sobre referências → `iadd` → VerifyError.
+                    || (!TypeMetrics.isNumeric(accType) && !TypeMetrics.isNumeric(rightType)))) {
         // concatenação com float/double no Native formataria
         // os bits como inteiro — diagnóstico em vez de lixo.
         // SÓ pula quando o driver.target não suporta FP (agora os 3

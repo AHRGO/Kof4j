@@ -905,9 +905,11 @@ tiers `stable`/`experimental` (`docs/backend-parity.md`).
 
 `kof inspect/decompile/translate/compare/migrate` no CLI (`Main.java`);
 Legacy Semantic IR com Confidence Model (5 níveis) + "nunca inventar". Prova
-medida 13/09 em HEAD: **Decompile 57, Translate 33, Compare 6, Migrate 3**
-(Translate tem 1 célula vermelha — `qualifiedLocalTypeTranslates`, WIP da lane
-`.22`, alheia a este plano). Recuperação de corpo de método ainda parcial
+medida 15/09 em HEAD (`7b0bfbe0`, classes frescas): **Decompile 67 + PostDom 6,
+Translate 61, Compare 7, Migrate 3** — todas verdes (os números de 13/09
+57/33/6/3 estavam defasados; a então "1 célula vermelha"
+`qualifiedLocalTypeTranslates` está VERDE desde que a lane `.22` a fechou).
+Recuperação de corpo de método ainda parcial
 (joins estruturais = Fase C, o maior gargalo medido: 2452 métodos). O
 histórico técnico detalhado vive em `LEGACY_MIGRATION.md` + `DECOMPILER.md`
 (§7) — **não duplicar aqui**; esta tabela só dá a ordem.

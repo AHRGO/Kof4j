@@ -140,7 +140,8 @@ public final class ExpressionLowerer {
             case NewExpr ne -> {
                 Type type = CompilerTypes.toType(ne.typeName(), driver.currentUnit,
                         driver.externalClasspath);
-                if ("List".equals(ne.typeName()) || "ArrayList".equals(ne.typeName())) {
+                Type collBuiltin = CompilerTypes.builtinCollectionType(ne.typeName(), driver.currentUnit, driver.semanticAnalyzer);
+                if (collBuiltin == BuiltinTypes.LIST) {
                     type = BuiltinTypes.LIST;
                 }
                 if (!ne.typeArguments().isEmpty() && type instanceof Type.ClassType cts) {
@@ -471,6 +472,22 @@ public final class ExpressionLowerer {
                         ops.add(new KofCall(recvType, fa.fieldName(), List.of(), ms.returnType(), KofCallKind.INSTANCE));
                     } else {
                         ops.add(new KofLoadField(recvType, fa.fieldName(), fieldType));
+                        // §245/#268: o descritor do campo genérico é apagado
+                        // (`T wrapped` → `Ljava/lang/Object;`), mas o tipo
+                        // EFETIVO vem do type-argument do receiver
+                        // (`Wrapper<Point>` → `Point`, `Wrapper<Int>` → `Int`).
+                        // O valor sai como Object: referência → checkcast;
+                        // primitivo → unbox. Sem o ajuste o próximo acesso
+                        // recebia Object na pilha → VerifyError.
+                        if (fieldType instanceof Type.TypeVariable && recvType instanceof Type.ClassType) {
+                            Type eff = CompilerTypes.substituteTypeVariableIn(fieldType, recvType, driver.currentUnit);
+                            Type ref = eff instanceof Type.NullableType nt2 ? nt2.inner() : eff;
+                            if (TypeMetrics.isPrimitiveType(ref)) {
+                                driver.emitErasureUnbox(ops, ref);
+                            } else if (ref instanceof Type.ClassType rct && !"Object".equals(rct.name())) {
+                                ops.add(new KofCheckCast(ref));
+                            }
+                        }
                     }
                 }
                 yield localIdx;

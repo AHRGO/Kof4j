@@ -257,6 +257,13 @@ if (ae.target() instanceof FieldAccessExpr fa) {
         return localIdx;
     }
     Type recvType = ExpressionTyper.inferExprType(driver, fa.receiver(), locals);
+    // §246/#269: o emit-path não conhece o narrowing (que vive no escopo
+    // semântico) — um receiver já validado como não-nulo chega aqui ainda
+    // como `NullableType`. Desembrulhar espelha o READ (ExpressionLowerer);
+    // sem isto o campo saía com owner `?` e tipo `Object` → `putfield`
+    // inválido (VerifyError). O acesso NÃO-narrowed nunca chega aqui: o
+    // StatementAnalyzer já o rejeita com SEM049.
+    if (recvType instanceof Type.NullableType nt) recvType = nt.inner();
     Type fieldType = Type.UnknownType.UNKNOWN;
     boolean isStaticField = false;
     if (recvType instanceof Type.ClassType ct) {

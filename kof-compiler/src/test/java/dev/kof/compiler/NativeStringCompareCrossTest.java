@@ -116,19 +116,19 @@ class NativeStringCompareCrossTest {
             main() {
                 var a = "a,b,".split(",")
                 println(a.size)
-                println(a.get(0) + "|" + a.get(1))
+                println(a[0] + "|" + a[1])
                 var b = "a,".split(",")
                 println(b.size)
-                println(b.get(0))
+                println(b[0])
                 var c = ",".split(",")
                 println(c.size)
                 var d = "".split(",")
                 println(d.size)
-                println("[" + d.get(0) + "]")
+                println("[" + d[0] + "]")
                 var e = "a,b".split(",")
                 println(e.size)
                 var f = ",a".split(",")
-                println(f.size + "|" + f.get(0) + "|" + f.get(1))
+                println(f.size + "|" + f[0] + "|" + f[1])
             }
             """;
 
