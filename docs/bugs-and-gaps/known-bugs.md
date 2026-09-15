@@ -8589,6 +8589,14 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   closed there); §179/§243 (the shadowing guard that decides when a builtin name
   is a user type). No suite test covers undefined declared types before this
   unit; not a release-gate red.
+- **Follow-up (Q4, same session):** the first pass rejected the type-params of
+  GENERIC INTERFACES (`interface Mapper<T> { T map(T input) }`, #160) as SEM011 —
+  the exact trap above — because `DeclaredTypeChecker` passed `List.of()` instead
+  of `i.typeParameters()` (a `TypeDeclarationNode` gained `typeParameters` from
+  the #160 lane). Fixed to whitelist interface type-params; 2 regression cases
+  added (`genericInterfaceTypeVariableAccepted`,
+  `genericInterfaceMultiParamAccepted`) → `DeclaredTypeValidationE2ETest` now
+  16/16 + `GenericInterfaceE2ETest` 6/6 green.
 
 ### §252 — Native x86_64 INTERMITTENT: `KofConcurrency2Test.spawnWorkerThrowPropagatesThroughSelectAnyNative` fails with `Runtime error: array index out of bounds` (~1 in 5 full-module runs)
 

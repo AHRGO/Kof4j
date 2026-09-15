@@ -8573,6 +8573,14 @@ usuário — diagnostic em compile-time é a meta (regra 6).
   §179/§243 (o guard de shadowing que decide quando um nome builtin é tipo do
   usuário). Nenhum teste da suíte cobria tipos declarados indefinidos antes
   desta unidade; não é vermelho do portão.
+- **Follow-up (Q4, mesma sessão):** a primeira passada rejeitava os type-params
+  de INTERFACES GENÉRICAS (`interface Mapper<T> { T map(T input) }`, #160) como
+  SEM011 — a armadilha exata acima — porque o `DeclaredTypeChecker` passava
+  `List.of()` em vez de `i.typeParameters()` (o `TypeDeclarationNode` ganhou
+  `typeParameters` com a lane #160). Corrigido para whitelistar type-params de
+  interface; 2 casos de regressão adicionados (`genericInterfaceTypeVariableAccepted`,
+  `genericInterfaceMultiParamAccepted`) → `DeclaredTypeValidationE2ETest` agora
+  16/16 + `GenericInterfaceE2ETest` 6/6 verdes.
 
 ### §252 — Native x86_64 INTERMITENTE: `KofConcurrency2Test.spawnWorkerThrowPropagatesThroughSelectAnyNative` falha com `Runtime error: array index out of bounds` (~1 em 5 execuções completas do módulo)
 
