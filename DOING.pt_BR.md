@@ -702,7 +702,15 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > COMPILAVEL+executavel (teste `sipushConstantInTestIsRecoveredAndRuns`,
 > golden JVM medido `1|2|2`); DecompileTest 67/67 + PostDom 6/6 verdes,
 > check_500 exit 0 (BytecodeDecoder 412).
-
+ > (5) ✅ **TRANSLATOR.md status resync (docs lane, 14/09 ~22:30):** a nota
+> "Expanded Java subset still pending" do header estava VIVA mas a diretriz
+> da mantenedora 13/09 ~21:00 ja declaram a lane DESPRIORIZADA — a nota agora
+> aponta a diretriz (nao e fila atual; retoma so por nova decisao). Nenhum
+> outro registro vivo em desencontro conhecido: fila-13 EN+PT 32=32 com onda
+> §2xx, README §2 ressinc, DECOMPILER ATUALIZACAO 3, §238 nota follow-up.
+> **LANE docs/development AGORA EXAUSTA** (re-varrer a cada re-disparo: se
+> outra lane mover gate/bugs, podem nascer syncs novos; o repo NAO esta
+> stable — 32 abertas + reds de gate alheios — mas nada disso e desta lane).
 
 > **⚠️ 5º RED NO PORTÃO (catalogado, para as lanes de bug — 14/09 ~16:45):**
 > `NativeStringCompareCrossTest` riscv+aarch → §233 no known-bugs (renumerado 17:40: §231 foi tomado pela lane .18 — colisao de rebase; fix

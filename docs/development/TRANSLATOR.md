@@ -12,8 +12,11 @@ proof: `TranslateTest` 30/30 (output compiles and runs; +do-while +switch
 +try/catch/throw +arrays +cast/instanceof +throws +generics +constructor
 +enum-body/multi-decl +interface-extends +bitwise/shift +parentheses
 +qualified types +assert +annotations +var +interface-default 13/09).
-Expanded Java subset still pending)
-**Date:** August 22, 2026
+Expanded Java subset still pending — **BUT see the maintainer directive of
+> 13/09 ~21:00 (DOING.md priority table): this lane is DESPRIORIZADO
+> ("lane encerrada; gaps restantes = regra 6") — the expanded subset is NOT
+> current queue; pick it up only on a new maintainer decision.**)
+**Date:** August 22, 2026 · status resynced 14/09 (docs lane, living record)
 
 ---
 
