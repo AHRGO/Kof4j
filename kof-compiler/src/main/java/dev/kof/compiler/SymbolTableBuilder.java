@@ -210,13 +210,10 @@ public final class SymbolTableBuilder {
                 classSym.members().define(fs);
                 classScope.define(fs);
             } else if (member instanceof MethodDeclarationNode method) {
-                Type returnType = MemberResolver.resolveType(sa, method.returnType(), classScope);
-                List<Type> paramTypes = new ArrayList<>();
-                for (FormalParameterNode p : method.parameters()) paramTypes.add(Type.of(p.type()));
-                SymbolTable.MethodSymbol ms = new SymbolTable.MethodSymbol(method.name(), iface.name(),
-                        returnType, paramTypes, 0, SymbolTable.DispatchKind.INSTANCE);
-                classScope.define(ms);
-                classSym.members().define(ms);
+                // #213: corpo de método de interface (default) precisa de escopo
+                // próprio (params/this) para a análise semântica — antes era
+                // descartado e a chamada nua `greet(name)` virava função hoisted.
+                defineMethodSymbol(sa, method, iface.name(), classScope, true);
             }
         }
     }
@@ -243,6 +240,11 @@ public final class SymbolTableBuilder {
 
     static void defineMethodSymbol(SemanticAnalyzer sa, MethodDeclarationNode method,
                                    String className, SymbolTable classScope) {
+        defineMethodSymbol(sa, method, className, classScope, false);
+    }
+
+    static void defineMethodSymbol(SemanticAnalyzer sa, MethodDeclarationNode method,
+                                   String className, SymbolTable classScope, boolean isInterface) {
         SymbolTable methodScope = classScope.enterScope();
         methodScope.define(new SymbolTable.ParameterSymbol("this",
                 new Type.ClassType(sa.currentPackage(), className, List.of()), 0));
@@ -267,6 +269,12 @@ public final class SymbolTableBuilder {
         // / VerifyError (contexto estático, <clinit>).
         if (method.modifiers().contains("static")) accessFlags |= AccessFlags.STATIC;
         if (method.modifiers().contains("abstract")) accessFlags |= AccessFlags.ABSTRACT;
+        // #213: método de interface SEM corpo é abstract; com corpo é default
+        // (implementação real) — não deve ser cobrado no implementador (SEM043).
+        boolean hasBody = method.body() != null && !method.body().isEmpty();
+        if (isInterface && !hasBody && (accessFlags & AccessFlags.STATIC) == 0) {
+            accessFlags |= AccessFlags.ABSTRACT;
+        }
         SymbolTable.MethodSymbol methodSym = new SymbolTable.MethodSymbol(method.name(), className,
                 returnType, paramTypes, accessFlags, SymbolTable.DispatchKind.INSTANCE);
         classScope.define(methodSym);

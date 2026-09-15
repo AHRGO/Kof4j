@@ -17,18 +17,10 @@ public final class ExpressionLowerer {
                 switch (lit.kind()) {
                     case ConcreteLiteralKind.INT -> ops.add(KofLoadLiteral.ofInt(driver.parseIntLiteral(lit.value())));
                     case ConcreteLiteralKind.LONG -> ops.add(KofLoadLiteral.ofLong(driver.parseLongLiteral(lit.value())));
-                    case ConcreteLiteralKind.FLOAT -> {
-                    // Literal already validated by lexer/parser — NumberFormatException impossible here
-                    @SuppressWarnings("NumberFormatException")
-                    Float f = Float.parseFloat(driver.stripSuffix(lit.value()));
-                    ops.add(KofLoadLiteral.ofFloat(f));
-                }
-                case ConcreteLiteralKind.DOUBLE -> {
-                    // Literal already validated by lexer/parser — NumberFormatException impossible here
-                    @SuppressWarnings("NumberFormatException")
-                    Double d = Double.parseDouble(driver.stripSuffix(lit.value()));
-                    ops.add(KofLoadLiteral.ofDouble(d));
-                }
+                    case ConcreteLiteralKind.FLOAT ->
+                        ops.add(KofLoadLiteral.ofFloat(driver.parseFloatLiteral(lit.value())));
+                    case ConcreteLiteralKind.DOUBLE ->
+                        ops.add(KofLoadLiteral.ofDouble(driver.parseDoubleLiteral(lit.value())));
                     case ConcreteLiteralKind.STRING -> ops.add(KofLoadLiteral.ofString(lit.value()));
                     case ConcreteLiteralKind.BOOLEAN -> ops.add(KofLoadLiteral.ofBool(Boolean.parseBoolean(lit.value())));
                     case ConcreteLiteralKind.CHAR -> ops.add(KofLoadLiteral.ofInt(lit.value().charAt(0)));

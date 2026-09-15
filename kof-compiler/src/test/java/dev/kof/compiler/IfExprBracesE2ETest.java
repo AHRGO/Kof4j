@@ -20,6 +20,7 @@ class IfExprBracesE2ETest {
 
     private final CompilerDriver driver = new CompilerDriver();
 
+    @SuppressWarnings("ProcessBuilderCommandInjection")
     private String runJvm(Path tempDir, String source, String expected) throws IOException {
         Path file = tempDir.resolve("Main-" + System.nanoTime() + ".kf");
         Files.writeString(file, source);
@@ -40,6 +41,7 @@ class IfExprBracesE2ETest {
         }
     }
 
+    @SuppressWarnings("ProcessBuilderCommandInjection")
     private String runNative(Path tempDir, String source, String expected) throws IOException {
         Path file = tempDir.resolve("Main-" + System.nanoTime() + ".kf");
         Files.writeString(file, source);

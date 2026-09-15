@@ -350,6 +350,9 @@ public class SemanticAnalyzer {
             for (Map.Entry<String, SymbolTable.Symbol> e
                     : ifaceSym.members().localSymbols().entrySet()) {
                 if (!(e.getValue() instanceof SymbolTable.MethodSymbol im)) continue;
+                // #213: métodos default (com corpo) já têm implementação na
+                // interface — a classe implementadora não precisa declará-los.
+                if ((im.accessFlags() & AccessFlags.ABSTRACT) == 0) continue;
                 SymbolTable.Symbol local = classScope.resolve(im.name());
                 if (local instanceof SymbolTable.MethodSymbol cm) {
                     if (cm.parameterTypes().size() != im.parameterTypes().size()) {
@@ -380,6 +383,24 @@ public class SemanticAnalyzer {
         }
         SymbolTable prevScope = currentScope;
         currentScope = classScope;
+        // #213: corpos de métodos default de interface precisam ser analisados
+        // (resolução de `greet(name)` como this.greet, tipos de retorno) — antes
+        // eram ignorados e a chamada nua virava função hoisted.
+        for (int pass = 0; pass < 4; pass++) {
+            boolean changed = false;
+            expressionTypes.clear();
+            for (AstNode member : iface.members()) {
+                if (member instanceof MethodDeclarationNode method
+                        && method.body() != null && !method.body().isEmpty()) {
+                    SymbolTable.MethodSymbol ms = methodSymbols.get(method);
+                    Type before = ms != null ? ms.returnType() : null;
+                    analyzeMethodBody(method);
+                    Type after = ms != null ? ms.returnType() : null;
+                    if (before != null && after != null && !before.equals(after)) changed = true;
+                }
+            }
+            if (!changed) break;
+        }
         currentScope = prevScope;
         currentClassName = prevClass;
     }

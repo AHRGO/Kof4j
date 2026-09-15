@@ -7052,7 +7052,35 @@ to the label) is the correct predicate and **was already used** in `parseStateme
   `8af810c5` "map primitive types to boxed classes" path that fixed the
   checkcast/instanceof faces likely omits the String-concat / boxing site,
   and `Char.toString()` lowers to `Integer.toString`.
-- **Status:** reproduces on `d2d025f4` (both #168 and #153 cases).
+- **Root cause MEASURED 15/09 (lane bugs-and-gaps `192.168.100.15`, fresh
+  classes on `212a8dbc`, javap):** `TypeEmitter.boxPrimitive` maps
+  `char` → `new Type.ClassType("java.lang", "Integer", …)` and forces the
+  `valueOf` parameter to `INT` (lines 27/32). Both stringification sites then
+  box the char as `Integer` and call `String.valueOf(Object)`:
+  ```
+  invokestatic java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+  invokestatic java/lang/String.valueOf:(Ljava/lang/Object;)Ljava/lang/String;
+  ```
+  → `"65"`. Affected sites: `ExpressionPrintLowerer:63` (println),
+  `ExpressionBinaryLowerer:253/261` (concat), `ExpressionInstanceCallLowerer:411`
+  (primitive `toString`).
+- **⚠️ RULE 6 — do NOT fix without a maintainer decision.** `println(char)` is
+  a **frozen** contract: `training/language/strings.md:25` documents
+  `println(s.charAt(0)) // 72 (H)` (numeric) and §27 of this file restates it
+  ("`println(char)` is numeric (`72`) in the 3 targets (frozen)"). Issues
+  #168/#153 request the opposite (`println(c)` → `A`) — that is a
+  **semantics change** to the frozen char-display contract, not a plain bug
+  fix. The face that IS a real parity bug is the **standalone**
+  `String.valueOf(char)`, which must yield the character (`"h"`) — already
+  fixed in §27 (07/09). Fixing #168/#153 as filed needs a version bump +
+  corpus update + migration (rule 6), or a maintainer ratification that
+  `println(Char)` shows the character while `charAt` stays numeric.
+  Collection storage must keep boxing char as `Integer`
+  (`JvmOpCollections.boxedClassNameFor` default + `unboxMethodName`
+  char→`intValue`) — the §104b-ii face-char fix depends on it.
+- **Status:** reproduces on `212a8dbc` (both #168 and #153 cases), silent
+  (`ec=0`). Blocked on rule 6 (frozen contract) — escalated to the maintainer
+  15/09; not fixed by this lane.
 
 ### §217 — generic class method return not downcast: `Box<String>.get(): T` emits `()Object`, method call on it → `VerifyError` at first use (issue #161)
 
