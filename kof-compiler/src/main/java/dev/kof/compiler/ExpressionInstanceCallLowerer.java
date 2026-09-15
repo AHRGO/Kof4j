@@ -408,6 +408,19 @@ public final class ExpressionInstanceCallLowerer {
         // primitivo.toString(): o primitivo não tem classe —
         // boxar e converter (String.valueOf) em vez de gerar
         // um owner vazio no bytecode (ClassFormatError)
+        // §216/#153 (face 1 — triagem da mantenedora 14/09: "`Char.toString()`
+        // NÃO é documentado numérico; é bug de paridade"): o `char` vai pelo
+        // overload `String.valueOf(char)` (descritor `(C)`) com o receiver já
+        // empilhado — `Character.toString`/`valueOf(I)` dariam o code point
+        // ("65"). As OUTRAS stringificações de char (println/concat) continuam
+        // numéricas — contrato CONGELADO (training/language/strings.md:25
+        // "println(s.charAt(0)) // 72"); e o box de char em COLEÇÃO continua
+        // Integer (JvmOpCollections) — não tocar daqui.
+        if ("char".equals(Type.canonicalPrimitiveName(((Type.PrimitiveType) recvType).name()))) {
+            ops.add(new KofCall(BuiltinTypes.STRING, "valueOf",
+                    List.of(Type.PrimitiveType.CHAR), BuiltinTypes.STRING, KofCallKind.STATIC));
+            return localIdx;
+        }
         TypeEmitter.boxPrimitive(ops, recvType);
         ops.add(new KofCall(BuiltinTypes.STRING, "valueOf",
                 List.of(Type.UnknownType.UNKNOWN), BuiltinTypes.STRING, KofCallKind.STATIC));
