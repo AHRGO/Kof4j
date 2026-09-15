@@ -879,6 +879,20 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > golden de execucao (oracle JVM medido 11|21|11|11 / 1|2|2), lei do diamante
 > VERDE, suíte DecompileTest+PostDom VERDE. §237 (StringValueOfChar,
 > 6º-red) = lane .22, NAO atacar.
+> **PLANO DA 2c FECHADO (turno 14/09 ~21:20, contexto no fim — NAO iniciado
+> para nao deixar meio-edit):** nos ramos `pureIfElse`/`pureIfThen` de
+> `struct()` (~linhas 316-331/348-361), PRE-VARRER os insns dos blocos entre
+> then/else e o tail: slot escrita por `xstore` e AINDA NAO em `declared` →
+> emitir `var <nome> = <default>` ANTES do `if` e `declared.add(slot)`.
+> Default pelo OPCODE da store: istore→`0`, lstore→`0L`, dstore→`0.0`;
+> fstore/astore (ref) → RECUSAR p/ stub honesto (sem default seguro). Slots ja
+> em declared (init pre-if como o `E.java`) = zero mudanca (byte-identico).
+> Guarda da lei: o pre-scan so roda nos caminhos ja existentes; contFor nao e
+> tocado (o cond computado recusa ANTES, e o `s` ja esta em declared).
+> A funcao de hoist vai p/ `StructWalker.java` NOVA (regra 7;
+> BytecodeStatements.java 538 = TOLERADA, nao engordar p/ >=600). Rodar:
+> 64 DecompileTest + 6 PostDom + Runner2 em Comp/Mid (compile=true) + CallM
+> golden 11|21|11|11 / 1|2|2 + docs-lang check.
 
 
 > **⚠️ 5º RED NO PORTÃO (catalogado, para as lanes de bug — 14/09 ~16:45):**
