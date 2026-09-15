@@ -67,6 +67,10 @@ class KofSupNode {
     Int reinicios = 0
     KofSupWindow janela = null
     Bool dropada = false
+    // DD-OTP-08: wrap VIVO da volta atual — stop() escreve wrap.parar=true
+    // (campo mutável = volatile, SG-020) e o worker cooperativo consulta
+    // via shouldStop() do handle de contexto.
+    KofSupWrap wrap = null
 }
 
 class Supervisor {
@@ -225,7 +229,12 @@ class Supervisor {
     Void stop(Int deadlineMs) {
         if (!vivo) { return }
         drenando = true
+        // DD-OTP-08: 1a alavanca = flag cooperativa. Campo mutável de classe
+        // Kof é ACC_VOLATILE (SG-020) — a escrita é observável pelo worker
+        // em TODOS os alvos (JVM/x86/JS/Script; riscv/aarch = gate OTP001).
+        // O cancel(handle) continua como bônus onde existe.
         for (var c in filhos) {
+            if (c.wrap != null) { c.wrap.parar = true }
             if (c.running && c.h != null) { cancel(c.h) }
         }
         var limites = time.now() + deadlineMs
@@ -288,6 +297,7 @@ Void lacoUnico() {
             n.reinicios = n.reinicios + 1
             this.anotarReinicio(n)
             var wrap = KofSupWrap(n.id, w)
+            n.wrap = wrap
             n.h = spawn kofSupRun(wrap)
             handles.add(n.h)
         }
@@ -344,6 +354,10 @@ Void lacoUnico() {
 class KofSupWrap {
     String id
     KofWorker w
+    // DD-OTP-08: flag de parada cooperativa. Campo MUTÁVEL de classe Kof =
+    // emitido ACC_VOLATILE (SG-020, emenda 14/09) — a escrita de stop() é
+    // observável pelo laço/worker sem risco de o C2 hoistar o load.
+    Bool parar = false
     constructor(String id, KofWorker w) { this.id = id; this.w = w }
 }
 
@@ -363,6 +377,14 @@ String kofSupRun(KofSupWrap wrap) {
     } catch (String e) {
         throw wrap.id + ": " + e
     }
+}
+
+// DD-OTP-08: consulta da flag cooperativa pelo worker. A flag vive no wrap
+// da volta atual do filho (campo mutável = volatile, SG-020); lida por um
+// clojure/lambda capturado — o padrão provado por
+// KofConcurrency2Test.stopFlagCapturedBoxObservedBySpinReader.
+Bool kofSupShouldStop(KofSupWrap wrap) {
+    return wrap.parar
 }
 
 

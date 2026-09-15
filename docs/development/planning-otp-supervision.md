@@ -22,7 +22,7 @@
 | 05 | Plan or tree | ✅ closed |
 | 06 | State on restart | ✅ closed |
 | 07 | Escalation | ✅ closed (text contradiction resolved) |
-| 08 | Shutdown | ✅ unblocked 14/09 — stop-flag proven (`KofConcurrency2Test`), mutable fields now `ACC_VOLATILE` (see SG-020 amendment 14/09); implementation still pending |
+| 08 | Shutdown | ✅ IMPLEMENTED 15/09 — cooperative flag live in the host (`KofSupWrap.parar` + `kofSupShouldStop`), `stop()` writes the flag before `cancel`; S4 E2E JVM+interpreter 13/13 |
 | 09 | Targets | ❌ **OPEN** — depends on 03 |
 | 10 | Injectable clock | ✅ closed |
 | 11 | Success metric | ✅ closed (four gates) |
@@ -250,6 +250,20 @@ loop ends — nothing new here, just honesty in the deadline.
 > details in the SG-020 amendment 14/09. What remains here is **implementation
 > only**: wire the captured flag into `supervisor-host.kf`'s worker contract
 > (factory-reconstructible worker that checks it) + deadline drain E2E.
+>
+> ✅ **15/09 — IMPLEMENTED (lane development, dono 192.168.100.18).** The
+> cooperative flag is live in the host: `KofSupWrap.parar` (mutable field →
+> `ACC_VOLATILE` per SG-020) + `kofSupShouldStop(wrap)` query for the worker's
+> loop + `stop()` writes `wrap.parar = true` on every live child **before**
+> `cancel(handle)` (cancel stays the bonus lever, flag is the contract one).
+> `KofSupNode.wrap` carries the current lap's wrap so `stop()` reaches the
+> running worker even between laps. Proof: `KofSupervisorE2ETest` 11→13
+> (`stopFlagWorkerParaNoDrenoComDeadline` JVM + `stopFlagWorkerNoInterpretador`
+> — long-running worker in a loop consulting the flag exits the loop on
+> `stop()`, drain finishes inside the deadline, both targets green). The
+> **worker contract is now written in the host**: a cooperative worker loops on
+> `kofSupShouldStop(wrap)`; a worker that never checks is still drained by the
+> deadline with the R6 diagnostic (pre-existing behavior, unchanged).
 
 > ⚠️ **11/09 Amendment — BLOCKED: the flag has no visibility guarantee.**### DD-OTP-09 — Targets
 Pure-Kof (DD-OTP-01-A) = **JVM + Script + JS + Native x86 + riscv/aarch for

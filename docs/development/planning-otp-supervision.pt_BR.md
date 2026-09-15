@@ -22,7 +22,7 @@
 | 05 | Plano ou árvore | ✅ fechada |
 | 06 | Estado no restart | ✅ fechada |
 | 07 | Escalonamento | ✅ fechada (contradição do texto resolvida) |
-| 08 | Shutdown | ✅ destravada 14/09 — stop-flag provado (`KofConcurrency2Test`), campos mutáveis agora `ACC_VOLATILE` (ver emenda 14/09 do SG-020); implementação ainda pendente |
+| 08 | Shutdown | ✅ IMPLEMENTADA 15/09 — flag cooperativa no host (`KofSupWrap.parar` + `kofSupShouldStop`), stop() escreve a flag antes do cancel; E2E S4 JVM+interpretador 13/13 |
 | 09 | Alvos | ❌ **ABERTA** — depende do 03 |
 | 10 | Relógio injetável | ✅ fechada |
 | 11 | Métrica de sucesso | ✅ fechada (quatro gates) |
@@ -251,6 +251,21 @@ supervisora termina — nada novo aqui, só honestidade no deadline.
 > detalhes na emenda 14/09 do SG-020. O que resta aqui é só **implementação**:
 > ligar a flag capturada ao contrato do worker de `supervisor-host.kf`
 > (worker reconstrutível pela fábrica que a checa) + E2E do dreno com deadline.
+>
+> ✅ **15/09 — IMPLEMENTADA (lane development, dono 192.168.100.18).** A flag
+> cooperativa está viva no host: `KofSupWrap.parar` (campo mutável →
+> `ACC_VOLATILE` conforme SG-020) + `kofSupShouldStop(wrap)` para o laço do
+> worker consultar + `stop()` escreve `wrap.parar = true` em todo filho vivo
+> **antes** do `cancel(handle)` (o cancel segue como alavanca-bônus; a flag é
+> a de contrato). `KofSupNode.wrap` carrega o wrap da volta corrente para o
+> `stop()` alcançar o worker em execução mesmo entre voltas. Prova:
+> `KofSupervisorE2ETest` 11→13 (`stopFlagWorkerParaNoDrenoComDeadline` JVM +
+> `stopFlagWorkerNoInterpretador` — worker longevo em laço consultando a flag
+> sai do laço no `stop()`, o dreno termina dentro do deadline, os dois alvos
+> verdes). O **contrato do worker agora está escrito no host**: worker
+> cooperativo laça em `kofSupShouldStop(wrap)`; worker que nunca checa segue
+> drenado pelo deadline com o diagnóstico R6 (comportamento pré-existente,
+> inalterado).
 
 > ⚠️ **Emenda 11/09 — BLOQUEADA: a flag não tem garantia de visibilidade.**### DD-OTP-09 — Alvos
 Puro-Kof (DD-OTP-01-A) = **JVM + Script + JS + Native x86 + riscv/aarch de
