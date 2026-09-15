@@ -13,4 +13,11 @@ root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
 for marker in rebase-merge rebase-apply MERGE_HEAD CHERRY_PICK_HEAD REVERT_HEAD; do
     [ -e "$root/.git/$marker" ] && exit 0
 done
-exec "$root/scripts/codeql-gate.sh" --fast
+# rc do gate: 0 = verde; 1 = alerta novo (bloqueia); 2 = INCONCLUSIVO (API
+# fora/limit — nada verificado). rc=2 NAO bloqueia: a porta real e o scan do
+# CI (codeql.yml); travar push por indisponibilidade de API deixaria o repo
+# inteiro impedido (licao 15/09 ~18:45: secondary rate limit das maquinas).
+"$root/scripts/codeql-gate.sh" --fast
+rc=$?
+[ "$rc" = 2 ] && echo "pre-push: GATE 1 nao avaliado (API fora) — push segue; o CI e a porta" && exit 0
+exit "$rc"
