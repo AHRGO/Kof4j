@@ -2,6 +2,7 @@ package dev.kof.compiler;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Construção das tables de símbolos (pre-declaração de tipos e definição
@@ -136,6 +137,98 @@ public final class SymbolTableBuilder {
             classScope.define(defaultCtor);
             classSym.members().define(defaultCtor);
         }
+        checkMemberSignatureDupes(sa, cls.members(), cls.name(), classScope, "class");
+    }
+
+    /**
+     * #264 — dois membros de classe com MESMA assinatura JVM (nome + tipos de
+     * parametro + tipo de retorno apagados a descritor) — incluindo um estatico
+     * e um de instancia — produzem dois metodos com o par (name, descriptor)
+     * identico no mesmo .class: JVMS §4.6 proibe, a classe NAO carrega
+     * (ClassFormatError: Duplicate method name) — o compilador aceitava em
+     * silencio (R6 violado). Espelha o SEM047 de funcao top-level (SG-011B,
+     * ja ratificado): DUPLICATA EXATA e erro; sobrecarga por assinatura
+     * DIFERENTE e permitida (§131). Staticness NAO faz parte do descritor JVM
+     * (e nao do "method signature" do JVMS) — `static go(Int):Int` +
+     * `go(Int):Int` colidem. Chave derivada dos TIPOS RESOLVIDOS (mesma chave
+     * ⇒ mesmo descritor: o mapper e funcao do Type; nomes prefixados/retornos
+     * diferentes continuam passando, medido). Construtores: <init>(params)V.
+     */
+    static void checkMemberSignatureDupes(SemanticAnalyzer sa, List<? extends AstNode> members,
+                                          String className, SymbolTable classScope, String kind) {
+        DiagnosticCollector dc = sa.diagnostics();
+        if (dc == null) return;
+        Map<String, SourcePosition> seen = new java.util.LinkedHashMap<>();
+        for (AstNode member : members) {
+            String key;
+            String shown;
+            SourcePosition pos;
+            if (member instanceof MethodDeclarationNode m) {
+                SymbolTable.MethodSymbol ms = sa.methodSymbols().get(m);
+                if (ms == null) continue;
+                key = signatureKey(m.name(), ms.parameterTypes(), ms.returnType());
+                shown = m.name() + "(" + joinParamTypes(m.parameters()) + ")";
+                pos = m.position();
+            } else if (member instanceof ConstructorDeclarationNode c) {
+                List<Type> pt = new ArrayList<>();
+                for (FormalParameterNode p : c.parameters()) {
+                    pt.add(MemberResolver.resolveType(sa, p.type(), classScope));
+                }
+                key = signatureKey("<init>", pt, Type.PrimitiveType.VOID);
+                shown = "constructor " + className + "(" + joinParamTypes(c.parameters()) + ")";
+                pos = c.position();
+            } else {
+                continue;
+            }
+            SourcePosition prev = seen.putIfAbsent(key, pos);
+            if (prev != null) {
+                dc.error(pos != null ? pos.file() : "", pos != null ? pos.line() : 0,
+                        pos != null ? pos.column() : 0, 0,
+                        "'" + shown + "' is already defined in " + kind + " '" + className + "' at line "
+                                + prev.line() + " — same JVM descriptor; overload requires a DIFFERENT"
+                                + " parameter or return type (static and instance do not differ here)",
+                        "SEM061");
+            }
+        }
+    }
+
+    private static String joinParamTypes(List<FormalParameterNode> ps) {
+        StringBuilder sb = new StringBuilder();
+        for (FormalParameterNode p : ps) {
+            if (sb.length() > 0) sb.append(", ");
+            sb.append(p.type() != null ? p.type() : "?");
+        }
+        return sb.toString();
+    }
+
+    private static String signatureKey(String name, List<Type> params, Type ret) {
+        StringBuilder sb = new StringBuilder(name).append('(');
+        for (Type t : params) sb.append(typeKey(t));
+        return sb.append(')').append(typeKey(ret)).toString();
+    }
+
+    /** Chave de APAGAMENTO (erasure), espelhando o descritor JVM: argumentos de
+     *  tipo caem ({@code List<Int>} × {@code List<String>} → APAGADOS para o
+     *  mesmo ArrayList — javac rejeita como "same erasure", e a JVM tambem:
+     *  mesmo descritor → ClassFormatError, medido), {@code T} vira Object.
+     *  Retorno incluido (faz parte do descritor). */
+    private static String typeKey(Type t) {
+        if (t == null) return "?";
+        return switch (t) {
+            case Type.PrimitiveType p -> "P:" + p.name();
+            case Type.ClassType c -> "java.lang".equals(c.packageName()) && "Object".equals(c.name())
+                    ? "Ljava/lang/Object;" : "C:" + c.packageName() + "." + c.name();
+            case Type.ArrayType a -> "[" + typeKey(a.componentType());
+            // Int? apaga para java/lang/Integer (boxed — c0cf805e), NAO para I:
+            // go(Int) e go(Int?) tem descritores DIFERENTES (mediado no tip:
+            // (I)I × (Ljava/lang/Integer;)I) — nao pode casar na chave.
+            case Type.NullableType n -> n.inner() instanceof Type.PrimitiveType p
+                    ? "B:" + p.name() : typeKey(n.inner());
+            case Type.TypeVariable _ -> "Ljava/lang/Object;";
+            case Type.FunctionType f -> f.className() != null ? "C:" + f.className() : "Ljava/lang/Object;";
+            case Type.WildcardType _ -> "Ljava/lang/Object;";
+            default -> "O:" + t;
+        };
     }
 
     static void defineRecordMembers(SemanticAnalyzer sa, RecordDeclarationNode rec) {
@@ -183,6 +276,7 @@ public final class SymbolTableBuilder {
                 defineMethodSymbol(sa, method, rec.name(), classScope);
             }
         }
+        checkMemberSignatureDupes(sa, rec.members(), rec.name(), classScope, "record");
     }
 
     static void defineEntityMembers(SemanticAnalyzer sa, EntityDeclarationNode ent) {
@@ -216,6 +310,7 @@ public final class SymbolTableBuilder {
                 defineMethodSymbol(sa, method, iface.name(), classScope, true);
             }
         }
+        checkMemberSignatureDupes(sa, iface.members(), iface.name(), classScope, "interface");
     }
 
     static void defineConstructorSymbol(SemanticAnalyzer sa, ConstructorDeclarationNode ctor,
