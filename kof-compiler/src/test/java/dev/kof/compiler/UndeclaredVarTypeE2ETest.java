@@ -98,6 +98,43 @@ class UndeclaredVarTypeE2ETest {
                 "Must report SEM011 on junk: " + r.diagnostics().getDiagnostics());
     }
 
+    @Test
+    void statementLossFaceWithIsIsDiagnosed(@TempDir Path tmp) throws Exception {
+        // Catalog face (b): `x is Dog` was read as VarDecl(x, is) and the next
+        // `Dog println("one")` as a bogus nested function that swallowed the
+        // call — only `two` printed, exit 0. Now diagnosed.
+        CompilationResult r = compile(tmp, """
+                class Dog { }
+                main() {
+                    var x = 1
+                    x is Dog
+                    println("one")
+                    println("two")
+                }
+                """);
+        assertFalse(r.success(), "mangled `x is Dog` must be rejected: " + r.diagnostics().getDiagnostics());
+        assertTrue(hasSem011(r, "x"),
+                "Must report SEM011 on x: " + r.diagnostics().getDiagnostics());
+    }
+
+    @Test
+    void tailDroppedExpressionFaceDiagnosed(@TempDir Path tmp) throws Exception {
+        // Catalog face (c): `var r = d is Dog` silently became `var r = d` and
+        // printed the object. Now the bogus trailing decl (`is Dog`) is SEM011.
+        CompilationResult r = compile(tmp, """
+                class Dog { }
+                main() {
+                    var d = new Dog()
+                    var r = d is Dog
+                    println(r)
+                }
+                """);
+        assertFalse(r.success(), "tail-dropped `d is Dog` must be rejected: " + r.diagnostics().getDiagnostics());
+        assertTrue(r.diagnostics().getDiagnostics().stream()
+                        .anyMatch(d -> "SEM011".equals(d.code())),
+                "Must report SEM011: " + r.diagnostics().getDiagnostics());
+    }
+
     // ---- forms legítimas que NÃO podem ser rejeitadas (Q4/Q3) ----
 
     @Test
