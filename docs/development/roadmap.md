@@ -878,6 +878,7 @@ domain (`INFRA00x`/`DATA00x`/`SCI00x`/`BIO00x`/`SECPQ`) + parity matrix;
 | 1.3 | Typed query DSL (`User.query {}`) | ✅ 01/09 (`KofOrmE2ETest`) |
 | 1.4 | Package manager MVP (`kofdeps`) | 🟡 `kof deps` + Maven Central resolution; transitive/registry pending |
 | 1.5 | Tracing/OpenTelemetry + `application{}` lifecycle | 🟡 W3C spans + lifecycle ✅ 3 targets; OTel export pending |
+| 1.6 | **Native → bare-metal/bootable** (microcontroller, legacy BIOS, UEFI) — 15/09 maintainer directive | ⚪ **plan only** — HAL seam `kof_plat_*` + freestanding profile, faces B-0…B-5 in `docs/development/future/PLAN-BAREMETAL-BOOT.md`; not scheduled; MCU depends on 1.2 |
 
 ### TIER 2 — Compiler foundations (M) — **status corrected against the code**
 

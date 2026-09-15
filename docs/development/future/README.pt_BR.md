@@ -24,6 +24,7 @@ documento de arquitetura/visão **sem código implementado** (ou com código que
 |-----|------|---------------------------|
 | `PLAN-UNIVERSAL-PLATFORM.md` | visão de longo prazo (Kof como plataforma universal) | 100% visão/estratégia — não é ordem de implementação; nenhum pacote `ml`/`bio`/`hpc`/`infra-*` no código |
 | `scoped-resources-plan.md` | RAII leve (TIER 2.4, `using`/`resource_scope`) | design puro — zero ocorrências de `resource_scope`/`kof_resource`/`using` no lexer/parser/runtime; gated por bump |
+| `PLAN-BAREMETAL-BOOT.md` | **nativo → bare-metal/bootável** (costura HAL B-0…B-5: freestanding, UEFI, BIOS legado, MCU) — diretiva da mantenedora 15/09 | **zero código** — o runtime está fixado a syscalls Linux, o x86 precisa de `-lc`/`-dynamic-linker`, codegen de 32 bits ausente; classificado por `PLAN-TREE-SHAKING.md` §T3 ("embedded real = backend RTOS/bare-metal em si") — vai p/ `docs/` quando B-1 produzir um ELF sem dinâmica |
 | ~~`planning-stdlib-array-returns.md`~~ → `docs/stdlib/DD-STDLIB-01-array-returns.md` | DD-STDLIB-01 | **FECHADO 13/09** — decisão 6a + implementação (`randomBytesHex`->String; choice=idiom), movido p/ docs/ |
 
 ## Já caíram para `docs/development/` (iniciados — regra dos 3 estados, 12/09)

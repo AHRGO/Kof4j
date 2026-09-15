@@ -152,6 +152,14 @@
 > próprios marcadores `.L`-locais riscv — NÃO precisou do `kof_heap_root_end`
 > x86 da S-5); G-4 (sweep+collect) é o próximo e não depende dele.
 >
+> **Além do GC (futuro, sem degrau agendado):** a diretiva da mantenedora de
+> 15/09 ("todo código nativo deve se comunicar direto com barebones — código
+> bootável para microcontroladores, legado e UEFI com Kof") está registada,
+> decomposta e mantida só-plano em
+> `docs/development/future/PLAN-BAREMETAL-BOOT.md` (faces B-0…B-5: costura HAL
+> `kof_plat_*` + perfil freestanding + UEFI/BIOS/MCU). A face MCU depende do
+> coletor (G-4/G-5) acima.
+>
 > **Status:** `EM DESENVOLVIMENTO (parcial)` — **riscv64 + aarch64 com core completo (03/09)**: classes/arrays/List/strings/instanceof/switch/try-catch/FP/recursão em asm puro nos dois; paridade avançada pendente *(ver re-auditoria 12/09 acima — muito do que estava "pendente" já roda sob qemu; o que falta tem código de gap honesto)*.
 > **Versão:** 0.2.6-beta · **Data:** 2026-09-03
 > **Gap:** `NATIVE002` (riscv64 core ✅ 02/09; aarch64 core ✅ 03/09 via tradução riscv→aarch64; paridade total x86 — JSON/DB/HTTP/concorrência/UI/net — pendente nos dois).
@@ -370,3 +378,9 @@ compila e roda **idêntico** em `x86_64`, `aarch64 (qemu)`, `riscv64 (qemu)` e
 
 - `GC` mark-sweep avançado, `float/double` no Native (`F2D`), `kof.web`
   `listen` nativo, `macOS` Mach-O / `Windows` PE.
+- **Bare-metal / bootável** (microcontrolador, BIOS legado, UEFI) — diretiva da
+  mantenedora 15/09 ("todo código nativo deve se comunicar direto com barebones").
+  O runtime riscv64/aarch64 em asm puro (sem libc) é a base natural, mas os
+  emitters estão fixados a `ecall`/`syscall` Linux e a uma ABI `_start`, e não há
+  perfil de link freestanding. Só plano, sem agendamento:
+  `docs/development/future/PLAN-BAREMETAL-BOOT.md` (faces B-0…B-5).

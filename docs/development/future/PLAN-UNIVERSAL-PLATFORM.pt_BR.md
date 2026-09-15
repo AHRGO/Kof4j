@@ -1082,10 +1082,16 @@ sistemas embarcados/edge, HPC local, forense.
   pthread bloqueante) — **D** (necessário para servidores HPC/edge);
   (e) **codegen RISC/ARM** (hoje placeholder via qemu) — **C** (já em
   andamento); (f) **GPU** (Vulkan por FFI; CUDA por FFI) — **D/A**.
+  **(g) bare-metal / bootável** (microcontrolador, BIOS legado, UEFI) — ver
+  `PLAN-BAREMETAL-BOOT.md` (diretiva da mantenedora 15/09): uma **costura de
+  plataforma (`kof_plat_*`) + perfil de link freestanding**, não outra
+  linguagem. Classificado B-0…B-5; a face MCU de 32 bits é classe-pesquisa e
+  depende do coletor.
 - **Veredito:** o Native é o alvo dos **domínios de sistemas** (infra edge,
   forense, automação, embarcados). O caminho HPC/numérico é **FFI a
   C/C++/Rust** (zona sem GC), não reimplementação. Custo: médio-alto
-  (GC mark-sweep + event-loop são os dois itens caros).
+  (GC mark-sweep + event-loop são os dois itens caros; bare-metal soma a
+  costura HAL + codegen de 32 bits conforme `PLAN-BAREMETAL-BOOT.md`).
 
 ## 8.3 JS (o alvo "web/browser")
 
