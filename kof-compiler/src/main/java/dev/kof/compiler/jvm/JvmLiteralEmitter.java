@@ -222,7 +222,6 @@ public final class JvmLiteralEmitter {
         return Math.max(max, 1);
     }
 
-    @SuppressWarnings("java/local-variable-is-never-read")
     static int computeStack(List<KofOperation> ops) {
         int depth = 0;
         int max = 0;
