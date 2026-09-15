@@ -79,7 +79,7 @@ All hanging on:
 | Group | Bugs | Who unblocks |
 |---|---|---|
 | Ratified decision 13/09 — pending implementation | §161/NAT-STR01 (§89 ✅ `e33425b5`, §106 ✅ `5b939106`+JS `ab85cfae`, §117 ✅ `3734f2aa`, §131 ✅ `18a64d45`, §81 ✅ `839bd73f`, §163 ✅ `d2a8a618`; §45/DD-01 CLOSED 13/09 — see `docs/decisions/DD-01-finally-return.md`) | ratified queue / executor lanes |
-| Rule-6 frozen | §101 | nobody (contract) |
+| Rule-6 frozen | ~~§101~~ ✅ FIXED 14/09 (DECISIONS §1 option A — pure IEEE 754 on all targets) | nobody (contract) |
 | Someone else's lane | §104b-ii + §107 remaining + §114 (bugfixer — record storage-box), §132 (OTP-JS), §165 (js-slices — re-verified 13/09: does NOT reproduce in a clean build, probable non-bug) — §129 ✅ FIXED 15/09 (lane development `192.168.100.18`) | lane owners |
 
 Fixed 13/09: **§89** (numeric conversion in a primitive = alias of `as` +
@@ -123,7 +123,7 @@ scalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 | `pow`/`-lm`, `roundTo`-mode | `docs/stdlib/PLAN-STDLIB-EXPANSION.md` | ✅ `pow` **DONE 13/09** (7a: `-lm`; 5 targets MATH001 cross; `stdmathpow` matrix + `powCrossArchRefused` `d736e36e`) · `roundTo` **DONE 14/09** (DECISIONS §3 ratified; S1b.3: `math.roundTo(Double,Int)`, half-away-from-zero by deterministic decimal scaling, no libm; 5 targets — riscv/aarch B32; `stdmathround` matrix + `roundToCrossArch` under qemu + `KofScriptStdlibParityTest.mathRoundToParity`) |
 | NAT-STR01 (case-map astral) | `known-bugs.md` §161 / conformance-matrix | ✅ OPEN BY DECISION 13/09 — implement UTF-8 astral in the natives |
 | §129 (cross-thread unwind via TLS) | `known-bugs.md` | ✅ FIXED 15/09 (DECISIONS §2 option B: TLS per-thread chain + per-worker handler in the trampoline; x86_64; riscv/aarch remain `OTP001`) |
-| json §106 | `known-bugs.md` | ✅ DECIDED 13/09 (option 2b: sorted keys) — implement |
+| json §106 | `known-bugs.md` | ✅ FIXED 13/09 (option 2b: sorted keys) — JVM/x86/Script/JS (`5b939106` + JS residual `ab85cfae`); riscv/aarch port gap tracked separately |
 
 ---
 

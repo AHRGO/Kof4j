@@ -79,7 +79,7 @@ Todos pendurados em:
 | Grupo | Bugs | Quem destrava |
 |---|---|---|
 | Decisão ratificada 13/09 — implementação pendente | §161/NAT-STR01 (§89 ✅ `e33425b5`, §106 ✅ `5b939106`+JS `ab85cfae`, §117 ✅ `3734f2aa`, §131 ✅ `18a64d45`, §81 ✅ `839bd73f`, §163 ✅ `d2a8a618`; §45/DD-01 FECHADO 13/09 — ver `docs/decisions/DD-01-finally-return.md`) | fila ratificada / lanes executoras |
-| Congelado regra-6 | §101 | ninguém (contrato) |
+| Congelado regra-6 | ~~§101~~ ✅ CORRIGIDO 14/09 (DECISIONS §1 opção A — IEEE 754 puro em todos os alvos) | ninguém (contrato) |
 | Lane alheia | §104b-ii + §107 restante + §114 (bugfixer — storage-box de record), §132 (OTP-JS), §165 (js-slices — re-verificado 13/09: NÃO reproduz em clean build, provável não-bug) — §129 ✅ CORRIGIDO 15/09 (lane development `192.168.100.18`) | donos das lanes |
 
 Corrigidos 13/09: **§89** (conversão numérica em primitivo = alias do `as` +
@@ -123,7 +123,7 @@ escalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 | `pow`/`-lm`, `roundTo`-mode | `docs/stdlib/PLAN-STDLIB-EXPANSION.md` | ✅ `pow` **FEITO 13/09** (7a: `-lm`; 5 alvos MATH001 cross; `stdmathpow` matriz + `powCrossArchRefused` `d736e36e`) · `roundTo` **NÃO aprovado pela 7a** (ratificação = só pow; "+roundTo" era nota de agente no plano — superfície/assinatura indefinida = regra 6, aguarda decisão da mantenedora) |
 | NAT-STR01 (case-map astral) | `known-bugs.md` §161 / conformance-matrix | ✅ ABERTO POR DECISÃO 13/09 — implementar UTF-8 astral nos nativos |
 | §129 (unwind cross-thread via TLS) | `known-bugs.md` | ✅ CORRIGIDO 15/09 (DECISIONS §2 opção B: chain TLS por thread + handler por worker no trampolim; x86_64; riscv/aarch seguem `OTP001`) |
-| json §106 | `known-bugs.md` | ✅ DECIDIDO 13/09 (opção 2b: chaves sorted) — implementar |
+| json §106 | `known-bugs.md` | ✅ CORRIGIDO 13/09 (opção 2b: chaves sorted) — JVM/x86/Script/JS (`5b939106` + residual JS `ab85cfae`); gap de porte riscv/aarch rastreado à parte |
 
 ---
 
