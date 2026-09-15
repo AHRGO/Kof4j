@@ -1408,6 +1408,15 @@ class ConformanceMatrixTest {
                     println(if (s == "") 1 else "s")
                 }
                 """, "1", Set.of(), tempDir);
+        // §205 (ramo FALSO): o print direto pelo outro lado do if — no
+        // código antigo (SIGSEGV) ambos os lados crashavam; a prova precisa
+        // cobrir os dois dispatchs (valueOf(int) E println(string)).
+        matrix("ifexpr-heterogeneous-direct-else", """
+                main() {
+                    var s = "x"
+                    println(if (s == "") 1 else "s")
+                }
+                """, "s", Set.of(), tempDir);
         // mesma classe da #57 p/ switch-expression heterogêneo.
         matrix("switchexpr-heterogeneous-direct", """
                 main() {
@@ -1418,6 +1427,38 @@ class ConformanceMatrixTest {
                     })
                 }
                 """, "1", Set.of(), tempDir);
+        // §205: lado FALSO do switch heterogêneo (default) + multi-arms — a
+        // chain de comparação precisa cair no próximo braço. No código antigo,
+        // crashava em todos os lados.
+        matrix("switchexpr-heterogeneous-direct-else", """
+                main() {
+                    var s = "x"
+                    println(switch (s) {
+                        case "" -> 1
+                        default -> "s"
+                    })
+                }
+                """, "s", Set.of(), tempDir);
+        matrix("switchexpr-heterogeneous-multi", """
+                main() {
+                    var v = 5
+                    println(switch (v) {
+                        case 1 -> "a"
+                        case 5 -> 2
+                        default -> "d"
+                    })
+                }
+                """, "2", Set.of(), tempDir);
+        matrix("switchexpr-heterogeneous-multi-default", """
+                main() {
+                    var v = 9
+                    println(switch (v) {
+                        case 1 -> "a"
+                        case 5 -> 2
+                        default -> "d"
+                    })
+                }
+                """, "d", Set.of(), tempDir);
         // §70 — heterogêneo primitivo-vs-primitivo de slots distintos
         // (Int 1-word vs Long 2-word): o join quebrava o COMPUTE_FRAMES
         // (crash AIOOBE) em vez de VerifyError. Fix: cada ramo boxeado

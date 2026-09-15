@@ -22,6 +22,14 @@ public final class BuiltinTypes {
     }
 
 
+    public static boolean isObject(Type type) {
+        if (type instanceof Type.ClassType ct) {
+            return "java.lang".equals(ct.packageName()) && "Object".equals(ct.name());
+        }
+        return false;
+    }
+
+
     public static boolean isReferenceType(Type type) {
         return type instanceof Type.ClassType || type instanceof Type.ArrayType;
     }
