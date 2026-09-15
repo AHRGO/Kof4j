@@ -593,10 +593,17 @@ Phase E  Kof Decompiler          (generate Kof source)
 > comparison fold) FOUND & FIXED with a new recompile test (`comparisonReturn-
 > RespectsBoolVsIntReturnType`, DecompileTest 64/64 green), and §238 (the 2a
 > `pureIfElse` join emitting `var` inside the branch → non-compilable output)
-> catalogued with a measured repro — §238 is the next autonomous unit (2c),
-> fixable here without touching the diamond law or rule 6. The structural
-> WALKER stays discarded (453 loop+continue = rule 6; 646 invoke-test = interop
-> lane §234).
+> catalogued with a measured repro — §238 became the next autonomous unit (2c).
+> **UPDATE 2 (14/09 ~21:35): §238 ✅ FIXED (unidade 2c)** — classe NOVA
+> `StructWalker.hoistEscapingLocals` içar `var` default-init (0/0L/0.0 por
+> opcode da store; fstore/astore → recusar p/ stub honesto) antes do `if`
+> nos caminhos `pureIfElse`; 2 testes novos que FALHAM no código antigo
+> (Q0-prova 2/2 red revertido) + executam com oracle JVM medido
+> (`10/21/12`); DecompileTest 66/66, PostDom 6/6, kof-cli COMPLETO 251/251
+> BUILD SUCCESS, lei do diamante VERDE, check_500 OK (537→547 TOLERADA,
+> StructWalker 84 linhas). Remaining in the structural lane: the diamond law +
+> `continue` face (453, rule 6 — maintainer decision) and the interop tests
+> (646, §234 lane compiler) — the doc returns to a genuine stopping point.
 
 ## 7. Relationship with the Compiler
 

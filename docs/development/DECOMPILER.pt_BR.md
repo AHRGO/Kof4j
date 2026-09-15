@@ -595,10 +595,18 @@ Fase E  Kof Decompiler          (gerar Kof source)
 > Bool-vs-Int da comparacao) ACHADA & CORRIGIDA com teste novo de recompile
 > (`comparisonReturnRespectsBoolVsIntReturnType`, DecompileTest 64/64 verde),
 > e §238 (o join `pureIfElse` da 2a emitindo `var` dentro do ramo → saida
-> nao-compilavel) catalogado com repro medido — §238 e a proxima unidade
-> autonoma (2c), consertavel aqui sem tocar a lei do diamante nem regra 6. O
-> walker ESTRUTURAL segue descartado (453 loop+continue = regra 6; 646 teste
-> com invoke = lane interop §234).
+> nao-compilavel) catalogado com repro medido — §238 virou a proxima unidade
+> autonoma (2c). **ATUALIZACAO 2 (14/09 ~21:35): §238 ✅ CORRIGIDO (unidade
+> 2c)** — classe NOVA `StructWalker.hoistEscapingLocals` içar `var`
+> default-init (0/0L/0.0 por opcode da store; fstore/astore → recusar p/
+> stub honesto) antes do `if` nos caminhos `pureIfElse`; 2 testes novos que
+> FALHAM no codigo antigo (prova Q0: 2/2 red com o revert) + executam com
+> oracle JVM medido (`10/21/12`); DecompileTest 66/66, PostDom 6/6, kof-cli
+> COMPLETO 251/251 BUILD SUCCESS, lei do diamante VERDE, check_500 OK
+> (537→547 TOLERADA, StructWalker 84 linhas). O que resta na lane
+> estrutural: a face lei-do-diamante + `continue` (453, regra 6 — decisao da
+> mantenedora) e os testes interop (646, lane compiler §234) — o doc volta
+> a um ponto de parada genuino.
 
 ## 7. Relação com o Compilador
 

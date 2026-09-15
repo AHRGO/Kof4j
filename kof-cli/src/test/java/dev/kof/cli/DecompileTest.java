@@ -873,6 +873,84 @@ class DecompileTest {
     }
 
     @Test
+    void hoistsEscapingLocalOutOfIfElseBranchesAndRunsIt(@TempDir Path dir) throws Exception {
+        // §238 (Fase C degrau 2c): um local cuja PRIMEIRA escrita fica dentro
+        // de um ramo do if-else e e lida DEPOIS do join saia com `var` escopado
+        // dentro do if -> o pos-join referenciava um nome nao-declarado e a
+        // saida NAO recompilava (SEM000, anti-R6). O hoist icar a declaracao
+        // (default por tipo da store: Int->0) ANTES do if. Prova FORTE:
+        // recompila E executa os 3 caminhos (oracle JVM medido 10 21 12).
+        Path src = dir.resolve("classes");
+        Files.createDirectories(src);
+        Path s = src.resolve("Hl.java");
+        Files.writeString(s, """
+                public class Hl {
+                    public static int both(int n) {
+                        int m = n % 2; int s;
+                        if (m == 0) { s = 10; } else { s = 20; }
+                        return s + n;
+                    }
+                }
+                """);
+        runJavac(java.util.List.of(s), src);
+        String kof = Decompile.decompile(src.resolve("Hl.class"));
+
+        assertTrue(kof.contains("var v2 = 0") && kof.contains("if (v1 == 0) {"),
+                "declaracao do local escapante deve ser içada p/ antes do if:\n" + kof);
+        assertTrue(kof.indexOf("var v2 = 0") < kof.indexOf("if (v1 == 0)"),
+                "o var do local vem ANTES do if, nao dentro do ramo:\n" + kof);
+        assertFalse(kof.contains("throw \"body not recovered\""), "nao deve stubar:\n" + kof);
+
+        Path out = dir.resolve("gen");
+        Files.createDirectories(out);
+        Path kf = out.resolve("Hl.kf");
+        Files.writeString(kf, kof);
+        Path mainKf = out.resolve("Main.kf");
+        Files.writeString(mainKf, "main() {\n    println(Hl.both(0))\n    println(Hl.both(1))"
+                + "\n    println(Hl.both(2))\n}\n");
+        CompilationResult r = new CompilerDriver().compileSources(java.util.List.of(kf, mainKf),
+                dir.resolve("o"), Target.JVM, out);
+        assertTrue(r.success(), "içado decompilado deve COMPILAR (era o bug):\n" + kof
+                + "\n" + r.diagnostics().getDiagnostics());
+        ProcessBuilder pb = new ProcessBuilder("java", "-cp", dir.resolve("o").toString(), "Default.Main");
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String o = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+                .replace("\r\n", "\n").trim();
+        assertEquals(0, p.waitFor(), "run: " + o);
+        assertEquals("10\n21\n12", o, "os 3 caminhos do join içado:\n" + kof);
+    }
+
+    @Test
+    void refLocalEscapingStaysHonestStubNotBrokenOutput(@TempDir Path dir) throws Exception {
+        // §238 (face R6): um local de REFERENCIA escapante (String s escrito
+        // nos 2 ramos, lido depois) NAO tem default seguro a icar (o tipo de
+        // referencia e desconhecido no store; float literal drifta — licao bug
+        // 62). Antes o pureIfElse emitia `var v1 = "a"` dentro do ramo ->
+        // saida nao-compilavel. Agora: RECUSA p/ stub honesto (UNKNOWN), que e
+        // o contrato R6 (nunca codigo errado/nao-compilavel).
+        Path src = dir.resolve("classes");
+        Files.createDirectories(src);
+        Path s = src.resolve("Hr.java");
+        Files.writeString(s, """
+                public class Hr {
+                    public static String ref(int n) {
+                        int m = n % 2; String s;
+                        if (m == 0) { s = "a"; } else { s = "b"; }
+                        return s;
+                    }
+                }
+                """);
+        runJavac(java.util.List.of(s), src);
+        String kof = Decompile.decompile(src.resolve("Hr.class"));
+
+        assertTrue(kof.contains("throw \"body not recovered\""),
+                "local de referencia escapante deve degradar p/ stub honesto:\n" + kof);
+        assertFalse(kof.contains("var v") && kof.contains("} else {"),
+                "nao deve emitir var escopado dentro do ramo (bug §238):\n" + kof);
+    }
+
+    @Test
     void recoversNullNarrowAndRunsIt(@TempDir Path dir) throws Exception {
         // Fase C: ifnull/ifnonnull (0xc6/0xc7) — narrowing CANONICO da
         // linguagem (idiom Null safety; ROI medido: 308 testes sobre load

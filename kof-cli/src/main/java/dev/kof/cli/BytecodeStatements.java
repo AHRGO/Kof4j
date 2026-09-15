@@ -321,6 +321,27 @@ final class BytecodeStatements {
                     && !BytecodeReader.isLoopHeader(join)
                     && byStart.get(thenStart) != null
                     && byStart.get(thenStart).succ.equals(List.of(exitStart));
+            BytecodeReader.Block thenB = byStart.get(thenStart);
+            BytecodeReader.Block elseB = join;
+            int tail = thenB != null && thenB.succ.size() == 1 ? thenB.succ.get(0) : -1;
+            boolean pureIfElse = tail >= 0 && elseB != null && tail != exitStart && tail != b.start
+                    && elseB.succ.equals(List.of(tail))
+                    && !BytecodeReader.isLoopHeader(byStart.get(tail) != null ? byStart.get(tail) : elseB)
+                    && byStart.get(tail) != null
+                    && byStart.get(tail).pred.size() == 2
+                    && byStart.get(tail).pred.contains(thenStart)
+                    && byStart.get(tail).pred.contains(exitStart);
+            // §238 (degrau 2c): um local escrito nos DOIS ramos e lido apos o
+            // join sai com `var` escopado dentro do if -> SEM000 nao-compilavel
+            // (anti-R6). Ica a declaracao (default por tipo da store) ANTES do
+            // if; so no pureIfElse (o pureIfThen nao tem else nem init
+            // escapante — Java valido nao o produz). Se um local escapante for
+            // float/ref (sem default seguro) -> RECUSAR p/ stub honesto.
+            if (pureIfElse) {
+                List<String> hoist = StructWalker.hoistEscapingLocals(thenB, elseB, insns, frame, declared);
+                if (hoist == null) return false;
+                out.addAll(hoist);
+            }
             out.add("if (" + cond + ") {");
             if (pureIfThen) {
                 Set<Integer> jstops = new HashSet<>(stops);
@@ -337,18 +358,7 @@ final class BytecodeStatements {
             // recusa 214 = stub do metodo inteiro. O trap 1 (sequela sugada
             // p/ dentro do else) NAO e possivel aqui: preds(P)=={then,else}
             // NAO contem o if — P nao e alvo de branch, e o join dos ramos.
-            BytecodeReader.Block thenB = byStart.get(thenStart);
-            BytecodeReader.Block elseB = join;
-            int tail = thenB != null && thenB.succ.size() == 1 ? thenB.succ.get(0) : -1;
-            boolean pureIfElse = tail >= 0 && elseB != null && tail != exitStart && tail != b.start
-                    && elseB.succ.equals(List.of(tail))
-                    && !BytecodeReader.isLoopHeader(byStart.get(tail) != null ? byStart.get(tail) : elseB)
-                    && byStart.get(tail) != null
-                    && byStart.get(tail).pred.size() == 2
-                    && byStart.get(tail).pred.contains(thenStart)
-                    && byStart.get(tail).pred.contains(exitStart);
             if (pureIfElse) {
-                // o `if (cond) { acima (linha do path classico) ja foi emitido
                 Set<Integer> bstops = new HashSet<>(stops);
                 bstops.add(tail);
                 if (!struct(thenB, insns, byStart, cp, frame, out, emitted, declared, header, bstops))

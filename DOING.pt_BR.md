@@ -675,6 +675,24 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > BytecodeStatements.java 538 = TOLERADA, nao engordar p/ >=600). Rodar:
 > 64 DecompileTest + 6 PostDom + Runner2 em Comp/Mid (compile=true) + CallM
 > golden 11|21|11|11 / 1|2|2 + docs-lang check.
+> (3) ✅ **UNIDADE 2c FEITA (14/09 ~21:35, dono = 192.168.100.17):** §238
+> CORRIGIDA — `StructWalker.hoistEscapingLocals` (classe NOVA, 84 linhas)
+> içar `var` default-init (istore→0, lstore→0L, dstore→0.0; fstore/astore →
+> RECUSAR p/ stub honesto) antes do `if` so no caminho `pureIfElse` de
+> `struct()` (pureIfThen intocado; pre-declarados byte-identicos); 2 testes
+> novos (hoistsEscaping…RunsIt golden medido 10/21/12 +
+> refLocalEscapingStaysHonestStub) que FALHAM 2/2 no codigo antigo (prova
+> Q0) e passam com o fix; DecompileTest 66/66 + PostDom 6/6 + kof-cli
+> COMPLETO 251/251 BUILD SUCCESS + check_500 exit 0. BytecodeStatements
+> 537→547 (TOLERADA; nao aproximar de 600 — proximo acrescimo exige split
+> por responsabilidade). DECOMPILER AGORA: parada genuina — as faces
+> restantes sao regra 6 (diamante+continue, 453) e lane compiler (interop
+> 646/§234); mover p/ `docs/` depende de decisao da mantenedora sobre o
+> destino da Fase C. **PRÓXIMO PASSO desta lane (docs/development
+> exclusiva):** re-varrer `docs/development/` — se nenhum doc tiver
+> trabalho acionavel sem dono, STABILITY: registrar recusa + parar cron
+> (scripts/auto-loop.sh stop) e reportar ao maintainer.
+
 
 > **⚠️ 5º RED NO PORTÃO (catalogado, para as lanes de bug — 14/09 ~16:45):**
 > `NativeStringCompareCrossTest` riscv+aarch → §233 no known-bugs (renumerado 17:40: §231 foi tomado pela lane .18 — colisao de rebase; fix
