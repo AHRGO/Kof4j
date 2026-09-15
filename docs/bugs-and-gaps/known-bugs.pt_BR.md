@@ -7008,7 +7008,36 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   `8af810c5` "mapear tipos primitivos p/ classes boxeadas" que consertou as
   faces checkcast/instanceof provavelmente omite o sítio de concatenação
   String / boxing, e `Char.toString()` baixa para `Integer.toString`.
-- **Estado:** reproduz no `d2d025f4` (casos #168 e #153).
+- **Causa raiz MEDIDA 15/09 (lane bugs-and-gaps `192.168.100.15`, classes
+  FRESCAS em `212a8dbc`, javap):** `TypeEmitter.boxPrimitive` mapeia
+  `char` → `new Type.ClassType("java.lang", "Integer", …)` e força o
+  parâmetro do `valueOf` para `INT` (linhas 27/32). Os dois sítios de
+  stringificação boxam o char como `Integer` e chamam
+  `String.valueOf(Object)`:
+  ```
+  invokestatic java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+  invokestatic java/lang/String.valueOf:(Ljava/lang/Object;)Ljava/lang/String;
+  ```
+  → `"65"`. Sítios afetados: `ExpressionPrintLowerer:63` (println),
+  `ExpressionBinaryLowerer:253/261` (concat), `ExpressionInstanceCallLowerer:411`
+  (`toString` de primitivo).
+- **⚠️ REGRA 6 — NÃO corrigir sem decisão da mantenedora.** `println(char)` é
+  contrato **congelado**: `training/language/strings.md:25` documenta
+  `println(s.charAt(0)) // 72 (H)` (numérico) e o §27 deste arquivo reafirma
+  ("`println(char)` é numérico (`72`) nos 3 targets (congelado)"). As issues
+  #168/#153 pedem o OPOSTO (`println(c)` → `A`) — é uma **mudança de
+  semântica** do contrato congelado de exibição de char, não um bugfix
+  simples. A face que É bug de paridade é o **standalone**
+  `String.valueOf(char)`, que deve dar o caractere (`"h"`) — já corrigido no
+  §27 (07/09). Corrigir #168/#153 como pedem exige bump + atualização do
+  corpus + migração (regra 6), ou ratificação da mantenedora de que
+  `println(Char)` mostra o caractere enquanto `charAt` continua numérico. O
+  storage de coleção deve continuar boxando char como `Integer`
+  (`JvmOpCollections.boxedClassNameFor` default + `unboxMethodName`
+  char→`intValue`) — o fix §104b-ii face-char depende disso.
+- **Estado:** reproduz no `212a8dbc` (casos #168 e #153), silencioso
+  (`ec=0`). Bloqueado na regra 6 (contrato congelado) — escalado à mantenedora
+  15/09; não corrigido por esta lane.
 
 ### §217 — retorno de método de classe genérica não faz downcast: `Box<String>.get(): T` emite `()Object`, chamar método nele → `VerifyError` no primeiro uso (issue #161)
 
