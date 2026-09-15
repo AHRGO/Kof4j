@@ -982,6 +982,27 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > **LANE docs/development AGORA EXAUSTA** (re-varrer a cada re-disparo: se
 > outra lane mover gate/bugs, podem nascer syncs novos; o repo NAO esta
 > stable — 32 abertas + reds de gate alheios — mas nada disso e desta lane).
+> (6) **⏸️ RECUSA de re-disparo (14/09 ~23:59, dono = 192.168.100.17, lane
+> docs/development exclusiva):** re-varredura executada: tip do remoto ==
+> tip local (nenhuma lane nova empurrou apos meu `f0a0a13c`); os fixes de
+> compiler das outras lanes (8935c8a7/3cb4bd30/79ab6e0e/d6101bf9 — signatures,
+> if-expr braces, field-vs-method, reject-abstract) NAO tocam nenhum doc da
+> lane (grep objetivo: nenhuma cita como gap/pendente); guardas de doc
+> 13/13 VERDES (ConformanceMatrixDoc/ConcurrencyGaps/TargetMatrix rodados no
+> HEAD real); fila-13 32=32 EN/PT conferida por parse do corpo (nao memoria);
+> P0 da mantenedora (DECISIONS/stdlib/OTP) tem dono ativo .18 e NADA
+> acionavel sem dono; DECOMPILER = regra 6/lanes alheias; TRANSLATOR/LEGACY =
+> diretriz encerrada. **AVALIACAO: lane sem trabalho acionavel — recusa
+> registrada. CRON CONTINUA (repo NAO esta stable: 32 abertas na fila +
+> reds de gate de outras lanes).**
+> **PRÓXIMO PASSO (re-trigger le isto, proxima varredura da lane):** repetir
+> o protocolo do bloco (6): `git fetch` + diff do tip; se as outras lanes
+> empurrarem fix/mudanca de contrato, checar `grep -rniE "<feature>"
+> docs/development/*.md` por dessincronizacao da lane + rodar os 3 guardas
+> (`mvn -o -pl kof-compiler -am test -Dtest=ConformanceMatrixDocTest,
+> ConcurrencyGapsDocTest,TargetMatrixTest -Dsurefire.failIfNoSpecifiedTests=false`);
+> nascer sync novo = unidade com prova no mesmo commit; senao, recusar de
+> novo. Dono = 192.168.100.17.
 
 
 > **⚠️ 5º RED NO PORTÃO (catalogado, para as lanes de bug — 14/09 ~16:45):**
