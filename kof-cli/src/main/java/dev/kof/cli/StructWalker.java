@@ -45,7 +45,7 @@ final class StructWalker {
         for (BytecodeReader.Block b : new BytecodeReader.Block[]{thenB, elseB}) {
             if (b == null) continue;
             for (BytecodeReader.Insn in : BytecodeDecoder.insnsWithin(b, insns)) {
-                int slot = storeSlot(in, frame);
+                int slot = storeSlot(in);
                 if (slot < 0 || declared.contains(slot) || seen.contains(slot)) continue;
                 String def = storeDefault(in.opcode());
                 if (def == null) return null;                 // float/ref: recusar (R6)
@@ -58,7 +58,7 @@ final class StructWalker {
     }
 
     /** Slot que o insn escreve (store), ou -1 se nao e store. */
-    private static int storeSlot(BytecodeReader.Insn in, BytecodeFrame frame) {
+    private static int storeSlot(BytecodeReader.Insn in) {
         int op = in.opcode();
         int[] o = in.operands();
         if (op == 0x36) return o[0];                          // istore idx

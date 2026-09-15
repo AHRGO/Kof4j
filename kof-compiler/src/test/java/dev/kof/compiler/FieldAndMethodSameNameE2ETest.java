@@ -19,6 +19,7 @@ class FieldAndMethodSameNameE2ETest {
 
     private final CompilerDriver driver = new CompilerDriver();
 
+    @SuppressWarnings("ProcessBuilderCommandInjection")
     private String runJvm(Path tempDir, String source, String expected) throws IOException {
         Path file = tempDir.resolve("Main-" + System.nanoTime() + ".kf");
         Files.writeString(file, source);

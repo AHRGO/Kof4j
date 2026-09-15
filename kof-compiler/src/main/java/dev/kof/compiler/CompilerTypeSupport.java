@@ -200,6 +200,22 @@ public final class CompilerTypeSupport {
         }
     }
 
+    static float parseFloatLiteral(String value) {
+        try {
+            return Float.parseFloat(CompilerTypeSupport.stripSuffix(value));
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid float literal: " + value, e);
+        }
+    }
+
+    static double parseDoubleLiteral(String value) {
+        try {
+            return Double.parseDouble(CompilerTypeSupport.stripSuffix(value));
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid double literal: " + value, e);
+        }
+    }
+
     static String stripSuffix(String value) {
         if (value.endsWith("l") || value.endsWith("L") ||
             value.endsWith("f") || value.endsWith("F") ||

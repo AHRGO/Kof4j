@@ -456,8 +456,17 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
         ops.add(new KofLoadLocal(ownerType, 0));
         localIdx = driver.emitArgumentsWithFormalTypes(mc.arguments(), selfMethod.parameterTypes(),
                 ops, owner, localIdx, locals);
+        // #213: chamada nua dentro de default method de interface resolve p/ a
+        // PRÓPRIA interface — invokestatic/invokevirtual não valem; o JVM exige
+        // invokeinterface (senão IncompatibleClassChangeError "Found interface").
+        KofCallKind selfKind = KofCallKind.INSTANCE;
+        if (driver.semanticAnalyzer != null) {
+            String selfOwner = selfMethod.ownerClass();
+            if (selfOwner.contains("/")) selfOwner = selfOwner.substring(selfOwner.lastIndexOf('/') + 1);
+            if (driver.semanticAnalyzer.isInterfaceType(selfOwner)) selfKind = KofCallKind.INTERFACE;
+        }
         ops.add(new KofCall(ownerType, mc.methodName(), selfMethod.parameterTypes(),
-                selfMethod.returnType(), KofCallKind.INSTANCE));
+                selfMethod.returnType(), selfKind));
         return localIdx;
     }
     SymbolTable.ClassSymbol cs = driver.semanticAnalyzer != null ? driver.semanticAnalyzer.getClass(mc.methodName()) : null;

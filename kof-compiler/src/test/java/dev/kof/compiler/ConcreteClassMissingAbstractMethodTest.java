@@ -47,6 +47,7 @@ class ConcreteClassMissingAbstractMethodTest {
     }
 
     @Test
+    @SuppressWarnings("ProcessBuilderCommandInjection")
     void completeAbstractMethodImplementationCompilesAndRuns(@TempDir Path tempDir) throws Exception {
         Path source = tempDir.resolve("Main.kf");
         Files.writeString(source, """
