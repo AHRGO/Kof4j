@@ -155,6 +155,10 @@ lowering, which would create divergence again).
   an initializer" is lint (SEM0xx reserved, phase 2).
 - KofScript's `let`/`const` (aliases) → inherit: `const` → `val`, `let` → `var`
   (the .ks parser only needs to map to the same boolean).
+  ⚠️ *Register note 16/09: this never happened — the `let`/`const` sugar was
+  REMOVED from KofScript (`183cb048`, 06/09: "KofScript is pure Kof, no sugar
+  from another language"). `let x = 5` is now `SEM011`/`PARSE011`. Historical
+  line kept for traceability.*
 
 ## Files touched (when approved)
 

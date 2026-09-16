@@ -70,7 +70,7 @@ kof build main.kf --target=native
 
 ### KofScript (0.3.22-beta)
 
-`kof script` / `kof repl` — top-level `let`/`const` become persistent `KofScriptGlobals`, `--watch` re-executes; jvm/native/js targets.
+`kof script` / `kof repl` — top-level `var`/`val` become persistent `KofScriptGlobals` (there is no `let`/`const` — JS sugar removed 06/09), `--watch` re-executes; jvm/native/js targets.
 
 ```bash
 kof run script.kf

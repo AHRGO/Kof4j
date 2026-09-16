@@ -87,9 +87,9 @@ Native: SQLite via `.so` + MySQL WIP; JS: untyped (16/09), `query<T>` typed = `D
 **KofJS** — Kof's `js` target: generates ES Modules (ECMAScript 2022+) from the
 Kof IR (JVM+JS for `kof.http`, HTTP002 Native). See `learn/37-kofjs.md`.
 
-**KofScript** — `kof script <file.ks|kf>` + `kof repl` : direct execution; top-level `let`/`const` become persistent `KofScriptGlobals`, `--watch` re-executes; jvm/native/js targets (0.3.22-beta).
+**KofScript** — `kof script <file.ks|kf>` + `kof repl` : direct execution; top-level `var`/`val` become persistent `KofScriptGlobals` (there is NO `let`/`const` — JS sugar removed 06/09), `--watch` re-executes; jvm/native/js targets (0.3.22-beta).
 
-**String?** — basic nullable type (0.3.22-beta): `String? x = null; if (x != null) x.length()`.
+**String?** — basic nullable type (0.3.22-beta): `String? x = get(k); if (x != null) x.length()` (null reaches `T?` only via API — the `= null` literal is SEM048 since 10/09).
 
 **Pattern matching** — `switch (o) { case String s: ... case Point(x,y): ... }` with type pattern + destructuring (0.3.22-beta, JVM/Native/JS).
 
