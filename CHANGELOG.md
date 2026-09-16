@@ -1831,6 +1831,67 @@ commit convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`,
   - prepend JDK compilador ao PATH dos E2E (D-BASELINE, release 25)
   - baseline da toolchain 21 -> 25 (D-BASELINE, decisão da mantenedora)
 
+## [0.4.2-beta] - 2026-09-16
+
+### Features
+
+  - CONC001 fechado — helpers de concorrência cross riscv64+aarch64 (fatia RtB48, cancel por TID real, E2E qemu nas duas arches)
+  - auto-loop.sh start aceita 3o arg = PORTA p/ pinar o servidor do heartbeat
+  - DB001 fatia 1 — runtime kof_db_* SQLite cross riscv64+aarch64 (gate removido, E2E qemu nas duas arches)
+  - D-NARROW-WHILE (#159) — narrowing de fluxo no while e em campo de receiver
+  - add kof-quality-bot, kof-warning-bot, kof-security-bot, kof-bots orchestrator, kof-issues-agent
+  - DB001 fatia 0 — link-by-use da libsqlite3 cross (riscv64+aarch64)
+  - FLT001 cross RuntimeDtoa — riscv64+aarch64 println/valueOf/collections(double,float)
+  - G-4 sweep + collect riscv64/aarch64 (NATIVE002 face 1)
+  - link dinâmico sob demanda (link-by-use) cross riscv64/aarch64
+
+### Bugfixes
+
+  - §257 — javac ConstantValue inlining de texto de runtime → false red no build incremental
+  - §184 + §187-face-JS narrow array store via KofArrayStore kind (other lane WIP committed whole)
+  - store em Char[]/Bool[] crashava — coerceFor produz o tipo REAL do slot
+  - store em Char[]/Bool[] crashava — coerceFor produz o tipo REAL do slot
+  - #770/#771 — dead code do D-ENUM207 fatia 2 na raiz
+  - internal-representation-exposure x10 (#755-764) — mutable* accessors viram mutadores
+  - §211 D-ENUM207 fatia 2 — enum é CLASSE real (getstatic/getClass/instanceof/identidade nos 4 alvos)
+  - pre-push tolera rc=2 (INCONCLUSIVO, API fora) — nao bloqueia push
+  - heartbeat grava server= no state (anti cross-lane) + registro DOING
+  - codeql-gate GATE 1 — N:1 GET por alerta → list paginado (pre-push pendurava 8min)
+  - §211 D-ENUM207 fatia 1 — `enum == String` agora é SEM062 no frontend compartilhado
+  - §213 — cast `as` primitivo->referencia agora boxa (VerifyError no load)
+
+### Documentation
+
+  - D-VALUE-RECORD + fila roadmap 2.7 — #275 aceita p/ engenharia futura (value records)
+  - sync CONC001 fechado 15/09 no corpus (regra 5/R6 documental)
+  - §256 catalogado (reds CONC001 pré-existentes) + §254 marcado FIXED pela owner lane
+  - cataloga §253 — self-cancel de time.interval/scheduler.every SEM011 em todo alvo; leitura do handle capturado no job SIGSEGV no native x86
+  - #273 comentario tecnico postado (re-trigger 01:14 UTC — passo 2 da varredura completo)
+  - varredura de issues 15/09 ~22:05 — #159 FECHADA com prova medida (catalogo EN+PT)
+  - PLAN-MULTIPARADIGMA — diagnóstico Fase 0 + proposta técnica compatível com o Kof atual
+  - D-STDLIB-ULID — briefing ulid/isUlid p/ mantenedora (regra 6)
+  - restaura coordenacao perdida no 9e270e56 (arvore compartilhada stale)
+  - D-ENUM207 fatia 2 FEITO (`8769e4e1`) + #207 fechada; PRÓXIMO PASSO = D-PRINT/#168
+  - D-ENUM207 fatia 1 ✅ — PRÓXIMO PASSO reescrito c/ a fatia 2 (classe enum JVM real + getstatic)
+  - item (I) — fila docs/development/ VAZIA 15/09 (auditoria completa executada) + PRÓXIMO PASSO reescrito com critérios de ataque/recusa
+  - anotação datada — o '1 red §205' citado na linha .18 foi FECHADO 15/09 pela fatia 1
+  - §205 fatia 1 na tabela de deltas do backend-parity (EN+PT)
+  - §125 PT — ponteiro de revogação D-NULL-INTENT espelhado no idiomático PT
+  - corpus-table — DD-STDLIB-01 FECHADO 13/09, não mora mais em future/
+  - §23 ganha 2.6 = fila N1→N4 do D-NULL-INTENT (auto-correção da lacada de e04f10ff)
+  - migração legado DESPRIORIZADA — DECOMPILER/TRANSLATOR/LEGACY_MIGRATION (EN+PT) voltam a future/ (regra 15/09 da mantenedora)
+  - claim D-ENUM207 — #207 enum identity reassigned to lane .15 (scope + recon)
+  - lane CodeQL — FEITO round 2 (D-GATE, #394-396 FP-falso corrigido na raiz, #736-743, PR #272 cura o build da main) + NEXT STEP com recusa-no-verde
+  - D-PRINT (println char = string, ascii explicit = fecha #168) + D-NULL-QUEUE (#266/#259 = mantenedora na logica de intencao, lane nao ataca) + D-NARROW-WHILE (#159 opcao a: implementar) + D-ENUM207 (#207 reatribuida p/ lane .15, agente anterior encerrado)
+  - §252 reproduces 2nd time (2/7 runs) -> issue #273 opened for native lane
+  - campanha 15/09 noite — §205 fatia 1 publicada (97d08e54, D-NULL-INTENT travado (e04f10ff) e corrida §251 perdida com honestidade
+
+### Tests
+
+  - S12c isNis — golden da célula stdvalidation CORRIGIDO (deslocado 1) + sync de docs
+  - prova local do GATE 1 — falso-VERDE da lista (state:null omitido) + falso-RED de instancias
+  - EXPERIMENTO controlado — 4 chaves de @SuppressWarnings, scan decide qual cola
+
 <!-- NEXT-RELEASE -->
 
 ## [0.2.7-beta] - 2026-09-04
