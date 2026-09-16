@@ -8,7 +8,8 @@ Neste capítulo você vai entender como declara variáveis, como o sistema de ti
 
 ## Declaração de variáveis (0.3.22-beta)
 
-Em Kof existem duas palavras-chave para variáveis (mais `let`/`const` como alias no KofScript → `KofScriptGlobals`):
+Em Kof existem duas palavras-chave para variáveis (`var`/`val`); NÃO há
+`let`/`const` (sugar JS removido do KofScript em 06/09 — ver abaixo):
 
 ### `var` — variável mutável
 
@@ -24,14 +25,19 @@ val PI = 3.14
 // PI = 2.0  // ERRO: não pode reatribuir
 ```
 
-### `let` / `const` — alias KofScript (top-level → `KofScriptGlobals`)
+### `let` / `const` — NÃO existem (sugar removido 06/09)
+
+KofScript é **Kof puro executado diretamente** — NÃO é JavaScript. Não há
+**alias `let`/`const`**: `let x = 5` dá `SEM011`/`PARSE011` (*medido no jar do
+tip, 16/09*). Use `var`/`val`; o único serviço do wrapper é o modelo de
+script — `var`/`val` no topo viram campos estáticos de `KofScriptGlobals` e
+statements soltos viram `main()`:
 
 ```kf
-let nome = "Mel"   // topo de .ks vira KofScriptGlobals.nome
-const pi = 3.14   // alias para val, persistente no repl
+var nome = "Mel"   // .ks no topo → KofScriptGlobals.nome (campo estático)
+val pi = 3.14      // o mesmo; não existe let/const
+println(nome)      // um statement solto é embrulhado em main()
 ```
-
-No `.kf` tradicional use `var`/`val`; `let`/`const` existem para compatibilidade KofScript e viram o mesmo IR.
 
 ## Tipagem explícita
 
@@ -168,10 +174,10 @@ Kof usa os mesmos tipos da JVM:
 | `Char` | `char` | `C` |
 | `String` | `String` | `Ljava/lang/String;` |
 
-## KofScript let/const + String? (0.2.0)
+## KofScript: `var`/`val` no topo + String? (0.2.0; sugar let/const REMOVIDO 06/09)
 
 ```kf
-let x = 5            // KofScript topo: KofScriptGlobals.x
+var x = 5            // .ks no topo → campo estático de KofScriptGlobals
 String? s = mapOf("k", "abc").get("k")   // nullable básico — null via API (= null é SEM048)
 if (s != null) { println(s.length()) }
 ```
@@ -179,7 +185,7 @@ if (s != null) { println(s.length()) }
 ## Status atual (0.3.22-beta)
 
 ✅ `var` e `val` funcionam
-✅ `let`/`const` (alias → `KofScriptGlobals` no KofScript)
+✅ `var`/`val` no topo do KofScript → `KofScriptGlobals` (NÃO existe `let`/`const` — sugar JS removido 06/09)
 ✅ `String?` nullable básico
 ✅ Inferência de tipos funciona
 ✅ Records funcionam

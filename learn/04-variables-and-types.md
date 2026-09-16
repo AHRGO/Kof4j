@@ -8,7 +8,8 @@ In this chapter you will understand how to declare variables, how the type syste
 
 ## Variable declaration (0.3.22-beta)
 
-In Kof there are two keywords for variables (plus `let`/`const` as aliases in KofScript → `KofScriptGlobals`):
+In Kof there are two keywords for variables (`var`/`val`); there is **no**
+`let`/`const` (JS sugar removed from KofScript 06/09 — see below):
 
 ### `var` — mutable variable
 
@@ -24,14 +25,19 @@ val PI = 3.14
 // PI = 2.0  // ERROR: cannot reassign
 ```
 
-### `let` / `const` — KofScript alias (top-level → `KofScriptGlobals`)
+### `let` / `const` — DO NOT exist (sugar removed 06/09)
+
+KofScript is **pure Kof executed directly** — it is NOT JavaScript. There is
+**no `let`/`const` alias**: `let x = 5` gives `SEM011`/`PARSE011` (*measured on
+the tip jar, 16/09*). Use `var`/`val`; the wrapper's only job is the script
+model — top-level `var`/`val` become static fields of `KofScriptGlobals` and
+loose statements become `main()`:
 
 ```kf
-let nome = "Mel"   // top of .ks becomes KofScriptGlobals.nome
-const pi = 3.14   // alias for val, persistent in the repl
+var nome = "Mel"   // top-level .ks → KofScriptGlobals.nome (static field)
+val pi = 3.14      // same thing; there is no let/const
+println(nome)      // a loose statement is wrapped into main()
 ```
-
-In a traditional `.kf` use `var`/`val`; `let`/`const` exist for KofScript compatibility and become the same IR.
 
 ## Explicit typing
 
@@ -168,10 +174,10 @@ Kof uses the same types as the JVM:
 | `Char` | `char` | `C` |
 | `String` | `String` | `Ljava/lang/String;` |
 
-## KofScript let/const + String? (0.2.0)
+## KofScript: top-level `var`/`val` + String? (0.2.0; sugar let/const REMOVED 06/09)
 
 ```kf
-let x = 5            // KofScript top-level: KofScriptGlobals.x
+var x = 5            // top-level .ks → static field of KofScriptGlobals
 String? s = mapOf("k", "abc").get("k")   // basic nullable — null via API (= null is SEM048)
 if (s != null) { println(s.length()) }
 ```
@@ -179,7 +185,7 @@ if (s != null) { println(s.length()) }
 ## Current status (0.3.22-beta)
 
 ✅ `var` and `val` work
-✅ `let`/`const` (alias → `KofScriptGlobals` in KofScript)
+✅ top-level `var`/`val` in KofScript → `KofScriptGlobals` (there is NO `let`/`const` — JS sugar removed 06/09)
 ✅ Basic nullable `String?`
 ✅ Type inference works
 ✅ Records work
