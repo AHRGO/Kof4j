@@ -174,7 +174,7 @@
 > sweep+collect** (`NativeRiscvGcSweepTest` roda as 2 arches), então o G-5 está
 > efetivamente satisfeito para o coletor também.
 
-> **G-6 x86 (ABERTA 16/09 — frente 2 D-DEV-PRIORITY, §260):** o coletor x86
+> **G-6 x86 (ABERTA 16/09 — frente 2 D-DEV-PRIORITY, §260; causa (1) FECHADA 16/09 pela G-6b abaixo):** o coletor x86
 > existe e está correto (`kof_gc_mark`+`kof_gc_sweep`+`kof_gc_collect_now`),
 > mas o **gatilho** de auto-collect dentro do `kof_alloc` foi MEDIDO INSANO
 > para a convenção x86: o backend mantém temporários em **registradores
@@ -184,7 +184,20 @@
 > lá a value-stack É a pilha de máquina (RtB44:15-20); o x86 exige o real
 > "mapa de raízes por frame" do texto da D-DEV-PRIORITY. Duas opções honestas
 > (escopo: a lane compiler):
-> - **(a) mínima, caminho escolhido — spill-per-live-ref nos call-sites de
+> **G-6b (a metade da causa-1) FEITA 16/09, gatilho ainda OFF:** provado a gdb
+> que com a varredura restrita ao frame corrente, Strings vivas nos frames
+> EXTERNOS (a pilha de main enquanto um helper aloca) ficavam invisíveis →
+> o sweep liberava vivo (keep corrompido, supervisor SIGSEGV 139). Corrigido
+> sem o gatilho: o `_start` grava `kof_main_stack_bottom` (rsp de entrada) e
+> o `kof_gc_mark` varre a pilha INTEIRA da thread até ele (cap 64MB +
+> fallback sp..sp+4096 preservado p/ harness asm sem `_start`); guard
+> `NativeX86GcMarkScopeTest` 3/3 (Q0: vermelho no mark antigo). keep/supervisor
+> ficaram verdes até COM o gatilho ligado; o red restante é exatamente a
+> causa (2) (o caminho `toFloat` segura a String-arg viva em registrador
+> caller-saved no call-site do `kof_alloc`) → o gatilho fica OFF (paridade FP
+> é freeze rule 5) até a (a) fechar.
+>
+> Face restante — **(a) mínima, caminho escolhido — spill-per-live-ref nos call-sites de
 >   alloc:** o backend x86, para cada `call kof_alloc`, empilha (ou já mantém
 >   no frame) toda referência viva ao heap para que o mark conservador as veja
 >   na pilha; então o gatilho `.Lkof_alloc_maybe_gc` pode chamar

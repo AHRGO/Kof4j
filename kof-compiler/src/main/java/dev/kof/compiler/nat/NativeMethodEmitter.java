@@ -345,6 +345,11 @@ final class NativeMethodEmitter {
                 .anyMatch(m -> !m.parameterTypes().isEmpty());
         sb.append("\n.globl _start\n");
         sb.append("_start:\n");
+        // G-6b (16/09): fundo da pilha da thread main (rsp na entrada, antes de
+        // qualquer push) — o kof_gc_mark varre a pilha INTEIRA ate aqui, nao so
+        // o frame corrente (causa (1) do §260: String viva no frame de main
+        // enquanto um helper aloca era INVISIVEL ao mark -> sweep liberava vivo)
+        sb.append("    movq %rsp, kof_main_stack_bottom(%rip)\n");
         // grava o TID do main thread (SYS_gettid=186) — limita GC ao main
         sb.append("    movq $186, %rax\n");
         sb.append("    syscall\n");

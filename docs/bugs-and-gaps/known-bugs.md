@@ -9196,8 +9196,35 @@ the user's — a compile-time diagnostic is the goal (rule 6).
 - **Pointer:** `docs/development/native-multiarch.md` §"G-6 x86";
   fila = D-DEV-PRIORITY frente 2. `kof_gc_collect_now` MANUAL continua
   exposto e seguro quando chamado sem temporário vivo em registrador.
-- **Status:** 🔴 OPEN 16/09 — catalogued by lane compiler `192.168.100.17`
-  (patch revertido na árvore; medições acima são o artefato).
+- **CAUSA REAL, apurada a gdb no MESMO dia da catalogação (substitui a
+  hipótese "registrador" como causa-1 — ela é causa-2 parcial):** duas
+  falhas de som no mark x86 quando o coletor roda:
+  **(1) varredura restrita ao frame corrente:** `kof_gc_mark` escaneava só
+  `[rsp..rbp]` de quem chama o coletor — os frames EXTERNOS (a pilha de
+  `main` com Strings vivas enquanto um helper aloca) ficavam INVISÍVEIS →
+  sweep liberava vivo (gdb: o slot `-16(%rbp)` de `main` continha 0 no
+  helper; keep virava o objeto do helper; supervisor SIGSEGV 139). O riscv
+  não sofre disso porque a value-stack dele É a pilha e o mark derrama
+  s0-s11 (RtB44:15-20). **ESTA METADE FOI CORRIGIDA 16/09 (G-6b, sem o
+  trigger):** o `_start` grava `kof_main_stack_bottom` (rsp de entrada) e o
+  mark varre `rsp..bottom` da thread inteira (cap 64MB + fallback
+  sp..sp+4096 preservados p/ harness asm sem _start); guard asm
+  `NativeX86GcMarkScopeTest` 3/3 (Q0: com o mark antigo, o guard cai na
+  asserção exata). Com a correção, keep/supervisor ficam verdes atá COM o
+  trigger ligado — a causa-1 estava ativa.
+  **(2) temporário em registrador caller-saved no call-site — CONFIRMADA
+  como causa-2 restante:** com (1) corrigida, o único red que sobra com o
+  trigger ligado é `KofStringParseTest.toDoubleToFloatContractNativeX86`
+  (linha 20 `"2.5".toFloat()==2.5` → `false`; 29 linhas, as demais ok) —
+  o caminho `kof_string_to_float` chama `kof_alloc` com a String-arg viva
+  em `%rdi`/registrador caller-saved: invisível ao mark (a pilha inteira
+  não contém o que só existe em registrador), sweep libera o objeto vivo,
+  o parse seguinte corrompe. Logo G-6(a) (spill-per-live-ref nos 170
+  call-sites, ou stack-map) continua ABERTO e é o que falta; o gatilho NO
+  `kof_alloc` foi desligado de novo após a demonstração (FP verde sem ele
+  = paridade JVM/x86/JS preservada — freeze rule 5).
+- **Árvore:** gatilho OFF; mark corrigido (G-6b) + guard. Face (2)
+  continua a fila: G-6(a).
 
 
 ### §261 — KofJS `window.bind` collides Component ids with raw-widget node ids: a widget bound after a Component renders nothing

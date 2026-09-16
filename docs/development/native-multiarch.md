@@ -178,7 +178,7 @@
 > effectively satisfied for the collector too; a dedicated G-5 aarch step is no
 > longer a separate face.
 > 
-> **G-6 x86 (OPEN 16/09 — frente 2 D-DEV-PRIORITY, §260):** the x86 collector
+> **G-6 x86 (OPEN 16/09 — frente 2 D-DEV-PRIORITY, §260; causa (1) CLOSED 16/09 by G-6b below):** the x86 collector
 > exists and is correct (`kof_gc_mark`+`kof_gc_sweep`+`kof_gc_collect_now`), but
 > the auto-collect **trigger** inside `kof_alloc` was measured UNSOUND for the
 > x86 calling convention: the backend keeps temporaries in **caller-saved
@@ -188,7 +188,19 @@
 > value-stack IS the machine stack (RtB44:15-20); x86 requires the real "root
 > map per frame" of the D-DEV-PRIORITY text. Two honest options (scope: the
 > compiler lane):
-> - **(a) minimal, chosen path — spill-per-live-ref at alloc sites:** the x86
+> **G-6b (the root-cause-(1) half) DONE 16/09, trigger still OFF:** gdb-proved
+> that with only the frame-current scan, live Strings in EXTERNAL frames (main's
+> stack while a helper allocates) were invisible → sweep freed live memory
+> (keep corruption, supervisor SIGSEGV 139). Fixed without the trigger: `_start`
+> records `kof_main_stack_bottom` (entry rsp) and `kof_gc_mark` scans the whole
+> thread stack to it (64MB cap + sp..sp+4096 fallback preserved for asm harness
+> without `_start`); guard `NativeX86GcMarkScopeTest` 3/3 (Q0 red on the old
+> mark). keep/supervisor went green even WITH the trigger; the remaining red is
+> exactly cause (2) (`toFloat` path holds the live arg String in a caller-saved
+> register at the `kof_alloc` call-site) → the trigger stays OFF (FP parity is
+> freeze rule 5) until (a) lands.
+>
+> Remaining face — **(a) minimal, chosen path — spill-per-live-ref at alloc sites:** the x86
 >   backend, for every `call kof_alloc`, first pushes (or already holds in the
 >   frame) every live heap reference so the conservative mark sees them on the
 >   stack; then the `.Lkof_alloc_maybe_gc` trigger can call `collect_now`

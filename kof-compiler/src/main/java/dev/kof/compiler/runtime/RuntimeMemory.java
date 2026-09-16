@@ -36,6 +36,7 @@ public final class RuntimeMemory {
             kof_heap_high: .quad 0
             .balign 8
             kof_main_tid: .quad 0              # tid do main thread p/ o GC (conservador lê a stack)
+            kof_main_stack_bottom: .quad 0     # rsp do _start: topo da pilha main; o mark varre rsp..ate_isto (G-6b)
             .section .data
             .Lstr_alloc_fail: .asciz "Runtime error: out of memory"
             .section .rodata
