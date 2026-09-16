@@ -10,6 +10,13 @@
 > DD-OTP-01, 02, 03, 08, 09, 11 and slice S2. The common reason for the two
 > material amendments: `selectAny` **does not exist** on riscv64/aarch64, and the
 > shutdown flag depends on an SG-020 rule that still has no proof.
+>
+> **16/09 note (doc sync against the code — both reasons changed):** the
+> helpers now **do exist** on riscv64/aarch64 (`CONC001` closed 15/09 by
+> `e8364c97` — slice `NativeRiscvAsmRtB48`, qemu proof on both arches), and
+> the SG-020 flag has proof (`ACC_VOLATILE` fix + DD-OTP-08 implemented 15/09).
+> What still blocks supervisor on cross is `OTP001` alone: raw `clone` without
+> TLS for the §129 per-thread handler chain.
 
 ## Decision status (11/09)
 
@@ -17,7 +24,7 @@
 |---|---|---|
 | 01 | Shape (pure-Kof stdlib) | ⚠️ closable **with amendment** — missing the specification of stdlib packaging in `.kf` |
 | 02 | Surface (API) | ⚠️ closable **with amendment** — the signature must declare the layer |
-| 03 | N workers without blocking | ❌ **OPEN** — `selectAny` missing on riscv/aarch; still need to decide the fallback |
+| 03 | N workers without blocking | ❌ **OPEN** — premise changed 15/09: `selectAny` now EXISTS on riscv/aarch (CONC001 closed, `e8364c97`); the remaining blocker is `OTP001` (no TLS) — the fallback decision stays on the maintainer's queue (rule 6) |
 | 04 | What counts as a failure | ✅ closed |
 | 05 | Plan or tree | ✅ closed |
 | 06 | State on restart | ✅ closed |
@@ -155,6 +162,14 @@ per child — acceptable on JVM virtual-threads, worse on x86. I recommend
 > workers needs a declared fallback — one supervisor thread per child
 > where `selectAny` does not exist — or riscv/aarch are limited to **one
 > worker per supervisor**, registered as PARTIAL.
+>
+> **✅ 16/09 sync — premise dead:** on 15/09 the symbols were ported
+> (`e8364c97`, fatia `NativeRiscvAsmRtB48` — `kof_select_any`/`kof_poll`/
+> `kof_done`/`kof_cancel`/`kof_await_timeout` on riscv64 + aarch64, qemu
+> proof `KofConcurrency2Test.crossNativeConcurrencyHelpersRun`). The
+> fallback decision no longer needs to handle "helper missing" — only the
+> `OTP001` throw/TLS gap (the supervisor loop observes failure via
+> `try { await } catch`, which still longjmps the global chain on cross).
 
 ### DD-OTP-04 — What counts as a failure
 
@@ -281,6 +296,14 @@ regime cost, not a correctness cost.
 > = declared PARTIAL**, limited to one worker per supervisor until someone
 > ports the helpers (Native lane work, together with the R6 gate that
 > is also missing today).
+>
+> **✅ 16/09 sync — the helpers were ported (15/09, `e8364c97`), but the
+> coverage holds as declared for a different reason.** riscv/aarch remain
+> PARTIAL because of `OTP001`: the supervisor loop observes failure via
+> `try { await } catch`, and on cross a `throw` in a worker still longjmps
+> the global handler chain (the §129 TLS fix is x86-only). JS remains
+> `OTP002` (§132). The "one worker per supervisor" limit stays until the
+> TLS port closes on the Native lane (rule 6: it is that lane's front).
 
 ### DD-OTP-10 — Injectable clock
 
@@ -365,6 +388,9 @@ lane; small and isolated. It does not block OTP (which uses its own flag).
    riscv/aarch do **not** come out by construction — `selectAny` does not exist there
    (DD-OTP-03/09). Either they enter with a fallback of one supervisor thread per
    child, or they stay PARTIAL with one worker per supervisor.
+   *(16/09 sync: `selectAny` exists on cross since 15/09 — the blocker is now
+   only `OTP001` (§129 TLS), so the "one worker per supervisor" option is the
+   live one, and the fallback decision is re-opened on the maintainer's queue.)*
 3. **S3:** ✅ EXECUTED 14/09 (lane development, owner 192.168.100.18): `stats()` (`started`/`restarts`/`dropped`/`vivos`) + sliding ring window (`restartLimitWindow(max, windowMs)`, ring per child) + injectable clock (`.clock(nowFn)`, DD-OTP-10) + `temporary` drop accounting (`stats().dropped`). Proof: `KofSupervisorE2ETest` 11/11 (window expiry with virtual clock = deterministic, no wall-clock; temporary drop counted on JVM+Script). Original item: `supervisorStats` + ring window + `temporary` drop + parity
    docs; promote to stable only with the complete gate matrix (R5).
 

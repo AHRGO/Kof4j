@@ -4085,7 +4085,8 @@ int de índice) — verificados na varredura.
   juntado para o `kof_spawn_join_all` implícito no fim da `main` nunca dar double
   join (SIGSEGV em `__pthread_clockjoin_ex` com TCB reciclado — reproduzido com 50
   throwers spawnados). `CompilerSupervisor` só emite `OTP001` para **riscv/aarch**
-  (clone cru, sem TLS, + `selectAny`/CONC001) — esses seguem gate honesto. Prova:
+  (clone cru, sem TLS) — esses seguem gate honesto (o par
+  `selectAny`/CONC001 foi fechado 15/09 por `e8364c97`; o blocker do OTP é o TLS agora). Prova:
   `KofConcurrency2Test.spawnWorkerThrow{AwaitedAndCaught,UnhandledThrowPropagates,IsolatedFromSiblings,PropagatesThroughSelectAny}Native`
   (4/4, + 10× repetição do stress de 50 workers sem SIGSEGV),
   `KofSupervisorE2ETest.supervisorNativeParityX86` (restarts=2/escaladas=2/fabrica=3)

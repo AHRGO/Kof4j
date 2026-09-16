@@ -161,10 +161,10 @@ trava esta tabela contra o código — ver nota ao final da seção.
 | `spawn stmt` | ✅ `SpawnE2ETest.spawnRunsConcurrentlyAndJoins` | ✅ pthread — `SpawnE2ETest.nativeSpawnStmtRuns` | ✅ `clone` 220 — `NativeRiscv64E2ETest.riscv64SpawnFireAndForgetJoins` | ✅ microtask — `SpawnE2ETest.jsSpawnStmtRunsSequentially` |
 | `val r = spawn expr` | ✅ `KofAwaitTest.awaitJvm` | ✅ pthread — `SpawnE2ETest.nativeSpawnExprAwait` | ✅ `clone` 220 — `NativeRiscv64E2ETest.riscv64SpawnAwait` | ✅ microtask — `KofAwaitTest.awaitJs` |
 | `await r` | ✅ `KofAwaitTest.awaitJvm` | ✅ `pthread_join` — `KofAwaitTest.awaitNativeRuns` | ✅ futex sobre `done` — `NativeAarch64E2ETest.aarch64SpawnAwait` | ✅ `KofAwaitTest.awaitJs` |
-| `poll` / `done` | ✅ `KofAwaitTest.pollDoneJvm` | ✅ `KofConcurrency2Test.pollDoneNative` | ❌ `kof_poll`/`kof_done` não emitidos | ✅ `KofAwaitTest.pollDoneJs` |
-| `cancel` / `cancelled` | ✅ `KofConcurrency2Test.cancelCooperativeJvm` | ⚠️ `KofConcurrency2Test.cancelCooperativeNative` — mas ver **bug 101** | ❌ `kof_cancel` não emitido | ✅ no-op (`cancelled()` = `0`) — `KofConcurrency2Test.cancelJsSequential` |
-| `selectAny` | ✅ `KofConcurrency2Test.selectAnyJvm` | ✅ polling 1 ms — `KofConcurrency2Test.selectAnyNative` | ❌ `kof_select_any` não emitido | ✅ `Promise.race` — `KofConcurrency2Test.selectAnyJs` |
-| `awaitTimeout` | ✅ `KofConcurrency2Test.awaitTimeoutJvm` | ✅ polling 1 ms — `KofConcurrency2Test.awaitTimeoutNative` | ❌ `kof_await_timeout` não emitido | ✅ `KofConcurrency2Test.awaitTimeoutJs` |
+| `poll` / `done` | ✅ `KofAwaitTest.pollDoneJvm` | ✅ `KofConcurrency2Test.pollDoneNative` | ✅ `kof_poll`/`kof_done` (CONC001 fechado 15/09) — `KofConcurrency2Test.crossNativeConcurrencyHelpersRun` | ✅ `KofAwaitTest.pollDoneJs` |
+| `cancel` / `cancelled` | ✅ `KofConcurrency2Test.cancelCooperativeJvm` | ✅ `KofConcurrency2Test.cancelCooperativeNative` (bug 101 → §117 FIXED 13/09, tabela por TID real `3734f2aa`) | ✅ `kof_cancel` TID real (CONC001 fechado 15/09) — `KofConcurrency2Test.crossNativeCancelDuringRunningWorker` | ✅ no-op (`cancelled()` = `0`) — `KofConcurrency2Test.cancelJsSequential` |
+| `selectAny` | ✅ `KofConcurrency2Test.selectAnyJvm` | ✅ polling 1 ms — `KofConcurrency2Test.selectAnyNative` | ✅ `kof_select_any` (CONC001 fechado 15/09) — `KofConcurrency2Test.crossNativeConcurrencyHelpersRun` | ✅ `Promise.race` — `KofConcurrency2Test.selectAnyJs` |
+| `awaitTimeout` | ✅ `KofConcurrency2Test.awaitTimeoutJvm` | ✅ polling 1 ms — `KofConcurrency2Test.awaitTimeoutNative` | ✅ `kof_await_timeout` (CONC001 fechado 15/09) — `KofConcurrency2Test.crossNativeConcurrencyHelpersRun` | ✅ `KofConcurrency2Test.awaitTimeoutJs` |
 
 `spawn`/`await` fecharam o `CONC001` no Native em 31/08 (pthread_create +
 trampoline + `pthread_join` + allocator thread-safe via futex), e os
@@ -173,19 +173,24 @@ construtos auxiliares (`poll`/`done`/`cancel`/`cancelled`/`selectAny`/
 `runtime/RuntimeConcurrency.java:304`, prova em
 `KofConcurrency2Test.selectAnyNative`.
 
-No x86_64, `cancel`/`cancelled` funcionam mas carregam o **bug 101** (flag
-por `TID % 256` — dois workers podem herdar o cancel um do outro).
+No x86_64, `cancel`/`cancelled` usam a tabela por **TID real + sonda
+linear** — a colisão `TID % 256` antiga (bug 101, renumerado §117) foi
+CORRIGIDA em 13/09 (`3734f2aa`).
 
-Em **riscv64/aarch64** esses auxiliares não existem:
-`nat/NativeRiscvSpawn.java` emite apenas `kof_spawn_result`, `kof_spawn`,
-`kof_await` e `kof_spawn_join_all`. Desde 11/09 a ausência é um gap R6
-honesto: `ExpressionStaticCallLowerer` detecta `poll`/`done`/`cancel`/
-`cancelled`/`selectAny`/`awaitTimeout` nesses alvos e emite **`CONC001` em
-compile-time** (antes caía no `sanitizeName` genérico de
-`NativeRiscvCrossOps.resolveCalleeNameRiscv` e o erro só aparecia no
-**link**, como símbolo indefinido — mesmo padrão do bug 59). Prova:
-`KofConcurrency2Test.crossMissingConcurrencyHelpersReportConc001` (issue
-#91). O que falta para fechar de vez é portar os símbolos, não o diagnóstico.
+Em **riscv64/aarch64** os auxiliares **existem desde 15/09**: o `CONC001`
+foi fechado portando os símbolos (`e8364c97`) — a fatia
+`nat/NativeRiscvAsmRtB48.java` emite `kof_poll`, `kof_done`, `kof_cancel`,
+`kof_select_any` e `kof_await_timeout`, com cancel por TID real
+(`gettid(178)` gravado pelo kernel no ctid do `clone`, sem colisão).
+Nota histórica: entre 11/09 e 15/09 a ausência era um gate R6 honesto —
+`ExpressionStaticCallLowerer` emitia **`CONC001` em compile-time** (issue
+#91; antes não havia gate e o erro só aparecia no **link**, como símbolo
+indefinido — mesmo padrão do bug 59); o gate foi **removido** com o port.
+Prova: `KofConcurrency2Test.crossNativeConcurrencyHelpersRun` e
+`crossNativeCancelDuringRunningWorker` (qemu, nas duas arches — pulam sem o
+toolchain cruzado). O que segue aberto no cross é o supervisor OTP
+(`OTP001` — `clone` cru sem TLS para a cadeia de handlers do §129), não os
+helpers.
 
 > **Esta tabela é travada por teste.** `ConcurrencyGapsDocTest` (em
 > `kof-compiler/src/test/java/dev/kof/compiler/`) quebra o build se uma

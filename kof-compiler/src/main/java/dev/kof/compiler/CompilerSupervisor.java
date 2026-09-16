@@ -21,7 +21,9 @@ import java.util.List;
  * opção B) o handler chain do Native x86 é PER-THREAD (TLS) e o trampolim do
  * spawn instala handler próprio: o {@code throw} de um worker marca o handle
  * como excepcional e {@code await}/{@code selectAny} relançam no consumidor —
- * x86 entrega o núcleo. riscv/aarch seguem {@code OTP001} (clone cru sem TLS)
+ * x86 entrega o núcleo. riscv/aarch seguem {@code OTP001} (clone cru sem TLS
+ * para a cadeia de handlers — os auxiliares poll/done/cancel/selectAny/
+ * awaitTimeout existem desde 15/09, CONC001 fechado {@code e8364c97})
  * e JS {@code OTP002} (§132 event-loop single-thread: task spawned de dentro
  * de outra task não dispara). Nesses casos o diagnóstico é claro — NUNCA
  * fallback silencioso. JVM/ANDROID (JvmBackend), Script (interpretador) e
@@ -50,8 +52,9 @@ final class CompilerSupervisor {
         // §129 (DECISIONS §2, opção B) FECHADO no x86: o handler chain é TLS
         // (per-thread) e o trampolim do spawn instala handler próprio — um
         // throw em worker marca o handle como excepcional e await/selectAny
-        // relança. riscv/aarch seguem OTP001 (clone cru sem TLS + selectAny
-        // ausente/CONC001).
+        // relança. riscv/aarch seguem OTP001 (clone cru sem TLS; os helpers
+        // selectAny/poll/done/cancel/awaitTimeout existem desde 15/09 —
+        // CONC001 fechado e8364c97).
         if (driver.target == Target.NATIVE_RISCV64 || driver.target == Target.NATIVE_AARCH64) {
             diagnostics.error(driver.currentSourceName, 0, 0, 0,
                     "kof.supervisor no target " + driver.target + ": o laço de "

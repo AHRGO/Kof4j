@@ -160,10 +160,10 @@ locks this table against the code — see the note at the end of the section.
 | `spawn stmt` | ✅ `SpawnE2ETest.spawnRunsConcurrentlyAndJoins` | ✅ pthread — `SpawnE2ETest.nativeSpawnStmtRuns` | ✅ `clone` 220 — `NativeRiscv64E2ETest.riscv64SpawnFireAndForgetJoins` | ✅ microtask — `SpawnE2ETest.jsSpawnStmtRunsSequentially` |
 | `val r = spawn expr` | ✅ `KofAwaitTest.awaitJvm` | ✅ pthread — `SpawnE2ETest.nativeSpawnExprAwait` | ✅ `clone` 220 — `NativeRiscv64E2ETest.riscv64SpawnAwait` | ✅ microtask — `KofAwaitTest.awaitJs` |
 | `await r` | ✅ `KofAwaitTest.awaitJvm` | ✅ `pthread_join` — `KofAwaitTest.awaitNativeRuns` | ✅ futex over `done` — `NativeAarch64E2ETest.aarch64SpawnAwait` | ✅ `KofAwaitTest.awaitJs` |
-| `poll` / `done` | ✅ `KofAwaitTest.pollDoneJvm` | ✅ `KofConcurrency2Test.pollDoneNative` | ❌ `kof_poll`/`kof_done` not emitted | ✅ `KofAwaitTest.pollDoneJs` |
-| `cancel` / `cancelled` | ✅ `KofConcurrency2Test.cancelCooperativeJvm` | ⚠️ `KofConcurrency2Test.cancelCooperativeNative` — but see **bug 101** | ❌ `kof_cancel` not emitted | ✅ no-op (`cancelled()` = `0`) — `KofConcurrency2Test.cancelJsSequential` |
-| `selectAny` | ✅ `KofConcurrency2Test.selectAnyJvm` | ✅ 1 ms polling — `KofConcurrency2Test.selectAnyNative` | ❌ `kof_select_any` not emitted | ✅ `Promise.race` — `KofConcurrency2Test.selectAnyJs` |
-| `awaitTimeout` | ✅ `KofConcurrency2Test.awaitTimeoutJvm` | ✅ 1 ms polling — `KofConcurrency2Test.awaitTimeoutNative` | ❌ `kof_await_timeout` not emitted | ✅ `KofConcurrency2Test.awaitTimeoutJs` |
+| `poll` / `done` | ✅ `KofAwaitTest.pollDoneJvm` | ✅ `KofConcurrency2Test.pollDoneNative` | ✅ `kof_poll`/`kof_done` (CONC001 closed 15/09) — `KofConcurrency2Test.crossNativeConcurrencyHelpersRun` | ✅ `KofAwaitTest.pollDoneJs` |
+| `cancel` / `cancelled` | ✅ `KofConcurrency2Test.cancelCooperativeJvm` | ✅ `KofConcurrency2Test.cancelCooperativeNative` (bug 101 → §117 FIXED 13/09, real-TID table `3734f2aa`) | ✅ `kof_cancel` real TID (CONC001 closed 15/09) — `KofConcurrency2Test.crossNativeCancelDuringRunningWorker` | ✅ no-op (`cancelled()` = `0`) — `KofConcurrency2Test.cancelJsSequential` |
+| `selectAny` | ✅ `KofConcurrency2Test.selectAnyJvm` | ✅ 1 ms polling — `KofConcurrency2Test.selectAnyNative` | ✅ `kof_select_any` (CONC001 closed 15/09) — `KofConcurrency2Test.crossNativeConcurrencyHelpersRun` | ✅ `Promise.race` — `KofConcurrency2Test.selectAnyJs` |
+| `awaitTimeout` | ✅ `KofConcurrency2Test.awaitTimeoutJvm` | ✅ 1 ms polling — `KofConcurrency2Test.awaitTimeoutNative` | ✅ `kof_await_timeout` (CONC001 closed 15/09) — `KofConcurrency2Test.crossNativeConcurrencyHelpersRun` | ✅ `KofConcurrency2Test.awaitTimeoutJs` |
 
 `spawn`/`await` closed `CONC001` on Native on 31/08 (pthread_create +
 trampoline + `pthread_join` + thread-safe allocator via futex), and the
@@ -172,20 +172,24 @@ auxiliary constructs (`poll`/`done`/`cancel`/`cancelled`/`selectAny`/
 `runtime/RuntimeConcurrency.java:304`, proof in
 `KofConcurrency2Test.selectAnyNative`.
 
-On x86_64, `cancel`/`cancelled` work but carry **bug 101** (flag
-by `TID % 256` — two workers can inherit the cancel from each other).
+On x86_64, `cancel`/`cancelled` use the table by **real TID + linear probe**
+— the old `TID % 256` collision (bug 101, renumbered §117) was FIXED on
+13/09 (`3734f2aa`).
 
-On **riscv64/aarch64** these auxiliaries do not exist:
-`nat/NativeRiscvSpawn.java` emits only `kof_spawn_result`, `kof_spawn`,
-`kof_await` and `kof_spawn_join_all`. Since 11/09 the absence is an honest R6
-gap: `ExpressionStaticCallLowerer` detects `poll`/`done`/`cancel`/
-`cancelled`/`selectAny`/`awaitTimeout` on those targets and emits **`CONC001` at
-compile-time** (previously it fell into the generic `sanitizeName` of
-`NativeRiscvCrossOps.resolveCalleeNameRiscv` and the error only appeared at
-**link** time, as an undefined symbol — same pattern as bug 59). Proof:
-`KofConcurrency2Test.crossMissingConcurrencyHelpersReportConc001` (issue
-#91). What is missing to close it for good is porting the symbols, not the
-diagnostic.
+On **riscv64/aarch64** the auxiliaries **exist since 15/09**: `CONC001` was
+closed by porting the symbols (`e8364c97`) — the slice
+`nat/NativeRiscvAsmRtB48.java` emits `kof_poll`, `kof_done`, `kof_cancel`,
+`kof_select_any` and `kof_await_timeout`, with cancel by real TID
+(`gettid(178)` recorded by the kernel in the `clone` ctid, no collision).
+Historical note: between 11/09 and 15/09 the absence was an honest R6 gate —
+`ExpressionStaticCallLowerer` emitted **`CONC001` at compile-time** (issue
+#91; before it there was no gate and the error appeared only at **link**, as
+an undefined symbol — same pattern as bug 59); the gate was **removed** with
+the port. Proof: `KofConcurrency2Test.crossNativeConcurrencyHelpersRun` and
+`crossNativeCancelDuringRunningWorker` (qemu, both arches — they skip without
+the cross toolchain). What remains open on cross is the OTP supervisor
+(`OTP001` — raw `clone` without TLS for the §129 handler chain), not the
+helpers.
 
 > **This table is locked by test.** `ConcurrencyGapsDocTest` (in
 > `kof-compiler/src/test/java/dev/kof/compiler/`) breaks the build if a

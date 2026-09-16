@@ -10,6 +10,13 @@
 > DD-OTP-01, 02, 03, 08, 09, 11 e a fatia S2. O motivo comum das duas
 > emendas materiais: `selectAny` **não existe** em riscv64/aarch64, e a
 > flag de shutdown depende de uma regra do SG-020 que ainda não tem prova.
+>
+> **Nota 16/09 (sync da doc contra o código — os dois motivos mudaram):** os
+> auxiliares agora **existem** em riscv64/aarch64 (`CONC001` fechado 15/09 por
+> `e8364c97` — fatia `NativeRiscvAsmRtB48`, prova qemu nas duas arches), e a
+> flag do SG-020 tem prova (fix `ACC_VOLATILE` + DD-OTP-08 implementada 15/09).
+> O que ainda trava o supervisor no cross é só o `OTP001`: `clone` cru sem TLS
+> para a cadeia de handlers por-thread do §129.
 
 ## Estado das decisões (11/09)
 
@@ -17,7 +24,7 @@
 |---|---|---|
 | 01 | Forma (stdlib puro-Kof) | ⚠️ fechável **com emenda** — falta especificar o empacotamento de stdlib em `.kf` |
 | 02 | Superfície (API) | ⚠️ fechável **com emenda** — a assinatura precisa declarar a camada |
-| 03 | N workers sem bloquear | ❌ **ABERTA** — `selectAny` ausente em riscv/aarch; falta decidir o fallback |
+| 03 | N workers sem bloquear | ❌ **ABERTA** — premissa mudou 15/09: `selectAny` agora EXISTE em riscv/aarch (CONC001 fechado, `e8364c97`); o blocker restante é o `OTP001` (sem TLS) — a decisão do fallback segue na fila da mantenedora (regra 6) |
 | 04 | O que conta como falha | ✅ fechada |
 | 05 | Plano ou árvore | ✅ fechada |
 | 06 | Estado no restart | ✅ fechada |
@@ -155,6 +162,14 @@ por filho — aceitável no JVM virtual-threads, pior no x86. Recomendo
 > workers precisa de fallback declarado — uma thread supervisora por filho
 > onde `selectAny` não existe — ou riscv/aarch ficam limitados a **um
 > worker por supervisor**, registrado como PARTIAL.
+>
+> **✅ Sync 16/09 — premissa morta:** em 15/09 os símbolos foram portados
+> (`e8364c97`, fatia `NativeRiscvAsmRtB48` — `kof_select_any`/`kof_poll`/
+> `kof_done`/`kof_cancel`/`kof_await_timeout` em riscv64 + aarch64, prova qemu
+> `KofConcurrency2Test.crossNativeConcurrencyHelpersRun`). A decisão do
+> fallback não precisa mais tratar "auxiliar ausente" — só o gap `OTP001`
+> de throw/TLS (o laço do supervisor observa falha via `try { await } catch`,
+> que no cross ainda longjmpa a cadeia global).
 
 ### DD-OTP-04 — O que conta como falha
 
@@ -283,6 +298,14 @@ custo de regime, não de correção.
 > = PARTIAL declarada**, limitados a um worker por supervisor até alguém
 > portar os auxiliares (trabalho da lane Native, junto com o gate R6 que
 > hoje também falta).
+>
+> **✅ Sync 16/09 — os auxiliares foram portados (15/09, `e8364c97`), mas a
+> cobertura segue como declarada por outro motivo.** riscv/aarch permanecem
+> PARTIAL por causa do `OTP001`: o laço do supervisor observa falha via
+> `try { await } catch`, e no cross um `throw` em worker ainda longjmpa a
+> cadeia global de handlers (o fix TLS do §129 é só x86). JS segue `OTP002`
+> (§132). O limite "um worker por supervisor" permanece até o port do TLS
+> fechar na lane Native (regra 6: a frente é dela).
 
 ### DD-OTP-10 — Relógio injetável
 
@@ -367,6 +390,9 @@ Native; pequeno e isolado. Não bloqueia OTP (que usa flag própria).
    riscv/aarch **não** saem por construção — `selectAny` não existe lá
    (DD-OTP-03/09). Ou entram com fallback de uma thread supervisora por
    filho, ou ficam PARTIAL com um worker por supervisor.
+   *(Sync 16/09: `selectAny` existe no cross desde 15/09 — o blocker agora é
+   só o `OTP001` (TLS do §129), então a opção "um worker por supervisor" é a
+   viva, e a decisão do fallback reabre na fila da mantenedora.)*
 3. **S3:** ✅ EXECUTADO 14/09 (lane development, dono 192.168.100.18): `stats()` (`started`/`restarts`/`dropped`/`vivos`) + janela ring (`restartLimitWindow(max, windowMs)`, anel por filho) + relógio injetável (`.clock(nowFn)`, DD-OTP-10) + drop `temporary` contabilizado (`stats().dropped`). Prova: `KofSupervisorE2ETest` 11/11 (expiração com relógio virtual determinístico; drop em JVM+Script). Original: `supervisorStats` + janela ring + `temporary` drop + docs de
    paridade; promote p/ stable só com a matriz de gates completa (R5).
 
