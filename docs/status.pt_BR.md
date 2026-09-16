@@ -764,7 +764,7 @@ Docs: `debugger-architecture.md`, `debugging.md`, `debug-adapter.md`,
 4. ✅ `Módulos multi-arquivo` — `kof build <dir>` com resolução unificada: `import a.b.C` file fix done + `moduleRoot` derivado do **menor ancestral comum** das fontes (3-arg `compileSources` resolve imports cross-diretório sem raiz explícita; `PackagesE2ETest` 6/6)
 
 **P2 — Web completa (próxima listinha):**
-5. ✅ Resposta rica `status(201, body)`/`headerSet("X","y")` `JVM` `201 Created 202 Accepted` `X-Custom/X-Test` `KofWebE2ETest 9/9` (27/08) **`Native WEB002 parcial` (03/09 — server 200+body, headers customizados ainda são pendência)** `JS stub`
+5. ✅ Resposta rica `status(201, body)`/`headerSet("X","y")` `JVM` `201 Created 202 Accepted` `X-Custom/X-Test` `KofWebE2ETest 9/9` (27/08) **`Native WEB002 parcial` (03/09 — server 200+body, headers customizados ainda são pendência)** `JS ✅ 03/09` (GraalJS HttpServer real — context-fns `status`/`headerSet` 16/09)
 6. ✅ `kof.cache` `get/set/set(key,v,ttl)/ttl/delete/clear` — ✅ JVM/Native/JS (30/08; fix nativo: clobber de `%rax/%rdi` em `set_ttl/get/ttl` + `println(null)` segfault; `KofCacheE2ETest 5/5 x3 targets`)
 7. ✅ `WebSocket` `app.ws("/chat") { }` + `SSE` `sse.send/event/close` — ✅ JVM (30/08; PRs 14-17: persistent-conn/route-kinds, SSE, handshake RFC 6455, frame codec+máscara; `KofWebSseE2ETest 7/7` `KofWebWsE2ETest 11/11` `KofWsFrameTest 7/7`; hardening/limites/contadores 04/09 — `KofWebHardeningTest 6/6`)
 8. ✅ `Scheduler` `every(ms) { }`/`at(cron) { }`/`cancel(id)` — ✅ JVM (`ScheduledExecutor`, 27/08) + JS (`setInterval`) + **Native SCHED001** (31/08: thread por job — trampoline `usleep` ms→us + `active` flag com futex — `cancel(id)` cooperativo; `KofConcurrency2Test` `schedulerEveryNative/Jvm`)
