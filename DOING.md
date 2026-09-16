@@ -137,6 +137,8 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
  ## PRÓXIMO PASSO (re-dispacho lê isto)
 > **✅ FEITO (16/09 ~05:40, dono = 192.168.100.22, lane issue-watcher/compiler — ordem da usuária "corrige as issues e fecha"): #148/§218 CORRIGIDO — `n.toHexString()`/`toBinaryString()` de Int/Long emitem os ESTÁTICOS JDK reais; fim do `ClassFormatError: Illegal class name ""`.** (1) **Repro no tip** (jar fresco): `invokevirtual "".toHexString:()Ljava/lang/Object;` → `ClassFormatError` (a classe nunca carrega). (2) **Fix na raiz** (`ExpressionInstanceCallLowerer`): branch para receptor primitivo + `toHexString`/`toBinaryString` (0 args) roteia para `KofCall` STATIC `java/lang/Integer|Long` `(I|J)Ljava/lang/String;` — mesma superfície do alias `toInt`/§89, o receptor empilhado vira o argumento do INVOKESTATIC; receptores não-Int/Long (Byte/Short/Char/Float/Double/Bool) recebem **SEM052** honesto apontando a stdlib — nunca owner vazio (R6). (3) **Face JS** (`JsCallEmitter`, padrão #233): estático → `toString(radix)` com máscara unsigned (`>>> 0` Int / `BigInt.asUintN(64)` Long) — caça Q4: JDK é unsigned 32/64-bit, `Number.toString` mantém sinal (`-42` dava `ffffffd6` JVM × `-2a` JS); corrigido, paridade 3-target (JVM=JS=Script) com `-42→ffffffd6`, Long `-1→ffffffffffffffff`. **Armadilha do shade resolvida (lição):** o uber-jar do CLI continuava STALE mesmo com `install` — o shade do kof-cli processava o PRÓPRIO `kof-cli/target/*.jar` antigo (22:44) como primeiro input (classes vencem por ordem); fix = `mvn -o clean install -DskipTests` do ROOT. (4) **Provas:** `NumericFormatterE2ETest` (NOVO, 3/3): paridade JVM×JS Int (`255→ff`, `-42→ffffffd6`, `0→0`) + Long (`4294967296→100000000`, `-1→ffffffffffffffff`) + Double receptor → SEM052; suíte **2197/0/0/190** (1900 compiler + 297 script+c+cli; o único fail de uma passada = §252 flake alheio, verde no re-run pós-pull). (5) Docs EN+PT no mesmo commit: §218 seção + fila do known-bugs. Próximo: fechar a issue #148 com prova via bot.
 >
+> **✅ FEITO (16/09 ~06:00, dono = 192.168.100.22, lane issue-watcher/compiler): #148 FECHADA com prova (`78b733fa` pushado com bypass §258 declarado) + varredura 16/09 ~06:00 — 4 abertas lidas, ZERO novos work, watcher sincronizado.** (1) **#148 fechada** via `kof-agent-worker[bot]` (comentário de prova `5694858539` + `gh issue close`): root cause + fix + `NumericFormatterE2ETest` 3/3 + `javap` antes/depois + suíte sem regressões. **Armadilha do gate:** o pre-push CodeQL seguiu VERMELHO (#773 `KofJsRunner:525` dono .18, §258 OPEN) — push via `CODEQL_GATE_SKIP=1` com a causa declarada no commit (bypass honesto documentado no hook; NÃO "consertar" o gate, regra Q5). (2) **Varredura final (re-trigger do watcher):** 4 abertas (275/273/266/259) — **#275**: único comentário novo = a própria triagem SG-022 da mantenedora→lane (`1cc6f84f` já na beta; DECISIONS pendente da mantenedora, regra 6 — sem ação); **#273** (§252): dono nat/.18, sem comentário novo — não tocar; **#266/#259** (D-NULL-INTENT): frente da mantenedora, sem comentário novo — não tocar. Snapshot `seen` do watcher atualizado (275→5692154247; 148 removida — fechada). **PRÓXIMO PASSO:** nenhum item sem dono na lane — recusar re-trigger (estabilidade) salvo regressão/issue nova; §258 (#773) segue o único bloqueador de push, dono .18.
+>
 > **✅ FEITO (16/09 ~04:30, dono = 192.168.100.22, lane docs/development —
 > autônomo, onda R6-documental): varredura CONC001/CONC003/contagem-suíte
 > ESGOTADA no corpus.** 5 commits nesta sequência: `76d1cfc8` (18 células
@@ -218,17 +220,49 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
  > "0 falhas"→"0 regressões (1 falha = flake §252)" nos 8 registros EN+PT
  > (development/README, status×2, backend-parity, ecosystem-coverage, AGENTS
  > ×2 blocos + linha "Correct state TODAY"). **§258 ainda VERMELHO** (sem
- > mudança).
- > Fila do PRÓXIMO tick (reescrita): **(1)** `git fetch` + `git log <last>..HEAD`;
- > **(2)** se o #773 SUMIR do `scripts/codeql-gate.sh --fast` → fechar §258
- > (fila+seção EN+PT com SHA/prova) + tirar o bypass `CODEQL_GATE_SKIP`;
- > **(3)** se o tip mover CÓDIGO → re-medir (clean kof-runtime ANTES) e
- > re-sincronizar contagem nos 8 registros; **(4)** se a lane nativa fechar
- > §252 → confirmar (suíte sem a falha) + atualizar §252 + a linha "Correct
- > state TODAY" volta a "0 falhas"; **(5)** nada disso E gates verde → tick
- > não-inventivo: registrar "aguardando fechamento da .18/.22/nat" e sair.
- > RECUSAR de vez + `auto-loop.sh stop` SÓ quando as 3 condições STABILITY
- > segurarem (hoje NÃO: §258/§252/§253/§255/§256b abertos).
+  > mudança). **TICK 06:30 — CONTAMINAÇÃO DE WORKTREE (achado novo, 2ª face do
+  > anti-pattern) + medição autoritativa:** tentei re-medir o tip `574c9419`
+  > num `git worktree` → falso vermelho `ConformanceMatrixDocTest`
+  > (`methodoverload` "faltando" na matriz) — mas `git status` do worktree
+  > dizia limpo: `git worktree add` **herda flags `skip-worktree` do índice
+  > sujo do pai** (218 arquivos `S`), disco ≠ HEAD silenciosamente, e
+  > `checkout --force`/`reset --hard` NÃO restauram. Diagnose:
+  > `md5sum f` vs `git show HEAD:f | md5sum` divergem com status limpo.
+  > **Medi autoritativo num CLONE FRESCO: 2206 run (1899+38+7+262), 1 fail =
+  > flake §252 (aqui NÃO disparou na 1ª corrida, disparou na 2ª — ~50/50,
+  > consistente com o registro re-afiado), 0 erros, 190 skip, guard
+  > `ConformanceMatrixDocTest` VERDE no tip limpo.** Contagem corrigida nos
+  > 8 registros (2199→2206; cli 252→262 reflete `e5013152`
+  > DepsTransitiveTest +10; o 2199/1902 era contagem mid-flight com as
+  > frentes landando). 2ª face documentada no anti-pattern EN+PT. **Gate
+  > CodeQL AGORA COM 2 alertas: #773 (`.18`, `KofJsRunner:525`, sem fix ainda
+  > — só a linha andou) + #774 NOVO `java/relative-path-command`
+  > `DepsTransitiveTest` `ProcessBuilder("mvn","-v")` (frente-3 `e5013152`
+  > da `.17` — pushed-red 2 da mesma família)** → §258 re-catalogado EN+PT
+  > (fila+seção: 2 alertas, 2 ponteiros de dono; bypass segue com causa).
+  > **FECHAMENTO NO MESMO TICK:** a `.17` respondeu ao ponteiro em ~2h —
+  > `2a60b426` remove `mvnOnPath()` e reusa `Deps.mvnAvailable()` → gate só
+  > com #773; §258 atualizado (EN+PT). A contagem cli pode ter voltado de 262
+  > (teste reescrito) → re-medição em andamento no clone fresco do tip
+  > `78b733fa` (que também moveu código: `78b733fa` §218 toHexString/toBinary-
+  > String → contrato (3) dispara).
+  > ⚠️ Processos CONCORRENTES ativos nesta máquina editam a árvore compartilhada
+  > (NumericFormatter*/ExpressionInstanceCallLowerer/JsCallEmitter +2 em edição
+  > às 03:56; os flags S vêm de algum deles) — medir tip = clone fresco.
+  > Fila do PRÓXIMO tick (reescrita): **(1)** `git fetch` + `git log <last>..HEAD`
+  > (CUIDADO: árvore compartilhada tem concorrentes ativos + 218 flags `S` —
+  > NUNCA medir num `git worktree`; usar `git clone` fresco do tip); **(2)** o
+  > gate está com 1 alerta (#773 `.18`; #774 já fechado por `2a60b426`):
+  > se #773 sumir do `scripts/codeql-gate.sh --fast` → fechar §258
+  > (fila+seção EN+PT com SHA/prova) + tirar o bypass `CODEQL_GATE_SKIP`; **(3)** se o tip mover CÓDIGO → re-medir no CLONE FRESCO (a
+  > contagem autoritativa vem de `git clone`+checkout, disco==HEAD==índice —
+  > lição `stale-ecj-class-trap.md` 2ª face) e re-sincronizar contagem nos 8
+  > registros; **(4)** se a lane nativa fechar §252 → confirmar (suíte sem a
+  > falha no clone limpo) + atualizar §252 + a linha "Correct state TODAY" volta
+  > a "0 falhas"; **(5)** nada disso E gates verde → tick não-inventivo:
+  > registrar "aguardando fechamento da .18/.17/.22/nat" e sair. RECUSAR de
+  > vez + `auto-loop.sh stop` SÓ quando as 3 condições STABILITY segurarem
+  > (hoje NÃO: §258[#773]/§252/§253/§255/§256b abertos).
  > NÃO TOCAR: DB001-JS/WEB001/UI-web-db (development .18 — frente DELA; esta
  > lane só sincroniza docs após o FECHAMENTO), §258/§256-face-b/§252/§253-face-B
  > (dono .18/`KofJsRunner`), §253-face-A (compiler .22), §248, N1→N4, split
