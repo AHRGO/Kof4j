@@ -14,7 +14,7 @@
 > | **§254 ✅ CORRIGIDO 15/09 (lane dona development `.18`, `713031a7`)** | golden `[stdvalidation]` da ConformanceMatrix codificava a saída ERRADA ANTIGA (4 linhas vs o oráculo mod-11) — célula vermelha no tip limpo; re-gravado pela dona com prova no JVM executado. |
 > | **§255 🔴 ABERTO 15/09 (lane development `.18`)** | `KofDbE2ETest.crossNativeSqliteNowCompiles` falha duro em hosts sem `libsqlite3` cross (falta guard `assumeTrue`; COMP001 `riscv64-ld: -lsqlite3` não encontrado). |
 > | **§256 🟡 PARCIAL 16/09 (lane development `.18`)** | fechamento CONC001 deixou 2 vermelhos no tip limpo (worktree `4af4356f`): ~~célula de gaps de `learn/18-concurrency.md` dessincronizada (guard)~~ **face (a) ✅ FECHADA 16/09 pela lane docs/development `192.168.100.22` (`dd2c7fcb` — `ConcurrencyGapsDocTest` 3/3 verde)** + riscv64 `poll(b)` retorna 0 após scan do selectAny (aarch casa) — face (b) ABERTA. PRÉ-EXISTENTE, não §257. |
-> | **§258 🔴 ABERTO 16/09 (lane `.18`; #774 FECHADO pela `.17`)** | Gate CodeQL: **#773** `java/comparison-with-wider-type` (`i < n`, int vs long) `KofJsRunner.listValues` (DB001 fatia A `3e55df51`, dona `.18` — bound check, precedente `d6eaae0c`) segue VERMELHO; **#774** `java/relative-path-command` em `DepsTransitiveTest` CORRIGIDO 16/09 por `2a60b426` (`.17`: `mvnOnPath()` removido, reusa `Deps.mvnAvailable()`); bypass `CODEQL_GATE_SKIP=1` + causa declarada enquanto. |
+> | **§258 🔴 ABERTO 16/09 (lane `.18`; #774 FECHADO pela `.17`)** | Gate CodeQL: **#773** `java/comparison-with-wider-type` (`i < n`, int vs long) `KofJsRunner.listValues` (DB001 fatia A `3e55df51`, dona `.18` — bound check, precedente `d6eaae0c`) segue VERMELHO (alerta em **:525**, não :510; a unidade DB001 fechou em `eb9140cb`, logo a justificativa "conflito vivo" expirou — conserto desbloqueado para a `.18`, ver UPDATE 16/09 ~07:00 na seção); **#774** `java/relative-path-command` em `DepsTransitiveTest` CORRIGIDO 16/09 por `2a60b426` (`.17`: `mvnOnPath()` removido, reusa `Deps.mvnAvailable()`); bypass `CODEQL_GATE_SKIP=1` + causa declarada enquanto. |
 > | **§257 ✅ CORRIGIDO 15/09 (lane compiler `192.168.100.17`)** | literais `static final String` de texto-de-runtime = inlining ConstantValue do javac → falso vermelho em build incremental (`validationBrJs`); 77 campos de-`final` + `RuntimeConstantInliningGuardTest` (ASM, ConstantValue) trava. |
 > | **§173 ✅ CORRIGIDO 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `++`/`--`/compound em `Long`/`Double`/`Float` + incremento de ELEMENTO de array: JVM VerifyError (literal `INT 1` em binário de 2 slots, `DUP` de 1 slot, `arraystore` sem `[array,index]`), Native core dump, Script `NoSuchElementException`, JS `stack underflow`/`KofDup2`. 4 targets; caça Q4 13/09 (sobre o §167). Prova: `BackendParityTest.parityIncrementWideTypesAndArrayElement` + `KofInterpreterParityTest.incrementWideTypesAndArrayElement` + célula `increment` 4/4. |
 > | **§174 ✅ CORRIGIDO 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `return`/`throw` dentro de um `if` dentro do `try`: JVM/Native/Script corretos, KofJS abortava com `COMP002 unexpected KofCatchStart` (o `JsIfThrowElse.parseElse` consumia o endLabel do try envolvente ao tratar o `then` incondicional como if-else). Fix sem mudança de contrato/IR (guarda `isTryEndLabel`). Prova: `CoreRegressionE2ETest.returnInsideIfInsideTryJs`. |
@@ -8893,17 +8893,27 @@ usuário — diagnostic em compile-time é a meta (regra 6).
   explícito + erro, não cast cru.
 - **Repro (não precisa toolchain — API do CI ou scan local):**
   `scripts/codeql-gate.sh --fast` em qualquer push (bloqueia com RED #773);
-  o padrão em si: `KofJsRunner.java:506-513`.
-- **Esperado:** a dona `.18` (autora de `3e55df51`, unidade ainda EM CURSO)
-  adiciona o bound check (`n > Integer.MAX_VALUE` → `guestError`/throw,
-  casando o precedente `d6eaae0c`) — conserto de 3 linhas dentro do arquivo
-  que aquela lane já está editando. NÃO consertado aqui: regra 6 (áurea —
-  mesmo arquivo, conflito vivo com a unidade DB001 IN PROGRESS) + regra 8
-  (nunca editar às cegas a feature em voo de outra lane). Até entrar, as
-  OUTRAS lanes usam legitimamente o bypass honesto (`CODEQL_GATE_SKIP=1` +
-  causa declarada: "bloqueado pelo §258, dono `.18`") — o bypass está
-  documentado no próprio hook exatamente para este caso; "consertar" o
-  gate/teste calado para passar é o que a Q5 proíbe, bypass-com-causa não é.
+  o padrão em si: `KofJsRunner.java:523-525`.
+- **Esperado:** a dona `.18` (autora de `3e55df51`) adiciona o bound check
+  (`n > Integer.MAX_VALUE` → `guestError`/throw, casando o precedente
+  `d6eaae0c`) — conserto de 3 linhas. Quando catalogado, NÃO consertado aqui:
+  regra 6 (áurea — mesmo arquivo, conflito vivo com a então-EM-CURSO unidade
+  DB001) + regra 8 (nunca editar às cegas a feature em voo de outra lane) —
+  ver o UPDATE abaixo (essa justificativa expirou). Até entrar, as OUTRAS lanes
+  usam legitimamente o bypass honesto (`CODEQL_GATE_SKIP=1` + causa declarada:
+  "bloqueado pelo §258, dono `.18`") — o bypass está documentado no próprio
+  hook exatamente para este caso; "consertar" o gate/teste calado para passar
+  é o que a Q5 proíbe, bypass-com-causa não é.
+- **UPDATE 16/09 ~07:00 (lane bugs-and-gaps `192.168.100.15`):** a
+  justificativa "conflito vivo com a unidade DB001 EM CURSO" **expirou** — a
+  unidade DB001 fechou em `eb9140cb` (16/09 01:34), que é também o ÚLTIMO
+  commit a tocar `KofJsRunner.java`; o arquivo está sem edições há ~5,5h e
+  nenhuma lane o segura `EM CURSO`. Logo o conserto está **desbloqueado** para
+  a dona `.18` (segue ativa, pushou `78b733fa` 05:53). Corrigida também a
+  referência de linha: o alerta está em **:525** (`long n =
+  list.getArraySize()` @523, `for (int i = 0; i < n; i++)` @525), não :510 — o
+  arquivo deslocou com a fatia B do DB001. Dono inalterado (lane `.18`); esta
+  lane só mantém o registro verdadeiro.
 - **Segundo alerta (mesmo mecanismo, 16/09 ~05:00) — #774 `java/relative-path-command` em
   `kof-cli/src/test/java/dev/kof/cli/DepsTransitiveTest.java`** (D-DEV-PRIORITY
   frente-3 `e5013152`, dona lane compiler `.17`): o guard de disponibilidade `mvnOnPath()`
