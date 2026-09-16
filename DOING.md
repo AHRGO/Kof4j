@@ -953,6 +953,25 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 >
 > **✅ DONE (15/09 ~21:15, owner = 192.168.100.18, development lane): CONC001 CLOSED — the 6 high-order concurrency helpers (`selectAny`/`done`/`poll`/`cancel`/`cancelled`/`awaitTimeout`) now run on the cross runtime (riscv64+aarch64, qemu-proven).** Code: new slice `NativeRiscvAsmRtB48` (port of `RuntimeConcurrency`): cancel table 256×16B `[tid, flag]` keyed by REAL TID via gettid(178) with phi-hash + linear probe (same design as the x86 §117-8a); `kof_done`/`kof_poll` (non-blocking handle reads), `kof_cancel` (cooperative flag set), `kof_cancelled` (current-thread flag), `kof_select_any` (1ms polling anyOf), `kof_await_timeout` (1ms polling + `kof_throw_string` on deadline). `NativeRiscvSpawn` upgraded: handle 32→56B (`tid@32` written by the KERNEL on `clone` via `parent_tidptr=&handle->tid` — pthread_create-equivalent without libc; `cancelEntry@40` `exc@48`), trampoline registers the cancel slot before `invoke` and clears it on exit. Frontend: the `isCrossMissingConcurrencyBuiltin` gate (#91) REMOVED — the helpers flow through the same x86 FUNCTION path with identical signatures. `supervisor` itself keeps **OTP001** (EH chain is global not TLS on the cross — §129 per-worker catch stays x86-only; honestly documented). **Real bug found & fixed (qemu `-d exec` 2.2M-loop trace):** `kof_cancel` is NOT leaf (calls `slot_find`) but did not save `ra` — on riscv the inner `call` overwrites the ra register, so the final `ret` returned INTO ITSELF → infinite loop (and, when `a0` had already become the flag value 1, `sd 8(a0)` = the si_addr=0x9 SIGSEGV seen in `-strace`). Fixed with a 16B frame. **Race documented:** `cancel` right after `spawn` may miss the slot the worker has not registered yet (same as x86: returns false; test sleeps 15ms first — mirrors the x86 leak test). **Proof (qemu riscv64 AND aarch64):** `KofConcurrency2Test` 41/41 including new `crossNativeConcurrencyHelpersRun` (deterministic order `1/true/1/false/1` both arches — was the CONC001 gate test, now the positive proof) and `crossNativeCancelDuringRunningWorker` (`true/7` — cancel DURING a sleeping worker + awaitTimeout). Non-regression: `KofSupervisorE2ETest` 15/15 (OTP001 gate intact), `NativeRiscv64E2ETest`+`NativeAarch64E2ETest` 44+44 (only the pre-existing `CastSaturation`), slice-registry 8/8 (B48 auto-discovered), `NativeCrossDynamicLinkTest` 9/9, `NativeRiscvDtoaTest` 3/3, `ArtifactSizeTest` 6/6, `KofDbE2ETest` 18/18. `check_500` OK + `docs-lang` OK. Docs EN+PT: `native-multiarch` (gap list: CONC001 helpers closed, OTP001 remains), `backend-parity` (concurrency row: cross helpers 15/09 + test count 41). **Next:** ORM001 on cross or the next NATIVE002 face (SECN000/JSN004 stay documented as non-goals/other-lane).
 >
+> **✅ FEITO (16/09 ~00:40, dono = 192.168.100.17, lane compiler): §231 — sobrecarga top-level com
+> parâmetro default resolve chamada curta (`requiredArity` nos 3 sítios).** `h(Int,Int=10)+h(String)`
+> com `h(5)` dava SEM014 (escolhia `h(String)`); `h(Int,Int=1)+h(Int,String)` com `h(5)` dava SEM013
+> ("expected 2 but got 1") — medido no CLI 0.4.0-beta (jar do tip). **Fix (Q0, raiz — o plano exato
+> da seção):** `TopLevelOverload.requiredArityOf(fn)` (índice do 1º default, espelho do `firstDefault`
+> dos wrappers `lowerFunctionDefaults`); wired nos 3 sítios (`MethodCallTyper`, `ExpressionMethodCall
+> Lowerer`, `BuiltinCallTyper` — este tinha guard extra que DESCARTAVA o candidato com-default em
+> chamada curta, e validava `checkArgTypes` contra a assinatura total → truncado pro prefixo recebido,
+> como o lowering já emitia o wrapper). Não é rule 6: liga o wire do contrato `requiredArity <= n <=
+> totalArity` que a própria classe já documentava; zero mudança em operadores/ordem. **Prova (Q1,
+> MESMO commit):** `TopLevelOverloadE2ETest` +caso `OVERLOAD_DEFAULTS` (15/11/99 nos 5 targets — JVM/
+> Script/JS/x86 + riscv64/aarch64 sob qemu) + `ambiguousDefaultOverloadIsSem057NotSilent`
+> (`h(Int)+h(Int,Int=)` → SEM057 nos 3, antes era ClassFormatError no JVM / escolha silenciosa). RED
+> pré-fix medido (stash dos 4 main): X86/AArch64/ambíguo+JVM/Script/JS vermelhos; pós: 7/7 + vizinhos
+> (SemanticResolution 30/0, DuplicateSignature 10/0, guard §257 2/0). Suíte do tip: 1859/5F — os 5F
+> são os pré-existentes catalogados (§181×2, §255, §256-face-b, §252-flake), zero novos.
+> **Colateral útil descoberto:** o jar do CLI estava STALE (ironia do §257 — rebuild parcial não
+> pegou as classes; `rm -rf target` resolveu) — mais uma evidência do invariante.
+
 > **✅ FEITO (15/09 ~22:40, dono = 192.168.100.17, lane compiler): §257 — javac ConstantValue
 > inlining de texto de runtime → false red no incremental (`validationBrJs`).** 77 campos
 > `static final String *RUNTIME*/*ASM*` com LITERAL em `dev.kof.compiler.{js,nat}` (75 arquivos)

@@ -562,7 +562,8 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
                     for (FunctionDeclarationNode fn : ovlFns) {
                         List<Type> pt = fn.parameters().stream()
                                 .map(pp -> CompilerTypes.resolveWithTypeParams(pp.type(), fn.typeParameters(), driver.currentUnit, driver.semanticAnalyzer)).toList();
-                        ovlCands.add(new TopLevelOverload.Candidate(fn, pt, pt.size()));
+                        ovlCands.add(new TopLevelOverload.Candidate(fn, pt,
+                                TopLevelOverload.requiredArityOf(fn)));
                     }
                     TopLevelOverload.Status[] st = new TopLevelOverload.Status[1];
                     int sel = TopLevelOverload.pick(ovlCands, argTypes, st);

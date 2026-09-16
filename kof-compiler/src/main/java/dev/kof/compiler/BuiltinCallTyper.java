@@ -416,10 +416,11 @@ public final class BuiltinCallTyper {
                     boolean hasDefaults = fn.parameters().stream()
                             .anyMatch(p -> p.defaultExpression() != null);
                     if (fn.typeParameters().isEmpty() && (!hasDefaults
-                            || mc.arguments().size() >= fn.parameters().size())) {
+                            || mc.arguments().size() >= TopLevelOverload.requiredArityOf(fn))) {
                         List<Type> paramTypes = new ArrayList<>();
                         for (FormalParameterNode p : fn.parameters()) paramTypes.add(MemberResolver.resolveType(sa, p.type(), scope));
-                        cands.add(new TopLevelOverload.Candidate(fn, paramTypes, paramTypes.size()));
+                        cands.add(new TopLevelOverload.Candidate(fn, paramTypes,
+                                TopLevelOverload.requiredArityOf(fn)));
                     }
                 } else if (d instanceof ExternalFunctionNode ext && ext.name().equals(mc.methodName())) {
                     // FFI (TIER 2.1): chamada a `extern` declarado resolve pelo
@@ -448,13 +449,23 @@ public final class BuiltinCallTyper {
                 } else {
                     if (sel < 0) sel = 0; // NO_MATCH → reporta SEM013/SEM014 no candidato 0, como antes
                     TopLevelOverload.Candidate chosen = cands.get(sel);
-                    TypeChecker.checkArgTypes(sa.diagnostics(), mc.methodName(), argTypes, chosen.paramTypes());
+                    // §231: chamada curta num candidato com default resolve pelo
+                    // WRAPPER de prefixo (mesmo `subList(0, nArgs)` que o
+                    // ExpressionMethodCallLowerer emite) — validar contra os
+                    // parâmetros recebidos, não contra a assinatura total, senão
+                    // a chamada boa cai em SEM013 "expected N but got nArgs".
+                    List<Type> chosenFormals = chosen.paramTypes();
+                    if (argTypes.size() < chosen.totalArity()
+                            && argTypes.size() >= chosen.requiredArity()) {
+                        chosenFormals = chosenFormals.subList(0, argTypes.size());
+                    }
+                    TypeChecker.checkArgTypes(sa.diagnostics(), mc.methodName(), argTypes, chosenFormals);
                     // #266 (c) — DECISIONS §7: `null` literal em parâmetro
                     // primitivo NÃO-nullable é SEM048 em compile-time, nunca
                     // VerifyError silencioso no load (a chamada top-level não
                     // passa por resolvedMethods, por isso o check direto aqui).
                     SemanticAnalyzer.checkNullArgs(sa.diagnostics(), mc.arguments(),
-                            mc.position(), chosen.paramTypes(), mc.methodName());
+                            mc.position(), chosenFormals, mc.methodName());
                     // registra o tipo de retorno da função top-level para o var
                     // local inferir (evita Unknown que quebra a resolução de
                     // métodos do receiver)

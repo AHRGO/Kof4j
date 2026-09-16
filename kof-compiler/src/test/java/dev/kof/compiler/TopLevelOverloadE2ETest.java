@@ -50,6 +50,30 @@ class TopLevelOverloadE2ETest {
             """;
     private static final String DEFAULTS_OUT = "7\n11";
 
+    // §231 — default EM PRESENÇA de sobrecarga (multi-candidato): o `pick`
+    // precisa tratar o candidato com default como aplicável à chamada CURTA
+    // (requiredArity = índice do 1º default), senão a chamada `h(5)` cai em
+    // SEM014 (escolhe o candidato errado `h(String)`) ou SEM013 (escolhe o
+    // certo mas valida aridade contra a assinatura total). Repro medido na CLI
+    // 16/09 antes do fix: `error: Argument 1 of 'h': expected String` /
+    // `Wrong number of arguments for 'h': expected 2 but got 1`.
+    private static final String OVERLOAD_DEFAULTS = """
+            Int h(Int x, Int y = 10) { return x + y }
+            Int h(String s) { return 99 }
+            main() {
+                println(h(5))
+                println(h(5, 6))
+                println(h("z"))
+            }
+            """;
+    private static final String OVERLOAD_DEFAULTS_OUT = "15\n11\n99";
+
+    private static final String OVERLOAD_DEFAULTS_AMBIG = """
+            Int h(Int x) { return x }
+            Int h(Int x, Int y = 10) { return x + y }
+            main() { println(h(5)) }
+            """;
+
     private String runJvm(Path src, Path out) throws IOException {
         CompilationResult r = driver.compile(src, out, Target.JVM);
         assertTrue(r.success(), "JVM compile: " + r.diagnostics().getDiagnostics());
@@ -100,7 +124,8 @@ class TopLevelOverloadE2ETest {
 
     @Test
     void overloadParityJvmScriptJs(@TempDir Path tmp) throws IOException {
-        String[][] cases = {{OVERLOAD, OVERLOAD_OUT, "ov"}, {DEFAULTS, DEFAULTS_OUT, "def"}};
+        String[][] cases = {{OVERLOAD, OVERLOAD_OUT, "ov"}, {DEFAULTS, DEFAULTS_OUT, "def"},
+                {OVERLOAD_DEFAULTS, OVERLOAD_DEFAULTS_OUT, "ovd"}};
         for (String[] c : cases) {
             Path src = tmp.resolve(c[2] + ".kf");
             Files.writeString(src, c[0]);
@@ -118,6 +143,26 @@ class TopLevelOverloadE2ETest {
         Path d = tmp.resolve("def.kf");
         Files.writeString(d, DEFAULTS);
         assertEquals(DEFAULTS_OUT, runNative(d, tmp.resolve("nat-d"), Target.NATIVE, new String[0]), "Native x86 defaults");
+        Path ovd = tmp.resolve("ovd.kf");
+        Files.writeString(ovd, OVERLOAD_DEFAULTS);
+        assertEquals(OVERLOAD_DEFAULTS_OUT, runNative(ovd, tmp.resolve("nat-ovd"), Target.NATIVE, new String[0]),
+                "§231 Native x86: default + sobrecarga, chamada curta");
+    }
+
+    @Test
+    void ambiguousDefaultOverloadIsSem057NotSilent(@TempDir Path tmp) throws IOException {
+        // §231 (Q3 expected-error): h(Int) e h(Int,Int=) ambos aplicáveis a
+        // h(5) → SEM057 nos 4 targets (mesmo frontend), nunca escolha
+        // silenciosa nem ClassFormatError.
+        Path src = tmp.resolve("amb.kf");
+        Files.writeString(src, OVERLOAD_DEFAULTS_AMBIG);
+        for (Target t : new Target[]{Target.JVM, Target.JS, Target.NATIVE}) {
+            CompilationResult r = driver.compile(src, tmp.resolve("amb-" + t), t);
+            assertFalse(r.success(), t + ": ambíguo não pode compilar com sucesso (R6): "
+                    + r.diagnostics().getDiagnostics());
+            assertTrue(r.diagnostics().getDiagnostics().toString().contains("SEM057"),
+                    t + ": chamada ambígua deve ser SEM057: " + r.diagnostics().getDiagnostics());
+        }
     }
 
     @Test
@@ -126,6 +171,9 @@ class TopLevelOverloadE2ETest {
         Path src = tmp.resolve("ov.kf");
         Files.writeString(src, OVERLOAD);
         assertEquals(OVERLOAD_OUT, runNative(src, tmp.resolve("rv"), Target.NATIVE_RISCV64, new String[]{"qemu-riscv64"}), "riscv64");
+        Path ovd = tmp.resolve("ovd.kf");
+        Files.writeString(ovd, OVERLOAD_DEFAULTS);
+        assertEquals(OVERLOAD_DEFAULTS_OUT, runNative(ovd, tmp.resolve("rv-ovd"), Target.NATIVE_RISCV64, new String[]{"qemu-riscv64"}), "§231 riscv64");
     }
 
     @Test
@@ -134,6 +182,9 @@ class TopLevelOverloadE2ETest {
         Path src = tmp.resolve("ov.kf");
         Files.writeString(src, OVERLOAD);
         assertEquals(OVERLOAD_OUT, runNative(src, tmp.resolve("aa"), Target.NATIVE_AARCH64, new String[]{"qemu-aarch64"}), "aarch64");
+        Path ovd = tmp.resolve("ovd.kf");
+        Files.writeString(ovd, OVERLOAD_DEFAULTS);
+        assertEquals(OVERLOAD_DEFAULTS_OUT, runNative(ovd, tmp.resolve("aa-ovd"), Target.NATIVE_AARCH64, new String[]{"qemu-aarch64"}), "§231 aarch64");
     }
 
     private static final String SUBTYPE = """
