@@ -26,9 +26,17 @@ A CLI é a ferramenta central da plataforma Kof.
 | `kof bench [paths...] [--target ...] [--iterations N] [--baseline <file>] [--threshold <ratio>] [--json] [--fail-on-regression]` | Benchmark harness (compile, run, validate, métricas, baseline) |
 | `kof profile <file.kf> [--target ...]` | Execução + métricas (CPU, RSS, GC) |
 | `kof inspect <file.kf> [--json]` | Estatísticas da IR: ops antes/depois da otimização |
+| `kof decompile <file.class> [--output <file.kf>]` | Esqueleto Kof estrutural de um `.class` |
+| `kof translate <file.java> [--output <file.kf>]` | Subset Java → fonte Kof |
+| `kof compare <legacy.class\|jar> <file.kf> [--json]` | Teste diferencial legacy vs Kof |
+| `kof migrate <file.class\|java> [--output <file.kf>] [--json]` | Migração + relatório rastreável |
 | `kof config gen <file.kf\|dir> [--output <arquivo>]` | Gera template `kof.config` a partir das chaves `config.*` do código |
 | `kof fmt <file.kf\|dir> [-w]` | Formatador real via parser (`KofFormatter`), idempotente — implementado em 31/08 |
 | `kof debug <file.kf> [--target jvm]` | DAP MVP (breakpoints por linha Kof, stack trace) |
+| `kof new <name>` | Esqueletos de projeto por tipo |
+| `kof init` | Inicializa um projeto no diretório atual |
+| `kof deps <init\|add\|remove\|list\|resolve>` | Gerenciador de pacotes (`kofdeps`, Maven Central) |
+| `kof editor <list\|detect\|status\|setup\|install\|uninstall\|update>` | Integração com editores (EDI001) |
 | `kof info [--json]` | Relatório do ambiente |
 | `kof lsp` | Language Server (stdio, LSP 3.x) |
 | `kof install <dir>` | Instala este build como distribuição (launcher + `kof.jar`) |
