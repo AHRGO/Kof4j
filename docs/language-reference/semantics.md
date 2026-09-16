@@ -21,8 +21,9 @@ when it runs — independently of the backend.
 6. The program ends; the exit code is 0 (unless an uncaught exception or a
    failing `assert` in the test harness).
 
-> **Unspecified**: whether the `Int` returned by `Int main()` becomes the exit code. The
-> JVM emit ignores the return of `main` (it is `void main` in the bytecode). **SG-018.**
+> The `Int main()` form was **removed** (SG-018): the entry point is only
+> `main()` (no return type) — `Int main()` → `SEM044`. The process exit code is
+> always 0 unless an uncaught error occurs.
 
 ---
 
@@ -31,8 +32,8 @@ when it runs — independently of the backend.
 - **Left to right** on binary operands (`emitExpression` emits
   `left` before `right`, `ExpressionLowerer.java:177-185`).
 - **Arguments** of a call are evaluated in order, left→right.
-- **`&&`/`||`** are short-circuit (the right side may not be evaluated) —
-  **except in the JS target**, where short-circuit is turned off (SG-006).
+- **`&&`/`||`** are short-circuit on **all targets** (the right side may not be
+  evaluated) — JS included (SG-006 ✅ FIXED 09/09).
 - **Postfix chaining** (`a.b().c()[d]`) is evaluated from left to
   right, receiver before the member.
 - **Side effects in assignment**: the right side is evaluated before
@@ -81,8 +82,9 @@ when it runs — independently of the backend.
   - JS: throwing the string → uncaught → error in the runner.
   - **Target-specific** in representation, **Stable** in effect (aborts with
     a message and exit ≠ 0).
-- **There are no** checked exceptions, nor validated `throws` (the `throw T`
-  clause is parsed but **not checked** — SG-019).
+- **There are no** checked exceptions. The `throws T` clause is **type-checked**
+  (each name must be a known type → `SEM045`, SG-019); the declared-vs-actual
+  throw set is not enforced.
 
 ---
 
@@ -95,9 +97,9 @@ when it runs — independently of the backend.
 - `awaitTimeout(h, ms)` throws an exception if it expires.
 - `Channel<T>`: `send`/`receive` (buffered/unbuffered — **Unspecified** the
   default capacity).
-- **There is no** formalized memory model (atomicity, visibility between
-  threads, happens-before). **Unspecified** (SG-020) — concurrency is
-  "best effort" delegated to the target.
+- **Memory model is formalized** (SG-020): sequentially consistent on all
+  targets, with total happens-before — 6 rules (spawn/await/channel/cancel/
+  locals/race) defined in `concurrency-memory-model.md`.
 
 ---
 
@@ -128,11 +130,11 @@ when it runs — independently of the backend.
 | Point | State |
 |---|---|
 | When objects are collected | Unspecified (host GC) |
-| Exit code of `Int main()` | Unspecified (SG-018) |
-| Concurrent memory model | Unspecified (SG-020) |
+| Exit code of `Int main()` | Removed: `main()` has no return type; `Int main()` → `SEM044` (SG-018) |
+| Concurrent memory model | Defined — sequentially consistent + 6 happens-before rules (`concurrency-memory-model.md`, SG-020) |
 | Map/Set iteration order | Unspecified |
-| `throws` as a contract | parsed, not checked (SG-019) |
-| Semantics of nested classes | Unspecified (SG-016) |
-| Top-level function overloading | Unspecified (SG-011) |
+| `throws` clause | names type-checked (`SEM045`); declared vs actual throw set not enforced (SG-019) |
+| Semantics of nested classes | Absent — parse error `SEM042` (SG-016) |
+| Top-level function overloading | Stable — distinct signatures coexist, ambiguous call → `SEM057` (SG-011) |
 | Value of `x++` as an expression | Implementation-defined |
 | `<`/`>` on non-numeric references | not supported |

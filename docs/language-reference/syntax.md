@@ -26,7 +26,7 @@ main() {
 
 `kof
 var x = 10              // inferred int, mutable
-val y = 20              // "immutable" (not-guaranteed — SG-010)
+val y = 20              // immutable (reassignment → SEM037)
 String nome = "Mel"     // type-first
 var idade: Int = 30     // annotated
 String? opcional = find(key) // nullable — null via API (= null literal is SEM048)

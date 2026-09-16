@@ -322,6 +322,12 @@ recomendações futuras (regra 14 da tarefa: não alterar comportamento).
   aridade divergente → SEM043 com esperado/encontrado (paridade de tipo exata
   aguarda dispatch virtual). Prova: 3 testes `CompilerDriverTest`
   (missing/wrongArity/complete-green).
+- **Refinado 17/09 (#322, `ebf59ca4`):** uma `abstract class` pode ADIAR os
+  métodos da interface (`abstract class A implements I {}` compila, JLS 8.4.8.1);
+  a obrigação é TRANSITIVA — um super abstrato cobra a subclasse concreta, então
+  `class C extends A {}` sem `f()` falha com `SEM043` nomeando classe + método +
+  "inherited via" (sem `AbstractMethodError` silencioso). Prova:
+  `AbstractClassPartialInterfaceE2ETest` 3/3.
 
 ### SG-016 — Semântica de classes aninhadas
 

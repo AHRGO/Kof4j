@@ -37,9 +37,10 @@ Valid examples:
 - **Without annotation**, the parameter assumes `Object` (`parseLambdaParameter:1652`).
   Using it in arithmetic → `SEM001` with the hint *"declare the parameter type,
   e.g. `(x: Int) -> …`"* (*probe*: `l.map((x) -> x + 1)` → SEM001).
-- **There is no lambda parameter type inference** from the call context (the
-  `map` table knows it is `Int`, but the parser does not propagate it to the
-  body). **Unspecified** as policy (SG-012).
+- **Lambda parameter type inference WORKS** from the call context (SG-012,
+  since 09/09): in `List` `map`/`filter`/`reduce`, a param without annotation
+  inherits the **element type** (`nums.map((x) -> x * 2)` compiles). Without
+  context, `Object` remains and arithmetic is `SEM001` (never a silent Object).
 
 ---
 

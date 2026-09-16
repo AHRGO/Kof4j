@@ -191,23 +191,23 @@ classes do módulo; **import ambíguo → não chuta** (tipo preservado).
 
 ---
 
-## 7. Subtipagem — a maior lacuna (SG-009)
+## 7. Subtipagem (SG-009 — ✅ CORRIGIDO 10/09)
 
-`isAssignable` aceita **`ClassType → ClassType` sempre** (caso final de `TypeChecker.isAssignable`). Não há
-checagem de que `to` é supertype de `from`. Consequências:
+`isAssignable` faz **subtipagem nominal** para reference→reference de classes de
+domínio: percorre `superClass`/`interfaces` por BFS. Classe **não relacionada** é
+**erro de compilação** (`SEM021`, *probe*: `class A`/`class B` com `A a = B()`).
+Idem cobertura de `implements` (`SEM043`), instanciação de abstrata (`SEM041`) e
+tipo de elemento de coleção (`SEM056`) — todos impostos em compile-time:
 
-- `B extends A; A a = b` funciona (*probe*) — mas por coincidência (o `checkcast`
-  do lowering salva o emit), não por regra de subtipagem.
-- **`A a = b_de_outra_classe` (não-relacionadas) também passa na checagem de
-  tipos.** A segurança é **delegada ao `checkcast`/runtime do target**, não ao
-  type checker.
-- `implements I` **não** exige cobrir todos os métodos: `class C implements I {}`
-  com `I` tendo `f()` abstrato **compila** (*probe*) — só falha se o método for
-  chamado (runtime `AbstractMethodError`).
-- `abstract class A; new A()` **compila** e falha em runtime com
-  `InstantiationError` (*probe*) — não é erro de tipo.
+- `B extends A; A a = b` — válido (subtipo real).
+- `A a = b_de_outra_classe` (não relacionadas) → `SEM021` em compile-time.
+- `class C implements I {}` com `f()` abstrato → `SEM043`; uma `abstract class`
+  pode adiar, a obrigação é transitiva para a subclasse concreta (`#322`).
+  Métodos `default` contam como satisfeitos.
+- `abstract class A; new A()`/`A()` → `SEM041` em compile-time.
+- `l.add("x")` numa `List<Int>` → `SEM056`.
 
-**Garantia real do type checker:** chamada a função/método **inexistente em tipo
+**Garantia do type checker:** chamada a função/método **inexistente em tipo
 conhecido** é erro (`SEM015`/`SEM025`); aridade de argumentos/construtores é
 checada (`SEM013`/`SEM023`); tipo de retorno incompatível é erro (`SEM010`);
 `throw` só aceita `String` (`SEM026`); atribuição respeita `isAssignable`
@@ -215,10 +215,9 @@ checada (`SEM013`/`SEM023`); tipo de retorno incompatível é erro (`SEM010`);
 expressão exige default/exaustividade (`SEM032`); enum exaustivo em switch
 (`SEM031`).
 
-**Não garantido:** subtipagem correta; tipo de elemento em `list.add`/`map.put`
-(`l.add("x")` numa `List<Int>` **não é erro** — §8); cobertura de interface;
-instandabilidade de abstract; coerção `bool→numérico` (funciona por
-representação 1/0, mas é implementation-defined — §3.1).
+**Não é garantia:** coerção `bool→numérico` funciona por representação 1/0 mas é
+implementation-defined (§3.1); ver os itens `não checado` (`private`/`protected`
+em **campos**, SG-013).
 
 ---
 

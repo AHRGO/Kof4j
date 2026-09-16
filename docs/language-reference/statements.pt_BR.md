@@ -41,11 +41,9 @@ String? nome2 = find(key)    // type-first nullable (null chega ao T? via API;
 - **`var` sem inicializador** → tipo `UnknownType` (`:625`).
 - **Tipo explícito ≠ tipo do inicializador** → `SEM021`.
 - **Redeclarar no mesmo escopo** → `SEM024`.
-- **`val` NÃO impede reatribuição**: `val x = 1; x = 2` **compila e roda**,
-  imprimindo `2` (*probe*, confirmado isoladamente). A imutabilidade de `val`
-  é **não-garantida** pelo compilador — é convenção de estilo, não regra de
-  linguagem (SG-010). `val` em campo de classe → `PARSE016` (não é aceito como
-  modificador de campo; use `final`).
+- **`val` impede reatribuição** (SG-010 ✅ CORRIGIDO 09/09): `val x = 1; x = 2`
+  (incl. composto `+=`) → `SEM037` ("cannot assign to immutable 'val'"). `val`
+  em campo de classe → `PARSE016` (não é aceito como modificador de campo; use `final`).
 
 ---
 

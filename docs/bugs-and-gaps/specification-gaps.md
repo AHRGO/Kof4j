@@ -322,6 +322,12 @@ future recommendations (rule 14 of the task: do not change behavior).
   divergent arity → SEM043 with expected/found (exact type parity
   awaits virtual dispatch). Proof: 3 `CompilerDriverTest` tests
   (missing/wrongArity/complete-green).
+- **Refined 17/09 (#322, `ebf59ca4`):** an `abstract class` may DEFER the
+  interface methods (`abstract class A implements I {}` compiles, JLS 8.4.8.1);
+  the obligation is TRANSITIVE — an abstract super charges the concrete subclass,
+  so `class C extends A {}` without `f()` fails with `SEM043` naming the class +
+  method + "inherited via" (no silent `AbstractMethodError`). Proof:
+  `AbstractClassPartialInterfaceE2ETest` 3/3.
 
 ### SG-016 — Semantics of nested classes
 

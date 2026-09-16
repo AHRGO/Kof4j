@@ -260,9 +260,8 @@ Higher precedence at the top. **All binaries are left-associative**
 
 ### 5.2 Short-circuit
 
-`&&` and `||` are evaluated with short-circuit via labels in **JVM and Native**;
-in the **JS target the short-circuit is turned off** (`ExpressionLowerer.java:147-148`)
-— **Target-specific** (SG-006).
+`&&` and `||` are evaluated with short-circuit on **all targets** — via labels
+in JVM/Native, via native operators in JS (SG-006 ✅ FIXED 09/09).
 
 ### 5.3 Operators that do NOT exist (SG-002, verified by probe)
 
