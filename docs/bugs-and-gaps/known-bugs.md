@@ -6936,7 +6936,7 @@ to the label) is the correct predicate and **was already used** in `parseStateme
   **JS residual catalogued §239** (KofJS has no `String.format` lowering,
   pre-existing `COMP002`; JS lane).
 
-### §211 — enum values compile as `ldc <String>`, no enum class emitted — `Dir.N.getClass()` == `java.lang.String`, `Dir.N == "N"` is `true` (issue #207, REOPENED)
+### §211 — enum values compile as `ldc <String>`, no enum class emitted — `Dir.N.getClass()` == `java.lang.String`, `Dir.N == "N"` is `true` (issue #207) — ✅ CLOSED 15/09 (D-ENUM207 lane bugs-and-gaps `192.168.100.15`)
 
 - **Symptom (measured 14/09 ~12:30, owner = 192.168.100.17 — catalogued,
   compiler lane):** `enum Dir { N, S, E, W }` produces NO `Dir.class`; every

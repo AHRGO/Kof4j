@@ -6915,7 +6915,7 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   **Residual JS catalogado §239** (KofJS sem lowering de `String.format`,
   `COMP002` pré-existente; lane JS).
 
-### §211 — valores de enum compilam como `ldc <String>`, nenhuma classe enum é emitida — `Dir.N.getClass()` == `java.lang.String`, `Dir.N == "N"` é `true` (issue #207, REABERTA)
+### §211 — valores de enum compilam como `ldc <String>`, nenhuma classe enum é emitida — `Dir.N.getClass()` == `java.lang.String`, `Dir.N == "N"` é `true` (issue #207) — ✅ FECHADA 15/09 (D-ENUM207 lane bugs-and-gaps `192.168.100.15`)
 
 - **Sintoma (medido 14/09 ~12:30, dono = 192.168.100.17 — só catalogado,
   lane compiler):** `enum Dir { N, S, E, W }` NÃO produz `Dir.class`; toda
