@@ -279,8 +279,8 @@ x86_64" — desatualizado** (SG-E1).
   discipline into this tree-shaped JS AST"*).
 - **Execução**: Node ou browser; `KofJsRunner` embute GraalJS para execução
   server-side.
-- **Short-circuit `&&`/`||` desligado** (`ExpressionLowerer.java:147-148`) —
-  SG-006.
+- **Short-circuit `&&`/`||` em todos os targets** — JS emite `&&`/`||` nativos
+  (SG-006 ✅ CORRIGIDO 09/09; o caminho por labels é JVM/Native).
 
 ### 5.4 Android (`Target.ANDROID`)
 

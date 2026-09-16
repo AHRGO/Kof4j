@@ -280,8 +280,8 @@ placeholder" — outdated** (SG-E1).
   discipline into this tree-shaped JS AST"*).
 - **Execution**: Node or browser; `KofJsRunner` embeds GraalJS for
   server-side execution.
-- **Short-circuit `&&`/`||` disabled** (`ExpressionLowerer.java:147-148`) —
-  SG-006.
+- **Short-circuit `&&`/`||` on all targets** — JS emits native `&&`/`||`
+  (SG-006 ✅ FIXED 09/09; the label path is JVM/Native).
 
 ### 5.4 Android (`Target.ANDROID`)
 
