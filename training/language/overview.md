@@ -74,7 +74,7 @@ Kof IR (backend-agnostic, KofOperation)
 | kof.http: `http.get/post/put/delete/patch/options/status` + `timeout/retry/circuit` | ✅ | HTTP002 | ✅ | JS via Java HttpClient 27/08; retry/circuit 30/08 |
 | kof.cache: `cache.get/set/set_ttl/ttl/delete/clear` | ✅ | ✅ | ✅ | ConcurrentHashMap/Js Map |
 | switch, instanceof, `as` | ✅ | ✅ | ✅ | |
-| Web server (`web.app()` routes/middleware/`status`/`headerSet` + `listenSecure` TLS + `app.ws` + `app.sse`) | ✅ | WEB002 | ✅ base 16/09 | ws/sse 30/08; JS base (`web.app`/routes/context-fns) 16/09, `app.ws`/`app.sse` = WEB004/WEB003 compile-time |
+| Web server (`web.app()` routes/middleware/`status`/`headerSet` + `listenSecure` TLS + `app.ws` + `app.sse`) | ✅ | base ✅ 03/09; TLS `WEB002`, ws `WEB004`, sse `WEB003` | ✅ base 16/09 | ws/sse 30/08; JS base (`web.app`/routes/context-fns) 16/09, `app.ws`/`app.sse` = WEB004/WEB003 compile-time |
 | kof.validation (13 predicates) | ✅ | ✅ | ✅ | |
 | kof.security (passwords/crypto/jwt/secrets/auth + rateLimit/sessions/apiKeys) | ✅ | ✅ | ✅ | |
 | kof.observability (health/readiness/liveness/counter/increment/gauge/requestId) | ✅ | ✅ | ✅ | |
@@ -93,7 +93,7 @@ Kof IR (backend-agnostic, KofOperation)
 | Scheduler `every`/`at` on Native | SCHED001 (JVM/JS ✅) |
 | Automatic GC mark-sweep on Native | Pending (manual free-list + `kof_gc_collect`; auto-GC off) |
 | HTTP/2 in `kof.http` | Planned (HTTP002 on Native) |
-| Web stack on Native/JS (`web.app`) | WEB002 (Native); `app.ws`/`app.sse` = WEB004/WEB003 on JS (JVM ✅) |
+| Web stack tail on Native/JS (`web.app`) | base ✅ (Native 03/09, JS 16/09); residual per feature: TLS `WEB002`, ws `WEB004`, sse `WEB003` (JVM ✅) |
 
 ## What Kof Is NOT
 
