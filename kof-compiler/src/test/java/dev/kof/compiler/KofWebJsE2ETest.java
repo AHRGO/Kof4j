@@ -160,4 +160,57 @@ class KofWebJsE2ETest {
         assertTrue(echo.startsWith("HTTP/1.1 200") || echo.startsWith("HTTP/1.0 200"), echo);
         assertEquals("got:hello", bodyOf(echo).trim(), "POST body: " + echo);
     }
+
+    // ── 16/09 (WEB001 fatia honestidade): context-fns web sem runtime no JS
+    //    (sse/wsSend/wsMessage/stats) NÃO podem baixar para kofWebStub e
+    //    retornar 0 em silêncio (R6). Compilar deve FALAR o gap; as
+    //    context-fns com runtime (param/query/header/body/method/path)
+    //    continuam compilando. ──
+    @Test
+    void jsUnsupportedContextFnsReportGapAtCompile(@TempDir Path tempDir) throws IOException {
+        // aridade exata de cada context-fn (KofWeb.contextCall) — chamada
+        // com aridade errada não chega ao gate (resolve null antes).
+        String[] fns = {"sse", "wsSend", "wsMessage", "stats"};
+        String[] calls = {"sse(\"tick\")", "wsSend(\"hello\")", "wsMessage()", "stats(\"reqs\")"};
+        for (int i = 0; i < fns.length; i++) {
+            Path source = tempDir.resolve(fns[i] + ".kf");
+            Files.writeString(source, """
+                main() {
+                    var app = web.app()
+                    app.get("/x") {
+                        %s
+                        return "ok"
+                    }
+                }
+                """.replace("%s", calls[i]));
+            CompilationResult r = driver.compile(source, tempDir.resolve(fns[i] + "-out"), Target.JS);
+            assertFalse(r.success(), fns[i] + " no JS deve falhar em compile (gap), não compilar p/ kofWebStub");
+            assertTrue(r.diagnostics().getDiagnostics().toString().matches("(?s).*WEB00[134].*"),
+                    fns[i] + " deve reportar WEB00x: " + r.diagnostics().getDiagnostics());
+        }
+    }
+
+    @Test
+    void jsSupportedContextFnsStillCompile(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            main() {
+                var app = web.app()
+                app.get("/users/:id") {
+                    var u = param("id")
+                    var n = query("name")
+                    var h = header("x-a")
+                    var b = body()
+                    var m = method()
+                    var p = path()
+                    return u + n + h + b + m + p
+                }
+            }
+            """);
+        CompilationResult r = driver.compile(source, tempDir.resolve("out"), Target.JS);
+        assertTrue(r.success(), "context-fns com runtime no JS devem compilar: "
+                + r.diagnostics().getDiagnostics());
+        assertFalse(r.diagnostics().getDiagnostics().toString().contains("WEB001"),
+                r.diagnostics().getDiagnostics().toString());
+    }
 }

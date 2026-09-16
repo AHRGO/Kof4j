@@ -109,6 +109,22 @@ if (mc.receiver() == null && KofWeb.isContextFunction(mc.methodName())) {
             }
             return localIdx;
         }
+        // 16/09: o mesmo vazamento existia no JS — context-fns sem runtime
+        // (sse/wsSend/wsMessage/stats) baixavam para kofWebStub (return 0
+        // SILENCIOSO, R6). Gap em tempo de compilação, código por função.
+        if (driver.target == Target.JS
+                && !KofWeb.contextJsSupported(webCtx.function())) {
+            String code = KofWeb.gapCode(webCtx.function());
+            if (driver.currentDiagnostics != null) {
+                var pos = mc.position();
+                driver.currentDiagnostics.error(pos != null ? pos.file() : "",
+                        pos != null ? pos.line() : 0, pos != null ? pos.column() : 0,
+                        0, "web context '" + mc.methodName() + "()': not available on the "
+                                + driver.target + " driver.target yet (" + code + ")",
+                        code);
+            }
+            return localIdx;
+        }
         for (ExpressionNode arg : mc.arguments()) {
             localIdx = ExpressionLowerer.emitExpression(driver, arg, ops, owner, localIdx, locals);
         }

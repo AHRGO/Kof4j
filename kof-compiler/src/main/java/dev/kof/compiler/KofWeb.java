@@ -203,6 +203,21 @@ public final class KofWeb {
         };
     }
 
+    /** #104 item (16/09): funções de contexto que o runtime WEB JS
+     *  (JsRuntimeUiWeb + JsRuntimeOps ramo `kof_web_`) realmente emite.
+     *  param/query/header/body/method/path/status/headerSet/setHeader são
+     *  reais (leem o request/response corrente); sse/wsSend/wsMessage/stats
+     *  NÃO têm símbolo — antes caíam no `kofWebStub` (return 0 SILENCIOSO,
+     *  R6). Agora viram gap em tempo de compilação, como o gate nativo. */
+    static boolean contextJsSupported(String function) {
+        return switch (function) {
+            case "kof_web_param", "kof_web_query", "kof_web_header",
+                 "kof_web_body", "kof_web_method", "kof_web_path",
+                 "kof_web_status", "kof_web_header_set" -> true;
+            default -> false;
+        };
+    }
+
     static boolean isNativeTarget(Target t) {
         return t == Target.NATIVE || t == Target.NATIVE_RISCV64 || t == Target.NATIVE_AARCH64;
     }
