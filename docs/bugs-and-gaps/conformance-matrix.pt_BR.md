@@ -167,7 +167,7 @@ CLOSED 11/09 (riscv64/aarch64)**: `addDays`/`diffDays` run on the 5 targets —
 > proves riscv+aarch under qemu) run on the 3 natives + JVM + JS + Script.
 | stdlib kof.uuid (S3b: v4 — non-deterministic, NO matrix case) | shape `xxxxxxxx-xxxx-4xxx-[89ab]xxx-xxxxxxxxxxxx` | ✅ assert | ✅ assert¹ | ✅ | ✅ assert (+riscv/aarch qemu) | `KofUuidTest` 4/4 |
 | stdlib kof.uuid (S3b.1: isUuid — shape predicate 8-4-4-4-12, lower/upper hex, version/variant not checked; riscv/aarch = slice B25, UUID001 closed in the beta→main merge 10/09) | `true` / `true` / `false` / `false` / `false` / `false` / `true` | DONE | DONE | DONE | DONE | `stduuidform` |
-| stdlib kof.uuid (S3b.2: v7 — RFC 9562 time-ordered, NO matrix case; riscv/aarch = UUID002) | shape `xxxxxxxx-xxxx-7xxx-[89ab]xxx-xxxxxxxxxxxx` | ✅ assert | ✅ assert | ✅ | ✅ assert | `KofUuidTest` (v7) |
+| stdlib kof.uuid (S3b.2: v7 — RFC 9562 time-ordered, NO matrix case; riscv/aarch fatia B25b) | shape `xxxxxxxx-xxxx-7xxx-[89ab]xxx-xxxxxxxxxxxx` | ✅ assert | ✅ assert | ✅ | ✅ assert | `KofUuidTest` (v7) |
 | stdlib kof.random (S10/S10a/S10b — non-deterministic, NO matrix case) | contract `0<=randomInt(b)<b` / `randomBoolean∈{0,1}` / `randomString: len==n, chars∈alphabet` + main face `double∈[0,1)` / `hex: 2n chars, n<=0→null (JVM/JS; x86 →""` pre-existing from the crypto lane) + lenient edges (`b<=0→0`) | ✅ assert | ✅ assert | ✅ | ✅ assert (+riscv/aarch qemu) | `KofRandomTest` 12/12 |
 
 > `random.*` does not enter the equality matrix (entropy — same reason as uuid):
@@ -199,7 +199,7 @@ CLOSED 11/09 (riscv64/aarch64)**: `addDays`/`diffDays` run on the 5 targets —
 > `uuid.v7()` (RFC 9562 time-ordered, S3b.2): parity proven by shape
 > assertions (length=36, hyphens at 8/13/18/23, digit 14='7', variant 10xx
 > digit 19∈{8,9,a,b}, timestamp monotonicity and uniqueness) on JVM,
-> Native x86 and JS. UUID002 gate (R6 — never silent) active on riscv64 and aarch64.
+> Native x86, JS, **e riscv64/aarch64** (fatia B25b + tradutor, 10/09 — `KofUuidTest.uuidV7CrossArch` sob qemu). Nenhum código `UUID002` existe no compilador (o único código de v7 é `UUID001`, hoje inalcançável pois o gate foi removido).
 
 > **S2b ASCII:** `capitalize` uses the SAME rule on the 4 targets (byte 0 `a-z`→`A-Z`).
 > `reverse` is byte-reverse on Native and UTF-16/UTF-8 on the others — they coincide in ASCII
