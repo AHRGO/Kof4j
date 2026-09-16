@@ -108,7 +108,8 @@ uuid.isUuid(id)      // true — validates the SHAPE (dashes 8/13/18/23 + rest h
 ```
 
 Non-deterministic: validate by **shape** (`isUuid`, or by hand: dashes at 8/13/18/23,
-digit 14='4', digit 19∈{8,9,a,b}), never by equality. v7/ulid do not exist yet.
+digit 14='4', digit 19∈{8,9,a,b}), never by equality. `uuid.v7()` (time-ordered, RFC 9562)
+exists on all 5 targets (digit 14='7', digit 19∈{8,9,a,b}); ulid does not exist yet.
 
 ## random (S10a/b)
 
