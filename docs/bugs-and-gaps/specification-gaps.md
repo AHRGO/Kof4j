@@ -273,10 +273,11 @@ future recommendations (rule 14 of the task: do not change behavior).
   declaration (SG-011); two homonymous top-level functions collide without a
   clear diagnostic (the `define` overwrites).
 - **Related (METHOD, not top-level):** method overloading by ARITY in the
-  same class remains OPEN — `defineMethodSymbol` keeps 1 slot per NAME →
-  SEM013 in the JVM / symbol collision in Native. It is **bug 131** of
-  `known-bugs.md` (**DECIDED 13/09**, option 10a: implement); this SG-011
-  covers only top-level FUNCTION overloading (✅).
+  same class was **bug 131 of `known-bugs.md` — ✅ FIXED 13/09** (DECIDED
+  13/09 option 10a: implement; `18a64d45`, 4 backends, `MethodCallTyper` picks
+  by arity+compatibility; class methods of the same name with different
+  signatures coexist). This SG-011 covers top-level FUNCTION overloading (✅);
+  §131 covers the class-METHOD face (also ✅ since 13/09).
 
 ### SG-012 — Lambda parameter type inference
 

@@ -273,10 +273,11 @@ recomendações futuras (regra 14 da tarefa: não alterar comportamento).
   declaração (SG-011); duas funções top-level homônimas colidem sem
   diagnóstico claro (o `define` sobrescreve).
 - **Relacionado (MÉTODO, não top-level):** sobrecarga de método por ARIDADE na
-  mesma classe segue ABERTA — `defineMethodSymbol` mantém 1 slot por NOME →
-  SEM013 no JVM / colisão de símbolo no Native. É o **bug 131** de
-  `known-bugs.md` (**DECIDIDO 13/09**, opção 10a: implementar); esta SG-011
-  cobre só a sobrecarga de FUNÇÃO top-level (✅).
+  mesma classe era o **bug 131 de `known-bugs.md` — ✅ CORRIGIDO 13/09**
+  (DECIDIDO 13/09, opção 10a: implementar; `18a64d45`, 4 backends, `MethodCallTyper`
+  escolhe por aridade+compatibilidade; métodos de classe de mesmo nome com
+  assinaturas diferentes coexistem). Esta SG-011 cobre só a sobrecarga de FUNÇÃO
+  top-level (✅); o §131 cobre a face MÉTODO de classe (também ✅ desde 13/09).
 
 ### SG-012 — Inferência de tipo de parâmetro de lambda
 
