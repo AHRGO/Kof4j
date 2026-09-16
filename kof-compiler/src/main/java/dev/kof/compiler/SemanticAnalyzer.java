@@ -267,6 +267,7 @@ public class SemanticAnalyzer {
             }
         }
         checkInterfaceImplementation(cls, classScope);
+        checkOverrideReturnCompatibility(cls);
         MemberResolver.checkAbstractClassImplementation(this, cls);
         currentScope = prevScope;
         currentClassName = prevClass;
@@ -498,6 +499,71 @@ public class SemanticAnalyzer {
 
     /** #322: par (interfaces-declaradas, pai-abstrato-que-as-declarou). */
     private record ClassDeclIfaces(java.util.List<String> ifaces, String via) {}
+
+    /**
+     * #326: overriding method deve ter retorno COMPATIVEL com o do
+     * sobrescrito (JLS 8.4.8.3 / JVM invokevdispatch). Retorno COVARIANTE
+     * (subtipo) e legal — gerado como bridge por
+     * `generateCovariantReturnBridges` (#248). Retorno INCOMPATIVEL (nem
+     * igual, nem atribuivel ao do pai) e a causa do bug: o emit gera o metodo
+     * com o descritor do FILHO, a JVM nao ve override, e a chamada via
+     * referencia do pai faz dispatch ao pai (saida errada, silenciosa). Re-
+     * jeitar em compile-time (R6), apontando o metodo, o pai e os dois tipos.
+     * Roda DEPOIS do fixpoint de `analyzeClass` porque o retorno pode ser
+     * refinado na analise de corpo.
+     */
+    private void checkOverrideReturnCompatibility(ClassDeclarationNode cls) {
+        if (diagnostics == null) return;
+        String curSuper = cls.superClass();
+        if (curSuper == null || curSuper.isEmpty() || "Object".equals(curSuper)) return;
+        SymbolTable classScope = classMemberScopes.get(cls.name());
+        if (classScope == null) return;
+        java.util.Set<String> visited = new java.util.HashSet<>();
+        visited.add(cls.name());
+        while (curSuper != null && !curSuper.isEmpty() && !"Object".equals(curSuper)) {
+            String simple = curSuper.contains("/")
+                    ? curSuper.substring(curSuper.lastIndexOf("/") + 1) : curSuper;
+            if (simple.contains("<")) simple = simple.substring(0, simple.indexOf("<"));
+            if (!visited.add(simple)) break;
+            SymbolTable.ClassSymbol superSym = knownClasses.get(simple);
+            if (superSym == null) break;
+            for (Map.Entry<String, SymbolTable.Symbol> e
+                    : classScope.localSymbols().entrySet()) {
+                java.util.List<SymbolTable.MethodSymbol> childMethods = new java.util.ArrayList<>();
+                if (e.getValue() instanceof SymbolTable.MethodSymbol c) childMethods.add(c);
+                else if (e.getValue() instanceof SymbolTable.MethodSet cs) childMethods.addAll(cs.methods());
+                for (SymbolTable.MethodSymbol child : childMethods) {
+                    if ((child.accessFlags() & (AccessFlags.STATIC | AccessFlags.PRIVATE)) != 0) continue;
+                    SymbolTable.Symbol parent = superSym.members().resolve(child.name());
+                    java.util.List<SymbolTable.MethodSymbol> parents = new java.util.ArrayList<>();
+                    if (parent instanceof SymbolTable.MethodSymbol p) parents.add(p);
+                    else if (parent instanceof SymbolTable.MethodSet pset) parents.addAll(pset.methods());
+                    for (SymbolTable.MethodSymbol pm : parents) {
+                        if ((pm.accessFlags() & (AccessFlags.STATIC | AccessFlags.PRIVATE)) != 0) continue;
+                        if (pm.parameterTypes().size() != child.parameterTypes().size()) continue;
+                        boolean paramsMatch = true;
+                        for (int i = 0; i < child.parameterTypes().size(); i++) {
+                            if (!child.parameterTypes().get(i).equals(pm.parameterTypes().get(i))) {
+                                paramsMatch = false;
+                                break;
+                            }
+                        }
+                        if (!paramsMatch) continue;
+                        Type parentRet = pm.returnType();
+                        Type childRet = child.returnType();
+                        if (childRet.equals(parentRet)) continue;
+                        if (TypeChecker.isAssignable(this, childRet, parentRet)) continue;
+                        diagnostics.error("", 0, 0, 0,
+                                "method '" + child.name() + "' in class '" + cls.name()
+                                        + "' overrides '" + simple + "' but return type " + childRet
+                                        + " is not compatible with the overridden return type " + parentRet,
+                                "SEM059");
+                    }
+                }
+            }
+            curSuper = superSym.superClass();
+        }
+    }
 
     private void analyzeInterface(InterfaceDeclarationNode iface) {
         String prevClass = currentClassName;
