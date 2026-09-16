@@ -173,6 +173,38 @@
 > **G-5 aarch64** — herda tudo via tradutor; **o G-4 JÁ provou a herança do
 > sweep+collect** (`NativeRiscvGcSweepTest` roda as 2 arches), então o G-5 está
 > efetivamente satisfeito para o coletor também.
+
+> **G-6 x86 (ABERTA 16/09 — frente 2 D-DEV-PRIORITY, §260):** o coletor x86
+> existe e está correto (`kof_gc_mark`+`kof_gc_sweep`+`kof_gc_collect_now`),
+> mas o **gatilho** de auto-collect dentro do `kof_alloc` foi MEDIDO INSANO
+> para a convenção x86: o backend mantém temporários em **registradores
+> caller-saved** nos call-sites (provado: `KofStringParseTest` vermelho /
+> `KofSupervisorE2ETest` exit 139 SIGSEGV com o gatilho, verdes sem; medições
+> completas em `known-bugs.md §260`). O riscv não precisou de stack-map porque
+> lá a value-stack É a pilha de máquina (RtB44:15-20); o x86 exige o real
+> "mapa de raízes por frame" do texto da D-DEV-PRIORITY. Duas opções honestas
+> (escopo: a lane compiler):
+> - **(a) mínima, caminho escolhido — spill-per-live-ref nos call-sites de
+>   alloc:** o backend x86, para cada `call kof_alloc`, empilha (ou já mantém
+>   no frame) toda referência viva ao heap para que o mark conservador as veja
+>   na pilha; então o gatilho `.Lkof_alloc_maybe_gc` pode chamar
+>   `collect_now` com gate `kof_spawn_count==0` (as pilhas dos workers seguem
+>   fora do escaneamento — mesma fronteira sã da hoje). Auditoria de custo
+>   obrigatória: o `ArtifactSizeTest` inchou 32520→38928B só de linkar a
+>   máquina do GC (+19,7% > baseline+5%) — o custo de link é inevitável quando
+>   o coletor fica vivo (é o PONTO da feature); o custo do spill por site deve
+>   ficar nos 5% do gate, senão a baseline é re-baselineada com o aval da
+>   mantenedora, nunca em silêncio.
+> - **(b) stack-map completo:** mapa registrador/spill por call-site emitido
+>   numa tabela `.rodata` consumida pelo `kof_gc_mark`; mais pesado, trabalho
+>   de IR no compilador; só se (a) se provar grosseiro demais.
+> Aceitação (matriz Q3, não só happy path): (1) teste de cap verde (padrão
+> `gcAutoCollectFitsUnderMemoryCap`, main-only); (2) os dois repros do §260
+> verdes (spawn/supervisor + parse native); (3) paridade cross riscv/aarch
+> inalterada; (4) decisão do `ArtifactSizeTest` documentada (rebaseline com
+> causa ou gate segurado); (5) multi-thread: gate = comportamento exato de
+> antes, face catalogada (varredura da pilha do worker é o PRÓXIMO degrau,
+> nunca silencioso).
 > Cada degrau: commit com suíte cross completa verde + DOING.md na linha.
 > G-0/G-1/G-2 adiantam sem root_end; **o G-3 também adiantou** (emite os
 > próprios marcadores `.L`-locais riscv — NÃO precisou do `kof_heap_root_end`

@@ -177,7 +177,38 @@
 > sweep+collect** (`NativeRiscvGcSweepTest` runs both arches), so G-5 is
 > effectively satisfied for the collector too; a dedicated G-5 aarch step is no
 > longer a separate face.
-> Each step: commit with the complete cross suite green + DOING.md on the line.
+> 
+> **G-6 x86 (OPEN 16/09 — frente 2 D-DEV-PRIORITY, §260):** the x86 collector
+> exists and is correct (`kof_gc_mark`+`kof_gc_sweep`+`kof_gc_collect_now`), but
+> the auto-collect **trigger** inside `kof_alloc` was measured UNSOUND for the
+> x86 calling convention: the backend keeps temporaries in **caller-saved
+> registers** at call sites (proved: `KofStringParseTest` red /
+> `KofSupervisorE2ETest` exit 139 SIGSEGV with the trigger, green without; full
+> measurements in `known-bugs.md §260`). riscv needed no stack map because its
+> value-stack IS the machine stack (RtB44:15-20); x86 requires the real "root
+> map per frame" of the D-DEV-PRIORITY text. Two honest options (scope: the
+> compiler lane):
+> - **(a) minimal, chosen path — spill-per-live-ref at alloc sites:** the x86
+>   backend, for every `call kof_alloc`, first pushes (or already holds in the
+>   frame) every live heap reference so the conservative mark sees them on the
+>   stack; then the `.Lkof_alloc_maybe_gc` trigger can call `collect_now`
+>   gated on `kof_spawn_count==0` (workers' stacks stay un-scanned — same
+>   sound boundary as today). Cost audit mandatory: `ArtifactSizeTest` grew
+>   32520→38928B just from linking the GC machinery (+19.7% > baseline+5%) —
+>   the link cost is unavoidable once the collector is live (it is the POINT
+>   of the feature); the per-site spill cost must stay within the 5% gate or
+>   the baseline is re-baselined with the maintainer's sign-off, never
+>   silently.
+> - **(b) full stack-map:** per-call-site register/spill map emitted into a
+>   `.rodata` table consumed by `kof_gc_mark`; heavier, compiler-side IR work;
+>   only if (a) proves too coarse.
+> Acceptance (Q3 matrix, not only happy path): (1) cap test green
+> (`gcAutoCollectFitsUnderMemoryCap` pattern, main-only); (2) the two §260
+> repros green (spawn/supervisor + parse native); (3) cross parity riscv/aarch
+> unchanged; (4) `ArtifactSizeTest` decision documented (rebaseline-with-cause
+> or gate held); (5) multi-thread: gate = exact old behavior, face catalogued
+> (worker-stack scan is the NEXT step, never silent).
+Each step: commit with the complete cross suite green + DOING.md on the line.
 > Do NOT mix with S-5-x86/root_end (bugfix queue). G-0/G-1/G-2 move ahead
 > without root_end; **G-3 also advanced** (emits its own riscv `.L`-local
 > markers — did NOT need the x86 `kof_heap_root_end` of S-5); G-4 (sweep+

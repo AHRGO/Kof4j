@@ -9122,3 +9122,55 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   Pointer: native/compiler lane (`.17`/`.18`). Related: §258 (same sweep),
   WEB002/WEB004/WEB003 (the per-function gap-code split precedent this should
   follow).
+
+### §260 — Native x86: auto-collect `kof_gc_collect_now` no gatilho de free-list exausta é INSOUND por temporário em registrador (medição 16/09 — a frente 2 real exige stack-map, não o trigger)
+
+- **Contexto:** frente 2 da fila D-DEV-PRIORITY ("GC auto-collect:
+  safe-points + root map por frame"). A tentativa de 16/09 (lane `.17`)
+  portou o gatilho riscv G-4 (free-list vazia → coletar 1× antes do mmap)
+  para o `kof_alloc` x86 (`.Lkof_alloc_maybe_gc` em `RuntimeMemory.java`)
+  com gate `kof_spawn_count==0` e re-scan da lista nova. **Revertido
+  antes do commit** — a suíte provou insound + caro. Este registro é a
+  MEDIÇÃO (não a opinião):
+- **Medições (host x86, tip com patch + vs. sem patch):**
+  1. **Reuso funciona no caso main-only sem temporário em registrador:**
+     `s = "s"+i` 200k → VmHWM 1536KB (vs. 1201280KB = ~12KB/iter sem
+     coletor); sob `ulimit -v 256M`: exit 1 "out of memory" SEM o patch,
+     exit 0 COM. Ou seja: o mecanismo (collect_now derrama
+     rbx/r12-r15/rbp antes do mark) ESTÁ correto para valores que o
+     backend guarda no frame/pilha.
+  2. **INSOUND real (exit 139 SIGSEGV + stdout truncado):**
+     `KofStringParseTest.toDoubleToFloatContractNativeX86` e
+     `KofSupervisorE2ETest.supervisorNativeParityX86` (139) ficam
+     VERMELHOS com o trigger, verdes sem. Root cause: o backend x86 de
+     chamadas segura temporários vivos em **caller-saved** (`rax/rcx/
+     rdx/rsi/rdi/r8-r11`) no call-site do `kof_alloc` (ex.: o array/
+     String do parse, o bloco do handle no spawn path — o comentário em
+     `RuntimeConcurrency.kof_spawn_handle_new` já documenta que só a
+     ÂNCORA em bss salvou o trampolim); o mark conservador (pilha +
+     `.data/.bss.._end`) não enxerga registrador → sweep libera bloco
+     vivo → uso posterior = SIGSEGV/corrupção. O gate `spawn_count` não
+     cobre isso: é call-site, não thread.
+  3. **Custo de código (gate de tamanho):** `ArtifactSizeTest.helloX86`
+     inchou 32520→38928B (+19.7% > baseline+5%): o `call kof_gc_collect_now`
+     dentro de `kof_alloc` tira a máquina mark/sweep do dead-code e o
+     link estático a puxa para TODO binário. Não é impeditivo — mas prova
+     que hoje NENHUM binário carrega o coletor; liga-lo é decisão de
+     tamanho/valor, não só de som.
+- **Por que riscv pôde e x86 não:** `NativeRiscvAsmRtB44:15-20` mede e
+  documenta a assimetria — na riscv a value-stack É a pilha de máquina
+  e o mark derrama s0-s11; no x86 a máquina é de registradores e só o
+  frame do chamador está na pilha. Copiar o trigger sem o stack-map é
+  copiar meia ideia.
+- **O que a frente 2 REAL exige (face G-6 x86, planejada):** mapa de
+  raízes por frame (ou por call-site do `kof_alloc`): o backend x86
+  registra, em cada call-site, o conjunto de slots de frame/registrador
+  que apontam para heap; `collect_now` passa a varrer o mapa (ou o
+  backend spill permanentemente as referências vivas no frame — a via
+  mais simples, custo: push/pop por temporário). Sem G-6, manter o
+  status-quo honesto: mmap backstop (sem corrupção, memória maior).
+- **Pointer:** `docs/development/native-multiarch.md` §"G-6 x86";
+  fila = D-DEV-PRIORITY frente 2. `kof_gc_collect_now` MANUAL continua
+  exposto e seguro quando chamado sem temporário vivo em registrador.
+- **Status:** 🔴 OPEN 16/09 — catalogued by lane compiler `192.168.100.17`
+  (patch revertido na árvore; medições acima são o artefato).
