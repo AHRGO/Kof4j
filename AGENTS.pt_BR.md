@@ -1084,7 +1084,9 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > o reactor** e **kof-script, kof-c-compiler e kof-cli nunca rodam** — você
 > acha que validou tudo mas só viu o primeiro módulo. O total real com o flag
 > é **2214 testes** (compiler 1907 + script 38 + kof-c 7 + cli 262, medição
-> 16/09 ~11:38 — cresce com cada commit): **0 regressões (1 = o flake intermitente do §252 nativo) / 0 erros** (node agora presente
+> 16/09 ~11:38 — cresce com cada commit): **0 regressões / 0 erros** (a única falha que a
+> suíte já mostrou é o flake intermitente do §252 nativo — calado nesta corrida, disparou às 09:44)
+> (node agora presente
 > no host da medição — o antigo "13 erros = node ausente" não se aplica mais). O §149 JS (`KofRandomTest.randomStringJs`/`randomShapeJs`,
 > regressão do fix §147 no `JsIfThrowElse`) foi **CORRIGIDO 13/09** — a raiz era
 > o parser consumir o label de início do `while` seguinte a um assert/if-throw
