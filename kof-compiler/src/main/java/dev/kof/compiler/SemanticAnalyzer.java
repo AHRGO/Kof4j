@@ -418,34 +418,86 @@ public class SemanticAnalyzer {
      */
     private void checkInterfaceImplementation(ClassDeclarationNode cls, SymbolTable classScope) {
         if (diagnostics == null) return;
-        for (String ifaceName : cls.interfaces()) {
-            SymbolTable.ClassSymbol ifaceSym = knownClasses.get(ifaceName);
-            if (ifaceSym == null || !interfaceNames.contains(ifaceName)) continue;
-            for (Map.Entry<String, SymbolTable.Symbol> e
-                    : ifaceSym.members().localSymbols().entrySet()) {
-                if (!(e.getValue() instanceof SymbolTable.MethodSymbol im)) continue;
-                // #213: métodos default (com corpo) já têm implementação na
-                // interface — a classe implementadora não precisa declará-los.
-                if ((im.accessFlags() & AccessFlags.ABSTRACT) == 0) continue;
-                SymbolTable.Symbol local = classScope.resolve(im.name());
-                if (local instanceof SymbolTable.MethodSymbol cm) {
-                    if (cm.parameterTypes().size() != im.parameterTypes().size()) {
+        // #322: classe ABSTRATA que implementa uma interface pode DEIXAR
+        // métodos da interface sem implementação (o contrato é o mesmo do
+        // Java/JLS 8.4.8.1): quem deve implementá-los é a subclasse CONCRETA.
+        // A obrigação de NÃO ficar em silêncio é transitiva: para classe
+        // concreta, cobramos também as interfaces herdadas dos pais
+        // ABSTRATOS (senão o deferral viraria um AbstractMethodError mudo —
+        // mesma classe de bug da #311, vetada pela regra 6 do freeze/R6).
+        boolean clsAbstract = cls.modifiers().contains("abstract");
+        java.util.List<ClassDeclIfaces> obligations = new java.util.ArrayList<>();
+        obligations.add(new ClassDeclIfaces(cls.interfaces(), null));
+        if (!clsAbstract) {
+            // sobe a cadeia de super-ABSTRATOS (mesma normalização do
+            // checkAbstractClassImplementation: nome simples, sem generics)
+            String curSuper = cls.superClass();
+            java.util.Set<String> seen = new java.util.HashSet<>();
+            seen.add(cls.name());
+            while (curSuper != null && !curSuper.isEmpty() && !"Object".equals(curSuper)) {
+                String simple = curSuper.contains("/")
+                        ? curSuper.substring(curSuper.lastIndexOf("/") + 1) : curSuper;
+                if (simple.contains("<")) simple = simple.substring(0, simple.indexOf("<"));
+                if (!seen.add(simple)) break;
+                SymbolTable.ClassSymbol superSym = knownClasses.get(simple);
+                if (superSym == null) break;
+                if (!abstractClasses.contains(simple)) break;
+                obligations.add(new ClassDeclIfaces(superSym.interfaces(), simple));
+                curSuper = superSym.superClass();
+            }
+        }
+        for (ClassDeclIfaces ob : obligations) {
+            for (String ifaceName : ob.ifaces()) {
+                SymbolTable.ClassSymbol ifaceSym = knownClasses.get(ifaceName);
+                if (ifaceSym == null || !interfaceNames.contains(ifaceName)) continue;
+                for (Map.Entry<String, SymbolTable.Symbol> e
+                        : ifaceSym.members().localSymbols().entrySet()) {
+                    if (!(e.getValue() instanceof SymbolTable.MethodSymbol im)) continue;
+                    // #213: métodos default (com corpo) já têm implementação na
+                    // interface — a classe implementadora não precisa declará-los.
+                    if ((im.accessFlags() & AccessFlags.ABSTRACT) == 0) continue;
+                    SymbolTable.Symbol local = clsAbstract
+                            ? classScope.resolve(im.name())
+                            : MemberResolver.resolveInHierarchy(this, cls.name(), im.name());
+                    // #322: só um método CONCRETO satisfaz a obrigação. O
+                    // walk transitivo via resolveInHierarchy pode devolver a
+                    // PRÓPRIA declaração abstrata da interface (ou um abstract
+                    // de um super abstrato) — isso NÃO implementa nada.
+                    boolean implemented = false;
+                    if (local instanceof SymbolTable.MethodSymbol cm) {
+                        if ((cm.accessFlags() & AccessFlags.ABSTRACT) == 0) {
+                            implemented = true;
+                            if (cm.parameterTypes().size() != im.parameterTypes().size()) {
+                                diagnostics.error("", 0, 0, 0,
+                                        "method '" + im.name() + "' of interface '" + ifaceName
+                                                + "' expects " + im.parameterTypes().size()
+                                                + " parameter(s) but implementation has "
+                                                + cm.parameterTypes().size(),
+                                        "SEM043");
+                            }
+                        }
+                    } else if (local instanceof SymbolTable.MethodSet ms) {
+                        for (SymbolTable.MethodSymbol cm : ms.methods()) {
+                            if ((cm.accessFlags() & AccessFlags.ABSTRACT) == 0) {
+                                implemented = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!implemented && !clsAbstract) {
                         diagnostics.error("", 0, 0, 0,
-                                "method '" + im.name() + "' of interface '" + ifaceName
-                                        + "' expects " + im.parameterTypes().size()
-                                        + " parameter(s) but implementation has "
-                                        + cm.parameterTypes().size(),
+                                "class '" + cls.name() + "' does not implement method '" + im.name()
+                                        + "' of interface '" + ifaceName + "'"
+                                        + (ob.via() != null ? " inherited via '" + ob.via() + "'" : ""),
                                 "SEM043");
                     }
-                } else {
-                    diagnostics.error("", 0, 0, 0,
-                            "class '" + cls.name() + "' implements '" + ifaceName
-                                    + "' but does not implement method '" + im.name() + "'",
-                            "SEM043");
                 }
             }
         }
     }
+
+    /** #322: par (interfaces-declaradas, pai-abstrato-que-as-declarou). */
+    private record ClassDeclIfaces(java.util.List<String> ifaces, String via) {}
 
     private void analyzeInterface(InterfaceDeclarationNode iface) {
         String prevClass = currentClassName;
