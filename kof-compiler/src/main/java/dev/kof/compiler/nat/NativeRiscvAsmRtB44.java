@@ -27,7 +27,7 @@ public final class NativeRiscvAsmRtB44 {
 
     private NativeRiscvAsmRtB44() {}
 
-    static final String RISCV_RUNTIME_ASM_B_44 = """
+    static  String RISCV_RUNTIME_ASM_B_44 = """
             .section .data
             .align 3
             .Lkof_gc_tick: .quad 0

@@ -5,7 +5,7 @@ public final class JsRuntimeUiLayout {
     private JsRuntimeUiLayout() {
     }
 
-    static final String UI_LAYOUT_RUNTIME = """
+    static  String UI_LAYOUT_RUNTIME = """
             // ── Layout primitives (docs/ui/architecture.md §2.8) ──────
             // CSS-first: the framework never computes pixel positions; each
             // primitive maps to a flex/grid CSS pattern.

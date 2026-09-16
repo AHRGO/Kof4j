@@ -7,7 +7,7 @@ public final class NativeRiscvAsmRtB0 {
 
     private NativeRiscvAsmRtB0() {}
 
-    static final String RISCV_RUNTIME_ASM_B_0 = """
+    static  String RISCV_RUNTIME_ASM_B_0 = """
             # kof_string_to_int MOVIDO p/ B30 (bug 79 U3: contrato JDK
             # c/ trim+digito-a-digito+overflow->throw; este corpo silencioso
             # era "abc"=0 / "12a34"=1234 — divergente do JVM).

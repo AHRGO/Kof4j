@@ -14,7 +14,7 @@ package dev.kof.compiler.nat;
 // (7be4fd0a); sem t6 novo (usar t0..t5); blt/bge SIGNED no bounds (S7 wedge).
 public final class NativeRiscvAsmRtB33 {
 
-    static final String RISCV_RUNTIME_ASM_B_33 = """
+    static  String RISCV_RUNTIME_ASM_B_33 = """
 
             .section .text
 

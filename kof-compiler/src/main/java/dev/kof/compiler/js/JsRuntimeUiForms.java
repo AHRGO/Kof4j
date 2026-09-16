@@ -5,7 +5,7 @@ public final class JsRuntimeUiForms {
     private JsRuntimeUiForms() {
     }
 
-    static final String UI_FORMS_RUNTIME = """
+    static  String UI_FORMS_RUNTIME = """
             export function kofUiInputNew(text) {
                 const id = kofUiCreateNode("input", "kof-input");
                 if (id < 0) {

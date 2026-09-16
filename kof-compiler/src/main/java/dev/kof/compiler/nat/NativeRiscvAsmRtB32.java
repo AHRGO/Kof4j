@@ -20,7 +20,7 @@ package dev.kof.compiler.nat;
 //   isDecimal(v)   = !isInteger(v)
 public final class NativeRiscvAsmRtB32 {
 
-    static final String RISCV_RUNTIME_ASM_B_32 = """
+    static  String RISCV_RUNTIME_ASM_B_32 = """
 
             .section .text
 

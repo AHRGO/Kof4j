@@ -10,7 +10,7 @@ final class NativeRiscvAsmRtB38 {
 
     private NativeRiscvAsmRtB38() {}
 
-    static final String RISCV_RUNTIME_ASM_B_38 = """
+    static  String RISCV_RUNTIME_ASM_B_38 = """
             .section .text
 
             # kof_strings_indent(a0=v, a1=n) -> a0=String

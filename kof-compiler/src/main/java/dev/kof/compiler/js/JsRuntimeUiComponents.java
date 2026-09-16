@@ -5,7 +5,7 @@ public final class JsRuntimeUiComponents {
     private JsRuntimeUiComponents() {
     }
 
-    static final String UI_COMPONENT_RUNTIME = """
+    static  String UI_COMPONENT_RUNTIME = """
             // ── Component Core (docs/ui/architecture.md) ─────────────
             // A UI is a tree of components. A Component node carries: identity,
             // state (Int), a view builder, lifecycle hooks, effects (auto-cleaned)

@@ -25,7 +25,7 @@ final class NativeRiscvAsmRtB40 {
 
     private NativeRiscvAsmRtB40() {}
 
-    static final String RISCV_RUNTIME_ASM_B_40 = """
+    static  String RISCV_RUNTIME_ASM_B_40 = """
             .section .text
 
             # ── Double % (§146 cross — §146 x86, #101) ───────────────────

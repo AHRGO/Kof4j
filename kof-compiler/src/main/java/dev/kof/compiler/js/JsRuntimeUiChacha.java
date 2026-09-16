@@ -10,7 +10,7 @@ public final class JsRuntimeUiChacha {
     private JsRuntimeUiChacha() {
     }
 
-    static final String UI_CHACHA_RUNTIME = """
+    static  String UI_CHACHA_RUNTIME = """
             // ── ChaCha20-Poly1305 (D-SEC ratificado 13/09, RFC 8439) ──────
             // Puro JS (o WebCrypto não tem ChaCha20). Envelope idêntico ao
             // JVM/Native: chacha20$<nonceB64(12B)>$<ct+tagB64>. r/s lidos

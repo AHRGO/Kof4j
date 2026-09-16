@@ -23,7 +23,7 @@ package dev.kof.compiler.nat;
 // ⚠ `.section .text` NO TOPO (lição 7be4fd0a).
 public final class NativeRiscvAsmRtB23 {
 
-    static final String RISCV_RUNTIME_ASM_B_23 = """
+    static  String RISCV_RUNTIME_ASM_B_23 = """
 
             .section .text
             # ── encode: std (s7=0, com padding) / url (s7=1, sem padding) ──

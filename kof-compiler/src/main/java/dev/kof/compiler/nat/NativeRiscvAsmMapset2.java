@@ -7,7 +7,7 @@ public final class NativeRiscvAsmMapset2 {
 
     private NativeRiscvAsmMapset2() {}
 
-    static final String RISCV_MAPSET_ASM_2 = """
+    static  String RISCV_MAPSET_ASM_2 = """
             .globl kof_scheduler_cancel
             kof_scheduler_cancel:
                 addi sp, sp, -48

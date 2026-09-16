@@ -7,7 +7,7 @@ public final class NativeRiscvAsmStrn1 {
 
     private NativeRiscvAsmStrn1() {}
 
-    static final String RISCV_STRN002_ASM_1 = """
+    static  String RISCV_STRN002_ASM_1 = """
             .globl kof_string_equals_ignore_case
             kof_string_equals_ignore_case:
                 addi sp, sp, -40

@@ -17,7 +17,7 @@ public final class NativeRiscvAsmRtB30 {
 
     private NativeRiscvAsmRtB30() {}
 
-    private static final String TEMPLATE = """
+    private static  String TEMPLATE = """
             .globl %1$s
             %1$s:
                 addi sp, sp, -64
@@ -118,7 +118,7 @@ public final class NativeRiscvAsmRtB30 {
                 call kof_throw_string
             """;
 
-    static final String RISCV_RUNTIME_ASM_B_30 = """
+    static  String RISCV_RUNTIME_ASM_B_30 = """
             .section .text
 
             # kof_string_to_int(str) -> Int (contrato Integer.parseInt; bug 79)

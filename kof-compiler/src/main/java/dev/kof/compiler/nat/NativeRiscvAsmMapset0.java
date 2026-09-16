@@ -7,7 +7,7 @@ public final class NativeRiscvAsmMapset0 {
 
     private NativeRiscvAsmMapset0() {}
 
-    static final String RISCV_MAPSET_ASM_0 = """
+    static  String RISCV_MAPSET_ASM_0 = """
             .section .text
             # kof_map_new() -> Map*
             .globl kof_map_new

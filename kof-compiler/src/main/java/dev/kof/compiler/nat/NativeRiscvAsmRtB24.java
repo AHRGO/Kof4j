@@ -15,7 +15,7 @@ package dev.kof.compiler.nat;
 // ⚠️ `.section .text` NO TOPO (lição 7be4fd0a).
 public final class NativeRiscvAsmRtB24 {
 
-    static final String RISCV_RUNTIME_ASM_B_24 = """
+    static  String RISCV_RUNTIME_ASM_B_24 = """
 
             .section .text
             .globl kof_net_scheme

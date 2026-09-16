@@ -19,7 +19,7 @@ public final class NativeRiscvAsmRtB42 {
 
     private NativeRiscvAsmRtB42() {}
 
-    static final String RISCV_RUNTIME_ASM_B_42 = """
+    static  String RISCV_RUNTIME_ASM_B_42 = """
             .section .bss
             .align 2
             .Lkof_alloc_lock: .word 0

@@ -6,7 +6,7 @@ package dev.kof.compiler.nat;
 // aarch64 (sem .rodata). Paridade byte-a-byte com RuntimeEncoding.x86.
 public final class NativeRiscvAsmRtB10 {
 
-    static final String RISCV_RUNTIME_ASM_B_10 = """
+    static  String RISCV_RUNTIME_ASM_B_10 = """
 
             .section .text
             # kof_encoding_hexEncode(a0=str) -> String (minúsculo)

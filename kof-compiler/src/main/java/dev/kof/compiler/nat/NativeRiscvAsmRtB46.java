@@ -12,7 +12,7 @@ public final class NativeRiscvAsmRtB46 {
 
     private NativeRiscvAsmRtB46() {}
 
-    static final String RISCV_RUNTIME_ASM_B_46 = """
+    static String RISCV_RUNTIME_ASM_B_46 = """
             # kof_io_strlen(str@a0) -> byte count (sem o NUL). Port RuntimeIo1:53.
             .globl kof_io_strlen
             kof_io_strlen:

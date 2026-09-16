@@ -15,7 +15,7 @@ final class NativeRiscvAsmRtB37 {
 
     private NativeRiscvAsmRtB37() {}
 
-    static final String RISCV_RUNTIME_ASM_B_37 = """
+    static  String RISCV_RUNTIME_ASM_B_37 = """
 
             .section .text
 

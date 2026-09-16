@@ -24,7 +24,7 @@ final class NativeRiscvAsmRtB39 {
 
     private NativeRiscvAsmRtB39() {}
 
-    static final String RISCV_RUNTIME_ASM_B_39 = """
+    static  String RISCV_RUNTIME_ASM_B_39 = """
             .section .rodata
             .align 3
             .Lc2s_lbr:   .ascii "["

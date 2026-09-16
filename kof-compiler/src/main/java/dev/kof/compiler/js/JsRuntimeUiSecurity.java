@@ -5,7 +5,7 @@ public final class JsRuntimeUiSecurity {
     private JsRuntimeUiSecurity() {
     }
 
-    static final String UI_SECURITY_RUNTIME = """
+    static  String UI_SECURITY_RUNTIME = """
             // ── kof.security (docs/stdlib/security.md §5) ────────────────────
 
             function kofSecBytesToHex(bytes) {

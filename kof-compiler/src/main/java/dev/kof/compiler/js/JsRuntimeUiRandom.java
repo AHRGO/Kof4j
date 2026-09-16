@@ -10,7 +10,7 @@ public final class JsRuntimeUiRandom {
 
     private JsRuntimeUiRandom() {}
 
-    static final String RANDOM_RUNTIME = """
+    static  String RANDOM_RUNTIME = """
 
             // kof.random (STDLIB S10a) — face não-críptográfica. Entropia do
             // SO: kof_platform (SecureRandom no runner Node); no browser o

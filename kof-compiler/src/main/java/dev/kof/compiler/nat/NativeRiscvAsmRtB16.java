@@ -13,7 +13,7 @@ package dev.kof.compiler.nat;
 // ⚠️ `.section .text` NO TOPO (lição 7be4fd0a).
 public final class NativeRiscvAsmRtB16 {
 
-    static final String RISCV_RUNTIME_ASM_B_16 = """
+    static  String RISCV_RUNTIME_ASM_B_16 = """
 
             .section .text
             # kof_validation_isIpv4(a0=str) -> a0 0/1

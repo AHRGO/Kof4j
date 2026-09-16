@@ -13,7 +13,7 @@ package dev.kof.compiler.nat;
 // ⚠️ `.section .text` NO TOPO (lição do bug .rodata herdado, fix 7be4fd0a).
 public final class NativeRiscvAsmRtB13 {
 
-    static final String RISCV_RUNTIME_ASM_B_13 = """
+    static  String RISCV_RUNTIME_ASM_B_13 = """
 
             .section .text
             # kof_time_isLeapYear(a0=year) -> 0/1

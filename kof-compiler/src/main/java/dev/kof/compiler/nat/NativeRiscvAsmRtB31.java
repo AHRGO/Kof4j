@@ -17,7 +17,7 @@ public final class NativeRiscvAsmRtB31 {
 
     private NativeRiscvAsmRtB31() {}
 
-    static final String RISCV_RUNTIME_ASM_B_31 = """
+    static  String RISCV_RUNTIME_ASM_B_31 = """
             .section .text
 
             # kof_string_to_double(str) -> Double (raw bits em a0; contrato

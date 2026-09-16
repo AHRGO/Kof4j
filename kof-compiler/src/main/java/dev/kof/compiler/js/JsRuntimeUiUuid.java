@@ -11,7 +11,7 @@ public final class JsRuntimeUiUuid {
 
     private JsRuntimeUiUuid() {}
 
-    static final String UUID_RUNTIME = """
+    static  String UUID_RUNTIME = """
 
             // ── kof.uuid (STDLIB S3b / S3b.2) ──────────────────────────────
             // v4: kof_platform.randomBytesHex (16 B) -> RFC 4122

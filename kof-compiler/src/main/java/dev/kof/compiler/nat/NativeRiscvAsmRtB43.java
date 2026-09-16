@@ -33,7 +33,7 @@ public final class NativeRiscvAsmRtB43 {
 
     private NativeRiscvAsmRtB43() {}
 
-    static final String RISCV_RUNTIME_ASM_B_43 = """
+    static  String RISCV_RUNTIME_ASM_B_43 = """
             .section .text
             # kof_gc_try_mark(ptr@a0): se ptr aponta para o PAYLOAD de um
             # bloco da gc-list e está dentro do heap, seta bit0 (mark).

@@ -5,7 +5,7 @@ public final class JsRuntimeUiCrypto {
     private JsRuntimeUiCrypto() {
     }
 
-    static final String UI_CRYPTO_RUNTIME = """
+    static  String UI_CRYPTO_RUNTIME = """
             // ── AES-256-GCM (SECN002 fechado 01/09) ───────────────────
             // Puro JS (roda no GraalJS e no browser). Formato idêntico ao
             // JVM/Native: aesgcm$<ivB64>$<ct||tagB64>, key 32 bytes (64 hex),

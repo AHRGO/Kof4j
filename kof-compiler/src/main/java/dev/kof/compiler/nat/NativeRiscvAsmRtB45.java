@@ -32,7 +32,7 @@ public final class NativeRiscvAsmRtB45 {
 
     private NativeRiscvAsmRtB45() {}
 
-    static final String RISCV_RUNTIME_ASM_B_45 = """
+    static  String RISCV_RUNTIME_ASM_B_45 = """
             .section .rodata
             .Ldtf_fmt_sci:  .asciz "%.*e"
             .Ldtf_fmt_fix:  .asciz "%.*f"

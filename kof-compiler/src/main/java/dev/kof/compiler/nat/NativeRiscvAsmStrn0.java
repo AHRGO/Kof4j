@@ -7,7 +7,7 @@ public final class NativeRiscvAsmStrn0 {
 
     private NativeRiscvAsmStrn0() {}
 
-    static final String RISCV_STRN002_ASM_0 = """
+    static  String RISCV_STRN002_ASM_0 = """
             # ---- STRN002: String methods riscv64 (char-loops, sem FP) ----
             # kof_string_trim(str@a0) -> str
             .globl kof_string_trim

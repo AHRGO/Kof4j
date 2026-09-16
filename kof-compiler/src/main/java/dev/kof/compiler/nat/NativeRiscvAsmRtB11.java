@@ -8,7 +8,7 @@ package dev.kof.compiler.nat;
 // add/addi/sub/andi/or/slli/srli/lbu/sb/lw/sw/la/j/ret (sem bleu — inexistente).
 public final class NativeRiscvAsmRtB11 {
 
-    static final String RISCV_RUNTIME_ASM_B_11 = """
+    static  String RISCV_RUNTIME_ASM_B_11 = """
 
             .section .text
             # kof_encoding_urlEncode(a0=str) -> String (pior caso 3*len)

@@ -8,7 +8,7 @@ public final class JsRuntimeUiWs {
 
     private JsRuntimeUiWs() {}
 
-    static final String WS_RUNTIME = """
+    static  String WS_RUNTIME = """
 
             // ── kof.strings (STDLIB S3.2) — whitespace ──────────────────
             function kofIsWsC(c) { return c === 32 || (c >= 9 && c <= 13); }

@@ -9,7 +9,7 @@ final class JsRuntimeUiStdlib {
 
     private JsRuntimeUiStdlib() {}
 
-    static final String STDLIB_RUNTIME = """
+    static  String STDLIB_RUNTIME = """
             // ── kof.math (STDLIB S1) — Int-only, paridade JVM/Native ─────
             export function kofMathAbs(v) { return v < 0 ? -v : v; }
             export function kofMathSign(v) { return v > 0 ? 1 : (v < 0 ? -1 : 0); }

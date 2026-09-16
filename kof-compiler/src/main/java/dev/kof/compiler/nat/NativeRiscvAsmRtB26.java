@@ -11,7 +11,7 @@ package dev.kof.compiler.nat;
 // ⚠️ `.section .text` NO TOPO (lição 7be4fd0a).
 public final class NativeRiscvAsmRtB26 {
 
-    static final String RISCV_RUNTIME_ASM_B_26 = """
+    static  String RISCV_RUNTIME_ASM_B_26 = """
 
             .section .text
             .globl kof_strings_escapeJson

@@ -19,7 +19,7 @@ final class NativeRiscvAsmRtB34 {
 
     private NativeRiscvAsmRtB34() {}
 
-    static final String RISCV_RUNTIME_ASM_B_34 = """
+    static  String RISCV_RUNTIME_ASM_B_34 = """
             .section .rodata
             .Lu9_sa_msg: .asciz "Runtime error: substring cannot split an astral code point (native UTF-16 face pending, known-bugs 43)\\n"
             .section .text

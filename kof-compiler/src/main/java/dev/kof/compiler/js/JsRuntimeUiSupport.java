@@ -5,7 +5,7 @@ public final class JsRuntimeUiSupport {
     private JsRuntimeUiSupport() {
     }
 
-    static final String UI_SUPPORT_RUNTIME = """
+    static  String UI_SUPPORT_RUNTIME = """
             export const kofMqSubs = new Map();
             export const kofMqQueues = new Map();
             export let kofMqSeq = 0;

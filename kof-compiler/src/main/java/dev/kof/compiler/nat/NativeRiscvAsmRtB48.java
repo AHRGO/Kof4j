@@ -16,7 +16,7 @@ public final class NativeRiscvAsmRtB48 {
 
     private NativeRiscvAsmRtB48() {}
 
-    static final String RISCV_RUNTIME_ASM_B_48 = """
+    static String RISCV_RUNTIME_ASM_B_48 = """
             # ---- CONC001: cancel por TID real + helpers (port RuntimeConcurrency) ----
             # tabela 256 entries de 16B [tid(8), flag(8)], chave = gettid(178),
             # probe linear a partir do hash phi; tid=0 = vazio.
