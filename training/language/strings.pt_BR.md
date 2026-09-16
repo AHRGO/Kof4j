@@ -22,7 +22,8 @@ println(s.length)  // 5
 ### Character Access
 ```kof
 var s = "Hello"
-println(s.charAt(0))  // 72 (H)
+println(s.charAt(0))       // H (o caractere)
+println(s.charAt(0) as Int) // 72 (o code point, explícito)
 ```
 
 ### Substring

@@ -33,6 +33,32 @@ public final class ExpressionBinaryLowerer {
         return "<<".equals(op) || ">>".equals(op) || ">>>".equals(op);
     }
 
+    /**
+     * Stringifica um operando de concatenação. D-PRINT (#168, manterdora
+     * 15/09): um `Char` vira o CARÁTER ("A"), nunca o code point ("65") — a
+     * face numérica de §216 face 2 está SUPERSEDED (regra 4). Usa o overload
+     * `String.valueOf(char)` (descritor (C)) com o valor int-width já na
+     * pilha, sem boxear; nos 4 alvos o dispatch `valueOf(C)` é o mesmo de
+     * `String.valueOf(c)` (§27). Os demais primitivos mantêm o box.
+     */
+    private static void emitOperandToString(CompilerDriver driver, List<KofOperation> ops, Type type) {
+        Type check = type instanceof Type.NullableType nt ? nt.inner() : type;
+        boolean isChar = check instanceof Type.PrimitiveType p
+                && "char".equals(Type.canonicalPrimitiveName(p.name()));
+        if (isChar) {
+            ops.add(new KofCall(BuiltinTypes.STRING, "valueOf",
+                    List.of(Type.PrimitiveType.CHAR), BuiltinTypes.STRING, KofCallKind.STATIC));
+            return;
+        }
+        boolean stringified = !Type.isString(type) && TypeMetrics.isPrimitiveType(type);
+        if (stringified) TypeEmitter.boxPrimitive(ops, type);
+        ops.add(new KofCall(BuiltinTypes.STRING, "valueOf",
+                List.of(driver.target.isNative() && !stringified && !Type.isString(type)
+                        && !(type instanceof Type.PrimitiveType)
+                        ? type : Type.UnknownType.UNKNOWN),
+                BuiltinTypes.STRING, KofCallKind.STATIC));
+    }
+
     static int lower(CompilerDriver driver, BinaryExpr bin, List<KofOperation> ops,
                         String owner, int localIdx, List<IRLocalVariable> locals) {
 if ("instanceof".equals(bin.operator()) || "as".equals(bin.operator())) {
@@ -265,21 +291,9 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
         // stringuificava DE NOVO o ponteiro da String = lixo. Mesmo guard
         // nos dois lados: se o box já rodou, o valueOf externo é no-op
         // (UNKNOWN).
-        boolean accStringified = !Type.isString(accType) && TypeMetrics.isPrimitiveType(accType);
-        if (accStringified) TypeEmitter.boxPrimitive(ops, accType);
-        ops.add(new KofCall(BuiltinTypes.STRING, "valueOf",
-                List.of(driver.target.isNative() && !accStringified && !Type.isString(accType)
-                        && !(accType instanceof Type.PrimitiveType)
-                        ? accType : Type.UnknownType.UNKNOWN),
-                BuiltinTypes.STRING, KofCallKind.STATIC));
+        emitOperandToString(driver, ops, accType);
         localIdx = ExpressionLowerer.emitExpression(driver, be.right(), ops, owner, localIdx, locals);
-        boolean rightStringified = !Type.isString(rightType) && TypeMetrics.isPrimitiveType(rightType);
-        if (rightStringified) TypeEmitter.boxPrimitive(ops, rightType);
-        ops.add(new KofCall(BuiltinTypes.STRING, "valueOf",
-                List.of(driver.target.isNative() && !rightStringified && !Type.isString(rightType)
-                        && !(rightType instanceof Type.PrimitiveType)
-                        ? rightType : Type.UnknownType.UNKNOWN),
-                BuiltinTypes.STRING, KofCallKind.STATIC));
+        emitOperandToString(driver, ops, rightType);
         ops.add(new KofCall(BuiltinTypes.STRING, "kof_string_concat",
                 List.of(BuiltinTypes.STRING, BuiltinTypes.STRING),
                 BuiltinTypes.STRING, KofCallKind.FUNCTION));

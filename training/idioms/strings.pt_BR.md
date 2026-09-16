@@ -14,7 +14,7 @@ conteúdo com `==`/`!=`, e uma API de métodos direta.
 ```kof
 var s = "Hello World"
 s.length                    // 11 (propriedade; s.length() também é aceito)
-s.charAt(1)                 // 'e' como valor numérico (101)
+s.charAt(1)                 // 'e' (um Char; imprime o caractere, `101` via `as Int`)
 s.substring(6)              // "World"
 s.substring(0, 5)           // "Hello"
 s.contains("World")

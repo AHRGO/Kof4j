@@ -135,7 +135,7 @@ for (var n in items) {
 ```kof
 var s = "Hello World"
 println(s.length)           // 11
-println(s.charAt(0))        // 72 (H)
+println(s.charAt(0))        // H (the character)
 println(s.substring(0, 5))  // "Hello"
 println(s.contains("World")) // true
 println(s.startsWith("Hello")) // true

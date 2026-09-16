@@ -81,7 +81,8 @@ if (done(r)) {
 - `done(r)` → `Bool`.
 - `poll`/`done` work on JVM, JS and Native x86_64 (on JS execution is
   sequential, so `poll` always has the value and `done` is `true`); on
-  riscv64/aarch64 they do not exist (see the gaps table below).
+  riscv64/aarch64 they also work since 15/09 (CONC001 closed — see the gaps
+  table below).
 
 ## Exceptions cross await
 
@@ -137,8 +138,8 @@ println(selectAny(a, b))   // value of the fast one
 
 It blocks until **any** handle completes and returns its value. On JS it is
 `Promise.race` over the handles (`js/JsRuntimeUiLayout.java:304`); on Native
-x86_64 it works by 1 ms polling over the handles; on riscv64/aarch64 it
-does not exist.
+x86_64 it works by 1 ms polling over the handles; on riscv64/aarch64 it also
+works since 15/09 (CONC001 closed).
 
 ## Semantics
 

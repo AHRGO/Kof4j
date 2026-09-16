@@ -82,7 +82,8 @@ if (done(r)) {
 - `done(r)` → `Bool`.
 - `poll`/`done` funcionam em JVM, JS e Native x86_64 (no JS a execução é
   sequencial, então `poll` sempre tem o valor e `done` é `true`); em
-  riscv64/aarch64 não existem (ver a tabela de gaps abaixo).
+  riscv64/aarch64 também funcionam desde 15/09 (CONC001 fechado — ver a
+  tabela de gaps abaixo).
 
 ## Exceções atravessam await
 
@@ -139,7 +140,7 @@ println(selectAny(a, b))   // valor da rapida
 Bloqueia até **qualquer** handle completar e devolve o valor dele. No JS é
 `Promise.race` sobre os handles (`js/JsRuntimeUiLayout.java:304`); no Native
 x86_64 funciona por polling de 1 ms sobre os handles; em riscv64/aarch64
-não existe.
+também funciona desde 15/09 (CONC001 fechado).
 
 ## Semântica
 

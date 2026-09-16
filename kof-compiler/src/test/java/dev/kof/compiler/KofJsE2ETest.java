@@ -605,7 +605,7 @@ class KofJsE2ETest {
             ab1
             true
             true
-            101
+            e
             2
             World""");
     }

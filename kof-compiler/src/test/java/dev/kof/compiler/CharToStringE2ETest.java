@@ -98,11 +98,11 @@ class CharToStringE2ETest {
     }
 
     @Test
-    void printlnAndConcatOfCharStayNumericFrozenContract(@TempDir Path tempDir) throws IOException {
-        // regra 6: a stringificação IMPLÍCITA de char continua numérica — é o
-        // contrato congelado (strings.md:25). Este teste PROÍBE o fix de toString
-        // de vazar para println/concat.
-        Path src = tempDir.resolve("fz.kf");
+    void printlnAndConcatOfCharPrintTheCharacter(@TempDir Path tempDir) throws IOException {
+        // D-PRINT (#168, mantenedora 15/09): a stringificação IMPLÍCITA de
+        // char imprime o CARÁTER, não o code point — supersede a face numérica
+        // de §216 face 2 (regra 4: remove saída silenciosamente errada).
+        Path src = tempDir.resolve("dp.kf");
         Files.writeString(src, """
                 main() {
                     var a = 'A'
@@ -110,11 +110,11 @@ class CharToStringE2ETest {
                     println("char=" + a)
                 }
                 """);
-        Path out = tempDir.resolve("fz-jvm");
+        Path out = tempDir.resolve("dp-jvm");
         CompilationResult r = driver.compile(src, out, Target.JVM);
         assertTrue(r.success(), "compilar: " + r.diagnostics().getDiagnostics());
-        assertEquals("65\nchar=65", runJvm(out),
-                "println(char)/concat são numéricos por contrato — não devem mudar");
+        assertEquals("A\nchar=A", runJvm(out),
+                "println(char)/concat imprimem o caractere (D-PRINT)");
     }
 
     @Test
@@ -141,8 +141,10 @@ class CharToStringE2ETest {
 
     @Test
     void charInCollectionStillBoxesAsInteger(@TempDir Path tempDir) throws IOException {
-        // §216: o box de char em coleção continua Integer — o fix é SÓ no
-        // toString(), não pode ter movido JvmOpCollections.
+        // §216/§104b-ii: o STORAGE de char em coleção continua Integer boxed
+        // (o D-PRINT não moveu JvmOpCollections). Mas o println de um Char —
+        // inclusive vindo de coleção (get devolve Char/Char?) — imprime o
+        // CARÁTER (D-PRINT, mantenedora 15/09), não o code point.
         Path src = tempDir.resolve("col.kf");
         Files.writeString(src, """
                 main() {
@@ -156,7 +158,7 @@ class CharToStringE2ETest {
         Path out = tempDir.resolve("col-jvm");
         CompilationResult r = driver.compile(src, out, Target.JVM);
         assertTrue(r.success(), "compilar: " + r.diagnostics().getDiagnostics());
-        assertEquals("65\n65", runJvm(out),
-                "char em coleção ainda é Integer (65) — contrato §104b-ii intacto");
+        assertEquals("A\nA", runJvm(out),
+                "char em coleção continua boxed Integer, mas o println imprime o caractere (D-PRINT)");
     }
 }

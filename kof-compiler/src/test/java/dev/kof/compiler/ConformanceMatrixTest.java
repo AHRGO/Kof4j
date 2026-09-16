@@ -183,7 +183,7 @@ class ConformanceMatrixTest {
                     println(l as Int)
                     println(66 as Char)
                 }
-                """, "9\n70000\n66", Set.of(), tempDir);
+                """, "9\n70000\nB", Set.of(), tempDir);
         // §110 (paridade absoluta, JVM literal-emitter): -0.0 em JVM virava
         // +0.0 — `emitLoadDouble`/`emitLoadFloat` testavam `value == 0.0`,
         // e IEEE casa -0.0 == 0.0 → DCONST_0 colapsava o sinal (literal
@@ -374,7 +374,7 @@ class ConformanceMatrixTest {
                     val miss = mapOf("x", true).get("nope")
                     println(miss)
                 }
-                """, "true\ntrue\n8\n9000000001\ntrue\n97\nfalse", Set.of(), tempDir);
+                """, "true\ntrue\n8\n9000000001\ntrue\na\nfalse", Set.of(), tempDir);
 
         // §125 (decisão da mantenedora 12/09, opção A): println de função
         // Nullable(primitivo) que RETORNA null imprime o DEFAULT do primitivo
@@ -1204,14 +1204,14 @@ class ConformanceMatrixTest {
                     println(s.charAt(3))
                     println(s + "!")
                 }
-                """, "4\n233\ncafé!", Set.of(), tempDir);
+                """, "4\né\ncafé!", Set.of(), tempDir);
         matrix("unicode-astral", """
                 main() {
                     var e = "a😀b"
                     println(e.length)
-                    println(e.charAt(1))
-                    println(e.charAt(2))
-                    println(e.charAt(3))
+                    println(e.charAt(1) as Int)
+                    println(e.charAt(2) as Int)
+                    println(e.charAt(3) as Int)
                 }
                 """, "4\n55357\n56832\n98", Set.of(), tempDir);
         // bug 43 (substring face, 10/09) — code units UTF-16, paridade 4
@@ -1616,7 +1616,7 @@ class ConformanceMatrixTest {
                     println(b[0])
                     println(b[1])
                 }
-                """, "65\n66\ntrue\nfalse", Set.of("script"), tempDir);
+                """, "A\nB\ntrue\nfalse", Set.of("script"), tempDir);
         // §186 (13/09): inicializador de campo `static` NÃO-literal. O
         // front-end só levava `LiteralExpr` direto ao `initialValue`; `-1`
         // (unário) e `2 + 3` (binário dobrado) ficavam de fora e, no JVM,
@@ -1660,13 +1660,13 @@ class ConformanceMatrixTest {
                     var c = new Char[2]
                     c[0] = 70000
                     c[1] = -1
-                    println(c[0])
-                    println(c[1])
+                    println(c[0] as Int)
+                    println(c[1] as Int)
                     var d = new Char[2][2]
                     d[0][0] = 70000
                     d[1][1] = -1
-                    println(d[0][0])
-                    println(d[1][1])
+                    println(d[0][0] as Int)
+                    println(d[1][1] as Int)
                     var s = new Short[1]
                     s[0] = -1
                     println(s[0])

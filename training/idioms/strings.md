@@ -14,7 +14,7 @@ comparison with `==`/`!=`, and a direct method API.
 ```kof
 var s = "Hello World"
 s.length                    // 11 (property; s.length() is also accepted)
-s.charAt(1)                 // 'e' as a numeric value (101)
+s.charAt(1)                 // 'e' (a Char; prints as the character, `101` via `as Int`)
 s.substring(6)              // "World"
 s.substring(0, 5)           // "Hello"
 s.contains("World")

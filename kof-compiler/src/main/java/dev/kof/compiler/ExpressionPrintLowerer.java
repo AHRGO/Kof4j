@@ -58,10 +58,25 @@ if (("print".equals(mc.methodName()) || "println".equals(mc.methodName())) && mc
                 KofCallKind.INSTANCE));
     } else if (TypeMetrics.isPrimitiveType(argType)
             && !ExpressionTyper.boxesOwnBranches(driver, mc.arguments().get(0), locals)) {
-        if (driver.target.isNative()) {
-            // println(char) é NUMÉRICO (congelado: strings.md
-            // "72 (H)" + execStringCharAt). valueOf(char) solto
-            // é o caractere UTF-8 (common-mistakes.md "h").
+        // D-PRINT (#168, maintainer 15/09): `println(Char)` imprime o
+        // CARÁTER ("A"), nunca o code point ("65"), com ou sem aspas — a
+        // antiga face numérica de §216 face 2 está SUPERSEDED (regra 4:
+        // remove saída silenciosamente errada). Vale para os 4 alvos: o
+        // `valueOf(C)` é o MESMO overload que `String.valueOf(c)` já usa e
+        // que o `.toString()` de char usa (§27). O valor na pilha de um
+        // `char` é int-width em todos os alvos (literal, `charAt`, storage
+        // de coleção §104b-ii — que segue boxado como Integer, NÃO tocado):
+        // reinterpretar como C é seguro. `Nullable(char)` desembrulha p/ a
+        // checagem (get de Map devolve Nullable).
+        Type charCheck = argType instanceof Type.NullableType nt ? nt.inner() : argType;
+        boolean isCharPrimitive = charCheck instanceof Type.PrimitiveType p
+                && "char".equals(Type.canonicalPrimitiveName(p.name()));
+        if (isCharPrimitive) {
+            ops.add(new KofCall(
+                    BuiltinTypes.STRING,
+                    "valueOf", List.of(Type.PrimitiveType.CHAR),
+                    BuiltinTypes.STRING, KofCallKind.STATIC));
+        } else if (driver.target.isNative()) {
             // O dispatch nativo do valueOf decide pelo tipo do
             // parâmetro — aqui mapeia char→Int para imprimir o
             // codepoint sem quebrar String.valueOf(char).
@@ -70,10 +85,7 @@ if (("print".equals(mc.methodName()) || "println".equals(mc.methodName())) && mc
             // dispatch; sem desembrulhar, char-em-coleção caía no
             // ramo char_to_string ("a") ou, Unknown, em nada
             // (raw int → println_string → SIGSEGV).
-            Type charCheck = argType instanceof Type.NullableType nt ? nt.inner() : argType;
-            boolean mapCharToInt = charCheck instanceof Type.PrimitiveType p
-                    && "char".equals(Type.canonicalPrimitiveName(p.name()));
-            Type nativeArg = mapCharToInt ? Type.PrimitiveType.INT : argType;
+            Type nativeArg = argType;
             ops.add(new KofCall(
                     BuiltinTypes.STRING,
                     "valueOf", List.of(nativeArg),
