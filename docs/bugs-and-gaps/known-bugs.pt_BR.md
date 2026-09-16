@@ -6532,7 +6532,9 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
 - **Impacto:** qualquer Kof que grave/leia `Char[]` com valor fora de
   `[0,65535]` produz valor diferente no Native e no JS (silencioso, regra 5).
 - **Fix proposto (lane JS):** o mesmo do §184 (tag de tipo no
-  `kofArraySet`/`Get`). Face **JS segue ABERTA**.
+  `kofArraySet`/`Get`). ~~Face JS segue ABERTA.~~ **(SUPERADO — ✅ CORRIGIDA
+  15/09 lane compiler `192.168.100.22`: `kofArraySet` kind char→`& 0xFFFF`;
+  ver o cabeçalho da seção.)**
 - **Provas a adicionar:** célula de matriz `charnarrow` (JVM DONE; Native/
   Script/JS PARTIAL — Script cai no §185) + testes cross.
 - **Nota de escopo:** a face JS já é o mesmo defeito do §184; registrada

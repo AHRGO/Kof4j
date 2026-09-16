@@ -6544,7 +6544,9 @@ to the label) is the correct predicate and **was already used** in `parseStateme
 - **Impact:** any Kof that writes/reads `Char[]` with a value outside
   `[0,65535]` produces a different value on Native and on JS (silent, rule 5).
 - **Proposed fix (JS lane):** the same as §184 (type tag in
-  `kofArraySet`/`Get`). **JS face remains OPEN**.
+  `kofArraySet`/`Get`). ~~JS face remains OPEN.~~ **(SUPERSEDED — ✅ FIXED
+  15/09 lane compiler `192.168.100.22`: `kofArraySet` kind char→`& 0xFFFF`;
+  see the section header.)**
 - **Proofs to add:** matrix cell `charnarrow` (JVM DONE; Native/
   Script/JS PARTIAL — Script falls into §185) + cross tests.
 - **Scope note:** the JS face is already the same defect as §184; recorded
