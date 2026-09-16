@@ -933,6 +933,59 @@ The final decision on the semantics remains recorded in this section before chan
 
 ---
 
+## D-VALUE-RECORD — value records / first-class value types
+
+**Date:** 2026-09-16
+
+**State:** `DECIDED`
+
+**Origin:** issue #275 (feature proposal).
+
+### Context
+
+Kof already has concise immutable `record` (e.g. `record Vec2(Float x, Float y)`),
+but has no way to explicitly declare that a user-defined aggregate has
+**value semantics and no object identity**. For small data-oriented types
+(vectors, coordinates, colors, ranges, parser tokens, iterator state),
+requiring a separate object allocation adds allocation pressure, GC work,
+indirection and worse cache locality. Relying on JVM escape analysis does not
+express intent and does not hold across the Native/JS backends.
+
+### Decision
+
+The suggestion is **accepted**: add an entry to the implementation queue in
+`docs/development/future/` for future engineering and development of a value
+form of `record` (`value record`).
+
+### Contract
+
+* A `value record` has the same concise immutable data-model as an existing
+  Kof record, but explicitly no observable object identity.
+* Equality/hash by fields (already the record contract).
+* Additive and backward compatible: ordinary `record` retains its existing
+  semantics; existing code keeps compiling and running (rule 2).
+* Per-target ABI is an explicit scope decision before code (R7 honest scope):
+  JVM → value/inline class; Native → pass-by-value (struct by value/registers);
+  JS → plain frozen object.
+* Boundary: core stdlib, not an official package (R1).
+
+### Status
+
+Planned only — **not current development**. No implementation in progress.
+Lanes must not open this front without a new authorization (rule 6 / R12:
+new fronts do not open before the SYSTEMS stage closes).
+
+### Implementation
+
+Queue entry added to `docs/development/roadmap.md` §23 (TIER 2) and this
+decision recorded; engineering scheduled for the future queue.
+
+### Relationships
+
+* `Related:` #275 (issue)
+
+---
+
 # 4. Rejected or superseded decisions
 
 This section is historical. It does not define current behavior.

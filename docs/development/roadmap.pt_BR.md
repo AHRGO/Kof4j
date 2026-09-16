@@ -919,6 +919,21 @@ REVOGADA). Lane: **compiler** (contrato nos 4 backends — não a lane docs).
 | 2.6.2 | **N2** — Native: null real via ABI de box tagged §104b-ii | box `typeId=3` + `object_to_string`/unbox com dispatch; x86 à mão + riscv à mão + aarch64 via tradutor | §104b-ii / §205 fatia 2 dividem este ABI |
 | 2.6.3 | **N3** — `== null` em NÃO-nullable: legal, constant-foldable, NUNCA diagnóstico | a intenção é a própria comparação; regra 2 (retrocompat): código existente que compara continua compilando | N1 |
 | 2.6.4 | **N4** — auditar as faces restantes de null silencioso | map-miss `0` (SG-008), campo não-inicializado `0`, unbox-de-null `0` — cada um ganha decisão ou diagnóstico honesto (R6) | N1–N3 |
+
+#### 2.7 — Value records / tipos de valor de primeira classe (fila de `D-VALUE-RECORD`, 16/09)
+
+**Decidido pela mantenedora 16/09** (registro: `DECISIONS.md` §D-VALUE-RECORD;
+origem issue #275). Aditivo, retrocompatível. **Apenas planejado — não é
+trabalho atual** (R12: frentes novas não abrem antes de o estágio SYSTEMS
+fechar; lanes não devem atacar sem nova autorização).
+
+| # | Etapa | Escopo (uma linha) | Depende de |
+|---|-------|--------------------|------------|
+| 2.7.1 | **keyword `value` no front-end** | `value record Name(campos)` faz parse e tipagem como `record` + modificador `value`; sem semântica de identidade ainda | — |
+| 2.7.2 | **ABI JVM** | mapeamento value/inline class (`invokevirtual` com semântica de valor, sem identidade `Object`) | 2.7.1 |
+| 2.7.3 | **ABI Native** | passagem por valor (struct por valor / registradores) | 2.7.1 |
+| 2.7.4 | **ABI JS** | objeto congelado comum (sem identidade) | 2.7.1 |
+| 2.7.5 | **paridade + docs** | células de conformidade `valuerecord` + matriz de paridade + `training/` + `learn/` | 2.7.1–2.7.4 |
 ### TIER 3–5 — Plataforma de migração legado (Fases A–H) ✅ código+testes
 
 `kof inspect/decompile/translate/compare/migrate` no CLI (`Main.java`);

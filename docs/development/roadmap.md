@@ -919,6 +919,21 @@ Lane: **compiler** (contract on the 4 backends — not the docs lane).
 | 2.6.2 | **N2** — Native: real null via the tagged-box ABI §104b-ii | `typeId=3` box + `object_to_string`/unbox dispatch; x86 hand-written + riscv hand-written + aarch64 via translator | §104b-ii / §205 slice 2 share this ABI |
 | 2.6.3 | **N3** — `== null` on a NON-nullable: legal, constant-foldable, NEVER a diagnostic | intent reads the comparison itself; rule 2 (backward compat): existing code that compares keeps compiling | N1 |
 | 2.6.4 | **N4** — audit the remaining silent-null faces | map-miss `0` (SG-008), uninitialized field `0`, unbox-of-null `0` — each gets a decision or an honest diagnostic (R6) | N1–N3 |
+
+#### 2.7 — Value records / first-class value types (queue of `D-VALUE-RECORD`, 16/09)
+
+**Decided by the maintainer 16/09** (record: `DECISIONS.md` §D-VALUE-RECORD;
+origin issue #275). Additive, backward compatible. **Planned only — not
+current work** (R12: new fronts do not open before the SYSTEMS stage closes;
+lanes must not attack without new authorization).
+
+| # | Step | Scope (one line) | Depends on |
+|---|------|------------------|------------|
+| 2.7.1 | **front-end `value` keyword** | `value record Name(fields)` parses and types like `record` + `value` modifier; no identity semantics yet | — |
+| 2.7.2 | **JVM ABI** | value/inline class mapping (`invokevirtual` value semantics, no `Object` identity) | 2.7.1 |
+| 2.7.3 | **Native ABI** | pass-by-value (struct by value / registers) | 2.7.1 |
+| 2.7.4 | **JS ABI** | plain frozen object (no identity) | 2.7.1 |
+| 2.7.5 | **parity + docs** | conformance cells `valuerecord` + parity matrix + `training/` + `learn/` | 2.7.1–2.7.4 |
 ### TIER 3–5 — Legacy migration platform (Phases A–H) ✅ code+tests
 
 `kof inspect/decompile/translate/compare/migrate` in the CLI (`Main.java`);

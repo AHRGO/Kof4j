@@ -889,6 +889,59 @@ A decisão final sobre a semântica permanece registrada nesta seção antes da 
 
 ---
 
+## D-VALUE-RECORD — value records / tipos de valor de primeira classe
+
+**Data:** 16/09/2026
+
+**Estado:** `DECIDED`
+
+**Origem:** issue #275 (proposta de feature).
+
+### Contexto
+
+Kof já tem `record` imutável conciso (ex. `record Vec2(Float x, Float y)`),
+mas não tem como declarar explicitamente que um agregado definido pelo usuário
+tem **semântica de valor e sem identidade de objeto**. Para tipos pequenos
+orientados a dados (vetores, coordenadas, cores, intervalos, tokens de parser,
+estado de iterador), exigir uma alocação de objeto separada adiciona pressão
+de alocação, trabalho de GC, indireção e pior localidade de cache. Depender de
+escape analysis do JVM não expressa intenção e não vale nos backends Native/JS.
+
+### Decisão
+
+A sugestão foi **aceita**: adicionar uma entrada na fila de implementação em
+`docs/development/future/` para engenharia e desenvolvimento futuros de uma
+forma de valor de `record` (`value record`).
+
+### Contrato
+
+* Um `value record` tem o mesmo modelo de dados imutável conciso de um `record`
+  Kof existente, mas explicitamente sem identidade de objeto observável.
+* Igualdade/hash por campos (já o contrato de `record`).
+* Aditivo e retrocompatível: o `record` comum mantém sua semântica existente;
+  o código existente continua compilando e rodando (regra 2).
+* ABI por alvo é uma decisão de escopo explícita antes do código (R7 honest
+  scope): JVM → value/inline class; Native → passagem por valor (struct por
+  valor/registradores); JS → objeto congelado comum.
+* Fronteira: stdlib do núcleo, não pacote oficial (R1).
+
+### Status
+
+Apenas planejado — **não é desenvolvimento atual**. Sem implementação em
+andamento. Lanes não devem abrir esta frente sem nova autorização (regra 6 /
+R12: frentes novas não abrem antes de o estágio SYSTEMS fechar).
+
+### Implementação
+
+Entrada de fila adicionada em `docs/development/roadmap.md` §23 (TIER 2) e
+esta decisão registrada; engenharia agendada para a fila futura.
+
+### Relações
+
+* `Relacionada:` #275 (issue)
+
+---
+
 # 4. Decisões rejeitadas ou substituídas
 
 Esta seção é histórica. Ela não define o comportamento atual.
