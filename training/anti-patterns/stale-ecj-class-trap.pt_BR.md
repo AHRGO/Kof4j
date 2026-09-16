@@ -71,3 +71,31 @@ tip move código (commit de outra pessoa) → mvn test -o (incremental)
   §257 (mesma família, face `static final`), `weak-green-proof.md` (o erro
   espelhado: acreditar num verde). Esta entrada: **não acredite num vermelho
   tampouco — verifique se as classes são as que você acha que são.**
+
+## Segunda face (16/09 ~05:00) — o worktree `skip-worktree` que mede uma árvore-fantasma
+
+`git worktree add` **herda as flags `skip-worktree` (e `assume-unchanged`) do
+índice sujo do repo pai**. Um arquivo marcado `S` *nunca* é tocado no checkout:
+o **disco** do worktree mantém o que a árvore principal tinha (a edição
+não-commitada de um agente concorrente), enquanto `git show HEAD:<arquivo>` lê
+o blob real do commit. `git diff`/`git status` reportam **limpo** (a flag manda
+o git ignorar o arquivo), então o worktree *parece* imaculado mas **não é o
+HEAD**. A mesma família "Unresolved compilation" de erros-em-massa, porém
+silenciosa: nenhum stub lançado, só conteúdo errado.
+
+Mordida real (16/09, lane docs/development): um worktree "medir o tip" mostrou
+`ConformanceMatrixDocTest` VERMELHO (célula `methodoverload` faltando na
+matriz) — e a matriz em disco de fato não tinha a anotação commitada (o
+arquivo casava com uma edição concorrente, não com `574c9419`). Limpar as
+flags, `checkout --force`, até `reset --hard` NÃO restauraram (o split-index
+re-marcava `S`). A medição era uma **fantasma**. O tip autoritativo é um
+**`git clone` fresco**, onde disco == commit == índice == HEAD.
+
+```
+diagnosticar um vermelho que outro checkout já mostrou VERDE (ou que você não
+tocou nos arquivos que ele nomeia):
+→ git ls-files -v | grep -c '^S'      # >0 = contaminado
+→ md5sum <arquivo> ; git show HEAD:<arquivo> | md5sum   # DIVERGE com status limpo = ESTA armadilha
+→ medir num CLONE FRESCO (git clone + checkout <tip> + status 0 + sem ^S),
+   nunca num worktree de um repo que tem flags skip-worktree no índice.
+```

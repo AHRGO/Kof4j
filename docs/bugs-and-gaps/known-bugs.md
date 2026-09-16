@@ -14,7 +14,7 @@
 > | **§254 ✅ FIXED 15/09 (owning lane development `.18`, `713031a7`)** | `[stdvalidation]` golden of the ConformanceMatrix encoded the OLD wrong output (4 lines vs the mod-11 oracle) — cell red on clean tip; re-recorded by the owner with the executed-JVM proof. |
 > | **§255 🔴 OPEN 15/09 (lane development `.18`)** | `KofDbE2ETest.crossNativeSqliteNowCompiles` hard-fails on hosts without cross `libsqlite3` (missing `assumeTrue` guard; COMP001 `riscv64-ld: -lsqlite3` not found). |
 > | **§256 🟡 PARTIAL 16/09 (lane development `.18`)** | CONC001 closure left 2 reds on clean tip (worktree `4af4356f`): ~~`learn/18-concurrency.md` gaps cell desynced (guard)~~ **face (a) ✅ CLOSED 16/09 by lane docs/development `192.168.100.22` (`dd2c7fcb` — `ConcurrencyGapsDocTest` 3/3 green)** + riscv64 `poll(b)` returns 0 after selectAny scan (aarch agrees) — face (b) OPEN. PRE-EXISTING, not §257. |
-> | **§258 🔴 OPEN 16/09 (lanes `.18` + `.17`)** | CodeQL **two** alerts open on `beta-0.4.0` → repo-wide pre-push gate RED, blocks ALL lanes' pushes: **#773** `java/comparison-with-wider-type` (`i < n`, int vs long) `KofJsRunner.listValues` (DB001 fatia A `3e55df51`, owner `.18` — bound check, precedent `d6eaae0c`) + **#774** `java/relative-path-command` `ProcessBuilder("mvn","-v")` in `DepsTransitiveTest:231` (D-DEV-PRIORITY frente-3 `e5013152`, owner `.17`); bypass `CODEQL_GATE_SKIP=1` + cause declared meanwhile. |
+> | **§258 🔴 OPEN 16/09 (lane `.18`; #774 CLOSED by `.17`)** | CodeQL gate: **#773** `java/comparison-with-wider-type` (`i < n`, int vs long) `KofJsRunner.listValues` (DB001 fatia A `3e55df51`, owner `.18` — bound check, precedent `d6eaae0c`) still RED; **#774** `java/relative-path-command` `DepsTransitiveTest` FIXED 16/09 by `2a60b426` (`.17`: `mvnOnPath()` removed, reuses `Deps.mvnAvailable()`); bypass `CODEQL_GATE_SKIP=1` + cause declared meanwhile. |
 > | **§257 ✅ FIXED 15/09 (lane compiler `192.168.100.17`)** | `static final String` runtime-text literals = javac ConstantValue inlining → false red on incremental build (`validationBrJs`); 77 fields de-`final` + `RuntimeConstantInliningGuardTest` (ASM, ConstantValue) locks it. |
 > | **§173 ✅ FIXED 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `++`/`--`/compound on `Long`/`Double`/`Float` + increment of an array ELEMENT: JVM VerifyError (literal `INT 1` in a 2-slot binary, 1-slot `DUP`, `arraystore` without `[array,index]`), Native core dump, Script `NoSuchElementException`, JS `stack underflow`/`KofDup2`. 4 targets; Q4 hunt 13/09 (over §167). Proof: `BackendParityTest.parityIncrementWideTypesAndArrayElement` + `KofInterpreterParityTest.incrementWideTypesAndArrayElement` + cell `increment` 4/4. |
 > | **§174 ✅ FIXED 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `return`/`throw` inside an `if` inside the `try`: JVM/Native/Script correct, KofJS aborted with `COMP002 unexpected KofCatchStart` (the `JsIfThrowElse.parseElse` consumed the endLabel of the enclosing try when treating the unconditional `then` as if-else). Fix without contract/IR change (`isTryEndLabel` guard). Proof: `CoreRegressionE2ETest.returnInsideIfInsideTryJs`. |
@@ -9008,17 +9008,16 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   the bypass is documented in the hook itself for exactly this case; silently
    "fixing" the test/gate to pass is what rule Q5 forbids, bypass-with-cause is not.
 - **Second alert (same mechanism, 16/09 ~05:00) — #774 `java/relative-path-command` at
-  `kof-cli/src/test/java/dev/kof/cli/DepsTransitiveTest.java:231`** (D-DEV-PRIORITY
+  `kof-cli/src/test/java/dev/kof/cli/DepsTransitiveTest.java`** (D-DEV-PRIORITY
   frente-3 `e5013152`, owner lane compiler `.17`): the `mvnOnPath()` availability guard
-  runs `new ProcessBuilder("mvn", "-v")` (relative command). CodeQL flags any
-  `ProcessBuilder`/`Runtime.exec` whose program name is a bare relative token. The
-  fix belongs to `.17` (a test-only availability probe: resolve `mvn` via the host
-  path with an explicit guard, or a scoped `// codeql[...]` suppression justified by
-  "test detects toolchain presence, does not run user input" — same shape as the
-  `mvn -v` idiom already used elsewhere). NOT fixed here: rule 8 (another lane's
-  file). The gate is repo-wide, so BOTH #773 and #774 must clear before any push is
-  un-bypassed.
+  ran `new ProcessBuilder("mvn", "-v")` (relative command) — CodeQL flags any
+  `ProcessBuilder`/`Runtime.exec` whose program name is a bare relative token.
+  **CLOSED 16/09 by `2a60b426`** (the `.17` lane fixed it in-file, exactly the
+  "fix it in the same commit that ships the gap" discipline): `mvnOnPath()` removed,
+  the test now reuses `Deps.mvnAvailable()` — one guarded helper instead of a
+  hand-rolled probe. Gate now shows ONLY #773. The cataloguing here played its role:
+  pointer to the owner, owner fixed it within ~2h.
  - **Status:** 🔴 OPEN 16/09 — catalogued by lane docs/development `192.168.100.22`
-   with the full gate output. Pointers: lane development `.18` (DB001, author of
-   `3e55df51`) for #773; lane compiler `.17` (D-DEV-PRIORITY, author of `e5013152`)
-   for #774. Related: §256 (same lane's CONC001), `d6eaae0c` (same-rule precedent fix).
+   with the full gate output. Pointer: lane development `.18` (DB001, author of
+   `3e55df51`) for #773 (#774 already closed by `.17` in `2a60b426`).
+   Related: §256 (same lane's CONC001), `d6eaae0c` (same-rule precedent fix).

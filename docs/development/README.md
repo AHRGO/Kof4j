@@ -3,11 +3,11 @@
 # Development — living backlog (only work in development)
 
 > **Base:** `0.4.0-beta` · branch `beta-0.4.0` · **updated:** 16/09/2026
-> **Suite measured at this HEAD:** `2199` run (1902 kof-compiler + 38 kof-script
-> + 7 kof-c-compiler + 252 kof-cli), **0 regressions / 0 errors**, 190 skip (1 failure = the known INTERMITTENT §252 native flake `spawnWorkerThrowPropagatesThroughSelectAnyNative`, owner native lane `.18`/nat — not a regression; re-measured 16/09 ~03:20)
+> **Suite measured at this HEAD:** `2206` run (1899 kof-compiler + 38 kof-script
+> + 7 kof-c-compiler + 262 kof-cli), **0 regressions / 0 errors**, 190 skip (1 failure = the known INTERMITTENT §252 native flake `spawnWorkerThrowPropagatesThroughSelectAnyNative`, owner native lane `.18`/nat — not a regression; re-measured 16/09 ~05:34 on tip `574c9419` from a CLEAN clone)
 > (no qemu on the measuring host: the 84 cross are skipped, + the 5 external DBs
 > + other toolchain guards; `node` present — all `*Js` green) — measured
-> 16/09 ~01:45 on `3e55df51` (post DB001-fatia-A; first read showed 297 errors = the §257 stale-ECJ-stub trap, cleared by `mvn -pl kof-runtime clean`).
+> the 262 kof-cli reflects `e5013152` (DepsTransitiveTest, +10). The 2199/1902/252 figure was a mid-flight miscount (measured while `555d2afe`/`e5013152` were landing); 16/09 ~05:34 is the clean-clone authoritative number. Earlier 16/09 ~01:45 read showed 297 errors = the §257 stale-ECJ-stub trap, cleared by `mvn -pl kof-runtime clean`.
 > The previous number (1662/13-errors, 13/09) was a node-less host. **Authoritative suite number = the run on the host** (the gate
 > `mvn test ... -Dmaven.test.failure.ignore=true`; check per module with
 > `grep -rl FAILURE */target/surefire-reports/*.txt`), not this line — it

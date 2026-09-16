@@ -70,3 +70,31 @@ tip moves code (someone else's commit) → mvn test -o (incremental)
   family, `static final` face), `weak-green-proof.md` (the mirror error:
   believing a green). This entry: **don't believe a red either — verify the
   classes are the ones you think they are.**
+
+## Second face (16/09 ~05:00) — the `skip-worktree` worktree that measures a ghost tree
+
+`git worktree add` **inherits `skip-worktree` (and `assume-unchanged`) index
+flags** from the parent repo's dirty index. A file flagged `S` is *never*
+touched on checkout: the worktree's **disk** keeps whatever the main tree had
+(a concurrent agent's uncommitted edit), while `git show HEAD:<file>` reads the
+real commit blob. `git diff`/`git status` report **clean** (the flag tells git
+to ignore the file), so the worktree *looks* pristine but **is not HEAD**. The
+same "Unresolved compilation" mass-error family, but a silent one: no stub
+thrown, just wrong content.
+
+Real hit (16/09, docs/development lane): a "measure the tip" worktree showed
+`ConformanceMatrixDocTest` RED (`methodoverload` cell missing from the matrix)
+— and the disk matrix genuinely lacked the committed annotation (the file
+matched a concurrent edit, not `574c9419`). Clearing the flags, `checkout
+--force`, even `reset --hard` did NOT restore it (the split index kept
+re-marking `S`). The measurement was a **ghost**. The authoritative tip is a
+**fresh `git clone`**, where disk == commit == index == HEAD.
+
+```
+diagnose a red that another checkout already showed GREEN (or you didn't
+touch the files it names):
+→ git ls-files -v | grep -c '^S'      # >0 = contaminated
+→ md5sum <file> ; git show HEAD:<file> | md5sum   # MISMATCH with clean status = THIS trap
+→ measure in a FRESH CLONE (git clone + checkout <tip> + status 0 + no ^S),
+   never in a worktree of a repo that has skip-worktree flags in its index.
+```
