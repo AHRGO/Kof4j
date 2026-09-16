@@ -2,8 +2,8 @@
 
 # Release Naming — Kof
 
-**Last updated:** 08/30/2026
-**Current version:** 0.2.6-beta
+**Last updated:** 09/16/2026
+**Current version:** 0.4.0-beta
 
 ---
 

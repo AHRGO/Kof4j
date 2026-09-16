@@ -2,8 +2,8 @@
 
 # Standard Library — Proposal
 
-**Last updated:** September 12, 2026
-> **Updated (0.2.6-beta):** the stdlib is largely implemented on the 3
+**Last updated:** September 16, 2026
+> **Updated (0.4.0-beta):** the stdlib is largely implemented on the 3
 > targets (JVM/Native/JS) — `kof.core`, `kof.collections`, `kof.io`,
 > `kof.time`, `kof.json` (FP + full arrays on Native, 31/08),
 > `kof.http` (client + resilience JVM+JS), `kof.web` (`web.app()` +
@@ -14,7 +14,7 @@
 > module matrix and the architecture live in `docs/stdlib/stdlib.md`** (source of
 > reference). The table below is the complete plan.
 
-**Status:** largely implemented (0.2.6-beta; see `docs/stdlib/stdlib.md`)
+**Status:** largely implemented (0.4.0-beta; see `docs/stdlib/stdlib.md`)
 
 ---
 

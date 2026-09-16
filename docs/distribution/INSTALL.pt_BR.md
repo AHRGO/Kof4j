@@ -5,7 +5,7 @@
 Guia oficial de instalação a partir dos artefatos publicados no **GitHub
 Releases**. Siga o passo a passo do **seu sistema** e pronto.
 
-> **Versão atual:** 0.2.6-beta (30/08/2026). Este guia **não depende da
+> **Versão atual:** 0.4.0-beta (ver `VERSION` na raiz do repo). Este guia **não depende da
 > versão**: os comandos funcionam em qualquer release, atual ou futura.
 > Você não precisa saber qual é a versão para instalar.
 

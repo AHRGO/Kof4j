@@ -5,7 +5,7 @@
 Official installation guide from the artifacts published on **GitHub
 Releases**. Follow the step-by-step for **your system** and you are done.
 
-> **Current version:** 0.2.6-beta (08/30/2026). This guide **does not depend on the
+> **Current version:** 0.4.0-beta (see `VERSION` at the repo root). This guide **does not depend on the
 > version**: the commands work on any release, current or future.
 > You do not need to know which version it is to install.
 
