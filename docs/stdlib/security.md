@@ -54,8 +54,8 @@ NOT APPLICABLE   → does not apply to the Kof architecture
 | Web | spring-web | `kof.web` (`web.app()`) | **EXISTS** | Routes, params, query, headers, body, `app.use` middleware, `status`/`headerSet` |
 | Web MVC | WebMVC | `kof.web` + handlers | PARTIAL | JVM only today; embedded JS (alpha) |
 | WebFlux | WebFlux | `spawn` + virtual threads | PARTIAL | Own concurrent model (JVM/Native/JS) |
-| WebSocket | WebSocket | `kof.web` (`app.ws`) | **EXISTS (JVM)** | RFC 6455: handshake + masked frame codec (Native `WEB004`, JS `WEB003`) |
-| SSE | (Spring via `SseEmitter`) | `kof.web` (`app.sse`) | **EXISTS (JVM)** | `sse.send/event/close` (Native/JS `WEB003`) |
+| WebSocket | WebSocket | `kof.web` (`app.ws`) | **EXISTS (JVM)** | RFC 6455: handshake + masked frame codec (Native/JS `WEB004` — gate `ExpressionBuiltinInstanceCalls`, 16/09) |
+| SSE | (Spring via `SseEmitter`) | `kof.web` (`app.sse`) | **EXISTS (JVM)** | `sse.send/event/close` (JVM + JS handler-scoped ✅ 16/09, `7cd69a7b`; Native `WEB003`, JS post-return push `WEB003` residual) |
 | Messaging | spring-messaging | `kof.mq` (publish/subscribe/queue) | **EXISTS** | JVM+Native+JS (MQ001 closed 01/09) |
 | Transactions | spring-tx | `kof.db` (`transaction {}`) | **EXISTS** | JVM (JDBC commit/rollback) + Native (SQLite) + JS (untyped 16/09) |
 | Scheduling | spring-context | `kof.scheduler` (`every/at/cancel`) + `spawn` | PARTIAL | JVM (ScheduledExecutor) + JS (setInterval); Native `SCHED001` |
