@@ -814,7 +814,7 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
   mas o corpo lê `LoadLocal(2)`).
 - **Esperado:** `inner` + `outer` (semântica JVM de exception table).
 - **Prova/repro:** caso `nested-try` (sweep manual 06/09).
-- **Corrigido 07/09 (JVM/Native):** o corpo do catch agora usa um sub-escopo de locals (`subList(0, pos-do-catch-corrente)`) — com try aninhado de catch de MESMO nome, o local do catch interno sobrescrevia o externo no findLocalVar. Prova: `CoreRegressionE2ETest.rethrowInNestedTry` (JVM). ⚠️ JS: gap SEPARADO — try aninhado com catch gera `KofCatchStart` que o KofJS não suporta (COMP002); pré-existente, registrar como gap.
+- **Corrigido 07/09 (JVM/Native):** o corpo do catch agora usa um sub-escopo de locals (`subList(0, pos-do-catch-corrente)`) — com try aninhado de catch de MESMO nome, o local do catch interno sobrescrevia o externo no findLocalVar. Prova: `CoreRegressionE2ETest.rethrowInNestedTry` (JVM). ⚠️ JS: o gap separado de try aninhado a que esta nota apontava era o **§49 (✅ CORRIGIDO 07/09)** e a variante de re-throw o **§52 (✅ CORRIGIDO 08/09)** — ambos hoje compilam no KofJS (`nestedtry`/`catchrethrow` no `ConformanceMatrixTest`, 4 alvos).
 
 ### 39. `println(m.get("zz"))` (null de Map) → NPE/unbox errado nos 2 caminhos — ✅ CORRIGIDO 10/09 (SG-008/bug 87, decisão do maintainer)
 

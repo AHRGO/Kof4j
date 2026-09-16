@@ -812,7 +812,7 @@ EXTERNAL mutation produced garbage (JVM correct) — the cause was the prologue 
   but the body reads `LoadLocal(2)`).
 - **Expected:** `inner` + `outer` (JVM exception-table semantics).
 - **Proof/repro:** case `nested-try` (manual sweep 06/09).
-- **Fixed 07/09 (JVM/Native):** the catch body now uses a sub-scope of locals (`subList(0, pos-of-current-catch)`) — with a nested try whose catch has the SAME name, the inner catch's local overwrote the outer one in findLocalVar. Proof: `CoreRegressionE2ETest.rethrowInNestedTry` (JVM). ⚠️ JS: SEPARATE gap — a nested try with catch generates `KofCatchStart` which KofJS does not support (COMP002); pre-existing, record as a gap.
+- **Fixed 07/09 (JVM/Native):** the catch body now uses a sub-scope of locals (`subList(0, pos-of-current-catch)`) — with a nested try whose catch has the SAME name, the inner catch's local overwrote the outer one in findLocalVar. Proof: `CoreRegressionE2ETest.rethrowInNestedTry` (JVM). ⚠️ JS: the separate nested-try gap this note pointed to was **§49 (✅ FIXED 07/09)** and the re-throw variant **§52 (✅ FIXED 08/09)** — both now compile on KofJS (`nestedtry`/`catchrethrow` in `ConformanceMatrixTest`, 4 targets).
 
 ### 39. `println(m.get("zz"))` (Map null) → NPE/wrong unbox in the 2 paths — ✅ FIXED 10/09 (SG-008/bug 87, maintainer decision)
 
