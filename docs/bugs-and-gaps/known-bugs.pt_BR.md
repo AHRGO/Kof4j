@@ -7379,6 +7379,9 @@ antes — lição da obsolescência do §206/§207), corpos-exatos das issues
   typer**, não crashes R6; prioridade na estabilização = abaixo de §216–§218
   (que quebram programas válidos em RUNTIME silenciosamente). Fixes
   pertencem à lane compiler (regra 6).
+  *(Nota histórica 16/09: §216/§217/§218 **já estão CORRIGIDOS** — §216 FECHADA
+  15/09, §217 CORRIGIDO 14/09, §218 CORRIGIDO 16/09 `78b733fa`; a comparação de
+  prioridade acima reflete o estado no momento da triagem 14/09, não o atual.)*
 - **Pointer-resumo:** parser — `is` em condições (#151), type params de
   interface (#160); typer — tipagem de método multi-interface (#155),
   narrowing de null no fluxo while (#159), tipagem de resultado do Handle-

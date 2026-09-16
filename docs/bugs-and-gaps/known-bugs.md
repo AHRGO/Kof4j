@@ -7388,6 +7388,9 @@ of the issues (repros kept in the issue comments):
   compile = honest diagnostic) — so they are **support gaps/typer bugs**, not
   R6 crashes; priority for stabilization = below §216–§218 (which break valid
   programs at RUNTIME silently). Fixes belong to lane compiler (rule 6).
+  *(Nota histórica 16/09: §216/§217/§218 **já estão FIXED** — §216 CLOSED 15/09,
+  §217 FIXED 14/09, §218 FIXED 16/09 `78b733fa`; a comparação de prioridade
+  acima reflete o estado no momento da triagem 14/09, não o estado atual.)*
 - **Pointer summary:** parser — `is` in conditions (#151), interface type
   params (#160); typer — multi-interface method typing (#155), null-narrowing
   in while-flow (#159), Handle-await result typing (#141 — near the §29 spawn
