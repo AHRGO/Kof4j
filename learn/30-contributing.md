@@ -157,7 +157,7 @@ The project is at 0.3.22-beta, functional:
 - Records, classes and interfaces + generics (erasure) + `map/filter/reduce` + `Map/Set` + real exceptions (JVM + Native unwinding)
 - Functions with `main()`, lambdas with captures, `spawn`/`await` (JVM virtual threads, Native pthread — 31/08)
 - Pattern matching (`case String s`, `Point(x,y)`) on JVM/Native/JS
-- CLI with 18 commands (build, run, serve, check, test, script, repl, c, fmt, config gen, bench, profile, inspect, debug, info, lsp, install, version) — `--target=jvm|native|native.risc|native.arm|js|android`
+- CLI with 26 commands (build, run, serve, check, test, script, repl, c, fmt, config gen, bench, profile, inspect, decompile, translate, compare, migrate, debug, info, lsp, install, deps, editor, new, init, version) — `--target=jvm|native|native.risc|native.arm|js|android`
 - JVM backend via ASM — bytecode V21, exception table, virtual threads
 - Native backend — stable x86-64 ELF (free-list GC, spawn/pthread, FP XMM, full JSON, SQLite) + riscv64/aarch64 placeholders
 - KofJS — ES Modules via GraalJS (`kof.http` via Java HttpClient interop)

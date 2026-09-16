@@ -255,8 +255,8 @@ instalação não depende de Java externo, `JAVA_HOME` ou SDKMAN. Build
 `mvn test` 2218 (1911+38+7+262), golden 16/16, integration 9/9.
 
 O usuário que instala o Kof recebe tudo o que precisa para desenvolver,
-compilar, executar e usar o tooling da linguagem (18 comandos:
-`kof build/run/serve/check/test/script/repl/c/fmt/config/bench/profile/inspect/debug/info/lsp/install/version`).
+compilar, executar e usar o tooling da linguagem (26 comandos:
+`kof build, run, serve, check, test, script, repl, c, fmt, config, bench, profile, inspect, decompile, translate, compare, migrate, debug, info, lsp, install, deps, editor, init, new, version`).
 
 ---
 
