@@ -62,7 +62,7 @@ final class JsExpressionStatementParser {
                 return parser.finishExpressionStatement(preamble, new JsIr.JsExprStmt(new JsIr.JsBinary(
                         new JsIr.JsMember(new JsIr.JsIdentifier(owner), JsTypeMapper.sanitizeName(ps.name())), "=", value)));
             }
-            if (op instanceof KofArrayStore) {
+            if (op instanceof KofArrayStore as) {
                 if (stack.isEmpty()) {
                     throw new IllegalStateException("KofJS: arraystore empty stack; next="
                             + (pos[0] < ctx.ops.size() ? ctx.ops.get(pos[0]) : "eof")
@@ -75,9 +75,15 @@ final class JsExpressionStatementParser {
                 // KOF-SBD-001: bounds-checked write (raw `array[index] = value`
                 // would inherit JS array semantics — a write at/after `length`
                 // silently grows the array instead of being rejected).
+                // §184/§187: the store must also NARROW the value to the element
+                // width (byte → i2b, short → i2s, char → i2c) so KofJS matches the
+                // JVM/Native/Script targets — the raw store kept 130/70000 as-is
+                // (silent cross-target divergence). The kind rides as a 4th arg.
                 parser.p.lc.registerRuntime("kofArraySet");
                 JsIr.JsStatement stmt = new JsIr.JsExprStmt(
-                        new JsIr.JsCall(new JsIr.JsIdentifier("kofArraySet"), List.of(array, index, value)));
+                        new JsIr.JsCall(new JsIr.JsIdentifier("kofArraySet"),
+                                List.of(array, index, value,
+                                        new JsIr.JsNumber(Integer.toString(arrayStoreKind(as.elementType()))))));
                 if (stack.isEmpty() && !parser.isIncTmpLoadAhead(ctx, pos)) {
                     return parser.finishExpressionStatement(preamble, preambleExprs, stmt);
                 }
@@ -196,6 +202,22 @@ final class JsExpressionStatementParser {
             return parser.finishExpressionStatement(preamble, preambleExprs, null);
         }
         throw new IllegalStateException("KofJS: unterminated expression statement");
+    }
+
+    /**
+     * §184/§187 — element-width for the {@code KofArrayStore} narrowing kind:
+     * 1 = byte (i2b), 2 = short (i2s), 3 = char (i2c), 0 = none (no narrowing).
+     * Mirrors {@code NativeOpHelpers.elementTypeSize} so the 4 targets agree on
+     * out-of-range narrow stores.
+     */
+    static int arrayStoreKind(Type elementType) {
+        if (elementType instanceof Type.NullableType nt) elementType = nt.inner();
+        if (elementType instanceof Type.PrimitiveType p) {
+            if (p == Type.PrimitiveType.BYTE) return 1;
+            if (p == Type.PrimitiveType.SHORT) return 2;
+            if (p == Type.PrimitiveType.CHAR) return 3;
+        }
+        return 0;
     }
 
 }

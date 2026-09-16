@@ -1583,9 +1583,11 @@ class ConformanceMatrixTest {
                 }
                 """, "9\n3\n0", Set.of(), tempDir);
         // §184 (13/09): store em `Byte[]`/`Short[]` com valor FORA de faixa —
-        // JVM/Native/Script truncam (BASTORE/SASTORE, 8/16 bits com sinal); o
-        // JS grava o valor cru (kofArraySet não conhece o tipo do elemento).
-        // PARTIAL js (bug §184; célula de cobertura estreita — Q5).
+        // JVM/Native/Script truncam (BASTORE/SASTORE, 8/16 bits com sinal). O
+        // JS gravava o valor cru (kofArraySet não conhecia o tipo do
+        // elemento) — §184 fix na RAIZ: o emitter passa o kind (byte/short)
+        // p/ kofArraySet, que agora aplica o mesmo estreitamento (i2b/i2s).
+        // Cell cobre os 4 targets (era `Set.of("js")`, Q5 false-green).
         matrix("narrowarr", """
                 main() {
                     var b = new Byte[1]
@@ -1595,7 +1597,7 @@ class ConformanceMatrixTest {
                     s[0] = 70000
                     println(s[0])
                 }
-                """, "-126\n4464", Set.of("js"), tempDir);
+                """, "-126\n4464", Set.of(), tempDir);
         // §185 (13/09): store em elemento de `Char[]`/`Bool[]` — o
         // interpretador (Script) LANÇA "argument type mismatch" no caminho
         // vivo `KofInterpreter:306` (`coerceFor` devolve Integer; `Array.set`
@@ -1650,7 +1652,9 @@ class ConformanceMatrixTest {
         // riscv/aarch `slli 48`/`srli 48` — stride 4 mantido, load `movslq`
         // segue correto). A 2-D trava o `kof_multi_alloc`; o `Short[]`
         // negativo é o controle de SINAL (prova que a máscara não virou
-        // zero-extend genérico). PARTIAL js (§184) e script (§185, crash).
+        // zero-extend genérico). §184/§187 fix na RAIZ: o JS também estreita
+        // Char[] (kind=3 → `& 0xFFFF`) — só o `script` segue PARTIAL (§185,
+        // crash do interpretador no store de Char[]).
         matrix("charnarrow", """
                 main() {
                     var c = new Char[2]
@@ -1667,7 +1671,7 @@ class ConformanceMatrixTest {
                     s[0] = -1
                     println(s[0])
                 }
-                """, "4464\n65535\n4464\n65535\n-1", Set.of("script", "js"), tempDir);
+                """, "4464\n65535\n4464\n65535\n-1", Set.of("script"), tempDir);
         // §131 (decisão 10a, 13/09): sobrecarga de MÉTODO de classe por
         // assinatura (aridade/tipos). Antes: SEM013 no JVM (último def
         // sobrescrevia) e colisão de símbolo no Native. Prova só JVM+JS

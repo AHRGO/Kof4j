@@ -323,11 +323,22 @@ public final class JsRuntimeCore {
                 return array[index];
             }
 
-            export function kofArraySet(array, index, value) {
+            export function kofArraySet(array, index, value, kind) {
                 if (index < 0 || index >= array.length) {
                     throw new Error("Array index out of bounds: " + index + " (length " + array.length + ")");
                 }
-                array[index] = value;
+                // §184/§187: narrow to the element width on write, like the
+                // JVM (i2b/i2s/i2c), Native (mask) and Script targets.
+                // kind: 1 = byte (i2b), 2 = short (i2s), 3 = char (i2c), 0 = none.
+                if (kind === 1) {
+                    array[index] = (value << 24) >> 24;
+                } else if (kind === 2) {
+                    array[index] = (value << 16) >> 16;
+                } else if (kind === 3) {
+                    array[index] = value & 0xFFFF;
+                } else {
+                    array[index] = value;
+                }
             }
 
             // hashCode de valor Kof: espelha o Objects.hashCode/record JVM.

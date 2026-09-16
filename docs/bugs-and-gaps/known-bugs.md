@@ -6267,7 +6267,7 @@ to the label) is the correct predicate and **was already used** in `parseStateme
   literal — it derives from the runtime's own result (parity) or from
   controlled input.
 
-### §184 — `new Byte[n]`/`new Short[n]`: storing an out-of-range value does NOT narrow on JS (JVM/Native/Script narrow) — SILENT cross-target divergence — ❌ OPEN 13/09 (found in the Q4 hunt of lane bugs-and-gaps `192.168.100.15`; fix = JS lane)
+### §184 — `new Byte[n]`/`new Short[n]`: storing an out-of-range value does NOT narrow on JS (JVM/Native/Script narrow) — SILENT cross-target divergence — ✅ FIXED 15/09 (lane compiler `192.168.100.22`; JS face — `kofArraySet` now narrows byte→i2b/short→i2s/char→i2c)
 
 - **Symptom (measured 13/09, 4 targets):** arrays of narrow type do not perform
   the *narrowing* of the value on write in the JS backend (the array becomes a plain
@@ -6492,7 +6492,7 @@ to the label) is the correct predicate and **was already used** in `parseStateme
   explicitly in a method called before first use.
 - **Discovered:** 13/09, KOF-SBD-001-STRESS (STRESS-016).
 
-### §187 — `new Char[n]`: `Char[]` store/load does NOT narrow to 16 bits on Native (nor on JS) — JVM/Script correct — 🟡 OPEN 13/09 (face **Native FIXED 13/09**; JS face remains OPEN — fix = JS lane)
+### §187 — `new Char[n]`: `Char[]` store/load does NOT narrow to 16 bits on Native (nor on JS) — JVM/Script correct — ✅ FIXED 15/09 (Native face fixed 13/09 lane .15; **JS face fixed 15/09 lane compiler `192.168.100.22`** — `kofArraySet` kind char→`& 0xFFFF`)
 
 - **Symptom (measured 13/09, 4 targets):** `Char[]` stores 32 bits instead of
   performing the 16-bit narrowing (JVM `CASTORE`/`CALOAD`):

@@ -6256,7 +6256,7 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   relógio/ambiente — deriva do resultado do próprio runtime (paridade) ou de
   entrada controlada.
 
-### §184 — `new Byte[n]`/`new Short[n]`: store de valor fora da faixa NÃO estreita no JS (JVM/Native/Script estreitam) — divergência cross-target SILENCIOSA — ❌ ABERTO 13/09 (achado na caça Q4 da lane bugs-and-gaps `192.168.100.15`; fix = lane JS)
+### §184 — `new Byte[n]`/`new Short[n]`: store de valor fora da faixa NÃO estreita no JS (JVM/Native/Script estreitam) — divergência cross-target SILENCIOSA — ✅ CORRIGIDO 15/09 (lane compiler `192.168.100.22`; face JS — `kofArraySet` agora estreita byte→i2b/short→i2s/char→i2c)
 
 - **Sintoma (medido 13/09, 4 targets):** arrays de tipo estreito não fazem o
   *narrowing* do valor na escrita no backend JS (o array vira `Array` JS
@@ -6481,7 +6481,7 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   explicitamente num método chamado antes do primeiro uso.
 - **Descoberto:** 13/09, KOF-SBD-001-STRESS (STRESS-016).
 
-### §187 — `new Char[n]`: store/load de `Char[]` NÃO estreita a 16 bits no Native (e no JS) — JVM/Script corretos — 🟡 ABERTO 13/09 (face **Native CORRIGIDA 13/09**; face JS segue ABERTA — fix = lane JS)
+### §187 — `new Char[n]`: store/load de `Char[]` NÃO estreita a 16 bits no Native (e no JS) — JVM/Script corretos — ✅ CORRIGIDO 15/09 (face **Native CORRIGIDA 13/09**; **face JS CORRIGIDA 15/09 pela lane compiler `192.168.100.22`** — `kofArraySet` kind char→`& 0xFFFF`)
 
 - **Sintoma (medido 13/09, 4 targets):** `Char[]` guarda 32 bits em vez de
   fazer o narrowing de 16 bits (JVM `CASTORE`/`CALOAD`):
