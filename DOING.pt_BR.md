@@ -207,6 +207,13 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
   > (teste reescrito) → re-medição em andamento no clone fresco do tip
   > `78b733fa` (que também moveu código: §218 toHexString/toBinaryString →
   > contrato (3) dispara).
+  > ✅ **REGISTRO CORRIGIDO (16/09 ~06:20, lane bugs-and-gaps .15):** §218/#148
+  > estava "✅ CORRIGIDO" na docs-only `42f1c43e` (03:56) ~2h ANTES do código
+  > existir; verificação exaustiva (05:55, tip `55eedc25`) confirmou o overclaim
+  > (sem roteamento, `NumericFormatterE2ETest` ausente do git, repro →
+  > `ClassFormatError`). O fix REAL é `78b733fa` (05:53) e a #148 foi fechada
+  > 16/09 09:02Z. `known-bugs` EN+PT agora pina o SHA de CÓDIGO. Lição: registro
+  > de fix cita o commit que o materializa, nunca o precede.
   > ⚠️ Processos CONCORRENTES ativos nesta máquina editam a árvore compartilhada
   > (NumericFormatter*/ExpressionInstanceCallLowerer/JsCallEmitter +2 em edição
   > às 03:56; os flags S vêm de algum deles) — medir tip = clone fresco.
