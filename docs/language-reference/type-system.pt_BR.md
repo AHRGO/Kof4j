@@ -140,19 +140,28 @@ Para `+ - * / %` com dois numéricos: `double` domina, senão `float`, senão
   x`) com `x` identificador de tipo `T?` → no **then-branch**, `x` passa a ter
   tipo `T` (`StatementAnalyzer`, narrowing de `IfStmt`). **Não há** narrowing por `&&`,
   `||`, ternário, ou `if (x == null)` no else.
-- **Deref de `T?` sem narrowing NÃO é erro**: `var s: String? = "x"; s.length`
-  **compila** (*probe*) — o lowering desembrulha o receiver
-  (`ExpressionTyper.java:143`). A segurança null é **advisory**, não garantida
-  pelo compilador (SG-005).
+- **Deref de `T?` sem narrowing É erro** (SG-005 corrigido 10/09, `9436da12`):
+  `var s: String? = "x"; s.length` → `error: receiver is nullable (T?);
+  narrow first` [**SEM049**] (*medido 16/09, jar do tip `803eeef4*`).
+  O comportamento antigo de "advisory, não garantida" acabou — o narrowing
+  (`if (x != null)`) é obrigatório.
 - **Comparação com null**: primitivo `== null` → **constante** (`false`/`true`,
-  `ExpressionLowerer.java:256-268`); referência `== null` → `if_acmp`.
+  `ExpressionLowerer.java:256-268`); referência `== null` → `if_acmp` (class/
+  String fazem narrowing corretamente — *medido 16/09*). **Record é a exceção**:
+  `==`/`!=` num record baixa para `.equals()` sem guarda de null, então um
+  `Point?` null comparado com `null` dá **NPE** (bug §262, aberto).
   `Int? == Int?` compara valor (*probe*: `5 == 5` → true). **`Int? == null`
-  falha em runtime** (o unbox de um `Integer` null lança NPE — o erro do
-  "JavaFX launcher" é o wrapper do runtime para exceção não tratada; *probe*).
-  `String? == null` → `true` corretamente (*probe*). Comparar nullable de
-  primitivo com `null` é **bug de runtime** (SG-008), não regra de linguagem.
+  NÃO lança — dobra silencioso**: um `Int?` null (map miss) compara
+  `== null` como **false** (`if (n == null)` imprimiu `not-null`, *medido
+  16/09, jar do tip*) porque o storage de nullable-primitivo é o interno
+  (`null`→`0` na fronteira). Esse silêncio é o bug aberto **D-NULL-INTENT /
+  #259** (§125 mede a dobra) — NÃO é regra de linguagem; o contrato boxed
+  segue devendo as outras faces (§241 revertido para o gap honesto).
+  `String? == null` → `true` corretamente (*medido 16/09*).
 - **Fontes de `T?`**: `Map.get(k)` para valor de referência, `readLine()`,
-  `readFile()`, literais `T?`.
+  `readFile()`, função declarada `T?` que faz `return null`. **Não existe
+  literal `T? = null`** — o null-literal é rejeitado desde 10/09 (SG-008 →
+  **SEM048**, *medido*: `null cannot be assigned [SEM048]`).
 
 ---
 

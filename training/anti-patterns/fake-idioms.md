@@ -26,7 +26,7 @@ because they exist in other languages. Code like that **does not compile** or
 | If-expr `if (c) a else b` | ✅ Implemented |
 | `json.encode` / `json.decode<T>` | ✅ Implemented (3 targets; JSN001/002/003 closed 31/08 — objects/records/arrays, FP XMM in Native) |
 | `throw "msg"` / `try/catch/finally` | ✅ Implemented (JVM + Native unwinding) |
-| `String?` / `Int?` null safety + `if (x != null)` narrowing | ✅ Implemented (since 0.2.6-beta, NullableType + isAssignable) |
+| `String?` / `Int?` null safety + `if (x != null)` narrowing | ✅ Implemented (since 0.2.6-beta, NullableType + isAssignable; `= null` literal rejected SEM048 since 10/09). ⚠️ nullable of `Int?` **folds `null`→`0` silently** (open bug #259/D-NULL-INTENT, §125) and a null **record** `T?` compared to `null` **NPEs** (§262) — the "✅" is the String/class path |
 | Pattern matching `switch (x) { case String s: ... }` + `instanceof`/`as` | ✅ Implemented |
 | Pattern record destructuring `case Point(x, y):` | ✅ Implemented (Parser PatternExpr fieldVars, since 0.2.6-beta) |
 | Switch as expression `var r = switch (x) { case A -> b; default -> c }` | ✅ Implemented (SYN001, 03/09 — 3 targets + riscv64/aarch64; `default` required or enum exhaustiveness, otherwise `SEM032`) |

@@ -140,19 +140,28 @@ For `+ - * / %` with two numerics: `double` dominates, else `float`, else
   x`) with `x` an identifier of type `T?` → in the **then-branch**, `x` now has
   type `T` (`StatementAnalyzer`, `IfStmt` narrowing). There is **no** narrowing by `&&`,
   `||`, ternary, or `if (x == null)` in the else.
-- **Deref of `T?` without narrowing is NOT an error**: `var s: String? = "x"; s.length`
-  **compiles** (*probe*) — the lowering unwraps the receiver
-  (`ExpressionTyper.java:143`). Null safety is **advisory**, not guaranteed
-  by the compiler (SG-005).
+- **Deref of `T?` without narrowing IS an error** (SG-005 fixed 10/09,
+  `9436da12`): `var s: String? = "x"; s.length` → `error: receiver is nullable
+  (T?); narrow first` [**SEM049**] (*measured 16/09, jar of tip `803eeef4*`).
+  The old "advisory, not guaranteed" behavior is gone — narrowing (`if (x != null)`)
+  is mandatory.
 - **Comparison with null**: primitive `== null` → **constant** (`false`/`true`,
-  `ExpressionLowerer.java:256-268`); reference `== null` → `if_acmp`.
-  `Int? == Int?` compares value (*probe*: `5 == 5` → true). **`Int? == null`
-  fails at runtime** (unboxing a null `Integer` throws NPE — the
-  "JavaFX launcher" error is the runtime wrapper for an unhandled exception; *probe*).
-  `String? == null` → `true` correctly (*probe*). Comparing a nullable
-  primitive with `null` is a **runtime bug** (SG-008), not a language rule.
+  `ExpressionLowerer.java:256-268`); reference `== null` → `if_acmp` (class/
+  String narrow correctly — *measured 16/09*). **Record is the exception**:
+  `==`/`!=` on a record lowers to `.equals()` with no null-guard, so a null
+  `Point?` compared to `null` **NPEs** (bug §262, open). `Int? == Int?`
+  compares value (*probe*: `5 == 5` → true). **`Int? == null` does NOT throw
+  — it folds silently**: a null `Int?` (map miss) compares `== null` as
+  **false** (`if (n == null)` printed `not-null`, *measured 16/09, jar of tip*)
+  because the nullable-primitive storage is the inner (`null`→`0` at the
+  boundary). That silence is the open bug **D-NULL-INTENT / #259** (§125
+  measures the fold) — NOT a language rule; the boxed contract keeps failing
+  its other faces (§241 reverted to the honest gap). `String? == null` →
+  `true` correctly (*measured 16/09*).
 - **Sources of `T?`**: `Map.get(k)` for a reference value, `readLine()`,
-  `readFile()`, `T?` literals.
+  `readFile()`, a function declared `T?` that `return null`s. There is **no
+  `T? = null` literal** — the null-literal is rejected since 10/09 (SG-008 →
+  **SEM048**, *measured*: `null cannot be assigned [SEM048]`).
 
 ---
 
