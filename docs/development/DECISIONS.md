@@ -811,6 +811,40 @@ against the comment that justified it.
 
 ---
 
+## D-STDLIB-ULID — `uuid.ulid`/`uuid.isUlid`: format decision PENDING (⏳ asked 15/09, lane development — rule 6)
+
+The last two items of the stdlib plan without an algorithm in the corpus
+(PLAN-STDLIB-EXPANSION line 45, P1 since 08/09). The Crockford-base32 shape
+is not controversial; what IS a contract decision (rule 6) is the variant
+matrix. Briefing for the maintainer, one answer per line:
+
+1. **`uuid.ulid()` — what does it return?** (a) canonical 26-char uppercase
+   Crockford string (`01ARZ3NDEKTSV4RRFFQ69G5FAV`); (b) nullable `String?`
+   with monotonicity failure returning `null`; (c) 128-bit value as two
+   Longs (timestamp + random). **Recommended: (a)** — the corpus pattern of
+   `uuid.v4()`/`uuid.v7()` is a String, and `isUlid` consumes the same form.
+2. **Monotonicity within the same millisecond** (ULID spec §"Monotonicity"):
+   (a) increment the last random bit on collision (spec-recommended, needs
+   per-process state = 1 static slot in the runtime); (b) no monotonicity
+   guarantee in v1 (documented edge, deterministic per call). **Recommended:
+   (a) for JVM/x86, (b) documented for JS/Script if per-process state is not
+   portable** — BUT cross-target parity (freeze 5) prefers ONE behavior:
+   if (a) is chosen, JS gets a module-level counter too.
+3. **`uuid.isUlid(s)` scope:** (a) shape-only (26 chars, Crockford alphabet,
+   decodable timestamp — same "shape" precedent as `isUuid`, which does NOT
+   validate version/variant); (b) shape + timestamp sanity (not in the
+   future). **Recommended: (a)** — parity with the `isUuid` precedent.
+4. **Crockford alphabet edge:** do `I`,`L`,`O`,`U` (and lowercase accepted?)
+   make the string INVALID? Crockford canonical decode maps them; the strict
+   reading rejects them. **Recommended: lowercase accepted (canonical
+   uppercase compare), `ILLOU` rejected** — matches most ecosystems.
+
+Until decided, NOT implemented (the stdlib lane does not invent contracts).
+On decision: implementation = the S12c template (typer case + 5-target
+emission + slice + conformance cell), one unit.
+
+---
+
 ## How to update this doc
 
 Decided anything else in the chat → lock it here (date + option + code
