@@ -14,7 +14,7 @@
 > | **§254 ✅ FIXED 15/09 (owning lane development `.18`, `713031a7`)** | `[stdvalidation]` golden of the ConformanceMatrix encoded the OLD wrong output (4 lines vs the mod-11 oracle) — cell red on clean tip; re-recorded by the owner with the executed-JVM proof. |
 > | **§255 🔴 OPEN 15/09 (lane development `.18`)** | `KofDbE2ETest.crossNativeSqliteNowCompiles` hard-fails on hosts without cross `libsqlite3` (missing `assumeTrue` guard; COMP001 `riscv64-ld: -lsqlite3` not found). |
 > | **§256 🟡 PARTIAL 16/09 (lane development `.18`)** | CONC001 closure left 2 reds on clean tip (worktree `4af4356f`): ~~`learn/18-concurrency.md` gaps cell desynced (guard)~~ **face (a) ✅ CLOSED 16/09 by lane docs/development `192.168.100.22` (`dd2c7fcb` — `ConcurrencyGapsDocTest` 3/3 green)** + riscv64 `poll(b)` returns 0 after selectAny scan (aarch agrees) — face (b) OPEN. PRE-EXISTING, not §257. |
-> | **§258 🔴 OPEN 16/09 (lane `.18`; #774 CLOSED by `.17`)** | CodeQL gate: **#773** `java/comparison-with-wider-type` (`i < n`, int vs long) `KofJsRunner.listValues` (DB001 fatia A `3e55df51`, owner `.18` — bound check, precedent `d6eaae0c`) still RED (alert at **:525**, not :510; DB001 unit closed `eb9140cb` so the "live conflict" rationale expired — fix unblocked for `.18`, see section UPDATE 16/09 ~07:00); **#774** `java/relative-path-command` `DepsTransitiveTest` FIXED 16/09 by `2a60b426` (`.17`: `mvnOnPath()` removed, reuses `Deps.mvnAvailable()`); bypass `CODEQL_GATE_SKIP=1` + cause declared meanwhile. |
+> | **§258 🔴 OPEN 16/09 (lane `.18`; #774 CLOSED, #775/#776 OPEN 16/09)** | CodeQL gate (3 open): **#773** `java/comparison-with-wider-type` (`i < n`, int vs long) `KofJsRunner.listValues` (DB001 fatia A `3e55df51`, owner `.18` — bound check, precedent `d6eaae0c`) still RED (alert at **:525**, not :510; DB001 unit closed `eb9140cb` so the "live conflict" rationale expired — fix unblocked for `.18`, see section UPDATE 16/09 ~07:00); **#774** `java/relative-path-command` `DepsTransitiveTest` FIXED 16/09 by `2a60b426` (`.17`: `mvnOnPath()` removed, reuses `Deps.mvnAvailable()`); **#775** `java/relative-path-command` `NumericFormatterE2ETest:35` (owner `.22`, `78b733fa` — relative `java` in a test oracle, fix in-file like #774) + **#776** `java/unused-parameter` `KofHttp.supportedOn:57` (= the dead guard of §259, owner `.15`/`.17`, `@SuppressWarnings` not honoured by CodeQL — resolves when §259 wires it); bypass `CODEQL_GATE_SKIP=1` + cause declared meanwhile. |
 > | **§259 🔴 OPEN 16/09 (lane native/compiler `.17`/`.18`)** | Native `http.timeout`/`http.retry`/`http.circuit` compile OK but are **pure silent no-ops** (`NativeHttpCore.java:369-380` = bare `ret`; riscv/aarch `NativeRiscvHttpCore.java:317-324`); `KofHttp.supportedOn` returns `true` for every target, so the user believes retry/circuit are active (R6/rule 5). Docs cited a **phantom `HTTP003`** ("not silent: debug syserr") that no module emits; `HTTP002` exists only as a literal and its branch is dead (see section) — no HTTP gap code is emitted today. Found + docs corrected by lane bugs-and-gaps `.15`; catalogued, fix direction = emit a real compile-time gap code on `NATIVE*` (WEB-split precedent) or implement in asm. |
 > | **§257 ✅ FIXED 15/09 (lane compiler `192.168.100.17`)** | `static final String` runtime-text literals = javac ConstantValue inlining → false red on incremental build (`validationBrJs`); 77 fields de-`final` + `RuntimeConstantInliningGuardTest` (ASM, ConstantValue) locks it. |
 > | **§173 ✅ FIXED 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `++`/`--`/compound on `Long`/`Double`/`Float` + increment of an array ELEMENT: JVM VerifyError (literal `INT 1` in a 2-slot binary, 1-slot `DUP`, `arraystore` without `[array,index]`), Native core dump, Script `NoSuchElementException`, JS `stack underflow`/`KofDup2`. 4 targets; Q4 hunt 13/09 (over §167). Proof: `BackendParityTest.parityIncrementWideTypesAndArrayElement` + `KofInterpreterParityTest.incrementWideTypesAndArrayElement` + cell `increment` 4/4. |
@@ -9056,10 +9056,25 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   the test now reuses `Deps.mvnAvailable()` — one guarded helper instead of a
   hand-rolled probe. Gate now shows ONLY #773. The cataloguing here played its role:
   pointer to the owner, owner fixed it within ~2h.
+- **Third + fourth alert (surfaced 16/09 ~10:30 by the GitHub CodeQL analysis on the
+  tip, same repo-wide-gate mechanism) — #775 `java/relative-path-command` at
+  `kof-compiler/src/test/java/dev/kof/compiler/NumericFormatterE2ETest.java:35`** and
+  **#776 `java/unused-parameter` at
+  `kof-compiler/src/main/java/dev/kof/compiler/KofHttp.java:57`**. #775 is the SAME
+  family as #774: `runJvm()` spawns `new ProcessBuilder("java", "-cp", …)` (relative
+  program) — the pattern is correct for a test oracle but CodeQL flags any bare
+  relative token; the `.22` owner of `78b733fa` fixes in-file (a guarded `java`
+  resolution or a scoped suppression). #776 is the `supportedOn(@SuppressWarnings
+  ("unused") Target target)` placeholder on `KofHttp` — already annotated and its
+  removal/real-wiring is **§259** (the native-http dead-guard record, owner `.15`/`.17`);
+  CodeQL does not honour `@SuppressWarnings` for this rule, so the resolution belongs
+  to §259 (wire the guard when a real unsupported target lands, then the param is used).
+  NOT fixed here: rule 8 (another lane's file) + the #776 fix is a §259 design call.
  - **Status:** 🔴 OPEN 16/09 — catalogued by lane docs/development `192.168.100.22`
-   with the full gate output. Pointer: lane development `.18` (DB001, author of
-   `3e55df51`) for #773 (#774 already closed by `.17` in `2a60b426`).
-   Related: §256 (same lane's CONC001), `d6eaae0c` (same-rule precedent fix).
+   with the full gate output. Pointers: lane development `.18` (DB001, author of
+   `3e55df51`) for #773; lane compiler `.22` (author of `78b733fa`) for #775;
+   §259 (native-http guard, `.15`/`.17`) for #776 (#774 already closed by `.17` in
+   `2a60b426`). Related: §256 (same lane's CONC001), `d6eaae0c` (same-rule precedent fix).
 
 ### §259 — Native `http.timeout`/`http.retry`/`http.circuit` are SILENT no-ops (compile OK, `ret` only) and the docs cited a phantom `HTTP003` code the compiler never emits
 

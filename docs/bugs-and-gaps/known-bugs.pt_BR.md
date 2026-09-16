@@ -14,7 +14,7 @@
 > | **§254 ✅ CORRIGIDO 15/09 (lane dona development `.18`, `713031a7`)** | golden `[stdvalidation]` da ConformanceMatrix codificava a saída ERRADA ANTIGA (4 linhas vs o oráculo mod-11) — célula vermelha no tip limpo; re-gravado pela dona com prova no JVM executado. |
 > | **§255 🔴 ABERTO 15/09 (lane development `.18`)** | `KofDbE2ETest.crossNativeSqliteNowCompiles` falha duro em hosts sem `libsqlite3` cross (falta guard `assumeTrue`; COMP001 `riscv64-ld: -lsqlite3` não encontrado). |
 > | **§256 🟡 PARCIAL 16/09 (lane development `.18`)** | fechamento CONC001 deixou 2 vermelhos no tip limpo (worktree `4af4356f`): ~~célula de gaps de `learn/18-concurrency.md` dessincronizada (guard)~~ **face (a) ✅ FECHADA 16/09 pela lane docs/development `192.168.100.22` (`dd2c7fcb` — `ConcurrencyGapsDocTest` 3/3 verde)** + riscv64 `poll(b)` retorna 0 após scan do selectAny (aarch casa) — face (b) ABERTA. PRÉ-EXISTENTE, não §257. |
-> | **§258 🔴 ABERTO 16/09 (lane `.18`; #774 FECHADO pela `.17`)** | Gate CodeQL: **#773** `java/comparison-with-wider-type` (`i < n`, int vs long) `KofJsRunner.listValues` (DB001 fatia A `3e55df51`, dona `.18` — bound check, precedente `d6eaae0c`) segue VERMELHO (alerta em **:525**, não :510; a unidade DB001 fechou em `eb9140cb`, logo a justificativa "conflito vivo" expirou — conserto desbloqueado para a `.18`, ver UPDATE 16/09 ~07:00 na seção); **#774** `java/relative-path-command` em `DepsTransitiveTest` CORRIGIDO 16/09 por `2a60b426` (`.17`: `mvnOnPath()` removido, reusa `Deps.mvnAvailable()`); bypass `CODEQL_GATE_SKIP=1` + causa declarada enquanto. |
+> | **§258 🔴 ABERTO 16/09 (lane `.18`; #774 FECHADO, #775/#776 ABERTOS 16/09)** | Gate CodeQL (3 abertos): **#773** `java/comparison-with-wider-type` (`i < n`, int vs long) `KofJsRunner.listValues` (DB001 fatia A `3e55df51`, dona `.18` — bound check, precedente `d6eaae0c`) segue VERMELHO (alerta em **:525**, não :510; a unidade DB001 fechou em `eb9140cb`, logo a justificativa "conflito vivo" expirou — conserto desbloqueado para a `.18`, ver UPDATE 16/09 ~07:00 na seção); **#774** `java/relative-path-command` em `DepsTransitiveTest` CORRIGIDO 16/09 por `2a60b426` (`.17`: `mvnOnPath()` removido, reusa `Deps.mvnAvailable()`); **#775** `java/relative-path-command` `NumericFormatterE2ETest:35` (dona `.22`, `78b733fa` — `java` relativo num oráculo de teste, consertar no arquivo como o #774) + **#776** `java/unused-parameter` `KofHttp.supportedOn:57` (= o guard morto do §259, dona `.15`/`.17`, `@SuppressWarnings` não respeitado pelo CodeQL — resolve quando o §259 ligar); bypass `CODEQL_GATE_SKIP=1` + causa declarada enquanto. |
 > | **§259 🔴 ABERTO 16/09 (lane native/compiler `.17`/`.18`)** | `http.timeout`/`http.retry`/`http.circuit` no Native compilam OK mas são **puros no-ops silenciosos** (`NativeHttpCore.java:369-380` = `ret` puro; riscv/aarch `NativeRiscvHttpCore.java:317-324`); `KofHttp.supportedOn` devolve `true` para todo target, então o usuário acredita que retry/circuit estão ativos (R6/regra 5). Os docs citavam um **`HTTP003` fantasma** ("não silencioso: debug syserr") que nenhum módulo emite; `HTTP002` existe só como literal e seu ramo é morto (ver seção) — nenhum gap code HTTP é emitido hoje. Achado + docs corrigidos pela lane bugs-and-gaps `.15`; catalogado, direção do conserto = emitir um código de gap real em compile-time no `NATIVE*` (precedente do split WEB) ou implementar em asm. |
 > | **§257 ✅ CORRIGIDO 15/09 (lane compiler `192.168.100.17`)** | literais `static final String` de texto-de-runtime = inlining ConstantValue do javac → falso vermelho em build incremental (`validationBrJs`); 77 campos de-`final` + `RuntimeConstantInliningGuardTest` (ASM, ConstantValue) trava. |
 > | **§173 ✅ CORRIGIDO 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `++`/`--`/compound em `Long`/`Double`/`Float` + incremento de ELEMENTO de array: JVM VerifyError (literal `INT 1` em binário de 2 slots, `DUP` de 1 slot, `arraystore` sem `[array,index]`), Native core dump, Script `NoSuchElementException`, JS `stack underflow`/`KofDup2`. 4 targets; caça Q4 13/09 (sobre o §167). Prova: `BackendParityTest.parityIncrementWideTypesAndArrayElement` + `KofInterpreterParityTest.incrementWideTypesAndArrayElement` + célula `increment` 4/4. |
@@ -8936,8 +8936,22 @@ usuário — diagnostic em compile-time é a meta (regra 6).
   o teste agora reusa `Deps.mvnAvailable()` — um helper guardado em vez de sonda
   manual. O gate agora mostra SÓ #773. A catalogação aqui cumpriu o papel: ponteiro
   para a dona, a dona consertou em ~2h.
+- **Terceiro + quarto alerta (trazidos à tona 16/09 ~10:30 pela análise CodeQL do GitHub
+  no tip, mesmo mecanismo de gate repo-wide) — #775 `java/relative-path-command` em
+  `kof-compiler/src/test/java/dev/kof/compiler/NumericFormatterE2ETest.java:35`** e
+  **#776 `java/unused-parameter` em
+  `kof-compiler/src/main/java/dev/kof/compiler/KofHttp.java:57`**. O #775 é da MESMA
+  família do #774: `runJvm()` roda `new ProcessBuilder("java", "-cp", …)` (programa
+  relativo) — o padrão está correto para um oráculo de teste mas o CodeQL marca qualquer
+  token relativo cru; a dona `.22` de `78b733fa` conserta no arquivo (resolver `java`
+  guardado ou supressão escopada). O #776 é o placeholder `supportedOn(@SuppressWarnings
+  ("unused") Target target)` no `KofHttp` — já anotado, e removê-lo/ligar de verdade é o
+  **§259** (registro do guard morto do http nativo, dona `.15`/`.17`); o CodeQL não
+  respeita `@SuppressWarnings` nesta regra, então a resolução pertence ao §259 (ligar o
+  guard quando um alvo realmente não-suportado landar, aí o parâmetro é usado).
+  NÃO consertado aqui: regra 8 (arquivo de outra lane) + o conserto do #776 é decisão §259.
 - **Estado:** 🔴 ABERTO 16/09 — catalogado pela lane docs/development
-  `192.168.100.22` com a saída completa do gate. Ponteiro: lane development
+  `192.168.100.22` com a saída completa do gate. Ponteiros: lane development
   `.18` (DB001, autora de `3e55df51`) pelo #773 (#774 já fechado pela `.17` em
   `2a60b426`). Relacionado: §256 (CONC001 da mesma lane), `d6eaae0c` (conserto
   precedente da mesma regra).
