@@ -172,10 +172,10 @@ for (int i = 0; i < ss.cases().size(); i++) {
     ops.add(new KofLoadLocal(switchType, switchTmp));
     localIdx = ExpressionLowerer.emitExpression(driver, sc.value(), ops, owner, localIdx, locals);
     if (enumSwitch) {
-        // comparação por conteúdo (o valor do enum é o nome)
-        ops.add(new KofCall(BuiltinTypes.STRING, "kof_string_equals",
-                List.of(BuiltinTypes.STRING, BuiltinTypes.STRING),
-                Type.PrimitiveType.BOOL, KofCallKind.FUNCTION));
+        // D-ENUM207: as constantes são INSTÂNCIAS (singletons), a igualdade
+        // é por IDENTIDADE (if_acmp) — não mais kof_string_equals sobre o
+        // nome (que agora forçaria cast de Dir→String = CCE).
+        ops.add(new KofBinary(KofBinaryOp.EQ, switchType));
         ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 0));
         ops.add(new KofConditionalJump(KofComparison.NE, bodyLabels.get(i),
                 i + 1 < ss.cases().size() ? testLabels.get(i + 1) : defaultLabel));

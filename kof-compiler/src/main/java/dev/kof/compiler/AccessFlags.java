@@ -15,6 +15,9 @@ public final class AccessFlags {
     public static final int ABSTRACT   = 0x0400;
     public static final int INTERFACE  = 0x0200;
     public static final int SYNTHETIC  = 0x1000;
+    // D-ENUM207 (#207): marca a constante de enum. Bit 0x4000 no espaço de
+    // FIELD flags (§4.5) e de CLASS flags (§4.1) — sem colisão com os acima.
+    public static final int ENUM       = 0x4000;
 
     private AccessFlags() {}
 }

@@ -67,10 +67,9 @@ public final class JvmTypeMapper {
         if ("kof.concurrent".equals(c.packageName()) && "Handle".equals(c.name())) {
             return "Ljava/util/concurrent/CompletableFuture;";
         }
-        // enum: o valor em runtime é o nome (String)
-        if (c.packageName().isEmpty() && BuiltinTypes.isEnumName(c.name())) {
-            return "Ljava/lang/String;";
-        }
+        // enum: D-ENUM207 — o valor é uma INSTÂNCIA de enum (classe real
+        // emitida por CompilerEnumLowering), não a String do nome. Descriptor
+        // próprio L<Dir>; (antes era apagado p/ Ljava/lang/String;).
         return "L" + internalName + ";";
     }
 
@@ -163,7 +162,6 @@ public final class JvmTypeMapper {
         if ("kof".equals(packageName) && "Map".equals(simpleName)) return "java/util/HashMap";
         if ("kof.concurrent".equals(packageName) && "Channel".equals(simpleName)) return "java/util/concurrent/LinkedBlockingQueue";
         if ("kof.concurrent".equals(packageName) && "Handle".equals(simpleName)) return "java/util/concurrent/CompletableFuture";
-        if (packageName.isEmpty() && BuiltinTypes.isEnumName(simpleName)) return "java/lang/String";
         if (packageName.isEmpty()) return simpleName;
         return packageName.replace('.', '/') + "/" + simpleName;
     }

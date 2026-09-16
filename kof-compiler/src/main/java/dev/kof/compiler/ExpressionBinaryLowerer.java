@@ -74,6 +74,16 @@ if ("instanceof".equals(bin.operator()) || "as".equals(bin.operator())) {
         if (targetType instanceof Type.FunctionType ft) {
             castTarget = CompilerLambdaClass.lambdaInterfaceType(driver, ft);
         }
+        if (TypeMetrics.isPrimitiveType(fromCastType)
+                && !TypeMetrics.isPrimitiveType(targetType)) {
+            // §213: cast de PRIMITIVO → REFERÊNCIA (`i as Object`, `7 as Object`)
+            // emitia o primitivo cru seguido de checkcast → VerifyError
+            // ("Bad type on operand stack" — um int não é assignable a
+            // referência). Boxa primeiro (mirror `var o: Object = 7` que já
+            // faz kof_box via StatementLowerer). JS/Native são untyped — o
+            // kof_box é identidade lá.
+            driver.emitErasureBox(ops, fromCastType);
+        }
         ops.add(new KofCheckCast(castTarget));
         // #205: cast de REFERÊNCIA → PRIMITIVO (`obj as Int` com obj Object)
         // chegava aqui com targetType primitivo (from não é primitivo → o ramo
@@ -307,8 +317,7 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
         }
         accType = Type.PrimitiveType.BOOL;
     } else if (("==".equals(be.operator()) || "!=".equals(be.operator()))
-            && (Type.isString(accType) || Type.isString(rightType)
-                || CompilerTypes.isEnumType(accType, driver.currentUnit) || CompilerTypes.isEnumType(rightType, driver.currentUnit))) {
+            && (Type.isString(accType) || Type.isString(rightType))) {
         localIdx = ExpressionLowerer.emitExpression(driver, be.right(), ops, owner, localIdx, locals);
         ops.add(new KofCall(BuiltinTypes.STRING, "kof_string_equals",
                 List.of(BuiltinTypes.STRING, BuiltinTypes.STRING),

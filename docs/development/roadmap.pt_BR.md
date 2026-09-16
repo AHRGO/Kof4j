@@ -2,7 +2,10 @@
 
 # Kof — Roadmap de Longo Prazo
 
-**Última atualização:** 13 de setembro de 2026 (fusão de planos: §23 = plano
+**Última atualização:** 15 de setembro de 2026 (§23 ganha 2.6 = fila
+D-NULL-INTENT N1→N4 [lane compiler, decisão da mantenedora 15/09]; TIER 3–5
+marcado DESPRIORIZADO pela mantenedora 15/09 — trio de volta a `future/`).
+(antes: fusão de planos: §23 = plano
 de implementação ÚNICO (ex-`ACTION_PLAN`+`IMPLEMENTATION_PLAN`); cluster de
 migração consolidado — `LEGACY_IR`+`DIFFERENTIAL_TESTING` fundidos em
 `LEGACY_MIGRATION.md`)
@@ -806,13 +809,15 @@ maps, avançado) planejadas. Ver: `docs/debugging/debugger-architecture.md`,
 Iniciativa de longo prazo para analisar, recuperar, traduzir e modernizar
 sistemas legados para Kof — **fora do escopo 0.0.x**.
 
-- Documento central: `LEGACY_MIGRATION.md` (§4 = Legacy Semantic IR/Confidence;
-  §8 = teste diferencial + migration report)
+- Documento central: `future/LEGACY_MIGRATION.md` (§4 = Legacy Semantic
+  IR/Confidence; §8 = teste diferencial + migration report) —
+  **DESPRIORIZADO pela mantenedora 15/09: o trio + work-logs voltaram para
+  `future/`; o código em kof-cli fica, promoção exige decisão explícita dela**
 - Componentes planejados: `kof inspect`, `kof decompile`, `kof translate`,
   `kof migrate`, `kof compare`
 - Arquitetura: `Legacy Input → Legacy Semantic IR → Kof AST → Kof IR → Backend`
 - Java é origem suportada, nunca representação intermediária obrigatória
-- Documentos relacionados: `DECOMPILER.md`, `TRANSLATOR.md` (os antigos
+- Documentos relacionados: `future/DECOMPILER.md`, `future/TRANSLATOR.md` (os antigos
   `LEGACY_IR.md` e `DIFFERENTIAL_TESTING.md` foram fundidos no central 13/09;
   `IMPLEMENTATION_PLAN.md`/`ACTION_PLAN.md` viraram o §23 deste roadmap)
 
@@ -902,6 +907,33 @@ tiers `stable`/`experimental` (`docs/backend-parity.md`).
 | 2.4.1 | Scoped resources (RAII leve sobre `try/finally`) | 🟡 só design (`future/scoped-resources-plan.md`); sintaxe `using` gated por bump |
 | 2.5 | Variance / sealed | ✅ **DECIDIDO ADIAR** — `enum`+`record`/`interface` cobrem o caso; abre só com pipeline científica (bump) |
 
+#### 2.6 — Nullability por INTENÇÃO EXPLÍCITA (fila N1→N4 de DECISIONS §D-NULL-INTENT, 15/09)
+
+**Decidido pela mantenedora em pessoa 15/09** (registro: `DECISIONS.md`
+§D-NULL-INTENT, EN+PT — a "opção A" do §125 (dobra silenciosa `null→0`) está
+REVOGADA). Lane: **compiler** (contrato nos 4 backends — não a lane docs).
+
+| # | Passo | Escopo (uma linha) | Depende de |
+|---|-------|--------------------|------------|
+| 2.6.1 | **N1** — JVM+Script+JS: `Nullable(primitivo)` carrega null REAL | `T?` boxed em retorno/campo/slot nos 3 targets com tipo boxed; virar a célula `nullableprint` + as 3 paridades null-branch de `KofInterpreterParityTest` no MESMO commit do comportamento (regra 1) | — |
+| 2.6.2 | **N2** — Native: null real via ABI de box tagged §104b-ii | box `typeId=3` + `object_to_string`/unbox com dispatch; x86 à mão + riscv à mão + aarch64 via tradutor | §104b-ii / §205 fatia 2 dividem este ABI |
+| 2.6.3 | **N3** — `== null` em NÃO-nullable: legal, constant-foldable, NUNCA diagnóstico | a intenção é a própria comparação; regra 2 (retrocompat): código existente que compara continua compilando | N1 |
+| 2.6.4 | **N4** — auditar as faces restantes de null silencioso | map-miss `0` (SG-008), campo não-inicializado `0`, unbox-de-null `0` — cada um ganha decisão ou diagnóstico honesto (R6) | N1–N3 |
+
+#### 2.7 — Value records / tipos de valor de primeira classe (fila de `D-VALUE-RECORD`, 16/09)
+
+**Decidido pela mantenedora 16/09** (registro: `DECISIONS.md` §D-VALUE-RECORD;
+origem issue #275). Aditivo, retrocompatível. **Apenas planejado — não é
+trabalho atual** (R12: frentes novas não abrem antes de o estágio SYSTEMS
+fechar; lanes não devem atacar sem nova autorização).
+
+| # | Etapa | Escopo (uma linha) | Depende de |
+|---|-------|--------------------|------------|
+| 2.7.1 | **keyword `value` no front-end** | `value record Name(campos)` faz parse e tipagem como `record` + modificador `value`; sem semântica de identidade ainda | — |
+| 2.7.2 | **ABI JVM** | mapeamento value/inline class (`invokevirtual` com semântica de valor, sem identidade `Object`) | 2.7.1 |
+| 2.7.3 | **ABI Native** | passagem por valor (struct por valor / registradores) | 2.7.1 |
+| 2.7.4 | **ABI JS** | objeto congelado comum (sem identidade) | 2.7.1 |
+| 2.7.5 | **paridade + docs** | células de conformidade `valuerecord` + matriz de paridade + `training/` + `learn/` | 2.7.1–2.7.4 |
 ### TIER 3–5 — Plataforma de migração legado (Fases A–H) ✅ código+testes
 
 `kof inspect/decompile/translate/compare/migrate` no CLI (`Main.java`);
@@ -911,9 +943,13 @@ Translate 61, Compare 7, Migrate 3** — todas verdes (os números de 13/09
 57/33/6/3 estavam defasados; a então "1 célula vermelha"
 `qualifiedLocalTypeTranslates` está VERDE desde que a lane `.22` a fechou).
 Recuperação de corpo de método ainda parcial
-(joins estruturais = Fase C, o maior gargalo medido: 2452 métodos). O
-histórico técnico detalhado vive em `LEGACY_MIGRATION.md` + `DECOMPILER.md`
-(§7) — **não duplicar aqui**; esta tabela só dá a ordem.
+(joins estruturais = Fase C; re-medido 15/09 com probe instrumentado:
+1793 stubs, a maior família são prefixos de teste com computação/invokes —
+519/566 TRAPs exigindo o walker de post-dominador; o número antigo "2452" do
+StoreCat está defasado, o sub-caso de join if-then puro já está recuperado). O
+histórico técnico detalhado vive em `future/LEGACY_MIGRATION.md` +
+`future/DECOMPILER.md` (§7) — **não duplicar aqui**; esta tabela só dá a
+ordem. **DESPRIORIZADO 15/09 (mantenedora): TIER 3–5 não é trabalho atual.**
 
 ### TIER 6–12 — Plataforma universal (não iniciados; regidos por `future/PLAN-UNIVERSAL-PLATFORM.md`)
 

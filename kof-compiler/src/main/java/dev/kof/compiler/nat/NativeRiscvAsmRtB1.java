@@ -7,7 +7,7 @@ public final class NativeRiscvAsmRtB1 {
 
     private NativeRiscvAsmRtB1() {}
 
-    static final String RISCV_RUNTIME_ASM_B_1 = """
+    static  String RISCV_RUNTIME_ASM_B_1 = """
             .globl kof_observability_increment
             kof_observability_increment:
                 addi sp, sp, -32

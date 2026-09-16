@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * `kof_gc_dump` do G-2 ANTES/DEPOIS do mark.
  *
  * <p>Prova (qemu riscv64 + aarch64, toolchain presente, NUNCA skip): monta o
- * runtime de PRODUÇÃO ({@link RiscvSlices#renderRuntime()}) com um `_start`
+ * runtime de PRODUÇÃO PODADO ({@link RiscvGcTestRuntimes#prunedFor}) com um `_start`
  * que aloca A(estático)→B(pilha)→C(inalcançável)→D(via campo de A), chama
  * `kof_gc_mark` e despeja a gc-list (LIFO): D=1, C=0, B=1, A=1.
  */
@@ -113,7 +113,7 @@ class NativeRiscvGcMarkTest {
 
     private String buildRiscv(Path tempDir, String name) throws IOException {
         Path asm = tempDir.resolve(name + ".s");
-        Files.writeString(asm, HARNESS + "\n" + RiscvSlices.renderRuntime());
+        Files.writeString(asm, HARNESS + "\n" + RiscvGcTestRuntimes.prunedFor(HARNESS));
         Path obj = tempDir.resolve(name + ".o");
         Path bin = tempDir.resolve(name);
         runCapture("riscv64-linux-gnu-as", "-mno-relax", "-o", obj.toString(), asm.toString());
@@ -123,7 +123,7 @@ class NativeRiscvGcMarkTest {
     }
 
     private String buildAarch64(Path tempDir, String name) throws IOException {
-        String riscv = HARNESS + "\n" + RiscvSlices.renderRuntime();
+        String riscv = HARNESS + "\n" + RiscvGcTestRuntimes.prunedFor(HARNESS);
         StringBuilder arm = new StringBuilder();
         for (String line : riscv.split("\n", -1)) {
             List<String> tr = NativeAarch64Translator.translateRiscvToAarch64(line);

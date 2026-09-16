@@ -23,7 +23,7 @@ final class NativeRiscvAsmRtB36 {
 
     private NativeRiscvAsmRtB36() {}
 
-    static final String RISCV_RUNTIME_ASM_B_36 = """
+    static  String RISCV_RUNTIME_ASM_B_36 = """
             .section .text
 
             # String_equals(a0=String*, a1=String*) -> a0=Bool (bytewise, como

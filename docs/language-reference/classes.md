@@ -136,10 +136,17 @@ println(c.name())         // "Red" (probe)
 
 - **Constants only** — no methods, fields, constructors, body (`enum E { A
   String f(){…} }` → `PARSE032`, *probe*).
-- **At runtime the enum value IS the name (`String`)** (`BuiltinTypes.java:95-98`).
-  `Color.Red` is the string `"Red"`. `==` compares content.
-- Synthetic methods: `values() → List<String>` (static), `valueOf(String) →
-  enum` (static), `name() → String` (instance) (`preDeclareType:299-314`).
+- **An enum value is a real instance (D-ENUM207, issue #207)** — the compiler
+  emits a real enum class (`Dir.class`) with the constants as `static final`
+  instances created in `<clinit>`; `Dir.N` compiles to
+  `getstatic Dir.N : LDir;` (not `ldc "N"`). `getClass()` returns `Dir` and
+  `instanceof Dir` is a real check. `==`/`!=` between two enum values compares
+  **identity** (`if_acmp`) — correct because the constants are singletons.
+  An enum value is **not** a String: `Color.Red == "Red"` is rejected at
+  compile time with `SEM062` — compare two enum values or call `.name()`.
+- Synthetic methods: `values() → List<Dir>` (static), `valueOf(String) →
+  Dir` (static, null on miss), `name() → String`, `ordinal() → Int`,
+  `toString() → String` (the name), `compareTo(Dir) → Int` (instance).
 - **Switch over enum**: without `default` it requires full coverage → otherwise `SEM031`.
 - Unqualified constant (`Red` within the enum context) resolves
   (`:869-876`).

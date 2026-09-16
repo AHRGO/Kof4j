@@ -148,6 +148,16 @@ public final class NativeRiscvCrossOps {
                         sb.append("    call kof_bool_to_string\n");
                         sb.append(nl ? "    call kof_println_string\n" : "    call kof_print_string\n");
                     }
+                    case "float" -> {
+                        // FLT001 (fechado 15/09): println(double/float) direto
+                        // de System.out (não passa pelo valueOf do sugar).
+                        sb.append("    call kof_float_to_string\n");
+                        sb.append(nl ? "    call kof_println_string\n" : "    call kof_print_string\n");
+                    }
+                    case "double" -> {
+                        sb.append("    call kof_double_to_string\n");
+                        sb.append(nl ? "    call kof_println_string\n" : "    call kof_print_string\n");
+                    }
                     default -> sb.append(nl ? "    call kof_println_string\n" : "    call kof_print_string\n");
                 }
             } else {
@@ -174,14 +184,18 @@ public final class NativeRiscvCrossOps {
             if (vArgType instanceof Type.PrimitiveType pt) {
                 String cn = Type.canonicalPrimitiveName(pt.name());
                 if ("float".equals(cn) || "double".equals(cn)) {
-                    // FLT001: double→string exige %g (snprintf/libc) — ausente
-                    // no runtime riscv64/aarch64 (asm puro estático). Sem guard,
-                    // os bits do double ficavam na pilha e o println seguinte
-                    // tratava-os como ponteiro de string (segfault silencioso).
-                    throw new IllegalStateException("FLT001: " + mn
-                            + "(float/double) não é suportado no runtime riscv64/aarch64"
-                            + " (asm puro, sem libc/snprintf) — use JVM/Native x86_64"
-                            + " ou converta (d as Int)");
+                    // FLT001 (fechado 15/09): double/float→string via slice B45
+                    // (libc snprintf/strtod, link dinâmico sob demanda). Os bits
+                    // crus já estão no topo da pilha de valor; a string volta em
+                    // a0. ABI: kof_float_to_string(a0=low32),
+                    // kof_double_to_string(a0=bits).
+                    if ("float".equals(cn)) {
+                        sb.append("    pop a0\n    call kof_float_to_string\n");
+                    } else {
+                        sb.append("    pop a0\n    call kof_double_to_string\n");
+                    }
+                    other.pushRiscv(sb, "a0");
+                    return;
                 }
                 if ("int".equals(cn) || "char".equals(cn) || "short".equals(cn) || "byte".equals(cn) || "long".equals(cn)) {
                     sb.append("    pop a0\n    call kof_int_to_string\n");
@@ -196,21 +210,15 @@ public final class NativeRiscvCrossOps {
                 // toString) — o ramo genérico não emitia nada e o ponteiro cru
                 // caía em kof_println_string = lixo (`@` medido no qemu). A tag
                 // do elemento vem do typer (SEM056: homogênea), igual x86.
-                // FP-em-coleção: MESMA recusa honesta do valueOf escalar
-                // (FLT001, sem snprintf no runtime asm-puro) — nunca `[?, ?]`
-                // silencioso nem lixo (R6/R7). Record/aninhado (tag 6) fica
-                // `?` no helper (cara do §104b-ii, idêntico ao x86).
+                // FP-em-coleção (tags 4/5): fechado em 15/09 — o helper
+                // kof_elem_to_string do B39 chama kof_double_to_string/
+                // kof_float_to_string (slice B45), igual ao x86.
+                // Record/aninhado (tag 6) fica `?` no helper (cara do §104b-ii).
                 Type elem = BuiltinTypes.isMap(ct) ? null
                         : BuiltinTypes.isList(ct) ? BuiltinTypes.listElement(ct)
                         : BuiltinTypes.setElement(ct);
                 int ktag = NativeX86Calls.collectionTag(BuiltinTypes.isMap(ct) ? BuiltinTypes.mapKey(ct) : elem);
                 int vtag = BuiltinTypes.isMap(ct) ? NativeX86Calls.collectionTag(BuiltinTypes.mapValue(ct)) : -1;
-                if (ktag == 4 || ktag == 5 || vtag == 4 || vtag == 5) {
-                    throw new IllegalStateException("FLT001: " + mn
-                            + "(coleção de float/double) não é suportada no runtime riscv64/aarch64"
-                            + " (asm puro, sem libc/snprintf) — use JVM/Native x86_64"
-                            + " ou converta (d as Int)");
-                }
                 sb.append("    pop a0\n");
                 if (BuiltinTypes.isList(ct)) {
                     sb.append("    li a1, ").append(ktag).append("\n");

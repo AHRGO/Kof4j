@@ -34,10 +34,15 @@ public final class StatementAnalyzer {
         if (ae.target() instanceof IdentifierExpr ie) {
             SymbolTable.Symbol sym = scope.resolve(ie.name());
             if (sym != null) {
-                targetType = sym.type();
+                // D-NARROW-WHILE (#159): alvo NARROWADO — a assignabilidade e
+                // o `val` vêm da DECLARAÇÃO; o narrowing é de fluxo, não muda
+                // o tipo do slot (senão `s = nextVal(i)` num corpo narrowado
+                // dava SEM012 falso-positivo).
+                SymbolTable.Symbol effective = Narrowing.assignTarget(scope, ie.name(), sym);
+                targetType = effective.type();
                 // bug 62: `val` é imutável — escrever em val é erro de
                 // mutabilidade (SEM037), alinhado à  .
-                if (sym instanceof SymbolTable.LocalVariableSymbol lv && lv.isVal()
+                if (effective instanceof SymbolTable.LocalVariableSymbol lv && lv.isVal()
                         && sa.diagnostics() != null) {
                     sa.diagnostics().error("", 0, 0, 0,
                             "cannot assign to immutable 'val' variable '" + ie.name() + "'",
@@ -200,7 +205,7 @@ public final class StatementAnalyzer {
             case ReturnStmt ret -> {
                 if (ret.value() != null) {
                     Type valueType = SemExpressionTyper.inferType(sa, ret.value(), scope);
-                    sa.expressionTypes().put(ret.value(), valueType);
+                    sa.putExpressionType(ret.value(), valueType);
                     if (sa.diagnostics() != null && !Type.isUnknown(returnType) && !Type.isVoid(returnType)
                             && !Type.isUnknown(valueType) && !TypeChecker.isAssignable(sa, valueType, returnType)) {
                         sa.diagnostics().error("", 0, 0, 0,
@@ -246,6 +251,13 @@ public final class StatementAnalyzer {
             case WhileStmt ws -> {
                 SemExpressionTyper.inferType(sa, ws.condition(), scope);
                 SymbolTable whileScope = scope.enterScope();
+                // D-NARROW-WHILE (#159): `while (s != null)` narrowa `s` no
+                // corpo como o THEN do `if` — o corpo só roda com a condição
+                // verdadeira (o `if` já fazia; o while era o falso-positivo).
+                java.util.List<SymbolTable.LocalVariableSymbol> bodyNarrow = new java.util.ArrayList<>();
+                collectNarrowing(sa, ws.condition(), scope, bodyNarrow,
+                        new java.util.ArrayList<>(), false);
+                for (SymbolTable.LocalVariableSymbol s : bodyNarrow) whileScope.define(s);
                 analyzeStatement(sa, ws.body(), whileScope, returnType);
             }
             case DoWhileStmt dws -> {
@@ -370,11 +382,11 @@ public final class StatementAnalyzer {
                     // (SEM012) sem o SEM027 (que é só para uso como VALOR —
                     // bug 12). Mesmo helper usado pelo update do for.
                     if (es.expression() instanceof AssignmentExpr ae) {
-                        sa.expressionTypes().put(es.expression(),
+                        sa.putExpressionType(es.expression(),
                                 analyzeAssignmentStatement(sa, ae, scope));
                     } else {
                         Type exprType = SemExpressionTyper.inferType(sa, es.expression(), scope);
-                        sa.expressionTypes().put(es.expression(), exprType);
+                        sa.putExpressionType(es.expression(), exprType);
                     }
                 }
             }
@@ -409,7 +421,9 @@ public final class StatementAnalyzer {
      * `x != null` → THEN; `x == null` → ELSE; conjunção (&&) une os dois
      * lados no mesmo ramo THEN (o ramo só roda se TODOS os conjuntos valerem).
      * Disjunção (||) NÃO narrow (o ramo roda se UM valer) — recursão para
-     * sem coletar. Só narrow locais cujo símbolo é NullableType.
+     * sem coletar. Narrowa locais cujo símbolo é NullableType e, desde
+     * D-NARROW-WHILE (#159), também CAMPOS de receiver (`b.data != null`)
+     * via um símbolo sintético (Narrowing.fieldNarrow) consultado por path.
      */
     private static void collectNarrowing(SemanticAnalyzer sa, ExpressionNode cond,
             SymbolTable scope,
@@ -428,13 +442,23 @@ public final class StatementAnalyzer {
             return;
         }
         boolean isNullTest = be.right() instanceof LiteralExpr rl && rl.kind() == ConcreteLiteralKind.NULL;
-        boolean leftIsId = be.left() instanceof IdentifierExpr;
-        if (!isNullTest || !leftIsId) return;
-        IdentifierExpr id = (IdentifierExpr) be.left();
-        SymbolTable.Symbol sym = scope.resolve(id.name());
-        if (!(sym != null && sym.type() instanceof Type.NullableType nt)) return;
-        SymbolTable.LocalVariableSymbol narrowed =
-                new SymbolTable.LocalVariableSymbol(id.name(), nt.inner(), 0);
+        if (!isNullTest) return;
+        SymbolTable.LocalVariableSymbol narrowed;
+        if (be.left() instanceof IdentifierExpr id) {
+            SymbolTable.Symbol sym = scope.resolve(id.name());
+            if (!(sym != null && sym.type() instanceof Type.NullableType nt)) return;
+            narrowed = new SymbolTable.LocalVariableSymbol(id.name(), nt.inner(), 0);
+        } else if (be.left() instanceof FieldAccessExpr) {
+            // D-NARROW-WHILE (#159): campo de receiver (`if (b.data != null)`)
+            // narrowa o CAMPO no ramo — o tipo efetivo vem da inferência da
+            // própria expressão (o receiver do campo pode ser Nullable também).
+            String path = Narrowing.pathOf(be.left());
+            Type fieldType = SemExpressionTyper.inferType(sa, be.left(), scope);
+            if (!(fieldType instanceof Type.NullableType nt) || path == null) return;
+            narrowed = Narrowing.fieldNarrow(path, nt.inner());
+        } else {
+            return;
+        }
         switch (op) {
             case "!=" -> thenNarrow.add(narrowed);
             case "==" -> elseNarrow.add(narrowed);

@@ -26,6 +26,7 @@ is explicitly non-deliverable and outside the current scope).
 | `scoped-resources-plan.md` | lightweight RAII (TIER 2.4, `using`/`resource_scope`) | pure design — zero occurrences of `resource_scope`/`kof_resource`/`using` in the lexer/parser/runtime; gated by bump |
 | `PLAN-BAREMETAL-BOOT.md` | **native → bare-metal/bootable** (HAL seam B-0…B-5: freestanding, UEFI, legacy BIOS, MCU) — maintainer directive 15/09 | **zero code** — the runtime is hardwired to Linux syscalls, x86 needs `-lc`/`-dynamic-linker`, 32-bit codegen absent; classified per `PLAN-TREE-SHAKING.md` §T3 ("real embedded = RTOS/bare-metal backend of its own") — moves to `docs/` when B-1 produces a dynamic-free ELF |
 | ~~`planning-stdlib-array-returns.md`~~ → `docs/stdlib/DD-STDLIB-01-array-returns.md` | DD-STDLIB-01 | **CLOSED 09/13** — decision 6a + implementation (`randomBytesHex`->String; choice=idiom), moved to docs/ |
+| `DECOMPILER.md` + `TRANSLATOR.md` + `LEGACY_MIGRATION.md` | legacy migration platform (decompiler/translator/IR/diff-testing) | **DEPRIORITIZED by the maintainer 15/09 — back from `docs/development/`. Code stays in kof-cli (DecompileTest 67/67, TranslateTest 61/61); the QUEUE is paused: promotion needs her explicit decision |
 
 ## Already fell to `docs/development/` (started — rule of 3 states, 09/12)
 

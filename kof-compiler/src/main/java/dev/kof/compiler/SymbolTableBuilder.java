@@ -34,7 +34,7 @@ public final class SymbolTableBuilder {
             SymbolTable.ClassSymbol sym = new SymbolTable.ClassSymbol(cls.name(), declPkg,
                     cls.superClass() != null ? superQualified : "Object",
                     cls.interfaces(), members);
-            sa.allClasses().put(cls.name(), sym);
+            sa.putClass(cls.name(), sym);
             sa.currentScope().define(sym);
         } else if (decl instanceof RecordDeclarationNode rec) {
             SymbolTable members = new SymbolTable();
@@ -47,13 +47,13 @@ public final class SymbolTableBuilder {
             }
             SymbolTable.ClassSymbol sym = new SymbolTable.ClassSymbol(rec.name(), sa.packageOf(rec),
                     rec.superClass() != null ? superQualified : "Record", rec.interfaces(), members);
-            sa.allClasses().put(rec.name(), sym);
+            sa.putClass(rec.name(), sym);
             sa.currentScope().define(sym);
         } else if (decl instanceof EntityDeclarationNode ent) {
             SymbolTable members = new SymbolTable();
             SymbolTable.ClassSymbol sym = new SymbolTable.ClassSymbol(ent.name(), sa.packageOf(ent),
                     "Record", List.of(), members);
-            sa.allClasses().put(ent.name(), sym);
+            sa.putClass(ent.name(), sym);
             sa.currentScope().define(sym);
         } else if (decl instanceof EnumDeclarationNode en) {
             SymbolTable members = new SymbolTable();
@@ -78,20 +78,20 @@ public final class SymbolTableBuilder {
                     0, SymbolTable.DispatchKind.INSTANCE));
             SymbolTable.ClassSymbol sym = new SymbolTable.ClassSymbol(en.name(), sa.packageOf(en),
                     "Enum", List.of(), members);
-            sa.allClasses().put(en.name(), sym);
+            sa.putClass(en.name(), sym);
             sa.currentScope().define(sym);
         } else if (decl instanceof InterfaceDeclarationNode iface) {
             SymbolTable members = new SymbolTable();
             SymbolTable.ClassSymbol sym = new SymbolTable.ClassSymbol(iface.name(), sa.packageOf(iface),
                     "Object", iface.interfaces(), members);
-            sa.allClasses().put(iface.name(), sym);
-            sa.interfaceNames().add(iface.name());
+            sa.putClass(iface.name(), sym);
+            sa.addInterface(iface.name());
             sa.currentScope().define(sym);
         }
         // SG-017 (SEM041): registra classes abstratas — `new A()` vira erro.
         if (decl instanceof ClassDeclarationNode cls
                 && cls.modifiers().contains("abstract")) {
-            sa.abstractClasses().add(cls.name());
+            sa.addAbstractClass(cls.name());
         }
     }
 
@@ -110,7 +110,7 @@ public final class SymbolTableBuilder {
         if (sa.classMemberScopes().containsKey(cls.name())) return;
         SymbolTable.ClassSymbol classSym = sa.allClasses().get(cls.name());
         SymbolTable classScope = classSym.members().enterScope();
-        sa.classMemberScopes().put(cls.name(), classScope);
+        sa.putClassMemberScope(cls.name(), classScope);
         for (String tp : cls.typeParameters()) {
             classScope.define(new SymbolTable.TypeParameterSymbol(tp));
         }
@@ -235,7 +235,7 @@ public final class SymbolTableBuilder {
         if (sa.classMemberScopes().containsKey(rec.name())) return;
         SymbolTable.ClassSymbol classSym = sa.allClasses().get(rec.name());
         SymbolTable classScope = classSym.members().enterScope();
-        sa.classMemberScopes().put(rec.name(), classScope);
+        sa.putClassMemberScope(rec.name(), classScope);
         List<String> typeParams = rec.typeParameters() == null ? List.of() : rec.typeParameters();
         for (String tp : typeParams) {
             classScope.define(new SymbolTable.TypeParameterSymbol(tp));
@@ -294,7 +294,7 @@ public final class SymbolTableBuilder {
         if (sa.classMemberScopes().containsKey(iface.name())) return;
         SymbolTable.ClassSymbol classSym = sa.allClasses().get(iface.name());
         SymbolTable classScope = classSym.members().enterScope();
-        sa.classMemberScopes().put(iface.name(), classScope);
+        sa.putClassMemberScope(iface.name(), classScope);
         // #160: type-params de interface genérica entram no escopo ANTES dos
         // membros, igual a defineClassMembers — sem isso `map(T input)` não
         // resolve o T.
@@ -336,7 +336,7 @@ public final class SymbolTableBuilder {
         classScope.define(ctorSym);
         SymbolTable.ClassSymbol cs = sa.allClasses().get(className);
         if (cs != null) cs.members().define(ctorSym);
-        sa.ctorScopes().put(ctor, ctorScope);
+        sa.putCtorScope(ctor, ctorScope);
     }
 
     static void defineMethodSymbol(SemanticAnalyzer sa, MethodDeclarationNode method,
@@ -381,7 +381,7 @@ public final class SymbolTableBuilder {
         classScope.define(methodSym);
         SymbolTable.ClassSymbol cs = sa.allClasses().get(className);
         if (cs != null) cs.members().define(methodSym);
-        sa.methodScopes().put(method, methodScope);
-        sa.methodSymbols().put(method, methodSym);
+        sa.putMethodScope(method, methodScope);
+        sa.putMethodSymbol(method, methodSym);
     }
 }

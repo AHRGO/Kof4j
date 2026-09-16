@@ -4,7 +4,7 @@ package dev.kof.compiler.nat;
 // Convenção RISC-V LP64: a0/a1/a2 = args, a0 = retorno.
 public final class NativeRiscvAsmRtB5 {
 
-    static final String RISCV_RUNTIME_ASM_B_5 = """
+    static  String RISCV_RUNTIME_ASM_B_5 = """
 
             # ── kof.math (STDLIB S1) — Int-only ───────────────────────
 

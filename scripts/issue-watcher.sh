@@ -17,6 +17,7 @@ GH_REPO="KofLang/Kof4j"
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/$MARKER"
 STATE="$STATE_DIR/state"
 LOG="$STATE_DIR/watch.log"
+LOCK="$STATE_DIR/lock"
 
 SERVER="${OPENCODE_SERVER_URL:-http://127.0.0.1:9093}"
 OPENCODE="${OPENCODE_BIN:-}"
@@ -92,6 +93,42 @@ cmd_tick() {
     # OPENCODE_SERVER_URL no momento do start fixa a porta da sessão-alvo;
     # o tick roda no cron sem o env → usa o server gravado no state.
     SERVER="${OPENCODE_SERVER_URL:-${server:-$SERVER}}"
+    # GUARDA (16/09): sem lock, cada tick empilhava um 'opencode run' na sessao
+    # viva (16 runs acumulados 15/09 21:54->22:24; 'seen' so avanca apos o run
+    # terminar -> o mesmo tick re-injetava a mesma varredura infinitamente,
+    # competindo com o turno injetado). Espelho do flock+watchdog de
+    # auto-loop.sh:139-175: run anterior ativo = tick pulado; stale >=
+    # WATCHER_MAX_MIN (default 240) = mata o holder e segue.
+    mkdir -p "$STATE_DIR"
+    exec 9>"$LOCK"
+    if ! flock -n 9; then
+        local age_min max holder held_since
+        age_min=0
+        if [ -f "$LOCK.held" ]; then
+            held_since=$(cat "$LOCK.held" 2>/dev/null || echo 0)
+            case "$held_since" in (*[!0-9]*|'') held_since=0;; esac
+            age_min=$(( ( $(date +%s) - held_since ) / 60 ))
+        fi
+        max="${WATCHER_MAX_MIN:-240}"
+        if [ "$age_min" -ge "$max" ]; then
+            holder=$(fuser "$LOCK" 2>/dev/null | tr -s ' \t' '\n' | grep -E '^[0-9]+$' | grep -vx "$$" | tr '\n' ' ' || true)
+            echo "$(date -Is) lock STALE (${age_min}min >= ${max}min) — matando holder(s): ${holder:-nenhum}" >> "$LOG"
+            if [ -n "$holder" ]; then
+                # shellcheck disable=SC2086
+                kill $holder 2>/dev/null || true
+                sleep 2
+            fi
+            exec 9>"$LOCK"
+            if ! flock -n 9; then
+                echo "$(date -Is) tick pulado: lock ainda ocupada apos kill do holder stale" >> "$LOG"
+                return 0
+            fi
+        else
+            echo "$(date -Is) tick pulado: run anterior ainda ativo (${age_min}min < ${max}min)" >> "$LOG"
+            return 0
+        fi
+    fi
+    date +%s > "$LOCK.held"
     if [ "${issue:-}" = "all" ]; then
         tick_all
         return $?
@@ -120,7 +157,10 @@ tick_all() {
         now=$(latest_comment_id "$i")
         [ -n "$now" ] || continue
         new_seen="$new_seen $i=$now"
-        old=$(printf '%s' "${seen:-}" | tr ' ' '\n' | grep "^$i=" | cut -d= -f2)
+        # ISSUE NOVA fora do snapshot 'seen' (16/09): grep sem match +
+        # pipefail+set -e MATAVA o tick antes de injetar (nunca processava
+        # a issue nova). '|| true' deixa old vazio -> cai no :-0.
+        old=$(printf '%s' "${seen:-}" | tr ' ' '\n' | { grep "^$i=" || true; } | cut -d= -f2)
         old="${old:-0}"
         if [ "$now" -gt "$old" ] 2>/dev/null; then
             news="$news #$i($old->$now)"

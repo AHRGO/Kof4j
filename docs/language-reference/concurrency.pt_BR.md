@@ -166,7 +166,7 @@ A mesma semântica Kof utiliza implementações diferentes:
 |--------|---------------|--------|
 | JVM 21+ | Virtual Threads (scheduler da JVM) | ✅ `await`/`Handle<T>` + `kof.mq` |
 | Native x86_64 | OS threads: `pthread_create` + trampoline + `await`/`pthread_join` + `done`/`poll`/`cancel`/`cancelled`/`selectAny` + allocator thread-safe (futex) | ✅ 31/08 (`CONC001` fechado) |
-| Native riscv64/aarch64 | OS threads: `clone(220)` + stack por `mmap` + espera por futex em `handle->done` (`nat/NativeRiscvSpawn.java`) — **só** `spawn`/`await`/join implícito | ⚠️ parcial: `poll`/`done`/`cancel`/`cancelled`/`selectAny`/`awaitTimeout` **ausentes** (gate `CONC001` em compile-time desde 11/09 — ver nota abaixo) |
+| Native riscv64/aarch64 | OS threads: `clone(220)` + stack por `mmap` + espera por futex em `handle->done` (`nat/NativeRiscvSpawn.java`) + helpers `kof_poll`/`kof_done`/`kof_cancel`/`kof_select_any`/`kof_await_timeout` (`nat/NativeRiscvAsmRtB48.java`) | ✅ 15/09 (helpers `CONC001` fechados — `e8364c97`, cancel por TID real; prova `KofConcurrency2Test.crossNativeConcurrencyHelpersRun` sob qemu, duas arches) |
 | JS (GraalJS) | `async`/`await`/`Promise` nativos — coloração async por fixpoint no compilador (`JsBackend.computeAsyncColoring`), handle `{done,value,error,promise}`, canais com fila de resolvers pendentes, `KofJsRunner` drena a fila de microtasks (`kofActiveTasks`) | ✅ 03/09 (`CONC003` fechado) |
 | KofScript | JVM via KofScriptGlobals | ✅ |
 
@@ -174,15 +174,20 @@ O código Kof não muda entre targets; no x86_64 não há mais gap de
 `spawn`/`await` nem dos auxiliares (`poll`/`done`/`cancel`/`cancelled`/
 `selectAny`/`awaitTimeout` — `CONC001` fechado, incluindo o residual), nem
 no JS (`CONC003` fechado). Em riscv64/aarch64 o `spawn`/`await` existe
-(`clone` 220 + futex), mas os auxiliares **não** — e essa ausência é
-diagnosticada em compile-time: `ExpressionStaticCallLowerer` emite
-**`CONC001`** para `poll`/`done`/`cancel`/`cancelled`/`selectAny`/
-`awaitTimeout` nesses alvos (issue #91, 11/09; antes não havia gate —
-`NativeRiscvCrossOps.resolveCalleeNameRiscv` caía no `sanitizeName`
-genérico e o erro aparecia só no **link**, como símbolo indefinido, o
-mesmo padrão do bug 59). Prova:
-`KofConcurrency2Test.crossMissingConcurrencyHelpersReportConc001`. O que
-resta é portar os símbolos, não o diagnóstico (lane Native).
+(`clone` 220 + futex) e os auxiliares também: o `CONC001` foi fechado em
+15/09 portando os símbolos (`e8364c97` — fatia `NativeRiscvAsmRtB48`, cancel
+por TID real via `gettid(178)` gravado no ctid do `clone`). Nota histórica:
+entre 11/09 e 15/09 a ausência era um gate R6 honesto —
+`ExpressionStaticCallLowerer` emitia **`CONC001`** em compile-time para
+`poll`/`done`/`cancel`/`cancelled`/`selectAny`/`awaitTimeout` nesses alvos
+(issue #91; antes não havia gate — a call caía no `sanitizeName` genérico de
+`NativeRiscvCrossOps.resolveCalleeNameRiscv` e o erro aparecia só no
+**link**, como símbolo indefinido, o mesmo padrão do bug 59); o gate foi
+removido com o port. Prova:
+`KofConcurrency2Test.crossNativeConcurrencyHelpersRun` e
+`crossNativeCancelDuringRunningWorker` (qemu, duas arches). O que segue
+aberto no cross é o supervisor OTP (`OTP001` — `clone` cru sem TLS para a
+cadeia de handlers do §129), não os helpers (lane Native).
 
 No JS especificamente: só lambdas criadas direto num site de `spawn`
 ("task-lambdas") podem virar `async function`; ver restrição

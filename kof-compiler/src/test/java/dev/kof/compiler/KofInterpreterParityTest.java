@@ -669,4 +669,27 @@ class KofInterpreterParityTest {
                 }
                 """);
     }
+
+    @Test
+    void charBoolArrayStore() throws IOException {
+        // §185: o interpretador crashava ("argument type mismatch") ao gravar
+        // em Char[]/Bool[] — coerceFor devolvia Integer para o slot
+        // char[]/boolean[] e o Array.set do reflect rejeitava. Fix: a coerção
+        // produz o tipo REAL do slot (Character/Boolean). Paridade byte-a-byte
+        // interpretado×JVM cobre store de literal, char/bool/número e leitura.
+        parity("charboolarr", """
+                main() {
+                    var c = new Char[2]
+                    c[0] = 'A'
+                    println(c[0])
+                    c[1] = 66
+                    println(c[1])
+                    var b = new Bool[2]
+                    b[0] = true
+                    println(b[0])
+                    b[1] = false
+                    println(b[1])
+                }
+                """);
+    }
 }

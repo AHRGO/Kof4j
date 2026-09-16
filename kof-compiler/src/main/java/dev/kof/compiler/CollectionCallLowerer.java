@@ -218,7 +218,7 @@ public final class CollectionCallLowerer {
                 // String conhecidos; senão raw cmpq (nunca deref → miss seguro
                 // = false do JVM). Int-arg em String-list era SIGSEGV (E1).
                 ops.add(new KofLoadLiteral(Type.PrimitiveType.INT,
-                        CollectionWrites.stringTag(driver.currentUnit, elemType, argTypes, 0)));
+                        CollectionWrites.stringTag(elemType, argTypes, 0)));
                 argTypes = new ArrayList<>(argTypes);
                 argTypes.add(Type.PrimitiveType.INT);
             }
@@ -387,7 +387,7 @@ public final class CollectionCallLowerer {
                 // tag de tipo só no Native (HashSet usa equals no JVM)
                 // §126: conjunção elem×arg — senão raw cmpq, que nunca deref
                 // (Int-arg em String-set era SIGSEGV: ST1/ST2).
-                int tag = CollectionWrites.stringTag(driver.currentUnit, elemType, argTypes, 0);
+                int tag = CollectionWrites.stringTag(elemType, argTypes, 0);
                 ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, tag));
                 argTypes = new ArrayList<>(argTypes);
                 argTypes.add(Type.PrimitiveType.INT);

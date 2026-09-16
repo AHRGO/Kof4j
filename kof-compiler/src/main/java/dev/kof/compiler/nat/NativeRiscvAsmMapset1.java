@@ -8,7 +8,7 @@ public final class NativeRiscvAsmMapset1 {
 
     private NativeRiscvAsmMapset1() {}
 
-    static final String RISCV_MAPSET_ASM_1 = """
+    static  String RISCV_MAPSET_ASM_1 = """
             .globl kof_json_decode_long
             kof_json_decode_long:
                 j    kof_json_decode_int

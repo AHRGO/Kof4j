@@ -43,14 +43,14 @@ public final class ExpressionLowerer {
                     }
                     yield localIdx;
                 }
-                // constante de enum não-qualificada → literal String tipado
+                // constante de enum não-qualificada → instância de enum real
                 if (driver.currentUnit != null && driver.findLocalVar(ie.name(), locals) == null
                         && (driver.semanticAnalyzer == null || !driver.semanticAnalyzer.allClasses().containsKey(ie.name()))) {
                     for (AstNode d0 : driver.currentUnit.declarations()) {
                         if (d0 instanceof EnumDeclarationNode en0
                                 && en0.constants().contains(ie.name())) {
-                            ops.add(new KofLoadLiteral(new Type.ClassType("", en0.name(), List.of()),
-                                    ie.name()));
+                            Type enumT = new Type.ClassType("", en0.name(), List.of());
+                            ops.add(new KofGetStatic(enumT, ie.name(), enumT));
                             yield localIdx;
                         }
                     }
@@ -421,7 +421,7 @@ public final class ExpressionLowerer {
                     localIdx = ExpressionLowerer.emitExpression(driver, fa.receiver(), ops, owner, localIdx, locals);
                     yield localIdx;
                 }
-                // enum constant access: Color.Red — literal String tipado como Color
+                // enum constant access: Color.Red — instância de enum real
                 if (recvType instanceof Type.ClassType ct && ct.packageName().isEmpty()
                         && CompilerTypes.isEnumName(ct.name(), driver.currentUnit)) {
                     if (!CompilerTypes.enumConstantsOf(ct.name(), driver.currentUnit).contains(fa.fieldName())) {
@@ -434,13 +434,13 @@ public final class ExpressionLowerer {
                         }
                         yield localIdx;
                     }
-                    ops.add(new KofLoadLiteral(BuiltinTypes.STRING, fa.fieldName()));
+                    ops.add(new KofGetStatic(recvType, fa.fieldName(), recvType));
                     yield localIdx;
                 }
                 // static field access: Class.field — no receiver on the stack
                 if (recvType instanceof Type.ClassType ct && ct.packageName().isEmpty()
                         && CompilerTypes.isEnumName(ct.name(), driver.currentUnit) && CompilerTypes.enumConstantsOf(ct.name(), driver.currentUnit).contains(fa.fieldName())) {
-                    ops.add(new KofLoadLiteral(BuiltinTypes.STRING, fa.fieldName()));
+                    ops.add(new KofGetStatic(recvType, fa.fieldName(), recvType));
                     yield localIdx;
                 }
                 if (recvType instanceof Type.ClassType ct && driver.semanticAnalyzer != null) {

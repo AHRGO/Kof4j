@@ -1140,7 +1140,7 @@ use o harness do projeto ou crie um teste E2E mínimo no pacote da área.
 | `learn/` | Tutorials passo a passo (00-introduction → 39-stdlib) |
 | `docs/architecture/architecture.md`, `docs/architecture/compiler-architecture.md` etc. | Domínios específicos (estáveis) |
 | `docs/development/` | **Backlog vivo — tudo que NÃO está concluído** (planos, roadmaps, audits, gaps, refactors). Ver `docs/development/README.md` para índice completo. |
-| `docs/development/future/` (plans) | **só plano sem código**: plataforma universal (visão), RAII TIER 2.4, DD-STDLIB-01. A migração legado (decompiler/translator/IR/differential) **caiu p/ `docs/development/` 12/09** — implementada com testes |
+| `docs/development/future/` (plans) | **só plano sem código**: plataforma universal (visão), RAII TIER 2.4 (DD-STDLIB-01 FECHADO 13/09 → `docs/stdlib/`). A migração legado (decompiler/translator/IR/differential) foi p/ `docs/development/` 12/09, **voltou p/ `future/` 15/09 — DESPRIORIZADA pela mantenedora** (código fica em kof-cli; promoção exige decisão explícita dela) |
 | `docs/development/roadmap.md`, `docs/audits/roadmap-audit.md`, `docs/bugs-and-gaps/ecosystem-coverage.md` | Roadmaps & auditoria de cobertura (fila P0→P5) |
 | `docs/bugs-and-gaps/specification-gaps.md`, `docs/bugs-and-gaps/known-bugs.md` | Gaps de spec (SG-00x — fila do maintainer completa, virou referência) + bugs abertos |
 | `docs/development/native-multiarch.md`, `docs/stdlib/DATABASE_VISION.md`, `docs/audits/complexity-audit.md` | Native multiarch (NATIVE002) + DB vision (realizada → stdlib) + audit ≤500 (snapshot → architecture) |

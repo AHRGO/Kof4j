@@ -40,7 +40,7 @@ public final class MemberCallTyper {
                 SymbolTable.MethodSymbol kms = set.select(mc.arguments().size(), argTypes0);
                 if (kms != null) {
                     SymbolTable.ClassSymbol kt = sa.allClasses().get(krid.name());
-                    sa.resolvedMethods().put(mc, new SymbolTable.MethodSymbol(
+                    sa.putResolvedMethod(mc, new SymbolTable.MethodSymbol(
                             kms.name(), kt.internalName(), kms.returnType(),
                             kms.parameterTypes(), kms.accessFlags(),
                             SymbolTable.DispatchKind.STATIC));
@@ -51,7 +51,7 @@ public final class MemberCallTyper {
             if (km instanceof SymbolTable.MethodSymbol kms
                     && kms.parameterTypes().size() == mc.arguments().size()) {
                 SymbolTable.ClassSymbol kt = sa.allClasses().get(krid.name());
-                sa.resolvedMethods().put(mc, new SymbolTable.MethodSymbol(
+                sa.putResolvedMethod(mc, new SymbolTable.MethodSymbol(
                         kms.name(), kt.internalName(), kms.returnType(),
                         kms.parameterTypes(), kms.accessFlags(),
                         SymbolTable.DispatchKind.STATIC));
@@ -79,7 +79,7 @@ public final class MemberCallTyper {
                         params.add(ExternalClasspath.typeFromDescriptor(d));
                     }
                     Type ret = ExternalClasspath.typeFromDescriptor(sig.returnDescriptor());
-                    sa.resolvedMethods().put(mc, new SymbolTable.MethodSymbol(mc.methodName(),
+                    sa.putResolvedMethod(mc, new SymbolTable.MethodSymbol(mc.methodName(),
                             qt.internalName(), ret, params, 1,
                             SymbolTable.DispatchKind.STATIC));
                     return ret;
@@ -233,7 +233,7 @@ public final class MemberCallTyper {
                 if (ms != null) {
                     checkMemberAccess(sa, ms.accessFlags(), ms.ownerClass(), ct.name(),
                             "'" + ct.name() + "." + mc.methodName() + "'");
-                    sa.resolvedMethods().put(mc, ms);
+                    sa.putResolvedMethod(mc, ms);
                     TypeChecker.checkArgTypes(sa.diagnostics(), mc.methodName(), argTypes0, ms.parameterTypes());
                     return ms.returnType();
                 }
@@ -244,7 +244,7 @@ public final class MemberCallTyper {
                 // runtime com IllegalAccessError).
                 checkMemberAccess(sa, ms.accessFlags(), ms.ownerClass(), ct.name(),
                         "'" + ct.name() + "." + mc.methodName() + "'");
-                sa.resolvedMethods().put(mc, ms);
+                sa.putResolvedMethod(mc, ms);
                 List<Type> argTypes = new ArrayList<>();
                 for (ExpressionNode arg : mc.arguments()) argTypes.add(SemExpressionTyper.inferType(sa, arg, scope));
                 TypeChecker.checkArgTypes(sa.diagnostics(), mc.methodName(), argTypes, ms.parameterTypes());
@@ -264,7 +264,7 @@ public final class MemberCallTyper {
                         params.add(ExternalClasspath.typeFromDescriptor(d));
                     }
                     Type ret = ExternalClasspath.typeFromDescriptor(sig.returnDescriptor());
-                    sa.resolvedMethods().put(mc, new SymbolTable.MethodSymbol(mc.methodName(),
+                    sa.putResolvedMethod(mc, new SymbolTable.MethodSymbol(mc.methodName(),
                             ct.internalName(), ret, params, 1,
                             SymbolTable.DispatchKind.INSTANCE));
                     return ret;

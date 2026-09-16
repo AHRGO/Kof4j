@@ -7,7 +7,7 @@ public final class NativeRiscvAsmRtB4 {
 
     private NativeRiscvAsmRtB4() {}
 
-    static final String RISCV_RUNTIME_ASM_B_4 = """
+    static  String RISCV_RUNTIME_ASM_B_4 = """
             .globl kof_json_encode_list
             kof_json_encode_list:
                 addi sp, sp, -48

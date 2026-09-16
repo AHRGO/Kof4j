@@ -5,7 +5,7 @@ package dev.kof.compiler.nat;
 // Convenção LP64: a0..a2 args, a0 retorno; s0-s4/pilha preservam estado.
 public final class NativeRiscvAsmRtB8 {
 
-    static final String RISCV_RUNTIME_ASM_B_8 = """
+    static  String RISCV_RUNTIME_ASM_B_8 = """
 
             # ── kof.strings (STDLIB S2b.2) — repeat/truncate ──────────
 

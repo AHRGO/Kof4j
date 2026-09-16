@@ -1,13 +1,21 @@
 [English](DECOMPILER.md) | [Português](DECOMPILER.pt_BR.md)
 
-# DECOMPILER.md — Kof Decompiler (plano → EM DESENVOLVIMENTO)
+# DECOMPILER.md — Decompilador Kof (DESPRIORIZADO 15/09 — de volta a future/)
 
-**Status:** EM DESENVOLVIMENTO (caiu de `future/` em 12/09 — implementado:
+**Status:** **DESPRIORIZADO pela mantenedora (15/09) — movido de volta a
+`future/`. Não é trabalho atual; promoção exige decisão explícita dela**
+(regra dos três estados). O código já no repo fica (kof-cli `Decompile.java` +
+decoders, `DecompileTest` 67/67) — só a *fila* para aqui; o work-log completo
+abaixo permanece como registro para uma sessão futura. Implementado:
 `Decompile.java` + decoders de bytecode, Fases A–E com código; prova:
 `DecompileTest` **67/67** verdes + `DecompilePostDominatorTest` 6/6
 (re-medido 15/09 no tip `7b0bfbe0`; o 45/45 do cabeçalho era a linha de base
-de 22/08). Fases de recuperação de corpo completo ainda
-abertas — por isso não vai para `docs/`)
+de 22/08). A lacuna restante
+(medida 15/09: 1793 stubs no corpus de 706 classes; a maior — joins de
+struct com computacao/invokes no teste, 519 TRAPs da familia `r14` —
+exige o walker de post-dominador = sessao futura dedicada; os guards
+locais "stop/join" e o fallback ingenuo de expressao foram tentados e
+REJEITADOS, passos 1-3a do work-log abaixo)
 **Data:** 22 de agosto de 2026
 
 ---

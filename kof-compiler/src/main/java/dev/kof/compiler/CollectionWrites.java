@@ -62,7 +62,7 @@ public final class CollectionWrites {
      * miss silencioso (false/null) — exatamente o que o JVM faz com
      * tipos incompatíveis no HashMap/HashSet/ArrayList reais.
      */
-    public static int stringTag(CompilationUnitNode unit, Type elemType,
+    public static int stringTag(Type elemType,
                                 java.util.List<Type> argTypes, int argIdx) {
         Type at = argIdx < argTypes.size() ? argTypes.get(argIdx) : null;
         if (at instanceof Type.NullableType nt) at = nt.inner();
@@ -70,23 +70,24 @@ public final class CollectionWrites {
         boolean etKnown = et != null && !(et instanceof Type.UnknownType);
         boolean atKnown = at != null && !(at instanceof Type.UnknownType);
         if (etKnown && atKnown) {
-            return isStringLike(et, unit) && isStringLike(at, unit) ? 1 : 0;
+            return isStringLike(et) && isStringLike(at) ? 1 : 0;
         }
-        if (etKnown) return isStringLike(et, unit) ? 1 : 0;
-        if (atKnown) return isStringLike(at, unit) ? 1 : 0;
+        if (etKnown) return isStringLike(et) ? 1 : 0;
+        if (atKnown) return isStringLike(at) ? 1 : 0;
         return 1;
     }
 
     /**
-     * §150: uma constante de enum é lowering p/ String literal (representação
-     * de runtime), então comparação por CONTEÚDO vale — mesmo princípio do
-     * `==` de enum (CompilerComparisons:27). Sem isto, `listOf(Color.Red).
-     * contains(Color.Green)` no Native usava raw cmpq sobre dois ponteiros
-     * String distintos → false, enquanto JVM/Script/JS davam true.
-     * Só enum entra: record/objeto NÃO é String em runtime (deref → SIGSEGV).
+     * §150 / D-ENUM207: String é o único tipo comparado por CONTEÚDO no
+     * Native (kof_string_equals). Uma constante de enum agora é uma INSTÂNCIA
+     * real (singleton de {@code <clinit>}) — o raw {@code cmpq} por PONTEIRO
+     * acerta (as constantes são o mesmo objeto em toda a execução), como o
+     * JVM faz com identity-equals. Marcar enum como string-like fazia o
+     * Native chamar {@code kof_string_equals} sobre o ponteiro do objeto →
+     * SIGSEGV (exit 135).
      */
-    private static boolean isStringLike(Type t, CompilationUnitNode unit) {
-        return BuiltinTypes.isString(t) || CompilerTypes.isEnumType(t, unit);
+    private static boolean isStringLike(Type t) {
+        return BuiltinTypes.isString(t);
     }
 
     public static String typeNameFor(Type t) {

@@ -5,7 +5,7 @@ public final class JsRuntimeUiConfig {
     private JsRuntimeUiConfig() {
     }
 
-    static final String CONFIG_RUNTIME = """
+    static  String CONFIG_RUNTIME = """
             export function kofConfigGet(key) {
                 return kofConfigLookup(key);
             }

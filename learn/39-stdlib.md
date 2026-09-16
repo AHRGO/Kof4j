@@ -251,6 +251,7 @@ validation.isCpf("529.982.247-25")       // true  — punctuation ignored
 validation.isCnpj("34546401000163")      // true  // CPF/CNPJ: mod-11 with
 validation.isCep("01310-100")            // true  //   check digit
 validation.isPis("12345678900")          // true
+validation.isNis("12056412278")          // true — NIS reuses the PIS mod-11
 
 validation.isIpv4("192.168.0.1")         // true  — dotted-quad
 validation.isIpv4("01.2.3.4")            // false — leading zero is not allowed
@@ -317,7 +318,7 @@ machine on the 3 natives).
 
 | API | JVM / Script | Native x86_64 | Native riscv64 / aarch64 | JS |
 |---|---|---|---|---|
-| `math.*`, `strings.is*/count/capitalize/reverse/repeat/truncate/pad*/escapeHtml`, `toCamel/Pascal/Snake/Kebab/slugify`, `encoding.hex*/url*`, `time.isLeapYear/daysInMonth/dayOfWeek/daysBetween`, `validation.isCpf/isCnpj/isCep/isPis/isIpv4/isIpv6/isMac/isPort/isCreditCard/isDomain` | ✅ | ✅ | ✅ | ✅ |
+| `math.*`, `strings.is*/count/capitalize/reverse/repeat/truncate/pad*/escapeHtml`, `toCamel/Pascal/Snake/Kebab/slugify`, `encoding.hex*/url*`, `time.isLeapYear/daysInMonth/dayOfWeek/daysBetween`, `validation.isCpf/isCnpj/isCep/isPis/isNis/isIpv4/isIpv6/isMac/isPort/isCreditCard/isDomain` | ✅ | ✅ | ✅ | ✅ |
 | `encoding.base64*` / `base64Url*` | ✅ | ✅ | ✅ | ✅ |
 | `net.*` (S8) | ✅ | ✅ | ✅ | ✅ |
 | `uuid.v4` / `uuid.v7` | ✅ | ✅ | ✅ | ✅ |

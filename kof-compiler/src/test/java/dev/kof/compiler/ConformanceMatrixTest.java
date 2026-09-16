@@ -49,7 +49,7 @@ class ConformanceMatrixTest {
         CompilationResult r = freshDriver().compile(source, outDir, Target.JVM);
         assertTrue(r.success(), "JVM compile: " + r.diagnostics().getDiagnostics());
         try {
-            ProcessBuilder pb = new ProcessBuilder("java", "-cp", outDir.toString(), "Default.Main");
+            ProcessBuilder pb = new ProcessBuilder(System.getProperty("java.home") + "/bin/java", "-cp", outDir.toString(), "Default.Main");
             pb.redirectErrorStream(true);
             Process p = pb.start();
             String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
@@ -912,10 +912,16 @@ class ConformanceMatrixTest {
                     println(validation.isCep("0131010"))
                     println(validation.isPis("123.4567.890-0"))
                     println(validation.isPis("12345678901"))
+                    // S12c: NIS — MESMO checksum mod-11 do PIS (reuso 1:1).
+                    println(validation.isNis("12056412278"))
+                    println(validation.isNis("120.5641.227-8"))
+                    println(validation.isNis("12056412279"))
+                    println(validation.isNis("12345678901"))
+                    println(validation.isNis(""))
                     println(validation.isCpf("529.982.247-25") == true)
                     println(validation.isCpf("111.111.111-11") == false)
                 }
-                """, "true\nfalse\ntrue\nfalse\ntrue\nfalse\ntrue\nfalse\ntrue\ntrue", Set.of(), tempDir);
+                """, "true\nfalse\ntrue\nfalse\ntrue\nfalse\ntrue\nfalse\ntrue\ntrue\nfalse\nfalse\nfalse\ntrue\ntrue", Set.of(), tempDir);
         matrix("stdvalidationnet", """
                 main() {
                     println(validation.isIpv4("192.168.0.1"))
@@ -1577,9 +1583,11 @@ class ConformanceMatrixTest {
                 }
                 """, "9\n3\n0", Set.of(), tempDir);
         // §184 (13/09): store em `Byte[]`/`Short[]` com valor FORA de faixa —
-        // JVM/Native/Script truncam (BASTORE/SASTORE, 8/16 bits com sinal); o
-        // JS grava o valor cru (kofArraySet não conhece o tipo do elemento).
-        // PARTIAL js (bug §184; célula de cobertura estreita — Q5).
+        // JVM/Native/Script truncam (BASTORE/SASTORE, 8/16 bits com sinal). O
+        // JS gravava o valor cru (kofArraySet não conhecia o tipo do
+        // elemento) — §184 fix na RAIZ: o emitter passa o kind (byte/short)
+        // p/ kofArraySet, que agora aplica o mesmo estreitamento (i2b/i2s).
+        // Cell cobre os 4 targets (era `Set.of("js")`, Q5 false-green).
         matrix("narrowarr", """
                 main() {
                     var b = new Byte[1]
@@ -1589,7 +1597,7 @@ class ConformanceMatrixTest {
                     s[0] = 70000
                     println(s[0])
                 }
-                """, "-126\n4464", Set.of("js"), tempDir);
+                """, "-126\n4464", Set.of(), tempDir);
         // §185 (13/09): store em elemento de `Char[]`/`Bool[]` — o
         // interpretador (Script) LANÇA "argument type mismatch" no caminho
         // vivo `KofInterpreter:306` (`coerceFor` devolve Integer; `Array.set`
@@ -1644,7 +1652,9 @@ class ConformanceMatrixTest {
         // riscv/aarch `slli 48`/`srli 48` — stride 4 mantido, load `movslq`
         // segue correto). A 2-D trava o `kof_multi_alloc`; o `Short[]`
         // negativo é o controle de SINAL (prova que a máscara não virou
-        // zero-extend genérico). PARTIAL js (§184) e script (§185, crash).
+        // zero-extend genérico). §184/§187 fix na RAIZ: o JS também estreita
+        // Char[] (kind=3 → `& 0xFFFF`) — só o `script` segue PARTIAL (§185,
+        // crash do interpretador no store de Char[]).
         matrix("charnarrow", """
                 main() {
                     var c = new Char[2]
@@ -1661,7 +1671,7 @@ class ConformanceMatrixTest {
                     s[0] = -1
                     println(s[0])
                 }
-                """, "4464\n65535\n4464\n65535\n-1", Set.of("script", "js"), tempDir);
+                """, "4464\n65535\n4464\n65535\n-1", Set.of("script"), tempDir);
         // §131 (decisão 10a, 13/09): sobrecarga de MÉTODO de classe por
         // assinatura (aridade/tipos). Antes: SEM013 no JVM (último def
         // sobrescrevia) e colisão de símbolo no Native. Prova só JVM+JS

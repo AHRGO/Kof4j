@@ -7,7 +7,7 @@ public final class NativeRiscvAsmRt1 {
 
     private NativeRiscvAsmRt1() {}
 
-    static final String RISCV_RUNTIME_ASM_1 = """
+    static  String RISCV_RUNTIME_ASM_1 = """
             .globl kof_string_concat
             kof_string_concat:
                 addi sp, sp, -64

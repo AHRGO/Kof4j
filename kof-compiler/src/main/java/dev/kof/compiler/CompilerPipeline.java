@@ -206,6 +206,7 @@ public final class CompilerPipeline {
             if (decl instanceof ClassDeclarationNode cls) classes.add(CompilerClassLowering.lowerClass(driver, cls, declPkg, nextTypeId++));
             else if (decl instanceof InterfaceDeclarationNode iface) classes.add(CompilerClassLowering.lowerInterface(driver, iface, declPkg, nextTypeId++));
             else if (decl instanceof RecordDeclarationNode rec) classes.add(CompilerClassLowering.lowerRecord(driver, rec, declPkg, nextTypeId++));
+            else if (decl instanceof EnumDeclarationNode en) classes.add(CompilerEnumLowering.lowerEnum(driver, en, nextTypeId++));
             else switch (decl) {
                 case EntityDeclarationNode ent -> {
                     driver.entitySchemas.put(ent.name(), ent.fields());

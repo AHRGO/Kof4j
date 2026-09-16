@@ -7,7 +7,7 @@ public final class NativeRiscvAsmRtB2 {
 
     private NativeRiscvAsmRtB2() {}
 
-    static final String RISCV_RUNTIME_ASM_B_2 = """
+    static  String RISCV_RUNTIME_ASM_B_2 = """
             .globl kof_cache_get
             kof_cache_get:
                 addi sp, sp, -48

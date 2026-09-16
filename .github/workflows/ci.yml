@@ -94,15 +94,17 @@ jobs:
           distribution: temurin
           java-version: '25'
 
-      - name: Install cross toolchains + qemu
+      - name: Install cross toolchains + qemu + cross libc
+        # libc6-<arch>-cross: link dinâmico sob demanda (link-by-use) —
+        # NativeCrossLink detecta /usr/<arch>-linux-gnu e liga sem --sysroot.
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             binutils-riscv64-linux-gnu binutils-aarch64-linux-gnu \
+            libc6-riscv64-cross libc6-arm64-cross \
             qemu-user-static
-
       - name: riscv64 + aarch64 E2E (executam sob qemu; falha se o codegen regredir)
         run: >
           mvn -B test -pl kof-compiler -am
-          -Dtest='NativeRiscv64E2ETest,NativeAarch64E2ETest'
+          -Dtest='NativeRiscv64E2ETest,NativeAarch64E2ETest,NativeCrossDynamicLinkTest,NativeRiscvDtoaTest,NativeRiscvGcListTest,NativeRiscvGcMarkTest,NativeRiscvGcFreeListTest,NativeRiscvGcSweepTest'
           -Dsurefire.failIfNoSpecifiedTests=false

@@ -7,7 +7,7 @@ public final class NativeRiscvAsmRt0 {
 
     private NativeRiscvAsmRt0() {}
 
-    static final String RISCV_RUNTIME_ASM_0 = """
+    static  String RISCV_RUNTIME_ASM_0 = """
             .option arch, rv64g
             .section .text
 

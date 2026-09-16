@@ -2,7 +2,7 @@
 
 # Plan — Universal Standard Library (STDLIB)
 
-**Owner:** KOFSCRIPT lane (fixes-for-kofagent) · **Status:** IN PROGRESS — **S7d CLOSED 11/09**: `addDays`/`diffDays` on the 5 targets (JVM/Script S7a, JS S7b, x86 S7c `RuntimeTimeIso`, riscv/aarch **B33** — TIME002 closed; the "blocked without qemu" spec fell: toolchain+qemu present, byte-identical goldens under qemu). S1b/S1b.1 **MATH001 closed 11/09** (Double math riscv/aarch B32). Remaining in the plan are decisions/implementations ratified 13/09 (`pow`/`-lm` 7a ✅, S10c `randomBytesHex` 6a ✅, §89 alias+warning 3a ✅ `e33425b5` — implemented) + the pending decision `format`/`boundaries` + items without an algorithm in the corpus (isNis/ulid/creditCard); S0–S6, S8–S10 DONE (audit 10/09 vs code) · **Briefing:** maintainer 08/09 (universal stdlib, multitarget, anti-microdependency)
+**Owner:** KOFSCRIPT lane (fixes-for-kofagent) · **Status:** IN PROGRESS — **S7d CLOSED 11/09**: `addDays`/`diffDays` on the 5 targets (JVM/Script S7a, JS S7b, x86 S7c `RuntimeTimeIso`, riscv/aarch **B33** — TIME002 closed; the "blocked without qemu" spec fell: toolchain+qemu present, byte-identical goldens under qemu). S1b/S1b.1 **MATH001 closed 11/09** (Double math riscv/aarch B32). Remaining in the plan are decisions/implementations ratified 13/09 (`pow`/`-lm` 7a ✅, S10c `randomBytesHex` 6a ✅, §89 alias+warning 3a ✅ `e33425b5` — implemented) + the pending decision `format`/`boundaries` + items without an algorithm in the corpus (ulid/creditCard); S0–S6, S8–S10 DONE (audit 10/09 vs code) · **Briefing:** maintainer 08/09 (universal stdlib, multitarget, anti-microdependency)
 
 ## 0. Real architecture (mapped 08/09 — DO NOT invent a parallel one)
 
@@ -45,7 +45,7 @@ briefing accepts it ("adapt to the real architecture"). So: `math.clamp(...)`,
 | `uuid` | v4 · ~~isUuid~~ (DONE S3b-ext 09/09, 5 targets — UUID001 closed in the beta→main merge 10/09) · ~~v7~~ (DONE S3b.2 10/09, 5 targets — RFC 9562) · ulid/isUlid (P1) |
 | `encoding` | base64Encode/Decode · base64UrlEncode/Decode · hexEncode/Decode · urlEncode/Decode |
 | `random` | randomDouble · randomBoolean · randomChoice · randomString · randomBytes (secure split: `random.*` insecure vs `security.*` secure — already documented) |
-| `validation` (ext) | ~~isCpf/formatCpf~~ (formatCpf DONE S12 09/09, 5 targets) · ~~isCnpj~~ · formatCnpj DONE S12b 09/09 (5 targets) · ~~isCep/formatCep~~ (formatCep DONE S12 09/09, 5 targets) · isPis/isNis · isIp/isIpv4/isIpv6/isMac/isDomain/isPort · isCreditCard/creditCardBrand/last4 (Luhn) · isStrongPassword/passwordScore |
+| `validation` (ext) | ~~isCpf/formatCpf~~ (formatCpf DONE S12 09/09, 5 targets) · ~~isCnpj~~ · formatCnpj DONE S12b 09/09 (5 targets) · ~~isCep/formatCep~~ (formatCep DONE S12 09/09, 5 targets) · ~~isPis/isNis~~ · isIp/isIpv4/isIpv6/isMac/isDomain/isPort · isCreditCard/creditCardBrand/last4 (Luhn) · isStrongPassword/passwordScore |
 | `time` (ext) | addDays/addMonths/addYears · daysBetween/hoursBetween · startOf/endOf (day/week/month/year) · isLeapYear · daysInMonth · age · formatDate/parseDate · isToday/~~isWeekend~~ (DONE S7-ext 09/09, 5 targets) · today |
 | `net` (new, P2) | **6 scalars** `net.scheme/host/port/path/query/fragment(STR)->STR` + `queryEncode/queryDecode` — see §4 (S8 decision, 09/09) |
 | `util` (P2) | debounce/throttle · retry (backoff/jitter) |

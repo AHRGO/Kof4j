@@ -1061,33 +1061,68 @@ class KofConcurrency2Test {
     }
 
     @Test
-    void crossMissingConcurrencyHelpersReportConc001(@TempDir Path tmp) throws Exception {
-        // #91 (R6): nat/NativeRiscvSpawn.java só emite kof_spawn_result/kof_spawn/
-        // kof_await/kof_spawn_join_all. Antes do gate, selectAny/poll/done/cancel/
-        // cancelled/awaitTimeout compilavam e só falhavam no LINK como símbolo
-        // indefinido. Agora: diagnóstico CONC001 em compile-time nos 6 construtos.
-        Path f = tmp.resolve("M.kf");
-        Files.writeString(f, """
-                Int trabalho() { return 1 }
-                main() {
-                    val a = spawn trabalho()
-                    val b = spawn trabalho()
-                    println(selectAny(a, b))
-                    println(done(a))
-                    println(poll(b))
-                    cancel(a)
-                    println(cancelled())
-                    println(awaitTimeout(a, 10))
-                }
-                """);
+    void crossNativeConcurrencyHelpersRun(@TempDir Path tmp) throws Exception {
+        // CONC001 FECHADO (15/09): os 6 helpers existem no runtime cross
+        // (fatia RtB48 + trampoline do spawn com cancel slot; TID real via
+        // gettid(178) gravado pelo kernel no clone ctid). Antes do fechamento
+        // este teste era o GATE NEGATIVO (compile-time CONC001 em cada helper);
+        // agora o MESMO programa compila e executa sob qemu nas duas arches
+        // com a ordem determinística: selectAny devolve 1 (a termina), done
+        // true, poll devolve 1 (b terminou no selectAny scan), cancel marca,
+        // cancelled()==false no main, awaitTimeout devolve o valor (prazo).
         for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
-            CompilationResult r = driver.compile(f, tmp.resolve("cross-" + t), t);
-            assertFalse(r.success(), t + " deve reportar CONC001");
-            String diags = r.diagnostics().getDiagnostics().toString();
-            assertTrue(diags.contains("CONC001"), t + ": " + diags);
-            for (String m : new String[]{"selectAny", "done", "poll", "cancel", "cancelled", "awaitTimeout"}) {
-                assertTrue(diags.contains(m + ":"), t + ": falta diagnóstico para " + m + " em " + diags);
-            }
+            String arch = t.nativeArch();
+            Assumptions.assumeTrue(NativeRiscv64E2ETest.hasToolchain(arch), "cross toolchain " + arch + " ausente — pulando");
+            Path f = tmp.resolve("M" + arch + ".kf");
+            Files.writeString(f, """
+                    Int trabalho() { return 1 }
+                    main() {
+                        val a = spawn trabalho()
+                        val b = spawn trabalho()
+                        println(selectAny(a, b))
+                        println(done(a))
+                        println(poll(b))
+                        cancel(a)
+                        println(cancelled())
+                        println(awaitTimeout(a, 100))
+                    }
+                    """);
+            Path outDir = tmp.resolve("cross-" + arch);
+            CompilationResult r = driver.compile(f, outDir, t);
+            assertTrue(r.success(), t + " não deve mais reportar CONC001: " + r.diagnostics().getDiagnostics());
+            String out = NativeRiscv64E2ETest.runQemu(arch, outDir.resolve("Default/Main"));
+            assertEquals("1\ntrue\n1\nfalse\n1", out, t + " helpers output");
+        }
+    }
+
+    @Test
+    void crossNativeCancelDuringRunningWorker(@TempDir Path tmp) throws Exception {
+        // Face cooperativa: cancel DURANTE a task em execução (worker dormindo)
+        // retorna true e o main segue; await depois devolve o valor. Prova
+        // também o ra-save do kof_cancel (não-leaf): sem ele, loop infinito
+        // no próprio bloco de retorno (achado qemu -d exec, 2.2M loops).
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            String arch = t.nativeArch();
+            Assumptions.assumeTrue(NativeRiscv64E2ETest.hasToolchain(arch), "cross toolchain " + arch + " ausente — pulando");
+            Path f = tmp.resolve("MC" + arch + ".kf");
+            Files.writeString(f, """
+                    Int longo() {
+                        time.sleep(2000)
+                        return 7
+                    }
+                    main() {
+                        val a = spawn longo()
+                        time.sleep(15)
+                        var ok = cancel(a)
+                        println(ok)
+                        println(awaitTimeout(a, 10000))
+                    }
+                    """);
+            Path outDir = tmp.resolve("crossc-" + arch);
+            CompilationResult r = driver.compile(f, outDir, t);
+            assertTrue(r.success(), t + ": " + r.diagnostics().getDiagnostics());
+            String out = NativeRiscv64E2ETest.runQemu(arch, outDir.resolve("Default/Main"));
+            assertEquals("true\n7", out, t + " cancel-during-run output");
         }
     }
 

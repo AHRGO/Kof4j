@@ -1,722 +1,1048 @@
 [English](DECISIONS.md) | [Português](DECISIONS.pt_BR.md)
 
-# DECISIONS — registro de decisões da mantenedora + planos ratificados
+# DECISIONS — registro de decisões da linguagem
 
-**Última atualização:** 13/09/2026 · **Quem decide:** Mel Santos (mantenedora)
-**Como decidir este tipo de item:** a mantenedora responde no chat ("pode
-seguir com a recomendada", ou escolhe outra opção); o agente trava a resposta
-aqui com data + opção escolhida — **a decisão não mora no chat, mora aqui**.
+**Última atualização:** 15/09/2026
+**Mantenedora:** Mel Santos
+**Natureza:** registro normativo e histórico de decisões de arquitetura, semântica e evolução da linguagem.
 
-> Este documento **substitui** os 6 arquivos que viviam em
-> `docs/development/decision-pending/` (decisão da mantenedora 13/09:
-> "transformar eles num doc só pra development"). As decisões foram
-> inventariadas, auditadas contra o código (nunca memória) e **ratificadas
-> 13/09** com a recomendação técnica aceita. O que cada arquivo virou:
+> Este arquivo registra decisões que já foram tomadas. Ele não é um backlog, um diário de implementação nem uma coleção de propostas abertas.
 >
-> | Arquivo apagado | Virou |
-> |---|---|
-> | `planning-stdlib-time-design.md` | §D-STDLIB — execução na fila STDLIB |
-> | `security-plan.md` | §D-SEC — camadas B/C/D viraram fila; arquitetura invariante em `docs/stdlib/security.md` |
-> | `plan-spring-independence.md` | §D-SPRING — fases 1–9 ✅ (histórico), 10–12 ratificadas aqui |
-> | `plan-platform-completion.md` | §D-PLAT — P0–P2 ✅ históricos; a fila real vive em `roadmap.md` §23 |
-> | `APPLICATION_MODEL.md` | §D-APP (Q1–Q10 travados) |
-> | `PLATFORM-PLAN.md` | §D-PLATFORM — **morto**: F1 absorvido pelo manifesto (já implementado, `KofProjectConfig`); F2–F9 já vivem em `roadmap.md` §23 |
->
-> Invariantes que nada aqui altera: congelamento 0.2.6-beta (operadores, `==`,
-> `spawn`, coleções), R1–R12 da visão universal, regra ≤500, suíte como gate.
+> Uma decisão registrada aqui continua sendo a fonte de verdade até ser formalmente substituída por outra decisão. O código, os testes e o roadmap devem convergir para este contrato.
 
 ---
 
-## D-STDLIB — semântica de tempo/calendário (ratificado 13/09)
+## 1. Autoridade e regras de alteração
 
-**D1 (fuso) — UTC-only.** `today()`/`isToday` derivam de `now()` em UTC em
-TODOS os 5 alvos. Quem quiser fuso usa getter explícito `tzOffsetSeconds()`
-(JVM: host; JS: `Date.getTimezoneOffset`; Native: gap DIAG `TIME003` até
-haver `TZ`/`/etc/localtime` no asm). Sem paridade acidental de fuso — a
-divergência silenciosa cross-target está proibida por construção.
+### 1.1 Quem decide
 
-**D2 (compostos) — sem retorno composto.** A trava DD-STDLIB-01 já fechou
-13/09, mas **não** é para reabri-la: o calendário entra **escalar puro sobre
-ISO** — a convenção `addDays("YYYY-MM-DD", n) -> String` já é a forma viva
-desde S7a (auditado em `KofTime.java:133`). Nada de `startOf` retornando
-tupla.
+A mantenedora decide questões de contrato, semântica, arquitetura e direção da linguagem.
 
-**D3 (`hoursBetween`) — completo, floor simétrico.** Consistente com
-`daysBetween` (truncado em direção a zero): conta dias-inteiros-completos +
-delta de horas. Sem float (FLT001), sem assinatura de 12 args.
+Agentes e contribuidores podem:
 
-**D4 (formato) — zero pattern-DSL.** A stdlib expõe `formatDateIso(y,m,d) ->
-STR` (invalidez ⇒ `""`, face leniente documentada) e `parseDateIso(STR) ->
-Int` (serial `daysFromEpoch`; inválido ⇒ 0). Patterns `dd/MM/yyyy` **não
-entram na stdlib base** (R1/R12 — motor de parsing é pacote, não base).
+* investigar alternativas;
+* propor decisões;
+* implementar decisões aprovadas;
+* corrigir bugs e divergências em relação ao contrato;
+* atualizar evidências e estado de execução.
 
-**D5 (`isToday`) — entra**, dependência de D1 resolvida:
-`isToday(y,m,d) -> Bool` = igualdade com a data UTC de `now()`.
+Agentes e contribuidores **não podem alterar o contrato de uma decisão por interpretação própria**.
 
-### Fila STDLIB liberada (uma unidade-teste-commit cada)
+### 1.2 Como uma decisão entra neste arquivo
 
-| Item | Assinatura | Alvos |
-|---|---|---|
-| `time.todayIso()` | `() -> STR` ("YYYY-MM-DD" UTC) | 5 |
-| `time.formatDateIso(y,m,d)` | `(I,I,I) -> STR` (inválido ⇒ `""`) | 5 |
-| `time.isToday(y,m,d)` | `(I,I,I) -> Bool` (UTC) | 5 |
-| `time.hoursBetween(y,m,d,H, y,m,d,H)` | `(I×8) -> Int`, floor simétrico | 5 |
-| `time.parseDateIso(STR)` | `(STR) -> Int` (serial; inválido ⇒ 0) | 5 |
-| `time.tzOffsetSeconds()` | `() -> Int` (Native = `TIME003` DIAG) | JVM/JS/SCRIPT; Native gap |
+Uma decisão só é considerada vigente quando registrada com:
 
-Cada linha: golden do oracle JVM (medição real), dispatch em `KofTime`,
-`training/idioms`, matriz de conformidade, gap honesto onde houver.
+* identificador estável;
+* data;
+* escopo;
+* contrato;
+* decisão tomada;
+* relação com decisões anteriores, quando aplicável;
+* estado de implementação, se houver.
 
-> **✅ EXECUTADO 13/09 (lane development, dono 192.168.100.18):** as 6
-> linhas acima implementadas e validadas — todayIso/formatDateIso/isToday
-> (S7e), hoursBetween (S7f + fix emit x86 7+ args), parseDateIso (S7g),
-> tzOffsetSeconds (S7h, Native gap honesto TIME003 — fila geral). Prova:
-> `KofTimeE2ETest` S7e-S7h (30/30) + matriz `stdtime3`/`stdtime4`/
-> `stdtime5`/`stdtime6` + parity Script. Suíte 1772/0/0. **Fila
-> D-STDLIB TIME FECHADA.**
+A decisão não mora no chat. O chat pode conter a discussão; este arquivo contém o resultado normativo.
+
+### 1.3 Como uma decisão é revisada
+
+Uma decisão vigente só pode ser alterada por uma nova entrada que:
+
+1. identifique a decisão anterior;
+2. explique o que muda;
+3. registre a nova decisão;
+4. preserve o histórico;
+5. atualize o roadmap e a documentação afetada.
+
+Uma decisão substituída não é apagada.
+
+### 1.4 Estados permitidos
+
+| Estado        | Significado                                                |
+| ------------- | ---------------------------------------------------------- |
+| `DECIDED`     | Contrato aprovado, ainda sem implementação completa        |
+| `IN_PROGRESS` | Implementação em andamento                                 |
+| `IMPLEMENTED` | Implementação concluída e validada                         |
+| `PARTIAL`     | Parte do contrato implementada; gaps explícitos permanecem |
+| `BLOCKED`     | Implementação depende de outra decisão ou capacidade       |
+| `SUPERSEDED`  | Substituída por outra decisão                              |
+| `REJECTED`    | Alternativa analisada e rejeitada                          |
+| `CLOSED`      | Registro encerrado sem backlog restante                    |
+
+O estado de implementação **não altera o contrato**.
 
 ---
 
-## D-SEC — segurança (ratificado 13/09)
+## 2. Invariantes globais
 
-**Arquitetura invariante (não muda — já documentada em
-`docs/stdlib/security.md`):** 18 camadas; cripto nunca caseira (JCA/WebCrypto/
-asm auditado); `SECN00x` para gap por target; estado atual verificado no
-código 13/09: camada A e B ✅ (password/sha512/AES-GCM/JWT nos 3+alvos com
-`SECN001/2/3/4` honestos), C10/12/13/14/15 ✅, D17 parcial ✅.
+Estas regras continuam válidas independentemente das decisões abaixo.
 
-**ChaCha20-Poly1305 — entra (RFC 8439), espelhando o envelope AES-GCM real**
-(auditado em `JvmStringSecurityRuntime.java:152-154` —
-`aesgcm$<ivB64>$<ct+tagB64>`, `(plaintext, keyHex)` com chave 32B em hex):
+### G-01 — Freeze de superfície
 
+O congelamento 0.2.6-beta permanece vigente para os itens explicitamente congelados:
+
+* operadores;
+* `==`;
+* `spawn`;
+* coleções;
+* demais itens cobertos pela regra 6.
+
+Uma decisão posterior pode alterar um contrato congelado somente quando registrar explicitamente a revisão correspondente.
+
+### G-02 — Visão universal
+
+R1–R12 permanecem como invariantes da visão universal da linguagem.
+
+### G-03 — Limite de complexidade
+
+A regra ≤500 permanece vigente.
+
+### G-04 — Suíte como gate
+
+A suíte de conformidade permanece como gate de integração. Código não pode ser considerado concluído apenas porque compila localmente.
+
+### G-05 — Gap honesto
+
+Quando uma capacidade não existe em determinado target, o sistema deve:
+
+* reportar o gap documentado;
+* usar o código de diagnóstico correspondente;
+* nunca produzir um resultado silenciosamente incorreto;
+* nunca simular suporte inexistente como se fosse suporte real.
+
+### G-06 — Paridade
+
+Quando uma decisão define comportamento observável, a implementação deve buscar o mesmo contrato em todos os targets suportados.
+
+Uma diferença entre targets só é aceitável quando:
+
+1. estiver explicitamente documentada;
+2. tiver diagnóstico ou comportamento definido;
+3. estiver representada na matriz de conformidade.
+
+### G-07 — Determinismo
+
+Mesma entrada, mesmo contrato e mesmo target devem produzir resultado determinístico.
+
+Quando a decisão exigir paridade cross-target, o resultado observável deve ser equivalente, salvo gaps explicitamente registrados.
+
+### G-08 — Não reinventar a roda
+
+A lógica interna do compilador e do runtime deve se inspirar prioritariamente em:
+
+1. Java — JLS, JVMS e comportamento de `java.lang`/`java.math`;
+2. C — ISO C e `libm`, especialmente para o backend nativo;
+3. outras linguagens, quando a referência for uma técnica de backend.
+
+Essa regra não autoriza copiar a superfície de outra linguagem. Sintaxe, ergonomia e modelo de escrita continuam sendo decisões próprias do Kof.
+
+---
+
+# 3. Decisões vigentes
+
+## D-STDLIB — tempo e calendário
+
+**Data:** 13/09/2026
+**Estado:** `IMPLEMENTED`
+**Escopo:** semântica de data, hora e calendário da stdlib.
+
+### Contrato
+
+**D-STDLIB.1 — UTC como referência padrão**
+
+`today()` e `isToday` derivam de `now()` em UTC em todos os targets.
+
+O fuso local só pode ser obtido por API explícita:
+
+```kof
+time.tzOffsetSeconds()
 ```
-chacha20$<nonceB64(12B)>$<ct+tagB64(16B tag)>
-security.chacha20Encrypt(String text, String keyHex) -> String
-security.chacha20Decrypt(String token, String keyHex) -> String
+
+Native sem suporte de timezone reporta `TIME003`.
+
+Não existe paridade acidental de timezone entre targets.
+
+**D-STDLIB.2 — Calendário escalar**
+
+A API base de calendário usa valores escalares sobre ISO.
+
+Exemplo:
+
+```kof
+time.addDays("YYYY-MM-DD", n) -> String
 ```
 
-Mesmo padrão `SecCall` de `kof_sec_aesgcm_*` (gap SECN002 nos alvos sem
-implementação). JS via WebCrypto `ChaCha20-Poly1305` (onde existir; restante
-= SECN002 honesto). Constante de tempo, nonce nunca reusado (documentado).
+A stdlib base não introduz retornos compostos para operações de calendário.
 
-> **✅ EXECUTADO (14/09, degrau 2 — dono 192.168.100.18):** chacha20 JVM+JS
-> (`kof_sec_chacha20_encrypt/decrypt`, SecCall idêntico ao aesgcm). JS é
-> implementação pura (WebCrypto **não** expõe ChaCha20 em nenhum engine
-> principal — a premissa "onde existir" caiu; prova: MDN
-> SubtleCrypto.algorithms). Validado byte a byte contra node:crypto e contra
-> o vetor RFC 8439 §2.8.2 (Poly1305 AEAD: r/s LE, mac_data
-> pad16(ct)||le64(0)||le64(ctLen)). **Native (x86/riscv/aarch64) segue gap
-> SECN002 honesto em compile-time** — asm puro de Poly1305 (aritmética
-> 130-bit) fica na fila, mesmo precedente do SECN000. Constante de tempo:
-> tag comparada com `MessageDigest.isEqual` (JVM) / XOR acumulado (JS).
-> Testes: KofSecurityTest 32/32 (`chacha20*`), suíte 4 módulos 0 falhas.
+**D-STDLIB.3 — Diferença de horas**
 
-**Cookies (C11) + middleware de security (C18) — entram, EXECUTAM JUNTO com
-o Application Model** (a ordem só faz sentido com `app.use`):
+`hoursBetween` conta horas inteiras completas, com truncamento em direção a zero, consistente com `daysBetween`.
 
-- `security.cookies`: parse/set com defaults seguros (`HttpOnly`, `Secure`,
-  `SameSite=Lax`, `Path=/`); API `cookieSet(name, value, opts-map)` e
-  `cookieGet(request, name)`.
-- `app.security()` — middleware composto aplicando a **ordem fixa**:
-  rate-limit → cors → headers → cookies/session → csrf → auth → RBAC → rota.
-  Security by default: `listen` em produção exige `app.security()` explícito
-  ou warning.
+Não usa float nem assinatura de 12 argumentos.
 
-> **✅ EXECUTADO (14/09, degrau 3 parcial — dono 192.168.100.18):**
-> `security.cookieSet(name,value[,opts])` e `security.cookieGet(header,name)`
-> implementados em **JVM + JS** (`kof_sec_cookie_set/set_opts/get`), com
-> defaults seguros (`Path=/; SameSite=Lax; Secure; HttpOnly`) e opts-map
-> (`path/domain/maxAge/expires/sameSite/secure/httpOnly`). **Native segue gap
-> honesto SECN006** (mesmo precedente SECN000/002). Testes `KofSecurityTest`
-> 39/39 (cookieSetDefaults/opts/get Jvm+Js, roundtrip JVM→JS, SECN006 cross).
-> **✅ EXECUTADO (14/09, degrau 4 — dono 192.168.100.22):**
-> `app.security([opts])` (C18) implementado no runtime JVM (`WebApp` fields +
-> `kof_web_security` + `kof_web_security_pipeline` em `JvmRuntimeWebDispatch`).
-> Ordem fixa ratificada: rate-limit → cors → security headers (CSP/HSTS/nosniff/frame/referrer)
-> → session (authHeader + publicPaths) → csrf. Prova: `KofWebE2ETest#appSecurityPipelineE2E`
-> + validação E2E completa no `KofBlogE2ETest`.
+**D-STDLIB.4 — Formatação ISO**
 
-> **✅ MESCLADO (14/09, dono 192.168.100.18): as duas implementações de C18 foram
-> unificadas como superconjunto** (pacto de agregação — nenhum lado descartado).
-> A API da `.22` (`rateLimit` Number, `corsOrigin`, `sessionHeader`,
-> `publicPaths`) e a da `.18` (`headers`, `cors`, `rateLimit` String, `csrf`,
-> `auth`, `roles`) agora vivem num único `kof_web_security`/`kof_web_security_opts`
-> + um pipeline (rate-limit → cors → headers → session → csrf → auth → RBAC)
-> gravando headers de resposta em `KOF_SEC_RESPONSE_HEADERS`. Sessão é exigida em
-> mutações (leituras públicas; header de sessão inválido nunca passa);
-> `auth`/`roles` exigem Bearer JWT válido. Prova: `KofWebE2ETest` 22/22 +
-> `KofBlogE2ETest` 1/1 + `KofOAuthResourceServerTest` 4/4 + `KofSecurityTest`
-> 41/41 = 68/0/0.
+```kof
+time.formatDateIso(y, m, d) -> String
+```
 
-> **✅ EXECUTADO (14/09, degrau 3 completo — dono 192.168.100.18):**
-> `app.security()` (C18) implementado em **JVM** (`kof_web_security` /
-> `kof_web_security_opts`, `SecurityMiddleware` registrado em `app.middlewares`).
-> Aplica a **ordem fixa** rate-limit → CORS → headers → cookies/session → csrf →
-> auth → RBAC → rota. Sem args = defaults seguros (headers de hardening:
-> CSP/nosniff/frame/referrer; HSTS só sob TLS). Opts-map (tudo documentado em
-> `docs/stdlib/stdlib-web.md`): `headers` (Bool), `cors` (String origem/CSV/`*`,
-> origem não listada → 403, preflight → 204), `rateLimit`
-> (`"limite/janelaSeg"` por IP remoto → 429 + `Retry-After`), `csrf`
-> (double-submit cookie), `auth` (exige Bearer JWT válido), `roles` (String CSV
-> ou List). **Auth-if-present:** request com token inválido nunca passa, mesmo
-> sem `auth:true`. **Security by default:** `listen`/`listenSecure` com
-> `KOF_ENV=production` sem `app.security()` avisa em `stderr`. **Native/JS
-> reportam `WEB006`** honesto (mesmo precedente WEB002/WEB005). Headers de
-> resposta do middleware sobrevivem ao clear do dispatch via
-> `KOF_SEC_RESPONSE_HEADERS`. Refactor: novo fragmento
-> `JvmWebSecurityRuntime.java` mantém o ratchet §140 verde (`JvmWebCoreRuntime`
-> 699→495). Testes: `KofWebE2ETest` 22/22 (headers, auth 401/200,
-> auth-if-present, roles 403, CORS deny/preflight, CSRF, rate-limit 429, WEB006
-> Native+JS). Também corrigido bug de descriptor pré-existente:
-> `kof_sec_auth_user` estava declarado `(Ljava/lang/String;)` mas não recebe
-> args.
+Data inválida retorna `""`.
 
-**OAuth2/OIDC (D cam. 16) — sequência travada:** (1) **resource server**
-primeiro (validação de JWT de terceiro: JWKS + issuer/aud — barato, fecha
-"quem é usuário Google?"), (2) client authorization-code + PKCE depois;
-**provider nunca** (non-goal, fora de qualquer plano).
+**D-STDLIB.5 — Parsing ISO**
 
-> **✅ EXECUTADO (14/09, dono 192.168.100.18):** passo 1 — **resource server
-> OAuth2** no JVM. `auth.resourceServer(jwksUrl, issuer, audience)` configura a
-> validação de JWT de terceiro (busca as chaves públicas na URL do JWKS;
-> issuer/audience vazio = não exige) e `auth.resourceServerVerify(token)`
-> devolve o JSON de claims ou `null`. Allowlist fixa **RS256/384/512 +
-> ES256/384/512** — nunca `none` nem HS* (confusão de algoritmo rejeitada);
-> chaves JWK RSA (`n`/`e`) e EC (`crv` P-256/384/521, `x`/`y`); `exp` + `iss` +
-> `aud` (String ou lista). Em `kid` desconhecido, re-busca o JWKS uma vez
-> (rotação de chave). O resource server pluga em
-> `auth.authenticated()`/`app.security({auth:true})`: configurado, um token que
-> falha no HS256 cai para a validação via JWKS. JWKS é cacheado em memória.
-> **Native/JS reportam `SECN007`** honesto. Testes: `KofOAuthResourceServerTest`
-> 4/4 (token RS256 real + JWKS local via `com.sun.net.httpserver`; rejeição de
-> iss/aud; alg=none/tamper; integração com `app.security` 401/200; SECN007
-> Native+JS). API documentada em `docs/stdlib/security.md`.
+```kof
+time.parseDateIso(value) -> Int
+```
 
-**TLS com certificado próprio — entra:** `app.listenSecure(port, certPem,
-keyPem)` (PKCS#8 PEM; JVM primeiro; Native/JS continuam `WEB002` honesto).
-Self-signed atual permanece como conveniência de dev, não como produção.
+Retorna o serial `daysFromEpoch`.
+
+Entrada inválida retorna `0`.
+
+Patterns arbitrários como `dd/MM/yyyy` não fazem parte da stdlib base.
+
+**D-STDLIB.6 — isToday**
+
+```kof
+time.isToday(y, m, d) -> Bool
+```
+
+Compara com a data UTC derivada de `now()`.
+
+### API ratificada
+
+| Função                      | Contrato                  | Targets                   |
+| --------------------------- | ------------------------- | ------------------------- |
+| `time.todayIso()`           | `() -> String`            | 5                         |
+| `time.formatDateIso(y,m,d)` | `(Int,Int,Int) -> String` | 5                         |
+| `time.isToday(y,m,d)`       | `(Int,Int,Int) -> Bool`   | 5                         |
+| `time.hoursBetween(...)`    | `(Int × 8) -> Int`        | 5                         |
+| `time.parseDateIso(String)` | `String -> Int`           | 5                         |
+| `time.tzOffsetSeconds()`    | `() -> Int`               | JVM/JS/SCRIPT; Native gap |
+
+### Evidência
+
+Implementação S7e–S7h concluída em 13/09/2026.
+
+* `KofTimeE2ETest`: 30/30
+* Matrizes `stdtime3`–`stdtime6`
+* Paridade Script
+* Suíte: 1772/0/0
+
+**Referência de implementação:** `docs/stdlib/time.md`
+**Fila:** encerrada.
 
 ---
 
-## D-APP — Application Model (ratificado 13/09)
+## D-SEC — segurança
 
-Os 10 open questions da RFC viram decisão:
+**Data:** 13–14/09/2026
+**Estado:** `PARTIAL`
+**Escopo:** criptografia, cookies, middleware de segurança e OAuth2/OIDC.
 
-| Q | Decisão |
-|---|---|
-| Q1 manifesto | **`kof.toml`** — ✅ já implementado (`KofProjectConfig` subconjunto INI; PKG006 usa como raiz de projeto). Decisão formalizada, sem código novo. |
-| Q2 bump | **0.4.0-beta** (capability nova; a linha 0.4.0 já está em curso). |
-| Q3 shared types | package local importado por front+backend, **depois** do package manager; não bloqueia nada. |
-| Q4 `kof serve --system` | **rejeitado** (confirmado) — alternativa: `kof serve --list` (apps+portas, sem subir). |
-| Q5 `[frontend].api` | **convenção documentada** (não feature de rewrite). |
-| Q6 fat jar | **flag `--fat` opcional** (I3); default = classpath explícito. ✅ **EXECUTADO 14/09**: `kof build --fat` (JVM) gera `kof-app.jar` (classes do app + runtime `dev.kof.runtime` + deps externas, `Main-Class` no manifesto, first-wins do app, assinaturas deps descartadas); prova `CmdBuildFatTest` 4/4 (`java -jar` roda o programa; sem a flag não há jar; `--fat` fora do JVM recusa honesto R6). |
-| Q7 Wasm | coluna ✅ frontend na tabela quando o target abrir; **modelo não muda**. |
-| Q8 `kof.proxy` | fora desta RFC; convenção hoje, stdlib só com 3+ apps pedindo. |
-| Q9 rebuild frontend | **sob demanda por hash** (I2); watcher = futuro. |
-| Q10 Android | **declarar ✅** na tabela (WebView + KofJS já é full-stack de fato; sem código novo). |
+### Invariantes
 
-**Plano I1–I3 da RFC:** I1 (manifesto+`kof new`) — **manifesto já existe**;
-resta `CmdNew` (esqueletos backend/full-stack/frontend + validação `APP003`),
-escopo pequeno. I2 (full-stack serve/build) ✅ e I3 (fat/deploy) ✅ (`--fat`,
-14/09) executados com os incrementos da RFC §23. A matriz APP001–003 vai para
-`docs/backend-parity.md` (gap codes R6).
+* Criptografia não é implementada de forma caseira.
+* JVM utiliza JCA quando aplicável.
+* JS utiliza WebCrypto quando aplicável.
+* Native utiliza implementação auditada ou reporta gap.
+* Algoritmos, formatos de token e regras de validação são contratos observáveis.
+* Gaps são reportados por `SECN00x`.
 
-### D-APP.REF — o modelo em uma página (conteúdo de referência da RFC)
+### D-SEC.1 — ChaCha20-Poly1305
 
-**Definição.** Uma Kof Application é um diretório contendo um módulo Kof
-(conjunto de `.kf` com um `main()`) + manifesto opcional `kof.toml`
-descrevendo componentes (frontend, static) e execução (porta/host, target).
+**Decisão:** adicionar suporte a ChaCha20-Poly1305 conforme RFC 8439.
+
+Formato:
 
 ```text
-my-app/
-├── kof.toml            # manifesto (OPCIONAL — sem ele, convenção atual 1:1)
-├── kofdeps             # dependências (existe hoje)
-├── src/main.kf         # entrypoint (main() único = backend)
-│   └── web/main.kf     # componente FRONTEND (outro módulo → bundle js)
-└── src/static/         # componente STATIC (css/img — copy puro)
+chacha20$<nonceB64(12B)>$<ct+tagB64(16B tag)>
 ```
 
-Regras: (1) uma aplicação = um módulo = um `main()`; frontend é OUTRO módulo
-compilado para `js`; (2) componentes = zero/um/mais (backend, frontend,
-static); (3) menor unidade de `kof serve`/deploy (1 processo, 1 porta);
-(4) System = composição de deploy, não de compilação; (5) **sem `kof.toml`
-= comportamento exatamente atual**.
+API:
 
-Manifesto (subconjunto INI já lido por `KofProjectConfig`): `[app]`
-(name/version/entry/target), `[serve]` (port/host; flag sempre vence),
-`[frontend]` (path/entry/out/base/api/cors), `[static]` (path). Lido pela
-CLI, nunca pelo compilador; erro de manifesto = diagnóstico claro (R6).
+```kof
+security.chacha20Encrypt(text, keyHex) -> String
+security.chacha20Decrypt(token, keyHex) -> String
+```
 
-**Full-stack:** backend monta o bundle via `app.serveDir` (existe no JVM) e
-o frontend chama a API **por HTTP** (`kof.http` no js) — nunca chamada
-direta. Contrato front→back é sempre HTTP/JSON ⇒ "mesmo processo" e
-"serviço remoto" são intercambiáveis (base da portabilidade
-monólito↔distribuído).
+A chave deve ter 32 bytes representados em hexadecimal.
 
-Topologias (o que muda é só o número de diretórios e quem orquestra —
-linguagem/compilador/CLI não mudam): monolith (default de hoje), modular
-monolith (organização de pacotes, nada do modelo), microservices (N apps
-backend-only), microfrontends (N bundles + shell), full-stack (meta I2),
-backend-only, frontend-only, full-stack distribuído (+ gateway = app que
-roteia).
+Nonce nunca pode ser reutilizado com a mesma chave.
 
-**Regras estruturais permanentes (ex-spring, D-SPRING):** nenhum componente
-da stdlib depende de Spring; nenhum backend gera Java-source como passo
-obrigatório; capacidades fundamentais têm API Kof-native (Spring é
-alternativa consumida); o teste de independência (app Kof sem Spring) vale
-tanto quanto o de interoperabilidade.
+Native sem implementação reporta `SECN002`.
 
----
+**Estado:** JVM + JS implementados. Native permanece em gap.
 
-## D-SPRING — fases 10/11/12 (ratificado 13/09)
+**Evidência:** vetor RFC 8439 + `node:crypto` + `KofSecurityTest`.
 
-- **Fase 10 (testing nativo):** escopo travado = `kof test` roda os testes do
-  projeto com **asserts Kof** (sem JUnit obrigatório; interoperável quando
-  JVM); unit + HTTP (via `web.app` em porta efêmera) primeiro; property/
-  stress/mocks são incrementos separados, nunca gate.
-- **Fase 11 (CLI completa):** consolidar o que existe (`run/build/test/serve/
-  fmt/deps/init/check` ✅ no `Main.java`) + `kof new` (I1 do D-APP); `kofdeps
-  add/remove/list/resolve` já landed (Deps.java) — falta só o elo com o
-  manifesto (deps no `kof.toml`).
-- **Fase 12 (blog E2E):** **AGORA** — é a validação da plataforma, e é o app
-  model canônico (backend + frontend + db + auth + validation num único
-  `kof.toml`); roda em JVM e Native sem mudar uma linha (gaps diagnosticados
-  contam como honestos, não como falha).
+### D-SEC.2 — Cookies
 
-## D-PLAT — platform-completion (ratificado 13/09)
+API:
 
-P0–P2 ✅ fechados (histórico 0.1.0→0.2.6-beta). P3–P5 não são fila própria:
-**cada linha restante já tem casa** — DB/orm no roadmap §23 e
-`docs/stdlib/DATABASE_VISION.md`, observabilidade (OTLP) em
-`docs/backend-parity.md`, DX (`kof new`) no D-APP/I1. O documento morto.
-O **Definition of Done** do plano ("compila nos 3 targets ou gap com
-`supportedOn` + E2E por target + benchmark quando plausível + docs
-sincronizadas no mesmo commit + suíte verde") não se perdeu: mora em
-`docs/architecture/performance.md` §40–§41 (a fonte que o próprio plano
-citava) e ecoa no portão Q0–Q6 do `AGENTS.md`.
+```kof
+security.cookieSet(name, value, opts)
+security.cookieGet(header, name)
+```
 
-## D-PLATFORM — PLATFORM-PLAN (morto 13/09)
+Defaults:
 
-F1 (raiz de projeto) **resolvido pelo manifesto** (`KofProjectConfig` +
-PKG006); F2 targets = `docs/targets` + §23; F3 full-stack = D-APP I2; F4/F5 =
-`KOFUI-AUDIT`/`docs/stdlib/stdlib-web.md`; F6 wasm/F7 android = tabela do
-D-APP Q7/Q10; F8 script = `kof-cli CmdScript` ✅; F9 conformance =
-`docs/bugs-and-gaps/conformance-matrix.md`. **Nada restava de único — o arquivo foi absorvido, não descartado.**
+* `HttpOnly`;
+* `Secure`;
+* `SameSite=Lax`;
+* `Path=/`.
 
-## D-RELEASE — gatilho de patch (0.4.1) por volume de fixes (14/09)
+Native sem implementação reporta `SECN006`.
 
-**Regra da mantenedora (14/09, após fechar a minor 0.4.0):** desenvolvimento
-agora é **estabilização de patch**, não feature. O critério objetivo de subir
-um patch:
+**Estado:** JVM + JS implementados.
 
-- **Gatilho:** quando a `beta` estiver **entre 100 e 150 commits à frente da
-  `main`**, avaliar o bump para **`0.4.1`** (patch — só fixes, zero capability
-  nova; a linha `0.4.0` já foi liberada no #138).
-- **Features NÃO param nem são descartadas na janela (adição da mantenedora
-  14/09):** entre 0.4.0 e o gatilho, **evolução real (features/melhorias)
-  concorre com os bugfixes** — o contador de 100–150 mistura os dois. A janela
-  de patch **não congela desenvolvimento** e o bump **não pode descartar /
-  reverter / segurar em branch** o trabalho de feature feito no período: tudo
-  que está na `beta` com suíte verde e prova entra no pacote. Se o volume de
-  **capability nova** acumulado na janela for material (mudou contrato/operador
-  — regra 6, ou superfície de API visível), o bump avaliado deixa de ser
-  patch: vira **0.5.0-minor** (semver decide pelo conteúdo, não pelo calendário
-  nem pelo gatilho). A nota de release lista fixes E features.
-- **Média de pacote estável:** 100–150 commits de fix acumulados = um pacote
-  estável o bastante para valer um release. Abaixo disso, é ruído; acima, o
-  backlog de correções já justifica o número de versão.
-- **Antes de bumpar:** **corrigir as issues abertas** (`gh issue list --state
-  open`) que forem da lane de bugs/paridade — o patch sai com as issues
-  conhecidas fechadas, não em cima delas. Issues de regra 6 (contrato) ficam
-  abertas com nota, não bloqueiam o patch.
-- **Depois do bump:** voltar ao desenvolvimento normal (a `beta` reabre para a
-  próxima minor/feature; o contador reinicia contra a nova `main`).
+### D-SEC.3 — Middleware `app.security()`
 
-**Estado do contador (medição 14/09, post-#138):** `main..beta = 1` (só
-`a5eedbe2`), `beta..main = 1` (o merge do PR). **Longe do gatilho** — o loop
-segue acumulando fixes na beta; nenhum agente bumpa versão enquanto não
-chegar perto de 100. Quem medir deve anotar aqui a contagem e a data.
+A ordem do pipeline é fixa:
 
-**Como medir:** `git rev-list --count origin/main..origin/beta-0.4.0`. Ao
-cruzar a faixa, abrir a issue "Release 0.4.1" (regra: toda PR vem com issue),
-rodar a suíte completa verde, fechar as issues da lane bugs, e só então bumpar
-`pom.xml` + `version.properties`.
+```text
+rate-limit
+→ CORS
+→ security headers
+→ cookies/session
+→ CSRF
+→ authentication
+→ RBAC
+→ route
+```
 
----
+O usuário configura políticas, mas não recompõe a ordem interna.
 
-## D-ASM-GATE — gate de asm riscv/aarch OPCIONAL até o dev nativo fechar (14/09)
+Sem argumentos, `app.security()` aplica os defaults de hardening.
 
-**Decisão da mantenedora (14/09):** *"deixa o teste do riscv e arm opcional
-até o desenvolvimento estar completo"* — e o chão inegociável que a acompanha:
-*"não pode ter teste quebrado na main nem na beta"*.
+Em produção, `listen`/`listenSecure` sem `app.security()` emite warning.
 
-- **Contexto (causa raiz medida):** os testes
-  `*CastSaturationLabelsAreUniquePerEmission` (trava de regressão do §181,
-  `67db6c50`) assertavam "o backend sempre mantém o `.s`". **Falso:** em host
-  COM toolchain, `as`+`ld` linkam com sucesso e o `NativeArchEmitter` APAGA o
-  `.s` (só mantém com `KOF_KEEP_ASM`). Resultado: verde no host de dev (sem
-  toolchain, ramo `ToolchainMissing` preserva o asm), **vermelho no CI**
-  (toolchain presente) — gate da beta quebrado desde `67db6c50`/`fdf0dd92`.
-- **Opção escolhida:** skip **honesto e explícito** (regra Q5, nunca "passa por
-  acidente"): `Assumptions.assumeTrue(KOF_ASM_GATE)` no início dos dois testes.
-  Padrão = skip (CI verde); reativa com `KOF_ASM_GATE=1` quando o gate cross
-  for exigido de novo. Corpo tornado **portável** (if `.s` existe → inspeção de
-  texto; senão → exige o binário linkado, prova mecânica).
-- **A regressão do §181 continua provada nos 42 E2Es riscv + 42 aarch sob qemu:**
-  label `.Lsat181` duplicada = `as` falha = `success()` false = teste E2E
-  vermelho. O gate de texto é redundante com qemu; só acrescenta em host SEM
-  toolchain — por isso pode ser opcional sem perder proteção real.
-- **Evidência:** `NativeRiscv64E2ETest.java`/`NativeAarch64E2ETest.java`
-  (`KOF_ASM_GATE`); prova local dupla — sem flag: `Skipped: 2`; com
-  `KOF_ASM_GATE=1`: `Tests run: 2, Failures: 0, Errors: 0, Skipped: 0`.
-- **Condição de reativação:** quando o desenvolvimento nativo estiver completo
-  (bugs da lane Native — §184/§187/§181-adjacentes — fechados com matriz
-  5/5), o `assumeTrue` é removido e o gate volta a ser obrigatório no CI.
+### D-SEC.4 — Autenticação padrão
+
+Quando `app.security()` está configurado:
+
+* o default é autenticação obrigatória;
+* métodos de leitura não são implicitamente públicos;
+* caminhos públicos devem ser declarados por allow-list;
+* `permitAll` é alias de `publicPaths`;
+* token inválido nunca passa silenciosamente;
+* CSRF é ligado por default para métodos que alteram estado;
+* `csrf:false` desliga explicitamente essa proteção.
+
+### D-SEC.5 — OAuth2/OIDC
+
+A implementação segue esta ordem:
+
+1. resource server;
+2. client authorization-code + PKCE;
+3. provider: fora do escopo.
+
+O resource server valida JWT de terceiros por JWKS, issuer e audience.
+
+Algoritmos permitidos:
+
+* RS256/384/512;
+* ES256/384/512.
+
+São rejeitados:
+
+* `none`;
+* HS*;
+* algoritmos fora da allow-list.
+
+Native/JS sem implementação reportam `SECN007`.
+
+### D-SEC.6 — TLS
+
+API:
+
+```kof
+app.listenSecure(port, certPem, keyPem)
+```
+
+A chave deve estar em PKCS#8 PEM.
+
+JVM é o primeiro target.
+
+Self-signed permanece conveniência de desenvolvimento, não configuração de produção.
+
+### Evidência
+
+* `KofSecurityTest`
+* `KofWebE2ETest`
+* `KofBlogE2ETest`
+* `KofOAuthResourceServerTest`
+
+**Referência:** `docs/stdlib/security.md`
+**Implementação:** `docs/stdlib/stdlib-web.md`
+**Fila restante:** Native crypto/TLS e gaps documentados.
 
 ---
 
-## D-ENGINEERING — não reinventar a roda (14/09, princípio da mantenedora)
+## D-APP — modelo de aplicação
 
-**Regra da mantenedora (14/09):** *"sobre a lógica interna do compilador, sempre
-se inspirar na forma que **Java e C** resolvem os problemas, desde que o
-frontend e a forma de escrever continuem idiomáticos e a saída continue
-determinística; pode se inspirar na forma como outras linguagens resolvem o
-backend. Não queremos reinventar a roda."*
+**Data:** 13/09/2026
+**Estado:** `PARTIAL`
+**Escopo:** manifesto, composição de componentes e execução de aplicações.
 
-- **Escopo:** lógica interna do compilador/backend (lowering, helpers de
-  runtime, codegen, semântica). **Não** é o frontend Kof: sintaxe e a forma de
-  escrever continuam Kof idiomático (regra 6 — superfície congelada não muda
-  com isto).
-- **Ordem de referência:** (1) **Java** (JLS/JVMS + comportamento de
-  `java.lang`/`java.math` — âncora mais forte, pois o backend JVM já mira nele),
-  (2) **C** (ISO C / libm para o backend nativo), (3) outras linguagens só para
-  *técnica de backend* (nunca para a superfície Kof).
-- **Invariantes mantidos:** saída determinística (mesma entrada → mesmos
-  bytes/resultado em todo alvo) e a regra do gap honesto (R6: nunca resposta
-  errada silenciosa; face não implementada reporta código, não adivinha).
-- **Primeiras aplicações (mesmo dia):** §D-BACKEND-SEMANTICS abaixo.
+### Contrato
 
----
+**D-APP.1 — Manifesto**
 
-## D-BACKEND-SEMANTICS — 6 decisões do chat de 14/09 (dono 192.168.100.18)
+O manifesto da aplicação é:
 
-**✅ FILA FECHADA — 6/6 implementadas:** §101 (1), §129 (2), `roundTo` (3),
-§179 (4), `app.security()`/Spring (5), §180 (6). A fila `## 7` do
-`docs/development/README.md` está vazia; esta seção agora é registro, não backlog.
+```text
+kof.toml
+```
 
-A mantenedora respondeu a lista aberta. Opções escolhidas e a execução:
+Ele é opcional.
 
-### 1. §101 — operadores relacionais com NaN → **opção A (IEEE 754 puro)**
-Todos os alvos concordam com IEEE 754: **toda comparação relacional com NaN é
-`false`** (e `!=` é `true`). O comportamento riscv/aarch é a referência (já é
-IEEE); **JVM/x86/JS são alinhados a ele**. Concretamente: o lowering JVM não
-pode depender do quirk `dcmpl`/`dcmpg` que devolve `true` para `1.0 < NaN` /
-`1.0 <= NaN`; o resultado é computado IEEE-correto (resultado unordered força
-`false` para `<`, `<=`, `>`, `>=` e `true` para `!=`). JS segue IEEE por
-construção (`<` com NaN é `false`). É o próprio contrato do Java (JLS 15.20.1:
-comparações com NaN são todas `false`), então o JVM era o outlier, não a
-referência.
+Sem manifesto, o comportamento atual deve permanecer 1:1.
 
-**Feito (14/09, dono 192.168.100.18):** o JVM usa `FCMPG`/`DCMPG` para `<`/`<=`
-e `FCMPL`/`DCMPL` para `>`/`>=` (`JvmOpEmitter` via
-`JvmLiteralEmitter.floatCmpIsG`/`condCmpIsG`); o Native x86 foi corrigido em
-`NativeX86Arith` (caminho de valor) e `NativeOpHelpers` (caminho de salto) — o
-`setb`/`jb` do `LT` não tinha o guard de unordered que `LE`/`GE` já tinham.
-riscv/aarch já eram IEEE. Prova: `BackendParityTest.parityNanRelationalIeee`
-(JVM×JS) e `ComponentCoreE2ETest.nanRelationalIsIeeeOnAllTargets`
-(JVM+Native+JS, caminhos de valor e de salto, Double e Float).
+**D-APP.2 — Unidade de aplicação**
 
-### 2. §129 — unwind cross-thread no Native → **opção B (frame por thread)**
-Dar ao unwinder do Native um **frame de exceção por thread** (não um
-`kof_exc_chain` global, não uma chain compartilhada por TID): cada thread é dona
-da sua cadeia de handlers/frames, então um `throw` sem handler dentro de um
-worker `spawn` marca o handle do worker como excepcionalmente-completo em vez de
-`longjmp` para fora da thread. Inspirado no Java (estado de exceção por thread)
-e no C (frames `setjmp`/`longjmp` são locais à pilha). Afeta o runtime
-compartilhado (`RuntimeDb4`/GC); a chain vira thread-scoped. Destrava o
-**OTP S2-Native** (§129), cujo gate é `OTP001` até isto fechar.
+Uma aplicação é um diretório contendo um módulo Kof e um `main()`.
 
-**Feito (15/09, owner 192.168.100.18) — Native x86:** a chain agora é TLS
-local-exec (`.section .tbss,"awT",@nobits` + `%fs:kof_exc_chain@tpoff`) em
-`RuntimeGc.emitPanic`, `NativeMethodEmitter` (`KofTryStart`/`KofTryEnd`),
-`RuntimeDb4` (frames de tx) e `RuntimeStringParseOrDefault`; o `ld.so` inicializa
-o TLS da main e o `pthread_create` o do worker (validado: um worker que escreve
-na chain não toca na da main). O `kof_spawn_trampoline` instala um frame de
-handler por worker e, num `throw` sem handler interno, publica a causa no handle
-(`handle->exc` em 40) em vez de desenrolar para a pilha da main;
-`kof_await`/`kof_await_timeout`/`kof_select_any` a relançam no consumidor
-(paridade JVM), e `kof_await` zera o TID já juntado para o
-`kof_spawn_join_all` implícito nunca dar double join (SIGSEGV com TCB
-reciclado). O frame do handler guarda o handle em `32(%rsp)` porque o worker
-pode clobberar o `%r12` callee-saved. `CompilerSupervisor` agora só emite
-`OTP001` para riscv/aarch (clone cru, sem TLS + `selectAny`/CONC001). Prova:
-`KofConcurrency2Test.spawnWorkerThrow*Native` (4), `KofSupervisorE2ETest`
-`supervisorNativeParityX86`/`supervisorNativeS2ParityX86` + `crossGateOtp001`;
-`KofSupervisorE2ETest` 15/15, `KofConcurrency2Test` 40/0, `ExceptionsE2ETest`
-11/0, `NativeE2ETest` 65/0.
+Componentes possíveis:
 
-### 3. `roundTo` — **implementar, racional (inspirado em Java + C)**
-Aprovado para implementação (a ratificação do `pow` de 13/09 o deixou aberto).
-Design racional, inspirado em Java+C:
-- **Família `round()` do C** = arredonda-meio-para-longe-do-zero
-  (`round(2.5)=3`, `round(-2.5)=-3`) — a âncora para o *modo de arredondamento*.
-- **`BigDecimal.setScale(n, RoundingMode.HALF_UP)` do Java** = a âncora para a
-  *escala decimal* (arredondar `Double`/`Float` para N casas decimais).
-- **Superfície (Kof idiomático):** `math.roundTo(value, decimals)` devolve o
-  mesmo tipo numérico de `value`, `decimals` um `Int` (0 = arredonda inteiro).
-  Determinístico: escala decimal pura, sem locale, sem pattern DSL (mesmo
-  precedente de `time.format`, §D-STDLIB). Célula golden cross-target.
+* backend;
+* frontend;
+* static.
 
-**Feito (14/09, dono 192.168.100.18):** S1b.3 — `kof_math_roundTo(Double,Int)`
-nos 5 alvos. Contrato **aritmético** (não decimal-string): `p=10^|d|` por
-multiplicação REPETIDA (cada passo é 1 op IEEE corretamente arredondada →
-byte-idêntico); `d>=0`: `roundHalfAway(v*p)/p`, `d<0`: `roundHalfAway(v/p)*p`
-(decimals negativo arredonda p/ dezenas/centenas); `|d|` satura em 308; overflow
-de `v*p` → devolve `v` (no-op). `roundHalfAway` = trunc + correção do resto
-(`|f|>=0.5` → ±1; evita o double-rounding do `floor(x+0.5)`). Consequência
-travada: `roundTo(2.675,2)==2.68` (o double `2.675*100` arredonda a `267.5`).
-Sem libm. Backends: JVM (`JvmStringMathRuntime`), SCRIPT (reflexão), JS
-(`kofMathRoundTo`), x86 (`RuntimeMath`), riscv (fatia B32, aarch via tradutor).
-Prova: `KofMathTest.roundTo{Jvm,Native,Js,CrossArch}` + guard SEM025 +
-`ConformanceMatrixTest.stdmathround` (4 targets) + `KofScriptStdlibParityTest.
-mathRoundToParity`.
+Uma aplicação é a menor unidade de `kof serve` e deploy.
 
-### 4. §179 — tipo `kof.ui`/`kof.media` declarado → **opção A (mapear o builtin)**
-`MemberResolver.resolveType`, após `qualifyDeep`, mapeia `ClassType("", name)`
-para `KofUi.constructorType(name)`/`KofMedia` quando `name` é builtin UI/media
-**e** não foi resolvido por import/classe do módulo — **shadowing do usuário é
-preservado** (classe de usuário chamada `Label` ainda vence). Corrige o
-`VerifyError` do JVM (descritor `LLabel;` vs handle `int`) para
-var/param/campo/retorno declarado de tipos UI/media.
+**D-APP.3 — Frontend**
 
-**Feito (14/09, dono 192.168.100.18):** o mapeamento vive em
-`CompilerTypes.qualifyDeep` (passo 2b: após `simpleNamePackage` devolver null e
-nem o módulo nem o `SymbolTable` declararem o nome), via `builtinDeclaredType`
-(`KofUi.typeByName` para todos os tipos UI + `KofMedia.IMAGE_DATA`) e o guard de
-shadowing `unitDeclaresType`; `MemberResolver.resolveType` passa por
-`qualifyDeep`, e o `VarDeclStmt` do `StatementLowerer` agora resolve com o
-analisador semântico (o `toType` de 2 args pulava `qualifyDeep`, então um local
-declarado mantinha o pacote vazio). Prova:
-`ComponentCoreE2ETest.declaredUiAndMediaTypesCompileAndRun` +
-`userClassShadowsBuiltinUiTypeName` (JVM+Native+JS).
+Frontend é outro módulo Kof compilado para JS.
 
-### 5. `app.security()` → **inspirado no Spring Security**
-Refinar o middleware composto ao **modelo mental do Spring Security**, mantendo
-a superfície Kof idiomática e a saída determinística:
-- **Chain estilo `HttpSecurity`:** a ordem do middleware é fixa e do framework
-  (não composta à mão pelo usuário) — a ordem fixa atual (rate-limit → CORS →
-  headers → session → CSRF → auth → RBAC) é exatamente a ideia de filter-chain
-  do Spring.
-- **`authorizeHttpRequests`:** os caminhos públicos são uma **allow-list** de
-  matchers; tudo que não casa exige autenticação. Leituras **não** são
-  implicitamente públicas: **o default é autenticado** (o
-  `anyRequest().authenticated()` do Spring), com matchers `permitAll`
-  explícitos. Isto reverte a escolha interina "reads públicas" do merge — o
-  blog E2E manda o token de sessão nos GETs.
-- **CSRF:** ligado por default para métodos que mudam estado (o Spring liga por
-  default); métodos seguros emitem o cookie. **Session:** o modo header-token
-  fica (Kof não tem sessão de servlet), mesma regra "autenticado por default".
-- **Native/JS:** seguem gap honesto (`WEB006`).
+O backend não chama funções do frontend diretamente.
 
-> **✅ EXECUTADO (14/09, dono 192.168.100.18):** `app.security()` adotou o modelo
-> Spring acima. **CSRF LIGADO por default** quando `app.security()` é
-> configurado (`kof_web_security_opts` seta `securityCsrf = true`; `csrf:false`
-> desliga explicitamente) — métodos seguros emitem o cookie double-submit,
-> métodos que mudam estado o exigem. **Leituras são autenticadas por default**:
-> a guarda de sessão já exige auth em toda request fora de `publicPaths`
-> (GET incluído), então a nota "reads públicas" do merge estava desatualizada.
-> **`permitAll`** aceito como alias de `publicPaths` (allow-list de matchers).
-> `app.security()` sem args segue só-headers (GET `/hello` → 200), e apps que
-> nunca chamam `app.security()` não são afetados. Prova: `KofWebE2ETest` 25/25
-> (novos `securityCsrfIsOnByDefault`, `securityPermitAllAliasIsPublicPaths`) +
-> `KofBlogE2ETest` (double-submit nos POSTs) + `KofOAuthResourceServerTest` 4/4.
+A comunicação front→back ocorre por HTTP/JSON.
 
-### 6. §180 — `println(double/float)` no Native x86 → **inspirado no Java**
-Alinhar o Native ao **`Double.toString`/`Float.toString` (Java)**: decimal
-shortest round-trip, `Float` impresso na sua própria forma mais curta (não a
-expansão double), o limiar de notação científica do Java (`1e7`→`1.0E7`,
-`1e-3`→`0.001`). Inspirado no Java (representação mais curta estilo
-Ryu/Grisu; um loop limitado `%.{1..17}g`+`strtod` é implementação
-determinística aceitável) — sem reinventar o algoritmo além do que o JDK já
-define. Célula golden cross-target (`floatprint`).
+**D-APP.4 — System**
 
-> **✅ EXECUTADO (15/09, dono 192.168.100.18):** o Native x86_64 agora usa o
-> loop limitado `%.*e`+`strtod` (a opção sancionada acima). Nova fatia de
-> runtime `RuntimeDtoa` emite `kof_dtoa_format`, `kof_double_to_string` e
-> `kof_float_to_string`: para cada precisão `0..16` (double) / `0..8` (float)
-> formata com `snprintf("%.*e")` e re-parseia com `strtod`, guardando a
-> **menor** precisão que faz round-trip bit-exato; depois reformata no estilo
-> Java (científica só quando `|x|>=1e7` ou `<1e-3`, `E` maiúsculo, mantissa
-> sempre com parte fracionária) e `Float` mantém a **própria** forma mais curta
-> (não a expansão double). `RuntimePrintNum` (o `print` sem box),
-> `RuntimeJsonEncode` (NaN/±Inf → `null`) e os ramos `.Lce_double`/`.Lce_float`
-> do `RuntimeCollectionToString` delegam a ela; o `RuntimeStringConv` não
-> carrega mais a conversão de float/double (só int/char/long/bool).
-> **Restrição libc:** `snprintf`/`strtod` são necessários, então isto é **só
-> x86_64**; riscv/aarch seguem `FLT001`. O `_start` do runtime Kof **não**
-> garante alinhamento de pilha de 16 bytes, então cada entry point do dtoa faz
-> `andq $-16, %rsp` antes das chamadas libc (o `movaps` da glibc precisa de
-> 16B — o desalinhamento era a causa-raiz do SIGSEGV). Prova:
-> `ConformanceMatrixTest.doubleprint` (exclusão do Native removida, estendida
-> com `0.001`/`1.0E-4`/`3.4028235E38`/`-0.0`) — Native == JVM byte a byte;
-> `KofMathTest` 29/29, `JsonE2ETest` 18/18, `JsonCompleteE2ETest` 9/9,
-> `NativeRuntimeSliceRegistryTest` 7/7, `ConformanceMatrixDocTest` verde.
+System é composição de deploy, não de compilação.
+
+`kof serve --system` permanece rejeitado.
+
+A alternativa aprovada é:
+
+```text
+kof serve --list
+```
+
+**D-APP.5 — Fat jar**
+
+A flag:
+
+```text
+kof build --fat
+```
+
+é opcional.
+
+Default continua sendo classpath explícito.
+
+**D-APP.6 — Rebuild**
+
+O frontend é reconstruído sob demanda por hash.
+
+Watcher permanece futuro.
+
+**D-APP.7 — Targets**
+
+Wasm entra na matriz quando o target estiver aberto.
+
+Android é declarado como suportado pelo modelo WebView + KofJS, sem alterar o modelo de aplicação.
+
+### Manifesto
+
+Seções:
+
+```toml
+[app]
+[serve]
+[frontend]
+[static]
+```
+
+O manifesto é lido pela CLI, não pelo compilador.
+
+Erro de manifesto deve produzir diagnóstico claro.
+
+### Topologias permitidas
+
+* monolith;
+* modular monolith;
+* microservices;
+* microfrontends;
+* full-stack;
+* backend-only;
+* frontend-only;
+* full-stack distribuído;
+* gateway.
+
+O modelo não muda entre essas topologias.
+
+### Evidência
+
+* `KofProjectConfig`
+* `CmdBuildFatTest`
+* `KofBlogE2ETest`
+* `KofWebE2ETest`
+
+**Referência:** `docs/architecture/application-model.md`
+**Fila:** `CmdNew`, integração completa de manifesto/deps e gaps de target.
 
 ---
 
-## D-BASELINE — baseline da toolchain 21 → 25 (✅ decidido 14/09, mantenedora)
+## D-SPRING — independência de framework
 
-- **Decisão:** o baseline de build da toolchain do repo sobe de **Java 21**
-  para **Java 25** (LTS), pedida pela mantenedora na sessão da lane CodeQL
-  (14/09) para destravar o codemod 100% preservador de comportamento dos
-  findings `java/local-variable-is-never-read` (×82) e parte de
-  `java/unused-parameter` (×81): **unnamed patterns/variables, JEP 443,
-  finalizado no Java 22** (medido: `javac --release 21` recusa
-  `case WhileStmt _ -> false;`).
-- **O que muda (toolchain do repo, NÃO a linguagem):** `pom.xml` `release=25`;
-  `setup-java` 21→25 em ci/codeql/release/benchmark/android; Temurin embutido
-  do `package.sh --jdk` 21→25; README canônico + PT "JDK 25+"; CHANGELOG EN/PT
-  (seção Build de 0.4.0-beta); `learn/31-distribution` EN/PT com a nota das
-  três camadas.
-- **O que NÃO muda (regra 6 — alvo de runtime de programa Kof, congelado):**
-  `JvmBackend` continua emitindo `V21`; template Android continua
-  `release="21"`; `KofVersion.TOOLING_API=21` (piso do programa emitido,
-  reportado por `kof info`); a guarda `--release 21 --enable-preview` do
-  `JvmRuntime` (caminho vk/extern em JDK <22) segue correta em 21..25.
-  **Programa Kof compilado hoje roda em JVM 21+** — subir a toolchain do repo
-  não sobe o runtime mínimo da linguagem.
-- **Evidência:** `mvn -o -pl kof-compiler -am compile` verde com
-  `Compiling ... with javac [debug release 25]`; suíte do kof-compiler em JDK
-  25: 1464/0 (162 skip) antes do codemod, e worktree b3ab9858+codemod
-  61-bindings: 1574/1 (a única fail é o flake SSE documentado da família §90,
-  verde 6/6 isolado).
+**Data:** 13/09/2026
+**Estado:** `IN_PROGRESS`
 
----
+### Contrato
 
-## D-NULL — emenda §125/SEM048: "null pra primitivo" foi LEITURA ERRADA (✅ decidido 15/09, mantenedora, pessoal)
+* Nenhum componente da stdlib depende de Spring.
+* Nenhum backend gera Java-source como etapa obrigatória.
+* Capacidades fundamentais possuem API Kof-native.
+* Spring pode ser consumido como alternativa de interoperabilidade.
+* O teste de independência tem o mesmo peso do teste de interoperabilidade.
 
-> **A mantenedora corrigiu o registro diretamente: "eu NÃO proíbo null pra
-> primitivo, proíbo null pra quando tem null safety. Vocês entenderam errado."**
-> Todo registro do catálogo que leu §125/SEM048 como *"um primitivo nunca pode
-> carregar null, portanto `Int?` boxed é proibido (regra 6)"* está **errado**, e o
-> raciocínio *"`T?` boxed reabre o §125 → regra 6"* que estacionou #259/#266/#252
-> (e justificou o revert `6553ac2e` do §241) é **nulo**.
+### Fases
 
-O que §125/SEM048 realmente proíbe é **fabricar `null` num ponto sem
-null-safety** — o `null` **literal** em atribuição / retorno / argumento. Null
-safety é por **narrowing** (`if (x != null)`); `null` só chega de API que devolve
-`T?`. Duas consequências, ambas o contrato agora:
+| Fase                | Estado        |
+| ------------------- | ------------- |
+| 1–9                 | `IMPLEMENTED` |
+| 10 — testing nativo | `DECIDED`     |
+| 11 — CLI completa   | `IN_PROGRESS` |
+| 12 — blog E2E       | `IN_PROGRESS` |
 
-- **(a) `Int?`/`Boolean?`/`Double?` PODEM carregar `null` de verdade.** A face
-  `Nullable(primitivo)` boxed (família #252) **NÃO é um congelamento regra-6** —
-  o §125 nunca a proibiu. O trabalho é *"completar o box
-  nos 4 targets"* (JVM + Script + JS + Native em lockstep — exatamente o que a
-  meia-implementação `c0cf805e` do §241 falhou em fazer), rastreado como a fila
-  §241/#266/#259, **não** estacionado atrás de uma decisão que não existe.
-- **(b) Um `Int` pelado (sem `?`) continua sem null** — e o compilador deve DIZER
-  isso em **compile-time**, nunca um `VerifyError` silencioso no load. `f(null)`
-  onde `f` recebe um `Int` não-nullable é **SEM048** (espelha o guard da
-  atribuição `x = null` e o do retorno §125). Implementado 15/09 pela lane
-  bugs-and-gaps `192.168.100.15`: guard compartilhado
-  `SemanticAnalyzer.checkNullArgs` + pós-pass sobre
-  `resolvedMethods`/`resolvedConstructors` (método de instância + construtor) +
-  check no ramo top-level do `BuiltinCallTyper` (os mapas resolvidos nunca veem
-  chamadas top-level). Um formal `NullableType` NUNCA cai no guard —
-  `handle(Boolean? flag)` + `handle(null)` deve compilar (isso é (a), o caso-core
-  do #266). Prova: `NullArgPrimitiveParamE2ETest` 7/7 (4 rejeições
-  instância/construtor/top-level/Long + 2 não-regressões "sem SEM048 em
-  Boolean?/String? + null" + valor real passa); cross-target o diagnóstico é
-  idêntico em jvm/js/native e sob `kof run --target script` (frontend
-  compartilhado).
+### Fase 10
 
-> **✅ DECIDIDO 15/09** — o §125 segue CONGELADO como "null literal não é
-> fabricável", mas seu *escopo* foi corrigido: ele nunca proibiu `T?` boxed. O
-> trabalho boxed-4-targets **não está bloqueado pela regra 6** — mas *abrir* essa
-> frente como fila é **decisão da mantenedora** (a lane só registra a correção de
-> escopo, §regra 6). Catálogo conexo: §250 (parte (c), corrigida),
-> §241/#252/#259/#266 (a fila do box).
+`kof test` deve executar testes do projeto com asserts Kof.
+
+JUnit não é obrigatório.
+
+Escopo inicial:
+
+* unit;
+* HTTP com `web.app` em porta efêmera.
+
+Property testing, stress e mocks são incrementos separados.
+
+### Fase 11
+
+Consolidar:
+
+```text
+run
+build
+test
+serve
+fmt
+deps
+init
+check
+new
+```
+
+`kofdeps add/remove/list/resolve` já existe.
+
+Falta integrar dependências ao manifesto.
+
+### Fase 12
+
+O blog E2E é o aplicativo canônico de validação da plataforma:
+
+* backend;
+* frontend;
+* banco;
+* autenticação;
+* validação;
+* manifesto.
+
+A validação deve ser feita por target, com gaps honestos.
 
 ---
 
-## D-NULL-INTENT — nullabilidade por INTENÇÃO EXPLÍCITA; o colapso silencioso `null→0` está MORTO (✅ decidido 15/09, mantenedora, pessoal)
+## D-RELEASE — critério de avaliação de patch
 
-> **Palavras da mantenedora:** *"null safety nunca deve retornar null, mas vamos
-> adicionar uma função semântica pro compilador entender a intenção quando o dev
-> quer que volte null — compara por exemplo um int com `if (i == null)`, então
-> isso é a intenção mandando no escopo: deve poder ser null nesse quesito, quando
-> a intenção fica explícita. O mesmo pra string, boolean, todos os tipos. Caso
-> contrário, null nunca é esperado."*
+**Data:** 14/09/2026
+**Estado:** `DECIDED`
 
-O contrato, agora congelado (substitui a "opção A — dobra em 0" do §125 e
-completa o D-NULL do mesmo dia):
+### Contrato
 
-1. **Null NUNCA é esperado por default.** Uma declaração sem intenção de null
-   explícita (`Int`, `String`, `Foo` …) não pode produzir nem carregar `null`.
-   Retornar/passar `null` onde não há intenção é **diagnóstico de
-   compile-time** — nunca a dobra silenciosa `null→0`/`null→false` que a
-   "opção A" do §125 ratificou (medido 15/09: `Int? maybe(){return null}` →
-   `maybe(2)==null` = **false**, `println` = `0`; `Int f(){return null}` → `0`
-   sem NENHUM diagnóstico — ambos são violações de R6 e agora são bugs a
-   corrigir, não comportamento a preservar).
-2. **A intenção é a comparação `== null` / `!= null`.** Um programa que escreve
-   `if (i == null)` num `Int` não-nullable está declarando intenção: *"isto pode
-   ser null, trate"*. O compilador deve entendê-la em TODOS os tipos (Int,
-   Long, Bool, Double, String, classe …): o ponto comparado aceita null
-   naquele escopo (o ramo narroweia; o outro ramo é não-null). Nenhuma
-   cerimônia sintática é exigida para *pedir* null — pedir é a própria
-   comparação.
-3. **Quando há intenção, null é REAL, em todo target.** `Int?`/`Long?`/`Bool?`/
-   `Double?` carregam `null` de verdade: `x == null` responde `true` para null
-   e `false` para valor; `println(x)` imprime `null` — JVM, Script, JS e
-   Native com a MESMA saída (regra 5). É exatamente a face `T?` boxed que o
-   D-NULL liberou da regra 6 (fila §241/#266/#259) — agora com PRAZO: é a
-   implementação desta decisão, não uma ideia estacionada.
-4. **O que NÃO muda (o congelamento segura):** o `null` LITERAL continua não
-   atribuível a um ponto não-nullable (SEM048 fica: `f(null)` em `f(Int)` é
-   erro — a intenção vem das comparações `== null` e das declarações `T?`, não
-   de enfiar `null` num slot não-null); a semântica de conteúdo do `==`,
-   operadores e precedência estão intocados (a comparação `i == null` é um
-   *uso* do `==` congelado, não uma mudança nele); tipos de referência mantêm
-   o comportamento atual onde já bate (`String?` já devolve null real).
+A linha 0.4.0 já foi liberada no #138.
 
-**Fila de implementação (roadmap §23, nesta ordem):**
+O desenvolvimento continua normalmente após a release.
 
-- **N1 (JVM+Script+JS):** `Nullable(primitivo)` carrega null de verdade — o
-  tipo de retorno do método vira a classe boxed (`maybe` emite `Integer`, não
-  `int`), slots/locais tipados `T?` são boxed com null permitido, `== null`
-  abaixa para comparação de referência sobre o boxed; remover
-  `foldNullablePrimBranches` (extensão do §125) e as dobras `null→0` nos
-  caminhos de retorno/atribuição. Regressão: células da matriz `Int?` null
-  (`nullprim-true`: `maybe(2)==null` → `true`, `println(maybe(2))` → `null`)
-  em 3 targets + Script.
-- **N2 (Native):** o mesmo pela ABI boxed do §104b-ii (box com tag +
-  `kof_box`/`kof_unbox` reais + `object_to_string`) — o Native imprime
-  `null`/`1` identicamente. As células reabrem com Native incluído SOMENTE
-  quando byte-idêntico.
-- **N3 (intenção em NÃO-nullable):** `i == null` onde `i` é declarado `Int`
-  (sem `?`): hoje compila para `false` constante (medido 15/09). Contrato: a
-  comparação é legal e REAL — se `i` pode observar null ela responde a
-  verdade, senão é constante que o otimizador pode dobrar; NENHUM diagnóstico
-  é adicionado (a intenção nunca pode quebrar código que compila — retro-
-  compatibilidade, regra 2: código que compila hoje continua compilando).
-- **N4 (fim do null silencioso):** um `return null` / `x = null` em assinatura/
-  declaração não-nullable já é SEM048/§125 para o LITERAL — auditar os
-  caminhos silenciosos RESTANTES (map-miss `0`, campo não-inicializado `0`,
-  unbox-de-null `0`) e dar a cada um uma face DECIDIDA: null honesto (quando o
-  ponto é `T?` / tem intenção) ou diagnóstico; nunca um valor tirado do nada.
+Quando a beta estiver entre 100 e 150 commits à frente da main, deve-se avaliar uma release de patch.
 
-> **✅ DECIDIDO 15/09** — esta entrada é a lei da família null; a "opção A" do
-> §125 está REVOGADA como comportamento (o registro no catálogo aponta para
-> cá). A fila N1→N4 é aditiva ao idioma apenas no sentido que o D-NULL já
-> sancionou (completar `T?` nos 4 targets); ela REMOVE comportamento
-> silencioso-errado, que o congelamento nunca protegeu (regra 4 do freeze:
-> bug se corrige para alcançar o esperado, nunca o contrário).
+### Regra
+
+```text
+git rev-list --count origin/main..origin/beta-0.4.0
+```
+
+Ao cruzar a faixa:
+
+1. abrir issue de release;
+2. executar suíte completa;
+3. fechar issues conhecidas da lane de bugs/paridade;
+4. avaliar o conteúdo acumulado;
+5. atualizar versão somente após a avaliação.
+
+### SemVer
+
+Se houver capability nova material que altere contrato, operador ou superfície de API, a versão avaliada deixa de ser patch e passa a ser minor.
+
+O contador não congela features.
+
+Features e fixes concluídos com suíte verde entram no pacote.
+
+**Estado registrado em 14/09:** `main..beta = 1`.
 
 ---
 
-## Como atualizar este doc
+## D-ASM-GATE — gate de ASM riscv/aarch
 
-Decidiu mais alguma coisa no chat → trava aqui (data + opção + evidência de
-código quando houver). Item decidido que vira código: sai daqui para a fila
-do `roadmap.md` §23/DOING; a linha fica marcando `✅ decidido <data>` (o
-registro é permanente — a pasta `decision-pending/` não existe mais).
+**Data:** 14/09/2026
+**Estado:** `DECIDED`
+
+### Contrato
+
+O gate específico de inspeção de ASM para riscv/aarch é opcional enquanto o desenvolvimento nativo não estiver completo.
+
+A main e a beta nunca podem permanecer com testes quebrados.
+
+### Regra
+
+O gate pode ser reativado com:
+
+```text
+KOF_ASM_GATE=1
+```
+
+O padrão é skip explícito.
+
+O corpo do teste continua portável:
+
+* se `.s` existe, inspeciona o texto;
+* se não existe, exige o binário linkado.
+
+### Proteção mantida
+
+A regressão de labels duplicadas continua coberta pelos E2Es sob qemu.
+
+### Reativação
+
+Quando a lane Native estiver completa e a matriz 5/5 estiver verde, o `assumeTrue` deve ser removido e o gate volta a ser obrigatório.
+
+---
+
+## D-BACKEND-SEMANTICS — semântica de backend
+
+**Data:** 14–15/09/2026
+**Estado:** `IMPLEMENTED`
+
+Esta seção registra decisões de semântica já ratificadas e implementadas.
+
+### §101 — NaN em comparações relacionais
+
+**Decisão:** IEEE 754 puro.
+
+Comparações relacionais com NaN retornam `false`.
+
+`!=` retorna `true`.
+
+Todos os targets devem concordar.
+
+### §129 — unwind cross-thread
+
+**Decisão:** frame de exceção por thread.
+
+A cadeia de exceções é thread-scoped.
+
+Worker sem handler interno publica a exceção no handle.
+
+O consumidor relança em `await`, `await_timeout` e `select_any`.
+
+### `roundTo`
+
+**Decisão:** arredondamento decimal aritmético.
+
+```kof
+math.roundTo(value, decimals)
+```
+
+* mesmo tipo numérico do valor;
+* `decimals = 0` arredonda para inteiro;
+* negativos arredondam dezenas, centenas etc.;
+* modo half-away-from-zero;
+* sem locale;
+* sem pattern DSL;
+* determinístico.
+
+### §179 — tipos builtin UI/media
+
+Tipos builtin declarados são mapeados pelo resolvedor sem quebrar shadowing do usuário.
+
+Uma classe de usuário com o mesmo nome continua vencendo.
+
+### `app.security()`
+
+O modelo mental é inspirado no Spring Security:
+
+* filter chain fixa;
+* autenticação por default;
+* allow-list explícita para rotas públicas;
+* CSRF por default;
+* superfície Kof própria.
+
+### §180 — impressão de float/double
+
+Native deve alinhar-se ao comportamento observável de `Double.toString` e `Float.toString` do Java:
+
+* shortest round-trip;
+* `Float` mantém sua própria representação;
+* notação científica conforme o limiar definido;
+* `E` maiúsculo;
+* mantissa com parte fracionária.
+
+---
+
+## D-BASELINE — baseline da toolchain
+
+**Data:** 14/09/2026
+**Estado:** `IMPLEMENTED`
+
+O baseline de build do repositório sobe de Java 21 para Java 25.
+
+Isso altera a toolchain do repositório, não o runtime mínimo dos programas Kof.
+
+### O que muda
+
+* `pom.xml`: `release=25`;
+* CI;
+* CodeQL;
+* release;
+* benchmark;
+* Android tooling;
+* JDK embutido do `package.sh`;
+* documentação de build.
+
+### O que não muda
+
+* `JvmBackend` continua emitindo bytecode V21;
+* Android continua com `release="21"`;
+* `KofVersion.TOOLING_API=21`;
+* programas Kof continuam com runtime mínimo JVM 21+.
+
+---
+
+## D-NULL — nullabilidade e primitivos
+
+**Data:** 15/09/2026
+**Estado:** `DECIDED`
+**Revisão de:** §125 / SEM048
+
+### Correção histórica
+
+A decisão anterior foi interpretada incorretamente.
+
+O contrato nunca proibiu que `T?` boxed carregasse `null`.
+
+O que é proibido é fabricar `null` em um ponto sem null-safety.
+
+### Contrato
+
+* `Int?`, `Boolean?`, `Double?` e demais `T?` podem carregar `null`;
+* `Int`, `Boolean`, `Double` e demais tipos não-nullable não carregam `null`;
+* `null` literal em ponto não-nullable é erro de compile-time;
+* `T?` boxed não está congelado pela regra 6;
+* o comportamento deve ser completado nos targets em lockstep.
+
+### Estado
+
+O trabalho de boxed nullable segue na fila §241/#252/#259/#266.
+
+O catálogo anterior que tratava isso como proibido está corrigido.
+
+---
+
+## D-NULL-INTENT — intenção explícita de nullabilidade
+
+**Data:** 15/09/2026
+**Estado:** `DECIDED`
+**Revisão de:** opção A do §125
+
+### Contrato
+
+Null não é esperado por default.
+
+Uma declaração sem intenção explícita não pode produzir ou carregar `null`.
+
+A intenção de nullabilidade é expressa pela comparação:
+
+```kof
+if (x == null) { ... }
+if (x != null) { ... }
+```
+
+Isso vale para todos os tipos.
+
+Quando a intenção existe:
+
+* `T?` pode carregar null real;
+* `x == null` deve responder corretamente;
+* `println(x)` deve imprimir `null`;
+* o comportamento deve ser equivalente em todos os targets.
+
+O `null` literal continua proibido em pontos não-nullable.
+
+### Regras de implementação
+
+* `Int?` e demais primitivos nullable devem usar representação boxed real;
+* não pode haver dobra silenciosa `null → 0`;
+* não pode haver dobra silenciosa `null → false`;
+* unbox de null deve ter comportamento definido;
+* campos não inicializados devem ter comportamento definido;
+* map-miss não pode inventar valor.
+
+### Fila
+
+1. JVM + Script + JS;
+2. Native;
+3. intenção em declarações não-nullable;
+4. auditoria e eliminação dos caminhos silenciosos.
+
+### Proteção de escopo
+
+A implementação do núcleo de intenção está sob responsabilidade da mantenedora.
+
+As lanes não devem atacar o núcleo boxed-nullable de #266/#259 sem nova autorização.
+
+As lanes podem atuar em:
+
+* auditoria SEM048/SEM049;
+* catálogo de caminhos silenciosos;
+* correções que não sobreponham a implementação protegida.
+
+---
+
+## D-PRINT — conversão implícita de Char
+
+**Data:** 15/09/2026
+**Estado:** `DECIDED`
+
+### Contrato
+
+`println` imprime `Char` como caractere.
+
+```kof
+println('A') // A
+```
+
+Concatenação também preserva o caractere:
+
+```kof
+"char: " + 'A' // char: A
+```
+
+Conversão numérica exige API explícita.
+
+O armazenamento de `Char` em coleções continua sendo contrato separado.
+
+---
+
+## D-NARROW-WHILE — narrowing de fluxo
+
+**Data:** 15/09/2026
+**Estado:** `DECIDED`
+
+O narrowing existente em `if` deve ser estendido para:
+
+* condição de `while`;
+* receptores de campo de classe;
+* escopos estreitados por comparação de null.
+
+Reatribuição dentro do escopo estreitado não altera a nullabilidade da declaração.
+
+O falso-positivo SEM012 do caso #159 deve ser eliminado.
+
+---
+
+## D-ENUM207 — identidade de enum
+
+**Data:** 15/09/2026
+**Estado:** `IN_PROGRESS`
+
+A implementação de identidade de enum foi reatribuída à lane bugs-and-gaps.
+
+A mudança semântica:
+
+```kof
+Dir.N == "N"
+```
+
+deve ser tratada como decisão de contrato, não como simples correção local.
+
+A decisão final sobre a semântica permanece registrada nesta seção antes da alteração do comportamento.
+
+---
+
+## D-VALUE-RECORD — value records / tipos de valor de primeira classe
+
+**Data:** 16/09/2026
+
+**Estado:** `DECIDED`
+
+**Origem:** issue #275 (proposta de feature).
+
+### Contexto
+
+Kof já tem `record` imutável conciso (ex. `record Vec2(Float x, Float y)`),
+mas não tem como declarar explicitamente que um agregado definido pelo usuário
+tem **semântica de valor e sem identidade de objeto**. Para tipos pequenos
+orientados a dados (vetores, coordenadas, cores, intervalos, tokens de parser,
+estado de iterador), exigir uma alocação de objeto separada adiciona pressão
+de alocação, trabalho de GC, indireção e pior localidade de cache. Depender de
+escape analysis do JVM não expressa intenção e não vale nos backends Native/JS.
+
+### Decisão
+
+A sugestão foi **aceita**: adicionar uma entrada na fila de implementação em
+`docs/development/future/` para engenharia e desenvolvimento futuros de uma
+forma de valor de `record` (`value record`).
+
+### Contrato
+
+* Um `value record` tem o mesmo modelo de dados imutável conciso de um `record`
+  Kof existente, mas explicitamente sem identidade de objeto observável.
+* Igualdade/hash por campos (já o contrato de `record`).
+* Aditivo e retrocompatível: o `record` comum mantém sua semântica existente;
+  o código existente continua compilando e rodando (regra 2).
+* ABI por alvo é uma decisão de escopo explícita antes do código (R7 honest
+  scope): JVM → value/inline class; Native → passagem por valor (struct por
+  valor/registradores); JS → objeto congelado comum.
+* Fronteira: stdlib do núcleo, não pacote oficial (R1).
+
+### Status
+
+Apenas planejado — **não é desenvolvimento atual**. Sem implementação em
+andamento. Lanes não devem abrir esta frente sem nova autorização (regra 6 /
+R12: frentes novas não abrem antes de o estágio SYSTEMS fechar).
+
+### Implementação
+
+Entrada de fila adicionada em `docs/development/roadmap.md` §23 (TIER 2) e
+esta decisão registrada; engenharia agendada para a fila futura.
+
+### Relações
+
+* `Relacionada:` #275 (issue)
+
+---
+
+# 4. Decisões rejeitadas ou substituídas
+
+Esta seção é histórica. Ela não define o comportamento atual.
+
+| ID                  | Decisão anterior                        | Estado       | Substituída por                  |
+| ------------------- | --------------------------------------- | ------------ | -------------------------------- |
+| §125                | `null` para primitivo dobra em zero     | `SUPERSEDED` | D-NULL                           |
+| §125                | `T?` boxed seria proibido               | `SUPERSEDED` | D-NULL                           |
+| §125                | `null` silencioso em retorno/atribuição | `SUPERSEDED` | D-NULL-INTENT                    |
+| C18 interino        | leituras públicas por default           | `SUPERSEDED` | D-SEC.4                          |
+| D-PLATFORM          | plano separado de plataforma            | `CLOSED`     | D-APP + roadmap §23              |
+| D-PLAT              | plano separado de conclusão             | `CLOSED`     | roadmap §23 + Definition of Done |
+| D-ASM-GATE anterior | inspeção ASM obrigatória sempre         | `SUPERSEDED` | D-ASM-GATE atual                 |
+
+---
+
+# 5. Relação com outros documentos
+
+Este arquivo define **o contrato**.
+
+Os demais documentos definem:
+
+| Documento                | Responsabilidade                        |
+| ------------------------ | --------------------------------------- |
+| `roadmap.md`             | O que será implementado e em qual ordem |
+| `DOING.md`               | O que está sendo executado agora        |
+| `AGENTS.md`              | Regras operacionais para agentes        |
+| `docs/architecture/`     | Arquitetura detalhada                   |
+| `docs/stdlib/`           | Contratos e APIs da stdlib              |
+| `docs/backend-parity.md` | Matriz de paridade e gaps               |
+| `docs/bugs-and-gaps/`    | Bugs, gaps e regressões                 |
+| `training/`              | Material de aprendizagem e corpus       |
+| `CHANGELOG`              | Histórico de releases                   |
+
+### Regra de precedência
+
+Em caso de conflito:
+
+1. decisão vigente neste arquivo;
+2. documentação normativa específica;
+3. testes de conformidade;
+4. implementação atual;
+5. histórico de chat.
+
+Código e teste que contradizem uma decisão vigente indicam divergência a corrigir, não uma nova decisão automática.
+
+---
+
+# 6. Como registrar uma nova decisão
+
+Use este formato:
+
+```markdown
+## D-XXXX — título
+
+**Data:** YYYY-MM-DD
+**Estado:** DECIDED | IN_PROGRESS | IMPLEMENTED | PARTIAL |
+BLOCKED | SUPERSEDED | REJECTED | CLOSED
+**Escopo:** ...
+
+### Contexto
+
+Por que a decisão foi necessária.
+
+### Decisão
+
+Contrato aprovado, sem detalhes de implementação desnecessários.
+
+### Invariantes
+
+O que não pode ser quebrado.
+
+### Alternativas rejeitadas
+
+Somente quando necessário para preservar o raciocínio.
+
+### Implementação
+
+Referência ao roadmap ou DOING.
+
+### Evidência
+
+Testes, commits, matriz ou documentação.
+
+### Relações
+
+- `Supersedes: ...`
+- `Depends on: ...`
+- `Related: ...`
+```
+
+---
+
+## 7. Regra final
+
+**Decisões são permanentes até serem substituídas. Implementações são revisáveis.**
+
+O código pode mudar.
+
+O teste pode mudar.
+
+O roadmap pode mudar.
+
+O contrato só muda por decisão registrada.

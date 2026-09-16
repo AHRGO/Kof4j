@@ -5,7 +5,7 @@ package dev.kof.compiler.nat;
 // Convenção de paridade (matriz stdstrings): "" / null => false.
 public final class NativeRiscvAsmRtB6 {
 
-    static final String RISCV_RUNTIME_ASM_B_6 = """
+    static  String RISCV_RUNTIME_ASM_B_6 = """
 
             # ── kof.strings (STDLIB S2a) — predicados de char ─────────
 

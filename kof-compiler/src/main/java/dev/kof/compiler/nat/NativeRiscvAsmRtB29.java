@@ -13,7 +13,7 @@ package dev.kof.compiler.nat;
 // linha (lw/sd/sb/lbu/li/addi/call/j/b* todos traduzidos; imediais <=2047).
 public final class NativeRiscvAsmRtB29 {
 
-    static final String RISCV_RUNTIME_ASM_B_29 = """
+    static  String RISCV_RUNTIME_ASM_B_29 = """
 
             .section .text
             # kof_validation_formatCnpj(a0=str) -> String (S12b)

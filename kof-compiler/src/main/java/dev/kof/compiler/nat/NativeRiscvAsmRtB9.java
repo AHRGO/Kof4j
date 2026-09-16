@@ -4,7 +4,7 @@ package dev.kof.compiler.nat;
 // padLeft/padRight (alocam String; molde B7). pad = 1º byte do 3º arg.
 public final class NativeRiscvAsmRtB9 {
 
-    static final String RISCV_RUNTIME_ASM_B_9 = """
+    static  String RISCV_RUNTIME_ASM_B_9 = """
 
             # ── kof.strings (STDLIB S2b.3) — padLeft/padRight ─────────
 

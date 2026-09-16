@@ -7,7 +7,7 @@ package dev.kof.compiler.nat;
 // Convenção RISC-V LP64: a0..a2 = args, a0 = retorno. ASCII (byte 0-255).
 public final class NativeRiscvAsmRtB7 {
 
-    static final String RISCV_RUNTIME_ASM_B_7 = """
+    static  String RISCV_RUNTIME_ASM_B_7 = """
 
             # ── kof.strings (STDLIB S2b) — conversores que alocam ─────
 

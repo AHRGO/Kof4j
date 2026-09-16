@@ -134,6 +134,125 @@ class NullSafetyE2ETest {
             """, "eof\ndone");
     }
 
+    @Test
+    void nullableWhileNarrowingJvm(@TempDir Path tmp) throws Exception {
+        // D-NARROW-WHILE (#159): `while (s != null)` narrows `s` in the body
+        // (before the fix: SEM049 "receiver is nullable"), and reassigning a
+        // nullable value inside the narrowed body keeps the DECLARATION's
+        // nullability (before the fix: SEM012 false-positive).
+        runJvm(tmp, """
+            String? next(Int i) {
+                if (i < 2) return "v" + i
+                return null
+            }
+            main() {
+                var i = 0
+                var s = next(i)
+                while (s != null) {
+                    println(s.length)
+                    i = i + 1
+                    s = next(i)
+                }
+                println("done")
+            }
+            """, "2\n2\ndone");
+    }
+
+    @Test
+    void nullableWhileNarrowingNative(@TempDir Path tmp) throws Exception {
+        runNative(tmp, """
+            String? next(Int i) {
+                if (i < 2) return "v" + i
+                return null
+            }
+            main() {
+                var i = 0
+                var s = next(i)
+                while (s != null) {
+                    println(s.length)
+                    i = i + 1
+                    s = next(i)
+                }
+                println("done")
+            }
+            """, "2\n2\ndone");
+    }
+
+    @Test
+    void nullableFieldNarrowingInWhileJvm(@TempDir Path tmp) throws Exception {
+        // D-NARROW-WHILE (#159) 2nd face: `while (b.data != null)` narrows the
+        // FIELD on the receiver (before: SEM049 on `b.data.length`).
+        runJvm(tmp, """
+            class Box {
+                String? data
+                public constructor(String? data) {
+                    this.data = data
+                }
+            }
+            String? next(Int i) {
+                if (i < 2) return "v" + i
+                return null
+            }
+            main() {
+                var i = 0
+                var b = Box(next(i))
+                while (b.data != null) {
+                    println(b.data.length)
+                    i = i + 1
+                    b.data = next(i)
+                }
+                println("done")
+            }
+            """, "2\n2\ndone");
+    }
+
+    @Test
+    void nullableFieldNarrowingInWhileNative(@TempDir Path tmp) throws Exception {
+        runNative(tmp, """
+            class Box {
+                String? data
+                public constructor(String? data) {
+                    this.data = data
+                }
+            }
+            String? next(Int i) {
+                if (i < 2) return "v" + i
+                return null
+            }
+            main() {
+                var i = 0
+                var b = Box(next(i))
+                while (b.data != null) {
+                    println(b.data.length)
+                    i = i + 1
+                    b.data = next(i)
+                }
+                println("done")
+            }
+            """, "2\n2\ndone");
+    }
+
+    @Test
+    void reassignmentInsideNarrowedIfStaysGreen(@TempDir Path tmp) throws Exception {
+        // Regression guard (D-NARROW-WHILE): the narrowed local must keep the
+        // DECLARATION's nullability for writes — `s = next(3)` inside
+        // `if (s != null)` is valid and must not raise SEM012.
+        runJvm(tmp, """
+            String? next(Int i) {
+                if (i < 5) return "v" + i
+                return null
+            }
+            main() {
+                var s = next(0)
+                if (s != null) {
+                    s = next(3)
+                    println(s.length)
+                }
+                println("done")
+            }
+            """, "2\ndone");
+    }
+
     private String runJvm(Path tempDir, String source, String expected) throws java.io.IOException {
         Path file = tempDir.resolve("Main-" + System.nanoTime() + ".kf");
         Files.writeString(file, source);

@@ -1,0 +1,10 @@
+# Config do CodeQL para o kof-security-bot (suite security-extended).
+# paths-ignore espelha o config canônico (kof4j-config.yml): harnesses de
+# teste invocam java/gcc/qemu com Strings próprias do teste — sem config o
+# scan dos bots RE-GERAVA os fantasmas dismissados da src/test (20 alerts
+# 15/09). A suite aqui é a do bot; o ignore é o contrato compartilhado.
+name: Kof4j CodeQL (security-bot)
+queries:
+  - uses: security-extended
+paths-ignore:
+  - "**/src/test/**"

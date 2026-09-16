@@ -17,7 +17,7 @@ package dev.kof.compiler.nat;
 // `.section .text` NO TOPO de cada fatia.
 public final class NativeRiscvAsmRtB12 {
 
-    static final String RISCV_RUNTIME_ASM_B_12 = """
+    static  String RISCV_RUNTIME_ASM_B_12 = """
 
             .section .text
             # kof_br_digits_rv(a0=str, a1=buf) -> a0 = nº de dígitos.

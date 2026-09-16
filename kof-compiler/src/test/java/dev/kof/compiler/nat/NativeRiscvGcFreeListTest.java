@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * {@code write()} sem alocar (a correção doc-vs-realidade está registrada em
  * {@code docs/development/native-multiarch.md}). Sem caminho Kof, a prova do
  * G-1 é este harness: concatena o runtime de PRODUÇÃO
- * ({@link RiscvSlices#renderRuntime()}) com um {@code _start} que faz
+ * PODADO ({@link RiscvGcTestRuntimes#prunedFor}) com um {@code _start} que faz
  * alloc/free/alloc do MESMO tamanho e exige o reuso do slot, depois imprime
  * {@code kof_memstats}. Roda sob qemu-riscv64.
  *
@@ -127,7 +127,7 @@ class NativeRiscvGcFreeListTest {
     void freeListReusesSlotAndMemstatsCounts(@TempDir Path tempDir) throws IOException {
         assumeToolchain();
         Path asm = tempDir.resolve("g1.s");
-        Files.writeString(asm, HARNESS + "\n" + RiscvSlices.renderRuntime());
+        Files.writeString(asm, HARNESS + "\n" + RiscvGcTestRuntimes.prunedFor(HARNESS));
         Path obj = tempDir.resolve("g1.o");
         Path bin = tempDir.resolve("g1");
         runCapture("riscv64-linux-gnu-as", "-mno-relax", "-o", obj.toString(), asm.toString());
@@ -142,7 +142,7 @@ class NativeRiscvGcFreeListTest {
     @Test
     void freeListReusesSlotAndMemstatsCountsAarch64(@TempDir Path tempDir) throws IOException {
         assumeAarch64();
-        StringBuilder riscv = new StringBuilder(HARNESS).append('\n').append(RiscvSlices.renderRuntime());
+        StringBuilder riscv = new StringBuilder(HARNESS).append('\n').append(RiscvGcTestRuntimes.prunedFor(HARNESS));
         StringBuilder arm = new StringBuilder();
         for (String line : riscv.toString().split("\n", -1)) {
             List<String> tr = NativeAarch64Translator.translateRiscvToAarch64(line);

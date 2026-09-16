@@ -17,7 +17,7 @@ package dev.kof.compiler.nat;
 // wraparound do subl/cmpl do x86 sobre bytes 0..255.
 public final class NativeRiscvAsmRtB15 {
 
-    static final String RISCV_RUNTIME_ASM_B_15 = """
+    static  String RISCV_RUNTIME_ASM_B_15 = """
 
             .section .text
             # _kof_strings_joinWords(a0=v, a1=mode) -> a0 = String nova

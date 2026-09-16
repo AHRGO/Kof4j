@@ -5,7 +5,7 @@ public final class JsRuntimeUiWidgets {
     private JsRuntimeUiWidgets() {
     }
 
-    static final String UI_WIDGET_RUNTIME = """
+    static  String UI_WIDGET_RUNTIME = """
             // ── Font ───────────────────────────────────────────
             let __kofFontSeq = 0;
             export function kofUiFontNew(family, size) {

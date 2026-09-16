@@ -19,7 +19,7 @@ public final class NativeRiscvAsmRtB42 {
 
     private NativeRiscvAsmRtB42() {}
 
-    static final String RISCV_RUNTIME_ASM_B_42 = """
+    static  String RISCV_RUNTIME_ASM_B_42 = """
             .section .bss
             .align 2
             .Lkof_alloc_lock: .word 0
@@ -41,24 +41,30 @@ public final class NativeRiscvAsmRtB42 {
             # atômico; a busca na lista não). Custo ~0 com a lista vazia.
             .globl kof_alloc
             kof_alloc:
-                addi sp, sp, -48
-                sd   ra, 40(sp)
-                sd   s0, 32(sp)
-                sd   s1, 24(sp)
-                sd   s2, 16(sp)
-                sd   s3, 8(sp)
+                addi sp, sp, -64
+                sd   ra, 56(sp)
+                sd   s0, 48(sp)
+                sd   s1, 40(sp)
+                sd   s2, 32(sp)
+                sd   s3, 24(sp)
+                sd   s4, 16(sp)
                 addi s0, a0, 15
                 andi s0, s0, -16
                 addi s0, s0, 32          # total = align16(size)+header
+                # G-4: tick do coletor na ENTRADA (antes do lock; o kof_gc_collect
+                # toma o lock ele mesmo no sweep). s0 é callee-saved e sobrevive.
+                li   s4, 0               # s4 = já tentou collect_now no OOM?
+                call kof_gc_collect
                 la   s1, .Lkof_alloc_lock
             .Lkof_alloc_spin:
                 li   t0, 1
                 amoswap.w t1, t0, (s1)
                 bnez t1, .Lkof_alloc_spin
+            .Lkof_alloc_fsearch:
                 la   s2, .Lkof_free_head
                 ld   s3, 0(s2)           # cur
                 li   t5, 0               # prev
-            .Lkof_alloc_fsearch:
+            .Lkof_alloc_fsearch_loop:
                 beqz s3, .Lkof_alloc_bump
                 ld   t2, 0(s3)           # block size
                 bltu t2, s0, .Lkof_alloc_fnext
@@ -83,7 +89,7 @@ public final class NativeRiscvAsmRtB42 {
             .Lkof_alloc_fnext:
                 mv   t5, s3
                 ld   s3, 8(s3)
-                j    .Lkof_alloc_fsearch
+                j    .Lkof_alloc_fsearch_loop
             .Lkof_alloc_bump:
                 la   t2, kof_alloc_ptr
                 amoadd.d t0, s0, (t2)    # t0 = base do bloco
@@ -92,7 +98,20 @@ public final class NativeRiscvAsmRtB42 {
                 add  t4, t0, s0
                 bltu t4, t3, .Lkof_alloc_bok
                 beq  t4, t3, .Lkof_alloc_bok
-                sw   zero, 0(s1)         # unlock antes do panic
+                # G-4: arena esgotada. Solta o lock e roda o coletor UMA vez;
+                # se ele devolver blocos à free-list, re-tenta a busca (o bump
+                # já avançou, mas a busca acha o reuso). Só panic se ainda faltar.
+                sw   zero, 0(s1)         # unlock
+                bnez s4, .Lkof_alloc_oom
+                li   s4, 1
+                call kof_gc_collect_now
+                la   s1, .Lkof_alloc_lock
+            .Lkof_alloc_respin:
+                li   t0, 1
+                amoswap.w t1, t0, (s1)
+                bnez t1, .Lkof_alloc_respin
+                j    .Lkof_alloc_fsearch
+            .Lkof_alloc_oom:
                 la   a0, .Lstr_oom
                 call kof_panic
             .Lkof_alloc_bok:
@@ -115,12 +134,13 @@ public final class NativeRiscvAsmRtB42 {
                 addi a0, t0, 32
             .Lkof_alloc_unlock:
                 sw   zero, 0(s1)         # unlock
-                ld   s0, 32(sp)
-                ld   s1, 24(sp)
-                ld   s2, 16(sp)
-                ld   s3, 8(sp)
-                ld   ra, 40(sp)
-                addi sp, sp, 48
+                ld   s0, 48(sp)
+                ld   s1, 40(sp)
+                ld   s2, 32(sp)
+                ld   s3, 24(sp)
+                ld   s4, 16(sp)
+                ld   ra, 56(sp)
+                addi sp, sp, 64
                 ret
 
             # kof_free(ptr@a0) — devolve o bloco à free list (LIFO), marca

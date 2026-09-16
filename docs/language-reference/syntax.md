@@ -81,8 +81,9 @@ record Point(Int x, Int y)             // immutable, accessors
 var p = Point(10, 20)
 println(p.x())                         // 10
 
-enum Color { Red, Blue }               // constants only; value = String
+enum Color { Red, Blue }               // constants; each is a singleton instance
 println(Color.Red)                     // "Red"
+// Color.Red == "Red"                  // SEM062: an enum value is not a String
 
 interface Shape { Double area() }
 class Circle(Double r) implements Shape {   // ⚠ class X(...) = record!

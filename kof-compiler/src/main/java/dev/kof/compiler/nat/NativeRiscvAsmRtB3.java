@@ -7,7 +7,7 @@ public final class NativeRiscvAsmRtB3 {
 
     private NativeRiscvAsmRtB3() {}
 
-    static final String RISCV_RUNTIME_ASM_B_3 = """
+    static  String RISCV_RUNTIME_ASM_B_3 = """
             .globl kof_validation_notBlank
             kof_validation_notBlank:
                 beqz a0, .Lv_nb_false

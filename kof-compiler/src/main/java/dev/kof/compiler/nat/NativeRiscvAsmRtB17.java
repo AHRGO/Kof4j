@@ -10,7 +10,7 @@ package dev.kof.compiler.nat;
 // ⚠️ `.section .text` NO TOPO (lição 7be4fd0a).
 public final class NativeRiscvAsmRtB17 {
 
-    static final String RISCV_RUNTIME_ASM_B_17 = """
+    static  String RISCV_RUNTIME_ASM_B_17 = """
 
             .section .text
             # kof_validation_isCreditCard(a0=str) -> a0 0/1

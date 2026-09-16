@@ -24,10 +24,10 @@ final class MethodCallNamespaces {
                 && driver.findLocalVar(rid.name(), locals) == null) {
             java.util.List<String> consts = CompilerTypes.enumConstantsOf(rid.name(), driver.currentUnit);
             Type enumT = new Type.ClassType("", rid.name(), List.of());
-            // MVP: elementos tipados como String (runtime do enum é o nome);
-            // comparação com constantes funciona via string-equals
+            // D-ENUM207: valores agora são INSTÂNCIAS de enum — values() é
+            // List<Enum>, valueOf devolve Enum (não List<String>).
             if ("values".equals(mc.methodName()) && mc.arguments().isEmpty()) {
-                return new Type.ClassType("kof", "List", List.of(BuiltinTypes.STRING));
+                return new Type.ClassType("kof", "List", List.of(enumT));
             }
             if ("valueOf".equals(mc.methodName()) && mc.arguments().size() == 1) {
                 return enumT;

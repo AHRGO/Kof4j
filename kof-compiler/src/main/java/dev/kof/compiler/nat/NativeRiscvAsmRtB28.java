@@ -15,7 +15,7 @@ package dev.kof.compiler.nat;
 // <=2047 via aarch64AddSubImm).
 public final class NativeRiscvAsmRtB28 {
 
-    static final String RISCV_RUNTIME_ASM_B_28 = """
+    static  String RISCV_RUNTIME_ASM_B_28 = """
 
             # ── kof.random randomString (STDLIB S10b) ─────────────────────
             # kof_random_string(a0=n, a1=alphabet) -> String

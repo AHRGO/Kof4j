@@ -43,6 +43,57 @@ class NativeRiscv64E2ETest {
                 "cross toolchain riscv64 + qemu ausente — pulando (NATIVE002)");
     }
 
+    /** Bridge p/ testes de outros pacotes (KofConcurrency2Test etc.):
+     *  toolchain + qemu presentes para a arch ("riscv64"/"aarch64")? */
+    static boolean hasToolchain(String arch) {
+        return has(arch + "-linux-gnu-as", arch + "-linux-gnu-ld", "qemu-" + arch);
+    }
+
+    /** Roda o binário sob qemu (QEMU_LD_PREFIX do sysroot resolvido) e
+     *  devolve o stdout normalizado; falha o teste em exit != 0. */
+    static String runQemu(String arch, Path binFile) throws IOException {
+        ProcessBuilder pb = qemu(arch, binFile);
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String output = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8)
+                .replace("\r\n", "\n").trim();
+        int ec;
+        try {
+            ec = p.waitFor();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("Interrupted while running " + arch + " binary", e);
+        }
+        assertEquals(0, ec, "Exit code should be 0, output: '" + output + "'");
+        return output;
+    }
+
+    /** FLT001 (15/09): programas que imprimem FP linkam DINAMICAMENTE com a
+     *  libc — o loader resolve-se em {@code <QEMU_LD_PREFIX>/lib/}. Escolhe o
+     *  sysroot disponível (KOF_CROSS_SYSROOT > /tmp/opencode/x > sistema). */
+    static ProcessBuilder qemu(String arch, Path binFile) {
+        ProcessBuilder pb = new ProcessBuilder("qemu-" + arch, binFile.toString());
+        String prefix = qemuPrefix(arch);
+        if (prefix != null) pb.environment().put("QEMU_LD_PREFIX", prefix);
+        return pb;
+    }
+
+    static String qemuPrefix(String arch) {
+        String env = System.getenv("KOF_CROSS_SYSROOT");
+        String loader = arch.equals("riscv64") ? "ld-linux-riscv64-lp64d.so.1" : "ld-linux-aarch64.so.1";
+        if (env != null && !env.isBlank()
+                && Files.exists(Path.of(env, "usr", arch + "-linux-gnu", "lib", loader))) {
+            return env + "/usr/" + arch + "-linux-gnu";
+        }
+        for (String root : new String[]{"/tmp/opencode/x", "/"}) {
+            Path p = Path.of(root, "usr", arch + "-linux-gnu");
+            if (Files.exists(p.resolve("lib").resolve(loader))) {
+                return root.equals("/") ? p.toString() : root + "/usr/" + arch + "-linux-gnu";
+            }
+        }
+        return null;
+    }
+
     private String runRiscv64(Path tempDir, String source) throws IOException {
         Path src = tempDir.resolve("Main.kf");
         Files.writeString(src, source);
@@ -51,7 +102,7 @@ class NativeRiscv64E2ETest {
         assertTrue(result.success(), "Compilation should succeed: " + result.diagnostics().getDiagnostics());
         Path binFile = outDir.resolve("Default/Main");
         assertTrue(Files.exists(binFile), "Binary should exist");
-        ProcessBuilder pb = new ProcessBuilder("qemu-riscv64", binFile.toString());
+        ProcessBuilder pb = qemu("riscv64", binFile);
         pb.redirectErrorStream(true);
         Process p = pb.start();
         String output = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8)
@@ -884,10 +935,10 @@ main() {
         // (`@` medido no qemu antes do fix) — o valueOf cross não tinha ramo
         // List/Map/Set e caía em kof_println_string sobre o ponteiro cru. Os
         // helpers riscv kof_{list,set,map}_to_string espelham o x86 (mesma
-        // tag compile-time 0/1/2/3/6, `?` p/ record/aninhado). Golden = MESMA
-        // string do execCollectionPrintMatchesJvmGolden x86 (= oracle JVM
-        // medido) — sem a linha de Double (tag 4/5), barrada por FLT001 em
-        // tempo de compilação no cross (recusa honesta, ver outro teste).
+        // tag compile-time 0/1/2/3/4/5/6, `?` p/ record/aninhado). Golden =
+        // MESMA string do execCollectionPrintMatchesJvmGolden x86 (= oracle
+        // JVM medido). Double/Float (tags 4/5) entraram em 15/09 (FLT001
+        // fechado — slice B45); a linha 1.5/2.0f abaixo prova o novo ramo.
         String out = runRiscv64(tempDir, """
                 main() {
                     println(listOf(1, 2, 3))
@@ -900,26 +951,43 @@ main() {
                     println(listOf())
                     println(listOf(listOf(1), listOf(2)))
                     println(mapOf("a", 1, "b", 2))
+                    println(listOf(1.5, 2.0))
+                    println(listOf(1.5f, 2.5f))
                 }
                 """);
         assertEquals("[1, 2, 3]\n[1, 2]\n{k=9}\n[a, b]\n[true, false]\n"
-                + "[100000000000, 2]\n[97, 98]\n[]\n[?, ?]\n{a=1, b=2}", out);
+                + "[100000000000, 2]\n[97, 98]\n[]\n[?, ?]\n{a=1, b=2}\n"
+                + "[1.5, 2.0]\n[1.5, 2.5]", out);
     }
 
     @Test
-    void nativeCollectionPrintFloatDoubleRefusedHonest(@TempDir Path tempDir) throws IOException {
+    void nativeValueOfDoubleFloatMatchesJvmGolden(@TempDir Path tempDir) throws IOException {
         assumeToolchain();
-        // §107-cross: coleção de Double/Float NÃO pode virar `?` silencioso
-        // nem lixo — mesma recusa FLT001 do valueOf escalar cross (sem
-        // snprintf no asm puro). A falha é em TEMPO DE COMPILAÇÃO (R6/R7:
-        // diagnóstico claro, nunca output errado). `listOf(1.5, 2.0)` deve
-        // diagnosticar FLT001, não compilar.
-        Path src = tempDir.resolve("Main.kf");
-        Files.writeString(src, "main() {\n    println(listOf(1.5, 2.0))\n}\n");
-        CompilationResult result = driver.compile(src, tempDir.resolve("out"), Target.NATIVE_RISCV64);
-        assertFalse(result.success(), "Double-em-lista deve ser recusado (FLT001)");
-        String diags = result.diagnostics().getDiagnostics().toString();
-        assertTrue(diags.contains("FLT001"), "recusa deve ser FLT001, foi: " + diags);
+        // FLT001 (fechado 15/09): Double/Float -> String no cross via libc
+        // (snprintf/strtod, link dinâmico sob demanda). Golden = Double.toString
+        // /Float.toString do JVM (decimal MAIS CURTO que faz round-trip, limiar
+        // científico do Java, NaN/±Inf normalizados). O binário passa a linkar
+        // DINAMICAMENTE (needsLibc detecta `call snprintf`).
+        String out = runRiscv64(tempDir, """
+                main() {
+                    println(1.7)
+                    println(3.14)
+                    println(-0.5)
+                    println(1000000.0)
+                    println(0.0001)
+                    println(123456.789)
+                    println(9.99E-4)
+                    println(1.0 / 0.0)
+                    println(-1.0 / 0.0)
+                    println(0.0 / 0.0)
+                    println("v=" + 2.25)
+                    println(1.5f)
+                    println(3.14f)
+                    println(1.0f / 0.0f)
+                }
+                """);
+        assertEquals("1.7\n3.14\n-0.5\n1000000.0\n1.0E-4\n123456.789\n9.99E-4\n"
+                + "Infinity\n-Infinity\nNaN\nv=2.25\n1.5\n3.14\nInfinity", out);
     }
 
     /** G-0 (native-multiarch face 1, 12/09): o guard OOM honesto. O bump riscv
@@ -931,7 +999,9 @@ main() {
     void riscvHeapExhaustionPanicsHonest(@TempDir Path tempDir) throws IOException, InterruptedException {
         assumeToolchain();
         Path src = tempDir.resolve("Main.kf");
-        // sem GC (riscv é bump), a lista retém tudo → o bump estoura os 256KB.
+        // mesmo com o coletor (G-4), a lista `l` é uma raiz VIVA (alcançável
+        // pela pilha): tudo que ela referencia é marcado, então o bump estoura
+        // os 256KB e o kof_alloc panica honestamente.
         Files.writeString(src, """
             main() {
                 val l = listOf("")
@@ -946,7 +1016,7 @@ main() {
         CompilationResult result = driver.compile(src, outDir, Target.NATIVE_RISCV64);
         assertTrue(result.success(), "compilação deve passar: " + result.diagnostics().getDiagnostics());
         Path binFile = outDir.resolve("Default/Main");
-        ProcessBuilder pb = new ProcessBuilder("qemu-riscv64", binFile.toString());
+        ProcessBuilder pb = qemu("riscv64", binFile);
         pb.redirectErrorStream(true);
         Process p = pb.start();
         String output = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);

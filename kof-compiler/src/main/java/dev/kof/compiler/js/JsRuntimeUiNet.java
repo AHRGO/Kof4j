@@ -10,7 +10,7 @@ public final class JsRuntimeUiNet {
 
     private JsRuntimeUiNet() {}
 
-    static final String NET_RUNTIME = """
+    static  String NET_RUNTIME = """
 
             // ── kof.net (STDLIB S8) ────────────────────────────────────────
             function kofNetSplit(u) {

@@ -1,12 +1,15 @@
 [English](TRANSLATOR.md) | [Português](TRANSLATOR.pt_BR.md)
 
-# TRANSLATOR.md — Kof Translator (plan → IN DEVELOPMENT)
+# TRANSLATOR.md — Kof Translator (DEPRIORITIZED 15/09 — back to future/)
 
 > **Owner:** 192.168.100.22 (claimed 13/09 ~10:05 — orphan: no owner with IP
 > in the header; last code 6 days ago `84c48041`; maintainer's owner-without-IP=orphan
 > rule).
 
-**Status:** IN DEVELOPMENT (fell from `future/` on 12/09 — Phase F
+**Status:** **DEPRIORITIZED by the maintainer (15/09) — moved back to
+`future/`. Not current work; promotion needs her explicit decision.** Code
+already in the repo stays (`Translate.java` + `TranslateLexer`/`TranslateExpr`,
+`TranslateTest` 61/61) — only the *queue* stops here. Phase F
 implemented: `Translate.java` + `TranslateLexer`/`TranslateExpr`;
 proof: `TranslateTest` **61/61** (re-measured 15/09 on tip `7b0bfbe0`;
 the header's 30/30 was the 22/08 baseline) — output compiles and runs; +do-while +switch

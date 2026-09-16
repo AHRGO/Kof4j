@@ -19,7 +19,7 @@ final class NativeRiscvAsmRtB35 {
 
     private NativeRiscvAsmRtB35() {}
 
-    static final String RISCV_RUNTIME_ASM_B_35 = """
+    static  String RISCV_RUNTIME_ASM_B_35 = """
             .section .text
 
             # kof_string_index_of(str@a0, needle@a1) -> Int (code units UTF-16)

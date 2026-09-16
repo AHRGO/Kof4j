@@ -57,12 +57,17 @@ class ArtifactSizeTest {
     // syms 103→18 (a queda dos 103→18 é o gc-sections; 258→103 foi a poda
     // por peça da S-4). Bytes 136.792→133.288 (−2,6%): o .bss do heap bump
     // (~260KB reservado) é fixo sem mark-sweep — a queda real é em SÍMBOLOS.
+    // G-4 (15/09): o kof_alloc passou a chamar o coletor (kof_gc_collect na
+    // entrada + kof_gc_collect_now no OOM): o hello puxa agora sweep/collect/
+    // tick — 18→24 símbolos. O G-4 é o que fecha o vazamento do .bss; o custo
+    // (+6 syms no hello) é o preço do coletor alcançável. Bytes estáveis
+    // (dentro da tolerância).
     private static final long HELLO_RV_BYTES = 133_288L;
-    private static final int HELLO_RV_SYMS = 18;
+    private static final int HELLO_RV_SYMS = 24;
     // Hello aarch64 (medido 12/09, mesmo caminho: poda S-4 + gc-sections S-5
-    // no asm riscv ANTES do tradutor).
+    // no asm riscv ANTES do tradutor). G-4 (15/09): também 18→24 syms.
     private static final long HELLO_AA_BYTES = 133_112L;
-    private static final int HELLO_AA_SYMS = 18;
+    private static final int HELLO_AA_SYMS = 24;
 
     private static final double TOL = 0.05; // gate de inchaço >5%
 

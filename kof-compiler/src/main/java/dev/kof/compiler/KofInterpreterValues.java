@@ -123,7 +123,14 @@ public final class KofInterpreterValues {
             case "long" -> v instanceof Number n ? n.longValue() : v;
             case "double" -> v instanceof Number n ? n.doubleValue() : v;
             case "float" -> v instanceof Number n ? n.floatValue() : v;
-            case "int", "char", "bool", "byte", "short" -> v instanceof Number n ? n.intValue() : v;
+            // §185: char[]/boolean[] rejeitam Integer no Array.set
+            // ("argument type mismatch") — a coerção tem que produzir o tipo
+            // REAL do slot (Character/Boolean), não um int homônimo.
+            case "char" -> v instanceof Character c ? c
+                    : v instanceof Number n ? (char) n.intValue() : v;
+            case "bool" -> v instanceof Boolean b ? b
+                    : v instanceof Number n ? n.intValue() != 0 : v;
+            case "int", "byte", "short" -> v instanceof Number n ? n.intValue() : v;
             default -> v;
         };
     }

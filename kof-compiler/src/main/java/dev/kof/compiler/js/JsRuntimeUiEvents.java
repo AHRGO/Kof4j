@@ -5,7 +5,7 @@ public final class JsRuntimeUiEvents {
     private JsRuntimeUiEvents() {
     }
 
-    static final String UI_EVENT_RUNTIME = """
+    static  String UI_EVENT_RUNTIME = """
             // Fase 5 (docs/ui/architecture.md §2.5): target -> bubbles up the
             // component tree (child -> parent). The handler receives a Kof
             // Event with type + stopPropagation support.

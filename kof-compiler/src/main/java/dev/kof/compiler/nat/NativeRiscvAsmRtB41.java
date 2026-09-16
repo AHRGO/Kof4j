@@ -17,7 +17,7 @@ public final class NativeRiscvAsmRtB41 {
 
     private NativeRiscvAsmRtB41() {}
 
-    private static final String TEMPLATE = """
+    private static  String TEMPLATE = """
             .globl %1$s
             %1$s:
                 addi sp, sp, -48
@@ -55,7 +55,7 @@ public final class NativeRiscvAsmRtB41 {
                 ret
             """;
 
-    static final String RISCV_RUNTIME_ASM_B_41 = """
+    static  String RISCV_RUNTIME_ASM_B_41 = """
             .section .text
 
             # kof_string_to_int_or_default(str, def) -> Int (contrato §43:

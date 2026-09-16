@@ -9,7 +9,7 @@ public final class JsRuntimeUiValidation {
     private JsRuntimeUiValidation() {
     }
 
-    static final String UI_VALIDATION_RUNTIME = """
+    static  String UI_VALIDATION_RUNTIME = """
 
             // ── kof.validation (STDLIB S12) — pontuação BR ─────────────
             // 11 dígitos => DDD.DDD.DDD-DD; 8 => DDDDD-DDDD; senão original

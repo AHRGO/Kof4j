@@ -9,7 +9,7 @@ final class JsRuntimeUiMathDouble {
 
     private JsRuntimeUiMathDouble() {}
 
-    static final String MATH_DOUBLE_RUNTIME = """
+    static  String MATH_DOUBLE_RUNTIME = """
             // ── kof.math S1b.1 — Double puros (paridade JVM/Native) ─────
             // Bool = 1/0 (chokepoint §93 cuida do ==true).
             // ── §181 (13/09): casts Double/Float -> Int/Long SATURANTES

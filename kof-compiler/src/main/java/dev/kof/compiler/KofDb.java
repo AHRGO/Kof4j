@@ -21,7 +21,7 @@ import java.util.List;
  * <p>Internamente cada chamada mapeia para funções {@code kof_db_*} do
  * {@code dev.kof.runtime.KofRuntime} gerado. Aridade dinâmica (varargs de
  * bind) é resolvida por overloads de aridade fixa (0-4 parâmetros).
- * Native e JS reportam {@code DB001} em compile-time.
+ * JS reporta {@code DB001} em compile-time.
  */
 public final class KofDb {
 
@@ -41,13 +41,16 @@ public final class KofDb {
         return "db".equals(name);
     }
 
-    /** kof.db: JVM via JDBC; NATIVE (x86_64) via link direto de client libs
-     *  (sem driver) — SQLite primeiro (libsqlite3.so.0), depois mysql/oracle.
-     *  O link dinâmico de libsqlite3 exige libc — os cross estáticos
-     *  (riscv64/aarch64, asm puro sem C) reportam DB001 em compile-time (R6:
-     *  nunca undefined-reference silencioso no ld). JS reporta DB001. */
-    static boolean supportedOn(@SuppressWarnings("unused") Target target) {
-        return target == Target.JVM || target == Target.NATIVE;
+    /** kof.db: JVM via JDBC; NATIVE (x86_64) e NATIVE_RISCV64/NATIVE_AARCH64
+     *  via link direto de libsqlite3 (sem driver) — DB001 fechado 15/09: o
+     *  consumidor `sqlite3_*` liga dinamicamente por link-by-use
+     *  ({@code NativeCrossLink.needsSqlite} + {@code -lsqlite3}) e o runtime
+     *  {code kof_db_*} do cross vive nas fatias RtB46/RtB47. Só o subconjunto
+     *  SQLite (URLs `sqlite:*`); MySQL/oracle devolvem null em runtime. JS
+     *  reporta DB001. */
+    static boolean supportedOn(Target target) {
+        return target == Target.JVM || target == Target.NATIVE
+                || target == Target.NATIVE_RISCV64 || target == Target.NATIVE_AARCH64;
     }
 
     static String gapCode() {

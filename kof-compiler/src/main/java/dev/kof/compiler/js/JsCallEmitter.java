@@ -53,7 +53,13 @@ void handleCall(MethodCtx ctx, List<Object> stack,
             }
             throw new StatementEnd(new JsIr.JsCall(new JsIr.JsIdentifier(fn), List.of(value)));
         }
-        if ("valueOf".equals(kc.methodName()) && kc.kind() == KofCallKind.STATIC) {
+        // Só o valueOf de PLATAFORMA (String.valueOf / Integer.valueOf /
+        // Boolean.valueOf…) é a identidade boxed ou conversão. Um
+        // `Color.valueOf(name)` de usuário (D-ENUM207, enum real) tem o
+        // MÉTODO estático da própria classe — sem este guard o call site
+        // colapsava para o argumento (`Color.valueOf("Blue")` virava "Blue").
+        if ("valueOf".equals(kc.methodName()) && kc.kind() == KofCallKind.STATIC
+                && isJdkValueOfOwner(kc.ownerType())) {
             if (!kc.parameterTypes().isEmpty()
                     && kc.parameterTypes().get(0) instanceof Type.PrimitiveType cpt
                     && "char".equals(Type.canonicalPrimitiveName(cpt.name()))) {
@@ -231,8 +237,14 @@ boolean isPrintCall(KofCall kc) {
                 && ("println".equals(kc.methodName()) || "print".equals(kc.methodName()));
     }
 
-boolean isStringOp(KofCall kc) {
+    boolean isStringOp(KofCall kc) {
         return BuiltinTypes.isString(kc.ownerType());
+    }
+
+    /** {@code String.valueOf}/{@code java.lang.*.valueOf} — valueOf de plataforma. */
+    private static boolean isJdkValueOfOwner(Type owner) {
+        if (BuiltinTypes.isString(owner)) return true;
+        return owner instanceof Type.ClassType ct && "java.lang".equals(ct.packageName());
     }
 
 void handleStringOp(MethodCtx ctx, List<Object> stack,

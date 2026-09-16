@@ -20,11 +20,15 @@
 > (§113), busca String UTF-16 (§43/§102/§111). **ABERTO — recusa HONESTA em
 > compile-time (NUNCA binário mudo; regra R6 — o stub "exit 0 sem efeito" de
 > 03/09 já NÃO descreve mais o estado, ops desconhecidos dão código de gap):**
-> `kof.db` → **DB001** (`KofDbE2ETest` prova `assertFalse(success)` + diags
-> DB001 nos 6 alvos), `kof.security` crypto-heavy → **SECN000**, os 6
-> construtos de concorrência de mais alta ordem (supervisor/`selectAny`
-> multi/cancel cross …) → **CONC001** (`spawn`/`await`/`sleep`/`interval`
-> VERDES no cross — o gate #91 não os toca), UI (`kof.ui`) **sem port cross
+> `kof.db` → **DB001 FECHADO 15/09 no riscv64/aarch64** (link-by-use `libsqlite3` +
+> runtime `kof_db_*` nas fatias `RtB46/RtB47`; `KofDbE2ETest.crossNativeSqliteRoundtrip`
+> prova o caminho completo sob qemu nas duas arches; JS mantém `DB001`), `kof.security` crypto-heavy → **SECN000**, o
+> `supervisor` de concorrência → **OTP001** (a EH chain é global, não TLS, no
+> cross — o catch per-worker do §129 segue só-x86; os próprios
+> `selectAny`/`done`/`poll`/`cancel`/`cancelled`/`awaitTimeout` **FECHADOS
+> 15/09**: fatia `RtB48` + trampolim do spawn registrando o cancel slot, TID
+> real via gettid(178) gravado pelo KERNEL no ctid do clone,
+> `KofConcurrency2Test.crossNative*` sob qemu nas duas arches), UI (`kof.ui`) **sem port cross
 > algum** (nenhum teste riscv/aarch), `json.decode<List<Record>>` → **JSN004**
 > (asm puro não tem reflection p/ materializar record). **Consequência honesta
 > HOJE:** programa com coleção/HTTP/net/JSON-escalar/spawn/time/math **roda de
@@ -34,16 +38,24 @@
 > **Gap real `NATIVE002` que sobra:** (1) GC mark-sweep cross (riscv é
 > bump-pointer sem coletor — vazamento em heap longo, não-crash) —
 > **G-0 bloco-header + G-1 free-list/memstats + G-2 gc-list/dump + G-3 mark
-> conservative FEITOS 15/09** (ver a decomposição abaixo); G-4..G-5 pendentes,
-> o coletor (G-4) é quem de fato recupera; (2) as
-> recusas DB001/SECN000/CONC001/JSN004 acima; (3) FP-coleção no cross
-> (FLT001 em compilação §107); (4) `backend-parity.md` colunas por-arch
+> conservative + G-4 sweep/collect FEITOS 15/09** (ver a decomposição abaixo);
+> G-5 aarch64 satisfeito pelo G-4 (as 2 arches rodam a prova do sweep);
+> o coletor (G-4) é quem de fato recupera; (2) a face cross do DB001
+> FECHADA 15/09 (SQLite; JS mantém DB001) e os helpers do CONC001
+> (selectAny/done/poll/cancel/cancelled/awaitTimeout) FECHADOS 15/09
+> — restam as recusas SECN000/OTP001/JSN004; (3) FP-coleção no cross
+> (FLT001 FECHADO 15/09 — fatia `RtB45`; face restante do §107 = record/aninhado `?`); (4) `backend-parity.md` colunas por-arch
 > ainda por separar; (5) CI cross não existe (toolchain host-dependente) —
 > **face (5) FECHADA 12/09**: job `cross-native` em `.github/workflows/ci.yml`
 > instala `binutils-riscv64/aarch64-linux-gnu` + `qemu-user-static` e roda
 > `NativeRiscv64E2ETest,NativeAarch64E2ETest` (executam sob qemu, não skipam —
 > o job EXISTE para provar; nomes dos binários batem com `NativeArchEmitter:151
 > -282`; local: riscv 39/39 + aarch 39/39 verdes neste host com qemu).
+> **➕ Link dinâmico SOB DEMANDA FEITO 15/09** (diretriz "liga dinamicamente"):
+> `NativeCrossLink` liga libc (`-dynamic-linker … -lc`) só quando o runtime
+> podado chama libc; os 84 binários cross atuais seguem estáticos/portáveis.
+> **➕ 1º consumidor de produção FEITO 15/09**: `RuntimeDtoa` portado ao runtime
+> cross como fatia `RtB45` (`snprintf`/`strtod`), fechando o **FLT001**. Ver §2.3.
 > Este doc continua em `development/` (NATIVE002 não fecha enquanto restam
 > (1)–(5)); quando (1)–(5) zerarem → mover para `docs/`.
 >
@@ -138,15 +150,29 @@
 > 2/2 vermelho com D=0. Harnesses G-1/G-2 e slice-registry 8/8 ainda verdes;
 > `ArtifactSizeTest` 6/6 (rótulos `.L`-locais, sem inchar o symtab);
 > `KofGcE2ETest` 3/3 x86 intocado; `check_500` OK.
-> **G-4 sweep + collect no alloc** — free-list recebe mortos; `kof_gc_collect`
-> portado (tick 4096 como o x86); prova: teste de VASAMENTO que hoje é
-> impossível (loop de alloc que estouraria o bump de 260KB roda e a memória
-> não cresce monotonicamente — medir via memstats do G-1).
-> **G-5 aarch64** — herda tudo via tradutor (as diretivas/labels riscv passam
-> ilesas — mesmo caminho da poda S-4; `amoadd.d`→`ldadd`, `amoswap.w`→`swpal` já
-> traduzidos, `NativeAarch64Translator.java:299`); gate: suíte aarch sob qemu +
-> o teste de vazamento G-4 também no aarch. **O G-1 JÁ provou a herança da
-> free-list** (`NativeRiscvGcFreeListTest.freeListReusesSlotAndMemstatsCountsAarch64`).
+> **G-4 sweep + collect FEITO 15/09** — a free-list agora recebe os mortos:
+> `kof_gc_sweep` (mark==1 → limpa bit0; mark==0 & !free → free-list + bit1 +
+> contadores) + `kof_gc_collect_now` (mark+sweep incondicional) +
+> `kof_gc_collect` (tick-guarded, `tick & 4095`, chamado na ENTRADA do
+> `kof_alloc`) + `kof_gc_tick` (fatia nova `NativeRiscvAsmRtB44`). O caminho de
+> OOM do `kof_alloc` (B42) também roda UM `kof_gc_collect_now` e re-busca a
+> free-list antes de panicar. **O x86 DESLIGA o collect dentro do alloc de
+> propósito** (`RuntimeMemory:122-131`: o ponteiro do bloco livre vive num
+> registrador e o mark conservador não o vê → reuso duplo); **o riscv é seguro**
+> porque a value-stack É a pilha de máquina (`pushRiscv`: `addi sp,-8; sd`) e o
+> `kof_gc_mark` derrama `s0-s11` — todo temporário vivo está na pilha varrida.
+> **Prova (qemu riscv64 E aarch64, NÃO skipam):** `NativeRiscvGcSweepTest` 5/5 —
+> (1) mark+sweep+dump exige `gc 96 0 / gc 96 2 / gc 96 0 / gc 96 0` +
+> `frees: 1` (C recuperada, D/A/B sobrevivem); (2) um laço de 10000 allocs
+> (arena 256KB ≈ 2730 blocos de 96B) COMPLETA porque o coletor recicla os mortos
+> (frees > 0); (3) **sabotagem** (remover os hooks do coletor) = o mesmo laço
+> panica `out of memory` (não-vacuidade). Baseline do `ArtifactSizeTest`
+> atualizado 18→24 syms no hello (a cadeia do coletor agora é alcançável a partir
+> do `kof_alloc` — o preço de fechar o vazamento); cross 44+44, G-1/G-2/G-3,
+> registry 8/8, `KofGcE2ETest` 3/3 x86 intocado; `check_500` OK.
+> **G-5 aarch64** — herda tudo via tradutor; **o G-4 JÁ provou a herança do
+> sweep+collect** (`NativeRiscvGcSweepTest` roda as 2 arches), então o G-5 está
+> efetivamente satisfeito para o coletor também.
 > Cada degrau: commit com suíte cross completa verde + DOING.md na linha.
 > G-0/G-1/G-2 adiantam sem root_end; **o G-3 também adiantou** (emite os
 > próprios marcadores `.L`-locais riscv — NÃO precisou do `kof_heap_root_end`
@@ -262,12 +288,37 @@ Main.s  (programa: kof_main + seções .data/.rodata)
    └─ qemu-<arch> → saída esperada (exit 0)
 ```
 
+**🔗 Link dinâmico SOB DEMANDA (link-by-use) — FEITO 15/09 (diretriz da
+mantenedora "liga dinamicamente"):** o link cross *era* estático (asm puro, sem
+libc) embora a decisão de 02/09 acima sempre dissesse dinâmico. O
+`NativeCrossLink` implementa o realinhamento: o binário continua **estático**
+enquanto o runtime *podado* não chamar símbolo de libc; no instante em que uma
+capacidade libc-dependente entra (double→string/FLT001 via `snprintf`/`strtod`,
+`kof.db` via `.so`, …) o `NativeArchEmitter` troca para `<arch>-ld
+--allow-shlib-undefined [--no-relax riscv] --sysroot=<s> -dynamic-linker
+/lib/ld-linux-<arch>.so.1 -o <bin> <obj> -lc`. Isso preserva a portabilidade dos
+84 binários cross atuais (nada muda sem consumidor libc) e destrava os gaps de
+libc sob demanda. O `--allow-shlib-undefined` é obrigatório (a `libc.so.6` do
+sysroot referencia símbolos `GLIBC_PRIVATE` do loader; o runtime os resolve).
+Resolução do sysroot: env `KOF_CROSS_SYSROOT` → instalação de sistema
+(`/usr/<arch>-linux-gnu`, sem `--sysroot`) → `/tmp/opencode/x` (este host) →
+nenhum (segue estático + stderr, R6). Provado por `NativeCrossDynamicLinkTest`
+(5/5, riscv64 **e** aarch64 sob qemu: `snprintf`+`write` resolvidos em runtime; a
+sabotagem de ligar o mesmo harness estático falha com `snprintf` indefinido). O
+primeiro consumidor de produção chegou em 15/09: `RuntimeDtoa` portado ao
+runtime cross como fatia `RtB45` (`kof_dtoa_format`/`kof_double_to_string`/
+`kof_float_to_string`), fechando o **FLT001** — provado por `NativeRiscvDtoaTest`
+(tabela oracle JVM no riscv64 **e** aarch64) mais o E2E
+`nativeValueOfDoubleFloat` nos 2 arches. O aarch64 herda automaticamente assim
+que o tradutor mapeia os apelidos ABI `fa0..fa7` → `d0..d7`.
+
 Detalhes do runtime riscv64/aarch64 (inc-0 02/09 + 03/09):
 - alocação: **bump allocator + free-list** em `.bss` (sem `mmap` — evita
   problemas de qemu estático; o x86_64 usa `mmap`+free-list, e riscv64/aarch64
   seguem o modelo). O G-1 (15/09) somou a free-list no estilo x86 +
-  `kof_free` + `kof_memstats`; o bump segue como fallback e o coletor (G-4) é
-  quem alimenta a free list.
+  `kof_free` + `kof_memstats`; o G-4 (15/09) fechou o laço: `kof_gc_collect`
+  roda na entrada do `kof_alloc` (tick 4096) e o `kof_gc_sweep` alimenta a
+  free-list com os mortos, então um laço longo recicla em vez de esgotar o `.bss`.
 - strings: layout **idêntico ao x86_64** — `[typeId@0 i32][super@4 i32]
   [vtable@8 ptr][len@16 i32][data@24 …]` (`KOF_STRING_TYPE_ID=1`).
 - saída: raw syscall `write(1, …)` (`a7=64` riscv / `x8=64` arm) + `exit` (`a7/x8=93`) — binário **estático**, sem libc/PLT.

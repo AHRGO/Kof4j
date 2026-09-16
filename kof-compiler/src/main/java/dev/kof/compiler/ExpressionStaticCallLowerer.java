@@ -197,9 +197,10 @@ if ("listOf".equals(mc.methodName()) && mc.receiver() == null) {
     }
     return localIdx;
 }
-if (isCrossMissingConcurrencyBuiltin(driver, mc, locals)) {
-    return localIdx;
-}
+// CONC001 fechado 15/09: os 6 helpers existem no cross (fatia RtB48 +
+// spawn trampoline com cancel slot) — o gate isCrossMissingConcurrencyBuiltin
+// foi REMOVIDO; cancel/cancelled/selectAny/done/poll/awaitTimeout descem
+// pelo caminho genérico abaixo (mesmas assinaturas do x86).
 if (mc.receiver() == null && ("cancel".equals(mc.methodName())
         || "cancelled".equals(mc.methodName()) || "selectAny".equals(mc.methodName()))
         && driver.findLocalVar(mc.methodName(), locals) == null) {
@@ -348,31 +349,12 @@ if (mc.receiver() instanceof IdentifierExpr rid && CompilerTypes.isEnumName(rid.
     Type enumT = new Type.ClassType("", rid.name(), List.of());
     Type enumListT = new Type.ClassType("kof", "List", List.of(enumT));
     if ("values".equals(mc.methodName()) && mc.arguments().isEmpty()) {
-        ops.add(new KofCall(enumListT,
-                "kof_list_new", List.of(), enumListT,
-                KofCallKind.FUNCTION));
-        for (String c : CompilerTypes.enumConstantsOf(rid.name(), driver.currentUnit)) {
-            ops.add(new KofDup());
-            ops.add(new KofLoadLiteral(BuiltinTypes.STRING, c));
-            ops.add(new KofCall(enumListT,
-                    "kof_list_add", List.of(enumT), Type.PrimitiveType.VOID,
-                    KofCallKind.INSTANCE));
-        }
+        ops.add(new KofCall(enumT, "values", List.of(), enumListT, KofCallKind.STATIC));
         return localIdx;
     }
     if ("valueOf".equals(mc.methodName()) && mc.arguments().size() == 1) {
-        Type listT = enumListT;
-        ops.add(new KofCall(listT, "kof_list_new", List.of(), listT,
-                KofCallKind.FUNCTION));
-        for (String c : CompilerTypes.enumConstantsOf(rid.name(), driver.currentUnit)) {
-            ops.add(new KofDup());
-            ops.add(new KofLoadLiteral(BuiltinTypes.STRING, c));
-            ops.add(new KofCall(listT, "kof_list_add", List.of(enumT),
-                    Type.PrimitiveType.VOID, KofCallKind.INSTANCE));
-        }
         localIdx = ExpressionLowerer.emitExpression(driver, mc.arguments().get(0), ops, owner, localIdx, locals);
-        ops.add(new KofCall(enumT, "kof_enum_value_of",
-                List.of(listT, BuiltinTypes.STRING), enumT, KofCallKind.FUNCTION));
+        ops.add(new KofCall(enumT, "valueOf", List.of(BuiltinTypes.STRING), enumT, KofCallKind.STATIC));
         return localIdx;
     }
     return localIdx;
@@ -442,33 +424,10 @@ if ("setOf".equals(mc.methodName()) && mc.receiver() == null) {
     return -1;
     }
 
-    // #91 (R6): nat/NativeRiscvSpawn.java emite apenas kof_spawn_result,
-    // kof_spawn, kof_await e kof_spawn_join_all. Os auxiliares de concorrência
-    // (poll/done/cancel/cancelled/selectAny/awaitTimeout) não existem nos
-    // alvos cruzados — sem gate, a call era emitida e o erro só aparecia no
-    // link como símbolo indefinido (mesmo padrão do bug 59). Diagnóstico
-    // CONC001 em compile-time, nunca link silencioso.
-    private static boolean isCrossMissingConcurrencyBuiltin(CompilerDriver driver,
-            MethodCallExpr mc, List<IRLocalVariable> locals) {
-        if (driver.target != Target.NATIVE_RISCV64 && driver.target != Target.NATIVE_AARCH64) {
-            return false;
-        }
-        if (mc.receiver() != null) return false;
-        String mn = mc.methodName();
-        boolean builtin = switch (mn) {
-            case "poll", "done", "cancel", "cancelled", "selectAny", "awaitTimeout" -> true;
-            default -> false;
-        };
-        if (!builtin || driver.findLocalVar(mn, locals) != null) return false;
-        if (driver.currentDiagnostics != null) {
-            driver.currentDiagnostics.error(mc.position() != null ? mc.position().file() : "",
-                    mc.position() != null ? mc.position().line() : 0,
-                    mc.position() != null ? mc.position().column() : 0,
-                    0,
-                    mn + ": concurrency helpers are not available on the "
-                            + driver.target.nativeArch() + " native target yet (CONC001)",
-                    "CONC001");
-        }
-        return true;
-    }
+    // #91: o gate CONC001 foi REMOVIDO (15/09) — os 6 helpers (poll/done/
+    // cancel/cancelled/selectAny/awaitTimeout) existem no runtime cross
+    // (fatia NativeRiscvAsmRtB48 + trampoline do spawn registrando o cancel
+    // slot; TID real via gettid(178) gravado pelo kernel no clone ctid).
+    // O caminho do frontend é o MESMO do x86 (kof_* FUNCTION, assinaturas
+    // idênticas) — NativeX86Calls é a referência de semântica.
 }
