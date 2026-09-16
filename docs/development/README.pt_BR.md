@@ -3,11 +3,11 @@
 # Development — backlog vivo (só trabalho em desenvolvimento)
 
 > **Base:** `0.4.0-beta` · branch `beta-0.4.0` · **atualizado:** 16/09/2026
-> **Suíte medida neste HEAD:** `2214` run (1907 kof-compiler + 38 kof-script
-> + 7 kof-c-compiler + 262 kof-cli), **0 regressões / 0 erros / 0 falhas nesta corrida**, 190 skip (a única falha que a suíte já mostrou é o flake INTERMITENTE conhecido do §252 nativo `spawnWorkerThrowPropagatesThroughSelectAnyNative`, dona lane nativa `.18`/nat — não é regressão; re-medido 16/09 ~11:38 no tip `803eeef4` a partir de um CLONE LIMPO; o flake ficou CALADO nesta corrida — frequência ~1/2) (sem
+> **Suíte medida neste HEAD:** `2215` run (1908 kof-compiler + 38 kof-script
+> + 7 kof-c-compiler + 262 kof-cli), **0 regressões / 0 erros / 0 falhas nesta corrida**, 192 skip (a única falha que a suíte já mostrou é o flake INTERMITENTE conhecido do §252 nativo `spawnWorkerThrowPropagatesThroughSelectAnyNative`, dona lane nativa `.18`/nat — não é regressão; re-medido 16/09 ~15:09 no tip `97425541` a partir de um CLONE LIMPO; o flake ficou CALADO de novo — frequência ~1/2, disparou 09:44, calou 11:38 e 15:09) (sem
 > qemu no host da medição: os 84 cross são pulados, + os 5 DBs externos +
 > outros guardas de toolchain; `node` presente — todos os `*Js` verdes) —
-> os 262 kof-cli refletem `e5013152` (DepsTransitiveTest, +10; `2a60b426` reescreveu o guard, mesmos 10 @Test). 1907 compiler = 1899 + 3 (`78b733fa` NumericFormatterE2ETest) + 2 (`7b38d0d4` §253-face-A KofTimeE2ETest) + 3 (`7cd69a7b` SSE-JS KofWebJsE2ETest). O número 2199/1902/252 foi uma contagem no meio do caminho (medida enquanto `555d2afe`/`e5013152` landavam); 16/09 ~09:44 é o nº autoritativo do clone limpo. A leitura de 16/09 ~01:45 deu 297 erros = o trap de stub ECJ velho do §257, limpo com `mvn -pl kof-runtime clean`. O número
+> os 262 kof-cli refletem `e5013152` (DepsTransitiveTest, +10; `2a60b426` reescreveu o guard, mesmos 10 @Test). 1908 compiler = 1899 + 3 (`78b733fa` NumericFormatterE2ETest) + 2 (`7b38d0d4` §253-face-A KofTimeE2ETest) + 3 (`7cd69a7b` SSE-JS KofWebJsE2ETest) + 1 (`4ea099b3` §261 window-bind KofJsBrowserE2ETest); +1 skip no KofDbE2ETest = o guard de sysroot do §255 (`06e77e94`). O número 2199/1902/252 foi uma contagem no meio do caminho (medida enquanto `555d2afe`/`e5013152` landavam); 16/09 ~15:09 é o nº autoritativo do clone limpo. A leitura de 16/09 ~01:45 deu 297 erros = o trap de stub ECJ velho do §257, limpo com `mvn -pl kof-runtime clean`. O número
 > anterior (1662/13-erros, 13/09) era de host sem node. **Nº autoritativo da suíte = a execução no host** (o gate
 > `mvn test ... -Dmaven.test.failure.ignore=true`; conferir por módulo com
 > `grep -rl FAILURE */target/surefire-reports/*.txt`), não esta linha — ela

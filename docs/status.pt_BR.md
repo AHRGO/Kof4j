@@ -85,7 +85,7 @@
 
 ``` 
 mvn clean package    → PASSA
-mvn test             → 2214 testes (1907 kof-compiler + 38 kof-script + 7 kof-c-compiler + 262 kof-cli), 0 regressões (1 falha = o flake intermitente conhecido do §252 nativo), 0 erros, 190 skip (sem qemu no host → 84 cross skip; guardas de toolchain/DB externo; `node` presente — todos os `*Js` verdes) — 16/09 pos-fatia-A (o anterior 1662/13-erros = host sem node, 13/09)
+mvn test             → 2215 testes (1908 kof-compiler + 38 kof-script + 7 kof-c-compiler + 262 kof-cli), 0 regressões / 0 erros, 192 skip (sem qemu no host → 84 cross skip; guardas de toolchain/DB externo + guard de sysroot §255; `node` presente — todos os `*Js` verdes) — 16/09 ~15:09 clone limpo de `97425541` (o flake §252 nativo é intermitente ~1/2, calado nesta corrida) (o anterior 1662/13-erros = host sem node, 13/09)
 kof build            → PASS (--target jvm|native|js|native.risc|native.arm) [--release]
 kof run              → PASS (jvm|native|js|native.risc|native.arm) [--release]
 kof serve            → PASS (web.app() nativo + API legada handle())
@@ -575,7 +575,7 @@ main() { /* ignorado pelo kof test */ }
 
 ---
 
-## Testes (2214 = 1907 kof-compiler + 38 kof-script + 7 kof-c-compiler + 262 kof-cli — suíte completa verde, 0 regressões (1 falha = o flake intermitente conhecido do §252 nativo) / 0 erros, 190 skip; medição 16/09 ~05:34 num clone limpo de `574c9419`. Host sem qemu: cross → skip honesto)
+## Testes (2215 = 1908 kof-compiler + 38 kof-script + 7 kof-c-compiler + 262 kof-cli — suíte completa verde, 0 regressões / 0 erros, 192 skip; medição 16/09 ~15:09 num clone limpo de `97425541`; flake §252 nativo intermitente ~1/2, calado nesta corrida. Host sem qemu: cross → skip honesto)
 
 | Suíte | Quantidade | Cobertura |
 |-------|-----------|-----------|

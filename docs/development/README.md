@@ -3,11 +3,11 @@
 # Development — living backlog (only work in development)
 
 > **Base:** `0.4.0-beta` · branch `beta-0.4.0` · **updated:** 16/09/2026
-> **Suite measured at this HEAD:** `2214` run (1907 kof-compiler + 38 kof-script
-> + 7 kof-c-compiler + 262 kof-cli), **0 regressions / 0 errors / 0 failures in this run**, 190 skip (the only failure the suite ever shows is the known INTERMITTENT §252 native flake `spawnWorkerThrowPropagatesThroughSelectAnyNative`, owner native lane `.18`/nat — not a regression; re-measured 16/09 ~11:38 on tip `803eeef4` from a CLEAN clone; the flake stayed SILENT in this run — ~1/2 frequency)
+> **Suite measured at this HEAD:** `2215` run (1908 kof-compiler + 38 kof-script
+> + 7 kof-c-compiler + 262 kof-cli), **0 regressions / 0 errors / 0 failures in this run**, 192 skip (the only failure the suite ever shows is the known INTERMITTENT §252 native flake `spawnWorkerThrowPropagatesThroughSelectAnyNative`, owner native lane `.18`/nat — not a regression; re-measured 16/09 ~15:09 on tip `97425541` from a CLEAN clone; the flake stayed SILENT again — ~1/2 frequency, fired 09:44, silent 11:38 and 15:09)
 > (no qemu on the measuring host: the 84 cross are skipped, + the 5 external DBs
 > + other toolchain guards; `node` present — all `*Js` green) — measured
-> the 262 kof-cli reflects `e5013152` (DepsTransitiveTest, +10; `2a60b426` rewrote the guard, same 10 @Test). 1907 compiler = 1899 + 3 (`78b733fa` NumericFormatterE2ETest) + 2 (`7b38d0d4` §253-face-A KofTimeE2ETest) + 3 (`7cd69a7b` SSE-JS KofWebJsE2ETest). The 2199/1902/252 figure was a mid-flight miscount (measured while `555d2afe`/`e5013152` were landing); 16/09 ~05:34 is the clean-clone authoritative number. Earlier 16/09 ~01:45 read showed 297 errors = the §257 stale-ECJ-stub trap, cleared by `mvn -pl kof-runtime clean`.
+> the 262 kof-cli reflects `e5013152` (DepsTransitiveTest, +10; `2a60b426` rewrote the guard, same 10 @Test). 1908 compiler = 1899 + 3 (`78b733fa` NumericFormatterE2ETest) + 2 (`7b38d0d4` §253-face-A KofTimeE2ETest) + 3 (`7cd69a7b` SSE-JS KofWebJsE2ETest) + 1 (`4ea099b3` §261 window-bind KofJsBrowserE2ETest); +1 skip in KofDbE2ETest = the §255 sysroot guard (`06e77e94`). The 2199/1902/252 figure was a mid-flight miscount (measured while `555d2afe`/`e5013152` were landing); 16/09 ~15:09 is the clean-clone authoritative number (re-measures at 11:38 and 15:09 kept the flake silent). Earlier 16/09 ~01:45 read showed 297 errors = the §257 stale-ECJ-stub trap, cleared by `mvn -pl kof-runtime clean`.
 > The previous number (1662/13-errors, 13/09) was a node-less host. **Authoritative suite number = the run on the host** (the gate
 > `mvn test ... -Dmaven.test.failure.ignore=true`; check per module with
 > `grep -rl FAILURE */target/surefire-reports/*.txt`), not this line — it
