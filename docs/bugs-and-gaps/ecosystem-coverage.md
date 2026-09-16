@@ -159,7 +159,7 @@ Legend in the target columns: `y` = supported, `~` = partial, `–` = no.
 | Capability | Kof | JVM | Native | JS | Tests | Docs |
 |-----------|-----|-----|--------|----|-------|------|
 | application lifecycle | `main()`/`args` | y | y (empty args) | y | UiE2ETest | history/language-state.md |
-| configuration model | `config.get/str/int/long/bool/has` (file + env + profiles) | y | y (CONFIG001 closed) | – CONF001 | KofConfigE2ETest | stdlib/stdlib.md |
+| configuration model | `config.get/str/int/long/bool/has` (file + env + profiles) | y | y | y (CONF001 closed 16/09) | KofConfigE2ETest | stdlib/stdlib.md |
 | dependency injection | `NA` (no container; direct resolution) | — | — | — | — | philosophy.md |
 | events | `PLANNED` (event bus) | — | — | — | — | development/roadmap.md |
 | validation | ✅ `kof.validation` (required/notBlank/minLength/maxLength/lengthBetween/isEmail/isUrl/matches/isInt/isLong/inRange/min/max) — JVM/Native/JS | y | y | y | KofValidationTest | stdlib/stdlib.md |
@@ -167,7 +167,7 @@ Legend in the target columns: `y` = supported, `~` = partial, `–` = no.
 | caching | ✅ `kof.cache` (get/set/ttl/delete/clear; 08/30) | y | y (asm) | y | KofCacheE2ETest (5, x3) | development/roadmap.md |
 | transactions | ✅ `transaction {}` (JVM; real commit/rollback) | y | y (asm 01/09) | ✅ 16/09 (JS bridge) | KofDbE2ETest | development/DATABASE_VISION.md |
 | resource management | `PARTIAL` (real try/finally) | y | y | — | ExceptionsE2ETest | history/language-state.md |
-| profiles/environments | `PARTIAL` (profile file + env; the rest in kof.config) | y | – CONFIG001 | – CONFIG001 | KofConfigE2ETest | — |
+| profiles/environments | `PARTIAL` (profile file + env; the rest in kof.config) | y | y | – CONF001 | KofConfigE2ETest | — |
 
 ## 3.2 Web / HTTP / REST
 
@@ -357,7 +357,7 @@ Legend in the target columns: `y` = supported, `~` = partial, `–` = no.
 |---|-----|---------|----------------|
 | G1 | ~~**Database/SQL** nonexistent~~ — ✅ **level 0 implemented**: `kof.db` (JDBC JVM, native SQLite, MySQL WIP) + `kof.orm` (entity, CRUD, where, migrate, MongoDB) | real apps with persistence on JVM/Native-SQLite | ✅ typed query DSL (01/09) + kof.db on JS (16/09); remaining: pools, ORM on Native/JS (`ORM001`) |
 | G2 | ~~**HTTP client** nonexistent~~ — ✅ **implemented**: `kof.http` client (get/post/put/delete/patch/options/status/timeout + retry/circuit 08/30, headers; HTTP002 on Native) | integrations, tests, frontend | ✅ closed — `KofHttpE2ETest` (4, JVM+JS) + `KofHttpResilienceE2ETest` (3) |
-| G3 | ~~Configuration~~ — ✅ `kof.config` implemented (file > env > profile > default, typed `str/int/long/bool`); **native CONFIG001 closed** (asm `/proc/self/environ`); JS reports CONF001 | — | JS (P1) |
+| G3 | ~~Configuration~~ — ✅ `kof.config` implemented (file > env > profile > default, typed `str/int/long/bool`); **native CONF001 closed** (asm `/proc/self/environ`); JS: CONF001 closed 16/09 | — | — |
 | G4 | ~~**Validation** nonexistent~~ — ✅ **implemented**: `kof.validation` (13 predicates on the 3 targets) | — | `KofValidationTest` (3/3) |
 | G5 | ~~**Partial runtime observability**~~ — ✅ **implemented**: `kof.observability` (health/readiness/liveness, counter/increment/gauge, requestId/correlationId — JVM/Native/JS; `KofObservabilityTest` 3/3) | — | `KofObservabilityTest` |
 | G6 | ~~**Structured kof.test** nonexistent~~ — ✅ **implemented**: `test "name" { }` on the 3 targets; runner synthesized at compile-time; PASS/FAIL by name + exit code (`StructuredTestE2ETest`) | tests as first-class citizens | next: named suites by directory, timeouts, fixtures |
@@ -450,7 +450,7 @@ Principles maintained:
 1. ~~G7~~ — ✅ complete target diagnostic in security/web.
 2. ~~G6~~ — ✅ structured `kof.test` (`test "name" { }` on the 3 targets,
    runner synthesized at compile-time, `process.exit(code)`).
-3. ~~G3~~ — ✅ `kof.config` (JVM + **Native**); JS reports CONF001 (P1).
+3. ~~G3~~ — ✅ `kof.config` (JVM + **Native** + JS); CONF001 closed 16/09.
 4. ~~G2~~ — ✅ `kof.http` client.
 5. ~~G1~~ — ✅ complete level 0 `kof.db` + `kof.orm` (idiomatic JDBC, native
    SQLite, transactions, entity, migrations, **where with operators**,
@@ -523,4 +523,4 @@ external module), cloud integrations, provider adapters.
   (levels, stderr — JVM); health/metrics/request IDs enter in P0-G5.
 - **Configuration**: `kof.config` (JVM) follows the precedence
   explicit file > env > profile > default; typed via
-  `config.str/int/long/bool`; Native/JS report CONFIG001.
+  `config.str/int/long/bool`; CONF001 closed 16/09.

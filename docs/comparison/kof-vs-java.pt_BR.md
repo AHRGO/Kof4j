@@ -312,7 +312,7 @@ var url = config.str("database.url", "jdbc:h2:mem")
 ```
 
 **Status:** Implementado — `kof.config` tipado (JVM/Native; precedência
-arquivo > env > profile > default; JS reporta CONF001).
+arquivo > env > profile > default; CONF001 fechado 16/09).
 
 ---
 
@@ -328,7 +328,7 @@ arquivo > env > profile > default; JS reporta CONF001).
 | Pattern matching `case String s` + `Point(x,y)` | ✅ (17+) | ✅ JVM/Native/JS 27/08 | guards |
 | Concorrência `spawn`/`await` | ✅ | ✅ JVM + JS event-loop; Native `CONC001` | Native scheduler |
 | HTTP `serve` + `kof.http` | Framework | ✅ `web.app()` JVM + `kof.http` JVM+JS | Native HTTP |
-| Config `kof.config` | Framework | ✅ JVM+Native (free-list 27/08) | JS `CONF001` |
+| Config `kof.config` | Framework | ✅ JVM+Native+JS (free-list 27/08, CONF001 fechado 16/09) | — |
 | Logging / Observability | Framework | ✅ `kof.log` JVM+Native + `kof.observability` 3 targets | tracing |
 | Database `kof.db`/`kof.orm` | Framework | ✅ JDBC + SQLite native + MySQL `kof_db_mysql_scramble` | query DSL |
 | DI | Framework | ❌ (planned `service`) | proposta |

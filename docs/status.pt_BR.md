@@ -527,8 +527,8 @@ main() {
 - Native: implementação asm própria completa — precedência total
   (KOF_CONFIG > env KOF_<KEY> > perfil > kof.config), typed com default
   em valor inválido, trim e comentários (`NativeConfigE2ETest`, 8 testes).
-  JS reporta `CONF001`. Docs: `docs/stdlib/stdlib-config.md`
-  (`KofConfigE2ETest`, 8 E2E).
+  ✅ (JVM/Native/JS — CONF001 fechado; ver `docs/stdlib/stdlib-config.md`).
+  Prova: `KofConfigE2ETest` 11/11 (JVM + Native + JS, arquivo/env/profile reais).
 
 ### Logging nativo (`kof.log`)
 
