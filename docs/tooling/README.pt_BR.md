@@ -18,7 +18,7 @@ Kof installation
         └── tooling
               ├── syntax definition      (editor/kof.tmLanguage.json)
               ├── language server        (kof lsp)
-              ├── formatter              (planejado — kof fmt)
+              ├── formatter              (kof fmt)
               └── diagnostics            (kof check / LSP publishDiagnostics)
 ```
 
@@ -64,11 +64,11 @@ O baseline de API Java para todo o tooling é **Java 21**:
 | Componente | Estado | Comando/Arquivo |
 |------------|--------|------------------|
 | Grammar oficial | ✅ | `editor/kof.tmLanguage.json` (scope `source.kof`) |
-| Language Server | ✅ (mínimo) | `kof lsp` (stdio, LSP 3.x) |
+| Language Server | ✅ | `kof lsp` (stdio, LSP 3.x: diagnostics, hover, completion, definition, references, rename) |
 | Type-check | ✅ | `kof check <file.kf\|dir>` |
 | Test runner | ✅ | `kof test <file.kf\|dir>` (PASS/FAIL por exit code) |
 | Diagnóstico do ambiente | ✅ | `kof info [--json]` |
-| Formatter | 🔜 planejado | `kof fmt` |
+| Formatter | ✅ | `kof fmt` |
 
 
 ---
@@ -87,14 +87,16 @@ O `kof lsp` implementa o Language Server Protocol sobre stdio. Capacidades:
 - `initialize` / `shutdown` / `exit`
 - `textDocument/didOpen` / `didChange` (sync completa)
 - `textDocument/publishDiagnostics` com o frontend real do compilador
+- `textDocument/hover`, `textDocument/definition`, `textDocument/completion`
+- `textDocument/references` + `textDocument/rename` (word-boundary, arquivo único)
 
 Ver [LSP.md](LSP.md).
 
 ---
 
-## 6. Formatter (planejado)
+## 6. Formatter
 
-`kof fmt` usará a mesma AST do frontend para reescrever o arquivo com a
+`kof fmt` usa a mesma AST do frontend para reescrever o arquivo com a
 formatação canônica. Sem implementação própria de parsing — o formatter
 consome a saída do parser oficial, garantindo que `kof fmt` nunca altere a
 semântica do programa.
