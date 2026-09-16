@@ -8261,7 +8261,7 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   green before #183 because the typer returned the THEN type and never reached
   the `Object` print path.
 
-### §231 — overloads top-level com parâmetro default: `requiredArity` não considera defaults → chamada curta dá SEM014 em vez de selecionar o candidato com default — 🟡 catalogado 14/09 (achado na triagem CodeQL local-variable #160, owner = fila de overload/§131)
+### §231 — overloads top-level com parâmetro default: `requiredArity` não considera defaults → chamada curta dá SEM014 em vez de selecionar o candidato com default — ✅ FIXED 16/09 (lane compiler `192.168.100.17`, `e4f1fb65`; achado na triagem CodeQL local-variable #160)
 
 - **Symptom:** `Int h(Int x, Int y = 10) { ... }` + `Int h(String s) { ... }`;
   `h(5)` → `SEM014: Argument 1 of 'h': expected String but got int` (escolhe o
@@ -8274,10 +8274,14 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   define `requiredArity = totalArity`, então `pick` só aplica o candidato com
   default quando `nArgs == totalArity`. `TopLevelOverload` por contrato usa
   `requiredArity <= n <= totalArity` — os call-sites têm o wire pela metade.
-- **Why §231 and not a fix here:** completar o `requiredArity` MUDA a ordem de
-  avaliação/resolução de operadores (contrato §131/§205 frozen, rule 6) — é
-  implementação da feature, não limpeza. O comentário em `MethodCallTyper:399`
-  aponta esta seção.
+- **Why §231 and not a fix here:** initially catalogued as rule-6 (completing
+  `requiredArity` "changes the resolution order"). **CORRECTED 16/09 by the fix
+  itself (`e4f1fb65`): it was NOT rule 6** — `TopLevelOverload` already
+  documented `requiredArity <= n <= totalArity`; the 3 call-sites simply passed
+  `pt.size()`, i.e. the wire was half-connected. Wiring the documented contract
+  changes no operator/precedence/order. Lesson (same as the §241 misread): "it
+  looks like a contract change" must be re-verified against the class's own
+  documented invariant before freezing.
 - **Fix plan (when the overload lane attacks it):** `requiredArity = índice do
   primeiro default` (já existe o loop `firstDefault` em `CompilerClassLowering:360-366`
   — mesma lógica para função top-level), nos 3 sítios; regressão: um caso
