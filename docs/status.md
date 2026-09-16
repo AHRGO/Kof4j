@@ -820,12 +820,11 @@ Docs: `debugger-architecture.md`, `debugging.md`, `debug-adapter.md`,
 - `native.risc` (riscv64) + `native.arm` (aarch64) **core complete (02-03/09)** — plumbing + codegen/runtimes in pure asm + qemu, `NativeRiscv64E2ETest 26/26` + `NativeAarch64E2ETest 26/26` (core + stdlib 05/09: JSON/HTTP/spawn/cache/time/mq/Map/Set/higher-order/toInt/metrics; gates DB001/SECN000/SCHED001/TIME001) — **detail + how to finish: `docs/development/native-multiarch.md`** (gap `NATIVE002`)
 - Debugger — JVM MVP (DAP over stdio) + **line-level V3 JS source maps (01/09)**; Native DWARF pending
 - KofJS — web platform in the browser (ES Modules via GraalJS already in alpha)
+- Package manager: **`kof deps` transitive dependencies ✅ 16/09** — `kofdeps.lock` + Maven delegation (R9: never reimplement the Maven graph resolver); honest degradation when `mvn` is absent; `DepsTransitiveTest` 10/10 incl. real-Maven E2E; **registry pending** (maintainer decision on format/hosting)
 
 ### Planned
 
-- package manager (`kof init`, `kofdeps`, registry)
 - complete language specification; conformance suite
-- typed query DSL for the ORM (`User.query { where age > 18 }`)
 - full web platform (declarative frontend + routing/forms/SSR)
 - **gRPC in `kof.web`** (31/08) — gRPC RPC communication as a first-class part of the web platform: `app.grpc { service ... }` (stubs from `.proto`, server streaming + unary over HTTP/2 on the JVM) + client `grpc.call(endpoint, method, msg)`; `.proto` codegen → IR; JVM parity first (see `docs/development/roadmap.md` § web)
 - self-hosting (compiler written in Kof)
