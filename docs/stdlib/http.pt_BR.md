@@ -5,8 +5,8 @@
 **Data:** 2 de setembro de 2026
 > **Atualizado (0.2.6-beta):** `kof serve` com handlers top-level + stack web nativa `web.app()` (Fase 1 Spring independence) — rotas com lambda trailing, path params, query, headers, body, middleware, JSON tipado, status/headers customizados e servidor HTTP gerado no runtime; `kof.http` client `http.get/post/put/delete/patch/options/status` + `timeout/retry/circuit` funciona em **JVM + JS** (JS via `Java HttpClient` interop no `KofJsRunner`; retry/circuit em paridade JVM+JS, 30/08) — Native `HTTP002`; TLS `listenSecure` JVM. Ver [docs/stdlib/stdlib-web.md](stdlib-web.md) e `docs/status.md` (contagem corrente da suíte).
 
-**Status:** Implementado (Fase H) — 0.2.6-beta `VERSION` 0.2.6-beta
-**Versão:** 0.2.6-beta
+**Status:** Implementado (Fase H) — `VERSION` 0.4.0-beta
+**Versão:** 0.4.0-beta
 
 ---
 

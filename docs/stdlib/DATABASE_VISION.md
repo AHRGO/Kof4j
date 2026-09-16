@@ -11,8 +11,8 @@
 > not a pending item of this vision.
 
 **Last updated:** September 12, 2026
-**Version:** 0.2.6-beta
-**Status:** Levels 0-2 and 4 implemented (`kof.db` + `kof.orm`, 0.2.6-beta):
+**Version:** 0.4.0-beta
+**Status:** Levels 0-2 and 4 implemented (`kof.db` + `kof.orm`, 0.4.0-beta):
 `entity` (schema in the language), `orm.create/save/saveAll/find/all/where/
 where-op/delete/deleteAll/count/count-filtrado/page/migrate` (JDBC on the JVM:
 H2, MySQL, MariaDB, PostgreSQL, SQLite; record mappings; versioned

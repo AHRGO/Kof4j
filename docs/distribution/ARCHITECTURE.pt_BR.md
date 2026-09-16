@@ -2,7 +2,7 @@
 
 # Arquitetura de Distribuição do Kof
 
-**Versão:** 0.2.6-beta (30/08/2026)
+**Versão:** 0.4.0-beta (16/09/2026)
 
 O Kof não é apenas um compilador — é uma plataforma distribuível. A partir
 do 0.2.x-beta, o projeto trata a instalação como parte oficial do produto:

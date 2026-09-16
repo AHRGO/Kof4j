@@ -11,8 +11,8 @@
 > não pendência desta visão.
 
 **Última atualização:** 12 de setembro de 2026
-**Versão:** 0.2.6-beta
-**Status:** Nível 0-2 e 4 implementados (`kof.db` + `kof.orm`, 0.2.6-beta):
+**Versão:** 0.4.0-beta
+**Status:** Nível 0-2 e 4 implementados (`kof.db` + `kof.orm`, 0.4.0-beta):
 `entity` (schema na linguagem), `orm.create/save/saveAll/find/all/where/
 where-op/delete/deleteAll/count/count-filtrado/page/migrate` (JDBC no JVM:
 H2, MySQL, MariaDB, PostgreSQL, SQLite; mappings de records; migrations
