@@ -9277,3 +9277,50 @@ usuário — diagnostic em compile-time é a meta (regra 6).
   da coluna JS de `conformance-matrix.md`/`.pt_BR.md` atualizadas
   PARTIAL→DONE em lockstep (o gate `ConformanceMatrixDocTest` exige concordância
   doc×Set.of).
+> | **§264 ✅ CORRIGIDO 16/09 (lane development `.18`)** | Handlers web do KofJS: `status(201, body)`/`headerSet()` eram no-ops SILENCIOSOS — `JsRuntimeOps.handleRuntimeOp` tinha um ramo de colapso (`status→args.get(1)`) que DESCARTAVA a chamada do `invoke()` emitido (decisivo), e `kofWebStatus` lia `kofWebRequest.response` (campo que nunca existiu; o `response` vive no `ctx`). JVM: `201`+`X-Custom`; JS: `200`, header descartado (R6; a célula "JS ✅ 08/27" do ecosystem-coverage era false-green — suporte em compile ≠ efeito em runtime). Conserto = remover os ramos de colapso (o roteamento correto já existia abaixo) + deferir `_status`/`_headerQueue` aplicados pelo pump antes do envio (o HttpServer do JDK exige headers pré-envio), idem thread-local do JVM. Prova: `KofWebJsE2ETest.jsWebStatusAndHeaderReachTheWire` (VERMELHO pré-fix, medido `return "made"` no JS emitido + `200` no fio vivo). `status/header` do Native fica `– WEB001` (honesto).
+
+### §264 — Handlers web do KofJS: `status(code, body)` e `headerSet(name, value)` eram no-ops SILENCIOSOS (o ramo de colapso em `handleRuntimeOp` descartava a chamada do handler emitido; e `kofWebStatus` lia um campo `kofWebRequest.response` que nunca existiu) — a doc dizia "JS 08/27 ✅" mas o JS devolvia 200 e descartava o header — ✅ CORRIGIDO 16/09 (lane development, dono = 192.168.100.18)
+
+- **Sintoma (medido 16/09, probe da lane .18 contra o servidor vivo, PRÉ-EXISTENTE
+  desde o port JS do WEB001-T1 em 13/09):**
+  ```kof
+  app.get("/created") {
+      headerSet("X-Custom", "abc")
+      return status(201, "made")
+  }
+  ```
+  JVM: `HTTP/1.1 201 Created` + `X-Custom: abc` + corpo `made`. **JS: `200 OK`, sem
+  `X-Custom`, corpo   `made`** — o código de status e o header custom desapareciam em
+  silêncio (R6). DUAS camadas de raiz: **(1) codegen (a decisiva):**
+  `JsRuntimeOps.handleRuntimeOp` tinha um ramo inicial colapsando
+  `kof_web_status`→`args.get(1)` e `kof_web_header_set`→`args.get(1)` — a chamada
+  era **descartada inteiramente do handler emitido** (verificado: `invoke()`
+  saía `return "made"`; a IR ainda tinha os ops, 8 vs 2). Isto SOMBRAVA o ramo
+  correto mais abaixo no MESMO método (que chama `kofWebStatus` de verdade).
+  **(2) runtime (latente, também quebrado):** `kofWebStatus` lia
+  `kofWebRequest.response` — campo que o objeto `kofWebRequest` do pump nunca
+  teve (o objeto `response` vive no `ctx`, objeto diferente), então mesmo com a
+  chamada emitida o guard engoliria tudo; e o `ctx.response.status` escrevia na
+  hora (double `sendResponseHeaders`) com o branch do pump testando
+  `result.status === 'function'` enquanto a fn real devolve String — nunca casava.
+- **Esperado (contrato, `stdlib-web.md` "status(code, body) ... use as a return"):**
+  semântica DEFERIDA idêntica ao JVM (`KOF_WEB_STATUS` thread-local lido no envio):
+  o texto retornado pelo handler é o body, `_status` (se setado) substitui o default
+  200/404, e os pares `headerSet` enfileirados landam antes de `sendResponseHeaders`
+  (o HttpServer do JDK exige headers antes do envio).
+- **Correção (`JsRuntimeOps.java` + `JsRuntimeUiWeb.java`):** removidos os dois
+  ramos de colapso em `handleRuntimeOp` (o roteamento correto já existia abaixo);
+  `kofWebRequest` ganha `_status`/`_headerQueue`;
+  `kofWebStatus`/`kofWebHeaderSet` DEFEREM para eles (retornam o body/valor como o
+  JVM); `ctx.response` delega para o mesmo estado deferido (sem escrita adiantada);
+  o pump aplica headers + status no envio (default 200, retorno null → 404
+  inalterado).
+- **Nota de ledger:** isto torna as células "custom status codes"/"custom response
+  headers" do `ecosystem-coverage.md` **JS ✅** genuínas — uma varredura de auditoria
+  anterior chamou essas células de STALE (alegando que `KofWeb.contextJsSupported`
+  já as deixava verdes); ERRADO: suporte em compile-time ≠ efeito em runtime. As
+  células só viraram depois desta correção + a prova E2E. Native fica `– WEB001`
+  (honesto).
+- **Prova:** `KofWebJsE2ETest.jsWebStatusAndHeaderReachTheWire` — asser
+  `201`+`X-Custom: abc`+corpo no fio vivo (VERMELHO pré-fix: medido `200` + header
+  ausente contra o servidor rodando; a mesma sonda verde no JVM `201 Created`).

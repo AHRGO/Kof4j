@@ -283,14 +283,11 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
             stack.add(call);
             return;
         }
-        if (name.equals("kof_web_status") && args.size() == 2) {
-            stack.add(args.get(1));
-            return;
-        }
-        if (name.equals("kof_web_header_set") && args.size() == 2) {
-            stack.add(args.get(1));
-            return;
-        }
+        // §264 (JS): nao colapsar status()/headerSet() no 2º arg — havia aqui
+        // um ramo `status -> args.get(1)` / `headerSet -> args.get(1)` que
+        // descartava a chamada inteira (side-effect perdido) e SOMBRAVA o ramo
+        // correto mais abaixo (kofWebStatus/kofWebHeaderSet). Removido; cai no
+        // dispatch real.
         if (name.startsWith("kof_web_")) {
             // JS target: WEB001 REAL IMPLEMENTATION via GraalJS HttpServer
             // Uses Java.type('com.sun.net.8') + Value-based handler invoke

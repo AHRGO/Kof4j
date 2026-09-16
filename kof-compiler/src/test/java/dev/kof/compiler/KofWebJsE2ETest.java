@@ -161,6 +161,70 @@ class KofWebJsE2ETest {
         assertEquals("got:hello", bodyOf(echo).trim(), "POST body: " + echo);
     }
 
+    // §264 (JS, 16/09 lane .18): `status()`/`headerSet()` dentro de um handler
+    // web SILENCIOSAMENTE não faziam nada no JS — `kofWebStatus` lia
+    // `kofWebRequest.response`, campo que `kofWebRequest` nunca teve, e o guard
+    // engolia a chamada (R6). O handler `return status(201, body)` dava 200, não
+    // 201, e o `headerSet("X","y")` não chegava na resposta. Fix = deferir
+    // status/header para o pump aplicar no envio (idem JVM). Prova: esta célula
+    // (VERMELHO pré-fix: 200 sem X-Custom).
+    @Test
+    void jsWebStatusAndHeaderReachTheWire(@TempDir Path tempDir) throws Exception {
+        int port = freePort();
+        Path source = tempDir.resolve("StatusApp.kf");
+        Files.writeString(source, """
+                main() {
+                    var app = web.app()
+                    app.get("/created") {
+                        headerSet("X-Custom", "abc")
+                        return status(201, "made")
+                    }
+                    app.get("/plain") {
+                        return "ok"
+                    }
+                    app.listen(PORT)
+                }
+                """.replace("PORT", String.valueOf(port)));
+        Path outDir = tempDir.resolve("out");
+        CompilationResult result = driver.compile(source, outDir, Target.JS);
+        assertTrue(result.success(), "compilação JS web deve suceder: "
+                + result.diagnostics().getDiagnostics());
+        java.io.ByteArrayOutputStream serverErr = new java.io.ByteArrayOutputStream();
+        Thread serverThread = new Thread(() -> {
+            try {
+                dev.kof.runtime.KofJsRunner.run(findJsEntry(outDir),
+                        java.io.OutputStream.nullOutputStream(),
+                        java.io.InputStream.nullInputStream(), serverErr);
+            } catch (Exception ignored) {
+            }
+        }, "kof-web-js-status");
+        serverThread.setDaemon(true);
+        serverThread.start();
+        boolean listening = false;
+        for (int attempt = 0; attempt < 50 && !listening; attempt++) {
+            try (Socket probe = new Socket()) {
+                probe.connect(new java.net.InetSocketAddress("127.0.0.1", port), 200);
+                listening = true;
+            } catch (IOException e) {
+                Thread.sleep(100);
+            }
+        }
+        assertTrue(listening, "server JS não abriu a porta " + port
+                + " | stderr: " + serverErr.toString(StandardCharsets.UTF_8));
+
+        String created = request(port, "GET /created HTTP/1.0\r\nHost: x\r\n\r\n");
+        assertTrue(created.startsWith("HTTP/1.1 201") || created.startsWith("HTTP/1.0 201"),
+                "status(201) deve chegar na linha de status: " + created);
+        assertTrue(created.toLowerCase().contains("x-custom: abc"),
+                "headerSet(X-Custom) deve chegar nos headers: " + created);
+        assertEquals("made", bodyOf(created).trim(), "body do status(201): " + created);
+
+        String plain = request(port, "GET /plain HTTP/1.0\r\nHost: x\r\n\r\n");
+        assertTrue(plain.startsWith("HTTP/1.1 200") || plain.startsWith("HTTP/1.0 200"),
+                "handler sem status() default 200: " + plain);
+        assertEquals("ok", bodyOf(plain).trim(), "body default: " + plain);
+    }
+
     // ── 16/09 (WEB001 fatia honestidade): context-fns web sem runtime no JS
     //    baixavam para kofWebStub e retornavam 0 em silêncio (R6). SSE ganhou
     //    runtime handler-scoped no host JS (16/09) e saiu da lista; restam

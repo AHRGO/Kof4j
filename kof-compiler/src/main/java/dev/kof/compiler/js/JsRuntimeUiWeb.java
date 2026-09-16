@@ -130,7 +130,15 @@ public final class JsRuntimeUiWeb {
                         query: exchange.getRequestURI().getQuery(),
                         headers: exchange.getRequestHeaders(),
                         body: body,
-                        paramsMap: matched || new Map()
+                        paramsMap: matched || new Map(),
+                        // §264 (JS): status/headerSet DEFERIDOS idem JVM
+                        // (KOF_WEB_STATUS/KOF_WEB_HEADERS thread-local) — o
+                        // handler faz `return status(201, body)`; o pump aplica
+                        // no envio. O desenho antigo (response.status escrevendo
+                        // na hora) nunca funcionava: `kofWebRequest` nao tinha o
+                        // campo `response`, e o guard engolia a chamada (R6).
+                        _status: null,
+                        _headerQueue: []
                     };
                     const ctx = {
                         request: {
@@ -140,16 +148,21 @@ public final class JsRuntimeUiWeb {
                             headers: exchange.getRequestHeaders()
                         },
                         body: body,
+                        // §264 (JS): response.status/header DEFERIDOS idem
+                        // kofWebStatus/kofWebHeaderSet — escrevia na hora e o
+                        // pump escrevia DE NOVO (sendResponseHeaders 2x =
+                        // erro; o branch `result.status === 'function'` no
+                        // pump nunca era casado — o status() real devolvia
+                        // String). O handler Kof usa status()/headerSet()
+                        // documentados; ctx.response fica consistente.
                         response: {
                             status: function(code, text) {
-                                const bytes = text == null ? [] : kofWebUtf8Bytes(text);
-                                exchange.sendResponseHeaders(code, bytes.length);
-                                const os = exchange.getResponseBody();
-                                os.write(bytes);
-                                os.close();
+                                kofWebRequest._status = Number(code);
+                                return text == null ? "" : String(text);
                             },
                             header: function(name, value) {
-                                exchange.getResponseHeaders().set(name, value);
+                                kofWebRequest._headerQueue.push([String(name), String(value)]);
+                                return String(value);
                             }
                         }
                     };
@@ -181,18 +194,25 @@ public final class JsRuntimeUiWeb {
                     }
                     const result = (typeof handler.invoke === 'function') ? handler.invoke(ctx)
                                  : (typeof handler === 'function' ? handler(ctx) : undefined);
+                    // §264 (JS): aplica os headers deferidos ANTES do envio
+                    // (idem JVM — KOF_WEB_HEADERS lido no write) e o status
+                    // deferido; sem status() o default é 200 (ou 404 se o
+                    // handler retornou null).
+                    for (const hv of kofWebRequest._headerQueue) {
+                        exchange.getResponseHeaders().set(hv[0], hv[1]);
+                    }
                     if (result === null || result === undefined) {
+                        const code404 = kofWebRequest._status != null ? kofWebRequest._status : 404;
                         const nf = '{"error": "not found"}';
-                        exchange.sendResponseHeaders(404, nf.length);
+                        exchange.sendResponseHeaders(code404, kofWebUtf8Bytes(nf).length);
                         const os0 = exchange.getResponseBody();
                         os0.write(kofWebUtf8Bytes(nf));
                         os0.close();
-                    } else if (typeof result === 'object' && result !== null && typeof result.status === 'function') {
-                        // ctx de resposta já escrito pelo handler (response.status)
                     } else {
                         const text = String(result);
                         const bytes = kofWebUtf8Bytes(text);
-                        exchange.sendResponseHeaders(200, bytes.length);
+                        const code = kofWebRequest._status != null ? kofWebRequest._status : 200;
+                        exchange.sendResponseHeaders(code, bytes.length);
                         const os1 = exchange.getResponseBody();
                         os1.write(bytes);
                         os1.close();
@@ -239,15 +259,15 @@ public final class JsRuntimeUiWeb {
                 return kofWebRequest ? kofWebRequest.path : "";
             }
             export function kofWebStatus(code, text) {
-                if (kofWebRequest && kofWebRequest.response) {
-                    kofWebRequest.response.status(code, text);
-                }
+                // §264 (JS): defere — o pump aplica no envio (idem JVM:
+                // KOF_WEB_STATUS.set + retorna o body p/ uso como retorno).
+                if (kofWebRequest) kofWebRequest._status = Number(code);
                 return text == null ? "" : String(text);
             }
             export function kofWebHeaderSet(name, value) {
-                if (kofWebRequest && kofWebRequest.response) {
-                    kofWebRequest.response.header(String(name), String(value));
-                }
+                // §264 (JS): defere p/ antes do sendResponseHeaders (o JDK
+                // HttpServer exige headers ANTES do envio; idem JVM).
+                if (kofWebRequest) kofWebRequest._headerQueue.push([String(name), String(value)]);
                 return value == null ? "" : String(value);
             }
             export function kofWebAppNew() {

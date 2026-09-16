@@ -20,6 +20,7 @@
 > | **§260 🟡 PARTIAL 16/09 (lane native/compiler `.17`; cause-1 G-6b CLOSED by `92d11a03`, cause-2/G-6(a) + trigger still OPEN)** | Native x86 auto-collect was unsound for TWO reasons (gdb-probed same day): (1) mark scanned only the current frame → main's live Strings invisible → freed (SIGSEGV) — **FIXED 16/09 (G-6b: `_start` records `kof_main_stack_bottom`, mark scans the whole thread stack; `NativeX86GcMarkScopeTest` 3/3)**; (2) live temporaries in caller-saved regs at the `kof_alloc` call-site (`%rdi`) — invisible to any stack scan → needs G-6(a) (spill-per-live-ref / stack-map), the trigger is OFF again. riscv never hit (1) (value-stack = machine stack). |
 > | **§261 ✅ FIXED 16/09 (lane development `.18`)** | KofJS `window.bind`: Components and raw DOM widgets drew handle ids from TWO separate counters (`kofUiSeq` vs `kofNodeSeq`, both from 0); `kofUiWindowBind` resolves components FIRST → a Component created before a raw widget stole the widget's id and the widget rendered nothing (orphan in `__kofNodes`). Found via kof-ui-widgets (Slider+ReconfigButton in real Chrome). Fix = one shared counter (`kofNodeSeq`). Proof: `KofJsBrowserE2ETest.componentAndRawWidgetIdsNeverCollide` (RED pre-fix, measured) + lib `scripts/browser-drag.mjs`.
 > | **§263 ✅ FIXED 16/09 (lane development `.18`)** | KofJS printed `Double`/`Float` with the raw `Number.toString` — `4` not `4.0`, `10000000` not `1.0E7`, `0` not `-0.0` — in **every** display path (println/print/concat/`String.valueOf`/`.toString()`); silent rule-5 divergence vs JVM/Native. The old §44/§180 records called it "expected on JS" and 5 conformance cells excluded `js` to stay green. Fix = new runtime slice `num-fmt`/`kofNumFmt` (JDK contract: shortest round-trip + `E`-threshold + Float own precision) routed from the JS emitter + type-passthrough in the shared lowerers. Proof: `WrapperStaticCallsE2ETest.doubleFloatJdkPrintFormat` + 5 cells flipped to 4-target parity (value-by-value vs JVM oracle on node v18). Boxed-collection print (`List<Double>`→`[4,2.5]`) stays §104b-ii (native lane), NOT fixed here.
+> | **§264 ✅ FIXED 16/09 (lane development `.18`)** | KofJS web handlers: `status(201, body)`/`headerSet()` were SILENT no-ops — `JsRuntimeOps.handleRuntimeOp` had a collapse branch (`status→args.get(1)`) that DROPPED the call from the emitted `invoke()` (decisive), and `kofWebStatus` read `kofWebRequest.response` (field never existed; the `response` lives on `ctx`). JVM: `201`+`X-Custom`; JS: `200`, header dropped (R6; the ecosystem-coverage "JS ✅ 08/27" cell was a false green — compile-support ≠ runtime effect). Fix = delete the collapse branches (correct routing existed below) + defer `_status`/`_headerQueue` applied by the pump before send (JDK HttpServer needs headers pre-send), idem JVM thread-local. Proof: `KofWebJsE2ETest.jsWebStatusAndHeaderReachTheWire` (RED pre-fix, measured `return "made"` in the emitted JS + `200` on the live wire). Native `status/header` stays `– WEB001` (honest).
 > | **§257 ✅ FIXED 15/09 (lane compiler `192.168.100.17`)** | `static final String` runtime-text literals = javac ConstantValue inlining → false red on incremental build (`validationBrJs`); 77 fields de-`final` + `RuntimeConstantInliningGuardTest` (ASM, ConstantValue) locks it. |
 > | **§173 ✅ FIXED 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `++`/`--`/compound on `Long`/`Double`/`Float` + increment of an array ELEMENT: JVM VerifyError (literal `INT 1` in a 2-slot binary, 1-slot `DUP`, `arraystore` without `[array,index]`), Native core dump, Script `NoSuchElementException`, JS `stack underflow`/`KofDup2`. 4 targets; Q4 hunt 13/09 (over §167). Proof: `BackendParityTest.parityIncrementWideTypesAndArrayElement` + `KofInterpreterParityTest.incrementWideTypesAndArrayElement` + cell `increment` 4/4. |
 > | **§174 ✅ FIXED 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `return`/`throw` inside an `if` inside the `try`: JVM/Native/Script correct, KofJS aborted with `COMP002 unexpected KofCatchStart` (the `JsIfThrowElse.parseElse` consumed the endLabel of the enclosing try when treating the unconditional `then` as if-else). Fix without contract/IR change (`isTryEndLabel` guard). Proof: `CoreRegressionE2ETest.returnInsideIfInsideTryJs`. |
@@ -9550,3 +9551,51 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   JVM oracle on host node v18); the `conformance-matrix.md`/`.pt_BR.md` JS
   column cells updated PARTIAL→DONE in lockstep (the `ConformanceMatrixDocTest`
   gate enforces   doc×Set.of agreement).
+
+### §264 — KofJS web handlers: `status(code, body)` and `headerSet(name, value)` were SILENT no-ops (the `handleRuntimeOp` collapse branch dropped the call from the emitted handler; and `kofWebStatus` read a `kofWebRequest.response` field that never existed) — the doc said "JS 08/27 ✅" but JS returned 200 and dropped the header — ✅ FIXED 16/09 (lane development, owner = 192.168.100.18)
+
+- **Symptom (measured 16/09, lane .18 probe against the live server, PRE-EXISTING
+  since the WEB001-T1 JS port 13/09):**
+  ```kof
+  app.get("/created") {
+      headerSet("X-Custom", "abc")
+      return status(201, "made")
+  }
+  ```
+  JVM: `HTTP/1.1 201 Created` + `X-Custom: abc` + body `made`. **JS: `200 OK`, no
+  `X-Custom`, body   `made`** — the status code and the custom header silently
+  vanished (R6). TWO layers of root cause: **(1) codegen (the decisive one):**
+  `JsRuntimeOps.handleRuntimeOp` had an early branch collapsing
+  `kof_web_status`→`args.get(1)` and `kof_web_header_set`→`args.get(1)` — the
+  call was **dropped entirely from the emitted handler** (verified: `invoke()`
+  came out as `return "made"`; IR still had the ops, 8 vs 2). This shadowed the
+  correct routing later in the SAME method (which DOES call `kofWebStatus`).
+  **(2) runtime (latent, also broken):** `kofWebStatus` read
+  `kofWebRequest.response` — a field the pump's `kofWebRequest` object never had
+  (the `response` object lives on `ctx`, a different object), so even with the
+  call emitted the guard would swallow it; and `ctx.response.status` wrote
+  eagerly (double `sendResponseHeaders`) with the pump matching branch testing
+  `result.status === 'function'` while the real fn returns a String — never
+  matched.
+- **Expected (contract, docs `stdlib-web.md` "status(code, body) ... use as a
+  return"):** defered semantics identical to the JVM (`KOF_WEB_STATUS`
+  thread-local read by the dispatch on send): the handler's returned text is the
+  body, `_status` (if set) replaces the 200/404 default, and queued
+  `headerSet` pairs land before `sendResponseHeaders` (JDK HttpServer requires
+  headers before send).
+- **Fix (`JsRuntimeOps.java` + `JsRuntimeUiWeb.java`):** deleted the two collapse
+  branches in `handleRuntimeOp` (the routing to `kofWebStatus`/`kofWebHeaderSet`
+  already existed below); `kofWebRequest` gains `_status`/`_headerQueue`;
+  `kofWebStatus`/`kofWebHeaderSet` DEFER into them (return the body/value like
+  the JVM); `ctx.response` delegates to the same deferred state (no more eager
+  write); the pump applies headers + status at send (default 200, null-return →
+  404 unchanged).
+- **Ledger note:** this makes the `ecosystem-coverage.md` cells "custom status
+  codes"/"custom response headers" **JS ✅** genuine — an earlier audit pass
+  called those cells STALE (claiming `KofWeb.contextJsSupported` already made
+  them green); WRONG: compile-time support ≠ runtime effect. The cells flipped
+  only after this fix + the E2E proof. Native stays `– WEB001` (honest).
+- **Proof:** `KofWebJsE2ETest.jsWebStatusAndHeaderReachTheWire` — asserts
+  `201`+`X-Custom: abc`+body on the live wire (RED pre-fix: measured `200` +
+  missing header against the running server; the same probe green on JVM
+  `201 Created`).
