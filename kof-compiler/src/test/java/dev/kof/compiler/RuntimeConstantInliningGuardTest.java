@@ -17,7 +17,7 @@ import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.Opcodes;
 
 /**
- * §253 — guarda estrutural: nenhum texto de runtime do JS/Native pode ser
+ * §257 — guarda estrutural (renumbered from §253 after the 15/09 collision with the time.interval §253 of lane .18): nenhum texto de runtime do JS/Native pode ser
  * constante de compilação. Um campo {@code static final String} inicializado
  * por LITERAL (ConstantValue no bytecode) é INLINED pelo javac em todo
  * consumidor cross-class; editar o produtor sem recompilar o consumidor deixa
@@ -81,7 +81,7 @@ class RuntimeConstantInliningGuardTest {
         assertTrue(scanned >= 100,
                 "guarda vira facade se a varredura não chegar no bytecode real: classes varridas=" + scanned);
         assertTrue(offenders.isEmpty(),
-                "§253 — campo de texto de runtime com ConstantValue = INLINED pelo javac nos "
+                "§257 — campo de texto de runtime com ConstantValue = INLINED pelo javac nos "
                         + "consumidores cross-class = vermelho-falso quando o build incremental não "
                         + "recompila o consumidor (validationBrJs 15/09: JsRuntimeSlices.class velho "
                         + "via a cópia sem kofValidationIsNis). Tire o `final` ou use `= method()`. "
