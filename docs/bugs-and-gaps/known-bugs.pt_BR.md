@@ -8377,7 +8377,11 @@ usuário — diagnostic em compile-time é a meta (regra 6).
   dentro do corpo de `for (var i in 0..n)` → `PARSE039 Expected field
   name` (interação loop de faixa + subscrito); `while` + subscrito funciona.
   (b) `fn` é palavra reservada: `var fn = ...` → `PARSE037 Expected
-  variable name` (inofensivo mas não documentado no fake-idioms). (c) campo
+  variable name` (inofensivo mas não documentado no fake-idioms). **CORRIGIDO
+  17/09 (#330):** agora é `PARSE085` em toda posição de nome — o
+  `ParseContext.expectId` emite o diagnóstico canônico (probe:
+  função/variável/parâmetro/método/campo/classe/record/enum todos `PARSE085`).
+  (c) campo
   de tipo-função com o MESMO NOME que um método → `this.campo` resolve como
   o MÉTODO → `SEM015 not a function` na invocação (campo `clock` vs método
   `.clock()` no host S3; contorno via renomeio do campo para `clockFn`).

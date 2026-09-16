@@ -158,8 +158,11 @@ c() { … }             // sem tipo → void (default)
 `
 
 **Não existe keyword de declaração de função** (SG-001 resolvido 06/09):
-`fn`/`fun`/`func` como prefixo são rejeitados com `PARSE085`. Como *nome* de
-função continuam identificadores válidos. Parâmetros aceitam **default values**
+`fn`/`fun`/`func` como prefixo são rejeitados com `PARSE085`. Em **qualquer
+posição de nome** (função, variável, parâmetro, método, campo, classe, record,
+enum) também são rejeitados com `PARSE085` — o `ParseContext.expectId` emite o
+diagnóstico canônico (#330, medido 17/09). Nunca são identificadores válidos.
+Parâmetros aceitam **default values**
 (`parameter = expression`), que geram overloads sintéticos por aridade no
 lowering.
 

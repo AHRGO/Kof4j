@@ -8397,7 +8397,10 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   `PARSE039 Expected field name` (the range loop + subscript interplay);
   `while` + subscript works. (b) `fn` is a reserved word: `var fn = ...` →
   `PARSE037 Expected variable name` (harmless but undocumented in
-  fake-idioms). (c) field of function-type with the SAME NAME as a method
+  fake-idioms). **FIXED 17/09 (#330):** it is now `PARSE085` in every name
+  position — `ParseContext.expectId` emits the canonical diagnostic (probe:
+  function/variable/parameter/method/field/class/record/enum all `PARSE085`).
+  (c) field of function-type with the SAME NAME as a method
   → `this.field` resolves as the METHOD → `SEM015 not a function` on
   invocation (`clock` field vs `.clock()` method in the S3 host; worked
   around by renaming the field `clockFn`).

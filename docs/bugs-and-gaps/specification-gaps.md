@@ -36,13 +36,16 @@ future recommendations (rule 14 of the task: do not change behavior).
   `sealed`/`permits`) — they **do not exist** in Kof in any position: neither as
   a declaration keyword, nor as a function, variable, parameter or
   field name. In declaration position the parser gives `PARSE085` (clear diagnostic —
-  R6); in another position, each parser's `expectId` already fails (`PARSE037`
-  variable, `PARSE023` parameter, …). Aligned with the corpus (rule 4). KofScript
+  R6); in any name position (function, variable, parameter, method, field,
+  class, record, enum) `ParseContext.expectId` emits the same `PARSE085`
+  (measured 17/09, #330; previously the generic `PARSE037` variable /
+  `PARSE023` parameter). Aligned with the corpus (rule 4). KofScript
   (`.ks`) keeps `fn` as its own syntax and translates at the boundary
   KofScript (`.ks`) is **not** an exception: it is pure Kof (without `fn`/`let`/`async`).
-  Tests: `FunctionSyntaxTest` (12: fun/fn/func
+  Tests: `FunctionSyntaxTest` (15: fun/fn/func
   rejected as a prefix, `fn calc(): Int` rejected, `fn()`/`var fun`/
-  `param fn` rejected, class member, idiomatic `Int calc():Int`).
+  `param fn` rejected, class member, idiomatic `Int calc():Int`; #330 added
+  `var fun`/`var fn`/`var func` as name → `PARSE085`).
   `let`/`const`/`async` do not exist in `.kf` **and** `.ks` (KofScript is not
   JavaScript — sugar removed 06/09).
 
