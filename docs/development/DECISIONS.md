@@ -1038,6 +1038,100 @@ decision while the `Em desenvolvimento` list has open items.
 
 ---
 
+## D-DIAG-EN — tooling and diagnostics in English; docs stay EN+PT
+
+**Date:** 2026-09-16
+
+**State:** `DECIDED`
+
+**Origin:** issue #324 (maintainer decision in the chat: "aprovo a tradução
+completa para inglês"; scope confirmed 16/09: "tooling da linguagem 100% em
+ingles mas as documentações precisam de ingles + pt. porem toda mensagem de
+erro da linguagem precisa ser em ingles pro usuario. até pq kof é uma
+plataforma universal").
+
+### Context
+
+The compiler emits ~144 user-visible message fragments in Portuguese across
+parser, typer, lowerers and the JVM/JS/Native runtimes, and ~37 test files
+assert those fragments. The internal-repr half of #324 was fixed by
+`130aa213` (`Type.display`); the language half was blocked here as rule 6
+until this decision.
+
+### Contract
+
+1. **Every user-visible message the language tooling emits is English**:
+   compiler diagnostics (PARSE/SEM/… codes), runtime error strings thrown by
+   the stdlib runtimes (JVM/JS/Native/interpreter), CLI/REPL/LSP output,
+   build/decompile logs, and generated config templates.
+2. **Documentation is a different axis and stays bilingual** — every doc
+   keeps its EN + PT pair (`docs-lang.sh` invariants unchanged).
+3. **Codes never change** — only the message text (SEM048 stays SEM048).
+   Tests that match message *text* migrate with their unit; tests that match
+   *codes* are untouched.
+4. Rationale: Kof is a universal platform — the tool's language travels with
+   the tool, not with the user's locale.
+
+### Implementation
+
+Queue opened in DOING (lane issues: translation in per-package units; files
+staged/IN-PROGRESS of other agents are excluded from each unit until they
+land). Docs quoting PT message texts (learn/training) sync as a follow-up
+doc unit per package translated.
+
+### Relationships
+
+- Related: #324 (internal-repr half fixed by `130aa213`), R6 (surgical,
+  never-silent diagnostics), G-01 (surface freeze — message *codes* frozen;
+  *text* of this axis is set by this decision).
+
+---
+
+## D-DECL-RETURN — declared return type is law (#333)
+
+**Date:** 2026-09-16
+
+**State:** `DECIDED`
+
+**Origin:** issue #333 (maintainer decision in the chat, 16/09: "classe
+definida como int deve obrigatoriamente retornar int"; "função definida como
+int deve obrigatoriamente retornar int e o mesmo vale pras outras tipagem.
+função de um tipo declarado deve retornar aquele tipo").
+
+### Contract
+
+1. **The declared return type is the law** in every backend: a function or
+   method declared `T` must return a value assignable to `T`; a function
+   declared `void` must NOT `return <value>` — that is a compile-time
+   diagnostic (never silent re-typing).
+2. **The silent re-inference `void→T` is removed from both paths** that
+   today disagree (root cause measured in the #333 thread):
+   `SemanticAnalyzer.analyzeMethodBody` (re-types the class symbol) and
+   `CompilerFunctionLowering.lowerFunctionInner` (re-types only the
+   definition descriptor — call-sites keep resolving `()V` → the
+   `NoSuchMethodError`). Every call-site resolves against the **declared**
+   type.
+3. **Inference only where no type is declared** (`main()`, and unannotated
+   top-level forms as today).
+4. This is a **deliberate contract change** (freeze rule 1): code that
+   today compiles by silently re-typing a declared `void` starts failing
+   with the diagnostic above — approved by the maintainer with this record;
+   CHANGELOG entry lands with the implementation commit.
+
+### Implementation
+
+Owner: compiler lane (issue sweep claimed in DOING, 17/09). Diagnostic
+wording must follow D-DIAG-EN (English).
+
+### Relationships
+
+- Closes the rule-6 block on #333 (the fix was catalogued, waiting for
+  exactly this decision).
+- Related: D-NULL-INTENT (declared-vs-inferred contract family), bug 62.
+
+---
+
+
 # 4. Rejected or superseded decisions
 
 This section is historical. It does not define current behavior.

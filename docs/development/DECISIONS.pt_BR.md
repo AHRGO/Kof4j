@@ -1000,6 +1000,100 @@ itens abertos.
 
 ---
 
+## D-DIAG-EN — tooling e diagnósticos em inglês; docs continuam EN+PT
+
+**Data:** 16/09/2026
+
+**Estado:** `DECIDIDO`
+
+**Origem:** issue #324 (decisão da mantenedora no chat: "aprovo a tradução
+completa para inglês"; escopo confirmado 16/09: "tooling da linguagem 100%
+em ingles mas as documentações precisam de ingles + pt. porem toda mensagem
+de erro da linguagem precisa ser em ingles pro usuario. até pq kof é uma
+plataforma universal").
+
+### Contexto
+
+O compiler emite ~144 fragmentos de mensagem visíveis ao usuário em
+português (parser, typers, lowerers e runtimes JVM/JS/Native), e ~37
+arquivos de teste asserem esses fragmentos. A metade internal-repr do #324
+foi corrigida por `130aa213` (`Type.display`); a metade de língua estava
+travada aqui como regra 6 até esta decisão.
+
+### Contrato
+
+1. **Toda mensagem visível ao usuário emitida pelo tooling da linguagem é
+   em inglês**: diagnósticos do compiler (códigos PARSE/SEM/…), strings de
+   erro lançadas pelos runtimes da stdlib (JVM/JS/Native/interpretador),
+   saída de CLI/REPL/LSP, logs de build/decompilação e templates de config
+   gerados.
+2. **Documentação é eixo diferente e continua bilíngue** — cada doc mantém
+   o par EN + PT (invariantes do `docs-lang.sh` inalterados).
+3. **Códigos nunca mudam** — só o texto da mensagem (SEM048 continua
+   SEM048). Testes que casam o *texto* da mensagem migram junto com sua
+   unidade; testes que casam o *código* não são tocados.
+4. Razão: Kof é plataforma universal — a língua da ferramenta viaja com a
+   ferramenta, não com o idioma do usuário.
+
+### Implementação
+
+Fila aberta no DOING (lane issues: tradução em unidades por pacote;
+arquivos staged/EM ANDAMENTO de outros agentes ficam de fora de cada unidade
+até landarem). Docs que citam textos PT de mensagens (learn/training)
+sincronizam como unidade-doc de acompanhamento por pacote traduzido.
+
+### Relacionamentos
+
+- Relacionado: #324 (metade internal-repr fixada por `130aa213`), R6
+  (diagnóstico cirúrgico, nunca silencioso), G-01 (freeze da superfície —
+  *códigos* congelados; o *texto* deste eixo é definido por esta decisão).
+
+---
+
+## D-DECL-RETURN — o tipo de retorno declarado é lei (#333)
+
+**Data:** 16/09/2026
+
+**Estado:** `DECIDIDO`
+
+**Origem:** issue #333 (decisão da mantenedora no chat, 16/09: "classe
+definida como int deve obrigatoriamente retornar int"; "função definida como
+int deve obrigatoriamente retornar int e o mesmo vale pras outras tipagem.
+função de um tipo declarado deve retornar aquele tipo").
+
+### Contrato
+
+1. **O tipo de retorno declarado é a lei** em todo backend: função/método
+   declarado `T` deve retornar valor atribuível a `T`; função declarada
+   `void` NÃO pode `return <valor>` — isso é diagnóstico em compile-time
+   (nunca re-typing silencioso).
+2. **A re-inferência silenciosa `void→T` sai das duas rotas** que hoje
+   discordam (raiz medida no thread do #333):
+   `SemanticAnalyzer.analyzeMethodBody` (re-tipa o símbolo da classe) e
+   `CompilerFunctionLowering.lowerFunctionInner` (re-tipa só o descritor da
+   definição — call-sites continuam resolvendo `()V` → o
+   `NoSuchMethodError`). Todo call-site resolve contra o tipo **declarado**.
+3. **Inferência só onde não há tipo declarado** (`main()`, e formas
+   top-level sem anotação como hoje).
+4. É **mudança deliberada de contrato** (freeze regra 1): código que hoje
+   compila re-tipando um `void` declarado passa a falhar com o diagnóstico
+   acima — aprovado pela mantenedora com este registro; entrada no
+   CHANGELOG vai junto do commit de implementação.
+
+### Implementação
+
+Dono: lane compiler (issue sweep reivindicado no DOING, 17/09). O texto do
+diagnóstico segue D-DIAG-EN (inglês).
+
+### Relacionamentos
+
+- Fecha o bloqueio por regra 6 do #333 (o fix estava catalogado, esperando
+  exatamente esta decisão).
+- Relacionado: D-NULL-INTENT (família declarado-vs-inferido), bug 62.
+
+---
+
+
 # 4. Decisões rejeitadas ou substituídas
 
 Esta seção é histórica. Ela não define o comportamento atual.
