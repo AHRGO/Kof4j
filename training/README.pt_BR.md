@@ -59,7 +59,14 @@ training/
 │   ├── duplicate-state.md
 │   ├── fake-idioms.md
 │   ├── premature-optimization.md
-│   └── runtime-workarounds.md
+│   ├── runtime-workarounds.md
+│   ├── chained-or-membership.md
+│   ├── weak-green-proof.md
+│   ├── stale-ecj-class-trap.md
+│   ├── constant-folded-runtime-asm.md
+│   ├── asm-comment-escape.md
+│   ├── char-in-string-methods.md
+│   └── void-call-merge-crash.md
 ├── datasets/              # Material estruturado para ingestão automatizada
 │   └── kof-idioms.json
 ├── patterns/              # Padrões idiomáticos
