@@ -21,7 +21,7 @@ final class CmdTest {
     }
 
     static void run(String[] args) {
-        if (args.length < 2) { System.err.println("usage: kof test <file.kf|dir> [--target jvm|native|js|android]"); System.exit(1); return; }
+        if (args.length < 2) { System.err.println("usage: kof test <file.kf|dir> [--target jvm|native|js]"); System.exit(1); return; }
         Path src = Path.of(args[1]);
         Target target = Target.JVM;
         for (int i = 2; i < args.length; i++) {
