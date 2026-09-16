@@ -355,6 +355,7 @@ kof check <file.kf|dir> [--json]
 kof test <file.kf|dir> [--target jvm|native|js]
 kof script | repl | c | fmt | config
 kof bench | profile | inspect | debug
+kof decompile | translate | compare | migrate | deps | editor | new
 kof info | lsp | install | version
 ```
 
