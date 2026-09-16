@@ -10,9 +10,9 @@
 > **Method:** audit of the repository (code + tests + docs) — see §2.
 > **Build (on the audit date):** `mvn clean package` PASS, `mvn test` 810 (793 kof-compiler +8 kof-script +5 kof-c-compiler +4 kof-cli), golden 16/16, integration 9/9, `scripts/package.sh` PASS, `release.yml` 2 jobs (`test-and-bump` → `package-and-release`) × 3 platforms, Windows SIGPIPE fix.
 >
-> **⚠️ Snapshot 09/02 — outdated numbers (09/13):** Kof is at
-> **0.4.0-beta** and the suite has **1662 tests** across the 4 modules (1479 kof-compiler
-> + 31 kof-script + 5 kof-c-compiler + 147 kof-cli; baseline measured 09/13, see
+> **⚠️ Snapshot 09/02 — outdated numbers (09/16):** Kof is at
+> **0.4.0-beta** and the suite has **2182 tests** across the 4 modules (1885 kof-compiler
+> + 38 kof-script + 7 kof-c-compiler + 252 kof-cli; baseline measured 09/16, see
 > `docs/status.md`); this document is a **capability inventory**,
 > not the current gate. The status matrix (`DONE`/`PARTIAL`/
 > `PLANNED`) reflects 09/02 — confirm against `docs/stdlib/stdlib.md` and
