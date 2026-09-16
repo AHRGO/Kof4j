@@ -415,7 +415,8 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
             return;
         }
         String fn = JsTypeMapper.runtimeJsName(name);
-        if (name.startsWith("kof_io_") || name.equals("kof_read_line")
+        if (name.startsWith("kof_io_") || name.startsWith("kof_db_")
+                || name.equals("kof_read_line")
                 || name.equals("kof_read_file") || name.equals("kof_write_file")) {
             p.lc.registerIoRuntime(fn);
         } else {

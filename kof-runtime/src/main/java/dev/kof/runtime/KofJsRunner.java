@@ -291,6 +291,63 @@ public final class KofJsRunner {
             }
         });
         platform.put("dirList", (ProxyExecutable) args -> dirList(args));
+        // kof.db no JS (DB001) — o mesmo DriverManager do caminho JVM, a
+        // mesma JVM; sem driver no classpath connect lanca erro claro.
+        platform.put("dbConnect", (ProxyExecutable) args -> {
+            try {
+                return KofJsDbBridge.connect(args[0].asString());
+            } catch (Exception e) {
+                throw guestError(e);
+            }
+        });
+        platform.put("dbConnect2", (ProxyExecutable) args -> {
+            try {
+                return KofJsDbBridge.connect2(args[0].asString(), args[1].asString(),
+                        args[2].asString());
+            } catch (Exception e) {
+                throw guestError(e);
+            }
+        });
+        platform.put("dbClose", (ProxyExecutable) args -> {
+            try {
+                return KofJsDbBridge.close(args[0].asString());
+            } catch (Exception e) {
+                throw guestError(e);
+            }
+        });
+        platform.put("dbExecute", (ProxyExecutable) args -> {
+            try {
+                return KofJsDbBridge.executeV(args[0].asString(), args[1].asString(),
+                        listValues(args, 2));
+            } catch (Exception e) {
+                throw guestError(e);
+            }
+        });
+        platform.put("dbQuery", (ProxyExecutable) args -> {
+            try {
+                Value cls = args[2];
+                String className = cls.isNull() ? "" : cls.asString();
+                return KofJsDbBridge.queryV(args[0].asString(), args[1].asString(), className,
+                        listValues(args, 3));
+            } catch (Exception e) {
+                throw guestError(e);
+            }
+        });
+        platform.put("dbTransaction", (ProxyExecutable) args -> {
+            // O rollback ja ocorre dentro do bridge (re-gra do bloco); deixar
+            // a excecao do bloco propagar sem embrulhar — paridade com o JVM,
+            // que relanca a causa p/ o try/catch externo ver o valor.
+            Value fn = args[0];
+            try {
+                KofJsDbBridge.transaction(() -> fn.execute());
+            } catch (Exception e) {
+                if (e instanceof RuntimeException re) {
+                    throw re;
+                }
+                throw new RuntimeException(e.getMessage() == null ? e.toString() : e.getMessage());
+            }
+            return 0;
+        });
         // kof.security platform primitives (docs/stdlib/security.md §5)
         platform.put("getenv", (ProxyExecutable) args ->
                 System.getenv(args[0].asString()));
@@ -439,5 +496,30 @@ public final class KofJsRunner {
         } catch (IOException e) {
             return null;
         }
+    }
+
+    /** O ultimo arg da chamada de dbExecute/dbQuery e a lista de binds
+     *  (array guest); extrai p/ Value[] na ordem. */
+    private static org.graalvm.polyglot.Value[] listValues(Value[] args, int listIndex) {
+        if (args.length <= listIndex || args[listIndex] == null || !args[listIndex].hasArrayElements()) {
+            return new org.graalvm.polyglot.Value[0];
+        }
+        Value list = args[listIndex];
+        long n = list.getArraySize();
+        org.graalvm.polyglot.Value[] out = new org.graalvm.polyglot.Value[(int) n];
+        for (int i = 0; i < n; i++) {
+            out[i] = list.getArrayElement(i);
+        }
+        return out;
+    }
+
+    /** Erro da ponte vira excecao de script com mensagem limpa (o catch do
+     *  programa Kof ve a causa, nao stack de proxy). */
+    private static RuntimeException guestError(Exception e) {
+        String msg = e.getMessage();
+        if (msg == null || msg.isEmpty()) {
+            msg = e.getClass().getSimpleName();
+        }
+        return new RuntimeException(msg);
     }
 }
