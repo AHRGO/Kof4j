@@ -136,10 +136,12 @@ conta como descartado). `escalate(cb)` chama `disparou(id, motivo, reinicios)`
 no limite (sem `escalate` o supervisor **para de reiniciar e avisa** — nunca
 silencioso).
 
-Paridade honesta: **JVM + Script** (interpretador) entregam o núcleo. NATIVE =
-`OTP001` (o `throw` em task no backend nativo atual cai no handler chain global
-— §129), JS = `OTP002` (event-loop single-thread não agenda task-de-task —
-§132). Nos dois o `import kof.supervisor` falha no compile-time com
+Paridade honesta: **JVM + Script + Native x86** entregam o núcleo (Native x86 ✅ 15/09 —
+§129 CORRIGIDO, DECISIONS §2 opção B: cadeia de handler TLS por thread, handler por
+worker). NATIVE riscv/aarch = `OTP001` (o `clone` cru não tem TLS para a cadeia de
+handler — o conserto do x86 não porta direto), JS = `OTP002` (event-loop single-thread
+não agenda task-de-task — §132). Nos dois o `import kof.supervisor` falha no
+compile-time com
 diagnóstico claro, nunca um binário que trava.
 
 ## WHY

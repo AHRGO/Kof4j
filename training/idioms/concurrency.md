@@ -135,9 +135,10 @@ isolation). The three policies: `permanent` (falls → always restarts),
 `disparou(id, motivo, reinicios)` at the limit (without `escalate` the
 supervisor **stops restarting and warns** — never silent).
 
-Honest parity: **JVM + Script** (interpreter) deliver the core. NATIVE =
-`OTP001` (the `throw` in a task on the current native backend falls into the
-global handler chain — §129), JS = `OTP002` (single-thread event-loop does not
+Honest parity: **JVM + Script + Native x86** deliver the core (Native x86 ✅ 15/09 —
+§129 FIXED, DECISIONS §2 option B: per-thread TLS handler chain, per-worker handler).
+NATIVE riscv/aarch = `OTP001` (raw `clone` has no TLS for the handler chain — the
+x86 fix cannot port as-is), JS = `OTP002` (single-thread event-loop does not
 schedule task-of-task — §132). In both, `import kof.supervisor` fails at
 compile-time with a clear diagnostic, never a binary that hangs.
 

@@ -116,7 +116,7 @@ Resumo executivo (0.2.6-beta, 31/08):
 | observability | DONE (kof.observability: health/metrics/request IDs — JVM/Native/JS) |
 | `KofScript` / `KofCcompiler` / targets riscv64/aarch64 | DONE (KofScript 8, KofC 5, riscv64 toolchain estável) |
 | messaging (`kof.mq` 3 targets), scheduling (`scheduler` 3 targets — SCHED001 fechado 31/08), sessions, rate limiting, TLS, WebSocket/SSE (JVM), `kof.cache` (3 targets) | DONE (gaps reais: `WEB002` TLS, `WEB003/004` WS/SSE) |
-| GC Native mark-sweep | DONE (03/09 `kof_gc_mark` + `kof_gc_sweep` + auto-collect on exhaustion; `KofGcE2ETest` 3/3) |
+| GC mark-sweep no Native | ✅ sweep real 03/09 (`kof_gc_mark` conservador stack+bss + `kof_gc_sweep` → free-list + `kof_gc_collect_now` manual; `KofGcE2ETest` 3/3). ⚠️ **auto-collect na exaustão segue PENDENTE** — exige safe-points/root-map (chamar de dentro do `kof_alloc` sem um = double-free; ver `docs/status.pt_BR.md` "auto-collect pendente" + nota do `KofGcE2ETest`) |
 
 # 6. PRÓXIMAS ETAPAS (residual pós-0.2.0)
 
