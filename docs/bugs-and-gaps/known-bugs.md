@@ -9366,6 +9366,25 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   ficar verde, a causa-2 era ref-de-header invisivel e o fix e do MARK
   (pequeno), nao do backend. Risco zero de over-free (marca MAIS, nunca
   menos). Medir: keep/supervisor/parse/cap + suíte.
+- **VEREDITO gdb-3 + G-6c (16/09, fim de tarde — AMBOS FECHADOS):**
+  (a) o historico de kills no slot bb000 mostra que o kill NUNCA pegou o
+  payload "2.5" — sempre "\001" (Bool-boxes do println re-usando o slot;
+  mata-los e correto). A quebra da linha 20 NAO e "String morta": o
+  watchpoint no bloco do literal NAO dispara (String sobrevive), mas o
+  RESULTADO do toFloat diverge (act='false') quando um sweep ocorre no
+  meio do parse. (b) **G-6c IMPLEMENTADO E REFUTADO**: header-ptr aceito
+  no try_mark + mark_transitive (2 sites) + trigger ad-hoc — FP linhas
+  1..20 continua divergindo SO na linha 20; keep/supervisor/parse/cap
+  seguem ALIVE. Header-pointer nao e o buraco do mark. Revertido (arvore
+  = gatilho OFF, gate compile verde). (c) Hipotese sobrevivente: o parser
+  de float (.Lkfs_pd) le/escreve SCRATCH fora dos registradores locais —
+  buffer de trabalho no heap NAO-enraizado (vira vitima do sweep) ou o
+  flag "\001" do primeiro byte do payload lido como digito. PROXIMO
+  PASSO EXATO: (1) ler RuntimeStringParseFp (.Lkfs_pd) atras de todo
+  load/store fora de rdi/rsi/rax/rcx/rdx/rbx — se houver buffer heap
+  (ex. kof_float_buf), enraiza-lo em kof_heap_root_start (fix de 1 linha,
+  raiz permanente como a tabela de intern) ou move-lo p/ .bss; (2) se nao
+  houver, diff do xmm0 na linha 20 sem/trigger p/ isolar o que muda.
 
 
 
