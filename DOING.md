@@ -135,6 +135,8 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > **✅ FEITO (16/09 ~00:30, dono = 192.168.100.22, lane docs/development — modo autônomo ativado `scripts/auto-loop.sh start ses_f5806df42ffeulR14Wq8KhA7Fn 5 9093`): sync CONC001 no corpus (regra 5 do freeze — R6 documental pós-`e8364c97`).** O fechamento do CONC001 cross (15/09, lane nat) deixou 4 docs + 1 comentário Java afirmando o CONTRÁRIO do código ("selectAny/poll/done/cancel/awaitTimeout não existem em riscv/aarch", "gate CONC001 em compile-time desde 11/09" — gate REMOVIDO em `e8364c97`). Sincronizado: `learn/18-concurrency.pt_BR.md` (tabela ❌→✅ espelhando o EN já corrigido + nota riscv/aarch reescrita), `docs/language-reference/concurrency.md`+`.pt_BR.md` (linha da tabela riscv/aarch ⚠️→✅ + parágrafo do gate → nota histórica com provas `crossNativeConcurrencyHelpersRun`/`crossNativeCancelDuringRunningWorker`), `docs/development/planning-otp-supervision.md`+`.pt_BR.md` (nota de topo 16/09 + DD-OTP-03/09/emenda S2: premissa morta — o blocker do supervisor cross AGORA é só o `OTP001` TLS, não o `selectAny` ausente; decisão de fallback reabre na fila da mantenedora, regra 6 — não-atacar), `known-bugs.md`+`.pt_BR.md` (linha do §129 que ainda citava "selectAny/CONC001" como gap cross), comentário de `CompilerSupervisor.java` (classe+linha do gate OTP001 — texto, zero mudança de código). **Prova (Q1: o guard JÁ é o teste da doc — Q0: as células ❌+citação morta de `crossMissingConcurrencyHelpersReportConc001` falhariam no guard):** `ConcurrencyGapsDocTest` 3/3 verde pós-sync com o EN corrigido e o PT espelhado; `docs-lang.sh check` = 0 drift; `mvn -o -pl kof-compiler -am` verde (só Java tocado: 1 comentário). **WIP resgatado (regra 8):** tabela EN de `learn/18-concurrency.md` (de outra instância, sem commit) + flock/watchdog + fix pipefail do `scripts/issue-watcher.sh` (commit separado, prova `bash -n` + dry-run). NÃO TOCAR: §252/#273, §205 fatia 2, §192 (nat), D-PRINT/#168 (lane .15), N1→N4 (compiler).
 
  ## PRÓXIMO PASSO (re-dispacho lê isto)
+> **✅ FEITO (16/09 ~05:40, dono = 192.168.100.22, lane issue-watcher/compiler — ordem da usuária "corrige as issues e fecha"): #148/§218 CORRIGIDO — `n.toHexString()`/`toBinaryString()` de Int/Long emitem os ESTÁTICOS JDK reais; fim do `ClassFormatError: Illegal class name ""`.** (1) **Repro no tip** (jar fresco): `invokevirtual "".toHexString:()Ljava/lang/Object;` → `ClassFormatError` (a classe nunca carrega). (2) **Fix na raiz** (`ExpressionInstanceCallLowerer`): branch para receptor primitivo + `toHexString`/`toBinaryString` (0 args) roteia para `KofCall` STATIC `java/lang/Integer|Long` `(I|J)Ljava/lang/String;` — mesma superfície do alias `toInt`/§89, o receptor empilhado vira o argumento do INVOKESTATIC; receptores não-Int/Long (Byte/Short/Char/Float/Double/Bool) recebem **SEM052** honesto apontando a stdlib — nunca owner vazio (R6). (3) **Face JS** (`JsCallEmitter`, padrão #233): estático → `toString(radix)` com máscara unsigned (`>>> 0` Int / `BigInt.asUintN(64)` Long) — caça Q4: JDK é unsigned 32/64-bit, `Number.toString` mantém sinal (`-42` dava `ffffffd6` JVM × `-2a` JS); corrigido, paridade 3-target (JVM=JS=Script) com `-42→ffffffd6`, Long `-1→ffffffffffffffff`. **Armadilha do shade resolvida (lição):** o uber-jar do CLI continuava STALE mesmo com `install` — o shade do kof-cli processava o PRÓPRIO `kof-cli/target/*.jar` antigo (22:44) como primeiro input (classes vencem por ordem); fix = `mvn -o clean install -DskipTests` do ROOT. (4) **Provas:** `NumericFormatterE2ETest` (NOVO, 3/3): paridade JVM×JS Int (`255→ff`, `-42→ffffffd6`, `0→0`) + Long (`4294967296→100000000`, `-1→ffffffffffffffff`) + Double receptor → SEM052; suíte **2197/0/0/190** (1900 compiler + 297 script+c+cli; o único fail de uma passada = §252 flake alheio, verde no re-run pós-pull). (5) Docs EN+PT no mesmo commit: §218 seção + fila do known-bugs. Próximo: fechar a issue #148 com prova via bot.
+>
 > **✅ FEITO (16/09 ~04:30, dono = 192.168.100.22, lane docs/development —
 > autônomo, onda R6-documental): varredura CONC001/CONC003/contagem-suíte
 > ESGOTADA no corpus.** 5 commits nesta sequência: `76d1cfc8` (18 células
@@ -171,32 +173,47 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > Varredura de fechamentos alheios: D-PRINT/§216 já lockstep pela .15; nada
 > órfão.
 >
-> **PRÓXIMO PASSO (16/09 ~05:00, dono = 192.168.100.22, lane docs/development —
-> autônomo ATIVO `auto-loop.sh start ses_f5806df42ffeulR14Wq8KhA7Fn 5 9093`):**
-> **ESTABILIDADE NÃO alcançada — heartbeat CONTINUA (não recusar ainda):** as
-> três condições da AGENTS.md falham (bugs abertos: §252/§253/§255/§256b/§258;
-> development/ com trabalho: DB001 da .18 em curso), e o trabalho REAL desta
-> lane está na fila DOS FECHAMENTOS alheios — stoparia o loop prematuramente
-> (o tick é o cobertor do intervalo, não gerador de trabalho artificial).
-> Fila concreta do próximo tick: **(1)** `git fetch` + `git log --oneline
-> <last>..HEAD`; se `3e55df51`+ganharem fatia B (gate `supportedOn` +JS) ou
-> um fix CodeQL do #773: **(2a)** DB001 fechado → sync das células "DB001
-> (JS)" em stdlib EN+PT / backend-parity EN+PT / status EN+PT (3 linhas
-> cada: stdlib:69, parity:94, status:235+368) + §258 fecha se o #773 sumir
-> (confirmar com `scripts/codeql-gate.sh --fast` — só então tirar o bypass);
-> **(2b)** §258 consertado SEM DB001 fechado → atualizar status do §258
-> (EN+PT, fila+seção) com SHA/prova. **(3)** contagem da suíte só re-medir
-> se o tip mover código (armadilha: leitura suja = trap §165 — fazer
-> `mvn -pl kof-runtime clean` ANTES de acusar qualquer lane; lição em
-> `training/anti-patterns/stale-ecj-class-trap.md`). **(4)** nada disso E
-> gate das conditions verde? — a estabilidade ainda não existirá (lanes
-> ativas com frentes abertas): tick não-inventivo = registrar
-> "nada-orgao-nesta-lane, aguardando fechamento X" e sair; RECUSAR de
-> vez + `auto-loop.sh stop` só quando as 3 condições STABILITY segurarem.
-> NÃO TOCAR: DB001-JS/WEB001/UI-web-db (development .18 — regra absoluta da
-> mantenedora 16/09, frente DELA; esta lane só sincroniza docs após o FECHAMENTO),
-> §258/§256-face-b/§252/§253-face-B (dono .18/`KofJsRunner`), §253-face-A
-> (compiler .22), §248, N1→N4, split ≥600 check_500 (compiler).
+ > **PRÓXIMO PASSO (16/09 ~05:40, dono = 192.168.100.22, lane docs/development —
+ > autônomo ATIVO `auto-loop.sh start ses_f5806df42ffeulR14Wq8KhA7Fn 5 9093`):**
+ > **ESTABILIDADE NÃO alcançada — heartbeat CONTINUA (não recusar):** bugs
+ > abertos (§252/§253/§255/§256b/§258) + lanes ativas. **TICK EXECUTADO
+ > (~05:20–05:40):** o (2a) enfileirado (sync das 3 células PRIMÁRIAS
+ > stdlib:69/parity:94/status:235+368) virou **no-op** — `eb9140cb` (lane .18,
+ > DB001 fatia B, FECHADA) já sincronizou elas + stdlib-database no MESMO
+ > commit (fechamento correto, não duplico). O trabalho REAL desta lane foi o
+ > **blast radius do fechamento no corpus downstream** (mesmo tipo de drift
+ > que sincronizei em CONC001/CONC003) — `57a4172e` (18 células EN+PT):
+ > learn/37-kofjs (`kof.db` `❌(DB001)`→`✅ untyped; query<T>=DB002`),
+ > learn/README (gap riscado ✅16/09), learn/glossary, learn/28-language-design
+ > (exemplo gap-code: tirou DB001, manteve HTTP002/WEB002 vivos), DATABASE_VISION
+ > (linha JS + nota de top), security (Transactions JS `DB001`→`untyped 16/09`
+ > — o `transaction{}` existe no JS agora), backend-parity:67 (coluna KofJS da
+ > matriz principal `DB001/ORM001`→`✅ untyped; query<T>=DB002 / ORM001` — a
+ > coluna Notes já dizia "JS CLOSED 16/09" = auto-contradição resolvida),
+ > status:657 (linha do teste riscv: DB001 sai dos "honest gates" cross,
+ > fechou 15/09). **NÃO tocou:** backend-parity:140/144 (legenda gap-code=
+ > formato), ecosystem-coverage (matrix bugs-and-gaps = outra lane), DB002 (já
+ > carregado em parity:67/94=autoritativo), §211/§231/§216 (syncs das outras
+ > lanes `6c24d4df`/`6d1f933c` consistentes). **WEB001 fatia `555d2afe`
+ > conferida:** é só a fatia de honestidade (context-fns sem runtime agora
+ > FALHAM em compile no JS, fim do no-op `return 0`); o `js` ainda reporta
+ > WEB001 p/ a stack web → `stdlib-web:330` continua CORRETO, sem sync da
+ > lane. **§258 ainda VERMELHO** (#773 `KofJsRunner.listValues` — a linha
+ > andou 510→525, MESMA raiz `int i < long n`, `eb9140cb` só moveu o método;
+ > segue dono da .18, sem mudança de status).
+ > Fila do PRÓXIMO tick: **(1)** `git fetch` + `git log <last>..HEAD`;
+ > **(2)** se o #773 SUMIR do `scripts/codeql-gate.sh --fast` → fechar §258
+ > (fila+seção EN+PT com SHA/prova) + tirar o bypass `CODEQL_GATE_SKIP`;
+ > **(3)** se o tip mover CÓDIGO → re-medir suíte (FAZER `mvn -pl kof-runtime
+ > clean` ANTES — armadilha stale-ECJ em
+ > `training/anti-patterns/stale-ecj-class-trap.md`); **(4)** nada disso E
+ > gates verdes → tick não-inventivo: registrar "aguardando fechamento da
+ > .18/.22" e sair; RECUSAR de vez + `auto-loop.sh stop` só quando as 3
+ > condições STABILITY segurarem (hoje NÃO: §258/§252/§253/§255/§256b abertos).
+ > NÃO TOCAR: DB001-JS/WEB001/UI-web-db (development .18 — frente DELA; esta
+ > lane só sincroniza docs após o FECHAMENTO), §258/§256-face-b/§252/§253-face-B
+ > (dono .18/`KofJsRunner`), §253-face-A (compiler .22), §248, N1→N4, split
+ > ≥600 check_500 (compiler).
 > **FEITO (14/09 ~09:30, dono = 192.168.100.22, lane CodeQL/health): baseline
 > 25 + codemod `_` (agregados no main pela agregacao do cluster).** (a)
 > `b3ab9858` D-BASELINE: toolchain do repo 21→25 (pom+workflows+package.sh+
