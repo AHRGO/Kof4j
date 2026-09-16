@@ -47,18 +47,18 @@ public final class Main {
 
     private static void printUsage() {
         System.out.println("usage: kof <command>");
-        System.out.println("  build <dir> [--target jvm|native|js|android] [--output <dir>] [--release] [--apk]");
-        System.out.println("  run <file.kf> [--target jvm|native|js|android] [--release] [args...]");
+        System.out.println("  build <dir> [--target jvm|native|js|native.risc|native.arm|android] [--output <dir>] [--release] [--apk]");
+        System.out.println("  run <file.kf> [--target jvm|native|js|native.risc|native.arm|android] [--release] [args...]");
         System.out.println("  serve <file.kf> [--port <port>] [--host <host>]");
         System.out.println("  check <file.kf|dir> [--json]   type-check without emitting output");
         System.out.println("  script <file.ks|kf> [--target jvm|native|js]   execução direta KofScript (JVM/Native/JS, diagnostics com file:line)");
         System.out.println("  repl                         REPL incremental KofScript (type 'exit' to quit)");
-        System.out.println("  test <file.kf|dir> [--target jvm|native]   run programs, PASS/FAIL by exit code");
-        System.out.println("  bench [paths...] [--target jvm|native|js|android] [--iterations N] [--warmup N] [--baseline <file>]");
+        System.out.println("  test <file.kf|dir> [--target jvm|native|js]   run programs, PASS/FAIL by exit code");
+        System.out.println("  bench [paths...] [--target jvm|native|js] [--iterations N] [--warmup N] [--baseline <file>]");
         System.out.println("                          [--update-baseline <file>] [--threshold <ratio>] [--json] [--quick]");
         System.out.println("                          [--fail-on-regression]");
         System.out.println("                          compile, run, validate output, collect metrics, compare baseline");
-        System.out.println("  profile <file.kf> [--target jvm|native|js|android] [args...]   run + execution metrics (CPU, RSS, GC)");
+        System.out.println("  profile <file.kf> [--target jvm|native|js] [args...]   run + execution metrics (CPU, RSS, GC)");
         System.out.println("  inspect <file.kf> [--json]   IR statistics: ops before/after optimization");
         System.out.println("  decompile <file.class> [--output <file.kf>]   structural Kof skeleton from a .class");
         System.out.println("  translate <file.java> [--output <file.kf>]    Java subset -> Kof source");

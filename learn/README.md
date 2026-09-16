@@ -17,7 +17,7 @@ Kof is a programming language compiled for multiple platforms, strongly typed, o
 * **kof.ui**: Window, Label, Button (actions), Input, Column/Row, View+Style —
   rendering in a native webview (WebKitGTK)
 * Official distribution (embedded JDK, tooling, editor support)
-* CLI (18 commands): build, run, serve, check, test, script, repl, c, fmt, config gen, bench, profile, inspect, debug, info, lsp, install, version — `kof script` (`let`→`KofScriptGlobals`, repl, --watch), `kof c` (native-only C subset), `kof fmt` (real parser, idempotent — 31/08)
+* CLI (26 commands): build, run, serve, check, test, script, repl, c, fmt, config gen, bench, profile, inspect, decompile, translate, compare, migrate, debug, info, lsp, install, deps, editor, new, init, version — `kof script` (`let`→`KofScriptGlobals`, repl, --watch), `kof c` (native-only C subset), `kof fmt` (real parser, idempotent — 31/08)
 * kof.io: File, Path, Directory (JVM + Native) + kof.http (JVM+JS, HTTP002 Native)
 * 
 
@@ -149,11 +149,11 @@ See also `training/` for a structured corpus of Kof knowledge.
 | 39 | Standard Library (math/strings/encoding/uuid/validation/time) | ✅ (4 targets; gates FLT/NAT-STR01) |
 
 Kof is in a consolidation phase. The compiler is functional with JVM,
-Native (x86-64 free-list), Native.risc, Native.arm, KofJS and KofC backends (0.3.22-beta).
+Native (x86-64 free-list), Native.risc, Native.arm, KofJS and KofC backends (0.4.0-beta).
 
 **Tests:** 805
 
-**What works today (0.3.22-beta — Sep 2026 — `jvm/native/native.risc/native.arm/js/kofc`):**
+**What works today (0.4.0-beta — Sep 2026 — `jvm/native/native.risc/native.arm/js/kofc`):**
 - Complete frontend (lexer, parser, type system, semantics) — `intention->Kof->frontend->IR->backend->runtime`
 - Six targets: JVM (ASM), Native x86-64 (free-list GC), Native.risc, Native.arm, KofJS (GraalJS) and KofC (native-only C subset)
 - Classes, records, inheritance, interfaces, virtual dispatch, generics (erasure), `a.b.C` imports fix (largeproj)
@@ -161,7 +161,7 @@ Native (x86-64 free-list), Native.risc, Native.arm, KofJS and KofC backends (0.3
 - Real exceptions (JVM + Native unwinding), `assert`, `spawn` (JVM virtual threads, Native pthread — 31/08; JS event-loop — CONC003 03/09)
 - Strings (complete API), arrays, `List<T>` + `map/filter/reduce`, `Map<K,V>`/`Set<T>`, JSON, kof.io, kof.time, `kof.http` (JVM+JS), `kof_db` (SQLite+MySQL WIP)
 - `KofScript` (top-level `var`/`val` → `KofScriptGlobals` — no `let`/`const`, JS sugar removed 06/09 — `kof script --repl`, `--watch`), `KofC` (`kof c <file.c>` native-only)
-- CLI (18 commands): `build, run, serve, check, test, script, repl, c, fmt, config gen, bench, profile, inspect, debug, info, lsp, install, version` + `--target=jvm|native|native.risc|native.arm|js|android`
+- CLI (26 commands): `build, run, serve, check, test, script, repl, c, fmt, config gen, bench, profile, inspect, decompile, translate, compare, migrate, debug, info, lsp, install, deps, editor, new, init, version` + `--target=jvm|native|native.risc|native.arm|js|android`
 - `kof serve` (native `web.app()` + legacy `handle()` API; each connection in a virtual thread), `kof test` (`test "nome" {}` suite on the 3 targets), `kof bench`/`kof profile`/`kof inspect`/`kof debug`
 - Official distribution (embedded Temurin 25, package, CI/release) — Target separation (`Target.NATIVE_RISCV64/AARCH64`)
 

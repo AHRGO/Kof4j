@@ -170,7 +170,7 @@ no JS (CONC003). Ver [docs/language-reference/concurrency.md](docs/language-refe
 **Null safety**: `String?`/`Int?` + `if (x != null)` narrowing nos 3 targets
 (fix JVM 02/09). `Map.get` devolve `V?` para valores de referência.
 
-**Testes**: `test "nome" { }` + `assert(cond, "msg")` + `kof test` — 2214 testes
+**Testes**: `test "nome" { }` + `assert(cond, "msg")` + `kof test` — 2218 testes
 (1907 kof-compiler + 38 kof-script + 7 kof-c-compiler + 262 kof-cli). Ver
 [learn/23-testing.md](learn/23-testing.md).
 
@@ -355,6 +355,7 @@ kof check <file.kf|dir> [--json]
 kof test <file.kf|dir> [--target jvm|native|js]
 kof script | repl | c | fmt | config
 kof bench | profile | inspect | debug
+kof decompile | translate | compare | migrate | deps | editor | new
 kof info | lsp | install | version
 ```
 

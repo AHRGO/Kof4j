@@ -171,7 +171,7 @@ sequential on JS (CONC003). See [docs/language-reference/concurrency.md](docs/la
 **Null safety**: `String?`/`Int?` + `if (x != null)` narrowing on the 3 targets
 (JVM fix 02/09). `Map.get` returns `V?` for reference values.
 
-**Tests**: `test "name" { }` + `assert(cond, "msg")` + `kof test` — 2214 tests
+**Tests**: `test "name" { }` + `assert(cond, "msg")` + `kof test` — 2218 tests
 (1907 kof-compiler + 38 kof-script + 7 kof-c-compiler + 262 kof-cli). See
 [learn/23-testing.md](learn/23-testing.md).
 
@@ -356,6 +356,7 @@ kof check <file.kf|dir> [--json]
 kof test <file.kf|dir> [--target jvm|native|js]
 kof script | repl | c | fmt | config
 kof bench | profile | inspect | debug
+kof decompile | translate | compare | migrate | deps | editor | new
 kof info | lsp | install | version
 ```
 

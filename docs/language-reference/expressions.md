@@ -69,8 +69,8 @@ context.
 
 - `&&`/`||` require `bool` (or integer primitive — `1 && 2` compiles and is
   **true**, *probe*: treated as non-zero). Result `bool`.
-- **Short-circuit**: `a && b` does not evaluate `b` if `a` is false. **Disabled on
-  the JS target** (`ExpressionLowerer.java:147-148`) — **Target-specific** (SG-006).
+- **Short-circuit**: `a && b` does not evaluate `b` if `a` is false — on **all**
+  targets, JS included (SG-006 ✅ FIXED 09/09; `BackendParityTest.parityShortCircuitAndOr`).
 - `!` is logical negation. `!5` → `0` (*probe*: applied to an integer as XOR with
   -1 / JVM `lnot` which gives 0/1). **Unspecified** for non-bool.
 

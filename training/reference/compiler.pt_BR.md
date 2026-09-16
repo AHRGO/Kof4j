@@ -2,7 +2,7 @@
 
 # Kof Compiler Reference
 
-**Version:** 0.4.0-beta (Sep 2026) — 2214 testes
+**Version:** 0.4.0-beta (Sep 2026) — 2218 testes
 
 ## Compilation Pipeline
 
@@ -43,13 +43,21 @@ Kof IR (backend-agnostic) → Optimizer (constant folding, branch simplification
 | `kof bench [paths...] [--iterations N] [--quick] [--baseline <file>]` | Benchmark harness com baselines |
 | `kof profile <file.kf> [--target ...]` | Execução + métricas (CPU, RSS, GC) |
 | `kof inspect <file.kf> [--json]` | IR statistics (ops antes/depois do otimizador) |
+| `kof decompile <file.class> [--output <file.kf>]` | Esqueleto Kof estrutural de um `.class` |
+| `kof translate <file.java> [--output <file.kf>]` | Subset Java → fonte Kof |
+| `kof compare <legacy.class\|jar> <file.kf> [--json]` | Teste diferencial legacy vs Kof |
+| `kof migrate <file.class\|java> [--output <file.kf>] [--json]` | Migração + relatório rastreável |
 | `kof debug <file.kf>` | DAP MVP no target JVM |
 | `kof info [--json]` | Environment report |
-| `kof install <dir>` | Instala este build como distribuição |
 | `kof lsp` | Language Server (stdio, LSP 3.x) |
+| `kof deps <init\|add\|remove\|list\|resolve>` | Gerenciador de pacotes (`kofdeps`, Maven Central) |
+| `kof editor <list\|detect\|status\|setup\|install\|uninstall\|update>` | Integração com editores (EDI001) |
+| `kof new <name>` | Esqueletos de projeto por tipo |
+| `kof init` | Inicializa um projeto no diretório atual |
+| `kof install <dir>` | Instala este build como distribuição |
 | `kof version` | Show version (0.4.0-beta) |
 
-18 comandos. `kof fmt` e `kof config gen` implementados (0.4.0-beta).
+26 comandos. `kof fmt` e `kof config gen` implementados (0.4.0-beta).
 
 Fixes 27/08:
 - `CompilerDriver.expandKofImports` trata `import a.b.C` (arquivo) além de `a.b.*` (pasta) — projetos grandes com `a/b/C.kf` agora geram ambos os `.class`.
@@ -81,7 +89,7 @@ Fixes 27/08:
 - `kof.cache`, `Map/Set`, `String?`, pattern record destructuring
 
 ### KofScript
-- JIT in-memory, top-level `let`/`const` → `var`/`val` preprocess + `KofScriptGlobals`, evalCache 64 LRU
+- JIT in-memory, `var`/`val` no topo → `KofScriptGlobals` (sem preprocess `let`/`const` — sugar JS removido `183cb048`), evalCache 64 LRU
 
 ### KofC
 - C subset (`int` globals, `void` funcs, `if`/`while`/`*(int*)`/`&`) → x86_64 via `as`/`ld`

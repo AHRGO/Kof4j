@@ -226,7 +226,7 @@ error: type mismatch
 | Diagnostics | ✅ Functional |
 | KofScript (`KofScriptGlobals`) | ✅ top-level `var`/`val` → `KofScriptGlobals`, repl, --watch (no `let`/`const`) |
 | KofC (`KofCCompiler`) | ✅ C subset → native-only ELF (`kof c`) |
-| CLI | ✅ Functional (18 commands: build, run, serve, check, test, script, repl, c, fmt, config gen, bench, profile, inspect, debug, info, lsp, install, version) |
+| CLI | ✅ Functional (26 commands: build, run, serve, check, test, script, repl, c, fmt, config gen, bench, profile, inspect, decompile, translate, compare, migrate, debug, info, lsp, install, deps, editor, new, init, version) |
 
 ## Multiplatform architecture
 

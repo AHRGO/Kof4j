@@ -146,18 +146,24 @@ main() { println(idf<Int>(7)) }     // → 7 (probe)
 - **Top-level**: compiled into the `Main` class (or `<pkg>/Main`) as `static`
   methods (`CompilerDriver.java`, method `lowerToIR`).
 - **Class members**: normal methods.
-- **There are no** nested functions (function inside a function) — `main() { f() {} }`
-  is not parsed as a nested function declaration. **Unspecified** (SG-011).
-- **There are no** named local functions; for local named behavior, use a
+- **Nested function (function inside a function) works**, but only in the
+  **typed** form: `main() { Int f() { return 1 }; println(f()) }` is hoisted to a
+  top-level `outer__f` inserted before the outer (`JvmE2ETest.execNestedFunction`,
+  SG-011). The untyped `f() {}` form is **not** a declaration → `SEM015`; the
+  annotated `f(): Int {}` form is a parse error (`PARSE041`).
+- **No** named local functions otherwise; for other local named behavior, use a
   lambda in a `val`.
 
 ---
 
 ## 9. Function overloading
 
-- **There is no top-level function overloading** — two functions with the same name in
-  the same unit collide (the `define` overwrites; `resolveInHierarchy` returns
-  one). **Unspecified** whether it is an error or last-wins.
+- **Top-level function overloading works** (§131/SG-011): two functions with
+  the same name but **different signatures** coexist and the call site resolves
+  the most specific candidate (exact > subtyping; the JVM is the oracle).
+  An **exact duplicate** signature is an error (`SEM047`); a **return-only**
+  difference is not a signature (also `SEM047`); an **ambiguous** call →
+  `SEM057` with a cast hint.
 - **Constructors** overload by arity (see [classes.md](classes.md)).
 - **Methods** of a class overload by signature (§131 closed 13/09 —
   see §11 of type-system.md).

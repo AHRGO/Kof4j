@@ -2,7 +2,7 @@
 
 # 10 — Inheritance
 
-> **Status: implemented (JVM / JS — Native SUP001) — 0.3.22-beta — Target separation `native.risc/arm` preserves dispatch**
+> **Status: implemented (JVM / JS — Native SUP001) — 0.4.0-beta — Target separation `native.risc/arm` preserves dispatch**
 >
 > `extends`, virtual dispatch, overriding, `super(...)` constructor and
 > `super.metodo()` work on the JVM and KofJS targets; on Native, inheritance and

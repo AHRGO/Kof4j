@@ -287,13 +287,14 @@ main() {
 
 - `VERSION` como fonte única; `<revision>` no Maven; `KofVersion` com
   `version.properties`; `scripts/bump-version.sh`.
-- CLI: `build, run, serve, check, test, script, repl, c, fmt, config gen,
-  bench, profile, inspect, debug, info, lsp, install, version, init`.
+- CLI (26 commands): `build, run, serve, check, test, script, repl, c, fmt,
+  config gen, bench, profile, inspect, decompile, translate, compare, migrate,
+  debug, info, lsp, install, deps, editor, new, init, version`.
  - `kof lsp` — Language Server via stdio (initialize, didOpen/didChange/
    didClose → publishDiagnostics do frontend real, hover, completion,
    **references + rename** — word-boundary, single-file; `LspServerTest` 4/4).
 - Launchers `bin/kof` (Unix) e `bin/kof.bat` (Windows) com JDK embutido
-  (Temurin 21, Tooling API Level 21).
+  (Temurin 25, Tooling API Level 21).
 - `scripts/package.sh` — layout oficial de distribuição, `--jdk` para JDK
   embutido, SHA256SUMS.
 - GitHub Actions: `ci.yml` (PR — testes, golden, integração, multiplatform)

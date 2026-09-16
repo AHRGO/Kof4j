@@ -190,8 +190,8 @@ public final class TypeChecker {
             if (!Type.isUnknown(argTypes.get(i)) && !Type.isUnknown(paramTypes.get(i))
                     && !isAssignable(argTypes.get(i), paramTypes.get(i))) {
                 diagnostics.error("", 0, 0, 0,
-                        "Argument " + (i + 1) + " of '" + methodName + "': expected "
-                                + paramTypes.get(i) + " but got " + argTypes.get(i), "SEM014");
+                        "Argument " + (i + 1) + " of '" + methodName + "': expected '" + Type.display(paramTypes.get(i))
+                                + "' but got '" + Type.display(argTypes.get(i)) + "'", "SEM014");
                 return;
             }
         }

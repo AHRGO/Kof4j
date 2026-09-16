@@ -16,6 +16,7 @@
 > | **§256 🟡 PARTIAL 16/09 (lane development `.18`)** | CONC001 closure left 2 reds on clean tip (worktree `4af4356f`): ~~`learn/18-concurrency.md` gaps cell desynced (guard)~~ **face (a) ✅ CLOSED 16/09 by lane docs/development `192.168.100.22` (`dd2c7fcb` — `ConcurrencyGapsDocTest` 3/3 green)** + riscv64 `poll(b)` returns 0 after selectAny scan (aarch agrees) — face (b) OPEN. PRE-EXISTING, not §257. |
 > | **§258 🟡 PARTIAL 16/09 (lane `.18`/SSE owns the fixes; #773/#774/#777 CLOSED, #775/#776/#780 OPEN)** | CodeQL gate (3 open): **#780** `java/uncaught-number-format-exception` `KofWebJsE2ETest:307` (= the §258/#777 fix landed INSUFFICIENT: the `(?i)[0-9a-f]+` guard accepts a >8-hex-digit token → `Integer.parseInt(...,16)` throws uncaught NFE — *measured 16/09*: `"fffffffff"`.matches + NFE "under radix 16"; owner = `.18`/SSE lane, fix: length/range guard or catch; see section); **#773** `java/comparison-with-wider-type` `KofJsRunner.listValues` — ✅ FIXED 16/09 by `.18` (bound check `n > Integer.MAX_VALUE` → clear `RuntimeException`, precedent `d6eaae0c`; int/int loop, no silent truncation). **#774** `java/relative-path-command` `DepsTransitiveTest` — ✅ FIXED by `2a60b426` (`.17`). **#777** `java/uncaught-number-format-exception` `KofWebJsE2ETest:302` — ✅ FIXED 16/09 by the SSE lane (`.18`): the chunked-decode test helper validates the hex size token before `parseInt`, no uncaught NFE; 6/6. **STILL OPEN (other owners):** #775 `java/relative-path-command` `NumericFormatterE2ETest:35` (owner `.22`, `78b733fa`) + #776 `java/unused-parameter` `KofHttp.supportedOn:57` (= the dead guard of §259, owner `.15`/`.17` — resolves when §259 wires it). |
 > | **§259 🔴 OPEN 16/09 (lane native/compiler `.17`/`.18`)** | Native `http.timeout`/`http.retry`/`http.circuit` compile OK but are **pure silent no-ops** (`NativeHttpCore.java:369-380` = bare `ret`; riscv/aarch `NativeRiscvHttpCore.java:317-324`); `KofHttp.supportedOn` returns `true` for every target, so the user believes retry/circuit are active (R6/rule 5). Docs cited a **phantom `HTTP003`** ("not silent: debug syserr") that no module emits; `HTTP002` exists only as a literal and its branch is dead (see section) — no HTTP gap code is emitted today. Found + docs corrected by lane bugs-and-gaps `.15`; catalogued, fix direction = emit a real compile-time gap code on `NATIVE*` (WEB-split precedent) or implement in asm. |
+> | **§263 🔴 OPEN 16/09 (found by lane docs/development `.22`; fix = compiler lane)** | Parser accepts an ANY identifier before an annotated declaration and silently DISCARDS it (R6): `let x: Int = 5` prints `5`, `Klaxon x: Int = 5` too, `Banana q: String = "z"` → `z` — the error disappears with the annotation. Root: `parseVarDecl` falls through to `parseTypeRef` for any IDENT (`StatementParser:413-415`) and the `: Tipo` on :417-421 silently replaces the "type"; `async f(): Int` passes check too. Without annotation it fails correctly (SEM011 — `let x = 5`/`const y = 10` → dead sugar, `183cb048`). **The truth about the `let/const`-sugar cluster:** partial removal (the `let x = 5`/`const y = 10` case in the `jsSugarIsRejected` test is green because of the missing annotation, not because the sugar exists). Related: the corpus claims in `training/reference/{targets,compiler}` ("`let`/`const` → KofScriptGlobals") — false for the unannotated case, fixed separately (cluster I-D).
 > | **§262 🔴 OPEN 16/09 (found by lane docs/development `.22`; fix = lane compiler `CompilerComparisons`)** | Record `T?` vs `null`: `== null`/`!= null` **NPEs on the JVM** (`Cannot invoke Point.equals(Object) because maybe is null`) — record `==` lowers to `.equals()` with NO null-guard on the receiver (`CompilerComparisons:28,337-342`, bug 188); class/String nullable narrow fine (`if_acmp`/`Objects.equals`). Fix = contract change (freeze rule 6) → lane compiler, NOT touched here. |
 > | **§260 🟡 PARTIAL 16/09 (lane native/compiler `.17`; cause-1 G-6b CLOSED by `92d11a03`, cause-2/G-6(a) + trigger still OPEN)** | Native x86 auto-collect was unsound for TWO reasons (gdb-probed same day): (1) mark scanned only the current frame → main's live Strings invisible → freed (SIGSEGV) — **FIXED 16/09 (G-6b: `_start` records `kof_main_stack_bottom`, mark scans the whole thread stack; `NativeX86GcMarkScopeTest` 3/3)**; (2) live temporaries in caller-saved regs at the `kof_alloc` call-site (`%rdi`) — invisible to any stack scan → needs G-6(a) (spill-per-live-ref / stack-map), the trigger is OFF again. riscv never hit (1) (value-stack = machine stack). |
 > | **§261 ✅ FIXED 16/09 (lane development `.18`)** | KofJS `window.bind`: Components and raw DOM widgets drew handle ids from TWO separate counters (`kofUiSeq` vs `kofNodeSeq`, both from 0); `kofUiWindowBind` resolves components FIRST → a Component created before a raw widget stole the widget's id and the widget rendered nothing (orphan in `__kofNodes`). Found via kof-ui-widgets (Slider+ReconfigButton in real Chrome). Fix = one shared counter (`kofNodeSeq`). Proof: `KofJsBrowserE2ETest.componentAndRawWidgetIdsNeverCollide` (RED pre-fix, measured) + lib `scripts/browser-drag.mjs`.
@@ -858,7 +859,7 @@ EXTERNAL mutation produced garbage (JVM correct) — the cause was the prologue 
 ### 41. STATIC field in Native → garbage (silent R6) — ✅ FIXED 07/09 (lane Native)
 
 - **Symptom:** `class C { static Int count = 0; static Int bump() { count = count + 1; return count } }` + `main() { println(C.bump()) ... }`: JVM/JS/interpreter give `1\n2\n2`; **Native prints garbage** (`61241504\n4209948\n4211958` — uninitialized memory, non-deterministic).
-- **Root cause:** `nat/NativeBackend.java:629-630` has an **empty stub** for `KofGetStatic` (`case KofGetStatic gs -> { }` — does nothing, the field value is never loaded) and `KofPutStatic` (`addq $8, %rsp` — corrupts the stack, does not store). The simple-name lowering emits GETSTATIC/PUTSTATIC since `0ba58fc` (fix for the static path); Native **never implemented** these ops.
+- **Root cause:** `nat/NativeBackend.java:629-630` (pre-split line, 06/09; the case now lives in `NativeMethodEmitter.java:293`) has an **empty stub** for `KofGetStatic` (`case KofGetStatic gs -> { }` — does nothing, the field value is never loaded) and `KofPutStatic` (`addq $8, %rsp` — corrupts the stack, does not store). The simple-name lowering emits GETSTATIC/PUTSTATIC since `0ba58fc` (fix for the static path); Native **never implemented** these ops.
 - **Fixed 07/09:** `ClassLayout` excludes static fields from the instance layout (they do not occupy the object); `NativeBackend.collectStaticFields/emitStaticData/staticSymbol` emits a `.quad` slot in .data per static field with the initialValue (String becomes a Kof OBJECT: header+length@16+chars@24, not `.asciz`); `KofGetStatic`/`KofPutStatic` in `NativeMethodEmitter` (x86_64) and `NativeRiscvCrossEmit` (riscv/aarch64) access the slot; the `System.out` receiver of println/print is discarded (`addq $8,%rsp`/`addi sp,sp,8`) in `NativeX86Calls`/`NativeRiscvCrossOps`. Proof: `NativeE2ETest.nativeStaticFields` (Int/String/bool, `mel\ntrue\n1\n2\n2`).
 - **Pre-existing, not a regression:** there is no Native test with a static field (`NativeE2ETest` — `grep static` = 0). Before `0ba58fc` Native lowered `LoadLocal(0)+LoadField` (also garbage, `this` nonexistent in a static method). The green suite (1045/0) does not cover static×Native.
 - **Proof/repro:** cross-target sweep 07/09 (cases `static-field` / `static-field-plus-eq`), Native x86_64.
@@ -8398,7 +8399,10 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   `PARSE039 Expected field name` (the range loop + subscript interplay);
   `while` + subscript works. (b) `fn` is a reserved word: `var fn = ...` →
   `PARSE037 Expected variable name` (harmless but undocumented in
-  fake-idioms). (c) field of function-type with the SAME NAME as a method
+  fake-idioms). **FIXED 17/09 (#330):** it is now `PARSE085` in every name
+  position — `ParseContext.expectId` emits the canonical diagnostic (probe:
+  function/variable/parameter/method/field/class/record/enum all `PARSE085`).
+  (c) field of function-type with the SAME NAME as a method
   → `this.field` resolves as the METHOD → `SEM015 not a function` on
   invocation (`clock` field vs `.clock()` method in the S3 host; worked
   around by renaming the field `clockFn`).
@@ -9404,6 +9408,114 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   (ex. kof_float_buf), enraiza-lo em kof_heap_root_start (fix de 1 linha,
   raiz permanente como a tabela de intern) ou move-lo p/ .bss; (2) se nao
   houver, diff do xmm0 na linha 20 sem/trigger p/ isolar o que muda.
+- **TRACE DE INSTRUCOES do parse '2.5' na linha 21 com trigger (16/09
+  ~20:30, stepi Python-gdb — CAUSA-2 RESOLVIDA ao nivel de mecanismo):**
+  ao entrar em `.Lkfs_pd` pelo thunk da linha 21, os registradores ja vem
+  da main com `r15=2` STALE (resto do parse de "1.5"/"12.3456" anteriores —
+  a main guarda r15 como live-range entre calls). O parser faz
+  `mov %r12d,%r15d` (len) em 40459f e o loop de trim compara
+  `cmpl %r15d,%r14d` — com trigger, em 4045a2 ve-se r15=3 correto, MAS em
+  4046f1+ (corpo `.Lpdd_num`) o r13 nao e mais o mantissa acumulada
+  esperada: o `h13 r13=25` do BASE (que gera 2.5 correto) NUNCA aparece no
+  trigger; na main da linha 21, apos `call kof_string_from_literal`
+  (que ALOCA = dispara o trigger no meio!), o r15 sai DO ALLOC com valor
+  de busca da free-list (meu ad-hoc injeta `movq kof_free_head,%r13;
+  xorq %r14,%r14; jmp .Lkof_alloc_search` — o caminho de saida do alloc
+  restaura r15 do prologue push... mas `collect_now` + search pisam r15
+  como ponteiro de walk SEM o restaurar no caminho jmp-back). CORRECAO
+  CANDIDATO (provar na proxima sessao): o trigger ad-hoc esta INCOMPLETO —
+  falta preservar r10..r15 no bloco injetado (empilhar antes do
+  `call kof_gc_collect_now` e dos `jmp .Lkof_alloc_search` e restaurar
+  antes de cair no `.Lkof_alloc_mmap`/pop). A causa-2 pode ser 100%
+  ARTEFATO DO AD-HOC (trigger real seria uma versao com registro-save
+  completo = G-6(a)). Teste exato: re-injetar o trigger com
+  push/pop de r10-r15 ao redor do bloco collect_now+search e rodar FP
+  1..21: se verdissimo, a frente 2 fecha com o trigger COMPLETO (sem
+  stack-map, sem backend!
+- **RESOLUCAO DA CAUSA-2 (16/09 ~23:00, `e667791f`) — NAO ERA GC:** trace
+  stepi-gdb do parse '2.5' na linha 21 + o repro de 3 linhas LEAK.kf
+  (loop `s.toDouble(); t.toFloat()` SEM NENHUM alloc, sem trigger, sem
+  GC) provam: `riscv64/aarch` e x86 imprimiam STALE/STALE/STALE no OLD
+  code e OK/OK/OK com o fix. Raiz: `.Lpdd_num` zerava
+  r13/r10/r11/ecx/edx mas NAO r8 (exp-neg) nem r9 (expoente);
+  `.Lpdd_build` le `cmpq $320,%r9` incondicional — o parse ANTERIOR com
+  expoente ("1e-400": r9=400, r8=1) vazava no parse SEM expoente
+  seguinte ("2.5" desvia p/ hugeexp -> 0.0). Sem trigger, o syscall mmap
+  do proximo alloc clobberava r9=0 = bug LATENTE escondido por sorte; o
+  trigger trocou mmap por free-list e o bug virou observavel. Fix:
+  `xorl %r8d; xorq %r9` no .Lpdd_num (x86) + `li s8,0; li s5,0` no
+  .Lpd_num (espelho riscv). Aarch64 NAO tem parser proprio (usa libc
+  strtod via RtB45/link-on-demand — correto por delegacao, R9; confirmado
+  16/09: nenhum pd_num em NativeAarch64*). EVIDENCIA Q0 no golden: KofStringParseTest
+  ganhou vetores de leak (3 iteracoes, strings internadas fora do loop =
+  zero alloc) e o x86 FALHA sem o fix (re-confirmado com stash). A
+  suíte completa rodou: unicas falhas = §181 castSaturation (pre-existente,
+  lane nat). CONSEQUENCIA PARA A FRENTE 2: a causa-1 (G-6b) e a causa-2
+  (parser) estao AMBAS fechadas — o gatilho auto-collect COM o fix do
+  parser passou em KofStringParseTest 8/8 + NativeX86GcMarkScopeTest 3/3 +
+  KofGcE2ETest 3/3 + KofSupervisorE2ETest 15/15 (medido neste turno com
+  o trigger ad-hoc). Ligar o gatilho PERMANENTEMENTE = mudanca de
+  contrato (alloc passa a coletar; custo de artifact +19.7% medido antes
+  do fix) = RULE 6: decidir com a mantenedora (opcoes: (A) ligar com o
+  gate spawn_count==0 atual, (B) ligar sempre apos o parser-fix,
+  (C) manter OFF / feature-flag). Medicao nova (com fix) do custo:
+  rodar ArtifactSizeTest com o trigger ligado no outro turno ANTES de
+  propor — o numero antigo (+19.7%) pode ter caido com o parser-fix.
+- **DADO DA RE-MEDICAO (16/09 ~23:50, trigger ad-hoc + parser-fix,
+  ArtifactSizeTest): 38976B vs. baseline 32520B = +19.8%** (gate 5%
+  estoura, como antes — o custo e o CODIGO DO COLETOR linkado no binario,
+  NAO o parser; o fix numerico nao mexe no tamanho). Ou seja: ligar o
+  gatilho permanente custa +20% no artefato x86 hello (37->~38 syms,
+  coletor mark+sweep+free-list inteiro). SYMS de `kof_gc_*`/
+  `kof_main_stack_bottom` entram. OPcoes p/ a mantenedora (RULE 6 — nao
+  e decisao minha): (A) LIGAR com o gate spawn_count==0 atual + subir a
+  baseline do ArtifactSizeTest x86 p/ ~39KB/+19.8% (precedente riscv
+  G-4 18->24 syms aceito como "price of reachable collector"); (B) ligar
+  SEMPRE (sem gate) — NAO recomendado, o gate protege a fase de boot;
+  (C) manter OFF (comportamento atual = mmap, zero custo de tamanho, GC
+  so manual via kof_gc_collect_now ja exposto). A causa FUNCIONAL esta
+  resolvida nas duas frentes (G-6b mark + parser e667791f); o que resta e
+  APENAS a ligadura do gatilho = trade-off tamanho-vs-colecao-automatica
+  = decisao de produto da mantenedora, documentada aqui com o numero.).
+- **HIPÓTESE DE SCRATCH REFUTADA (16/09, leitura de código):** .Lkfs_pd
+  (RuntimeStringParseFp) nao aloca nada e nao usa buffer — os unicos
+  acessos a memoria sao `movzbl 24(%rbx,%rN)` (leitura do payload do
+  proprio String, 30 casos) + `movsd .Lpdd_nan/inf(%rip)` (constantes) +
+  1 `call` no caminho de throw. NAO ha scratch heap p/ enraizar. E
+  kill2.gdb (condicional payload=='2.5' no sweep) = ZERO hits: o bloco da
+  String '2.5' NUNCA e morto. Isolamento restante: o que muda o resultado
+  do parse entre trigger/no-trigger e ou (a) o bloco '2.5' devolvido da
+  free-list com size/flags inconsistentes (escrita do literal invade
+  vizinho, ou le length errado — o parser usa movl 16(%rbx) = size-field!),
+  ou (b) o box do RESULTADO. EXPERIMENTO: no toFloat-entry da linha 20,
+  x/4gx rbx (header+payload) e comparar com no-trigger; se 16(%rbx)
+  (length) divergir — causa achada = free-list re-usa bloco com size
+  antigo, e o fix e no sweep/alloc (truncar/consistir o size no insert).
+  O parser le o length do HEADER — um bloco '2.5' (len 3) re-usado de um
+  slot que era Bool-box (len 8? 1?) com size-field NAO atualizado = parser
+  le bytes alem do conteudo = float errado = 'false'. VERIFICAR se o
+  kof_string_from_literal atualiza o size-field do bloco vindo da free-list
+  (provavelmente sim; o suspeito e o sweep gravar um garbage-size no
+  free-list-link que o alloc copia pro header).
+- **MEDICAO DO BLOCO '2.5' (16/09 ~19:30, gdb p25.gdb condicional ao
+  conteudo '2.5'):** BASE=header 0x40 (=64, size coerente), LEN@+16=3
+  (correto!), PAYLOAD[0..3]=32 2e 35 (bytes '2.5' corretos nos dois
+  binarios). DIVERGENCIA ACHADA no trigger: dword em payload+4 =
+  0x00003000 ('0' no byte de indice 4) vs. 0 no base. ANALISE: o parser le
+  24(%rbx,%rN) com rN < len=3 — o byte extra NAO entra no parse (por isso
+  o double do base esta certo E o do trigger pode estar errado apenas se o
+  path lermos adiante de len: o .Lpdd_num para em 3 digitos). Origem do
+  0x30 provavel: link da free-list escrito DENTRO do payload de um vizinho
+  (o bloco bb000 foi morto/re-usado no boot; o qword +40 =
+  0x7ffff7fbc000 = proximo mmap — o '30' = byte baixo do endereco
+  0x...30?? ou resto de string anterior). IMPORTANTE PARA A PROXIMA
+  SESSAO: o thunk `kof_string_to_float` (+0x0..+0x9) e SÓ cvtsd2ss — o
+  break para medir xmm0 final deve ir em `kof_string_to_float+0x5`
+  (pos-ret do .Lkfs_pd interno, end. real 40457e) e o parse real tem que
+  ser instrumentado via .Lkfs_pd+offsets (localizar no objdump). A
+  divergencia 'false' da linha 20 pode MORAR no byte extra se o main
+  comparar o float RE-EMBALADO (box Float com 4 bytes lidos de um buffer
+  de intern corrompido) — nao no parse em si.
 
 
 
@@ -9499,6 +9611,17 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   §D-NULL-INTENT (boxed nullable contract), bug 188 (record `==` content),
   §241 (nullable-primitive boxed contract, reverted to honest gap).
 
+### §263 — Parser accepts any identifier before an annotated declaration and silently discards it (`let x: Int = 5`, `Klaxon x: Int = 5` compile and run)
+
+- **Found 16/09 ~17:30 by lane docs/development `192.168.100.22`**, while measuring the `let`/`const`-sugar corpus cluster (unit I): the cluster claimed `let x = 5` is dead sugar — but the probe `let x: Int = 5` **printed `5`**. Chasing it (rule Q4) exposed a general parser hole, not a sugar (CODE bug — fix = compiler lane; rule 8, catalogued only).
+- **Repro (measured on a CLEAN-CLONE jar of tip `9572949f`; each dir has one `main()`):**
+  - `Klaxon x: Int = 5; println(x)` → prints `5`. `Banana q: String = "z"` → prints `z`. `let x: Int = 5` → `5`. `async foo(): Int { return 1 }` → `check` says "no errors". **The identifier before the declaration is parsed as a type name and then silently discarded** by the annotation.
+  - **Without annotation it fails correctly (the intended contract, `183cb048`):** `let x = 5` → `SEM011`+`SEM021`; `const y = 10` → same; `Klaxon x = 5` → `SEM011`+`SEM021`. `fn` is reserved → `PARSE085` (good). The `let`/`const` sugar only "works" via this hole — the cluster-I docs fix (teach `var`/`val`) stands.
+  - The `jsSugarIsRejected` test is GREEN because its `let x = 5` is UNANNOTATED — it does not prove the annotation path was closed.
+- **Root (file:line):** `StatementParser.parseVarDecl` — when the first token is neither `val` nor `VAR`, it falls through to `TypeParser.parseTypeRef` (~414), which accepts ANY identifier as a "type"; the `name: Type =` annotation at ~417-421 then **replaces** that discarded type with no diagnostic. R6 violated (never silent): the garbage type vanishes silently.
+- **Correct fix (compiler lane):** when an annotated declaration discards a previously-parsed type prefix, emit a diagnostic (the prefix must match the annotation or be a known keyword). Behavior change → rule 6: **the decision belongs to the maintainer** — this lane catalogued, did NOT touch the parser.
+- **Cross-target:** parser-level, every backend inherits the hole. Not measured here.
+- **Status:** 🔴 OPEN 16/09 — catalogued by lane docs/development with the measured cases above. Related: `183cb048` (sugar removal — partial), cluster I (docs teach `var`/`val`), bug 62 (`val` type in `parseVarDecl`).
 ### §264 — KofJS printed Double/Float with the raw `Number.toString` (`4`, `10000000`), not the JDK contract (`4.0`, `1.0E7`) — silent rule-5 divergence in println/print/concat/`String.valueOf`/`.toString()` — ✅ FIXED 16/09 (lane development, owner = 192.168.100.18)
 
 - **Symptom (measured 16/09 on fresh classes, lane .18 probe, PRE-EXISTING):**

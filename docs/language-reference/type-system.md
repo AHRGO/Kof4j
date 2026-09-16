@@ -191,33 +191,33 @@ module classes; **ambiguous import → does not guess** (type preserved).
 
 ---
 
-## 7. Subtyping — the biggest gap (SG-009)
+## 7. Subtyping (SG-009 — ✅ FIXED 10/09)
 
-`isAssignable` accepts **`ClassType → ClassType` always** (final case of `TypeChecker.isAssignable`). There is no
-check that `to` is a supertype of `from`. Consequences:
+`isAssignable` performs **nominal subtyping** for reference→reference of domain
+classes: it walks `superClass`/`interfaces` via BFS. An **unrelated** class is a
+**compile error** (`SEM021`, *probe*: `class A`/`class B` with `A a = B()`).
+Same for `implements` coverage (`SEM043`), abstract instantiation (`SEM041`) and
+collection element type (`SEM056`) — all enforced at compile time:
 
-- `B extends A; A a = b` works (*probe*) — but by coincidence (the lowering's
-  `checkcast` saves the emit), not by a subtyping rule.
-- **`A a = b_from_another_class` (unrelated) also passes the type
-  check.** Safety is **delegated to the target's `checkcast`/runtime**, not to the
-  type checker.
-- `implements I` does **not** require covering all methods: `class C implements I {}`
-  with `I` having an abstract `f()` **compiles** (*probe*) — it only fails if the method is
-  called (runtime `AbstractMethodError`).
-- `abstract class A; new A()` **compiles** and fails at runtime with
-  `InstantiationError` (*probe*) — it is not a type error.
+- `B extends A; A a = b` — valid (real subtype).
+- `A a = b_from_another_class` (unrelated) → `SEM021` at compile time.
+- `class C implements I {}` with an abstract `f()` → `SEM043`; an `abstract
+  class` may defer, the obligation is transitive to the concrete subclass
+  (`#322`). `default` methods count as satisfied.
+- `abstract class A; new A()`/`A()` → `SEM041` at compile time.
+- `l.add("x")` on a `List<Int>` → `SEM056`.
 
-**Real guarantee of the type checker:** calling a function/method **that does not exist on a known type** is an error (`SEM015`/`SEM025`); argument/constructor arity is
+**Guarantee of the type checker:** a function/method **that does not exist on a
+known type** is an error (`SEM015`/`SEM025`); argument/constructor arity is
 checked (`SEM013`/`SEM023`); an incompatible return type is an error (`SEM010`);
 `throw` only accepts `String` (`SEM026`); assignment respects `isAssignable`
-(`SEM012`/`SEM021`); redeclaration in the same scope is an error (`SEM024`); switch-
-expression requires default/exhaustiveness (`SEM032`); exhaustive enum in switch
-(`SEM031`).
+(`SEM012`/`SEM021`); redeclaration in the same scope is an error (`SEM024`);
+switch-expression requires default/exhaustiveness (`SEM032`); exhaustive enum in
+switch (`SEM031`).
 
-**Not guaranteed:** correct subtyping; element type in `list.add`/`map.put`
-(`l.add("x")` on a `List<Int>` **is not an error** — §8); interface
-coverage; instantiability of abstract; `bool→numeric` coercion (works by
-1/0 representation, but is implementation-defined — §3.1).
+**Not a guarantee:** `bool→numeric` coercion works by 1/0 representation but is
+implementation-defined (§3.1); check the §`not checked` items (`private`/
+`protected` **fields**, SG-013).
 
 ---
 
@@ -247,7 +247,7 @@ coverage; instantiability of abstract; `bool→numeric` coercion (works by
 
 - **Auto-box** from primitive to reference slot at emit (`Integer`, `Long`,
   …; `JvmBackend.java:77-101`).
-- **Unbox** in `list.get(i)` according to elemType (`JvmBackend.java:913-946`):
+- **Unbox** in `list.get(i)` according to elemType (`JvmOpCollections.java:95-112`):
   `listOf(1,2).get(0) + 1` → `2` (*probe*).
 - **Erasure box** (primitive behind type-var/Object): `kof_box`/`kof_unbox`.
 - **Mutable capture** of a closure uses a synthetic `Box<N>` class (see

@@ -17,12 +17,13 @@ quando ele roda — de forma independente do backend.
    usuário; `onShutdown` **depois** (desugaring, `CompilerDesugar.java:47`).
 4. Statements de `main` executam **sequencialmente**, em ordem de fonte.
 5. **Tarefas `spawn` pendentes são aguardadas antes do programa terminar**
-   (join implícito — `SpawnStmt` javadoc, `AstNodes.java:358-363`).
+   (join implícito — `SpawnStmt` javadoc, `AstNodes.java:63-64`).
 6. O programa termina; o exit code é 0 (salvo exceção não capturada ou
    `assert` falho no harness de teste).
 
-> **Unspecified**: se o `Int` retornado por `Int main()` vira exit code. O
-> emit JVM ignora o retorno de `main` (é `void main` no bytecode). **SG-018.**
+> A forma `Int main()` foi **removida** (SG-018): o entry point é só `main()`
+> (sem tipo de retorno) — `Int main()` → `SEM044`. O exit code do processo é
+> sempre 0 a menos que ocorra um erro não capturado.
 
 ---
 
@@ -31,8 +32,8 @@ quando ele roda — de forma independente do backend.
 - **Esquerda para direita** nos operandos de binários (`emitExpression` emite
   `left` antes de `right`, `ExpressionLowerer.java:177-185`).
 - **Arguments** de uma chamada são avaliados em ordem, esquerda→direita.
-- **`&&`/`||`** são short-circuit (lado direito pode não ser avaliado) —
-  **exceto no target JS**, onde o short-circuit é desligado (SG-006).
+- **`&&`/`||`** são short-circuit em **todos os targets** (lado direito pode não
+  ser avaliado) — JS incluso (SG-006 ✅ CORRIGIDO 09/09).
 - **Encadeamento de postfix** (`a.b().c()[d]`) é avaliado da esquerda para a
   direita, receiver antes do membro.
 - **Efeitos colaterais em atribuição**: o lado direito é avaliado antes de
@@ -81,8 +82,9 @@ quando ele roda — de forma independente do backend.
   - JS: throw da string → não capturada → erro no runner.
   - **Target-specific** na representação, **Stable** no efeito (aborta com
     mensagem e exit ≠ 0).
-- **Não há** checked exceptions, nem `throws` validado (a cláusula `throw T`
-  é parseada mas **não checada** — SG-019).
+- **Não há** checked exceptions. A cláusula `throws T` é **checada por tipo**
+  (cada nome precisa ser um tipo conhecido → `SEM045`, SG-019); o conjunto
+  declarado-vs-real não é imposto.
 
 ---
 
@@ -95,9 +97,9 @@ quando ele roda — de forma independente do backend.
 - `awaitTimeout(h, ms)` lança exceção se expirar.
 - `Channel<T>`: `send`/`receive` (buffered/unbuffered — **Unspecified** a
   capacidade default).
-- **Não há** modelo de memória formalizado (atomicidade, visibilidade entre
-  threads, happens-before). **Unspecified** (SG-020) — concorrência é
-  "melhor esforço" delegada ao target.
+- **O modelo de memória é formalizado** (SG-020): sequencialmente consistente
+  em todos os targets, com happens-before total — 6 regras (spawn/await/channel/
+  cancel/locals/race) definidas em `concurrency-memory-model.md`.
 
 ---
 
@@ -128,11 +130,11 @@ quando ele roda — de forma independente do backend.
 | Ponto | Estado |
 |---|---|
 | Quando objetos são coletados | Unspecified (GC do host) |
-| Exit code de `Int main()` | Unspecified (SG-018) |
-| Modelo de memória concorrente | Unspecified (SG-020) |
+| Exit code de `Int main()` | Removido: `main()` não tem tipo de retorno; `Int main()` → `SEM044` (SG-018) |
+| Modelo de memória concorrente | Definido — sequencialmente consistente + 6 regras happens-before (`concurrency-memory-model.md`, SG-020) |
 | Ordem de iteração de Map/Set | Unspecified |
-| `throws` como contrato | parseado, não checado (SG-019) |
-| Semântica de classes aninhadas | Unspecified (SG-016) |
-| Sobrecarga de função top-level | Unspecified (SG-011) |
+| Cláusula `throws` | nomes checados por tipo (`SEM045`); conjunto declarado vs real não imposto (SG-019) |
+| Semântica de classes aninhadas | Ausente — erro de parse `SEM042` (SG-016) |
+| Sobrecarga de função top-level | Stable — assinaturas distintas coexistem, chamada ambígua → `SEM057` (SG-011) |
 | Valor de `x++` como expressão | Implementation-defined |
 | `<`/`>` em referências não-numéricas | não suportado |

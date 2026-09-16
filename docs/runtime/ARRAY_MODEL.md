@@ -228,7 +228,7 @@ kof_null_error() available for detection.
 | Parser.java | Parsing of `new Type[size]` + `expr[expr]` |
 | SemanticAnalyzer.java | Array type checking |
 | CompilerDriver.java | Lowering to `KofNewArray`/`KofArrayLoad`/`KofArrayStore`/`KofArrayLength` |
-| IRNodes.java | `KofNewArray`/`KofArrayLoad`/`KofArrayStore`/`KofArrayLength` |
+| `KofNewArray.java`/`KofArrayLoad.java`/`KofArrayStore.java`/`KofArrayLength.java` | array ops (one record per op) |
 | NativeRuntime.java | 4 runtime functions for arrays |
 | NativeBackend.java | Lowering of the array operations |
 | JvmBackend.java | `NEWARRAY`/`IALOAD`/`IASTORE`/`ARRAYLENGTH` |

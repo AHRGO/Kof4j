@@ -67,7 +67,8 @@ implements-clause = "implements" , type-ref , { "," , type-ref }
   virtual real no runtime: `A a = B(); a.f()` → 2, *probe*).
 - **`override` modifier** é aceito mas **não validado** (não há checagem de que
   o método existe na super).
-- **Subtipagem não é checada no type checker** (SG-009) — ver
+- **Subtipagem é checada** (nominal, SG-009 ✅ CORRIGIDO 10/09): classe não
+  relacionada em declaração/atribuição tipada → `SEM021` — ver
   [type-system.md](type-system.md) §7.
 
 ---
@@ -80,9 +81,13 @@ implements-clause = "implements" , type-ref , { "," , type-ref }
 | `private` | visível só na classe |
 | `protected` | visível no pacote/subclasse (semântica JVM) |
 
-- **`private` NÃO é checado em compile-time**: acessar `p.x` de fora →
-  `IllegalAccessError` em **runtime** (*probe*). A visibilidade é emitida como
-  flag JVM; o compilador Kof não a impõe. **Implementation-defined** (SG-013).
+- **`private`/`protected` são checados em compile-time para MÉTODOS**
+  (`SEM046`, *probe*): chamar `c.f()` de fora de um método `private` (ou fora
+  da hierarquia, no caso de `protected`) é erro de compilação; de dentro,
+  funciona.
+- **Acesso a CAMPO não é checado**: ler/escrever `c.x` num campo `private`/
+  `protected` de fora compila — falha só em runtime (`IllegalAccessError`). A
+  checagem cobre símbolos de método, não campos. SG-013.
 - Sem modificador → `public` (`accessFlagsFor:3388`).
 - `static` campo/método: acesso por nome de classe (`S.k`, `S.k()` — *probe*).
 
@@ -197,9 +202,13 @@ class C implements I { Int f() { return 1 } }
 - **`default Int f() { … }`** → método com corpo em interface funciona
   (*probe*).
 - **Não aceita type-parameters** (`interface F<T>` → `PARSE007`, *probe*).
-- **Não há checagem de implementação completa**: `class C implements I {}` sem
-  `f()` **compila** (*probe*) — falha só em runtime se `f()` for chamado
-  (`AbstractMethodError`). **Unspecified** (SG-015).
+- **A implementação completa é checada em compile-time** (`SEM043`, *probe*):
+  `class C implements I {}` sem `f()` é **erro de compilação**, não
+  `AbstractMethodError` em runtime. Uma **`abstract class` pode adiar** os
+  métodos da interface (`abstract class A implements I {}` compila); a obrigação é
+  **transitiva** para a subclasse concreta — `class C extends A {}` sem `f()`
+  falha com `SEM043` nomeando classe + método + "inherited via". Métodos `default`
+  com corpo contam como satisfeitos (#213). SG-015 resolvido.
 - **Não há** trait, nem interface com estado (campos), nem companion object.
 
 ---
@@ -221,7 +230,7 @@ entity User {
 }
 `
 
-- **É um record gerado + schema para `kof.orm`** (`AstNodes.java:147-158`).
+- **É um record gerado + schema para `kof.orm`** (`EntityDeclarationNode.java` / `KofOrm.java`).
 - Constraints `generated`/`unique` são metadados de schema (compile-time, sem
   reflection).
 - Habilita o **Query DSL**: `User.query(db) { where age > 18; … }`.
@@ -231,9 +240,10 @@ entity User {
 
 ## 9. Classes aninhadas
 
-`class A { class B { } }` — o parser aceita `type-declaration` como membro
-(`parseClassMember:740-742`). **Semântica de nomeamento/escopo do aninhamento
-é Unspecified** (SG-016) — não há teste dedicado que fixe `A.B` vs `B`.
+`class A { class B { } }` é **erro de parse** (`SEM042`, *probe*): tipos
+aninhados não existem no Kof — `ClassMemberParser.parseClassMember` rejeita uma
+`type-declaration` usada como membro com "declare at top level"; o mesmo branch
+cobre interface/record/entity aninhados. Prova: `nestedClassGivesCleanDiagnostic` + `topLevelClassStaysGreen` (SG-016 resolvido).
 
 ---
 
@@ -242,7 +252,7 @@ entity User {
 | Ausente | Nota |
 |---|---|
 | `sealed`/`permits` | não são palavras-chave — removidas do lexer (SG-002, 12/09): `sealed class S {}` → `PARSE010`; feature adiada (roadmap §2.5) |
-| `abstract class` não-instanciável em compile-time | `new A()` compila, falha runtime (SG-017) |
+| ~~`abstract class` não-instanciável em compile-time~~ **existe** | `new A()`/`A()` em classe abstrata → `SEM041` (*probe*, SG-017 resolvido) |
 | `companion object` | não existe |
 | `object` (singleton) | não existe keyword `object` |
 | `data class` | use `record` |

@@ -187,13 +187,24 @@ main() {
     println("1e3".toFloat() == 1000.0)
     try { println("".toDouble()); println("S8") } catch (String e) { println("T8") }
     try { println("   ".toDouble()); println("S9") } catch (String e) { println("T9") }
+    val ls1 = "1e-400"
+    val ls2 = "2.5"
+    var ln = 0
+    var lok = true
+    while (ln < 3) {
+        val ld = ls1.toDouble()
+        val lf = ls2.toFloat()
+        lok = lok && (lf == 2.5) && (ld == 0.0)
+        ln = ln + 1
+    }
+    println(lok)
 }    """;
 
     // §175 (13/09): ""/"   " LANÇAM nos 5 alvos (T8/T9) — no x86/riscv era
     // 0.0 silencioso (.Lpdd_vazio/.Lpd_vazio devolviam xorpd/li a0,0), JVM
     // lança NumberFormatException. R6/paridade fechada; a prova do OrDefault
     // com vazio fica em KofMathTest.PARSEORD (linha `parseDoubleOrDefault("", d)`).
-    private static final String FP_EXPECTED = "true\ntrue\ntrue\ntrue\ntrue\ntrue\nT1\nT2\ntrue\ntrue\nT3\ntrue\ntrue\ntrue\ntrue\ntrue\nfalse\ntrue\ntrue\ntrue\nT5\nT6\nT7\ntrue\ntrue\nT8\nT9";
+    private static final String FP_EXPECTED = "true\ntrue\ntrue\ntrue\ntrue\ntrue\nT1\nT2\ntrue\ntrue\nT3\ntrue\ntrue\ntrue\ntrue\ntrue\nfalse\ntrue\ntrue\ntrue\nT5\nT6\nT7\ntrue\ntrue\nT8\nT9\ntrue";
     // === bug 82 (face cross): riscv64/aarch64 definem kof_string_to_double/float
     // (NativeRiscvAsmRtB31, espelho do x86 RuntimeStringParseFp). Oracle SEM
     // print de double (print double segue FLT001 no cross) — throw vira var +
@@ -266,7 +277,18 @@ main() {
     try { var d5 = "1.2.3".toDouble(); println(d5 == 1.0); println("S7") } catch (String e) { println("T7") }
     println("7".toDouble() == 7.0)
     println("1e3".toFloat() == 1000.0)
-}
+    val ls1 = "1e-400"
+    val ls2 = "2.5"
+    var ln = 0
+    var lok = true
+    while (ln < 3) {
+        val ld = ls1.toDouble()
+        val lf = ls2.toFloat()
+        lok = lok && (lf == 2.5) && (ld == 0.0)
+        ln = ln + 1
+    }
+    println(lok)
+    }
     """;
-    private static final String FP_CROSS_EXPECTED = "true\ntrue\ntrue\ntrue\ntrue\ntrue\nT1\nT2\ntrue\ntrue\nT3\ntrue\ntrue\ntrue\ntrue\ntrue\nfalse\ntrue\ntrue\ntrue\nT5\nT6\nT7\ntrue\ntrue";
+    private static final String FP_CROSS_EXPECTED = "true\ntrue\ntrue\ntrue\ntrue\ntrue\nT1\nT2\ntrue\ntrue\nT3\ntrue\ntrue\ntrue\ntrue\ntrue\nfalse\ntrue\ntrue\ntrue\nT5\nT6\nT7\ntrue\ntrue\ntrue";
 }

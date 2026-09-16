@@ -81,7 +81,7 @@ To make it permanent: **Environment Variables → PATH → New** →
 ## Step 3 — Check
 
 ```bash
-kof version        # e.g.: kof 0.3.22-beta
+kof version        # e.g.: kof 0.4.0-beta
 kof info           # full environment (embedded JVM, targets, installation)
 ```
 

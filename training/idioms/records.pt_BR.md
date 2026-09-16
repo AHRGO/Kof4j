@@ -82,7 +82,7 @@ var b = new Point(3, 4)    // também aceito
 > de um record é erro de compilação **SEM038** ("record is immutable"). Para
 > estado mutável use `class` com campos + `constructor(...)`.
 
-## Pattern matching — record destructuring (0.3.22-beta)
+## Pattern matching — record destructuring (0.4.0-beta)
 
 ```kof
 record Point(Int x, Int y)
@@ -154,7 +154,7 @@ var d = json.decode<Point>("{\"x\": 10, \"y\": 20}")
 **Native:** JSN002/JSN001/JSN003 fechados 31/08 — `json.encode`/`json.decode<T>` de
 objetos/records/arrays funciona também no Native (composição compile-time; FP em XMM).
 
-## Null safety com records (0.3.22-beta)
+## Null safety com records (0.4.0-beta)
 
 ```kof
 record Point(Int x, Int y)

@@ -15,7 +15,7 @@
 |---|---|---|
 | `roadmap-audit.md` | roadmap × code (matrix + P0→P5 queue) | **alive** — re-audit when something closes |
 | `complexity-audit.md` | line/class count (09/02) | **snapshot** — live gate = `scripts/check_500.sh` (CI ratchet) |
-| `PLANNING-FUTURE-AUDIT.md` | branch `planning-future` × beta (09/07–09/08) | **closed** — R2 lives in `DECISIONS.md` x{a7}D-APP/x{a7}D-PLATFORM (ratified 09/13), R5 in the migration cluster |
+| `PLANNING-FUTURE-AUDIT.md` | branch `planning-future` × beta (09/07–09/08) | **closed** — R2 lives in `DECISIONS.md` §D-APP/§D-PLATFORM (ratified 09/13), R5 in the migration cluster |
 | `planning-future-reconcile.md` | branch merge (09/05) | **closed** — checklist fulfilled (tiers port) |
 
 ## How to use

@@ -124,7 +124,7 @@ INTERFACE}`.
 
 ## 4. Middle-end
 
-### 4.1 IR (`IRNodes.java`)
+### 4.1 IR (`KofOperation` + um record por op)
 
 **Tipo de IR**: **máquina de pilha linear** — não three-address, não SSA, não
 árvore. Javadoc do otimizador (`Optimizer.java:14-15`): *"The IR is a linear,
@@ -149,7 +149,7 @@ IRModule(name, classes, imports, sourceName)
 bloco por método (`new IRBasicBlock(0, ops)`); o otimizador achata e
 re-empacota. A unidade real é a **lista plana de ops com labels**.
 
-**Os 30 ops** (`IRNodes.java:99-252`):
+**Os 30 ops** (um record `Kof*.java` por op — ex. `KofLoadLiteral.java` — implementando `KofOperation.java`):
 
 | Grupo | Ops |
 |---|---|
@@ -279,8 +279,8 @@ x86_64" — desatualizado** (SG-E1).
   discipline into this tree-shaped JS AST"*).
 - **Execução**: Node ou browser; `KofJsRunner` embute GraalJS para execução
   server-side.
-- **Short-circuit `&&`/`||` desligado** (`ExpressionLowerer.java:147-148`) —
-  SG-006.
+- **Short-circuit `&&`/`||` em todos os targets** — JS emite `&&`/`||` nativos
+  (SG-006 ✅ CORRIGIDO 09/09; o caminho por labels é JVM/Native).
 
 ### 5.4 Android (`Target.ANDROID`)
 

@@ -41,11 +41,9 @@ String? nome2 = find(key)    // type-first nullable (null reaches T? via API;
 - **`var` without initializer** → type `UnknownType` (`:625`).
 - **Explicit type ≠ initializer type** → `SEM021`.
 - **Redeclaring in the same scope** → `SEM024`.
-- **`val` does NOT prevent reassignment**: `val x = 1; x = 2` **compiles and runs**,
-  printing `2` (*probe*, confirmed in isolation). The immutability of `val`
-  is **not guaranteed** by the compiler — it is a style convention, not a
-  language rule (SG-010). `val` in a class field → `PARSE016` (not accepted as a
-  field modifier; use `final`).
+- **`val` prevents reassignment** (SG-010 ✅ FIXED 09/09): `val x = 1; x = 2`
+  (incl. compound `+=`) → `SEM037` ("cannot assign to immutable 'val'"). `val`
+  in a class field → `PARSE016` (not accepted as a field modifier; use `final`).
 
 ---
 

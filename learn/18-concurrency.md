@@ -2,7 +2,7 @@
 
 # 18 — Concurrency
 
-> **Status: implemented (JVM / Native / JS) — 0.3.22-beta — `spawn`/`await` on the 3 targets**
+> **Status: implemented (JVM / Native / JS) — 0.4.0-beta — `spawn`/`await` on the 3 targets**
 >
 > Kof does not expose `Thread`, `Runnable` nor `CompletableFuture`: the intention is
 > `spawn` (run in parallel) and `await` (wait for the result). JVM uses virtual

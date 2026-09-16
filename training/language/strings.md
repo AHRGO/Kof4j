@@ -64,7 +64,7 @@ println(a == b)  // true (byte-level comparison)
 
 Strings are immutable. Operations like `concat` create new strings.
 
-## Null safety (0.3.22-beta)
+## Null safety (0.4.0-beta)
 
 ```kof
 String? s = mapOf("k", "x").get("k")   // null via API (no `= null` — SEM048 since 10/09)

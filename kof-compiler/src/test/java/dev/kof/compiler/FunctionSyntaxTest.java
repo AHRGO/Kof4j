@@ -157,6 +157,23 @@ class FunctionSyntaxTest {
     }
 
     @Test
+    void fnAsVarNameIsRejectedWithParse085(@TempDir Path tempDir) throws IOException {
+        // #330: `var fn = 42` dava PARSE037 genérico; reservada em posição de
+        // nome tem que dar PARSE085 com a forma correta (SG-001).
+        assertParse085(tempDir, "main() {\n    var fn = 42\n    println(fn)\n}\n");
+    }
+
+    @Test
+    void funAsVarNameIsRejectedWithParse085(@TempDir Path tempDir) throws IOException {
+        assertParse085(tempDir, "main() {\n    var fun = 42\n}\n");
+    }
+
+    @Test
+    void funcAsVarNameIsRejectedWithParse085(@TempDir Path tempDir) throws IOException {
+        assertParse085(tempDir, "main() {\n    var func = 42\n}\n");
+    }
+
+    @Test
     void fnWithReturnTypeIsRejected(@TempDir Path tempDir) throws IOException {
         assertParse085(tempDir, "fn calc(): Int {\n    return 1\n}\nmain() {\n    println(calc())\n}\n");
     }

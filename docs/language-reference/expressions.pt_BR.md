@@ -69,8 +69,8 @@ atribuição.
 
 - `&&`/`||` exigem `bool` (ou primitivo inteiro — `1 && 2` compila e é
   **verdadeiro**, *probe*: tratado como não-zero). Resultado `bool`.
-- **Short-circuit**: `a && b` não avalia `b` se `a` é falso. **Desligado no
-  target JS** (`ExpressionLowerer.java:147-148`) — **Target-specific** (SG-006).
+- **Short-circuit**: `a && b` não avalia `b` se `a` é falso — em **todos** os
+  targets, JS incluso (SG-006 ✅ CORRIGIDO 09/09; `BackendParityTest.parityShortCircuitAndOr`).
 - `!` é negação lógica. `!5` → `0` (*probe*: aplicado a inteiro como XOR com
   -1 / `lnot` JVM que dá 0/1). **Unspecified** para não-bool.
 

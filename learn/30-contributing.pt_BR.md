@@ -15,7 +15,7 @@ kof/
 ├── kof-runtime/        ← runtime nativo (free-list GC)
 ├── docs/               ← documentação interna
 ├── learn/              ← este material (intention->Kof->frontend->IR->backend->runtime)
-├── tests/              ← testes golden (2214)
+├── tests/              ← testes golden (2218)
 ├── pom.xml             ← build Maven (`${revision}`)
 └── README.md
 ```
@@ -150,20 +150,20 @@ Sempre que uma feature mudar:
 
 ## Estado atual do projeto
 
-O projeto está em 0.3.22-beta, funcional:
+O projeto está em 0.4.0-beta, funcional:
 
 **Funciona hoje:**
 - Frontend completo: lexer, parser, `SemanticAnalyzer` (type checking + nullability `String?`)
 - Records, classes e interfaces + generics (erasure) + `map/filter/reduce` + `Map/Set` + exceptions reais (JVM + Native unwinding)
 - Funções com `main()`, lambdas com capturas, `spawn`/`await` (JVM virtual threads, Native pthread — 31/08)
 - Pattern matching (`case String s`, `Point(x,y)`) em JVM/Native/JS
-- CLI com 18 comandos (build, run, serve, check, test, script, repl, c, fmt, config gen, bench, profile, inspect, debug, info, lsp, install, version) — `--target=jvm|native|native.risc|native.arm|js|android`
+- CLI com 26 comandos (build, run, serve, check, test, script, repl, c, fmt, config gen, bench, profile, inspect, decompile, translate, compare, migrate, debug, info, lsp, install, deps, editor, new, init, version) — `--target=jvm|native|native.risc|native.arm|js|android`
 - Backend JVM via ASM — bytecode V21, exception table, virtual threads
 - Backend Nativo — ELF x86-64 estável (free-list GC, spawn/pthread, FP XMM, JSON completo, SQLite) + riscv64/aarch64 placeholders
 - KofJS — ES Modules via GraalJS (`kof.http` via Java HttpClient interop)
 - KofScript (`let`→`KofScriptGlobals`, repl, --watch) + KofC (`kof c` nativo-only)
 - stdlib: kof.io, kof.web, kof.http, kof.security, kof.db, kof.orm, kof.ui, kof.config, kof.log, kof.cache, kof.mq
-- Testes: 2214 (golden 16/16, integração 9/9)
+- Testes: 2218 (golden 16/16, integração 9/9)
 
 **Em desenvolvimento:**
 - MySQL/MariaDB nativo completo (wire protocol: auth SHA-1 feito)

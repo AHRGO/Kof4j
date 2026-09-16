@@ -170,6 +170,44 @@ public sealed interface Type {
         return parseJvmDescriptor(desc, pos);
     }
 
+    /**
+     * Kof-facing name for diagnostics (#324): never the AST node
+     * {@code toString()} (e.g. {@code PrimitiveType[name=int, sort=10]}).
+     * Maps primitive lowercases to the language spelling the user wrote
+     * (int→Int, bool→Bool, …) and recurses through arrays/nullables/generics.
+     */
+    public static String display(Type type) {
+        return switch (type) {
+            case PrimitiveType p -> kofPrimitiveName(p.name());
+            case ClassType c -> c.name()
+                    + (c.typeArguments().isEmpty() ? ""
+                        : c.typeArguments().stream().map(Type::display)
+                            .collect(java.util.stream.Collectors.joining(", ", "<", ">")));
+            case ArrayType a -> display(a.componentType()) + "[]";
+            case NullableType n -> display(n.inner()) + "?";
+            case UnknownType _ -> "unknown";
+            case TypeVariable v -> v.name();
+            case FunctionType _ -> "function";
+            case WildcardType _ -> "?";
+        };
+    }
+
+    static String kofPrimitiveName(String name) {
+        return switch (name) {
+            case "int" -> "Int";
+            case "long" -> "Long";
+            case "float" -> "Float";
+            case "double" -> "Double";
+            case "bool", "boolean" -> "Bool";
+            case "byte" -> "Byte";
+            case "short" -> "Short";
+            case "char" -> "Char";
+            case "void" -> "Void";
+            case "string" -> "String";
+            default -> name;
+        };
+    }
+
     static String describe(Type type) {
         return switch (type) {
             case PrimitiveType p -> p.name();

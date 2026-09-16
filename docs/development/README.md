@@ -29,7 +29,8 @@
 **Sources of truth that are NOT here (they are not backlog):** `docs/status.md`
 (what works + the suite gate), `docs/backend-parity.md` (parity
 matrix with honest gaps), `docs/bugs-and-gaps/specification-gaps.md`
-(SG-001–020 — maintainer queue COMPLETE 12/09, became a reference).
+(SG-001–022 — maintainer queue COMPLETE, became a reference; SG-021/022 =
+requests with no decision).
 
 ---
 
@@ -158,7 +159,7 @@ scalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 | `roadmap.md` | §§8–11 ❌ (frontend same-project, monolith→micro) | long term |
 | ~~`roadmap-audit.md`~~ → `docs/audits/roadmap-audit.md` | matrix 06/09 + queue P0→P5 (P0 CLOSED 09/09) | re-audit when something closes |
 | ~~`KOFUI-AUDIT.md`~~ → `docs/bugs-and-gaps/` | UI001-Native (R6 face: silent no-op) OPEN | UI lane |
-| ~~`known-bugs.md`~~ → `docs/bugs-and-gaps/` | 8 open (triage §2 above; §81/§163/§127-JVM, §155, §94, §157-160 and §65 closed/DOES-NOT-REPRODUCE 13/09) | live queue |
+| ~~`known-bugs.md`~~ → `docs/bugs-and-gaps/` | 32 open (the live count and triage are in §2 above; §81/§163/§127-JVM, §155, §94, §157-160 and §65 closed/DOES-NOT-REPRODUCE 13/09) | live queue |
 | ~~`refactoring/PLAN-SOLID-500.md`~~ → `docs/architecture/PLAN-SOLID-500.md` | ✅ **DONE + MOVED 13/09** (F1–F9 all closed — F3: NativeBackend 498 ≤500 measured, GC lane blocker expired/dead-owner rule); ratchet `check_500-baseline.txt` (debts locked — authoritative number = `wc -l` of the file) in CI | plan CLOSED (3-state rule) |
 
 ### 4.3 `future/` — plan only, zero code (not current work)
@@ -166,8 +167,10 @@ scalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 | File | Trigger to fall in here |
 |---|---|
 | `PLAN-UNIVERSAL-PLATFORM.md` | decision + SYSTEMS closed (R12) |
+| `PLAN-MULTIPARADIGMA.md` (multiparadigm / functional pipelines + declarative queries; 16/09, design only) | first functional increment begins (SYSTEMS closed, R12) |
 | `scoped-resources-plan.md` (RAII TIER 2.4) | bump with `using`/`resource_scope` decided |
 | `PLAN-BAREMETAL-BOOT.md` (native → bare-metal/bootable; 15/09 maintainer directive) | SYSTEMS closed (R12) + first face (HAL seam) authorized |
+| `DECOMPILER.md`, `TRANSLATOR.md`, `LEGACY_MIGRATION.md` (legacy migration platform) | **back here 15/09 — DEPRIORITIZED by the maintainer**; promotion needs her explicit decision |
 
 *(DD-STDLIB-01 `planning-stdlib-array-returns.md` **left `future/` 13/09** — decision 6a ratified, implemented and moved to `docs/stdlib/DD-STDLIB-01-array-returns.md`.)*
 
@@ -180,7 +183,7 @@ evidence in each line of §4.1; SG snapshot 08/09 → `docs/history/`)*
 
 | Left for | Doc | Proof |
 |---|---|---|
-| `docs/bugs-and-gaps/specification-gaps.md` | SG-001–020 + E1–E3 | maintainer queue COMPLETE (summary of the doc itself); old snapshot → `docs/history/specification-gaps-0.3.0-snapshot.md` |
+| `docs/bugs-and-gaps/specification-gaps.md` | SG-001–022 + E1–E3 | maintainer queue COMPLETE (summary of the doc itself); old snapshot → `docs/history/specification-gaps-0.3.0-snapshot.md` |
 | `docs/stdlib/DATABASE_VISION.md` | levels 0–4 | query DSL 01/09 (`KofOrmE2ETest` 22), MySQL prepared (`nativeMysqlPreparedBinary`), pooling ✅; DB001/ORM001 live in the parity matrix |
 | `docs/audits/complexity-audit.md` | snapshot 02/09 | pre-SOLID-500 numbers; live gate = `scripts/check_500.sh` (ratchet) |
 | `docs/history/roadmap-gap-2026-09-03.md` | dated gap report | pending items live in roadmap-audit/known-bugs |

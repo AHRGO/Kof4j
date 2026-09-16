@@ -17,7 +17,7 @@ MAJOR.MINOR.PATCH
 PATCH is the *little dot of shame*: bugfixes, corrections, regressions and
 small adjustments without any relevant architectural change.
 
-## Beta Stage (0.3.22-beta)
+## Beta Stage (0.4.0-beta)
 
 Kof moved from `0.0.x` (Alpha) to `0.2.6-beta`. Each release carries the suffix:
 
@@ -25,7 +25,7 @@ Kof moved from `0.0.x` (Alpha) to `0.2.6-beta`. Each release carries the suffix:
 0.2.6-beta
 ```
 
-Nothing is called stable. The evolution was: Alpha → Beta (0.2.6-beta, Sep 2 2026; today 0.3.22-beta) → Release Candidate → Stable. The `intention->Kof->frontend->IR->backend->runtime` chain holds for all of them.
+Nothing is called stable. The evolution was: Alpha → Beta (0.2.6-beta, Sep 2 2026; today 0.4.0-beta) → Release Candidate → Stable. The `intention->Kof->frontend->IR->backend->runtime` chain holds for all of them.
 
 Official targets in 0.2.0: `jvm`, `native` (x86-64), `native.risc` (riscv64), `native.arm` (aarch64), `js` (KofJS), `kofc` (KofC C subset native-only). Target separation already in the `Target` enum.
 
@@ -35,7 +35,7 @@ The version lives in `VERSION` (repository root). `scripts/bump-version.sh`
 synchronizes:
 
 ```text
-VERSION (0.3.22-beta) → pom.xml (`<revision>`) → dev/kof/version.properties (packaged)
+VERSION (0.4.0-beta) → pom.xml (`<revision>`) → dev/kof/version.properties (packaged)
 ```
 
 Never edit versions scattered across files — the pipeline handles that.

@@ -66,8 +66,10 @@ true  false  null
 > (tokens `FUN`/`FN`/`FUNC` no lexer) — **não existem** no Kof, nem como
 > keyword de declaração nem como identificador em nenhuma posição (nome de
 > função, variável, parâmetro, campo). Em posição de declaração o parser dá
-> `PARSE085`; em outra posição, o `expectId` de cada parser já falha com
-> diagnóstico (`PARSE037` variável, `PARSE023` parâmetro, …). Alinhado ao
+> `PARSE085`; em qualquer posição de nome (função, variável, parâmetro, método,
+> campo, classe, record, enum) o `ParseContext.expectId` emite o mesmo
+> `PARSE085` (medido 17/09, #330 — antes caía no genérico `PARSE037` variável /
+> `PARSE023` parâmetro). Alinhado ao
 > corpus (regra 4: bug = alinhar ao previsto). KofScript (`.ks`) **não** é
 > exceção — é Kof puro executado direto; `fn`/`fun`/`func` lá também dão
 > `PARSE085` (não há tradução de dialeto).

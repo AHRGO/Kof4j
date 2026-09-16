@@ -2,7 +2,7 @@
 
 # Kof Target Reference
 
-**Version:** 0.4.0-beta (Sep 2026) — 2214 testes
+**Version:** 0.4.0-beta (Sep 2026) — 2218 testes
 
 ## JVM Target
 
@@ -134,8 +134,8 @@ kof script app.ks --target jvm|native|js --watch --inspect
 kof repl
 ```
 
-- Top-level `let`/`const` → `KofScriptGlobals` static fields + rewriting (27/08)
-- `let x = 5` `const y: Int = 10` → `class KofScriptGlobals { static Int x = 5 }`
+- `var`/`val` no topo → campos estáticos `KofScriptGlobals` + rewriting
+- `var x = 5` `val y: Int = 10` → `class KofScriptGlobals { static Int x = 5 }` (sem `let`/`const` — sugar JS removido `183cb048`; a forma anotada só "funciona" via furo do parser §263)
 - JIT in-memory + cache LRU 64 (evalCache/fileCache)
 - Suporta `--watch` (WatchService debounce 200ms) e `--inspect` (IRStatistics)
 

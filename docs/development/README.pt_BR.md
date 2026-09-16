@@ -29,7 +29,8 @@
 **Fontes de verdade que NÃO estão aqui (não são backlog):** `docs/status.md`
 (o que funciona + gate da suíte), `docs/backend-parity.md` (matriz de
 paridade com gaps honestos), `docs/bugs-and-gaps/specification-gaps.md`
-(SG-001–020 — fila do maintainer COMPLETA 12/09, virou referência).
+(SG-001–022 — fila do maintainer COMPLETA, virou referência; SG-021/022 =
+pedidos sem decisão).
 
 ---
 
@@ -158,7 +159,7 @@ escalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 | `roadmap.md` | §§8–11 ❌ (frontend same-project, monólito→micro) | longo prazo |
 | ~~`roadmap-audit.md`~~ → `docs/audits/roadmap-audit.md` | matriz 06/09 + fila P0→P5 (P0 FECHADO 09/09) | re-audit quando algo fecha |
 | ~~`KOFUI-AUDIT.md`~~ → `docs/bugs-and-gaps/` | UI001-Native (face R6: no-op silencioso) ABERTO | lane UI |
-| ~~`known-bugs.md`~~ → `docs/bugs-and-gaps/` | 8 abertos (triagem §2 acima; §81/§163/§127-JVM, §155, §94, §157-160 e §65 fechados/NÃO-REPRODUZ 13/09) | fila viva |
+| ~~`known-bugs.md`~~ → `docs/bugs-and-gaps/` | 32 abertos (a contagem viva e a triagem estão no §2 acima; §81/§163/§127-JVM, §155, §94, §157-160 e §65 fechados/NÃO-REPRODUZ 13/09) | fila viva |
 | ~~`refactoring/PLAN-SOLID-500.md`~~ → `docs/architecture/PLAN-SOLID-500.md` | ✅ **FEITO + MOVIDO 13/09** (F1–F9 todas fechadas — F3: NativeBackend 498 ≤500 medido, bloqueio da lane GC caducou/regra do dono-morto); ratchet `check_500-baseline.txt` (dívidas travadas — nº autoritativo = `wc -l` do arquivo) no CI | plano FECHADO (regra dos 3 estados) |
 
 ### 4.3 `future/` — só plano, zero código (não é trabalho atual)
@@ -166,8 +167,10 @@ escalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 | Arquivo | Gatilho p/ cair p/ cá |
 |---|---|
 | `PLAN-UNIVERSAL-PLATFORM.md` | decisão + SYSTEMS fechado (R12) |
+| `PLAN-MULTIPARADIGMA.md` (multiparadigma / pipelines funcionais + queries declarativas; 16/09, só design) | primeiro incremento funcional começa (SYSTEMS fechado, R12) |
 | `scoped-resources-plan.md` (RAII TIER 2.4) | bump com `using`/`resource_scope` decidido |
 | `PLAN-BAREMETAL-BOOT.md` (nativo → bare-metal/bootável; diretiva da mantenedora 15/09) | SYSTEMS fechado (R12) + primeira face (costura HAL) autorizada |
+| `DECOMPILER.md`, `TRANSLATOR.md`, `LEGACY_MIGRATION.md` (plataforma de migração legado) | **de volta p/ cá 15/09 — DESPRIORIZADO pela mantenedora**; promoção exige decisão explícita dela |
 
 *(DD-STDLIB-01 `planning-stdlib-array-returns.md` **saiu de `future/` 13/09** — decisão 6a ratificada, implementado e movido p/ `docs/stdlib/DD-STDLIB-01-array-returns.md`.)*
 
@@ -180,7 +183,7 @@ evidência em cada linha de §4.1; snapshot SG 08/09 → `docs/history/`)*
 
 | Saiu p/ | Doc | Prova |
 |---|---|---|
-| `docs/bugs-and-gaps/specification-gaps.md` | SG-001–020 + E1–E3 | fila do maintainer COMPLETA (resumo do próprio doc); snapshot antigo → `docs/history/specification-gaps-0.3.0-snapshot.md` |
+| `docs/bugs-and-gaps/specification-gaps.md` | SG-001–022 + E1–E3 | fila do maintainer COMPLETA (resumo do próprio doc); snapshot antigo → `docs/history/specification-gaps-0.3.0-snapshot.md` |
 | `docs/stdlib/DATABASE_VISION.md` | níveis 0–4 | query DSL 01/09 (`KofOrmE2ETest` 22), MySQL prepared (`nativeMysqlPreparedBinary`), pooling ✅; DB001/ORM001 vivem na matriz de paridade |
 | `docs/audits/complexity-audit.md` | snapshot 02/09 | números pré-SOLID-500; gate vivo = `scripts/check_500.sh` (ratchet) |
 | `docs/history/roadmap-gap-2026-09-03.md` | gap report datado | pendências vivem em roadmap-audit/known-bugs |

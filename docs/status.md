@@ -287,8 +287,9 @@ main() {
 
 - `VERSION` as the single source; `<revision>` in Maven; `KofVersion` with
   `version.properties`; `scripts/bump-version.sh`.
-- CLI: `build, run, serve, check, test, script, repl, c, fmt, config gen,
-  bench, profile, inspect, debug, info, lsp, install, version, init`.
+- CLI (26 commands): `build, run, serve, check, test, script, repl, c, fmt,
+  config gen, bench, profile, inspect, decompile, translate, compare, migrate,
+  debug, info, lsp, install, deps, editor, new, init, version`.
  - `kof lsp` — Language Server via stdio (initialize, didOpen/didChange/
    didClose → publishDiagnostics from the real frontend, hover, completion,
    **references + rename** — word-boundary, single-file; `LspServerTest` 4/4).

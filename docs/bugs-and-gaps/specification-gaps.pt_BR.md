@@ -36,13 +36,16 @@ recomendações futuras (regra 14 da tarefa: não alterar comportamento).
   `sealed`/`permits`) — **não existem** no Kof em nenhuma posição: nem como
   keyword de declaração, nem como nome de função, variável, parâmetro ou
   campo. Em posição de declaração o parser dá `PARSE085` (diagnóstico claro —
-  R6); em outra posição, o `expectId` de cada parser já falha (`PARSE037`
-  variável, `PARSE023` parâmetro, …). Alinhado ao corpus (regra 4). KofScript
+  R6); em qualquer posição de nome (função, variável, parâmetro, método, campo,
+  classe, record, enum) o `ParseContext.expectId` emite o mesmo `PARSE085`
+  (medido 17/09, #330; antes o genérico `PARSE037` variável / `PARSE023`
+  parâmetro). Alinhado ao corpus (regra 4). KofScript
   (`.ks`) mantém `fn` como sintaxe própria e traduz na fronteira
   KofScript (`.ks`) **não** é exceção: é Kof puro (sem `fn`/`let`/`async`).
-  Testes: `FunctionSyntaxTest` (12: fun/fn/func
+  Testes: `FunctionSyntaxTest` (15: fun/fn/func
   rejeitados como prefixo, `fn calc(): Int` rejeitado, `fn()`/`var fun`/
-  `param fn` rejeitados, membro de classe, `Int calc():Int` idiomático).
+  `param fn` rejeitados, membro de classe, `Int calc():Int` idiomático; o
+  #330 adicionou `var fun`/`var fn`/`var func` como nome → `PARSE085`).
   `let`/`const`/`async` são inexistentes em `.kf` **e** `.ks` (KofScript não
   é JavaScript — sugar removido 06/09).
 
@@ -319,6 +322,12 @@ recomendações futuras (regra 14 da tarefa: não alterar comportamento).
   aridade divergente → SEM043 com esperado/encontrado (paridade de tipo exata
   aguarda dispatch virtual). Prova: 3 testes `CompilerDriverTest`
   (missing/wrongArity/complete-green).
+- **Refinado 17/09 (#322, `ebf59ca4`):** uma `abstract class` pode ADIAR os
+  métodos da interface (`abstract class A implements I {}` compila, JLS 8.4.8.1);
+  a obrigação é TRANSITIVA — um super abstrato cobra a subclasse concreta, então
+  `class C extends A {}` sem `f()` falha com `SEM043` nomeando classe + método +
+  "inherited via" (sem `AbstractMethodError` silencioso). Prova:
+  `AbstractClassPartialInterfaceE2ETest` 3/3.
 
 ### SG-016 — Semântica de classes aninhadas
 

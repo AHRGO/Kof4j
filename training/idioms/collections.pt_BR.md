@@ -108,7 +108,7 @@ class Registry {
 }
 ```
 
-## GOOD — transformação declarativa (0.3.22-beta)
+## GOOD — transformação declarativa (0.4.0-beta)
 
 ```kof
 var nomes = users.map((u: User) -> u.name)

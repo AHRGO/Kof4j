@@ -67,7 +67,8 @@ implements-clause = "implements" , type-ref , { "," , type-ref }
   (real virtual dispatch at runtime: `A a = B(); a.f()` → 2, *probe*).
 - **`override` modifier** is accepted but **not validated** (there is no check
   that the method exists in the super).
-- **Subtyping is not checked in the type checker** (SG-009) — see
+- **Subtyping is checked** (nominal, SG-009 ✅ FIXED 10/09): an unrelated class
+  in a typed declaration/assignment → `SEM021` — see
   [type-system.md](type-system.md) §7.
 
 ---
@@ -80,10 +81,12 @@ implements-clause = "implements" , type-ref , { "," , type-ref }
 | `private` | visible only in the class |
 | `protected` | visible in the package/subclass (JVM semantics) |
 
-- **`private` is NOT checked at compile-time**: accessing `p.x` from outside →
-  `IllegalAccessError` at **runtime** (*probe*). Visibility is emitted as a
-  JVM flag; the Kof compiler does not enforce it. **Implementation-defined**
-  (SG-013).
+- **`private`/`protected` are checked at compile-time for METHODS** (`SEM046`,
+  *probe*): calling `c.f()` from outside a private method (or outside the
+  hierarchy for `protected`) is a compile error; calling it from inside is fine.
+- **Field access is NOT checked**: reading/writing `c.x` on a `private`/
+  `protected` field from outside compiles — it fails only at runtime
+  (`IllegalAccessError`). The check covers method symbols, not fields. SG-013.
 - No modifier → `public` (`accessFlagsFor:3388`).
 - `static` field/method: access by class name (`S.k`, `S.k()` — *probe*).
 
@@ -197,9 +200,13 @@ class C implements I { Int f() { return 1 } }
 - **`default Int f() { … }`** → a method with a body in an interface works
   (*probe*).
 - **Does not accept type-parameters** (`interface F<T>` → `PARSE007`, *probe*).
-- **There is no check for complete implementation**: `class C implements I {}` without
-  `f()` **compiles** (*probe*) — it fails only at runtime if `f()` is called
-  (`AbstractMethodError`). **Unspecified** (SG-015).
+- **Complete implementation is checked at compile time** (`SEM043`, *probe*):
+  `class C implements I {}` without `f()` is a **compile error**, not a runtime
+  `AbstractMethodError`. An **`abstract class` may defer** the interface methods
+  (`abstract class A implements I {}` compiles); the obligation is **transitive**
+  to the concrete subclass — `class C extends A {}` without `f()` fails with
+  `SEM043` naming the class + method + "inherited via". `default` methods with a
+  body count as satisfied (#213). SG-015 resolved.
 - **There is no** trait, nor interface with state (fields), nor companion object.
 
 ---
@@ -221,7 +228,7 @@ entity User {
 }
 `
 
-- **It is a generated record + schema for `kof.orm`** (`AstNodes.java:147-158`).
+- **It is a generated record + schema for `kof.orm`** (`EntityDeclarationNode.java` / `KofOrm.java`).
 - Constraints `generated`/`unique` are schema metadata (compile-time, without
   reflection).
 - Enables the **Query DSL**: `User.query(db) { where age > 18; … }`.
@@ -231,9 +238,10 @@ entity User {
 
 ## 9. Nested classes
 
-`class A { class B { } }` — the parser accepts `type-declaration` as a member
-(`parseClassMember:740-742`). **The naming/scoping semantics of nesting
-is Unspecified** (SG-016) — there is no dedicated test that fixes `A.B` vs `B`.
+`class A { class B { } }` is a **parse error** (`SEM042`, *probe*): nested
+types do not exist in Kof — `ClassMemberParser.parseClassMember` rejects a
+`type-declaration` used as a member with "declare at top level"; the same branch
+covers nested interface/record/entity. Proof: `nestedClassGivesCleanDiagnostic` + `topLevelClassStaysGreen` (SG-016 resolved).
 
 ---
 
@@ -242,7 +250,7 @@ is Unspecified** (SG-016) — there is no dedicated test that fixes `A.B` vs `B`
 | Missing | Note |
 |---|---|
 | `sealed`/`permits` | not keywords — removed from the lexer (SG-002, 12/09): `sealed class S {}` → `PARSE010`; feature postponed (roadmap §2.5) |
-| `abstract class` non-instantiable at compile-time | `new A()` compiles, fails at runtime (SG-017) |
+| ~~`abstract class` non-instantiable at compile-time~~ **exists** | `new A()`/`A()` on an abstract class → `SEM041` (*probe*, SG-017 resolved) |
 | `companion object` | does not exist |
 | `object` (singleton) | there is no `object` keyword |
 | `data class` | use `record` |

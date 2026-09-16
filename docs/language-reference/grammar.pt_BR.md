@@ -158,8 +158,11 @@ c() { … }             // sem tipo → void (default)
 `
 
 **Não existe keyword de declaração de função** (SG-001 resolvido 06/09):
-`fn`/`fun`/`func` como prefixo são rejeitados com `PARSE085`. Como *nome* de
-função continuam identificadores válidos. Parâmetros aceitam **default values**
+`fn`/`fun`/`func` como prefixo são rejeitados com `PARSE085`. Em **qualquer
+posição de nome** (função, variável, parâmetro, método, campo, classe, record,
+enum) também são rejeitados com `PARSE085` — o `ParseContext.expectId` emite o
+diagnóstico canônico (#330, medido 17/09). Nunca são identificadores válidos.
+Parâmetros aceitam **default values**
 (`parameter = expression`), que geram overloads sintéticos por aridade no
 lowering.
 
@@ -257,9 +260,8 @@ Maior precedência no topo. **Todos os binários são left-associativos**
 
 ### 5.2 Short-circuit
 
-`&&` e `||` são avaliados com short-circuit por labels em **JVM e Native**;
-no **target JS o short-circuit é desligado** (`ExpressionLowerer.java:147-148`)
-— **Target-specific** (SG-006).
+`&&` e `||` são avaliados com short-circuit em **todos os targets** — JVM/Native
+por labels, JS pelos operadores nativos (SG-006 ✅ CORRIGIDO 09/09).
 
 ### 5.3 Operadores que NÃO existem (SG-002, verificado por probe)
 

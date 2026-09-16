@@ -23,9 +23,9 @@ final class CmdBuild {
     }
 
     static void run(String[] args) {
-        if (args.length < 2) { System.err.println("usage: kof build <source-dir> [--target jvm|native|js|android] [--backend <t>] [--frontend <t>] [--output <dir>] [--release] [--apk] [--fat] [--print-sizes] [--classpath <jars>] [--keystore <ks> [--storepass <p>] [--keypass <p>] [--alias <a>]]");
+        if (args.length < 2) { System.err.println("usage: kof build <source-dir> [--target jvm|native|js|native.risc|native.arm|android] [--backend <t>] [--frontend <t>] [--output <dir>] [--release] [--apk] [--fat] [--print-sizes] [--classpath <jars>] [--keystore <ks> [--storepass <p>] [--keypass <p>] [--alias <a>]]");
         if ("--help".equals(args[1]) || "-h".equals(args[1]) || "--version".equals(args[1])) {
-            System.out.println("usage: kof build <source-dir> [--target jvm|native|js|android] [--backend <t>] [--frontend <t>] [--output <dir>] [--release] [--apk] [--fat] [--print-sizes] [--classpath <jars>] [--keystore <ks> [--storepass <p>] [--keypass <p>] [--alias <a>]]");
+            System.out.println("usage: kof build <source-dir> [--target jvm|native|js|native.risc|native.arm|android] [--backend <t>] [--frontend <t>] [--output <dir>] [--release] [--apk] [--fat] [--print-sizes] [--classpath <jars>] [--keystore <ks> [--storepass <p>] [--keypass <p>] [--alias <a>]]");
             return;
         } return; }
         Path src = Path.of(args[1]);
