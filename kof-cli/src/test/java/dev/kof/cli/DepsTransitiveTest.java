@@ -198,7 +198,7 @@ class DepsTransitiveTest {
     // (guard honesto — Q5: skip explícito, nunca verde por acidente).
     @Test
     void realMvnResolvesTransitiveClosure(@TempDir Path tmp) throws Exception {
-        org.junit.jupiter.api.Assumptions.assumeTrue(mvnOnPath(),
+        org.junit.jupiter.api.Assumptions.assumeTrue(Deps.mvnAvailable(),
                 "`mvn` não está no PATH — E2E real de fechamento Maven pulado (honesto)");
         Path m2 = Path.of(System.getProperty("maven.repo.local",
                 System.getProperty("user.home", ".") + "/.m2/repository"));
@@ -223,15 +223,6 @@ class DepsTransitiveTest {
             assertTrue(cp.contains("jheaps-0.11.jar"), "transitiva no classpath: " + cp);
         } finally {
             restore();
-        }
-    }
-
-    private static boolean mvnOnPath() {
-        try {
-            return new ProcessBuilder("mvn", "-v").redirectErrorStream(true)
-                    .start().waitFor() == 0;
-        } catch (Exception e) {
-            return false;
         }
     }
 
