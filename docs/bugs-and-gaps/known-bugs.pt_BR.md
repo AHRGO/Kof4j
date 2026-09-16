@@ -14,6 +14,7 @@
 > | **§254 ✅ CORRIGIDO 15/09 (lane dona development `.18`, `713031a7`)** | golden `[stdvalidation]` da ConformanceMatrix codificava a saída ERRADA ANTIGA (4 linhas vs o oráculo mod-11) — célula vermelha no tip limpo; re-gravado pela dona com prova no JVM executado. |
 > | **§255 🔴 ABERTO 15/09 (lane development `.18`)** | `KofDbE2ETest.crossNativeSqliteNowCompiles` falha duro em hosts sem `libsqlite3` cross (falta guard `assumeTrue`; COMP001 `riscv64-ld: -lsqlite3` não encontrado). |
 > | **§256 🟡 PARCIAL 16/09 (lane development `.18`)** | fechamento CONC001 deixou 2 vermelhos no tip limpo (worktree `4af4356f`): ~~célula de gaps de `learn/18-concurrency.md` dessincronizada (guard)~~ **face (a) ✅ FECHADA 16/09 pela lane docs/development `192.168.100.22` (`dd2c7fcb` — `ConcurrencyGapsDocTest` 3/3 verde)** + riscv64 `poll(b)` retorna 0 após scan do selectAny (aarch casa) — face (b) ABERTA. PRÉ-EXISTENTE, não §257. |
+> | **§258 🔴 ABERTO 16/09 (lane development `.18`)** | CodeQL #773 `java/comparison-with-wider-type` (`i < n`, int vs long) em `KofJsRunner.listValues:510` (DB001 fatia A `3e55df51`) — pre-push gate do repo VERMELHO, bloqueia o push de TODAS as lanes; a dona conserta no próprio arquivo (bound check, precedente `d6eaae0c`); bypass `CODEQL_GATE_SKIP=1` + causa declarada enquanto. |
 > | **§257 ✅ CORRIGIDO 15/09 (lane compiler `192.168.100.17`)** | literais `static final String` de texto-de-runtime = inlining ConstantValue do javac → falso vermelho em build incremental (`validationBrJs`); 77 campos de-`final` + `RuntimeConstantInliningGuardTest` (ASM, ConstantValue) trava. |
 > | **§173 ✅ CORRIGIDO 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `++`/`--`/compound em `Long`/`Double`/`Float` + incremento de ELEMENTO de array: JVM VerifyError (literal `INT 1` em binário de 2 slots, `DUP` de 1 slot, `arraystore` sem `[array,index]`), Native core dump, Script `NoSuchElementException`, JS `stack underflow`/`KofDup2`. 4 targets; caça Q4 13/09 (sobre o §167). Prova: `BackendParityTest.parityIncrementWideTypesAndArrayElement` + `KofInterpreterParityTest.incrementWideTypesAndArrayElement` + célula `increment` 4/4. |
 > | **§174 ✅ CORRIGIDO 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `return`/`throw` dentro de um `if` dentro do `try`: JVM/Native/Script corretos, KofJS abortava com `COMP002 unexpected KofCatchStart` (o `JsIfThrowElse.parseElse` consumia o endLabel do try envolvente ao tratar o `then` incondicional como if-else). Fix sem mudança de contrato/IR (guarda `isTryEndLabel`). Prova: `CoreRegressionE2ETest.returnInsideIfInsideTryJs`. |
@@ -8788,3 +8789,40 @@ usuário — diagnostic em compile-time é a meta (regra 6).
 - **Esperado:** a dona `.18` do CONC001 (a) ~~atualiza a célula~~ **FEITO 16/09 pela lane docs/development `192.168.100.22` (`dd2c7fcb`)** e (b) corrige o `poll` riscv64 para `crossNativeConcurrencyHelpersRun` ficar verde nas DUAS arches (Q3 cross-target).
 - **Repro:** parte (a): `mvn -o -pl kof-compiler -am test -Dtest='ConcurrencyGapsDocTest'` — verde no tip. Parte (b): worktree em tip com toolchain cross + qemu: `mvn -o -pl kof-compiler -am test -Dtest='KofConcurrency2Test#crossNativeConcurrencyHelpersRun'`.
 - **Estado:** 🟡 PARCIAL 16/09 — catalogado 16/09 pela lane compiler `192.168.100.17`. **Face (a) ✅ FECHADA 16/09 pela lane docs/development `192.168.100.22` (`dd2c7fcb` — tabela EN+PT sincronizada, `ConcurrencyGapsDocTest` 3/3 verde no tip).** **Face (b) segue ABERTA** (riscv64 `poll(b)`=0 após selectAny — correção de comportamento, exige toolchain cross/qemu). Ponteiro: lane development `.18` (CONC001, autora de `e8364c97`). Relacionado: §129 (handler cross-thread de spawn), §257 (mesma sessão, raiz DIFERENTE).
+
+### §258 — CodeQL #773 `java/comparison-with-wider-type` em `KofJsRunner.listValues` (DB001 fatia A, lane `.18`) bloqueia TODO push: o pre-push gate é repo-wide
+
+- **Achado 16/09 ~04:30 pela lane docs/development `192.168.100.22`**, ao dar
+  push na varredura R6-documental (`eaba0f24`): `scripts/codeql-gate.sh --fast`
+  voltou VERMELHO — `#773 [java/comparison-with-wider-type]
+  kof-runtime/src/main/java/dev/kof/runtime/KofJsRunner.java:510`. O gate não
+  tem exceção "não é meu arquivo": uma vez que existe alerta novo na
+  `beta-0.4.0`, **nenhum agente consegue dar push** até ele ser resolvido (é o
+  desenho — o gate é o piso do repo). O alerta foi introduzido por `3e55df51`
+  (DB001 fatia A, lane `.18`), já no remoto — logo foi um **pushed-red** que o
+  gate da sessão da `.18` não pegou (ou pulou sem causa declarada).
+- **Raiz (leitura estática, sem cross):** `listValues` faz
+  `long n = list.getArraySize(); new Value[(int) n]` e o limite do loop
+  `int i < n` compara int com long. `getArraySize()` pode em princípio exceder
+  `Integer.MAX_VALUE` num array guest gigante → o cast `(int) n` wrap silencioso
+  (negativo → `NegativeArraySizeException`, ou truncado → binds de tamanho
+  errado sem diagnóstico = violação R6). O mesmo padrão nos vizinhos
+  (`d6eaae0c` consertou uma onda desses) foi corrigido com bound check
+  explícito + erro, não cast cru.
+- **Repro (não precisa toolchain — API do CI ou scan local):**
+  `scripts/codeql-gate.sh --fast` em qualquer push (bloqueia com RED #773);
+  o padrão em si: `KofJsRunner.java:506-513`.
+- **Esperado:** a dona `.18` (autora de `3e55df51`, unidade ainda EM CURSO)
+  adiciona o bound check (`n > Integer.MAX_VALUE` → `guestError`/throw,
+  casando o precedente `d6eaae0c`) — conserto de 3 linhas dentro do arquivo
+  que aquela lane já está editando. NÃO consertado aqui: regra 6 (áurea —
+  mesmo arquivo, conflito vivo com a unidade DB001 IN PROGRESS) + regra 8
+  (nunca editar às cegas a feature em voo de outra lane). Até entrar, as
+  OUTRAS lanes usam legitimamente o bypass honesto (`CODEQL_GATE_SKIP=1` +
+  causa declarada: "bloqueado pelo §258, dono `.18`") — o bypass está
+  documentado no próprio hook exatamente para este caso; "consertar" o
+  gate/teste calado para passar é o que a Q5 proíbe, bypass-com-causa não é.
+- **Estado:** 🔴 ABERTO 16/09 — catalogado pela lane docs/development
+  `192.168.100.22` com a saída completa do gate. Ponteiro: lane development
+  `.18` (DB001, autora de `3e55df51`). Relacionado: §256 (CONC001 da mesma
+  lane), `d6eaae0c` (conserto precedente da mesma regra).

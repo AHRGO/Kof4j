@@ -14,6 +14,7 @@
 > | **§254 ✅ FIXED 15/09 (owning lane development `.18`, `713031a7`)** | `[stdvalidation]` golden of the ConformanceMatrix encoded the OLD wrong output (4 lines vs the mod-11 oracle) — cell red on clean tip; re-recorded by the owner with the executed-JVM proof. |
 > | **§255 🔴 OPEN 15/09 (lane development `.18`)** | `KofDbE2ETest.crossNativeSqliteNowCompiles` hard-fails on hosts without cross `libsqlite3` (missing `assumeTrue` guard; COMP001 `riscv64-ld: -lsqlite3` not found). |
 > | **§256 🟡 PARTIAL 16/09 (lane development `.18`)** | CONC001 closure left 2 reds on clean tip (worktree `4af4356f`): ~~`learn/18-concurrency.md` gaps cell desynced (guard)~~ **face (a) ✅ CLOSED 16/09 by lane docs/development `192.168.100.22` (`dd2c7fcb` — `ConcurrencyGapsDocTest` 3/3 green)** + riscv64 `poll(b)` returns 0 after selectAny scan (aarch agrees) — face (b) OPEN. PRE-EXISTING, not §257. |
+> | **§258 🔴 OPEN 16/09 (lane development `.18`)** | CodeQL #773 `java/comparison-with-wider-type` (`i < n`, int vs long) in `KofJsRunner.listValues:510` (DB001 fatia A `3e55df51`) — repo-wide pre-push gate RED, blocks ALL lanes' pushes; owner fixes in-file (bound check, precedent `d6eaae0c`); bypass `CODEQL_GATE_SKIP=1` + cause declared meanwhile. |
 > | **§257 ✅ FIXED 15/09 (lane compiler `192.168.100.17`)** | `static final String` runtime-text literals = javac ConstantValue inlining → false red on incremental build (`validationBrJs`); 77 fields de-`final` + `RuntimeConstantInliningGuardTest` (ASM, ConstantValue) locks it. |
 > | **§173 ✅ FIXED 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `++`/`--`/compound on `Long`/`Double`/`Float` + increment of an array ELEMENT: JVM VerifyError (literal `INT 1` in a 2-slot binary, 1-slot `DUP`, `arraystore` without `[array,index]`), Native core dump, Script `NoSuchElementException`, JS `stack underflow`/`KofDup2`. 4 targets; Q4 hunt 13/09 (over §167). Proof: `BackendParityTest.parityIncrementWideTypesAndArrayElement` + `KofInterpreterParityTest.incrementWideTypesAndArrayElement` + cell `increment` 4/4. |
 > | **§174 ✅ FIXED 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `return`/`throw` inside an `if` inside the `try`: JVM/Native/Script correct, KofJS aborted with `COMP002 unexpected KofCatchStart` (the `JsIfThrowElse.parseElse` consumed the endLabel of the enclosing try when treating the unconditional `then` as if-else). Fix without contract/IR change (`isTryEndLabel` guard). Proof: `CoreRegressionE2ETest.returnInsideIfInsideTryJs`. |
@@ -8895,3 +8896,38 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   behavior fix, needs the cross toolchain/qemu). Pointer: lane development `.18`
   (CONC001, author of `e8364c97`). Related: §129
   (cross-thread spawn handler), §257 (same session, DIFFERENT root cause).
+
+### §258 — CodeQL #773 `java/comparison-with-wider-type` on `KofJsRunner.listValues` (DB001 slice A, lane `.18`) blocks EVERY push: the pre-push gate is repo-wide
+
+- **Found 16/09 ~04:30 by lane docs/development `192.168.100.22`**, when pushing
+  the R6-documental sweep (`eaba0f24`): `scripts/codeql-gate.sh --fast` returned
+  RED — `#773 [java/comparison-with-wider-type]
+  kof-runtime/src/main/java/dev/kof/runtime/KofJsRunner.java:510`. The gate has
+  no "not-my-file" exception: once a new alert exists on `beta-0.4.0`, **no
+  agent can push** until it is resolved (by design — the gate is the repo's
+  floor). The alert was introduced by `3e55df51` (DB001 fatia A, lane `.18`),
+  already on the remote — so it was a **pushed-red** the gate of `.18`'s session
+  did not catch (or bypassed without a declared cause).
+- **Root cause (static reading, no cross needed):** `listValues` does
+  `long n = list.getArraySize(); new Value[(int) n]` and the loop bound
+  `int i < n` compares int to long. `getArraySize()` can in principle exceed
+  `Integer.MAX_VALUE` on a huge guest array → the `(int) n` cast silently
+  wraps (negative → `NegativeArraySizeException`, or truncated → wrong-length
+  binds with no diagnostic = R6 violation). The same pattern in the neighbors
+  (`d6eaae0c` fixed a wave of these) was fixed with an explicit bound check +
+  error, not a raw cast.
+- **Repro (no toolchain needed — CI API or local scan):**
+  `scripts/codeql-gate.sh --fast` on any push (blocks with RED #773);
+  the pattern itself: `KofJsRunner.java:506-513`.
+- **Expected:** the `.18` owner (author of `3e55df51`, unit still IN PROGRESS)
+  adds the bound check (`n > Integer.MAX_VALUE` → `guestError`/throw, matching
+  the `d6eaae0c` precedent) — a 3-line fix inside the file that lane is already
+  editing. NOT fixed here: rule 6 (golden — same file, live conflict with the
+  IN-PROGRESS DB001 unit) + rule 8 (never blind-edit another lane's in-flight
+  feature). Until it lands, OTHER lanes legitimately use the honest bypass
+  (`CODEQL_GATE_SKIP=1` + declared cause: "blocked by §258, owned by `.18`") —
+  the bypass is documented in the hook itself for exactly this case; silently
+  "fixing" the test/gate to pass is what rule Q5 forbids, bypass-with-cause is not.
+- **Status:** 🔴 OPEN 16/09 — catalogued by lane docs/development `192.168.100.22`
+  with the full gate output. Pointer: lane development `.18` (DB001, author of
+  `3e55df51`). Related: §256 (same lane's CONC001), `d6eaae0c` (same-rule precedent fix).
