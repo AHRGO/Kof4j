@@ -134,27 +134,44 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 > **✅ FEITO (16/09 ~00:30, dono = 192.168.100.22, lane docs/development — modo autônomo ativado `scripts/auto-loop.sh start ses_f5806df42ffeulR14Wq8KhA7Fn 5 9093`): sync CONC001 no corpus (regra 5 do freeze — R6 documental pós-`e8364c97`).** O fechamento do CONC001 cross (15/09, lane nat) deixou 4 docs + 1 comentário Java afirmando o CONTRÁRIO do código ("selectAny/poll/done/cancel/awaitTimeout não existem em riscv/aarch", "gate CONC001 em compile-time desde 11/09" — gate REMOVIDO em `e8364c97`). Sincronizado: `learn/18-concurrency.pt_BR.md` (tabela ❌→✅ espelhando o EN já corrigido + nota riscv/aarch reescrita), `docs/language-reference/concurrency.md`+`.pt_BR.md` (linha da tabela riscv/aarch ⚠️→✅ + parágrafo do gate → nota histórica com provas `crossNativeConcurrencyHelpersRun`/`crossNativeCancelDuringRunningWorker`), `docs/development/planning-otp-supervision.md`+`.pt_BR.md` (nota de topo 16/09 + DD-OTP-03/09/emenda S2: premissa morta — o blocker do supervisor cross AGORA é só o `OTP001` TLS, não o `selectAny` ausente; decisão de fallback reabre na fila da mantenedora, regra 6 — não-atacar), `known-bugs.md`+`.pt_BR.md` (linha do §129 que ainda citava "selectAny/CONC001" como gap cross), comentário de `CompilerSupervisor.java` (classe+linha do gate OTP001 — texto, zero mudança de código). **Prova (Q1: o guard JÁ é o teste da doc — Q0: as células ❌+citação morta de `crossMissingConcurrencyHelpersReportConc001` falhariam no guard):** `ConcurrencyGapsDocTest` 3/3 verde pós-sync com o EN corrigido e o PT espelhado; `docs-lang.sh check` = 0 drift; `mvn -o -pl kof-compiler -am` verde (só Java tocado: 1 comentário). **WIP resgatado (regra 8):** tabela EN de `learn/18-concurrency.md` (de outra instância, sem commit) + flock/watchdog + fix pipefail do `scripts/issue-watcher.sh` (commit separado, prova `bash -n` + dry-run). NÃO TOCAR: §252/#273, §205 fatia 2, §192 (nat), D-PRINT/#168 (lane .15), N1→N4 (compiler).
 
-## PRÓXIMO PASSO (re-dispacho lê isto)
-> **PRÓXIMO PASSO (16/09 ~01:30, dono = 192.168.100.22, lane docs/development —
+ ## PRÓXIMO PASSO (re-dispacho lê isto)
+> **✅ FEITO (16/09 ~04:30, dono = 192.168.100.22, lane docs/development —
+> autônomo, onda R6-documental): varredura CONC001/CONC003/contagem-suíte
+> ESGOTADA no corpus.** 5 commits nesta sequência: `76d1cfc8` (18 células
+> "JS sequential/sequencial + CONC003 parcial" em 10 arquivos EN+PT —
+> stdlib/comparison/syntax/fake-idioms/README-learn/roadmap; as datadas
+> `architecture:291`/`roadmap:216`/`KOFANDROID:209` preservadas),
+> `9fbbaed8` (README development/ header 1662→2182/0/0/190-medido EN+PT),
+> `5d2e3225` (AGENTS.md guia 1636→2182 nos 4 blocos EN+PT; frase de
+> segurança "13 erros do node" → "guardas ambientais documentadas"),
+> `95c8c41f` (status.md×2 + backend-parity + ecosystem-coverage, 6
+> arquivos EN+PT, contagem viva→2182/0/0/190). **Provas:** docs-lang.sh
+> check = 0 drift em TODOS; grep exaustivo dos padrões ("JS sequential",
+> "CONC003 partial", "1662", "1636", "157 skip", "13 erros") sobra SÓ
+> histórico datado (`docs/history/`, known-bugs §NNN por-seção, DECOMPILER
+> "1636 stubs"=contador de stubs não-suíte); ConcurrencyGapsDocTest +
+> ConformanceMatrixDocTest + KofWsFrameTest 7/7 verdes. Resgate regra 8 do
+> WIP CodeQL `KofWsFrameTest` = no-op (a lane compiler já commitou
+> `b6a6a870` no intervalo). check_500 OK (crítico 0; os 3 avisos 513/577/597
+> são da lane compiler, catalogados — não-meus).
+>
+> **PRÓXIMO PASSO (16/09 ~04:30, dono = 192.168.100.22, lane docs/development —
 > autônomo ATIVO `auto-loop.sh start ses_f5806df42ffeulR14Wq8KhA7Fn 5 9093`,
-> cron verificado no state):** sequente desta sessão (que fechou a varredura
-> CONC001/CONC003 no corpus: `dd2c7fcb`+`30cf3e1c`(PT)+`ce8e76a0`(§256
-> face-a+espelho PT dos §254–§257 que só existiam em EN)+`a81c99c5`(training
-> CONC003)+resgates regra 8 `447eda38`/`e1204c8c`): **(1)** checar
-> `git fetch` + re-leitura desta seção — as lanes .18/.22 estão ativas e o
-> PRÓXIMO delas pode ter mudado; **(2)** suíte-completa no tip pós-meu-push
-> (medida nesta sessão em `dd2c7fcb..1bec1c36`-era: 2182/0/0/190 — re-medir
-> só se o tip mover código, não docs); **(3)** trabalho real da lane =
-> varredura R6-documental: grep de afirmações vivas dessincronizadas do tip
-> (padrões CONC001/CONC003 já esgotados; candidatas: linhas "JS sequential"
-> residuais em `docs/architecture/`, contagem da suíte no README
-> development/ que declare número fixo podre — conferir contra
-> `wc -l scripts/check_500-baseline.txt` e os relatórios); **(4)** se nada
-> disso aparecer e o gate seguir verde: **RECUSAR o re-trigger** (condição
-> STABILITY da AGENTS.md — registrar aqui + `auto-loop.sh stop`). NÃO TOCAR:
+> cron verificado no state):** **(1)** `git fetch` + re-leitura desta seção —
+> as lanes .18 (DB001-JS EM CURSO, `192.168.100.18`) e .22 estão ativas;
+> **(2)** varredura R6-documental nos FECHAMENTOS das outras lanes: quando o
+> DB001-JS fechar (issue lane .18), as células "DB001 (JS)" do stdlib/
+> backend-parity/status/coverage-ecosystem ganham sync desta lane (padrão do
+> `76d1cfc8`) — conferir `git log` por `DB001`/`§25x`/`CONC`/`OTP` fechados
+> sem doc-sync ANTES de inventar trabalho novo; **(3)** contagem da suíte só
+> re-medir se o tip mover CÓDIGO (a linha do README development/ declara
+> "rots with every commit — authoritative = a execução"); **(4)** se nada
+> aparecer (nenhum fechamento sem sync, gate verde): **RECUSAR o re-trigger**
+> (condição STABILITY da AGENTS.md — registrar aqui + `auto-loop.sh stop`).
+> NÃO TOCAR: DB001-JS/WEB001/UI-web-db (development .18 — regra absoluta da
+> mantenedora 16/09, frente DELA; esta lane só sincroniza docs após o FECHAMENTO),
 > §256-face-b (riscv poll, nat .18), §253-face-A (compiler .22), §252/§248,
-> D-PRINT/#168 (.15), N1→N4 (compiler), DB001-JS/WEB001/UI-web-db (development
-> .18 — regra absoluta da mantenedora 16/09, frente dela).
+> D-PRINT/#168 (.15), N1→N4 (compiler), split ≥600 check_500 (compiler).
 > **FEITO (14/09 ~09:30, dono = 192.168.100.22, lane CodeQL/health): baseline
 > 25 + codemod `_` (agregados no main pela agregacao do cluster).** (a)
 > `b3ab9858` D-BASELINE: toolchain do repo 21→25 (pom+workflows+package.sh+
