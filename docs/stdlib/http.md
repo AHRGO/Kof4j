@@ -337,10 +337,10 @@ http.circuit(0)       // turns off the circuit and resets the failure state
 ```
 
 - **`timeout(s)`** — applies `Duration.ofSeconds(s)` to each request
-  (`JvmWebRuntime.kof_http_timeout_set`). Default: 15 s.
+  (`JvmWebHttpRuntime.kof_http_timeout_set`). Default: 15 s.
 - **`retry(n)`** — `n` extra attempts; retries the request when it throws
   an exception (connection refused, timeout) **or** when the HTTP status is `>= 500`
-  (`JvmWebRuntime.kof_http_retry_set`). Default: 0. `retry(0)` turns it off.
+  (`JvmWebHttpRuntime.kof_http_retry_set`). Default: 0. `retry(0)` turns it off.
 - **`circuit(trips)`** — opens the circuit after `trips` consecutive failures
   (exception or HTTP `>= 500`); while open, requests fail immediately
   (fail-fast) with `IOException("kof.http circuit open (fail fast): <url>")`
