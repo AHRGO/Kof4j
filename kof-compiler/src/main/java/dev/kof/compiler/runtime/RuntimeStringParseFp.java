@@ -144,6 +144,8 @@ kof_string_to_float:
                 xorl %r11d, %r11d            # nFrac
                 xorl %ecx, %ecx              # nDig (r10+r11)
                 xorl %edx, %edx              # flags: 1 neg, 2 dot
+                xorl %r8d, %r8d              # exp neg flag (path sem expoente leia 0 -- §260)
+                xorq %r9, %r9                # expoente (path sem expoente leia 0 -- §260)
                 movzbl 24(%rbx,%r14), %eax
                 cmpl $45, %eax
                 jne .Lpdd_nots
