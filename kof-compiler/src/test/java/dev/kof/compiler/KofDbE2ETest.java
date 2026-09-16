@@ -662,7 +662,13 @@ class KofDbE2ETest {
     @Test
     void crossNativeSqliteNowCompiles(@TempDir Path tempDir) throws IOException {
         // DB001 fechado no cross (15/09): o gate caiu — db.* compila nos dois
-        // alvos cross (sem sysroot, o ld falha ALTO — R6, nunca silencioso).
+        // alvos cross. §255 (16/09): compilar p/ cross INCLUI o link contra a
+        // libsqlite3 do sysroot (link-by-use); sem ela o ld falha ALTO — que é
+        // R6 correto p/ o USUÁRIO, mas um falso-vermelho p/ a SUÍTE numa máquina
+        // sem o pacote multiarch. O guard é o mesmo par do irmão
+        // crossNativeSqliteRoundtrip: pula honesto quando toolchain/sysroot/
+        // sqlite ausentes; na máquina com eles roda como antes (Q0: sem o
+        // guard, riscv64-ld "não foi possível localizar -lsqlite3" = red).
         Path source = tempDir.resolve("Main.kf");
         Files.writeString(source, """
             main() {
@@ -670,6 +676,14 @@ class KofDbE2ETest {
             }
             """);
         for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            String arch = t.nativeArch();
+            String as = arch.equals("riscv64") ? "riscv64-linux-gnu-as" : "aarch64-linux-gnu-as";
+            String ld = arch.equals("riscv64") ? "riscv64-linux-gnu-ld" : "aarch64-linux-gnu-ld";
+            assumeTrue(has(as, ld, "qemu-" + arch), "cross toolchain " + arch + " ausente — pulando");
+            assumeTrue(dev.kof.compiler.nat.NativeCrossLink.sysrootOrNull(arch) != null,
+                    "sysroot cross " + arch + " ausente — pulando");
+            assumeTrue(dev.kof.compiler.nat.NativeCrossLink.sqliteAvailable(arch),
+                    "libsqlite3 " + arch + " ausente no sysroot — pulando");
             CompilationResult r = new CompilerDriver().compile(source, tempDir.resolve("cross-" + t), t);
             assertTrue(r.success(), t + " db.* agora compila (DB001 fechado): "
                     + r.diagnostics().getDiagnostics());
