@@ -9386,6 +9386,30 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   (ex. kof_float_buf), enraiza-lo em kof_heap_root_start (fix de 1 linha,
   raiz permanente como a tabela de intern) ou move-lo p/ .bss; (2) se nao
   houver, diff do xmm0 na linha 20 sem/trigger p/ isolar o que muda.
+- **TRACE DE INSTRUCOES do parse '2.5' na linha 21 com trigger (16/09
+  ~20:30, stepi Python-gdb — CAUSA-2 RESOLVIDA ao nivel de mecanismo):**
+  ao entrar em `.Lkfs_pd` pelo thunk da linha 21, os registradores ja vem
+  da main com `r15=2` STALE (resto do parse de "1.5"/"12.3456" anteriores —
+  a main guarda r15 como live-range entre calls). O parser faz
+  `mov %r12d,%r15d` (len) em 40459f e o loop de trim compara
+  `cmpl %r15d,%r14d` — com trigger, em 4045a2 ve-se r15=3 correto, MAS em
+  4046f1+ (corpo `.Lpdd_num`) o r13 nao e mais o mantissa acumulada
+  esperada: o `h13 r13=25` do BASE (que gera 2.5 correto) NUNCA aparece no
+  trigger; na main da linha 21, apos `call kof_string_from_literal`
+  (que ALOCA = dispara o trigger no meio!), o r15 sai DO ALLOC com valor
+  de busca da free-list (meu ad-hoc injeta `movq kof_free_head,%r13;
+  xorq %r14,%r14; jmp .Lkof_alloc_search` — o caminho de saida do alloc
+  restaura r15 do prologue push... mas `collect_now` + search pisam r15
+  como ponteiro de walk SEM o restaurar no caminho jmp-back). CORRECAO
+  CANDIDATO (provar na proxima sessao): o trigger ad-hoc esta INCOMPLETO —
+  falta preservar r10..r15 no bloco injetado (empilhar antes do
+  `call kof_gc_collect_now` e dos `jmp .Lkof_alloc_search` e restaurar
+  antes de cair no `.Lkof_alloc_mmap`/pop). A causa-2 pode ser 100%
+  ARTEFATO DO AD-HOC (trigger real seria uma versao com registro-save
+  completo = G-6(a)). Teste exato: re-injetar o trigger com
+  push/pop de r10-r15 ao redor do bloco collect_now+search e rodar FP
+  1..21: se verdissimo, a frente 2 fecha com o trigger COMPLETO (sem
+  stack-map, sem backend!).
 - **HIPÓTESE DE SCRATCH REFUTADA (16/09, leitura de código):** .Lkfs_pd
   (RuntimeStringParseFp) nao aloca nada e nao usa buffer — os unicos
   acessos a memoria sao `movzbl 24(%rbx,%rN)` (leitura do payload do
@@ -9406,6 +9430,25 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   kof_string_from_literal atualiza o size-field do bloco vindo da free-list
   (provavelmente sim; o suspeito e o sweep gravar um garbage-size no
   free-list-link que o alloc copia pro header).
+- **MEDICAO DO BLOCO '2.5' (16/09 ~19:30, gdb p25.gdb condicional ao
+  conteudo '2.5'):** BASE=header 0x40 (=64, size coerente), LEN@+16=3
+  (correto!), PAYLOAD[0..3]=32 2e 35 (bytes '2.5' corretos nos dois
+  binarios). DIVERGENCIA ACHADA no trigger: dword em payload+4 =
+  0x00003000 ('0' no byte de indice 4) vs. 0 no base. ANALISE: o parser le
+  24(%rbx,%rN) com rN < len=3 — o byte extra NAO entra no parse (por isso
+  o double do base esta certo E o do trigger pode estar errado apenas se o
+  path lermos adiante de len: o .Lpdd_num para em 3 digitos). Origem do
+  0x30 provavel: link da free-list escrito DENTRO do payload de um vizinho
+  (o bloco bb000 foi morto/re-usado no boot; o qword +40 =
+  0x7ffff7fbc000 = proximo mmap — o '30' = byte baixo do endereco
+  0x...30?? ou resto de string anterior). IMPORTANTE PARA A PROXIMA
+  SESSAO: o thunk `kof_string_to_float` (+0x0..+0x9) e SÓ cvtsd2ss — o
+  break para medir xmm0 final deve ir em `kof_string_to_float+0x5`
+  (pos-ret do .Lkfs_pd interno, end. real 40457e) e o parse real tem que
+  ser instrumentado via .Lkfs_pd+offsets (localizar no objdump). A
+  divergencia 'false' da linha 20 pode MORAR no byte extra se o main
+  comparar o float RE-EMBALADO (box Float com 4 bytes lidos de um buffer
+  de intern corrompido) — nao no parse em si.
 
 
 
