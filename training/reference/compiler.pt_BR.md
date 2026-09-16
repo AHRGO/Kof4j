@@ -81,7 +81,7 @@ Fixes 27/08:
 - `kof.cache`, `Map/Set`, `String?`, pattern record destructuring
 
 ### KofScript
-- JIT in-memory, top-level `let`/`const` → `var`/`val` preprocess + `KofScriptGlobals`, evalCache 64 LRU
+- JIT in-memory, `var`/`val` no topo → `KofScriptGlobals` (sem preprocess `let`/`const` — sugar JS removido `183cb048`), evalCache 64 LRU
 
 ### KofC
 - C subset (`int` globals, `void` funcs, `if`/`while`/`*(int*)`/`&`) → x86_64 via `as`/`ld`

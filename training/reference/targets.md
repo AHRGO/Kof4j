@@ -134,8 +134,8 @@ kof script app.ks --target jvm|native|js --watch --inspect
 kof repl
 ```
 
-- Top-level `let`/`const` → `KofScriptGlobals` static fields + rewriting (27/08)
-- `let x = 5` `const y: Int = 10` → `class KofScriptGlobals { static Int x = 5 }`
+- Top-level `var`/`val` → `KofScriptGlobals` static fields + rewriting
+- `var x = 5` `val y: Int = 10` → `class KofScriptGlobals { static Int x = 5 }` (no `let`/`const` — JS sugar removed `183cb048`; the annotated form only "works" via parser hole §263)
 - JIT in-memory + 64-entry LRU cache (evalCache/fileCache)
 - Supports `--watch` (WatchService 200ms debounce) and `--inspect` (IRStatistics)
 
