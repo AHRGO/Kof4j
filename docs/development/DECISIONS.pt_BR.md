@@ -977,10 +977,12 @@ TAREFA segue as frentes abaixo.
    source maps linha ✅; DWARF Native linha ✅ parcial — variáveis/expressões
    e breakpoints nativos pendentes + ext. VS Code.
 5. **KofJS — a plataforma web no browser** — ES Modules via GraalJS; base do
-   servidor web ✅ (`HttpServer` + `KofJsWebQueue`); residual
-   ws/sse/TLS/path-params = **WEB001**.
-6. **kof.web no Native** — residual **WEB002**: TLS, path params,
-   keep-alive, ws/sse.
+   servidor web ✅ (`HttpServer` + `KofJsWebQueue`); SSE handler-scoped ✅
+   16/09 (`7cd69a7b`); residual por feature: ws = **WEB004**, TLS = **WEB002**,
+   sse push pós-return/multi-cliente = **WEB003**, path params/keep-alive =
+   **WEB001** (linha canônica: `backend-parity.pt_BR.md` "web no Native/JS").
+6. **kof.web no Native** — residual por feature: TLS = **WEB002**, path
+   params/keep-alive = **WEB001**, ws = **WEB004**, sse = **WEB003**.
 7. **kof.db/orm no JS** — **DB001 FECHADO 16/09** (nao-tipado
    `connect/execute/query/close/transaction` na ponte do host GraalJS —
    `3e55df51`+`eb9140cb`); residual: `db.query<T>` tipado = `DB002`

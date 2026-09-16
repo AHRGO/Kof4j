@@ -1020,10 +1020,12 @@ fronts below.
    source maps line ✅; DWARF Native line ✅ partial — native
    variables/expressions and breakpoints pending + VS Code ext.
 5. **KofJS — the web platform in the browser** — ES Modules via GraalJS;
-   web server base ✅ (`HttpServer` + `KofJsWebQueue`); residual
-   ws/sse/TLS/path-params = **WEB001**.
-6. **kof.web in Native** — residual **WEB002**: TLS, path params,
-   keep-alive, ws/sse.
+   web server base ✅ (`HttpServer` + `KofJsWebQueue`); SSE handler-scoped ✅
+   16/09 (`7cd69a7b`); residual per feature: ws = **WEB004**, TLS = **WEB002**,
+   sse post-return push/multi-client = **WEB003**, path params/keep-alive =
+   **WEB001** (canonical row: `backend-parity.md` "web on Native/JS").
+6. **kof.web in Native** — residual per feature: TLS = **WEB002**, path
+   params/keep-alive = **WEB001**, ws = **WEB004**, sse = **WEB003**.
 7. **kof.db/orm in JS** — **DB001 CLOSED 16/09** (untyped `connect/execute/query/close/transaction` on the GraalJS-host bridge — `3e55df51`+`eb9140cb`); residual: typed `db.query<T>` = `DB002` (architectural: JS emits no JVM bytecode on the host classpath) + `kof.orm` = `ORM001` (same wall; WASM planned).
 
 **Relation to the other rules:** this decides **order**, not **what is
