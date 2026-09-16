@@ -9239,6 +9239,19 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   = paridade JVM/x86/JS preservada — freeze rule 5).
 - **Árvore:** gatilho OFF; mark corrigido (G-6b) + guard. Face (2)
   continua a fila: G-6(a).
+- **G-6a tentativa 1 (16/09, REVERTIDA — medição honesta):** capturar os 8
+  caller-saved (rcx/rdx/rsi/rdi/r8-r11) no prologue do `kof_alloc` (8 pushes,
+  paridade de alinhamento preservada, pops espelhados nos 2 épicos) +
+  re-ligar o trigger. Resultado: keep/supervisor/parse-linha20-caso-único
+  continuaram como esperado, MAS o programa FP REGREDIU para 4 linhas falsas
+  (`0.3`/`123.456`/`2.5`/`7` vs. só `2.5` antes) — capturar/restaurar os
+  caller-saved altera algo além do som do GC (provavelmente interação com o
+  que o próprio `collect_now`/mark enxerga ou com sites que dependem do
+  clobber). A causa-(2) NÃO é "só mais um push no prologue": exige auditoria
+  sítio-a-sítio (o call-site exato que segura o vivo e o que ele assume).
+  Revertido; árvore = estado verde `92d11a03`. PRÓXIMO: auditoria real, não
+  tentativa-e-erro.
+
 
 
 ### §261 — KofJS `window.bind` collides Component ids with raw-widget node ids: a widget bound after a Component renders nothing
