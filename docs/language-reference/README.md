@@ -82,6 +82,8 @@ a *target limitation* or *target-dependent behavior* (see
 | [classes.md](classes.md) | Classes, records, enums, interfaces, entities, inheritance, visibility. |
 | [modules.md](modules.md) | Packages, imports, name resolution, compilation unit. |
 | [semantics.md](semantics.md) | Execution model, evaluation order, scope, lifetime, errors. |
+| [concurrency.md](concurrency.md) | Concurrency model: `spawn`/`await`, virtual threads (JVM), async/await (JS), pthread (Native). |
+| [concurrency-memory-model.md](concurrency-memory-model.md) | Happens-before edges and memory-visibility guarantees (SG-020). |
 | [specification-status.md](specification-status.md) | Classification of each feature (Stable/Experimental/…). |
 
 The **compiler implementation** (pipeline, IR, optimizations, backends) has

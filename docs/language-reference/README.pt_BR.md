@@ -80,6 +80,8 @@ diferentes. Quando há divergência real entre targets, ela é registrada como
 | [classes.md](classes.md) | Classes, records, enums, interfaces, entities, herança, visibilidade. |
 | [modules.md](modules.md) | Pacotes, imports, resolução de nomes, unidade de compilação. |
 | [semantics.md](semantics.md) | Modelo de execução, ordem de avaliação, escopo, tempo de vida, erros. |
+| [concurrency.md](concurrency.md) | Modelo de concorrência: `spawn`/`await`, virtual threads (JVM), async/await (JS), pthread (Native). |
+| [concurrency-memory-model.md](concurrency-memory-model.md) | Arestas happens-before e garantias de visibilidade de memória (SG-020). |
 | [specification-status.md](specification-status.md) | Classificação de cada feature (Stable/Experimental/…). |
 
 A **implementação do compilador** (pipeline, IR, otimizações, backends) tem
