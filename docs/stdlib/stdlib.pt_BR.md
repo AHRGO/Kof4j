@@ -59,7 +59,7 @@ CONC001, JSN00x) — nunca comportamento silenciosamente diferente.
 | `kof.http` | ✅ | `kof serve` (KofHttpServer, thread pool) — JVM; `kof.http` client `http.get/post/put/delete/patch/options/status` — JVM/JS/**Native 03/09** (HTTP/1.1 asm, `NativeHttpRuntime`, IPv4 só; https→throw); retry/circuit/timeout aceitam chamada mas só implementados em JVM/JS (`HTTP003`). **Assíncrono:** `var h = spawn http.get(url); await h` → `Handle<String>` nos 3 targets — no Node/browser é o único caminho real (fetch→Promise, §133; a chamada síncrona lá devolve o Promise cru — face síncrona não existe em JS puro, §133/HTTP003) |
 | `kof.web` | ✅ | `web.app()`, rotas, middleware `app.use`, `listenSecure(port)` TLS, `status(code[, body])`/`headerSet`, `app.ws` (WebSocket RFC 6455) + `app.sse` (SSE) — JVM (Native `WEB001/002`, JS `WEB001`/`WEB003`/`WEB004`) |
 | `kof.security` | ✅ (v1 + G9) | passwords, crypto, jwt, secrets, auth, security, rateLimit, sessions, apiKeys — 3 targets; free-list Native 27/08 — ver `docs/stdlib/security.md` |
-| `kof.concurrent` | ✅ | `spawn` (statement) + `val r = spawn f()` / `await r` (handle tipado) — JVM (virtual threads) + Native (pthread, 31/08, `CONC001` fechado) + JS sequencial |
+| `kof.concurrent` | ✅ | `spawn` (statement) + `val r = spawn f()` / `await r` (handle tipado) — JVM (virtual threads) + Native (pthread, 31/08, `CONC001` fechado) + JS event-loop (`CONC003` fechado 03/09) |
 | `kof.test` | ✅ | `kof test` (`test "nome" { }` nos 3 targets) + `assert` — `StructuredTestE2ETest` 11/11; golden 16/16 |
 | `kof.cli` | ✅ | `kof build/run/serve/check/test/bench/debug/info/lsp/install/script/repl/c` (debug DAP, `kof script --watch` SIGPIPE fix 27/08) |
 | `kof.script` | ✅ | `KofScript` top-level `let` → `KofScriptGlobals` + REPL (8 testes kof-script, 27/08) |
@@ -111,7 +111,7 @@ Resumo executivo (0.2.6-beta, 31/08):
 | core/collections/io/time/json | DONE (3 targets; 0.2.0 acrescenta `map/filter/reduce` + pattern matching + `String?`) |
 | security (crypto, jwt, secrets, auth web + G9) | DONE (JVM/Native/JS core; web auth JVM; free-list Native 27/08) |
 | web server (`web.app()`) + `kof.http` client | DONE (JVM; `kof.http` JVM+JS + retry/circuit; WebSocket/SSE JVM) |
-| concurrency (`spawn` + `await`) | DONE (JVM + Native pthread (31/08) + JS sequencial) |
+| concurrency (`spawn` + `await`) | DONE (JVM + Native pthread (31/08) + JS event-loop (CONC003 03/09)) |
 | test (`assert`, `kof test` `test "nome" {}`) | DONE (3 targets, 16/16 golden, 9/9 integration) |
 | observability | DONE (kof.observability: health/metrics/request IDs — JVM/Native/JS) |
 | `KofScript` / `KofCcompiler` / targets riscv64/aarch64 | DONE (KofScript 8, KofC 5, riscv64 toolchain estável) |

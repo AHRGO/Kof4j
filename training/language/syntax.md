@@ -118,7 +118,7 @@ if (p instanceof Point) {
 ### Spawn / Await
 
 ```kof
-spawn expr();            // fire-and-forget (JVM virtual thread / Native pthread / JS sequential)
+spawn expr();            // fire-and-forget (JVM virtual thread / Native pthread / JS microtask)
 val r = spawn expr();    // Handle<T> typed handle
 val v = await r;         // blocks; T (primitives unboxed)
 ```

@@ -128,7 +128,7 @@ Consulte também `training/` para corpus estruturado de conhecimento Kof.
 | 15 | Pattern Matching | ✅ (`case String s` + `Point(x,y)`) |
 | 16 | Lambdas | ✅ (com capturas) |
 | 17 | Programação Funcional | ✅ (`map/filter/reduce`) |
-| 18 | Concorrência (spawn) | ✅ (JVM virtual threads; Native pthread 31/08; JS sequencial) |
+| 18 | Concorrência (spawn) | ✅ (JVM virtual threads; Native pthread 31/08; JS event-loop 03/09) |
 | 19 | Packages e Módulos | ✅ (`a.b.C` fix) |
 | 20 | Annotations | Implementado (JVM/KofJS) |
 | 21 | Java Interop | Parcial (bytecode JVM compatível; chamada Java direta funcional) |
@@ -158,7 +158,7 @@ Native (x86-64 free-list), Native.risc, Native.arm, KofJS e KofC (0.3.22-beta).
 - Seis targets: JVM (ASM), Native x86-64 (free-list GC), Native.risc, Native.arm, KofJS (GraalJS) e KofC (C subset nativo-only)
 - Classes, records, herança, interfaces, virtual dispatch, generics (erasure), imports `a.b.C` fix (largeproj)
 - Funções (sem `fun`), lambdas com capturas, if-expr, switch com `case String s` + `Point(x,y)` destructuring, `String?`, for-in
-- Exceptions reais (JVM + Native unwinding), `assert`, `spawn` (JVM virtual threads, Native pthread — 31/08; JS sequencial)
+- Exceptions reais (JVM + Native unwinding), `assert`, `spawn` (JVM virtual threads, Native pthread — 31/08; JS event-loop — CONC003 03/09)
 - Strings (API completa), arrays, `List<T>` + `map/filter/reduce`, `Map<K,V>`/`Set<T>`, JSON, kof.io, kof.time, `kof.http` (JVM+JS), `kof_db` (SQLite+MySQL WIP)
 - `KofScript` (`let`/`const` no topo → `KofScriptGlobals`, `kof script --repl`, `--watch`), `KofC` (`kof c <file.c>` nativo-only)
 - CLI (18 comandos): `build, run, serve, check, test, script, repl, c, fmt, config gen, bench, profile, inspect, debug, info, lsp, install, version` + `--target=jvm|native|native.risc|native.arm|js|android`

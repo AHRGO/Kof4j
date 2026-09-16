@@ -232,7 +232,7 @@ Future<String> future = executor.submit(() -> "result");
 
 Implemented: `spawn` with implicit join (JVM: virtual threads; Native:
 `pthread_create` + trampoline + `pthread_join` with a thread-safe allocator
-(futex), 31/08; JS: sequential). `await`/typed handles. Zero platform API
+(futex), 31/08; JS: event-loop (CONC003 03/09)). `await`/typed handles. Zero platform API
 exposed (`Thread`/`Executor` are runtime internals).
 
 ---
@@ -326,7 +326,7 @@ file > env > profile > default; JS reports CONF001).
 | Collections `List`/`Map`/`Set` + `map/filter/reduce` | ✅ | ✅ `List map/filter/reduce` + `Map`/`Set` 3 targets 27/08 | — |
 | Exceptions `try/catch/finally` | ✅ | ✅ JVM unwinding + Native unwinding | — |
 | Pattern matching `case String s` + `Point(x,y)` | ✅ (17+) | ✅ JVM/Native/JS 27/08 | guards |
-| Concurrency `spawn`/`await` | ✅ | ✅ JVM + sequential JS; Native `CONC001` | Native scheduler |
+| Concurrency `spawn`/`await` | ✅ | ✅ JVM + event-loop JS; Native `CONC001` | Native scheduler |
 | HTTP `serve` + `kof.http` | Framework | ✅ `web.app()` JVM + `kof.http` JVM+JS | Native HTTP |
 | Config `kof.config` | Framework | ✅ JVM+Native (free-list 27/08) | JS `CONF001` |
 | Logging / Observability | Framework | ✅ `kof.log` JVM+Native + `kof.observability` 3 targets | tracing |

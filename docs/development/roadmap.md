@@ -259,7 +259,7 @@ handle — a SIGSEGV in `__pthread_clockjoin_ex` once the TCB was recycled
 | Item | Description | Priority |
 |------|-----------|------------|
 | ~~`ExecutionException` unwrap~~ | ✅ 31/08 — `kof_await` re-throws the original cause (JVM) | — |
-| ~~`await` with timeout~~ | ✅ 31/08 — `awaitTimeout(r, ms)`: value on time, exception catchable via `try/catch` on timeout (JVM `Future.get(ms)` + Native 1ms polling with deadline; JS sequential = parity) | — |
+| ~~`await` with timeout~~ | ✅ 31/08 — `awaitTimeout(r, ms)`: value on time, exception catchable via `try/catch` on timeout (JVM `Future.get(ms)` + Native 1ms polling with deadline; JS deadline poll `kofAwaitTimeout` — CONC003) | — |
 | ~~Cancellation~~ | ✅ 31/08 — `cancel(r)`/`cancelled()` cooperative via flag on the handle (JVM + Native by TID) | — |
 | ~~Multiple wait~~ | ✅ 31/08 — `selectAny(h1, h2, ...)` → first ready handle (JVM + Native + JS) | — |
 | ~~`done`/`poll`~~ | ✅ 31/08 — non-blocking over the handle (JVM + Native) | — |

@@ -30,7 +30,7 @@ because they exist in other languages. Code like that **does not compile** or
 | Pattern matching `switch (x) { case String s: ... }` + `instanceof`/`as` | ✅ Implemented |
 | Pattern record destructuring `case Point(x, y):` | ✅ Implemented (Parser PatternExpr fieldVars, since 0.2.6-beta) |
 | Switch as expression `var r = switch (x) { case A -> b; default -> c }` | ✅ Implemented (SYN001, 03/09 — 3 targets + riscv64/aarch64; `default` required or enum exhaustiveness, otherwise `SEM032`) |
-| `spawn` / `await` with `Handle<T>` and unboxing | ✅ 3 targets (JVM virtual threads; Native pthread — CONC001 closed 31/08; JS sequential — CONC003 partial) |
+| `spawn` / `await` with `Handle<T>` and unboxing | ✅ 3 targets (JVM virtual threads; Native pthread — CONC001 closed 31/08; JS event-loop — CONC003 closed 03/09) |
 | Primary constructor `class X(...)` / `record` | ✅ Implemented (record-style since 0.0.5) |
 | `Thread` / `Executor` (platform APIs) | ❌ Unavailable — never use (`spawn` is the intent) |
 | Generic `Option<T>` | ❌ Planned — use `String?` for nullability |
