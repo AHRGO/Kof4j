@@ -85,7 +85,7 @@
 
 ``` 
 mvn clean package    → PASSA
-mvn test             → 2182 testes (1885 kof-compiler + 38 kof-script + 7 kof-c-compiler + 252 kof-cli), 0 falhas, 0 erros, 190 skip (sem qemu no host → 84 cross skip; guardas de toolchain/DB externo; `node` presente — todos os `*Js` verdes) — 16/09 (o anterior 1662/13-erros era host sem node, 13/09)
+mvn test             → 2189 testes (1892 kof-compiler + 38 kof-script + 7 kof-c-compiler + 252 kof-cli), 0 falhas, 0 erros, 190 skip (sem qemu no host → 84 cross skip; guardas de toolchain/DB externo; `node` presente — todos os `*Js` verdes) — 16/09 pos-fatia-A (o anterior 1662/13-erros = host sem node, 13/09)
 kof build            → PASS (--target jvm|native|js|native.risc|native.arm) [--release]
 kof run              → PASS (jvm|native|js|native.risc|native.arm) [--release]
 kof serve            → PASS (web.app() nativo + API legada handle())
@@ -575,7 +575,7 @@ main() { /* ignorado pelo kof test */ }
 
 ---
 
-## Testes (2182 = 1885 kof-compiler + 38 kof-script + 7 kof-c-compiler + 252 kof-cli — suíte completa verde, 0 falhas / 0 erros, 190 skip; medição 16/09. Host sem qemu: cross → skip honesto)
+## Testes (2189 = 1892 kof-compiler + 38 kof-script + 7 kof-c-compiler + 252 kof-cli — suíte completa verde, 0 falhas / 0 erros, 190 skip; medição 16/09. Host sem qemu: cross → skip honesto)
 
 | Suíte | Quantidade | Cobertura |
 |-------|-----------|-----------|
