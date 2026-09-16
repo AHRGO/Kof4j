@@ -9251,6 +9251,17 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   sítio-a-sítio (o call-site exato que segura o vivo e o que ele assume).
   Revertido; árvore = estado verde `92d11a03`. PRÓXIMO: auditoria real, não
   tentativa-e-erro.
+- **Medição de desempate (16/09, mesma hora): gatilho + G-6b SEM a captura
+  (teste ad-hoc fora da árvore) = EXATAMENTE 1 linha do programa FP diverge**
+  (`0.3/123.456/.../7` todos corretos; só `"2.5".toFloat()==2.5` → false).
+  keep/supervisor/cap-test/KofGcE2ETest/KofSupervisorE2ETest (15/15) todos
+  VERDES nesse estado. Conclusões: (i) a captura-prologue inteira da tentativa-1
+  era ela mesma BUG (piorava p/ 4 linhas), a causa-2 é ESTREITA e específica do
+  caminho `toFloat`; (ii) G-6b + gatilho puro já fecha keep/supervisor/leak —
+  o restante é fechar o caso toFloat com auditoria cirúrgica (gdb: qual bloco
+  é liberado vivo na linha 20; hipótese: o resultado do parse/vivaz do literal
+  no caminho Float vs. Double, que só difere no cvtsd2ss). NÃO shippar o
+  gatilho com 1 vetor FP divergente = paridade (freeze rule 5) e Q7 proíbem.
 
 
 
