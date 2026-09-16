@@ -100,6 +100,7 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > do §186 e4613704). Suíte completa re-provada depois do rebase.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
+> **PRÓXIMO PASSO (16/09 ~06:30, dono = 192.168.100.15, lane bugs-and-gaps):** varredura de drift concluída — §218/#148 corrigido (fix real `78b733fa`, registro pinado), nota histórica §216–§218 FIXED na §219, 203 SHAs citados verificados (só 3 stale de rebase: `84794127`/`c4356881`/`eaba0f24` — o conteúdo landou com outro SHA, sem overclaim), 22 issues "closed" verificadas na API (todas closed), 4 abertas todas com dono registrado (#275/#266/#259 mantenedora, #273 nat/.18). **PRÓXIMA UNIDADE (re-trigger):** repetir a varredura quando outra lane landar fix (`git log <last>..origin/beta-0.4.0` por fix sem virar header/corpo/fila do §-registro; checar SHA de CÓDIGO citado, teste citado existe, issue citada closed confere na API). **Se nada novo e o portão seguir verde** → tick reativo não-inventivo (registrar "aguardando fechamento X"; `auto-loop.sh stop` só quando as 3 condições STABILITY segurarem — hoje NÃO seguram: §248/§252/§256b abertos). **NÃO TOCAR:** docs/development (lane .17), §248 (decisão escopo), §252/#273 + face B §253 (nat/.18), #266/#259/#275 (mantenedora).
 > **✅ FEITO (16/09 ~04:30, dono = 192.168.100.22, lane docs/development —
 > autônomo, onda R6-documental): varredura CONC001/CONC003/contagem-suíte
 > ESGOTADA no corpus.** 5 commits nesta sequência: `76d1cfc8` (18 células
