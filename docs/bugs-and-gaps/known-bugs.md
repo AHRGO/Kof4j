@@ -8911,7 +8911,10 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   agreement holds).
 - **Timeline:** cell GREEN on tip `c4356881` (full suite 15/09 ~18:00,
   `suite253.log`: only §257-collateral + 2 §181 catalogued reds) → cell RED on
-  tip `1fed6a17`. The golden (written in `f8301194`) was recorded from an
+  tip `1fed6a17`. ⚠️ **`c4356881` does not resolve in this repo nor on the
+  remote (API 422) — dead reference** (same class as §258's `eaba0f24`; the
+  verifiable anchors of this timeline are `1fed6a17` RED and `f8301194`
+  golden). The golden (written in `f8301194`) was recorded from an
   implementation that INCORRECTLY accepted the two bad checksums and printed
   the `==`-comparisons as false — some commit between flipped those lines to
   the correct values without the golden being re-verified (Q0: the golden was
@@ -8919,6 +8922,12 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   (`1fed6a17` DB001, `9e270e56` D-NARROW-WHILE #159, gate/crons commits) are the
   suspect range; `9e270e56` (flow narrowing touching `Bool ==`) is the prime
   suspect for lines 14,15.
+- **⚠️ Record note (16/09, lane bugs-and-gaps `192.168.100.15`):** the SHA
+  `c4356881` does **not** resolve in this repo's object store (3109 commits,
+  all worktrees) nor on the remote (GitHub API → 422). It is a dead reference
+  (likely a local commit on the `.22` host that never landed). The verifiable
+  anchor of the timeline is `1fed6a17` (RED); `f8301194`/`1fed6a17`/`9e270e56`
+  all resolve.
 - **Expected:** golden corrected to the oracle-verified sequence (the current
   4-target consensus) by the **stdlib/validation lane (owner of `f8301194`)** —
   NOT by this lane (Q5: I do not relax another lane's assertion to go green;
@@ -8939,7 +8948,7 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   libsqlite3)` guard → false red on developer machines/CI without the multiarch
   package (`apt install libsqlite3-dev:riscv64/arm64` fixes locally).
 - **Expected:** an honest SKIP when the sysroot lib is absent (the guard pattern
-  `4408eb66`), not a red; or the CI installs the cross libs.
+  `4408eb6`), not a red; or the CI installs the cross libs.
 - **Repro:** on a host without `/usr/{riscv64,aarch64}-linux-gnu/lib/libsqlite3.so`,
   `mvn -o -pl kof-compiler -am test -Dtest=KofDbE2ETest#crossNativeSqliteNowCompiles`.
 - **Status:** 🔴 OPEN — catalogued 15/09 by lane compiler `192.168.100.17`.
@@ -8985,7 +8994,8 @@ the user's — a compile-time diagnostic is the goal (rule 6).
 ### §258 — CodeQL #773 `java/comparison-with-wider-type` on `KofJsRunner.listValues` (DB001 slice A, lane `.18`) blocks EVERY push: the pre-push gate is repo-wide
 
 - **Found 16/09 ~04:30 by lane docs/development `192.168.100.22`**, when pushing
-  the R6-documental sweep (`eaba0f24`): `scripts/codeql-gate.sh --fast` returned
+  the R6-documental sweep (`eaba0f24` ⚠️ dead SHA — see the record note at the
+  end of the section): `scripts/codeql-gate.sh --fast` returned
   RED — `#773 [java/comparison-with-wider-type]
   kof-runtime/src/main/java/dev/kof/runtime/KofJsRunner.java:510`. The gate has
   no "not-my-file" exception: once a new alert exists on `beta-0.4.0`, **no
@@ -9023,6 +9033,16 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   the alert is at **:525** (`long n = list.getArraySize()` @523, `for (int i =
   0; i < n; i++)` @525), not :510 — the file shifted with DB001 fatia B.
   Ownership is unchanged (lane `.18`); this lane only keeps the record true.
+- **Record note (16/09, lane bugs-and-gaps `192.168.100.15`) — dead SHAs:**
+  `eaba0f24` (above) does **not** resolve in this repo (all 3109 local commit
+  objects, all 3 worktrees) nor on the remote (GitHub API → 422). Same for
+  `c4356881` (in §256 timeline). The cataloguing commit itself is `5d12cb21`
+  (16/09 01:06, parent `c084113e`), where the sibling record-sweep SHAs
+  (`ce8e76a0`/`97597416`/`dd2c7fcb`) all resolve; the candidate for the
+  R6-documental sweep is `3c6cb458` (16/09 04:33, same author), but this is
+  **not** asserted as a substitution. Practically: pointers that fail to
+  resolve are noise — the same class of defect as the §218 "record before the
+  proof" lesson. No overclaim; the dead tokens are flagged, not rewritten.
 
 - **Second alert (same mechanism, 16/09 ~05:00) — #774 `java/relative-path-command` at
   `kof-cli/src/test/java/dev/kof/cli/DepsTransitiveTest.java`** (D-DEV-PRIORITY

@@ -8850,7 +8850,7 @@ usuário — diagnostic em compile-time é a meta (regra 6).
 
 - **Sintoma (medido 15/09 ~22:30, worktree SEM mudanças locais no tip `1fed6a17`):** `ConformanceMatrixTest.conformanceCoreArithmetic` falha na célula `[stdvalidation]` — as saídas JVM/Native/Script/JS são **byte-idênticas entre si** (todas `exit=0`), divergindo do golden em exatamente 4 linhas: 11, 12, 14, 15.
 - **A implementação está CERTA, o golden está ERRADO (oráculo independente):** as linhas são os casos negativos de NIS + os casos `Bool == true/false`. mod-11 manual (pesos 3,2,9,8,7,6,5,4,3,2): `12056412279` → dv 8 ≠ 9 → `isNis`=**false** (golden diz true); `12345678901` → dv 0 ≠ 1 → **false** (golden diz true); `isCpf(valid) == true` → **true** (golden diz false); `isCpf(invalid) == false` → **true** (golden diz false). A saída atual dos 4 targets casa com o oráculo em todas as linhas.
-- **Linha do tempo:** célula VERDE no tip `c4356881` → vermelha no tip `1fed6a17`. O golden (escrito em `f8301194`) foi gravado de uma implementação que INCORRETAMENTE aceitava os dois checksums ruins e imprimia as comparações `==` como false — algum commit no meio virou essas linhas para os valores corretos sem o golden ser re-verificado (Q0: o golden nunca foi medição independente).
+- **Linha do tempo:** célula VERDE no tip `c4356881` ⚠️ **não resolve neste repo nem no remoto (API 422) — referência morta** (mesma classe do `eaba0f24` do §258; âncoras verificáveis desta timeline = `1fed6a17` VERMELHO e `f8301194` golden) → vermelha no tip `1fed6a17`. O golden (escrito em `f8301194`) foi gravado de uma implementação que INCORRETAMENTE aceitava os dois checksums ruins e imprimia as comparações `==` como false — algum commit no meio virou essas linhas para os valores corretos sem o golden ser re-verificado (Q0: o golden nunca foi medição independente).
 - **Esperado:** golden corrigido para a sequência verificada pelo oráculo (o consenso atual dos 4 targets) pela **lane stdlib/validation (dona de `f8301194`)** — NÃO por esta lane (Q5: não se relaxa asserção de outra lane para ficar verde; a correção do valor precisa ser ratificada por quem tem o oráculo de checksum).
 - **Estado:** ✅ CORRIGIDO 15/09 pela lane dona `.18` (`713031a7`) — re-gravado com a prova no JVM executado.
 - **Repro:** `mvn -o -pl kof-compiler -am test -Dtest=ConformanceMatrixTest#conformanceCoreArithmetic` em `target/classes` limpo (sem mudanças locais).
@@ -8859,7 +8859,7 @@ usuário — diagnostic em compile-time é a meta (regra 6).
 
 - **Sintoma (medido 15/09, worktree tip `1fed6a17`, sem mudanças locais):** `crossNativeSqliteNowCompiles` vermelho com `COMP001: riscv64-ld failed (exit 1): não foi possível localizar -lsqlite3` — os sysroots riscv64/aarch64 do host NÃO têm `libsqlite3.so` (só `libsqlite3-0:amd64`).
 - **Causa raiz (higiene de teste):** o teste da fatia-1 DB001 afirma `r.success()` incondicionalmente nos alvos cross, mas o link cross agora EXIGE o `libsqlite3` da arch-alvo no sysroot (link-by-use, §"DB001"). Outros E2E cross usam `assumeToolchain()`; este não tem o guard `assumeTrue(sysroot tem libsqlite3)` → falso vermelho em máquinas de dev/CI sem o pacote multiarch (`apt install libsqlite3-dev:riscv64/arm64` resolve localmente).
-- **Esperado:** SKIP honesto quando a lib do sysroot está ausente (padrão de guard `4408eb66`), não vermelho; ou a CI instala as libs cross.
+- **Esperado:** SKIP honesto quando a lib do sysroot está ausente (padrão de guard `4408eb6`), não vermelho; ou a CI instala as libs cross.
 - **Repro:** num host sem `/usr/{riscv64,aarch64}-linux-gnu/lib/libsqlite3.so`, `mvn -o -pl kof-compiler -am test -Dtest=KofDbE2ETest#crossNativeSqliteNowCompiles`.
 - **Estado:** 🔴 ABERTO — catalogado 15/09 pela lane compiler `192.168.100.17`. Ponteiro: lane development `.18` (DB001, autora do teste em `1fed6a17`).
 
@@ -8875,7 +8875,7 @@ usuário — diagnostic em compile-time é a meta (regra 6).
 ### §258 — CodeQL #773 `java/comparison-with-wider-type` em `KofJsRunner.listValues` (DB001 fatia A, lane `.18`) bloqueia TODO push: o pre-push gate é repo-wide
 
 - **Achado 16/09 ~04:30 pela lane docs/development `192.168.100.22`**, ao dar
-  push na varredura R6-documental (`eaba0f24`): `scripts/codeql-gate.sh --fast`
+  push na varredura R6-documental (`eaba0f24` ⚠️ SHA morto — ver a nota de registro ao fim da seção): `scripts/codeql-gate.sh --fast`
   voltou VERMELHO — `#773 [java/comparison-with-wider-type]
   kof-runtime/src/main/java/dev/kof/runtime/KofJsRunner.java:510`. O gate não
   tem exceção "não é meu arquivo": uma vez que existe alerta novo na
@@ -8914,6 +8914,16 @@ usuário — diagnostic em compile-time é a meta (regra 6).
   list.getArraySize()` @523, `for (int i = 0; i < n; i++)` @525), não :510 — o
   arquivo deslocou com a fatia B do DB001. Dono inalterado (lane `.18`); esta
   lane só mantém o registro verdadeiro.
+- **Nota de registro (16/09, lane bugs-and-gaps `192.168.100.15`) — SHAs mortos:**
+  `eaba0f24` (acima) **não** resolve neste repo (todos os 3109 objetos de commit
+  locais, os 3 worktrees) nem no remoto (API do GitHub → 422). Idem `c4356881`
+  (timeline do §256). O commit de catalogação em si é `5d12cb21` (16/09 01:06,
+  pai `c084113e`), onde os SHAs irmãos da onda de registro
+  (`ce8e76a0`/`97597416`/`dd2c7fcb`) todos resolvem; o candidato para a
+  varredura R6-documental é `3c6cb458` (16/09 04:33, mesmo autor), mas isso
+  **não** é afirmado como substituição. Na prática: ponteiro que não resolve é
+  ruído — a mesma classe de defeito da lição §218 "registro antes da prova".
+  Sem overclaim; os tokens mortos são sinalizados, não reescritos.
 - **Segundo alerta (mesmo mecanismo, 16/09 ~05:00) — #774 `java/relative-path-command` em
   `kof-cli/src/test/java/dev/kof/cli/DepsTransitiveTest.java`** (D-DEV-PRIORITY
   frente-3 `e5013152`, dona lane compiler `.17`): o guard de disponibilidade `mvnOnPath()`
