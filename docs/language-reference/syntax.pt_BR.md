@@ -29,7 +29,7 @@ var x = 10              // inferido int, mutável
 val y = 20              // "imutável" (não-garantido — SG-010)
 String nome = "Mel"     // type-first
 var idade: Int = 30     // anotado
-String? opcional = null // nullable
+String? opcional = find(key) // nullable — null via API (literal `= null` é SEM048)
 var arr: Int[] = new Int[3]
 `
 

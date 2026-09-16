@@ -154,7 +154,7 @@ String nullable = null;
 
 ### Kof (0.4.0-beta)
 ```kof
-String? maybe = null
+String? maybe = mapOf("k", "hi").get("missing")   // null via API, NOT `= null` (SEM048 since 10/09)
 if (maybe != null) {
     println(maybe.length)   // narrowing
 }

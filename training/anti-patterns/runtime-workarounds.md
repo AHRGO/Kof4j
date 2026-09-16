@@ -18,7 +18,8 @@ explicitly `WORKAROUND` and `NOT IDIOMATIC`.
 
 ```kof
 // ✅ String? / Int? implemented with narrowing
-String? s = null
+String? s = mapOf("k", "x").get("k")   // NOTE since 10/09: `= null` literal is SEM048 —
+                                        // null reaches T? via API only
 if (s != null) {
     println(s.length)   // OK — narrowing via isAssignable
 }

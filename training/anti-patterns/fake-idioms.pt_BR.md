@@ -47,7 +47,7 @@ porque existem em outras linguagens. Código assim **não compila** ou
 | `String.valueOf(x)` receiver estático builtin | ✅ Implemented (01/09) |
 | `Set<T>` como tipo declarado (campo/retorno/param) | ✅ Implemented (02/09 — descriptor JVM `kof.Set` → `java/util/HashSet`) |
 | Retorno/método com tipo genérico em classe (`List<String> foo()`) | ✅ Implemented (02/09 — parser parse-then-decide) |
-| Forma prefixada nullable `String? s = null` e retorno `String? f()` | ✅ Implemented (02/09 — statements, funções e classes) |
+| Forma prefixada nullable `String? s` (tipo antes do nome) e retorno `String? f()` | ✅ Implemented (02/09 — statements, funções e classes). NOTA: inicializar com `= null` é SEM048 desde 10/09 — null só chega ao `T?` via API |
 | `Map.get` devolvendo `V?` para valores de referência | ✅ Implemented (02/09 — ausência = null, narrowing) |
 
 ## Bad example (ainda não compila)
@@ -77,11 +77,11 @@ var adultos = users.filter((u: User) -> u.age >= 18)
 var soma = nums.reduce((a: Int, b: Int) -> a + b, 0)
 
 // Null safety String?
-String? maybe = null
+String? maybe = mapOf("k", "x").get("k")   // null via API (sem `= null` — SEM048)
 if (maybe != null) {
     println(maybe.length)
 }
-var s: String = maybe   // erro SEM014 — não atribuível sem check
+var s: String = maybe   // erro SEM021 — não atribuível sem check
 
 // Pattern matching + record destructuring
 switch (obj) {

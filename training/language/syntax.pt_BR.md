@@ -76,18 +76,19 @@ interface Speaker {
 var x = 10
 val y = 20
 String name = "Mel"
-String? maybe = null        // nullable
+String? maybe = find(key)   // nullable (null via API — literal `= null` é SEM048)
 Box<Int> b = Box(42)        // generics com primitivo
 ```
 
 ### Nullable (0.3.22-beta)
 
 ```kof
-String? s = null
+String? s = mapOf("k", "x").get("k")   // null chega ao T? via API (sem `= null` — SEM048 desde 10/09)
 if (s != null) {
-    println(s.length)   // narrowing
+    println(s.length)   // narrowing — SOMENTE dentro do then-branch
+    String t = s        // OK aqui (estreitado para String)
 }
-String t = s            // erro SEM014 se sem check
+String t2 = s           // erro SEM021 — não atribuível fora do check
 ```
 
 ### KofScript top-level let (0.3.22-beta)

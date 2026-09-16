@@ -33,8 +33,9 @@ Four valid forms:
 var x = 10              // inferred, mutable
 val y = 20              // inferred, "immutable" (see below)
 String nome = "Mel"     // explicit type (type-first)
-var idade: Int? = null  // annotated type (annotated)
-String? nome2 = null    // type-first nullable
+var idade: Int? = findAge()  // annotated type (annotated)
+String? nome2 = find(key)    // type-first nullable (null reaches T? via API;
+                             // `= null` literal is SEM048 since 10/09)
 `
 
 - **`var` without initializer** → type `UnknownType` (`:625`).

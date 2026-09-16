@@ -114,12 +114,12 @@ enum Color { Red, Green, Blue }
 ### Nullable
 
 ```kof
-String? s = null
+String? s = mapOf("k", "x").get("k")   // null via API (sem `= null` — SEM048 desde 10/09)
 Int? n = 5
 if (s != null) {
     println(s.length)   // OK — narrowing
 }
-String t = s            // erro: String? não atribuível a String sem check
+String t = s            // erro SEM021: String? não atribuível a String sem check
 ```
 
 `NullableType(inner)` em `Type.java`; `SemanticAnalyzer.isAssignable` trata `Nullable → non-null`.
@@ -140,7 +140,7 @@ let y = 10          // KofScript → var y: Int = 10 (KofScriptGlobals)
 Int x = 10
 String s = "Hello"
 Point p = Point(1, 2)
-String? maybe = null
+String? maybe = mapOf("k", "x").get("k")   // null via API (sem `= null` — SEM048 desde 10/09)
 Box<Int> boxed = Box<Int>(5)
 ```
 

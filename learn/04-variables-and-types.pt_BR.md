@@ -172,7 +172,7 @@ Kof usa os mesmos tipos da JVM:
 
 ```kf
 let x = 5            // KofScript topo: KofScriptGlobals.x
-String? s = null     // nullable básico
+String? s = mapOf("k", "abc").get("k")   // nullable básico — null via API (= null é SEM048)
 if (s != null) { println(s.length()) }
 ```
 
