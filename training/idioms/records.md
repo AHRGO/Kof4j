@@ -165,11 +165,14 @@ if (maybe != null) {
 }
 ```
 
-> ⚠️ A **missing** key (`m.get("z")`, so `maybe` is really `null`) currently
-> **NPEs on the JVM**: record `==`/`!=` lowers to `.equals()` with no null-guard
-> on the receiver (measured 16/09 — bug `§262`, open, fix is lane compiler's).
-> The present-key form above is safe; do not narrow a possibly-null record from
-> `Map.get` until §262 lands.
+> ✅ The narrowing above is safe even for a **missing** key (`m.get("z")`,
+> so `maybe` is really `null`): `== null`/`!= null` on a record is a reference
+> comparison (`if_acmp`), never a `.equals()` call — fixed 17/09 (`07a51565`,
+> bug `§262` face (a)).
+>
+> ⚠️ Still open (`§262` face (b)): comparing **two** nullable records with
+> `==` when one is `null` (e.g. `miss == hit`) NPEs on the JVM — null-safe
+> content equality is cross-target work. Narrow first (`if (a != null && b != null)`).
 
 ## Related anti-patterns
 

@@ -165,11 +165,15 @@ if (maybe != null) {
 }
 ```
 
-> ⚠️ Uma chave **ausente** (`m.get("z")`, então `maybe` é realmente `null`)
-> atualmente dá **NPE no JVM**: `==`/`!=` de record baixa para `.equals()` sem
-> guarda de null no receptor (medido 16/09 — bug `§262`, aberto, o conserto é
-> da lane compiler). A forma com chave presente acima é segura; não faça
-> narrowing de um record possivelmente-null vindo de `Map.get` até o §262 landar.
+> ✅ O narrowing acima é seguro mesmo para uma chave **ausente**
+> (`m.get("z")`, então `maybe` é realmente `null`): `== null`/`!= null` num
+> record é comparação de referência (`if_acmp`), nunca chamada `.equals()` —
+> consertado 17/09 (`07a51565`, bug `§262` face (a)).
+>
+> ⚠️ Ainda aberto (`§262` face (b)): comparar **dois** records nullable com
+> `==` quando um é `null` (ex.: `miss == hit`) dá NPE no JVM — igualdade de
+> conteúdo null-safe é trabalho cross-target. Faça narrowing antes
+> (`if (a != null && b != null)`).
 
 ## Anti-patterns relacionados
 

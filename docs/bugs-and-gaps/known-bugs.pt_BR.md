@@ -17,7 +17,7 @@
 > | **§258 🟡 PARCIAL 16/09 (lane `.18`/SSE dona dos consertos; #773/#774/#777 FECHADOS, #775/#776/#780 ABERTOS)** | Gate CodeQL (3 abertos): **#780** `java/uncaught-number-format-exception` `KofWebJsE2ETest:307` (= o conserto do §258/#777 landou INSUFICIENTE: o guard `(?i)[0-9a-f]+` aceita token de >8 dígitos hex → `Integer.parseInt(...,16)` lança NFE sem catch — *medido 16/09*: `"fffffffff"`.matches + NFE "under radix 16"; dono = lane `.18`/SSE, conserto: guard de comprimento/faixa ou catch; ver seção); **#773** `java/comparison-with-wider-type` `KofJsRunner.listValues` — ✅ CORRIGIDO 16/09 pela `.18` (bound check `n > Integer.MAX_VALUE` → `RuntimeException` claro, precedente `d6eaae0c`; loop int/int, sem truncamento silencioso). **#774** `java/relative-path-command` `DepsTransitiveTest` — ✅ CORRIGIDO por `2a60b426` (`.17`). **#777** `java/uncaught-number-format-exception` `KofWebJsE2ETest:302` — ✅ CORRIGIDO 16/09 pela lane SSE (`.18`): o helper de-chunk do teste valida o token hex antes do `parseInt`, sem NFE solta; 6/6. **AINDA ABERTOS (outras donas):** #775 `java/relative-path-command` `NumericFormatterE2ETest:35` (dona `.22`, `78b733fa`) + #776 `java/unused-parameter` `KofHttp.supportedOn:57` (= o guard morto do §259, dona `.15`/`.17` — resolve quando o §259 ligar). |
 > | **§259 🔴 ABERTO 16/09 (lane native/compiler `.17`/`.18`)** | `http.timeout`/`http.retry`/`http.circuit` no Native compilam OK mas são **puros no-ops silenciosos** (`NativeHttpCore.java:369-380` = `ret` puro; riscv/aarch `NativeRiscvHttpCore.java:317-324`); `KofHttp.supportedOn` devolve `true` para todo target, então o usuário acredita que retry/circuit estão ativos (R6/regra 5). Os docs citavam um **`HTTP003` fantasma** ("não silencioso: debug syserr") que nenhum módulo emite; `HTTP002` existe só como literal e seu ramo é morto (ver seção) — nenhum gap code HTTP é emitido hoje. Achado + docs corrigidos pela lane bugs-and-gaps `.15`; catalogado, direção do conserto = emitir um código de gap real em compile-time no `NATIVE*` (precedente do split WEB) ou implementar em asm. |
 > | **§263 🔴 ABERTO 16/09 (achado pela lane docs/development `.22`; conserto = lane compiler)** | O parser aceita QUALQUER identificador antes de uma declaração anotada e o DESCARTA em silêncio (R6): `let x: Int = 5` imprime `5`, `Klaxon x: Int = 5` idem, `Banana q: String = "z"` → `z` — o erro DESAPARECE com a anotação. Raiz: `parseVarDecl` cai em `parseTypeRef` para qualquer IDENT (`StatementParser:413-415`) e o `: Tipo` de :417-421 SUBSTITUI o "tipo" em silêncio; `async f(): Int` passa no check. Sem anotação falha certo (`let x = 5`/`const y = 10` → sugar morto, `183cb048`). **A verdade do cluster let/const-sugar:** remoção PARCIAL (o caso `let x = 5` do teste `jsSugarIsRejected` é verde por falta de anotação, não porque o sugar exista). Relacionado: células `training/reference/{targets,compiler}` corrigidas à parte (cluster I-D).
-> | **§262 🔴 ABERTO 16/09 (achado pela lane docs/development `.22`; conserto = lane compiler `CompilerComparisons`)** | Record `T?` vs `null`: `== null`/`!= null` dá **NPE no JVM** (`Cannot invoke Point.equals(Object) because maybe is null`) — o `==` de record baixa para `.equals()` SEM guarda de null no receptor (`CompilerComparisons:28,337-342`, bug 188); nullable de class/String faz narrowing bem (`if_acmp`/`Objects.equals`). Conserto = mudança de contrato (regra 6 do freeze) → lane compiler, NÃO tocado aqui. |
+> | **§262 🟡 PARCIAL 17/09 (face (a) `== null`/`!= null` ✅ FEITA 17/09 `07a51565` pela lane bugs-and-gaps `.15`; face (b) `nullableRecord == nullableRecord` ABERTA)** | Record `T?` vs `null`: `== null`/`!= null` dá **NPE no JVM** (`Cannot invoke Point.equals(Object) because maybe is null`) — o `==` de record baixa para `.equals()` SEM guarda de null no receptor (`CompilerComparisons:28,337-342`, bug 188); nullable de class/String faz narrowing bem (`if_acmp`/`Objects.equals`). Face (a) consertada excluindo o literal `null` do ramo de igualdade de conteúdo de record (agora `if_acmp`); face (b) precisa de guarda de null/`Objects.equals` no caminho record-`==` (cross-target). |
 > | **§260 🟡 PARCIAL 16/09 (lane native/compiler `.17`; causa-1 G-6b FECHADA por `92d11a03`, causa-2/G-6(a) + gatilho AINDA ABERTOS)** | O auto-collect x86 era insound por DUAS razões (apurado a gdb no mesmo dia): (1) o mark varria só o frame corrente → Strings vivas do main invisíveis → liberadas (SIGSEGV) — **CORRIGIDO 16/09 (G-6b: o `_start` grava `kof_main_stack_bottom`, o mark varre a pilha inteira da thread; `NativeX86GcMarkScopeTest` 3/3)**; (2) temporários vivos em registradores caller-saved no call-site do `kof_alloc` (`%rdi`) — invisíveis a qualquer varredura de pilha → exige G-6(a) (spill-per-live-ref / stack-map), o gatilho está OFF de novo. riscv nunca sofreu (1) (value-stack = pilha de máquina). |
 > | **§261 ✅ CORRIGIDO 16/09 (lane development `.18`)** | `window.bind` no KofJS: Components e widgets DOM crus tiravam ids de handle de DOIS contadores SEPARADOS (`kofUiSeq` vs `kofNodeSeq`, ambos do 0); `kofUiWindowBind` resolve componentes PRIMEIRO → um Component criado antes de um widget cru roubava o id do widget e o widget não renderizava nada (órfão em `__kofNodes`). Achado via kof-ui-widgets (Slider+ReconfigButton no Chrome real). Conserto = um contador único compartilhado (`kofNodeSeq`). Prova: `KofJsBrowserE2ETest.componentAndRawWidgetIdsNeverCollide` (VERMELHO pré-fix, medido) + `scripts/browser-drag.mjs` da lib.
 > | **§264 ✅ CORRIGIDO 16/09 (lane development `.18`)** | O KofJS imprimia `Double`/`Float` com o `Number.toString` cru — `4` em vez de `4.0`, `10000000` em vez de `1.0E7`, `0` em vez de `-0.0` — em **todo** caminho de display (println/print/concat/`String.valueOf`/`.toString()`); divergência silenciosa da regra 5 vs JVM/Native. Os registros antigos do §44/§180 chamavam isso de "esperado no JS" e 5 células de conformidade excluíam o `js` para ficarem verdes. Conserto = nova fatia de runtime `num-fmt`/`kofNumFmt` (contrato JDK: round-trip curto + limiar `E` + precisão própria de Float) roteada pelo emissor JS + passthrough de tipo nos lowerers compartilhados. Prova: `WrapperStaticCallsE2ETest.doubleFloatJdkPrintFormat` + 5 células viradas para paridade de 4 alvos (valor por valor contra o oracle JVM no node v18). O print de coleção boxed (`List<Double>`→`[4,2.5]`) continua sendo §104b-ii (lane nativa), NÃO corrigido aqui.
@@ -9176,7 +9176,7 @@ usuário — diagnostic em compile-time é a meta (regra 6).
   bloco de runtime (slice registry), então os dois hosts ficam consertados
   juntos por construção; o lado da lib (Slider/ReconfigButton + docs) é o
   commit companheiro em `kof-ui-widgets`.
-### §262 — Record `T?` vs `null`: `== null`/`!= null` dá NPE no JVM (o `==` de record baixa para `.equals()` sem guarda de null no receptor); nullable de class/String faz narrowing normal
+### §262 — Record `T?` vs `null`: `== null`/`!= null` dá NPE no JVM (o `==` de record baixa para `.equals()` sem guarda de null no receptor); nullable de class/String faz narrowing normal — ✅ face (a) FIXED 17/09 (`07a51565`); 🟡 face (b) OPEN
 
 - **Encontrado 16/09 ~15:40 pela lane docs/development `192.168.100.22`**, ao
   corrigir o cluster null-contrato do corpus: a célula "Null safety with
@@ -9209,20 +9209,36 @@ usuário — diagnostic em compile-time é a meta (regra 6).
   os targets; record é tipo referência, então `== null` deve comportar-se
   como `if_acmp`, e a igualdade de conteúdo record-vs-record deve guardar o
   receptor null primeiro (ex.: `Objects.equals`).
-- **Dono do conserto:** lane compiler (autora do lowering record-`==`→
-  `.equals()`, `CompilerComparisons`). NÃO tocado aqui: regra 8 (arquivo de
-  outra lane + fronteira de contrato/ordem de avaliação — a regra 6 do freeze
-  mantém `==`/null-safety fora de edição direta). Candidato de conserto
-  mínimo: no caminho record-`==`, quando um operando for estaticamente
-  `T?`/`null`, emitir a guarda de null (`if_acmp`) ou rotear por
-  `Objects.equals` em vez de um `receiver.equals(arg)` cru.
-- **Cross-target:** JS/Native não medidos nesta sessão (qemu/node neste
-  host); qualquer que seja o que imprimirem, um NPE no JVM já é bug de
-  paridade (regra 5).
-- **Status:** 🔴 ABERTO 16/09 — catalogado pela lane docs/development
-  `192.168.100.22` com os quatro casos medidos acima. Corpus: a célula de
-  null-safety de `training/idioms/records.md` aponta para cá (ensina a forma
-  HIT, anota a forma MISS como este bug) até o conserto landar. Relacionado:
+- **Conserto (face a) — ✅ FEITO 17/09 pela lane bugs-and-gaps
+  `192.168.100.15` (`07a51565`), reivindicado após localizar o repro (OPEN
+  órfão):** o ramo de igualdade de conteúdo de record em
+  `ExpressionBinaryLowerer` disparava mesmo quando um operando era o literal
+  `null`, emitindo `receiver.equals(null)` sem guarda. Fix: excluir o literal
+  `null` desse ramo, então `==`/`!=` contra `null` baixa para comparação de
+  REFERÊNCIA (`if_acmp`) — nunca dereferencia o receptor. (`class`/`String`
+  já tomavam o caminho null-safe; `record==record` de conteúdo, bug 11/188,
+  fica igual quando nenhum lado é o literal.)
+- **Prova de regressão (face a):** `RecordNullableNullEqE2ETest` 6/6 — MISS
+  `== null`/`!= null`, HIT, map miss, conteúdo `record==record`, SCRIPT e JS.
+  Vizinhança verde: `NullSafetyE2ETest` 12/12, `CoreRegressionE2ETest`
+  102/102, `BackendParityTest` 19/19 (0 regressão).
+- **🟡 Face (b) ABERTA — `nullableRecord == nullableRecord` (sem literal)
+  ainda dá NPE:** `var miss: Point? = mapOf("k", Point(7,8)).get("z")` +
+  `var hit: Point? = mapOf("k", Point(7,8)).get("k")` + `println(miss == hit)`
+  → mesmo `Cannot invoke "Point.equals(Object)" because "miss" is null`. O
+  caminho de igualdade de conteúdo é tomado com receptor null. Esperado:
+  igualdade de conteúdo null-safe (`Objects.equals` — o interpretador já faz
+  via `objectEquals`). Conserto = guardar o receptor null no caminho
+  record-`==` (ou rotear por `Objects.equals`); **cross-target**
+  (JS/Native/SCRIPT precisam concordar), não medido nesta sessão nos alvos
+  cross.
+- **Cross-target (face a):** JVM provado por teste; SCRIPT + JS provados por
+  teste; Native não medido (sem qemu) — o lowering é agnóstico de alvo
+  (comparação de referência `if_acmp`).
+- **Status:** 🟡 PARCIAL 17/09 — face (a) FEITA (`07a51565`, lane
+  bugs-and-gaps `192.168.100.15`); face (b) ABERTA como acima. Corpus: a
+  célula de null-safety de `training/idioms/records.md` atualizada (o
+  narrowing `!= null` numa chave ausente agora é seguro). Relacionado:
   §D-NULL-INTENT (contrato boxed nullable), bug 188 (`==` de conteúdo de
   record), §241 (contrato boxed nullable-primitivo, revertido para gap
   honesto).

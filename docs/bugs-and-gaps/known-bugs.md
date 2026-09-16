@@ -17,7 +17,7 @@
 > | **§258 🟡 PARTIAL 16/09 (lane `.18`/SSE owns the fixes; #773/#774/#777 CLOSED, #775/#776/#780 OPEN)** | CodeQL gate (3 open): **#780** `java/uncaught-number-format-exception` `KofWebJsE2ETest:307` (= the §258/#777 fix landed INSUFFICIENT: the `(?i)[0-9a-f]+` guard accepts a >8-hex-digit token → `Integer.parseInt(...,16)` throws uncaught NFE — *measured 16/09*: `"fffffffff"`.matches + NFE "under radix 16"; owner = `.18`/SSE lane, fix: length/range guard or catch; see section); **#773** `java/comparison-with-wider-type` `KofJsRunner.listValues` — ✅ FIXED 16/09 by `.18` (bound check `n > Integer.MAX_VALUE` → clear `RuntimeException`, precedent `d6eaae0c`; int/int loop, no silent truncation). **#774** `java/relative-path-command` `DepsTransitiveTest` — ✅ FIXED by `2a60b426` (`.17`). **#777** `java/uncaught-number-format-exception` `KofWebJsE2ETest:302` — ✅ FIXED 16/09 by the SSE lane (`.18`): the chunked-decode test helper validates the hex size token before `parseInt`, no uncaught NFE; 6/6. **STILL OPEN (other owners):** #775 `java/relative-path-command` `NumericFormatterE2ETest:35` (owner `.22`, `78b733fa`) + #776 `java/unused-parameter` `KofHttp.supportedOn:57` (= the dead guard of §259, owner `.15`/`.17` — resolves when §259 wires it). |
 > | **§259 🔴 OPEN 16/09 (lane native/compiler `.17`/`.18`)** | Native `http.timeout`/`http.retry`/`http.circuit` compile OK but are **pure silent no-ops** (`NativeHttpCore.java:369-380` = bare `ret`; riscv/aarch `NativeRiscvHttpCore.java:317-324`); `KofHttp.supportedOn` returns `true` for every target, so the user believes retry/circuit are active (R6/rule 5). Docs cited a **phantom `HTTP003`** ("not silent: debug syserr") that no module emits; `HTTP002` exists only as a literal and its branch is dead (see section) — no HTTP gap code is emitted today. Found + docs corrected by lane bugs-and-gaps `.15`; catalogued, fix direction = emit a real compile-time gap code on `NATIVE*` (WEB-split precedent) or implement in asm. |
 > | **§263 🔴 OPEN 16/09 (found by lane docs/development `.22`; fix = compiler lane)** | Parser accepts an ANY identifier before an annotated declaration and silently DISCARDS it (R6): `let x: Int = 5` prints `5`, `Klaxon x: Int = 5` too, `Banana q: String = "z"` → `z` — the error disappears with the annotation. Root: `parseVarDecl` falls through to `parseTypeRef` for any IDENT (`StatementParser:413-415`) and the `: Tipo` on :417-421 silently replaces the "type"; `async f(): Int` passes check too. Without annotation it fails correctly (SEM011 — `let x = 5`/`const y = 10` → dead sugar, `183cb048`). **The truth about the `let/const`-sugar cluster:** partial removal (the `let x = 5`/`const y = 10` case in the `jsSugarIsRejected` test is green because of the missing annotation, not because the sugar exists). Related: the corpus claims in `training/reference/{targets,compiler}` ("`let`/`const` → KofScriptGlobals") — false for the unannotated case, fixed separately (cluster I-D).
-> | **§262 🔴 OPEN 16/09 (found by lane docs/development `.22`; fix = lane compiler `CompilerComparisons`)** | Record `T?` vs `null`: `== null`/`!= null` **NPEs on the JVM** (`Cannot invoke Point.equals(Object) because maybe is null`) — record `==` lowers to `.equals()` with NO null-guard on the receiver (`CompilerComparisons:28,337-342`, bug 188); class/String nullable narrow fine (`if_acmp`/`Objects.equals`). Fix = contract change (freeze rule 6) → lane compiler, NOT touched here. |
+> | **§262 🟡 PARTIAL 17/09 (face (a) `== null`/`!= null` ✅ FIXED 17/09 `07a51565` by lane bugs-and-gaps `.15`; face (b) `nullableRecord == nullableRecord` OPEN)** | Record `T?` vs `null`: `== null`/`!= null` **NPEs on the JVM** (`Cannot invoke Point.equals(Object) because maybe is null`) — record `==` lowers to `.equals()` with NO null-guard on the receiver (`CompilerComparisons:28,337-342`, bug 188); class/String nullable narrow fine (`if_acmp`/`Objects.equals`). Face (a) fixed by excluding the `null` literal from the record content-equality branch (now `if_acmp`); face (b) needs a null-guard/`Objects.equals` in the record `==` path (cross-target). |
 > | **§260 🟡 PARTIAL 16/09 (lane native/compiler `.17`; cause-1 G-6b CLOSED by `92d11a03`, cause-2/G-6(a) + trigger still OPEN)** | Native x86 auto-collect was unsound for TWO reasons (gdb-probed same day): (1) mark scanned only the current frame → main's live Strings invisible → freed (SIGSEGV) — **FIXED 16/09 (G-6b: `_start` records `kof_main_stack_bottom`, mark scans the whole thread stack; `NativeX86GcMarkScopeTest` 3/3)**; (2) live temporaries in caller-saved regs at the `kof_alloc` call-site (`%rdi`) — invisible to any stack scan → needs G-6(a) (spill-per-live-ref / stack-map), the trigger is OFF again. riscv never hit (1) (value-stack = machine stack). |
 > | **§261 ✅ FIXED 16/09 (lane development `.18`)** | KofJS `window.bind`: Components and raw DOM widgets drew handle ids from TWO separate counters (`kofUiSeq` vs `kofNodeSeq`, both from 0); `kofUiWindowBind` resolves components FIRST → a Component created before a raw widget stole the widget's id and the widget rendered nothing (orphan in `__kofNodes`). Found via kof-ui-widgets (Slider+ReconfigButton in real Chrome). Fix = one shared counter (`kofNodeSeq`). Proof: `KofJsBrowserE2ETest.componentAndRawWidgetIdsNeverCollide` (RED pre-fix, measured) + lib `scripts/browser-drag.mjs`.
 > | **§264 ✅ FIXED 16/09 (lane development `.18`)** | KofJS printed `Double`/`Float` with the raw `Number.toString` — `4` not `4.0`, `10000000` not `1.0E7`, `0` not `-0.0` — in **every** display path (println/print/concat/`String.valueOf`/`.toString()`); silent rule-5 divergence vs JVM/Native. The old §44/§180 records called it "expected on JS" and 5 conformance cells excluded `js` to stay green. Fix = new runtime slice `num-fmt`/`kofNumFmt` (JDK contract: shortest round-trip + `E`-threshold + Float own precision) routed from the JS emitter + type-passthrough in the shared lowerers. Proof: `WrapperStaticCallsE2ETest.doubleFloatJdkPrintFormat` + 5 cells flipped to 4-target parity (value-by-value vs JVM oracle on node v18). Boxed-collection print (`List<Double>`→`[4,2.5]`) stays §104b-ii (native lane), NOT fixed here.
@@ -9564,7 +9564,7 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   side (Slider/ReconfigButton + docs) is the companion commit in
   `kof-ui-widgets`.
 
-### §262 — Record `T?` vs `null`: `== null`/`!= null` NPEs on the JVM (record `==` lowers to `.equals()` with no null-guard on the receiver); class/String nullable narrow fine
+### §262 — Record `T?` vs `null`: `== null`/`!= null` NPEs on the JVM (record `==` lowers to `.equals()` with no null-guard on the receiver); class/String nullable narrow fine — ✅ face (a) FIXED 17/09 (`07a51565`); 🟡 face (b) OPEN
 
 - **Found 16/09 ~15:40 by lane docs/development `192.168.100.22`**, while
   fixing the null-contrato corpus cluster: the `training/idioms/records.md`
@@ -9596,20 +9596,37 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   comparison (never unbox/deref the receiver), on every target; a record is a
   reference type, so `== null` must behave like `if_acmp`, and record-vs-record
   content equality must guard the null receiver first (e.g. `Objects.equals`).
-- **Fix owner:** lane compiler (author of the record-`==`→`.equals()` lowering,
-  `CompilerComparisons`). NOT touched here: rule 8 (another lane's file + a
-  contract/eval-order boundary — freeze rule 6 keeps `==`/null-safety off
-  direct edits). Minimal fix candidate: in the record-`==` path, when either
-  operand is statically `T?`/`null`, emit the null-guard (`if_acmp`) or route
-  through `Objects.equals` instead of a bare `receiver.equals(arg)`.
-- **Cross-target:** JS/Native not measured this session (qemu/node on this
-  host); whatever they print, a JVM NPE is already a parity bug (rule 5).
-- **Status:** 🔴 OPEN 16/09 — catalogued by lane docs/development
-  `192.168.100.22` with the four measured cases above. Corpus:
-  `training/idioms/records.md` null-safety cell left pointing here (HIT form
-  taught, MISS form annotated as this bug) until the fix lands. Related:
-  §D-NULL-INTENT (boxed nullable contract), bug 188 (record `==` content),
-  §241 (nullable-primitive boxed contract, reverted to honest gap).
+- **Fix (face a) — ✅ FIXED 17/09 by lane bugs-and-gaps `192.168.100.15`
+  (`07a51565`), claimed after the repro was localized (orphan OPEN):** the
+  record content-equality branch in `ExpressionBinaryLowerer` fired even when
+  an operand was the literal `null`, emitting `receiver.equals(null)` with no
+  guard. Fix: exclude the `null` literal from that branch, so `==`/`!=`
+  against `null` lowers to a REFERENCE comparison (`if_acmp`) — it never
+  dereferences the receiver. (`class`/`String` already took the null-safe
+  path; `record==record` content equality, bug 11/188, is unchanged when
+  neither side is the literal.)
+- **Regression proof (face a):** `RecordNullableNullEqE2ETest` 6/6 — MISS
+  `== null`/`!= null`, HIT, map miss, `record==record` content, SCRIPT and JS.
+  Neighbors green: `NullSafetyE2ETest` 12/12, `CoreRegressionE2ETest` 102/102,
+  `BackendParityTest` 19/19 (0 regression).
+- **🟡 Face (b) OPEN — `nullableRecord == nullableRecord` (no literal) still
+  NPEs:** `var miss: Point? = mapOf("k", Point(7,8)).get("z")` +
+  `var hit: Point? = mapOf("k", Point(7,8)).get("k")` + `println(miss == hit)`
+  → same `Cannot invoke "Point.equals(Object)" because "miss" is null`. The
+  content-equality path is taken with a null receiver. Expected: null-safe
+  content equality (`Objects.equals` semantics — the interpreter already does
+  it via `objectEquals`). Fix = guard the null receiver in the record `==`
+  path (or route through `Objects.equals`); **cross-target** (JS/Native/SCRIPT
+  must agree), not measured this session on the cross targets.
+- **Cross-target (face a):** JVM proven by test; SCRIPT + JS proven by test;
+  Native not measured (qemu absent) — the lowering is target-agnostic
+  (`if_acmp` reference compare).
+- **Status:** 🟡 PARTIAL 17/09 — face (a) FIXED (`07a51565`, lane
+  bugs-and-gaps `192.168.100.15`); face (b) OPEN as above. Corpus:
+  `training/idioms/records.md` null-safety cell updated (the `!= null`
+  narrowing on a missing key is now safe). Related: §D-NULL-INTENT (boxed
+  nullable contract), bug 188 (record `==` content), §241
+  (nullable-primitive boxed contract, reverted to honest gap).
 
 ### §263 — Parser accepts any identifier before an annotated declaration and silently discards it (`let x: Int = 5`, `Klaxon x: Int = 5` compile and run)
 
