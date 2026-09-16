@@ -321,7 +321,7 @@ stream é fechado e a task cancelada.
 - `app.serveDir` (arquivos estáticos + Range 206/416) é JVM-only (Native/JS `WEB005`).
 - Hardening PR6 (connection cap, limites `maxFrameBytes`/`maxMessageBytes`,
   `idleMs`, `app.stats`) é JVM; backpressure e fragmentação seguem follow-up.
-- `kof.http` client — ✅ JVM+JS (27/08; `timeout/retry/circuit` em paridade 30/08), Native `HTTP002` pendente.
+- `kof.http` client — ✅ JVM+JS (27/08; `timeout/retry/circuit` em paridade 30/08), Native ✅ (asm HTTP/1.1; configuradores `timeout/retry/circuit` são no-ops silenciosos — ver §259; ramo HTTP002 morto).
 - Middleware/rotas de outros métodos HTTP além dos listados: futuramente.
 
 > Fechas nesta fase (27–30/08): status codes + headers customizados
