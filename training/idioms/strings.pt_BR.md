@@ -114,11 +114,11 @@ de caracteres quando o target importa.
 ## Null safety (0.3.22-beta)
 
 ```kof
-String? s = null
+String? s = mapOf("k", "abc").get("k")   // null chega ao T? via API (= null literal é SEM048)
 if (s != null) {
     println(s.length)   // narrowing OK — propriedade E métodos (s.substring(...))
 }
-// s.length sem check → erro SEM014
+// s.length sem check → erro SEM049 (SG-005 corrigido 10/09)
 ```
 
 > **02/09:** narrowing de `String?` no JVM corrigido — antes `s.length`/`s.substring(...)`

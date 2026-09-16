@@ -114,11 +114,11 @@ count when the target matters.
 ## Null safety (0.3.22-beta)
 
 ```kof
-String? s = null
+String? s = mapOf("k", "abc").get("k")   // null reaches T? via API (= null literal is SEM048)
 if (s != null) {
     println(s.length)   // narrowing OK — property AND methods (s.substring(...))
 }
-// s.length without a check → error SEM014
+// s.length without a check → error SEM049 (SG-005 fixed 10/09)
 ```
 
 > **02/09:** narrowing of `String?` on the JVM fixed — before, `s.length`/`s.substring(...)`

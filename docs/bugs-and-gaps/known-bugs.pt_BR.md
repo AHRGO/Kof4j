@@ -16,6 +16,7 @@
 > | **§256 🟡 PARCIAL 16/09 (lane development `.18`)** | fechamento CONC001 deixou 2 vermelhos no tip limpo (worktree `4af4356f`): ~~célula de gaps de `learn/18-concurrency.md` dessincronizada (guard)~~ **face (a) ✅ FECHADA 16/09 pela lane docs/development `192.168.100.22` (`dd2c7fcb` — `ConcurrencyGapsDocTest` 3/3 verde)** + riscv64 `poll(b)` retorna 0 após scan do selectAny (aarch casa) — face (b) ABERTA. PRÉ-EXISTENTE, não §257. |
 > | **§258 🔴 ABERTO 16/09 (lane `.18`; #774 FECHADO, #775/#776/#777 ABERTOS 16/09)** | Gate CodeQL (4 abertos): **#773** `java/comparison-with-wider-type` (`i < n`, int vs long) `KofJsRunner.listValues` (DB001 fatia A `3e55df51`, dona `.18` — bound check, precedente `d6eaae0c`) segue VERMELHO (alerta em **:525**, não :510; a unidade DB001 fechou em `eb9140cb`, logo a justificativa "conflito vivo" expirou — conserto desbloqueado para a `.18`, ver UPDATE 16/09 ~07:00 na seção); **#774** `java/relative-path-command` em `DepsTransitiveTest` CORRIGIDO 16/09 por `2a60b426` (`.17`: `mvnOnPath()` removido, reusa `Deps.mvnAvailable()`); **#775** `java/relative-path-command` `NumericFormatterE2ETest:35` (dona `.22`, `78b733fa` — `java` relativo num oráculo de teste, consertar no arquivo como o #774) + **#776** `java/unused-parameter` `KofHttp.supportedOn:57` (= o guard morto do §259, dona `.15`/`.17`, `@SuppressWarnings` não respeitado pelo CodeQL — resolve quando o §259 ligar) + **#777** `java/uncaught-number-format-exception` em `KofWebJsE2ETest:302` (dona = lane SSE da mantenedora, `7cd69a7b` 16/09 — `Integer.parseInt(hex)` no helper de-chunk do teste sem catch; chunk-size malformado → NFE não capturada; conserto: envolver/validar como o guard `lineEnd < 0` acima); bypass `CODEQL_GATE_SKIP=1` + causa declarada enquanto. |
 > | **§259 🔴 ABERTO 16/09 (lane native/compiler `.17`/`.18`)** | `http.timeout`/`http.retry`/`http.circuit` no Native compilam OK mas são **puros no-ops silenciosos** (`NativeHttpCore.java:369-380` = `ret` puro; riscv/aarch `NativeRiscvHttpCore.java:317-324`); `KofHttp.supportedOn` devolve `true` para todo target, então o usuário acredita que retry/circuit estão ativos (R6/regra 5). Os docs citavam um **`HTTP003` fantasma** ("não silencioso: debug syserr") que nenhum módulo emite; `HTTP002` existe só como literal e seu ramo é morto (ver seção) — nenhum gap code HTTP é emitido hoje. Achado + docs corrigidos pela lane bugs-and-gaps `.15`; catalogado, direção do conserto = emitir um código de gap real em compile-time no `NATIVE*` (precedente do split WEB) ou implementar em asm. |
+> | **§262 🔴 ABERTO 16/09 (achado pela lane docs/development `.22`; conserto = lane compiler `CompilerComparisons`)** | Record `T?` vs `null`: `== null`/`!= null` dá **NPE no JVM** (`Cannot invoke Point.equals(Object) because maybe is null`) — o `==` de record baixa para `.equals()` SEM guarda de null no receptor (`CompilerComparisons:28,337-342`, bug 188); nullable de class/String faz narrowing bem (`if_acmp`/`Objects.equals`). Conserto = mudança de contrato (regra 6 do freeze) → lane compiler, NÃO tocado aqui. |
 > | **§261 ✅ CORRIGIDO 16/09 (lane development `.18`)** | `window.bind` no KofJS: Components e widgets DOM crus tiravam ids de handle de DOIS contadores SEPARADOS (`kofUiSeq` vs `kofNodeSeq`, ambos do 0); `kofUiWindowBind` resolve componentes PRIMEIRO → um Component criado antes de um widget cru roubava o id do widget e o widget não renderizava nada (órfão em `__kofNodes`). Achado via kof-ui-widgets (Slider+ReconfigButton no Chrome real). Conserto = um contador único compartilhado (`kofNodeSeq`). Prova: `KofJsBrowserE2ETest.componentAndRawWidgetIdsNeverCollide` (VERMELHO pré-fix, medido) + `scripts/browser-drag.mjs` da lib.
 > | **§257 ✅ CORRIGIDO 15/09 (lane compiler `192.168.100.17`)** | literais `static final String` de texto-de-runtime = inlining ConstantValue do javac → falso vermelho em build incremental (`validationBrJs`); 77 campos de-`final` + `RuntimeConstantInliningGuardTest` (ASM, ConstantValue) trava. |
 > | **§173 ✅ CORRIGIDO 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `++`/`--`/compound em `Long`/`Double`/`Float` + incremento de ELEMENTO de array: JVM VerifyError (literal `INT 1` em binário de 2 slots, `DUP` de 1 slot, `arraystore` sem `[array,index]`), Native core dump, Script `NoSuchElementException`, JS `stack underflow`/`KofDup2`. 4 targets; caça Q4 13/09 (sobre o §167). Prova: `BackendParityTest.parityIncrementWideTypesAndArrayElement` + `KofInterpreterParityTest.incrementWideTypesAndArrayElement` + célula `increment` 4/4. |
@@ -9070,3 +9071,53 @@ usuário — diagnostic em compile-time é a meta (regra 6).
   bloco de runtime (slice registry), então os dois hosts ficam consertados
   juntos por construção; o lado da lib (Slider/ReconfigButton + docs) é o
   commit companheiro em `kof-ui-widgets`.
+### §262 — Record `T?` vs `null`: `== null`/`!= null` dá NPE no JVM (o `==` de record baixa para `.equals()` sem guarda de null no receptor); nullable de class/String faz narrowing normal
+
+- **Encontrado 16/09 ~15:40 pela lane docs/development `192.168.100.22`**, ao
+  corrigir o cluster null-contrato do corpus: a célula "Null safety with
+  records" de `training/idioms/records.md` usava `Point? maybe = null`, e
+  reescrevê-la para a forma API expôs um crash de runtime (isto é bug de
+  CÓDIGO, regra 8 — catalogado aqui, não consertado aqui).
+- **Repro (medido num jar de CLONE LIMPO do tip `803eeef4`; cada diretório
+  tem um `main()`):**
+  - Record **MISS** → NPE: `record Point(Int x, Int y)` +
+    `var maybe: Point? = mapOf("k", Point(7,8)).get("z")` +
+    `if (maybe == null) {...}` ou `if (maybe != null) {...}` →
+    `Exception in thread "main" java.lang.NullPointerException:
+    Cannot invoke "Point.equals(Object)" because "maybe" is null`. Igual via
+    função que retorna `Point?` com `return null` (findPoint(false)).
+  - Record **HIT** → OK: mesmo map, `get("k")` → imprime `7`.
+  - Nullable de class → OK: `class Ponto { Int x ... }`,
+    `var p: Ponto? = mapOf("k",Ponto(7)).get("z")`, `if (p == null)` →
+    `is-null` (usa `if_acmp`).
+  - Nullable de String → OK: `mapOf("k","v").get("missing")`, `!= null` →
+    `miss-str-ok`.
+- **Root cause (estático, casa com a medição):** `==` num record baixa para
+  igualdade de conteúdo `left.equals(right)` (`CompilerComparisons.java:28,
+  337-342` — "bug 188: `==` de record compara CONTEÚDO via `.equals()`");
+  esse lowering **não tem guarda de null no receptor**, então comparar uma
+  referência record null com `null` chama `.equals` em `null` → NPE. As
+  comparações de `class`/`String` passam por `if_acmp`/`Objects.equals`
+  (null-safe), por isso fazem narrowing corretamente.
+- **Esperado (freeze regra 5 / D-NULL-INTENT):** `T? == null` deve ser uma
+  comparação de null (nunca desembrulhar/dereferenciar o receptor), em todos
+  os targets; record é tipo referência, então `== null` deve comportar-se
+  como `if_acmp`, e a igualdade de conteúdo record-vs-record deve guardar o
+  receptor null primeiro (ex.: `Objects.equals`).
+- **Dono do conserto:** lane compiler (autora do lowering record-`==`→
+  `.equals()`, `CompilerComparisons`). NÃO tocado aqui: regra 8 (arquivo de
+  outra lane + fronteira de contrato/ordem de avaliação — a regra 6 do freeze
+  mantém `==`/null-safety fora de edição direta). Candidato de conserto
+  mínimo: no caminho record-`==`, quando um operando for estaticamente
+  `T?`/`null`, emitir a guarda de null (`if_acmp`) ou rotear por
+  `Objects.equals` em vez de um `receiver.equals(arg)` cru.
+- **Cross-target:** JS/Native não medidos nesta sessão (qemu/node neste
+  host); qualquer que seja o que imprimirem, um NPE no JVM já é bug de
+  paridade (regra 5).
+- **Status:** 🔴 ABERTO 16/09 — catalogado pela lane docs/development
+  `192.168.100.22` com os quatro casos medidos acima. Corpus: a célula de
+  null-safety de `training/idioms/records.md` aponta para cá (ensina a forma
+  HIT, anota a forma MISS como este bug) até o conserto landar. Relacionado:
+  §D-NULL-INTENT (contrato boxed nullable), bug 188 (`==` de conteúdo de
+  record), §241 (contrato boxed nullable-primitivo, revertido para gap
+  honesto).

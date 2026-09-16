@@ -157,11 +157,19 @@ objects/records/arrays also works on Native (compile-time composition; FP in XMM
 ## Null safety with records (0.3.22-beta)
 
 ```kof
-Point? maybe = null
+record Point(Int x, Int y)
+var m: Map<String, Point> = mapOf("k", Point(7, 8))
+var maybe: Point? = m.get("k")    // null reaches T? via API (= null literal is SEM048)
 if (maybe != null) {
     println(maybe.x())
 }
 ```
+
+> ⚠️ A **missing** key (`m.get("z")`, so `maybe` is really `null`) currently
+> **NPEs on the JVM**: record `==`/`!=` lowers to `.equals()` with no null-guard
+> on the receiver (measured 16/09 — bug `§262`, open, fix is lane compiler's).
+> The present-key form above is safe; do not narrow a possibly-null record from
+> `Map.get` until §262 lands.
 
 ## Related anti-patterns
 

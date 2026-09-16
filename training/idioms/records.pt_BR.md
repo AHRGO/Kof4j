@@ -157,11 +157,19 @@ objetos/records/arrays funciona também no Native (composição compile-time; FP
 ## Null safety com records (0.3.22-beta)
 
 ```kof
-Point? maybe = null
+record Point(Int x, Int y)
+var m: Map<String, Point> = mapOf("k", Point(7, 8))
+var maybe: Point? = m.get("k")    // null chega ao T? via API (= null literal é SEM048)
 if (maybe != null) {
     println(maybe.x())
 }
 ```
+
+> ⚠️ Uma chave **ausente** (`m.get("z")`, então `maybe` é realmente `null`)
+> atualmente dá **NPE no JVM**: `==`/`!=` de record baixa para `.equals()` sem
+> guarda de null no receptor (medido 16/09 — bug `§262`, aberto, o conserto é
+> da lane compiler). A forma com chave presente acima é segura; não faça
+> narrowing de um record possivelmente-null vindo de `Map.get` até o §262 landar.
 
 ## Anti-patterns relacionados
 

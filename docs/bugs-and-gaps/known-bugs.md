@@ -16,6 +16,7 @@
 > | **§256 🟡 PARTIAL 16/09 (lane development `.18`)** | CONC001 closure left 2 reds on clean tip (worktree `4af4356f`): ~~`learn/18-concurrency.md` gaps cell desynced (guard)~~ **face (a) ✅ CLOSED 16/09 by lane docs/development `192.168.100.22` (`dd2c7fcb` — `ConcurrencyGapsDocTest` 3/3 green)** + riscv64 `poll(b)` returns 0 after selectAny scan (aarch agrees) — face (b) OPEN. PRE-EXISTING, not §257. |
 > | **§258 🔴 OPEN 16/09 (lane `.18`; #774 CLOSED, #775/#776/#777 OPEN 16/09)** | CodeQL gate (4 open): **#773** `java/comparison-with-wider-type` (`i < n`, int vs long) `KofJsRunner.listValues` (DB001 fatia A `3e55df51`, owner `.18` — bound check, precedent `d6eaae0c`) still RED (alert at **:525**, not :510; DB001 unit closed `eb9140cb` so the "live conflict" rationale expired — fix unblocked for `.18`, see section UPDATE 16/09 ~07:00); **#774** `java/relative-path-command` `DepsTransitiveTest` FIXED 16/09 by `2a60b426` (`.17`: `mvnOnPath()` removed, reuses `Deps.mvnAvailable()`); **#775** `java/relative-path-command` `NumericFormatterE2ETest:35` (owner `.22`, `78b733fa` — relative `java` in a test oracle, fix in-file like #774) + **#776** `java/unused-parameter` `KofHttp.supportedOn:57` (= the dead guard of §259, owner `.15`/`.17`, `@SuppressWarnings` not honoured by CodeQL — resolves when §259 wires it) + **#777** `java/uncaught-number-format-exception` `KofWebJsE2ETest:302` (owner = maintainer SSE lane, `7cd69a7b` 16/09 — `Integer.parseInt(hex)` in the chunked-decode test helper with no catch; malformed chunk-size → uncaught NFE; fix: wrap/validate like the `lineEnd < 0` guard above it); bypass `CODEQL_GATE_SKIP=1` + cause declared meanwhile. |
 > | **§259 🔴 OPEN 16/09 (lane native/compiler `.17`/`.18`)** | Native `http.timeout`/`http.retry`/`http.circuit` compile OK but are **pure silent no-ops** (`NativeHttpCore.java:369-380` = bare `ret`; riscv/aarch `NativeRiscvHttpCore.java:317-324`); `KofHttp.supportedOn` returns `true` for every target, so the user believes retry/circuit are active (R6/rule 5). Docs cited a **phantom `HTTP003`** ("not silent: debug syserr") that no module emits; `HTTP002` exists only as a literal and its branch is dead (see section) — no HTTP gap code is emitted today. Found + docs corrected by lane bugs-and-gaps `.15`; catalogued, fix direction = emit a real compile-time gap code on `NATIVE*` (WEB-split precedent) or implement in asm. |
+> | **§262 🔴 OPEN 16/09 (found by lane docs/development `.22`; fix = lane compiler `CompilerComparisons`)** | Record `T?` vs `null`: `== null`/`!= null` **NPEs on the JVM** (`Cannot invoke Point.equals(Object) because maybe is null`) — record `==` lowers to `.equals()` with NO null-guard on the receiver (`CompilerComparisons:28,337-342`, bug 188); class/String nullable narrow fine (`if_acmp`/`Objects.equals`). Fix = contract change (freeze rule 6) → lane compiler, NOT touched here. |
 > | **§261 ✅ FIXED 16/09 (lane development `.18`)** | KofJS `window.bind`: Components and raw DOM widgets drew handle ids from TWO separate counters (`kofUiSeq` vs `kofNodeSeq`, both from 0); `kofUiWindowBind` resolves components FIRST → a Component created before a raw widget stole the widget's id and the widget rendered nothing (orphan in `__kofNodes`). Found via kof-ui-widgets (Slider+ReconfigButton in real Chrome). Fix = one shared counter (`kofNodeSeq`). Proof: `KofJsBrowserE2ETest.componentAndRawWidgetIdsNeverCollide` (RED pre-fix, measured) + lib `scripts/browser-drag.mjs`.
 > | **§257 ✅ FIXED 15/09 (lane compiler `192.168.100.17`)** | `static final String` runtime-text literals = javac ConstantValue inlining → false red on incremental build (`validationBrJs`); 77 fields de-`final` + `RuntimeConstantInliningGuardTest` (ASM, ConstantValue) locks it. |
 > | **§173 ✅ FIXED 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `++`/`--`/compound on `Long`/`Double`/`Float` + increment of an array ELEMENT: JVM VerifyError (literal `INT 1` in a 2-slot binary, 1-slot `DUP`, `arraystore` without `[array,index]`), Native core dump, Script `NoSuchElementException`, JS `stack underflow`/`KofDup2`. 4 targets; Q4 hunt 13/09 (over §167). Proof: `BackendParityTest.parityIncrementWideTypesAndArrayElement` + `KofInterpreterParityTest.incrementWideTypesAndArrayElement` + cell `increment` 4/4. |
@@ -9237,3 +9238,50 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   (slice registry), so both hosts are fixed together by construction; the lib
   side (Slider/ReconfigButton + docs) is the companion commit in
   `kof-ui-widgets`.
+
+### §262 — Record `T?` vs `null`: `== null`/`!= null` NPEs on the JVM (record `==` lowers to `.equals()` with no null-guard on the receiver); class/String nullable narrow fine
+
+- **Found 16/09 ~15:40 by lane docs/development `192.168.100.22`**, while
+  fixing the null-contrato corpus cluster: the `training/idioms/records.md`
+  "Null safety with records" cell used `Point? maybe = null`, and rewriting
+  it to the API form exposed a runtime crash (this is a CODE bug, rule 8 —
+  catalogued here, not fixed here).
+- **Repro (measured on a CLEAN-CLONE jar of tip `803eeef4`; each dir has one
+  `main()`):**
+  - Record **MISS** → NPE: `record Point(Int x, Int y)` +
+    `var maybe: Point? = mapOf("k", Point(7,8)).get("z")` +
+    `if (maybe == null) {...}` or `if (maybe != null) {...}` →
+    `Exception in thread "main" java.lang.NullPointerException:
+    Cannot invoke "Point.equals(Object)" because "maybe" is null`. Same via a
+    function returning `Point?` with `return null` (findPoint(false)).
+  - Record **HIT** → OK: same map, `get("k")` → prints `7`.
+  - Class nullable → OK: `class Ponto { Int x ... }`,
+    `var p: Ponto? = mapOf("k",Ponto(7)).get("z")`, `if (p == null)` →
+    `is-null` (uses `if_acmp`).
+  - String nullable → OK: `mapOf("k","v").get("missing")`, `!= null` →
+    `miss-str-ok`.
+- **Root cause (static, matches the measurement):** `==` on a record lowers
+  to content-equality `left.equals(right)` (`CompilerComparisons.java:28,
+  337-342` — "bug 188: record `==` compares CONTENT via `.equals()`"); that
+  lowering has **no null-guard on the receiver**, so comparing a null record
+  reference to `null` calls `.equals` on `null` → NPE. `class`/`String`
+  comparisons go through `if_acmp`/`Objects.equals` (null-safe), which is why
+  they narrow correctly.
+- **Expected (freeze rule 5 / D-NULL-INTENT):** `T? == null` must be a null
+  comparison (never unbox/deref the receiver), on every target; a record is a
+  reference type, so `== null` must behave like `if_acmp`, and record-vs-record
+  content equality must guard the null receiver first (e.g. `Objects.equals`).
+- **Fix owner:** lane compiler (author of the record-`==`→`.equals()` lowering,
+  `CompilerComparisons`). NOT touched here: rule 8 (another lane's file + a
+  contract/eval-order boundary — freeze rule 6 keeps `==`/null-safety off
+  direct edits). Minimal fix candidate: in the record-`==` path, when either
+  operand is statically `T?`/`null`, emit the null-guard (`if_acmp`) or route
+  through `Objects.equals` instead of a bare `receiver.equals(arg)`.
+- **Cross-target:** JS/Native not measured this session (qemu/node on this
+  host); whatever they print, a JVM NPE is already a parity bug (rule 5).
+- **Status:** 🔴 OPEN 16/09 — catalogued by lane docs/development
+  `192.168.100.22` with the four measured cases above. Corpus:
+  `training/idioms/records.md` null-safety cell left pointing here (HIT form
+  taught, MISS form annotated as this bug) until the fix lands. Related:
+  §D-NULL-INTENT (boxed nullable contract), bug 188 (record `==` content),
+  §241 (nullable-primitive boxed contract, reverted to honest gap).
