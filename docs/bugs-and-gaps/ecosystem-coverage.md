@@ -355,7 +355,7 @@ Legend in the target columns: `y` = supported, `~` = partial, `–` = no.
 
 | # | Gap | Impact | Proposed location |
 |---|-----|---------|----------------|
-| G1 | ~~**Database/SQL** nonexistent~~ — ✅ **level 0 implemented**: `kof.db` (JDBC JVM, native SQLite, MySQL WIP) + `kof.orm` (entity, CRUD, where, migrate, MongoDB) | real apps with persistence on JVM/Native-SQLite | next: typed query DSL, pools, kof.db outside the JVM |
+| G1 | ~~**Database/SQL** nonexistent~~ — ✅ **level 0 implemented**: `kof.db` (JDBC JVM, native SQLite, MySQL WIP) + `kof.orm` (entity, CRUD, where, migrate, MongoDB) | real apps with persistence on JVM/Native-SQLite | ✅ typed query DSL (01/09) + kof.db on JS (16/09); remaining: pools, ORM on Native/JS (`ORM001`) |
 | G2 | ~~**HTTP client** nonexistent~~ — ✅ **implemented**: `kof.http` client (get/post/put/delete/patch/options/status/timeout + retry/circuit 08/30, headers; HTTP002 on Native) | integrations, tests, frontend | ✅ closed — `KofHttpE2ETest` (4, JVM+JS) + `KofHttpResilienceE2ETest` (3) |
 | G3 | ~~Configuration~~ — ✅ `kof.config` implemented (file > env > profile > default, typed `str/int/long/bool`); **native CONFIG001 closed** (asm `/proc/self/environ`); JS reports CONF001 | — | JS (P1) |
 | G4 | ~~**Validation** nonexistent~~ — ✅ **implemented**: `kof.validation` (13 predicates on the 3 targets) | — | `KofValidationTest` (3/3) |
@@ -455,7 +455,7 @@ Principles maintained:
 5. ~~G1~~ — ✅ complete level 0 `kof.db` + `kof.orm` (idiomatic JDBC, native
    SQLite, transactions, entity, migrations, **where with operators**,
    **saveAll batch**, **page/count/deleteAll**, **real MariaDB/PostgreSQL**,
-   MongoDB); next: typed query DSL, pools, Native/JS portability.
+   MongoDB); next: pools, ORM on Native/JS (`ORM001`). Typed query DSL ✅ 01/09; `kof.db` on JS ✅ 16/09 (`DB001`).
 6. ~~G4~~ — ✅ `kof.validation` (13 predicates on the 3 targets; `KofValidationTest` 3/3).
 7. ~~G5~~ — ✅ `kof.observability` (health/readiness/liveness, counter/increment/gauge, requestId/correlationId — JVM/Native/JS; `KofObservabilityTest` 3/3).
 8. ~~G8~~ — ✅ `kof.time.sleep` + `interval`/`cancel` 3 targets (JS: cooperative queue — TIME001 closed 09/02).
