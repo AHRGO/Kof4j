@@ -81,8 +81,12 @@ var v = await r
 var id = time.interval(1000, () -> println("tick"))
 ```
 
-For scheduled `every`/`at`, `kof.scheduler` exists on the 3 targets
-(`SCHED001` closed on Native 31/08): `scheduler.every(100) { ... }`, `scheduler.at("0 3 * * *") { ... }`, `scheduler.cancel(id)`.
+For scheduled `every`, `kof.scheduler` exists on the 3 targets
+(`SCHED001` closed on Native 31/08): `scheduler.every(100) { ... }`, `scheduler.cancel(id)`.
+⚠️ `scheduler.at("0 3 * * *", fn)` is a **60s stub on every target** (`CRON001` — the cron
+expression is ignored, the job just runs once a minute); until CRON001 lands, compute the
+milliseconds until the next fire and run `spawn { time.sleep(ms); job() }` (re-arm inside
+the job for a repeating schedule).
 
 ## WHY
 

@@ -81,8 +81,12 @@ var v = await r
 var id = time.interval(1000, () -> println("tick"))
 ```
 
-Para `every`/`at` programados, `kof.scheduler` existe nos 3 targets
-(`SCHED001` fechado no Native 31/08): `scheduler.every(100) { ... }`, `scheduler.at("0 3 * * *") { ... }`, `scheduler.cancel(id)`.
+Para `every` programado, `kof.scheduler` existe nos 3 targets
+(`SCHED001` fechado no Native 31/08): `scheduler.every(100) { ... }`, `scheduler.cancel(id)`.
+⚠️ `scheduler.at("0 3 * * *", fn)` é um **stub de 60s em todos os targets** (`CRON001` — a
+expressão cron é ignorada, o job só roda uma vez por minuto); até o CRON001 landar, calcule
+os milissegundos até o próximo disparo e rode `spawn { time.sleep(ms); job() }` (re-arme
+dentro do job para agenda recorrente).
 
 ## WHY
 

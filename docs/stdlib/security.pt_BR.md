@@ -58,7 +58,7 @@ NOT APPLICABLE   → não se aplica à arquitetura Kof
 | SSE | (Spring via `SseEmitter`) | `kof.web` (`app.sse`) | **EXISTS (JVM)** | `sse.send/event/close` (JVM + JS handler-scoped ✅ 16/09, `7cd69a7b`; Native `WEB003`, resíduo de push pós-return no JS `WEB003`) |
 | Messaging | spring-messaging | `kof.mq` (publish/subscribe/queue) | **EXISTS** | JVM+Native+JS (MQ001 fechado 01/09) |
 | Transactions | spring-tx | `kof.db` (`transaction {}`) | **EXISTS** | JVM (JDBC commit/rollback) + Native (SQLite) + JS (não-tipado 16/09) |
-| Scheduling | spring-context | `kof.scheduler` (`every/at/cancel`) + `spawn` | PARTIAL | JVM (ScheduledExecutor) + JS (setInterval); Native `SCHED001` |
+| Scheduling | spring-context | `kof.scheduler` (`every`/`cancel` + `spawn`) | PARCIAL | JVM (ScheduledExecutor) + JS (setInterval) + Native (`SCHED001` fechado 31/08); `at(cron)` = stub de 60s (`CRON001`); cron de verdade precisa do CRON001 |
 | Events | ApplicationEvent | `kof.mq` pub/sub | PARTIAL | filas pub/sub na stdlib |
 | Resources | Resource | `kof.io` | EXISTS | |
 | Cache | spring-cache | `kof.cache` (`get/set/set-ttl/ttl/delete/clear`) | **EXISTS** | 3 targets (fix nativo 30/08) |
