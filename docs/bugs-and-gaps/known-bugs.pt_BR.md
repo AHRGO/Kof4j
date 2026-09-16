@@ -476,7 +476,7 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
   (internal "a/b/C" → `a_b_C_init_0`). JVM funciona (a/b/C.class correto).
 - **Reprodução:** `kof build src --target native` no projeto
   `src/Main.kf (import a.b.C)` + `src/a/b/C.kf (package a.b)`.
-- **Causa provável:** `NativeBackend.java:1725` (e ~1730 para métodos) monta o
+- **Causa provável:** `NativeBackend.java:369-372` monta o
   símbolo com `ct.name()` simples; deveria usar internal name
   (`ct.packageName().replace('.','/') + "/" + ct.name()`).
 - **Arquivos:** `NativeBackend.java` (mangle de CONSTRUCTOR/call).

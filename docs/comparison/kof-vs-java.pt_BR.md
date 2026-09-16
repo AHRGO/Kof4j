@@ -322,7 +322,7 @@ arquivo > env > profile > default; CONF001 fechado 16/09).
 |---------|------|---------------|------------|
 | Classes / Records / Herança / Interfaces / Virtual dispatch | ✅ | ✅ (JVM/Native x86_64 + riscv64 + JS `kof.http`) | ✅ |
 | Null safety `String?` | ✅ (via `Optional`/checker) | ✅ básica `String?` (`Type?`) 27/08 | checks avançados |
-| Generics `Box<T>` + `List<T>` | ✅ | ✅ `Box<T>` erasure (`substituteTypeVariable` `CompilerDriver.java:3972`) | bounds |
+| Generics `Box<T>` + `List<T>` | ✅ | ✅ `Box<T>` erasure (`substituteTypeVariable` `CompilerTypes.java:423`) | bounds |
 | Collections `List`/`Map`/`Set` + `map/filter/reduce` | ✅ | ✅ `List map/filter/reduce` + `Map`/`Set` 3 targets 27/08 | — |
 | Exceptions `try/catch/finally` | ✅ | ✅ JVM unwinding + Native unwinding | — |
 | Pattern matching `case String s` + `Point(x,y)` | ✅ (17+) | ✅ JVM/Native/JS 27/08 | guards |

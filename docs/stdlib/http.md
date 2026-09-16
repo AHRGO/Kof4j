@@ -318,8 +318,8 @@ app.get("/hello") { return "Hello TLS" }
 app.listenSecure(8443) // JVM: generates self-signed via keytool (SAN=IP:127.0.0.1,DNS:localhost), SSLServerSocket
 ```
 
-- **Server:** `app.listenSecure(port)` — `KofWeb.java:84` `kof_web_listen_secure` → `JvmRuntime.java:370` `SSLServerSocket` + `keytool -genkeypair` (JKS, `SAN=IP:127.0.0.1,DNS:localhost`); Native/JS report `WEB002`.
-- **Client:** `kof.http.get("https://...")` — `JvmWebRuntime.java:238` `KOF_HTTP_CLIENT_INSECURE` (`SSLContext` trust-all + `SSLParameters` without `endpointIdentification`, `HttpClient` with insecure `sslContext`) — needed for self-signed in tests.
+- **Server:** `app.listenSecure(port)` — `KofWeb.java:142` `kof_web_listen_secure` → `JvmRuntimeWebServer.java:50` `SSLServerSocketFactory` + `keytool -genkeypair` (JKS, `SAN=IP:127.0.0.1,DNS:localhost`); Native/JS report `WEB002`.
+- **Client:** `kof.http.get("https://...")` — `JvmWebHttpRuntime.java:112` `KOF_HTTP_CLIENT_INSECURE` (`SSLContext` trust-all + `SSLParameters` without `endpointIdentification`, `HttpClient` with insecure `sslContext`) — needed for self-signed in tests.
 - **Test:** `KofWebTlsTest.java:12` 5 tests (hello, headers, `http` over TLS, Native/JS gaps `WEB002`).
 
 ---

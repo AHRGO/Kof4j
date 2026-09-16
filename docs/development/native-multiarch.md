@@ -275,8 +275,8 @@ It does not include macOS/Windows, advanced GC or complete native `kof.web` (see
 | Enum `Target.NATIVE_RISCV64` / `NATIVE_AARCH64` | ✅ | `Target.java` (values distinct from `NATIVE`; `NATIVE` remains = `x86_64`) |
 | `Target.isNative()` covers the 3 natives | ✅ | `Target.java` |
 | `Target.nativeArch()` → `x86_64`/`riscv64`/`aarch64` | ✅ | `Target.java` |
-| CLI `native.risc`/`native.riscv64`/`native.riscv` → `NATIVE_RISCV64` | ✅ | `Main.java:364` |
-| CLI `native.arm`/`native.aarch64`/`native.aarch` → `NATIVE_AARCH64` | ✅ | `Main.java:365` |
+| CLI `native.risc`/`native.riscv64`/`native.riscv` → `NATIVE_RISCV64` | ✅ | `KofCliSupport.java:91` |
+| CLI `native.arm`/`native.aarch64`/`native.aarch` → `NATIVE_AARCH64` | ✅ | `KofCliSupport.java:92` |
 | `kof build`/`run` accept `native.risc`/`native.arm` | ✅ | `status.md:13-14` |
 | Dispatch `emit()` → `emitRiscv`/`emitAarch64` | ✅ | `NativeBackend.java:210-215` |
 | Cross toolchain invoked (as/ld + dynamic-linker + `-lc`) | ✅ | `NativeBackend.emitRiscv`/`emitAarch64` |
@@ -368,7 +368,7 @@ Runtime details for riscv64/aarch64 (inc-0 02/09 + 03/09):
 - strings: layout **identical to x86_64** — `[typeId@0 i32][super@4 i32]
   [vtable@8 ptr][len@16 i32][data@24 …]` (`KOF_STRING_TYPE_ID=1`).
 - output: raw syscall `write(1, …)` (`a7=64` riscv / `x8=64` arm) + `exit` (`a7/x8=93`) — **static** binary, no libc/PLT.
-- aarch64: **mechanical translation** of the riscv64 runtime (`riscv2arm.py` validated + `translateRiscvToAarch64` in `NativeBackend.java:3650`): `la`→`adrp`+`add :lo12:`, `ecall`→`svc #0`, `and sp` skip (sp already 16-aligned), `str sp` via `mov x17,sp`, `andi -16` via `movk x17`+`and`, `rem`→`sdiv`+`msub`, `slt/sle`→`cmp`+`cset`, FP `fcvt`→`scvtf`/`fmv`→`fmov`/`fadd`→`fadd`/`feq`→`fcmp`+`cset`.
+- aarch64: **mechanical translation** of the riscv64 runtime (`riscv2arm.py` validated + `translateRiscvToAarch64` in `NativeAarch64Translator.java:16`): `la`→`adrp`+`add :lo12:`, `ecall`→`svc #0`, `and sp` skip (sp already 16-aligned), `str sp` via `mov x17,sp`, `andi -16` via `movk x17`+`and`, `rem`→`sdiv`+`msub`, `slt/sle`→`cmp`+`cset`, FP `fcvt`→`scvtf`/`fmv`→`fmov`/`fadd`→`fadd`/`feq`→`fcmp`+`cset`.
 - validation: `NativeRiscv64E2ETest 13/13` via `qemu-riscv64` + `NativeAarch64E2ETest 13/13` via `qemu-aarch64` (complete core).
 
 What **remained** for the next increments:

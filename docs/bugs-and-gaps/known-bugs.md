@@ -476,7 +476,7 @@ EXTERNAL mutation produced garbage (JVM correct) — the cause was the prologue 
   (internal "a/b/C" → `a_b_C_init_0`). JVM works (a/b/C.class correct).
 - **Reproduction:** `kof build src --target native` in the project
   `src/Main.kf (import a.b.C)` + `src/a/b/C.kf (package a.b)`.
-- **Probable cause:** `NativeBackend.java:1725` (and ~1730 for methods) builds the
+- **Probable cause:** `NativeBackend.java:369-372` builds the
   symbol with the simple `ct.name()`; it should use the internal name
   (`ct.packageName().replace('.','/') + "/" + ct.name()`).
 - **Files:** `NativeBackend.java` (mangle of CONSTRUCTOR/call).

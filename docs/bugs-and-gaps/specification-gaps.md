@@ -228,7 +228,7 @@ future recommendations (rule 14 of the task: do not change behavior).
 
 - **Implementation**: `val x = 1; x = 2` **compiles and runs** (prints 2, *probe*
   confirmed in isolation). There is no immutability flag in `VarDeclStmt`
-  (only `type`/`name`/`initializer` — `AstNodes.java:351`).
+  (only `type`/`name`/`initializer` — `VarDeclStmt.java:4`).
 - **Documentation**: `AGENTS.md` "val y = 20 // immutable".
 - **Problem**: `val` is decorative. The `val`/`var` distinction has no
   observable effect.

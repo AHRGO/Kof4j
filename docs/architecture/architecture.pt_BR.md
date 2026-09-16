@@ -89,7 +89,7 @@ Implementations:
 - `JvmBackend` - generates `.class` files via ASM (`kof-compiler/src/main/java/dev/kof/compiler/jvm/JvmBackend.java:1`)
 - `NativeBackend` - generates ELF via assembly + `as` + `ld` (x86_64 stable, riscv64/aarch64 via cross toolchain)
 - `JsBackend` - generates ES Modules (ECMAScript 2022+), executed by the embedded GraalJS engine (`KofJsRunner`)
-- `KofCcompiler` - C subset (`kof c`) → ELF x86_64 native-only (`kof-compiler/src/main/java/dev/kof/compiler/KofCcompiler.java:1`)
+- `KofCCompiler` - C subset (`kof c`) → ELF x86_64 native-only (`kof-c-compiler/src/main/java/dev/kof/c/KofCCompiler.java:1`)
 
 ### Target Enum
 
@@ -104,7 +104,7 @@ public enum Target {
 }
 ```
 
-CLI: `kof build/run --target jvm|native|native.risc|native.arm|js` (aliases `native.riscv64`/`native.aarch64`; `android` em Fase 1) (`CompilerDriver.java:1`, `Target.java:1`). `kof run`/`kof build --target js` executa JS sem Node.js (runtime embarcado). `kof c` usa `KofCcompiler` apenas para `native`.
+CLI: `kof build/run --target jvm|native|native.risc|native.arm|js` (aliases `native.riscv64`/`native.aarch64`; `android` em Fase 1) (`CompilerDriver.java:1`, `Target.java:1`). `kof run`/`kof build --target js` executa JS sem Node.js (runtime embarcado). `kof c` usa `KofCCompiler` apenas para `native`.
 
 ## Type System
 
@@ -112,7 +112,7 @@ The type system supports (0.2.6-beta, 27/08/2026):
 
 - Primitive types: `bool`, `byte`, `short`, `int`, `long`, `float`, `double`, `char`
 - Reference types: classes, interfaces, enums (with `values()/valueOf` + exhaustiveness), records
-- Generic types: `List<T>`, `Map<K,V>`, `Set<T>`, `Box<T>` (erasure, `Box<Int>` works via `substituteTypeVariable` `CompilerDriver.java:3972`)
+- Generic types: `List<T>`, `Map<K,V>`, `Set<T>`, `Box<T>` (erasure, `Box<Int>` works via `substituteTypeVariable` `CompilerTypes.java:423`)
 - Type parameters: `<T>` (implemented, erasure); bounds (future)
 - Wildcards: `?`, `? extends T`, `? super T` (future)
 - Arrays: `int[]`, `String[]`
@@ -239,9 +239,9 @@ Runtime functions (x86-64, `NativeRuntime.java:1`):
 - Scheduler `kof.time` via `setInterval` (27/08); `spawn`/`await` com async/await/Promise reais (statement/expressão; CONC003 fechado 03/09)
 - Status alpha (0.2.6-beta)
 
-## KofCcompiler
+## KofCCompiler
 
-- C subset compiler (`kof c` — native-only): `int` globals, `void` funcs, `if`/`while`/`*(int*)`/`&`, → ELF x86_64 via `kof_c` (`KofCcompiler.java:1`)
+- C subset compiler (`kof c` — native-only): `int` globals, `void` funcs, `if`/`while`/`*(int*)`/`&`, → ELF x86_64 via `kof_c` (`KofCCompiler.java:1`)
 
 ## KofScript Runtime
 
