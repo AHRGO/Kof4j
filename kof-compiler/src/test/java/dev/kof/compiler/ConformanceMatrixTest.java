@@ -49,7 +49,7 @@ class ConformanceMatrixTest {
         CompilationResult r = freshDriver().compile(source, outDir, Target.JVM);
         assertTrue(r.success(), "JVM compile: " + r.diagnostics().getDiagnostics());
         try {
-            ProcessBuilder pb = new ProcessBuilder("java", "-cp", outDir.toString(), "Default.Main");
+            ProcessBuilder pb = new ProcessBuilder(System.getProperty("java.home") + "/bin/java", "-cp", outDir.toString(), "Default.Main");
             pb.redirectErrorStream(true);
             Process p = pb.start();
             String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
@@ -921,7 +921,7 @@ class ConformanceMatrixTest {
                     println(validation.isCpf("529.982.247-25") == true)
                     println(validation.isCpf("111.111.111-11") == false)
                 }
-                """, "true\nfalse\ntrue\nfalse\ntrue\nfalse\ntrue\nfalse\ntrue\ntrue\ntrue\ntrue\nfalse\nfalse\nfalse", Set.of(), tempDir);
+                """, "true\nfalse\ntrue\nfalse\ntrue\nfalse\ntrue\nfalse\ntrue\ntrue\nfalse\nfalse\nfalse\ntrue\ntrue", Set.of(), tempDir);
         matrix("stdvalidationnet", """
                 main() {
                     println(validation.isIpv4("192.168.0.1"))
