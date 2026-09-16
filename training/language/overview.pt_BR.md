@@ -63,7 +63,7 @@ Kof IR (backend-agnostic, KofOperation)
 | Null safety `String?` / `Int?` + narrowing `if (x != null)` | ✅ | ✅ | ✅ | desde 0.2.6-beta |
 | Pattern matching `case String s` + `instanceof`/`as` | ✅ | ✅ | ✅ | desde 0.2.6-beta |
 | Record destructuring `case Point(x, y)` | ✅ | ✅ | ✅ | Parser fieldVars |
-| Concorrência: `spawn` / `Handle<T>` / `await` | ✅ | ✅ (pthread, 31/08) | ✅ (sequencial) | CONC001 fechado; JS CONC003 parcial |
+| Concorrência: `spawn` / `Handle<T>` / `await` | ✅ | ✅ (pthread, 31/08) | ✅ (event-loop) | CONC001 fechado; JS CONC003 fechado 03/09 |
 | Strings (`+`, `==`, indexOf, trim, split, ...) | ✅ | ✅ | ✅ | |
 | Arrays (`new Int[n]`, `arr[i]`, `.length`) | ✅ | ✅ | ✅ | |
 | Exceptions `throw "msg"` / try/catch/finally | ✅ | ✅ | ✅ | Native unwinding |

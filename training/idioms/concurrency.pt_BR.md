@@ -2,7 +2,7 @@
 
 # Idioms — Concurrency
 
-**Status:** available (3 targets) · **Introduced:** 0.0.5-alpha · **Updated:**  0.4.0-beta (Sep 2026) (31/08: CONC001 fechado) · **JS:** sequencial (CONC003 parcial)
+**Status:** available (3 targets) · **Introduced:** 0.0.5-alpha · **Updated:**  0.4.0-beta (Sep 2026) (31/08: CONC001 fechado; 15/09: helpers cross do CONC001) · **JS:** event-loop (CONC003 fechado 03/09)
 
 ## What it is
 
@@ -38,7 +38,7 @@ main() {
 
 ## Semântica real (verificada — 0.3.22-beta)
 
-- a tarefa roda em paralelo: JVM virtual threads; **Native `pthread_create` + trampoline + `pthread_join` (CONC001 fechado 31/08)**; JS sequencial (statement e expressão cobrem; async real = CONC003 parcial);
+- a tarefa roda em paralelo: JVM virtual threads; **Native `pthread_create` + trampoline + `pthread_join` (CONC001 fechado 31/08)**; JS event-loop (statement e expressão cobrem; async real = CONC003 fechado 03/09);
 - o programa **espera as tarefas antes de sair** (join implícito: `kof_spawn_join_all` no fim do main no Native);
 - `val r = spawn f()` devolve `Handle<T>` tipado; `await r` com unboxing;
 - `var h = spawn { return expr }` (lambda literal com `return` + Handle) funciona no JVM/JS/interpretador — **gap: Native x86_64 → SIGSEGV (bug 46, known-bugs.md)**; usar `spawn fn(arg)` (função nomeada) como workaround no Native até o fix;
@@ -55,7 +55,8 @@ main() {
 ## When not to use
 
 - quando a ordem importa e não há sincronização.
-- JS para paralelismo real de CPU (execução sequencial; CONC003 parcial).
+- JS para paralelismo real de CPU (event-loop single-thread — concorrência é
+  real, paralelismo não; CONC003 fechado 03/09).
 
 ## BAD — expor plataforma
 
@@ -91,7 +92,10 @@ plataforma — a decisão de como executar pertence ao runtime.
 ## Limitações honestas (0.3.22-beta)
 
 - ~~Native: CONC001~~ — ✅ fechado 31/08 (pthread_create + trampoline + await/pthread_join + allocator thread-safe futex + join implícito);
-- JS: execução sequencial — `spawn`/`await` cobrem statement e expressão; async real de event-loop = CONC003 parcial;
+- JS: ~~execução sequencial~~ → async real de event-loop — `spawn`/`await`
+  cobrem statement e expressão (CONC003 fechado 03/09); limitações conhecidas:
+  `cancelled()` sempre `0` (sem thread-local da task atual) e só task-lambdas
+  viram `async function` (CONC003-JS-01);
 - filas produtor/consumidor: `kof.mq` — 3 targets (Native 01/09, MQ001 fechado; pub/sub + `mq.queue()`/`push`/`pop`);
 - lambdas com captura funcionam em spawn (BoxN).
 

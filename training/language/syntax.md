@@ -123,7 +123,7 @@ val r = spawn expr();    // Handle<T> typed handle
 val v = await r;         // blocks; T (primitives unboxed)
 ```
 
-3 targets: JVM virtual threads, Native pthread (CONC001 closed 31/08), JS sequential (CONC003 partial). Android: AND001.
+3 targets: JVM virtual threads, Native pthread (CONC001 closed 31/08), JS event-loop (CONC003 closed 03/09). Android: AND001.
 
 ### kof.http (0.3.22-beta)
 

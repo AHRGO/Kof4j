@@ -124,7 +124,7 @@ kof script app.ks --target js
 - **kof.ui**: widgets (Window/Label/Button/Input, Column/Row, View+Style) com
   renderização em webview nativo (WebKitGTK) ou browser; ações por lambda;
   fechar a janela encerra o programa. JVM/Native: handles no-ops.
-- `spawn` no JS é sequencial: statement e expressão cobrem; async real de event-loop = CONC003 parcial.
+- `spawn` no JS é async de event-loop: statement e expressão cobrem; CONC003 fechado 03/09 (`async`/`await`/`Promise` reais; `cancelled()` sempre `0` é a limitação conhecida).
 - Gap codes de target (HTTP002, DB001, WEB001/002/003/004, SCHED001, AND001, SECN00x) reportados via diagnostic em compile-time.
 
 ## KofScript (`kof script`)

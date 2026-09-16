@@ -2,7 +2,7 @@
 
 # Idioms — Concurrency
 
-**Status:** available (3 targets) · **Introduced:** 0.0.5-alpha · **Updated:**  0.4.0-beta (Sep 2026) (31/08: CONC001 closed) · **JS:** sequential (CONC003 partial)
+**Status:** available (3 targets) · **Introduced:** 0.0.5-alpha · **Updated:**  0.4.0-beta (Sep 2026) (31/08: CONC001 closed; 15/09: CONC001 cross helpers) · **JS:** event-loop (CONC003 closed 03/09)
 
 ## What it is
 
@@ -38,7 +38,7 @@ main() {
 
 ## Real semantics (verified — 0.3.22-beta)
 
-- the task runs in parallel: JVM virtual threads; **Native `pthread_create` + trampoline + `pthread_join` (CONC001 closed 31/08)**; JS sequential (statement and expression covered; real async = CONC003 partial);
+- the task runs in parallel: JVM virtual threads; **Native `pthread_create` + trampoline + `pthread_join` (CONC001 closed 31/08)**; JS event-loop (statement and expression covered; real async = CONC003 closed 03/09);
 - the program **waits for the tasks before exiting** (implicit join: `kof_spawn_join_all` at the end of main on Native);
 - `val r = spawn f()` returns a typed `Handle<T>`; `await r` with unboxing;
 - `var h = spawn { return expr }` (lambda literal with `return` + Handle) works on JVM/JS/interpreter — **gap: Native x86_64 → SIGSEGV (bug 46, known-bugs.md)**; use `spawn fn(arg)` (named function) as a workaround on Native until the fix;
@@ -55,7 +55,8 @@ main() {
 ## When not to use
 
 - when order matters and there is no synchronization.
-- JS for real CPU parallelism (sequential execution; CONC003 partial).
+- JS for real CPU parallelism (single-thread event-loop — concurrency is real,
+  parallelism is not; CONC003 closed 03/09).
 
 ## BAD — exposing the platform
 
@@ -91,7 +92,10 @@ mechanisms — the decision of how to execute belongs to the runtime.
 ## Honest limitations (0.3.22-beta)
 
 - ~~Native: CONC001~~ — ✅ closed 31/08 (pthread_create + trampoline + await/pthread_join + futex thread-safe allocator + implicit join);
-- JS: sequential execution — `spawn`/`await` cover statement and expression; real event-loop async = CONC003 partial;
+- JS: ~~sequential~~ → real event-loop async — `spawn`/`await` cover statement
+  and expression (CONC003 closed 03/09); known limitations: `cancelled()`
+  always `0` (no thread-local for the current task) and only task-lambdas
+  become `async function` (CONC003-JS-01);
 - producer/consumer queues: `kof.mq` — 3 targets (Native 01/09, MQ001 closed; pub/sub + `mq.queue()`/`push`/`pop`);
 - lambdas with capture work in spawn (BoxN).
 
