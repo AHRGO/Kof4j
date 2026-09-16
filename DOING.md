@@ -153,25 +153,50 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > ConformanceMatrixDocTest + KofWsFrameTest 7/7 verdes. Resgate regra 8 do
 > WIP CodeQL `KofWsFrameTest` = no-op (a lane compiler já commitou
 > `b6a6a870` no intervalo). check_500 OK (crítico 0; os 3 avisos 513/577/597
-> são da lane compiler, catalogados — não-meus).
+> são da lane compiler, catalogados — não-meus). **Extensão da mesma onda
+> (turno seguinte):** `c084113e` re-contratou este PRÓXIMO PASSO p/ varredura
+> de fechamentos alheios; push esbarrou no pre-push gate VERMELHO repo-wide →
+> `5d12cb21` cataloga **§258** (CodeQL #773 `KofJsRunner.listValues:510`
+> `int < long`, introduzido por `3e55df51` da .18, já no remoto = pushed-red;
+> dono conserta in-file, bypass `CODEQL_GATE_SKIP=1`+causa declarado p/ as
+> outras lanes); tip tinha movido CÓDIGO (fatia A, inerte) → re-medição pelo
+> contrato: 1ª leitura = 297 ERROS = **trap §165/§257 morderia esta sessão**
+> (stub ECJ velho em kof-runtime/target/classes — NÃO regressão da .18;
+> diagnose antes de acusar); `mvn -pl kof-runtime clean` + re-run =
+> **2189/0/0/190** → `3091bd47` sincroniza os 8 registros EN+PT;
+> `36dd9d41` ensina a lição no corpus (`training/anti-patterns/
+> stale-ecj-class-trap.md` EN+PT, novo) + sincroniza a árvore do índice
+> training/README (listava 9/16 anti-patterns). Células DB001(JS) conferidas:
+> CORRETAMENTE inalteradas (gate supportedOn ainda fechado na fatia A).
+> Varredura de fechamentos alheios: D-PRINT/§216 já lockstep pela .15; nada
+> órfão.
 >
-> **PRÓXIMO PASSO (16/09 ~04:30, dono = 192.168.100.22, lane docs/development —
-> autônomo ATIVO `auto-loop.sh start ses_f5806df42ffeulR14Wq8KhA7Fn 5 9093`,
-> cron verificado no state):** **(1)** `git fetch` + re-leitura desta seção —
-> as lanes .18 (DB001-JS EM CURSO, `192.168.100.18`) e .22 estão ativas;
-> **(2)** varredura R6-documental nos FECHAMENTOS das outras lanes: quando o
-> DB001-JS fechar (issue lane .18), as células "DB001 (JS)" do stdlib/
-> backend-parity/status/coverage-ecosystem ganham sync desta lane (padrão do
-> `76d1cfc8`) — conferir `git log` por `DB001`/`§25x`/`CONC`/`OTP` fechados
-> sem doc-sync ANTES de inventar trabalho novo; **(3)** contagem da suíte só
-> re-medir se o tip mover CÓDIGO (a linha do README development/ declara
-> "rots with every commit — authoritative = a execução"); **(4)** se nada
-> aparecer (nenhum fechamento sem sync, gate verde): **RECUSAR o re-trigger**
-> (condição STABILITY da AGENTS.md — registrar aqui + `auto-loop.sh stop`).
+> **PRÓXIMO PASSO (16/09 ~05:00, dono = 192.168.100.22, lane docs/development —
+> autônomo ATIVO `auto-loop.sh start ses_f5806df42ffeulR14Wq8KhA7Fn 5 9093`):**
+> **ESTABILIDADE NÃO alcançada — heartbeat CONTINUA (não recusar ainda):** as
+> três condições da AGENTS.md falham (bugs abertos: §252/§253/§255/§256b/§258;
+> development/ com trabalho: DB001 da .18 em curso), e o trabalho REAL desta
+> lane está na fila DOS FECHAMENTOS alheios — stoparia o loop prematuramente
+> (o tick é o cobertor do intervalo, não gerador de trabalho artificial).
+> Fila concreta do próximo tick: **(1)** `git fetch` + `git log --oneline
+> <last>..HEAD`; se `3e55df51`+ganharem fatia B (gate `supportedOn` +JS) ou
+> um fix CodeQL do #773: **(2a)** DB001 fechado → sync das células "DB001
+> (JS)" em stdlib EN+PT / backend-parity EN+PT / status EN+PT (3 linhas
+> cada: stdlib:69, parity:94, status:235+368) + §258 fecha se o #773 sumir
+> (confirmar com `scripts/codeql-gate.sh --fast` — só então tirar o bypass);
+> **(2b)** §258 consertado SEM DB001 fechado → atualizar status do §258
+> (EN+PT, fila+seção) com SHA/prova. **(3)** contagem da suíte só re-medir
+> se o tip mover código (armadilha: leitura suja = trap §165 — fazer
+> `mvn -pl kof-runtime clean` ANTES de acusar qualquer lane; lição em
+> `training/anti-patterns/stale-ecj-class-trap.md`). **(4)** nada disso E
+> gate das conditions verde? — a estabilidade ainda não existirá (lanes
+> ativas com frentes abertas): tick não-inventivo = registrar
+> "nada-orgao-nesta-lane, aguardando fechamento X" e sair; RECUSAR de
+> vez + `auto-loop.sh stop` só quando as 3 condições STABILITY segurarem.
 > NÃO TOCAR: DB001-JS/WEB001/UI-web-db (development .18 — regra absoluta da
 > mantenedora 16/09, frente DELA; esta lane só sincroniza docs após o FECHAMENTO),
-> §256-face-b (riscv poll, nat .18), §253-face-A (compiler .22), §252/§248,
-> D-PRINT/#168 (.15), N1→N4 (compiler), split ≥600 check_500 (compiler).
+> §258/§256-face-b/§252/§253-face-B (dono .18/`KofJsRunner`), §253-face-A
+> (compiler .22), §248, N1→N4, split ≥600 check_500 (compiler).
 > **FEITO (14/09 ~09:30, dono = 192.168.100.22, lane CodeQL/health): baseline
 > 25 + codemod `_` (agregados no main pela agregacao do cluster).** (a)
 > `b3ab9858` D-BASELINE: toolchain do repo 21→25 (pom+workflows+package.sh+

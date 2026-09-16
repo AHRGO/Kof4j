@@ -118,26 +118,50 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > ConformanceMatrixDocTest + KofWsFrameTest 7/7 verdes. Resgate regra 8 do
 > WIP CodeQL `KofWsFrameTest` = no-op (a lane compiler já commitou
 > `b6a6a870` no intervalo). check_500 OK (crítico 0; os 3 avisos 513/577/597
-> são da lane compiler, catalogados — não-meus).
+> são da lane compiler, catalogados — não-meus). **Extensão da mesma onda
+> (turno seguinte):** `c084113e` re-contratou este PRÓXIMO PASSO p/ varredura
+> de fechamentos alheios; push esbarrou no pre-push gate VERMELHO repo-wide →
+> `5d12cb21` cataloga **§258** (CodeQL #773 `KofJsRunner.listValues:510`
+> `int < long`, introduzido por `3e55df51` da .18, já no remoto = pushed-red;
+> dona conserta in-file, bypass `CODEQL_GATE_SKIP=1`+causa declarada p/ as
+> outras lanes); o tip tinha movido CÓDIGO (fatia A, inerte) → re-medição pelo
+> contrato: 1ª leitura = 297 ERROS = **a armadilha §165/§257 mordeu esta
+> sessão** (stub ECJ velho em kof-runtime/target/classes — NÃO regressão da
+> .18; diagnosticar antes de acusar); `mvn -pl kof-runtime clean` + re-run =
+> **2189/0/0/190** → `3091bd47` sincroniza os 8 registros EN+PT;
+> `36dd9d41` ensina a lição no corpus (`training/anti-patterns/
+> stale-ecj-class-trap.md` EN+PT, novo) + sincroniza a árvore do índice
+> training/README (listava 9/16 anti-patterns). Células DB001(JS) conferidas:
+> CORRETAMENTE inalteradas (gate supportedOn ainda fechado na fatia A).
+> Varredura de fechamentos alheios: D-PRINT/§216 já lockstep pela .15; nada
+> órfão.
 >
-> **PRÓXIMO PASSO (16/09 ~04:30, dono = 192.168.100.22, lane docs/development —
-> autônomo ATIVO `auto-loop.sh start ses_f5806df42ffeulR14Wq8KhA7Fn 5 9093`,
-> cron verificado no state):** **(1)** `git fetch` + re-leitura desta seção —
-> as lanes .18 (DB001-JS EM CURSO, `192.168.100.18`) e .22 estão ativas;
-> **(2)** varredura R6-documental nos FECHAMENTOS das outras lanes: quando o
-> DB001-JS fechar (issue lane .18), as células "DB001 (JS)" do stdlib/
-> backend-parity/status/coverage-ecosystem ganham sync desta lane (padrão do
-> `76d1cfc8`) — conferir `git log` por `DB001`/`§25x`/`CONC`/`OTP` fechados
-> sem doc-sync ANTES de inventar trabalho novo; **(3)** contagem da suíte só
-> re-medir se o tip mover CÓDIGO (a linha do README development/ declara
-> "rots com cada commit — autoritativa = a execução"); **(4)** se nada
-> aparecer (nenhum fechamento sem sync, gate verde): **RECUSAR o re-trigger**
-> (condição STABILITY da AGENTS.md — registrar aqui + `auto-loop.sh stop`).
-> NÃO TOCAR: DB001-JS/WEB001/UI-web-db (development .18 — regra absoluta da
-> mantenedora 16/09, frente DELA; esta lane só sincroniza docs após o
-> FECHAMENTO), §256-face-b (riscv poll, nat .18), §253-face-A (compiler .22),
-> §252/§248, D-PRINT/#168 (.15), N1→N4 (compiler), split ≥600 check_500
-> (compiler).
+> **PRÓXIMO PASSO (16/09 ~05:00, dono = 192.168.100.22, lane docs/development —
+> autônomo ATIVO `auto-loop.sh start ses_f5806df42ffeulR14Wq8KhA7Fn 5 9093`):**
+> **ESTABILIDADE NÃO alcançada — heartbeat CONTINUA (não recusar ainda):** as
+> três condições da AGENTS.md falham (bugs abertos: §252/§253/§255/§256b/§258;
+> development/ com trabalho: DB001 da .18 em curso), e o trabalho REAL desta
+> lane está na fila DOS FECHAMENTOS alheios — parar o loop seria prematuro
+> (o tick cobre o intervalo entre trabalhos reais, não gera trabalho
+> artificial). Fila concreta do próximo tick: **(1)** `git fetch` + `git log
+> --oneline <last>..HEAD`; se `3e55df51`+ ganharem fatia B (gate `supportedOn`
+> +JS) ou um fix CodeQL do #773: **(2a)** DB001 fechado → sync das células
+> "DB001 (JS)" em stdlib EN+PT / backend-parity EN+PT / status EN+PT (3
+> linhas cada: stdlib:69, parity:94, status:235+368) + §258 fecha se o #773
+> sumir (confirmar com `scripts/codeql-gate.sh --fast` — só então tirar o
+> bypass); **(2b)** §258 consertado SEM DB001 fechado → atualizar status do
+> §258 (EN+PT, fila+seção) com SHA/prova. **(3)** contagem da suíte só
+> re-medir se o tip mover código (armadilha: leitura suja = trap §165 — rodar
+> `mvn -pl kof-runtime clean` ANTES de acusar qualquer lane; lição em
+> `training/anti-patterns/stale-ecj-class-trap.md`). **(4)** nada disso? — a
+> estabilidade ainda não existirá (lanes ativas com frentes abertas): tick
+> não-inventivo = registrar "nada-próprio-nesta-lane, aguardando fechamento
+> X" e sair; RECUSAR de vez + `auto-loop.sh stop` só quando as 3 condições
+> STABILITY segurarem. NÃO TOCAR: DB001-JS/WEB001/UI-web-db (development .18
+> — regra absoluta da mantenedora 16/09, frente DELA; esta lane só sincroniza
+> docs após o FECHAMENTO), §258/§256-face-b/§252/§253-face-B (dona .18/
+> `KofJsRunner`), §253-face-A (compiler .22), §248, N1→N4, split ≥600
+> check_500 (compiler).
 
 > **⚡ EM CURSO (16/09 ~03:40→04:10, dono = 192.168.100.18, lane development): DB001 no JS — ponte `kof_platform.db*` no host GraalJS (regra absoluta da mantenedora: roadmap "Em desenvolvimento" = prioridade, frente UI/web/db desta lane).** **FATIA A ✅ FEITA (`3e55df51`):** `KofJsDbBridge` (kof-runtime, semantica copiada de JvmConfigRuntime — aninhamento bug 77, CLOB/BLOB, rowToJson byte-parity) + exports `kofDb*` no `JsRuntimeIo` + routing `kof_db_` p/ io-runtime no `JsRuntimeOps`; gate `supportedOn` AINDA fechado (inerte — KofDbE2ETest 18/18 segue reportando DB001, slices 12/12); prova `KofJsDbBridgeTest` 5/5 sem GraalJS. **FATIA B (restante):** abrir `KofDb.supportedOn` +JS; gate compile-time DB002 p/ `query<T>` tipado (programa JS nao emite .class no host — testar untyped primeiro); E2E via `.mjs` gerado + `java -cp out:h2` (o MESMO comando do teste JVM:34 — mesmo classpath = DriverManager ve o driver; `KofJsRunner.run` in-process so nao ve h2 porque surefire nao poe test-jar no classpath) + transaction/execute/query; CHECK na hora: os testes tipados existentes no JS (`query<Record>` no `KofDbE2ETest`) tem de passar ou falham loud DB002? Se um asserted verde p/ tipado-JS existir, a decisao untyped+DB002 reabre; inverter `KofDbE2ETest:443/583-584`; docs EN+PT lockstep (stdlib/backend-parity/status 235/367/605, TargetMatrix se tiver DB001-JS, kof-ui-widgets: kof.db no JS sai do limbo). KofJsRunner 524 linhas = divida tolerada registrada (check_500). ✅ **FATIA B FEITA no mesmo tick (`db001js` abaixo): gate aberto (supportedOn +JS), DB002 compile-time p/ `query<T>` tipado, desacoplamento ORM (`CompilerOrmSupport` le `KofOrm.supportedOn` → JS segue `ORM001`, nunca vazou), rows `String[]` (contrato `list.length` do guest), closure `invoke` (convencao UiWeb 505-506), 4 E2Es JS byte-parity c/ JVM. Unit **DB001-JS FECHADA**. **Blueprint (historico)**: fechado por leitura do código (não reimplementar; lição §241: unidade inteira, nunca half-landing).** (1) `KofJsRunner` — +`platform.db*` (connect/connect2/close/execute/query/transaction) na MESMA JVM do app (DriverManager enxerga h2/sqlite-jdbc; CONFERIR escopo runtime no pom do CLI); query = mesma forma do JVM (`kof_db_query_n`+`kof_db_row_to_json`/`kof_json_bind`, `Class.forName` p/ typed), transaction = autoCommit/commit/rollback/aninhamento do `kof_db_transaction` via `callbackGuest.execute()`. (2) `JsRuntimeIo.java` — +exports `kofDb*` delegando `kof_platform.db*`; erro → throw String; shim #104 já cobre browser/node. (3) `JsRuntimeOps.handleRuntimeOp` — prefixo `kof_db_` no ramo `registerIoRuntime`. (4) `KofDb.supportedOn` +`Target.JS` (gates `ExpressionDbCallLowerer:20`/`ExpressionStaticCallLowerer:121`/`CompilerOrmSupport:77` caem sozinhos; ORM-JS: a prova decide). (5) `KofDbE2ETest:443/583-584` invertidos → roundtrip js (h2:mem + sqlite arquivo) + query<Record> + transaction; (6) docs lockstep (stdlib/backend-parity/status EN+PT, kof-ui-widgets gaps UIW031 fica); (7) riscos no 1º build: byte-parity do slice registry io (`legacyIoRuntime` atualizado em lockstep), `Value`→`setObject`, rows como List<String> JSON. **(7bis) ESCOPO ANTI-§241:** `supportedOn` é por-TARGET — abrir ativa os 10 + transaction aninhado + query typed (`Class.forName` no host) de uma vez; testar o caminho tipado ANTES de inverter os asserts DB001 (face não-tipada sozinha NÃO fecha DB001); se pesado, fatia A (host+guest sem abrir o gate) + fatia B (abrir com matriz completa), cada uma commitável verde. NÃO TOCAR: §252/§192/face B §253 (nat), §248 (mantenedora), UI007 (Q1–Q5 regra 6), docs/development (lane .17).
 
