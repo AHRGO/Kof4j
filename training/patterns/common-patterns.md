@@ -59,7 +59,7 @@ app.listenSecure(8443)               // TLS
 
 Complete `web.app()` on the JVM (routes `get/post/put/delete/patch/options`, `status(201, body)`,
 `headerSet`, `app.use`, WebSocket `app.ws`, SSE `app.sse` with `sse.send/event/close`,
-`listenSecure` TLS) — 30/08. Native WEB002; JS base (`web.app`/routes/context-fns) ✅ 16/09, `app.ws`/`app.sse` = WEB004/WEB003 compile-time.
+`listenSecure` TLS) — 30/08. Native base ✅ 03/09 (TLS `WEB002`, ws `WEB004`, sse `WEB003`); JS base (`web.app`/routes/context-fns) ✅ 16/09, `app.ws`/`app.sse` = WEB004/WEB003 compile-time.
 
 ## HTTP client (0.4.0-beta)
 

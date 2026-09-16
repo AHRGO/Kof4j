@@ -187,7 +187,7 @@ http.timeout(30)    // resiliência (30/08): timeout/retry/circuit
 http.retry(3)
 http.circuit(5)
 
-// web server (JVM; Native WEB002; base JS ✅ 16/09 — ws/sse = WEB004/WEB003)
+// web server (JVM ✅; base Native ✅ 03/09 — TLS WEB002, ws WEB004, sse WEB003; base JS ✅ 16/09 — ws/sse = WEB004/WEB003)
 var app = web.app()
 app.get("/users/:id") { return "user " + param("id") }
 return status(201, body())       // status customizado por handler
