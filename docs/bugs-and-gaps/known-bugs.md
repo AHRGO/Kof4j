@@ -9326,6 +9326,46 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   (NativeOpHelpers/NativeX86Calls) p/ o padrao `call X (rax=ref viva);
   call Y-aloca` — spilla o rax no frame entre os dois. Se o padrao for
   largo (>X sites), o custo e decisao de escopo (rule 6).
+- **SUTILEZA QUE MUDA O ALVO DA PROXIMA SESSAO (16/09, deduzida dos
+  proprios dados da auditoria):** o endereco morto 0x7ffff7fbb000 e um
+  slot RE-USADO — o kill acontece DENTRO do `call kof_string_from_literal`
+  da linha 20 (backtrace: alloc <- from_literal <- main), quando a String
+  "2.5" AINDA NAO EXISTE (ela nasce do proprio alloc que dispara o
+  trigger; o bloco morto era a String anterior que morava naquele slot —
+  provavelmente o box/`true` do println da linha 19, correto de liberar).
+  Portanto o bloco da String "2.5" em si NAO foi morto — o que corrompe o
+  resultado do parse na linha 20 e outra coisa: (a) o sweep pode ter morto
+  o objeto que o xmm0/stack da LINHA ANTERIOR ainda referenciava por
+  chamada de imprimicao atrasada, ou (b) o trigger matou o box do resultado
+  da LINHA 20 apos o parse (a comparacao `== 2.5` imprime um Bool-box
+  allado que a free-list re-usa e o print imprime `false` stale). O
+  proximo gdb deve: watchpoint no PAYLOAD do bloco do Bool-box impresso na
+  linha 20 (identificar via x/s nos dois primeiros qwords do .data? nao —
+  via `b kof_println_string` na 20a hit, registrar o ptr impresso, watch
+  nesse ptr-32), e o mesmo par keep=ALIVE (M1/M2) como controle. Se o
+  culprit for o box do println, o padrao backend a corrigir e: `call
+  kof_string_from_literal` cujo RESULTADO vive so em rax ate o push —
+  spilla-o imediata e universalmente (1 push extra por literal, nao 8 pops
+  no prologue do alloc = tentativa-1).
+- **EXPERIMENTO gdb-3 (16/09, mesmo turno — resultados brutos):** no
+  instante do kill do bloco 0x7ffff7fbb000 (FP linhas 1..20, trigger+G-6b
+  ad-hoc): `find /g rsp..bottom, 0x7ffff7fbb020` = NOT FOUND (nenhuma ref
+  ao PAYLOAD na pilha varrida); `find /g root_start.._end, 0x7ffff7fbb020`
+  = NOT FOUND; `find ...0x7ffff7fbb000` (HEADER) = **2 hits em .data**.
+  Leitura: o try_mark/mark_transitive x86 ACEITA so ponteiro de payload
+  (cmp `ptr==bloco+32` ou `bloco+32<=ptr<payload_end`) e REJEITA ponteiro
+  de header. As 2 refs de header encontradas sao bookkeeping (gc-list/
+  free-list), mas o fato de UMA ref de payload nao existir em lugar nenhum
+  enquanto o bloco ainda era usado na linha 20 prova que a posse naquele
+  instante era so-registro (rax do from_literal → rdi do to_float, sem
+  nenhum push vivo) — a String recem-criada pela from_literal da linha 20
+  sobrevive, o que morre e o bloco do slot anterior (conteudo `\001`).
+  PROXIMO EXPERIMENTO EXATO (1 linha de codigo, conservador-por-construcao):
+  no try_mark x86 (RuntimeGc), tratar `ptr==bloco` (header exato) como HIT
+  de marcação (hoje so payload==bloco+32/range) — se o FP linhas 1..20
+  ficar verde, a causa-2 era ref-de-header invisivel e o fix e do MARK
+  (pequeno), nao do backend. Risco zero de over-free (marca MAIS, nunca
+  menos). Medir: keep/supervisor/parse/cap + suíte.
 
 
 
