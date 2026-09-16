@@ -314,7 +314,7 @@ stream é fechado e a task cancelada.
 
 - O target `js` suporta a base da stack web (`web.app()` + rotas + context-fns com runtime: param/query/header/body/method/path/status/headerSet — `WEB001` fatia honestidade 16/09); gaps residuais: `app.ws`/`app.sse` reportam `WEB003`/`WEB004` em compile-time; `kof.http` já funciona no JS via `Java HttpClient`.
 - O target `native` (`x86_64`/`riscv64`/`aarch64`) não possui servidor web ainda (`WEB002` TLS também).
-- `app.ws`/`app.sse` são JVM-only (Native `WEB004`, JS `WEB003`).
+- `app.ws`/`app.sse` são JVM-only (Native/JS: `app.ws` → `WEB004`, `app.sse` → `WEB003` — reportados por função em compile-time).
 - `app.serveDir` (arquivos estáticos + Range 206/416) é JVM-only (Native/JS `WEB005`).
 - Hardening PR6 (connection cap, limites `maxFrameBytes`/`maxMessageBytes`,
   `idleMs`, `app.stats`) é JVM; backpressure e fragmentação seguem follow-up.
