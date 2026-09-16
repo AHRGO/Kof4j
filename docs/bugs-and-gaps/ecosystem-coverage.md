@@ -165,7 +165,7 @@ Legend in the target columns: `y` = supported, `~` = partial, `–` = no.
 | validation | ✅ `kof.validation` (required/notBlank/minLength/maxLength/lengthBetween/isEmail/isUrl/matches/isInt/isLong/inRange/min/max) — JVM/Native/JS | y | y | y | KofValidationTest | stdlib/stdlib.md |
 | scheduling | ✅ `kof.time` now/sleep (JVM/Native/JS) + interval/cancel (JVM) | y | y (now/sleep) | y (now/sleep) | KofTimeE2ETest | stdlib/stdlib.md |
 | caching | ✅ `kof.cache` (get/set/ttl/delete/clear; 08/30) | y | y (asm) | y | KofCacheE2ETest (5, x3) | development/roadmap.md |
-| transactions | ✅ `transaction {}` (JVM; real commit/rollback) | y | ✅ 16/09 (JS bridge) | KofDbE2ETest | development/DATABASE_VISION.md |
+| transactions | ✅ `transaction {}` (JVM; real commit/rollback) | y | y (asm 01/09) | ✅ 16/09 (JS bridge) | KofDbE2ETest | development/DATABASE_VISION.md |
 | resource management | `PARTIAL` (real try/finally) | y | y | — | ExceptionsE2ETest | history/language-state.md |
 | profiles/environments | `PARTIAL` (profile file + env; the rest in kof.config) | y | – CONFIG001 | – CONFIG001 | KofConfigE2ETest | — |
 
@@ -186,8 +186,8 @@ Legend in the target columns: `y` = supported, `~` = partial, `–` = no.
 | multipart | `PLANNED` | — | — | — | — | — |
 | content negotiation | `PLANNED` | — | — | — | — | — |
 | error handling | 404/500 + message | y | – | ✅ 03/09 (JS 404/500) | KofWebE2ETest | stdlib/stdlib-web.md |
-| WebSocket | ✅ `app.ws("/chat") { }` (JVM, 08/30 — RFC 6455 handshake + frame codec/masking) | y | – WEB002 | – WEB001 | KofWebWsE2ETest (11) + KofWsFrameTest (7) | stdlib/stdlib-web.md |
-| SSE | ✅ `sse.send/event/close` (JVM, 08/30) | y | – WEB002 | – WEB001 | KofWebSseE2ETest (7) | stdlib/stdlib-web.md |
+| WebSocket | ✅ `app.ws("/chat") { }` (JVM, 08/30 — RFC 6455 handshake + frame codec/masking) | y | – WEB002 | – WEB004 (compile-time gate 16/09; was silent no-op) | KofWebWsE2ETest (11) + KofWsFrameTest (7) | stdlib/stdlib-web.md |
+| SSE | ✅ `sse.send/event/close` (JVM, 08/30) | y | – WEB002 | – WEB003 (compile-time gate 16/09; was silent no-op) | KofWebSseE2ETest (7) | stdlib/stdlib-web.md |
 | web limits/observability | ✅ `app.configure`/`app.stats` (JVM, 09/04) | y | – | – | KofWebHardeningTest (6) | stdlib/stdlib-web.md |
 | gRPC / GraphQL / SOAP | `EXTERNAL`/`PLANNED` (interop) | — | — | — | — | development/roadmap.md |
 | REST documentation (OpenAPI) | `PLANNED` | — | — | — | — | development/roadmap.md |
@@ -227,7 +227,7 @@ Legend in the target columns: `y` = supported, `~` = partial, `–` = no.
 |-----------|-----|-----|--------|----|-------|------|
 | password hashing (PBKDF2 600k) | `DONE` | y | y (asm, G10) | y | KofSecurityTest | stdlib/security.md |
 | SHA-256 / SHA-512 / HMAC | `DONE` | y | y (asm, G10) | y | KofSecurityTest | stdlib/security.md |
-| AES-GCM | ✅ | y (asm, G10) | ✅ (01/09, SECN002 closed — pure JS) | KofSecurityTest | stdlib/security.md |
+| AES-GCM | `DONE` | y | y (asm, G10) | ✅ (01/09, SECN002 closed — pure JS) | KofSecurityTest | stdlib/security.md |
 | SecureRandom | `DONE` | y | y (getrandom) | y | KofSecurityTest | stdlib/security.md |
 | JWT (HS256, exp/iss/aud) | `DONE` | y | y (asm, G10) | y | KofSecurityTest | stdlib/security.md |
 | secrets (`secrets.get`, env) | `DONE` | y | y | y | KofSecurityTest | stdlib/security.md |
