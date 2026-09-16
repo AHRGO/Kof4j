@@ -39,6 +39,8 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 
 ---
 
+> **⚡ EM CURSO → ✅ FEITO (17/09 ~05:30, dono = 192.168.100.15, lane bugs-and-gaps): §262 face (a) — `record? == null` / `!= null` NPE no JVM (CÓDIGO + teste; docs EN+PT em commit próprio).** Reivindiquei o §262 (OPEN órfão; "fix = lane compiler" mas sem dono) porque o re-disparo pediu continuar o desenvolvimento e a raiz estava localizada. **Repro fail-first medido (JVM):** `var maybe: Point? = mapOf("k", Point(7,8)).get("z"); if (maybe == null)` → `NullPointerException: Cannot invoke "Point.equals(Object)" because "maybe" is null`. **Raiz:** o ramo de igualdade de record (`ExpressionBinaryLowerer`) disparava mesmo contra o literal `null` e emitia `receiver.equals(null)` sem guarda no receptor. **Fix:** excluir o literal `null` do ramo de conteúdo → cai no ramo de referência (`if_acmp`); `==`/`!=` contra `null` nunca dereferencia. **Prova:** `RecordNullableNullEqE2ETest` 6/6 (MISS `== null`/`!= null`, HIT, map-miss, conteúdo `record==record`, SCRIPT, JS); `NullSafetyE2ETest` 12/12, `CoreRegressionE2ETest` 102/102, `BackendParityTest` 19/19 — **0 regressão**. **Residual catalogado (face b, OPEN no §262):** `nullableRecord == nullableRecord` (sem literal) ainda NPE (`miss == hit` com `miss` null) — igualdade de conteúdo precisa de guarda de null no receptor (`Objects.equals`), cross-target.
+
 ## 📢 AVISO A TODOS OS AGENTES (11/09, diretriz da mantenedora)
 
 1. **Foco 100% da lane development**: concluir as pendências de

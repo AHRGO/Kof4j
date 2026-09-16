@@ -1,0 +1,149 @@
+package dev.kof.compiler;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import java.nio.file.*;
+import java.util.List;
+import static org.junit.jupiter.api.Assertions.*;
+
+/**
+ * Regressão do §262 — record `T?` comparado com `null` (`== null` / `!= null`)
+ * dava `NullPointerException` no JVM: o `==` de record virava
+ * `left.equals(right)` (igualdade de conteúdo, bug 11/188) mesmo contra o
+ * literal `null`, sem guarda no receiver.
+ *
+ * Contrato: `== null` é sempre comparação de REFERÊNCIA (if_acmp*), nunca
+ * chamada de método. A igualdade de conteúdo (record × record) continua
+ * valendo quando NENHUM dos lados é o literal `null`.
+ */
+class RecordNullableNullEqE2ETest {
+
+    private final CompilerDriver driver = new CompilerDriver();
+
+    private static final String RECORD_MISS = """
+        record Point(Int x, Int y)
+        Point? find(Bool yes) {
+            if (yes) return Point(7, 8)
+            return null
+        }
+        main() {
+            var miss = find(false)
+            if (miss == null) { println("miss-null") } else { println("miss-not-null") }
+            var hit = find(true)
+            if (hit != null) { println("hit") } else { println("hit-null") }
+            println("done")
+        }
+        """;
+
+    private static final String RECORD_MAP_MISS = """
+        record Point(Int x, Int y)
+        main() {
+            var m = mapOf("k", Point(7, 8))
+            var maybe = m.get("z")
+            if (maybe == null) { println("missing") } else { println("found") }
+            println("done")
+        }
+        """;
+
+    private static final String RECORD_CONTENT_EQUALITY = """
+        record Point(Int x, Int y)
+        main() {
+            var a = Point(1, 2)
+            var b = Point(1, 2)
+            var c = Point(3, 4)
+            println(a == b)
+            println(a == c)
+            println(a != b)
+            println("done")
+        }
+        """;
+
+    private static final String EXACT_262 = """
+        record Point(Int x, Int y)
+        main() {
+            var maybe: Point? = mapOf("k", Point(7, 8)).get("z")
+            if (maybe == null) { println("is-null") } else { println("not-null") }
+            var hit: Point? = mapOf("k", Point(7, 8)).get("k")
+            if (hit != null) { println("hit") }
+            println("done")
+        }
+        """;
+
+    @Test
+    void exactRepro262Jvm(@TempDir Path tmp) throws Exception {
+        runJvm(tmp, EXACT_262, "is-null\nhit\ndone");
+    }
+
+    @Test
+    void recordNullableEqualsNullJvm(@TempDir Path tmp) throws Exception {
+        runJvm(tmp, RECORD_MISS, "miss-null\nhit\ndone");
+    }
+
+    @Test
+    void recordMapMissEqualsNullJvm(@TempDir Path tmp) throws Exception {
+        runJvm(tmp, RECORD_MAP_MISS, "missing\ndone");
+    }
+
+    @Test
+    void recordContentEqualityJvm(@TempDir Path tmp) throws Exception {
+        runJvm(tmp, RECORD_CONTENT_EQUALITY, "true\nfalse\nfalse\ndone");
+    }
+
+    @Test
+    void recordNullableEqualsNullScript(@TempDir Path tmp) throws Exception {
+        runScript(tmp, RECORD_MISS, "miss-null\nhit\ndone");
+    }
+
+    @Test
+    void recordNullableEqualsNullJs(@TempDir Path tmp) throws Exception {
+        runJs(tmp, RECORD_MISS, "miss-null\nhit\ndone");
+    }
+
+    private String runJvm(Path tempDir, String source, String expected) throws java.io.IOException {
+        Path file = tempDir.resolve("Main-" + System.nanoTime() + ".kf");
+        Files.writeString(file, source);
+        Path outDir = tempDir.resolve("out-" + System.nanoTime());
+        CompilationResult result = driver.compile(file, outDir, Target.JVM);
+        assertTrue(result.success(), "JVM compile failed: " + result.diagnostics().getDiagnostics());
+        try {
+            Process p = new ProcessBuilder(System.getProperty("java.home") + "/bin/java",
+                    "-cp", outDir.toString(), "Default.Main").redirectErrorStream(true).start();
+            String output = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+                .replace("\r\n", "\n").trim();
+            int ec = p.waitFor();
+            return assertTarget("JVM", ec, output, expected);
+        } catch (InterruptedException e) {
+            throw new java.io.IOException("interrupted", e);
+        }
+    }
+
+    private String runScript(Path tempDir, String source, String expected) throws java.io.IOException {
+        Path file = tempDir.resolve("Main-" + System.nanoTime() + ".kf");
+        Files.writeString(file, source);
+        try {
+            KofInterpreter.Result r = new CompilerDriver().interpret(List.of(file), tempDir, new String[0]);
+            return assertTarget("SCRIPT", r.exitCode(), r.stdout().trim(), expected);
+        } catch (KofInterpretException e) {
+            fail("SCRIPT frontend error: " + e.getMessage());
+            return null;
+        }
+    }
+
+    private String runJs(Path tempDir, String source, String expected) throws java.io.IOException {
+        Path file = tempDir.resolve("Main-" + System.nanoTime() + ".kf");
+        Files.writeString(file, source);
+        Path outDir = tempDir.resolve("js-" + System.nanoTime());
+        CompilationResult result = driver.compile(file, outDir, Target.JS);
+        assertTrue(result.success(), "JS compile failed: " + result.diagnostics().getDiagnostics());
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        int ec = dev.kof.runtime.KofJsRunner.run(outDir.resolve("Default.mjs"), out,
+                (java.io.InputStream) new java.io.ByteArrayInputStream(new byte[0]), out);
+        return assertTarget("JS", ec, out.toString().replace("\r\n", "\n").trim(), expected);
+    }
+
+    private String assertTarget(String target, int ec, String output, String expected) {
+        assertEquals(0, ec, target + " exit code, output: " + output);
+        assertEquals(expected, output, target + " output");
+        return output;
+    }
+}

@@ -325,7 +325,12 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
         ops.add(new KofLoadLiteral(Type.PrimitiveType.BOOL, eq ? 0 : 1));
         accType = Type.PrimitiveType.BOOL;
     } else if (("==".equals(be.operator()) || "!=".equals(be.operator()))
+            && !driver.isNullLiteral(be.left()) && !driver.isNullLiteral(be.right())
             && (CompilerTypes.isRecordType(accType, driver.currentUnit, driver.semanticAnalyzer) || CompilerTypes.isRecordType(rightType, driver.currentUnit, driver.semanticAnalyzer))) {
+        // §262: `record == null` / `!= null` NÃO é igualdade de conteúdo —
+        // é comparação de REFERÊNCIA (if_acmp), nunca `receiver.equals(null)`
+        // (que dava NPE com o receiver nulo). O guard de literal null cai no
+        // ramo de referência abaixo. `record == record` segue conteúdo (bug 11).
         // bug 11: `==` em records é igualdade de CONTEÚDO →
         // left.equals(right) (o record gera equals no JVM e no
         // JS). Antes emitia referência (if_acmpeq) → false.
