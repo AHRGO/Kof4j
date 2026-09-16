@@ -299,8 +299,12 @@ class KofWebJsE2ETest {
             while (p < body.length) {
                 int lineEnd = indexOfSeq(body, new byte[]{'\r', '\n'}, p);
                 if (lineEnd < 0) break;
-                int size = Integer.parseInt(
-                        new String(body, p, lineEnd - p, StandardCharsets.UTF_8).trim(), 16);
+                String sizeToken = new String(body, p, lineEnd - p, StandardCharsets.UTF_8).trim();
+                // §258/#777: um tamanho de chunk nao-hex (resposta malformada)
+                // chutaria NumberFormatException solta no meio do oraculo —
+                // robustez do harness de teste, nunca um false-green silencioso.
+                if (sizeToken.isEmpty() || !sizeToken.matches("(?i)[0-9a-f]+")) break;
+                int size = Integer.parseInt(sizeToken, 16);
                 if (size == 0) break;
                 de.append(new String(body, lineEnd + 2, size, StandardCharsets.UTF_8));
                 p = lineEnd + 2 + size + 2;

@@ -521,8 +521,16 @@ public final class KofJsRunner {
         }
         Value list = args[listIndex];
         long n = list.getArraySize();
-        org.graalvm.polyglot.Value[] out = new org.graalvm.polyglot.Value[(int) n];
-        for (int i = 0; i < n; i++) {
+        // §258/#773 (java/comparison-with-wider-type): o cast bruto p/ int
+        // truncaria ou daria wrap negativo numa lista > 2^31 (array gigante no
+        // guest), sem diagnostico (R6). Bound check explicito; no-op p/ listas
+        // normais. Precedente: d6eaae0c (mesma familia CodeQL).
+        if (n > Integer.MAX_VALUE) {
+            throw new RuntimeException("lista excede o limite da ponte JS (" + n + " > " + Integer.MAX_VALUE + ")");
+        }
+        int size = (int) n;
+        org.graalvm.polyglot.Value[] out = new org.graalvm.polyglot.Value[size];
+        for (int i = 0; i < size; i++) {
             out[i] = list.getArrayElement(i);
         }
         return out;
