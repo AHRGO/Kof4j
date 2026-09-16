@@ -11,8 +11,8 @@
 > **Build (na data da auditoria):** `mvn clean package` PASS, `mvn test` 810 (793 kof-compiler +8 kof-script +5 kof-c-compiler +4 kof-cli), golden 16/16, integration 9/9, `scripts/package.sh` PASS, `release.yml` 2 jobs (`test-and-bump` → `package-and-release`) × 3 plataformas, Windows SIGPIPE fix.
 >
 > **⚠️ Snapshot 02/09 — números desatualizados (16/09):** o Kof está em
-> **0.4.0-beta** e a suíte tem **2206 testes** nos 4 módulos (1899 kof-compiler
-> + 38 kof-script + 7 kof-c-compiler + 262 kof-cli; baseline medido 16/09, ver
+> **0.4.0-beta** e a suíte tem **2211 testes** nos 4 módulos (1904 kof-compiler
+> + 38 kof-script + 7 kof-c-compiler + 262 kof-cli; baseline medido 16/09 ~09:44, ver
 > `docs/status.md`); este documento é **inventário de
 > capacidades**, não o gate atual. A matriz de status (`DONE`/`PARTIAL`/
 > `PLANNED`) reflete 02/09 — confirme contra `docs/stdlib/stdlib.md` e

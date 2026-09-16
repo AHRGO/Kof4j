@@ -3,11 +3,11 @@
 # Development — backlog vivo (só trabalho em desenvolvimento)
 
 > **Base:** `0.4.0-beta` · branch `beta-0.4.0` · **atualizado:** 16/09/2026
-> **Suíte medida neste HEAD:** `2206` run (1899 kof-compiler + 38 kof-script
-> + 7 kof-c-compiler + 262 kof-cli), **0 regressões / 0 erros**, 190 skip (1 falha = o flake INTERMITENTE conhecido do §252 nativo `spawnWorkerThrowPropagatesThroughSelectAnyNative`, dona lane nativa `.18`/nat — não é regressão; re-medido 16/09 ~05:34 no tip `574c9419` a partir de um CLONE LIMPO) (sem
+> **Suíte medida neste HEAD:** `2211` run (1904 kof-compiler + 38 kof-script
+> + 7 kof-c-compiler + 262 kof-cli), **0 regressões / 0 erros**, 190 skip (1 falha = o flake INTERMITENTE conhecido do §252 nativo `spawnWorkerThrowPropagatesThroughSelectAnyNative`, dona lane nativa `.18`/nat — não é regressão; re-medido 16/09 ~09:44 no tip `98ac26ed` a partir de um CLONE LIMPO; o flake re-disparou nesta corrida) (sem
 > qemu no host da medição: os 84 cross são pulados, + os 5 DBs externos +
 > outros guardas de toolchain; `node` presente — todos os `*Js` verdes) —
-> os 262 kof-cli refletem `e5013152` (DepsTransitiveTest, +10). O número 2199/1902/252 foi uma contagem no meio do caminho (medida enquanto `555d2afe`/`e5013152` landavam); 16/09 ~05:34 é o nº autoritativo do clone limpo. A leitura de 16/09 ~01:45 deu 297 erros = o trap de stub ECJ velho do §257, limpo com `mvn -pl kof-runtime clean`. O número
+> os 262 kof-cli refletem `e5013152` (DepsTransitiveTest, +10; `2a60b426` reescreveu o guard, mesmos 10 @Test). 1904 compiler = 1899 + 3 (`78b733fa` NumericFormatterE2ETest) + 2 (`7b38d0d4` §253-face-A KofTimeE2ETest). O número 2199/1902/252 foi uma contagem no meio do caminho (medida enquanto `555d2afe`/`e5013152` landavam); 16/09 ~09:44 é o nº autoritativo do clone limpo. A leitura de 16/09 ~01:45 deu 297 erros = o trap de stub ECJ velho do §257, limpo com `mvn -pl kof-runtime clean`. O número
 > anterior (1662/13-erros, 13/09) era de host sem node. **Nº autoritativo da suíte = a execução no host** (o gate
 > `mvn test ... -Dmaven.test.failure.ignore=true`; conferir por módulo com
 > `grep -rl FAILURE */target/surefire-reports/*.txt`), não esta linha — ela
