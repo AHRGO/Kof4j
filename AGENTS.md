@@ -726,7 +726,7 @@ ready.
 > suite) prove. **No agent may break behavior that already works.**
 
 1. **Zero regression.** No commit may make an existing test start to
-   fail. The full suite (`mvn test`, today **2211** across the 4 modules — see
+   fail. The full suite (`mvn test`, today **2214** across the 4 modules — see
    §"Verification loop" for the command with the failure.ignore flag) is a **merge gate** —
    a change that doesn't keep everything green doesn't get in. Single exception: a **deliberate**
    contract change, with a version bump + updated docs + migration.
@@ -1084,8 +1084,8 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > it, Maven is fail-fast per module: any failure in **kof-compiler aborts
 > the reactor** and **kof-script, kof-c-compiler and kof-cli never run** — you
 > think you validated everything but only saw the first module. The real total with the flag
-> is **2211 tests** (compiler 1904 + script 38 + kof-c 7 + cli 262, measurement
-> 16/09 ~09:44 — grows with each commit): **0 regressions (1 = the intermittent §252 native flake) / 0 errors** (node now present on
+> is **2214 tests** (compiler 1907 + script 38 + kof-c 7 + cli 262, measurement
+> 16/09 ~11:38 — grows with each commit): **0 regressions (1 = the intermittent §252 native flake) / 0 errors** (node now present on
 > the measuring host — the old "13 errors = node missing" no longer applies). The §149 JS (`KofRandomTest.randomStringJs`/`randomShapeJs`,
 > regression of the §147 fix in `JsIfThrowElse`) was **FIXED 09/13** — the root was
 > the parser consuming the start label of the `while` following an assert/if-throw
@@ -1103,13 +1103,13 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > **The numbers change with qemu in the environment:** without qemu (host of the
 > 16/09 measurement — no cross toolchain), the 84 cross
 > (2×42, `NativeRiscv64/Aarch64E2ETest`) are **skipped** by the guard
-> (`4408eb6`) + the other toolchain/external-DB guards → `2211/1/190-skip` (the 1 failure = the known intermittent §252 native flake, not a regression)
-> (MEASURED 16/09 ~09:44, clean clone). With qemu, **everything executes** — the 84 cross run
-> green and the total stays `2211` with the skip count dropping to the
-> external-DB/`node`-env residual. Correct state TODAY (16/09 ~09:44, clean clone of `98ac26ed`):
-> **0 regressions / 0 errors** — the only failure is the known INTERMITTENT §252
+> (`4408eb6`) + the other toolchain/external-DB guards → `2214/0-1/190-skip` (the flake §252 fires in ~1/2 of full-suite runs: fired at 09:44, silent at 11:38)
+> (MEASURED 16/09 ~11:38, clean clone). With qemu, **everything executes** — the 84 cross run
+> green and the total stays `2214` with the skip count dropping to the
+> external-DB/`node`-env residual. Correct state TODAY (16/09 ~11:38, clean clone of `803eeef4`):
+> **0 regressions / 0 errors** — the full run at 09:44 had the known INTERMITTENT §252
 > native flake (`spawnWorkerThrowPropagatesThroughSelectAnyNative`, owner native
-> lane `.18`/nat, fired again in the full-suite run — see §252), which
+> lane `.18`/nat; the 11:38 run it stayed silent — ~1/2 frequency, see §252), which
 > must be read as a TEST red, not a regression. What matters remains no FAILURE
 > outside the §252 flake and the documented guards.
 
