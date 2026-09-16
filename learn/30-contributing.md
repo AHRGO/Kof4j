@@ -15,7 +15,7 @@ kof/
 ├── kof-runtime/        ← native runtime (free-list GC)
 ├── docs/               ← internal documentation
 ├── learn/              ← this material (intention->Kof->frontend->IR->backend->runtime)
-├── tests/              ← golden tests (810)
+├── tests/              ← golden tests (2214)
 ├── pom.xml             ← Maven build (`${revision}`)
 └── README.md
 ```
@@ -163,7 +163,7 @@ The project is at 0.3.22-beta, functional:
 - KofJS — ES Modules via GraalJS (`kof.http` via Java HttpClient interop)
 - KofScript (`let`→`KofScriptGlobals`, repl, --watch) + KofC (`kof c` native-only)
 - stdlib: kof.io, kof.web, kof.http, kof.security, kof.db, kof.orm, kof.ui, kof.config, kof.log, kof.cache, kof.mq
-- Tests: 810 (golden 16/16, integration 9/9)
+- Tests: 2214 (golden 16/16, integration 9/9)
 
 **In development:**
 - Full native MySQL/MariaDB (wire protocol: SHA-1 auth done)
