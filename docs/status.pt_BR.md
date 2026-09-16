@@ -232,7 +232,7 @@ main() {
     (mysql_native_password) + COM_QUERY + parse de resultset (coldefs + rows
     + EOF) + binds `?` (substituição de literal client-side, `nativeMysqlWireProtocol`
     — 31/08)**. Prepared statements via COM_STMT_PREPARE (binário) pendente.
-- **JS**: reporta `DB001` (gap documentado).
+- **JS** (16/09, DB001 fechado): `connect`/`connect2`/`close`/`execute`/`query`/`transaction` delegam a `kof_platform.db*` no host GraalJS (`KofJsRunner`+`KofJsDbBridge`) — mesma JVM/classpath do caminho JDBC, entao o `DriverManager` ve h2/sqlite-jdbc exatamente como o target JVM faz; saida byte-parity (`KofDbE2ETest.js*` 4 casos). **`db.query<T>` tipado = `DB002`** (compile-time: JS nao emite bytecode JVM no classpath do host — `Class.forName` nao tem o que carregar; o `query` nao-tipado retorna linhas JSON).
 - **riscv64/aarch64**: SQLite fechado 15/09 — link-by-use `libsqlite3` + fatias de runtime `kof_db_*` `RtB46/RtB47` (`KofDbE2ETest.crossNativeSqliteRoundtrip` sob qemu); DSN só `sqlite:`, transaction via EH chain (dentro de `spawn` não suportado no cross, mesma classe do OTP001).
 - DSNs: `jdbc:*` (JVM), `sqlite:` (JVM/Native), `mongodb://` (ORM).
 
@@ -364,7 +364,7 @@ Bool positivo(Int x) = x > 0         // expression body
 | kof.mq (publish/subscribe/queue) | ✅ | ✅ (01/09, pub/sub + filas in-process, asm) | ✅ |
 | kof.log (`log.info/warn/error/debug`) | ✅ | ✅ (asm; UTC, sem JSON) | LOG001 |
 | kof.security (passwords, crypto, JWT, secrets) | ✅ | ✅ | ✅ |
-| kof.db (JDBC, query<T>, transaction) + SQLite nativo | ✅ | ✅ (SQLite + transaction; MySQL WIP; **riscv64/aarch64 ✅ 15/09** link-by-use libsqlite3) | DB001 (JS) |
+| kof.db (JDBC, query<T>, transaction) + SQLite nativo | ✅ | ✅ (SQLite + transaction; MySQL WIP; **riscv64/aarch64 ✅ 15/09** link-by-use libsqlite3) | ✅ 16/09 (nao-tipado `connect/execute/query/close/transaction` na ponte GraalJS — `DB002` p/ `query<T>` tipado) |
 | kof.orm (entity, CRUD, where, migrate, MongoDB) | ✅ | ORM001 | ORM001 |
 | String.toInt/toLong/toDouble/toFloat | ✅ | ✅ | ✅ |
 | kof.ui (Color, Palette, Theme, Window) | ✅ | ✅ (JS render) | ✅ |
@@ -602,7 +602,7 @@ main() { /* ignorado pelo kof test */ }
 | KofPatternMatchingTest | 12 | switch case String s / Point(x,y) 3 targets |
 | KofWebE2ETest | 12 | stack web nativa (web.app, rotas, JSON, middleware, `app.health` bypass) |
 | ExceptionsE2ETest | 9 | try/catch/finally JVM + Native |
-| KofDbE2ETest | 18 | kof.db: JDBC, query<T>, transaction, rollback, SQLite nativo, transaction Native (commit+rollback), DB001, **roundtrip SQLite cross riscv64+aarch64 (qemu) 15/09** |
+| KofDbE2ETest | 22 | kof.db: JDBC, query<T>, transaction, rollback, SQLite nativo, transaction Native (commit+rollback), **DB001 no JS (bridge GraalJS 16/09: roundtrip js + transaction commit/rollback/aninhado byte-parity c/ JVM)**, `DB002` p/ query<T> no JS, **roundtrip SQLite cross riscv64+aarch64 (qemu) 15/09** |
 | KofHttpServerTest | 8 | serve engine (sockets reais) |
 | KofMediaE2ETest | 15 | kof.media + serveDir: Image/Audio/WAV/Video(MP4), Range 206/416, conteúdo binário (não base64) |
 | NativeConfigE2ETest | 8 | kof.config Native (asm): precedência, typed, comentários |

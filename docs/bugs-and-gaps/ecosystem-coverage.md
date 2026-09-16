@@ -165,7 +165,7 @@ Legend in the target columns: `y` = supported, `~` = partial, `–` = no.
 | validation | ✅ `kof.validation` (required/notBlank/minLength/maxLength/lengthBetween/isEmail/isUrl/matches/isInt/isLong/inRange/min/max) — JVM/Native/JS | y | y | y | KofValidationTest | stdlib/stdlib.md |
 | scheduling | ✅ `kof.time` now/sleep (JVM/Native/JS) + interval/cancel (JVM) | y | y (now/sleep) | y (now/sleep) | KofTimeE2ETest | stdlib/stdlib.md |
 | caching | ✅ `kof.cache` (get/set/ttl/delete/clear; 08/30) | y | y (asm) | y | KofCacheE2ETest (5, x3) | development/roadmap.md |
-| transactions | ✅ `transaction {}` (JVM; real commit/rollback) | y | – DB001 | – DB001 | KofDbE2ETest | development/DATABASE_VISION.md |
+| transactions | ✅ `transaction {}` (JVM; real commit/rollback) | y | ✅ 16/09 (JS bridge) | KofDbE2ETest | development/DATABASE_VISION.md |
 | resource management | `PARTIAL` (real try/finally) | y | y | — | ExceptionsE2ETest | history/language-state.md |
 | profiles/environments | `PARTIAL` (profile file + env; the rest in kof.config) | y | – CONFIG001 | – CONFIG001 | KofConfigE2ETest | — |
 
@@ -197,9 +197,9 @@ Legend in the target columns: `y` = supported, `~` = partial, `–` = no.
 
 | Capability | Kof | JVM | Native | JS | Tests | Docs |
 |-----------|-----|-----|--------|----|-------|------|
-| SQL / JDBC | ✅ `kof.db` (SQL-first) + native SQLite via direct `.so` + MySQL wire protocol (handshake+scramble+auth-switch+COM_QUERY+resultset, 08/31) | y | y (SQLite + MySQL wire) | – DB001 | KofDbE2ETest | development/DATABASE_VISION.md |
-| `db.connect/query/transaction` | ✅ (+ typed `query<T>`) | y | y | – DB001 | KofDbE2ETest | development/DATABASE_VISION.md |
-| prepared statements | ✅ (`?` binds) | y | y | – DB001 | KofDbE2ETest | — |
+| SQL / JDBC | ✅ `kof.db` (SQL-first) + native SQLite via direct `.so` + MySQL wire protocol (handshake+scramble+auth-switch+COM_QUERY+resultset, 08/31) | y | y (SQLite + MySQL wire) | ✅ 16/09 (JDBC via GraalJS host) | KofDbE2ETest | development/DATABASE_VISION.md |
+| `db.connect/query/transaction` | ✅ (+ typed `query<T>`) | y | y | ✅ untyped 16/09; typed `query<T>` `DB002` | KofDbE2ETest | development/DATABASE_VISION.md |
+| prepared statements | ✅ (`?` binds) | y | y | ✅ 16/09 (binds via bridge) | KofDbE2ETest | — |
 | connection pools | `PLANNED` | — | — | — | — | — |
 | migrations | ✅ versioned `orm.migrate` (`kof_migrations`) | y | – ORM001 | – ORM001 | KofOrmE2ETest | development/DATABASE_VISION.md |
 | repositories/ORM | ✅ `kof.orm`: `entity` + create/save/find/all/where/delete/count | y | – ORM001 | – ORM001 | KofOrmE2ETest | development/DATABASE_VISION.md |

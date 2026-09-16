@@ -50,11 +50,25 @@ public final class KofDb {
      *  reporta DB001. */
     static boolean supportedOn(Target target) {
         return target == Target.JVM || target == Target.NATIVE
-                || target == Target.NATIVE_RISCV64 || target == Target.NATIVE_AARCH64;
+                || target == Target.NATIVE_RISCV64 || target == Target.NATIVE_AARCH64
+                || target == Target.JS;
     }
 
     static String gapCode() {
         return "DB001";
+    }
+
+    /** No JS o query tipado (`db.query<User>`) nao e portavel: o programa
+     *  nao emite .class no classpath do host GraalJS (Target.JS nao produz
+     *  bytecode JVM), entao o `Class.forName` da ponte nao tem o que carregar.
+     *  DB002 = falha ALTA em compile-time, nunca runtime silencioso; o
+     *  caminho nao-tipado (`query` sem type arg) funciona no JS. */
+    static boolean typedQueryUnsupportedOn(Target target) {
+        return target == Target.JS;
+    }
+
+    static String typedQueryGapCode() {
+        return "DB002";
     }
 
     record DbCall(String function, Type returnType, List<Type> parameterTypes) {}

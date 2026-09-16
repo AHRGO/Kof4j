@@ -4,7 +4,7 @@
 
 **Last updated:** September 12, 2026
 **Version:** 0.4.0-beta
-**Status:** implemented (Phase 5 of the Spring independence plan) — JVM (JDBC) + Native (SQLite via direct `.so` + MySQL wire protocol WIP) + `kof.orm` (JVM + MongoDB); JS `DB001`
+**Status:** implemented (Phase 5 of the Spring independence plan) — JVM (JDBC) + Native (SQLite via direct `.so` + MySQL wire protocol WIP) + `kof.orm` (JVM + MongoDB); JS untyped ✅ (16/09), `query<T>` = `DB002`, ORM `ORM001`
 
 ---
 
@@ -104,13 +104,13 @@ Native:
 | JVM | ✅ complete (JDBC) | `db.connect`/`execute`/`query<T>`/`transaction` (H2/MySQL/MariaDB/PostgreSQL/SQLite) + `orm.*` (entity, `saveAll`, `where` operators, `page`, filtered `count`, `deleteAll`, `migrate`, MongoDB) |
 | Native x86_64 | ✅ SQLite; MySQL WIP | `sqlite:` DSN complete; MySQL wire protocol (SHA-1 scramble + lenenc + `user:pass@`) — handshake/query/prepared pending |
 | Native riscv64 | ✅ SQLite (riscv64) | `li a7` syscalls |
-| JS | DB001 (documented gap) | reports `DB001`/`ORM001` at compile-time |
+| JS | ✅ untyped (16/09); typed `query<T>` = `DB002` | `connect/execute/query/close/transaction` via `kof_platform.db*` on the GraalJS host; typed query + `orm.*` = `DB002`/`ORM001` at compile-time |
 
 ## 7. Tests (0.2.6-beta)
 
 `KofDbE2ETest` 8 + `KofOrmE2ETest` 16 (includes MariaDB/PostgreSQL/MongoDB with conditional skip + native SQLite) — execute + JSON query,
 typed query with bind, transaction with commit, rollback on exception,
-credentials, and DB001 in JS (Native SQLite ✅).
+credentials; JS untyped roundtrip + transaction byte-parity with JVM (16/09, `DB001` closed); `query<T>` in JS = `DB002` (Native SQLite ✅).
 
 ## 8. Planned evolution (residual)
 

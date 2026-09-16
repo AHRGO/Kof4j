@@ -327,8 +327,11 @@ public final class KofJsRunner {
             try {
                 Value cls = args[2];
                 String className = cls.isNull() ? "" : cls.asString();
+                // String[] (nao List) — mesmo contrato do dirList: o guest
+                // acessa rows.size como list.length e rows.get(i) como
+                // list[i]; java.util.List nao expoe .length ao JS.
                 return KofJsDbBridge.queryV(args[0].asString(), args[1].asString(), className,
-                        listValues(args, 3));
+                        listValues(args, 3)).toArray(new String[0]);
             } catch (Exception e) {
                 throw guestError(e);
             }
@@ -337,9 +340,21 @@ public final class KofJsRunner {
             // O rollback ja ocorre dentro do bridge (re-gra do bloco); deixar
             // a excecao do bloco propagar sem embrulhar — paridade com o JVM,
             // que relanca a causa p/ o try/catch externo ver o valor.
+            // O bloco `transaction { }` baixa como closure Kof = objeto com
+            // membro `invoke` (convencao do runtime JS, cf. UiWeb 505-506);
+            // aceita tambem funcao JS crua por robustez.
             Value fn = args[0];
+            Runnable body;
+            Value invoke = fn.hasMembers() ? fn.getMember("invoke") : null;
+            if (invoke != null && invoke.canExecute()) {
+                body = () -> invoke.execute();
+            } else if (fn.canExecute()) {
+                body = fn::execute;
+            } else {
+                throw new RuntimeException("transaction: callback is not invocable");
+            }
             try {
-                KofJsDbBridge.transaction(() -> fn.execute());
+                KofJsDbBridge.transaction(body);
             } catch (Exception e) {
                 if (e instanceof RuntimeException re) {
                     throw re;
