@@ -266,7 +266,7 @@ fix).
 | ~~`done`/`poll`~~ | ✅ 31/08 — não-bloqueantes sobre o handle (JVM + Native) | — |
 | ~~Port Native~~ | ✅ 31/08 — `pthread_create` + trampoline + `pthread_join` + allocator thread-safe (futex); join implícito (CONC001 fechado) | — |
 | ~~Port JS~~ | ✅ 03/09 — spawn sobre Promise, await nativo via microtask (CONC003 fechado) | — |
-| ~~Scheduler/cron~~ | ✅ 31/08 — `every`/`at` JVM (`ScheduledExecutor`) + JS (`setInterval`) + **Native SCHED001** (thread por job, `usleep` ms→us + flag `active`, `cancel(id)` cooperativo) | — |
+| ~~Scheduler~~ | ✅ 31/08 — `every`/`cancel` JVM (`ScheduledExecutor`) + JS (`setInterval`) + **Native SCHED001** (thread por job, `usleep` ms→us + flag `active`, `cancel(id)` cooperativo) | `at(cron)` = stub 60s em todo alvo → **CRON001** (parser cron real pendente) |
 | ~~Canais tipados~~ | ✅ 31/08, bloqueio real no JS 03/09 — `channel<Int>()` com `send`/`receive` (JVM `LinkedBlockingQueue` bloqueante + Native FIFO futex + JS fila de resolvers pendentes) | — |
 
 Critério de "100%": os três targets executando os mesmos programas

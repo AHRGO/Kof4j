@@ -68,10 +68,13 @@ final class ExpressionBuiltinInstanceCalls {
                         || webCall.function().equals("kof_web_route"));
             // WEB001-T1 JS (13/09): routes HTTP + listen liberados no JS — o
             // runtime JsRuntimeUiWeb emite kofWebAppNew/Route/Listen (server
-            // GraalJS HttpServer real); sse/ws/TLS seguem WEB003/004/002.
+            // GraalJS HttpServer real); ws/TLS seguem WEB004/002. SSE ✅ 16/09
+            // handler-scoped (push pós-return do handler = WEB003 residual —
+            // o pump JS é single-thread).
             boolean jsWebT1 = driver.target == Target.JS
                     && (webCall.function().equals("kof_web_listen")
                         || webCall.function().equals("kof_web_route")
+                        || webCall.function().equals("kof_web_sse_route")
                         || webCall.function().equals("kof_web_app_new"));
             if (driver.target != Target.JVM && driver.target != Target.ANDROID
                     && !nativeWebT1 && !jsWebT1) {

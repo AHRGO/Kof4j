@@ -265,7 +265,7 @@ handle — a SIGSEGV in `__pthread_clockjoin_ex` once the TCB was recycled
 | ~~`done`/`poll`~~ | ✅ 31/08 — non-blocking over the handle (JVM + Native) | — |
 | ~~Native Port~~ | ✅ 31/08 — `pthread_create` + trampoline + `pthread_join` + thread-safe allocator (futex); implicit join (CONC001 closed) | — |
 | ~~JS Port~~ | ✅ 03/09 — spawn over Promise, native await via microtask (CONC003 closed) | — |
-| ~~Scheduler/cron~~ | ✅ 31/08 — `every`/`at` JVM (`ScheduledExecutor`) + JS (`setInterval`) + **Native SCHED001** (thread per job, `usleep` ms→us + `active` flag, cooperative `cancel(id)`) | — |
+| ~~Scheduler~~ | ✅ 31/08 — `every`/`cancel` JVM (`ScheduledExecutor`) + JS (`setInterval`) + **Native SCHED001** (thread per job, `usleep` ms→us + `active` flag, cooperative `cancel(id)`) | `at(cron)` = 60s stub on every target → **CRON001** (real cron parser pending) |
 | ~~Typed channels~~ | ✅ 31/08, real blocking in JS 03/09 — `channel<Int>()` with `send`/`receive` (JVM blocking `LinkedBlockingQueue` + Native FIFO futex + JS queue of pending resolvers) | — |
 
 Criterion for "100%": the three targets running the same concurrent programs

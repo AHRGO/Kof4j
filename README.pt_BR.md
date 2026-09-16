@@ -156,7 +156,7 @@ ferramenta separada, não consome a IR Kof — ver
 | JSON encode/decode (objetos/records/arrays, 3 targets) | ✅ | ✅ | ✅ |
 | kof.io (File, Path, Directory) | ✅ | ✅ | ✅ |
 | kof.time (`now`/`sleep`/`interval`), kof.cache | ✅ | ✅ | ✅ |
-| kof.web (`web.app()`, ws, sse, TLS) | ✅ | base ✅ 03/09; TLS `WEB002`, ws `WEB004`, sse `WEB003` | ✅ base 16/09 (ws/sse = WEB004/WEB003 compile-time) |
+| kof.web (`web.app()`, ws, sse, TLS) | ✅ | base ✅ 03/09; TLS `WEB002`, ws `WEB004`, sse `WEB003` | ✅ base 16/09 + SSE handler-scoped 16/09 (ws `WEB004`, push SSE pós-return `WEB003` compile-time) |
 | kof.http client + retry/circuit | ✅ | HTTP002 | ✅ |
 | kof.security (passwords, crypto, jwt, secrets, auth) | ✅ | ✅ | ✅ |
 | kof.db / kof.orm (SQLite nativo, MySQL WIP, MongoDB) | ✅ | ✅ | ✅ 16/09 nao-tipado (ponte no host GraalJS); `query<T>` tipado = `DB002`; ORM `ORM001` |

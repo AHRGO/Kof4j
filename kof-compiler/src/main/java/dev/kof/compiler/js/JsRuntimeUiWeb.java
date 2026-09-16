@@ -103,6 +103,14 @@ public final class JsRuntimeUiWeb {
                     exchange.getResponseBody().close();
                     return;
                 }
+                // WEB001 SSE (16/09): rotas sse vivem embrulhadas — o wrapper
+                // carrega o handler real + flag; matching ignora o método
+                // (idem JVM: SSE só responde GET).
+                let sseRoute = false;
+                if (handler && handler.__sse === true) {
+                    sseRoute = true;
+                    handler = handler.handler;
+                }
                 try {
                     // WEB001-T1 (13/09): body = stream do request lido inteiro
                     // e decodificado UTF-8 (métodos de instância em objetos
@@ -147,6 +155,30 @@ public final class JsRuntimeUiWeb {
                     };
                     // WEB001-T1 (13/09): idem JVM (JvmRuntimeWebDispatch) — o
                     // RETORNO do handler é o body 200; null/undefined → 404.
+                    if (sseRoute) {
+                        // WEB001 SSE (16/09): HANDLER-SCOPED. O pump JS é
+                        // single-thread — o stream vive DURANTE o corpo do
+                        // handler (send/event flusham por evento, idem JVM
+                        // writeFrame) e fecha no retorno. Push pós-return ou
+                        // de outro handler = WEB003 (não há scheduler-side
+                        // sender no JS); sse(text) fora de rota já falha em
+                        // compile-time (contextJsSupported 16/09).
+                        const conn = kofWebSseMakeConn(exchange);
+                        kofWebSseConn = conn;
+                        try {
+                            if (typeof handler.invoke === 'function') handler.invoke(conn);
+                            else if (typeof handler === 'function') handler(conn);
+                        } catch (se) {
+                            // idem JVM (JvmRuntimeWebServer): erro do handler
+                            // SSE vai p/ stderr e o stream fecha — nunca 500
+                            // (os headers do stream já foram enviados).
+                            console.log("kof web sse handler error: " + se);
+                        } finally {
+                            kofWebSseConn = null;
+                            conn.close();
+                        }
+                        return;
+                    }
                     const result = (typeof handler.invoke === 'function') ? handler.invoke(ctx)
                                  : (typeof handler === 'function' ? handler(ctx) : undefined);
                     if (result === null || result === undefined) {

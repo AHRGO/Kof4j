@@ -162,16 +162,15 @@ class KofWebJsE2ETest {
     }
 
     // ── 16/09 (WEB001 fatia honestidade): context-fns web sem runtime no JS
-    //    (sse/wsSend/wsMessage/stats) NÃO podem baixar para kofWebStub e
-    //    retornar 0 em silêncio (R6). Compilar deve FALAR o gap; as
-    //    context-fns com runtime (param/query/header/body/method/path)
-    //    continuam compilando. ──
+    //    baixavam para kofWebStub e retornavam 0 em silêncio (R6). SSE ganhou
+    //    runtime handler-scoped no host JS (16/09) e saiu da lista; restam
+    //    wsSend/wsMessage/stats (WEB004/WEB001). ──
     @Test
     void jsUnsupportedContextFnsReportGapAtCompile(@TempDir Path tempDir) throws IOException {
         // aridade exata de cada context-fn (KofWeb.contextCall) — chamada
         // com aridade errada não chega ao gate (resolve null antes).
-        String[] fns = {"sse", "wsSend", "wsMessage", "stats"};
-        String[] calls = {"sse(\"tick\")", "wsSend(\"hello\")", "wsMessage()", "stats(\"reqs\")"};
+        String[] fns = {"wsSend", "wsMessage", "stats"};
+        String[] calls = {"wsSend(\"hello\")", "wsMessage()", "stats(\"reqs\")"};
         for (int i = 0; i < fns.length; i++) {
             Path source = tempDir.resolve(fns[i] + ".kf");
             Files.writeString(source, """
@@ -212,5 +211,162 @@ class KofWebJsE2ETest {
                 + r.diagnostics().getDiagnostics());
         assertFalse(r.diagnostics().getDiagnostics().toString().contains("WEB001"),
                 r.diagnostics().getDiagnostics().toString());
+    }
+
+    // ── 16/09 (WEB001 residual — SSE no host GraalJS, HANDLER-SCOPED) ──
+    // O pump JS é single-thread: o stream SSE vive DURANTE o corpo do handler
+    // e fecha no retorno dele (push pós-return = WEB003 residual). Forma
+    // provada: contexto-fn sse(text) e o objeto injetado no handler
+    // (app.sse(path) { sse.send(...) }) — idem stdlib-web/JVM framing.
+    private static final String SSE_APP = """
+            main() {
+                var app = web.app()
+                app.sse("/events") {
+                    HANDLER
+                }
+                app.listen(PORT)
+            }
+            """;
+
+    private int startSseServer(Path tempDir, String handlerBody) throws Exception {
+        int port = freePort();
+        Path source = tempDir.resolve("App.kf");
+        Files.writeString(source, SSE_APP.replace("PORT", String.valueOf(port))
+                .replace("HANDLER", handlerBody));
+        Path outDir = tempDir.resolve("out-" + System.nanoTime());
+        CompilationResult result = driver.compile(source, outDir, Target.JS);
+        assertTrue(result.success(), "compilação JS sse deve suceder: "
+                + result.diagnostics().getDiagnostics());
+        java.io.ByteArrayOutputStream serverErr = new java.io.ByteArrayOutputStream();
+        java.io.ByteArrayOutputStream serverOut = new java.io.ByteArrayOutputStream();
+        sseServerOut = serverOut;
+        Thread serverThread = new Thread(() -> {
+            try {
+                dev.kof.runtime.KofJsRunner.run(findJsEntry(outDir),
+                        serverOut, java.io.InputStream.nullInputStream(), serverErr);
+            } catch (Exception ignored) {
+            }
+        }, "kof-sse-js-" + port);
+        serverThread.setDaemon(true);
+        serverThread.start();
+        for (int attempt = 0; attempt < 50; attempt++) {
+            try (Socket probe = new Socket()) {
+                probe.connect(new java.net.InetSocketAddress("127.0.0.1", port), 200);
+                return port;
+            } catch (IOException e) {
+                Thread.sleep(100);
+            }
+        }
+        if (!serverThread.isAlive()) {
+            throw new IOException("runner MORREU | out: [" + serverOut.toString(StandardCharsets.UTF_8)
+                    + "] err: [" + serverErr.toString(StandardCharsets.UTF_8) + "]");
+        }
+        throw new IOException("server SSE JS não abriu a porta " + port
+                + " | out: [" + serverOut.toString(StandardCharsets.UTF_8)
+                + "] err: [" + serverErr.toString(StandardCharsets.UTF_8) + "]");
+    }
+
+    private java.io.ByteArrayOutputStream sseServerOut;
+
+    /**
+     * Resposta SSE crua (HTTP/1.1 + Connection: close — o HttpServer do host
+     * mantém keep-alive aberto após o stream, sem close o read travaria).
+     * De-chunks quando o transporte chunkou; corpo raw caso contrário.
+     */
+    private String[] sseRaw(int port) throws IOException {
+        try (Socket socket = new Socket("127.0.0.1", port)) {
+            socket.setSoTimeout(5000);
+            socket.getOutputStream().write(
+                    ("GET /events HTTP/1.1\r\nHost: 127.0.0.1\r\n"
+                            + "Accept: text/event-stream\r\nConnection: close\r\n\r\n")
+                            .getBytes(StandardCharsets.UTF_8));
+            socket.getOutputStream().flush();
+            InputStream in = socket.getInputStream();
+            java.io.ByteArrayOutputStream all = new java.io.ByteArrayOutputStream();
+            byte[] buf = new byte[4096];
+            int n;
+            while ((n = in.read(buf)) != -1) all.write(buf, 0, n);
+            byte[] raw = all.toByteArray();
+            int sep = indexOfSeq(raw, new byte[]{'\r', '\n', '\r', '\n'}, 0);
+            String head = new String(raw, 0, sep, StandardCharsets.UTF_8);
+            byte[] body = java.util.Arrays.copyOfRange(raw, sep + 4, raw.length);
+            String out = new String(body, StandardCharsets.UTF_8);
+            if (!head.toLowerCase().contains("transfer-encoding: chunked")) {
+                return new String[]{head, out};
+            }
+            StringBuilder de = new StringBuilder();
+            int p = 0;
+            while (p < body.length) {
+                int lineEnd = indexOfSeq(body, new byte[]{'\r', '\n'}, p);
+                if (lineEnd < 0) break;
+                int size = Integer.parseInt(
+                        new String(body, p, lineEnd - p, StandardCharsets.UTF_8).trim(), 16);
+                if (size == 0) break;
+                de.append(new String(body, lineEnd + 2, size, StandardCharsets.UTF_8));
+                p = lineEnd + 2 + size + 2;
+            }
+            return new String[]{head, de.toString()};
+        }
+    }
+
+    private static int indexOfSeq(byte[] data, byte[] seq, int from) {
+        outer:
+        for (int i = from; i <= data.length - seq.length; i++) {
+            for (int j = 0; j < seq.length; j++) {
+                if (data[i + j] != seq[j]) continue outer;
+            }
+            return i;
+        }
+        return -1;
+    }
+
+    private String[] sseBody(int port) throws IOException {
+        String[] resp = sseRaw(port);
+        if (resp[1].isEmpty()) {
+            fail("corpo SSE vazio | runner stdout: ["
+                    + sseServerOut.toString(StandardCharsets.UTF_8)
+                    + "] | head: [" + resp[0].replace("\r", "~") + "]");
+        }
+        return resp;
+    }
+
+    @Test
+    void jsSseSingleDataEvent(@TempDir Path tempDir) throws Exception {
+        int port = startSseServer(tempDir, "sse(\"hello\")");
+        String[] resp = sseBody(port);
+        String head = resp[0].toLowerCase();
+        assertTrue(resp[0].contains("200"), resp[0]);
+        // O com.sun HttpServer canonicaliza o CASE dos header names
+        // ("x-accel-buffering" vs. o raw-socket JVM "X-Accel-Buffering") —
+        // clients SSE são case-insensitive por spec; o VALOR importa.
+        assertTrue(head.contains("content-type: text/event-stream"), resp[0]);
+        assertTrue(head.contains("cache-control: no-cache"), resp[0]);
+        assertTrue(head.contains("x-accel-buffering: no"), resp[0]);
+        assertEquals("data: hello\n\n", resp[1], "framing do evento único");
+    }
+
+    @Test
+    void jsSseMemberSendNamedAndMultiLine(@TempDir Path tempDir) throws Exception {
+        int port = startSseServer(tempDir, """
+            sse.send("one")
+            sse.event("tick", "hello")
+            sse.send("a\\nb")
+            """);
+        String[] resp = sseBody(port);
+        assertEquals("data: one\n\nevent: tick\ndata: hello\n\ndata: a\ndata: b\n\n",
+                resp[1], "framing send/event/multi-line");
+    }
+
+    @Test
+    void jsSseHandlerScopedAndClosesAfterReturn(@TempDir Path tempDir) throws Exception {
+        // o stream fecha no retorno do handler (handler-scoped): a resposta é
+        // lida inteira e EOF chega sem hang — prova de que o pump não trava.
+        int port = startSseServer(tempDir, """
+            sse.send("a")
+            sse.send("b")
+            assert(sse.isOpen())
+            """);
+        String[] resp = sseBody(port);
+        assertEquals("data: a\n\ndata: b\n\n", resp[1]);
     }
 }

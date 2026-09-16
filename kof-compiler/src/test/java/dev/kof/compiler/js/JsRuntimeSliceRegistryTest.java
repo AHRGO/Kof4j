@@ -20,6 +20,7 @@ class JsRuntimeSliceRegistryTest {
                 .append(JsRuntimeUiLayout.UI_LAYOUT_RUNTIME)
                 .append(JsRuntimeUiJsonMap.JSON_MAP_RUNTIME)
                 .append(JsRuntimeUiWeb.UI_WEB_RUNTIME)
+                .append(JsRuntimeUiWebSse.uiWebSseRuntime())
                 .append(JsRuntimeUiConfig.CONFIG_RUNTIME)
                 .append(JsRuntimeUiSupport.UI_SUPPORT_RUNTIME)
                 .append(JsRuntimeUiSecurity.UI_SECURITY_RUNTIME)

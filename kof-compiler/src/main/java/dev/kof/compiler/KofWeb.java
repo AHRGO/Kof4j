@@ -213,7 +213,9 @@ public final class KofWeb {
         return switch (function) {
             case "kof_web_param", "kof_web_query", "kof_web_header",
                  "kof_web_body", "kof_web_method", "kof_web_path",
-                 "kof_web_status", "kof_web_header_set" -> true;
+                 "kof_web_status", "kof_web_header_set",
+                 // WEB001 SSE (16/09): sse(text) handler-scoped no host JS.
+                 "kof_web_sse_send" -> true;
             default -> false;
         };
     }

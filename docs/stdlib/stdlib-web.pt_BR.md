@@ -253,7 +253,10 @@ app.ws("/chat") {
 | `sse.close()` | Encerra o stream do cliente |
 | `sse.isOpen()` | `Bool` — o stream segue aberto |
 
-Cada conexão SSE é independente (ThreadLocal por conexão); os headers
+No host **JS** (Graal) o SSE é **handler-scoped**: os eventos são escritos durante
+o corpo do handler e o stream fecha quando ele retorna — o pump é single-thread,
+então push pós-return e múltiplos clientes simultâneos são o residual `WEB003`
+ali. No JVM cada conexão SSE é independente (ThreadLocal por conexão). Nos dois, os headers
 `Content-Type: text/event-stream`, `Cache-Control: no-cache`,
 `Connection: keep-alive` e `X-Accel-Buffering: no` são emitidos.
 
@@ -265,9 +268,9 @@ app.sse("/events") {
 }
 ```
 
-`app.ws` e `app.sse` estão disponíveis no **JVM**. Em outros targets são
-gaps documentados em compile-time: WebSocket → `WEB004`, SSE → `WEB003`
-(Native/JS).
+`app.ws` está disponível no **JVM**; `app.sse` funciona no JVM e (desde
+16/09, handler-scoped) no **JS**. Nos outros targets / no residual JS são
+gaps documentados em compile-time: WebSocket → `WEB004`, SSE → `WEB003` (Native).
 
 ### Limites e observabilidade (`app.configure`, `app.stats`)
 
@@ -312,9 +315,9 @@ stream é fechado e a task cancelada.
 
 ## 5. Limitações atuais (Fase 1, 0.2.6-beta)
 
-- O target `js` suporta a base da stack web (`web.app()` + rotas + context-fns com runtime: param/query/header/body/method/path/status/headerSet — `WEB001` fatia honestidade 16/09); gaps residuais: `app.ws`/`app.sse` reportam `WEB003`/`WEB004` em compile-time; `kof.http` já funciona no JS via `Java HttpClient`.
+- O target `js` suporta a base da stack web (`web.app()` + rotas + context-fns com runtime: param/query/header/body/method/path/status/headerSet — `WEB001` fatia honestidade 16/09) mais **SSE handler-scoped** (`app.sse` + `sse.send/event/close/isOpen` + `sse()`, framing/headers idem JVM — 16/09); gaps residuais: SSE push depois do retorno do handler e múltiplos clientes simultâneos (`WEB003`), `app.ws` (`WEB004`) e `stats()` reportados em compile-time; `kof.http` já funciona no JS via `Java HttpClient`.
 - O target `native` (`x86_64`/`riscv64`/`aarch64`) tem a base do servidor web desde 03/09 (`NativeWebRuntime.java`: accept/route/lambda/body, `KofWebNativeE2ETest` 4/4); residuais: TLS `WEB002`, ws `WEB004`, sse `WEB003`, path params/keep-alive/`status()`/`headerSet()` `WEB001`.
-- `app.ws`/`app.sse` são JVM-only (Native/JS: `app.ws` → `WEB004`, `app.sse` → `WEB003` — reportados por função em compile-time).
+- `app.ws` é JVM-only (Native/JS → `WEB004` em compile-time). `app.sse` é JVM + JS handler-scoped (16/09; Native `WEB003`, push pós-return no JS `WEB003` residual).
 - `app.serveDir` (arquivos estáticos + Range 206/416) é JVM-only (Native/JS `WEB005`).
 - Hardening PR6 (connection cap, limites `maxFrameBytes`/`maxMessageBytes`,
   `idleMs`, `app.stats`) é JVM; backpressure e fragmentação seguem follow-up.

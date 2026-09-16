@@ -110,8 +110,10 @@ if (mc.receiver() == null && KofWeb.isContextFunction(mc.methodName())) {
             return localIdx;
         }
         // 16/09: o mesmo vazamento existia no JS — context-fns sem runtime
-        // (sse/wsSend/wsMessage/stats) baixavam para kofWebStub (return 0
-        // SILENCIOSO, R6). Gap em tempo de compilação, código por função.
+        // baixavam para kofWebStub (return 0 SILENCIOSO, R6). Gap em tempo de
+        // compilação, código por função. SSE (kof_web_sse_send) ganhou runtime
+        // handler-scoped no host JS (16/09) e saiu da lista; restam wsSend/
+        // wsMessage (WEB004) e stats (WEB001).
         if (driver.target == Target.JS
                 && !KofWeb.contextJsSupported(webCtx.function())) {
             String code = KofWeb.gapCode(webCtx.function());
