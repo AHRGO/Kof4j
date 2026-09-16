@@ -455,7 +455,7 @@ Princípios mantidos:
 5. ~~G1~~ — ✅ `kof.db` + `kof.orm` nível 0 completo (JDBC idiomático, SQLite
    nativo, transactions, entity, migrations, **where com operadores**,
    **saveAll batch**, **page/count/deleteAll**, **MariaDB/PostgreSQL reais**,
-   MongoDB); próximo: pools, ORM no Native/JS (`ORM001`). Query DSL tipada ✅ 01/09; `kof.db` no JS ✅ 16/09 (`DB001`).
+   MongoDB); próximo: pools, ORM no Native/JS (`ORM001`). Query DSL tipada ✅ 01/09; `kof.db` no JS ✅ 16/09 (DB001 fechado).
 6. ~~G4~~ — ✅ `kof.validation` (13 predicados nos 3 targets; `KofValidationTest` 3/3).
 7. ~~G5~~ — ✅ `kof.observability` (health/readiness/liveness, counter/increment/gauge, requestId/correlationId — JVM/Native/JS; `KofObservabilityTest` 3/3).
 8. ~~G8~~ — ✅ `kof.time.sleep` + `interval`/`cancel` 3 targets (JS: fila cooperativa — TIME001 fechado 02/09).
