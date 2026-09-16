@@ -861,6 +861,17 @@ Implementation of the intent core is under the maintainer's responsibility.
 
 Lanes must not attack the boxed-nullable core of #266/#259 without new authorization.
 
+**Authorization (16/09, maintainer via chat, hierarchy rule):** the maintainer
+explicitly delegated the D-NULL-INTENT front to the agent lane (`192.168.100.22`,
+issue-watcher/compiler) — the "new authorization" requirement above is hereby
+met. The boxed-nullable core of #266/#259 is UNLOCKED for implementation by
+this lane, following the D-NULL-INTENT queue (1. JVM + Script + JS; 2. Native;
+3. intent in non-nullable declarations; 4. audit and elimination of silent
+paths). The contract itself (explicit intent via `== null`, real boxed `T?`,
+no silent folding) is unchanged. Recorded here by the lane before/with the
+implementation, per the hierarchy rule (a later explicit maintainer directive
+supersedes a documented restriction).
+
 Lanes may work on:
 
 * SEM048/SEM049 audit;

@@ -820,6 +820,18 @@ A implementação do núcleo de intenção está sob responsabilidade da mantene
 
 As lanes não devem atacar o núcleo boxed-nullable de #266/#259 sem nova autorização.
 
+**Autorização (16/09, mantenedora via chat, regra de hierarquia):** a
+mantenedora delegou explicitamente a frente D-NULL-INTENT à lane de agentes
+(`192.168.100.22`, issue-watcher/compiler) — o requisito de "nova autorização"
+acima está cumprido. O núcleo boxed-nullable de #266/#259 está DESTRAVADO para
+implementação por esta lane, seguindo a fila do D-NULL-INTENT (1. JVM + Script
++ JS; 2. Native; 3. intenção em declarações não-nullable; 4. auditoria e
+eliminação dos caminhos silenciosos). O contrato em si (intenção explícita via
+`== null`, `T?` boxed real, sem dobra silenciosa) permanece inalterado.
+Registrado aqui pela lane antes/com a implementação, conforme a regra de
+hierarquia (diretriz posterior explícita da mantenedora supera restrição
+documentada anterior).
+
 As lanes podem atuar em:
 
 * auditoria SEM048/SEM049;
