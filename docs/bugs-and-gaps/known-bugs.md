@@ -4164,7 +4164,8 @@ index int) — verified in the sweep.
   overloading of a **class method** (the `class B { m/1; m/2 }` above): the cause
   is another (`defineMethodSymbol` overwrites the homonymous Symbol in the class
   symtable + vtable by index), and the `as: symbol 'Supervisor_child' is already
-  defined` there is `<init>`/method, not a top-level function. It remains OPEN.
+  defined` there is `<init>`/method, not a top-level function. ~~It remains OPEN.~~
+  **(SUPERSEDED — ✅ FIXED 13/09, option 10a, `18a64d45`; see below.)**
 - **✅ FIXED 13/09 (option 10a implemented, 4 backend faces):**
   (a) **symtable:** `SymbolTable.define` merges a homonymous `MethodSymbol`
   into a `MethodSet` (mirror of `ConstructorSet`) with `select(argCount, argTypes)`
@@ -4383,7 +4384,7 @@ new contract (`distinctSignatureOverloadCompiles` + `duplicateExactSignatureFail
 (SG-011B → APPLIED) and in `AGENTS.md` (frozen list + SEM047 table); (3) bump
 does NOT apply — the 09/09 contract lived only in this dev branch, was never
 released in a release tag (the last is `kof-0.3.1-beta`); 0.4.0-beta is born with
-the new and documented semantics; (4) §131 (class method) remains OPEN with a
+the new and documented semantics; (4) §131 (class method) ~~remains OPEN~~ **✅ FIXED 13/09 (option 10a, `18a64d45`)** with a
 scope note in §136. 6/6 parity proven by `TopLevelOverloadE2ETest`
 (JVM/Script/JS/x86/riscv64/aarch64 under qemu + specificity by subtyping).
 

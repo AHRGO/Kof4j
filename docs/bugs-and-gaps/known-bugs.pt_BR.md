@@ -4166,7 +4166,8 @@ int de índice) — verificados na varredura.
   sobrecarga de **método de classe** (o `class B { m/1; m/2 }` acima): a causa
   é outra (`defineMethodSymbol` sobreescreve o Symbol homônimo na symtable da
   classe + vtable por índice), e o `as: symbol 'Supervisor_child' is already
-  defined` ali é `<init>`/método, não função top-level. Continua ABERTO.
+  defined` ali é `<init>`/método, não função top-level. ~~Continua ABERTO.~~
+  **(SUPERADO — ✅ CORRIGIDO 13/09, opção 10a, `18a64d45`; ver abaixo.)**
 - **✅ CORRIGIDO 13/09 (opção 10a implementada, 4 backend faces):**
   (a) **symtable:** `SymbolTable.define` faz merge de `MethodSymbol` homônimo
   num `MethodSet` (espelho do `ConstructorSet`) com `select(argCount, argTypes)`
@@ -4385,7 +4386,7 @@ contrato novo (`distinctSignatureOverloadCompiles` + `duplicateExactSignatureFai
 (SG-011B → APLICADO) e em `AGENTS.md` (lista congelada + tabela SEM047); (3) bump
 NÃO se aplica — o contrato de 09/09 viveu só nesta branch dev, nunca foi
 liberado em tag de release (a última é `kof-0.3.1-beta`); a 0.4.0-beta nasce com
-a semântica nova e documentada; (4) §131 (método de classe) fica ABERTO com
+a semântica nova e documentada; (4) §131 (método de classe) ~~fica ABERTO~~ **✅ CORRIGIDO 13/09 (opção 10a, `18a64d45`)** com
 nota de alcance na §136. Paridade 6/6 provada por `TopLevelOverloadE2ETest`
 (JVM/Script/JS/x86/riscv64/aarch64 sob qemu + especificidade por subtipagem).
 
