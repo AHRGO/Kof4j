@@ -9263,6 +9263,69 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   é liberado vivo na linha 20; hipótese: o resultado do parse/vivaz do literal
   no caminho Float vs. Double, que só difere no cvtsd2ss). NÃO shippar o
   gatilho com 1 vetor FP divergente = paridade (freeze rule 5) e Q7 proíbem.
+- **AUDITORIA gdb da causa-2 (16/09, trigger+G-6b ad-hoc; patch revertido
+  na árvore):** repro MINIMO obtido — FP linhas 1..20 é o menor que quebra
+  (`P_18_20` não quebra; precisa da pressão de free-list das ~19 linhas
+  anteriores p/ o trigger disparar na 20). No sweep com breakpoint em
+  `kof_gc_sweep+30` (ponto de inserção na free-list), o bloco liberado é
+  SEMPRE o mesmo: base `0x7ffff7fbb000`, payload `0x7ffff7fbb020` ==
+  EXATAMENTE o `%rdi` na entrada de `kof_string_to_float` (String "2.5"
+  vivo). Conclusões: (a) o "temporário em registrador" NÃO é o mecanismo —
+  na cadeia main→toFloat→Lkfs_pd→kof_alloc, o prologue do alloc derrama
+  %rbx (que carrega a String) na stack e o mark varre essa stack inteira
+  (rsp..bottom) — ainda assim o bloco morre; (b) hipoteses sobreviventes:
+  o ponteiro da tabela de intern do literal aponta para o HEADER do bloco
+  (nao o payload), e `mark_transitive` casa `ptr==bloco+32` ou ptr no
+  range DO PAYLOAD — header-ptr = invisivel ao mark; ou a liberacao ocorre
+  num sweep de BOOTSTRAP antes do uso na linha 20 (String criado no boot,
+  referenciado so pela tabela de intern em .data, slot re-usado com
+  conteudo corrompido — o payload observado ja continha `\001`). PRÓXIMO
+  passo exato: verificar o formato das entries da tabela de intern
+  (`internString`/`.data` no NativeBackend: ptr → payload ou → header?) e
+  condicionar o breakpoint do sweep ao address == 0x7ffff7fbb000 p/ capturar
+  o BACKTRACE do sweep que mata o bloco (qual trigger, qual linha do
+  programa). Isso decide entre spill cirurgico vs. correcao do mark vs.
+  decisao de escopo (rule 6).
+- **BACKTRACE + enderecos capturados (16/09, sessao gdb dedicada no FP
+  linhas 1..20):** breakpoint em `kof_gc_sweep+30` (inserir na free-list)
+  condicionado a `rbx==0x7ffff7fbb000`. O sweep que mata o bloco vem de
+  `kof_gc_collect_now ← kof_alloc+284` (o proprio trigger), na cadeia
+  `kof_string_from_literal ← _start/main`. IDENTIDADE CONFIRMADA: no
+  `kof_string_to_float` de entrada, `%rdi = 0x7ffff7fbb020` == o payload do
+  bloco morto; watchpoint em `rdi-8` (flags do header) dispara com
+  `Old=0 → New=corrompido` durante o parse. PARADOXO QUE ABRE A PROXIMA
+  SESSAO: a referencia nao esta "so em registrador" — o main faz
+  `pushq %rax; popq %rdi` ANTES do call (o arg sai da stack), mas o
+  prologue do `.Lkfs_pd` derrama %rbx (= o ponteiro) na propria stack e
+  o mark varre rsp..bottom — ainda assim o bloco morre. Hipoteses a testar
+  (em ordem): (i) `mark_transitive`/`try_mark` casa o ponteiro pelo range
+  `heap_low..heap_high` — o objeto "2.5" foi alocado no BOOT (antes de
+  heap_low setado? ou heap_high nao cobre o mmap dele?) → o range-check
+  do try_mark REJEITA o ponteiro e nem tenta a gc-list; (ii) a tabela de
+  intern .data segura o ponteiro mas com deslocamento de HEADER (o mark
+  varre .data.._end e tentaria o try_mark mesmo assim — cai se (i) for
+  verdade). (i) e verificavel em 1 gdb: `p (long)kof_heap_low/high` no
+  momento do kill vs. 0x7ffff7fbb000. Isso provavelmente REDUZ a causa-2 a
+  um bug de range/intervalo do mark (conserto pequeno), nao stack-map.
+- **VEREDITO da hipotese (i) (16/09, gdb — REFUTADA):** no momento do kill,
+  `&kof_heap_low=0x7ffff7fbb000`, `&kof_heap_high=0x7ffff7fbc038`,
+  `&kof_gc_head=0x7ffff7fbb000`: o bloco morto (base 0x7ffff7fbb000) esta
+  DENTRO do range (>=low, <high) e na gc-list — `try_mark` NAO o rejeita por
+  intervalo. Se qualquer slot varrido (pilha rsp..bottom, .data/.bss) o
+  referenciasse, estaria marcado. Morre => naquele instante a unica posse
+  da String "2.5" esta em REGISTRO caller-saved do backend (padrao:
+  `call kof_string_from_literal` → resultado em %rax → `popq %rdi` do arg →
+  `call kof_string_to_float` — entre o pop e o call NADA na pilha segura o
+  ponteiro; o trigger dispara no alloc do PRÓPRIO kof_string_to_float e o
+  sweep mata). FIX = G-6(a) no BACKEND x86: spill-per-live-ref nos sites que
+  deixam ref de heap viva em rax/rdi apos o call e antes de novo alloc —
+  NAO no prologue universal do alloc (a tentativa-1 regrediu o FP p/ 4
+  linhas: interacao do restore dos 8 caller-saved com sites que assumem
+  clobber legitimo — ex. o caminho syscall do proprio kof_alloc e da libc).
+  Proximo passo concreto: auditoria do emissor de calls no backend
+  (NativeOpHelpers/NativeX86Calls) p/ o padrao `call X (rax=ref viva);
+  call Y-aloca` — spilla o rax no frame entre os dois. Se o padrao for
+  largo (>X sites), o custo e decisao de escopo (rule 6).
 
 
 
