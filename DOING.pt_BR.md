@@ -181,17 +181,49 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
   > "0 falhas"→"0 regressões (1 falha = flake §252)" nos 8 registros EN+PT
   > (development/README, status×2, backend-parity, ecosystem-coverage, AGENTS
   > ×2 blocos + linha "Estado correto HOJE"). **§258 ainda VERMELHO** (sem
-  > mudança).
-  > Fila do PRÓXIMO tick (reescrita): **(1)** `git fetch` + `git log <last>..HEAD`;
-  > **(2)** se o #773 SUMIR do `scripts/codeql-gate.sh --fast` → fechar §258
-  > (fila+seção EN+PT com SHA/prova) + tirar o bypass `CODEQL_GATE_SKIP`;
-  > **(3)** se o tip mover CÓDIGO → re-medir (clean kof-runtime ANTES) e
-  > re-sincronizar contagem nos 8 registros; **(4)** se a lane nativa fechar
-  > o §252 → confirmar (suíte sem a falha) + atualizar §252 + a linha "Estado
-  > correto HOJE" volta a "0 falhas"; **(5)** nada disso E gates verde → tick
-  > não-inventivo: registrar "aguardando fechamento da .18/.22/nat" e sair.
-  > RECUSAR de vez + `auto-loop.sh stop` SÓ quando as 3 condições STABILITY
-  > segurarem (hoje NÃO: §258/§252/§253/§255/§256b abertos).
+  > mudança). **TICK 06:30 — CONTAMINAÇÃO DE WORKTREE (achado novo, 2ª face do
+  > anti-pattern) + medição autoritativa:** tentei re-medir o tip `574c9419`
+  > num `git worktree` → falso vermelho `ConformanceMatrixDocTest`
+  > (`methodoverload` "faltando" na matriz) — mas `git status` do worktree
+  > dizia limpo: `git worktree add` **herda flags `skip-worktree` do índice
+  > sujo do pai** (218 arquivos `S`), disco ≠ HEAD silenciosamente, e
+  > `checkout --force`/`reset --hard` NÃO restauram. Diagnose:
+  > `md5sum f` vs `git show HEAD:f | md5sum` divergem com status limpo.
+  > **Medi autoritativo num CLONE FRESCO: 2206 run (1899+38+7+262), 1 fail =
+  > flake §252 (aqui NÃO disparou na 1ª corrida, disparou na 2ª — ~50/50,
+  > consistente com o registro re-afiado), 0 erros, 190 skip, guard
+  > `ConformanceMatrixDocTest` VERDE no tip limpo.** Contagem corrigida nos
+  > 8 registros (2199→2206; cli 252→262 reflete `e5013152`
+  > DepsTransitiveTest +10; o 2199/1902 era contagem mid-flight com as
+  > frentes landando). 2ª face documentada no anti-pattern EN+PT. **Gate
+  > CodeQL AGORA COM 2 alertas: #773 (`.18`, `KofJsRunner:525`, sem fix ainda
+  > — só a linha andou) + #774 NOVO `java/relative-path-command`
+  > `DepsTransitiveTest` `ProcessBuilder("mvn","-v")` (frente-3 `e5013152`
+  > da `.17` — pushed-red 2 da mesma família)** → §258 re-catalogado EN+PT
+  > (fila+seção: 2 alertas, 2 ponteiros de dono; bypass segue com causa).
+  > **FECHAMENTO NO MESMO TICK:** a `.17` respondeu ao ponteiro em ~2h —
+  > `2a60b426` remove `mvnOnPath()` e reusa `Deps.mvnAvailable()` → gate só
+  > com #773; §258 atualizado (EN+PT). A contagem cli pode ter voltado de 262
+  > (teste reescrito) → re-medição em andamento no clone fresco do tip
+  > `78b733fa` (que também moveu código: §218 toHexString/toBinaryString →
+  > contrato (3) dispara).
+  > ⚠️ Processos CONCORRENTES ativos nesta máquina editam a árvore compartilhada
+  > (NumericFormatter*/ExpressionInstanceCallLowerer/JsCallEmitter +2 em edição
+  > às 03:56; os flags S vêm de algum deles) — medir tip = clone fresco.
+  > Fila do PRÓXIMO tick (reescrita): **(1)** `git fetch` + `git log <last>..HEAD`
+  > (CUIDADO: árvore compartilhada tem concorrentes ativos + 218 flags `S` —
+  > NUNCA medir num `git worktree`; usar `git clone` fresco do tip); **(2)** o
+  > gate está com 1 alerta (#773 `.18`; #774 já fechado por `2a60b426`):
+  > se #773 sumir do `scripts/codeql-gate.sh --fast` → fechar §258
+  > (fila+seção EN+PT com SHA/prova) + tirar o bypass `CODEQL_GATE_SKIP`; **(3)** se o tip mover CÓDIGO → re-medir no CLONE FRESCO (a
+  > contagem autoritativa vem de `git clone`+checkout, disco==HEAD==índice —
+  > lição `stale-ecj-class-trap.md` 2ª face) e re-sincronizar contagem nos 8
+  > registros; **(4)** se a lane nativa fechar o §252 → confirmar (suíte sem a
+  > falha no clone limpo) + atualizar §252 + a linha "Estado correto HOJE" volta
+  > a "0 falhas"; **(5)** nada disso E gates verde → tick não-inventivo:
+  > registrar "aguardando fechamento da .18/.17/.22/nat" e sair. RECUSAR de
+  > vez + `auto-loop.sh stop` SÓ quando as 3 condições STABILITY segurarem
+  > (hoje NÃO: §258[#773]/§252/§253/§255/§256b abertos).
  > NÃO TOCAR: DB001-JS/WEB001/UI-web-db (development .18 — frente DELA; esta
  > lane só sincroniza docs após o FECHAMENTO), §258/§256-face-b/§252/§253-face-B
  > (dona .18/`KofJsRunner`), §253-face-A (compiler .22), §248, N1→N4, split
