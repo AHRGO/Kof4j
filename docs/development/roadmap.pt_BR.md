@@ -886,7 +886,7 @@ tiers `stable`/`experimental` (`docs/backend-parity.md`).
 
 | # | Item | Estado medido (13/09) |
 |---|------|----------------------|
-| 1.1 | Gaps de paridade (`HTTP002`, `WEB001/002`, `CONC003`, `LOG001`, `MQ001`, `SCHED001`/`TIME001`, `SECN002`, `OBS002`, `MEDIA`) | 🟡 em progresso — JS web server base `abbde60b`; residual por `backend-parity.md` |
+| 1.1 | Gaps de paridade (`HTTP002`, resíduo web `WEB002`/`WEB003`/`WEB004`, ~~`CONC003`~~ ✅ 03/09, ~~`LOG001`~~ ✅ 01/09, ~~`MQ001`~~ ✅ 01/09, ~~`SCHED001`~~ ✅ 31/08, ~~`TIME001`~~ ✅ 02–05/09, ~~`SECN002`~~ ✅ 01/09, ~~`OBS002`~~ ✅ 01/09, `MEDIA`) | 🟡 em progresso — JS web server base ✅ 16/09 (WEB001 fechado; DB001 fechado); residual por `backend-parity.md` (HTTP002 https/TLS nativo, gap codes ws/sse, MEDIA) |
 | 1.2 | GC mark-sweep automático no Native | 🟡 riscv `356f33b9` ✅; x86 decomposto G-1..G-5 (`native-multiarch.md`) |
 | 1.3 | Query DSL tipada (`User.query {}`) | ✅ 01/09 (`KofOrmE2ETest`) |
 | 1.4 | Package manager MVP (`kofdeps`) | 🟡 `kof deps` + resolução Maven Central; **transitivos ✅ 16/09** (delegação ao Maven + `kofdeps.lock`, `DepsTransitiveTest` 10/10 incl. E2E com Maven real); **registry pendente (decisão da mantenedora)** |

@@ -61,7 +61,7 @@ JSN00x, WEB001) — nunca divergência silenciosa.
 |--------|----------------|-------------------|-------|
 | `kof.core`/`kof.collections` | `println/print`, `String` (concat, length, indexOf, split...), `List<T>`, `listOf`, `map/filter/reduce` (0.2.0), pattern matching `case String s` + `Point(x,y)` (0.2.0), `String?` (0.2.0) | JvmRuntime/NativeRuntime/JsBackend | KofHigherOrderTest (5) + JvmE2ETest, NativeE2ETest, KofJsE2ETest |
 | `kof.io` | `File/Path/Directory` (+métodos), `readFile/writeFile/readLine` | KofIo.java | IoE2ETest (15) |
-| `kof.time` | `now()`, `sleep` (JVM/Native/JS), `interval`/`cancel` (JVM) | KofTime.java | KofTimeE2ETest (5) |
+| `kof.time` | `now()`, `sleep`, `interval`/`cancel` (JVM/Native/JS — TIME001 fechado) | KofTime.java | KofTimeE2ETest |
 | `kof.json` | `json.encode/decode<T>` | JvmRuntime/NativeRuntime/JsBackend | JsonE2ETest (14) |
 | `kof.security` | `passwords.*`, `crypto.*`, `jwt.*`, `secrets.*`, `security.*`, `auth.*` | KofSecurity.java | KofSecurityTest (22) |
 | `kof.web` | `web.app()`, `app.get/post/.../use/listen/port/close`, `param/query/header/body/method/path`, `status(code, body)`, `headerSet`, `app.ws("/chat") { }` (WebSocket, 30/08), `sse.send/event/close` (SSE, 30/08), `app.configure`/`app.stats` (hardening, 04/09) | KofWeb.java + JvmWebRuntime.java + KofHttpServer.java | KofWebE2ETest (9), KofHttpServerTest (8), KofWebWsE2ETest (11), KofWsFrameTest (7), KofWebSseE2ETest (7), KofWebHardeningTest (6) |
@@ -163,7 +163,7 @@ Legenda nas colunas de target: `y` = suportado, `~` = parcial, `–` = não.
 | dependency injection | `NA` (sem container; resolução direta) | — | — | — | — | philosophy.md |
 | events | `PLANNED` (event bus) | — | — | — | — | development/roadmap.md |
 | validation | ✅ `kof.validation` (required/notBlank/minLength/maxLength/lengthBetween/isEmail/isUrl/matches/isInt/isLong/inRange/min/max) — JVM/Native/JS | y | y | y | KofValidationTest | stdlib/stdlib.md |
-| scheduling | ✅ `kof.time` now/sleep (JVM/Native/JS) + interval/cancel (JVM) | y | y (now/sleep) | y (now/sleep) | KofTimeE2ETest | stdlib/stdlib.md |
+| scheduling | ✅ `kof.time` now/sleep + interval/cancel (3 targets — TIME001 fechado) | y | y | y | KofTimeE2ETest | stdlib/stdlib.md |
 | caching | ✅ `kof.cache` (get/set/ttl/delete/clear; 30/08) | y | y (asm) | y | KofCacheE2ETest (5, x3) | development/roadmap.md |
 | transactions | ✅ `transaction {}` (JVM; commit/rollback real) | y | y (asm 01/09) | ✅ 16/09 (ponte JS) | KofDbE2ETest | development/DATABASE_VISION.md |
 | resource management | `PARTIAL` (try/finally real) | y | y | — | ExceptionsE2ETest | history/language-state.md |

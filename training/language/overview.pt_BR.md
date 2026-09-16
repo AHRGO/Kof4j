@@ -90,7 +90,7 @@ Kof IR (backend-agnostic, KofOperation)
 | `Array literals {1, 2, 3}` | Unavailable — use `new Int[n]` / `listOf` |
 | MySQL query/prepared completo no Native | In progress (handshake done 27/08) |
 | RISC-V/ARM codegen real | Placeholder (target separation done, as/ld+qemu) |
-| Scheduler `every`/`at` no Native | SCHED001 (JVM/JS ✅) |
+| ~~Scheduler `every`/`at` no Native~~ | ✅ `SCHED001` fechado 31/08 (JVM/JS/Native — 3 targets) |
 | GC mark-sweep automático no Native | Pendente (free-list + `kof_gc_collect` manuais; auto-GC desligado) |
 | HTTP/2 no `kof.http` | Planned (HTTP002 no Native) |
 | Cauda da stack web no Native/JS (`web.app`) | base ✅ (Native 03/09, JS 16/09); residual por feature: TLS `WEB002`, ws `WEB004`, sse `WEB003` (JVM ✅) |

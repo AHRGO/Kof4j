@@ -77,12 +77,12 @@ var v = await r
 ## GOOD — kof.time interval como scheduler
 
 ```kof
-// periódicas: interval/cancel apenas JVM (TIME001 no Native/JS)
+// periódicas: interval/cancel — 3 targets (TIME001 fechado: Native 01/09 + cross 05/09, JS 02/09)
 var id = time.interval(1000, () -> println("tick"))
 ```
 
-Para `every`/`at` programados, `kof.scheduler` existe em JVM/JS
-(`Native SCHED001`): `scheduler.every(100) { ... }`, `scheduler.at("0 3 * * *") { ... }`, `scheduler.cancel(id)`.
+Para `every`/`at` programados, `kof.scheduler` existe nos 3 targets
+(`SCHED001` fechado no Native 31/08): `scheduler.every(100) { ... }`, `scheduler.at("0 3 * * *") { ... }`, `scheduler.cancel(id)`.
 
 ## WHY
 
@@ -97,6 +97,10 @@ plataforma — a decisão de como executar pertence ao runtime.
   `cancelled()` sempre `0` (sem thread-local da task atual) e só task-lambdas
   viram `async function` (CONC003-JS-01);
 - filas produtor/consumidor: `kof.mq` — 3 targets (Native 01/09, MQ001 fechado; pub/sub + `mq.queue()`/`push`/`pop`);
+- self-cancel (`var id = time.interval(ms, () -> { … time.cancel(id) })`) — ler o handle dentro do
+  próprio inicializador funciona em JVM/JS/Script desde 16/09 (§253 face A); **o Native rejeita em
+  compile-time com SEM092** até a face B landar (ler o handle capturado dá SIGSEGV no x86 — gap
+  honesto, nunca silencioso);
 - lambdas com captura funcionam em spawn (BoxN).
 
 ## GOOD — kof.supervisor: reinício supervisionado (OTP, issue #83)

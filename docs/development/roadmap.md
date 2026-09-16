@@ -885,7 +885,7 @@ domain (`INFRA00x`/`DATA00x`/`SCI00x`/`BIO00x`/`SECPQ`) + parity matrix;
 
 | # | Item | Measured state (13/09) |
 |---|------|----------------------|
-| 1.1 | Parity gaps (`HTTP002`, `WEB001/002`, `CONC003`, `LOG001`, `MQ001`, `SCHED001`/`TIME001`, `SECN002`, `OBS002`, `MEDIA`) | 🟡 in progress — JS web server base `abbde60b`; residual per `backend-parity.md` |
+| 1.1 | Parity gaps (`HTTP002`, WEB residual `WEB002`/`WEB003`/`WEB004`, ~~`CONC003`~~ ✅ 03/09, ~~`LOG001`~~ ✅ 01/09, ~~`MQ001`~~ ✅ 01/09, ~~`SCHED001`~~ ✅ 31/08, ~~`TIME001`~~ ✅ 02–05/09, ~~`SECN002`~~ ✅ 01/09, ~~`OBS002`~~ ✅ 01/09, `MEDIA`) | 🟡 in progress — JS web server base ✅ 16/09 (WEB001 closed; DB001 closed); residual per `backend-parity.md` (HTTP002 https/TLS native, ws/sse gap codes, MEDIA) |
 | 1.2 | Automatic GC mark-sweep in Native | 🟡 riscv `356f33b9` ✅; x86 decomposed G-1..G-5 (`native-multiarch.md`) |
 | 1.3 | Typed query DSL (`User.query {}`) | ✅ 01/09 (`KofOrmE2ETest`) |
 | 1.4 | Package manager MVP (`kofdeps`) | 🟡 `kof deps` + Maven Central resolution; **transitive ✅ 16/09** (Maven delegation + `kofdeps.lock`, `DepsTransitiveTest` 10/10 incl. real-Maven E2E); **registry pending (needs maintainer decision)** |
