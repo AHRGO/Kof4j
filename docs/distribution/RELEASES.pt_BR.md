@@ -22,7 +22,7 @@ package-and-release (matriz — um job por plataforma)
    ├─ checkout do COMMIT DE BUMP (não o do trigger)
    ├─ mvn clean package
    ├─ sanity check: VERSION do checkout == versão da release
-   ├─ scripts/package.sh --jdk (embute Temurin 21 — Tooling API baseline)
+   ├─ scripts/package.sh --jdk (embute Temurin 25 — toolchain baseline D-BASELINE)
    ├─ valida o artefato (extrai, bin/kof version + info, JDK embutido)
    └─ GitHub Release kof-<versão>-<plataforma> com artefato + SHA256SUMS
 ```
@@ -63,7 +63,7 @@ Dois jobs:
    - sanity check: `VERSION` do checkout deve ser igual à versão da
      release (falha a job se divergir);
    - `mvn clean package`;
-   - `scripts/package.sh --jdk` (embute Temurin 21);
+   - `scripts/package.sh --jdk` (embute Temurin 25);
    - valida o artefato: extrai, roda `bin/kof version`, `bin/kof info`
      e verifica o JDK embutido;
    - cria o **GitHub Release por plataforma**

@@ -248,7 +248,7 @@ Kof is a general-purpose, compiled programming language with multiple backends.
 
 Kof is not "a Java project you assemble" — it is **a language you
 install**. The official package includes the compiler, CLI, runtime, stdlib,
-tooling, editor support and a bundled OpenJDK 21 (Temurin 21, `release.yml`
+tooling, editor support and a bundled OpenJDK 25 (Temurin 25, `release.yml`
 with 2 jobs — `test-and-bump` → `package-and-release` — per platform
 linux-x86_64/macos-arm64/windows-x86_64, `scripts/package.sh` PASS). The
 installation does not depend on external Java, `JAVA_HOME` or SDKMAN. Build

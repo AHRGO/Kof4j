@@ -52,9 +52,10 @@ O baseline de API Java para todo o tooling é **Java 21**:
 
 - APIs do tooling são compatíveis com Java 21;
 - o Kof não exige Java anterior a 21;
-- versões posteriores do OpenJDK (ex.: 25, para Virtual Threads) podem ser
-  usadas internamente quando apropriado, sem tornarem-se requisito;
-- o pacote oficial carrega sua própria JVM (Temurin 21).
+- o toolchain do repo exige JDK 25 (D-BASELINE, 14/09) — ver README
+  "três camadas de JDK": o piso da linguagem segue JVM 21+ e o API level do
+  tooling segue 21 (`KofVersion.TOOLING_API`);
+- o pacote oficial carrega sua própria JVM (Temurin 25).
 
 ---
 

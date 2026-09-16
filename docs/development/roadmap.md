@@ -738,8 +738,8 @@ rule — 500-lines-per-class limit".
 
 Kof is a distributable platform, not just a JAR:
 
-- self-contained distribution (compiler, CLI, runtime, stdlib, tooling, editor support, embedded JDK 21);
-- OpenJDK embedded in the official package (Temurin 21, Tooling API Level 21);
+- self-contained distribution (compiler, CLI, runtime, stdlib, tooling, editor support, embedded JDK 25);
+- OpenJDK embedded in the official package (Temurin 25, tooling API level 21);
 - centralized versioning (`VERSION` 0.4.0-beta → pom/properties via `scripts/bump-version.sh`);
 - releases by 2 jobs (`release.yml`: `test-and-bump` exports `bump_sha` → `package-and-release` checks the bump commit + version sanity check) on push to `main`, per platform linux-x86_64 / macos-arm64 / windows-x86_64 (tests 819 → bump → package 3 platforms → GitHub Release);
 - `scripts/package.sh` PASS (dist layout + tar.gz/zip + SHA256SUMS + jars), golden 16/16, integration 9/9;

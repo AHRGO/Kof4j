@@ -14,7 +14,7 @@ scripts/package.sh [--jdk] [--output <dir>] [--skip-build]
 
 | Option | Effect |
 |-------|--------|
-| `--jdk` | Downloads and embeds OpenJDK (Temurin 21) in the package |
+| `--jdk` | Downloads and embeds OpenJDK (Temurin 25) in the package |
 | `--output <dir>` | Output directory (default: `dist/`) |
 | `--skip-build` | Uses the already compiled jar without rebuilding |
 
@@ -99,7 +99,7 @@ sha256sum -c SHA256SUMS
 
 ## 6. Embedded JDK
 
-`--jdk` downloads OpenJDK Eclipse Temurin 21 (Tooling API Level) from the
+`--jdk` downloads OpenJDK Eclipse Temurin 25 (tooling API level 21) from the
 Adoptium binary API and places it in `jdk/`. No download is done in local
 builds without `--jdk` to keep the cycle fast; the release pipeline always
 packages with `--jdk`.

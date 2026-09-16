@@ -197,7 +197,7 @@ kof-<version>-<system>/
 │   └── kof-webview    # kof.ui shell (when available)
 ├── lib/
 │   └── kof.jar        # compiler + runtime + stdlib + GraalJS
-├── jdk/               # embedded OpenJDK 21 (official release)
+├── jdk/               # embedded OpenJDK 25 (official release)
 ├── editor/            # grammar + editor support
 ├── tooling/           # reusable language definitions
 ├── docs/              # embedded documentation
@@ -210,7 +210,7 @@ Main commands already available (details in
 | Command | What it does |
 |---------|-----------|
 | `kof run app.kf` | compiles and runs (JVM by default) |
-| `kof build <dir> [--target ...]` | compiles to jvm / native / js / android |
+| `kof build <dir> [--target ...]` | compiles to jvm / native / native.risc / native.arm / js / android |
 | `kof serve app.kf` | starts a `web.app()` app |
 | `kof test <dir>` | runs the test suite |
 | `kof check <dir>` | type-check without emitting code |
@@ -248,7 +248,7 @@ The layout is stable between releases — there is no "migrate" step.
 
 Only for those who want to contribute or test `main`:
 
-**Prerequisites:** JDK 21+ (Temurin) and Maven 3.9+. For the `native`
+**Prerequisites:** JDK 25 (Temurin) and Maven 3.9+. For the `native`
 target: binutils (`as`/`ld`).
 
 ```bash
