@@ -2,11 +2,17 @@
 
 # DEBUGGING_NATIVE.md — Debugging on the Native target
 
-**Status:** Partial (02/09) — real DWARF line table in the x86-64 ELF (partial Phase 5): `NativeBackend`
+**Status:** Partial (17/09) — real DWARF line table in the x86-64 ELF (partial Phase 5): `NativeBackend`
 emits `.file 1 "<source.kf>"` + `.loc 1 <line> 0` when debug enabled; `objdump
 --dwarf=decodedline` shows the Kof file and the line of each instruction
-(`NativeDwarfLineInfoTest`). Local variables, DAP on native and stepping pending.
-**Date:** September 2, 2026
+(`NativeDwarfLineInfoTest`). **Front 4 slice 1 (17/09): a Kof DWARF
+`.debug_info`/`.debug_abbrev` CU with one `DW_TAG_subprogram` per Kof function
+(`DW_AT_name` = source name, `low_pc`/`high_pc`, `decl_file`/`decl_line`) —
+`NativeDwarf.java` + `NativeDwarfSubprogramTest`; the `as` assembler suppresses
+its own auto-CU when the program emits `.debug_info` explicitly (verified on
+the linked ELF). Local variables (`DW_AT_location`/fbreg), DAP on native and
+stepping pending.**
+**Date:** September 17, 2026
 **Version:** 0.4.0-beta (7 targets)
 
 ---
