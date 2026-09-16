@@ -14,7 +14,7 @@ package com.example
 ### Import (fix 0.2.6-beta: file-specific)
 
 ```kof
-import a.b.C          // arquivo a/b/C.kf — fix 27/08 CompilerDriver expandKofImports
+import a.b.C          // arquivo a/b/C.kf — fix 27/08 CompilerImports expandKofImports
 import a.b.*          // diretório a/b
 import kof.http
 ```

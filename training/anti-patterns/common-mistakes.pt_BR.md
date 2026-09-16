@@ -142,7 +142,7 @@ var y = listOf(1,2,3).get(1) // 2
 
 ```kof
 // WRONG — copiar arquivo C.kf para pasta raiz para evitar import a.b.C falhando
-// RIGHT (0.4.0-beta) — CompilerDriver expandKofImports file-specific
+// RIGHT (0.4.0-beta) — CompilerImports expandKofImports file-specific
 import a.b.C
 import a.b.*
 ```
@@ -184,7 +184,7 @@ lição de causa → efeito.
 return KofLmTokVocab(new String[0], new Long[0])   // ✅ agora ANEWARRAY
 ```
 
-**Causa:** `JvmBackend.arrayTypeForType` só cobria primitivos e
+**Causa:** `JvmLiteralEmitter.arrayTypeForType` só cobria primitivos e
 caía no default `T_BYTE` para tipos de referência. O bytecode
 passava pelo `check` mas o JVM rejeitava no Verify (frame `[B`
 vs `[Ljava/lang/String;`). O erro na tela era enganoso: o

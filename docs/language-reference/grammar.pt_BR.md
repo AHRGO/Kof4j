@@ -76,15 +76,15 @@ type-declaration =
 
 modifiers = { "public" | "private" | "protected" | "static" | "final"
             | "abstract" | "transient" | "volatile" | "synchronized"
-            | "native" | "default" | "override" } ;                 (* `Parser.parseModifiers` *)
+            | "native" | "default" | "override" } ;                 (* `TypeDeclarations.parseModifiers` *)
 
 class-declaration = modifiers , "class" , identifier , [ type-parameters ] ,
                     [ "extends" , type-ref ] , [ implements-clause ] ,
-                    ( class-body | record-header , class-body ) ;   (* `Parser.parseTypeDeclaration (class)` *)
+                    ( class-body | record-header , class-body ) ;   (* `TypeDeclarations.parseClassDeclaration` *)
 `
 
 > `class X(...)` **com parênteses** é parseado como **record** (corpo via
-> `parseRecordBody`, Parser.parseRecordBody) — não como classe com primary
+> `parseRecordBody`, TypeDeclarations.parseRecordDeclaration) — não como classe com primary
 > constructor. É o comportamento documentado em `AGENTS.md`.
 
 `ebnf
@@ -94,7 +94,7 @@ class-member = annotation-list , modifiers , ( constructor-declaration
 
 interface-declaration = modifiers , "interface" , identifier ,
                         [ "extends" , type-ref , { "," , type-ref } ] ,
-                        "{" , { class-member } , "}" ;              (* `Parser.parseTypeDeclaration (class-body)` *)
+                        "{" , { class-member } , "}" ;              (* `TypeDeclarations.parseInterfaceDeclaration` *)
 `
 
 **Interfaces não aceitam type-parameters** (`interface F<T>` → `PARSE007`,
@@ -102,15 +102,15 @@ interface-declaration = modifiers , "interface" , identifier ,
 
 `ebnf
 record-declaration = modifiers , "record" , identifier , [ type-parameters ] ,
-                     [ "extends" , type-ref ] , [ implements-clause ] ,
-                     record-header , [ record-body ] ;              (* `Parser.parseTypeDeclaration (record)` *)
+                     [ "extends" , type-ref ] , record-header ,
+                     [ implements-clause ] , [ record-body ] ;      (* `TypeDeclarations.parseRecordDeclaration` *)
 record-header      = "(" , [ record-component , { "," , record-component } ] , ")" ;
 record-component   = annotation-list , modifiers , type-ref , identifier ,
                      [ "=" , expression ] ;                         (* `ClassMemberParser.parseField` *)
 record-body        = "{" , { class-member } , "}" ;
 
 enum-declaration = modifiers , "enum" , identifier ,
-                   "{" , [ identifier , { "," , identifier } ] , "}" ;  (* `Parser.parseTypeDeclaration (enum)` *)
+                   "{" , [ identifier , { "," , identifier } ] , "}" ;  (* `TypeDeclarations.parseEnumDeclaration` *)
 `
 
 **Enums são apenas constantes** — sem corpo, sem métodos, sem construtores, sem
@@ -119,7 +119,7 @@ valor de um enum **é** o nome (`String`) — ver [classes.md](classes.md).
 
 `ebnf
 entity-declaration = modifiers , "entity" , identifier ,
-                     "{" , { entity-field } , "}" ;                 (* `Parser.parseEntity` *)
+                     "{" , { entity-field } , "}" ;                 (* `TypeDeclarations.parseEntityDeclaration` *)
 entity-field       = identifier , ":" , type-ref , { "generated" | "unique" } ;
 `
 
@@ -180,7 +180,7 @@ primitive-type = "bool" | "byte" | "short" | "int" | "long"
                | "float" | "double" | "char" | "string" ;           (* `TypeParser (primitivos)` *)
 qualified-name = identifier , { "." , identifier } ;
 generic-args   = "<" , type-ref , { "," , type-ref } , ">" ;        (* `TypeParser (generic args)` *)
-function-type  = "(" , [ type-ref , { "," , type-ref } ] , ")" , "->" , type-ref ;  (* `TypeParser.parseFunctionType` *)
+function-type  = "(" , [ type-ref , { "," , type-ref } ] , ")" , "->" , type-ref ;  (* `TypeParser.parseFunctionTypeRef` *)
 `
 
 O parser captura o tipo como **string bruta** (`parseTypeRef` devolve
@@ -302,12 +302,12 @@ expr-stmt   = expression , [ ";" ] ;
 
 `ebnf
 switch-stmt = "switch" , "(" , expression , ")" , "{" , { case-stmt } ,
-              [ default-stmt ] , "}" ;                              (* `StatementParser.parseSwitch` *)
+              [ default-stmt ] , "}" ;                              (* `StatementParser.parseSwitchStatement` *)
 case-stmt   = "case" , ( pattern | expression ) , ":" , { statement } ;
 default-stmt = "default" , ":" , { statement } ;
 
 switch-expression = "switch" , "(" , expression , ")" , "{" , { case-expr } ,
-                    [ default-expr ] , "}" ;                        (* `ExpressionParser.parseSwitchExpr` *)
+                    [ default-expr ] , "}" ;                        (* `ExpressionParser.parseSwitchExpression` *)
 case-expr   = "case" , ( pattern | expression ) , "->" , expression ;
 default-expr = "default" , "->" , expression ;
 

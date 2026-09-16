@@ -1849,7 +1849,7 @@ EXTERNAL mutation produced garbage (JVM correct) — the cause was the prologue 
   above.
 - **Bug 10** (`!` NOT as an expression value always returns `true`) —
   **fixed 03/09**: constant folding used `~i` (bitwise) instead of `i == 0
-  ? 1 : 0` (logical) in `Optimizer.foldUnary`. Proof:
+  ? 1 : 0` (logical) in `FieldConstantFolder.foldUnary`. Proof:
   `CoreRegressionE2ETest.logicalNotAsExpressionValue` (JVM+JS+Native).
 - **Bug 5** (FP→Int/Long cast generates invalid bytecode) — **fixed 03/09**:
   the conversion ops `D2I`/`F2I`/`D2L`/`F2L` were missing in the IR and in the
@@ -4008,7 +4008,7 @@ index int) — verified in the sweep.
 
 
 ### 128. [OTP] JVM: result of `selectAny`/`await` of Handle<Int> assigned to a var and used as Int → VerifyError — ✅ FIXED 12/09 (JVM; await already fell into unbox, selectAny did not) (OTP spike #83 11/09)
-- **Correction (12/09, lane bugfix):** in `JvmOpCollections.emitRuntimeCall`, the
+- **Correction (12/09, lane bugfix):** in `JvmOpCollections.emitKofRuntimeCall`, the
   branch that calls `emitUnboxIfPrimitive` for `kof_await`/`kof_await_timeout` with a
   primitive return was extended to `kof_select_any` (same `Object` destination of the
   runtime, same asymmetry). One condition. The typer already returned the inner `Int`

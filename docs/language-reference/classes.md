@@ -2,7 +2,7 @@
 
 # Classes, Records, Enums, Interfaces, Entities
 
-**Status:** Stable (except where labeled) · **Evidence:** Parser.parseTypeDeclaration, `SymbolTableBuilder`/`SemanticAnalyzer` (defineMembers), `SymbolTable.java`
+**Status:** Stable (except where labeled) · **Evidence:** TypeDeclarations.parseTypeDeclaration, `SymbolTableBuilder`/`SemanticAnalyzer` (defineMembers), `SymbolTable.java`
 
 ---
 
@@ -42,7 +42,7 @@ u.age = 27                  // direct field — mutable
 ### 1.1 `class X(...)` is a record, not a class
 
 `class User(String name, Int age) { }` **is not** a class with a primary
-constructor — the parser routes to `parseRecordBody` (Parser.parseRecordBody)
+constructor — the parser routes to `parseRecordBody` (TypeDeclarations.parseRecordDeclaration)
 and produces a **record** (immutable, accessors `u.name()`). Writing
 `u.name = "x"` **does not** work. For immutable data, the canonical form is
 `record`. **Stable** (documented in `AGENTS.md`, verified).
@@ -96,8 +96,8 @@ implements-clause = "implements" , type-ref , { "," , type-ref }
 
 `ebnf
 record-declaration = modifiers , "record" , identifier , [ type-parameters ] ,
-                     [ "extends" , type-ref ] , [ implements-clause ] ,
-                     record-header , [ record-body ]
+                     [ "extends" , type-ref ] , record-header ,
+                     [ implements-clause ] , [ record-body ]
 record-header = "(" , [ record-component , { "," , record-component } ] , ")"
 record-component = [ modifiers ] , type-ref , identifier , [ "=" , expression ]
 `
@@ -120,6 +120,9 @@ println(p)              // JVM: Point[x=10, y=20]
   works (*probe*).
 - **Generic record**: `record Box<T>(T v)` works (*probe*).
 - **Default in a component**: `record C(Int x = 0)` generates overloads by arity.
+- **Record implementing interfaces**: canonical Kof order is components first —
+  `record Point(Int x, Int y) implements Describable { }`; the Java order
+  (`implements` before the component list) is also accepted (#325).
 
 ---
 

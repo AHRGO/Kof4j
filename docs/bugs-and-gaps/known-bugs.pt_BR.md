@@ -1851,7 +1851,7 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
   acima.
 - **Bug 10** (`!` NOT como valor de expressão sempre retorna `true`) —
   **corrigido 03/09**: constant folding usava `~i` (bitwise) em vez de `i == 0
-  ? 1 : 0` (lógico) em `Optimizer.foldUnary`. Prova:
+  ? 1 : 0` (lógico) em `FieldConstantFolder.foldUnary`. Prova:
   `CoreRegressionE2ETest.logicalNotAsExpressionValue` (JVM+JS+Native).
 - **Bug 5** (cast FP→Int/Long gera bytecode inválido) — **corrigido 03/09**:
   faltavam os ops de conversão `D2I`/`F2I`/`D2L`/`F2L` no IR e nos backends
@@ -4009,7 +4009,7 @@ int de índice) — verificados na varredura.
 
 
 ### 128. [OTP] JVM: resultado de `selectAny`/`await` de Handle<Int> atribuído a var e usado como Int → VerifyError — ✅ CORRIGIDO 12/09 (JVM; await já caía no unbox, selectAny não) (spike OTP #83 11/09)
-- **Correção (12/09, lane bugfix):** em `JvmOpCollections.emitRuntimeCall`, o
+- **Correção (12/09, lane bugfix):** em `JvmOpCollections.emitKofRuntimeCall`, o
   ramo que chama `emitUnboxIfPrimitive` para `kof_await`/`kof_await_timeout` com
   retorno primitivo foi estendido a `kof_select_any` (mesmo destino `Object` do
   runtime, mesma assimetria). Uma condição. Typer já devolvia o inner `Int`

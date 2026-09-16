@@ -67,7 +67,7 @@ Não marque captura como workaround — é implementado.
 ### 5. Imports de projeto grande — RESOLVIDO (27/08)
 
 ```kof
-// ✅ CompilerDriver expandKofImports agora trata import a.b.C (arquivo) + a.b (pasta)
+// ✅ CompilerImports expandKofImports agora trata import a.b.C (arquivo) + a.b (pasta)
 // Projeto largeproj com a/b/C.kf → Main.class + a/b/C.class corretos
 import a.b.C
 import a.b.*

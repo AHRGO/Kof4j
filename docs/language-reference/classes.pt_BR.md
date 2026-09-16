@@ -2,7 +2,7 @@
 
 # Classes, Records, Enums, Interfaces, Entities
 
-**Status:** Stable (exceto onde etiquetado) · **Evidência:** Parser.parseTypeDeclaration, `SymbolTableBuilder`/`SemanticAnalyzer` (defineMembers), `SymbolTable.java`
+**Status:** Stable (exceto onde etiquetado) · **Evidência:** TypeDeclarations.parseTypeDeclaration, `SymbolTableBuilder`/`SemanticAnalyzer` (defineMembers), `SymbolTable.java`
 
 ---
 
@@ -42,7 +42,7 @@ u.age = 27                  // campo direto — mutável
 ### 1.1 `class X(...)` é record, não classe
 
 `class User(String name, Int age) { }` **não** é classe com primary
-constructor — o parser roteia para `parseRecordBody` (Parser.parseRecordBody) e
+constructor — o parser roteia para `parseRecordBody` (TypeDeclarations.parseRecordDeclaration) e
 produz um **record** (imutável, accessors `u.name()`). Escrita `u.name = "x"`
 **não** funciona. Para dados imutáveis, a forma canônica é `record`.
 **Stable** (documentado em `AGENTS.md`, verificado).
@@ -97,8 +97,8 @@ implements-clause = "implements" , type-ref , { "," , type-ref }
 
 `ebnf
 record-declaration = modifiers , "record" , identifier , [ type-parameters ] ,
-                     [ "extends" , type-ref ] , [ implements-clause ] ,
-                     record-header , [ record-body ]
+                     [ "extends" , type-ref ] , record-header ,
+                     [ implements-clause ] , [ record-body ]
 record-header = "(" , [ record-component , { "," , record-component } ] , ")"
 record-component = [ modifiers ] , type-ref , identifier , [ "=" , expression ]
 `
@@ -121,6 +121,9 @@ println(p)              // JVM: Point[x=10, y=20]
   funciona (*probe*).
 - **Record genérico**: `record Box<T>(T v)` funciona (*probe*).
 - **Default em componente**: `record C(Int x = 0)` gera overloads por aridade.
+- **Record implementando interfaces**: a ordem canônica do Kof é componentes
+  primeiro — `record Point(Int x, Int y) implements Describable { }`; a ordem
+  Java (`implements` antes da lista de componentes) também é aceita (#325).
 
 ---
 

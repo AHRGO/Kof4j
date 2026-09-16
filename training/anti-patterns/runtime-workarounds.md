@@ -67,7 +67,7 @@ Do not mark capture as a workaround — it is implemented.
 ### 5. Imports in a large project — RESOLVED (27/08)
 
 ```kof
-// ✅ CompilerDriver expandKofImports now handles import a.b.C (file) + a.b (folder)
+// ✅ CompilerImports expandKofImports now handles import a.b.C (file) + a.b (folder)
 // Project largeproj with a/b/C.kf → correct Main.class + a/b/C.class
 import a.b.C
 import a.b.*

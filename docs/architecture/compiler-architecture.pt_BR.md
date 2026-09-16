@@ -219,7 +219,7 @@ delegado ao JIT do target (JVM) ou ao `as`/`ld` (Native).
 
 Interface (`Backend.java:6-12`): `void emit(IRModule, Path, boolean debugInfo)`.
 
-Seleção (`CompilerDriver.selectBackend`, `:370-381`):
+Seleção (`CompilerPipeline.selectBackend`, `:177`):
 
 `java
 case JVM            -> backendWithClasspath(new JvmBackend());

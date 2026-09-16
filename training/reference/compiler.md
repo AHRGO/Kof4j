@@ -60,7 +60,7 @@ Kof IR (backend-agnostic) → Optimizer (constant folding, branch simplification
 26 commands. `kof fmt` and `kof config gen` implemented (0.4.0-beta).
 
 Fixes 27/08:
-- `CompilerDriver.expandKofImports` handles `import a.b.C` (file) in addition to `a.b.*` (folder) — large projects with `a/b/C.kf` now generate both `.class` files.
+- `CompilerImports.expandKofImports` handles `import a.b.C` (file) in addition to `a.b.*` (folder) — large projects with `a/b/C.kf` now generate both `.class` files.
 - `NativeRuntime` free-list GC (`kof_free_head`, `kof_gc_collect` mark-sweep; auto-GC off) + spawn/await via pthread (31/08).
 
 ## Backend Targets
