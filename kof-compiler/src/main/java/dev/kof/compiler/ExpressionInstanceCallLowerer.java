@@ -425,6 +425,13 @@ public final class ExpressionInstanceCallLowerer {
         ops.add(new KofCall(BuiltinTypes.STRING, "valueOf",
                 List.of(Type.UnknownType.UNKNOWN), BuiltinTypes.STRING, KofCallKind.STATIC));
         return localIdx;
+    } else if (TypeMetrics.isPrimitiveType(recvType)
+            && PrimitiveNumericFormatters.isFormatter(mc.methodName(), mc.arguments().size())) {
+        // §218/#148: formatadores numéricos de primitivo → estático JDK real
+        // (ver PrimitiveNumericFormatters). Int/Long emitem a chamada; os
+        // demais primitivos recebem SEM052 e encerram o caminho aqui.
+        PrimitiveNumericFormatters.emit(driver, mc, recvType, ops);
+        return localIdx;
     } else {
         StringMethodRegistry.Sig osig = StringMethodRegistry.objectMethodSignature(mc.methodName(), mc.arguments().size());
         if (osig != null) {

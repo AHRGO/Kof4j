@@ -138,6 +138,27 @@ void handleCall(MethodCtx ctx, List<Object> stack,
             // Number.is* (paridade JVM: (D)Z).
             String ownerName = JsTypeMapper.jsClassName(
                     JsTypeMapper.ownerInternalName(kc.ownerType()));
+            // §218/#148 (JS): Int/Long.toHexString/toBinaryString — estáticos
+            // JDK reais; o backend JS não tem java_lang_Integer/java_lang_Long —
+            // map para toString(radix) (paridade JVM: (I)Ljava/lang/String;).
+            // O JDK é UNSIGNED de 32/64 bits (-42 → "ffffffd6"); JS mantém o
+            // sinal (-2a) — aplicar a máscara >>> 0 (Int) / BigInt.asUintN(64)
+            // (Long) antes do radix, igual ao JVM.
+            if (kc.parameterTypes().size() == 1
+                    && ("java_lang_Integer".equals(ownerName) || "java_lang_Long".equals(ownerName))
+                    && ("toHexString".equals(kc.methodName()) || "toBinaryString".equals(kc.methodName()))) {
+                boolean isLong = "java_lang_Long".equals(ownerName);
+                int radix = "toHexString".equals(kc.methodName()) ? 16 : 2;
+                JsIr.JsExpression arg = args.get(0);
+                JsIr.JsExpression unsigned = isLong
+                        ? new JsIr.JsCall(new JsIr.JsMember(new JsIr.JsIdentifier("BigInt"),
+                                "asUintN"), List.of(new JsIr.JsNumber("64"), arg))
+                        : new JsIr.JsBinary(arg, ">>>", new JsIr.JsNumber("0"));
+                JsIr.JsExpression repr = new JsIr.JsCall(
+                        new JsIr.JsMember(unsigned, "toString"), List.of(new JsIr.JsNumber(String.valueOf(radix))));
+                finishCall(stack, kc, repr);
+                return;
+            }
             if (kc.parameterTypes().size() == 1
                     && ("java_lang_Double".equals(ownerName) || "java_lang_Float".equals(ownerName))) {
                 String jsPredicate = switch (kc.methodName()) {

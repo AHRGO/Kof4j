@@ -17,7 +17,7 @@
 > | **§254 ✅ FIXED 15/09 (owning lane development `.18`, `713031a7`)** | `[stdvalidation]` golden of the ConformanceMatrix encoded the OLD wrong output (4 lines vs the mod-11 oracle) — cell red on clean tip; re-recorded by the owner with the executed-JVM proof. |
 > | **§255 🔴 OPEN 15/09 (lane development `.18`)** | `KofDbE2ETest.crossNativeSqliteNowCompiles` hard-fails on hosts without cross `libsqlite3` (missing `assumeTrue` guard; COMP001 `riscv64-ld: -lsqlite3` not found). |
 > | **§256 🟡 PARTIAL 16/09 (lane development `.18`)** | CONC001 closure left 2 reds on clean tip (worktree `4af4356f`): ~~`learn/18-concurrency.md` gaps cell desynced (guard)~~ **face (a) ✅ CLOSED 16/09 by lane docs/development `192.168.100.22` (`dd2c7fcb` — `ConcurrencyGapsDocTest` 3/3 green)** + riscv64 `poll(b)` returns 0 after selectAny scan (aarch agrees) — face (b) OPEN. PRE-EXISTING, not §257. |
-> | **§258 🔴 OPEN 16/09 (lane development `.18`)** | CodeQL #773 `java/comparison-with-wider-type` (`i < n`, int vs long) in `KofJsRunner.listValues:510` (DB001 fatia A `3e55df51`) — repo-wide pre-push gate RED, blocks ALL lanes' pushes; owner fixes in-file (bound check, precedent `d6eaae0c`); bypass `CODEQL_GATE_SKIP=1` + cause declared meanwhile. |
+> | **§258 🔴 OPEN 16/09 (lanes `.18` + `.17`)** | CodeQL **two** alerts open on `beta-0.4.0` → repo-wide pre-push gate RED, blocks ALL lanes' pushes: **#773** `java/comparison-with-wider-type` (`i < n`, int vs long) `KofJsRunner.listValues` (DB001 fatia A `3e55df51`, owner `.18` — bound check, precedent `d6eaae0c`) + **#774** `java/relative-path-command` `ProcessBuilder("mvn","-v")` in `DepsTransitiveTest:231` (D-DEV-PRIORITY frente-3 `e5013152`, owner `.17`); bypass `CODEQL_GATE_SKIP=1` + cause declared meanwhile. |
 > | **§257 ✅ FIXED 15/09 (lane compiler `192.168.100.17`)** | `static final String` runtime-text literals = javac ConstantValue inlining → false red on incremental build (`validationBrJs`); 77 fields de-`final` + `RuntimeConstantInliningGuardTest` (ASM, ConstantValue) locks it. |
 > | **§173 ✅ FIXED 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `++`/`--`/compound on `Long`/`Double`/`Float` + increment of an array ELEMENT: JVM VerifyError (literal `INT 1` in a 2-slot binary, 1-slot `DUP`, `arraystore` without `[array,index]`), Native core dump, Script `NoSuchElementException`, JS `stack underflow`/`KofDup2`. 4 targets; Q4 hunt 13/09 (over §167). Proof: `BackendParityTest.parityIncrementWideTypesAndArrayElement` + `KofInterpreterParityTest.incrementWideTypesAndArrayElement` + cell `increment` 4/4. |
 > | **§174 ✅ FIXED 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `return`/`throw` inside an `if` inside the `try`: JVM/Native/Script correct, KofJS aborted with `COMP002 unexpected KofCatchStart` (the `JsIfThrowElse.parseElse` consumed the endLabel of the enclosing try when treating the unconditional `then` as if-else). Fix without contract/IR change (`isTryEndLabel` guard). Proof: `CoreRegressionE2ETest.returnInsideIfInsideTryJs`. |
@@ -8816,7 +8816,7 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   - the 2 methods alone under 8× CPU load, 6 runs: **2/0** each;
   - the compiled binary run 20×: **20/20** `sel=boom\nok=true`.
   So it is a **rare nondeterministic native failure**, not a stable miscompile — consistent with a race in the brand-new §129 per-thread handler path (`kof_exc_chain` in `.tbss`/`%fs:tpoff`) rather than a deterministic bug.
-  - **Re-measured 16/09 ~03:20 (lane docs/development `192.168.100.22`), single-method isolation `KofConcurrency2Test#spawnWorkerThrowPropagatesThroughSelectAnyNative` with a fresh `-am` build and NO CPU load: 6 runs = 4 pass / 2 FAIL.** This **weakens** the "not reproducible in isolation (9/9)" premise above and the "rare / load-dependent" hypothesis — it now fires ~1/3 of the time in a quiet single-test run, i.e. the race is **not gated on CPU load**. The full-suite gate of that same tip (2199 run) showed exactly 1 fail = this §252 flake, **not a new regression** (all other targets/modules green). Sharpened pointer for the owner: reproduce by hammering the single method (or add the bounded-retry loop the Hypothesis already suggests) — load is not a prerequisite.
+  - **Re-measured 16/09 ~03:20 (lane docs/development `192.168.100.22`), single-method isolation `KofConcurrency2Test#spawnWorkerThrowPropagatesThroughSelectAnyNative` with a fresh `-am` build and NO CPU load: 6 runs = 4 pass / 2 FAIL.** This **weakens** the "not reproducible in isolation (9/9)" premise above and the "rare / load-dependent" hypothesis — it now fires ~1/3 of the time in a quiet single-test run, i.e. the race is **not gated on CPU load**. The full-suite gate of that same tip (2206 run) showed exactly 1 fail = this §252 flake, **not a new regression** (all other targets/modules green). Sharpened pointer for the owner: reproduce by hammering the single method (or add the bounded-retry loop the Hypothesis already suggests) — load is not a prerequisite.
 - **Impact:** it makes the full-suite gate **red intermittently** (a `git bisect`/CI hazard: the same commit is green 4/5 times). The failing assertion is a **TEST red on the tip**, not one of the known-alien §205.
 - **Hypothesis (not proven):** the `selectAny` path that re-raises an exceptional handle (`handle->exc`) interacts with the per-thread unwinder under a lost race — e.g. the worker's handler frame or the handle's exception slot is read before the spawner materializes it, and the corrupted unwind lands in a bounds-check path (`kof_bounds_error`). Root-cause work must be done **in the native lane** with the failing pattern reproduced under load (add a bounded retry loop to the harness to force it).
 - **Issue:** **#273** (opened 15/09 by this lane with the byte-identical repro + evidence).
@@ -9000,7 +9000,19 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   feature). Until it lands, OTHER lanes legitimately use the honest bypass
   (`CODEQL_GATE_SKIP=1` + declared cause: "blocked by §258, owned by `.18`") —
   the bypass is documented in the hook itself for exactly this case; silently
-  "fixing" the test/gate to pass is what rule Q5 forbids, bypass-with-cause is not.
-- **Status:** 🔴 OPEN 16/09 — catalogued by lane docs/development `192.168.100.22`
-  with the full gate output. Pointer: lane development `.18` (DB001, author of
-  `3e55df51`). Related: §256 (same lane's CONC001), `d6eaae0c` (same-rule precedent fix).
+   "fixing" the test/gate to pass is what rule Q5 forbids, bypass-with-cause is not.
+- **Second alert (same mechanism, 16/09 ~05:00) — #774 `java/relative-path-command` at
+  `kof-cli/src/test/java/dev/kof/cli/DepsTransitiveTest.java:231`** (D-DEV-PRIORITY
+  frente-3 `e5013152`, owner lane compiler `.17`): the `mvnOnPath()` availability guard
+  runs `new ProcessBuilder("mvn", "-v")` (relative command). CodeQL flags any
+  `ProcessBuilder`/`Runtime.exec` whose program name is a bare relative token. The
+  fix belongs to `.17` (a test-only availability probe: resolve `mvn` via the host
+  path with an explicit guard, or a scoped `// codeql[...]` suppression justified by
+  "test detects toolchain presence, does not run user input" — same shape as the
+  `mvn -v` idiom already used elsewhere). NOT fixed here: rule 8 (another lane's
+  file). The gate is repo-wide, so BOTH #773 and #774 must clear before any push is
+  un-bypassed.
+ - **Status:** 🔴 OPEN 16/09 — catalogued by lane docs/development `192.168.100.22`
+   with the full gate output. Pointers: lane development `.18` (DB001, author of
+   `3e55df51`) for #773; lane compiler `.17` (D-DEV-PRIORITY, author of `e5013152`)
+   for #774. Related: §256 (same lane's CONC001), `d6eaae0c` (same-rule precedent fix).
