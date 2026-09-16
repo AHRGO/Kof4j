@@ -986,6 +986,46 @@ decision recorded; engineering scheduled for the future queue.
 
 ---
 
+## D-DEV-PRIORITY — "Em desenvolvimento" is the absolute priority of every lane
+
+**Date:** 2026-09-16
+
+**State:** `ACTIVE` (supersedes any per-lane preference ordering)
+
+The maintainer's rule (16/09, chat): **total priority is completing the
+`Em desenvolvimento` roadmap** — every agent, every lane, every autonomous
+re-trigger picks its next task from this list, in order, before anything else
+(other gaps, other queues, new fronts). Cataloguing and bug-fixing continue as
+usual (the quality gate is never relaxed), but TASK SELECTION follows the
+fronts below.
+
+**The fronts (as stated by the maintainer 16/09):**
+
+1. **Standard Library** — contracts in stabilization (the S-series:
+   `PLAN-STDLIB-EXPANSION`; faces still open ride the per-item queue).
+2. **GC auto-collect** — safe-points + per-frame root map.
+3. **Package manager beyond MVP** — registry.
+4. **Debugger beyond JVM MVP** — DAP over stdio is already on JVM; JS
+   source maps line ✅; DWARF Native line ✅ partial — native
+   variables/expressions and breakpoints pending + VS Code ext.
+5. **KofJS — the web platform in the browser** — ES Modules via GraalJS;
+   web server base ✅ (`HttpServer` + `KofJsWebQueue`); residual
+   ws/sse/TLS/path-params = **WEB001**.
+6. **kof.web in Native** — residual **WEB002**: TLS, path params,
+   keep-alive, ws/sse.
+7. **kof.db/orm in JS** — **DB001/ORM001** (WASM planned; the JS bridge
+   slice A landed in `3e55df51` — gate §258 must close it).
+
+**Relation to the other rules:** this decides **order**, not **what is
+acceptable** — Q0–Q7, the freeze, rule 6 and the three-states rule keep all
+their force. A blocked front (rule 6, another owner `EM CURSO`, or the
+`§258`-style gate) is recorded and the agent takes the NEXT front in this
+list — the list is the queue, not a suggestion. `AGENTS.md` priority rule
+("loose `.md` first") and the roadmap §23 tiers stay subordinate to this
+decision while the `Em desenvolvimento` list has open items.
+
+---
+
 # 4. Rejected or superseded decisions
 
 This section is historical. It does not define current behavior.
