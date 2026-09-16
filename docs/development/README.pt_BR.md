@@ -29,7 +29,8 @@
 **Fontes de verdade que NÃO estão aqui (não são backlog):** `docs/status.md`
 (o que funciona + gate da suíte), `docs/backend-parity.md` (matriz de
 paridade com gaps honestos), `docs/bugs-and-gaps/specification-gaps.md`
-(SG-001–020 — fila do maintainer COMPLETA 12/09, virou referência).
+(SG-001–022 — fila do maintainer COMPLETA, virou referência; SG-021/022 =
+pedidos sem decisão).
 
 ---
 
@@ -182,7 +183,7 @@ evidência em cada linha de §4.1; snapshot SG 08/09 → `docs/history/`)*
 
 | Saiu p/ | Doc | Prova |
 |---|---|---|
-| `docs/bugs-and-gaps/specification-gaps.md` | SG-001–020 + E1–E3 | fila do maintainer COMPLETA (resumo do próprio doc); snapshot antigo → `docs/history/specification-gaps-0.3.0-snapshot.md` |
+| `docs/bugs-and-gaps/specification-gaps.md` | SG-001–022 + E1–E3 | fila do maintainer COMPLETA (resumo do próprio doc); snapshot antigo → `docs/history/specification-gaps-0.3.0-snapshot.md` |
 | `docs/stdlib/DATABASE_VISION.md` | níveis 0–4 | query DSL 01/09 (`KofOrmE2ETest` 22), MySQL prepared (`nativeMysqlPreparedBinary`), pooling ✅; DB001/ORM001 vivem na matriz de paridade |
 | `docs/audits/complexity-audit.md` | snapshot 02/09 | números pré-SOLID-500; gate vivo = `scripts/check_500.sh` (ratchet) |
 | `docs/history/roadmap-gap-2026-09-03.md` | gap report datado | pendências vivem em roadmap-audit/known-bugs |

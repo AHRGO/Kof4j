@@ -29,7 +29,8 @@
 **Sources of truth that are NOT here (they are not backlog):** `docs/status.md`
 (what works + the suite gate), `docs/backend-parity.md` (parity
 matrix with honest gaps), `docs/bugs-and-gaps/specification-gaps.md`
-(SG-001–020 — maintainer queue COMPLETE 12/09, became a reference).
+(SG-001–022 — maintainer queue COMPLETE, became a reference; SG-021/022 =
+requests with no decision).
 
 ---
 
@@ -182,7 +183,7 @@ evidence in each line of §4.1; SG snapshot 08/09 → `docs/history/`)*
 
 | Left for | Doc | Proof |
 |---|---|---|
-| `docs/bugs-and-gaps/specification-gaps.md` | SG-001–020 + E1–E3 | maintainer queue COMPLETE (summary of the doc itself); old snapshot → `docs/history/specification-gaps-0.3.0-snapshot.md` |
+| `docs/bugs-and-gaps/specification-gaps.md` | SG-001–022 + E1–E3 | maintainer queue COMPLETE (summary of the doc itself); old snapshot → `docs/history/specification-gaps-0.3.0-snapshot.md` |
 | `docs/stdlib/DATABASE_VISION.md` | levels 0–4 | query DSL 01/09 (`KofOrmE2ETest` 22), MySQL prepared (`nativeMysqlPreparedBinary`), pooling ✅; DB001/ORM001 live in the parity matrix |
 | `docs/audits/complexity-audit.md` | snapshot 02/09 | pre-SOLID-500 numbers; live gate = `scripts/check_500.sh` (ratchet) |
 | `docs/history/roadmap-gap-2026-09-03.md` | dated gap report | pending items live in roadmap-audit/known-bugs |
