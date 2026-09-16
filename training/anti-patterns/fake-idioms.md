@@ -61,6 +61,11 @@ var maybe = Option.of(x)
 
 // DOES NOT COMPILE — for without var
 for (user in users) { }
+
+// DOES NOT COMPILE — sealed/permits are NOT keywords (SG-002 removed them
+// from the lexer 12/09). `sealed` parses as a stray IDENTIFIER → PARSE010.
+// Use `record` + `enum` + `interface` (the Kotlin sealed-class habit fails here).
+sealed class Resultado permits Sucesso, Erro { }
 ```
 
 ## Good example — what exists today
