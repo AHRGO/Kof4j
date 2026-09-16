@@ -59,7 +59,7 @@ app.listenSecure(8443)               // TLS
 
 `web.app()` completo no JVM (rotas `get/post/put/delete/patch/options`, `status(201, body)`,
 `headerSet`, `app.use`, WebSocket `app.ws`, SSE `app.sse` com `sse.send/event/close`,
-`listenSecure` TLS) — 30/08. Native/JS: WEB001.
+`listenSecure` TLS) — 30/08. Native WEB002; base JS (`web.app`/rotas/context-fns) ✅ 16/09, `app.ws`/`app.sse` = WEB004/WEB003 compile-time.
 
 ## HTTP client (0.4.0-beta)
 

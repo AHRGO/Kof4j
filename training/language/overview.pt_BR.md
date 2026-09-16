@@ -74,11 +74,11 @@ Kof IR (backend-agnostic, KofOperation)
 | kof.http: `http.get/post/put/delete/patch/options/status` + `timeout/retry/circuit` | ✅ | HTTP002 | ✅ | JS via Java HttpClient 27/08; retry/circuit 30/08 |
 | kof.cache: `cache.get/set/set_ttl/ttl/delete/clear` | ✅ | ✅ | ✅ | ConcurrentHashMap/Js Map |
 | switch, instanceof, `as` | ✅ | ✅ | ✅ | |
-| Web server (`web.app()` rotas/middleware/`status`/`headerSet` + `listenSecure` TLS + `app.ws` + `app.sse`) | ✅ | WEB001 | — | ws/sse 30/08 |
+| Servidor web (`web.app()` rotas/middleware/`status`/`headerSet` + `listenSecure` TLS + `app.ws` + `app.sse`) | ✅ | WEB002 | ✅ base 16/09 | ws/sse 30/08; base JS (`web.app`/rotas/context-fns) 16/09, `app.ws`/`app.sse` = WEB004/WEB003 compile-time |
 | kof.validation (13 predicados) | ✅ | ✅ | ✅ | |
 | kof.security (passwords/crypto/jwt/secrets/auth + rateLimit/sessions/apiKeys) | ✅ | ✅ | ✅ | |
 | kof.observability (health/readiness/liveness/counter/increment/gauge/requestId) | ✅ | ✅ | ✅ | |
-| kof.db + SQLite nativo + MySQL handshake | ✅ | ✅ (MySQL auth scramble SHA-1 done) | DB001 | |
+| kof.db + SQLite nativo + MySQL handshake | ✅ | ✅ (MySQL auth scramble SHA-1 done) | ✅ 16/09 | JS via ponte GraalJS (DB001 fechado); `query<T>` tipado = DB002 |
 | KofScript `let` top-level + repl --watch --inspect | ✅ | ✅ | ✅ | KofScriptGlobals |
 | KofC C subset → ELF x86_64 | — | ✅ | — | nativo-only |
 
@@ -93,7 +93,7 @@ Kof IR (backend-agnostic, KofOperation)
 | Scheduler `every`/`at` no Native | SCHED001 (JVM/JS ✅) |
 | GC mark-sweep automático no Native | Pendente (free-list + `kof_gc_collect` manuais; auto-GC desligado) |
 | HTTP/2 no `kof.http` | Planned (HTTP002 no Native) |
-| Web stack no Native/JS (`web.app`) | WEB001 (JVM ✅) |
+| Stack web no Native/JS (`web.app`) | WEB002 (Native); `app.ws`/`app.sse` = WEB004/WEB003 no JS (JVM ✅) |
 
 ## What Kof Is NOT
 

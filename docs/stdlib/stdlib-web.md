@@ -327,7 +327,7 @@ the stream is closed and the task cancelled.
 
 ## 5. Current limitations (Phase 1, 0.2.6-beta)
 
-- The `js` target reports `WEB001` for the web stack (documented gap); `kof.http` already works on JS via `Java HttpClient`.
+- The `js` target supports the web stack base (`web.app()` + routes + context-fns with runtime: param/query/header/body/method/path/status/headerSet — `WEB001` fatia honestidade 16/09); residual gaps: `app.ws`/`app.sse` report `WEB003`/`WEB004` at compile-time; `kof.http` already works on JS via `Java HttpClient`.
 - The `native` target (`x86_64`/`riscv64`/`aarch64`) does not have a web server yet (`WEB002` TLS either).
 - `app.ws`/`app.sse` are JVM-only (Native `WEB004`, JS `WEB003`).
 - `app.serveDir` (static files + Range 206/416) is JVM-only (Native/JS `WEB005`).

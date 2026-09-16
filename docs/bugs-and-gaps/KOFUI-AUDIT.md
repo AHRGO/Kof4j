@@ -84,7 +84,8 @@ Grid, Center, Align, Store, Canvas + namespace `Router`.
 `EventSource`(SSE)/`localStorage`/`sessionStorage`/`navigator`/`location`/
 `history` in the browser = DOM/Fetch/Storage matrix with supportedOn+gapCode of
 the Phase 5 plan (today absent in the browser runtime; the current JS "web" is a
-GraalJS HttpServer server — residual WEB001 ws/sse).
+GraalJS HttpServer server — residual ws/sse report `WEB004`/`WEB003` at
+compile-time since the 16/09 honesty slice).
 
 ## 5. Recipe: new method in kof.ui = **6 points** (learned in practice 07/09)
 

@@ -84,7 +84,8 @@ Grid, Center, Align, Store, Canvas + namespace `Router`.
 `EventSource`(SSE)/`localStorage`/`sessionStorage`/`navigator`/`location`/
 `history` no browser = matriz DOM/Fetch/Storage com supportedOn+gapCode do
 plano Fase 5 (hoje ausentes no runtime browser; o "web" JS atual é server
-GraalJS HttpServer — WEB001 residual ws/sse).
+GraalJS HttpServer — ws/sse residuais reportam `WEB004`/`WEB003` em
+compile-time desde a fatia de honestidade 16/09).
 
 ## 5. Receita: método novo em kof.ui = **6 pontos** (aprendida na prática 07/09)
 
