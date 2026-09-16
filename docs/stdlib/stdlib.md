@@ -61,7 +61,7 @@ JSN00x) — never silently different behavior.
 | `kof.security` | ✅ (v1 + G9) | passwords, crypto, jwt, secrets, auth, security, rateLimit, sessions, apiKeys — 3 targets; Native free-list 27/08 — see `docs/stdlib/security.md` |
 | `kof.concurrent` | ✅ | `spawn` (statement) + `val r = spawn f()` / `await r` (typed handle) — JVM (virtual threads) + Native (pthread, 31/08, `CONC001` closed) + event-loop JS (`CONC003` closed 03/09) |
 | `kof.test` | ✅ | `kof test` (`test "name" { }` on the 3 targets) + `assert` — `StructuredTestE2ETest` 11/11; golden 16/16 |
-| `kof.cli` | ✅ | `kof build/run/serve/check/test/bench/debug/info/lsp/install/script/repl/c` (debug DAP, `kof script --watch` SIGPIPE fix 27/08) |
+| `kof.cli` | ✅ | `kof build/run/serve/check/test/script/repl/c/fmt/config/bench/profile/inspect/decompile/translate/compare/migrate/debug/info/lsp/install/deps/editor/new/init/version` (26 commands — see `docs/status.md`; debug DAP, `kof script --watch` SIGPIPE fix 27/08) |
 | `kof.script` | ✅ | `KofScript` top-level `let` → `KofScriptGlobals` + REPL (8 kof-script tests, 27/08) |
 | `kof.c` | ✅ | `KofCcompiler` C subset (`int` globals, `void` funcs, `if`/`while`/`*(int*)`/`&`) → native x86_64 (5 kof-c-compiler tests, 27/08) |
 | `kof.metrics` | ✅ | `kof bench`/`kof profile` (harness + baseline, 37 benchmarks, `benchmark.yml` threshold 1.20) |

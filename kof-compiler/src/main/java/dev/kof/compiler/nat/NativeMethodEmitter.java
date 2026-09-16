@@ -143,6 +143,17 @@ final class NativeMethodEmitter {
             sb.append("    popq %rbp\n");
             sb.append("    ret\n");
         }
+        if (nb.debugInfo) {
+            // frente 4 fatia 1: fim da funcao p/ DW_AT_high_pc (offset) + registro
+            sb.append(".Lfe_").append(mangled).append(":\n");
+            int declLine = 1;
+            if (method.debugInfo() != null && !method.debugInfo().positions().isEmpty()) {
+                for (SourcePosition pos : method.debugInfo().positions().values()) {
+                    if (pos.line() > 0 && (declLine == 1 || pos.line() < declLine)) declLine = pos.line();
+                }
+            }
+            nb.kofDwarf.add(mangled, method.name(), declLine);
+        }
     }
 
     @SuppressWarnings("unused")
