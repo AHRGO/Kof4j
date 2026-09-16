@@ -8,10 +8,16 @@
 # nunca spawnar um agente headless concorrente (isso criava "outra sessão").
 #
 # Uso:
-#   scripts/auto-loop.sh start [sessionID] [intervalo-min]  # ativa (padrão: última sessão, 30 min)
+#   scripts/auto-loop.sh start [sessionID] [intervalo-min] [porta]  # ativa (padrão: última sessão, 30 min)
 #   scripts/auto-loop.sh stop                                # desativa (remove o cron)
 #   scripts/auto-loop.sh status                              # estado atual
 #   scripts/auto-loop.sh tick [--dry-run]                    # chamado pelo cron
+#
+# Porta (3º arg): PINA o servidor do heartbeat em http://127.0.0.1:<porta>
+# (ex.: start ses_xxx 2 9093). Sem o arg, resolve dinamicamente. Necessário
+# porque os servidores TUI compartilham storage e CONHECEM todas as sessões —
+# a resolução dinâmica pode escolher a porta da lane errada (regra dos crons:
+# nunca cruzar sessões; AGENTS.md "Two sessions, two crons").
 set -euo pipefail
 
 MARKER="kof-auto-loop"
@@ -63,13 +69,15 @@ remove_cron() {
 }
 
 cmd_start() {
-    local session="${1:-}" interval="${2:-30}"
+    local session="${1:-}" interval="${2:-30}" port="${3:-}"
     [ -n "$session" ] || session=$(last_session)
     case "$interval" in *[!0-9]*|'') echo "intervalo deve ser inteiro (minutos)" >&2; exit 1;; esac
+    case "$port" in '') ;; *[!0-9]*) echo "porta deve ser inteira (ou vazia p/ resolucao dinamica)" >&2; exit 1;; esac
     mkdir -p "$STATE_DIR"
     local prompt_q
     prompt_q=$(printf '%s' "${AUTOLOOP_PROMPT:-$DEFAULT_PROMPT}" | sed "s/'/'\\\\''/g")
     local server_q=""
+    [ -z "$server_q" ] && [ -n "$port" ] && server_q="http://127.0.0.1:$port"
     if [ -z "$server_q" ]; then
         server_q=$(resolve_server "$session" || true)
     fi
@@ -169,7 +177,7 @@ cmd_tick() {
 }
 
 case "${1:-}" in
-    start)  shift; cmd_start "${1:-}" "${2:-30}";;
+    start)  shift; cmd_start "${1:-}" "${2:-30}" "${3:-}";;
     stop)   cmd_stop;;
     status) cmd_status;;
     tick)   shift; cmd_tick "${1:-}";;
