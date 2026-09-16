@@ -309,7 +309,7 @@ main() {
 | Target | Backend | Execution | Status |
 |--------|---------|----------|--------|
 | `jvm` | `JvmBackend` (ASM) | V21 bytecode, exception table, virtual threads | stable |
-| `native` | `NativeBackend` (x86_64) | ELF x86_64, syscalls, free-list alloc, GC mark pending | stable |
+| `native` | `NativeBackend` (x86_64) | ELF x86_64, syscalls, free-list alloc + mark-sweep GC (03/09; auto-collect pending — §260) | stable |
 | `native.risc` | `NativeBackend` (riscv64) | ELF riscv64 via `riscv64-linux-gnu-as/ld` + qemu (core+stdlib 02-05/09, 26/26 — see `docs/development/native-multiarch.md`) | stable (core) |
 | `native.arm` | `NativeBackend` (aarch64) | ELF aarch64 via `aarch64-linux-gnu-as/ld` + qemu (core+stdlib 03-05/09, 26/26 via translation — see `docs/development/native-multiarch.md`) | stable (core) |
 | `js` | `JsBackend` + `KofJsRunner` | ES Modules via GraalJS, `kof.http` via `Java HttpClient` interop | alpha |
