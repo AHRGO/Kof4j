@@ -100,6 +100,26 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > do §186 e4613704). Suíte completa re-provada depois do rebase.
 
 ## PRÓXIMO PASSO (re-dispacho lê isto)
+> **PRÓXIMO PASSO (16/09 ~01:30, dono = 192.168.100.22, lane docs/development —
+> autônomo ATIVO `auto-loop.sh start ses_f5806df42ffeulR14Wq8KhA7Fn 5 9093`,
+> cron verificado no state):** sequente desta sessão (que fechou a varredura
+> CONC001/CONC003 no corpus: `dd2c7fcb`+`30cf3e1c`(PT)+`ce8e76a0`(§256
+> face-a+espelho PT dos §254–§257 que só existiam em EN)+`a81c99c5`(training
+> CONC003)+resgates regra 8 `447eda38`/`e1204c8c`): **(1)** checar
+> `git fetch` + re-leitura desta seção — as lanes .18/.22 estão ativas e o
+> PRÓXIMO delas pode ter mudado; **(2)** suíte-completa no tip pós-meu-push
+> (medida nesta sessão: 2182/0/0/190 — re-medir só se o tip mover código,
+> não docs); **(3)** trabalho real da lane = varredura R6-documental: grep de
+> afirmações vivas dessincronizadas do tip (padrões CONC001/CONC003 já
+> esgotados; candidatas: linhas "JS sequential" residuais em
+> `docs/architecture/`, contagem da suíte no README development/ que declare
+> número fixo podre — conferir contra
+> `wc -l scripts/check_500-baseline.txt` e os relatórios); **(4)** se nada
+> disso aparecer e o gate seguir verde: **RECUSAR o re-trigger** (condição
+> STABILITY da AGENTS.md — registrar aqui + `auto-loop.sh stop`). NÃO TOCAR:
+> §256-face-b (riscv poll, nat .18), §253-face-A (compiler .22), §252/§248,
+> D-PRINT/#168 (.15), N1→N4 (compiler), DB001-JS/WEB001/UI-web-db (development
+> .18 — regra absoluta da mantenedora 16/09, frente dela).
 
 > **✅ FEITO (16/09 ~03:10, dono = 192.168.100.18, lane development): §253 catalogado + frente-UI da kof-ui-widgets (UIW008/UIW020 fechados com código).** (1) §253 EN+PT no `known-bugs.md`/`.pt_BR.md` (self-cancel `time.interval`/`scheduler.every` → SEM011 nos 3 alvos; leitura da var do handle do job → SIGSEGV no native x86; matriz de 8 casos r1/s1/e1/e5/e6/e2/t4/winclose; face A→compiler .22, face B→nat). (2) kof-ui-widgets main `19dd7d9`→`6e562ca`: `scripts/prepare-kof.sh`+`kof-source.sh` passaram a ler o release do pom e escolher o JDK sozinhos; verificação empírica dos gaps contra o `beta-0.4.0` → UIW008 (timer) e UIW020 (datas ISO) deixaram de ser gaps; `ToastAutoDismiss(msg,ms)` + `Clock()` + `Spinner(frames,ms)` implementados com **handle-sombra** (t4/t5/winclose verdes nos 3 alvos), 12/12×js/jvm/native + check ok; `api.md` corrigido em 31 células (Int→tipo concreto pós-UIW050) com scanner de paridade api×fonte no próprio commit.
 >
