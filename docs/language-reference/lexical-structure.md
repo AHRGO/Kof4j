@@ -33,7 +33,7 @@ errors with code `LEX00x`.
 
 `text
 class  interface  record  enum  entity  generated  unique
-extends  implements  sealed  permits
+extends  implements
 package  import
 public  private  protected  static  final  abstract
 transient  volatile  synchronized  native  default  override
@@ -52,12 +52,14 @@ true  false  null
 [grammar.md](grammar.md)) or none.
 
 **RESERVED words** (their own tokens, `IDENTIFIER` **never**): `fun`,
-`fn`, `func` (SG-001, 06/09) — same as `sealed`/`permits` (dedicated tokens
-that the parser does not accept as an identifier in **any** position).
+`fn`, `func` (SG-001, 06/09).
 
-> **Documented divergence (SG-002):** `sealed` and `permits` are lexer keywords
-> but are **not accepted anywhere in the parser** — `sealed class X {}`
-> fails with `PARSE007`. They are dead tokens. See
+> **SG-002 APPLIED (12/09):** `sealed` and `permits` were **keywords** of the
+> lexer (dead tokens, never accepted by the parser — `sealed class X {}` used
+> to fail with `PARSE007`); the grammar never used them, so with the removal
+> they are now **plain `IDENTIFIER`s**: `sealed class S {}` fails as
+> `PARSE010` (declaration without type). Locked by
+> `CompilerDriverTest.deadTokensGiveCleanLexerError`. See
 > [specification-gaps.md](../bugs-and-gaps/specification-gaps.md).
 
 > **SG-001 RESOLVED (06/09):** `fun`/`fn`/`func` are **reserved words**

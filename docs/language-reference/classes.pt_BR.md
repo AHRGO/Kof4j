@@ -241,7 +241,7 @@ entity User {
 
 | Ausente | Nota |
 |---|---|
-| `sealed`/`permits` | keywords do lexer, não parseadas (SG-002) |
+| `sealed`/`permits` | não são palavras-chave — removidas do lexer (SG-002, 12/09): `sealed class S {}` → `PARSE010`; feature adiada (roadmap §2.5) |
 | `abstract class` não-instanciável em compile-time | `new A()` compila, falha runtime (SG-017) |
 | `companion object` | não existe |
 | `object` (singleton) | não existe keyword `object` |

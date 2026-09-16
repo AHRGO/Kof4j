@@ -241,7 +241,7 @@ is Unspecified** (SG-016) — there is no dedicated test that fixes `A.B` vs `B`
 
 | Missing | Note |
 |---|---|
-| `sealed`/`permits` | lexer keywords, not parsed (SG-002) |
+| `sealed`/`permits` | not keywords — removed from the lexer (SG-002, 12/09): `sealed class S {}` → `PARSE010`; feature postponed (roadmap §2.5) |
 | `abstract class` non-instantiable at compile-time | `new A()` compiles, fails at runtime (SG-017) |
 | `companion object` | does not exist |
 | `object` (singleton) | there is no `object` keyword |
