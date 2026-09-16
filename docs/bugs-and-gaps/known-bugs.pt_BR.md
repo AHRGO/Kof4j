@@ -17,7 +17,7 @@
 > | **§258 🟡 PARCIAL 16/09 (lane `.18`/SSE dona dos consertos; #773/#774/#777 FECHADOS, #775/#776/#780 ABERTOS)** | Gate CodeQL (3 abertos): **#780** `java/uncaught-number-format-exception` `KofWebJsE2ETest:307` (= o conserto do §258/#777 landou INSUFICIENTE: o guard `(?i)[0-9a-f]+` aceita token de >8 dígitos hex → `Integer.parseInt(...,16)` lança NFE sem catch — *medido 16/09*: `"fffffffff"`.matches + NFE "under radix 16"; dono = lane `.18`/SSE, conserto: guard de comprimento/faixa ou catch; ver seção); **#773** `java/comparison-with-wider-type` `KofJsRunner.listValues` — ✅ CORRIGIDO 16/09 pela `.18` (bound check `n > Integer.MAX_VALUE` → `RuntimeException` claro, precedente `d6eaae0c`; loop int/int, sem truncamento silencioso). **#774** `java/relative-path-command` `DepsTransitiveTest` — ✅ CORRIGIDO por `2a60b426` (`.17`). **#777** `java/uncaught-number-format-exception` `KofWebJsE2ETest:302` — ✅ CORRIGIDO 16/09 pela lane SSE (`.18`): o helper de-chunk do teste valida o token hex antes do `parseInt`, sem NFE solta; 6/6. **AINDA ABERTOS (outras donas):** #775 `java/relative-path-command` `NumericFormatterE2ETest:35` (dona `.22`, `78b733fa`) + #776 `java/unused-parameter` `KofHttp.supportedOn:57` (= o guard morto do §259, dona `.15`/`.17` — resolve quando o §259 ligar). |
 > | **§259 🔴 ABERTO 16/09 (lane native/compiler `.17`/`.18`)** | `http.timeout`/`http.retry`/`http.circuit` no Native compilam OK mas são **puros no-ops silenciosos** (`NativeHttpCore.java:369-380` = `ret` puro; riscv/aarch `NativeRiscvHttpCore.java:317-324`); `KofHttp.supportedOn` devolve `true` para todo target, então o usuário acredita que retry/circuit estão ativos (R6/regra 5). Os docs citavam um **`HTTP003` fantasma** ("não silencioso: debug syserr") que nenhum módulo emite; `HTTP002` existe só como literal e seu ramo é morto (ver seção) — nenhum gap code HTTP é emitido hoje. Achado + docs corrigidos pela lane bugs-and-gaps `.15`; catalogado, direção do conserto = emitir um código de gap real em compile-time no `NATIVE*` (precedente do split WEB) ou implementar em asm. |
 > | **§262 🔴 ABERTO 16/09 (achado pela lane docs/development `.22`; conserto = lane compiler `CompilerComparisons`)** | Record `T?` vs `null`: `== null`/`!= null` dá **NPE no JVM** (`Cannot invoke Point.equals(Object) because maybe is null`) — o `==` de record baixa para `.equals()` SEM guarda de null no receptor (`CompilerComparisons:28,337-342`, bug 188); nullable de class/String faz narrowing bem (`if_acmp`/`Objects.equals`). Conserto = mudança de contrato (regra 6 do freeze) → lane compiler, NÃO tocado aqui. |
-> | **§260 🔴 ABERTO 16/09 (lane native/compiler `.17` — catalogado; conserto = face G-6 x86, D-DEV-PRIORITY frente 2)** | Native x86: o auto-collect `kof_gc_collect_now` no gatilho de free-list exausta é **INSOUND** — o backend de chamadas x86 segura temporários vivos em registradores caller-saved no call-site do `kof_alloc`; o mark conservador (pilha+bss) não enxerga registrador → o sweep libera bloco vivo → SIGSEGV (2 testes da suíte vermelhos com o trigger; patch revertido antes do commit). As medições são o artefato; riscv pôde (value-stack = pilha de máquina), x86 não sem mapa de raízes por frame (G-6). |
+> | **§260 🟡 PARCIAL 16/09 (lane native/compiler `.17`; causa-1 G-6b FECHADA por `92d11a03`, causa-2/G-6(a) + gatilho AINDA ABERTOS)** | O auto-collect x86 era insound por DUAS razões (apurado a gdb no mesmo dia): (1) o mark varria só o frame corrente → Strings vivas do main invisíveis → liberadas (SIGSEGV) — **CORRIGIDO 16/09 (G-6b: o `_start` grava `kof_main_stack_bottom`, o mark varre a pilha inteira da thread; `NativeX86GcMarkScopeTest` 3/3)**; (2) temporários vivos em registradores caller-saved no call-site do `kof_alloc` (`%rdi`) — invisíveis a qualquer varredura de pilha → exige G-6(a) (spill-per-live-ref / stack-map), o gatilho está OFF de novo. riscv nunca sofreu (1) (value-stack = pilha de máquina). |
 > | **§261 ✅ CORRIGIDO 16/09 (lane development `.18`)** | `window.bind` no KofJS: Components e widgets DOM crus tiravam ids de handle de DOIS contadores SEPARADOS (`kofUiSeq` vs `kofNodeSeq`, ambos do 0); `kofUiWindowBind` resolve componentes PRIMEIRO → um Component criado antes de um widget cru roubava o id do widget e o widget não renderizava nada (órfão em `__kofNodes`). Achado via kof-ui-widgets (Slider+ReconfigButton no Chrome real). Conserto = um contador único compartilhado (`kofNodeSeq`). Prova: `KofJsBrowserE2ETest.componentAndRawWidgetIdsNeverCollide` (VERMELHO pré-fix, medido) + `scripts/browser-drag.mjs` da lib.
 > | **§257 ✅ CORRIGIDO 15/09 (lane compiler `192.168.100.17`)** | literais `static final String` de texto-de-runtime = inlining ConstantValue do javac → falso vermelho em build incremental (`validationBrJs`); 77 campos de-`final` + `RuntimeConstantInliningGuardTest` (ASM, ConstantValue) trava. |
 > | **§173 ✅ CORRIGIDO 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `++`/`--`/compound em `Long`/`Double`/`Float` + incremento de ELEMENTO de array: JVM VerifyError (literal `INT 1` em binário de 2 slots, `DUP` de 1 slot, `arraystore` sem `[array,index]`), Native core dump, Script `NoSuchElementException`, JS `stack underflow`/`KofDup2`. 4 targets; caça Q4 13/09 (sobre o §167). Prova: `BackendParityTest.parityIncrementWideTypesAndArrayElement` + `KofInterpreterParityTest.incrementWideTypesAndArrayElement` + célula `increment` 4/4. |
@@ -9094,8 +9094,35 @@ usuário — diagnostic em compile-time é a meta (regra 6).
 - **Pointer:** `docs/development/native-multiarch.md` §"G-6 x86";
   fila = D-DEV-PRIORITY frente 2. `kof_gc_collect_now` MANUAL continua
   exposto e seguro quando chamado sem temporário vivo em registrador.
-- **Status:** 🔴 ABERTO 16/09 — catalogado pela lane compiler `192.168.100.17`
-  (patch revertido na árvore; medições acima são o artefato).
+- **CAUSA REAL, apurada a gdb no MESMO dia da catalogação (substitui a
+  hipótese "registrador" como causa-1 — ela é causa-2 parcial):** duas
+  falhas de som no mark x86 quando o coletor roda:
+  **(1) varredura restrita ao frame corrente:** `kof_gc_mark` escaneava só
+  `[rsp..rbp]` de quem chama o coletor — os frames EXTERNOS (a pilha de
+  `main` com Strings vivas enquanto um helper aloca) ficavam INVISÍVEIS →
+  sweep liberava vivo (gdb: o slot `-16(%rbp)` de `main` continha 0 no
+  helper; keep virava o objeto do helper; supervisor SIGSEGV 139). O riscv
+  não sofre disso porque a value-stack dele É a pilha e o mark derrama
+  s0-s11 (RtB44:15-20). **ESTA METADE FOI CORRIGIDA 16/09 (G-6b, sem o
+  trigger):** o `_start` grava `kof_main_stack_bottom` (rsp de entrada) e o
+  mark varre `rsp..bottom` da thread inteira (cap 64MB + fallback
+  sp..sp+4096 preservados p/ harness asm sem _start); guard asm
+  `NativeX86GcMarkScopeTest` 3/3 (Q0: com o mark antigo, o guard cai na
+  asserção exata). Com a correção, keep/supervisor ficam verdes atá COM o
+  trigger ligado — a causa-1 estava ativa.
+  **(2) temporário em registrador caller-saved no call-site — CONFIRMADA
+  como causa-2 restante:** com (1) corrigida, o único red que sobra com o
+  trigger ligado é `KofStringParseTest.toDoubleToFloatContractNativeX86`
+  (linha 20 `"2.5".toFloat()==2.5` → `false`; 29 linhas, as demais ok) —
+  o caminho `kof_string_to_float` chama `kof_alloc` com a String-arg viva
+  em `%rdi`/registrador caller-saved: invisível ao mark (a pilha inteira
+  não contém o que só existe em registrador), sweep libera o objeto vivo,
+  o parse seguinte corrompe. Logo G-6(a) (spill-per-live-ref nos 170
+  call-sites, ou stack-map) continua ABERTO e é o que falta; o gatilho NO
+  `kof_alloc` foi desligado de novo após a demonstração (FP verde sem ele
+  = paridade JVM/x86/JS preservada — freeze rule 5).
+- **Árvore:** gatilho OFF; mark corrigido (G-6b) + guard. Face (2)
+  continua a fila: G-6(a).
 
 ### §261 — `window.bind` no KofJS colide ids de Component com ids de nós de widget cru: um widget vinculado depois de um Component não renderiza nada
 
