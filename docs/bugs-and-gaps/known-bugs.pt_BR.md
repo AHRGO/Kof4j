@@ -6946,7 +6946,9 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   `Dir.Value` em constante String (procurar `ldc` de enum no emitter de
   valores / `CompilerEnum*`; o emissor de classe para `EnumDecl` parece
   ser pulado inteiramente).
-- **Estado:** reproduz no `0ab25887`; **RE-MEDIDO 15/09 ~18:30 pela lane
+- **Estado: ✅ FECHADO 15/09 (ambas as fatias abaixo) — a linha seguinte é a
+  RE-MEDIÇÃO histórica pré-fix (mantida como trilha), não o estado atual.**
+  *(Histórico)* reproduz no `0ab25887`; **RE-MEDIDO 15/09 ~18:30 pela lane
   bugs-and-gaps `192.168.100.15` no tip `b66edfe9`** (classes frescas,
   `Triage` JVM + `javap`): `Dir.N.getClass()` → `class java.lang.String`,
   `Dir.N == "N"` → `true`, `d instanceof Dir` → `instanceof java/lang/String`,
@@ -6955,7 +6957,8 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   superficial `values()`/`name()` — REABERTA por esta lane 15/09 ~18:35 com a
   prova de bytecode** (o fix §165 `479506e1` tipou `values()`, mas nunca
   implementou a identidade de enum). Regra 6 (semântica); fix = lane compiler
-  com prova E2E (getClass + == + switch + identidade de values).
+  com prova E2E (getClass + == + switch + identidade de values). **RESOLVIDO
+  pelas fatias 1+2 abaixo (`EnumIdentityE2ETest` 6/6, #207 fechada).**
 - **🟡 FATIA 1 CORRIGIDA 15/09 (lane bugs-and-gaps `192.168.100.15`,
   D-ENUM207 — #207 reatribuída a esta lane pela mantenedora, `3629a13b`):**
   `enum == String` (em qualquer ordem) agora é ERRO DE TIPO em compile-time —

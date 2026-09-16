@@ -6967,7 +6967,9 @@ to the label) is the correct predicate and **was already used** in `parseStateme
   `Dir.Value` into a String constant (search `ldc` for enum in the value
   emitter / `CompilerEnum*`; the class emitter for `EnumDecl` appears to be
   skipped entirely).
-- **Status:** reproduces on `0ab25887`; **RE-MEASURED 15/09 ~18:30 by lane
+- **Status: ✅ CLOSED 15/09 (both slices below) — the line that follows is the
+  historical pre-fix RE-MEASURE (kept as the trail), not the current state.**
+  *(Historical)* reproduces on `0ab25887`; **RE-MEASURED 15/09 ~18:30 by lane
   bugs-and-gaps `192.168.100.15` on the tip `b66edfe9`** (fresh classes,
   `Triage` JVM + `javap`): `Dir.N.getClass()` → `class java.lang.String`,
   `Dir.N == "N"` → `true`, `d instanceof Dir` → `instanceof java/lang/String`,
@@ -6976,7 +6978,8 @@ to the label) is the correct predicate and **was already used** in `parseStateme
   `values()`/`name()` face only — REOPENED by this lane 15/09 ~18:35 with the
   bytecode proof** (the §165 `479506e1` fix typed `values()` but never
   implemented enum identity). Rule 6 (semantics); fix = lane compiler with E2E
-  proof (getClass + == + switch + values identity).
+  proof (getClass + == + switch + values identity). **RESOLVED by slices 1+2
+  below (`EnumIdentityE2ETest` 6/6, #207 closed).**
 - **🟡 SLICE 1 FIXED 15/09 (lane bugs-and-gaps `192.168.100.15`, D-ENUM207 —
   #207 reassigned to this lane by the maintainer, `3629a13b`): `enum == String`
   (either order) is now a compile-time TYPE ERROR — `SEM062` in the SHARED
