@@ -93,7 +93,6 @@ public final class SwitchExprLowerer {
         } else {
             ops.add(new KofLoadLocal(switchType, switchTmp));
             localIdx = ExpressionLowerer.emitExpression(driver, sc.value(), ops, owner, localIdx, locals);
-            Type caseType = ExpressionTyper.inferExprType(driver, sc.value(), locals);
             if (Type.isString(switchType)) {
                 // igualdade de String é por conteúdo (bug 4 do statement)
                 ops.add(new KofCall(BuiltinTypes.STRING, "kof_string_equals",

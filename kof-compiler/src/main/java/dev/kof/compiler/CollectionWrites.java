@@ -62,7 +62,7 @@ public final class CollectionWrites {
      * miss silencioso (false/null) — exatamente o que o JVM faz com
      * tipos incompatíveis no HashMap/HashSet/ArrayList reais.
      */
-    public static int stringTag(CompilationUnitNode unit, Type elemType,
+    public static int stringTag(Type elemType,
                                 java.util.List<Type> argTypes, int argIdx) {
         Type at = argIdx < argTypes.size() ? argTypes.get(argIdx) : null;
         if (at instanceof Type.NullableType nt) at = nt.inner();
@@ -70,10 +70,10 @@ public final class CollectionWrites {
         boolean etKnown = et != null && !(et instanceof Type.UnknownType);
         boolean atKnown = at != null && !(at instanceof Type.UnknownType);
         if (etKnown && atKnown) {
-            return isStringLike(et, unit) && isStringLike(at, unit) ? 1 : 0;
+            return isStringLike(et) && isStringLike(at) ? 1 : 0;
         }
-        if (etKnown) return isStringLike(et, unit) ? 1 : 0;
-        if (atKnown) return isStringLike(at, unit) ? 1 : 0;
+        if (etKnown) return isStringLike(et) ? 1 : 0;
+        if (atKnown) return isStringLike(at) ? 1 : 0;
         return 1;
     }
 
@@ -86,7 +86,7 @@ public final class CollectionWrites {
      * Native chamar {@code kof_string_equals} sobre o ponteiro do objeto →
      * SIGSEGV (exit 135).
      */
-    private static boolean isStringLike(Type t, CompilationUnitNode unit) {
+    private static boolean isStringLike(Type t) {
         return BuiltinTypes.isString(t);
     }
 
