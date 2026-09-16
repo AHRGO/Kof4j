@@ -264,18 +264,19 @@ conceptual engineering nor decide architecture/direction. Practical consequences
    or the suite red (outside the documented environmental errors) is violating
    the gate: fix it in the same unit or revert. `git bisect`-hostile is the
    worst legacy an agent can leave.
-7. **Git identity (09/12, maintainer's decision — single identity).**
-   The old `temmcode` rule (e-mail `aminadojava@gmail.com` in `--local`
-   to attribute commits to the worker + a `"Kof-agent-worker"` block in comments
-   via proxy) was **ABANDONED at the maintainer's request** — it caused too much
-   headache (her manual commit going up as `temmcode` due to the clone's `--local`).
-   What applies now: **a single identity, hers**. The agent NEVER configures
-   identity (`git config user.*` with or without `--global` is forbidden; it never
-   writes to `~/.gitconfig` nor to `.git/config`); it uses the effective identity
-   of the repo/environment as is. No e-mail trick, no mandatory marking
-   block in issues/PRs, **no `Co-authored-by` trailer** (pollutes the repo
-   log). When she prepares something exclusive for the
-   agents, that rule comes back in a new form.
+7. **Git identity & agent worker (09/12, updated 09/16 maintainer directive).**
+   The GitHub App `kof-agent-worker` (App ID `4960796`, configured via `scripts/gh-as-agent.sh`
+   and `~/.config/kof/agent-app.env`) is the dedicated identity for issues, PRs, and commits
+   where installed.
+   - **Commit permission & identity:** the app has commit permissions and its own Git/GitHub
+     identity.
+   - **Fallback rule:** if authentication, push, or commit fails when using the bot's identity
+     (e.g. app not yet installed on a specific target repository or integration error), the agent
+     **must accept and fall back to the maintainer's default pattern**:
+     `mel <amelissariver@gmail.com>` (GitHub account `melmonfre`).
+   - No email tricks or synthetic trailers (`Co-authored-by` is forbidden as it pollutes the repo log).
+   - The agent uses the effective environment identity as configured.
+
 
 > In summary: AI runs **under the strict rules of real computing** —
 > surgical documentation, zero hallucination, without the market hype.

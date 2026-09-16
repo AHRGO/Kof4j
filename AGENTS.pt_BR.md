@@ -264,18 +264,18 @@ conceitual nem decide arquitetura/rumo. Consequências práticas para o agente:
    ou a suíte vermelha (fora dos erros ambientais documentados) está violando
    o portão: conserta na mesma unidade ou reverte. `git bisect`-hostil é o
    pior legado que um agente pode deixar.
-7. **Identidade do git (12/09, decisão da mantenedora — identidade única).**
-   A regra antiga do `temmcode` (e-mail `aminadojava@gmail.com` no `--local`
-   para atribuir commits ao worker + bloco `"Kof-agent-worker"` em comentários
-   via proxy) foi **ABANDONADA a pedido da mantenedora** — dava dor de cabeça
-   demais (commit manual dela subindo como `temmcode` pelo `--local` do clone).
-   Vale agora: **uma identidade só, a dela**. O agente NUNCA configura
-   identidade (`git config user.*` com ou sem `--global` é proibido; nunca
-   escreve em `~/.gitconfig` nem no `.git/config`); usa a identidade efetiva
-   do repo/ambiente como está. Sem truque de e-mail, sem bloco de marcação
-   obrigatório em issues/PRs, **sem trailer `Co-authored-by`** (polui o log do
-   repo). Quando ela preparar algo exclusivo para os
-   agentes, essa regra volta numa forma nova.
+7. **Identidade do git e worker de agente (12/09, atualizado 16/09 diretriz da mantenedora).**
+   O GitHub App `kof-agent-worker` (App ID `4960796`, configurado via `scripts/gh-as-agent.sh`
+   e `~/.config/kof/agent-app.env`) é a identidade dedicada para issues, PRs e commits
+   onde estiver instalado.
+   - **Permissão de commit e identidade:** o app tem permissões de commit e identidade própria de Git/GitHub.
+   - **Regra de fallback:** se a autenticação, push ou commit falhar usando a identidade do bot
+     (ex.: app ainda não instalado em um repositório alvo específico ou erro de integração), o agente
+     **deve aceitar e recorrer ao padrão da mantenedora**:
+     `mel <amelissariver@gmail.com>` (conta GitHub `melmonfre`).
+   - Sem truques de e-mail ou trailers sintéticos (`Co-authored-by` é proibido pois polui o log do repo).
+   - O agente usa a identidade efetiva do ambiente conforme configurada.
+
 
 > Em resumo: a IA roda **sob as regras estritas da computação de verdade** —
 > documentação cirúrgica, zero alucinação, sem o hype do mercado.
