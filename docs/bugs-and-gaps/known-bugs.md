@@ -9070,7 +9070,7 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   CodeQL does not honour `@SuppressWarnings` for this rule, so the resolution belongs
   to §259 (wire the guard when a real unsupported target lands, then the param is used).
   NOT fixed here: rule 8 (another lane's file) + the #776 fix is a §259 design call.
- - **Status:** 🔴 OPEN 16/09 — catalogued by lane docs/development `192.168.100.22`
+- **Status:** 🔴 OPEN 16/09 — catalogued by lane docs/development `192.168.100.22`
    with the full gate output. Pointers: lane development `.18` (DB001, author of
    `3e55df51`) for #773; lane compiler `.22` (author of `78b733fa`) for #775;
    §259 (native-http guard, `.15`/`.17`) for #776 (#774 already closed by `.17` in
