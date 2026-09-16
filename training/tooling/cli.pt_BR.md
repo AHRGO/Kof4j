@@ -7,7 +7,7 @@ comandos, tooling e editor support.
 
 **Version:** 0.4.0-beta (Sep 2026) — 2218 testes
 
-## Comandos oficiais (18)
+## Comandos oficiais (26)
 
 | Comando | Comportamento |
 |---------|---------------|
@@ -28,6 +28,15 @@ comandos, tooling e editor support.
 | `kof version` | Versão da plataforma (0.4.0-beta) |
 | `kof bench [...]` | Benchmark harness com baselines |
 | `kof debug <file.kf>` | DAP MVP no JVM |
+| `kof profile <file.kf> [--target ...]` | Execução + métricas (CPU, RSS, GC) |
+| `kof inspect <file.kf> [--json]` | Estatísticas de IR: ops antes/depois da otimização |
+| `kof decompile <file.class> [--output <file.kf>]` | Esqueleto estrutural Kof de um `.class` |
+| `kof translate <file.java> [--output <file.kf>]` | Subset Java → código Kof |
+| `kof compare <legacy.class\|jar> <file.kf> [--json]` | Teste diferencial legado vs Kof |
+| `kof migrate <file.class\|java> [--output <file.kf>] [--json]` | Migração + relatório rastreável |
+| `kof new <name>` | Esqueletos de projeto por tipo |
+| `kof deps <init\|add\|remove\|list\|resolve>` | Gerenciador de pacotes (`kofdeps`, Maven Central) |
+| `kof install <dir>` | Instala este build como distribuição (launcher + `kof.jar`) |
 
 `kof fmt` (parser real, idempotente) e `kof config gen` são implementados
 (0.4.0-beta). Não existe comando `kof doctor` — o diagnóstico oficial é
@@ -52,8 +61,9 @@ kof c app.c
 
 - O baseline de API Java do tooling é 21.
 - O Kof não exige Java anterior a 21 para seu tooling.
-- Versões posteriores (ex.: 25, Virtual Threads) podem ser usadas
-  internamente sem virar requisito.
+- O toolchain do repo exige JDK 25 (D-BASELINE, 14/09): compilar o repo e
+  rodar a CLI são JDK 25. O **API level** do tooling segue 21
+  (`KofVersion.TOOLING_API`); programas Kof seguem JVM 21+.
 - O pacote oficial carrega sua própria JVM (Temurin 25).
 
 ## Editor support
