@@ -1605,8 +1605,9 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
   x86_64) tem o MESMO furo (BEGIN/COMMIT em transação externa comita o
   escopo externo no sqlite/MySQL) — NÃO corrigido nesta lane (assembly
   Native, sem ThreadLocal equivalente); lane Native deve espelhar a
-  semântica JVM (flag de transação ativa p/ o handle). O JS não implementa
-  `kof_db_transaction` (gap JS pré-existente, JSN00x).
+  semântica JVM (flag de transação ativa p/ o handle). O JS **implementou
+  `kof_db_transaction` em 16/09** (DB001, ponte no host GraalJS —
+  `nestedTransactionDoesNotCommitOuterScope` é um dos 4 E2E JS; não é mais gap).
 - **Prova:** repro EXATO da issue `caught {"n":0}` (antes `{"n":2}`, H2
   in-memory); teste `nestedTransactionDoesNotCommitOuterScope`; classe
   KofDbE2ETest 15/0 (2 skips Native pré-existentes).

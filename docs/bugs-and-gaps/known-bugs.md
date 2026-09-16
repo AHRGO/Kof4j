@@ -1601,8 +1601,10 @@ EXTERNAL mutation produced garbage (JVM correct) — the cause was the prologue 
   has the SAME hole (BEGIN/COMMIT in an outer transaction commits the
   outer scope in sqlite/MySQL) — NOT fixed in this lane (Native
   assembly, without an equivalent ThreadLocal); the Native lane must mirror the
-  JVM semantics (active-transaction flag for the handle). JS does not implement
-  `kof_db_transaction` (pre-existing JS gap, JSN00x).
+  JVM semantics (active-transaction flag for the handle). JS **implemented
+  `kof_db_transaction` on 16/09** (DB001, GraalJS-host bridge —
+  `nestedTransactionDoesNotCommitOuterScope` is one of the 4 JS E2E cases; no
+  longer a gap).
 - **Proof:** EXACT issue repro `caught {"n":0}` (before `{"n":2}`, in-memory
   H2); test `nestedTransactionDoesNotCommitOuterScope`; class
   KofDbE2ETest 15/0 (2 pre-existing Native skips).
