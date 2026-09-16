@@ -9621,6 +9621,14 @@ the user's — a compile-time diagnostic is the goal (rule 6).
 - **Cross-target (face a):** JVM proven by test; SCRIPT + JS proven by test;
   Native not measured (qemu absent) — the lowering is target-agnostic
   (`if_acmp` reference compare).
+- **Face (b) measured on 3 targets (17/09, this session):** JVM
+  `NullPointerException: Cannot invoke "Point.equals(Object)"`; **JS
+  `TypeError: Cannot read property 'equals' of null`**; SCRIPT also red. So
+  face (b) is a real cross-target parity bug, not JVM-only; the fix needs a
+  null-safe object-equality helper (`kofValEq` exists in the JS runtime,
+  `Objects.equals` on the JVM) shared by the 4 targets — not attempted here
+  because Native cannot be proven on this host (no qemu) and a JVM-only fix
+  would create divergence (rule 5).
 - **Status:** 🟡 PARTIAL 17/09 — face (a) FIXED (`07a51565`, lane
   bugs-and-gaps `192.168.100.15`); face (b) OPEN as above. Corpus:
   `training/idioms/records.md` null-safety cell updated (the `!= null`

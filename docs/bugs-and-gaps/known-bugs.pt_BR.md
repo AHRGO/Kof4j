@@ -9235,6 +9235,14 @@ usuário — diagnostic em compile-time é a meta (regra 6).
 - **Cross-target (face a):** JVM provado por teste; SCRIPT + JS provados por
   teste; Native não medido (sem qemu) — o lowering é agnóstico de alvo
   (comparação de referência `if_acmp`).
+- **Face (b) medida em 3 alvos (17/09, esta sessão):** JVM
+  `NullPointerException: Cannot invoke "Point.equals(Object)"`; **JS
+  `TypeError: Cannot read property 'equals' of null`**; SCRIPT também
+  vermelho. Então a face (b) é bug de paridade cross-target real, não só do
+  JVM; o conserto precisa de um helper de igualdade de objetos null-safe
+  (`kofValEq` existe no runtime JS, `Objects.equals` no JVM) compartilhado
+  pelos 4 alvos — não tentado aqui porque o Native não pode ser provado nesta
+  máquina (sem qemu) e um fix só-JVM criaria divergência (regra 5).
 - **Status:** 🟡 PARCIAL 17/09 — face (a) FEITA (`07a51565`, lane
   bugs-and-gaps `192.168.100.15`); face (b) ABERTA como acima. Corpus: a
   célula de null-safety de `training/idioms/records.md` atualizada (o
