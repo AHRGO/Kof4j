@@ -105,10 +105,10 @@ Documentation: `docs/stdlib/security.md`; tests: `KofSecurityTest` (22).
   Content-Type (JSON if `{`/`[`); 404/500; chained middlewares.
 - Engine: `WebRoute/WebRequest` generated in KofRuntime; `KofHttpServer`
   (legacy `kof serve`, `ReflectiveHandler`).
-- Targets: JVM ✅ (incl. ws/sse); Native ✅ base (WEB002 server: `kof_web_*`
-  in asm — `NativeWebCore`/`Listen`/`Responses`/`Runtime`; proof
-  `KofWebNativeE2ETest` 4/4 in the 09/12 gate; TLS/ws/sse/path-params tail
-  remain as residual WEB002 on the DOING open table); JS ✅ WEB001-T1
+- Targets: JVM ✅ (incl. ws/sse); Native ✅ base (Native web server in asm:
+  `kof_web_*` — `NativeWebCore`/`Listen`/`Responses`/`Runtime`; proof
+  `KofWebNativeE2ETest` 4/4 in the 09/12 gate; the tail remains per-feature
+  gaps — TLS `WEB002`, ws `WEB004`, sse `WEB003`); JS ✅ WEB001-T1
   (09/13: hostless GraalJS server — `kofWeb*` in `JsRuntimeUiWeb` + Java queue
   `KofJsWebQueue` (Context thread-confined → event-loop in `kofWebListen`);
   handler return = 200 body same as JVM; pure JS UTF-8 encoder (host
@@ -186,8 +186,8 @@ Legend in the target columns: `y` = supported, `~` = partial, `–` = no.
 | multipart | `PLANNED` | — | — | — | — | — |
 | content negotiation | `PLANNED` | — | — | — | — | — |
 | error handling | 404/500 + message | y | – | ✅ 03/09 (JS 404/500) | KofWebE2ETest | stdlib/stdlib-web.md |
-| WebSocket | ✅ `app.ws("/chat") { }` (JVM, 08/30 — RFC 6455 handshake + frame codec/masking) | y | – WEB002 | – WEB004 (compile-time gate 16/09; was silent no-op) | KofWebWsE2ETest (11) + KofWsFrameTest (7) | stdlib/stdlib-web.md |
-| SSE | ✅ `sse.send/event/close` (JVM, 08/30) | y | – WEB002 | – WEB003 (compile-time gate 16/09; was silent no-op) | KofWebSseE2ETest (7) | stdlib/stdlib-web.md |
+| WebSocket | ✅ `app.ws("/chat") { }` (JVM, 08/30 — RFC 6455 handshake + frame codec/masking) | y | – WEB004 | – WEB004 (compile-time gate 16/09; was silent no-op) | KofWebWsE2ETest (11) + KofWsFrameTest (7) | stdlib/stdlib-web.md |
+| SSE | ✅ `sse.send/event/close` (JVM, 08/30) | y | – WEB003 | – WEB003 (compile-time gate 16/09; was silent no-op) | KofWebSseE2ETest (7) | stdlib/stdlib-web.md |
 | web limits/observability | ✅ `app.configure`/`app.stats` (JVM, 09/04) | y | – | – | KofWebHardeningTest (6) | stdlib/stdlib-web.md |
 | gRPC / GraphQL / SOAP | `EXTERNAL`/`PLANNED` (interop) | — | — | — | — | development/roadmap.md |
 | REST documentation (OpenAPI) | `PLANNED` | — | — | — | — | development/roadmap.md |
