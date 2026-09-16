@@ -252,7 +252,7 @@ tooling, editor support e um OpenJDK 21 embutido (Temurin 21, `release.yml`
 com 2 jobs — `test-and-bump` → `package-and-release` — por plataforma
 linux-x86_64/macos-arm64/windows-x86_64, `scripts/package.sh` PASS). A
 instalação não depende de Java externo, `JAVA_HOME` ou SDKMAN. Build
-`mvn test` 2214 (1907+38+7+262), golden 16/16, integration 9/9.
+`mvn test` 2218 (1911+38+7+262), golden 16/16, integration 9/9.
 
 O usuário que instala o Kof recebe tudo o que precisa para desenvolver,
 compilar, executar e usar o tooling da linguagem (18 comandos:
