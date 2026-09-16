@@ -7,7 +7,7 @@
 > provados: Nível 3 (Query DSL tipada `User.query(db){...}` → `db.query<T>`) ✅
 > 01/09 (`KofOrmE2ETest` 22); MySQL prepared binário ✅ 03/09
 > (`KofDbE2ETest.nativeMysqlPreparedBinary`); connection pool ✅. DB001/ORM001 em
-> riscv/aarch/JS são gaps honestos R6 trackeados em `docs/backend-parity.md`,
+> (DB001 fechado: riscv/aarch 15/09 + JS 16/09); só `ORM001` permanece um gap honesto R6 tracked em `docs/backend-parity.md`,
 > não pendência desta visão.
 
 **Última atualização:** 12 de setembro de 2026
@@ -217,7 +217,7 @@ db.close(db)
   `user:pass@` na DSN `mysql://[user[:pass]@]host[:port][/db]`) — em
   progresso: handshake completo, query e prepared statements pendentes;
   sem teste E2E contra servidor real ainda.
-- **JS:** `DB001` (diagnóstico claro em compile-time).
+- **JS:** não-tipado (16/09, ponte no host GraalJS); `query<T>` tipado = `DB002` compile-time.
 - Testes: `KofDbE2ETest` (9) + `KofOrmE2ETest` (16, inclui MariaDB/PostgreSQL/
   MongoDB com skip condicional + SQLite nativo). O link nativo inclui a lib
   do MySQL apenas quando o programa a usa (DSN literal detectado em

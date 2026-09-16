@@ -35,7 +35,7 @@ convention. The mechanism never rises into the user's code:
 | script | `let x = 5` at the top | `KofScriptGlobals` (repl --watch) |
 
 The intention compiles on all targets; the target that cannot realize it
-reports at compile-time with a gap code (`HTTP002`, `DB001`, `WEB002`) — never
+reports at compile-time with a gap code (`HTTP002`, `WEB002`) — never
 silently. Details in `docs/philosophy.md`.
 
 ## The multiplatform vision

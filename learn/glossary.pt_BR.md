@@ -78,7 +78,7 @@ rateLimit, session, apiKey), `auth` (contexto web). Gaps `SECN00x`
 documentados (ex.: AES-GCM no JS).
 
 **kof.db / kof.orm** — persistência (JVM: JDBC H2/MySQL/PostgreSQL + SQLite;
-Native: SQLite via `.so` + MySQL WIP; JS: `DB001`): `db.connect/execute/query`
+Native: SQLite via `.so` + MySQL WIP; JS: não-tipado (16/09), `query<T>` tipado = `DB002`): `db.connect/execute/query`
 + `transaction {}`; ORM com `entity` declarativo (CRUD, `where`, `page`,
 `migrate`, MongoDB; nativo/JS `ORM001`).
 

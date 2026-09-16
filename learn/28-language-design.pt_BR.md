@@ -35,7 +35,7 @@ convenção. O mecanismo nunca sobe para o código do usuário:
 | script | `let x = 5` no topo | `KofScriptGlobals` (repl --watch) |
 
 A intenção compila em todos os alvos; o alvo que não consegue realizá-la
-reporta em compile-time com código de gap (`HTTP002`, `DB001`, `WEB002`) — nunca
+reporta em compile-time com código de gap (`HTTP002`, `WEB002`) — nunca
 silenciosamente. Detalhes em `docs/philosophy.md`.
 
 ## A visão multiplatform
