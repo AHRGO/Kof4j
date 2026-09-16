@@ -17,7 +17,7 @@ when it runs — independently of the backend.
    `main`; `onShutdown` **after** (desugaring, `CompilerDesugar.java:47`).
 4. `main` statements execute **sequentially**, in source order.
 5. **Pending `spawn` tasks are awaited before the program ends**
-   (implicit join — `SpawnStmt` javadoc, `AstNodes.java:358-363`).
+   (implicit join — `SpawnStmt` javadoc, `AstNodes.java:63-64`).
 6. The program ends; the exit code is 0 (unless an uncaught exception or a
    failing `assert` in the test harness).
 

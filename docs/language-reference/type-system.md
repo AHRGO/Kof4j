@@ -247,7 +247,7 @@ implementation-defined (§3.1); check the §`not checked` items (`private`/
 
 - **Auto-box** from primitive to reference slot at emit (`Integer`, `Long`,
   …; `JvmBackend.java:77-101`).
-- **Unbox** in `list.get(i)` according to elemType (`JvmBackend.java:913-946`):
+- **Unbox** in `list.get(i)` according to elemType (`JvmOpCollections.java:95-112`):
   `listOf(1,2).get(0) + 1` → `2` (*probe*).
 - **Erasure box** (primitive behind type-var/Object): `kof_box`/`kof_unbox`.
 - **Mutable capture** of a closure uses a synthetic `Box<N>` class (see

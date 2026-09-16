@@ -247,7 +247,7 @@ em **campos**, SG-013).
 
 - **Auto-box** de primitivo para slot de referência no emit (`Integer`, `Long`,
   …; `JvmBackend.java:77-101`).
-- **Unbox** em `list.get(i)` conforme elemType (`JvmBackend.java:913-946`):
+- **Unbox** em `list.get(i)` conforme elemType (`JvmOpCollections.java:95-112`):
   `listOf(1,2).get(0) + 1` → `2` (*probe*).
 - **Box de erasure** (primitivo atrás de type-var/Object): `kof_box`/`kof_unbox`.
 - **Captura mutável** de closure usa classe `Box<N>` sintética (ver

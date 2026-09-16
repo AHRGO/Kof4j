@@ -125,7 +125,7 @@ INTERFACE}`.
 
 ## 4. Middle-end
 
-### 4.1 IR (`IRNodes.java`)
+### 4.1 IR (`KofOperation` + one record per op)
 
 **IR type**: **linear stack machine** — not three-address, not SSA, not a
 tree. Optimizer Javadoc (`Optimizer.java:14-15`): *"The IR is a linear,
@@ -150,7 +150,7 @@ IRModule(name, classes, imports, sourceName)
 block per method (`new IRBasicBlock(0, ops)`); the optimizer flattens and
 repacks. The real unit is the **flat op list with labels**.
 
-**The 30 ops** (`IRNodes.java:99-252`):
+**The 30 ops** (one `Kof*.java` record per op — e.g. `KofLoadLiteral.java` — implementing `KofOperation.java`):
 
 | Group | Ops |
 |---|---|

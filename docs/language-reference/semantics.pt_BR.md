@@ -17,7 +17,7 @@ quando ele roda — de forma independente do backend.
    usuário; `onShutdown` **depois** (desugaring, `CompilerDesugar.java:47`).
 4. Statements de `main` executam **sequencialmente**, em ordem de fonte.
 5. **Tarefas `spawn` pendentes são aguardadas antes do programa terminar**
-   (join implícito — `SpawnStmt` javadoc, `AstNodes.java:358-363`).
+   (join implícito — `SpawnStmt` javadoc, `AstNodes.java:63-64`).
 6. O programa termina; o exit code é 0 (salvo exceção não capturada ou
    `assert` falho no harness de teste).
 

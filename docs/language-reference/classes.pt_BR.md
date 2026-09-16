@@ -230,7 +230,7 @@ entity User {
 }
 `
 
-- **É um record gerado + schema para `kof.orm`** (`AstNodes.java:147-158`).
+- **É um record gerado + schema para `kof.orm`** (`EntityDeclarationNode.java` / `KofOrm.java`).
 - Constraints `generated`/`unique` são metadados de schema (compile-time, sem
   reflection).
 - Habilita o **Query DSL**: `User.query(db) { where age > 18; … }`.
