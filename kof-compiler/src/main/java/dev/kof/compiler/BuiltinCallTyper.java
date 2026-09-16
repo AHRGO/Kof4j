@@ -75,7 +75,10 @@ public final class BuiltinCallTyper {
             // User classes take precedence over builtin helpers with
             // the same name (e.g. KofUi's Color).
             SymbolTable.ClassSymbol ctorClass = sa.allClasses().get(mc.methodName());
-            for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
+            List<Type> ctorArgTypes = new ArrayList<>();
+            for (ExpressionNode arg : mc.arguments()) {
+                ctorArgTypes.add(SemExpressionTyper.inferType(sa, arg, scope));
+            }
             // SG-017 (SEM041): classe abstrata não pode ser instanciada —
             // cobre tanto `new A()` (SemExpressionTyper) quanto `A()` (aqui).
             if (sa.abstractClasses().contains(mc.methodName()) && sa.diagnostics() != null) {
@@ -88,6 +91,12 @@ public final class BuiltinCallTyper {
             if (ctor != null) {
                 sa.putResolvedMethod(mc, new SymbolTable.MethodSymbol("<init>", mc.methodName(),
                         ctor.type(), ctor.parameterTypes(), ctor.accessFlags(), SymbolTable.DispatchKind.STATIC));
+                // #323: `A("x")` num ctor `(Int)` — resolucao por aridade sem
+                // conferir TIPO inventava <init>(String)V (VerifyError mudo
+                // no load, R6). Sobrecarga com irmao compativel passa (o emit
+                // resolve por aridade+assignability).
+                TypeChecker.checkCtorArgTypes(sa, ctorClass.members(), mc.methodName(),
+                        ctorArgTypes);
             }
             return new Type.ClassType(ctorClass.packageName(), ctorClass.name(), List.of());
         }
@@ -483,12 +492,22 @@ public final class BuiltinCallTyper {
         }
         SymbolTable.ClassSymbol ctorClass = sa.allClasses().get(mc.methodName());
         if (ctorClass != null) {
-            for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
+            List<Type> ctorArgTypes = new ArrayList<>();
+            for (ExpressionNode arg : mc.arguments()) {
+                ctorArgTypes.add(SemExpressionTyper.inferType(sa, arg, scope));
+            }
             SymbolTable.ConstructorSymbol ctor = SymbolTable.constructorFor(
                     ctorClass.members(), mc.arguments().size());
             if (ctor != null) {
                 sa.putResolvedMethod(mc, new SymbolTable.MethodSymbol("<init>", mc.methodName(),
                         ctor.type(), ctor.parameterTypes(), ctor.accessFlags(), SymbolTable.DispatchKind.STATIC));
+                // #323: face IMPLICITA da construcao (`A("x")` sem `new`) —
+                // mesma regra da face NewExpr no SemExpressionTyper:
+                // resolucao por aridade + conferencia de TIPO dos args,
+                // overload-aware (irmao compativel passa). Sem isto a chamada
+                // inventava <init>(String)V e o load estourava VerifyError.
+                TypeChecker.checkCtorArgTypes(sa, ctorClass.members(), mc.methodName(),
+                        ctorArgTypes);
             }
             return new Type.ClassType(ctorClass.packageName(), ctorClass.name(), List.of());
         }

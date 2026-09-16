@@ -324,6 +324,19 @@ public final class SemExpressionTyper {
                             SymbolTable.constructorFor(cs.members(), ne.arguments().size());
                     if (ctor3 != null) {
                         sa.putResolvedConstructor(ne, ctor3);
+                        // #323: a RESOLUCAO era so por aridade; o tipo dos
+                        // argumentos nunca era conferido contra a assinatura
+                        // do construtor. Sem isto, `new A("x")` num ctor
+                        // `(Int)` compila e a chamada inventa <init>(String)V
+                        // → VerifyError no load (R6/Q7: nunca silencioso).
+                        // Overload-aware: irmao de mesma aridade que casa
+                        // (isAssignable) passa — mesmo predicado do emit.
+                        List<Type> argTypes3 = new ArrayList<>();
+                        for (ExpressionNode arg : ne.arguments()) {
+                            argTypes3.add(inferType(sa, arg, scope));
+                        }
+                        TypeChecker.checkCtorArgTypes(sa, cs.members(), ne.typeName(),
+                                argTypes3);
                     } else if (sa.diagnostics() != null) {
                         SymbolTable.Symbol anyInit = cs.members().resolve("<init>");
                         if (anyInit instanceof SymbolTable.ConstructorSymbol c) {
