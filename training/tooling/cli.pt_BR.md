@@ -54,7 +54,7 @@ kof c app.c
 - O Kof não exige Java anterior a 21 para seu tooling.
 - Versões posteriores (ex.: 25, Virtual Threads) podem ser usadas
   internamente sem virar requisito.
-- O pacote oficial carrega sua própria JVM (Temurin 21).
+- O pacote oficial carrega sua própria JVM (Temurin 25).
 
 ## Editor support
 

@@ -56,7 +56,7 @@ MAJOR.MINOR.PATCH[-suffix]
  - Push workflow on main: 2 jobs — `test-and-bump` (bump + push +
    exports SHA) and `package-and-release` (matrix: linux-x86_64,
    windows-x86_64, **macos-arm64**), artifact validation, changelog,
-   GitHub Release per platform with embedded JDK 21.
+   GitHub Release per platform with embedded JDK 25.
 
  ## Artifacts
 
@@ -69,7 +69,7 @@ MAJOR.MINOR.PATCH[-suffix]
  ```
 
 Each package contains compiler, CLI, runtime, stdlib, tooling, editor support and
-embedded JDK (Temurin 21, Tooling API Level 21).
+embedded JDK (Temurin 25; tooling API level 21).
 
 ## Changelog
 
