@@ -154,7 +154,7 @@ kof version
 Saída esperada (o número é o da sua release):
 
 ```
-kof 0.2.6-beta
+kof 0.4.0-beta
 ```
 
 Relatório completo do ambiente:
@@ -166,13 +166,13 @@ kof info
 Saída esperada (resumo):
 
 ```
-Kof 0.2.6-beta
+Kof 0.4.0-beta
 Release channel: beta
 Tooling API: 21
 OS: linux
 Arch: x86_64
 Target: linux-x86_64
-JVM: Eclipse Adoptium 21.x (embedded)
+JVM: Eclipse Adoptium 25.x (embedded)
 Compiler: 0.2.6
 Runtime: 0.2.6
 Stdlib: 0.2.6
