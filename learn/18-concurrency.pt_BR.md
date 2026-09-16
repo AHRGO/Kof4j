@@ -2,7 +2,7 @@
 
 # 18 — Concorrência
 
-> **Status: implementado (JVM / Native / JS) — 0.3.22-beta — `spawn`/`await` nos 3 targets**
+> **Status: implementado (JVM / Native / JS) — 0.4.0-beta — `spawn`/`await` nos 3 targets**
 >
 > Kof não expõe `Thread`, `Runnable` nem `CompletableFuture`: a intenção é
 > `spawn` (rode em paralelo) e `await` (espere o resultado). JVM usa virtual

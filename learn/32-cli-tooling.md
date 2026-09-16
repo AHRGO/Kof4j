@@ -56,9 +56,9 @@ OS: linux
 Arch: x86_64
 Target: linux-x86_64
 JVM: Eclipse Adoptium 25.0.4 (embedded)
-Compiler: 0.3.22-beta
-Runtime: 0.3.22-beta
-Stdlib: 0.3.22-beta
+Compiler: 0.4.0-beta
+Runtime: 0.4.0-beta
+Stdlib: 0.4.0-beta
 Targets: jvm, native, js (alpha)
 LSP: available
 Editor support: available

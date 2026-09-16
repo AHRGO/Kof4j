@@ -150,7 +150,7 @@ Whenever a feature changes:
 
 ## Current state of the project
 
-The project is at 0.3.22-beta, functional:
+The project is at 0.4.0-beta, functional:
 
 **Works today:**
 - Complete frontend: lexer, parser, `SemanticAnalyzer` (type checking + nullability `String?`)

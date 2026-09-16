@@ -46,7 +46,7 @@ Kof IR (backend-agnostic, KofOperation)
  * real riscv64 (02/09, pure asm, qemu); aarch64 placeholder
 ```
 
-## Current Features (0.3.22-beta)
+## Current Features (0.4.0-beta)
 
 | Feature | JVM | Native | JS | Notes |
 |---------|-----|--------|----|-------|
@@ -82,7 +82,7 @@ Kof IR (backend-agnostic, KofOperation)
 | KofScript `let` top-level + repl --watch --inspect | ✅ | ✅ | ✅ | KofScriptGlobals |
 | KofC C subset → ELF x86_64 | — | ✅ | — | native-only |
 
-## Planned / Unavailable (0.3.22-beta)
+## Planned / Unavailable (0.4.0-beta)
 
 | Feature | Status |
 |---------|--------|

@@ -81,7 +81,7 @@ Para valer sempre: **Variáveis de Ambiente → PATH → Novo** →
 ## Passo 3 — Conferir
 
 ```bash
-kof version        # ex.: kof 0.3.22-beta
+kof version        # ex.: kof 0.4.0-beta
 kof info           # ambiente completo (JVM embutida, targets, instalação)
 ```
 

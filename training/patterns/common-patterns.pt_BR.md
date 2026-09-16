@@ -86,7 +86,7 @@ try {
     println("Cleanup")
 }
 
-// Ausência como valor — String? (0.3.22-beta)
+// Ausência como valor — String? (0.4.0-beta)
 String? maybe = find("key")
 if (maybe != null) {
     println(maybe)

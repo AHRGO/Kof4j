@@ -29,7 +29,7 @@ try {
 
 - Fluxo normal de controle — use `if`.
 - Validação simples — `if` + retorno.
-- Ausência como valor (não erro) — use `String?` + `if (x != null)` (0.3.22-beta) em vez de sentinela. `Option<T>` genérico ainda é planned.
+- Ausência como valor (não erro) — use `String?` + `if (x != null)` (0.4.0-beta) em vez de sentinela. `Option<T>` genérico ainda é planned.
 
 ## BAD — sentinela
 

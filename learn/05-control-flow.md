@@ -2,7 +2,7 @@
 
 # 05 — Control Flow
 
-> **Status: implemented (JVM / Native / JS) — 0.3.22-beta**
+> **Status: implemented (JVM / Native / JS) — 0.4.0-beta**
 >
 > `if/else`, `while`, `for`, `for-in`, `switch`, `break/continue` work on the three targets. Pattern matching (`case String s`, `Point(x,y)`) see chapter 15.
 
@@ -72,7 +72,7 @@ switch (dia) {
 > **is not needed** inside `switch`. Use `break`/`continue` only in
 > loops. If-expr is the preferred form for conditional values:
 > `var x = if (c) a else b`. When the `switch` produces a value, use the
-> **expression** form (SYN001, 0.3.22-beta): `var r = switch (dia) { case 1 -> "seg";
+> **expression** form (SYN001, 0.4.0-beta): `var r = switch (dia) { case 1 -> "seg";
 > default -> "outro" }` — no `break`, no block scope, `default`
 > required. Switch with patterns (type pattern / destructuring) see chapter
 > 15.

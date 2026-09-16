@@ -111,7 +111,7 @@ Para strings com acentos/emoji os valores divergem (`"Olá".length` = 4 no Nativ
 `docs/backend-parity.md`): use `length` para tamanho bruto; não assuma contagem
 de caracteres quando o target importa.
 
-## Null safety (0.3.22-beta)
+## Null safety (0.4.0-beta)
 
 ```kof
 String? s = mapOf("k", "abc").get("k")   // null chega ao T? via API (= null literal é SEM048)
@@ -133,4 +133,4 @@ if (s != null) {
 
 ## Anti-patterns relacionados
 
-- `sentinel-values.md` — use `String?` em vez de `""` para "não encontrado" (0.3.22-beta)
+- `sentinel-values.md` — use `String?` em vez de `""` para "não encontrado" (0.4.0-beta)

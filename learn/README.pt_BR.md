@@ -149,11 +149,11 @@ Consulte também `training/` para corpus estruturado de conhecimento Kof.
 | 39 | Standard Library (math/strings/encoding/uuid/validation/time) | ✅ (4 targets; gates FLT/NAT-STR01) |
 
 Kof está em fase de consolidação. O compilador é funcional com backends JVM,
-Native (x86-64 free-list), Native.risc, Native.arm, KofJS e KofC (0.3.22-beta).
+Native (x86-64 free-list), Native.risc, Native.arm, KofJS e KofC (0.4.0-beta).
 
 **Testes:** 805
 
-**O que funciona hoje (0.3.22-beta — set 2026 — `jvm/native/native.risc/native.arm/js/kofc`):**
+**O que funciona hoje (0.4.0-beta — set 2026 — `jvm/native/native.risc/native.arm/js/kofc`):**
 - Frontend completo (lexer, parser, type system, semântica) — `intention->Kof->frontend->IR->backend->runtime`
 - Seis targets: JVM (ASM), Native x86-64 (free-list GC), Native.risc, Native.arm, KofJS (GraalJS) e KofC (C subset nativo-only)
 - Classes, records, herança, interfaces, virtual dispatch, generics (erasure), imports `a.b.C` fix (largeproj)

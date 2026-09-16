@@ -59,7 +59,7 @@ kof-<v>-<system>/
 ├── tooling/           consumption conventions per editor
 ├── editor/            official TextMate grammar
 ├── docs/              compact documentation
-└── VERSION            installation version (e.g.: 0.3.22-beta)
+└── VERSION            installation version (e.g.: 0.4.0-beta)
 ```
 
 ## Installation (step by step — Linux, example)
