@@ -2,7 +2,7 @@
 
 # Status da Especificação
 
-**Versão:** 0.3.0-beta · **Data:** 06/09/2026
+**Versão:** 0.4.0-beta · **Data:** 06/09/2026
 
 Classificação de cada feature da linguagem. **Nada aqui é "estável" por
 cortesia** — Stable exige   (regra 0.2.6-beta) **e** teste

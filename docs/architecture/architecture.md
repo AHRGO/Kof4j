@@ -7,7 +7,7 @@
 ## Status: Accepted
 
 **Last updated:** September 13, 2026
-**Version:** 0.3.0-beta
+**Version:** 0.4.0-beta
 
 > **Visual improvement 13/09 (issue #109):** the ASCII diagrams of this ADR
 > (Pipeline, Type Representation, IR, backends and stdlib dispatch) became
@@ -28,7 +28,7 @@
  > and aarch64 is translated from riscv64 (`translateRiscvToAarch64`); (b) **KofC**
  > does not consume Kof's IR (C subset → ELF); **KofScript consumes the SAME
  > frontend** (lexer→parser→AST→IR) and executes the optimized IR in the interpreter
- > (direct execution target, 0.3.0-beta); (c) the IR is a **linear stack
+ > (direct execution target, 0.4.0-beta); (c) the IR is a **linear stack
  > machine** (30 ops), not a "tree". See SG-E1/SG-E3 in
  > [`specification-gaps.md`](../bugs-and-gaps/specification-gaps.md).
 
@@ -247,7 +247,7 @@ Runtime functions (x86-64, `NativeRuntime.java:1`):
 
 KofScript is a **direct execution target**: pure Kof executed by the
 IR interpreter, with no compilation step and no JVM fork
-(0.3.0-beta). **It is not JavaScript** — `let`/`const`/`async`/`fn` do not
+(0.4.0-beta). **It is not JavaScript** — `let`/`const`/`async`/`fn` do not
 exist; they fail with the normal Kof parser diagnostic.
 
 ```bash

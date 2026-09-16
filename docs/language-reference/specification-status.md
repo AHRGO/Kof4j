@@ -2,7 +2,7 @@
 
 # Specification Status
 
-**Version:** 0.3.0-beta · **Date:** 06/09/2026
+**Version:** 0.4.0-beta · **Date:** 06/09/2026
 
 Classification of each language feature. **Nothing here is "stable" out of
 courtesy** — Stable requires   (rule 0.2.6-beta) **and** a test
