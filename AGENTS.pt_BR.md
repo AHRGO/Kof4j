@@ -725,7 +725,7 @@ pronta.
 > completa) provam. **Nenhum agente pode quebrar comportamento que já funciona.**
 
 1. **Zero regressão.** Nenhum commit pode fazer um teste existente passar a
-   falhar. A suíte completa (`mvn test`, hoje **1636** nos 4 módulos — ver
+   falhar. A suíte completa (`mvn test`, hoje **2182** nos 4 módulos — ver
    §"Loop de verificação" para o comando com o flag de failure.ignore) é **gate de merge** —
    mudança que não mantém tudo verde não entra. Exceção única: mudança de
    contrato **deliberada**, com bump de versão + docs atualizados + migração.
@@ -1083,9 +1083,9 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > ele, o Maven é fail-fast por módulo: qualquer falha em **kof-compiler aborta
 > o reactor** e **kof-script, kof-c-compiler e kof-cli nunca rodam** — você
 > acha que validou tudo mas só viu o primeiro módulo. O total real com o flag
-> é **1636 testes** (compiler 1464 + script 31 + kof-c 5 + cli 136, medição
-> 13/09 — cresce com cada commit): **0 falhas** (13 erros = só `node` ausente
-> no host, ambientais). O §149 JS (`KofRandomTest.randomStringJs`/`randomShapeJs`,
+> é **2182 testes** (compiler 1885 + script 38 + kof-c 7 + cli 252, medição
+> 16/09 — cresce com cada commit): **0 falhas / 0 erros** (node agora presente
+> no host da medição — o antigo "13 erros = node ausente" não se aplica mais). O §149 JS (`KofRandomTest.randomStringJs`/`randomShapeJs`,
 > regressão do fix §147 no `JsIfThrowElse`) foi **CORRIGIDO 13/09** — a raiz era
 > o parser consumir o label de início do `while` seguinte a um assert/if-throw
 > como fim do else (ver `known-bugs.md §149`).
@@ -1093,19 +1093,20 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > `kof_static_java_lang_System_out` no link) foram **CORRIDAS 09/09** — com
 > qemu os cross agora PASSAM (`NativeRiscv64E2ETest`/`NativeAarch64E2ETest`
 > 42/42 cada; prova no `known-bugs.md §59` + gate 12/09). Qualquer falha que
-> não seja dos 13 erros de `node` ausente é SUA. Antes de commitar, confira os
+> não seja de uma guarda ambiental documentada é SUA. Antes de commitar, confira os
 > reports POR MÓDULO
 > (`grep -rl FAILURE */target/surefire-reports/*.txt`).
 > (Lição registrada 08/09: sessões inteiras citaram "suíte 1085/59" sem os
 > módulos finais terem rodado.)
 >
-> **Os números mudam com qemu no ambiente:** sem qemu, os 84 cross
+> **Os números mudam com qemu no ambiente:** sem qemu (host da medição de
+> 16/09 — sem toolchain cruzada), os 84 cross
 > (2×42, `NativeRiscv64/Aarch64E2ETest`) são **skipados** pelo guard
-> (`4408eb6`) + 5 de BD externo → `~1547/0/~89-skip` (estimado — a medição
-> abaixo é de host COM toolchain). Com qemu, **tudo executa** — `1636/0/5-skip`
-> (os 5 = MySQL/Mongo/Postgres externos; medido 13/09). Estado correto HOJE:
-> **0 falhas** nos dois cenários (o §149 JS foi corrigido 13/09); os 13 erros
-> são só `node` ausente. O que importa continua sendo nenhum FAILURE fora
+> (`4408eb6`) + os outros guards de toolchain/BD externo → `2182/0/190-skip`
+> (MEDIDO 16/09). Com qemu, **tudo executa** — os 84 cross rodam
+> verdes e o total fica `2182` com a contagem de skip caindo para o
+> resíduo externo de BD/ambiente `node`. Estado correto HOJE:
+> **0 falhas / 0 erros** nos dois cenários (o §149 JS foi corrigido 13/09). O que importa continua sendo nenhum FAILURE fora
 > deles e das guardas.
 
 Para validar um snippet isolado (ex.: confirmar se um idiom compila),

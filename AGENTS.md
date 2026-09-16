@@ -726,7 +726,7 @@ ready.
 > suite) prove. **No agent may break behavior that already works.**
 
 1. **Zero regression.** No commit may make an existing test start to
-   fail. The full suite (`mvn test`, today **1636** across the 4 modules — see
+   fail. The full suite (`mvn test`, today **2182** across the 4 modules — see
    §"Verification loop" for the command with the failure.ignore flag) is a **merge gate** —
    a change that doesn't keep everything green doesn't get in. Single exception: a **deliberate**
    contract change, with a version bump + updated docs + migration.
@@ -1084,9 +1084,9 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > it, Maven is fail-fast per module: any failure in **kof-compiler aborts
 > the reactor** and **kof-script, kof-c-compiler and kof-cli never run** — you
 > think you validated everything but only saw the first module. The real total with the flag
-> is **1636 tests** (compiler 1464 + script 31 + kof-c 5 + cli 136, measurement
-> 09/13 — grows with each commit): **0 failures** (13 errors = only `node` missing
-> on the host, environmental). The §149 JS (`KofRandomTest.randomStringJs`/`randomShapeJs`,
+> is **2182 tests** (compiler 1885 + script 38 + kof-c 7 + cli 252, measurement
+> 16/09 — grows with each commit): **0 failures / 0 errors** (node now present on
+> the measuring host — the old "13 errors = node missing" no longer applies). The §149 JS (`KofRandomTest.randomStringJs`/`randomShapeJs`,
 > regression of the §147 fix in `JsIfThrowElse`) was **FIXED 09/13** — the root was
 > the parser consuming the start label of the `while` following an assert/if-throw
 > as the end of the else (see `known-bugs.md §149`).
@@ -1094,19 +1094,20 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > `kof_static_java_lang_System_out` at link) were **RUN 09/09** — with
 > qemu the cross now PASS (`NativeRiscv64E2ETest`/`NativeAarch64E2ETest`
 > 42/42 each; proof in `known-bugs.md §59` + gate 09/12). Any failure that
-> isn't one of the 13 missing-`node` errors is YOURS. Before committing, check the
+> isn't one of the documented environmental guards is YOURS. Before committing, check the
 > reports PER MODULE
 > (`grep -rl FAILURE */target/surefire-reports/*.txt`).
 > (Lesson recorded 09/08: entire sessions cited "suite 1085/59" without the
 > final modules having run.)
 >
-> **The numbers change with qemu in the environment:** without qemu, the 84 cross
+> **The numbers change with qemu in the environment:** without qemu (host of the
+> 16/09 measurement — no cross toolchain), the 84 cross
 > (2×42, `NativeRiscv64/Aarch64E2ETest`) are **skipped** by the guard
-> (`4408eb6`) + 5 external DB → `~1547/0/~89-skip` (estimated — the measurement
-> below is from a host WITH toolchain). With qemu, **everything executes** — `1636/0/5-skip`
-> (the 5 = external MySQL/Mongo/Postgres; measured 09/13). Correct state TODAY:
-> **0 failures** in both scenarios (the §149 JS was fixed 09/13); the 13 errors
-> are only missing `node`. What matters remains no FAILURE outside
+> (`4408eb6`) + the other toolchain/external-DB guards → `2182/0/190-skip`
+> (MEASURED 16/09). With qemu, **everything executes** — the 84 cross run
+> green and the total stays `2182` with the skip count dropping to the
+> external-DB/`node`-env residual. Correct state TODAY:
+> **0 failures / 0 errors** in both scenarios (the §149 JS was fixed 09/13). What matters remains no FAILURE outside
 > them and the guards.
 
 To validate an isolated snippet (e.g., confirm whether an idiom compiles),
