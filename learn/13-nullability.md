@@ -22,8 +22,9 @@ System.out.println(nome.length());  // NullPointerException!
 
 ```kf
 String nome = "Mel"           // cannot be null
-String? apelido = null        // can be null
+String? apelido = findNickname()  // can be null — null arrives via API,
 var outro: String? = "Kof"    // annotated form (also valid)
+                              // NEVER via `= null` (SEM048 since 10/09)
 ```
 
 ## Narrowing: `if (x != null)`
