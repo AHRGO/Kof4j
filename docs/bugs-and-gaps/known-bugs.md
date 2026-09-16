@@ -15,6 +15,7 @@
 > | **§255 🔴 OPEN 15/09 (lane development `.18`)** | `KofDbE2ETest.crossNativeSqliteNowCompiles` hard-fails on hosts without cross `libsqlite3` (missing `assumeTrue` guard; COMP001 `riscv64-ld: -lsqlite3` not found). |
 > | **§256 🟡 PARTIAL 16/09 (lane development `.18`)** | CONC001 closure left 2 reds on clean tip (worktree `4af4356f`): ~~`learn/18-concurrency.md` gaps cell desynced (guard)~~ **face (a) ✅ CLOSED 16/09 by lane docs/development `192.168.100.22` (`dd2c7fcb` — `ConcurrencyGapsDocTest` 3/3 green)** + riscv64 `poll(b)` returns 0 after selectAny scan (aarch agrees) — face (b) OPEN. PRE-EXISTING, not §257. |
 > | **§258 🔴 OPEN 16/09 (lane `.18`; #774 CLOSED by `.17`)** | CodeQL gate: **#773** `java/comparison-with-wider-type` (`i < n`, int vs long) `KofJsRunner.listValues` (DB001 fatia A `3e55df51`, owner `.18` — bound check, precedent `d6eaae0c`) still RED (alert at **:525**, not :510; DB001 unit closed `eb9140cb` so the "live conflict" rationale expired — fix unblocked for `.18`, see section UPDATE 16/09 ~07:00); **#774** `java/relative-path-command` `DepsTransitiveTest` FIXED 16/09 by `2a60b426` (`.17`: `mvnOnPath()` removed, reuses `Deps.mvnAvailable()`); bypass `CODEQL_GATE_SKIP=1` + cause declared meanwhile. |
+> | **§259 🔴 OPEN 16/09 (lane native/compiler `.17`/`.18`)** | Native `http.timeout`/`http.retry`/`http.circuit` compile OK but are **pure silent no-ops** (`NativeHttpCore.java:369-380` = bare `ret`; riscv/aarch `NativeRiscvHttpCore.java:317-324`); `KofHttp.supportedOn` returns `true` for every target, so the user believes retry/circuit are active (R6/rule 5). Docs cited a **phantom `HTTP003`** ("not silent: debug syserr") that no module emits; `HTTP002` exists only as a literal and its branch is dead (see section) — no HTTP gap code is emitted today. Found + docs corrected by lane bugs-and-gaps `.15`; catalogued, fix direction = emit a real compile-time gap code on `NATIVE*` (WEB-split precedent) or implement in asm. |
 > | **§257 ✅ FIXED 15/09 (lane compiler `192.168.100.17`)** | `static final String` runtime-text literals = javac ConstantValue inlining → false red on incremental build (`validationBrJs`); 77 fields de-`final` + `RuntimeConstantInliningGuardTest` (ASM, ConstantValue) locks it. |
 > | **§173 ✅ FIXED 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `++`/`--`/compound on `Long`/`Double`/`Float` + increment of an array ELEMENT: JVM VerifyError (literal `INT 1` in a 2-slot binary, 1-slot `DUP`, `arraystore` without `[array,index]`), Native core dump, Script `NoSuchElementException`, JS `stack underflow`/`KofDup2`. 4 targets; Q4 hunt 13/09 (over §167). Proof: `BackendParityTest.parityIncrementWideTypesAndArrayElement` + `KofInterpreterParityTest.incrementWideTypesAndArrayElement` + cell `increment` 4/4. |
 > | **§174 ✅ FIXED 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `return`/`throw` inside an `if` inside the `try`: JVM/Native/Script correct, KofJS aborted with `COMP002 unexpected KofCatchStart` (the `JsIfThrowElse.parseElse` consumed the endLabel of the enclosing try when treating the unconditional `then` as if-else). Fix without contract/IR change (`isTryEndLabel` guard). Proof: `CoreRegressionE2ETest.returnInsideIfInsideTryJs`. |
@@ -9058,3 +9059,49 @@ the user's — a compile-time diagnostic is the goal (rule 6).
    with the full gate output. Pointer: lane development `.18` (DB001, author of
    `3e55df51`) for #773 (#774 already closed by `.17` in `2a60b426`).
    Related: §256 (same lane's CONC001), `d6eaae0c` (same-rule precedent fix).
+
+### §259 — Native `http.timeout`/`http.retry`/`http.circuit` are SILENT no-ops (compile OK, `ret` only) and the docs cited a phantom `HTTP003` code the compiler never emits
+
+- **Found 16/09 by lane bugs-and-gaps `192.168.100.15`**, during the doc↔code
+  gap-code sweep (WEB002 drift follow-up): `ecosystem-coverage.md:270` claimed
+  the Native retry/timeout/circuit knob was a "gap `HTTP003` — not silent:
+  debug `syserr`". Neither half is true in the code:
+  - `HTTP003` **does not exist** — grep over
+    `kof-compiler`/`kof-runtime`/`kof-cli`/`kof-script` returns zero `HTTP003`.
+    The only HTTP code that exists as a literal is `HTTP002`
+    (`KofHttp.java:58`, `ExpressionHttpCallLowerer.java:28`) — but it too is
+    **currently unreachable**: `KofHttp.supportedOn(...)` always returns `true`
+    (`KofHttp.java:53-55`) and `KofHttp.gapCode()` has no callers, so the
+    `HTTP002` error branch (`ExpressionHttpCallLowerer.java:19-30`) is dead. In
+    other words: **no HTTP gap code is emitted at all today**, which is exactly
+    why the no-op configurators go unnoticed.
+  - The three configurators are **pure silent no-ops**: `NativeHttpCore.java:369-380`
+    emits `kof_http_timeout_set`/`kof_http_retry_set`/`kof_http_circuit_set` as
+    bare `ret` (same on riscv/aarch64: `NativeRiscvHttpCore.java:317-324`), with
+    no `syserr`/stderr write anywhere in the native HTTP sources.
+- **Why it is a Q7/R6 defect:** `http.retry(3)` on Native compiles clean and then
+  does nothing — the user believes retries/circuit-breaker are active when they
+  are not. Rule 5 (cross-target parity) + R6 (never silent): the honest forms
+  are a compile-time gap code on `NATIVE*` (like the WEB split) or a real
+  runtime implementation — never a silent accept.
+- **Repro (no toolchain needed — static):**
+  `grep -n 'kof_http_retry_set' kof-compiler/src/main/java/dev/kof/compiler/nat/NativeHttpCore.java`
+  → the symbol body is a lone `ret`; `grep -rn 'HTTP003' kof-compiler kof-runtime`
+  → empty; `grep -rn 'HTTP002"' kof-compiler/src/main/java` → only the two
+  declarations above, no reachable emit path.
+- **Fix direction (NOT done here):** either (a) add a dedicated compile-time gap
+  code for the no-op configurators on `NATIVE*` (rename the docs' phantom
+  `HTTP003` into a real emitted code, mirroring `KofWeb.gapCode`'s per-function
+  split) or (b) implement timeout/retry/circuit in the native HTTP asm. Owner
+  lane is the compiler/native lane (`.17`/`.18`); NOT this lane (rule 6 — the
+  choice between "honest gap" and "implement" is a scope decision, and the
+  affected files are the native HTTP backend). Recorded so the phantom code
+  does not keep spreading through the corpus.
+- **Docs corrected in this unit (EN+PT):** `ecosystem-coverage.md:270` no longer
+  cites `HTTP003`/"not silent: debug syserr" — it now says the native knobs are
+  pure silent no-ops; `backend-parity.md:93` likewise (phantom `HTTP003` → §259
+  pointer).
+- **Status:** 🔴 OPEN 16/09 — catalogued by lane bugs-and-gaps `192.168.100.15`.
+  Pointer: native/compiler lane (`.17`/`.18`). Related: §258 (same sweep),
+  WEB002/WEB004/WEB003 (the per-function gap-code split precedent this should
+  follow).

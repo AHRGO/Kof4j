@@ -267,7 +267,7 @@ Legenda nas colunas de target: `y` = suportado, `~` = parcial, `–` = não.
 |-----------|-----|-----|--------|----|-------|------|
 | HTTP integrations | ✅ `kof.http` client (3 targets — Native asm HTTP/1.1) | y | y | y | KofHttpE2ETest | stdlib/http.md |
 | file adapters | `DONE` (kof.io) | y | y | y | IoE2ETest | stdlib/IO.md |
-| retry / timeout / circuit | ✅ `kof.http` `retry`/`timeout`/`circuit` (JVM+JS, 30/08); Native aceita como no-op (gap HTTP003 — não silencioso: debug `syserr`) | y | no-op | y | KofHttpResilienceE2ETest | stdlib/http.md |
+| retry / timeout / circuit | ✅ `kof.http` `retry`/`timeout`/`circuit` (JVM+JS, 30/08); Native aceita como no-op SILENCIOSO (compila OK, `ret` puro — ver §259; `HTTP002` é o único código HTTP Native emitido) | y | no-op | y | KofHttpResilienceE2ETest | stdlib/http.md |
 | circuit breaker / bulkhead | ✅ circuit breaker `kof.http` (30/08, 30s window, fail-fast); bulkhead `PLANNED` | y | – HTTP002 | y | KofHttpResilienceE2ETest | stdlib/http.md |
 | idempotency | `PLANNED` | — | — | — | — | — |
 

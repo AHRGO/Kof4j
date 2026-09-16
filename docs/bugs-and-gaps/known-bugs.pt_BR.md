@@ -15,6 +15,7 @@
 > | **§255 🔴 ABERTO 15/09 (lane development `.18`)** | `KofDbE2ETest.crossNativeSqliteNowCompiles` falha duro em hosts sem `libsqlite3` cross (falta guard `assumeTrue`; COMP001 `riscv64-ld: -lsqlite3` não encontrado). |
 > | **§256 🟡 PARCIAL 16/09 (lane development `.18`)** | fechamento CONC001 deixou 2 vermelhos no tip limpo (worktree `4af4356f`): ~~célula de gaps de `learn/18-concurrency.md` dessincronizada (guard)~~ **face (a) ✅ FECHADA 16/09 pela lane docs/development `192.168.100.22` (`dd2c7fcb` — `ConcurrencyGapsDocTest` 3/3 verde)** + riscv64 `poll(b)` retorna 0 após scan do selectAny (aarch casa) — face (b) ABERTA. PRÉ-EXISTENTE, não §257. |
 > | **§258 🔴 ABERTO 16/09 (lane `.18`; #774 FECHADO pela `.17`)** | Gate CodeQL: **#773** `java/comparison-with-wider-type` (`i < n`, int vs long) `KofJsRunner.listValues` (DB001 fatia A `3e55df51`, dona `.18` — bound check, precedente `d6eaae0c`) segue VERMELHO (alerta em **:525**, não :510; a unidade DB001 fechou em `eb9140cb`, logo a justificativa "conflito vivo" expirou — conserto desbloqueado para a `.18`, ver UPDATE 16/09 ~07:00 na seção); **#774** `java/relative-path-command` em `DepsTransitiveTest` CORRIGIDO 16/09 por `2a60b426` (`.17`: `mvnOnPath()` removido, reusa `Deps.mvnAvailable()`); bypass `CODEQL_GATE_SKIP=1` + causa declarada enquanto. |
+> | **§259 🔴 ABERTO 16/09 (lane native/compiler `.17`/`.18`)** | `http.timeout`/`http.retry`/`http.circuit` no Native compilam OK mas são **puros no-ops silenciosos** (`NativeHttpCore.java:369-380` = `ret` puro; riscv/aarch `NativeRiscvHttpCore.java:317-324`); `KofHttp.supportedOn` devolve `true` para todo target, então o usuário acredita que retry/circuit estão ativos (R6/regra 5). Os docs citavam um **`HTTP003` fantasma** ("não silencioso: debug syserr") que nenhum módulo emite; `HTTP002` existe só como literal e seu ramo é morto (ver seção) — nenhum gap code HTTP é emitido hoje. Achado + docs corrigidos pela lane bugs-and-gaps `.15`; catalogado, direção do conserto = emitir um código de gap real em compile-time no `NATIVE*` (precedente do split WEB) ou implementar em asm. |
 > | **§257 ✅ CORRIGIDO 15/09 (lane compiler `192.168.100.17`)** | literais `static final String` de texto-de-runtime = inlining ConstantValue do javac → falso vermelho em build incremental (`validationBrJs`); 77 campos de-`final` + `RuntimeConstantInliningGuardTest` (ASM, ConstantValue) trava. |
 > | **§173 ✅ CORRIGIDO 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `++`/`--`/compound em `Long`/`Double`/`Float` + incremento de ELEMENTO de array: JVM VerifyError (literal `INT 1` em binário de 2 slots, `DUP` de 1 slot, `arraystore` sem `[array,index]`), Native core dump, Script `NoSuchElementException`, JS `stack underflow`/`KofDup2`. 4 targets; caça Q4 13/09 (sobre o §167). Prova: `BackendParityTest.parityIncrementWideTypesAndArrayElement` + `KofInterpreterParityTest.incrementWideTypesAndArrayElement` + célula `increment` 4/4. |
 > | **§174 ✅ CORRIGIDO 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `return`/`throw` dentro de um `if` dentro do `try`: JVM/Native/Script corretos, KofJS abortava com `COMP002 unexpected KofCatchStart` (o `JsIfThrowElse.parseElse` consumia o endLabel do try envolvente ao tratar o `then` incondicional como if-else). Fix sem mudança de contrato/IR (guarda `isTryEndLabel`). Prova: `CoreRegressionE2ETest.returnInsideIfInsideTryJs`. |
@@ -8939,3 +8940,51 @@ usuário — diagnostic em compile-time é a meta (regra 6).
   `.18` (DB001, autora de `3e55df51`) pelo #773 (#774 já fechado pela `.17` em
   `2a60b426`). Relacionado: §256 (CONC001 da mesma lane), `d6eaae0c` (conserto
   precedente da mesma regra).
+
+### §259 — `http.timeout`/`http.retry`/`http.circuit` no Native são no-ops SILENCIOSOS (compila OK, só `ret`) e os docs citavam um código `HTTP003` fantasma que o compilador nunca emite
+
+- **Achado 16/09 pela lane bugs-and-gaps `192.168.100.15`**, durante a varredura
+  de gap-code doc↔código (desdobramento do drift WEB002):
+  `ecosystem-coverage.md:270` afirmava que o knob retry/timeout/circuit do Native
+  era um "gap `HTTP003` — não silencioso: debug `syserr`". Nenhuma das duas
+  metades é verdadeira no código:
+  - `HTTP003` **não existe** — grep em
+    `kof-compiler`/`kof-runtime`/`kof-cli`/`kof-script` devolve zero `HTTP003`.
+    O único código HTTP que existe como literal é `HTTP002`
+    (`KofHttp.java:58`, `ExpressionHttpCallLowerer.java:28`) — mas ele também é
+    **inalcançável hoje**: `KofHttp.supportedOn(...)` sempre devolve `true`
+    (`KofHttp.java:53-55`) e `KofHttp.gapCode()` não tem chamadores, então o
+    ramo de erro `HTTP002` (`ExpressionHttpCallLowerer.java:19-30`) é morto. Ou
+    seja: **nenhum gap code HTTP é emitido hoje**, e é exatamente por isso que
+    os configuradores no-op passam despercebidos.
+  - Os três configuradores são **puros no-ops silenciosos**:
+    `NativeHttpCore.java:369-380` emite
+    `kof_http_timeout_set`/`kof_http_retry_set`/`kof_http_circuit_set` como
+    `ret` puro (idem em riscv/aarch64: `NativeRiscvHttpCore.java:317-324`), sem
+    nenhuma escrita `syserr`/stderr nos fontes HTTP nativos.
+- **Por que é defeito Q7/R6:** `http.retry(3)` no Native compila limpo e depois
+  não faz nada — o usuário acredita que retry/circuit-breaker estão ativos quando
+  não estão. Regra 5 (paridade cross-target) + R6 (nunca silêncio): as formas
+  honestas são um código de gap em compile-time no `NATIVE*` (como o split do
+  WEB) ou uma implementação real de runtime — nunca um aceite silencioso.
+- **Repro (sem toolchain — estático):**
+  `grep -n 'kof_http_retry_set' kof-compiler/src/main/java/dev/kof/compiler/nat/NativeHttpCore.java`
+  → o corpo do símbolo é um `ret` solitário; `grep -rn 'HTTP003' kof-compiler kof-runtime`
+  → vazio; `grep -rn 'HTTP002"' kof-compiler/src/main/java` → só as duas
+  declarações acima, sem caminho de emissão alcançável.
+- **Direção do conserto (NÃO feita aqui):** ou (a) adicionar um código de gap
+  dedicado em compile-time para os configuradores no-op no `NATIVE*` (renomear o
+  `HTTP003` fantasma dos docs num código realmente emitido, espelhando o split
+  por função do `KofWeb.gapCode`) ou (b) implementar timeout/retry/circuit no asm
+  HTTP nativo. A lane dona é a lane compiler/native (`.17`/`.18`); NÃO esta lane
+  (regra 6 — a escolha entre "gap honesto" e "implementar" é decisão de escopo, e
+  os arquivos afetados são o backend HTTP nativo). Registrado para o código
+  fantasma não continuar se espalhando pelo corpus.
+- **Docs corrigidos nesta unidade (EN+PT):** `ecosystem-coverage.md:270` não cita
+  mais `HTTP003`/"não silencioso: debug syserr" — agora diz que os knobs nativos
+  são puros no-ops silenciosos; `backend-parity.md:93` idem (phantom `HTTP003` →
+  ponteiro §259).
+- **Estado:** 🔴 ABERTO 16/09 — catalogado pela lane bugs-and-gaps `192.168.100.15`.
+  Ponteiro: lane native/compiler (`.17`/`.18`). Relacionado: §258 (mesma varredura),
+  WEB002/WEB004/WEB003 (o precedente de split de gap-code por função que este
+  deveria seguir).
