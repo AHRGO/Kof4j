@@ -219,8 +219,9 @@ public final class Decompile {
             sb.append("record ").append(simpleName);
             var tps = BytecodeRecords.typeParams(ir.classSignature);
             if (!tps.isEmpty()) sb.append('<').append(String.join(", ", tps)).append('>');
-            if (!rec.interfaces().isEmpty())
-                sb.append(" implements ").append(String.join(", ", rec.interfaces()));
+            // #325: a forma Kof valida e `record Nome(comps) implements I` —
+            // os COMPONENTES vao ANTES do implements (nao a ordem javac, que
+            // era emitida aqui e dependia do furo do parser antigo).
             sb.append('(');
             for (int k = 0; k < comps.size(); k++) {
                 if (k > 0) sb.append(", ");
@@ -232,7 +233,10 @@ public final class Decompile {
                 recordSignatureUses(fieldTypeTree(f.descriptor, f.signature), scope);
                 sb.append(ctype).append(' ').append(f.name);
             }
-            sb.append(")\n\n");
+            sb.append(')');
+            if (!rec.interfaces().isEmpty())
+                sb.append(" implements ").append(String.join(", ", rec.interfaces()));
+            sb.append("\n\n");
             if (scope != null) {
                 var lines = new StringBuilder();
                 for (String imp : scope.usedImports()) lines.append("import ").append(imp).append('\n');
