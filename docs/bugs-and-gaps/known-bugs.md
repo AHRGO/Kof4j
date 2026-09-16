@@ -9441,7 +9441,23 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   gate spawn_count==0 atual, (B) ligar sempre apos o parser-fix,
   (C) manter OFF / feature-flag). Medicao nova (com fix) do custo:
   rodar ArtifactSizeTest com o trigger ligado no outro turno ANTES de
-  propor — o numero antigo (+19.7%) pode ter caido com o parser-fix.).
+  propor — o numero antigo (+19.7%) pode ter caido com o parser-fix.
+- **DADO DA RE-MEDICAO (16/09 ~23:50, trigger ad-hoc + parser-fix,
+  ArtifactSizeTest): 38976B vs. baseline 32520B = +19.8%** (gate 5%
+  estoura, como antes — o custo e o CODIGO DO COLETOR linkado no binario,
+  NAO o parser; o fix numerico nao mexe no tamanho). Ou seja: ligar o
+  gatilho permanente custa +20% no artefato x86 hello (37->~38 syms,
+  coletor mark+sweep+free-list inteiro). SYMS de `kof_gc_*`/
+  `kof_main_stack_bottom` entram. OPcoes p/ a mantenedora (RULE 6 — nao
+  e decisao minha): (A) LIGAR com o gate spawn_count==0 atual + subir a
+  baseline do ArtifactSizeTest x86 p/ ~39KB/+19.8% (precedente riscv
+  G-4 18->24 syms aceito como "price of reachable collector"); (B) ligar
+  SEMPRE (sem gate) — NAO recomendado, o gate protege a fase de boot;
+  (C) manter OFF (comportamento atual = mmap, zero custo de tamanho, GC
+  so manual via kof_gc_collect_now ja exposto). A causa FUNCIONAL esta
+  resolvida nas duas frentes (G-6b mark + parser e667791f); o que resta e
+  APENAS a ligadura do gatilho = trade-off tamanho-vs-colecao-automatica
+  = decisao de produto da mantenedora, documentada aqui com o numero.).
 - **HIPÓTESE DE SCRATCH REFUTADA (16/09, leitura de código):** .Lkfs_pd
   (RuntimeStringParseFp) nao aloca nada e nao usa buffer — os unicos
   acessos a memoria sao `movzbl 24(%rbx,%rN)` (leitura do payload do
