@@ -209,14 +209,17 @@ helpers.
 > `NativeRiscv64E2ETest` and `NativeAarch64E2ETest` are entirely
 > conditioned by `Assumptions.assumeTrue(...)` on the cross toolchain
 > (`riscv64-linux-gnu-as`, `riscv64-linux-gnu-ld`, `qemu-riscv64`) — without
-> it, **the 66 proofs of those two classes skip silently**. Execution of
+> it, the cross proofs of those two classes (2×42 = 84 in the 16/09
+> measurement; grows with each commit) **skip silently**. Execution of
 > 11/09 on a machine without the toolchain: JVM, Native x86_64 and JS passed
 > (`SpawnE2ETest` 10/10, `KofAwaitTest` 8/8, `KofConcurrency2Test` 29/29
 > with 1 qemu skip, `ConcurrencyGapsDocTest` 3/3), and riscv/aarch
 > skipped 33/33 each. Therefore the `✅` of that column means *"proven
-> where the toolchain exists"*, not *"proven"*. Installing `qemu-user` and the
-> cross assemblers on CI is what would close that gap — on the GitHub
-> runners `sudo apt-get` works without a password (`ci.yml:41` already does that).
+> where the toolchain exists"*, not *"proven"*. **That gap is closed on CI:**
+> the `cross-native` job (`ci.yml`) installs the cross binutils, libc and
+> `qemu-user-static` and runs both suites under qemu — a green job there is
+> real cross-parity proof, not a masked skip. On a local machine without the
+> toolchain the `assumeTrue` guard still applies (honest skip, 42+42).
 
 On JS the model is
 single-threaded, but truly concurrent over the event loop: `spawn`

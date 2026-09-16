@@ -210,14 +210,18 @@ helpers.
 > `NativeRiscv64E2ETest` e `NativeAarch64E2ETest` são inteiramente
 > condicionados por `Assumptions.assumeTrue(...)` ao toolchain cruzado
 > (`riscv64-linux-gnu-as`, `riscv64-linux-gnu-ld`, `qemu-riscv64`) — sem
-> ele, **as 66 provas dessas duas classes pulam em silêncio**. Execução de
+> ele, as provas cross dessas duas classes (2×42 = 84 na medição de
+> 16/09; cresce a cada commit) **pulam em silêncio**. Execução de
 > 11/09 numa máquina sem o toolchain: JVM, Native x86_64 e JS passaram
 > (`SpawnE2ETest` 10/10, `KofAwaitTest` 8/8, `KofConcurrency2Test` 29/29
 > com 1 skip de qemu, `ConcurrencyGapsDocTest` 3/3), e riscv/aarch
 > pularam 33/33 cada. Portanto o `✅` dessa coluna significa *"provado
-> onde o toolchain existe"*, não *"provado"*. Instalar `qemu-user` e os
-> assemblers cruzados no CI é o que fecharia essa lacuna — nos runners do
-> GitHub o `sudo apt-get` funciona sem senha (`ci.yml:41` já faz isso).
+> onde o toolchain existe"*, não *"provado"*. **Essa lacuna está fechada
+> na CI:** o job `cross-native` (`ci.yml`) instala as binutils cruzadas, a
+> libc e o `qemu-user-static` e roda as duas suítes sob qemu — um job verde
+> ali é prova real de paridade cross, não um skip maquiado. Numa máquina
+> local sem o toolchain, o guard `assumeTrue` continua valendo (skip
+> honesto, 42+42).
 
 No JS o modelo é
 single-threaded, mas concorrente de verdade sobre o event-loop: `spawn`
