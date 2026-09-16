@@ -831,8 +831,12 @@ Int g(Int x, Int y) { return x + y }         // JVM oracle): signature differs
 var x = 10              // mutable
 val y = 20              // immutable
 String nome = "Mel"
-String? nome2 = null    // nullability: TYPE-FIRST form (idiomatic in the corpus)
-var idade: Int? = null  // nullability: ANNOTATED form (also valid)
+String? nome2 = find(key)   // nullability: TYPE-FIRST form (idiomatic in the corpus)
+var idade: Int? = findAge() // nullability: ANNOTATED form (also valid)
+// ⚠️ `= null` literal is REJECTED since 10/09 (SEM048, maintainer decision
+// behind SG-008/D-NULL-INTENT): `null` only reaches a `T?` via API
+// (map.get, readLine, a function returning `T?` with `return null`) —
+// then `if (x != null)` narrows.
 ```
 
 ### Classes (mutable → fields + `constructor(...)`) and the case `class X(...)` = record

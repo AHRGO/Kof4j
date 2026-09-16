@@ -830,8 +830,12 @@ Int g(Int x, Int y) { return x + y }         // oracle JVM): assinatura difere
 var x = 10              // mutável
 val y = 20              // imutável
 String nome = "Mel"
-String? nome2 = null    // nullability: forma TIPO-PRIMEIRO (idiomática no corpus)
-var idade: Int? = null  // nullability: forma ANOTADA (também válida)
+String? nome2 = find(key)  // nullability: forma TIPO-PRIMEIRO (idiomática no corpus)
+var idade: Int? = findAge() // nullability: forma ANOTADA (também válida)
+// ⚠️ literal `= null` é REJEITADO desde 10/09 (SEM048, decisão da mantenedora
+// por trás da SG-008/D-NULL-INTENT): `null` só chega a um `T?` via API
+// (map.get, readLine, função que retorna `T?` com `return null`) —
+// aí `if (x != null)` faz o narrowing.
 ```
 
 ### Classes (mutable → campos + `constructor(...)`) e o caso `class X(...)` = record
