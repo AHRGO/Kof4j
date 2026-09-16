@@ -9412,7 +9412,36 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   completo = G-6(a)). Teste exato: re-injetar o trigger com
   push/pop de r10-r15 ao redor do bloco collect_now+search e rodar FP
   1..21: se verdissimo, a frente 2 fecha com o trigger COMPLETO (sem
-  stack-map, sem backend!).
+  stack-map, sem backend!
+- **RESOLUCAO DA CAUSA-2 (16/09 ~23:00, `e667791f`) — NAO ERA GC:** trace
+  stepi-gdb do parse '2.5' na linha 21 + o repro de 3 linhas LEAK.kf
+  (loop `s.toDouble(); t.toFloat()` SEM NENHUM alloc, sem trigger, sem
+  GC) provam: `riscv64/aarch` e x86 imprimiam STALE/STALE/STALE no OLD
+  code e OK/OK/OK com o fix. Raiz: `.Lpdd_num` zerava
+  r13/r10/r11/ecx/edx mas NAO r8 (exp-neg) nem r9 (expoente);
+  `.Lpdd_build` le `cmpq $320,%r9` incondicional — o parse ANTERIOR com
+  expoente ("1e-400": r9=400, r8=1) vazava no parse SEM expoente
+  seguinte ("2.5" desvia p/ hugeexp -> 0.0). Sem trigger, o syscall mmap
+  do proximo alloc clobberava r9=0 = bug LATENTE escondido por sorte; o
+  trigger trocou mmap por free-list e o bug virou observavel. Fix:
+  `xorl %r8d; xorq %r9` no .Lpdd_num (x86) + `li s8,0; li s5,0` no
+  .Lpd_num (espelho riscv). Aarch64 NAO tem parser proprio (usa libc
+  strtod via RtB45/link-on-demand — correto por delegacao, R9; confirmado
+  16/09: nenhum pd_num em NativeAarch64*). EVIDENCIA Q0 no golden: KofStringParseTest
+  ganhou vetores de leak (3 iteracoes, strings internadas fora do loop =
+  zero alloc) e o x86 FALHA sem o fix (re-confirmado com stash). A
+  suíte completa rodou: unicas falhas = §181 castSaturation (pre-existente,
+  lane nat). CONSEQUENCIA PARA A FRENTE 2: a causa-1 (G-6b) e a causa-2
+  (parser) estao AMBAS fechadas — o gatilho auto-collect COM o fix do
+  parser passou em KofStringParseTest 8/8 + NativeX86GcMarkScopeTest 3/3 +
+  KofGcE2ETest 3/3 + KofSupervisorE2ETest 15/15 (medido neste turno com
+  o trigger ad-hoc). Ligar o gatilho PERMANENTEMENTE = mudanca de
+  contrato (alloc passa a coletar; custo de artifact +19.7% medido antes
+  do fix) = RULE 6: decidir com a mantenedora (opcoes: (A) ligar com o
+  gate spawn_count==0 atual, (B) ligar sempre apos o parser-fix,
+  (C) manter OFF / feature-flag). Medicao nova (com fix) do custo:
+  rodar ArtifactSizeTest com o trigger ligado no outro turno ANTES de
+  propor — o numero antigo (+19.7%) pode ter caido com o parser-fix.).
 - **HIPÓTESE DE SCRATCH REFUTADA (16/09, leitura de código):** .Lkfs_pd
   (RuntimeStringParseFp) nao aloca nada e nao usa buffer — os unicos
   acessos a memoria sao `movzbl 24(%rbx,%rN)` (leitura do payload do
