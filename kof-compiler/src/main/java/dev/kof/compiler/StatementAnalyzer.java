@@ -158,6 +158,34 @@ public final class StatementAnalyzer {
                                     + " (variable '" + vds.name() + "')",
                             "SEM048");
                 }
+                // §253 face A (16/09): `var id = time.interval(…, () -> cancel(id))` —
+                // o inicializador contém lambda que LÊ a var em declaração. Hoje o
+                // escopo só define `id` DEPOIS de tipar o inicializador → SEM011 nos
+                // 3 alvos. Pre-define UNKNOWN ANTES da inferência (a inferência do
+                // corpo não depende do tipo do self-ref); o tipo real entra no
+                // define final. Nos alvos NATIVE* a leitura do handle capturado
+                // SIGSEGVa (face B, §253/nat) — abrir lá converteria SEM011 (alto)
+                // em crash: gate SEM092 em compile-time, nunca runtime silencioso (R6).
+                boolean selfCapture = vds.initializer() != null
+                        && CompilerCaptureScanner.lambdaExprReadsName(vds.initializer(), vds.name());
+                boolean selfPredefined = false;
+                if (selfCapture && sa.target().isNative()) {
+                    if (sa.diagnostics() != null) {
+                        sa.diagnostics().error("", 0, 0, 0,
+                                "self-referencing initializer var inside a lambda "
+                                        + "(var '" + vds.name() + "') is not available on the "
+                                        + sa.target() + " target yet — captured handle read in the "
+                                        + "job crashes the worker (§253 face B, native lane); use "
+                                        + "the shadow-handle idiom (var id=\"\"; job reads id after "
+                                        + "assignment; id = time.interval(…) after) (SEM092)",
+                                "SEM092");
+                    }
+                } else if (selfCapture && !scope.hasLocal(vds.name())) {
+                    scope.define(new SymbolTable.LocalVariableSymbol(vds.name(),
+                            Type.UnknownType.UNKNOWN, 0,
+                            vds.type() != null && "val".equals(vds.type())));
+                    selfPredefined = true;
+                }
                 // "val"/"var" são palavras-chave de mutabilidade, não tipos —
                 // o tipo real vem do initializer (ou do type explícito após ':').
                 if (vds.type() != null && !vds.type().isEmpty()
@@ -179,7 +207,8 @@ public final class StatementAnalyzer {
                     varType = Type.UnknownType.UNKNOWN;
                 }
                 // SC5: redeclaração no MESMO escopo é erro
-                if (scope.hasLocal(vds.name()) && sa.diagnostics() != null) {
+                if (scope.hasLocal(vds.name()) && sa.diagnostics() != null
+                        && !selfPredefined) {
                     sa.diagnostics().error("", 0, 0, 0,
                             "variable '" + vds.name() + "' is already defined in this scope",
                             "SEM024");

@@ -14,6 +14,17 @@ public class SemanticAnalyzer {
     /** Classpath externo (android.jar etc.) para resolver membros de classes fora da IR. */
     private ExternalClasspath externalTypes;
 
+    /** §253 face A: o alvo determina o gate SEM092 (native tem face B em runtime). */
+    private Target target = Target.JVM;
+
+    void setTarget(Target t) {
+        this.target = t;
+    }
+
+    Target target() {
+        return target;
+    }
+
     void setExternalTypes(ExternalClasspath cp) {
         this.externalTypes = cp;
     }
