@@ -349,7 +349,7 @@ http.circuit(0)       // desliga o circuito e zera o estado de falhas
 
 A paridade JVM+JS é exercida por `KofHttpResilienceE2ETest` (3/3): retry
 recupera num endpoint flaky (2×500 → 200), circuito abre após falha e
-fail-fast, e `circuit(0)` recupera. Native reporta `HTTP002`.
+fail-fast, e `circuit(0)` recupera. O Native aceita `timeout`/`retry`/`circuit` como **no-ops silenciosos** — o ramo do diagnóstico `HTTP002` está morto hoje (`KofHttp.supportedOn` sempre devolve `true`; §259).
 
 ---
 

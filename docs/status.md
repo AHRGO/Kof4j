@@ -363,7 +363,7 @@ Bool positivo(Int x) = x > 0         // expression body
 | kof.http (`http.get/post/put/delete/status` + `timeout/retry/circuit`) | ✅ | ✅ **HTTP002 closed 03/09** (`NativeHttpRuntime` — HTTP/1.1 asm, IPv4; https → clear throw; retry/circuit no-op) | ✅ (27/08 JS via `Java HttpClient` interop; 30/08 retry/circuit parity) |
 | kof.config (env, files, profiles, typed) | ✅ | ✅ (own asm) | ✅ |
 | kof.mq (publish/subscribe/queue) | ✅ | ✅ (01/09, pub/sub + in-process queues, asm) | ✅ |
-| kof.log (`log.info/warn/error/debug`) | ✅ | ✅ (asm; UTC, no JSON) | LOG001 |
+| kof.log (`log.info/warn/error/debug`) | ✅ | ✅ (asm; UTC, no JSON) | ✅ (LOG001 closed 01/09) |
 | kof.security (passwords, crypto, JWT, secrets) | ✅ | ✅ | ✅ |
 | kof.db (JDBC, query<T>, transaction) + native SQLite | ✅ | ✅ (SQLite + transaction; MySQL WIP; **riscv64/aarch64 ✅ 15/09** link-by-use libsqlite3) | ✅ 16/09 (untyped `connect/execute/query/close/transaction` na ponte GraalJS — `DB002` p/ `query<T>` tipado) |
 | kof.orm (entity, CRUD, where, migrate, MongoDB) | ✅ | ORM001 | ORM001 |
@@ -544,8 +544,8 @@ log.error("failed: " + message)
   stderr; level via `KOF_LOG_LEVEL` (debug < info < warn < error < off).
 - Works inside web handlers. **Native**: own asm implementation
   (Hinnant civil date, own env scan) — UTC timestamp and `KOF_LOG_JSON`
-  with no effect for now; JS reports `LOG001`. Docs: `docs/stdlib/stdlib-logging.md`
-  (`KofLogE2ETest` 10 JVM + `NativeLogE2ETest` 7).
+  with no effect for now; JS `console.*` (LOG001 closed 01/09). Docs: `docs/stdlib/stdlib-logging.md`
+  (`KofLogE2ETest` incl. JS + `NativeLogE2ETest` 7).
 
 ### Language tests (G6 — structured suite)
 
