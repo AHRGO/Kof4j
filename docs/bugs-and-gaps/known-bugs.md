@@ -9385,6 +9385,26 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   (ex. kof_float_buf), enraiza-lo em kof_heap_root_start (fix de 1 linha,
   raiz permanente como a tabela de intern) ou move-lo p/ .bss; (2) se nao
   houver, diff do xmm0 na linha 20 sem/trigger p/ isolar o que muda.
+- **HIPÓTESE DE SCRATCH REFUTADA (16/09, leitura de código):** .Lkfs_pd
+  (RuntimeStringParseFp) nao aloca nada e nao usa buffer — os unicos
+  acessos a memoria sao `movzbl 24(%rbx,%rN)` (leitura do payload do
+  proprio String, 30 casos) + `movsd .Lpdd_nan/inf(%rip)` (constantes) +
+  1 `call` no caminho de throw. NAO ha scratch heap p/ enraizar. E
+  kill2.gdb (condicional payload=='2.5' no sweep) = ZERO hits: o bloco da
+  String '2.5' NUNCA e morto. Isolamento restante: o que muda o resultado
+  do parse entre trigger/no-trigger e ou (a) o bloco '2.5' devolvido da
+  free-list com size/flags inconsistentes (escrita do literal invade
+  vizinho, ou le length errado — o parser usa movl 16(%rbx) = size-field!),
+  ou (b) o box do RESULTADO. EXPERIMENTO: no toFloat-entry da linha 20,
+  x/4gx rbx (header+payload) e comparar com no-trigger; se 16(%rbx)
+  (length) divergir — causa achada = free-list re-usa bloco com size
+  antigo, e o fix e no sweep/alloc (truncar/consistir o size no insert).
+  O parser le o length do HEADER — um bloco '2.5' (len 3) re-usado de um
+  slot que era Bool-box (len 8? 1?) com size-field NAO atualizado = parser
+  le bytes alem do conteudo = float errado = 'false'. VERIFICAR se o
+  kof_string_from_literal atualiza o size-field do bloco vindo da free-list
+  (provavelmente sim; o suspeito e o sweep gravar um garbage-size no
+  free-list-link que o alloc copia pro header).
 
 
 
