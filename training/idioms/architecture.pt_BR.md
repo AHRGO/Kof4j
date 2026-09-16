@@ -139,7 +139,8 @@ var todos   = User.query(db) {}                    // → kof_orm_all
 - O campo do `where` é **validado em compile-time** (campo inexistente →
   `ORM003`; entidade desconhecida → `ORM002`; target sem ORM → `ORM001`).
 - **Não** é uma mini-linguagem: é açúcar sobre `kof_orm_*` existentes.
-- `orderBy`/múltiplos `where` pendentes (evolução).
+- `orderBy name asc|desc` e múltiplas cláusulas `where` (AND) funcionam desde
+  02/09 (`a5b25cc3` — `KofOrmE2ETest.queryDslFiltersOrdersAndLimits`/`queryDslMultipleWhereAnds`).
 
 Lifecycle (01/09):
 
