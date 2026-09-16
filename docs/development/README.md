@@ -166,8 +166,10 @@ scalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 | File | Trigger to fall in here |
 |---|---|
 | `PLAN-UNIVERSAL-PLATFORM.md` | decision + SYSTEMS closed (R12) |
+| `PLAN-MULTIPARADIGMA.md` (multiparadigm / functional pipelines + declarative queries; 16/09, design only) | first functional increment begins (SYSTEMS closed, R12) |
 | `scoped-resources-plan.md` (RAII TIER 2.4) | bump with `using`/`resource_scope` decided |
 | `PLAN-BAREMETAL-BOOT.md` (native → bare-metal/bootable; 15/09 maintainer directive) | SYSTEMS closed (R12) + first face (HAL seam) authorized |
+| `DECOMPILER.md`, `TRANSLATOR.md`, `LEGACY_MIGRATION.md` (legacy migration platform) | **back here 15/09 — DEPRIORITIZED by the maintainer**; promotion needs her explicit decision |
 
 *(DD-STDLIB-01 `planning-stdlib-array-returns.md` **left `future/` 13/09** — decision 6a ratified, implemented and moved to `docs/stdlib/DD-STDLIB-01-array-returns.md`.)*
 
