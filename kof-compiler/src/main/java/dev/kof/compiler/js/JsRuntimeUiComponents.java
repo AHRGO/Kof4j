@@ -12,7 +12,6 @@ public final class JsRuntimeUiComponents {
             // and events. Rendering is KofJS; the framework (not the widget)
             // owns the tree, the render schedule and the lifecycle.
             const kofUiComponents = new Map();
-            let kofUiSeq = 0;
             let kofNodeSeq = 0;
             let kofUiFlushing = false;
             const kofUiDirty = [];
@@ -123,7 +122,13 @@ public final class JsRuntimeUiComponents {
             }
 
             export function kofUiComponentNew(state) {
-                const id = ++kofUiSeq;
+                // §261: componentes e nós DOM compartilham UMA sequencia de handles
+                // (kofNodeSeq). Antes o component tinha contador proprio (kofUiSeq),
+                // entao window.bind(id) achava um node com o MESMO id de um component
+                // (busca component-first) e montava o objeto errado — o widget real
+                // ficava orfao no __kofNodes (medido no Chrome 16/09, ReconfigButton
+                // nunca aparecia quando um Slider era montado antes dele).
+                const id = ++kofNodeSeq;
                 const c = {
                     id: id, name: "c" + id, state: state,
                     view: null, mounted: false, disposed: false,

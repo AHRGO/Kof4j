@@ -16,6 +16,7 @@
 > | **§256 🟡 PARCIAL 16/09 (lane development `.18`)** | fechamento CONC001 deixou 2 vermelhos no tip limpo (worktree `4af4356f`): ~~célula de gaps de `learn/18-concurrency.md` dessincronizada (guard)~~ **face (a) ✅ FECHADA 16/09 pela lane docs/development `192.168.100.22` (`dd2c7fcb` — `ConcurrencyGapsDocTest` 3/3 verde)** + riscv64 `poll(b)` retorna 0 após scan do selectAny (aarch casa) — face (b) ABERTA. PRÉ-EXISTENTE, não §257. |
 > | **§258 🔴 ABERTO 16/09 (lane `.18`; #774 FECHADO, #775/#776/#777 ABERTOS 16/09)** | Gate CodeQL (4 abertos): **#773** `java/comparison-with-wider-type` (`i < n`, int vs long) `KofJsRunner.listValues` (DB001 fatia A `3e55df51`, dona `.18` — bound check, precedente `d6eaae0c`) segue VERMELHO (alerta em **:525**, não :510; a unidade DB001 fechou em `eb9140cb`, logo a justificativa "conflito vivo" expirou — conserto desbloqueado para a `.18`, ver UPDATE 16/09 ~07:00 na seção); **#774** `java/relative-path-command` em `DepsTransitiveTest` CORRIGIDO 16/09 por `2a60b426` (`.17`: `mvnOnPath()` removido, reusa `Deps.mvnAvailable()`); **#775** `java/relative-path-command` `NumericFormatterE2ETest:35` (dona `.22`, `78b733fa` — `java` relativo num oráculo de teste, consertar no arquivo como o #774) + **#776** `java/unused-parameter` `KofHttp.supportedOn:57` (= o guard morto do §259, dona `.15`/`.17`, `@SuppressWarnings` não respeitado pelo CodeQL — resolve quando o §259 ligar) + **#777** `java/uncaught-number-format-exception` em `KofWebJsE2ETest:302` (dona = lane SSE da mantenedora, `7cd69a7b` 16/09 — `Integer.parseInt(hex)` no helper de-chunk do teste sem catch; chunk-size malformado → NFE não capturada; conserto: envolver/validar como o guard `lineEnd < 0` acima); bypass `CODEQL_GATE_SKIP=1` + causa declarada enquanto. |
 > | **§259 🔴 ABERTO 16/09 (lane native/compiler `.17`/`.18`)** | `http.timeout`/`http.retry`/`http.circuit` no Native compilam OK mas são **puros no-ops silenciosos** (`NativeHttpCore.java:369-380` = `ret` puro; riscv/aarch `NativeRiscvHttpCore.java:317-324`); `KofHttp.supportedOn` devolve `true` para todo target, então o usuário acredita que retry/circuit estão ativos (R6/regra 5). Os docs citavam um **`HTTP003` fantasma** ("não silencioso: debug syserr") que nenhum módulo emite; `HTTP002` existe só como literal e seu ramo é morto (ver seção) — nenhum gap code HTTP é emitido hoje. Achado + docs corrigidos pela lane bugs-and-gaps `.15`; catalogado, direção do conserto = emitir um código de gap real em compile-time no `NATIVE*` (precedente do split WEB) ou implementar em asm. |
+> | **§261 ✅ CORRIGIDO 16/09 (lane development `.18`)** | `window.bind` no KofJS: Components e widgets DOM crus tiravam ids de handle de DOIS contadores SEPARADOS (`kofUiSeq` vs `kofNodeSeq`, ambos do 0); `kofUiWindowBind` resolve componentes PRIMEIRO → um Component criado antes de um widget cru roubava o id do widget e o widget não renderizava nada (órfão em `__kofNodes`). Achado via kof-ui-widgets (Slider+ReconfigButton no Chrome real). Conserto = um contador único compartilhado (`kofNodeSeq`). Prova: `KofJsBrowserE2ETest.componentAndRawWidgetIdsNeverCollide` (VERMELHO pré-fix, medido) + `scripts/browser-drag.mjs` da lib.
 > | **§257 ✅ CORRIGIDO 15/09 (lane compiler `192.168.100.17`)** | literais `static final String` de texto-de-runtime = inlining ConstantValue do javac → falso vermelho em build incremental (`validationBrJs`); 77 campos de-`final` + `RuntimeConstantInliningGuardTest` (ASM, ConstantValue) trava. |
 > | **§173 ✅ CORRIGIDO 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `++`/`--`/compound em `Long`/`Double`/`Float` + incremento de ELEMENTO de array: JVM VerifyError (literal `INT 1` em binário de 2 slots, `DUP` de 1 slot, `arraystore` sem `[array,index]`), Native core dump, Script `NoSuchElementException`, JS `stack underflow`/`KofDup2`. 4 targets; caça Q4 13/09 (sobre o §167). Prova: `BackendParityTest.parityIncrementWideTypesAndArrayElement` + `KofInterpreterParityTest.incrementWideTypesAndArrayElement` + célula `increment` 4/4. |
 > | **§174 ✅ CORRIGIDO 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `return`/`throw` dentro de um `if` dentro do `try`: JVM/Native/Script corretos, KofJS abortava com `COMP002 unexpected KofCatchStart` (o `JsIfThrowElse.parseElse` consumia o endLabel do try envolvente ao tratar o `then` incondicional como if-else). Fix sem mudança de contrato/IR (guarda `isTryEndLabel`). Prova: `CoreRegressionE2ETest.returnInsideIfInsideTryJs`. |
@@ -9017,3 +9018,50 @@ usuário — diagnostic em compile-time é a meta (regra 6).
   Ponteiro: lane native/compiler (`.17`/`.18`). Relacionado: §258 (mesma varredura),
   WEB002/WEB004/WEB003 (o precedente de split de gap-code por função que este
   deveria seguir).
+
+
+### §261 — `window.bind` no KofJS colide ids de Component com ids de nós de widget cru: um widget vinculado depois de um Component não renderiza nada
+
+- **Sintoma (medido 16/09 no Chrome real, achado pela biblioteca consumidora kof-ui-widgets):**
+  `main() { var comp = Component(0); comp.view(…); var raw = Label("widget-cru");
+  var w = Window(…); w.bind(comp); w.bind(raw); w.show() }` renderiza a view do
+  Component mas o `Label` cru NUNCA aparece no DOM (fica órfão em
+  `window.__kofNodes`, sem pai). Sem erro, sem aviso — silencioso (defeito R6).
+  O gatilho concreto: o `Slider` da lib (um `Component`) vinculado antes do
+  `ReconfigButton` (um `Button` cru) — o botão sumia.
+- **Causa raiz:** o runtime JS aloca handles de ui a partir de DOIS contadores
+  independentes que começam nos dois em 0: Components usavam `++kofUiSeq`
+  (`kofUiComponentNew` de `JsRuntimeUiComponents`) enquanto nós DOM usavam
+  `++kofNodeSeq` (`kofUiCreateNode` e vizinhos). O programa enxerga UM único
+  espaço de handles Int, e `kofUiWindowBind(id)` (e `kofUiComponentBind`)
+  resolvem `kofUiComponents.get(id)` PRIMEIRO, caindo em `__kofNodes[id]` só
+  depois — então o id 1 de component e o id 1 de node são o MESMO handle para
+  o binder. O primeiro bind consome o component; o segundo bind do id colidido
+  remonta o MESMO component (appendChild de quem já está lá é re-anexar no-op)
+  e o nó real fica órfão. Qualquer mistura de Components + widgets crus numa
+  janela pode disparar; quanto mais widgets criados, mais provável.
+- **Conserto (nesta unidade, só o runtime JS — `JsRuntimeUiComponents.java`):**
+  `kofUiComponentNew` agora tira do contador `kofNodeSeq` COMPARTILHADO
+  (`const id = ++kofNodeSeq`), tornando o espaço de ids component/node uma
+  única sequência disjunta; o contador morto `kofUiSeq` foi removido. Nenhum
+  outro consumidor de `kofUiSeq` existia (grep verificado; o nome cosmético
+  `"c" + id` mantém o comportamento). JVM/Native não são afetados (o
+  `window.bind` deles é contabilidade de árvore/no-op, sem corrida de resolução
+  de id).
+- **Repro (Q0, vermelho pré-fix — medido, depois re-introduzido para confirmar):**
+  `mvn -o -pl kof-compiler -am test
+  -Dtest='KofJsBrowserE2ETest#componentAndRawWidgetIdsNeverCollide'` → com o
+  código de dois contadores a asserção "widget cru órfão (§261)" FALHA no
+  Chrome real; com o contador compartilhado passa. Teste novo em
+  `KofJsBrowserE2ETest` (26/26 verde com Chrome presente).
+- **Prova no lado consumidor:** `scripts/browser-drag.mjs` da kof-ui-widgets —
+  Chrome real despachando `MouseEvent`s com bolha: arraste do Slider 20 → 70,
+  ReconfigButton `desligado → LIGADO → desligado` (2 cliques), zero exceções de
+  console. Antes deste conserto o ReconfigButton nem entrava no DOM, então o
+  oráculo de arraste/clique não tinha como vê-lo.
+- **Estado:** ✅ CORRIGIDO 16/09 (lane development `192.168.100.18`) —
+  `JsRuntimeUiComponents.java` + `KofJsBrowserE2ETest`; suíte completa do
+  compilador 1908/0/0/168. Relacionado: o host headless GraalJS usa o MESMO
+  bloco de runtime (slice registry), então os dois hosts ficam consertados
+  juntos por construção; o lado da lib (Slider/ReconfigButton + docs) é o
+  commit companheiro em `kof-ui-widgets`.

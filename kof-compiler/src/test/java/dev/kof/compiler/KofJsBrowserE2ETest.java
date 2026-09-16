@@ -206,6 +206,47 @@ class KofJsBrowserE2ETest {
     }
 
     @Test
+    void componentAndRawWidgetIdsNeverCollide(@TempDir Path tempDir) throws IOException {
+        // §261 (16/09, descoberto pela lib kof-ui-widgets): componentes e nós
+        // DOM tinham contadores de handle PROPRIOS a partir de 0, e
+        // window.bind(id) resolve componentes PRIMEIRO — então um Component
+        // criado antes de um widget cru colidia com o handle do widget e o
+        // bind montava o objeto errado (o widget ficava órfão em __kofNodes,
+        // nunca aparecia). Medido no Chrome com Slider+Button da lib.
+        Browser browser = findBrowser();
+        assumeTrue(browser != null, "nenhum browser real (Chrome/Chromium/Safari) — pulando E2E de browser");
+
+        String program = """
+            main() {
+                var comp = Component(0)
+                comp.view((s: Int) -> Label("componente-vivo"))
+                var raw = Label("widget-cru")
+                var w = Window("IdCollision")
+                w.bind(comp)
+                w.bind(raw)
+                w.show()
+            }
+            """;
+        Path source = tempDir.resolve("App.kf");
+        Files.writeString(source, program);
+
+        Path outDir = tempDir.resolve("out");
+        CompilationResult result = driver.compile(source, outDir, Target.JS);
+        assertTrue(result.success(), "compilação JS deve passar: " + result.diagnostics().getDiagnostics());
+
+        HttpServer server = serve(outDir);
+        int port = server.getAddress().getPort();
+        try {
+            String dom = browser.dump("http://127.0.0.1:" + port + "/index.html");
+            assertTrue(dom.contains("componente-vivo"), "component ausente no DOM: " + excerpt(dom));
+            assertTrue(dom.contains("widget-cru"),
+                    "widget cru órfão (colisão de id component/node — §261): " + excerpt(dom));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
     void inputTypeRendersInRealBrowserDom(@TempDir Path tempDir) throws IOException {
         Browser browser = findBrowser();
         assumeTrue(browser != null, "nenhum browser real (Chrome/Chromium/Safari) — pulando E2E de browser");

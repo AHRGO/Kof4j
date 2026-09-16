@@ -16,6 +16,7 @@
 > | **§256 🟡 PARTIAL 16/09 (lane development `.18`)** | CONC001 closure left 2 reds on clean tip (worktree `4af4356f`): ~~`learn/18-concurrency.md` gaps cell desynced (guard)~~ **face (a) ✅ CLOSED 16/09 by lane docs/development `192.168.100.22` (`dd2c7fcb` — `ConcurrencyGapsDocTest` 3/3 green)** + riscv64 `poll(b)` returns 0 after selectAny scan (aarch agrees) — face (b) OPEN. PRE-EXISTING, not §257. |
 > | **§258 🔴 OPEN 16/09 (lane `.18`; #774 CLOSED, #775/#776/#777 OPEN 16/09)** | CodeQL gate (4 open): **#773** `java/comparison-with-wider-type` (`i < n`, int vs long) `KofJsRunner.listValues` (DB001 fatia A `3e55df51`, owner `.18` — bound check, precedent `d6eaae0c`) still RED (alert at **:525**, not :510; DB001 unit closed `eb9140cb` so the "live conflict" rationale expired — fix unblocked for `.18`, see section UPDATE 16/09 ~07:00); **#774** `java/relative-path-command` `DepsTransitiveTest` FIXED 16/09 by `2a60b426` (`.17`: `mvnOnPath()` removed, reuses `Deps.mvnAvailable()`); **#775** `java/relative-path-command` `NumericFormatterE2ETest:35` (owner `.22`, `78b733fa` — relative `java` in a test oracle, fix in-file like #774) + **#776** `java/unused-parameter` `KofHttp.supportedOn:57` (= the dead guard of §259, owner `.15`/`.17`, `@SuppressWarnings` not honoured by CodeQL — resolves when §259 wires it) + **#777** `java/uncaught-number-format-exception` `KofWebJsE2ETest:302` (owner = maintainer SSE lane, `7cd69a7b` 16/09 — `Integer.parseInt(hex)` in the chunked-decode test helper with no catch; malformed chunk-size → uncaught NFE; fix: wrap/validate like the `lineEnd < 0` guard above it); bypass `CODEQL_GATE_SKIP=1` + cause declared meanwhile. |
 > | **§259 🔴 OPEN 16/09 (lane native/compiler `.17`/`.18`)** | Native `http.timeout`/`http.retry`/`http.circuit` compile OK but are **pure silent no-ops** (`NativeHttpCore.java:369-380` = bare `ret`; riscv/aarch `NativeRiscvHttpCore.java:317-324`); `KofHttp.supportedOn` returns `true` for every target, so the user believes retry/circuit are active (R6/rule 5). Docs cited a **phantom `HTTP003`** ("not silent: debug syserr") that no module emits; `HTTP002` exists only as a literal and its branch is dead (see section) — no HTTP gap code is emitted today. Found + docs corrected by lane bugs-and-gaps `.15`; catalogued, fix direction = emit a real compile-time gap code on `NATIVE*` (WEB-split precedent) or implement in asm. |
+> | **§261 ✅ FIXED 16/09 (lane development `.18`)** | KofJS `window.bind`: Components and raw DOM widgets drew handle ids from TWO separate counters (`kofUiSeq` vs `kofNodeSeq`, both from 0); `kofUiWindowBind` resolves components FIRST → a Component created before a raw widget stole the widget's id and the widget rendered nothing (orphan in `__kofNodes`). Found via kof-ui-widgets (Slider+ReconfigButton in real Chrome). Fix = one shared counter (`kofNodeSeq`). Proof: `KofJsBrowserE2ETest.componentAndRawWidgetIdsNeverCollide` (RED pre-fix, measured) + lib `scripts/browser-drag.mjs`.
 > | **§257 ✅ FIXED 15/09 (lane compiler `192.168.100.17`)** | `static final String` runtime-text literals = javac ConstantValue inlining → false red on incremental build (`validationBrJs`); 77 fields de-`final` + `RuntimeConstantInliningGuardTest` (ASM, ConstantValue) locks it. |
 > | **§173 ✅ FIXED 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `++`/`--`/compound on `Long`/`Double`/`Float` + increment of an array ELEMENT: JVM VerifyError (literal `INT 1` in a 2-slot binary, 1-slot `DUP`, `arraystore` without `[array,index]`), Native core dump, Script `NoSuchElementException`, JS `stack underflow`/`KofDup2`. 4 targets; Q4 hunt 13/09 (over §167). Proof: `BackendParityTest.parityIncrementWideTypesAndArrayElement` + `KofInterpreterParityTest.incrementWideTypesAndArrayElement` + cell `increment` 4/4. |
 > | **§174 ✅ FIXED 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `return`/`throw` inside an `if` inside the `try`: JVM/Native/Script correct, KofJS aborted with `COMP002 unexpected KofCatchStart` (the `JsIfThrowElse.parseElse` consumed the endLabel of the enclosing try when treating the unconditional `then` as if-else). Fix without contract/IR change (`isTryEndLabel` guard). Proof: `CoreRegressionE2ETest.returnInsideIfInsideTryJs`. |
@@ -9186,3 +9187,49 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   exposto e seguro quando chamado sem temporário vivo em registrador.
 - **Status:** 🔴 OPEN 16/09 — catalogued by lane compiler `192.168.100.17`
   (patch revertido na árvore; medições acima são o artefato).
+
+
+### §261 — KofJS `window.bind` collides Component ids with raw-widget node ids: a widget bound after a Component renders nothing
+
+- **Symptom (measured 16/09 in real Chrome, found by the consumer library kof-ui-widgets):**
+  `main() { var comp = Component(0); comp.view(…); var raw = Label("widget-cru");
+  var w = Window(…); w.bind(comp); w.bind(raw); w.show() }` renders the Component's
+  view but the raw `Label` NEVER appears in the DOM (it is an orphan in
+  `window.__kofNodes` with no parent). No error, no warning — silent (R6 defect).
+  The concrete trigger: the lib's `Slider` (a `Component`) bound before
+  `ReconfigButton` (a raw `Button`) — the button vanished.
+- **Root cause:** the JS runtime allocates ui handles from TWO independent
+  counters that both start at 0: Components used `++kofUiSeq`
+  (`JsRuntimeUiComponents.kofUiComponentNew`) while DOM nodes used
+  `++kofNodeSeq` (`kofUiCreateNode` and friends). A single Int handle space is
+  exposed to the program, and `kofUiWindowBind(id)` (and `kofUiComponentBind`)
+  resolve `kofUiComponents.get(id)` FIRST, falling back to `__kofNodes[id]` —
+  so component id 1 and node id 1 are the SAME handle to the binder. The first
+  bind consumes the component; the second bind of the colliding id re-mounts
+  the SAME component (appendChild is a no-op re-attach) and the real node is
+  left orphaned. Any mix of Components + raw widgets in one window can hit it;
+  the more widgets created, the likelier.
+- **Fix (this unit, JS runtime only — `JsRuntimeUiComponents.java`):**
+  `kofUiComponentNew` now draws from the SHARED `kofNodeSeq` counter
+  (`const id = ++kofNodeSeq`), making the component/node id space one disjoint
+  sequence; the dead `kofUiSeq` counter was removed. No other consumer of
+  `kofUiSeq` existed (grep verified; the cosmetic `"c" + id` name is unchanged
+  in behavior). JVM/Native are unaffected (their `window.bind` is tree
+  bookkeeping/no-op, no id resolution race).
+- **Repro (Q0, red pre-fix — measured, then reverted to confirm):**
+  `mvn -o -pl kof-compiler -am test
+  -Dtest='KofJsBrowserE2ETest#componentAndRawWidgetIdsNeverCollide'` → with the
+  two-counter code the assertion "widget cru órfão (§261)" FAILS on real
+  Chrome; with the shared counter it passes. New test added in
+  `KofJsBrowserE2ETest` (26/26 green with Chrome present).
+- **Consumer-side proof:** kof-ui-widgets `scripts/browser-drag.mjs` — real
+  Chrome dispatching bubbling `MouseEvent`s: Slider drag 20 → 70, ReconfigButton
+  `desligado → LIGADO → desligado` (2 clicks), zero console exceptions. Before
+  this fix the ReconfigButton never entered the DOM, so the drag/click oracle
+  could not even see it.
+- **Status:** ✅ FIXED 16/09 (lane development `192.168.100.18`) —
+  `JsRuntimeUiComponents.java` + `KofJsBrowserE2ETest`; full compiler suite
+  1908/0/0/168. Related: the headless host GraalJS uses the SAME runtime block
+  (slice registry), so both hosts are fixed together by construction; the lib
+  side (Slider/ReconfigButton + docs) is the companion commit in
+  `kof-ui-widgets`.
