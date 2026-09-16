@@ -101,6 +101,10 @@ public final class NativeRiscvAsm {
                 .append(NativeRiscvAsmRtB46.RISCV_RUNTIME_ASM_B_46)
                 // DB001 (15/09): runtime kof.db SQLite — port Db2/Db4/Db5 (gerado).
                 .append(NativeRiscvAsmRtB47.RISCV_RUNTIME_ASM_B_47)
+                // CONC001 (15/09): helpers de concorrência de alta ordem —
+                // done/poll/cancel/cancelled/selectAny/awaitTimeout (port
+                // RuntimeConcurrency; cancel por TID real via gettid+clone ctid).
+                .append(NativeRiscvAsmRtB48.RISCV_RUNTIME_ASM_B_48)
                 .toString();
     }
     static final String RISCV_MAPSET_ASM = runtimeMapset();

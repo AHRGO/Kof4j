@@ -41,7 +41,9 @@ public final class NativeRiscvSpawn {
         sb.append("""
             # ---- spawn/await riscv64 (NATIVE002-stdlib) ----
             .section .text
-            # handle: [typeId@0(i32) done@4(i32) result@8 stack@16] (32B)
+            # handle: [typeId@0(i32) done@4(i32) result@8 stack@16 stacktop@24
+            #          tid@32 cancelEntry@40 exc@48] (56B) — tid é gravado pelo
+            # KERNEL (clone ctid); cancelEntry/exc pelas fatias CONC001 (B48).
             # kof_spawn_result(task@a0) -> handle@a0
             .globl kof_spawn_result
             kof_spawn_result:
@@ -51,13 +53,16 @@ public final class NativeRiscvSpawn {
                 sd   s1, 8(sp)
                 sd   s2, 0(sp)
                 mv   s0, a0                 # task
-                li   a0, 32
+                li   a0, 56
                 call kof_alloc
                 mv   s1, a0                 # handle
                 li   t0, 2
                 sw   t0, 0(s1)              # typeId=2 (handle)
                 sw   zero, 4(s1)            # done=0
                 sd   zero, 8(s1)            # result=0
+                sd   zero, 32(s1)           # tid=0
+                sd   zero, 40(s1)           # cancelEntry=0
+                sd   zero, 48(s1)           # exc=0
                 # stack do worker: mmap(NULL, 1MB, RW, PRIVATE|ANON, -1, 0)
                 li   a0, 0
                 li   a1, 1048576
@@ -71,10 +76,12 @@ public final class NativeRiscvSpawn {
                 li   t1, 1048576
                 add  s2, a0, t1             # stack TOP
                 sd   s2, 24(s1)             # stack top no handle (filho lê)
-                # clone(flags, stack_top, ptid, tls, ctid) — filho herda s0,s1
+                # clone(flags, stack_top, ptid=&tid, tls=0, ctid=0) — filho
+                # herda s0,s1; o KERNEL grava o TID do filho em &handle->tid
+                # (ctid), que kof_cancel (B48) usa p/ achar a entry de flag.
                 li   a0, 0x3D0F00
                 mv   a1, s2
-                li   a2, 0
+                addi a2, s1, 32
                 li   a3, 0
                 li   a4, 0
                 li   a7, 220
@@ -119,18 +126,25 @@ public final class NativeRiscvSpawn {
             .globl kof_spawn
             kof_spawn:
                 j    kof_spawn_result
-            # trampoline: s0=task, s1=handle -> roda task.invoke(), marca done, wake
+            # trampoline: s0=task, s1=handle -> registra cancel slot (CONC001),
+            # roda task.invoke(), marca done, wake, remove o slot
             kof_spawn_trampoline:
-                addi sp, sp, -32
-                sd   ra, 24(sp)
-                sd   s0, 16(sp)
-                sd   s1, 8(sp)
+                addi sp, sp, -48
+                sd   ra, 40(sp)
+                sd   s0, 32(sp)
+                sd   s1, 24(sp)
+                # CONC001: registra (TID real, flag=0) e guarda a entry no
+                # handle->cancelEntry — kof_cancel/cancelled (B48) usam.
+                li   a7, 178                 # gettid
+                ecall
+                call kof_cancel_slot_insert
+                sd   a0, 40(s1)             # handle->cancelEntry
                 ld   t0, 8(s0)              # task vtable
                 ld   t0, 0(t0)              # vtable[0] = invoke
                 mv   a0, s0
                 jalr t0                     # a0 = resultado
-                ld   s0, 16(sp)             # invoke pode clobberar s-regs? não
-                ld   s1, 8(sp)              # (callee-saved), mas protege s0/s1
+                ld   s0, 32(sp)             # invoke pode clobberar s-regs? não
+                ld   s1, 24(sp)             # (callee-saved), mas protege s0/s1
                 sd   a0, 8(s1)              # handle->result
                 fence rw, rw                # ordena result antes de done (RVO)
                 li   t0, 1
@@ -140,8 +154,15 @@ public final class NativeRiscvSpawn {
                 li   a2, 1
                 li   a7, 98
                 ecall
-                ld   ra, 24(sp)
-                addi sp, sp, 32
+                # CONC001: slot volta a vazio (tid=0) sem tocar worker alheio
+                ld   t0, 40(s1)
+                beqz t0, .Lst_nocl
+                sd   zero, 0(t0)
+            .Lst_nocl:
+                ld   ra, 40(sp)
+                ld   s0, 32(sp)
+                ld   s1, 24(sp)
+                addi sp, sp, 48
                 ret
             # kof_await(handle@a0) -> result@a0 (futex wait em done)
             .globl kof_await

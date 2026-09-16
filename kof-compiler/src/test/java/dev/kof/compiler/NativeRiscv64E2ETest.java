@@ -43,6 +43,31 @@ class NativeRiscv64E2ETest {
                 "cross toolchain riscv64 + qemu ausente — pulando (NATIVE002)");
     }
 
+    /** Bridge p/ testes de outros pacotes (KofConcurrency2Test etc.):
+     *  toolchain + qemu presentes para a arch ("riscv64"/"aarch64")? */
+    static boolean hasToolchain(String arch) {
+        return has(arch + "-linux-gnu-as", arch + "-linux-gnu-ld", "qemu-" + arch);
+    }
+
+    /** Roda o binário sob qemu (QEMU_LD_PREFIX do sysroot resolvido) e
+     *  devolve o stdout normalizado; falha o teste em exit != 0. */
+    static String runQemu(String arch, Path binFile) throws IOException {
+        ProcessBuilder pb = qemu(arch, binFile);
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String output = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8)
+                .replace("\r\n", "\n").trim();
+        int ec;
+        try {
+            ec = p.waitFor();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("Interrupted while running " + arch + " binary", e);
+        }
+        assertEquals(0, ec, "Exit code should be 0, output: '" + output + "'");
+        return output;
+    }
+
     /** FLT001 (15/09): programas que imprimem FP linkam DINAMICAMENTE com a
      *  libc — o loader resolve-se em {@code <QEMU_LD_PREFIX>/lib/}. Escolhe o
      *  sysroot disponível (KOF_CROSS_SYSROOT > /tmp/opencode/x > sistema). */

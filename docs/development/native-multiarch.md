@@ -22,10 +22,13 @@
 > of 03/09 no longer describes the state, unknown ops give a gap code):**
 > `kof.db` → **DB001 CLOSED 15/09 on riscv64/aarch64** (link-by-use `libsqlite3` +
 > runtime `kof_db_*` in slices `RtB46/RtB47`; `KofDbE2ETest.crossNativeSqliteRoundtrip`
-> proves the full path under qemu on both arches; JS keeps `DB001`), `kof.security` crypto-heavy → **SECN000**, the 6
-> higher-order concurrency constructs (supervisor/`selectAny`
-> multi/cancel cross …) → **CONC001** (`spawn`/`await`/`sleep`/`interval`
-> GREEN on cross — gate #91 does not touch them), UI (`kof.ui`) **without any
+> proves the full path under qemu on both arches; JS keeps `DB001`), `kof.security` crypto-heavy → **SECN000**, the
+> higher-order concurrency `supervisor` → **OTP001** (EH chain is global not
+> TLS on the cross — per-worker catch §129 stays x86-only; `selectAny`/`done`/
+> `poll`/`cancel`/`cancelled`/`awaitTimeout` themselves **CLOSED 15/09**: slice
+> `RtB48` + spawn trampoline registering the cancel slot, TID real via
+> gettid(178) recorded by the kernel on the clone ctid,
+> `KofConcurrency2Test.crossNative*` under qemu both arches), UI (`kof.ui`) **without any
 > cross port** (no riscv/aarch test), `json.decode<List<Record>>` → **JSN004**
 > (pure asm has no reflection to materialize a record). **Honest consequence
 > TODAY:** a program with collection/HTTP/net/scalar-JSON/spawn/time/math **truly
@@ -38,8 +41,9 @@
 > conservative mark + G-4 sweep/collect DONE 15/09** (see the decomposition
 > below); G-5 aarch64 satisfied by G-4 (both arches run the sweep proof);
 > the collector (G-4) is what actually reclaims; (2) the
-> DB001 cross face CLOSED 15/09 (SQLite; JS keeps DB001) — remaining
-> SECN000/CONC001/JSN004 refusals; (3) FP-collection on cross
+> DB001 cross face CLOSED 15/09 (SQLite; JS keeps DB001) and the CONC001
+> helpers (selectAny/done/poll/cancel/cancelled/awaitTimeout) CLOSED 15/09
+> — remaining refusals: SECN000/OTP001/JSN004; (3) FP-collection on cross
 > (FLT001 CLOSED 15/09 — slice `RtB45`; §107 remaining face = record/nested `?`); (4) `backend-parity.md` per-arch columns
 > still to be separated; (5) cross CI does not exist (host-dependent toolchain) —
 > **face (5) CLOSED 12/09**: job `cross-native` in `.github/workflows/ci.yml`
