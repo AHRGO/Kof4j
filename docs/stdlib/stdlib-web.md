@@ -328,7 +328,7 @@ the stream is closed and the task cancelled.
 ## 5. Current limitations (Phase 1, 0.2.6-beta)
 
 - The `js` target supports the web stack base (`web.app()` + routes + context-fns with runtime: param/query/header/body/method/path/status/headerSet — `WEB001` fatia honestidade 16/09); residual gaps: `app.ws`/`app.sse` report `WEB003`/`WEB004` at compile-time; `kof.http` already works on JS via `Java HttpClient`.
-- The `native` target (`x86_64`/`riscv64`/`aarch64`) does not have a web server yet (`WEB002` TLS either).
+- The `native` target (`x86_64`/`riscv64`/`aarch64`) has had the web server base since 03/09 (`NativeWebRuntime.java`: accept/route/lambda/body, `KofWebNativeE2ETest` 4/4); residual: TLS `WEB002`, ws `WEB004`, sse `WEB003`, path params/keep-alive/`status()`/`headerSet()` `WEB001`.
 - `app.ws`/`app.sse` are JVM-only (Native/JS: `app.ws` → `WEB004`, `app.sse` → `WEB003` — reported per-function at compile-time).
 - `app.serveDir` (static files + Range 206/416) is JVM-only (Native/JS `WEB005`).
 - PR6 hardening (connection cap, `maxFrameBytes`/`maxMessageBytes` limits,
