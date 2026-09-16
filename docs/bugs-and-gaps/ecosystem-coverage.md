@@ -173,15 +173,15 @@ Legend in the target columns: `y` = supported, `~` = partial, `–` = no.
 
 | Capability | Kof | JVM | Native | JS | Tests | Docs |
 |-----------|-----|-----|--------|----|-------|------|
-| HTTP server | `web.app()` | y | – WEB002 | ✅ T1 (09/13) | KofWebE2ETest, KofWebJsE2ETest | stdlib/stdlib-web.md |
+| HTTP server | `web.app()` | y | ✅ base 03/09 | ✅ T1 (09/13) | KofWebE2ETest, KofWebJsE2ETest | stdlib/stdlib-web.md |
 | routing (path params, query, headers) | `app.get("/users/:id")` | y | – | ✅ T1 (09/13) | KofWebE2ETest, KofWebJsE2ETest | stdlib/stdlib-web.md |
 | REST verbs | get/post/put/delete/patch/options | y | – | ✅ get/post (T1) | KofWebE2ETest, KofWebJsE2ETest | stdlib/stdlib-web.md |
 | JSON body | automatic (Content-Type) | y | – | – | KofWebE2ETest | stdlib/stdlib-web.md |
 | middleware | `app.use` | y | – | – | KofWebE2ETest | stdlib/stdlib-web.md |
 | HTTP client | ✅ `kof.http` (get/post/put/delete/patch/options/status; 3 targets — Native via HTTP/1.1 asm, https/retry) | y | y (asm `NativeHttpRuntime`) | y (GraalJS `Java HttpClient` + fetch) | KofHttpE2ETest (6) + KofHttpResilienceE2ETest (3, JVM+JS) | stdlib/http.md |
 | typed path/query/body | `PLANNED` (today strings) | — | — | — | — | stdlib/stdlib-web.md |
-| custom status codes | ✅ `status(201, body)` (08/27) | y | – WEB002 | ✅ 03/09 (JS HttpServer) | KofWebE2ETest | stdlib/stdlib-web.md |
-| custom response headers | ✅ `headerSet("X","y")` (08/27) | y | – WEB002 | ✅ 03/09 (JS HttpServer) | KofWebE2ETest | stdlib/stdlib-web.md |
+| custom status codes | ✅ `status(201, body)` (08/27) | y | – WEB001 | – WEB001 | KofWebE2ETest | stdlib/stdlib-web.md |
+| custom response headers | ✅ `headerSet("X","y")` (08/27) | y | – WEB001 | – WEB001 | KofWebE2ETest | stdlib/stdlib-web.md |
 | cookies | `PLANNED` | — | — | — | — | development/roadmap.md |
 | multipart | `PLANNED` | — | — | — | — | — |
 | content negotiation | `PLANNED` | — | — | — | — | — |
