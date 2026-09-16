@@ -102,7 +102,7 @@ Para o backend nativo, Kof usa:
 
 ### Native runtime (0.2.0)
 
-Native usa **free-list GC** (`kof_free_head`, reuso `mmap`, mark-sweep pendente), `spawn` via **pthread** (31/08 — `CONC001` fechado), ponto flutuante **XMM real** (`vcvtsi2sd`/`mulsd`, `FLT001` fechado) e JSON completo (objetos/records/arrays — `JSN001/002/003` fechados). `kof_db` traz **SQLite nativo** e MySQL em progresso (wire protocol, auth scramble SHA-1). Nada disso vaza para o código Kof — é `intention->Kof->frontend->IR->backend->runtime`.
+Native usa **GC free-list com mark-sweep** (`kof_free_head` com reuso + `kof_gc_mark` conservador stack+bss + `kof_gc_sweep`, 03/09 — `KofGcE2ETest` 3/3; auto-collect na exaustão ainda PENDENTE — precisa de safe-points, §260), `spawn` via **pthread** (31/08 — `CONC001` fechado), ponto flutuante **XMM real** (`vcvtsi2sd`/`mulsd`, `FLT001` fechado) e JSON completo (objetos/records/arrays — `JSN001/002/003` fechados). `kof_db` traz **SQLite nativo** e MySQL em progresso (wire protocol, auth scramble SHA-1). Nada disso vaza para o código Kof — é `intention->Kof->frontend->IR->backend->runtime`.
 
 ### Compile-time > runtime
 
