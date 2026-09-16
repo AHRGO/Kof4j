@@ -167,8 +167,8 @@ Native (x86-64 free-list), Native.risc, Native.arm, KofJS and KofC backends (0.3
 
 
 **What is planned / real gaps:**
-- Target gaps: HTTP002 (HTTP client Native), SCHED001 (scheduler Native), PROC001 (process.spawn Native), ~~DB001 (db in JS)~~ ✅ 16/09, ORM001 (native/JS ORM), WEB002 (native web server), AND00x (Android Phase 2+) — ~~CONC003 (real async in JS)~~ ✅ 03/09
-- Complete mark-sweep GC on Native (today free-list)
+- Target gaps: HTTP002 (https + real DNS on Native — http/1.1 works 03/09; timeout/retry/circuit silent → §259), ~~SCHED001 (scheduler Native)~~ ✅ 31/08, PROC001 (process.spawn Native), ~~DB001 (db in JS)~~ ✅ 16/09, ORM001 (native/JS ORM), WEB002 (TLS on native web — server base 03/09), AND00x (Android Phase 2+) — ~~CONC003 (real async in JS)~~ ✅ 03/09
+- GC auto-collect on exhaustion on Native (mark-sweep landed 09/03; auto-collect needs safe-points — §260)
 - Complete native MySQL/MariaDB (wire protocol: SHA-1 auth scramble done; handshake, query and prepared statements missing)
 - `when` guards in pattern matching, deep flow analysis for `String?`
 - Complete hover/completion in the LSP, native Debugger (DWARF) and JS (source maps)

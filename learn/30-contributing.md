@@ -166,11 +166,11 @@ The project is at 0.3.22-beta, functional:
 - Tests: 810 (golden 16/16, integration 9/9)
 
 **In development:**
-- GC mark-sweep on Native (today free-list)
 - Full native MySQL/MariaDB (wire protocol: SHA-1 auth done)
 - Android Phase 2+ (today Phase 1: Maven project + APK, host Activity in Kof)
 - Multi-file modules (residual unified semantics)
-- Native scheduler (SCHED001)
+- GC auto-collect on exhaustion (mark-sweep landed 09/03; auto-collect needs
+  safe-points/root-map — `§260`); native scheduler CLOSED 08/31 (`SCHED001`)
 
 **Planned:**
 - Typed query DSL, connection pooling, ORM outside the JVM
