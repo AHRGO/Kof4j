@@ -942,6 +942,50 @@ esta decisão registrada; engenharia agendada para a fila futura.
 
 ---
 
+## D-DEV-PRIORITY — "Em desenvolvimento" é a prioridade absoluta de toda lane
+
+**Data:** 2026-09-16
+
+**Estado:** `ATIVO` (sobrepõe qualquer ordenação de preferência por lane)
+
+A regra da mantenedora (16/09, chat): **a prioridade total é completar o
+roadmap `Em desenvolvimento`** — todo agente, toda lane, todo re-trigger
+autônomo escolhe a próxima tarefa desta lista, em ordem, antes de qualquer
+outra coisa (outros gaps, outras filas, frentes novas). Catalogar e corrigir
+bugs seguem como sempre (o gate de qualidade nunca relaxa), mas a SELEÇÃO DE
+TAREFA segue as frentes abaixo.
+
+**As frentes (conforme declaradas pela mantenedora 16/09):**
+
+1. **Standard Library** — contratos em estabilização (a série S:
+   `PLAN-STDLIB-EXPANSION`; faces ainda abertas andam na fila por item).
+2. **GC auto-collect** — safe-points + mapa de raízes por frame.
+3. **Package manager além do MVP** — registry.
+4. **Debugger além do MVP JVM** — DAP via stdio já está no JVM; JS
+   source maps linha ✅; DWARF Native linha ✅ parcial — variáveis/expressões
+   e breakpoints nativos pendentes + ext. VS Code.
+5. **KofJS — a plataforma web no browser** — ES Modules via GraalJS; base do
+   servidor web ✅ (`HttpServer` + `KofJsWebQueue`); residual
+   ws/sse/TLS/path-params = **WEB001**.
+6. **kof.web no Native** — residual **WEB002**: TLS, path params,
+   keep-alive, ws/sse.
+7. **kof.db/orm no JS** — **DB001 FECHADO 16/09** (nao-tipado
+   `connect/execute/query/close/transaction` na ponte do host GraalJS —
+   `3e55df51`+`eb9140cb`); residual: `db.query<T>` tipado = `DB002`
+   (arquitetural: JS não emite bytecode JVM no classpath do host) +
+   `kof.orm` = `ORM001` (mesma parede; WASM planejado).
+
+**Relação com as outras regras:** esta decisão decide a **ordem**, não o que
+é **aceitável** — Q0–Q7, o freeze, a regra 6 e a regra dos três estados
+mantêm toda a sua força. Uma frente bloqueada (regra 6, outro dono
+`EM CURSO`, ou gate no estilo `§258`) é registrada e o agente pega a PRÓXIMA
+frente desta lista — a lista é a fila, não uma sugestão. A regra de prioridade
+do `AGENTS.md` (".md solto primeiro") e as camadas do roadmap §23 ficam
+subordinadas a esta decisão enquanto a lista de `Em desenvolvimento` tiver
+itens abertos.
+
+---
+
 # 4. Decisões rejeitadas ou substituídas
 
 Esta seção é histórica. Ela não define o comportamento atual.

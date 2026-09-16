@@ -1013,8 +1013,7 @@ fronts below.
    ws/sse/TLS/path-params = **WEB001**.
 6. **kof.web in Native** — residual **WEB002**: TLS, path params,
    keep-alive, ws/sse.
-7. **kof.db/orm in JS** — **DB001/ORM001** (WASM planned; the JS bridge
-   slice A landed in `3e55df51` — gate §258 must close it).
+7. **kof.db/orm in JS** — **DB001 CLOSED 16/09** (untyped `connect/execute/query/close/transaction` on the GraalJS-host bridge — `3e55df51`+`eb9140cb`); residual: typed `db.query<T>` = `DB002` (architectural: JS emits no JVM bytecode on the host classpath) + `kof.orm` = `ORM001` (same wall; WASM planned).
 
 **Relation to the other rules:** this decides **order**, not **what is
 acceptable** — Q0–Q7, the freeze, rule 6 and the three-states rule keep all

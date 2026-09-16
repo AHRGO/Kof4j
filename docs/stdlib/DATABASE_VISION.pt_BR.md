@@ -6,7 +6,7 @@
 > dos 3 estados: nada concluído fica em development/). Níveis 0–4 implementados e
 > provados: Nível 3 (Query DSL tipada `User.query(db){...}` → `db.query<T>`) ✅
 > 01/09 (`KofOrmE2ETest` 22); MySQL prepared binário ✅ 03/09
-> (`KofDbE2ETest.nativeMysqlPreparedBinary`); connection pool ✅. DB001/ORM001 em
+> (`KofDbE2ETest.nativeMysqlPreparedBinary`). Connection pooling é PLANNED (nenhuma pool hoje — cada `connect` abre sua própria conexão, §Limitações abaixo). DB001/ORM001 em
 > (DB001 fechado: riscv/aarch 15/09 + JS 16/09); só `ORM001` permanece um gap honesto R6 tracked em `docs/backend-parity.md`,
 > não pendência desta visão.
 
@@ -316,7 +316,7 @@ config {
 
 ### Connection Pool
 
-O runtime pode gerenciar connection pool automaticamente. O programador não precisa configurar.
+Planejado — não implementado. Hoje cada `db.connect` abre sua própria conexão física; uma pool gerenciada (reuso, sizing, timeouts) é um residual documentado desta visão, não o comportamento atual.
 
 ---
 

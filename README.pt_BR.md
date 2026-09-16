@@ -159,7 +159,7 @@ ferramenta separada, não consome a IR Kof — ver
 | kof.web (`web.app()`, ws, sse, TLS) | ✅ | WEB002 | WEB001 |
 | kof.http client + retry/circuit | ✅ | HTTP002 | ✅ |
 | kof.security (passwords, crypto, jwt, secrets, auth) | ✅ | ✅ | ✅ |
-| kof.db / kof.orm (SQLite nativo, MySQL WIP, MongoDB) | ✅ | ✅ | DB001/ORM001 |
+| kof.db / kof.orm (SQLite nativo, MySQL WIP, MongoDB) | ✅ | ✅ | ✅ 16/09 nao-tipado (ponte no host GraalJS); `query<T>` tipado = `DB002`; ORM `ORM001` |
 | kof.config / kof.log | ✅ | ✅ | CONF001/LOG001 |
 | kof.ui (Color, Palette, Theme, widgets) | no-op | no-op | ✅ render |
 

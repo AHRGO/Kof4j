@@ -180,12 +180,12 @@ Legend in the target columns: `y` = supported, `~` = partial, `–` = no.
 | middleware | `app.use` | y | – | – | KofWebE2ETest | stdlib/stdlib-web.md |
 | HTTP client | ✅ `kof.http` (get/post/put/delete/patch/options/status; 3 targets — Native via HTTP/1.1 asm, https/retry) | y | y (asm `NativeHttpRuntime`) | y (GraalJS `Java HttpClient` + fetch) | KofHttpE2ETest (6) + KofHttpResilienceE2ETest (3, JVM+JS) | stdlib/http.md |
 | typed path/query/body | `PLANNED` (today strings) | — | — | — | — | stdlib/stdlib-web.md |
-| custom status codes | ✅ `status(201, body)` (08/27) | y | – WEB002 | – WEB001 | KofWebE2ETest | stdlib/stdlib-web.md |
-| custom response headers | ✅ `headerSet("X","y")` (08/27) | y | – WEB002 | – WEB001 | KofWebE2ETest | stdlib/stdlib-web.md |
+| custom status codes | ✅ `status(201, body)` (08/27) | y | – WEB002 | ✅ 03/09 (JS HttpServer) | KofWebE2ETest | stdlib/stdlib-web.md |
+| custom response headers | ✅ `headerSet("X","y")` (08/27) | y | – WEB002 | ✅ 03/09 (JS HttpServer) | KofWebE2ETest | stdlib/stdlib-web.md |
 | cookies | `PLANNED` | — | — | — | — | development/roadmap.md |
 | multipart | `PLANNED` | — | — | — | — | — |
 | content negotiation | `PLANNED` | — | — | — | — | — |
-| error handling | 404/500 + message | y | – | – | KofWebE2ETest | stdlib/stdlib-web.md |
+| error handling | 404/500 + message | y | – | ✅ 03/09 (JS 404/500) | KofWebE2ETest | stdlib/stdlib-web.md |
 | WebSocket | ✅ `app.ws("/chat") { }` (JVM, 08/30 — RFC 6455 handshake + frame codec/masking) | y | – WEB002 | – WEB001 | KofWebWsE2ETest (11) + KofWsFrameTest (7) | stdlib/stdlib-web.md |
 | SSE | ✅ `sse.send/event/close` (JVM, 08/30) | y | – WEB002 | – WEB001 | KofWebSseE2ETest (7) | stdlib/stdlib-web.md |
 | web limits/observability | ✅ `app.configure`/`app.stats` (JVM, 09/04) | y | – | – | KofWebHardeningTest (6) | stdlib/stdlib-web.md |
@@ -205,7 +205,7 @@ Legend in the target columns: `y` = supported, `~` = partial, `–` = no.
 | repositories/ORM | ✅ `kof.orm`: `entity` + create/save/find/all/where/delete/count | y | – ORM001 | – ORM001 | KofOrmE2ETest | development/DATABASE_VISION.md |
 | NoSQL (MongoDB) | ✅ official driver via compatible reflection | y | — | — | KofOrmE2ETest (E2E, conditional skip) | development/DATABASE_VISION.md |
 | mapping | ✅ entity → row/document by compile-time schema | y | – | y | JsonE2ETest, KofOrmE2ETest | — |
-| typed query DSL (`User.query { where ... }`) | `PLANNED` (level 3 of the vision) | — | — | — | — | development/DATABASE_VISION.md |
+| typed query DSL (`User.query { where ... }`) | ✅ (level 3, 01/09 — lowers to `db.query<T>`; JVM H2 E2E) | ✅ | — | — | KofOrmE2ETest | development/DATABASE_VISION.md |
 | pagination | ✅ `orm.page(page, size[, where])` | y | – | – | KofOrmE2ETest | development/DATABASE_VISION.md |
 | PostgreSQL / MySQL / SQLite / MongoDB / Redis | `PLANNED` (adapters) | — | — | — | — | — |
 | transactions | `PLANNED` | — | — | — | — | — |
@@ -215,7 +215,7 @@ Legend in the target columns: `y` = supported, `~` = partial, `–` = no.
 
 | Capability | Kof | JVM | Native | JS | Tests | Docs |
 |-----------|-----|-----|--------|----|-------|------|
-| event bus / pub-sub | ✅ `kof.mq` (publish/subscribe/unsubscribe + queue/push/pop) — JVM + Native + JS (MQ001 closed 09/01) | y | – | y | KofMqE2ETest (4, x3 targets) | concurrency |
+| event bus / pub-sub | ✅ `kof.mq` (publish/subscribe/unsubscribe + queue/push/pop) — JVM + Native + JS (MQ001 closed 01/09) | y | ✅ | ✅ | KofMqE2ETest (4, x3 targets) | concurrency |
 | queues (`kof.concurrent.Queue`) | `PLANNED` | — | — | — | — | concurrency |
 | Kafka / AMQP / Pulsar | `PLANNED` (external adapters) | — | — | — | — | development/roadmap.md |
 | retry / dead-letter / backpressure | `PLANNED` | — | — | — | — | — |
@@ -227,7 +227,7 @@ Legend in the target columns: `y` = supported, `~` = partial, `–` = no.
 |-----------|-----|-----|--------|----|-------|------|
 | password hashing (PBKDF2 600k) | `DONE` | y | y (asm, G10) | y | KofSecurityTest | stdlib/security.md |
 | SHA-256 / SHA-512 / HMAC | `DONE` | y | y (asm, G10) | y | KofSecurityTest | stdlib/security.md |
-| AES-GCM | `DONE` (JVM) | y (asm, G10) | – SECN002 | KofSecurityTest | stdlib/security.md |
+| AES-GCM | ✅ | y (asm, G10) | ✅ (01/09, SECN002 closed — pure JS) | KofSecurityTest | stdlib/security.md |
 | SecureRandom | `DONE` | y | y (getrandom) | y | KofSecurityTest | stdlib/security.md |
 | JWT (HS256, exp/iss/aud) | `DONE` | y | y (asm, G10) | y | KofSecurityTest | stdlib/security.md |
 | secrets (`secrets.get`, env) | `DONE` | y | y | y | KofSecurityTest | stdlib/security.md |
