@@ -387,6 +387,30 @@ future recommendations (rule 14 of the task: do not change behavior).
   it is up to the maintainer; until then the wrong arity is SEM025 with a hint of the
   correct form — never a silent fallback (R6).
 
+### SG-022 — value records / first-class value types (no observable identity) — REQUESTED, no decision
+
+- **Origin:** Issue #275 (feature request, 16/09). Proposal: a `value record
+  Vec2(Float x, Float y)` form with value semantics and **no observable object
+  identity**, letting each backend choose the physical representation (local,
+  ABI register/stack, inline field, flattened array, boxed on demand). The
+  reporter explicitly does **not** want a "stack allocation" syntax nor a
+  guaranteed storage strategy — only the semantic property (no identity).
+- **Spec state:** `record` today is an immutable data aggregate that still has
+  reference identity (`==` is content `==`, `getClass()` is the record class,
+  it can be boxed and stored in collections). There is **no** syntax to declare
+  identity-free value semantics; the corpus never promised one.
+- **Why it is not a lane edit:** it is **new syntax + a new semantic contract**
+  (identity observability) → rule 6 (frozen contract). It is the maintainer's
+  design decision, and it interacts with the freeze on `==`, boxing and
+  collections. Until decided: no silent optimization of ordinary records
+  (escape analysis stays a backend detail, never an observable promise).
+- **Cross-target note:** on the JVM a value record could still be a normal class
+  (the JVM has no value types until Project Valhalla); the guarantee would be
+  "identity not observable", enforceable by the compiler (forbid identity
+  operations) — not "no allocation". Native x86/riscv could flatten/embed;
+  JS would box. Any implementation must state the honest per-target behavior
+  (R6/R7), never promise stack allocation.
+
 ---
 
 ## Category C — Divergences between targets (parity) — updated 10/09
@@ -453,8 +477,8 @@ Not duplicated here — see [known-bugs.md](known-bugs.md):
 
 ## Summary
 
-- **20 SG-00x gaps** (A: doc/code contradictions; B: unspecified
-  behavior). **Maintainer queue (2nd round, 10/09) COMPLETE:**
+- **22 SG-00x gaps** (A: doc/code contradictions; B: unspecified
+  behavior; SG-021 json pretty-print and SG-022 value records = requests with no decision). **Maintainer queue (2nd round, 10/09) COMPLETE:**
   SG-008 ✅, SG-005 ✅, SG-009 ✅, SG-020 ✅ — see the history in each section.
 - **8 target divergences** (C).
 - **3 outdated docs** (E) — **all ✅** (E1 residual 10/09, E2

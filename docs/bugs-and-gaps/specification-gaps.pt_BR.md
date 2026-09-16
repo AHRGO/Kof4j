@@ -387,6 +387,31 @@ recomendações futuras (regra 14 da tarefa: não alterar comportamento).
   cabe à mantenedora; até lá a aridade errada é SEM025 com dica da forma
   correta — nunca fallback silencioso (R6).
 
+### SG-022 — value records / tipos-valor de primeira classe (sem identidade observável) — PEDIDO, sem decisão
+
+- **Origem:** Issue #275 (pedido de feature, 16/09). Proposta: uma forma
+  `value record Vec2(Float x, Float y)` com semântica de valor e **sem
+  identidade de objeto observável**, deixando cada backend escolher a
+  representação física (local, ABI registro/pilha, campo inline, array
+  achatado, boxed sob demanda). O reporter explicitamente **não** quer uma
+  sintaxe de "alocação na pilha" nem uma estratégia de armazenamento
+  garantida — só a propriedade semântica (ausência de identidade).
+- **Estado da spec:** `record` hoje é um agregado imutável que ainda tem
+  identidade de referência (`==` é `==` de conteúdo, `getClass()` é a classe do
+  record, pode ser boxeado e guardado em coleção). **Não** existe sintaxe para
+  declarar semântica de valor sem identidade; o corpus nunca prometeu uma.
+- **Por que não é edição de lane:** é **sintaxe nova + contrato semântico novo**
+  (observabilidade de identidade) → regra 6 (contrato congelado). É decisão de
+  design da mantenedora e interage com o freeze de `==`, boxe e coleções. Até
+  ser decidido: nenhuma otimização silenciosa de record comum (escape analysis
+  segue detalhe de backend, nunca promessa observável).
+- **Nota cross-target:** na JVM um value record ainda poderia ser uma classe
+  normal (a JVM não tem value types até o Project Valhalla); a garantia seria
+  "identidade não observável", imposta pelo compilador (proibir operações de
+  identidade) — não "sem alocação". Native x86/riscv poderia achatar/embutir;
+  JS boxearia. Qualquer implementação deve declarar o comportamento honesto
+  por alvo (R6/R7), nunca prometer alocação na pilha.
+
 ---
 
 ## Categoria C — Divergências entre targets (paridade) — atualizada 10/09
@@ -453,8 +478,9 @@ Não duplicados aqui — ver [known-bugs.md](known-bugs.md):
 
 ## Resumo
 
-- **20 gaps SG-00x** (A: contradições doc/código; B: comportamento não
-  especificado). **Fila do maintainer (2ª rodada, 10/09) COMPLETA:**
+- **22 gaps SG-00x** (A: contradições doc/código; B: comportamento não
+  especificado; SG-021 json pretty-print e SG-022 value records = pedidos sem
+  decisão). **Fila do maintainer (2ª rodada, 10/09) COMPLETA:**
   SG-008 ✅, SG-005 ✅, SG-009 ✅, SG-020 ✅ — ver histórico em cada seção.
 - **8 divergências de target** (C).
 - **3 docs desatualizados** (E) — **todos ✅** (E1 residual 10/09, E2
