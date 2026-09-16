@@ -80,7 +80,7 @@ void handleCall(MethodCtx ctx, List<Object> stack,
             } else if (BuiltinTypes.isString(kc.ownerType())
                     && !kc.parameterTypes().isEmpty()
                     && isDoubleOrFloatUnwrapped(kc.parameterTypes().get(0))) {
-                // §263: String.valueOf(Double/Float) — formato do JDK ("4.0",
+                // §264: String.valueOf(Double/Float) — formato do JDK ("4.0",
                 // "1.0E7"), nao o String() cru do JS ("4", "10000000"). O
                 // lowerer compartilhado passou o tipo REAL no arg do valueOf
                 // (ExpressionPrintLowerer/ExpressionBinaryLowerer, faces JS).
@@ -173,7 +173,7 @@ void handleCall(MethodCtx ctx, List<Object> stack,
             if (kc.parameterTypes().size() == 1
                     && ("java_lang_Double".equals(ownerName) || "java_lang_Float".equals(ownerName))) {
                 if ("toString".equals(kc.methodName())) {
-                    // §263 (JS): Double.toString(d)/Float.toString(d) estaticos
+                    // §264 (JS): Double.toString(d)/Float.toString(d) estaticos
                     // — caíam no dispatch generico (ReferenceError, §235 family)
                     // OU, no caso do receiver primitivo, em `String(v)` cru
                     // ("4"). Formato do JDK via kofNumFmt.
@@ -246,7 +246,7 @@ void handleCall(MethodCtx ctx, List<Object> stack,
         String owner = JsTypeMapper.ownerInternalName(kc.ownerType());
         if ("toString".equals(kc.methodName()) && kc.parameterTypes().isEmpty()
                 && (isDoubleOrFloatUnwrapped(kc.ownerType()) || isJdkWrapperFp(kc.ownerType()))) {
-            // §263 (JS): `d.toString()` com d Double/Float (primitivo ou wrapper
+            // §264 (JS): `d.toString()` com d Double/Float (primitivo ou wrapper
             // — o typer boxia p/ java.lang.Double e o dispatch estrutural
             // gerava `(4).toString()` = "4", o String cru do JS). O valor no JS
             // e Number nos dois casos. Formato do JDK via kofNumFmt.
@@ -333,7 +333,7 @@ boolean isPrintCall(KofCall kc) {
         return owner instanceof Type.ClassType ct && "java.lang".equals(ct.packageName());
     }
 
-    /** §263: Double/Float crus (ou Nullable deles) — o JS trata-os como Number. */
+    /** §264: Double/Float crus (ou Nullable deles) — o JS trata-os como Number. */
     private static boolean isDoubleOrFloatUnwrapped(Type t) {
         Type inner = t instanceof Type.NullableType nt ? nt.inner() : t;
         return inner instanceof Type.PrimitiveType pt
@@ -347,7 +347,7 @@ boolean isPrintCall(KofCall kc) {
                 && "float".equals(Type.canonicalPrimitiveName(pt.name()));
     }
 
-    /** §263: wrapper-boxed Double/Float (o typer boxou o receiver de `toString`). */
+    /** §264: wrapper-boxed Double/Float (o typer boxou o receiver de `toString`). */
     private static boolean isJdkWrapperFp(Type t) {
         Type inner = t instanceof Type.NullableType nt ? nt.inner() : t;
         return inner instanceof Type.ClassType ct && "java.lang".equals(ct.packageName())

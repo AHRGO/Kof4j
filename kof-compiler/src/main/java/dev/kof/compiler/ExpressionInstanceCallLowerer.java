@@ -422,7 +422,7 @@ public final class ExpressionInstanceCallLowerer {
             return localIdx;
         }
         if (driver.target == Target.JS && TypeMetrics.isFloatingPoint(recvType)) {
-            // §263 (JS): Double/Float crus (Number no JS) — valueOf recebe o
+            // §264 (JS): Double/Float crus (Number no JS) — valueOf recebe o
             // tipo REAL p/ o emissor formatar no contrato do JDK ("4.0").
             ops.add(new KofCall(BuiltinTypes.STRING, "valueOf",
                     List.of(recvType), BuiltinTypes.STRING, KofCallKind.STATIC));

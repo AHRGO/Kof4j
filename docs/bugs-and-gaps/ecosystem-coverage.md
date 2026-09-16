@@ -180,8 +180,8 @@ Legend in the target columns: `y` = supported, `~` = partial, `–` = no.
 | middleware | `app.use` | y | – | – | KofWebE2ETest | stdlib/stdlib-web.md |
 | HTTP client | ✅ `kof.http` (get/post/put/delete/patch/options/status; 3 targets — Native via HTTP/1.1 asm, https/retry) | y | y (asm `NativeHttpRuntime`) | y (GraalJS `Java HttpClient` + fetch) | KofHttpE2ETest (6) + KofHttpResilienceE2ETest (3, JVM+JS) | stdlib/http.md |
 | typed path/query/body | `PLANNED` (today strings) | — | — | — | — | stdlib/stdlib-web.md |
-| custom status codes | ✅ `status(201, body)` (08/27) | y | – WEB001 | ✅ 16/09 (§264) | KofWebE2ETest, KofWebJsE2ETest `jsWebStatusAndHeaderReachTheWire` | stdlib/stdlib-web.md |
-| custom response headers | ✅ `headerSet("X","y")` (08/27) | y | – WEB001 | ✅ 16/09 (§264) | KofWebE2ETest, KofWebJsE2ETest `jsWebStatusAndHeaderReachTheWire` | stdlib/stdlib-web.md |
+| custom status codes | ✅ `status(201, body)` (08/27) | y | – WEB001 | ✅ 16/09 (§265) | KofWebE2ETest, KofWebJsE2ETest `jsWebStatusAndHeaderReachTheWire` | stdlib/stdlib-web.md |
+| custom response headers | ✅ `headerSet("X","y")` (08/27) | y | – WEB001 | ✅ 16/09 (§265) | KofWebE2ETest, KofWebJsE2ETest `jsWebStatusAndHeaderReachTheWire` | stdlib/stdlib-web.md |
 | cookies | `PLANNED` | — | — | — | — | development/roadmap.md |
 | multipart | `PLANNED` | — | — | — | — | — |
 | content negotiation | `PLANNED` | — | — | — | — | — |

@@ -358,7 +358,7 @@ class BackendParityTest {
     // KofScriptTest.interpreterParitySweep (grupo A — paridade total)
     // agora travam JVM×JS. Os 26 que têm paridade JVM==JS ficam como gate
     // permanente. EXCLUÍDOS (bug documentado, não gate):
-    //   - ~~float-print~~ §263 16/09: o JS agora formata double inteiro como
+    //   - ~~float-print~~ §264 16/09: o JS agora formata double inteiro como
     //     "4.0" (era "4"/"5" — `Number.toString` cru); virou gate PERMANENTE
     //     `double-print` no array abaixo, não mais exclusão.
     //   - record-eq-hash → bug 42 (hashCode ausente no JS: TypeError).

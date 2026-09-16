@@ -206,7 +206,7 @@ class ConformanceMatrixTest {
                 """, "0.0\n-0.0\n-0.0\n-0.0\n-0.0\ntrue", Set.of(), tempDir);
         // bug 44 CORRIGIDO 10/09 (x86_64): kof_print_double/float via snprintf
         // %.16g + append '.0' p/ inteiro-válido + write via syscall (sem
-        // printf/reordenação) — Native desbloqueado. §263 (16/09, lane .18):
+        // printf/reordenação) — Native desbloqueado. §264 (16/09, lane .18):
         // o JS também imprimia `String(5.0)`="5"; agora `kofNumFmt` fecha o
         // contrato do JDK — a exclusão `js` CAIU.
         matrix("floatprint", """
@@ -245,7 +245,7 @@ class ConformanceMatrixTest {
         // (1.0f/3.0f = 0.33333334, não a expansão double 0.3333333432674408).
         // O x86_64 agora usa `kof_dtoa` (RuntimeDtoa: loop `%.*e`+strtod p/ o
         // shortest + reformat p/ o limiar/estilo do Java); a exclusão do Native
-        // CAIU. §263 (16/09, lane .18): a exclusão do JS também CAIU —
+        // CAIU. §264 (16/09, lane .18): a exclusão do JS também CAIU —
         // `kofNumFmt` (slice num-fmt) implementa o mesmo contrato em JS
         // (round-trip curto via toExponential + threshold E/decimal do JDK).
         matrix("doubleprint", """

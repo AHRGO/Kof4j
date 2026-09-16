@@ -131,7 +131,7 @@ public final class JsRuntimeUiWeb {
                         headers: exchange.getRequestHeaders(),
                         body: body,
                         paramsMap: matched || new Map(),
-                        // §264 (JS): status/headerSet DEFERIDOS idem JVM
+                        // §265 (JS): status/headerSet DEFERIDOS idem JVM
                         // (KOF_WEB_STATUS/KOF_WEB_HEADERS thread-local) — o
                         // handler faz `return status(201, body)`; o pump aplica
                         // no envio. O desenho antigo (response.status escrevendo
@@ -148,7 +148,7 @@ public final class JsRuntimeUiWeb {
                             headers: exchange.getRequestHeaders()
                         },
                         body: body,
-                        // §264 (JS): response.status/header DEFERIDOS idem
+                        // §265 (JS): response.status/header DEFERIDOS idem
                         // kofWebStatus/kofWebHeaderSet — escrevia na hora e o
                         // pump escrevia DE NOVO (sendResponseHeaders 2x =
                         // erro; o branch `result.status === 'function'` no
@@ -194,7 +194,7 @@ public final class JsRuntimeUiWeb {
                     }
                     const result = (typeof handler.invoke === 'function') ? handler.invoke(ctx)
                                  : (typeof handler === 'function' ? handler(ctx) : undefined);
-                    // §264 (JS): aplica os headers deferidos ANTES do envio
+                    // §265 (JS): aplica os headers deferidos ANTES do envio
                     // (idem JVM — KOF_WEB_HEADERS lido no write) e o status
                     // deferido; sem status() o default é 200 (ou 404 se o
                     // handler retornou null).
@@ -259,13 +259,13 @@ public final class JsRuntimeUiWeb {
                 return kofWebRequest ? kofWebRequest.path : "";
             }
             export function kofWebStatus(code, text) {
-                // §264 (JS): defere — o pump aplica no envio (idem JVM:
+                // §265 (JS): defere — o pump aplica no envio (idem JVM:
                 // KOF_WEB_STATUS.set + retorna o body p/ uso como retorno).
                 if (kofWebRequest) kofWebRequest._status = Number(code);
                 return text == null ? "" : String(text);
             }
             export function kofWebHeaderSet(name, value) {
-                // §264 (JS): defere p/ antes do sendResponseHeaders (o JDK
+                // §265 (JS): defere p/ antes do sendResponseHeaders (o JDK
                 // HttpServer exige headers ANTES do envio; idem JVM).
                 if (kofWebRequest) kofWebRequest._headerQueue.push([String(name), String(value)]);
                 return value == null ? "" : String(value);

@@ -93,7 +93,7 @@ if (("print".equals(mc.methodName()) || "println".equals(mc.methodName())) && mc
         } else if (driver.target == Target.JS
                 && TypeMetrics.isFloatingPoint(
                         argType instanceof Type.NullableType nt ? nt.inner() : argType)) {
-            // §263 (JS): Double/Float no JS sao Numbers crus — sem box; o
+            // §264 (JS): Double/Float no JS sao Numbers crus — sem box; o
             // valueOf recebe o tipo REAL p/ o emissor formatar no contrato
             // do JDK ("4.0"/"1.0E7", nao "4"). Nullable: o get de Map devolve
             // Double? — o valueOf(J) do JS faz null-guard antes de formatar.

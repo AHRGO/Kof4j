@@ -54,7 +54,7 @@ public final class ExpressionBinaryLowerer {
         if (driver.target == Target.JS
                 && TypeMetrics.isFloatingPoint(
                         type instanceof Type.NullableType ntp ? ntp.inner() : type)) {
-            // §263 (JS): Double/Float crus (Number no JS) — valueOf recebe o
+            // §264 (JS): Double/Float crus (Number no JS) — valueOf recebe o
             // tipo REAL p/ o emissor formatar no contrato do JDK; sem box.
             ops.add(new KofCall(BuiltinTypes.STRING, "valueOf",
                     List.of(type), BuiltinTypes.STRING, KofCallKind.STATIC));

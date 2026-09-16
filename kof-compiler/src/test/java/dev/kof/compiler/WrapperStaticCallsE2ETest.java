@@ -114,7 +114,7 @@ class WrapperStaticCallsE2ETest {
                 """, "true\nfalse\n43\n200\n4.0\ntrue", tempDir, "wrap-is-parse");
     }
 
-    // §263 (JS): Double/Float print no contrato do JDK — inteiro com ponto
+    // §264 (JS): Double/Float print no contrato do JDK — inteiro com ponto
     // ("4.0"), científico com E ("1.0E7"), -0.0, e round-trip curto. Antes
     // o JS imprimia `String(v)` cru: "4", "10000000" (silencioso, R6).
     @Test

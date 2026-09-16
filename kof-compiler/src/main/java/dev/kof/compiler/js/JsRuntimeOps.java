@@ -283,7 +283,7 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
             stack.add(call);
             return;
         }
-        // §264 (JS): nao colapsar status()/headerSet() no 2º arg — havia aqui
+        // §265 (JS): nao colapsar status()/headerSet() no 2º arg — havia aqui
         // um ramo `status -> args.get(1)` / `headerSet -> args.get(1)` que
         // descartava a chamada inteira (side-effect perdido) e SOMBRAVA o ramo
         // correto mais abaixo (kofWebStatus/kofWebHeaderSet). Removido; cai no

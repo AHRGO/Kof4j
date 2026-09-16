@@ -161,7 +161,7 @@ class KofWebJsE2ETest {
         assertEquals("got:hello", bodyOf(echo).trim(), "POST body: " + echo);
     }
 
-    // §264 (JS, 16/09 lane .18): `status()`/`headerSet()` dentro de um handler
+    // §265 (JS, 16/09 lane .18): `status()`/`headerSet()` dentro de um handler
     // web SILENCIOSAMENTE não faziam nada no JS — `kofWebStatus` lia
     // `kofWebRequest.response`, campo que `kofWebRequest` nunca teve, e o guard
     // engolia a chamada (R6). O handler `return status(201, body)` dava 200, não
