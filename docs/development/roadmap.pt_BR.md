@@ -398,7 +398,14 @@ Arquivo próprio da linguagem (`kofdeps`). Para Kof4J, o sistema poderá gerar `
 
 Estado atual: 🟡 MVP 01/09 — `kof deps init/add/remove/list/resolve` (arquivo
 `kofdeps`, resolução Maven Central → `~/.kof/deps`, classpath via
-`kof build|run --deps`); dependências transitivas do POM e registry pendentes.
+`kof build|run --deps`); **dependências transitivas do POM ✅ 16/09** (resolvidas
+delegando ao Maven via `pom.xml` temporário + `dependency:build-classpath`
+(R9: o resolvedor de grafo do Maven já existe — nunca reimplementado); o fecho vai
+para um `kofdeps.lock` portável (lista GAV) consumido por `resolve`/`build`/`run
+--deps`; degradação honesta quando `mvn` não está no PATH — warning explícito,
+nunca classpath truncado em silêncio; prova `DepsTransitiveTest` 10/10 incluindo
+E2E com Maven real `jgrapht-core:1.4.0 → org.jheaps:jheaps:0.11`);
+**registry pendente** (precisa de decisão da mantenedora — formato/hosting público).
 
 ---
 
@@ -882,7 +889,7 @@ tiers `stable`/`experimental` (`docs/backend-parity.md`).
 | 1.1 | Gaps de paridade (`HTTP002`, `WEB001/002`, `CONC003`, `LOG001`, `MQ001`, `SCHED001`/`TIME001`, `SECN002`, `OBS002`, `MEDIA`) | 🟡 em progresso — JS web server base `abbde60b`; residual por `backend-parity.md` |
 | 1.2 | GC mark-sweep automático no Native | 🟡 riscv `356f33b9` ✅; x86 decomposto G-1..G-5 (`native-multiarch.md`) |
 | 1.3 | Query DSL tipada (`User.query {}`) | ✅ 01/09 (`KofOrmE2ETest`) |
-| 1.4 | Package manager MVP (`kofdeps`) | 🟡 `kof deps` + resolução Maven Central; transitivos/registry pendentes |
+| 1.4 | Package manager MVP (`kofdeps`) | 🟡 `kof deps` + resolução Maven Central; **transitivos ✅ 16/09** (delegação ao Maven + `kofdeps.lock`, `DepsTransitiveTest` 10/10 incl. E2E com Maven real); **registry pendente (decisão da mantenedora)** |
 | 1.5 | Tracing/OpenTelemetry + lifecycle `application{}` | 🟡 spans W3C + lifecycle ✅ 3 targets; OTel export pendente |
 | 1.6 | **Native → bare-metal/bootável** (microcontrolador, BIOS legado, UEFI) — diretiva da mantenedora 15/09 | ⚪ **só plano** — costura HAL `kof_plat_*` + perfil freestanding, faces B-0…B-5 em `docs/development/future/PLAN-BAREMETAL-BOOT.md`; sem agendamento; MCU depende de 1.2 |
 

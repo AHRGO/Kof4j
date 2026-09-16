@@ -397,7 +397,14 @@ The language's own file (`kofdeps`). For Kof4J, the system may generate a tempor
 
 Current state: 🟡 MVP 01/09 — `kof deps init/add/remove/list/resolve` (file
 `kofdeps`, Maven Central resolution → `~/.kof/deps`, classpath via
-`kof build|run --deps`); POM transitive dependencies and registry pending.
+`kof build|run --deps`); **POM transitive dependencies ✅ 16/09** (resolved by
+delegating to Maven via a temporary `pom.xml` + `dependency:build-classpath`
+(R9: the Maven graph resolver already exists — never reimplemented), the closure
+is written to a portable `kofdeps.lock` GAV list that `resolve`/`build`/`run
+--deps` consume; `KofDb`-style honest degradation when `mvn` is absent — explicit
+warning, never a silent truncated classpath; proof `DepsTransitiveTest` 10/10
+including a real-Maven E2E `jgrapht-core:1.4.0 → org.jheaps:jheaps:0.11`);
+**registry pending** (needs a maintainer decision — public format/hosting).
 
 ---
 
@@ -881,7 +888,7 @@ domain (`INFRA00x`/`DATA00x`/`SCI00x`/`BIO00x`/`SECPQ`) + parity matrix;
 | 1.1 | Parity gaps (`HTTP002`, `WEB001/002`, `CONC003`, `LOG001`, `MQ001`, `SCHED001`/`TIME001`, `SECN002`, `OBS002`, `MEDIA`) | 🟡 in progress — JS web server base `abbde60b`; residual per `backend-parity.md` |
 | 1.2 | Automatic GC mark-sweep in Native | 🟡 riscv `356f33b9` ✅; x86 decomposed G-1..G-5 (`native-multiarch.md`) |
 | 1.3 | Typed query DSL (`User.query {}`) | ✅ 01/09 (`KofOrmE2ETest`) |
-| 1.4 | Package manager MVP (`kofdeps`) | 🟡 `kof deps` + Maven Central resolution; transitive/registry pending |
+| 1.4 | Package manager MVP (`kofdeps`) | 🟡 `kof deps` + Maven Central resolution; **transitive ✅ 16/09** (Maven delegation + `kofdeps.lock`, `DepsTransitiveTest` 10/10 incl. real-Maven E2E); **registry pending (needs maintainer decision)** |
 | 1.5 | Tracing/OpenTelemetry + `application{}` lifecycle | 🟡 W3C spans + lifecycle ✅ 3 targets; OTel export pending |
 | 1.6 | **Native → bare-metal/bootable** (microcontroller, legacy BIOS, UEFI) — 15/09 maintainer directive | ⚪ **plan only** — HAL seam `kof_plat_*` + freestanding profile, faces B-0…B-5 in `docs/development/future/PLAN-BAREMETAL-BOOT.md`; not scheduled; MCU depends on 1.2 |
 
