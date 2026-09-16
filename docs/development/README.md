@@ -2,13 +2,13 @@
 
 # Development — living backlog (only work in development)
 
-> **Base:** `0.4.0-beta` · branch `beta-0.4.0` · **updated:** 13/09/2026
-> **Suite measured at this HEAD:** `1662` run (1479 kof-compiler + 31 kof-script
-> + 5 kof-c-compiler + 147 kof-cli), **0 failures** (13 errors = only missing `node`, environmental — all `*Js`), 157 skip (toolchain/node
-> guards; without qemu the 84 cross are skipped) — with cross riscv/aarch
-> 42+42 under real qemu (G-0/§142 added the
-> header/OOM tests). Post-§131/§163 gate measured 13/09 (`gate_final2.log`, BUILD
-> SUCCESS). **Authoritative suite number = the run on the host** (the gate
+> **Base:** `0.4.0-beta` · branch `beta-0.4.0` · **updated:** 16/09/2026
+> **Suite measured at this HEAD:** `2182` run (1885 kof-compiler + 38 kof-script
+> + 7 kof-c-compiler + 252 kof-cli), **0 failures / 0 errors**, 190 skip
+> (no qemu on the measuring host: the 84 cross are skipped, + the 5 external DBs
+> + other toolchain guards; `node` present — all `*Js` green) — measured
+> 16/09 ~00:30 on `dd2c7fcb..447eda38` with the CONC001/CONC003 doc-sync wave.
+> The previous number (1662/13-errors, 13/09) was a node-less host. **Authoritative suite number = the run on the host** (the gate
 > `mvn test ... -Dmaven.test.failure.ignore=true`; check per module with
 > `grep -rl FAILURE */target/surefire-reports/*.txt`), not this line — it
 > rots with every commit. Refold of the `NativeRiscvAsm` concatenation to

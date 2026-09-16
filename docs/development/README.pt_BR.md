@@ -2,13 +2,13 @@
 
 # Development — backlog vivo (só trabalho em desenvolvimento)
 
-> **Base:** `0.4.0-beta` · branch `beta-0.4.0` · **atualizado:** 13/09/2026
-> **Suíte medida neste HEAD:** `1662` run (1479 kof-compiler + 31 kof-script
-> + 5 kof-c-compiler + 147 kof-cli), **0 falhas** (13 erros = só `node` ausente, ambientais — todos `*Js`), 157 skip (guardas de
-> toolchain/node; sem qemu os 84 cross são skipados) — com cross riscv/aarch
-> 42+42 sob qemu real (G-0/§142 somaram os
-> testes de header/OOM). Gate pós-§131/§163 medido 13/09 (`gate_final2.log`, BUILD
-> SUCCESS). **Nº autoritativo da suíte = a execução no host** (o gate
+> **Base:** `0.4.0-beta` · branch `beta-0.4.0` · **atualizado:** 16/09/2026
+> **Suíte medida neste HEAD:** `2182` run (1885 kof-compiler + 38 kof-script
+> + 7 kof-c-compiler + 252 kof-cli), **0 falhas / 0 erros**, 190 skip (sem
+> qemu no host da medição: os 84 cross são pulados, + os 5 DBs externos +
+> outros guardas de toolchain; `node` presente — todos os `*Js` verdes) —
+> medida 16/09 ~00:30 com a onda de sync de docs CONC001/CONC003. O número
+> anterior (1662/13-erros, 13/09) era de host sem node. **Nº autoritativo da suíte = a execução no host** (o gate
 > `mvn test ... -Dmaven.test.failure.ignore=true`; conferir por módulo com
 > `grep -rl FAILURE */target/surefire-reports/*.txt`), não esta linha — ela
 > apodrece a cada commit. Refold da concatenação do `NativeRiscvAsm` para
