@@ -421,6 +421,13 @@ public final class ExpressionInstanceCallLowerer {
                     List.of(Type.PrimitiveType.CHAR), BuiltinTypes.STRING, KofCallKind.STATIC));
             return localIdx;
         }
+        if (driver.target == Target.JS && TypeMetrics.isFloatingPoint(recvType)) {
+            // §263 (JS): Double/Float crus (Number no JS) — valueOf recebe o
+            // tipo REAL p/ o emissor formatar no contrato do JDK ("4.0").
+            ops.add(new KofCall(BuiltinTypes.STRING, "valueOf",
+                    List.of(recvType), BuiltinTypes.STRING, KofCallKind.STATIC));
+            return localIdx;
+        }
         TypeEmitter.boxPrimitive(ops, recvType);
         ops.add(new KofCall(BuiltinTypes.STRING, "valueOf",
                 List.of(Type.UnknownType.UNKNOWN), BuiltinTypes.STRING, KofCallKind.STATIC));

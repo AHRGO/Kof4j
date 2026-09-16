@@ -174,7 +174,7 @@ class ConformanceMatrixTest {
                     var nan = z / z
                     println(nan % 2.0)
                 }
-                """, "1.5\n1.5\n1.0\n0.5\n-1.5\n1.5\nNaN\nNaN\nNaN", Set.of("js"), tempDir);
+                """, "1.5\n1.5\n1.0\n0.5\n-1.5\n1.5\nNaN\nNaN\nNaN", Set.of(), tempDir);
         matrix("cast", """
                 main() {
                     var d = 9.9
@@ -203,18 +203,19 @@ class ConformanceMatrixTest {
                     println(-1.0 * 0.0)
                     println(0.0 == -0.0)
                 }
-                """, "0.0\n-0.0\n-0.0\n-0.0\n-0.0\ntrue", Set.of("js"), tempDir);
+                """, "0.0\n-0.0\n-0.0\n-0.0\n-0.0\ntrue", Set.of(), tempDir);
         // bug 44 CORRIGIDO 10/09 (x86_64): kof_print_double/float via snprintf
         // %.16g + append '.0' p/ inteiro-válido + write via syscall (sem
-        // printf/reordenação) — Native desbloqueado. KofJS mantém a exclusão:
-        // doc "parece bug mas é esperado" (JS String(5.0) = "5").
+        // printf/reordenação) — Native desbloqueado. §263 (16/09, lane .18):
+        // o JS também imprimia `String(5.0)`="5"; agora `kofNumFmt` fecha o
+        // contrato do JDK — a exclusão `js` CAIU.
         matrix("floatprint", """
                 main() {
                     println(1.0 / 3.0)
                     println(2.5 * 2.0)
                     println(7.0 / 2.0)
                 }
-                """, "0.3333333333333333\n5.0\n3.5", Set.of("js"), tempDir);
+                """, "0.3333333333333333\n5.0\n3.5", Set.of(), tempDir);
         // bug 44 (residual, x86_64, paridade regra 5): o glibc %.16g escreve
         // 'inf'/'-inf'/'nan' mas o contrato é JDK Double.toString →
         // 'Infinity'/'-Infinity'/'NaN' (o que JVM/Script imprimem). O println
@@ -236,7 +237,7 @@ class ConformanceMatrixTest {
                     println("v=" + (0.0 / 0.0))
                 }
                 """, "Infinity\n-Infinity\nNaN\nInfinity\nInfinity NaN\nv=NaN",
-                Set.of("js"), tempDir);
+                Set.of(), tempDir);
         // §180 ✅ CORRIGIDO 14/09 (DECISIONS §6): o contrato é JDK
         // Double.toString/Float.toString — shortest-round-trip
         // (0.1+0.2 = 0.30000000000000004), notação científica (|x|>=1e7 ou
@@ -244,8 +245,9 @@ class ConformanceMatrixTest {
         // (1.0f/3.0f = 0.33333334, não a expansão double 0.3333333432674408).
         // O x86_64 agora usa `kof_dtoa` (RuntimeDtoa: loop `%.*e`+strtod p/ o
         // shortest + reformat p/ o limiar/estilo do Java); a exclusão do Native
-        // CAIU. JS segue excluído (Number.toString não emite '.0' nem notação
-        // científica no mesmo limiar — §44).
+        // CAIU. §263 (16/09, lane .18): a exclusão do JS também CAIU —
+        // `kofNumFmt` (slice num-fmt) implementa o mesmo contrato em JS
+        // (round-trip curto via toExponential + threshold E/decimal do JDK).
         matrix("doubleprint", """
                 main() {
                     println(0.1 + 0.2)
@@ -262,7 +264,7 @@ class ConformanceMatrixTest {
                 }
                 """, "0.30000000000000004\n1.0E7\n1.0E-5\n33.333333333333336\n0.33333334\n1.0E20\nNaN"
                 + "\n0.001\n1.0E-4\n3.4028235E38\n-0.0",
-                Set.of("js"), tempDir);
+                Set.of(), tempDir);
         // bug 100 (paridade absoluta): `String.equals(não-String)` é `false` em
         // todo target — o JVM sempre deu false (Objects.equals), mas o Native
         // CRASHAVA (SIGSEGV/vazio) ao ler o Int-boxado como ponteiro-String.

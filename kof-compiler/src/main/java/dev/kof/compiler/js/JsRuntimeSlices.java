@@ -35,6 +35,7 @@ final class JsRuntimeSlices {
             new Block("stdlib", JsRuntimeUiStdlib.STDLIB_RUNTIME, false),
             new Block("random", JsRuntimeUiRandom.RANDOM_RUNTIME, false),
             new Block("math-double", JsRuntimeUiMathDouble.MATH_DOUBLE_RUNTIME, false),
+            new Block("num-fmt", JsRuntimeUiNumFmt.NUM_FMT_RUNTIME, false),
             new Block("net", JsRuntimeUiNet.NET_RUNTIME, false),
             new Block("uuid", JsRuntimeUiUuid.UUID_RUNTIME, false),
             new Block("ws", JsRuntimeUiWs.WS_RUNTIME, false),

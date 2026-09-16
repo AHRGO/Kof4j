@@ -51,6 +51,15 @@ public final class ExpressionBinaryLowerer {
             return;
         }
         boolean stringified = !Type.isString(type) && TypeMetrics.isPrimitiveType(type);
+        if (driver.target == Target.JS
+                && TypeMetrics.isFloatingPoint(
+                        type instanceof Type.NullableType ntp ? ntp.inner() : type)) {
+            // §263 (JS): Double/Float crus (Number no JS) — valueOf recebe o
+            // tipo REAL p/ o emissor formatar no contrato do JDK; sem box.
+            ops.add(new KofCall(BuiltinTypes.STRING, "valueOf",
+                    List.of(type), BuiltinTypes.STRING, KofCallKind.STATIC));
+            return;
+        }
         if (stringified) TypeEmitter.boxPrimitive(ops, type);
         ops.add(new KofCall(BuiltinTypes.STRING, "valueOf",
                 List.of(driver.target.isNative() && !stringified && !Type.isString(type)

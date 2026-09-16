@@ -90,6 +90,17 @@ if (("print".equals(mc.methodName()) || "println".equals(mc.methodName())) && mc
                     BuiltinTypes.STRING,
                     "valueOf", List.of(nativeArg),
                     BuiltinTypes.STRING, KofCallKind.STATIC));
+        } else if (driver.target == Target.JS
+                && TypeMetrics.isFloatingPoint(
+                        argType instanceof Type.NullableType nt ? nt.inner() : argType)) {
+            // §263 (JS): Double/Float no JS sao Numbers crus — sem box; o
+            // valueOf recebe o tipo REAL p/ o emissor formatar no contrato
+            // do JDK ("4.0"/"1.0E7", nao "4"). Nullable: o get de Map devolve
+            // Double? — o valueOf(J) do JS faz null-guard antes de formatar.
+            ops.add(new KofCall(
+                    BuiltinTypes.STRING,
+                    "valueOf", List.of(argType),
+                    BuiltinTypes.STRING, KofCallKind.STATIC));
         } else {
             TypeEmitter.boxPrimitive(ops, argType);
             ops.add(new KofCall(

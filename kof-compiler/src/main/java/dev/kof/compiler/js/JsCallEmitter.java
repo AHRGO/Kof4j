@@ -77,6 +77,17 @@ void handleCall(MethodCtx ctx, List<Object> stack,
                 // colchetes/ordem errada. kofFormat espelha o formato JVM.
                 p.lc.registerRuntime("kofFormat");
                 stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofFormat"), List.of(args.get(0))));
+            } else if (BuiltinTypes.isString(kc.ownerType())
+                    && !kc.parameterTypes().isEmpty()
+                    && isDoubleOrFloatUnwrapped(kc.parameterTypes().get(0))) {
+                // §263: String.valueOf(Double/Float) — formato do JDK ("4.0",
+                // "1.0E7"), nao o String() cru do JS ("4", "10000000"). O
+                // lowerer compartilhado passou o tipo REAL no arg do valueOf
+                // (ExpressionPrintLowerer/ExpressionBinaryLowerer, faces JS).
+                p.lc.registerRuntime("kofNumFmt");
+                stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofNumFmt"),
+                        List.of(args.get(0), new JsIr.JsNumber(isFloatUnwrapped(
+                                kc.parameterTypes().get(0)) ? "1" : "0"))));
             } else if (BuiltinTypes.isString(kc.ownerType())) {
                 stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("String"), List.of(args.get(0))));
             } else if (!kc.parameterTypes().isEmpty()
@@ -161,6 +172,17 @@ void handleCall(MethodCtx ctx, List<Object> stack,
             }
             if (kc.parameterTypes().size() == 1
                     && ("java_lang_Double".equals(ownerName) || "java_lang_Float".equals(ownerName))) {
+                if ("toString".equals(kc.methodName())) {
+                    // §263 (JS): Double.toString(d)/Float.toString(d) estaticos
+                    // — caíam no dispatch generico (ReferenceError, §235 family)
+                    // OU, no caso do receiver primitivo, em `String(v)` cru
+                    // ("4"). Formato do JDK via kofNumFmt.
+                    p.lc.registerRuntime("kofNumFmt");
+                    boolean isFloat = "java_lang_Float".equals(ownerName);
+                    finishCall(stack, kc, new JsIr.JsCall(new JsIr.JsIdentifier("kofNumFmt"),
+                            List.of(args.get(0), new JsIr.JsNumber(isFloat ? "1" : "0"))));
+                    return;
+                }
                 String jsPredicate = switch (kc.methodName()) {
                     case "isNaN" -> "Number.isNaN";
                     case "isInfinite" -> null; // tratado abaixo (JS não tem Number.isInfinite)
@@ -185,6 +207,36 @@ void handleCall(MethodCtx ctx, List<Object> stack,
                     return;
                 }
             }
+            // §235 (JS): estáticos `parse*` dos wrappers JDK — o dispatch
+            // genérico emitia `java_lang_Integer.parseInt(...)` (ReferenceError
+            // silencioso, R6). Os helpers do runtime já existem (github #51 +
+            // §81: `kof_string_to_int/_long/_double/_float`, trim/regex estreito/
+            // overflow lança como no JVM); `parseBoolean` é "true".equalsIgnoreCase.
+            if (kc.parameterTypes().size() == 1) {
+                String parseFn = switch (ownerName + "." + kc.methodName()) {
+                    case "java_lang_Integer.parseInt" -> "kof_string_to_int";
+                    case "java_lang_Long.parseLong" -> "kof_string_to_long";
+                    case "java_lang_Double.parseDouble" -> "kof_string_to_double";
+                    case "java_lang_Float.parseFloat" -> "kof_string_to_float";
+                    default -> null;
+                };
+                if (parseFn != null) {
+                    ctx.lc.registerRuntime(parseFn);
+                    finishCall(stack, kc, new JsIr.JsCall(
+                            new JsIr.JsIdentifier(parseFn), List.of(args.get(0))));
+                    return;
+                }
+                if ("java_lang_Boolean.parseBoolean".equals(ownerName + "." + kc.methodName())) {
+                    JsIr.JsExpression s = new JsIr.JsCall(
+                            new JsIr.JsIdentifier("String"), List.of(args.get(0)));
+                    JsIr.JsExpression lower = new JsIr.JsCall(
+                            new JsIr.JsMember(s, "toLowerCase"), List.of());
+                    finishCall(stack, kc, new JsIr.JsBinary(
+                            new JsIr.JsCall(new JsIr.JsMember(lower, "trim"), List.of()),
+                            "===", new JsIr.JsString("true")));
+                    return;
+                }
+            }
             String owner = JsTypeMapper.jsClassName(JsTypeMapper.ownerInternalName(kc.ownerType()));
             finishCall(stack, kc, new JsIr.JsCall(
                     new JsIr.JsMember(new JsIr.JsIdentifier(owner), JsTypeMapper.sanitizeName(kc.methodName())), args));
@@ -192,6 +244,19 @@ void handleCall(MethodCtx ctx, List<Object> stack,
         }
         // INSTANCE / INTERFACE — structural dispatch
         String owner = JsTypeMapper.ownerInternalName(kc.ownerType());
+        if ("toString".equals(kc.methodName()) && kc.parameterTypes().isEmpty()
+                && (isDoubleOrFloatUnwrapped(kc.ownerType()) || isJdkWrapperFp(kc.ownerType()))) {
+            // §263 (JS): `d.toString()` com d Double/Float (primitivo ou wrapper
+            // — o typer boxia p/ java.lang.Double e o dispatch estrutural
+            // gerava `(4).toString()` = "4", o String cru do JS). O valor no JS
+            // e Number nos dois casos. Formato do JDK via kofNumFmt.
+            p.lc.registerRuntime("kofNumFmt");
+            boolean isFloat = isFloatUnwrapped(kc.ownerType())
+                    || "java_lang_Float".equals(JsTypeMapper.jsClassName(owner));
+            finishCall(stack, kc, new JsIr.JsCall(new JsIr.JsIdentifier("kofNumFmt"),
+                    List.of(receiver, new JsIr.JsNumber(isFloat ? "1" : "0"))));
+            return;
+        }
         if ("equals".equals(kc.methodName()) && owner != null
                 && !ctx.hasClassMethod(owner, "equals")) {
             // Object.equals — reference equality (JVM semantics)
@@ -267,6 +332,28 @@ boolean isPrintCall(KofCall kc) {
         if (BuiltinTypes.isString(owner)) return true;
         return owner instanceof Type.ClassType ct && "java.lang".equals(ct.packageName());
     }
+
+    /** §263: Double/Float crus (ou Nullable deles) — o JS trata-os como Number. */
+    private static boolean isDoubleOrFloatUnwrapped(Type t) {
+        Type inner = t instanceof Type.NullableType nt ? nt.inner() : t;
+        return inner instanceof Type.PrimitiveType pt
+                && ("double".equals(Type.canonicalPrimitiveName(pt.name()))
+                        || "float".equals(Type.canonicalPrimitiveName(pt.name())));
+    }
+
+    private static boolean isFloatUnwrapped(Type t) {
+        Type inner = t instanceof Type.NullableType nt ? nt.inner() : t;
+        return inner instanceof Type.PrimitiveType pt
+                && "float".equals(Type.canonicalPrimitiveName(pt.name()));
+    }
+
+    /** §263: wrapper-boxed Double/Float (o typer boxou o receiver de `toString`). */
+    private static boolean isJdkWrapperFp(Type t) {
+        Type inner = t instanceof Type.NullableType nt ? nt.inner() : t;
+        return inner instanceof Type.ClassType ct && "java.lang".equals(ct.packageName())
+                && ("Double".equals(ct.name()) || "Float".equals(ct.name()));
+    }
+
 
 void handleStringOp(MethodCtx ctx, List<Object> stack,
                                 List<JsIr.JsExpression> preambleExprs, KofCall kc,
