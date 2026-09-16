@@ -238,7 +238,7 @@ public final class StatementAnalyzer {
                     if (sa.diagnostics() != null && !Type.isUnknown(returnType) && !Type.isVoid(returnType)
                             && !Type.isUnknown(valueType) && !TypeChecker.isAssignable(sa, valueType, returnType)) {
                         sa.diagnostics().error("", 0, 0, 0,
-                                "Return type mismatch: expected " + returnType + " but got " + valueType, "SEM010");
+                                "Return type mismatch: expected '" + Type.display(returnType) + "' but got '" + Type.display(valueType) + "'", "SEM010");
                     }
                 }
             }

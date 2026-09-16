@@ -29,7 +29,7 @@ public final class ReturnPathAnalyzer {
         if (!reachesEnd) return;
         sa.diagnostics().error(pos != null ? pos.file() : "",
                 pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0,
-                what + " declara retorno '" + returnType + "' mas pode terminar sem return/throw",
+                what + " declara retorno '" + Type.display(returnType) + "' mas pode terminar sem return/throw",
                 "SEM036");
     }
 

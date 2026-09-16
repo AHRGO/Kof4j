@@ -527,6 +527,45 @@ class CompilerDriverTest {
     }
 
     @Test
+    void typeMismatchDiagnosticsAreHumanReadable(@TempDir Path tempDir) throws IOException {
+        // #324: as mensagens SEM010/SEM014/SEM036 nao podem expor o toString()
+        // do node do AST (`PrimitiveType[name=int, sort=10]`) nem `ClassType[...]`.
+        // Forma legivel: 'Int', 'String'.
+        Path source = tempDir.resolve("Readable.kf");
+        Files.writeString(source, """
+            class A { Int compute() { return "wrong" } }
+            main() { }
+            """);
+        CompilationResult r10 = driver.compile(source, tempDir.resolve("o10"), Target.JVM);
+        String d10 = r10.diagnostics().getDiagnostics().toString();
+        assertTrue(d10.contains("SEM010"), "esperava SEM010, veio: " + d10);
+        assertTrue(d10.contains("expected 'Int' but got 'String'"), "SEM010 ilegivel: " + d10);
+        assertFalse(d10.contains("PrimitiveType[") || d10.contains("ClassType["),
+                "SEM010 expoe AST interno: " + d10);
+
+        Files.writeString(tempDir.resolve("Main14.kf"), """
+            class C { void show(String s) { } }
+            main() { var c = new C(); c.show(42) }
+            """);
+        CompilationResult r14 = driver.compile(tempDir.resolve("Main14.kf"), tempDir.resolve("o14"), Target.JVM);
+        String d14 = r14.diagnostics().getDiagnostics().toString();
+        assertTrue(d14.contains("SEM014"), "esperava SEM014, veio: " + d14);
+        assertTrue(d14.contains("expected 'String' but got 'Int'"), "SEM014 ilegivel: " + d14);
+        assertFalse(d14.contains("PrimitiveType[") || d14.contains("ClassType["),
+                "SEM014 expoe AST interno: " + d14);
+
+        Files.writeString(tempDir.resolve("Main36.kf"), """
+            class Y { Int f(Int n) { var x = n * 2 } }
+            main() { }
+            """);
+        CompilationResult r36 = driver.compile(tempDir.resolve("Main36.kf"), tempDir.resolve("o36"), Target.JVM);
+        String d36 = r36.diagnostics().getDiagnostics().toString();
+        assertTrue(d36.contains("SEM036"), "esperava SEM036, veio: " + d36);
+        assertTrue(d36.contains("'Int'"), "SEM036 nao usa forma legivel: " + d36);
+        assertFalse(d36.contains("PrimitiveType["), "SEM036 expoe AST interno: " + d36);
+    }
+
+    @Test
     void allPathsReturnStillCompiles(@TempDir Path tempDir) throws IOException {
         Path source = tempDir.resolve("Ok.kf");
         Files.writeString(source, """
