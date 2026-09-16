@@ -15,7 +15,7 @@
 |---|---|---|
 | `roadmap-audit.md` | roadmap × código (matriz + fila P0→P5) | **viva** — re-audit quando algo fecha |
 | `complexity-audit.md` | contagem de linhas/classe (02/09) | **snapshot** — gate vivo = `scripts/check_500.sh` (ratchet CI) |
-| `PLANNING-FUTURE-AUDIT.md` | branch `planning-future` × beta (07–08/09) | **encerrada** — R2 vive em `DECISIONS.md` x{a7}D-APP/x{a7}D-PLATFORM (ratificado 13/09), R5 no cluster migração |
+| `PLANNING-FUTURE-AUDIT.md` | branch `planning-future` × beta (07–08/09) | **encerrada** — R2 vive em `DECISIONS.md` §D-APP/§D-PLATFORM (ratificado 13/09), R5 no cluster migração |
 | `planning-future-reconcile.md` | merge da branch (05/09) | **encerrada** — checklist cumprido (port dos tiers) |
 
 ## Como usar
