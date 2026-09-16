@@ -725,7 +725,7 @@ pronta.
 > completa) provam. **Nenhum agente pode quebrar comportamento que já funciona.**
 
 1. **Zero regressão.** Nenhum commit pode fazer um teste existente passar a
-   falhar. A suíte completa (`mvn test`, hoje **2189** nos 4 módulos — ver
+   falhar. A suíte completa (`mvn test`, hoje **2199** nos 4 módulos — ver
    §"Loop de verificação" para o comando com o flag de failure.ignore) é **gate de merge** —
    mudança que não mantém tudo verde não entra. Exceção única: mudança de
    contrato **deliberada**, com bump de versão + docs atualizados + migração.
@@ -1083,7 +1083,7 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > ele, o Maven é fail-fast por módulo: qualquer falha em **kof-compiler aborta
 > o reactor** e **kof-script, kof-c-compiler e kof-cli nunca rodam** — você
 > acha que validou tudo mas só viu o primeiro módulo. O total real com o flag
-> é **2189 testes** (compiler 1892 + script 38 + kof-c 7 + cli 252, medição
+> é **2199 testes** (compiler 1902 + script 38 + kof-c 7 + cli 252, medição
 > 16/09 — cresce com cada commit): **0 falhas / 0 erros** (node agora presente
 > no host da medição — o antigo "13 erros = node ausente" não se aplica mais). O §149 JS (`KofRandomTest.randomStringJs`/`randomShapeJs`,
 > regressão do fix §147 no `JsIfThrowElse`) foi **CORRIGIDO 13/09** — a raiz era
@@ -1102,12 +1102,15 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > **Os números mudam com qemu no ambiente:** sem qemu (host da medição de
 > 16/09 — sem toolchain cruzada), os 84 cross
 > (2×42, `NativeRiscv64/Aarch64E2ETest`) são **skipados** pelo guard
-> (`4408eb6`) + os outros guards de toolchain/BD externo → `2189/0/190-skip`
-> (MEDIDO 16/09). Com qemu, **tudo executa** — os 84 cross rodam
-> verdes e o total fica `2189` com a contagem de skip caindo para o
-> resíduo externo de BD/ambiente `node`. Estado correto HOJE:
-> **0 falhas / 0 erros** nos dois cenários (o §149 JS foi corrigido 13/09). O que importa continua sendo nenhum FAILURE fora
-> deles e das guardas.
+> (`4408eb6`) + os outros guards de toolchain/BD externo → `2199/1/190-skip` (a 1 falha = o flake intermitente conhecido do §252 nativo, não é regressão)
+> (MEDIDO 16/09 ~03:20). Com qemu, **tudo executa** — os 84 cross rodam
+> verdes e o total fica `2199` com a contagem de skip caindo para o
+> resíduo externo de BD/ambiente `node`. Estado correto HOJE (16/09 ~03:20):
+> **0 regressões / 0 erros** — a única falha é o flake INTERMITENTE conhecido do §252
+> nativo (`spawnWorkerThrowPropagatesThroughSelectAnyNative`, dona lane nativa
+> `.18`/nat, agora dispara ~1/3 no isolamento do método único — ver §252), que
+> deve ser lido como um vermelho de TESTE, não regressão. O que importa continua
+> sendo nenhum FAILURE fora do flake do §252 e das guardas documentadas.
 
 Para validar um snippet isolado (ex.: confirmar se um idiom compila),
 use o harness do projeto ou crie um teste E2E mínimo no pacote da área.

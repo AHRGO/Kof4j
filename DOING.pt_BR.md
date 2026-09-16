@@ -136,7 +136,7 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
 > Varredura de fechamentos alheios: D-PRINT/§216 já lockstep pela .15; nada
 > órfão.
 >
- > **PRÓXIMO PASSO (16/09 ~05:40, dono = 192.168.100.22, lane docs/development —
+ > **PRÓXIMO PASSO (16/09 ~06:10, dono = 192.168.100.22, lane docs/development —
  > autônomo ATIVO `auto-loop.sh start ses_f5806df42ffeulR14Wq8KhA7Fn 5 9093`):**
  > **ESTABILIDADE NÃO alcançada — heartbeat CONTINUA (não recusar):** bugs
  > abertos (§252/§253/§255/§256b/§258) + lanes ativas. **TICK EXECUTADO
@@ -163,16 +163,35 @@ Estados: `ABERTO` · `EM CURSO` · `FEITO` · `BLOQUEADO`.
  > WEB001 p/ a stack web → `stdlib-web:330` continua CORRETO, sem sync da
  > lane. **§258 ainda VERMELHO** (#773 `KofJsRunner.listValues` — a linha
  > andou 510→525, MESMA raiz `int i < long n`, `eb9140cb` só moveu o método;
- > segue dona da .18, sem mudança de status).
- > Fila do PRÓXIMO tick: **(1)** `git fetch` + `git log <last>..HEAD`;
- > **(2)** se o #773 SUMIR do `scripts/codeql-gate.sh --fast` → fechar §258
- > (fila+seção EN+PT com SHA/prova) + tirar o bypass `CODEQL_GATE_SKIP`;
- > **(3)** se o tip mover CÓDIGO → re-medir suíte (FAZER `mvn -pl kof-runtime
- > clean` ANTES — armadilha stale-ECJ em
- > `training/anti-patterns/stale-ecj-class-trap.md`); **(4)** nada disso E
- > gates verdes → tick não-inventivo: registrar "aguardando fechamento da
- > .18/.22" e sair; RECUSAR de vez + `auto-loop.sh stop` só quando as 3
- > condições STABILITY segurarem (hoje NÃO: §258/§252/§253/§255/§256b abertos).
+  > segue dona da .18, sem mudança de status).
+  >
+  > **TICK EXECUTADO (~05:50–06:10) — (3) DISPAROU:** o tip moveu CÓDIGO
+  > (`555d2afe` WEB001 fatia honestidade + 4 testes novos, 02:29, pós-minha
+  > medição de 2189) → re-medição obrigada pelo contrato. `mvn -pl kof-runtime
+  > clean` ANTES (armadilha stale-ECJ) + suíte completa = **2199 run (1902
+  > compiler + 38 + 7 + 252), 190 skip, 0 erros; ÚNICA falha = o §252**
+  > (`KofConcurrency2Test.spawnWorkerThrowPropagatesThroughSelectAnyNative`,
+  > `Runtime error: array index out of bounds`). **NÃO é regressão**: é o bug
+  > OPEN conhecido da lane nativa. E a re-medição AFIROU o registro — em
+  > isolamento do método único, SEM carga de CPU, 6 runs = **4 pass / 2 FAIL**,
+  > o que ENFRAQUECE a premissa "não reproduz em isolamento (9/9)" + a hipótese
+  > "depende de carga" (agora dispara ~1/3 em run silencioso). Atualizei o
+  > corpo + fila EN+PT do §252 com essa medição (dever da lane docs: manter o
+  > registro preciso — NÃO consertar a lane nativa). Contagem viva 2189→2199 +
+  > "0 falhas"→"0 regressões (1 falha = flake §252)" nos 8 registros EN+PT
+  > (development/README, status×2, backend-parity, ecosystem-coverage, AGENTS
+  > ×2 blocos + linha "Estado correto HOJE"). **§258 ainda VERMELHO** (sem
+  > mudança).
+  > Fila do PRÓXIMO tick (reescrita): **(1)** `git fetch` + `git log <last>..HEAD`;
+  > **(2)** se o #773 SUMIR do `scripts/codeql-gate.sh --fast` → fechar §258
+  > (fila+seção EN+PT com SHA/prova) + tirar o bypass `CODEQL_GATE_SKIP`;
+  > **(3)** se o tip mover CÓDIGO → re-medir (clean kof-runtime ANTES) e
+  > re-sincronizar contagem nos 8 registros; **(4)** se a lane nativa fechar
+  > o §252 → confirmar (suíte sem a falha) + atualizar §252 + a linha "Estado
+  > correto HOJE" volta a "0 falhas"; **(5)** nada disso E gates verde → tick
+  > não-inventivo: registrar "aguardando fechamento da .18/.22/nat" e sair.
+  > RECUSAR de vez + `auto-loop.sh stop` SÓ quando as 3 condições STABILITY
+  > segurarem (hoje NÃO: §258/§252/§253/§255/§256b abertos).
  > NÃO TOCAR: DB001-JS/WEB001/UI-web-db (development .18 — frente DELA; esta
  > lane só sincroniza docs após o FECHAMENTO), §258/§256-face-b/§252/§253-face-B
  > (dona .18/`KofJsRunner`), §253-face-A (compiler .22), §248, N1→N4, split

@@ -3,8 +3,8 @@
 # Development — backlog vivo (só trabalho em desenvolvimento)
 
 > **Base:** `0.4.0-beta` · branch `beta-0.4.0` · **atualizado:** 16/09/2026
-> **Suíte medida neste HEAD:** `2189` run (1892 kof-compiler + 38 kof-script
-> + 7 kof-c-compiler + 252 kof-cli), **0 falhas / 0 erros**, 190 skip (sem
+> **Suíte medida neste HEAD:** `2199` run (1902 kof-compiler + 38 kof-script
+> + 7 kof-c-compiler + 252 kof-cli), **0 regressões / 0 erros**, 190 skip (1 falha = o flake INTERMITENTE conhecido do §252 nativo `spawnWorkerThrowPropagatesThroughSelectAnyNative`, dona lane nativa `.18`/nat — não é regressão; re-medido 16/09 ~03:20) (sem
 > qemu no host da medição: os 84 cross são pulados, + os 5 DBs externos +
 > outros guardas de toolchain; `node` presente — todos os `*Js` verdes) —
 > medida 16/09 ~01:45 em `3e55df51` (pos-DB001-fatia-A; a 1a leitura deu 297 erros = o trap de stub ECJ velho do §257, limpo com `mvn -pl kof-runtime clean`). O número

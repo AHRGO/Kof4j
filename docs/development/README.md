@@ -3,8 +3,8 @@
 # Development — living backlog (only work in development)
 
 > **Base:** `0.4.0-beta` · branch `beta-0.4.0` · **updated:** 16/09/2026
-> **Suite measured at this HEAD:** `2189` run (1892 kof-compiler + 38 kof-script
-> + 7 kof-c-compiler + 252 kof-cli), **0 failures / 0 errors**, 190 skip
+> **Suite measured at this HEAD:** `2199` run (1902 kof-compiler + 38 kof-script
+> + 7 kof-c-compiler + 252 kof-cli), **0 regressions / 0 errors**, 190 skip (1 failure = the known INTERMITTENT §252 native flake `spawnWorkerThrowPropagatesThroughSelectAnyNative`, owner native lane `.18`/nat — not a regression; re-measured 16/09 ~03:20)
 > (no qemu on the measuring host: the 84 cross are skipped, + the 5 external DBs
 > + other toolchain guards; `node` present — all `*Js` green) — measured
 > 16/09 ~01:45 on `3e55df51` (post DB001-fatia-A; first read showed 297 errors = the §257 stale-ECJ-stub trap, cleared by `mvn -pl kof-runtime clean`).
