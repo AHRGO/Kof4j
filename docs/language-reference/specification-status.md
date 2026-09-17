@@ -5,7 +5,7 @@
 **Version:** 0.4.0-beta · **Date:** 06/09/2026 · **Re-synced 17/09/2026** against the applied SG-00x (`docs/bugs-and-gaps/specification-gaps.md`) and the #322/#330 fixes.
 
 Classification of each language feature. **Nothing here is "stable" out of
-courtesy** — Stable requires   (rule 0.2.6-beta) **and** a test
+courtesy** — Stable requires frozen semantics (rule 0.2.6-beta) **and** a test
 that proves it. Categories: **Stable · Experimental · Implementation-defined ·
 Target-specific · Unspecified · Planned**.
 

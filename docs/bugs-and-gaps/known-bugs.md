@@ -539,7 +539,7 @@ EXTERNAL mutation produced garbage (JVM correct) — the cause was the prologue 
   to character (it lets the number through); JVM uses the JDK's `String.valueOf(char)`
   (character) and Native uses `kof_char_to_string` (UTF-8).
 - **What should happen:** the 3 targets equal. The decision of which is correct
-  (`"h"` or `"104"`) is a **design** one (  — rule 6): the corpus
+  (`"h"` or `"104"`) is a **design** one (frozen semantics — rule 6): the corpus
   (`common-mistakes.md`) favors `"h"`, but that needs a bump + discussion,
   not a silent fix. Recorded as a gap until then.
 - **Files:** `JsBackend.java` (`valueOf` dispatch), `CompilerDriver.java`

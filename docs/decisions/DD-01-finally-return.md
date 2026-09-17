@@ -41,7 +41,7 @@ the expected. The previous agent (07/09) labeled the 3 as "frozen by constructio
 this is a **code bug**, not a frozen design decision.
 
 **Why it is still a design decision *how to implement it*:** fixing it changes the
-evaluation order (rule 6 — "  0.2.6-beta": evaluation
+evaluation order (rule 6 — "frozen semantics 0.2.6-beta": evaluation
 order). The *direction* is in the corpus (run `finally`); the *mechanism* and the
 impact on the 4 backends + the JS reconstructor require experience → this DD asks
 for a bump + sign-off before editing the lowering.

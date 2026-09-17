@@ -108,7 +108,7 @@ leave large uncommitted work — that's how a session is lost.
 
 **Stop conditions (the ONLY ones that justify stopping and calling the human):**
 
-1. **  at stake** — change of contract/operator/order of
+1. **Frozen semantics at stake** — change of contract/operator/order of
    evaluation (rule 6): becomes a gap/plan in `planning-*`, never an edit.
 2. **Unavoidable lane collision** — the only path touches a file `IN PROGRESS`
    of another agent and it can't be postponed: stop, record it in the DOING.md, wait.
@@ -247,7 +247,7 @@ conceptual engineering nor decide architecture/direction. Practical consequences
 4. **Technical discussion before code.** When the doubt is conceptual (semantics,
    floating-point overflow, ABI), the contribution is through **technical debate** —
    commented design proposals/documents — not a disorderly PR that changes
-    .
+   frozen semantics.
 5. **Shielding against pollution.** Never mix the Kof language with terms
    foreign to the domain (games, etc.) in docs/code. Disclaimers and nomenclature
    are law; violated it, revert.
@@ -763,7 +763,7 @@ ready.
 5. **Cross-target parity.** JVM/Native/JS diverging on the same program is a parity
    bug. The expected behavior holds on the 3 targets, or a diagnosed gap `XXX00x`
    — never silent divergence.
-6. **  (0.2.6-beta).** Operators, precedence, order of
+6. **Frozen semantics (0.2.6-beta).** Operators, precedence, order of
    evaluation, null-safety, content `==`, exceptions as String,
    `spawn`/`await`, `List/Map/Set` collections are **frozen**. A proposal to
    change becomes a gap/plan in `planning-*`, never a direct edit of the current

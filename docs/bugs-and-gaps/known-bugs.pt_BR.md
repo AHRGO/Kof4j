@@ -539,7 +539,7 @@ EXTERNA produzia lixo (JVM correto) — a causa era o prólogo tratando captura 
   para caractere (deixa o número passar); JVM usa `String.valueOf(char)` do JDK
   (caractere) e Native usa `kof_char_to_string` (UTF-8).
 - **O que deveria acontecer:** os 3 targets iguais. A decisão de qual é o certo
-  (`"h"` ou `"104"`) é **de design** (  — regra 6): o corpus
+  (`"h"` ou `"104"`) é **de design** (semântica congelada — regra 6): o corpus
   (`common-mistakes.md`) favorece `"h"`, mas isso precisa de bump + discussão,
   não de correção silenciosa. Registrado como gap até lá.
 - **Arquivos:** `JsBackend.java` (dispatch de `valueOf`), `CompilerDriver.java`

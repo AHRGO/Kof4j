@@ -41,7 +41,7 @@ public final class StatementAnalyzer {
                 SymbolTable.Symbol effective = Narrowing.assignTarget(scope, ie.name(), sym);
                 targetType = effective.type();
                 // bug 62: `val` é imutável — escrever em val é erro de
-                // mutabilidade (SEM037), alinhado à  .
+                // mutabilidade (SEM037), alinhado à semântica congelada.
                 if (effective instanceof SymbolTable.LocalVariableSymbol lv && lv.isVal()
                         && sa.diagnostics() != null) {
                     sa.diagnostics().error("", 0, 0, 0,

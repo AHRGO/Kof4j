@@ -54,7 +54,7 @@ briefing accepts it ("adapt to the real architecture"). So: `math.clamp(...)`,
 
 **Not** (briefing rule §48/§49 + R6): browser/DOM/storage/clipboard = KofUI lane
 (kof.ui already exists); homegrown crypto = forbidden (JCA already exists); `Result`/`Option` = does not exist
-in   (null-safety + throw are the mechanism).
+in frozen semantics (null-safety + throw are the mechanism).
 
 ## 3. Committable steps (each: dispatch + 3 backends + Kof<Domain>Test + matrix + doc)
 
