@@ -146,7 +146,7 @@ final class CmdBuild {
         if (target != Target.ANDROID && (apk || keystore != null
                 || storepass != null || keypass != null || keyalias != null)) {
             System.err.println("build: --apk/--keystore/--storepass/--keypass/--alias "
-                    + "só se aplicam a --target android (alvo: "
+                    + "only apply to --target android (target: "
                     + TargetMatrix.name(target) + ")");
             System.exit(1);
             return;
@@ -156,16 +156,7 @@ final class CmdBuild {
         if (!apk && (keystore != null || storepass != null
                 || keypass != null || keyalias != null)) {
             System.err.println("build: --keystore/--storepass/--keypass/--alias "
-                    + "só se aplicam junto com --apk");
-            System.exit(1);
-            return;
-        }
-        // signing flags only act inside the standalone --apk pipeline; without
-        // --apk they would be silently dropped (R6).
-        if (!apk && (keystore != null || storepass != null
-                || keypass != null || keyalias != null)) {
-            System.err.println("build: --keystore/--storepass/--keypass/--alias "
-                    + "só se aplicam junto com --apk");
+                    + "only apply together with --apk");
             System.exit(1);
             return;
         }
