@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
@@ -43,9 +44,14 @@ class JvmFrameDiagnosticsTest {
 
         String msg = rootMessages(e);
         assertTrue(msg.contains("crash.kf:7"), "mensagem deve apontar arquivo:linha Kof: " + msg);
-        assertTrue(msg.contains("fase"), "mensagem deve nomear a fase do compilador: " + msg);
+        assertTrue(msg.contains("phase"), "mensagem deve nomear a fase do compilador: " + msg);
         assertTrue(msg.contains("KofPop"), "mensagem deve incluir o IR da op: " + msg);
         assertTrue(msg.contains("ASM") || msg.contains("asm"), "mensagem deve incluir bytecode ASM: " + msg);
+        // D-DIAG-EN: as labels do frame-diagnostics sao ingles (tooling 100% EN).
+        assertTrue(msg.contains("last Kof construct") && msg.contains("IR (last")
+                && msg.contains("bytecode ASM (last"), "diagnostico deve ser EN: " + msg);
+        assertFalse(msg.matches("(?s).*(últimas|linhas|indisponível|erro ASM|fase:).*"),
+                "frame-diagnostics ainda tem texto PT: " + msg);
     }
 
     private static String rootMessages(Throwable t) {

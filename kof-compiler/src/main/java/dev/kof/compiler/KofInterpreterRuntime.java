@@ -72,7 +72,7 @@ public final class KofInterpreterRuntime {
                 if (KofInterpreterValues.simpleOf(c.name()).equals(cn)
                         || c.name().replace('/', '.').equals(cn)) { kc = c; break; }
             }
-            if (kc == null) throw new NoSuchMethodError("KofRuntime." + name + " (classe '" + cn + "' não achada)");
+            if (kc == null) throw new NoSuchMethodError("KofRuntime." + name + " (class '" + cn + "' not found)");
             Object parsed = runtimeFn("kof_json_parse", new Object[]{json});
             List<Object> out = new ArrayList<>();
             if (parsed instanceof List<?> l) {
@@ -89,7 +89,7 @@ public final class KofInterpreterRuntime {
                 if (KofInterpreterValues.simpleOf(c.name()).equals(cn)
                         || c.name().replace('/', '.').equals(cn)) { kc = c; break; }
             }
-            if (kc == null) throw new NoSuchMethodError("KofRuntime." + name + " (classe '" + cn + "' não achada)");
+            if (kc == null) throw new NoSuchMethodError("KofRuntime." + name + " (class '" + cn + "' not found)");
             Object parsed = runtimeFn("kof_json_parse", new Object[]{json});
             java.util.Map<Object, Object> out = new java.util.LinkedHashMap<>();
             if (parsed instanceof java.util.Map<?, ?> m) {

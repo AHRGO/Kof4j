@@ -72,7 +72,7 @@ public final class KofInterpreterConcurrency {
                         throw unwrap(e);
                     }
                 }
-                throw new IllegalStateException("await: handle inválido");
+                throw new IllegalStateException("await: invalid handle");
             }
             case "kof_await_timeout": {
                 Future<?> fu = (Future<?>) args[0];

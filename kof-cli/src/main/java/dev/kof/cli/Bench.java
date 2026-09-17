@@ -44,7 +44,7 @@ public final class Bench {
         try {
             return Integer.parseInt(value.trim());
         } catch (NumberFormatException e) {
-            System.err.println("kof bench: valor inválido para " + name + ": '" + value + "'");
+            System.err.println("kof bench: invalid value for " + name + ": '" + value + "'");
             return null;
         }
     }
@@ -54,7 +54,7 @@ public final class Bench {
         try {
             return Double.parseDouble(value.trim());
         } catch (NumberFormatException e) {
-            System.err.println("kof bench: valor inválido para " + name + ": '" + value + "'");
+            System.err.println("kof bench: invalid value for " + name + ": '" + value + "'");
             return null;
         }
     }

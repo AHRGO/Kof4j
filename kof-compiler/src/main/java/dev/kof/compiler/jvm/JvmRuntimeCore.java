@@ -134,7 +134,7 @@ public final class JvmRuntimeCore {
                                 .map(h -> {
                                     if (!(h instanceof java.util.concurrent.CompletableFuture<?> cf)) {
                                         throw new IllegalStateException(
-                                                "selectAny: argumento não é Handle");
+                                                "selectAny: argument is not a Handle");
                                     }
                                     return cf;
                                 })
@@ -155,13 +155,13 @@ public final class JvmRuntimeCore {
                             throw new RuntimeException(cause);
                         }
                     }
-                    throw new IllegalStateException("await: handle inválido");
+                    throw new IllegalStateException("await: invalid handle");
                 }
 
                 /** awaitTimeout(handle, timeoutMs) -> valor; lança exceção no estouro. */
                 public static Object kof_await_timeout(Object handle, int timeoutMs) throws Exception {
                     if (!(handle instanceof java.util.concurrent.Future<?> f)) {
-                        throw new IllegalStateException("awaitTimeout: handle inválido");
+                        throw new IllegalStateException("awaitTimeout: invalid handle");
                     }
                     try {
                         return f.get(timeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS);
