@@ -49,7 +49,10 @@ training/
 │   ├── web.md
 │   ├── architecture.md
 │   ├── composition.md
-│   └── concurrency.md
+│   ├── concurrency.md
+│   ├── stdlib.md
+│   ├── ui.md
+│   └── interop.md
 ├── anti-patterns/         # Catalog of what NOT to do
 │   ├── common-mistakes.md
 │   ├── java-like-code.md

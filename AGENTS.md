@@ -818,7 +818,7 @@ target per domain; no SQL/Arrow/ML engine of its own.
 ## Before writing code (mandatory)
 
 1. Read `training/idioms/<area>.md` for the problem's area
-   (collections, functions, strings, errors, records, classes, concurrency, control-flow).
+   (collections, functions, strings, errors, records, classes, concurrency, control-flow, interop).
 2. Read `training/anti-patterns/` — especially `java-like-code.md`,
    `chained-or-membership.md`, `fake-idioms.md`.
 3. If the doubt persists: **write a snippet and compile** (loop below).
