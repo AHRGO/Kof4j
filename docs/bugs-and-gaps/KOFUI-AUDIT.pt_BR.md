@@ -225,3 +225,17 @@ JVM/Native mantêm os no-ops documentados do Store; o singleton JVM ainda conta
 em `storesLive()`), `ComponentCoreE2ETest` 24/24. Atribuir inscrições
 automaticamente ao ciclo de vida dos components segue questão aberta regra 6
 (o `unsubscribe` manual é o primitivo funcional hoje).
+
+### Fase 11 (estrutura de módulos) — AUDITADA/CONCLUÍDA (18/09, sem código)
+
+O mapa de módulos do §2.10 se declara **conceitual** ("hoje vive no
+compilador; o motor é o CORE_RUNTIME do JS"). Medido contra a árvore: os
+arquivos físicos já espelham cada módulo conceitual por responsabilidade
+(`Components`/`Events`/`Forms`/`Validation` = core; `Layout` = layout; o
+bloco Router de `Events` = navigation; `KofStyleParser`+`KofUiTokens`+
+`Palette` = theme; `Widgets` = widgets; `JvmRuntimeUi`/`RuntimeUi` nativo =
+os no-ops honestos). Um empacotamento físico `kof-ui/*` moveria arquivos sem
+mudar comportamento nem as exports do `CORE_RUNTIME` — rejeitado por "núcleo
+pequeno e estável" (ganho zero, risco todo); o §2.10 agora carrega a tabela
+de mapeamento (EN+PT) como fronteira de módulos. Regra dos três estados:
+isto é auditoria fechando um estado documentado, não trabalho inventado.

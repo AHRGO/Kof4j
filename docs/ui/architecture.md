@@ -277,6 +277,23 @@ Implementation details (JS target):
 
 ### 2.10 Module structure (Phase 11)
 
+**AUDITED 18/09 — delivered as the conceptual structure it declares.** The
+engine lives in the compiler (not a standalone `kof-ui/` package), and the
+physical files already mirror the map by responsibility:
+
+| conceptual module | where it lives today |
+|---|---|
+| `core/` (component · state · lifecycle · render · events · input) | `js/JsRuntimeUiComponents.java`, `js/JsRuntimeUiEvents.java`, `js/JsRuntimeUiForms.java`, `js/JsRuntimeUiValidation.java` |
+| `layout/` (row · column · stack · box · grid · wrap · spacer) | `js/JsRuntimeUiLayout.java` |
+| `navigation/` (router · route) | `js/JsRuntimeUiEvents.java` (Router block, Fase 7) |
+| `theme/` (theme · color · typography · spacing · border · radius · elevation) | `KofStyleParser.java` + `KofUiTokens.java` + `Palette` (compiler-side, all four targets) |
+| `widgets/` (input · buttons · selection · feedback · data) | `js/JsRuntimeUiWidgets.java` |
+| honest no-ops (UI is KofJS) | `jvm/JvmRuntimeUi.java`, `runtime/RuntimeUi.java` (native asm) |
+
+A physical split into `kof-ui/*` packages would move files without changing
+behavior or the JS `CORE_RUNTIME` exports — no gain, all risk (rule: small
+and stable core); the table above is the module boundary.
+
 ```text
 kof-ui/  (conceptual — today it lives in the compiler; the engine is the JS CORE_RUNTIME)
   core/       component · state · lifecycle · render · events · input · focus

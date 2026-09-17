@@ -276,6 +276,24 @@ Detalhes de implementação (alvo JS):
 
 ### 2.10 Estrutura de módulos (Fase 11)
 
+**AUDITADA 18/09 — entregue como a estrutura conceitual que declara.** O
+motor vive no compilador (não um pacote `kof-ui/` separado), e os arquivos
+físicos já espelham o mapa por responsabilidade:
+
+| módulo conceitual | onde vive hoje |
+|---|---|
+| `core/` (componente · estado · ciclo de vida · render · eventos · input) | `js/JsRuntimeUiComponents.java`, `js/JsRuntimeUiEvents.java`, `js/JsRuntimeUiForms.java`, `js/JsRuntimeUiValidation.java` |
+| `layout/` (row · column · stack · box · grid · wrap · spacer) | `js/JsRuntimeUiLayout.java` |
+| `navigation/` (router · route) | `js/JsRuntimeUiEvents.java` (bloco Router, Fase 7) |
+| `theme/` (theme · color · typography · spacing · border · radius · elevation) | `KofStyleParser.java` + `KofUiTokens.java` + `Palette` (lado compilador, os quatro targets) |
+| `widgets/` (input · buttons · selection · feedback · data) | `js/JsRuntimeUiWidgets.java` |
+| no-ops honestos (UI é KofJS) | `jvm/JvmRuntimeUi.java`, `runtime/RuntimeUi.java` (asm nativo) |
+
+Uma divisão física em pacotes `kof-ui/*` moveria arquivos sem mudar
+comportamento nem as exports do `CORE_RUNTIME` do JS — ganho zero, risco
+todo (regra: núcleo pequeno e estável); a tabela acima É a fronteira de
+módulos.
+
 ```text
 kof-ui/  (conceitual — hoje vive no compilador; o motor é o CORE_RUNTIME JS)
   core/       component · state · lifecycle · render · events · input · focus

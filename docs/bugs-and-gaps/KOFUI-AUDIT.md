@@ -223,3 +223,17 @@ JVM/Native keep the documented Store no-ops; JVM singleton still counts in
 `storesLive()`), `ComponentCoreE2ETest` 24/24. Auto-attributing subscriptions
 to component lifecycles remains a rule-6 open question (manual
 `unsubscribe` is the working primitive today).
+
+### Phase 11 (module structure) — AUDITED DONE (18/09, no code)
+
+The §2.10 module map declares itself **conceptual** ("today it lives in the
+compiler; the engine is the JS CORE_RUNTIME"). Measured against the tree:
+the physical files already mirror every conceptual module by responsibility
+(`Components`/`Events`/`Forms`/`Validation` = core; `Layout` = layout; the
+Router block of `Events` = navigation; `KofStyleParser`+`KofUiTokens`+
+`Palette` = theme; `Widgets` = widgets; `JvmRuntimeUi`/native `RuntimeUi` =
+the honest no-ops). A physical `kof-ui/*` packaging would move files without
+changing behavior or the `CORE_RUNTIME` exports — rejected by "small and
+stable core" (no gain, all risk); §2.10 now carries the mapping table (EN+PT)
+as the module boundary. Three-states rule: this is an audit closing a
+documented state, not invented work.
