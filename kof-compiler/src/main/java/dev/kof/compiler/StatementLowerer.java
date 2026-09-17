@@ -113,8 +113,8 @@ public final class StatementLowerer {
                             driver.currentDiagnostics.error(vds.position() != null ? vds.position().file() : "",
                                     vds.position() != null ? vds.position().line() : 0,
                                     vds.position() != null ? vds.position().column() : 0, 0,
-                                    "a atribuição a '" + vds.name() + "' recebeu um valor void — a"
-                                            + " chamada não retorna valor",
+                                    "assignment to '" + vds.name() + "' received a void value — the"
+                                            + " call does not return a value",
                                     "SEM033");
                         }
                         yield localIdx;
