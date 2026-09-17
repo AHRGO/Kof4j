@@ -149,8 +149,8 @@ public final class JsRuntimeUiEvents {
                 if (!st) return;
                 st.value = value;
                 // notify every subscriber synchronously (ordering: subscription)
-                for (const f of st.subs.slice()) {
-                    try { f(value); } catch (e) {}
+                for (const sub of st.subs.slice()) {
+                    try { sub.f(value); } catch (e) {}
                 }
             }
 
@@ -159,7 +159,10 @@ public final class JsRuntimeUiEvents {
                 if (!st) return;
                 const f = kofUiRunFn(fn);
                 if (!f) return;
-                st.subs.push(f);
+                // §274: keep the RAW handle as the unsubscribe key — the
+                // wrapper (fn.invoke.bind) is a new object every call, so
+                // indexOf(fn) on wrappers could never match.
+                st.subs.push({ raw: fn, f: f });
                 // the subscriber receives the current value immediately
                 try { f(st.value); } catch (e) {}
             }
@@ -167,8 +170,11 @@ public final class JsRuntimeUiEvents {
             export function kofUiStoreUnsubscribe(s, fn) {
                 const st = kofUiStores.get(s);
                 if (!st) return;
-                const i = st.subs.indexOf(fn);
-                if (i >= 0) st.subs.splice(i, 1);
+                // remove exactly one matching subscription (first), like a
+                // listener list; a fn never subscribed is a silent no-op.
+                for (let i = 0; i < st.subs.length; i++) {
+                    if (st.subs[i].raw === fn) { st.subs.splice(i, 1); return; }
+                }
             }
 
             export function kofUiStoresLive() {

@@ -550,6 +550,37 @@ class ComponentCoreE2ETest {
     }
 
     @Test
+    void storeUnsubscribeStopsDelivery(@TempDir Path tempDir) throws IOException {
+        // §274: JS unsubscribe was a SILENT NO-OP — subscribe stored the
+        // wrapper (fn.invoke.bind) but unsubscribe searched the RAW handle,
+        // so indexOf never matched and the subscriber kept being notified.
+        // Same identity contract as mq's unsubscribeStopsDelivery (JS now;
+        // JVM/Native keep their documented Store no-ops).
+        String program = """
+            main() {
+                var store = Store(1)
+                var log = ""
+                var h = (v: Int) -> { log = log + "n=" + v + "," }
+                store.subscribe(h)
+                store.set(2)
+                store.unsubscribe(h)
+                store.set(3)
+                store.unsubscribe(h)
+                println(log)
+            }
+            """;
+        Path src = tempDir.resolve("store-unsub.kf");
+        Files.writeString(src, program);
+        // JVM/Native: subscribe/set are no-ops — log stays empty.
+        runJvm(src, tempDir.resolve("jvm-store-unsub"), "");
+        runNative(src, tempDir.resolve("native-store-unsub"), "");
+        // JS: current value on subscribe (n=1) + set(2); after unsubscribe
+        // set(3) must NOT fire; the second unsubscribe is a no-op.
+        assertEquals("n=1,n=2,", runJs(tempDir, "store-unsub", program),
+                "unsubscribe must stop delivery (§274)");
+    }
+
+    @Test
     void declaredUiAndMediaTypesCompileAndRun(@TempDir Path tempDir) throws IOException {
         // §179 (D-BACKEND-SEMANTICS #4): tipo kof.ui/kof.media DECLARADO
         // (var/param/campo/retorno) — antes o descritor JVM saía `LLabel;`
