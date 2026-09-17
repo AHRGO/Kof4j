@@ -31,6 +31,29 @@ public final class NativeHttpCore {
                 movq %rdi, .Lhttp_urlptr(%rip)   # §259: url p/ msg "HTTP nnn from"
                 pushq %rbp                 # §259: tentativas restantes (rbp = N)
                 movq .Lhttp_retry_n(%rip), %rbp
+                # §259 fatia 3: circuito aberto -> fail-fast SEM conectar (JVM:
+                # kof_http_circuit_open() antes do loop de tentativas)
+                call kof_http_circuit_open
+                testq %rax, %rax
+                jz .Lhr_parse
+                leaq .Lhttp_errbuf(%rip), %rdi
+                leaq .Lhttp_str_copen(%rip), %rsi
+                call kof_http_append_cstr
+                movq %rax, %rdi
+                movq .Lhttp_urlptr(%rip), %rsi
+                movl 16(%rsi), %edx
+                addq $24, %rsi
+                call kof_http_append_n
+                movb $0, (%rax)
+                leaq .Lhttp_errbuf(%rip), %rdi
+                call kof_http_cstrlen
+                movl %eax, %esi
+                leaq .Lhttp_errbuf(%rip), %rdi
+                call kof_string_from_literal
+                movq %rax, %rdi
+                call kof_throw_string
+                jmp .Lhr_out
+            .Lhr_parse:
                 call kof_http_parse_url    # rdi ja' tem url (parse 1x: buffers globais)
             .Lhr_attempt:
                 movq .Lhttp_methodp(%rip), %r12   # restaura method (clobberado p/ total)
@@ -313,6 +336,7 @@ public final class NativeHttpCore {
                 call kof_net_close
                 jmp .Lhr_rtry_chk
             .Lhr_body:
+                call kof_http_circuit_record_success  # §259 fatia 3 (JVM: record_success p/ <500)
                 # body = depois de \r\n\r\n
                 leaq .Lhttp_respbuf(%rip), %rsi
                 movq %r12, %r9             # total
@@ -367,6 +391,7 @@ public final class NativeHttpCore {
                 jmp .Lhr_rtry
             .Lhr_rtry:                     # §259: paridade JVM — excecao OU 5xx tentam de novo
                 movq %rax, .Lhttp_last_err(%rip)
+                call kof_http_circuit_record_fail   # §259 fatia 3 (JVM: record_failure por tentativa)
             .Lhr_rtry_chk:
                 testq %rbp, %rbp
                 jz .Lhr_throw_last

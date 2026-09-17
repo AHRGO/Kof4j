@@ -9311,7 +9311,24 @@ behavior-preserving (`RawRowCollectionAccessE2ETest` + `SemanticResolutionTest`
   throw). `KofHttpE2ETest` 8/8 + `KofHttpResilienceE2ETest` 3/3 (JVM/JS) +
   `KofHttpNativeTimeoutE2ETest` 3/3 sem regressao. **PENDENTE:** circuit no x86
   (fatia 3) e a porta riscv64/aarch64 dos 3 knobs (fatia 4 — os `ret` puros
-  continuam la; o `HTTP003` do doc continua inexistente, o registro aponta p/ ca). Related: §258 (same sweep),
+  continuam la; o `HTTP003` do doc continua inexistente, o registro aponta p/ ca).
+- **FATIA 3 FECHA o circuit no x86_64 (17/09 ~04:00):** helpers asm proprios no
+  modulo verbs (`kof_http_now_ms` = clock_gettime(228)/CLOCK_MONOTONIC=1,
+  medidos, inline p/ nao depender de kof_now sujeito a runtime prune;
+  `kof_http_circuit_open` fecha no vencimento da janela (half-open, 30s = JVM);
+  `record_fail` incrementa e abre ao bater trips; `record_success` zera).
+  O core integra os 3 pontos do JVM: fail-fast ANTES do socket com throw
+  `"kof.http circuit open (fail fast): "+url`, `record_fail` por tentativa
+  falha, `record_success` no corpo <500. `circuit(0)` fecha e limpa (max(0,n)).
+  PROVA: `KofHttpNativeCircuitE2ETest` 1/1 (Q0 RED: 2a request conectava =
+  circuito nunca abria; GREEN: fail=caught, open=kof.http circuit open (fail
+  fast), recover=ok, e okHits==1 EXATO — fail-fast nao toca o servidor).
+  Vizinhos 15/15 (timeout 3, retry 3, E2E 8). SUITE 1969/3F/0E: §181×2 +
+  KofConcurrency2Test.crossNativeConcurrencyHelpersRun (aarch64 `poll(b)`=0 vs
+  golden 1 — MESMA classe do §256 CONC001/riscv (lane .18); divergencia
+  agora no aarch; esta unidade nao toca codigo de concorrencia — nada
+  introduzido aqui). **PENDENTE:** fatia 4 = porta riscv64 dos 3 knobs
+  (aarch64 herda via translateRiscvToAarch64). Related: §258 (same sweep),
   WEB002/WEB004/WEB003 (the per-function gap-code split precedent this should
   follow).
 

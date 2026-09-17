@@ -133,11 +133,95 @@ public final class NativeHttpVerbs {
             .Lhrs_store:
                 movq %rdi, .Lhttp_retry_n(%rip)
                 ret
-            # §259 fatia 3 (pendente): circuit ainda no-op no nativo
+            # §259 fatia 3: circuit REAL (era ret puro). trips=max(0,n) igual
+            # JVM; circuit(0) fecha e limpa o estado de falhas.
             .globl kof_http_circuit_set
             .type kof_http_circuit_set, @function
             kof_http_circuit_set:
+                movslq %edi, %rdi
+                testq %rdi, %rdi
+                jge .Lhcs_store
+                xorq %rdi, %rdi
+            .Lhcs_store:
+                movq %rdi, .Lhttp_circuit_trips(%rip)
+                testq %rdi, %rdi
+                jnz .Lhcs_ret
+                movq $0, .Lhttp_circuit_fails(%rip)
+                movq $0, .Lhttp_circuit_open_until(%rip)
+            .Lhcs_ret:
                 ret
+
+            # ---- §259 fatia 3: circuit-breaker helpers (asm proprio, relógio
+            # inline p/ nao depender de kof_now sujeito a runtime prune) ----
+            # kof_http_now_ms() -> rax = ms monotonicos; clobbers rax,rcx,rdx,
+            # rsi,rdi,r8. clock_gettime=228, CLOCK_MONOTONIC=1 (medidos).
+            .globl kof_http_now_ms
+            .type kof_http_now_ms, @function
+            kof_http_now_ms:
+                subq $16, %rsp
+                movq %rsp, %rsi
+                movl $1, %edi
+                movl $228, %eax
+                syscall
+                movq (%rsp), %rcx           # sec
+                imulq $1000, %rcx           # sec*1000
+                movq 8(%rsp), %rax          # nsec
+                movq $1000000, %r8
+                xorq %rdx, %rdx
+                divq %r8                    # nsec/1e6
+                addq %rcx, %rax
+                addq $16, %rsp
+                ret
+            # kof_http_circuit_open() -> rax=1 aberto; janela expirada -> fecha
+            # (half-open, permite proxima tentativa) e rax=0.
+            .globl kof_http_circuit_open
+            .type kof_http_circuit_open, @function
+            kof_http_circuit_open:
+                movq .Lhttp_circuit_open_until(%rip), %rax
+                testq %rax, %rax
+                jz .Lhco_false
+                pushq %rax
+                call kof_http_now_ms
+                popq %rcx
+                cmpq %rcx, %rax
+                jge .Lhco_expired
+                movl $1, %eax
+                ret
+            .Lhco_expired:
+                movq $0, .Lhttp_circuit_open_until(%rip)
+            .Lhco_false:
+                xorl %eax, %eax
+                ret
+            # kof_http_circuit_record_fail(): trips<=0 -> nao faz nada; senao
+            # incrementa falhas e, ao bater trips, abre por 30s (igual JVM).
+            .globl kof_http_circuit_record_fail
+            .type kof_http_circuit_record_fail, @function
+            kof_http_circuit_record_fail:
+                movq .Lhttp_circuit_trips(%rip), %rcx
+                testq %rcx, %rcx
+                jle .Lhrf_done
+                incq .Lhttp_circuit_fails(%rip)
+                movq .Lhttp_circuit_fails(%rip), %rax
+                cmpq %rcx, %rax
+                jl .Lhrf_done
+                call kof_http_now_ms
+                addq $30000, %rax
+                movq %rax, .Lhttp_circuit_open_until(%rip)
+            .Lhrf_done:
+                ret
+            # kof_http_circuit_record_success(): zera falhas e fecha.
+            .globl kof_http_circuit_record_success
+            .type kof_http_circuit_record_success, @function
+            kof_http_circuit_record_success:
+                movq $0, .Lhttp_circuit_fails(%rip)
+                movq $0, .Lhttp_circuit_open_until(%rip)
+                ret
+
+            .section .data
+            .Lhttp_circuit_trips: .quad 0
+            .Lhttp_circuit_fails: .quad 0
+            .Lhttp_circuit_open_until: .quad 0
+            .section .text
 
             .section .data
             .Lhttp_m_get: .asciz "GET"
@@ -146,6 +230,7 @@ public final class NativeHttpVerbs {
             .Lhttp_m_patch: .asciz "PATCH"
             .Lhttp_m_delete: .asciz "DELETE"
             .Lhttp_m_options: .asciz "OPTIONS"
+            .Lhttp_str_copen: .asciz "kof.http circuit open (fail fast): "
             .section .text            """;
     }
 }
