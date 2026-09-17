@@ -351,9 +351,13 @@ retorno do lambda (*probe*: map/filter/reduce corretos).
 | `SEM044` | `main()` com tipo de retorno declarado (`Int main()`) | `SemanticAnalyzer.analyzeFunction` (SG-018) |
 | `SEM045` | cláusula `throw X` com tipo desconhecido | `SemanticAnalyzer.checkThrowsClause` (SG-019) |
 | `SEM046` | acesso `private`/`protected` (método ou campo) fora do permitido | `MemberCallTyper.checkMemberAccess`/`checkFieldAccess` (SG-013) |
+| `SEM017` | nenhum construtor `super`/delegante com essa aridade na classe base | `ExpressionBareCallLowerer.lower` (deferido ao lowering) |
+| `SEM059` | tipo de retorno do override incompatível com o do método sobrescrito | `ImplementationChecker.checkOverrideReturnCompatibility` (#326) |
+| `SEM060` | chamar método de instância pelo nome da classe sem receptor (`Calc.add(1)`) | `ExpressionMethodCallLowerer.lower` (#258) |
+| `SEM061` | mesmo descritor JVM redeclarado (o overload exige parâmetro/retorno DIFERENTE) | `SymbolTableBuilder.checkMethodRedeclaration` |
 | `SEM064` | `interface J extends Base` onde `Base` é uma classe (interfaces só podem estender interfaces) | `SemanticAnalyzer.analyzeInterface` (#321) |
 | `SEM065` | escrita em campo `final` fora do construtor da classe | `MemberCallTyper.checkFinalFieldWrite` (#331/#327; era SEM063, renumerado 17/09 — colidiu com §193) |
-| `SEM066` | acessor de coleção (`get`/`put`/`size`...) chamado num receptor String (linha crua do `db.query`) | `ExpressionInstanceCallLowerer` (§193) |
+| `SEM066` | acessor de coleção (`get`/`put`/`size`...) chamado num receptor String (linha crua do `db.query`) | `StringReceiverGuards` (§193) |
 | `SEM067` | tipo de `catch` é um primitivo Kof (primitivos não são throwable) | `CatchTypeCheck.check` (#332/#328) |
 | `SEM068` | tipo de `catch` é classe de usuário que não é subclasse de `Throwable` | `CatchTypeCheck.check` (#332/#328) |
 | `SEM069` | `final abstract class X` (modificadores contraditórios — sem instância nem subclasse possível) | `ClassShapeChecks.checkClassDeclaration` (#341) |
