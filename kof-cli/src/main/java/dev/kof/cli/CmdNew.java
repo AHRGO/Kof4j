@@ -40,8 +40,8 @@ public final class CmdNew {
             } else if (a.equals("--type") && i + 1 < args.length) {
                 type = args[++i];
             } else if (a.startsWith("-")) {
-                System.err.println("kof new: flag desconhecida '" + a + "' [APP003]"
-                        + "\n  tipos: mono | backend | frontend | full-stack");
+                System.err.println("kof new: unknown flag '" + a + "' [APP003]"
+                        + "\n  types: mono | backend | frontend | full-stack");
                 return 1;
             } else if (dirName == null) {
                 dirName = a;
@@ -58,7 +58,7 @@ public final class CmdNew {
         Path manifest = dir.resolve("kof.toml");
         try {
             if (Files.exists(manifest)) {
-                System.err.println("kof new: " + manifest + " já existe (projeto já inicializado) [APP003]");
+                System.err.println("kof new: " + manifest + " already exists (project already initialized) [APP003]");
                 return 1;
             }
             Files.createDirectories(dir);
@@ -68,13 +68,13 @@ public final class CmdNew {
                 case "frontend" -> writeFrontend(dir);
                 case "full-stack" -> writeFullStack(dir);
                 default -> {
-                    System.err.println("kof new: tipo '" + type + "' não existe [APP003]"
-                            + "\n  tipos: mono | backend | frontend | full-stack");
+                    System.err.println("kof new: tipo '" + type + "' does not exist [APP003]"
+                            + "\n  types: mono | backend | frontend | full-stack");
                     return 1;
                 }
             }
-            System.out.println("criado " + type + " em " + dir.toAbsolutePath().normalize()
-                    + "\npróximos passos:\n  kof build " + dirName);
+            System.out.println("created " + type + " at " + dir.toAbsolutePath().normalize()
+                    + "\nnext steps:\n  kof build " + dirName);
             return 0;
         } catch (IOException e) {
             System.err.println("kof new: " + e.getMessage() + " [APP003]");

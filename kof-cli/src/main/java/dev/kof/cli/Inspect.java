@@ -41,7 +41,7 @@ public final class Inspect {
         // ser ignorada em silencio (aceita so --json).
         for (int i = 1; i < args.length; i++) {
             if (args[i].startsWith("-") && !"--json".equals(args[i])) {
-                System.err.println("inspect: flag desconhecida: " + args[i] + " (aceita: --json)");
+                System.err.println("inspect: unknown flag: " + args[i] + " (accepts: --json)");
                 return 1;
             }
         }

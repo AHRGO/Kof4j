@@ -198,7 +198,7 @@ public class JvmBackend implements Backend {
             try {
                 emitMethod(cw, clazz.name(), method, clazz.superName());
             } catch (RuntimeException e) {
-                throw new RuntimeException("frame crash em " + clazz.name() + "."
+                throw new RuntimeException("frame crash in " + clazz.name() + "."
                         + method.name() + " (super=" + superName + "): " + e.getMessage(), e);
             }
         }

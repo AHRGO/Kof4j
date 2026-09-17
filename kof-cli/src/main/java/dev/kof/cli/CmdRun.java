@@ -186,7 +186,7 @@ final class CmdRun {
                 Target feTarget = frontendTarget != null ? frontendTarget : Target.JS;
                 if (feTarget != Target.JS) {
                     System.err.println("run: frontend '" + TargetMatrix.name(feTarget)
-                            + "' ainda não roda em 'kof run' (só kofjs; script-SSR = Fase 8)");
+                            + "' does not run under 'kof run' yet (kofjs only; script-SSR = Phase 8)");
                     KofCliSupport.cleanup(tempDir);
                     System.exit(1);
                     return;

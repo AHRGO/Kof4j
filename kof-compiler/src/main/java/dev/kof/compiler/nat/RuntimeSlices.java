@@ -209,7 +209,7 @@ public final class RuntimeSlices {
             for (String p : sl.provides()) {
                 Integer prev = m.put(p, sl.index());
                 if (prev != null && prev >= 0) {
-                    throw new IllegalStateException("símbolo definido por 2 fatias: "
+                    throw new IllegalStateException("symbol defined by 2 slices: "
                             + p + " [" + prev + "," + sl.index() + "]");
                 }
             }
@@ -331,14 +331,14 @@ public final class RuntimeSlices {
             }
             if (m == null) {
                 throw new IllegalStateException("fatia " + clsRef + "." + meth
-                        + " não resolvida por reflexão em " + candidates
-                        + " (mudou visibilidade/pacote?)");
+                        + " not resolved by reflection in " + candidates
+                        + " (visibility/package changed?)");
             }
             StringBuilder sb = new StringBuilder();
             try {
                 m.invoke(null, sb);
             } catch (IllegalAccessException | InvocationTargetException e) {
-                throw new IllegalStateException("emissor " + fq + "." + meth + " lançou", e.getCause());
+                throw new IllegalStateException("emitter " + fq + "." + meth + " threw", e.getCause());
             }
             String code = ASM_COMMENT.matcher(sb).replaceAll("");
             Set<String> provides = new LinkedHashSet<>();
@@ -404,12 +404,12 @@ public final class RuntimeSlices {
                         "src/main/java/dev/kof/compiler/NativeRuntime.java"));
             } catch (Exception e2) {
                 throw new IllegalStateException(
-                        "NativeRuntime.java não localizado (rode do módulo kof-compiler)", e2);
+                        "NativeRuntime.java not found (run from the kof-compiler module)", e2);
             }
         }
         int start = src.indexOf("generateRuntimeAssembly()");
         int end = src.indexOf("return sb.toString", start);
-        if (start < 0 || end < 0) throw new IllegalStateException("corpo não localizado");
+        if (start < 0 || end < 0) throw new IllegalStateException("body not found");
         return new String[]{src, src.substring(start, end)};
     }
 
@@ -422,7 +422,7 @@ public final class RuntimeSlices {
             pairs.add(new String[]{cls, c.group(2)});
         }
         if (pairs.size() < 100) {
-            throw new IllegalStateException("ordem de fatias sub-derivada: " + pairs.size());
+            throw new IllegalStateException("slice order under-derived: " + pairs.size());
         }
         return pairs.toArray(new String[0][]);
     }
@@ -449,8 +449,8 @@ public final class RuntimeSlices {
             out.append("            .section .text\n");
             out.append(all.substring(rtEnd));
             System.err.println("NativeBackend: runtime prune " + keep.size() + "/"
-                    + slices.size() + " fatias mantidas (" + (all.length() - out.length())
-                    + " bytes podados)");
+                    + slices.size() + " slices kept (" + (all.length() - out.length())
+                    + " bytes pruned)");
             return out.toString();
         } catch (RuntimeException e) {
             // R6: nunca podar silenciosamente errado — se o mapa falhar, emite

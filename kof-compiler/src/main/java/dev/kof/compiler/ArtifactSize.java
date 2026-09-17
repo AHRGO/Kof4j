@@ -45,7 +45,7 @@ public final class ArtifactSize {
     public static ElfSizes elf(Path bin) throws IOException {
         byte[] b = Files.readAllBytes(bin);
         if (b.length < 64 || b[0] != 0x7f || b[1] != 'E' || b[2] != 'L' || b[3] != 'F' || b[4] != 2) {
-            throw new IOException("não é ELF64: " + bin);
+            throw new IOException("not ELF64: " + bin);
         }
         long eShoff = u64(b, 0x28);
         int eShentsize = u16(b, 0x3a);

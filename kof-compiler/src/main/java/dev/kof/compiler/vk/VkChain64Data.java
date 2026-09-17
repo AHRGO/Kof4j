@@ -25,7 +25,7 @@ public final class VkChain64Data {
             .Lvkv_e_enum:     .asciz "enum"
             .Lvkv_e_noqueue:  .asciz "sem compute queue"
             .Lvkv_e_device:   .asciz "device"
-            .Lvkv_e_spvopen:  .asciz "spv nao abriu"
+            .Lvkv_e_spvopen:  .asciz "spv did not open"
             .Lvkv_e_spvread:  .asciz "spv leitura falhou"
             .Lvkv_e_shader:   .asciz "shader module"
             .Lvkv_e_nbinds:   .asciz "nbinds?"

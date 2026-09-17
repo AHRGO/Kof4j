@@ -200,7 +200,7 @@ final class Deps {
                     Files.write(file.getParent().resolve(LOCK_FILE), mvnClosure(file.getParent(), lines));
                 } catch (Exception e) {
                     System.err.println("deps: transitive resolution failed (" + e.getMessage()
-                            + "); classpath fica SÓ com as diretas (sem kofdeps.lock)");
+                            + "); classpath keeps ONLY the direct deps (no kofdeps.lock)");
                 }
             } else {
                 System.err.println("deps: `mvn` is not on PATH — TRANSITIVE dependencies"

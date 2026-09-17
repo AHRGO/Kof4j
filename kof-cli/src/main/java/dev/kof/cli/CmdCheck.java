@@ -46,7 +46,7 @@ final class CmdCheck {
             } else {
                 // R6: nunca ignorar uma flag desconhecida em silêncio (o usuario
                 // acharia que ela teve efeito). `check` so aceita --target/--json.
-                err.println("check: flag desconhecida: " + arg
+                err.println("check: unknown flag: " + arg
                         + " (aceita: --target <t> --json)");
                 return 1;
             }

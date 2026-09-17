@@ -29,7 +29,7 @@ final class Fmt {
         // teve efeito). Aceita só -w.
         for (int i = 1; i < args.length; i++) {
             if (args[i].startsWith("-") && !"-w".equals(args[i])) {
-                System.err.println("fmt: flag desconhecida: " + args[i] + " (aceita: -w)");
+                System.err.println("fmt: unknown flag: " + args[i] + " (accepts: -w)");
                 return 1;
             }
         }

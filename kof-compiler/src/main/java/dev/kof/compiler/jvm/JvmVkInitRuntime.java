@@ -178,7 +178,7 @@ public final class JvmVkInitRuntime {
                     var linker = java.lang.foreign.Linker.nativeLinker();
                     return linker.downcallHandle(
                             lib.find(name).orElseThrow(
-                                    () -> new RuntimeException("simbolo ausente: " + name)),
+                                    () -> new RuntimeException("missing symbol: " + name)),
                             desc);
                 }
 
@@ -226,7 +226,7 @@ public final class JvmVkInitRuntime {
                                 .filter(s2 -> s2 != null)
                                 .findFirst()
                                 .orElseThrow(() -> new RuntimeException(
-                                        "libvkboot.so nao encontrada (instale em /usr/local/lib ou ./)"));
+                                        "libvkboot.so not found (install in /usr/local/lib or ./)"));
                         vkBoot = vkFn(bootLib, "vkboot",
                                 java.lang.foreign.FunctionDescriptor.of(I, P));
                         vkCreateShaderModule = vkFn(lib, "vkCreateShaderModule", java.lang.foreign.FunctionDescriptor.of(I, P, P, P, P));
@@ -287,7 +287,7 @@ public final class JvmVkInitRuntime {
                         if (java.nio.file.Files.isRegularFile(java.nio.file.Path.of(v))) {
                             return v;
                         }
-                        envSpvErr = env + " aponta p/ arquivo ausente: " + v;
+                        envSpvErr = env + " points to a missing file: " + v;
                         return null;
                     }
                     if (java.nio.file.Files.isRegularFile(java.nio.file.Path.of(fallback))) {

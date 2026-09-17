@@ -179,8 +179,8 @@ public final class AndroidProjectWriter {
                 globalThis.kof_platform = {
                   print(x) { console.log(String(x)); },
                   args() { return []; },
-                  readFileSync(p) { throw new Error("kof.io readFile não disponível no Android (use interop)"); },
-                  writeFile(p, c) { throw new Error("kof.io writeFile não disponível no Android (use interop)"); }
+                  readFileSync(p) { throw new Error("kof.io readFile not available on Android (use interop)"); },
+                  writeFile(p, c) { throw new Error("kof.io writeFile not available on Android (use interop)"); }
                 };
                 """);
     }

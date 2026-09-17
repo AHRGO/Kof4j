@@ -385,8 +385,8 @@ final class NativeMethodEmitter {
                 sb.append("    call kof_throw_string\n");
             }
             default -> throw new UnsupportedOperationException(
-                    "operação sem lowering x86: " + op.getClass().getSimpleName()
-                    + " (R6: nunca silenciar) em método " + currentMethod.name());
+                    "operation with no x86 lowering: " + op.getClass().getSimpleName()
+                    + " (R6: never silent) in method " + currentMethod.name());
         }
     }
 

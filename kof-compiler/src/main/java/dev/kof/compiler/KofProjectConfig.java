@@ -61,7 +61,7 @@ public final class KofProjectConfig {
             return parse(Files.readString(manifest));
         } catch (IOException e) {
             return new KofProjectConfig(null, null, null, null,
-                    List.of("kof.toml ilegível: " + e.getMessage()));
+                    List.of("unreadable kof.toml: " + e.getMessage()));
         }
     }
 
@@ -86,7 +86,7 @@ public final class KofProjectConfig {
             }
             int eq = line.indexOf('=');
             if (eq < 0) {
-                warnings.add("linha " + lineNo + ": esperava 'chave = valor', achou '"
+                warnings.add("line " + lineNo + ": expected 'key = value', found '"
                         + line + "'");
                 continue;
             }
@@ -110,19 +110,19 @@ public final class KofProjectConfig {
                         try {
                             port = Integer.parseInt(val);
                         } catch (NumberFormatException e) {
-                            warnings.add("[server] port deve ser número, achou '" + val + "'");
+                            warnings.add("[server] port must be a number, found '" + val + "'");
                         }
                     } else warnUnknown(warnings, section, key);
                 }
-                default -> warnings.add("linha " + lineNo + ": seção desconhecida '["
-                        + section + "]' (chave '" + key + "' ignorada)");
+                default -> warnings.add("line " + lineNo + ": unknown section '["
+                        + section + "]' (key '" + key + "' ignored)");
             }
         }
         return new KofProjectConfig(name, backend, frontend, port, warnings);
     }
 
     private static void warnUnknown(List<String> warnings, String section, String key) {
-        warnings.add("[" + section + "] chave desconhecida '" + key + "' ignorada");
+        warnings.add("[" + section + "] unknown key '" + key + "' ignored");
     }
 
     private static String unquote(String v) {

@@ -35,10 +35,10 @@ final class CmdTest {
         // não produz binário standalone. Recusa honesta e cedo (R6) em vez do
         // enganoso "no binary produced" depois de compilar o projeto inteiro.
         if (target == Target.ANDROID) {
-            System.err.println("test: --target android não é um alvo de teste"
-                    + " (android é empacotamento). Teste a lógica com"
+            System.err.println("test: --target android is not a test target"
+                    + " (android is packaging). Test the logic with"
                     + " --target jvm|native|js; use 'kof build --target android'"
-                    + " para gerar o APK");
+                    + " to build the APK");
             System.exit(1);
             return;
         }

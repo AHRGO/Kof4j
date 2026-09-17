@@ -173,7 +173,7 @@ class CmdCheckTest {
                 new PrintStream(err, true, StandardCharsets.UTF_8));
 
         assertEquals(1, ec, "flag desconhecida deve ser recusada (R6)");
-        assertTrue(err.toString(StandardCharsets.UTF_8).contains("desconhecida"),
+        assertTrue(err.toString(StandardCharsets.UTF_8).contains("unknown flag"),
                 err.toString(StandardCharsets.UTF_8));
     }
 }

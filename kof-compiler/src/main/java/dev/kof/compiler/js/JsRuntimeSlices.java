@@ -53,7 +53,7 @@ final class JsRuntimeSlices {
     private static final List<Map.Entry<Pattern, String>> GUARDS = List.of(
             Map.entry(Pattern.compile("\\beval\\s*\\("), "eval()"),
             Map.entry(Pattern.compile("\\bnew\\s+Function\\s*\\("), "new Function()"),
-            Map.entry(Pattern.compile("\\bimport\\s*\\("), "import() dinâmico"),
+            Map.entry(Pattern.compile("\\bimport\\s*\\("), "dynamic import()"),
             Map.entry(Pattern.compile("globalThis\\s*\\["), "globalThis[...]"),
             Map.entry(Pattern.compile("window\\s*\\["), "window[...]"));
 
@@ -157,8 +157,8 @@ final class JsRuntimeSlices {
         for (Unit u : blockUnits) {
             String body = strip(u.text());
             if (count(body, '{') != count(body, '}') || count(body, '(') != count(body, ')')) {
-                String who = u.provides().isEmpty() ? "preâmbulo" : u.provides().get(0);
-                return "unidade não balanceada (" + who + ")";
+                String who = u.provides().isEmpty() ? "preamble" : u.provides().get(0);
+                return "unbalanced unit (" + who + ")";
             }
         }
         return null;

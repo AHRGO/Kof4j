@@ -91,7 +91,7 @@ final class CmdServe {
                 KofCliSupport.Targets sel = KofCliSupport.selectTargets(backendFlag, frontendFlag, serveRoot);
                 if (sel.backend() != null && sel.backend() != Target.JVM) {
                     System.err.println("serve: backend '" + TargetMatrix.name(sel.backend())
-                            + "' ainda não é executável via kof serve (só jvm); "
+                            + "' is not runnable via kof serve yet (jvm only); "
                             + "use 'kof run --target " + TargetMatrix.name(sel.backend()) + "'");
                     KofCliSupport.cleanup(tempDir);
                     System.exit(1);

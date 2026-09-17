@@ -112,7 +112,7 @@ final class CmdEditor {
         out.println("  status               Kof editing environment (detailed)");
         out.println("  install <editor>     install a given editor's integration");
         out.println("  uninstall <editor>   remove the installed integration");
-        out.println("  setup                detecta e instala as recomendadas (com consentimento)");
+        out.println("  setup                detect and install the recommended ones (with consent)");
         out.println("  update               re-sync installed integrations");
     }
 
