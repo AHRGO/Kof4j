@@ -113,8 +113,8 @@ primário por reproduzir a complexidade de threads).
 Troca de valores entre tarefas através de:
 
 - parâmetros e retornos (estilo "join");
-- filas (produtor/consumidor) — abstração planejada na stdlib
-  (`kof.concurrent.Queue`);
+- filas (produtor/consumidor) — implementadas como `channel<T>()` (`c.send(v)`/`c.receive()`,
+  `take` bloqueante); o plano original chamava de `kof.concurrent.Queue`;
 - callbacks estruturados (não como modelo primário).
 
 ### 2.4 Sincronização
@@ -265,7 +265,7 @@ Essa decisão pertence ao target/runtime.
 ## 6. Dependências (0.2.6-beta)
 
 - ✅ Lambdas com captura via `BoxN` — implementado (necessário para `spawn { ... }` idiomático);
-- filas na stdlib (`kof.concurrent.Queue` — planned, `kof.mq` já fornece pub/sub);
+- ✅ filas (produtor/consumidor) — implementadas como `channel<T>()` (send/receive, bloqueio real 03/09); `kof.mq` também fornece pub/sub. O nome `kof.concurrent.Queue` do plano realizou-se como `channel<T>()`;
 - modelo de exceção por tarefa — ✅ unwrap `ExecutionException` no `await` (JVM);
 - ✅ OS threads no Native — `pthread_create` + trampoline + futex (31/08, `CONC001` fechado no x86_64); scheduler `scheduler.every/at` no Native segue `SCHED001`.
 

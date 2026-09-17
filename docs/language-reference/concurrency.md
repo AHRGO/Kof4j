@@ -113,8 +113,8 @@ because it reproduces the complexity of threads).
 Exchange of values between tasks through:
 
 - parameters and returns ("join" style);
-- queues (producer/consumer) — abstraction planned in the stdlib
-  (`kof.concurrent.Queue`);
+- producer/consumer queues — implemented as `channel<T>()` (`c.send(v)`/`c.receive()`,
+  blocking `take`); the original plan named it `kof.concurrent.Queue`;
 - structured callbacks (not as the primary model).
 
 ### 2.4 Synchronization
@@ -265,7 +265,7 @@ That decision belongs to the target/runtime.
 ## 6. Dependencies (0.2.6-beta)
 
 - ✅ Lambdas with capture via `BoxN` — implemented (necessary for idiomatic `spawn { ... }`);
-- queues in the stdlib (`kof.concurrent.Queue` — planned, `kof.mq` already provides pub/sub);
+- ✅ producer/consumer queues — implemented as `channel<T>()` (send/receive, real blocking 03/09); `kof.mq` also provides pub/sub. The plan's `kof.concurrent.Queue` name was realized as `channel<T>()`;
 - per-task exception model — ✅ unwrap `ExecutionException` on `await` (JVM);
 - ✅ OS threads on Native — `pthread_create` + trampoline + futex (31/08, `CONC001` closed on x86_64); `scheduler.every/at` scheduler on Native still follows `SCHED001`.
 
