@@ -4017,7 +4017,7 @@ no upstream).
 | **Portar stdlib riscv64/aarch64** | média | `translateRiscvToAarch64` existe | agente-nativo-val |
 | **~~EDI001~~** | ~~média~~ | ~~Editor Integration~~ | ✅ **CONCLUÍDO 13/09** (degraus 0–13 provados; movido para `docs/tooling/PLAN-EDITOR-INTEGRATION.md`; `EditorIntegrationTest`). Resta só o plugin IntelliJ oficial (issue #1, escopo). |
 | Debugger DWARF variáveis/expressões + VS Code ext | baixa | `kof.debug` | |
-| OpenTelemetry export | baixa | spans feitos; falta OTLP export | |
+| OpenTelemetry export | ~~baixa~~ | ~~spans feitos; falta OTLP export~~ | ✅ **LANDADO 17/09** (`435b7013`: `exportSpans()`→OTLP/JSON JVM+JS; Native `OBS003` honesto) |
 
 ### Trilha universal — Tier 1 e o estágio SYSTEMS
 
