@@ -156,6 +156,16 @@ public class StatementParser {
             // bare return: `return` followed by the end of the block
             return new ReturnStmt(p, null);
         }
+        // #343 — ASI no `return`: sem ponto-e-vírgula, a expressão da próxima
+        // linha ENCAIXA no `return` e engole o statement seguinte
+        // (`if (x<0) return\n println(..)` virava `return println(..)` — o
+        // corpo desaparecia e o ramo parecia "invertido"). O valor do return
+        // só vale na MESMA linha da palavra-chave; senão é return-void.
+        // Aditivo: nenhum programa do corpus usa `return` com valor na linha
+        // seguinte (medido: todos os `return` nus são seguidos de `}`).
+        if (ctx.peek().line() > p.line()) {
+            return new ReturnStmt(p, null);
+        }
         ExpressionNode value = ExpressionParser.parseExpression(ctx);
         ctx.expectSemicolon();
         return new ReturnStmt(p, value);
