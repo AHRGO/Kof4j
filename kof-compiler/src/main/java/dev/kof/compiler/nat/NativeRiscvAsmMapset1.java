@@ -477,7 +477,10 @@ public final class NativeRiscvAsmMapset1 {
                 addi sp, sp, 48
                 ret
 
-            # kof_scheduler_at(cron@a0, task@a1) -> id (MVP: roda a cada 60s)
+            # kof_scheduler_at(cron@a0, task@a1) -> id
+            # CRON001 (17/09): inalcançável a partir de Kof — o front-end
+            # recusa `scheduler.at` no Native em compile-time (sem parser
+            # cron em asm). Mantido só para o link não quebrar.
             .globl kof_scheduler_at
             kof_scheduler_at:
                 mv   t0, a1

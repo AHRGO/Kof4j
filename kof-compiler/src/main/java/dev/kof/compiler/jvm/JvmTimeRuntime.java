@@ -236,9 +236,135 @@ public final class JvmTimeRuntime {
                     return kof_time_interval(ms, fn);
                 }
 
+                // ── kof.scheduler.at — cron real (CRON001) ──────────────
+                // 5 campos: minuto hora dia-do-mês mês dia-da-semana,
+                // avaliados em UTC (convenção do stdlib: determinismo e
+                // paridade entre alvos — sem DST). Suporta *, a, a-b,
+                // a-b/s, */s e listas com vírgula. DOW 0/7 = domingo.
+                // Quando dia-do-mês E dia-da-semana são restritos vale o OU
+                // (regra cron clássica). Cron inválido lança
+                // IllegalArgumentException (alto, nunca silencioso — R6).
+                public static long kof_cron_next_delay_ms(String cron, long nowMillis) {
+                    return kof_cron_next_delay_ms(kof_cron_parse(cron), nowMillis);
+                }
+
+                static long[] kof_cron_parse(String cron) {
+                    if (cron == null) throw new IllegalArgumentException("cron: null expression");
+                    String[] f = cron.trim().split("\\\\s+");
+                    if (f.length != 5) {
+                        throw new IllegalArgumentException("cron: expected 5 fields, got " + f.length + ": " + cron);
+                    }
+                    long[] out = new long[7];
+                    out[0] = kof_cron_field(f[0], 0, 59, "minute");
+                    out[1] = kof_cron_field(f[1], 0, 23, "hour");
+                    out[2] = kof_cron_field(f[2], 1, 31, "day-of-month");
+                    out[3] = kof_cron_field(f[3], 1, 12, "month");
+                    out[4] = kof_cron_field(f[4], 0, 7, "day-of-week");
+                    if ((out[4] & (1L << 7)) != 0) out[4] |= 1L;   // 7 == domingo == 0
+                    out[4] &= ~(1L << 7);
+                    out[5] = f[2].equals("*") ? 0 : 1;
+                    out[6] = f[4].equals("*") ? 0 : 1;
+                    return out;
+                }
+
+                static long kof_cron_field(String spec, int min, int max, String name) {
+                    long mask = 0;
+                    for (String part : spec.split(",")) {
+                        if (part.isEmpty()) throw new IllegalArgumentException("cron: empty " + name + " field");
+                        int step = 1;
+                        String range = part;
+                        int slash = part.indexOf('/');
+                        if (slash >= 0) {
+                            range = part.substring(0, slash);
+                            step = kof_cron_int(part.substring(slash + 1), name);
+                            if (step <= 0) throw new IllegalArgumentException("cron: bad step in " + name + ": " + part);
+                        }
+                        int lo;
+                        int hi;
+                        if (range.equals("*")) {
+                            lo = min;
+                            hi = max;
+                        } else {
+                            int dash = range.indexOf('-');
+                            if (dash >= 0) {
+                                lo = kof_cron_int(range.substring(0, dash), name);
+                                hi = kof_cron_int(range.substring(dash + 1), name);
+                            } else {
+                                lo = kof_cron_int(range, name);
+                                hi = slash >= 0 ? max : lo;
+                            }
+                        }
+                        if (lo < min || hi > max || lo > hi) {
+                            throw new IllegalArgumentException("cron: " + name + " out of range: " + part);
+                        }
+                        for (int v = lo; v <= hi; v += step) mask |= 1L << v;
+                    }
+                    return mask;
+                }
+
+                static int kof_cron_int(String s, String name) {
+                    try {
+                        return Integer.parseInt(s.trim());
+                    } catch (NumberFormatException e) {
+                        throw new IllegalArgumentException("cron: bad " + name + " value: " + s);
+                    }
+                }
+
+                static boolean kof_cron_matches(long[] f, java.time.ZonedDateTime z) {
+                    if ((f[0] >>> z.getMinute() & 1L) == 0) return false;
+                    if ((f[1] >>> z.getHour() & 1L) == 0) return false;
+                    if ((f[3] >>> z.getMonthValue() & 1L) == 0) return false;
+                    boolean domOk = (f[2] >>> z.getDayOfMonth() & 1L) != 0;
+                    boolean dowOk = (f[4] >>> (z.getDayOfWeek().getValue() % 7) & 1L) != 0;
+                    if (f[5] == 1 && f[6] == 1) return domOk || dowOk;
+                    if (f[5] == 1) return domOk;
+                    if (f[6] == 1) return dowOk;
+                    return true;
+                }
+
+                /** Próximo delay (ms) a partir de nowMillis; varre minuto a
+                 *  minuto por até 4 anos (cobre 29/02). */
+                static long kof_cron_next_delay_ms(long[] f, long nowMillis) {
+                    long t = (nowMillis / 60000L) * 60000L + 60000L;
+                    for (int i = 0; i < 366 * 24 * 60 * 4; i++) {
+                        java.time.ZonedDateTime z = java.time.Instant.ofEpochMilli(t)
+                                .atZone(java.time.ZoneOffset.UTC);
+                        if (kof_cron_matches(f, z)) return t - nowMillis;
+                        t += 60000L;
+                    }
+                    return 60000L;
+                }
+
                 public static String kof_scheduler_at(String cron, Object fn) {
-                    // MVP: cron "0 3 * * *" -> 60s interval for now; parse simple "*/5 * * * *"
-                    return kof_time_interval(60000, fn);
+                    long[] fields = kof_cron_parse(cron);
+                    String id = "job-" + KOF_TIME_SEQ.incrementAndGet();
+                    Thread t = new Thread(() -> {
+                        try {
+                            java.lang.reflect.Method invoke = fn.getClass().getMethod("invoke");
+                            while (KOF_TIME_JOBS.containsKey(id)) {
+                                long delay = kof_cron_next_delay_ms(fields, System.currentTimeMillis());
+                                long slept = 0;
+                                while (slept < delay && KOF_TIME_JOBS.containsKey(id)) {
+                                    long chunk = Math.min(1000L, delay - slept);
+                                    Thread.sleep(chunk);
+                                    slept += chunk;
+                                }
+                                if (!KOF_TIME_JOBS.containsKey(id)) break;
+                                invoke.invoke(fn);
+                            }
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                        } catch (java.lang.reflect.InvocationTargetException e) {
+                            if (e.getCause() instanceof RuntimeException re) throw re;
+                            throw new RuntimeException(e.getCause());
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    }, "kof-cron-" + id);
+                    t.setDaemon(true);
+                    KOF_TIME_JOBS.put(id, t);
+                    t.start();
+                    return id;
                 }
 
                 public static void kof_scheduler_cancel(String id) {

@@ -16,16 +16,17 @@ public final class ExpressionSchedulerCallLowerer {
     for (ExpressionNode arg : mc.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
     KofScheduler.SchedulerCall schedCall = KofScheduler.staticCall(mc.methodName(), argTypes);
     if (schedCall != null) {
-        if (!KofScheduler.supportedOn(driver.target)) {
+        if (!KofScheduler.supportedOn(schedCall.function(), driver.target)) {
             if (driver.currentDiagnostics != null) {
+                String code = KofScheduler.gapCode(schedCall.function());
                 driver.currentDiagnostics.error(mc.position() != null ? mc.position().file() : "",
                         mc.position() != null ? mc.position().line() : 0,
                         mc.position() != null ? mc.position().column() : 0,
                         0,
                         mc.methodName()
                                 + ": not available on the " + driver.target
-                                + " driver.target yet (SCHED001)",
-                        "SCHED001");
+                                + " driver.target yet (" + code + ")",
+                        code);
             }
             return localIdx;
         }

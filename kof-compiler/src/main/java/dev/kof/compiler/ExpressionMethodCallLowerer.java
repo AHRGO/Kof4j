@@ -253,10 +253,11 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
     for (ExpressionNode arg : mc.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
     KofScheduler.SchedulerCall schedCall = KofScheduler.staticCall(mc.methodName(), argTypes);
     if (schedCall != null) {
-        if (!KofScheduler.supportedOn(driver.target)) {
+        if (!KofScheduler.supportedOn(schedCall.function(), driver.target)) {
+            String code = KofScheduler.gapCode(schedCall.function());
             gapError(driver, mc, rid.name() + "." + mc.methodName()
                     + ": not available on the " + driver.target
-                    + " driver.target yet (SCHED001)", "SCHED001");
+                    + " driver.target yet (" + code + ")", code);
             return localIdx;
         }
         localIdx = emitArgs(driver, mc, ops, owner, localIdx, locals);
