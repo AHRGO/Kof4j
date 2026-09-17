@@ -279,7 +279,8 @@ public final class CompilerPipeline {
         Backend backend = CompilerPipeline.selectBackend(driver, target);
         backend.emit(irModule, outputDir, driver.debugInfoEnabled);
         if (target == Target.ANDROID) {
-            new AndroidProjectWriter().write(outputDir, irModule);
+            new AndroidProjectWriter(driver.androidMinSdk, driver.androidTargetSdk)
+                    .write(outputDir, irModule);
         }
     }
 

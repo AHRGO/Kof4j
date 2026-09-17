@@ -43,7 +43,27 @@ public final class AndroidProjectWriter {
     static final String APP_PACKAGE = "dev.kof.app";
     static final String APP_LABEL = "Kof App";
     private static final String BUILD_TOOLS = "34.0.0";
-    private static final String API_LEVEL = "34";
+    /** Defaults conservadores do alvo (ver docs/targets/KOFANDROID.md). */
+    public static final int DEFAULT_MIN_SDK = 24;
+    public static final int DEFAULT_TARGET_SDK = 34;
+
+    private final int minSdk;
+    private final int targetSdk;
+
+    /** Projeto com os defaults do alvo (minSdk 24 / targetSdk 34). */
+    public AndroidProjectWriter() {
+        this(DEFAULT_MIN_SDK, DEFAULT_TARGET_SDK);
+    }
+
+    /**
+     * Projeto com minSdk/targetSdk explícitos (`--min-sdk`/`--target-sdk`).
+     * targetSdk também seleciona a plataforma do SDK linkada
+     * (`platforms/android-<targetSdk>/android.jar`).
+     */
+    public AndroidProjectWriter(int minSdk, int targetSdk) {
+        this.minSdk = minSdk;
+        this.targetSdk = targetSdk;
+    }
 
     /**
      * Escreve o projeto. As classes JVM já estão em outputDir (o JvmBackend
@@ -99,7 +119,9 @@ public final class AndroidProjectWriter {
                 - Label do app: "%4$s" (primeira Window do programa).
                   Permissões: declare @Permissions(["android.permission.X"])
                   numa classe Kof.
-                """.formatted(BUILD_TOOLS, API_LEVEL, APP_PACKAGE, appLabel));
+                - minSdk %5$d / targetSdk %6$d (override no build com
+                  --min-sdk <n> / --target-sdk <n>).
+                """.formatted(BUILD_TOOLS, targetSdk, APP_PACKAGE, appLabel, minSdk, targetSdk));
     }
 
     /** Primeiro literal String passado a kof_ui_window_new vira o label. */
@@ -214,7 +236,7 @@ public final class AndroidProjectWriter {
      */
     private void writePom(Path out) throws IOException {
         String bt = "${env.ANDROID_HOME}/build-tools/" + BUILD_TOOLS;
-        String platformJar = "${env.ANDROID_HOME}/platforms/android-" + API_LEVEL + "/android.jar";
+        String platformJar = "${env.ANDROID_HOME}/platforms/android-" + targetSdk + "/android.jar";
         Files.writeString(out.resolve("pom.xml"), """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <!--
@@ -277,7 +299,7 @@ public final class AndroidProjectWriter {
                                 <exec executable="${kof.build-tools}/d8" failonerror="true">
                                   <arg value="--release"/>
                                   <arg value="--lib"/><arg value="${kof.platform.jar}"/>
-                                  <arg value="--min-api"/><arg value="24"/>
+                                  <arg value="--min-api"/><arg value="%d"/>
                                   <arg value="--output"/><arg value="${project.build.directory}/apk"/>
                                   <arg value="libs/kof-app.jar"/>
                                   <arg value="${project.build.directory}/kof-host.jar"/>
@@ -358,7 +380,7 @@ public final class AndroidProjectWriter {
                     </plugins>
                   </build>
                 </profile-placeholder>
-                """.formatted(APP_PACKAGE, bt, platformJar)
+                """.formatted(APP_PACKAGE, bt, platformJar, minSdk)
                         .replace("</profile-placeholder>", "</project>"));
     }
 
@@ -376,23 +398,24 @@ public final class AndroidProjectWriter {
                 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
                     package="%s">
 
-                    %s<application
-                        android:label="%s"
-                        android:icon="@drawable/ic_launcher_kof"
-                        android:theme="@android:style/Theme.Material.Light.NoActionBar">
-                        <activity
-                            android:name=".MainActivity"
-                            android:exported="true"
-                            android:configChanges="orientation|screenSize|keyboardHidden">
-                            <intent-filter>
-                                <action android:name="android.intent.action.MAIN" />
-                                <category android:name="android.intent.category.LAUNCHER" />
-                            </intent-filter>
-                        </activity>
-                    </application>
+                    <uses-sdk android:minSdkVersion="%d" android:targetSdkVersion="%d" />
+                %s<application
+                    android:label="%s"
+                    android:icon="@drawable/ic_launcher_kof"
+                    android:theme="@android:style/Theme.Material.Light.NoActionBar">
+                    <activity
+                        android:name=".MainActivity"
+                        android:exported="true"
+                        android:configChanges="orientation|screenSize|keyboardHidden">
+                        <intent-filter>
+                            <action android:name="android.intent.action.MAIN" />
+                            <category android:name="android.intent.category.LAUNCHER" />
+                        </intent-filter>
+                    </activity>
+                </application>
 
                 </manifest>
-                """.formatted(APP_PACKAGE, permLines.toString(), appLabel));
+                """.formatted(APP_PACKAGE, minSdk, targetSdk, permLines.toString(), appLabel));
     }
 
     /** Ícone vetorial do Kof — sem binário PNG no projeto gerado. */

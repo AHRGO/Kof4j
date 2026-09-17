@@ -451,6 +451,46 @@ class AndroidInteropE2ETest {
     }
 
     @Test
+    void androidSdkOverrideThreadsToManifestPomAndReadme(@TempDir Path tempDir) throws IOException {
+        // Fase 4: minSdk/targetSdk explícitos (--min-sdk/--target-sdk) devem
+        // chegar ao manifesto (uses-sdk), ao pom (platform jar + d8 --min-api)
+        // e ao README. Defaults 24/34 quando não informados.
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            main() {
+                println("oi")
+            }
+            """);
+
+        Path sdkJar = tempDir.resolve("fake-sdk.jar");
+        try (InputStream in = AndroidInteropE2ETest.class.getResourceAsStream("/android/fake-sdk.jar")) {
+            assertNotNull(in, "fake-sdk.jar deve estar em src/test/resources/android/");
+            Files.copy(in, sdkJar);
+        }
+
+        Path proj = tempDir.resolve("proj");
+        CompilerDriver cpDriver = new CompilerDriver();
+        cpDriver.setExternalClasspath(List.of(sdkJar));
+        cpDriver.setAndroidSdk(21, 35);
+        CompilationResult result = cpDriver.compile(source, proj, Target.ANDROID);
+        assertTrue(result.success(), "Compilation should succeed: " + result.diagnostics().getDiagnostics());
+
+        String manifest = Files.readString(proj.resolve("src/main/AndroidManifest.xml"));
+        assertTrue(manifest.contains("minSdkVersion=\"21\""), "manifest minSdk=21:\n" + manifest);
+        assertTrue(manifest.contains("targetSdkVersion=\"35\""), "manifest targetSdk=35:\n" + manifest);
+
+        String pom = Files.readString(proj.resolve("pom.xml"));
+        assertTrue(pom.contains("platforms/android-35/android.jar"),
+                "pom deve linkar a plataforma android-35:\n" + pom);
+        assertTrue(pom.contains("<arg value=\"--min-api\"/><arg value=\"21\"/>"),
+                "d8 deve receber --min-api 21:\n" + pom);
+
+        String readme = Files.readString(proj.resolve("README.txt"));
+        assertTrue(readme.contains("minSdk 21 / targetSdk 35"),
+                "README deve refletir o override:\n" + readme);
+    }
+
+    @Test
     void androidReadmePlaceholdersResolve(@TempDir Path tempDir) throws IOException {
         // CodeQL #357 (unused-format-argument): o README.txt usava %1$s %2$s %4$s
         // %5$s mas passava 5 args (um APP_PACKAGE duplicado, %3$s nunca lido).

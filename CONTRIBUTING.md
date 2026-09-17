@@ -168,8 +168,8 @@ The project is at 0.4.0-beta (2218 tests), functional:
 **In development:**
 - Native auto-collect on exhaustion (mark-sweep is implemented but manual — §260)
 - Complete native MySQL/MariaDB (handshake/query/prepared)
-- Android Phase 4+ (Phases 1-3 done: Maven/APK, label/permissions/--apk/--keystore,
-  responsive WebView; pending: --aab, --min-sdk/--target-sdk, icon metadata, emulator CI)
+- Android Phase 5+ (Phases 1-4 done: Maven/APK, label/permissions/--apk/--keystore,
+  responsive WebView, --min-sdk/--target-sdk; pending: --aab, icon metadata, emulator CI)
 - Multi-file modules (residual unified semantics)
 
 **Planned:**

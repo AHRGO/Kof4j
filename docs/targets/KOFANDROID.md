@@ -2,7 +2,7 @@
 
 # KofAndroid — Kof's Android target
 
-> **Status: Phases 1, 2 and 3 implemented (Phase 3 = responsiveness, 17/09).**
+> **Status: Phases 1-4 implemented (Phase 3 = responsiveness, Phase 4 = `--min-sdk`/`--target-sdk`, 17/09).**
 > `kof build --target android` generates the
 > Maven project + APK pipeline with the host Activity written IN KOF
 > (`dev/kof/android-host.kf`) — zero Java, zero Kotlin, zero Gradle in the
@@ -224,11 +224,20 @@ desktop 980px layout viewport:
 
 Proof: `AndroidInteropE2ETest.androidResponsiveViewportAndWebViewWideViewport`.
 
-### Pending (Phases 4+, no owner yet)
+### Phase 4 — implemented (17/09): SDK versioning by flag
+
+- ✅ **`--min-sdk <n>` / `--target-sdk <n>`** on `kof build --target android`
+  (explicit flag, never a magic file). The values reach the generated
+  `AndroidManifest.xml` (`<uses-sdk>`), the `pom.xml` (platform jar
+  `android-<targetSdk>` + `d8 --min-api <minSdk>`) and the standalone
+  `--apk` pipeline. Defaults stay 24/34; `min > target` and non-android
+  targets are refused with an honest diagnostic (R6).
+  Proof: `AndroidInteropE2ETest.androidSdkOverrideThreadsToManifestPomAndReadme`
+  + `CmdBuildAndroidSdkTest`.
+
+### Pending (Phases 5+, no owner yet)
 
 - `--aab` output (App Bundle for Play) — needs `bundletool`, honest gap today;
-- `--min-sdk`/`--target-sdk` CLI override (doc §"Lifecycle" promises an
-  explicit flag, not a magic file) — defaults are fixed at 24/34;
 - declarative icon override by metadata (today: vectorial Kof default);
 - CI: `build → assembleDebug` with an emulator smoke test (workflow exists,
   emulator step pending).

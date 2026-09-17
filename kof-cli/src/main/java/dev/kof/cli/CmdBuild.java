@@ -5,6 +5,7 @@ import dev.kof.compiler.Diagnostic;
 import dev.kof.compiler.CompilerDriver;
 import dev.kof.compiler.Target;
 import dev.kof.compiler.TargetMatrix;
+import dev.kof.compiler.backend.AndroidProjectWriter;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -23,9 +24,9 @@ final class CmdBuild {
     }
 
     static void run(String[] args) {
-        if (args.length < 2) { System.err.println("usage: kof build <source-dir> [--target jvm|native|js|native.risc|native.arm|android] [--backend <t>] [--frontend <t>] [--output <dir>] [--release] [--apk] [--fat] [--print-sizes] [--classpath <jars>] [--keystore <ks> [--storepass <p>] [--keypass <p>] [--alias <a>]]"); return; }
+        if (args.length < 2) { System.err.println("usage: kof build <source-dir> [--target jvm|native|js|native.risc|native.arm|android] [--backend <t>] [--frontend <t>] [--output <dir>] [--release] [--apk] [--fat] [--print-sizes] [--classpath <jars>] [--keystore <ks> [--storepass <p>] [--keypass <p>] [--alias <a>]] [--min-sdk <n>] [--target-sdk <n>]"); return; }
         if ("--help".equals(args[1]) || "-h".equals(args[1]) || "--version".equals(args[1])) {
-            System.out.println("usage: kof build <source-dir> [--target jvm|native|js|native.risc|native.arm|android] [--backend <t>] [--frontend <t>] [--output <dir>] [--release] [--apk] [--fat] [--print-sizes] [--classpath <jars>] [--keystore <ks> [--storepass <p>] [--keypass <p>] [--alias <a>]]");
+            System.out.println("usage: kof build <source-dir> [--target jvm|native|js|native.risc|native.arm|android] [--backend <t>] [--frontend <t>] [--output <dir>] [--release] [--apk] [--fat] [--print-sizes] [--classpath <jars>] [--keystore <ks> [--storepass <p>] [--keypass <p>] [--alias <a>]] [--min-sdk <n>] [--target-sdk <n>]");
             return;
         }
         Path src = Path.of(args[1]);
@@ -44,6 +45,8 @@ final class CmdBuild {
         String storepass = null;
         String keypass = null;
         String keyalias = null;
+        String minSdkArg = null;
+        String targetSdkArg = null;
         boolean useDeps = false;
         boolean printSizes = false;
         for (int i = 2; i < args.length; i++) {
@@ -100,6 +103,14 @@ final class CmdBuild {
                 keyalias = arg.substring("--alias=".length());
             } else if (arg.equals("--alias") && i + 1 < args.length) {
                 keyalias = args[++i];
+            } else if (arg.startsWith("--min-sdk=")) {
+                minSdkArg = arg.substring("--min-sdk=".length());
+            } else if (arg.equals("--min-sdk") && i + 1 < args.length) {
+                minSdkArg = args[++i];
+            } else if (arg.startsWith("--target-sdk=")) {
+                targetSdkArg = arg.substring("--target-sdk=".length());
+            } else if (arg.equals("--target-sdk") && i + 1 < args.length) {
+                targetSdkArg = args[++i];
             }
         }
         // F2-parte-4 (plataforma): --backend/--frontend sobrepõem o kof.toml.
@@ -128,6 +139,27 @@ final class CmdBuild {
         }
         CompilerDriver driver = new CompilerDriver();
         if (release) driver.setDebugInfoEnabled(false);
+        // kof-android Fase 4: minSdk/targetSdk por flag explícita (nunca
+        // arquivo mágico). Honesto e cedo (R6): as flags só valem para o
+        // alvo android e min não pode exceder target.
+        int androidMin = AndroidProjectWriter.DEFAULT_MIN_SDK;
+        int androidTarget = AndroidProjectWriter.DEFAULT_TARGET_SDK;
+        if (minSdkArg != null || targetSdkArg != null) {
+            if (target != Target.ANDROID) {
+                System.err.println("build: --min-sdk/--target-sdk só se aplicam a --target android");
+                System.exit(1);
+                return;
+            }
+            androidMin = parseSdk(minSdkArg, "--min-sdk", AndroidProjectWriter.DEFAULT_MIN_SDK);
+            androidTarget = parseSdk(targetSdkArg, "--target-sdk", AndroidProjectWriter.DEFAULT_TARGET_SDK);
+            if (androidMin > androidTarget) {
+                System.err.println("build: --min-sdk (" + androidMin
+                        + ") não pode ser maior que --target-sdk (" + androidTarget + ")");
+                System.exit(1);
+                return;
+            }
+            driver.setAndroidSdk(androidMin, androidTarget);
+        }
         // dependências externas (android.jar etc.) geridas pelo Kof via
         // ExternalClasspath — separadas por ':' ou ';'
         List<Path> externalEntries = new ArrayList<>();
@@ -198,8 +230,26 @@ final class CmdBuild {
         // target android + --apk: pipeline direto (sem Maven) usando o SDK
         // (full-stack: as classes do backend saíram em backendOut)
         if (target == Target.ANDROID && apk) {
-            runApkPipeline(backendOut, keystore, storepass, keypass, keyalias);
+            runApkPipeline(backendOut, androidMin, androidTarget,
+                    keystore, storepass, keypass, keyalias);
         }
+    }
+
+    /** Lê um valor de SDK (`--min-sdk`/`--target-sdk`); default = `dflt`. */
+    private static int parseSdk(String value, String flag, int dflt) {
+        if (value == null) return dflt;
+        int n;
+        try {
+            n = Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            n = -1;
+        }
+        if (n < 1 || n > 99) {
+            System.err.println("build: " + flag + " inválido: '" + value
+                    + "' (esperado inteiro de 1 a 99)");
+            System.exit(1);
+        }
+        return n;
     }
 
     /**
@@ -307,7 +357,8 @@ final class CmdBuild {
      * gera debug keystore local na primeira vez; com --keystore, assina
      * com o keystore do usuário (release signing parametrizável).
      */
-    private static void runApkPipeline(Path projDir, String keystore, String storepass,
+    private static void runApkPipeline(Path projDir, int minSdk, int targetSdk,
+                                       String keystore, String storepass,
                                        String keypass, String keyalias) {
         String androidHome = System.getenv("ANDROID_HOME");
         if (androidHome == null || androidHome.isBlank()) {
@@ -315,7 +366,7 @@ final class CmdBuild {
             return;
         }
         Path bt = Path.of(androidHome, "build-tools", "34.0.0");
-        Path platformJar = Path.of(androidHome, "platforms", "android-34", "android.jar");
+        Path platformJar = Path.of(androidHome, "platforms", "android-" + targetSdk, "android.jar");
         if (!Files.isExecutable(bt.resolve("aapt2"))) {
             System.err.println("--apk: build-tools 34.0.0 não encontrado em " + bt);
             return;
@@ -343,7 +394,7 @@ final class CmdBuild {
                     "-A", projDir.resolve("src/main/assets").toString(),
                     "-R", apkDir.resolve("res.zip").toString()), projDir);
             run(List.of(bt.resolve("d8").toString(), "--release",
-                    "--lib", platformJar.toString(), "--min-api", "24",
+                    "--lib", platformJar.toString(), "--min-api", Integer.toString(minSdk),
                     "--output", apkDir.toString(),
                     projDir.resolve("libs/kof-app.jar").toString()), projDir);
             run(List.of("jar", "uf", apkDir.resolve("base.apk").toString(),
