@@ -863,6 +863,8 @@ science) **without** destroying the language's simplicity.
   effect system; no homemade crypto; no reimplementing Arrow/BLAS/ML/
   aligners; no "Kali in Kof"; no per-domain target; no own SQL engine
 
+> **Status 17/09:** R1 ✅ DONE (`5f1422c6` — gate `scripts/check_stdlib_boundary.sh` + ledger na CI, AGENTS invariante 1). R2–R12: fila aberta por D-UNIVERSAL; unidades de código seguem a ordem de valor do §23.
+>
 > **R12 gate overridden 17/09/2026** (`DECISIONS.md` §D-UNIVERSAL): the
 > maintainer authorized this front to open **with SYSTEMS still in progress**.
 > The entry point is Stage 1 (SYSTEMS consolidation) + R1–R12; Tier 6+
