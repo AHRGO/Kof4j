@@ -232,8 +232,9 @@ final class CmdBuild {
         }
         // target android + --apk: pipeline direto (sem Maven) usando o SDK
         // (full-stack: as classes do backend saíram em backendOut)
+        boolean apkOk = true;
         if (target == Target.ANDROID && apk) {
-            runApkPipeline(backendOut, androidMin, androidTarget,
+            apkOk = runApkPipeline(backendOut, androidMin, androidTarget,
                     keystore, storepass, keypass, keyalias);
         }
         // --aab (App Bundle p/ Play): ainda NÃO produzido — precisa do
@@ -249,6 +250,12 @@ final class CmdBuild {
                     + " requer bundletool (fora do build-tools). O projeto foi gerado;"
                     + " use --apk ou o bundletool manualmente"
                     + " (docs/targets/KOFANDROID.md)");
+            System.exit(1);
+        }
+        // --apk pedido mas o SDK nao permitiu gerar o artefato: a flag nao pode
+        // "passar" em silencio (exit 0 sem APK) — o script do usuario checaria $?
+        // e acreditaria em sucesso (R6). O projeto foi gerado; o exit e honesto.
+        if (!apkOk) {
             System.exit(1);
         }
     }
@@ -375,19 +382,19 @@ final class CmdBuild {
      * gera debug keystore local na primeira vez; com --keystore, assina
      * com o keystore do usuário (release signing parametrizável).
      */
-    private static void runApkPipeline(Path projDir, int minSdk, int targetSdk,
-                                       String keystore, String storepass,
-                                       String keypass, String keyalias) {
+    private static boolean runApkPipeline(Path projDir, int minSdk, int targetSdk,
+                                          String keystore, String storepass,
+                                          String keypass, String keyalias) {
         String androidHome = System.getenv("ANDROID_HOME");
         if (androidHome == null || androidHome.isBlank()) {
             System.err.println("--apk: ANDROID_HOME não definido; gere o projeto e use 'mvn verify'");
-            return;
+            return false;
         }
         Path bt = Path.of(androidHome, "build-tools", "34.0.0");
         Path platformJar = Path.of(androidHome, "platforms", "android-" + targetSdk, "android.jar");
         if (!Files.isExecutable(bt.resolve("aapt2"))) {
             System.err.println("--apk: build-tools 34.0.0 não encontrado em " + bt);
-            return;
+            return false;
         }
         Path build = projDir.resolve("target");
         Path apkDir = build.resolve("apk");
@@ -435,9 +442,10 @@ final class CmdBuild {
             sign.add(apkDir.resolve("aligned.apk").toString());
             run(sign, projDir);
             System.out.println("APK gerado: " + build.resolve("kof-app.apk"));
+            return true;
         } catch (Exception e) {
             System.err.println("pipeline apk falhou: " + e.getMessage());
-            System.exit(1);
+            return false;
         }
     }
 

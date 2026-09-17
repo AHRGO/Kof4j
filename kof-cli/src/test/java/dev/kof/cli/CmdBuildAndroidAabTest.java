@@ -20,6 +20,10 @@ class CmdBuildAndroidAabTest {
     private record Cli(int exit, String out) {}
 
     private static Cli cli(Path workDir, String... args) throws Exception {
+        return cliWithEnv(workDir, null, args);
+    }
+
+    private static Cli cliWithEnv(Path workDir, String androidHome, String... args) throws Exception {
         java.util.List<String> cmd = new java.util.ArrayList<>();
         cmd.add(Path.of(System.getProperty("java.home"), "bin", "java").toString());
         cmd.add("-cp");
@@ -28,6 +32,8 @@ class CmdBuildAndroidAabTest {
         cmd.addAll(java.util.List.of(args));
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.directory(workDir.toFile());
+        if (androidHome != null) pb.environment().put("ANDROID_HOME", androidHome);
+        else pb.environment().remove("ANDROID_HOME");
         pb.redirectErrorStream(true);
         Process p = pb.start();
         String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
@@ -60,5 +66,34 @@ class CmdBuildAndroidAabTest {
         Cli r = cli(dir, "build", src.toString(), "--target", "jvm", "--aab");
         assertNotEquals(0, r.exit(), "--aab fora do android deve recusar (R6):\n" + r.out());
         assertTrue(r.out().contains("android"), "diagnostico honesto esperado:\n" + r.out());
+    }
+
+    @Test
+    void apkWithoutSdkIsHonestError(@TempDir Path dir) throws Exception {
+        Path src = writeApp(dir);
+        // ANDROID_HOME removido => --apk NAO pode "passar" (exit 0 sem APK), R6
+        Cli r = cliWithEnv(dir, null, "build", src.toString(), "--target", "android",
+                "--output", "dist", "--apk");
+        assertNotEquals(0, r.exit(), "--apk sem ANDROID_HOME deve recusar (R6):\n" + r.out());
+        assertTrue(r.out().contains("ANDROID_HOME"), "diagnostico honesto esperado:\n" + r.out());
+        // o projeto continua sendo gerado mesmo assim
+        assertTrue(Files.exists(dir.resolve("dist/pom.xml")), "projeto gerado mesmo sem --apk");
+    }
+
+    @Test
+    void projectGenerationWithoutApkStillSucceeds(@TempDir Path dir) throws Exception {
+        Path src = writeApp(dir);
+        Cli r = cliWithEnv(dir, null, "build", src.toString(), "--target", "android",
+                "--output", "dist");
+        assertEquals(0, r.exit(), "gerar o projeto SEM --apk deve suceder:\n" + r.out());
+        assertTrue(Files.exists(dir.resolve("dist/pom.xml")), "projeto gerado:\n" + r.out());
+    }
+
+    @Test
+    void apkOutsideAndroidIsHonestError(@TempDir Path dir) throws Exception {
+        Path src = writeApp(dir);
+        Cli r = cli(dir, "build", src.toString(), "--target", "jvm", "--apk");
+        assertTrue(r.exit() != 0 || !r.out().contains("APK gerado"),
+                "--apk fora do android nao deve gerar APK:\n" + r.out());
     }
 }
