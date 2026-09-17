@@ -118,7 +118,7 @@ final class Deps {
         }
         lines.add(dep);
         Files.write(file, lines);
-        System.out.println("adicionada: " + dep);
+        System.out.println("added: " + dep);
         return 0;
     }
 
@@ -136,7 +136,7 @@ final class Deps {
         boolean removed = lines.remove(args[2]);
         Files.write(file, lines);
         if (removed) {
-            System.out.println("removida: " + args[2]);
+            System.out.println("removed: " + args[2]);
         } else {
             System.err.println("deps: '" + args[2] + "' not declared");
             return 1;

@@ -66,6 +66,11 @@ class JsRuntimePruneWriterTest {
         assertTrue(js.contains("// kof:units "), "o artefato diz quantas unidades entraram");
         assertEquals(js.contains("// kof:fallback "), !JsRuntimeSlices.select(List.of("kofPrintln")).notes().isEmpty(),
                 "fallback, quando houver, é observável no cabeçalho");
+        // D-DIAG-EN: o cabeçalho do artefato gerado é tooling — texto 100% EN,
+        // nunca PT (a frase antiga era "Conteúdo por alcançabilidade...").
+        assertTrue(js.contains("// Reachability-based content: only what the program reaches."),
+                "header do runtime JS é English (D-DIAG-EN)");
+        assertFalse(js.contains("Conteúdo por"), "nenhum PT vivo no cabeçalho do artefato (D-DIAG-EN)");
     }
 
     @Test

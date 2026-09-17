@@ -91,7 +91,7 @@ public final class CmdNew {
                 name = "%s"
                 """.formatted(dir.getFileName()));
         Files.writeString(src.resolve("Main.kf"), """
-                // Projeto Kof — rode com: kof run src/Main.kf
+                // Kof project — run with: kof run src/Main.kf
                 main() {
                     println("Hello, Kof!")
                 }
@@ -196,7 +196,7 @@ public final class CmdNew {
                     println("hello from the frontend")
                 }
                 """);
-        Files.writeString(src.resolve("static/app.css"), "/* estilos do app */\n");
+        Files.writeString(src.resolve("static/app.css"), "/* app styles */\n");
         gitignore(dir);
     }
 

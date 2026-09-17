@@ -233,7 +233,7 @@ public final class Main {
                 return 1;
             }
             Files.writeString(src, """
-                    // Projeto Kof — rode com: kof run main.kf
+                    // Kof project — run with: kof run main.kf
                     main() {
                         println("Hello, Kof!")
                     }
