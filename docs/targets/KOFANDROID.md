@@ -125,7 +125,7 @@ b.clicks = 5                      // external field (read/write)
 | UI app | `main()` with `Window(...)` | synthesizes host Activity + WebView |
 | Android component | `class MinhaTela extends android.app.Activity` | respects the hierarchy; requires real signatures via classpath |
 | framework metadata | `@Override`, `@NonNull`, ... | emits RuntimeVisible/Invisible in the bytecode |
-| logical entry point | `main()` | still exists and is testable (`kof test`) |
+| logical entry point | `main()` | still exists — test the logic with `kof test` on `jvm`/`js`; android is packaging, not a test target |
 
 Convention rules (no mandatory configuration):
 
@@ -245,7 +245,9 @@ run on every push.
 
 ### Pending (Phases 5+, no owner yet)
 
-- `--aab` output (App Bundle for Play) — needs `bundletool`, honest gap today;
+- `--aab` output (App Bundle for Play) — needs `bundletool` (not in build-tools).
+  The flag is recognized and refused with an honest diagnostic (R6) instead of
+  being silently ignored; the project is still generated.
 - declarative icon override by metadata — **decision-pending** (the mechanism
   `kof.toml [app] icon` vs `--icon` flag is not locked).
 
@@ -258,7 +260,7 @@ targets; the target that cannot realize it says so right away, with a code.**
 |--------|----------|--------|
 | ~~`AND001`~~ | ~~`spawn { ... }`~~ | ✅ **closed 31/08**: ART has no virtual threads (Java 21), but the runtime falls back to **platform threads** when `Thread.startVirtualThread` does not exist — `spawn`/`await`/`cancel`/`cancelled`/`selectAny`/`awaitTimeout`/`channel`/`scheduler` compile and run (bytecode: `CompletableFuture` + `new Thread` + `LinkedBlockingQueue`; WebView's KofJS: sequential). `KofConcurrency2Test`/`AndroidInteropE2ETest` |
 | `AND002` | `web.app()` / `kof.web` (embedded server) | ✅ **enforced at compile-time (17/09)**: a mobile app does not listen on a port — the target refuses with `AND002` and points to interop, never emits server code that cannot run (R6) |
-| `AND003` | dynamic reflection on Kof classes | desugaring/R8 may remove symbols |
+| `AND003` | reflection on Kof classes via interop | *caveat, not a compile-time gate*: desugaring/R8 may strip symbols; the language has no reflection surface of its own, so there is nothing for the compiler to detect |
 | `AND004` | android.jar missing from ExternalClasspath | host Activity not included (warning) |
 | `SAM001` | lambda arity ≠ SAM method | external interface requires N args |
 | `SUP001` | `super.method()` in Native | already covered; ANDROID reuses the JVM path |

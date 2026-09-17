@@ -124,7 +124,7 @@ b.clicks = 5                      // campo externo (leitura/escrita)
 | app de UI | `main()` com `Window(...)` | sintetiza host Activity + WebView |
 | componente Android | `class MinhaTela extends android.app.Activity` | respeita a hierarquia; exige assinaturas reais via classpath |
 | metadado de framework | `@Override`, `@NonNull`, ... | emite RuntimeVisible/Invisible no bytecode |
-| ponto de entrada lógico | `main()` | continua existindo e testável (`kof test`) |
+| ponto de entrada lógico | `main()` | continua existindo — teste a lógica com `kof test` em `jvm`/`js`; android é empacotamento, não alvo de teste |
 
 Regras de convenção (nenhuma configuração obrigatória):
 
@@ -243,7 +243,9 @@ o CLI, gera o projeto, `mvn verify` monta o APK e então instala/abre com
 
 ### Pendente (Fases 5+, sem dono ainda)
 
-- saída `--aab` (App Bundle p/ Play) — precisa de `bundletool`, gap honesto hoje;
+- saída `--aab` (App Bundle p/ Play) — precisa de `bundletool` (não está no
+  build-tools). A flag é reconhecida e recusada com diagnóstico honesto (R6) em
+  vez de ser ignorada em silêncio; o projeto ainda é gerado.
 - override declarativo do ícone por metadado — **decisão pendente** (o mecanismo
   `kof.toml [app] icon` vs flag `--icon` não está fechado).
 
@@ -256,7 +258,7 @@ alvos; o alvo que não consegue realizá-la diz isso na hora, com código.**
 |--------|----------|--------|
 | ~~`AND001`~~ | ~~`spawn { ... }`~~ | ✅ **fechado 31/08**: ART não tem virtual threads (Java 21), mas o runtime cai em **platform threads** quando `Thread.startVirtualThread` não existe — `spawn`/`await`/`cancel`/`cancelled`/`selectAny`/`awaitTimeout`/`channel`/`scheduler` compilam e rodam (bytecode: `CompletableFuture` + `new Thread` + `LinkedBlockingQueue`; KofJS do WebView: sequencial). `KofConcurrency2Test`/`AndroidInteropE2ETest` |
 | `AND002` | `web.app()` / `kof.web` (servidor embutido) | ✅ **imposto em compile-time (17/09)**: app mobile não escuta porta — o alvo recusa com `AND002` e aponta o interop, nunca emite código de servidor que não roda (R6) |
-| `AND003` | reflexão dinâmica sobre classes Kof | desugaring/R8 pode remover símbolos |
+| `AND003` | reflexão sobre classes Kof via interop | *caveat, não gate de compile-time*: desugaring/R8 pode remover símbolos; a linguagem não tem superfície de reflexão própria, então não há o que o compilador detectar |
 | `AND004` | android.jar ausente no ExternalClasspath | host Activity não incluída (warning) |
 | `SAM001` | aridade da lambda ≠ método SAM | interface externa exige N args |
 | `SUP001` | `super.metodo()` no Native | já coberto; ANDROID reusa o caminho JVM |
