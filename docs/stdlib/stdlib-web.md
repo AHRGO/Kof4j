@@ -101,43 +101,41 @@ also be passed explicitly: `app.get("/x", handler)`.
 `app.use { ... }` registers a middleware executed before routing.
 Return `null` → continues; return `String` → immediate response (200).
 
-### Server
+### Security (`app.security()`) — D-SEC C18 (14/09)
 
-### Segurança (`app.security()`) — D-SEC C18 (14/09)
+| Call | Description |
+|------|-------------|
+| `app.security()` | Composite middleware with secure defaults (hardening headers) |
+| `app.security(opts)` | Same, with overrides via `Map` |
 
-| Chamada | Descrição |
-|---------|-----------|
-| `app.security()` | Middleware composto com defaults seguros (headers de hardening) |
-| `app.security(opts)` | Idem, com overrides via `Map` |
+Applies the **fixed order** rate-limit → CORS → headers → cookies/session → csrf →
+auth → RBAC → route (D-SEC). Replaces the manual `app.use` chain.
 
-Aplica a **ordem fixa** rate-limit → CORS → headers → cookies/session → csrf →
-auth → RBAC → rota (D-SEC). Substitui a cadeia manual de `app.use`.
-
-Sem argumentos, liga os **headers de hardening** (sempre seguros) e o **CSRF**
-para métodos que mudam estado:
+Without arguments, enables the **hardening headers** (always safe) and **CSRF**
+for state-changing methods:
 
 - `Content-Security-Policy: default-src 'self'; frame-ancestors 'none'; base-uri 'self'`
 - `X-Content-Type-Options: nosniff`
 - `X-Frame-Options: DENY`
 - `Referrer-Policy: no-referrer`
-- `Strict-Transport-Security` — só sob TLS (`listenSecure`)
+- `Strict-Transport-Security` — only under TLS (`listenSecure`)
 
-Opts documentados (chaves do `Map`; qualquer outra é ignorada):
+Documented opts (`Map` keys; any other is ignored):
 
-| Chave | Tipo | Default | Efeito |
-|-------|------|---------|--------|
-| `headers` | `Bool` | `true` | Liga/desliga os headers acima |
-| `cors` / `corsOrigin` | `String` | off | Origem permitida, CSV ou `*`. Origem não listada → 403; preflight `OPTIONS` → 204 |
-| `rateLimit` | `String` ou `Number` | off | `"limite/janelaSegundos"` (ex.: `"100/60"`) ou só o limite. Por IP remoto; excedeu → 429 + `Retry-After` |
-| `csrf` | `Bool` | `true` | Double-submit cookie: emite `csrf` (SameSite=Lax) em métodos seguros; exige `X-CSRF-Token` casando com o cookie em POST/PUT/PATCH/DELETE, senão 403. `csrf:false` desliga |
-| `sessionHeader` | `String` | off | Nome do header de sessão. Fora dos `publicPaths`, **toda** request (GET incluído) exige sessão válida; ausente/inválida → 401 |
-| `publicPaths` / `permitAll` | `String` CSV | — | Allow-list de matchers públicos (ex.: `"/register,/login"`); todo o resto exige autenticação |
-| `auth` | `Bool` | `false` | Exige `Authorization: Bearer` JWT válido (secret via `auth.secret`); ausente/inválido → 401 + `WWW-Authenticate` |
-| `roles` | `String` CSV ou `List` | — | Exige todas as roles (claims `roles`); falta → 403 (implica auth) |
+| Key | Type | Default | Effect |
+|-----|------|---------|--------|
+| `headers` | `Bool` | `true` | Enables/disables the headers above |
+| `cors` / `corsOrigin` | `String` | off | Allowed origin, CSV or `*`. Origin not listed → 403; `OPTIONS` preflight → 204 |
+| `rateLimit` | `String` or `Number` | off | `"limit/windowSeconds"` (e.g. `"100/60"`) or just the limit. Per remote IP; exceeded → 429 + `Retry-After` |
+| `csrf` | `Bool` | `true` | Double-submit cookie: emits `csrf` (SameSite=Lax) on safe methods; requires `X-CSRF-Token` matching the cookie on POST/PUT/PATCH/DELETE, otherwise 403. `csrf:false` disables |
+| `sessionHeader` | `String` | off | Session header name. Outside `publicPaths`, **every** request (GET included) requires a valid session; missing/invalid → 401 |
+| `publicPaths` / `permitAll` | `String` CSV | — | Allow-list of public matchers (e.g. `"/register,/login"`); everything else requires authentication |
+| `auth` | `Bool` | `false` | Requires a valid `Authorization: Bearer` JWT (secret via `auth.secret`); missing/invalid → 401 + `WWW-Authenticate` |
+| `roles` | `String` CSV or `List` | — | Requires all roles (claims `roles`); missing → 403 (implies auth) |
 
-**Auth-if-present:** mesmo sem `auth: true`, uma request que **traz**
-`Authorization` com token inválido nunca passa (401) — evita "token ruim vira
-anônimo".
+**Auth-if-present:** even without `auth: true`, a request that **carries**
+`Authorization` with an invalid token never passes (401) — avoids "bad token
+becomes anonymous".
 
 ```kof
 main() {
@@ -154,35 +152,27 @@ main() {
 }
 ```
 
-**Security by default:** `listen`/`listenSecure` com `KOF_ENV=production` sem
-`app.security()` avisa em `stderr` (nunca falha silenciosamente).
+**Security by default:** `listen`/`listenSecure` with `KOF_ENV=production`
+without `app.security()` warns on `stderr` (never fails silently).
 
-**JVM-only** — Native/JS reportam `WEB006` (gap honesto, mesmo precedente
+**JVM-only** — Native/JS report `WEB006` (honest gap, same precedent
 `WEB002`/`WEB005`).
 
-### Servidor
+### Server
 
 | Call | Description |
 |---------|-----------|
 | `app.listen(port)` | Starts the server (blocking) on `0.0.0.0` |
-| `app.listenSecure(port)` | Same, with TLS (JVM; self-signed `keytool` + `SSLServerSocket`) |
+| `app.listenSecure(port)` | Same, with dev self-signed TLS (JVM; `keytool` + `SSLServerSocket`) |
+| `app.listenSecure(port, certPem, keyPem)` | TLS with a **user-supplied certificate** (PKCS#8 PEM) — production (JVM) |
 | `app.port()` | Port actually bound (useful with `listen(0)`) |
 | `app.close()` | Shuts down the server (graceful shutdown) |
 
 `app.listen(0)` binds an ephemeral port; `app.port()` reveals the real port.
-`app.listenSecure` is available on the JVM (Native/JS `WEB002`).
-
-| `app.listen(port)` | Inicia o servidor (bloqueante) em `0.0.0.0` |
-| `app.listenSecure(port)` | Idem, com TLS self-signed de dev (JVM; `keytool` + `SSLServerSocket`) |
-| `app.listenSecure(port, certPem, keyPem)` | TLS com **certificado próprio** (PKCS#8 PEM) — produção (JVM) |
-| `app.port()` | Porta efetivamente vinculada (útil com `listen(0)`) |
-| `app.close()` | Encerra o servidor (graceful shutdown) |
-
-`app.listen(0)` vincula uma porta efêmera; `app.port()` revela a porta real.
-`app.listenSecure` está disponível no JVM (Native/JS `WEB002`). A variante de
-3 args usa o par cert/chave do usuário (`-----BEGIN CERTIFICATE-----` /
-`-----BEGIN PRIVATE KEY-----`, chave PKCS#8 RSA/EC/DSA); o self-signed de 1
-arg continua como conveniência de dev, não de produção (D-SEC).
+`app.listenSecure` is available on the JVM (Native/JS `WEB002`). The 3-arg
+variant uses the user's cert/key pair (`-----BEGIN CERTIFICATE-----` /
+`-----BEGIN PRIVATE KEY-----`, PKCS#8 RSA/EC/DSA key); the 1-arg self-signed
+stays a dev convenience, not for production (D-SEC).
 
 ### Static files (`app.serveDir`) (31/08)
 
