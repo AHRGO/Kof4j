@@ -81,13 +81,16 @@ implements-clause = "implements" , type-ref , { "," , type-ref }
 | `private` | visível só na classe |
 | `protected` | visível no pacote/subclasse (semântica JVM) |
 
-- **`private`/`protected` são checados em compile-time para MÉTODOS**
-  (`SEM046`, *probe*): chamar `c.f()` de fora de um método `private` (ou fora
-  da hierarquia, no caso de `protected`) é erro de compilação; de dentro,
-  funciona.
-- **Acesso a CAMPO não é checado**: ler/escrever `c.x` num campo `private`/
-  `protected` de fora compila — falha só em runtime (`IllegalAccessError`). A
-  checagem cobre símbolos de método, não campos. SG-013.
+- **`private`/`protected` são checados em compile-time para MÉTODOS e CAMPOS**
+  (`SEM046`, SG-013): chamar `c.f()` ou ler/escrever `c.x` de fora de um membro
+  `private` (ou fora da hierarquia, no caso de `protected`) é erro de
+  compilação; de dentro, funciona. `this.x`/`x` nu na classe declarante passa
+  (owner == caller). A face de CAMPOS foi fechada 17/09 (#331/#327) — o
+  `FieldSymbol` perdia os modificadores.
+- **Escrita em campo `final` é checada** (`SEM063`): atribuir um campo `final`
+  fora do construtor da classe declarante é erro de compilação (JVMS 4.4,
+  restrição do `putfield`); o inicializador sintético `<clinit>` ainda passa.
+  `FieldAccessControlTest` 7/7.
 - Sem modificador → `public` (`accessFlagsFor:3388`).
 - `static` campo/método: acesso por nome de classe (`S.k`, `S.k()` — *probe*).
 

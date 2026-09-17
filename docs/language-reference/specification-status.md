@@ -72,7 +72,7 @@ Target-specific · Unspecified · Planned**.
 | Interface (default methods) | Stable | probe |
 | Interface coverage (concrete class must implement) | Stable | `SemanticAnalyzer.checkInterfaceImplementation` `SEM043` (SG-015); `abstract` may defer, obligation transitive via abstract supers (#322) |
 | Inheritance + virtual override | Stable | probes |
-| `private`/`protected` at compile-time — **methods** | Stable | `SEM046` (SG-013) |
+| `private`/`protected` at compile-time — **methods + fields**; `final` write | Stable | `SEM046`/`SEM063` (SG-013) |
 | `private`/`protected` at compile-time — **fields** | **Unspecified** (runtime only) | probe (SG-013) |
 | `abstract` non-instantiable | Stable | `SEM041` (SG-017) |
 | Pattern matching (binding+destructuring) | Stable | `KofPatternMatchingTest` |

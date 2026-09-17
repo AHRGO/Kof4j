@@ -347,7 +347,8 @@ the lambda's return (*probe*: map/filter/reduce correct).
 | `SEM043` | `implements` without covering the interface method / wrong arity | `SemanticAnalyzer.checkInterfaceImplementation` (SG-015) |
 | `SEM044` | `main()` with a declared return type (`Int main()`) | `SemanticAnalyzer.analyzeFunction` (SG-018) |
 | `SEM045` | `throw X` clause with unknown type | `SemanticAnalyzer.checkThrowsClause` (SG-019) |
-| `SEM046` | `private`/`protected` access outside what is allowed | `MemberCallTyper.checkMemberAccess` (SG-013) |
+| `SEM046` | `private`/`protected` access (method or field) outside what is allowed | `MemberCallTyper.checkMemberAccess`/`checkFieldAccess` (SG-013) |
+| `SEM063` | write to a `final` field outside its class constructor | `MemberCallTyper.checkFinalFieldWrite` (#331/#327) |
 | `ARITH001` | division/remainder by a **constant** zero | ExpressionLowerer:198 |
 
 Division by a **non-constant** zero (`7 / z` with `z=0`) → **runtime**

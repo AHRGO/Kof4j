@@ -292,7 +292,7 @@ recomendações futuras (regra 14 da tarefa: não alterar comportamento).
   (nunca Object silencioso). Prova: `lambdaParamInferredFromListContext` +
   regressão `untypedLambdaParamArithmeticIsDiagnosedNotEmitted`.
 
-### SG-013 — `private`/`protected` não são checados em compile-time
+### SG-013 — `private`/`protected` sem checagem em compile-time — ✅ FIXED (métodos 09/09; campos 17/09)
 
 - **APLICADO (09/09, decisão do maintainer, SEM046):** causa raiz era
   `defineMethodSymbol` com accessFlags=1 (PUBLIC) hardcoded — modifiers
@@ -301,6 +301,13 @@ recomendações futuras (regra 14 da tarefa: não alterar comportamento).
   declarante, protected fora da hierarquia (transitiva), ambos de contexto
   top-level. Prova: 4 testes `CompilerDriverTest` (private/protected,
   dentro/fora).
+- **ESTENDIDO a CAMPOS (17/09, #331/#327, lane compiler):** o mesmo contrato
+  agora cobre acesso a campo — `private` só na declarante, `protected` na
+  declarante/subclasses; `this.x`/`x` nu na classe declarante passa. Raiz:
+  `FieldSymbol` perdia os modificadores no `SymbolTableBuilder`; agora
+  `MemberCallTyper.checkFieldAccess` rejeita (`SEM046`). Escrita em campo
+  `final` fora do construtor declarante é rejeitada com `SEM063` (JVMS 4.4 —
+  antes: `IllegalAccessError` silencioso). Prova: `FieldAccessControlTest` 7/7.
 
 ### SG-014 — Pattern matching sem guardas/aninhamento
 

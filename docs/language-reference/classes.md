@@ -81,12 +81,16 @@ implements-clause = "implements" , type-ref , { "," , type-ref }
 | `private` | visible only in the class |
 | `protected` | visible in the package/subclass (JVM semantics) |
 
-- **`private`/`protected` are checked at compile-time for METHODS** (`SEM046`,
-  *probe*): calling `c.f()` from outside a private method (or outside the
-  hierarchy for `protected`) is a compile error; calling it from inside is fine.
-- **Field access is NOT checked**: reading/writing `c.x` on a `private`/
-  `protected` field from outside compiles — it fails only at runtime
-  (`IllegalAccessError`). The check covers method symbols, not fields. SG-013.
+- **`private`/`protected` are checked at compile-time for METHODS and FIELDS**
+  (`SEM046`, SG-013): calling `c.f()` or reading/writing `c.x` from outside a
+  private member (or outside the hierarchy for `protected`) is a compile error;
+  from inside it is fine. `this.x`/bare `x` in the declaring class passes
+  (owner == caller). Fields were closed 17/09 (#331/#327) — the `FieldSymbol`
+  used to lose the modifiers.
+- **`final` field write is checked** (`SEM063`): assigning a `final` field
+  outside the declaring class's constructor is a compile error (JVMS 4.4,
+  `putfield` restriction); the synthetic `<clinit>` initializer still passes.
+  `FieldAccessControlTest` 7/7.
 - No modifier → `public` (`accessFlagsFor:3388`).
 - `static` field/method: access by class name (`S.k`, `S.k()` — *probe*).
 

@@ -347,7 +347,8 @@ retorno do lambda (*probe*: map/filter/reduce corretos).
 | `SEM043` | `implements` sem cobrir método da interface / aridade errada | `SemanticAnalyzer.checkInterfaceImplementation` (SG-015) |
 | `SEM044` | `main()` com tipo de retorno declarado (`Int main()`) | `SemanticAnalyzer.analyzeFunction` (SG-018) |
 | `SEM045` | cláusula `throw X` com tipo desconhecido | `SemanticAnalyzer.checkThrowsClause` (SG-019) |
-| `SEM046` | acesso `private`/`protected` fora do permitido | `MemberCallTyper.checkMemberAccess` (SG-013) |
+| `SEM046` | acesso `private`/`protected` (método ou campo) fora do permitido | `MemberCallTyper.checkMemberAccess`/`checkFieldAccess` (SG-013) |
+| `SEM063` | escrita em campo `final` fora do construtor da classe | `MemberCallTyper.checkFinalFieldWrite` (#331/#327) |
 | `ARITH001` | divisão/resto por zero **constante** | ExpressionLowerer:198 |
 
 Divisão por zero **não-constante** (`7 / z` com `z=0`) → erro de **runtime**
