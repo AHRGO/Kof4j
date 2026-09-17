@@ -111,4 +111,34 @@ class CliFlagStrictnessTest {
         assertEquals(0, r.exit(), "build simples nao regride:\n" + r.out());
         assertTrue(Files.exists(dir.resolve("dist/Default/Main.class")), r.out());
     }
+
+    @Test
+    void testRejectsUnknownFlag(@TempDir Path dir) throws Exception {
+        Path src = dir.resolve("src");
+        Files.createDirectories(src);
+        Files.writeString(src.resolve("Main.kf"), "main() { println(\"oi\") }\n");
+        Cli r = cli(dir, "test", src.toString(), "--bogus");
+        assertNotEquals(0, r.exit(), "test --flag deve recusar (R6):\n" + r.out());
+        assertTrue(r.out().contains("--bogus"), r.out());
+    }
+
+    @Test
+    void testRejectsTargetWithoutValue(@TempDir Path dir) throws Exception {
+        Path src = dir.resolve("src");
+        Files.createDirectories(src);
+        Files.writeString(src.resolve("Main.kf"), "main() { println(\"oi\") }\n");
+        Cli r = cli(dir, "test", src.toString(), "--target");
+        assertNotEquals(0, r.exit(), "test --target sem valor deve recusar (R6):\n" + r.out());
+        assertTrue(r.out().contains("--target"), r.out());
+    }
+
+    @Test
+    void testStillRunsPlainSource(@TempDir Path dir) throws Exception {
+        Path src = dir.resolve("src");
+        Files.createDirectories(src);
+        Files.writeString(src.resolve("Main.kf"), "main() { println(\"oi\") }\n");
+        Cli r = cli(dir, "test", src.toString());
+        assertEquals(0, r.exit(), "test simples nao regride:\n" + r.out());
+        assertTrue(r.out().contains("1 passed, 0 failed"), r.out());
+    }
 }
