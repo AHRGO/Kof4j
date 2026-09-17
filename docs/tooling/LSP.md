@@ -45,6 +45,11 @@ diagnostics produced are published to the editor via
 | `initialized` | no-op |
 | `textDocument/didOpen` | compiles and publishes diagnostics |
 | `textDocument/didChange` | recompiles and publishes diagnostics |
+| `textDocument/hover` | hover info for the symbol at the position |
+| `textDocument/definition` | go-to-definition (single file) |
+| `textDocument/completion` | completion (trigger `.`) |
+| `textDocument/references` | references (word-boundary, single file) |
+| `textDocument/rename` | rename (word-boundary, single file) |
 | `shutdown` | responds `null` |
 | `exit` | terminates the process |
 
@@ -70,11 +75,13 @@ LSP client (`cmd: ["kof", "lsp"]`).
 
 ---
 
-## Current limitations (Alpha)
+## Current limitations
 
-- No autocomplete, hover or go-to-definition (planned);
+- Single-file analysis: `definition`/`references`/`rename` are word-boundary
+  based within the open document (no cross-file project index);
 - full document sync (incremental planned);
-- no formatting via LSP (the `kof fmt` formatter is planned separately).
+- no formatting via LSP (the `kof fmt` formatter is a separate, implemented
+  command).
 
 The evolution path is always the same: **new LSP capabilities feed on the
 official frontend**, never on a parallel parser.

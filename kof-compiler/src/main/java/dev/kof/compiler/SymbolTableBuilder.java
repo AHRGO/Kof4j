@@ -28,6 +28,13 @@ public final class SymbolTableBuilder {
                 Type viaImports = MemberResolver.qualifyViaImports(sa.unit(), superQualified);
                 if (viaImports instanceof Type.ClassType qt) {
                     superQualified = qt.packageName() + "." + qt.name();
+                } else if (CompilerTypes.JAVA_LANG_THROWABLES.contains(superQualified)) {
+                    // #313 família: `class MyEx extends RuntimeException` SEM
+                    // import gravava o super como `RuntimeException` cru →
+                    // NoClassDefFoundError no load da própria classe (medido).
+                    // Throwable simples do JDK mora em java.lang (mesmo mapa
+                    // de exceptionType/#163 e do toType do #313).
+                    superQualified = "java.lang." + superQualified;
                 }
             }
             String declPkg = sa.packageOf(cls);
@@ -93,6 +100,11 @@ public final class SymbolTableBuilder {
                 && cls.modifiers().contains("abstract")) {
             sa.addAbstractClass(cls.name());
         }
+        // #339 (SEM070): registra classes `final` — `class D extends F` vira erro.
+        if (decl instanceof ClassDeclarationNode cls
+                && cls.modifiers().contains("final")) {
+            sa.addFinalClass(cls.name());
+        }
     }
 
     static void defineMembers(SemanticAnalyzer sa, AstNode decl) {
@@ -117,7 +129,16 @@ public final class SymbolTableBuilder {
         for (AstNode member : cls.members()) {
             if (member instanceof FieldDeclarationNode field) {
                 Type fieldType = MemberResolver.resolveType(sa, field.type(), classScope);
-                int flags = field.modifiers().contains("static") ? AccessFlags.STATIC : 0;
+                // #331/#327 (espelha SG-013 dos metodos, :361): private/
+                // protected/FINAL precisam chegar ao simbolo — antes so
+                // STATIC era preservado e os cheques de acesso/atribuicao de
+                // campo nao tinham informacao (IllegalAccessError
+                // silencioso no runtime).
+                int flags = AccessFlags.PUBLIC;
+                if (field.modifiers().contains("private")) flags |= AccessFlags.PRIVATE;
+                else if (field.modifiers().contains("protected")) flags |= AccessFlags.PROTECTED;
+                if (field.modifiers().contains("static")) flags |= AccessFlags.STATIC;
+                if (field.modifiers().contains("final")) flags |= AccessFlags.FINAL;
                 SymbolTable.FieldSymbol fs = new SymbolTable.FieldSymbol(field.name(), fieldType, flags, cls.name());
                 classSym.members().define(fs);
                 classScope.define(fs);

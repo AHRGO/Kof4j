@@ -33,7 +33,7 @@ errors with code `LEX00x`.
 
 `text
 class  interface  record  enum  entity  generated  unique
-extends  implements  sealed  permits
+extends  implements
 package  import
 public  private  protected  static  final  abstract
 transient  volatile  synchronized  native  default  override
@@ -51,21 +51,38 @@ true  false  null
 `onShutdown`, `desc`, `asc`. They have contextual meaning in the parser (see
 [grammar.md](grammar.md)) or none.
 
-**RESERVED words** (their own tokens, `IDENTIFIER` **never**): `fun`,
-`fn`, `func` (SG-001, 06/09) — same as `sealed`/`permits` (dedicated tokens
-that the parser does not accept as an identifier in **any** position).
+> **§263 FIXED (17/09, compiler/nat lane):** the annotated form
+> `name: Type = ...` is only valid after `var`/`val`. On the type-first path
+> (`Type name = ...`) a `:` right after the name means the consumed prefix was
+> never a real type. `parseVarDecl` now emits **`PARSE095`** pointing at the
+> discarded prefix, instead of silently overwriting it — **only when the prefix
+> differs from the annotation** (prefix == annotation discards nothing; that is
+> the fix direction declared by the cataloguing lane). Before the fix,
+> `let x: Int = 5` / `Klaxon x: Int = 5` / `Banana q: String = "z"` compiled
+> and printed the value; without the annotation the unknown prefix already
+> failed honestly as SEM011 — the hole was only with `:`. Parser-level fix:
+> all 4 targets inherit the same diagnostic (rule 5). Locked by
+> `ParserGarbageTypePrefixE2ETest` (9/9, JVM + JS).
 
-> **Documented divergence (SG-002):** `sealed` and `permits` are lexer keywords
-> but are **not accepted anywhere in the parser** — `sealed class X {}`
-> fails with `PARSE007`. They are dead tokens. See
+**RESERVED words** (their own tokens, `IDENTIFIER` **never**): `fun`,
+`fn`, `func` (SG-001, 06/09).
+
+> **SG-002 APPLIED (12/09):** `sealed` and `permits` were **keywords** of the
+> lexer (dead tokens, never accepted by the parser — `sealed class X {}` used
+> to fail with `PARSE007`); the grammar never used them, so with the removal
+> they are now **plain `IDENTIFIER`s**: `sealed class S {}` fails as
+> `PARSE010` (declaration without type). Locked by
+> `CompilerDriverTest.deadTokensGiveCleanLexerError`. See
 > [specification-gaps.md](../bugs-and-gaps/specification-gaps.md).
 
 > **SG-001 RESOLVED (06/09):** `fun`/`fn`/`func` are **reserved words**
 > (`FUN`/`FN`/`FUNC` tokens in the lexer) — they **do not exist** in Kof, neither
 > as a declaration keyword nor as an identifier in any position (function
 > name, variable, parameter, field). In declaration position the parser gives
-> `PARSE085`; in another position, each parser's `expectId` already fails with
-> a diagnostic (`PARSE037` variable, `PARSE023` parameter, …). Aligned with the
+> `PARSE085`; in any name position (function, variable, parameter, method,
+> field, class, record, enum) `ParseContext.expectId` emits the same `PARSE085`
+> (measured 17/09, #330 — it used to fall through to the generic `PARSE037`
+> variable / `PARSE023` parameter). Aligned with the
 > corpus (rule 4: bug = align with what is expected). KofScript (`.ks`) is **not**
 > an exception — it is pure Kof executed directly; `fn`/`fun`/`func` there also give
 > `PARSE085` (there is no dialect translation).
@@ -111,6 +128,8 @@ Observable rules:
 
 - **No digit separator.** `1_000` is read as `1` followed by the
   identifier `_000` → `SEM011` (*probe*).
+- **No binary literal.** `0b1010` is read as `0` followed by the identifier
+  `b1010` → `SEM011` (there is no `0b` prefix) (*probe*).
 - **No octal.** `0777` is **777** decimal (the leading `0` is not a base
   prefix) (*probe*).
 - **A decimal point requires digits on both sides.** `.5` → `PARSE041`;
@@ -214,9 +233,17 @@ Unexpected character → `LEX005`.
 
 **The semicolon is optional in every statement-end position.** The parser
 consumes `;` only *if present* (`expectSemicolon`, ParseContext.expectSemicolon).
-Line breaks are **not** tokens and have **no** syntactic meaning
-(automatic semicolon insertion does not exist). Consequence: `var a = 1 var b =
+Line breaks are **not** tokens and have **no** syntactic meaning for statement
+termination (automatic semicolon insertion does not exist). Consequence: `var a = 1 var b =
 2` on the same line is parsed as two declarations.
+
+**Single exception — `return` (#343).** The value of a `return` only counts
+when it is on the **same line** as the keyword. A line break after a bare
+`return` makes it a void return (`StatementParser.parseReturn`), so
+`if (x < 0) return` followed by `println(x)` on the next line parses as a
+void `return` + a separate statement — not as `return println(x)`. A value
+on the following line is not supported (use braces or keep the value on the
+same line).
 
 ---
 

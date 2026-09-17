@@ -25,8 +25,12 @@ public final class CompilerComparisons {
             if (Type.isString(left) || Type.isString(right)) return false;
             // bug 188: record == record (ou qualquer record em ==) compara CONTEÚDO via .equals()
             // desativar shortcut para não emitir if_acmpeq direto
-            if (CompilerTypes.isRecordType(left, driver.currentUnit, driver.semanticAnalyzer)
-                    || CompilerTypes.isRecordType(right, driver.currentUnit, driver.semanticAnalyzer)) {
+            // §262(b): Nullable(record) também (Point? do get/retorno de fn) —
+            // antes caía no shortcut → if_acmp de referência (contrato é conteúdo).
+            Type leftU = left instanceof Type.NullableType nl ? nl.inner() : left;
+            Type rightU = right instanceof Type.NullableType nr ? nr.inner() : right;
+            if (CompilerTypes.isRecordType(leftU, driver.currentUnit, driver.semanticAnalyzer)
+                    || CompilerTypes.isRecordType(rightU, driver.currentUnit, driver.semanticAnalyzer)) {
                 return false;
             }
             // enum == enum: D-ENUM207 — as constantes são INSTÂNCIAS (singletons

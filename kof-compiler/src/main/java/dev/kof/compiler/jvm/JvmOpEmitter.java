@@ -35,6 +35,8 @@ import dev.kof.compiler.KofReturnVoid;
 import dev.kof.compiler.KofStoreField;
 import dev.kof.compiler.KofStoreLocal;
 import dev.kof.compiler.KofThrow;
+import dev.kof.compiler.KofContinueLabel;
+import dev.kof.compiler.KofStatementIf;
 import dev.kof.compiler.KofTryEnd;
 import dev.kof.compiler.KofTryStart;
 import dev.kof.compiler.KofUi;
@@ -236,6 +238,12 @@ public final class JvmOpEmitter {
             case KofTryStart kts -> {
                 c.mv().visitLabel(ctx.resolveLabel(kts.startLabel()));
                 ctx.pushTryRegion(kts.startLabel(), kts.endLabel());
+            }
+            case KofStatementIf _ -> {
+                // §267: marcador de if de statement (uso exclusivo do dispatcher JS) — no-op
+            }
+            case KofContinueLabel _ -> {
+                // §266: marcador estrutural (fronteira corpo/update do for) — no-op
             }
             case KofTryEnd _ -> {
                 ctx.popTryRegion();

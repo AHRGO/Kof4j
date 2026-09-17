@@ -155,6 +155,10 @@ backend, o que criaria divergência de novo).
   inicializador" é lint (SEM0xx reservado, fase 2).
 - `let`/`const` do KofScript (aliases) → herdam: `const` → `val`, `let` → `var`
   (parser do .ks só precisa mapear p/ o mesmo booleano).
+  ⚠️ *Nota de registro 16/09: isto nunca aconteceu — o sugar `let`/`const` foi
+  REMOVIDO do KofScript (`183cb048`, 06/09: "KofScript é Kof puro, sem sugar de
+  outra língua"). `let x = 5` agora é `SEM011`/`PARSE011`. Linha histórica
+  preservada por rastreabilidade.*
 
 ## Arquivos tocados (quando aprovado)
 

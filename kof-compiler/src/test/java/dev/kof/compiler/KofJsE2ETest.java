@@ -76,7 +76,7 @@ class KofJsE2ETest {
                 println(2.5 * 2)
             }
             """);
-        runJs(source, tempDir.resolve("out"), "70\n14\n2\n5");
+        runJs(source, tempDir.resolve("out"), "70\n14\n2\n5.0");
     }
 
     @Test
@@ -605,7 +605,7 @@ class KofJsE2ETest {
             ab1
             true
             true
-            101
+            e
             2
             World""");
     }

@@ -2,12 +2,15 @@
 
 # KofAndroid — o target Android da Kof
 
-> **Status: Fases 1 e 2 implementadas (31/08).** `kof build --target android` gera o
+> **Status: Fases 1-4 implementadas (Fase 3 = responsividade, Fase 4 = `--min-sdk`/`--target-sdk`, 17/09).**
+> `kof build --target android` gera o
 > projeto Maven + APK pipeline com o host Activity escrito EM KOF
 > (`dev/kof/android-host.kf`) — zero Java, zero Kotlin, zero Gradle no
 > projeto gerado; dependências resolvidas pelo Kof (ExternalClasspath).
 > Fase 2: label/permissões derivados do programa, `--apk` standalone
 > (aapt2/d8/apksigner direto do CLI) e release signing `--keystore`.
+> Fase 3: o WebView renderiza na largura do aparelho (`<meta viewport>` +
+> `setUseWideViewPort`) com um bloco CSS para tela estreita — ver abaixo.
 > A base de compilador que isso exige está funcional: herança de classes
 > externas, `super(...)`/`super.metodo()` com INVOKESPECIAL correto,
 > chamadas encadeadas em receivers externos, construtores e campos
@@ -121,7 +124,7 @@ b.clicks = 5                      // campo externo (leitura/escrita)
 | app de UI | `main()` com `Window(...)` | sintetiza host Activity + WebView |
 | componente Android | `class MinhaTela extends android.app.Activity` | respeita a hierarquia; exige assinaturas reais via classpath |
 | metadado de framework | `@Override`, `@NonNull`, ... | emite RuntimeVisible/Invisible no bytecode |
-| ponto de entrada lógico | `main()` | continua existindo e testável (`kof test`) |
+| ponto de entrada lógico | `main()` | continua existindo — teste a lógica com `kof test` em `jvm`/`js`; android é empacotamento, não alvo de teste (`kof test --target android` recusa com exit 1, R6) |
 
 Regras de convenção (nenhuma configuração obrigatória):
 
@@ -191,12 +194,62 @@ vetorial (`res/drawable/ic_launcher_kof.xml`) — nenhum binário gerado.
   `<uses-permission>` no manifesto (`detectPermissions`);
 - ✅ **modo standalone sem Maven**: `kof build --target android --apk` chama
   `aapt2 → d8 → zip → zipalign → apksigner` direto do CLI (build-tools 34 +
-  `ANDROID_HOME`);
+  `ANDROID_HOME`). Sem o SDK (`ANDROID_HOME` ausente, sem `aapt2`), a flag falha
+  com **exit 1** e mensagem honesta — nunca exit 0 sem APK (R6); o projeto ainda
+  é gerado, então `mvn verify` segue como alternativa;
 - ✅ **release signing parametrizável**: `--keystore <ks> [--storepass <p>]
   [--keypass <p>] [--alias <a>]` — sem `--keystore`, mantém o debug keystore
-  local gerado na primeira vez;
+  local gerado na primeira vez. As flags de assinatura/artefato (`--apk`,
+  `--keystore`, `--storepass`, `--keypass`, `--alias`) são **só android**: em
+  qualquer outro alvo, ou assinando sem `--apk`, o CLI recusa com exit 1 (R6)
+  em vez de ignorá-las em silêncio;
 - ícone: default vetorial do Kof (`res/drawable/ic_launcher_kof.xml`);
   override declarativo por metadado segue planejado (nenhum binário gerado).
+
+### Fase 3 — implementada (17/09): responsividade
+
+O host WebView agora renderiza a UI na **largura do aparelho** em vez do
+viewport de layout de 980px do desktop:
+
+- ✅ **`<meta viewport>` no `index.html` gerado** — `width=device-width,
+  initial-scale=1, viewport-fit=cover` (`JsArtifactWriter.writeHtmlEntry`);
+  `AndroidProjectWriter.patchIndexForPlatform` injeta defensivamente também
+  num `index.html` customizado;
+- ✅ **host liga o viewport largo** — `setUseWideViewPort(true)` +
+  `setLoadWithOverviewMode(true)` no `dev/kof/android-host.kf`; sem os dois o
+  WebView **ignora** a meta tag e a UI aparece encolhida;
+- ✅ **CSS para tela estreita** — um bloco `@media (max-width: 600px)` quebra
+  `.kof-row` e diminui o padding do titlebar/root, então a mesma intenção
+  `Window`/`Column`/`Row` se adapta sem mudar o código `.kf`;
+- `kofUiSerializeHtml` (caminho de export HTML) emite a mesma meta viewport.
+
+Prova: `AndroidInteropE2ETest.androidResponsiveViewportAndWebViewWideViewport`.
+
+### Fase 4 — implementada (17/09): versionamento do SDK por flag
+
+- ✅ **`--min-sdk <n>` / `--target-sdk <n>`** no `kof build --target android`
+  (flag explícita, nunca arquivo mágico). Os valores chegam ao
+  `AndroidManifest.xml` gerado (`<uses-sdk>`), ao `pom.xml` (platform jar
+  `android-<targetSdk>` + `d8 --min-api <minSdk>`) e ao pipeline standalone
+  `--apk`. Defaults seguem 24/34; `min > target` e alvos não-android são
+  recusados com diagnóstico honesto (R6).
+  Prova: `AndroidInteropE2ETest.androidSdkOverrideThreadsToManifestPomAndReadme`
+  + `CmdBuildAndroidSdkTest`.
+
+### CI
+
+`.github/workflows/android.yml` (manual `workflow_dispatch`) tem dois jobs:
+`interop` (roda `AndroidInteropE2ETest` contra o SDK) e `emulator-smoke` (builda
+o CLI, gera o projeto, `mvn verify` monta o APK e então instala/abre com
+`android-emulator-runner`). Não está ligado a rodar a cada push.
+
+### Pendente (Fases 5+, sem dono ainda)
+
+- saída `--aab` (App Bundle p/ Play) — precisa de `bundletool` (não está no
+  build-tools). A flag é reconhecida e recusada com diagnóstico honesto (R6) em
+  vez de ser ignorada em silêncio; o projeto ainda é gerado.
+- override declarativo do ícone por metadado — **decisão pendente** (o mecanismo
+  `kof.toml [app] icon` vs flag `--icon` não está fechado).
 
 ## Restrições e gaps (diagnosticados em compile-time)
 
@@ -206,8 +259,8 @@ alvos; o alvo que não consegue realizá-la diz isso na hora, com código.**
 | Código | Situação | Motivo |
 |--------|----------|--------|
 | ~~`AND001`~~ | ~~`spawn { ... }`~~ | ✅ **fechado 31/08**: ART não tem virtual threads (Java 21), mas o runtime cai em **platform threads** quando `Thread.startVirtualThread` não existe — `spawn`/`await`/`cancel`/`cancelled`/`selectAny`/`awaitTimeout`/`channel`/`scheduler` compilam e rodam (bytecode: `CompletableFuture` + `new Thread` + `LinkedBlockingQueue`; KofJS do WebView: sequencial). `KofConcurrency2Test`/`AndroidInteropE2ETest` |
-| `AND002` | `kof.web` (servidor embutido) | app mobile não escuta porta; usar interop |
-| `AND003` | reflexão dinâmica sobre classes Kof | desugaring/R8 pode remover símbolos |
+| `AND002` | `web.app()` / `kof.web` (servidor embutido) | ✅ **imposto em compile-time (17/09)** tanto no `kof build` quanto no `kof check --target android` (18/09): app mobile não escuta porta — o alvo recusa com `AND002` e aponta o interop, nunca emite código de servidor que não roda (R6) |
+| `AND003` | reflexão sobre classes Kof via interop | *caveat, não gate de compile-time*: desugaring/R8 pode remover símbolos; a linguagem não tem superfície de reflexão própria, então não há o que o compilador detectar |
 | `AND004` | android.jar ausente no ExternalClasspath | host Activity não incluída (warning) |
 | `SAM001` | aridade da lambda ≠ método SAM | interface externa exige N args |
 | `SUP001` | `super.metodo()` no Native | já coberto; ANDROID reusa o caminho JVM |

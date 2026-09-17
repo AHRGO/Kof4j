@@ -3,7 +3,7 @@
 # stdlib web — Kof's Native Web Stack
 
 **Last updated:** September 4, 2026
-**Version:** 0.2.6-beta (`kof.http` JVM+JS + retry/circuit; WebSocket/SSE JVM + hardening)
+**Version:** 0.4.0-beta (`kof.http` JVM+JS + retry/circuit; WebSocket/SSE JVM + hardening)
 **Status:** implemented (Phase 1 of the Spring independence plan) — `kof serve` + `kof.http` JVM+JS + `app.ws`/`app.sse` JVM + limits/counters
 
 ---
@@ -101,43 +101,41 @@ also be passed explicitly: `app.get("/x", handler)`.
 `app.use { ... }` registers a middleware executed before routing.
 Return `null` → continues; return `String` → immediate response (200).
 
-### Server
+### Security (`app.security()`) — D-SEC C18 (14/09)
 
-### Segurança (`app.security()`) — D-SEC C18 (14/09)
+| Call | Description |
+|------|-------------|
+| `app.security()` | Composite middleware with secure defaults (hardening headers) |
+| `app.security(opts)` | Same, with overrides via `Map` |
 
-| Chamada | Descrição |
-|---------|-----------|
-| `app.security()` | Middleware composto com defaults seguros (headers de hardening) |
-| `app.security(opts)` | Idem, com overrides via `Map` |
+Applies the **fixed order** rate-limit → CORS → headers → cookies/session → csrf →
+auth → RBAC → route (D-SEC). Replaces the manual `app.use` chain.
 
-Aplica a **ordem fixa** rate-limit → CORS → headers → cookies/session → csrf →
-auth → RBAC → rota (D-SEC). Substitui a cadeia manual de `app.use`.
-
-Sem argumentos, liga os **headers de hardening** (sempre seguros) e o **CSRF**
-para métodos que mudam estado:
+Without arguments, enables the **hardening headers** (always safe) and **CSRF**
+for state-changing methods:
 
 - `Content-Security-Policy: default-src 'self'; frame-ancestors 'none'; base-uri 'self'`
 - `X-Content-Type-Options: nosniff`
 - `X-Frame-Options: DENY`
 - `Referrer-Policy: no-referrer`
-- `Strict-Transport-Security` — só sob TLS (`listenSecure`)
+- `Strict-Transport-Security` — only under TLS (`listenSecure`)
 
-Opts documentados (chaves do `Map`; qualquer outra é ignorada):
+Documented opts (`Map` keys; any other is ignored):
 
-| Chave | Tipo | Default | Efeito |
-|-------|------|---------|--------|
-| `headers` | `Bool` | `true` | Liga/desliga os headers acima |
-| `cors` / `corsOrigin` | `String` | off | Origem permitida, CSV ou `*`. Origem não listada → 403; preflight `OPTIONS` → 204 |
-| `rateLimit` | `String` ou `Number` | off | `"limite/janelaSegundos"` (ex.: `"100/60"`) ou só o limite. Por IP remoto; excedeu → 429 + `Retry-After` |
-| `csrf` | `Bool` | `true` | Double-submit cookie: emite `csrf` (SameSite=Lax) em métodos seguros; exige `X-CSRF-Token` casando com o cookie em POST/PUT/PATCH/DELETE, senão 403. `csrf:false` desliga |
-| `sessionHeader` | `String` | off | Nome do header de sessão. Fora dos `publicPaths`, **toda** request (GET incluído) exige sessão válida; ausente/inválida → 401 |
-| `publicPaths` / `permitAll` | `String` CSV | — | Allow-list de matchers públicos (ex.: `"/register,/login"`); todo o resto exige autenticação |
-| `auth` | `Bool` | `false` | Exige `Authorization: Bearer` JWT válido (secret via `auth.secret`); ausente/inválido → 401 + `WWW-Authenticate` |
-| `roles` | `String` CSV ou `List` | — | Exige todas as roles (claims `roles`); falta → 403 (implica auth) |
+| Key | Type | Default | Effect |
+|-----|------|---------|--------|
+| `headers` | `Bool` | `true` | Enables/disables the headers above |
+| `cors` / `corsOrigin` | `String` | off | Allowed origin, CSV or `*`. Origin not listed → 403; `OPTIONS` preflight → 204 |
+| `rateLimit` | `String` or `Number` | off | `"limit/windowSeconds"` (e.g. `"100/60"`) or just the limit. Per remote IP; exceeded → 429 + `Retry-After` |
+| `csrf` | `Bool` | `true` | Double-submit cookie: emits `csrf` (SameSite=Lax) on safe methods; requires `X-CSRF-Token` matching the cookie on POST/PUT/PATCH/DELETE, otherwise 403. `csrf:false` disables |
+| `sessionHeader` | `String` | off | Session header name. Outside `publicPaths`, **every** request (GET included) requires a valid session; missing/invalid → 401 |
+| `publicPaths` / `permitAll` | `String` CSV | — | Allow-list of public matchers (e.g. `"/register,/login"`); everything else requires authentication |
+| `auth` | `Bool` | `false` | Requires a valid `Authorization: Bearer` JWT (secret via `auth.secret`); missing/invalid → 401 + `WWW-Authenticate` |
+| `roles` | `String` CSV or `List` | — | Requires all roles (claims `roles`); missing → 403 (implies auth) |
 
-**Auth-if-present:** mesmo sem `auth: true`, uma request que **traz**
-`Authorization` com token inválido nunca passa (401) — evita "token ruim vira
-anônimo".
+**Auth-if-present:** even without `auth: true`, a request that **carries**
+`Authorization` with an invalid token never passes (401) — avoids "bad token
+becomes anonymous".
 
 ```kof
 main() {
@@ -154,35 +152,27 @@ main() {
 }
 ```
 
-**Security by default:** `listen`/`listenSecure` com `KOF_ENV=production` sem
-`app.security()` avisa em `stderr` (nunca falha silenciosamente).
+**Security by default:** `listen`/`listenSecure` with `KOF_ENV=production`
+without `app.security()` warns on `stderr` (never fails silently).
 
-**JVM-only** — Native/JS reportam `WEB006` (gap honesto, mesmo precedente
+**JVM-only** — Native/JS report `WEB006` (honest gap, same precedent
 `WEB002`/`WEB005`).
 
-### Servidor
+### Server
 
 | Call | Description |
 |---------|-----------|
 | `app.listen(port)` | Starts the server (blocking) on `0.0.0.0` |
-| `app.listenSecure(port)` | Same, with TLS (JVM; self-signed `keytool` + `SSLServerSocket`) |
+| `app.listenSecure(port)` | Same, with dev self-signed TLS (JVM; `keytool` + `SSLServerSocket`) |
+| `app.listenSecure(port, certPem, keyPem)` | TLS with a **user-supplied certificate** (PKCS#8 PEM) — production (JVM) |
 | `app.port()` | Port actually bound (useful with `listen(0)`) |
 | `app.close()` | Shuts down the server (graceful shutdown) |
 
 `app.listen(0)` binds an ephemeral port; `app.port()` reveals the real port.
-`app.listenSecure` is available on the JVM (Native/JS `WEB002`).
-
-| `app.listen(port)` | Inicia o servidor (bloqueante) em `0.0.0.0` |
-| `app.listenSecure(port)` | Idem, com TLS self-signed de dev (JVM; `keytool` + `SSLServerSocket`) |
-| `app.listenSecure(port, certPem, keyPem)` | TLS com **certificado próprio** (PKCS#8 PEM) — produção (JVM) |
-| `app.port()` | Porta efetivamente vinculada (útil com `listen(0)`) |
-| `app.close()` | Encerra o servidor (graceful shutdown) |
-
-`app.listen(0)` vincula uma porta efêmera; `app.port()` revela a porta real.
-`app.listenSecure` está disponível no JVM (Native/JS `WEB002`). A variante de
-3 args usa o par cert/chave do usuário (`-----BEGIN CERTIFICATE-----` /
-`-----BEGIN PRIVATE KEY-----`, chave PKCS#8 RSA/EC/DSA); o self-signed de 1
-arg continua como conveniência de dev, não de produção (D-SEC).
+`app.listenSecure` is available on the JVM (Native/JS `WEB002`). The 3-arg
+variant uses the user's cert/key pair (`-----BEGIN CERTIFICATE-----` /
+`-----BEGIN PRIVATE KEY-----`, PKCS#8 RSA/EC/DSA key); the 1-arg self-signed
+stays a dev convenience, not for production (D-SEC).
 
 ### Static files (`app.serveDir`) (31/08)
 
@@ -268,7 +258,11 @@ app.ws("/chat") {
 | `sse.close()` | Ends the client stream |
 | `sse.isOpen()` | `Bool` — the stream is still open |
 
-Each SSE connection is independent (ThreadLocal per connection); the headers
+On the **JS** host (Graal) SSE is **handler-scoped**: events are written during
+the handler body and the stream closes when the handler returns — the pump is
+single-thread, so post-return push and multiple concurrent clients are the
+`WEB003` residual there. On the JVM each SSE connection is independent
+(ThreadLocal per connection). In both, the headers
 `Content-Type: text/event-stream`, `Cache-Control: no-cache`,
 `Connection: keep-alive` and `X-Accel-Buffering: no` are emitted.
 
@@ -280,9 +274,9 @@ app.sse("/events") {
 }
 ```
 
-`app.ws` and `app.sse` are available on the **JVM**. On other targets they are
-compile-time documented gaps: WebSocket → `WEB004`, SSE → `WEB003`
-(Native/JS).
+`app.ws` is available on the **JVM**; `app.sse` works on the JVM and (since
+16/09, handler-scoped) on **JS**. On other targets / the JS residual they are
+compile-time documented gaps: WebSocket → `WEB004`, SSE → `WEB003` (Native).
 
 ### Limits and observability (`app.configure`, `app.stats`)
 
@@ -325,15 +319,15 @@ synchronous handlers; the runtime decides the strategy. SSE handlers run on
 the shared `KOF_SSE_HANDLERS` and have a deadline of `idleMs * 4`; on timeout
 the stream is closed and the task cancelled.
 
-## 5. Current limitations (Phase 1, 0.2.6-beta)
+## 5. Current limitations (Phase 1, 0.4.0-beta)
 
-- The `js` target reports `WEB001` for the web stack (documented gap); `kof.http` already works on JS via `Java HttpClient`.
-- The `native` target (`x86_64`/`riscv64`/`aarch64`) does not have a web server yet (`WEB002` TLS either).
-- `app.ws`/`app.sse` are JVM-only (Native `WEB004`, JS `WEB003`).
+- The `js` target supports the web stack base (`web.app()` + routes + context-fns with runtime: param/query/header/body/method/path/status/headerSet — `WEB001` fatia honestidade 16/09) plus **SSE handler-scoped** (`app.sse` + `sse.send/event/close/isOpen` + `sse()`, framing/headers same as the JVM — 16/09); residual gaps: SSE push after the handler returns and multiple concurrent clients (`WEB003`), `app.ws` (`WEB004`) and `stats()` report at compile-time; `kof.http` already works on JS via `Java HttpClient`.
+- The `native` target (`x86_64`/`riscv64`/`aarch64`) has had the web server base since 03/09 (`NativeWebRuntime.java`: accept/route/lambda/body, `KofWebNativeE2ETest` 4/4); residual: TLS `WEB002`, ws `WEB004`, sse `WEB003`, path params/keep-alive/`status()`/`headerSet()` `WEB001`.
+- `app.ws` is JVM-only (Native/JS → `WEB004` at compile-time). `app.sse` is JVM + JS handler-scoped (16/09; Native `WEB003`, JS post-return push `WEB003` residual).
 - `app.serveDir` (static files + Range 206/416) is JVM-only (Native/JS `WEB005`).
 - PR6 hardening (connection cap, `maxFrameBytes`/`maxMessageBytes` limits,
   `idleMs`, `app.stats`) is JVM; backpressure and fragmentation remain follow-up.
-- `kof.http` client — ✅ JVM+JS (27/08; `timeout/retry/circuit` in parity 30/08), Native `HTTP002` pending.
+- `kof.http` client — ✅ JVM+JS (27/08; `timeout/retry/circuit` in parity 30/08), Native ✅ (asm HTTP/1.1; configurators `timeout/retry/circuit` are silent no-ops — see §259; HTTP002 branch is dead).
 - Middleware/routes for HTTP methods other than those listed: in the future.
 
 > Closed in this phase (27–30/08): status codes + custom headers
@@ -341,7 +335,7 @@ the stream is closed and the task cancelled.
 > targets; `WebSocket` (`app.ws`) + `SSE` (`app.sse`) on the JVM; `http.retry`/
 > `http.circuit` in JVM+JS parity.
 
-## 6. Tests (0.2.6-beta)
+## 6. Tests (0.4.0-beta)
 
 `KofWebE2ETest` 10 + `KofHttpServerTest` 8 + `KofHttpE2ETest` 4 (JVM+JS,
 27/08) + `KofWebTlsTest` 5 + `KofWebSseE2ETest` 7 + `KofWebWsE2ETest` 11 +

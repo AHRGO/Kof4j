@@ -18,7 +18,8 @@ explicitly `WORKAROUND` and `NOT IDIOMATIC`.
 
 ```kof
 // ✅ String? / Int? implemented with narrowing
-String? s = null
+String? s = mapOf("k", "x").get("k")   // NOTE since 10/09: `= null` literal is SEM048 —
+                                        // null reaches T? via API only
 if (s != null) {
     println(s.length)   // OK — narrowing via isAssignable
 }
@@ -42,7 +43,7 @@ var l = json.decode<Int[]>("[1,2,3]")
 Do not use the JSON workaround anymore (not encoding an object in Native, swapping
 Double for Int) — the feature is closed.
 
-### 3. Constructor with arguments — RESOLVED (0.3.22-beta)
+### 3. Constructor with arguments — RESOLVED (0.4.0-beta)
 
 ```kof
 // ✅ Primary constructor is the idiomatic form since 0.0.5
@@ -53,7 +54,7 @@ var u = User("Mel", 30)   // without new also OK
 
 Do not use `// WORKAROUND` for the constructor — it is a stable feature.
 
-### 4. Capture in lambdas — RESOLVED (0.3.22-beta)
+### 4. Capture in lambdas — RESOLVED (0.4.0-beta)
 
 ```kof
 var offset = 10
@@ -66,7 +67,7 @@ Do not mark capture as a workaround — it is implemented.
 ### 5. Imports in a large project — RESOLVED (27/08)
 
 ```kof
-// ✅ CompilerDriver expandKofImports now handles import a.b.C (file) + a.b (folder)
+// ✅ CompilerImports expandKofImports now handles import a.b.C (file) + a.b (folder)
 // Project largeproj with a/b/C.kf → correct Main.class + a/b/C.class
 import a.b.C
 import a.b.*

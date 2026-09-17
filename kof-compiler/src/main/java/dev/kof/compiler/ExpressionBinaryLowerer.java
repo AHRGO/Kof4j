@@ -23,6 +23,12 @@ public final class ExpressionBinaryLowerer {
                 && ("int".equals(pt.name()) || "Int".equals(pt.name()));
     }
 
+    /** §262(b): `Point?` (Nullable(record)) É record p/ o caminho de conteúdo. */
+    static boolean isRecordLike(Type t, CompilerDriver driver) {
+        Type u = t instanceof Type.NullableType nt ? nt.inner() : t;
+        return CompilerTypes.isRecordType(u, driver.currentUnit, driver.semanticAnalyzer);
+    }
+
     /** §167: bitwise inteiro `& | ^` (o `&&`/`||` lógico já saiu antes). */
     private static boolean isBitwiseOp(String op) {
         return "&".equals(op) || "|".equals(op) || "^".equals(op);
@@ -31,6 +37,41 @@ public final class ExpressionBinaryLowerer {
     /** §167: shift inteiro `<< >> >>>`. */
     private static boolean isShiftOp(String op) {
         return "<<".equals(op) || ">>".equals(op) || ">>>".equals(op);
+    }
+
+    /**
+     * Stringifica um operando de concatenação. D-PRINT (#168, manterdora
+     * 15/09): um `Char` vira o CARÁTER ("A"), nunca o code point ("65") — a
+     * face numérica de §216 face 2 está SUPERSEDED (regra 4). Usa o overload
+     * `String.valueOf(char)` (descritor (C)) com o valor int-width já na
+     * pilha, sem boxear; nos 4 alvos o dispatch `valueOf(C)` é o mesmo de
+     * `String.valueOf(c)` (§27). Os demais primitivos mantêm o box.
+     */
+    private static void emitOperandToString(CompilerDriver driver, List<KofOperation> ops, Type type) {
+        Type check = type instanceof Type.NullableType nt ? nt.inner() : type;
+        boolean isChar = check instanceof Type.PrimitiveType p
+                && "char".equals(Type.canonicalPrimitiveName(p.name()));
+        if (isChar) {
+            ops.add(new KofCall(BuiltinTypes.STRING, "valueOf",
+                    List.of(Type.PrimitiveType.CHAR), BuiltinTypes.STRING, KofCallKind.STATIC));
+            return;
+        }
+        boolean stringified = !Type.isString(type) && TypeMetrics.isPrimitiveType(type);
+        if (driver.target == Target.JS
+                && TypeMetrics.isFloatingPoint(
+                        type instanceof Type.NullableType ntp ? ntp.inner() : type)) {
+            // §264 (JS): Double/Float crus (Number no JS) — valueOf recebe o
+            // tipo REAL p/ o emissor formatar no contrato do JDK; sem box.
+            ops.add(new KofCall(BuiltinTypes.STRING, "valueOf",
+                    List.of(type), BuiltinTypes.STRING, KofCallKind.STATIC));
+            return;
+        }
+        if (stringified) TypeEmitter.boxPrimitive(ops, type);
+        ops.add(new KofCall(BuiltinTypes.STRING, "valueOf",
+                List.of(driver.target.isNative() && !stringified && !Type.isString(type)
+                        && !(type instanceof Type.PrimitiveType)
+                        ? type : Type.UnknownType.UNKNOWN),
+                BuiltinTypes.STRING, KofCallKind.STATIC));
     }
 
     static int lower(CompilerDriver driver, BinaryExpr bin, List<KofOperation> ops,
@@ -265,21 +306,9 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
         // stringuificava DE NOVO o ponteiro da String = lixo. Mesmo guard
         // nos dois lados: se o box já rodou, o valueOf externo é no-op
         // (UNKNOWN).
-        boolean accStringified = !Type.isString(accType) && TypeMetrics.isPrimitiveType(accType);
-        if (accStringified) TypeEmitter.boxPrimitive(ops, accType);
-        ops.add(new KofCall(BuiltinTypes.STRING, "valueOf",
-                List.of(driver.target.isNative() && !accStringified && !Type.isString(accType)
-                        && !(accType instanceof Type.PrimitiveType)
-                        ? accType : Type.UnknownType.UNKNOWN),
-                BuiltinTypes.STRING, KofCallKind.STATIC));
+        emitOperandToString(driver, ops, accType);
         localIdx = ExpressionLowerer.emitExpression(driver, be.right(), ops, owner, localIdx, locals);
-        boolean rightStringified = !Type.isString(rightType) && TypeMetrics.isPrimitiveType(rightType);
-        if (rightStringified) TypeEmitter.boxPrimitive(ops, rightType);
-        ops.add(new KofCall(BuiltinTypes.STRING, "valueOf",
-                List.of(driver.target.isNative() && !rightStringified && !Type.isString(rightType)
-                        && !(rightType instanceof Type.PrimitiveType)
-                        ? rightType : Type.UnknownType.UNKNOWN),
-                BuiltinTypes.STRING, KofCallKind.STATIC));
+        emitOperandToString(driver, ops, rightType);
         ops.add(new KofCall(BuiltinTypes.STRING, "kof_string_concat",
                 List.of(BuiltinTypes.STRING, BuiltinTypes.STRING),
                 BuiltinTypes.STRING, KofCallKind.FUNCTION));
@@ -302,15 +331,15 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
         ops.add(new KofLoadLiteral(Type.PrimitiveType.BOOL, eq ? 0 : 1));
         accType = Type.PrimitiveType.BOOL;
     } else if (("==".equals(be.operator()) || "!=".equals(be.operator()))
-            && (CompilerTypes.isRecordType(accType, driver.currentUnit, driver.semanticAnalyzer) || CompilerTypes.isRecordType(rightType, driver.currentUnit, driver.semanticAnalyzer))) {
-        // bug 11: `==` em records é igualdade de CONTEÚDO →
-        // left.equals(right) (o record gera equals no JVM e no
-        // JS). Antes emitia referência (if_acmpeq) → false.
-        localIdx = ExpressionLowerer.emitExpression(driver, be.right(), ops, owner, localIdx, locals);
-        Type recordType = CompilerTypes.isRecordType(accType, driver.currentUnit, driver.semanticAnalyzer) ? accType : rightType;
-        Type objT = new Type.ClassType("java.lang", "Object", List.of());
-        ops.add(new KofCall(recordType, "equals", List.of(objT),
-                Type.PrimitiveType.BOOL, KofCallKind.INSTANCE));
+            && !driver.isNullLiteral(be.left()) && !driver.isNullLiteral(be.right())
+            && (isRecordLike(accType, driver) || isRecordLike(rightType, driver))) {
+        // §262 / bug 11: `record == record` é igualdade de CONTEÚDO, null-safe
+        // (Objects.equals). Desugaring em RecordEqualityLowerer (JS = chamada
+        // p/ helper kofRecordEq; JVM/Script/Native = ternária com jumps). O
+        // `record == null` literal NAO cai aqui — é comparação de referência
+        // (ramo abaixo). Aqui só se aplica o `!=` UMA vez, p/ todos os targets.
+        localIdx = RecordEqualityLowerer.emit(driver, be, ops, owner, localIdx, locals,
+                accType, rightType);
         if ("!=".equals(be.operator())) {
             ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 0));
             ops.add(new KofBinary(KofBinaryOp.EQ, Type.PrimitiveType.INT));

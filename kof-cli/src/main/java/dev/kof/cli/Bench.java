@@ -44,7 +44,7 @@ public final class Bench {
         try {
             return Integer.parseInt(value.trim());
         } catch (NumberFormatException e) {
-            System.err.println("kof bench: valor inválido para " + name + ": '" + value + "'");
+            System.err.println("kof bench: invalid value for " + name + ": '" + value + "'");
             return null;
         }
     }
@@ -54,7 +54,7 @@ public final class Bench {
         try {
             return Double.parseDouble(value.trim());
         } catch (NumberFormatException e) {
-            System.err.println("kof bench: valor inválido para " + name + ": '" + value + "'");
+            System.err.println("kof bench: invalid value for " + name + ": '" + value + "'");
             return null;
         }
     }
@@ -138,6 +138,12 @@ public final class Bench {
                         Double th = parseDoubleOption("--threshold", arg.substring("--threshold=".length()));
                         if (th == null) return 1;
                         threshold = th;
+                    } else if (arg.startsWith("-")) {
+                        // R6: a flag desconhecida nao pode virar root em silencio
+                        // (o usuario acharia que teve efeito; um typo virava
+                        // "no benchmarks found").
+                        System.err.println("bench: unknown flag: " + arg);
+                        return 1;
                     } else {
                         roots.add(Path.of(arg));
                     }

@@ -820,6 +820,18 @@ A implementação do núcleo de intenção está sob responsabilidade da mantene
 
 As lanes não devem atacar o núcleo boxed-nullable de #266/#259 sem nova autorização.
 
+**Autorização (16/09, mantenedora via chat, regra de hierarquia):** a
+mantenedora delegou explicitamente a frente D-NULL-INTENT à lane de agentes
+(`192.168.100.22`, issue-watcher/compiler) — o requisito de "nova autorização"
+acima está cumprido. O núcleo boxed-nullable de #266/#259 está DESTRAVADO para
+implementação por esta lane, seguindo a fila do D-NULL-INTENT (1. JVM + Script
++ JS; 2. Native; 3. intenção em declarações não-nullable; 4. auditoria e
+eliminação dos caminhos silenciosos). O contrato em si (intenção explícita via
+`== null`, `T?` boxed real, sem dobra silenciosa) permanece inalterado.
+Registrado aqui pela lane antes/com a implementação, conforme a regra de
+hierarquia (diretriz posterior explícita da mantenedora supera restrição
+documentada anterior).
+
 As lanes podem atuar em:
 
 * auditoria SEM048/SEM049;
@@ -941,6 +953,195 @@ esta decisão registrada; engenharia agendada para a fila futura.
 * `Relacionada:` #275 (issue)
 
 ---
+
+## D-DEV-PRIORITY — "Em desenvolvimento" é a prioridade absoluta de toda lane
+
+**Data:** 2026-09-16
+
+**Estado:** `ATIVO` (sobrepõe qualquer ordenação de preferência por lane)
+
+A regra da mantenedora (16/09, chat): **a prioridade total é completar o
+roadmap `Em desenvolvimento`** — todo agente, toda lane, todo re-trigger
+autônomo escolhe a próxima tarefa desta lista, em ordem, antes de qualquer
+outra coisa (outros gaps, outras filas, frentes novas). Catalogar e corrigir
+bugs seguem como sempre (o gate de qualidade nunca relaxa), mas a SELEÇÃO DE
+TAREFA segue as frentes abaixo.
+
+**As frentes (conforme declaradas pela mantenedora 16/09):**
+
+1. **Standard Library** — contratos em estabilização (a série S:
+   `PLAN-STDLIB-EXPANSION`; faces ainda abertas andam na fila por item).
+2. **GC auto-collect** — safe-points + mapa de raízes por frame.
+3. **Package manager além do MVP** — registry.
+4. **Debugger além do MVP JVM** — DAP via stdio já está no JVM; JS
+   source maps linha ✅; DWARF Native linha ✅ parcial — variáveis/expressões
+   e breakpoints nativos pendentes + ext. VS Code.
+5. **KofJS — a plataforma web no browser** — ES Modules via GraalJS; base do
+   servidor web ✅ (`HttpServer` + `KofJsWebQueue`); SSE handler-scoped ✅
+   16/09 (`7cd69a7b`); residual por feature: ws = **WEB004**, TLS = **WEB002**,
+   sse push pós-return/multi-cliente = **WEB003**, path params/keep-alive =
+   **WEB001** (linha canônica: `backend-parity.pt_BR.md` "web no Native/JS").
+6. **kof.web no Native** — residual por feature: TLS = **WEB002**, path
+   params/keep-alive = **WEB001**, ws = **WEB004**, sse = **WEB003**.
+7. **kof.db/orm no JS** — **DB001 FECHADO 16/09** (nao-tipado
+   `connect/execute/query/close/transaction` na ponte do host GraalJS —
+   `3e55df51`+`eb9140cb`); residual: `db.query<T>` tipado = `DB002`
+   (arquitetural: JS não emite bytecode JVM no classpath do host) +
+   `kof.orm` = `ORM001` (mesma parede; WASM planejado).
+
+**Relação com as outras regras:** esta decisão decide a **ordem**, não o que
+é **aceitável** — Q0–Q7, o freeze, a regra 6 e a regra dos três estados
+mantêm toda a sua força. Uma frente bloqueada (regra 6, outro dono
+`EM CURSO`, ou gate no estilo `§258`) é registrada e o agente pega a PRÓXIMA
+frente desta lista — a lista é a fila, não uma sugestão. A regra de prioridade
+do `AGENTS.md` (".md solto primeiro") e as camadas do roadmap §23 ficam
+subordinadas a esta decisão enquanto a lista de `Em desenvolvimento` tiver
+itens abertos.
+
+---
+
+## D-DIAG-EN — tooling e diagnósticos em inglês; docs continuam EN+PT
+
+**Data:** 16/09/2026
+
+**Estado:** `DECIDIDO`
+
+**Origem:** issue #324 (decisão da mantenedora no chat: "aprovo a tradução
+completa para inglês"; escopo confirmado 16/09: "tooling da linguagem 100%
+em ingles mas as documentações precisam de ingles + pt. porem toda mensagem
+de erro da linguagem precisa ser em ingles pro usuario. até pq kof é uma
+plataforma universal").
+
+### Contexto
+
+O compiler emite ~144 fragmentos de mensagem visíveis ao usuário em
+português (parser, typers, lowerers e runtimes JVM/JS/Native), e ~37
+arquivos de teste asserem esses fragmentos. A metade internal-repr do #324
+foi corrigida por `130aa213` (`Type.display`); a metade de língua estava
+travada aqui como regra 6 até esta decisão.
+
+### Contrato
+
+1. **Toda mensagem visível ao usuário emitida pelo tooling da linguagem é
+   em inglês**: diagnósticos do compiler (códigos PARSE/SEM/…), strings de
+   erro lançadas pelos runtimes da stdlib (JVM/JS/Native/interpretador),
+   saída de CLI/REPL/LSP, logs de build/decompilação e templates de config
+   gerados.
+2. **Documentação é eixo diferente e continua bilíngue** — cada doc mantém
+   o par EN + PT (invariantes do `docs-lang.sh` inalterados).
+3. **Códigos nunca mudam** — só o texto da mensagem (SEM048 continua
+   SEM048). Testes que casam o *texto* da mensagem migram junto com sua
+   unidade; testes que casam o *código* não são tocados.
+4. Razão: Kof é plataforma universal — a língua da ferramenta viaja com a
+   ferramenta, não com o idioma do usuário.
+
+### Implementação
+
+Fila aberta no DOING (lane issues: tradução em unidades por pacote;
+arquivos staged/EM ANDAMENTO de outros agentes ficam de fora de cada unidade
+até landarem). Docs que citam textos PT de mensagens (learn/training)
+sincronizam como unidade-doc de acompanhamento por pacote traduzido.
+
+### Relacionamentos
+
+- Relacionado: #324 (metade internal-repr fixada por `130aa213`), R6
+  (diagnóstico cirúrgico, nunca silencioso), G-01 (freeze da superfície —
+  *códigos* congelados; o *texto* deste eixo é definido por esta decisão).
+
+---
+
+## D-DECL-RETURN — o tipo de retorno declarado é lei (#333)
+
+**Data:** 16/09/2026
+
+**Estado:** `DECIDIDO`
+
+**Origem:** issue #333 (decisão da mantenedora no chat, 16/09: "classe
+definida como int deve obrigatoriamente retornar int"; "função definida como
+int deve obrigatoriamente retornar int e o mesmo vale pras outras tipagem.
+função de um tipo declarado deve retornar aquele tipo").
+
+### Contrato
+
+1. **O tipo de retorno declarado é a lei** em todo backend: função/método
+   declarado `T` deve retornar valor atribuível a `T`; função declarada
+   `void` NÃO pode `return <valor>` — isso é diagnóstico em compile-time
+   (nunca re-typing silencioso).
+2. **A re-inferência silenciosa `void→T` sai das duas rotas** que hoje
+   discordam (raiz medida no thread do #333):
+   `SemanticAnalyzer.analyzeMethodBody` (re-tipa o símbolo da classe) e
+   `CompilerFunctionLowering.lowerFunctionInner` (re-tipa só o descritor da
+   definição — call-sites continuam resolvendo `()V` → o
+   `NoSuchMethodError`). Todo call-site resolve contra o tipo **declarado**.
+3. **Inferência só onde não há tipo declarado** (`main()`, e formas
+   top-level sem anotação como hoje).
+4. É **mudança deliberada de contrato** (freeze regra 1): código que hoje
+   compila re-tipando um `void` declarado passa a falhar com o diagnóstico
+   acima — aprovado pela mantenedora com este registro; entrada no
+   CHANGELOG vai junto do commit de implementação.
+
+### Implementação
+
+Dono: lane compiler (issue sweep reivindicado no DOING, 17/09). O texto do
+diagnóstico segue D-DIAG-EN (inglês).
+
+### Relacionamentos
+
+- Fecha o bloqueio por regra 6 do #333 (o fix estava catalogado, esperando
+  exatamente esta decisão).
+- Relacionado: D-NULL-INTENT (família declarado-vs-inferido), bug 62.
+
+---
+
+## D-NOT-JAVA — Kof não é Java/Kotlin: pedido de feature de outra língua NÃO é bug do Kof
+
+**Data:** 2026-09-18
+
+**Estado:** `DECIDIDO`
+
+**Origem:** diretriz da mantenedora, 18/09 (varredura de issues): "ele ta
+abrindo issue de java no kof. kof não é java. não tem string builder no kof.
+responde todas e as que não forem relativas a kof ou que ele usou treinamento
+errado devem ser ignoradas e fechadas. adiciona isso como regra absoluta."
+
+### Contrato
+
+1. Pedido de construto que não existe no Kof porque é **Java/Kotlin/C#
+   traduzido** NÃO é bug: o compilador rejeitar é comportamento correto.
+   Exemplos medidos na varredura: `StringBuilder`, `val`/`var` top-level,
+   keywords `fun`/`val`, `v is Car`, `"""três aspas"""`, `Pair`, `it` implícito
+   de lambda, `mutableListOf`, Elvis `?:`, `?.`, intervalo `0..n`, `!!`,
+   argumento nomeado, construtor primário estilo Kotlin COM corpo,
+   `catch (e: Type)`, `object`, `open`/`override`.
+2. Tratamento: **responder uma vez com o idiom do Kof que substitui** (a
+   tabela de idioms de `AGENTS.md`) e **FECHAR a issue** como não-procedente.
+   Não implementar a feature estrangeira nem "melhorar o diagnóstico" de uma
+   rejeição correta.
+3. Exceção (trabalho real): o Kof *promete* o construto em
+   `training/`/`learn/`/docs e o compilador discorda da própria documentação —
+   aí é bug (regra 4 do freeze); e *como* a feature existiria é decisão de
+   design reservada à mantenedora (regra 6).
+4. A regra fica registrada como **§8 de AGENTS.md** (EN+PT) — absoluta.
+
+### Evidência
+
+- Varredura 18/09, fechadas sob esta regra: #407, #417, #418, #422, #424,
+  #425, #406, #410, #414, #416, #411, #412, #419, #420, #421, #404, #364,
+  #367, #350, #386, #427 (cada fechamento traz o idiom Kof correto).
+- Autoridade no corpus: `AGENTS.md` §"Fake idioms — DO NOT EXIST in Kof",
+  `training/anti-patterns/fake-idioms.md`, `learn/15` (`is`/binding não tem
+  suporte → `switch`/`as`).
+
+### Relações
+
+- Generaliza o precedente do cluster de açúcar `let/const` (§263) e
+  `Int.MAX_VALUE` (bug 99 / SEM050).
+- NÃO cobre: bugs cujo reproducer é Kof válido (#403, #336, #313 — ficam e
+  foram corrigidos), nem o cluster nullable-primitive (D-NULL-INTENT), nem a
+  resolução de tipo JDK sem qualificar (§268).
+
+---
+
 
 # 4. Decisões rejeitadas ou substituídas
 

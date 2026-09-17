@@ -7,7 +7,7 @@
 ## Status: Accepted
 
 **Last updated:** September 13, 2026
-**Version:** 0.3.0-beta
+**Version:** 0.4.0-beta
 
 > **Visual improvement 13/09 (issue #109):** the ASCII diagrams of this ADR
 > (Pipeline, Type Representation, IR, backends and stdlib dispatch) became
@@ -28,7 +28,7 @@
  > and aarch64 is translated from riscv64 (`translateRiscvToAarch64`); (b) **KofC**
  > does not consume Kof's IR (C subset → ELF); **KofScript consumes the SAME
  > frontend** (lexer→parser→AST→IR) and executes the optimized IR in the interpreter
- > (direct execution target, 0.3.0-beta); (c) the IR is a **linear stack
+ > (direct execution target, 0.4.0-beta); (c) the IR is a **linear stack
  > machine** (30 ops), not a "tree". See SG-E1/SG-E3 in
  > [`specification-gaps.md`](../bugs-and-gaps/specification-gaps.md).
 
@@ -89,7 +89,7 @@ Implementations:
 - `JvmBackend` - generates `.class` files via ASM (`kof-compiler/src/main/java/dev/kof/compiler/jvm/JvmBackend.java:1`)
 - `NativeBackend` - generates ELF via assembly + `as` + `ld` (x86_64 stable, riscv64/aarch64 via cross toolchain)
 - `JsBackend` - generates ES Modules (ECMAScript 2022+), executed by the embedded GraalJS engine (`KofJsRunner`)
-- `KofCcompiler` - C subset (`kof c`) → ELF x86_64 native-only (`kof-compiler/src/main/java/dev/kof/compiler/KofCcompiler.java:1`)
+- `KofCCompiler` - C subset (`kof c`) → ELF x86_64 native-only (`kof-c-compiler/src/main/java/dev/kof/c/KofCCompiler.java:1`)
 
 ### Target Enum
 
@@ -104,20 +104,20 @@ public enum Target {
 }
 ```
 
-CLI: `kof build/run --target jvm|native|native.risc|native.arm|js` (aliases `native.riscv64`/`native.aarch64`; `android` in Phase 1) (`CompilerDriver.java:1`, `Target.java:1`). `kof run`/`kof build --target js` executes JS without Node.js (embedded runtime). `kof c` uses `KofCcompiler` only for `native`.
+CLI: `kof build/run --target jvm|native|native.risc|native.arm|js` (aliases `native.riscv64`/`native.aarch64`; `android` in Phase 1) (`CompilerDriver.java:1`, `Target.java:1`). `kof run`/`kof build --target js` executes JS without Node.js (embedded runtime). `kof c` uses `KofCCompiler` only for `native`.
 
 ## Type System
 
-The type system supports (0.2.6-beta, 27/08/2026):
+The type system supports (0.4.0-beta, re-synced 17/09/2026):
 
 - Primitive types: `bool`, `byte`, `short`, `int`, `long`, `float`, `double`, `char`
 - Reference types: classes, interfaces, enums (with `values()/valueOf` + exhaustiveness), records
-- Generic types: `List<T>`, `Map<K,V>`, `Set<T>`, `Box<T>` (erasure, `Box<Int>` works via `substituteTypeVariable` `CompilerDriver.java:3972`)
+- Generic types: `List<T>`, `Map<K,V>`, `Set<T>`, `Box<T>` (erasure, `Box<Int>` works via `substituteTypeVariable` `CompilerTypes.java:423`)
 - Type parameters: `<T>` (implemented, erasure); bounds (future)
 - Wildcards: `?`, `? extends T`, `? super T` (future)
 - Arrays: `int[]`, `String[]`
-- Null safety: `String?` basic (`Type?` nullable, compile-time `?`-check) — 0.2.6-beta
-- Pattern matching: `switch` with `case String s` + record destructuring `Point(x,y)` — JVM/Native/JS (0.2.6-beta)
+- Null safety: `String?` basic (`Type?` nullable, compile-time `?`-check) — since 0.2.6-beta
+- Pattern matching: `switch` with `case String s` + record destructuring `Point(x,y)` — JVM/Native/JS (since 0.2.6-beta)
 - Void type
 - Function types: `FunctionType` (lambdas with captures via `BoxN`, implemented)
 
@@ -192,7 +192,7 @@ The backend produces:
 - LineNumberTable (debugging)
 - LocalVariableTable (debugging)
 
-JVM Runtime (`KofRuntime` generated) in 0.2.6-beta (30-31/08): web stack
+JVM Runtime (`KofRuntime` generated; base 30-31/08, re-synced 17/09): web stack
 (`web.app()`, routes, middleware, `status`/`headerSet`), **WebSocket**
 (`app.ws`, RFC 6455 handshake + frame codec with mask) and **SSE**
 (`sse.send/event/close`), `kof.cache` (get/set/ttl/delete/clear), `kof.http`
@@ -202,7 +202,7 @@ client with **retry/circuit breaker** (`KOF_HTTP_RETRIES`/`KOF_HTTP_TRIPS`/
 
 ## Native Backend
 
-The native backend generates ELF binaries (0.2.6-beta).
+The native backend generates ELF binaries (0.4.0-beta).
 
 ```mermaid
 flowchart TD
@@ -213,8 +213,8 @@ flowchart TD
     E --> F["ELF binary"]
 ```
 
-Targets (0.2.6-beta, 31/08):
-- `native` (x86_64) **stable**: ELF x86_64, syscalls, free-list allocator (`kof_free_head`; mark-sweep pending, auto-GC disabled — memory returned only in the `munmap` fallback), strings/lists/JSON (objects/records + FP arrays, 31/08), exceptions with unwinding, `spawn`/`await` via `pthread_create` + trampoline + `pthread_join` with thread-safe allocator (futex) — CONC001 (31/08), real FP in XMM (`vcvtsi2sd`/`mulsd`, dtoa via `snprintf`) — FLT001, `kof_db_mysql_scramble` + wire protocol in progress
+Targets (0.4.0-beta, re-synced 17/09):
+- `native` (x86_64) **stable**: ELF x86_64, syscalls, free-list allocator (`kof_free_head`; mark-sweep implemented 03/09, manual `kof_gc_collect_now` — auto-GC disabled, auto-collect on exhaustion pending §260; `munmap` fallback), strings/lists/JSON (objects/records + FP arrays, 31/08), exceptions with unwinding, `spawn`/`await` via `pthread_create` + trampoline + `pthread_join` with thread-safe allocator (futex) — CONC001 (31/08), real FP in XMM (`vcvtsi2sd`/`mulsd`, dtoa via `snprintf`) — FLT001, `kof_db_mysql_scramble` + wire protocol in progress
 - `native.risc` (riscv64) **real**: riscv64 lowering (`NativeBackend.emitRiscv`); `riscv64-linux-gnu-as/ld` + qemu
 - `native.arm` (aarch64) **real**: translation from riscv64 (`translateRiscvToAarch64`); `aarch64-linux-gnu-as/ld` + qemu
 
@@ -226,7 +226,7 @@ Current capabilities (x86_64):
 - `kof.io`, `kof.time` (now/sleep), `kof.config` (own asm, `/proc/self/environ`), `kof.log` (asm), `kof.security` (SHA-256/HMAC asm), `kof.cache` (30/08 — register clobber fixed), `kof.db` SQLite (direct `.so`) + MySQL wire protocol (SHA-1 scramble, WIP)
 
 Runtime functions (x86-64, `NativeRuntime.java:1`):
-- `kof_alloc` / `kof_free_head` free-list (mmap reuse) / `kof_gc_collect` (mark-sweep pending)
+- `kof_alloc` / `kof_free_head` free-list (mmap reuse) / `kof_gc_collect` (mark-sweep implemented 03/09)
 - `kof_print` / `kof_println` / `kof_print_int` / `kof_int_to_string`
 - `kof_string_*`, `kof_array_*`, `kof_list_*`, `kof_map_*`, `kof_cache_*`, `kof_db_mysql_scramble`
 - trampoline of `pthread_create` + `pthread_join` (spawn/await, 31/08)
@@ -237,17 +237,17 @@ Runtime functions (x86-64, `NativeRuntime.java:1`):
 - Generates ES Modules, executed by embedded GraalJS (`KofJsRunner`) — no Node.js required
 - Supports pattern matching (`case String s` + `Point(x,y)` via `typeof` + destructuring), `String?` basic, `kof.http` via `Java HttpClient` interop (+ fetch fallback; retry/circuit in parity with the JVM, 30/08), `List map/filter/reduce`, `Box<T>` via `substituteTypeVariable`
 - Scheduler `kof.time` via `setInterval` (27/08); `spawn`/`await` with real async/await/Promise (statement/expression; CONC003 closed 03/09)
-- Status alpha (0.2.6-beta)
+- Status alpha (0.4.0-beta)
 
-## KofCcompiler
+## KofCCompiler
 
-- C subset compiler (`kof c` — native-only): `int` globals, `void` funcs, `if`/`while`/`*(int*)`/`&`, → ELF x86_64 via `kof_c` (`KofCcompiler.java:1`)
+- C subset compiler (`kof c` — native-only): `int` globals, `void` funcs, `if`/`while`/`*(int*)`/`&`, → ELF x86_64 via `kof_c` (`KofCCompiler.java:1`)
 
 ## KofScript Runtime
 
 KofScript is a **direct execution target**: pure Kof executed by the
 IR interpreter, with no compilation step and no JVM fork
-(0.3.0-beta). **It is not JavaScript** — `let`/`const`/`async`/`fn` do not
+(0.4.0-beta). **It is not JavaScript** — `let`/`const`/`async`/`fn` do not
 exist; they fail with the normal Kof parser diagnostic.
 
 ```bash
@@ -288,7 +288,7 @@ flowchart TD
 Target gaps produce **clear compile-time diagnostics** (SECN00x,
 CONC001, JSN00x, DB001, CONF001, LOG001) — never silently different behavior.
 
-Modules (0.2.6-beta, 31/08/2026): `kof.core`, `kof.collections` (`List map/filter/reduce`, `Map/Set`, `Box<T>`), `kof.io`, `kof.time` (scheduler `every` JVM+JS via `setInterval`), `kof.json` (objects/records + arrays on the 3 targets, 31/08), `kof.http` (JVM+JS via HttpClient; retry/circuit breaker 30/08), `kof.web` (routes/middleware + WebSocket/SSE JVM, 30/08), `kof.cache` (3 targets, 30/08), `kof.security`, `kof.concurrent` (`spawn` — JVM virtual threads, Native pthread 31/08, JS sequential), `kof.test`, `kof.cli` (18 commands: `build/run/serve/check/test/script/repl/c/fmt/config/bench/profile/inspect/debug/info/lsp/install/version`), `kof.db`/`kof.orm` (native SQLite `.so` + MySQL wire protocol WIP), `kof.config`/`kof.log`. Full state in docs/stdlib/stdlib.md and docs/status.md (current suite count).
+Modules (0.4.0-beta, re-synced 17/09): `kof.core`, `kof.collections` (`List map/filter/reduce`, `Map/Set`, `Box<T>`), `kof.io`, `kof.time` (scheduler `every` JVM+JS via `setInterval`), `kof.json` (objects/records + arrays on the 3 targets, 31/08), `kof.http` (JVM+JS via HttpClient; retry/circuit breaker 30/08), `kof.web` (routes/middleware + WebSocket/SSE JVM, 30/08), `kof.cache` (3 targets, 30/08), `kof.security`, `kof.concurrent` (`spawn` — JVM virtual threads, Native pthread 31/08, JS sequential), `kof.test`, `kof.cli` (18 commands: `build/run/serve/check/test/script/repl/c/fmt/config/bench/profile/inspect/debug/info/lsp/install/version`), `kof.db`/`kof.orm` (native SQLite `.so` + MySQL wire protocol WIP), `kof.config`/`kof.log`. Full state in docs/stdlib/stdlib.md and docs/status.md (current suite count).
 
 ## Diagnostics
 

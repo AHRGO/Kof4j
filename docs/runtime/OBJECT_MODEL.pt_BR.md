@@ -305,7 +305,11 @@ VTable:
 
 ## 10. GC Future
 
-O object model DEVE suportar GC futuro:
+> **Implementado 03/09:** mark-sweep existe (`kof_gc_mark`/`kof_gc_sweep`,
+> `kof_gc_collect_now` manual); auto-collect sob exaustão pendente (§260).
+> O bit de marca abaixo é rastreado no prefixo do bloco do allocator.
+
+O object model DEVE suportar GC:
 
 - **Mark bits** nos flags para mark-and-sweep
 - **Pinned objects** para objects que não podem ser movidos

@@ -3,7 +3,7 @@
 # stdlib log — Logging Nativo do Kof
 
 **Última atualização:** 3 de setembro de 2026
-**Versão:** 0.2.6-beta  (840 testes, 03/09)
+**Versão:** 0.4.0-beta (contagens de teste em `docs/status.md`)
 **Status:** implementado (Fase 4 do plano de independência do Spring) — JVM+Native (Native asm UTC `kof_log_*`, 27/08); JS `console.*` (LOG001 fechado 01/09)
 
 ---
@@ -60,7 +60,7 @@ app.get("/users") {
 }
 ```
 
-## 5. Targets (0.2.6-beta)
+## 5. Targets (0.4.0-beta)
 
 | Target | Estado | Notas |
 |--------|--------|-------|
@@ -71,7 +71,7 @@ app.get("/users") {
 
 ## 6. Testes
 
-`KofLogE2ETest` 11 (JVM + JS, 01/09) + `NativeLogE2ETest` 7 (Native asm, 0.2.6-beta) —
+`KofLogE2ETest` 11 (JVM + JS, 01/09) + `NativeLogE2ETest` 7 (Native asm, since 0.2.6-beta) —
 nível default, debug visível com `KOF_LOG_LEVEL=debug`, supressão em
 `error`, `off` silencioso, warn no stderr, log dentro de handler web, JSON
 estruturado + correlation ID (JVM) e JS via `console.*`.

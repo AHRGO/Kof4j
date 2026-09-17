@@ -2,7 +2,7 @@
 
 # Specification Status
 
-**Version:** 0.3.0-beta · **Date:** 06/09/2026
+**Version:** 0.4.0-beta · **Date:** 06/09/2026 · **Re-synced 17/09/2026** against the applied SG-00x (`docs/bugs-and-gaps/specification-gaps.md`) and the #322/#330 fixes.
 
 Classification of each language feature. **Nothing here is "stable" out of
 courtesy** — Stable requires   (rule 0.2.6-beta) **and** a test
@@ -20,8 +20,8 @@ Target-specific · Unspecified · Planned**.
 | Recursive descent parser | Stable | `FunctionSyntaxTest`, `Parser` via E2E |
 | Optional semicolon | Stable | probes + suite |
 | Keywords (list) | Stable | `Lexer.java:13-74` |
-| `sealed`/`permits` | **Unspecified** (dead tokens) | none (SG-002) |
-| `fn`/`fun`/`func` prefix | **Stable** (rejected with `PARSE085`, SG-001 resolved 06/09) | `FunctionSyntaxTest` (5 cases) |
+| `sealed`/`permits` | **Absent** (dead tokens removed from the lexer; `sealed class S {}` → `PARSE010`) | `deadTokensGiveCleanLexerError` (SG-002) |
+| `fn`/`fun`/`func` (prefix **and any name position**) | **Stable** (rejected with `PARSE085`, SG-001 resolved 06/09; #330 extended to names) | `FunctionSyntaxTest` (15) |
 
 ### Type system
 | Feature | Status | Test evidence |
@@ -33,16 +33,16 @@ Target-specific · Unspecified · Planned**.
 | `bool→numeric` (=1/0) | **Implementation-defined** | probe (representation leaked) |
 | Nullability `T?` | Stable | `KofPatternMatchingTest`, probes |
 | Narrowing `if (x != null)` | Stable | probes |
-| Deref `T?` without narrowing | **Unspecified** (compiles) | probe (SG-005) |
-| Subtyping by inheritance | **Unspecified** (not checked) | probe (SG-009) |
+| Deref `T?` without narrowing | Stable — deref without narrowing → `SEM049` | probe (SG-005) |
+| Subtyping by inheritance | Stable — nominal; unrelated class → `SEM021` | probe (SG-009) |
 | Generics (erasure) | Stable | `KofMapSetTest`, `PackagesE2ETest` |
-| Variance (`? extends`) | **Unspecified** (breaks at runtime) | probe (SG-007) |
+| Variance (`? extends`) | **Absent** — wildcard → `PARSE086` | probe (SG-007) |
 | Type-var bounds | **Planned/absent** | none |
 | Ctor type-args inference | **Absent** | none |
-| Elem check in `list.add` | **Unspecified** (does not check) | probe (SG-009) |
+| Elem check in `list.add`/`set`/`map.put` | Stable — wrong element type → `SEM056` | probe |
 | `==` by type (content/identity) | Stable | probes + `CoreRegressionE2ETest` |
 | Constructor overload (arity) | Stable | `SymbolTable.java:47` |
-| Method overload | **Absent** | none |
+| Method overload (arity/types, same class) | Stable (since 13/09, §131) | `MethodCallTyper` (SG-011) |
 | Default parameters | Stable | `lowerFunctionDefaults` |
 
 ### Functions and closures
@@ -58,8 +58,8 @@ Target-specific · Unspecified · Planned**.
 | Snapshot capture | Stable | probe |
 | Mutable capture (Box) | Stable | probe `n=2` |
 | First-class function types | Stable | `KofHigherOrderTest` |
-| Lambda param inference | **Unspecified** (requires annotation) | probe SEM001 |
-| Nested function | **Unspecified** | none (SG-011) |
+| Lambda param inference | Stable with **context** (`List` `map`/`filter`/`reduce`); without context → `SEM001` | `LambdaE2ETest`, probe (SG-012) |
+| Nested function | Stable (hoisted to `outer__inner`) | `JvmE2ETest.execNestedFunction` (SG-011) |
 | Trailing lambda | Stable | `LambdaE2ETest` |
 
 ### Classes and data types
@@ -70,14 +70,15 @@ Target-specific · Unspecified · Planned**.
 | Record (equals/hashCode/toString) | Stable | `KofPatternMatchingTest` |
 | Enum (constants only, value=String) | Stable | `KofEnumTest`, `KofEnumSwitchTest` |
 | Interface (default methods) | Stable | probe |
-| Interface without coverage check | **Unspecified** | probe (SG-015) |
+| Interface coverage (concrete class must implement) | Stable | `ImplementationChecker.checkInterfaceImplementation` `SEM043` (SG-015); `abstract` may defer, obligation transitive via abstract supers (#322) |
 | Inheritance + virtual override | Stable | probes |
-| `private` at compile-time | **Unspecified** (runtime only) | probe (SG-013) |
-| `abstract` non-instantiable | **Unspecified** (runtime only) | probe (SG-017) |
+| `private`/`protected` at compile-time — **methods + fields**; `final` write | Stable | `SEM046`/`SEM065` (SG-013) |
+| `private`/`protected` at compile-time — **fields** | **Unspecified** (runtime only) | probe (SG-013) |
+| `abstract` non-instantiable | Stable | `SEM041` (SG-017) |
 | Pattern matching (binding+destructuring) | Stable | `KofPatternMatchingTest` |
 | Pattern with guard/nested | **Absent** | none (SG-014) |
 | Entity (ORM) | **Experimental** | `KofOrmE2ETest` |
-| Nested classes | **Unspecified** | none (SG-016) |
+| Nested classes | **Absent** (parse error `SEM042`) | `nestedClassGivesCleanDiagnostic` (SG-016) |
 | Operator overload | **Absent** | none |
 
 ### Control flow
@@ -110,7 +111,7 @@ Target-specific · Unspecified · Planned**.
 | await | Stable | `KofAwaitTest` |
 | awaitTimeout | Stable | probe |
 | Channel | Stable | `KofConcurrency2Test` |
-| Memory model | **Unspecified** | none (SG-020) |
+| Memory model | Defined — SC + 6 happens-before rules | `concurrency-memory-model.md` (SG-020) |
 | `spawn { lambda }` with handle | **Bug #29** | `known-bugs.md` |
 
 ### Exceptions
@@ -118,7 +119,7 @@ Target-specific · Unspecified · Planned**.
 |---|---|---|
 | throw String | Stable | `ExceptionsE2ETest` |
 | try/catch/finally | Stable | `ExceptionsE2ETest` |
-| `throws` validated | **Absent** | probe (SG-019) |
+| `throws` clause names type-checked (`SEM045`) | Stable (since 09/09, SG-019) | `throwsUnknownTypeGivesCleanDiagnostic` |
 | Per-target representation | **Target-specific** | `ExceptionsE2ETest` |
 
 ### Stdlib (`kof.*`)
@@ -137,8 +138,10 @@ Target-specific · Unspecified · Planned**.
 A conformance definition (accept valid, reject invalid, preserve
 meaning) **cannot be rigorous** as long as the following exist:
 
-1. **Unspecified rules** listed above (subtyping, null-deref, memory
-   model, nested classes, top-level overloading, main exit code).
+1. **Unspecified rules** still listed above (e.g. `private`/`protected` on
+   **fields**, `Map`/`Set` order) — the SG-00x queue is otherwise resolved or
+   applied (subtyping, null-deref, memory model, nested classes, top-level
+   overloading, `main` exit code, …).
 2. **Implementation-defined rules** that leak into observable behavior
    (`bool→int`=1/0, non-immutable `val`, evaluation order of `x++` in an
    expression, slot layout).
@@ -170,6 +173,7 @@ meaning) **cannot be rigorous** as long as the following exist:
   spawn mechanism.
 - **Target-specific**: GC, extreme FP, exception (representation), JS
   short-circuit, interop (JVM only), Map order.
-- **Unspecified**: ~20 points (SG-002 to SG-020).
+- **Unspecified**: 1 point — `private`/`protected` on **fields** (SG-013); the
+  rest of SG-002–SG-020 is resolved/applied.
 - **Planned/Absent**: type-var bounds, operator overloading, labeled
   break, `~`, ternary, range, macros, traits, type alias.

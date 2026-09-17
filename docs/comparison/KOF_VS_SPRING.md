@@ -232,12 +232,12 @@ test "find user by id" {
 
 ## Priority
 
-| Feature | Priority | Justification | Status (0.2.6-beta, 31/08) |
+| Feature | Priority | Justification | Status (0.4.0-beta) |
 |---------|-----------|---------------|----------------------------|
 | DI | High | Eliminates massive boilerplate | planned (`service` proposal) |
 | HTTP routing | High | Essential for backends | ✅ `web.app()` JVM (routes, middleware, JSON, ws/sse) |
 | Configuration | Medium | Significantly improves DX | ✅ `kof.config` JVM/Native |
 | Validation | Medium | Eliminates beans validation | ✅ `kof.validation` 3 targets |
 | Serialization | Medium | Essential for APIs | ✅ `json.encode/decode` 3 targets |
-| Lifecycle | Low | Can wait | planned (`application { onStart/onShutdown }`) |
+| Lifecycle | Low | Can wait | ✅ `application { onStart/onShutdown }` (language-level, runs before/after `main`) |
 | Testing | High | Essential for productivity | ✅ `test "name" { }` + `kof test` 3 targets |

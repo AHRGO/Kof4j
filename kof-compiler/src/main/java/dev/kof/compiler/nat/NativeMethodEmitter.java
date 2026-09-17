@@ -17,6 +17,8 @@ import dev.kof.compiler.KofPop2;
 import dev.kof.compiler.KofReturn;
 import dev.kof.compiler.KofReturnVoid;
 import dev.kof.compiler.KofThrow;
+import dev.kof.compiler.KofContinueLabel;
+import dev.kof.compiler.KofStatementIf;
 import dev.kof.compiler.KofTryEnd;
 import dev.kof.compiler.KofTryStart;
 import dev.kof.compiler.KofUnary;
@@ -143,6 +145,51 @@ final class NativeMethodEmitter {
             sb.append("    popq %rbp\n");
             sb.append("    ret\n");
         }
+        if (nb.debugInfo) {
+            // frente 4 fatia 1/2: fim da funcao p/ DW_AT_high_pc (offset) + registro
+            sb.append(".Lfe_").append(mangled).append(":\n");
+            int declLine = 1;
+            if (method.debugInfo() != null && !method.debugInfo().positions().isEmpty()) {
+                for (SourcePosition pos : method.debugInfo().positions().values()) {
+                    if (pos.line() > 0 && (declLine == 1 || pos.line() < declLine)) declLine = pos.line();
+                }
+            }
+            java.util.List<NativeDwarf.Local> params = new java.util.ArrayList<>();
+            java.util.List<NativeDwarf.Local> locals = new java.util.ArrayList<>();
+            for (IRLocalVariable lv : method.localVariables()) {
+                if (lv.name() == null || lv.name().isEmpty() || lv.name().startsWith("tmp")
+                        || lv.name().startsWith("cap") || lv.name().startsWith("lambda$")) {
+                    continue; // temporarios do lowering nao sao nome Kof
+                }
+                NativeDwarf.Local slot = new NativeDwarf.Local(lv.name(),
+                        NativeDwarf.slotOffset(lv.index()), dwarfKindOf(lv.type()));
+                if (lv.name().equals("this") || lv.index() < paramSlotMax) {
+                    params.add(slot);
+                } else {
+                    locals.add(slot);
+                }
+            }
+            nb.kofDwarf.add(mangled, method.name(), declLine,
+                    dwarfKindOf(method.returnType()), params, locals);
+        }
+    }
+
+    static String dwarfKindOf(Type t) {
+        if (t instanceof Type.PrimitiveType pt) {
+            return switch (Type.canonicalPrimitiveName(pt.name())) {
+                case "int" -> "Int";
+                case "long" -> "Long";
+                case "short" -> "Short";
+                case "byte" -> "Byte";
+                case "float" -> "Float";
+                case "double" -> "Double";
+                case "bool", "boolean" -> "Bool";
+                case "char" -> "Char";
+                case "void" -> "Void";
+                default -> "Opaque";
+            };
+        }
+        return "Opaque"; // String/classes/arrays: handle 8B opaco (sem DW_TAG_structure p/ agora)
     }
 
     @SuppressWarnings("unused")
@@ -250,6 +297,12 @@ final class NativeMethodEmitter {
                 sb.append("    movq %rcx, 24(%rsp)\n");
                 sb.append("    movq %rsp, %fs:kof_exc_chain@tpoff\n");
             }
+            case KofStatementIf _ -> {
+                // §267: marcador de if de statement (uso exclusivo do dispatcher JS) — no-op
+            }
+            case KofContinueLabel _ -> {
+                // §266: marcador estrutural (fronteira corpo/update do for) — no-op
+            }
             case KofTryEnd _ -> {
                 sb.append("    movq 24(%rsp), %rcx\n");
                 sb.append("    movq %rcx, %fs:kof_exc_chain@tpoff\n");
@@ -332,8 +385,8 @@ final class NativeMethodEmitter {
                 sb.append("    call kof_throw_string\n");
             }
             default -> throw new UnsupportedOperationException(
-                    "operação sem lowering x86: " + op.getClass().getSimpleName()
-                    + " (R6: nunca silenciar) em método " + currentMethod.name());
+                    "operation with no x86 lowering: " + op.getClass().getSimpleName()
+                    + " (R6: never silent) in method " + currentMethod.name());
         }
     }
 
@@ -345,6 +398,11 @@ final class NativeMethodEmitter {
                 .anyMatch(m -> !m.parameterTypes().isEmpty());
         sb.append("\n.globl _start\n");
         sb.append("_start:\n");
+        // G-6b (16/09): fundo da pilha da thread main (rsp na entrada, antes de
+        // qualquer push) — o kof_gc_mark varre a pilha INTEIRA ate aqui, nao so
+        // o frame corrente (causa (1) do §260: String viva no frame de main
+        // enquanto um helper aloca era INVISIVEL ao mark -> sweep liberava vivo)
+        sb.append("    movq %rsp, kof_main_stack_bottom(%rip)\n");
         // grava o TID do main thread (SYS_gettid=186) — limita GC ao main
         sb.append("    movq $186, %rax\n");
         sb.append("    syscall\n");

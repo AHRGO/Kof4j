@@ -677,10 +677,13 @@ class NativeRiscv64E2ETest {
                     String h;
                     while ((h = in.readLine()) != null && !h.isEmpty()) {
                         if (h.toLowerCase().startsWith("content-length:")) {
-                            // Response from controlled test server — valid integer guaranteed
-                            @SuppressWarnings("NumberFormatException")
-                            int parsed = Integer.parseInt(h.substring(15).trim());
-                            cl = parsed;
+                            // Header comes from the socket (untrusted input): a malformed
+                            // Content-Length must not kill the server thread — treat as absent.
+                            try {
+                                cl = Integer.parseInt(h.substring(15).trim());
+                            } catch (NumberFormatException ignored) {
+                                // fall through: cl stays 0
+                            }
                         }
                     }
                     String body = "Hello from Kof";

@@ -42,11 +42,11 @@ public final class TargetMatrix {
      */
     public static String validate(Target backend, Target frontend) {
         if (backend != null && !isBackend(backend)) {
-            return "target '" + name(backend) + "' não pode ser backend"
+            return "target '" + name(backend) + "' cannot be a backend"
                     + " (backend: jvm, native, script)";
         }
         if (frontend != null && !isFrontend(frontend)) {
-            return "target '" + name(frontend) + "' não pode ser frontend"
+            return "target '" + name(frontend) + "' cannot be a frontend"
                     + " (frontend: kofjs, script)";
         }
         return null;
@@ -89,8 +89,8 @@ public final class TargetMatrix {
         String gap = frontendGapFor(value);
         if (gap != null) {
             if (outError != null) outError.add(
-                    "target '" + value + "' (KofWebAssembly) ainda não existe — planejado"
-                            + " na Fase 6 do plano de plataforma (docs/development/DECISIONS.md) ["
+                    "target '" + value + "' (KofWebAssembly) does not exist yet — planned"
+                            + " in Phase 6 of the platform plan (docs/development/DECISIONS.md) ["
                             + gap + "]");
             return null;
         }

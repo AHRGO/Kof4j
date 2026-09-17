@@ -74,14 +74,14 @@ public final class CompilerOrmSupport {
     static int lowerQueryDsl(CompilerDriver driver, QueryDslExpr q,
                               List<KofOperation> ops, String owner,
                               int localIdx, List<IRLocalVariable> locals) {
-        if (!KofDb.supportedOn(driver.target)) {
+        if (!KofOrm.supportedOn(driver.target)) {
             if (driver.currentDiagnostics != null) {
                 SourcePosition p = q.position();
                 driver.currentDiagnostics.error(p != null ? p.file() : "",
                         p != null ? p.line() : 0, p != null ? p.column() : 0, 0,
                         q.entityType() + ".query: not available on the " + driver.target
-                                + " driver.target yet (" + KofDb.gapCode() + ")",
-                        KofDb.gapCode());
+                                + " driver.target yet (" + KofOrm.gapCode() + ")",
+                        KofOrm.gapCode());
             }
             return localIdx;
         }

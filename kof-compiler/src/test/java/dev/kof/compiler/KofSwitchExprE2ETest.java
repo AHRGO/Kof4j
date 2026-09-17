@@ -325,6 +325,12 @@ class KofSwitchExprE2ETest {
         assertFalse(result.success(), "deveria falhar sem default");
         assertTrue(result.diagnostics().getDiagnostics().toString().contains("SEM032"),
                 "deveria reportar SEM032: " + result.diagnostics().getDiagnostics());
+        // D-DIAG-EN: a mensagem visivel e em ingles (tooling 100% EN).
+        var msg = result.diagnostics().getDiagnostics().toString();
+        assertTrue(msg.contains("switch expression requires 'default'"),
+                "mensagem SEM032 deve ser EN, veio: " + msg);
+        assertFalse(msg.matches("(?s).*[ãõáàâéêíóôúç].*"),
+                "SEM032 ainda tem texto PT: " + msg);
     }
 
     // ── corpo de case em BLOCO → diagnóstico PARSE094 (R6) ──────────

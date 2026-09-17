@@ -25,5 +25,6 @@ public final class NativeHttpRuntime {
         sb.append(NativeHttpPrimitives.source());
         sb.append(NativeHttpParseUrl.source());
         sb.append(NativeHttpCore.source());
+        sb.append(NativeHttpVerbs.source());
     }
 }

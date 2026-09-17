@@ -184,7 +184,7 @@ public final class RiscvSlices {
             for (String s : p.provides()) {
                 Integer prev = m.put(s, p.index());
                 if (prev != null) {
-                    throw new IllegalStateException("símbolo definido por 2 peças: "
+                    throw new IllegalStateException("symbol defined by 2 pieces: "
                             + s + " [" + prev + "," + p.index() + "]");
                 }
             }
@@ -296,8 +296,8 @@ public final class RiscvSlices {
                 f.setAccessible(true);
                 text = (String) f.get(null);
             } catch (ReflectiveOperationException e) {
-                throw new IllegalStateException("peça " + cls + "." + fld
-                        + " não resolvida por reflexão (mudou visibilidade/nome?)", e);
+                throw new IllegalStateException("piece " + cls + "." + fld
+                        + " not resolved by reflection (visibility/name changed?)", e);
             }
             String code = ASM_COMMENT.matcher(text).replaceAll("");
             texts.add(text);
@@ -366,7 +366,7 @@ public final class RiscvSlices {
                         "src/main/java/dev/kof/compiler/nat/NativeRiscvAsm.java"));
             } catch (Exception e2) {
                 throw new IllegalStateException(
-                        "NativeRiscvAsm.java não localizado (rode do módulo kof-compiler)", e2);
+                        "NativeRiscvAsm.java not found (run from the kof-compiler module)", e2);
             }
         }
         List<String[]> pairs = new ArrayList<>();
@@ -377,7 +377,7 @@ public final class RiscvSlices {
             if (seen.add(key)) pairs.add(new String[]{m.group(1), m.group(2)});
         }
         if (pairs.size() < 40) {
-            throw new IllegalStateException("ordem de peças sub-derivada: " + pairs.size());
+            throw new IllegalStateException("piece order under-derived: " + pairs.size());
         }
         return pairs;
     }

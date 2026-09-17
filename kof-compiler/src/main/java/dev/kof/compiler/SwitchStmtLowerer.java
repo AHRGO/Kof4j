@@ -34,9 +34,9 @@ if (switchType instanceof Type.ClassType sct && sct.packageName().isEmpty()
         driver.currentDiagnostics.error(ss.position() != null ? ss.position().file() : "",
                 ss.position() != null ? ss.position().line() : 0,
                 ss.position() != null ? ss.position().column() : 0, 0,
-                "switch sobre '" + sct.name() + "' não cobre: "
+                "switch on '" + sct.name() + "' does not cover: "
                         + String.join(", ", missing)
-                        + " (adicione default ou os casos faltantes)",
+                        + " (add a default or the missing cases)",
                 "SEM031");
     }
 }
@@ -67,8 +67,8 @@ if (hasPattern) {
                     SourcePosition pp = pe.position();
                     driver.currentDiagnostics.error(pp != null ? pp.file() : "",
                             pp != null ? pp.line() : 0, pp != null ? pp.column() : 0, 0,
-                            "case de tipo primitivo não é suportado em pattern matching "
-                                    + "(use um tipo de referência ou o valor direto)",
+                            "case of primitive type is not supported in pattern matching "
+                                    + "(use a reference type or the value directly)",
                             "SEM035");
                 }
                 return localIdx;
@@ -107,8 +107,8 @@ if (hasPattern) {
                     SourcePosition pp = pe.position();
                     driver.currentDiagnostics.error(pp != null ? pp.file() : "",
                             pp != null ? pp.line() : 0, pp != null ? pp.column() : 0, 0,
-                            "case de tipo primitivo não é suportado em pattern matching "
-                                    + "(use um tipo de referência ou o valor direto)",
+                            "case of primitive type is not supported in pattern matching "
+                                    + "(use a reference type or the value directly)",
                             "SEM035");
                 }
                 return localIdx;

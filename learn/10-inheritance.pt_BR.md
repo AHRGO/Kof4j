@@ -2,7 +2,7 @@
 
 # 10 — Herança
 
-> **Status: implementado (JVM / JS — Native SUP001) — 0.3.22-beta — Target separation `native.risc/arm` preserva dispatch**
+> **Status: implementado (JVM / JS — Native SUP001) — 0.4.0-beta — Target separation `native.risc/arm` preserva dispatch**
 >
 > `extends`, virtual dispatch, sobrescrita, construtor `super(...)` e
 > `super.metodo()` funcionam nos targets JVM e KofJS; no Native, herança e
@@ -85,10 +85,14 @@ class Retangulo(Double largura, Double altura) extends Forma {
 }
 ```
 
-## sealed classes (planejado — ainda não implementado)
+## sealed classes (adiado — não faz parte da gramática)
 
-A palavra-chave existe no lexer, mas o parser ainda não consome `sealed ...
-permits` numa declaração de classe. Exemplo ilustrativo do que se pretende:
+`sealed` **não** é palavra-chave: foi removida do lexer com a SG-002
+(12/09) porque a gramática nunca a usou — hoje `sealed class S {}` falha com
+`PARSE010` (travado por `CompilerDriverTest.deadTokensGiveCleanLexerError`).
+A feature em si está **decidida a adiar** (roadmap §2.5: `enum` +
+`record`/`interface` cobrem o caso; só abre com bump de versão).
+Exemplo ilustrativo do que se pretende, quando landar:
 
 ```kf
 sealed class Resultado<T> permits Sucesso<T>, Erro<T> {}

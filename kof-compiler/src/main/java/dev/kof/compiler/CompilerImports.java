@@ -79,7 +79,7 @@ public final class CompilerImports {
                                 && currentDiagnostics != null) {
                             currentDiagnostics.error(kf.toString(), 0, 0, 0,
                                     "package '" + libUnit.packageName()
-                                            + "' não corresponde ao diretório do import ('"
+                                            + "' does not match the import directory ('"
                                             + expectedPkg + "')",
                                     "PKG004");
                             continue;
@@ -131,7 +131,7 @@ public final class CompilerImports {
                                 && !libUnit.packageName().equals(pkgPart)
                                 && currentDiagnostics != null) {
                             currentDiagnostics.error(kfFile.toString(), 0, 0, 0,
-                                    "package '" + libUnit.packageName() + "' não corresponde ao diretório do import ('" + pkgPart + "')",
+                                    "package '" + libUnit.packageName() + "' does not match the import directory ('" + pkgPart + "')",
                                     "PKG004");
                             continue;
                         }
@@ -167,9 +167,9 @@ public final class CompilerImports {
                         || !externalClasspath.knowsImport(imp, wildcard))
                     && currentDiagnostics != null) {
                 currentDiagnostics.error("", 0, 0, 0,
-                        "import '" + imp + "' não encontrado no módulo"
-                                + " (esperado " + imp.replace('.', '/') + "/ ou "
-                                + imp.replace('.', '/') + ".kf sob a raiz)",
+                        "import '" + imp + "' not found in the module"
+                                + " (expected " + imp.replace('.', '/') + "/ or "
+                                + imp.replace('.', '/') + ".kf under the root)",
                         "PKG006");
             }
             // import externo (android.* etc.) — ignora

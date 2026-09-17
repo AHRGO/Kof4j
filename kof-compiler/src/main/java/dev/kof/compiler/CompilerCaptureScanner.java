@@ -41,6 +41,7 @@ public final class CompilerCaptureScanner {
 
     /** Nomes de var-decl no escopo da função (não desce em lambdas). */
     static void collectDeclaredVarNamesStmt(StatementNode stmt, java.util.Set<String> out) {
+
         switch (stmt) {
             case ExpressionStmt es -> {
                 collectDeclaredVarNamesExpr(es.expression());
@@ -163,9 +164,131 @@ public final class CompilerCaptureScanner {
         }
     }
 
-    /** Coleta todas as lambdas do corpo (para computar capturas reais). */
-    static void collectLambdasStmt(StatementNode stmt, java.util.List<LambdaExpr> out) {
+    /**
+     * §253 face A: `nome` é lido como identificador livre dentro de ALGUMA lambda
+     * deste inicializador (não no nível top — só via lambda). Usado pelo
+     * StatementAnalyzer para gate SEM092 (native) e pre-define (demais alvos).
+     * Shadowing: parâmetro/formal/var-decl de mesmo nome DENTRO da lambda não conta.
+     */
+    static boolean lambdaExprReadsName(ExpressionNode expr, String name) {
+        java.util.List<LambdaExpr> lambdas = new java.util.ArrayList<>();
+        collectLambdasExpr(expr, lambdas);
+        for (LambdaExpr le : lambdas) {
+            java.util.Set<String> shadowed = new java.util.HashSet<>();
+            for (FormalParameterNode p : le.parameters()) shadowed.add(p.name());
+            for (StatementNode s : le.body()) {
+                if (stmtReadsNameFree(s, name, shadowed)) return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean stmtReadsNameFree(StatementNode stmt, String name, java.util.Set<String> shadowed) {
         switch (stmt) {
+            case ExpressionStmt es -> { return exprReadsNameFree(es.expression(), name, shadowed); }
+            case ReturnStmt rs -> {
+                return rs.value() != null && exprReadsNameFree(rs.value(), name, shadowed);
+            }
+            case BlockStmt b -> {
+                java.util.Set<String> inner = new java.util.HashSet<>(shadowed);
+                for (StatementNode s : b.statements()) {
+                    if (stmtReadsNameFree(s, name, inner)) return true;
+                }
+                return false;
+            }
+            case IfStmt i -> {
+                java.util.Set<String> then = new java.util.HashSet<>(shadowed);
+                if (exprReadsNameFree(i.condition(), name, then)) return true;
+                if (stmtReadsNameFree(i.thenBranch(), name, new java.util.HashSet<>(shadowed))) return true;
+                if (i.elseBranch() != null
+                        && stmtReadsNameFree(i.elseBranch(), name, new java.util.HashSet<>(shadowed))) return true;
+                return false;
+            }
+            case WhileStmt w -> {
+                if (exprReadsNameFree(w.condition(), name, new java.util.HashSet<>(shadowed))) return true;
+                return stmtReadsNameFree(w.body(), name, new java.util.HashSet<>(shadowed));
+            }
+            case VarDeclStmt vds -> {
+                // decl shadowe o nome → não é mais livre dentro deste bloco.
+                if (vds.initializer() != null
+                        && exprReadsNameFree(vds.initializer(), name, shadowed)) return true;
+                shadowed.add(vds.name());
+                return false;
+            }
+            case ThrowStmt ts -> {
+                return ts.expression() != null
+                        && exprReadsNameFree(ts.expression(), name, shadowed);
+            }
+            case AssertStmt as -> {
+                return as.condition() != null
+                        && exprReadsNameFree(as.condition(), name, shadowed);
+            }
+            case SpawnStmt ss -> {
+                return exprReadsNameFree(ss.expression(), name, shadowed);
+            }
+            default -> { return false; }
+        }
+    }
+
+    private static boolean exprReadsNameFree(ExpressionNode expr, String name, java.util.Set<String> shadowed) {
+        if (expr == null) return false;
+        if (expr instanceof IdentifierExpr ie) return name.equals(ie.name()) && !shadowed.contains(name);
+        // nested lambda: parâmetros da lambda shadowe; recursão de corpo é
+        // "livre" — mas para o gate SEM092 basta QUALQUER leitura.
+        if (expr instanceof LambdaExpr le) {
+            java.util.Set<String> inner = new java.util.HashSet<>(shadowed);
+            for (FormalParameterNode p : le.parameters()) inner.add(p.name());
+            for (StatementNode s : le.body()) {
+                if (stmtReadsNameFree(s, name, inner)) return true;
+            }
+            return false;
+        }
+        switch (expr) {
+            case BinaryExpr be -> {
+                return exprReadsNameFree(be.left(), name, shadowed)
+                        || exprReadsNameFree(be.right(), name, shadowed);
+            }
+            case UnaryExpr ue -> { return exprReadsNameFree(ue.operand(), name, shadowed); }
+            case MethodCallExpr mc -> {
+                if (exprReadsNameFree(mc.receiver(), name, shadowed)) return true;
+                for (ExpressionNode a : mc.arguments()) {
+                    if (exprReadsNameFree(a, name, shadowed)) return true;
+                }
+                return false;
+            }
+            case FieldAccessExpr fa -> { return exprReadsNameFree(fa.receiver(), name, shadowed); }
+            case AssignmentExpr ae -> {
+                return exprReadsNameFree(ae.target(), name, shadowed)
+                        || exprReadsNameFree(ae.value(), name, shadowed);
+            }
+            case IfExpr iex -> {
+                return exprReadsNameFree(iex.condition(), name, shadowed)
+                        || exprReadsNameFree(iex.thenExpr(), name, shadowed)
+                        || exprReadsNameFree(iex.elseExpr(), name, shadowed);
+            }
+            case ArrayAccessExpr aa -> {
+                return exprReadsNameFree(aa.receiver(), name, shadowed)
+                        || exprReadsNameFree(aa.index(), name, shadowed);
+            }
+            case NewExpr ne -> {
+                for (ExpressionNode a : ne.arguments()) {
+                    if (exprReadsNameFree(a, name, shadowed)) return true;
+                }
+                return false;
+            }
+            case NewArrayExpr nae -> {
+                if (exprReadsNameFree(nae.size(), name, shadowed)) return true;
+                for (ExpressionNode d : nae.moreDims()) {
+                    if (exprReadsNameFree(d, name, shadowed)) return true;
+                }
+                return false;
+            }
+            default -> { return false; }
+        }
+    }
+
+    /** Coleta todas as lambdas do corpo (para computar capturas reais). */
+    static void collectLambdasStmt(StatementNode stmt, java.util.List<LambdaExpr> out) {        switch (stmt) {
             case ExpressionStmt es -> {
                 collectLambdasExpr(es.expression(), out);
             }
@@ -329,6 +452,16 @@ public final class CompilerCaptureScanner {
                 collectMutatedCapturesStmt(driver, fi.body(), inner, inLambda);
             }
             case VarDeclStmt vds -> {
+                // §253 face A (c): `var id = time.interval(…, () -> cancel(id))` —
+                // a lambda do PRÓPRIO inicializador lê o nome da decl. Sem isto
+                // o nome nunca entra em mutatedCapturedNames (nenhuma assign
+                // externa) → captura por valor de slot vazio (leitura stale/null).
+                // Pre-marcar força o box (CapturedVarBox.emit) com store do box
+                // ANTES de avaliar o init (seam (d)).
+                if (vds.initializer() != null
+                        && lambdaExprReadsName(vds.initializer(), vds.name())) {
+                    driver.mutatedCapturedNames.add(vds.name());
+                }
                 shadowed.add(vds.name());
                 if (vds.initializer() != null) collectMutatedCapturesExpr(driver, vds.initializer(), shadowed, inLambda);
             }

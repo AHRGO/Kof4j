@@ -17,6 +17,21 @@ public final class ExpressionDbCallLowerer {
     boolean typed = KofDb.isQuery(mc.methodName()) && !mc.typeArguments().isEmpty();
     KofDb.DbCall dbCall = KofDb.staticCall(mc.methodName(), argTypes, typed);
     if (dbCall != null) {
+        if (typed && KofDb.typedQueryUnsupportedOn(driver.target)) {
+            if (driver.currentDiagnostics != null) {
+                driver.currentDiagnostics.error(mc.position() != null ? mc.position().file() : "",
+                        mc.position() != null ? mc.position().line() : 0,
+                        mc.position() != null ? mc.position().column() : 0,
+                        0,
+                        ((IdentifierExpr) mc.receiver()).name() + "." + mc.methodName()
+                                + "<T>: typed query is not supported on the " + driver.target
+                                + " target (no JVM bytecode on the host classpath) — use the "
+                                + "untyped query() which returns JSON rows ("
+                                + KofDb.typedQueryGapCode() + ")",
+                        KofDb.typedQueryGapCode());
+            }
+            return localIdx;
+        }
         if (!KofDb.supportedOn(driver.target)) {
             if (driver.currentDiagnostics != null) {
                 driver.currentDiagnostics.error(mc.position() != null ? mc.position().file() : "",

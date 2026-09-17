@@ -14,7 +14,7 @@ funciona a distribuição".
 - O pacote oficial contém: compiler, CLI, runtime, stdlib, tooling, editor
   support, OpenJDK embutido e documentação.
 - O usuário NÃO precisa instalar Java, configurar JAVA_HOME ou usar SDKMAN.
-- O OpenJDK embutido é Temurin 21 (Tooling API Level 21).
+- O OpenJDK embutido é Temurin 25 (tooling API level 21).
 - O launcher é `bin/kof` (Unix) ou `bin/kof.bat` (Windows); ele localiza o
   JDK embutido em `jdk/` e, em builds de desenvolvimento sem JDK embutido,
   usa `java` do PATH.
@@ -59,7 +59,7 @@ kof-<v>-<sistema>/
 ├── tooling/           convenções de consumo por editores
 ├── editor/            grammar TextMate oficial
 ├── docs/              documentação compacta
-└── VERSION            versão da instalação (ex.: 0.3.22-beta)
+└── VERSION            versão da instalação (ex.: 0.4.0-beta)
 ```
 
 ## Instalação (passo a passo — Linux, exemplo)

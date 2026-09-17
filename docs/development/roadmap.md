@@ -46,10 +46,18 @@ Objectives:
   (`extends Activity`, `super.onCreate`, androidx annotations);
 - honest gaps at compile-time (`AND001..003`).
 
-Current state: 🟡 Phase 1 implemented — `kof build --target android` generates a
-Maven project (zero Java/Kotlin/Gradle) with an Activity host IN KOF
+Current state: 🟡 Phases 1-4 implemented — `kof build --target android`
+generates a Maven project (zero Java/Kotlin/Gradle) with an Activity host IN KOF
 (`android-host.kf`) compiled by the frontend itself; d8/aapt2/apksigner
-pipeline via pom without dependencies.
+pipeline via pom without dependencies. Phase 2: the manifest carries
+label/permissions; `--apk`/`--keystore` build the artifact directly. Phase 3:
+responsive WebView (`<meta viewport>` device-width + narrow-screen CSS +
+`setUseWideViewPort`/`setLoadWithOverviewMode` in the host). Phase 4:
+`--min-sdk`/`--target-sdk` thread to `<uses-sdk>`, the platform jar and
+`d8 --min-api` (defaults 24/34). `kof.web` is an enforced compile-time gap
+(`AND002`). Pending (Phases 5+, no owner): `--aab` (needs `bundletool`, refused
+honestly today), declarative icon metadata (decision-pending). Details in
+[docs/targets/KOFANDROID.md](../targets/KOFANDROID.md).
 
 ### Kof4J — JVM
 
@@ -259,13 +267,13 @@ handle — a SIGSEGV in `__pthread_clockjoin_ex` once the TCB was recycled
 | Item | Description | Priority |
 |------|-----------|------------|
 | ~~`ExecutionException` unwrap~~ | ✅ 31/08 — `kof_await` re-throws the original cause (JVM) | — |
-| ~~`await` with timeout~~ | ✅ 31/08 — `awaitTimeout(r, ms)`: value on time, exception catchable via `try/catch` on timeout (JVM `Future.get(ms)` + Native 1ms polling with deadline; JS sequential = parity) | — |
+| ~~`await` with timeout~~ | ✅ 31/08 — `awaitTimeout(r, ms)`: value on time, exception catchable via `try/catch` on timeout (JVM `Future.get(ms)` + Native 1ms polling with deadline; JS deadline poll `kofAwaitTimeout` — CONC003) | — |
 | ~~Cancellation~~ | ✅ 31/08 — `cancel(r)`/`cancelled()` cooperative via flag on the handle (JVM + Native by TID) | — |
 | ~~Multiple wait~~ | ✅ 31/08 — `selectAny(h1, h2, ...)` → first ready handle (JVM + Native + JS) | — |
 | ~~`done`/`poll`~~ | ✅ 31/08 — non-blocking over the handle (JVM + Native) | — |
 | ~~Native Port~~ | ✅ 31/08 — `pthread_create` + trampoline + `pthread_join` + thread-safe allocator (futex); implicit join (CONC001 closed) | — |
 | ~~JS Port~~ | ✅ 03/09 — spawn over Promise, native await via microtask (CONC003 closed) | — |
-| ~~Scheduler/cron~~ | ✅ 31/08 — `every`/`at` JVM (`ScheduledExecutor`) + JS (`setInterval`) + **Native SCHED001** (thread per job, `usleep` ms→us + `active` flag, cooperative `cancel(id)`) | — |
+| ~~Scheduler~~ | ✅ 31/08 — `every`/`cancel` JVM (`ScheduledExecutor`) + JS (`setInterval`) + **Native SCHED001** (thread per job, `usleep` ms→us + `active` flag, cooperative `cancel(id)`) | `at(cron)` = 60s stub on every target → **CRON001** (real cron parser pending) |
 | ~~Typed channels~~ | ✅ 31/08, real blocking in JS 03/09 — `channel<Int>()` with `send`/`receive` (JVM blocking `LinkedBlockingQueue` + Native FIFO futex + JS queue of pending resolvers) | — |
 
 Criterion for "100%": the three targets running the same concurrent programs
@@ -376,7 +384,7 @@ statements, transactions, declarative `entity` at compile-time, CRUD
 (`create/save/find/all/where/delete/count`), `orm.where` by field + operators, `saveAll` batch, `page`/`count`/`deleteAll`,
 versioned migrations (`kof_migrations`) and MongoDB (official driver).
 Missing: typed query DSL (`User.query { where age > 18 }`), connection
-pooling, complete MySQL (query/prepared), kof.db/kof.orm outside the JVM (DB001/ORM001 JS), NoSQL beyond MongoDB.
+pooling, complete MySQL (query/prepared), `kof.db`/`kof.orm` outside the JVM (**JS `DB001` CLOSED 16/09** — untyped on the GraalJS host; residual typed `query<T>` = `DB002` + `ORM001`), NoSQL beyond MongoDB.
 
 ---
 
@@ -397,7 +405,14 @@ The language's own file (`kofdeps`). For Kof4J, the system may generate a tempor
 
 Current state: 🟡 MVP 01/09 — `kof deps init/add/remove/list/resolve` (file
 `kofdeps`, Maven Central resolution → `~/.kof/deps`, classpath via
-`kof build|run --deps`); POM transitive dependencies and registry pending.
+`kof build|run --deps`); **POM transitive dependencies ✅ 16/09** (resolved by
+delegating to Maven via a temporary `pom.xml` + `dependency:build-classpath`
+(R9: the Maven graph resolver already exists — never reimplemented), the closure
+is written to a portable `kofdeps.lock` GAV list that `resolve`/`build`/`run
+--deps` consume; `KofDb`-style honest degradation when `mvn` is absent — explicit
+warning, never a silent truncated classpath; proof `DepsTransitiveTest` 10/10
+including a real-Maven E2E `jgrapht-core:1.4.0 → org.jheaps:jheaps:0.11`);
+**registry pending** (needs a maintainer decision — public format/hosting).
 
 ---
 
@@ -731,13 +746,13 @@ rule — 500-lines-per-class limit".
 
 Kof is a distributable platform, not just a JAR:
 
-- self-contained distribution (compiler, CLI, runtime, stdlib, tooling, editor support, embedded JDK 21);
-- OpenJDK embedded in the official package (Temurin 21, Tooling API Level 21);
+- self-contained distribution (compiler, CLI, runtime, stdlib, tooling, editor support, embedded JDK 25);
+- OpenJDK embedded in the official package (Temurin 25, tooling API level 21);
 - centralized versioning (`VERSION` 0.4.0-beta → pom/properties via `scripts/bump-version.sh`);
 - releases by 2 jobs (`release.yml`: `test-and-bump` exports `bump_sha` → `package-and-release` checks the bump commit + version sanity check) on push to `main`, per platform linux-x86_64 / macos-arm64 / windows-x86_64 (tests 819 → bump → package 3 platforms → GitHub Release);
 - `scripts/package.sh` PASS (dist layout + tar.gz/zip + SHA256SUMS + jars), golden 16/16, integration 9/9;
 - official editor support: TextMate grammar + LSP (hover/completion + real diagnostics) + `kof editor install` (VS Code/Neovim/Vim/Emacs/Geany/Nano + honest step-10 IntelliJ 13/09: filetype XML + External Tools + LSP4IJ README, no plugin — issue #1);
-- `kof build/run/serve/check/test/script/repl/c/fmt/config/bench/profile/inspect/debug/info/lsp/install/version` PASS (18 commands; `fmt` and `config gen` 31/08).
+- `kof build/run/serve/check/test/script/repl/c/fmt/config/bench/profile/inspect/decompile/translate/compare/migrate/debug/info/lsp/install/deps/editor/init/new/version` PASS (26 commands; `fmt` and `config gen` 31/08).
 
 References: `docs/distribution/`, `docs/tooling/`.
 
@@ -878,10 +893,10 @@ domain (`INFRA00x`/`DATA00x`/`SCI00x`/`BIO00x`/`SECPQ`) + parity matrix;
 
 | # | Item | Measured state (13/09) |
 |---|------|----------------------|
-| 1.1 | Parity gaps (`HTTP002`, `WEB001/002`, `CONC003`, `LOG001`, `MQ001`, `SCHED001`/`TIME001`, `SECN002`, `OBS002`, `MEDIA`) | 🟡 in progress — JS web server base `abbde60b`; residual per `backend-parity.md` |
+| 1.1 | Parity gaps (`HTTP002`, WEB residual `WEB002`/`WEB003`/`WEB004`, ~~`CONC003`~~ ✅ 03/09, ~~`LOG001`~~ ✅ 01/09, ~~`MQ001`~~ ✅ 01/09, ~~`SCHED001`~~ ✅ 31/08, ~~`TIME001`~~ ✅ 02–05/09, ~~`SECN002`~~ ✅ 01/09, ~~`OBS002`~~ ✅ 01/09, `MEDIA`) | 🟡 in progress — JS web server base ✅ 16/09 (WEB001 closed; DB001 closed); residual per `backend-parity.md` (HTTP002 https/TLS native, ws/sse gap codes, MEDIA) |
 | 1.2 | Automatic GC mark-sweep in Native | 🟡 riscv `356f33b9` ✅; x86 decomposed G-1..G-5 (`native-multiarch.md`) |
 | 1.3 | Typed query DSL (`User.query {}`) | ✅ 01/09 (`KofOrmE2ETest`) |
-| 1.4 | Package manager MVP (`kofdeps`) | 🟡 `kof deps` + Maven Central resolution; transitive/registry pending |
+| 1.4 | Package manager MVP (`kofdeps`) | 🟡 `kof deps` + Maven Central resolution; **transitive ✅ 16/09** (Maven delegation + `kofdeps.lock`, `DepsTransitiveTest` 10/10 incl. real-Maven E2E); **registry pending (needs maintainer decision)** |
 | 1.5 | Tracing/OpenTelemetry + `application{}` lifecycle | 🟡 W3C spans + lifecycle ✅ 3 targets; OTel export pending |
 | 1.6 | **Native → bare-metal/bootable** (microcontroller, legacy BIOS, UEFI) — 15/09 maintainer directive | ⚪ **plan only** — HAL seam `kof_plat_*` + freestanding profile, faces B-0…B-5 in `docs/development/future/PLAN-BAREMETAL-BOOT.md`; not scheduled; MCU depends on 1.2 |
 

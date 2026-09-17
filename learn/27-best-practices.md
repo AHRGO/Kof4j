@@ -9,7 +9,7 @@
 - Use `String?` for nullable instead of comments about null.
 - Prefer `case Point(x, y):` over a cascading `if` when destructuring records.
 - Use `list.map/filter/reduce` instead of a manual `for` when the intent is to transform.
-- `let`/`const` at the top only in `.ks` (KofScript → `KofScriptGlobals`); in `.kf` use `var`/`val`.
+- Top-level `var`/`val` in `.ks` (KofScript → `KofScriptGlobals`); there is NO `let`/`const` (JS sugar removed 06/09) — use `var`/`val` everywhere.
 - Web: one `web.app()` app per process; middleware in `app.use { }` before the routes;
   rich responses with `status(code, body)` + `headerSet(...)` instead of raw strings.
 - HTTP client: `http.get/post/put/delete/patch/options` + `timeout`/`retry`/`circuit`

@@ -190,8 +190,82 @@ public final class TypeChecker {
             if (!Type.isUnknown(argTypes.get(i)) && !Type.isUnknown(paramTypes.get(i))
                     && !isAssignable(argTypes.get(i), paramTypes.get(i))) {
                 diagnostics.error("", 0, 0, 0,
-                        "Argument " + (i + 1) + " of '" + methodName + "': expected "
-                                + paramTypes.get(i) + " but got " + argTypes.get(i), "SEM014");
+                        "Argument " + (i + 1) + " of '" + methodName + "': expected '" + Type.display(paramTypes.get(i))
+                                + "' but got '" + Type.display(argTypes.get(i)) + "'", "SEM014");
+                return;
+            }
+        }
+    }
+
+    /**
+     * #323 — par formal/arg que o EMIT considera compatível ao ESCOLHER o
+     * construtor. UNIAO do predicado do emit (`ExpressionStaticCallLowerer`:
+     * `equals || argUnknown || ambos ClassType`) com `isAssignable`: o
+     * predicado do emit sozinho perderia `String` → `String?` e boxing;
+     * `isAssignable` sozinho daria falso-positivo em classe passada onde o
+     * emit espera `FunctionType` (callback/SAM — Supervisor como handler no
+     * KofSupWindow, caso real do KofSupervisorE2ETest). So reporta o par que
+     * NENHUMA das duas vias aceita — o que fabricaria descritor/stack errado
+     * (o VerifyError da issue).
+     */
+    static boolean emitCtorPairCompatible(Type formal, Type arg) {
+        if (formal.equals(arg)) return true;
+        if (Type.isUnknown(arg) || Type.isUnknown(formal)) return true;
+        if (isAssignable(arg, formal)) return true;
+        if (formal instanceof Type.FunctionType) return true;   // SAM/coercao de callback
+        if (formal instanceof Type.TypeVariable) return true;   // apagado no emit
+        if (formal instanceof Type.ClassType && arg instanceof Type.ClassType) return true;
+        return false;
+    }
+
+    static boolean ctorAccepts(SymbolTable.ConstructorSymbol c, List<Type> argTypes) {
+        if (c.parameterTypes().size() != argTypes.size()) return false;
+        for (int i = 0; i < argTypes.size(); i++) {
+            if (!emitCtorPairCompatible(c.parameterTypes().get(i), argTypes.get(i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * #323 — cheque de TIPO de argumento na construcao (`new X(args)` e a
+     * forma implicita `X(args)`). O emit resolve o construtor por aridade e,
+     * sem um que aceite os args, fabrica o descritor a partir dos ARGS →
+     * <init> fantasma → VerifyError mudo no load (o bug da issue). Reportamos
+     * SEM014 exatamente quando NENHUM construtor de mesma aridade passa no
+     * PREDICADO DO EMIT (não em `isAssignable`: sobrecarga válida, SAM e
+     * classe externa têm de continuar compilando). Aridade sem candidato e
+     * SEM023 de quem chama (ja existente).
+     */
+    static void checkCtorArgTypes(SemanticAnalyzer sa,
+            SymbolTable members, String typeName, List<Type> argTypes) {
+        if (sa == null || sa.diagnostics() == null) return;
+        SymbolTable.Symbol init = members.resolve("<init>");
+        java.util.List<SymbolTable.ConstructorSymbol> ctors = new java.util.ArrayList<>();
+        if (init instanceof SymbolTable.ConstructorSymbol c) ctors.add(c);
+        else if (init instanceof SymbolTable.ConstructorSet set) ctors.addAll(set.constructors());
+        boolean hasSameArity = false;
+        for (SymbolTable.ConstructorSymbol c : ctors) {
+            if (c.parameterTypes().size() != argTypes.size()) continue;
+            hasSameArity = true;
+            if (ctorAccepts(c, argTypes)) return; // o emit pega este irmao
+        }
+        if (!hasSameArity) return; // aridade: SEM023 do chamador, nao nosso caso
+        // o emit caí no fallback "primeiro de mesma aridade" e inventa o
+        // descritor: reporta o primeiro par realmente incompatível.
+        SymbolTable.ConstructorSymbol firstArity = ctors.stream()
+                .filter(c -> c.parameterTypes().size() == argTypes.size())
+                .findFirst().orElse(null);
+        for (int i = 0; i < argTypes.size(); i++) {
+            Type formal = firstArity.parameterTypes().get(i);
+            Type arg = argTypes.get(i);
+            if (!emitCtorPairCompatible(formal, arg)) {
+                sa.diagnostics().error("", 0, 0, 0,
+                        "Argument " + (i + 1) + " of '" + typeName + "': expected "
+                                + formal + " but got " + arg
+                                + " (no constructor matches the argument types)",
+                        "SEM014");
                 return;
             }
         }

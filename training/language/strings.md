@@ -22,7 +22,8 @@ println(s.length)  // 5
 ### Character Access
 ```kof
 var s = "Hello"
-println(s.charAt(0))  // 72 (H)
+println(s.charAt(0))       // H (the character)
+println(s.charAt(0) as Int) // 72 (the code point, explicit)
 ```
 
 ### Substring
@@ -63,10 +64,10 @@ println(a == b)  // true (byte-level comparison)
 
 Strings are immutable. Operations like `concat` create new strings.
 
-## Null safety (0.3.22-beta)
+## Null safety (0.4.0-beta)
 
 ```kof
-String? s = null
+String? s = mapOf("k", "x").get("k")   // null via API (no `= null` — SEM048 since 10/09)
 if (s != null) {
     println(s.length)   // OK — narrowing
 }

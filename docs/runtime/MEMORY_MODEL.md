@@ -3,7 +3,7 @@
 # MEMORY_MODEL.md — Kof Memory Model
 
 **Date:** September 2, 2026
-**Status:** Implemented — Phase F.7 + 0.0.5 evolution (allocator with header) + 0.2.6-beta (free-list `kof_free_head` 27/08; mark-sweep pending)
+**Status:** Implemented — Phase F.7 + 0.0.5 evolution (allocator with header) + 0.4.0-beta (free-list `kof_free_head` 27/08; mark-sweep implemented 03/09)
 
 ---
 
@@ -56,9 +56,9 @@ mechanism.
 
 | Type | Lifetime | Deallocation |
 |------|----------|--------------|
-| Object | While referenced | `kof_free` / future GC |
-| Array | While referenced | `kof_free` / future GC |
-| String | While referenced | `kof_free` / future GC |
+| Object | While referenced | `kof_free` / GC mark-sweep (03/09, manual `kof_gc_collect_now`) |
+| Array | While referenced | `kof_free` / GC mark-sweep (03/09, manual) |
+| String | While referenced | `kof_free` / GC mark-sweep (03/09, manual) |
 | Method Table | Whole program | OS on exit |
 
 No GC in this phase: memory is returned to the OS on process exit.
@@ -113,7 +113,7 @@ no forwarding pointer) — the allocation header sits 16 bytes before the object
 
 ## 8. Limitations
 
-1. No automatic GC (mark-sweep pending; auto-GC disabled after a hang —
+1. No automatic GC on exhaustion (mark-sweep implemented 03/09 via manual `kof_gc_collect_now`; auto-GC disabled after a hang —
    free-list reuses `mmap`, memory returned only on the `munmap` fallback — see §9)
 2. No reference counting
 3. No weak references

@@ -133,7 +133,7 @@ var result = "Items: " + items.length
 // WRONG (historical workaround) — manual bounds check before get
 if (i >= 0 && i < l.size) { var x = l.get(i) }
 
-// RIGHT (0.3.22-beta) — kof_list_get already does the bounds check with a clear message
+// RIGHT (0.4.0-beta) — kof_list_get already does the bounds check with a clear message
 var x = l.get(1)   // or l[1]
 var y = listOf(1,2,3).get(1) // 2
 ```
@@ -142,12 +142,12 @@ var y = listOf(1,2,3).get(1) // 2
 
 ```kof
 // WRONG — copying file C.kf to the root folder to avoid import a.b.C failing
-// RIGHT (0.3.22-beta) — CompilerDriver expandKofImports file-specific
+// RIGHT (0.4.0-beta) — CompilerImports expandKofImports file-specific
 import a.b.C
 import a.b.*
 ```
 
-## 12. Ignoring null safety (0.3.22-beta)
+## 12. Ignoring null safety (0.4.0-beta)
 
 ```kof
 // WRONG — sentinel for absence
@@ -159,7 +159,7 @@ var r = find("x")
 if (r != null) { println(r) }
 ```
 
-## 13. Manual loop when higher-order exists (0.3.22-beta)
+## 13. Manual loop when higher-order exists (0.4.0-beta)
 
 ```kof
 // WRONG
@@ -184,7 +184,7 @@ cause → effect lesson.
 return KofLmTokVocab(new String[0], new Long[0])   // ✅ now ANEWARRAY
 ```
 
-**Cause:** `JvmBackend.arrayTypeForType` only covered primitives and
+**Cause:** `JvmLiteralEmitter.arrayTypeForType` only covered primitives and
 fell through to the `T_BYTE` default for reference types. The bytecode
 passed `check` but the JVM rejected it at Verify (frame `[B`
 vs `[Ljava/lang/String;`). The on-screen error was misleading: the
@@ -221,7 +221,7 @@ if (idx.contains(sub)) {
 
 The compiler emits `intValue()` right at the assignment when the
 variable is `Int`; the `!= null` afterwards does not save it. A guard with
-`contains` is the stable form today (0.3.22-beta).
+`contains` is the stable form today (0.4.0-beta).
 
 ### 4. Sum of Int silently overflows in wide accumulators
 

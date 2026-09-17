@@ -54,7 +54,7 @@ public sealed interface Type {
             String paramsStr = rp > 1 ? name.substring(1, rp) : "";
             String retStr = name.substring(arrow + 4);
             List<Type> params = paramsStr.isEmpty() ? List.of()
-                    : java.util.Arrays.stream(paramsStr.split(","))
+                    : splitTopLevel(paramsStr).stream()
                             .map(String::trim).map(Type::of).toList();
             return new FunctionType(params, Type.of(retStr));
         }
@@ -69,8 +69,10 @@ public sealed interface Type {
         if (name.contains("<")) {
             int lt = name.indexOf('<');
             String base = name.substring(0, lt);
-            String argsStr = name.substring(lt + 1, name.lastIndexOf('>'));
-            List<Type> args = java.util.Arrays.stream(argsStr.split(","))
+            int close = findMatchingAngle(name, lt);
+            if (close < 0) return new ClassType("", base, List.of());
+            String argsStr = name.substring(lt + 1, close);
+            List<Type> args = splitTopLevel(argsStr).stream()
                     .map(String::trim).map(Type::of).toList();
             if ("List".equals(base) || "ArrayList".equals(base)) return new ClassType("kof", "List", args);
             if ("Map".equals(base) || "HashMap".equals(base)) return new ClassType("kof", "Map", args);
@@ -93,6 +95,38 @@ public sealed interface Type {
             case "Object" -> new ClassType("java.lang", "Object", List.of());
             default -> new ClassType("", name, List.of());
         };
+    }
+
+    static int findMatchingAngle(String s, int open) {
+        int depth = 0;
+        for (int i = open; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == '<') depth++;
+            else if (c == '>' && !isArrowAt(s, i) && --depth == 0) return i;
+        }
+        return -1;
+    }
+
+    static List<String> splitTopLevel(String s) {
+        List<String> out = new java.util.ArrayList<>();
+        int depth = 0, start = 0;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == '<' || c == '(') depth++;
+            else if (c == ')' || (c == '>' && !isArrowAt(s, i))) depth--;
+            else if (c == ',' && depth == 0) {
+                out.add(s.substring(start, i));
+                start = i + 1;
+            }
+        }
+        out.add(s.substring(start));
+        return out;
+    }
+
+    /** True when the '>' at i is the tail of a `->` (function-type arrow),
+     *  not a generic close — `List<(Int)->Int>` must not close at the arrow. */
+    private static boolean isArrowAt(String s, int i) {
+        return i > 0 && s.charAt(i) == '>' && s.charAt(i - 1) == '-';
     }
 
     static boolean isPrimitive(Type type) {
@@ -168,6 +202,44 @@ public sealed interface Type {
      */
     public static ParseResult parseJvmDescriptorAt(String desc, int pos) {
         return parseJvmDescriptor(desc, pos);
+    }
+
+    /**
+     * Kof-facing name for diagnostics (#324): never the AST node
+     * {@code toString()} (e.g. {@code PrimitiveType[name=int, sort=10]}).
+     * Maps primitive lowercases to the language spelling the user wrote
+     * (int→Int, bool→Bool, …) and recurses through arrays/nullables/generics.
+     */
+    public static String display(Type type) {
+        return switch (type) {
+            case PrimitiveType p -> kofPrimitiveName(p.name());
+            case ClassType c -> c.name()
+                    + (c.typeArguments().isEmpty() ? ""
+                        : c.typeArguments().stream().map(Type::display)
+                            .collect(java.util.stream.Collectors.joining(", ", "<", ">")));
+            case ArrayType a -> display(a.componentType()) + "[]";
+            case NullableType n -> display(n.inner()) + "?";
+            case UnknownType _ -> "unknown";
+            case TypeVariable v -> v.name();
+            case FunctionType _ -> "function";
+            case WildcardType _ -> "?";
+        };
+    }
+
+    static String kofPrimitiveName(String name) {
+        return switch (name) {
+            case "int" -> "Int";
+            case "long" -> "Long";
+            case "float" -> "Float";
+            case "double" -> "Double";
+            case "bool", "boolean" -> "Bool";
+            case "byte" -> "Byte";
+            case "short" -> "Short";
+            case "char" -> "Char";
+            case "void" -> "Void";
+            case "string" -> "String";
+            default -> name;
+        };
     }
 
     static String describe(Type type) {

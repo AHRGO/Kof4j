@@ -2,8 +2,8 @@
 
 # Standard Library — Proposal
 
-**Last updated:** September 12, 2026
-> **Updated (0.2.6-beta):** the stdlib is largely implemented on the 3
+**Last updated:** September 16, 2026
+> **Updated (0.4.0-beta):** the stdlib is largely implemented on the 3
 > targets (JVM/Native/JS) — `kof.core`, `kof.collections`, `kof.io`,
 > `kof.time`, `kof.json` (FP + full arrays on Native, 31/08),
 > `kof.http` (client + resilience JVM+JS), `kof.web` (`web.app()` +
@@ -12,9 +12,9 @@
 > `kof.scheduler`, `kof.validation`, `kof.test`, `kof.ui` (Color/Theme/
 > Palette + widgets). **This page is the original plan; the current state, the
 > module matrix and the architecture live in `docs/stdlib/stdlib.md`** (source of
-> reference). The table below is the complete plan.
+> reference). The table below is the original plan, with the current status.
 
-**Status:** largely implemented (0.2.6-beta; see `docs/stdlib/stdlib.md`)
+**Status:** largely implemented (0.4.0-beta; see `docs/stdlib/stdlib.md`)
 
 ---
 
@@ -108,7 +108,7 @@ spawn processarFila()
 spawn { ... }
 ```
 
-`await`/task result: planned. See `docs/language-reference/concurrency.md`.
+`await`/task result: implemented — `val r = spawn f()` + `await r` (3 targets). See `docs/language-reference/concurrency.md`.
 
 ### kof.test
 
@@ -120,7 +120,7 @@ main() {
 }
 ```
 
-Structured suite (`test "soma" { ... }`): planned.
+Structured suite (`test "soma" { ... }`): implemented on the 3 targets (`StructuredTestE2ETest` 11/11).
 
 ---
 
@@ -128,17 +128,15 @@ Structured suite (`test "soma" { ... }`): planned.
 
 | Module | Priority | Status |
 |--------|-----------|--------|
-| kof.core | High | Partial (String ops, println, types) |
+| kof.core | High | Implemented (String ops, println, types) |
 | kof.io | High | Implemented (File/Path/Directory) |
-| kof.web | High | Planned |
-| kof.http | High | Implemented (`kof serve` + KofHttpServer) |
+| kof.web | High | Implemented (`web.app()` + ws/sse) |
+| kof.http | High | Implemented (`kof serve` + client) |
 | kof.json | Medium | Implemented (`json.encode`/`decode`) |
-| kof.time | Medium | Implemented (`now()`) |
-| kof.concurrent | High | Partial (`spawn` JVM) |
-| kof.test | High | Partial (`assert` + `kof test`) |
-| kof.sql | High | Not implemented |
-| kof.concurrent | Medium | Not implemented |
-| kof.test | High | Not implemented |
+| kof.time | Medium | Implemented (`now()`, `sleep`, `interval`) |
+| kof.concurrent | High | Implemented (`spawn`/`await`/`channel<T>`, 3 targets) |
+| kof.test | High | Implemented (`assert` + `test "name"` + `kof test`) |
+| kof.sql | High | Implemented as `kof.db`/`kof.orm` (MySQL wire WIP) — module name in the plan |
 
 ---
 

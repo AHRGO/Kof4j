@@ -112,4 +112,5 @@ var r = orm.where<User>(db, "age", 30)
 - Nonexistent column in the ORM/DSL `where` → `ORM003`.
 - `where` without comparison, unsupported operator or >4 binds in the DSL → `ORM004`.
 - ORM outside the JVM (Native/JS) → `ORM001` at compile-time.
-- `db` on JS → `DB001`.
+- Typed `db.query<T>` on JS → `DB002` (untyped connect/execute/query/transaction
+  work on JS since `DB001` closed 16/09).

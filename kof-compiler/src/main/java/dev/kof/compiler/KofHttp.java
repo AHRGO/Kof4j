@@ -21,7 +21,8 @@ import java.util.List;
  * generated {@code dev.kof.runtime.KofRuntime} class (JVM target, JDK
  * {@code java.net.http}). The body is returned as a String (JSON flows through
  * {@code kof.json}); headers are a single String with one {@code Name: value}
- * per line. Native and JS targets report {@code HTTP002} at compile time.
+ * per line. Native and JS targets would report {@code HTTP002} at compile time
+ * (but the branch is dead — see §259; no HTTP gap code is emitted today).
  */
 public final class KofHttp {
 
@@ -50,10 +51,15 @@ public final class KofHttp {
     /** kof.http: JVM + JS (JS via Java HttpClient interop / fetch),
      *  Native via HTTP/1.1 puro em asm (HTTP002 parcial — http somente,
      *  https em TLS gap; DNS host≠IPv4 cai em 127.0.0.1). */
+    // §259: supportedOn currently always returns true → the HTTP002 branch in
+    // ExpressionHttpCallLowerer:19-30 is DEAD. When native http gains a real
+    // unsupported target, this guard + gapCode must be wired in.
     static boolean supportedOn(@SuppressWarnings("unused") Target target) {
         return true;
     }
 
+    // §259: gapCode() has no callers — no HTTP gap code is emitted today.
+    // Stays for when native http configurators gain a real gap code.
     static String gapCode() {
         return "HTTP002";
     }

@@ -60,8 +60,8 @@ public final class SwitchExprLowerer {
                     SourcePosition pp = pe.position();
                     driver.currentDiagnostics.error(pp != null ? pp.file() : "",
                             pp != null ? pp.line() : 0, pp != null ? pp.column() : 0, 0,
-                            "case de tipo primitivo não é suportado em pattern matching "
-                                    + "(use um tipo de referência ou o valor direto)",
+                            "case of primitive type is not supported in pattern matching "
+                                    + "(use a reference type or the value directly)",
                             "SEM035");
                 }
                 return localIdx;

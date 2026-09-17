@@ -23,6 +23,11 @@ class MainActivity extends Activity {
         web.getSettings().setJavaScriptEnabled(true)
         web.getSettings().setDomStorageEnabled(true)
         web.getSettings().setAllowFileAccess(true)
+        // Responsividade: honra o <meta viewport> (width=device-width) gerado
+        // no index.html — sem isto o WebView usa o viewport de 980px do
+        // desktop e a UI aparece encolhida no aparelho.
+        web.getSettings().setUseWideViewPort(true)
+        web.getSettings().setLoadWithOverviewMode(true)
 
         setContentView(web)
         web.loadUrl("file:///android_asset/kof/index.html")

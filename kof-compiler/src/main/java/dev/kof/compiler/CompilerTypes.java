@@ -57,6 +57,16 @@ public final class CompilerTypes {
          // §243: o usuário declarou um tipo com este nome → ele vence o alias
          // primitivo/builtin que `Type.of` mapearia (`String` → java.lang.String).
          if (!allowBuiltinPins) return new Type.ClassType("", typeName, List.of());
+         // #313: throwable simples do JDK (`Exception`, `RuntimeException`, ...)
+         // NUNCA é classe do programa — mora em java.lang. Sem isto,
+         // `throw new Exception("x")` saía `new Exception`/`invokespecial
+         // Exception.<init>` (nome cru, classe inexistente →
+         // NoClassDefFoundError no load), enquanto a exception table (caminho
+         // `exceptionType`, #163/#241) qualificava corretamente. Mesmo mapa,
+         // agora no toType (face do NEW/invokespecial/descritores).
+         if (JAVA_LANG_THROWABLES.contains(typeName)) {
+             return new Type.ClassType("java.lang", typeName, List.of());
+         }
          return Type.of(typeName);
      }
 
@@ -84,7 +94,7 @@ public final class CompilerTypes {
      * chamar qualquer método no `e`. `String` continua sendo a exceção de
      * Kof (mensagem, `RuntimeException` em runtime).
      */
-    private static final java.util.Set<String> JAVA_LANG_THROWABLES = java.util.Set.of(
+    static final java.util.Set<String> JAVA_LANG_THROWABLES = java.util.Set.of(
             "Throwable", "Exception", "RuntimeException", "IllegalArgumentException",
             "IllegalStateException", "IndexOutOfBoundsException", "NumberFormatException",
             "ArithmeticException", "NullPointerException", "UnsupportedOperationException",

@@ -59,7 +59,7 @@ app.listenSecure(8443)               // TLS
 
 Complete `web.app()` on the JVM (routes `get/post/put/delete/patch/options`, `status(201, body)`,
 `headerSet`, `app.use`, WebSocket `app.ws`, SSE `app.sse` with `sse.send/event/close`,
-`listenSecure` TLS) — 30/08. Native/JS: WEB001.
+`listenSecure` TLS) — 30/08. Native base ✅ 03/09 (TLS `WEB002`, ws `WEB004`, sse `WEB003`); JS base (`web.app`/routes/context-fns) ✅ 16/09, `app.ws`/`app.sse` = WEB004/WEB003 compile-time.
 
 ## HTTP client (0.4.0-beta)
 
@@ -86,7 +86,7 @@ try {
     println("Cleanup")
 }
 
-// Absence as a value — String? (0.3.22-beta)
+// Absence as a value — String? (0.4.0-beta)
 String? maybe = find("key")
 if (maybe != null) {
     println(maybe)
@@ -135,7 +135,7 @@ for (var n in items) {
 ```kof
 var s = "Hello World"
 println(s.length)           // 11
-println(s.charAt(0))        // 72 (H)
+println(s.charAt(0))        // H (the character)
 println(s.substring(0, 5))  // "Hello"
 println(s.contains("World")) // true
 println(s.startsWith("Hello")) // true

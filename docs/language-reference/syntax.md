@@ -7,7 +7,7 @@ construct with minimal verifiable examples. The **formal rules** are in
 [grammar.md](grammar.md); the **tokens** in [lexical-structure.md](lexical-structure.md);
 the **semantics** in the domain documents. It does not repeat — it references.
 
-> Every example here **compiles** in `kof-compiler` 0.3.0-beta (verified by
+> Every example here **compiles** in `kof-compiler` 0.4.0-beta (verified by
 > probe/suite). Examples that *look* valid but do not compile are listed
 > in [lexical-structure.md](lexical-structure.md) §5.3 and
 > [specification-gaps.md](../bugs-and-gaps/specification-gaps.md).
@@ -26,10 +26,10 @@ main() {
 
 `kof
 var x = 10              // inferred int, mutable
-val y = 20              // "immutable" (not-guaranteed — SG-010)
+val y = 20              // immutable (reassignment → SEM037)
 String nome = "Mel"     // type-first
 var idade: Int = 30     // annotated
-String? opcional = null // nullable
+String? opcional = find(key) // nullable — null via API (= null literal is SEM048)
 var arr: Int[] = new Int[3]
 `
 

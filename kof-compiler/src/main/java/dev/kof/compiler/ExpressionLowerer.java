@@ -286,8 +286,8 @@ public final class ExpressionLowerer {
                          var p = aa.position();
                          driver.currentDiagnostics.error(p != null ? p.file() : "",
                                  p != null ? p.line() : 0, p != null ? p.column() : 0, 0,
-                                 "Set não suporta indexação [i]; use contains(x) para "
-                                         + "pertencimento ou keys() para iterar",
+                                 "Set does not support indexing [i]; use contains(x) for "
+                                         + "membership or keys() to iterate",
                                  "SEM025");
                      }
                      yield localIdx;
@@ -429,7 +429,7 @@ public final class ExpressionLowerer {
                             driver.currentDiagnostics.error(fa.position() != null ? fa.position().file() : "",
                                     fa.position() != null ? fa.position().line() : 0,
                                     fa.position() != null ? fa.position().column() : 0, 0,
-                                    "enum '" + ct.name() + "' não tem constante '" + fa.fieldName() + "'",
+                                    "enum '" + ct.name() + "' has no constant '" + fa.fieldName() + "'",
                                     "SEM030");
                         }
                         yield localIdx;

@@ -241,9 +241,9 @@ public class JsBackend implements Backend {
                     if (markAsync) {
                         if (isRegularLambda) {
                             throw new IllegalStateException(
-                                    "CONC003-JS-01: lambda passada para list.map/filter/reduce "
-                                            + "(ou handler de UI/timer/mq) não pode usar "
-                                            + "await/spawn/channel.receive() — só spawn { ... } pode");
+                                    "CONC003-JS-01: lambda passed to list.map/filter/reduce "
+                                            + "(or a UI/timer/mq handler) cannot use "
+                                            + "await/spawn/channel.receive() — only spawn { ... } can");
                         }
                         async.put(key, true);
                         changed = true;

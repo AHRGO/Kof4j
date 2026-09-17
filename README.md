@@ -128,7 +128,7 @@ Kof does not depend on Java as an intermediate language.
 
 # Current State
 
-Kof is in active development — **0.3.0-beta**.
+Kof is in active development — **0.4.0-beta**.
 
 The compiler has its own frontend, type system, Kof IR and **three backends
 over the IR**, which produce **six targets**: JVM (V21 via ASM), Native x86_64
@@ -157,10 +157,10 @@ tool, it does not consume the Kof IR — see
 | JSON encode/decode (objects/records/arrays, 3 targets) | ✅ | ✅ | ✅ |
 | kof.io (File, Path, Directory) | ✅ | ✅ | ✅ |
 | kof.time (`now`/`sleep`/`interval`), kof.cache | ✅ | ✅ | ✅ |
-| kof.web (`web.app()`, ws, sse, TLS) | ✅ | WEB002 | WEB001 |
+| kof.web (`web.app()`, ws, sse, TLS) | ✅ | base ✅ 03/09; TLS `WEB002`, ws `WEB004`, sse `WEB003` | ✅ base 16/09 + SSE handler-scoped 16/09 (ws `WEB004`, SSE push pós-return `WEB003` compile-time) |
 | kof.http client + retry/circuit | ✅ | HTTP002 | ✅ |
 | kof.security (passwords, crypto, jwt, secrets, auth) | ✅ | ✅ | ✅ |
-| kof.db / kof.orm (native SQLite, MySQL WIP, MongoDB) | ✅ | ✅ | DB001/ORM001 |
+| kof.db / kof.orm (native SQLite, MySQL WIP, MongoDB) | ✅ | ✅ | ✅ 16/09 untyped (GraalJS-host bridge); typed `query<T>` = `DB002`; ORM `ORM001` |
 | kof.config / kof.log | ✅ | ✅ | CONF001/LOG001 |
 | kof.ui (Color, Palette, Theme, widgets) | no-op | no-op | ✅ render |
 
@@ -171,8 +171,8 @@ sequential on JS (CONC003). See [docs/language-reference/concurrency.md](docs/la
 **Null safety**: `String?`/`Int?` + `if (x != null)` narrowing on the 3 targets
 (JVM fix 02/09). `Map.get` returns `V?` for reference values.
 
-**Tests**: `test "name" { }` + `assert(cond, "msg")` + `kof test` — 810 tests
-(793 kof-compiler + 8 kof-script + 5 kof-c-compiler + 4 kof-cli). See
+**Tests**: `test "name" { }` + `assert(cond, "msg")` + `kof test` — 2218 tests
+(1907 kof-compiler + 38 kof-script + 7 kof-c-compiler + 262 kof-cli). See
 [learn/23-testing.md](learn/23-testing.md).
 
 **Debugging**: `kof debug <file.kf>` — DAP server over stdio with raw JDWP
@@ -356,6 +356,7 @@ kof check <file.kf|dir> [--json]
 kof test <file.kf|dir> [--target jvm|native|js]
 kof script | repl | c | fmt | config
 kof bench | profile | inspect | debug
+kof decompile | translate | compare | migrate | deps | editor | new
 kof info | lsp | install | version
 ```
 

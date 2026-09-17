@@ -2,7 +2,7 @@
 
 # Kof Training — Corpus for LLMs
 
-**Version:** 0.4.0-beta (Sep 2026) — 810 tests · targets jvm/native/native.risc/native.arm/js/kofc + KofScript
+**Version:** 0.4.0-beta (Sep 2026) — 2218 tests · targets jvm/native/native.risc/native.arm/js/kofc + KofScript
 
 This directory contains structured knowledge about the Kof language, optimized for language models.
 
@@ -59,7 +59,14 @@ training/
 │   ├── duplicate-state.md
 │   ├── fake-idioms.md
 │   ├── premature-optimization.md
-│   └── runtime-workarounds.md
+│   ├── runtime-workarounds.md
+│   ├── chained-or-membership.md
+│   ├── weak-green-proof.md
+│   ├── stale-ecj-class-trap.md
+│   ├── constant-folded-runtime-asm.md
+│   ├── asm-comment-escape.md
+│   ├── char-in-string-methods.md
+│   └── void-call-merge-crash.md
 ├── datasets/              # Structured material for automated ingestion
 │   └── kof-idioms.json
 ├── patterns/              # Idiomatic patterns

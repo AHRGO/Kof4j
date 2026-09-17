@@ -283,14 +283,11 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
             stack.add(call);
             return;
         }
-        if (name.equals("kof_web_status") && args.size() == 2) {
-            stack.add(args.get(1));
-            return;
-        }
-        if (name.equals("kof_web_header_set") && args.size() == 2) {
-            stack.add(args.get(1));
-            return;
-        }
+        // §265 (JS): nao colapsar status()/headerSet() no 2º arg — havia aqui
+        // um ramo `status -> args.get(1)` / `headerSet -> args.get(1)` que
+        // descartava a chamada inteira (side-effect perdido) e SOMBRAVA o ramo
+        // correto mais abaixo (kofWebStatus/kofWebHeaderSet). Removido; cai no
+        // dispatch real.
         if (name.startsWith("kof_web_")) {
             // JS target: WEB001 REAL IMPLEMENTATION via GraalJS HttpServer
             // Uses Java.type('com.sun.net.8') + Value-based handler invoke
@@ -304,6 +301,12 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
             if (name.equals("kof_web_route")) {
                 p.lc.registerRuntime("kofWebRoute");
                 JsIr.JsExpression call = new JsIr.JsCall(new JsIr.JsIdentifier("kofWebRoute"), args);
+                throw new StatementEnd(call);
+            }
+            // WEB001 SSE (16/09): rota SSE no host GraalJS (handler-scoped).
+            if (name.equals("kof_web_sse_route")) {
+                p.lc.registerRuntime("kofWebSseRoute");
+                JsIr.JsExpression call = new JsIr.JsCall(new JsIr.JsIdentifier("kofWebSseRoute"), args);
                 throw new StatementEnd(call);
             }
             if (name.equals("kof_web_listen")) {
@@ -358,6 +361,13 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
             if (name.equals("kof_web_header_set") && args.size() == 2) {
                 p.lc.registerRuntime("kofWebHeaderSet");
                 stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofWebHeaderSet"), args));
+                return;
+            }
+            // WEB001 SSE (16/09): sse(text) dentro do handler de app.sse —
+            // escreve na conexão corrente (kofWebSseConn, handler-scoped).
+            if (name.equals("kof_web_sse_send") && args.size() == 1) {
+                p.lc.registerRuntime("kofWebSseSend");
+                stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofWebSseSend"), args));
                 return;
             }
             // fallback: R6 — o gap é EXPLICITO (kofWebStub lança WEB001), nunca undefined
@@ -415,7 +425,8 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
             return;
         }
         String fn = JsTypeMapper.runtimeJsName(name);
-        if (name.startsWith("kof_io_") || name.equals("kof_read_line")
+        if (name.startsWith("kof_io_") || name.startsWith("kof_db_")
+                || name.equals("kof_read_line")
                 || name.equals("kof_read_file") || name.equals("kof_write_file")) {
             p.lc.registerIoRuntime(fn);
         } else {

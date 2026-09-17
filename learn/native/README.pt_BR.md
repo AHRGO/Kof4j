@@ -68,9 +68,9 @@ kof build main.kf --target=native
 - Distribuição simples (apenas o binário)
 - Ideal para ferramentas CLI e sistemas
 
-### KofScript (0.3.22-beta)
+### KofScript (0.4.0-beta)
 
-`kof script` / `kof repl` — `let`/`const` no topo viram `KofScriptGlobals` persistentes, `--watch` re-executa; targets jvm/native/js.
+`kof script` / `kof repl` — `var`/`val` no topo viram `KofScriptGlobals` persistentes (NÃO existe `let`/`const` — sugar JS removido 06/09), `--watch` re-executa; targets jvm/native/js.
 
 ```bash
 kof run script.kf

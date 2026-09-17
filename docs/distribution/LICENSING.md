@@ -2,7 +2,7 @@
 
 # Kof Licensing
 
-**Last updated:** September 12, 2026
+**Last updated:** September 17, 2026
 **Version:** 0.4.0-beta (7 targets; free-list + pthread spawn + FP XMM)
 
 ---
@@ -17,17 +17,17 @@ The `LICENSE` file at the repository root contains the full text of the GPLv3.
 
 ---
 
-## 2. JDK embedded in the official distribution (0.2.6-beta, JDK 21)
+## 2. JDK embedded in the official distribution (0.4.0-beta, JDK 25)
 
-The official Kof package ships an **OpenJDK Eclipse Temurin 21** (Adoptium binaries, Tooling API Level 21), distributed under the **GPLv2 with Classpath Exception**. The embedded JDK is a component separate from Kof's source code, packaged only in the distribution (not in the repository), and keeps its own license.
+The official Kof package ships an **OpenJDK Eclipse Temurin 25** (Adoptium binaries; tooling API level 21), distributed under the **GPLv2 with Classpath Exception**. The embedded JDK is a component separate from Kof's source code, packaged only in the distribution (not in the repository), and keeps its own license.
 
 Kof does not modify the embedded JDK; the launcher (`bin/kof`/`bin/kof.bat`, Windows SIGPIPE fix 08/27) only locates and executes it. `scripts/package.sh` generates the dist layout + tar.gz/zip + SHA256SUMS, `release.yml` uses 2 jobs (`test-and-bump` exports the SHA of the bump commit → `package-and-release` checks out the bump commit + version sanity check) with per-platform releases (linux-x86_64/macos-arm64/windows-x86_64).
 
 ---
 
-## 2.1 Compiler (0.2.6-beta)
+## 2.1 Compiler (0.4.0-beta)
 
-The Kof compiler (modules `kof-compiler` 793 tests + `kof-script` 8 + `kof-c-compiler` 5 = 806, `VERSION` 0.2.6-beta) is GPLv3.
+The Kof compiler (modules `kof-compiler`, `kof-script` and `kof-c-compiler`; current test counts in `docs/status.md`, `VERSION` 0.4.0-beta) is GPLv3.
 
 It contains:
 - Lexer / Parser (`case String s` + `Point(x,y)` + `String?`)
@@ -52,9 +52,9 @@ The JVM backend delegates to the JVM's facilities (java.lang.String, native arra
 
 ### Native Runtime
 
-The Native backend generates runtime functions in assembly during compilation (0.2.6-beta: free-list `kof_free_head` with `mmap` reuse + `spawn`/`await` via `pthread_create`/`pthread_join` with a thread-safe allocator (futex) + real FP in XMM + JSON objects/arrays). These functions are:
+The Native backend generates runtime functions in assembly during compilation (0.4.0-beta: free-list `kof_free_head` with `mmap` reuse + `spawn`/`await` via `pthread_create`/`pthread_join` with a thread-safe allocator (futex) + real FP in XMM + JSON objects/arrays). These functions are:
 
-- `kof_alloc` / `kof_free_head` — allocation with `mmap` reuse (mark-sweep GC pending)
+- `kof_alloc` / `kof_free_head` — allocation with `mmap` reuse (mark-sweep GC implemented 03/09, manual `kof_gc_collect_now`; auto-collect pending §260)
 - `kof_print`, `kof_println`, `kof_print_int`, `kof_int_to_string` — output
 - `kof_string_*`, `kof_array_*`, `kof_list_*` (`map/filter/reduce`), `kof_map_*` — collections
 - JSON objects/records + `Int/Long/Bool/String/Double` arrays (08/31)

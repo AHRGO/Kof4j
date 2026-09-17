@@ -75,7 +75,10 @@ public final class BuiltinCallTyper {
             // User classes take precedence over builtin helpers with
             // the same name (e.g. KofUi's Color).
             SymbolTable.ClassSymbol ctorClass = sa.allClasses().get(mc.methodName());
-            for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
+            List<Type> ctorArgTypes = new ArrayList<>();
+            for (ExpressionNode arg : mc.arguments()) {
+                ctorArgTypes.add(SemExpressionTyper.inferType(sa, arg, scope));
+            }
             // SG-017 (SEM041): classe abstrata não pode ser instanciada —
             // cobre tanto `new A()` (SemExpressionTyper) quanto `A()` (aqui).
             if (sa.abstractClasses().contains(mc.methodName()) && sa.diagnostics() != null) {
@@ -83,11 +86,19 @@ public final class BuiltinCallTyper {
                         "cannot instantiate abstract class '" + mc.methodName() + "'",
                         "SEM041");
             }
+            // #340 (SEM071): interface não é instanciável (mesma face de `A()`).
+            ClassShapeChecks.checkInstantiable(sa, mc.methodName());
             SymbolTable.ConstructorSymbol ctor = SymbolTable.constructorFor(
                     ctorClass.members(), mc.arguments().size());
             if (ctor != null) {
                 sa.putResolvedMethod(mc, new SymbolTable.MethodSymbol("<init>", mc.methodName(),
                         ctor.type(), ctor.parameterTypes(), ctor.accessFlags(), SymbolTable.DispatchKind.STATIC));
+                // #323: `A("x")` num ctor `(Int)` — resolucao por aridade sem
+                // conferir TIPO inventava <init>(String)V (VerifyError mudo
+                // no load, R6). Sobrecarga com irmao compativel passa (o emit
+                // resolve por aridade+assignability).
+                TypeChecker.checkCtorArgTypes(sa, ctorClass.members(), mc.methodName(),
+                        ctorArgTypes);
             }
             return new Type.ClassType(ctorClass.packageName(), ctorClass.name(), List.of());
         }
@@ -416,10 +427,11 @@ public final class BuiltinCallTyper {
                     boolean hasDefaults = fn.parameters().stream()
                             .anyMatch(p -> p.defaultExpression() != null);
                     if (fn.typeParameters().isEmpty() && (!hasDefaults
-                            || mc.arguments().size() >= fn.parameters().size())) {
+                            || mc.arguments().size() >= TopLevelOverload.requiredArityOf(fn))) {
                         List<Type> paramTypes = new ArrayList<>();
                         for (FormalParameterNode p : fn.parameters()) paramTypes.add(MemberResolver.resolveType(sa, p.type(), scope));
-                        cands.add(new TopLevelOverload.Candidate(fn, paramTypes, paramTypes.size()));
+                        cands.add(new TopLevelOverload.Candidate(fn, paramTypes,
+                                TopLevelOverload.requiredArityOf(fn)));
                     }
                 } else if (d instanceof ExternalFunctionNode ext && ext.name().equals(mc.methodName())) {
                     // FFI (TIER 2.1): chamada a `extern` declarado resolve pelo
@@ -448,13 +460,23 @@ public final class BuiltinCallTyper {
                 } else {
                     if (sel < 0) sel = 0; // NO_MATCH → reporta SEM013/SEM014 no candidato 0, como antes
                     TopLevelOverload.Candidate chosen = cands.get(sel);
-                    TypeChecker.checkArgTypes(sa.diagnostics(), mc.methodName(), argTypes, chosen.paramTypes());
+                    // §231: chamada curta num candidato com default resolve pelo
+                    // WRAPPER de prefixo (mesmo `subList(0, nArgs)` que o
+                    // ExpressionMethodCallLowerer emite) — validar contra os
+                    // parâmetros recebidos, não contra a assinatura total, senão
+                    // a chamada boa cai em SEM013 "expected N but got nArgs".
+                    List<Type> chosenFormals = chosen.paramTypes();
+                    if (argTypes.size() < chosen.totalArity()
+                            && argTypes.size() >= chosen.requiredArity()) {
+                        chosenFormals = chosenFormals.subList(0, argTypes.size());
+                    }
+                    TypeChecker.checkArgTypes(sa.diagnostics(), mc.methodName(), argTypes, chosenFormals);
                     // #266 (c) — DECISIONS §7: `null` literal em parâmetro
                     // primitivo NÃO-nullable é SEM048 em compile-time, nunca
                     // VerifyError silencioso no load (a chamada top-level não
                     // passa por resolvedMethods, por isso o check direto aqui).
                     SemanticAnalyzer.checkNullArgs(sa.diagnostics(), mc.arguments(),
-                            mc.position(), chosen.paramTypes(), mc.methodName());
+                            mc.position(), chosenFormals, mc.methodName());
                     // registra o tipo de retorno da função top-level para o var
                     // local inferir (evita Unknown que quebra a resolução de
                     // métodos do receiver)
@@ -472,12 +494,22 @@ public final class BuiltinCallTyper {
         }
         SymbolTable.ClassSymbol ctorClass = sa.allClasses().get(mc.methodName());
         if (ctorClass != null) {
-            for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
+            List<Type> ctorArgTypes = new ArrayList<>();
+            for (ExpressionNode arg : mc.arguments()) {
+                ctorArgTypes.add(SemExpressionTyper.inferType(sa, arg, scope));
+            }
             SymbolTable.ConstructorSymbol ctor = SymbolTable.constructorFor(
                     ctorClass.members(), mc.arguments().size());
             if (ctor != null) {
                 sa.putResolvedMethod(mc, new SymbolTable.MethodSymbol("<init>", mc.methodName(),
                         ctor.type(), ctor.parameterTypes(), ctor.accessFlags(), SymbolTable.DispatchKind.STATIC));
+                // #323: face IMPLICITA da construcao (`A("x")` sem `new`) —
+                // mesma regra da face NewExpr no SemExpressionTyper:
+                // resolucao por aridade + conferencia de TIPO dos args,
+                // overload-aware (irmao compativel passa). Sem isto a chamada
+                // inventava <init>(String)V e o load estourava VerifyError.
+                TypeChecker.checkCtorArgTypes(sa, ctorClass.members(), mc.methodName(),
+                        ctorArgTypes);
             }
             return new Type.ClassType(ctorClass.packageName(), ctorClass.name(), List.of());
         }

@@ -2,7 +2,7 @@
 
 # 23 — Testing
 
-> **Status: implemented — `test "nome" { }`, `kof test` + `assert` — 0.3.22-beta**
+> **Status: implemented — `test "nome" { }`, `kof test` + `assert` — 0.4.0-beta**
 >
 > Testing Kof is writing Kof. The structured suite declares cases with
 > `test "nome" { }`; `kof test` runs each test in isolation and reports

@@ -54,11 +54,11 @@ NOT APPLICABLE   → não se aplica à arquitetura Kof
 | Web | spring-web | `kof.web` (`web.app()`) | **EXISTS** | Rotas, params, query, headers, body, middleware `app.use`, `status`/`headerSet` |
 | Web MVC | WebMVC | `kof.web` + handlers | PARTIAL | Só JVM hoje; JS embarcado (alpha) |
 | WebFlux | WebFlux | `spawn` + virtual threads | PARTIAL | Modelo concorrente próprio (JVM/Native/JS) |
-| WebSocket | WebSocket | `kof.web` (`app.ws`) | **EXISTS (JVM)** | RFC 6455: handshake + frame codec com máscara (Native `WEB004`, JS `WEB003`) |
-| SSE | (Spring via `SseEmitter`) | `kof.web` (`app.sse`) | **EXISTS (JVM)** | `sse.send/event/close` (Native/JS `WEB003`) |
+| WebSocket | WebSocket | `kof.web` (`app.ws`) | **EXISTS (JVM)** | RFC 6455: handshake + frame codec com máscara (Native/JS `WEB004` — gate `ExpressionBuiltinInstanceCalls`, 16/09) |
+| SSE | (Spring via `SseEmitter`) | `kof.web` (`app.sse`) | **EXISTS (JVM)** | `sse.send/event/close` (JVM + JS handler-scoped ✅ 16/09, `7cd69a7b`; Native `WEB003`, resíduo de push pós-return no JS `WEB003`) |
 | Messaging | spring-messaging | `kof.mq` (publish/subscribe/queue) | **EXISTS** | JVM+Native+JS (MQ001 fechado 01/09) |
-| Transactions | spring-tx | `kof.db` (`transaction {}`) | **EXISTS** | JVM (JDBC commit/rollback) + Native (SQLite); JS `DB001` |
-| Scheduling | spring-context | `kof.scheduler` (`every/at/cancel`) + `spawn` | PARTIAL | JVM (ScheduledExecutor) + JS (setInterval); Native `SCHED001` |
+| Transactions | spring-tx | `kof.db` (`transaction {}`) | **EXISTS** | JVM (JDBC commit/rollback) + Native (SQLite) + JS (não-tipado 16/09) |
+| Scheduling | spring-context | `kof.scheduler` (`every`/`cancel` + `spawn`) | PARCIAL | JVM (ScheduledExecutor) + JS (setInterval) + Native (`SCHED001` fechado 31/08); `at(cron)` = stub de 60s (`CRON001`); cron de verdade precisa do CRON001 |
 | Events | ApplicationEvent | `kof.mq` pub/sub | PARTIAL | filas pub/sub na stdlib |
 | Resources | Resource | `kof.io` | EXISTS | |
 | Cache | spring-cache | `kof.cache` (`get/set/set-ttl/ttl/delete/clear`) | **EXISTS** | 3 targets (fix nativo 30/08) |
@@ -78,7 +78,7 @@ NOT APPLICABLE   → não se aplica à arquitetura Kof
 | Actuator | actuator | `kof.observability` | **EXISTS** | health/metrics/request IDs JVM/Native/JS |
 | Health checks | health | `kof.observability.health` | **EXISTS** | JVM/Native/JS |
 | Metrics | micrometer | `kof.observability` | **EXISTS** | counter/increment/gauge JVM/Native/JS |
-| Observability | tracing | `kof.observability` | **EXISTS** | health/metrics/request IDs; tracing planejado |
+| Observability | tracing | `kof.observability` | **EXISTS** | health/metrics/histogramas/request IDs + `traceId`/`spanId` W3C e `spanStart`/`spanEnd` cronometrados (3 targets, `OBS002`); export OTel planejado |
 | Logging | logback | `kof.log` + `println` | **EXISTS** | `log.debug/info/warn/error` JVM/Native |
 | Graceful shutdown | shutdown | `web.close()` + spawn join | PARTIAL | |
 | CLI/tooling | spring CLI | `kof` CLI (build/run/serve/test/bench/profile/inspect) | EXISTS | |
@@ -130,7 +130,7 @@ NOT APPLICABLE   → não se aplica à arquitetura Kof
 | Service discovery | Cloud | — | MISSING | BAIXA (config manual) |
 | Gateway | Cloud Gateway | `kof.web` + proxy | PARTIAL | BAIXA |
 | Circuit breakers | Resilience | `kof.http` (`http.circuit`) | **EXISTS (JVM+JS)** | BAIXA |
-| Distributed tracing | Sleuth | `kof.observability` (`requestId`/`correlationId`) | PARTIAL | BAIXA |
+| Distributed tracing | Sleuth | `kof.observability` (`requestId`/`correlationId`, `traceId`/`spanId` W3C) | PARTIAL | BAIXA |
 | Batch (jobs/steps/retry) | Batch | `kof.mq` queue + `kof.scheduler` | PARTIAL | MÉDIA |
 | GraphQL | GraphQL | — | MISSING | BAIXA (REST primeiro) |
 | Distributed sessions | Session | `kof.security` (`sessionCreate/Get/Destroy`) | **EXISTS (JVM/Native/JS)** | BAIXA |
@@ -291,9 +291,9 @@ jwt:         RFC 7519 HS256 (alg fixado, nunca aceito do token)
 
 ---
 
-# 7. ESTADO DA IMPLEMENTAÇÃO (0.2.6-beta, 31/08/2026 — `VERSION` 0.2.6-beta, 810 testes, free-list + riscv64)
+# 7. ESTADO DA IMPLEMENTAÇÃO (0.4.0-beta, re-synced 17/09/2026 — `VERSION` 0.4.0-beta, 2218 testes, free-list + mark-sweep + riscv64)
 
-## 7.1 Implementado (0.2.6-beta)
+## 7.1 Implementado (0.4.0-beta)
 
 | API | JVM | Native x86_64 (+ riscv64) | JS | Formato |
 |-----|-----|---------------------------|----|---------|

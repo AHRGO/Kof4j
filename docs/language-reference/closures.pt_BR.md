@@ -37,9 +37,11 @@ Exemplos válidos:
 - **Sem anotação**, o parâmetro assume `Object` (`parseLambdaParameter:1652`).
   Usá-lo em aritmética → `SEM001` com dica *"declare o tipo do parâmetro,
   ex.: `(x: Int) -> …`"* (*probe*: `l.map((x) -> x + 1)` → SEM001).
-- **Não há inferência de tipo de parâmetro de lambda** a partir do contexto de
-  chamada (a tabela de `map` sabe que é `Int`, mas o parser não propaga para o
-  corpo). **Unspecified** como política (SG-012).
+- **A inferência de tipo de parâmetro de lambda FUNCIONA** a partir do contexto
+  de chamada (SG-012, desde 09/09): em `List` `map`/`filter`/`reduce`, um
+  parâmetro sem anotação herda o **tipo do elemento** (`nums.map((x) -> x * 2)`
+  compila). Sem contexto, resta `Object` e aritmética é `SEM001` (nunca Object
+  silencioso).
 
 ---
 

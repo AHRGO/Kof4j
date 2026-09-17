@@ -168,15 +168,15 @@ final class NativeArchEmitter {
             // R6: sem libc-cross não há como ligar dinâmico — segue estático,
             // mas avisa (o consumidor libc ficará sem .so → provável ld aborta,
             // que já é propagado como erro de compilação).
-            System.err.println("NativeBackend: riscv64 pede libc mas KOF_CROSS_SYSROOT/" +
-                    "/tmp/opencode/x/usr/riscv64-linux-gnu ausente — tentando link estático");
+            System.err.println("NativeBackend: riscv64 needs libc but KOF_CROSS_SYSROOT/" +
+                    "/tmp/opencode/x/usr/riscv64-linux-gnu missing — trying static link");
         }
         if (sqlite && !NativeCrossLink.sqliteAvailable("riscv64")) {
-            System.err.println("NativeBackend: riscv64 usa kof.db mas libsqlite3.so não está no " +
-                    "sysroot (CI instala só libc6-*-cross) — o ld vai abortar com undefined reference");
+            System.err.println("NativeBackend: riscv64 uses kof.db but libsqlite3.so is not in the " +
+                    "sysroot (CI installs only libc6-*-cross) — ld will abort with undefined reference");
         }
-        if (dynamic) System.err.println("NativeBackend: riscv64 link dinâmico (" +
-                (sqlite ? "libc+libsqlite3 detectadas" : "libc detectada") + ")");
+        if (dynamic) System.err.println("NativeBackend: riscv64 dynamic link (" +
+                (sqlite ? "libc+libsqlite3 detected" : "libc detected") + ")");
 
         try {
             Path objFile = asmFile.resolveSibling("kof.o");
@@ -198,7 +198,7 @@ final class NativeArchEmitter {
             binFile.toFile().setExecutable(true);
         } catch (NativeAssembler.ToolchainMissing e) {
             // toolchain ausente: gracioso (assumeToolchain pula o teste)
-            System.err.println("NativeBackend: riscv64 toolchain ausente (NATIVE002), keeping asm: " + e.getMessage());
+            System.err.println("NativeBackend: riscv64 toolchain missing (NATIVE002), keeping asm: " + e.getMessage());
         }
         // as/ld FALHOU (ex.: undefined reference) → propaga como erro de
         // compilação (R6: nunca success=true sem binário).
@@ -332,11 +332,11 @@ final class NativeArchEmitter {
         boolean dynamic = sqlite || NativeCrossLink.needsLibc(prunedRiscv);
         String sysroot = NativeCrossLink.sysrootFor("aarch64");
         if (sqlite && !NativeCrossLink.sqliteAvailable("aarch64")) {
-            System.err.println("NativeBackend: aarch64 usa kof.db mas libsqlite3.so não está no " +
-                    "sysroot (CI instala só libc6-*-cross) — o ld vai abortar com undefined reference");
+            System.err.println("NativeBackend: aarch64 uses kof.db but libsqlite3.so is not in the " +
+                    "sysroot (CI installs only libc6-*-cross) — ld will abort with undefined reference");
         }
-        if (dynamic) System.err.println("NativeBackend: aarch64 link dinâmico (" +
-                (sqlite ? "libc+libsqlite3 detectadas" : "libc detectada") + ")");
+        if (dynamic) System.err.println("NativeBackend: aarch64 dynamic link (" +
+                (sqlite ? "libc+libsqlite3 detected" : "libc detected") + ")");
         try {
             Path objFile = asmFile.resolveSibling("kof.o");
             nb.runCommand(new String[]{"aarch64-linux-gnu-as", "-o", objFile.toString(), asmFile.toString()}, "aarch64-as");
@@ -346,7 +346,7 @@ final class NativeArchEmitter {
             if (System.getenv("KOF_KEEP_ASM") == null) Files.deleteIfExists(asmFile);
             binFile.toFile().setExecutable(true);
         } catch (NativeAssembler.ToolchainMissing e) {
-            System.err.println("NativeBackend: aarch64 toolchain ausente (NATIVE002), keeping asm: " + e.getMessage());
+            System.err.println("NativeBackend: aarch64 toolchain missing (NATIVE002), keeping asm: " + e.getMessage());
         }
         // as/ld FALHOU → propaga como erro de compilação (R6).
     }
@@ -381,8 +381,8 @@ final class NativeArchEmitter {
             out.append(".section .text\n");
             out.append(all.substring(rtEnd));
             System.err.println("NativeBackend: " + arch + " runtime prune " + keep.size() + "/"
-                    + pieces.size() + " peças mantidas (" + (all.length() - out.length())
-                    + " bytes podados)");
+                    + pieces.size() + " pieces kept (" + (all.length() - out.length())
+                    + " bytes pruned)");
             return out.toString();
         } catch (RuntimeException e) {
             System.err.println("NativeBackend: " + arch + " runtime prune DESABILITADO (" + e

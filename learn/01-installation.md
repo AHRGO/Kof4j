@@ -81,7 +81,7 @@ To make it permanent: **Environment Variables → PATH → New** →
 ## Step 3 — Check
 
 ```bash
-kof version        # e.g.: kof 0.3.22-beta
+kof version        # e.g.: kof 0.4.0-beta
 kof info           # full environment (embedded JVM, targets, installation)
 ```
 
@@ -136,7 +136,7 @@ The chain `intention → Kof → IR → backend → runtime` is the same for all
 | `kof build <dir> [--target ...]` | compiles to the target |
 | `kof serve <f.kf>` | starts a web app (`web.app()`) |
 | `kof test <f.kf\|dir>` | runs tests |
-| `kof check <f.kf\|dir>` | type-check without emitting |
+| `kof check <f.kf\|dir> [--target <t>]` | type-check without emitting (target-aware gaps) |
 | `kof script <f.kf>` / `kof repl` | direct execution / REPL |
 | `kof fmt <f.kf>` | formats |
 | `kof info` / `kof version` | environment / version |

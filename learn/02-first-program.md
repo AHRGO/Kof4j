@@ -131,19 +131,20 @@ kof run ponto.kf --target=native  # Native rbx→rcx fix
 kof run ponto.kf --target=js      # JS typeof
 ```
 
-### KofScript: top-level `let` becomes global
+### KofScript: top-level `var`/`val` become global
 
-In `kof script` / `kof repl`, `let`/`const` at file level are not `main` locals — they become `KofScriptGlobals`:
+KofScript is pure Kof — there is **no `let`/`const`** (JS sugar removed 06/09;
+`let x = 5` → `PARSE011`/`SEM011`). In `kof script` / `kof repl`, `var`/`val`
+at file level become static fields of the generated `KofScriptGlobals`, and
+loose statements become `main()`:
 
 File `demo.ks`:
 
 ```kf
-let nome = "Mel"
-const pi = 3.14
+var nome = "Mel"
+val pi = 3.14
 
-main() {
-    println(nome + " " + pi)
-}
+println(nome + " " + pi)   // a loose statement is wrapped into main()
 ```
 
 ```bash

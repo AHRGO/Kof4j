@@ -92,6 +92,21 @@ public final class StatementAnalyzer {
                         "cannot assign to '" + fa.fieldName() + "': record is immutable",
                         "SEM038");
             }
+            // #331/#327 — escrita em campo: MESMO contrato do READ (que passa
+            // por SemExpressionTyper), mas aqui o inferType e so do RECEIVER,
+            // entao os cheques de acesso/`final` precisam ser feitos a mao.
+            // Owner: receiver ClassType explicito, ou currentClassName p/
+            // `this.x`. final so e escrito legalmente no <init> da declarante
+            // (o construtor ja cai no caminho legal de checkFinalFieldWrite).
+            String ownerName = onThis ? sa.currentClassName()
+                    : (recvType instanceof Type.ClassType rct ? rct.name() : null);
+            if (ownerName != null) {
+                SymbolTable.Symbol wf = MemberResolver.resolveFieldInHierarchy(sa, ownerName, fa.fieldName());
+                if (wf instanceof SymbolTable.FieldSymbol wfs) {
+                    MemberCallTyper.checkFieldAccess(sa, wfs, ownerName);
+                    MemberCallTyper.checkFinalFieldWrite(sa, wfs);
+                }
+            }
         } else if (ae.target() instanceof ArrayAccessExpr aa) {
             // #149/#152: `l[i]` READ on a List is supported; the WRITE face
             // (`l[i] = v`) was never lowered — it emitted a raw array store
@@ -129,6 +144,11 @@ public final class StatementAnalyzer {
                 SymbolTable tryScope = scope.enterScope();
                 for (StatementNode s : tryStmt.tryBody()) analyzeStatement(sa, s, tryScope, returnType);
                 for (CatchClause cc : tryStmt.catchClauses()) {
+                    // #332/#328: valida o TIPO do catch uma vez aqui (compartilhado
+                    // por JVM/Native/JS/interpreter) — `catch (Int e)` e `catch
+                    // (Foo e)` de classe não-throwable compilavam em silêncio e
+                    // morriam no load (NoClassDefFoundError / VerifyError).
+                    CatchTypeCheck.check(sa, cc);
                     SymbolTable catchScope = scope.enterScope();
                     if (cc.exceptionName() != null) {
                         // #163: `catch (RuntimeException e)` precisa do tipo
@@ -158,6 +178,34 @@ public final class StatementAnalyzer {
                                     + " (variable '" + vds.name() + "')",
                             "SEM048");
                 }
+                // §253 face A (16/09): `var id = time.interval(…, () -> cancel(id))` —
+                // o inicializador contém lambda que LÊ a var em declaração. Hoje o
+                // escopo só define `id` DEPOIS de tipar o inicializador → SEM011 nos
+                // 3 alvos. Pre-define UNKNOWN ANTES da inferência (a inferência do
+                // corpo não depende do tipo do self-ref); o tipo real entra no
+                // define final. Nos alvos NATIVE* a leitura do handle capturado
+                // SIGSEGVa (face B, §253/nat) — abrir lá converteria SEM011 (alto)
+                // em crash: gate SEM092 em compile-time, nunca runtime silencioso (R6).
+                boolean selfCapture = vds.initializer() != null
+                        && CompilerCaptureScanner.lambdaExprReadsName(vds.initializer(), vds.name());
+                boolean selfPredefined = false;
+                if (selfCapture && sa.target().isNative()) {
+                    if (sa.diagnostics() != null) {
+                        sa.diagnostics().error("", 0, 0, 0,
+                                "self-referencing initializer var inside a lambda "
+                                        + "(var '" + vds.name() + "') is not available on the "
+                                        + sa.target() + " target yet — captured handle read in the "
+                                        + "job crashes the worker (§253 face B, native lane); use "
+                                        + "the shadow-handle idiom (var id=\"\"; job reads id after "
+                                        + "assignment; id = time.interval(…) after) (SEM092)",
+                                "SEM092");
+                    }
+                } else if (selfCapture && !scope.hasLocal(vds.name())) {
+                    scope.define(new SymbolTable.LocalVariableSymbol(vds.name(),
+                            Type.UnknownType.UNKNOWN, 0,
+                            vds.type() != null && "val".equals(vds.type())));
+                    selfPredefined = true;
+                }
                 // "val"/"var" são palavras-chave de mutabilidade, não tipos —
                 // o tipo real vem do initializer (ou do type explícito após ':').
                 if (vds.type() != null && !vds.type().isEmpty()
@@ -179,7 +227,8 @@ public final class StatementAnalyzer {
                     varType = Type.UnknownType.UNKNOWN;
                 }
                 // SC5: redeclaração no MESMO escopo é erro
-                if (scope.hasLocal(vds.name()) && sa.diagnostics() != null) {
+                if (scope.hasLocal(vds.name()) && sa.diagnostics() != null
+                        && !selfPredefined) {
                     sa.diagnostics().error("", 0, 0, 0,
                             "variable '" + vds.name() + "' is already defined in this scope",
                             "SEM024");
@@ -209,7 +258,7 @@ public final class StatementAnalyzer {
                     if (sa.diagnostics() != null && !Type.isUnknown(returnType) && !Type.isVoid(returnType)
                             && !Type.isUnknown(valueType) && !TypeChecker.isAssignable(sa, valueType, returnType)) {
                         sa.diagnostics().error("", 0, 0, 0,
-                                "Return type mismatch: expected " + returnType + " but got " + valueType, "SEM010");
+                                "Return type mismatch: expected '" + Type.display(returnType) + "' but got '" + Type.display(valueType) + "'", "SEM010");
                     }
                 }
             }

@@ -18,7 +18,7 @@ Kof installation
         └── tooling
               ├── syntax definition      (editor/kof.tmLanguage.json)
               ├── language server        (kof lsp)
-              ├── formatter              (planned — kof fmt)
+              ├── formatter              (kof fmt)
               └── diagnostics            (kof check / LSP publishDiagnostics)
 ```
 
@@ -52,9 +52,10 @@ The Java API baseline for all tooling is **Java 21**:
 
 - tooling APIs are compatible with Java 21;
 - Kof does not require Java older than 21;
-- later OpenJDK versions (e.g.: 25, for Virtual Threads) may be used
-  internally when appropriate, without becoming a requirement;
-- the official package carries its own JVM (Temurin 21).
+- the repo toolchain requires JDK 25 (D-BASELINE, 14/09) — see README
+  "three JDK layers": the language floor stays JVM 21+ and the tooling API
+  level stays 21 (`KofVersion.TOOLING_API`);
+- the official package carries its own JVM (Temurin 25).
 
 ---
 
@@ -63,11 +64,11 @@ The Java API baseline for all tooling is **Java 21**:
 | Component | Status | Command/File |
 |------------|--------|------------------|
 | Official grammar | ✅ | `editor/kof.tmLanguage.json` (scope `source.kof`) |
-| Language Server | ✅ (minimal) | `kof lsp` (stdio, LSP 3.x) |
+| Language Server | ✅ | `kof lsp` (stdio, LSP 3.x: diagnostics, hover, completion, definition, references, rename) |
 | Type-check | ✅ | `kof check <file.kf\|dir>` |
 | Test runner | ✅ | `kof test <file.kf\|dir>` (PASS/FAIL by exit code) |
 | Environment diagnostics | ✅ | `kof info [--json]` |
-| Formatter | 🔜 planned | `kof fmt` |
+| Formatter | ✅ | `kof fmt` |
 
 
 ---
@@ -86,14 +87,16 @@ IntelliJ, Neovim and LSP editors.
 - `initialize` / `shutdown` / `exit`
 - `textDocument/didOpen` / `didChange` (full sync)
 - `textDocument/publishDiagnostics` with the compiler's real frontend
+- `textDocument/hover`, `textDocument/definition`, `textDocument/completion`
+- `textDocument/references` + `textDocument/rename` (word-boundary, single file)
 
 See [LSP.md](LSP.md).
 
 ---
 
-## 6. Formatter (planned)
+## 6. Formatter
 
-`kof fmt` will use the same frontend AST to rewrite the file with the
+`kof fmt` uses the same frontend AST to rewrite the file with the
 canonical formatting. With no parsing implementation of its own — the
 formatter consumes the official parser's output, ensuring that `kof fmt`
 never changes the program's semantics.

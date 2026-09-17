@@ -160,6 +160,65 @@ public final class JsRuntimeIo {
             export function kofIoDirList(p) {
                 return kof_platform.dirList(p);
             }
+
+            // ── kof.db (DB001) — delegacao ao host (mesmo classpath JDBC do
+            // caminho JVM; sem host = shim #104 com erro claro). Rows voltam
+            // como List<String> json (contrato List<STR> do frontend).
+            export function kofDbConnect(url) {
+                return kof_platform.dbConnect(url);
+            }
+
+            export function kofDbConnect2(url, user, pass) {
+                return kof_platform.dbConnect2(url, user, pass);
+            }
+
+            export function kofDbClose(id) {
+                return kof_platform.dbClose(id);
+            }
+
+            export function kofDbExecute(id, sql) {
+                return kof_platform.dbExecute(id, sql, []);
+            }
+
+            export function kofDbExecute1(id, sql, a) {
+                return kof_platform.dbExecute(id, sql, [a]);
+            }
+
+            export function kofDbExecute2(id, sql, a, b) {
+                return kof_platform.dbExecute(id, sql, [a, b]);
+            }
+
+            export function kofDbExecute3(id, sql, a, b, c) {
+                return kof_platform.dbExecute(id, sql, [a, b, c]);
+            }
+
+            export function kofDbExecute4(id, sql, a, b, c, d) {
+                return kof_platform.dbExecute(id, sql, [a, b, c, d]);
+            }
+
+            export function kofDbQuery0(id, sql, cls) {
+                return kof_platform.dbQuery(id, sql, cls == null ? "" : String(cls), []);
+            }
+
+            export function kofDbQuery1(id, sql, a, cls) {
+                return kof_platform.dbQuery(id, sql, cls == null ? "" : String(cls), [a]);
+            }
+
+            export function kofDbQuery2(id, sql, a, b, cls) {
+                return kof_platform.dbQuery(id, sql, cls == null ? "" : String(cls), [a, b]);
+            }
+
+            export function kofDbQuery3(id, sql, a, b, c, cls) {
+                return kof_platform.dbQuery(id, sql, cls == null ? "" : String(cls), [a, b, c]);
+            }
+
+            export function kofDbQuery4(id, sql, a, b, c, d, cls) {
+                return kof_platform.dbQuery(id, sql, cls == null ? "" : String(cls), [a, b, c, d]);
+            }
+
+            export function kofDbTransaction(fn) {
+                return kof_platform.dbTransaction(fn);
+            }
             """;
 
 }

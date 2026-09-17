@@ -364,8 +364,12 @@ public final class JsRuntimeUiLayout {
             }
 
             export function kofWebStub() {
-                // JS stub for kof.web/db — keeps KofJS compilable; real impl is JVM/Native
-                return 0;
+                // R6: gap EXPLICITO em runtime, nunca no-op silencioso. O
+                // front-end já gateia em compile-time (ExpressionStaticCallLowerer
+                // + KofWeb.contextJsSupported) — este throw é a defesa em
+                // profundidade p/ código pré-compilado ou entrada não-gateada.
+                throw new Error("web: feature not available on the JS target "
+                        + "(WEB001 — see compile-time diagnostic)");
             }
 
             let kofHttpTimeoutSec = 10;

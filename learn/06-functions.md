@@ -2,7 +2,7 @@
 
 # 06 — Functions
 
-> **Status: implemented (JVM / Native / JS) — 0.3.22-beta — examples verified in the compiler**
+> **Status: implemented (JVM / Native / JS) — 0.4.0-beta — examples verified in the compiler**
 >
 > Top-level functions, methods, expression bodies, default parameters,
 > recursion and functions as values (lambdas) work on the JVM, Native

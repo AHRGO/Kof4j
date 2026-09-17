@@ -419,8 +419,10 @@ class SemanticResolutionTest {
             CompilationResult r = compile(tmp, "e.kf", "main() { println(" + e + ") }");
             assertFalse(r.success(), "deve falhar: " + e);
             boolean found = r.diagnostics().getDiagnostics().stream()
-                    .anyMatch(d -> "SEM051".equals(d.code()) && d.message().contains("como argumento"));
-            assertTrue(found, "esperava SEM051 p/ '" + e + "', foi: "
+                    .anyMatch(d -> "SEM051".equals(d.code())
+                            && d.message().contains("as argument")
+                            && !d.message().matches("(?s).*como argumento.*"));
+            assertTrue(found, "esperava SEM051 (EN) p/ '" + e + "', foi: "
                     + r.diagnostics().getDiagnostics());
         }
     }
@@ -584,7 +586,7 @@ class SemanticResolutionTest {
             CompilationResult r = compile(tmp, "e.kf", "main() { " + e + " }");
             assertFalse(r.success(), "deve falhar: " + e);
             boolean found = r.diagnostics().getDiagnostics().stream()
-                    .anyMatch(d -> "SEM055".equals(d.code()) && d.message().contains("ÍNDICE"));
+                    .anyMatch(d -> "SEM055".equals(d.code()) && d.message().contains("INDEX"));
             assertTrue(found, "esperava SEM055 p/ '" + e + "', foi: "
                     + r.diagnostics().getDiagnostics());
         }
@@ -631,8 +633,10 @@ class SemanticResolutionTest {
             CompilationResult r = compile(tmp, "e.kf", "main() { " + e + "; println(1) }");
             assertFalse(r.success(), "deve falhar: " + e);
             boolean found = r.diagnostics().getDiagnostics().stream()
-                    .anyMatch(d -> "SEM056".equals(d.code()) && d.message().contains("homog"));
-            assertTrue(found, "esperava SEM056 p/ '" + e + "', foi: "
+                    .anyMatch(d -> "SEM056".equals(d.code())
+                            && d.message().contains("Kof collections are homogeneous")
+                            && !d.message().matches("(?s).*cole\u00e7\u00f5es.*"));
+            assertTrue(found, "esperava SEM056 (EN) p/ '" + e + "', foi: "
                     + r.diagnostics().getDiagnostics());
         }
     }

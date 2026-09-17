@@ -2,7 +2,7 @@
 
 # Kof Compiler Reference
 
-**Version:** 0.4.0-beta (Sep 2026) — 810 tests
+**Version:** 0.4.0-beta (Sep 2026) — 2218 tests
 
 ## Compilation Pipeline
 
@@ -33,7 +33,7 @@ Kof IR (backend-agnostic) → Optimizer (constant folding, branch simplification
 | `kof build <dir> [--target jvm\|native\|native.risc\|native.arm\|js\|android] [--output <dir>] [--release] [--apk]` | Compile all .kf files |
 | `kof run <file.kf\|dir> [--target jvm\|native\|native.risc\|native.arm\|js\|android] [args...]` | Compile and run (JVM/Native/JS/Android) |
 | `kof serve <file.kf> [--port] [--host]` | Start HTTP server (web.app + legacy handle API) |
-| `kof check <file.kf\|dir>` | Type-check only |
+| `kof check <file.kf\|dir> [--target <t>]` | Type-check only (target-aware gaps) |
 | `kof test <file.kf\|dir> [--target jvm\|native\|js]` | Structured tests `test "nome" { }` on the 3 targets |
 | `kof script <file.ks> [--watch] [--inspect]` | KofScript top-level let → KofScriptGlobals + JIT |
 | `kof repl` | Incremental KofScript REPL |
@@ -43,16 +43,24 @@ Kof IR (backend-agnostic) → Optimizer (constant folding, branch simplification
 | `kof bench [paths...] [--iterations N] [--quick] [--baseline <file>]` | Benchmark harness with baselines |
 | `kof profile <file.kf> [--target ...]` | Execution + metrics (CPU, RSS, GC) |
 | `kof inspect <file.kf> [--json]` | IR statistics (ops before/after the optimizer) |
+| `kof decompile <file.class> [--output <file.kf>]` | Structural Kof skeleton from a `.class` |
+| `kof translate <file.java> [--output <file.kf>]` | Java subset → Kof source |
+| `kof compare <legacy.class\|jar> <file.kf> [--json]` | Differential test legacy vs Kof |
+| `kof migrate <file.class\|java> [--output <file.kf>] [--json]` | Migration + traceable report |
 | `kof debug <file.kf>` | DAP MVP on the JVM target |
 | `kof info [--json]` | Environment report |
-| `kof install <dir>` | Installs this build as a distribution |
 | `kof lsp` | Language Server (stdio, LSP 3.x) |
+| `kof deps <init\|add\|remove\|list\|resolve>` | Package manager (`kofdeps`, Maven Central) |
+| `kof editor <list\|detect\|status\|setup\|install\|uninstall\|update>` | Editor integration (EDI001) |
+| `kof new <name>` | Project skeletons by type |
+| `kof init` | Initialize a project in the current directory |
+| `kof install <dir>` | Installs this build as a distribution |
 | `kof version` | Show version (0.4.0-beta) |
 
-18 commands. `kof fmt` and `kof config gen` implemented (0.4.0-beta).
+26 commands. `kof fmt` and `kof config gen` implemented (0.4.0-beta).
 
 Fixes 27/08:
-- `CompilerDriver.expandKofImports` handles `import a.b.C` (file) in addition to `a.b.*` (folder) — large projects with `a/b/C.kf` now generate both `.class` files.
+- `CompilerImports.expandKofImports` handles `import a.b.C` (file) in addition to `a.b.*` (folder) — large projects with `a/b/C.kf` now generate both `.class` files.
 - `NativeRuntime` free-list GC (`kof_free_head`, `kof_gc_collect` mark-sweep; auto-GC off) + spawn/await via pthread (31/08).
 
 ## Backend Targets
@@ -81,7 +89,7 @@ Fixes 27/08:
 - `kof.cache`, `Map/Set`, `String?`, pattern record destructuring
 
 ### KofScript
-- JIT in-memory, top-level `let`/`const` → `var`/`val` preprocess + `KofScriptGlobals`, evalCache 64 LRU
+- JIT in-memory, top-level `var`/`val` → `KofScriptGlobals` (no `let`/`const` preprocess — JS sugar removed `183cb048`), evalCache 64 LRU
 
 ### KofC
 - C subset (`int` globals, `void` funcs, `if`/`while`/`*(int*)`/`&`) → x86_64 via `as`/`ld`

@@ -21,16 +21,48 @@ final class CmdTest {
     }
 
     static void run(String[] args) {
-        if (args.length < 2) { System.err.println("usage: kof test <file.kf|dir> [--target jvm|native|js|android]"); System.exit(1); return; }
+        if (args.length < 2) { System.err.println("usage: kof test <file.kf|dir> [--target jvm|native|js]"); System.exit(1); return; }
+        if (args[1].equals("--help") || args[1].equals("-h")) {
+            System.out.println("usage: kof test <file.kf|dir> [--target jvm|native|js]");
+            return;
+        }
         Path src = Path.of(args[1]);
         Target target = Target.JVM;
         for (int i = 2; i < args.length; i++) {
-            if (args[i].equals("--target") && i + 1 < args.length) {
+            if (args[i].startsWith("--target=")) {
+                target = KofCliSupport.parseTarget(args[i].substring("--target=".length()));
+            } else if (args[i].equals("--target") && i + 1 < args.length) {
                 target = KofCliSupport.parseTarget(args[i + 1]);
                 i++;
+            } else if (args[i].equals("--help") || args[i].equals("-h")) {
+                System.err.println("usage: kof test <file.kf|dir> [--target jvm|native|js]");
+                return;
+            } else if (args[i].startsWith("-")) {
+                // R6: an unknown flag (or --target without its value) must never
+                // be silently ignored — the user/CI would believe it took effect.
+                System.err.println("test: unknown or incomplete flag: " + args[i]
+                        + " (accepts: --target jvm|native|js)");
+                System.exit(1);
+                return;
+            } else {
+                System.err.println("test: unexpected argument: " + args[i]
+                        + " (accepts: --target jvm|native|js)");
+                System.exit(1);
+                return;
             }
         }
         if (!Files.exists(src)) { System.err.println("not found: " + src); System.exit(1); return; }
+        // android é empacotamento (APK/AAB), não um alvo de execução: `kof test`
+        // não produz binário standalone. Recusa honesta e cedo (R6) em vez do
+        // enganoso "no binary produced" depois de compilar o projeto inteiro.
+        if (target == Target.ANDROID) {
+            System.err.println("test: --target android is not a test target"
+                    + " (android is packaging). Test the logic with"
+                    + " --target jvm|native|js; use 'kof build --target android'"
+                    + " to build the APK");
+            System.exit(1);
+            return;
+        }
         List<Path> files = Files.isDirectory(src) ? KofCliSupport.collect(src) : List.of(src);
         if (files.isEmpty()) { System.out.println("no .kf/.kof files found"); return; }
         CompilerDriver driver = new CompilerDriver();

@@ -2,7 +2,7 @@
 
 # 39 — Standard Library universal (math, strings, encoding, uuid, validation, time)
 
-> **Kof 0.3.0-beta — `intention->Kof->frontend->IR->backend->runtime`**
+> **Kof 0.4.0-beta — `intention->Kof->frontend->IR->backend->runtime`**
 
 A Standard Library do Kof existe para uma coisa: **você nunca reimplementar o
 óbvio**. Matemática de uso comum, predicados e conversores de string,
@@ -160,9 +160,9 @@ uuid.isUuid("não-é-uuid")       // false
 
 `v4()` é não-determinístico por natureza: os testes travam **forma**, não
 igualdade. `isUuid` é o inverso: predicado puro de forma (36 chars, traços
-em 8/13/18/23, hex min ou maiúsculo) — não verifica version/variant. Tem
-JVM/Script/JS/x86; riscv64/aarch64 ficam atrás do gap `UUID001` (fatia B
-própria pendente — o compilador recusa com código claro, nunca stub).
+em 8/13/18/23, hex min ou maiúsculo) — não verifica version/variant. Roda em
+JVM/Script/JS e em Native x86/riscv64/aarch64 (`UUID001` fechado 09/09 — fatia B +
+tradutor; `getrandom(2)` sob qemu, `KofUuidTest.uuidV4CrossArch`/`isUuidCrossArch`).
 
 ## uuid — v7 (S3b.2, RFC 9562)
 

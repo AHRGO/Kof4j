@@ -214,7 +214,7 @@ error: type mismatch
 
 | Componente | Status |
 |------------|--------|
-| Lexer | ✅ Completo (55+ keywords, `String?`, `let`/`const` alias para KofScript) |
+| Lexer | ✅ Completo (55+ keywords, `String?`; SEM `let`/`const` — sugar JS removido do KofScript 06/09) |
 | Parser | ✅ Funcional (records, classes, interfaces, funções, `case String s`, `Point(x,y)`, `String?`) |
 | AST | ✅ Completo para constructs suportados |
 | Type system | ✅ `String?` nullable, `List<T>` inference, imports `a.b.C` fix |
@@ -224,9 +224,9 @@ error: type mismatch
 | JVM Backend | ✅ Funcional (via ASM, bytecode V21, exception table, virtual threads; ) |
 | Native Backend | ✅ Funcional (x86-64 free-list GC + spawn/pthread + FP XMM; riscv/arm placeholders via qemu) |
 | Diagnostics | ✅ Funcional |
-| KofScript (`KofScriptGlobals`) | ✅ `let`/`const` topo, repl, --watch |
+| KofScript (`KofScriptGlobals`) | ✅ `var`/`val` no topo → `KofScriptGlobals`, repl, --watch (sem `let`/`const`) |
 | KofC (`KofCCompiler`) | ✅ C subset → ELF nativo-only (`kof c`) |
-| CLI | ✅ Funcional (18 comandos: build, run, serve, check, test, script, repl, c, fmt, config gen, bench, profile, inspect, debug, info, lsp, install, version) |
+| CLI | ✅ Funcional (26 comandos: build, run, serve, check, test, script, repl, c, fmt, config gen, bench, profile, inspect, decompile, translate, compare, migrate, debug, info, lsp, install, deps, editor, new, init, version) |
 
 ## Multiplatform architecture
 
@@ -236,7 +236,7 @@ A arquitetura do compilador foi projetada para suportar múltiplos backends:
                     Kof Source (.kf / .ks / .c)
                           │
                           ▼
-                        Lexer (let/const alias, String?)
+                        Lexer (String?; sem let/const — KofScript e Kof puro)
                           │
                           ▼
                         Parser (case String s, Point(x,y))

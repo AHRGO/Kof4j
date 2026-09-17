@@ -21,8 +21,8 @@ import java.util.List;
  * <p>Internamente cada chamada mapeia para funções {@code kof_db_*} do
  * {@code dev.kof.runtime.KofRuntime} gerado. Aridade dinâmica (varargs de
  * bind) é resolvida por overloads de aridade fixa (0-4 parâmetros).
- * JS reporta {@code DB001} em compile-time.
- */
+ * JS soporta connect/execute/query/transaction não-tipado (DB001 fechado 16/09;
+ *  tipado db.query<T> → DB002). */
 public final class KofDb {
 
     private KofDb() {}
@@ -47,14 +47,28 @@ public final class KofDb {
      *  ({@code NativeCrossLink.needsSqlite} + {@code -lsqlite3}) e o runtime
      *  {code kof_db_*} do cross vive nas fatias RtB46/RtB47. Só o subconjunto
      *  SQLite (URLs `sqlite:*`); MySQL/oracle devolvem null em runtime. JS
-     *  reporta DB001. */
+     *  soporta kof.db não-tipado (DB001 fechado 16/09; tipado → DB002). */
     static boolean supportedOn(Target target) {
         return target == Target.JVM || target == Target.NATIVE
-                || target == Target.NATIVE_RISCV64 || target == Target.NATIVE_AARCH64;
+                || target == Target.NATIVE_RISCV64 || target == Target.NATIVE_AARCH64
+                || target == Target.JS;
     }
 
     static String gapCode() {
         return "DB001";
+    }
+
+    /** No JS o query tipado (`db.query<User>`) nao e portavel: o programa
+     *  nao emite .class no classpath do host GraalJS (Target.JS nao produz
+     *  bytecode JVM), entao o `Class.forName` da ponte nao tem o que carregar.
+     *  DB002 = falha ALTA em compile-time, nunca runtime silencioso; o
+     *  caminho nao-tipado (`query` sem type arg) funciona no JS. */
+    static boolean typedQueryUnsupportedOn(Target target) {
+        return target == Target.JS;
+    }
+
+    static String typedQueryGapCode() {
+        return "DB002";
     }
 
     record DbCall(String function, Type returnType, List<Type> parameterTypes) {}

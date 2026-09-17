@@ -21,7 +21,7 @@ class TranslateExpr {
      * (aqui na base) não enxerga {@code parseBlock}.
      */
     protected List<String> parseStatementBlock() {
-        throw new TranslateException("lambda com corpo em bloco indisponível nesta camada");
+        throw new TranslateException("lambda with a block body unavailable at this layer");
     }
 
     /**
@@ -29,7 +29,7 @@ class TranslateExpr {
      * corpo/statements vivem em {@link TranslateStatements} (subclasse).
      */
     protected String parseSwitchExprHook() {
-        throw new TranslateException("switch expressão indisponível nesta camada");
+        throw new TranslateException("switch expression unavailable at this layer");
     }
 
         String parseExpr() {
@@ -128,13 +128,13 @@ class TranslateExpr {
                     p.next();
                     String ty = parseType();
                     // Pattern matching `o instanceof String s` (binding) — Kof
-                    // não tem binding de pattern; introduzir a variável muda
+                    // has no binding de pattern; introduzir a variável muda
                     // o fluxo → gap honesto R6 (antes: `expected ')' but
                     // found 's'` confuso).
                     if (p.peek().type == T.IDENT && !p.at("instanceof")) {
                         throw new TranslateException(
-                                "pattern matching `instanceof Tipo var` (binding) não tem equivalente "
-                                + "direto em Kof (use `instanceof` + cast/`as`) — revisão manual");
+                                "pattern matching `instanceof Type var` (binding) has no equivalent "
+                                + "direct in Kof (use `instanceof` + cast/`as`) — manual review");
                     }
                     e = e + " instanceof " + ty;
                 } else {
@@ -187,7 +187,7 @@ class TranslateExpr {
         String parseUnary() {
             if (p.at(T.NOT)) { p.next(); return "!" + parseUnary(); }
             if (p.at("~")) {
-                // Complemento bit a bit `~x`: Kof não tem `~` (PARSE041), mas
+                // Complemento bit a bit `~x`: Kof has no `~` (PARSE041), mas
                 // a identidade `~x == -x - 1` é exata em complemento de dois
                 // → emite `(-x - 1)` com parênteses (precedência preservada).
                 p.next();
@@ -210,12 +210,12 @@ class TranslateExpr {
                         // method call on receiver
                         e = translateCall(e, field);
                     } else if (e.equals("Math")) {
-                        // `Math.PI` / `Math.E` — constantes JDK sem equivalente
+                        // `Math.PI` / `Math.E` — constantes JDK no equivalent
                         // garantido em Kof (`math.*` cobre funções) → gap
                         // honesto R6 em vez de `Math.PI` = SEM011 silencioso.
                         throw new TranslateException(
-                                "constante `Math." + field + "` não é resolvida pelo translator "
-                                + "(Kof não expõe as constantes da classe Math do JDK) — revisão manual");
+                                "constant `Math." + field + "` is not resolved by the translator "
+                                + "(Kof does not expose the JDK Math class constants) — manual review");
                     } else {
                         e = e + "." + field;
                     }
@@ -233,11 +233,11 @@ class TranslateExpr {
                     e = e + "(" + args + ")";
                 } else if (p.at(":") && p.peek(1).text.equals(":")) {
                     // Method reference `Tipo::metodo` / `obj::metodo` — Kof
-                    // não tem referência de método (só lambda) → gap honesto
+                    // has no referência de método (só lambda) → gap honesto
                     // R6 (antes: `expected ')' but found ':'` confuso).
                     throw new TranslateException(
-                            "method reference (`::`) não tem equivalente direto em Kof "
-                            + "(use lambda `(x) -> ...`) — revisão manual");
+                            "method reference (`::`) has no direct equivalent in Kof "
+                            + "(use a lambda `(x) -> ...`) — manual review");
                 } else if (p.at(T.INC)) { p.next(); e += "++"; }
                 else if (p.at(T.DEC)) { p.next(); e += "--"; }
                 else break;
@@ -257,15 +257,15 @@ class TranslateExpr {
             if (receiver.equals("Math")) {
                 // `Math.<fn>(...)`: Kof expõe a stdlib em `math.<fn>` mas
                 // `math.min/max/abs` são **Int-only** (SEM025 p/ Double, sem
-                // widening) e o translator não tem tipos p/ escolher o
+                // widening) e o translator has no tipos p/ escolher o
                 // overload → mapear cegamente geraria Kof que não compila;
                 // emitir `Math.x(...)` dava `Math` undefined = SEM011
                 // silencioso. Mapear Java→stdlib é decisão de design
                 // (regra 6) → gap honesto R6 (Q4 13/09).
                 throw new TranslateException(
-                        "chamada a `Math." + method + "(...)` não é resolvida pelo translator "
-                        + "(Kof usa o namespace `math.*`, mas os overloads Double/Int não mapeiam "
-                        + "automaticamente) — revisão manual");
+                        "chamada a `Math." + method + "(...)` is not resolved by the translator "
+                        + "(Kof uses the `math.*` namespace, but the Double/Int overloads do not map "
+                        + "automatically) — manual review");
             }
             if (method.equals("equals")) {
                 String arg = parseSingleArg();
@@ -320,9 +320,9 @@ class TranslateExpr {
                         // `java.util.List.of(...)` = Kof inválido/SEM011).
                         if ((t.text.equals("java") || t.text.equals("javax")) && p.at(".")) {
                             throw new TranslateException(
-                                    "tipo qualificado em expressão (`" + t.text
-                                    + ".…`) não é resolvido pelo translator (imports ignorados) — "
-                                    + "revisão manual");
+                                    "qualified type in expression (`" + t.text
+                                    + ".…`) is not resolved by the translator (imports are ignored) — "
+                                    + "manual review");
                         }
                         if (p.at(T.ARROW)) {
                             // Lambda de um parâmetro SEM parênteses (`x -> expr`):
@@ -449,8 +449,8 @@ class TranslateExpr {
                 // concrete type or nullable T?"). Sem equivalente direto →
                 // gap honesto R6 (bug latente Q4 13/09).
                 throw new TranslateException(
-                        "wildcard genérico (`?`, `? extends`, `? super`) não é suportado em Kof "
-                        + "(PARSE086; use tipo concreto ou `T?`) — revisão manual");
+                        "generic wildcard (`?`, `? extends`, `? super`) is not supported in Kof "
+                        + "(PARSE086; use a concrete type or `T?`) — manual review");
             }
             String base = p.next().text;
             // Tipo qualificado `java.util.Map` → `Map` (stripa o pacote; o
@@ -485,16 +485,16 @@ class TranslateExpr {
         }
 
         private String parseParam() {
-            // `final T x` — Kof não tem final em parâmetro → descarta.
+            // `final T x` — Kof has no final em parâmetro → descarta.
             while (p.at("final")) p.next();
             String ty = parseType();
             if (p.at(".") && p.peek(1).text.equals(".") && p.peek(2).text.equals(".")) {
-                // Java varargs `T...` não tem equivalente em função Kof
+                // Java varargs `T...` has no equivalent em função Kof
                 // (só builtins setOf/listOf são variádicos). Revisão manual
                 // (R6: nunca silencioso).
                 throw new TranslateException(
-                        "varargs (`T...`) não tem equivalente direto em Kof "
-                        + "(use `List<T>` ou `T[]`) — revisão manual");
+                        "varargs (`T...`) has no direct equivalent in Kof "
+                        + "(use `List<T>` or `T[]`) — manual review");
             }
             String nm = p.next().text;
             return ty + " " + nm;

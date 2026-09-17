@@ -70,6 +70,17 @@ public class ParseContext {
 
     public String expectId(String message, String code) {
         if (check(TokenType.IDENTIFIER)) return advance().value();
+        // #330: `fn`/`fun`/`func` são RESERVADAS (SG-001) — em posição de nome
+        // o diagnóstico certo é PARSE085 com a forma correta, não o genérico
+        // do chamador. Lexer + Parser (topo de arquivo) já fazem o mesmo.
+        if (check(TokenType.FUN, TokenType.FN, TokenType.FUNC)) {
+            Token kw = peek();
+            advance();
+            diagnostics.error(file, kw.line(), kw.column(), kw.value().length(),
+                    "'" + kw.value() + "' is a reserved word (Kof has no function keyword); "
+                    + "declare as 'Type name(...) { }' or 'name(...): Type { }'", "PARSE085");
+            return "error";
+        }
         diagnostics.error(file, peek().line(), peek().column(), peek().length(), message, code);
         return "error";
     }

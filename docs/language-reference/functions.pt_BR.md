@@ -146,18 +146,23 @@ main() { println(idf<Int>(7)) }     // → 7 (probe)
 - **Top-level**: compiladas para a classe `Main` (ou `<pkg>/Main`) como métodos
   `static` (`CompilerDriver.java`, método `lowerToIR`).
 - **Membros de classe**: métodos normais.
-- **Não há** funções aninhadas (função dentro de função) — `main() { f() {} }`
-  não é parseado como declaração de função aninhada. **Unspecified** (SG-011).
-- **Não há** funções locais nomeadas; para comportamento nomeado local, use
-  lambda em `val`.
+- **Função aninhada (função dentro de função) funciona**, mas só na forma
+  **tipada**: `main() { Int f() { return 1 }; println(f()) }` é hoisted para uma
+  top-level `outer__f` inserida antes da externa (`JvmE2ETest.execNestedFunction`,
+  SG-011). A forma sem tipo `f() {}` **não** é declaração → `SEM015`; a forma
+  anotada `f(): Int {}` é erro de parse (`PARSE041`).
+- **Fora isso, não há** funções locais nomeadas; para outro comportamento
+  nomeado local, use lambda em `val`.
 
 ---
 
 ## 9. Sobrecarga de função
 
-- **Não há sobrecarga de função top-level** — duas funções com o mesmo nome na
-  mesma unidade colidem (o `define` sobrescreve; `resolveInHierarchy` retorna
-  uma). **Unspecified** se é erro ou último-vence.
+- **Sobrecarga de função top-level funciona** (§131/SG-011): duas funções com
+  o mesmo nome mas **assinaturas diferentes** coexistem e o call site resolve o
+  candidato mais específico (exato > subtipagem; a JVM é o oráculo). Assinatura
+  **exatamente duplicada** é erro (`SEM047`); diferença **só no retorno** não é
+  assinatura (também `SEM047`); chamada **ambígua** → `SEM057` com dica de cast.
 - **Construtores** sobrecarregam por aridade (ver [classes.md](classes.md)).
 - **Métodos** de classe sobrecarregam por assinatura (§131 fechado 13/09 —
   ver §11 de type-system.md).

@@ -10,10 +10,22 @@
 >
 > | | |
 > |---|---|
-> | **OPEN Queue (sweep 13/09 — sections without resolution in the header itself)** | **32 items** (12 from the sweep [~~§176~~ closed 14/09] + §184/§185 ✅ FIXED 15/09 (interp crash Char[]/Bool[] store — coerceFor now produces the REAL slot type Character/Boolean, KofInterpreterParityTest.charBoolArrayStore 26/26, lane development .18)/§186/§187/§188/§192/§193/§194/~~§195~~/§196/§197/§201✅/§202✅/§203✅/§206✅/§207✅/§208✅/§209 ✅ FIXED JVM 14/09 (`59e2403b`, `InterfaceDefaultMethodE2ETest` 5/5; JS/Native face → §248)/§210✅/§211 ✅ CLOSED 15/09 (D-ENUM207 lane .15: enum = real class — `getstatic Dir.N:LDir;`, `Dir.class` emitted, `getClass()`→Dir, `instanceof Dir`, identity `==`, real `name`/`ordinal`/`values`/`valueOf`; `enum == String` = SEM062; `EnumIdentityE2ETest` 6/6, suite 1877/0/16-node)/§212 ✅ FIXED 15/09/§213/§214 ✅ FIXED 15/09/§215 ✅ FIXED 15/09/§216 🟡 face 1 `c.toString()` ✅ FIXED 15/09 (`69bc0f73`), face 2 `println`+concat frozen rule 6/§217✅/§218 🔴 OPEN 15/09 (re-measured `ClassFormatError: Illegal class name ""` on tip 2fc7d6e0; DEFERRED to 0.4.1 by the maintainer, lane .17)/§219 🟡 (#160 ✅ 15/09; #151 silent-loss face ✅ 15/09 → SEM011, feature deferred; #159 ✅ CLOSED 15/09 ~22:05 (`9e270e56` D-NARROW-WHILE — `NullSafetyE2ETest` 12/12, both repro cases green with fresh jar; issue closed with proof))/§220/~~§221~~/§222 ✅ FIXED 15/09/§223 ✅ FIXED 15/09/§224 ✅ FIXED 15/09/§225 ✅ FIXED 15/09/§226 ✅ FIXED 15/09/§227 ✅ FIXED 15/09/§228/§229 ✅ FIXED 15/09/§230 ✅ FIXED 15/09/§231/§232 ✅ FIXED 15/09/§233 ✅/§234 ✅ FIXED 15/09/§235(new lane .18)/§236 ✅/§237 ✅/§238 ✅/§239 new/§240 ✅ FIXED 15/09 (REGRESSION 8935c8a7: knows() for all java.* → 39 suite reds, lane .22; separação knows()=entries OR JDK∖builtin, `KofBuiltinJdkSeparationE2ETest` 4/4, suíte 53→15) /§241 ✅ FIXED 15/09 (REGRESSION c0cf805e: Nullable(primitive) boxed globally but half-landed → Int? return VerifyError + 14 suite reds; REVERTED because the boxing landed on ONE face only, NOT across the 4 targets — NOT because §125 forbids boxed null (a MISREAD, corrected 15/09 by the maintainer — DECISIONS §7); boxed T? is not blocked by rule 6; opening it as a work front is the maintainer's call, lane compiler .22; suite 15→1 fail) /§242 ✅ FIXED 15/09 (#256 residual: abstract-override check matched by name+ARITY, not signature — same-arity-different-type wrongly satisfied the abstract; now keys by `TopLevelOverload.sigTag` + `satisfiesAbstract`, `ConcreteClassMissingAbstractMethodTest` 6/6, lane compiler .22; #266 = same root, PARAMETER face) /§243 ✅ FIXED 15/09 (#261: user class named `List`/`String`/`Set`/`Map` was IGNORED — builtin alias won → IllegalAccessError/NoSuchFieldError; now the §179 shadowing guard gates every alias pin, `UserClassShadowsBuiltinE2ETest` 7/7 [RED 4/7 pre-fix], lane compiler .22) /§244 ✅ FIXED 15/09 (#267: `+` on two erased-generic operands (`Object`) emitted `iadd` → VerifyError; the concat branch now fires when both operands are non-numeric, `GenericOperandConcatE2ETest` 4/4 [RED 3/4 pre-fix], lane compiler .22) (§228 List ✅ fixed 14/09, lane .15; /§245 ✅ FIXED 15/09 (test-only: `KofConcurrency2Test.stopFlagFieldWriteObservedBySpinReader` mis-sized — the 500M-Int spin-reader loop is closed by the C2 in ~83 ms, BEFORE the writer's `time.sleep(100)` → deterministic `nao-observou`; budget raised to Long 5B (~1.55 s = ~15× margin); Q0: 3/3 red without the SG-020 `ACC_VOLATILE`, 3/3 green with it; lane bugs-and-gaps `192.168.100.15`; DOING gate 2→1 fail, the remaining = §205) /§246 ✅ FIXED 15/09 (#268: chained member access on a generic type-parameter field (erased to `Object`) emitted an invalid JVM owner — field → `"?"` (`NoClassDefFoundError: ?`), call → `""` (`ClassFormatError`); missing `substituteTypeVariable` in the field-access path; FIXED by lane compiler .22 — `CompilerTypes.substituteTypeVariableIn` + checkcast/unbox on the erased load, `GenericFieldAccessE2ETest` 6/6 [RED 5/6 pre-fix]) /§247 ✅ FIXED 15/09 (#269: write through a NULLABLE receiver was silently accepted (no SEM049, unlike the read) and emitted `putfield Field "?".num:...` → VerifyError; FIXED by lane compiler .22 — SEM049 on the write + `NullableType` unwrap in `ExpressionAssignmentLowerer`, `GenericFieldAccessE2ETest` 6/6 [RED 5/6 pre-fix]) §233/§234 renumbered 14/09 ~17:40 after §231/§228 collision with lanes .18/.15; §232 = implicit-this face of §227 family, owner .18; §239 = JS `String.format` COMP002, catalogued 14/09 by lane .15); §189 ✅ fixed 14/09; §190 test of lane `.18` — `KofBlogE2ETest` without `Content-Length`; §191 ✅ fixed 14/09 (`cookieSet` secure/httpOnly string case); **§192 had a DUPLICATE (parseOrDefault lane `.17` × `db.query<Record>` lane `.18`) — the `db.query<Record>` record was renumbered to §197 on 14/09 by the registry owner (lane bugs-and-gaps `192.168.100.15`); §192 = parseOrDefault; **NEW §194** (for-in over String/non-collection was ACCEPTED and broke per target — JVM VerifyError/Native SIGSEGV/Script crash/JS iterated; ✅ FIXED 14/09 SEM058, triage of #145, lane bugs-and-gaps `192.168.100.15`); **NEW §195** (`KofBlogE2ETest` red at HEAD: test uses `app.security` but the GETs don't send a session → 401, middleware CORRECT; ⚠️ TEST, owner lane `.18`/`.22`); **NEW §196** (EN i18n broke the guard `ConcurrencyGapsDocTest` — the test pinned the PT header `| Construto |`; ✅ FIXED 14/09, guard accepts both spellings, lane bugs-and-gaps `192.168.100.15`))) (sections/sub-faces without resolution) — ~~§177~~ ✅ FIXED 13/09 (lambda with a BLOCK body that returns a local declared in the block was typed void/SEM033 when the module had a class — `firstReturnValueType` didn't record the body's `VarDeclStmt`; lane bugs-and-gaps `192.168.100.15`, closed in the §178 unit; translator repro runs 4 targets = 8). **§179 ✅ FIXED 14/09** (`kof.ui`/`kof.media` type DECLARED → JVM VerifyError; fixed per DECISIONS §4 option A — `qualifyDeep` step 2b + `unitDeclaresType` shadowing guard; owner 192.168.100.18) **+ §180 ✅ FIXED 15/09** (println double/float in Native x86 ≠ JDK `Double.toString`/`Float.toString` — residual/overclaim of bug 44; `RuntimeDtoa` `%.*e`+`strtod` shortest round-trip, x86_64 only, lane development `192.168.100.18`; DECISIONS §6) **+ §181 ✅ FIXED 13/09** (cast `Double/Float as Int/Long` out of range/NaN/Inf — implemented in `c90e85ee` (JS `kofD2I/kofD2L` + Native) and **regression of the x86/riscv fix fixed by lane bugs-and-gaps `192.168.100.15`**: integer bits read as double saturated EVERY positive value; duplicated riscv labels; 4 targets) **+ §182 ✅ FIXED 13/09** (ISO parse of `kof.time` with a SIGN field: JVM/Script lenient via `Integer.parseInt`, Native strict, JS inconsistent — lane .18 fix `a13665f7`, STRICT consensus) **+ §183 ✅ FIXED 13/09** (test `KofTimeE2ETest.todayIso…` was clock-flaky — literal `isToday(2026,9,13)`; lane .18 fix `a13665f7` via parts of `todayIso()`; finding of lane bugs-and-gaps `192.168.100.15`) **+ NEW §184** (store into `Byte[]`/`Short[]` out of range does NOT truncate in JS — JVM/Native/Script `-126`/`4464` vs JS `130`/`70000`; silent, rule 5) **+ NEW §185** (Script interpreter **crash** when writing to `Char[]` **and `Bool[]`**: `c[0]='A'`/`b[0]=true` → `argument type mismatch`; JVM/Native/JS correct — the real root cause is `KofInterpreterValues.coerceFor` on the live path `KofInterpreter:306`, **not** the `KofInterpreterOps.arrayStore` which is dead code) **+ §189 ✅ FIXED 14/09** (record with a **nullable** generic list field `List<Item>?` — `toGenericSignature` didn't unwrap `NullableType` → record component without `Signature` → `json.decode` returned a raw `LinkedHashMap` → `ClassCastException`; **the test of #128 `76ca3dd4` went up RED while declaring green**; fix = unwrap nullable, lane bugs-and-gaps `192.168.100.15`) **+ §187 🟡 Native face ✅ FIXED 13/09** (`Char[]` out of range did NOT narrow to 16 bits in Native — `elementTypeSize` maps `char`→4 and `kof_array_set` did a raw `movl`; **fix = 0xFFFF mask on the store** x86 `movzwl` + riscv/aarch `slli`/`srli`, stride 4 preserved; **JS face remains OPEN** = §184; JVM/Script `4464`/`65535`; **§186 = distinct bug from collaborator Jonas Rocha**, non-constant `static` initializer/issue #133)   — ~~§168~~ ✅ FIXED 13/09 (`3ab4c99e`; SEM025 json — `json.metodoRuim()` now rejected, re-verified in `kof check`; it was pre-existing, not from WEB001-T1), ~~§166~~ ✅ FIXED 13/09 (hello size gate: baseline re-measured 7.700→8.297; DOM shim #121 is a legitimate `always` preamble, same process as #104 — option (a) of the record itself; lane bugs-and-gaps), §165 re-verified 13/09: does NOT reproduce in a clean build (node v22 present, export in the runtime, green cell) — `static final` inlining trap, see §165; ~~§81~~ ✅ FIXED 13/09 (5b: Long=BigInt in JS, real 64-bit parity, JS golden unified with the JVM), §101 (Double relationals with NaN diverge cross — **frozen** rule 6), §104b-ii (record in collection + storage-box asm — **lane bugfixer**, LARGE unit), §107 🟡 (native `println(collection)` → pointer garbage; **scalar face ✅ FIXED 12/09** in the 3 natives `f3b3821c`+B39; record/nested=`?` remain until §104b-ii + FP-cross=FLT001), §114 ⏳ (record equals with reference field in Native; sub-face of §104b-ii), §129 (throw in `spawn` worker → cross-thread longjmp in Native — **lane nat**; was referred to as "§129-TLS"), §132 (KofJS: task of task doesn't run without yielding the event-loop — OTP002 gate; **another lane**), §161/NAT-STR01 (ASCII-only case-fold in Native vs Unicode in JVM/JS — **DECIDED 13/09**, lane nat; recorded here 13/09). **§165 RE-VERIFIED 13/09 (owner 192.168.100.17, node v22 present): does NOT reproduce in a clean build** — the export REACHES `kof-runtime.mjs`, the cell is green; the symptom was the `static final` inlining trap (stale classes). Closure/shielding = §106/js-slices owner; §166 open). **~~§149~~ is NOT open — ✅ FIXED 12/09** (the previous line listed it by mistake; the root was the `JsIfThrowElse` of §147). **§156 ✅ FIXED 13/09** (heterogeneous list of lambdas with the same signature → element without className, SAM dispatch). **§155 ✅ FIXED 13/09** (function-type in type-args → `ClassFormatError`; parser preserves the type-ref spaces). **§127-JVM ✅ FIXED 13/09** (decision 9a: `as ()->T` parses as type-ref; checkcast for synthetic SAM interface). **§94 ✅ FIXED 13/09** (EQ/NE of Double/Float in the interpreter now IEEE). **§125 ✅ FIXED 12/09** (return Nullable(primitive) → default; cell `nullableprint` 4/4). **§139 ✅ FIXED 12/09** (JS fold `f()==null` → COMP002; JS parser discards mid-expression). **§140 ✅ FIXED 12/09** (≤500 gate became a ratchet with a baseline in CI). **§90 ✅ FIXED 12/09** (lane web). **§145/§146/§147 ✅ FIXED 12/09** (`440730c8`, issue #101). **§45 ✅ IMPLEMENTED 13/09** (DD-01 option 4a: FinallyFrame in the IR; 4 targets, `063ed956`) and **S10c ✅ 13/09** (`random.randomBytesHex`, `317b23e7`). **§157/§158/§159/§160 ✅ FIXED 13/09** (issue-lane: #103 case 3 POP2 in `HashMap.put` of `Long`, kof.web `header()`/`query()` `String?`+SEM049, Native web WEB001, KofJS hostless `kof_platform`). **§172 ✅ FIXED 13/09** (SHIFT compounds `<<=`/`>>=`/`>>>=` lowered as a plain assignment — silent miscompilation; + 2nd face `Long<<=Long` VerifyError, L2I on the count; lane development/translator, owner = 192.168.100.22). **Honest conclusion (13/09):** of the **8 open items**, most depend on a **maintainer decision already ratified** (implementation queue), **rule-6 freeze** (§101 + sub-faces §114/§107 = 3), **another lane** (§104b-ii lane bugfixer + §129 lane nat + §132 = 3) — **§89 ✅ FIXED 13/09** (`e33425b5`, 4 targets + SEM090 warning), **§106 ✅ FIXED 13/09** (`5b939106` + JS residual `ab85cfae`, 4 targets), **§117 ✅ FIXED 13/09** (`3734f2aa`), **§131 ✅ FIXED 13/09** (`18a64d45`, 4 backends; + **same-arity/types residual** `73ca2d58`, Native), **§156 ✅ FIXED 13/09**, **§81 ✅ FIXED 13/09** (Long=BigInt JS, own section) and **§163 ✅ FIXED 13/09** (interpreter: 2nd wide parameter read as `null` — 4-target parity, found in the `NativeBackend` split probe). **§167 ✅ FIXED 13/09** (bitwise/shift with mixed `Long`: JVM VerifyError + JS TypeError/wrong mask + Long overflow without wrap in JS; lane bugs-and-gaps `192.168.100.15`, 4 targets, 3 tests — own section). |> | **§167 ✅ FIXED 13/09 (lane bugs-and-gaps, 192.168.100.15)** | bitwise/shift with mixed `Long`: JVM VerifyError + JS TypeError/wrong mask + Long overflow without wrap in JS. 4 targets; found in the 13/09 Q4 hunt. Related overclaim of §81 (declared "real 64-bit" covering only parse/literal). Proof: `BackendParityTest.parityLongBitwiseShiftMixed` + `KofInterpreterParityTest.longBitwiseShiftMixed` + `bitwise` cell extended 4/4. |> | **§172 ✅ FIXED 13/09 (lane development/translator, 192.168.100.22)** | compound shift `<<=`/`>>=`/`>>>=` was parsed but lowered as a SIMPLE assignment (only the RHS stored): `x=6; x <<= 2` gave `2` (silent, 4 targets). Fix: `isCompoundOp`+`compoundBinaryOp` with SHL/SHR/USHR + `emitCompoundRhsConv` (L2I on the wide RHS). Proof: `CoreRegressionE2ETest.compoundShiftAssignments`. | /§248 🔴 OPEN 15/09 (cross-target gap of §209/#213: interface default methods dropped on JS — `TypeError` at runtime — and on Native — prints `null`, exit 0; JVM-only feature, needs a scope decision, lane compiler .22) /§249 ✅ FIXED 15/09 (two identifiers in a row at statement start were SILENTLY parsed as a typed decl `Type name` — `s length` / `x is Dog`; root: the declared type of a `VarDeclStmt` was never validated, so an unknown simple name became an invisible dead decl; now SEM011, `UndeclaredVarTypeE2ETest` 10/10 [RED 3/10 pre-fix]; lane compiler .22) /§251 ✅ FIXED 15/09 (declared types NEVER validated → SEM011 at every declaration site via a dedicated `DeclaredTypeChecker` + `MemberResolver.declaredTypeUnresolved` with type-variable whitelist; `DeclaredTypeValidationE2ETest` 14/14 [RED 7/14 pre-fix]; lane compiler `192.168.100.22`) /§252 🔴 OPEN 15/09 (#273: Native x86_64 INTERMITTENT `spawnWorkerThrowPropagatesThroughSelectAnyNative` — `Runtime error: array index out of bounds`, 2 in 7 full-module runs, byte-identical, NOT reproducible in isolation (9/9) nor 20× binary; suspected race in the §129 per-thread handler path; owner = native lane .18/nat) /§253 🔴 OPEN 15/09 (one-shot timer idiom `var id = time.interval(10, () -> { time.cancel(id) })` → SEM011 on ALL targets — the var being declared is out of the lambda scope; pre-declared workaround reads `id` inside the job → SIGSEGV 139 on native x86 only; blocks kof-ui-widgets Toast auto-dismiss/UIW008; face A lane compiler .22, face B nat .18; found by development .18 verifying UIW008/UIW020)
+> | **OPEN Queue (sweep 13/09 — sections without resolution in the header itself)** | **32 items** (12 from the sweep [~~§176~~ closed 14/09] + §184/§185 ✅ FIXED 15/09 (interp crash Char[]/Bool[] store — coerceFor now produces the REAL slot type Character/Boolean, KofInterpreterParityTest.charBoolArrayStore 26/26, lane development .18)/§186 ✅ FIXED 14/09 (#133, contributor Jonas Rocha)/§187 ✅ FIXED 15/09 (Native face 13/09 lane .15; JS face 15/09 lane compiler .22 §184)/§188/§192/~~§193~~ ✅ FIXED 16/09 (face crua → SEM066 diagnóstico, lane .18)/§194/~~§195~~/§196/§197/§201✅/§202✅/§203✅/§206✅/§207✅/§208✅/§209 ✅ FIXED JVM 14/09 (`59e2403b`, `InterfaceDefaultMethodE2ETest` 5/5; JS/Native face → §248)/§210✅/§211 ✅ CLOSED 15/09 (D-ENUM207 lane .15: enum = real class — `getstatic Dir.N:LDir;`, `Dir.class` emitted, `getClass()`→Dir, `instanceof Dir`, identity `==`, real `name`/`ordinal`/`values`/`valueOf`; `enum == String` = SEM062; `EnumIdentityE2ETest` 6/6, suite 1877/0/16-node)/§212 ✅ FIXED 15/09/§213/§214 ✅ FIXED 15/09/§215 ✅ FIXED 15/09/§216 ✅ CLOSED 15/09 (face 1 `c.toString()` `69bc0f73`; face 2 `println`+concat by **D-PRINT** (`7a9b03dd`) — Char prints the CHARACTER, supersedes the numeric contract)/§217✅/§218 ✅ FIXED 16/09 (`78b733fa` — JDK statics `Integer|Long.toHexString|toBinaryString` via `PrimitiveNumericFormatters` + SEM052 p/ não-Int/Long; JS `toString(radix)` c/ máscara unsigned; `NumericFormatterE2ETest` 3/3; #148 FECHADA 16/09 09:02Z. Nota de registro: a docs-only `42f1c43e` (03:56) marcou FIXED ~2h antes do código existir — o catálogo agora pina o SHA de código)/§219 🟡 (#160 ✅ 15/09; #151 silent-loss face ✅ 15/09 → SEM011, feature deferred; #159 ✅ CLOSED 15/09 ~22:05 (`9e270e56` D-NARROW-WHILE — `NullSafetyE2ETest` 12/12, both repro cases green with fresh jar; issue closed with proof))/§220/~~§221~~/§222 ✅ FIXED 15/09/§223 ✅ FIXED 15/09/§224 ✅ FIXED 15/09/§225 ✅ FIXED 15/09/§226 ✅ FIXED 15/09/§227 ✅ FIXED 15/09/§228/§229 ✅ FIXED 15/09/§230 ✅ FIXED 15/09/§231 ✅ FIXED 16/09/§232 ✅ FIXED 15/09/§233 ✅/§234 ✅ FIXED 15/09/§235 🟡 FIXED JS face 16/09 (lane .18 — `JsCallEmitter` parse*→`kof_string_to_*`; `WrapperStaticCallsE2ETest` un-JVM-only; **NATIVE face still OPEN — link error `java_lang_Integer_parseInt`, nat lane**)/§236 ✅/§237 ✅/§238 ✅/§239 new/§240 ✅ FIXED 15/09 (REGRESSION 8935c8a7: knows() for all java.* → 39 suite reds, lane .22; separação knows()=entries OR JDK∖builtin, `KofBuiltinJdkSeparationE2ETest` 4/4, suíte 53→15) /§241 ✅ FIXED 15/09 (REGRESSION c0cf805e: Nullable(primitive) boxed globally but half-landed → Int? return VerifyError + 14 suite reds; REVERTED because the boxing landed on ONE face only, NOT across the 4 targets — NOT because §125 forbids boxed null (a MISREAD, corrected 15/09 by the maintainer — DECISIONS §7); boxed T? is not blocked by rule 6; opening it as a work front is the maintainer's call, lane compiler .22; suite 15→1 fail) /§242 ✅ FIXED 15/09 (#256 residual: abstract-override check matched by name+ARITY, not signature — same-arity-different-type wrongly satisfied the abstract; now keys by `TopLevelOverload.sigTag` + `satisfiesAbstract`, `ConcreteClassMissingAbstractMethodTest` 6/6, lane compiler .22; #266 = same root, PARAMETER face) /§243 ✅ FIXED 15/09 (#261: user class named `List`/`String`/`Set`/`Map` was IGNORED — builtin alias won → IllegalAccessError/NoSuchFieldError; now the §179 shadowing guard gates every alias pin, `UserClassShadowsBuiltinE2ETest` 7/7 [RED 4/7 pre-fix], lane compiler .22) /§244 ✅ FIXED 15/09 (#267: `+` on two erased-generic operands (`Object`) emitted `iadd` → VerifyError; the concat branch now fires when both operands are non-numeric, `GenericOperandConcatE2ETest` 4/4 [RED 3/4 pre-fix], lane compiler .22) (§228 List ✅ fixed 14/09, lane .15; /§245 ✅ FIXED 15/09 (test-only: `KofConcurrency2Test.stopFlagFieldWriteObservedBySpinReader` mis-sized — the 500M-Int spin-reader loop is closed by the C2 in ~83 ms, BEFORE the writer's `time.sleep(100)` → deterministic `nao-observou`; budget raised to Long 5B (~1.55 s = ~15× margin); Q0: 3/3 red without the SG-020 `ACC_VOLATILE`, 3/3 green with it; lane bugs-and-gaps `192.168.100.15`; DOING gate 2→1 fail, the remaining = §205) /§246 ✅ FIXED 15/09 (#268: chained member access on a generic type-parameter field (erased to `Object`) emitted an invalid JVM owner — field → `"?"` (`NoClassDefFoundError: ?`), call → `""` (`ClassFormatError`); missing `substituteTypeVariable` in the field-access path; FIXED by lane compiler .22 — `CompilerTypes.substituteTypeVariableIn` + checkcast/unbox on the erased load, `GenericFieldAccessE2ETest` 6/6 [RED 5/6 pre-fix]) /§247 ✅ FIXED 15/09 (#269: write through a NULLABLE receiver was silently accepted (no SEM049, unlike the read) and emitted `putfield Field "?".num:...` → VerifyError; FIXED by lane compiler .22 — SEM049 on the write + `NullableType` unwrap in `ExpressionAssignmentLowerer`, `GenericFieldAccessE2ETest` 6/6 [RED 5/6 pre-fix]) §233/§234 renumbered 14/09 ~17:40 after §231/§228 collision with lanes .18/.15; §232 = implicit-this face of §227 family, owner .18; §239 = JS `String.format` COMP002, catalogued 14/09 by lane .15); §189 ✅ fixed 14/09; §190 test of lane `.18` — `KofBlogE2ETest` without `Content-Length`; §191 ✅ fixed 14/09 (`cookieSet` secure/httpOnly string case); **§192 had a DUPLICATE (parseOrDefault lane `.17` × `db.query<Record>` lane `.18`) — the `db.query<Record>` record was renumbered to §197 on 14/09 by the registry owner (lane bugs-and-gaps `192.168.100.15`); §192 = parseOrDefault; **NEW §194** (for-in over String/non-collection was ACCEPTED and broke per target — JVM VerifyError/Native SIGSEGV/Script crash/JS iterated; ✅ FIXED 14/09 SEM058, triage of #145, lane bugs-and-gaps `192.168.100.15`); **NEW §195** (`KofBlogE2ETest` red at HEAD: test uses `app.security` but the GETs don't send a session → 401, middleware CORRECT; ⚠️ TEST, owner lane `.18`/`.22`); **NEW §196** (EN i18n broke the guard `ConcurrencyGapsDocTest` — the test pinned the PT header `| Construto |`; ✅ FIXED 14/09, guard accepts both spellings, lane bugs-and-gaps `192.168.100.15`))) (sections/sub-faces without resolution) — ~~§177~~ ✅ FIXED 13/09 (lambda with a BLOCK body that returns a local declared in the block was typed void/SEM033 when the module had a class — `firstReturnValueType` didn't record the body's `VarDeclStmt`; lane bugs-and-gaps `192.168.100.15`, closed in the §178 unit; translator repro runs 4 targets = 8). **§179 ✅ FIXED 14/09** (`kof.ui`/`kof.media` type DECLARED → JVM VerifyError; fixed per DECISIONS §4 option A — `qualifyDeep` step 2b + `unitDeclaresType` shadowing guard; owner 192.168.100.18) **+ §180 ✅ FIXED 15/09** (println double/float in Native x86 ≠ JDK `Double.toString`/`Float.toString` — residual/overclaim of bug 44; `RuntimeDtoa` `%.*e`+`strtod` shortest round-trip, x86_64 only, lane development `192.168.100.18`; DECISIONS §6) **+ §181 ✅ FIXED 13/09** (cast `Double/Float as Int/Long` out of range/NaN/Inf — implemented in `c90e85ee` (JS `kofD2I/kofD2L` + Native) and **regression of the x86/riscv fix fixed by lane bugs-and-gaps `192.168.100.15`**: integer bits read as double saturated EVERY positive value; duplicated riscv labels; 4 targets) **+ §182 ✅ FIXED 13/09** (ISO parse of `kof.time` with a SIGN field: JVM/Script lenient via `Integer.parseInt`, Native strict, JS inconsistent — lane .18 fix `a13665f7`, STRICT consensus) **+ §183 ✅ FIXED 13/09** (test `KofTimeE2ETest.todayIso…` was clock-flaky — literal `isToday(2026,9,13)`; lane .18 fix `a13665f7` via parts of `todayIso()`; finding of lane bugs-and-gaps `192.168.100.15`) **+ NEW §184** (store into `Byte[]`/`Short[]` out of range does NOT truncate in JS — JVM/Native/Script `-126`/`4464` vs JS `130`/`70000`; silent, rule 5) **+ NEW §185** (Script interpreter **crash** when writing to `Char[]` **and `Bool[]`**: `c[0]='A'`/`b[0]=true` → `argument type mismatch`; JVM/Native/JS correct — the real root cause is `KofInterpreterValues.coerceFor` on the live path `KofInterpreter:306`, **not** the `KofInterpreterOps.arrayStore` which is dead code) **+ §189 ✅ FIXED 14/09** (record with a **nullable** generic list field `List<Item>?` — `toGenericSignature` didn't unwrap `NullableType` → record component without `Signature` → `json.decode` returned a raw `LinkedHashMap` → `ClassCastException`; **the test of #128 `76ca3dd4` went up RED while declaring green**; fix = unwrap nullable, lane bugs-and-gaps `192.168.100.15`) **+ §187 ✅ FIXED 15/09** (`Char[]` out of range did NOT narrow to 16 bits in Native — `elementTypeSize` maps `char`→4 and `kof_array_set` did a raw `movl`; **fix = 0xFFFF mask on the store** x86 `movzwl` + riscv/aarch `slli`/`srli`, stride 4 preserved; **JS face FIXED** = §184 (same `kofArraySet` char narrowing via `& 0xFFFF`, lane compiler `192.168.100.22`); JVM/Script `4464`/`65535`; **§186 = distinct bug from collaborator Jonas Rocha**, non-constant `static` initializer/issue #133)   — ~~§168~~ ✅ FIXED 13/09 (`3ab4c99e`; SEM025 json — `json.metodoRuim()` now rejected, re-verified in `kof check`; it was pre-existing, not from WEB001-T1), ~~§166~~ ✅ FIXED 13/09 (hello size gate: baseline re-measured 7.700→8.297; DOM shim #121 is a legitimate `always` preamble, same process as #104 — option (a) of the record itself; lane bugs-and-gaps), §165 re-verified 13/09: does NOT reproduce in a clean build (node v22 present, export in the runtime, green cell) — `static final` inlining trap, see §165; ~~§81~~ ✅ FIXED 13/09 (5b: Long=BigInt in JS, real 64-bit parity, JS golden unified with the JVM), §101 (Double relationals with NaN diverge cross — **frozen** rule 6), §104b-ii (record in collection + storage-box asm — **lane bugfixer**, LARGE unit), §107 🟡 (native `println(collection)` → pointer garbage; **scalar face ✅ FIXED 12/09** in the 3 natives `f3b3821c`+B39; record/nested=`?` remain until §104b-ii + FP-cross=FLT001), §114 ⏳ (record equals with reference field in Native; sub-face of §104b-ii), §129 (throw in `spawn` worker → cross-thread longjmp in Native — **lane nat**; was referred to as "§129-TLS"), §132 (KofJS: task of task doesn't run without yielding the event-loop — OTP002 gate; **another lane**), §161/NAT-STR01 (ASCII-only case-fold in Native vs Unicode in JVM/JS — **DECIDED 13/09**, lane nat; recorded here 13/09). **§165 RE-VERIFIED 13/09 (owner 192.168.100.17, node v22 present): does NOT reproduce in a clean build** — the export REACHES `kof-runtime.mjs`, the cell is green; the symptom was the `static final` inlining trap (stale classes). Closure/shielding = §106/js-slices owner; §166 open). **~~§149~~ is NOT open — ✅ FIXED 12/09** (the previous line listed it by mistake; the root was the `JsIfThrowElse` of §147). **§156 ✅ FIXED 13/09** (heterogeneous list of lambdas with the same signature → element without className, SAM dispatch). **§155 ✅ FIXED 13/09** (function-type in type-args → `ClassFormatError`; parser preserves the type-ref spaces). **§127-JVM ✅ FIXED 13/09** (decision 9a: `as ()->T` parses as type-ref; checkcast for synthetic SAM interface). **§94 ✅ FIXED 13/09** (EQ/NE of Double/Float in the interpreter now IEEE). **§125 ✅ FIXED 12/09** (return Nullable(primitive) → default; cell `nullableprint` 4/4). **§139 ✅ FIXED 12/09** (JS fold `f()==null` → COMP002; JS parser discards mid-expression). **§140 ✅ FIXED 12/09** (≤500 gate became a ratchet with a baseline in CI). **§90 ✅ FIXED 12/09** (lane web). **§145/§146/§147 ✅ FIXED 12/09** (`440730c8`, issue #101). **§45 ✅ IMPLEMENTED 13/09** (DD-01 option 4a: FinallyFrame in the IR; 4 targets, `063ed956`) and **S10c ✅ 13/09** (`random.randomBytesHex`, `317b23e7`). **§157/§158/§159/§160 ✅ FIXED 13/09** (issue-lane: #103 case 3 POP2 in `HashMap.put` of `Long`, kof.web `header()`/`query()` `String?`+SEM049, Native web WEB001, KofJS hostless `kof_platform`). **§172 ✅ FIXED 13/09** (SHIFT compounds `<<=`/`>>=`/`>>>=` lowered as a plain assignment — silent miscompilation; + 2nd face `Long<<=Long` VerifyError, L2I on the count; lane development/translator, owner = 192.168.100.22). **Honest conclusion (13/09):** of the **8 open items**, most depend on a **maintainer decision already ratified** (implementation queue), **rule-6 freeze** (§101 + sub-faces §114/§107 = 3), **another lane** (§104b-ii lane bugfixer + §129 lane nat + §132 = 3) — **§89 ✅ FIXED 13/09** (`e33425b5`, 4 targets + SEM090 warning), **§106 ✅ FIXED 13/09** (`5b939106` + JS residual `ab85cfae`, 4 targets), **§117 ✅ FIXED 13/09** (`3734f2aa`), **§131 ✅ FIXED 13/09** (`18a64d45`, 4 backends; + **same-arity/types residual** `73ca2d58`, Native), **§156 ✅ FIXED 13/09**, **§81 ✅ FIXED 13/09** (Long=BigInt JS, own section) and **§163 ✅ FIXED 13/09** (interpreter: 2nd wide parameter read as `null` — 4-target parity, found in the `NativeBackend` split probe). **§167 ✅ FIXED 13/09** (bitwise/shift with mixed `Long`: JVM VerifyError + JS TypeError/wrong mask + Long overflow without wrap in JS; lane bugs-and-gaps `192.168.100.15`, 4 targets, 3 tests — own section). |> | **§167 ✅ FIXED 13/09 (lane bugs-and-gaps, 192.168.100.15)** | bitwise/shift with mixed `Long`: JVM VerifyError + JS TypeError/wrong mask + Long overflow without wrap in JS. 4 targets; found in the 13/09 Q4 hunt. Related overclaim of §81 (declared "real 64-bit" covering only parse/literal). Proof: `BackendParityTest.parityLongBitwiseShiftMixed` + `KofInterpreterParityTest.longBitwiseShiftMixed` + `bitwise` cell extended 4/4. |> | **§172 ✅ FIXED 13/09 (lane development/translator, 192.168.100.22)** | compound shift `<<=`/`>>=`/`>>>=` was parsed but lowered as a SIMPLE assignment (only the RHS stored): `x=6; x <<= 2` gave `2` (silent, 4 targets). Fix: `isCompoundOp`+`compoundBinaryOp` with SHL/SHR/USHR + `emitCompoundRhsConv` (L2I on the wide RHS). Proof: `CoreRegressionE2ETest.compoundShiftAssignments`. | /§248 🔴 OPEN 15/09 (cross-target gap of §209/#213: interface default methods dropped on JS — `TypeError` at runtime — and on Native — prints `null`, exit 0; JVM-only feature, needs a scope decision, lane compiler .22) /§249 ✅ FIXED 15/09 (two identifiers in a row at statement start were SILENTLY parsed as a typed decl `Type name` — `s length` / `x is Dog`; root: the declared type of a `VarDeclStmt` was never validated, so an unknown simple name became an invisible dead decl; now SEM011, `UndeclaredVarTypeE2ETest` 10/10 [RED 3/10 pre-fix]; lane compiler .22) /§251 ✅ FIXED 15/09 (declared types NEVER validated → SEM011 at every declaration site via a dedicated `DeclaredTypeChecker` + `MemberResolver.declaredTypeUnresolved` with type-variable whitelist; `DeclaredTypeValidationE2ETest` 14/14 [RED 7/14 pre-fix]; lane compiler `192.168.100.22`) /§252 🔴 OPEN 15/09 (#273: Native x86_64 INTERMITTENT `spawnWorkerThrowPropagatesThroughSelectAnyNative` — `Runtime error: array index out of bounds`, 2 in 7 full-module runs, byte-identical, NOT reproducible in isolation (9/9) nor 20× binary; suspected race in the §129 per-thread handler path; **re-measured 16/09 ~03:20 by lane docs/development: single-method isolation, no CPU load, 6 runs = 4 pass / 2 FAIL** (race is NOT load-gated — see the §252 body); owner = native lane .18/nat) /~~§253~~ 🟡 FACE A ✅ FIXED 16/09 (lane development .18): one-shot idiom `var id = time.interval(…, () -> { time.cancel(id) })` pre-defined in the analyzer + captured by-reference (self-capture box stored before init eval); NATIVE* targets now fail compile-time SEM092 until face B (the SIGSEGV reading the captured handle in the job — nat lane, still OPEN; shadow-handle workaround stays valid)
 > | **§254 ✅ FIXED 15/09 (owning lane development `.18`, `713031a7`)** | `[stdvalidation]` golden of the ConformanceMatrix encoded the OLD wrong output (4 lines vs the mod-11 oracle) — cell red on clean tip; re-recorded by the owner with the executed-JVM proof. |
-> | **§255 🔴 OPEN 15/09 (lane development `.18`)** | `KofDbE2ETest.crossNativeSqliteNowCompiles` hard-fails on hosts without cross `libsqlite3` (missing `assumeTrue` guard; COMP001 `riscv64-ld: -lsqlite3` not found). |
-> | **§256 🔴 OPEN 16/09 (lane development `.18`)** | CONC001 closure left 2 reds on clean tip (worktree `4af4356f`): `learn/18-concurrency.md` gaps cell desynced (guard) + riscv64 `poll(b)` returns 0 after selectAny scan (aarch agrees). PRE-EXISTING, not §257. |
+> | **§255 ✅ FIXED 16/09 (lane development `.18`)** | `KofDbE2ETest.crossNativeSqliteNowCompiles` hard-failed on hosts without cross `libsqlite3`; now carries the sibling's guard trio (`has`+`sysrootOrNull`+`sqliteAvailable`) → honest SKIP. |
+> | **§256 🟡 PARTIAL 16/09 (lane development `.18`)** | CONC001 closure left 2 reds on clean tip (worktree `4af4356f`): ~~`learn/18-concurrency.md` gaps cell desynced (guard)~~ **face (a) ✅ CLOSED 16/09 by lane docs/development `192.168.100.22` (`dd2c7fcb` — `ConcurrencyGapsDocTest` 3/3 green)** + riscv64 `poll(b)` returns 0 after selectAny scan (aarch agrees) — face (b) OPEN. PRE-EXISTING, not §257. |
+> | **§258 🟡 PARTIAL 16-18/09 (lane `.18`/SSE owns the fixes; #773/#774/#777/#780 CLOSED, #775/#776 OPEN)** | CodeQL gate (2 open): **#780** `java/uncaught-number-format-exception` `KofWebJsE2ETest:307` — ✅ FIXED 18/09 by `.18`/SSE: the #777 `(?i)[0-9a-f]+` guard accepted ANY int-overflowing hex (not just >8 digits — *remeasured 18/09*: `0x80000000`/`0xffffffff` are 8 digits and ALSO throw "under radix 16"), now the `parseInt` is wrapped in try/catch → `break` (malformed chunk = empty/non-hex idiom). The catalog's *other* suggested fix (`length()<=7`) was measured WRONG — it rejects valid 8-digit sizes (`0x7fffffff` = MAX_INT, parses OK); try/catch is the precise guard. `KofWebJsE2ETest` 7/7; **#773** `java/comparison-with-wider-type` `KofJsRunner.listValues` — ✅ FIXED 16/09 by `.18` (bound check `n > Integer.MAX_VALUE` → clear `RuntimeException`, precedent `d6eaae0c`; int/int loop, no silent truncation). **#774** `java/relative-path-command` `DepsTransitiveTest` — ✅ FIXED by `2a60b426` (`.17`). **#777** `java/uncaught-number-format-exception` `KofWebJsE2ETest:302` — ✅ FIXED 16/09 by the SSE lane (`.18`): the chunked-decode test helper validates the hex size token before `parseInt`, no uncaught NFE; 6/6. **STILL OPEN (other owners):** #775 `java/relative-path-command` `NumericFormatterE2ETest:35` (owner `.22`, `78b733fa`) + #776 `java/unused-parameter` `KofHttp.supportedOn:57` (= the dead guard of §259, owner `.15`/`.17` — resolves when §259 wires it). |
+> | **§259 ✅ CLOSED 17/09 (lane native/compiler `.17` — fatias 1-4: timeout x86 `021cefad` / retry x86 `3f6814ec` / circuit x86 `d11eceac`+`6abd3341` / riscv+aarch port `f7b096c5`)** | Native `http.timeout`/`http.retry`/`http.circuit` were **pure silent no-ops** (R6/rule 5 — the user believed the knobs were active on every target). Now wired in native asm: nonblock+poll+SO_ERROR connect with SO_RCVTIMEO/SNDTIMEO on the socket, retry loop, and a connection-failure circuit breaker (5xx also records a fail, JVM parity). Proven on x86 (`KofHttpNative{Timeout,Retry,Circuit}E2ETest`) and cross riscv64+aarch64 under qemu (`KofHttpNativeResilienceCrossTest`, byte-identical messages). See the section body for the full fatia log.
+> | **§268 🟡 PARTIAL 18/09 (throwables face ✅ CLOSED by lane compiler `.22`, #313 commit; broader extends face OPEN, same lane's queue)** | `throw new Exception(...)`/`extends <JDK-throwable>` emitted a RAW name (`new Exception` / super `RuntimeException`) → `NoClassDefFoundError` at load while the exception table qualified (two resolver paths). Fixed at the root: `CompilerTypes.toType` + `SymbolTableBuilder` now map the `JAVA_LANG_THROWABLES` set to `java.lang.*` (module homonym wins; proof `ThrowQualifiedTest` 4/4). Broader scope RE-PROBED and still raw: `extends Thread`/`Object` (java.lang non-throwable), `extends IOException` (java.io, no import), `extends Zebra` (undefined — silent) — general fix queued (SEM0xx + `Object`→`java/lang/Object`). |
+> | **§269 🔴 OPEN 18/09 (compiler lane `.22`; from the PublioSantos sweep under D-NOT-JAVA)** | Three measured **R6 violations on the parse/lower path** (a non-Kof construct must fail with a diagnostic, never silently): (a) `"""triple quotes"""` (#364, REOPENED after I first closed it wrongly): the lexer folds `"""..."""` to an EMPTY string and the program compiles+runs printing nothing — silent content discard, tip jar 12:26 measured (`println` output empty, rc=0); the fix is a PARSE0xx rejection (the feature has no promise — `lexical-structure.md` §4.1), NOT template support. (b) #361 `nums.reduce((acc: Int, n: Int) -> acc + n)` (no seed) **HANGS the compiler forever** (rc=124 timeout, tip jar) — no diagnostic ever arrives; same family: #423 brace-lambda/`it` repro now hangs too. (c) #397 local `var args = 5` in `main()`: compiles, prints NOTHING, rc=1 (silent wrong, likely the `aload_0` slot collision the issue names) — the slot-0-vs-1 rule for the `String[]` parameter is broken in the local allocator. Each needs a minimal repro + a fail-fast diagnostic/regression test (Q0 order: reproduce → fix root → prove). NOT-YET-TRIAGED siblings with valid-Kof repros kept open from the sweep: #310 (SAM-typed lambda var `var m: Mapper = (n: Int) -> n + 1` → IncompatibleClassChangeError at runtime; the unannotated form prints 11), #318 (`this()`/`driver()` ctor delegation rejected SEM015 on the tip jar; the lowering branch exists in `ExpressionBareCallLowerer` but no corpus promise — needs design/gap decision, rule 6). |
+> | **§263 ✅ FIXED 17/09 — var-decl face (PARSE095), by compiler/nat lane `.17`; 🔴 function-position face OPEN (re-measured 17/09; rule 6 — maintainer)** | Parser accepted ANY identifier before an *annotated* declaration and silently discarded it (R6): `let x: Int = 5` / `Klaxon x: Int = 5` / `Banana q: String = "z"` printed the value — the `: Tipo` in `parseVarDecl` (~417-421) overwrote the consumed prefix with no diagnostic. Fixed by the cataloguer's declared direction: on the type-first path a mismatching prefix → **PARSE095** (identity `Int x: Int` tolerated — nothing discarded); parser-level, all 4 targets inherit; proof `ParserGarbageTypePrefixE2ETest` 9/9 (JVM+JS). Without annotation it already failed honestly (SEM011 — `let x = 5`/`const y = 10` dead sugar, `183cb048`). Remaining face: `async foo(): Int` (function position) STILL compiles — different fall-through, river shared with the nullable/generics cluster; left honest per rule 6. Related: the corpus claims in `training/reference/{targets,compiler}` (“let/const are rejected”) were only half true.
+> | **§262 ✅ FIXED 17-18/09 (face (a) `== null`/`!= null` FIXED `07a51565` by lane bugs-and-gaps `.15`; face (b) `nullableRecord == nullableRecord` FIXED in TWO STEPS: receiver-guard landed first `ab284b91` (lane `.17`) — but measured INCOMPLETE (3 holes); completed 18/09 by development lane `.18` (null-safe arg + Nullable-record gate + JS numeric `!=`) — 4 targets, 21/21)** | Record `T?` vs `null`: `== null`/`!= null` **NPEs on the JVM** (`Cannot invoke Point.equals(Object) because maybe is null`) — record `==` lowers to `.equals()` with NO null-guard on the receiver (`CompilerComparisons:28,337-342`, bug 188); class/String nullable narrow fine (`if_acmp`/`Objects.equals`). Face (a) fixed by excluding the `null` literal from the record content-equality branch (now `if_acmp`); face (b) step 1 (`ab284b91`) guarded only the RECEIVER (`L==null ? (R==null) : L.equals(R)`) — measured INCOMPLETE: null ARG still crashes JS/Native, a function-derived `Point?` fell to the reference path, and JS `!=` on the null-path was always-false; step 2 (`.18`) made the guard full `Objects.equals` on BOTH operands + unwrapped `Nullable(record)` in the gate + routed JS through a numeric `kofRecordEq` helper (rule-5 parity by construction, 4 targets). Proof: `RecordNullableEqContentE2ETest` 10/10 + `RecordNullableNullEqE2ETest` 11/11 = 21/21. |
+> | **§260 🟡 PARTIAL 16/09 (lane native/compiler `.17`; cause-1 G-6b CLOSED by `92d11a03`, cause-2/G-6(a) + trigger still OPEN)** | Native x86 auto-collect was unsound for TWO reasons (gdb-probed same day): (1) mark scanned only the current frame → main's live Strings invisible → freed (SIGSEGV) — **FIXED 16/09 (G-6b: `_start` records `kof_main_stack_bottom`, mark scans the whole thread stack; `NativeX86GcMarkScopeTest` 3/3)**; (2) live temporaries in caller-saved regs at the `kof_alloc` call-site (`%rdi`) — invisible to any stack scan → needs G-6(a) (spill-per-live-ref / stack-map), the trigger is OFF again. riscv never hit (1) (value-stack = machine stack). |
+> | **§261 ✅ FIXED 16/09 (lane development `.18`)** | KofJS `window.bind`: Components and raw DOM widgets drew handle ids from TWO separate counters (`kofUiSeq` vs `kofNodeSeq`, both from 0); `kofUiWindowBind` resolves components FIRST → a Component created before a raw widget stole the widget's id and the widget rendered nothing (orphan in `__kofNodes`). Found via kof-ui-widgets (Slider+ReconfigButton in real Chrome). Fix = one shared counter (`kofNodeSeq`). Proof: `KofJsBrowserE2ETest.componentAndRawWidgetIdsNeverCollide` (RED pre-fix, measured) + lib `scripts/browser-drag.mjs`.
+> | **§264 ✅ FIXED 16/09 (lane development `.18`)** | KofJS printed `Double`/`Float` with the raw `Number.toString` — `4` not `4.0`, `10000000` not `1.0E7`, `0` not `-0.0` — in **every** display path (println/print/concat/`String.valueOf`/`.toString()`); silent rule-5 divergence vs JVM/Native. The old §44/§180 records called it "expected on JS" and 5 conformance cells excluded `js` to stay green. Fix = new runtime slice `num-fmt`/`kofNumFmt` (JDK contract: shortest round-trip + `E`-threshold + Float own precision) routed from the JS emitter + type-passthrough in the shared lowerers. Proof: `WrapperStaticCallsE2ETest.doubleFloatJdkPrintFormat` + 5 cells flipped to 4-target parity (value-by-value vs JVM oracle on node v18). Boxed-collection print (`List<Double>`→`[4,2.5]`) stays §104b-ii (native lane), NOT fixed here.
+> | **§265 ✅ FIXED 16/09 (lane development `.18`)** | KofJS web handlers: `status(201, body)`/`headerSet()` were SILENT no-ops — `JsRuntimeOps.handleRuntimeOp` had a collapse branch (`status→args.get(1)`) that DROPPED the call from the emitted `invoke()` (decisive), and `kofWebStatus` read `kofWebRequest.response` (field never existed; the `response` lives on `ctx`). JVM: `201`+`X-Custom`; JS: `200`, header dropped (R6; the ecosystem-coverage "JS ✅ 08/27" cell was a false green — compile-support ≠ runtime effect). Fix = delete the collapse branches (correct routing existed below) + defer `_status`/`_headerQueue` applied by the pump before send (JDK HttpServer needs headers pre-send), idem JVM thread-local. Proof: `KofWebJsE2ETest.jsWebStatusAndHeaderReachTheWire` (RED pre-fix, measured `return "made"` in the emitted JS + `200` on the live wire). Native `status/header` stays `– WEB001` (honest).
+ > | **§266 ✅ FIXED 17/09 (lane development `.18`)** | Loop body with an `if` followed by trailing statements miscompiled on JS only (locals escaped into the `for(;…;update)` clause) — `ReferenceError` headless, SILENT EMPTY UI in `Component.view` (kofUiRender catch). Fix = structural `KofContinueLabel(label, loopStart)` emitted by the lowering; reconstructor consumes it, the ambiguous backward scan + `looksLikeContinueLabel` guess are GONE; `JsTryParser` split keeps the file under 600. Proof: `JsLoopIfTailE2ETest` 7/7 + lib ReorderList back to the direct-`if` form in Chrome. The daughter debt — 5 UI catches swallowing user throws — CLOSED 18/09 (`kofUiReportError` → console.error; `ComponentCoreE2ETest` +2, views/onMount/onDispose/effects report, siblings still survive). |
+| **§267 ✅ FIXED 17/09 (lane development `.18`; sibling face found during §266)** | Statement-level `if/else` whose branches are assignments folded into a ternary (`tryParseIfExpr`) and the NEXT statement had its `let` hoisted above it → stale read, SILENT WRONG VALUE on JS. Fix = marker `KofStatementIf(thenLabel)` at lowering (label-bound — a boolean would be eaten by a NESTED if-expr's CJump in the condition); value if-exprs keep folding. Proof: `JsIfFoldStatementE2ETest` 8/8 + suite 1990/0/0/169. |
 > | **§257 ✅ FIXED 15/09 (lane compiler `192.168.100.17`)** | `static final String` runtime-text literals = javac ConstantValue inlining → false red on incremental build (`validationBrJs`); 77 fields de-`final` + `RuntimeConstantInliningGuardTest` (ASM, ConstantValue) locks it. |
 > | **§173 ✅ FIXED 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `++`/`--`/compound on `Long`/`Double`/`Float` + increment of an array ELEMENT: JVM VerifyError (literal `INT 1` in a 2-slot binary, 1-slot `DUP`, `arraystore` without `[array,index]`), Native core dump, Script `NoSuchElementException`, JS `stack underflow`/`KofDup2`. 4 targets; Q4 hunt 13/09 (over §167). Proof: `BackendParityTest.parityIncrementWideTypesAndArrayElement` + `KofInterpreterParityTest.incrementWideTypesAndArrayElement` + cell `increment` 4/4. |
 > | **§174 ✅ FIXED 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `return`/`throw` inside an `if` inside the `try`: JVM/Native/Script correct, KofJS aborted with `COMP002 unexpected KofCatchStart` (the `JsIfThrowElse.parseElse` consumed the endLabel of the enclosing try when treating the unconditional `then` as if-else). Fix without contract/IR change (`isTryEndLabel` guard). Proof: `CoreRegressionE2ETest.returnInsideIfInsideTryJs`. |
@@ -23,7 +35,7 @@
 > | **§168 ✅ FIXED 13/09 (lane development/translator, `3ab4c99e`)** | SEM025 missing in namespace `json` for a nonexistent method: `json.metodoRuim()` compiled successfully (it should fail with SEM025). The #126 handler (`61495f69`) validated the arity of `encode/decode` but did not reject an unknown method; `MemberCallNamespaces` changed from `if (known && !valid)` to `if (!valid)` (rejects ANY method ≠ encode/decode) + `return null` on the valid path. Re-verified in the binary (`kof check` → SEM025; `json.encode(42)` → no errors); `SemanticResolutionTest` 27/27. |
 > | **§179 ✅ FIXED 14/09 (DECISIONS §4 option A, owner 192.168.100.18; catalogued 13/09 by lane bugs-and-gaps `192.168.100.15`, Q4 hunt of §178)** | Type `kof.ui`/`kof.media` DECLARED in a signature/var/param/field breaks the JVM backend (VerifyError `Bad type on operand stack`): `MemberResolver.resolveType("Label")` falls into `Type.of("Label")` = `ClassType("", "Label")` — does NOT recognize the builtin `kof.ui.Label` — so the descriptor comes out `LLabel;` while the real handle value is an `int` (`kof_ui_label_new` returns int). Minimal repro `main(){ Label l = Label("x"); println(uiNodesLive()) }` → JVM VerifyError; Native/Script/JS OK. Same root: `Label make(){...}`, param `void use(Label l)`, field `Label field`. **FIXED 14/09:** `CompilerTypes.qualifyDeep` step 2b maps `ClassType("", name)` → `KofUi.typeByName`/`KofMedia.IMAGE_DATA` (via `builtinDeclaredType`), gated by the `unitDeclaresType` shadowing guard (a user `class Label` still wins); `StatementLowerer`'s `VarDeclStmt` resolves via the semantic analyzer. Proof: `ComponentCoreE2ETest.declaredUiAndMediaTypesCompileAndRun` + `userClassShadowsBuiltinUiTypeName` (JVM+Native+JS; re-verified green 15/09). |
 > | **§181 ✅ FIXED 13/09 (catalogued by lane bugs-and-gaps, 192.168.100.15; fix `c90e85ee` + x86/riscv regression fixed by the same lane `192.168.100.15`)** | `Double/Float as Int/Long` cast OUT of range / `NaN` / `Infinity`: the contract is the JVM (JLS 5.1.3 — saturates: NaN→0, >MAX→MAX, <MIN→MIN) and **JVM+Script agree**. **Native x86** used raw `cvttsd2si` → "integer indefinite" `INT_MIN` (`3.0e9 as Int`→`-2147483648`, `NaN`→`INT_MIN`, `1.0e19 as Long`→`Long.MIN`). **JS** used `Math.trunc`/`BigInt(Math.trunc)` without 32-bit (`3.0e9 as Int`→`3000000000`, `NaN as Int`→`NaN`, `Infinity as Int`→`Infinity`; `1.0e19 as Long`→`10000000000000000000`; and **`NaN as Long` THREW `RangeError`**). Inconsistent even with JS Int arithmetic (which wraps 32-bit). The `cast` cell only tested values IN RANGE = **false green (Q5)**. Fix delivered: JS = saturating helpers (`kofD2I`/`kofD2L`/`kofF2I`/`kofF2L`); Native = `ucomisd` guard + saturation (`emitSatConv`) mirrored riscv/aarch. **The `cast` cell caught the x86 regression** (integer bits read as double) and `castrange` (4 targets) pins the golden. |
-> | **§180 ❌ OPEN 13/09 (lane bugs-and-gaps, 192.168.100.15 — residual/overclaim of bug 44)** | `println(double/float)` in Native x86_64 is NOT JDK `Double.toString`/`Float.toString`: `%.16g` truncates the shortest-round-trip (`println(0.1+0.2)` → JVM/Script/JS `0.30000000000000004`, Native `0.3`; `100.0/3.0` → `33.333333333333336` vs `33.33333333333334`), diverges in scientific notation (`1e7` → `1.0E7` vs `10000000.0`; `1e-5` → `1.0E-5` vs `1e-05`) and `Float` prints the double expansion (`1.0f/3.0f` → JVM `0.33333334`, Native `0.3333333432674408`). Only Native x86 diverges (rule 5, silent). The `floatprint` cell only tested 3 values that coincide = **false green (Q5)**. Cause: `RuntimeStringConv.emitDoubleToString`/`emitFloatToString`/`RuntimePrintNum` use `snprintf("%.16g")` + `cvtss2sd`. Fix = JDK shortest-round-trip (Ryu/Grisu or `%.{1..17}g`+`strtod` loop) + normalize scientific + own `Float.toString` — **LARGE unit, Native lane**, not fixed here. |
+> | **§180 ✅ FIXED 15/09 x86_64 (lane bugs-and-gaps `192.168.100.15` catalogued, lane development `192.168.100.18` executed — residual/overclaim of bug 44)** | `println(double/float)` in Native x86_64 is NOT JDK `Double.toString`/`Float.toString`: `%.16g` truncates the shortest-round-trip (`println(0.1+0.2)` → JVM/Script/JS `0.30000000000000004`, Native `0.3`; `100.0/3.0` → `33.333333333333336` vs `33.33333333333334`), diverges in scientific notation (`1e7` → `1.0E7` vs `10000000.0`; `1e-5` → `1.0E-5` vs `1e-05`) and `Float` prints the double expansion (`1.0f/3.0f` → JVM `0.33333334`, Native `0.3333333432674408`). Only Native x86 diverges (rule 5, silent). The `floatprint` cell only tested 3 values that coincide = **false green (Q5)**. Cause: `RuntimeStringConv.emitDoubleToString`/`emitFloatToString`/`RuntimePrintNum` use `snprintf("%.16g")` + `cvtss2sd`. Fix = JDK shortest-round-trip (Ryu/Grisu or `%.{1..17}g`+`strtod` loop) + normalize scientific + own `Float.toString` — **LARGE unit, Native lane**, not fixed here. |
 
 > | Old "08/09 sweep" (apocryphal — corrected 12/09) | the "open" 39/62/63/64/46/48/50/59/61 are ✅ FIXED in their own headers (39/62/63/64 JVM/JS; 46/50/59 Native; 48/61 honest gap JSN004/FFI001); real count on the line above. |
 > | Interpreter × compiled parity (`==` semantics frozen — rule 6) | **0** — bug 94 ✅ FIXED 13/09 (EQ/NE of Double/Float in the interpreter now IEEE; the "decision" was to align with what was expected, which the 3 compiled targets + corpus already defined) |
@@ -471,7 +483,7 @@ EXTERNAL mutation produced garbage (JVM correct) — the cause was the prologue 
   (internal "a/b/C" → `a_b_C_init_0`). JVM works (a/b/C.class correct).
 - **Reproduction:** `kof build src --target native` in the project
   `src/Main.kf (import a.b.C)` + `src/a/b/C.kf (package a.b)`.
-- **Probable cause:** `NativeBackend.java:1725` (and ~1730 for methods) builds the
+- **Probable cause:** `NativeBackend.java:369-372` builds the
   symbol with the simple `ct.name()`; it should use the internal name
   (`ct.packageName().replace('.','/') + "/" + ct.name()`).
 - **Files:** `NativeBackend.java` (mangle of CONSTRUCTOR/call).
@@ -514,9 +526,10 @@ EXTERNAL mutation produced garbage (JVM correct) — the cause was the prologue 
 ### 27. Parity: `String.valueOf(char)` diverges between JS and JVM/Native — ✅ FIXED 07/09
 
 - **Symptom:** `String.valueOf(104 as Char)` returns `"h"` in the JVM and Native,
-  but `"104"` in JS. `println(char)` is numeric (`72`) in the 3 targets (frozen
-  — `training/language/strings.md`), but the **standalone** `valueOf(char)` has no
-  parity.
+  but `"104"` in JS. `println(char)` is numeric (`72`) in the 3 targets (at that
+  time frozen — `training/language/strings.md`; **SUPERSEDED 15/09 by D-PRINT**:
+  `println(char)` now prints the character, see §216), but the **standalone**
+  `valueOf(char)` has no parity.
 - **Reproduction:**
   ```kof
   main() { println(String.valueOf(104 as Char)) }
@@ -807,7 +820,7 @@ EXTERNAL mutation produced garbage (JVM correct) — the cause was the prologue 
   but the body reads `LoadLocal(2)`).
 - **Expected:** `inner` + `outer` (JVM exception-table semantics).
 - **Proof/repro:** case `nested-try` (manual sweep 06/09).
-- **Fixed 07/09 (JVM/Native):** the catch body now uses a sub-scope of locals (`subList(0, pos-of-current-catch)`) — with a nested try whose catch has the SAME name, the inner catch's local overwrote the outer one in findLocalVar. Proof: `CoreRegressionE2ETest.rethrowInNestedTry` (JVM). ⚠️ JS: SEPARATE gap — a nested try with catch generates `KofCatchStart` which KofJS does not support (COMP002); pre-existing, record as a gap.
+- **Fixed 07/09 (JVM/Native):** the catch body now uses a sub-scope of locals (`subList(0, pos-of-current-catch)`) — with a nested try whose catch has the SAME name, the inner catch's local overwrote the outer one in findLocalVar. Proof: `CoreRegressionE2ETest.rethrowInNestedTry` (JVM). ⚠️ JS: the separate nested-try gap this note pointed to was **§49 (✅ FIXED 07/09)** and the re-throw variant **§52 (✅ FIXED 08/09)** — both now compile on KofJS (`nestedtry`/`catchrethrow` in `ConformanceMatrixTest`, 4 targets).
 
 ### 39. `println(m.get("zz"))` (Map null) → NPE/wrong unbox in the 2 paths — ✅ FIXED 10/09 (SG-008/bug 87, maintainer decision)
 
@@ -850,7 +863,7 @@ EXTERNAL mutation produced garbage (JVM correct) — the cause was the prologue 
 ### 41. STATIC field in Native → garbage (silent R6) — ✅ FIXED 07/09 (lane Native)
 
 - **Symptom:** `class C { static Int count = 0; static Int bump() { count = count + 1; return count } }` + `main() { println(C.bump()) ... }`: JVM/JS/interpreter give `1\n2\n2`; **Native prints garbage** (`61241504\n4209948\n4211958` — uninitialized memory, non-deterministic).
-- **Root cause:** `nat/NativeBackend.java:629-630` has an **empty stub** for `KofGetStatic` (`case KofGetStatic gs -> { }` — does nothing, the field value is never loaded) and `KofPutStatic` (`addq $8, %rsp` — corrupts the stack, does not store). The simple-name lowering emits GETSTATIC/PUTSTATIC since `0ba58fc` (fix for the static path); Native **never implemented** these ops.
+- **Root cause:** `nat/NativeBackend.java:629-630` (pre-split line, 06/09; the case now lives in `NativeMethodEmitter.java:293`) has an **empty stub** for `KofGetStatic` (`case KofGetStatic gs -> { }` — does nothing, the field value is never loaded) and `KofPutStatic` (`addq $8, %rsp` — corrupts the stack, does not store). The simple-name lowering emits GETSTATIC/PUTSTATIC since `0ba58fc` (fix for the static path); Native **never implemented** these ops.
 - **Fixed 07/09:** `ClassLayout` excludes static fields from the instance layout (they do not occupy the object); `NativeBackend.collectStaticFields/emitStaticData/staticSymbol` emits a `.quad` slot in .data per static field with the initialValue (String becomes a Kof OBJECT: header+length@16+chars@24, not `.asciz`); `KofGetStatic`/`KofPutStatic` in `NativeMethodEmitter` (x86_64) and `NativeRiscvCrossEmit` (riscv/aarch64) access the slot; the `System.out` receiver of println/print is discarded (`addq $8,%rsp`/`addi sp,sp,8`) in `NativeX86Calls`/`NativeRiscvCrossOps`. Proof: `NativeE2ETest.nativeStaticFields` (Int/String/bool, `mel\ntrue\n1\n2\n2`).
 - **Pre-existing, not a regression:** there is no Native test with a static field (`NativeE2ETest` — `grep static` = 0). Before `0ba58fc` Native lowered `LoadLocal(0)+LoadField` (also garbage, `this` nonexistent in a static method). The green suite (1045/0) does not cover static×Native.
 - **Proof/repro:** cross-target sweep 07/09 (cases `static-field` / `static-field-plus-eq`), Native x86_64.
@@ -1596,8 +1609,10 @@ EXTERNAL mutation produced garbage (JVM correct) — the cause was the prologue 
   has the SAME hole (BEGIN/COMMIT in an outer transaction commits the
   outer scope in sqlite/MySQL) — NOT fixed in this lane (Native
   assembly, without an equivalent ThreadLocal); the Native lane must mirror the
-  JVM semantics (active-transaction flag for the handle). JS does not implement
-  `kof_db_transaction` (pre-existing JS gap, JSN00x).
+  JVM semantics (active-transaction flag for the handle). JS **implemented
+  `kof_db_transaction` on 16/09** (DB001, GraalJS-host bridge —
+  `nestedTransactionDoesNotCommitOuterScope` is one of the 4 JS E2E cases; no
+  longer a gap).
 - **Proof:** EXACT issue repro `caught {"n":0}` (before `{"n":2}`, in-memory
   H2); test `nestedTransactionDoesNotCommitOuterScope`; class
   KofDbE2ETest 15/0 (2 pre-existing Native skips).
@@ -1838,7 +1853,7 @@ EXTERNAL mutation produced garbage (JVM correct) — the cause was the prologue 
   above.
 - **Bug 10** (`!` NOT as an expression value always returns `true`) —
   **fixed 03/09**: constant folding used `~i` (bitwise) instead of `i == 0
-  ? 1 : 0` (logical) in `Optimizer.foldUnary`. Proof:
+  ? 1 : 0` (logical) in `FieldConstantFolder.foldUnary`. Proof:
   `CoreRegressionE2ETest.logicalNotAsExpressionValue` (JVM+JS+Native).
 - **Bug 5** (FP→Int/Long cast generates invalid bytecode) — **fixed 03/09**:
   the conversion ops `D2I`/`F2I`/`D2L`/`F2L` were missing in the IR and in the
@@ -3997,7 +4012,7 @@ index int) — verified in the sweep.
 
 
 ### 128. [OTP] JVM: result of `selectAny`/`await` of Handle<Int> assigned to a var and used as Int → VerifyError — ✅ FIXED 12/09 (JVM; await already fell into unbox, selectAny did not) (OTP spike #83 11/09)
-- **Correction (12/09, lane bugfix):** in `JvmOpCollections.emitRuntimeCall`, the
+- **Correction (12/09, lane bugfix):** in `JvmOpCollections.emitKofRuntimeCall`, the
   branch that calls `emitUnboxIfPrimitive` for `kof_await`/`kof_await_timeout` with a
   primitive return was extended to `kof_select_any` (same `Object` destination of the
   runtime, same asymmetry). One condition. The typer already returned the inner `Int`
@@ -4157,7 +4172,8 @@ index int) — verified in the sweep.
   overloading of a **class method** (the `class B { m/1; m/2 }` above): the cause
   is another (`defineMethodSymbol` overwrites the homonymous Symbol in the class
   symtable + vtable by index), and the `as: symbol 'Supervisor_child' is already
-  defined` there is `<init>`/method, not a top-level function. It remains OPEN.
+  defined` there is `<init>`/method, not a top-level function. ~~It remains OPEN.~~
+  **(SUPERSEDED — ✅ FIXED 13/09, option 10a, `18a64d45`; see below.)**
 - **✅ FIXED 13/09 (option 10a implemented, 4 backend faces):**
   (a) **symtable:** `SymbolTable.define` merges a homonymous `MethodSymbol`
   into a `MethodSet` (mirror of `ConstructorSet`) with `select(argCount, argTypes)`
@@ -4376,7 +4392,7 @@ new contract (`distinctSignatureOverloadCompiles` + `duplicateExactSignatureFail
 (SG-011B → APPLIED) and in `AGENTS.md` (frozen list + SEM047 table); (3) bump
 does NOT apply — the 09/09 contract lived only in this dev branch, was never
 released in a release tag (the last is `kof-0.3.1-beta`); 0.4.0-beta is born with
-the new and documented semantics; (4) §131 (class method) remains OPEN with a
+the new and documented semantics; (4) §131 (class method) ~~remains OPEN~~ **✅ FIXED 13/09 (option 10a, `18a64d45`)** with a
 scope note in §136. 6/6 parity proven by `TopLevelOverloadE2ETest`
 (JVM/Script/JS/x86/riscv64/aarch64 under qemu + specificity by subtyping).
 
@@ -5844,7 +5860,7 @@ to the label) is the correct predicate and **was already used** in `parseStateme
 
 - **Symptom:** the program below is VALID Kof (the local `y` exists), but
   `kof check`/compilation rejects it with
-  `SEM033: println(...) recebeu um valor void — a chamada não retorna valor`.
+  `SEM033: println(...) received a void value — the call does not return a value`.
   The lambda is typed as void, so `f(3)` cannot be used as a value.
 - **Minimal repro (reproduces in the binary, 13/09):**
   ```kof
@@ -6536,7 +6552,9 @@ to the label) is the correct predicate and **was already used** in `parseStateme
 - **Impact:** any Kof that writes/reads `Char[]` with a value outside
   `[0,65535]` produces a different value on Native and on JS (silent, rule 5).
 - **Proposed fix (JS lane):** the same as §184 (type tag in
-  `kofArraySet`/`Get`). **JS face remains OPEN**.
+  `kofArraySet`/`Get`). ~~JS face remains OPEN.~~ **(SUPERSEDED — ✅ FIXED
+  15/09 lane compiler `192.168.100.22`: `kofArraySet` kind char→`& 0xFFFF`;
+  see the section header.)**
 - **Proofs to add:** matrix cell `charnarrow` (JVM DONE; Native/
   Script/JS PARTIAL — Script falls into §185) + cross tests.
 - **Scope note:** the JS face is already the same defect as §184; recorded
@@ -6934,7 +6952,7 @@ to the label) is the correct predicate and **was already used** in `parseStateme
   **JS residual catalogued §239** (KofJS has no `String.format` lowering,
   pre-existing `COMP002`; JS lane).
 
-### §211 — enum values compile as `ldc <String>`, no enum class emitted — `Dir.N.getClass()` == `java.lang.String`, `Dir.N == "N"` is `true` (issue #207, REOPENED)
+### §211 — enum values compile as `ldc <String>`, no enum class emitted — `Dir.N.getClass()` == `java.lang.String`, `Dir.N == "N"` is `true` (issue #207) — ✅ CLOSED 15/09 (D-ENUM207 lane bugs-and-gaps `192.168.100.15`)
 
 - **Symptom (measured 14/09 ~12:30, owner = 192.168.100.17 — catalogued,
   compiler lane):** `enum Dir { N, S, E, W }` produces NO `Dir.class`; every
@@ -6960,7 +6978,9 @@ to the label) is the correct predicate and **was already used** in `parseStateme
   `Dir.Value` into a String constant (search `ldc` for enum in the value
   emitter / `CompilerEnum*`; the class emitter for `EnumDecl` appears to be
   skipped entirely).
-- **Status:** reproduces on `0ab25887`; **RE-MEASURED 15/09 ~18:30 by lane
+- **Status: ✅ CLOSED 15/09 (both slices below) — the line that follows is the
+  historical pre-fix RE-MEASURE (kept as the trail), not the current state.**
+  *(Historical)* reproduces on `0ab25887`; **RE-MEASURED 15/09 ~18:30 by lane
   bugs-and-gaps `192.168.100.15` on the tip `b66edfe9`** (fresh classes,
   `Triage` JVM + `javap`): `Dir.N.getClass()` → `class java.lang.String`,
   `Dir.N == "N"` → `true`, `d instanceof Dir` → `instanceof java/lang/String`,
@@ -6969,7 +6989,8 @@ to the label) is the correct predicate and **was already used** in `parseStateme
   `values()`/`name()` face only — REOPENED by this lane 15/09 ~18:35 with the
   bytecode proof** (the §165 `479506e1` fix typed `values()` but never
   implemented enum identity). Rule 6 (semantics); fix = lane compiler with E2E
-  proof (getClass + == + switch + values identity).
+  proof (getClass + == + switch + values identity). **RESOLVED by slices 1+2
+  below (`EnumIdentityE2ETest` 6/6, #207 closed).**
 - **🟡 SLICE 1 FIXED 15/09 (lane bugs-and-gaps `192.168.100.15`, D-ENUM207 —
   #207 reassigned to this lane by the maintainer, `3629a13b`): `enum == String`
   (either order) is now a compile-time TYPE ERROR — `SEM062` in the SHARED
@@ -7164,7 +7185,7 @@ to the label) is the correct predicate and **was already used** in `parseStateme
   guardado omitia o store da var bound (VerifyError)"; issue #199 closed);
   repro re-verified green on the tip 15/09 (prints `hello`).
 
-### §216 — `Char` is boxed as `Integer`: `println(c)` / `c.toString()` show the code point (`65`) not the character (`A`) (issues #168 + #153, one root) — 🟡 face 1 `c.toString()` ✅ FIXED 15/09 (`69bc0f73`); face 2 `println`/concat frozen rule 6 (0.4.1)
+### §216 — `Char` is boxed as `Integer`: `println(c)` / `c.toString()` show the code point (`65`) not the character (`A`) (issues #168 + #153, one root) — ✅ CLOSED 15/09 (face 1 `c.toString()` `69bc0f73`; face 2 `println`/concat by D-PRINT — supersedes the numeric contract)
 
 - **Symptom (measured 14/09 ~13:05 on `d2d025f4` with FRESH classes, owner =
   192.168.100.17 — catalogued, compiler lane):** a `Char` value goes through
@@ -7233,11 +7254,23 @@ to the label) is the correct predicate and **was already used** in `parseStateme
   (no box), the same overload standalone `String.valueOf(c)` already uses
   (§27); `CharToStringE2ETest` 5/5. **Independently re-verified by this lane on
   the tip `69bc0f73`** (fresh classes, `Triage` on JVM): `'A'.toString()` →
-  `A`, length `1`. **Face 2** (`println(char)` / concat → numeric `65`)
-  reproduces — **frozen** rule 6 (documented in
-  `training/language/strings.md:25`), deferred by the maintainer to 0.4.1; NOT
-  touched. The fix preserves the collection boxing of char as `Integer` (does
-  not disturb the §104b-ii face-char).
+  `A`, length `1`. **Face 2 ✅ IMPLEMENTED 15/09 by D-PRINT** (maintainer
+  decision in person, `DECISIONS.md` D-PRINT — the numeric face is
+  SUPERSEDED, rule 4: it removed silently-wrong output). `println(Char)` and
+  concatenation now print the CHARACTER on all 4 targets:
+  `ExpressionPrintLowerer` and `ExpressionBinaryLowerer` route a `char`
+  operand through `String.valueOf(char)` (the `(C)` overload), never the
+  `Integer` box. `CharToStringE2ETest` (now `printlnAndConcatOfCharPrintTheCharacter`)
+  + the `mapgetprim`/`chararr`/`charnarrow`/`cast`/`unicode` matrix cells +
+  `NativeE2ETest.execStringCharAt`/`nativeStringCharAtUtf16` +
+  `JvmE2ETest.execStringMethods`/`execNarrowPrimitiveArrayAccess` +
+  `CodegenKitchenSinkTest` + `KofJsE2ETest.execStringApi` updated to the new
+  contract. Collection storage still boxes char as `Integer` (§104b-ii
+  face-char untouched — the `println` of a collection element is a display
+  site, not storage). The code point is reachable only via the explicit
+  `c as Int` conversion (`training/language/strings.md` updated in the same
+  commit). Closes #168. The fix preserves the collection boxing of char as
+  `Integer` (does not disturb the §104b-ii face-char).
 
 ### §217 — generic class method return not downcast: `Box<String>.get(): T` emits `()Object`, method call on it → `VerifyError` at first use (issue #161) — ✅ FIXED 14/09 (`3f742916`, lane bugs-and-gaps; `GenericMethodReturnCastE2ETest` 4/4)
 
@@ -7325,6 +7358,31 @@ to the label) is the correct predicate and **was already used** in `parseStateme
   (issue #148 triage 14/09 09:51: "Correção entra na 0.4.1 — patch de
   estabilização"); OPEN, not a 0.4.0 release-gate blocker. Fix = the
   Int number-format helper resolution (qualification family, §203/§166).
+- **✅ FIXED 16/09 — código real `78b733fa` (05:53), #148 FECHADA 16/09 09:02Z.**
+  `ExpressionInstanceCallLowerer` + novo `PrimitiveNumericFormatters` (R7):
+  receptor Int/Long roteia para os ESTÁTICOS JDK reais
+  (`java/lang/Integer|Long`, `(I|J)Ljava/lang/String;` — mesma superfície do
+  alias `toInt`/§89; o receptor empilhado vira o argumento do INVOKESTATIC);
+  não-Int/Long (Byte/Short/Char/Float/Double/Bool) → **SEM052** honesto
+  apontando a stdlib — nunca owner vazio (R6). Face JS (`JsCallEmitter`,
+  precedente #233): estáticos → `toString(radix)` com máscara unsigned
+  (`>>> 0` Int / `BigInt.asUintN(64)` Long) — caça Q4: o formatador JDK é
+  unsigned 32/64-bit, o `Number.toString` do JS mantém o sinal (`-42` dava
+  `ffffffd6` JVM × `-2a` JS).
+  **Re-medido 16/09 ~06:20 pela lane bugs-and-gaps `192.168.100.15` no tip
+  `78b733fa`** (classes frescas, `kof build`): `javap` mostra
+  `invokestatic #13 // Method java/lang/Integer.toHexString:(I)Ljava/lang/String;`
+  e a execução → `ff` (exit 0) — antes: `#13 = Methodref #9.#12 //
+  "".toHexString:()Ljava/lang/Object;` (`#9 = Class ""`) →
+  `ClassFormatError: Illegal class name ""` (exit 1) no tip `55eedc25`.
+  Prova no repo: `NumericFormatterE2ETest` (3/3).
+- **Lição de registro (drift "record antes da prova"):** a docs-only
+  `42f1c43e` (03:56) marcou §218 como FIXED e citou `NumericFormatterE2ETest`
+  **~2 h ANTES** de o código existir (`78b733fa`, 05:53) — naquele instante o
+  teste e o roteamento não existiam em objeto algum do git (a própria mensagem
+  admite "NÃO toquei o WIP"). O registro de um fix deve citar o **commit de
+  CÓDIGO** (SHA) que o materializa, nunca preceder a prova; o catálogo passou a
+  pinar `78b733fa`. Correção de registro pura (R6 documental), sem tocar código.
 
 ### §219 — batch (triage 14/09): 5 open issues whose code is REJECTED by false-positive compile diagnostics (legitimate corpus forms blocked — honest diagnostic, wrong verdict, so not R6-silent; each needs a compiler fix, not a crash-fix)
 
@@ -7344,6 +7402,9 @@ of the issues (repros kept in the issue comments):
   compile = honest diagnostic) — so they are **support gaps/typer bugs**, not
   R6 crashes; priority for stabilization = below §216–§218 (which break valid
   programs at RUNTIME silently). Fixes belong to lane compiler (rule 6).
+  *(Nota histórica 16/09: §216/§217/§218 **já estão FIXED** — §216 CLOSED 15/09,
+  §217 FIXED 14/09, §218 FIXED 16/09 `78b733fa`; a comparação de prioridade
+  acima reflete o estado no momento da triagem 14/09, não o estado atual.)*
 - **Pointer summary:** parser — `is` in conditions (#151), interface type
   params (#160); typer — multi-interface method typing (#155), null-narrowing
   in while-flow (#159), Handle-await result typing (#141 — near the §29 spawn
@@ -7959,6 +8020,175 @@ exposing `Object` in the Map values — the handler needs a typed
 workaround. The `VerifyError` in the emitted bytecode is a COMPILER error, not
 the user's — a compile-time diagnostic is the goal (rule 6).
 
+**✅ FIXED 16/09 (lane development `192.168.100.18`) — the diagnostic face.** The
+queue above predates DB001; re-measured on the current tip the raw face had
+MORPHED: a raw `db.query` row is now a **JSON `String`** (`{"pwhash":"abc"}`),
+so `rows.get(0).get("col")` no longer VerifyErrors — it compiles **silently**
+and dies at runtime with `NoSuchMethodError: 'java.lang.Object String.get(String)'`
+(same face in every other target: JS runs the absent `.get` → `undefined`, Native
+`undefined reference` at link). Still rule-6 (silent → runtime crash), now the
+accessor-misuse shape, so the record's own prescription ("a compile-time
+diagnostic is the goal") was implemented: **SEM066** in the single frontend
+(guard `StringReceiverGuards.check`, called from `ExpressionInstanceCallLowerer`'s
+String branch next to SEM052; SEM063 was already taken by the field-visibility
+guard #331/#327 and #321 then took SEM064 in a same-tick renumber — §176 again, later arrival renumbers: this one is SEM066) rejects the
+collection/map accessors (`get/put/remove/size/keys/values/containsKey/entries`)
+called with parens on a `String` receiver, pointing at the canonical path
+(`db.query<Record>` typed, or `json.decode<Map<String, Object>>(row)`). Scoped
+NARROW on purpose: real JDK String methods reachable via the external classpath
+(`getBytes`/`isBlank`/`strip`/`repeat`/`indent`…) are NOT in the set and stay
+legal; `xs.get(0)` on a `List` and `.get("col")` on a `Map` are unaffected
+(guard only fires on `BuiltinTypes.isString(recvType)`). The `.size` no-paren
+member-access form is a different path (`MemberCallTyper`) and is NOT in this
+face. Proof: `RawRowCollectionAccessE2ETest` (4/4: both `rec.get("col")` shapes
+rejected with SEM066 incl. the exact §193 repro; `rows.get(0)` + String
+methods/List `.get` not flagged). The canonical **typed** `db.query<Record>`
+already works on JVM/Native (reflection bind by className); its JS face remains
+DB002 (a high compile-time error — see KofDb), unchanged here.
+
+**Split (this same commit):** the guard initially landed inline in
+`ExpressionInstanceCallLowerer`, pushing that file 583→608 over the ≤600 red
+line — so the three pure String-receiver diagnostic guards (SEM052/SEM066/SEM051,
+which only emit diagnostics and never touch the IR stack) were extracted to
+`StringReceiverGuards.check`; the host is back to 478 and the helper is 153,
+behavior-preserving (`RawRowCollectionAccessE2ETest` + `SemanticResolutionTest`
+30/30 + `KofDbE2ETest` 22 all green across the move).
+
+
+## §266 — KofJS CFG reconstructor hoists a loop body's post-`if` statements into the `for(;…;update)` clause, out of scope of their own `let` (silent `ReferenceError`; empty DOM when it happens in a `view`) — ✅ FIXED 17/09 (lane development, owner = 192.168.100.18, found while building the lib's ReorderList)
+
+> **FIX (17/09):** the loop boundary is now STRUCTURAL, not guessed. The
+> lowering (`StatementLowerer`, ForStmt + ForInStmt cases) emits a dedicated
+> marker op `KofContinueLabel(continueLabel, startLabel)` — tagged with the
+> OWNING loop's start label — immediately before `Label(continueLabel)`.
+> `JsControlFlowParser.parseLoop`/`parseTrueLoop` find their update clause by
+> a FORWARD scan matching `loopStart == startLabel` (a nested loop's marker
+> carries the inner loop's start, so it is never mistaken for the outer one);
+> `parseStatements`/`JsIfThrowElse.parseElse` STOP at the marker without
+> consuming it; and the post-hoc heuristic `looksLikeContinueLabel` (the source
+> of the bug) is REMOVED — `LoopCtx` now always carries the true continue
+> label. The marker is a no-op in every backend (JvmOpEmitter/NativeMethodEmitter/
+> NativeRiscvCrossEmit/KofInterpreter explicit `case KofContinueLabel _ -> {}`;
+> the Optimizer keeps its paired label from the orphan-label pass, which had
+> eaten the unreferenced `Label(continue)`). Split `JsControlFlowParser`
+> 558→479 by extracting `JsTryParser` (same §140/§147 responsibility-split
+> precedent) so the file stays under the 600 line. **Proof:** `JsLoopIfTailE2ETest`
+> (7 tests, runBoth JVM+JS, exact values) — while/for × if-tail, real `continue`
+> with trailing stmts, `break`, nested for-in-while, for-in with if-tail,
+> `while(true)` with if-tail; full suite 1969/0/0/169; the lib's `ReorderList`
+> flipped OFF the helper workaround to the direct in-loop `if` and renders
+> non-empty in Chrome (`scripts/browser-reorder.mjs`). **Distinct sibling face
+> found during this unit (loop-INDEPENDENT, ✅ FIXED 17/09 in the FOLLOWING unit): §267** below.
+
+- **Symptom (measured 17/09, headless `kof run --target=js`):** any `while`
+  (or `for`) whose body contains an `if`/ternary followed by more statements
+  miscompiles: the JS emitter's loop-region parser
+  (`JsControlFlowParser.parseLoop`) moves the trailing statements into the
+  generated `for(; cond; update)` clause, but their `let _scopedVar$…`
+  declarations stay inside the body block → `ReferenceError: _scopedVar$v is
+  not defined` at the first iteration. Script/JVM/Native targets are correct
+  (rule 5 broken). Minimal repro:
+  ```
+  var out = new List<Int>()
+  var p = 0
+  while (p < 3) {
+      var v = p + 100
+      var flag = 0
+      if (p == 1) { flag = 1 }
+      var r = v + flag      // <- emitted into the update clause
+      out.add(r)
+      p = p + 1
+  }
+  println(out.get(0))       // FIXED: JS now 100/102/102 == JVM == Script
+  ```
+- **UI amplification (why nobody hit it before):** inside a `Component.view`
+  the crash is SWALLOWED — `kofUiRender` wraps the view call in
+  `catch (e) { rootId = 0; }` (JsRuntimeUiComponents, since §157-era), so the
+  component mounts as an EMPTY box with no reported error: a silent broken UI
+  (rule 6). The widget found this only because Chrome rendering made the empty
+  DOM observable. (The §266 unit fixed the MISCOMPILE, not the error-hiding;
+  UNRELATED to §267, which is fixed.)
+- **✅ §266-daughter CLOSED 18/09 (lane development, owner `.18`):** the
+  silent swallow itself — 5 catches in `JsRuntimeUiComponents` (`kofUiRender`'s
+  view call, `kofUiRunEffect`, onMount, onDispose, the effects loop) that
+  ENGOLIED user-code throws → empty UI with ZERO console message (headless was
+  loud, the browser was silent — the R6 amplification above). Every catch now
+  calls one helper `kofUiReportError(where, e)` which keeps the resilience
+  (a broken component must NOT take down its siblings in the flush — measured:
+  sibling still mounts, `main` still runs) but writes
+  `console.error("[kof] <where>: <message+stack>")`. Chosen over `kofLogError`
+  because that one is level-gated (`kofLogLevel <= 3`, default info=1 — a user
+  running at warn/off would keep the silent-UI bug); `console.error` is
+  unconditional and maps to the Context err stream, which the E2E harness
+  shares with out — so it's assertable headless AND visible in the browser.
+  Guarded with `(console.error || console.log)` + try/catch so reporting can
+  never itself break the flush. Proof: `ComponentCoreE2ETest.throwingViewIs
+  ReportedNotSilentlySwallowed` + `throwingOnMountIsReportedNotSilentlySwallowed`
+  (list-OOB throw → asserts `[kof] view render threw` / `[kof] onMount threw`
+  AND `main-done` in the captured stream — the fail-first evidence was the
+  pre-fix probe printing NOTHING about the crash); `ComponentCoreE2ETest` 17→19,
+  all UI classes green (UiE2ETest 29, KofJsE2ETest 40, KofJsBrowserE2ETest 26 —
+  the console.error stream shared with stdout caused zero exact-match
+  regressions). JS-only by nature: views execute in the headless JS runner;
+  JVM/Native desktop UI does not render without a window, and the JVM already
+  propagates the stack.
+- **Root cause (file:line, now fixed):** `JsControlFlowParser.parseLoop` scanned
+  BACKWARD from the body's back-edge `Jump(start)` to find "the continue label"
+  (~line 293). For a loop body ending in `… Jump(endX), Label(endX), <trailing
+  stmts>, Jump(start)` — exactly what the if-lowering emits for an if-without-else
+  in the middle of a body — the backward scan stopped at the if's `Label(endX)`
+  and mislabeled it a CONTINUE label, poisoning `ctx.loops`; the body parse then
+  broke at endX and everything after it became the `for` update clause, emitted
+  in the `for(;…;UPDATE)` head outside the block where its locals were declared.
+  A real for-loop's continue label is structurally identical post-hoc — the
+  ambiguity was in the IR, so the fix adds the missing structural info.
+
+## §267 — KofJS folded a statement-level `if/else` (both branches a single assignment to the same var) into a ternary EXPRESSION, and the FOLLOWING statement's `let` was emitted BEFORE the ternary ran → stale read (silent wrong value; loop-independent) — ✅ FIXED 17/09 (lane development, owner = 192.168.100.18, found as a sibling face while fixing §266)
+
+> **FIX (17/09):** same lesson as §266 — the ambiguity is in the IR (a
+> statement-`if` and a value-`if-expr` lower to identical `[cond], CJump,
+> Label, branch, Jump, Label, branch, Label` ops), so the intent is marked at
+> lowering: `StatementLowerer.IfStmt` emits `KofStatementIf(thenLabel)` (the
+> branch-point's TRUE label) before the condition. The JS statement dispatcher
+> consumes the marker and registers the label in `MethodCtx.statementIfLabels`;
+> when the CJump branch in `JsExpressionStatementParser` finds ITS trueLabel in
+> the set (remove = one shot, labels are monotonic), it SKIPS `tryParseIfExpr`
+> and goes straight to `parseIfBody`. A label was REQUIRED (not a boolean
+> flag): measured 17/09, `if (if(c) true else false) {...}` — the first CJump
+> the dispatcher reaches belongs to the NESTED if-EXPRESSION, and a one-shot
+> boolean was eaten by it (the nested expr then mis-routed through
+> `parseIfBody` → COMP002 stack underflow). Value if-exprs (lowered by
+> `IfExpr`, never marked) keep folding, including when nested in a
+> statement-`if`'s condition or branch. The marker is a no-op in JVM/Native/
+> Script (explicit `case KofStatementIf _ -> {}`, same sites as §266's).
+> **Proof:** `JsIfFoldStatementE2ETest` 8/8 runBoth JVM+JS — the exact repro,
+> real if-expr still folds (no-regression), compound `&&`/`||` conditions,
+> nested if-expr in condition AND in branches, if/else in a loop with tail
+> read (the §266 case-G that motivated this unit), nested statement-ifs,
+> multi-assign branches; full suite 1990/0/0/169.
+
+- **Symptom (measured 17/09; PRESENT on the pristine toolchain — NOT a §266
+  regression):** an `if`/`else` whose branches each do ONE assignment to the
+  same variable, at STATEMENT position, followed by a statement that reads
+  that variable, misordered the reads: the next statement's initializer was
+  hoisted above the folded ternary, so it saw the variable's pre-`if` value.
+  Needed NO loop (loop-independent — what distinguished it from §266). Repro:
+  ```
+  var t = 2
+  var gv = 0
+  if (t % 2 == 0) { gv = t * 10 } else { gv = t * 10 + 1 }   // gv becomes 20
+  var gt = gv + 1                                             // must be 21
+  println(gt)          // FIXED: JS 21 == JVM == Script == Native
+  ```
+- **Root cause (file:line, now fixed):** `JsControlFlowParser.tryParseIfExpr`
+  is attempted by the STATEMENT dispatcher on every `CJump/Label` it meets
+  (`JsExpressionStatementParser`'s if-or-if-expr branch). When the fold hit a
+  statement-`if`, the resulting `JsConditional` was glued onto the expression
+  stack and merged with the FOLLOWING statement into a `JsSequence`, while that
+  statement's `let` preamble emitted BEFORE the sequence — so the read raced
+  ahead of the assignment. Post-hoc, no op-window discriminator exists between
+  this and a legitimate `var x = if (c) a else b` (identical IR) — hence the
+  structural marker.
 
 ### §194 — `for (var c in "abc")` (for-in over String/non-collection) was ACCEPTED and broke one way per target (JVM `VerifyError`, Native SIGSEGV, Script crash, JS iterated) — ✅ FIXED 14/09 (SEM058; triage of queue #145 of the bugs-and-gaps lane `192.168.100.15`)
 
@@ -8247,7 +8477,7 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   green before #183 because the typer returned the THEN type and never reached
   the `Object` print path.
 
-### §231 — overloads top-level com parâmetro default: `requiredArity` não considera defaults → chamada curta dá SEM014 em vez de selecionar o candidato com default — 🟡 catalogado 14/09 (achado na triagem CodeQL local-variable #160, owner = fila de overload/§131)
+### §231 — overloads top-level com parâmetro default: `requiredArity` não considera defaults → chamada curta dá SEM014 em vez de selecionar o candidato com default — ✅ FIXED 16/09 (lane compiler `192.168.100.17`, `e4f1fb65`; achado na triagem CodeQL local-variable #160)
 
 - **Symptom:** `Int h(Int x, Int y = 10) { ... }` + `Int h(String s) { ... }`;
   `h(5)` → `SEM014: Argument 1 of 'h': expected String but got int` (escolhe o
@@ -8260,15 +8490,50 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   define `requiredArity = totalArity`, então `pick` só aplica o candidato com
   default quando `nArgs == totalArity`. `TopLevelOverload` por contrato usa
   `requiredArity <= n <= totalArity` — os call-sites têm o wire pela metade.
-- **Why §231 and not a fix here:** completar o `requiredArity` MUDA a ordem de
-  avaliação/resolução de operadores (contrato §131/§205 frozen, rule 6) — é
-  implementação da feature, não limpeza. O comentário em `MethodCallTyper:399`
-  aponta esta seção.
+- **Why §231 and not a fix here:** initially catalogued as rule-6 (completing
+  `requiredArity` "changes the resolution order"). **CORRECTED 16/09 by the fix
+  itself (`e4f1fb65`): it was NOT rule 6** — `TopLevelOverload` already
+  documented `requiredArity <= n <= totalArity`; the 3 call-sites simply passed
+  `pt.size()`, i.e. the wire was half-connected. Wiring the documented contract
+  changes no operator/precedence/order. Lesson (same as the §241 misread): "it
+  looks like a contract change" must be re-verified against the class's own
+  documented invariant before freezing.
 - **Fix plan (when the overload lane attacks it):** `requiredArity = índice do
   primeiro default` (já existe o loop `firstDefault` em `CompilerClassLowering:360-366`
   — mesma lógica para função top-level), nos 3 sítios; regressão: um caso
   `h(Int,Int=) + h(String)` chamando `h(5)` → 15 em 4 targets + SEM057
   quando ambíguo de verdade.
+- **Status:** ✅ FIXED 16/09 (lane compiler `192.168.100.17`).
+- **Fix (Q0, causa raiz — o plano EXATO acima, sem mudança de contrato):** novo
+  helper `TopLevelOverload.requiredArityOf(fn)` (índice do 1º parâmetro com
+  default, espelhando `firstDefault` de `CompilerFunctionLowering
+  .lowerFunctionDefaults`/`CompilerClassLowering`); os 3 sítios que construíam
+  `new Candidate(..., pt.size())` passaram a usar `requiredArityOf(fn)`
+  (`MethodCallTyper:437`, `ExpressionMethodCallLowerer:565`,
+  `BuiltinCallTyper:422` — este último também afrouxou o guard que descartava o
+  candidato com-default em chamada curta, a causa do SEM013). O elo final:
+  `BuiltinCallTyper` validava `checkArgTypes` contra `chosen.paramTypes()`
+  TOTAL (2 params) mesmo escolhendo `h(Int,Int=10)` para `h(5)` → SEM013; agora
+  trunca para o PREFIXO recebido (`subList(0, nArgs)`) exatamente como o
+  `ExpressionMethodCallLowerer` emite o wrapper — seleção e emissão concordam.
+  NÃO é rule 6: não muda operadores/precedência/ordem; só liga o wire do contrato
+  `requiredArity <= n <= totalArity` que `TopLevelOverload` JÁ documentava.
+- **Proof (Q1, MESMO commit):** `TopLevelOverloadE2ETest` +casos §231 —
+  `OVERLOAD_DEFAULTS` (`h(Int,Int=10)+h(String)`, `h(5)`→15, `h(5,6)`→11,
+  `h("z")`→99) nos 4 targets (JVM/Script/JS/Native-x86 + riscv64/aarch64 sob
+  qemu, paridade byte-idêntica) e `ambiguousDefaultOverloadIsSem057NotSilent`
+  (`h(Int)+h(Int,Int=)`, `h(5)` → SEM057 nos 3, nunca ClassFormatError nem
+  escolha silenciosa — R6). **RED pré-fix medido** (stash dos 4 arquivos main):
+  `overloadParityNativeX86`/`overloadParityNativeAarch64`/
+  `ambiguousDefaultOverloadIsSem057NotSilent` + JVM/Script/JS vermelhos; 7/7
+  verde pós-fix. O único-candidato com default (DEFAULTS, já coberto) continua
+  7→11 (zero-regressão no caminho antigo).
+- **Q3 edges cobertos:** happy (prefixo + total + outro candidato por tipo),
+  expected-error (ambíguo → SEM057), cross-target (5 targets idênticos),
+  idempotência (re-compile). O edge `h(Int)+h(Int,Int=)` ANTES dava
+  ClassFormatError no JVM (wrapper `h(Int)` colidia com o explícito) — agora é
+  SEM057 no typer, ANTES da emissão.
+
 ### §232 — implicit-this instance method call inside its own class lowers to `invokestatic Default/Main.<name>` (missing function) → JVM `VerifyError` (if-condition face) — ✅ FIXED 15/09 (issue #225 closed; repro re-verified green on the tip 15/09)
 
 - **Symptom (measured 14/09 ~16:40 on fresh classes of the rebase of
@@ -8307,7 +8572,10 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   `PARSE039 Expected field name` (the range loop + subscript interplay);
   `while` + subscript works. (b) `fn` is a reserved word: `var fn = ...` →
   `PARSE037 Expected variable name` (harmless but undocumented in
-  fake-idioms). (c) field of function-type with the SAME NAME as a method
+  fake-idioms). **FIXED 17/09 (#330):** it is now `PARSE085` in every name
+  position — `ParseContext.expectId` emits the canonical diagnostic (probe:
+  function/variable/parameter/method/field/class/record/enum all `PARSE085`).
+  (c) field of function-type with the SAME NAME as a method
   → `this.field` resolves as the METHOD → `SEM015 not a function` on
   invocation (`clock` field vs `.clock()` method in the S3 host; worked
   around by renaming the field `clockFn`).
@@ -8353,6 +8621,23 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   generic `JsMember` emission, mirroring `ExpressionInstanceCallLowerer`'s
   builtin-receiver handling; `JsTypeMapper.jsClassName` must never leak a
   `java_lang_*` identifier into a call position.
+- **✅ FIXED 16/09 (JS face, lane development `192.168.100.18`):**
+  `JsCallEmitter` STATIC branch now maps the parse statics to the existing
+  runtime helpers (`Int.parseInt`→`kof_string_to_int`, `Long.parseLong`→
+  `kof_string_to_long`, `Double.parseDouble`→`kof_string_to_double`,
+  `Float.parseFloat`→`kof_string_to_float` — all already present from
+  github #51/§81), `Bool.parseBoolean`→`"true".equals(trim(lowercase))`, and
+  the static `Double/Float.toString(d)` routes to `kofNumFmt` (§264). No new
+  runtime fn needed for the parse family. **Proof:** `WrapperStaticCallsE2ETest.
+  wrapperIsAndParseStatics` was un-JVM-only to `runBoth` (JVM+JS) — 43/200/4.0/
+  true now match across both; JS face green on host node v18.
+- **⚠️ NATIVE face REMAINS OPEN (different lane — nat, not silently fixed):**
+  the same source `main(){ println(Int.parseInt("42")) }` fails at LINK time on
+  native x86 with `undefined reference to java_lang_Integer_parseInt [COMP001]`
+  (measured 16/09, lane .18 probe). This is R6-HONEST (loud link error, not a
+  silent run) but NOT rule-5 parity — the wrapper-static dispatch is missing in
+  the native backend too. Owner = native lane; left open deliberately so the
+  JS fix here is not recorded as a cross-target close.
 
 ### §239 — JS backend: `String.format(...)` aborts compilation with `Internal compiler error: unknown JS expression: null` (COMP002)
 
@@ -8743,6 +9028,11 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   - the 2 methods alone under 8× CPU load, 6 runs: **2/0** each;
   - the compiled binary run 20×: **20/20** `sel=boom\nok=true`.
   So it is a **rare nondeterministic native failure**, not a stable miscompile — consistent with a race in the brand-new §129 per-thread handler path (`kof_exc_chain` in `.tbss`/`%fs:tpoff`) rather than a deterministic bug.
+  - **Re-measured 16/09 ~15:54 (lane docs/development `192.168.100.22`), FULL 4-module suite on a CLEAN CLONE of tip `9572949f`: the flake stayed SILENT a 3rd straight time** (0 failures in 2218 = 1911+38+7+262, 0 errors, 192 skip, BUILD SUCCESS). Today's full-suite tally: fired 09:44, silent 11:38/15:09/15:54 → the frequency estimate tightens toward ~1/4 (not ~1/2). (+3 runs vs 15:09 = the G-6b guard `NativeX86GcMarkScopeTest`, `92d11a03`, no skip-guard → runs on the host.)
+  - **Re-measured 16/09 ~15:09 (lane docs/development `192.168.100.22`), FULL 4-module suite on a CLEAN CLONE of tip `97425541`: the flake stayed SILENT AGAIN** (0 failures in 2215 = 1908+38+7+262, 0 errors, 192 skip, BUILD SUCCESS — `KofConcurrency2Test` 41/0/3-skip). Frequency today: FIRED 09:44, silent 11:38 and 15:09 → ~1/2 holds. (+1 run vs 11:38 = the §261 window-bind browser test `4ea099b3`, Chrome-guarded → skip+1 here; +1 skip = §255 sysroot guard `06e77e94`.)
+  - **Re-measured 16/09 ~11:38 (lane docs/development `192.168.100.22`), FULL 4-module suite on a CLEAN CLONE of tip `803eeef4`: the flake stayed SILENT** (0 failures in 2214, BUILD SUCCESS — `KofConcurrency2Test` 41/0/3-skip). Frequency across the full-suite runs measured today: FIRED at 09:44, silent at 11:38 → ~1/2, matching the isolation re-affirmation below.
+  - **Re-measured 16/09 ~09:44 (lane docs/development `192.168.100.22`), FULL 4-module suite on a CLEAN CLONE of tip `98ac26ed`: the flake FIRED AGAIN** (1 failure in 2211 — exactly `spawnWorkerThrowPropagatesThroughSelectAnyNative`, `Runtime error: array index out of bounds`, identical to the 15/09 signature). Full-suite frequency now ≈ 2 occurrences in ~10 module runs — consistent with the re-affirmed reading below.
+  - **Re-measured 16/09 ~03:20 (lane docs/development `192.168.100.22`), single-method isolation `KofConcurrency2Test#spawnWorkerThrowPropagatesThroughSelectAnyNative` with a fresh `-am` build and NO CPU load: 6 runs = 4 pass / 2 FAIL.** This **weakens** the "not reproducible in isolation (9/9)" premise above and the "rare / load-dependent" hypothesis — it now fires ~1/3 of the time in a quiet single-test run, i.e. the race is **not gated on CPU load**. The full-suite gate of that same tip (2206 run, at the time) showed exactly 1 fail = this §252 flake, **not a new regression** (all other targets/modules green). Sharpened pointer for the owner: reproduce by hammering the single method (or add the bounded-retry loop the Hypothesis already suggests) — load is not a prerequisite.
 - **Impact:** it makes the full-suite gate **red intermittently** (a `git bisect`/CI hazard: the same commit is green 4/5 times). The failing assertion is a **TEST red on the tip**, not one of the known-alien §205.
 - **Hypothesis (not proven):** the `selectAny` path that re-raises an exceptional handle (`handle->exc`) interacts with the per-thread unwinder under a lost race — e.g. the worker's handler frame or the handle's exception slot is read before the spawner materializes it, and the corrupted unwind lands in a bounds-check path (`kof_bounds_error`). Root-cause work must be done **in the native lane** with the failing pattern reproduced under load (add a bounded retry loop to the harness to force it).
 - **Issue:** **#273** (opened 15/09 by this lane with the byte-identical repro + evidence).
@@ -8762,8 +9052,12 @@ the user's — a compile-time diagnostic is the goal (rule 6).
 - **Matrix (all green unless stated):** `core3` Str captured, no self-ref → 3/3 green; `e5` Int captured + reassigned after creation → green; `e6` Str captured + reassigned → green; `e2` `time.cancel("literal")` inside the job → green; `winclose` `w.close()` on a captured Window inside the job → **green on all 3** (the auto-dismiss action itself works); `r1`/`s1` self-ref → SEM011 ×3; `e1`/`autotest` handle-read in job → green/green/**SIGSEGV**.
 - **Impact:** the one-shot/cancel-by-id idiom is unusable — this is the exact blocker for `kof-ui-widgets` **Toast auto-dismiss** (roadmap UIW008: "Toast auto-dismiss, Spinner/Skeleton animados"). The `spawn { time.sleep(ms); w.close() }` workaround is NOT parity (e3: fired=0 — the js side never runs the spawn in that shape under test).
 - **Hypothesis (face B, not proven):** the native closure's captured Str slot ends up pointing at the scheduler-allocated handle temp (or the spawner's slot) whose backing dies/is reused before the worker thread (`SCHED001`, thread-per-job via clone) reads it — consistent with a dangling KofStr deref inside the worker. Root-cause work belongs to the native lane; face A belongs to the frontend scoping (related to §177's lambda-capture family).
+- **🔬 ROOT CAUSE PROVEN (17/09, native lane `.17` — gdb + bisect matrix):** the hypothesis was WRONG — the crash does NOT happen in the worker and the captured slot is NOT dangling. It is a **x86-64 stack-misalignment**: when the assignment target is a captured-mutable local (a `CapturedVarBox` field — face A seam (c) made self-captured `id` boxed) and the RHS is a call, the emitter keeps the receiver-box on the **machine stack** across the RHS evaluation (`pushq` before, `popq %rcx; movq %rax,16(%rcx)` after), and the resulting push-count at `call kof_time_interval` leaves `%rsp ≡ 8 (mod 16)` in `main` (gdb, measured on tip: red binary `rsp=0x…d5f8 mod16=8` vs green `mod16=0` at the same call). The scheduler's `pthread_create` then faults INSIDE glibc's `__pthread_attr_copy` on `movaps` (SSE needs 16-byte alignment) — the scheduler is the VICTIM, not the bug. The `#4 = heap-pointer` return frame gdb showed = the corrupted stack, not the cause.
+- **Bisect matrix (native x86, tip, this session):** `id="" + id=interval(job reads id.length)` → **139**; job NOT reading the captured handle (writes `got` only) → green; non-self-assign `h=interval(reads id+got)` → green (same closure!); self-assign WITHOUT captures (`id=interval(println)`) → green. Trigger = **self-referencing assignment into a BOX + closure reads the boxed var** — exactly the `var id = ""; id = time.interval(10, () -> … id …)` workaround shape face A shipped for. Face A's SEM092 gate keeps users from the native crash; the crash itself is this misalignment.
+- **Fix direction (queued, native codegen):** the boxed-store sequence (`NativeMethodEmitter`/`KofStoreField` on a `CapturedVarBox` receiver in a method frame) must keep call-site alignment: hold the receiver-box in a FRAME SLOT (`movq box, -N(%rbp)` + reload after) instead of an odd number of machine-stack pushes across calls, or fix the prologue so every `call` lands ≡0. Small surface (one emitter path), but it touches the shared native assignment lowering — needs the matrix above as the regression net (Q3: the 4 green variants must stay green, the red one must go green, JVM/JS/SCRIPT unaffected).
+- **Claim:** face B is owned by native lane `.17` (this record is the claim + root-cause; the codegen fix is the next unit in this lane — DOING.md ⚡ line).
 - **Pointer:** face A → lane compiler `.22` (scope of the initializer var in lambdas); face B → lane development `.18`/`nat` (`RuntimeConcurrency`/`SCHED001`, JS `kofTimeInterval` env). Repros in the report (`r1`/`s1`/`e1`/`e5`/`e6`/`e2`/`winclose`/`core3`, 10–20 lines each).
-- **Status:** 🔴 OPEN — catalogued 15/09 by lane development `192.168.100.18`, discovered while verifying UIW008/UIW020 against `beta-0.4.0` for `kof-ui-widgets`.
+- **Status:** 🟡 **FACE A ✅ FIXED 16/09** (lane development `192.168.100.18`); face B remains 🔴 OPEN (native lane). Face A fix = 4 seams landed together (never commit (a) alone — without (d) it becomes a silent stale read): (a) `StatementAnalyzer` pre-defines the decl name as UNKNOWN when its initializer contains a lambda that reads it (self-capture); (b) new compile-time gate **SEM092** on every `NATIVE*` target (reads of the captured handle in the job SIGSEGV until face B — compile-time error, never a silent crash, R6); (c) `CompilerCaptureScanner` VarDeclStmt case marks the self-name captured-mutable so it gets a box; (d) `CapturedVarBox.emit` stores the box in the slot BEFORE evaluating the initializer (the lambda inside the init captures the box by reference; `KofStoreField(value)` comes after). Proof: `KofTimeE2ETest.selfReferencingIntervalHandleCancelsItself` (jvm+js+script run, real cancel observed) + `selfReferencingIntervalHandleIsNativeGateSem092` (3 native targets, SEM092 asserted); full kof-compiler suite 1901/0/0/190. Workaround (shadow handle) stays valid.
 
 ### §257 — `static final String` runtime text with CONSTANT VALUE (renumbered from §253 after the 15/09 collision with the `time.interval` §253 of lane `.18`) = javac inlining → false red with incremental build
 
@@ -8825,7 +9119,10 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   agreement holds).
 - **Timeline:** cell GREEN on tip `c4356881` (full suite 15/09 ~18:00,
   `suite253.log`: only §257-collateral + 2 §181 catalogued reds) → cell RED on
-  tip `1fed6a17`. The golden (written in `f8301194`) was recorded from an
+  tip `1fed6a17`. ⚠️ **`c4356881` does not resolve in this repo nor on the
+  remote (API 422) — dead reference** (same class as §258's `eaba0f24`; the
+  verifiable anchors of this timeline are `1fed6a17` RED and `f8301194`
+  golden). The golden (written in `f8301194`) was recorded from an
   implementation that INCORRECTLY accepted the two bad checksums and printed
   the `==`-comparisons as false — some commit between flipped those lines to
   the correct values without the golden being re-verified (Q0: the golden was
@@ -8833,6 +9130,12 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   (`1fed6a17` DB001, `9e270e56` D-NARROW-WHILE #159, gate/crons commits) are the
   suspect range; `9e270e56` (flow narrowing touching `Bool ==`) is the prime
   suspect for lines 14,15.
+- **⚠️ Record note (16/09, lane bugs-and-gaps `192.168.100.15`):** the SHA
+  `c4356881` does **not** resolve in this repo's object store (3109 commits,
+  all worktrees) nor on the remote (GitHub API → 422). It is a dead reference
+  (likely a local commit on the `.22` host that never landed). The verifiable
+  anchor of the timeline is `1fed6a17` (RED); `f8301194`/`1fed6a17`/`9e270e56`
+  all resolve.
 - **Expected:** golden corrected to the oracle-verified sequence (the current
   4-target consensus) by the **stdlib/validation lane (owner of `f8301194`)** —
   NOT by this lane (Q5: I do not relax another lane's assertion to go green;
@@ -8853,11 +9156,15 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   libsqlite3)` guard → false red on developer machines/CI without the multiarch
   package (`apt install libsqlite3-dev:riscv64/arm64` fixes locally).
 - **Expected:** an honest SKIP when the sysroot lib is absent (the guard pattern
-  `4408eb66`), not a red; or the CI installs the cross libs.
+  `4408eb6`), not a red; or the CI installs the cross libs.
 - **Repro:** on a host without `/usr/{riscv64,aarch64}-linux-gnu/lib/libsqlite3.so`,
   `mvn -o -pl kof-compiler -am test -Dtest=KofDbE2ETest#crossNativeSqliteNowCompiles`.
-- **Status:** 🔴 OPEN — catalogued 15/09 by lane compiler `192.168.100.17`.
-  Pointer: lane development `.18` (DB001, author of the test in `1fed6a17`).
+- **Status:** ✅ FIXED 16/09 (lane development `.18`) — `crossNativeSqliteNowCompiles`
+  now carries the same guard trio as its sibling `crossNativeSqliteRoundtrip`
+  (`has(as,ld,qemu)` + `NativeCrossLink.sysrootOrNull` + `NativeCrossLink.sqliteAvailable`):
+  honest SKIP when toolchain/sysroot/libsqlite3 are absent, real assertion otherwise.
+  On this host (no cross `libsqlite3`) the test now skips instead of hard-failing
+  (`Skipped: 1`, was a red); on a host with the multiarch package it runs as before.
 
 ### §256 — CONC001 closure (lane .18) left 2 reds on clean tip: cross gaps table desynced + riscv64 `poll(b)` returns 0 after `selectAny`
 
@@ -8887,6 +9194,988 @@ the user's — a compile-time diagnostic is the goal (rule 6).
 - **Repro:** worktree at `4af4356f`:
   `mvn -o -pl kof-compiler -am test -Dtest='ConcurrencyGapsDocTest,KofConcurrency2Test#crossNativeConcurrencyHelpersRun'`
   (both red without any local change).
-- **Status:** 🔴 OPEN — catalogued 16/09 by lane compiler `192.168.100.17`.
-  Pointer: lane development `.18` (CONC001, author of `e8364c97`). Related: §129
+- **Status:** 🟡 PARTIAL 16/09 — catalogued 16/09 by lane compiler `192.168.100.17`.
+  **Face (a) ✅ CLOSED 16/09 by lane docs/development `192.168.100.22` (`dd2c7fcb`):**
+  the gaps table of `learn/18-concurrency.md` (EN cell + PT mirror, same commit) now
+  matches the emitted cross symbols — `ConcurrencyGapsDocTest` 3/3 green
+  on the tip. **Face (b) remains OPEN** (riscv64 `poll(b)`=0 after selectAny —
+  behavior fix, needs the cross toolchain/qemu). Pointer: lane development `.18`
+  (CONC001, author of `e8364c97`). Related: §129
   (cross-thread spawn handler), §257 (same session, DIFFERENT root cause).
+
+### §258 — CodeQL #773 `java/comparison-with-wider-type` on `KofJsRunner.listValues` (DB001 slice A, lane `.18`) blocks EVERY push: the pre-push gate is repo-wide
+
+- **Found 16/09 ~04:30 by lane docs/development `192.168.100.22`**, when pushing
+  the R6-documental sweep (`eaba0f24` ⚠️ dead SHA — see the record note at the
+  end of the section): `scripts/codeql-gate.sh --fast` returned
+  RED — `#773 [java/comparison-with-wider-type]
+  kof-runtime/src/main/java/dev/kof/runtime/KofJsRunner.java:510`. The gate has
+  no "not-my-file" exception: once a new alert exists on `beta-0.4.0`, **no
+  agent can push** until it is resolved (by design — the gate is the repo's
+  floor). The alert was introduced by `3e55df51` (DB001 fatia A, lane `.18`),
+  already on the remote — so it was a **pushed-red** the gate of `.18`'s session
+  did not catch (or bypassed without a declared cause).
+- **Root cause (static reading, no cross needed):** `listValues` does
+  `long n = list.getArraySize(); new Value[(int) n]` and the loop bound
+  `int i < n` compares int to long. `getArraySize()` can in principle exceed
+  `Integer.MAX_VALUE` on a huge guest array → the `(int) n` cast silently
+  wraps (negative → `NegativeArraySizeException`, or truncated → wrong-length
+  binds with no diagnostic = R6 violation). The same pattern in the neighbors
+  (`d6eaae0c` fixed a wave of these) was fixed with an explicit bound check +
+  error, not a raw cast.
+- **Repro (no toolchain needed — CI API or local scan):**
+  `scripts/codeql-gate.sh --fast` on any push (blocks with RED #773);
+  the pattern itself: `KofJsRunner.java:523-525`.
+- **Expected:** the `.18` owner (author of `3e55df51`) adds the bound check
+  (`n > Integer.MAX_VALUE` → `guestError`/throw, matching the `d6eaae0c`
+  precedent) — a 3-line fix. When catalogued, NOT fixed here: rule 6 (golden —
+  same file, live conflict with the then-IN-PROGRESS DB001 unit) + rule 8
+  (never blind-edit another lane's in-flight feature) — see the UPDATE below
+  (that rationale expired). Until it lands, OTHER lanes legitimately use the
+  honest bypass (`CODEQL_GATE_SKIP=1` + declared cause: "blocked by §258,
+  owned by `.18`") — the bypass is documented in the hook itself for exactly
+  this case; silently "fixing" the test/gate to pass is what rule Q5 forbids,
+  bypass-with-cause is not.
+- **UPDATE 16/09 ~07:00 (lane bugs-and-gaps `192.168.100.15`):** the
+  "live-conflict with the IN-PROGRESS DB001 unit" rationale **expired** — the
+  DB001 unit closed at `eb9140cb` (16/09 01:34), which is also the LAST commit
+  to touch `KofJsRunner.java`; the file has had no edits in ~5.5h and no lane
+  holds it `EM CURSO`. So the fix is now **unblocked** for its owner `.18`
+  (still active, pushed `78b733fa` 05:53). Also corrected the line reference:
+  the alert is at **:525** (`long n = list.getArraySize()` @523, `for (int i =
+  0; i < n; i++)` @525), not :510 — the file shifted with DB001 fatia B.
+  Ownership is unchanged (lane `.18`); this lane only keeps the record true.
+- **Lane `.17` ledger (17/09, this session):** #794
+  `java/local-variable-is-never-read` (`KofHttpNativeTimeoutE2ETest:133`, my
+  §259 file) — **CLOSED** (`int bh = startBlackhole()` never-read local
+  dropped, side-effect call kept; test still 3/3). #809
+  `java/concatenated-command-line` (`RecordNullableEqContentE2ETest`, created
+  by §262 face (b) `ab284b91`) — catalogued: same harness pattern as #789
+  (the E2E `ProcessBuilder("java","-cp",tempDir,...)` idiom shared by 11 test
+  files on the branch; path is a controlled JUnit tempdir, not user input) —
+  a harness-wide triage decision belonging to the sweep owner, not patched in
+  one file alone. Pushes of this session used the documented honest bypass
+  (`CODEQL_GATE_SKIP=1`) with cause "gate repo-wide red on the pre-existing
+  multi-lane sweep (#783–#810), lane `.17` debt (#794) closed in-file"; never
+  edited the gate or any assertion (Q5).
+- **Record note (16/09, lane bugs-and-gaps `192.168.100.15`) — dead SHAs:**
+  `eaba0f24` (above) does **not** resolve in this repo (all 3109 local commit
+  objects, all 3 worktrees) nor on the remote (GitHub API → 422). Same for
+  `c4356881` (in §256 timeline). The cataloguing commit itself is `5d12cb21`
+  (16/09 01:06, parent `c084113e`), where the sibling record-sweep SHAs
+  (`ce8e76a0`/`97597416`/`dd2c7fcb`) all resolve; the candidate for the
+  R6-documental sweep is `3c6cb458` (16/09 04:33, same author), but this is
+  **not** asserted as a substitution. Practically: pointers that fail to
+  resolve are noise — the same class of defect as the §218 "record before the
+  proof" lesson. No overclaim; the dead tokens are flagged, not rewritten.
+
+- **Second alert (same mechanism, 16/09 ~05:00) — #774 `java/relative-path-command` at
+  `kof-cli/src/test/java/dev/kof/cli/DepsTransitiveTest.java`** (D-DEV-PRIORITY
+  frente-3 `e5013152`, owner lane compiler `.17`): the `mvnOnPath()` availability guard
+  ran `new ProcessBuilder("mvn", "-v")` (relative command) — CodeQL flags any
+  `ProcessBuilder`/`Runtime.exec` whose program name is a bare relative token.
+  **CLOSED 16/09 by `2a60b426`** (the `.17` lane fixed it in-file, exactly the
+  "fix it in the same commit that ships the gap" discipline): `mvnOnPath()` removed,
+  the test now reuses `Deps.mvnAvailable()` — one guarded helper instead of a
+  hand-rolled probe. Gate now shows ONLY #773. The cataloguing here played its role:
+  pointer to the owner, owner fixed it within ~2h.
+- **Third + fourth alert (surfaced 16/09 ~10:30 by the GitHub CodeQL analysis on the
+  tip, same repo-wide-gate mechanism) — #775 `java/relative-path-command` at
+  `kof-compiler/src/test/java/dev/kof/compiler/NumericFormatterE2ETest.java:35`** and
+  **#776 `java/unused-parameter` at
+  `kof-compiler/src/main/java/dev/kof/compiler/KofHttp.java:57`**. #775 is the SAME
+  family as #774: `runJvm()` spawns `new ProcessBuilder("java", "-cp", …)` (relative
+  program) — the pattern is correct for a test oracle but CodeQL flags any bare
+  relative token; the `.22` owner of `78b733fa` fixes in-file (a guarded `java`
+  resolution or a scoped suppression). #776 is the `supportedOn(@SuppressWarnings
+  ("unused") Target target)` placeholder on `KofHttp` — already annotated and its
+  removal/real-wiring is **§259** (the native-http dead-guard record, owner `.15`/`.17`);
+  CodeQL does not honour `@SuppressWarnings` for this rule, so the resolution belongs
+  to §259 (wire the guard when a real unsupported target lands, then the param is used).
+  NOT fixed here: rule 8 (another lane's file) + the #776 fix is a §259 design call.
+- **Fifth alert (surfaced 16/09 ~13:25 by `scripts/codeql-gate.sh --fast` on the tip) —
+  #777 `java/uncaught-number-format-exception` at
+  `kof-compiler/src/test/java/dev/kof/compiler/KofWebJsE2ETest.java:302`**: the
+  chunked-response decode helper introduced by `7cd69a7b` (SSE handler-scoped,
+  maintainer SSE lane, 16/09) parses the hex chunk-size with `Integer.parseInt(…, 16)`
+  inside the `while (p < body.length)` loop with no catch — a malformed/truncated
+  chunk-size line throws an uncaught `NumberFormatException` (CodeQL: the input comes
+  from a network read, so it is attacker-reachable in principle even though this is a
+  test helper). Fix is one line and in-file (wrap with a guard/try like the
+  `lineEnd < 0` break above it); NOT touched here: rule 8 (the maintainer SSE lane owns
+  the file, the test is green today — the NFE path is a robustness gap, not a red).
+- **Status:** 🟡 PARTIAL 16/09 — catalogued by lane docs/development `192.168.100.22`.
+   **#773 ✅ FIXED 16/09** by lane `.18` (author of `3e55df51`): `listValues` now
+   bound-checks `n > Integer.MAX_VALUE` → a clear `RuntimeException` before the
+   `(int)` cast, loop is int/int (precedent `d6eaae0c`). **#777 ✅ FIXED 16/09** by
+   the SSE lane (`.18`, author of `7cd69a7b`): the `KofWebJsE2ETest` chunk-decode
+   helper validates the hex size token before `parseInt` (breaks on malformed like
+   the `lineEnd < 0` guard above), no more uncaught NFE; `KofWebJsE2ETest` 6/6.
+   #774 closed by `.17` (`2a60b426`). **STILL OPEN:** #775 (lane `.22`,
+   `78b733fa`) + #776 (§259 native-http guard, `.15`/`.17`). Related: §256,
+   `d6eaae0c`.
+- **UPDATE 16/09 ~15:20 (lane docs/development `.22`, gate re-run after `c2300df6`):**
+  the gate is now 3 open — **#773/#777 disappeared but #780 APPEARED at the SAME
+  site**: `java/uncaught-number-format-exception` `KofWebJsE2ETest:307`. The #777
+  fix (`.18`/SSE) added `sizeToken.matches("(?i)[0-9a-f]+")` before
+  `Integer.parseInt(sizeToken, 16)` — but that regex accepts an arbitrarily long
+  hex token: *measured* (`javac`/`java`, golden = real run): `"fffffffff"`
+  matches the guard AND `parseInt(...,16)` throws
+  `NumberFormatException: For input string: "fffffffff" under radix 16` —
+  uncaught, same class of failure #777 was. **The fix was insufficient: it
+  closed CodeQL's exact token but not the overflow path.** Fix (owner =
+  `.18`/SSE lane, rule 8 — not touched here): bound the token length
+  (`sizeToken.length() <= 7` — HTTP chunk sizes that overflow an int are
+  malformed by definition, treat like the empty/non-hex break) or wrap the
+  `parseInt` in try/catch → `break`. #775/#776 unchanged (`.22`, §259).
+- **UPDATE 18/09 (lane development/SSE `.18`) — #780 ✅ FIXED.** Re-measured
+  the boundary (`javac`/`java`, 18/09): the overflow is NOT only >8 digits —
+  `0x80000000` and `0xffffffff` are **8 digits and also throw**
+  `NumberFormatException` (radix-16 parses unsigned → overflow), while
+  `0x7fffffff` (8 digits) parses to `MAX_INT` fine. So the catalog's
+  `length() <= 7` suggestion was WRONG (it would reject the valid 8-digit
+  `7fffffff`); the correct guard is **catch → break** (treat an unparseable
+  size exactly like the empty/non-hex break — a chunk header that can't be an
+  int is malformed by definition). Applied at `KofWebJsE2ETest` de-chunk
+  helper; `KofWebJsE2ETest` 7/7. #775 (`NumericFormatterE2ETest`, `.22`) and
+  #776 (`KofHttp.supportedOn`, §259) are the ONLY remaining §258 opens (other
+  owners).
+
+### §259 — Native `http.timeout`/`http.retry`/`http.circuit` are SILENT no-ops (compile OK, `ret` only) and the docs cited a phantom `HTTP003` code the compiler never emits
+
+- **Found 16/09 by lane bugs-and-gaps `192.168.100.15`**, during the doc↔code
+  gap-code sweep (WEB002 drift follow-up): `ecosystem-coverage.md:270` claimed
+  the Native retry/timeout/circuit knob was a "gap `HTTP003` — not silent:
+  debug `syserr`". Neither half is true in the code:
+  - `HTTP003` **does not exist** — grep over
+    `kof-compiler`/`kof-runtime`/`kof-cli`/`kof-script` returns zero `HTTP003`.
+    The only HTTP code that exists as a literal is `HTTP002`
+    (`KofHttp.java:58`, `ExpressionHttpCallLowerer.java:28`) — but it too is
+    **currently unreachable**: `KofHttp.supportedOn(...)` always returns `true`
+    (`KofHttp.java:53-55`) and `KofHttp.gapCode()` has no callers, so the
+    `HTTP002` error branch (`ExpressionHttpCallLowerer.java:19-30`) is dead. In
+    other words: **no HTTP gap code is emitted at all today**, which is exactly
+    why the no-op configurators go unnoticed.
+  - The three configurators are **pure silent no-ops**: `NativeHttpCore.java:369-380`
+    emits `kof_http_timeout_set`/`kof_http_retry_set`/`kof_http_circuit_set` as
+    bare `ret` (same on riscv/aarch64: `NativeRiscvHttpCore.java:317-324`), with
+    no `syserr`/stderr write anywhere in the native HTTP sources.
+- **Why it is a Q7/R6 defect:** `http.retry(3)` on Native compiles clean and then
+  does nothing — the user believes retries/circuit-breaker are active when they
+  are not. Rule 5 (cross-target parity) + R6 (never silent): the honest forms
+  are a compile-time gap code on `NATIVE*` (like the WEB split) or a real
+  runtime implementation — never a silent accept.
+- **Repro (no toolchain needed — static):**
+  `grep -n 'kof_http_retry_set' kof-compiler/src/main/java/dev/kof/compiler/nat/NativeHttpCore.java`
+  → the symbol body is a lone `ret`; `grep -rn 'HTTP003' kof-compiler kof-runtime`
+  → empty; `grep -rn 'HTTP002"' kof-compiler/src/main/java` → only the two
+  declarations above, no reachable emit path.
+- **Fix direction (NOT done here):** either (a) add a dedicated compile-time gap
+  code for the no-op configurators on `NATIVE*` (rename the docs' phantom
+  `HTTP003` into a real emitted code, mirroring `KofWeb.gapCode`'s per-function
+  split) or (b) implement timeout/retry/circuit in the native HTTP asm. Owner
+  lane is the compiler/native lane (`.17`/`.18`); NOT this lane (rule 6 — the
+  choice between "honest gap" and "implement" is a scope decision, and the
+  affected files are the native HTTP backend). Recorded so the phantom code
+  does not keep spreading through the corpus.
+- **Docs corrected in this unit (EN+PT):** `ecosystem-coverage.md:270` no longer
+  cites `HTTP003`/"not silent: debug syserr" — it now says the native knobs are
+  pure silent no-ops; `backend-parity.md:93` likewise (phantom `HTTP003` → §259
+  pointer).
+- **Status:** ✅ CLOSED 17/09 (fatiast 1-4: timeout x86 `021cefad` | retry x86
+  `3f6814ec` | circuit x86 `d11eceac` + paridade-5xx `6abd3341` | porta riscv64
+  +aarch64 nesta unidade — os 3 knobs REAIS nos 4 targets nativos + JVM/JS,
+  mensagens cross-identicas provadas sob qemu
+  (`KofHttpNativeResilienceCrossTest` 4/4: "kof.http: timeout", "HTTP 500
+  from <url>", "kof.http circuit open (fail fast)"; SUITE 1979/2F(§181
+  pre-ex)/0E; split NativeRiscvHttpVerbs p/ gate). Constantes riscv MEDIDAS
+  (ppoll=73 ts=segundos — NAO ms como x86 poll; setsockopt=208/209/25/113;
+  armadilha htons-LE 0xAFB3 capturada em probe rtmo.s). Catalogued by lane
+  bugs-and-gaps `192.168.100.15`; **fatia 1 FECHA o timeout no x86_64:**
+  `kof_http_timeout_set` guarda segundos (default 15, 0 = sem deadline, igual
+  o JVM) e `kof_http_core` roda connect nao-bloqueante + `poll(POLLOUT)` com
+  deadline + `getsockopt(SO_ERROR)` (erro de conexao RAPIDO, nao engolido pelo
+  timeout) + `SO_RCVTIMEO`/`SO_SNDTIMEO` + `read` que volta `-EAGAIN` vira
+  `throw "kof.http: timeout"` (superficie identica ao JVM — `catch (String e)`
+  pega). Codigos de syscall/sockopt/errno e offsets **medidos em probes
+  standalone** (tmo.s/tmo2.s/tmo3.s: poll bloqueou o deadline exato 1.005s,
+  SO_ERROR=111 lido certo em porta fechada, EAGAIN so' apos tv_sec quando o
+  bloqueio e restaurado — sem restaurar, EAGAIN instantaneo = green falso).
+  Prova: `KofHttpNativeTimeoutE2ETest` 3/3 (Q0: RED = binario travou 20s no
+  blackhole-server; GREEN = timeout em ~1s com `timeout(1)`; request boa com
+  `timeout(5)` intacta; porta fechada fail-fast). `KofHttpE2ETest` 8/8 +
+  `KofHttpResilienceE2ETest` 3/3 (JVM/JS) sem regressao.
+- **FATIA 2 FECHA o retry no x86_64 (17/09, commit desta unidade):**
+  `kof_http_retry_set` guarda N (`max(0,n)`, igual JVM) e o core roda em
+  `.Lhr_attempt` com contador em `%rbp` (callee-saved, push/pop simetrico):
+  excecao de conexao/timeout **ou** status `>= 500` ⇒ nova tentativa; esgotadas
+  as N+1, `throw` da ultima mensagem — 5xx monta `"HTTP <n> from <url>"`
+  (paridade exata da `IOException` do `JvmWebHttpRuntime.kof_http_request`).
+  Causa REAL achada no caminho: o read-loop clobberava `%r12` (method) — sem
+  stash em `.Lhttp_methodp` a 2a tentativa construia request com method NULL
+  (segfault, output vazio); RED mostrou o sintoma, o stash corrigiu a raiz.
+  Split `NativeHttpCore`→`NativeHttpVerbs` (wrappers/configurators,
+  byte-a-byte, precedente REFACTOR-500) p/ o core caber no gate (415/151).
+  Prova: `KofHttpNativeRetryE2ETest` 3/3 (Q0 RED: retry no-op = 1 tentativa e
+  5xx retornado silencioso — o PROPRIO no-op virou bug de paridade, regra 4 do
+  freeze; GREEN: flaky 500→500→200 com `retry(2)` = `ok-3`/3 hits, 5xx
+  persistente com `retry(1)` = throw apos 2 hits, default `retry(0)` = 1 hit +
+  throw). `KofHttpE2ETest` 8/8 + `KofHttpResilienceE2ETest` 3/3 (JVM/JS) +
+  `KofHttpNativeTimeoutE2ETest` 3/3 sem regressao. **PENDENTE:** circuit no x86
+  (fatia 3) e a porta riscv64/aarch64 dos 3 knobs (fatia 4 — os `ret` puros
+  continuam la; o `HTTP003` do doc continua inexistente, o registro aponta p/ ca).
+- **FATIA 3 FECHA o circuit no x86_64 (17/09 ~04:00):** helpers asm proprios no
+  modulo verbs (`kof_http_now_ms` = clock_gettime(228)/CLOCK_MONOTONIC=1,
+  medidos, inline p/ nao depender de kof_now sujeito a runtime prune;
+  `kof_http_circuit_open` fecha no vencimento da janela (half-open, 30s = JVM);
+  `record_fail` incrementa e abre ao bater trips; `record_success` zera).
+  O core integra os 3 pontos do JVM: fail-fast ANTES do socket com throw
+  `"kof.http circuit open (fail fast): "+url`, `record_fail` por tentativa
+  falha, `record_success` no corpo <500. `circuit(0)` fecha e limpa (max(0,n)).
+  PROVA: `KofHttpNativeCircuitE2ETest` 1/1 (Q0 RED: 2a request conectava =
+  circuito nunca abria; GREEN: fail=caught, open=kof.http circuit open (fail
+  fast), recover=ok, e okHits==1 EXATO — fail-fast nao toca o servidor).
+  Vizinhos 15/15 (timeout 3, retry 3, E2E 8).
+- **AUTO-CACHO Q4 (17/09, mesmo turno):** o RED do circuit exercitou SO falha
+  de CONEXAO; o ramo `status>=500` do retry (fatia 2) nao chamava
+  `record_fail` — divergencia do JVM (`JvmWebHttpRuntime:184` registra no 5xx
+  tambem). Fix: `.Lhr_rtry_cl` agora chama `record_fail`; RED dedicado
+  (`nativeCircuitOpensOnPersistent5xxAndFailsFast`: sem fix, circuito NAO abre
+  e a 2a request CONECTA / endpoint 500 batido 2x; com fix, fail-fast e o
+  endpoint batido 1x exato). Regra 5 (paridade cross-target) + Q4. SUITE 1969/3F/0E: §181×2 +
+  KofConcurrency2Test.crossNativeConcurrencyHelpersRun (aarch64 `poll(b)`=0 vs
+  golden 1 — MESMA classe do §256 CONC001/riscv (lane .18); divergencia
+  agora no aarch; esta unidade nao toca codigo de concorrencia — nada
+  introduzido aqui). **FATIA 4 FECHADA (17/09):** timeout/retry/circuit
+  portados ao riscv64 com aarch64 herdando via translateRiscvToAarch64 —
+  `KofHttpNativeResilienceCrossTest` 4/4 sob qemu, mensagens IDENTICAS ao
+  x86/JVM; §259 CLOSED (commit da porta: ver SHA na linha de Status). Related: §258 (same sweep),
+  WEB002/WEB004/WEB003 (the per-function gap-code split precedent this should
+  follow).
+
+### §260 — Native x86: auto-collect `kof_gc_collect_now` no gatilho de free-list exausta é INSOUND por temporário em registrador (medição 16/09 — a frente 2 real exige stack-map, não o trigger)
+
+- **Contexto:** frente 2 da fila D-DEV-PRIORITY ("GC auto-collect:
+  safe-points + root map por frame"). A tentativa de 16/09 (lane `.17`)
+  portou o gatilho riscv G-4 (free-list vazia → coletar 1× antes do mmap)
+  para o `kof_alloc` x86 (`.Lkof_alloc_maybe_gc` em `RuntimeMemory.java`)
+  com gate `kof_spawn_count==0` e re-scan da lista nova. **Revertido
+  antes do commit** — a suíte provou insound + caro. Este registro é a
+  MEDIÇÃO (não a opinião):
+- **Medições (host x86, tip com patch + vs. sem patch):**
+  1. **Reuso funciona no caso main-only sem temporário em registrador:**
+     `s = "s"+i` 200k → VmHWM 1536KB (vs. 1201280KB = ~12KB/iter sem
+     coletor); sob `ulimit -v 256M`: exit 1 "out of memory" SEM o patch,
+     exit 0 COM. Ou seja: o mecanismo (collect_now derrama
+     rbx/r12-r15/rbp antes do mark) ESTÁ correto para valores que o
+     backend guarda no frame/pilha.
+  2. **INSOUND real (exit 139 SIGSEGV + stdout truncado):**
+     `KofStringParseTest.toDoubleToFloatContractNativeX86` e
+     `KofSupervisorE2ETest.supervisorNativeParityX86` (139) ficam
+     VERMELHOS com o trigger, verdes sem. Root cause: o backend x86 de
+     chamadas segura temporários vivos em **caller-saved** (`rax/rcx/
+     rdx/rsi/rdi/r8-r11`) no call-site do `kof_alloc` (ex.: o array/
+     String do parse, o bloco do handle no spawn path — o comentário em
+     `RuntimeConcurrency.kof_spawn_handle_new` já documenta que só a
+     ÂNCORA em bss salvou o trampolim); o mark conservador (pilha +
+     `.data/.bss.._end`) não enxerga registrador → sweep libera bloco
+     vivo → uso posterior = SIGSEGV/corrupção. O gate `spawn_count` não
+     cobre isso: é call-site, não thread.
+  3. **Custo de código (gate de tamanho):** `ArtifactSizeTest.helloX86`
+     inchou 32520→38928B (+19.7% > baseline+5%): o `call kof_gc_collect_now`
+     dentro de `kof_alloc` tira a máquina mark/sweep do dead-code e o
+     link estático a puxa para TODO binário. Não é impeditivo — mas prova
+     que hoje NENHUM binário carrega o coletor; liga-lo é decisão de
+     tamanho/valor, não só de som.
+- **Por que riscv pôde e x86 não:** `NativeRiscvAsmRtB44:15-20` mede e
+  documenta a assimetria — na riscv a value-stack É a pilha de máquina
+  e o mark derrama s0-s11; no x86 a máquina é de registradores e só o
+  frame do chamador está na pilha. Copiar o trigger sem o stack-map é
+  copiar meia ideia.
+- **O que a frente 2 REAL exige (face G-6 x86, planejada):** mapa de
+  raízes por frame (ou por call-site do `kof_alloc`): o backend x86
+  registra, em cada call-site, o conjunto de slots de frame/registrador
+  que apontam para heap; `collect_now` passa a varrer o mapa (ou o
+  backend spill permanentemente as referências vivas no frame — a via
+  mais simples, custo: push/pop por temporário). Sem G-6, manter o
+  status-quo honesto: mmap backstop (sem corrupção, memória maior).
+- **Pointer:** `docs/development/native-multiarch.md` §"G-6 x86";
+  fila = D-DEV-PRIORITY frente 2. `kof_gc_collect_now` MANUAL continua
+  exposto e seguro quando chamado sem temporário vivo em registrador.
+- **CAUSA REAL, apurada a gdb no MESMO dia da catalogação (substitui a
+  hipótese "registrador" como causa-1 — ela é causa-2 parcial):** duas
+  falhas de som no mark x86 quando o coletor roda:
+  **(1) varredura restrita ao frame corrente:** `kof_gc_mark` escaneava só
+  `[rsp..rbp]` de quem chama o coletor — os frames EXTERNOS (a pilha de
+  `main` com Strings vivas enquanto um helper aloca) ficavam INVISÍVEIS →
+  sweep liberava vivo (gdb: o slot `-16(%rbp)` de `main` continha 0 no
+  helper; keep virava o objeto do helper; supervisor SIGSEGV 139). O riscv
+  não sofre disso porque a value-stack dele É a pilha e o mark derrama
+  s0-s11 (RtB44:15-20). **ESTA METADE FOI CORRIGIDA 16/09 (G-6b, sem o
+  trigger):** o `_start` grava `kof_main_stack_bottom` (rsp de entrada) e o
+  mark varre `rsp..bottom` da thread inteira (cap 64MB + fallback
+  sp..sp+4096 preservados p/ harness asm sem _start); guard asm
+  `NativeX86GcMarkScopeTest` 3/3 (Q0: com o mark antigo, o guard cai na
+  asserção exata). Com a correção, keep/supervisor ficam verdes atá COM o
+  trigger ligado — a causa-1 estava ativa.
+  **(2) temporário em registrador caller-saved no call-site — CONFIRMADA
+  como causa-2 restante:** com (1) corrigida, o único red que sobra com o
+  trigger ligado é `KofStringParseTest.toDoubleToFloatContractNativeX86`
+  (linha 20 `"2.5".toFloat()==2.5` → `false`; 29 linhas, as demais ok) —
+  o caminho `kof_string_to_float` chama `kof_alloc` com a String-arg viva
+  em `%rdi`/registrador caller-saved: invisível ao mark (a pilha inteira
+  não contém o que só existe em registrador), sweep libera o objeto vivo,
+  o parse seguinte corrompe. Logo G-6(a) (spill-per-live-ref nos 170
+  call-sites, ou stack-map) continua ABERTO e é o que falta; o gatilho NO
+  `kof_alloc` foi desligado de novo após a demonstração (FP verde sem ele
+  = paridade JVM/x86/JS preservada — freeze rule 5).
+- **Árvore:** gatilho OFF; mark corrigido (G-6b) + guard. Face (2)
+  continua a fila: G-6(a).
+- **G-6a tentativa 1 (16/09, REVERTIDA — medição honesta):** capturar os 8
+  caller-saved (rcx/rdx/rsi/rdi/r8-r11) no prologue do `kof_alloc` (8 pushes,
+  paridade de alinhamento preservada, pops espelhados nos 2 épicos) +
+  re-ligar o trigger. Resultado: keep/supervisor/parse-linha20-caso-único
+  continuaram como esperado, MAS o programa FP REGREDIU para 4 linhas falsas
+  (`0.3`/`123.456`/`2.5`/`7` vs. só `2.5` antes) — capturar/restaurar os
+  caller-saved altera algo além do som do GC (provavelmente interação com o
+  que o próprio `collect_now`/mark enxerga ou com sites que dependem do
+  clobber). A causa-(2) NÃO é "só mais um push no prologue": exige auditoria
+  sítio-a-sítio (o call-site exato que segura o vivo e o que ele assume).
+  Revertido; árvore = estado verde `92d11a03`. PRÓXIMO: auditoria real, não
+  tentativa-e-erro.
+- **Medição de desempate (16/09, mesma hora): gatilho + G-6b SEM a captura
+  (teste ad-hoc fora da árvore) = EXATAMENTE 1 linha do programa FP diverge**
+  (`0.3/123.456/.../7` todos corretos; só `"2.5".toFloat()==2.5` → false).
+  keep/supervisor/cap-test/KofGcE2ETest/KofSupervisorE2ETest (15/15) todos
+  VERDES nesse estado. Conclusões: (i) a captura-prologue inteira da tentativa-1
+  era ela mesma BUG (piorava p/ 4 linhas), a causa-2 é ESTREITA e específica do
+  caminho `toFloat`; (ii) G-6b + gatilho puro já fecha keep/supervisor/leak —
+  o restante é fechar o caso toFloat com auditoria cirúrgica (gdb: qual bloco
+  é liberado vivo na linha 20; hipótese: o resultado do parse/vivaz do literal
+  no caminho Float vs. Double, que só difere no cvtsd2ss). NÃO shippar o
+  gatilho com 1 vetor FP divergente = paridade (freeze rule 5) e Q7 proíbem.
+- **AUDITORIA gdb da causa-2 (16/09, trigger+G-6b ad-hoc; patch revertido
+  na árvore):** repro MINIMO obtido — FP linhas 1..20 é o menor que quebra
+  (`P_18_20` não quebra; precisa da pressão de free-list das ~19 linhas
+  anteriores p/ o trigger disparar na 20). No sweep com breakpoint em
+  `kof_gc_sweep+30` (ponto de inserção na free-list), o bloco liberado é
+  SEMPRE o mesmo: base `0x7ffff7fbb000`, payload `0x7ffff7fbb020` ==
+  EXATAMENTE o `%rdi` na entrada de `kof_string_to_float` (String "2.5"
+  vivo). Conclusões: (a) o "temporário em registrador" NÃO é o mecanismo —
+  na cadeia main→toFloat→Lkfs_pd→kof_alloc, o prologue do alloc derrama
+  %rbx (que carrega a String) na stack e o mark varre essa stack inteira
+  (rsp..bottom) — ainda assim o bloco morre; (b) hipoteses sobreviventes:
+  o ponteiro da tabela de intern do literal aponta para o HEADER do bloco
+  (nao o payload), e `mark_transitive` casa `ptr==bloco+32` ou ptr no
+  range DO PAYLOAD — header-ptr = invisivel ao mark; ou a liberacao ocorre
+  num sweep de BOOTSTRAP antes do uso na linha 20 (String criado no boot,
+  referenciado so pela tabela de intern em .data, slot re-usado com
+  conteudo corrompido — o payload observado ja continha `\001`). PRÓXIMO
+  passo exato: verificar o formato das entries da tabela de intern
+  (`internString`/`.data` no NativeBackend: ptr → payload ou → header?) e
+  condicionar o breakpoint do sweep ao address == 0x7ffff7fbb000 p/ capturar
+  o BACKTRACE do sweep que mata o bloco (qual trigger, qual linha do
+  programa). Isso decide entre spill cirurgico vs. correcao do mark vs.
+  decisao de escopo (rule 6).
+- **BACKTRACE + enderecos capturados (16/09, sessao gdb dedicada no FP
+  linhas 1..20):** breakpoint em `kof_gc_sweep+30` (inserir na free-list)
+  condicionado a `rbx==0x7ffff7fbb000`. O sweep que mata o bloco vem de
+  `kof_gc_collect_now ← kof_alloc+284` (o proprio trigger), na cadeia
+  `kof_string_from_literal ← _start/main`. IDENTIDADE CONFIRMADA: no
+  `kof_string_to_float` de entrada, `%rdi = 0x7ffff7fbb020` == o payload do
+  bloco morto; watchpoint em `rdi-8` (flags do header) dispara com
+  `Old=0 → New=corrompido` durante o parse. PARADOXO QUE ABRE A PROXIMA
+  SESSAO: a referencia nao esta "so em registrador" — o main faz
+  `pushq %rax; popq %rdi` ANTES do call (o arg sai da stack), mas o
+  prologue do `.Lkfs_pd` derrama %rbx (= o ponteiro) na propria stack e
+  o mark varre rsp..bottom — ainda assim o bloco morre. Hipoteses a testar
+  (em ordem): (i) `mark_transitive`/`try_mark` casa o ponteiro pelo range
+  `heap_low..heap_high` — o objeto "2.5" foi alocado no BOOT (antes de
+  heap_low setado? ou heap_high nao cobre o mmap dele?) → o range-check
+  do try_mark REJEITA o ponteiro e nem tenta a gc-list; (ii) a tabela de
+  intern .data segura o ponteiro mas com deslocamento de HEADER (o mark
+  varre .data.._end e tentaria o try_mark mesmo assim — cai se (i) for
+  verdade). (i) e verificavel em 1 gdb: `p (long)kof_heap_low/high` no
+  momento do kill vs. 0x7ffff7fbb000. Isso provavelmente REDUZ a causa-2 a
+  um bug de range/intervalo do mark (conserto pequeno), nao stack-map.
+- **VEREDITO da hipotese (i) (16/09, gdb — REFUTADA):** no momento do kill,
+  `&kof_heap_low=0x7ffff7fbb000`, `&kof_heap_high=0x7ffff7fbc038`,
+  `&kof_gc_head=0x7ffff7fbb000`: o bloco morto (base 0x7ffff7fbb000) esta
+  DENTRO do range (>=low, <high) e na gc-list — `try_mark` NAO o rejeita por
+  intervalo. Se qualquer slot varrido (pilha rsp..bottom, .data/.bss) o
+  referenciasse, estaria marcado. Morre => naquele instante a unica posse
+  da String "2.5" esta em REGISTRO caller-saved do backend (padrao:
+  `call kof_string_from_literal` → resultado em %rax → `popq %rdi` do arg →
+  `call kof_string_to_float` — entre o pop e o call NADA na pilha segura o
+  ponteiro; o trigger dispara no alloc do PRÓPRIO kof_string_to_float e o
+  sweep mata). FIX = G-6(a) no BACKEND x86: spill-per-live-ref nos sites que
+  deixam ref de heap viva em rax/rdi apos o call e antes de novo alloc —
+  NAO no prologue universal do alloc (a tentativa-1 regrediu o FP p/ 4
+  linhas: interacao do restore dos 8 caller-saved com sites que assumem
+  clobber legitimo — ex. o caminho syscall do proprio kof_alloc e da libc).
+  Proximo passo concreto: auditoria do emissor de calls no backend
+  (NativeOpHelpers/NativeX86Calls) p/ o padrao `call X (rax=ref viva);
+  call Y-aloca` — spilla o rax no frame entre os dois. Se o padrao for
+  largo (>X sites), o custo e decisao de escopo (rule 6).
+- **SUTILEZA QUE MUDA O ALVO DA PROXIMA SESSAO (16/09, deduzida dos
+  proprios dados da auditoria):** o endereco morto 0x7ffff7fbb000 e um
+  slot RE-USADO — o kill acontece DENTRO do `call kof_string_from_literal`
+  da linha 20 (backtrace: alloc <- from_literal <- main), quando a String
+  "2.5" AINDA NAO EXISTE (ela nasce do proprio alloc que dispara o
+  trigger; o bloco morto era a String anterior que morava naquele slot —
+  provavelmente o box/`true` do println da linha 19, correto de liberar).
+  Portanto o bloco da String "2.5" em si NAO foi morto — o que corrompe o
+  resultado do parse na linha 20 e outra coisa: (a) o sweep pode ter morto
+  o objeto que o xmm0/stack da LINHA ANTERIOR ainda referenciava por
+  chamada de imprimicao atrasada, ou (b) o trigger matou o box do resultado
+  da LINHA 20 apos o parse (a comparacao `== 2.5` imprime um Bool-box
+  allado que a free-list re-usa e o print imprime `false` stale). O
+  proximo gdb deve: watchpoint no PAYLOAD do bloco do Bool-box impresso na
+  linha 20 (identificar via x/s nos dois primeiros qwords do .data? nao —
+  via `b kof_println_string` na 20a hit, registrar o ptr impresso, watch
+  nesse ptr-32), e o mesmo par keep=ALIVE (M1/M2) como controle. Se o
+  culprit for o box do println, o padrao backend a corrigir e: `call
+  kof_string_from_literal` cujo RESULTADO vive so em rax ate o push —
+  spilla-o imediata e universalmente (1 push extra por literal, nao 8 pops
+  no prologue do alloc = tentativa-1).
+- **EXPERIMENTO gdb-3 (16/09, mesmo turno — resultados brutos):** no
+  instante do kill do bloco 0x7ffff7fbb000 (FP linhas 1..20, trigger+G-6b
+  ad-hoc): `find /g rsp..bottom, 0x7ffff7fbb020` = NOT FOUND (nenhuma ref
+  ao PAYLOAD na pilha varrida); `find /g root_start.._end, 0x7ffff7fbb020`
+  = NOT FOUND; `find ...0x7ffff7fbb000` (HEADER) = **2 hits em .data**.
+  Leitura: o try_mark/mark_transitive x86 ACEITA so ponteiro de payload
+  (cmp `ptr==bloco+32` ou `bloco+32<=ptr<payload_end`) e REJEITA ponteiro
+  de header. As 2 refs de header encontradas sao bookkeeping (gc-list/
+  free-list), mas o fato de UMA ref de payload nao existir em lugar nenhum
+  enquanto o bloco ainda era usado na linha 20 prova que a posse naquele
+  instante era so-registro (rax do from_literal → rdi do to_float, sem
+  nenhum push vivo) — a String recem-criada pela from_literal da linha 20
+  sobrevive, o que morre e o bloco do slot anterior (conteudo `\001`).
+  PROXIMO EXPERIMENTO EXATO (1 linha de codigo, conservador-por-construcao):
+  no try_mark x86 (RuntimeGc), tratar `ptr==bloco` (header exato) como HIT
+  de marcação (hoje so payload==bloco+32/range) — se o FP linhas 1..20
+  ficar verde, a causa-2 era ref-de-header invisivel e o fix e do MARK
+  (pequeno), nao do backend. Risco zero de over-free (marca MAIS, nunca
+  menos). Medir: keep/supervisor/parse/cap + suíte.
+- **VEREDITO gdb-3 + G-6c (16/09, fim de tarde — AMBOS FECHADOS):**
+  (a) o historico de kills no slot bb000 mostra que o kill NUNCA pegou o
+  payload "2.5" — sempre "\001" (Bool-boxes do println re-usando o slot;
+  mata-los e correto). A quebra da linha 20 NAO e "String morta": o
+  watchpoint no bloco do literal NAO dispara (String sobrevive), mas o
+  RESULTADO do toFloat diverge (act='false') quando um sweep ocorre no
+  meio do parse. (b) **G-6c IMPLEMENTADO E REFUTADO**: header-ptr aceito
+  no try_mark + mark_transitive (2 sites) + trigger ad-hoc — FP linhas
+  1..20 continua divergindo SO na linha 20; keep/supervisor/parse/cap
+  seguem ALIVE. Header-pointer nao e o buraco do mark. Revertido (arvore
+  = gatilho OFF, gate compile verde). (c) Hipotese sobrevivente: o parser
+  de float (.Lkfs_pd) le/escreve SCRATCH fora dos registradores locais —
+  buffer de trabalho no heap NAO-enraizado (vira vitima do sweep) ou o
+  flag "\001" do primeiro byte do payload lido como digito. PROXIMO
+  PASSO EXATO: (1) ler RuntimeStringParseFp (.Lkfs_pd) atras de todo
+  load/store fora de rdi/rsi/rax/rcx/rdx/rbx — se houver buffer heap
+  (ex. kof_float_buf), enraiza-lo em kof_heap_root_start (fix de 1 linha,
+  raiz permanente como a tabela de intern) ou move-lo p/ .bss; (2) se nao
+  houver, diff do xmm0 na linha 20 sem/trigger p/ isolar o que muda.
+- **TRACE DE INSTRUCOES do parse '2.5' na linha 21 com trigger (16/09
+  ~20:30, stepi Python-gdb — CAUSA-2 RESOLVIDA ao nivel de mecanismo):**
+  ao entrar em `.Lkfs_pd` pelo thunk da linha 21, os registradores ja vem
+  da main com `r15=2` STALE (resto do parse de "1.5"/"12.3456" anteriores —
+  a main guarda r15 como live-range entre calls). O parser faz
+  `mov %r12d,%r15d` (len) em 40459f e o loop de trim compara
+  `cmpl %r15d,%r14d` — com trigger, em 4045a2 ve-se r15=3 correto, MAS em
+  4046f1+ (corpo `.Lpdd_num`) o r13 nao e mais o mantissa acumulada
+  esperada: o `h13 r13=25` do BASE (que gera 2.5 correto) NUNCA aparece no
+  trigger; na main da linha 21, apos `call kof_string_from_literal`
+  (que ALOCA = dispara o trigger no meio!), o r15 sai DO ALLOC com valor
+  de busca da free-list (meu ad-hoc injeta `movq kof_free_head,%r13;
+  xorq %r14,%r14; jmp .Lkof_alloc_search` — o caminho de saida do alloc
+  restaura r15 do prologue push... mas `collect_now` + search pisam r15
+  como ponteiro de walk SEM o restaurar no caminho jmp-back). CORRECAO
+  CANDIDATO (provar na proxima sessao): o trigger ad-hoc esta INCOMPLETO —
+  falta preservar r10..r15 no bloco injetado (empilhar antes do
+  `call kof_gc_collect_now` e dos `jmp .Lkof_alloc_search` e restaurar
+  antes de cair no `.Lkof_alloc_mmap`/pop). A causa-2 pode ser 100%
+  ARTEFATO DO AD-HOC (trigger real seria uma versao com registro-save
+  completo = G-6(a)). Teste exato: re-injetar o trigger com
+  push/pop de r10-r15 ao redor do bloco collect_now+search e rodar FP
+  1..21: se verdissimo, a frente 2 fecha com o trigger COMPLETO (sem
+  stack-map, sem backend!
+- **RESOLUCAO DA CAUSA-2 (16/09 ~23:00, `e667791f`) — NAO ERA GC:** trace
+  stepi-gdb do parse '2.5' na linha 21 + o repro de 3 linhas LEAK.kf
+  (loop `s.toDouble(); t.toFloat()` SEM NENHUM alloc, sem trigger, sem
+  GC) provam: `riscv64/aarch` e x86 imprimiam STALE/STALE/STALE no OLD
+  code e OK/OK/OK com o fix. Raiz: `.Lpdd_num` zerava
+  r13/r10/r11/ecx/edx mas NAO r8 (exp-neg) nem r9 (expoente);
+  `.Lpdd_build` le `cmpq $320,%r9` incondicional — o parse ANTERIOR com
+  expoente ("1e-400": r9=400, r8=1) vazava no parse SEM expoente
+  seguinte ("2.5" desvia p/ hugeexp -> 0.0). Sem trigger, o syscall mmap
+  do proximo alloc clobberava r9=0 = bug LATENTE escondido por sorte; o
+  trigger trocou mmap por free-list e o bug virou observavel. Fix:
+  `xorl %r8d; xorq %r9` no .Lpdd_num (x86) + `li s8,0; li s5,0` no
+  .Lpd_num (espelho riscv). Aarch64 NAO tem parser proprio (usa libc
+  strtod via RtB45/link-on-demand — correto por delegacao, R9; confirmado
+  16/09: nenhum pd_num em NativeAarch64*). EVIDENCIA Q0 no golden: KofStringParseTest
+  ganhou vetores de leak (3 iteracoes, strings internadas fora do loop =
+  zero alloc) e o x86 FALHA sem o fix (re-confirmado com stash). A
+  suíte completa rodou: unicas falhas = §181 castSaturation (pre-existente,
+  lane nat). CONSEQUENCIA PARA A FRENTE 2: a causa-1 (G-6b) e a causa-2
+  (parser) estao AMBAS fechadas — o gatilho auto-collect COM o fix do
+  parser passou em KofStringParseTest 8/8 + NativeX86GcMarkScopeTest 3/3 +
+  KofGcE2ETest 3/3 + KofSupervisorE2ETest 15/15 (medido neste turno com
+  o trigger ad-hoc). Ligar o gatilho PERMANENTEMENTE = mudanca de
+  contrato (alloc passa a coletar; custo de artifact +19.7% medido antes
+  do fix) = RULE 6: decidir com a mantenedora (opcoes: (A) ligar com o
+  gate spawn_count==0 atual, (B) ligar sempre apos o parser-fix,
+  (C) manter OFF / feature-flag). Medicao nova (com fix) do custo:
+  rodar ArtifactSizeTest com o trigger ligado no outro turno ANTES de
+  propor — o numero antigo (+19.7%) pode ter caido com o parser-fix.
+- **DADO DA RE-MEDICAO (16/09 ~23:50, trigger ad-hoc + parser-fix,
+  ArtifactSizeTest): 38976B vs. baseline 32520B = +19.8%** (gate 5%
+  estoura, como antes — o custo e o CODIGO DO COLETOR linkado no binario,
+  NAO o parser; o fix numerico nao mexe no tamanho). Ou seja: ligar o
+  gatilho permanente custa +20% no artefato x86 hello (37->~38 syms,
+  coletor mark+sweep+free-list inteiro). SYMS de `kof_gc_*`/
+  `kof_main_stack_bottom` entram. OPcoes p/ a mantenedora (RULE 6 — nao
+  e decisao minha): (A) LIGAR com o gate spawn_count==0 atual + subir a
+  baseline do ArtifactSizeTest x86 p/ ~39KB/+19.8% (precedente riscv
+  G-4 18->24 syms aceito como "price of reachable collector"); (B) ligar
+  SEMPRE (sem gate) — NAO recomendado, o gate protege a fase de boot;
+  (C) manter OFF (comportamento atual = mmap, zero custo de tamanho, GC
+  so manual via kof_gc_collect_now ja exposto). A causa FUNCIONAL esta
+  resolvida nas duas frentes (G-6b mark + parser e667791f); o que resta e
+  APENAS a ligadura do gatilho = trade-off tamanho-vs-colecao-automatica
+  = decisao de produto da mantenedora, documentada aqui com o numero.).
+- **HIPÓTESE DE SCRATCH REFUTADA (16/09, leitura de código):** .Lkfs_pd
+  (RuntimeStringParseFp) nao aloca nada e nao usa buffer — os unicos
+  acessos a memoria sao `movzbl 24(%rbx,%rN)` (leitura do payload do
+  proprio String, 30 casos) + `movsd .Lpdd_nan/inf(%rip)` (constantes) +
+  1 `call` no caminho de throw. NAO ha scratch heap p/ enraizar. E
+  kill2.gdb (condicional payload=='2.5' no sweep) = ZERO hits: o bloco da
+  String '2.5' NUNCA e morto. Isolamento restante: o que muda o resultado
+  do parse entre trigger/no-trigger e ou (a) o bloco '2.5' devolvido da
+  free-list com size/flags inconsistentes (escrita do literal invade
+  vizinho, ou le length errado — o parser usa movl 16(%rbx) = size-field!),
+  ou (b) o box do RESULTADO. EXPERIMENTO: no toFloat-entry da linha 20,
+  x/4gx rbx (header+payload) e comparar com no-trigger; se 16(%rbx)
+  (length) divergir — causa achada = free-list re-usa bloco com size
+  antigo, e o fix e no sweep/alloc (truncar/consistir o size no insert).
+  O parser le o length do HEADER — um bloco '2.5' (len 3) re-usado de um
+  slot que era Bool-box (len 8? 1?) com size-field NAO atualizado = parser
+  le bytes alem do conteudo = float errado = 'false'. VERIFICAR se o
+  kof_string_from_literal atualiza o size-field do bloco vindo da free-list
+  (provavelmente sim; o suspeito e o sweep gravar um garbage-size no
+  free-list-link que o alloc copia pro header).
+- **MEDICAO DO BLOCO '2.5' (16/09 ~19:30, gdb p25.gdb condicional ao
+  conteudo '2.5'):** BASE=header 0x40 (=64, size coerente), LEN@+16=3
+  (correto!), PAYLOAD[0..3]=32 2e 35 (bytes '2.5' corretos nos dois
+  binarios). DIVERGENCIA ACHADA no trigger: dword em payload+4 =
+  0x00003000 ('0' no byte de indice 4) vs. 0 no base. ANALISE: o parser le
+  24(%rbx,%rN) com rN < len=3 — o byte extra NAO entra no parse (por isso
+  o double do base esta certo E o do trigger pode estar errado apenas se o
+  path lermos adiante de len: o .Lpdd_num para em 3 digitos). Origem do
+  0x30 provavel: link da free-list escrito DENTRO do payload de um vizinho
+  (o bloco bb000 foi morto/re-usado no boot; o qword +40 =
+  0x7ffff7fbc000 = proximo mmap — o '30' = byte baixo do endereco
+  0x...30?? ou resto de string anterior). IMPORTANTE PARA A PROXIMA
+  SESSAO: o thunk `kof_string_to_float` (+0x0..+0x9) e SÓ cvtsd2ss — o
+  break para medir xmm0 final deve ir em `kof_string_to_float+0x5`
+  (pos-ret do .Lkfs_pd interno, end. real 40457e) e o parse real tem que
+  ser instrumentado via .Lkfs_pd+offsets (localizar no objdump). A
+  divergencia 'false' da linha 20 pode MORAR no byte extra se o main
+  comparar o float RE-EMBALADO (box Float com 4 bytes lidos de um buffer
+  de intern corrompido) — nao no parse em si.
+
+
+
+### §261 — KofJS `window.bind` collides Component ids with raw-widget node ids: a widget bound after a Component renders nothing
+
+- **Symptom (measured 16/09 in real Chrome, found by the consumer library kof-ui-widgets):**
+  `main() { var comp = Component(0); comp.view(…); var raw = Label("widget-cru");
+  var w = Window(…); w.bind(comp); w.bind(raw); w.show() }` renders the Component's
+  view but the raw `Label` NEVER appears in the DOM (it is an orphan in
+  `window.__kofNodes` with no parent). No error, no warning — silent (R6 defect).
+  The concrete trigger: the lib's `Slider` (a `Component`) bound before
+  `ReconfigButton` (a raw `Button`) — the button vanished.
+- **Root cause:** the JS runtime allocates ui handles from TWO independent
+  counters that both start at 0: Components used `++kofUiSeq`
+  (`JsRuntimeUiComponents.kofUiComponentNew`) while DOM nodes used
+  `++kofNodeSeq` (`kofUiCreateNode` and friends). A single Int handle space is
+  exposed to the program, and `kofUiWindowBind(id)` (and `kofUiComponentBind`)
+  resolve `kofUiComponents.get(id)` FIRST, falling back to `__kofNodes[id]` —
+  so component id 1 and node id 1 are the SAME handle to the binder. The first
+  bind consumes the component; the second bind of the colliding id re-mounts
+  the SAME component (appendChild is a no-op re-attach) and the real node is
+  left orphaned. Any mix of Components + raw widgets in one window can hit it;
+  the more widgets created, the likelier.
+- **Fix (this unit, JS runtime only — `JsRuntimeUiComponents.java`):**
+  `kofUiComponentNew` now draws from the SHARED `kofNodeSeq` counter
+  (`const id = ++kofNodeSeq`), making the component/node id space one disjoint
+  sequence; the dead `kofUiSeq` counter was removed. No other consumer of
+  `kofUiSeq` existed (grep verified; the cosmetic `"c" + id` name is unchanged
+  in behavior). JVM/Native are unaffected (their `window.bind` is tree
+  bookkeeping/no-op, no id resolution race).
+- **Repro (Q0, red pre-fix — measured, then reverted to confirm):**
+  `mvn -o -pl kof-compiler -am test
+  -Dtest='KofJsBrowserE2ETest#componentAndRawWidgetIdsNeverCollide'` → with the
+  two-counter code the assertion "widget cru órfão (§261)" FAILS on real
+  Chrome; with the shared counter it passes. New test added in
+  `KofJsBrowserE2ETest` (26/26 green with Chrome present).
+- **Consumer-side proof:** kof-ui-widgets `scripts/browser-drag.mjs` — real
+  Chrome dispatching bubbling `MouseEvent`s: Slider drag 20 → 70, ReconfigButton
+  `desligado → LIGADO → desligado` (2 clicks), zero console exceptions. Before
+  this fix the ReconfigButton never entered the DOM, so the drag/click oracle
+  could not even see it.
+- **Status:** ✅ FIXED 16/09 (lane development `192.168.100.18`) —
+  `JsRuntimeUiComponents.java` + `KofJsBrowserE2ETest`; full compiler suite
+  1908/0/0/168. Related: the headless host GraalJS uses the SAME runtime block
+  (slice registry), so both hosts are fixed together by construction; the lib
+  side (Slider/ReconfigButton + docs) is the companion commit in
+  `kof-ui-widgets`.
+
+### §262 — Record `T?` vs `null`: `== null`/`!= null` NPEs on the JVM (record `==` lowers to `.equals()` with no null-guard on the receiver); class/String nullable narrow fine — ✅ face (a) FIXED 17/09 (`07a51565`); ✅ face (b) FIXED in two steps: receiver-guard `ab284b91` (`.17`, measured 8/11) + completion 18/09 (`.18`, 21/21)
+
+- **Found 16/09 ~15:40 by lane docs/development `192.168.100.22`**, while
+  fixing the null-contrato corpus cluster: the `training/idioms/records.md`
+  "Null safety with records" cell used `Point? maybe = null`, and rewriting
+  it to the API form exposed a runtime crash (this is a CODE bug, rule 8 —
+  catalogued here, not fixed here).
+- **Repro (measured on a CLEAN-CLONE jar of tip `803eeef4`; each dir has one
+  `main()`):**
+  - Record **MISS** → NPE: `record Point(Int x, Int y)` +
+    `var maybe: Point? = mapOf("k", Point(7,8)).get("z")` +
+    `if (maybe == null) {...}` or `if (maybe != null) {...}` →
+    `Exception in thread "main" java.lang.NullPointerException:
+    Cannot invoke "Point.equals(Object)" because "maybe" is null`. Same via a
+    function returning `Point?` with `return null` (findPoint(false)).
+  - Record **HIT** → OK: same map, `get("k")` → prints `7`.
+  - Class nullable → OK: `class Ponto { Int x ... }`,
+    `var p: Ponto? = mapOf("k",Ponto(7)).get("z")`, `if (p == null)` →
+    `is-null` (uses `if_acmp`).
+  - String nullable → OK: `mapOf("k","v").get("missing")`, `!= null` →
+    `miss-str-ok`.
+- **Root cause (static, matches the measurement):** `==` on a record lowers
+  to content-equality `left.equals(right)` (`CompilerComparisons.java:28,
+  337-342` — "bug 188: record `==` compares CONTENT via `.equals()`"); that
+  lowering has **no null-guard on the receiver**, so comparing a null record
+  reference to `null` calls `.equals` on `null` → NPE. `class`/`String`
+  comparisons go through `if_acmp`/`Objects.equals` (null-safe), which is why
+  they narrow correctly.
+- **Expected (freeze rule 5 / D-NULL-INTENT):** `T? == null` must be a null
+  comparison (never unbox/deref the receiver), on every target; a record is a
+  reference type, so `== null` must behave like `if_acmp`, and record-vs-record
+  content equality must guard the null receiver first (e.g. `Objects.equals`).
+- **Fix (face a) — ✅ FIXED 17/09 by lane bugs-and-gaps `192.168.100.15`
+  (`07a51565`), claimed after the repro was localized (orphan OPEN):** the
+  record content-equality branch in `ExpressionBinaryLowerer` fired even when
+  an operand was the literal `null`, emitting `receiver.equals(null)` with no
+  guard. Fix: exclude the `null` literal from that branch, so `==`/`!=`
+  against `null` lowers to a REFERENCE comparison (`if_acmp`) — it never
+  dereferences the receiver. (`class`/`String` already took the null-safe
+  path; `record==record` content equality, bug 11/188, is unchanged when
+  neither side is the literal.)
+- **Regression proof (face a):** `RecordNullableNullEqE2ETest` 6/6 — MISS
+  `== null`/`!= null`, HIT, map miss, `record==record` content, SCRIPT and JS.
+  Neighbors green: `NullSafetyE2ETest` 12/12, `CoreRegressionE2ETest` 102/102,
+  `BackendParityTest` 19/19 (0 regression).
+- **🔧 Face (b) FIXED 17/09 by compiler/nat lane `192.168.100.17` —
+  `nullableRecord == nullableRecord` (no literal) NPEd on ALL 4 targets:**
+  `var miss: Point? = mapOf("k", Point(7,8)).get("z")` +
+  `var hit: Point? = mapOf("k", Point(7,8)).get("k")` + `println(miss == hit)`.
+  **Red measured before the fix (this session, all 4 targets — the dossier's
+  "native not measured" is now closed):** JVM
+  `NullPointerException: Cannot invoke "Point.equals(Object)"`, JS
+  `TypeError: Cannot read property 'equals' of null`, SCRIPT exit 1,
+  **NATIVE x86-64 SIGSEGV (exit 139)** — same shared lowering, same crash
+  shape everywhere.
+- **Fix (root cause, single point):** the record `==` lowering in
+  `ExpressionBinaryLowerer` (the `KofCall "equals"` INSTANCE branch) is
+  **shared by the 4 targets**, so the null-guard goes there and repairs
+  JVM+JS+SCRIPT+NATIVE at once (rule 5 — no divergence by construction).
+  Semantics = `Objects.equals`: `L == null ? (R == null) : L.equals(R)`
+  (emitted as the proven if-expression IR pattern
+  `KofConditionalJump`+`KofLabel`+`KofJump`+temp slots `__kofrecL/R` — the
+  same shape `IfExpr` lowers to, which all 4 backends fold; NOT the `&&`
+  short-circuit, which is gated `!= Target.JS`). Content equality
+  (bug 11/188, `record == record` non-null) is unchanged: still `L.equals(R)`.
+  **⚠️ The first fix's premise — "only the RECEIVER null crashed;
+  `record.equals(null)` is safely `false`" — held ONLY on the JVM** (the
+  generated `equals` guards the arg with `instanceof` there). **Measured
+  18/09 (rule 8 completion), the receiver-only guard left 3 holes across the
+  4 targets:**
+  1. **NULL ARG crashes JS/NATIVE:** `hit == miss` (receiver non-null, arg
+     null) → JS `TypeError: Cannot read property '_x' of null`, Native
+     SIGSEGV (exit 139) — the record `equals` reads `other._x` with NO arg
+     guard on those targets;
+  2. **FUNCTION-DERIVED twin falls to the reference path:** a `Point?` that
+     comes from a function call (not `map.get`) has type
+     `NullableType(Point)`; `isRecordType(NullableType(Point))` is false →
+     the gate never triggered and `mk(true) == mk(true)` printed `false`
+     where the contract is `true` (silent divergence JVM vs SCRIPT);
+  3. **`!=` on the NULL PATH is always `false` on JS:** the null path
+     compared `R == null` with `KofBinary EQ` on Object (a JS BOOLEAN), and
+     the `!=` fold is `(x === 0)` — number-only — so `miss != hit` printed
+     `false` (the §186/UIW052 boolean-vs-number class, hit inside the fold).
+  **Completion (development lane `.18`, 18/09):** the guard became FULL
+  `Objects.equals` on both operands, shared by 4 targets, extracted to
+  `RecordEqualityLowerer` (113 lines, ratchet §140; `ExpressionBinaryLowerer`
+  back under 500). JVM/Script/Native: the nested-ternary jump desugar
+  (each branch yields numeric 0/1; each `KofConditionalJump` gets its OWN
+  convergence label — sharing one underflows the JS expression stack,
+  measured). JS cannot fold a conditional jump INSIDE an if/while
+  CONDITION region at all (temp-local `let`s escape the loop body →
+  `ReferenceError`, measured inside `while`) — so for JS the lowering emits
+  a single opaque call `kofRecordEq(a, b) → 1/0` (new export in
+  `JsRuntimeCore`, mirroring `kofValEq`), the same route `&&`/`||` take for
+  the same reconstructor reason. `CompilerComparisons.isComparisonShortcut`
+  now unwraps `NullableType(record)` (hole 2's root). `!=` is applied ONCE
+  by the caller for every target. The first fix's `RecordNullableEqContentE2ETest`
+  is kept and passes unchanged against the completion (its battery simply
+  omitted the null-arg order, function-derived and `!=`-on-null-path cases).
+  **Measured with both test files against the completion: 10/10 (first fix)
+  + 11/11 (completion battery) = 21/21 green.**
+- **Proof:** `RecordNullableEqContentE2ETest` 10/10 (miss-vs-hit `false`,
+  both-null `true`+`!= false`, content-still-works) × JVM/SCRIPT/JS/NATIVE — nullPath branch + native content both proven cross-target.
+  Face (a) `RecordNullableNullEqE2ETest` 6/6 keeps passing; neighbors green:
+  `CoreRegressionE2ETest` 102/102, `BackendParityTest` 19/19,
+  `NullSafetyE2ETest` 12/12, `NativeE2ETest` 65/65, `RecordImplementsE2ETest` 4/4.
+  Full 4-module suite: 0 regressions from this change (the 2 cross
+  cast-saturation reds reproduce on the BASE without the fix — §256/.18 lane;
+  `crossNativeConcurrencyHelpersRun` is a load flake, green in isolation).
+- **Cross-target (face a):** JVM proven by test; SCRIPT + JS proven by test;
+  Native x86-64 proven by test (this session) — the lowering is target-agnostic
+  (`if_acmp` reference compare). The "qemu absent" excuse only applies to the
+  riscv64/aarch64 CROSS ports; the x86-64 host runs assemble+link+execute via
+  `gcc` directly (the `KofIntOverflowNativeTest`/`NativeE2ETest` already do).
+- **Face (b) measured on 4 targets (17-18/09):** JVM `NullPointerException:
+  Cannot invoke "Point.equals(Object)"`; **JS `TypeError: Cannot read property
+  'equals' of null`**; SCRIPT red; **Native x86-64 SIGSEGV (exit 139)** — the
+  "host lacks qemu" handoff was WRONG for x86-64: the native lane proves it
+  here via `gcc` (assemble+link+run), qemu is only for the riscv/aarch CROSS
+  ports. The fix therefore IS cross-target (4/4), not JVM-only.
+- **Status:** ✅ FIXED — face (a) FIXED (`07a51565`, lane bugs-and-gaps
+  `192.168.100.15`); face (b) fixed in TWO LANDED STEPS: (1) receiver-guard
+  `ab284b91` (17/09, compiler/nat lane `192.168.100.17`,
+  `RecordNullableEqContentE2ETest` × 4 targets — the handoff's "host lacks
+  qemu" no longer applies; x86-64 runs via `gcc`); (2) completion 18/09
+  (development lane `192.168.100.18`) for the 3 holes measured against step
+  1 (null-arg JS/Native crash, Nullable-record gate twin, JS numeric `!=`) —
+  `RecordNullableNullEqE2ETest` 11/11 × 4 targets (map-miss, both-null,
+  content, if-condition, WHILE-condition = JS reconstructor stressor, chained
+  `!=`), first-fix test kept green (21/21 together). Corpus:
+  `training/idioms/records.md` null-safety cell updated (the `!= null`
+  narrowing on a missing key is now safe). Related: §D-NULL-INTENT (boxed
+  nullable contract), bug 188 (record `==` content), §241
+  (nullable-primitive boxed contract, reverted to honest gap).
+
+### §263 — Parser accepts any identifier before an annotated declaration and silently discards it (`let x: Int = 5`, `Klaxon x: Int = 5` compile and run)
+
+- **Found 16/09 ~17:30 by lane docs/development `192.168.100.22`**, while measuring the `let`/`const`-sugar corpus cluster (unit I): the cluster claimed `let x = 5` is dead sugar — but the probe `let x: Int = 5` **printed `5`**. Chasing it (rule Q4) exposed a general parser hole, not a sugar (CODE bug — fix = compiler lane; rule 8, catalogued only).
+- **Repro (measured on a CLEAN-CLONE jar of tip `9572949f`; each dir has one `main()`):**
+  - `Klaxon x: Int = 5; println(x)` → prints `5`. `Banana q: String = "z"` → prints `z`. `let x: Int = 5` → `5`. `async foo(): Int { return 1 }` → `check` says "no errors". **The identifier before the declaration is parsed as a type name and then silently discarded** by the annotation.
+  - **Without annotation it fails correctly (the intended contract, `183cb048`):** `let x = 5` → `SEM011`+`SEM021`; `const y = 10` → same; `Klaxon x = 5` → `SEM011`+`SEM021`. `fn` is reserved → `PARSE085` (good). The `let`/`const` sugar only "works" via this hole — the cluster-I docs fix (teach `var`/`val`) stands.
+  - The `jsSugarIsRejected` test is GREEN because its `let x = 5` is UNANNOTATED — it does not prove the annotation path was closed.
+- **Root (file:line):** `StatementParser.parseVarDecl` — when the first token is neither `val` nor `VAR`, it falls through to `TypeParser.parseTypeRef` (~414), which accepts ANY identifier as a "type"; the `name: Type =` annotation at ~417-421 then **replaces** that discarded type with no diagnostic. R6 violated (never silent): the garbage type vanishes silently.
+- **Correct fix (compiler lane):** when an annotated declaration discards a previously-parsed type prefix, emit a diagnostic (the prefix must match the annotation or be a known keyword). Behavior change → rule 6: **the decision belongs to the maintainer** — this lane catalogued, did NOT touch the parser.
+- **Cross-target:** parser-level, every backend inherits the hole. Not measured here.
+- **✅ FIXED 17/09 by compiler/nat lane `192.168.100.17` (claimed — fix = compiler
+  lane, no owner in DOING.md):** the rule-6 note was the *cataloguing* lane
+  respecting rule 8 (not its lane); the decision is the catalogued direction
+  itself — "the prefix must match the annotation" — and the corpus already
+  settles it: AGENTS.md fake-idioms says `let`/`const` "do NOT exist", so a
+  program using them is invalid-by-spec and the silent acceptance was the R6
+  bug (freeze rule 4: align the code to the expected, never the opposite).
+  Implemented exactly that direction: `parseVarDecl` now tracks the type-first
+  path; when the `:` annotation appears there and the consumed prefix **differs**
+  from the annotation, it emits **`PARSE095`** anchored on the discarded prefix
+  (identity `Int x: Int` discards NOTHING — tolerated, not the reported hole).
+  Without the annotation the unknown prefix already failed honestly (SEM011) —
+  untouched. Parser-level: all 4 targets inherit the diagnostic (rule 5).
+- **Proof:** `ParserGarbageTypePrefixE2ETest` 9/9 — rejects `let x: Int` /
+  `Klaxon x: Int` / `Banana q: String` / mismatch `Int x: String` (all PARSE095),
+  keeps `var x: Int` / `val v: Int` / type-first `Int n` / identity `Int x: Int`
+  valid, **JS target also rejects** (measured JVM+JS; SCRIPT/NATIVE share the
+  parser). Red BEFORE the fix: the 4 rejection cases failed (parser compiled the
+  garbage silently — exactly the repro above). Neighbors green: CompilerDriver
+  256, CoreRegression 102, FunctionSyntax 16, CatchTypeValidation 5,
+  ClassShapeChecks 5, BackendParity 19, NullSafety 12. Corpus:
+  `docs/language-reference/lexical-structure.md`/`.pt_BR.md` (PARSE095 note,
+  EN+PT).
+- **Remaining face (function position) — OPEN, catalogued (rule 6/8):**
+  `async foo(): Int { return 1 }` was also in the repro. **Re-measured 17/09 on
+  this unit (JVM):** still compiles clean and runs (prints `1`) — the garbage
+  `async` prefix is silently discarded at a DIFFERENT fall-through (the
+  function-declaration parser, not `parseVarDecl`). Fixing it changes how the
+  function parser distinguishes a modifier/type-prefix from the return type —
+  shared river with the nullable/generics cluster (§268 rule-6 note), and NOT
+  the "prefix must match the annotation" direction the cataloguer declared.
+  Left as an honest OPEN sub-case for the maintainer, not silently patched here.
+- **Cross-target:** parser-level, every backend inherits the hole. Not measured here.
+- **Status:** ✅ FIXED 17/09 (var-decl face, PARSE095) — catalogued by lane
+  docs/development 16/09; function-position face re-measured and recorded by
+  this unit. Related: `183cb048` (sugar removal — partial), cluster I (docs
+  teach `var`/`val`), bug 62 (`val` type in `parseVarDecl`).
+
+### §264 — KofJS printed Double/Float with the raw `Number.toString` (`4`, `10000000`), not the JDK contract (`4.0`, `1.0E7`) — silent rule-5 divergence in println/print/concat/`String.valueOf`/`.toString()` — ✅ FIXED 16/09 (lane development, owner = 192.168.100.18)
+
+- **Symptom (measured 16/09 on fresh classes, lane .18 probe, PRE-EXISTING):**
+  ```kof
+  main() {
+      var d: Double = 4.0
+      println(d)              // JVM/Native: 4.0   — JS was: 4
+      println("v=" + d)       // JVM/Native: v=4.0  — JS was: v=4
+      println(String.valueOf(d))
+      println(d.toString())   // JVM/Native: 4.0    — JS was: 4
+      println(10000000.0)     // JVM: 1.0E7         — JS was: 10000000
+  }
+  ```
+  Every display path (`println`, `print`, string concat, `String.valueOf`, and
+  `Double.toString`/`.toString()`) emitted the **raw JS** `String(v)`, which
+  drops the mandatory trailing `.0` of an integral double and uses a different
+  scientific-notation threshold than `Double.toString`. JVM and Native (after
+  bug 44 + §180) print the JDK form; **JS silently diverged** — no diagnostic
+  (R6) and no rule-5 parity. The old §44/§180 records *called this "expected on
+  JS"* and the `floatprint`/`doubleprint`/`infinityprint`/`negzero`/`doublemod`
+  matrix cells **excluded** JS to keep them green — so the divergence was baked
+  into the conformance harness as a false "by-design" note.
+- **Why it was a distinct gap (not §44/§180):** those fixed the *Native* `%.16g`
+  path. JS had no JDK formatter at all — no `.0`, wrong scientific threshold,
+  `String(-0.0)`=`0`, `String(1e21)`=`1e+21`.
+- **Expected:** the JDK `Double.toString`/`Float.toString` contract on JS too —
+  integral with `.0` (`4.0`), shortest round-trip (`0.30000000000000004`),
+  scientific with uppercase `E` + no leading-zero exponent at the JDK threshold
+  `exp < -3 || exp >= 7` (`1.0E7`, `1.0E-4`, `1.0E20`), signed zero (`-0.0`),
+  `Float` with its OWN shortest round-trip (`1.0f/3.0f`=`0.33333334`, not the
+  double expansion), and `Infinity`/`-Infinity`/`NaN` (which already matched).
+- **Fix:** new runtime slice `JsRuntimeUiNumFmt` (block `num-fmt`, exports
+  `kofNumFmt(v, isFloat)`) implementing the contract (round-trip loop over
+  `toExponential(p)` with `Math.fround` at Float precision; JDK threshold/`E`
+  reformat; null→`"null"`). The shared print/concat/instance-call lowerers now
+  pass the real floating `argType` into `String.valueOf` **for the JS target
+  only** (matching the existing Native passthrough), and `JsCallEmitter` routes
+  `valueOf(D/F)`, static `Double/Float.toString`, and `d.toString()` to
+  `kofNumFmt`. Lazy slice: not in the `hello` closure (no base-size cost).
+- **Scope note — what this does NOT fix:** boxed collection storage.
+  `println(new List<Double>{4.0})` prints `[4, 2.5]` on JS vs `[4.0, 2.5]` on
+  JVM because a JS `List` holds raw `Number`s with no type tag (a `List<Double>`
+  is indistinguishable from `List<Int>` at runtime). That is the §104b-ii
+  boxed-storage gap (native lane), NOT this display gap — `mapgetprim` stays
+  on a predicate (`d > 1.0`) precisely to avoid colliding with it.
+- **Proof:** `WrapperStaticCallsE2ETest.doubleFloatJdkPrintFormat` (runBoth
+  JVM+JS, RED on JS before the fix: `4` vs `4.0`); `ConformanceMatrixTest` cells
+  `floatprint`/`doubleprint`/`infinityprint`/`negzero`/`doublemod` flipped from
+  `Set.of("js")` to full 4-target parity (verified value-by-value against the
+  JVM oracle on host node v18); the `conformance-matrix.md`/`.pt_BR.md` JS
+  column cells updated PARTIAL→DONE in lockstep (the `ConformanceMatrixDocTest`
+  gate enforces   doc×Set.of agreement).
+
+### §265 — KofJS web handlers: `status(code, body)` and `headerSet(name, value)` were SILENT no-ops (the `handleRuntimeOp` collapse branch dropped the call from the emitted handler; and `kofWebStatus` read a `kofWebRequest.response` field that never existed) — the doc said "JS 08/27 ✅" but JS returned 200 and dropped the header — ✅ FIXED 16/09 (lane development, owner = 192.168.100.18)
+
+- **Symptom (measured 16/09, lane .18 probe against the live server, PRE-EXISTING
+  since the WEB001-T1 JS port 13/09):**
+  ```kof
+  app.get("/created") {
+      headerSet("X-Custom", "abc")
+      return status(201, "made")
+  }
+  ```
+  JVM: `HTTP/1.1 201 Created` + `X-Custom: abc` + body `made`. **JS: `200 OK`, no
+  `X-Custom`, body   `made`** — the status code and the custom header silently
+  vanished (R6). TWO layers of root cause: **(1) codegen (the decisive one):**
+  `JsRuntimeOps.handleRuntimeOp` had an early branch collapsing
+  `kof_web_status`→`args.get(1)` and `kof_web_header_set`→`args.get(1)` — the
+  call was **dropped entirely from the emitted handler** (verified: `invoke()`
+  came out as `return "made"`; IR still had the ops, 8 vs 2). This shadowed the
+  correct routing later in the SAME method (which DOES call `kofWebStatus`).
+  **(2) runtime (latent, also broken):** `kofWebStatus` read
+  `kofWebRequest.response` — a field the pump's `kofWebRequest` object never had
+  (the `response` object lives on `ctx`, a different object), so even with the
+  call emitted the guard would swallow it; and `ctx.response.status` wrote
+  eagerly (double `sendResponseHeaders`) with the pump matching branch testing
+  `result.status === 'function'` while the real fn returns a String — never
+  matched.
+- **Expected (contract, docs `stdlib-web.md` "status(code, body) ... use as a
+  return"):** defered semantics identical to the JVM (`KOF_WEB_STATUS`
+  thread-local read by the dispatch on send): the handler's returned text is the
+  body, `_status` (if set) replaces the 200/404 default, and queued
+  `headerSet` pairs land before `sendResponseHeaders` (JDK HttpServer requires
+  headers before send).
+- **Fix (`JsRuntimeOps.java` + `JsRuntimeUiWeb.java`):** deleted the two collapse
+  branches in `handleRuntimeOp` (the routing to `kofWebStatus`/`kofWebHeaderSet`
+  already existed below); `kofWebRequest` gains `_status`/`_headerQueue`;
+  `kofWebStatus`/`kofWebHeaderSet` DEFER into them (return the body/value like
+  the JVM); `ctx.response` delegates to the same deferred state (no more eager
+  write); the pump applies headers + status at send (default 200, null-return →
+  404 unchanged).
+- **Ledger note:** this makes the `ecosystem-coverage.md` cells "custom status
+  codes"/"custom response headers" **JS ✅** genuine — an earlier audit pass
+  called those cells STALE (claiming `KofWeb.contextJsSupported` already made
+  them green); WRONG: compile-time support ≠ runtime effect. The cells flipped
+  only after this fix + the E2E proof. Native stays `– WEB001` (honest).
+- **Proof:** `KofWebJsE2ETest.jsWebStatusAndHeaderReachTheWire` — asserts
+  `201`+`X-Custom: abc`+body on the live wire (RED pre-fix: measured `200` +
+  missing header against the running server; the same probe green on JVM
+  `201 Created`).
+
+## §268 — user class `extends <JDK class>` by SIMPLE name writes a RAW superclass → `NoClassDefFoundError` on load — 🟡 PARTIAL 18/09 (throwables face CLOSED by #313; broader extends face OPEN, rule-6 fork)
+
+- **Symptom:** `class MyEx extends RuntimeException { ... }` compiles clean
+  (exit 0) and the OWNING class fails at load:
+  `Caused by: java.lang.ClassNotFoundException: RuntimeException`
+  (it loads `RuntimeException`, not `java/lang/RuntimeException`).
+  Scope is BROADER than throwables — measured the same raw `super_class` for
+  **`RuntimeException`, `Exception`, `IOException`, `IllegalArgumentException`,
+  `Object`, `Thread`** (any JDK class referenced by simple name). `java.lang`
+  needs no `import`, so this is not an import problem.
+- **Status update (18/09, lane compiler `.22`, commit of #313):** PARTIAL — the
+  `extends <JDK-throwable>` face is CLOSED at the root in `SymbolTableBuilder`
+  (same commit as #313): the recorded super falls back to `java.lang.<Name>` for
+  the `JAVA_LANG_THROWABLES` set when no import resolves (measured:
+  `class MyEx extends RuntimeException` no-import now loads and runs;
+  `ThrowQualifiedTest` locks it). The BROADER scope of this section stays OPEN,
+  re-measured with instantiation (a load crash only shows when the class is
+  actually loaded): `extends Thread`/`extends Object` (java.lang, not throwables)
+  and `extends IOException` (java.io, no import) still emit the raw super →
+  `NoClassDefFoundError`/CNFE at instantiation; `extends Zebra` (undefined name)
+  compiles clean with a raw `extends Zebra` (silent, R6). General fix queued:
+  unresolved simple name in extends/implements → honest diagnostic (a free SEM0xx at implementation
+  time — SEM072 is taken by #336's List.add arity), `Object` → `java/lang/Object`.
+- **Rule-6 fork (why the throwables commit did NOT close the broad face):**
+  the generalization changes how EVERY simple type name in `extends`/`implements`
+  resolves, across all four targets, and shares the resolution river with the
+  nullable/generics cluster (`#259`/`#361`/`#363`/`#365`/`#366`/`#368`). Three
+  candidate contracts, all strictly better than today's silent load-crash but
+  NOT interchangeable: **(A)** implicit `java.lang` for extends/implements via a
+  cached `Class.forName("java.lang."+n)` probe (complete, matches Java, but
+  makes the compiler's JDK a semantic oracle — non-java.lang like
+  `IOException`/`List` still need an import or hit the SEM0xx); **(B)** curated
+  `JAVA_LANG_TYPES` set (precedent = `JAVA_LANG_THROWABLES`; under-covers —
+  that guess-too-narrow mistake is exactly what §268 records); **(C)** require
+  the import (strictest, breaks today's no-import idiom). Needs the
+  maintainer's pick + bump/doc (it turns currently-crashing programs into
+  compile errors → SEM0xx), so it is NOT a silent `.22` edit. Owner = compiler
+  lane; attack after the nullable/generics cluster settles (same files).
+  `driver.toInternalName("", sym.superClass())` passes an EMPTY package when the
+  analyzer resolved the name but the class is an implicit-JDK name →
+  the emitted `super_class` is the raw `RuntimeException` instead of
+  `java/lang/RuntimeException`. Independent of the `catch` mapper (§167/§332/§328
+  family fixed 18/09) — this is the **`extends` super field**, not the catch table.
+- **Repro (measured on tip `a7af2c6a`, JVM, 18/09):**
+  ```kof
+  class MyEx extends RuntimeException {
+      String what() { return "my" }
+  }
+  main() {
+      var e = MyEx()
+      println("ok " + e.what())
+  }
+  ```
+  → `build`/`run` exit 0 then `ClassNotFoundException: RuntimeException`
+  at `Default.Main.main(Main.kf:5)`. Same with `extends Object`/`Thread`/`IOException`.
+- **Family:** the same "unqualified JDK ref" root as issues **#313/#314**
+  (static call / `throw new` unqualified) — register there. Owner = the
+  compiler lane (`#313/#314` queue, DOING line 223). Fix direction:
+  `toInternalName` must qualify implicit JDK class names after the analyzer
+  resolves them (and the same check that pins `String`/`List`/`Map` builtin
+  aliases (SG-011 §179 pattern) should give the throwable its real package).
+- **Not fixed here** (found while closing §332/#328; the queue for this family
+  is `#313/#314`, owner = lane compiler `.22` per DOING line 223).

@@ -150,7 +150,7 @@ offset 24: elements data
 - Modelo: programa de curta duração, SO reivindica memória
 
 > **Atualizado (0.2.6-beta, 31/08):** `kof_alloc` usa free-list
-> `kof_free_head` (reuso `mmap`); GC mark-sweep pendente e auto-GC
+> `kof_free_head` (reuso `mmap`); GC mark-sweep implementado 03/09 e auto-GC
 > desativado após hang (memória devolvida só no `munmap` fallback);
 > allocator thread-safe (futex) para o `spawn` em pthreads.
 

@@ -53,7 +53,7 @@ cmd_token() {
     if [ -z "$inst" ]; then
         inst=$(curl -s -H "Authorization: Bearer $jwt" -H "Accept: application/vnd.github+json" \
             "https://api.github.com/app/installations" \
-            | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d[0]["id"])' 2>/dev/null || true)
+            | python3 -c 'import json,sys; insts=json.load(sys.stdin); kof=[i["id"] for i in insts if i.get("account",{}).get("login")=="KofLang"]; print(kof[0] if kof else insts[0]["id"])' 2>/dev/null || true)
     fi
     [ -n "$inst" ] || { echo "nenhuma installation visível para a app (instalou na org?)" >&2; exit 1; }
     curl -s -X POST -H "Authorization: Bearer $jwt" -H "Accept: application/vnd.github+json" \
@@ -61,7 +61,9 @@ cmd_token() {
         | python3 -c 'import json,sys; d=json.load(sys.stdin); print("export GH_TOKEN=" + d["token"])'
 }
 
-cmd_whoami() { gh api user --jq .login; }
+cmd_whoami() {
+    gh api /installation/repositories --jq '.repositories[0].owner.login' 2>/dev/null && echo "kof-agent-worker[bot]" || echo "unknown"
+}
 
 cmd_check() {
     if [ -z "${GH_TOKEN:-}${GITHUB_TOKEN:-}" ]; then
@@ -70,9 +72,9 @@ cmd_check() {
         exit 1
     fi
     local login
-    login=$(cmd_whoami)
+    login=$(cmd_whoami | tail -n 1)
     case "$login" in
-        *"[bot]"|*"-bot"|Kof-agent-worker*) echo "OK: identidade de agente = $login";;
+        *"[bot]"|*"-bot"|Kof-agent-worker*|kof-agent-worker*) echo "OK: identidade de agente = $login";;
         melmonfre) echo "ERRO: identidade = melmonfre (perfil pessoal) — NÃO postar issues/PRs assim" >&2; exit 1;;
         *) echo "ATENÇÃO: identidade = $login (não é app do worker) — confirme antes de postar";;
     esac

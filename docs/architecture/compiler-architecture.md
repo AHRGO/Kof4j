@@ -2,7 +2,7 @@
 
 # Kof Compiler Architecture
 
-**Version:** 0.3.0-beta · **Evidence:** `kof-compiler/src/main/java/dev/kof/compiler/`
+**Version:** 0.4.0-beta · **Evidence:** `kof-compiler/src/main/java/dev/kof/compiler/`
 
 This document describes **how the Kof compiler implements the language**. It is
 **normative about the implementation**, not about the language — the language
@@ -125,7 +125,7 @@ INTERFACE}`.
 
 ## 4. Middle-end
 
-### 4.1 IR (`IRNodes.java`)
+### 4.1 IR (`KofOperation` + one record per op)
 
 **IR type**: **linear stack machine** — not three-address, not SSA, not a
 tree. Optimizer Javadoc (`Optimizer.java:14-15`): *"The IR is a linear,
@@ -150,7 +150,7 @@ IRModule(name, classes, imports, sourceName)
 block per method (`new IRBasicBlock(0, ops)`); the optimizer flattens and
 repacks. The real unit is the **flat op list with labels**.
 
-**The 30 ops** (`IRNodes.java:99-252`):
+**The 30 ops** (one `Kof*.java` record per op — e.g. `KofLoadLiteral.java` — implementing `KofOperation.java`):
 
 | Group | Ops |
 |---|---|
@@ -220,7 +220,7 @@ delegated to the target's JIT (JVM) or to `as`/`ld` (Native).
 
 Interface (`Backend.java:6-12`): `void emit(IRModule, Path, boolean debugInfo)`.
 
-Selection (`CompilerDriver.selectBackend`, `:370-381`):
+Selection (`CompilerPipeline.selectBackend`, `:177`):
 
 `java
 case JVM            -> backendWithClasspath(new JvmBackend());
@@ -280,8 +280,8 @@ placeholder" — outdated** (SG-E1).
   discipline into this tree-shaped JS AST"*).
 - **Execution**: Node or browser; `KofJsRunner` embeds GraalJS for
   server-side execution.
-- **Short-circuit `&&`/`||` disabled** (`ExpressionLowerer.java:147-148`) —
-  SG-006.
+- **Short-circuit `&&`/`||` on all targets** — JS emits native `&&`/`||`
+  (SG-006 ✅ FIXED 09/09; the label path is JVM/Native).
 
 ### 5.4 Android (`Target.ANDROID`)
 

@@ -35,7 +35,7 @@ convention. The mechanism never rises into the user's code:
 | script | `let x = 5` at the top | `KofScriptGlobals` (repl --watch) |
 
 The intention compiles on all targets; the target that cannot realize it
-reports at compile-time with a gap code (`HTTP002`, `DB001`, `WEB002`) — never
+reports at compile-time with a gap code (`HTTP002`, `WEB002`) — never
 silently. Details in `docs/philosophy.md`.
 
 ## The multiplatform vision
@@ -60,7 +60,7 @@ Kof is not just a language for the JVM. It is a language that can compile to dif
 
 **The language does not change. The target changes.**
 
-This is a fundamental design decision. The same Kof source can generate (0.3.22-beta):
+This is a fundamental design decision. The same Kof source can generate (0.4.0-beta):
 - JVM bytecode for applications that need the Java ecosystem
 - Native executables x86-64 / riscv64 (`native.risc`) / aarch64 (`native.arm`) for CLI tools and systems (Target separation)
 - ES Modules for the browser/webview via KofJS (see [chapter 37](37-kofjs.md))
@@ -102,7 +102,9 @@ For the native backend, Kof uses:
 
 ### Native runtime (0.2.0)
 
-Native uses a **free-list GC** (`kof_free_head`, `mmap` reuse, mark-sweep pending), `spawn` via **pthread** (31/08 — `CONC001` closed), **real XMM** floating point (`vcvtsi2sd`/`mulsd`, `FLT001` closed) and full JSON (objects/records/arrays — `JSN001/002/003` closed). `kof_db` brings **native SQLite** and MySQL in progress (wire protocol, SHA-1 auth scramble). None of this leaks into Kof code — it is `intention->Kof->frontend->IR->backend->runtime`.
+Native uses a **free-list GC with mark-sweep** (`kof_free_head` reuse + `kof_gc_mark`
+conservative stack+bss + `kof_gc_sweep`, 03/09 — `KofGcE2ETest` 3/3; auto-collect on
+exhaustion still PENDING — needs safe-points, §260), `spawn` via **pthread** (31/08 — `CONC001` closed), **real XMM** floating point (`vcvtsi2sd`/`mulsd`, `FLT001` closed) and full JSON (objects/records/arrays — `JSN001/002/003` closed). `kof_db` brings **native SQLite** and MySQL in progress (wire protocol, SHA-1 auth scramble). None of this leaks into Kof code — it is `intention->Kof->frontend->IR->backend->runtime`.
 
 ### Compile-time > runtime
 

@@ -127,7 +127,7 @@ Kof não depende de Java como linguagem intermediária.
 
 # Estado Atual
 
-Kof está em desenvolvimento ativo — **0.3.0-beta**.
+Kof está em desenvolvimento ativo — **0.4.0-beta**.
 
 O compilador possui frontend próprio, type system, Kof IR e **três backends
 sobre a IR**, que produzem **seis targets**: JVM (V21 via ASM), Native x86_64
@@ -156,10 +156,10 @@ ferramenta separada, não consome a IR Kof — ver
 | JSON encode/decode (objetos/records/arrays, 3 targets) | ✅ | ✅ | ✅ |
 | kof.io (File, Path, Directory) | ✅ | ✅ | ✅ |
 | kof.time (`now`/`sleep`/`interval`), kof.cache | ✅ | ✅ | ✅ |
-| kof.web (`web.app()`, ws, sse, TLS) | ✅ | WEB002 | WEB001 |
+| kof.web (`web.app()`, ws, sse, TLS) | ✅ | base ✅ 03/09; TLS `WEB002`, ws `WEB004`, sse `WEB003` | ✅ base 16/09 + SSE handler-scoped 16/09 (ws `WEB004`, push SSE pós-return `WEB003` compile-time) |
 | kof.http client + retry/circuit | ✅ | HTTP002 | ✅ |
 | kof.security (passwords, crypto, jwt, secrets, auth) | ✅ | ✅ | ✅ |
-| kof.db / kof.orm (SQLite nativo, MySQL WIP, MongoDB) | ✅ | ✅ | DB001/ORM001 |
+| kof.db / kof.orm (SQLite nativo, MySQL WIP, MongoDB) | ✅ | ✅ | ✅ 16/09 nao-tipado (ponte no host GraalJS); `query<T>` tipado = `DB002`; ORM `ORM001` |
 | kof.config / kof.log | ✅ | ✅ | CONF001/LOG001 |
 | kof.ui (Color, Palette, Theme, widgets) | no-op | no-op | ✅ render |
 
@@ -170,8 +170,8 @@ no JS (CONC003). Ver [docs/language-reference/concurrency.md](docs/language-refe
 **Null safety**: `String?`/`Int?` + `if (x != null)` narrowing nos 3 targets
 (fix JVM 02/09). `Map.get` devolve `V?` para valores de referência.
 
-**Testes**: `test "nome" { }` + `assert(cond, "msg")` + `kof test` — 810 testes
-(793 kof-compiler + 8 kof-script + 5 kof-c-compiler + 4 kof-cli). Ver
+**Testes**: `test "nome" { }` + `assert(cond, "msg")` + `kof test` — 2218 testes
+(1907 kof-compiler + 38 kof-script + 7 kof-c-compiler + 262 kof-cli). Ver
 [learn/23-testing.md](learn/23-testing.md).
 
 **Depuração**: `kof debug <file.kf>` — servidor DAP sobre stdio com JDWP cru
@@ -355,6 +355,7 @@ kof check <file.kf|dir> [--json]
 kof test <file.kf|dir> [--target jvm|native|js]
 kof script | repl | c | fmt | config
 kof bench | profile | inspect | debug
+kof decompile | translate | compare | migrate | deps | editor | new
 kof info | lsp | install | version
 ```
 

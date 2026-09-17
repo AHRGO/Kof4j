@@ -78,12 +78,13 @@ class CastPrimitivesE2ETest {
     @Test
     void castObjectToCharUnboxesAsIntegerWidth(@TempDir Path tempDir) throws IOException {
         // Char Kof é guardado BOXED como Integer (§104b-ii) — o unbox tem que
-        // pedir intValue()I, não charValue()C (inexistente). Testado por
-        // aritmética (não println) para não codificar o bug aberto #153/#168.
+        // pedir intValue()I, não charValue()C (inexistente). O code point do
+        // resultado é obtido de forma explícita (`as Int`) — D-PRINT: o
+        // println de um Char imprimiria o CARÁTER, não o número.
         assertEquals("98", compileAndRun("aschar", """
                 main() {
                     var c: Object = 97
-                    println((c as Char) + 1)
+                    println(((c as Char) + 1) as Int)
                 }
                 """, tempDir), "#205: Char via Integer-box — antes Integer.charValue()C inexistente");
     }
@@ -100,7 +101,7 @@ class CastPrimitivesE2ETest {
 
     @Test
     void castPrimitiveFromPrimitiveStillConverts(@TempDir Path tempDir) throws IOException {
-        assertEquals("97\n101", compileAndRun("asprim", """
+        assertEquals("a\n101", compileAndRun("asprim", """
                 main() {
                     var x = 97
                     println(x as Char)

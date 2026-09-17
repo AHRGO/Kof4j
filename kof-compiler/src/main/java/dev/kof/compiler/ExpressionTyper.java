@@ -226,7 +226,7 @@ public final class ExpressionTyper {
                         && CompilerTypes.isEnumName(ct.name(), driver.currentUnit)) {
                     if (!CompilerTypes.enumConstantsOf(ct.name(), driver.currentUnit).contains(fa.fieldName()) && driver.currentDiagnostics != null) {
                         driver.currentDiagnostics.error("", 0, 0, 0,
-                                "enum '" + ct.name() + "' não tem constante '" + fa.fieldName() + "'",
+                                "enum '" + ct.name() + "' has no constant '" + fa.fieldName() + "'",
                                 "SEM030");
                     }
                     yield recvType;

@@ -156,6 +156,16 @@ public class StatementParser {
             // bare return: `return` followed by the end of the block
             return new ReturnStmt(p, null);
         }
+        // #343 — ASI no `return`: sem ponto-e-vírgula, a expressão da próxima
+        // linha ENCAIXA no `return` e engole o statement seguinte
+        // (`if (x<0) return\n println(..)` virava `return println(..)` — o
+        // corpo desaparecia e o ramo parecia "invertido"). O valor do return
+        // só vale na MESMA linha da palavra-chave; senão é return-void.
+        // Aditivo: nenhum programa do corpus usa `return` com valor na linha
+        // seguinte (medido: todos os `return` nus são seguidos de `}`).
+        if (ctx.peek().line() > p.line()) {
+            return new ReturnStmt(p, null);
+        }
         ExpressionNode value = ExpressionParser.parseExpression(ctx);
         ctx.expectSemicolon();
         return new ReturnStmt(p, value);
@@ -303,7 +313,7 @@ public class StatementParser {
                 SourcePosition cp = ctx.pos();
                 ctx.advance();
                 ExpressionNode value = StatementParser.parseSwitchCasePatternOrValue(ctx, cp);
-                ctx.expect(TokenType.COLON, "Expected ':' (switch statement) ou '->' (switch expressão)", "PARSE073");
+                ctx.expect(TokenType.COLON, "expected ':' (switch statement) or '->' (switch expression)", "PARSE073");
                 List<StatementNode> caseBody = new ArrayList<>();
                 while (!ctx.check(TokenType.CASE) && !ctx.check(TokenType.DEFAULT) && !ctx.check(TokenType.RBRACE) && !ctx.atEnd()) {
                     caseBody.add(StatementParser.parseStatement(ctx));
@@ -403,6 +413,7 @@ public class StatementParser {
     static StatementNode parseVarDecl(ParseContext ctx) {
         SourcePosition p = ctx.pos();
         String type = "var";
+        boolean typeFirst = false;
         if (ctx.check(TokenType.VAL)) {
             // bug 62: `val` é imutável — o type do VarDeclStmt precisa carregar
             // "val" para o analisador semântico emitir SEM037 em reatribuição.
@@ -412,12 +423,31 @@ public class StatementParser {
             ctx.advance();
         } else {
             type = TypeParser.parseTypeRef(ctx);
+            typeFirst = true;
         }
         String name = ctx.expectId("Expected variable name", "PARSE037");
         if (ctx.check(TokenType.COLON)) {
             // var name: Type = value — explicit type annotation
             ctx.advance();
-            type = TypeParser.parseTypeRef(ctx);
+            String annType = TypeParser.parseTypeRef(ctx);
+            // §263 (R6): a anotacao `nome: Type` so e forma valida depois de
+            // var/val. No caminho type-first (parseTypeRef consumiu um
+            // prefixo), o `:` sobrescrevia o prefixo SEM diagnosticar. So ha
+            // buraco quando o prefixo DIFERE da anotacao — ai ele NUNCA foi um
+            // tipo real (`let`, `Klaxon`, `Banana`) e desaparece em silencio
+            // (programa invalido compila). Prefixo == anotacao nao descarta
+            // nada (overwrite identidade) — mantido, nao e o bug reportado.
+            // Sem anotacao o prefixo desconhecido ja caia honesto no typer
+            // (SEM011) — o buraco era so com `:`.
+            if (typeFirst && !annType.equals(type)) {
+                ctx.diagnostics.error(ctx.file, p.line(), p.column(), p.length(),
+                        "invalid variable declaration: the ':' annotation is only allowed after 'var'/'val' — "
+                        + "the type '" + type + "' before '" + name + "' does not match '" + annType
+                        + "' and would be silently discarded; write 'var " + name + ": " + annType
+                        + " = ...' or '" + annType + " " + name + " = ...'",
+                        "PARSE095");
+            }
+            type = annType;
         }
         ExpressionNode init = null;
         if (ctx.check(TokenType.EQUAL)) {

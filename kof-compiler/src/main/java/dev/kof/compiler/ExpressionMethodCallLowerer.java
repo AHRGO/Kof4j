@@ -28,6 +28,25 @@ public final class ExpressionMethodCallLowerer {
         return localIdx;
     }
 
+    /**
+     * #403 — o nome do receiver sombreia um CAMPO da classe corrente? A
+     * semântica já resolve `log` como campo (SemExpressionTyper:63, antes da
+     * isenção de namespace); se o EMIT hijackear o nome cru p/ um lowerer de
+     * namespace (log/json/db/…) o corpo da chamada sai VAZIO quando o método
+     * não está mapeado (`log.add(...)` → ExpressionLogCallLowerer engole →
+     * `return` só → VerifyError: Operand stack underflow no load, R6/silencioso).
+     * Espelha a resolução por owner de ExpressionLowerer:72 (getfield do campo).
+     */
+    static boolean shadowsFieldOfCurrentClass(CompilerDriver driver, String owner, String name) {
+        if (driver.semanticAnalyzer == null || owner == null || owner.isEmpty()) return false;
+        String className = owner.substring(owner.lastIndexOf('/') + 1);
+        if (className.isEmpty()) return false;
+        SymbolTable.ClassSymbol cs = driver.semanticAnalyzer.getClass(className);
+        if (cs == null) return false;
+        return HierarchyResolver.resolveFieldInHierarchy(cs.name(), name, driver.semanticAnalyzer)
+                instanceof SymbolTable.FieldSymbol;
+    }
+
     static int lower(CompilerDriver driver, MethodCallExpr mc, List<KofOperation> ops,
                         String owner, int localIdx, List<IRLocalVariable> locals) {
 // User-defined classes take precedence over builtin helpers
@@ -204,18 +223,23 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
     // instance lowerer, which owns the builtin wrapper/`valueOf` handling.
     return ExpressionInstanceCallLowerer.lower(driver, mc, ops, owner, localIdx, locals);
 } else if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.name(), locals)
-        && "json".equals(rid.name())) {
+        && "json".equals(rid.name())
+        && !shadowsFieldOfCurrentClass(driver, owner, rid.name())) {
     return ExpressionJsonCallLowerer.lower(driver, mc, ops, owner, localIdx, locals);
-} else if (mc.receiver() instanceof IdentifierExpr rid && KofDb.isDbNamespace(rid.name())) {
+} else if (mc.receiver() instanceof IdentifierExpr rid && KofDb.isDbNamespace(rid.name())
+        && !shadowsFieldOfCurrentClass(driver, owner, rid.name())) {
     return ExpressionDbCallLowerer.lower(driver, mc, ops, owner, localIdx, locals);
 } else if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.name(), locals)
-        && KofOrm.isOrmNamespace(rid.name())) {
+        && KofOrm.isOrmNamespace(rid.name())
+        && !shadowsFieldOfCurrentClass(driver, owner, rid.name())) {
     return ExpressionOrmCallLowerer.lower(driver, mc, ops, owner, localIdx, locals);
 } else if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.name(), locals)
-            && KofLog.isLogNamespace(rid.name())) {
+            && KofLog.isLogNamespace(rid.name())
+            && !shadowsFieldOfCurrentClass(driver, owner, rid.name())) {
     return ExpressionLogCallLowerer.lower(driver, mc, ops, owner, localIdx, locals);
 } else if (mc.receiver() instanceof IdentifierExpr rid && "process".equals(rid.name())
-        && driver.findLocalVar(rid.name(), locals) == null) {
+        && driver.findLocalVar(rid.name(), locals) == null
+        && !shadowsFieldOfCurrentClass(driver, owner, rid.name())) {
     return ExpressionProcessCallLowerer.lower(driver, mc, ops, owner, localIdx, locals);
 } else if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.name(), locals)
             && KofHttp.isHttpNamespace(rid.name())) {
@@ -398,10 +422,18 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
 } else if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.name(), locals)
             && KofWeb.isWebNamespace(rid.name())) {
     if ("app".equals(mc.methodName()) && mc.arguments().isEmpty()) {
+        // AND002 (docs/targets/KOFANDROID.md): app móvel não escuta porta —
+        // o servidor embutido (web.app) não tem realização no Android; o
+        // alvo diz na hora (R6), nunca silencia.
+        if (driver.target == Target.ANDROID) {
+            gapError(driver, mc, "web.app: embedded server not available on Android — "
+                    + "a mobile app does not listen on a port; use interop (AND002)", "AND002");
+            return localIdx;
+        }
         // WEB001-T1 JS (13/09): web.app() liberado — o runtime JS tem server
         // real (JsRuntimeUiWeb: kofWebAppNew/Route/Listen via GraalJS
         // HttpServer); o gap real era o frontend bloquear o JS aqui.
-        if (driver.target != Target.JVM && driver.target != Target.ANDROID
+        if (driver.target != Target.JVM
                 && driver.target != Target.NATIVE
                 && driver.target != Target.NATIVE_RISCV64
                 && driver.target != Target.NATIVE_AARCH64
@@ -425,170 +457,7 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
 } else if (mc.receiver() != null) {
     return ExpressionInstanceCallLowerer.lower(driver, mc, ops, owner, localIdx, locals);
 } else {
-    if (("super".equals(mc.methodName()) || "driver".equals(mc.methodName()))
-            && driver.semanticAnalyzer != null && owner != null && !owner.isEmpty()) {
-        // super(args): construtor da superclasse (Object quando
-        // a classe não tem extends). driver(args): delegação para
-        // outro construtor da própria classe — o alvo executa
-        // super() e os inicializadores de campo.
-        boolean delegation = "driver".equals(mc.methodName());
-        String targetInternal;
-        if (delegation) {
-            targetInternal = owner;
-        } else {
-            targetInternal = HierarchyResolver.findSuperClass(owner, driver.semanticAnalyzer);
-            if (targetInternal == null) targetInternal = "java/lang/Object";
-            targetInternal = targetInternal.replace('.', '/');
-        }
-        Type targetType = CompilerTypes.ownerTypeFromInternal(targetInternal, driver.semanticAnalyzer);
-        SymbolTable.ClassSymbol targetCs = driver.semanticAnalyzer.getClass(
-                targetInternal.substring(targetInternal.lastIndexOf('/') + 1));
-        SymbolTable.ConstructorSymbol ctor = targetCs != null
-                ? SymbolTable.constructorFor(targetCs.members(), mc.arguments().size()) : null;
-        List<Type> argTypes = new ArrayList<>();
-        for (ExpressionNode arg : mc.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
-        ops.add(new KofLoadLocal(CompilerTypes.ownerTypeFromInternal(owner, driver.semanticAnalyzer), 0));
-        List<Type> ctorParamTypes;
-        if (ctor != null && ctor.parameterTypes().size() == mc.arguments().size()) {
-            ctorParamTypes = ctor.parameterTypes();
-        } else {
-            if (targetCs != null && driver.currentDiagnostics != null) {
-                // classe conhecida e nenhum construtor com essa
-                // aridade — erro em compile-time
-                SourcePosition p = mc.position();
-                driver.currentDiagnostics.error(p != null ? p.file() : "",
-                        p != null ? p.line() : 0, p != null ? p.column() : 0, 0,
-                        (delegation ? "no constructor of '" : "no super constructor of '")
-                                + targetInternal.substring(targetInternal.lastIndexOf('/') + 1)
-                                + "' with " + mc.arguments().size() + " argument(s)",
-                        "SEM017");
-                return localIdx;
-            }
-            ctorParamTypes = argTypes;
-        }
-        localIdx = driver.emitArgumentsWithFormalTypes(mc.arguments(), ctorParamTypes, ops, owner, localIdx, locals);
-        ops.add(new KofCall(targetType, "<init>", ctorParamTypes, Type.PrimitiveType.VOID, KofCallKind.CONSTRUCTOR));
-        return localIdx;
-    }
-    SymbolTable.MethodSymbol selfMethod = driver.semanticAnalyzer != null
-            ? driver.semanticAnalyzer.getResolvedMethod(mc) : null;
-    if (selfMethod != null && owner != null && !owner.isEmpty()
-            && !"<init>".equals(selfMethod.name())
-            && selfMethod.ownerClass() != null) {
-        Type ownerType = CompilerTypes.ownerTypeFromInternal(selfMethod.ownerClass(), driver.semanticAnalyzer);
-        // Método ESTÁTICO da própria classe chamado sem receiver (ex.:
-        // `twice(21)` dentro de outra static, ou no <clinit> de um campo
-        // estático): invokestatic SEM receiver — antes emitia aload_0 +
-        // invokevirtual → IncompatibleClassChangeError (contexto de
-        // instância) / VerifyError (contexto estático).
-        if ((selfMethod.accessFlags() & AccessFlags.STATIC) != 0) {
-            localIdx = driver.emitArgumentsWithFormalTypes(mc.arguments(), selfMethod.parameterTypes(),
-                    ops, owner, localIdx, locals);
-            ops.add(new KofCall(ownerType, mc.methodName(), selfMethod.parameterTypes(),
-                    selfMethod.returnType(), KofCallKind.STATIC));
-            return localIdx;
-        }
-        ops.add(new KofLoadLocal(ownerType, 0));
-        localIdx = driver.emitArgumentsWithFormalTypes(mc.arguments(), selfMethod.parameterTypes(),
-                ops, owner, localIdx, locals);
-        // #213: chamada nua dentro de default method de interface resolve p/ a
-        // PRÓPRIA interface — invokestatic/invokevirtual não valem; o JVM exige
-        // invokeinterface (senão IncompatibleClassChangeError "Found interface").
-        KofCallKind selfKind = KofCallKind.INSTANCE;
-        // selfMethod != null so aqui SOMENTE porque o ternario acima passou por
-        // driver.semanticAnalyzer != null — o re-check era dead-code (CodeQL #716,
-        // confirmado pelo proprio dominance). Removido; nenhum caminho alterado.
-        String selfOwner = selfMethod.ownerClass();
-        if (selfOwner.contains("/")) selfOwner = selfOwner.substring(selfOwner.lastIndexOf('/') + 1);
-        if (driver.semanticAnalyzer.isInterfaceType(selfOwner)) selfKind = KofCallKind.INTERFACE;
-        ops.add(new KofCall(ownerType, mc.methodName(), selfMethod.parameterTypes(),
-                selfMethod.returnType(), selfKind));
-        return localIdx;
-    }
-    SymbolTable.ClassSymbol cs = driver.semanticAnalyzer != null ? driver.semanticAnalyzer.getClass(mc.methodName()) : null;
-    if (cs != null) {
-        List<Type> argTypes = new ArrayList<>();
-        for (ExpressionNode arg : mc.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
-        SymbolTable.ConstructorSymbol ctor = null;
-        SymbolTable.Symbol ctorSym = cs.members().resolve("<init>");
-        if (ctorSym instanceof SymbolTable.ConstructorSymbol ctorSingle) ctor = ctorSingle;
-        ops.add(new KofNewObject(cs.type(), argTypes));
-        ops.add(new KofDup());
-        List<Type> ctorParamTypes = (ctor != null
-                && ctor.parameterTypes().size() == mc.arguments().size())
-                ? ctor.parameterTypes() : argTypes;
-        localIdx = driver.emitArgumentsWithFormalTypes(mc.arguments(), ctorParamTypes, ops, owner, localIdx, locals);
-        ops.add(new KofCall(cs.type(), "<init>", ctorParamTypes, Type.PrimitiveType.VOID, KofCallKind.CONSTRUCTOR));
-    } else {
-        IRLocalVariable lambdaVar = driver.findLocalVar(mc.methodName(), locals);
-        if (lambdaVar != null && lambdaVar.type() instanceof Type.FunctionType lft) {
-            if (lft.className() == null) {
-                // bug 8: valor de TIPO DE FUNÇÃO DECLARADO (param
-                // (s: (Int) -> Int), sem classe sintética). Todas
-                // as lambdas da assinatura implementam a interface
-                // sintética — invoca via INVOKEINTERFACE.
-                localIdx = ExpressionLowerer.emitExpression(driver, new IdentifierExpr(mc.position(), mc.methodName()),
-                        ops, owner, localIdx, locals);
-                List<Type> argTypes = new ArrayList<>();
-                for (ExpressionNode arg : mc.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
-                localIdx = driver.emitArgumentsWithFormalTypes(mc.arguments(), lft.parameterTypes(),
-                        ops, owner, localIdx, locals);
-                Type iface = driver.lambdaInterfaceType(lft);
-                ops.add(new KofCall(iface, "invoke", argTypes, lft.returnType(),
-                        KofCallKind.INTERFACE));
-            } else {
-            localIdx = ExpressionLowerer.emitExpression(driver, new IdentifierExpr(mc.position(), mc.methodName()),
-                    ops, owner, localIdx, locals);
-            List<Type> argTypes = new ArrayList<>();
-            for (ExpressionNode arg : mc.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
-            localIdx = driver.emitArgumentsWithFormalTypes(mc.arguments(), lft.parameterTypes(), ops, owner, localIdx, locals);
-            Type invokeOwner = new Type.ClassType("", lft.className(), List.of());
-            ops.add(new KofCall(invokeOwner, "invoke", argTypes, lft.returnType(), KofCallKind.INSTANCE));
-            }
-        } else {
-            List<Type> argTypes = new ArrayList<>();
-            for (ExpressionNode arg : mc.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
-            Type returnType = Type.UnknownType.UNKNOWN;
-            if (driver.currentUnit != null) {
-                // SG-011B: mesmo veredicto do typer (frontend único). Único
-                // candidato → caminho idêntico ao antigo; ≥2 → assinatura.
-                List<FunctionDeclarationNode> ovlFns = new ArrayList<>();
-                for (AstNode d : driver.currentUnit.declarations()) {
-                    if (d instanceof FunctionDeclarationNode fn && fn.name().equals(mc.methodName())) ovlFns.add(fn);
-                }
-                FunctionDeclarationNode chosen = ovlFns.isEmpty() ? null : ovlFns.get(0);
-                if (ovlFns.size() > 1) {
-                    List<TopLevelOverload.Candidate> ovlCands = new ArrayList<>();
-                    for (FunctionDeclarationNode fn : ovlFns) {
-                        List<Type> pt = fn.parameters().stream()
-                                .map(pp -> CompilerTypes.resolveWithTypeParams(pp.type(), fn.typeParameters(), driver.currentUnit, driver.semanticAnalyzer)).toList();
-                        ovlCands.add(new TopLevelOverload.Candidate(fn, pt, pt.size()));
-                    }
-                    TopLevelOverload.Status[] st = new TopLevelOverload.Status[1];
-                    int sel = TopLevelOverload.pick(ovlCands, argTypes, st);
-                    if (sel >= 0) chosen = ovlCands.get(sel).fn();
-                }
-                if (chosen != null) {
-                    returnType = CompilerTypes.resolveWithTypeParams(chosen.returnType(), chosen.typeParameters(), driver.currentUnit, driver.semanticAnalyzer);
-                    List<Type> fnTypes = new ArrayList<>();
-                    for (var pp : chosen.parameters()) fnTypes.add(CompilerTypes.resolveWithTypeParams(pp.type(), chosen.typeParameters(), driver.currentUnit, driver.semanticAnalyzer));
-                    boolean hasDefaults = chosen.parameters().stream()
-                            .anyMatch(p -> p.defaultExpression() != null);
-                    if (hasDefaults && mc.arguments().size() < fnTypes.size()) {
-                        argTypes = fnTypes.subList(0, mc.arguments().size());
-                    } else {
-                        argTypes = fnTypes;
-                    }
-                }
-            }
-            localIdx = driver.emitArgumentsWithFormalTypes(mc.arguments(), argTypes, ops, owner, localIdx, locals);
-            ops.add(new KofCall(CompilerTypes.mainClassType(driver.currentModule), mc.methodName(), argTypes, returnType, KofCallKind.FUNCTION));
-            Type effective = ExpressionTyper.inferExprType(driver, mc, locals);
-            if (returnType instanceof Type.TypeVariable && TypeMetrics.isPrimitiveType(effective)) {
-                driver.emitErasureUnbox(ops, effective);
-            }
-        }
-    }
+    return ExpressionBareCallLowerer.lower(driver, mc, ops, owner, localIdx, locals);
 }
 return localIdx;
     }

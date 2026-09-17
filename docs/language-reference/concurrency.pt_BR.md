@@ -40,7 +40,7 @@ Semântica implementada:
 - `awaitTimeout(r, ms)` — valor se a task terminar no prazo; senão lança exceção (capturável via `try/catch`) — JVM (`Future.get(ms)`) + Native (polling 1ms com deadline) + JS (polling cooperativo via `await Promise.resolve()`, dispara de verdade contra task mais lenta — `KofConcurrency2Test.awaitTimeoutSlowTaskJs`)
 - `channel<T>()` — FIFO thread-safe com `c.send(v)`/`c.receive()` — JVM (`LinkedBlockingQueue`, `put`/`take` bloqueantes) + Native (lista ligada + mutex futex + polling 1ms) + JS (fila de resolvers pendentes — `receive()` em canal vazio bloqueia de verdade até um `send()` posterior, `KofConcurrency2Test.channelBlocksBeforeSendJs`)
 - Lambdas com captura via `BoxN` já suportam `spawn { println(x) }` — inclusive captura de variável mutada de escopo externo, nos 3 targets
-- `kof.mq` publish/subscribe/queue — **3 targets** (JVM in-memory; Native asm 01/09, MQ001 fechado; JS in-process); `kof.time interval/cancel` — JVM+Native
+- `kof.mq` publish/subscribe/queue — **3 targets** (JVM in-memory; Native asm 01/09, MQ001 fechado; JS in-process); `kof.time interval/cancel` — JVM+Native+JS (TIME001 fechado)
 
 ### Não exposto
 
@@ -113,8 +113,8 @@ primário por reproduzir a complexidade de threads).
 Troca de valores entre tarefas através de:
 
 - parâmetros e retornos (estilo "join");
-- filas (produtor/consumidor) — abstração planejada na stdlib
-  (`kof.concurrent.Queue`);
+- filas (produtor/consumidor) — implementadas como `channel<T>()` (`c.send(v)`/`c.receive()`,
+  `take` bloqueante); o plano original chamava de `kof.concurrent.Queue`;
 - callbacks estruturados (não como modelo primário).
 
 ### 2.4 Sincronização
@@ -265,7 +265,7 @@ Essa decisão pertence ao target/runtime.
 ## 6. Dependências (0.2.6-beta)
 
 - ✅ Lambdas com captura via `BoxN` — implementado (necessário para `spawn { ... }` idiomático);
-- filas na stdlib (`kof.concurrent.Queue` — planned, `kof.mq` já fornece pub/sub);
+- ✅ filas (produtor/consumidor) — implementadas como `channel<T>()` (send/receive, bloqueio real 03/09); `kof.mq` também fornece pub/sub. O nome `kof.concurrent.Queue` do plano realizou-se como `channel<T>()`;
 - modelo de exceção por tarefa — ✅ unwrap `ExecutionException` no `await` (JVM);
 - ✅ OS threads no Native — `pthread_create` + trampoline + futex (31/08, `CONC001` fechado no x86_64); scheduler `scheduler.every/at` no Native segue `SCHED001`.
 

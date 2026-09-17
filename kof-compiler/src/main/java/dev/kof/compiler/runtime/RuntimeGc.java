@@ -25,14 +25,25 @@ public final class RuntimeGc {
                 pushq %r15
                 pushq %rbp
                 movq %rsp, %r12
-                movq %rbp, %r13
+                # G-6b (16/09, causa (1) medida no §260): varre a pilha INTEIRA
+                # da thread main (rsp_do_coletor .. kof_main_stack_bottom), nao
+                # apenas o frame corrente [rsp..rbp]. Com o scan restrito, uma
+                # String viva no frame de main enquanto um helper aloca era
+                # INVISIVEL ao mark -> sweep liberava vivo (keep corrompido,
+                # supervisor SIGSEGV 139 — ambos medidos com gdb 16/09). Lixo
+                # stale de frames ja retornados eh conservador-safe: marca a
+                # mais = leak de vida, nunca menos = corrupcao; o try_mark ja
+                # filtra pelo intervalo de heap. Cap 64MB = guard contra r13
+                # corrompido; fallback sp..sp+4096 mantido (harness asm sem
+                # _start gravado, mesmo caminho de antes).
+                movq kof_main_stack_bottom(%rip), %r13
                 testq %r13, %r13
                 je .Lgc_mark_stack_fallback
                 cmpq %r13, %r12
                 jae .Lgc_mark_stack_fallback
                 movq %r13, %rax
                 subq %r12, %rax
-                cmpq $1048576, %rax
+                cmpq $67108864, %rax
                 ja .Lgc_mark_stack_fallback
                 jmp .Lgc_mark_stack
             .Lgc_mark_stack_fallback:

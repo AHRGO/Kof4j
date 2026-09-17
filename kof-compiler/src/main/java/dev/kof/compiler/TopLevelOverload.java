@@ -57,6 +57,22 @@ public final class TopLevelOverload {
         int totalArity() { return paramTypes.size(); }
     }
 
+    /** §231 — requiredArity de uma função com parâmetros default: o índice do
+     *  PRIMEIRO parâmetro com default (= quantos são obrigatórios). Espelha
+     *  exatamente o `firstDefault` dos wrappers de {@code
+     *  CompilerFunctionLowering.lowerFunctionDefaults}/{@code
+     *  CompilerClassLowering} — a seleção e a emissão precisam concordar, senão
+     *  o wrapper de aridade curta existe mas o `pick` nunca o escolhe (a chamada
+     *  curta cai em SEM013/SEM014). Sem default, devolve o total (comportamento
+     *  antigo, zero-regressão). */
+    static int requiredArityOf(FunctionDeclarationNode fn) {
+        List<FormalParameterNode> ps = fn.parameters();
+        for (int i = 0; i < ps.size(); i++) {
+            if (ps.get(i).defaultExpression() != null) return i;
+        }
+        return ps.size();
+    }
+
     /** Resultado da seleção. */
     enum Status { NO_MATCH, AMBIGUOUS }
 

@@ -14,6 +14,14 @@ final class ExpressionBuiltinInstanceCalls {
 
     private ExpressionBuiltinInstanceCalls() {}
 
+    /** Diagnóstico de gap honesto (R6) numa chamada kof.web. */
+    private static void webGap(CompilerDriver driver, MethodCallExpr mc, String msg, String code) {
+        if (driver.currentDiagnostics == null) return;
+        SourcePosition p = mc.position();
+        driver.currentDiagnostics.error(p != null ? p.file() : "",
+                p != null ? p.line() : 0, p != null ? p.column() : 0, 0, msg, code);
+    }
+
     /**
      * Lowering de métodos em instância de enum (name, toString, ordinal, compareTo).
      * Retorna >= 0 se o método foi consumido, ou -1 se não é método de enum tratado aqui.
@@ -61,6 +69,16 @@ final class ExpressionBuiltinInstanceCalls {
         for (ExpressionNode arg : mc.arguments()) webArgTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
         KofWeb.WebCall webCall = KofWeb.instanceMethod(mc.methodName(), webArgTypes);
         if (webCall != null) {
+            // AND002: no Android o servidor embutido não tem realização
+            // (app móvel não escuta porta) — diagnóstico honesto em compile
+            // time (R6), nunca código de servidor que não roda.
+            if (driver.target == Target.ANDROID) {
+                webGap(driver, mc,
+                        "web: embedded server not available on Android — a mobile app "
+                                + "does not listen on a port; use interop (AND002)",
+                        "AND002");
+                return localIdx;
+            }
             boolean nativeWebT1 = (driver.target == Target.NATIVE
                     || driver.target == Target.NATIVE_RISCV64
                     || driver.target == Target.NATIVE_AARCH64)
@@ -68,10 +86,13 @@ final class ExpressionBuiltinInstanceCalls {
                         || webCall.function().equals("kof_web_route"));
             // WEB001-T1 JS (13/09): routes HTTP + listen liberados no JS — o
             // runtime JsRuntimeUiWeb emite kofWebAppNew/Route/Listen (server
-            // GraalJS HttpServer real); sse/ws/TLS seguem WEB003/004/002.
+            // GraalJS HttpServer real); ws/TLS seguem WEB004/002. SSE ✅ 16/09
+            // handler-scoped (push pós-return do handler = WEB003 residual —
+            // o pump JS é single-thread).
             boolean jsWebT1 = driver.target == Target.JS
                     && (webCall.function().equals("kof_web_listen")
                         || webCall.function().equals("kof_web_route")
+                        || webCall.function().equals("kof_web_sse_route")
                         || webCall.function().equals("kof_web_app_new"));
             if (driver.target != Target.JVM && driver.target != Target.ANDROID
                     && !nativeWebT1 && !jsWebT1) {

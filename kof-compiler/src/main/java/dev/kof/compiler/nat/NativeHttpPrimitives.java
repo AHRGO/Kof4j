@@ -19,7 +19,7 @@ public final class NativeHttpPrimitives {
             .Lhttp_reqbuf:    .space 16384
             .Lhttp_respbuf:   .space 262144
             .Lhttp_last_status: .quad 0
-            .Lhttps_err:   .asciz "kof.http: https nao suportado no Native (TLS pendente); use http://"
+            .Lhttps_err:   .asciz "kof.http: https not supported on Native (TLS pending); use http://"
             .Lhttp_fallback: .asciz "127.0.0.1"
             .Lhttp_str_host: .asciz "Host: "
             .Lhttp_str_clen: .asciz "Content-Length: "

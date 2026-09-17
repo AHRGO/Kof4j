@@ -264,18 +264,19 @@ conceptual engineering nor decide architecture/direction. Practical consequences
    or the suite red (outside the documented environmental errors) is violating
    the gate: fix it in the same unit or revert. `git bisect`-hostile is the
    worst legacy an agent can leave.
-7. **Git identity (09/12, maintainer's decision — single identity).**
-   The old `temmcode` rule (e-mail `aminadojava@gmail.com` in `--local`
-   to attribute commits to the worker + a `"Kof-agent-worker"` block in comments
-   via proxy) was **ABANDONED at the maintainer's request** — it caused too much
-   headache (her manual commit going up as `temmcode` due to the clone's `--local`).
-   What applies now: **a single identity, hers**. The agent NEVER configures
-   identity (`git config user.*` with or without `--global` is forbidden; it never
-   writes to `~/.gitconfig` nor to `.git/config`); it uses the effective identity
-   of the repo/environment as is. No e-mail trick, no mandatory marking
-   block in issues/PRs, **no `Co-authored-by` trailer** (pollutes the repo
-   log). When she prepares something exclusive for the
-   agents, that rule comes back in a new form.
+7. **Git identity & agent worker (09/12, updated 09/16 maintainer directive).**
+   The GitHub App `kof-agent-worker` (App ID `4960796`, configured via `scripts/gh-as-agent.sh`
+   and `~/.config/kof/agent-app.env`) is the dedicated identity for issues, PRs, and commits
+   where installed.
+   - **Commit permission & identity:** the app has commit permissions and its own Git/GitHub
+     identity.
+   - **Fallback rule:** if authentication, push, or commit fails when using the bot's identity
+     (e.g. app not yet installed on a specific target repository or integration error), the agent
+     **must accept and fall back to the maintainer's default pattern**:
+     `mel <amelissariver@gmail.com>` (GitHub account `melmonfre`).
+   - No email tricks or synthetic trailers (`Co-authored-by` is forbidden as it pollutes the repo log).
+   - The agent uses the effective environment identity as configured.
+
 
 > In summary: AI runs **under the strict rules of real computing** —
 > surgical documentation, zero hallucination, without the market hype.
@@ -562,6 +563,23 @@ Bool isQuery(String op) {
    new file is named for what it **contains** (the responsibility that
    left), not for how many siblings already exist. Readability comes before
    any typing economy.
+8. **Kof is not Java/Kotlin/C# — a request for another language's feature is
+   NOT a Kof bug (ABSOLUTE, maintainer 18/09).** When an issue asks for a
+   construct that does not exist in Kof because it is **translated Java or
+   Kotlin** (`StringBuilder`, `.equals()`, `new`, top-level `val`/`var`/`let`,
+   `fun`/`val` keyword, `v is Car`, `"""triple quotes"""`, `Pair`, `it` implicit
+   lambda param, `mutableListOf`, Elvis `?:`, `?.`, `0..n`, `!!`, named args
+   `f(p=v)`, primary `class Box(size: Int)` with body, `catch (e: Type)`,
+   `object`, `open`/`override`), the compiler's rejection is **correct and
+   expected** — the issue is **NOT-VALID, answer once with the Kof idiom that
+   replaces it (the idiom table in this file) and CLOSE it**; do NOT implement
+   the foreign feature and do NOT "fix the diagnostic". It only becomes real
+   work if Kof *claims* the construct in `training/`/`learn/`/docs and the
+   compiler *disagrees with its own docs* (that is a bug) — or if the
+   maintainer decides (rule 6: a design decision, not an agent edit). Every
+   such close carries the "Kof is not Java" reason and points to
+   `training/anti-patterns/fake-idioms.md`. Cross-check: if the reproducer
+   would compile in **Kotlin/Java** but is *translated*, it is this rule.
 
 ---
 
@@ -725,7 +743,7 @@ ready.
 > suite) prove. **No agent may break behavior that already works.**
 
 1. **Zero regression.** No commit may make an existing test start to
-   fail. The full suite (`mvn test`, today **1636** across the 4 modules — see
+   fail. The full suite (`mvn test`, today **2218** across the 4 modules — see
    §"Verification loop" for the command with the failure.ignore flag) is a **merge gate** —
    a change that doesn't keep everything green doesn't get in. Single exception: a **deliberate**
    contract change, with a version bump + updated docs + migration.
@@ -802,7 +820,7 @@ target per domain; no SQL/Arrow/ML engine of its own.
 
 ---
 
-## Real syntax (verified in the compiler — 0.3.0-beta)
+## Real syntax (verified in the compiler — 0.4.0-beta)
 
 ### Functions (there is no `fun` nor `func`)
 
@@ -830,8 +848,12 @@ Int g(Int x, Int y) { return x + y }         // JVM oracle): signature differs
 var x = 10              // mutable
 val y = 20              // immutable
 String nome = "Mel"
-String? nome2 = null    // nullability: TYPE-FIRST form (idiomatic in the corpus)
-var idade: Int? = null  // nullability: ANNOTATED form (also valid)
+String? nome2 = find(key)   // nullability: TYPE-FIRST form (idiomatic in the corpus)
+var idade: Int? = findAge() // nullability: ANNOTATED form (also valid)
+// ⚠️ `= null` literal is REJECTED since 10/09 (SEM048, maintainer decision
+// behind SG-008/D-NULL-INTENT): `null` only reaches a `T?` via API
+// (map.get, readLine, a function returning `T?` with `return null`) —
+// then `if (x != null)` narrows.
 ```
 
 ### Classes (mutable → fields + `constructor(...)`) and the case `class X(...)` = record
@@ -1083,9 +1105,11 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > it, Maven is fail-fast per module: any failure in **kof-compiler aborts
 > the reactor** and **kof-script, kof-c-compiler and kof-cli never run** — you
 > think you validated everything but only saw the first module. The real total with the flag
-> is **1636 tests** (compiler 1464 + script 31 + kof-c 5 + cli 136, measurement
-> 09/13 — grows with each commit): **0 failures** (13 errors = only `node` missing
-> on the host, environmental). The §149 JS (`KofRandomTest.randomStringJs`/`randomShapeJs`,
+> is **2218 tests** (compiler 1911 + script 38 + kof-c 7 + cli 262, measurement
+> 16/09 ~15:54 — grows with each commit): **0 regressions / 0 errors** (the only failure the
+> suite ever shows is the intermittent §252 native flake — silent a 3rd straight run, last fired at 09:44)
+> (node now present on
+> the measuring host — the old "13 errors = node missing" no longer applies). The §149 JS (`KofRandomTest.randomStringJs`/`randomShapeJs`,
 > regression of the §147 fix in `JsIfThrowElse`) was **FIXED 09/13** — the root was
 > the parser consuming the start label of the `while` following an assert/if-throw
 > as the end of the else (see `known-bugs.md §149`).
@@ -1093,20 +1117,25 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > `kof_static_java_lang_System_out` at link) were **RUN 09/09** — with
 > qemu the cross now PASS (`NativeRiscv64E2ETest`/`NativeAarch64E2ETest`
 > 42/42 each; proof in `known-bugs.md §59` + gate 09/12). Any failure that
-> isn't one of the 13 missing-`node` errors is YOURS. Before committing, check the
+> isn't one of the documented environmental guards is YOURS. Before committing, check the
 > reports PER MODULE
 > (`grep -rl FAILURE */target/surefire-reports/*.txt`).
 > (Lesson recorded 09/08: entire sessions cited "suite 1085/59" without the
 > final modules having run.)
 >
-> **The numbers change with qemu in the environment:** without qemu, the 84 cross
+> **The numbers change with qemu in the environment:** without qemu (host of the
+> 16/09 measurement — no cross toolchain), the 84 cross
 > (2×42, `NativeRiscv64/Aarch64E2ETest`) are **skipped** by the guard
-> (`4408eb6`) + 5 external DB → `~1547/0/~89-skip` (estimated — the measurement
-> below is from a host WITH toolchain). With qemu, **everything executes** — `1636/0/5-skip`
-> (the 5 = external MySQL/Mongo/Postgres; measured 09/13). Correct state TODAY:
-> **0 failures** in both scenarios (the §149 JS was fixed 09/13); the 13 errors
-> are only missing `node`. What matters remains no FAILURE outside
-> them and the guards.
+> (`4408eb6`) + the other toolchain/external-DB guards + the §255 sysroot guard (`06e77e94`) → `2218/0-1/192-skip` (the flake §252 fired at 09:44, then went silent at 11:38, 15:09 and 15:54 — ~1/4 of full-suite runs)
+> (MEASURED 16/09 ~11:38, clean clone). With qemu, **everything executes** — the 84 cross run
+> green and the total stays `2218` with the skip count dropping to the
+> external-DB/`node`-env residual. Correct state TODAY (16/09 ~15:54, clean clone of `9572949f`):
+> **0 regressions / 0 errors** (2218 = 1911+38+7+262, 192 skip) — the full run at 09:44 had the
+> known INTERMITTENT §252
+> native flake (`spawnWorkerThrowPropagatesThroughSelectAnyNative`, owner native
+> lane `.18`/nat; the 11:38, 15:09 and 15:54 runs it stayed silent — ~1/4 frequency, see §252), which
+> must be read as a TEST red, not a regression. What matters remains no FAILURE
+> outside the §252 flake and the documented guards.
 
 To validate an isolated snippet (e.g., confirm whether an idiom compiles),
 use the project harness or create a minimal E2E test in the area's package.

@@ -206,8 +206,17 @@ public class TypeParser {
                 if (ctx.check(TokenType.COMMA)) ctx.advance();
                 sb.append(", ");
             }
+            // #379 — guard de progresso: se parseTypeRef nao consumir o token
+            // atual (ex.: `+`/`:` num contexto que nao e tipo), o loop alocava
+            // "Object" para sempre (OutOfMemoryError). Diagnostico honesto +
+            // skip do token mantem o progresso e termina o parse.
+            int before = ctx.pos;
             sb.append(TypeParser.parseTypeRef(ctx));
             first = false;
+            if (ctx.pos == before) {
+                if (!ctx.atEnd()) ctx.advance();
+                else break;
+            }
         }
         ctx.expect(TokenType.RPAREN, "Expected ')'", "PARSE040");
         sb.append(")");

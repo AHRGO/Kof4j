@@ -76,15 +76,15 @@ type-declaration =
 
 modifiers = { "public" | "private" | "protected" | "static" | "final"
             | "abstract" | "transient" | "volatile" | "synchronized"
-            | "native" | "default" | "override" } ;                 (* `Parser.parseModifiers` *)
+            | "native" | "default" | "override" } ;                 (* `TypeDeclarations.parseModifiers` *)
 
 class-declaration = modifiers , "class" , identifier , [ type-parameters ] ,
                     [ "extends" , type-ref ] , [ implements-clause ] ,
-                    ( class-body | record-header , class-body ) ;   (* `Parser.parseTypeDeclaration (class)` *)
+                    ( class-body | record-header , class-body ) ;   (* `TypeDeclarations.parseClassDeclaration` *)
 `
 
 > `class X(...)` **with parentheses** is parsed as a **record** (body via
-> `parseRecordBody`, Parser.parseRecordBody) — not as a class with a primary
+> `parseRecordBody`, TypeDeclarations.parseRecordDeclaration) — not as a class with a primary
 > constructor. This is the behavior documented in `AGENTS.md`.
 
 `ebnf
@@ -94,7 +94,7 @@ class-member = annotation-list , modifiers , ( constructor-declaration
 
 interface-declaration = modifiers , "interface" , identifier ,
                         [ "extends" , type-ref , { "," , type-ref } ] ,
-                        "{" , { class-member } , "}" ;              (* `Parser.parseTypeDeclaration (class-body)` *)
+                        "{" , { class-member } , "}" ;              (* `TypeDeclarations.parseInterfaceDeclaration` *)
 `
 
 **Interfaces do not accept type-parameters** (`interface F<T>` → `PARSE007`,
@@ -102,15 +102,15 @@ interface-declaration = modifiers , "interface" , identifier ,
 
 `ebnf
 record-declaration = modifiers , "record" , identifier , [ type-parameters ] ,
-                     [ "extends" , type-ref ] , [ implements-clause ] ,
-                     record-header , [ record-body ] ;              (* `Parser.parseTypeDeclaration (record)` *)
+                     [ "extends" , type-ref ] , record-header ,
+                     [ implements-clause ] , [ record-body ] ;      (* `TypeDeclarations.parseRecordDeclaration` *)
 record-header      = "(" , [ record-component , { "," , record-component } ] , ")" ;
 record-component   = annotation-list , modifiers , type-ref , identifier ,
                      [ "=" , expression ] ;                         (* `ClassMemberParser.parseField` *)
 record-body        = "{" , { class-member } , "}" ;
 
 enum-declaration = modifiers , "enum" , identifier ,
-                   "{" , [ identifier , { "," , identifier } ] , "}" ;  (* `Parser.parseTypeDeclaration (enum)` *)
+                   "{" , [ identifier , { "," , identifier } ] , "}" ;  (* `TypeDeclarations.parseEnumDeclaration` *)
 `
 
 **Enums are just constants** — no body, no methods, no constructors, no
@@ -119,7 +119,7 @@ value of an enum **is** the name (`String`) — see [classes.md](classes.md).
 
 `ebnf
 entity-declaration = modifiers , "entity" , identifier ,
-                     "{" , { entity-field } , "}" ;                 (* `Parser.parseEntity` *)
+                     "{" , { entity-field } , "}" ;                 (* `TypeDeclarations.parseEntityDeclaration` *)
 entity-field       = identifier , ":" , type-ref , { "generated" | "unique" } ;
 `
 
@@ -158,8 +158,11 @@ c() { … }             // no type → void (default)
 `
 
 **There is no function declaration keyword** (SG-001 resolved 06/09):
-`fn`/`fun`/`func` as a prefix are rejected with `PARSE085`. As a function
-*name* they remain valid identifiers. Parameters accept **default values**
+`fn`/`fun`/`func` as a prefix are rejected with `PARSE085`. In **any name
+position** (function, variable, parameter, method, field, class, record, enum)
+they are also rejected with `PARSE085` — `ParseContext.expectId` emits the
+canonical diagnostic (#330, measured 17/09). They are never valid identifiers.
+Parameters accept **default values**
 (`parameter = expression`), which generate synthetic overloads by arity in the
 lowering.
 
@@ -177,7 +180,7 @@ primitive-type = "bool" | "byte" | "short" | "int" | "long"
                | "float" | "double" | "char" | "string" ;           (* `TypeParser (primitives)` *)
 qualified-name = identifier , { "." , identifier } ;
 generic-args   = "<" , type-ref , { "," , type-ref } , ">" ;        (* `TypeParser (generic args)` *)
-function-type  = "(" , [ type-ref , { "," , type-ref } ] , ")" , "->" , type-ref ;  (* `TypeParser.parseFunctionType` *)
+function-type  = "(" , [ type-ref , { "," , type-ref } ] , ")" , "->" , type-ref ;  (* `TypeParser.parseFunctionTypeRef` *)
 `
 
 The parser captures the type as a **raw string** (`parseTypeRef` returns
@@ -257,9 +260,8 @@ Higher precedence at the top. **All binaries are left-associative**
 
 ### 5.2 Short-circuit
 
-`&&` and `||` are evaluated with short-circuit via labels in **JVM and Native**;
-in the **JS target the short-circuit is turned off** (`ExpressionLowerer.java:147-148`)
-— **Target-specific** (SG-006).
+`&&` and `||` are evaluated with short-circuit on **all targets** — via labels
+in JVM/Native, via native operators in JS (SG-006 ✅ FIXED 09/09).
 
 ### 5.3 Operators that do NOT exist (SG-002, verified by probe)
 
@@ -300,12 +302,12 @@ expr-stmt   = expression , [ ";" ] ;
 
 `ebnf
 switch-stmt = "switch" , "(" , expression , ")" , "{" , { case-stmt } ,
-              [ default-stmt ] , "}" ;                              (* `StatementParser.parseSwitch` *)
+              [ default-stmt ] , "}" ;                              (* `StatementParser.parseSwitchStatement` *)
 case-stmt   = "case" , ( pattern | expression ) , ":" , { statement } ;
 default-stmt = "default" , ":" , { statement } ;
 
 switch-expression = "switch" , "(" , expression , ")" , "{" , { case-expr } ,
-                    [ default-expr ] , "}" ;                        (* `ExpressionParser.parseSwitchExpr` *)
+                    [ default-expr ] , "}" ;                        (* `ExpressionParser.parseSwitchExpression` *)
 case-expr   = "case" , ( pattern | expression ) , "->" , expression ;
 default-expr = "default" , "->" , expression ;
 

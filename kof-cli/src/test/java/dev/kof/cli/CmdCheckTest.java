@@ -130,4 +130,50 @@ class CmdCheckTest {
         String output = out.toString(StandardCharsets.UTF_8).trim();
         assertTrue(output.contains("--json"), output);
     }
+
+    @Test
+    void checkTargetAndroidEnforcesAnd002(@TempDir Path tmp) throws Exception {
+        Path file = tmp.resolve("Main.kf");
+        Files.writeString(file, "main() {\n    var app = web.app()\n}\n");
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ByteArrayOutputStream err = new ByteArrayOutputStream();
+        int ec = CmdCheck.run(new String[]{"check", file.toString(), "--target", "android"},
+                new PrintStream(out, true, StandardCharsets.UTF_8),
+                new PrintStream(err, true, StandardCharsets.UTF_8));
+
+        assertEquals(1, ec, "web.app() no android deve ser AND002 no check");
+        assertTrue(out.toString(StandardCharsets.UTF_8).contains("AND002"),
+                out.toString(StandardCharsets.UTF_8));
+    }
+
+    @Test
+    void checkTargetJvmKeepsWebClean(@TempDir Path tmp) throws Exception {
+        Path file = tmp.resolve("Main.kf");
+        Files.writeString(file, "main() {\n    var app = web.app()\n}\n");
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ByteArrayOutputStream err = new ByteArrayOutputStream();
+        int ec = CmdCheck.run(new String[]{"check", file.toString(), "--target", "jvm"},
+                new PrintStream(out, true, StandardCharsets.UTF_8),
+                new PrintStream(err, true, StandardCharsets.UTF_8));
+
+        assertEquals(0, ec, "no jvm web.app() nao e gap");
+    }
+
+    @Test
+    void checkUnknownFlagIsRejected(@TempDir Path tmp) throws Exception {
+        Path file = tmp.resolve("Main.kf");
+        Files.writeString(file, "main() { println(\"ok\") }");
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ByteArrayOutputStream err = new ByteArrayOutputStream();
+        int ec = CmdCheck.run(new String[]{"check", file.toString(), "--bogus"},
+                new PrintStream(out, true, StandardCharsets.UTF_8),
+                new PrintStream(err, true, StandardCharsets.UTF_8));
+
+        assertEquals(1, ec, "flag desconhecida deve ser recusada (R6)");
+        assertTrue(err.toString(StandardCharsets.UTF_8).contains("unknown flag"),
+                err.toString(StandardCharsets.UTF_8));
+    }
 }

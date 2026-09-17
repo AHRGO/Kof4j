@@ -177,7 +177,50 @@
 > sweep+collect** (`NativeRiscvGcSweepTest` runs both arches), so G-5 is
 > effectively satisfied for the collector too; a dedicated G-5 aarch step is no
 > longer a separate face.
-> Each step: commit with the complete cross suite green + DOING.md on the line.
+> 
+> **G-6 x86 (OPEN 16/09 — frente 2 D-DEV-PRIORITY, §260; causa (1) CLOSED 16/09 by G-6b below):** the x86 collector
+> exists and is correct (`kof_gc_mark`+`kof_gc_sweep`+`kof_gc_collect_now`), but
+> the auto-collect **trigger** inside `kof_alloc` was measured UNSOUND for the
+> x86 calling convention: the backend keeps temporaries in **caller-saved
+> registers** at call sites (proved: `KofStringParseTest` red /
+> `KofSupervisorE2ETest` exit 139 SIGSEGV with the trigger, green without; full
+> measurements in `known-bugs.md §260`). riscv needed no stack map because its
+> value-stack IS the machine stack (RtB44:15-20); x86 requires the real "root
+> map per frame" of the D-DEV-PRIORITY text. Two honest options (scope: the
+> compiler lane):
+> **G-6b (the root-cause-(1) half) DONE 16/09, trigger still OFF:** gdb-proved
+> that with only the frame-current scan, live Strings in EXTERNAL frames (main's
+> stack while a helper allocates) were invisible → sweep freed live memory
+> (keep corruption, supervisor SIGSEGV 139). Fixed without the trigger: `_start`
+> records `kof_main_stack_bottom` (entry rsp) and `kof_gc_mark` scans the whole
+> thread stack to it (64MB cap + sp..sp+4096 fallback preserved for asm harness
+> without `_start`); guard `NativeX86GcMarkScopeTest` 3/3 (Q0 red on the old
+> mark). keep/supervisor went green even WITH the trigger; the remaining red is
+> exactly cause (2) (`toFloat` path holds the live arg String in a caller-saved
+> register at the `kof_alloc` call-site) → the trigger stays OFF (FP parity is
+> freeze rule 5) until (a) lands.
+>
+> Remaining face — **(a) minimal, chosen path — spill-per-live-ref at alloc sites:** the x86
+>   backend, for every `call kof_alloc`, first pushes (or already holds in the
+>   frame) every live heap reference so the conservative mark sees them on the
+>   stack; then the `.Lkof_alloc_maybe_gc` trigger can call `collect_now`
+>   gated on `kof_spawn_count==0` (workers' stacks stay un-scanned — same
+>   sound boundary as today). Cost audit mandatory: `ArtifactSizeTest` grew
+>   32520→38928B just from linking the GC machinery (+19.7% > baseline+5%) —
+>   the link cost is unavoidable once the collector is live (it is the POINT
+>   of the feature); the per-site spill cost must stay within the 5% gate or
+>   the baseline is re-baselined with the maintainer's sign-off, never
+>   silently.
+> - **(b) full stack-map:** per-call-site register/spill map emitted into a
+>   `.rodata` table consumed by `kof_gc_mark`; heavier, compiler-side IR work;
+>   only if (a) proves too coarse.
+> Acceptance (Q3 matrix, not only happy path): (1) cap test green
+> (`gcAutoCollectFitsUnderMemoryCap` pattern, main-only); (2) the two §260
+> repros green (spawn/supervisor + parse native); (3) cross parity riscv/aarch
+> unchanged; (4) `ArtifactSizeTest` decision documented (rebaseline-with-cause
+> or gate held); (5) multi-thread: gate = exact old behavior, face catalogued
+> (worker-stack scan is the NEXT step, never silent).
+Each step: commit with the complete cross suite green + DOING.md on the line.
 > Do NOT mix with S-5-x86/root_end (bugfix queue). G-0/G-1/G-2 move ahead
 > without root_end; **G-3 also advanced** (emits its own riscv `.L`-local
 > markers — did NOT need the x86 `kof_heap_root_end` of S-5); G-4 (sweep+
@@ -232,8 +275,8 @@ It does not include macOS/Windows, advanced GC or complete native `kof.web` (see
 | Enum `Target.NATIVE_RISCV64` / `NATIVE_AARCH64` | ✅ | `Target.java` (values distinct from `NATIVE`; `NATIVE` remains = `x86_64`) |
 | `Target.isNative()` covers the 3 natives | ✅ | `Target.java` |
 | `Target.nativeArch()` → `x86_64`/`riscv64`/`aarch64` | ✅ | `Target.java` |
-| CLI `native.risc`/`native.riscv64`/`native.riscv` → `NATIVE_RISCV64` | ✅ | `Main.java:364` |
-| CLI `native.arm`/`native.aarch64`/`native.aarch` → `NATIVE_AARCH64` | ✅ | `Main.java:365` |
+| CLI `native.risc`/`native.riscv64`/`native.riscv` → `NATIVE_RISCV64` | ✅ | `KofCliSupport.java:91` |
+| CLI `native.arm`/`native.aarch64`/`native.aarch` → `NATIVE_AARCH64` | ✅ | `KofCliSupport.java:92` |
 | `kof build`/`run` accept `native.risc`/`native.arm` | ✅ | `status.md:13-14` |
 | Dispatch `emit()` → `emitRiscv`/`emitAarch64` | ✅ | `NativeBackend.java:210-215` |
 | Cross toolchain invoked (as/ld + dynamic-linker + `-lc`) | ✅ | `NativeBackend.emitRiscv`/`emitAarch64` |
@@ -325,7 +368,7 @@ Runtime details for riscv64/aarch64 (inc-0 02/09 + 03/09):
 - strings: layout **identical to x86_64** — `[typeId@0 i32][super@4 i32]
   [vtable@8 ptr][len@16 i32][data@24 …]` (`KOF_STRING_TYPE_ID=1`).
 - output: raw syscall `write(1, …)` (`a7=64` riscv / `x8=64` arm) + `exit` (`a7/x8=93`) — **static** binary, no libc/PLT.
-- aarch64: **mechanical translation** of the riscv64 runtime (`riscv2arm.py` validated + `translateRiscvToAarch64` in `NativeBackend.java:3650`): `la`→`adrp`+`add :lo12:`, `ecall`→`svc #0`, `and sp` skip (sp already 16-aligned), `str sp` via `mov x17,sp`, `andi -16` via `movk x17`+`and`, `rem`→`sdiv`+`msub`, `slt/sle`→`cmp`+`cset`, FP `fcvt`→`scvtf`/`fmv`→`fmov`/`fadd`→`fadd`/`feq`→`fcmp`+`cset`.
+- aarch64: **mechanical translation** of the riscv64 runtime (`riscv2arm.py` validated + `translateRiscvToAarch64` in `NativeAarch64Translator.java:16`): `la`→`adrp`+`add :lo12:`, `ecall`→`svc #0`, `and sp` skip (sp already 16-aligned), `str sp` via `mov x17,sp`, `andi -16` via `movk x17`+`and`, `rem`→`sdiv`+`msub`, `slt/sle`→`cmp`+`cset`, FP `fcvt`→`scvtf`/`fmv`→`fmov`/`fadd`→`fadd`/`feq`→`fcmp`+`cset`.
 - validation: `NativeRiscv64E2ETest 13/13` via `qemu-riscv64` + `NativeAarch64E2ETest 13/13` via `qemu-aarch64` (complete core).
 
 What **remained** for the next increments:

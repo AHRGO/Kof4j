@@ -861,6 +861,17 @@ Implementation of the intent core is under the maintainer's responsibility.
 
 Lanes must not attack the boxed-nullable core of #266/#259 without new authorization.
 
+**Authorization (16/09, maintainer via chat, hierarchy rule):** the maintainer
+explicitly delegated the D-NULL-INTENT front to the agent lane (`192.168.100.22`,
+issue-watcher/compiler) — the "new authorization" requirement above is hereby
+met. The boxed-nullable core of #266/#259 is UNLOCKED for implementation by
+this lane, following the D-NULL-INTENT queue (1. JVM + Script + JS; 2. Native;
+3. intent in non-nullable declarations; 4. audit and elimination of silent
+paths). The contract itself (explicit intent via `== null`, real boxed `T?`,
+no silent folding) is unchanged. Recorded here by the lane before/with the
+implementation, per the hierarchy rule (a later explicit maintainer directive
+supersedes a documented restriction).
+
 Lanes may work on:
 
 * SEM048/SEM049 audit;
@@ -985,6 +996,196 @@ decision recorded; engineering scheduled for the future queue.
 * `Related:` #275 (issue)
 
 ---
+
+## D-DEV-PRIORITY — "Em desenvolvimento" is the absolute priority of every lane
+
+**Date:** 2026-09-16
+
+**State:** `ACTIVE` (supersedes any per-lane preference ordering)
+
+The maintainer's rule (16/09, chat): **total priority is completing the
+`Em desenvolvimento` roadmap** — every agent, every lane, every autonomous
+re-trigger picks its next task from this list, in order, before anything else
+(other gaps, other queues, new fronts). Cataloguing and bug-fixing continue as
+usual (the quality gate is never relaxed), but TASK SELECTION follows the
+fronts below.
+
+**The fronts (as stated by the maintainer 16/09):**
+
+1. **Standard Library** — contracts in stabilization (the S-series:
+   `PLAN-STDLIB-EXPANSION`; faces still open ride the per-item queue).
+2. **GC auto-collect** — safe-points + per-frame root map.
+3. **Package manager beyond MVP** — registry.
+4. **Debugger beyond JVM MVP** — DAP over stdio is already on JVM; JS
+   source maps line ✅; DWARF Native line ✅ partial — native
+   variables/expressions and breakpoints pending + VS Code ext.
+5. **KofJS — the web platform in the browser** — ES Modules via GraalJS;
+   web server base ✅ (`HttpServer` + `KofJsWebQueue`); SSE handler-scoped ✅
+   16/09 (`7cd69a7b`); residual per feature: ws = **WEB004**, TLS = **WEB002**,
+   sse post-return push/multi-client = **WEB003**, path params/keep-alive =
+   **WEB001** (canonical row: `backend-parity.md` "web on Native/JS").
+6. **kof.web in Native** — residual per feature: TLS = **WEB002**, path
+   params/keep-alive = **WEB001**, ws = **WEB004**, sse = **WEB003**.
+7. **kof.db/orm in JS** — **DB001 CLOSED 16/09** (untyped `connect/execute/query/close/transaction` on the GraalJS-host bridge — `3e55df51`+`eb9140cb`); residual: typed `db.query<T>` = `DB002` (architectural: JS emits no JVM bytecode on the host classpath) + `kof.orm` = `ORM001` (same wall; WASM planned).
+
+**Relation to the other rules:** this decides **order**, not **what is
+acceptable** — Q0–Q7, the freeze, rule 6 and the three-states rule keep all
+their force. A blocked front (rule 6, another owner `EM CURSO`, or the
+`§258`-style gate) is recorded and the agent takes the NEXT front in this
+list — the list is the queue, not a suggestion. `AGENTS.md` priority rule
+("loose `.md` first") and the roadmap §23 tiers stay subordinate to this
+decision while the `Em desenvolvimento` list has open items.
+
+---
+
+## D-DIAG-EN — tooling and diagnostics in English; docs stay EN+PT
+
+**Date:** 2026-09-16
+
+**State:** `DECIDED`
+
+**Origin:** issue #324 (maintainer decision in the chat: "aprovo a tradução
+completa para inglês"; scope confirmed 16/09: "tooling da linguagem 100% em
+ingles mas as documentações precisam de ingles + pt. porem toda mensagem de
+erro da linguagem precisa ser em ingles pro usuario. até pq kof é uma
+plataforma universal").
+
+### Context
+
+The compiler emits ~144 user-visible message fragments in Portuguese across
+parser, typer, lowerers and the JVM/JS/Native runtimes, and ~37 test files
+assert those fragments. The internal-repr half of #324 was fixed by
+`130aa213` (`Type.display`); the language half was blocked here as rule 6
+until this decision.
+
+### Contract
+
+1. **Every user-visible message the language tooling emits is English**:
+   compiler diagnostics (PARSE/SEM/… codes), runtime error strings thrown by
+   the stdlib runtimes (JVM/JS/Native/interpreter), CLI/REPL/LSP output,
+   build/decompile logs, and generated config templates.
+2. **Documentation is a different axis and stays bilingual** — every doc
+   keeps its EN + PT pair (`docs-lang.sh` invariants unchanged).
+3. **Codes never change** — only the message text (SEM048 stays SEM048).
+   Tests that match message *text* migrate with their unit; tests that match
+   *codes* are untouched.
+4. Rationale: Kof is a universal platform — the tool's language travels with
+   the tool, not with the user's locale.
+
+### Implementation
+
+Queue opened in DOING (lane issues: translation in per-package units; files
+staged/IN-PROGRESS of other agents are excluded from each unit until they
+land). Docs quoting PT message texts (learn/training) sync as a follow-up
+doc unit per package translated.
+
+### Relationships
+
+- Related: #324 (internal-repr half fixed by `130aa213`), R6 (surgical,
+  never-silent diagnostics), G-01 (surface freeze — message *codes* frozen;
+  *text* of this axis is set by this decision).
+
+---
+
+## D-DECL-RETURN — declared return type is law (#333)
+
+**Date:** 2026-09-16
+
+**State:** `DECIDED`
+
+**Origin:** issue #333 (maintainer decision in the chat, 16/09: "classe
+definida como int deve obrigatoriamente retornar int"; "função definida como
+int deve obrigatoriamente retornar int e o mesmo vale pras outras tipagem.
+função de um tipo declarado deve retornar aquele tipo").
+
+### Contract
+
+1. **The declared return type is the law** in every backend: a function or
+   method declared `T` must return a value assignable to `T`; a function
+   declared `void` must NOT `return <value>` — that is a compile-time
+   diagnostic (never silent re-typing).
+2. **The silent re-inference `void→T` is removed from both paths** that
+   today disagree (root cause measured in the #333 thread):
+   `SemanticAnalyzer.analyzeMethodBody` (re-types the class symbol) and
+   `CompilerFunctionLowering.lowerFunctionInner` (re-types only the
+   definition descriptor — call-sites keep resolving `()V` → the
+   `NoSuchMethodError`). Every call-site resolves against the **declared**
+   type.
+3. **Inference only where no type is declared** (`main()`, and unannotated
+   top-level forms as today).
+4. This is a **deliberate contract change** (freeze rule 1): code that
+   today compiles by silently re-typing a declared `void` starts failing
+   with the diagnostic above — approved by the maintainer with this record;
+   CHANGELOG entry lands with the implementation commit.
+
+### Implementation
+
+Owner: compiler lane (issue sweep claimed in DOING, 17/09). Diagnostic
+wording must follow D-DIAG-EN (English).
+
+### Relationships
+
+- Closes the rule-6 block on #333 (the fix was catalogued, waiting for
+  exactly this decision).
+- Related: D-NULL-INTENT (declared-vs-inferred contract family), bug 62.
+
+---
+
+## D-NOT-JAVA — Kof is not Java/Kotlin: a foreign-language feature request is NOT a Kof bug
+
+**Date:** 2026-09-18
+
+**State:** `DECIDED`
+
+**Origin:** maintainer directive, 18/09 (issue sweep): "ele ta abrindo issue de
+java no kof. kof não é java. não tem string builder no kof. responde todas e as
+que não forem relativas a kof ou que ele usou treinamento errado devem ser
+ignoradas e fechadas. adiciona isso como regra absoluta."
+
+### Contract
+
+1. A request for a construct that does not exist in Kof because it is
+   **translated Java/Kotlin/C#** is **not a bug**: the compiler rejecting it is
+   correct behavior. Examples measured in the sweep: `StringBuilder`,
+   top-level `val`/`var`, `fun`/`val` keywords, `v is Car`, `"""triple
+   quotes"""`, `Pair`, `it` implicit lambda parameter, `mutableListOf`, Elvis
+   `?:`, `?.`, `0..n` ranges, `!!`, named arguments, Kotlin-style primary
+   constructor with body, `catch (e: Type)`, `object`, `open`/`override`.
+2. Handling: **answer once with the Kof idiom that replaces it** (the idiom
+   table of `AGENTS.md` §"Idiom table") and **close the issue** as
+   not-valid. Do not implement the foreign feature; do not "improve the
+   diagnostic" of a correct rejection.
+3. Exception (real work): Kof *claims* the construct in `training/`/`learn/`/
+   docs and the compiler disagrees with its own documentation — that is a
+   bug (freeze rule 4), and *how* the feature would exist is a design
+   decision reserved to the maintainer (rule 6).
+4. The rule is recorded as iron rule **§8 of AGENTS.md** (EN+PT) — absolute.
+
+### Evidence
+
+- Sweep 18/09: closed under this rule: #407 (top-level val/var), #417
+  (`mutableListOf`), #418 (`Pair`), #422 (`it` + `any/all/none` chain), #424
+  (`StringBuilder`), #425 (`object`), #406 (`v is Car`), #410 (`0..n`), #414
+  (Elvis `?:`), #416 (`!!`), #411 + #412 (`: Type` syntax family), #419
+  (destructured `for ((k,v) in map)`), #420 (`open`/`override`), #421
+  (primary-ctor-with-body), #404 (`catch (e: Type)` form — real issue tracked
+  as #427 where applicable), #364 (`"""triple quotes"""`), #367 (named args),
+  #415 (`s[0]` on String — decided: strings are not indexable in Kof; use
+  `charAt`).
+- Corpus authority: `AGENTS.md` §"Fake idioms — DO NOT EXIST in Kof",
+  `training/anti-patterns/fake-idioms.md`, `learn/15` (`is`/binding not
+  supported → `switch`/`as`).
+
+### Relationships
+
+- Generalizes the precedent of the `let/const` sugar cluster (§263) and
+  `Int.MAX_VALUE` (bug 99 / SEM050).
+- Does NOT cover: bugs where the reproducer is valid Kof (e.g. #403, #336,
+  #313 — those stay and got fixed) nor the nullable-primitive cluster
+  (D-NULL-INTENT) nor unqualified-JDK-type resolution (§268/D-DECL family).
+
+---
+
 
 # 4. Rejected or superseded decisions
 

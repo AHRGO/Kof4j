@@ -356,10 +356,11 @@ class BackendParityTest {
 
     // Paridade cross-target (regra 5, 07/09): os mesmos casos do
     // KofScriptTest.interpreterParitySweep (grupo A — paridade total)
-    // agora travam JVM×JS. Os 25 que têm paridade JVM==JS ficam como gate
+    // agora travam JVM×JS. Os 26 que têm paridade JVM==JS ficam como gate
     // permanente. EXCLUÍDOS (bug documentado, não gate):
-    //   - float-print  → JS formata double inteiro como "5" (JVM "5.0"):
-    //     "parece bug mas é esperado" (known-bugs.md), não divergência.
+    //   - ~~float-print~~ §264 16/09: o JS agora formata double inteiro como
+    //     "4.0" (era "4"/"5" — `Number.toString` cru); virou gate PERMANENTE
+    //     `double-print` no array abaixo, não mais exclusão.
     //   - record-eq-hash → bug 42 (hashCode ausente no JS: TypeError).
     //   - finally-return → bug 45 (JS perde o valor de retorno: undefined).
     // Native×JVM é coberto em NativeE2ETest; divergências Native estão em
@@ -370,8 +371,8 @@ class BackendParityTest {
             {"int-overflow", "main() {\n var a = 2147483647\n println(a + 1)\n}", "-2147483648"},
             {"mod-neg", "main() {\n println(-7 % 3)\n println(7 % -3)\n}", "-1\n1"},
             {"long-div", "main() {\n var a = 10000000000L\n println(a / 3L)\n println(a % 7L)\n}", "3333333333\n4"},
-            {"cast-chain", "main() {\n var d = 9.9\n println(d as Int)\n var l = 70000L\n println(l as Int)\n println(66 as Char)\n}", "9\n70000\n66"},
-            {"unicode-str", "main() {\n var s = \"café\"\n println(s.length)\n println(s.charAt(3))\n println(s + \"!\")\n}", "4\n233\ncafé!"},
+            {"cast-chain", "main() {\n var d = 9.9\n println(d as Int)\n var l = 70000L\n println(l as Int)\n println(66 as Char)\n}", "9\n70000\nB"},
+            {"unicode-str", "main() {\n var s = \"café\"\n println(s.length)\n println(s.charAt(3))\n println(s + \"!\")\n}", "4\né\ncafé!"},
             {"str-ops", "main() {\n var s = \"a,b,,c\"\n println(s.split(\",\").length)\n println(\"Hello World\".toLowerCase())\n println(\"  x  \".trim() + \"|\")\n}", "4\nhello world\nx|"},
             {"map-null-val", "main() {\n var m = mapOf(\"a\", 1)\n m.put(\"b\", 2)\n println(m.get(\"a\"))\n println(m.size)\n}", "1\n2"},
             {"empty-list", "main() {\n var l = listOf()\n println(l.isEmpty())\n println(l.size)\n println(l.contains(1))\n}", "true\n0\nfalse"},
@@ -387,6 +388,7 @@ class BackendParityTest {
             {"static-field", "class Counter {\n static Int count = 0\n static Int bump() {\n count = count + 1\n return count\n }\n}\nmain() {\n println(Counter.bump())\n println(Counter.bump())\n println(Counter.count)\n}", "1\n2\n2"},
             {"static-field-plus-eq", "class Counter2 {\n static Int count = 0\n static Int bump() {\n count += 2\n return count\n }\n}\nmain() {\n println(Counter2.bump())\n println(Counter2.bump())\n println(Counter2.count)\n}", "2\n4\n4"},
             {"string-num-concat", "main() {\n println(\"n=\" + 42)\n println(1 + 2 + \"x\")\n println(\"x\" + 1 + 2)\n}", "n=42\n3x\nx12"},
+            {"double-print", "main() {\n var d = 4.0\n println(d)\n println(2.5 * 2.0)\n println(d + 0.5)\n}", "4.0\n5.0\n4.5"},
             {"bool-logic", "main() {\n println(true && false)\n println(true || false)\n println(!true)\n println((1 < 2) == (3 > 2))\n}", "false\ntrue\nfalse\ntrue"},
             {"bitwise", "main() {\n println(6 & 3)\n println(6 | 3)\n println(6 ^ 3)\n println(1 << 4)\n println(256 >> 2)\n}", "2\n7\n5\n16\n64"},
             {"deep-recursion", "Int fact(Int n) {\n if (n <= 1) {\n return 1\n }\n return n * fact(n - 1)\n}\nmain() {\n println(fact(10))\n}", "3628800"},

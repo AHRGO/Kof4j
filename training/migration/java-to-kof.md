@@ -154,7 +154,7 @@ String nullable = null;
 
 ### Kof (0.4.0-beta)
 ```kof
-String? maybe = null
+String? maybe = mapOf("k", "hi").get("missing")   // null via API, NOT `= null` (SEM048 since 10/09)
 if (maybe != null) {
     println(maybe.length)   // narrowing
 }
@@ -187,7 +187,7 @@ http.timeout(30)    // resilience (30/08): timeout/retry/circuit
 http.retry(3)
 http.circuit(5)
 
-// web server (JVM; Native/JS WEB001)
+// web server (JVM ✅; Native base ✅ 03/09 — TLS WEB002, ws WEB004, sse WEB003; JS base ✅ 16/09 — ws/sse = WEB004/WEB003)
 var app = web.app()
 app.get("/users/:id") { return "user " + param("id") }
 return status(201, body())       // custom status per handler

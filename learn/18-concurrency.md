@@ -2,7 +2,7 @@
 
 # 18 — Concurrency
 
-> **Status: implemented (JVM / Native / JS) — 0.3.22-beta — `spawn`/`await` on the 3 targets**
+> **Status: implemented (JVM / Native / JS) — 0.4.0-beta — `spawn`/`await` on the 3 targets**
 >
 > Kof does not expose `Thread`, `Runnable` nor `CompletableFuture`: the intention is
 > `spawn` (run in parallel) and `await` (wait for the result). JVM uses virtual
@@ -81,7 +81,8 @@ if (done(r)) {
 - `done(r)` → `Bool`.
 - `poll`/`done` work on JVM, JS and Native x86_64 (on JS execution is
   sequential, so `poll` always has the value and `done` is `true`); on
-  riscv64/aarch64 they do not exist (see the gaps table below).
+  riscv64/aarch64 they also work since 15/09 (CONC001 closed — see the gaps
+  table below).
 
 ## Exceptions cross await
 
@@ -137,8 +138,8 @@ println(selectAny(a, b))   // value of the fast one
 
 It blocks until **any** handle completes and returns its value. On JS it is
 `Promise.race` over the handles (`js/JsRuntimeUiLayout.java:304`); on Native
-x86_64 it works by 1 ms polling over the handles; on riscv64/aarch64 it
-does not exist.
+x86_64 it works by 1 ms polling over the handles; on riscv64/aarch64 it also
+works since 15/09 (CONC001 closed).
 
 ## Semantics
 
@@ -208,14 +209,17 @@ helpers.
 > `NativeRiscv64E2ETest` and `NativeAarch64E2ETest` are entirely
 > conditioned by `Assumptions.assumeTrue(...)` on the cross toolchain
 > (`riscv64-linux-gnu-as`, `riscv64-linux-gnu-ld`, `qemu-riscv64`) — without
-> it, **the 66 proofs of those two classes skip silently**. Execution of
+> it, the cross proofs of those two classes (2×42 = 84 in the 16/09
+> measurement; grows with each commit) **skip silently**. Execution of
 > 11/09 on a machine without the toolchain: JVM, Native x86_64 and JS passed
 > (`SpawnE2ETest` 10/10, `KofAwaitTest` 8/8, `KofConcurrency2Test` 29/29
 > with 1 qemu skip, `ConcurrencyGapsDocTest` 3/3), and riscv/aarch
 > skipped 33/33 each. Therefore the `✅` of that column means *"proven
-> where the toolchain exists"*, not *"proven"*. Installing `qemu-user` and the
-> cross assemblers on CI is what would close that gap — on the GitHub
-> runners `sudo apt-get` works without a password (`ci.yml:41` already does that).
+> where the toolchain exists"*, not *"proven"*. **That gap is closed on CI:**
+> the `cross-native` job (`ci.yml`) installs the cross binutils, libc and
+> `qemu-user-static` and runs both suites under qemu — a green job there is
+> real cross-parity proof, not a masked skip. On a local machine without the
+> toolchain the `assumeTrue` guard still applies (honest skip, 42+42).
 
 On JS the model is
 single-threaded, but truly concurrent over the event loop: `spawn`

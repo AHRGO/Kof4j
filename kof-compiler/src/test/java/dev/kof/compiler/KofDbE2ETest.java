@@ -53,6 +53,24 @@ class KofDbE2ETest {
         throw new IllegalStateException("H2 jar not found on test classpath");
     }
 
+    // DB001 (16/09): o KofJS roda no host GraalJS (KofJsRunner), que vive na
+    // MESMA JVM do teste e ve o h2/sqlite do java.class.path pelo DriverManager
+    // (o proprio findH2Jar le esse classpath). O delegate `kof_platform.db*`
+    // faz o roundtrip JDBC; a saida deve bater com o caminho JVM byte-a-byte.
+    private String runJs(Path source, Path outDir, String expected) throws IOException {
+        CompilationResult result = driver.compile(source, outDir, Target.JS);
+        assertTrue(result.success(), "JS compilation should succeed: "
+                + result.diagnostics().getDiagnostics());
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        int ec = dev.kof.runtime.KofJsRunner.run(outDir.resolve("Default.mjs"), out,
+                new java.io.ByteArrayInputStream(new byte[0]), out);
+        String output = out.toString(java.nio.charset.StandardCharsets.UTF_8)
+                .replace("\r\n", "\n").trim();
+        assertEquals(0, ec, "JS exit code should be 0, output: '" + output + "'");
+        assertEquals(expected, output, "Unexpected JS output");
+        return output;
+    }
+
     private String runNative(Path source, Path outDir, String expected) throws IOException {
         CompilationResult result = driver.compile(source, outDir, Target.NATIVE);
         assertTrue(result.success(), "Native compilation should succeed: " + result.diagnostics().getDiagnostics());
@@ -200,6 +218,92 @@ class KofDbE2ETest {
             }
             """);
         runJvm(source, tempDir.resolve("out"), "caught\n{\"n\":0}");
+    }
+
+    // ── DB001 (16/09): os mesmos contratos no KofJS, via delegate
+    //    `kof_platform.db*` no host GraalJS — saida byte-parity com JVM ──
+    @Test
+    void jsExecuteAndQueryRowsAsJson(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            main() {
+                var db = db.connect("jdbc:h2:mem:js1;DB_CLOSE_DELAY=-1")
+                db.execute(db, "create table users(id int, name varchar(50))")
+                db.execute(db, "insert into users values (?, ?)", 1, "Mel")
+                db.execute(db, "insert into users values (?, ?)", 2, "Kof")
+                var rows = db.query(db, "select * from users order by id")
+                println(rows.size)
+                println(rows.get(0))
+                println(rows.get(1))
+            }
+            """);
+        runJs(source, tempDir.resolve("out"),
+                "2\n{\"id\":1,\"name\":\"Mel\"}\n{\"id\":2,\"name\":\"Kof\"}");
+    }
+
+    @Test
+    void jsTransactionCommits(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            main() {
+                var db = db.connect("jdbc:h2:mem:js2;DB_CLOSE_DELAY=-1")
+                db.execute(db, "create table t(x int)")
+                transaction {
+                    db.execute(db, "insert into t values (1)")
+                    db.execute(db, "insert into t values (2)")
+                }
+                var rows = db.query(db, "select count(*) as n from t")
+                println(rows.get(0))
+            }
+            """);
+        runJs(source, tempDir.resolve("out"), "{\"n\":2}");
+    }
+
+    @Test
+    void jsTransactionRollsBackOnFailure(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            main() {
+                var db = db.connect("jdbc:h2:mem:js3;DB_CLOSE_DELAY=-1")
+                db.execute(db, "create table t(x int)")
+                try {
+                    transaction {
+                        db.execute(db, "insert into t values (1)")
+                        throw "boom"
+                    }
+                } catch (String e) {
+                    println("caught")
+                }
+                var rows = db.query(db, "select count(*) as n from t")
+                println(rows.get(0))
+            }
+            """);
+        runJs(source, tempDir.resolve("out"), "caught\n{\"n\":0}");
+    }
+
+    @Test
+    void jsNestedTransactionDoesNotCommitOuterScope(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            main() {
+                var connection = db.connect("jdbc:h2:mem:js4;DB_CLOSE_DELAY=-1")
+                db.execute(connection, "create table entries(id int)")
+                try {
+                    transaction {
+                        db.execute(connection, "insert into entries values (1)")
+                        transaction {
+                            db.execute(connection, "insert into entries values (2)")
+                        }
+                        throw "abort outer transaction"
+                    }
+                } catch (String e) {
+                    println("caught")
+                }
+                var rows = db.query(connection, "select count(*) as n from entries")
+                println(rows.get(0))
+            }
+            """);
+        runJs(source, tempDir.resolve("out"), "caught\n{\"n\":0}");
     }
 
     @Test
@@ -419,7 +523,7 @@ class KofDbE2ETest {
     }
 
     @Test
-    void nativeSupportsSqliteAndJsReportsDb001(@TempDir Path tempDir) throws IOException {
+    void nativeSupportsSqliteAndJsReportsDb002OnTypedQuery(@TempDir Path tempDir) throws IOException {
         Path source = tempDir.resolve("Main.kf");
         Files.writeString(source, """
             main() {
@@ -435,12 +539,13 @@ class KofDbE2ETest {
         Path jsSource = tempDir.resolve("MainJs.kf");
         Files.writeString(jsSource, """
             main() {
-                var db = db.connect("sqlite:/tmp/x.db")
+                var db = db.connect("jdbc:sqlite:/tmp/x.db")
+                var rows = db.query<User>(db, "select * from u")
             }
             """);
         CompilationResult jsResult = driver.compile(jsSource, tempDir.resolve("js-out"), Target.JS);
-        assertFalse(jsResult.success());
-        assertTrue(jsResult.diagnostics().getDiagnostics().toString().contains("DB001"),
+        assertFalse(jsResult.success(), "typed query no JS deve falhar em compile");
+        assertTrue(jsResult.diagnostics().getDiagnostics().toString().contains("DB002"),
                 jsResult.diagnostics().getDiagnostics().toString());
     }
 
@@ -557,7 +662,13 @@ class KofDbE2ETest {
     @Test
     void crossNativeSqliteNowCompiles(@TempDir Path tempDir) throws IOException {
         // DB001 fechado no cross (15/09): o gate caiu — db.* compila nos dois
-        // alvos cross (sem sysroot, o ld falha ALTO — R6, nunca silencioso).
+        // alvos cross. §255 (16/09): compilar p/ cross INCLUI o link contra a
+        // libsqlite3 do sysroot (link-by-use); sem ela o ld falha ALTO — que é
+        // R6 correto p/ o USUÁRIO, mas um falso-vermelho p/ a SUÍTE numa máquina
+        // sem o pacote multiarch. O guard é o mesmo par do irmão
+        // crossNativeSqliteRoundtrip: pula honesto quando toolchain/sysroot/
+        // sqlite ausentes; na máquina com eles roda como antes (Q0: sem o
+        // guard, riscv64-ld "não foi possível localizar -lsqlite3" = red).
         Path source = tempDir.resolve("Main.kf");
         Files.writeString(source, """
             main() {
@@ -565,6 +676,14 @@ class KofDbE2ETest {
             }
             """);
         for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            String arch = t.nativeArch();
+            String as = arch.equals("riscv64") ? "riscv64-linux-gnu-as" : "aarch64-linux-gnu-as";
+            String ld = arch.equals("riscv64") ? "riscv64-linux-gnu-ld" : "aarch64-linux-gnu-ld";
+            assumeTrue(has(as, ld, "qemu-" + arch), "cross toolchain " + arch + " ausente — pulando");
+            assumeTrue(dev.kof.compiler.nat.NativeCrossLink.sysrootOrNull(arch) != null,
+                    "sysroot cross " + arch + " ausente — pulando");
+            assumeTrue(dev.kof.compiler.nat.NativeCrossLink.sqliteAvailable(arch),
+                    "libsqlite3 " + arch + " ausente no sysroot — pulando");
             CompilationResult r = new CompilerDriver().compile(source, tempDir.resolve("cross-" + t), t);
             assertTrue(r.success(), t + " db.* agora compila (DB001 fechado): "
                     + r.diagnostics().getDiagnostics());
@@ -572,16 +691,20 @@ class KofDbE2ETest {
     }
 
     @Test
-    void jsStillReportsDb001(@TempDir Path tempDir) throws IOException {
+    void jsDbConnectNowCompiles(@TempDir Path tempDir) throws IOException {
+        // DB001 fechado no JS (16/09): o gate `KofDb.supportedOn` abriu —
+        // connect nao-tipado compila (a ponte `kof_platform.db*` roda na mesma
+        // JVM/classpath do caminho JVM). So o query TIPADO segue gate (DB002).
         Path source = tempDir.resolve("Main.kf");
         Files.writeString(source, """
             main() {
-                var db = db.connect("sqlite:/tmp/x.db")
+                var db = db.connect("jdbc:h2:mem:gate;DB_CLOSE_DELAY=-1")
             }
             """);
         CompilationResult r = driver.compile(source, tempDir.resolve("js-out"), Target.JS);
-        assertFalse(r.success(), "JS should still report DB001");
-        assertTrue(r.diagnostics().getDiagnostics().toString().contains("DB001"),
+        assertTrue(r.success(), "connect deve compilar no JS apos DB001: "
+                + r.diagnostics().getDiagnostics());
+        assertFalse(r.diagnostics().getDiagnostics().toString().contains("DB001"),
                 r.diagnostics().getDiagnostics().toString());
     }
 }

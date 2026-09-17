@@ -14,7 +14,7 @@ test-and-bump
    ├─ mvn clean package (gate)
    ├─ tests/run-golden.sh (jvm + native)
    ├─ tests/run-integration.sh (CLI + serve + kof test)
-   ├─ version bump (scripts/bump-version.sh) — ex.: 0.2.6-beta → 0.2.6-beta
+   ├─ version bump (scripts/bump-version.sh) — ex.: 0.3.22-beta → 0.4.0-beta
    ├─ seção do changelog → CHANGELOG.md
    └─ commit + push do bump ([skip ci])
       ↓
@@ -22,7 +22,7 @@ package-and-release (matriz — um job por plataforma)
    ├─ checkout do COMMIT DE BUMP (não o do trigger)
    ├─ mvn clean package
    ├─ sanity check: VERSION do checkout == versão da release
-   ├─ scripts/package.sh --jdk (embute Temurin 21 — Tooling API baseline)
+   ├─ scripts/package.sh --jdk (embute Temurin 25 — toolchain baseline D-BASELINE)
    ├─ valida o artefato (extrai, bin/kof version + info, JDK embutido)
    └─ GitHub Release kof-<versão>-<plataforma> com artefato + SHA256SUMS
 ```
@@ -49,8 +49,8 @@ Dois jobs:
      build quebrado;
    - `tests/run-golden.sh` (8 casos × jvm+native) e
      `tests/run-integration.sh` (CLI + serve + kof test);
-   - lê `VERSION` (ex.: `0.2.6-beta`), calcula a próxima
-     (`0.2.6-beta`), roda `scripts/bump-version.sh`;
+   - lê `VERSION` (ex.: `0.3.22-beta`), calcula a próxima
+     (`0.4.0-beta`), roda `scripts/bump-version.sh`;
    - insere a seção do changelog no `CHANGELOG.md`;
    - commita e faz push do bump (`[skip ci]` para não re-disparar);
    - exporta o **SHA do commit de bump** (`bump_sha`).
@@ -63,7 +63,7 @@ Dois jobs:
    - sanity check: `VERSION` do checkout deve ser igual à versão da
      release (falha a job se divergir);
    - `mvn clean package`;
-   - `scripts/package.sh --jdk` (embute Temurin 21);
+   - `scripts/package.sh --jdk` (embute Temurin 25);
    - valida o artefato: extrai, roda `bin/kof version`, `bin/kof info`
      e verifica o JDK embutido;
    - cria o **GitHub Release por plataforma**
@@ -74,8 +74,8 @@ Dois jobs:
 
 ## Tags e releases
 
-- Uma release **por plataforma**: `kof-0.2.6-beta-linux-x86_64`,
-  `kof-0.2.6-beta-macos-arm64`, `kof-0.2.6-beta-windows-x86_64`.
+- Uma release **por plataforma**: `kof-0.4.0-beta-linux-x86_64`,
+  `kof-0.4.0-beta-macos-arm64`, `kof-0.4.0-beta-windows-x86_64`.
 - A mais recente de cada plataforma carrega o selo **Latest**.
 - O usuário instala a partir da release do **seu** sistema
   (ver [INSTALL.md](INSTALL.md)).

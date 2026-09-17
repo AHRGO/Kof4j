@@ -37,6 +37,14 @@ public final class Inspect {
             System.err.println("usage: kof inspect <file.kf|file.class> [--json]");
             return 1;
         }
+        // R6: sem pass-through para o programa — flag desconhecida nao pode
+        // ser ignorada em silencio (aceita so --json).
+        for (int i = 1; i < args.length; i++) {
+            if (args[i].startsWith("-") && !"--json".equals(args[i])) {
+                System.err.println("inspect: unknown flag: " + args[i] + " (accepts: --json)");
+                return 1;
+            }
+        }
         Path file = Path.of(args[0]);
         boolean jsonOut = java.util.Arrays.asList(args).contains("--json");
         if (!Files.isRegularFile(file)) {

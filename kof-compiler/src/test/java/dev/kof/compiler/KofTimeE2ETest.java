@@ -132,6 +132,60 @@ class KofTimeE2ETest {
         runNative(tempDir, src, "true\ntrue");
     }
 
+    // §253 face A (16/09): `var id = time.interval(…, () -> cancel(id))` — a
+    // lambda do PRÓPRIO inicializador lê o handle que está sendo declarado.
+    // Antes dava SEM011 nos 3 alvos (escopo define id só DEPOIS de tipar o
+    // init). Face A abre JVM+JS (pre-define + box com store antes do init);
+    // NATIVE fica em SEM092 (face B — leitura do handle nativo SIGSEGVa).
+    @Test
+    void selfReferencingIntervalHandleCancelsItself(@TempDir Path tempDir) throws IOException {
+        String src = """
+                main() {
+                    var ticks = 0
+                    var id = time.interval(100, () -> {
+                        ticks = ticks + 1
+                        if (ticks >= 3) {
+                            time.cancel(id)
+                        }
+                    })
+                    time.sleep(450)
+                    println(ticks == 3)
+                    var after = ticks
+                    time.sleep(300)
+                    println(ticks == after)
+                }
+                """;
+        runJvm(tempDir, src, "true\ntrue");
+        runJs(tempDir, src, "true\ntrue");
+        // Script (interpretador): roda o mesmo KofRuntime do host JVM — a
+        // leitura self-ref do handle no job é a mesma captura do frame.
+        Path sfile = tempDir.resolve("SelfScript-" + System.nanoTime() + ".kf");
+        Files.writeString(sfile, src);
+        dev.kof.compiler.KofInterpreter.Result ir = new CompilerDriver()
+                .interpret(java.util.List.of(sfile), sfile.getParent(), new String[0]);
+        assertEquals(0, ir.exitCode(), "Script exit/stderr: " + ir.stdout() + " " + ir.stderr());
+        assertEquals("true\ntrue", ir.stdout().trim(), "Script output");
+    }
+
+    @Test
+    void selfReferencingIntervalHandleIsNativeGateSem092(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+                main() {
+                    var id = time.interval(100, () -> {
+                        time.cancel(id)
+                    })
+                    time.sleep(250)
+                }
+                """);
+        for (Target t : new Target[]{Target.NATIVE, Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            CompilationResult r = driver.compile(source, tempDir.resolve("sem092-" + t), t);
+            assertFalse(r.success(), t + " self-ref handle deve falhar (face B pendente)");
+            String diags = r.diagnostics().getDiagnostics().toString();
+            assertTrue(diags.contains("SEM092"), t + " deve reportar SEM092: " + diags);
+        }
+    }
+
     @Test
     void nowReturnsEpochMillis(@TempDir Path tempDir) throws IOException {
         runJvm(tempDir, """
