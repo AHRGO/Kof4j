@@ -605,4 +605,66 @@ class ComponentCoreE2ETest {
             """;
         both(tempDir, "shadow", program, "meu");
     }
+
+    @Test
+    void throwingViewIsReportedNotSilentlySwallowed(@TempDir Path tempDir) throws IOException {
+        // §266-filha: kofUiRender/view/effect/onMount/onDispose catches ENGOLIAM
+        // o throw do usuário → UI vazia SEM NENHUM erro no console do browser
+        // (a lição do §266: só o loop estava errado; QUALQUER outro crash de
+        // view continuava silencioso). Agora o catch mantém a resiliência (o
+        // component quebrado não derruba os irmãos do flush) mas TORNA O ERRO
+        // VISÍVEL (console.error com contexto + stack). JS-only: views só
+        // executam no runner headless do JS (JVM/Native desktop não renderizam
+        // sem janela, UiE2ETest prova por via própria). O harness runJs passa
+        // o MESMO buffer p/ out E err, então console.error é capturável.
+        String program = """
+            main() {
+                var win = Window("App")
+                var bad = Component(0)
+                win.bind(bad)
+                bad.view((s: Int) -> {
+                    var junk = listOf(1, 2).get(9)
+                    return Label("unreachable " + junk)
+                })
+                bad.mount()
+                var ok = Component(0)
+                win.bind(ok)
+                ok.view((s: Int) -> { return Label("sibling-ok") })
+                ok.mount()
+                println("main-done")
+            }
+            """;
+        String out = runJs(tempDir, "throwview", program);
+        assertTrue(out.contains("[kof] view render threw"),
+                "o throw da view deve ser REPORTADO, não engolido — output: " + out);
+        assertTrue(out.contains("Index out of bounds") || out.contains("out of bounds"),
+                "a mensagem do throw original deve aparecer — output: " + out);
+        assertTrue(out.contains("main-done"),
+                "main continua (resiliência: um component quebrado não derruba o flush) — output: " + out);
+    }
+
+    @Test
+    void throwingOnMountIsReportedNotSilentlySwallowed(@TempDir Path tempDir) throws IOException {
+        // §266-filha: mesmo furo no caminho do onMount (try { om(); } catch {}
+        // engolia). Prova que o helper cobre o callback do usuário no ciclo de
+        // vida, não só o da view.
+        String program = """
+            main() {
+                var app = Component(0)
+                app.onMount(() -> {
+                    var junk = listOf(1, 2).get(9)
+                    println("unreachable " + junk)
+                })
+                var win = Window("App")
+                win.bind(app)
+                app.mount()
+                println("main-done")
+            }
+            """;
+        String out = runJs(tempDir, "throwmount", program);
+        assertTrue(out.contains("[kof] onMount threw"),
+                "o throw do onMount deve ser reportado — output: " + out);
+        assertTrue(out.contains("main-done"),
+                "o mount não deve derrubar o resto — output: " + out);
+    }
 }

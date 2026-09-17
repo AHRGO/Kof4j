@@ -96,6 +96,21 @@ public final class JsRuntimeUiComponents {
                 }
             }
 
+            function kofUiReportError(where, e) {
+                // §266-filha: os catches deste módulo ENGOLIAM o throw do
+                // código do usuário — view que crashava = UI vazia SEM NENHUMA
+                // mensagem no console do browser (a lição do §266: o loop estava
+                // errado, mas QUALQUER outro crash de view continuava silencioso
+                // p/ UI e barulhento só headless). Mantém a resiliência (um
+                // component quebrado não derruba os irmãos do flush) mas TORNA
+                // O ERRO VISÍVEL: console.error com contexto + o throw original
+                // (stack quando houver), espelhando o stderr do JVM/Script.
+                const detail = e && (e.stack || e.message) ? (e.stack || e.message) : String(e);
+                try {
+                    (console.error || console.log)("[kof] " + where + ": " + detail);
+                } catch (ignored) {}
+            }
+
             function kofUiRender(c) {
                 // rebuild the component's child subtree: run the view builder
                 // with the current state, then swap the fresh DOM in place.
@@ -105,6 +120,7 @@ public final class JsRuntimeUiComponents {
                     const v = kofUiRunFn(c.view);
                     rootId = v ? v(c.state) : 0;
                 } catch (e) {
+                    kofUiReportError("view render threw for component " + (c && c.name), e);
                     rootId = 0;
                 }
                 if (c.el) {
@@ -199,6 +215,7 @@ public final class JsRuntimeUiComponents {
                 try {
                     result = f();
                 } catch (e) {
+                    kofUiReportError("effect threw", e);
                     result = null;
                 }
                 n.effects.push(result);
@@ -212,7 +229,7 @@ public final class JsRuntimeUiComponents {
                 if (n.view) kofUiRender(n);
                 const om = kofUiRunFn(n.onMountFn);
                 if (om) {
-                    try { om(); } catch (e) {}
+                    try { om(); } catch (e) { kofUiReportError("onMount threw", e); }
                 }
                 for (const f of n.effectFns) kofUiRunEffect(n, f);
             }
@@ -230,13 +247,13 @@ public final class JsRuntimeUiComponents {
                 // unmount: onDispose() -> effects() in REVERSE
                 const od = kofUiRunFn(n.onDisposeFn);
                 if (od) {
-                    try { od(); } catch (e) {}
+                    try { od(); } catch (e) { kofUiReportError("onDispose threw", e); }
                 }
                 for (let i = n.effects.length - 1; i >= 0; i--) {
                     try {
                         const ef = n.effects[i];
                         if (typeof ef === "function") ef();
-                    } catch (e) {}
+                    } catch (e) { kofUiReportError("effect cleanup threw", e); }
                 }
                 n.effects.length = 0;
                 n.effectFns.length = 0;

@@ -23,7 +23,7 @@
 > | **§261 ✅ CORRIGIDO 16/09 (lane development `.18`)** | `window.bind` no KofJS: Components e widgets DOM crus tiravam ids de handle de DOIS contadores SEPARADOS (`kofUiSeq` vs `kofNodeSeq`, ambos do 0); `kofUiWindowBind` resolve componentes PRIMEIRO → um Component criado antes de um widget cru roubava o id do widget e o widget não renderizava nada (órfão em `__kofNodes`). Achado via kof-ui-widgets (Slider+ReconfigButton no Chrome real). Conserto = um contador único compartilhado (`kofNodeSeq`). Prova: `KofJsBrowserE2ETest.componentAndRawWidgetIdsNeverCollide` (VERMELHO pré-fix, medido) + `scripts/browser-drag.mjs` da lib.
 > | **§264 ✅ CORRIGIDO 16/09 (lane development `.18`)** | O KofJS imprimia `Double`/`Float` com o `Number.toString` cru — `4` em vez de `4.0`, `10000000` em vez de `1.0E7`, `0` em vez de `-0.0` — em **todo** caminho de display (println/print/concat/`String.valueOf`/`.toString()`); divergência silenciosa da regra 5 vs JVM/Native. Os registros antigos do §44/§180 chamavam isso de "esperado no JS" e 5 células de conformidade excluíam o `js` para ficarem verdes. Conserto = nova fatia de runtime `num-fmt`/`kofNumFmt` (contrato JDK: round-trip curto + limiar `E` + precisão própria de Float) roteada pelo emissor JS + passthrough de tipo nos lowerers compartilhados. Prova: `WrapperStaticCallsE2ETest.doubleFloatJdkPrintFormat` + 5 células viradas para paridade de 4 alvos (valor por valor contra o oracle JVM no node v18). O print de coleção boxed (`List<Double>`→`[4,2.5]`) continua sendo §104b-ii (lane nativa), NÃO corrigido aqui.
 > | **§265 ✅ CORRIGIDO 16/09 (lane development `.18`)** | Handlers web do KofJS: `status(201, body)`/`headerSet()` eram no-ops SILENCIOSOS — `JsRuntimeOps.handleRuntimeOp` tinha um ramo de colapso (`status→args.get(1)`) que DESCARTAVA a chamada do `invoke()` emitido (decisivo), e `kofWebStatus` lia `kofWebRequest.response` (campo que nunca existiu; o `response` vive no `ctx`). JVM: `201`+`X-Custom`; JS: `200`, header descartado (R6; a célula "JS ✅ 08/27" do ecosystem-coverage era false-green — suporte em compile ≠ efeito em runtime). Conserto = remover os ramos de colapso (o roteamento correto já existia abaixo) + deferir `_status`/`_headerQueue` aplicados pelo pump antes do envio (o HttpServer do JDK exige headers pré-envio), idem thread-local do JVM. Prova: `KofWebJsE2ETest.jsWebStatusAndHeaderReachTheWire` (VERMELHO pré-fix, medido `return "made"` no JS emitido + `200` no fio vivo). `status/header` do Native fica `– WEB001` (honesto).
-> | **§266 ✅ CORRIGIDO 17/09 (lane development `.18`)** | Corpo de loop com `if` seguido de statements miscompilava SÓ no JS (locais escapavam p/ a cláusula `for(;…;update)`) — `ReferenceError` headless, UI VAZIA SILENCIOSA em `Component.view` (catch do kofUiRender). Correção = `KofContinueLabel(label, loopStart)` estrutural emitido no lowering; o reconstructor consome o marcador, a varredura-para-trás ambígua + o guess `looksLikeContinueLabel` SAÍRAM; split `JsTryParser` mantém o arquivo <600. Prova: `JsLoopIfTailE2ETest` 7/7 + ReorderList da lib de volta à forma `if` direta no Chrome. O catch do `kofUiRender` AINDA engole throws do view (a amplificação alto-headless/UI-muda permanece p/ qualquer outro crash de view). |
+> | **§266 ✅ CORRIGIDO 17/09 (lane development `.18`)** | Corpo de loop com `if` seguido de statements miscompilava SÓ no JS (locais escapavam p/ a cláusula `for(;…;update)`) — `ReferenceError` headless, UI VAZIA SILENCIOSA em `Component.view` (catch do kofUiRender). Correção = `KofContinueLabel(label, loopStart)` estrutural emitido no lowering; o reconstructor consome o marcador, a varredura-para-trás ambígua + o guess `looksLikeContinueLabel` SAÍRAM; split `JsTryParser` mantém o arquivo <600. Prova: `JsLoopIfTailE2ETest` 7/7 + ReorderList da lib de volta à forma `if` direta no Chrome. Dívida-filha FECHADA 18/09: os 5 catches do runtime UI (`kofUiRender`/effects/onMount/onDispose) que ENGOLIAM throw do usuário agora REPORTAM via `kofUiReportError` → `console.error` (resiliência mantida: irmão continua montando); `ComponentCoreE2ETest` +2. |
 > | **§267 ✅ CORRIGIDO 17/09 (lane development `.18`; face irmã achada durante o §266)** | `if/else` de nível-statement cujos ramos são assignments dobrou numa ternária expressão (`tryParseIfExpr`) e o statement SEGUINTE teve seu `let` içado p/ cima dela → leitura obsoleta, VALOR ERRADO SILENCIOSO no JS. Correção = marcador `KofStatementIf(thenLabel)` no lowering (amarrado ao label — um booleano seria comido pelo CJump de uma if-expr NESTED na condição); if-expressões reais continuam dobrando. Prova: `JsIfFoldStatementE2ETest` 8/8 + suíte 1990/0/0/169. |
 > | **§257 ✅ CORRIGIDO 15/09 (lane compiler `192.168.100.17`)** | literais `static final String` de texto-de-runtime = inlining ConstantValue do javac → falso vermelho em build incremental (`validationBrJs`); 77 campos de-`final` + `RuntimeConstantInliningGuardTest` (ASM, ConstantValue) trava. |
 > | **§173 ✅ CORRIGIDO 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `++`/`--`/compound em `Long`/`Double`/`Float` + incremento de ELEMENTO de array: JVM VerifyError (literal `INT 1` em binário de 2 slots, `DUP` de 1 slot, `arraystore` sem `[array,index]`), Native core dump, Script `NoSuchElementException`, JS `stack underflow`/`KofDup2`. 4 targets; caça Q4 13/09 (sobre o §167). Prova: `BackendParityTest.parityIncrementWideTypesAndArrayElement` + `KofInterpreterParityTest.incrementWideTypesAndArrayElement` + célula `increment` 4/4. |
@@ -8068,9 +8068,31 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
   view em `catch (e) { rootId = 0; }` (JsRuntimeUiComponents, desde a era §157),
   então o componente montava como CAIXA VAZIA sem erro reportado: UI muda
   quebrada (regra 6). O widget só flagou isto porque a renderização no Chrome
-  tornou o DOM vazio observável. (O engolir silencioso do `kofUiRender` continua
-  igual — esta unidade conserta o miscompile, não o esconder-erro; um follow-up
-  poderia expor os throws do view. Fica anotado na nota do §267.)
+  tornou o DOM vazio observável. (Esta unidade consertou o MISCOMPILE, não o
+  esconder-erro.)
+- **✅ Filha-do-§266 FECHADA 18/09 (lane development, dono `.18`):** o próprio
+  engolir-silencioso — 5 catches em `JsRuntimeUiComponents` (o da view em
+  `kofUiRender`, `kofUiRunEffect`, onMount, onDispose e o loop de effects) que
+  ENGOLIAM throw de código do usuário → UI vazia com ZERO mensagem no console
+  (headless era barulhento, o browser era mudo — a amplificação R6 acima). Todo
+  catch agora chama um helper `kofUiReportError(where, e)` que MANTÉM a
+  resiliência (um component quebrado NÃO derruba os irmãos do flush — medido: o
+  irmão monta, o `main` continua) mas escreve
+  `console.error("[kof] <onde>: <mensagem+stack>")`. Escolhido em vez de
+  `kofLogError` porque ESTE é gateado por nível (`kofLogLevel <= 3`, default
+  info=1 — quem roda em warn/off manteria o bug da UI muda); `console.error` é
+  incondicional e cai no stream err do Context, que o harness E2E COMPARTILHA
+  com o out — assertável headless E visível no browser. Guardado com
+  `(console.error || console.log)` + try/catch p/ o report nunca quebrar o
+  flush. Prova: `ComponentCoreE2ETest.throwingViewIsReportedNotSilentlySwallowed`
+  + `throwingOnMountIsReportedNotSilentlySwallowed` (throw de OOB de lista →
+  asserem `[kof] view render threw` / `[kof] onMount threw` E `main-done` no
+  stream capturado; o fail-first medido foi o probe pré-fix NÃO imprimir NADA
+  sobre o crash); `ComponentCoreE2ETest` 17→19, classes UI verdes (UiE2ETest 29,
+  KofJsE2ETest 40, KofJsBrowserE2ETest 26 — o stream console.error compartilhado
+  com o stdout não causou NENHUMA regressão de exact-match). JS-only por natureza:
+  views executam no runner headless do JS; o desktop JVM/Native não renderiza sem
+  janela, e o JVM já propaga a stack.
 - **Causa raiz (arquivo:linha, agora corrigida):** `JsControlFlowParser.parseLoop`
   varria para TRÁS do back-edge `Jump(start)` do corpo para achar "o label de
   continue" (~linha 293). Num corpo que termina em `… Jump(endX), Label(endX),
