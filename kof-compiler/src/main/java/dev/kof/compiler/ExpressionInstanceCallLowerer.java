@@ -31,6 +31,11 @@ public final class ExpressionInstanceCallLowerer {
             "toSnakeCase", "toKebabCase", "slugify", "escapeHtml",
             "unescapeHtml", "escapeJson", "removeWhitespace", "normalizeWhitespace");
 
+    /** §193: nomes de acessor de coleção/mapa chamados numa String (a linha
+     *  crua do db.query é JSON String) → SEM063 em vez de runtime quebrado. */
+    private static final java.util.Set<String> COLLECTION_ACCESSORS_ON_STRING = java.util.Set.of(
+            "get", "put", "remove", "size", "keys", "values", "containsKey", "entries");
+
     private ExpressionInstanceCallLowerer() {}
 
     /** Nome canônico da função `strings.*` p/ o nome de método errado (SEM052). */
@@ -328,6 +333,26 @@ public final class ExpressionInstanceCallLowerer {
                     "Kof não tem método \"" + mc.methodName() + "\" de String; use a função "
                             + "da stdlib: strings." + padHint(mc.methodName()) + "(...",
                     "SEM052");
+        }
+        // §193 (face crua do db.query, R6): a linha do `db.query` NÃO-tipado é
+        // String JSON (`{"col":...}`) desde DB001; chamar acessor de coleção
+        // nela (`rows.get(0).get("col")`) era ACEITO e quebrava em runtime —
+        // JVM `NoSuchMethodError: String.get`, JS `.get` nativo inexistente →
+        // undefined silencioso, Nativo `undefined reference` no link. Meta do
+        // registro: diagnóstico em compile-time apontando o caminho canônico
+        // (`db.query<Record>` tipado ou json.decode). NÃO confunda com os
+        // métodos JDK reais de String (getBytes/isBlank/strip/repeat via
+        // classpath externo) — esses continuam legais.
+        if (COLLECTION_ACCESSORS_ON_STRING.contains(mc.methodName())
+                && driver.currentDiagnostics != null) {
+            var pos = mc.position();
+            driver.currentDiagnostics.error(pos != null ? pos.file() : "",
+                    pos != null ? pos.line() : 0,
+                    pos != null ? pos.column() : 0, 0,
+                    "String não tem método \"" + mc.methodName() + "\" — parece acessor de "
+                            + "coleção; a linha crua de db.query é JSON String: use "
+                            + "db.query<Record> (tipado) ou json.decode<Map<String, Object>>(row)",
+                    "SEM063");
         }
         // bug 100 (R6, paridade absoluta JVM=JS=X86=ARM=RISC): argumento
         // NÃO-String num parâmetro String/CharSequence (Char, Int, Long, lista…)
