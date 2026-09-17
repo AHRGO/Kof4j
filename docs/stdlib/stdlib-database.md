@@ -97,7 +97,7 @@ Native:
   detected at compile-time). Full handshake, query and prepared statements
   still in progress (P3).
 
-## 6. Targets (0.2.6-beta)
+## 6. Targets (0.4.0-beta)
 
 | Target | Status | Notes |
 |--------|--------|-------|
@@ -106,7 +106,7 @@ Native:
 | Native riscv64 | ✅ SQLite (riscv64) | `li a7` syscalls |
 | JS | ✅ untyped (16/09); typed `query<T>` = `DB002` | `connect/execute/query/close/transaction` via `kof_platform.db*` on the GraalJS host; typed query + `orm.*` = `DB002`/`ORM001` at compile-time |
 
-## 7. Tests (0.2.6-beta)
+## 7. Tests (0.4.0-beta)
 
 `KofDbE2ETest` 8 + `KofOrmE2ETest` 16 (includes MariaDB/PostgreSQL/MongoDB with conditional skip + native SQLite) — execute + JSON query,
 typed query with bind, transaction with commit, rollback on exception,

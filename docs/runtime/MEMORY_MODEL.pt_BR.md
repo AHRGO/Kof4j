@@ -3,7 +3,7 @@
 # MEMORY_MODEL.md — Modelo de Memória do Kof
 
 **Data:** 2 de setembro de 2026
-**Status:** Implementado — Fase F.7 + evolução 0.0.5 (allocator com header) + 0.2.6-beta (free-list `kof_free_head` 27/08; mark-sweep implementado 03/09)
+**Status:** Implementado — Fase F.7 + evolução 0.0.5 (allocator com header) + 0.4.0-beta (free-list `kof_free_head` 27/08; mark-sweep implementado 03/09)
 
 ---
 

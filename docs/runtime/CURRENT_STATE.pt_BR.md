@@ -3,7 +3,7 @@
 # CURRENT_STATE.md — Estado do Runtime do Kof
 
 **Data:** 2 de setembro de 2026
-**Status:** Fase F concluída + 0.2.6-beta (free-list GC, spawn pthread, FP XMM, JSON completo)
+**Status:** Fase F concluída + 0.4.0-beta (free-list GC + mark-sweep, spawn pthread, FP XMM, JSON completo); re-synced 17/09
 
 ---
 

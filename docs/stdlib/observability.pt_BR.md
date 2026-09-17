@@ -7,7 +7,7 @@
 
 > **Status:** DONE (JVM/Native/JS) — `KofObservabilityTest` 7/7 (VERSION 0.4.0-beta, free-list Native); API confirmada em `KofObservability.java`; histogramas/spans/export Prometheus fechados como `OBS002` (16/09)
 > **Módulo:** `kof.observability` — `observability.*`
-> **Targets:** JVM ✅ · Native x86_64 ✅ (free-list) · Native riscv64 ✅ · JS ✅ — sem gaps (G5 fechado, 0.2.6-beta)
+> **Targets:** JVM ✅ · Native x86_64 ✅ (free-list) · Native riscv64 ✅ · JS ✅ — sem gaps (G5 fechado 0.2.6-beta; OBS002 16/09)
 
 ---
 

@@ -104,7 +104,7 @@ architecture, priority and strategy) lives in **`docs/bugs-and-gaps/ecosystem-co
 platform (a checklist derived from the Spring ecosystem, used as a
 capability matrix, not as an API specification).
 
-Executive summary (0.2.6-beta, 31/08):
+Executive summary (0.4.0-beta, re-synced 17/09):
 
 | Category | Status |
 |-----------|--------|

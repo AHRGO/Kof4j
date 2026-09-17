@@ -291,9 +291,9 @@ jwt:         RFC 7519 HS256 (alg fixado, nunca aceito do token)
 
 ---
 
-# 7. ESTADO DA IMPLEMENTAÇÃO (0.2.6-beta, 31/08/2026 — `VERSION` 0.2.6-beta, 810 testes, free-list + riscv64)
+# 7. ESTADO DA IMPLEMENTAÇÃO (0.4.0-beta, re-synced 17/09/2026 — `VERSION` 0.4.0-beta, 2218 testes, free-list + mark-sweep + riscv64)
 
-## 7.1 Implementado (0.2.6-beta)
+## 7.1 Implementado (0.4.0-beta)
 
 | API | JVM | Native x86_64 (+ riscv64) | JS | Formato |
 |-----|-----|---------------------------|----|---------|

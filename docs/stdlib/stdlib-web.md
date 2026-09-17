@@ -329,7 +329,7 @@ synchronous handlers; the runtime decides the strategy. SSE handlers run on
 the shared `KOF_SSE_HANDLERS` and have a deadline of `idleMs * 4`; on timeout
 the stream is closed and the task cancelled.
 
-## 5. Current limitations (Phase 1, 0.2.6-beta)
+## 5. Current limitations (Phase 1, 0.4.0-beta)
 
 - The `js` target supports the web stack base (`web.app()` + routes + context-fns with runtime: param/query/header/body/method/path/status/headerSet — `WEB001` fatia honestidade 16/09) plus **SSE handler-scoped** (`app.sse` + `sse.send/event/close/isOpen` + `sse()`, framing/headers idem JVM — 16/09); residual gaps: SSE push after the handler returns and multiple concurrent clients (`WEB003`), `app.ws` (`WEB004`) and `stats()` report at compile-time; `kof.http` already works on JS via `Java HttpClient`.
 - The `native` target (`x86_64`/`riscv64`/`aarch64`) has had the web server base since 03/09 (`NativeWebRuntime.java`: accept/route/lambda/body, `KofWebNativeE2ETest` 4/4); residual: TLS `WEB002`, ws `WEB004`, sse `WEB003`, path params/keep-alive/`status()`/`headerSet()` `WEB001`.
@@ -345,7 +345,7 @@ the stream is closed and the task cancelled.
 > targets; `WebSocket` (`app.ws`) + `SSE` (`app.sse`) on the JVM; `http.retry`/
 > `http.circuit` in JVM+JS parity.
 
-## 6. Tests (0.2.6-beta)
+## 6. Tests (0.4.0-beta)
 
 `KofWebE2ETest` 10 + `KofHttpServerTest` 8 + `KofHttpE2ETest` 4 (JVM+JS,
 27/08) + `KofWebTlsTest` 5 + `KofWebSseE2ETest` 7 + `KofWebWsE2ETest` 11 +

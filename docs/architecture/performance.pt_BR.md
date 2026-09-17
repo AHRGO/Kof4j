@@ -198,7 +198,7 @@ No Native o Kof possui controle ainda maior sobre a execução.
 
 Portanto, a expectativa de eficiência deve ser ainda mais agressiva.
 
-> **Estado (0.2.6-beta, 31/08):** alocação via free-list `kof_free_head`
+> **Estado (0.4.0-beta, re-synced 17/09; base 31/08):** alocação via free-list `kof_free_head`
 > (reuso `mmap` — reduz o custo de mmap por alocação); FP em XMM
 > (`vcvtsi2sd`/`mulsd`) em vez de fallback em int; dtoa via `snprintf`;
 > `spawn` em threads reais (`pthread`) — sobrecarga de contexto documentada
@@ -824,7 +824,7 @@ Detectar:
 
 Cada versão deve possuir baseline.
 
-Exemplo (0.2.6-beta, 27/08/2026 — `mvn test` 810, golden 16/16):
+Exemplo (baseline histórico 0.2.6-beta, 27/08/2026 — `mvn test` 810, golden 16/16):
 
 ```text
 Kof 0.2.6-beta

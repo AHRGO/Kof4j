@@ -104,7 +104,7 @@ arquitetura, prioridade e estratégia) vive em **`docs/bugs-and-gaps/ecosystem-c
 plataforma moderna (checklist derivado do ecossistema Spring, usado como
 matriz de capacidades, não como especificação de API).
 
-Resumo executivo (0.2.6-beta, 31/08):
+Resumo executivo (0.4.0-beta, re-synced 17/09):
 
 | Categoria | Estado |
 |-----------|--------|

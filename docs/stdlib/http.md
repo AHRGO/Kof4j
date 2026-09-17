@@ -3,6 +3,8 @@
 # Web Architecture — `kof serve`
 
 **Date:** September 2, 2026
+**Re-synced:** September 17, 2026 (0.4.0-beta)
+
 > **Updated (0.2.6-beta):** `kof serve` with top-level handlers + native web stack `web.app()` (Spring independence Phase 1) — routes with trailing lambda, path params, query, headers, body, middleware, typed JSON, custom status/headers and HTTP server generated in the runtime; `kof.http` client `http.get/post/put/delete/patch/options/status` + `timeout/retry/circuit` works on **JVM + JS** (JS via `Java HttpClient` interop in `KofJsRunner`; retry/circuit at JVM+JS parity, 30/08) — Native `HTTP002`; TLS `listenSecure` JVM. See [docs/stdlib/stdlib-web.md](stdlib-web.md) and `docs/status.md` (current suite count).
 
 **Status:** Implemented (Phase H) — `VERSION` 0.4.0-beta

@@ -802,7 +802,7 @@ target por domínio; sem motor SQL/Arrow/ML próprio.
 
 ---
 
-## Sintaxe real (verificada no compilador — 0.3.0-beta)
+## Sintaxe real (verificada no compilador — 0.4.0-beta)
 
 ### Funções (não existe `fun` nem `func`)
 

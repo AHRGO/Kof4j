@@ -60,7 +60,7 @@ app.get("/users") {
 }
 ```
 
-## 5. Targets (0.2.6-beta)
+## 5. Targets (0.4.0-beta)
 
 | Target | Estado | Notas |
 |--------|--------|-------|
@@ -71,7 +71,7 @@ app.get("/users") {
 
 ## 6. Testes
 
-`KofLogE2ETest` 11 (JVM + JS, 01/09) + `NativeLogE2ETest` 7 (Native asm, 0.2.6-beta) —
+`KofLogE2ETest` 11 (JVM + JS, 01/09) + `NativeLogE2ETest` 7 (Native asm, since 0.2.6-beta) —
 nível default, debug visível com `KOF_LOG_LEVEL=debug`, supressão em
 `error`, `off` silencioso, warn no stderr, log dentro de handler web, JSON
 estruturado + correlation ID (JVM) e JS via `console.*`.

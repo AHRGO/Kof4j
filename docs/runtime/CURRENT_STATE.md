@@ -3,7 +3,7 @@
 # CURRENT_STATE.md — Kof Runtime State
 
 **Date:** September 2, 2026
-**Status:** Phase F complete + 0.2.6-beta (free-list GC, spawn pthread, FP XMM, complete JSON)
+**Status:** Phase F complete + 0.4.0-beta (free-list GC + mark-sweep, spawn pthread, FP XMM, complete JSON); re-synced 17/09
 
 ---
 

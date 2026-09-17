@@ -108,7 +108,7 @@ CLI: `kof build/run --target jvm|native|native.risc|native.arm|js` (aliases `nat
 
 ## Type System
 
-The type system supports (0.2.6-beta, 27/08/2026):
+The type system supports (0.4.0-beta, re-synced 17/09/2026):
 
 - Primitive types: `bool`, `byte`, `short`, `int`, `long`, `float`, `double`, `char`
 - Reference types: classes, interfaces, enums (with `values()/valueOf` + exhaustiveness), records
@@ -116,8 +116,8 @@ The type system supports (0.2.6-beta, 27/08/2026):
 - Type parameters: `<T>` (implemented, erasure); bounds (future)
 - Wildcards: `?`, `? extends T`, `? super T` (future)
 - Arrays: `int[]`, `String[]`
-- Null safety: `String?` basic (`Type?` nullable, compile-time `?`-check) — 0.2.6-beta
-- Pattern matching: `switch` with `case String s` + record destructuring `Point(x,y)` — JVM/Native/JS (0.2.6-beta)
+- Null safety: `String?` basic (`Type?` nullable, compile-time `?`-check) — since 0.2.6-beta
+- Pattern matching: `switch` with `case String s` + record destructuring `Point(x,y)` — JVM/Native/JS (since 0.2.6-beta)
 - Void type
 - Function types: `FunctionType` (lambdas with captures via `BoxN`, implemented)
 
@@ -192,7 +192,7 @@ The backend produces:
 - LineNumberTable (debugging)
 - LocalVariableTable (debugging)
 
-Runtime JVM (`KofRuntime` gerado) em 0.2.6-beta (30-31/08): web stack
+Runtime JVM (`KofRuntime` gerado; base 30-31/08, re-synced 17/09): web stack
 (`web.app()`, rotas, middleware, `status`/`headerSet`), **WebSocket**
 (`app.ws`, handshake RFC 6455 + frame codec com máscara) e **SSE**
 (`sse.send/event/close`), `kof.cache` (get/set/ttl/delete/clear), `kof.http`
@@ -202,7 +202,7 @@ client com **retry/circuit breaker** (`KOF_HTTP_RETRIES`/`KOF_HTTP_TRIPS`/
 
 ## Native Backend
 
-The native backend generates ELF binaries (0.2.6-beta).
+The native backend generates ELF binaries (0.4.0-beta).
 
 ```mermaid
 flowchart TD
@@ -213,7 +213,7 @@ flowchart TD
     E --> F["ELF binary"]
 ```
 
-Targets (0.2.6-beta, 31/08):
+Targets (0.4.0-beta, re-synced 17/09):
 - `native` (x86_64) **stable**: ELF x86_64, syscalls, free-list allocator (`kof_free_head`; mark-sweep implementado 03/09, `kof_gc_collect_now` manual — auto-GC desativado, auto-collect sob exaustão pendente §260; fallback `munmap`), strings/lists/JSON (objetos/records + arrays FP, 31/08), exceptions with unwinding, `spawn`/`await` via `pthread_create` + trampoline + `pthread_join` com allocator thread-safe (futex) — CONC001 (31/08), FP real em XMM (`vcvtsi2sd`/`mulsd`, dtoa via `snprintf`) — FLT001, `kof_db_mysql_scramble` + wire protocol em progresso
 - `native.risc` (riscv64) **real**: lowering riscv64 (`NativeBackend.emitRiscv`); `riscv64-linux-gnu-as/ld` + qemu
 - `native.arm` (aarch64) **real**: tradução do riscv64 (`translateRiscvToAarch64`); `aarch64-linux-gnu-as/ld` + qemu
@@ -237,7 +237,7 @@ Runtime functions (x86-64, `NativeRuntime.java:1`):
 - Generates ES Modules, executed by embedded GraalJS (`KofJsRunner`) — no Node.js required
 - Supports pattern matching (`case String s` + `Point(x,y)` via `typeof` + destructuring), `String?` basic, `kof.http` via `Java HttpClient` interop (+ fetch fallback; retry/circuit em paridade com o JVM, 30/08), `List map/filter/reduce`, `Box<T>` via `substituteTypeVariable`
 - Scheduler `kof.time` via `setInterval` (27/08); `spawn`/`await` com async/await/Promise reais (statement/expressão; CONC003 fechado 03/09)
-- Status alpha (0.2.6-beta)
+- Status alpha (0.4.0-beta)
 
 ## KofCCompiler
 
@@ -288,7 +288,7 @@ flowchart TD
 Gaps de target produzem **diagnósticos claros em compile-time** (SECN00x,
 CONC001, JSN00x, DB001, CONF001, LOG001) — nunca comportamento silenciosamente diferente.
 
-Módulos (0.2.6-beta, 31/08/2026): `kof.core`, `kof.collections` (`List map/filter/reduce`, `Map/Set`, `Box<T>`), `kof.io`, `kof.time` (scheduler `every` JVM+JS via `setInterval`), `kof.json` (objetos/records + arrays nos 3 targets, 31/08), `kof.http` (JVM+JS via HttpClient; retry/circuit breaker 30/08), `kof.web` (rotas/middleware + WebSocket/SSE JVM, 30/08), `kof.cache` (3 targets, 30/08), `kof.security`, `kof.concurrent` (`spawn` — JVM virtual threads, Native pthread 31/08, JS sequencial), `kof.test`, `kof.cli` (18 comandos: `build/run/serve/check/test/script/repl/c/fmt/config/bench/profile/inspect/debug/info/lsp/install/version`), `kof.db`/`kof.orm` (SQLite nativo `.so` + MySQL wire protocol WIP), `kof.config`/`kof.log`. Estado completo em docs/stdlib/stdlib.md e docs/status.md (contagem corrente da suíte).
+Módulos (0.4.0-beta, re-synced 17/09): `kof.core`, `kof.collections` (`List map/filter/reduce`, `Map/Set`, `Box<T>`), `kof.io`, `kof.time` (scheduler `every` JVM+JS via `setInterval`), `kof.json` (objetos/records + arrays nos 3 targets, 31/08), `kof.http` (JVM+JS via HttpClient; retry/circuit breaker 30/08), `kof.web` (rotas/middleware + WebSocket/SSE JVM, 30/08), `kof.cache` (3 targets, 30/08), `kof.security`, `kof.concurrent` (`spawn` — JVM virtual threads, Native pthread 31/08, JS sequencial), `kof.test`, `kof.cli` (18 comandos: `build/run/serve/check/test/script/repl/c/fmt/config/bench/profile/inspect/debug/info/lsp/install/version`), `kof.db`/`kof.orm` (SQLite nativo `.so` + MySQL wire protocol WIP), `kof.config`/`kof.log`. Estado completo em docs/stdlib/stdlib.md e docs/status.md (contagem corrente da suíte).
 
 ## Diagnostics
 

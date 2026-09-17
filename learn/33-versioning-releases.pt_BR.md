@@ -22,7 +22,7 @@ pequenos ajustes sem mudança arquitetural relevante.
 O Kof saiu de `0.0.x` (Alpha) para `0.2.6-beta`. Cada release carrega o sufixo:
 
 ```text
-0.2.6-beta
+0.4.0-beta
 ```
 
 Nada é chamado de stable. A evolução foi: Alpha → Beta (0.2.6-beta, 02 set 2026; hoje 0.4.0-beta) → Release Candidate → Stable. A cadeia `intention->Kof->frontend->IR->backend->runtime` vale para todos.

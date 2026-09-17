@@ -803,7 +803,7 @@ target per domain; no SQL/Arrow/ML engine of its own.
 
 ---
 
-## Real syntax (verified in the compiler — 0.3.0-beta)
+## Real syntax (verified in the compiler — 0.4.0-beta)
 
 ### Functions (there is no `fun` nor `func`)
 

@@ -80,7 +80,7 @@ main() {
 }
 ```
 
-## 5. Targets (0.2.6-beta)
+## 5. Targets (0.4.0-beta)
 
 | Target | Estado | Notas |
 |--------|--------|-------|
@@ -91,7 +91,7 @@ main() {
 
 ## 6. Testes
 
-`KofConfigE2ETest` — 11 testes E2E (0.2.6-beta): env por convenção, defaults,
+`KofConfigE2ETest` — 11 testes E2E (0.4.0-beta): env por convenção, defaults,
 arquivo explícito, profiles, arquivo padrão no diretório de trabalho, `env()`,
 precedência completa, `required` (presente em todos os targets + falha rápida
 se ausente) e interpolação `${key}` (JVM/Native/JS).
@@ -109,7 +109,7 @@ descoberto por reflection.
 
 ## 8. Onde estamos vs. o padrão ouro (Spring/Quarkus) — auditoria honesta
 
-**Última revisão:** 30/08/2026 (0.2.6-beta, auditoria da Fase de Configuração)
+**Última revisão:** re-synced 17/09/2026 (0.4.0-beta; auditoria base 30/08/2026)
 
 | Capacidade | kof.config hoje | Spring Boot | Status |
 |------------|-----------------|-------------|--------|
