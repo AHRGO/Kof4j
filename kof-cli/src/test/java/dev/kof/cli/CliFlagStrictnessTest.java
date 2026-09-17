@@ -165,6 +165,28 @@ class CliFlagStrictnessTest {
     }
 
     @Test
+    void lspRejectsUnknownFlag(@TempDir Path dir) throws Exception {
+        Cli r = cli(dir, "lsp", "--bogus");
+        assertNotEquals(0, r.exit(), "lsp --flag deve recusar (R6):\n" + r.out());
+        assertTrue(r.out().contains("--bogus"), r.out());
+    }
+
+    @Test
+    void configGenRejectsUnknownFlag(@TempDir Path dir) throws Exception {
+        Files.writeString(dir.resolve("Main.kf"), "main() { println(\"oi\") }\n");
+        Cli r = cli(dir, "config", "gen", "Main.kf", "--bogus");
+        assertNotEquals(0, r.exit(), "config gen --flag deve recusar (R6):\n" + r.out());
+        assertTrue(r.out().contains("--bogus"), r.out());
+    }
+
+    @Test
+    void configGenStillWorks(@TempDir Path dir) throws Exception {
+        Files.writeString(dir.resolve("Main.kf"), "main() { println(\"oi\") }\n");
+        Cli r = cli(dir, "config", "gen", "Main.kf");
+        assertEquals(0, r.exit(), "config gen simples nao regride:\n" + r.out());
+    }
+
+    @Test
     void benchRejectsUnknownFlagInsteadOfTreatingItAsPath(@TempDir Path dir) throws Exception {
         Cli r = cli(dir, "bench", "--verbos");
         assertNotEquals(0, r.exit(), "bench --flag deve recusar (R6):\n" + r.out());

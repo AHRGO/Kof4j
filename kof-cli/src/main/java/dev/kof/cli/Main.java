@@ -29,7 +29,7 @@ public final class Main {
             case "migrate" -> System.exit(Migrate.run(args));
             case "debug" -> System.exit(KofDebug.run(args));
             case "info" -> info(args);
-            case "lsp" -> lsp();
+            case "lsp" -> lsp(args);
             case "install" -> install(args);
             case "script" -> System.exit(CmdScript.run(args));
             case "repl" -> System.exit(CmdScript.repl(args));
@@ -143,7 +143,13 @@ public final class Main {
         }
     }
 
-    private static void lsp() {
+    private static void lsp(String[] args) {
+        // R6: `lsp` takes no flags — a typo must not be silently ignored.
+        if (args.length > 1 && args[1].startsWith("-")) {
+            System.err.println("lsp: unknown flag: " + args[1] + " (usage: kof lsp)");
+            System.exit(1);
+            return;
+        }
         LspServer server = new LspServer(System.in, System.out);
         try {
             server.run();
@@ -165,15 +171,37 @@ public final class Main {
             System.exit(1);
             return;
         }
+        if (args[2].startsWith("-")) {
+            System.err.println("config: unknown flag: " + args[2]
+                    + " (accepts: --target jvm|native|js --output <file>)");
+            System.exit(1);
+            return;
+        }
         Path src = Path.of(args[2]);
         if (!Files.exists(src)) { System.err.println("not found: " + src); System.exit(1); return; }
         Target target = Target.JVM;
         Path output = null;
         for (int i = 3; i < args.length; i++) {
-            if ("--target".equals(args[i]) && i + 1 < args.length) {
+            if (args[i].startsWith("--target=")) {
+                target = KofCliSupport.parseTarget(args[i].substring("--target=".length()));
+            } else if ("--target".equals(args[i]) && i + 1 < args.length) {
                 target = KofCliSupport.parseTarget(args[++i]);
+            } else if (args[i].startsWith("--output=")) {
+                output = Path.of(args[i].substring("--output=".length()));
             } else if ("--output".equals(args[i]) && i + 1 < args.length) {
                 output = Path.of(args[++i]);
+            } else if (args[i].startsWith("-")) {
+                // R6: a flag desconhecida (ou sem valor) nao pode ser ignorada
+                // em silencio — o usuario/CI acharia que teve efeito.
+                System.err.println("config: unknown or incomplete flag: " + args[i]
+                        + " (accepts: --target jvm|native|js --output <file>)");
+                System.exit(1);
+                return;
+            } else {
+                System.err.println("config: unexpected argument: " + args[i]
+                        + " (accepts: --target jvm|native|js --output <file>)");
+                System.exit(1);
+                return;
             }
         }
         // compile-only: chaves são coletadas em compile-time, nada é executado
