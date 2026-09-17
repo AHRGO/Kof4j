@@ -198,10 +198,10 @@ if ("listOf".equals(mc.methodName()) && mc.receiver() == null) {
             var pos = mc.position();
             driver.currentDiagnostics.error(pos != null ? pos.file() : "",
                     pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0,
-                    "listOf: elemento " + CollectionWrites.typeNameFor(argType)
-                            + " não casa com o tipo da lista ("
+                    "listOf: element " + CollectionWrites.typeNameFor(argType)
+                            + " does not match the list element type ("
                             + CollectionWrites.typeNameFor(elemType)
-                            + ") — coleções Kof são homogêneas", "SEM056");
+                            + ") — Kof collections are homogeneous", "SEM056");
             return localIdx;
         }
         ops.add(new KofDup());
@@ -401,10 +401,10 @@ if ("mapOf".equals(mc.methodName()) && mc.receiver() == null) {
             var pos = mc.position();
             driver.currentDiagnostics.error(pos != null ? pos.file() : "",
                     pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0,
-                    "mapOf: valor " + CollectionWrites.typeNameFor(vType)
-                            + " não casa com o tipo do mapa ("
+                    "mapOf: value " + CollectionWrites.typeNameFor(vType)
+                            + " does not match the map type ("
                             + CollectionWrites.typeNameFor(valueType)
-                            + ") — coleções Kof são homogêneas", "SEM056");
+                            + ") — Kof collections are homogeneous", "SEM056");
             return localIdx;
         }
         ops.add(new KofDup());

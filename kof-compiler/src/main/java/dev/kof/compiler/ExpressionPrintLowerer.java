@@ -21,8 +21,8 @@ if (("print".equals(mc.methodName()) || "println".equals(mc.methodName())) && mc
             driver.currentDiagnostics.error(mc.position() != null ? mc.position().file() : "",
                     mc.position() != null ? mc.position().line() : 0,
                     mc.position() != null ? mc.position().column() : 0, 0,
-                    mc.methodName() + "(...) recebeu um valor void — a chamada não"
-                            + " retorna valor (adicione 'return' ou não a use como argumento)",
+                    mc.methodName() + "(...) received a void value — the call does"
+                            + " not return a value (add a 'return' or don't use it as an argument)",
                     "SEM033");
         }
         return localIdx;

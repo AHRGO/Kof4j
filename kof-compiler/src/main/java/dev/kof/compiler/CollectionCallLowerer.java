@@ -144,8 +144,8 @@ public final class CollectionCallLowerer {
                     driver.currentDiagnostics.error(pos != null ? pos.file() : "",
                             pos != null ? pos.line() : 0,
                             pos != null ? pos.column() : 0, 0,
-                            "List." + mc.methodName() + " pega ÍNDICE Int; " + CollectionWrites.typeNameFor(idxT)
-                                    + " não é índice (para buscar por valor use contains)",
+                            "List." + mc.methodName() + " takes an Int INDEX; " + CollectionWrites.typeNameFor(idxT)
+                                    + " is not an index (to search by value use contains)",
                             "SEM055");
                     return localIdx;
                 }
@@ -168,9 +168,9 @@ public final class CollectionCallLowerer {
                     driver.currentDiagnostics.error(pos != null ? pos.file() : "",
                             pos != null ? pos.line() : 0,
                             pos != null ? pos.column() : 0, 0,
-                            "List." + mc.methodName() + ": elemento " + CollectionWrites.typeNameFor(argTypes.get(valIdx))
-                                    + " não casa com o tipo da lista (" + CollectionWrites.typeNameFor(elemType)
-                                    + ") — coleções Kof são homogêneas",
+                            "List." + mc.methodName() + ": element " + CollectionWrites.typeNameFor(argTypes.get(valIdx))
+                                    + " does not match the list element type (" + CollectionWrites.typeNameFor(elemType)
+                                    + ") — Kof collections are homogeneous",
                             "SEM056");
                     return localIdx;
                 }
@@ -302,8 +302,8 @@ public final class CollectionCallLowerer {
                             pos != null ? pos.line() : 0,
                             pos != null ? pos.column() : 0, 0,
                             "Map.put: " + badSlot + " " + CollectionWrites.typeNameFor(badType)
-                                    + " não casa com o tipo do mapa (" + CollectionWrites.typeNameFor(slotType)
-                                    + ") — coleções Kof são homogêneas",
+                                    + " does not match the map type (" + CollectionWrites.typeNameFor(slotType)
+                                    + ") — Kof collections are homogeneous",
                             "SEM056");
                     return localIdx;
                 }
@@ -367,9 +367,9 @@ public final class CollectionCallLowerer {
                 driver.currentDiagnostics.error(pos != null ? pos.file() : "",
                         pos != null ? pos.line() : 0,
                         pos != null ? pos.column() : 0, 0,
-                        "Set.add: elemento " + CollectionWrites.typeNameFor(argTypes.get(0))
-                                + " não casa com o tipo do set (" + CollectionWrites.typeNameFor(elemType)
-                                + ") — coleções Kof são homogêneas",
+                        "Set.add: element " + CollectionWrites.typeNameFor(argTypes.get(0))
+                                + " does not match the set element type (" + CollectionWrites.typeNameFor(elemType)
+                                + ") — Kof collections are homogeneous",
                         "SEM056");
                 return localIdx;
             }
@@ -406,8 +406,8 @@ public final class CollectionCallLowerer {
         driver.currentDiagnostics.error(mc.position() != null ? mc.position().file() : "",
                 mc.position() != null ? mc.position().line() : 0,
                 mc.position() != null ? mc.position().column() : 0, 0,
-                "método '" + mc.methodName() + "' não é suportado em coleções;"
-                        + " use um loop com new T[n] para materializar um array",
+                "method '" + mc.methodName() + "' is not supported on collections;"
+                        + " use a loop with new T[n] to materialize an array",
                 "SEM029");
     }
     // bug 16 (cauda): `sublist()`/`subSet()` retornam COLEÇÃO —
@@ -420,9 +420,9 @@ public final class CollectionCallLowerer {
         driver.currentDiagnostics.error(mc.position() != null ? mc.position().file() : "",
                 mc.position() != null ? mc.position().line() : 0,
                 mc.position() != null ? mc.position().column() : 0, 0,
-                "método '" + mc.methodName() + "' não é suportado em coleções"
-                        + " (retorno de coleção não é materializável);"
-                        + " copie os elementos com um loop",
+                "method '" + mc.methodName() + "' is not supported on collections"
+                        + " (collection return is not materializable);"
+                        + " copy the elements with a loop",
                 "SEM034");
     }
     for (ExpressionNode arg : mc.arguments()) {
