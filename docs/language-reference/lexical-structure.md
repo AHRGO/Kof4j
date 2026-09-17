@@ -218,9 +218,17 @@ Unexpected character → `LEX005`.
 
 **The semicolon is optional in every statement-end position.** The parser
 consumes `;` only *if present* (`expectSemicolon`, ParseContext.expectSemicolon).
-Line breaks are **not** tokens and have **no** syntactic meaning
-(automatic semicolon insertion does not exist). Consequence: `var a = 1 var b =
+Line breaks are **not** tokens and have **no** syntactic meaning for statement
+termination (automatic semicolon insertion does not exist). Consequence: `var a = 1 var b =
 2` on the same line is parsed as two declarations.
+
+**Single exception — `return` (#343).** The value of a `return` only counts
+when it is on the **same line** as the keyword. A line break after a bare
+`return` makes it a void return (`StatementParser.parseReturn`), so
+`if (x < 0) return` followed by `println(x)` on the next line parses as a
+void `return` + a separate statement — not as `return println(x)`. A value
+on the following line is not supported (use braces or keep the value on the
+same line).
 
 ---
 

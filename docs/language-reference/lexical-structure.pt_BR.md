@@ -218,9 +218,16 @@ Caractere inesperado → `LEX005`.
 
 **O ponto-e-vírgulo é opcional em toda posição de fim de statement.** O parser
 consome `;` apenas *se presente* (`expectSemicolon`, ParseContext.expectSemicolon).
-Quebras de linha **não** são tokens e **não** têm significado sintático
-(inserção automática de semicolon não existe). Consequência: `var a = 1 var b =
-2` na mesma linha é parseado como duas declarações.
+Quebras de linha **não** são tokens e **não** têm significado sintático para
+terminar statements (inserção automática de semicolon não existe). Consequência:
+`var a = 1 var b = 2` na mesma linha é parseado como duas declarações.
+
+**Exceção única — `return` (#343).** O valor de um `return` só vale quando está
+na **mesma linha** da palavra-chave. Uma quebra de linha após um `return` nu o
+torna return-void (`StatementParser.parseReturn`), então `if (x < 0) return`
+seguido de `println(x)` na linha seguinte parseia como um `return` void + um
+statement separado — não como `return println(x)`. Valor na linha seguinte não
+é suportado (use chaves ou mantenha o valor na mesma linha).
 
 ---
 
