@@ -45,7 +45,7 @@ final class TranslateSwitch {
                 isDefault = true;
             } else {
                 throw new TranslateException(
-                        "expected 'case'/'default' em switch-expressão but found '" + p.peek().text + "'");
+                        "expected 'case'/'default' in switch-expression but found '" + p.peek().text + "'");
             }
             if (p.at(T.ARROW)) {
                 p.next();
@@ -56,8 +56,8 @@ final class TranslateSwitch {
                 // `case L -> { ... yield v; }` — Kof switch-expr exige UMA
                 // expressão por case (PARSE094) → gap honesto R6.
                 throw new TranslateException(
-                        "switch-expressão com corpo de case em BLOCO não é suportado em Kof "
-                        + "(PARSE094: exige uma expressão por case) — revisão manual");
+                        "switch-expression with a case body in a BLOCK is not supported in Kof "
+                        + "(PARSE094: requires one expression per case) — manual review");
             }
             if (p.at("yield")) { p.next(); } // forma colon Java
             String body = expr.parseExpr();

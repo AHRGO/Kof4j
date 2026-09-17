@@ -45,13 +45,13 @@ import java.util.List;
                 continue;
             }
             if (c == '"') {
-                // Text block Java `""" ... """` — Kof não tem text block
+                // Text block Java `""" ... """` — Kof has no text block
                 // (só string com `\n`) → gap honesto R6 (antes: o lexer lia
                 // `""` vazio e reabria, gerando parse error confuso).
                 if (i + 2 < n && s.charAt(i + 1) == '"' && s.charAt(i + 2) == '"') {
                     throw new TranslateException(
-                            "text block (`\"\"\"`) não tem equivalente direto em Kof "
-                            + "(use string com `\\n`) — revisão manual");
+                            "text block (`\"\"\"`) has no direct equivalent in Kof "
+                            + "(use a string with `\\n`) — manual review");
                 }
                 int j = i + 1;
                 StringBuilder sb = new StringBuilder();
@@ -153,8 +153,8 @@ import java.util.List;
                 case '@' -> out.add(new Tok(T.AT, "@"));
                 case '~' -> out.add(new Tok(T.P, "~"));
                 default -> throw new TranslateException(
-                        "caractere inesperado `" + s.charAt(i) + "` não é suportado pelo translator "
-                        + "(antes era dropado em SILÊNCIO, gerando Kof inválido) — revisão manual");
+                        "caractere inesperado `" + s.charAt(i) + "` is not supported by the translator "
+                        + "(it used to be dropped in SILENCE, generating invalid Kof) — manual review");
             }
             i = Math.min(i + 1, n); // guarded advance for simple single-char cases
         }
