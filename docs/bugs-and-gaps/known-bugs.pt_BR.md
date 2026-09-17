@@ -9556,3 +9556,32 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
   §179) deve dar ao throwable o seu pacote real).
 - **Não corrigido aqui** (achado ao fechar §332/#328; a fila desta família é
   `#313/#314`, dono = lane compiler `.22` conforme DOING linha 223).
+- **Atualização de status (18/09, lane compiler `.22`, commit do #313):**
+  PARCIAL — a face `extends <throwable-JDK>` está FECHADA na raiz em
+  `SymbolTableBuilder` (mesmo commit do #313): o super registrado agora cai
+  para `java.lang.<Nome>` para o conjunto `JAVA_LANG_THROWABLES` quando nenhum
+  import resolve (medido: `class MyEx extends RuntimeException` sem import
+  carrega e roda; `ThrowQualifiedTest` trava). O ESCOPO AMPLO segue ABERTO,
+  re-medido com instanciação (o crash de load só aparece quando a classe é
+  realmente carregada): `extends Thread`/`extends Object` (java.lang, não
+  throwables) e `extends IOException` (java.io, sem import) ainda emitem o
+  super cru → `NoClassDefFoundError`/CNFE; `extends Zebra` (nome indefinido)
+  compila limpo com super cru (silencioso, R6). Correção geral na fila: nome
+  simples não-resolvido em extends/implements → SEM072 honesto,
+  `Object` → `java/lang/Object`.
+- **Bifurcação rule-6 (por que o commit dos throwables NÃO fechou a face
+  ampla):** a generalização muda como TODO nome simples de tipo em
+  `extends`/`implements` resolve, nos quatro targets, e divide o rio de
+  resolução com o cluster nullable/generics (`#259`/`#361`/`#363`/`#365`/
+  `#366`/`#368`). Três contratos candidatos, todos melhores que o crash-de-load
+  silencioso de hoje mas NÃO intercambiáveis: **(A)** `java.lang` implícito em
+  extends/implements via probe `Class.forName("java.lang."+n)` com cache
+  (completo, casa com Java, mas torna o JDK do compilador oráculo semântico —
+  não-java.lang como `IOException`/`List` ainda exige import ou cai em SEM072);
+  **(B)** conjunto `JAVA_LANG_TYPES` curado (precedente =
+  `JAVA_LANG_THROWABLES`; subcobre — chutar curto demais é exatamente o erro
+  que o §268 registra); **(C)** exigir o import (o mais estrito, quebra o
+  idiom no-import de hoje). Precisa da escolha da mantenedora + bump/doc
+  (programas que hoje crasham passam a dar erro de compilação → SEM072),
+  portanto NÃO é edição silenciosa da `.22`. Dono = lane compiler; atacar
+  depois que o cluster nullable/generics assentar (mesmos arquivos).

@@ -9990,6 +9990,21 @@ behavior-preserving (`RawRowCollectionAccessE2ETest` + `SemanticResolutionTest`
   compiles clean with a raw `extends Zebra` (silent, R6). General fix queued:
   unresolved simple name in extends/implements → honest diagnostic (SEM072),
   `Object` → `java/lang/Object`.
+- **Rule-6 fork (why the throwables commit did NOT close the broad face):**
+  the generalization changes how EVERY simple type name in `extends`/`implements`
+  resolves, across all four targets, and shares the resolution river with the
+  nullable/generics cluster (`#259`/`#361`/`#363`/`#365`/`#366`/`#368`). Three
+  candidate contracts, all strictly better than today's silent load-crash but
+  NOT interchangeable: **(A)** implicit `java.lang` for extends/implements via a
+  cached `Class.forName("java.lang."+n)` probe (complete, matches Java, but
+  makes the compiler's JDK a semantic oracle — non-java.lang like
+  `IOException`/`List` still need an import or hit SEM072); **(B)** curated
+  `JAVA_LANG_TYPES` set (precedent = `JAVA_LANG_THROWABLES`; under-covers —
+  that guess-too-narrow mistake is exactly what §268 records); **(C)** require
+  the import (strictest, breaks today's no-import idiom). Needs the
+  maintainer's pick + bump/doc (it turns currently-crashing programs into
+  compile errors → SEM072), so it is NOT a silent `.22` edit. Owner = compiler
+  lane; attack after the nullable/generics cluster settles (same files).
   `driver.toInternalName("", sym.superClass())` passes an EMPTY package when the
   analyzer resolved the name but the class is an implicit-JDK name →
   the emitted `super_class` is the raw `RuntimeException` instead of
