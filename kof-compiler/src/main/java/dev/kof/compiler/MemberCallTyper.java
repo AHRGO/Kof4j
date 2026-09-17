@@ -29,12 +29,12 @@ public final class MemberCallTyper {
             }
         }
         if (mc.receiver() instanceof IdentifierExpr tokR && KofUiTokens.isTokenNamespace(tokR.name())) {
-            // Fase 10: tokens são CONSTANTES — um método neles é SEM076 (R6),
+            // Fase 10: tokens são CONSTANTES — um método neles é SEM078 (R6),
             // nunca queda silenciosa p/ void.
             if (sa.diagnostics() != null) {
                 sa.diagnostics().error("", 0, 0, 0,
                         "token '" + tokR.name() + "' has no methods — it holds constants: "
-                        + KofUiTokens.memberList(tokR.name()), "SEM076");
+                        + KofUiTokens.memberList(tokR.name()), "SEM078");
             }
             return Type.PrimitiveType.VOID;
         }

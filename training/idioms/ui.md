@@ -395,7 +395,7 @@ var v = View(Style(Palette.white, Palette.black, 8, 4))
 
 **GOOD — one idiomatic CSS string, parsed and validated in the compiler:**
 ```kof
-// ✅ IDIOMATIC — parse/validate at compile time (SEM073/074/075, never silent)
+// ✅ IDIOMATIC — parse/validate at compile time (SEM075/076/077, never silent)
 var card = Style("background: #ffffff; padding: 8; border-radius: 4")
 var v = View(card)
 var l = Label("titulo")
@@ -404,8 +404,8 @@ l.setStyle(card)                       // any DOM widget, not only View
 
 **Why:** the compiler owns the parse (D-UI-STYLE/UI007): hex/name/`Palette`
 colors, bare Int = px, `px`/`%`/`em`/`rem`, and a typed whitelist — an unknown
-property is `SEM073`, a malformed declaration `SEM074`, an invalid value
-`SEM075`. Never a silent fallback to `node.style` (R6). Real in KofJS;
+property is `SEM075`, a malformed declaration `SEM076`, an invalid value
+`SEM077`. Never a silent fallback to `node.style` (R6). Real in KofJS;
 documented no-op on JVM/Native/Script, like the 4-Int `Style`.
 
 ## Design-system tokens (Spacing/Radius/Border/Elevation/Typography)
@@ -429,7 +429,7 @@ var rad = Radius.md                  // 4
 **Why:** tokens are compile-time constants (Int px — D-UI-STYLE Q2), folded
 by the same idiom as `Palette`; because the fold is in the shared frontend,
 all four targets carry the same value. An unknown member (`Spacing.huge`)
-or a method call on a namespace (`Spacing.of(4)`) is `SEM076` (R6 — never a
+or a method call on a namespace (`Spacing.of(4)`) is `SEM078` (R6 — never a
 silent 0). Scales (8px grid): `Spacing` xs/sm/md/lg/xl = 4/8/16/24/32 ·
 `Radius` none/sm/md/lg/full = 0/2/4/8/9999 · `Border` hairline/thin/medium/
 thick = 1/2/4/8 · `Elevation` none/sm/md/lg/xl = 0/1/2/3/4 · `Typography`

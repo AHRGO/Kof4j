@@ -46,7 +46,7 @@ l.setFontSize(Typography.lg)
 ```
 
 Membro inexistente (`Spacing.huge`) ou chamada de método (`Spacing.of(4)`)
-é `SEM076` — os tokens guardam constantes, nunca um 0 silencioso.
+é `SEM078` — os tokens guardam constantes, nunca um 0 silencioso.
 
 ## Janelas e Widgets
 
@@ -141,7 +141,7 @@ w.bind(view)
 
 `Style("<declarações>")` recebe CSS idiomático. O compilador faz o parse e
 valida (D-UI-STYLE/UI007): propriedade desconhecida é erro de compile-time
-(`SEM073`), declaração malformada `SEM074` e valor inválido `SEM075` — nunca
+(`SEM075`), declaração malformada `SEM076` e valor inválido `SEM077` — nunca
 fallback silencioso.
 
 ```kof

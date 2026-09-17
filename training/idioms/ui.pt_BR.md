@@ -395,7 +395,7 @@ var v = View(Style(Palette.white, Palette.black, 8, 4))
 
 **BOM — uma string CSS idiomática, parseada e validada no compilador:**
 ```kof
-// ✅ IDIOMÁTICO — parse/validação em compile-time (SEM073/074/075, nunca silencioso)
+// ✅ IDIOMÁTICO — parse/validação em compile-time (SEM075/076/077, nunca silencioso)
 var card = Style("background: #ffffff; padding: 8; border-radius: 4")
 var v = View(card)
 var l = Label("titulo")
@@ -404,8 +404,8 @@ l.setStyle(card)                       // qualquer widget DOM, não só View
 
 **Por quê:** o compilador faz o parse (D-UI-STYLE/UI007): cores hex/nome/`Palette`,
 inteiro nu = px, `px`/`%`/`em`/`rem`, e uma whitelist tipada — propriedade
-desconhecida é `SEM073`, declaração malformada `SEM074`, valor inválido
-`SEM075`. Nunca fallback silencioso para `node.style` (R6). Real no KofJS;
+desconhecida é `SEM075`, declaração malformada `SEM076`, valor inválido
+`SEM077`. Nunca fallback silencioso para `node.style` (R6). Real no KofJS;
 no-op documentado no JVM/Native/Script, igual ao `Style` de 4 Ints.
 
 ## Tokens do design system (Spacing/Radius/Border/Elevation/Typography)
@@ -430,7 +430,7 @@ var rad = Radius.md                  // 4
 folding pelo mesmo idiom que o `Palette`; como o fold está no frontend
 compartilhado, os quatro targets carregam o mesmo valor. Membro inexistente
 (`Spacing.huge`) ou chamada de método num namespace (`Spacing.of(4)`) é
-`SEM076` (R6 — nunca 0 silencioso). Escalas (grade de 8px): `Spacing`
+`SEM078` (R6 — nunca 0 silencioso). Escalas (grade de 8px): `Spacing`
 xs/sm/md/lg/xl = 4/8/16/24/32 · `Radius` none/sm/md/lg/full = 0/2/4/8/9999 ·
 `Border` hairline/thin/medium/thick = 1/2/4/8 · `Elevation` none/sm/md/lg/xl
 = 0/1/2/3/4 · `Typography` xs/sm/md/lg/xl/hero = 12/14/16/20/24/32.

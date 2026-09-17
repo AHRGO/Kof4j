@@ -1174,9 +1174,9 @@ padding, radius — `kof_ui_style_new`) já está entregue nos quatro alvos
 4. **Unidades (Q2).** Inteiro nu significa `px`; os sufixos `px`, `%`, `em`
    e `rem` são aceitos.
 5. **Propriedades (Q3).** Uma **whitelist tipada**. Propriedade fora da
-   whitelist é diagnóstico em compile-time (`SEM073`) — nunca repassada em
-   silêncio para `node.style` (R6). Declaração malformada é `SEM074`; valor
-   inválido para propriedade conhecida é `SEM075`.
+   whitelist é diagnóstico em compile-time (`SEM075`) — nunca repassada em
+   silêncio para `node.style` (R6). Declaração malformada é `SEM076`; valor
+   inválido para propriedade conhecida é `SEM077`.
 6. **Escopo (Q5).** `setStyle(style)` — recebendo o valor `Style`, exatamente
    como `View(style)` — fica disponível em **todo widget DOM**
    (`KofUi.isDomWidget`), não só `View`, pela família compartilhada
@@ -1212,7 +1212,7 @@ testes; fatia B = `setStyle` em todo widget DOM.
 ### Evidências
 
 `UiStyleCssE2ETest` 10/10 (JVM + Native + Script + JS: happy path, nomes CSS,
-unidades, `setStyle` num Label, `SEM073`/`SEM074`/`SEM075`, não-literal,
+unidades, `setStyle` num Label, `SEM075`/`SEM076`/`SEM077`, não-literal,
 não-regressão da forma de 4 Ints) + `KofJsBrowserE2ETest` (Chrome headless,
 DOM real: `declarativeStyleRendersInRealBrowserDom`,
 `setStyleRendersOnAnyDomWidgetInRealBrowser`); suíte completa dos 4 módulos
@@ -1342,7 +1342,7 @@ de design.
 
 3. **R6 — sem 0 silencioso.** Um membro inexistente (`Spacing.huge`) e uma
    chamada de método num namespace (`Spacing.of(4)`) são um diagnóstico de
-   compile-time **`SEM076`** (mensagem em inglês, lista os membros válidos).
+   compile-time **`SEM078`** (mensagem em inglês, lista os membros válidos).
    O buraco silencioso pré-existente `Palette.nope` é um gap separado e
    catalogado (é superfície da lane compiler; os tokens não o replicam).
 
@@ -1358,7 +1358,12 @@ de design.
   `var`).
 - Valores são `Int` px puros (D-UI-STYLE Q2); `full`=9999 é o idiom CSS de
   "pílula" (totalmente arredondado).
-- Diagnósticos seguem D-DIAG-EN; `SEM076` é aditivo, não renumera nada.
+- Diagnósticos seguem D-DIAG-EN. **Emenda (18/09, colisão entre lanes):** os
+  códigos desta decisão e da D-UI-STYLE foram re-numerados — a lane compiler
+  já havia publicado `SEM073` (aridade do `reduce`, `MemberCallTyper`) e `SEM074`
+  (método em primitivo, `SemMethodCallTyper`) no `beta-0.4.0`. Style:
+  `SEM073/074/075` → **`SEM075/076/077`**; tokens: `SEM076` → **`SEM078`**.
+  Só os rótulos mudaram; nenhuma semântica mudou (as decisões valem como decididas).
 - Sem superfície de runtime: o fold é em compile-time, então não há no-op
   por target a documentar (diferente do UI001) — o valor está na IR.
 
@@ -1382,7 +1387,7 @@ Reivindicado no `DOING.md` (Fases 8–11, lane UI/style). `KofUiTokens.java`
 
 `UiTokensE2ETest` 7/7 — tabela golden em JVM + Native + Script (mesmo fold
 compartilhado → saída idêntica), DOM JS (o valor chega no texto renderizado),
-`SEM076` membro inexistente, `SEM076` chamada de método, composição com
+`SEM078` membro inexistente, `SEM078` chamada de método, composição com
 `Style`/widget; suíte 4-módulos verde fora do flake pré-existente §252 e dos
 reds cross §181/§256; `docs-lang.sh check` 0/0/0.
 

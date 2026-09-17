@@ -46,7 +46,7 @@ l.setFontSize(Typography.lg)
 ```
 
 An unknown member (`Spacing.huge`) or a method call (`Spacing.of(4)`) is
-`SEM076` — the tokens hold constants, never a silent 0.
+`SEM078` — the tokens hold constants, never a silent 0.
 
 ## Windows and Widgets
 
@@ -141,8 +141,8 @@ w.bind(view)
 
 `Style("<declarations>")` takes idiomatic CSS. The compiler parses and
 validates it (D-UI-STYLE/UI007): an unknown property is a compile-time
-error (`SEM073`), a malformed declaration `SEM074` and an invalid value
-`SEM075` — never a silent fallback.
+error (`SEM075`), a malformed declaration `SEM076` and an invalid value
+`SEM077` — never a silent fallback.
 
 ```kof
 var style = Style("background: #ff0000; padding: 8; border-radius: 4")

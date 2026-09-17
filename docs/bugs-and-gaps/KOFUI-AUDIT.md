@@ -80,7 +80,7 @@ Grid, Center, Align, Store, Canvas + namespace `Router`.
 | **UI004** | Forms: `<form>` ✅ + submit handler ✅ DONE 07/09 (`Form(children)`, `onSubmit`, `submit()` — handler runs in the browser, proof by DOM mutation); fieldset ✅ DONE 08/09 (`Fieldset(children[, legend])`, `358ec80`). `Input` types ✅ (`setType`); checkbox/radio state ✅ (`setChecked`/`checked`); select ✅ (`Select`/`setOptions`/`selected`/`setSelected`) | KofJS | P1 **DONE** |
 | **UI005** | Attributes: id ✅ class ✅ disabled ✅ (DONE 07/09 — `setId`/`setClass`/`setDisabled` in DOM widgets, `kof_ui_widget_*` family); placeholder ✅ (`Input.setPlaceholder`); checked ✅; alt/width/height ✅ (`Image.*`); readonly/name ✅ DONE 07/09 (`Input`/`Textarea`.setReadonly(bool)/setName(String) — 6/6 complete points, browser proof: `name=`/`readonly` attributes in outerHTML) | KofJS | P1 **DONE** |
 | **UI006** | Events: `Event.type()`/`stopPropagation()` ✅; `key()`/`value()`/`x()`/`y()` ✅ DONE 08/09 (`f0907c2` — real DOM event: `key` from KeyboardEvent, `value` from the target input, `clientX/Y`; `widget.on(type, handler)` exposed for widgets outside the Component tree; `kofUiWidgetOn` now dispatches the kofEv, before it called `fn()` without an event); `target()`/`relatedTarget()` ✅ DONE 08/09 (`3c241ae`+ — id of the origin/related node with tagName fallback; browser proof: `t=campo-main` in the final DOM) | KofJS | P2 **DONE** |
-| **UI007** | declarative `style` (idiomatic CSS) — new, with its own parser (Phase 4 plan item). **DONE 17/09** (`D-UI-STYLE`, commit `f7a5ad89`): `Style("<declarations>")` parsed in the compiler, typed whitelist (`SEM073`/`SEM074`/`SEM075`), hex+CSS names+`Palette` names kept verbatim, px/`%`/`em`/`rem`, `setStyle(style)` on every DOM widget — proof: `UiStyleCssE2ETest` 10/10 + 2 real-Chrome tests | KofJS | P1 |
+| **UI007** | declarative `style` (idiomatic CSS) — new, with its own parser (Phase 4 plan item). **DONE 17/09** (`D-UI-STYLE`, commit `f7a5ad89`): `Style("<declarations>")` parsed in the compiler, typed whitelist (`SEM075`/`SEM076`/`SEM077`), hex+CSS names+`Palette` names kept verbatim, px/`%`/`em`/`rem`, `setStyle(style)` on every DOM widget — proof: `UiStyleCssE2ETest` 10/10 + 2 real-Chrome tests | KofJS | P1 |
 | **UI008** | Window: size/position only JVM no-op; KofJS only title (browser does not control window — ok per platform) | JVM/KofJS | P3 |
 | **UI009** | Canvas: fillText ✅ measureText ✅ save ✅ restore ✅ transform ✅ setGlobalAlpha ✅ (DONE 07/09 — `UiE2ETest.canvasUi009LinksOnAllTargets` + `KofJsBrowserE2ETest.canvasUi009RunsInRealBrowser`); drawImage ✅ (07/09 — Image→canvas via DOM element) | KofJS | P2 **DONE** |
 
@@ -155,8 +155,8 @@ Closed questions:
   names + the `Palette` names** (the same table `Palette` uses).
 - Q2: units — **a bare integer means `px`; `px`/`%`/`em`/`rem` accepted**.
 - Q3: properties — **typed whitelist**; an unknown property is a
-  compile-time diagnostic (`SEM073`), malformed declaration `SEM074`,
-  invalid value `SEM075` — never silently forwarded to `node.style` (R6).
+  compile-time diagnostic (`SEM075`), malformed declaration `SEM076`,
+  invalid value `SEM077` — never silently forwarded to `node.style` (R6).
 - Q4: **parse in the compiler** (style IR; normalized text in the lowering).
 - Q5: **every DOM widget accepts it** (`setStyle(style)` with the `Style`
   value, via the shared `kof_ui_widget_set_style` family — the UI005
@@ -165,7 +165,7 @@ Closed questions:
 Implementation: **DONE 17/09** (commit `f7a5ad89`) — slice A = parser +
 `Style(String)` + lowering + JS runtime + proof; slice B = `setStyle(style)`
 on every DOM widget. Proof: `UiStyleCssE2ETest` 10/10 (JVM/Native/Script/JS
-+ `SEM073`/`SEM074`/`SEM075`) and `KofJsBrowserE2ETest` +2 on real Chrome DOM.
++ `SEM075`/`SEM076`/`SEM077`) and `KofJsBrowserE2ETest` +2 on real Chrome DOM.
 
 **Phase 5 boundary (KofJS Web APIs — not kof.ui):** fetch/WS/storage.
 
@@ -201,8 +201,8 @@ the leak only.
 `Spacing`/`Radius`/`Border`/`Elevation`/`Typography` namespaces are
 compile-time `Int` (px) constants, folded by the same idiom as `Palette`
 (shared frontend → cross-target parity by construction). Unknown members and
-method calls on a namespace are `SEM076` (R6 — never a silent 0). Proof:
+method calls on a namespace are `SEM078` (R6 — never a silent 0). Proof:
 `UiTokensE2ETest` 7/7 (golden table on JVM/Native/Script + JS DOM + both
-`SEM076` edges + composition with `Style`/widget). The audit matrix
+`SEM078` edges + composition with `Style`/widget). The audit matrix
 "Design system" row now reads: Theme + `Color`/`Palette` + the five token
 namespaces (the semantic theme-to-widget application remains manual).

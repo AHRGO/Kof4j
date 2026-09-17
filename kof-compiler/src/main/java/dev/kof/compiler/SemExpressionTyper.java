@@ -313,7 +313,7 @@ public final class SemExpressionTyper {
                 if (fa.receiver() instanceof IdentifierExpr tid && KofUiTokens.isTokenNamespace(tid.name())) {
                     if (KofUiTokens.tokenValue(tid.name(), fa.fieldName()) == null && sa.diagnostics() != null) {
                         sa.diagnostics().error("", 0, 0, 0,
-                                KofUiTokens.unknownMemberMessage(tid.name(), fa.fieldName()), "SEM076");
+                                KofUiTokens.unknownMemberMessage(tid.name(), fa.fieldName()), "SEM078");
                     }
                     yield Type.PrimitiveType.INT;
                 }
