@@ -864,6 +864,8 @@ ciência) **sem** destruir a simplicidade da linguagem.
   effect system; sem cripto caseira; sem reimplementar Arrow/BLAS/ML/
   alinhadores; sem "Kali em Kof"; sem target por domínio; sem motor SQL próprio
 
+> **Estado 17/09:** R1 ✅ FEITO (`5f1422c6` — gate `scripts/check_stdlib_boundary.sh` + ledger na CI, AGENTS invariante 1). R2–R12: fila aberta por D-UNIVERSAL; unidades de código seguem a ordem de valor do §23.
+>
 > **Portão R12 sobreposto em 17/09/2026** (`DECISIONS.md` §D-UNIVERSAL): a
 > mantenedora autorizou abrir esta frente **com o SYSTEMS ainda em andamento**.
 > O ponto de entrada é o Estágio 1 (consolidação SYSTEMS) + R1–R12; o Tier 6+
