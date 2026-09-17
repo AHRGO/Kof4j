@@ -135,8 +135,8 @@ final class CmdBuild {
         // D-APP I3 (Q6): --fat só faz sentido no JVM (native/js já saem como
         // artefato único). Honesto e cedo (R6), antes de compilar.
         if (fat && target != Target.JVM) {
-            System.err.println("build: --fat só se aplica a --target jvm ("
-                    + TargetMatrix.name(target) + " já gera artefato único)");
+            System.err.println("build: --fat only applies to --target jvm ("
+                    + TargetMatrix.name(target) + " already produces a single artifact)");
             System.exit(1);
             return;
         }
@@ -178,7 +178,7 @@ final class CmdBuild {
         int androidTarget = AndroidProjectWriter.DEFAULT_TARGET_SDK;
         if (minSdkArg != null || targetSdkArg != null) {
             if (target != Target.ANDROID) {
-                System.err.println("build: --min-sdk/--target-sdk só se aplicam a --target android");
+                System.err.println("build: --min-sdk/--target-sdk only apply to --target android");
                 System.exit(1);
                 return;
             }
@@ -186,7 +186,7 @@ final class CmdBuild {
             androidTarget = parseSdk(targetSdkArg, "--target-sdk", AndroidProjectWriter.DEFAULT_TARGET_SDK);
             if (androidMin > androidTarget) {
                 System.err.println("build: --min-sdk (" + androidMin
-                        + ") não pode ser maior que --target-sdk (" + androidTarget + ")");
+                        + ") cannot be greater than --target-sdk (" + androidTarget + ")");
                 System.exit(1);
                 return;
             }
@@ -271,13 +271,13 @@ final class CmdBuild {
         // ignorar a flag em silêncio e devolver um APK como se fosse AAB.
         if (aab) {
             if (target != Target.ANDROID) {
-                System.err.println("build: --aab só se aplica a --target android");
+                System.err.println("build: --aab only applies to --target android");
                 System.exit(1);
                 return;
             }
-            System.err.println("build: --aab: App Bundle (AAB) ainda não é gerado —"
-                    + " requer bundletool (fora do build-tools). O projeto foi gerado;"
-                    + " use --apk ou o bundletool manualmente"
+            System.err.println("build: --aab: App Bundle (AAB) is not generated yet —"
+                    + " requires bundletool (outside build-tools). The project was generated;"
+                    + " use --apk or bundletool manually"
                     + " (docs/targets/KOFANDROID.md)");
             System.exit(1);
         }
@@ -299,8 +299,8 @@ final class CmdBuild {
             n = -1;
         }
         if (n < 1 || n > 99) {
-            System.err.println("build: " + flag + " inválido: '" + value
-                    + "' (esperado inteiro de 1 a 99)");
+            System.err.println("build: " + flag + " invalid: '" + value
+                    + "' (expected integer 1..99)");
             System.exit(1);
         }
         return n;
@@ -391,14 +391,14 @@ final class CmdBuild {
                                 && Files.isExecutable(p)).findFirst().orElse(null);
                     }
                 }
-                if (bin == null || !Files.exists(bin)) { System.err.println("print-sizes: binário nativo não encontrado em " + out); return; }
+                if (bin == null || !Files.exists(bin)) { System.err.println("print-sizes: native binary not found in " + out); return; }
                 System.out.println("# " + target + " " + bin);
                 System.out.println(dev.kof.compiler.ArtifactSize.toJson(
                         dev.kof.compiler.ArtifactSize.elf(bin)));
             } else if (target == Target.JS) {
                 System.out.println("{\"jsBytes\":" + dev.kof.compiler.ArtifactSize.jsBytes(out) + "}");
             } else {
-                System.out.println("# print-sizes: " + target + " é lazy/on-demand — sem artefato único (JVM classes separadas)");
+                System.out.println("# print-sizes: " + target + " is lazy/on-demand — no single artifact (separate JVM classes)");
             }
         } catch (IOException e) {
             System.err.println("print-sizes: " + e.getMessage());
@@ -416,13 +416,13 @@ final class CmdBuild {
                                           String keypass, String keyalias) {
         String androidHome = System.getenv("ANDROID_HOME");
         if (androidHome == null || androidHome.isBlank()) {
-            System.err.println("--apk: ANDROID_HOME não definido; gere o projeto e use 'mvn verify'");
+            System.err.println("--apk: ANDROID_HOME not set; generate the project and use 'mvn verify'");
             return false;
         }
         Path bt = Path.of(androidHome, "build-tools", "34.0.0");
         Path platformJar = Path.of(androidHome, "platforms", "android-" + targetSdk, "android.jar");
         if (!Files.isExecutable(bt.resolve("aapt2"))) {
-            System.err.println("--apk: build-tools 34.0.0 não encontrado em " + bt);
+            System.err.println("--apk: build-tools 34.0.0 not found in " + bt);
             return false;
         }
         Path build = projDir.resolve("target");
@@ -470,10 +470,10 @@ final class CmdBuild {
             sign.add(build.resolve("kof-app.apk").toString());
             sign.add(apkDir.resolve("aligned.apk").toString());
             run(sign, projDir);
-            System.out.println("APK gerado: " + build.resolve("kof-app.apk"));
+            System.out.println("APK built: " + build.resolve("kof-app.apk"));
             return true;
         } catch (Exception e) {
-            System.err.println("pipeline apk falhou: " + e.getMessage());
+            System.err.println("APK pipeline failed: " + e.getMessage());
             return false;
         }
     }

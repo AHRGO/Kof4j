@@ -184,7 +184,7 @@ class EditorIntegrationTest {
         bo.reset();
         assertEquals(0, CmdEditor.run(new String[]{"editor", "install", "neovim"}, ctx, home,
                 new BufferedReader(new StringReader("")), out, out));
-        assertTrue(bo.toString(StandardCharsets.UTF_8).contains("já atualizado"), bo.toString());
+        assertTrue(bo.toString(StandardCharsets.UTF_8).contains("already up to date"), bo.toString());
     }
 
     @Test

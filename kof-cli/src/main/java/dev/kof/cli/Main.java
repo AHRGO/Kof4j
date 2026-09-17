@@ -51,7 +51,7 @@ public final class Main {
         System.out.println("  run <file.kf> [--target jvm|native|js|native.risc|native.arm|android] [--release] [args...]");
         System.out.println("  serve <file.kf> [--port <port>] [--host <host>]");
         System.out.println("  check <file.kf|dir> [--json]   type-check without emitting output");
-        System.out.println("  script <file.ks|kf> [--target jvm|native|js]   execução direta KofScript (JVM/Native/JS, diagnostics com file:line)");
+        System.out.println("  script <file.ks|kf> [--target jvm|native|js]   direct KofScript execution (JVM/Native/JS, diagnostics with file:line)");
         System.out.println("  repl                         REPL incremental KofScript (type 'exit' to quit)");
         System.out.println("  test <file.kf|dir> [--target jvm|native|js]   run programs, PASS/FAIL by exit code");
         System.out.println("  bench [paths...] [--target jvm|native|js] [--iterations N] [--warmup N] [--baseline <file>]");
@@ -64,8 +64,8 @@ public final class Main {
         System.out.println("  translate <file.java> [--output <file.kf>]    Java subset -> Kof source");
         System.out.println("  compare <legacy.class|jar> <file.kf> [--stdin <s>] [--arg <v>] [--json]   differential test");
         System.out.println("  migrate <file.class|java> [--output <file.kf>] [--json]   migrate + traceable report");
-        System.out.println("  config gen <file.kf|dir> [--target jvm|native|js] [--output <arquivo>]");
-        System.out.println("                          gera template kof.config a partir das chaves config.* do código");
+        System.out.println("  config gen <file.kf|dir> [--target jvm|native|js] [--output <file>]");
+        System.out.println("                          generate a kof.config template from the config.* keys in the code");
         System.out.println("  info [--json]                environment and platform report");
         System.out.println("  lsp                          Language Server (stdio, LSP protocol)");
         System.out.println("  install <dir>                install this build as a distribution");
@@ -147,14 +147,14 @@ public final class Main {
     }
 
     /**
-     * kof config gen <file.kf|dir> [--target jvm|native|js] [--output <arquivo>]
+     * kof config gen <file.kf|dir> [--target jvm|native|js] [--output <file>]
      * (docs/stdlib/stdlib-config.md §8.2 P3): compila (JVM, só análise) e gera um
      * template kof.config com as chaves descobertas em compile-time.
      * Defaults viram comentário; required sem default vira linha ativa.
      */
     private static void config(String[] args) {
         if (args.length < 3 || !"gen".equals(args[1])) {
-            System.err.println("usage: kof config gen <file.kf|dir> [--target jvm|native|js] [--output <arquivo>]");
+            System.err.println("usage: kof config gen <file.kf|dir> [--target jvm|native|js] [--output <file>]");
             System.exit(1);
             return;
         }
@@ -197,7 +197,7 @@ public final class Main {
                 System.out.print(template);
             }
             if (driver.discoveredConfigKeys().isEmpty()) {
-                System.err.println("(nenhuma chave config.* literal encontrada no código)");
+                System.err.println("(no literal config.* key found in the code)");
             }
         } catch (IOException e) {
             System.err.println("error: " + e.getMessage());
@@ -215,7 +215,7 @@ public final class Main {
             Files.createDirectories(dir);
             Path src = dir.resolve("main.kf");
             if (Files.exists(src)) {
-                System.err.println("init: " + src + " já existe");
+                System.err.println("init: " + src + " already exists");
                 return 1;
             }
             Files.writeString(src, """
@@ -232,8 +232,8 @@ public final class Main {
                     }
                     """);
             Files.writeString(dir.resolve(".gitignore"), "target/\n*.log\n");
-            System.out.println("criado em " + dir.toAbsolutePath().normalize()
-                    + ":\n  main.kf\n  tests/smoke.kf\n  .gitignore\n\npróximos passos:\n  kof run " + src + "\n  kof test " + dir.resolve("tests"));
+            System.out.println("created at " + dir.toAbsolutePath().normalize()
+                    + ":\n  main.kf\n  tests/smoke.kf\n  .gitignore\n\nnext steps:\n  kof run " + src + "\n  kof test " + dir.resolve("tests"));
             return 0;
         } catch (Exception e) {
             System.err.println("init: " + e.getMessage());

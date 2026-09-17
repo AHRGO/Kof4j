@@ -91,11 +91,11 @@ final class Deps {
     private static int init(String[] args) throws IOException {
         Path file = depsFile(args);
         if (Files.exists(file)) {
-            System.err.println("deps: " + file + " já existe");
+            System.err.println("deps: " + file + " already exists");
             return 1;
         }
         Files.writeString(file, "");
-        System.out.println("criado " + file + " (vazio) — adicione com: kof deps add <g:a:v>");
+        System.out.println("created " + file + " (empty) — add with: kof deps add <g:a:v>");
         return 0;
     }
 
@@ -106,14 +106,14 @@ final class Deps {
         }
         String dep = normalize(args[2]);
         if (dep == null) {
-            System.err.println("deps: formato esperado group:artifact:version (ex.: com.h2database:h2:2.2.224)");
+            System.err.println("deps: expected format group:artifact:version (e.g. com.h2database:h2:2.2.224)");
             return 1;
         }
         Path file = depsFile(args);
         if (!Files.exists(file)) Files.writeString(file, "");
         List<String> lines = new ArrayList<>(Files.readAllLines(file));
         if (lines.contains(dep)) {
-            System.out.println("já declarada: " + dep);
+            System.out.println("already declared: " + dep);
             return 0;
         }
         lines.add(dep);
@@ -129,7 +129,7 @@ final class Deps {
         }
         Path file = depsFile(args);
         if (!Files.exists(file)) {
-            System.err.println("deps: " + file + " não existe");
+            System.err.println("deps: " + file + " does not exist");
             return 1;
         }
         List<String> lines = new ArrayList<>(Files.readAllLines(file));
@@ -138,7 +138,7 @@ final class Deps {
         if (removed) {
             System.out.println("removida: " + args[2]);
         } else {
-            System.err.println("deps: '" + args[2] + "' não declarada");
+            System.err.println("deps: '" + args[2] + "' not declared");
             return 1;
         }
         return 0;
@@ -147,12 +147,12 @@ final class Deps {
     private static int list(String[] args) throws IOException {
         Path file = depsFile(args);
         if (!Files.exists(file)) {
-            System.err.println("deps: " + file + " não existe (rode: kof deps init)");
+            System.err.println("deps: " + file + " does not exist (run: kof deps init)");
             return 1;
         }
         List<String> lines = Files.readAllLines(file);
         if (lines.isEmpty()) {
-            System.out.println("(nenhuma dependência declarada em " + file + ")");
+            System.out.println("(no dependency declared in " + file + ")");
         } else {
             for (String l : lines) {
                 if (!l.isBlank()) System.out.println(l);
@@ -164,7 +164,7 @@ final class Deps {
     private static int resolve(String[] args) throws IOException {
         Path file = depsFile(args);
         if (!Files.exists(file)) {
-            System.err.println("deps: " + file + " não existe (rode: kof deps init)");
+            System.err.println("deps: " + file + " does not exist (run: kof deps init)");
             return 1;
         }
         List<String> lines = Files.readAllLines(file);
@@ -175,7 +175,7 @@ final class Deps {
             declaredAny = true;
             String[] ga = l.split(":");
             if (ga.length != 3) {
-                missing.add(l + " (formato inválido)");
+                missing.add(l + " (invalid format)");
                 continue;
             }
             try {
@@ -185,7 +185,7 @@ final class Deps {
             }
         }
         if (!missing.isEmpty()) {
-            System.err.println("deps: resolução incompleta:");
+            System.err.println("deps: incomplete resolution:");
             for (String m : missing) System.err.println("  " + m);
             return 1;
         }
@@ -199,12 +199,12 @@ final class Deps {
                 try {
                     Files.write(file.getParent().resolve(LOCK_FILE), mvnClosure(file.getParent(), lines));
                 } catch (Exception e) {
-                    System.err.println("deps: resolução transitiva falhou (" + e.getMessage()
+                    System.err.println("deps: transitive resolution failed (" + e.getMessage()
                             + "); classpath fica SÓ com as diretas (sem kofdeps.lock)");
                 }
             } else {
-                System.err.println("deps: `mvn` não está no PATH — dependências TRANSITIVAS"
-                        + " não resolvidas (kofdeps.lock ausente; instale Maven p/ fechar o grafo)");
+                System.err.println("deps: `mvn` is not on PATH — TRANSITIVE dependencies"
+                        + " unresolved (kofdeps.lock missing; install Maven to close the graph)");
             }
         }
         System.out.println(classpath(file.getParent()));
@@ -289,7 +289,7 @@ final class Deps {
                     .redirectErrorStream(true).start();
             String log = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
             if (p.waitFor() != 0 || !Files.exists(cpFile)) {
-                throw new IOException("mvn " + (log.isBlank() ? "sem saída"
+                throw new IOException("mvn " + (log.isBlank() ? "no output"
                         : log.substring(0, Math.min(log.length(), 400))));
             }
             String sep = System.getProperty("os.name", "").toLowerCase().contains("win") ? ";" : ":";
@@ -358,7 +358,7 @@ final class Deps {
             HttpResponse<Path> resp = HTTP.send(req, HttpResponse.BodyHandlers.ofFile(jar));
             if (resp.statusCode() != 200) {
                 Files.deleteIfExists(jar);
-                throw new IOException("HTTP " + resp.statusCode() + " para " + url);
+                throw new IOException("HTTP " + resp.statusCode() + " for " + url);
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();

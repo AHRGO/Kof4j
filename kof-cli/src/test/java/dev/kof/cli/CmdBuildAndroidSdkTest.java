@@ -82,8 +82,10 @@ class CmdBuildAndroidSdkTest {
         Path src = writeApp(dir);
         Cli r = cli(dir, "build", src.toString(), "--target", "android", "--min-sdk", "abc");
         assertNotEquals(0, r.exit(), "sdk invalido deve recusar (R6):\n" + r.out());
-        assertTrue(r.out().contains("--min-sdk") && r.out().contains("inválido"),
+        assertTrue(r.out().contains("--min-sdk") && r.out().contains("invalid"),
                 "diagnostico honesto esperado:\n" + r.out());
+        assertTrue(!r.out().contains("inválido"),
+                "D-DIAG-EN: o diagnostico nao pode mais ter texto PT:\n" + r.out());
     }
 
     @Test
@@ -100,6 +102,8 @@ class CmdBuildAndroidSdkTest {
         Cli r = cli(dir, "build", src.toString(), "--target", "android",
                 "--min-sdk", "35", "--target-sdk", "21");
         assertNotEquals(0, r.exit(), "min>target deve recusar (R6):\n" + r.out());
-        assertTrue(r.out().contains("não pode ser maior"), "diagnostico honesto esperado:\n" + r.out());
+        assertTrue(r.out().contains("cannot be greater"), "diagnostico honesto esperado:\n" + r.out());
+        assertTrue(!r.out().contains("não pode ser maior"),
+                "D-DIAG-EN: o diagnostico nao pode mais ter texto PT:\n" + r.out());
     }
 }
