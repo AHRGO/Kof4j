@@ -43,7 +43,7 @@ public final class Main {
             case "version" -> {
                 // R6: `version` nao aceita flags — nao ignorar em silencio.
                 if (args.length > 1 && args[1].startsWith("-")) {
-                    System.err.println("version: flag desconhecida: " + args[1] + " (usage: kof version)");
+                    System.err.println("version: unknown flag: " + args[1] + " (usage: kof version)");
                     System.exit(1);
                 }
                 System.out.println("kof " + KofVersion.version());
@@ -55,7 +55,7 @@ public final class Main {
     private static void printUsage() {
         System.out.println("usage: kof <command>");
         System.out.println("  build <dir|file.kf> [--target jvm|native|js|native.risc|native.arm|android] [--output <dir>] [--release] [--apk] [--aab] [--min-sdk <n>] [--target-sdk <n>]");
-        System.out.println("  run <file.kf> [--target jvm|native|js|native.risc|native.arm|android] [--release] [args...]");
+        System.out.println("  run <file.kf> [--target jvm|native|js|native.risc|native.arm|android] [--backend <t>] [--frontend <t>] [--release] [--deps] [args...]");
         System.out.println("  serve <file.kf> [--port <port>] [--host <host>] [--backend <t>] [--frontend <t>]");
         System.out.println("  check <file.kf|dir> [--target <t>] [--json]   type-check without emitting output");
         System.out.println("  script <file.ks|kf> [--target jvm|native|js]   direct KofScript execution (JVM/Native/JS, diagnostics with file:line)");
@@ -247,7 +247,7 @@ public final class Main {
         // R6: `kof init` nao aceita flags — um `--flag` seria tratado como nome
         // de diretorio e criaria lixo (`--bogus/`). Recusa honesta.
         if (args.length > 1 && args[1].startsWith("-")) {
-            System.err.println("init: flag desconhecida: " + args[1]
+            System.err.println("init: unknown flag: " + args[1]
                     + " (usage: kof init [dir])");
             return 1;
         }
@@ -333,7 +333,7 @@ public final class Main {
         for (int i = 1; i < args.length; i++) {
             if (args[i].startsWith("-") && !"--json".equals(args[i])
                     && !"-h".equals(args[i]) && !"--help".equals(args[i])) {
-                System.err.println("info: flag desconhecida: " + args[i] + " (aceita: --json)");
+                System.err.println("info: unknown flag: " + args[i] + " (accepts: --json)");
                 System.exit(1);
             }
         }

@@ -252,7 +252,7 @@ final class CmdBuild {
                     driver.setExternalClasspath(externalEntries);
                 }
             } catch (IOException e) {
-                System.err.println("build: falha ao ler kofdeps: " + e.getMessage());
+                System.err.println("build: failed to read kofdeps: " + e.getMessage());
                 return;
             }
         }
@@ -287,7 +287,7 @@ final class CmdBuild {
                 Path jar = buildFatJar(backendOut, externalEntries);
                 System.out.println("fat jar → " + jar);
             } catch (IOException e) {
-                System.err.println("build: falha ao gerar fat jar: " + e.getMessage());
+                System.err.println("build: failed to generate fat jar: " + e.getMessage());
                 System.exit(1);
                 return;
             }

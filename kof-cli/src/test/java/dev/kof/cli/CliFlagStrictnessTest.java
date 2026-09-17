@@ -40,7 +40,7 @@ class CliFlagStrictnessTest {
     void initRejectsFlagAndDoesNotCreateJunkDir(@TempDir Path dir) throws Exception {
         Cli r = cli(dir, "init", "--bogus-xyz");
         assertNotEquals(0, r.exit(), "init --flag deve recusar (R6):\n" + r.out());
-        assertTrue(r.out().contains("desconhecida"), r.out());
+        assertTrue(r.out().contains("unknown flag"), r.out());
         assertFalse(Files.exists(dir.resolve("--bogus-xyz")),
                 "nao pode criar diretorio com nome de flag");
     }
@@ -58,7 +58,7 @@ class CliFlagStrictnessTest {
     void infoRejectsUnknownFlag(@TempDir Path dir) throws Exception {
         Cli r = cli(dir, "info", "--bogus");
         assertNotEquals(0, r.exit(), "info --flag deve recusar (R6):\n" + r.out());
-        assertTrue(r.out().contains("desconhecida"), r.out());
+        assertTrue(r.out().contains("unknown flag"), r.out());
     }
 
     @Test
@@ -72,7 +72,7 @@ class CliFlagStrictnessTest {
     void versionRejectsUnknownFlag(@TempDir Path dir) throws Exception {
         Cli r = cli(dir, "version", "--bogus");
         assertNotEquals(0, r.exit(), "version --flag deve recusar (R6):\n" + r.out());
-        assertTrue(r.out().contains("desconhecida"), r.out());
+        assertTrue(r.out().contains("unknown flag"), r.out());
     }
 
     @Test

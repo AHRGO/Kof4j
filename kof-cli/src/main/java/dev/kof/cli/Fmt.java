@@ -61,7 +61,7 @@ final class Fmt {
                 System.err.println("fmt " + f + ": " + e.getMessage());
             }
         }
-        if (write) System.out.println("fmt: " + changed + " arquivo(s) reformatado(s)");
+        if (write) System.out.println("fmt: " + changed + " file(s) reformatted");
         return 0;
     }
 
