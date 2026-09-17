@@ -192,6 +192,7 @@ public final class StatementLowerer {
                 LabelId elseLabel = LabelId.create();
                 LabelId endLabel = LabelId.create();
                 LabelId thenLabel = LabelId.create();
+                ops.add(new KofStatementIf(thenLabel)); // §267
                 if (ifStmt.condition() instanceof BinaryExpr bin && driver.isComparisonShortcut(bin, locals)) {
                     localIdx = driver.emitComparisonShortcut(bin, ops, owner, localIdx, locals);
                     ops.add(new KofConditionalJump(driver.mapComparison(bin.operator()), driver.comparisonOperandType(bin, locals), thenLabel, elseLabel));

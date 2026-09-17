@@ -11,6 +11,7 @@ import dev.kof.compiler.KofOperation;
 import dev.kof.compiler.KofPop;
 import dev.kof.compiler.KofReturn;
 import dev.kof.compiler.KofReturnVoid;
+import dev.kof.compiler.KofStatementIf;
 import dev.kof.compiler.KofStoreLocal;
 import dev.kof.compiler.KofThrow;
 import dev.kof.compiler.KofTryEnd;
@@ -124,6 +125,18 @@ List<JsIr.JsStatement> parseStatements(MethodCtx ctx, int[] pos,
      */
 List<JsIr.JsStatement> parseStatement(MethodCtx ctx, int[] pos) {
         KofOperation op = ctx.ops.get(pos[0]);
+        if (op instanceof KofStatementIf si) {
+            // §267: `if` de STATEMENT (marcado no lowering). Consome o marcador
+            // e registra o trueLabel do CJump do ramo; o dispatcher de
+            // statements (em JsExpressionStatementParser) pula a dobra em
+            // if-expressao quando bate nesse label (a ternária engoliria o
+            // statement seguinte = leitura obsoleta, §267). Delega no
+            // dispatcher de expressao, que ve a condicao + o CJump e cai em
+            // parseIfBody (sem tryParseIfExpr).
+            ctx.statementIfLabels.add(si.branchTrueLabel());
+            pos[0]++;
+            return p.expr.parseExpressionStatement(ctx, pos);
+        }
         if (op instanceof KofReturnVoid) {
             pos[0]++;
             return List.of(new JsIr.JsReturn(null));

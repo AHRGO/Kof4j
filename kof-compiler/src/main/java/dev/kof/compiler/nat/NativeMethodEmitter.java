@@ -18,6 +18,7 @@ import dev.kof.compiler.KofReturn;
 import dev.kof.compiler.KofReturnVoid;
 import dev.kof.compiler.KofThrow;
 import dev.kof.compiler.KofContinueLabel;
+import dev.kof.compiler.KofStatementIf;
 import dev.kof.compiler.KofTryEnd;
 import dev.kof.compiler.KofTryStart;
 import dev.kof.compiler.KofUnary;
@@ -295,6 +296,9 @@ final class NativeMethodEmitter {
                 sb.append("    movq %fs:kof_exc_chain@tpoff, %rcx\n");
                 sb.append("    movq %rcx, 24(%rsp)\n");
                 sb.append("    movq %rsp, %fs:kof_exc_chain@tpoff\n");
+            }
+            case KofStatementIf _ -> {
+                // §267: marcador de if de statement (uso exclusivo do dispatcher JS) — no-op
             }
             case KofContinueLabel _ -> {
                 // §266: marcador estrutural (fronteira corpo/update do for) — no-op

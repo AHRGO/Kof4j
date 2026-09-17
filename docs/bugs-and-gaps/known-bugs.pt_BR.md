@@ -8059,7 +8059,7 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
 > 1969/0/0/169; o `ReorderList` da lib voltou da função-auxiliar p/ a forma
 > `if` direta no loop e renderiza não-vazio no Chrome
 > (`scripts/browser-reorder.mjs`). **Face irmã DISTINTA achada durante esta
-> unidade (INDEPENDENTE de loop, ainda ABERTA): §267** abaixo.
+> unidade (INDEPENDENTE de loop, ✅ CORRIGIDA 17/09 na unidade SEGUINTE): §267** abaixo.
 
 - **Sintoma (medido 17/09, headless `kof run --target=js`):** qualquer `while`
   (ou `for`) cujo corpo tem um `if`/ternário SEGUIDO de mais statements
@@ -8100,60 +8100,53 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
   ambiguidade estava no IR, então a correção adiciona a informação estrutural
   que faltava.
 
-## §267 — O KofJS dobra um `if/else` de NÍVEL-STATEMENT (cada ramo UM assignment à mesma var) numa EXPRESSÃO ternária, e o `let` do statement SEGUINTE é emitido ANTES da ternária rodar → leitura obsoleta (valor errado silencioso; independente de loop) — catalogado 17/09 (lane development, dono = 192.168.100.18, achado como face irmã ao corrigir o §266)
+## §267 — O KofJS dobrava um `if/else` de NÍVEL-STATEMENT (cada ramo UM assignment à mesma var) numa EXPRESSÃO ternária, e o `let` do statement SEGUINTE era emitido ANTES da ternária rodar → leitura obsoleta (valor errado silencioso; independente de loop) — ✅ CORRIGIDO 17/09 (lane development, dono = 192.168.100.18, achado como face irmã ao corrigir o §266)
 
-- **Sintoma (medido 17/09, headless `kof run --target=js`; PRESENTE na
-  toolchain PRISTINE — NÃO é regressão do §266):** um `if`/`else` cujos ramos
-  fazem CADA UM UMA atribuição à MESMA variável, em posição de STATEMENT,
-  seguido de um statement que lê essa variável, DESORDENA as leituras: o
-  inicializador do statement seguinte sobe para antes da ternária dobrada, então
-  lê o valor da variável ANTES do `if`. NÃO precisa de loop (independente de
-  loop — é isto que o distingue do §266). Repro:
+> **CORREÇÃO (17/09):** mesma lição do §266 — a ambiguidade está no IR (um
+> `if` de statement e uma if-expressão baixam para ops IDÊNTICOS: `[cond],
+> CJump, Label, ramo, Jump, Label, ramo, Label`), então a INTENÇÃO é marcada no
+> lowering: `StatementLowerer.IfStmt` emite `KofStatementIf(thenLabel)` (o
+> TRUE label do ponto-de-ramo) antes da condição. O dispatcher de statements do
+> JS consome o marcador e registra o label em `MethodCtx.statementIfLabels`;
+> quando o ramo CJump do `JsExpressionStatementParser` acha o SEU trueLabel no
+> conjunto (remove = uma vez só, labels são monótonos), ele PULA a dobra
+> `tryParseIfExpr` e cai direto em `parseIfBody`. Um LABEL era OBRIGATÓRIO (não
+> um booleano): medido 17/09, `if (if(c) true else false) {...}` — o primeiro
+> CJump que o dispatcher alcança pertence à if-EXPRRESSÃO NESTED, e um booleano
+> one-shot era comido por ele (a expressão aninhada então rota errado por
+> `parseIfBody` → COMP002 stack underflow). If-expressões reais (baixadas por
+> `IfExpr`, nunca marcadas) continuam dobrando, inclusive aninhadas na condição
+> OU no ramo de um `if` de statement. O marcador é no-op em JVM/Native/Script
+> (`case KofStatementIf _ -> {}` explícito, mesmos sítios do §266). **Prova:**
+> `JsIfFoldStatementE2ETest` 8/8 runBoth JVM+JS — o repro exato, if-expressao
+> real ainda dobra (nao-regressão), condições compostas `&&`/`||`, if-expr
+> aninhada na condição E nos ramos, if/else em loop com leitura na cauda (o
+> case-G do §266 que motivou esta unidade), if de statement aninhado, ramos com
+> múltiplas atribuições; suíte completa 1990/0/0/169.
+
+- **Sintoma (medido 17/09; PRESENTE na toolchain PRISTINE — NÃO é regressão do
+  §266):** um `if`/`else` cujos ramos fazem CADA UM UMA atribuição à MESMA
+  variável, em posição de STATEMENT, seguido de um statement que lê essa
+  variável, desordenava as leituras: o inicializador do statement seguinte era
+  içado para antes da ternária dobrada, então lia o valor da variável ANTES do
+  `if`. NÃO precisava de loop (independente de loop — o que o distinguia do
+  §266). Repro:
   ```
   var t = 2
   var gv = 0
-  if (t % 2 == 0) { gv = t * 10 } else { gv = t * 10 + 1 }   // gv deveria virar 20
-  var gt = gv + 1                                             // deveria ser 21
-  println(gt)          // JVM: 21; JS: 1  (valor errado silencioso)
+  if (t % 2 == 0) { gv = t * 10 } else { gv = t * 10 + 1 }   // gv vira 20
+  var gt = gv + 1                                             // deve ser 21
+  println(gt)          // CORRIGIDO: JS 21 == JVM == Script == Native
   ```
-  JS emitido (medido):
-  ```
-  let gv = 0;
-  let gt = ((gv + 1) | 0);           // <- gt sai do gv ANTES-do-if = 0 → 1
-  (((!(t % 2)) ? (gv = 20) : (gv = 21)), kofListAdd(g, gt));
-  ```
-- **Causa raiz (arquivo:linha):** `JsControlFlowParser.tryParseIfExpr` reconhece
-  `Label(true), <expr>, Jump, Label(false), <expr>, Label(end)` e dobra numa
-  expressão `JsConditional` — VÁLIDO para um ternário real, mas ERRADO em
-  posição de statement quando os ramos são assignments cujo valor é descartado.
-  A expressão resultante vaza na pilha de expressões e é colada num
-  `JsSequence` com o statement SEGUINTE (`(ternária, próximo)`); o `let`/decl do
-  próximo statement sai como statement SEPARADO ANTES daquela sequência (ordem
-  de preamble do JsExpressionParser), então qualquer leitura da variável
-  atribuída no if acontece antes de a ternária executá-la.
-- **Correção certa (próxima unidade; NÃO tentada — a face-de-loop do §266 está
-  fechada e esta é uma região densa-em-casos-especiais DIFERENTE):** um `if` de
-  nível-statement NÃO deve ser dobrado em if-expressão; `tryParseIfExpr` deve
-  recusar a dobra quando os ramos são statements de atribuição sem consumidor do
-  valor (isto é, quando alcançado pelo dispatcher de statements, não de contexto
-  de expressão), OU a dobra deve preservar as fronteiras de statement para que o
-  `let` do próximo statement saia DEPOIS da ternária. Q0: o repro acima imprime
-  21 em JS == JVM == Script == Native; um loop de `view` que atribui uma var-marca
-  num `if/else` e a lê na linha seguinte renderiza corretamente no Chrome. Q1:
-  regressão `JsIfExprFoldStatementParityE2ETest` (statement if/else ambos-assign
-  + leitura seguinte; if dentro de loop; if dentro de função; if/else aninhado; e
-  o caso ternária-ainda-expressão NÃO pode regredir — `x = a ? b : c` ainda dobra).
-  RISCO: `tryParseIfExpr` está na fronteira compartilhada expressão/statement em
-  que as faces §147/§149 se apoiam — suíte completa obrigatória, orçamento
-  multi-tick. Até landar, esta forma é um programa compile-legítimo mas
-  SILENCIOSAMENTE ERRADO no JS (regra 6) — catalogado aqui, NÃO consertado pela
-  metade.
-- **Workaround em campo:** não ler uma variável atribuída-por-if num statement
-  que a dobra possa içar acima da ternária — atribua-a a uma variável DIFERENTE,
-  ou reestruture para que os ramos do `if/else` sejam blocos de statements
-  completos (não assignments únicos que o dobrador colapsa). O `ReorderList` da
-  lib usa uma FUNÇÃO auxiliar para a marca da linha (`reorderMark`), que é
-  parseada à parte e contorna as DUAS faces (loop §266 e dobra §267) de uma vez.
+- **Causa raiz (arquivo:linha, agora corrigida):** `JsControlFlowParser.tryParseIfExpr`
+  era tentada pelo dispatcher de STATEMENTS em todo `CJump/Label` que encontrava
+  (o ramo if-ou-if-expr do `JsExpressionStatementParser`). Quando a dobra
+  acertava um `if` de statement, o `JsConditional` resultante era colado na
+  pilha de expressões e fundido com o statement SEGUINTE num `JsSequence`,
+  enquanto o `let` daquele statement saía no preamble ANTES da sequência — então
+  a leitura corria na frente da atribuição. A posteriori, não há discriminador
+  de janela de ops entre isto e um legítimo `var x = if (c) a else b` (IR
+  idêntico) — daí o marcador estrutural.
 
 ### §194 — `for (var c in "abc")` (for-in sobre String/não-coleção) era ACEITO e quebrava de um jeito por target (JVM `VerifyError`, Native SIGSEGV, Script crash, JS iterava) — ✅ CORRIGIDO 14/09 (SEM058; triagem da fila #145 da lane bugs-and-gaps `192.168.100.15`)
 
@@ -9478,7 +9471,7 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
   doc×Set.of).
 > | **§265 ✅ CORRIGIDO 16/09 (lane development `.18`)** | Handlers web do KofJS: `status(201, body)`/`headerSet()` eram no-ops SILENCIOSOS — `JsRuntimeOps.handleRuntimeOp` tinha um ramo de colapso (`status→args.get(1)`) que DESCARTAVA a chamada do `invoke()` emitido (decisivo), e `kofWebStatus` lia `kofWebRequest.response` (campo que nunca existiu; o `response` vive no `ctx`). JVM: `201`+`X-Custom`; JS: `200`, header descartado (R6; a célula "JS ✅ 08/27" do ecosystem-coverage era false-green — suporte em compile ≠ efeito em runtime). Conserto = remover os ramos de colapso (o roteamento correto já existia abaixo) + deferir `_status`/`_headerQueue` aplicados pelo pump antes do envio (o HttpServer do JDK exige headers pré-envio), idem thread-local do JVM. Prova: `KofWebJsE2ETest.jsWebStatusAndHeaderReachTheWire` (VERMELHO pré-fix, medido `return "made"` no JS emitido + `200` no fio vivo). `status/header` do Native fica `– WEB001` (honesto).
 > | **§266 ✅ CORRIGIDO 17/09 (lane development `.18`)** | Corpo de loop com `if` seguido de statements miscompilava SÓ no JS (locais escapavam p/ a cláusula `for(;…;update)`) — `ReferenceError` headless, UI VAZIA SILENCIOSA em `Component.view` (catch do kofUiRender). Correção = `KofContinueLabel(label, loopStart)` estrutural emitido no lowering; o reconstructor consome o marcador, a varredura-para-trás ambígua + o guess `looksLikeContinueLabel` SAÍRAM; split `JsTryParser` mantém o arquivo <600. Prova: `JsLoopIfTailE2ETest` 7/7 + ReorderList da lib de volta à forma `if` direta no Chrome. O catch do `kofUiRender` AINDA engole throws do view (a amplificação alto-headless/UI-muda permanece p/ qualquer outro crash de view). |
-> | **§267 🔴 ABERTO 17/09 (lane development `.18`; face irmã achada durante o §266)** | `if/else` de nível-statement cujos DOIS ramos são um assignment à mesma var dobra numa ternária expressão (`tryParseIfExpr`) e o `let` do statement SEGUINTE sobe p/ acima dela → leitura obsoleta, VALOR ERRADO SILENCIOSO no JS (JVM/Script corretos). INDEPENDENTE de loop (diferente do §266). Repro + design da correção no §267. |
+> | **§267 ✅ CORRIGIDO 17/09 (lane development `.18`; face irmã achada durante o §266)** | `if/else` de nível-statement cujos ramos são assignments dobrou numa ternária expressão (`tryParseIfExpr`) e o statement SEGUINTE teve seu `let` içado p/ cima dela → leitura obsoleta, VALOR ERRADO SILENCIOSO no JS. Correção = marcador `KofStatementIf(thenLabel)` no lowering (amarrado ao label — um booleano seria comido pelo CJump de uma if-expr NESTED na condição); if-expressões reais continuam dobrando. Prova: `JsIfFoldStatementE2ETest` 8/8 + suíte 1990/0/0/169. |
 
 ### §265 — Handlers web do KofJS: `status(code, body)` e `headerSet(name, value)` eram no-ops SILENCIOSOS (o ramo de colapso em `handleRuntimeOp` descartava a chamada do handler emitido; e `kofWebStatus` lia um campo `kofWebRequest.response` que nunca existiu) — a doc dizia "JS 08/27 ✅" mas o JS devolvia 200 e descartava o header — ✅ CORRIGIDO 16/09 (lane development, dono = 192.168.100.18)
 
