@@ -40,6 +40,8 @@ public class SemanticAnalyzer {
     private final java.util.Set<String> interfaceNames = new java.util.HashSet<>();
     /** SG-017 (SEM041): classes declaradas `abstract` — `new A()` vira erro compile-time. */
     private final java.util.Set<String> abstractClasses = new java.util.HashSet<>();
+    /** #339 (SEM070): classes declaradas `final` — `class D extends F` vira erro compile-time. */
+    private final java.util.Set<String> finalClasses = new java.util.HashSet<>();
     private final Map<ExpressionNode, Type> expressionTypes = new IdentityHashMap<>();
     private final Map<MethodCallExpr, SymbolTable.MethodSymbol> resolvedMethods = new IdentityHashMap<>();
     private final Map<NewExpr, SymbolTable.ConstructorSymbol> resolvedConstructors = new IdentityHashMap<>();
@@ -221,6 +223,9 @@ public class SemanticAnalyzer {
 
 
     private void analyzeClass(ClassDeclarationNode cls) {
+        // #339/#341 — forma da classe (extends final, final+abstract) antes
+        // de qualquer análise de corpo: a JVM morreria no load.
+        ClassShapeChecks.checkClassDeclaration(this, cls);
         String prevClass = currentClassName;
         currentClassName = cls.name();
         SymbolTable classScope = classMemberScopes.get(cls.name());
@@ -291,6 +296,8 @@ public class SemanticAnalyzer {
     java.util.Set<String> interfaceNames() { return java.util.Collections.unmodifiableSet(interfaceNames); }
 
     java.util.Set<String> abstractClasses() { return java.util.Collections.unmodifiableSet(abstractClasses); }
+    /** #339 (SEM070): nomes simples das classes `final` do programa. */
+    java.util.Set<String> finalClasses() { return java.util.Collections.unmodifiableSet(finalClasses); }
     Map<ExpressionNode, Type> expressionTypes() { return java.util.Collections.unmodifiableMap(expressionTypes); }
     Map<MethodCallExpr, SymbolTable.MethodSymbol> resolvedMethods() { return java.util.Collections.unmodifiableMap(resolvedMethods); }
     Map<NewExpr, SymbolTable.ConstructorSymbol> resolvedConstructors() { return java.util.Collections.unmodifiableMap(resolvedConstructors); }
@@ -313,6 +320,7 @@ public class SemanticAnalyzer {
     void putClass(String name, SymbolTable.ClassSymbol sym) { knownClasses.put(name, sym); }
     void addInterface(String name) { interfaceNames.add(name); }
     void addAbstractClass(String name) { abstractClasses.add(name); }
+    void addFinalClass(String name) { finalClasses.add(name); }
 
     private void analyzeConstructorBody(ConstructorDeclarationNode ctor) {
         SymbolTable ctorScope = ctorScopes.get(ctor);

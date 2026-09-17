@@ -231,6 +231,8 @@ public final class SemExpressionTyper {
                                 "cannot instantiate abstract class '" + ne.typeName() + "'",
                                 "SEM041");
                     }
+                    // #340 (SEM071): interface não é instanciável — `new I()`.
+                    ClassShapeChecks.checkInstantiable(sa, ne.typeName());
                     // Inferencia dos argumentos: o efeito colateral importa
                     // (cache expressionTypes + diagnostics de SEM nas exprs), a
                     // resolucao do construtor e por aridade (constructorFor

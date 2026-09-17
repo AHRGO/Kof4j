@@ -93,6 +93,11 @@ public final class SymbolTableBuilder {
                 && cls.modifiers().contains("abstract")) {
             sa.addAbstractClass(cls.name());
         }
+        // #339 (SEM070): registra classes `final` — `class D extends F` vira erro.
+        if (decl instanceof ClassDeclarationNode cls
+                && cls.modifiers().contains("final")) {
+            sa.addFinalClass(cls.name());
+        }
     }
 
     static void defineMembers(SemanticAnalyzer sa, AstNode decl) {

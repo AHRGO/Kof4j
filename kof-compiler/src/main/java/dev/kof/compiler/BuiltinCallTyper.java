@@ -86,6 +86,8 @@ public final class BuiltinCallTyper {
                         "cannot instantiate abstract class '" + mc.methodName() + "'",
                         "SEM041");
             }
+            // #340 (SEM071): interface não é instanciável (mesma face de `A()`).
+            ClassShapeChecks.checkInstantiable(sa, mc.methodName());
             SymbolTable.ConstructorSymbol ctor = SymbolTable.constructorFor(
                     ctorClass.members(), mc.arguments().size());
             if (ctor != null) {
