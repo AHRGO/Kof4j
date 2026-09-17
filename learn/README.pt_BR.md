@@ -12,13 +12,13 @@ Kof é uma linguagem de programação compilada para múltiplas plataformas, for
 * Classes, records, interfaces, herança, virtual dispatch
 * Strings, arrays, exceptions, JSON, List\<T\> + `map/filter/reduce`, Map/Set, lambdas com capturas, `String?`, pattern `case String s` + `Point(x,y)`
 * Web server via `kof serve` + stack web nativa (`web.app()`)
-* Runtime nativo x86-64 (free-list GC `kof_free_head`) + riscv64/aarch64 placeholders + SQLite + MySQL via `kof_db`
+* Runtime nativo x86-64 + riscv64/aarch64 (free-list GC `kof_free_head` + mark-sweep) + SQLite + MySQL via `kof_db`
 * Target **KofJS**: ES Modules (GraalJS) + `kof.http` JVM+JS + Target separation (`jvm/native/native.risc/native.arm/js/kofc`)
 * **kof.ui**: Window, Label, Button (ações), Input, Column/Row, View+Style —
   renderização em webview nativo (WebKitGTK)
 * Distribuição oficial (JDK embutido, tooling, editor support)
 * CLI (26 comandos): build, run, serve, check, test, script, repl, c, fmt, config gen, bench, profile, inspect, decompile, translate, compare, migrate, debug, info, lsp, install, deps, editor, new, init, version — `kof script` (`let`→`KofScriptGlobals`, repl, --watch), `kof c` (C subset nativo-only), `kof fmt` (parser real, idempotente — 31/08)
-* kof.io: File, Path, Directory (JVM + Native) + kof.http (JVM+JS, HTTP002 Native)
+* kof.io: File, Path, Directory (JVM + Native) + kof.http (JVM + Native + JS; https/DNS ainda gaps)
 * 
 
 ## Para quem é
@@ -159,7 +159,7 @@ Native (x86-64 free-list), Native.risc, Native.arm, KofJS e KofC (0.4.0-beta).
 - Classes, records, herança, interfaces, virtual dispatch, generics (erasure), imports `a.b.C` fix (largeproj)
 - Funções (sem `fun`), lambdas com capturas, if-expr, switch com `case String s` + `Point(x,y)` destructuring, `String?`, for-in
 - Exceptions reais (JVM + Native unwinding), `assert`, `spawn` (JVM virtual threads, Native pthread — 31/08; JS event-loop — CONC003 03/09)
-- Strings (API completa), arrays, `List<T>` + `map/filter/reduce`, `Map<K,V>`/`Set<T>`, JSON, kof.io, kof.time, `kof.http` (JVM+JS), `kof_db` (SQLite+MySQL WIP)
+- Strings (API completa), arrays, `List<T>` + `map/filter/reduce`, `Map<K,V>`/`Set<T>`, JSON, kof.io, kof.time, `kof.http` (JVM+Native+JS), `kof_db` (SQLite+MySQL WIP)
 - `KofScript` (`var`/`val` no topo → `KofScriptGlobals` — sem `let`/`const`, sugar JS removido 06/09 — `kof script --repl`, `--watch`), `KofC` (`kof c <file.c>` nativo-only)
 - CLI (26 comandos): `build, run, serve, check, test, script, repl, c, fmt, config gen, bench, profile, inspect, decompile, translate, compare, migrate, debug, info, lsp, install, deps, editor, new, init, version` + `--target=jvm|native|native.risc|native.arm|js|android`
 - `kof serve` (`web.app()` nativa + API legada `handle()`; cada conexão em virtual thread), `kof test` (suíte `test "nome" {}` nos 3 targets), `kof bench`/`kof profile`/`kof inspect`/`kof debug`

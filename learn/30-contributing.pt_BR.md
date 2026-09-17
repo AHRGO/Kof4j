@@ -159,7 +159,7 @@ O projeto está em 0.4.0-beta, funcional:
 - Pattern matching (`case String s`, `Point(x,y)`) em JVM/Native/JS
 - CLI com 26 comandos (build, run, serve, check, test, script, repl, c, fmt, config gen, bench, profile, inspect, decompile, translate, compare, migrate, debug, info, lsp, install, deps, editor, new, init, version) — `--target=jvm|native|native.risc|native.arm|js|android`
 - Backend JVM via ASM — bytecode V21, exception table, virtual threads
-- Backend Nativo — ELF x86-64 estável (free-list GC, spawn/pthread, FP XMM, JSON completo, SQLite) + riscv64/aarch64 placeholders
+- Backend Nativo — ELF x86-64 + riscv64/aarch64 estáveis (free-list GC + mark-sweep, spawn/pthread, FP XMM, JSON completo, SQLite, HTTP, debug DWARF)
 - KofJS — ES Modules via GraalJS (`kof.http` via Java HttpClient interop)
 - KofScript (`let`→`KofScriptGlobals`, repl, --watch) + KofC (`kof c` nativo-only)
 - stdlib: kof.io, kof.web, kof.http, kof.security, kof.db, kof.orm, kof.ui, kof.config, kof.log, kof.cache, kof.mq
