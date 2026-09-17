@@ -629,6 +629,30 @@ class KofOrmE2ETest {
     }
 
     @Test
+    void jsUniqueConstraintRejected(@TempDir Path tempDir) throws IOException {
+        // R6: a violacao de `unique` nao pode ser silenciosa. Na sessao anterior
+        // este E2E estava BARRADO pelo ICE `catch(Throwable)` no JS (compilar
+        // quebrava); com o fix do JsTryParser ele passa a ser cobertura real da
+        // propagacao de erro da ponte KofJsOrmBridge -> catch no guest.
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, ENTITY_SRC + """
+                main() {
+                    var db = db.connect("jdbc:h2:mem:jsorm3;DB_CLOSE_DELAY=-1")
+                    orm.create<User>(db)
+                    orm.save(db, User(0, "Mel", "same@kof.dev", 30))
+                    try {
+                        orm.save(db, User(0, "Kof", "same@kof.dev", 1))
+                        println("no-error")
+                    } catch (Throwable e) {
+                        println("rejected")
+                    }
+                    db.close(db)
+                }
+                """);
+        runJs(source, tempDir.resolve("out"), "rejected");
+    }
+
+    @Test
     void jsEntityWithoutGeneratedUsesFirstFieldAsPk(@TempDir Path tempDir) throws IOException {
         Path source = tempDir.resolve("Main.kf");
         Files.writeString(source, """
