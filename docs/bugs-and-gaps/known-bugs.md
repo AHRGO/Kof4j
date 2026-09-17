@@ -9889,19 +9889,16 @@ behavior-preserving (`RawRowCollectionAccessE2ETest` + `SemanticResolutionTest`
   cast-saturation reds reproduce on the BASE without the fix — §256/.18 lane;
   `crossNativeConcurrencyHelpersRun` is a load flake, green in isolation).
 - **Cross-target (face a):** JVM proven by test; SCRIPT + JS proven by test;
-  Native not measured (qemu absent) — the lowering is target-agnostic
-  (`if_acmp` reference compare).
-- **Face (b) measured on 3 targets (17/09, this session):** JVM
-  `NullPointerException: Cannot invoke "Point.equals(Object)"`; **JS
-  `TypeError: Cannot read property 'equals' of null`**; SCRIPT also red. So
-  face (b) is a real cross-target parity bug, not JVM-only; the fix needs a
-  null-safe object-equality helper (`kofValEq` exists in the JS runtime,
-  `Objects.equals` on the JVM) shared by the 4 targets — not attempted here
-  because Native cannot be proven on this host (no qemu) and a JVM-only fix
-  would create divergence (rule 5).
-- **Handed off (17/09) to the compiler lane:** face (b) needs the native
-  toolchain to prove all 4 targets (host lacks qemu), so it is not fixed in
-  this lane — the compiler lane owns it with the full dossier below.
+  Native x86-64 proven by test (this session) — the lowering is target-agnostic
+  (`if_acmp` reference compare). The "qemu absent" excuse only applies to the
+  riscv64/aarch64 CROSS ports; the x86-64 host runs assemble+link+execute via
+  `gcc` directly (the `KofIntOverflowNativeTest`/`NativeE2ETest` already do).
+- **Face (b) measured on 4 targets (17-18/09):** JVM `NullPointerException:
+  Cannot invoke "Point.equals(Object)"`; **JS `TypeError: Cannot read property
+  'equals' of null`**; SCRIPT red; **Native x86-64 SIGSEGV (exit 139)** — the
+  "host lacks qemu" handoff was WRONG for x86-64: the native lane proves it
+  here via `gcc` (assemble+link+run), qemu is only for the riscv/aarch CROSS
+  ports. The fix therefore IS cross-target (4/4), not JVM-only.
 - **Status:** ✅ FIXED — face (a) FIXED (`07a51565`, lane bugs-and-gaps
   `192.168.100.15`); face (b) fixed in TWO LANDED STEPS: (1) receiver-guard
   `ab284b91` (17/09, compiler/nat lane `192.168.100.17`,

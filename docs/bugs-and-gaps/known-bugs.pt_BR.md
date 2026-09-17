@@ -9424,25 +9424,17 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
   `Nullable(record)` p/ o record nullable não cair em silêncio no caminho de
   referência.
 - **Cross-target (face a):** JVM provado por teste; SCRIPT + JS provados por
-  teste; Native não medido (sem qemu) — o lowering é agnóstico de alvo
-  (comparação de referência `if_acmp`).
-- **Face (b) medida em 3 alvos (17/09, esta sessão):** JVM
-  `NullPointerException: Cannot invoke "Point.equals(Object)"`; **JS
-  `TypeError: Cannot read property 'equals' of null`**; SCRIPT também
-  vermelho. Então a face (b) é bug de paridade cross-target real, não só do
-  JVM; o conserto precisa de um helper de igualdade de objetos null-safe
-  (`kofValEq` existe no runtime JS, `Objects.equals` no JVM) compartilhado
-  pelos 4 alvos — não tentado aqui porque o Native não pode ser provado nesta
-  máquina (sem qemu) e um fix só-JVM criaria divergência (regra 5). **(CORREÇÃO
-  17/09, lane `.18`: o "sem qemu" só valia p/ as portas cruzadas riscv/aarch64
-  — o native x86_64 RODA nesta máquina via `gcc` (assemble+link; o
-  `KofIntOverflowNativeTest` prova assim), então as 4 faces foram medidas e
-  consertadas em lockstep.)**
-- **Repassada (17/09) à lane compiler:** a face (b) precisa do toolchain
-  nativo para provar os 4 alvos (a máquina não tem qemu), então não é corrigida
-  nesta lane — a lane compiler assume com o dossiê completo abaixo. **(FEITA
-  17/09 pela lane compiler/development `192.168.100.18` com o native x86_64
-  provado por `gcc` — ver Conserto acima.)**
+  teste; Native x86-64 provado por teste (sessão 18/09) — o lowering é
+  agnóstico de alvo (comparação de referência `if_acmp`). A desculpa "sem
+  qemu" só valia p/ as portas CROSS riscv64/aarch64; o host x86-64 roda
+  assemble+link+execução via `gcc` direto (o `KofIntOverflowNativeTest`/
+  `NativeE2ETest` já fazem isso).
+- **Face (b) medida em 4 alvos (17-18/09):** JVM `NullPointerException:
+  Cannot invoke "Point.equals(Object)"`; **JS `TypeError: Cannot read property
+  'equals' of null`**; SCRIPT vermelho; **Native x86-64 SIGSEGV (exit 139)** —
+  o handoff "a máquina não tem qemu" estava ERRADO p/ o x86-64: a lane native
+  prova aqui via `gcc` (assemble+link+execução); qemu só é preciso p/ as portas
+  CROSS riscv/aarch64. Então o conserto É cross-target (4/4), não só-JVM.
 - **Prova de regressão (face b):** `RecordNullableNullEqE2ETest` agora
   **11/11** (6 da face-a + 5 da face-b, incl. Native x86 tanto p/ o par
   nullable quanto p/ o caminho de referência da face-a). A bateria assere
