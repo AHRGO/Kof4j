@@ -28,6 +28,13 @@ public final class SymbolTableBuilder {
                 Type viaImports = MemberResolver.qualifyViaImports(sa.unit(), superQualified);
                 if (viaImports instanceof Type.ClassType qt) {
                     superQualified = qt.packageName() + "." + qt.name();
+                } else if (CompilerTypes.JAVA_LANG_THROWABLES.contains(superQualified)) {
+                    // #313 família: `class MyEx extends RuntimeException` SEM
+                    // import gravava o super como `RuntimeException` cru →
+                    // NoClassDefFoundError no load da própria classe (medido).
+                    // Throwable simples do JDK mora em java.lang (mesmo mapa
+                    // de exceptionType/#163 e do toType do #313).
+                    superQualified = "java.lang." + superQualified;
                 }
             }
             String declPkg = sa.packageOf(cls);
