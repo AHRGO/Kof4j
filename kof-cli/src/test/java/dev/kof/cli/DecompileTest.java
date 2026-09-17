@@ -1299,6 +1299,7 @@ class DecompileTest {
         runJavac(javaFile, dir);
         String kof = Decompile.decompile(dir.resolve("Cs.class"));
         assertTrue(kof.contains("as Int"), "checkcast Integer → `as Int`:\n" + kof);
+        assertFalse(kof.contains("intValue"), "#362: unbox do wrapper = identidade — nunca emitir `x.intValue()` (SEM074):\n" + kof);
         Path out = dir.resolve("Cs.kf");
         Files.writeString(out, kof);
         CompilationResult result = new CompilerDriver().compile(out, dir.resolve("out"), Target.JVM);

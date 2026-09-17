@@ -157,7 +157,7 @@ this corpus/docs and the compiler *disagrees with its own docs*.
 | top-level `val`/`var`/`let` | inside a function, or a `class` field |
 | `fun name()` / `val` keyword | `String name() { }` (type before the name) |
 | `v is Car` (Kotlin type-check) | `if (v instanceof Car) { var c = v as Car … }` or `case Car c:` in `switch` |
-| `"""triple quotes"""` | normal `"…"` strings (no raw/block literal) |
+| `"""triple quotes"""` | normal `"…"` strings (no raw/block literal). Rejected with `LEX008` (#364: it used to fold to an **empty** string and compile silently) |
 | `Pair(a, b)` / `Triple` | a `record` with named fields |
 | `xs.any { it > 3 }` / `all`/`none`/`count { }` / `it` | `xs.filter((x: Int) -> x > 3)` then check `.size()`; the lambda param is **always explicit** |
 | `mutableListOf()` / `setOf(...)` variadic is fine | `listOf(...)` (Kof lists are already mutable) |
@@ -174,7 +174,7 @@ this corpus/docs and the compiler *disagrees with its own docs*.
 | `"x${n}"` string interpolation (Kotlin/GString) | `"x" + n` — `${…}` inside a Kof string is **literal text** (no diagnostic, by contract — `lexical-structure.md` §4.1, probe) |
 | `class Foo: A, B` (Kotlin interface list via `:`) | `class Foo implements A, B { }` |
 | `val name: String` property in an `interface` | a method accessor: `interface I { String name() }` |
-| `n.abs()` / `c.toChar()` — method on a **primitive** (Java/C# style) | `math.abs(n)` (`stdlib.md`) — primitives have no members (AGENTS.md rule: `Int.<field>` = SEM050 family). ⚠️ #362 OPEN: the member call passes `check` today and dies at load (`ClassFormatError`, empty Methodref owner) — R6 bug owned by compiler lane; the idiom above is the ONLY working form (measured: `math.abs(-5)` → `5`) |
+| `n.abs()` / `n.equals(o)` / `n.toChar()` (methods on a **primitive**) | `math.abs(n)`, `a == b`, `n as Char` — primitives only have `toString()` and the `toInt()`/`toLong()`/`toFloat()`/`toDouble()` conversions. Rejected with `SEM074` (#362 ✅ FIXED 18/09: the unlisted call used to pass `check` and die at class load — `ClassFormatError`, empty Methodref owner) |
 | `l.sort()` / `l.indexOf(x)` on a `List` (Java API) | Kof `List` API is `add/get/set/remove/contains/size/isEmpty/clear/map/filter/reduce`; find position with a `for` + `get(i)`; order by sorting outside the list (interop) — no `sort`/`indexOf` promise |
 | `m.containsValue(v)` / `m.getOrDefault(k, d)` on a `Map` (Java API) | `m.values()` + `contains`, or `var v = m.get(k); if (v == null) …` — Kof `Map` API is `put/get/remove/containsKey/contains/size/clear/isEmpty/keys/values` |
 | `this(args)` constructor self-delegation (Java/C#) | Kof promises **`super(args)`** only (base class, first statement — `learn/07`); share init via a helper method both constructors call (measured working) |

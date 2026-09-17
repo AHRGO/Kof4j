@@ -157,7 +157,7 @@ construto neste corpus/docs e o compilador *discorda da própria doc*.
 | `val`/`var`/`let` top-level | dentro de função, ou campo de `class` |
 | keyword `fun name()` / `val` | `String name() { }` (tipo antes do nome) |
 | `v is Car` (type-check Kotlin) | `if (v instanceof Car) { var c = v as Car … }` ou `case Car c:` no `switch` |
-| `"""três aspas"""` | strings normais `"…"` (sem literal raw/bloco) |
+| `"""três aspas"""` | strings normais `"…"` (sem literal raw/bloco). Rejeitado com `LEX008` (#364: antes dobrava para string **vazia** e compilava em silêncio) |
 | `Pair(a, b)` / `Triple` | um `record` com campos nomeados |
 | `xs.any { it > 3 }` / `all`/`none`/`count { }` / `it` | `xs.filter((x: Int) -> x > 3)` e checar `.size()`; o parâmetro do lambda é **sempre explícito** |
 | `mutableListOf()` | `listOf(...)` (a lista do Kof já é mutável) |
@@ -174,7 +174,7 @@ construto neste corpus/docs e o compilador *discorda da própria doc*.
 | interpolação `"x${n}"` (Kotlin/GString) | `"x" + n` — `${…}` dentro de string Kof é **texto literal** (sem diagnóstico, por contrato — `lexical-structure.md` §4.1, sonda) |
 | lista de interfaces com `:` (`class Foo: A, B`) | `class Foo implements A, B { }` |
 | propriedade `val name: String` num `interface` | acessor-método: `interface I { String name() }` |
-| `n.abs()` / `c.toChar()` — método num **primitivo** (estilo Java/C#) | `math.abs(n)` (`stdlib.md`) — primitivos não têm membros (regra AGENTS.md: `Int.<campo>` = família SEM050). ⚠️ #362 ABERTA: hoje a chamada-membro passa no `check` e morre no load (`ClassFormatError`, dono do Methodref vazio) — bug R6 da lane compiler; o idiom acima é a ÚNICA forma que roda (medido: `math.abs(-5)` → `5`) |
+| `n.abs()` / `n.equals(o)` / `n.toChar()` (métodos em **primitivo**) | `math.abs(n)`, `a == b`, `n as Char` — primitivos só têm `toString()` e as conversões `toInt()`/`toLong()`/`toFloat()`/`toDouble()`. Rejeitado com `SEM074` (#362 ✅ CORRIGIDA 18/09: a chamada fora da lista passava no `check` e morria no load — `ClassFormatError`, dono do Methodref vazio) |
 | `l.sort()` / `l.indexOf(x)` num `List` (API Java) | a API de `List` do Kof é `add/get/set/remove/contains/size/isEmpty/clear/map/filter/reduce`; ache a posição com `for` + `get(i)` (medido: `idx=2`); ordene fora da lista (interop) — não há promessa de `sort`/`indexOf` |
 | `m.containsValue(v)` / `m.getOrDefault(k, d)` num `Map` (API Java) | `m.values().contains(v)` (medido: `true`), ou `var v = m.get(k); if (v != null) { dft = v }` (medido: `fallback`) — a API de `Map` do Kof é `put/get/remove/containsKey/contains/size/clear/isEmpty/keys/values` |
 | `this(args)` auto-delegação de construtor (Java/C#) | o Kof promete só **`super(args)`** (classe-base, primeira instrução — `learn/07`); compartilhe o init via um método auxiliar que os dois construtores chamam (workaround medido `0/3`) |
