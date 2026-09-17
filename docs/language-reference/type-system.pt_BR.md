@@ -348,6 +348,7 @@ retorno do lambda (*probe*: map/filter/reduce corretos).
 | `SEM044` | `main()` com tipo de retorno declarado (`Int main()`) | `SemanticAnalyzer.analyzeFunction` (SG-018) |
 | `SEM045` | cláusula `throw X` com tipo desconhecido | `SemanticAnalyzer.checkThrowsClause` (SG-019) |
 | `SEM046` | acesso `private`/`protected` (método ou campo) fora do permitido | `MemberCallTyper.checkMemberAccess`/`checkFieldAccess` (SG-013) |
+| `SEM064` | `interface J extends Base` onde `Base` é uma classe (interfaces só podem estender interfaces) | `SemanticAnalyzer.analyzeInterface` (#321) |
 | `SEM065` | escrita em campo `final` fora do construtor da classe | `MemberCallTyper.checkFinalFieldWrite` (#331/#327; era SEM063, renumerado 17/09 — colidiu com §193) |
 | `SEM066` | acessor de coleção (`get`/`put`/`size`...) chamado num receptor String (linha crua do `db.query`) | `ExpressionInstanceCallLowerer` (§193) |
 | `SEM067` | tipo de `catch` é um primitivo Kof (primitivos não são throwable) | `CatchTypeCheck.check` (#332/#328) |
