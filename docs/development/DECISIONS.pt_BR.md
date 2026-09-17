@@ -1139,6 +1139,83 @@ errado devem ser ignoradas e fechadas. adiciona isso como regra absoluta."
 - NÃO cobre: bugs cujo reproducer é Kof válido (#403, #336, #313 — ficam e
   foram corrigidos), nem o cluster nullable-primitive (D-NULL-INTENT), nem a
   resolução de tipo JDK sem qualificar (§268).
+## D-UI-STYLE — `style` declarativo (UI007)
+
+**Data:** 17/09/2026
+
+**Estado:** `DECIDED`
+
+**Origem:** decisão da mantenedora no chat, respondendo às cinco perguntas
+abertas do `KOFUI-AUDIT.md` §UI007 ("UI007 — design proposal"). O item estava
+`BLOQUEADO` pela regra 6 (superfície de API); este registro o desbloqueia.
+
+### Contexto
+
+O UI007 pede "declarative `style` (idiomatic CSS), own parser". A superfície
+exata é congelamento de API, então não podia ser implementada por julgamento
+do agente. O `Style(Int, Int, Int, Int)` existente (background, foreground,
+padding, radius — `kof_ui_style_new`) já está entregue nos quatro alvos
+(real só no KofJS; no-op documentado nos demais).
+
+### Contrato
+
+1. **Superfície.** `Style("<declarações>")` — um argumento String literal,
+   pares `prop: value;` separados por `;`. Produz um valor `kof.ui.Style`,
+   consumido por `View(style)` exatamente como a forma de 4 Ints. O
+   `Style(4 Ints)` existente fica **intocado** (aditivo, retrocompatível).
+2. **Parse no compilador (Q4).** As declarações são parseadas e validadas em
+   compile-time; o lowering carrega o texto CSS **normalizado**. Argumento
+   não-literal é diagnóstico (nada de parse em runtime).
+3. **Cores (Q1).** Aceita hex CSS (`#rgb`, `#rrggbb`, `#rrggbbaa`) e nomes de
+   cor CSS, **além de** valores `Color`/`Palette` da linguagem interpolados
+   na string.
+4. **Unidades (Q2).** Inteiro nu significa `px`; os sufixos `px`, `%`, `em`
+   e `rem` são aceitos.
+5. **Propriedades (Q3).** Uma **whitelist tipada**. Propriedade fora da
+   whitelist é diagnóstico em compile-time (`SEM073`) — nunca repassada em
+   silêncio para `node.style` (R6). Declaração malformada é `SEM074`; valor
+   inválido para propriedade conhecida é `SEM075`.
+6. **Escopo (Q5).** `setStyle(String)` fica disponível em **todo widget DOM**
+   (`KofUi.isDomWidget`), não só `View` — pela família compartilhada
+   `kof_ui_widget_set_style` (padrão do UI005).
+
+### Invariantes
+
+- **Zero regressão na forma de 4 Ints**: `Style(Int, Int, Int, Int)` mantém
+  a semântica exata em todos os alvos.
+- **Paridade honesta por alvo**: o style declarativo é real no KofJS e
+  **no-op** no JVM/Native/Script, igual ao gap já existente do `Style`
+  (UI001). O no-op segue documentado; não vira fallback silencioso.
+- **Diagnósticos seguem D-DIAG-EN** (texto da mensagem em inglês; códigos
+  estáveis).
+- Os códigos novos são **aditivos** e não renumeram nada.
+
+### Alternativas rejeitadas
+
+- **Parse em runtime** (opção do Q4): rejeitada — "own parser" mais validação
+  em compile-time (Q3) exigem o compilador; um parse em runtime também
+  transformaria o erro de propriedade desconhecida em falha de execução, e
+  não em diagnóstico.
+- **`setStyle` só em `View`** (opção do Q5): rejeitada pela mantenedora em
+  favor da superfície mais ampla (todo widget DOM).
+
+### Implementação
+
+Reivindicado no `DOING.md` (UI007, lane UI/style); roadmap §8 Frontend.
+Fatia A = parser no compilador + `Style(String)` + lowering + runtime JS +
+testes; fatia B = `setStyle` em todo widget DOM.
+
+### Evidências
+
+`UiE2ETest` (JVM + link Native) + `KofJsBrowserE2ETest` (Chrome headless,
+DOM real) + testes de diagnóstico para `SEM073`/`SEM074`/`SEM075`;
+`docs-lang.sh check` 0/0/0.
+
+### Relacionamentos
+
+- Fecha o bloqueio por regra 6 do UI007 (`KOFUI-AUDIT.md` §UI007).
+- Relacionado: UI001 (família do no-op silencioso), UI005 (família
+  compartilhada `kof_ui_widget_*`), D-DIAG-EN.
 
 ---
 

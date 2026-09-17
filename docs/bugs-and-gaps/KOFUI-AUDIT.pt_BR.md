@@ -81,7 +81,7 @@ Grid, Center, Align, Store, Canvas + namespace `Router`.
 | **UI004** | Forms: `<form>` ✅ + submit handler ✅ FEITO 07/09 (`Form(children)`, `onSubmit`, `submit()` — handler roda no browser, prova por mutação de DOM); fieldset ✅ FEITO 08/09 (`Fieldset(children[, legend])`, `358ec80`). `Input` tipos ✅ (`setType`); checkbox/radio estado ✅ (`setChecked`/`checked`); select ✅ (`Select`/`setOptions`/`selected`/`setSelected`) | KofJS | P1 **FEITO** |
 | **UI005** | Atributos: id ✅ class ✅ disabled ✅ (FEITO 07/09 — `setId`/`setClass`/`setDisabled` em widgets DOM, família `kof_ui_widget_*`); placeholder ✅ (`Input.setPlaceholder`); checked ✅; alt/width/height ✅ (`Image.*`); readonly/name ✅ FEITO 07/09 (`Input`/`Textarea`.setReadonly(bool)/setName(String) — 6/6 pontos completos, prova browser: atributos `name=`/`readonly` no outerHTML) | KofJS | P1 **FEITO** |
 | **UI006** | Eventos: `Event.type()`/`stopPropagation()` ✅; `key()`/`value()`/`x()`/`y()` ✅ FEITO 08/09 (`f0907c2` — DOM event real: `key` do KeyboardEvent, `value` do input alvo, `clientX/Y`; `widget.on(type, handler)` exposto p/ widgets fora da árvore de Component; `kofUiWidgetOn` agora despacha o kofEv, antes chamava `fn()` sem evento); `target()`/`relatedTarget()` ✅ FEITO 08/09 (`3c241ae`+ — id do nó origem/relacionado com fallback tagName; prova browser: `t=campo-main` no DOM final) | KofJS | P2 **FEITO** |
-| **UI007** | `style` declarativo (CSS idiomático) — novo, com parse próprio (item do plano Fase 4) | KofJS | P1 |
+| **UI007** | `style` declarativo (CSS idiomático) — novo, com parse próprio (item do plano Fase 4). **DECIDIDO 17/09** (`D-UI-STYLE`): `Style("<declarações>")`, parse no compilador, whitelist tipada (`SEM073`/`SEM074`/`SEM075`), hex+nomes+`Color`/`Palette`, px/`%`/`em`/`rem`, `setStyle` em todo widget DOM — **EM CURSO** (fatia A) | KofJS | P1 |
 | **UI008** | Window: size/position só no-op JVM; KofJS só title (browser não controla window — ok por plataforma) | JVM/KofJS | P3 |
 | **UI009** | Canvas: fillText ✅ measureText ✅ save ✅ restore ✅ transform ✅ setGlobalAlpha ✅ (FEITO 07/09 — `UiE2ETest.canvasUi009LinksOnAllTargets` + `KofJsBrowserE2ETest.canvasUi009RunsInRealBrowser`); drawImage ✅ (07/09 — Image→canvas via elemento DOM) | KofJS | P2 **FEITO** |
 
@@ -136,11 +136,12 @@ UI005 `setId`/`setClass`/`setDisabled` (+ fix do código morto `acceptsFont`).
    tomada como aditivo sem quebrar retrocompat — **warning** único no stderr
    (nunca erro; regra 6 + congelamento); teste `KofScriptTest.ui002WarnsOnceOnUiCalls`.
 
-### UI007 — proposta de design (aguarda maintainer; regra 6)
+### UI007 — decisão de design (DECIDIDO 17/09; regra 6 fechada)
 
 O plano pede "`style` declarativo (CSS idiomático), parse próprio". A
-superfície exata é decisão de design (congelamento de API). Proposta
-mínima aditiva (não toca `Style(4 Ints)` existente — retrocompat):
+superfície foi congelada pela mantenedora e registrada como **`D-UI-STYLE`**
+em `docs/development/DECISIONS.md` (EN+PT). Forma mínima aditiva (não toca
+`Style(4 Ints)` existente — retrocompat):
 
 ```kof
 // forma nova: CSS idiomático como string, parse no compilador
@@ -148,19 +149,20 @@ var s = Style("background: #ff0000; padding: 8; border-radius: 4")
 var v = View(s)
 ```
 
-Open questions (não decidíveis sem maintainer):
-- Q1: cores — aceitar `#rrggbb`/nomes CSS, ou só o `Color`/`Palette` da
-  linguagem (conversão `toCss` já existe)?
-- Q2: unidades — `8` = px? aceitar `em`/`%`/`rem`?
-- Q3: propriedades — whitelist (background/padding/margin/radius/
-  border/font) ou qualquer `prop: valor` passado ao `node.style`?
-- Q4: parse no compilador (IR de estilo) ou no runtime (string → CSSStyle
-  declaration)? "parse próprio" sugere compilador.
-- Q5: `Style` é só para `View` ou todo widget DOM aceita (via
-  `setStyle`)?
+Perguntas fechadas:
+- Q1: cores — **hex CSS (`#rgb`/`#rrggbb`/`#rrggbbaa`) + nomes CSS + o
+  `Color`/`Palette` da linguagem** (conversão `toCss` já existe).
+- Q2: unidades — **inteiro nu significa `px`; `px`/`%`/`em`/`rem` aceitos**.
+- Q3: propriedades — **whitelist tipada**; propriedade desconhecida é
+  diagnóstico em compile-time (`SEM073`), declaração malformada `SEM074`,
+  valor inválido `SEM075` — nunca repassado em silêncio ao `node.style` (R6).
+- Q4: **parse no compilador** (IR de estilo; texto normalizado no lowering).
+- Q5: **todo widget DOM aceita** (`setStyle(String)` pela família
+  compartilhada `kof_ui_widget_set_style` — padrão UI005), não só `View`.
 
-Implementação aguarda decisão; o parse em si (lexer de `prop: valor;`) é
-mecânico quando a superfície fechar.
+Implementação: reivindicada no `DOING.md` (UI007); fatia A = parser +
+`Style(String)` + lowering + runtime JS + prova; fatia B = `setStyle` em
+todo widget DOM.
 
 **Fronteira Fase 5 (KofJS Web APIs — não é kof.ui):** fetch/WS/storage.
 
