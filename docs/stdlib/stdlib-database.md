@@ -159,4 +159,5 @@ main() {
 | `orm.migrate(db, name, sql)` | versioned migration (runs once) |
 
 Backends: SQL via JDBC (JVM) + **MongoDB** (official driver, E2E with a real
-container, conditional skip). Native/JS report `ORM001`.
+container, conditional skip). Native reports `ORM001`; **JS CLOSED 18/09**
+(`KofJsOrmBridge`, same SQL as the JVM runtime, byte-parity E2E).

@@ -987,7 +987,7 @@ TAREFA segue as frentes abaixo.
    `connect/execute/query/close/transaction` na ponte do host GraalJS —
    `3e55df51`+`eb9140cb`); residual `db.query<T>` tipado = `DB002` FECHADO 18/09: bind no guest via `__kof_decode_<T>`
    (arquitetural: JS não emite bytecode JVM no classpath do host) +
-   `kof.orm` = `ORM001` (mesma parede; WASM planejado).
+   `kof.orm` = `ORM001` FECHADO 18/09: `KofJsOrmBridge` roda o mesmo SQL de `JvmOrmRuntime` no host GraalJS, records tipados bindados no guest via `__kof_decode_<T>` (E2E byte-paridade; WASM planejado).
 
 **Relação com as outras regras:** esta decisão decide a **ordem**, não o que
 é **aceitável** — Q0–Q7, o freeze, a regra 6 e a regra dos três estados

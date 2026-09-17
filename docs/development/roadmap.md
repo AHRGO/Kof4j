@@ -384,7 +384,7 @@ statements, transactions, declarative `entity` at compile-time, CRUD
 (`create/save/find/all/where/delete/count`), `orm.where` by field + operators, `saveAll` batch, `page`/`count`/`deleteAll`,
 versioned migrations (`kof_migrations`) and MongoDB (official driver).
 Missing: typed query DSL (`User.query { where age > 18 }`), connection
-pooling, complete MySQL (query/prepared), `kof.db`/`kof.orm` outside the JVM (**JS `DB001` CLOSED 16/09** — untyped on the GraalJS host; typed `query<T>` = `DB002` CLOSED 18/09; residual `ORM001`), NoSQL beyond MongoDB.
+pooling, complete MySQL (query/prepared), `kof.db`/`kof.orm` outside the JVM (**JS `DB001` CLOSED 16/09** — untyped on the GraalJS host; typed `query<T>` = `DB002` CLOSED 18/09; `kof.orm` = `ORM001` CLOSED 18/09 on JS, residual Native `ORM001`), NoSQL beyond MongoDB.
 
 ---
 

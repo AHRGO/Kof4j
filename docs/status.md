@@ -275,8 +275,8 @@ main() {
   compatible reflection (`Bson`/`Class`, no ClientSession); E2E test with a
   real container (conditional skip; Mongo service in CI).
 - Versioned migrations: table `kof_migrations`, each migration runs once.
-- Native/JS report `ORM001`.
- - Tests: `KofDbE2ETest` (9), `KofOrmE2ETest` (22; MariaDB/PostgreSQL/MongoDB
+- Native reports `ORM001`; JS CLOSED 18/09 (`KofJsOrmBridge`, same SQL as JVM, byte-parity E2E).
+ - Tests: `KofDbE2ETest` (9), `KofOrmE2ETest` (31; MariaDB/PostgreSQL/MongoDB
    with conditional skip when the container is not up).
  - Docs: `docs/stdlib/DATABASE_VISION.md` (levels 0-4 implemented, including
    level 3 = typed query DSL `User.query(db){ where; orderBy; limit }` — 01/09).
@@ -367,7 +367,7 @@ Bool positivo(Int x) = x > 0         // expression body
 | kof.log (`log.info/warn/error/debug`) | ✅ | ✅ (asm; UTC, no JSON) | ✅ (LOG001 closed 01/09) |
 | kof.security (passwords, crypto, JWT, secrets) | ✅ | ✅ | ✅ |
 | kof.db (JDBC, query<T>, transaction) + native SQLite | ✅ | ✅ (SQLite + transaction; MySQL WIP; **riscv64/aarch64 ✅ 15/09** link-by-use libsqlite3) | ✅ 16/09 (untyped `connect/execute/query/close/transaction` on the GraalJS bridge) + ✅ 18/09 typed `query<T>` (`DB002` closed — guest-side bind via `__kof_decode_<T>`) |
-| kof.orm (entity, CRUD, where, migrate, MongoDB) | ✅ | ORM001 | ORM001 |
+| kof.orm (entity, CRUD, where, migrate, MongoDB) | ✅ | ORM001 | ✅ CLOSED 18/09 |
 | String.toInt/toLong/toDouble/toFloat | ✅ | ✅ | ✅ |
 | kof.ui (Color, Palette, Theme, Window) | ✅ | ✅ (JS render) | ✅ |
 | default parameters in functions | ✅ | ✅ | ✅ |
@@ -587,7 +587,7 @@ main() { /* ignored by kof test */ }
 | JvmE2ETest | 31 | real execution of JVM bytecode |
 | KofSecurityTest | 28 | kof.security: passwords, crypto, JWT, secrets, adversarial |
 | OptimizerTest | 22 | IR optimization passes |
-| KofOrmE2ETest | 22 | kof.orm: entity, CRUD, where (+ORM003 typed column validation, P3-10), **Query DSL `User.query(db){ where; orderBy; limit }` (level 3, ORM001)**, migrate, unique, MongoDB (3 conditional skips) |
+| KofOrmE2ETest | 31 | kof.orm: entity, CRUD, where (+ORM003 typed column validation, P3-10), **Query DSL `User.query(db){ where; orderBy; limit }` (level 3, ORM001)**, migrate, unique, MongoDB (3 conditional skips) |
 | KofConcurrency2Test | 33 | spawn stmt/expr, selectAny, cancel/cancelled, done/poll, awaitTimeout, channel (+`Channel<T>` as a function parameter, 3 targets) |
 | IoE2ETest | 16 | kof.io multiplatform (+ honest `readText`/`size` contracts 02/09) |
 

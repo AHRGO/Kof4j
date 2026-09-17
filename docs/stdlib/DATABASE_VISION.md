@@ -274,7 +274,10 @@ main() {
 - **MongoDB:** `save/find/all/where/delete/count` over the official driver via
   compatible reflection (`Bson`/`Class`, without `ClientSession`); E2E test with
   a real container (conditional skip; Mongo service in CI).
-- **Native/JS:** report `ORM001` (gap documented at compile-time).
+- **Native:** reports `ORM001` (gap documented at compile-time). **JS:** CLOSED
+  18/09 — `kof.orm` runs on the GraalJS host via `KofJsOrmBridge` (same SQL as
+  `JvmOrmRuntime`), typed records bound guest-side (`__kof_decode_<T>`); byte-parity
+  E2E in `KofOrmE2ETest` (`js*` cases).
 - Tests: `KofOrmE2ETest` (16; entity, CRUD, `where` operators, `migrate`,
   `unique`, non-numeric PK, MongoDB E2E, `ORM001`/`ORM002`).
 
