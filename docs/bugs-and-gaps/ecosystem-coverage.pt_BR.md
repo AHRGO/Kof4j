@@ -167,7 +167,7 @@ Legenda nas colunas de target: `y` = suportado, `~` = parcial, `–` = não.
 | validation | ✅ `kof.validation` (required/notBlank/minLength/maxLength/lengthBetween/isEmail/isUrl/matches/isInt/isLong/inRange/min/max) — JVM/Native/JS | y | y | y | KofValidationTest | stdlib/stdlib.md |
 | scheduling | ✅ `kof.time` now/sleep + interval/cancel (3 targets — TIME001 fechado) | y | y | y | KofTimeE2ETest | stdlib/stdlib.md |
 | caching | ✅ `kof.cache` (get/set/ttl/delete/clear; 30/08) | y | y (asm) | y | KofCacheE2ETest (5, x3) | development/roadmap.md |
-| transactions | ✅ `transaction {}` (JVM; commit/rollback real) | y | y (asm 01/09) | ✅ 16/09 (ponte JS) | KofDbE2ETest | development/DATABASE_VISION.md |
+| transactions | ✅ `transaction {}` (JVM; commit/rollback real) | y | y (asm 01/09) | ✅ 16/09 (ponte JS) | KofDbE2ETest | stdlib/DATABASE_VISION.md |
 | resource management | `PARTIAL` (try/finally real) | y | y | — | ExceptionsE2ETest | history/language-state.md |
 | profiles/environments | `PARTIAL` (profile file + env; o resto em kof.config) | y | y | – CONF001 | KofConfigE2ETest | — |
 
@@ -199,18 +199,18 @@ Legenda nas colunas de target: `y` = suportado, `~` = parcial, `–` = não.
 
 | Capacidade | Kof | JVM | Native | JS | Tests | Docs |
 |-----------|-----|-----|--------|----|-------|------|
-| SQL / JDBC | ✅ `kof.db` (SQL-first) + SQLite nativo via `.so` direto + MySQL wire protocol (handshake+scramble+auth-switch+COM_QUERY+resultset, 31/08) | y | y (SQLite + MySQL wire) | ✅ 16/09 (JDBC via host GraalJS) | KofDbE2ETest | development/DATABASE_VISION.md |
-| `db.connect/query/transaction` | ✅ (+ `query<T>` tipado) | y | y | ✅ nao-tipado 16/09; tipado `query<T>` `DB002` | KofDbE2ETest | development/DATABASE_VISION.md |
+| SQL / JDBC | ✅ `kof.db` (SQL-first) + SQLite nativo via `.so` direto + MySQL wire protocol (handshake+scramble+auth-switch+COM_QUERY+resultset, 31/08) | y | y (SQLite + MySQL wire) | ✅ 16/09 (JDBC via host GraalJS) | KofDbE2ETest | stdlib/DATABASE_VISION.md |
+| `db.connect/query/transaction` | ✅ (+ `query<T>` tipado) | y | y | ✅ nao-tipado 16/09; tipado `query<T>` `DB002` | KofDbE2ETest | stdlib/DATABASE_VISION.md |
 | prepared statements | ✅ (binds `?`) | y | y | ✅ 16/09 (binds via ponte) | KofDbE2ETest | — |
 | connection pools | `PLANNED` | — | — | — | — | — |
-| migrations | ✅ `orm.migrate` versionado (`kof_migrations`) | y | – ORM001 | – ORM001 | KofOrmE2ETest | development/DATABASE_VISION.md |
-| repositories/ORM | ✅ `kof.orm`: `entity` + create/save/find/all/where/delete/count | y | – ORM001 | – ORM001 | KofOrmE2ETest | development/DATABASE_VISION.md |
-| NoSQL (MongoDB) | ✅ driver oficial via reflexão compatível | y | — | — | KofOrmE2ETest (E2E, skip condicional) | development/DATABASE_VISION.md |
+| migrations | ✅ `orm.migrate` versionado (`kof_migrations`) | y | – ORM001 | – ORM001 | KofOrmE2ETest | stdlib/DATABASE_VISION.md |
+| repositories/ORM | ✅ `kof.orm`: `entity` + create/save/find/all/where/delete/count | y | – ORM001 | – ORM001 | KofOrmE2ETest | stdlib/DATABASE_VISION.md |
+| NoSQL (MongoDB) | ✅ driver oficial via reflexão compatível | y | — | — | KofOrmE2ETest (E2E, skip condicional) | stdlib/DATABASE_VISION.md |
 | mapping | ✅ entity → linha/documento por schema de compile-time | y | – | y | JsonE2ETest, KofOrmE2ETest | — |
-| query DSL tipada (`User.query { where ... }`) | ✅ (nível 3, 01/09 — baixa p/ `db.query<T>`; E2E JVM H2) | ✅ | — | — | KofOrmE2ETest | development/DATABASE_VISION.md |
-| pagination | ✅ `orm.page(page, size[, where])` | y | – | – | KofOrmE2ETest | development/DATABASE_VISION.md |
-| PostgreSQL / MySQL / SQLite / MongoDB / Redis | ✅ SQLite (`.so` nativo) / MySQL (wire protocol) / MongoDB (driver) — ver linhas acima; PostgreSQL + Redis `PLANNED` | y | y (SQLite) | — | KofDbE2ETest, KofOrmE2ETest | development/DATABASE_VISION.md |
-| transactions | ✅ `transaction {}` (JVM; commit/rollback; ponte JS 16/09) — ver §3.1 | y | y (asm 01/09) | ✅ 16/09 | KofDbE2ETest | development/DATABASE_VISION.md |
+| query DSL tipada (`User.query { where ... }`) | ✅ (nível 3, 01/09 — baixa p/ `db.query<T>`; E2E JVM H2) | ✅ | — | — | KofOrmE2ETest | stdlib/DATABASE_VISION.md |
+| pagination | ✅ `orm.page(page, size[, where])` | y | – | – | KofOrmE2ETest | stdlib/DATABASE_VISION.md |
+| PostgreSQL / MySQL / SQLite / MongoDB / Redis | ✅ SQLite (`.so` nativo) / MySQL (wire protocol) / MongoDB (driver) — ver linhas acima; PostgreSQL + Redis `PLANNED` | y | y (SQLite) | — | KofDbE2ETest, KofOrmE2ETest | stdlib/DATABASE_VISION.md |
+| transactions | ✅ `transaction {}` (JVM; commit/rollback; ponte JS 16/09) — ver §3.1 | y | y (asm 01/09) | ✅ 16/09 | KofDbE2ETest | stdlib/DATABASE_VISION.md |
 | optimistic/pessimistic locking | `PLANNED` | — | — | — | — | — |
 
 ## 3.4 Messaging
