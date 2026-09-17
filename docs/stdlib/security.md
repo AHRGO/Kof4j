@@ -213,7 +213,7 @@ resolves the runtime function and each target provides the implementation.
 | `kof.cache` | YES | YES | PARTIAL (in-memory) | JVM/Native/JS | YES | YES | YES |
 | `kof.test` (`kof test`, assert) | YES | YES | YES | JVM/Native/JS | YES | YES | YES |
 | `kof.cli` (kof CLI) | YES | YES | YES | JVM | YES | YES | YES |
-| `kof.process` | YES | YES | YES | JVM/Native/JS | YES | YES | YES |
+| `kof.process` | YES | YES | YES | JVM/JS (Native: `PROC001`) | YES | YES | YES |
 | `kof.crypto` | NO (part of kof.security) | — | — | — | — | — | — |
 | `kof.ui` (UI platform) | PARTIAL | PARTIAL | — | JS | — | PARTIAL | PARTIAL |
 

@@ -199,7 +199,7 @@ resolve a função de runtime e cada target fornece a implementação.
 | `kof.cache` | SIM | SIM | PARCIAL (in-memory) | JVM/Native/JS | SIM | SIM | SIM |
 | `kof.test` (`kof test`, assert) | SIM | SIM | SIM | JVM/Native/JS | SIM | SIM | SIM |
 | `kof.cli` (CLI kof) | SIM | SIM | SIM | JVM | SIM | SIM | SIM |
-| `kof.process` | SIM | SIM | SIM | JVM/Native/JS | SIM | SIM | SIM |
+| `kof.process` | SIM | SIM | SIM | JVM/JS (Native: `PROC001`) | SIM | SIM | SIM |
 | `kof.crypto` | NÃO (faz parte de kof.security) | — | — | — | — | — | — |
 | `kof.ui` (plataforma de UI) | PARCIAL | PARCIAL | — | JS | — | PARCIAL | PARCIAL |
 
