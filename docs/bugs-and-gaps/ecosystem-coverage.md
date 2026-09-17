@@ -189,7 +189,7 @@ Legend in the target columns: `y` = supported, `~` = partial, `–` = no.
 | content negotiation | `PLANNED` | — | — | — | — | — |
 | error handling | 404/500 + message | y | – | ✅ 03/09 (JS 404/500) | KofWebE2ETest | stdlib/stdlib-web.md |
 | WebSocket | ✅ `app.ws("/chat") { }` (JVM, 08/30 — RFC 6455 handshake + frame codec/masking) | y | – WEB004 | – WEB004 (compile-time gate 16/09; was silent no-op) | KofWebWsE2ETest (11) + KofWsFrameTest (7) | stdlib/stdlib-web.md |
-| SSE | ✅ `sse.send/event/close` (JVM, 08/30) | y | – WEB003 | ✅ handler-scoped 16/09 (`app.sse` + `send/event/close/isOpen` + `sse()`, framing/headers idem JVM; push pós-return/multi-cliente = WEB003 residual) | KofWebSseE2ETest (7) · KofWebJsE2ETest sse (3) | stdlib/stdlib-web.md |
+| SSE | ✅ `sse.send/event/close` (JVM, 08/30) | y | – WEB003 | ✅ handler-scoped 16/09 (`app.sse` + `send/event/close/isOpen` + `sse()`, framing/headers same as JVM; push after-return/multi-client = WEB003 residual) | KofWebSseE2ETest (7) · KofWebJsE2ETest sse (3) | stdlib/stdlib-web.md |
 | web limits/observability | ✅ `app.configure`/`app.stats` (JVM, 09/04) | y | – | – | KofWebHardeningTest (6) | stdlib/stdlib-web.md |
 | gRPC / GraphQL / SOAP | `EXTERNAL`/`PLANNED` (interop) | — | — | — | — | development/roadmap.md |
 | REST documentation (OpenAPI) | `PLANNED` | — | — | — | — | development/roadmap.md |
