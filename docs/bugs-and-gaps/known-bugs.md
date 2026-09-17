@@ -9292,10 +9292,26 @@ behavior-preserving (`RawRowCollectionAccessE2ETest` + `SemanticResolutionTest`
   Prova: `KofHttpNativeTimeoutE2ETest` 3/3 (Q0: RED = binario travou 20s no
   blackhole-server; GREEN = timeout em ~1s com `timeout(1)`; request boa com
   `timeout(5)` intacta; porta fechada fail-fast). `KofHttpE2ETest` 8/8 +
-  `KofHttpResilienceE2ETest` 3/3 (JVM/JS) sem regressao. **PENDENTE:** retry
-  e circuit no x86 (fatiast 2/3) e a porta riscv64/aarch64 dos 3 knobs
-  (fatia 4 — os `ret` puros continuam la; o `HTTP003` do doc continua
-  inexistente, o registro aponta p/ ca). Related: §258 (same sweep),
+  `KofHttpResilienceE2ETest` 3/3 (JVM/JS) sem regressao.
+- **FATIA 2 FECHA o retry no x86_64 (17/09, commit desta unidade):**
+  `kof_http_retry_set` guarda N (`max(0,n)`, igual JVM) e o core roda em
+  `.Lhr_attempt` com contador em `%rbp` (callee-saved, push/pop simetrico):
+  excecao de conexao/timeout **ou** status `>= 500` ⇒ nova tentativa; esgotadas
+  as N+1, `throw` da ultima mensagem — 5xx monta `"HTTP <n> from <url>"`
+  (paridade exata da `IOException` do `JvmWebHttpRuntime.kof_http_request`).
+  Causa REAL achada no caminho: o read-loop clobberava `%r12` (method) — sem
+  stash em `.Lhttp_methodp` a 2a tentativa construia request com method NULL
+  (segfault, output vazio); RED mostrou o sintoma, o stash corrigiu a raiz.
+  Split `NativeHttpCore`→`NativeHttpVerbs` (wrappers/configurators,
+  byte-a-byte, precedente REFACTOR-500) p/ o core caber no gate (415/151).
+  Prova: `KofHttpNativeRetryE2ETest` 3/3 (Q0 RED: retry no-op = 1 tentativa e
+  5xx retornado silencioso — o PROPRIO no-op virou bug de paridade, regra 4 do
+  freeze; GREEN: flaky 500→500→200 com `retry(2)` = `ok-3`/3 hits, 5xx
+  persistente com `retry(1)` = throw apos 2 hits, default `retry(0)` = 1 hit +
+  throw). `KofHttpE2ETest` 8/8 + `KofHttpResilienceE2ETest` 3/3 (JVM/JS) +
+  `KofHttpNativeTimeoutE2ETest` 3/3 sem regressao. **PENDENTE:** circuit no x86
+  (fatia 3) e a porta riscv64/aarch64 dos 3 knobs (fatia 4 — os `ret` puros
+  continuam la; o `HTTP003` do doc continua inexistente, o registro aponta p/ ca). Related: §258 (same sweep),
   WEB002/WEB004/WEB003 (the per-function gap-code split precedent this should
   follow).
 

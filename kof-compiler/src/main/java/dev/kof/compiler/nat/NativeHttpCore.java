@@ -24,10 +24,16 @@ public final class NativeHttpCore {
                 pushq %r13
                 pushq %r14
                 pushq %r15
-                movq %rsi, %r12            # method
+                movq %rsi, .Lhttp_methodp(%rip)  # §259: r12 vira contador de read —
+                movq %rsi, %r12            # method   o retry precisa restaurar por tentativa
                 movq %rdx, %r13            # body
                 movq %rcx, %r14            # headers
-                call kof_http_parse_url    # rdi ja' tem url
+                movq %rdi, .Lhttp_urlptr(%rip)   # §259: url p/ msg "HTTP nnn from"
+                pushq %rbp                 # §259: tentativas restantes (rbp = N)
+                movq .Lhttp_retry_n(%rip), %rbp
+                call kof_http_parse_url    # rdi ja' tem url (parse 1x: buffers globais)
+            .Lhr_attempt:
+                movq .Lhttp_methodp(%rip), %r12   # restaura method (clobberado p/ total)
                 # socket
                 movl $2, %edi
                 movl $1, %esi
@@ -280,6 +286,33 @@ public final class NativeHttpCore {
                 jmp .Lhr_st_loop
             .Lhr_st_ok:
                 movq %rax, .Lhttp_last_status(%rip)
+                # §259: status >= 500 = falha retryavel (paridade JVM "HTTP n from url")
+                cmpl $500, %eax
+                jl .Lhr_body
+                movl %eax, .Lhttp_serr(%rip)       # stash (append_* clobbem eax)
+                leaq .Lhttp_errbuf(%rip), %rdi
+                leaq .Lhttp_str_5xx(%rip), %rsi
+                call kof_http_append_cstr
+                movq %rax, %rdi
+                movslq .Lhttp_serr(%rip), %rsi
+                call kof_http_append_dec
+                movq %rax, %rdi
+                leaq .Lhttp_str_from(%rip), %rsi
+                call kof_http_append_cstr
+                movq %rax, %rdi
+                movq .Lhttp_urlptr(%rip), %rsi
+                movl 16(%rsi), %edx
+                addq $24, %rsi
+                call kof_http_append_n
+                movb $0, (%rax)
+                leaq .Lhttp_errbuf(%rip), %rax
+                jmp .Lhr_rtry_cl
+            .Lhr_rtry_cl:                  # 5xx: salva msg (close clobbera rax) e fecha fd
+                movq %rax, .Lhttp_last_err(%rip)
+                movl %r15d, %edi
+                call kof_net_close
+                jmp .Lhr_rtry_chk
+            .Lhr_body:
                 # body = depois de \r\n\r\n
                 leaq .Lhttp_respbuf(%rip), %rsi
                 movq %r12, %r9             # total
@@ -322,28 +355,37 @@ public final class NativeHttpCore {
                 call kof_net_close
                 popq %rax
                 jmp .Lhr_out
-            .Lhr_fail_cl:
+            .Lhr_fail_cl:                  # erro com fd aberto -> fecha
                 movl %r15d, %edi
                 call kof_net_close
-            .Lhr_fail:
-                leaq .Lhttp_err_conn(%rip), %rdi
-                call kof_http_cstrlen
-                movl %eax, %esi
-                leaq .Lhttp_err_conn(%rip), %rdi
-                call kof_string_from_literal
-                movq %rax, %rdi
-                call kof_throw_string
+                leaq .Lhttp_err_conn(%rip), %rax
+                jmp .Lhr_rtry
             .Lhr_tmo_cl:
                 movl %r15d, %edi
                 call kof_net_close
-                leaq .Lhttp_err_tmo(%rip), %rdi
+                leaq .Lhttp_err_tmo(%rip), %rax
+                jmp .Lhr_rtry
+            .Lhr_rtry:                     # §259: paridade JVM — excecao OU 5xx tentam de novo
+                movq %rax, .Lhttp_last_err(%rip)
+            .Lhr_rtry_chk:
+                testq %rbp, %rbp
+                jz .Lhr_throw_last
+                decq %rbp
+                jmp .Lhr_attempt
+            .Lhr_throw_last:
+                movq .Lhttp_last_err(%rip), %rdi
                 call kof_http_cstrlen
                 movl %eax, %esi
-                leaq .Lhttp_err_tmo(%rip), %rdi
+                movq .Lhttp_last_err(%rip), %rdi
                 call kof_string_from_literal
                 movq %rax, %rdi
                 call kof_throw_string
+                jmp .Lhr_out
+            .Lhr_fail:                     # socket() sem fd: nao ha o que fechar
+                leaq .Lhttp_err_conn(%rip), %rax
+                jmp .Lhr_rtry
             .Lhr_out:
+                popq %rbp
                 popq %r15
                 popq %r14
                 popq %r13
@@ -355,138 +397,18 @@ public final class NativeHttpCore {
             .Lhttp_err_conn: .asciz "kof.http: connect falhou"
             .Lhttp_err_tmo: .asciz "kof.http: timeout"
             .Lhttp_timeout_s: .quad 15
+            .Lhttp_retry_n: .quad 0
+            .Lhttp_last_err: .quad 0
+            .Lhttp_urlptr: .quad 0
+            .Lhttp_methodp: .quad 0
+            .Lhttp_errbuf: .space 512
+            .Lhttp_str_5xx: .asciz "HTTP "
+            .Lhttp_str_from: .asciz " from "
+            .Lhttp_empty2_unused: .quad 0
             .Lhttp_tv: .quad 0
             .Lhttp_serr: .quad 0
             .Lhttp_pf: .space 8
             .Lhttp_empty: .space 1
-            .section .text
-
-            # wrappers ----------------------------------------------------
-            .globl kof_http_get
-            .type kof_http_get, @function
-            kof_http_get:
-                leaq .Lhttp_m_get(%rip), %rsi
-                xorq %rdx, %rdx
-                xorq %rcx, %rcx
-                jmp kof_http_core
-            .globl kof_http_get_headers
-            .type kof_http_get_headers, @function
-            kof_http_get_headers:
-                movq %rsi, %rcx
-                leaq .Lhttp_m_get(%rip), %rsi
-                xorq %rdx, %rdx
-                jmp kof_http_core
-            .globl kof_http_delete
-            .type kof_http_delete, @function
-            kof_http_delete:
-                leaq .Lhttp_m_delete(%rip), %rsi
-                xorq %rdx, %rdx
-                xorq %rcx, %rcx
-                jmp kof_http_core
-            .globl kof_http_delete_headers
-            .type kof_http_delete_headers, @function
-            kof_http_delete_headers:
-                movq %rsi, %rcx
-                leaq .Lhttp_m_delete(%rip), %rsi
-                xorq %rdx, %rdx
-                jmp kof_http_core
-            .globl kof_http_options
-            .type kof_http_options, @function
-            kof_http_options:
-                leaq .Lhttp_m_options(%rip), %rsi
-                xorq %rdx, %rdx
-                xorq %rcx, %rcx
-                jmp kof_http_core
-            .globl kof_http_options_headers
-            .type kof_http_options_headers, @function
-            kof_http_options_headers:
-                movq %rsi, %rcx
-                leaq .Lhttp_m_options(%rip), %rsi
-                xorq %rdx, %rdx
-                jmp kof_http_core
-            .globl kof_http_post
-            .type kof_http_post, @function
-            kof_http_post:
-                movq %rsi, %rdx            # body
-                leaq .Lhttp_m_post(%rip), %rsi
-                xorq %rcx, %rcx
-                jmp kof_http_core
-            .globl kof_http_post_headers
-            .type kof_http_post_headers, @function
-            kof_http_post_headers:
-                movq %rdx, %rcx            # headers
-                movq %rsi, %rdx            # body
-                leaq .Lhttp_m_post(%rip), %rsi
-                jmp kof_http_core
-            .globl kof_http_put
-            .type kof_http_put, @function
-            kof_http_put:
-                movq %rsi, %rdx
-                leaq .Lhttp_m_put(%rip), %rsi
-                xorq %rcx, %rcx
-                jmp kof_http_core
-            .globl kof_http_post_headers_alias_put
-            .globl kof_http_put_headers
-            .type kof_http_put_headers, @function
-            kof_http_put_headers:
-                movq %rdx, %rcx
-                movq %rsi, %rdx
-                leaq .Lhttp_m_put(%rip), %rsi
-                jmp kof_http_core
-            .globl kof_http_patch
-            .type kof_http_patch, @function
-            kof_http_patch:
-                movq %rsi, %rdx
-                leaq .Lhttp_m_patch(%rip), %rsi
-                xorq %rcx, %rcx
-                jmp kof_http_core
-            .globl kof_http_patch_headers
-            .type kof_http_patch_headers, @function
-            kof_http_patch_headers:
-                movq %rdx, %rcx
-                movq %rsi, %rdx
-                leaq .Lhttp_m_patch(%rip), %rsi
-                jmp kof_http_core
-            # kof_http_status(url) -> int
-            .globl kof_http_status
-            .type kof_http_status, @function
-            kof_http_status:
-                leaq .Lhttp_m_get(%rip), %rsi
-                xorq %rdx, %rdx
-                xorq %rcx, %rcx
-                call kof_http_core
-                movq .Lhttp_last_status(%rip), %rax
-                ret
-            # §259: timeout REAL (era ret puro). Guarda segundos; 0 = sem
-            # deadline (igual JVM: Duration.ZERO = infinito). Default 15s.
-            .globl kof_http_timeout_set
-            .type kof_http_timeout_set, @function
-            kof_http_timeout_set:
-                movslq %edi, %rdi
-                testq %rdi, %rdi
-                jge .Lhts_store
-                xorq %rdi, %rdi
-            .Lhts_store:
-                movq %rdi, .Lhttp_timeout_s(%rip)
-                ret
-            # §259 fatia 2 (pendente): retry ainda no-op no nativo
-            .globl kof_http_retry_set
-            .type kof_http_retry_set, @function
-            kof_http_retry_set:
-                ret
-            # §259 fatia 3 (pendente): circuit ainda no-op no nativo
-            .globl kof_http_circuit_set
-            .type kof_http_circuit_set, @function
-            kof_http_circuit_set:
-                ret
-
-            .section .data
-            .Lhttp_m_get: .asciz "GET"
-            .Lhttp_m_post: .asciz "POST"
-            .Lhttp_m_put: .asciz "PUT"
-            .Lhttp_m_patch: .asciz "PATCH"
-            .Lhttp_m_delete: .asciz "DELETE"
-            .Lhttp_m_options: .asciz "OPTIONS"
             .section .text
             """;
     }
