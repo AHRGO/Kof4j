@@ -28,6 +28,25 @@ public final class ExpressionMethodCallLowerer {
         return localIdx;
     }
 
+    /**
+     * #403 — o nome do receiver sombreia um CAMPO da classe corrente? A
+     * semântica já resolve `log` como campo (SemExpressionTyper:63, antes da
+     * isenção de namespace); se o EMIT hijackear o nome cru p/ um lowerer de
+     * namespace (log/json/db/…) o corpo da chamada sai VAZIO quando o método
+     * não está mapeado (`log.add(...)` → ExpressionLogCallLowerer engole →
+     * `return` só → VerifyError: Operand stack underflow no load, R6/silencioso).
+     * Espelha a resolução por owner de ExpressionLowerer:72 (getfield do campo).
+     */
+    static boolean shadowsFieldOfCurrentClass(CompilerDriver driver, String owner, String name) {
+        if (driver.semanticAnalyzer == null || owner == null || owner.isEmpty()) return false;
+        String className = owner.substring(owner.lastIndexOf('/') + 1);
+        if (className.isEmpty()) return false;
+        SymbolTable.ClassSymbol cs = driver.semanticAnalyzer.getClass(className);
+        if (cs == null) return false;
+        return HierarchyResolver.resolveFieldInHierarchy(cs.name(), name, driver.semanticAnalyzer)
+                instanceof SymbolTable.FieldSymbol;
+    }
+
     static int lower(CompilerDriver driver, MethodCallExpr mc, List<KofOperation> ops,
                         String owner, int localIdx, List<IRLocalVariable> locals) {
 // User-defined classes take precedence over builtin helpers
@@ -204,18 +223,23 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
     // instance lowerer, which owns the builtin wrapper/`valueOf` handling.
     return ExpressionInstanceCallLowerer.lower(driver, mc, ops, owner, localIdx, locals);
 } else if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.name(), locals)
-        && "json".equals(rid.name())) {
+        && "json".equals(rid.name())
+        && !shadowsFieldOfCurrentClass(driver, owner, rid.name())) {
     return ExpressionJsonCallLowerer.lower(driver, mc, ops, owner, localIdx, locals);
-} else if (mc.receiver() instanceof IdentifierExpr rid && KofDb.isDbNamespace(rid.name())) {
+} else if (mc.receiver() instanceof IdentifierExpr rid && KofDb.isDbNamespace(rid.name())
+        && !shadowsFieldOfCurrentClass(driver, owner, rid.name())) {
     return ExpressionDbCallLowerer.lower(driver, mc, ops, owner, localIdx, locals);
 } else if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.name(), locals)
-        && KofOrm.isOrmNamespace(rid.name())) {
+        && KofOrm.isOrmNamespace(rid.name())
+        && !shadowsFieldOfCurrentClass(driver, owner, rid.name())) {
     return ExpressionOrmCallLowerer.lower(driver, mc, ops, owner, localIdx, locals);
 } else if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.name(), locals)
-            && KofLog.isLogNamespace(rid.name())) {
+            && KofLog.isLogNamespace(rid.name())
+            && !shadowsFieldOfCurrentClass(driver, owner, rid.name())) {
     return ExpressionLogCallLowerer.lower(driver, mc, ops, owner, localIdx, locals);
 } else if (mc.receiver() instanceof IdentifierExpr rid && "process".equals(rid.name())
-        && driver.findLocalVar(rid.name(), locals) == null) {
+        && driver.findLocalVar(rid.name(), locals) == null
+        && !shadowsFieldOfCurrentClass(driver, owner, rid.name())) {
     return ExpressionProcessCallLowerer.lower(driver, mc, ops, owner, localIdx, locals);
 } else if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.name(), locals)
             && KofHttp.isHttpNamespace(rid.name())) {
