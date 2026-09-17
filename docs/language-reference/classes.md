@@ -91,7 +91,7 @@ implements-clause = "implements" , type-ref , { "," , type-ref }
   outside the declaring class's constructor is a compile error (JVMS 4.4,
   `putfield` restriction); the synthetic `<clinit>` initializer still passes.
   `FieldAccessControlTest` 7/7.
-- No modifier → `public` (`accessFlagsFor:3388`).
+- No modifier → `public` (`SymbolTableBuilder` derives the flags from the declaration modifiers — private/protected/static/final).
 - `static` field/method: access by class name (`S.k`, `S.k()` — *probe*).
 
 ---

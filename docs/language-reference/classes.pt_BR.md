@@ -91,7 +91,7 @@ implements-clause = "implements" , type-ref , { "," , type-ref }
   fora do construtor da classe declarante é erro de compilação (JVMS 4.4,
   restrição do `putfield`); o inicializador sintético `<clinit>` ainda passa.
   `FieldAccessControlTest` 7/7.
-- Sem modificador → `public` (`accessFlagsFor:3388`).
+- Sem modificador → `public` (`SymbolTableBuilder` deriva as flags dos modificadores da declaração — private/protected/static/final).
 - `static` campo/método: acesso por nome de classe (`S.k`, `S.k()` — *probe*).
 
 ---
