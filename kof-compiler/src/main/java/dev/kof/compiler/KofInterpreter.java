@@ -352,6 +352,9 @@ public final class KofInterpreter {
                     case KofTryStart ts -> {
                         f.tryStack.push(frames.newTryRegion(f, ts, st.size()));
                     }
+                    case KofContinueLabel _ -> {
+                        // §266: marcador estrutural (fronteira corpo/update do for) — no-op
+                    }
                     case KofTryEnd _ -> {
                         if (!f.tryStack.isEmpty()) f.tryStack.pop();
                     }

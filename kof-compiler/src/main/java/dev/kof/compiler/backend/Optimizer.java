@@ -8,6 +8,7 @@ import dev.kof.compiler.KofConditionalJump;
 import dev.kof.compiler.KofDebugInfo;
 import dev.kof.compiler.KofDup;
 import dev.kof.compiler.KofJump;
+import dev.kof.compiler.KofContinueLabel;
 import dev.kof.compiler.KofLabel;
 import dev.kof.compiler.KofLoadLiteral;
 import dev.kof.compiler.KofLoadLocal;
@@ -235,7 +236,8 @@ public final class Optimizer {
         // would confuse the JS backend's structural reconstruction.
         Set<LabelId> referenced = new HashSet<>();
         for (KofOperation op : out) {
-            if (op instanceof KofJump kj) referenced.add(kj.target());
+            if (op instanceof KofContinueLabel cl) referenced.add(cl.label());
+            else if (op instanceof KofJump kj) referenced.add(kj.target());
             else if (op instanceof KofConditionalJump cj) {
                 referenced.add(cj.trueLabel());
                 referenced.add(cj.falseLabel());

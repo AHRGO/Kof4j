@@ -38,6 +38,14 @@ public final class JsIfThrowElse {
         List<JsIr.JsStatement> out = new ArrayList<>();
         while (pos[0] < ctx.ops.size()) {
             KofOperation op = ctx.ops.get(pos[0]);
+            if (op instanceof dev.kof.compiler.KofContinueLabel) {
+                // §266: fronteira corpo/update do loop — mesma regra de
+                // parseStatements. O else de um `if (…){ continue }` (§147,
+                // then-incondicional) engolia o marcador e caía em
+                // parseStatement (COMP002). NÃO consumir: o dono (parseLoop)
+                // casa o marcador + Label(continue).
+                return out;
+            }
             if (op instanceof KofLabel kl) {
                 if (ctx.isLoopLabel(kl.label())) return out;
                 // O endLabel de um try ENVOLVENTE não é o fim do else: consumi-lo

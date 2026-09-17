@@ -278,6 +278,7 @@ public final class StatementLowerer {
                 localIdx = driver.emitStatement(fs.body(), ops, owner, localIdx, locals, returnType);
                 driver.breakLabels.pop();
                 driver.continueLabels.pop();
+                ops.add(new KofContinueLabel(continueLabel, startLabel)); // §266
                 ops.add(new KofLabel(continueLabel));
                 if (fs.update() != null) {
                     if (fs.update() instanceof UnaryExpr ue
@@ -362,6 +363,7 @@ public final class StatementLowerer {
                 localIdx = driver.emitStatement(fis.body(), ops, owner, localIdx, locals, returnType);
                 driver.breakLabels.pop();
                 driver.continueLabels.pop();
+                ops.add(new KofContinueLabel(continueLabel, startLabel)); // §266
                 ops.add(new KofLabel(continueLabel));
                 ops.add(new KofLoadLocal(Type.PrimitiveType.INT, idxIdx));
                 ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 1));

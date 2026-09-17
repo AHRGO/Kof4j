@@ -22,7 +22,8 @@
 > | **§261 ✅ FIXED 16/09 (lane development `.18`)** | KofJS `window.bind`: Components and raw DOM widgets drew handle ids from TWO separate counters (`kofUiSeq` vs `kofNodeSeq`, both from 0); `kofUiWindowBind` resolves components FIRST → a Component created before a raw widget stole the widget's id and the widget rendered nothing (orphan in `__kofNodes`). Found via kof-ui-widgets (Slider+ReconfigButton in real Chrome). Fix = one shared counter (`kofNodeSeq`). Proof: `KofJsBrowserE2ETest.componentAndRawWidgetIdsNeverCollide` (RED pre-fix, measured) + lib `scripts/browser-drag.mjs`.
 > | **§264 ✅ FIXED 16/09 (lane development `.18`)** | KofJS printed `Double`/`Float` with the raw `Number.toString` — `4` not `4.0`, `10000000` not `1.0E7`, `0` not `-0.0` — in **every** display path (println/print/concat/`String.valueOf`/`.toString()`); silent rule-5 divergence vs JVM/Native. The old §44/§180 records called it "expected on JS" and 5 conformance cells excluded `js` to stay green. Fix = new runtime slice `num-fmt`/`kofNumFmt` (JDK contract: shortest round-trip + `E`-threshold + Float own precision) routed from the JS emitter + type-passthrough in the shared lowerers. Proof: `WrapperStaticCallsE2ETest.doubleFloatJdkPrintFormat` + 5 cells flipped to 4-target parity (value-by-value vs JVM oracle on node v18). Boxed-collection print (`List<Double>`→`[4,2.5]`) stays §104b-ii (native lane), NOT fixed here.
 > | **§265 ✅ FIXED 16/09 (lane development `.18`)** | KofJS web handlers: `status(201, body)`/`headerSet()` were SILENT no-ops — `JsRuntimeOps.handleRuntimeOp` had a collapse branch (`status→args.get(1)`) that DROPPED the call from the emitted `invoke()` (decisive), and `kofWebStatus` read `kofWebRequest.response` (field never existed; the `response` lives on `ctx`). JVM: `201`+`X-Custom`; JS: `200`, header dropped (R6; the ecosystem-coverage "JS ✅ 08/27" cell was a false green — compile-support ≠ runtime effect). Fix = delete the collapse branches (correct routing existed below) + defer `_status`/`_headerQueue` applied by the pump before send (JDK HttpServer needs headers pre-send), idem JVM thread-local. Proof: `KofWebJsE2ETest.jsWebStatusAndHeaderReachTheWire` (RED pre-fix, measured `return "made"` in the emitted JS + `200` on the live wire). Native `status/header` stays `– WEB001` (honest).
-> | **§266 🔴 OPEN 17/09 (lane development `.18`; fix = JS CFG reconstructor, multi-tick)** | Loop body with an `if` followed by trailing statements miscompiles on JS only (locals escape into the `for(;…;update)` clause) — `ReferenceError` headless, SILENT EMPTY UI in `Component.view` (kofUiRender catch). Repro + fix design in §266. Workaround: conditional into a helper function. |
+ > | **§266 ✅ FIXED 17/09 (lane development `.18`)** | Loop body with an `if` followed by trailing statements miscompiled on JS only (locals escaped into the `for(;…;update)` clause) — `ReferenceError` headless, SILENT EMPTY UI in `Component.view` (kofUiRender catch). Fix = structural `KofContinueLabel(label, loopStart)` emitted by the lowering; reconstructor consumes it, the ambiguous backward scan + `looksLikeContinueLabel` guess are GONE; `JsTryParser` split keeps the file under 600. Proof: `JsLoopIfTailE2ETest` 7/7 + lib ReorderList back to the direct-`if` form in Chrome. The `kofUiRender` catch STILL swallows view throws (loud-headless/silent-UI amplification remains for any other view crash). |
+ > | **§267 🔴 OPEN 17/09 (lane development `.18`; sibling face found during §266)** | Statement-level `if/else` where BOTH branches are single assignments to the same var folds into a ternary expression (`tryParseIfExpr`) and the NEXT statement's `let` is hoisted above it → stale read, SILENT WRONG VALUE on JS (JVM/Script correct). Loop-INDEPENDENT (unlike §266). Repro + fix design in §267. |
 > | **§257 ✅ FIXED 15/09 (lane compiler `192.168.100.17`)** | `static final String` runtime-text literals = javac ConstantValue inlining → false red on incremental build (`validationBrJs`); 77 fields de-`final` + `RuntimeConstantInliningGuardTest` (ASM, ConstantValue) locks it. |
 > | **§173 ✅ FIXED 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `++`/`--`/compound on `Long`/`Double`/`Float` + increment of an array ELEMENT: JVM VerifyError (literal `INT 1` in a 2-slot binary, 1-slot `DUP`, `arraystore` without `[array,index]`), Native core dump, Script `NoSuchElementException`, JS `stack underflow`/`KofDup2`. 4 targets; Q4 hunt 13/09 (over §167). Proof: `BackendParityTest.parityIncrementWideTypesAndArrayElement` + `KofInterpreterParityTest.incrementWideTypesAndArrayElement` + cell `increment` 4/4. |
 > | **§174 ✅ FIXED 13/09 (lane bugs-and-gaps, 192.168.100.15)** | `return`/`throw` inside an `if` inside the `try`: JVM/Native/Script correct, KofJS aborted with `COMP002 unexpected KofCatchStart` (the `JsIfThrowElse.parseElse` consumed the endLabel of the enclosing try when treating the unconditional `then` as if-else). Fix without contract/IR change (`isTryEndLabel` guard). Proof: `CoreRegressionE2ETest.returnInsideIfInsideTryJs`. |
@@ -8052,7 +8053,30 @@ behavior-preserving (`RawRowCollectionAccessE2ETest` + `SemanticResolutionTest`
 30/30 + `KofDbE2ETest` 22 all green across the move).
 
 
-## §266 — KofJS CFG reconstructor hoists a loop body's post-`if` statements into the `for(;…;update)` clause, out of scope of their own `let` (silent `ReferenceError`; empty DOM when it happens in a `view`) — catalogued 17/09 (lane development, owner = 192.168.100.18, found while building the lib's ReorderList)
+## §266 — KofJS CFG reconstructor hoists a loop body's post-`if` statements into the `for(;…;update)` clause, out of scope of their own `let` (silent `ReferenceError`; empty DOM when it happens in a `view`) — ✅ FIXED 17/09 (lane development, owner = 192.168.100.18, found while building the lib's ReorderList)
+
+> **FIX (17/09):** the loop boundary is now STRUCTURAL, not guessed. The
+> lowering (`StatementLowerer`, ForStmt + ForInStmt cases) emits a dedicated
+> marker op `KofContinueLabel(continueLabel, startLabel)` — tagged with the
+> OWNING loop's start label — immediately before `Label(continueLabel)`.
+> `JsControlFlowParser.parseLoop`/`parseTrueLoop` find their update clause by
+> a FORWARD scan matching `loopStart == startLabel` (a nested loop's marker
+> carries the inner loop's start, so it is never mistaken for the outer one);
+> `parseStatements`/`JsIfThrowElse.parseElse` STOP at the marker without
+> consuming it; and the post-hoc heuristic `looksLikeContinueLabel` (the source
+> of the bug) is REMOVED — `LoopCtx` now always carries the true continue
+> label. The marker is a no-op in every backend (JvmOpEmitter/NativeMethodEmitter/
+> NativeRiscvCrossEmit/KofInterpreter explicit `case KofContinueLabel _ -> {}`;
+> the Optimizer keeps its paired label from the orphan-label pass, which had
+> eaten the unreferenced `Label(continue)`). Split `JsControlFlowParser`
+> 558→479 by extracting `JsTryParser` (same §140/§147 responsibility-split
+> precedent) so the file stays under the 600 line. **Proof:** `JsLoopIfTailE2ETest`
+> (7 tests, runBoth JVM+JS, exact values) — while/for × if-tail, real `continue`
+> with trailing stmts, `break`, nested for-in-while, for-in with if-tail,
+> `while(true)` with if-tail; full suite 1969/0/0/169; the lib's `ReorderList`
+> flipped OFF the helper workaround to the direct in-loop `if` and renders
+> non-empty in Chrome (`scripts/browser-reorder.mjs`). **Distinct sibling face
+> found during this unit (loop-INDEPENDENT, still OPEN): §267** below.
 
 - **Symptom (measured 17/09, headless `kof run --target=js`):** any `while`
   (or `for`) whose body contains an `if`/ternary followed by more statements
@@ -8073,47 +8097,80 @@ behavior-preserving (`RawRowCollectionAccessE2ETest` + `SemanticResolutionTest`
       out.add(r)
       p = p + 1
   }
-  println(out.get(0))       // JS: ReferenceError; JVM/Script: 100
+  println(out.get(0))       // FIXED: JS now 100/102/102 == JVM == Script
   ```
 - **UI amplification (why nobody hit it before):** inside a `Component.view`
   the crash is SWALLOWED — `kofUiRender` wraps the view call in
   `catch (e) { rootId = 0; }` (JsRuntimeUiComponents, since §157-era), so the
   component mounts as an EMPTY box with no reported error: a silent broken UI
   (rule 6). The widget found this only because Chrome rendering made the empty
-  DOM observable.
-- **Root cause (file:line):** `JsControlFlowParser.parseLoop` scans backward
-  from the body's back-edge `Jump(start)` to find "the continue label" (the
-  boundary between body and the for-loop update clause, ~line 293). For a
-  loop body ending in `… Jump(endX), Label(endX), <trailing stmts>,
-  Jump(start)` — which is exactly what the if-lowering emits for an
-  if-without-else in the middle of a body (`StatementLowerer.IfStmt`:
-  `then; Jump(endLabel); Label(else); Label(end)`) — the backward scan stops
-  at the if's `Label(endX)` and mislabels it a CONTINUE label. That poisons
-  `ctx.loops` (MethodCtx.isLoopLabel/isIfEndLabel): the body parse then
-  BREAKS at endX, and everything after it is parsed as the `for` update
-  clause; the update is emitted in the `for(;…;UPDATE) { … }` head, outside
-  the block where its own locals were `let`-declared. A real for-loop's
-  continue label is structurally identical post-hoc — the ambiguity is in the
-  IR, not the parser.
-- **Correct fix (next unit, not this one):** mark the continue label at
-  lowering time — the ForStmt case in `StatementLowerer` emits
-  `Label(continueLabel)` between body and update; adding a dedicated IR
-  marker op (e.g. a boolean on the label or a `KofContinueLabel(LabelId)`
-  emitted by ForStmt only — precedent: `KofTryEnd`) lets the reconstructor
-  distinguish true-continue from if-end without guessing. Q0: the repro above
-  prints 100/102/102 on JS == JVM == Script; a view-loop with an `if` renders
-  non-empty in Chrome. Q1: regression E2E `JsLoopIfTailE2ETest` (while + for,
-  head+tail of body, nested if/else, continue/break interaction) runBoth jvm+js
-  + the ReorderList browser proof flips to the direct `if` form. RISK: the CFG
-  reconstructor is the most special-case-dense file in the JS lane (§147/§149/
-  §174 each patched it) — full suite is mandatory, budget multi-tick; until it
-  lands, the documented shape is a compile-legitimate but RUNTIME-BROKEN program
-  on JS (loud headless; silent in UI) — cataloged here per rule 6, NOT fixed
-  half-way.
-- **Workaround in the field:** keep `if`+trailing-statements out of loop bodies
-  (move the conditional into a helper FUNCTION — method bodies parse
-  independently, e.g. the lib's `ReorderList` `reorderMark(dragging, where, p)`
-  helper). Same-target-safe on JVM/Script/Native, provably JS-safe.
+  DOM observable. (The silent swallow in `kofUiRender` is unchanged — this unit
+  fixes the miscompile, not the error-hiding; a follow-up could surface view
+  throws. Tracked under §267's note.)
+- **Root cause (file:line, now fixed):** `JsControlFlowParser.parseLoop` scanned
+  BACKWARD from the body's back-edge `Jump(start)` to find "the continue label"
+  (~line 293). For a loop body ending in `… Jump(endX), Label(endX), <trailing
+  stmts>, Jump(start)` — exactly what the if-lowering emits for an if-without-else
+  in the middle of a body — the backward scan stopped at the if's `Label(endX)`
+  and mislabeled it a CONTINUE label, poisoning `ctx.loops`; the body parse then
+  broke at endX and everything after it became the `for` update clause, emitted
+  in the `for(;…;UPDATE)` head outside the block where its locals were declared.
+  A real for-loop's continue label is structurally identical post-hoc — the
+  ambiguity was in the IR, so the fix adds the missing structural info.
+
+## §267 — KofJS folds a statement-level `if/else` (both branches a single assignment to the same var) into a ternary EXPRESSION, and the FOLLOWING statement's `let` is emitted BEFORE the ternary runs → stale read (silent wrong value; loop-independent) — catalogued 17/09 (lane development, owner = 192.168.100.18, found as a sibling face while fixing §266)
+
+- **Symptom (measured 17/09, headless `kof run --target=js`; PRESENT on the
+  pristine toolchain — NOT a §266 regression):** an `if`/`else` whose branches
+  each do ONE assignment to the same variable, at STATEMENT position, followed
+  by a statement that reads that variable, misorders the reads: the next
+  statement's initializer is hoisted above the folded ternary, so it sees the
+  variable's pre-`if` value. Needs NO loop (loop-independent — this is what
+  distinguishes it from §266). Repro:
+  ```
+  var t = 2
+  var gv = 0
+  if (t % 2 == 0) { gv = t * 10 } else { gv = t * 10 + 1 }   // gv should become 20
+  var gt = gv + 1                                             // should be 21
+  println(gt)          // JVM: 21; JS: 1  (silent wrong value)
+  ```
+  Emitted JS (measured):
+  ```
+  let gv = 0;
+  let gt = ((gv + 1) | 0);           // <- gt computed from the PRE-if gv = 0 → 1
+  (((!(t % 2)) ? (gv = 20) : (gv = 21)), kofListAdd(g, gt));
+  ```
+- **Root cause (file:line):** `JsControlFlowParser.tryParseIfExpr` recognizes
+  `Label(true), <expr>, Jump, Label(false), <expr>, Label(end)` and folds it to
+  a `JsConditional` expression — VALID for a real ternary, but WRONG at statement
+  position when the branches are assignments whose value is discarded. The
+  resulting expression leaks onto the expression stack and is glued into a
+  `JsSequence` with the FOLLOWING statement (`(ternary, nextStmt)`); the next
+  statement's `let`/var-decl preamble is emitted as a SEPARATE statement BEFORE
+  that sequence (JsExpressionParser preamble ordering), so any read of the
+  if-assigned variable happens before the ternary executes it.
+- **Correct fix (next unit; NOT attempted — the §266 loop-face is closed, and
+  this one is a different special-case-dense region):** a statement-level `if`
+  must NOT be folded to an if-expression; `tryParseIfExpr` should refuse the fold
+  when the branches are assignment statements with no value consumer (i.e. when
+  it is reached from the statement dispatcher, not from expression context), or
+  the fold must preserve statement boundaries so the next statement's `let` is
+  emitted AFTER the ternary. Q0: the repro above prints 21 on JS == JVM ==
+  Script == Native; a `view` loop that assigns a marker var in an `if/else` and
+  reads it on the next line renders correctly in Chrome. Q1: regression
+  `JsIfExprFoldStatementParityE2ETest` (statement if/else both-assign + trailing
+  read; if inside loop; if inside function; nested if/else; the ternary-still-an-
+  expression case must NOT regress — `x = a ? b : c` must still fold). RISK:
+  `tryParseIfExpr` is on the shared expression/statement boundary the §147/§149
+  faces lean on — full suite mandatory, budget multi-tick. Until it lands, this
+  shape is a compile-legitimate but SILENTLY WRONG program on JS (rule 6) —
+  cataloged here, NOT fixed half-way.
+- **Workaround in the field:** don't read an if-assigned variable in a statement
+  that the fold can hoist above the ternary — assign it to a DIFFERENT variable,
+  or restructure so the `if/else` branches are full statement blocks (not single
+  assignments the folder can collapse). The lib's `ReorderList` view uses a
+  helper function for the row marker (`reorderMark`), which parses separately and
+  sidesteps BOTH the §266 loop face and this fold face at once.
 
 ### §194 — `for (var c in "abc")` (for-in over String/non-collection) was ACCEPTED and broke one way per target (JVM `VerifyError`, Native SIGSEGV, Script crash, JS iterated) — ✅ FIXED 14/09 (SEM058; triage of queue #145 of the bugs-and-gaps lane `192.168.100.15`)
 
