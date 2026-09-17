@@ -171,6 +171,19 @@ public final class KofJsDbBridge {
         return v.as(Object.class);
     }
 
+    /** Bridge do Value p/ objeto: o guest passa o record via `toJSON()` (membros
+     *  = nomes de campo crus); o ORM lê os valores pela ordem do schema. */
+    static Map<String, Object> valueMap(Value obj) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        if (obj == null || obj.isNull()) {
+            return m;
+        }
+        for (String key : obj.getMemberKeys()) {
+            m.put(key, fromGuest(obj.getMember(key)));
+        }
+        return m;
+    }
+
     /** Normaliza tipos JDBC p/ JSON natural (CLOB→String, BLOB→base64) —
      *  paridade com o `kof_db_value` do JVM. */
     private static Object value(Object v) throws Exception {

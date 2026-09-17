@@ -119,7 +119,7 @@ public final class Decompile {
             System.err.println("kof decompile: " + e.getMessage());
             return 1;
         }
-        System.out.println("decompiled " + ok + " class(es) → " + out + (fail > 0 ? " (" + fail + " falharam)" : ""));
+        System.out.println("decompiled " + ok + " class(es) → " + out + (fail > 0 ? " (" + fail + " failed)" : ""));
         return fail > 0 ? 1 : 0;
     }
 

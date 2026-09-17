@@ -523,7 +523,7 @@ class KofDbE2ETest {
     }
 
     @Test
-    void nativeSupportsSqliteAndJsReportsDb002OnTypedQuery(@TempDir Path tempDir) throws IOException {
+    void nativeSupportsSqliteAndJsCompilesTypedQuery(@TempDir Path tempDir) throws IOException {
         Path source = tempDir.resolve("Main.kf");
         Files.writeString(source, """
             main() {
@@ -536,17 +536,68 @@ class KofDbE2ETest {
         assertTrue(nativeResult.success(),
                 nativeResult.diagnostics().getDiagnostics().toString());
 
+        // DB002 (18/09): o gate compile-time CAIU — query tipado compila no JS
+        // (bind no guest via __kof_decode_<T>, wire untyped).
         Path jsSource = tempDir.resolve("MainJs.kf");
         Files.writeString(jsSource, """
+            record User(Int id, String name)
+
             main() {
                 var db = db.connect("jdbc:sqlite:/tmp/x.db")
                 var rows = db.query<User>(db, "select * from u")
+                println(rows.size)
             }
             """);
         CompilationResult jsResult = driver.compile(jsSource, tempDir.resolve("js-out"), Target.JS);
-        assertFalse(jsResult.success(), "typed query no JS deve falhar em compile");
-        assertTrue(jsResult.diagnostics().getDiagnostics().toString().contains("DB002"),
+        assertTrue(jsResult.success(), "DB002: typed query agora compila no JS: "
+                + jsResult.diagnostics().getDiagnostics());
+        assertFalse(jsResult.diagnostics().getDiagnostics().toString().contains("DB002"),
                 jsResult.diagnostics().getDiagnostics().toString());
+    }
+
+    @Test
+    void jsTypedQueryBindsRecord(@TempDir Path tempDir) throws IOException {
+        // DB002 (18/09): paridade byte-a-byte com `typedQueryBindsRecord` da JVM
+        // (o mesmo `__kof_decode_<T>` do json.decode faz o bind por linha).
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            record User(Int id, String name)
+
+            main() {
+                var db = db.connect("jdbc:h2:mem:jsd002a;DB_CLOSE_DELAY=-1")
+                db.execute(db, "create table users(id int, name varchar(50))")
+                db.execute(db, "insert into users values (?, ?)", 7, "Ada")
+                var users = db.query<User>(db, "select * from users where id = ?", 7)
+                println(users.size)
+                println(users.get(0).id)
+                println(users.get(0).name)
+            }
+            """);
+        runJs(source, tempDir.resolve("out"), "1\n7\nAda");
+    }
+
+    @Test
+    void jsTypedQueryAllRows(@TempDir Path tempDir) throws IOException {
+        // DB002 (18/09): paridade com `typedQueryAllRows` da JVM (for-in sobre
+        // List<record> + acesso a campo).
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            record User(Int id, String name)
+
+            main() {
+                var db = db.connect("jdbc:h2:mem:jsd002b;DB_CLOSE_DELAY=-1")
+                db.execute(db, "create table users(id int, name varchar(50))")
+                db.execute(db, "insert into users values (1, 'A')")
+                db.execute(db, "insert into users values (2, 'B')")
+                var users = db.query<User>(db, "select * from users order by id")
+                var total = 0
+                for (var u in users) {
+                    total = total + u.id
+                }
+                println(total)
+            }
+            """);
+        runJs(source, tempDir.resolve("out"), "3");
     }
 
     @Test
@@ -694,7 +745,8 @@ class KofDbE2ETest {
     void jsDbConnectNowCompiles(@TempDir Path tempDir) throws IOException {
         // DB001 fechado no JS (16/09): o gate `KofDb.supportedOn` abriu —
         // connect nao-tipado compila (a ponte `kof_platform.db*` roda na mesma
-        // JVM/classpath do caminho JVM). So o query TIPADO segue gate (DB002).
+        // JVM/classpath do caminho JVM). DB002 fechado no JS (18/09): o query
+        // tipado tbem compila (bind no guest; veja jsTypedQueryBindsRecord).
         Path source = tempDir.resolve("Main.kf");
         Files.writeString(source, """
             main() {

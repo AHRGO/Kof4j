@@ -23,7 +23,7 @@ final class CmdBuild {
     private CmdBuild() {
     }
 
-    private static final String USAGE = "usage: kof build <source-dir> [--target jvm|native|js|native.risc|native.arm|android] [--backend <t>] [--frontend <t>] [--output <dir>] [--release] [--apk] [--aab] [--fat] [--print-sizes] [--classpath <jars>] [--keystore <ks> [--storepass <p>] [--keypass <p>] [--alias <a>]] [--min-sdk <n>] [--target-sdk <n>]";
+    private static final String USAGE = "usage: kof build <source-dir|file.kf> [--target jvm|native|js|native.risc|native.arm|android] [--backend <t>] [--frontend <t>] [--output <dir>] [--release] [--apk] [--aab] [--fat] [--print-sizes] [--classpath <jars>] [--keystore <ks> [--storepass <p>] [--keypass <p>] [--alias <a>]] [--min-sdk <n>] [--target-sdk <n>]";
 
     static void run(String[] args) {
         if (args.length < 2) { System.err.println(USAGE); return; }
@@ -252,7 +252,7 @@ final class CmdBuild {
                     driver.setExternalClasspath(externalEntries);
                 }
             } catch (IOException e) {
-                System.err.println("build: falha ao ler kofdeps: " + e.getMessage());
+                System.err.println("build: failed to read kofdeps: " + e.getMessage());
                 return;
             }
         }
@@ -287,7 +287,7 @@ final class CmdBuild {
                 Path jar = buildFatJar(backendOut, externalEntries);
                 System.out.println("fat jar → " + jar);
             } catch (IOException e) {
-                System.err.println("build: falha ao gerar fat jar: " + e.getMessage());
+                System.err.println("build: failed to generate fat jar: " + e.getMessage());
                 System.exit(1);
                 return;
             }

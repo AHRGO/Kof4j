@@ -191,7 +191,8 @@ User.query(db) { where age > 18; orderBy name desc; limit 10 }
 - Sintaxe especial reconhecida quando o receiver é uma `entity` declarada e o
   método é `query` com 1 argumento (ExpressionParser.parsePostfix (call)).
 - Baixa para `db.query<Entity>(…)` com SQL montado em compile-time e valores
-  como binds (sem concat de entrada). ORM001.
+  como binds (sem concat de entrada). Disponível em JVM + JS (`DB002`/`ORM001`
+  fechados 18/09); `ORM001` no Native.
 - **Experimental** (domínio ORM).
 
 ---

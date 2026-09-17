@@ -84,7 +84,7 @@
 
 ``` 
 mvn clean package    → PASS
-mvn test             → 2218 tests (1911 kof-compiler + 38 kof-script + 7 kof-c-compiler + 262 kof-cli), 0 regressions / 0 errors, 192 skip (no qemu on host → 84 cross skip; external DB/toolchain guards + §255 sysroot guard; `node` present — all `*Js` green) — 16/09 ~15:54 clean clone of `9572949f` (the §252 native flake silent 3rd straight run) (previous 1662/13-errors = node-less host, 13/09)
+mvn test             → 2411 tests (2058 kof-compiler + 38 kof-script + 7 kof-c-compiler + 308 kof-cli), 0 regressions / 0 errors, 196 skip (no qemu on host → 84 cross skip; external DB/toolchain guards + §255 sysroot guard; `node` present — all `*Js` green) — 17/09 ~15:49 clean run on tip `f276e966` (§252 native flake silent again) (previous 2218 = 16/09 ~15:54 clean clone of `9572949f`)
 kof build            → PASS (--target jvm|native|js|native.risc|native.arm) [--release]
 kof run              → PASS (jvm|native|js|native.risc|native.arm) [--release]
 kof serve            → PASS (native web.app() + legacy handle() API)
@@ -232,7 +232,7 @@ main() {
     (mysql_native_password) + COM_QUERY + resultset parsing (coldefs + rows
     + EOF) + `?` binds (client-side literal substitution, `nativeMysqlWireProtocol`
     — 31/08)**. Prepared statements via COM_STMT_PREPARE (binary) pending.
-- **JS** (16/09, DB001 fechado): `connect`/`connect2`/`close`/`execute`/`query`/`transaction` delegate to `kof_platform.db*` on the GraalJS host (`KofJsRunner`+`KofJsDbBridge`) — same JVM/classpath as the JDBC path, so `DriverManager` sees h2/sqlite-jdbc exactly as the JVM target does; output byte-parity (`KofDbE2ETest.js*` 4 cases). **`db.query<T>` tipado = `DB002`** (compile-time: JS emits no JVM bytecode on the host classpath — `Class.forName` has nothing to load; the untyped `query` returns JSON rows).
+- **JS** (16/09, DB001 fechado): `connect`/`connect2`/`close`/`execute`/`query`/`transaction` delegate to `kof_platform.db*` on the GraalJS host (`KofJsRunner`+`KofJsDbBridge`) — same JVM/classpath as the JDBC path, so `DriverManager` sees h2/sqlite-jdbc exactly as the JVM target does; output byte-parity (`KofDbE2ETest.js*` 4 cases). **`db.query<T>` typed = `DB002` CLOSED 18/09** (the wire is untyped — the host bridge has no `Class.forName` for JS classes — but the guest binds each JSON row via the same `__kof_decode_<T>` helper `json.decode<List<T>>` uses; `KofDbE2ETest.jsTypedQuery*` byte-parity with the JVM).
 - **riscv64/aarch64**: SQLite closed 15/09 — link-by-use `libsqlite3` + `kof_db_*` runtime slices `RtB46/RtB47` (`KofDbE2ETest.crossNativeSqliteRoundtrip` under qemu); `sqlite:` DSN only, transaction via EH chain (inside `spawn` unsupported cross-side, same class as OTP001).
 - DSNs: `jdbc:*` (JVM), `sqlite:` (JVM/Native), `mongodb://` (ORM).
 
@@ -275,8 +275,8 @@ main() {
   compatible reflection (`Bson`/`Class`, no ClientSession); E2E test with a
   real container (conditional skip; Mongo service in CI).
 - Versioned migrations: table `kof_migrations`, each migration runs once.
-- Native/JS report `ORM001`.
- - Tests: `KofDbE2ETest` (9), `KofOrmE2ETest` (22; MariaDB/PostgreSQL/MongoDB
+- Native reports `ORM001`; JS CLOSED 18/09 (`KofJsOrmBridge`, same SQL as JVM, byte-parity E2E).
+ - Tests: `KofDbE2ETest` (9), `KofOrmE2ETest` (31; MariaDB/PostgreSQL/MongoDB
    with conditional skip when the container is not up).
  - Docs: `docs/stdlib/DATABASE_VISION.md` (levels 0-4 implemented, including
    level 3 = typed query DSL `User.query(db){ where; orderBy; limit }` — 01/09).
@@ -366,8 +366,8 @@ Bool positivo(Int x) = x > 0         // expression body
 | kof.mq (publish/subscribe/queue) | ✅ | ✅ (01/09, pub/sub + in-process queues, asm) | ✅ |
 | kof.log (`log.info/warn/error/debug`) | ✅ | ✅ (asm; UTC, no JSON) | ✅ (LOG001 closed 01/09) |
 | kof.security (passwords, crypto, JWT, secrets) | ✅ | ✅ | ✅ |
-| kof.db (JDBC, query<T>, transaction) + native SQLite | ✅ | ✅ (SQLite + transaction; MySQL WIP; **riscv64/aarch64 ✅ 15/09** link-by-use libsqlite3) | ✅ 16/09 (untyped `connect/execute/query/close/transaction` na ponte GraalJS — `DB002` p/ `query<T>` tipado) |
-| kof.orm (entity, CRUD, where, migrate, MongoDB) | ✅ | ORM001 | ORM001 |
+| kof.db (JDBC, query<T>, transaction) + native SQLite | ✅ | ✅ (SQLite + transaction; MySQL WIP; **riscv64/aarch64 ✅ 15/09** link-by-use libsqlite3) | ✅ 16/09 (untyped `connect/execute/query/close/transaction` on the GraalJS bridge) + ✅ 18/09 typed `query<T>` (`DB002` closed — guest-side bind via `__kof_decode_<T>`) |
+| kof.orm (entity, CRUD, where, migrate, MongoDB) | ✅ | ORM001 | ✅ CLOSED 18/09 |
 | String.toInt/toLong/toDouble/toFloat | ✅ | ✅ | ✅ |
 | kof.ui (Color, Palette, Theme, Window) | ✅ | ✅ (JS render) | ✅ |
 | default parameters in functions | ✅ | ✅ | ✅ |
@@ -577,7 +577,7 @@ main() { /* ignored by kof test */ }
 
 ---
 
-## Tests (2218 = 1911 kof-compiler + 38 kof-script + 7 kof-c-compiler + 262 kof-cli — full suite green, 0 regressions / 0 errors, 192 skip; measured 16/09 ~15:54 on a clean clone of `9572949f`; §252 native flake silent 3rd straight run. Host without qemu: cross → honest skip)
+## Tests (2411 = 2058 kof-compiler + 38 kof-script + 7 kof-c-compiler + 308 kof-cli — full suite green, 0 regressions / 0 errors, 196 skip; measured 17/09 ~15:49 on a clean run of tip `f276e966`; §252 native flake silent again. Host without qemu: cross → honest skip)
 
 | Suite | Count | Coverage |
 |-------|-----------|-----------|
@@ -587,7 +587,7 @@ main() { /* ignored by kof test */ }
 | JvmE2ETest | 31 | real execution of JVM bytecode |
 | KofSecurityTest | 28 | kof.security: passwords, crypto, JWT, secrets, adversarial |
 | OptimizerTest | 22 | IR optimization passes |
-| KofOrmE2ETest | 22 | kof.orm: entity, CRUD, where (+ORM003 typed column validation, P3-10), **Query DSL `User.query(db){ where; orderBy; limit }` (level 3, ORM001)**, migrate, unique, MongoDB (3 conditional skips) |
+| KofOrmE2ETest | 31 | kof.orm: entity, CRUD, where (+ORM003 typed column validation, P3-10), **Query DSL `User.query(db){ where; orderBy; limit }` (level 3, ORM001)**, migrate, unique, MongoDB (3 conditional skips) |
 | KofConcurrency2Test | 33 | spawn stmt/expr, selectAny, cancel/cancelled, done/poll, awaitTimeout, channel (+`Channel<T>` as a function parameter, 3 targets) |
 | IoE2ETest | 16 | kof.io multiplatform (+ honest `readText`/`size` contracts 02/09) |
 
@@ -604,7 +604,7 @@ main() { /* ignored by kof test */ }
 | KofPatternMatchingTest | 12 | switch case String s / Point(x,y) 3 targets |
 | KofWebE2ETest | 12 | native web stack (web.app, routes, JSON, middleware, `app.health` bypass) |
 | ExceptionsE2ETest | 9 | try/catch/finally JVM + Native |
-| KofDbE2ETest | 22 | kof.db: JDBC, query<T>, transaction, rollback, native SQLite, Native transaction (commit+rollback), **DB001 no JS (bridge GraalJS 16/09: roundtrip js + transaction commit/rollback/aninhado byte-parity c/ JVM)**, `DB002` p/ query<T> no JS, **cross SQLite roundtrip riscv64+aarch64 (qemu) 15/09** |
+| KofDbE2ETest | 24 | kof.db: JDBC, query<T>, transaction, rollback, native SQLite, Native transaction (commit+rollback), **DB001 no JS (bridge GraalJS 16/09: roundtrip js + transaction commit/rollback/nested byte-parity with the JVM)**, **DB002 closed on JS (18/09: typed `query<T>` guest-side bind via `__kof_decode_<T>`, byte-parity with the JVM)**, **cross SQLite roundtrip riscv64+aarch64 (qemu) 15/09** |
 | KofHttpServerTest | 8 | serve engine (real sockets) |
 | KofMediaE2ETest | 15 | kof.media + serveDir: Image/Audio/WAV/Video(MP4), Range 206/416, binary content (not base64) |
 | NativeConfigE2ETest | 8 | kof.config Native (asm): precedence, typed, comments |

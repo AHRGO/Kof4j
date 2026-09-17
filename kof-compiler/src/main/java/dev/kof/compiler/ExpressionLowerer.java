@@ -30,7 +30,14 @@ public final class ExpressionLowerer {
                 yield localIdx;
             }
             case IdentifierExpr ie -> {
-                if (driver.loweringMain && "args".equals(ie.name())) {
+                if (driver.loweringMain && "args".equals(ie.name())
+                        && driver.findLocalVar(ie.name(), locals) == null) {
+                    // #397: the implicit main-args intercept applies ONLY when
+                    // the user did not declare `args` in main (a declared local
+                    // wins — same §179 declared-beats-builtin-alias precedent as
+                    // the field-vs-namespace guard #403; the SEM pass already
+                    // resolves locals first, and the divergence here loaded
+                    // slot 0 String[] over the user's local → silent garbage).
                     if (driver.mainArgsListField) {
                         // args: List<String> — the converted list lives in
                         // slot 1 (set by the main prologue)

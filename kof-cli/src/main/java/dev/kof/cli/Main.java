@@ -29,7 +29,7 @@ public final class Main {
             case "migrate" -> System.exit(Migrate.run(args));
             case "debug" -> System.exit(KofDebug.run(args));
             case "info" -> info(args);
-            case "lsp" -> lsp();
+            case "lsp" -> lsp(args);
             case "install" -> install(args);
             case "script" -> System.exit(CmdScript.run(args));
             case "repl" -> System.exit(CmdScript.repl(args));
@@ -43,7 +43,7 @@ public final class Main {
             case "version" -> {
                 // R6: `version` nao aceita flags — nao ignorar em silencio.
                 if (args.length > 1 && args[1].startsWith("-")) {
-                    System.err.println("version: flag desconhecida: " + args[1] + " (usage: kof version)");
+                    System.err.println("version: unknown flag: " + args[1] + " (usage: kof version)");
                     System.exit(1);
                 }
                 System.out.println("kof " + KofVersion.version());
@@ -54,9 +54,9 @@ public final class Main {
 
     private static void printUsage() {
         System.out.println("usage: kof <command>");
-        System.out.println("  build <dir> [--target jvm|native|js|native.risc|native.arm|android] [--output <dir>] [--release] [--apk] [--aab] [--min-sdk <n>] [--target-sdk <n>]");
-        System.out.println("  run <file.kf> [--target jvm|native|js|native.risc|native.arm|android] [--release] [args...]");
-        System.out.println("  serve <file.kf> [--port <port>] [--host <host>]");
+        System.out.println("  build <dir|file.kf> [--target jvm|native|js|native.risc|native.arm|android] [--output <dir>] [--release] [--apk] [--aab] [--min-sdk <n>] [--target-sdk <n>]");
+        System.out.println("  run <file.kf> [--target jvm|native|js|native.risc|native.arm|android] [--backend <t>] [--frontend <t>] [--release] [--deps] [args...]");
+        System.out.println("  serve <file.kf> [--port <port>] [--host <host>] [--backend <t>] [--frontend <t>]");
         System.out.println("  check <file.kf|dir> [--target <t>] [--json]   type-check without emitting output");
         System.out.println("  script <file.ks|kf> [--target jvm|native|js]   direct KofScript execution (JVM/Native/JS, diagnostics with file:line)");
         System.out.println("  repl                         REPL incremental KofScript (type 'exit' to quit)");
@@ -143,7 +143,13 @@ public final class Main {
         }
     }
 
-    private static void lsp() {
+    private static void lsp(String[] args) {
+        // R6: `lsp` takes no flags — a typo must not be silently ignored.
+        if (args.length > 1 && args[1].startsWith("-")) {
+            System.err.println("lsp: unknown flag: " + args[1] + " (usage: kof lsp)");
+            System.exit(1);
+            return;
+        }
         LspServer server = new LspServer(System.in, System.out);
         try {
             server.run();
@@ -165,15 +171,37 @@ public final class Main {
             System.exit(1);
             return;
         }
+        if (args[2].startsWith("-")) {
+            System.err.println("config: unknown flag: " + args[2]
+                    + " (accepts: --target jvm|native|js --output <file>)");
+            System.exit(1);
+            return;
+        }
         Path src = Path.of(args[2]);
         if (!Files.exists(src)) { System.err.println("not found: " + src); System.exit(1); return; }
         Target target = Target.JVM;
         Path output = null;
         for (int i = 3; i < args.length; i++) {
-            if ("--target".equals(args[i]) && i + 1 < args.length) {
+            if (args[i].startsWith("--target=")) {
+                target = KofCliSupport.parseTarget(args[i].substring("--target=".length()));
+            } else if ("--target".equals(args[i]) && i + 1 < args.length) {
                 target = KofCliSupport.parseTarget(args[++i]);
+            } else if (args[i].startsWith("--output=")) {
+                output = Path.of(args[i].substring("--output=".length()));
             } else if ("--output".equals(args[i]) && i + 1 < args.length) {
                 output = Path.of(args[++i]);
+            } else if (args[i].startsWith("-")) {
+                // R6: a flag desconhecida (ou sem valor) nao pode ser ignorada
+                // em silencio — o usuario/CI acharia que teve efeito.
+                System.err.println("config: unknown or incomplete flag: " + args[i]
+                        + " (accepts: --target jvm|native|js --output <file>)");
+                System.exit(1);
+                return;
+            } else {
+                System.err.println("config: unexpected argument: " + args[i]
+                        + " (accepts: --target jvm|native|js --output <file>)");
+                System.exit(1);
+                return;
             }
         }
         // compile-only: chaves são coletadas em compile-time, nada é executado
@@ -219,7 +247,7 @@ public final class Main {
         // R6: `kof init` nao aceita flags — um `--flag` seria tratado como nome
         // de diretorio e criaria lixo (`--bogus/`). Recusa honesta.
         if (args.length > 1 && args[1].startsWith("-")) {
-            System.err.println("init: flag desconhecida: " + args[1]
+            System.err.println("init: unknown flag: " + args[1]
                     + " (usage: kof init [dir])");
             return 1;
         }
@@ -305,7 +333,7 @@ public final class Main {
         for (int i = 1; i < args.length; i++) {
             if (args[i].startsWith("-") && !"--json".equals(args[i])
                     && !"-h".equals(args[i]) && !"--help".equals(args[i])) {
-                System.err.println("info: flag desconhecida: " + args[i] + " (aceita: --json)");
+                System.err.println("info: unknown flag: " + args[i] + " (accepts: --json)");
                 System.exit(1);
             }
         }

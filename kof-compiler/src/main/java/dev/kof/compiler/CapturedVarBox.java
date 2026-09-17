@@ -34,15 +34,24 @@ public final class CapturedVarBox {
         // existia no capture path (decl anterior) — comportamento idêntico.
         ops.add(new KofStoreLocal(boxType, localIdx));
         locals.add(new IRLocalVariable(localIdx, vds.name(), boxType));
-        ops.add(new KofLoadLocal(boxType, localIdx));
         int nextFree = localIdx + 1;
+        // §253 face B: o receiver-box NAO pode ficar na pilha de maquina durante
+        // a avaliacao do init (um push impar cruzando os calls do init deixa
+        // todo call com rsp%16==8 e o SSE da libc SIGSEGVa no callee). Avalia o
+        // init primeiro, derrama o valor num slot de frame, e so entao empilha
+        // [box, value] para o putfield. O slot do box ja esta registrado acima
+        // (a lambda do init captura por referencia ao slot, nao ao stack).
         if (vdInit != null) {
             nextFree = ExpressionLowerer.emitExpression(driver, vdInit, ops, owner,
                     localIdx + 1, locals);
         } else {
             ops.add(new KofLoadLiteral(initType, 0));
         }
+        ops.add(new KofStoreLocal(initType, nextFree));
+        locals.add(new IRLocalVariable(nextFree, "$boxinit" + nextFree, initType));
+        ops.add(new KofLoadLocal(boxType, localIdx));
+        ops.add(new KofLoadLocal(initType, nextFree));
         ops.add(new KofStoreField(boxType, "value", initType));
-        return nextFree;
+        return nextFree + (TypeMetrics.isDoubleWidth(initType) ? 2 : 1);
     }
 }

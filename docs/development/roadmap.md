@@ -384,7 +384,7 @@ statements, transactions, declarative `entity` at compile-time, CRUD
 (`create/save/find/all/where/delete/count`), `orm.where` by field + operators, `saveAll` batch, `page`/`count`/`deleteAll`,
 versioned migrations (`kof_migrations`) and MongoDB (official driver).
 Missing: typed query DSL (`User.query { where age > 18 }`), connection
-pooling, complete MySQL (query/prepared), `kof.db`/`kof.orm` outside the JVM (**JS `DB001` CLOSED 16/09** — untyped on the GraalJS host; residual typed `query<T>` = `DB002` + `ORM001`), NoSQL beyond MongoDB.
+pooling, complete MySQL (query/prepared), `kof.db`/`kof.orm` outside the JVM (**JS `DB001` CLOSED 16/09** — untyped on the GraalJS host; typed `query<T>` = `DB002` CLOSED 18/09; `kof.orm` = `ORM001` CLOSED 18/09 on JS, residual Native `ORM001`), NoSQL beyond MongoDB.
 
 ---
 
@@ -840,14 +840,15 @@ compiler, runtime, stdlib and tooling.**
 
 ---
 
-## 22. Universal Platform (future plan)
+## 22. Universal Platform (under development — R12 overridden)
 
 Long-term vision — Kof as a universal platform (one language for
 applications **and** systems, infrastructure, automation, data, security and
 science) **without** destroying the language's simplicity.
 
-- Central document: `docs/development/future/PLAN-UNIVERSAL-PLATFORM.md` (architecture,
-  **not** implementation order)
+- Central document: `docs/development/PLAN-UNIVERSAL-PLATFORM.md`
+  (architecture — **UNDER DEVELOPMENT** since 17/09/2026; promoted from
+  `future/` by maintainer decision, `DECISIONS.md` §D-UNIVERSAL)
 - Stages by capability/maturity: `FOUNDATION ✅` → `SYSTEMS` (in
   progress) → `AUTOMATION` → `INFRASTRUCTURE` → `DATA` → `SECURITY` →
   `SCIENTIFIC` → `BIO` → `UNIVERSAL`
@@ -862,9 +863,14 @@ science) **without** destroying the language's simplicity.
   effect system; no homemade crypto; no reimplementing Arrow/BLAS/ML/
   aligners; no "Kali in Kof"; no per-domain target; no own SQL engine
 
-**Do not implement anything from this section before the SYSTEMS stage closes**
-(gap parity, GC mark-sweep, basic package manager — see
-`docs/development/roadmap.md` §23 (ex-plan-platform-completion) P0–P5).
+> **Status 17/09:** R1 ✅ DONE (`5f1422c6` — gate `scripts/check_stdlib_boundary.sh` + ledger na CI, AGENTS invariante 1). R2–R12: fila aberta por D-UNIVERSAL; unidades de código seguem a ordem de valor do §23.
+>
+> **R12 gate overridden 17/09/2026** (`DECISIONS.md` §D-UNIVERSAL): the
+> maintainer authorized this front to open **with SYSTEMS still in progress**.
+> The entry point is Stage 1 (SYSTEMS consolidation) + R1–R12; Tier 6+
+> (AUTOMATION/INFRA/DATA/…) keeps its order in §23. For every **other** front,
+> R12 remains the default: do not open `infra`/`data`/`sci` before SYSTEMS
+> closes (gap parity, GC mark-sweep, basic package manager — §23 P0–P5).
 
 ---
 
@@ -897,7 +903,7 @@ domain (`INFRA00x`/`DATA00x`/`SCI00x`/`BIO00x`/`SECPQ`) + parity matrix;
 | 1.2 | Automatic GC mark-sweep in Native | 🟡 riscv `356f33b9` ✅; x86 decomposed G-1..G-5 (`native-multiarch.md`) |
 | 1.3 | Typed query DSL (`User.query {}`) | ✅ 01/09 (`KofOrmE2ETest`) |
 | 1.4 | Package manager MVP (`kofdeps`) | 🟡 `kof deps` + Maven Central resolution; **transitive ✅ 16/09** (Maven delegation + `kofdeps.lock`, `DepsTransitiveTest` 10/10 incl. real-Maven E2E); **registry pending (needs maintainer decision)** |
-| 1.5 | Tracing/OpenTelemetry + `application{}` lifecycle | 🟡 W3C spans + lifecycle ✅ 3 targets; OTel export pending |
+| 1.5 | Tracing/OpenTelemetry + `application{}` lifecycle | 🟡 W3C spans + lifecycle ✅ 3 targets; **OTel export ✅ JVM/JS (`exportSpans()` → OTLP/JSON, `OBS003`); Native gap honesto `OBS003`** |
 | 1.6 | **Native → bare-metal/bootable** (microcontroller, legacy BIOS, UEFI) — 15/09 maintainer directive | ⚪ **plan only** — HAL seam `kof_plat_*` + freestanding profile, faces B-0…B-5 in `docs/development/future/PLAN-BAREMETAL-BOOT.md`; not scheduled; MCU depends on 1.2 |
 
 ### TIER 2 — Compiler foundations (M) — **status corrected against the code**
@@ -965,7 +971,7 @@ detailed technical history lives in `future/LEGACY_MIGRATION.md` +
 `future/DECOMPILER.md` (§7) — **do not duplicate here**; this table only gives
 the order. **DEPRIORITIZED 15/09 (maintainer): TIER 3–5 is not current work.**
 
-### TIER 6–12 — Universal platform (not started; governed by `future/PLAN-UNIVERSAL-PLATFORM.md`)
+### TIER 6–12 — Universal platform (architecture **UNDER DEVELOPMENT** 17/09 — R12 overridden; governed by `docs/development/PLAN-UNIVERSAL-PLATFORM.md`)
 
 | Tier | Stage | Scope (one line) |
 |------|---------|--------------------|

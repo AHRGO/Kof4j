@@ -5,7 +5,7 @@
 **Version:** 0.4.0-beta · **Date:** 06/09/2026 · **Re-synced 17/09/2026** against the applied SG-00x (`docs/bugs-and-gaps/specification-gaps.md`) and the #322/#330 fixes.
 
 Classification of each language feature. **Nothing here is "stable" out of
-courtesy** — Stable requires   (rule 0.2.6-beta) **and** a test
+courtesy** — Stable requires frozen semantics (rule 0.2.6-beta) **and** a test
 that proves it. Categories: **Stable · Experimental · Implementation-defined ·
 Target-specific · Unspecified · Planned**.
 
@@ -102,6 +102,7 @@ Target-specific · Unspecified · Planned**.
 | Ambiguous import (does not guess) | Stable | `CompilerTypes:102` |
 | PKG002 (1 main) | Stable | probe |
 | JVM interop (Java types) | **Target-specific** | `AndroidInteropE2ETest` |
+| C FFI (`extern "<lib>"`) | **Partial** — JVM whitelist 1-arg: `Int→Int`, `String→Int`, `Double→Double`; multi-arg/`String`-return = `FFI001`; JS = `FFI002`; Native = `FFI001` (R6, never silent) | measured 17/09 (`modules.md` §6); widening = fatia R3 (`PLAN-UNIVERSAL-PLATFORM.md`, #431) |
 
 ### Concurrency
 | Feature | Status | Test evidence |

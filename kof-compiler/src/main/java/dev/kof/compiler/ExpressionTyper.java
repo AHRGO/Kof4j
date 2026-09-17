@@ -26,7 +26,12 @@ public final class ExpressionTyper {
             };
             case QueryDslExpr q -> new Type.ClassType("kof", "List", List.of(CompilerTypes.toType(q.entityType(), driver.currentUnit)));
             case IdentifierExpr ie -> {
-                if (driver.loweringMain && "args".equals(ie.name())) {
+                if (driver.loweringMain && "args".equals(ie.name())
+                        && !locals.stream().anyMatch(lv2 -> lv2.name().equals(ie.name()))) {
+                    // #397: same declared-local-wins guard as the emit path —
+                    // without it the typer yielded String[] for a user-declared
+                    // `args` local and the unbox/checkcast followed the wrong
+                    // type (the emit's list read crashed with AIOOBE).
                     if (driver.mainArgsListField) {
                         yield KofProcess.STRING_LIST;
                     }

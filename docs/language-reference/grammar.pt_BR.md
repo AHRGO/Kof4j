@@ -51,11 +51,12 @@ top-level-declaration =
     | annotation-list , function-declaration
     | test-declaration
     | application-declaration
+    | extern-declaration
     | type-declaration
     | function-declaration ;
 `
 
-**Somente** declarações de tipo e de função podem aparecer no topo. `val`/`var`
+**Somente** declarações de tipo, de função, blocos `test`/`application` e `extern` podem aparecer no topo. `val`/`var`
 no topo → `PARSE007` (*probe*). Não há `let` (SG-001).
 
 > **Resolução da pergunta "o parser produz diretamente a AST?":** **não.** O
@@ -147,6 +148,13 @@ parameter      = annotation-list , modifiers ,
                  [ "=" , expression ] ;                              (* `ClassMemberParser.parseField` *)
 throws-clause  = "throw" , type-ref , { "," , type-ref } ;           (* `TypeParser.parseThrows` *)
 type-parameters = "<" , identifier , { "," , identifier } , ">" ;    (* `TypeParser.parseTypeParameters` *)
+
+extern-declaration = "extern" , [ string-literal ] , identifier ,
+                     [ type-parameters ] , "(" , [ parameter-list ] , ")" ,
+                     [ ":" , type-ref ] , [ ";" ] ;                  (* `Parser.parseExternDeclaration` *)
+(* sem corpo: o binding é por target no runtime (whitelist JVM 1-arg;
+   FFI001 JVM-arity / FFI002 JS). A gramática ACEITA qualquer aridade;
+   CompilerPipeline.isExternBound rejeita além da whitelist em tempo de compilação. *)
 `
 
 As **três formas de retorno** são válidas e equivalentes:

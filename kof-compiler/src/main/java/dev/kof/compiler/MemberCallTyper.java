@@ -157,6 +157,20 @@ public final class MemberCallTyper {
                                 + "use set(index, value) to replace at an index",
                         "SEM072");
             }
+            // #361 (§269(b)) — `reduce` SEMPRE takes TWO arguments: the lambda
+            // and the seed, in either documented order (collections.md:
+            // "(lambda, init)" and "(init, lambda) is also accepted"). A
+            // 1-arg `reduce((a,b)->...)` compiled silently and died in ASM
+            // frame computation (NegativeArraySizeException -1 in Frame.merge
+            // — the emit stacked list+lambda against the 3-slot runtime
+            // signature `(ArrayList,Object,Object)`). Reject at the shared
+            // typer (same face as SEM072/#336): one gate, all four targets.
+            if ("reduce".equals(mn) && mc.arguments().size() != 2 && sa.diagnostics() != null) {
+                sa.diagnostics().error("", 0, 0, 0,
+                        "List.reduce takes exactly two arguments: the lambda AND the seed — "
+                                + "reduce((a: Int, b: Int) -> a + b, 0) or reduce(0, (a: Int, b: Int) -> a + b)",
+                        "SEM073");
+            }
             if ("get".equals(mn)) return elemType;
             if ("remove".equals(mn)) return elemType;
             if ("size".equals(mn) || "length".equals(mn) || "count".equals(mn))

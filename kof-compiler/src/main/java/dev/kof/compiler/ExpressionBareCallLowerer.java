@@ -135,6 +135,34 @@ public final class ExpressionBareCallLowerer {
                 ops.add(new KofCall(invokeOwner, "invoke", argTypes, lft.returnType(), KofCallKind.INSTANCE));
                 }
             } else {
+                // #402/#388: chamada de CAMPO de tipo de função da classe atual.
+                // Antes caía no fallback de função de topo e emitia
+                // invokestatic phantom em Default/Main.<campo> (método que não
+                // existe; retorno Object) → VerifyError no load. O caminho
+                // correto espelha o ramo de lambda-local declarado acima:
+                // this + getfield + invokeinterface na interface sintética.
+                // Local venceu antes (findLocalVar) — declared-local-wins §179.
+                if (owner != null && !owner.isEmpty() && driver.semanticAnalyzer != null) {
+                    Type selfType = CompilerTypes.ownerTypeFromInternal(owner, driver.semanticAnalyzer);
+                    if (selfType instanceof Type.ClassType oct) {
+                        SymbolTable.Symbol fsym = MemberResolver.resolveFieldInHierarchy(
+                                driver.semanticAnalyzer, oct.name(), mc.methodName());
+                        if (fsym instanceof SymbolTable.FieldSymbol fld
+                                && fld.type() instanceof Type.FunctionType fft) {
+                            ops.add(new KofLoadLocal(oct, 0));
+                            ops.add(new KofLoadField(oct, fld.name(), fft));
+                            List<Type> fArgTypes = new ArrayList<>();
+                            for (ExpressionNode arg : mc.arguments()) fArgTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
+                            localIdx = driver.emitArgumentsWithFormalTypes(mc.arguments(), fft.parameterTypes(), ops, owner, localIdx, locals);
+                            Type fIface = fft.className() != null
+                                    ? new Type.ClassType("", fft.className(), List.of())
+                                    : driver.lambdaInterfaceType(fft);
+                            ops.add(new KofCall(fIface, "invoke", fArgTypes, fft.returnType(),
+                                    fft.className() != null ? KofCallKind.INSTANCE : KofCallKind.INTERFACE));
+                            return localIdx;
+                        }
+                    }
+                }
                 List<Type> argTypes = new ArrayList<>();
                 for (ExpressionNode arg : mc.arguments()) argTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
                 Type returnType = Type.UnknownType.UNKNOWN;

@@ -58,8 +58,8 @@ public final class TypeChecker {
                     default -> ">= 0";
                 };
                 diagnostics.error("", 0, 0, 0,
-                        "Kof não tem o operador '" + operator + "' para String "
-                                + "(ordem lexicográfica Unspecified — divergia por target); "
+                        "Kof has no operator '" + operator + "' for String "
+                                + "(lexicographic order is Unspecified — it diverges per target); "
                                 + "use: s.compareTo(t) " + rel,
                         "SEM053");
             }
@@ -154,7 +154,7 @@ public final class TypeChecker {
                 diagnostics.error("", 0, 0, 0,
                         "Cannot apply '" + operator + "' to non-numeric type "
                                 + (isReferenceType(left) ? left : right)
-                                + " (declare o tipo do parâmetro, ex.: (x: Int) -> ...)",
+                                + " (declare the parameter type, e.g. (x: Int) -> ...)",
                         "SEM001");
             }
             return Type.UnknownType.UNKNOWN;
@@ -354,21 +354,37 @@ public final class TypeChecker {
         java.util.Queue<String> queue = new java.util.LinkedList<>();
         visited.add(fromName);
         if (node.superClass() != null && !"Object".equals(node.superClass())) {
-            queue.add(node.superClass());
+            queue.add(rawTypeName(node.superClass()));
         }
-        queue.addAll(node.interfaces());
+        for (String iface : node.interfaces()) queue.add(rawTypeName(iface));
         while (!queue.isEmpty()) {
             String current = queue.poll();
             if (current.equals(toName)) return true;
             if (!visited.add(current)) continue;
             SymbolTable.ClassSymbol cur = sa.getClass(current);
             if (cur == null) continue; // ancestral externo — para o ramo
-            if (cur.superClass() != null && !"Object".equals(cur.superClass())) queue.add(cur.superClass());
-            queue.addAll(cur.interfaces());
+            if (cur.superClass() != null && !"Object".equals(cur.superClass())) queue.add(rawTypeName(cur.superClass()));
+            for (String iface : cur.interfaces()) queue.add(rawTypeName(iface));
         }
         // from pode ser subtipo declarado com nome qualificado divergente —
         // conservador quando o símbolo de to não existe no módulo
         return sa.getClass(toName) == null;
+    }
+
+    /**
+     * #400: `implements Converter<Int, String>` é guardado no AST COM os
+     * type-args (parseTypeRef preserva o texto todo), então o BFS nominal
+     * comparava "Converter<Int, String>" com "Converter" e nunca achava a
+     * interface → SEM021 falso-positivo bloqueando atribuição legal. A
+     * subtipagem nominal compara pela face APAGADA (mesma raiz do JDK:
+     * `Converter<Int,String>` apaga p/ `Converter`; checagem FINA dos args
+     * entre interfaces =SG-013/#401, fila própria). Precedente strip:
+     * MemberResolver:356 (`simpleSuper.substring(0, indexOf("&lt;"))`).
+     */
+    private static String rawTypeName(String declared) {
+        int lt = declared.indexOf('<');
+        if (lt < 0) return declared;
+        return declared.substring(0, lt).trim();
     }
 
     /** Referência → referência (o único caminho que a subtipagem nominal rege). */

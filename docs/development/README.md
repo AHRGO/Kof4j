@@ -50,10 +50,15 @@ requests with no decision).
 | 5 | ~~`plan-editor-integration.md`~~ → `docs/tooling/PLAN-EDITOR-INTEGRATION.md` | ✅ **CONCLUDED 14/09** — degrees 0–13 implemented and proven (`EditorIntegrationTest` 23/23; `kof editor` complete across 7 editors; release gate §19 green) | moved to `docs/tooling/` (3-state rule) | — |
 | 6 | ~~`plan-stdlib-expansion.md`~~ → `docs/stdlib/PLAN-STDLIB-EXPANSION.md` | ✅ **CONCLUDED 14/09** — S0–S13 implemented and validated on 5 targets; pending decisions consolidated in `DECISIONS.md` §D-STDLIB | moved to `docs/stdlib/` (3-state rule) | — |
 | 7 | newly opened queue of `DECISIONS.md` (13/09): ~~`time.todayIso/formatDateIso/isToday/hoursBetween/parseDateIso/tzOffsetSeconds` (D-STDLIB)~~ **✅ EXECUTED 13/09** (S7e-S7h, stdtime3-6 matrix, suite 1772/0/0; TIME003 = general queue) · ~~`CmdNew` (D-APP I1)~~ **✅ DONE 14/09** (`kof new --type mono\|backend\|frontend\|full-stack`, compilable skeletons, honest APP003, `CmdNewTest` 8/8, APP matrix in `backend-parity.md`) · ~~`chacha20Encrypt/Decrypt` (D-SEC)~~ **✅ DONE 14/09** · ~~`security.cookies`~~ **✅ DONE 14/09** · ~~`app.security()` (C18)~~ **✅ DONE 14/09** (composite middleware, fixed order, JVM; `KofWebE2ETest` 22/22 + `appSecurityPipelineE2E`; Native/JS `WEB006`; unified superset .18×.22) · ~~`--fat` (D-APP I3)~~ **✅ DONE 14/09** (`kof build --fat` → `kof-app.jar` executable with classes+runtime+deps; `CmdBuildFatTest` 4/4, `java -jar` proof; non-JVM honest refusal R6) · ~~blog E2E (D-SPRING F12)~~ **✅ DONE 14/09** (`KofBlogE2ETest` green; exposed+fixed 2 JVM bugs: `readRequest` counted body in chars vs `Content-Length` in bytes — hung a multibyte UTF-8 connection; raw JDBC CLOB on the read path) | `RATIFIED` (decision locked 13/09) | — | ~~TLS own cert (D-SEC)~~ **✅ DONE 14/09** (`app.listenSecure(port, certPem, keyPem)`, PKCS#8 PEM, JVM; `KofWebTlsTest` 7/7; Native/JS `WEB002`) · ~~OAuth resource-server (D-SEC layer 16)~~ **✅ DONE 14/09** (`auth.resourceServer(jwksUrl,issuer,aud)` + `resourceServerVerify`; RS/ES via JWKS, no alg confusion; integrates with `auth.authenticated`/`app.security`; `KofOAuthResourceServerTest` 4/4; Native/JS `SECN007`) — **§7 QUEUE EMPTY**; each line = unit-test-commit |
+| 8 | `PLAN-UNIVERSAL-PLATFORM.md` | `IN PROGRESS` — **promoted from `future/` 17/09** (`DECISIONS.md` §D-UNIVERSAL, R12 overridden); architecture active | maintainer directive 17/09: promote and implement | **Stage 1 (SYSTEMS consolidation) + R1–R12** — live state 17/09: **R1 ✅ DONE** (`5f1422c6` boundary gate+ledger+CI); **1.5 ✅ OTel export landed** (`435b7013`, `exportSpans`→OTLP/JSON; Native `OBS003` honest); 1.1 MEDIA = `MEDIA001/003` documented in the matrix, implementation queued behind the HTTP facades of the `.22` shared worktree; 1.2 GC x86 = nat lane (§260 G-6(a) re-measured — gate bites, needs maintainer re-baseline sign-off); 1.4 registry/kofdeps = maintainer decision. Claim in `DOING.md` before code |
 | — | living records: `conformance-matrix.md`, `ecosystem-coverage.md`, `KOFUI-AUDIT.md`, `known-bugs.md` (in `docs/bugs-and-gaps/`); `roadmap.md` (here); `roadmap-audit.md`/`complexity-audit.md` (in `docs/audits/`) | `LIVE` | **they are not backlog** — matrix/audit/queue that update together with each closure | update the cell/section in the SAME commit that closes the gap |
 
-**R12 rule (AGENTS.md):** nothing from `future/` (universal platform, RAII,
-package-compiler) opens before SYSTEMS closes (parity + GC + stability).
+**R12 rule (AGENTS.md):** nothing from `future/` (RAII, package-compiler,
+bare-metal) opens before SYSTEMS closes (parity + GC + stability).
+**Exception, maintainer decision 17/09** (`DECISIONS.md` §D-UNIVERSAL):
+`PLAN-UNIVERSAL-PLATFORM.md` was **promoted to current work** with the R12 gate
+**overridden** — its entry point is Stage 1 (SYSTEMS consolidation) + R1–R12,
+so it attacks exactly the SYSTEMS items this rule requires closing.
 
 ---
 
@@ -137,7 +142,7 @@ scalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 | ~~`PLATFORM-PLAN.md`~~ → `DECISIONS.md` §D-PLATFORM (dead) | F1–3/8/9 with code (`ProjectLocator`, `KofProjectConfig`, `Target.SCRIPT`, PKG006/007, conformance 11 tests) | F1 resolved by the manifest; F4/F5→KOFUI-AUDIT/stdlib-web; F6 wasm/F7 android→D-APP Q7/Q10 table; F9→conformance-matrix |
 | ~~`APPLICATION_MODEL.md`~~ → `DECISIONS.md` §D-APP (Q1–Q10 locked) | `application { onStart/onShutdown }` ✅ E2E 3 targets; I2 (full-stack) ✅ `FullStackE2ETest` | `CmdNew` (I1), I3 (`--fat`), System/distributed — queue |
 | ~~`LEGACY_MIGRATION.md` + `DECOMPILER.md` + `TRANSLATOR.md`~~ → **`future/` (DEPRIORITIZED by the maintainer 15/09)** — umbrella §4 IR/Confidence, §8 diff-testing; ~~+ `DIFFERENTIAL_TESTING.md` + `LEGACY_IR.md`~~ (MERGED into the umbrella 13/09) | code stays in the repo: `inspect/decompile/translate/compare/migrate` (`Main.java:25-29`) + `Confidence`/`Type.fromJvmSignature`; **NOT current work — promotion needs her explicit decision**; **live count = `roadmap.md` §23 TIER 3–5** (do not duplicate the number here) | coverage: opaque switch/athrow, `inspect --java` (R5 of the audit), IR non-JVM |
-| ~~`IMPLEMENTATION_PLAN.md` / `ACTION_PLAN.md`~~ → `roadmap.md` §23 | **MERGED 13/09** (redundancy ~85% between them; status over-claimed vs code — e.g.: `CodegenStep` ✅ nonexistent, Native FFI was FFI001) | §23 is the single plan; tiers 6–12 = `future/` (R12) |
+| ~~`IMPLEMENTATION_PLAN.md` / `ACTION_PLAN.md`~~ → `roadmap.md` §23 | **MERGED 13/09** (redundancy ~85% between them; status over-claimed vs code — e.g.: `CodegenStep` ✅ nonexistent, Native FFI was FFI001) | §23 is the single plan; tiers 6–12 = `PLAN-UNIVERSAL-PLATFORM.md` (promoted 17/09, R12 overridden) |
 | ~~`PLANNING-FUTURE-AUDIT.md` / `planning-future-reconcile.md`~~ → `docs/audits/` | comparison branch `planning-future`×beta **closed 13/09** — no open code of their own lives in them: R2 lives in `DECISIONS.md` §D-APP/§D-PLATFORM; R5 in the migration cluster (`DECOMPILER.md`/`LEGACY_MIGRATION.md` §4 Phase C) | — (outside `development/`) |
 | ~~`planning-finally-return.md`~~ → `docs/decisions/DD-01-finally-return.md` | CLOSED 13/09 (FinallyFrame IR + gates; bug 45 FIXED, suite 1627/0) | — (outside `development/`) |
 | ~~`planning-stdlib-time-design.md`~~ → `DECISIONS.md` §D-STDLIB | `addDays`/`diffDays` on the 5 targets | ✅ RATIFIED 13/09 — queue released |
@@ -161,12 +166,12 @@ scalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 | ~~`KOFUI-AUDIT.md`~~ → `docs/bugs-and-gaps/` | UI001-Native (R6 face: silent no-op) OPEN | UI lane |
 | ~~`known-bugs.md`~~ → `docs/bugs-and-gaps/` | 32 open (the live count and triage are in §2 above; §81/§163/§127-JVM, §155, §94, §157-160 and §65 closed/DOES-NOT-REPRODUCE 13/09) | live queue |
 | ~~`refactoring/PLAN-SOLID-500.md`~~ → `docs/architecture/PLAN-SOLID-500.md` | ✅ **DONE + MOVED 13/09** (F1–F9 all closed — F3: NativeBackend 498 ≤500 measured, GC lane blocker expired/dead-owner rule); ratchet `check_500-baseline.txt` (debts locked — authoritative number = `wc -l` of the file) in CI | plan CLOSED (3-state rule) |
+| `PLAN-UNIVERSAL-PLATFORM.md` | **UNDER DEVELOPMENT 17/09** — promoted from `future/` by maintainer decision, which **overrides the R12 gate** (`DECISIONS.md` §D-UNIVERSAL); entry point = Stage 1 (SYSTEMS consolidation) + R1–R12 | architecture for Tiers 6–12; vision/design frozen, only state claims synced to code |
 
 ### 4.3 `future/` — plan only, zero code (not current work)
 
 | File | Trigger to fall in here |
 |---|---|
-| `PLAN-UNIVERSAL-PLATFORM.md` | decision + SYSTEMS closed (R12) |
 | `PLAN-MULTIPARADIGMA.md` (multiparadigm / functional pipelines + declarative queries; 16/09, design only) | first functional increment begins (SYSTEMS closed, R12) |
 | `scoped-resources-plan.md` (RAII TIER 2.4) | bump with `using`/`resource_scope` decided |
 | `PLAN-BAREMETAL-BOOT.md` (native → bare-metal/bootable; 15/09 maintainer directive) | SYSTEMS closed (R12) + first face (HAL seam) authorized |
@@ -184,7 +189,7 @@ evidence in each line of §4.1; SG snapshot 08/09 → `docs/history/`)*
 | Left for | Doc | Proof |
 |---|---|---|
 | `docs/bugs-and-gaps/specification-gaps.md` | SG-001–022 + E1–E3 | maintainer queue COMPLETE (summary of the doc itself); old snapshot → `docs/history/specification-gaps-0.3.0-snapshot.md` |
-| `docs/stdlib/DATABASE_VISION.md` | levels 0–4 | query DSL 01/09 (`KofOrmE2ETest` 22), MySQL prepared (`nativeMysqlPreparedBinary`), pooling ✅; DB001/ORM001 live in the parity matrix |
+| `docs/stdlib/DATABASE_VISION.md` | levels 0–4 | query DSL 01/09 (`KofOrmE2ETest` 31; JS parity 18/09), MySQL prepared (`nativeMysqlPreparedBinary`), pooling ✅; DB001/DB002/ORM001 (native) live in the parity matrix |
 | `docs/audits/complexity-audit.md` | snapshot 02/09 | pre-SOLID-500 numbers; live gate = `scripts/check_500.sh` (ratchet) |
 | `docs/history/roadmap-gap-2026-09-03.md` | dated gap report | pending items live in roadmap-audit/known-bugs |
 | `docs/decisions/` | `planning-switch-expr`, `planning-mutability` | SYN001, DD-02/SEM037/SEM038 applied |

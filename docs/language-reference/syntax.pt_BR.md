@@ -179,6 +179,20 @@ main() {
 record Dato(Int x)
 `
 
+## FFI com C — `extern` (JVM, 1-arg)
+
+`kof
+extern "/lib/x86_64-linux-gnu/libm.so.6" cos(Double x): Double
+main() { println(cos(0.0)) }            // JVM: 1.0
+`
+
+A gramática aceita qualquer assinatura, mas a **whitelist** da JVM prende
+1-arg apenas: `f(Int): Int`, `f(String): Int`, `f(Double): Double`. O resto →
+`FFI001` em tempo de compilação; o target JS → `FFI002`; Native → `FFI001`
+até o §61. O caminho da lib é resolvido em **runtime** (símbolo ausente =
+exceção `kof_ffi_*`). O alargamento é a fatia R3
+(`docs/development/PLAN-UNIVERSAL-PLATFORM.md`, #431).
+
 ## Testes e lifecycle
 
 `kof

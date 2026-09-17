@@ -217,7 +217,7 @@ db.close(db)
   `user:pass@` na DSN `mysql://[user[:pass]@]host[:port][/db]`) — em
   progresso: handshake completo, query e prepared statements pendentes;
   sem teste E2E contra servidor real ainda.
-- **JS:** não-tipado (16/09, ponte no host GraalJS); `query<T>` tipado = `DB002` compile-time.
+- **JS:** não-tipado (16/09, ponte no host GraalJS); `query<T>` tipado = `DB002` FECHADO 18/09 (bind no guest via `__kof_decode_<T>`).
 - Testes: `KofDbE2ETest` (9) + `KofOrmE2ETest` (16, inclui MariaDB/PostgreSQL/
   MongoDB com skip condicional + SQLite nativo). O link nativo inclui a lib
   do MySQL apenas quando o programa a usa (DSN literal detectado em
@@ -274,7 +274,10 @@ main() {
 - **MongoDB:** `save/find/all/where/delete/count` sobre o driver oficial via
   reflexão compatível (`Bson`/`Class`, sem `ClientSession`); teste E2E com
   container real (skip condicional; serviço Mongo no CI).
-- **Native/JS:** reportam `ORM001` (gap documentado em compile-time).
+- **Native:** reporta `ORM001` (gap documentado em compile-time). **JS:** FECHADO
+  18/09 — `kof.orm` roda no host GraalJS via `KofJsOrmBridge` (mesmo SQL de
+  `JvmOrmRuntime`), records tipados bindados no guest (`__kof_decode_<T>`);
+  E2E byte-paridade em `KofOrmE2ETest` (casos `js*`).
 - Testes: `KofOrmE2ETest` (16; entity, CRUD, `where` operadores, `migrate`,
   `unique`, PK não-numérica, MongoDB E2E, `ORM001`/`ORM002`).
 

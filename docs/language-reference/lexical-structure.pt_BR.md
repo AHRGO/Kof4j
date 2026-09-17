@@ -158,7 +158,7 @@ string-literal = '"' { string-char | escape-sequence } '"' ;
   aspas faz parte do valor e incrementa a contagem de linha
   (`Lexer.java:187-190`) (*probe*: `"a\nb"` com newline real imprime duas
   linhas).
-- **Não existe** string com aspas triplas (`"""…"""` → `PARSE043`), **não
+- **Não existe** string com aspas triplas (`"""…"""` → **`LEX008`**), **não
   existe** interpolação (`"x${n}"` imprime o texto literal `x${n}` — *probe*),
   **não existe** prefixo de raw string (`r"…"` = identificador `r` + string).
 - String não terminada → `LEX002`.
@@ -257,3 +257,4 @@ statement separado — não como `return println(x)`. Valor na linha seguinte n�
 | `LEX005` | Unexpected character | caractere sem produção | `Lexer.java:470` |
 | `LEX006` | Incomplete unicode escape | `\u` com <4 dígitos | `Lexer.java:248` |
 | `LEX007` | Invalid unicode escape | hex inválido em `\uXXXX` | `Lexer.java:256` |
+| `LEX008` | No triple-quoted string | `"""…"""` (Kof não tem literal raw/multilinha — #364) | `Lexer.java:188` |

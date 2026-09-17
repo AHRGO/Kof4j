@@ -5,7 +5,7 @@
 **Versão:** 0.4.0-beta · **Data:** 06/09/2026 · **Re-sincronizado 17/09/2026** contra os SG-00x aplicados (`docs/bugs-and-gaps/specification-gaps.md`) e os fixes #322/#330.
 
 Classificação de cada feature da linguagem. **Nada aqui é "estável" por
-cortesia** — Stable exige   (regra 0.2.6-beta) **e** teste
+cortesia** — Stable exige semântica congelada (regra 0.2.6-beta) **e** teste
 que a prova. Categorias: **Stable · Experimental · Implementation-defined ·
 Target-specific · Unspecified · Planned**.
 
@@ -102,6 +102,7 @@ Target-specific · Unspecified · Planned**.
 | Import ambíguo (não chuta) | Stable | `CompilerTypes:102` |
 | PKG002 (1 main) | Stable | probe |
 | Interop JVM (tipos Java) | **Target-specific** | `AndroidInteropE2ETest` |
+| FFI C (`extern "<lib>"`) | **Parcial** — whitelist JVM 1-arg: `Int→Int`, `String→Int`, `Double→Double`; multi-arg/retorno `String` = `FFI001`; JS = `FFI002`; Native = `FFI001` (R6, nunca silent) | medido 17/09 (`modules.md` §6); alargamento = fatia R3 (`PLAN-UNIVERSAL-PLATFORM.md`, #431) |
 
 ### Concorrência
 | Feature | Status | Teste-evidência |

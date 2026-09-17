@@ -23,9 +23,9 @@ final class CmdRun {
     }
 
     static void run(String[] args) {
-        if (args.length < 2) { System.err.println("usage: kof run <file.kf> [--target jvm|native|js|native.risc|native.arm|android] [--deps] [args...]"); return; }
+        if (args.length < 2) { System.err.println("usage: kof run <file.kf> [--target jvm|native|js|native.risc|native.arm|android] [--backend <t>] [--frontend <t>] [--release] [--deps] [args...]"); return; }
         if ("--help".equals(args[1]) || "-h".equals(args[1]) || "--version".equals(args[1])) {
-            System.out.println("usage: kof run <file.kf> [--target jvm|native|js|native.risc|native.arm|android] [--deps] [args...]");
+            System.out.println("usage: kof run <file.kf> [--target jvm|native|js|native.risc|native.arm|android] [--backend <t>] [--frontend <t>] [--release] [--deps] [args...]");
             return;
         }
         // O arquivo é o primeiro arg não-flag; --target/--deps/--release podem
@@ -134,7 +134,7 @@ final class CmdRun {
                     driver.setExternalClasspath(entries);
                 }
             } catch (IOException e) {
-                System.err.println("run: falha ao ler kofdeps: " + e.getMessage());
+                System.err.println("run: failed to read kofdeps: " + e.getMessage());
                 KofCliSupport.cleanup(tempDir);
                 System.exit(1);
                 return;

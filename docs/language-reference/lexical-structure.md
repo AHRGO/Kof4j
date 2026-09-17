@@ -158,7 +158,7 @@ string-literal = '"' { string-char | escape-sequence } '"' ;
   quotes is part of the value and increments the line count
   (`Lexer.java:187-190`) (*probe*: `"a\nb"` with a real newline prints two
   lines).
-- **There is no** triple-quoted string (`"""…"""` → `PARSE043`), **there is
+- **There is no** triple-quoted string (`"""…"""` → **`LEX008`**), **there is
   no** interpolation (`"x${n}"` prints the literal text `x${n}` — *probe*),
   **there is no** raw string prefix (`r"…"` = identifier `r` + string).
 - Unterminated string → `LEX002`.
@@ -258,3 +258,4 @@ same line).
 | `LEX005` | Unexpected character | character without a production | `Lexer.java:470` |
 | `LEX006` | Incomplete unicode escape | `\u` with <4 digits | `Lexer.java:248` |
 | `LEX007` | Invalid unicode escape | invalid hex in `\uXXXX` | `Lexer.java:256` |
+| `LEX008` | No triple-quoted string | `"""…"""` (Kof has no raw/multiline literal — #364) | `Lexer.java:188` |

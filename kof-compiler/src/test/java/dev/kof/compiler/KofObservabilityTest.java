@@ -138,7 +138,7 @@ class KofObservabilityTest {
                 assert(json.contains("\\"traceId\\":"))
                 assert(json.contains("\\"spanId\\":"))
                 assert(json.contains("\\"durationMicros\\":"))
-                assert(json.contains("\\"name\\":\\"span\\""))
+                assert(json.contains("\\"name\\":\\"op\\""))
                 println("ok")
             }
             """, "ok");
@@ -148,6 +148,7 @@ class KofObservabilityTest {
                 val json = observability.spanEnd(h)
                 assert(json.contains("\\"traceId\\":"))
                 assert(json.contains("\\"spanId\\":"))
+                assert(json.contains("\\"name\\":\\"op\\""))
                 println("done")
             }
             """, "done");
@@ -160,6 +161,72 @@ class KofObservabilityTest {
                 println("ok")
             }
             """, "ok");
+    }
+
+@Test
+    void otlpExportJvm(@TempDir Path tmp) throws Exception {
+        // OBS003/OTel: export OTLP/JSON dos spans concluídos (JVM). O nome
+        // passado em spanStart precisa sobreviver ao spanEnd (bug corrigido:
+        // antes virava sempre "span").
+        runJvm(tmp, """
+            main() {
+                val empty = observability.exportSpans()
+                assert(empty.contains("\\"resourceSpans\\""))
+                assert(empty.contains("\\"spans\\":[]"))
+                val h1 = observability.spanStart("db.query")
+                val h2 = observability.spanStart("http.get")
+                val hq = observability.spanStart("q\\"x")
+                val j1 = observability.spanEnd(h1)
+                val j2 = observability.spanEnd(h2)
+                observability.spanEnd(hq)
+                assert(j1.contains("\\"name\\":\\"db.query\\""))
+                assert(j2.contains("\\"name\\":\\"http.get\\""))
+                val otlp = observability.exportSpans()
+                assert(otlp.contains("q\\\\\\"x"))
+                assert(otlp.contains("\\"resourceSpans\\""))
+                assert(otlp.contains("\\"service.name\\""))
+                assert(otlp.contains("\\"scope\\":{\\"name\\":\\"kof.observability\\"}"))
+                assert(otlp.contains("\\"name\\":\\"db.query\\""))
+                assert(otlp.contains("\\"name\\":\\"http.get\\""))
+                assert(otlp.contains("\\"kind\\":1"))
+                assert(otlp.contains("\\"startTimeUnixNano\\":"))
+                assert(otlp.contains("\\"endTimeUnixNano\\":"))
+                println("ok")
+            }
+            """, "ok");
+    }
+
+    @Test
+    void otlpExportJs(@TempDir Path tmp) throws Exception {
+        runJs(tmp, """
+            main() {
+                val h = observability.spanStart("op.js")
+                val j = observability.spanEnd(h)
+                assert(j.contains("\\"name\\":\\"op.js\\""))
+                val otlp = observability.exportSpans()
+                assert(otlp.contains("\\"resourceSpans\\""))
+                assert(otlp.contains("\\"service.name\\""))
+                assert(otlp.contains("\\"name\\":\\"op.js\\""))
+                assert(otlp.contains("\\"startTimeUnixNano\\":"))
+                println("done")
+            }
+            """, "done");
+    }
+
+    @Test
+    void otlpExportNativeIsHonestGap(@TempDir Path tmp) throws Exception {
+        // R6/R7: OTLP export não existe no Native ainda — recusa em tempo de
+        // compilação com OBS003, nunca um stub silencioso.
+        Path file = tmp.resolve("Main-" + System.nanoTime() + ".kf");
+        Files.writeString(file, """
+            main() {
+                println(observability.exportSpans())
+            }
+            """);
+        CompilationResult result = driver.compile(file, tmp.resolve("out"), Target.NATIVE);
+        assertFalse(result.success(), "Native OTLP export should be rejected (OBS003)");
+        String diags = result.diagnostics().getDiagnostics().toString();
+        assertTrue(diags.contains("OBS003"), "expected OBS003 in: " + diags);
     }
 
 @Test

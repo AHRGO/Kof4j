@@ -40,7 +40,7 @@ class CliFlagStrictnessTest {
     void initRejectsFlagAndDoesNotCreateJunkDir(@TempDir Path dir) throws Exception {
         Cli r = cli(dir, "init", "--bogus-xyz");
         assertNotEquals(0, r.exit(), "init --flag deve recusar (R6):\n" + r.out());
-        assertTrue(r.out().contains("desconhecida"), r.out());
+        assertTrue(r.out().contains("unknown flag"), r.out());
         assertFalse(Files.exists(dir.resolve("--bogus-xyz")),
                 "nao pode criar diretorio com nome de flag");
     }
@@ -58,7 +58,7 @@ class CliFlagStrictnessTest {
     void infoRejectsUnknownFlag(@TempDir Path dir) throws Exception {
         Cli r = cli(dir, "info", "--bogus");
         assertNotEquals(0, r.exit(), "info --flag deve recusar (R6):\n" + r.out());
-        assertTrue(r.out().contains("desconhecida"), r.out());
+        assertTrue(r.out().contains("unknown flag"), r.out());
     }
 
     @Test
@@ -72,7 +72,7 @@ class CliFlagStrictnessTest {
     void versionRejectsUnknownFlag(@TempDir Path dir) throws Exception {
         Cli r = cli(dir, "version", "--bogus");
         assertNotEquals(0, r.exit(), "version --flag deve recusar (R6):\n" + r.out());
-        assertTrue(r.out().contains("desconhecida"), r.out());
+        assertTrue(r.out().contains("unknown flag"), r.out());
     }
 
     @Test
@@ -162,6 +162,62 @@ class CliFlagStrictnessTest {
         Cli r = cli(dir, "build", "Main.kf", "--output", "out");
         assertEquals(0, r.exit(), "build <file.kf> documentado nao pode ser no-op (R6):\n" + r.out());
         assertTrue(Files.exists(dir.resolve("out/Default/Main.class")), r.out());
+    }
+
+    @Test
+    void lspRejectsUnknownFlag(@TempDir Path dir) throws Exception {
+        Cli r = cli(dir, "lsp", "--bogus");
+        assertNotEquals(0, r.exit(), "lsp --flag deve recusar (R6):\n" + r.out());
+        assertTrue(r.out().contains("--bogus"), r.out());
+    }
+
+    @Test
+    void serveUsageAnnouncesEveryAcceptedFlag(@TempDir Path dir) throws Exception {
+        Cli r = cli(dir, "serve", "--help");
+        assertEquals(0, r.exit(), r.out());
+        for (String flag : new String[] { "--port", "--host", "--backend", "--frontend" }) {
+            assertTrue(r.out().contains(flag),
+                    "serve aceita " + flag + " mas o usage nao o anuncia:\n" + r.out());
+        }
+    }
+
+    @Test
+    void serveRejectsUnknownFlag(@TempDir Path dir) throws Exception {
+        Files.writeString(dir.resolve("Main.kf"), "main() { println(\"oi\") }\n");
+        Cli r = cli(dir, "serve", "Main.kf", "--bogus");
+        assertNotEquals(0, r.exit(), "serve --flag deve recusar (R6):\n" + r.out());
+        assertTrue(r.out().contains("--bogus"), r.out());
+    }
+
+    @Test
+    void serveRejectsPortWithoutValue(@TempDir Path dir) throws Exception {
+        Files.writeString(dir.resolve("Main.kf"), "main() { println(\"oi\") }\n");
+        Cli r = cli(dir, "serve", "Main.kf", "--port");
+        assertNotEquals(0, r.exit(), "serve --port sem valor deve recusar (R6):\n" + r.out());
+        assertTrue(r.out().contains("--port"), r.out());
+    }
+
+    @Test
+    void debugRejectsUnknownFlag(@TempDir Path dir) throws Exception {
+        Files.writeString(dir.resolve("Main.kf"), "main() { println(\"oi\") }\n");
+        Cli r = cli(dir, "debug", "Main.kf", "--bogus");
+        assertNotEquals(0, r.exit(), "debug --flag deve recusar (R6):\n" + r.out());
+        assertTrue(r.out().contains("--bogus"), r.out());
+    }
+
+    @Test
+    void configGenRejectsUnknownFlag(@TempDir Path dir) throws Exception {
+        Files.writeString(dir.resolve("Main.kf"), "main() { println(\"oi\") }\n");
+        Cli r = cli(dir, "config", "gen", "Main.kf", "--bogus");
+        assertNotEquals(0, r.exit(), "config gen --flag deve recusar (R6):\n" + r.out());
+        assertTrue(r.out().contains("--bogus"), r.out());
+    }
+
+    @Test
+    void configGenStillWorks(@TempDir Path dir) throws Exception {
+        Files.writeString(dir.resolve("Main.kf"), "main() { println(\"oi\") }\n");
+        Cli r = cli(dir, "config", "gen", "Main.kf");
+        assertEquals(0, r.exit(), "config gen simples nao regride:\n" + r.out());
     }
 
     @Test

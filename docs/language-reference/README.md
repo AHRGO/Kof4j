@@ -102,7 +102,7 @@ that make sense for the current state of Kof (beta):
 
 | Label | Meaning |
 |---|---|
-| **Stable** | Behavior defined by the language, frozen (rule of   0.2.6-beta). Does not change without a version bump + migration. |
+| **Stable** | Behavior defined by the language, frozen (rule of frozen semantics 0.2.6-beta). Does not change without a version bump + migration. |
 | **Experimental** | Implemented and testable, but subject to change. Not frozen. |
 | **Implementation-defined** | The language does not fix the result; the current compiler decides. Another Kof compiler may legitimately diverge. |
 | **Target-specific** | The observable behavior depends on the target (JVM/Native/JS). Documented as a difference, not hidden. |

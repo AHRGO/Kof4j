@@ -23,9 +23,9 @@ final class CmdScript {
     static int run(String[] args) {
         if (args.length < 2 || "--help".equals(args[1]) || "-h".equals(args[1])) {
             System.out.println("usage: kof script <file.ks|kf> [--target jvm|native|js] [--watch] [--inspect] [args...]");
-            System.out.println("       kof script --repl  (ou: kof repl)");
-            System.out.println("       --watch   re-executa ao salvar o arquivo");
-            System.out.println("       --inspect mostra IR stats sem executar");
+            System.out.println("       kof script --repl  (or: kof repl)");
+            System.out.println("       --watch   re-runs when the file is saved");
+            System.out.println("       --inspect prints IR stats without executing");
             return 0;
         }
         if ("--repl".equals(args[1])) return repl(args);

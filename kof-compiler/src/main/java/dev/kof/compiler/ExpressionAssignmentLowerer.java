@@ -117,205 +117,7 @@ if (ae.target() instanceof IdentifierExpr ie && !owner.isEmpty()) {
     }
 }
 if (ae.target() instanceof FieldAccessExpr fa) {
-    if (fa.receiver() instanceof IdentifierExpr rid && driver.semanticAnalyzer != null
-            && driver.semanticAnalyzer.getClass(rid.name()) != null) {
-        // Static field store: Class.field = value.
-        SymbolTable.ClassSymbol cs = driver.semanticAnalyzer.getClass(rid.name());
-        SymbolTable.Symbol fs = HierarchyResolver.resolveFieldInHierarchy(cs.name(), fa.fieldName(), driver.semanticAnalyzer);
-        if (fs instanceof SymbolTable.FieldSymbol fld) {
-            String sfaOp = ae.operator();
-            boolean sfaCompound = isCompoundOp(sfaOp);
-            // compound em campo ESTÁTICO qualificado (`Counter.total += 5`,
-            // GitHub #64): getstatic antes do emit — sem receiver na pilha
-            // (estático não consome this), a ordem simples do caminho por
-            // nome simples basta.
-            if (sfaCompound) {
-                ops.add(new KofGetStatic(cs.type(), fa.fieldName(), fld.type()));
-            }
-            Type sfaValueType = ExpressionTyper.inferExprType(driver, ae.value(), locals);
-            boolean sfaConcat = sfaCompound && "+=".equals(sfaOp)
-                    && (Type.isString(fld.type()) || Type.isString(sfaValueType));
-            if (sfaConcat) {
-                if (!Type.isString(fld.type()) && TypeMetrics.isPrimitiveType(fld.type())) {
-                    TypeEmitter.boxPrimitive(ops, fld.type());
-                }
-                if (!Type.isString(fld.type())) {
-                    ops.add(new KofCall(BuiltinTypes.STRING, "valueOf",
-                            List.of(driver.target.isNative() && !Type.isString(fld.type())
-                                    && !(fld.type() instanceof Type.PrimitiveType)
-                                    ? fld.type() : Type.UnknownType.UNKNOWN),
-                            BuiltinTypes.STRING, KofCallKind.STATIC));
-                }
-            }
-            localIdx = ExpressionLowerer.emitExpression(driver, ae.value(), ops, owner, localIdx, locals);
-            if (sfaConcat) {
-                if (!Type.isString(sfaValueType) && TypeMetrics.isPrimitiveType(sfaValueType)) {
-                    TypeEmitter.boxPrimitive(ops, sfaValueType);
-                }
-                if (!Type.isString(sfaValueType)) {
-                    ops.add(new KofCall(BuiltinTypes.STRING, "valueOf",
-                            List.of(driver.target.isNative() && !Type.isString(sfaValueType)
-                                    && !(sfaValueType instanceof Type.PrimitiveType)
-                                    ? sfaValueType : Type.UnknownType.UNKNOWN),
-                            BuiltinTypes.STRING, KofCallKind.STATIC));
-                }
-                ops.add(new KofCall(BuiltinTypes.STRING, "kof_string_concat",
-                        List.of(BuiltinTypes.STRING, BuiltinTypes.STRING),
-                        BuiltinTypes.STRING, KofCallKind.FUNCTION));
-            } else if (sfaCompound) {
-                // RHS primitivo ≠ campo (ex.: Double *= int): widening p/ o
-                // tipo do campo — o KofBinary usa fld.type() p/ o opcode e o
-                // literal int na pilha de um DMUL daria frame inválido. Shift
-                // (`<<=`) exige contagem int (L2I) e resultado no tipo do alvo.
-                emitCompoundRhsConv(driver, ops, sfaOp, fld.type(), sfaValueType);
-                ops.add(new KofBinary(compoundBinaryOp(sfaOp), fld.type()));
-            } else if ("=".equals(sfaOp)) {
-                if (TypeMetrics.isPrimitiveType(sfaValueType) && TypeMetrics.isPrimitiveType(fld.type())) {
-                    driver.emitWideningIfNeeded(ops, sfaValueType, fld.type());
-                } else if (driver.erasesToReference(fld.type())
-                        && TypeMetrics.isPrimitiveType(sfaValueType)
-                        && !ExpressionTyper.boxesOwnBranches(driver, ae.value(), locals)) {
-                    // Issue #181: campo estático Object recebendo primitivo (Holder.item = 99)
-                    driver.emitErasureBox(ops, sfaValueType);
-                }
-            }
-            ops.add(new KofPutStatic(cs.type(), fa.fieldName(), sfaConcat ? BuiltinTypes.STRING : fld.type()));
-            return localIdx;
-        }
-    }
-    Type faRecvType = ExpressionTyper.inferExprType(driver, fa.receiver(), locals);
-    if (KofUi.isWindow(faRecvType) && "title".equals(fa.fieldName())) {
-        localIdx = ExpressionLowerer.emitExpression(driver, fa.receiver(), ops, owner, localIdx, locals);
-        localIdx = ExpressionLowerer.emitExpression(driver, ae.value(), ops, owner, localIdx, locals);
-        ops.add(new KofCall(new Type.ClassType("kof.ui", "Ui", List.of()),
-                "kof_ui_window_set_title", List.of(Type.PrimitiveType.INT, BuiltinTypes.STRING),
-                Type.PrimitiveType.VOID, KofCallKind.FUNCTION));
-        return localIdx;
-    }
-    if (KofUi.isLabel(faRecvType) && "text".equals(fa.fieldName())) {
-        localIdx = ExpressionLowerer.emitExpression(driver, fa.receiver(), ops, owner, localIdx, locals);
-        localIdx = ExpressionLowerer.emitExpression(driver, ae.value(), ops, owner, localIdx, locals);
-        ops.add(new KofCall(new Type.ClassType("kof.ui", "Ui", List.of()),
-                "kof_ui_label_set_text", List.of(Type.PrimitiveType.INT, BuiltinTypes.STRING),
-                Type.PrimitiveType.VOID, KofCallKind.FUNCTION));
-        return localIdx;
-    }
-    if (KofUi.isLabel(faRecvType) && "fontSize".equals(fa.fieldName())) {
-        localIdx = ExpressionLowerer.emitExpression(driver, fa.receiver(), ops, owner, localIdx, locals);
-        localIdx = ExpressionLowerer.emitExpression(driver, ae.value(), ops, owner, localIdx, locals);
-        ops.add(new KofCall(new Type.ClassType("kof.ui", "Ui", List.of()),
-                "kof_ui_label_set_font_size", List.of(Type.PrimitiveType.INT, Type.PrimitiveType.INT),
-                Type.PrimitiveType.VOID, KofCallKind.FUNCTION));
-        return localIdx;
-    }
-    if (KofUi.isLabel(faRecvType) && "bold".equals(fa.fieldName())) {
-        localIdx = ExpressionLowerer.emitExpression(driver, fa.receiver(), ops, owner, localIdx, locals);
-        localIdx = ExpressionLowerer.emitExpression(driver, ae.value(), ops, owner, localIdx, locals);
-        ops.add(new KofCall(new Type.ClassType("kof.ui", "Ui", List.of()),
-                "kof_ui_label_set_bold", List.of(Type.PrimitiveType.INT, Type.PrimitiveType.BOOL),
-                Type.PrimitiveType.VOID, KofCallKind.FUNCTION));
-        return localIdx;
-    }
-    if (KofUi.isLabel(faRecvType) && "color".equals(fa.fieldName())) {
-        localIdx = ExpressionLowerer.emitExpression(driver, fa.receiver(), ops, owner, localIdx, locals);
-        localIdx = ExpressionLowerer.emitExpression(driver, ae.value(), ops, owner, localIdx, locals);
-        ops.add(new KofCall(new Type.ClassType("kof.ui", "Ui", List.of()),
-                "kof_ui_label_set_color", List.of(Type.PrimitiveType.INT, Type.PrimitiveType.INT),
-                Type.PrimitiveType.VOID, KofCallKind.FUNCTION));
-        return localIdx;
-    }
-    if (KofUi.isWindow(faRecvType) && "theme".equals(fa.fieldName())) {
-        localIdx = ExpressionLowerer.emitExpression(driver, fa.receiver(), ops, owner, localIdx, locals);
-        localIdx = ExpressionLowerer.emitExpression(driver, ae.value(), ops, owner, localIdx, locals);
-        ops.add(new KofCall(new Type.ClassType("kof.ui", "Ui", List.of()),
-                "kof_ui_window_set_theme", List.of(Type.PrimitiveType.INT, Type.PrimitiveType.INT),
-                Type.PrimitiveType.VOID, KofCallKind.FUNCTION));
-        return localIdx;
-    }
-    if (KofUi.isButton(faRecvType) && "text".equals(fa.fieldName())) {
-        localIdx = ExpressionLowerer.emitExpression(driver, fa.receiver(), ops, owner, localIdx, locals);
-        localIdx = ExpressionLowerer.emitExpression(driver, ae.value(), ops, owner, localIdx, locals);
-        ops.add(new KofCall(new Type.ClassType("kof.ui", "Ui", List.of()),
-                "kof_ui_button_set_text", List.of(Type.PrimitiveType.INT, BuiltinTypes.STRING),
-                Type.PrimitiveType.VOID, KofCallKind.FUNCTION));
-        return localIdx;
-    }
-    if (KofUi.isInput(faRecvType) && "text".equals(fa.fieldName())) {
-        localIdx = ExpressionLowerer.emitExpression(driver, fa.receiver(), ops, owner, localIdx, locals);
-        localIdx = ExpressionLowerer.emitExpression(driver, ae.value(), ops, owner, localIdx, locals);
-        ops.add(new KofCall(new Type.ClassType("kof.ui", "Ui", List.of()),
-                "kof_ui_input_set_text", List.of(Type.PrimitiveType.INT, BuiltinTypes.STRING),
-                Type.PrimitiveType.VOID, KofCallKind.FUNCTION));
-        return localIdx;
-    }
-    if (KofUi.isComponent(faRecvType) && "state".equals(fa.fieldName())) {
-        localIdx = ExpressionLowerer.emitExpression(driver, fa.receiver(), ops, owner, localIdx, locals);
-        localIdx = ExpressionLowerer.emitExpression(driver, ae.value(), ops, owner, localIdx, locals);
-        ops.add(new KofCall(new Type.ClassType("kof.ui", "Ui", List.of()),
-                "kof_ui_component_state_set", List.of(Type.PrimitiveType.INT, Type.PrimitiveType.INT),
-                Type.PrimitiveType.VOID, KofCallKind.FUNCTION));
-        return localIdx;
-    }
-    Type recvType = ExpressionTyper.inferExprType(driver, fa.receiver(), locals);
-    // §246/#269: o emit-path não conhece o narrowing (que vive no escopo
-    // semântico) — um receiver já validado como não-nulo chega aqui ainda
-    // como `NullableType`. Desembrulhar espelha o READ (ExpressionLowerer);
-    // sem isto o campo saía com owner `?` e tipo `Object` → `putfield`
-    // inválido (VerifyError). O acesso NÃO-narrowed nunca chega aqui: o
-    // StatementAnalyzer já o rejeita com SEM049.
-    if (recvType instanceof Type.NullableType nt) recvType = nt.inner();
-    Type fieldType = Type.UnknownType.UNKNOWN;
-    boolean isStaticField = false;
-    if (recvType instanceof Type.ClassType ct) {
-        SymbolTable.Symbol fs = HierarchyResolver.resolveFieldInHierarchy(ct.name(), fa.fieldName(), driver.semanticAnalyzer);
-        if (fs instanceof SymbolTable.FieldSymbol fldSym) {
-            fieldType = fldSym.type();
-            isStaticField = (fldSym.accessFlags() & AccessFlags.STATIC) != 0;
-        } else if (fs != null) {
-            fieldType = fs.type();
-        } else if (!ct.packageName().isEmpty()
-                && driver.externalClasspath.knows(ct.internalName())) {
-            String desc = driver.externalClasspath.resolveFieldType(
-                    ct.internalName(), fa.fieldName());
-            if (desc != null) fieldType = ExternalClasspath.typeFromDescriptor(desc);
-        }
-    }
-    if (!isStaticField) {
-        localIdx = ExpressionLowerer.emitExpression(driver, fa.receiver(), ops, owner, localIdx, locals);
-    }
-    String faOp = ae.operator();
-    if (isCompoundOp(faOp)) {
-        if (isStaticField) {
-            ops.add(new KofGetStatic(recvType, fa.fieldName(), fieldType));
-        } else {
-            ops.add(new KofDup());
-            ops.add(new KofLoadField(recvType, fa.fieldName(), fieldType));
-        }
-    }
-    localIdx = ExpressionLowerer.emitExpression(driver, ae.value(), ops, owner, localIdx, locals);
-    boolean faCompound = isCompoundOp(faOp);
-    Type faValType = ExpressionTyper.inferExprType(driver, ae.value(), locals);
-    if (faCompound) {
-        // §103.2 (#103): widening do valor p/ o tipo do campo (h.value = n,
-        // Int→Long); no shift (`<<=`) a contagem é int (L2I) — regra do §167.
-        emitCompoundRhsConv(driver, ops, faOp, fieldType, faValType);
-        ops.add(new KofBinary(compoundBinaryOp(faOp), fieldType));
-    } else if ("=".equals(faOp)) {
-        if (TypeMetrics.isPrimitiveType(fieldType)) {
-            driver.emitWideningIfNeeded(ops, faValType, fieldType);
-        } else if (driver.erasesToReference(fieldType)
-                && TypeMetrics.isPrimitiveType(faValType)
-                && !ExpressionTyper.boxesOwnBranches(driver, ae.value(), locals)) {
-            // Issue #181: atribuição de primitivo a campo tipo Object (h.field = 99)
-            driver.emitErasureBox(ops, faValType);
-        }
-    }
-    if (isStaticField) {
-        ops.add(new KofPutStatic(recvType, fa.fieldName(), fieldType));
-    } else {
-        ops.add(new KofStoreField(recvType, fa.fieldName(), fieldType));
-    }
-    return localIdx;
+    return ExpressionFieldAssignLowerer.lowerField(driver, ae, fa, ops, owner, localIdx, locals);
 }
 if (ae.target() instanceof ArrayAccessExpr aa) {
     localIdx = ExpressionLowerer.emitExpression(driver, aa.receiver(), ops, owner, localIdx, locals);
@@ -415,10 +217,22 @@ if (ae.target() instanceof IdentifierExpr ieBox) {
                 ops.add(new KofBinary(compoundBinaryOp(op), valType));
                 ops.add(new KofStoreField(boxLv.type(), "value", valType));
             } else {
-                ops.add(new KofLoadLocal(boxLv.type(), boxLv.index()));
+                // §253 face B: o receiver-box NUNCA fica na pilha de máquina
+                // durante a avaliação do RHS — um push ímpar cruzando os calls
+                // do RHS faz todo call entrar com rsp≡8 (mod 16) e o SSE da
+                // libc (movaps) SIGSEGVa no callee (glibc é vítima; a pilha é
+                // o bug). Ordem: avalia o RHS primeiro, derrama o valor num
+                // slot de frame, e só então empilha [box, value] quando já não
+                // existe nenhum call pendente. Load do slot é puro → ordem de
+                // efeitos idêntica nos 4 backends (retro-compatível, regra 2).
                 localIdx = ExpressionLowerer.emitExpression(driver, ae.value(), ops, owner, localIdx, locals);
                 driver.emitWideningIfNeeded(ops, ExpressionTyper.inferExprType(driver, ae.value(), locals), valType);
+                ops.add(new KofStoreLocal(valType, localIdx));
+                locals.add(new IRLocalVariable(localIdx, "$boxval" + localIdx, valType));
+                ops.add(new KofLoadLocal(boxLv.type(), boxLv.index()));
+                ops.add(new KofLoadLocal(valType, localIdx));
                 ops.add(new KofStoreField(boxLv.type(), "value", valType));
+                return localIdx + (TypeMetrics.isDoubleWidth(valType) ? 2 : 1);
             }
             return localIdx;
         }
@@ -483,7 +297,7 @@ ops.add(new KofStoreLocal(Type.UnknownType.UNKNOWN, localIdx));
 return localIdx;
     }
 
-    private static KofBinaryOp compoundBinaryOp(String op) {
+    static KofBinaryOp compoundBinaryOp(String op) {
         return switch (op) {
             case "+=" -> KofBinaryOp.ADD;
             case "-=" -> KofBinaryOp.SUB;

@@ -108,7 +108,7 @@ deixe trabalho grande não-commitado — é assim que se perde uma sessão.
 
 **Condições de parada (as ÚNICAS que justificam parar e chamar o humano):**
 
-1. **  em jogo** — mudança de contrato/operador/ordem de
+1. **Semântica congelada em jogo** — mudança de contrato/operador/ordem de
    avaliação (regra 6): vira gap/plano em `planning-*`, nunca edição.
 2. **Colisão de lane inevitável** — o único caminho toca um arquivo `EM CURSO`
    de outro agente e não dá para adiar: pare, registre no DOING.md, aguarde.
@@ -179,8 +179,8 @@ scripts/auto-loop.sh status           # confirmar que está ativo
 - O cron chama `opencode run --session <id> --dir <repo> --attach <server>
   --auto "<prompt>"` a cada intervalo (padrão 30 min), com o prompt de
   re-disparo: *"analize os documentos, verifique os gaps, identifique o que
-  falta em nossos planos, trace um todo de implementação e continue o
-  desenvolvimento"*.
+  falta em nossos planos em docs/development, trace um todo de implementação
+  e continue o desenvolvimento"*.
 - **`--attach` é OBRIGATÓRIO — o heartbeat injeta na SESSÃO ABERTA, nunca
   spawna agente concorrente.** Sem `--attach`, `opencode run --session` cria
   um **processo headless novo** que só compartilha o histórico: você vê "outra
@@ -247,7 +247,7 @@ conceitual nem decide arquitetura/rumo. Consequências práticas para o agente:
 4. **Discussão técnica antes de código.** Quando a dúvida é conceitual (semântica,
    estouro de ponto flutuante, ABI), a contribuição é por **debate técnico** —
    propostas/documentos de design comentados — não PR desordenado que muda
-    .
+   semântica congelada.
 5. **Blindagem contra poluição.** Nunca misturar a linguagem Kof com termos
    alheios ao domínio (jogos, etc.) em docs/código. Disclaimers e nomenclatura
    são lei; violou, reverte.
@@ -742,7 +742,7 @@ pronta.
 > completa) provam. **Nenhum agente pode quebrar comportamento que já funciona.**
 
 1. **Zero regressão.** Nenhum commit pode fazer um teste existente passar a
-   falhar. A suíte completa (`mvn test`, hoje **2218** nos 4 módulos — ver
+   falhar. A suíte completa (`mvn test`, hoje **2411** nos 4 módulos — ver
    §"Loop de verificação" para o comando com o flag de failure.ignore) é **gate de merge** —
    mudança que não mantém tudo verde não entra. Exceção única: mudança de
    contrato **deliberada**, com bump de versão + docs atualizados + migração.
@@ -762,7 +762,7 @@ pronta.
 5. **Paridade cross-target.** JVM/Native/JS divergindo no mesmo programa é bug
    de paridade. O comportamento previsto vale nos 3 targets, ou gap `XXX00x`
    diagnosticado — nunca divergência silenciosa.
-6. **  (0.2.6-beta).** Operadores, precedência, ordem de
+6. **Semântica congelada (0.2.6-beta).** Operadores, precedência, ordem de
    avaliação, null-safety, `==` de conteúdo, exceções como String,
    `spawn`/`await`, coleções `List/Map/Set` são **congelados**. Proposta de
    mudança vira gap/plano em `planning-*`, nunca edição direta da semântica
@@ -770,7 +770,7 @@ pronta.
 
 ---
 
-## Invariantes da plataforma (visão universal — `docs/development/future/PLAN-UNIVERSAL-PLATFORM.md`)
+## Invariantes da plataforma (plano universal — `docs/development/PLAN-UNIVERSAL-PLATFORM.md`)
 
 Estas regras **sempre** se aplicam, mesmo quando não há código de domínio novo
 em jogo. São o mecanismo anti-"god language":
@@ -778,7 +778,11 @@ em jogo. São o mecanismo anti-"god language":
 1. **Fronteira core → stdlib base → plataforma → pacotes oficiais → interop**
    (R1). Domínio pesado (`ml`, `bio`, `hpc`, `infra-<cloud>`) vai para
    **pacote oficial**, nunca para a stdlib base. Só entra na stdlib o que é
-   "essencial à plataforma e pequeno".
+   "essencial à plataforma e pequeno". **Machine-gated** desde 17/09:
+   `scripts/check_stdlib_boundary.sh` + ledger `scripts/stdlib_boundary.txt`
+   (CI, morde sob `--selftest`) — namespace novo sem linha no ledger com a sua
+   camada **quebra o build**; domínios pesados são hard-deny. Registre a
+   camada primeiro (ordem de decisão §3.4), nunca em silêncio.
 2. **Interop-first** (R9). Para qualquer capacidade, a primeira pergunta é
    "já existe por fora e é melhor?" → FFI/interop (`kof.process`, `.so`, JVM,
    GraalJS). Nunca reimplementar Arrow/Parquet/BLAS/LAPACK/CUDA/NumPy/
@@ -812,7 +816,7 @@ target por domínio; sem motor SQL/Arrow/ML próprio.
 ## Antes de escrever código (obrigatório)
 
 1. Leia `training/idioms/<area>.md` da área do problema
-   (collections, functions, strings, errors, records, classes, concurrency, control-flow).
+   (collections, functions, strings, errors, records, classes, concurrency, control-flow, interop).
 2. Leia `training/anti-patterns/` — em especial `java-like-code.md`,
    `chained-or-membership.md`, `fake-idioms.md`.
 3. Se a dúvida persistir: **escreva um snippet e compile** (loop abaixo).
@@ -1104,9 +1108,9 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > ele, o Maven é fail-fast por módulo: qualquer falha em **kof-compiler aborta
 > o reactor** e **kof-script, kof-c-compiler e kof-cli nunca rodam** — você
 > acha que validou tudo mas só viu o primeiro módulo. O total real com o flag
-> é **2218 testes** (compiler 1911 + script 38 + kof-c 7 + cli 262, medição
-> 16/09 ~15:54 — cresce com cada commit): **0 regressões / 0 erros** (a única falha que a
-> suíte já mostrou é o flake intermitente do §252 nativo — calado pela 3ª corrida seguida, último disparo 09:44)
+> é **2411 testes** (compiler 2058 + script 38 + kof-c 7 + cli 308, medição
+> 17/09 ~15:49 no tip `f276e966` — cresce com cada commit): **0 regressões / 0 erros** (a única falha que a
+> suíte já mostrou é o flake intermitente do §252 nativo — calado de novo (5ª corrida quieta seguida), último disparo 16/09 09:44)
 > (node agora presente
 > no host da medição — o antigo "13 erros = node ausente" não se aplica mais). O §149 JS (`KofRandomTest.randomStringJs`/`randomShapeJs`,
 > regressão do fix §147 no `JsIfThrowElse`) foi **CORRIGIDO 13/09** — a raiz era
@@ -1125,11 +1129,11 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > **Os números mudam com qemu no ambiente:** sem qemu (host da medição de
 > 16/09 — sem toolchain cruzada), os 84 cross
 > (2×42, `NativeRiscv64/Aarch64E2ETest`) são **skipados** pelo guard
-> (`4408eb6`) + os outros guards de toolchain/BD externo + o guard de sysroot do §255 (`06e77e94`) → `2218/0-1/192-skip` (o flake §252 disparou às 09:44, depois calou às 11:38, 15:09 e 15:54 — ~1/4 das corridas completas)
-> (MEDIDO 16/09 ~15:09, clone limpo). Com qemu, **tudo executa** — os 84 cross rodam
-> verdes e o total fica `2218` com a contagem de skip caindo para o
-> resíduo externo de BD/ambiente `node`. Estado correto HOJE (16/09 ~15:54, clone limpo de `9572949f`):
-> **0 regressões / 0 erros** (2218 = 1911+38+7+262, 192 skip) — a corrida completa das 09:44 teve o flake INTERMITENTE
+> (`4408eb6`) + os outros guards de toolchain/BD externo + o guard de sysroot do §255 (`06e77e94`) → `2411/0/196-skip` (o flake §252 disparou 16/09 09:44, depois calou às 11:38, 15:09, 15:54 e 17/09 15:49 — ~1/4 das corridas completas)
+> (MEDIDO 17/09 ~15:49, run limpo no tip `f276e966`). Com qemu, **tudo executa** — os 84 cross rodam
+> verdes e o total fica `2411` com a contagem de skip caindo para o
+> resíduo externo de BD/ambiente `node`. Estado correto HOJE (17/09 ~15:49, run limpo no tip `f276e966`):
+> **0 regressões / 0 erros** (2411 = 2058+38+7+308, 196 skip) — a corrida completa das 09:44 teve o flake INTERMITENTE
 > conhecido do §252 nativo (`spawnWorkerThrowPropagatesThroughSelectAnyNative`, dona lane
 > nativa `.18`/nat; às 11:38, 15:09 e 15:54 ele ficou calado — frequência ~1/4, ver §252), que
 > deve ser lido como um vermelho de TESTE, não regressão. O que importa continua
@@ -1167,12 +1171,12 @@ use o harness do projeto ou crie um teste E2E mínimo no pacote da área.
 | `learn/` | Tutorials passo a passo (00-introduction → 39-stdlib) |
 | `docs/architecture/architecture.md`, `docs/architecture/compiler-architecture.md` etc. | Domínios específicos (estáveis) |
 | `docs/development/` | **Backlog vivo — tudo que NÃO está concluído** (planos, roadmaps, audits, gaps, refactors). Ver `docs/development/README.md` para índice completo. |
-| `docs/development/future/` (plans) | **só plano sem código**: plataforma universal (visão), RAII TIER 2.4 (DD-STDLIB-01 FECHADO 13/09 → `docs/stdlib/`). A migração legado (decompiler/translator/IR/differential) foi p/ `docs/development/` 12/09, **voltou p/ `future/` 15/09 — DESPRIORIZADA pela mantenedora** (código fica em kof-cli; promoção exige decisão explícita dela) |
+| `docs/development/future/` (plans) | **só plano sem código**: RAII TIER 2.4 (DD-STDLIB-01 FECHADO 13/09 → `docs/stdlib/`). A migração legado (decompiler/translator/IR/differential) foi p/ `docs/development/` 12/09, **voltou p/ `future/` 15/09 — DESPRIORIZADA pela mantenedora** (código fica em kof-cli; promoção exige decisão explícita dela) |
 | `docs/development/roadmap.md`, `docs/audits/roadmap-audit.md`, `docs/bugs-and-gaps/ecosystem-coverage.md` | Roadmaps & auditoria de cobertura (fila P0→P5) |
 | `docs/bugs-and-gaps/specification-gaps.md`, `docs/bugs-and-gaps/known-bugs.md` | Gaps de spec (SG-00x — fila do maintainer completa, virou referência) + bugs abertos |
 | `docs/development/native-multiarch.md`, `docs/stdlib/DATABASE_VISION.md`, `docs/audits/complexity-audit.md` | Native multiarch (NATIVE002) + DB vision (realizada → stdlib) + audit ≤500 (snapshot → architecture) |
 | `docs/development/DECISIONS.md` | **Decisões da mantenedora** (time/segurança/app-model/Spring — pasta `decision-pending/` extinta 13/09) |
-| `docs/development/roadmap.md` §23 | **Plano de implementação consolidado** (Tiers 0–12) — único plano ordenado; migração A–H ✅, universal não iniciada |
+| `docs/development/roadmap.md` §23 | **Plano de implementação consolidado** (Tiers 0–12) — único plano ordenado; migração A–H ✅, universal **EM DESENVOLVIMENTO** 17/09 (`PLAN-UNIVERSAL-PLATFORM.md`, R12 sobreposto — §D-UNIVERSAL) |
 
 ---
 

@@ -115,7 +115,7 @@ public final class SemExpressionTyper {
                 // pelo ExpressionStmt, que não chega aqui).
                 if (sa.diagnostics() != null) {
                     sa.diagnostics().error("", 0, 0, 0,
-                            "atribuição é um statement, não uma expressão (use '=' em linha própria)",
+                            "assignment is a statement, not an expression (use '=' on its own line)",
                             "SEM027");
                 }
                 Type valueType = inferType(sa, ae.value(), scope);
@@ -328,9 +328,9 @@ public final class SemExpressionTyper {
                         && MemberResolver.isBuiltinTypeName(rid.name())
                         && sa.diagnostics() != null) {
                     sa.diagnostics().error("", 0, 0, 0,
-                            "'" + rid.name() + "' é um tipo primitivo, não tem campo "
-                                    + "estático '" + fa.fieldName() + "' (use o literal, "
-                                    + "ex.: 2147483647 p/ Int; sem Int.MAX_VALUE em Kof)",
+                            "'" + rid.name() + "' is a primitive type, it has no static field "
+                                    + "'" + fa.fieldName() + "' (use the literal, "
+                                    + "e.g. 2147483647 for Int; there is no Int.MAX_VALUE in Kof)",
                             "SEM050");
                     yield Type.UnknownType.UNKNOWN;
                 }
@@ -418,7 +418,7 @@ public final class SemExpressionTyper {
                     var pos = aa.position();
                     sa.diagnostics().error(pos != null ? pos.file() : "",
                             pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0,
-                            "`[]` só pega em array em Kof; para esta coleção use "
+                            "`[]` only indexes arrays in Kof; for this collection use "
                                     + collectionIndexHint(recvType),
                             "SEM054");
                 }
