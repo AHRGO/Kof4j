@@ -343,7 +343,7 @@ public class SemanticAnalyzer {
     private void analyzeMethodBody(MethodDeclarationNode method) {
         SymbolTable methodScope = methodScopes.get(method);
         if (methodScope == null) return;
-        checkThrowsClause(method.thrownExceptions(), "método '" + method.name() + "'");
+        checkThrowsClause(method.thrownExceptions(), "method '" + method.name() + "'");
         Type returnType = resolveType(method.returnType(), methodScope);
         // bug 26: corpo pode terminar sem return/throw → SEM036 (uma vez por
         // método — o loop de 4 passes chamaria de novo). Antes do early-return
@@ -351,7 +351,7 @@ public class SemanticAnalyzer {
         // (corpo vazio é legítimo).
         if (!method.modifiers().contains("abstract") && reportedReturnPath.add(method)) {
             ReturnPathAnalyzer.check(this, method.body(), returnType, method.position(),
-                    "método '" + method.name() + "'");
+                    "method '" + method.name() + "'");
         }
         if (method.body() == null || method.body().isEmpty()) return;
         SymbolTable prevScope = currentScope;
@@ -508,7 +508,7 @@ public class SemanticAnalyzer {
         }
         String prevFunction = currentFunctionName;
         currentFunctionName = func.name();
-        checkThrowsClause(func.thrownExceptions(), "função '" + func.name() + "'");
+        checkThrowsClause(func.thrownExceptions(), "function '" + func.name() + "'");
         SymbolTable funcScope = currentScope.enterScope();
         for (String tp : func.typeParameters()) {
             funcScope.define(new SymbolTable.TypeParameterSymbol(tp));
@@ -524,7 +524,7 @@ public class SemanticAnalyzer {
         currentScope = funcScope;
         // bug 26: função top-level com tipo não-void pode terminar sem return
         ReturnPathAnalyzer.check(this, func.body(), returnType, func.position(),
-                "função '" + func.name() + "'");
+                "function '" + func.name() + "'");
         StatementAnalyzer.analyzeBody(this, func.body(), funcScope, returnType);
         currentScope = prevScope;
         currentFunctionName = prevFunction;

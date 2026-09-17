@@ -349,8 +349,8 @@ public final class StatementAnalyzer {
                     SourcePosition pos = fis.position();
                     sa.diagnostics().error(pos != null ? pos.file() : "",
                             pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0,
-                            "`for-in` só itera sobre `List<T>` ou array em Kof; para String use "
-                                    + "`s.charAt(i)` num loop numérico",
+                            "`for-in` only iterates over `List<T>` or arrays in Kof; for String use "
+                                    + "`s.charAt(i)` in a numeric loop",
                             "SEM058");
                 }
                 forScope.define(new SymbolTable.LocalVariableSymbol(fis.varName(), elemType, 0));
@@ -448,8 +448,8 @@ public final class StatementAnalyzer {
                     if (sa.diagnostics() != null && t != null && !Type.isUnknown(t)
                             && !BuiltinTypes.isString(t)) {
                         sa.diagnostics().error("", 0, 0, 0,
-                                "throw exige uma String (exceções são Strings em Kof),"
-                                        + " recebeu " + Type.canonicalPrimitiveName(
+                                "throw requires a String (exceptions are Strings in Kof),"
+                                        + " got " + Type.canonicalPrimitiveName(
                                         t instanceof Type.ClassType ct ? ct.name() : t.toString()),
                                 "SEM026");
                     }

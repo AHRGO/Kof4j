@@ -58,8 +58,8 @@ public final class TypeChecker {
                     default -> ">= 0";
                 };
                 diagnostics.error("", 0, 0, 0,
-                        "Kof não tem o operador '" + operator + "' para String "
-                                + "(ordem lexicográfica Unspecified — divergia por target); "
+                        "Kof has no operator '" + operator + "' for String "
+                                + "(lexicographic order is Unspecified — it diverges per target); "
                                 + "use: s.compareTo(t) " + rel,
                         "SEM053");
             }
@@ -154,7 +154,7 @@ public final class TypeChecker {
                 diagnostics.error("", 0, 0, 0,
                         "Cannot apply '" + operator + "' to non-numeric type "
                                 + (isReferenceType(left) ? left : right)
-                                + " (declare o tipo do parâmetro, ex.: (x: Int) -> ...)",
+                                + " (declare the parameter type, e.g. (x: Int) -> ...)",
                         "SEM001");
             }
             return Type.UnknownType.UNKNOWN;

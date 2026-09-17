@@ -378,7 +378,7 @@ class SemanticResolutionTest {
         for (String t : types) {
             for (String f : fields) {
                 assertSem050(compile(tmp, "e.kf", "main() { var x = " + t + "." + f + " }"),
-                        "'" + t + "' é um tipo primitivo");
+                        "'" + t + "' is a primitive type");
             }
         }
     }
