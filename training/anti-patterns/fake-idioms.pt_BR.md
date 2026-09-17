@@ -171,6 +171,9 @@ construto neste corpus/docs e o compilador *discorda da própria doc*.
 | `let` / `const` / `async fn` | `var`/`val`; `spawn`/`await` |
 | destructuring `for ((k, v) in map)` | `map.keys()` e depois `map.get(k)` |
 | indexar String com `s[0]` | `s.charAt(0)` |
+| interpolação `"x${n}"` (Kotlin/GString) | `"x" + n` — `${…}` dentro de string Kof é **texto literal** (sem diagnóstico, por contrato — `lexical-structure.md` §4.1, sonda) |
+| lista de interfaces com `:` (`class Foo: A, B`) | `class Foo implements A, B { }` |
+| propriedade `val name: String` num `interface` | acessor-método: `interface I { String name() }` |
 
 > Cruzamento: se o reproducer compilaria em **Kotlin/Java** por ser
 > *traduzido*, é esta regra — rejeite. A família de bugs é só sobre código que
