@@ -210,7 +210,7 @@ Principais comandos já disponíveis (detalhes em
 | Comando | O que faz |
 |---------|-----------|
 | `kof run app.kf` | compila e executa (JVM por padrão) |
-| `kof build <dir> [--target ...]` | compila para jvm / native / native.risc / native.arm / js / android |
+| `kof build <dir|file.kf> [--target ...]` | compila para jvm / native / native.risc / native.arm / js / android |
 | `kof serve app.kf` | sobe um app `web.app()` |
 | `kof test <dir>` | roda a suíte de testes |
 | `kof check <dir>` | type-check sem emitir código |

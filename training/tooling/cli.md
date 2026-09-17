@@ -11,7 +11,7 @@ commands, tooling and editor support.
 
 | Command | Behavior |
 |---------|----------|
-| `kof build <dir> [--target jvm\|native\|native.risc\|native.arm\|js\|android] [--output <dir>] [--release] [--apk]` | Compiles |
+| `kof build <dir\|file.kf> [--target jvm\|native\|native.risc\|native.arm\|js\|android] [--output <dir>] [--release] [--apk]` | Compiles |
 | `kof run <file.kf\|dir> [--target jvm\|native\|native.risc\|native.arm\|js\|android] [args...]` | Compiles and runs |
 | `kof serve <file.kf> [--port <port>] [--host <host>]` | Basic HTTP web server. `--port`/`--host` apply only in legacy mode (`handle`); a kof-native app (`app.listen`) sets its own port and the CLI warns (#35.3) |
 | `kof check <file.kf\|dir> [--target <t>]` | Type-check without emitting code (target-aware gaps) |

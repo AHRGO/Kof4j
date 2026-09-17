@@ -54,7 +54,7 @@ public final class Main {
 
     private static void printUsage() {
         System.out.println("usage: kof <command>");
-        System.out.println("  build <dir> [--target jvm|native|js|native.risc|native.arm|android] [--output <dir>] [--release] [--apk] [--aab] [--min-sdk <n>] [--target-sdk <n>]");
+        System.out.println("  build <dir|file.kf> [--target jvm|native|js|native.risc|native.arm|android] [--output <dir>] [--release] [--apk] [--aab] [--min-sdk <n>] [--target-sdk <n>]");
         System.out.println("  run <file.kf> [--target jvm|native|js|native.risc|native.arm|android] [--release] [args...]");
         System.out.println("  serve <file.kf> [--port <port>] [--host <host>]");
         System.out.println("  check <file.kf|dir> [--target <t>] [--json]   type-check without emitting output");

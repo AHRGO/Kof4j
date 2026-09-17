@@ -210,7 +210,7 @@ Main commands already available (details in
 | Command | What it does |
 |---------|-----------|
 | `kof run app.kf` | compiles and runs (JVM by default) |
-| `kof build <dir> [--target ...]` | compiles to jvm / native / native.risc / native.arm / js / android |
+| `kof build <dir|file.kf> [--target ...]` | compiles to jvm / native / native.risc / native.arm / js / android |
 | `kof serve app.kf` | starts a `web.app()` app |
 | `kof test <dir>` | runs the test suite |
 | `kof check <dir>` | type-check without emitting code |
