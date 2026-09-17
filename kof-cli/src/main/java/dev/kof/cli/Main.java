@@ -50,7 +50,7 @@ public final class Main {
         System.out.println("  build <dir> [--target jvm|native|js|native.risc|native.arm|android] [--output <dir>] [--release] [--apk] [--aab] [--min-sdk <n>] [--target-sdk <n>]");
         System.out.println("  run <file.kf> [--target jvm|native|js|native.risc|native.arm|android] [--release] [args...]");
         System.out.println("  serve <file.kf> [--port <port>] [--host <host>]");
-        System.out.println("  check <file.kf|dir> [--json]   type-check without emitting output");
+        System.out.println("  check <file.kf|dir> [--target <t>] [--json]   type-check without emitting output");
         System.out.println("  script <file.ks|kf> [--target jvm|native|js]   direct KofScript execution (JVM/Native/JS, diagnostics with file:line)");
         System.out.println("  repl                         REPL incremental KofScript (type 'exit' to quit)");
         System.out.println("  test <file.kf|dir> [--target jvm|native|js]   run programs, PASS/FAIL by exit code");
@@ -209,6 +209,13 @@ public final class Main {
 
     /** kof init [dir] — scaffold mínimo: hello.kf + estrutura padrão. */
     private static int init(String[] args) {
+        // R6: `kof init` nao aceita flags — um `--flag` seria tratado como nome
+        // de diretorio e criaria lixo (`--bogus/`). Recusa honesta.
+        if (args.length > 1 && args[1].startsWith("-")) {
+            System.err.println("init: flag desconhecida: " + args[1]
+                    + " (usage: kof init [dir])");
+            return 1;
+        }
         String dirName = args.length > 1 ? args[1] : ".";
         Path dir = Path.of(dirName);
         try {
@@ -286,7 +293,16 @@ public final class Main {
     }
 
     private static void info(String[] args) {
-        boolean json = args.length > 1 && "--json".equals(args[1]);
+        // R6: info aceita so --json; uma flag desconhecida nao pode ser
+        // ignorada em silencio (o usuario acharia que teve efeito).
+        for (int i = 1; i < args.length; i++) {
+            if (args[i].startsWith("-") && !"--json".equals(args[i])
+                    && !"-h".equals(args[i]) && !"--help".equals(args[i])) {
+                System.err.println("info: flag desconhecida: " + args[i] + " (aceita: --json)");
+                System.exit(1);
+            }
+        }
+        boolean json = java.util.Arrays.asList(args).contains("--json");
         String installDir = System.getProperty("kof.install.dir", "");
         if (installDir.isEmpty()) {
             try {
