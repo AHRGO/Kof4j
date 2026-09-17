@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * `.size`…) eram ACEITAS em compile-time e quebravam de um jeito em CADA
  * target (JVM `NoSuchMethodError: String.get`, JS roda `.get` inexistente →
  * undefined silencioso, Nativo `undefined reference` no link). Meta do
- * registro: SEM064 em compile-time apontando o caminho canônico. Frontend
+ * registro: SEM066 em compile-time apontando o caminho canônico. Frontend
  * único (`ExpressionInstanceCallLowerer`) — o MESMO erro nos 5 backends.
  */
 class RawRowCollectionAccessE2ETest {
@@ -40,7 +40,7 @@ class RawRowCollectionAccessE2ETest {
               + "    println(row.get(\"pwhash\"))");
         assertFalse(r.success(), "String.get(col) must be rejected at compile-time, "
                 + "not NoSuchMethodError at runtime: " + r.diagnostics().getDiagnostics());
-        assertTrue(hasSem(r, "SEM064", "get"), "must be SEM064 naming get: "
+        assertTrue(hasSem(r, "SEM066", "get"), "must be SEM066 naming get: "
                 + r.diagnostics().getDiagnostics());
     }
 
@@ -51,7 +51,7 @@ class RawRowCollectionAccessE2ETest {
               + "    println(row.size())");
         assertFalse(r.success(), "String.size() must be rejected (JSON row, not a map): "
                 + r.diagnostics().getDiagnostics());
-        assertTrue(hasSem(r, "SEM064", "size"), "must be SEM064 naming size: "
+        assertTrue(hasSem(r, "SEM066", "size"), "must be SEM066 naming size: "
                 + r.diagnostics().getDiagnostics());
     }
 
@@ -81,7 +81,7 @@ class RawRowCollectionAccessE2ETest {
         assertFalse(r.success(), "o repro do §193 (rec.get(col) na linha crua) deve "
                 + "falhar em compile-time com diagnóstico, não em runtime: "
                 + r.diagnostics().getDiagnostics());
-        assertTrue(hasSem(r, "SEM064", "get"), "SEM064 apontando get: "
+        assertTrue(hasSem(r, "SEM066", "get"), "SEM066 apontando get: "
                 + r.diagnostics().getDiagnostics());
     }
 }

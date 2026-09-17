@@ -10,7 +10,7 @@ import java.util.List;
  * condições sobre (nome do método, args, tipo do formal).
  *
  * - SEM052 (bug 96): funções da stdlib `strings.*` chamadas como método.
- * - SEM064 (§193): acessor de coleção/mapa numa String (a linha crua do
+ * - SEM066 (§193): acessor de coleção/mapa numa String (a linha crua do
  *   db.query é JSON String desde DB001).
  * - SEM051 (bug 100): argumento NÃO-String num parâmetro String/CharSequence.
  */
@@ -40,7 +40,7 @@ final class StringReceiverGuards {
             "unescapeHtml", "escapeJson", "removeWhitespace", "normalizeWhitespace");
 
     /** §193: nomes de acessor de coleção/mapa chamados numa String (a linha
-     *  crua do db.query é JSON String) → SEM064 em vez de runtime quebrado. */
+     *  crua do db.query é JSON String) → SEM066 em vez de runtime quebrado. */
     private static final java.util.Set<String> COLLECTION_ACCESSORS_ON_STRING = java.util.Set.of(
             "get", "put", "remove", "size", "keys", "values", "containsKey", "entries");
 
@@ -112,7 +112,7 @@ final class StringReceiverGuards {
                     "String não tem método \"" + mc.methodName() + "\" — parece acessor de "
                             + "coleção; a linha crua de db.query é JSON String: use "
                             + "db.query<Record> (tipado) ou json.decode<Map<String, Object>>(row)",
-                    "SEM064");
+                    "SEM066");
         }
         // bug 100 (R6, paridade absoluta JVM=JS=X86=ARM=RISC): argumento
         // NÃO-String num parâmetro String/CharSequence (Char, Int, Long, lista…)

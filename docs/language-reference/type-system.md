@@ -349,7 +349,7 @@ the lambda's return (*probe*: map/filter/reduce correct).
 | `SEM045` | `throw X` clause with unknown type | `SemanticAnalyzer.checkThrowsClause` (SG-019) |
 | `SEM046` | `private`/`protected` access (method or field) outside what is allowed | `MemberCallTyper.checkMemberAccess`/`checkFieldAccess` (SG-013) |
 | `SEM065` | write to a `final` field outside its class constructor | `MemberCallTyper.checkFinalFieldWrite` (#331/#327; era SEM063, renumerado 17/09 — colidiu com §193) |
-| `SEM063` | collection accessor (`get`/`put`/`size`...) called on a String receiver (raw `db.query` row) | `ExpressionInstanceCallLowerer` (§193) |
+| `SEM066` | collection accessor (`get`/`put`/`size`...) called on a String receiver (raw `db.query` row) | `StringReceiverGuards` (§193) |
 | `ARITH001` | division/remainder by a **constant** zero | `ExpressionBinaryLowerer` (constant-zero guard) |
 
 Division by a **non-constant** zero (`7 / z` with `z=0`) → **runtime**

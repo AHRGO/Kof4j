@@ -255,7 +255,7 @@ public final class ExpressionInstanceCallLowerer {
                 return localIdx;
             }
         }
-        // Guardas de diagnóstico em receptor String (SEM052/SEM064/SEM051) —
+        // Guardas de diagnóstico em receptor String (SEM052/SEM066/SEM051) —
         // extraídos p/ StringReceiverGuards (gate ≤600 REFACTOR-500; são puros:
         // só emitem diagnostics, não mexem na pilha/ops).
         StringReceiverGuards.check(driver, mc, locals, methodParamTypes);
