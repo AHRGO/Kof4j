@@ -15,8 +15,10 @@
 > + 38 kof-script + 7 kof-c-compiler + 262 kof-cli; baseline measured 09/16 ~15:54, see
 > `docs/status.md`); this document is a **capability inventory**,
 > not the current gate. The status matrix (`DONE`/`PARTIAL`/
-> `PLANNED`) reflects 09/02 — confirm against `docs/stdlib/stdlib.md` and
-> `docs/backend-parity.md` before using a row as a live state.
+> `PLANNED`) mostly reflects 09/02; rows re-checked against the code were
+> refreshed 17/09 (events/transactions/queues/DB adapters/tracing). Confirm
+> against `docs/stdlib/stdlib.md` and `docs/backend-parity.md` before using a
+> row as a live state.
 > **Result:** no new implementation was done in this document —
 > only inventory, matrix, gaps, priority and strategy. 0.2.6-beta adds `native.risc`/`native.arm` targets, free-list GC, pattern matching, `String?`, `KofScriptGlobals`, `KofCcompiler`; 08/30-31 adds Native spawn (pthread/CONC001), XMM FP (FLT001), full JSON on Native (JSN001/002/003), JVM WebSocket/SSE, `kof.cache` 3 targets, `kof.http` retry/circuit (JVM+JS), `kof fmt`/`kof config gen`, UI Phase 7 Router, native SQLite direct `.so`.
 
@@ -161,7 +163,7 @@ Legend in the target columns: `y` = supported, `~` = partial, `–` = no.
 | application lifecycle | `main()`/`args` | y | y (empty args) | y | UiE2ETest | history/language-state.md |
 | configuration model | `config.get/str/int/long/bool/has` (file + env + profiles) | y | y | y (CONF001 closed 16/09) | KofConfigE2ETest | stdlib/stdlib.md |
 | dependency injection | `NA` (no container; direct resolution) | — | — | — | — | philosophy.md |
-| events | `PLANNED` (event bus) | — | — | — | — | development/roadmap.md |
+| events | ✅ event bus via `kof.mq` (publish/subscribe/unsubscribe) — see §3.4 | y | ✅ | ✅ | KofMqE2ETest | stdlib/stdlib.md |
 | validation | ✅ `kof.validation` (required/notBlank/minLength/maxLength/lengthBetween/isEmail/isUrl/matches/isInt/isLong/inRange/min/max) — JVM/Native/JS | y | y | y | KofValidationTest | stdlib/stdlib.md |
 | scheduling | ✅ `kof.time` now/sleep + interval/cancel (3 targets — TIME001 closed) | y | y | y | KofTimeE2ETest | stdlib/stdlib.md |
 | caching | ✅ `kof.cache` (get/set/ttl/delete/clear; 08/30) | y | y (asm) | y | KofCacheE2ETest (5, x3) | development/roadmap.md |
@@ -207,8 +209,8 @@ Legend in the target columns: `y` = supported, `~` = partial, `–` = no.
 | mapping | ✅ entity → row/document by compile-time schema | y | – | y | JsonE2ETest, KofOrmE2ETest | — |
 | typed query DSL (`User.query { where ... }`) | ✅ (level 3, 01/09 — lowers to `db.query<T>`; JVM H2 E2E) | ✅ | — | — | KofOrmE2ETest | development/DATABASE_VISION.md |
 | pagination | ✅ `orm.page(page, size[, where])` | y | – | – | KofOrmE2ETest | development/DATABASE_VISION.md |
-| PostgreSQL / MySQL / SQLite / MongoDB / Redis | `PLANNED` (adapters) | — | — | — | — | — |
-| transactions | `PLANNED` | — | — | — | — | — |
+| PostgreSQL / MySQL / SQLite / MongoDB / Redis | ✅ SQLite (native `.so`) / MySQL (wire protocol) / MongoDB (driver) — see rows above; PostgreSQL + Redis `PLANNED` | y | y (SQLite) | — | KofDbE2ETest, KofOrmE2ETest | development/DATABASE_VISION.md |
+| transactions | ✅ `transaction {}` (JVM; commit/rollback; JS bridge 16/09) — see §3.1 | y | y (asm 01/09) | ✅ 16/09 | KofDbE2ETest | development/DATABASE_VISION.md |
 | optimistic/pessimistic locking | `PLANNED` | — | — | — | — | — |
 
 ## 3.4 Messaging
@@ -216,7 +218,7 @@ Legend in the target columns: `y` = supported, `~` = partial, `–` = no.
 | Capability | Kof | JVM | Native | JS | Tests | Docs |
 |-----------|-----|-----|--------|----|-------|------|
 | event bus / pub-sub | ✅ `kof.mq` (publish/subscribe/unsubscribe + queue/push/pop) — JVM + Native + JS (MQ001 closed 01/09) | y | ✅ | ✅ | KofMqE2ETest (4, x3 targets) | concurrency |
-| queues (`kof.concurrent.Queue`) | `PLANNED` | — | — | — | — | concurrency |
+| queues | ✅ producer/consumer realized as `channel<T>()` (`send`/`receive`, blocking `take`) — the plan's name was `kof.concurrent.Queue` | y | y | y | ConformanceMatrixTest, AndroidInteropE2ETest | language-reference/concurrency.md |
 | Kafka / AMQP / Pulsar | `PLANNED` (external adapters) | — | — | — | — | development/roadmap.md |
 | retry / dead-letter / backpressure | `PLANNED` | — | — | — | — | — |
 | consumer groups | `PLANNED` | — | — | — | — | — |
@@ -285,7 +287,7 @@ Legend in the target columns: `y` = supported, `~` = partial, `–` = no.
 |-----------|-----|-----|--------|----|-------|------|
 | metrics (runtime API) | ✅ `kof.observability.counter/increment/gauge` — JVM/Native/JS | y | y | y | KofObservabilityTest | stdlib/observability.md |
 | health checks / readiness / liveness | ✅ `kof.observability.health/readiness/liveness` — JVM/Native/JS | y | y | y | KofObservabilityTest | stdlib/observability.md |
-| tracing / OpenTelemetry | `PLANNED` | — | — | — | — | — |
+| tracing / OpenTelemetry | `PARTIAL` — W3C `traceId`/`spanId` IDs exist (3 targets); OTel export/spans store `PLANNED` | y | y | y | KofObservabilityTest | stdlib/observability.md |
 | structured logging | `log.debug/info/warn/error` (levels, stderr) | y | y (asm, UTC) | y (console.*, 09/01) | KofLogE2ETest, NativeLogE2ETest | — |
 | correlation IDs / request IDs | ✅ `kof.observability.requestId/correlationId` — JVM/Native/JS | y | y | y | KofObservabilityTest | stdlib/observability.md |
 | request IDs | ✅ `kof.observability.requestId` — JVM/Native/JS | y | y | y | KofObservabilityTest | stdlib/observability.md |
