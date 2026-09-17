@@ -419,8 +419,10 @@ class SemanticResolutionTest {
             CompilationResult r = compile(tmp, "e.kf", "main() { println(" + e + ") }");
             assertFalse(r.success(), "deve falhar: " + e);
             boolean found = r.diagnostics().getDiagnostics().stream()
-                    .anyMatch(d -> "SEM051".equals(d.code()) && d.message().contains("como argumento"));
-            assertTrue(found, "esperava SEM051 p/ '" + e + "', foi: "
+                    .anyMatch(d -> "SEM051".equals(d.code())
+                            && d.message().contains("as argument")
+                            && !d.message().matches("(?s).*como argumento.*"));
+            assertTrue(found, "esperava SEM051 (EN) p/ '" + e + "', foi: "
                     + r.diagnostics().getDiagnostics());
         }
     }

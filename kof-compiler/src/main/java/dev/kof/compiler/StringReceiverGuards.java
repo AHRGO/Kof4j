@@ -91,8 +91,8 @@ final class StringReceiverGuards {
             var pos = mc.position();
             driver.currentDiagnostics.error(pos != null ? pos.file() : "",
                     pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0,
-                    "Kof não tem método \"" + mc.methodName() + "\" de String; use a função "
-                            + "da stdlib: strings." + padHint(mc.methodName()) + "(...",
+                    "Kof has no \"" + mc.methodName() + "\" method on String; use the stdlib "
+                            + "function: strings." + padHint(mc.methodName()) + "(...",
                     "SEM052");
         }
         // §193 (face crua do db.query, R6): a linha do `db.query` NÃO-tipado é
@@ -109,9 +109,9 @@ final class StringReceiverGuards {
             driver.currentDiagnostics.error(pos != null ? pos.file() : "",
                     pos != null ? pos.line() : 0,
                     pos != null ? pos.column() : 0, 0,
-                    "String não tem método \"" + mc.methodName() + "\" — parece acessor de "
-                            + "coleção; a linha crua de db.query é JSON String: use "
-                            + "db.query<Record> (tipado) ou json.decode<Map<String, Object>>(row)",
+                    "String has no \"" + mc.methodName() + "\" method — looks like a "
+                            + "collection accessor; the raw row from db.query is a JSON String: use "
+                            + "db.query<Record> (typed) or json.decode<Map<String, Object>>(row)",
                     "SEM066");
         }
         // bug 100 (R6, paridade absoluta JVM=JS=X86=ARM=RISC): argumento
@@ -141,9 +141,9 @@ final class StringReceiverGuards {
                     var pos = mc.position();
                     driver.currentDiagnostics.error(pos != null ? pos.file() : "",
                             pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0,
-                            "String." + mc.methodName() + " não aceita " + typeNameFor(at)
-                                    + " como argumento " + (ai + 1) + " (o parâmetro é String); "
-                                    + "use um literal String, ex.: " + mc.methodName() + "(\"c\")",
+                            "String." + mc.methodName() + " does not accept " + typeNameFor(at)
+                                    + " as argument " + (ai + 1) + " (the parameter is String); "
+                                    + "use a String literal, e.g.: " + mc.methodName() + "(\"c\")",
                             "SEM051");
                     break;
                 }

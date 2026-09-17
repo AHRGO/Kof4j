@@ -287,8 +287,8 @@ public final class ExpressionInstanceCallLowerer {
                     || "float".equals(fn0) || "Float".equals(fn0));
         if (mayTruncate && driver.currentDiagnostics != null) {
             driver.currentDiagnostics.warning("", 0, 0, 0,
-                    "'" + mc.methodName() + "()' pode truncar (parte fracionária descartada; "
-                        + "overflow lança) — forma explícita: valor as "
+                    "'" + mc.methodName() + "()' may truncate (fractional part discarded; "
+                        + "overflow throws) — explicit form: value as "
                         + TypeMetrics.primitiveName(target), "SEM090");
         }
         driver.emitWideningIfNeeded(ops, recvType, target);

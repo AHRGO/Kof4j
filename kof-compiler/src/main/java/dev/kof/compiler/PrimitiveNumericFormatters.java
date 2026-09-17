@@ -44,9 +44,9 @@ final class PrimitiveNumericFormatters {
             var pos = mc.position();
             driver.currentDiagnostics.error(pos != null ? pos.file() : "",
                     pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0,
-                    "Kof não tem método \"" + mc.methodName() + "\" de "
-                            + TypeMetrics.primitiveName(recvType) + "; use a função "
-                            + "da stdlib sobre um Int/Long, ex.: n.toLong()." + mc.methodName() + "()",
+                    "Kof has no \"" + mc.methodName() + "\" method on "
+                            + TypeMetrics.primitiveName(recvType) + "; use the stdlib "
+                            + "function on an Int/Long, e.g.: n.toLong()." + mc.methodName() + "()",
                     "SEM052");
         }
         ops.add(new KofPop());
