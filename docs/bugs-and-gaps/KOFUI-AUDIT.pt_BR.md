@@ -9,13 +9,18 @@
 
 ## 1. Registry do compilador (`KofUi.java`, 539 linhas — era 383 na auditoria de 07/09)
 
-> **⚠️ Snapshot 07/09 — inventário abaixo é histórico.** O registry cresceu
-> depois da auditoria: hoje `isUiType` cobre **30 tipos** (o texto lista 24),
-> incluindo `Textarea`/`Select`/`Ul`/`Ol`/`Table`/`Form`/`Fieldset`/`Iframe`/
-> `Video`/`Audio`/`Hr` (o `KofUi.java` tem 36 `new ClassType("kof.ui", ...)` —
-> alguns são helpers, não tipos do registry). A matriz de gaps `UI00x` e a
-> convenção R6 continuam válidas; **recontar `UI001/UI002` (Native/Script
-> no-op silencioso) contra o código atual** antes de tratá-los como abertos.
+> **⚠️ Snapshot 07/09 — inventário abaixo é histórico.** Recontagem 17/09:
+> `isUiType` cobre **36 tipos** (o texto lista 24) — Color, Theme, Label,
+> Button, Input, Textarea, Select, Ul, Ol, Table, Column, Row, Form, View,
+> Style, Window, Link, Image, Icon, Font, Component, Event, o conjunto de
+> layout (Box, Stack, Spacer, Wrap, Grid, Center, Align) e Store, Canvas,
+> Fieldset, Iframe, Video, Audio, Hr. A matriz `UI00x` e a convenção R6
+> continuam válidas. **Recontagem `UI001/UI002` (17/09):** `UI002` ✅
+> confirmado FEITO 08/09 (o interpretador imprime o warning uma vez via
+> `ui002Warned`); `UI001` **segue aberto** — os erros de link de 07/09 estão
+> corrigidos (`RuntimeUi` carrega os stubs no-op, `COMP001` sumiu) mas o Native
+> continua um no-op **silencioso** (sem diagnóstico em compile-time), então
+> UI001 permanece como a única face de no-op silencioso.
 
 **Tipos (24 na varredura de 07/09):** Color, Theme, Label, Button, Input, Column, Row, View, Style,
 Window, Link, Image, Icon, Font, Component, Event, Box, Stack, Spacer, Wrap,

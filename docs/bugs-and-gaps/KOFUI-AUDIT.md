@@ -9,13 +9,17 @@
 
 ## 1. Compiler registry (`KofUi.java`, 539 lines — was 383 in the 07/09 audit)
 
-> **⚠️ 07/09 snapshot — the inventory below is historical.** The registry grew
-> after the audit: today `isUiType` covers **30 types** (the text lists 24),
-> including `Textarea`/`Select`/`Ul`/`Ol`/`Table`/`Form`/`Fieldset`/`Iframe`/
-> `Video`/`Audio`/`Hr` (the `KofUi.java` has 36 `new ClassType("kof.ui", ...)` —
-> some are helpers, not registry types). The `UI00x` gap matrix and the
-> R6 convention remain valid; **recount `UI001/UI002` (Native/Script
-> silent no-op) against the current code** before treating them as open.
+> **⚠️ 07/09 snapshot — the inventory below is historical.** Recount 17/09:
+> `isUiType` covers **36 types** (the text lists 24) — Color, Theme, Label,
+> Button, Input, Textarea, Select, Ul, Ol, Table, Column, Row, Form, View,
+> Style, Window, Link, Image, Icon, Font, Component, Event, the layout set
+> (Box, Stack, Spacer, Wrap, Grid, Center, Align) and Store, Canvas, Fieldset,
+> Iframe, Video, Audio, Hr. The `UI00x` matrix and R6 convention remain valid.
+> **`UI001/UI002` recount (17/09):** `UI002` ✅ confirmed DONE 08/09 (the
+> interpreter prints the warning once via `ui002Warned`); `UI001` **still
+> open** — the 07/09 link errors are fixed (`RuntimeUi` carries the no-op
+> stubs, `COMP001` gone) but Native is still a **silent** no-op (no
+> compile-time diagnostic), so UI001 stands as the only silent-no-op face.
 
 **Types (24 in the 07/09 scan):** Color, Theme, Label, Button, Input, Column, Row, View, Style,
 Window, Link, Image, Icon, Font, Component, Event, Box, Stack, Spacer, Wrap,
