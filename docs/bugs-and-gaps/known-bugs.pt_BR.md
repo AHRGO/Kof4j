@@ -9724,9 +9724,36 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
 - **NAO consertado aqui** (achado ao fechar a face B do §253; o codegen de alocar caixa e uma unidade vertical maior que o spill da face B — "small is sustainable"; catalogar + anotar agora para a proxima sessao nativa implementar a caixa real sem re-descobrir o no-op).
 
 
+
 ## §270 — atribuicao generica nao verificada `List<Int>` → `List<String>` e ACEITA EM SILENCIO (tipo-args nunca lidos na atribuicao) → `ClassCastException` no runtime — face aceite-falso do buraco de substituicao por tras de #400/#390 — 🟡 ABERTO (achado 17/09 medindo o #401; conserto honesto e fork regra-6)
 
 - **Repro (verbatim #401, re-medido no jar do tip `81d995ce`, JVM):** `val nums: List<Int> = listOf(); nums.add(1); val strs: List<String> = nums; println(strs.get(0))`. `check` → `no errors` (o silencio real); o `run` executa e morre no `get`: `ClassCastException: class java.lang.Integer cannot be cast to class java.lang.String` (M.kf:5). Literal nao-vazio `listOf(1,2)` reproduz identico (M.kf:4).
 - **Raiz:** o check de atribuicao compara so o tipo RAW (`List` vs `List`) — os tipo-argumentos nunca sao consultados, e uma divergencia e aceita em silencio. Mesma passada de substituicao faltante que REJEITA-FALSO codigo valido no #400 (classe → interface generica implementada, SEM021) e #390 (override `put(T)` vs `put(Int)`, SEM043). Dossieres com ponteiros nos tres issues.
 - **Registro do cluster (uma raiz, dois contratos — NAO dividir em tres patches):** #400 + #390 sao as faces rejeicao-falsa: conserta-los e ADITIVO (codigo valido que falha hoje passa; nada que compila hoje quebra) — seguro p/ a lane compiler agora. #401 e a face aceite-falso: tornar args rejeicao real **muda semantica congelada** (programas errados que hoje compilam param de compilar) → decisao regra-6/freeze-1 da mantenedora com nota de versao + migracao; nao "consertar" as avancas.
 - **Nao e uma face nova de crash silencioso (correcao Q5):** uma linha da triagem inicial dizia que este repro sai "rc=1 SEM diagnostico" — era o grep do harness perdendo a linha `Exception in thread "main"`. O silencio de compilacao e exatamente o aceite-falso acima; o CCE de runtime e como o issue protocolou.
+
+## §271 — DISPATCH de interface genérica em runtime: os call sites emitem o `invokeinterface Converter.convert(Object)Object` apagado mas nenhuma bridge é emitida na implementação (e o descritor da interface carrega a type-var) — `NoSuchMethodError` no load/primeira chamada — 🔴 ABERTA 18/09 (rio do Cluster A, regra 6) — lane compiler `.22`
+
+- **Achado (18/09, unidade #400):** o **falso positivo** do SEM021 (atribuir a
+  instância de `class IntToString implements Converter<Int, String>` a uma
+  variável `Converter<Int, String>`) foi corrigido no BFS nominal
+  compartilhado (`TypeChecker.rawTypeName` apaga o `<...>` do local de
+  declaração, `GenericInterfaceAssignabilityTest` 5/5, Q0: 3/5 RED pré-fix).
+  Com a aceitação no lugar, a **face de runtime** do MESMO programa ficou
+  observável — medido no jar do tip: imprime `42` (chamada direta) e depois
+  `NoSuchMethodError: 'java.lang.Object Converter.convert(java.lang.Object)'`
+  na chamada via interface (Main.kf:11).
+- **Causa-raiz (MESMO rio do Cluster A #363/#365/#366/#385/#399/#295/#353/#354):**
+  a classe-interface é emitida com o descritor carregando a type-var e a classe
+  implementadora só carrega o método especializado (`convert(int)String`) — o
+  contrato de erasure da JVM exige a bridge `convert(Object)Object` (e o
+  descritor da interface casando), que nenhum emissor produz. Corrigir muda a
+  modelagem de ABI de genéricos nos 4 backends → **regra 6**: vira plano, nunca
+  edição de ocasião.
+- **Estado das issues neste rio:** #400 permanece ABERTA até o dispatch landar
+  (face 1 — a rejeição falsa — está CORRIGIDA com prova); #390 (SEM043 em
+  override com T substituído) e #401 (checagem de args entre instanciações) são
+  vizinhas com faces próprias.
+- **Repro (mínimo, medido 18/09):** `interface Converter<A,B> { convert(input: A): B }` +
+  `class IntToString implements Converter<Int,String> { convert(input: Int): String { return input.toString() } }` +
+  `val cv: Converter<Int,String> = IntToString(); println(cv.convert(99))`.
