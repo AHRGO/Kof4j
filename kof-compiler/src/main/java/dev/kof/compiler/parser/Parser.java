@@ -226,8 +226,8 @@ public class Parser {
      */
     static void rejectFunctionKeyword(ParseContext ctx) {
         String w = ctx.advance().value();
-        ctx.error("'" + w + "' é palavra reservada (Kof não tem keyword de "
-                + "função); declare como 'Tipo nome(...) { }' ou 'nome(...): Tipo { }'", "PARSE085");
+        ctx.error("'" + w + "' is a reserved word (Kof has no function keyword); "
+                + "declare as 'Type name(...) { }' or 'name(...): Type { }'", "PARSE085");
     }
 
     /**

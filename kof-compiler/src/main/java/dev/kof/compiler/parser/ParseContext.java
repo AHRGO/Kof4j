@@ -77,8 +77,8 @@ public class ParseContext {
             Token kw = peek();
             advance();
             diagnostics.error(file, kw.line(), kw.column(), kw.value().length(),
-                    "'" + kw.value() + "' é palavra reservada (Kof não tem keyword de função); "
-                    + "declare como 'Tipo nome(...) { }' ou 'nome(...): Tipo { }'", "PARSE085");
+                    "'" + kw.value() + "' is a reserved word (Kof has no function keyword); "
+                    + "declare as 'Type name(...) { }' or 'name(...): Type { }'", "PARSE085");
             return "error";
         }
         diagnostics.error(file, peek().line(), peek().column(), peek().length(), message, code);

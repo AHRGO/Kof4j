@@ -452,7 +452,7 @@ public class ExpressionParser {
                 ctx.advance();
                 ExpressionNode value = StatementParser.parseSwitchCasePatternOrValue(ctx, cp);
                 ctx.expect(TokenType.ARROW,
-                        "Switch expressão exige '->' (a forma statement usa ':')", "PARSE076");
+                        "switch expression requires '->' (the statement form uses ':')", "PARSE076");
                 rejectBlockCaseBody(ctx);
                 ExpressionNode body = ExpressionParser.parseExpression(ctx);
                 cases.add(new SwitchExprCase(cp, value, body));
@@ -462,7 +462,7 @@ public class ExpressionParser {
                 rejectBlockCaseBody(ctx);
                 defaultValue = ExpressionParser.parseExpression(ctx);
             } else {
-                ctx.error("Esperava 'case' ou 'default' em switch expressão", "PARSE078");
+                ctx.error("expected 'case' or 'default' in switch expression", "PARSE078");
                 ctx.advance();
             }
         }
@@ -479,9 +479,9 @@ public class ExpressionParser {
      */
     static void rejectBlockCaseBody(ParseContext ctx) {
         if (ctx.check(TokenType.LBRACE)) {
-            ctx.error("switch expressão: o corpo de cada case é uma ÚNICA expressão "
-                    + "(sem escopo de bloco); use o switch-statement (`case ...:`) para "
-                    + "múltiplos statements", "PARSE094");
+            ctx.error("switch expression: each case body is a SINGLE expression "
+                    + "(no block scope); use the switch-statement (`case ...:`) for "
+                    + "multiple statements", "PARSE094");
         }
     }
 

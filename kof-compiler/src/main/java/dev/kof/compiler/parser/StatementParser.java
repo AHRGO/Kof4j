@@ -303,7 +303,7 @@ public class StatementParser {
                 SourcePosition cp = ctx.pos();
                 ctx.advance();
                 ExpressionNode value = StatementParser.parseSwitchCasePatternOrValue(ctx, cp);
-                ctx.expect(TokenType.COLON, "Expected ':' (switch statement) ou '->' (switch expressão)", "PARSE073");
+                ctx.expect(TokenType.COLON, "expected ':' (switch statement) or '->' (switch expression)", "PARSE073");
                 List<StatementNode> caseBody = new ArrayList<>();
                 while (!ctx.check(TokenType.CASE) && !ctx.check(TokenType.DEFAULT) && !ctx.check(TokenType.RBRACE) && !ctx.atEnd()) {
                     caseBody.add(StatementParser.parseStatement(ctx));

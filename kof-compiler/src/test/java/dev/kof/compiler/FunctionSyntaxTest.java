@@ -164,6 +164,20 @@ class FunctionSyntaxTest {
     }
 
     @Test
+    void reservedWordMessageIsEnglish(@TempDir Path tempDir) throws IOException {
+        // D-DIAG-EN: a mensagem visivel ao usuario e em ingles (tooling 100%
+        // EN); o codigo (PARSE085) permanece, so o texto migra.
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, "main() {\n    var fn = 42\n}\n");
+        CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.JVM);
+        var msg = result.diagnostics().getDiagnostics().stream()
+                .filter(d -> "PARSE085".equals(d.code())).findFirst().orElseThrow().message();
+        assertTrue(msg.contains("is a reserved word") && msg.contains("Kof has no function keyword"),
+                "mensagem PARSE085 deve ser EN, veio: " + msg);
+        assertFalse(msg.matches(".*[ãõáàâéêíóôúç].*"), "PARSE085 ainda tem PT: " + msg);
+    }
+
+    @Test
     void funAsVarNameIsRejectedWithParse085(@TempDir Path tempDir) throws IOException {
         assertParse085(tempDir, "main() {\n    var fun = 42\n}\n");
     }
