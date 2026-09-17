@@ -9399,8 +9399,10 @@ behavior-preserving (`RawRowCollectionAccessE2ETest` + `SemanticResolutionTest`
   KofConcurrency2Test.crossNativeConcurrencyHelpersRun (aarch64 `poll(b)`=0 vs
   golden 1 — MESMA classe do §256 CONC001/riscv (lane .18); divergencia
   agora no aarch; esta unidade nao toca codigo de concorrencia — nada
-  introduzido aqui). **PENDENTE:** fatia 4 = porta riscv64 dos 3 knobs
-  (aarch64 herda via translateRiscvToAarch64). Related: §258 (same sweep),
+  introduzido aqui). **FATIA 4 FECHADA (17/09):** timeout/retry/circuit
+  portados ao riscv64 com aarch64 herdando via translateRiscvToAarch64 —
+  `KofHttpNativeResilienceCrossTest` 4/4 sob qemu, mensagens IDENTICAS ao
+  x86/JVM; §259 CLOSED (commit da porta: ver SHA na linha de Status). Related: §258 (same sweep),
   WEB002/WEB004/WEB003 (the per-function gap-code split precedent this should
   follow).
 
