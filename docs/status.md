@@ -84,7 +84,7 @@
 
 ``` 
 mvn clean package    → PASS
-mvn test             → 2218 tests (1911 kof-compiler + 38 kof-script + 7 kof-c-compiler + 262 kof-cli), 0 regressions / 0 errors, 192 skip (no qemu on host → 84 cross skip; external DB/toolchain guards + §255 sysroot guard; `node` present — all `*Js` green) — 16/09 ~15:54 clean clone of `9572949f` (the §252 native flake silent 3rd straight run) (previous 1662/13-errors = node-less host, 13/09)
+mvn test             → 2411 tests (2058 kof-compiler + 38 kof-script + 7 kof-c-compiler + 308 kof-cli), 0 regressions / 0 errors, 196 skip (no qemu on host → 84 cross skip; external DB/toolchain guards + §255 sysroot guard; `node` present — all `*Js` green) — 17/09 ~15:49 clean run on tip `f276e966` (§252 native flake silent again) (previous 2218 = 16/09 ~15:54 clean clone of `9572949f`)
 kof build            → PASS (--target jvm|native|js|native.risc|native.arm) [--release]
 kof run              → PASS (jvm|native|js|native.risc|native.arm) [--release]
 kof serve            → PASS (native web.app() + legacy handle() API)
