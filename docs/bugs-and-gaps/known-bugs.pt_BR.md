@@ -9086,6 +9086,20 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
   list.getArraySize()` @523, `for (int i = 0; i < n; i++)` @525), não :510 — o
   arquivo deslocou com a fatia B do DB001. Dono inalterado (lane `.18`); esta
   lane só mantém o registro verdadeiro.
+- **Balanço da lane `.17` (17/09, esta sessão):** #794
+  `java/local-variable-is-never-read` (`KofHttpNativeTimeoutE2ETest:133`, meu
+  arquivo do §259) — **FECHADO** (local `int bh = startBlackhole()` nunca lido
+  removido, chamada com efeito colateral mantida; teste segue 3/3). #809
+  `java/concatenated-command-line` (`RecordNullableEqContentE2ETest`, criado
+  pelo §262 face (b) `ab284b91`) — catalogado: mesmo padrão de harness do #789
+  (o idiomão E2E `ProcessBuilder("java","-cp",tempDir,...)` compartilhado por 11
+  arquivos de teste na branch; o caminho é um tempdir controlado do JUnit, não
+  entrada de usuário) — decisão de triagem ampla do harness que pertence ao
+  dono da varredura, não remendada em um arquivo isolado. Os pushes desta
+  sessão usaram o bypass honesto documentado (`CODEQL_GATE_SKIP=1`) com causa
+  "gate vermelho no repo inteiro pela varredura multi-lane pré-existente
+  (#783–#810), dívida da lane `.17` (#794) fechada no arquivo"; nunca editei o
+  gate nem nenhuma asserção (Q5).
 - **Nota de registro (16/09, lane bugs-and-gaps `192.168.100.15`) — SHAs mortos:**
   `eaba0f24` (acima) **não** resolve neste repo (todos os 3109 objetos de commit
   locais, os 3 worktrees) nem no remoto (API do GitHub → 422). Idem `c4356881`

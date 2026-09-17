@@ -9240,6 +9240,19 @@ behavior-preserving (`RawRowCollectionAccessE2ETest` + `SemanticResolutionTest`
   the alert is at **:525** (`long n = list.getArraySize()` @523, `for (int i =
   0; i < n; i++)` @525), not :510 — the file shifted with DB001 fatia B.
   Ownership is unchanged (lane `.18`); this lane only keeps the record true.
+- **Lane `.17` ledger (17/09, this session):** #794
+  `java/local-variable-is-never-read` (`KofHttpNativeTimeoutE2ETest:133`, my
+  §259 file) — **CLOSED** (`int bh = startBlackhole()` never-read local
+  dropped, side-effect call kept; test still 3/3). #809
+  `java/concatenated-command-line` (`RecordNullableEqContentE2ETest`, created
+  by §262 face (b) `ab284b91`) — catalogued: same harness pattern as #789
+  (the E2E `ProcessBuilder("java","-cp",tempDir,...)` idiom shared by 11 test
+  files on the branch; path is a controlled JUnit tempdir, not user input) —
+  a harness-wide triage decision belonging to the sweep owner, not patched in
+  one file alone. Pushes of this session used the documented honest bypass
+  (`CODEQL_GATE_SKIP=1`) with cause "gate repo-wide red on the pre-existing
+  multi-lane sweep (#783–#810), lane `.17` debt (#794) closed in-file"; never
+  edited the gate or any assertion (Q5).
 - **Record note (16/09, lane bugs-and-gaps `192.168.100.15`) — dead SHAs:**
   `eaba0f24` (above) does **not** resolve in this repo (all 3109 local commit
   objects, all 3 worktrees) nor on the remote (GitHub API → 422). Same for
