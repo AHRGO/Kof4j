@@ -364,6 +364,7 @@ retorno do lambda (*probe*: map/filter/reduce corretos).
 | `SEM070` | `class D extends F` onde `F` é declarada `final` | `ClassShapeChecks.checkClassDeclaration` (#339) |
 | `SEM071` | instanciação de `interface` (`new I()` e `I()`) | `ClassShapeChecks.checkInstantiable` (#340) |
 | `SEM072` | `add`/`push`/`append` de List com aridade errada — ex. `l.add(i, v)` (não existe inserção posicional; use `set(i, v)`) | `MemberCallTyper` (#336, 4 alvos) |
+| `SEM073` | `reduce` de List com aridade errada — `reduce((a,b)->…)` sem seed (o reduce do Kof sempre recebe a lambda E uma seed, em qualquer ordem; a forma sem seed morria no `Frame.merge` da ASM) | `MemberCallTyper` (#361, 4 alvos) |
 | `ARITH001` | divisão/resto por zero **constante** | `ExpressionBinaryLowerer` (guarda de zero constante) |
 
 Divisão por zero **não-constante** (`7 / z` com `z=0`) → erro de **runtime**

@@ -363,6 +363,7 @@ the lambda's return (*probe*: map/filter/reduce correct).
 | `SEM070` | `class D extends F` where `F` is declared `final` | `ClassShapeChecks.checkClassDeclaration` (#339) |
 | `SEM071` | instantiation of an `interface` (`new I()` and `I()`) | `ClassShapeChecks.checkInstantiable` (#340) |
 | `SEM072` | wrong-arity `add`/`push`/`append` on a List — e.g. `l.add(i, v)` (there is no positional insert; use `set(i, v)`) | `MemberCallTyper` (#336, all 4 targets) |
+| `SEM073` | wrong-arity `reduce` on a List — seedless `reduce((a,b)->…)` (Kof's reduce always takes the lambda AND a seed, either order; the seedless form died in ASM `Frame.merge`) | `MemberCallTyper` (#361, all 4 targets) |
 | `ARITH001` | division/remainder by a **constant** zero | `ExpressionBinaryLowerer` (constant-zero guard) |
 
 Division by a **non-constant** zero (`7 / z` with `z=0`) → **runtime**
