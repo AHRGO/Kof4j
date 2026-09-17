@@ -51,6 +51,19 @@ true  false  null
 `onShutdown`, `desc`, `asc`. They have contextual meaning in the parser (see
 [grammar.md](grammar.md)) or none.
 
+> **§263 FIXED (17/09, compiler/nat lane):** the annotated form
+> `name: Type = ...` is only valid after `var`/`val`. On the type-first path
+> (`Type name = ...`) a `:` right after the name means the consumed prefix was
+> never a real type. `parseVarDecl` now emits **`PARSE095`** pointing at the
+> discarded prefix, instead of silently overwriting it — **only when the prefix
+> differs from the annotation** (prefix == annotation discards nothing; that is
+> the fix direction declared by the cataloguing lane). Before the fix,
+> `let x: Int = 5` / `Klaxon x: Int = 5` / `Banana q: String = "z"` compiled
+> and printed the value; without the annotation the unknown prefix already
+> failed honestly as SEM011 — the hole was only with `:`. Parser-level fix:
+> all 4 targets inherit the same diagnostic (rule 5). Locked by
+> `ParserGarbageTypePrefixE2ETest` (9/9, JVM + JS).
+
 **RESERVED words** (their own tokens, `IDENTIFIER` **never**): `fun`,
 `fn`, `func` (SG-001, 06/09).
 

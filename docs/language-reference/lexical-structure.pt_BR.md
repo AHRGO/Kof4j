@@ -51,6 +51,19 @@ true  false  null
 `onShutdown`, `desc`, `asc`. Têm significado contextual no parser (ver
 [grammar.md](grammar.md)) ou nenhum.
 
+> **§263 CORRIGIDO (17/09, lane compiler/nat):** a forma anotada
+> `nome: Type = ...` só é válida depois de `var`/`val`. No caminho type-first
+> (`Type nome = ...`), um `:` logo após o nome significa que o prefixo
+> consumido nunca foi um tipo real. `parseVarDecl` agora emite **`PARSE095`**
+> apontando para o prefixo descartado, em vez de sobrescrevê-lo em silêncio —
+> **somente quando o prefixo difere da anotação** (prefixo == anotação não
+> descarta nada; é a direção de conserto declarada pela lane que catalogou).
+> Antes da correção, `let x: Int = 5` / `Klaxon x: Int = 5` / `Banana q: String
+> = "z"` compilavam e imprimiam o valor; sem anotação o prefixo desconhecido já
+> falhava honesto como SEM011 — o buraco era só com `:`. Conserto no parser: os
+> 4 alvos herdam o mesmo diagnóstico (regra 5). Prova em
+> `ParserGarbageTypePrefixE2ETest` (9/9, JVM + JS).
+
 **Palavras RESERVADAS** (tokens próprios, `IDENTIFIER` **nunca**): `fun`,
 `fn`, `func` (SG-001, 06/09).
 

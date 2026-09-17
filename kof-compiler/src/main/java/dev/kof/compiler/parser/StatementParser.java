@@ -413,6 +413,7 @@ public class StatementParser {
     static StatementNode parseVarDecl(ParseContext ctx) {
         SourcePosition p = ctx.pos();
         String type = "var";
+        boolean typeFirst = false;
         if (ctx.check(TokenType.VAL)) {
             // bug 62: `val` é imutável — o type do VarDeclStmt precisa carregar
             // "val" para o analisador semântico emitir SEM037 em reatribuição.
@@ -422,12 +423,31 @@ public class StatementParser {
             ctx.advance();
         } else {
             type = TypeParser.parseTypeRef(ctx);
+            typeFirst = true;
         }
         String name = ctx.expectId("Expected variable name", "PARSE037");
         if (ctx.check(TokenType.COLON)) {
             // var name: Type = value — explicit type annotation
             ctx.advance();
-            type = TypeParser.parseTypeRef(ctx);
+            String annType = TypeParser.parseTypeRef(ctx);
+            // §263 (R6): a anotacao `nome: Type` so e forma valida depois de
+            // var/val. No caminho type-first (parseTypeRef consumiu um
+            // prefixo), o `:` sobrescrevia o prefixo SEM diagnosticar. So ha
+            // buraco quando o prefixo DIFERE da anotacao — ai ele NUNCA foi um
+            // tipo real (`let`, `Klaxon`, `Banana`) e desaparece em silencio
+            // (programa invalido compila). Prefixo == anotacao nao descarta
+            // nada (overwrite identidade) — mantido, nao e o bug reportado.
+            // Sem anotacao o prefixo desconhecido ja caia honesto no typer
+            // (SEM011) — o buraco era so com `:`.
+            if (typeFirst && !annType.equals(type)) {
+                ctx.diagnostics.error(ctx.file, p.line(), p.column(), p.length(),
+                        "invalid variable declaration: the ':' annotation is only allowed after 'var'/'val' — "
+                        + "the type '" + type + "' before '" + name + "' does not match '" + annType
+                        + "' and would be silently discarded; write 'var " + name + ": " + annType
+                        + " = ...' or '" + annType + " " + name + " = ...'",
+                        "PARSE095");
+            }
+            type = annType;
         }
         ExpressionNode init = null;
         if (ctx.check(TokenType.EQUAL)) {
