@@ -84,7 +84,7 @@ public final class CompilerTypes {
      * chamar qualquer método no `e`. `String` continua sendo a exceção de
      * Kof (mensagem, `RuntimeException` em runtime).
      */
-    private static final java.util.Set<String> JAVA_LANG_THROWABLES = java.util.Set.of(
+    static final java.util.Set<String> JAVA_LANG_THROWABLES = java.util.Set.of(
             "Throwable", "Exception", "RuntimeException", "IllegalArgumentException",
             "IllegalStateException", "IndexOutOfBoundsException", "NumberFormatException",
             "ArithmeticException", "NullPointerException", "UnsupportedOperationException",

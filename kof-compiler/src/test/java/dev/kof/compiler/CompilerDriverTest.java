@@ -3153,7 +3153,7 @@ class CompilerDriverTest {
                     throw "error"
                 } catch (String e) {
                     println(e)
-                } catch (Int e) {
+                } catch (Exception e) {
                     println(e)
                 }
             }
@@ -3171,7 +3171,7 @@ class CompilerDriverTest {
                     throw "error"
                 } catch (String e) {
                     println(e)
-                } catch (Int e) {
+                } catch (Exception e) {
                     println(e)
                 }
             }

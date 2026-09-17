@@ -144,6 +144,11 @@ public final class StatementAnalyzer {
                 SymbolTable tryScope = scope.enterScope();
                 for (StatementNode s : tryStmt.tryBody()) analyzeStatement(sa, s, tryScope, returnType);
                 for (CatchClause cc : tryStmt.catchClauses()) {
+                    // #332/#328: valida o TIPO do catch uma vez aqui (compartilhado
+                    // por JVM/Native/JS/interpreter) — `catch (Int e)` e `catch
+                    // (Foo e)` de classe não-throwable compilavam em silêncio e
+                    // morriam no load (NoClassDefFoundError / VerifyError).
+                    CatchTypeCheck.check(sa, cc);
                     SymbolTable catchScope = scope.enterScope();
                     if (cc.exceptionName() != null) {
                         // #163: `catch (RuntimeException e)` precisa do tipo

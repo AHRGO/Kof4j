@@ -371,6 +371,20 @@ public class JvmBackend implements Backend {
         // ClassFormatError. Nome com ponto ou barra já carrega o pacote: só traduz.
         if (kofType.indexOf('.') >= 0) return kofType.replace('.', '/');
         if (kofType.indexOf('/') >= 0) return kofType;
+        // #332 — classe DECLARADA no módulo vence o prefixo java/lang/ cego:
+        // `catch (Foo e)` gravava `java/lang/Foo` (inexistente) →
+        // NoClassDefFoundError no load em vez de `Foo` (o emit usa o nome
+        // interno cru da classe top-level). Mesma razão p/ import qualificado
+        // (`import java.io.IOException` + `catch (IOException e)`).
+        if (currentModule != null) {
+            for (IRClass c : currentModule.classes()) {
+                String simple = c.name().substring(c.name().lastIndexOf('/') + 1);
+                if (simple.equals(kofType)) return c.name();
+            }
+            for (String imp : currentModule.imports()) {
+                if (imp.endsWith("." + kofType)) return imp.replace('.', '/');
+            }
+        }
         return "java/lang/" + kofType;
     }
 
