@@ -33,7 +33,7 @@ Kof IR (backend-agnostic) → Optimizer (constant folding, branch simplification
 | `kof build <dir> [--target jvm\|native\|native.risc\|native.arm\|js\|android] [--output <dir>] [--release] [--apk]` | Compile all .kf files |
 | `kof run <file.kf\|dir> [--target jvm\|native\|native.risc\|native.arm\|js\|android] [args...]` | Compile and run (JVM/Native/JS/Android) |
 | `kof serve <file.kf> [--port] [--host]` | Start HTTP server (web.app + API legada handle) |
-| `kof check <file.kf\|dir>` | Type-check only |
+| `kof check <file.kf\|dir> [--target <t>]` | Type-check only (gaps por alvo) |
 | `kof test <file.kf\|dir> [--target jvm\|native\|js]` | Structured tests `test "nome" { }` nos 3 targets |
 | `kof script <file.ks> [--watch] [--inspect]` | KofScript top-level let → KofScriptGlobals + JIT |
 | `kof repl` | REPL incremental KofScript |

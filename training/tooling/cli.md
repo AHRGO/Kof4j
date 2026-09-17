@@ -14,7 +14,7 @@ commands, tooling and editor support.
 | `kof build <dir> [--target jvm\|native\|native.risc\|native.arm\|js\|android] [--output <dir>] [--release] [--apk]` | Compiles |
 | `kof run <file.kf\|dir> [--target jvm\|native\|native.risc\|native.arm\|js\|android] [args...]` | Compiles and runs |
 | `kof serve <file.kf> [--port <port>] [--host <host>]` | Basic HTTP web server. `--port`/`--host` apply only in legacy mode (`handle`); a kof-native app (`app.listen`) sets its own port and the CLI warns (#35.3) |
-| `kof check <file.kf\|dir>` | Type-check without emitting code |
+| `kof check <file.kf\|dir> [--target <t>]` | Type-check without emitting code (target-aware gaps) |
 | `kof test <file.kf\|dir> [--target jvm\|native\|js]` | Structured suite `test "name" { }`: PASS/FAIL per test; files without tests run whole (PASS = exit 0) |
 | `kof script <file.ks> [--target jvm\|native\|js] [--watch] [--inspect] [args...]` | KofScript: JIT with top-level `let` → KofScriptGlobals, repl, 64 LRU cache |
 | `kof repl` | Alias for interactive `kof script` |

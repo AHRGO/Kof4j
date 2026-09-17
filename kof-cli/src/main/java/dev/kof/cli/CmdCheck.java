@@ -22,27 +22,38 @@ final class CmdCheck {
 
     static int run(String[] args, PrintStream out, PrintStream err) {
         if (args.length < 2) {
-            err.println("usage: kof check <file.kf|dir> [--json]");
+            err.println("usage: kof check <file.kf|dir> [--target <t>] [--json]");
             return 1;
         }
 
         boolean json = false;
         String pathArg = null;
+        Target target = Target.JVM;
 
         for (int i = 1; i < args.length; i++) {
             String arg = args[i];
             if ("--help".equals(arg) || "-h".equals(arg) || "--version".equals(arg)) {
-                out.println("usage: kof check <file.kf|dir> [--json]");
+                out.println("usage: kof check <file.kf|dir> [--target <t>] [--json]");
                 return 0;
             } else if ("--json".equals(arg)) {
                 json = true;
+            } else if ("--target".equals(arg) && i + 1 < args.length) {
+                target = KofCliSupport.parseTarget(args[++i]);
+            } else if (arg.startsWith("--target=")) {
+                target = KofCliSupport.parseTarget(arg.substring("--target=".length()));
             } else if (pathArg == null && !arg.startsWith("-")) {
                 pathArg = arg;
+            } else {
+                // R6: nunca ignorar uma flag desconhecida em silêncio (o usuario
+                // acharia que ela teve efeito). `check` so aceita --target/--json.
+                err.println("check: flag desconhecida: " + arg
+                        + " (aceita: --target <t> --json)");
+                return 1;
             }
         }
 
         if (pathArg == null) {
-            err.println("usage: kof check <file.kf|dir> [--json]");
+            err.println("usage: kof check <file.kf|dir> [--target <t>] [--json]");
             return 1;
         }
 
@@ -77,9 +88,9 @@ final class CmdCheck {
             r = files.size() > 1
                     ? driver.compileSources(files.stream()
                             .map(p -> p.toAbsolutePath().normalize()).distinct()
-                            .collect(Collectors.toList()), tmp, Target.JVM,
+                            .collect(Collectors.toList()), tmp, target,
                             src.toAbsolutePath().normalize())
-                    : driver.compile(files.get(0), tmp, Target.JVM);
+                    : driver.compile(files.get(0), tmp, target);
         } finally {
             KofCliSupport.cleanup(tmp);
         }

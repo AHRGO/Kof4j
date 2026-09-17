@@ -21,7 +21,7 @@ The CLI is the central tool of the Kof platform.
 | `kof repl` | Incremental KofScript REPL (type `exit` to quit) |
 | `kof c <file.c> [--run] [--output <bin>]` | KofC C subset → native-only x86-64 ELF |
 | `kof serve <file.kf>` | HTTP web server (native `web.app()` + legacy `handle()` API) |
-| `kof check <file.kf\|dir> [--json]` | Type-check without emitting code |
+| `kof check <file.kf\|dir> [--target <t>] [--json]` | Type-check without emitting code (target-aware gaps, e.g. `AND002` on android) |
 | `kof test <file.kf\|dir> [--target jvm|native|js]` | Structured suite `test "nome" { assert(...) }` on the 3 targets + whole programs by exit code |
 | `kof bench [paths...] [--target ...] [--iterations N] [--baseline <file>] [--threshold <ratio>] [--json] [--fail-on-regression]` | Benchmark harness (compile, run, validate, metrics, baseline) |
 | `kof profile <file.kf> [--target ...]` | Execution + metrics (CPU, RSS, GC) |
@@ -74,9 +74,12 @@ Structured format: `kof info --json`.
 
 Runs the complete pipeline (Lexer → Parser → Semantic Analysis) and reports
 all errors, without emitting code. It is the same check that the LSP publishes.
-With the `--json` flag (`kof check <file.kf|dir> --json`), it emits the
-diagnostics in structured JSON format for automation and continuous
-integration (CI/CD).
+`--target <t>` checks against a specific target, so target-specific gaps are
+reported without a build (e.g. `kof check app.kf --target android` flags
+`web.app()` as `AND002`). With the `--json` flag
+(`kof check <file.kf|dir> --json`), it emits the diagnostics in structured JSON
+format for automation and continuous integration (CI/CD). Unknown flags are
+rejected with exit 1 (never silently ignored).
 
 ## `kof script` and `kof c` (0.2.0)
 

@@ -259,7 +259,7 @@ alvos; o alvo que não consegue realizá-la diz isso na hora, com código.**
 | Código | Situação | Motivo |
 |--------|----------|--------|
 | ~~`AND001`~~ | ~~`spawn { ... }`~~ | ✅ **fechado 31/08**: ART não tem virtual threads (Java 21), mas o runtime cai em **platform threads** quando `Thread.startVirtualThread` não existe — `spawn`/`await`/`cancel`/`cancelled`/`selectAny`/`awaitTimeout`/`channel`/`scheduler` compilam e rodam (bytecode: `CompletableFuture` + `new Thread` + `LinkedBlockingQueue`; KofJS do WebView: sequencial). `KofConcurrency2Test`/`AndroidInteropE2ETest` |
-| `AND002` | `web.app()` / `kof.web` (servidor embutido) | ✅ **imposto em compile-time (17/09)**: app mobile não escuta porta — o alvo recusa com `AND002` e aponta o interop, nunca emite código de servidor que não roda (R6) |
+| `AND002` | `web.app()` / `kof.web` (servidor embutido) | ✅ **imposto em compile-time (17/09)** tanto no `kof build` quanto no `kof check --target android` (18/09): app mobile não escuta porta — o alvo recusa com `AND002` e aponta o interop, nunca emite código de servidor que não roda (R6) |
 | `AND003` | reflexão sobre classes Kof via interop | *caveat, não gate de compile-time*: desugaring/R8 pode remover símbolos; a linguagem não tem superfície de reflexão própria, então não há o que o compilador detectar |
 | `AND004` | android.jar ausente no ExternalClasspath | host Activity não incluída (warning) |
 | `SAM001` | aridade da lambda ≠ método SAM | interface externa exige N args |
