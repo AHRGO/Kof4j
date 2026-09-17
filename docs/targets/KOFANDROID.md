@@ -125,7 +125,7 @@ b.clicks = 5                      // external field (read/write)
 | UI app | `main()` with `Window(...)` | synthesizes host Activity + WebView |
 | Android component | `class MinhaTela extends android.app.Activity` | respects the hierarchy; requires real signatures via classpath |
 | framework metadata | `@Override`, `@NonNull`, ... | emits RuntimeVisible/Invisible in the bytecode |
-| logical entry point | `main()` | still exists — test the logic with `kof test` on `jvm`/`js`; android is packaging, not a test target |
+| logical entry point | `main()` | still exists — test the logic with `kof test` on `jvm`/`js`; android is packaging, not a test target (`kof test --target android` refuses with exit 1, R6) |
 
 Convention rules (no mandatory configuration):
 

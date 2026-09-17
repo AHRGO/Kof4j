@@ -115,4 +115,14 @@ class CmdBuildAndroidAabTest {
                 "--keystore sem --apk seria descartado em silencio (R6):\n" + r.out());
         assertTrue(r.out().contains("--apk"), "diagnostico honesto esperado:\n" + r.out());
     }
+
+    @Test
+    void testTargetAndroidIsHonestError(@TempDir Path dir) throws Exception {
+        Path src = writeApp(dir);
+        Path f = src.resolve("Main.kf");
+        Cli r = cli(dir, "test", f.toString(), "--target", "android");
+        assertNotEquals(0, r.exit(), "kof test --target android deve recusar (R6):\n" + r.out());
+        assertTrue(r.out().contains("android") && r.out().contains("empacotamento"),
+                "diagnostico honesto esperado:\n" + r.out());
+    }
 }

@@ -31,6 +31,17 @@ final class CmdTest {
             }
         }
         if (!Files.exists(src)) { System.err.println("not found: " + src); System.exit(1); return; }
+        // android é empacotamento (APK/AAB), não um alvo de execução: `kof test`
+        // não produz binário standalone. Recusa honesta e cedo (R6) em vez do
+        // enganoso "no binary produced" depois de compilar o projeto inteiro.
+        if (target == Target.ANDROID) {
+            System.err.println("test: --target android não é um alvo de teste"
+                    + " (android é empacotamento). Teste a lógica com"
+                    + " --target jvm|native|js; use 'kof build --target android'"
+                    + " para gerar o APK");
+            System.exit(1);
+            return;
+        }
         List<Path> files = Files.isDirectory(src) ? KofCliSupport.collect(src) : List.of(src);
         if (files.isEmpty()) { System.out.println("no .kf/.kof files found"); return; }
         CompilerDriver driver = new CompilerDriver();

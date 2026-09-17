@@ -124,7 +124,7 @@ b.clicks = 5                      // campo externo (leitura/escrita)
 | app de UI | `main()` com `Window(...)` | sintetiza host Activity + WebView |
 | componente Android | `class MinhaTela extends android.app.Activity` | respeita a hierarquia; exige assinaturas reais via classpath |
 | metadado de framework | `@Override`, `@NonNull`, ... | emite RuntimeVisible/Invisible no bytecode |
-| ponto de entrada lógico | `main()` | continua existindo — teste a lógica com `kof test` em `jvm`/`js`; android é empacotamento, não alvo de teste |
+| ponto de entrada lógico | `main()` | continua existindo — teste a lógica com `kof test` em `jvm`/`js`; android é empacotamento, não alvo de teste (`kof test --target android` recusa com exit 1, R6) |
 
 Regras de convenção (nenhuma configuração obrigatória):
 
