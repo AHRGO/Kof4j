@@ -87,7 +87,7 @@ implements-clause = "implements" , type-ref , { "," , type-ref }
   compilação; de dentro, funciona. `this.x`/`x` nu na classe declarante passa
   (owner == caller). A face de CAMPOS foi fechada 17/09 (#331/#327) — o
   `FieldSymbol` perdia os modificadores.
-- **Escrita em campo `final` é checada** (`SEM063`): atribuir um campo `final`
+- **Escrita em campo `final` é checada** (`SEM065`): atribuir um campo `final`
   fora do construtor da classe declarante é erro de compilação (JVMS 4.4,
   restrição do `putfield`); o inicializador sintético `<clinit>` ainda passa.
   `FieldAccessControlTest` 7/7.

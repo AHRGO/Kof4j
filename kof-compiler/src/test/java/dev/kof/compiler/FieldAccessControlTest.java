@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * resto) — mesma raiz que os metodos tiveram antes do SG-013. Agora a
  * visibilidade e o `final` chegam ao simbolo e os cheques espelham o
  * contrato dos metodos: private so na declarante, protected na declarante/
- * subclasses, escrita final so no <init> da declarante (SEM063).
+ * subclasses, escrita final so no <init> da declarante (SEM065).
  */
 class FieldAccessControlTest {
 
@@ -84,7 +84,7 @@ class FieldAccessControlTest {
     }
 
     @Test
-    void finalFieldWriteOutsideConstructorIsRejectedWithSEM063(@TempDir Path tempDir) throws Exception {
+    void finalFieldWriteOutsideConstructorIsRejectedWithSEM065(@TempDir Path tempDir) throws Exception {
         CompilationResult result = compile(tempDir, """
                 class Config { final Int timeout = 30 }
                 main() { var c = Config(); c.timeout = 60; println(c.timeout) }
@@ -92,9 +92,9 @@ class FieldAccessControlTest {
         assertFalse(result.success(),
                 "putfield of a final field outside <init> = IllegalAccessError at runtime, silent today");
         assertTrue(result.diagnostics().getDiagnostics().stream()
-                        .anyMatch(d -> "SEM063".equals(d.code())
+                        .anyMatch(d -> "SEM065".equals(d.code())
                                 && d.message().contains("final field 'timeout'")),
-                "must report SEM063 naming the field: " + result.diagnostics().getDiagnostics());
+                "must report SEM065 naming the field: " + result.diagnostics().getDiagnostics());
     }
 
     @Test

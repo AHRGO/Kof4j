@@ -306,7 +306,7 @@ future recommendations (rule 14 of the task: do not change behavior).
   in the declarer/subclasses; `this.x`/bare `x` in the declaring class passes.
   Root: `FieldSymbol` lost the modifiers in `SymbolTableBuilder`; now
   `MemberCallTyper.checkFieldAccess` rejects (`SEM046`). `final` field writes
-  outside the declaring constructor are rejected with `SEM063` (JVMS 4.4 —
+  outside the declaring constructor are rejected with `SEM065` (JVMS 4.4 —
   before: silent `IllegalAccessError`). Proof: `FieldAccessControlTest` 7/7.
 
 ### SG-014 — Pattern matching without guards/nesting

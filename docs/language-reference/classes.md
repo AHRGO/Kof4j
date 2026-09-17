@@ -87,7 +87,7 @@ implements-clause = "implements" , type-ref , { "," , type-ref }
   from inside it is fine. `this.x`/bare `x` in the declaring class passes
   (owner == caller). Fields were closed 17/09 (#331/#327) — the `FieldSymbol`
   used to lose the modifiers.
-- **`final` field write is checked** (`SEM063`): assigning a `final` field
+- **`final` field write is checked** (`SEM065`): assigning a `final` field
   outside the declaring class's constructor is a compile error (JVMS 4.4,
   `putfield` restriction); the synthetic `<clinit>` initializer still passes.
   `FieldAccessControlTest` 7/7.

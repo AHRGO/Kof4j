@@ -575,6 +575,19 @@ public class SemanticAnalyzer {
         }
         SymbolTable prevScope = currentScope;
         currentScope = classScope;
+        // #321 — `interface J extends Base` onde Base é CLASSE: o JVM escreve
+        // o supertype na interface como super_class → IncompatibleClassChangeError
+        // no load, silencioso no compile (R6/Q7). Interfaces só estendem
+        // interfaces; o alvo precisa existir E ser interface (nome
+        // desconhecido: SEM011 de resolveType cuida — nao duplicar aqui).
+        for (String parent : iface.interfaces()) {
+            if (diagnostics == null) break;
+            String base = parent.contains("<") ? parent.substring(0, parent.indexOf('<')).trim() : parent;
+            if (knownClasses.containsKey(base) && !interfaceNames.contains(base)) {
+                reportError(iface, "interface '" + iface.name() + "' cannot extend class '"
+                        + base + "' (interfaces may only extend interfaces)", "SEM064");
+            }
+        }
         // #213: corpos de métodos default de interface precisam ser analisados
         // (resolução de `greet(name)` como this.greet, tipos de retorno) — antes
         // eram ignorados e a chamada nua virava função hoisted.

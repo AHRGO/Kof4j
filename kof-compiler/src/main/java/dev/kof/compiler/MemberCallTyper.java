@@ -408,7 +408,7 @@ public final class MemberCallTyper {
         sa.diagnostics().error("", 0, 0, 0,
                 "cannot assign to final field '" + fs.name() + "' (declared in '"
                         + fs.ownerClass() + "') from outside its constructor",
-                "SEM063");
+                "SEM065");
     }
 
     /** caller está na hierarquia de `base` (caller == base ou estende transitivamente)? */

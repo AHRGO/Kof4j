@@ -306,7 +306,7 @@ recomendações futuras (regra 14 da tarefa: não alterar comportamento).
   declarante/subclasses; `this.x`/`x` nu na classe declarante passa. Raiz:
   `FieldSymbol` perdia os modificadores no `SymbolTableBuilder`; agora
   `MemberCallTyper.checkFieldAccess` rejeita (`SEM046`). Escrita em campo
-  `final` fora do construtor declarante é rejeitada com `SEM063` (JVMS 4.4 —
+  `final` fora do construtor declarante é rejeitada com `SEM065` (JVMS 4.4 —
   antes: `IllegalAccessError` silencioso). Prova: `FieldAccessControlTest` 7/7.
 
 ### SG-014 — Pattern matching sem guardas/aninhamento
