@@ -182,3 +182,17 @@ em todo widget DOM. Prova: `UiStyleCssE2ETest` 10/10
   — mas R6 sugere diagnóstico em log (low prio).
 - Native/Script no-op silencioso **não** é decisão documentada — é omissão
   (R6 exige diagnóstico): UI001/UI002.
+
+### Fase 9 (Renderização) — poda no re-render (18/09)
+
+A varredura das fases 8–11 do Component Core achou que o `kofUiRender`
+(`JsRuntimeUiComponents.java`) reconstruía a view a cada mudança de estado
+mas podava do DOM só o elemento **raiz** anterior, deixando a subárvore
+descartada inteira em `window.__kofNodes` (e as ações de Button em
+`window.__kofActions`) — crescimento silencioso e ilimitado. Corrigido
+chamando o `kofUiRemoveSubtree` existente (DOM + registro) na troca de
+raiz mais a limpeza de `__kofActions`; ver `known-bugs.md` **§273**. Prova:
+`ComponentCoreE2ETest.rerenderPrunesPreviousSubtreeFromRegistry` +
+`rerenderReleasesDiscardedButtonActions` (ambos VERMELHOS pré-fix). A Fase
+9 continua sem reuso de nó/diffing (a metade "partial update") — esta
+unidade fecha só o vazamento.

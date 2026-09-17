@@ -170,10 +170,12 @@ Regras que o core garante:
   caminho de mutação (sem 5 formas de guardar estado).
 - **Invalidação mínima.** `state(...)` marca **só o componente** como dirty e
   agenda re-render (scheduling), sem tocar a aplicação inteira.
-- **Re-render por reconciliação.** o view builder re-rodou, mas os nós
-  estáveis (mesma posição + kind) **reaproveitam o DOM existente** — só o que
-  mudou é atualizado (texto, props, handlers). Arquitetura preparada para
-  diffing completo (Fase 9), sem recriar a árvore.
+- **Re-render por reconstrução + poda (atual); reconciliação (Fase 9,
+  pendente).** hoje o builder da view reexecuta e a subárvore nova substitui a
+  anterior, podando a antiga do DOM e do registro (§273). O **alvo** é
+  reconciliação por **posição + kind** — nós estáveis (mesma posição + kind)
+  reaproveitam o DOM existente e só o diff (texto, props, handlers) é
+  atualizado, sem recriar a árvore; o diffing por chave vem junto.
 - **Lifecycle determinístico.** mount (view + `onMount`), update (reconcile),
   unmount (`onDispose` + **efeitos em ordem reversa** + remoção do DOM).
 - **Cleanup automático.** listener/timer/subscription registrados via `effect`
@@ -208,9 +210,11 @@ Window (raiz/host)
    o próprio `state(...)` é o ponto de invalidação (sem polling, sem reflexão).
 4. **Invalidation:** `state(...)` marca o componente dirty na fila; um flush
    (agendado, não síncrono) reconcilia só os componentes dirty.
-5. **Updates aplicados:** reconciliação por **posição + kind**, reaproveitando
-   el existente e atualizando só o diff (texto/props/handlers). Preparado para
-   diffing por chave (Fase 9).
+5. **Updates aplicados:** o builder da view reexecuta e a subárvore nova
+   substitui a anterior — a subárvore antiga é podada do DOM **e** do registro
+   de nós (`kofUiRemoveSubtree`, §273), então nenhum handle vaza entre
+   renders. O reaproveitamento de nó por **posição + kind** (atualizando só o
+   diff) e o diffing por chave são a metade **pendente** da Fase 9.
 
 ### 2.5 Eventos
 

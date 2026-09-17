@@ -170,10 +170,13 @@ Rules the core guarantees:
   mutation path (no 5 ways to store state).
 - **Minimal invalidation.** `state(...)` marks **only the component** as dirty and
   schedules a re-render (scheduling), without touching the whole application.
-- **Re-render by reconciliation.** the view builder re-ran, but the stable
-  nodes (same position + kind) **reuse the existing DOM** — only what
-  changed is updated (text, props, handlers). Architecture prepared for
-  full diffing (Phase 9), without recreating the tree.
+- **Re-render by rebuild + prune (current); reconciliation (Phase 9, pending).**
+  today the view builder re-runs and the fresh subtree replaces the previous
+  one, pruning the old subtree from the DOM and the registry (§273). The
+  **target** is reconciliation by **position + kind** — stable nodes (same
+  position + kind) reuse the existing DOM and only the diff (text, props,
+  handlers) is updated, without recreating the tree; key-based diffing comes
+  with it.
 - **Deterministic lifecycle.** mount (view + `onMount`), update (reconcile),
   unmount (`onDispose` + **effects in reverse order** + DOM removal).
 - **Automatic cleanup.** listener/timer/subscription registered via `effect`
@@ -208,9 +211,11 @@ Window (root/host)
    `state(...)` itself is the invalidation point (no polling, no reflection).
 4. **Invalidation:** `state(...)` marks the component dirty in the queue; a flush
    (scheduled, not synchronous) reconciles only the dirty components.
-5. **Updates applied:** reconciliation by **position + kind**, reusing the
-   existing el and updating only the diff (text/props/handlers). Prepared for
-   key-based diffing (Phase 9).
+5. **Updates applied:** the view builder re-runs and the fresh subtree
+   replaces the previous one — the old subtree is pruned from the DOM **and**
+   from the node registry (`kofUiRemoveSubtree`, §273), so no handle leaks
+   across renders. Node reuse by **position + kind** (updating only the diff)
+   and key-based diffing are the **pending** half of Phase 9.
 
 ### 2.5 Events
 

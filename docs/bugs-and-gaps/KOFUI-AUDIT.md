@@ -180,3 +180,17 @@ on every DOM widget. Proof: `UiStyleCssE2ETest` 10/10 (JVM/Native/Script/JS
   — but R6 suggests a diagnostic in the log (low prio).
 - Native/Script silent no-op is **not** a documented decision — it is an
   omission (R6 requires a diagnostic): UI001/UI002.
+
+### Phase 9 (Rendering) — re-render prune (18/09)
+
+The survey for the Component Core phases 8–11 found that
+`kofUiRender` (`JsRuntimeUiComponents.java`) rebuilt the view on every
+state change but pruned only the previous **root** element from the DOM,
+leaving the whole discarded subtree in `window.__kofNodes` (and its Button
+actions in `window.__kofActions`) — unbounded silent growth. Fixed by
+calling the existing `kofUiRemoveSubtree` (DOM + registry) on root change
+plus the `__kofActions` cleanup; see `known-bugs.md` **§273**. Proof:
+`ComponentCoreE2ETest.rerenderPrunesPreviousSubtreeFromRegistry` +
+`rerenderReleasesDiscardedButtonActions` (both RED pre-fix). Phase 9 still
+lacks node reuse/diffing (the "partial update" half) — this unit closes
+the leak only.

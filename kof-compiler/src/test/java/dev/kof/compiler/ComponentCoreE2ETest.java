@@ -290,6 +290,67 @@ class ComponentCoreE2ETest {
     }
 
     @Test
+    void rerenderPrunesPreviousSubtreeFromRegistry(@TempDir Path tempDir) throws IOException {
+        // §273 (found during the Phase 9 survey, docs/ui/architecture.md):
+        // kofUiRender detached only the previous ROOT element from the DOM.
+        // The view builder creates a fresh widget (and handle) on every
+        // render, so every state change leaked the whole previous subtree
+        // into __kofNodes (unbounded growth, silent — R6). Measured pre-fix
+        // in the embedded host: 1 node after mount, 6 after 5 re-renders.
+        String program = """
+            main() {
+                var app = Component(0)
+                var win = Window("App")
+                app.view((s: Int) -> { return Label("v=" + s) })
+                win.bind(app)
+                app.stateSet(1)
+                app.stateSet(2)
+                app.stateSet(3)
+                app.stateSet(4)
+                app.stateSet(5)
+                win.show()
+                println("done")
+            }
+            """;
+        String probe = """
+            console.log("nodes=" + Object.keys(window.__kofNodes).length);
+            """;
+        assertEquals("done\nnodes=1",
+                runJsProbe(tempDir, "rerenderprune", program, probe),
+                "re-render must prune the previous subtree from __kofNodes "
+                + "(only the current view root may remain)");
+    }
+
+    @Test
+    void rerenderReleasesDiscardedButtonActions(@TempDir Path tempDir) throws IOException {
+        // §273 second face: the action table (window.__kofActions) is keyed by
+        // the same handle; a discarded Button with an action kept its closure
+        // reachable forever. kofUiRemoveSubtree now deletes the entry for
+        // every pruned node (kofUiButtonRemove already did it on the
+        // single-widget path).
+        String program = """
+            main() {
+                var app = Component(0)
+                var win = Window("App")
+                app.view((s: Int) -> {
+                    return Button("b" + s, () -> println("clicked"))
+                })
+                win.bind(app)
+                app.stateSet(1)
+                app.stateSet(2)
+                win.show()
+                println("done")
+            }
+            """;
+        String probe = """
+            console.log("actions=" + Object.keys(window.__kofActions || {}).length);
+            """;
+        assertEquals("done\nactions=1",
+                runJsProbe(tempDir, "rerenderactions", program, probe),
+                "actions of discarded widgets must be released with the subtree");
+    }
+
+    @Test
     void unmountCascadesToChildren(@TempDir Path tempDir) throws IOException {
         String program = """
             main() {
