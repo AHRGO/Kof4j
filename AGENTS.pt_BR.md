@@ -742,7 +742,7 @@ pronta.
 > completa) provam. **Nenhum agente pode quebrar comportamento que já funciona.**
 
 1. **Zero regressão.** Nenhum commit pode fazer um teste existente passar a
-   falhar. A suíte completa (`mvn test`, hoje **2218** nos 4 módulos — ver
+   falhar. A suíte completa (`mvn test`, hoje **2411** nos 4 módulos — ver
    §"Loop de verificação" para o comando com o flag de failure.ignore) é **gate de merge** —
    mudança que não mantém tudo verde não entra. Exceção única: mudança de
    contrato **deliberada**, com bump de versão + docs atualizados + migração.
@@ -1104,9 +1104,9 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > ele, o Maven é fail-fast por módulo: qualquer falha em **kof-compiler aborta
 > o reactor** e **kof-script, kof-c-compiler e kof-cli nunca rodam** — você
 > acha que validou tudo mas só viu o primeiro módulo. O total real com o flag
-> é **2218 testes** (compiler 1911 + script 38 + kof-c 7 + cli 262, medição
-> 16/09 ~15:54 — cresce com cada commit): **0 regressões / 0 erros** (a única falha que a
-> suíte já mostrou é o flake intermitente do §252 nativo — calado pela 3ª corrida seguida, último disparo 09:44)
+> é **2411 testes** (compiler 2058 + script 38 + kof-c 7 + cli 308, medição
+> 17/09 ~15:49 no tip `f276e966` — cresce com cada commit): **0 regressões / 0 erros** (a única falha que a
+> suíte já mostrou é o flake intermitente do §252 nativo — calado de novo (5ª corrida quieta seguida), último disparo 16/09 09:44)
 > (node agora presente
 > no host da medição — o antigo "13 erros = node ausente" não se aplica mais). O §149 JS (`KofRandomTest.randomStringJs`/`randomShapeJs`,
 > regressão do fix §147 no `JsIfThrowElse`) foi **CORRIGIDO 13/09** — a raiz era
@@ -1125,11 +1125,11 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > **Os números mudam com qemu no ambiente:** sem qemu (host da medição de
 > 16/09 — sem toolchain cruzada), os 84 cross
 > (2×42, `NativeRiscv64/Aarch64E2ETest`) são **skipados** pelo guard
-> (`4408eb6`) + os outros guards de toolchain/BD externo + o guard de sysroot do §255 (`06e77e94`) → `2218/0-1/192-skip` (o flake §252 disparou às 09:44, depois calou às 11:38, 15:09 e 15:54 — ~1/4 das corridas completas)
-> (MEDIDO 16/09 ~15:09, clone limpo). Com qemu, **tudo executa** — os 84 cross rodam
-> verdes e o total fica `2218` com a contagem de skip caindo para o
-> resíduo externo de BD/ambiente `node`. Estado correto HOJE (16/09 ~15:54, clone limpo de `9572949f`):
-> **0 regressões / 0 erros** (2218 = 1911+38+7+262, 192 skip) — a corrida completa das 09:44 teve o flake INTERMITENTE
+> (`4408eb6`) + os outros guards de toolchain/BD externo + o guard de sysroot do §255 (`06e77e94`) → `2411/0/196-skip` (o flake §252 disparou 16/09 09:44, depois calou às 11:38, 15:09, 15:54 e 17/09 15:49 — ~1/4 das corridas completas)
+> (MEDIDO 17/09 ~15:49, run limpo no tip `f276e966`). Com qemu, **tudo executa** — os 84 cross rodam
+> verdes e o total fica `2411` com a contagem de skip caindo para o
+> resíduo externo de BD/ambiente `node`. Estado correto HOJE (17/09 ~15:49, run limpo no tip `f276e966`):
+> **0 regressões / 0 erros** (2411 = 2058+38+7+308, 196 skip) — a corrida completa das 09:44 teve o flake INTERMITENTE
 > conhecido do §252 nativo (`spawnWorkerThrowPropagatesThroughSelectAnyNative`, dona lane
 > nativa `.18`/nat; às 11:38, 15:09 e 15:54 ele ficou calado — frequência ~1/4, ver §252), que
 > deve ser lido como um vermelho de TESTE, não regressão. O que importa continua
