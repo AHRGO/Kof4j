@@ -338,9 +338,9 @@ public final class MemberCallTyper {
      * dentro da própria classe declarante; `protected` dentro da declarante ou
      * subclasses. Chamada fora → erro SEM046 (antes: IllegalAccessError runtime).
      */
-    private static void checkMemberAccess(SemanticAnalyzer sa, int accessFlags,
-                                          String ownerClass, String receiverClass,
-                                          String memberDesc) {
+    static void checkMemberAccess(SemanticAnalyzer sa, int accessFlags,
+                                  String ownerClass, String receiverClass,
+                                  String memberDesc) {
         if (sa.diagnostics() == null) return;
         boolean isPriv = (accessFlags & AccessFlags.PRIVATE) != 0;
         boolean isProt = (accessFlags & AccessFlags.PROTECTED) != 0;
@@ -375,8 +375,44 @@ public final class MemberCallTyper {
         }
     }
 
+    /**
+     * #331/#327 — face de CAMPO do mesmo contrato SG-013: private só na
+     * declarante, protected na declarante/subclasses (JVM aplica em runtime;
+     * sem o cheque o compile deixava passar e o load estourava
+     * IllegalAccessError — R6/Q7: nunca silencioso). O método-irmão já fazia
+     * isso (SEM046); o campo não fazia porque o FieldSymbol perdia os
+     * modificadores no SymbolTableBuilder. `this.x`/`x` nu na própria classe
+     * passa (owner == caller).
+     */
+    static void checkFieldAccess(SemanticAnalyzer sa, SymbolTable.FieldSymbol fs,
+                                 String receiverClass) {
+        checkMemberAccess(sa, fs.accessFlags(), fs.ownerClass(), receiverClass,
+                "field '" + fs.name() + "'");
+    }
+
+    /**
+     * #327 — escrita em campo `final`: o JVM so aceita putfield de um campo
+     * final no <init> DA CLASSE DECLARANTE (JVMS 4.4). Fora disso o runtime
+     * estoura IllegalAccessError ("Update to non-static final field ...
+     * attempted from a different class") em silencio no compile (R6/Q7).
+     * O inicializador `final Int x = 30` passa pelo fieldInits/<clinit>
+     * sintetizado (nao e um statement do usuario) — nunca chega aqui.
+     */
+    static void checkFinalFieldWrite(SemanticAnalyzer sa, SymbolTable.FieldSymbol fs) {
+        if (sa == null || sa.diagnostics() == null) return;
+        if ((fs.accessFlags() & AccessFlags.FINAL) == 0) return;
+        boolean staticField = (fs.accessFlags() & AccessFlags.STATIC) != 0;
+        boolean legal = sa.inConstructor && !staticField
+                && fs.ownerClass().equals(sa.currentClassName());
+        if (legal) return;
+        sa.diagnostics().error("", 0, 0, 0,
+                "cannot assign to final field '" + fs.name() + "' (declared in '"
+                        + fs.ownerClass() + "') from outside its constructor",
+                "SEM063");
+    }
+
     /** caller está na hierarquia de `base` (caller == base ou estende transitivamente)? */
-    private static boolean isInHierarchy(SemanticAnalyzer sa, String caller, String base) {
+    static boolean isInHierarchy(SemanticAnalyzer sa, String caller, String base) {
         String current = caller;
         int depth = 0;
         while (current != null && depth++ < 32) {

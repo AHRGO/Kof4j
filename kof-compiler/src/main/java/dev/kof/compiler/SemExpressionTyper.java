@@ -440,6 +440,14 @@ public final class SemExpressionTyper {
                 if (recvType instanceof Type.ClassType ct) {
                     SymbolTable.Symbol field = MemberResolver.resolveFieldInHierarchy(sa, ct.name(), fa.fieldName());
                     if (field != null) {
+                        // #331/#327 (espelha SEM046 dos metodos): acesso a
+                        // campo private/protected de fora da declarante
+                        // compila e o load estourava IllegalAccessError em
+                        // silencio (R6/Q7). so com `this.x`/x nu (owner ==
+                        // caller) e dentro da declarante/subclasse passa.
+                        if (field instanceof SymbolTable.FieldSymbol fs) {
+                            MemberCallTyper.checkFieldAccess(sa, fs, ct.name());
+                        }
                         yield CompilerTypes.substituteTypeVariableIn(field.type(), recvType, sa.unit());
                     }
                     if (sa.isExternal(ct)) {

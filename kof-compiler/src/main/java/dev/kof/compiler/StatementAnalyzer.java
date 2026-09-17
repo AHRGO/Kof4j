@@ -92,6 +92,21 @@ public final class StatementAnalyzer {
                         "cannot assign to '" + fa.fieldName() + "': record is immutable",
                         "SEM038");
             }
+            // #331/#327 — escrita em campo: MESMO contrato do READ (que passa
+            // por SemExpressionTyper), mas aqui o inferType e so do RECEIVER,
+            // entao os cheques de acesso/`final` precisam ser feitos a mao.
+            // Owner: receiver ClassType explicito, ou currentClassName p/
+            // `this.x`. final so e escrito legalmente no <init> da declarante
+            // (o construtor ja cai no caminho legal de checkFinalFieldWrite).
+            String ownerName = onThis ? sa.currentClassName()
+                    : (recvType instanceof Type.ClassType rct ? rct.name() : null);
+            if (ownerName != null) {
+                SymbolTable.Symbol wf = MemberResolver.resolveFieldInHierarchy(sa, ownerName, fa.fieldName());
+                if (wf instanceof SymbolTable.FieldSymbol wfs) {
+                    MemberCallTyper.checkFieldAccess(sa, wfs, ownerName);
+                    MemberCallTyper.checkFinalFieldWrite(sa, wfs);
+                }
+            }
         } else if (ae.target() instanceof ArrayAccessExpr aa) {
             // #149/#152: `l[i]` READ on a List is supported; the WRITE face
             // (`l[i] = v`) was never lowered — it emitted a raw array store
