@@ -172,6 +172,16 @@ class CliFlagStrictnessTest {
     }
 
     @Test
+    void serveUsageAnnouncesEveryAcceptedFlag(@TempDir Path dir) throws Exception {
+        Cli r = cli(dir, "serve", "--help");
+        assertEquals(0, r.exit(), r.out());
+        for (String flag : new String[] { "--port", "--host", "--backend", "--frontend" }) {
+            assertTrue(r.out().contains(flag),
+                    "serve aceita " + flag + " mas o usage nao o anuncia:\n" + r.out());
+        }
+    }
+
+    @Test
     void serveRejectsUnknownFlag(@TempDir Path dir) throws Exception {
         Files.writeString(dir.resolve("Main.kf"), "main() { println(\"oi\") }\n");
         Cli r = cli(dir, "serve", "Main.kf", "--bogus");

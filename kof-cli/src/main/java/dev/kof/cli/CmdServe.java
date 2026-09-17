@@ -29,11 +29,11 @@ final class CmdServe {
 
     static void run(String[] args) {
         if (args.length >= 2 && ("--help".equals(args[1]) || "-h".equals(args[1]) || "--version".equals(args[1]))) {
-            System.out.println("usage: kof serve <file.kf> [--port <port>] [--host <host>]");
+            System.out.println("usage: kof serve <file.kf> [--port <port>] [--host <host>] [--backend <t>] [--frontend <t>]");
             return;
         }
         if (args.length < 2) {
-            System.err.println("usage: kof serve <file.kf> [--port <port>] [--host <host>]");
+            System.err.println("usage: kof serve <file.kf> [--port <port>] [--host <host>] [--backend <t>] [--frontend <t>]");
             return;
         }
         Path file = Path.of(args[1]);
