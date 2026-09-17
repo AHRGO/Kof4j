@@ -45,12 +45,19 @@ final class CmdServe {
         String backendFlag = null;
         String frontendFlag = null;
         for (int i = 2; i < args.length; i++) {
-            if (args[i].equals("--port") && i + 1 < args.length) {
+            if (args[i].startsWith("--port=")) {
+                Integer p = parsePortOption(args[i].substring("--port=".length()));
+                if (p == null) System.exit(1);
+                port = p;
+                portFlag = true;
+            } else if (args[i].equals("--port") && i + 1 < args.length) {
                 Integer p = parsePortOption(args[i + 1]);
                 if (p == null) System.exit(1);
                 port = p;
                 portFlag = true;
                 i++;
+            } else if (args[i].startsWith("--host=")) {
+                host = args[i].substring("--host=".length());
             } else if (args[i].equals("--host") && i + 1 < args.length) {
                 host = args[i + 1];
                 i++;
@@ -62,6 +69,18 @@ final class CmdServe {
                 frontendFlag = args[i].substring("--frontend=".length());
             } else if (args[i].equals("--frontend") && i + 1 < args.length) {
                 frontendFlag = args[++i];
+            } else if (args[i].startsWith("-")) {
+                // R6: `serve` has no program-arg pass-through; an unknown flag
+                // (or one missing its value) must not be silently ignored.
+                System.err.println("serve: unknown or incomplete flag: " + args[i]
+                        + " (accepts: --port <n> --host <h> --backend <t> --frontend <t>)");
+                System.exit(1);
+                return;
+            } else {
+                System.err.println("serve: unexpected argument: " + args[i]
+                        + " (accepts: --port <n> --host <h> --backend <t> --frontend <t>)");
+                System.exit(1);
+                return;
             }
         }
 

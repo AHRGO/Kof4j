@@ -172,6 +172,30 @@ class CliFlagStrictnessTest {
     }
 
     @Test
+    void serveRejectsUnknownFlag(@TempDir Path dir) throws Exception {
+        Files.writeString(dir.resolve("Main.kf"), "main() { println(\"oi\") }\n");
+        Cli r = cli(dir, "serve", "Main.kf", "--bogus");
+        assertNotEquals(0, r.exit(), "serve --flag deve recusar (R6):\n" + r.out());
+        assertTrue(r.out().contains("--bogus"), r.out());
+    }
+
+    @Test
+    void serveRejectsPortWithoutValue(@TempDir Path dir) throws Exception {
+        Files.writeString(dir.resolve("Main.kf"), "main() { println(\"oi\") }\n");
+        Cli r = cli(dir, "serve", "Main.kf", "--port");
+        assertNotEquals(0, r.exit(), "serve --port sem valor deve recusar (R6):\n" + r.out());
+        assertTrue(r.out().contains("--port"), r.out());
+    }
+
+    @Test
+    void debugRejectsUnknownFlag(@TempDir Path dir) throws Exception {
+        Files.writeString(dir.resolve("Main.kf"), "main() { println(\"oi\") }\n");
+        Cli r = cli(dir, "debug", "Main.kf", "--bogus");
+        assertNotEquals(0, r.exit(), "debug --flag deve recusar (R6):\n" + r.out());
+        assertTrue(r.out().contains("--bogus"), r.out());
+    }
+
+    @Test
     void configGenRejectsUnknownFlag(@TempDir Path dir) throws Exception {
         Files.writeString(dir.resolve("Main.kf"), "main() { println(\"oi\") }\n");
         Cli r = cli(dir, "config", "gen", "Main.kf", "--bogus");
