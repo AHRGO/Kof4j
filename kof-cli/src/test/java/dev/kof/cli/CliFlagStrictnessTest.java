@@ -67,4 +67,18 @@ class CliFlagStrictnessTest {
         assertEquals(0, r.exit(), r.out());
         assertTrue(r.out().contains("\"kof\":\""), r.out());
     }
+
+    @Test
+    void versionRejectsUnknownFlag(@TempDir Path dir) throws Exception {
+        Cli r = cli(dir, "version", "--bogus");
+        assertNotEquals(0, r.exit(), "version --flag deve recusar (R6):\n" + r.out());
+        assertTrue(r.out().contains("desconhecida"), r.out());
+    }
+
+    @Test
+    void versionPlainWorks(@TempDir Path dir) throws Exception {
+        Cli r = cli(dir, "version");
+        assertEquals(0, r.exit(), r.out());
+        assertTrue(r.out().contains("kof "), r.out());
+    }
 }

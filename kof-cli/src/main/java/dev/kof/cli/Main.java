@@ -40,7 +40,14 @@ public final class Main {
             case "fmt" -> System.exit(Fmt.run(args));
             case "editor" -> System.exit(CmdEditor.run(args));
             case "config" -> config(args);
-            case "version" -> System.out.println("kof " + KofVersion.version());
+            case "version" -> {
+                // R6: `version` nao aceita flags — nao ignorar em silencio.
+                if (args.length > 1 && args[1].startsWith("-")) {
+                    System.err.println("version: flag desconhecida: " + args[1] + " (usage: kof version)");
+                    System.exit(1);
+                }
+                System.out.println("kof " + KofVersion.version());
+            }
             default -> { System.err.println("unknown: " + args[0]); printUsage(); }
         }
     }
