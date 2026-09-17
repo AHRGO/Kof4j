@@ -159,15 +159,35 @@ final class NativeMethodEmitter {
                         || lv.name().startsWith("cap") || lv.name().startsWith("lambda$")) {
                     continue; // temporarios do lowering nao sao nome Kof
                 }
-                NativeDwarf.Local slot = new NativeDwarf.Local(lv.name(), NativeDwarf.slotOffset(lv.index()));
+                NativeDwarf.Local slot = new NativeDwarf.Local(lv.name(),
+                        NativeDwarf.slotOffset(lv.index()), dwarfKindOf(lv.type()));
                 if (lv.name().equals("this") || lv.index() < paramSlotMax) {
                     params.add(slot);
                 } else {
                     locals.add(slot);
                 }
             }
-            nb.kofDwarf.add(mangled, method.name(), declLine, params, locals);
+            nb.kofDwarf.add(mangled, method.name(), declLine,
+                    dwarfKindOf(method.returnType()), params, locals);
         }
+    }
+
+    static String dwarfKindOf(Type t) {
+        if (t instanceof Type.PrimitiveType pt) {
+            return switch (Type.canonicalPrimitiveName(pt.name())) {
+                case "int" -> "Int";
+                case "long" -> "Long";
+                case "short" -> "Short";
+                case "byte" -> "Byte";
+                case "float" -> "Float";
+                case "double" -> "Double";
+                case "bool", "boolean" -> "Bool";
+                case "char" -> "Char";
+                case "void" -> "Void";
+                default -> "Opaque";
+            };
+        }
+        return "Opaque"; // String/classes/arrays: handle 8B opaco (sem DW_TAG_structure p/ agora)
     }
 
     @SuppressWarnings("unused")

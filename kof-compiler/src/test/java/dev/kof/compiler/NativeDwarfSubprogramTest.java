@@ -69,6 +69,13 @@ class NativeDwarfSubprogramTest {
                 "formal_parameter deve ter DW_AT_location fbreg; got: " + head(info));
         assertTrue(info.contains("DW_AT_frame_base"),
                 "subprogram deve ter DW_AT_frame_base; got: " + head(info));
+        // fatia 3: tipos — base_type DIE + DW_AT_type referenciado nos params
+        assertTrue(info.contains("DW_TAG_base_type"),
+                "CU deve ter DW_TAG_base_type p/ tipos Kof; got: " + head(info));
+        assertTrue(info.contains("DW_AT_type"),
+                "formal_parameter deve ter DW_AT_type; got: " + head(info));
+        assertTrue(info.contains("Int"),
+                "base_type Int deve aparecer; got: " + head(info));
 
         // binario ainda executa corretamente (DWARF nao pode quebrar codegen)
         Process r = new ProcessBuilder(bin.toString()).redirectErrorStream(true).start();

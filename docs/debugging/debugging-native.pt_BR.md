@@ -14,6 +14,12 @@ v4+ (a v3 lia endereco absoluto e o gdb descartava a CU); (2) a ordem do header
 v4 e version→abbrev_offset→address_size. Prova E2E: `gdb -batch -ex "b
 Box_twice" -ex run -ex "info locals"` imprime `y = 20` (um `var` Kof) e nomeia
 os args `this`/`w` — ler valores com tipo exige `DW_AT_type` (fatia 3).**
+**Fatia 3 (17/09): DW_AT_type nos params/locals/retorno via DIEs filhos
+`DW_TAG_base_type` (Int=signed4, Long=signed8, Double=float8, Float=float4,
+Bool=boolean1, Char=unsigned2, Void=tamanho-0/sem-encoding,
+classe/array/String = handle opaco de 8 bytes por enquanto). Codigo retirado
+dos proprios bytes do `.debug_abbrev` do GCC, nao chutado. gdb le valores
+tipados fim-a-fim: `print w` -> `5`, `ptype Box_twice` -> `Int (Opaque, Int)`.**
 DAP on native e stepping pendentes.**
 **Data:** 2 de setembro de 2026
 **Versão:** 0.4.0-beta (7 targets)
