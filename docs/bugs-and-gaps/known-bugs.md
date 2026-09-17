@@ -5856,7 +5856,7 @@ to the label) is the correct predicate and **was already used** in `parseStateme
 
 - **Symptom:** the program below is VALID Kof (the local `y` exists), but
   `kof check`/compilation rejects it with
-  `SEM033: println(...) recebeu um valor void — a chamada não retorna valor`.
+  `SEM033: println(...) received a void value — the call does not return a value`.
   The lambda is typed as void, so `f(3)` cannot be used as a value.
 - **Minimal repro (reproduces in the binary, 13/09):**
   ```kof
