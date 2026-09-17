@@ -147,6 +147,7 @@ Whenever a feature changes:
 3. Updated documentation
 4. No comments in the code
 5. Code that compiles without warnings
+6. An open issue containing the implementation plan for the feature in your PR.
 
 ## Current state of the project
 

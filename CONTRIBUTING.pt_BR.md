@@ -147,6 +147,7 @@ Sempre que uma feature mudar:
 3. Documentação atualizada
 4. Sem comentários no código
 5. Código que compila sem warnings
+6. Uma issue aberta com o plano de implementação da feature presente no seu PR
 
 ## Estado atual do projeto
 
