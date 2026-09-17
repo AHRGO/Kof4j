@@ -6574,6 +6574,20 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   com `formatDateIso` (d5) e `parseDateIso` (S7g, retorna serial Int) — a
   conversão String→Int textual CANÔNICA é parse com função stdlib, não `as`.
   Se decidir, a correção provável é SEM0xx rejeitando `String as Int`.
+- **RE-MEDIDO 17/09 (lane bugs-and-gaps `.15`, no classpath do REATOR — não no jar
+  gordo):** ainda ABERTA, mas o **sintoma mudou** (o emit deslocou desde 14/09).
+  O repro original está AGORA MORTO por drift de API — `p.get(0)` (String[]) falha
+  antes com `SEM028` ("array has no method 'get()'; use arr[i]"), nunca chegando ao
+  cast. O repro mínimo vivo é direto: `var s = "2026"; var y = s as Int;
+  println(y)` → o `check` **passa SEM diagnóstico** e o `run --target jvm` morre no
+  runtime com `ClassCastException: class java.lang.String cannot be cast to class
+  java.lang.Integer` (antes era `VerifyError: Bad type on operand stack` — o backend
+  agora emite um `checkcast Integer` real que o verificador aceita mas o JVM falha na
+  execução). **Mesma violação de contrato R6** (programa do usuário compila limpo e
+  crasha no runtime), continua sendo fork rule-6 (rejeitar `String as Int` muda o
+  contrato do `as` → não é edição de agente). `math.parseInt("2026")` é o caminho
+  canônico que funciona hoje (sem cast) — re-verificado verde. Dono: lane compiler
+  (inalterado).
 
 ### §189 — Record com campo de lista genérica NULLABLE (`List<Item>?`): a assinatura genérica era omitida e o `json.decode` devolvia `LinkedHashMap` cru (`ClassCastException`) — ✅ CORRIGIDO 14/09 (lane bugs-and-gaps `192.168.100.15`; o teste do #128 subiu VERMELHO no `76ca3dd4`)
 

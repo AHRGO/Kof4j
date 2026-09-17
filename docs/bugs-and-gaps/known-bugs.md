@@ -6586,6 +6586,19 @@ to the label) is the correct predicate and **was already used** in `parseStateme
   with `formatDateIso` (d5) and `parseDateIso` (S7g, returns Int serial) — the
   CANONICAL textual String→Int conversion is parsing with a stdlib function, not `as`.
   If decided, the likely fix is SEM0xx rejecting `String as Int`.
+- **RE-MEASURED 17/09 (lane bugs-and-gaps `.15`, on the reactor classpath — not the
+  fat jar):** still OPEN, but the **symptom changed** (the emit shifted since 14/09).
+  The original repro is now DEAD on API drift — `p.get(0)` (String[]) fails earlier
+  with `SEM028` ("array has no method 'get()'; use arr[i]"), so it never reaches the
+  cast. The live minimal repro is direct: `var s = "2026"; var y = s as Int;
+  println(y)` → `check` **passes with NO diagnostic** and `run --target jvm` dies at
+  runtime with `ClassCastException: class java.lang.String cannot be cast to class
+  java.lang.Integer` (was `VerifyError: Bad type on operand stack` — the backend now
+  emits a real `checkcast Integer` that the verifier accepts but the JVM fails on
+  load-execution). **Same R6 contract violation** (a user program compiles clean and
+  crashes at runtime), still a rule-6 fix fork (rejecting `String as Int` changes the
+  `as` contract → not an agent edit). `math.parseInt("2026")` is the working canonical
+  path today (no cast) — re-verified green. Owner: compiler lane (unchanged).
 
 ### §189 — Record with NULLABLE generic list field (`List<Item>?`): the generic signature was omitted and `json.decode` returned raw `LinkedHashMap` (`ClassCastException`) — ✅ FIXED 14/09 (lane bugs-and-gaps `192.168.100.15`; the #128 test went RED on `76ca3dd4`)
 
