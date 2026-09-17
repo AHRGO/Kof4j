@@ -1509,7 +1509,20 @@ interromper** o desenvolvimento presente. Cada item: o que, por quê, custo, e
 o que **não** fazer. (Nenhum item abaixo é ação — são dependências
 arquiteturais futuras e guardrails.)
 
-## R1 — Travar a fronteira core/plataforma (a primeira e mais importante)
+> **Nota 17/09 (D-UNIVERSAL — esta linha está superada para a fila ATUAL):**
+> a promoção em `DECISIONS.md` §D-UNIVERSAL tornou R1–R12 o ponto de entrada do
+> trabalho corrente. Cada R acompanha seu estado real abaixo; o texto original
+> fica como histórico (convenção de registro datado).
+
+## R1 — Travar a fronteira core/plataforma (a primeira e mais importante) — ✅ FEITO 17/09 (`5f1422c6`)
+
+> **Estado 17/09:** a ordem do §3.4 agora é regra invariante E aplicada
+> mecanicamente: `scripts/check_stdlib_boundary.sh` + ledger
+> `scripts/stdlib_boundary.txt` (31 namespaces; namespace desconhecido ou domínio
+> pesado quebra o build; `--selftest` prova que o gate morde) integrado na CI
+> após `check_500.sh` e citado no invariante 1 de plataforma de `AGENTS.md`/
+> `.pt_BR.md`. Prova: scan rc=0 no tip, run de CI `5f1422c6` "Build + Tests"
+> SUCCESS com o step Gate R1.
 - **O quê:** adotar a ordem de decisão §3.4 como **regra invariante**
   (core → stdlib base → plataforma → pacotes oficiais → interop).
 - **Por quê:** é o mecanismo anti-god-language; sem ele, todo domínio "quer"

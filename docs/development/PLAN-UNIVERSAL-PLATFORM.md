@@ -1507,7 +1507,19 @@ interrupting** present development. Each item: what, why, cost, and
 what **not** to do. (No item below is an action — they are future architectural
 dependencies and guardrails.)
 
-## R1 — Lock the core/platform boundary (the first and most important)
+> **Note 17/09 (D-UNIVERSAL — this line is superseded for the CURRENT queue):**
+> the promotion in `DECISIONS.md` §D-UNIVERSAL made R1–R12 the entry point of
+> current work. Each R now tracks its real state below; the original text is
+> kept as history (dated-record convention).
+
+## R1 — Lock the core/platform boundary (the first and most important) — ✅ DONE 17/09 (`5f1422c6`)
+
+> **State 17/09:** the §3.4 order is now an invariant rule AND mechanically
+> enforced: `scripts/check_stdlib_boundary.sh` + ledger `scripts/stdlib_boundary.txt`
+> (31 namespaces; unknown namespace or heavy domain fails the build; `--selftest`
+> proves the gate bites) wired in CI after `check_500.sh`, and cited in
+> `AGENTS.md`/`.pt_BR.md` platform invariant 1. Proof: scan rc=0 at tip,
+> CI run `5f1422c6` "Build + Tests" SUCCESS with the Gate R1 step.
 - **What:** adopt the §3.4 decision order as an **invariant rule**
   (core → base stdlib → platform → official packages → interop).
 - **Why:** it is the anti-god-language mechanism; without it, every domain "wants"
