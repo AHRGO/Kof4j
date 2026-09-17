@@ -85,7 +85,7 @@
 
 ``` 
 mvn clean package    → PASSA
-mvn test             → 2218 testes (1911 kof-compiler + 38 kof-script + 7 kof-c-compiler + 262 kof-cli), 0 regressões / 0 erros, 192 skip (sem qemu no host → 84 cross skip; guardas de toolchain/DB externo + guard de sysroot §255; `node` presente — todos os `*Js` verdes) — 16/09 ~15:54 clone limpo de `9572949f` (o flake §252 nativo calado pela 3ª corrida seguida) (o anterior 1662/13-erros = host sem node, 13/09)
+mvn test             → 2411 testes (2058 kof-compiler + 38 kof-script + 7 kof-c-compiler + 308 kof-cli), 0 regressões / 0 erros, 196 skip (sem qemu no host → 84 cross skip; guardas de toolchain/DB externo + guard de sysroot §255; `node` presente — todos os `*Js` verdes) — 16/09 ~15:54 clone limpo de `9572949f` (o flake §252 nativo calado de novo) (o anterior 1662/13-erros = host sem node, 13/09)
 kof build            → PASS (--target jvm|native|js|native.risc|native.arm) [--release]
 kof run              → PASS (jvm|native|js|native.risc|native.arm) [--release]
 kof serve            → PASS (web.app() nativo + API legada handle())
@@ -576,7 +576,7 @@ main() { /* ignorado pelo kof test */ }
 
 ---
 
-## Testes (2218 = 1911 kof-compiler + 38 kof-script + 7 kof-c-compiler + 262 kof-cli — suíte completa verde, 0 regressões / 0 erros, 192 skip; medição 16/09 ~15:54 num clone limpo de `9572949f`; flake §252 nativo calado pela 3ª corrida seguida. Host sem qemu: cross → skip honesto)
+## Testes (2411 = 2058 kof-compiler + 38 kof-script + 7 kof-c-compiler + 308 kof-cli — suíte completa verde, 0 regressões / 0 erros, 196 skip; medição 17/09 ~15:49 num run limpo do tip `f276e966`; flake §252 nativo calado de novo. Host sem qemu: cross → skip honesto)
 
 | Suíte | Quantidade | Cobertura |
 |-------|-----------|-----------|

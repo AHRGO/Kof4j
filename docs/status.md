@@ -577,7 +577,7 @@ main() { /* ignored by kof test */ }
 
 ---
 
-## Tests (2218 = 1911 kof-compiler + 38 kof-script + 7 kof-c-compiler + 262 kof-cli — full suite green, 0 regressions / 0 errors, 192 skip; measured 16/09 ~15:54 on a clean clone of `9572949f`; §252 native flake silent 3rd straight run. Host without qemu: cross → honest skip)
+## Tests (2411 = 2058 kof-compiler + 38 kof-script + 7 kof-c-compiler + 308 kof-cli — full suite green, 0 regressions / 0 errors, 196 skip; measured 17/09 ~15:49 on a clean run of tip `f276e966`; §252 native flake silent again. Host without qemu: cross → honest skip)
 
 | Suite | Count | Coverage |
 |-------|-----------|-----------|
