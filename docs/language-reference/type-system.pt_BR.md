@@ -344,7 +344,7 @@ retorno do lambda (*probe*: map/filter/reduce corretos).
 | `SEM038` | escrita em componente de record | `StatementAnalyzer` (DD-02) |
 | `SEM041` | instanciação de classe `abstract` (`new A()` e `A()`) | `SemExpressionTyper`/`BuiltinCallTyper` (SG-017) |
 | `SEM042` | tipo aninhado (class dentro de class) | `ClassMemberParser.parseClassMember` (SG-016) |
-| `SEM043` | `implements` sem cobrir método da interface / aridade errada | `SemanticAnalyzer.checkInterfaceImplementation` (SG-015) |
+| `SEM043` | `implements` sem cobrir método da interface / aridade errada | `ImplementationChecker.checkInterfaceImplementation` (SG-015) |
 | `SEM044` | `main()` com tipo de retorno declarado (`Int main()`) | `SemanticAnalyzer.analyzeFunction` (SG-018) |
 | `SEM045` | cláusula `throw X` com tipo desconhecido | `SemanticAnalyzer.checkThrowsClause` (SG-019) |
 | `SEM046` | acesso `private`/`protected` (método ou campo) fora do permitido | `MemberCallTyper.checkMemberAccess`/`checkFieldAccess` (SG-013) |

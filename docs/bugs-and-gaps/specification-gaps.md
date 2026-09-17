@@ -116,7 +116,8 @@ future recommendations (rule 14 of the task: do not change behavior).
      `if (x != null)` → THEN (which already existed), now `if (x == null)` → **ELSE**,
      and the conjunction `x != null && Y` narrows the whole THEN. Disjunction (`||`) does NOT
      narrow (the branch runs if ONE holds) — honest.
-  4. **Intra-expression narrowing** (`SemExpressionTyper.narrowedScope`): in
+  4. **Intra-expression narrowing** (`SemNarrowing.narrowedScope`, called from
+     `SemExpressionTyper`; the 17/09 REFACTOR-500 moved it out): in
      `if (s != null && s.length > 0)`, the RIGHT side of `&&` sees `s` narrowed
      (short-circuit: the side is only evaluated if the left one passed) — without this
      the condition ITSELF would give SEM049 on `s.length`.

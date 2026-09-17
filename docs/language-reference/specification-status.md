@@ -70,7 +70,7 @@ Target-specific · Unspecified · Planned**.
 | Record (equals/hashCode/toString) | Stable | `KofPatternMatchingTest` |
 | Enum (constants only, value=String) | Stable | `KofEnumTest`, `KofEnumSwitchTest` |
 | Interface (default methods) | Stable | probe |
-| Interface coverage (concrete class must implement) | Stable | `SemanticAnalyzer.checkInterfaceImplementation` `SEM043` (SG-015); `abstract` may defer, obligation transitive via abstract supers (#322) |
+| Interface coverage (concrete class must implement) | Stable | `ImplementationChecker.checkInterfaceImplementation` `SEM043` (SG-015); `abstract` may defer, obligation transitive via abstract supers (#322) |
 | Inheritance + virtual override | Stable | probes |
 | `private`/`protected` at compile-time — **methods + fields**; `final` write | Stable | `SEM046`/`SEM065` (SG-013) |
 | `private`/`protected` at compile-time — **fields** | **Unspecified** (runtime only) | probe (SG-013) |

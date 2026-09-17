@@ -122,7 +122,7 @@ if (s != null) {
 String t = s            // erro SEM021: String? não atribuível a String sem check
 ```
 
-`NullableType(inner)` em `Type.java`; `SemanticAnalyzer.isAssignable` trata `Nullable → non-null`.
+`NullableType(inner)` em `Type.java`; `TypeChecker.isAssignable` trata `Nullable → non-null`.
 
 ## Type Inference
 
