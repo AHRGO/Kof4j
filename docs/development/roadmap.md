@@ -46,10 +46,18 @@ Objectives:
   (`extends Activity`, `super.onCreate`, androidx annotations);
 - honest gaps at compile-time (`AND001..003`).
 
-Current state: 🟡 Phase 1 implemented — `kof build --target android` generates a
-Maven project (zero Java/Kotlin/Gradle) with an Activity host IN KOF
+Current state: 🟡 Phases 1-4 implemented — `kof build --target android`
+generates a Maven project (zero Java/Kotlin/Gradle) with an Activity host IN KOF
 (`android-host.kf`) compiled by the frontend itself; d8/aapt2/apksigner
-pipeline via pom without dependencies.
+pipeline via pom without dependencies. Phase 2: the manifest carries
+label/permissions; `--apk`/`--keystore` build the artifact directly. Phase 3:
+responsive WebView (`<meta viewport>` device-width + narrow-screen CSS +
+`setUseWideViewPort`/`setLoadWithOverviewMode` in the host). Phase 4:
+`--min-sdk`/`--target-sdk` thread to `<uses-sdk>`, the platform jar and
+`d8 --min-api` (defaults 24/34). `kof.web` is an enforced compile-time gap
+(`AND002`). Pending (Phases 5+, no owner): `--aab` (needs `bundletool`, refused
+honestly today), declarative icon metadata (decision-pending). Details in
+[docs/targets/KOFANDROID.md](../targets/KOFANDROID.md).
 
 ### Kof4J — JVM
 

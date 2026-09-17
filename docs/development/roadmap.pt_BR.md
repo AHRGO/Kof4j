@@ -46,10 +46,18 @@ Objetivos:
   (`extends Activity`, `super.onCreate`, annotations androidx);
 - gaps honestos por compile-time (`AND001..003`).
 
-Estado atual: 🟡 Fase 1 implementada — `kof build --target android` gera
+Estado atual: 🟡 Fases 1-4 implementadas — `kof build --target android` gera
 projeto Maven (zero Java/Kotlin/Gradle) com host Activity EM KOF
 (`android-host.kf`) compilada pelo próprio frontend; pipeline
-d8/aapt2/apksigner via pom sem dependências.
+d8/aapt2/apksigner via pom sem dependências. Fase 2: o manifest carrega
+label/permissões; `--apk`/`--keystore` constroem o artefato direto. Fase 3:
+WebView responsivo (`<meta viewport>` device-width + CSS de tela estreita +
+`setUseWideViewPort`/`setLoadWithOverviewMode` no host). Fase 4:
+`--min-sdk`/`--target-sdk` chegam ao `<uses-sdk>`, ao platform jar e ao
+`d8 --min-api` (defaults 24/34). `kof.web` é gap de compile-time imposto
+(`AND002`). Pendente (Fases 5+, sem dono): `--aab` (precisa de `bundletool`,
+recusado honestamente hoje), metadado de ícone declarativo (decisão pendente).
+Detalhes em [docs/targets/KOFANDROID.md](../targets/KOFANDROID.md).
 
 ### Kof4J — JVM
 
