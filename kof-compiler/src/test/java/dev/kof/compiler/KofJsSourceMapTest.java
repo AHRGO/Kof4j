@@ -50,6 +50,12 @@ class KofJsSourceMapTest {
         int ver = jsonInt(mapJson, "version");
         assertEquals(3, ver, "source map V3");
         assertTrue(mapJson.contains("\"sources\":[\"Default.kf\"]"), "sources aponta p/ Default.kf");
+        // sourcesContent embutido: o depurador mostra o original sem o arquivo .kf
+        // ao lado (antes era null). Round-trip REAL: extrai a string JSON, faz o
+        // decode e exige que seja IDÊNTICA à fonte (prova o escaping, incl. o
+        // edge newline/aspas). Um escape errado quebra o parse/igualdade.
+        String embedded = jsonField(mapJson, "sourcesContent");
+        assertEquals(src, embedded, "sourcesContent decodificado deve ser a fonte exata");
         String mappings = jsonString(mapJson, "mappings");
         assertFalse(mappings.isEmpty(), "mappings não podem estar vazias (antes era stub)");
 
@@ -144,5 +150,42 @@ class KofJsSourceMapTest {
         int start = i + key.length() + 4;
         int end = json.indexOf('"', start);
         return json.substring(start, end);
+    }
+
+    /**
+     * Extrai o PRIMEIRO valor do array "key":[...] como string JSON decodificada
+     * (escapes resolvidos). Prova o round-trip do sourcesContent: o texto
+     * embutido deve ser idêntico ao original.
+     */
+    private static String jsonField(String json, String key) {
+        int i = json.indexOf("\"" + key + "\":[\"");
+        assertTrue(i >= 0, "chave '" + key + "' ausente ou não é array de string");
+        int p = i + key.length() + 5; // após "key":["
+        StringBuilder out = new StringBuilder();
+        while (p < json.length()) {
+            char c = json.charAt(p);
+            if (c == '"') break;
+            if (c == '\\') {
+                char n = json.charAt(++p);
+                switch (n) {
+                    case '"' -> out.append('"');
+                    case '\\' -> out.append('\\');
+                    case '/' -> out.append('/');
+                    case 'n' -> out.append('\n');
+                    case 'r' -> out.append('\r');
+                    case 't' -> out.append('\t');
+                    case 'u' -> {
+                        out.append((char) Integer.parseInt(json.substring(p + 1, p + 5), 16));
+                        p += 4;
+                    }
+                    default -> fail("escape JSON desconhecido: \\" + n);
+                }
+                p++;
+            } else {
+                out.append(c);
+                p++;
+            }
+        }
+        return out.toString();
     }
 }

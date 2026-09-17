@@ -38,6 +38,10 @@ IRModule currentModule;
 
     String currentSourceName;
 
+    /** Primary source text (the first file, i.e. what currentSourceName names) —
+     *  embedded as `sourcesContent` in the KofJS V3 source map. */
+    String currentSourceContent;
+
     final java.util.IdentityHashMap<KofOperation, SourcePosition> currentDebugPositions =
             new java.util.IdentityHashMap<>();
 
