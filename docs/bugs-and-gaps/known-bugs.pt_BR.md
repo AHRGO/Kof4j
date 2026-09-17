@@ -8035,6 +8035,68 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
 `SemanticResolutionTest` 30/30 + `KofDbE2ETest` 22 verdes na travessia do move).
 
 
+## §266 — O reconstrutor de CFG do KofJS move os statements POSTERIORES ao `if` do corpo de um loop para a cláusula `for(;…;update)`, fora do escopo do próprio `let` (`ReferenceError` silencioso; DOM vazio quando acontece num `view`) — catalogado 17/09 (lane development, dono = 192.168.100.18, achado ao montar o ReorderList da lib)
+
+- **Sintoma (medido 17/09, headless `kof run --target=js`):** qualquer `while`
+  (ou `for`) cujo corpo tem um `if`/ternário SEGUIDO de mais statements
+  miscompila: o parser de região de loop do emissor JS
+  (`JsControlFlowParser.parseLoop`) MOVE os statements do fim do corpo para a
+  cláusula update do `for(; cond; update)` gerado, mas os seus
+  `let _scopedVar$…` ficam dentro do bloco do corpo → `ReferenceError:
+  _scopedVar$v is not defined` na primeira iteração. Script/JVM/Native ficam
+  corretos (regra 5 quebrada). Repro mínimo:
+  ```
+  var out = new List<Int>()
+  var p = 0
+  while (p < 3) {
+      var v = p + 100
+      var flag = 0
+      if (p == 1) { flag = 1 }
+      var r = v + flag      // <- emitido na cláusula update
+      out.add(r)
+      p = p + 1
+  }
+  println(out.get(0))       // JS: ReferenceError; JVM/Script: 100
+  ```
+- **Amplificação em UI (por que ninguém bateu antes):** dentro de um
+  `Component.view` o crash é ENGOLIDO — o `kofUiRender` envolve a chamada do
+  view em `catch (e) { rootId = 0; }` (JsRuntimeUiComponents, desde a era
+  §157), então o componente monta como CAIXA VAZIA sem erro reportado: UI
+  muda quebrada (regra 6). O widget só flagou isto porque a renderização no
+  Chrome tornou o DOM vazio observável.
+- **Causa raiz (arquivo:linha):** `JsControlFlowParser.parseLoop` varre para
+  trás a partir do `Jump(start)` do back-edge do corpo para achar "o label de
+  continue" (a fronteira entre o corpo e a cláusula update do for-loop, ~linha
+  293). Num corpo que termina em `… Jump(endX), Label(endX), <stmts do fim>,
+  Jump(start)` — exatamente o que o lowering de if EMITE para um if-sem-else
+  no meio do corpo (`StatementLowerer.IfStmt`: `then; Jump(endLabel);
+  Label(else); Label(end)`) — a varredura para trás PARA no `Label(endX)` do
+  if e o MARCA como label de CONTINUE. Isso envenena o `ctx.loops`
+  (MethodCtx.isLoopLabel/isIfEndLabel): o parse do corpo então QUEBRA em endX,
+  e tudo depois é parseado como cláusula update do `for`; o update é emitido na
+  cabeça `for(;…;UPDATE) { … }`, FORA do bloco onde os seus locais foram
+  `let`-declarados. O continue label de um for-loop real é estruturalmente
+  idêntico a posteriori — a ambiguidade está no IR, não no parser.
+- **Correção certa (próxima unidade, não esta):** MARCAR o continue label no
+  lowering — o caso `ForStmt` do `StatementLowerer` emite
+  `Label(continueLabel)` entre o corpo e o update; adicionar um op de IR
+  dedicado (p.ex. um booleano no label, ou um `KofContinueLabel(LabelId)`
+  emitido só pelo ForStmt — precedente: `KofTryEnd`) deixa o reconstructor
+  distinguir continue-verdadeiro de end-de-if sem adivinhar. Q0: o repro above
+  imprime 100/102/102 em JS == JVM == Script; um view-loop com `if` renderiza
+  não-vazio no Chrome. Q1: regressão E2E `JsLoopIfTailE2ETest` (while + for,
+  início+fim do corpo, if/else aninhado, interação continue/break) runBoth
+  jvm+js + a prova browser do ReorderList volta à forma `if` direta. RISCO: o
+  reconstrutor de CFG é o arquivo mais denso em casos-especiais da lane JS
+  (§147/§149/§174 cada um remendou ali) — suíte completa obrigatória, orçamento
+  multi-tick; até landar, a forma documentada é um programa compile-legítimo
+  mas RUNTIME-QUEBRADO no JS (alto headless; silencioso em UI) — catalogado
+  aqui pela regra 6, NÃO consertado pela metade.
+- **Workaround em campo:** manter `if`+statements-do-fim fora do corpo do loop
+  (mover a condicional para uma FUNÇÃO auxiliar — corpo de método é parseado à
+  parte, p.ex. o helper `reorderMark(dragging, where, p)` do `ReorderList` da
+  lib). Seguro no mesmo-target em JVM/Script/Native, comprovadamente seguro no JS.
+
 ### §194 — `for (var c in "abc")` (for-in sobre String/não-coleção) era ACEITO e quebrava de um jeito por target (JVM `VerifyError`, Native SIGSEGV, Script crash, JS iterava) — ✅ CORRIGIDO 14/09 (SEM058; triagem da fila #145 da lane bugs-and-gaps `192.168.100.15`)
 
 - **Sintoma (medido 14/09, HEAD `e238330a`):** `for (var c in "abc")` compilava
@@ -9357,6 +9419,7 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
   PARTIAL→DONE em lockstep (o gate `ConformanceMatrixDocTest` exige concordância
   doc×Set.of).
 > | **§265 ✅ CORRIGIDO 16/09 (lane development `.18`)** | Handlers web do KofJS: `status(201, body)`/`headerSet()` eram no-ops SILENCIOSOS — `JsRuntimeOps.handleRuntimeOp` tinha um ramo de colapso (`status→args.get(1)`) que DESCARTAVA a chamada do `invoke()` emitido (decisivo), e `kofWebStatus` lia `kofWebRequest.response` (campo que nunca existiu; o `response` vive no `ctx`). JVM: `201`+`X-Custom`; JS: `200`, header descartado (R6; a célula "JS ✅ 08/27" do ecosystem-coverage era false-green — suporte em compile ≠ efeito em runtime). Conserto = remover os ramos de colapso (o roteamento correto já existia abaixo) + deferir `_status`/`_headerQueue` aplicados pelo pump antes do envio (o HttpServer do JDK exige headers pré-envio), idem thread-local do JVM. Prova: `KofWebJsE2ETest.jsWebStatusAndHeaderReachTheWire` (VERMELHO pré-fix, medido `return "made"` no JS emitido + `200` no fio vivo). `status/header` do Native fica `– WEB001` (honesto).
+> | **§266 🔴 ABERTO 17/09 (lane development `.18`; correção = reconstrutor de CFG do JS, multi-tick)** | Corpo de loop com `if` seguido de statements miscompila SÓ no JS (locais escapam p/ a cláusula `for(;…;update)`) — `ReferenceError` headless, UI VAZIA SILENCIOSA em `Component.view` (catch do kofUiRender). Repro + design da correção no §266. Workaround: condicional numa função auxiliar. |
 
 ### §265 — Handlers web do KofJS: `status(code, body)` e `headerSet(name, value)` eram no-ops SILENCIOSOS (o ramo de colapso em `handleRuntimeOp` descartava a chamada do handler emitido; e `kofWebStatus` lia um campo `kofWebRequest.response` que nunca existiu) — a doc dizia "JS 08/27 ✅" mas o JS devolvia 200 e descartava o header — ✅ CORRIGIDO 16/09 (lane development, dono = 192.168.100.18)
 
