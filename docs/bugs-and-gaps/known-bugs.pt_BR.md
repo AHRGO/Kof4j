@@ -9243,8 +9243,12 @@ usuário — diagnostic em compile-time é a meta (regra 6).
   (`kofValEq` existe no runtime JS, `Objects.equals` no JVM) compartilhado
   pelos 4 alvos — não tentado aqui porque o Native não pode ser provado nesta
   máquina (sem qemu) e um fix só-JVM criaria divergência (regra 5).
+- **Repassada (17/09) à lane compiler:** a face (b) precisa do toolchain
+  nativo para provar os 4 alvos (a máquina não tem qemu), então não é corrigida
+  nesta lane — a lane compiler assume com o dossiê completo abaixo.
 - **Status:** 🟡 PARCIAL 17/09 — face (a) FEITA (`07a51565`, lane
-  bugs-and-gaps `192.168.100.15`); face (b) ABERTA como acima. Corpus: a
+  bugs-and-gaps `192.168.100.15`); face (b) ABERTA (repassada à lane compiler,
+  17/09) como acima. Corpus: a
   célula de null-safety de `training/idioms/records.md` atualizada (o
   narrowing `!= null` numa chave ausente agora é seguro). Relacionado:
   §D-NULL-INTENT (contrato boxed nullable), bug 188 (`==` de conteúdo de

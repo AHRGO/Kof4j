@@ -9629,8 +9629,12 @@ the user's — a compile-time diagnostic is the goal (rule 6).
   `Objects.equals` on the JVM) shared by the 4 targets — not attempted here
   because Native cannot be proven on this host (no qemu) and a JVM-only fix
   would create divergence (rule 5).
+- **Handed off (17/09) to the compiler lane:** face (b) needs the native
+  toolchain to prove all 4 targets (host lacks qemu), so it is not fixed in
+  this lane — the compiler lane owns it with the full dossier below.
 - **Status:** 🟡 PARTIAL 17/09 — face (a) FIXED (`07a51565`, lane
-  bugs-and-gaps `192.168.100.15`); face (b) OPEN as above. Corpus:
+  bugs-and-gaps `192.168.100.15`); face (b) OPEN (handed to compiler lane,
+  17/09) as above. Corpus:
   `training/idioms/records.md` null-safety cell updated (the `!= null`
   narrowing on a missing key is now safe). Related: §D-NULL-INTENT (boxed
   nullable contract), bug 188 (record `==` content), §241
