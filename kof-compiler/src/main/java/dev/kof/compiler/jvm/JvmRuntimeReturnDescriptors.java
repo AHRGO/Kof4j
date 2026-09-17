@@ -170,7 +170,7 @@ public final class JvmRuntimeReturnDescriptors {
             // ── kof.observability (G5) ────────────────────────────────
             case "kof_observability_health", "kof_observability_request_id", "kof_observability_correlation_id",
                     "kof_observability_trace_id", "kof_observability_span_id",
-                    "kof_observability_metrics",
+                    "kof_observability_metrics", "kof_observability_export_spans",
                     "kof_observability_span_start", "kof_observability_span_end" -> "Ljava/lang/String;";
             case "kof_observability_readiness", "kof_observability_liveness", "kof_observability_counter", "kof_observability_increment" -> "I";
             case "kof_observability_gauge", "kof_observability_histogram" -> "V";

@@ -287,7 +287,7 @@ Legend in the target columns: `y` = supported, `~` = partial, `–` = no.
 |-----------|-----|-----|--------|----|-------|------|
 | metrics (runtime API) | ✅ `kof.observability.counter/increment/gauge/histogram/metrics()` — JVM/Native/JS | y | y | y | KofObservabilityTest | stdlib/observability.md |
 | health checks / readiness / liveness | ✅ `kof.observability.health/readiness/liveness` — JVM/Native/JS | y | y | y | KofObservabilityTest | stdlib/observability.md |
-| tracing / OpenTelemetry | `PARTIAL` — W3C `traceId`/`spanId` + timed `spanStart`/`spanEnd`/`metrics()` exist (3 targets, `OBS002`); OTel **export** of the span JSON `PLANNED` | y | y | y | KofObservabilityTest | stdlib/observability.md |
+| tracing / OpenTelemetry | `DONE` (JVM/JS) — W3C `traceId`/`spanId` + timed `spanStart`/`spanEnd`/`metrics()` (3 targets, `OBS002`) and OTel **export** (`exportSpans()` → OTLP/JSON `resourceSpans`) on JVM/JS (`OBS003`); Native export = honest compile-time gap (`OBS003`) | y | y | y | KofObservabilityTest 10/10 | stdlib/observability.md |
 | structured logging | `log.debug/info/warn/error` (levels, stderr) | y | y (asm, UTC) | y (console.*, 09/01) | KofLogE2ETest, NativeLogE2ETest | — |
 | correlation IDs / request IDs | ✅ `kof.observability.requestId/correlationId` — JVM/Native/JS | y | y | y | KofObservabilityTest | stdlib/observability.md |
 | request IDs | ✅ `kof.observability.requestId` — JVM/Native/JS | y | y | y | KofObservabilityTest | stdlib/observability.md |

@@ -329,7 +329,7 @@ arquivo > env > profile > default; CONF001 fechado 16/09).
 | Concorrência `spawn`/`await` | ✅ | ✅ JVM + Native pthread + JS event-loop (CONC001/CONC003 fechados) | — |
 | HTTP `serve` + `kof.http` | Framework | ✅ `web.app()` JVM + `kof.http` JVM/Native/JS | — |
 | Config `kof.config` | Framework | ✅ JVM+Native+JS (free-list 27/08, CONF001 fechado 16/09) | — |
-| Logging / Observability | Framework | ✅ `kof.log` JVM+Native + `kof.observability` 3 targets (health/métricas/histogramas/spans) | export OTel |
+| Logging / Observability | Framework | ✅ `kof.log` JVM+Native + `kof.observability` 3 targets (health/métricas/histogramas/spans) + **export OTel ✅ JVM/JS (`exportSpans()` → OTLP/JSON, `OBS003`)** | export OTel no Native (`OBS003`) |
 | Database `kof.db`/`kof.orm` | Framework | ✅ JDBC + SQLite native + MySQL `kof_db_mysql_scramble` | query DSL |
 | DI | Framework | ❌ (planned `service`) | proposta |
 | KofScript / KofC | — | ✅ `KofScript` `let`→`KofScriptGlobals` + `KofCcompiler` `kof c` | — |

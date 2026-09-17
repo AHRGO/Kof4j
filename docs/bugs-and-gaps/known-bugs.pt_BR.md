@@ -9757,3 +9757,12 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
 - **Repro (mínimo, medido 18/09):** `interface Converter<A,B> { convert(input: A): B }` +
   `class IntToString implements Converter<Int,String> { convert(input: Int): String { return input.toString() } }` +
   `val cv: Converter<Int,String> = IntToString(); println(cv.convert(99))`.
+
+### §272 — spans do `kof.observability`: JVM/JS descartavam o nome e o caminho Native diverge (x86 emite `durationMs`/sem nome; riscv64/aarch64 são stubs constantes) — 🟡 ABERTO (achado 17/09 pela lane bugs-and-gaps `192.168.100.15` ao fechar o `OBS003`; faces Native = lane nat)
+
+**Face (a) — JVM/JS descartavam o nome do span — ✅ CORRIGIDO 17/09** (lane bugs-and-gaps `.15`): `spanStart(name)` ignorava `name` e `spanEnd` fixava `"name":"span"`. O antigo `KofObservabilityTest.spansWithTiming` **pinnava o bug** (afirmava `"name":"span"` — falso verde, Q5). Correção: o nome é retido no registro do span ativo e renderizado (com escape JSON) pelo `spanEnd`; `startMicros`/`endMicros` agora são micros **epoch** reais (antes eram `System.nanoTime()/1000` monotônico). Prova: `KofObservabilityTest.spansWithTiming` (afirma `"name":"op"` no JVM+JS) + `otlpExportJvm`/`otlpExportJs`.
+
+**Face (b) — JSON de span do Native x86_64 diverge do JVM/JS (regra 5) — 🟡 ABERTO (lane nat):** `kof_observability_span_end` (`runtime/RuntimeObservability2.java`) emite `{"traceId":..,"spanId":..,"durationMs":N}` — sem `name`, sem `startMicros`/`endMicros`, e duração em **ms** enquanto JVM/JS usam **micros**; o `spanStart` também descarta o nome. Repro: compilar qualquer programa com span com `--target native` e comparar com o golden do JVM.
+
+**Face (c) — caminho de span/IDs W3C do Native riscv64/aarch64 é stub constante (Q7/R6) — 🟡 ABERTO (lane nat):** `NativeRiscvAsmRtB1` `kof_observability_span_start` devolve o literal `.Lstr_span_handle` (48 zeros) e `kof_observability_span_end` devolve `.Lstr_empty_json` (`{}`); `request_id`/`correlation_id` devolvem o constante `.Lstr_trace` (comprimento 16 → zeros) e `trace_id`/`span_id` devolvem `.Lstr_trace`/`.Lstr_span` (tudo zeros). Sem aleatoriedade, sem timing, sem store — e ainda assim `docs/stdlib/observability.md` afirmava "Native riscv64 ✅ spans W3C". A afirmação foi corrigida (nota `OBS003` + este §); fechar o stub é trabalho de asm da lane nat. Os testes E2E cross (`NativeRiscv64/Aarch64E2ETest`) só cobrem `counter`/`increment`/`gauge`/`metrics()`, nunca `spanStart`/`spanEnd`/`traceId` — por isso o stub sobreviveu.
+

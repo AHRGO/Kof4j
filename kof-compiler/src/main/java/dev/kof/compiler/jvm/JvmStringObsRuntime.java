@@ -60,26 +60,99 @@ public final class JvmStringObsRuntime {
                 // Propaga o traceId atual num ThreadLocal (requests web e
                 // spawn herdam o trace).
                 private static final java.lang.ThreadLocal<String> KOF_OBS_ACTIVE_TRACE = new java.lang.ThreadLocal<>();
-                private static final java.util.concurrent.ConcurrentHashMap<String, long[]> KOF_OBS_SPANS = new java.util.concurrent.ConcurrentHashMap<>();
+
+                /** Span ativo: nome + relógio monotônico (duração) + epoch (OTLP). */
+                private static final class KofObsSpan {
+                    final String name;
+                    final long startNanos;
+                    final long startMicros;
+                    KofObsSpan(String name, long startNanos, long startMicros) {
+                        this.name = name;
+                        this.startNanos = startNanos;
+                        this.startMicros = startMicros;
+                    }
+                }
+
+                /** Span concluído, pronto para export OTLP. */
+                private static final class KofObsCompleted {
+                    final String traceId;
+                    final String spanId;
+                    final String name;
+                    final long startMicros;
+                    final long endMicros;
+                    KofObsCompleted(String traceId, String spanId, String name,
+                            long startMicros, long endMicros) {
+                        this.traceId = traceId;
+                        this.spanId = spanId;
+                        this.name = name;
+                        this.startMicros = startMicros;
+                        this.endMicros = endMicros;
+                    }
+                }
+
+                private static final java.util.concurrent.ConcurrentHashMap<String, KofObsSpan> KOF_OBS_SPANS = new java.util.concurrent.ConcurrentHashMap<>();
+                // Ring limitado dos últimos spans concluídos (export OTLP).
+                private static final int KOF_OBS_EXPORT_MAX = 256;
+                private static final java.util.concurrent.ConcurrentLinkedDeque<KofObsCompleted> KOF_OBS_COMPLETED = new java.util.concurrent.ConcurrentLinkedDeque<>();
 
                 public static String kof_observability_span_start(String name) {
                     String id = kof_observability_trace_id() + kof_observability_span_id();
-                    long[] span = { System.nanoTime() };
-                    KOF_OBS_SPANS.put(id, span);
+                    KOF_OBS_SPANS.put(id, new KofObsSpan(name == null ? "" : name,
+                            System.nanoTime(), System.currentTimeMillis() * 1000L));
                     return id;
                 }
 
                 public static String kof_observability_span_end(String handle) {
-                    long[] span = KOF_OBS_SPANS.remove(handle);
+                    KofObsSpan span = KOF_OBS_SPANS.remove(handle);
                     if (span == null) return "{}";
                     long endNanos = System.nanoTime();
-                    long durUs = (endNanos - span[0]) / 1000;
+                    long endMicros = System.currentTimeMillis() * 1000L;
+                    long durUs = (endNanos - span.startNanos) / 1000;
                     String trace = KOF_OBS_ACTIVE_TRACE.get();
                     if (trace == null) trace = kof_observability_trace_id();
-                    return "{\\"traceId\\":\\"" + trace + "\\",\\"spanId\\":\\"" + handle.substring(32)
-                            + "\\",\\"parentSpanId\\":\\"\\",\\"name\\":\\"span\\",\\"startMicros\\":"
-                            + span[0] / 1000 + ",\\"endMicros\\":" + endNanos / 1000
+                    String spanId = handle.substring(32);
+                    KOF_OBS_COMPLETED.addLast(new KofObsCompleted(trace, spanId, span.name,
+                            span.startMicros, endMicros));
+                    while (KOF_OBS_COMPLETED.size() > KOF_OBS_EXPORT_MAX) KOF_OBS_COMPLETED.pollFirst();
+                    return "{\\"traceId\\":\\"" + trace + "\\",\\"spanId\\":\\"" + spanId
+                            + "\\",\\"parentSpanId\\":\\"\\",\\"name\\":\\""
+                            + kofObsJsonEscape(span.name) + "\\",\\"startMicros\\":"
+                            + span.startMicros + ",\\"endMicros\\":" + endMicros
                             + ",\\"durationMicros\\":" + durUs + "}";
+                }
+
+                /** Escapa \\ e " para embutir o nome num literal JSON. */
+                private static String kofObsJsonEscape(String s) {
+                    if (s == null) return "";
+                    StringBuilder out = new StringBuilder(s.length());
+                    for (int i = 0; i < s.length(); i++) {
+                        char c = s.charAt(i);
+                        if (c == '\\\\' || c == '"') out.append('\\\\');
+                        out.append(c);
+                    }
+                    return out.toString();
+                }
+
+                /** Exporta os spans concluídos no formato OTLP/JSON
+                 *  ({@code resourceSpans}) — o payload que um coletor
+                 *  OpenTelemetry consome em {@code /v1/traces}. Não destrutivo:
+                 *  o ring permanece até ser sobrescrito (máx. 256 spans). */
+                public static String kof_observability_export_spans() {
+                    StringBuilder spans = new StringBuilder();
+                    for (KofObsCompleted s : KOF_OBS_COMPLETED) {
+                        if (spans.length() > 0) spans.append(',');
+                        spans.append("{\\"traceId\\":\\"").append(s.traceId)
+                                .append("\\",\\"spanId\\":\\"").append(s.spanId)
+                                .append("\\",\\"parentSpanId\\":\\"\\",\\"name\\":\\"")
+                                .append(kofObsJsonEscape(s.name))
+                                .append("\\",\\"kind\\":1,\\"startTimeUnixNano\\":\\"")
+                                .append(s.startMicros * 1000L)
+                                .append("\\",\\"endTimeUnixNano\\":\\"")
+                                .append(s.endMicros * 1000L).append("\\"}");
+                    }
+                    return "{\\"resourceSpans\\":[{\\"resource\\":{\\"attributes\\":[{\\"key\\":\\"service.name\\",\\"value\\":{\\"stringValue\\":\\"kof\\"}}]},"
+                            + "\\"scopeSpans\\":[{\\"scope\\":{\\"name\\":\\"kof.observability\\"},\\"spans\\":["
+                            + spans + "]}]}]}";
                 }
 
                 public static void kof_observability_set_trace(String traceId) {
