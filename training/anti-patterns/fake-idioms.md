@@ -174,6 +174,10 @@ this corpus/docs and the compiler *disagrees with its own docs*.
 | `"x${n}"` string interpolation (Kotlin/GString) | `"x" + n` — `${…}` inside a Kof string is **literal text** (no diagnostic, by contract — `lexical-structure.md` §4.1, probe) |
 | `class Foo: A, B` (Kotlin interface list via `:`) | `class Foo implements A, B { }` |
 | `val name: String` property in an `interface` | a method accessor: `interface I { String name() }` |
+| `n.abs()` / `c.toChar()` — method on a **primitive** (Java/C# style) | `math.abs(n)` (`stdlib.md`) — primitives have no members (AGENTS.md rule: `Int.<field>` = SEM050 family). ⚠️ #362 OPEN: the member call passes `check` today and dies at load (`ClassFormatError`, empty Methodref owner) — R6 bug owned by compiler lane; the idiom above is the ONLY working form (measured: `math.abs(-5)` → `5`) |
+| `l.sort()` / `l.indexOf(x)` on a `List` (Java API) | Kof `List` API is `add/get/set/remove/contains/size/isEmpty/clear/map/filter/reduce`; find position with a `for` + `get(i)`; order by sorting outside the list (interop) — no `sort`/`indexOf` promise |
+| `m.containsValue(v)` / `m.getOrDefault(k, d)` on a `Map` (Java API) | `m.values()` + `contains`, or `var v = m.get(k); if (v == null) …` — Kof `Map` API is `put/get/remove/containsKey/contains/size/clear/isEmpty/keys/values` |
+| `this(args)` constructor self-delegation (Java/C#) | Kof promises **`super(args)`** only (base class, first statement — `learn/07`); share init via a helper method both constructors call (measured working) |
 
 > Cross-check: if the reproducer would compile in **Kotlin/Java** because it is
 > *translated*, it is this rule — reject it. The bug family is only about code
