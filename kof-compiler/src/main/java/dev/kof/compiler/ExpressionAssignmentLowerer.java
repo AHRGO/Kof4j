@@ -280,17 +280,35 @@ if (ae.target() instanceof FieldAccessExpr fa) {
             if (desc != null) fieldType = ExternalClasspath.typeFromDescriptor(desc);
         }
     }
+    int faRecvSlot = -1;
     if (!isStaticField) {
+        // §253 face B (campo de instância): o receiver NAO pode ficar na pilha
+        // de maquina durante o RHS — um push impar cruzando os calls do RHS
+        // deixa todo call com rsp%16==8 e o SSE da libc SIGSEGVa no callee
+        // (mesmo mecanismo do box capturado; a glibc e vitima, a pilha e o
+        // bug). Derrama o receiver num slot de frame; a ordem de efeitos fica
+        // preservada (receiver ainda avalia antes do RHS em todos backends).
         localIdx = ExpressionLowerer.emitExpression(driver, fa.receiver(), ops, owner, localIdx, locals);
+        ops.add(new KofStoreLocal(recvType, localIdx));
+        locals.add(new IRLocalVariable(localIdx, "#fldrecv" + localIdx, recvType));
+        faRecvSlot = localIdx;
+        localIdx = localIdx + (TypeMetrics.isDoubleWidth(recvType) ? 2 : 1);
     }
     String faOp = ae.operator();
+    int faCurSlot = -1;
+    int faValSlot = -1;
     if (isCompoundOp(faOp)) {
         if (isStaticField) {
             ops.add(new KofGetStatic(recvType, fa.fieldName(), fieldType));
         } else {
-            ops.add(new KofDup());
+            ops.add(new KofLoadLocal(recvType, faRecvSlot));
             ops.add(new KofLoadField(recvType, fa.fieldName(), fieldType));
         }
+        // `cur` atravessaria o RHS na pilha de maquina (1 push impar) — derrama.
+        ops.add(new KofStoreLocal(fieldType, localIdx));
+        locals.add(new IRLocalVariable(localIdx, "#fldcur" + localIdx, fieldType));
+        faCurSlot = localIdx;
+        localIdx = localIdx + (TypeMetrics.isDoubleWidth(fieldType) ? 2 : 1);
     }
     localIdx = ExpressionLowerer.emitExpression(driver, ae.value(), ops, owner, localIdx, locals);
     boolean faCompound = isCompoundOp(faOp);
@@ -299,6 +317,14 @@ if (ae.target() instanceof FieldAccessExpr fa) {
         // §103.2 (#103): widening do valor p/ o tipo do campo (h.value = n,
         // Int→Long); no shift (`<<=`) a contagem é int (L2I) — regra do §167.
         emitCompoundRhsConv(driver, ops, faOp, fieldType, faValType);
+        // o binario quer [cur, rhs]; derrama o rhs e recolhe na ordem certa
+        // (commutatividade NAO pode ser assumida — sub/div/shift).
+        ops.add(new KofStoreLocal(fieldType, localIdx));
+        locals.add(new IRLocalVariable(localIdx, "#fldrhs" + localIdx, fieldType));
+        faValSlot = localIdx;
+        localIdx = localIdx + (TypeMetrics.isDoubleWidth(fieldType) ? 2 : 1);
+        ops.add(new KofLoadLocal(fieldType, faCurSlot));
+        ops.add(new KofLoadLocal(fieldType, faValSlot));
         ops.add(new KofBinary(compoundBinaryOp(faOp), fieldType));
     } else if ("=".equals(faOp)) {
         if (TypeMetrics.isPrimitiveType(fieldType)) {
@@ -313,6 +339,13 @@ if (ae.target() instanceof FieldAccessExpr fa) {
     if (isStaticField) {
         ops.add(new KofPutStatic(recvType, fa.fieldName(), fieldType));
     } else {
+        // pilha aqui so carrega [value]; o par final [receiver, value] nasce
+        // depois do ultimo call do RHS e e consumido em sequencia pelo store.
+        ops.add(new KofStoreLocal(fieldType, localIdx));
+        locals.add(new IRLocalVariable(localIdx, "#fldval" + localIdx, fieldType));
+        ops.add(new KofLoadLocal(recvType, faRecvSlot));
+        ops.add(new KofLoadLocal(fieldType, localIdx));
+        localIdx = localIdx + (TypeMetrics.isDoubleWidth(fieldType) ? 2 : 1);
         ops.add(new KofStoreField(recvType, fa.fieldName(), fieldType));
     }
     return localIdx;
@@ -415,10 +448,22 @@ if (ae.target() instanceof IdentifierExpr ieBox) {
                 ops.add(new KofBinary(compoundBinaryOp(op), valType));
                 ops.add(new KofStoreField(boxLv.type(), "value", valType));
             } else {
-                ops.add(new KofLoadLocal(boxLv.type(), boxLv.index()));
+                // §253 face B: o receiver-box NUNCA fica na pilha de máquina
+                // durante a avaliação do RHS — um push ímpar cruzando os calls
+                // do RHS faz todo call entrar com rsp≡8 (mod 16) e o SSE da
+                // libc (movaps) SIGSEGVa no callee (glibc é vítima; a pilha é
+                // o bug). Ordem: avalia o RHS primeiro, derrama o valor num
+                // slot de frame, e só então empilha [box, value] quando já não
+                // existe nenhum call pendente. Load do slot é puro → ordem de
+                // efeitos idêntica nos 4 backends (retro-compatível, regra 2).
                 localIdx = ExpressionLowerer.emitExpression(driver, ae.value(), ops, owner, localIdx, locals);
                 driver.emitWideningIfNeeded(ops, ExpressionTyper.inferExprType(driver, ae.value(), locals), valType);
+                ops.add(new KofStoreLocal(valType, localIdx));
+                locals.add(new IRLocalVariable(localIdx, "$boxval" + localIdx, valType));
+                ops.add(new KofLoadLocal(boxLv.type(), boxLv.index()));
+                ops.add(new KofLoadLocal(valType, localIdx));
                 ops.add(new KofStoreField(boxLv.type(), "value", valType));
+                return localIdx + (TypeMetrics.isDoubleWidth(valType) ? 2 : 1);
             }
             return localIdx;
         }
