@@ -420,7 +420,7 @@ public final class NativeHttpCore {
                 ret
 
             .section .data
-            .Lhttp_err_conn: .asciz "kof.http: connect falhou"
+            .Lhttp_err_conn: .asciz "kof.http: connect failed"
             .Lhttp_err_tmo: .asciz "kof.http: timeout"
             .Lhttp_timeout_s: .quad 15
             .Lhttp_retry_n: .quad 0

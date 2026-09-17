@@ -160,7 +160,7 @@ class KofHttpNativeTimeoutE2ETest {
                     }
                 }
                 """.formatted(dead));
-        assertTrue(out.contains("err=kof.http: connect falhou"),
+        assertTrue(out.contains("err=kof.http: connect failed"),
                 "closed port must fail fast as connect error, not hang, got: " + out);
         assertFalse(out.contains("CONNECTED"), "must not connect to a closed port, got: " + out);
     }

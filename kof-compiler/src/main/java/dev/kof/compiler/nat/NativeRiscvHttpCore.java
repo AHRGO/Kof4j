@@ -424,14 +424,14 @@ public final class NativeRiscvHttpCore {
             .Lhttp_respbuf:   .space 262144
             .Lhttp_sock:      .space 16
             .Lhttp_last_status: .quad 0
-            .Lhttps_err:   .asciz "kof.http: https nao suportado no Native (TLS pendente); use http://"
+            .Lhttps_err:   .asciz "kof.http: https not supported on Native (TLS pending); use http://"
             .Lhttp_fallback: .asciz "127.0.0.1"
             .Lhttp_str_host: .asciz "Host: "
             .Lhttp_str_clen: .asciz "Content-Length: "
             .Lhttp_str_conn: .asciz "Connection: close"
             .Lhttp_str_ver:  .asciz " HTTP/1.1"
             .Lhttp_crlfb:    .byte 13, 10
-            .Lhttp_err_conn: .asciz "kof.http: connect falhou"
+            .Lhttp_err_conn: .asciz "kof.http: connect failed"
             .Lhttp_empty: .space 1
             .Lhttp_m_get: .asciz "GET"
             .Lhttp_m_post: .asciz "POST"

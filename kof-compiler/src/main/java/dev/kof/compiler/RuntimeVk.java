@@ -20,9 +20,9 @@ public final class RuntimeVk {
             .Lvkspv:   .asciz "KOF_GPU_SPV"
             .Lvkspvd:  .asciz "gpu/shaders/matmul.spv"
             .Lvkna:    .asciz "libvkchain.so not found (GPU002)"
-            .Lvksym:   .asciz "libvkchain: simbolo faltando (GPU003)"
-            .Lvkif:    .asciz "libvkchain: init falhou (GPU004)"
-            .Lvkok:    .asciz "libvkchain carregada"
+            .Lvksym:   .asciz "libvkchain: missing symbol (GPU003)"
+            .Lvkif:    .asciz "libvkchain: init failed (GPU004)"
+            .Lvkok:    .asciz "libvkchain loaded"
 
             .section .bss
             .lcomm g_vk_lib, 8
