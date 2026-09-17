@@ -10318,3 +10318,35 @@ The corpus (`backend-parity.md` media row + `stdlib-web.md` ×3 + `KofCliSupport
 **Fix:** `kof_web_serve_dir` → `WEB005` in `KofWeb.gapCode` + a `WEB005` message case in `ExpressionBuiltinInstanceCalls.lowerWeb`; the dead `KofMedia.appServeDir` and its duplicate mapping were removed (single source of truth). `serveDir` stays JVM-only (honest R6/R7) — only the emitted code changed to honor the documented contract.
 
 **Proof:** `KofMediaE2ETest.serveDirOnNonJvmEmitsWeb005NotWeb001` — JS + `NATIVE` + `NATIVE_RISCV64` + `NATIVE_AARCH64` all report `WEB005` and NOT `WEB001`, plus the JVM control compiles (no gap leaked). CLI re-measured after the fix: `web serveDir: not available on the JS driver.target yet (WEB005)`. RED before the fix was measured on the CLI (`WEB001`).
+
+
+## §276 — `static` method referencing an instance field bare compiled clean and died at LOAD with `VerifyError` (`aload_0` loads the `String[] args`/reference slot as `this` — "Bad local variable type") — ✅ FIXED 18/09 (lane compiler `.22`, #345)
+
+- **Found (17/09, sweep; dossier lane `.15` 16:18):** `class Foo { Int value = 10;
+  static Int getDouble() { return value * 2 } }` → `check` said "no errors",
+  `Foo.getDouble()` crashed at class load with `VerifyError: Bad local
+  variable type ... expected double/int` — the emit uses slot 0 for `this`,
+  but a static method's slot 0 is the parameter (or garbage in `main`).
+- **Root cause:** the bare identifier resolved in the METHOD scope — the
+  class's fields are defined there — (`SemExpressionTyper`, the
+  `scope.resolve` site at :48; the hierarchy fallback at :63 is never
+  reached for fields) and nobody checked the static context. The field
+  access was lowered exactly like an instance read (`aload_0` +
+  `getfield`) in a method where `this` does not exist. R6: a construct that
+  cannot run must fail with a diagnostic, never compile clean.
+- **Fix (diagnostic, additive — nothing that runs today breaks):**
+  `SemanticAnalyzer` tracks `currentMethodStatic` (set/restore around the
+  method-body analysis, :367-373) and `SemExpressionTyper` rejects a bare
+  non-static `FieldSymbol` reference in a static method with **SEM075**
+  (positioned on the identifier; message names the field and offers the
+  two idioms: use an instance, or declare the field `static`). Shared SEM
+  pass → the four targets reject identically.
+- **Proof (`StaticInstanceFieldTest` 4/4, same commit):** verbatim rejected
+  with SEM075; control — static field read from a static method still
+  compiles and prints golden `20`; instance field from instance method
+  intact; rejection asserted on JVM/NATIVE/JS artifacts. Q0 (valid, after
+  the full rebuild — see §165 lesson): stash of the two files → 2/4 RED
+  (the construct compiles clean again); with the guard → 4/4. CLI:
+  `Main.kf:3:37: error: static method cannot reference instance field
+  'value' ... [SEM075]`. Row SEM075 in type-system EN+PT.
+>>>>>>> 246897ce (fix(compiler): #345 — campo de instância nu em metodo static agora e SEM075 (antes: compila limpo e VerifyError no load por aload_0 sem this))

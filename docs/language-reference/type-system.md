@@ -365,6 +365,7 @@ the lambda's return (*probe*: map/filter/reduce correct).
 | `SEM072` | wrong-arity `add`/`push`/`append` on a List — e.g. `l.add(i, v)` (there is no positional insert; use `set(i, v)`) | `MemberCallTyper` (#336, all 4 targets) |
 | `SEM073` | wrong-arity `reduce` on a List — seedless `reduce((a,b)->…)` (Kof's reduce always takes the lambda AND a seed, either order; the seedless form died in ASM `Frame.merge`) | `MemberCallTyper` (#361, all 4 targets) |
 | `SEM074` | instance method on a primitive — e.g. `n.abs()`, `n.equals(o)`, `n.toChar()` (primitives have only `toString()` and the `toInt()`/`toLong()`/`toFloat()`/`toDouble()` conversions; comparison is `a == b`, math is top-level functions like `math.abs(x)`; the unlisted call used to compile and die at class load) | `SemMethodCallTyper` (#362, all 4 targets) |
+| `SEM075` | instance field referenced bare inside a `static` method (no implicit `this` exists; the JVM backend used to emit `aload_0` → `VerifyError` at load) — use an instance, or declare the field `static` | `SemExpressionTyper` (#345, all 4 targets) |
 | `ARITH001` | division/remainder by a **constant** zero | `ExpressionBinaryLowerer` (constant-zero guard) |
 
 Division by a **non-constant** zero (`7 / z` with `z=0`) → **runtime**

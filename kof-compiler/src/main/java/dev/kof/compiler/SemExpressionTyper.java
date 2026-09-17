@@ -46,7 +46,26 @@ public final class SemExpressionTyper {
             case LiteralExpr lit -> TypeChecker.inferLiteralType(lit);
             case IdentifierExpr ie -> {
                 SymbolTable.Symbol sym = scope.resolve(ie.name());
-                if (sym != null) yield sym.type();
+                if (sym != null) {
+                    // #345 (R6): campo de instância referido NU dentro de
+                    // método `static` = `this` implícito que não existe — o
+                    // emit gerava aload_0 → VerifyError "Bad local variable
+                    // type" no load (medido no tip; o `check` passava limpo).
+                    // Idiom: referência pela instância, ou campo `static`.
+                    if (sym instanceof SymbolTable.FieldSymbol fsm
+                            && (fsm.accessFlags() & AccessFlags.STATIC) == 0
+                            && sa.isCurrentMethodStatic()
+                            && sa.diagnostics() != null) {
+                        SourcePosition pos = ie.position();
+                        sa.diagnostics().error(pos != null ? pos.file() : "",
+                                pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0,
+                                "static method cannot reference instance field '" + ie.name()
+                                        + "' (no implicit 'this' in a static context; use an instance,"
+                                        + " or declare the field 'static')",
+                                "SEM075");
+                    }
+                    yield sym.type();
+                }
                 if ("args".equals(ie.name()) && "main".equals(sa.currentFunctionName())) {
                     yield new Type.ArrayType(BuiltinTypes.STRING);
                 }
