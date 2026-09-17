@@ -8056,8 +8056,9 @@ member-access form is a different path (`MemberCallTyper`) and is NOT in this
 face. Proof: `RawRowCollectionAccessE2ETest` (4/4: both `rec.get("col")` shapes
 rejected with SEM066 incl. the exact §193 repro; `rows.get(0)` + String
 methods/List `.get` not flagged). The canonical **typed** `db.query<Record>`
-already works on JVM/Native (reflection bind by className); its JS face remains
-DB002 (a high compile-time error — see KofDb), unchanged here.
+already works on JVM/Native (reflection bind by className); its JS face closed
+18/09 as `DB002` (guest-side bind via `__kof_decode_<T>`; see KofDbE2ETest
+jsTypedQuery*).
 
 **Split (this same commit):** the guard initially landed inline in
 `ExpressionInstanceCallLowerer`, pushing that file 583→608 over the ≤600 red

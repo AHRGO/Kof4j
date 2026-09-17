@@ -438,6 +438,22 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
         }
         callArgs.addAll(args);
         JsIr.JsExpression call = new JsIr.JsCall(new JsIr.JsIdentifier(fn), callArgs);
+        if (name.startsWith("kof_db_query") && kc.returnType() instanceof Type.ClassType dbList
+                && BuiltinTypes.isList(dbList) && !dbList.typeArguments().isEmpty()
+                && dbList.typeArguments().get(0) instanceof Type.ClassType elem
+                && p.lc.classMethodNames.containsKey(elem.internalName())) {
+            // DB002 (18/09): bind tipado no GUEST. A wire é untyped (className
+            // null — ExpressionDbCallLowerer), entao a ponte devolve rows JSON
+            // strings; o MESMO helper `__kof_decode_<T>` do json.decode<List<T>>
+            // (célula 82-101 acima) faz o parse+bind por linha. Paridade com a
+            // JVM, onde db.query<T> e json.decode compartilham kof_json_bind.
+            String jsName = JsTypeMapper.jsClassName(elem.internalName());
+            p.lc.decodeHelpers.add(jsName);
+            call = new JsIr.JsCall(new JsIr.JsMember(call, "map"),
+                    List.of(new JsIr.JsArrow(List.of("o"), new JsIr.JsCall(
+                            new JsIr.JsIdentifier("__kof_decode_" + jsName),
+                            List.of(new JsIr.JsIdentifier("o"))))));
+        }
         if (name.equals("kof_await") || name.equals("kof_await_timeout")
                 || name.equals("kof_select_any")) {
             call = new JsIr.JsAwait(call);

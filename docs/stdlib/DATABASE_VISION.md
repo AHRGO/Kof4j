@@ -217,7 +217,7 @@ db.close(db)
   `user:pass@` in the DSN `mysql://[user[:pass]@]host[:port][/db]`) — in
   progress: full handshake, query and prepared statements pending;
   no E2E test against a real server yet.
-- **JS:** untyped (16/09, bridge on the GraalJS host); `query<T>` typed = `DB002` compile-time.
+- **JS:** untyped (16/09, bridge on the GraalJS host); typed `query<T>` = `DB002` CLOSED 18/09 (guest-side bind via `__kof_decode_<T>`).
 - Tests: `KofDbE2ETest` (9) + `KofOrmE2ETest` (16, includes MariaDB/PostgreSQL/
   MongoDB with conditional skip + native SQLite). The native link includes the MySQL
   lib only when the program uses it (literal DSN detected at

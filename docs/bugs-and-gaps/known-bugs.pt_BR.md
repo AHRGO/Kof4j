@@ -8022,7 +8022,8 @@ Prova: `RawRowCollectionAccessE2ETest` (4/4: as duas formas de `rec.get("col")`
 rejeitadas com SEM066, incl. o repro exato do §193; `rows.get(0)` + métodos de
 String/List `.get` não flagados). O caminho canônico **tipado** `db.query<Record>`
 já funciona em JVM/Native (bind por reflection via className); a face JS dele
-segue DB002 (erro alto em compile-time — ver KofDb), inalterada aqui.
+fechado 18/09 como `DB002` (bind no guest via `__kof_decode_<T>`; ver KofDbE2ETest
+jsTypedQuery*).
 
 **Split (neste mesmo commit):** o guard entrou primeiro inline no
 `ExpressionInstanceCallLowerer`, empurrando o arquivo 583→608 pela linha vermelha

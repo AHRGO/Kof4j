@@ -179,8 +179,8 @@ scripts/auto-loop.sh status           # confirmar que está ativo
 - O cron chama `opencode run --session <id> --dir <repo> --attach <server>
   --auto "<prompt>"` a cada intervalo (padrão 30 min), com o prompt de
   re-disparo: *"analize os documentos, verifique os gaps, identifique o que
-  falta em nossos planos, trace um todo de implementação e continue o
-  desenvolvimento"*.
+  falta em nossos planos em docs/development, trace um todo de implementação
+  e continue o desenvolvimento"*.
 - **`--attach` é OBRIGATÓRIO — o heartbeat injeta na SESSÃO ABERTA, nunca
   spawna agente concorrente.** Sem `--attach`, `opencode run --session` cria
   um **processo headless novo** que só compartilha o histórico: você vê "outra

@@ -179,8 +179,8 @@ scripts/auto-loop.sh status           # confirm that it's active
 - The cron calls `opencode run --session <id> --dir <repo> --attach <server>
   --auto "<prompt>"` at every interval (default 30 min), with the re-trigger
   prompt: *"analyze the documents, check the gaps, identify what's
-  missing in our plans, draw up an implementation todo and continue
-  development"*.
+  missing in our plans in docs/development, draw up an implementation todo
+  and continue development"*.
 - **`--attach` is MANDATORY — the heartbeat injects into the OPEN SESSION, never
   spawns a concurrent agent.** Without `--attach`, `opencode run --session` creates
   a **new headless process** that only shares the history: you see "another

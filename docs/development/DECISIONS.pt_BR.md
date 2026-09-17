@@ -985,7 +985,7 @@ TAREFA segue as frentes abaixo.
    params/keep-alive = **WEB001**, ws = **WEB004**, sse = **WEB003**.
 7. **kof.db/orm no JS** — **DB001 FECHADO 16/09** (nao-tipado
    `connect/execute/query/close/transaction` na ponte do host GraalJS —
-   `3e55df51`+`eb9140cb`); residual: `db.query<T>` tipado = `DB002`
+   `3e55df51`+`eb9140cb`); residual `db.query<T>` tipado = `DB002` FECHADO 18/09: bind no guest via `__kof_decode_<T>`
    (arquitetural: JS não emite bytecode JVM no classpath do host) +
    `kof.orm` = `ORM001` (mesma parede; WASM planejado).
 

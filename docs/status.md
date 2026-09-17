@@ -232,7 +232,7 @@ main() {
     (mysql_native_password) + COM_QUERY + resultset parsing (coldefs + rows
     + EOF) + `?` binds (client-side literal substitution, `nativeMysqlWireProtocol`
     — 31/08)**. Prepared statements via COM_STMT_PREPARE (binary) pending.
-- **JS** (16/09, DB001 fechado): `connect`/`connect2`/`close`/`execute`/`query`/`transaction` delegate to `kof_platform.db*` on the GraalJS host (`KofJsRunner`+`KofJsDbBridge`) — same JVM/classpath as the JDBC path, so `DriverManager` sees h2/sqlite-jdbc exactly as the JVM target does; output byte-parity (`KofDbE2ETest.js*` 4 cases). **`db.query<T>` tipado = `DB002`** (compile-time: JS emits no JVM bytecode on the host classpath — `Class.forName` has nothing to load; the untyped `query` returns JSON rows).
+- **JS** (16/09, DB001 fechado): `connect`/`connect2`/`close`/`execute`/`query`/`transaction` delegate to `kof_platform.db*` on the GraalJS host (`KofJsRunner`+`KofJsDbBridge`) — same JVM/classpath as the JDBC path, so `DriverManager` sees h2/sqlite-jdbc exactly as the JVM target does; output byte-parity (`KofDbE2ETest.js*` 4 cases). **`db.query<T>` typed = `DB002` CLOSED 18/09** (the wire is untyped — the host bridge has no `Class.forName` for JS classes — but the guest binds each JSON row via the same `__kof_decode_<T>` helper `json.decode<List<T>>` uses; `KofDbE2ETest.jsTypedQuery*` byte-parity with the JVM).
 - **riscv64/aarch64**: SQLite closed 15/09 — link-by-use `libsqlite3` + `kof_db_*` runtime slices `RtB46/RtB47` (`KofDbE2ETest.crossNativeSqliteRoundtrip` under qemu); `sqlite:` DSN only, transaction via EH chain (inside `spawn` unsupported cross-side, same class as OTP001).
 - DSNs: `jdbc:*` (JVM), `sqlite:` (JVM/Native), `mongodb://` (ORM).
 
@@ -366,7 +366,7 @@ Bool positivo(Int x) = x > 0         // expression body
 | kof.mq (publish/subscribe/queue) | ✅ | ✅ (01/09, pub/sub + in-process queues, asm) | ✅ |
 | kof.log (`log.info/warn/error/debug`) | ✅ | ✅ (asm; UTC, no JSON) | ✅ (LOG001 closed 01/09) |
 | kof.security (passwords, crypto, JWT, secrets) | ✅ | ✅ | ✅ |
-| kof.db (JDBC, query<T>, transaction) + native SQLite | ✅ | ✅ (SQLite + transaction; MySQL WIP; **riscv64/aarch64 ✅ 15/09** link-by-use libsqlite3) | ✅ 16/09 (untyped `connect/execute/query/close/transaction` na ponte GraalJS — `DB002` p/ `query<T>` tipado) |
+| kof.db (JDBC, query<T>, transaction) + native SQLite | ✅ | ✅ (SQLite + transaction; MySQL WIP; **riscv64/aarch64 ✅ 15/09** link-by-use libsqlite3) | ✅ 16/09 (untyped `connect/execute/query/close/transaction` on the GraalJS bridge) + ✅ 18/09 typed `query<T>` (`DB002` closed — guest-side bind via `__kof_decode_<T>`) |
 | kof.orm (entity, CRUD, where, migrate, MongoDB) | ✅ | ORM001 | ORM001 |
 | String.toInt/toLong/toDouble/toFloat | ✅ | ✅ | ✅ |
 | kof.ui (Color, Palette, Theme, Window) | ✅ | ✅ (JS render) | ✅ |
@@ -604,7 +604,7 @@ main() { /* ignored by kof test */ }
 | KofPatternMatchingTest | 12 | switch case String s / Point(x,y) 3 targets |
 | KofWebE2ETest | 12 | native web stack (web.app, routes, JSON, middleware, `app.health` bypass) |
 | ExceptionsE2ETest | 9 | try/catch/finally JVM + Native |
-| KofDbE2ETest | 22 | kof.db: JDBC, query<T>, transaction, rollback, native SQLite, Native transaction (commit+rollback), **DB001 no JS (bridge GraalJS 16/09: roundtrip js + transaction commit/rollback/aninhado byte-parity c/ JVM)**, `DB002` p/ query<T> no JS, **cross SQLite roundtrip riscv64+aarch64 (qemu) 15/09** |
+| KofDbE2ETest | 24 | kof.db: JDBC, query<T>, transaction, rollback, native SQLite, Native transaction (commit+rollback), **DB001 no JS (bridge GraalJS 16/09: roundtrip js + transaction commit/rollback/nested byte-parity with the JVM)**, **DB002 closed on JS (18/09: typed `query<T>` guest-side bind via `__kof_decode_<T>`, byte-parity with the JVM)**, **cross SQLite roundtrip riscv64+aarch64 (qemu) 15/09** |
 | KofHttpServerTest | 8 | serve engine (real sockets) |
 | KofMediaE2ETest | 15 | kof.media + serveDir: Image/Audio/WAV/Video(MP4), Range 206/416, binary content (not base64) |
 | NativeConfigE2ETest | 8 | kof.config Native (asm): precedence, typed, comments |

@@ -200,7 +200,7 @@ Legenda nas colunas de target: `y` = suportado, `~` = parcial, `–` = não.
 | Capacidade | Kof | JVM | Native | JS | Tests | Docs |
 |-----------|-----|-----|--------|----|-------|------|
 | SQL / JDBC | ✅ `kof.db` (SQL-first) + SQLite nativo via `.so` direto + MySQL wire protocol (handshake+scramble+auth-switch+COM_QUERY+resultset, 31/08) | y | y (SQLite + MySQL wire) | ✅ 16/09 (JDBC via host GraalJS) | KofDbE2ETest | stdlib/DATABASE_VISION.md |
-| `db.connect/query/transaction` | ✅ (+ `query<T>` tipado) | y | y | ✅ nao-tipado 16/09; tipado `query<T>` `DB002` | KofDbE2ETest | stdlib/DATABASE_VISION.md |
+| `db.connect/query/transaction` | ✅ (+ `query<T>` tipado) | y | y | ✅ nao-tipado 16/09; tipado `query<T>` `DB002` FECHADO 18/09 | KofDbE2ETest | stdlib/DATABASE_VISION.md |
 | prepared statements | ✅ (binds `?`) | y | y | ✅ 16/09 (binds via ponte) | KofDbE2ETest | — |
 | connection pools | `PLANNED` | — | — | — | — | — |
 | migrations | ✅ `orm.migrate` versionado (`kof_migrations`) | y | – ORM001 | – ORM001 | KofOrmE2ETest | stdlib/DATABASE_VISION.md |
