@@ -141,4 +141,19 @@ class CliFlagStrictnessTest {
         assertEquals(0, r.exit(), "test simples nao regride:\n" + r.out());
         assertTrue(r.out().contains("1 passed, 0 failed"), r.out());
     }
+
+    @Test
+    void benchRejectsUnknownFlagInsteadOfTreatingItAsPath(@TempDir Path dir) throws Exception {
+        Cli r = cli(dir, "bench", "--verbos");
+        assertNotEquals(0, r.exit(), "bench --flag deve recusar (R6):\n" + r.out());
+        assertTrue(r.out().contains("unknown flag") && r.out().contains("--verbos"),
+                "diagnostico honesto esperado (nao 'no benchmarks found'):\n" + r.out());
+    }
+
+    @Test
+    void benchWithoutBenchmarksStillReportsHonestly(@TempDir Path dir) throws Exception {
+        Cli r = cli(dir, "bench");
+        assertNotEquals(0, r.exit(), "sem benchmarks: exit 1 preservado:\n" + r.out());
+        assertTrue(r.out().contains("no benchmarks found"), r.out());
+    }
 }

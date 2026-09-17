@@ -138,6 +138,12 @@ public final class Bench {
                         Double th = parseDoubleOption("--threshold", arg.substring("--threshold=".length()));
                         if (th == null) return 1;
                         threshold = th;
+                    } else if (arg.startsWith("-")) {
+                        // R6: a flag desconhecida nao pode virar root em silencio
+                        // (o usuario acharia que teve efeito; um typo virava
+                        // "no benchmarks found").
+                        System.err.println("bench: unknown flag: " + arg);
+                        return 1;
                     } else {
                         roots.add(Path.of(arg));
                     }
