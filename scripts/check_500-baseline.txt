@@ -7,7 +7,6 @@
 533	kof-compiler/src/main/java/dev/kof/compiler/ExpressionAssignmentLowerer.java
 556	kof-compiler/src/main/java/dev/kof/compiler/ExpressionInstanceCallLowerer.java
 537	kof-compiler/src/main/java/dev/kof/compiler/ExpressionLowerer.java
-593	kof-compiler/src/main/java/dev/kof/compiler/ExpressionMethodCallLowerer.java
 558	kof-compiler/src/main/java/dev/kof/compiler/js/JsControlFlowParser.java
 523	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeCore.java
 518	kof-compiler/src/main/java/dev/kof/compiler/js/JsRuntimeUiLayout.java
