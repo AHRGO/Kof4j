@@ -14,7 +14,7 @@
 | Tipagem | Forte, estática | Forte, estática (0.2.6-beta) |
 | OO | Classes, interfaces, records | Classes, interfaces, records + `enum` + pattern matching `case String s`/`Point(x,y)` |
 | Herança | Simples + interfaces | Simples + interfaces (3 níveis) |
-| GC | Automático | JVM: automático / Native: free-list `kof_free_head` (mark-sweep pendente; auto-GC desativado — `munmap` fallback, 27-31/08) |
+| GC | Automático | JVM: automático / Native: free-list `kof_free_head` (mark-sweep implementado 03/09, manual; auto-GC desativado — auto-collect sob exaustão pendente §260) |
 | Compilação | javac → bytecode | Kof → IR → JVM/Native (x86_64; `native.risc`/`native.arm` placeholder) / JS (GraalJS) / KofC / KofScript / Android (Fase 1) |
 | Sintaxe | Verbosa | Concisa (`String?`, `map/filter/reduce`, `let` → `KofScriptGlobals`) |
 

@@ -14,7 +14,7 @@
 | Typing | Strong, static | Strong, static (0.2.6-beta) |
 | OO | Classes, interfaces, records | Classes, interfaces, records + `enum` + pattern matching `case String s`/`Point(x,y)` |
 | Inheritance | Single + interfaces | Single + interfaces (3 levels) |
-| GC | Automatic | JVM: automatic / Native: free-list `kof_free_head` (mark-sweep pending; auto-GC disabled — `munmap` fallback, 27-31/08) |
+| GC | Automatic | JVM: automatic / Native: free-list `kof_free_head` (mark-sweep implemented 03/09, manual; auto-GC disabled — auto-collect on exhaustion pending §260) |
 | Compilation | javac → bytecode | Kof → IR → JVM/Native (x86_64; `native.risc`/`native.arm` placeholder) / JS (GraalJS) / KofC / KofScript / Android (Phase 1) |
 | Syntax | Verbose | Concise (`String?`, `map/filter/reduce`, `let` → `KofScriptGlobals`) |
 

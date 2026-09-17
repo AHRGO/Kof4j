@@ -214,7 +214,7 @@ flowchart TD
 ```
 
 Targets (0.2.6-beta, 31/08):
-- `native` (x86_64) **stable**: ELF x86_64, syscalls, free-list allocator (`kof_free_head`; mark-sweep pending, auto-GC disabled — memory returned only in the `munmap` fallback), strings/lists/JSON (objects/records + FP arrays, 31/08), exceptions with unwinding, `spawn`/`await` via `pthread_create` + trampoline + `pthread_join` with thread-safe allocator (futex) — CONC001 (31/08), real FP in XMM (`vcvtsi2sd`/`mulsd`, dtoa via `snprintf`) — FLT001, `kof_db_mysql_scramble` + wire protocol in progress
+- `native` (x86_64) **stable**: ELF x86_64, syscalls, free-list allocator (`kof_free_head`; mark-sweep implemented 03/09, manual `kof_gc_collect_now` — auto-GC disabled, auto-collect on exhaustion pending §260; `munmap` fallback), strings/lists/JSON (objects/records + FP arrays, 31/08), exceptions with unwinding, `spawn`/`await` via `pthread_create` + trampoline + `pthread_join` with thread-safe allocator (futex) — CONC001 (31/08), real FP in XMM (`vcvtsi2sd`/`mulsd`, dtoa via `snprintf`) — FLT001, `kof_db_mysql_scramble` + wire protocol in progress
 - `native.risc` (riscv64) **real**: riscv64 lowering (`NativeBackend.emitRiscv`); `riscv64-linux-gnu-as/ld` + qemu
 - `native.arm` (aarch64) **real**: translation from riscv64 (`translateRiscvToAarch64`); `aarch64-linux-gnu-as/ld` + qemu
 
@@ -226,7 +226,7 @@ Current capabilities (x86_64):
 - `kof.io`, `kof.time` (now/sleep), `kof.config` (own asm, `/proc/self/environ`), `kof.log` (asm), `kof.security` (SHA-256/HMAC asm), `kof.cache` (30/08 — register clobber fixed), `kof.db` SQLite (direct `.so`) + MySQL wire protocol (SHA-1 scramble, WIP)
 
 Runtime functions (x86-64, `NativeRuntime.java:1`):
-- `kof_alloc` / `kof_free_head` free-list (mmap reuse) / `kof_gc_collect` (mark-sweep pending)
+- `kof_alloc` / `kof_free_head` free-list (mmap reuse) / `kof_gc_collect` (mark-sweep implemented 03/09)
 - `kof_print` / `kof_println` / `kof_print_int` / `kof_int_to_string`
 - `kof_string_*`, `kof_array_*`, `kof_list_*`, `kof_map_*`, `kof_cache_*`, `kof_db_mysql_scramble`
 - trampoline of `pthread_create` + `pthread_join` (spawn/await, 31/08)

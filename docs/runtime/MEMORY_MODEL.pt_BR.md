@@ -3,7 +3,7 @@
 # MEMORY_MODEL.md — Modelo de Memória do Kof
 
 **Data:** 2 de setembro de 2026
-**Status:** Implementado — Fase F.7 + evolução 0.0.5 (allocator com header) + 0.2.6-beta (free-list `kof_free_head` 27/08; mark-sweep pendente)
+**Status:** Implementado — Fase F.7 + evolução 0.0.5 (allocator com header) + 0.2.6-beta (free-list `kof_free_head` 27/08; mark-sweep implementado 03/09)
 
 ---
 
@@ -56,9 +56,9 @@ de memória do target.
 
 | Tipo | Lifetime | Deallocation |
 |------|----------|--------------|
-| Objeto | Enquanto referenciado | `kof_free` / GC futuro |
-| Array | Enquanto referenciado | `kof_free` / GC futuro |
-| String | Enquanto referenciado | `kof_free` / GC futuro |
+| Objeto | Enquanto referenciado | `kof_free` / GC mark-sweep (03/09, `kof_gc_collect_now` manual) |
+| Array | Enquanto referenciado | `kof_free` / GC mark-sweep (03/09, manual) |
+| String | Enquanto referenciado | `kof_free` / GC mark-sweep (03/09, manual) |
 | Method Table | Todo o programa | SO no exit |
 
 Sem GC nesta fase: a memória é devolvida ao SO no exit do processo.
@@ -113,7 +113,7 @@ sem forwarding pointer) — o header de alocação fica 16 bytes antes do objeto
 
 ## 8. Limitações
 
-1. Sem GC automático (mark-sweep pendente; auto-GC desativado após hang —
+1. Sem GC automático sob exaustão (mark-sweep implementado 03/09 via `kof_gc_collect_now` manual; auto-GC desativado após hang —
    free-list reusa `mmap`, memória devolvida só no `munmap` fallback — ver §9)
 2. Sem reference counting
 3. Sem weak references

@@ -117,7 +117,7 @@ createArray(): Int[] {
 | Campo | Offset | Tamanho | Descrição |
 |-------|--------|---------|-----------|
 | type_id | 0 | 4 bytes | Sempre 2 para Array |
-| flags | 4 | 4 bytes | Reservado para GC futuro |
+| flags | 4 | 4 bytes | Reservado (o mark-sweep rastreia o prefixo do bloco do allocator) |
 | length | 8 | 4 bytes | Número de elementos |
 | elem_size | 12 | 4 bytes | Tamanho de cada elemento em bytes |
 | elements | 16 | variável | Dados contíguos |

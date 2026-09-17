@@ -117,7 +117,7 @@ createArray(): Int[] {
 | Field | Offset | Size | Description |
 |-------|--------|------|-------------|
 | type_id | 0 | 4 bytes | Always 2 for Array |
-| flags | 4 | 4 bytes | Reserved for future GC |
+| flags | 4 | 4 bytes | Reserved (GC mark-sweep tracks the allocator block prefix) |
 | length | 8 | 4 bytes | Number of elements |
 | elem_size | 12 | 4 bytes | Size of each element in bytes |
 | elements | 16 | variable | Contiguous data |
