@@ -7325,7 +7325,7 @@ para o label) é o predicado correto e **já era usado** no `parseStatements`.
   Suíte 4-módulos: só o fail conhecido §205 Native (lane #183) + 13 erros de
   `node` ausente.
 
-### §218 — `n.toHexString()` / `toBinaryString()` em Int emite `invokevirtual "".toHexString()` (classe dona vazia) → `ClassFormatError: Illegal class name ""` (issue #148)
+### §218 ✅ CORRIGIDO 16/09 (`78b733fa`, re-verificado 17/09 no tip → `ff`) — `n.toHexString()` / `toBinaryString()` em Int emite `invokevirtual "".toHexString()` (classe dona vazia) → `ClassFormatError: Illegal class name ""` (issue #148)
 
 - **Sintoma (medido 14/09 ~13:05 no `d2d025f4`, classes FRESCAS, dono =
   192.168.100.17 — só catalogado, lane compiler):** um método estilo-extensão

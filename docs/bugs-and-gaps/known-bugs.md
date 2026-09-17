@@ -7337,7 +7337,7 @@ to the label) is the correct predicate and **was already used** in `parseStateme
   suite: only the known §205 Native fail (lane #183) + 13 node-missing
   errors.
 
-### §218 — `n.toHexString()` / `toBinaryString()` on Int emit `invokevirtual "".toHexString()` (empty owner class) → `ClassFormatError: Illegal class name ""` (issue #148)
+### §218 ✅ FIXED 16/09 (`78b733fa`, re-verified 17/09 on tip → `ff`) — `n.toHexString()` / `toBinaryString()` on Int emit `invokevirtual "".toHexString()` (empty owner class) → `ClassFormatError: Illegal class name ""` (issue #148)
 
 - **Symptom (measured 14/09 ~13:05 on `d2d025f4`, FRESH classes, owner =
   192.168.100.17 — catalogued, compiler lane):** an extension-style Int
