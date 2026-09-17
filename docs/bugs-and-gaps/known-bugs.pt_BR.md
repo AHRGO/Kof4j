@@ -9471,6 +9471,7 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
   doc×Set.of).
 > | **§265 ✅ CORRIGIDO 16/09 (lane development `.18`)** | Handlers web do KofJS: `status(201, body)`/`headerSet()` eram no-ops SILENCIOSOS — `JsRuntimeOps.handleRuntimeOp` tinha um ramo de colapso (`status→args.get(1)`) que DESCARTAVA a chamada do `invoke()` emitido (decisivo), e `kofWebStatus` lia `kofWebRequest.response` (campo que nunca existiu; o `response` vive no `ctx`). JVM: `201`+`X-Custom`; JS: `200`, header descartado (R6; a célula "JS ✅ 08/27" do ecosystem-coverage era false-green — suporte em compile ≠ efeito em runtime). Conserto = remover os ramos de colapso (o roteamento correto já existia abaixo) + deferir `_status`/`_headerQueue` aplicados pelo pump antes do envio (o HttpServer do JDK exige headers pré-envio), idem thread-local do JVM. Prova: `KofWebJsE2ETest.jsWebStatusAndHeaderReachTheWire` (VERMELHO pré-fix, medido `return "made"` no JS emitido + `200` no fio vivo). `status/header` do Native fica `– WEB001` (honesto).
 > | **§266 ✅ CORRIGIDO 17/09 (lane development `.18`)** | Corpo de loop com `if` seguido de statements miscompilava SÓ no JS (locais escapavam p/ a cláusula `for(;…;update)`) — `ReferenceError` headless, UI VAZIA SILENCIOSA em `Component.view` (catch do kofUiRender). Correção = `KofContinueLabel(label, loopStart)` estrutural emitido no lowering; o reconstructor consome o marcador, a varredura-para-trás ambígua + o guess `looksLikeContinueLabel` SAÍRAM; split `JsTryParser` mantém o arquivo <600. Prova: `JsLoopIfTailE2ETest` 7/7 + ReorderList da lib de volta à forma `if` direta no Chrome. O catch do `kofUiRender` AINDA engole throws do view (a amplificação alto-headless/UI-muda permanece p/ qualquer outro crash de view). |
+> | **§268 🔴 ABERTO 18/09 (achado pela lane bugs-and-gaps `.15` ao fechar §332/#328; fix = lane compiler `#313/#314`)** | Classe de usuário `extends <JDK-throwable>` por nome simples sem `import` grava o `super_class` CRU (`RuntimeException`, não `java/lang/RuntimeException`) → a PRÓPRIA classe falha no load com `ClassNotFoundException: RuntimeException` (compila em silêncio, R6/Q7). Raiz: `CompilerClassLowering.lowerClass:22` `toInternalName("", sym.superClass())` passa pacote vazio p/ nome JDK implícito. Repro medido no tip `a7af2c6a` (`class MyEx extends RuntimeException`, exit 0 e então CNFE). Mesma família ref-JDK-não-qualificada do #313/#314. |
 > | **§267 ✅ CORRIGIDO 17/09 (lane development `.18`; face irmã achada durante o §266)** | `if/else` de nível-statement cujos ramos são assignments dobrou numa ternária expressão (`tryParseIfExpr`) e o statement SEGUINTE teve seu `let` içado p/ cima dela → leitura obsoleta, VALOR ERRADO SILENCIOSO no JS. Correção = marcador `KofStatementIf(thenLabel)` no lowering (amarrado ao label — um booleano seria comido pelo CJump de uma if-expr NESTED na condição); if-expressões reais continuam dobrando. Prova: `JsIfFoldStatementE2ETest` 8/8 + suíte 1990/0/0/169. |
 
 ### §265 — Handlers web do KofJS: `status(code, body)` e `headerSet(name, value)` eram no-ops SILENCIOSOS (o ramo de colapso em `handleRuntimeOp` descartava a chamada do handler emitido; e `kofWebStatus` lia um campo `kofWebRequest.response` que nunca existiu) — a doc dizia "JS 08/27 ✅" mas o JS devolvia 200 e descartava o header — ✅ CORRIGIDO 16/09 (lane development, dono = 192.168.100.18)
@@ -9518,3 +9519,37 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
 - **Prova:** `KofWebJsE2ETest.jsWebStatusAndHeaderReachTheWire` — asser
   `201`+`X-Custom: abc`+corpo no fio vivo (VERMELHO pré-fix: medido `200` + header
   ausente contra o servidor rodando; a mesma sonda verde no JVM `201 Created`).
+
+## §268 — classe de usuário `extends <JDK-throwable>` sem `import` grava o nome CRU da superclasse → `ClassNotFoundException: RuntimeException` no load (compila em silêncio; R6/Q7)
+
+- **Sintoma:** `class MyEx extends RuntimeException { ... }` (Throwable do JDK
+  referenciado por nome simples, sem `import java.lang.RuntimeException`) compila
+  limpo (exit 0) e a PRÓPRIA classe falha no load:
+  `Caused by: java.lang.ClassNotFoundException: RuntimeException`
+  (não `java/lang/RuntimeException`).
+- **Causa raiz (medida):** `CompilerClassLowering.lowerClass` (`:22`)
+  `driver.toInternalName("", sym.superClass())` passa pacote VAZIO quando o
+  analyzer resolveu o nome mas a classe é nome JDK implícito → o `super_class`
+  emitido é o `RuntimeException` cru em vez de `java/lang/RuntimeException`.
+  Independente do mapper do `catch` (família §167/§332/§328 corrigida 18/09) —
+  este é o campo **super do `extends`**, não a tabela de catch.
+- **Repro (medido no tip `a7af2c6a`, JVM, 18/09):**
+  ```kof
+  class MyEx extends RuntimeException {
+      String what() { return "my" }
+  }
+  main() {
+      var e = MyEx()
+      println("ok " + e.what())
+  }
+  ```
+  → `build`/`run` exit 0 e então `ClassNotFoundException: RuntimeException`
+  em `Default.Main.main(Main.kf:5)`.
+- **Família:** mesma raiz "ref JDK não-qualificada" das issues **#313/#314**
+  (static call / `throw new` não-qualificados) — registrar lá. Dono = lane
+  compiler (fila `#313/#314`, DOING linha 223). Direção do fix: `toInternalName`
+  deve qualificar nomes de classe JDK implícitos após o analyzer resolvê-los (e o
+  mesmo check que fixa os aliases builtin `String`/`List`/`Map` (padrão SG-011
+  §179) deve dar ao throwable o seu pacote real).
+- **Não corrigido aqui** (achado ao fechar §332/#328; a fila desta família é
+  `#313/#314`, dono = lane compiler `.22` conforme DOING linha 223).

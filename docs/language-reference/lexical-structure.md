@@ -115,6 +115,8 @@ Observable rules:
 
 - **No digit separator.** `1_000` is read as `1` followed by the
   identifier `_000` → `SEM011` (*probe*).
+- **No binary literal.** `0b1010` is read as `0` followed by the identifier
+  `b1010` → `SEM011` (there is no `0b` prefix) (*probe*).
 - **No octal.** `0777` is **777** decimal (the leading `0` is not a base
   prefix) (*probe*).
 - **A decimal point requires digits on both sides.** `.5` → `PARSE041`;

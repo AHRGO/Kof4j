@@ -115,6 +115,8 @@ Regras observáveis:
 
 - **Sem separador de dígitos.** `1_000` é lido como `1` seguido do
   identificador `_000` → `SEM011` (*probe*).
+- **Sem literal binário.** `0b1010` é lido como `0` seguido do identificador
+  `b1010` → `SEM011` (não existe prefixo `0b`) (*probe*).
 - **Sem octal.** `0777` vale **777** decimal (o `0` inicial não é prefixo de
   base) (*probe*).
 - **Ponto decimal exige dígitos dos dois lados.** `.5` → `PARSE041`;
