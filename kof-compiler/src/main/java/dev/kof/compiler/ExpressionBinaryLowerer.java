@@ -334,11 +334,45 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
         // bug 11: `==` em records é igualdade de CONTEÚDO →
         // left.equals(right) (o record gera equals no JVM e no
         // JS). Antes emitia referência (if_acmpeq) → false.
-        localIdx = ExpressionLowerer.emitExpression(driver, be.right(), ops, owner, localIdx, locals);
+        // §262 face (b): `nullableRecord == nullableRecord` (sem literal `null`)
+        // caía direto em `receiver.equals(arg)` → NPE/TypeError/SIGSEGV quando o
+        // receiver era null no runtime (ex.: miss de map). O lowering é COMPARTILHADO
+        // pelos 4 alvos (um único KofCall INSTANCE "equals"), então o guard vai AQUI
+        // e conserta JVM+JS+SCRIPT+NATIVE de uma vez (regra 5). Semântica =
+        // Objects.equals: L null → (R null); L nao-null → L.equals(R). Nao-eq =
+        // negacao. Emite no padrao de if-expressao (KofConditionalJump+KofLabel),
+        // ja provado nos 4 backends (ao contrario do short-circuit && que e gated
+        // !=JS). So o RECEIVER nulo quebrava; `record.equals(null)` e seguro (false).
         Type recordType = CompilerTypes.isRecordType(accType, driver.currentUnit, driver.semanticAnalyzer) ? accType : rightType;
         Type objT = new Type.ClassType("java.lang", "Object", List.of());
+        LabelId eqPath = LabelId.create();
+        LabelId nullPath = LabelId.create();
+        LabelId resLabel = LabelId.create();
+        int lSlot = localIdx;
+        int rSlot = localIdx + 1;
+        locals.add(new IRLocalVariable(lSlot, "__kofrecL", recordType));
+        locals.add(new IRLocalVariable(rSlot, "__kofrecR", recordType));
+        ops.add(new KofStoreLocal(recordType, lSlot));
+        localIdx = ExpressionLowerer.emitExpression(driver, be.right(), ops, owner, localIdx + 2, locals);
+        ops.add(new KofStoreLocal(recordType, rSlot));
+        ops.add(new KofLoadLocal(recordType, lSlot));
+        ops.add(KofLoadLiteral.ofNull());
+        ops.add(new KofConditionalJump(KofComparison.NE, objT, eqPath, nullPath));
+        ops.add(new KofLabel(eqPath));
+        ops.add(new KofLoadLocal(recordType, lSlot));
+        ops.add(new KofLoadLocal(recordType, rSlot));
         ops.add(new KofCall(recordType, "equals", List.of(objT),
                 Type.PrimitiveType.BOOL, KofCallKind.INSTANCE));
+        ops.add(new KofJump(resLabel));
+        ops.add(new KofLabel(nullPath));
+        ops.add(new KofLoadLocal(recordType, rSlot));
+        ops.add(KofLoadLiteral.ofNull());
+        ops.add(new KofBinary(KofBinaryOp.EQ, objT));
+        ops.add(new KofLabel(resLabel));
+        // os slots temporarios ficam no locals[] (nome __-prefixado nao colide
+        // com identificador de usuario); o localIdx retornado ja avanca depois
+        // deles — nao remover da lista (o emit do right pode ter acrescentado
+        // slots proprios depois dos nossos; remover o rabo pegaria os errados).
         if ("!=".equals(be.operator())) {
             ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 0));
             ops.add(new KofBinary(KofBinaryOp.EQ, Type.PrimitiveType.INT));
