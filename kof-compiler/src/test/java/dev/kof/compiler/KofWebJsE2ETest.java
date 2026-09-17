@@ -368,7 +368,18 @@ class KofWebJsE2ETest {
                 // chutaria NumberFormatException solta no meio do oraculo —
                 // robustez do harness de teste, nunca um false-green silencioso.
                 if (sizeToken.isEmpty() || !sizeToken.matches("(?i)[0-9a-f]+")) break;
-                int size = Integer.parseInt(sizeToken, 16);
+                // §258/#780: o guard hex acima ACEITA tokens que estouram o
+                // Integer.parseInt radix-16 — nao so >8 digitos (0x100000000),
+                // mas qualquer valor acima do MAX_INT (0x80000000/0xffffffff,
+                // 8 digitos, medido: "under radix 16"). Um tamanho desses NUNCA
+                // e um chunk valido (o corpo ja vem estourado no buffer); tratar
+                // como malformado => break, em vez do NFE solto.
+                int size;
+                try {
+                    size = Integer.parseInt(sizeToken, 16);
+                } catch (NumberFormatException malformed) {
+                    break;
+                }
                 if (size == 0) break;
                 de.append(new String(body, lineEnd + 2, size, StandardCharsets.UTF_8));
                 p = lineEnd + 2 + size + 2;
