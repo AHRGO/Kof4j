@@ -1166,18 +1166,22 @@ padding, radius — `kof_ui_style_new`) já está entregue nos quatro alvos
 2. **Parse no compilador (Q4).** As declarações são parseadas e validadas em
    compile-time; o lowering carrega o texto CSS **normalizado**. Argumento
    não-literal é diagnóstico (nada de parse em runtime).
-3. **Cores (Q1).** Aceita hex CSS (`#rgb`, `#rrggbb`, `#rrggbbaa`) e nomes de
-   cor CSS, **além de** valores `Color`/`Palette` da linguagem interpolados
-   na string.
+3. **Cores (Q1).** Aceita hex CSS (`#rgb`, `#rrggbb`, `#rrggbbaa`), nomes de
+   cor CSS e os nomes de `Palette` (`red`, `cyan`, …) — a mesma tabela do
+   `Palette`. O compilador valida o valor e o mantém no CSS normalizado (o
+   browser resolve o nome). A forma de 4 Ints segue sendo o caminho para
+   passar um `Color` calculado (a forma String aceita só literal).
 4. **Unidades (Q2).** Inteiro nu significa `px`; os sufixos `px`, `%`, `em`
    e `rem` são aceitos.
 5. **Propriedades (Q3).** Uma **whitelist tipada**. Propriedade fora da
    whitelist é diagnóstico em compile-time (`SEM073`) — nunca repassada em
    silêncio para `node.style` (R6). Declaração malformada é `SEM074`; valor
    inválido para propriedade conhecida é `SEM075`.
-6. **Escopo (Q5).** `setStyle(String)` fica disponível em **todo widget DOM**
-   (`KofUi.isDomWidget`), não só `View` — pela família compartilhada
-   `kof_ui_widget_set_style` (padrão do UI005).
+6. **Escopo (Q5).** `setStyle(style)` — recebendo o valor `Style`, exatamente
+   como `View(style)` — fica disponível em **todo widget DOM**
+   (`KofUi.isDomWidget`), não só `View`, pela família compartilhada
+   `kof_ui_widget_set_style` (padrão do UI005, mesma forma de
+   `setFont(font)`).
 
 ### Invariantes
 
@@ -1207,8 +1211,12 @@ testes; fatia B = `setStyle` em todo widget DOM.
 
 ### Evidências
 
-`UiE2ETest` (JVM + link Native) + `KofJsBrowserE2ETest` (Chrome headless,
-DOM real) + testes de diagnóstico para `SEM073`/`SEM074`/`SEM075`;
+`UiStyleCssE2ETest` 10/10 (JVM + Native + Script + JS: happy path, nomes CSS,
+unidades, `setStyle` num Label, `SEM073`/`SEM074`/`SEM075`, não-literal,
+não-regressão da forma de 4 Ints) + `KofJsBrowserE2ETest` (Chrome headless,
+DOM real: `declarativeStyleRendersInRealBrowserDom`,
+`setStyleRendersOnAnyDomWidgetInRealBrowser`); suíte completa dos 4 módulos
+verde fora do flake pré-existente §252 e dos reds cross §181/§256;
 `docs-lang.sh check` 0/0/0.
 
 ### Relacionamentos

@@ -260,6 +260,15 @@ if (mc.receiver() == null && "Style".equals(mc.methodName()) && mc.arguments().s
             Type.PrimitiveType.INT, KofCallKind.FUNCTION));
     return localIdx;
 }
+// ── D-UI-STYLE (UI007): Style("<declarations>") — parse in the compiler
+// (Q4), typed whitelist (Q3), normalized CSS carried to the runtime.
+if (mc.receiver() == null && "Style".equals(mc.methodName()) && mc.arguments().size() == 1) {
+    return lowerStyleCss(driver, mc, ops, localIdx);
+}
+if (mc.receiver() == null && "Style".equals(mc.methodName()) && mc.arguments().size() == 1) {
+    // D-UI-STYLE (UI007): declarative CSS parsed in the compiler (Q4).
+    return lowerStyleCss(driver, mc, ops, localIdx);
+}
 if (mc.receiver() == null && "Link".equals(mc.methodName()) && mc.arguments().size() == 2) {
     for (ExpressionNode arg : mc.arguments()) {
         localIdx = ExpressionLowerer.emitExpression(driver, arg, ops, owner, localIdx, locals);
@@ -277,5 +286,28 @@ if (mc.receiver() == null && "Image".equals(mc.methodName()) && mc.arguments().s
     return localIdx;
 }
         return -1;
+    }
+
+    /**
+     * D-UI-STYLE (UI007): lowers {@code Style("<declarations>")} to
+     * {@code kof_ui_style_css(normalized)}. The parse/validation diagnostics
+     * (SEM073/074/075) are owned by the analyzer path ({@code BuiltinCallTyper})
+     * — here the text is only re-parsed for the normalized CSS. The String form
+     * takes a literal only; the 4-Int form passes a computed Color.
+     */
+    private static int lowerStyleCss(CompilerDriver driver, MethodCallExpr mc,
+                                     List<KofOperation> ops, int localIdx) {
+        ExpressionNode arg = mc.arguments().get(0);
+        String source = KofStyleParser.literalString(arg);
+        String css = "";
+        if (source != null) {
+            KofStyleParser.Result r = KofStyleParser.parse(source);
+            if (r.ok()) css = r.normalized();
+        }
+        ops.add(KofLoadLiteral.ofString(css));
+        ops.add(new KofCall(new Type.ClassType("kof.ui", "Ui", List.of()),
+                "kof_ui_style_css", List.of(BuiltinTypes.STRING),
+                Type.PrimitiveType.INT, KofCallKind.FUNCTION));
+        return localIdx;
     }
 }

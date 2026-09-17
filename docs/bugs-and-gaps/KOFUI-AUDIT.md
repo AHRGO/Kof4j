@@ -80,7 +80,7 @@ Grid, Center, Align, Store, Canvas + namespace `Router`.
 | **UI004** | Forms: `<form>` ✅ + submit handler ✅ DONE 07/09 (`Form(children)`, `onSubmit`, `submit()` — handler runs in the browser, proof by DOM mutation); fieldset ✅ DONE 08/09 (`Fieldset(children[, legend])`, `358ec80`). `Input` types ✅ (`setType`); checkbox/radio state ✅ (`setChecked`/`checked`); select ✅ (`Select`/`setOptions`/`selected`/`setSelected`) | KofJS | P1 **DONE** |
 | **UI005** | Attributes: id ✅ class ✅ disabled ✅ (DONE 07/09 — `setId`/`setClass`/`setDisabled` in DOM widgets, `kof_ui_widget_*` family); placeholder ✅ (`Input.setPlaceholder`); checked ✅; alt/width/height ✅ (`Image.*`); readonly/name ✅ DONE 07/09 (`Input`/`Textarea`.setReadonly(bool)/setName(String) — 6/6 complete points, browser proof: `name=`/`readonly` attributes in outerHTML) | KofJS | P1 **DONE** |
 | **UI006** | Events: `Event.type()`/`stopPropagation()` ✅; `key()`/`value()`/`x()`/`y()` ✅ DONE 08/09 (`f0907c2` — real DOM event: `key` from KeyboardEvent, `value` from the target input, `clientX/Y`; `widget.on(type, handler)` exposed for widgets outside the Component tree; `kofUiWidgetOn` now dispatches the kofEv, before it called `fn()` without an event); `target()`/`relatedTarget()` ✅ DONE 08/09 (`3c241ae`+ — id of the origin/related node with tagName fallback; browser proof: `t=campo-main` in the final DOM) | KofJS | P2 **DONE** |
-| **UI007** | declarative `style` (idiomatic CSS) — new, with its own parser (Phase 4 plan item). **DECIDED 17/09** (`D-UI-STYLE`): `Style("<declarations>")`, parse in the compiler, typed whitelist (`SEM073`/`SEM074`/`SEM075`), hex+names+`Color`/`Palette`, px/`%`/`em`/`rem`, `setStyle` on every DOM widget — **IN PROGRESS** (slice A) | KofJS | P1 |
+| **UI007** | declarative `style` (idiomatic CSS) — new, with its own parser (Phase 4 plan item). **DECIDED 17/09** (`D-UI-STYLE`): `Style("<declarations>")`, parse in the compiler, typed whitelist (`SEM073`/`SEM074`/`SEM075`), hex+CSS names+`Palette` names, px/`%`/`em`/`rem`, `setStyle` on every DOM widget — **IN PROGRESS** (slice A) | KofJS | P1 |
 | **UI008** | Window: size/position only JVM no-op; KofJS only title (browser does not control window — ok per platform) | JVM/KofJS | P3 |
 | **UI009** | Canvas: fillText ✅ measureText ✅ save ✅ restore ✅ transform ✅ setGlobalAlpha ✅ (DONE 07/09 — `UiE2ETest.canvasUi009LinksOnAllTargets` + `KofJsBrowserE2ETest.canvasUi009RunsInRealBrowser`); drawImage ✅ (07/09 — Image→canvas via DOM element) | KofJS | P2 **DONE** |
 
@@ -149,15 +149,16 @@ var v = View(s)
 ```
 
 Closed questions:
-- Q1: colors — **hex CSS (`#rgb`/`#rrggbb`/`#rrggbbaa`) + CSS names +
-  the language's `Color`/`Palette`** (the `toCss` conversion already exists).
+- Q1: colors — **hex CSS (`#rgb`/`#rrggbb`/`#rrggbbaa`) + the CSS color
+  names + the `Palette` names** (the same table `Palette` uses).
 - Q2: units — **a bare integer means `px`; `px`/`%`/`em`/`rem` accepted**.
 - Q3: properties — **typed whitelist**; an unknown property is a
   compile-time diagnostic (`SEM073`), malformed declaration `SEM074`,
   invalid value `SEM075` — never silently forwarded to `node.style` (R6).
 - Q4: **parse in the compiler** (style IR; normalized text in the lowering).
-- Q5: **every DOM widget accepts it** (`setStyle(String)` via the shared
-  `kof_ui_widget_set_style` family — the UI005 pattern), not only `View`.
+- Q5: **every DOM widget accepts it** (`setStyle(style)` with the `Style`
+  value, via the shared `kof_ui_widget_set_style` family — the UI005
+  pattern), not only `View`.
 
 Implementation: claimed in `DOING.md` (UI007); slice A = parser +
 `Style(String)` + lowering + JS runtime + proof; slice B = `setStyle` on

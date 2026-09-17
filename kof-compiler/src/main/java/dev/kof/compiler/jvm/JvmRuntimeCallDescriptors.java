@@ -100,6 +100,7 @@ public final class JvmRuntimeCallDescriptors {
                     "kof_ui_hr_remove" -> "(I)V";
             case "kof_ui_view_new" -> "(I)I";
             case "kof_ui_style_new" -> "(IIII)I";
+            case "kof_ui_style_css" -> "(Ljava/lang/String;)I";
             case "kof_ui_window_set_theme", "kof_ui_label_set_font_size", "kof_ui_label_set_bold",
                     "kof_ui_label_set_color" -> "(II)V";
             case "kof_ui_label_font_size", "kof_ui_label_bold", "kof_ui_label_color" -> "(I)I";
@@ -155,6 +156,7 @@ public final class JvmRuntimeCallDescriptors {
             case "kof_ui_font_new" -> "(Ljava/lang/String;I)I";
             case "kof_ui_font_new_bold" -> "(Ljava/lang/String;IZ)I";
              case "kof_ui_widget_set_font" -> "(II)V";
+             case "kof_ui_widget_set_style" -> "(II)V";
              case "kof_ui_widget_set_id", "kof_ui_widget_set_class" -> "(ILjava/lang/String;)V";
              case "kof_ui_widget_set_disabled" -> "(II)V";
              case "kof_ui_widget_set_flex_basis", "kof_ui_widget_set_max_width" -> "(II)V";

@@ -122,6 +122,28 @@ w.bind(view)
 `Style(background, foreground, padding, radius)` — colors via `Color`,
 `padding`/`radius` in px.
 
+#### Declarative style (CSS-like string)
+
+`Style("<declarations>")` takes idiomatic CSS. The compiler parses and
+validates it (D-UI-STYLE/UI007): an unknown property is a compile-time
+error (`SEM073`), a malformed declaration `SEM074` and an invalid value
+`SEM075` — never a silent fallback.
+
+```kof
+var style = Style("background: #ff0000; padding: 8; border-radius: 4")
+var view = View(style)
+```
+
+- **Colors** accept hex CSS (`#rgb`/`#rrggbb`/`#rrggbbaa`), CSS color names
+  and the `Palette` names.
+- **Lengths**: a bare integer means `px`; `px`/`%`/`em`/`rem` are accepted.
+- The argument must be a **literal** (the parse is at compile time) — for a
+  computed color use the 4-Int form.
+- `setStyle(style)` applies a style to **any DOM widget**, not only `View`:
+  `label.setStyle(style)`.
+
+Real in KofJS; documented no-op on JVM/Native/Script (like the 4-Int form).
+
 ## Canvas 2D
 
 Canvas allows free 2D drawing — graphics, visualizations, games.

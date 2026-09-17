@@ -267,6 +267,9 @@ public final class KofUi {
                 case "setGradient" -> argCount == 3 ? new UiCall("kof_ui_widget_set_gradient", Type.PrimitiveType.VOID, List.of(COLOR, COLOR, INT)) : null;
                 case "setFlexBasis" -> argCount == 1 ? new UiCall("kof_ui_widget_set_flex_basis", Type.PrimitiveType.VOID, List.of(INT)) : null;
                 case "setMaxWidth" -> argCount == 1 ? new UiCall("kof_ui_widget_set_max_width", Type.PrimitiveType.VOID, List.of(INT)) : null;
+                // D-UI-STYLE (UI007) Q5: declarative style on every DOM widget
+                // (Style value, same shape as setFont(font)).
+                case "setStyle" -> argCount == 1 ? new UiCall("kof_ui_widget_set_style", Type.PrimitiveType.VOID, List.of(STYLE)) : null;
                 default -> null;
             };
             if (shared != null) return shared;

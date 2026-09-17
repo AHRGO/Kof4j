@@ -384,3 +384,26 @@ state (R3). `target()` returns the **id** of the node that originated the event
 (fallback to the lowercase `tagName` when the node has no `setId`; `""` outside
 the browser). `relatedTarget()` likewise for the related node (focus/mouse).
 Works on any DOM widget via `.on(type, handler)`.
+
+## Declarative style (CSS-like string)
+
+**BAD — manual per-property setters, Java-like ceremony:**
+```kof
+// ❌ NO — one call per property, and only View had a style
+var v = View(Style(Palette.white, Palette.black, 8, 4))
+```
+
+**GOOD — one idiomatic CSS string, parsed and validated in the compiler:**
+```kof
+// ✅ IDIOMATIC — parse/validate at compile time (SEM073/074/075, never silent)
+var card = Style("background: #ffffff; padding: 8; border-radius: 4")
+var v = View(card)
+var l = Label("titulo")
+l.setStyle(card)                       // any DOM widget, not only View
+```
+
+**Why:** the compiler owns the parse (D-UI-STYLE/UI007): hex/name/`Palette`
+colors, bare Int = px, `px`/`%`/`em`/`rem`, and a typed whitelist — an unknown
+property is `SEM073`, a malformed declaration `SEM074`, an invalid value
+`SEM075`. Never a silent fallback to `node.style` (R6). Real in KofJS;
+documented no-op on JVM/Native/Script, like the 4-Int `Style`.

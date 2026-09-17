@@ -220,6 +220,17 @@ public final class BuiltinCallTyper {
             for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
             return KofUi.STYLE;
         }
+        if (mc.receiver() == null && "Style".equals(mc.methodName()) && mc.arguments().size() == 1) {
+            // D-UI-STYLE (UI007): declarative form — parse/validate in the
+            // compiler (Q4) with a typed whitelist (Q3). SEM073 (unknown
+            // property) / SEM074 (malformed) / SEM075 (invalid value); the
+            // lowering re-parses only for the normalized text.
+            ExpressionNode arg = mc.arguments().get(0);
+            SemExpressionTyper.inferType(sa, arg, scope);
+            KofStyleParser.report(sa.diagnostics(), mc.position(),
+                    KofStyleParser.literalString(arg));
+            return KofUi.STYLE;
+        }
         if (mc.receiver() == null && "Link".equals(mc.methodName()) && mc.arguments().size() == 2) {
             for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
             return KofUi.LINK;

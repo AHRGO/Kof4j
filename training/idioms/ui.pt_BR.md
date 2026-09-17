@@ -384,3 +384,26 @@ relatedTarget.id) — o payload vem do browser, não de estado global manual
 `tagName` minúsculo quando o nó não tem `setId`; `""` fora do browser).
 `relatedTarget()` idem para o nó relacionado (foco/mouse). Funciona em
 qualquer widget DOM via `.on(type, handler)`.
+
+## Style declarativo (string CSS-like)
+
+**RUIM — setters por propriedade, cerimônia de Java:**
+```kof
+// ❌ NÃO — uma chamada por propriedade, e só o View tinha estilo
+var v = View(Style(Palette.white, Palette.black, 8, 4))
+```
+
+**BOM — uma string CSS idiomática, parseada e validada no compilador:**
+```kof
+// ✅ IDIOMÁTICO — parse/validação em compile-time (SEM073/074/075, nunca silencioso)
+var card = Style("background: #ffffff; padding: 8; border-radius: 4")
+var v = View(card)
+var l = Label("titulo")
+l.setStyle(card)                       // qualquer widget DOM, não só View
+```
+
+**Por quê:** o compilador faz o parse (D-UI-STYLE/UI007): cores hex/nome/`Palette`,
+inteiro nu = px, `px`/`%`/`em`/`rem`, e uma whitelist tipada — propriedade
+desconhecida é `SEM073`, declaração malformada `SEM074`, valor inválido
+`SEM075`. Nunca fallback silencioso para `node.style` (R6). Real no KofJS;
+no-op documentado no JVM/Native/Script, igual ao `Style` de 4 Ints.

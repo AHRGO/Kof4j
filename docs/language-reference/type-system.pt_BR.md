@@ -366,6 +366,9 @@ retorno do lambda (*probe*: map/filter/reduce corretos).
 | `SEM072` | `add`/`push`/`append` de List com aridade errada — ex. `l.add(i, v)` (não existe inserção posicional; use `set(i, v)`) | `MemberCallTyper` (#336, 4 alvos) |
 | `SEM073` | `reduce` de List com aridade errada — `reduce((a,b)->…)` sem seed (o reduce do Kof sempre recebe a lambda E uma seed, em qualquer ordem; a forma sem seed morria no `Frame.merge` da ASM) | `MemberCallTyper` (#361, 4 alvos) |
 | `SEM074` | método de instância em primitivo — ex. `n.abs()`, `n.equals(o)`, `n.toChar()` (primitivos só têm `toString()` e as conversões `toInt()`/`toLong()`/`toFloat()`/`toDouble()`; comparação é `a == b`, matemática é função top-level como `math.abs(x)`; a chamada fora da lista compilava e morria no load da classe) | `SemMethodCallTyper` (#362, 4 alvos) |
+| `SEM073` | `Style("<declarações>")` com propriedade fora da whitelist do kof.ui | `KofStyleParser` (D-UI-STYLE/UI007) |
+| `SEM074` | `Style("<declarações>")` com declaração malformada, ou argumento não-literal | `KofStyleParser` (D-UI-STYLE/UI007) |
+| `SEM075` | `Style("<declarações>")` com valor inválido para propriedade conhecida | `KofStyleParser` (D-UI-STYLE/UI007) |
 | `ARITH001` | divisão/resto por zero **constante** | `ExpressionBinaryLowerer` (guarda de zero constante) |
 
 Divisão por zero **não-constante** (`7 / z` com `z=0`) → erro de **runtime**

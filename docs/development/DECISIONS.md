@@ -1210,18 +1210,22 @@ padding, radius — `kof_ui_style_new`) is already shipped on all four targets
 2. **Parse in the compiler (Q4).** The declarations are parsed and validated
    at compile time; the lowering carries the **normalized** CSS text. A
    non-literal argument is a diagnostic (no runtime parse).
-3. **Colors (Q1).** Accept hex CSS (`#rgb`, `#rrggbb`, `#rrggbbaa`) and CSS
-   color names, **in addition to** the language's `Color`/`Palette` values
-   interpolated into the string.
+3. **Colors (Q1).** Accept hex CSS (`#rgb`, `#rrggbb`, `#rrggbbaa`), the CSS
+   color names and the `Palette` names (`red`, `cyan`, …) — the same table
+   `Palette` uses. The compiler validates the value and keeps it in the
+   normalized CSS (the browser resolves the name). The 4-Int `Style` form
+   remains the way to pass a computed `Color` value (the String form takes a
+   literal only).
 4. **Units (Q2).** A bare integer means `px`; the suffixes `px`, `%`, `em`
    and `rem` are accepted.
 5. **Properties (Q3).** A **typed whitelist**. A property outside the
    whitelist is a compile-time diagnostic (`SEM073`) — never silently
    forwarded to `node.style` (R6). A malformed declaration is `SEM074`; an
    invalid value for a known property is `SEM075`.
-6. **Scope (Q5).** `setStyle(String)` is available on **every DOM widget**
-   (`KofUi.isDomWidget`), not only `View` — through the shared
-   `kof_ui_widget_set_style` family (the UI005 pattern).
+6. **Scope (Q5).** `setStyle(style)` — taking the `Style` value, exactly like
+   `View(style)` — is available on **every DOM widget** (`KofUi.isDomWidget`),
+   not only `View`, through the shared `kof_ui_widget_set_style` family (the
+   UI005 pattern, same shape as `setFont(font)`).
 
 ### Invariants
 
@@ -1250,8 +1254,12 @@ compiler parser + `Style(String)` + lowering + JS runtime + tests; slice B =
 
 ### Evidence
 
-`UiE2ETest` (JVM + Native link) + `KofJsBrowserE2ETest` (headless Chrome,
-real DOM) + diagnostics tests for `SEM073`/`SEM074`/`SEM075`; `docs-lang.sh
+`UiStyleCssE2ETest` 10/10 (JVM + Native + Script + JS: happy path, CSS names,
+units, `setStyle` on a Label, `SEM073`/`SEM074`/`SEM075`, non-literal,
+4-Int non-regression) + `KofJsBrowserE2ETest` (headless Chrome, real DOM:
+`declarativeStyleRendersInRealBrowserDom`,
+`setStyleRendersOnAnyDomWidgetInRealBrowser`); full 4-module suite green
+outside the pre-existing §252 flake and §181/§256 cross reds; `docs-lang.sh
 check` 0/0/0.
 
 ### Relationships
