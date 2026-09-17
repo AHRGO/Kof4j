@@ -208,6 +208,10 @@ public final class ExpressionTyper {
                         && KofUi.paletteColor(fa.fieldName()) != null) {
                     yield KofUi.COLOR;
                 }
+                if (fa.receiver() instanceof IdentifierExpr tid && KofUiTokens.isTokenNamespace(tid.name())
+                        && KofUiTokens.tokenValue(tid.name(), fa.fieldName()) != null) {
+                    yield Type.PrimitiveType.INT;
+                }
                 if (BuiltinTypes.isList(recvType) && ("size".equals(fa.fieldName()) || "length".equals(fa.fieldName()))) {
                     yield Type.PrimitiveType.INT;
                 }

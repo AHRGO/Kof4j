@@ -1297,6 +1297,104 @@ docs/development/future/PLAN-UNIVERSAL-PLATFORM.pt_BR.md" → respondido
 ---
 
 
+## D-UI-TOKENS — tokens do design system (Fase 10, pilar 9)
+
+**Data:** 2026-09-18
+
+**Estado:** `DECIDIDO`
+
+**Origem:** autorização de escopo da mantenedora (chat, 18/09 — a resposta
+"todas" para as Fases 8–11 do Component Core). A superfície exata (nomes
+dos namespaces, nomes dos membros, valores em px) é um congelamento de API
+(regra 6); fica travada aqui, seguindo a convenção **D-UI-STYLE Q2** (Int nu
+é pixels) e a grade de 8px (consenso Material/Tailwind) para que os tokens
+sejam previsíveis e idiomáticos. A *forma* (cinco namespaces de constantes)
+é o contrato; os valores específicos da escala podem ser ajustados pela
+mantenedora sem mudar a forma da API.
+
+### Contexto
+
+`KOFUI-AUDIT.md`/`architecture.md` §2.1 pilar 9 ("Design system — Theme +
+tokens") lista os tokens `Color/Type/Spacing/Border/Radius/Elevation`. Hoje
+só existem `Color` (via `Palette`/`Color`) e `Theme`; não há tokens de
+Spacing/Border/Radius/Elevation/Typography, então os layouts usam literais
+hard-coded (`padding: 16`, `border-radius: 4`) em vez de nomear a intenção
+de design.
+
+### Contrato
+
+1. **Superfície.** Cinco namespaces de constantes, cada um um fold em
+   compile-time para um `Int` nu (px):
+
+   | Namespace | Membros (→ px) |
+   |-----------|----------------|
+   | `Spacing` | `xs`=4 `sm`=8 `md`=16 `lg`=24 `xl`=32 |
+   | `Radius` | `none`=0 `sm`=2 `md`=4 `lg`=8 `full`=9999 |
+   | `Border` | `hairline`=1 `thin`=2 `medium`=4 `thick`=8 |
+   | `Elevation` | `none`=0 `sm`=1 `md`=2 `lg`=3 `xl`=4 |
+   | `Typography` | `xs`=12 `sm`=14 `md`=16 `lg`=20 `xl`=24 `hero`=32 |
+
+2. **Fold no compilador (frontend compartilhado).** Um `FieldAccessExpr`
+   `Namespace.membro` é folding para `KofLoadLiteral(Int)` pelo mesmo
+   idiom que o `Palette`. Como o fold vive no frontend compartilhado, os
+   quatro targets (JVM/Native/Script/JS) carregam a mesma constante —
+   **paridade cross-target por construção**.
+
+3. **R6 — sem 0 silencioso.** Um membro inexistente (`Spacing.huge`) e uma
+   chamada de método num namespace (`Spacing.of(4)`) são um diagnóstico de
+   compile-time **`SEM076`** (mensagem em inglês, lista os membros válidos).
+   O buraco silencioso pré-existente `Palette.nope` é um gap separado e
+   catalogado (é superfície da lane compiler; os tokens não o replicam).
+
+4. **Aditivo e retrocompatível.** Nenhum identificador existente é
+   sombreado (`Spacing`/`Radius`/`Border`/`Elevation`/`Typography` eram
+   não usados). Os tokens compõem com os primitivos existentes
+   (`Label.setFontSize(Typography.lg)`, `Style("padding: " + Spacing.md + …)`
+   é a forma *literal* do style — os tokens carregam os mesmos valores px).
+
+### Invariantes
+
+- Os cinco namespaces são **apenas constantes** (sem métodos, sem forma
+  `var`).
+- Valores são `Int` px puros (D-UI-STYLE Q2); `full`=9999 é o idiom CSS de
+  "pílula" (totalmente arredondado).
+- Diagnósticos seguem D-DIAG-EN; `SEM076` é aditivo, não renumera nada.
+- Sem superfície de runtime: o fold é em compile-time, então não há no-op
+  por target a documentar (diferente do UI001) — o valor está na IR.
+
+### Alternativas rejeitadas
+
+- **Um namespace `Tokens` com membros aninhados** (`Tokens.Spacing.md`):
+  rejeitado — um nível extra de cerimônia sem ganho; o `Spacing.md` plano
+  casa com `Palette.red` e a tabela de idiom.
+- **Objetos de runtime / tokens `var`**: rejeitado — tokens são constantes
+  em compile-time; uma forma de runtime adicionaria um no-op por target
+  (família UI001) sem benefício.
+
+### Implementação
+
+Reivindicado no `DOING.md` (Fases 8–11, lane UI/style). `KofUiTokens.java`
+(tabela de fold + mensagens) + os seis pontos de toque do `Palette`
+(`SemExpressionTyper`×2, `ExpressionTyper`, `ExpressionLowerer`,
+`ExpressionMethodCallLowerer`, `MemberCallTyper`).
+
+### Evidência
+
+`UiTokensE2ETest` 7/7 — tabela golden em JVM + Native + Script (mesmo fold
+compartilhado → saída idêntica), DOM JS (o valor chega no texto renderizado),
+`SEM076` membro inexistente, `SEM076` chamada de método, composição com
+`Style`/widget; suíte 4-módulos verde fora do flake pré-existente §252 e dos
+reds cross §181/§256; `docs-lang.sh check` 0/0/0.
+
+### Relacionamentos
+
+- Entrega o pilar 9 de `architecture.md` §2.1 (Fase 10).
+- Relacionado: D-UI-STYLE (convenção px da Q2), `Palette` (idiom de fold),
+  UI001, D-DIAG-EN.
+
+---
+
+
 # 4. Decisões rejeitadas ou substituídas
 
 Esta seção é histórica. Ela não define o comportamento atual.

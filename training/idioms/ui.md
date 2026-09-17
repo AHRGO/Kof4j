@@ -407,3 +407,30 @@ colors, bare Int = px, `px`/`%`/`em`/`rem`, and a typed whitelist — an unknown
 property is `SEM073`, a malformed declaration `SEM074`, an invalid value
 `SEM075`. Never a silent fallback to `node.style` (R6). Real in KofJS;
 documented no-op on JVM/Native/Script, like the 4-Int `Style`.
+
+## Design-system tokens (Spacing/Radius/Border/Elevation/Typography)
+
+**BAD — hard-coded magic numbers (the design intent is unnamed):**
+```kof
+// ❌ NO — 16 and 4 are literals; nobody knows what they mean
+var card = Style("background: #ffffff; padding: 16; border-radius: 4")
+l.setFontSize(20)
+```
+
+**GOOD — name the design intent with the token scales (Fase 10, D-UI-TOKENS):**
+```kof
+// ✅ IDIOMATIC — Spacing/Radius/Border/Elevation/Typography.<name> = Int px
+var card = Style("background: #ffffff; padding: 16; border-radius: 4")  // literal still required by Style
+l.setFontSize(Typography.lg)        // 20
+var pad = Spacing.md                 // 16
+var rad = Radius.md                  // 4
+```
+
+**Why:** tokens are compile-time constants (Int px — D-UI-STYLE Q2), folded
+by the same idiom as `Palette`; because the fold is in the shared frontend,
+all four targets carry the same value. An unknown member (`Spacing.huge`)
+or a method call on a namespace (`Spacing.of(4)`) is `SEM076` (R6 — never a
+silent 0). Scales (8px grid): `Spacing` xs/sm/md/lg/xl = 4/8/16/24/32 ·
+`Radius` none/sm/md/lg/full = 0/2/4/8/9999 · `Border` hairline/thin/medium/
+thick = 1/2/4/8 · `Elevation` none/sm/md/lg/xl = 0/1/2/3/4 · `Typography`
+xs/sm/md/lg/xl/hero = 12/14/16/20/24/32.

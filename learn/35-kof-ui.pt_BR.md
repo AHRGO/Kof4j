@@ -33,6 +33,21 @@ dark.background().toCss()           // rgb(18, 18, 18)
 dark.primary()                      // Color
 ```
 
+Tokens do design system (Fase 10) — constantes `Int` (px) em compile-time
+que nomeiam a intenção de design:
+
+```kof
+Spacing.md          // 16  (xs=4 sm=8 md=16 lg=24 xl=32)
+Radius.lg           // 8   (none=0 sm=2 md=4 lg=8 full=9999)
+Border.thin         // 2   (hairline=1 thin=2 medium=4 thick=8)
+Elevation.md        // 2   (none=0 sm=1 md=2 lg=3 xl=4)
+Typography.lg       // 20  (xs=12 sm=14 md=16 lg=20 xl=24 hero=32)
+l.setFontSize(Typography.lg)
+```
+
+Membro inexistente (`Spacing.huge`) ou chamada de método (`Spacing.of(4)`)
+é `SEM076` — os tokens guardam constantes, nunca um 0 silencioso.
+
 ## Janelas e Widgets
 
 ```kof

@@ -311,6 +311,15 @@ public final class ExpressionLowerer {
                         yield localIdx;
                     }
                 }
+                if (fa.receiver() instanceof IdentifierExpr tid && KofUiTokens.isTokenNamespace(tid.name())) {
+                    Integer tok = KofUiTokens.tokenValue(tid.name(), fa.fieldName());
+                    if (tok != null) {
+                        ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, tok));
+                        yield localIdx;
+                    }
+                    ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 0));
+                    yield localIdx;
+                }
                 if (fa.receiver() instanceof IdentifierExpr sid2 && "super".equals(sid2.name())
                         && !owner.isEmpty() && driver.semanticAnalyzer != null) {
                     // super.campo: GETFIELD com owner na superclasse

@@ -84,7 +84,7 @@ Backend
 | **Navegação** | não existe | sem Route/Router; uma janela só |
 | **Estado** | ad-hoc | estado em **campos estáticos de classes** + lambda que atualiza label na mão; não há estado de componente nem invalidação |
 | **Renderização/invalidação** | imperativo | cada clique faz `label.text = ...` à mão; não há re-render, diffing, scheduling |
-| **Design system** | parcial | só Theme light/dark; não há tokens de Typography/Spacing/Border/Radius/Elevation |
+| **Design system** | parcial | Theme light/dark + `Color`/`Palette`; os tokens `Spacing`/`Radius`/`Border`/`Elevation`/`Typography` agora existem (Fase 10, `D-UI-TOKENS` — constantes px de compile-time); a aplicação semântica theme→widget segue manual |
 
 ### Problemas encontrados (diagnóstico)
 

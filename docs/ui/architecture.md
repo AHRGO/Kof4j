@@ -84,7 +84,7 @@ Backend
 | **Navigation** | does not exist | no Route/Router; a single window |
 | **State** | ad-hoc | state in **static class fields** + lambda that updates the label by hand; there is no component state nor invalidation |
 | **Rendering/invalidation** | imperative | each click does `label.text = ...` by hand; there is no re-render, diffing, scheduling |
-| **Design system** | partial | only Theme light/dark; there are no Typography/Spacing/Border/Radius/Elevation tokens |
+| **Design system** | partial | Theme light/dark + `Color`/`Palette`; the tokens `Spacing`/`Radius`/`Border`/`Elevation`/`Typography` now exist (Fase 10, `D-UI-TOKENS` — compile-time px constants); the semantic theme-to-widget application remains manual |
 
 ### Problems found (diagnosis)
 

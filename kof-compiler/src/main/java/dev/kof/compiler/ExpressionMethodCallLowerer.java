@@ -451,6 +451,7 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
         && (KofIo.isConstructor(uimrid.name())
             || KofMedia.isStaticNamespace(uimrid.name())
             || KofUi.isPalette(uimrid.name())
+            || KofUiTokens.isTokenNamespace(uimrid.name())
             || KofUi.isConstructor(uimrid.name())
             || KofUi.isRouterNamespace(uimrid.name()))) {
     return ExpressionUiMediaCallLowerer.lower(driver, mc, ops, owner, localIdx, locals);

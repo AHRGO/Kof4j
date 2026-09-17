@@ -1265,8 +1265,105 @@ check` 0/0/0.
 ### Relationships
 
 - Closes the rule-6 block on UI007 (`KOFUI-AUDIT.md` §UI007).
-- Related: UI001 (silent no-op family), UI005 (shared `kof_ui_widget_*`
-  family), D-DIAG-EN.
+ - Related: UI001 (silent no-op family), UI005 (shared `kof_ui_widget_*`
+   family), D-DIAG-EN.
+
+---
+
+
+## D-UI-TOKENS — design-system tokens (Fase 10, pillar 9)
+
+**Date:** 2026-09-18
+
+**State:** `DECIDED`
+
+**Origin:** maintainer scope authorisation (chat, 18/09 — the "all" answer
+for the Component Core phases 8–11). The exact surface (namespace names,
+member names, px values) is an API freeze (rule 6); it is locked here,
+following the **D-UI-STYLE Q2** convention (a bare Int is pixels) and the
+8px grid (Material/Tailwind consensus) so the tokens are predictable and
+idiomatic. The *shape* (five constant namespaces) is the contract; the
+specific scale values may be amended by the maintainer without changing the
+API shape.
+
+### Context
+
+`KOFUI-AUDIT.md`/`architecture.md` §2.1 pillar 9 ("Design system — Theme +
+tokens") lists the tokens `Color/Type/Spacing/Border/Radius/Elevation`.
+Today only `Color` (via `Palette`/`Color`) and `Theme` exist; there are no
+Spacing/Border/Radius/Elevation/Typography tokens, so layouts hard-code
+literals (`padding: 16`, `border-radius: 4`) instead of naming the design
+intent.
+
+### Contract
+
+1. **Surface.** Five constant namespaces, each a compile-time fold to a bare
+   `Int` (px):
+
+   | Namespace | Members (→ px) |
+   |-----------|----------------|
+   | `Spacing` | `xs`=4 `sm`=8 `md`=16 `lg`=24 `xl`=32 |
+   | `Radius` | `none`=0 `sm`=2 `md`=4 `lg`=8 `full`=9999 |
+   | `Border` | `hairline`=1 `thin`=2 `medium`=4 `thick`=8 |
+   | `Elevation` | `none`=0 `sm`=1 `md`=2 `lg`=3 `xl`=4 |
+   | `Typography` | `xs`=12 `sm`=14 `md`=16 `lg`=20 `xl`=24 `hero`=32 |
+
+2. **Fold in the compiler (shared frontend).** A `FieldAccessExpr`
+   `Namespace.member` is folded to a `KofLoadLiteral(Int)` by the same
+   idiom as `Palette`. Because the fold lives in the shared frontend, all
+   four targets (JVM/Native/Script/JS) carry the same constant —
+   **cross-target parity by construction**.
+
+3. **R6 — no silent 0.** An unknown member (`Spacing.huge`) and a method
+   call on a namespace (`Spacing.of(4)`) are a compile-time diagnostic
+   **`SEM076`** (English message, lists the valid members). The pre-existing
+   `Palette.nope` silent hole is a separate, catalogued gap (it is the
+   compiler lane's surface; tokens deliberately do not replicate it).
+
+4. **Additive & backward compatible.** No existing identifier is shadowed
+   (`Spacing`/`Radius`/`Border`/`Elevation`/`Typography` were unused).
+   Tokens compose with the existing primitives (`Label.setFontSize(
+   Typography.lg)`, `Style("padding: " + Spacing.md + …)` is the *style*
+   literal form — the tokens carry the same px values).
+
+### Invariants
+
+- The five namespaces are **constants only** (no methods, no `var` form).
+- Values are plain `Int` px (D-UI-STYLE Q2); `full`=9999 is the CSS
+  "pill" idiom for fully rounded.
+- Diagnostics follow D-DIAG-EN; `SEM076` is additive, renumbers nothing.
+- No runtime surface is added: the fold is compile-time, so there is no
+  per-target no-op to document (unlike UI001) — the value is in the IR.
+
+### Rejected alternatives
+
+- **A `Tokens` namespace with nested members** (`Tokens.Spacing.md`):
+  rejected — an extra level of ceremony for no gain; the flat
+  `Spacing.md` matches `Palette.red` and the idiom table.
+- **Runtime objects / `var` tokens**: rejected — tokens are compile-time
+  constants; a runtime form would add a no-op per target (UI001 family)
+  for zero benefit.
+
+### Implementation
+
+Claimed in `DOING.md` (Fases 8–11, lane UI/style). `KofUiTokens.java`
+(fold table + messages) + the six `Palette` touch points
+(`SemExpressionTyper`×2, `ExpressionTyper`, `ExpressionLowerer`,
+`ExpressionMethodCallLowerer`, `MemberCallTyper`).
+
+### Evidence
+
+`UiTokensE2ETest` 7/7 — golden table on JVM + Native + Script (same shared
+fold → identical output), JS DOM (value lands in rendered text),
+`SEM076` unknown member, `SEM076` method call, composition with
+`Style`/widget; full 4-module suite green outside the pre-existing §252
+flake and §181/§256 cross reds; `docs-lang.sh check` 0/0/0.
+
+### Relationships
+
+- Delivers pillar 9 of `architecture.md` §2.1 (Fase 10).
+- Related: D-UI-STYLE (Q2 px convention), `Palette` (fold idiom), UI001,
+  D-DIAG-EN.
 
 ---
 

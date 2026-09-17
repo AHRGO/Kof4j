@@ -194,3 +194,15 @@ plus the `__kofActions` cleanup; see `known-bugs.md` **§273**. Proof:
 `rerenderReleasesDiscardedButtonActions` (both RED pre-fix). Phase 9 still
 lacks node reuse/diffing (the "partial update" half) — this unit closes
 the leak only.
+
+### Phase 10 (Design system tokens) — DONE (18/09)
+
+`D-UI-TOKENS` delivered pillar 9 of `architecture.md` §2.1: the
+`Spacing`/`Radius`/`Border`/`Elevation`/`Typography` namespaces are
+compile-time `Int` (px) constants, folded by the same idiom as `Palette`
+(shared frontend → cross-target parity by construction). Unknown members and
+method calls on a namespace are `SEM076` (R6 — never a silent 0). Proof:
+`UiTokensE2ETest` 7/7 (golden table on JVM/Native/Script + JS DOM + both
+`SEM076` edges + composition with `Style`/widget). The audit matrix
+"Design system" row now reads: Theme + `Color`/`Palette` + the five token
+namespaces (the semantic theme-to-widget application remains manual).

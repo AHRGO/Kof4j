@@ -368,6 +368,7 @@ the lambda's return (*probe*: map/filter/reduce correct).
 | `SEM073` | `Style("<declarations>")` with a property outside the kof.ui whitelist | `KofStyleParser` (D-UI-STYLE/UI007) |
 | `SEM074` | `Style("<declarations>")` malformed declaration, or a non-literal argument | `KofStyleParser` (D-UI-STYLE/UI007) |
 | `SEM075` | `Style("<declarations>")` with an invalid value for a known property | `KofStyleParser` (D-UI-STYLE/UI007) |
+| `SEM076` | design-system token misuse: unknown member of `Spacing`/`Radius`/`Border`/`Elevation`/`Typography`, or a method call on a token namespace | `KofUiTokens` (Fase 10) |
 | `ARITH001` | division/remainder by a **constant** zero | `ExpressionBinaryLowerer` (constant-zero guard) |
 
 Division by a **non-constant** zero (`7 / z` with `z=0`) → **runtime**

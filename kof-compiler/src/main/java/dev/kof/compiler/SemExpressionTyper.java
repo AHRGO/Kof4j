@@ -87,6 +87,7 @@ public final class SemExpressionTyper {
                         && !KofTetris.isTetrisNamespace(ie.name())
                         && !KofMedia.isStaticNamespace(ie.name())
                         && !KofUi.isPalette(ie.name()) && !KofUi.isConstructor(ie.name())
+                        && !KofUiTokens.isTokenNamespace(ie.name())
                         && !KofUi.isRouterNamespace(ie.name())
                         && !"Theme".equals(ie.name())
                         && !MemberResolver.isBuiltinTypeName(ie.name())
@@ -309,6 +310,13 @@ public final class SemExpressionTyper {
             }
             case FieldAccessExpr fa -> {
                 if (fa.receiver() instanceof IdentifierExpr pId && KofUi.isPalette(pId.name()) && KofUi.paletteColor(fa.fieldName()) != null) yield KofUi.COLOR;
+                if (fa.receiver() instanceof IdentifierExpr tid && KofUiTokens.isTokenNamespace(tid.name())) {
+                    if (KofUiTokens.tokenValue(tid.name(), fa.fieldName()) == null && sa.diagnostics() != null) {
+                        sa.diagnostics().error("", 0, 0, 0,
+                                KofUiTokens.unknownMemberMessage(tid.name(), fa.fieldName()), "SEM076");
+                    }
+                    yield Type.PrimitiveType.INT;
+                }
                 String en = MemberResolver.enumNameOfConstant(sa.unit(), fa);
                 if (en != null) yield new Type.ClassType("", en, List.of());
                 Type recvType = inferType(sa, fa.receiver(), scope);

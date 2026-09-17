@@ -28,6 +28,16 @@ public final class MemberCallTyper {
                 return routerCall.returnType();
             }
         }
+        if (mc.receiver() instanceof IdentifierExpr tokR && KofUiTokens.isTokenNamespace(tokR.name())) {
+            // Fase 10: tokens são CONSTANTES — um método neles é SEM076 (R6),
+            // nunca queda silenciosa p/ void.
+            if (sa.diagnostics() != null) {
+                sa.diagnostics().error("", 0, 0, 0,
+                        "token '" + tokR.name() + "' has no methods — it holds constants: "
+                        + KofUiTokens.memberList(tokR.name()), "SEM076");
+            }
+            return Type.PrimitiveType.VOID;
+        }
         // Nome de CLASSE KOF (de qualquer pacote do modulo) como
         // receiver para metodo ESTATICO: Desconto.aplicar(c)
         if (mc.receiver() instanceof IdentifierExpr krid
