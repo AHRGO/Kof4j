@@ -1093,6 +1093,55 @@ diagnóstico segue D-DIAG-EN (inglês).
 
 ---
 
+## D-NOT-JAVA — Kof não é Java/Kotlin: pedido de feature de outra língua NÃO é bug do Kof
+
+**Data:** 2026-09-18
+
+**Estado:** `DECIDIDO`
+
+**Origem:** diretriz da mantenedora, 18/09 (varredura de issues): "ele ta
+abrindo issue de java no kof. kof não é java. não tem string builder no kof.
+responde todas e as que não forem relativas a kof ou que ele usou treinamento
+errado devem ser ignoradas e fechadas. adiciona isso como regra absoluta."
+
+### Contrato
+
+1. Pedido de construto que não existe no Kof porque é **Java/Kotlin/C#
+   traduzido** NÃO é bug: o compilador rejeitar é comportamento correto.
+   Exemplos medidos na varredura: `StringBuilder`, `val`/`var` top-level,
+   keywords `fun`/`val`, `v is Car`, `"""três aspas"""`, `Pair`, `it` implícito
+   de lambda, `mutableListOf`, Elvis `?:`, `?.`, intervalo `0..n`, `!!`,
+   argumento nomeado, construtor primário estilo Kotlin COM corpo,
+   `catch (e: Type)`, `object`, `open`/`override`.
+2. Tratamento: **responder uma vez com o idiom do Kof que substitui** (a
+   tabela de idioms de `AGENTS.md`) e **FECHAR a issue** como não-procedente.
+   Não implementar a feature estrangeira nem "melhorar o diagnóstico" de uma
+   rejeição correta.
+3. Exceção (trabalho real): o Kof *promete* o construto em
+   `training/`/`learn/`/docs e o compilador discorda da própria documentação —
+   aí é bug (regra 4 do freeze); e *como* a feature existiria é decisão de
+   design reservada à mantenedora (regra 6).
+4. A regra fica registrada como **§8 de AGENTS.md** (EN+PT) — absoluta.
+
+### Evidência
+
+- Varredura 18/09, fechadas sob esta regra: #407, #417, #418, #422, #424,
+  #425, #406, #410, #414, #416, #411, #412, #419, #420, #421, #404, #364,
+  #367, #350, #386, #427 (cada fechamento traz o idiom Kof correto).
+- Autoridade no corpus: `AGENTS.md` §"Fake idioms — DO NOT EXIST in Kof",
+  `training/anti-patterns/fake-idioms.md`, `learn/15` (`is`/binding não tem
+  suporte → `switch`/`as`).
+
+### Relações
+
+- Generaliza o precedente do cluster de açúcar `let/const` (§263) e
+  `Int.MAX_VALUE` (bug 99 / SEM050).
+- NÃO cobre: bugs cujo reproducer é Kof válido (#403, #336, #313 — ficam e
+  foram corrigidos), nem o cluster nullable-primitive (D-NULL-INTENT), nem a
+  resolução de tipo JDK sem qualificar (§268).
+
+---
+
 
 # 4. Decisões rejeitadas ou substituídas
 

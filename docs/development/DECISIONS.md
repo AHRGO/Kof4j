@@ -1131,6 +1131,61 @@ wording must follow D-DIAG-EN (English).
 
 ---
 
+## D-NOT-JAVA — Kof is not Java/Kotlin: a foreign-language feature request is NOT a Kof bug
+
+**Date:** 2026-09-18
+
+**State:** `DECIDED`
+
+**Origin:** maintainer directive, 18/09 (issue sweep): "ele ta abrindo issue de
+java no kof. kof não é java. não tem string builder no kof. responde todas e as
+que não forem relativas a kof ou que ele usou treinamento errado devem ser
+ignoradas e fechadas. adiciona isso como regra absoluta."
+
+### Contract
+
+1. A request for a construct that does not exist in Kof because it is
+   **translated Java/Kotlin/C#** is **not a bug**: the compiler rejecting it is
+   correct behavior. Examples measured in the sweep: `StringBuilder`,
+   top-level `val`/`var`, `fun`/`val` keywords, `v is Car`, `"""triple
+   quotes"""`, `Pair`, `it` implicit lambda parameter, `mutableListOf`, Elvis
+   `?:`, `?.`, `0..n` ranges, `!!`, named arguments, Kotlin-style primary
+   constructor with body, `catch (e: Type)`, `object`, `open`/`override`.
+2. Handling: **answer once with the Kof idiom that replaces it** (the idiom
+   table of `AGENTS.md` §"Idiom table") and **close the issue** as
+   not-valid. Do not implement the foreign feature; do not "improve the
+   diagnostic" of a correct rejection.
+3. Exception (real work): Kof *claims* the construct in `training/`/`learn/`/
+   docs and the compiler disagrees with its own documentation — that is a
+   bug (freeze rule 4), and *how* the feature would exist is a design
+   decision reserved to the maintainer (rule 6).
+4. The rule is recorded as iron rule **§8 of AGENTS.md** (EN+PT) — absolute.
+
+### Evidence
+
+- Sweep 18/09: closed under this rule: #407 (top-level val/var), #417
+  (`mutableListOf`), #418 (`Pair`), #422 (`it` + `any/all/none` chain), #424
+  (`StringBuilder`), #425 (`object`), #406 (`v is Car`), #410 (`0..n`), #414
+  (Elvis `?:`), #416 (`!!`), #411 + #412 (`: Type` syntax family), #419
+  (destructured `for ((k,v) in map)`), #420 (`open`/`override`), #421
+  (primary-ctor-with-body), #404 (`catch (e: Type)` form — real issue tracked
+  as #427 where applicable), #364 (`"""triple quotes"""`), #367 (named args),
+  #415 (`s[0]` on String — decided: strings are not indexable in Kof; use
+  `charAt`).
+- Corpus authority: `AGENTS.md` §"Fake idioms — DO NOT EXIST in Kof",
+  `training/anti-patterns/fake-idioms.md`, `learn/15` (`is`/binding not
+  supported → `switch`/`as`).
+
+### Relationships
+
+- Generalizes the precedent of the `let/const` sugar cluster (§263) and
+  `Int.MAX_VALUE` (bug 99 / SEM050).
+- Does NOT cover: bugs where the reproducer is valid Kof (e.g. #403, #336,
+  #313 — those stay and got fixed) nor the nullable-primitive cluster
+  (D-NULL-INTENT) nor unqualified-JDK-type resolution (§268/D-DECL family).
+
+---
+
 
 # 4. Rejected or superseded decisions
 

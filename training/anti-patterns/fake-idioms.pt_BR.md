@@ -139,3 +139,40 @@ Quando a feature não existe: use a alternativa real OU marque `WORKAROUND`.
 > bordas de token. Para aspas em string-esperada de test, prefira **evitar a
 > aspa** no assert (ex.: testar `&amp;quot;` → `&quot;` em vez de embutir `"`/
 > `'` no literal esperado).
+
+## "Kof não é Java/Kotlin/C#/JS" — issue pedindo para virar outra língua NÃO é bug
+
+**Regra (ABSOLUTA, mantenedora 18/09 — `AGENTS.md` §8, `DECISIONS.md`
+D-NOT-JAVA).** O Kof tem sintaxe própria e única. Quando um pedido
+(issue/PR) quer um construto que só existe porque é Java, Kotlin, C# ou
+JavaScript **traduzido**, a rejeição do compilador é **correta e esperada** —
+a issue é **não-procedente**: responda uma vez com o idiom do Kof que
+substitui e feche. Nunca implemente a feature estrangeira; nunca "conserte o
+diagnóstico" de uma rejeição correta. Só vira bug real se o Kof *promete* o
+construto neste corpus/docs e o compilador *discorda da própria doc*.
+
+| ❌ Estrangeiro (Java/Kotlin/C#/JS) | ✅ Idiom do Kof que substitui |
+|---|---|
+| `StringBuilder` | `+` / `+=` (concatenação já é eficiente) |
+| `val`/`var`/`let` top-level | dentro de função, ou campo de `class` |
+| keyword `fun name()` / `val` | `String name() { }` (tipo antes do nome) |
+| `v is Car` (type-check Kotlin) | `if (v instanceof Car) { var c = v as Car … }` ou `case Car c:` no `switch` |
+| `"""três aspas"""` | strings normais `"…"` (sem literal raw/bloco) |
+| `Pair(a, b)` / `Triple` | um `record` com campos nomeados |
+| `xs.any { it > 3 }` / `all`/`none`/`count { }` / `it` | `xs.filter((x: Int) -> x > 3)` e checar `.size()`; o parâmetro do lambda é **sempre explícito** |
+| `mutableListOf()` | `listOf(...)` (a lista do Kof já é mutável) |
+| `object` (singleton Kotlin) | uma `class` com campos + construtor, ou funções top-level |
+| Elvis `a ?: b`, safe-call `x?.y`, `x!!` | `if (x != null) …` (nulabilidade por narrowing) |
+| intervalos `0..n` / `1 until n` | `for (var i = 0; i < n; i++) { … }` |
+| argumento nomeado `f(p = v)` | argumentos posicionais na ordem da declaração |
+| `class Box(size: Int) { corpo }` primário+corpo | `record Box(Int size)` (sem corpo) **ou** `class` com `constructor(Int size)` explícito |
+| `catch (e: Exception)` tipado | `catch (String e)` (exceção no Kof **é** String; `throw "msg"`) |
+| `open` / `override` | métodos simples — o Kof faz dispatch por assinatura, sem modificador |
+| `let` / `const` / `async fn` | `var`/`val`; `spawn`/`await` |
+| destructuring `for ((k, v) in map)` | `map.keys()` e depois `map.get(k)` |
+| indexar String com `s[0]` | `s.charAt(0)` |
+
+> Cruzamento: se o reproducer compilaria em **Kotlin/Java** por ser
+> *traduzido*, é esta regra — rejeite. A família de bugs é só sobre código que
+> **é** Kof válido e o compilador trata mal (ex.: #403 hijack do campo `log`,
+> #313 `throw Exception` sem qualificar, #336 `l.add(i,v)`).

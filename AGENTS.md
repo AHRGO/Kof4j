@@ -563,6 +563,23 @@ Bool isQuery(String op) {
    new file is named for what it **contains** (the responsibility that
    left), not for how many siblings already exist. Readability comes before
    any typing economy.
+8. **Kof is not Java/Kotlin/C# — a request for another language's feature is
+   NOT a Kof bug (ABSOLUTE, maintainer 18/09).** When an issue asks for a
+   construct that does not exist in Kof because it is **translated Java or
+   Kotlin** (`StringBuilder`, `.equals()`, `new`, top-level `val`/`var`/`let`,
+   `fun`/`val` keyword, `v is Car`, `"""triple quotes"""`, `Pair`, `it` implicit
+   lambda param, `mutableListOf`, Elvis `?:`, `?.`, `0..n`, `!!`, named args
+   `f(p=v)`, primary `class Box(size: Int)` with body, `catch (e: Type)`,
+   `object`, `open`/`override`), the compiler's rejection is **correct and
+   expected** — the issue is **NOT-VALID, answer once with the Kof idiom that
+   replaces it (the idiom table in this file) and CLOSE it**; do NOT implement
+   the foreign feature and do NOT "fix the diagnostic". It only becomes real
+   work if Kof *claims* the construct in `training/`/`learn/`/docs and the
+   compiler *disagrees with its own docs* (that is a bug) — or if the
+   maintainer decides (rule 6: a design decision, not an agent edit). Every
+   such close carries the "Kof is not Java" reason and points to
+   `training/anti-patterns/fake-idioms.md`. Cross-check: if the reproducer
+   would compile in **Kotlin/Java** but is *translated*, it is this rule.
 
 ---
 

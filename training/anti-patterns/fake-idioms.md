@@ -139,3 +139,40 @@ When the feature does not exist: use the real alternative OR mark `WORKAROUND`.
 > token boundaries. For quotes in a test-expected string, prefer **avoiding the
 > quote** in the assert (e.g.: test `&amp;quot;` → `&quot;` instead of embedding `"`/
 > `'` in the expected literal).
+
+## "Kof is not Java/Kotlin/C#/JS" — an issue asking to become another language is NOT a bug
+
+**Rule (ABSOLUTE, maintainer 18/09 — `AGENTS.md` §8, `DECISIONS.md`
+D-NOT-JAVA).** Kof has its own unique syntax. When a request (issue/PR) asks
+for a construct that only exists because it is **translated** Java, Kotlin,
+C# or JavaScript, the compiler's rejection is **correct and expected** — the
+issue is **not-valid**: answer once with the Kof idiom that replaces it and
+close it. Never implement the foreign feature; never "fix the diagnostic" of a
+correct rejection. It is only a real bug if Kof *promises* the construct in
+this corpus/docs and the compiler *disagrees with its own docs*.
+
+| ❌ Foreign (Java/Kotlin/C#/JS) | ✅ Kof idiom that replaces it |
+|---|---|
+| `StringBuilder` | `+` / `+=` (concat is already efficient) |
+| top-level `val`/`var`/`let` | inside a function, or a `class` field |
+| `fun name()` / `val` keyword | `String name() { }` (type before the name) |
+| `v is Car` (Kotlin type-check) | `if (v instanceof Car) { var c = v as Car … }` or `case Car c:` in `switch` |
+| `"""triple quotes"""` | normal `"…"` strings (no raw/block literal) |
+| `Pair(a, b)` / `Triple` | a `record` with named fields |
+| `xs.any { it > 3 }` / `all`/`none`/`count { }` / `it` | `xs.filter((x: Int) -> x > 3)` then check `.size()`; the lambda param is **always explicit** |
+| `mutableListOf()` / `setOf(...)` variadic is fine | `listOf(...)` (Kof lists are already mutable) |
+| `object` (Kotlin singleton) | a `class` with fields + constructor, or top-level functions |
+| `a ?: b` (Elvis), `x?.y` (safe call), `x!!` | `if (x != null) …` (nullability by narrowing) |
+| `0..n` / `1 until n` ranges | `for (var i = 0; i < n; i++) { … }` |
+| `f(p = v)` named args | positional args in declaration order |
+| `class Box(size: Int) { body }` primary+body | `record Box(Int size)` (no body) **or** a `class` with explicit `constructor(Int size)` |
+| `catch (e: Exception)` typed catch | `catch (String e)` (Kof exceptions **are** Strings; `throw "msg"`) |
+| `open` / `override` | plain methods — Kof dispatches by signature, no modifiers |
+| `let` / `const` / `async fn` | `var`/`val`; `spawn`/`await` |
+| `Map.Entry` destructured `for ((k, v) in map)` | `map.keys()` then `map.get(k)` |
+| `s[0]` indexing a `String` | `s.charAt(0)` |
+
+> Cross-check: if the reproducer would compile in **Kotlin/Java** because it is
+> *translated*, it is this rule — reject it. The bug family is only about code
+> that **is** valid Kof and the compiler mishandles (e.g. #403 `log` field
+> hijack, #313 unqualified `throw Exception`, #336 `l.add(i,v)`).

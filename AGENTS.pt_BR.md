@@ -560,8 +560,25 @@ Bool isQuery(String op) {
    `stdmath2` — não. Sufixo numérico é lixo de co-processador (só existe para
    não colidir com um nome que ninguém entendeu). Ao splitar por gate ≤500, o
    arquivo novo ganha nome pelo que **contém** (a responsabilidade que
-   saiu), não por quantos irmãos já existem. Legibilidade vem antes de
-   qualquer economia de digitação.
+    saiu), não por quantos irmãos já existem. Legibilidade vem antes de
+    qualquer economia de digitação.
+8. **Kof não é Java/Kotlin/C# — pedido de feature de outra língua NÃO é bug do
+   Kof (ABSOLUTO, mantenedora 18/09).** Quando uma issue pede um construto que
+   não existe no Kof porque é **Java ou Kotlin traduzido** (`StringBuilder`,
+   `.equals()`, `new`, `val`/`var`/`let` top-level, keyword `fun`/`val`,
+   `v is Car`, `"""três aspas"""`, `Pair`, `it` implícito de lambda,
+   `mutableListOf`, Elvis `?:`, `?.`, `0..n`, `!!`, argumento nomeado `f(p=v)`,
+   `class Box(size: Int)` primário COM corpo, `catch (e: Type)`, `object`,
+   `open`/`override`), a rejeição do compilador é **correta e esperada** — a
+   issue é **NÃO-PROCEDENTE: responda uma vez com o idiom do Kof que substitui
+   (a tabela de idioms deste arquivo) e FECHE-a**; NÃO implemente a feature
+   estrangeira nem "conserte o diagnóstico". Vira trabalho real apenas se o Kof
+   *promete* o construto em `training/`/`learn/`/docs e o compilador *discorda
+   da própria doc* (aí sim é bug) — ou se a mantenedora decidir (regra 6:
+   decisão de design, não edição de agente). Todo fechamento desses carrega o
+   motivo "Kof não é Java" e aponta `training/anti-patterns/fake-idioms.pt_BR.md`.
+   Cruzamento: se o reproducer compilaria em **Kotlin/Java** por ser
+   *traduzido*, é esta regra.
 
 ---
 
