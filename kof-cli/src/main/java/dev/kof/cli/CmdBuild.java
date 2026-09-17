@@ -23,10 +23,12 @@ final class CmdBuild {
     private CmdBuild() {
     }
 
+    private static final String USAGE = "usage: kof build <source-dir> [--target jvm|native|js|native.risc|native.arm|android] [--backend <t>] [--frontend <t>] [--output <dir>] [--release] [--apk] [--aab] [--fat] [--print-sizes] [--classpath <jars>] [--keystore <ks> [--storepass <p>] [--keypass <p>] [--alias <a>]] [--min-sdk <n>] [--target-sdk <n>]";
+
     static void run(String[] args) {
-        if (args.length < 2) { System.err.println("usage: kof build <source-dir> [--target jvm|native|js|native.risc|native.arm|android] [--backend <t>] [--frontend <t>] [--output <dir>] [--release] [--apk] [--aab] [--fat] [--print-sizes] [--classpath <jars>] [--keystore <ks> [--storepass <p>] [--keypass <p>] [--alias <a>]] [--min-sdk <n>] [--target-sdk <n>]"); return; }
+        if (args.length < 2) { System.err.println(USAGE); return; }
         if ("--help".equals(args[1]) || "-h".equals(args[1]) || "--version".equals(args[1])) {
-            System.out.println("usage: kof build <source-dir> [--target jvm|native|js|native.risc|native.arm|android] [--backend <t>] [--frontend <t>] [--output <dir>] [--release] [--apk] [--aab] [--fat] [--print-sizes] [--classpath <jars>] [--keystore <ks> [--storepass <p>] [--keypass <p>] [--alias <a>]] [--min-sdk <n>] [--target-sdk <n>]");
+            System.out.println(USAGE);
             return;
         }
         Path src = Path.of(args[1]);
@@ -114,6 +116,22 @@ final class CmdBuild {
                 targetSdkArg = arg.substring("--target-sdk=".length());
             } else if (arg.equals("--target-sdk") && i + 1 < args.length) {
                 targetSdkArg = args[++i];
+            } else if (arg.equals("--help") || arg.equals("-h")) {
+                System.out.println(USAGE);
+                return;
+            } else if (arg.startsWith("-")) {
+                // R6: an unknown flag (or a known flag missing its value) must
+                // never be silently ignored — the user/CI would believe it took
+                // effect. Same rule already applied by check/fmt/inspect/init.
+                System.err.println("build: unknown or incomplete flag: " + arg
+                        + " (see 'kof build --help')");
+                System.exit(1);
+                return;
+            } else {
+                System.err.println("build: unexpected argument: " + arg
+                        + " (see 'kof build --help')");
+                System.exit(1);
+                return;
             }
         }
         // F2-parte-4 (plataforma): --backend/--frontend sobrepõem o kof.toml.
