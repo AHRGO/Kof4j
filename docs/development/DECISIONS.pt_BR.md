@@ -1447,6 +1447,46 @@ CoreRegression 102 + CompilerDriver 256 verdes.
 
 ---
 
+## D-UI-DIFF — Fase 9 (atualização parcial / reuso de nó): questão de contrato, BLOQUEADA na mantenedora (regra 6)
+
+**Data:** 2026-09-18
+
+**Estado:** `BLOQUEADA` — precisa de decisão da mantenedora; não é edição de agente.
+
+**Contexto:** a Fase 9 de `architecture.md` quer "atualização parcial":
+reusar o nó DOM quando o view re-renderiza o mesmo widget na mesma posição.
+Hoje o re-render é rebuild+prune: o §273 tirou o vazamento, mas a identidade
+ainda é recriada — **medido 18/09 (host embarcado, probe scratch):** o
+handle do label-raiz de um `view (s) -> Label("v="+s)` é `3` após 1 state
+write e `7` após 5 (um handle novo por render; subárvore antiga podada,
+correta mas nova). Consequências: toda referência que o usuário guardou a um
+widget de um render anterior fica obsoleta, e estado do DOM real (focus de
+input, cursor, scroll, transições CSS) se perde a cada state write.
+
+**Opções (não decididas aqui — regra 6, ciclo de vida/identidade do §2.7 é
+congelado):**
+- **(A) Reconcilador posicional completo** (VDOM-lite): builders emitem
+  descritores, um diff por (posição, tipo) conserta propriedades no lugar.
+  Maior ganho, maior risco: exige tabela de cópia de propriedades por família
+  de widget e faz handles antigos continuarem vivos — mudança de contrato de
+  identidade.
+- **(B) Reuso da raiz por tipo** (primeira fatia): quando raiz antiga e nova
+  são do mesmo tipo, copiar as propriedades de valor para o nó ANTIGO e
+  descartar o novo — um widget por vez, mensurável, mas ainda é mudança de
+  identidade de handle na raiz (decisão de aliasing obrigatória).
+- **(C) Manter rebuild; sem reuso.** Honestos e simples; a perda de
+  focus/cursor fica limitação documentada (estado atual).
+
+**Recomendação (lane UI/style):** (B) com nota explícita de identidade — a
+menor unidade coesa que conserta a dor visível (perda de focus no caso
+comum de widget único na raiz) sem camada VDOM. A decisão (qual opção + o
+contrato de continuidade de handle) é da mantenedora.
+
+**Relacionado:** §273 (prune), §274 (unsubscribe), linhas da Fase 9 na
+audit, D-UI-APPSTATE (postura do unsub manual).
+
+---
+
 
 # 4. Decisões rejeitadas ou substituídas
 

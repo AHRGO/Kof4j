@@ -1419,6 +1419,44 @@ CoreRegression 102 + CompilerDriver 256 green.
 
 ---
 
+## D-UI-DIFF — Fase 9 (partial update / node reuse): contract question, BLOCKED on the maintainer (rule 6)
+
+**Date:** 2026-09-18
+
+**State:** `BLOCKED` — needs a maintainer decision; not an agent edit.
+
+**Context:** `architecture.md` Phase 9 wants "partial update": reuse the DOM
+node when the view re-renders the same widget at the same position. Today
+re-render is rebuild+prune: §273 removed the leak, but identity is still
+re-created — **measured 18/09 (embedded host, scratch probe):** a
+`view (s) -> Label("v="+s)` component's root label handle is `3` after 1
+state write and `7` after 5 (one fresh handle per render; old subtree
+pruned, correct but new). Consequences: any reference a user kept to a
+widget from a previous render is stale, and real-DOM state (input focus,
+caret, scroll, CSS transitions) is lost on every state write.
+
+**Options (not decided here — rule 6, §2.7 lifecycle/identity is frozen):**
+- **(A) Full positional reconciler** (VDOM-lite): builders emit descriptors,
+  a diff-by-(position, kind) patches properties in place. Biggest gain,
+  biggest risk: needs a property-copy table per widget family, and makes old
+  handles stay live — an identity contract change.
+- **(B) Root-kind reuse patch** (first slice): when old and new root are the
+  same kind, copy the value-bearing properties onto the OLD DOM node and
+  discard the new node — one widget at a time, measurable, but still a
+  handle-identity change at the root (aliasing decision required).
+- **(C) Keep rebuild; no reuse.** Honest, simple; focus/caret loss stays a
+  documented limitation (current state).
+
+**Recommendation (lane UI/style):** (B) behind an explicit identity note —
+smallest cohesive unit that fixes the user-visible pain (focus loss on the
+common single-root-widget case) without a VDOM layer. The decision (which
+option + the handle-continuity contract) is the maintainer's.
+
+**Related:** §273 (prune), §274 (unsubscribe), Fase 9 audit lines,
+D-UI-APPSTATE (manual-unsub stance).
+
+---
+
 ## D-UNIVERSAL — promotion of `PLAN-UNIVERSAL-PLATFORM` to current work (R12 overridden)
 
 **Date:** 2026-09-17

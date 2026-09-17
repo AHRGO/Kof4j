@@ -193,7 +193,9 @@ plus the `__kofActions` cleanup; see `known-bugs.md` **§273**. Proof:
 `ComponentCoreE2ETest.rerenderPrunesPreviousSubtreeFromRegistry` +
 `rerenderReleasesDiscardedButtonActions` (both RED pre-fix). Phase 9 still
 lacks node reuse/diffing (the "partial update" half) — this unit closes
-the leak only.
+the leak only. The reuse half is a rule-6 identity contract question —
+planned with options + measured evidence in `DECISIONS.md` **D-UI-DIFF**
+(`BLOCKED` on the maintainer); no agent edit without it.
 
 ### Phase 10 (Design system tokens) — DONE (18/09)
 

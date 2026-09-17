@@ -195,7 +195,10 @@ raiz mais a limpeza de `__kofActions`; ver `known-bugs.md` **§273**. Prova:
 `ComponentCoreE2ETest.rerenderPrunesPreviousSubtreeFromRegistry` +
 `rerenderReleasesDiscardedButtonActions` (ambos VERMELHOS pré-fix). A Fase
 9 continua sem reuso de nó/diffing (a metade "partial update") — esta
-unidade fecha só o vazamento.
+unidade fecha só o vazamento. A metade de reuso é questão de contrato de
+identidade regra 6 — planejada com opções + evidência medida em
+`DECISIONS.pt_BR.md` **D-UI-DIFF** (`BLOQUEADA` na mantenedora); sem edição
+de agente sem ela.
 
 ### Fase 10 (tokens do design system) — FEITA (18/09)
 
