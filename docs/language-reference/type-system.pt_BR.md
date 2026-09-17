@@ -363,6 +363,7 @@ retorno do lambda (*probe*: map/filter/reduce corretos).
 | `SEM069` | `final abstract class X` (modificadores contraditórios — sem instância nem subclasse possível) | `ClassShapeChecks.checkClassDeclaration` (#341) |
 | `SEM070` | `class D extends F` onde `F` é declarada `final` | `ClassShapeChecks.checkClassDeclaration` (#339) |
 | `SEM071` | instanciação de `interface` (`new I()` e `I()`) | `ClassShapeChecks.checkInstantiable` (#340) |
+| `SEM072` | `add`/`push`/`append` de List com aridade errada — ex. `l.add(i, v)` (não existe inserção posicional; use `set(i, v)`) | `MemberCallTyper` (#336, 4 alvos) |
 | `ARITH001` | divisão/resto por zero **constante** | `ExpressionBinaryLowerer` (guarda de zero constante) |
 
 Divisão por zero **não-constante** (`7 / z` com `z=0`) → erro de **runtime**

@@ -142,6 +142,21 @@ public final class MemberCallTyper {
             }
             // inferir args para detectar identificadores não declarados (ghost) nos argumentos/lambdas
             for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
+            // #336 — `add`/`push`/`append` são APPEND de UM elemento no Kof
+            // (learn/12, training/idioms/collections). `l.add(i, v)` (o
+            // insert posicional do Java) compilava e quebrava DIFERENTE em
+            // cada alvo: JVM VerifyError no load, JS/Script engoliam o índice
+            // e faziam append silencioso (divergência rule-5, R6). Não existe
+            // insert posicional na linguagem; `set(i, v)` (replace) sim.
+            // Rejeição universal na semântica compartilhada (mesma face do
+            // CatchTypeCheck #332 — um gate, os 4 alvos reportam).
+            if (("add".equals(mn) || "push".equals(mn) || "append".equals(mn))
+                    && mc.arguments().size() != 1 && sa.diagnostics() != null) {
+                sa.diagnostics().error("", 0, 0, 0,
+                        "List." + mn + " appends exactly one element; there is no positional insert — "
+                                + "use set(index, value) to replace at an index",
+                        "SEM072");
+            }
             if ("get".equals(mn)) return elemType;
             if ("remove".equals(mn)) return elemType;
             if ("size".equals(mn) || "length".equals(mn) || "count".equals(mn))

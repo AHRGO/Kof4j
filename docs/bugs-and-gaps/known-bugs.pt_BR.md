@@ -9523,6 +9523,7 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
   doc×Set.of).
 > | **§265 ✅ CORRIGIDO 16/09 (lane development `.18`)** | Handlers web do KofJS: `status(201, body)`/`headerSet()` eram no-ops SILENCIOSOS — `JsRuntimeOps.handleRuntimeOp` tinha um ramo de colapso (`status→args.get(1)`) que DESCARTAVA a chamada do `invoke()` emitido (decisivo), e `kofWebStatus` lia `kofWebRequest.response` (campo que nunca existiu; o `response` vive no `ctx`). JVM: `201`+`X-Custom`; JS: `200`, header descartado (R6; a célula "JS ✅ 08/27" do ecosystem-coverage era false-green — suporte em compile ≠ efeito em runtime). Conserto = remover os ramos de colapso (o roteamento correto já existia abaixo) + deferir `_status`/`_headerQueue` aplicados pelo pump antes do envio (o HttpServer do JDK exige headers pré-envio), idem thread-local do JVM. Prova: `KofWebJsE2ETest.jsWebStatusAndHeaderReachTheWire` (VERMELHO pré-fix, medido `return "made"` no JS emitido + `200` no fio vivo). `status/header` do Native fica `– WEB001` (honesto).
 > | **§266 ✅ CORRIGIDO 17/09 (lane development `.18`)** | Corpo de loop com `if` seguido de statements miscompilava SÓ no JS (locais escapavam p/ a cláusula `for(;…;update)`) — `ReferenceError` headless, UI VAZIA SILENCIOSA em `Component.view` (catch do kofUiRender). Correção = `KofContinueLabel(label, loopStart)` estrutural emitido no lowering; o reconstructor consome o marcador, a varredura-para-trás ambígua + o guess `looksLikeContinueLabel` SAÍRAM; split `JsTryParser` mantém o arquivo <600. Prova: `JsLoopIfTailE2ETest` 7/7 + ReorderList da lib de volta à forma `if` direta no Chrome. O catch do `kofUiRender` AINDA engole throws do view (a amplificação alto-headless/UI-muda permanece p/ qualquer outro crash de view). |
+> | **§268 🟡 PARCIAL 18/09 (face throwables ✅ CORRIGIDA pela lane compiler `.22`, commit #313; extends amplo ABERTO, fila da mesma lane)** | `throw new Exception(...)`/`extends <throwable-JDK>` emitia nome CRU (`new Exception` / super `RuntimeException`) → `NoClassDefFoundError` no load enquanto a tabela de exceção qualificava (dois caminhos de resolução). Corrigido na raiz: `CompilerTypes.toType` + `SymbolTableBuilder` agora mapeiam o conjunto `JAVA_LANG_THROWABLES` para `java.lang.*` (homônimo do módulo vence; prova `ThrowQualifiedTest` 4/4). Escopo amplo RE-PROBADO e ainda cru: `extends Thread`/`Object` (java.lang não-throwable), `extends IOException` (java.io, sem import), `extends Zebra` (indefinido — silencioso) — correção geral na fila (SEM0xx + `Object`→`java/lang/Object`). |
 > | **§267 ✅ CORRIGIDO 17/09 (lane development `.18`; face irmã achada durante o §266)** | `if/else` de nível-statement cujos ramos são assignments dobrou numa ternária expressão (`tryParseIfExpr`) e o statement SEGUINTE teve seu `let` içado p/ cima dela → leitura obsoleta, VALOR ERRADO SILENCIOSO no JS. Correção = marcador `KofStatementIf(thenLabel)` no lowering (amarrado ao label — um booleano seria comido pelo CJump de uma if-expr NESTED na condição); if-expressões reais continuam dobrando. Prova: `JsIfFoldStatementE2ETest` 8/8 + suíte 1990/0/0/169. |
 
 ### §265 — Handlers web do KofJS: `status(code, body)` e `headerSet(name, value)` eram no-ops SILENCIOSOS (o ramo de colapso em `handleRuntimeOp` descartava a chamada do handler emitido; e `kofWebStatus` lia um campo `kofWebRequest.response` que nunca existiu) — a doc dizia "JS 08/27 ✅" mas o JS devolvia 200 e descartava o header — ✅ CORRIGIDO 16/09 (lane development, dono = 192.168.100.18)
@@ -9619,7 +9620,7 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
   throwables) e `extends IOException` (java.io, sem import) ainda emitem o
   super cru → `NoClassDefFoundError`/CNFE; `extends Zebra` (nome indefinido)
   compila limpo com super cru (silencioso, R6). Correção geral na fila: nome
-  simples não-resolvido em extends/implements → SEM072 honesto,
+  simples não-resolvido em extends/implements → SEM0xx honesto,
   `Object` → `java/lang/Object`.
 - **Bifurcação rule-6 (por que o commit dos throwables NÃO fechou a face
   ampla):** a generalização muda como TODO nome simples de tipo em
@@ -9629,12 +9630,12 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
   silencioso de hoje mas NÃO intercambiáveis: **(A)** `java.lang` implícito em
   extends/implements via probe `Class.forName("java.lang."+n)` com cache
   (completo, casa com Java, mas torna o JDK do compilador oráculo semântico —
-  não-java.lang como `IOException`/`List` ainda exige import ou cai em SEM072);
+  não-java.lang como `IOException`/`List` ainda exige import ou cai no SEM0xx);
   **(B)** conjunto `JAVA_LANG_TYPES` curado (precedente =
   `JAVA_LANG_THROWABLES`; subcobre — chutar curto demais é exatamente o erro
   que o §268 registra); **(C)** exigir o import (o mais estrito, quebra o
   idiom no-import de hoje). Precisa da escolha da mantenedora + bump/doc
-  (programas que hoje crasham passam a dar erro de compilação → SEM072),
+  (programas que hoje crasham passam a dar erro de compilação → SEM0xx),
   portanto NÃO é edição silenciosa da `.22`. Dono = lane compiler; atacar
   depois que o cluster nullable/generics assentar (mesmos arquivos).
 
