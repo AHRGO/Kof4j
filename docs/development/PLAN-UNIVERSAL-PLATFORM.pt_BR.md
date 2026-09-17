@@ -2,22 +2,27 @@
 
 # Plano Estratégico — Kof como Plataforma Universal
 
-**Tipo:** visão de longo prazo / arquitetura futura (NÃO é ordem de implementação)
+**Tipo:** arquitetura de longo prazo — **EM DESENVOLVIMENTO** desde 17/09/2026
+(promovido de `future/` por decisão da mantenedora; o portão R12 está
+**sobreposto** — ver `DECISIONS.md` §D-UNIVERSAL)
 **Data:** 2 de setembro de 2026
 **Base:** estado real 0.2.6-beta — frontend próprio (lexer, parser, AST, symbol
 table, semantic, type checking), Kof IR backend-agnóstica, 7 targets
 (jvm estável, native x86_64 estável, native.risc/native.arm toolchain+qemu,
-js alpha GraalJS, kofc native-only, android Fase 1), stdlib como **tabelas de
+js alpha GraalJS, kofc native-only, android Fases 1–4), stdlib como **tabelas de
 dispatch em compile-time** com gaps diagnosticados, FFI real (SQLite `.so`
-direto, FFM Vulkan compute, interop Java + GraalJS), `mvn test` 810.
+direto, FFM Vulkan compute, interop Java + GraalJS), `mvn test` 2411
+(17/09/2026 — ver `AGENTS.md` §"Loop de verificação" para a contagem viva).
 
-> **Regra deste documento:** este é um exercício de planejamento estratégico
-> e arquitetura futura. Ele NÃO altera, interrompe, reorganiza ou substitui o
-> trabalho em andamento. Não implementa nada, não cria código de demonstração,
-> não altera o roadmap atual, não move arquivos, não introduz dependências, não
-> refatora, não abre frente nova. O estado atual do Kof permanece 100% intacto.
-> Tudo que abaixo exigir mudança profunda no core é registrado como
-> **dependência arquitetural futura**, nunca como ação.
+> **Regra deste documento:** esta é uma arquitetura estratégica para a
+> plataforma. Promovido de `future/` para `development/` em 17/09/2026 **por
+> decisão da mantenedora** (ver `DECISIONS.md` §D-UNIVERSAL), que
+> **sobrepõe o portão R12** ("SYSTEMS fecha antes de qualquer Tier 6+"). É agora
+> **trabalho corrente**: o ponto de entrada é o Estágio 1 (consolidação
+> SYSTEMS, §10 Estágio 1) e as recomendações executáveis R1–R12 (§15), com cada
+> unidade portada como qualquer outra mudança (Q0–Q7). A semântica congelada do
+> core e o comportamento atualmente estável permanecem 100% intactos; toda
+> mudança chega de forma aditiva e por alvo.
 
 Referências (não alteradas): `docs/development/roadmap.md` (visão), `docs/philosophy.md`
 (intenção), `docs/architecture/architecture.md` (ADR multi-target),
@@ -1592,16 +1597,24 @@ arquiteturais futuras e guardrails.)
 - **Não fazer:** não expor primitivas ofensivas sem contexto; não "Kali em
   Kof".
 
-## R12 — Não interromper o presente (meta-regra)
-- **O quê:** nenhum item deste plano é **ação** sobre o estado atual. O estado
-  atual (0.2.6-beta, 810 testes, 7 targets) permanece **100% intacto**. Os
-  itens **C/D** acima são **dependências arquiteturais futuras**, a serem
-  retomadas pelo roadmap vigente (`roadmap.md` §23 — plano único consolidado)
-  **após** a consolidação atual (P0-P5) — nunca como frente paralela agora.
+## R12 — Não interromper o presente (meta-regra) — **SOBREPOSTA 17/09/2026**
+- **O quê (original):** nenhum item deste plano é **ação** sobre o estado
+  atual. Os itens **C/D** acima são **dependências arquiteturais futuras**, a
+  serem retomadas pelo roadmap vigente (`roadmap.md` §23 — plano único
+  consolidado) **após** a consolidação atual (P0-P5) — nunca como frente
+  paralela agora.
 - **Por quê:** o enunciado é explícito: preservar o trabalho em andamento.
 - **Custo:** zero.
 - **Não fazer:** não abrir `infra`/`data`/`sci` antes do estágio SYSTEMS
   (gap de paridade, GC, package manager) estar fechado.
+- **⚠️ Sobrepõe (decisão da mantenedora 17/09/2026, `DECISIONS.md`
+  §D-UNIVERSAL):** este plano foi **promovido a trabalho corrente** com o
+  portão R12 **sobreposto** — a frente abre com o SYSTEMS ainda em andamento.
+  O ponto de entrada é o Estágio 1 (consolidação SYSTEMS) + R1–R12; o Tier 6+
+  mantém sua ordem. A **semântica do core continua congelada** e toda mudança
+  é aditiva — "sobreposto" relaxa o portão de *agendamento*, nunca as regras
+  de qualidade/freeze. Para **qualquer outro** plano em `future/`, o R12
+  continua o default.
 
 ---
 

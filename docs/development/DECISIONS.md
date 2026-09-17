@@ -1186,6 +1186,72 @@ ignoradas e fechadas. adiciona isso como regra absoluta."
 
 ---
 
+## D-UNIVERSAL — promotion of `PLAN-UNIVERSAL-PLATFORM` to current work (R12 overridden)
+
+**Date:** 2026-09-17
+
+**State:** `DECIDED`
+
+**Origin:** maintainer directive in chat, 17/09/2026: "se acabaram os docs
+preciso que voce assuma a frente
+docs/development/future/PLAN-UNIVERSAL-PLATFORM.pt_BR.md" → answered "Promover
+p/ development/ e implementar".
+
+### Contract
+
+1. `PLAN-UNIVERSAL-PLATFORM.md` + `.pt_BR.md` **leave `future/`** and become
+   current work in `docs/development/`, status **UNDER DEVELOPMENT**.
+2. The promotion gate of `docs/development/README.md` §4.3 ("decision +
+   SYSTEMS closed (R12)") is **overridden by this decision**: the maintainer
+   authorizes the front to open with SYSTEMS still in progress.
+3. The document stops being "vision only": its own header rule ("implements
+   nothing, does not move files, does not open a new front") is **revoked and
+   rewritten** in the same commit as the move.
+4. The **first entry point is Stage 1 (SYSTEMS consolidation, §10 Estágio 1)**
+   and the executable recommendations **R1–R12 (§15)** — not Tier 6+
+   (AUTOMATION/INFRA/DATA/…), which keep their order in `roadmap.md` §23.
+5. The vision/design of the document is **not** edited by agents: only state
+   claims are synced to the real code (three-state rule), and each
+   implementation unit follows Q0–Q7 like any other change.
+6. Frozen core semantics remain frozen; every change is additive and per
+   target (R6/R7 apply).
+
+### Invariants
+
+- The plan does **not** become a license to break the freeze (rule 6 of
+  `AGENTS.md` still holds for operators/precedence/order of evaluation).
+- `roadmap.md` §23 remains the **single ordered plan**; this document supplies
+  the architecture for Tiers 6–12.
+- No heavy domain (`ml`/`bio`/`hpc`) enters the base stdlib (R1).
+
+### Rejected alternatives
+
+- **Respect R12 and close SYSTEMS first** (do the TIER 1 items before
+  promoting) — rejected by the maintainer, who chose to promote now.
+- **Promote only the document without opening implementation** — rejected:
+  the directive is "promover **e implementar**".
+
+### Implementation
+
+- Files moved: `docs/development/future/PLAN-UNIVERSAL-PLATFORM.md` →
+  `docs/development/PLAN-UNIVERSAL-PLATFORM.md` (and the `.pt_BR.md` pair).
+- Queue: `roadmap.md` §23 TIER 6–12 now points at the new path and records the
+  R12 override; the first executable unit is chosen from Stage 1 / R1–R12.
+- Tracking: `DOING.md` + `DOING.pt_BR.md`.
+
+### Evidence
+
+- Move + header rewrite + reference sync in the same commit; `docs-lang.sh
+  check` 0/0/0; `check_500.sh` rc=0.
+
+### Relationships
+
+- `Overrides: R12` (the meta-rule "do not interrupt the present").
+- `Related:` `roadmap.md` §23 (Tiers 0–12), §22 (Universal Platform),
+  `AGENTS.md` §"Platform invariants".
+
+---
+
 
 # 4. Rejected or superseded decisions
 

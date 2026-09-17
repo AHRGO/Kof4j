@@ -841,14 +841,15 @@ compilador, runtime, stdlib e tooling.**
 
 ---
 
-## 22. Plataforma Universal (plano futuro)
+## 22. Plataforma Universal (em desenvolvimento — R12 sobreposto)
 
 Visão de longo prazo — Kof como plataforma universal (uma linguagem para
 aplicações **e** sistemas, infraestrutura, automação, dados, segurança e
 ciência) **sem** destruir a simplicidade da linguagem.
 
-- Documento central: `docs/development/future/PLAN-UNIVERSAL-PLATFORM.md` (arquitetura,
-  **não** ordem de implementação)
+- Documento central: `docs/development/PLAN-UNIVERSAL-PLATFORM.md`
+  (arquitetura — **EM DESENVOLVIMENTO** desde 17/09/2026; promovido de
+  `future/` por decisão da mantenedora, `DECISIONS.md` §D-UNIVERSAL)
 - Estágios por capacidade/maturidade: `FOUNDATION ✅` → `SYSTEMS` (em
   andamento) → `AUTOMATION` → `INFRAESTRUTURA` → `DATA` → `SECURITY` →
   `SCIENTIFIC` → `BIO` → `UNIVERSAL`
@@ -863,9 +864,13 @@ ciência) **sem** destruir a simplicidade da linguagem.
   effect system; sem cripto caseira; sem reimplementar Arrow/BLAS/ML/
   alinhadores; sem "Kali em Kof"; sem target por domínio; sem motor SQL próprio
 
-**Não implementar nada desta seção antes do estágio SYSTEMS fechar**
-(paridade de gaps, GC mark-sweep, package manager básico — ver
-`docs/development/roadmap.md` §23 (ex-plan-platform-completion) P0–P5).
+> **Portão R12 sobreposto em 17/09/2026** (`DECISIONS.md` §D-UNIVERSAL): a
+> mantenedora autorizou abrir esta frente **com o SYSTEMS ainda em andamento**.
+> O ponto de entrada é o Estágio 1 (consolidação SYSTEMS) + R1–R12; o Tier 6+
+> (AUTOMATION/INFRA/DATA/…) mantém sua ordem no §23. Para **qualquer outra**
+> frente, o R12 continua o default: não abrir `infra`/`data`/`sci` antes do
+> SYSTEMS fechar (paridade de gaps, GC mark-sweep, package manager básico —
+> §23 P0–P5).
 
 ---
 
@@ -966,7 +971,7 @@ histórico técnico detalhado vive em `future/LEGACY_MIGRATION.md` +
 `future/DECOMPILER.md` (§7) — **não duplicar aqui**; esta tabela só dá a
 ordem. **DESPRIORIZADO 15/09 (mantenedora): TIER 3–5 não é trabalho atual.**
 
-### TIER 6–12 — Plataforma universal (não iniciados; regidos por `future/PLAN-UNIVERSAL-PLATFORM.md`)
+### TIER 6–12 — Plataforma universal (arquitetura **EM DESENVOLVIMENTO** 17/09 — R12 sobreposto; regidos por `docs/development/PLAN-UNIVERSAL-PLATFORM.md`)
 
 | Tier | Estágio | Escopo (uma linha) |
 |------|---------|--------------------|

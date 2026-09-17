@@ -1142,6 +1142,75 @@ errado devem ser ignoradas e fechadas. adiciona isso como regra absoluta."
 
 ---
 
+## D-UNIVERSAL — promoção do `PLAN-UNIVERSAL-PLATFORM` a trabalho corrente (R12 sobreposto)
+
+**Data:** 2026-09-17
+
+**Estado:** `DECIDED`
+
+**Origem:** diretriz da mantenedora no chat, 17/09/2026: "se acabaram os docs
+preciso que voce assuma a frente
+docs/development/future/PLAN-UNIVERSAL-PLATFORM.pt_BR.md" → respondido
+"Promover p/ development/ e implementar".
+
+### Contrato
+
+1. `PLAN-UNIVERSAL-PLATFORM.md` + `.pt_BR.md` **saem de `future/`** e passam a
+   ser trabalho corrente em `docs/development/`, estado **EM
+   DESENVOLVIMENTO**.
+2. O portão de promoção de `docs/development/README.md` §4.3 ("decisão +
+   SYSTEMS fechado (R12)") é **sobreposto por esta decisão**: a mantenedora
+   autoriza abrir a frente com o SYSTEMS ainda em andamento.
+3. O documento deixa de ser "só visão": a regra do próprio cabeçalho
+   ("não implementa nada, não move arquivos, não abre frente nova") é
+   **revogada e reescrita** no mesmo commit da movimentação.
+4. O **primeiro ponto de entrada é o Estágio 1 (consolidação SYSTEMS, §10
+   Estágio 1)** e as recomendações executáveis **R1–R12 (§15)** — não o Tier
+   6+ (AUTOMATION/INFRA/DATA/…), que mantém sua ordem em `roadmap.md` §23.
+5. A visão/design do documento **não** é editada por agentes: só as claims de
+   estado são sincronizadas com o código real (regra dos três estados), e cada
+   unidade de implementação segue Q0–Q7 como qualquer outra mudança.
+6. A semântica congelada do core permanece congelada; toda mudança é aditiva e
+   por alvo (R6/R7 valem).
+
+### Invariantes
+
+- O plano **não** vira licença para quebrar o freeze (a regra 6 do `AGENTS.md`
+  continua valendo para operadores/precedência/ordem de avaliação).
+- `roadmap.md` §23 continua sendo o **plano único ordenado**; este documento
+  fornece a arquitetura dos Tiers 6–12.
+- Nenhum domínio pesado (`ml`/`bio`/`hpc`) entra na stdlib base (R1).
+
+### Alternativas rejeitadas
+
+- **Respeitar o R12 e fechar o SYSTEMS primeiro** (fazer os itens do TIER 1
+  antes de promover) — rejeitada pela mantenedora, que escolheu promover
+  agora.
+- **Promover só o documento sem abrir implementação** — rejeitada: a diretriz
+  é "promover **e implementar**".
+
+### Implementação
+
+- Arquivos movidos: `docs/development/future/PLAN-UNIVERSAL-PLATFORM.md` →
+  `docs/development/PLAN-UNIVERSAL-PLATFORM.md` (e o par `.pt_BR.md`).
+- Fila: `roadmap.md` §23 TIER 6–12 agora aponta para o novo caminho e registra
+  a sobreposição do R12; a primeira unidade executável sai do Estágio 1 /
+  R1–R12.
+- Acompanhamento: `DOING.md` + `DOING.pt_BR.md`.
+
+### Evidência
+
+- Movimentação + reescrita do cabeçalho + sincronização de referências no
+  mesmo commit; `docs-lang.sh check` 0/0/0; `check_500.sh` rc=0.
+
+### Relações
+
+- `Overrides: R12` (a meta-regra "não interromper o presente").
+- `Related:` `roadmap.md` §23 (Tiers 0–12), §22 (Plataforma Universal),
+  `AGENTS.md` §"Invariantes da plataforma".
+
+---
+
 
 # 4. Decisões rejeitadas ou substituídas
 

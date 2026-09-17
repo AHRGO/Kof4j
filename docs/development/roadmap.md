@@ -840,14 +840,15 @@ compiler, runtime, stdlib and tooling.**
 
 ---
 
-## 22. Universal Platform (future plan)
+## 22. Universal Platform (under development — R12 overridden)
 
 Long-term vision — Kof as a universal platform (one language for
 applications **and** systems, infrastructure, automation, data, security and
 science) **without** destroying the language's simplicity.
 
-- Central document: `docs/development/future/PLAN-UNIVERSAL-PLATFORM.md` (architecture,
-  **not** implementation order)
+- Central document: `docs/development/PLAN-UNIVERSAL-PLATFORM.md`
+  (architecture — **UNDER DEVELOPMENT** since 17/09/2026; promoted from
+  `future/` by maintainer decision, `DECISIONS.md` §D-UNIVERSAL)
 - Stages by capability/maturity: `FOUNDATION ✅` → `SYSTEMS` (in
   progress) → `AUTOMATION` → `INFRASTRUCTURE` → `DATA` → `SECURITY` →
   `SCIENTIFIC` → `BIO` → `UNIVERSAL`
@@ -862,9 +863,12 @@ science) **without** destroying the language's simplicity.
   effect system; no homemade crypto; no reimplementing Arrow/BLAS/ML/
   aligners; no "Kali in Kof"; no per-domain target; no own SQL engine
 
-**Do not implement anything from this section before the SYSTEMS stage closes**
-(gap parity, GC mark-sweep, basic package manager — see
-`docs/development/roadmap.md` §23 (ex-plan-platform-completion) P0–P5).
+> **R12 gate overridden 17/09/2026** (`DECISIONS.md` §D-UNIVERSAL): the
+> maintainer authorized this front to open **with SYSTEMS still in progress**.
+> The entry point is Stage 1 (SYSTEMS consolidation) + R1–R12; Tier 6+
+> (AUTOMATION/INFRA/DATA/…) keeps its order in §23. For every **other** front,
+> R12 remains the default: do not open `infra`/`data`/`sci` before SYSTEMS
+> closes (gap parity, GC mark-sweep, basic package manager — §23 P0–P5).
 
 ---
 
@@ -965,7 +969,7 @@ detailed technical history lives in `future/LEGACY_MIGRATION.md` +
 `future/DECOMPILER.md` (§7) — **do not duplicate here**; this table only gives
 the order. **DEPRIORITIZED 15/09 (maintainer): TIER 3–5 is not current work.**
 
-### TIER 6–12 — Universal platform (not started; governed by `future/PLAN-UNIVERSAL-PLATFORM.md`)
+### TIER 6–12 — Universal platform (architecture **UNDER DEVELOPMENT** 17/09 — R12 overridden; governed by `docs/development/PLAN-UNIVERSAL-PLATFORM.md`)
 
 | Tier | Stage | Scope (one line) |
 |------|---------|--------------------|
