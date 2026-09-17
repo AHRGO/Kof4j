@@ -151,8 +151,33 @@ public final class MemberCallTyper {
             if ("add".equals(mn) || "push".equals(mn) || "append".equals(mn)
                     || "set".equals(mn) || "clear".equals(mn))
                 return Type.PrimitiveType.VOID;
-            if ("map".equals(mn) || "filter".equals(mn)) return recvType;
-            if ("reduce".equals(mn)) return elemType;
+            // #334 — `map` devolvia recvType (ELEMENTO-FONTE) e `reduce`
+            // devolvia elemType: a expressao era cacheada com o tipo errado
+            // (inferType guarda o resultado no no), entao `strs.get(0)`
+            // emitia checkcast do tipo FONTE sobre o valor real da lambda →
+            // ClassCastException silenciosa. Agora espelha o EMIT
+            // (`MethodCallTyper` #149 / `CollectionMethodTyper`): map →
+            // List<retorno-da-lambda>, reduce → retorno, filter → recvType
+            // (mesmo elemento, correto). Lambda sem retorno inferido =
+            // UNKNOWN honesto (o emit trata igual) — nunca mentir com o
+            // tipo da fonte.
+            if ("map".equals(mn) || "filter".equals(mn) || "reduce".equals(mn)) {
+                Type lamRet = Type.UnknownType.UNKNOWN;
+                for (ExpressionNode arg : mc.arguments()) {
+                    if (arg instanceof LambdaExpr || !(arg instanceof MethodCallExpr)) {
+                        if (sa.expressionTypes().get(arg) instanceof Type.FunctionType ft) {
+                            lamRet = ft.returnType();
+                            break;
+                        }
+                    }
+                }
+                if ("filter".equals(mn)) return recvType;
+                if (lamRet instanceof Type.UnknownType) return Type.UnknownType.UNKNOWN;
+                if ("map".equals(mn)) {
+                    return new Type.ClassType("kof", "List", List.of(lamRet));
+                }
+                return lamRet;
+            }
             if (!"toArray".equals(mn) && !"sublist".equals(mn) && !"subSet".equals(mn)) {
                 if (sa.diagnostics() != null) {
                     sa.diagnostics().error("", 0, 0, 0,
