@@ -7531,27 +7531,6 @@ antes — lição da obsolescência do §206/§207), corpos-exatos das issues
 - **Pointer (lane compiler):** ramo do parser para if-EXPRESSION onde a parte
   `then` começa com `{` — hoje cai no caminho de produção de lambda.
 
-## ### §223 — método `static` em INTERFACE mantém ACC_ABSTRACT → `ClassFormatError: illegal modifiers 0x409` (issue #230)
-
-- **Sintoma (medido 14/09 ~14:05 no `de38f7b5` com classes FRESCAS, dono =
-  192.168.100.17 — só catalogado, lane compiler):**
-  ```kof
-  interface Calc { static Int add(Int a, Int b) { return a + b } }
-  main() { println(Calc.add(3, 4)) }
-  ```
-  compila; no load: `ClassFormatError: Method add in class Calc has
-  illegal modifiers: 0x409`. javap: `public static abstract int add` —
-  flags ACC_PUBLIC|ACC_STATIC|**ACC_ABSTRACT** SEM Code attribute: o corpo
-  emitido pelo parser foi descartado e o flag abstract-implícito dos membros
-  de interface foi aplicado a um membro `static` (ilegal desde JVMS 2.9:
-  método estático em interface DEVE ter Code e NÃO pode ser abstrato).
-- **Esperado:** `Calc.add` → `ACC_PUBLIC|ACC_STATIC` com Code (default
-  static method Java 8+); o sítio de chamada já faz `invokestatic Calc.add`
-  (correto) — só a emissão da classe está errada.
-- **Pointer (lane compiler):** o writer de método de interface que ORA
-  ACC_ABSTRACT em todo flag de membro precisa pular membros `static` (e
-  `default`) e emitir o Code deles.
-
 ### §223 — método `static` em INTERFACE mantém ACC_ABSTRACT → `ClassFormatError: illegal modifiers: 0x409` — ✅ CORRIGIDO 15/09 (issue #230 fechada; repro re-verificado verde no tip 15/09)
 
 - **Sintoma (medido 14/09 ~14:05 sobre classes FRESH de `de38f7b5`, dono =
