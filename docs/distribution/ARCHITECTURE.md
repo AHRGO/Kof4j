@@ -171,7 +171,7 @@ sha256sum -c SHA256SUMS
 After installing:
 
 ```bash
-kof version      # kof 0.2.6-beta (the version of your release)
+kof version      # kof 0.4.0-beta (the version of your release)
 kof info         # full environment (embedded JVM shows up with "(embedded)")
 kof run hello.kf
 ```
