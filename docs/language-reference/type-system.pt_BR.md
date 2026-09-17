@@ -350,6 +350,11 @@ retorno do lambda (*probe*: map/filter/reduce corretos).
 | `SEM046` | acesso `private`/`protected` (método ou campo) fora do permitido | `MemberCallTyper.checkMemberAccess`/`checkFieldAccess` (SG-013) |
 | `SEM065` | escrita em campo `final` fora do construtor da classe | `MemberCallTyper.checkFinalFieldWrite` (#331/#327; era SEM063, renumerado 17/09 — colidiu com §193) |
 | `SEM066` | acessor de coleção (`get`/`put`/`size`...) chamado num receptor String (linha crua do `db.query`) | `ExpressionInstanceCallLowerer` (§193) |
+| `SEM067` | tipo de `catch` é um primitivo Kof (primitivos não são throwable) | `CatchTypeCheck.check` (#332/#328) |
+| `SEM068` | tipo de `catch` é classe de usuário que não é subclasse de `Throwable` | `CatchTypeCheck.check` (#332/#328) |
+| `SEM069` | `final abstract class X` (modificadores contraditórios — sem instância nem subclasse possível) | `ClassShapeChecks.checkClassDeclaration` (#341) |
+| `SEM070` | `class D extends F` onde `F` é declarada `final` | `ClassShapeChecks.checkClassDeclaration` (#339) |
+| `SEM071` | instanciação de `interface` (`new I()` e `I()`) | `ClassShapeChecks.checkInstantiable` (#340) |
 | `ARITH001` | divisão/resto por zero **constante** | `ExpressionBinaryLowerer` (guarda de zero constante) |
 
 Divisão por zero **não-constante** (`7 / z` com `z=0`) → erro de **runtime**

@@ -350,6 +350,11 @@ the lambda's return (*probe*: map/filter/reduce correct).
 | `SEM046` | `private`/`protected` access (method or field) outside what is allowed | `MemberCallTyper.checkMemberAccess`/`checkFieldAccess` (SG-013) |
 | `SEM065` | write to a `final` field outside its class constructor | `MemberCallTyper.checkFinalFieldWrite` (#331/#327; era SEM063, renumerado 17/09 — colidiu com §193) |
 | `SEM066` | collection accessor (`get`/`put`/`size`...) called on a String receiver (raw `db.query` row) | `StringReceiverGuards` (§193) |
+| `SEM067` | `catch` type is a Kof primitive (primitives are not throwable) | `CatchTypeCheck.check` (#332/#328) |
+| `SEM068` | `catch` type is a user class that is not a `Throwable` subclass | `CatchTypeCheck.check` (#332/#328) |
+| `SEM069` | `final abstract class X` (contradictory modifiers — no possible instance nor subclass) | `ClassShapeChecks.checkClassDeclaration` (#341) |
+| `SEM070` | `class D extends F` where `F` is declared `final` | `ClassShapeChecks.checkClassDeclaration` (#339) |
+| `SEM071` | instantiation of an `interface` (`new I()` and `I()`) | `ClassShapeChecks.checkInstantiable` (#340) |
 | `ARITH001` | division/remainder by a **constant** zero | `ExpressionBinaryLowerer` (constant-zero guard) |
 
 Division by a **non-constant** zero (`7 / z` with `z=0`) → **runtime**
