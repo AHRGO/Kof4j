@@ -81,7 +81,7 @@ Grid, Center, Align, Store, Canvas + namespace `Router`.
 | **UI004** | Forms: `<form>` ✅ + submit handler ✅ FEITO 07/09 (`Form(children)`, `onSubmit`, `submit()` — handler roda no browser, prova por mutação de DOM); fieldset ✅ FEITO 08/09 (`Fieldset(children[, legend])`, `358ec80`). `Input` tipos ✅ (`setType`); checkbox/radio estado ✅ (`setChecked`/`checked`); select ✅ (`Select`/`setOptions`/`selected`/`setSelected`) | KofJS | P1 **FEITO** |
 | **UI005** | Atributos: id ✅ class ✅ disabled ✅ (FEITO 07/09 — `setId`/`setClass`/`setDisabled` em widgets DOM, família `kof_ui_widget_*`); placeholder ✅ (`Input.setPlaceholder`); checked ✅; alt/width/height ✅ (`Image.*`); readonly/name ✅ FEITO 07/09 (`Input`/`Textarea`.setReadonly(bool)/setName(String) — 6/6 pontos completos, prova browser: atributos `name=`/`readonly` no outerHTML) | KofJS | P1 **FEITO** |
 | **UI006** | Eventos: `Event.type()`/`stopPropagation()` ✅; `key()`/`value()`/`x()`/`y()` ✅ FEITO 08/09 (`f0907c2` — DOM event real: `key` do KeyboardEvent, `value` do input alvo, `clientX/Y`; `widget.on(type, handler)` exposto p/ widgets fora da árvore de Component; `kofUiWidgetOn` agora despacha o kofEv, antes chamava `fn()` sem evento); `target()`/`relatedTarget()` ✅ FEITO 08/09 (`3c241ae`+ — id do nó origem/relacionado com fallback tagName; prova browser: `t=campo-main` no DOM final) | KofJS | P2 **FEITO** |
-| **UI007** | `style` declarativo (CSS idiomático) — novo, com parse próprio (item do plano Fase 4). **DECIDIDO 17/09** (`D-UI-STYLE`): `Style("<declarações>")`, parse no compilador, whitelist tipada (`SEM073`/`SEM074`/`SEM075`), hex+nomes CSS+nomes de `Palette`, px/`%`/`em`/`rem`, `setStyle` em todo widget DOM — **EM CURSO** (fatia A) | KofJS | P1 |
+| **UI007** | `style` declarativo (CSS idiomático) — novo, com parse próprio (item do plano Fase 4). **FEITO 17/09** (`D-UI-STYLE`, commit `f7a5ad89`): `Style("<declarações>")` com parse no compilador, whitelist tipada (`SEM073`/`SEM074`/`SEM075`), hex+nomes CSS+nomes de `Palette` verbatim, px/`%`/`em`/`rem`, `setStyle(style)` em todo widget DOM — prova: `UiStyleCssE2ETest` 10/10 + 2 testes no Chrome real | KofJS | P1 |
 | **UI008** | Window: size/position só no-op JVM; KofJS só title (browser não controla window — ok por plataforma) | JVM/KofJS | P3 |
 | **UI009** | Canvas: fillText ✅ measureText ✅ save ✅ restore ✅ transform ✅ setGlobalAlpha ✅ (FEITO 07/09 — `UiE2ETest.canvasUi009LinksOnAllTargets` + `KofJsBrowserE2ETest.canvasUi009RunsInRealBrowser`); drawImage ✅ (07/09 — Image→canvas via elemento DOM) | KofJS | P2 **FEITO** |
 
@@ -131,12 +131,14 @@ UI005 `setId`/`setClass`/`setDisabled` (+ fix do código morto `acceptsFont`).
    `Button(text, action)` em `ExpressionUiStaticLowerer`); teste browser.
 2. Atributos `id`/`class`/`disabled` (UI005) + elementos `textarea`/`select`
    (UI003) — mesmo padrão de 6 pontos.
-3. UI007 `style` declarativo (CSS idiomático, parse próprio) — o item maior.
+3. ~~UI007 `style` declarativo (CSS idiomático, parse próprio)~~ **FEITO 17/09**
+   (`f7a5ad89`): decisão `D-UI-STYLE` + fatias A/B, prova `UiStyleCssE2ETest`
+   10/10 + testes no Chrome real (ver §UI007 abaixo).
 4. ~~UI002 (Script no-op silencioso)~~ **FEITO 08/09** (`7081551`): decisão
    tomada como aditivo sem quebrar retrocompat — **warning** único no stderr
    (nunca erro; regra 6 + congelamento); teste `KofScriptTest.ui002WarnsOnceOnUiCalls`.
 
-### UI007 — decisão de design (DECIDIDO 17/09; regra 6 fechada)
+### UI007 — decisão de design + implementação (DECIDIDO e FEITO 17/09; regra 6 fechada)
 
 O plano pede "`style` declarativo (CSS idiomático), parse próprio". A
 superfície foi congelada pela mantenedora e registrada como **`D-UI-STYLE`**
@@ -161,9 +163,11 @@ Perguntas fechadas:
   família compartilhada `kof_ui_widget_set_style` — padrão UI005), não só
   `View`.
 
-Implementação: reivindicada no `DOING.md` (UI007); fatia A = parser +
-`Style(String)` + lowering + runtime JS + prova; fatia B = `setStyle` em
-todo widget DOM.
+Implementação: **FEITO 17/09** (commit `f7a5ad89`) — fatia A = parser +
+`Style(String)` + lowering + runtime JS + prova; fatia B = `setStyle(style)`
+em todo widget DOM. Prova: `UiStyleCssE2ETest` 10/10
+(JVM/Native/Script/JS + `SEM073`/`SEM074`/`SEM075`) e `KofJsBrowserE2ETest`
++2 no DOM real do Chrome.
 
 **Fronteira Fase 5 (KofJS Web APIs — não é kof.ui):** fetch/WS/storage.
 
