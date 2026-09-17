@@ -9570,3 +9570,71 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
 - **Prova:** `KofWebJsE2ETest.jsWebStatusAndHeaderReachTheWire` — asser
   `201`+`X-Custom: abc`+corpo no fio vivo (VERMELHO pré-fix: medido `200` + header
   ausente contra o servidor rodando; a mesma sonda verde no JVM `201 Created`).
+
+
+## §268 — classe de usuário `extends <classe do JDK>` por nome SIMPLES grava a superclasse CRUA → `NoClassDefFoundError` no load — 🟡 PARCIAL 18/09 (face throwables FECHADA pelo #313; face extends mais ampla ABERTA, fork regra 6)
+
+- **Sintoma:** `class MyEx extends RuntimeException { ... }` compila limpo
+  (exit 0) e a PRÓPRIA classe falha no load:
+  `Caused by: java.lang.ClassNotFoundException: RuntimeException`
+  (carrega `RuntimeException`, não `java/lang/RuntimeException`).
+  O escopo é MAIS AMPLO que throwables — medido o mesmo `super_class` cru para
+  **`RuntimeException`, `Exception`, `IOException`, `IllegalArgumentException`,
+  `Object`, `Thread`** (qualquer classe do JDK referenciada por nome simples).
+  `java.lang` não precisa de `import` — não é problema de import.
+- **Causa raiz (medida):** `CompilerClassLowering.lowerClass` (`:22`)
+  `driver.toInternalName("", sym.superClass())` passa pacote VAZIO quando o
+  analyzer resolveu o nome mas a classe é nome JDK implícito → o `super_class`
+  emitido é o `RuntimeException` cru em vez de `java/lang/RuntimeException`.
+  Independente do mapper do `catch` (família §167/§332/§328 corrigida 18/09) —
+  este é o campo **super do `extends`**, não a tabela de catch.
+- **Repro (medido no tip `a7af2c6a`, JVM, 18/09):**
+  ```kof
+  class MyEx extends RuntimeException {
+      String what() { return "my" }
+  }
+  main() {
+      var e = MyEx()
+      println("ok " + e.what())
+  }
+  ```
+  → `build`/`run` exit 0 e então `ClassNotFoundException: RuntimeException`
+  em `Default.Main.main(Main.kf:5)`. Idem com `extends Object`/`Thread`/`IOException`.
+- **Família:** mesma raiz "ref JDK não-qualificada" das issues **#313/#314**
+  (static call / `throw new` não-qualificados) — registrar lá. Dono = lane
+  compiler (fila `#313/#314`, DOING linha 223). Direção do fix: `toInternalName`
+  deve qualificar nomes de classe JDK implícitos após o analyzer resolvê-los (e o
+  mesmo check que fixa os aliases builtin `String`/`List`/`Map` (padrão SG-011
+  §179) deve dar ao throwable o seu pacote real).
+- **Não corrigido aqui** (achado ao fechar §332/#328; a fila desta família é
+  `#313/#314`, dono = lane compiler `.22` conforme DOING linha 223).
+- **Atualização de status (18/09, lane compiler `.22`, commit do #313):**
+  PARCIAL — a face `extends <throwable-JDK>` está FECHADA na raiz em
+  `SymbolTableBuilder` (mesmo commit do #313): o super registrado agora cai
+  para `java.lang.<Nome>` para o conjunto `JAVA_LANG_THROWABLES` quando nenhum
+  import resolve (medido: `class MyEx extends RuntimeException` sem import
+  carrega e roda; `ThrowQualifiedTest` trava). O ESCOPO AMPLO segue ABERTO,
+  re-medido com instanciação (o crash de load só aparece quando a classe é
+  realmente carregada): `extends Thread`/`extends Object` (java.lang, não
+  throwables) e `extends IOException` (java.io, sem import) ainda emitem o
+  super cru → `NoClassDefFoundError`/CNFE; `extends Zebra` (nome indefinido)
+  compila limpo com super cru (silencioso, R6). Correção geral na fila: nome
+  simples não-resolvido em extends/implements → SEM072 honesto,
+  `Object` → `java/lang/Object`.
+- **Bifurcação rule-6 (por que o commit dos throwables NÃO fechou a face
+  ampla):** a generalização muda como TODO nome simples de tipo em
+  `extends`/`implements` resolve, nos quatro targets, e divide o rio de
+  resolução com o cluster nullable/generics (`#259`/`#361`/`#363`/`#365`/
+  `#366`/`#368`). Três contratos candidatos, todos melhores que o crash-de-load
+  silencioso de hoje mas NÃO intercambiáveis: **(A)** `java.lang` implícito em
+  extends/implements via probe `Class.forName("java.lang."+n)` com cache
+  (completo, casa com Java, mas torna o JDK do compilador oráculo semântico —
+  não-java.lang como `IOException`/`List` ainda exige import ou cai em SEM072);
+  **(B)** conjunto `JAVA_LANG_TYPES` curado (precedente =
+  `JAVA_LANG_THROWABLES`; subcobre — chutar curto demais é exatamente o erro
+  que o §268 registra); **(C)** exigir o import (o mais estrito, quebra o
+  idiom no-import de hoje). Precisa da escolha da mantenedora + bump/doc
+  (programas que hoje crasham passam a dar erro de compilação → SEM072),
+  portanto NÃO é edição silenciosa da `.22`. Dono = lane compiler; atacar
+  depois que o cluster nullable/generics assentar (mesmos arquivos).
+

@@ -10026,7 +10026,7 @@ behavior-preserving (`RawRowCollectionAccessE2ETest` + `SemanticResolutionTest`
   missing header against the running server; the same probe green on JVM
   `201 Created`).
 
-## §268 — user class `extends <JDK class>` by SIMPLE name writes a RAW superclass → `NoClassDefFoundError` on load (silent compile; R6/Q7)
+## §268 — user class `extends <JDK class>` by SIMPLE name writes a RAW superclass → `NoClassDefFoundError` on load — 🟡 PARTIAL 18/09 (throwables face CLOSED by #313; broader extends face OPEN, rule-6 fork)
 
 - **Symptom:** `class MyEx extends RuntimeException { ... }` compiles clean
   (exit 0) and the OWNING class fails at load:
