@@ -10,8 +10,16 @@ emits `.file 1 "<source.kf>"` + `.loc 1 <line> 0` when debug enabled; `objdump
 (`DW_AT_name` = source name, `low_pc`/`high_pc`, `decl_file`/`decl_line`) —
 `NativeDwarf.java` + `NativeDwarfSubprogramTest`; the `as` assembler suppresses
 its own auto-CU when the program emits `.debug_info` explicitly (verified on
-the linked ELF). Local variables (`DW_AT_location`/fbreg), DAP on native and
-stepping pending.**
+the linked ELF). **Slice 2 (17/09): each subprogram now carries
+`DW_AT_frame_base` (`DW_OP_reg6`/rbp) + child `DW_TAG_formal_parameter`/
+`DW_TAG_variable` DIEs with `DW_AT_location = DW_OP_fbreg` at the exact slot
+the prologue uses (`-(index+1)*8`). Two DWARF4 lessons measured against real
+gdb: (1) `DW_AT_high_pc` is an offset only in v4+ (v3 read it as an absolute
+address and gdb discarded the CU as "non-debugging"); (2) the v4 header order
+is version→abbrev_offset→address_size. End-to-end proof: `gdb -batch -ex "b
+Box_twice" -ex run -ex "info locals"` prints `y = 20` (a Kof `var`) and names
+the args `this`/`w` — reading values as typed needs `DW_AT_type` (slice 3).**
+DAP on native and stepping pending.**
 **Date:** September 17, 2026
 **Version:** 0.4.0-beta (7 targets)
 

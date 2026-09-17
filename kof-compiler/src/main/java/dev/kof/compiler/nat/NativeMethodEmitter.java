@@ -144,7 +144,7 @@ final class NativeMethodEmitter {
             sb.append("    ret\n");
         }
         if (nb.debugInfo) {
-            // frente 4 fatia 1: fim da funcao p/ DW_AT_high_pc (offset) + registro
+            // frente 4 fatia 1/2: fim da funcao p/ DW_AT_high_pc (offset) + registro
             sb.append(".Lfe_").append(mangled).append(":\n");
             int declLine = 1;
             if (method.debugInfo() != null && !method.debugInfo().positions().isEmpty()) {
@@ -152,7 +152,21 @@ final class NativeMethodEmitter {
                     if (pos.line() > 0 && (declLine == 1 || pos.line() < declLine)) declLine = pos.line();
                 }
             }
-            nb.kofDwarf.add(mangled, method.name(), declLine);
+            java.util.List<NativeDwarf.Local> params = new java.util.ArrayList<>();
+            java.util.List<NativeDwarf.Local> locals = new java.util.ArrayList<>();
+            for (IRLocalVariable lv : method.localVariables()) {
+                if (lv.name() == null || lv.name().isEmpty() || lv.name().startsWith("tmp")
+                        || lv.name().startsWith("cap") || lv.name().startsWith("lambda$")) {
+                    continue; // temporarios do lowering nao sao nome Kof
+                }
+                NativeDwarf.Local slot = new NativeDwarf.Local(lv.name(), NativeDwarf.slotOffset(lv.index()));
+                if (lv.name().equals("this") || lv.index() < paramSlotMax) {
+                    params.add(slot);
+                } else {
+                    locals.add(slot);
+                }
+            }
+            nb.kofDwarf.add(mangled, method.name(), declLine, params, locals);
         }
     }
 

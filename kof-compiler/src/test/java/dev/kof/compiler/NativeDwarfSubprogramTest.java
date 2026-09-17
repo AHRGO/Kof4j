@@ -62,6 +62,13 @@ class NativeDwarfSubprogramTest {
                 "subprogram deve ter DW_AT_high_pc; got: " + head(info));
         assertTrue(info.contains("DW_AT_decl_file"),
                 "subprogram deve ter DW_AT_decl_file; got: " + head(info));
+        // fatia 2: args com DW_AT_location (DW_OP_fbreg) via frame_base(rbp)
+        assertTrue(info.contains("DW_TAG_formal_parameter"),
+                "subprogram deve ter DW_TAG_formal_parameter p/ args; got: " + head(info));
+        assertTrue(info.contains("DW_AT_location") && info.contains("fbreg"),
+                "formal_parameter deve ter DW_AT_location fbreg; got: " + head(info));
+        assertTrue(info.contains("DW_AT_frame_base"),
+                "subprogram deve ter DW_AT_frame_base; got: " + head(info));
 
         // binario ainda executa corretamente (DWARF nao pode quebrar codegen)
         Process r = new ProcessBuilder(bin.toString()).redirectErrorStream(true).start();
