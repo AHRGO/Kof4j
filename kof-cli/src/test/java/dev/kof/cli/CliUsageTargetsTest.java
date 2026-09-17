@@ -69,4 +69,21 @@ class CliUsageTargetsTest {
         assertTrue(line.contains("js"), "test aceita js (status.md:566) — usage: " + line);
         assertFalse(line.contains("android"), "test nao aceita android — usage: " + line);
     }
+
+    @Test
+    void buildWithoutSourcePrintsUsageInsteadOfCrashing() {
+        // Regressao: `CmdBuild.run` acessava args[1] depois de checar so
+        // length < 2 — `kof build` (sem fonte) estourava
+        // ArrayIndexOutOfBoundsException em vez de imprimir o usage (exit 1).
+        PrintStream realErr = System.err;
+        ByteArrayOutputStream err = new ByteArrayOutputStream();
+        System.setErr(new PrintStream(err, true, StandardCharsets.UTF_8));
+        try {
+            assertDoesNotThrow(() -> CmdBuild.run(new String[] { "build" }));
+        } finally {
+            System.setErr(realErr);
+        }
+        assertTrue(err.toString(StandardCharsets.UTF_8).contains("usage: kof build"),
+                "deve imprimir o usage, nao estourar AIOOBE");
+    }
 }
