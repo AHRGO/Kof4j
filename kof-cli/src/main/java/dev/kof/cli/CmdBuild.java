@@ -31,7 +31,36 @@ final class CmdBuild {
             System.out.println(USAGE);
             return;
         }
+        if (args[1].startsWith("-")) {
+            // R6: a flag in the source position was treated as a directory name
+            // and exited 0 with "no .kf/.kof files found" — a typo'd flag looked
+            // like an empty project.
+            System.err.println("build: unknown flag: " + args[1]
+                    + " (see 'kof build --help')");
+            System.exit(1);
+            return;
+        }
         Path src = Path.of(args[1]);
+        if (!Files.exists(src)) {
+            // R6: a nonexistent source dir exited 0 (same silent-success class);
+            // check/test/run already refuse with "not found".
+            System.err.println("not found: " + src);
+            System.exit(1);
+            return;
+        }
+        // Convenience (Go-like: the directory is the module): a single source
+        // file resolves to its containing directory. Documented as
+        // `kof build app.kf`, it previously exited 0 with "no .kf/.kof files
+        // found" — a silent no-op (R6).
+        if (Files.isRegularFile(src)) {
+            Path parent = src.toAbsolutePath().normalize().getParent();
+            if (parent == null) {
+                System.err.println("build: cannot resolve the module directory of " + src);
+                System.exit(1);
+                return;
+            }
+            src = parent;
+        }
         Target target = Target.JVM;
         Target frontendTarget = null;
         boolean targetFlagged = false;

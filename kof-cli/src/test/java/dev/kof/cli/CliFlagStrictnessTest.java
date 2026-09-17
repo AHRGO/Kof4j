@@ -143,6 +143,28 @@ class CliFlagStrictnessTest {
     }
 
     @Test
+    void buildRejectsNonexistentSource(@TempDir Path dir) throws Exception {
+        Cli r = cli(dir, "build", dir.resolve("does-not-exist").toString());
+        assertNotEquals(0, r.exit(), "build de dir inexistente deve recusar (R6):\n" + r.out());
+        assertTrue(r.out().contains("not found"), r.out());
+    }
+
+    @Test
+    void buildRejectsFlagInSourcePosition(@TempDir Path dir) throws Exception {
+        Cli r = cli(dir, "build", "--bogus");
+        assertNotEquals(0, r.exit(), "build com flag na posicao da fonte deve recusar (R6):\n" + r.out());
+        assertTrue(r.out().contains("--bogus"), r.out());
+    }
+
+    @Test
+    void buildAcceptsSingleSourceFile(@TempDir Path dir) throws Exception {
+        Files.writeString(dir.resolve("Main.kf"), "main() { println(\"oi\") }\n");
+        Cli r = cli(dir, "build", "Main.kf", "--output", "out");
+        assertEquals(0, r.exit(), "build <file.kf> documentado nao pode ser no-op (R6):\n" + r.out());
+        assertTrue(Files.exists(dir.resolve("out/Default/Main.class")), r.out());
+    }
+
+    @Test
     void benchRejectsUnknownFlagInsteadOfTreatingItAsPath(@TempDir Path dir) throws Exception {
         Cli r = cli(dir, "bench", "--verbos");
         assertNotEquals(0, r.exit(), "bench --flag deve recusar (R6):\n" + r.out());
