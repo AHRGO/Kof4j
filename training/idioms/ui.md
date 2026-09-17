@@ -434,3 +434,38 @@ silent 0). Scales (8px grid): `Spacing` xs/sm/md/lg/xl = 4/8/16/24/32 ·
 `Radius` none/sm/md/lg/full = 0/2/4/8/9999 · `Border` hairline/thin/medium/
 thick = 1/2/4/8 · `Elevation` none/sm/md/lg/xl = 0/1/2/3/4 · `Typography`
 xs/sm/md/lg/xl/hero = 12/14/16/20/24/32.
+
+## Application state without prop-drilling (Fase 8)
+
+**BAD (prop-drilling):**
+
+```kof
+main() {
+    var theme = Store(0)
+    buildHeader(theme)              // thread the handle down...
+}
+Header buildHeader(Store theme) {   // ...through every layer
+    return buildLogo(theme)
+}
+```
+
+**PREFERRED:**
+
+```kof
+main() {
+    AppState(0).set(1)              // root store: one per application
+}
+Label buildLogo() {
+    var l = Label("")
+    AppState(0).subscribe((v: Int) -> { l.text = "mode " + v })   // reach it directly
+    return l
+}
+```
+
+**Why:** `AppState(initial)` is the application-scoped root store —
+create-or-get singleton over the `Store` machinery (`D-UI-APPSTATE`): the
+first call creates with `initial`, later calls return the same handle.
+Components read it where they need it instead of carrying handles through
+layers. Methods are exactly the Store's; `unsubscribe` is real since §274
+(manual cleanup today — auto-attribution to component lifecycle is rule 6,
+undecided). The observable lives in KofJS; JVM/Native are documented no-ops.

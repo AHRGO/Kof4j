@@ -81,6 +81,17 @@ if (mc.receiver() == null && "Store".equals(mc.methodName())
             Type.PrimitiveType.INT, KofCallKind.FUNCTION));
     return localIdx;
 }
+if (mc.receiver() == null && "AppState".equals(mc.methodName())
+        && mc.arguments().size() == 1) {
+    // Fase 8 (docs/ui/architecture.md §2.6): estado RAIZ da aplicação —
+    // singleton create-or-get sobre a máquina do Store (D-UI-APPSTATE);
+    // métodos = os do Store, um único slot por processo.
+    localIdx = ExpressionLowerer.emitExpression(driver, mc.arguments().get(0), ops, owner, localIdx, locals);
+    ops.add(new KofCall(new Type.ClassType("kof.ui", "Ui", List.of()),
+            "kof_ui_app_state", List.of(Type.PrimitiveType.INT),
+            Type.PrimitiveType.INT, KofCallKind.FUNCTION));
+    return localIdx;
+}
 if (mc.receiver() == null && "Canvas".equals(mc.methodName()) && mc.arguments().size() == 2) {
     for (ExpressionNode arg : mc.arguments()) {
         localIdx = ExpressionLowerer.emitExpression(driver, arg, ops, owner, localIdx, locals);

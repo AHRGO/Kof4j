@@ -581,6 +581,65 @@ class ComponentCoreE2ETest {
     }
 
     @Test
+    void appStateIsCreateOrGetSingleton(@TempDir Path tempDir) throws IOException {
+        // Fase 8 (docs/ui/architecture.md §2.6): AppState(initial) is the
+        // application-scoped root store — create-or-get singleton over the
+        // Store machinery; the second `initial` is ignored. Methods are
+        // exactly the Store's (get/set/subscribe/unsubscribe).
+        String program = """
+            main() {
+                var a1 = AppState(10)
+                var a2 = AppState(999)
+                println(a1.get())
+                println(a2.get())
+                var log = ""
+                a1.subscribe((v: Int) -> { log = log + "x=" + v + "," })
+                a2.set(42)
+                println(log)
+                println(storesLive())
+            }
+            """;
+        Path src = tempDir.resolve("appstate.kf");
+        Files.writeString(src, program);
+        // JVM: Store no-ops (get()=0, no notify) but the slot counts once.
+        runJvm(src, tempDir.resolve("jvm-appstate"), "0\n0\n\n1");
+        // Native: pure no-op — storesLive()=0.
+        runNative(src, tempDir.resolve("native-appstate"), "0\n0\n\n0");
+        // JS: ONE shared store — second call returns the same handle (10,
+        // not 999); subscriber sees 10 on subscribe and 42 via the other handle.
+        assertEquals("10\n10\nx=10,x=42,\n1", runJs(tempDir, "appstate", program),
+                "AppState must be ONE shared store regardless of the call site");
+    }
+
+    @Test
+    void appStateDrivesComponentsWithoutPropDrilling(@TempDir Path tempDir) throws IOException {
+        // The app-state idiom: each component reads AppState itself — the
+        // store handle is never passed around.
+        String program = """
+            main() {
+                AppState(0)
+                var win = Window("App")
+                var a = Component(0)
+                var b = Component(0)
+                AppState(0).subscribe((v: Int) -> { a.state = v })
+                AppState(0).subscribe((v: Int) -> { b.state = v * 2 })
+                win.bind(a)
+                a.bind(b)
+                AppState(0).set(7)
+                println(a.state)
+                println(b.state)
+                println(storesLive())
+            }
+            """;
+        Path src = tempDir.resolve("appstate-shared.kf");
+        Files.writeString(src, program);
+        runJvm(src, tempDir.resolve("jvm-appstate-shared"), "0\n0\n1");
+        runNative(src, tempDir.resolve("native-appstate-shared"), "0\n0\n0");
+        assertEquals("7\n14\n1", runJs(tempDir, "appstate-shared", program),
+                "each component reaches the same app state");
+    }
+
+    @Test
     void declaredUiAndMediaTypesCompileAndRun(@TempDir Path tempDir) throws IOException {
         // §179 (D-BACKEND-SEMANTICS #4): tipo kof.ui/kof.media DECLARADO
         // (var/param/campo/retorno) — antes o descritor JVM saía `LLabel;`

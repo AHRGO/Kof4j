@@ -181,6 +181,15 @@ public final class JsRuntimeUiEvents {
                 return kofUiStores.size;
             }
 
+            // Fase 8 §2.6 / D-UI-APPSTATE: application-scoped root store —
+            // create-or-get singleton over the Store machinery (one slot per
+            // process; the `initial` of later calls is ignored by design).
+            let kofUiAppStateId = null;
+            export function kofUiAppState(initial) {
+                if (kofUiAppStateId === null) kofUiAppStateId = kofUiStoreNew(initial);
+                return kofUiAppStateId;
+            }
+
             // ── Fase 7: Navegação (docs/ui/architecture.md §2.9) ──────
             // Route = nome + builder(componente raiz). Navegar troca o
             // componente raiz da janela: unmount do antigo (lifecycle

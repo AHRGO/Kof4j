@@ -279,6 +279,15 @@ public final class JvmRuntimeUi {
                     return kofUiStoreLive.size();
                 }
 
+                private static int kofUiAppStateId = 0;
+
+                public static int kof_ui_app_state(int initial) {
+                    // Fase 8 §2.6 / D-UI-APPSTATE: create-or-get singleton
+                    // over the (no-op) Store machinery.
+                    if (kofUiAppStateId == 0) kofUiAppStateId = kof_ui_store_new(initial);
+                    return kofUiAppStateId;
+                }
+
                 // ── Fase 7: Router (no-ops — UI é KofJS) ──
                 public static void kof_ui_route_register(String name, int root) {
                 }

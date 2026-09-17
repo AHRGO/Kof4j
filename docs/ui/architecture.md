@@ -226,11 +226,13 @@ registers handlers per node (basis of propagation) and **clears them on unmount*
 
 ### 2.6 State
 
-Three scopes (Phase 8 defines the official model; the core delivers the **local** one):
+Three scopes (Phase 8 — delivered 18/09: `D-UI-APPSTATE` + §274):
 
 - **Component local:** `state`/`text`/`flag` on the `Component` (delivered).
-- **Shared:** an observable `Store` between components (Phase 8).
-- **Application:** root/`AppState` (Phase 8).
+- **Shared:** an observable `Store` between components (delivered;
+  JS `unsubscribe` fixed §274).
+- **Application:** `AppState(initial)` — create-or-get singleton over the
+  Store machinery, reachable from anywhere (delivered, `D-UI-APPSTATE`).
 
 A state change invalidates **only the owning component** — not the application.
 

@@ -48,6 +48,31 @@ l.setFontSize(Typography.lg)
 An unknown member (`Spacing.huge`) or a method call (`Spacing.of(4)`) is
 `SEM078` — the tokens hold constants, never a silent 0.
 
+## Shared and application state (Fase 8)
+
+`Store(initial)` is shared observable state between components;
+`AppState(initial)` is the **same store, one per application** — reachable
+from anywhere, no handle passed around:
+
+```kof
+main() {
+    var store = Store(0)             // shared: give the handle to who needs it
+    store.subscribe((v: Int) -> { println("s=" + v) })
+    store.set(1)                     // prints s=0 (current on subscribe), s=1
+    var h = (v: Int) -> { println("t=" + v) }
+    store.subscribe(h)
+    store.unsubscribe(h)             // real since §274 — stops delivery
+    AppState(0).set(7)               // app root: any component reads it...
+    println(AppState(0).get())       // ...the same value, 7
+}
+```
+
+`AppState(initial)` is create-or-get: the first call creates with `initial`,
+later calls return the same handle (their `initial` is ignored). Methods are
+exactly the Store's (`get`/`set`/`subscribe`/`unsubscribe`) — decision
+`D-UI-APPSTATE`. The observable lives in KofJS; on JVM/Native the operations
+are documented no-ops (UI is KofJS).
+
 ## Windows and Widgets
 
 ```kof

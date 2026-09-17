@@ -208,3 +208,20 @@ Prova: `UiTokensE2ETest` 7/7 (tabela golden em JVM/Native/Script + DOM JS +
 as duas arestas `SEM078` + composição com `Style`/widget). A linha
 "Design system" da matriz agora lê: Theme + `Color`/`Palette` + os cinco
 namespaces de token (a aplicação semântica theme→widget continua manual).
+
+### Fase 8 (Estado da aplicação) — CONCLUÍDA (18/09)
+
+A `architecture.md` §2.6 foi fechada por duas unidades. §274 (bug): o
+`Store.unsubscribe` do KofJS era no-op silencioso — o subscribe guardava o
+wrapper `fn.invoke.bind(fn)`, o unsubscribe buscava o handle raw, e callbacks
+desinscritos seguiam recebendo todo `set()` para sempre; as inscrições agora
+são pares `{raw,f}` removidos por identidade do raw (fail-first:
+`storeUnsubscribeStopsDelivery`, VERMELHO `n=1,n=2,n=3,` pré-fix). Feature:
+`AppState(initial)` — o store-raiz do escopo da aplicação, um singleton
+create-or-get sobre a máquina do Store, alcançável de qualquer lugar sem
+prop-drilling (`D-UI-APPSTATE`). Prova: `appStateIsCreateOrGetSingleton` +
+`appStateDrivesComponentsWithoutPropDrilling` (golden medido por target;
+JVM/Native mantêm os no-ops documentados do Store; o singleton JVM ainda conta
+em `storesLive()`), `ComponentCoreE2ETest` 24/24. Atribuir inscrições
+automaticamente ao ciclo de vida dos components segue questão aberta regra 6
+(o `unsubscribe` manual é o primitivo funcional hoje).

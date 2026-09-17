@@ -1372,6 +1372,53 @@ flake and §181/§256 cross reds; `docs-lang.sh check` 0/0/0.
 
 ---
 
+## D-UI-APPSTATE — Fase 8: `AppState(initial)` is the application-scoped root store
+
+**Date:** 2026-09-18
+
+**State:** `DECIDED`
+
+**Context:** `docs/ui/architecture.md` §2.6 defines three state scopes. The
+local one (`state`/`text`/`flag` on `Component`) and the shared `Store`
+(get/set/subscribe/unsubscribe) already worked; the **application root** was
+the missing scope (Fase 8). While wiring it, §274 was measured and fixed
+first: JS `Store.unsubscribe` was a silent no-op (wrapper-vs-raw identity),
+so the "cleanup" leg of §2.6 had no working primitive — see `known-bugs.md`
+§274.
+
+**Decision (minimal contract):**
+- `AppState(initial)` — one argument, returns the **app-scoped store**: a
+  **create-or-get singleton** over the Store machinery. The first call
+  creates with `initial`; later calls return the same handle and **ignore**
+  their `initial` (documented; the value lives in the runtime, one slot per
+  process).
+- The returned handle is a `Store` — methods are exactly `get`/`set`/
+  `subscribe`/`unsubscribe`; no new surface, no `State`/`Signal` machinery.
+- Reachability is the point: components call `AppState(0)` anywhere instead
+  of prop-drilling a handle.
+- `storesLive()` counts the app-state slot (leak probe unchanged).
+- Subscription cleanup on unmount stays **manual** (`unsubscribe(h)` — now
+  real per §274): auto-attributing subscriptions to components is a bigger
+  contract (which component is "current" during a subscribe?) — rule 6, not
+  decided here.
+- JVM/Native keep the documented Store no-ops (UI is KofJS — backend-parity);
+  the JVM singleton still counts once in `storesLive()`.
+
+**Amendable without breaking code:** the initial-value-ignored semantics and
+any later extension (e.g., auto-unsub) are recorded here first; the call
+shape itself is frozen.
+
+**Evidence:** `ComponentCoreE2ETest.appStateIsCreateOrGetSingleton` +
+`appStateDrivesComponentsWithoutPropDrilling` (RED pre-feature — SEM015
+"Undefined function: 'AppState'"; green post-wiring); golden measured per
+target (JS `10,10,x=10,x=42,,1`; JVM `0,0,"",1`; Native `0,0,"",0`);
+ComponentCore 24/24 + UiE2E 29 + browser 28 + Router 4 + style/tokens 17 +
+CoreRegression 102 + CompilerDriver 256 green.
+
+- Related: D-UI-STYLE, D-UI-TOKENS, §274, D-BACKEND-SEMANTICS (no-op stores).
+
+---
+
 ## D-UNIVERSAL — promotion of `PLAN-UNIVERSAL-PLATFORM` to current work (R12 overridden)
 
 **Date:** 2026-09-17

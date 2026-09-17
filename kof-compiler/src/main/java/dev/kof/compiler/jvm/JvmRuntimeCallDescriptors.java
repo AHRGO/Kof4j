@@ -130,7 +130,7 @@ public final class JvmRuntimeCallDescriptors {
             case "kof_ui_event_x", "kof_ui_event_y" -> "(I)I";
             case "kof_ui_emit" -> "(ILjava/lang/String;)V";
             case "kof_ui_event_stop" -> "(I)V";
-            case "kof_ui_store_new" -> "(I)I";
+            case "kof_ui_store_new", "kof_ui_app_state" -> "(I)I";
             case "kof_ui_store_get" -> "(I)I";
             case "kof_ui_store_set" -> "(II)V";
             case "kof_ui_store_subscribe", "kof_ui_store_unsubscribe" -> "(ILjava/lang/Object;)V";

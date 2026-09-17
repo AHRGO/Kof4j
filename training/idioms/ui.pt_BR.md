@@ -434,3 +434,38 @@ compartilhado, os quatro targets carregam o mesmo valor. Membro inexistente
 xs/sm/md/lg/xl = 4/8/16/24/32 · `Radius` none/sm/md/lg/full = 0/2/4/8/9999 ·
 `Border` hairline/thin/medium/thick = 1/2/4/8 · `Elevation` none/sm/md/lg/xl
 = 0/1/2/3/4 · `Typography` xs/sm/md/lg/xl/hero = 12/14/16/20/24/32.
+
+## Estado da aplicação sem prop-drilling (Fase 8)
+
+**RUIM (prop-drilling):**
+
+```kof
+main() {
+    var theme = Store(0)
+    buildHeader(theme)              // descer o handle por camada...
+}
+Header buildHeader(Store theme) {   // ...toda, uma a uma
+    return buildLogo(theme)
+}
+```
+
+**PREFERIDO:**
+
+```kof
+main() {
+    AppState(0).set(1)              // store-raiz: um por aplicação
+}
+Label buildLogo() {
+    var l = Label("")
+    AppState(0).subscribe((v: Int) -> { l.text = "mode " + v })   // alcança direto
+    return l
+}
+```
+
+**Por quê:** `AppState(initial)` é o store-raiz do escopo da aplicação —
+singleton create-or-get sobre a máquina do `Store` (`D-UI-APPSTATE`): a
+primeira chamada cria com `initial`, as seguintes devolvem o mesmo handle.
+Components leem onde precisam, sem carregar handles por camadas. Os métodos
+são exatamente os do Store; `unsubscribe` é real desde o §274 (cleanup manual
+hoje — auto-atribuição ao ciclo de vida do component é regra 6, indecisa). O
+observable vive no KofJS; JVM/Native são no-ops documentados.

@@ -206,3 +206,20 @@ method calls on a namespace are `SEM078` (R6 — never a silent 0). Proof:
 `SEM078` edges + composition with `Style`/widget). The audit matrix
 "Design system" row now reads: Theme + `Color`/`Palette` + the five token
 namespaces (the semantic theme-to-widget application remains manual).
+
+### Phase 8 (Application state) — DONE (18/09)
+
+`architecture.md` §2.6 closed by two units. §274 (bug): KofJS
+`Store.unsubscribe` was a silent no-op — subscribe stored the
+`fn.invoke.bind(fn)` wrapper, unsubscribe searched the raw handle, so
+unsubscribed callbacks kept receiving every `set()` forever; subs are now
+`{raw,f}` pairs removed by raw identity (fail-first:
+`storeUnsubscribeStopsDelivery`, RED `n=1,n=2,n=3,` pre-fix). Feature:
+`AppState(initial)` — the application-scoped root store, a create-or-get
+singleton over the Store machinery reachable from anywhere without
+prop-drilling (`D-UI-APPSTATE`). Proof: `appStateIsCreateOrGetSingleton` +
+`appStateDrivesComponentsWithoutPropDrilling` (golden measured per target;
+JVM/Native keep the documented Store no-ops; JVM singleton still counts in
+`storesLive()`), `ComponentCoreE2ETest` 24/24. Auto-attributing subscriptions
+to component lifecycles remains a rule-6 open question (manual
+`unsubscribe` is the working primitive today).

@@ -225,11 +225,13 @@ registra handlers por nó (base da propagação) e os **limpa no unmount**.
 
 ### 2.6 Estado
 
-Três escopos (Fase 8 define o modelo oficial; o core entrega o **local**):
+Três escopos (Fase 8 — entregue 18/09: `D-UI-APPSTATE` + §274):
 
 - **Local de componente:** `state`/`text`/`flag` no `Component` (entregue).
-- **Compartilhado:** um `Store` observável entre componentes (Fase 8).
-- **Aplicação:** raiz/`AppState` (Fase 8).
+- **Compartilhado:** um `Store` observável entre componentes (entregue;
+  `unsubscribe` do JS corrigido §274).
+- **Aplicação:** `AppState(initial)` — singleton create-or-get sobre a
+  máquina do Store, alcançável de qualquer lugar (entregue, `D-UI-APPSTATE`).
 
 Mudança de estado invalida **apenas o componente dono** — não a aplicação.
 

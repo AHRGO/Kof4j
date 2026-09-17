@@ -48,6 +48,31 @@ l.setFontSize(Typography.lg)
 Membro inexistente (`Spacing.huge`) ou chamada de método (`Spacing.of(4)`)
 é `SEM078` — os tokens guardam constantes, nunca um 0 silencioso.
 
+## Estado compartilhado e da aplicação (Fase 8)
+
+`Store(initial)` é estado observável compartilhado entre components;
+`AppState(initial)` é **o mesmo store, um por aplicação** — alcançável de
+qualquer lugar, sem passar handle:
+
+```kof
+main() {
+    var store = Store(0)             // compartilhado: entregue o handle a quem precisa
+    store.subscribe((v: Int) -> { println("s=" + v) })
+    store.set(1)                     // imprime s=0 (atual no subscribe), s=1
+    var h = (v: Int) -> { println("t=" + v) }
+    store.subscribe(h)
+    store.unsubscribe(h)             // real desde o §274 — para a entrega
+    AppState(0).set(7)               // raiz da app: qualquer component lê...
+    println(AppState(0).get())       // ...o mesmo valor, 7
+}
+```
+
+`AppState(initial)` é create-or-get: a primeira chamada cria com `initial`,
+as seguintes devolvem o mesmo handle (o `initial` delas é ignorado). Os
+métodos são exatamente os do Store (`get`/`set`/`subscribe`/`unsubscribe`) —
+decisão `D-UI-APPSTATE`. O observable vive no KofJS; em JVM/Native as
+operações são no-ops documentados (UI é KofJS).
+
 ## Janelas e Widgets
 
 ```kof

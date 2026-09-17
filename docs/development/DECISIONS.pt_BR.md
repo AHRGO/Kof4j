@@ -1399,6 +1399,54 @@ reds cross §181/§256; `docs-lang.sh check` 0/0/0.
 
 ---
 
+## D-UI-APPSTATE — Fase 8: `AppState(initial)` é o store-raiz da aplicação
+
+**Data:** 2026-09-18
+
+**Estado:** `DECIDIDA`
+
+**Contexto:** a `docs/ui/architecture.md` §2.6 define três escopos de
+estado. O local (`state`/`text`/`flag` no `Component`) e o `Store`
+compartilhado (get/set/subscribe/unsubscribe) já funcionavam; faltava o
+escopo **raiz da aplicação** (Fase 8). Ao ligá-lo, o §274 foi medido e
+corrigido primeiro: o `Store.unsubscribe` do JS era no-op silencioso
+(identidade wrapper-vs-raw), então a perna "cleanup" do §2.6 não tinha
+primitivo funcional — ver `known-bugs.md` §274.
+
+**Decisão (contrato mínimo):**
+- `AppState(initial)` — um argumento, devolve o store do **escopo da
+  aplicação**: um **singleton create-or-get** sobre a máquina do Store. A
+  primeira chamada cria com `initial`; as seguintes devolvem o MESMO handle
+  e **ignoram** o `initial` (documentado; o valor vive no runtime, um slot
+  por processo).
+- O handle devolvido é um `Store` — os métodos são exatamente
+  `get`/`set`/`subscribe`/`unsubscribe`; nenhuma superfície nova, nenhuma
+  máquina `State`/`Signal`.
+- O ponto é a alcançabilidade: components chamam `AppState(0)` em qualquer
+  lugar em vez de prop-drilling de handle.
+- `storesLive()` conta o slot do app-state (probe de leak inalterado).
+- O cleanup de inscrições no unmount segue **manual** (`unsubscribe(h)` —
+  agora real pelo §274): atribuir inscrições automaticamente a components é
+  contrato maior (qual component é o "current" durante um subscribe?) —
+  regra 6, não decidido aqui.
+- JVM/Native mantêm os no-ops documentados do Store (UI é KofJS —
+  backend-parity); o singleton JVM ainda conta uma vez em `storesLive()`.
+
+**Amendável sem quebrar código:** a semântica de ignorar o `initial`
+posterior e extensões futuras (p.ex. auto-unsub) são registradas aqui
+primeiro; a forma da chamada é congelada.
+
+**Evidência:** `ComponentCoreE2ETest.appStateIsCreateOrGetSingleton` +
+`appStateDrivesComponentsWithoutPropDrilling` (VERMELHO pré-feature — SEM015
+"Undefined function: 'AppState'"; verde pós-wiring); golden medido por
+target (JS `10,10,x=10,x=42,,1`; JVM `0,0,"",1`; Native `0,0,"",0`);
+ComponentCore 24/24 + UiE2E 29 + browser 28 + Router 4 + style/tokens 17 +
+CoreRegression 102 + CompilerDriver 256 verdes.
+
+- Relacionado: D-UI-STYLE, D-UI-TOKENS, §274, D-BACKEND-SEMANTICS (no-op stores).
+
+---
+
 
 # 4. Decisões rejeitadas ou substituídas
 

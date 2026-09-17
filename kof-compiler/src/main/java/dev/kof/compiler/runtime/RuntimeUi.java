@@ -490,6 +490,9 @@ public final class RuntimeUi {
             kof_ui_store_new:
                 movl $1, %eax
                 ret
+            kof_ui_app_state:
+                movl $1, %eax
+                ret
             kof_ui_store_get:
                 xorl %eax, %eax
                 ret
