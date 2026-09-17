@@ -778,7 +778,11 @@ em jogo. São o mecanismo anti-"god language":
 1. **Fronteira core → stdlib base → plataforma → pacotes oficiais → interop**
    (R1). Domínio pesado (`ml`, `bio`, `hpc`, `infra-<cloud>`) vai para
    **pacote oficial**, nunca para a stdlib base. Só entra na stdlib o que é
-   "essencial à plataforma e pequeno".
+   "essencial à plataforma e pequeno". **Machine-gated** desde 17/09:
+   `scripts/check_stdlib_boundary.sh` + ledger `scripts/stdlib_boundary.txt`
+   (CI, morde sob `--selftest`) — namespace novo sem linha no ledger com a sua
+   camada **quebra o build**; domínios pesados são hard-deny. Registre a
+   camada primeiro (ordem de decisão §3.4), nunca em silêncio.
 2. **Interop-first** (R9). Para qualquer capacidade, a primeira pergunta é
    "já existe por fora e é melhor?" → FFI/interop (`kof.process`, `.so`, JVM,
    GraalJS). Nunca reimplementar Arrow/Parquet/BLAS/LAPACK/CUDA/NumPy/

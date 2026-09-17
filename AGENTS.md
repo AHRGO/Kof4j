@@ -779,8 +779,13 @@ at stake. They are the anti-"god language" mechanism:
 1. **Boundary core → base stdlib → platform → official packages → interop**
    (R1). Heavy domain (`ml`, `bio`, `hpc`, `infra-<cloud>`) goes to an
    **official package**, never to the base stdlib. Only what is
-   "essential to the platform and small" enters the stdlib.
-2. **Interop-first** (R9). For any capability, the first question is
+   "essential to the platform and small" enters the stdlib. **Machine-gated**
+   since 17/09: `scripts/check_stdlib_boundary.sh` + ledger
+   `scripts/stdlib_boundary.txt` (CI, bites under `--selftest`) — a new
+   namespace without a ledger line with its layer **fails the build**; heavy
+   domains are hard-denied. Register the layer first (§3.4 decision order),
+   never silently.
+2. **Interop-first** (R9). For any capability, the first question is For any capability, the first question is
    "does it already exist outside and is it better?" → FFI/interop (`kof.process`, `.so`, JVM,
    GraalJS). Never reimplement Arrow/Parquet/BLAS/LAPACK/CUDA/NumPy/
    aligners/ML frameworks.
