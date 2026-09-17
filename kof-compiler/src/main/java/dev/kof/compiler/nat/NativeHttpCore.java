@@ -36,6 +36,13 @@ public final class NativeHttpCore {
                 testq %rax, %rax
                 js .Lhr_fail
                 movq %rax, %r15            # fd
+                # §259: connect nao-bloqueante p/ aplicar deadline (medido:
+                # loopback responde na hora; host morto fica em EINPROGRESS)
+                movl %r15d, %edi
+                movl $72, %eax             # fcntl
+                movl $4, %esi              # F_SETFL
+                movl $2048, %edx           # O_NONBLOCK
+                syscall
                 # sockaddr_in: family=2, port BE, ip BE
                 subq $16, %rsp
                 movw $2, (%rsp)
@@ -51,7 +58,73 @@ public final class NativeHttpCore {
                 syscall
                 addq $16, %rsp
                 testq %rax, %rax
+                jge .Lhr_conn_done
+                negq %rax
+                cmpq $115, %rax            # EINPROGRESS (medido, probe tmo2)
+                jne .Lhr_fail_cl
+                # poll(fd, POLLOUT, timeout_s*1000; 0 = infinito -> -1)
+                movl %r15d, .Lhttp_pf(%rip)
+                movw $4, .Lhttp_pf+4(%rip) # struct pollfd.events @+4 (medido: tmo3)
+                movq .Lhttp_timeout_s(%rip), %rcx
+                testq %rcx, %rcx
+                jz .Lhr_poll_inf
+                 imulq $1000, %rcx
+                 cmpq $0x7fffffff, %rcx     # clamp: ms > INT_MAX viraria negativo
+                 jbe .Lhr_poll_go           # no as = espera infinita (pior que nao ter)
+                 movq $0x7fffffff, %rcx     # ~24 dias de deadline
+                 jmp .Lhr_poll_go
+             .Lhr_poll_inf:
+                 movq $-1, %rcx
+             .Lhr_poll_go:
+                leaq .Lhttp_pf(%rip), %rdi
+                movl $1, %esi
+                movl %ecx, %edx
+                movl $7, %eax              # poll (medido: bloqueou o deadline exato)
+                syscall
+                testq %rax, %rax
                 js .Lhr_fail_cl
+                jz .Lhr_tmo_cl
+                # getsockopt(fd, SOL_SOCKET=1, SO_ERROR=4, &err, &len)
+                movl $0, .Lhttp_serr(%rip)
+                movl $4, .Lhttp_serr+4(%rip)
+                movl %r15d, %edi
+                movl $1, %esi
+                movl $4, %edx
+                leaq .Lhttp_serr(%rip), %r10
+                leaq .Lhttp_serr+4(%rip), %r8
+                movl $55, %eax
+                syscall
+                cmpl $0, .Lhttp_serr(%rip)
+                jne .Lhr_fail_cl           # ECONNREFUSED etc -> connect falhou (rapido)
+            .Lhr_conn_done:
+                # restaura blocking (F_SETFL=0 ignora access mode) e poe os
+                # timeouts de leitura/escrita (medido: read volta -EAGAIN so'
+                # depois de tv_sec; sem restaurar, EAGAIN seria instantaneo)
+                movl %r15d, %edi
+                movl $72, %eax
+                movl $4, %esi
+                xorl %edx, %edx
+                syscall
+                movq .Lhttp_timeout_s(%rip), %rcx
+                testq %rcx, %rcx
+                jz .Lhr_build
+                movq %rcx, .Lhttp_tv(%rip)
+                movq $0, .Lhttp_tv+8(%rip)
+                movl %r15d, %edi
+                movl $1, %esi
+                movl $20, %edx             # SO_RCVTIMEO
+                leaq .Lhttp_tv(%rip), %r10
+                movl $16, %r8d
+                movl $54, %eax             # setsockopt
+                syscall
+                movl %r15d, %edi
+                movl $1, %esi
+                movl $21, %edx             # SO_SNDTIMEO
+                leaq .Lhttp_tv(%rip), %r10
+                movl $16, %r8d
+                movl $54, %eax
+                syscall
+            .Lhr_build:
                 # build: METHOD SP path SP HTTP/1.1 CRLF Host: host CRLF
                 leaq .Lhttp_reqbuf(%rip), %rbx
                 movq %rbx, %rdi
@@ -177,7 +250,11 @@ public final class NativeHttpCore {
                 subq %r12, %rdx
                 call kof_net_read
                 testq %rax, %rax
-                jle .Lhr_rd_done
+                jg .Lhr_rd_more
+                cmpq $-11, %rax            # EAGAIN: SO_RCVTIMEO expirou (medido)
+                je .Lhr_tmo_cl
+                jmp .Lhr_rd_done           # 0 = EOF (Connection: close), outro erro idem
+            .Lhr_rd_more:
                 addq %rax, %r12
                 cmpq $262144, %r12
                 jl .Lhr_rd
@@ -256,6 +333,16 @@ public final class NativeHttpCore {
                 call kof_string_from_literal
                 movq %rax, %rdi
                 call kof_throw_string
+            .Lhr_tmo_cl:
+                movl %r15d, %edi
+                call kof_net_close
+                leaq .Lhttp_err_tmo(%rip), %rdi
+                call kof_http_cstrlen
+                movl %eax, %esi
+                leaq .Lhttp_err_tmo(%rip), %rdi
+                call kof_string_from_literal
+                movq %rax, %rdi
+                call kof_throw_string
             .Lhr_out:
                 popq %r15
                 popq %r14
@@ -266,6 +353,11 @@ public final class NativeHttpCore {
 
             .section .data
             .Lhttp_err_conn: .asciz "kof.http: connect falhou"
+            .Lhttp_err_tmo: .asciz "kof.http: timeout"
+            .Lhttp_timeout_s: .quad 15
+            .Lhttp_tv: .quad 0
+            .Lhttp_serr: .quad 0
+            .Lhttp_pf: .space 8
             .Lhttp_empty: .space 1
             .section .text
 
@@ -365,15 +457,24 @@ public final class NativeHttpCore {
                 call kof_http_core
                 movq .Lhttp_last_status(%rip), %rax
                 ret
-            # configurators (no-op nativo, preservam API; paridade futura)
+            # §259: timeout REAL (era ret puro). Guarda segundos; 0 = sem
+            # deadline (igual JVM: Duration.ZERO = infinito). Default 15s.
             .globl kof_http_timeout_set
             .type kof_http_timeout_set, @function
             kof_http_timeout_set:
+                movslq %edi, %rdi
+                testq %rdi, %rdi
+                jge .Lhts_store
+                xorq %rdi, %rdi
+            .Lhts_store:
+                movq %rdi, .Lhttp_timeout_s(%rip)
                 ret
+            # §259 fatia 2 (pendente): retry ainda no-op no nativo
             .globl kof_http_retry_set
             .type kof_http_retry_set, @function
             kof_http_retry_set:
                 ret
+            # §259 fatia 3 (pendente): circuit ainda no-op no nativo
             .globl kof_http_circuit_set
             .type kof_http_circuit_set, @function
             kof_http_circuit_set:

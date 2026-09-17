@@ -9278,8 +9278,24 @@ behavior-preserving (`RawRowCollectionAccessE2ETest` + `SemanticResolutionTest`
   cites `HTTP003`/"not silent: debug syserr" — it now says the native knobs are
   pure silent no-ops; `backend-parity.md:93` likewise (phantom `HTTP003` → §259
   pointer).
-- **Status:** 🔴 OPEN 16/09 — catalogued by lane bugs-and-gaps `192.168.100.15`.
-  Pointer: native/compiler lane (`.17`/`.18`). Related: §258 (same sweep),
+- **Status:** 🟡 PARTIAL 17/09 — catalogued by lane bugs-and-gaps
+  `192.168.100.15`; **fatia 1 FECHA o timeout no x86_64** (this commit):
+  `kof_http_timeout_set` guarda segundos (default 15, 0 = sem deadline, igual
+  o JVM) e `kof_http_core` roda connect nao-bloqueante + `poll(POLLOUT)` com
+  deadline + `getsockopt(SO_ERROR)` (erro de conexao RAPIDO, nao engolido pelo
+  timeout) + `SO_RCVTIMEO`/`SO_SNDTIMEO` + `read` que volta `-EAGAIN` vira
+  `throw "kof.http: timeout"` (superficie identica ao JVM — `catch (String e)`
+  pega). Codigos de syscall/sockopt/errno e offsets **medidos em probes
+  standalone** (tmo.s/tmo2.s/tmo3.s: poll bloqueou o deadline exato 1.005s,
+  SO_ERROR=111 lido certo em porta fechada, EAGAIN so' apos tv_sec quando o
+  bloqueio e restaurado — sem restaurar, EAGAIN instantaneo = green falso).
+  Prova: `KofHttpNativeTimeoutE2ETest` 3/3 (Q0: RED = binario travou 20s no
+  blackhole-server; GREEN = timeout em ~1s com `timeout(1)`; request boa com
+  `timeout(5)` intacta; porta fechada fail-fast). `KofHttpE2ETest` 8/8 +
+  `KofHttpResilienceE2ETest` 3/3 (JVM/JS) sem regressao. **PENDENTE:** retry
+  e circuit no x86 (fatiast 2/3) e a porta riscv64/aarch64 dos 3 knobs
+  (fatia 4 — os `ret` puros continuam la; o `HTTP003` do doc continua
+  inexistente, o registro aponta p/ ca). Related: §258 (same sweep),
   WEB002/WEB004/WEB003 (the per-function gap-code split precedent this should
   follow).
 
