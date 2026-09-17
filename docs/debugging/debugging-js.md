@@ -2,7 +2,7 @@
 
 # DEBUGGING_JS.md — Debugging on the KofJS target
 
-**Status:** Planned — future source maps
+**Status:** Source maps ✅ partial 01/09 (line-level V3 `Kof → JS` map, `KofJsSourceMapTest`; columns/expressions pending) · **debug execution path: planned** (see `debug-adapter.md`)
 **Date:** August 27, 2026
 **Version:** 0.4.0-beta (7 targets; free-list + pthread spawn + FP XMM)
 
@@ -26,8 +26,10 @@ Editor
 
 ## 2. Source Maps
 
-The JsBackend generates `.mjs` + source maps that map each JS line to the
-Kof line. A breakpoint at `main.kf:15` stops at the corresponding JS instruction.
+The JsBackend generates `.mjs` + a **line-level V3 source map** that maps each
+JS line to the Kof line (`KofJsSourceMapTest`). A breakpoint at `main.kf:15`
+stops at the corresponding JS line. Column-level mapping and expression
+evaluation are pending.
 
 The user never looks for the `.mjs` manually.
 

@@ -78,7 +78,7 @@ NOT APPLICABLE   → does not apply to the Kof architecture
 | Actuator | actuator | `kof.observability` | **EXISTS** | health/metrics/request IDs JVM/Native/JS |
 | Health checks | health | `kof.observability.health` | **EXISTS** | JVM/Native/JS |
 | Metrics | micrometer | `kof.observability` | **EXISTS** | counter/increment/gauge JVM/Native/JS |
-| Observability | tracing | `kof.observability` | **EXISTS** | health/metrics/request IDs; tracing planned |
+| Observability | tracing | `kof.observability` | **EXISTS** | health/metrics/request IDs + W3C `traceId`/`spanId` (pure IDs, 3 targets); OTel export/spans store planned |
 | Logging | logback | `kof.log` + `println` | **EXISTS** | `log.debug/info/warn/error` JVM/Native |
 | Graceful shutdown | shutdown | `web.close()` + spawn join | PARTIAL | |
 | CLI/tooling | spring CLI | `kof` CLI (build/run/serve/test/bench/profile/inspect) | EXISTS | |
@@ -144,7 +144,7 @@ NOT APPLICABLE   → does not apply to the Kof architecture
 | Service discovery | Cloud | — | MISSING | LOW (manual config) |
 | Gateway | Cloud Gateway | `kof.web` + proxy | PARTIAL | LOW |
 | Circuit breakers | Resilience | `kof.http` (`http.circuit`) | **EXISTS (JVM+JS)** | LOW |
-| Distributed tracing | Sleuth | `kof.observability` (`requestId`/`correlationId`) | PARTIAL | LOW |
+| Distributed tracing | Sleuth | `kof.observability` (`requestId`/`correlationId`, W3C `traceId`/`spanId`) | PARTIAL | LOW |
 | Batch (jobs/steps/retry) | Batch | `kof.mq` queue + `kof.scheduler` | PARTIAL | MEDIUM |
 | GraphQL | GraphQL | — | MISSING | LOW (REST first) |
 | Distributed sessions | Session | `kof.security` (`sessionCreate/Get/Destroy`) | **EXISTS (JVM/Native/JS)** | LOW |
