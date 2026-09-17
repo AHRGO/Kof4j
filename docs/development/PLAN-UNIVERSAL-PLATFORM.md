@@ -1544,6 +1544,18 @@ dependencies and guardrails.)
 - **Cost:** **low in the core** (it is lowering + runtime, not semantics).
 - **Not to do:** do not turn FFI into "pointers in the core" — the boundary is
   safe; the non-GC zone stays outside.
+- **First slice (opened by #431, 17/09 — raylib is the motivating case; tracked
+  on the issue):** the current surface is fixed-shape JVM helpers
+  (`JvmFfiRuntime`: `i`/`si`/`dd`) gated by `CompilerPipeline.isExternBound`.
+  Concrete increments, in order, each with `FfiE2ETest`-pattern proof and
+  additive (previously `FFI001`-rejected signatures, never a change to what
+  compiles today): (1) **arity** — `ii`/`iii`/`id`-style helpers + lowering
+  dispatch; (2) **`void` returns**; (3) **String return** (`allocateUtf8String`
+  copy — same JDK 21/22 branch the `si` helper uses); (4) `const char*` params
+  **mixed with numerics** (the `InitWindow(Int,Int,String):void` case);
+  (5) native side waits on §61 (raw `_start` without libc TLS init — proven
+  direct-link path recorded there). Structs stay R3-proper (signature-level
+  ABI design), not a slice of this increment.
 
 ## R4 — Formalize compile-time codegen (already exists implicitly)
 - **What:** make explicit the layer that today generates `KofRuntime`, synthesizes the

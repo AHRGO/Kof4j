@@ -1547,6 +1547,18 @@ arquiteturais futuras e guardrails.)
 - **Custo:** **baixo no core** (é lowering + runtime, não semântica).
 - **Não fazer:** não transformar FFI em "ponteio no core" — a fronteira é
   segura; a zona sem GC fica por fora.
+- **Primeira fatia (aberta pela #431, 17/09 — raylib é o caso motivador;
+  rastreada na issue):** a superfície atual são helpers JVM de forma fixa
+  (`JvmFfiRuntime`: `i`/`si`/`dd`) gated por `CompilerPipeline.isExternBound`.
+  Incrementos concretos, em ordem, cada um com prova no padrão `FfiE2ETest` e
+  aditivo (assinaturas antes rejeitadas com `FFI001`, nunca mudança no que
+  compila hoje): (1) **aridade** — helpers `ii`/`iii`/`id` + dispatch do
+  lowering; (2) **retornos `void`**; (3) **retorno `String`** (cópia via
+  `allocateUtf8String` — mesmo ramo JDK 21/22 do helper `si`); (4) parâmetros
+  `const char*` **misturados com numéricos** (o caso `InitWindow(Int,Int,String):void`);
+  (5) o lado native aguarda o §61 (raw `_start` sem TLS da libc — caminho
+  de link direto provado registrado lá). Structs ficam no R3 formal (design de
+  ABI por assinatura), não são fatia deste incremento.
 
 ## R4 — Formalizar codegen de compile-time (já existe implicitamente)
 - **O quê:** tornar explícita a camada que hoje gera `KofRuntime`, sintetiza o
