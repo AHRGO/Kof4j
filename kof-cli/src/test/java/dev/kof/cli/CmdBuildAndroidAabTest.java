@@ -93,7 +93,26 @@ class CmdBuildAndroidAabTest {
     void apkOutsideAndroidIsHonestError(@TempDir Path dir) throws Exception {
         Path src = writeApp(dir);
         Cli r = cli(dir, "build", src.toString(), "--target", "jvm", "--apk");
-        assertTrue(r.exit() != 0 || !r.out().contains("APK gerado"),
-                "--apk fora do android nao deve gerar APK:\n" + r.out());
+        assertNotEquals(0, r.exit(), "--apk fora do android deve recusar (R6):\n" + r.out());
+        assertTrue(r.out().contains("android"), "diagnostico honesto esperado:\n" + r.out());
+    }
+
+    @Test
+    void signingFlagsOutsideAndroidAreHonestError(@TempDir Path dir) throws Exception {
+        Path src = writeApp(dir);
+        Cli r = cli(dir, "build", src.toString(), "--target", "js",
+                "--keystore", "/tmp/none.ks");
+        assertNotEquals(0, r.exit(), "--keystore fora do android deve recusar (R6):\n" + r.out());
+        assertTrue(r.out().contains("android"), "diagnostico honesto esperado:\n" + r.out());
+    }
+
+    @Test
+    void signingFlagsWithoutApkAreHonestError(@TempDir Path dir) throws Exception {
+        Path src = writeApp(dir);
+        Cli r = cli(dir, "build", src.toString(), "--target", "android",
+                "--keystore", "/tmp/none.ks", "--storepass", "x");
+        assertNotEquals(0, r.exit(),
+                "--keystore sem --apk seria descartado em silencio (R6):\n" + r.out());
+        assertTrue(r.out().contains("--apk"), "diagnostico honesto esperado:\n" + r.out());
     }
 }

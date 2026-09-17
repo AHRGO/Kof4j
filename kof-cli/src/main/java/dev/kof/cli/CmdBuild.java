@@ -140,6 +140,35 @@ final class CmdBuild {
             System.exit(1);
             return;
         }
+        // android-only signing/artifact flags on a non-android target: never
+        // accepted and silently ignored (R6) — the user/CI would believe the
+        // APK/signing happened. Same class as --fat/--aab.
+        if (target != Target.ANDROID && (apk || keystore != null
+                || storepass != null || keypass != null || keyalias != null)) {
+            System.err.println("build: --apk/--keystore/--storepass/--keypass/--alias "
+                    + "só se aplicam a --target android (alvo: "
+                    + TargetMatrix.name(target) + ")");
+            System.exit(1);
+            return;
+        }
+        // signing flags only act inside the standalone --apk pipeline; without
+        // --apk they would be silently dropped (R6).
+        if (!apk && (keystore != null || storepass != null
+                || keypass != null || keyalias != null)) {
+            System.err.println("build: --keystore/--storepass/--keypass/--alias "
+                    + "só se aplicam junto com --apk");
+            System.exit(1);
+            return;
+        }
+        // signing flags only act inside the standalone --apk pipeline; without
+        // --apk they would be silently dropped (R6).
+        if (!apk && (keystore != null || storepass != null
+                || keypass != null || keyalias != null)) {
+            System.err.println("build: --keystore/--storepass/--keypass/--alias "
+                    + "só se aplicam junto com --apk");
+            System.exit(1);
+            return;
+        }
         CompilerDriver driver = new CompilerDriver();
         if (release) driver.setDebugInfoEnabled(false);
         // kof-android Fase 4: minSdk/targetSdk por flag explícita (nunca

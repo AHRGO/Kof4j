@@ -200,7 +200,10 @@ vectorial (`res/drawable/ic_launcher_kof.xml`) — no generated binary.
   (R6); the project is still generated, so `mvn verify` remains an option;
 - ✅ **parametrizable release signing**: `--keystore <ks> [--storepass <p>]
   [--keypass <p>] [--alias <a>]` — without `--keystore`, it keeps the local
-  debug keystore generated the first time;
+  debug keystore generated the first time. The signing/artifact flags
+  (`--apk`, `--keystore`, `--storepass`, `--keypass`, `--alias`) are
+  **android-only**: on any other target, or signing without `--apk`, the CLI
+  refuses with exit 1 (R6) instead of silently ignoring them;
 - icon: Kof's vectorial default (`res/drawable/ic_launcher_kof.xml`);
   declarative override by metadata remains planned (no generated binary).
 

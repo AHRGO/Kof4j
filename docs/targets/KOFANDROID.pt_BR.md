@@ -199,7 +199,10 @@ vetorial (`res/drawable/ic_launcher_kof.xml`) — nenhum binário gerado.
   é gerado, então `mvn verify` segue como alternativa;
 - ✅ **release signing parametrizável**: `--keystore <ks> [--storepass <p>]
   [--keypass <p>] [--alias <a>]` — sem `--keystore`, mantém o debug keystore
-  local gerado na primeira vez;
+  local gerado na primeira vez. As flags de assinatura/artefato (`--apk`,
+  `--keystore`, `--storepass`, `--keypass`, `--alias`) são **só android**: em
+  qualquer outro alvo, ou assinando sem `--apk`, o CLI recusa com exit 1 (R6)
+  em vez de ignorá-las em silêncio;
 - ícone: default vetorial do Kof (`res/drawable/ic_launcher_kof.xml`);
   override declarativo por metadado segue planejado (nenhum binário gerado).
 
