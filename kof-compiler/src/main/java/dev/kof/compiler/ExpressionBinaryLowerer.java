@@ -346,6 +346,29 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
         }
         accType = Type.PrimitiveType.BOOL;
     } else if (("==".equals(be.operator()) || "!=".equals(be.operator()))
+            && (Type.isString(accType) || Type.isString(rightType))
+            && (TypeMetrics.isPrimitiveType(accType) || TypeMetrics.isPrimitiveType(rightType))) {
+        // #338 (dossiê .15): primitivo vs String caiu no ramo do
+        // kof_string_equals com um int UNBOXADO na pilha → VerifyError no JVM
+        // (mascarado de JavaFX), SIGSEGV latente no Native; JS já dava `false`.
+        // O contrato é um só e já existe no repo: igualdade de conteúdo entre
+        // tipos diferentes é `false` em TODO target (mesma face do fold
+        // String.equals(não-String) em ExpressionInstanceCallLowerer e da
+        // "paridade absoluta" documentada lá). Dobrar: POP dos dois lados
+        // (POP2 p/ wide — SG-020/bug 79) + BOOL constante.
+        if (TypeMetrics.isPrimitiveType(accType)) {
+            localIdx = ExpressionLowerer.emitExpression(driver, be.right(), ops, owner, localIdx, locals);
+            ops.add(new KofPop());                                                             // String (topo)
+            ops.add(TypeMetrics.isDoubleWidth(accType) ? new KofPop2() : new KofPop());        // primitivo
+        } else {
+            localIdx = ExpressionLowerer.emitExpression(driver, be.right(), ops, owner, localIdx, locals);
+            ops.add(TypeMetrics.isDoubleWidth(rightType) ? new KofPop2() : new KofPop());      // primitivo (topo)
+            ops.add(new KofPop());                                                             // String
+        }
+        boolean ne = "!=".equals(be.operator());
+        ops.add(new KofLoadLiteral(Type.PrimitiveType.BOOL, ne ? 1 : 0));
+        accType = Type.PrimitiveType.BOOL;
+    } else if (("==".equals(be.operator()) || "!=".equals(be.operator()))
             && (Type.isString(accType) || Type.isString(rightType))) {
         localIdx = ExpressionLowerer.emitExpression(driver, be.right(), ops, owner, localIdx, locals);
         ops.add(new KofCall(BuiltinTypes.STRING, "kof_string_equals",

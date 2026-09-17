@@ -10269,3 +10269,31 @@ behavior-preserving (`RawRowCollectionAccessE2ETest` + `SemanticResolutionTest`
 **Face (b) — Native x86_64 span JSON diverges from JVM/JS (rule 5) — 🟡 OPEN (lane nat):** `kof_observability_span_end` (`runtime/RuntimeObservability2.java`) emits `{"traceId":..,"spanId":..,"durationMs":N}` — no `name`, no `startMicros`/`endMicros`, and duration in **ms** while JVM/JS use **micros**; `spanStart` also discards the name. Repro: build any span program with `--target native` and compare with the JVM golden.
 
 **Face (c) — Native riscv64/aarch64 span/W3C-ID path is a constant stub (Q7/R6) — 🟡 OPEN (lane nat):** `NativeRiscvAsmRtB1` `kof_observability_span_start` returns the literal `.Lstr_span_handle` (48 zeros) and `kof_observability_span_end` returns `.Lstr_empty_json` (`{}`); `request_id`/`correlation_id` return the constant `.Lstr_trace` (length 16 → zeros) and `trace_id`/`span_id` return `.Lstr_trace`/`.Lstr_span` (all zeros). No randomness, no timing, no store — yet `docs/stdlib/observability.md` claimed "Native riscv64 ✅ spans W3C". The claim was corrected (the `OBS003` note + this §); closing the stub is nat-lane asm work. The cross E2E tests (`NativeRiscv64/Aarch64E2ETest`) only cover `counter`/`increment`/`gauge`/`metrics()`, never `spanStart`/`spanEnd`/`traceId` — that is why the stub survived.
+
+
+## §273 — `Char` (or any primitive) `== String` compiled clean and died at class LOAD with `VerifyError` (unboxed `iload` fed to `kof_string_equals` which expects two `String`) — ✅ FIXED 18/09 (lane compiler `.22`, #338)
+
+- **Found (17/09, sweep; dossier posted by lane `.15` 16:20):** `var c: Char = 'A'`
+  then `c == "A"` → `check` said nothing, `run` died with `VerifyError:
+  Bad local variable type` (the JavaFX launcher masked it — reflected
+  `Run.java` showed the real `int` on a `String` stack slot). Measured on
+  the tip jar BEFORE the fix: JVM rc=1, Script silent, JS printed `false`,
+  Native alive — a 4-target divergence, JS the only one accidentally right.
+- **Root cause:** the `==` String branch in `ExpressionBinaryLowerer` called
+  `kof_string_equals` unconditionally; when one operand was a primitive
+  (Int/Char/Bool...), the operand stack received the UNBOXED value while the
+  method signature demands two `String`. There is no widening conversion
+  primitive→String in Kof (`"x" + n` is the concat idiom).
+- **Fix (root, shared emit):** a constant-fold branch BEFORE the String
+  branch — primitive × String comparison can never hold (`String.equals`
+  of a non-String is `false` on every target — the contract already frozen
+  by §216/§264), so pop both operands (POP2 for wide Long/Double per
+  SG-020/bug 79) and push the Bool literal. One fold in the shared IR
+  lowerer = the four targets agree BY CONSTRUCTION.
+- **Proof (`PrimitiveStringEqTest` 4/4, same commit):** verbatim `c == "A"`
+  prints `false` and RUNS (JVM execution asserted); wide/edge matrix
+  (`!=` → true, Double × String → false, mirrored operand order → false);
+  String × String control unchanged (`true/true/true/false`); JS artifact
+  compiles. Q0: stashing `ExpressionBinaryLowerer` turns the verbatim RED
+  (load crash); CLI measurement after the fix: JVM/Script/JS/Native all
+  print `false`.

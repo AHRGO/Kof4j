@@ -9766,3 +9766,30 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
 
 **Face (c) — caminho de span/IDs W3C do Native riscv64/aarch64 é stub constante (Q7/R6) — 🟡 ABERTO (lane nat):** `NativeRiscvAsmRtB1` `kof_observability_span_start` devolve o literal `.Lstr_span_handle` (48 zeros) e `kof_observability_span_end` devolve `.Lstr_empty_json` (`{}`); `request_id`/`correlation_id` devolvem o constante `.Lstr_trace` (comprimento 16 → zeros) e `trace_id`/`span_id` devolvem `.Lstr_trace`/`.Lstr_span` (tudo zeros). Sem aleatoriedade, sem timing, sem store — e ainda assim `docs/stdlib/observability.md` afirmava "Native riscv64 ✅ spans W3C". A afirmação foi corrigida (nota `OBS003` + este §); fechar o stub é trabalho de asm da lane nat. Os testes E2E cross (`NativeRiscv64/Aarch64E2ETest`) só cobrem `counter`/`increment`/`gauge`/`metrics()`, nunca `spanStart`/`spanEnd`/`traceId` — por isso o stub sobreviveu.
 
+
+## §273 — `Char` (ou qualquer primitivo) `== String` compilava limpo e morria no LOAD da classe com `VerifyError` (`iload` unboxed alimentando `kof_string_equals` que espera dois `String`) — ✅ CORRIGIDA 18/09 (lane compiler `.22`, #338)
+
+- **Achada (17/09, varredura; dossiê postado pela lane `.15` 16:20):** `var c: Char = 'A'`
+  e `c == "A"` → o `check` não dizia nada, o `run` morria com `VerifyError:
+  Bad local variable type` (o launcher JavaFX mascarava — o `Run.java` por
+  reflexão mostrava o `int` real num slot de pilha `String`). Medido no jar
+  do tip ANTES do conserto: JVM rc=1, Script silencioso, JS imprimia `false`,
+  Native vivo — divergência entre 4 alvos, o JS acertando por acaso.
+- **Raiz:** o ramo String do `==` em `ExpressionBinaryLowerer` chamava
+  `kof_string_equals` incondicionalmente; com um operando primitivo
+  (Int/Char/Bool...), a pilha recebia o valor UNBOXED enquanto a assinatura
+  exige dois `String`. Não existe widening primitivo→String em Kof
+  (`"x" + n` é o idiom de concat).
+- **Conserto (na raiz, emit compartilhado):** uma branch de constant-fold
+  ANTES do ramo String — primitivo × String nunca pode ser igual
+  (`String.equals` de não-String é `false` em todo target — contrato já
+  congelado por §216/§264), então pop nos dois operandos (POP2 p/ wide
+  Long/Double por SG-020/bug 79) e push do literal Bool. Um único fold no
+  lowerer compartilhado = os 4 alvos concordam POR CONSTRUÇÃO.
+- **Prova (`PrimitiveStringEqTest` 4/4, mesmo commit):** verbatim `c == "A"`
+  imprime `false` e RODA (execução JVM assertada); matriz wide/edge
+  (`!=` → true, Double × String → false, ordem espelhada → false);
+  controle String × String intacto (`true/true/true/false`); artefato JS
+  compila. Q0: dar stash em `ExpressionBinaryLowerer` deixa o verbatim RED
+  (crash no load); medição CLI pós-conserto: JVM/Script/JS/Native todos
+  imprimem `false`.
