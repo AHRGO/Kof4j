@@ -434,6 +434,7 @@ public class NativeBackend implements Backend {
     static void emitRiscvHttp(StringBuilder sb) {
         NativeRiscvHttpSupport.emit(sb);
         NativeRiscvHttpCore.emit(sb);
+        NativeRiscvHttpVerbs.emit(sb);
     }
 
 

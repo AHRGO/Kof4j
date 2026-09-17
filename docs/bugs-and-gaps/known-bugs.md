@@ -9335,8 +9335,16 @@ behavior-preserving (`RawRowCollectionAccessE2ETest` + `SemanticResolutionTest`
   cites `HTTP003`/"not silent: debug syserr" — it now says the native knobs are
   pure silent no-ops; `backend-parity.md:93` likewise (phantom `HTTP003` → §259
   pointer).
-- **Status:** 🟡 PARTIAL 17/09 — catalogued by lane bugs-and-gaps
-  `192.168.100.15`; **fatia 1 FECHA o timeout no x86_64** (this commit):
+- **Status:** ✅ CLOSED 17/09 (fatiast 1-4: timeout x86 `021cefad` | retry x86
+  `3f6814ec` | circuit x86 `d11eceac` + paridade-5xx `6abd3341` | porta riscv64
+  +aarch64 nesta unidade — os 3 knobs REAIS nos 4 targets nativos + JVM/JS,
+  mensagens cross-identicas provadas sob qemu
+  (`KofHttpNativeResilienceCrossTest` 4/4: "kof.http: timeout", "HTTP 500
+  from <url>", "kof.http circuit open (fail fast)"; SUITE 1979/2F(§181
+  pre-ex)/0E; split NativeRiscvHttpVerbs p/ gate). Constantes riscv MEDIDAS
+  (ppoll=73 ts=segundos — NAO ms como x86 poll; setsockopt=208/209/25/113;
+  armadilha htons-LE 0xAFB3 capturada em probe rtmo.s). Catalogued by lane
+  bugs-and-gaps `192.168.100.15`; **fatia 1 FECHA o timeout no x86_64:**
   `kof_http_timeout_set` guarda segundos (default 15, 0 = sem deadline, igual
   o JVM) e `kof_http_core` roda connect nao-bloqueante + `poll(POLLOUT)` com
   deadline + `getsockopt(SO_ERROR)` (erro de conexao RAPIDO, nao engolido pelo
