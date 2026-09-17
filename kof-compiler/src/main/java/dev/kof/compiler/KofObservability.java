@@ -65,18 +65,23 @@ public final class KofObservability {
                     ? new ObservabilityCall("kof_observability_span_start", STR, List.of(STR)) : null;
             case "spanEnd" -> argc == 1 && isString(argTypes.get(0))
                     ? new ObservabilityCall("kof_observability_span_end", STR, List.of(STR)) : null;
+            case "exportSpans" -> argc == 0
+                    ? new ObservabilityCall("kof_observability_export_spans", STR, List.of()) : null;
             default -> null;
         };
     }
 
-    static boolean supportedOn(@SuppressWarnings("unused") String function,
-            @SuppressWarnings("unused") Target target) {
+    static boolean supportedOn(String function, Target target) {
         // OBS002 fechado: histogram/metrics (store + export Prometheus) agora
         // estão nos 3 targets (JVM/JS/Native).
+        // OBS003 (R7 — JVM-first): a serialização OTLP/JSON de spans existe no
+        // JVM e no JS; no Native ainda não (asm) — falha honesta, nunca stub.
+        if (function.equals("kof_observability_export_spans")) return !target.isNative();
         return true;
     }
 
     static String gapCode(String function) {
+        if (function.equals("kof_observability_export_spans")) return "OBS003";
         return function.equals("kof_observability_histogram")
                 || function.equals("kof_observability_metrics")
                 ? "OBS002" : "OBS001";

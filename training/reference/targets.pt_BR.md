@@ -2,7 +2,7 @@
 
 # Kof Target Reference
 
-**Version:** 0.4.0-beta (Sep 2026) — 810 tests
+**Version:** 0.4.0-beta (Sep 2026) — 2218 testes
 
 ## JVM Target
 
@@ -124,7 +124,7 @@ kof script app.ks --target js
 - **kof.ui**: widgets (Window/Label/Button/Input, Column/Row, View+Style) com
   renderização em webview nativo (WebKitGTK) ou browser; ações por lambda;
   fechar a janela encerra o programa. JVM/Native: handles no-ops.
-- `spawn` no JS é sequencial: statement e expressão cobrem; async real de event-loop = CONC003 parcial.
+- `spawn` no JS é async de event-loop: statement e expressão cobrem; CONC003 fechado 03/09 (`async`/`await`/`Promise` reais; `cancelled()` sempre `0` é a limitação conhecida).
 - Gap codes de target (HTTP002, DB001, WEB001/002/003/004, SCHED001, AND001, SECN00x) reportados via diagnostic em compile-time.
 
 ## KofScript (`kof script`)
@@ -134,8 +134,8 @@ kof script app.ks --target jvm|native|js --watch --inspect
 kof repl
 ```
 
-- Top-level `let`/`const` → `KofScriptGlobals` static fields + rewriting (27/08)
-- `let x = 5` `const y: Int = 10` → `class KofScriptGlobals { static Int x = 5 }`
+- `var`/`val` no topo → campos estáticos `KofScriptGlobals` + rewriting
+- `var x = 5` `val y: Int = 10` → `class KofScriptGlobals { static Int x = 5 }` (sem `let`/`const` — sugar JS removido `183cb048`; a forma anotada só "funciona" via furo do parser §263)
 - JIT in-memory + cache LRU 64 (evalCache/fileCache)
 - Suporta `--watch` (WatchService debounce 200ms) e `--inspect` (IRStatistics)
 

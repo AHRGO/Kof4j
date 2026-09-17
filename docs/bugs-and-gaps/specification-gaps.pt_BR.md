@@ -36,13 +36,16 @@ recomendações futuras (regra 14 da tarefa: não alterar comportamento).
   `sealed`/`permits`) — **não existem** no Kof em nenhuma posição: nem como
   keyword de declaração, nem como nome de função, variável, parâmetro ou
   campo. Em posição de declaração o parser dá `PARSE085` (diagnóstico claro —
-  R6); em outra posição, o `expectId` de cada parser já falha (`PARSE037`
-  variável, `PARSE023` parâmetro, …). Alinhado ao corpus (regra 4). KofScript
+  R6); em qualquer posição de nome (função, variável, parâmetro, método, campo,
+  classe, record, enum) o `ParseContext.expectId` emite o mesmo `PARSE085`
+  (medido 17/09, #330; antes o genérico `PARSE037` variável / `PARSE023`
+  parâmetro). Alinhado ao corpus (regra 4). KofScript
   (`.ks`) mantém `fn` como sintaxe própria e traduz na fronteira
   KofScript (`.ks`) **não** é exceção: é Kof puro (sem `fn`/`let`/`async`).
-  Testes: `FunctionSyntaxTest` (12: fun/fn/func
+  Testes: `FunctionSyntaxTest` (15: fun/fn/func
   rejeitados como prefixo, `fn calc(): Int` rejeitado, `fn()`/`var fun`/
-  `param fn` rejeitados, membro de classe, `Int calc():Int` idiomático).
+  `param fn` rejeitados, membro de classe, `Int calc():Int` idiomático; o
+  #330 adicionou `var fun`/`var fn`/`var func` como nome → `PARSE085`).
   `let`/`const`/`async` são inexistentes em `.kf` **e** `.ks` (KofScript não
   é JavaScript — sugar removido 06/09).
 
@@ -113,7 +116,8 @@ recomendações futuras (regra 14 da tarefa: não alterar comportamento).
      `if (x != null)` → THEN (que já existia), agora `if (x == null)` → **ELSE**,
      e conjunção `x != null && Y` narrowa o THEN inteiro. Disjunção (`||`) NÃO
      narrowa (o ramo roda se UM valer) — honesto.
-  4. **Narrowing intra-expressão** (`SemExpressionTyper.narrowedScope`): em
+  4. **Narrowing intra-expressão** (`SemNarrowing.narrowedScope`, chamado de
+     `SemExpressionTyper`; o REFACTOR-500 de 17/09 o moveu): em
      `if (s != null && s.length > 0)`, o lado DIREITO da `&&` vê `s` narrowed
      (short-circuit: o lado só é avaliado se o esquerdo passou) — sem isso a
      PRÓPRIA condição daria SEM049 no `s.length`.
@@ -228,7 +232,7 @@ recomendações futuras (regra 14 da tarefa: não alterar comportamento).
 
 - **Implementação**: `val x = 1; x = 2` **compila e roda** (imprime 2, *probe*
   confirmado isoladamente). Não há flag de imutabilidade no `VarDeclStmt`
-  (só `type`/`name`/`initializer` — `AstNodes.java:351`).
+  (só `type`/`name`/`initializer` — `VarDeclStmt.java:4`).
 - **Documentação**: `AGENTS.md` "val y = 20 // imutável".
 - **Problema**: `val` é decorativo. A distinção `val`/`var` não tem efeito
   observável.
@@ -273,10 +277,11 @@ recomendações futuras (regra 14 da tarefa: não alterar comportamento).
   declaração (SG-011); duas funções top-level homônimas colidem sem
   diagnóstico claro (o `define` sobrescreve).
 - **Relacionado (MÉTODO, não top-level):** sobrecarga de método por ARIDADE na
-  mesma classe segue ABERTA — `defineMethodSymbol` mantém 1 slot por NOME →
-  SEM013 no JVM / colisão de símbolo no Native. É o **bug 131** de
-  `known-bugs.md` (**DECIDIDO 13/09**, opção 10a: implementar); esta SG-011
-  cobre só a sobrecarga de FUNÇÃO top-level (✅).
+  mesma classe era o **bug 131 de `known-bugs.md` — ✅ CORRIGIDO 13/09**
+  (DECIDIDO 13/09, opção 10a: implementar; `18a64d45`, 4 backends, `MethodCallTyper`
+  escolhe por aridade+compatibilidade; métodos de classe de mesmo nome com
+  assinaturas diferentes coexistem). Esta SG-011 cobre só a sobrecarga de FUNÇÃO
+  top-level (✅); o §131 cobre a face MÉTODO de classe (também ✅ desde 13/09).
 
 ### SG-012 — Inferência de tipo de parâmetro de lambda
 
@@ -288,7 +293,7 @@ recomendações futuras (regra 14 da tarefa: não alterar comportamento).
   (nunca Object silencioso). Prova: `lambdaParamInferredFromListContext` +
   regressão `untypedLambdaParamArithmeticIsDiagnosedNotEmitted`.
 
-### SG-013 — `private`/`protected` não são checados em compile-time
+### SG-013 — `private`/`protected` sem checagem em compile-time — ✅ FIXED (métodos 09/09; campos 17/09)
 
 - **APLICADO (09/09, decisão do maintainer, SEM046):** causa raiz era
   `defineMethodSymbol` com accessFlags=1 (PUBLIC) hardcoded — modifiers
@@ -297,6 +302,13 @@ recomendações futuras (regra 14 da tarefa: não alterar comportamento).
   declarante, protected fora da hierarquia (transitiva), ambos de contexto
   top-level. Prova: 4 testes `CompilerDriverTest` (private/protected,
   dentro/fora).
+- **ESTENDIDO a CAMPOS (17/09, #331/#327, lane compiler):** o mesmo contrato
+  agora cobre acesso a campo — `private` só na declarante, `protected` na
+  declarante/subclasses; `this.x`/`x` nu na classe declarante passa. Raiz:
+  `FieldSymbol` perdia os modificadores no `SymbolTableBuilder`; agora
+  `MemberCallTyper.checkFieldAccess` rejeita (`SEM046`). Escrita em campo
+  `final` fora do construtor declarante é rejeitada com `SEM065` (JVMS 4.4 —
+  antes: `IllegalAccessError` silencioso). Prova: `FieldAccessControlTest` 7/7.
 
 ### SG-014 — Pattern matching sem guardas/aninhamento
 
@@ -318,6 +330,12 @@ recomendações futuras (regra 14 da tarefa: não alterar comportamento).
   aridade divergente → SEM043 com esperado/encontrado (paridade de tipo exata
   aguarda dispatch virtual). Prova: 3 testes `CompilerDriverTest`
   (missing/wrongArity/complete-green).
+- **Refinado 17/09 (#322, `ebf59ca4`):** uma `abstract class` pode ADIAR os
+  métodos da interface (`abstract class A implements I {}` compila, JLS 8.4.8.1);
+  a obrigação é TRANSITIVA — um super abstrato cobra a subclasse concreta, então
+  `class C extends A {}` sem `f()` falha com `SEM043` nomeando classe + método +
+  "inherited via" (sem `AbstractMethodError` silencioso). Prova:
+  `AbstractClassPartialInterfaceE2ETest` 3/3.
 
 ### SG-016 — Semântica de classes aninhadas
 
@@ -387,6 +405,31 @@ recomendações futuras (regra 14 da tarefa: não alterar comportamento).
   cabe à mantenedora; até lá a aridade errada é SEM025 com dica da forma
   correta — nunca fallback silencioso (R6).
 
+### SG-022 — value records / tipos-valor de primeira classe (sem identidade observável) — PEDIDO, sem decisão
+
+- **Origem:** Issue #275 (pedido de feature, 16/09). Proposta: uma forma
+  `value record Vec2(Float x, Float y)` com semântica de valor e **sem
+  identidade de objeto observável**, deixando cada backend escolher a
+  representação física (local, ABI registro/pilha, campo inline, array
+  achatado, boxed sob demanda). O reporter explicitamente **não** quer uma
+  sintaxe de "alocação na pilha" nem uma estratégia de armazenamento
+  garantida — só a propriedade semântica (ausência de identidade).
+- **Estado da spec:** `record` hoje é um agregado imutável que ainda tem
+  identidade de referência (`==` é `==` de conteúdo, `getClass()` é a classe do
+  record, pode ser boxeado e guardado em coleção). **Não** existe sintaxe para
+  declarar semântica de valor sem identidade; o corpus nunca prometeu uma.
+- **Por que não é edição de lane:** é **sintaxe nova + contrato semântico novo**
+  (observabilidade de identidade) → regra 6 (contrato congelado). É decisão de
+  design da mantenedora e interage com o freeze de `==`, boxe e coleções. Até
+  ser decidido: nenhuma otimização silenciosa de record comum (escape analysis
+  segue detalhe de backend, nunca promessa observável).
+- **Nota cross-target:** na JVM um value record ainda poderia ser uma classe
+  normal (a JVM não tem value types até o Project Valhalla); a garantia seria
+  "identidade não observável", imposta pelo compilador (proibir operações de
+  identidade) — não "sem alocação". Native x86/riscv poderia achatar/embutir;
+  JS boxearia. Qualquer implementação deve declarar o comportamento honesto
+  por alvo (R6/R7), nunca prometer alocação na pilha.
+
 ---
 
 ## Categoria C — Divergências entre targets (paridade) — atualizada 10/09
@@ -453,8 +496,9 @@ Não duplicados aqui — ver [known-bugs.md](known-bugs.md):
 
 ## Resumo
 
-- **20 gaps SG-00x** (A: contradições doc/código; B: comportamento não
-  especificado). **Fila do maintainer (2ª rodada, 10/09) COMPLETA:**
+- **22 gaps SG-00x** (A: contradições doc/código; B: comportamento não
+  especificado; SG-021 json pretty-print e SG-022 value records = pedidos sem
+  decisão). **Fila do maintainer (2ª rodada, 10/09) COMPLETA:**
   SG-008 ✅, SG-005 ✅, SG-009 ✅, SG-020 ✅ — ver histórico em cada seção.
 - **8 divergências de target** (C).
 - **3 docs desatualizados** (E) — **todos ✅** (E1 residual 10/09, E2

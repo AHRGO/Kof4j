@@ -37,6 +37,8 @@ import dev.kof.compiler.KofReturnVoid;
 import dev.kof.compiler.KofStoreField;
 import dev.kof.compiler.KofStoreLocal;
 import dev.kof.compiler.KofThrow;
+import dev.kof.compiler.KofContinueLabel;
+import dev.kof.compiler.KofStatementIf;
 import dev.kof.compiler.KofTryEnd;
 import dev.kof.compiler.KofTryStart;
 import dev.kof.compiler.KofUnary;
@@ -275,6 +277,12 @@ public final class NativeRiscvCrossEmit {
                 sb.append("    ld t2, 0(t1)\n");
                 sb.append("    sd t2, 24(sp)\n");
                 sb.append("    sd sp, 0(t1)\n");
+            }
+            case KofStatementIf _ -> {
+                // §267: marcador de if de statement (uso exclusivo do dispatcher JS) — no-op
+            }
+            case KofContinueLabel _ -> {
+                // §266: marcador estrutural (fronteira corpo/update do for) — no-op
             }
             case KofTryEnd _ -> {
                 sb.append("    la t1, kof_exc_chain\n");

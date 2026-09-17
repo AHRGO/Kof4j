@@ -107,13 +107,13 @@ final class CmdEditor {
 
     private static void usage(PrintStream out) {
         out.println("usage: kof editor <subcommand>");
-        out.println("  list                 integrações oficiais disponíveis");
-        out.println("  detect               editores instalados + integrações");
-        out.println("  status               ambiente de edição Kof (detalhado)");
-        out.println("  install <editor>     instala a integração de um editor");
-        out.println("  uninstall <editor>   remove a integração instalada");
-        out.println("  setup                detecta e instala as recomendadas (com consentimento)");
-        out.println("  update               re-sincroniza integrações instaladas");
+        out.println("  list                 available official integrations");
+        out.println("  detect               installed editors + integrations");
+        out.println("  status               Kof editing environment (detailed)");
+        out.println("  install <editor>     install a given editor's integration");
+        out.println("  uninstall <editor>   remove the installed integration");
+        out.println("  setup                detect and install the recommended ones (with consent)");
+        out.println("  update               re-sync installed integrations");
     }
 
     private static int list(PrintStream out) {
@@ -153,7 +153,7 @@ final class CmdEditor {
         out.println("  compiler: OK");
         out.println("  LSP: OK (kof lsp)");
         out.println("  formatter: OK (kof fmt)");
-        out.println("  debugger: PARTIAL (kof debug — DAP em evolução)");
+        out.println("  debugger: PARTIAL (kof debug — DAP evolving)");
         out.println();
         out.println("Editors:");
         List<EditorIntegration> all = EditorRegistry.all();
@@ -185,13 +185,13 @@ final class CmdEditor {
         if (args.length < 3) { err.println("usage: kof editor uninstall <editor>"); return 1; }
         EditorIntegration e = EditorRegistry.byId(args[2]);
         if (e == null) { err.println("kof editor: editor desconhecido '" + args[2] + "'"); return 1; }
-        if (home == null) { err.println("kof editor: HOME indisponível"); return 1; }
+        if (home == null) { err.println("kof editor: HOME unavailable"); return 1; }
         EditorInstaller.Result r = EditorInstaller.uninstall(e, home);
         return report(e, r, out, err, "uninstall");
     }
 
     private static int update(DetectContext ctx, Path home, PrintStream out, PrintStream err) {
-        if (home == null) { err.println("kof editor: HOME indisponível"); return 1; }
+        if (home == null) { err.println("kof editor: HOME unavailable"); return 1; }
         int rc = 0;
         for (EditorIntegration e : EditorRegistry.all()) {
             if (EditorInstaller.isInstalled(home, e.id())) {
@@ -203,7 +203,7 @@ final class CmdEditor {
 
     private static int setup(DetectContext ctx, Path home, BufferedReader in,
                              PrintStream out, PrintStream err) {
-        if (home == null) { err.println("kof editor: HOME indisponível"); return 1; }
+        if (home == null) { err.println("kof editor: HOME unavailable"); return 1; }
         // 1-3: detectar editores + integrações existentes
         List<EditorIntegration> recommended = new ArrayList<>();
         out.println("Kof Editor Setup");
@@ -219,7 +219,7 @@ final class CmdEditor {
         }
         if (recommended.isEmpty()) {
             out.println();
-            out.println("Nada a instalar (nenhum editor detectado sem integração).");
+            out.println("Nothing to install (no detected editor without an integration).");
             return 0;
         }
         // 5: recomendações
@@ -232,7 +232,7 @@ final class CmdEditor {
         out.flush();
         String ans = readLine(in);
         if (ans != null && !ans.isBlank() && !ans.trim().toLowerCase().startsWith("y")) {
-            out.println("Ok — você pode instalar depois com:  kof editor setup");
+            out.println("Ok — you can install later with:  kof editor setup");
             return 0;
         }
         // 7-10: instalar + validar + resultado
@@ -244,7 +244,7 @@ final class CmdEditor {
     }
 
     private static EditorInstaller.Result doInstallResult(EditorIntegration e, DetectContext ctx, Path home) {
-        if (home == null) return new EditorInstaller.Failed("HOME indisponível");
+        if (home == null) return new EditorInstaller.Failed("HOME unavailable");
         return EditorInstaller.install(e, ctx, home);
     }
 
@@ -256,14 +256,14 @@ final class CmdEditor {
     private static int report(EditorIntegration e, EditorInstaller.Result r,
                               PrintStream out, PrintStream err, String verb) {
         if (r instanceof EditorInstaller.Installed inst) {
-            out.println(e.displayName() + ": integração " + verb + " (" + inst.written().size()
-                    + " arquivo(s))");
+            out.println(e.displayName() + ": integration " + verb + " (" + inst.written().size()
+                    + " file(s))");
             return 0;
         } else if (r instanceof EditorInstaller.Unchanged) {
-            out.println(e.displayName() + ": já atualizado (nenhuma mudança)");
+            out.println(e.displayName() + ": already up to date (no change)");
             return 0;
         } else if (r instanceof EditorInstaller.Removed rem) {
-            out.println(e.displayName() + ": removido (" + rem.deleted().size() + " arquivo(s))");
+            out.println(e.displayName() + ": removed (" + rem.deleted().size() + " file(s))");
             return 0;
         } else if (r instanceof EditorInstaller.Failed f) {
             err.println(e.displayName() + ": " + f.message());

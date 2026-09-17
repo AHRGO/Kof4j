@@ -31,7 +31,7 @@ class Http {
 }
 ```
 
-## GOOD — plataforma (0.3.22-beta)
+## GOOD — plataforma (0.4.0-beta)
 
 ```kof
 var j = json.encode(user)
@@ -115,13 +115,13 @@ Double total(Cart cart) {
 }
 ```
 
-## 4. Módulos (0.3.22-beta)
+## 4. Módulos (0.4.0-beta)
 
 `package`/`import` existem. `import a.b.C` file-specific fixado 27/08 — projetos grandes com `a/b/C.kf` agora compilam corretamente (CompilerDriver). `import a.b.*` para diretório. Targets: `jvm`, `native`, `native.risc`/`native.arm` (placeholder), `js`, `kofc`, `KofScript` (`.ks` com `let`).
 
 Para programas pequenos, um único arquivo `.kf` é suficiente — o `main()` no topo.
 
-## 5. Construções de intenção (0.3.22-beta)
+## 5. Construções de intenção (0.4.0-beta)
 
 O compilador reduz construções de intenção a código normal (mesmo padrão de
 `entity`/`test "nome" {}`): a sintaxe expressa *o quê*, o lowering decide *o
@@ -139,7 +139,8 @@ var todos   = User.query(db) {}                    // → kof_orm_all
 - O campo do `where` é **validado em compile-time** (campo inexistente →
   `ORM003`; entidade desconhecida → `ORM002`; target sem ORM → `ORM001`).
 - **Não** é uma mini-linguagem: é açúcar sobre `kof_orm_*` existentes.
-- `orderBy`/múltiplos `where` pendentes (evolução).
+- `orderBy name asc|desc` e múltiplas cláusulas `where` (AND) funcionam desde
+  02/09 (`a5b25cc3` — `KofOrmE2ETest.queryDslFiltersOrdersAndLimits`/`queryDslMultipleWhereAnds`).
 
 Lifecycle (01/09):
 

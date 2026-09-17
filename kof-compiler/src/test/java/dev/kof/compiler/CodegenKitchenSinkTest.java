@@ -78,7 +78,7 @@ class CodegenKitchenSinkTest {
                     println(parts.size)
                     println(parts[0])
                 }
-                """, "11\n101\nWorld\ntrue\ntrue\n3\na"));
+                """, "11\ne\nWorld\ntrue\ntrue\n3\na"));
         l.add(new Case("collections", """
                 main() {
                     var l = listOf(1, 2, 3)

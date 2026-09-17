@@ -13,7 +13,7 @@
 animations and custom visualizations are impossible — the most one does
 are colored rectangles (`View`+`Style`).
 
-The future (`PLAN-UNIVERSAL-PLATFORM.md:422`) foresees "basic plot via kof.ui"
+The future (`docs/development/PLAN-UNIVERSAL-PLATFORM.md:428`) foresees "basic plot via kof.ui"
 as lightweight visualization (SVG/`kof.ui` + FFI). The `Canvas` widget is the
 concrete implementation of that need.
 

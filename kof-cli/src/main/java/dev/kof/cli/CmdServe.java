@@ -29,11 +29,11 @@ final class CmdServe {
 
     static void run(String[] args) {
         if (args.length >= 2 && ("--help".equals(args[1]) || "-h".equals(args[1]) || "--version".equals(args[1]))) {
-            System.out.println("usage: kof serve <file.kf> [--port <port>] [--host <host>]");
+            System.out.println("usage: kof serve <file.kf> [--port <port>] [--host <host>] [--backend <t>] [--frontend <t>]");
             return;
         }
         if (args.length < 2) {
-            System.err.println("usage: kof serve <file.kf> [--port <port>] [--host <host>]");
+            System.err.println("usage: kof serve <file.kf> [--port <port>] [--host <host>] [--backend <t>] [--frontend <t>]");
             return;
         }
         Path file = Path.of(args[1]);
@@ -45,12 +45,19 @@ final class CmdServe {
         String backendFlag = null;
         String frontendFlag = null;
         for (int i = 2; i < args.length; i++) {
-            if (args[i].equals("--port") && i + 1 < args.length) {
+            if (args[i].startsWith("--port=")) {
+                Integer p = parsePortOption(args[i].substring("--port=".length()));
+                if (p == null) System.exit(1);
+                port = p;
+                portFlag = true;
+            } else if (args[i].equals("--port") && i + 1 < args.length) {
                 Integer p = parsePortOption(args[i + 1]);
                 if (p == null) System.exit(1);
                 port = p;
                 portFlag = true;
                 i++;
+            } else if (args[i].startsWith("--host=")) {
+                host = args[i].substring("--host=".length());
             } else if (args[i].equals("--host") && i + 1 < args.length) {
                 host = args[i + 1];
                 i++;
@@ -62,6 +69,18 @@ final class CmdServe {
                 frontendFlag = args[i].substring("--frontend=".length());
             } else if (args[i].equals("--frontend") && i + 1 < args.length) {
                 frontendFlag = args[++i];
+            } else if (args[i].startsWith("-")) {
+                // R6: `serve` has no program-arg pass-through; an unknown flag
+                // (or one missing its value) must not be silently ignored.
+                System.err.println("serve: unknown or incomplete flag: " + args[i]
+                        + " (accepts: --port <n> --host <h> --backend <t> --frontend <t>)");
+                System.exit(1);
+                return;
+            } else {
+                System.err.println("serve: unexpected argument: " + args[i]
+                        + " (accepts: --port <n> --host <h> --backend <t> --frontend <t>)");
+                System.exit(1);
+                return;
             }
         }
 
@@ -91,7 +110,7 @@ final class CmdServe {
                 KofCliSupport.Targets sel = KofCliSupport.selectTargets(backendFlag, frontendFlag, serveRoot);
                 if (sel.backend() != null && sel.backend() != Target.JVM) {
                     System.err.println("serve: backend '" + TargetMatrix.name(sel.backend())
-                            + "' ainda não é executável via kof serve (só jvm); "
+                            + "' is not runnable via kof serve yet (jvm only); "
                             + "use 'kof run --target " + TargetMatrix.name(sel.backend()) + "'");
                     KofCliSupport.cleanup(tempDir);
                     System.exit(1);

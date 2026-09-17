@@ -10,63 +10,7 @@ import java.util.List;
  */
 public final class ExpressionInstanceCallLowerer {
 
-    /** Métodos de String cujo parâmetro é String/CharSequence (SEM051 — bug 100). */
-    private static final java.util.Set<String> STRING_ARG_METHODS = java.util.Set.of(
-            "indexOf", "lastIndexOf", "contains", "startsWith", "endsWith",
-            "split", "concat", "equalsIgnoreCase", "compareTo", "compareToIgnoreCase");
-
-    /**
-     * Funções da stdlib {@code strings.*} que NÃO são métodos de instância em
-     * Kof (SEM052 — bug 96). Chamá-las como método era ACEITO e quebrava de
-     * um jeito em cada target (JVM NoSuchMethodError, Native link-fail, JS
-     * roda o nativo do JS, Script roda/quebra por reflexão) — paridade
-     * absoluta JVM=JS=X86=ARM=RISC. O idiom do corpus é só a função
-     * (training/idioms/stdlib.md, learn/39-stdlib.md).
-     */
-    private static final java.util.Set<String> NOT_INSTANCE_METHODS = java.util.Set.of(
-            "repeat", "truncate", "padLeft", "padRight", "padStart", "padEnd",
-            "capitalize", "uncapitalize", "reverse", "count",
-            "isAlpha", "isNumeric", "isAlphaNumeric", "isAscii",
-            "isUpperCase", "isLowerCase", "toCamelCase", "toPascalCase",
-            "toSnakeCase", "toKebabCase", "slugify", "escapeHtml",
-            "unescapeHtml", "escapeJson", "removeWhitespace", "normalizeWhitespace");
-
     private ExpressionInstanceCallLowerer() {}
-
-    /** Nome canônico da função `strings.*` p/ o nome de método errado (SEM052). */
-    private static String padHint(String methodName) {
-        return switch (methodName) {
-            case "padStart" -> "padLeft";
-            case "padEnd" -> "padRight";
-            default -> methodName;
-        };
-    }
-
-    /** SEM051: Char/numérico/array/classe NÃO-Kof-String num formal String. */
-    private static boolean notStringForFormal(Type t) {
-        if (t instanceof Type.NullableType nt) t = nt.inner();
-        if (t instanceof Type.UnknownType) return false;
-        if (BuiltinTypes.isString(t)) return false;
-        return TypeMetrics.isPrimitiveType(t) || t instanceof Type.ClassType
-                || t instanceof Type.ArrayType;
-    }
-
-    private static String typeNameFor(Type t) {
-        if (t instanceof Type.PrimitiveType p) return switch (p.name()) {
-            case "char" -> "Char";
-            case "int" -> "Int";
-            case "long" -> "Long";
-            case "double" -> "Double";
-            case "float" -> "Float";
-            case "bool" -> "Bool";
-            case "byte" -> "Byte";
-            case "short" -> "Short";
-            default -> p.name();
-        };
-        if (t instanceof Type.ArrayType a) return typeNameFor(a.componentType()) + "[]";
-        if (t instanceof Type.ClassType c) return c.name();
-        return String.valueOf(t);
-    }
 
     static int lower(CompilerDriver driver, MethodCallExpr mc, List<KofOperation> ops,
                     String owner, int localIdx, List<IRLocalVariable> locals) {
@@ -311,59 +255,10 @@ public final class ExpressionInstanceCallLowerer {
                 return localIdx;
             }
         }
-        // bug 96 (paridade absoluta): as funções da stdlib `strings.*` NÃO são
-        // métodos de instância em Kof — chamá-las como método era ACEITO pelo
-        // typer e quebrava de um jeito em CADA target (JVM `NoSuchMethodError`
-        // por descritor Object, Native `undefined reference` no link, JS roda o
-        // nativo `.repeat`/`.padStart` do próprio JS, Script roda/quebra por
-        // reflexão). Opção B (decisão da mantenedora): REJEITAR em compile-time
-        // com SEM052 apontando p/ o idiom real do corpus — o MESMO erro nos 5
-        // backends (este lowering é o frontend único). NÃO confunda com
-        // `toUpperCase`/`toLowerCase`/`trim`/`split`/`replace`/`substring`,
-        // que SÃO métodos de String na registry (e em Kof).
-        if (NOT_INSTANCE_METHODS.contains(mc.methodName()) && driver.currentDiagnostics != null) {
-            var pos = mc.position();
-            driver.currentDiagnostics.error(pos != null ? pos.file() : "",
-                    pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0,
-                    "Kof não tem método \"" + mc.methodName() + "\" de String; use a função "
-                            + "da stdlib: strings." + padHint(mc.methodName()) + "(...",
-                    "SEM052");
-        }
-        // bug 100 (R6, paridade absoluta JVM=JS=X86=ARM=RISC): argumento
-        // NÃO-String num parâmetro String/CharSequence (Char, Int, Long, lista…)
-        // era ACEITO e quebrava de um jeito em CADA target (JVM
-        // VerifyError/NoSuchMethodError/ExceptionInInitializer, Native SIGSEGV/
-        // saída vazia, Script `false`/vazio). Opção B (decisão da mantenedora):
-        // REJEITAR em tempo de compilação (SEM051), o MESMO erro nos 5 backends
-        // (este lowering é o frontend único). Checagem POR POSIÇÃO pela formal
-        // da registry (indexOf("a", 2) tem formal String,Int → só a posição 0
-        // é stringy; indexOf('c') pega na 0). compareTo/compareToIgnoreCase não
-        // estão na registry (sig=null) → tratadas TODAS as posições como stringy.
-        // NÃO flaguemos `replace` (formal CHAR quando args são Char — widening
-        // legal) nem `charAt`/`substring` (formal numérico, fora da lista).
-        if (STRING_ARG_METHODS.contains(mc.methodName()) && driver.currentDiagnostics != null) {
-            StringMethodRegistry.Sig sigG = StringMethodRegistry.stringMethodSignature(
-                    mc.methodName(), mc.arguments().size(), methodParamTypes);
-            List<Type> formals = sigG != null ? sigG.parameterTypes() : null;
-            for (int ai = 0; ai < mc.arguments().size(); ai++) {
-                boolean formalIsStringy = formals == null
-                        || (ai < formals.size() && (BuiltinTypes.isString(formals.get(ai))
-                            || (formals.get(ai) instanceof Type.ClassType fc
-                                && "CharSequence".equals(fc.name()))));
-                if (!formalIsStringy) continue;
-                Type at = ExpressionTyper.inferExprType(driver, mc.arguments().get(ai), locals);
-                if (notStringForFormal(at)) {
-                    var pos = mc.position();
-                    driver.currentDiagnostics.error(pos != null ? pos.file() : "",
-                            pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0,
-                            "String." + mc.methodName() + " não aceita " + typeNameFor(at)
-                                    + " como argumento " + (ai + 1) + " (o parâmetro é String); "
-                                    + "use um literal String, ex.: " + mc.methodName() + "(\"c\")",
-                            "SEM051");
-                    break;
-                }
-            }
-        }
+        // Guardas de diagnóstico em receptor String (SEM052/SEM066/SEM051) —
+        // extraídos p/ StringReceiverGuards (gate ≤600 REFACTOR-500; são puros:
+        // só emitem diagnostics, não mexem na pilha/ops).
+        StringReceiverGuards.check(driver, mc, locals, methodParamTypes);
         StringMethodRegistry.Sig sig = StringMethodRegistry.stringMethodSignature(mc.methodName(), mc.arguments().size(),
                 methodParamTypes);
         if (sig != null) {
@@ -392,8 +287,8 @@ public final class ExpressionInstanceCallLowerer {
                     || "float".equals(fn0) || "Float".equals(fn0));
         if (mayTruncate && driver.currentDiagnostics != null) {
             driver.currentDiagnostics.warning("", 0, 0, 0,
-                    "'" + mc.methodName() + "()' pode truncar (parte fracionária descartada; "
-                        + "overflow lança) — forma explícita: valor as "
+                    "'" + mc.methodName() + "()' may truncate (fractional part discarded; "
+                        + "overflow throws) — explicit form: value as "
                         + TypeMetrics.primitiveName(target), "SEM090");
         }
         driver.emitWideningIfNeeded(ops, recvType, target);
@@ -421,9 +316,23 @@ public final class ExpressionInstanceCallLowerer {
                     List.of(Type.PrimitiveType.CHAR), BuiltinTypes.STRING, KofCallKind.STATIC));
             return localIdx;
         }
+        if (driver.target == Target.JS && TypeMetrics.isFloatingPoint(recvType)) {
+            // §264 (JS): Double/Float crus (Number no JS) — valueOf recebe o
+            // tipo REAL p/ o emissor formatar no contrato do JDK ("4.0").
+            ops.add(new KofCall(BuiltinTypes.STRING, "valueOf",
+                    List.of(recvType), BuiltinTypes.STRING, KofCallKind.STATIC));
+            return localIdx;
+        }
         TypeEmitter.boxPrimitive(ops, recvType);
         ops.add(new KofCall(BuiltinTypes.STRING, "valueOf",
                 List.of(Type.UnknownType.UNKNOWN), BuiltinTypes.STRING, KofCallKind.STATIC));
+        return localIdx;
+    } else if (TypeMetrics.isPrimitiveType(recvType)
+            && PrimitiveNumericFormatters.isFormatter(mc.methodName(), mc.arguments().size())) {
+        // §218/#148: formatadores numéricos de primitivo → estático JDK real
+        // (ver PrimitiveNumericFormatters). Int/Long emitem a chamada; os
+        // demais primitivos recebem SEM052 e encerram o caminho aqui.
+        PrimitiveNumericFormatters.emit(driver, mc, recvType, ops);
         return localIdx;
     } else {
         StringMethodRegistry.Sig osig = StringMethodRegistry.objectMethodSignature(mc.methodName(), mc.arguments().size());

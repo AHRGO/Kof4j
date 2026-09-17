@@ -5,6 +5,7 @@ import dev.kof.compiler.Diagnostic;
 import dev.kof.compiler.CompilerDriver;
 import dev.kof.compiler.Target;
 import dev.kof.compiler.TargetMatrix;
+import dev.kof.compiler.backend.AndroidProjectWriter;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -22,13 +23,44 @@ final class CmdBuild {
     private CmdBuild() {
     }
 
+    private static final String USAGE = "usage: kof build <source-dir|file.kf> [--target jvm|native|js|native.risc|native.arm|android] [--backend <t>] [--frontend <t>] [--output <dir>] [--release] [--apk] [--aab] [--fat] [--print-sizes] [--classpath <jars>] [--keystore <ks> [--storepass <p>] [--keypass <p>] [--alias <a>]] [--min-sdk <n>] [--target-sdk <n>]";
+
     static void run(String[] args) {
-        if (args.length < 2) { System.err.println("usage: kof build <source-dir> [--target jvm|native|js|android] [--backend <t>] [--frontend <t>] [--output <dir>] [--release] [--apk] [--fat] [--print-sizes] [--classpath <jars>] [--keystore <ks> [--storepass <p>] [--keypass <p>] [--alias <a>]]");
+        if (args.length < 2) { System.err.println(USAGE); return; }
         if ("--help".equals(args[1]) || "-h".equals(args[1]) || "--version".equals(args[1])) {
-            System.out.println("usage: kof build <source-dir> [--target jvm|native|js|android] [--backend <t>] [--frontend <t>] [--output <dir>] [--release] [--apk] [--fat] [--print-sizes] [--classpath <jars>] [--keystore <ks> [--storepass <p>] [--keypass <p>] [--alias <a>]]");
+            System.out.println(USAGE);
             return;
-        } return; }
+        }
+        if (args[1].startsWith("-")) {
+            // R6: a flag in the source position was treated as a directory name
+            // and exited 0 with "no .kf/.kof files found" — a typo'd flag looked
+            // like an empty project.
+            System.err.println("build: unknown flag: " + args[1]
+                    + " (see 'kof build --help')");
+            System.exit(1);
+            return;
+        }
         Path src = Path.of(args[1]);
+        if (!Files.exists(src)) {
+            // R6: a nonexistent source dir exited 0 (same silent-success class);
+            // check/test/run already refuse with "not found".
+            System.err.println("not found: " + src);
+            System.exit(1);
+            return;
+        }
+        // Convenience (Go-like: the directory is the module): a single source
+        // file resolves to its containing directory. Documented as
+        // `kof build app.kf`, it previously exited 0 with "no .kf/.kof files
+        // found" — a silent no-op (R6).
+        if (Files.isRegularFile(src)) {
+            Path parent = src.toAbsolutePath().normalize().getParent();
+            if (parent == null) {
+                System.err.println("build: cannot resolve the module directory of " + src);
+                System.exit(1);
+                return;
+            }
+            src = parent;
+        }
         Target target = Target.JVM;
         Target frontendTarget = null;
         boolean targetFlagged = false;
@@ -38,12 +70,15 @@ final class CmdBuild {
         boolean outFlagged = false;
         boolean release = false;
         boolean apk = false;
+        boolean aab = false;
         boolean fat = false;
         String classpath = null;
         String keystore = null;
         String storepass = null;
         String keypass = null;
         String keyalias = null;
+        String minSdkArg = null;
+        String targetSdkArg = null;
         boolean useDeps = false;
         boolean printSizes = false;
         for (int i = 2; i < args.length; i++) {
@@ -74,6 +109,8 @@ final class CmdBuild {
                 release = true;
             } else if (arg.equals("--apk")) {
                 apk = true;
+            } else if (arg.equals("--aab")) {
+                aab = true;
             } else if (arg.equals("--fat")) {
                 fat = true;
             } else if (arg.equals("--deps")) {
@@ -100,6 +137,30 @@ final class CmdBuild {
                 keyalias = arg.substring("--alias=".length());
             } else if (arg.equals("--alias") && i + 1 < args.length) {
                 keyalias = args[++i];
+            } else if (arg.startsWith("--min-sdk=")) {
+                minSdkArg = arg.substring("--min-sdk=".length());
+            } else if (arg.equals("--min-sdk") && i + 1 < args.length) {
+                minSdkArg = args[++i];
+            } else if (arg.startsWith("--target-sdk=")) {
+                targetSdkArg = arg.substring("--target-sdk=".length());
+            } else if (arg.equals("--target-sdk") && i + 1 < args.length) {
+                targetSdkArg = args[++i];
+            } else if (arg.equals("--help") || arg.equals("-h")) {
+                System.out.println(USAGE);
+                return;
+            } else if (arg.startsWith("-")) {
+                // R6: an unknown flag (or a known flag missing its value) must
+                // never be silently ignored — the user/CI would believe it took
+                // effect. Same rule already applied by check/fmt/inspect/init.
+                System.err.println("build: unknown or incomplete flag: " + arg
+                        + " (see 'kof build --help')");
+                System.exit(1);
+                return;
+            } else {
+                System.err.println("build: unexpected argument: " + arg
+                        + " (see 'kof build --help')");
+                System.exit(1);
+                return;
             }
         }
         // F2-parte-4 (plataforma): --backend/--frontend sobrepõem o kof.toml.
@@ -121,13 +182,54 @@ final class CmdBuild {
         // D-APP I3 (Q6): --fat só faz sentido no JVM (native/js já saem como
         // artefato único). Honesto e cedo (R6), antes de compilar.
         if (fat && target != Target.JVM) {
-            System.err.println("build: --fat só se aplica a --target jvm ("
-                    + TargetMatrix.name(target) + " já gera artefato único)");
+            System.err.println("build: --fat only applies to --target jvm ("
+                    + TargetMatrix.name(target) + " already produces a single artifact)");
+            System.exit(1);
+            return;
+        }
+        // android-only signing/artifact flags on a non-android target: never
+        // accepted and silently ignored (R6) — the user/CI would believe the
+        // APK/signing happened. Same class as --fat/--aab.
+        if (target != Target.ANDROID && (apk || keystore != null
+                || storepass != null || keypass != null || keyalias != null)) {
+            System.err.println("build: --apk/--keystore/--storepass/--keypass/--alias "
+                    + "only apply to --target android (target: "
+                    + TargetMatrix.name(target) + ")");
+            System.exit(1);
+            return;
+        }
+        // signing flags only act inside the standalone --apk pipeline; without
+        // --apk they would be silently dropped (R6).
+        if (!apk && (keystore != null || storepass != null
+                || keypass != null || keyalias != null)) {
+            System.err.println("build: --keystore/--storepass/--keypass/--alias "
+                    + "only apply together with --apk");
             System.exit(1);
             return;
         }
         CompilerDriver driver = new CompilerDriver();
         if (release) driver.setDebugInfoEnabled(false);
+        // kof-android Fase 4: minSdk/targetSdk por flag explícita (nunca
+        // arquivo mágico). Honesto e cedo (R6): as flags só valem para o
+        // alvo android e min não pode exceder target.
+        int androidMin = AndroidProjectWriter.DEFAULT_MIN_SDK;
+        int androidTarget = AndroidProjectWriter.DEFAULT_TARGET_SDK;
+        if (minSdkArg != null || targetSdkArg != null) {
+            if (target != Target.ANDROID) {
+                System.err.println("build: --min-sdk/--target-sdk only apply to --target android");
+                System.exit(1);
+                return;
+            }
+            androidMin = parseSdk(minSdkArg, "--min-sdk", AndroidProjectWriter.DEFAULT_MIN_SDK);
+            androidTarget = parseSdk(targetSdkArg, "--target-sdk", AndroidProjectWriter.DEFAULT_TARGET_SDK);
+            if (androidMin > androidTarget) {
+                System.err.println("build: --min-sdk (" + androidMin
+                        + ") cannot be greater than --target-sdk (" + androidTarget + ")");
+                System.exit(1);
+                return;
+            }
+            driver.setAndroidSdk(androidMin, androidTarget);
+        }
         // dependências externas (android.jar etc.) geridas pelo Kof via
         // ExternalClasspath — separadas por ':' ou ';'
         List<Path> externalEntries = new ArrayList<>();
@@ -150,7 +252,7 @@ final class CmdBuild {
                     driver.setExternalClasspath(externalEntries);
                 }
             } catch (IOException e) {
-                System.err.println("build: falha ao ler kofdeps: " + e.getMessage());
+                System.err.println("build: failed to read kofdeps: " + e.getMessage());
                 return;
             }
         }
@@ -185,7 +287,7 @@ final class CmdBuild {
                 Path jar = buildFatJar(backendOut, externalEntries);
                 System.out.println("fat jar → " + jar);
             } catch (IOException e) {
-                System.err.println("build: falha ao gerar fat jar: " + e.getMessage());
+                System.err.println("build: failed to generate fat jar: " + e.getMessage());
                 System.exit(1);
                 return;
             }
@@ -197,9 +299,49 @@ final class CmdBuild {
         }
         // target android + --apk: pipeline direto (sem Maven) usando o SDK
         // (full-stack: as classes do backend saíram em backendOut)
+        boolean apkOk = true;
         if (target == Target.ANDROID && apk) {
-            runApkPipeline(backendOut, keystore, storepass, keypass, keyalias);
+            apkOk = runApkPipeline(backendOut, androidMin, androidTarget,
+                    keystore, storepass, keypass, keyalias);
         }
+        // --aab (App Bundle p/ Play): ainda NÃO produzido — precisa do
+        // bundletool (fora do build-tools). Honesto e explícito (R6): nunca
+        // ignorar a flag em silêncio e devolver um APK como se fosse AAB.
+        if (aab) {
+            if (target != Target.ANDROID) {
+                System.err.println("build: --aab only applies to --target android");
+                System.exit(1);
+                return;
+            }
+            System.err.println("build: --aab: App Bundle (AAB) is not generated yet —"
+                    + " requires bundletool (outside build-tools). The project was generated;"
+                    + " use --apk or bundletool manually"
+                    + " (docs/targets/KOFANDROID.md)");
+            System.exit(1);
+        }
+        // --apk pedido mas o SDK nao permitiu gerar o artefato: a flag nao pode
+        // "passar" em silencio (exit 0 sem APK) — o script do usuario checaria $?
+        // e acreditaria em sucesso (R6). O projeto foi gerado; o exit e honesto.
+        if (!apkOk) {
+            System.exit(1);
+        }
+    }
+
+    /** Lê um valor de SDK (`--min-sdk`/`--target-sdk`); default = `dflt`. */
+    private static int parseSdk(String value, String flag, int dflt) {
+        if (value == null) return dflt;
+        int n;
+        try {
+            n = Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            n = -1;
+        }
+        if (n < 1 || n > 99) {
+            System.err.println("build: " + flag + " invalid: '" + value
+                    + "' (expected integer 1..99)");
+            System.exit(1);
+        }
+        return n;
     }
 
     /**
@@ -287,14 +429,14 @@ final class CmdBuild {
                                 && Files.isExecutable(p)).findFirst().orElse(null);
                     }
                 }
-                if (bin == null || !Files.exists(bin)) { System.err.println("print-sizes: binário nativo não encontrado em " + out); return; }
+                if (bin == null || !Files.exists(bin)) { System.err.println("print-sizes: native binary not found in " + out); return; }
                 System.out.println("# " + target + " " + bin);
                 System.out.println(dev.kof.compiler.ArtifactSize.toJson(
                         dev.kof.compiler.ArtifactSize.elf(bin)));
             } else if (target == Target.JS) {
                 System.out.println("{\"jsBytes\":" + dev.kof.compiler.ArtifactSize.jsBytes(out) + "}");
             } else {
-                System.out.println("# print-sizes: " + target + " é lazy/on-demand — sem artefato único (JVM classes separadas)");
+                System.out.println("# print-sizes: " + target + " is lazy/on-demand — no single artifact (separate JVM classes)");
             }
         } catch (IOException e) {
             System.err.println("print-sizes: " + e.getMessage());
@@ -307,18 +449,19 @@ final class CmdBuild {
      * gera debug keystore local na primeira vez; com --keystore, assina
      * com o keystore do usuário (release signing parametrizável).
      */
-    private static void runApkPipeline(Path projDir, String keystore, String storepass,
-                                       String keypass, String keyalias) {
+    private static boolean runApkPipeline(Path projDir, int minSdk, int targetSdk,
+                                          String keystore, String storepass,
+                                          String keypass, String keyalias) {
         String androidHome = System.getenv("ANDROID_HOME");
         if (androidHome == null || androidHome.isBlank()) {
-            System.err.println("--apk: ANDROID_HOME não definido; gere o projeto e use 'mvn verify'");
-            return;
+            System.err.println("--apk: ANDROID_HOME not set; generate the project and use 'mvn verify'");
+            return false;
         }
         Path bt = Path.of(androidHome, "build-tools", "34.0.0");
-        Path platformJar = Path.of(androidHome, "platforms", "android-34", "android.jar");
+        Path platformJar = Path.of(androidHome, "platforms", "android-" + targetSdk, "android.jar");
         if (!Files.isExecutable(bt.resolve("aapt2"))) {
-            System.err.println("--apk: build-tools 34.0.0 não encontrado em " + bt);
-            return;
+            System.err.println("--apk: build-tools 34.0.0 not found in " + bt);
+            return false;
         }
         Path build = projDir.resolve("target");
         Path apkDir = build.resolve("apk");
@@ -343,7 +486,7 @@ final class CmdBuild {
                     "-A", projDir.resolve("src/main/assets").toString(),
                     "-R", apkDir.resolve("res.zip").toString()), projDir);
             run(List.of(bt.resolve("d8").toString(), "--release",
-                    "--lib", platformJar.toString(), "--min-api", "24",
+                    "--lib", platformJar.toString(), "--min-api", Integer.toString(minSdk),
                     "--output", apkDir.toString(),
                     projDir.resolve("libs/kof-app.jar").toString()), projDir);
             run(List.of("jar", "uf", apkDir.resolve("base.apk").toString(),
@@ -365,10 +508,11 @@ final class CmdBuild {
             sign.add(build.resolve("kof-app.apk").toString());
             sign.add(apkDir.resolve("aligned.apk").toString());
             run(sign, projDir);
-            System.out.println("APK gerado: " + build.resolve("kof-app.apk"));
+            System.out.println("APK built: " + build.resolve("kof-app.apk"));
+            return true;
         } catch (Exception e) {
-            System.err.println("pipeline apk falhou: " + e.getMessage());
-            System.exit(1);
+            System.err.println("APK pipeline failed: " + e.getMessage());
+            return false;
         }
     }
 

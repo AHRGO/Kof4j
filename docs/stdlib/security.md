@@ -54,11 +54,11 @@ NOT APPLICABLE   → does not apply to the Kof architecture
 | Web | spring-web | `kof.web` (`web.app()`) | **EXISTS** | Routes, params, query, headers, body, `app.use` middleware, `status`/`headerSet` |
 | Web MVC | WebMVC | `kof.web` + handlers | PARTIAL | JVM only today; embedded JS (alpha) |
 | WebFlux | WebFlux | `spawn` + virtual threads | PARTIAL | Own concurrent model (JVM/Native/JS) |
-| WebSocket | WebSocket | `kof.web` (`app.ws`) | **EXISTS (JVM)** | RFC 6455: handshake + masked frame codec (Native `WEB004`, JS `WEB003`) |
-| SSE | (Spring via `SseEmitter`) | `kof.web` (`app.sse`) | **EXISTS (JVM)** | `sse.send/event/close` (Native/JS `WEB003`) |
+| WebSocket | WebSocket | `kof.web` (`app.ws`) | **EXISTS (JVM)** | RFC 6455: handshake + masked frame codec (Native/JS `WEB004` — gate `ExpressionBuiltinInstanceCalls`, 16/09) |
+| SSE | (Spring via `SseEmitter`) | `kof.web` (`app.sse`) | **EXISTS (JVM)** | `sse.send/event/close` (JVM + JS handler-scoped ✅ 16/09, `7cd69a7b`; Native `WEB003`, JS post-return push `WEB003` residual) |
 | Messaging | spring-messaging | `kof.mq` (publish/subscribe/queue) | **EXISTS** | JVM+Native+JS (MQ001 closed 01/09) |
-| Transactions | spring-tx | `kof.db` (`transaction {}`) | **EXISTS** | JVM (JDBC commit/rollback) + Native (SQLite); JS `DB001` |
-| Scheduling | spring-context | `kof.scheduler` (`every/at/cancel`) + `spawn` | PARTIAL | JVM (ScheduledExecutor) + JS (setInterval); Native `SCHED001` |
+| Transactions | spring-tx | `kof.db` (`transaction {}`) | **EXISTS** | JVM (JDBC commit/rollback) + Native (SQLite) + JS (untyped 16/09) |
+| Scheduling | spring-context | `kof.scheduler` (`every`/`cancel` + `spawn`) | PARTIAL | JVM (ScheduledExecutor) + JS (setInterval) + Native (`SCHED001` closed 31/08); `at(cron)` = 60s stub (`CRON001`); true cron needs CRON001 |
 | Events | ApplicationEvent | `kof.mq` pub/sub | PARTIAL | pub/sub queues in the stdlib |
 | Resources | Resource | `kof.io` | EXISTS | |
 | Cache | spring-cache | `kof.cache` (`get/set/set-ttl/ttl/delete/clear`) | **EXISTS** | 3 targets (native fix 30/08) |
@@ -78,7 +78,7 @@ NOT APPLICABLE   → does not apply to the Kof architecture
 | Actuator | actuator | `kof.observability` | **EXISTS** | health/metrics/request IDs JVM/Native/JS |
 | Health checks | health | `kof.observability.health` | **EXISTS** | JVM/Native/JS |
 | Metrics | micrometer | `kof.observability` | **EXISTS** | counter/increment/gauge JVM/Native/JS |
-| Observability | tracing | `kof.observability` | **EXISTS** | health/metrics/request IDs; tracing planned |
+| Observability | tracing | `kof.observability` | **EXISTS** | health/metrics/histograms/request IDs + W3C `traceId`/`spanId` and timed `spanStart`/`spanEnd` (3 targets, `OBS002`); OTel export planned |
 | Logging | logback | `kof.log` + `println` | **EXISTS** | `log.debug/info/warn/error` JVM/Native |
 | Graceful shutdown | shutdown | `web.close()` + spawn join | PARTIAL | |
 | CLI/tooling | spring CLI | `kof` CLI (build/run/serve/test/bench/profile/inspect) | EXISTS | |
@@ -144,7 +144,7 @@ NOT APPLICABLE   → does not apply to the Kof architecture
 | Service discovery | Cloud | — | MISSING | LOW (manual config) |
 | Gateway | Cloud Gateway | `kof.web` + proxy | PARTIAL | LOW |
 | Circuit breakers | Resilience | `kof.http` (`http.circuit`) | **EXISTS (JVM+JS)** | LOW |
-| Distributed tracing | Sleuth | `kof.observability` (`requestId`/`correlationId`) | PARTIAL | LOW |
+| Distributed tracing | Sleuth | `kof.observability` (`requestId`/`correlationId`, W3C `traceId`/`spanId`) | PARTIAL | LOW |
 | Batch (jobs/steps/retry) | Batch | `kof.mq` queue + `kof.scheduler` | PARTIAL | MEDIUM |
 | GraphQL | GraphQL | — | MISSING | LOW (REST first) |
 | Distributed sessions | Session | `kof.security` (`sessionCreate/Get/Destroy`) | **EXISTS (JVM/Native/JS)** | LOW |
@@ -213,7 +213,7 @@ resolves the runtime function and each target provides the implementation.
 | `kof.cache` | YES | YES | PARTIAL (in-memory) | JVM/Native/JS | YES | YES | YES |
 | `kof.test` (`kof test`, assert) | YES | YES | YES | JVM/Native/JS | YES | YES | YES |
 | `kof.cli` (kof CLI) | YES | YES | YES | JVM | YES | YES | YES |
-| `kof.process` | YES | YES | YES | JVM/Native/JS | YES | YES | YES |
+| `kof.process` | YES | YES | YES | JVM/JS (Native: `PROC001`) | YES | YES | YES |
 | `kof.crypto` | NO (part of kof.security) | — | — | — | — | — | — |
 | `kof.ui` (UI platform) | PARTIAL | PARTIAL | — | JS | — | PARTIAL | PARTIAL |
 
@@ -321,9 +321,9 @@ jwt:         RFC 7519 HS256 (alg fixed, never accepted from the token)
 
 ---
 
-# 7. IMPLEMENTATION STATE (0.2.6-beta, 31/08/2026 — `VERSION` 0.2.6-beta, 810 tests, free-list + riscv64)
+# 7. IMPLEMENTATION STATE (0.4.0-beta, re-synced 17/09/2026 — `VERSION` 0.4.0-beta, 2218 tests, free-list + mark-sweep + riscv64)
 
-## 7.1 Implemented (0.2.6-beta)
+## 7.1 Implemented (0.4.0-beta)
 
 | API | JVM | Native x86_64 (+ riscv64) | JS | Format |
 |-----|-----|---------------------------|----|---------|

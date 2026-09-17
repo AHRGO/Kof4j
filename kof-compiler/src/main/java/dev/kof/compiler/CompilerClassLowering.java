@@ -224,10 +224,10 @@ public final class CompilerClassLowering {
                         pos != null ? pos.file() : "",
                         pos != null ? pos.line() : 0,
                         pos != null ? pos.column() : 0, 0,
-                        "modificador '" + mod + "' não tem efeito no Kof (non-goal do "
+                        "modificador '" + mod + "' has no effect in Kof (a non-goal of the "
                                 + "memory model — concurrency-memory-model.md §5); use a "
-                                + "abstração da linguagem: spawn/await/Channel p/ concorrência"
-                                + (pos != null ? " (linha " + pos.line() + ")" : ""),
+                                + "language abstraction: spawn/await/Channel for concurrency"
+                                + (pos != null ? " (line " + pos.line() + ")" : ""),
                         "SEM091");
             }
         }

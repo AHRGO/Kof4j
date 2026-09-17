@@ -208,7 +208,7 @@ class JvmE2ETest {
                 println(s.indexOf("W"))
             }
             """);
-        runJvm(source, tempDir.resolve("out"), "101\nWorld\nHello\ntrue\ntrue\ntrue\n6");
+        runJvm(source, tempDir.resolve("out"), "e\nWorld\nHello\ntrue\ntrue\ntrue\n6");
     }
 
     @Test
@@ -344,7 +344,7 @@ class JvmE2ETest {
                 println(i[1])
             }
             """);
-        runJvm(source, tempDir.resolve("out"), "true\nfalse\n65\n66\n1000\n-5\n7\n-8\n43");
+        runJvm(source, tempDir.resolve("out"), "true\nfalse\nA\nB\n1000\n-5\n7\n-8\n43");
     }
 
     @Test

@@ -285,7 +285,7 @@ class NativeE2ETest {
                 println(s.charAt(4))
             }
             """);
-        runNative(source, tempDir.resolve("out"), "72\n111");
+        runNative(source, tempDir.resolve("out"), "H\no");
     }
 
     @Test
@@ -987,12 +987,12 @@ class NativeE2ETest {
                     var s = "café"
                     println(s.charAt(3))
                     var e = "a😀b"
-                    println(e.charAt(1))
-                    println(e.charAt(2))
-                    println(e.charAt(3))
+                    println(e.charAt(1) as Int)
+                    println(e.charAt(2) as Int)
+                    println(e.charAt(3) as Int)
                 }
                 """);
-        runNative(source, tempDir.resolve("out"), "233\n55357\n56832\n98");
+        runNative(source, tempDir.resolve("out"), "é\n55357\n56832\n98");
     }
 
     // bug 43 (metade substring, 10/09): substring conta code units UTF-16 no

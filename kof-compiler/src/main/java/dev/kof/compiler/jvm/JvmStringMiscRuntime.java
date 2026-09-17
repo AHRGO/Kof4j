@@ -75,7 +75,7 @@ public final class JvmStringMiscRuntime {
                         if (m.isSynthetic()) continue;
                         try { return m.invoke(lambda, args); } catch (IllegalArgumentException ignored) {}
                     }
-                    throw new IllegalStateException("lambda invoke não encontrado (" + args.length + " args)");
+                    throw new IllegalStateException("lambda invoke not found (" + args.length + " args)");
                 }
 
                 public static java.util.ArrayList<Object> kof_list_map(

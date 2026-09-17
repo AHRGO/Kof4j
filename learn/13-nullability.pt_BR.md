@@ -2,7 +2,7 @@
 
 # 13 — Nullability
 
-> **Status: implementado (JVM / Native / JS) — 0.3.22-beta — exemplos verificados no compilador**
+> **Status: implementado (JVM / Native / JS) — 0.4.0-beta — exemplos verificados no compilador**
 >
 > `Tipo?` (ex.: `String?`) declara que um valor **pode** ser `null`. O
 > compilador exige um check (`if (x != null)`) antes de usar — e o narrowing
@@ -22,8 +22,9 @@ System.out.println(nome.length());  // NullPointerException!
 
 ```kf
 String nome = "Mel"           // não pode ser null
-String? apelido = null        // pode ser null
+String? apelido = findNickname()  // pode ser null — null chega via API,
 var outro: String? = "Kof"    // forma anotada (também válida)
+                              // NUNCA via `= null` (SEM048 desde 10/09)
 ```
 
 ## Narrowing: `if (x != null)`
@@ -104,7 +105,7 @@ String findOrThrow(Int id) {
 }
 ```
 
-## Onde estamos (0.3.22-beta)
+## Onde estamos (0.4.0-beta)
 
 - ✅ `String?`, `Int?`, `Tipo?` no parser e type system (`NullableType`).
 - ✅ Narrowing `if (x != null)` nos 3 targets — **JVM corrigido 02/09**

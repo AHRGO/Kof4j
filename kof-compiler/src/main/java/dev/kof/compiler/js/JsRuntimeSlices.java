@@ -26,7 +26,7 @@ final class JsRuntimeSlices {
             new Block("ui-forms", JsRuntimeUiForms.UI_FORMS_RUNTIME, false),
             new Block("ui-layout", JsRuntimeUiLayout.UI_LAYOUT_RUNTIME, false),
             new Block("ui-jsonmap", JsRuntimeUiJsonMap.JSON_MAP_RUNTIME, false),
-            new Block("ui-web", JsRuntimeUiWeb.UI_WEB_RUNTIME, false),
+            new Block("ui-web", JsRuntimeUiWeb.UI_WEB_RUNTIME + JsRuntimeUiWebSse.uiWebSseRuntime(), false),
             new Block("ui-config", JsRuntimeUiConfig.CONFIG_RUNTIME, false),
             new Block("ui-support", JsRuntimeUiSupport.UI_SUPPORT_RUNTIME, false),
             new Block("security", JsRuntimeUiSecurity.UI_SECURITY_RUNTIME, false),
@@ -35,6 +35,7 @@ final class JsRuntimeSlices {
             new Block("stdlib", JsRuntimeUiStdlib.STDLIB_RUNTIME, false),
             new Block("random", JsRuntimeUiRandom.RANDOM_RUNTIME, false),
             new Block("math-double", JsRuntimeUiMathDouble.MATH_DOUBLE_RUNTIME, false),
+            new Block("num-fmt", JsRuntimeUiNumFmt.NUM_FMT_RUNTIME, false),
             new Block("net", JsRuntimeUiNet.NET_RUNTIME, false),
             new Block("uuid", JsRuntimeUiUuid.UUID_RUNTIME, false),
             new Block("ws", JsRuntimeUiWs.WS_RUNTIME, false),
@@ -52,7 +53,7 @@ final class JsRuntimeSlices {
     private static final List<Map.Entry<Pattern, String>> GUARDS = List.of(
             Map.entry(Pattern.compile("\\beval\\s*\\("), "eval()"),
             Map.entry(Pattern.compile("\\bnew\\s+Function\\s*\\("), "new Function()"),
-            Map.entry(Pattern.compile("\\bimport\\s*\\("), "import() dinâmico"),
+            Map.entry(Pattern.compile("\\bimport\\s*\\("), "dynamic import()"),
             Map.entry(Pattern.compile("globalThis\\s*\\["), "globalThis[...]"),
             Map.entry(Pattern.compile("window\\s*\\["), "window[...]"));
 
@@ -156,8 +157,8 @@ final class JsRuntimeSlices {
         for (Unit u : blockUnits) {
             String body = strip(u.text());
             if (count(body, '{') != count(body, '}') || count(body, '(') != count(body, ')')) {
-                String who = u.provides().isEmpty() ? "preâmbulo" : u.provides().get(0);
-                return "unidade não balanceada (" + who + ")";
+                String who = u.provides().isEmpty() ? "preamble" : u.provides().get(0);
+                return "unbalanced unit (" + who + ")";
             }
         }
         return null;

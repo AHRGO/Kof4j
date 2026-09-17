@@ -35,7 +35,7 @@ convenção. O mecanismo nunca sobe para o código do usuário:
 | script | `let x = 5` no topo | `KofScriptGlobals` (repl --watch) |
 
 A intenção compila em todos os alvos; o alvo que não consegue realizá-la
-reporta em compile-time com código de gap (`HTTP002`, `DB001`, `WEB002`) — nunca
+reporta em compile-time com código de gap (`HTTP002`, `WEB002`) — nunca
 silenciosamente. Detalhes em `docs/philosophy.md`.
 
 ## A visão multiplatform
@@ -60,7 +60,7 @@ Kof não é apenas uma linguagem para a JVM. É uma linguagem que pode compilar 
 
 **A linguagem não muda. O target muda.**
 
-Isso é uma decisão de design fundamental. A mesma fonte Kof pode gerar (0.3.22-beta):
+Isso é uma decisão de design fundamental. A mesma fonte Kof pode gerar (0.4.0-beta):
 - Bytecode JVM para aplicações que precisam do ecossistema Java
 - Executáveis nativos x86-64 / riscv64 (`native.risc`) / aarch64 (`native.arm`) para ferramentas CLI e sistemas (Target separation)
 - ES Modules para o navegador/webview via KofJS (ver [capítulo 37](37-kofjs.md))
@@ -102,7 +102,7 @@ Para o backend nativo, Kof usa:
 
 ### Native runtime (0.2.0)
 
-Native usa **free-list GC** (`kof_free_head`, reuso `mmap`, mark-sweep pendente), `spawn` via **pthread** (31/08 — `CONC001` fechado), ponto flutuante **XMM real** (`vcvtsi2sd`/`mulsd`, `FLT001` fechado) e JSON completo (objetos/records/arrays — `JSN001/002/003` fechados). `kof_db` traz **SQLite nativo** e MySQL em progresso (wire protocol, auth scramble SHA-1). Nada disso vaza para o código Kof — é `intention->Kof->frontend->IR->backend->runtime`.
+Native usa **GC free-list com mark-sweep** (`kof_free_head` com reuso + `kof_gc_mark` conservador stack+bss + `kof_gc_sweep`, 03/09 — `KofGcE2ETest` 3/3; auto-collect na exaustão ainda PENDENTE — precisa de safe-points, §260), `spawn` via **pthread** (31/08 — `CONC001` fechado), ponto flutuante **XMM real** (`vcvtsi2sd`/`mulsd`, `FLT001` fechado) e JSON completo (objetos/records/arrays — `JSN001/002/003` fechados). `kof_db` traz **SQLite nativo** e MySQL em progresso (wire protocol, auth scramble SHA-1). Nada disso vaza para o código Kof — é `intention->Kof->frontend->IR->backend->runtime`.
 
 ### Compile-time > runtime
 

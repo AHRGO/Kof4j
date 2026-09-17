@@ -37,9 +37,9 @@ public final class JvmMediaWebRuntime {
                         return kof_media_mic_record_impl(seconds);
                     } catch (RuntimeException e) {
                         if (e.getMessage() != null && e.getMessage().contains("MEDIA003")) throw e;
-                        throw new RuntimeException("microfone indisponível (MEDIA003): " + e.getMessage(), e);
+                        throw new RuntimeException("microphone unavailable (MEDIA003): " + e.getMessage(), e);
                     } catch (Throwable e) {
-                        throw new RuntimeException("microfone indisponível (MEDIA003): " + e, e);
+                        throw new RuntimeException("microphone unavailable (MEDIA003): " + e, e);
                     }
                 }
 
@@ -51,12 +51,12 @@ public final class JvmMediaWebRuntime {
                     try {
                         if (!javax.sound.sampled.AudioSystem.isLineSupported(info)) {
                             throw new RuntimeException(
-                                    "sem microfone disponível neste ambiente (MEDIA003)");
+                                    "no microphone available in this environment (MEDIA003)");
                         }
                     } catch (RuntimeException e) {
                         if (e.getMessage() != null && e.getMessage().contains("sem microfone")) throw e;
                         throw new RuntimeException(
-                                "sem microfone disponível neste ambiente (MEDIA003)", e);
+                                "no microphone available in this environment (MEDIA003)", e);
                     }
                     int total = 16000 * Math.max(1, seconds) * 2;
                     byte[] buf = new byte[total];
@@ -73,7 +73,7 @@ public final class JvmMediaWebRuntime {
                         line.stop();
                     } catch (javax.sound.sampled.LineUnavailableException e) {
                         throw new RuntimeException(
-                                "microfone indisponível (MEDIA003): " + e.getMessage(), e);
+                                "microphone unavailable (MEDIA003): " + e.getMessage(), e);
                     }
                     byte[] pcm = new byte[read];
                     System.arraycopy(buf, 0, pcm, 0, read);

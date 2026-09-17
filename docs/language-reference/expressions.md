@@ -69,8 +69,8 @@ context.
 
 - `&&`/`||` require `bool` (or integer primitive — `1 && 2` compiles and is
   **true**, *probe*: treated as non-zero). Result `bool`.
-- **Short-circuit**: `a && b` does not evaluate `b` if `a` is false. **Disabled on
-  the JS target** (`ExpressionLowerer.java:147-148`) — **Target-specific** (SG-006).
+- **Short-circuit**: `a && b` does not evaluate `b` if `a` is false — on **all**
+  targets, JS included (SG-006 ✅ FIXED 09/09; `BackendParityTest.parityShortCircuitAndOr`).
 - `!` is logical negation. `!5` → `0` (*probe*: applied to an integer as XOR with
   -1 / JVM `lnot` which gives 0/1). **Unspecified** for non-bool.
 
@@ -191,7 +191,8 @@ User.query(db) { where age > 18; orderBy name desc; limit 10 }
 - Special syntax recognized when the receiver is a declared `entity` and the
   method is `query` with 1 argument (ExpressionParser.parsePostfix (call)).
 - Lowers to `db.query<Entity>(…)` with SQL assembled at compile-time and values
-  as binds (no input concatenation). ORM001.
+  as binds (no input concatenation). Available on JVM + JS (`DB002`/`ORM001`
+  closed 18/09); `ORM001` on Native.
 - **Experimental** (ORM domain).
 
 ---

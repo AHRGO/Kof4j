@@ -109,7 +109,8 @@ uuid.isUuid(id)      // true — valida o SHAPE (traços 8/13/18/23 + resto hex)
 ```
 
 Não-determinístico: valide pelo **shape** (`isUuid`, ou à mão: traços em 8/13/18/23,
-dígito 14='4', dígito 19∈{8,9,a,b}), nunca por igualdade. v7/ulid ainda não existem.
+dígito 14='4', dígito 19∈{8,9,a,b}), nunca por igualdade. `uuid.v7()` (ordem temporal,
+RFC 9562) existe nos 5 targets (dígito 14='7', dígito 19∈{8,9,a,b}); ulid ainda não existe.
 
 ## random (S10a/b)
 

@@ -14,6 +14,17 @@ public class SemanticAnalyzer {
     /** Classpath externo (android.jar etc.) para resolver membros de classes fora da IR. */
     private ExternalClasspath externalTypes;
 
+    /** §253 face A: o alvo determina o gate SEM092 (native tem face B em runtime). */
+    private Target target = Target.JVM;
+
+    void setTarget(Target t) {
+        this.target = t;
+    }
+
+    Target target() {
+        return target;
+    }
+
     void setExternalTypes(ExternalClasspath cp) {
         this.externalTypes = cp;
     }
@@ -29,6 +40,8 @@ public class SemanticAnalyzer {
     private final java.util.Set<String> interfaceNames = new java.util.HashSet<>();
     /** SG-017 (SEM041): classes declaradas `abstract` — `new A()` vira erro compile-time. */
     private final java.util.Set<String> abstractClasses = new java.util.HashSet<>();
+    /** #339 (SEM070): classes declaradas `final` — `class D extends F` vira erro compile-time. */
+    private final java.util.Set<String> finalClasses = new java.util.HashSet<>();
     private final Map<ExpressionNode, Type> expressionTypes = new IdentityHashMap<>();
     private final Map<MethodCallExpr, SymbolTable.MethodSymbol> resolvedMethods = new IdentityHashMap<>();
     private final Map<NewExpr, SymbolTable.ConstructorSymbol> resolvedConstructors = new IdentityHashMap<>();
@@ -210,6 +223,9 @@ public class SemanticAnalyzer {
 
 
     private void analyzeClass(ClassDeclarationNode cls) {
+        // #339/#341 — forma da classe (extends final, final+abstract) antes
+        // de qualquer análise de corpo: a JVM morreria no load.
+        ClassShapeChecks.checkClassDeclaration(this, cls);
         String prevClass = currentClassName;
         currentClassName = cls.name();
         SymbolTable classScope = classMemberScopes.get(cls.name());
@@ -255,7 +271,8 @@ public class SemanticAnalyzer {
                 }
             }
         }
-        checkInterfaceImplementation(cls, classScope);
+        ImplementationChecker.checkInterfaceImplementation(this, cls, classScope);
+        ImplementationChecker.checkOverrideReturnCompatibility(this, cls);
         MemberResolver.checkAbstractClassImplementation(this, cls);
         currentScope = prevScope;
         currentClassName = prevClass;
@@ -279,6 +296,8 @@ public class SemanticAnalyzer {
     java.util.Set<String> interfaceNames() { return java.util.Collections.unmodifiableSet(interfaceNames); }
 
     java.util.Set<String> abstractClasses() { return java.util.Collections.unmodifiableSet(abstractClasses); }
+    /** #339 (SEM070): nomes simples das classes `final` do programa. */
+    java.util.Set<String> finalClasses() { return java.util.Collections.unmodifiableSet(finalClasses); }
     Map<ExpressionNode, Type> expressionTypes() { return java.util.Collections.unmodifiableMap(expressionTypes); }
     Map<MethodCallExpr, SymbolTable.MethodSymbol> resolvedMethods() { return java.util.Collections.unmodifiableMap(resolvedMethods); }
     Map<NewExpr, SymbolTable.ConstructorSymbol> resolvedConstructors() { return java.util.Collections.unmodifiableMap(resolvedConstructors); }
@@ -301,6 +320,7 @@ public class SemanticAnalyzer {
     void putClass(String name, SymbolTable.ClassSymbol sym) { knownClasses.put(name, sym); }
     void addInterface(String name) { interfaceNames.add(name); }
     void addAbstractClass(String name) { abstractClasses.add(name); }
+    void addFinalClass(String name) { finalClasses.add(name); }
 
     private void analyzeConstructorBody(ConstructorDeclarationNode ctor) {
         SymbolTable ctorScope = ctorScopes.get(ctor);
@@ -323,7 +343,7 @@ public class SemanticAnalyzer {
     private void analyzeMethodBody(MethodDeclarationNode method) {
         SymbolTable methodScope = methodScopes.get(method);
         if (methodScope == null) return;
-        checkThrowsClause(method.thrownExceptions(), "método '" + method.name() + "'");
+        checkThrowsClause(method.thrownExceptions(), "method '" + method.name() + "'");
         Type returnType = resolveType(method.returnType(), methodScope);
         // bug 26: corpo pode terminar sem return/throw → SEM036 (uma vez por
         // método — o loop de 4 passes chamaria de novo). Antes do early-return
@@ -331,7 +351,7 @@ public class SemanticAnalyzer {
         // (corpo vazio é legítimo).
         if (!method.modifiers().contains("abstract") && reportedReturnPath.add(method)) {
             ReturnPathAnalyzer.check(this, method.body(), returnType, method.position(),
-                    "método '" + method.name() + "'");
+                    "method '" + method.name() + "'");
         }
         if (method.body() == null || method.body().isEmpty()) return;
         SymbolTable prevScope = currentScope;
@@ -400,42 +420,6 @@ public class SemanticAnalyzer {
         currentClassName = prevClass;
     }
 
-    /**
-     * SG-015 (SEM043): classe que implementa interface deve declarar os
-     * métodos da interface (por nome; paridade de assinatura checada por
-     * aridade — tipos exatos entram quando o dispatch virtual existir).
-     */
-    private void checkInterfaceImplementation(ClassDeclarationNode cls, SymbolTable classScope) {
-        if (diagnostics == null) return;
-        for (String ifaceName : cls.interfaces()) {
-            SymbolTable.ClassSymbol ifaceSym = knownClasses.get(ifaceName);
-            if (ifaceSym == null || !interfaceNames.contains(ifaceName)) continue;
-            for (Map.Entry<String, SymbolTable.Symbol> e
-                    : ifaceSym.members().localSymbols().entrySet()) {
-                if (!(e.getValue() instanceof SymbolTable.MethodSymbol im)) continue;
-                // #213: métodos default (com corpo) já têm implementação na
-                // interface — a classe implementadora não precisa declará-los.
-                if ((im.accessFlags() & AccessFlags.ABSTRACT) == 0) continue;
-                SymbolTable.Symbol local = classScope.resolve(im.name());
-                if (local instanceof SymbolTable.MethodSymbol cm) {
-                    if (cm.parameterTypes().size() != im.parameterTypes().size()) {
-                        diagnostics.error("", 0, 0, 0,
-                                "method '" + im.name() + "' of interface '" + ifaceName
-                                        + "' expects " + im.parameterTypes().size()
-                                        + " parameter(s) but implementation has "
-                                        + cm.parameterTypes().size(),
-                                "SEM043");
-                    }
-                } else {
-                    diagnostics.error("", 0, 0, 0,
-                            "class '" + cls.name() + "' implements '" + ifaceName
-                                    + "' but does not implement method '" + im.name() + "'",
-                            "SEM043");
-                }
-            }
-        }
-    }
-
     private void analyzeInterface(InterfaceDeclarationNode iface) {
         String prevClass = currentClassName;
         currentClassName = iface.name();
@@ -446,6 +430,19 @@ public class SemanticAnalyzer {
         }
         SymbolTable prevScope = currentScope;
         currentScope = classScope;
+        // #321 — `interface J extends Base` onde Base é CLASSE: o JVM escreve
+        // o supertype na interface como super_class → IncompatibleClassChangeError
+        // no load, silencioso no compile (R6/Q7). Interfaces só estendem
+        // interfaces; o alvo precisa existir E ser interface (nome
+        // desconhecido: SEM011 de resolveType cuida — nao duplicar aqui).
+        for (String parent : iface.interfaces()) {
+            if (diagnostics == null) break;
+            String base = parent.contains("<") ? parent.substring(0, parent.indexOf('<')).trim() : parent;
+            if (knownClasses.containsKey(base) && !interfaceNames.contains(base)) {
+                reportError(iface, "interface '" + iface.name() + "' cannot extend class '"
+                        + base + "' (interfaces may only extend interfaces)", "SEM064");
+            }
+        }
         // #213: corpos de métodos default de interface precisam ser analisados
         // (resolução de `greet(name)` como this.greet, tipos de retorno) — antes
         // eram ignorados e a chamada nua virava função hoisted.
@@ -511,7 +508,7 @@ public class SemanticAnalyzer {
         }
         String prevFunction = currentFunctionName;
         currentFunctionName = func.name();
-        checkThrowsClause(func.thrownExceptions(), "função '" + func.name() + "'");
+        checkThrowsClause(func.thrownExceptions(), "function '" + func.name() + "'");
         SymbolTable funcScope = currentScope.enterScope();
         for (String tp : func.typeParameters()) {
             funcScope.define(new SymbolTable.TypeParameterSymbol(tp));
@@ -527,7 +524,7 @@ public class SemanticAnalyzer {
         currentScope = funcScope;
         // bug 26: função top-level com tipo não-void pode terminar sem return
         ReturnPathAnalyzer.check(this, func.body(), returnType, func.position(),
-                "função '" + func.name() + "'");
+                "function '" + func.name() + "'");
         StatementAnalyzer.analyzeBody(this, func.body(), funcScope, returnType);
         currentScope = prevScope;
         currentFunctionName = prevFunction;

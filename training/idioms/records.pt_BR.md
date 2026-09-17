@@ -82,7 +82,7 @@ var b = new Point(3, 4)    // também aceito
 > de um record é erro de compilação **SEM038** ("record is immutable"). Para
 > estado mutável use `class` com campos + `constructor(...)`.
 
-## Pattern matching — record destructuring (0.3.22-beta)
+## Pattern matching — record destructuring (0.4.0-beta)
 
 ```kof
 record Point(Int x, Int y)
@@ -154,14 +154,27 @@ var d = json.decode<Point>("{\"x\": 10, \"y\": 20}")
 **Native:** JSN002/JSN001/JSN003 fechados 31/08 — `json.encode`/`json.decode<T>` de
 objetos/records/arrays funciona também no Native (composição compile-time; FP em XMM).
 
-## Null safety com records (0.3.22-beta)
+## Null safety com records (0.4.0-beta)
 
 ```kof
-Point? maybe = null
+record Point(Int x, Int y)
+var m: Map<String, Point> = mapOf("k", Point(7, 8))
+var maybe: Point? = m.get("k")    // null chega ao T? via API (= null literal é SEM048)
 if (maybe != null) {
     println(maybe.x())
 }
 ```
+
+> ✅ O narrowing acima é seguro mesmo para uma chave **ausente**
+> (`m.get("z")`, então `maybe` é realmente `null`): `== null`/`!= null` num
+> record é comparação de referência (`if_acmp`), nunca chamada `.equals()` —
+> consertado 17/09 (`07a51565`, bug `§262` face (a)).
+>
+> ✅ `==` entre **dois** records nullable também é seguro (consertado 17/09,
+> `§262` face (b)): `miss == hit` com um deles `null` devolve o resultado de
+> `Objects.equals` (`false` se só um é `null`, `true` se ambos são, igualdade
+> de conteúdo nos demais casos) nos quatro alvos — sem NPE, sem precisar de
+> narrowing. (`RecordNullableNullEqE2ETest` trava JVM=JS=SCRIPT=Native.)
 
 ## Anti-patterns relacionados
 

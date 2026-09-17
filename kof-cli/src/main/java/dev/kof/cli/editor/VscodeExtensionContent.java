@@ -42,8 +42,8 @@ final class VscodeExtensionContent {
             """;
 
     private static final String EXTENSION_JS = """
-            // Kof for VS Code — comandos delegam à CLI oficial num terminal
-            // integrado. Nenhum build/run/format reimplementado aqui (§15/§20).
+            // Kof for VS Code — commands delegate to the official CLI in an integrated
+            // terminal. No build/run/format re-implemented here (§15/§20).
             const vscode = require('vscode');
 
             function kofBin() {
@@ -100,22 +100,22 @@ final class VscodeExtensionContent {
               "main": {
                 "prefix": "main",
                 "body": ["main() {", "\\t$0", "}"],
-                "description": "ponto de entrada"
+                "description": "entry point"
               },
               "function": {
                 "prefix": "fn",
                 "body": ["${1:Int} ${2:name}(${3}) {", "\\t$0", "}"],
-                "description": "função com tipo de retorno"
+                "description": "function with return type"
               },
               "record": {
                 "prefix": "rec",
                 "body": ["record ${1:Name}(${2:Int x, Int y})"],
-                "description": "dados imutáveis"
+                "description": "immutable data"
               },
               "class": {
                 "prefix": "cls",
                 "body": ["class ${1:Name} {", "\\t${2:constructor}", "}"],
-                "description": "classe com estado mutável"
+                "description": "class with mutable state"
               },
               "ifelse": {
                 "prefix": "ife",
@@ -135,12 +135,12 @@ final class VscodeExtensionContent {
               "spawn": {
                 "prefix": "sp",
                 "body": ["spawn ${1:work}()"],
-                "description": "concorrência (fire-and-forget)"
+                "description": "concurrency (fire-and-forget)"
               },
               "try": {
                 "prefix": "try",
                 "body": ["try {", "\\t$1", "} catch (String e) {", "\\tprintln(\\"falhou: \\" + e)", "}"],
-                "description": "exceção como String"
+                "description": "exception as String"
               }
             }
             """;
@@ -149,7 +149,7 @@ final class VscodeExtensionContent {
             {
               "name": "kof",
               "displayName": "Kof",
-              "description": "Kof language support — grammar + comandos CLI + LSP (kof lsp).",
+              "description": "Kof language support — grammar + CLI commands + LSP (kof lsp).",
               "version": "0.3.0",
               "publisher": "KofLang",
               "engines": { "vscode": "^1.80.0" },
@@ -178,13 +178,13 @@ final class VscodeExtensionContent {
                     "kof.executable": {
                       "type": "string",
                       "default": "kof",
-                      "description": "Caminho do executável kof (CLI/LSP)."
+                      "description": "Path to the kof executable (CLI/LSP)."
                     },
                     "kof.target": {
                       "type": "string",
                       "default": "jvm",
                       "enum": ["jvm", "native", "js", "android"],
-                      "description": "Backend alvo dos comandos."
+                      "description": "Target backend for the commands."
                     }
                   }
                 },

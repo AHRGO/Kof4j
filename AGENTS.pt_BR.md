@@ -108,7 +108,7 @@ deixe trabalho grande não-commitado — é assim que se perde uma sessão.
 
 **Condições de parada (as ÚNICAS que justificam parar e chamar o humano):**
 
-1. **  em jogo** — mudança de contrato/operador/ordem de
+1. **Semântica congelada em jogo** — mudança de contrato/operador/ordem de
    avaliação (regra 6): vira gap/plano em `planning-*`, nunca edição.
 2. **Colisão de lane inevitável** — o único caminho toca um arquivo `EM CURSO`
    de outro agente e não dá para adiar: pare, registre no DOING.md, aguarde.
@@ -179,8 +179,8 @@ scripts/auto-loop.sh status           # confirmar que está ativo
 - O cron chama `opencode run --session <id> --dir <repo> --attach <server>
   --auto "<prompt>"` a cada intervalo (padrão 30 min), com o prompt de
   re-disparo: *"analize os documentos, verifique os gaps, identifique o que
-  falta em nossos planos, trace um todo de implementação e continue o
-  desenvolvimento"*.
+  falta em nossos planos em docs/development, trace um todo de implementação
+  e continue o desenvolvimento"*.
 - **`--attach` é OBRIGATÓRIO — o heartbeat injeta na SESSÃO ABERTA, nunca
   spawna agente concorrente.** Sem `--attach`, `opencode run --session` cria
   um **processo headless novo** que só compartilha o histórico: você vê "outra
@@ -247,7 +247,7 @@ conceitual nem decide arquitetura/rumo. Consequências práticas para o agente:
 4. **Discussão técnica antes de código.** Quando a dúvida é conceitual (semântica,
    estouro de ponto flutuante, ABI), a contribuição é por **debate técnico** —
    propostas/documentos de design comentados — não PR desordenado que muda
-    .
+   semântica congelada.
 5. **Blindagem contra poluição.** Nunca misturar a linguagem Kof com termos
    alheios ao domínio (jogos, etc.) em docs/código. Disclaimers e nomenclatura
    são lei; violou, reverte.
@@ -264,18 +264,18 @@ conceitual nem decide arquitetura/rumo. Consequências práticas para o agente:
    ou a suíte vermelha (fora dos erros ambientais documentados) está violando
    o portão: conserta na mesma unidade ou reverte. `git bisect`-hostil é o
    pior legado que um agente pode deixar.
-7. **Identidade do git (12/09, decisão da mantenedora — identidade única).**
-   A regra antiga do `temmcode` (e-mail `aminadojava@gmail.com` no `--local`
-   para atribuir commits ao worker + bloco `"Kof-agent-worker"` em comentários
-   via proxy) foi **ABANDONADA a pedido da mantenedora** — dava dor de cabeça
-   demais (commit manual dela subindo como `temmcode` pelo `--local` do clone).
-   Vale agora: **uma identidade só, a dela**. O agente NUNCA configura
-   identidade (`git config user.*` com ou sem `--global` é proibido; nunca
-   escreve em `~/.gitconfig` nem no `.git/config`); usa a identidade efetiva
-   do repo/ambiente como está. Sem truque de e-mail, sem bloco de marcação
-   obrigatório em issues/PRs, **sem trailer `Co-authored-by`** (polui o log do
-   repo). Quando ela preparar algo exclusivo para os
-   agentes, essa regra volta numa forma nova.
+7. **Identidade do git e worker de agente (12/09, atualizado 16/09 diretriz da mantenedora).**
+   O GitHub App `kof-agent-worker` (App ID `4960796`, configurado via `scripts/gh-as-agent.sh`
+   e `~/.config/kof/agent-app.env`) é a identidade dedicada para issues, PRs e commits
+   onde estiver instalado.
+   - **Permissão de commit e identidade:** o app tem permissões de commit e identidade própria de Git/GitHub.
+   - **Regra de fallback:** se a autenticação, push ou commit falhar usando a identidade do bot
+     (ex.: app ainda não instalado em um repositório alvo específico ou erro de integração), o agente
+     **deve aceitar e recorrer ao padrão da mantenedora**:
+     `mel <amelissariver@gmail.com>` (conta GitHub `melmonfre`).
+   - Sem truques de e-mail ou trailers sintéticos (`Co-authored-by` é proibido pois polui o log do repo).
+   - O agente usa a identidade efetiva do ambiente conforme configurada.
+
 
 > Em resumo: a IA roda **sob as regras estritas da computação de verdade** —
 > documentação cirúrgica, zero alucinação, sem o hype do mercado.
@@ -560,8 +560,25 @@ Bool isQuery(String op) {
    `stdmath2` — não. Sufixo numérico é lixo de co-processador (só existe para
    não colidir com um nome que ninguém entendeu). Ao splitar por gate ≤500, o
    arquivo novo ganha nome pelo que **contém** (a responsabilidade que
-   saiu), não por quantos irmãos já existem. Legibilidade vem antes de
-   qualquer economia de digitação.
+    saiu), não por quantos irmãos já existem. Legibilidade vem antes de
+    qualquer economia de digitação.
+8. **Kof não é Java/Kotlin/C# — pedido de feature de outra língua NÃO é bug do
+   Kof (ABSOLUTO, mantenedora 18/09).** Quando uma issue pede um construto que
+   não existe no Kof porque é **Java ou Kotlin traduzido** (`StringBuilder`,
+   `.equals()`, `new`, `val`/`var`/`let` top-level, keyword `fun`/`val`,
+   `v is Car`, `"""três aspas"""`, `Pair`, `it` implícito de lambda,
+   `mutableListOf`, Elvis `?:`, `?.`, `0..n`, `!!`, argumento nomeado `f(p=v)`,
+   `class Box(size: Int)` primário COM corpo, `catch (e: Type)`, `object`,
+   `open`/`override`), a rejeição do compilador é **correta e esperada** — a
+   issue é **NÃO-PROCEDENTE: responda uma vez com o idiom do Kof que substitui
+   (a tabela de idioms deste arquivo) e FECHE-a**; NÃO implemente a feature
+   estrangeira nem "conserte o diagnóstico". Vira trabalho real apenas se o Kof
+   *promete* o construto em `training/`/`learn/`/docs e o compilador *discorda
+   da própria doc* (aí sim é bug) — ou se a mantenedora decidir (regra 6:
+   decisão de design, não edição de agente). Todo fechamento desses carrega o
+   motivo "Kof não é Java" e aponta `training/anti-patterns/fake-idioms.pt_BR.md`.
+   Cruzamento: se o reproducer compilaria em **Kotlin/Java** por ser
+   *traduzido*, é esta regra.
 
 ---
 
@@ -725,7 +742,7 @@ pronta.
 > completa) provam. **Nenhum agente pode quebrar comportamento que já funciona.**
 
 1. **Zero regressão.** Nenhum commit pode fazer um teste existente passar a
-   falhar. A suíte completa (`mvn test`, hoje **1636** nos 4 módulos — ver
+   falhar. A suíte completa (`mvn test`, hoje **2411** nos 4 módulos — ver
    §"Loop de verificação" para o comando com o flag de failure.ignore) é **gate de merge** —
    mudança que não mantém tudo verde não entra. Exceção única: mudança de
    contrato **deliberada**, com bump de versão + docs atualizados + migração.
@@ -745,7 +762,7 @@ pronta.
 5. **Paridade cross-target.** JVM/Native/JS divergindo no mesmo programa é bug
    de paridade. O comportamento previsto vale nos 3 targets, ou gap `XXX00x`
    diagnosticado — nunca divergência silenciosa.
-6. **  (0.2.6-beta).** Operadores, precedência, ordem de
+6. **Semântica congelada (0.2.6-beta).** Operadores, precedência, ordem de
    avaliação, null-safety, `==` de conteúdo, exceções como String,
    `spawn`/`await`, coleções `List/Map/Set` são **congelados**. Proposta de
    mudança vira gap/plano em `planning-*`, nunca edição direta da semântica
@@ -753,7 +770,7 @@ pronta.
 
 ---
 
-## Invariantes da plataforma (visão universal — `docs/development/future/PLAN-UNIVERSAL-PLATFORM.md`)
+## Invariantes da plataforma (plano universal — `docs/development/PLAN-UNIVERSAL-PLATFORM.md`)
 
 Estas regras **sempre** se aplicam, mesmo quando não há código de domínio novo
 em jogo. São o mecanismo anti-"god language":
@@ -761,7 +778,11 @@ em jogo. São o mecanismo anti-"god language":
 1. **Fronteira core → stdlib base → plataforma → pacotes oficiais → interop**
    (R1). Domínio pesado (`ml`, `bio`, `hpc`, `infra-<cloud>`) vai para
    **pacote oficial**, nunca para a stdlib base. Só entra na stdlib o que é
-   "essencial à plataforma e pequeno".
+   "essencial à plataforma e pequeno". **Machine-gated** desde 17/09:
+   `scripts/check_stdlib_boundary.sh` + ledger `scripts/stdlib_boundary.txt`
+   (CI, morde sob `--selftest`) — namespace novo sem linha no ledger com a sua
+   camada **quebra o build**; domínios pesados são hard-deny. Registre a
+   camada primeiro (ordem de decisão §3.4), nunca em silêncio.
 2. **Interop-first** (R9). Para qualquer capacidade, a primeira pergunta é
    "já existe por fora e é melhor?" → FFI/interop (`kof.process`, `.so`, JVM,
    GraalJS). Nunca reimplementar Arrow/Parquet/BLAS/LAPACK/CUDA/NumPy/
@@ -795,14 +816,14 @@ target por domínio; sem motor SQL/Arrow/ML próprio.
 ## Antes de escrever código (obrigatório)
 
 1. Leia `training/idioms/<area>.md` da área do problema
-   (collections, functions, strings, errors, records, classes, concurrency, control-flow).
+   (collections, functions, strings, errors, records, classes, concurrency, control-flow, interop).
 2. Leia `training/anti-patterns/` — em especial `java-like-code.md`,
    `chained-or-membership.md`, `fake-idioms.md`.
 3. Se a dúvida persistir: **escreva um snippet e compile** (loop abaixo).
 
 ---
 
-## Sintaxe real (verificada no compilador — 0.3.0-beta)
+## Sintaxe real (verificada no compilador — 0.4.0-beta)
 
 ### Funções (não existe `fun` nem `func`)
 
@@ -830,8 +851,12 @@ Int g(Int x, Int y) { return x + y }         // oracle JVM): assinatura difere
 var x = 10              // mutável
 val y = 20              // imutável
 String nome = "Mel"
-String? nome2 = null    // nullability: forma TIPO-PRIMEIRO (idiomática no corpus)
-var idade: Int? = null  // nullability: forma ANOTADA (também válida)
+String? nome2 = find(key)  // nullability: forma TIPO-PRIMEIRO (idiomática no corpus)
+var idade: Int? = findAge() // nullability: forma ANOTADA (também válida)
+// ⚠️ literal `= null` é REJEITADO desde 10/09 (SEM048, decisão da mantenedora
+// por trás da SG-008/D-NULL-INTENT): `null` só chega a um `T?` via API
+// (map.get, readLine, função que retorna `T?` com `return null`) —
+// aí `if (x != null)` faz o narrowing.
 ```
 
 ### Classes (mutable → campos + `constructor(...)`) e o caso `class X(...)` = record
@@ -1083,9 +1108,11 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > ele, o Maven é fail-fast por módulo: qualquer falha em **kof-compiler aborta
 > o reactor** e **kof-script, kof-c-compiler e kof-cli nunca rodam** — você
 > acha que validou tudo mas só viu o primeiro módulo. O total real com o flag
-> é **1636 testes** (compiler 1464 + script 31 + kof-c 5 + cli 136, medição
-> 13/09 — cresce com cada commit): **0 falhas** (13 erros = só `node` ausente
-> no host, ambientais). O §149 JS (`KofRandomTest.randomStringJs`/`randomShapeJs`,
+> é **2411 testes** (compiler 2058 + script 38 + kof-c 7 + cli 308, medição
+> 17/09 ~15:49 no tip `f276e966` — cresce com cada commit): **0 regressões / 0 erros** (a única falha que a
+> suíte já mostrou é o flake intermitente do §252 nativo — calado de novo (5ª corrida quieta seguida), último disparo 16/09 09:44)
+> (node agora presente
+> no host da medição — o antigo "13 erros = node ausente" não se aplica mais). O §149 JS (`KofRandomTest.randomStringJs`/`randomShapeJs`,
 > regressão do fix §147 no `JsIfThrowElse`) foi **CORRIGIDO 13/09** — a raiz era
 > o parser consumir o label de início do `while` seguinte a um assert/if-throw
 > como fim do else (ver `known-bugs.md §149`).
@@ -1093,20 +1120,24 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > `kof_static_java_lang_System_out` no link) foram **CORRIDAS 09/09** — com
 > qemu os cross agora PASSAM (`NativeRiscv64E2ETest`/`NativeAarch64E2ETest`
 > 42/42 cada; prova no `known-bugs.md §59` + gate 12/09). Qualquer falha que
-> não seja dos 13 erros de `node` ausente é SUA. Antes de commitar, confira os
+> não seja de uma guarda ambiental documentada é SUA. Antes de commitar, confira os
 > reports POR MÓDULO
 > (`grep -rl FAILURE */target/surefire-reports/*.txt`).
 > (Lição registrada 08/09: sessões inteiras citaram "suíte 1085/59" sem os
 > módulos finais terem rodado.)
 >
-> **Os números mudam com qemu no ambiente:** sem qemu, os 84 cross
+> **Os números mudam com qemu no ambiente:** sem qemu (host da medição de
+> 16/09 — sem toolchain cruzada), os 84 cross
 > (2×42, `NativeRiscv64/Aarch64E2ETest`) são **skipados** pelo guard
-> (`4408eb6`) + 5 de BD externo → `~1547/0/~89-skip` (estimado — a medição
-> abaixo é de host COM toolchain). Com qemu, **tudo executa** — `1636/0/5-skip`
-> (os 5 = MySQL/Mongo/Postgres externos; medido 13/09). Estado correto HOJE:
-> **0 falhas** nos dois cenários (o §149 JS foi corrigido 13/09); os 13 erros
-> são só `node` ausente. O que importa continua sendo nenhum FAILURE fora
-> deles e das guardas.
+> (`4408eb6`) + os outros guards de toolchain/BD externo + o guard de sysroot do §255 (`06e77e94`) → `2411/0/196-skip` (o flake §252 disparou 16/09 09:44, depois calou às 11:38, 15:09, 15:54 e 17/09 15:49 — ~1/4 das corridas completas)
+> (MEDIDO 17/09 ~15:49, run limpo no tip `f276e966`). Com qemu, **tudo executa** — os 84 cross rodam
+> verdes e o total fica `2411` com a contagem de skip caindo para o
+> resíduo externo de BD/ambiente `node`. Estado correto HOJE (17/09 ~15:49, run limpo no tip `f276e966`):
+> **0 regressões / 0 erros** (2411 = 2058+38+7+308, 196 skip) — a corrida completa das 09:44 teve o flake INTERMITENTE
+> conhecido do §252 nativo (`spawnWorkerThrowPropagatesThroughSelectAnyNative`, dona lane
+> nativa `.18`/nat; às 11:38, 15:09 e 15:54 ele ficou calado — frequência ~1/4, ver §252), que
+> deve ser lido como um vermelho de TESTE, não regressão. O que importa continua
+> sendo nenhum FAILURE fora do flake do §252 e das guardas documentadas.
 
 Para validar um snippet isolado (ex.: confirmar se um idiom compila),
 use o harness do projeto ou crie um teste E2E mínimo no pacote da área.
@@ -1140,12 +1171,12 @@ use o harness do projeto ou crie um teste E2E mínimo no pacote da área.
 | `learn/` | Tutorials passo a passo (00-introduction → 39-stdlib) |
 | `docs/architecture/architecture.md`, `docs/architecture/compiler-architecture.md` etc. | Domínios específicos (estáveis) |
 | `docs/development/` | **Backlog vivo — tudo que NÃO está concluído** (planos, roadmaps, audits, gaps, refactors). Ver `docs/development/README.md` para índice completo. |
-| `docs/development/future/` (plans) | **só plano sem código**: plataforma universal (visão), RAII TIER 2.4 (DD-STDLIB-01 FECHADO 13/09 → `docs/stdlib/`). A migração legado (decompiler/translator/IR/differential) foi p/ `docs/development/` 12/09, **voltou p/ `future/` 15/09 — DESPRIORIZADA pela mantenedora** (código fica em kof-cli; promoção exige decisão explícita dela) |
+| `docs/development/future/` (plans) | **só plano sem código**: RAII TIER 2.4 (DD-STDLIB-01 FECHADO 13/09 → `docs/stdlib/`). A migração legado (decompiler/translator/IR/differential) foi p/ `docs/development/` 12/09, **voltou p/ `future/` 15/09 — DESPRIORIZADA pela mantenedora** (código fica em kof-cli; promoção exige decisão explícita dela) |
 | `docs/development/roadmap.md`, `docs/audits/roadmap-audit.md`, `docs/bugs-and-gaps/ecosystem-coverage.md` | Roadmaps & auditoria de cobertura (fila P0→P5) |
 | `docs/bugs-and-gaps/specification-gaps.md`, `docs/bugs-and-gaps/known-bugs.md` | Gaps de spec (SG-00x — fila do maintainer completa, virou referência) + bugs abertos |
 | `docs/development/native-multiarch.md`, `docs/stdlib/DATABASE_VISION.md`, `docs/audits/complexity-audit.md` | Native multiarch (NATIVE002) + DB vision (realizada → stdlib) + audit ≤500 (snapshot → architecture) |
 | `docs/development/DECISIONS.md` | **Decisões da mantenedora** (time/segurança/app-model/Spring — pasta `decision-pending/` extinta 13/09) |
-| `docs/development/roadmap.md` §23 | **Plano de implementação consolidado** (Tiers 0–12) — único plano ordenado; migração A–H ✅, universal não iniciada |
+| `docs/development/roadmap.md` §23 | **Plano de implementação consolidado** (Tiers 0–12) — único plano ordenado; migração A–H ✅, universal **EM DESENVOLVIMENTO** 17/09 (`PLAN-UNIVERSAL-PLATFORM.md`, R12 sobreposto — §D-UNIVERSAL) |
 
 ---
 

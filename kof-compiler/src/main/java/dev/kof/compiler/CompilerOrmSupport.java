@@ -74,14 +74,14 @@ public final class CompilerOrmSupport {
     static int lowerQueryDsl(CompilerDriver driver, QueryDslExpr q,
                               List<KofOperation> ops, String owner,
                               int localIdx, List<IRLocalVariable> locals) {
-        if (!KofDb.supportedOn(driver.target)) {
+        if (!KofOrm.supportedOn(driver.target)) {
             if (driver.currentDiagnostics != null) {
                 SourcePosition p = q.position();
                 driver.currentDiagnostics.error(p != null ? p.file() : "",
                         p != null ? p.line() : 0, p != null ? p.column() : 0, 0,
                         q.entityType() + ".query: not available on the " + driver.target
-                                + " driver.target yet (" + KofDb.gapCode() + ")",
-                        KofDb.gapCode());
+                                + " driver.target yet (" + KofOrm.gapCode() + ")",
+                        KofOrm.gapCode());
             }
             return localIdx;
         }
@@ -198,8 +198,12 @@ public final class CompilerOrmSupport {
             localIdx = ExpressionLowerer.emitExpression(driver, b, ops, owner, localIdx, locals);
             if (TypeMetrics.isPrimitiveType(bt)) TypeEmitter.boxPrimitive(ops, bt);
         }
-        // 4) className
-        ops.add(new KofLoadLiteral(BuiltinTypes.STRING, CompilerTypes.classNameFor(entity)));
+        // 4) className — no JS a ponte nao tem Class.forName p/ classes do
+        // guest (DB002): a wire vai untyped (className vazio) e o bind tipado
+        // acontece no guest via __kof_decode_<T> (JsRuntimeOps), a partir do
+        // returnType List<Entity> abaixo. Mesma estrategia de ExpressionDbCallLowerer.
+        ops.add(new KofLoadLiteral(BuiltinTypes.STRING,
+                driver.target == Target.JS ? "" : CompilerTypes.classNameFor(entity)));
         // 5) a chamada
         List<Type> params = new ArrayList<>();
         params.add(BuiltinTypes.STRING); // id

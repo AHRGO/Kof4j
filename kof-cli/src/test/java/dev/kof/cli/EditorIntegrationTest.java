@@ -184,7 +184,7 @@ class EditorIntegrationTest {
         bo.reset();
         assertEquals(0, CmdEditor.run(new String[]{"editor", "install", "neovim"}, ctx, home,
                 new BufferedReader(new StringReader("")), out, out));
-        assertTrue(bo.toString(StandardCharsets.UTF_8).contains("já atualizado"), bo.toString());
+        assertTrue(bo.toString(StandardCharsets.UTF_8).contains("already up to date"), bo.toString());
     }
 
     @Test
@@ -260,6 +260,10 @@ class EditorIntegrationTest {
         assertTrue(js.contains("kof.build") && js.contains("kof.selectTarget"), "comandos Kof: (§19)");
         assertTrue(js.contains("require('vscode')"), "usa API do vscode");
         assertTrue(Files.isRegularFile(ext.resolve("snippets/kof.json")), "snippets presentes (§3)");
+        // D-DIAG-EN: description dos snippets é UI do editor — English, nunca PT.
+        String snips = Files.readString(ext.resolve("snippets/kof.json"));
+        assertTrue(snips.contains("function with return type"), "snippet fn em English (D-DIAG-EN)");
+        assertFalse(snips.contains("função com tipo"), "nenhum PT vivo nos snippets (D-DIAG-EN)");
 
         // JSONs parseáveis (parser do próprio projeto)
         for (String rel : List.of("package.json", "language-configuration.json",

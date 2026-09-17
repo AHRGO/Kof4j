@@ -174,7 +174,7 @@ class ConformanceMatrixTest {
                     var nan = z / z
                     println(nan % 2.0)
                 }
-                """, "1.5\n1.5\n1.0\n0.5\n-1.5\n1.5\nNaN\nNaN\nNaN", Set.of("js"), tempDir);
+                """, "1.5\n1.5\n1.0\n0.5\n-1.5\n1.5\nNaN\nNaN\nNaN", Set.of(), tempDir);
         matrix("cast", """
                 main() {
                     var d = 9.9
@@ -183,7 +183,7 @@ class ConformanceMatrixTest {
                     println(l as Int)
                     println(66 as Char)
                 }
-                """, "9\n70000\n66", Set.of(), tempDir);
+                """, "9\n70000\nB", Set.of(), tempDir);
         // §110 (paridade absoluta, JVM literal-emitter): -0.0 em JVM virava
         // +0.0 — `emitLoadDouble`/`emitLoadFloat` testavam `value == 0.0`,
         // e IEEE casa -0.0 == 0.0 → DCONST_0 colapsava o sinal (literal
@@ -203,18 +203,19 @@ class ConformanceMatrixTest {
                     println(-1.0 * 0.0)
                     println(0.0 == -0.0)
                 }
-                """, "0.0\n-0.0\n-0.0\n-0.0\n-0.0\ntrue", Set.of("js"), tempDir);
+                """, "0.0\n-0.0\n-0.0\n-0.0\n-0.0\ntrue", Set.of(), tempDir);
         // bug 44 CORRIGIDO 10/09 (x86_64): kof_print_double/float via snprintf
         // %.16g + append '.0' p/ inteiro-válido + write via syscall (sem
-        // printf/reordenação) — Native desbloqueado. KofJS mantém a exclusão:
-        // doc "parece bug mas é esperado" (JS String(5.0) = "5").
+        // printf/reordenação) — Native desbloqueado. §264 (16/09, lane .18):
+        // o JS também imprimia `String(5.0)`="5"; agora `kofNumFmt` fecha o
+        // contrato do JDK — a exclusão `js` CAIU.
         matrix("floatprint", """
                 main() {
                     println(1.0 / 3.0)
                     println(2.5 * 2.0)
                     println(7.0 / 2.0)
                 }
-                """, "0.3333333333333333\n5.0\n3.5", Set.of("js"), tempDir);
+                """, "0.3333333333333333\n5.0\n3.5", Set.of(), tempDir);
         // bug 44 (residual, x86_64, paridade regra 5): o glibc %.16g escreve
         // 'inf'/'-inf'/'nan' mas o contrato é JDK Double.toString →
         // 'Infinity'/'-Infinity'/'NaN' (o que JVM/Script imprimem). O println
@@ -236,7 +237,7 @@ class ConformanceMatrixTest {
                     println("v=" + (0.0 / 0.0))
                 }
                 """, "Infinity\n-Infinity\nNaN\nInfinity\nInfinity NaN\nv=NaN",
-                Set.of("js"), tempDir);
+                Set.of(), tempDir);
         // §180 ✅ CORRIGIDO 14/09 (DECISIONS §6): o contrato é JDK
         // Double.toString/Float.toString — shortest-round-trip
         // (0.1+0.2 = 0.30000000000000004), notação científica (|x|>=1e7 ou
@@ -244,8 +245,9 @@ class ConformanceMatrixTest {
         // (1.0f/3.0f = 0.33333334, não a expansão double 0.3333333432674408).
         // O x86_64 agora usa `kof_dtoa` (RuntimeDtoa: loop `%.*e`+strtod p/ o
         // shortest + reformat p/ o limiar/estilo do Java); a exclusão do Native
-        // CAIU. JS segue excluído (Number.toString não emite '.0' nem notação
-        // científica no mesmo limiar — §44).
+        // CAIU. §264 (16/09, lane .18): a exclusão do JS também CAIU —
+        // `kofNumFmt` (slice num-fmt) implementa o mesmo contrato em JS
+        // (round-trip curto via toExponential + threshold E/decimal do JDK).
         matrix("doubleprint", """
                 main() {
                     println(0.1 + 0.2)
@@ -262,7 +264,7 @@ class ConformanceMatrixTest {
                 }
                 """, "0.30000000000000004\n1.0E7\n1.0E-5\n33.333333333333336\n0.33333334\n1.0E20\nNaN"
                 + "\n0.001\n1.0E-4\n3.4028235E38\n-0.0",
-                Set.of("js"), tempDir);
+                Set.of(), tempDir);
         // bug 100 (paridade absoluta): `String.equals(não-String)` é `false` em
         // todo target — o JVM sempre deu false (Objects.equals), mas o Native
         // CRASHAVA (SIGSEGV/vazio) ao ler o Int-boxado como ponteiro-String.
@@ -374,7 +376,7 @@ class ConformanceMatrixTest {
                     val miss = mapOf("x", true).get("nope")
                     println(miss)
                 }
-                """, "true\ntrue\n8\n9000000001\ntrue\n97\nfalse", Set.of(), tempDir);
+                """, "true\ntrue\n8\n9000000001\ntrue\na\nfalse", Set.of(), tempDir);
 
         // §125 (decisão da mantenedora 12/09, opção A): println de função
         // Nullable(primitivo) que RETORNA null imprime o DEFAULT do primitivo
@@ -1204,14 +1206,14 @@ class ConformanceMatrixTest {
                     println(s.charAt(3))
                     println(s + "!")
                 }
-                """, "4\n233\ncafé!", Set.of(), tempDir);
+                """, "4\né\ncafé!", Set.of(), tempDir);
         matrix("unicode-astral", """
                 main() {
                     var e = "a😀b"
                     println(e.length)
-                    println(e.charAt(1))
-                    println(e.charAt(2))
-                    println(e.charAt(3))
+                    println(e.charAt(1) as Int)
+                    println(e.charAt(2) as Int)
+                    println(e.charAt(3) as Int)
                 }
                 """, "4\n55357\n56832\n98", Set.of(), tempDir);
         // bug 43 (substring face, 10/09) — code units UTF-16, paridade 4
@@ -1616,7 +1618,7 @@ class ConformanceMatrixTest {
                     println(b[0])
                     println(b[1])
                 }
-                """, "65\n66\ntrue\nfalse", Set.of("script"), tempDir);
+                """, "A\nB\ntrue\nfalse", Set.of("script"), tempDir);
         // §186 (13/09): inicializador de campo `static` NÃO-literal. O
         // front-end só levava `LiteralExpr` direto ao `initialValue`; `-1`
         // (unário) e `2 + 3` (binário dobrado) ficavam de fora e, no JVM,
@@ -1660,13 +1662,13 @@ class ConformanceMatrixTest {
                     var c = new Char[2]
                     c[0] = 70000
                     c[1] = -1
-                    println(c[0])
-                    println(c[1])
+                    println(c[0] as Int)
+                    println(c[1] as Int)
                     var d = new Char[2][2]
                     d[0][0] = 70000
                     d[1][1] = -1
-                    println(d[0][0])
-                    println(d[1][1])
+                    println(d[0][0] as Int)
+                    println(d[1][1] as Int)
                     var s = new Short[1]
                     s[0] = -1
                     println(s[0])

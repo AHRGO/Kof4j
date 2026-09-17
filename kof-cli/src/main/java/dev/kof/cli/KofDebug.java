@@ -37,6 +37,16 @@ final class KofDebug {
             System.err.println("usage: kof debug <file.kf>");
             return 1;
         }
+        if (args[1].startsWith("-")) {
+            // R6: `debug` takes no flags — a typo must not be silently ignored.
+            System.err.println("debug: unknown flag: " + args[1] + " (usage: kof debug <file.kf>)");
+            return 1;
+        }
+        if (args.length > 2) {
+            System.err.println("debug: " + (args[2].startsWith("-") ? "unknown flag: " : "unexpected argument: ")
+                    + args[2] + " (usage: kof debug <file.kf>)");
+            return 1;
+        }
         Path file = Path.of(args[1]);
         if (!Files.exists(file)) {
             System.err.println("file not found: " + file);

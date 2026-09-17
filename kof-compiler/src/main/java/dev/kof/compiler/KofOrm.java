@@ -43,9 +43,9 @@ public final class KofOrm {
         return "orm".equals(name);
     }
 
-    /** JVM: JDBC via kof.db. Native (SQLite) e JS reportam ORM001. */
+    /** JVM: JDBC via kof.db. JS: KofJsOrmBridge (18/09, ORM001). Native: ORM001. */
     static boolean supportedOn(@SuppressWarnings("unused") Target target) {
-        return target == Target.JVM;
+        return target == Target.JVM || target == Target.JS;
     }
 
     static String gapCode() {

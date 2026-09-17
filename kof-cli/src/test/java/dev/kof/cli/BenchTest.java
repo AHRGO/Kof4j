@@ -62,7 +62,7 @@ class BenchTest {
         Run r = runCapturing("bench", "--iterations", "2", "--warmup=0", "--threshold", "1.5");
         assertEquals(1, r.code, "chega ao estágio de descoberta de benchmarks");
         assertTrue(r.err.contains("benchmark"), "diagnóstico de benchmarks, não de parse: " + r.err);
-        assertFalse(r.err.contains("inválido"), r.err);
+        assertFalse(r.err.contains("invalid value"), r.err);
         assertFalse(r.err.contains("Exception"), r.err);
     }
 

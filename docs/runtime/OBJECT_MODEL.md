@@ -247,9 +247,8 @@ GETFIELD Point.name Ljava/lang/String;  # String name
 >
 > **Updated (0.2.6-beta, 31/08):** objects are allocated on the free-list
 > `kof_free_head` (`mmap` reuse); the allocator is **thread-safe** (futex)
-> because of `spawn` on pthreads. Mark-sweep GC still pending (see
-> MEMORY_MODEL.md §9) — the header's MARKED flag remains reserved for
-> that phase.
+> because of `spawn` on pthreads. Mark-sweep GC implemented 03/09 (manual; see
+> MEMORY_MODEL.md §9) — auto-collect on exhaustion is pending (§260).
 
 ## 8. Inheritance (Historical — implemented in F.3)
 
@@ -305,7 +304,11 @@ VTable:
 
 ## 10. GC Future
 
-The object model MUST support future GC:
+> **Implemented 03/09:** mark-sweep exists (`kof_gc_mark`/`kof_gc_sweep`,
+> manual `kof_gc_collect_now`); auto-collect on exhaustion is pending (§260).
+> The mark bit below is tracked in the allocator block prefix.
+
+The object model MUST support GC:
 
 - **Mark bits** in the flags for mark-and-sweep
 - **Pinned objects** for objects that cannot be moved

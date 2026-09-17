@@ -129,7 +129,7 @@ Erros de runtime são fatais em ambos os backends:
 |---------|-------|
 | AstNodes.java | `ThrowStmt`, `TryStmt`, `CatchClause` |
 | Parser.java | Parsing de `throw`, `try/catch/finally` |
-| IRNodes.java | `KofThrow` |
+| `KofThrow.java` | `KofThrow` (um record por op) |
 | CompilerDriver.java | Lowering de `throw` e `try/catch/finally` |
 | JvmBackend.java | Exception table, StackMapTable, wrap `RuntimeException` |
 | NativeBackend.java | Frames de exceção, unwind, `kof_throw_string` |

@@ -46,10 +46,18 @@ Objetivos:
   (`extends Activity`, `super.onCreate`, annotations androidx);
 - gaps honestos por compile-time (`AND001..003`).
 
-Estado atual: 🟡 Fase 1 implementada — `kof build --target android` gera
+Estado atual: 🟡 Fases 1-4 implementadas — `kof build --target android` gera
 projeto Maven (zero Java/Kotlin/Gradle) com host Activity EM KOF
 (`android-host.kf`) compilada pelo próprio frontend; pipeline
-d8/aapt2/apksigner via pom sem dependências.
+d8/aapt2/apksigner via pom sem dependências. Fase 2: o manifest carrega
+label/permissões; `--apk`/`--keystore` constroem o artefato direto. Fase 3:
+WebView responsivo (`<meta viewport>` device-width + CSS de tela estreita +
+`setUseWideViewPort`/`setLoadWithOverviewMode` no host). Fase 4:
+`--min-sdk`/`--target-sdk` chegam ao `<uses-sdk>`, ao platform jar e ao
+`d8 --min-api` (defaults 24/34). `kof.web` é gap de compile-time imposto
+(`AND002`). Pendente (Fases 5+, sem dono): `--aab` (precisa de `bundletool`,
+recusado honestamente hoje), metadado de ícone declarativo (decisão pendente).
+Detalhes em [docs/targets/KOFANDROID.md](../targets/KOFANDROID.md).
 
 ### Kof4J — JVM
 
@@ -260,13 +268,13 @@ fix).
 | Item | Descrição | Prioridade |
 |------|-----------|------------|
 | ~~Unwrap de `ExecutionException`~~ | ✅ 31/08 — `kof_await` re-lança a causa original (JVM) | — |
-| ~~`await` com timeout~~ | ✅ 31/08 — `awaitTimeout(r, ms)`: valor no prazo, exceção capturável via `try/catch` no estouro (JVM `Future.get(ms)` + Native polling 1ms com deadline; JS sequencial = paridade) | — |
+| ~~`await` com timeout~~ | ✅ 31/08 — `awaitTimeout(r, ms)`: valor no prazo, exceção capturável via `try/catch` no estouro (JVM `Future.get(ms)` + Native polling 1ms com deadline; JS deadline-poll `kofAwaitTimeout` — CONC003) | — |
 | ~~Cancelamento~~ | ✅ 31/08 — `cancel(r)`/`cancelled()` cooperativo via flag no handle (JVM + Native por TID) | — |
 | ~~Espera múltipla~~ | ✅ 31/08 — `selectAny(h1, h2, ...)` → primeiro handle pronto (JVM + Native + JS) | — |
 | ~~`done`/`poll`~~ | ✅ 31/08 — não-bloqueantes sobre o handle (JVM + Native) | — |
 | ~~Port Native~~ | ✅ 31/08 — `pthread_create` + trampoline + `pthread_join` + allocator thread-safe (futex); join implícito (CONC001 fechado) | — |
 | ~~Port JS~~ | ✅ 03/09 — spawn sobre Promise, await nativo via microtask (CONC003 fechado) | — |
-| ~~Scheduler/cron~~ | ✅ 31/08 — `every`/`at` JVM (`ScheduledExecutor`) + JS (`setInterval`) + **Native SCHED001** (thread por job, `usleep` ms→us + flag `active`, `cancel(id)` cooperativo) | — |
+| ~~Scheduler~~ | ✅ 31/08 — `every`/`cancel` JVM (`ScheduledExecutor`) + JS (`setInterval`) + **Native SCHED001** (thread por job, `usleep` ms→us + flag `active`, `cancel(id)` cooperativo) | `at(cron)` = stub 60s em todo alvo → **CRON001** (parser cron real pendente) |
 | ~~Canais tipados~~ | ✅ 31/08, bloqueio real no JS 03/09 — `channel<Int>()` com `send`/`receive` (JVM `LinkedBlockingQueue` bloqueante + Native FIFO futex + JS fila de resolvers pendentes) | — |
 
 Critério de "100%": os três targets executando os mesmos programas
@@ -377,7 +385,7 @@ statements, transactions, `entity` declarativo em compile-time, CRUD
 (`create/save/find/all/where/delete/count`), `orm.where` por campo + operadores, `saveAll` batch, `page`/`count`/`deleteAll`,
 migrations versionadas (`kof_migrations`) e MongoDB (driver oficial).
 Faltam: query DSL tipada (`User.query { where age > 18 }`), connection
-pooling, MySQL completo (query/prepared), kof.db/kof.orm fora do JVM (DB001/ORM001 JS), NoSQL além do MongoDB.
+pooling, MySQL completo (query/prepared), `kof.db`/`kof.orm` fora do JVM (**JS `DB001` FECHADO 16/09** — nao-tipado no host GraalJS; tipado `query<T>` = `DB002` FECHADO 18/09; `kof.orm` = `ORM001` FECHADO 18/09 no JS, residual Native `ORM001`), NoSQL além do MongoDB.
 
 ---
 
@@ -398,7 +406,14 @@ Arquivo próprio da linguagem (`kofdeps`). Para Kof4J, o sistema poderá gerar `
 
 Estado atual: 🟡 MVP 01/09 — `kof deps init/add/remove/list/resolve` (arquivo
 `kofdeps`, resolução Maven Central → `~/.kof/deps`, classpath via
-`kof build|run --deps`); dependências transitivas do POM e registry pendentes.
+`kof build|run --deps`); **dependências transitivas do POM ✅ 16/09** (resolvidas
+delegando ao Maven via `pom.xml` temporário + `dependency:build-classpath`
+(R9: o resolvedor de grafo do Maven já existe — nunca reimplementado); o fecho vai
+para um `kofdeps.lock` portável (lista GAV) consumido por `resolve`/`build`/`run
+--deps`; degradação honesta quando `mvn` não está no PATH — warning explícito,
+nunca classpath truncado em silêncio; prova `DepsTransitiveTest` 10/10 incluindo
+E2E com Maven real `jgrapht-core:1.4.0 → org.jheaps:jheaps:0.11`);
+**registry pendente** (precisa de decisão da mantenedora — formato/hosting público).
 
 ---
 
@@ -732,13 +747,13 @@ arquitetura — limite de 500 linhas por classe".
 
 O Kof é uma plataforma distribuível, não apenas um JAR:
 
-- distribuição autocontida (compiler, CLI, runtime, stdlib, tooling, editor support, JDK 21 embutido);
-- OpenJDK embutido no pacote oficial (Temurin 21, Tooling API Level 21);
+- distribuição autocontida (compiler, CLI, runtime, stdlib, tooling, editor support, JDK 25 embutido);
+- OpenJDK embutido no pacote oficial (Temurin 25, tooling API level 21);
 - versionamento centralizado (`VERSION` 0.4.0-beta → pom/properties via `scripts/bump-version.sh`);
 - releases por 2 jobs (`release.yml`: `test-and-bump` exporta `bump_sha` → `package-and-release` checkeia o commit de bump + sanity check de versão) por push na `main`, por plataforma linux-x86_64 / macos-arm64 / windows-x86_64 (testes 819 → bump → package 3 plataformas → GitHub Release);
 - `scripts/package.sh` PASS (layout dist + tar.gz/zip + SHA256SUMS + jars), golden 16/16, integration 9/9;
 - editor support oficial: grammar TextMate + LSP (hover/completion + diagnostics reais) + `kof editor install` (VS Code/Neovim/Vim/Emacs/Geany/Nano + IntelliJ degrau-10 honesto 13/09: filetype XML + External Tools + README LSP4IJ, sem plugin — issue #1);
-- `kof build/run/serve/check/test/script/repl/c/fmt/config/bench/profile/inspect/debug/info/lsp/install/version` PASS (18 comandos; `fmt` e `config gen` 31/08).
+- `kof build/run/serve/check/test/script/repl/c/fmt/config/bench/profile/inspect/decompile/translate/compare/migrate/debug/info/lsp/install/deps/editor/init/new/version` PASS (26 comandos; `fmt` e `config gen` 31/08).
 
 Referências: `docs/distribution/`, `docs/tooling/`.
 
@@ -826,14 +841,15 @@ compilador, runtime, stdlib e tooling.**
 
 ---
 
-## 22. Plataforma Universal (plano futuro)
+## 22. Plataforma Universal (em desenvolvimento — R12 sobreposto)
 
 Visão de longo prazo — Kof como plataforma universal (uma linguagem para
 aplicações **e** sistemas, infraestrutura, automação, dados, segurança e
 ciência) **sem** destruir a simplicidade da linguagem.
 
-- Documento central: `docs/development/future/PLAN-UNIVERSAL-PLATFORM.md` (arquitetura,
-  **não** ordem de implementação)
+- Documento central: `docs/development/PLAN-UNIVERSAL-PLATFORM.md`
+  (arquitetura — **EM DESENVOLVIMENTO** desde 17/09/2026; promovido de
+  `future/` por decisão da mantenedora, `DECISIONS.md` §D-UNIVERSAL)
 - Estágios por capacidade/maturidade: `FOUNDATION ✅` → `SYSTEMS` (em
   andamento) → `AUTOMATION` → `INFRAESTRUTURA` → `DATA` → `SECURITY` →
   `SCIENTIFIC` → `BIO` → `UNIVERSAL`
@@ -848,9 +864,15 @@ ciência) **sem** destruir a simplicidade da linguagem.
   effect system; sem cripto caseira; sem reimplementar Arrow/BLAS/ML/
   alinhadores; sem "Kali em Kof"; sem target por domínio; sem motor SQL próprio
 
-**Não implementar nada desta seção antes do estágio SYSTEMS fechar**
-(paridade de gaps, GC mark-sweep, package manager básico — ver
-`docs/development/roadmap.md` §23 (ex-plan-platform-completion) P0–P5).
+> **Estado 17/09:** R1 ✅ FEITO (`5f1422c6` — gate `scripts/check_stdlib_boundary.sh` + ledger na CI, AGENTS invariante 1). R2–R12: fila aberta por D-UNIVERSAL; unidades de código seguem a ordem de valor do §23.
+>
+> **Portão R12 sobreposto em 17/09/2026** (`DECISIONS.md` §D-UNIVERSAL): a
+> mantenedora autorizou abrir esta frente **com o SYSTEMS ainda em andamento**.
+> O ponto de entrada é o Estágio 1 (consolidação SYSTEMS) + R1–R12; o Tier 6+
+> (AUTOMATION/INFRA/DATA/…) mantém sua ordem no §23. Para **qualquer outra**
+> frente, o R12 continua o default: não abrir `infra`/`data`/`sci` antes do
+> SYSTEMS fechar (paridade de gaps, GC mark-sweep, package manager básico —
+> §23 P0–P5).
 
 ---
 
@@ -879,11 +901,11 @@ tiers `stable`/`experimental` (`docs/backend-parity.md`).
 
 | # | Item | Estado medido (13/09) |
 |---|------|----------------------|
-| 1.1 | Gaps de paridade (`HTTP002`, `WEB001/002`, `CONC003`, `LOG001`, `MQ001`, `SCHED001`/`TIME001`, `SECN002`, `OBS002`, `MEDIA`) | 🟡 em progresso — JS web server base `abbde60b`; residual por `backend-parity.md` |
+| 1.1 | Gaps de paridade (`HTTP002`, resíduo web `WEB002`/`WEB003`/`WEB004`, ~~`CONC003`~~ ✅ 03/09, ~~`LOG001`~~ ✅ 01/09, ~~`MQ001`~~ ✅ 01/09, ~~`SCHED001`~~ ✅ 31/08, ~~`TIME001`~~ ✅ 02–05/09, ~~`SECN002`~~ ✅ 01/09, ~~`OBS002`~~ ✅ 01/09, `MEDIA`) | 🟡 em progresso — JS web server base ✅ 16/09 (WEB001 fechado; DB001 fechado); residual por `backend-parity.md` (HTTP002 https/TLS nativo, gap codes ws/sse, MEDIA) |
 | 1.2 | GC mark-sweep automático no Native | 🟡 riscv `356f33b9` ✅; x86 decomposto G-1..G-5 (`native-multiarch.md`) |
 | 1.3 | Query DSL tipada (`User.query {}`) | ✅ 01/09 (`KofOrmE2ETest`) |
-| 1.4 | Package manager MVP (`kofdeps`) | 🟡 `kof deps` + resolução Maven Central; transitivos/registry pendentes |
-| 1.5 | Tracing/OpenTelemetry + lifecycle `application{}` | 🟡 spans W3C + lifecycle ✅ 3 targets; OTel export pendente |
+| 1.4 | Package manager MVP (`kofdeps`) | 🟡 `kof deps` + resolução Maven Central; **transitivos ✅ 16/09** (delegação ao Maven + `kofdeps.lock`, `DepsTransitiveTest` 10/10 incl. E2E com Maven real); **registry pendente (decisão da mantenedora)** |
+| 1.5 | Tracing/OpenTelemetry + lifecycle `application{}` | 🟡 spans W3C + lifecycle ✅ 3 targets; **export OTel ✅ JVM/JS (`exportSpans()` → OTLP/JSON, `OBS003`); gap honesto no Native `OBS003`** |
 | 1.6 | **Native → bare-metal/bootável** (microcontrolador, BIOS legado, UEFI) — diretiva da mantenedora 15/09 | ⚪ **só plano** — costura HAL `kof_plat_*` + perfil freestanding, faces B-0…B-5 em `docs/development/future/PLAN-BAREMETAL-BOOT.md`; sem agendamento; MCU depende de 1.2 |
 
 ### TIER 2 — Fundações de compilador (M) — **status corrigido contra o código**
@@ -951,7 +973,7 @@ histórico técnico detalhado vive em `future/LEGACY_MIGRATION.md` +
 `future/DECOMPILER.md` (§7) — **não duplicar aqui**; esta tabela só dá a
 ordem. **DESPRIORIZADO 15/09 (mantenedora): TIER 3–5 não é trabalho atual.**
 
-### TIER 6–12 — Plataforma universal (não iniciados; regidos por `future/PLAN-UNIVERSAL-PLATFORM.md`)
+### TIER 6–12 — Plataforma universal (arquitetura **EM DESENVOLVIMENTO** 17/09 — R12 sobreposto; regidos por `docs/development/PLAN-UNIVERSAL-PLATFORM.md`)
 
 | Tier | Estágio | Escopo (uma linha) |
 |------|---------|--------------------|

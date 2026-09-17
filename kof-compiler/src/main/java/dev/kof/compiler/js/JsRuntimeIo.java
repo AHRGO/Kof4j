@@ -160,6 +160,125 @@ public final class JsRuntimeIo {
             export function kofIoDirList(p) {
                 return kof_platform.dirList(p);
             }
+
+            // ── kof.db (DB001) — delegacao ao host (mesmo classpath JDBC do
+            // caminho JVM; sem host = shim #104 com erro claro). Rows voltam
+            // como List<String> json (contrato List<STR> do frontend).
+            export function kofDbConnect(url) {
+                return kof_platform.dbConnect(url);
+            }
+
+            export function kofDbConnect2(url, user, pass) {
+                return kof_platform.dbConnect2(url, user, pass);
+            }
+
+            export function kofDbClose(id) {
+                return kof_platform.dbClose(id);
+            }
+
+            export function kofDbExecute(id, sql) {
+                return kof_platform.dbExecute(id, sql, []);
+            }
+
+            export function kofDbExecute1(id, sql, a) {
+                return kof_platform.dbExecute(id, sql, [a]);
+            }
+
+            export function kofDbExecute2(id, sql, a, b) {
+                return kof_platform.dbExecute(id, sql, [a, b]);
+            }
+
+            export function kofDbExecute3(id, sql, a, b, c) {
+                return kof_platform.dbExecute(id, sql, [a, b, c]);
+            }
+
+            export function kofDbExecute4(id, sql, a, b, c, d) {
+                return kof_platform.dbExecute(id, sql, [a, b, c, d]);
+            }
+
+            export function kofDbQuery0(id, sql, cls) {
+                return kof_platform.dbQuery(id, sql, cls == null ? "" : String(cls), []);
+            }
+
+            export function kofDbQuery1(id, sql, a, cls) {
+                return kof_platform.dbQuery(id, sql, cls == null ? "" : String(cls), [a]);
+            }
+
+            export function kofDbQuery2(id, sql, a, b, cls) {
+                return kof_platform.dbQuery(id, sql, cls == null ? "" : String(cls), [a, b]);
+            }
+
+            export function kofDbQuery3(id, sql, a, b, c, cls) {
+                return kof_platform.dbQuery(id, sql, cls == null ? "" : String(cls), [a, b, c]);
+            }
+
+            export function kofDbQuery4(id, sql, a, b, c, d, cls) {
+                return kof_platform.dbQuery(id, sql, cls == null ? "" : String(cls), [a, b, c, d]);
+            }
+
+            export function kofDbTransaction(fn) {
+                return kof_platform.dbTransaction(fn);
+            }
+
+            // ORM001 (18/09) — kof.orm no JS sobre a mesma conn do kof.db
+            // (KofJsOrmBridge). O registro e serializado pelo toJSON()
+            // sintetico do record (chaves limpas id/name/...); o bind tipado da
+            // volta acontece no guest (JsRuntimeOps __kof_decode_<T>), com
+            // paridade byte-a-byte com JvmOrmRuntime. O className do wire e
+            // ignorado: a ponte le o schema, nao a classe.
+            export function kofOrmSingle(r, dec) { return r == null ? null : dec(r); }
+
+            export function kofOrmCreate(id, table, schema) {
+                return kof_platform.ormCreate(id, table, schema);
+            }
+
+            export function kofOrmSave(id, obj, table, schema) {
+                return kof_platform.ormSave(id, obj.toJSON(), table, schema);
+            }
+
+            export function kofOrmSaveAll(id, items, table, schema) {
+                return kof_platform.ormSaveAll(id, items.map(o => o.toJSON()), table, schema);
+            }
+
+            export function kofOrmFind(id, key, table, schema, cls) {
+                return kof_platform.ormFind(id, key, table, schema);
+            }
+
+            export function kofOrmAll(id, table, schema, cls) {
+                return kof_platform.ormAll(id, table, schema);
+            }
+
+            export function kofOrmWhere(id, field, value, table, schema, cls) {
+                return kof_platform.ormWhere(id, field, value, table, schema);
+            }
+
+            export function kofOrmWhereOp(id, field, op, value, table, schema, cls) {
+                return kof_platform.ormWhereOp(id, field, op, value, table, schema);
+            }
+
+            export function kofOrmCount(id, table, schema) {
+                return kof_platform.ormCount(id, table, schema);
+            }
+
+            export function kofOrmCountWhere(id, field, value, table, schema) {
+                return kof_platform.ormCountWhere(id, field, value, table, schema);
+            }
+
+            export function kofOrmDelete(id, key, table, schema) {
+                return kof_platform.ormDelete(id, key, table, schema);
+            }
+
+            export function kofOrmDeleteAll(id, table, schema) {
+                return kof_platform.ormDeleteAll(id, table, schema);
+            }
+
+            export function kofOrmPage(id, limit, offset, table, schema, cls) {
+                return kof_platform.ormPage(id, limit, offset, table, schema);
+            }
+
+            export function kofOrmMigrate(id, name, sql) {
+                return kof_platform.ormMigrate(id, name, sql);
+            }
             """;
 
 }

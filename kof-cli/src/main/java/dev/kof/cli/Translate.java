@@ -94,9 +94,9 @@ public final class Translate {
                 // (o static method vira função top-level Kof e resolve).
                 if (isStatic && (fqn.startsWith("java.") || fqn.startsWith("javax."))) {
                     throw new TranslateException(
-                            "`import static " + fqn + "` não é resolvido pelo translator "
-                            + "(Kof não mapeia membros estáticos da stdlib JDK; imports são ignorados) — "
-                            + "revisão manual");
+                            "`import static " + fqn + "` is not resolved by the translator "
+                            + "(Kof does not map static members of the JDK stdlib; imports are ignored) — "
+                            + "manual review");
                 }
             }
             // Parse all top-level type declarations.
@@ -165,9 +165,9 @@ public final class Translate {
                     // (`A { ... }`) exigem construtor/override — Kof enum é
                     // só o NOME. Antes era pulado em SILÊNCIO (R6/Q7).
                     throw new TranslateException(
-                            "enum com construtor/corpo de constante (`" + constants.get(constants.size() - 1)
-                            + "(…)` / `{ … }`) não tem equivalente em Kof "
-                            + "(enum = só constantes) — revisão manual");
+                            "enum with a constructor/constant body (`" + constants.get(constants.size() - 1)
+                            + "(…)` / `{ … }`) has no equivalent in Kof "
+                            + "(enum = constants only) — manual review");
                 }
                 if (p.at(",")) p.next();
             }
@@ -178,9 +178,9 @@ public final class Translate {
                 // pulado em SILÊNCIO → `E.A.get()`/`E.A.v` sumiam (R6).
                 if (!p.at("}")) {
                     throw new TranslateException(
-                            "enum com corpo (campos/métodos/construtor) não tem equivalente em Kof "
-                            + "(enum = só constantes; use `class` com `static` se precisar de dados) — "
-                            + "revisão manual");
+                            "enum with a body (fields/methods/constructor) has no equivalent in Kof "
+                            + "(enum = constants only; use a `class` with `static` if you need data) — "
+                            + "manual review");
                 }
             }
             p.expect("}");
@@ -209,8 +209,8 @@ public final class Translate {
                 // overrides sumiam (R6, Q4 13/09).
                 if (!p.peek(1).text.equals("}")) {
                     throw new TranslateException(
-                            "record com corpo (construtor compacto/accessors/métodos) não tem "
-                            + "equivalente em Kof (record = só componentes) — revisão manual");
+                            "record with a body (compact constructor/accessors/methods) has no "
+                            + "equivalent in Kof (record = components only) — manual review");
                 }
                 skipBlock();
             } else {
@@ -279,11 +279,11 @@ public final class Translate {
                     // Campo/constante de interface Java (`int X = 1;` é
                     // implicitamente `static final`). Kof aceita declarar, mas
                     // não resolve o campo (`I.X` → SEM025, verificado 13/09) e
-                    // não há constante top-level → revisão manual (R6).
+                    // não há constante top-level → manual review (R6).
                     throw new TranslateException(
-                            "constante de interface (`Type NOME = ...` em interface) não tem "
-                            + "equivalente direto em Kof (campo de interface não é resolvível, "
-                            + "SEM025) — revisão manual");
+                            "interface constant (`Type NAME = ...` in an interface) has no "
+                            + "direct equivalent in Kof (an interface field is not resolvable, "
+                            + "SEM025) — manual review");
                 }
                 List<String> params = parseParams();
                 if (p.at("{")) {
@@ -295,9 +295,9 @@ public final class Translate {
                     // não compila; dropá-lo silenciosamente muda o
                     // comportamento → gap honesto (R6).
                     throw new TranslateException(
-                            "método de interface com corpo (`default`/`static` method) não tem "
-                            + "equivalente direto em Kof (sem default method; o implementador "
-                            + "falharia com SEM043) — mova o corpo para a classe — revisão manual");
+                            "interface method with a body (`default`/`static` method) has no "
+                            + "direct equivalent in Kof (sem default method; o implementador "
+                            + "would fail with SEM043) — move the body to the class — manual review");
                 }
                 p.expect(";");
                 out.append("    ").append(ret).append(' ').append(mname).append('(')
@@ -319,8 +319,8 @@ public final class Translate {
                 String tp = p.next().text;
                 if (p.at("extends")) {
                     throw new TranslateException(
-                            "type parameter com bound (`<T extends X>`) não tem equivalente "
-                            + "direto em Kof — revisão manual");
+                            "type parameter with a bound (`<T extends X>`) has no equivalent "
+                            + "direct in Kof — manual review");
                 }
                 tps.add(tp);
                 if (p.at(",")) p.next();
@@ -354,26 +354,26 @@ public final class Translate {
             }
             if (p.at("{")) {
                 // Bloco de inicialização. AMBOS têm efeito: o de INSTÂNCIA
-                // roda antes do construtor; o `static {}` inicializa campos
+                // runs before do construtor; o `static {}` inicializa campos
                 // estáticos (que agora EMITIMOS como `static Int X`) — pulá-lo
                 // em silêncio deixaria X com o default errado (R6, Q4 13/09).
                 throw new TranslateException(
                         (isStatic
-                                ? "bloco de inicialização `static { ... }` não tem equivalente direto em Kof "
-                                  + "(mova p/ o inicializador do campo `static` ou p/ um método)"
-                                : "bloco de inicialização de instância `{ ... }` (não-static) roda antes "
-                                  + "do construtor — sem equivalente direto em Kof; mova o corpo para o "
+                                ? "initialization block `static { ... }` has no direct equivalent in Kof "
+                                  + "(move it to the `static` field initializer or to a method)"
+                                : "instance initializer block `{ ... }` (non-static) runs before "
+                                  + "of the constructor — no direct equivalent in Kof; move the body to the "
                                   + "`constructor(...)`")
-                        + " — revisão manual");
+                        + " — manual review");
             }
             if (p.at("class") || p.at("interface") || p.at("record") || p.at("enum")) {
                 // Kof não suporta tipo aninhado (SEM042). Hoisting p/ o topo
                 // exige renomear referências (`Outer.Inner` → `Inner`) —
-                // transformação semântica, decisão de design → revisão manual
+                // transformação semântica, decisão de design → manual review
                 // (R6), nunca parse error confuso.
                 throw new TranslateException(
-                        "tipo aninhado (`class`/`interface`/`record`/`enum` dentro de classe) "
-                        + "não tem equivalente direto em Kof (SEM042; declare no top level) — revisão manual");
+                        "nested type (`class`/`interface`/`record`/`enum` inside a class) "
+                        + "has no direct equivalent in Kof (SEM042; declare it at the top level) — manual review");
             }
             // Construtor Java: `[mods] ClassName ( params ) { body }` — sem tipo
             // de retorno. Precisa ser detectado ANTES de parseType, senão o nome
@@ -409,11 +409,11 @@ public final class Translate {
                 }
                 if (p.at(";")) {
                     // Método sem corpo (`abstract`/`native`) em CLASSE: Kof
-                    // não tem — toda função tem corpo. Antes era dropado em
+                    // has no — toda função tem corpo. Antes era dropado em
                     // SILÊNCIO → a chamada virava SEM011 (Kof inválido), Q4.
                     throw new TranslateException(
-                            "método sem corpo (`abstract`/`native` `" + memberName + "`) em classe "
-                            + "não tem equivalente em Kof (toda função tem corpo) — revisão manual");
+                            "method with no body (`abstract`/`native` `" + memberName + "`) in class "
+                            + "has no equivalent in Kof (every function has a body) — manual review");
                 }
                 List<String> body = parseBlock();
                 emitMethod(isStatic, typeName, className, memberName, typeParams, params, body);
@@ -428,8 +428,8 @@ public final class Translate {
                         // o output saía TRUNCADO (`Int[] xs = {`) = Kof inválido
                         // (bug latente achado 13/09 no probe Q4).
                         throw new TranslateException(
-                                "array initializer `{...}` não tem equivalente direto em Kof "
-                                + "(use `new Int[n]` + atribuições ou `listOf(...)`) — revisão manual");
+                                "array initializer `{...}` has no direct equivalent in Kof "
+                                + "(use `new Int[n]` + assignments or `listOf(...)`) — manual review");
                     }
                     init = " = " + parseExpr();
                 }

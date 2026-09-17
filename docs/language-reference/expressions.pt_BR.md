@@ -69,8 +69,8 @@ atribuição.
 
 - `&&`/`||` exigem `bool` (ou primitivo inteiro — `1 && 2` compila e é
   **verdadeiro**, *probe*: tratado como não-zero). Resultado `bool`.
-- **Short-circuit**: `a && b` não avalia `b` se `a` é falso. **Desligado no
-  target JS** (`ExpressionLowerer.java:147-148`) — **Target-specific** (SG-006).
+- **Short-circuit**: `a && b` não avalia `b` se `a` é falso — em **todos** os
+  targets, JS incluso (SG-006 ✅ CORRIGIDO 09/09; `BackendParityTest.parityShortCircuitAndOr`).
 - `!` é negação lógica. `!5` → `0` (*probe*: aplicado a inteiro como XOR com
   -1 / `lnot` JVM que dá 0/1). **Unspecified** para não-bool.
 
@@ -191,7 +191,8 @@ User.query(db) { where age > 18; orderBy name desc; limit 10 }
 - Sintaxe especial reconhecida quando o receiver é uma `entity` declarada e o
   método é `query` com 1 argumento (ExpressionParser.parsePostfix (call)).
 - Baixa para `db.query<Entity>(…)` com SQL montado em compile-time e valores
-  como binds (sem concat de entrada). ORM001.
+  como binds (sem concat de entrada). Disponível em JVM + JS (`DB002`/`ORM001`
+  fechados 18/09); `ORM001` no Native.
 - **Experimental** (domínio ORM).
 
 ---

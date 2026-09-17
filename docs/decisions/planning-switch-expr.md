@@ -30,7 +30,7 @@ Before the change, what the compiler **already** does (important for the scope):
 - **Enum exhaustiveness is already an error** (`SEM031`): a switch over an enum without
   `default` and without covering all constants does not compile.
 - **Pattern matching already exists** in the statement form: `case String s:` and
-  `case Point(var x, var y):` (`Parser.parseSwitchStatement`).
+  `case Point(var x, var y):` (`StatementParser.parseSwitchStatement`).
 - **Expression precedent already exists:** `if` is already an expression (`IfExpr`,
   `var s = if (c) "a" else "b"`).
 

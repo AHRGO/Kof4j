@@ -28,6 +28,16 @@ public final class MethodCtx {
     final Set<String> usedNames = new HashSet<>();
     final List<String> tempDecls = new ArrayList<>();
     final List<LoopCtx> loops = new ArrayList<>();
+    /**
+     * §267: `if` de STATEMENT (marcados no lowering por KofStatementIf) são
+     * identicos em IR a if-expressões ([cond], CJump, Label, ramo, Jump, Label,
+     * ramo, Label) — o dispatcher de statements só distingue um do outro pela
+     * INTENÇÃO do lowering. Este conjunto guarda o `trueLabel` do CJump ramo
+     * de cada `if` de statement: quando a CJump dispatcher bate nele, pula a
+     * dobra em ternária (que engoliria o statement seguinte). `LabelId` é
+     * monotônico → sem colisões; o dispatcher remove após o uso (uma só vez).
+     */
+    final Set<LabelId> statementIfLabels = new java.util.HashSet<>();
     final boolean instanceMethod;
     final String kofClassName;
     final String methodName;

@@ -12,13 +12,13 @@ Kof is a programming language compiled for multiple platforms, strongly typed, o
 * Classes, records, interfaces, inheritance, virtual dispatch
 * Strings, arrays, exceptions, JSON, List\<T\> + `map/filter/reduce`, Map/Set, lambdas with captures, `String?`, pattern `case String s` + `Point(x,y)`
 * Web server via `kof serve` + native web stack (`web.app()`)
-* Native runtime x86-64 (free-list GC `kof_free_head`) + riscv64/aarch64 placeholders + SQLite + MySQL via `kof_db`
+* Native runtime x86-64 + riscv64/aarch64 (free-list GC `kof_free_head` + mark-sweep) + SQLite + MySQL via `kof_db`
 * **KofJS** target: ES Modules (GraalJS) + `kof.http` JVM+JS + Target separation (`jvm/native/native.risc/native.arm/js/kofc`)
 * **kof.ui**: Window, Label, Button (actions), Input, Column/Row, View+Style —
   rendering in a native webview (WebKitGTK)
 * Official distribution (embedded JDK, tooling, editor support)
-* CLI (18 commands): build, run, serve, check, test, script, repl, c, fmt, config gen, bench, profile, inspect, debug, info, lsp, install, version — `kof script` (`let`→`KofScriptGlobals`, repl, --watch), `kof c` (native-only C subset), `kof fmt` (real parser, idempotent — 31/08)
-* kof.io: File, Path, Directory (JVM + Native) + kof.http (JVM+JS, HTTP002 Native)
+* CLI (26 commands): build, run, serve, check, test, script, repl, c, fmt, config gen, bench, profile, inspect, decompile, translate, compare, migrate, debug, info, lsp, install, deps, editor, new, init, version — `kof script` (`let`→`KofScriptGlobals`, repl, --watch), `kof c` (native-only C subset), `kof fmt` (real parser, idempotent — 31/08)
+* kof.io: File, Path, Directory (JVM + Native) + kof.http (JVM + Native + JS; https/DNS still gaps)
 * 
 
 ## Who it is for
@@ -128,7 +128,7 @@ See also `training/` for a structured corpus of Kof knowledge.
 | 15 | Pattern Matching | ✅ (`case String s` + `Point(x,y)`) |
 | 16 | Lambdas | ✅ (with captures) |
 | 17 | Functional Programming | ✅ (`map/filter/reduce`) |
-| 18 | Concurrency (spawn) | ✅ (JVM virtual threads; Native pthread 31/08; JS sequential) |
+| 18 | Concurrency (spawn) | ✅ (JVM virtual threads; Native pthread 31/08; JS event-loop 03/09) |
 | 19 | Packages and Modules | ✅ (`a.b.C` fix) |
 | 20 | Annotations | Implemented (JVM/KofJS) |
 | 21 | Java Interop | Partial (compatible JVM bytecode; direct Java call functional) |
@@ -149,26 +149,26 @@ See also `training/` for a structured corpus of Kof knowledge.
 | 39 | Standard Library (math/strings/encoding/uuid/validation/time) | ✅ (4 targets; gates FLT/NAT-STR01) |
 
 Kof is in a consolidation phase. The compiler is functional with JVM,
-Native (x86-64 free-list), Native.risc, Native.arm, KofJS and KofC backends (0.3.22-beta).
+Native (x86-64 free-list), Native.risc, Native.arm, KofJS and KofC backends (0.4.0-beta).
 
 **Tests:** 805
 
-**What works today (0.3.22-beta — Sep 2026 — `jvm/native/native.risc/native.arm/js/kofc`):**
+**What works today (0.4.0-beta — Sep 2026 — `jvm/native/native.risc/native.arm/js/kofc`):**
 - Complete frontend (lexer, parser, type system, semantics) — `intention->Kof->frontend->IR->backend->runtime`
 - Six targets: JVM (ASM), Native x86-64 (free-list GC), Native.risc, Native.arm, KofJS (GraalJS) and KofC (native-only C subset)
 - Classes, records, inheritance, interfaces, virtual dispatch, generics (erasure), `a.b.C` imports fix (largeproj)
 - Functions (without `fun`), lambdas with captures, if-expr, switch with `case String s` + `Point(x,y)` destructuring, `String?`, for-in
-- Real exceptions (JVM + Native unwinding), `assert`, `spawn` (JVM virtual threads, Native pthread — 31/08; JS sequential)
-- Strings (complete API), arrays, `List<T>` + `map/filter/reduce`, `Map<K,V>`/`Set<T>`, JSON, kof.io, kof.time, `kof.http` (JVM+JS), `kof_db` (SQLite+MySQL WIP)
-- `KofScript` (`let`/`const` at the top → `KofScriptGlobals`, `kof script --repl`, `--watch`), `KofC` (`kof c <file.c>` native-only)
-- CLI (18 commands): `build, run, serve, check, test, script, repl, c, fmt, config gen, bench, profile, inspect, debug, info, lsp, install, version` + `--target=jvm|native|native.risc|native.arm|js|android`
+- Real exceptions (JVM + Native unwinding), `assert`, `spawn` (JVM virtual threads, Native pthread — 31/08; JS event-loop — CONC003 03/09)
+- Strings (complete API), arrays, `List<T>` + `map/filter/reduce`, `Map<K,V>`/`Set<T>`, JSON, kof.io, kof.time, `kof.http` (JVM+Native+JS), `kof_db` (SQLite+MySQL WIP)
+- `KofScript` (top-level `var`/`val` → `KofScriptGlobals` — no `let`/`const`, JS sugar removed 06/09 — `kof script --repl`, `--watch`), `KofC` (`kof c <file.c>` native-only)
+- CLI (26 commands): `build, run, serve, check, test, script, repl, c, fmt, config gen, bench, profile, inspect, decompile, translate, compare, migrate, debug, info, lsp, install, deps, editor, new, init, version` + `--target=jvm|native|native.risc|native.arm|js|android`
 - `kof serve` (native `web.app()` + legacy `handle()` API; each connection in a virtual thread), `kof test` (`test "nome" {}` suite on the 3 targets), `kof bench`/`kof profile`/`kof inspect`/`kof debug`
 - Official distribution (embedded Temurin 25, package, CI/release) — Target separation (`Target.NATIVE_RISCV64/AARCH64`)
 
 
 **What is planned / real gaps:**
-- Target gaps: HTTP002 (HTTP client Native), SCHED001 (scheduler Native), PROC001 (process.spawn Native), DB001 (db in JS), ORM001 (native/JS ORM), WEB002 (native web server), AND00x (Android Phase 2+) — ~~CONC003 (real async in JS)~~ ✅ 03/09
-- Complete mark-sweep GC on Native (today free-list)
+- Target gaps: HTTP002 (https + real DNS on Native — http/1.1 works 03/09; timeout/retry/circuit silent → §259), ~~SCHED001 (scheduler Native)~~ ✅ 31/08, PROC001 (process.spawn Native), ~~DB001 (db in JS)~~ ✅ 16/09, ORM001 (native/JS ORM), WEB002 (TLS on native web — server base 03/09), AND00x (Android Phase 2+) — ~~CONC003 (real async in JS)~~ ✅ 03/09
+- GC auto-collect on exhaustion on Native (mark-sweep landed 09/03; auto-collect needs safe-points — §260)
 - Complete native MySQL/MariaDB (wire protocol: SHA-1 auth scramble done; handshake, query and prepared statements missing)
 - `when` guards in pattern matching, deep flow analysis for `String?`
 - Complete hover/completion in the LSP, native Debugger (DWARF) and JS (source maps)

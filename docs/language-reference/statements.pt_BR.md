@@ -33,18 +33,17 @@ Quatro formas válidas:
 var x = 10              // inferido, mutável
 val y = 20              // inferido, "imutável" (ver abaixo)
 String nome = "Mel"     // tipo explícito (type-first)
-var idade: Int? = null  // tipo anotado (anotado)
-String? nome2 = null    // type-first nullable
+var idade: Int? = findAge()  // tipo anotado (anotado)
+String? nome2 = find(key)    // type-first nullable (null chega ao T? via API;
+                             // literal `= null` é SEM048 desde 10/09)
 `
 
 - **`var` sem inicializador** → tipo `UnknownType` (`:625`).
 - **Tipo explícito ≠ tipo do inicializador** → `SEM021`.
 - **Redeclarar no mesmo escopo** → `SEM024`.
-- **`val` NÃO impede reatribuição**: `val x = 1; x = 2` **compila e roda**,
-  imprimindo `2` (*probe*, confirmado isoladamente). A imutabilidade de `val`
-  é **não-garantida** pelo compilador — é convenção de estilo, não regra de
-  linguagem (SG-010). `val` em campo de classe → `PARSE016` (não é aceito como
-  modificador de campo; use `final`).
+- **`val` impede reatribuição** (SG-010 ✅ CORRIGIDO 09/09): `val x = 1; x = 2`
+  (incl. composto `+=`) → `SEM037` ("cannot assign to immutable 'val'"). `val`
+  em campo de classe → `PARSE016` (não é aceito como modificador de campo; use `final`).
 
 ---
 

@@ -61,7 +61,7 @@ Verificação:
 
 ```bash
 kof info
-# Kof 0.3.22-beta
+# Kof 0.4.0-beta
 # Targets: jvm, native, js (alpha)
 # JVM: Eclipse Temurin 25.0.x (embedded)
 ```

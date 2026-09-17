@@ -1,6 +1,6 @@
 [English](README.md) | [Português](README.pt_BR.md)
 
-# docs/future/ — só plano futuro (zero código)
+# docs/development/future/ — só plano futuro (zero código)
 
 **Regra desta pasta:** aqui vive **apenas** o que é **plano para o futuro** —
 documento de arquitetura/visão **sem código implementado** (ou com código que
@@ -22,22 +22,33 @@ documento de arquitetura/visão **sem código implementado** (ou com código que
 
 | Doc | Tema | Por que fica em `future/` |
 |-----|------|---------------------------|
-| `PLAN-UNIVERSAL-PLATFORM.md` | visão de longo prazo (Kof como plataforma universal) | 100% visão/estratégia — não é ordem de implementação; nenhum pacote `ml`/`bio`/`hpc`/`infra-*` no código |
+| `PLAN-MULTIPARADIGMA.md` | multiparadigma / pipelines funcionais e queries declarativas (`users.filter{...}.map{...}`), diagnóstico no HEAD 16/09 | **design puro, zero código no doc** (§8 não lista nenhum arquivo alterado); promovido só quando o primeiro incremento funcional landar (SYSTEMS fechado, R12) |
 | `scoped-resources-plan.md` | RAII leve (TIER 2.4, `using`/`resource_scope`) | design puro — zero ocorrências de `resource_scope`/`kof_resource`/`using` no lexer/parser/runtime; gated por bump |
 | `PLAN-BAREMETAL-BOOT.md` | **nativo → bare-metal/bootável** (costura HAL B-0…B-5: freestanding, UEFI, BIOS legado, MCU) — diretiva da mantenedora 15/09 | **zero código** — o runtime está fixado a syscalls Linux, o x86 precisa de `-lc`/`-dynamic-linker`, codegen de 32 bits ausente; classificado por `PLAN-TREE-SHAKING.md` §T3 ("embedded real = backend RTOS/bare-metal em si") — vai p/ `docs/` quando B-1 produzir um ELF sem dinâmica |
+| `DECOMPILER.md` + `TRANSLATOR.md` + `LEGACY_MIGRATION.md` | plataforma de migração legado (decompiler/translator/IR/diff-testing) | **DESPRIORIZADO pela mantenedora 15/09 — de volta desde `docs/development/`.** O código fica em kof-cli (`DecompileTest` 67/67, `TranslateTest` 61/61); a FILA está pausada: promoção exige decisão explícita dela |
 | ~~`planning-stdlib-array-returns.md`~~ → `docs/stdlib/DD-STDLIB-01-array-returns.md` | DD-STDLIB-01 | **FECHADO 13/09** — decisão 6a + implementação (`randomBytesHex`->String; choice=idiom), movido p/ docs/ |
-| `DECOMPILER.md` + `TRANSLATOR.md` + `LEGACY_MIGRATION.md` | plataforma de migração legado (decompiler/translator/IR/diff-testing) | **DESPRIORIZADO pela mantenedora 15/09 — de volta desde `docs/development/`. O código fica em kof-cli (DecompileTest 67/67, TranslateTest 61/61); a FILA está pausada: promoção exige decisão explícita dela |
 
-## Já caíram para `docs/development/` (iniciados — regra dos 3 estados, 12/09)
+> **`PLAN-UNIVERSAL-PLATFORM.md` saiu de `future/` em 17/09/2026** — promovido
+> para `docs/development/PLAN-UNIVERSAL-PLATFORM.md` como **trabalho corrente**
+> por decisão da mantenedora, que **sobrepõe o portão R12** (ver `DECISIONS.md`
+> §D-UNIVERSAL). A visão/design não muda; o ponto de entrada é o Estágio 1
+> (consolidação SYSTEMS) e as recomendações executáveis R1–R12.
 
-| Doc | Gatilho da queda |
+## Histórico: o que saiu de `future/` antes (snapshot 12/09 — NÃO é o estado atual)
+
+> **Não leia como estado atual** (atualizado 17/09). O cluster de migração
+> **voltou para `future/` em 15/09** (linha acima), e os docs de plataforma/app-model
+> foram **ratificados e consolidados no `DECISIONS.md` em 13/09** (os 6 arquivos de
+> `decision-pending/` foram apagados). A tabela fica só como registro da queda de 12/09.
+
+| Doc | Destino / casa atual |
 |-----|------------------|
-| `DECOMPILER.md`, `TRANSLATOR.md`, `LEGACY_MIGRATION.md` (os `IMPLEMENTATION_PLAN.md`+`ACTION_PLAN.md` desta lista foram FUNDIDOS p/ `roadmap.md` §23 e os `DIFFERENTIAL_TESTING.md`+`LEGACY_IR.md` p/ dentro do `LEGACY_MIGRATION.md`, tudo 13/09) | plataforma de migração com código+testes: `kof inspect/decompile/translate/compare/migrate` no `Main.java:25-29`, `Confidence.java`, `Type.fromJvmSignature` (contagem viva em `roadmap.md` §23) |
-| `PLATFORM-PLAN.md` | Fases 1–3, 8, 9 com código: `ProjectLocator`, `KofProjectConfig`, `Target.SCRIPT`, PKG006/PKG007, `conformance-matrix.md` travada por 11 testes |
-| `APPLICATION_MODEL.md` | `application { onStart/onShutdown }` parseado+desugared+E2E nos 3 targets; `KofProjectConfig` |
-| ~~`PLANNING-FUTURE-AUDIT.md`, `planning-future-reconcile.md`~~ → `docs/audits/` | auditorias **encerradas 13/09** (comparação branch×beta); R2→`DECISIONS.md` §D-APP/§D-PLATFORM (ratificado 13/09; os 6 arquivos foram apagados), R5→cluster migração |
-| ~~`planning-finally-return.md`~~ → `docs/decisions/DD-01-finally-return.md` | FECHADO 13/09 (FinallyFrame IR + gates finallyReturnJvm/Js; bug 45 CORRIGIDO) |
-| `planning-stdlib-time-design.md` | `addDays`/`diffDays` (o formato D2 do doc) implementados nos 5 alvos (TIME002 11/09) |
+| `DECOMPILER.md`, `TRANSLATOR.md`, `LEGACY_MIGRATION.md` (os `IMPLEMENTATION_PLAN.md`+`ACTION_PLAN.md` foram FUNDIDOS p/ `roadmap.md` §23 e os `DIFFERENTIAL_TESTING.md`+`LEGACY_IR.md` p/ dentro do `LEGACY_MIGRATION.md`, tudo 13/09) | **de volta em `future/` 15/09** (despriorizado) — código+testes ficam em kof-cli (`kof inspect/decompile/translate/compare/migrate`, `Main.java`); contagem viva em `roadmap.md` §23 TIER 3–5 |
+| `PLATFORM-PLAN.md` | `DECISIONS.md` §D-PLATFORM (ratificado 13/09; o arquivo foi apagado) |
+| `APPLICATION_MODEL.md` | `DECISIONS.md` §D-APP (Q1–Q10 travados 13/09; o arquivo foi apagado) |
+| `PLANNING-FUTURE-AUDIT.md`, `planning-future-reconcile.md` | `docs/audits/` (encerradas 13/09); R2→`DECISIONS.md` §D-APP/§D-PLATFORM, R5→cluster migração |
+| `planning-finally-return.md` | `docs/decisions/DD-01-finally-return.md` (FECHADO 13/09; bug 45 CORRIGIDO) |
+| `planning-stdlib-time-design.md` | `DECISIONS.md` §D-STDLIB (ratificado 13/09; o arquivo foi apagado) — `addDays`/`diffDays` nos 5 alvos (TIME002 11/09) |
 
 ## Quando mover de `future/` para `docs/`
 

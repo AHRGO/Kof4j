@@ -135,8 +135,8 @@ final class KofCliSupport {
      */
     public static String app001(Target backend, boolean fullStack) {
         if (!fullStack || backend == null || backend == Target.JVM) return null;
-        return "backend '" + TargetMatrix.name(backend) + "' com [frontend]/web/ ainda não"
-                + " roda full-stack (o bundle é montado pelo backend JVM via app.serveDir;"
+        return "backend '" + TargetMatrix.name(backend) + "' with [frontend]/web/ does not"
+                + " run full-stack yet (the bundle is assembled by the JVM backend via app.serveDir;"
                 + " Native/JS = WEB005) [APP001]";
     }
 
@@ -166,9 +166,9 @@ final class KofCliSupport {
         if (layout.staticDir() != null) {
             try {
                 int n = copyTree(layout.staticDir(), buildRoot.resolve("static"));
-                System.out.println(n + " estático(s) → " + buildRoot.resolve("static"));
+                System.out.println(n +  " static file(s) → " + buildRoot.resolve("static"));
             } catch (java.io.IOException e) {
-                System.err.println("build: falha ao copiar estáticos: " + e.getMessage());
+                System.err.println("build: failed to copy static files: " + e.getMessage());
                 System.exit(1);
             }
         }

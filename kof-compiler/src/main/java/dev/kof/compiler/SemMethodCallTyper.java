@@ -17,10 +17,15 @@ public final class SemMethodCallTyper {
     static final String SSE_CONNECTION_TYPE =
             "dev.kof.runtime.KofRuntime$SseConnection";
 
+    private static final java.util.Set<String> PRIMITIVE_METHODS =
+            java.util.Set.of("toString", "toInt", "toLong", "toFloat", "toDouble",
+                    "toHexString", "toBinaryString");
+
     static Type infer(SemanticAnalyzer sa, MethodCallExpr mc, SymbolTable scope) {
         // F10: métodos de instância do handle de process.spawn
+        Type recv = null;
         if (mc.receiver() != null) {
-            Type recv = SemExpressionTyper.inferType(sa, mc.receiver(), scope);
+            recv = SemExpressionTyper.inferType(sa, mc.receiver(), scope);
             // SG-005: deref de T? sem narrowing é erro — null safety é por
             // narrowing (`if (x != null)` re-tipa o símbolo no escopo filho,
             // StatementAnalyzer). Se o receiver AINDA é NullableType aqui, o
@@ -39,9 +44,31 @@ public final class SemMethodCallTyper {
             // reference no Native).
             if (recv instanceof Type.ArrayType && sa.diagnostics() != null) {
                 sa.diagnostics().error("", 0, 0, 0,
-                        "array não tem método '" + mc.methodName()
-                                + "()'; use o operador arr[i] / arr[i] = v",
+                        "array has no method '" + mc.methodName()
+                                + "()'; use the operator arr[i] / arr[i] = v",
                         "SEM028");
+            }
+            // #362 (R6, nunca silencioso): método de instância em primitivo.
+            // O emit só conhece a whitelist de primitivos (toString + as
+            // conversões §89 + formatadores §218); fora dela caía no ramo
+            // genérico e emitia KofCall com owner "" → Methodref "" no
+            // constant pool → ClassFormatError no load (JVM) / undefined
+            // reference (Native) — compilava e o `check` dizia no-errors, só
+            // crashava em execução. `Int`/`Bool`/`Char` etc. não são classes
+            // em Kof (idiom: comparação é `a == b`; matemática é função
+            // top-level, ex. math.abs(x); precedentes SEM050 de campo e
+            // bug 99; mesmo gate compartilhado SEM028/SEM072/SEM073).
+            if (recv instanceof Type.PrimitiveType pt && !"void".equals(Type.canonicalPrimitiveName(pt.name()))
+                    && !PRIMITIVE_METHODS.contains(mc.methodName())
+                    && sa.diagnostics() != null) {
+                SourcePosition mcPos = mc.position();
+                sa.diagnostics().error(mcPos != null ? mcPos.file() : "",
+                        mcPos != null ? mcPos.line() : 0, mcPos != null ? mcPos.column() : 0, 0,
+                        "'" + Type.canonicalPrimitiveName(pt.name()) + "' is a primitive — it has no method '"
+                                + mc.methodName() + "()' (primitives have toString() and the conversions "
+                                + "toInt()/toLong()/toFloat()/toDouble(); comparison is `a == b`, math is "
+                                + "top-level functions, e.g. math.abs(x))",
+                        "SEM074");
             }
             if (KofProcess.isHandle(recv)) {
                 List<Type> argTypes = new ArrayList<>();

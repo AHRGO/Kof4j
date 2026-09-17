@@ -93,6 +93,8 @@ public class NativeBackend implements Backend {
     Map<String, IRClass> allClassesMap = new HashMap<>();
     /** Debug info nativa (DWARF .debug_line via .file/.loc). */
     boolean debugInfo = false;
+    /** Frente 4 fatia 1: CU DWARF propria (.debug_info/.debug_abbrev). */
+    final NativeDwarf kofDwarf = new NativeDwarf();
     String sourceFile = "";
     private NativeRiscvCrossEmit crossEmitInst;
     private NativeJsonSchema jsonSchemaInst;
@@ -189,6 +191,7 @@ public class NativeBackend implements Backend {
         if (module.classes().isEmpty()) return;
         labelCounter = 0;
         labelMap.clear();
+        kofDwarf.fns.clear();
         stringLiterals.clear();
         stringCounter = 0;
         inlineSeq = 0;
@@ -299,6 +302,9 @@ public class NativeBackend implements Backend {
                 }
             }
             emitStart(sb, mainClass);
+        }
+        if (debugInfo && target == Target.NATIVE) {
+            kofDwarf.emit(sb, sourceFile);
         }
         // #113/S-5(x86): o FECHAMENTO explicito (kof_heap_root_end) entra JUNTO
         // do --gc-sections no x86, NAO aqui: medir hoje mostra _end ~33KB acima
@@ -428,6 +434,7 @@ public class NativeBackend implements Backend {
     static void emitRiscvHttp(StringBuilder sb) {
         NativeRiscvHttpSupport.emit(sb);
         NativeRiscvHttpCore.emit(sb);
+        NativeRiscvHttpVerbs.emit(sb);
     }
 
 

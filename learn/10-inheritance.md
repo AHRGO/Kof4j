@@ -2,7 +2,7 @@
 
 # 10 — Inheritance
 
-> **Status: implemented (JVM / JS — Native SUP001) — 0.3.22-beta — Target separation `native.risc/arm` preserves dispatch**
+> **Status: implemented (JVM / JS — Native SUP001) — 0.4.0-beta — Target separation `native.risc/arm` preserves dispatch**
 >
 > `extends`, virtual dispatch, overriding, `super(...)` constructor and
 > `super.metodo()` work on the JVM and KofJS targets; on Native, inheritance and
@@ -85,10 +85,14 @@ class Retangulo(Double largura, Double altura) extends Forma {
 }
 ```
 
-## sealed classes (planned — not yet implemented)
+## sealed classes (postponed — not part of the grammar)
 
-The keyword exists in the lexer, but the parser does not yet consume `sealed ...
-permits` in a class declaration. Illustrative example of what is intended:
+`sealed` is **not** a keyword: it was removed from the lexer with SG-002
+(12/09) because the grammar never used it — today `sealed class S {}` fails
+with `PARSE010` (locked by `CompilerDriverTest.deadTokensGiveCleanLexerError`).
+The feature itself is **decided-to-postpone** (roadmap §2.5: `enum` +
+`record`/`interface` cover the case; it only opens with a version bump).
+Illustrative example of what is intended, when it lands:
 
 ```kf
 sealed class Resultado<T> permits Sucesso<T>, Erro<T> {}

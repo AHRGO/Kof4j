@@ -15,7 +15,7 @@ kof/
 ├── kof-runtime/        ← runtime nativo (free-list GC)
 ├── docs/               ← documentação interna
 ├── learn/              ← este material (intention->Kof->frontend->IR->backend->runtime)
-├── tests/              ← testes golden (810)
+├── tests/              ← testes golden (2218)
 ├── pom.xml             ← build Maven (`${revision}`)
 └── README.md
 ```
@@ -147,30 +147,34 @@ Sempre que uma feature mudar:
 3. Documentação atualizada
 4. Sem comentários no código
 5. Código que compila sem warnings
+6. Uma issue aberta com o plano de implementação da feature presente no seu PR
+
 
 ## Estado atual do projeto
 
-O projeto está em 0.3.22-beta, funcional:
+O projeto está em 0.4.0-beta, funcional:
 
 **Funciona hoje:**
 - Frontend completo: lexer, parser, `SemanticAnalyzer` (type checking + nullability `String?`)
 - Records, classes e interfaces + generics (erasure) + `map/filter/reduce` + `Map/Set` + exceptions reais (JVM + Native unwinding)
 - Funções com `main()`, lambdas com capturas, `spawn`/`await` (JVM virtual threads, Native pthread — 31/08)
 - Pattern matching (`case String s`, `Point(x,y)`) em JVM/Native/JS
-- CLI com 18 comandos (build, run, serve, check, test, script, repl, c, fmt, config gen, bench, profile, inspect, debug, info, lsp, install, version) — `--target=jvm|native|native.risc|native.arm|js|android`
+- CLI com 26 comandos (build, run, serve, check, test, script, repl, c, fmt, config gen, bench, profile, inspect, decompile, translate, compare, migrate, debug, info, lsp, install, deps, editor, new, init, version) — `--target=jvm|native|native.risc|native.arm|js|android`
 - Backend JVM via ASM — bytecode V21, exception table, virtual threads
-- Backend Nativo — ELF x86-64 estável (free-list GC, spawn/pthread, FP XMM, JSON completo, SQLite) + riscv64/aarch64 placeholders
+- Backend Nativo — ELF x86-64 + riscv64/aarch64 estáveis (free-list GC + mark-sweep, spawn/pthread, FP XMM, JSON completo, SQLite, HTTP, debug DWARF)
 - KofJS — ES Modules via GraalJS (`kof.http` via Java HttpClient interop)
 - KofScript (`let`→`KofScriptGlobals`, repl, --watch) + KofC (`kof c` nativo-only)
 - stdlib: kof.io, kof.web, kof.http, kof.security, kof.db, kof.orm, kof.ui, kof.config, kof.log, kof.cache, kof.mq
-- Testes: 810 (golden 16/16, integração 9/9)
+- Testes: 2218 (golden 16/16, integração 9/9)
 
 **Em desenvolvimento:**
-- GC mark-sweep no Native (hoje free-list)
 - MySQL/MariaDB nativo completo (wire protocol: auth SHA-1 feito)
-- Android Fase 2+ (hoje Fase 1: projeto Maven + APK, host Activity em Kof)
+- Android Fase 4+ (Fases 1-3 feitas: projeto Maven + APK com host Activity em Kof,
+  label/permissões/--apk standalone/--keystore release, WebView responsivo)
 - Módulos multi-arquivo (semântica unificada residual)
-- Scheduler nativo (SCHED001)
+- Auto-coleta do GC na exaustão no Native (mark-sweep landou 03/09; auto-
+  coleta precisa de safe-points/root-map — `§260`); scheduler nativo FECHADO
+  31/08 (`SCHED001`)
 
 **Planejado:**
 - Query DSL tipada, connection pooling, ORM fora do JVM

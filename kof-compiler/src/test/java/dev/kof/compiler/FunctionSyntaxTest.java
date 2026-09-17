@@ -157,6 +157,37 @@ class FunctionSyntaxTest {
     }
 
     @Test
+    void fnAsVarNameIsRejectedWithParse085(@TempDir Path tempDir) throws IOException {
+        // #330: `var fn = 42` dava PARSE037 genérico; reservada em posição de
+        // nome tem que dar PARSE085 com a forma correta (SG-001).
+        assertParse085(tempDir, "main() {\n    var fn = 42\n    println(fn)\n}\n");
+    }
+
+    @Test
+    void reservedWordMessageIsEnglish(@TempDir Path tempDir) throws IOException {
+        // D-DIAG-EN: a mensagem visivel ao usuario e em ingles (tooling 100%
+        // EN); o codigo (PARSE085) permanece, so o texto migra.
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, "main() {\n    var fn = 42\n}\n");
+        CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.JVM);
+        var msg = result.diagnostics().getDiagnostics().stream()
+                .filter(d -> "PARSE085".equals(d.code())).findFirst().orElseThrow().message();
+        assertTrue(msg.contains("is a reserved word") && msg.contains("Kof has no function keyword"),
+                "mensagem PARSE085 deve ser EN, veio: " + msg);
+        assertFalse(msg.matches(".*[ãõáàâéêíóôúç].*"), "PARSE085 ainda tem PT: " + msg);
+    }
+
+    @Test
+    void funAsVarNameIsRejectedWithParse085(@TempDir Path tempDir) throws IOException {
+        assertParse085(tempDir, "main() {\n    var fun = 42\n}\n");
+    }
+
+    @Test
+    void funcAsVarNameIsRejectedWithParse085(@TempDir Path tempDir) throws IOException {
+        assertParse085(tempDir, "main() {\n    var func = 42\n}\n");
+    }
+
+    @Test
     void fnWithReturnTypeIsRejected(@TempDir Path tempDir) throws IOException {
         assertParse085(tempDir, "fn calc(): Int {\n    return 1\n}\nmain() {\n    println(calc())\n}\n");
     }

@@ -45,8 +45,8 @@ public final class EditorInstaller {
         try {
             List<EditorFile> files = provider.integrationFiles(ctx);
             if (files.isEmpty()) {
-                return new Failed("nenhum arquivo de integração para " + provider.id()
-                        + " (provider ainda sem conteúdo idiomático)");
+                return new Failed("no integration file for " + provider.id()
+                        + " (provider still has no idiomatic content)");
             }
             List<String> written = new ArrayList<>();
             boolean anyChanged = false;

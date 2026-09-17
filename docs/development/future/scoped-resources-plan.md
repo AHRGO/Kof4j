@@ -2,8 +2,8 @@
 
 # Scoped Resources — lightweight RAII (design plan · TIER 2.4)
 
-**Status:** Plan (design) — implementation gated by version bump (  0.2.6-beta)
-**Source:** `PLAN-UNIVERSAL-PLATFORM.md` §7 · `roadmap.md` §23 TIER 2.4.1 (former `ACTION_PLAN.md`)
+**Status:** Plan (design) — implementation gated by version bump (frozen semantics 0.2.6-beta)
+**Source:** `../PLAN-UNIVERSAL-PLATFORM.md` §7 · `roadmap.md` §23 TIER 2.4.1 (former `ACTION_PLAN.md`)
 
 ## 1. Objective
 
@@ -87,11 +87,11 @@ unit → desugarUsing → desugarTests → desugarApplication → lowering
 |------|--------|
 | Mechanism (`try/finally` + GC) | ✅ already exists |
 | Desugar hook (`CodegenStep`) | ✅ TIER 2.2.2 |
-| `using` syntax | ⏳ **gated by  ** (bump 0.3.0) |
+| `using` syntax | ⏳ **gated by frozen semantics** (bump 0.3.0) |
 | `close()` convention + diagnostic | ⏳ same gate |
 
 > The SYSTEMS stage (Tier 1) has already closed (09/03 — DOING.md), so TIER 2 is
-> open. The real gate here is not R12: it is the ** ** (0.2.6-beta).
-> Implementing the syntax now would violate " " (AGENTS.md) —
+> open. The real gate here is not R12: it is the **frozen semantics** (0.2.6-beta).
+> Implementing the syntax now would violate "frozen semantics" (AGENTS.md) —
 > a language change requires **version bump + discussion**, never silent
 > addition. What is delivered is the design + the desugar ready to activate in 0.3.0.

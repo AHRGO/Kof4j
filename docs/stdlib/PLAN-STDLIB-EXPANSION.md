@@ -1,8 +1,10 @@
-[English](plan-stdlib-expansion.md) | [Português](plan-stdlib-expansion.pt_BR.md)
+[English](PLAN-STDLIB-EXPANSION.md) | [Português](PLAN-STDLIB-EXPANSION.pt_BR.md)
 
 # Plan — Universal Standard Library (STDLIB)
 
-**Owner:** KOFSCRIPT lane (fixes-for-kofagent) · **Status:** IN PROGRESS — **S7d CLOSED 11/09**: `addDays`/`diffDays` on the 5 targets (JVM/Script S7a, JS S7b, x86 S7c `RuntimeTimeIso`, riscv/aarch **B33** — TIME002 closed; the "blocked without qemu" spec fell: toolchain+qemu present, byte-identical goldens under qemu). S1b/S1b.1 **MATH001 closed 11/09** (Double math riscv/aarch B32). Remaining in the plan are decisions/implementations ratified 13/09 (`pow`/`-lm` 7a ✅, S10c `randomBytesHex` 6a ✅, §89 alias+warning 3a ✅ `e33425b5` — implemented) + the pending decision `format`/`boundaries` + items without an algorithm in the corpus (ulid/creditCard); S0–S6, S8–S10 DONE (audit 10/09 vs code) · **Briefing:** maintainer 08/09 (universal stdlib, multitarget, anti-microdependency)
+**Owner:** KOFSCRIPT lane (fixes-for-kofagent) · **Status:** CONCLUDED (14/09) — S0–S13 implemented and validated on 5 targets; pending decisions moved to `DECISIONS.md` §D-STDLIB · **Briefing:** maintainer 08/09 (universal stdlib, multitarget, anti-microdependency)
+
+> **History (kept for traceability):** **S7d CLOSED 11/09**: `addDays`/`diffDays` on the 5 targets (JVM/Script S7a, JS S7b, x86 S7c `RuntimeTimeIso`, riscv/aarch **B33** — TIME002 closed; the "blocked without qemu" spec fell: toolchain+qemu present, byte-identical goldens under qemu). S1b/S1b.1 **MATH001 closed 11/09** (Double math riscv/aarch B32). Decisions/implementations ratified 13/09 (`pow`/`-lm` 7a ✅, S10c `randomBytesHex` 6a ✅, §89 alias+warning 3a ✅ `e33425b5`). S0–S6, S8–S10 DONE (audit 10/09 vs code). Items still without an algorithm in the corpus (ulid/creditCard) and the `format`/`boundaries` API shape remain open decisions in `DECISIONS.md`.
 
 ## 0. Real architecture (mapped 08/09 — DO NOT invent a parallel one)
 
@@ -52,7 +54,7 @@ briefing accepts it ("adapt to the real architecture"). So: `math.clamp(...)`,
 
 **Not** (briefing rule §48/§49 + R6): browser/DOM/storage/clipboard = KofUI lane
 (kof.ui already exists); homegrown crypto = forbidden (JCA already exists); `Result`/`Option` = does not exist
-in   (null-safety + throw are the mechanism).
+in frozen semantics (null-safety + throw are the mechanism).
 
 ## 3. Committable steps (each: dispatch + 3 backends + Kof<Domain>Test + matrix + doc)
 

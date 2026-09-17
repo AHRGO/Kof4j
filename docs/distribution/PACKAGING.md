@@ -14,7 +14,7 @@ scripts/package.sh [--jdk] [--output <dir>] [--skip-build]
 
 | Option | Effect |
 |-------|--------|
-| `--jdk` | Downloads and embeds OpenJDK (Temurin 21) in the package |
+| `--jdk` | Downloads and embeds OpenJDK (Temurin 25) in the package |
 | `--output <dir>` | Output directory (default: `dist/`) |
 | `--skip-build` | Uses the already compiled jar without rebuilding |
 
@@ -37,12 +37,12 @@ The `<os>-<arch>` comes from the release workflow matrix (one package per
 platform). Real examples:
 
 ```text
-kof-0.2.6-beta-linux-x86_64.tar.gz
-kof-0.2.6-beta-macos-arm64.tar.gz
-kof-0.2.6-beta-windows-x86_64.zip
+kof-0.4.0-beta-linux-x86_64.tar.gz
+kof-0.4.0-beta-macos-arm64.tar.gz
+kof-0.4.0-beta-windows-x86_64.zip
 ```
 
-> The name carries the **release version** (e.g.: `0.2.6-beta`). The user does
+> The name carries the **release version** (e.g.: `0.4.0-beta`). The user does
 > not need to memorize the version: the installation guide uses the
 > `kof-*-<os>-<arch>.tar.gz` glob.
 
@@ -99,7 +99,7 @@ sha256sum -c SHA256SUMS
 
 ## 6. Embedded JDK
 
-`--jdk` downloads OpenJDK Eclipse Temurin 21 (Tooling API Level) from the
+`--jdk` downloads OpenJDK Eclipse Temurin 25 (tooling API level 21) from the
 Adoptium binary API and places it in `jdk/`. No download is done in local
 builds without `--jdk` to keep the cycle fast; the release pipeline always
 packages with `--jdk`.

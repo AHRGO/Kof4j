@@ -132,6 +132,160 @@ class KofTimeE2ETest {
         runNative(tempDir, src, "true\ntrue");
     }
 
+    // §253 face A (16/09): `var id = time.interval(…, () -> cancel(id))` — a
+    // lambda do PRÓPRIO inicializador lê o handle que está sendo declarado.
+    // Antes dava SEM011 nos 3 alvos (escopo define id só DEPOIS de tipar o
+    // init). Face A abre JVM+JS (pre-define + box com store antes do init);
+    // NATIVE fica em SEM092 (face B — leitura do handle nativo SIGSEGVa).
+    @Test
+    void selfReferencingIntervalHandleCancelsItself(@TempDir Path tempDir) throws IOException {
+        String src = """
+                main() {
+                    var ticks = 0
+                    var id = time.interval(100, () -> {
+                        ticks = ticks + 1
+                        if (ticks >= 3) {
+                            time.cancel(id)
+                        }
+                    })
+                    time.sleep(450)
+                    println(ticks == 3)
+                    var after = ticks
+                    time.sleep(300)
+                    println(ticks == after)
+                }
+                """;
+        runJvm(tempDir, src, "true\ntrue");
+        runJs(tempDir, src, "true\ntrue");
+        // Script (interpretador): roda o mesmo KofRuntime do host JVM — a
+        // leitura self-ref do handle no job é a mesma captura do frame.
+        Path sfile = tempDir.resolve("SelfScript-" + System.nanoTime() + ".kf");
+        Files.writeString(sfile, src);
+        dev.kof.compiler.KofInterpreter.Result ir = new CompilerDriver()
+                .interpret(java.util.List.of(sfile), sfile.getParent(), new String[0]);
+        assertEquals(0, ir.exitCode(), "Script exit/stderr: " + ir.stdout() + " " + ir.stderr());
+        assertEquals("true\ntrue", ir.stdout().trim(), "Script output");
+    }
+
+    @Test
+    void selfReferencingIntervalHandleIsNativeGateSem092(@TempDir Path tempDir) throws IOException {
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+                main() {
+                    var id = time.interval(100, () -> {
+                        time.cancel(id)
+                    })
+                    time.sleep(250)
+                }
+                """);
+        for (Target t : new Target[]{Target.NATIVE, Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            CompilationResult r = driver.compile(source, tempDir.resolve("sem092-" + t), t);
+            assertFalse(r.success(), t + " self-ref handle deve falhar (face B pendente)");
+            String diags = r.diagnostics().getDiagnostics().toString();
+            assertTrue(diags.contains("SEM092"), t + " deve reportar SEM092: " + diags);
+        }
+    }
+
+    @Test
+    void capturedBoxAssignAcrossCallRunsNativeX86(@TempDir Path tempDir) throws IOException {
+        // §253 face B — o workaround pré-declarado (var id = ""; id =
+        // time.interval(job que le id)) SIGSEGVava no x86: o receiver-box
+        // ficava na pilha de maquina durante os calls do RHS e o SSE da libc
+        // (movaps no pthread_create do scheduler) faultava com rsp%16==8.
+        // Forma exata do reproducao da matriz (t3): job le a String capturada
+        // (got = got + id.length) e o handle e escrito na mesma atribuicao.
+        // RED antes do fix: exit 139 no NATIVE.
+        String src = """
+                main() {
+                    var got = 0
+                    var id = ""
+                    id = time.interval(10, () -> { got = got + id.length })
+                    time.sleep(60)
+                    println(got > 0)
+                }
+                """;
+        runJvm(tempDir, src, "true");
+        runJs(tempDir, src, "true");
+        runNative(tempDir, src, "true");
+        Path sfile = tempDir.resolve("BoxAssign-" + System.nanoTime() + ".kf");
+        Files.writeString(sfile, src);
+        dev.kof.compiler.KofInterpreter.Result ir = new CompilerDriver()
+                .interpret(java.util.List.of(sfile), sfile.getParent(), new String[0]);
+        assertEquals(0, ir.exitCode(), "Script exit/stderr: " + ir.stdout() + " " + ir.stderr());
+        assertEquals("true", ir.stdout().trim(), "Script output");
+    }
+
+    @Test
+    void instanceFieldAssignAcrossCallRunsNativeX86(@TempDir Path tempDir) throws IOException {
+        // §253 face B — segunda face do MESMO mecanismo: `h.s = time.interval(…)`
+        // empilhava o receiver `h` na pilha de maquina durante os calls do RHS
+        // (mesmo desalinhamento rsp%16==8 do box capturado; SIGSEGV no
+        // pthread_create do scheduler). RED antes do fix: exit 139 no NATIVE.
+        String src = """
+                class H {
+                    String s
+                    public constructor() {
+                        this.s = ""
+                    }
+                }
+                main() {
+                    var ticked = false
+                    var h = H()
+                    h.s = time.interval(50, () -> { ticked = true })
+                    time.sleep(200)
+                    println(ticked)
+                }
+                """;
+        runJvm(tempDir, src, "true");
+        runNative(tempDir, src, "true");
+        Path sfile = tempDir.resolve("FieldAssign-" + System.nanoTime() + ".kf");
+        Files.writeString(sfile, src);
+        dev.kof.compiler.KofInterpreter.Result ir = new CompilerDriver()
+                .interpret(java.util.List.of(sfile), sfile.getParent(), new String[0]);
+        assertEquals(0, ir.exitCode(), "Script exit/stderr: " + ir.stdout() + " " + ir.stderr());
+        assertEquals("true", ir.stdout().trim());
+    }
+
+    @Test
+    void capturedBoxAssignAcrossCallRunsCrossArchQemu(@TempDir Path tempDir) throws IOException {
+        // riscv/aarch usam o MESMO lowering de box (receiver na pilha de
+        // maquina cruzando o call do RHS) — a regressao de ordem vale nos 3
+        // cross: executa via qemu. O SIGSEGV face B era o primeiro
+        // pthread_create do scheduler (exit 139) — o que este test prova e
+        // que a forma workaround compila e o job roda nos dois archs.
+        // aarch: o scheduler de intervalo ainda armado nao termina sob
+        // qemu-aarch (gap §266 — thread sem join na saida); o cancel
+        // explicito antes de sair e a forma que termina (medido: rc=0).
+        // riscv: join explicito no runtime — termina sem cancel.
+        if (has("riscv64-linux-gnu-as", "riscv64-linux-gnu-ld", "qemu-riscv64")) {
+            runQemu(tempDir, Target.NATIVE_RISCV64, "qemu-riscv64", """
+                    main() {
+                        var got = 0
+                        var id = ""
+                        id = time.interval(5, () -> { got = got + id.length })
+                        time.sleep(25)
+                        assert(got > 0)
+                    }
+                    """);
+        } else {
+            Assumptions.assumeTrue(false, "toolchain riscv64 ausente");
+        }
+        if (has("aarch64-linux-gnu-as", "aarch64-linux-gnu-ld", "qemu-aarch64")) {
+            runQemu(tempDir, Target.NATIVE_AARCH64, "qemu-aarch64", """
+                    main() {
+                        var got = 0
+                        var id = ""
+                        id = time.interval(5, () -> { got = got + id.length })
+                        time.sleep(25)
+                        assert(got > 0)
+                        time.cancel(id)
+                    }
+                    """);
+        } else {
+            Assumptions.assumeTrue(false, "toolchain aarch64 ausente");
+        }
+    }
+
     @Test
     void nowReturnsEpochMillis(@TempDir Path tempDir) throws IOException {
         runJvm(tempDir, """

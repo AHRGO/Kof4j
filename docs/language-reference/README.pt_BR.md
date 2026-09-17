@@ -2,7 +2,7 @@
 
 # Kof Language Reference
 
-**Versão da especificação:** 0.3.0-beta · **Extraída de:** `kof-compiler` (branch `beta-0.3.0`, 06/09/2026)
+**Versão da especificação:** 0.4.0-beta · **Extraída de:** `kof-compiler` (branch de extração inicial `beta-0.3.0`, 06/09/2026; branch atual `beta-0.4.0`)
 
 Esta é a **referência da linguagem Kof**. Ela descreve *o que é um programa Kof
 válido* e *qual é o significado desse programa* — independentemente de como o
@@ -80,6 +80,8 @@ diferentes. Quando há divergência real entre targets, ela é registrada como
 | [classes.md](classes.md) | Classes, records, enums, interfaces, entities, herança, visibilidade. |
 | [modules.md](modules.md) | Pacotes, imports, resolução de nomes, unidade de compilação. |
 | [semantics.md](semantics.md) | Modelo de execução, ordem de avaliação, escopo, tempo de vida, erros. |
+| [concurrency.md](concurrency.md) | Modelo de concorrência: `spawn`/`await`, virtual threads (JVM), async/await (JS), pthread (Native). |
+| [concurrency-memory-model.md](concurrency-memory-model.md) | Arestas happens-before e garantias de visibilidade de memória (SG-020). |
 | [specification-status.md](specification-status.md) | Classificação de cada feature (Stable/Experimental/…). |
 
 A **implementação do compilador** (pipeline, IR, otimizações, backends) tem
@@ -98,7 +100,7 @@ são as que fazem sentido para o estado atual do Kof (beta):
 
 | Etiqueta | Significado |
 |---|---|
-| **Stable** | Comportamento definido pela linguagem, congelado (regra de   0.2.6-beta). Não muda sem bump de versão + migração. |
+| **Stable** | Comportamento definido pela linguagem, congelado (regra de semântica congelada 0.2.6-beta). Não muda sem bump de versão + migração. |
 | **Experimental** | Implementado e testável, mas sujeito a mudança. Não congelado. |
 | **Implementation-defined** | A linguagem não fixa o resultado; o compilador atual decide. Outro compilador Kof pode divergir legitimamente. |
 | **Target-specific** | O comportamento observável depende do target (JVM/Native/JS). Documentado como diferença, não escondido. |
@@ -140,9 +142,11 @@ Uma definição de conformidade seria:
 > válido o significado que a especificação define.
 
 Hoje isso **não pode ser rigorosamente definido** porque partes da linguagem
-estão **Unspecified** ou **Implementation-defined** (subtipagem por herança não
-é checada no type checker; coerção `bool→numérico` passa na análise mas não tem
-emissão; `val` não impede reatribuição; generics sem variance/bounds). A
+ainda estão **Unspecified** ou **Implementation-defined** (`private`/`protected`
+em campos; coerção `bool→numérico` é implementation-defined; generics sem
+variance/bounds; ordem de iteração de `Map`/`Set`). Vários bloqueios antigos já
+estão **resolvidos** — subtipagem por herança (`SEM021`), reatribuição de `val`
+(`SEM037`), cobertura de interface (`SEM043`), instanciação de abstrata (`SEM041`). A
 seção "Conformance" de [specification-status.md](specification-status.md)
 lista exatamente o que ainda impede uma definição rigorosa. Não há, por ora,
 um *conformance suite* formal — mas os testes E2E por target são o embrião de

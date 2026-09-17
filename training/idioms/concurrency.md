@@ -2,7 +2,7 @@
 
 # Idioms — Concurrency
 
-**Status:** available (3 targets) · **Introduced:** 0.0.5-alpha · **Updated:**  0.4.0-beta (Sep 2026) (31/08: CONC001 closed) · **JS:** sequential (CONC003 partial)
+**Status:** available (3 targets) · **Introduced:** 0.0.5-alpha · **Updated:**  0.4.0-beta (Sep 2026) (31/08: CONC001 closed; 15/09: CONC001 cross helpers) · **JS:** event-loop (CONC003 closed 03/09)
 
 ## What it is
 
@@ -21,14 +21,14 @@ main() {
     println("fim")
 }
 
-// With result (0.3.22-beta)
+// With result (0.4.0-beta)
 main() {
     val r = spawn trabalho()   // typed Handle<T>
     var v = await r            // blocks; T with primitive unboxing
     println(v)
 }
 
-// Lambda literal with return + Handle (0.3.22-beta)
+// Lambda literal with return + Handle (0.4.0-beta)
 main() {
     var n = 21
     var h = spawn { return n * 2 }   // Handle<Int>
@@ -36,9 +36,9 @@ main() {
 }
 ```
 
-## Real semantics (verified — 0.3.22-beta)
+## Real semantics (verified — 0.4.0-beta)
 
-- the task runs in parallel: JVM virtual threads; **Native `pthread_create` + trampoline + `pthread_join` (CONC001 closed 31/08)**; JS sequential (statement and expression covered; real async = CONC003 partial);
+- the task runs in parallel: JVM virtual threads; **Native `pthread_create` + trampoline + `pthread_join` (CONC001 closed 31/08)**; JS event-loop (statement and expression covered; real async = CONC003 closed 03/09);
 - the program **waits for the tasks before exiting** (implicit join: `kof_spawn_join_all` at the end of main on Native);
 - `val r = spawn f()` returns a typed `Handle<T>`; `await r` with unboxing;
 - `var h = spawn { return expr }` (lambda literal with `return` + Handle) works on JVM/JS/interpreter — **gap: Native x86_64 → SIGSEGV (bug 46, known-bugs.md)**; use `spawn fn(arg)` (named function) as a workaround on Native until the fix;
@@ -55,7 +55,8 @@ main() {
 ## When not to use
 
 - when order matters and there is no synchronization.
-- JS for real CPU parallelism (sequential execution; CONC003 partial).
+- JS for real CPU parallelism (single-thread event-loop — concurrency is real,
+  parallelism is not; CONC003 closed 03/09).
 
 ## BAD — exposing the platform
 
@@ -76,23 +77,33 @@ var v = await r
 ## GOOD — kof.time interval as a scheduler
 
 ```kof
-// periodic: interval/cancel JVM only (TIME001 on Native/JS)
+// periodic: interval/cancel — 3 targets (TIME001 closed: Native 01/09 + cross 05/09, JS 02/09)
 var id = time.interval(1000, () -> println("tick"))
 ```
 
-For scheduled `every`/`at`, `kof.scheduler` exists on JVM/JS
-(`Native SCHED001`): `scheduler.every(100) { ... }`, `scheduler.at("0 3 * * *") { ... }`, `scheduler.cancel(id)`.
+For scheduled `every`, `kof.scheduler` exists on the 3 targets
+(`SCHED001` closed on Native 31/08): `scheduler.every(100) { ... }`, `scheduler.cancel(id)`.
+⚠️ `scheduler.at("0 3 * * *", fn)` is a **60s stub on every target** (`CRON001` — the cron
+expression is ignored, the job just runs once a minute); until CRON001 lands, compute the
+milliseconds until the next fire and run `spawn { time.sleep(ms); job() }` (re-arm inside
+the job for a repeating schedule).
 
 ## WHY
 
 `spawn` expresses intent. Thread/Runnable/Executor are platform
 mechanisms — the decision of how to execute belongs to the runtime.
 
-## Honest limitations (0.3.22-beta)
+## Honest limitations (0.4.0-beta)
 
 - ~~Native: CONC001~~ — ✅ closed 31/08 (pthread_create + trampoline + await/pthread_join + futex thread-safe allocator + implicit join);
-- JS: sequential execution — `spawn`/`await` cover statement and expression; real event-loop async = CONC003 partial;
+- JS: ~~sequential~~ → real event-loop async — `spawn`/`await` cover statement
+  and expression (CONC003 closed 03/09); known limitations: `cancelled()`
+  always `0` (no thread-local for the current task) and only task-lambdas
+  become `async function` (CONC003-JS-01);
 - producer/consumer queues: `kof.mq` — 3 targets (Native 01/09, MQ001 closed; pub/sub + `mq.queue()`/`push`/`pop`);
+- self-cancel (`var id = time.interval(ms, () -> { … time.cancel(id) })`) — the handle var read inside
+  its own initializer works on JVM/JS/Script since 16/09 (§253 face A); **Native rejects it at compile
+  time with SEM092** until face B lands (reading the captured handle SIGSEGVs on x86 — honest gap, never silent);
 - lambdas with capture work in spawn (BoxN).
 
 ## GOOD — kof.supervisor: supervised restart (OTP, issue #83)
@@ -128,9 +139,10 @@ isolation). The three policies: `permanent` (falls → always restarts),
 `disparou(id, motivo, reinicios)` at the limit (without `escalate` the
 supervisor **stops restarting and warns** — never silent).
 
-Honest parity: **JVM + Script** (interpreter) deliver the core. NATIVE =
-`OTP001` (the `throw` in a task on the current native backend falls into the
-global handler chain — §129), JS = `OTP002` (single-thread event-loop does not
+Honest parity: **JVM + Script + Native x86** deliver the core (Native x86 ✅ 15/09 —
+§129 FIXED, DECISIONS §2 option B: per-thread TLS handler chain, per-worker handler).
+NATIVE riscv/aarch = `OTP001` (raw `clone` has no TLS for the handler chain — the
+x86 fix cannot port as-is), JS = `OTP002` (single-thread event-loop does not
 schedule task-of-task — §132). In both, `import kof.supervisor` fails at
 compile-time with a clear diagnostic, never a binary that hangs.
 

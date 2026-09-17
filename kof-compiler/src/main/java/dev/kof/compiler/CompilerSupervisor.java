@@ -57,21 +57,21 @@ final class CompilerSupervisor {
         // CONC001 fechado e8364c97).
         if (driver.target == Target.NATIVE_RISCV64 || driver.target == Target.NATIVE_AARCH64) {
             diagnostics.error(driver.currentSourceName, 0, 0, 0,
-                    "kof.supervisor no target " + driver.target + ": o laço de "
-                            + "supervisao usa 'try { await } catch' sobre tasks que "
-                            + "falham, e no cross riscv/aarch o throw em task "
-                            + "longjmpa no handler chain GLOBAL da thread main "
-                            + "(crash/hang — known-bugs §129, x86 corrigido). "
-                            + "Nucleo OTP disponivel em JVM, Script e Native x86.",
+                    "kof.supervisor no target " + driver.target + ": the supervisor loop "
+                            + "uses 'try { await } catch' over tasks that "
+                            + "fail, and on riscv/aarch cross the throw in a task "
+                            + "longjmps into the GLOBAL handler chain of the main thread "
+                            + "(crash/hang — known-bugs §129, fixed on x86). "
+                            + "OTP core available on JVM, Script and Native x86.",
                     "OTP001");
             return null;
         }
         if (driver.target == Target.JS) {
             diagnostics.error(driver.currentSourceName, 0, 0, 0,
-                    "kof.supervisor no target js: o backend JS roda num event-loop "
-                            + "single-thread e uma task spawnada de dentro de outra "
-                            + "task nao e agendada sem ceder (o worker nunca roda — "
-                            + "known-bugs §132). Nucleo OTP disponivel em JVM e "
+                    "kof.supervisor on target js: the JS backend runs on an event-loop "
+                            + "single-thread and a task spawned from inside another "
+                            + "task is not scheduled without yielding (the worker never runs — "
+                            + "known-bugs §132). OTP core available on JVM and "
                             + "Script (kof run --target script).",
                     "OTP002");
             return null;
@@ -79,7 +79,7 @@ final class CompilerSupervisor {
         try (var in = CompilerDriver.class.getResourceAsStream("/dev/kof/supervisor-host.kf")) {
             if (in == null) {
                 diagnostics.error("", 0, 0, 0,
-                        "supervisor host resource /dev/kof/supervisor-host.kf ausente", "PKG003");
+                        "supervisor host resource /dev/kof/supervisor-host.kf missing", "PKG003");
                 return null;
             }
             String hostSource = new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
@@ -89,7 +89,7 @@ final class CompilerSupervisor {
             CompilationUnitNode hostUnit = parser.parse();
             if (silent.hasErrors() || hostUnit == null) {
                 for (Diagnostic d : silent.getDiagnostics()) diagnostics.report(d);
-                diagnostics.error("", 0, 0, 0, "supervisor host nao parseou", "PKG003");
+                diagnostics.error("", 0, 0, 0, "supervisor host did not parse", "PKG003");
                 return null;
             }
             List<String> imports = new ArrayList<>();

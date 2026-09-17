@@ -36,13 +36,16 @@ future recommendations (rule 14 of the task: do not change behavior).
   `sealed`/`permits`) — they **do not exist** in Kof in any position: neither as
   a declaration keyword, nor as a function, variable, parameter or
   field name. In declaration position the parser gives `PARSE085` (clear diagnostic —
-  R6); in another position, each parser's `expectId` already fails (`PARSE037`
-  variable, `PARSE023` parameter, …). Aligned with the corpus (rule 4). KofScript
+  R6); in any name position (function, variable, parameter, method, field,
+  class, record, enum) `ParseContext.expectId` emits the same `PARSE085`
+  (measured 17/09, #330; previously the generic `PARSE037` variable /
+  `PARSE023` parameter). Aligned with the corpus (rule 4). KofScript
   (`.ks`) keeps `fn` as its own syntax and translates at the boundary
   KofScript (`.ks`) is **not** an exception: it is pure Kof (without `fn`/`let`/`async`).
-  Tests: `FunctionSyntaxTest` (12: fun/fn/func
+  Tests: `FunctionSyntaxTest` (15: fun/fn/func
   rejected as a prefix, `fn calc(): Int` rejected, `fn()`/`var fun`/
-  `param fn` rejected, class member, idiomatic `Int calc():Int`).
+  `param fn` rejected, class member, idiomatic `Int calc():Int`; #330 added
+  `var fun`/`var fn`/`var func` as name → `PARSE085`).
   `let`/`const`/`async` do not exist in `.kf` **and** `.ks` (KofScript is not
   JavaScript — sugar removed 06/09).
 
@@ -113,7 +116,8 @@ future recommendations (rule 14 of the task: do not change behavior).
      `if (x != null)` → THEN (which already existed), now `if (x == null)` → **ELSE**,
      and the conjunction `x != null && Y` narrows the whole THEN. Disjunction (`||`) does NOT
      narrow (the branch runs if ONE holds) — honest.
-  4. **Intra-expression narrowing** (`SemExpressionTyper.narrowedScope`): in
+  4. **Intra-expression narrowing** (`SemNarrowing.narrowedScope`, called from
+     `SemExpressionTyper`; the 17/09 REFACTOR-500 moved it out): in
      `if (s != null && s.length > 0)`, the RIGHT side of `&&` sees `s` narrowed
      (short-circuit: the side is only evaluated if the left one passed) — without this
      the condition ITSELF would give SEM049 on `s.length`.
@@ -228,7 +232,7 @@ future recommendations (rule 14 of the task: do not change behavior).
 
 - **Implementation**: `val x = 1; x = 2` **compiles and runs** (prints 2, *probe*
   confirmed in isolation). There is no immutability flag in `VarDeclStmt`
-  (only `type`/`name`/`initializer` — `AstNodes.java:351`).
+  (only `type`/`name`/`initializer` — `VarDeclStmt.java:4`).
 - **Documentation**: `AGENTS.md` "val y = 20 // immutable".
 - **Problem**: `val` is decorative. The `val`/`var` distinction has no
   observable effect.
@@ -273,10 +277,11 @@ future recommendations (rule 14 of the task: do not change behavior).
   declaration (SG-011); two homonymous top-level functions collide without a
   clear diagnostic (the `define` overwrites).
 - **Related (METHOD, not top-level):** method overloading by ARITY in the
-  same class remains OPEN — `defineMethodSymbol` keeps 1 slot per NAME →
-  SEM013 in the JVM / symbol collision in Native. It is **bug 131** of
-  `known-bugs.md` (**DECIDED 13/09**, option 10a: implement); this SG-011
-  covers only top-level FUNCTION overloading (✅).
+  same class was **bug 131 of `known-bugs.md` — ✅ FIXED 13/09** (DECIDED
+  13/09 option 10a: implement; `18a64d45`, 4 backends, `MethodCallTyper` picks
+  by arity+compatibility; class methods of the same name with different
+  signatures coexist). This SG-011 covers top-level FUNCTION overloading (✅);
+  §131 covers the class-METHOD face (also ✅ since 13/09).
 
 ### SG-012 — Lambda parameter type inference
 
@@ -288,7 +293,7 @@ future recommendations (rule 14 of the task: do not change behavior).
   (never silent Object). Proof: `lambdaParamInferredFromListContext` +
   regression `untypedLambdaParamArithmeticIsDiagnosedNotEmitted`.
 
-### SG-013 — `private`/`protected` are not checked at compile-time
+### SG-013 — `private`/`protected` unchecked at compile-time — ✅ FIXED (09/09 methods; 17/09 fields)
 
 - **APPLIED (09/09, maintainer decision, SEM046):** the root cause was
   `defineMethodSymbol` with accessFlags=1 (PUBLIC) hardcoded — modifiers
@@ -297,6 +302,13 @@ future recommendations (rule 14 of the task: do not change behavior).
   class, protected outside the hierarchy (transitive), both from a top-level
   context. Proof: 4 `CompilerDriverTest` tests (private/protected,
   inside/outside).
+- **EXTENDED to FIELDS (17/09, #331/#327, compiler lane):** the same contract
+  now covers field access — `private` field only in the declarer, `protected`
+  in the declarer/subclasses; `this.x`/bare `x` in the declaring class passes.
+  Root: `FieldSymbol` lost the modifiers in `SymbolTableBuilder`; now
+  `MemberCallTyper.checkFieldAccess` rejects (`SEM046`). `final` field writes
+  outside the declaring constructor are rejected with `SEM065` (JVMS 4.4 —
+  before: silent `IllegalAccessError`). Proof: `FieldAccessControlTest` 7/7.
 
 ### SG-014 — Pattern matching without guards/nesting
 
@@ -318,6 +330,12 @@ future recommendations (rule 14 of the task: do not change behavior).
   divergent arity → SEM043 with expected/found (exact type parity
   awaits virtual dispatch). Proof: 3 `CompilerDriverTest` tests
   (missing/wrongArity/complete-green).
+- **Refined 17/09 (#322, `ebf59ca4`):** an `abstract class` may DEFER the
+  interface methods (`abstract class A implements I {}` compiles, JLS 8.4.8.1);
+  the obligation is TRANSITIVE — an abstract super charges the concrete subclass,
+  so `class C extends A {}` without `f()` fails with `SEM043` naming the class +
+  method + "inherited via" (no silent `AbstractMethodError`). Proof:
+  `AbstractClassPartialInterfaceE2ETest` 3/3.
 
 ### SG-016 — Semantics of nested classes
 
@@ -387,6 +405,30 @@ future recommendations (rule 14 of the task: do not change behavior).
   it is up to the maintainer; until then the wrong arity is SEM025 with a hint of the
   correct form — never a silent fallback (R6).
 
+### SG-022 — value records / first-class value types (no observable identity) — REQUESTED, no decision
+
+- **Origin:** Issue #275 (feature request, 16/09). Proposal: a `value record
+  Vec2(Float x, Float y)` form with value semantics and **no observable object
+  identity**, letting each backend choose the physical representation (local,
+  ABI register/stack, inline field, flattened array, boxed on demand). The
+  reporter explicitly does **not** want a "stack allocation" syntax nor a
+  guaranteed storage strategy — only the semantic property (no identity).
+- **Spec state:** `record` today is an immutable data aggregate that still has
+  reference identity (`==` is content `==`, `getClass()` is the record class,
+  it can be boxed and stored in collections). There is **no** syntax to declare
+  identity-free value semantics; the corpus never promised one.
+- **Why it is not a lane edit:** it is **new syntax + a new semantic contract**
+  (identity observability) → rule 6 (frozen contract). It is the maintainer's
+  design decision, and it interacts with the freeze on `==`, boxing and
+  collections. Until decided: no silent optimization of ordinary records
+  (escape analysis stays a backend detail, never an observable promise).
+- **Cross-target note:** on the JVM a value record could still be a normal class
+  (the JVM has no value types until Project Valhalla); the guarantee would be
+  "identity not observable", enforceable by the compiler (forbid identity
+  operations) — not "no allocation". Native x86/riscv could flatten/embed;
+  JS would box. Any implementation must state the honest per-target behavior
+  (R6/R7), never promise stack allocation.
+
 ---
 
 ## Category C — Divergences between targets (parity) — updated 10/09
@@ -453,8 +495,8 @@ Not duplicated here — see [known-bugs.md](known-bugs.md):
 
 ## Summary
 
-- **20 SG-00x gaps** (A: doc/code contradictions; B: unspecified
-  behavior). **Maintainer queue (2nd round, 10/09) COMPLETE:**
+- **22 SG-00x gaps** (A: doc/code contradictions; B: unspecified
+  behavior; SG-021 json pretty-print and SG-022 value records = requests with no decision). **Maintainer queue (2nd round, 10/09) COMPLETE:**
   SG-008 ✅, SG-005 ✅, SG-009 ✅, SG-020 ✅ — see the history in each section.
 - **8 target divergences** (C).
 - **3 outdated docs** (E) — **all ✅** (E1 residual 10/09, E2

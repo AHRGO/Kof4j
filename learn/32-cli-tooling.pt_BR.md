@@ -21,14 +21,22 @@ A CLI é a ferramenta central da plataforma Kof.
 | `kof repl` | REPL incremental KofScript (type `exit` to quit) |
 | `kof c <file.c> [--run] [--output <bin>]` | KofC C subset → ELF x86-64 nativo-only |
 | `kof serve <file.kf>` | Web server HTTP (`web.app()` nativo + API legada `handle()`) |
-| `kof check <file.kf\|dir> [--json]` | Type-check sem emitir código |
+| `kof check <file.kf\|dir> [--target <t>] [--json]` | Type-check sem emitir código (gaps por alvo, ex.: `AND002` no android) |
 | `kof test <file.kf\|dir> [--target jvm|native|js]` | Suíte estruturada `test "nome" { assert(...) }` nos 3 targets + programas inteiros por exit code |
 | `kof bench [paths...] [--target ...] [--iterations N] [--baseline <file>] [--threshold <ratio>] [--json] [--fail-on-regression]` | Benchmark harness (compile, run, validate, métricas, baseline) |
 | `kof profile <file.kf> [--target ...]` | Execução + métricas (CPU, RSS, GC) |
 | `kof inspect <file.kf> [--json]` | Estatísticas da IR: ops antes/depois da otimização |
+| `kof decompile <file.class> [--output <file.kf>]` | Esqueleto Kof estrutural de um `.class` |
+| `kof translate <file.java> [--output <file.kf>]` | Subset Java → fonte Kof |
+| `kof compare <legacy.class\|jar> <file.kf> [--json]` | Teste diferencial legacy vs Kof |
+| `kof migrate <file.class\|java> [--output <file.kf>] [--json]` | Migração + relatório rastreável |
 | `kof config gen <file.kf\|dir> [--output <arquivo>]` | Gera template `kof.config` a partir das chaves `config.*` do código |
 | `kof fmt <file.kf\|dir> [-w]` | Formatador real via parser (`KofFormatter`), idempotente — implementado em 31/08 |
 | `kof debug <file.kf> [--target jvm]` | DAP MVP (breakpoints por linha Kof, stack trace) |
+| `kof new <name>` | Esqueletos de projeto por tipo |
+| `kof init` | Inicializa um projeto no diretório atual |
+| `kof deps <init\|add\|remove\|list\|resolve>` | Gerenciador de pacotes (`kofdeps`, Maven Central) |
+| `kof editor <list\|detect\|status\|setup\|install\|uninstall\|update>` | Integração com editores (EDI001) |
 | `kof info [--json]` | Relatório do ambiente |
 | `kof lsp` | Language Server (stdio, LSP 3.x) |
 | `kof install <dir>` | Instala este build como distribuição (launcher + `kof.jar`) |
@@ -48,9 +56,9 @@ OS: linux
 Arch: x86_64
 Target: linux-x86_64
 JVM: Eclipse Adoptium 25.0.4 (embedded)
-Compiler: 0.3.22-beta
-Runtime: 0.3.22-beta
-Stdlib: 0.3.22-beta
+Compiler: 0.4.0-beta
+Runtime: 0.4.0-beta
+Stdlib: 0.4.0-beta
 Targets: jvm, native, js (alpha)
 LSP: available
 Editor support: available
@@ -66,7 +74,10 @@ Formato estruturado: `kof info --json`.
 
 Executa o pipeline completo (Lexer → Parser → Análise Semântica) e reporta
 todos os erros, sem emitir código. É a mesma checagem que o LSP publica.
-Com a flag `--json` (`kof check <file.kf|dir> --json`), emite os diagnósticos
+`--target <t>` checa contra um alvo específico, então gaps específicos do
+alvo são reportados sem build (ex.: `kof check app.kf --target android` acusa
+`web.app()` como `AND002`). Flags desconhecidas são recusadas com exit 1
+(nunca ignoradas em silêncio). Com a flag `--json` (`kof check <file.kf|dir> --json`), emite os diagnósticos
 em formato JSON estruturado para automação e integração contínua (CI/CD).
 
 ## `kof script` e `kof c` (0.2.0)

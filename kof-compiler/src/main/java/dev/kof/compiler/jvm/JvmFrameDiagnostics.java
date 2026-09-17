@@ -35,13 +35,13 @@ final class JvmFrameDiagnostics {
         StringBuilder sb = new StringBuilder();
         SourcePosition last = lastPosition(ops, debugPositions);
         if (last != null) {
-            sb.append("último construto Kof: ").append(last.file())
+            sb.append("last Kof construct: ").append(last.file())
               .append(':').append(last.line()).append(':').append(last.column());
         } else {
-            sb.append("sem posição Kof no IR");
+            sb.append("no Kof position in IR");
         }
-        sb.append("\n  fase: JVM backend / ASM COMPUTE_FRAMES (visitMaxs)");
-        sb.append("\n  erro ASM: ").append(asmError.getClass().getSimpleName());
+        sb.append("\n  phase: JVM backend / ASM COMPUTE_FRAMES (visitMaxs)");
+        sb.append("\n  ASM error: ").append(asmError.getClass().getSimpleName());
         if (asmError.getMessage() != null) {
             sb.append(": ").append(firstLine(asmError.getMessage()));
         }
@@ -62,7 +62,7 @@ final class JvmFrameDiagnostics {
 
     private static void appendIrTail(StringBuilder sb, List<KofOperation> ops,
                                      Map<KofOperation, SourcePosition> debugPositions) {
-        sb.append("\n  IR (últimas ").append(IR_TAIL).append(" ops):");
+        sb.append("\n  IR (last ").append(IR_TAIL).append(" ops):");
         int from = Math.max(0, ops.size() - IR_TAIL);
         for (int i = from; i < ops.size(); i++) {
             KofOperation op = ops.get(i);
@@ -83,12 +83,12 @@ final class JvmFrameDiagnostics {
             pr.print(new java.io.PrintWriter(sw, true));
             String[] lines = sw.toString().split("\n");
             int from = Math.max(0, lines.length - ASM_TAIL);
-            sb.append("\n  bytecode ASM (últimas ").append(ASM_TAIL).append(" linhas):");
+            sb.append("\n  bytecode ASM (last ").append(ASM_TAIL).append(" lines):");
             for (int i = from; i < lines.length; i++) {
                 sb.append("\n    ").append(lines[i].strip());
             }
         } catch (Throwable t) {
-            sb.append("\n  (bytecode ASM indisponível: ").append(t.getClass().getSimpleName()).append(')');
+            sb.append("\n  (bytecode ASM unavailable: ").append(t.getClass().getSimpleName()).append(')');
         }
     }
 

@@ -198,7 +198,7 @@ class TranslateTest {
                 "switch Java deve virar switch Kof statement (antes: expected ';' but found '('):\n" + kof);
         assertFalse(kof.contains("break"), "break Java é opcional em Kof (sem fallthrough) — dropar:\n" + kof);
         assertTrue(kof.contains("case \"a\": case \"b\": println(\"ab\")"),
-                "labels múltiplos `case \"a\", \"b\":` viram cases separados:\n" + kof);
+                "labels multiple init `case \"a\", \"b\":` viram cases separados:\n" + kof);
 
         assertCompiles(dir, kof, "one\nab");
     }
@@ -308,7 +308,7 @@ class TranslateTest {
                 """);
 
         assertTrue(kof.contains("enum Color { RED, GREEN }"),
-                "enum com `;` de fechamento (sem corpo) → só constantes:\n" + kof);
+                "enum com `;` de fechamento (method with no body) → só constantes:\n" + kof);
         assertTrue(kof.contains("var x = 1 var y = 2"),
                 "multi-declaração `int x = 1, y = 2` → statements separados (antes: expected ';' but found ','):\n" + kof);
 
@@ -327,8 +327,8 @@ class TranslateTest {
                             int code() { return 1; }
                         }
                         """));
-        assertTrue(e.getMessage().contains("enum com corpo") && e.getMessage().contains("revisão manual"),
-                "enum com corpo → gap explícito (R6), foi: " + e.getMessage());
+        assertTrue(e.getMessage().contains("enum with a body") && e.getMessage().contains("manual review"),
+                "enum with a body → gap explícito (R6), foi: " + e.getMessage());
     }
 
     @Test
@@ -342,13 +342,13 @@ class TranslateTest {
                             P { if (x < 0) throw new RuntimeException("neg"); }
                         }
                         """));
-        assertTrue(e.getMessage().contains("record com corpo") && e.getMessage().contains("revisão manual"),
-                "record com corpo → gap explícito (R6), foi: " + e.getMessage());
+        assertTrue(e.getMessage().contains("record with a body") && e.getMessage().contains("manual review"),
+                "record with a body → gap explícito (R6), foi: " + e.getMessage());
     }
 
     @Test
     void abstractMethodIsHonestGap() {
-        // Método sem corpo (`abstract`) em classe: Kof não tem — antes era
+        // Método method with no body (`abstract`) em classe: Kof não tem — antes era
         // dropado em SILÊNCIO (a chamada virava SEM011) → gap honesto R6.
         TranslateException e = assertThrows(TranslateException.class, () ->
                 Translate.translateJava("""
@@ -357,7 +357,7 @@ class TranslateTest {
                             int g() { return f(); }
                         }
                         """));
-        assertTrue(e.getMessage().contains("sem corpo") && e.getMessage().contains("revisão manual"),
+        assertTrue(e.getMessage().contains("method with no body") && e.getMessage().contains("manual review"),
                 "método abstract → gap explícito (R6), foi: " + e.getMessage());
     }
 
@@ -373,7 +373,7 @@ class TranslateTest {
                 """);
 
         assertTrue(kof.contains("Map<String, List<Int>>"),
-                "tipo qualificado `java.util.Map` → `Map` (builtin Kof; antes: expected ')' but found 'util'):\n" + kof);
+                "qualified type `java.util.Map` → `Map` (builtin Kof; antes: expected ')' but found 'util'):\n" + kof);
 
         assertCompiles(dir, kof, "ok");
     }
@@ -499,7 +499,7 @@ class TranslateTest {
                             int g();
                         }
                         """));
-        assertTrue(e.getMessage().contains("revisão manual"),
+        assertTrue(e.getMessage().contains("manual review"),
                 "default method sem equivalente Kof → gap explícito (R6), foi: " + e.getMessage());
     }
 
@@ -527,8 +527,8 @@ class TranslateTest {
                             int g();
                         }
                         """));
-        assertTrue(e.getMessage().contains("constante de interface") && e.getMessage().contains("revisão manual"),
-                "constante de interface não resolvível em Kof (SEM025) → gap explícito (R6), foi: " + e.getMessage());
+        assertTrue(e.getMessage().contains("interface constant") && e.getMessage().contains("manual review"),
+                "interface constant não resolvível em Kof (SEM025) → gap explícito (R6), foi: " + e.getMessage());
     }
 
     @Test
@@ -543,7 +543,7 @@ class TranslateTest {
                             CD() { this(5); }
                         }
                         """));
-        assertTrue(e.getMessage().contains("this(...)") && e.getMessage().contains("revisão manual"),
+        assertTrue(e.getMessage().contains("this(...)") && e.getMessage().contains("manual review"),
                 "delegação `this(...)` sem equivalente Kof → gap explícito (R6), foi: " + e.getMessage());
     }
 
@@ -558,7 +558,7 @@ class TranslateTest {
                             void go(List<? extends Number> xs) { }
                         }
                         """));
-        assertTrue(e.getMessage().contains("wildcard") && e.getMessage().contains("revisão manual"),
+        assertTrue(e.getMessage().contains("wildcard") && e.getMessage().contains("manual review"),
                 "wildcard genérico sem equivalente Kof → gap explícito (R6), foi: " + e.getMessage());
     }
 
@@ -601,7 +601,7 @@ class TranslateTest {
                             }
                         }
                         """));
-        assertTrue(e.getMessage().contains("method reference") && e.getMessage().contains("revisão manual"),
+        assertTrue(e.getMessage().contains("method reference") && e.getMessage().contains("manual review"),
                 "method reference sem equivalente Kof → gap explícito (R6), foi: " + e.getMessage());
     }
 
@@ -619,7 +619,7 @@ class TranslateTest {
                             }
                         }
                         """));
-        assertTrue(e.getMessage().contains("text block") && e.getMessage().contains("revisão manual"),
+        assertTrue(e.getMessage().contains("text block") && e.getMessage().contains("manual review"),
                 "text block sem equivalente Kof → gap explícito (R6), foi: " + e.getMessage());
     }
 
@@ -636,7 +636,7 @@ class TranslateTest {
                             }
                         }
                         """));
-        assertTrue(e.getMessage().contains("pattern matching") && e.getMessage().contains("revisão manual"),
+        assertTrue(e.getMessage().contains("pattern matching") && e.getMessage().contains("manual review"),
                 "binding pattern sem equivalente Kof → gap explícito (R6), foi: " + e.getMessage());
     }
 
@@ -654,8 +654,8 @@ class TranslateTest {
                             }
                         }
                         """));
-        assertTrue(e.getMessage().contains("tipo qualificado") && e.getMessage().contains("revisão manual"),
-                "tipo qualificado em expressão → gap explícito (R6), foi: " + e.getMessage());
+        assertTrue(e.getMessage().contains("qualified type") && e.getMessage().contains("manual review"),
+                "qualified type em expressão → gap explícito (R6), foi: " + e.getMessage());
     }
 
     @Test
@@ -699,7 +699,7 @@ class TranslateTest {
                             int f() { return max(3, 4); }
                         }
                         """));
-        assertTrue(e.getMessage().contains("import static") && e.getMessage().contains("revisão manual"),
+        assertTrue(e.getMessage().contains("import static") && e.getMessage().contains("manual review"),
                 "import static de JDK → gap explícito (R6), foi: " + e.getMessage());
     }
 
@@ -715,7 +715,7 @@ class TranslateTest {
                             int f() { return Math.max(3, 4); }
                         }
                         """));
-        assertTrue(call.getMessage().contains("Math.max") && call.getMessage().contains("revisão manual"),
+        assertTrue(call.getMessage().contains("Math.max") && call.getMessage().contains("manual review"),
                 "Math.<fn> → gap explícito (R6), foi: " + call.getMessage());
 
         TranslateException constant = assertThrows(TranslateException.class, () ->
@@ -724,7 +724,7 @@ class TranslateTest {
                             double f() { return Math.PI; }
                         }
                         """));
-        assertTrue(constant.getMessage().contains("Math.PI") && constant.getMessage().contains("revisão manual"),
+        assertTrue(constant.getMessage().contains("Math.PI") && constant.getMessage().contains("manual review"),
                 "Math.<const> → gap explícito (R6), foi: " + constant.getMessage());
     }
 
@@ -793,7 +793,7 @@ class TranslateTest {
                             }
                         }
                         """));
-        assertTrue(e.getMessage().contains("LOCAL") && e.getMessage().contains("revisão manual"),
+        assertTrue(e.getMessage().contains("LOCAL") && e.getMessage().contains("manual review"),
                 "classe local → gap explícito (R6), foi: " + e.getMessage());
     }
 
@@ -810,7 +810,7 @@ class TranslateTest {
                             }
                         }
                         """));
-        assertTrue(e.getMessage().contains("synchronized") && e.getMessage().contains("revisão manual"),
+        assertTrue(e.getMessage().contains("synchronized") && e.getMessage().contains("manual review"),
                 "bloco synchronized → gap explícito (R6), foi: " + e.getMessage());
     }
 
@@ -886,7 +886,7 @@ class TranslateTest {
                             }
                         }
                         """));
-        assertTrue(e.getMessage().contains("múltiplos") && e.getMessage().contains("revisão manual"),
+        assertTrue(e.getMessage().contains("multiple init") && e.getMessage().contains("manual review"),
                 "`for` com vírgula sem equivalente Kof → gap explícito (R6), foi: " + e.getMessage());
     }
 
@@ -968,7 +968,7 @@ class TranslateTest {
                             static int sum(int... xs) { return xs.length; }
                         }
                         """));
-        assertTrue(varargs.getMessage().contains("varargs") && varargs.getMessage().contains("revisão manual"),
+        assertTrue(varargs.getMessage().contains("varargs") && varargs.getMessage().contains("manual review"),
                 "varargs `T...` sem equivalente Kof → gap explícito (R6), foi: " + varargs.getMessage());
 
         TranslateException nested = assertThrows(TranslateException.class, () ->
@@ -977,8 +977,8 @@ class TranslateTest {
                             static class Inner { int x = 1; }
                         }
                         """));
-        assertTrue(nested.getMessage().contains("tipo aninhado") && nested.getMessage().contains("revisão manual"),
-                "tipo aninhado sem equivalente Kof (SEM042) → gap explícito (R6), foi: " + nested.getMessage());
+        assertTrue(nested.getMessage().contains("nested type") && nested.getMessage().contains("manual review"),
+                "nested type sem equivalente Kof (SEM042) → gap explícito (R6), foi: " + nested.getMessage());
 
         TranslateException twr = assertThrows(TranslateException.class, () ->
                 Translate.translateJava("""
@@ -990,7 +990,7 @@ class TranslateTest {
                             }
                         }
                         """));
-        assertTrue(twr.getMessage().contains("try-with-resources") && twr.getMessage().contains("revisão manual"),
+        assertTrue(twr.getMessage().contains("try-with-resources") && twr.getMessage().contains("manual review"),
                 "try-with-resources sem equivalente Kof → gap explícito (R6), foi: " + twr.getMessage());
 
         TranslateException fqn = assertThrows(TranslateException.class, () ->
@@ -999,8 +999,8 @@ class TranslateTest {
                             static Object make() { return new java.util.ArrayList<String>(); }
                         }
                         """));
-        assertTrue(fqn.getMessage().contains("tipo qualificado") && fqn.getMessage().contains("revisão manual"),
-                "tipo qualificado não resolvido → gap explícito (R6), foi: " + fqn.getMessage());
+        assertTrue(fqn.getMessage().contains("qualified type") && fqn.getMessage().contains("manual review"),
+                "qualified type não resolvido → gap explícito (R6), foi: " + fqn.getMessage());
 
         TranslateException label = assertThrows(TranslateException.class, () ->
                 Translate.translateJava("""
@@ -1012,7 +1012,7 @@ class TranslateTest {
                             }
                         }
                         """));
-        assertTrue(label.getMessage().contains("labeled") && label.getMessage().contains("revisão manual"),
+        assertTrue(label.getMessage().contains("labeled") && label.getMessage().contains("manual review"),
                 "labeled statement sem equivalente Kof → gap explícito (R6), foi: " + label.getMessage());
 
         TranslateException anon = assertThrows(TranslateException.class, () ->
@@ -1026,8 +1026,8 @@ class TranslateTest {
                             }
                         }
                         """));
-        assertTrue(anon.getMessage().contains("classe anônima") && anon.getMessage().contains("revisão manual"),
-                "classe anônima sem equivalente Kof → gap explícito (R6), foi: " + anon.getMessage());
+        assertTrue(anon.getMessage().contains("anonymous class") && anon.getMessage().contains("manual review"),
+                "anonymous class sem equivalente Kof → gap explícito (R6), foi: " + anon.getMessage());
     }
 
     @Test
@@ -1117,7 +1117,7 @@ class TranslateTest {
                             }
                         }
                         """));
-        assertTrue(e.getMessage().contains("revisão manual"),
+        assertTrue(e.getMessage().contains("manual review"),
                 "array initializer `{...}` sem equivalente Kof → gap explícito (R6), foi: " + e.getMessage());
 
         // Campo (não-local): mesmo gap — antes o output saía TRUNCADO
@@ -1129,7 +1129,7 @@ class TranslateTest {
                             int first() { return xs[0]; }
                         }
                         """));
-        assertTrue(e2.getMessage().contains("revisão manual"),
+        assertTrue(e2.getMessage().contains("manual review"),
                 "array initializer em CAMPO também é gap honesto (R6), foi: " + e2.getMessage());
     }
 
@@ -1144,7 +1144,7 @@ class TranslateTest {
                             void m() { System.out.println(1); }
                         }
                         """));
-        assertTrue(e.getMessage().contains("revisão manual"),
+        assertTrue(e.getMessage().contains("manual review"),
                 "instance initializer block → gap explícito (R6), foi: " + e.getMessage());
 
         // `static {}` TAMBÉM é gap: agora que o campo `static` é EMITIDO,
@@ -1157,7 +1157,7 @@ class TranslateTest {
                             void m() { System.out.println(X); }
                         }
                         """));
-        assertTrue(st.getMessage().contains("static") && st.getMessage().contains("revisão manual"),
+        assertTrue(st.getMessage().contains("static") && st.getMessage().contains("manual review"),
                 "static initializer block → gap explícito (R6), foi: " + st.getMessage());
     }
 

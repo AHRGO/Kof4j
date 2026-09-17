@@ -114,13 +114,16 @@ class PrimitiveToReferenceCastE2ETest {
     @Test
     void primitiveToPrimitiveCastStaysNumeric(@TempDir Path tmp) throws IOException {
         // Q4 guard: `i as Long` is a numeric widening, NOT a box — must stay ec=0.
+        // D-PRINT: o code point de um Char é obtido pela conversão explícita
+        // `as Int` (antes `println(c)` imprimia o número por contrato; agora
+        // imprime o CARÁTER — o teste pede o número de forma explícita).
         String out = runJvm(tmp, """
                 main() {
                     var i = 7
                     var l = i as Long
                     var c = i as Char
                     println(l)
-                    println(c)
+                    println(c as Int)
                 }
                 """);
         assertEquals("7\n7", out, "primitive→primitive cast must remain a numeric conversion");

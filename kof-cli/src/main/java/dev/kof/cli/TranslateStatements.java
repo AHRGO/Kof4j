@@ -57,8 +57,8 @@ class TranslateStatements extends TranslateExpr {
             // tipos aninhados/locais (SEM042) → gap honesto R6 (antes:
             // `expected ';' but found 'B'` confuso).
             throw new TranslateException(
-                    "classe/tipo LOCAL (`class`/`interface`/`enum`/`record` dentro de método) não "
-                    + "tem equivalente em Kof (SEM042: sem tipos aninhados) — revisão manual");
+                    "LOCAL class/type (`class`/`interface`/`enum`/`record` inside a method) "
+                    + "has no equivalent in Kof (SEM042: no nested types) — manual review");
         }
         if (p.at("{")) {
             List<String> body = parseBlock();
@@ -67,31 +67,31 @@ class TranslateStatements extends TranslateExpr {
             return sb.append('}').toString().trim();
         }
         if (p.at("this") && p.peek(1).text.equals("(")) {
-            // Delegação de construtor Java `this(...)` — Kof não tem (probe:
+            // Delegação de construtor Java `this(...)` — Kof has no (probe:
             // `variable 'this' is not a function` = SEM015). Sem equivalente
             // direto (duplicar o corpo ou usar um `init` privado) → gap
             // honesto R6 (bug latente Q4 13/09).
             throw new TranslateException(
-                    "delegação de construtor `this(...)` não tem equivalente direto em Kof "
-                    + "(SEM015) — duplique o corpo ou extraia um método privado — revisão manual");
+                    "constructor delegation `this(...)` has no direct equivalent in Kof "
+                    + "(SEM015) — duplicate the body or extract a private method — manual review");
         }
         if (p.peek().type == T.IDENT && p.peek(1).text.equals(":")) {
             // Labeled statement Java (`outer: for (...)`) — Kof não tem
             // labels (verificado 13/09: `outer:` é PARSE041). Revisão manual
             // (R6): o desugar (flag booleana + condição) muda o fluxo.
             throw new TranslateException(
-                    "labeled statement (`label:`) não tem equivalente direto em Kof "
-                    + "(sem labels; use uma flag) — revisão manual");
+                    "labeled statement (`label:`) has no direct equivalent in Kof "
+                    + "(no labels; use a flag) — manual review");
         }
         if (p.at("synchronized")) {
-            // Bloco `synchronized (obj) { ... }` — Kof não tem monitor
+            // Bloco `synchronized (obj) { ... }` — Kof has no monitor
             // explícito (`synchronized` é warning SEM091 no corpus; a
             // concorrência é `spawn`/`await`). Dropá-lo mudaria a atomicidade
             // do bloco → gap honesto R6 (antes: `expected ';' but found '{'`
             // confuso — Q4 13/09).
             throw new TranslateException(
-                    "bloco `synchronized (…) { … }` não tem equivalente direto em Kof "
-                    + "(concorrência é `spawn`/`await`; sem monitor explícito) — revisão manual");
+                    "`synchronized (…) { … }` has no direct equivalent in Kof "
+                    + "(concurrency is `spawn`/`await`; no explicit monitor) — manual review");
         }
         if (p.at("return")) {
             p.next();
@@ -197,8 +197,8 @@ class TranslateStatements extends TranslateExpr {
         // honesto: desugar p/ while muda o fluxo (continue pula o incr).
         if (forHeaderHasComma()) {
             throw new TranslateException(
-                    "`for` com init/incr múltiplos (`i=0, j=3` / `i++, j--`) não tem "
-                    + "equivalente direto em Kof (for não aceita vírgula) — revisão manual");
+                    "`for` with multiple init/incr (`i=0, j=3` / `i++, j--`) has no "
+                    + "direct equivalent in Kof (for does not accept a comma) — manual review");
         }
         String init = "";
         if (!p.at(";")) init = parseForInit();
@@ -322,13 +322,13 @@ class TranslateStatements extends TranslateExpr {
         // união de tipos em catch). Bloco vazio → `{}`.
         p.next(); // try
         if (p.at("(")) {
-            // `try (R r = ...) { }` — Kof não tem try-with-resources nem
+            // `try (R r = ...) { }` — Kof has no try-with-resources nem
             // AutoCloseable (RAII é plano futuro). Desugar mecânico p/
             // `try/finally` exige `if (r != null) r.close()` + o tipo Java
-            // pode nem existir em Kof → revisão manual (R6: nunca silencioso).
+            // pode nem existir em Kof → manual review (R6: nunca silencioso).
             throw new TranslateException(
-                    "try-with-resources (`try (R r = ...)`) não tem equivalente direto em Kof "
-                    + "(sem AutoCloseable; use `try/finally` + `r.close()`) — revisão manual");
+                    "try-with-resources (`try (R r = ...)`) has no direct equivalent in Kof "
+                    + "(no AutoCloseable; use `try/finally` + `r.close()`) — manual review");
         }
         List<String> tryBody = parseBlock();
         String tryStr = tryBody.isEmpty() ? "{}"
@@ -340,7 +340,7 @@ class TranslateStatements extends TranslateExpr {
             // [final] Type [| Type]* name
             if (p.at("final")) p.next();
             p.next(); // type (descartado — Kof: String)
-            // union `catch (A | B e)` → catch único (Kof não tem união
+            // union `catch (A | B e)` → catch único (Kof has no união
             // de tipos em catch; `|` agora é T.PIPE no lexer).
             while (p.at(T.PIPE)) { p.next(); p.next(); } // '|' TipoExtra
             String varName = p.next().text;
@@ -364,7 +364,7 @@ class TranslateStatements extends TranslateExpr {
         int save = p.pos;
         // Detect "Type name [= expr];" / "Type[] name ..." / "Type<...> name ..."
         if (isLocalDeclAhead()) {
-            // modificador local `final int y = 2` — Kof não tem `final` em
+            // modificador local `final int y = 2` — Kof has no `final` em
             // local (vars são mutáveis; sem `val` local) → descarta o
             // modificador e traduz a declaração (bug latente Q4 13/09).
             while (p.at("final")) p.next();
@@ -391,13 +391,13 @@ class TranslateStatements extends TranslateExpr {
             if (p.at("=")) {
                 p.next();
                 if (p.at("{")) {
-                    // Array initializer `int[] xs = {1,2,3}` não tem literal
-                    // equivalente em Kof (não existe `{...}` — arrays são
+                    // Array initializer `int[] xs = {1,2,3}` has no literal
+                    // equivalent in Kof (não existe `{...}` — arrays são
                     // `new Int[n]` + atribuição, ou `listOf` p/ List).
                     // Revisão manual (R6: nunca silencioso).
                     throw new TranslateException(
-                            "array initializer `{...}` não tem equivalente direto em Kof "
-                            + "(use `new Int[n]` + atribuições ou `listOf(...)`) — revisão manual");
+                            "array initializer `{...}` has no direct equivalent in Kof "
+                            + "(use `new Int[n]` + assignments or `listOf(...)`) — manual review");
                 }
                 String e = parseExpr();
                 List<String> decls = new ArrayList<>();
@@ -435,7 +435,7 @@ class TranslateStatements extends TranslateExpr {
     private boolean isLocalDeclAhead() {
         // Java `var x = 1` — `var` é o mesmo nome reservado do Kof; a
         // declaração traduz como ela mesma (`var x = 1`).
-        // Modificador local `final` é descartado (Kof não tem final local).
+        // Modificador local `final` é descartado (Kof has no final local).
         int base = p.pos;
         while (base < p.toks.size() && p.toks.get(base).text.equals("final")) base++;
         if (p.toks.get(base).text.equals("var")) {

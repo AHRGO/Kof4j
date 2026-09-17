@@ -142,6 +142,35 @@ public final class MemberCallTyper {
             }
             // inferir args para detectar identificadores não declarados (ghost) nos argumentos/lambdas
             for (ExpressionNode arg : mc.arguments()) SemExpressionTyper.inferType(sa, arg, scope);
+            // #336 — `add`/`push`/`append` são APPEND de UM elemento no Kof
+            // (learn/12, training/idioms/collections). `l.add(i, v)` (o
+            // insert posicional do Java) compilava e quebrava DIFERENTE em
+            // cada alvo: JVM VerifyError no load, JS/Script engoliam o índice
+            // e faziam append silencioso (divergência rule-5, R6). Não existe
+            // insert posicional na linguagem; `set(i, v)` (replace) sim.
+            // Rejeição universal na semântica compartilhada (mesma face do
+            // CatchTypeCheck #332 — um gate, os 4 alvos reportam).
+            if (("add".equals(mn) || "push".equals(mn) || "append".equals(mn))
+                    && mc.arguments().size() != 1 && sa.diagnostics() != null) {
+                sa.diagnostics().error("", 0, 0, 0,
+                        "List." + mn + " appends exactly one element; there is no positional insert — "
+                                + "use set(index, value) to replace at an index",
+                        "SEM072");
+            }
+            // #361 (§269(b)) — `reduce` SEMPRE takes TWO arguments: the lambda
+            // and the seed, in either documented order (collections.md:
+            // "(lambda, init)" and "(init, lambda) is also accepted"). A
+            // 1-arg `reduce((a,b)->...)` compiled silently and died in ASM
+            // frame computation (NegativeArraySizeException -1 in Frame.merge
+            // — the emit stacked list+lambda against the 3-slot runtime
+            // signature `(ArrayList,Object,Object)`). Reject at the shared
+            // typer (same face as SEM072/#336): one gate, all four targets.
+            if ("reduce".equals(mn) && mc.arguments().size() != 2 && sa.diagnostics() != null) {
+                sa.diagnostics().error("", 0, 0, 0,
+                        "List.reduce takes exactly two arguments: the lambda AND the seed — "
+                                + "reduce((a: Int, b: Int) -> a + b, 0) or reduce(0, (a: Int, b: Int) -> a + b)",
+                        "SEM073");
+            }
             if ("get".equals(mn)) return elemType;
             if ("remove".equals(mn)) return elemType;
             if ("size".equals(mn) || "length".equals(mn) || "count".equals(mn))
@@ -151,8 +180,33 @@ public final class MemberCallTyper {
             if ("add".equals(mn) || "push".equals(mn) || "append".equals(mn)
                     || "set".equals(mn) || "clear".equals(mn))
                 return Type.PrimitiveType.VOID;
-            if ("map".equals(mn) || "filter".equals(mn)) return recvType;
-            if ("reduce".equals(mn)) return elemType;
+            // #334 — `map` devolvia recvType (ELEMENTO-FONTE) e `reduce`
+            // devolvia elemType: a expressao era cacheada com o tipo errado
+            // (inferType guarda o resultado no no), entao `strs.get(0)`
+            // emitia checkcast do tipo FONTE sobre o valor real da lambda →
+            // ClassCastException silenciosa. Agora espelha o EMIT
+            // (`MethodCallTyper` #149 / `CollectionMethodTyper`): map →
+            // List<retorno-da-lambda>, reduce → retorno, filter → recvType
+            // (mesmo elemento, correto). Lambda sem retorno inferido =
+            // UNKNOWN honesto (o emit trata igual) — nunca mentir com o
+            // tipo da fonte.
+            if ("map".equals(mn) || "filter".equals(mn) || "reduce".equals(mn)) {
+                Type lamRet = Type.UnknownType.UNKNOWN;
+                for (ExpressionNode arg : mc.arguments()) {
+                    if (arg instanceof LambdaExpr || !(arg instanceof MethodCallExpr)) {
+                        if (sa.expressionTypes().get(arg) instanceof Type.FunctionType ft) {
+                            lamRet = ft.returnType();
+                            break;
+                        }
+                    }
+                }
+                if ("filter".equals(mn)) return recvType;
+                if (lamRet instanceof Type.UnknownType) return Type.UnknownType.UNKNOWN;
+                if ("map".equals(mn)) {
+                    return new Type.ClassType("kof", "List", List.of(lamRet));
+                }
+                return lamRet;
+            }
             if (!"toArray".equals(mn) && !"sublist".equals(mn) && !"subSet".equals(mn)) {
                 if (sa.diagnostics() != null) {
                     sa.diagnostics().error("", 0, 0, 0,
@@ -338,9 +392,9 @@ public final class MemberCallTyper {
      * dentro da própria classe declarante; `protected` dentro da declarante ou
      * subclasses. Chamada fora → erro SEM046 (antes: IllegalAccessError runtime).
      */
-    private static void checkMemberAccess(SemanticAnalyzer sa, int accessFlags,
-                                          String ownerClass, String receiverClass,
-                                          String memberDesc) {
+    static void checkMemberAccess(SemanticAnalyzer sa, int accessFlags,
+                                  String ownerClass, String receiverClass,
+                                  String memberDesc) {
         if (sa.diagnostics() == null) return;
         boolean isPriv = (accessFlags & AccessFlags.PRIVATE) != 0;
         boolean isProt = (accessFlags & AccessFlags.PROTECTED) != 0;
@@ -375,8 +429,44 @@ public final class MemberCallTyper {
         }
     }
 
+    /**
+     * #331/#327 — face de CAMPO do mesmo contrato SG-013: private só na
+     * declarante, protected na declarante/subclasses (JVM aplica em runtime;
+     * sem o cheque o compile deixava passar e o load estourava
+     * IllegalAccessError — R6/Q7: nunca silencioso). O método-irmão já fazia
+     * isso (SEM046); o campo não fazia porque o FieldSymbol perdia os
+     * modificadores no SymbolTableBuilder. `this.x`/`x` nu na própria classe
+     * passa (owner == caller).
+     */
+    static void checkFieldAccess(SemanticAnalyzer sa, SymbolTable.FieldSymbol fs,
+                                 String receiverClass) {
+        checkMemberAccess(sa, fs.accessFlags(), fs.ownerClass(), receiverClass,
+                "field '" + fs.name() + "'");
+    }
+
+    /**
+     * #327 — escrita em campo `final`: o JVM so aceita putfield de um campo
+     * final no <init> DA CLASSE DECLARANTE (JVMS 4.4). Fora disso o runtime
+     * estoura IllegalAccessError ("Update to non-static final field ...
+     * attempted from a different class") em silencio no compile (R6/Q7).
+     * O inicializador `final Int x = 30` passa pelo fieldInits/<clinit>
+     * sintetizado (nao e um statement do usuario) — nunca chega aqui.
+     */
+    static void checkFinalFieldWrite(SemanticAnalyzer sa, SymbolTable.FieldSymbol fs) {
+        if (sa == null || sa.diagnostics() == null) return;
+        if ((fs.accessFlags() & AccessFlags.FINAL) == 0) return;
+        boolean staticField = (fs.accessFlags() & AccessFlags.STATIC) != 0;
+        boolean legal = sa.inConstructor && !staticField
+                && fs.ownerClass().equals(sa.currentClassName());
+        if (legal) return;
+        sa.diagnostics().error("", 0, 0, 0,
+                "cannot assign to final field '" + fs.name() + "' (declared in '"
+                        + fs.ownerClass() + "') from outside its constructor",
+                "SEM065");
+    }
+
     /** caller está na hierarquia de `base` (caller == base ou estende transitivamente)? */
-    private static boolean isInHierarchy(SemanticAnalyzer sa, String caller, String base) {
+    static boolean isInHierarchy(SemanticAnalyzer sa, String caller, String base) {
         String current = caller;
         int depth = 0;
         while (current != null && depth++ < 32) {

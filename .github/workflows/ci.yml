@@ -40,6 +40,9 @@ jobs:
       - name: Gate ≤500 linhas/classe (regra ≤500; §140 — dívidas no baseline não crescem)
         run: scripts/check_500.sh
 
+      - name: Gate R1 fronteira stdlib (D-UNIVERSAL; ledger nao cresce em silencio)
+        run: scripts/check_stdlib_boundary.sh --selftest && scripts/check_stdlib_boundary.sh
+
       - name: Install native webview deps (Linux)
         run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev
 

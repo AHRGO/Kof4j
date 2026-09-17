@@ -2,7 +2,7 @@
 
 # 19 — Packages and Modules
 
-> **Status: implemented — imports `a.b.C` fixed for large projects (0.3.22-beta)**
+> **Status: implemented — imports `a.b.C` fixed for large projects (0.4.0-beta)**
 >
 > `package` + `import` work end-to-end. On 27/08 the `CompilerDriver` started treating `import a.b.C` as a file import **plus** a directory import `a.b`, fixing the loss of imports in projects with `a/b/C.kf`.
 
@@ -71,7 +71,7 @@ kof build src --target=js      # Default.mjs with import C
 > constructor mangling uses the simple name (`C_init_0`) instead of the internal
 > name (`a_b_C_init_0`) → `undefined reference`. Bug 22 in
 > `docs/bugs-and-gaps/known-bugs.md`. Use `--target=jvm`/`js` meanwhile, or fix the
-> `NativeBackend.java:1725`.
+> `NativeBackend.java:369`.
 
 > ⚠️ **Equal names in different packages are rejected** (PKG005) — `pkgA.Data`
 > + `pkgB.Data` do not compile together. Bug 21 in `docs/bugs-and-gaps/known-bugs.md`.

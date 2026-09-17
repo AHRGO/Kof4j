@@ -187,14 +187,37 @@ final class TypeDeclarations {
             ctx.advance();
             superClass = TypeParser.parseTypeRef(ctx);
         }
-        List<String> ifaces = parseImplementedInterfaces(ctx);
-        RecordDeclarationNode rec = parseRecordBody(ctx, name, mods, superClass, ifaces, typeParams);
-        return new RecordDeclarationNode(rec.position(), rec.name(), rec.modifiers(), rec.superClass(),
-                rec.interfaces(), typeParams, rec.components(), rec.members(), annos);
+        // #325: a forma canonical do Kof e `record Point(Int x, Int y)
+        // implements Describable { }` — COMPONENTES antes do `implements`,
+        // igual ao `class X(params) implements I` (l. parseTypeDeclaration).
+        // O parser antigo so aceitava a ordem java (`implements` antes dos
+        // parenteses) e dava PARSE007 em cascata na forma canonical. Ordem
+        // java continua aceita (retro-compatibilidade: saida do decompiler,
+        // Fase E, e codigo existente na natureza).
+        List<String> ifaces = new ArrayList<>();
+        List<RecordComponentNode> components;
+        if (ctx.check(TokenType.IMPLEMENTS)) {
+            ifaces = parseImplementedInterfaces(ctx);
+            components = parseRecordComponents(ctx);
+        } else {
+            components = parseRecordComponents(ctx);
+            ifaces = parseImplementedInterfaces(ctx);
+        }
+        List<AstNode> members = new ArrayList<>();
+        if (ctx.check(TokenType.LBRACE)) {
+            ctx.advance();
+            while (!ctx.check(TokenType.RBRACE) && !ctx.atEnd()) {
+                members.add(ClassMemberParser.parseClassMember(ctx));
+            }
+            ctx.expect(TokenType.RBRACE, "Expected '}' after record body", "PARSE014");
+        }
+        return new RecordDeclarationNode(ctx.pos(), name, mods, superClass, ifaces,
+                typeParams, List.copyOf(components), List.copyOf(members), annos);
     }
 
-    static RecordDeclarationNode parseRecordBody(ParseContext ctx, String name, List<String> mods, String superClass,
-                                                  List<String> ifaces, List<String> typeParams) {
+    /** Componentes `( ... )` de um record — separados do corpo p/ o
+     *  dispatcher conseguir parsear `implements` entre os dois (#325). */
+    static List<RecordComponentNode> parseRecordComponents(ParseContext ctx) {
         List<RecordComponentNode> components = new ArrayList<>();
         if (ctx.check(TokenType.LPAREN)) {
             ctx.advance();
@@ -207,16 +230,7 @@ final class TypeDeclarations {
             }
             ctx.expect(TokenType.RPAREN, "Expected ')' after record components", "PARSE013");
         }
-        List<AstNode> members = new ArrayList<>();
-        if (ctx.check(TokenType.LBRACE)) {
-            ctx.advance();
-            while (!ctx.check(TokenType.RBRACE) && !ctx.atEnd()) {
-                members.add(ClassMemberParser.parseClassMember(ctx));
-            }
-            ctx.expect(TokenType.RBRACE, "Expected '}' after record body", "PARSE014");
-        }
-        return new RecordDeclarationNode(ctx.pos(), name, mods, superClass, ifaces,
-                typeParams, List.copyOf(components), List.copyOf(members), List.of());
+        return components;
     }
 
     static List<String> parseImplementedInterfaces(ParseContext ctx) {

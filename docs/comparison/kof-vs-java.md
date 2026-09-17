@@ -11,11 +11,11 @@
 
 | Aspect | Java | Kof |
 |---------|------|-----|
-| Typing | Strong, static | Strong, static (0.2.6-beta) |
+| Typing | Strong, static | Strong, static (0.4.0-beta) |
 | OO | Classes, interfaces, records | Classes, interfaces, records + `enum` + pattern matching `case String s`/`Point(x,y)` |
 | Inheritance | Single + interfaces | Single + interfaces (3 levels) |
-| GC | Automatic | JVM: automatic / Native: free-list `kof_free_head` (mark-sweep pending; auto-GC disabled — `munmap` fallback, 27-31/08) |
-| Compilation | javac → bytecode | Kof → IR → JVM/Native (x86_64; `native.risc`/`native.arm` placeholder) / JS (GraalJS) / KofC / KofScript / Android (Phase 1) |
+| GC | Automatic | JVM: automatic / Native: free-list `kof_free_head` (mark-sweep implemented 03/09, manual; auto-GC disabled — auto-collect on exhaustion pending §260) |
+| Compilation | javac → bytecode | Kof → IR → JVM/Native (x86_64 + riscv64 + aarch64) / JS (GraalJS) / KofC / KofScript / Android (Phase 1) |
 | Syntax | Verbose | Concise (`String?`, `map/filter/reduce`, `let` → `KofScriptGlobals`) |
 
 ---
@@ -165,7 +165,7 @@ Generics by erasure (classes and functions). Bounds: planned.
 
 ---
 
-## Collections (0.2.6-beta)
+## Collections (0.4.0-beta)
 
 ### Java
 
@@ -232,7 +232,7 @@ Future<String> future = executor.submit(() -> "result");
 
 Implemented: `spawn` with implicit join (JVM: virtual threads; Native:
 `pthread_create` + trampoline + `pthread_join` with a thread-safe allocator
-(futex), 31/08; JS: sequential). `await`/typed handles. Zero platform API
+(futex), 31/08; JS: event-loop (CONC003 03/09)). `await`/typed handles. Zero platform API
 exposed (`Thread`/`Executor` are runtime internals).
 
 ---
@@ -312,25 +312,25 @@ var url = config.str("database.url", "jdbc:h2:mem")
 ```
 
 **Status:** Implemented — typed `kof.config` (JVM/Native; precedence
-file > env > profile > default; JS reports CONF001).
+file > env > profile > default; CONF001 closed).
 
 ---
 
-## Summary (0.2.6-beta, 31/08/2026 — `VERSION` 0.2.6-beta, `mvn test` 810, 7 targets)
+## Summary (0.4.0-beta, re-synced 17/09/2026 — `VERSION` 0.4.0-beta, `mvn test` 2218, 7 targets)
 
-| Feature | Java | Kof 0.2.6-beta | Kof Future |
+| Feature | Java | Kof 0.4.0-beta | Kof Future |
 |---------|------|---------------|------------|
 | Classes / Records / Inheritance / Interfaces / Virtual dispatch | ✅ | ✅ (JVM/Native x86_64 + riscv64 + JS `kof.http`) | ✅ |
 | Null safety `String?` | ✅ (via `Optional`/checker) | ✅ basic `String?` (`Type?`) 27/08 | advanced checks |
-| Generics `Box<T>` + `List<T>` | ✅ | ✅ `Box<T>` erasure (`substituteTypeVariable` `CompilerDriver.java:3972`) | bounds |
+| Generics `Box<T>` + `List<T>` | ✅ | ✅ `Box<T>` erasure (`substituteTypeVariable` `CompilerTypes.java:423`) | bounds |
 | Collections `List`/`Map`/`Set` + `map/filter/reduce` | ✅ | ✅ `List map/filter/reduce` + `Map`/`Set` 3 targets 27/08 | — |
 | Exceptions `try/catch/finally` | ✅ | ✅ JVM unwinding + Native unwinding | — |
 | Pattern matching `case String s` + `Point(x,y)` | ✅ (17+) | ✅ JVM/Native/JS 27/08 | guards |
-| Concurrency `spawn`/`await` | ✅ | ✅ JVM + sequential JS; Native `CONC001` | Native scheduler |
-| HTTP `serve` + `kof.http` | Framework | ✅ `web.app()` JVM + `kof.http` JVM+JS | Native HTTP |
-| Config `kof.config` | Framework | ✅ JVM+Native (free-list 27/08) | JS `CONF001` |
-| Logging / Observability | Framework | ✅ `kof.log` JVM+Native + `kof.observability` 3 targets | tracing |
+| Concurrency `spawn`/`await` | ✅ | ✅ JVM + Native pthread + JS event-loop (CONC001/CONC003 closed) | — |
+| HTTP `serve` + `kof.http` | Framework | ✅ `web.app()` JVM + `kof.http` JVM/Native/JS | — |
+| Config `kof.config` | Framework | ✅ JVM+Native+JS (free-list 27/08, CONF001 closed 16/09) | — |
+| Logging / Observability | Framework | ✅ `kof.log` JVM+Native + `kof.observability` 3 targets (health/metrics/histograms/spans) + **OTel export ✅ JVM/JS (`exportSpans()` → OTLP/JSON, `OBS003`)** | Native OTel export (`OBS003`) |
 | Database `kof.db`/`kof.orm` | Framework | ✅ JDBC + native SQLite + MySQL `kof_db_mysql_scramble` | query DSL |
 | DI | Framework | ❌ (planned `service`) | proposal |
 | KofScript / KofC | — | ✅ `KofScript` `let`→`KofScriptGlobals` + `KofCcompiler` `kof c` | — |
-| Targets | — | JVM stable (ws/sse), native x86_64 stable (free-list + pthread spawn), native.risc/native.arm (placeholder via qemu), js alpha, kofc, android Phase 1 | — |
+| Targets | — | JVM stable (ws/sse), native x86_64 stable + native.risc/native.arm full core (free-list + mark-sweep + pthread spawn, via qemu), js alpha, kofc, android Phase 1 | — |

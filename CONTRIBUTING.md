@@ -2,7 +2,7 @@
 
 # 30 — Contributing
 
-> **Kof 0.2.6-beta — 02 Sep 2026 — 810 tests — targets jvm/native/native.risc/native.arm/js/kofc**
+> **Kof 0.4.0-beta — 17 Sep 2026 — 2218 tests — targets jvm/native/native.risc/native.arm/js/kofc**
 
 ## Repository structure
 
@@ -15,8 +15,8 @@ kof/
 ├── kof-runtime/        ← native runtime (free-list GC)
 ├── docs/               ← internal documentation
 ├── learn/              ← this material (intention->Kof->frontend->IR->backend->runtime)
-├── tests/              ← golden tests (810)
-├── pom.xml             ← Maven build (0.2.6-beta)
+├── tests/              ← golden tests (16 golden + 9 integration)
+├── pom.xml             ← Maven build (0.4.0-beta)
 └── README.md
 ```
 
@@ -147,35 +147,35 @@ Whenever a feature changes:
 3. Updated documentation
 4. No comments in the code
 5. Code that compiles without warnings
-
+6. An open issue containing the implementation plan for the feature in your PR.
 ## Current state of the project
 
-The project is at 0.2.6-beta (810 tests), functional:
+The project is at 0.4.0-beta (2218 tests), functional:
 
 **Works today:**
 - Complete frontend: lexer, parser, `SemanticAnalyzer` (type checking + nullability `String?`)
 - Records, classes and interfaces + generics (erasure) + `map/filter/reduce` + `Map/Set` + real exceptions (JVM + Native unwinding)
 - Functions with `main()`, lambdas with captures, `spawn`/`await` (JVM virtual threads, Native pthread — 31/08)
 - Pattern matching (`case String s`, `Point(x,y)`) on JVM/Native/JS
-- CLI with 18 commands (build, run, serve, check, test, script, repl, c, fmt, config gen, bench, profile, inspect, debug, info, lsp, install, version) — `--target=jvm|native|native.risc|native.arm|js|android`
+- CLI with 26 commands (build, run, serve, check, test, script, repl, c, fmt, config, bench, profile, inspect, decompile, translate, compare, migrate, debug, info, lsp, install, deps, editor, new, init, version) — `--target=jvm|native|native.risc|native.arm|js|android`
 - JVM backend via ASM — V21 bytecode, exception table, virtual threads
-- Native backend — stable x86-64 ELF (free-list GC, spawn/pthread, FP XMM, complete JSON, SQLite) + riscv64/aarch64 placeholders
+- Native backend — stable x86-64 ELF + riscv64/aarch64 full core (free-list GC + mark-sweep, spawn/pthread, FP XMM, complete JSON, SQLite, HTTP, DWARF debug info)
 - KofJS — ES Modules via GraalJS (`kof.http` via Java HttpClient interop)
 - KofScript (`let`→`KofScriptGlobals`, repl, --watch) + KofC (`kof c` native-only)
-- stdlib: kof.io, kof.web, kof.http, kof.security, kof.db, kof.orm, kof.ui, kof.config, kof.log, kof.cache, kof.mq
-- Tests: 810 (golden 16/16, integration 9/9)
+- stdlib: kof.io, kof.web, kof.http, kof.security, kof.db, kof.orm, kof.ui, kof.config, kof.log, kof.cache, kof.mq, kof.observability, kof.validation, kof.time, kof.scheduler, kof.process
+- Tests: 2218 across the 4 modules (golden 16/16, integration 9/9)
 
 **In development:**
-- Mark-sweep GC in Native (today free-list)
-- Complete native MySQL/MariaDB (wire protocol: auth SHA-1 done)
-- Android Phase 2+ (today Phase 1: Maven project + APK, Activity host in Kof)
+- Native auto-collect on exhaustion (mark-sweep is implemented but manual — §260)
+- Complete native MySQL/MariaDB (handshake/query/prepared)
+- Android Phase 5+ (Phases 1-4 done: Maven/APK, label/permissions/--apk/--keystore,
+  responsive WebView, --min-sdk/--target-sdk; pending: --aab, icon metadata)
 - Multi-file modules (residual unified semantics)
-- Native scheduler (SCHED001)
 
 **Planned:**
-- Typed Query DSL, connection pooling, ORM outside the JVM
-- Observability (metrics, tracing)
-- Native debugger (DWARF) and JS (source maps)
+- Connection pooling, ORM outside the JVM
+- OpenTelemetry export (W3C traceId/spanId + timed spans already exist)
+- Native DWARF types (`DW_AT_type` slice — low_pc/locals already work)
 
 ## Next step
 

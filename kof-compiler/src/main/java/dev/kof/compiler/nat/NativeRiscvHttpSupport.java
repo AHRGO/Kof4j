@@ -275,6 +275,145 @@ public final class NativeRiscvHttpSupport {
             # ── request core ────────────────────────────────────────────
             # a0=url, a1=method cstr, a2=body cstr|0, a4=headers cstr|0
             # retorna a0=KofString body (status em .Lhttp_last_status)
+
+            # ── §259: configurators + circuit-breaker (riscv64) ────────
+            # kof_http_timeout_set(s@a0): segundos, max(0,s); 0 = infinito.
+            .globl kof_http_timeout_set
+            kof_http_timeout_set:
+                bltz a0, .Lhts_zero
+                la t0, .Lhttp_timeout_s
+                sd a0, 0(t0)
+                ret
+            .Lhts_zero:
+                li t1, 0
+                la t0, .Lhttp_timeout_s
+                sd t1, 0(t0)
+                ret
+            .globl kof_http_retry_set
+            kof_http_retry_set:
+                bltz a0, .Lhrs_zero
+                la t0, .Lhttp_retry_n
+                sd a0, 0(t0)
+                ret
+            .Lhrs_zero:
+                li t1, 0
+                la t0, .Lhttp_retry_n
+                sd t1, 0(t0)
+                ret
+            # kof_http_circuit_set(n@a0): trips=max(0,n); 0 fecha e limpa
+            .globl kof_http_circuit_set
+            kof_http_circuit_set:
+                bltz a0, .Lhcs_zero
+                la t0, .Lhttp_circuit_trips
+                sd a0, 0(t0)
+                bnez a0, .Lhcs_ret
+                ret
+            .Lhcs_zero:
+                li t1, 0
+                la t0, .Lhttp_circuit_trips
+                sd t1, 0(t0)
+                la t0, .Lhttp_circuit_fails
+                sd t1, 0(t0)
+                la t0, .Lhttp_circuit_open_until
+                sd t1, 0(t0)
+            .Lhcs_ret:
+                ret
+            # kof_http_now_ms() -> a0 ms MONOTONICOS (clock_gettime=113,
+            # CLOCK_MONOTONIC=1 — medidos em asm-generic; usa t0/t1)
+            .globl kof_http_now_ms
+            kof_http_now_ms:
+                addi sp, sp, -16
+                mv a1, sp
+                li a0, 1
+                li a7, 113
+                ecall
+                ld a0, 0(sp)
+                li t1, 1000
+                mul a0, a0, t1
+                ld t0, 8(sp)
+                li t1, 1000000
+                divu t0, t0, t1
+                add a0, a0, t0
+                addi sp, sp, 16
+                ret
+            # kof_http_circuit_open() -> a0=1 aberto; vencida a janela fecha
+            .globl kof_http_circuit_open
+            kof_http_circuit_open:
+                addi sp, sp, -16
+                sd ra, 8(sp)
+                la t0, .Lhttp_circuit_open_until
+                ld a0, 0(t0)
+                beqz a0, .Lhco_false
+                call kof_http_now_ms
+                la t1, .Lhttp_circuit_open_until
+                ld t1, 0(t1)
+                blt a0, t1, .Lhco_true
+                li t1, 0
+                la t0, .Lhttp_circuit_open_until
+                sd t1, 0(t0)
+            .Lhco_false:
+                li a0, 0
+                j .Lhco_out
+            .Lhco_true:
+                li a0, 1
+            .Lhco_out:
+                ld ra, 8(sp)
+                addi sp, sp, 16
+                ret
+            # kof_http_circuit_record_fail(): trips<=0 nada; senao ++falhas,
+            # ao bater trips abre por 30s (janela JVM)
+            .globl kof_http_circuit_record_fail
+            kof_http_circuit_record_fail:
+                addi sp, sp, -16
+                sd ra, 8(sp)
+                la t0, .Lhttp_circuit_trips
+                ld t1, 0(t0)
+                blez t1, .Lhrf_done
+                la t0, .Lhttp_circuit_fails
+                ld t2, 0(t0)
+                addi t2, t2, 1
+                sd t2, 0(t0)
+                la t0, .Lhttp_circuit_trips
+                ld t1, 0(t0)
+                blt t2, t1, .Lhrf_done
+                call kof_http_now_ms
+                li t1, 30000
+                add a0, a0, t1
+                la t0, .Lhttp_circuit_open_until
+                sd a0, 0(t0)
+            .Lhrf_done:
+                ld ra, 8(sp)
+                addi sp, sp, 16
+                ret
+            # kof_http_circuit_record_success(): zera falhas e fecha
+            .globl kof_http_circuit_record_success
+            kof_http_circuit_record_success:
+                li t1, 0
+                la t0, .Lhttp_circuit_fails
+                sd t1, 0(t0)
+                la t0, .Lhttp_circuit_open_until
+                sd t1, 0(t0)
+                ret
+
+            .section .data
+            .Lhttp_timeout_s:   .quad 15
+            .Lhttp_retry_n:     .quad 0
+            .Lhttp_circuit_trips: .quad 0
+            .Lhttp_circuit_fails: .quad 0
+            .Lhttp_circuit_open_until: .quad 0
+            .Lhttp_pf:          .space 8
+            .Lhttp_attempts:    .quad 1
+            .Lhttp_tv:          .space 16
+            .Lhttp_serr:        .quad 0
+            .Lhttp_last_err:    .quad 0
+            .Lhttp_urlptr:      .quad 0
+            .Lhttp_methodp:     .quad 0
+            .Lhttp_errbuf:      .space 512
+            .Lhttp_str_5xx:     .asciz "HTTP "
+            .Lhttp_str_from:    .asciz " from "
+            .Lhttp_str_copen:   .asciz "kof.http circuit open (fail fast): "
+            .Lhttp_err_tmo:     .asciz "kof.http: timeout"
+            .section .text
             """);
     }
 }

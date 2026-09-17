@@ -171,6 +171,8 @@ public final class NativeRiscvAsmRtB31 {
                 li   s6, 0
                 li   s9, 0
                 li   s7, 0
+                li   s8, 0                     # exp neg: 0 sem expoente (§260)
+                li   s5, 0                     # expoente: 0 sem expoente (§260)
                 addi t0, s0, 24
                 add  t0, t0, s2
                 lbu  t0, 0(t0)

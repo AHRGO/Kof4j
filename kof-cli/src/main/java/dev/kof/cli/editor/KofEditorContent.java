@@ -44,7 +44,7 @@ public final class KofEditorContent {
             new EditorFile(".config/nvim/ftdetect/kof.lua",
                 "vim.filetype.add({ extension = { kf = 'kof', kof = 'kof' } })\n"),
             new EditorFile(".config/nvim/after/ftplugin/kof.lua", kof(ctx, """
-                -- Kof: delega semântica ao LSP oficial (@KOF@ lsp). Nada de parser aqui.
+                -- Kof: delegates semantics to the official LSP (@KOF@ lsp). No parser here.
                 vim.bo.commentstring = '// %s'
                 vim.bo.expandtab = true
                 vim.bo.shiftwidth = 4
@@ -69,7 +69,7 @@ public final class KofEditorContent {
             new EditorFile(".vim/ftdetect/kof.vim",
                 "au BufRead,BufNewFile *.kf,*.kof setfiletype kof\n"),
             new EditorFile(".vim/after/syntax/kof.vim", """
-                " Kof syntax (keyword-based; semântica vem do kof lsp)
+                " Kof syntax (keyword-based; semantics come from kof lsp)
                 if exists('b:current_syntax') && b:current_syntax ==# 'kof' | finish | endif
                 syntax keyword kofKeyword if else for while do switch case break continue return throw try catch finally instanceof as new this super
                 syntax keyword kofDecl class interface record extends implements sealed permits package import public private protected static final abstract var val void constructor
@@ -102,7 +102,7 @@ public final class KofEditorContent {
     public static List<EditorFile> nano(DetectContext ctx) {
         return List.of(
             new EditorFile(".nano/kof.nanorc", """
-                ## Kof — syntax highlighting (proporcional ao nano; semântica: kof lsp)
+                ## Kof — syntax highlighting (proportional to nano; semantics: kof lsp)
                 syntax "\\.kof$" "\\.kf$"
                 color brightyellow "^(class|interface|record|package|import|constructor)\\>"
                 color brightcyan "^(public|private|protected|static|final|abstract|sealed|permits|extends|implements)\\>"
@@ -119,10 +119,10 @@ public final class KofEditorContent {
     public static List<EditorFile> emacs(DetectContext ctx) {
         return List.of(
             new EditorFile(".emacs.d/lisp/kof-mode.el", kof(ctx, """
-                ;;; kof-mode.el --- Kof major mode (semântica via @KOF@ lsp/eglot)  -*- lexical-binding: t; -*-
+                ;;; kof-mode.el --- Kof major mode (semantics via @KOF@ lsp/eglot)  -*- lexical-binding: t; -*-
                 ;;; Commentary:
-                ;; Highlight por palavras-chave; diagnostics/completion/rename vêm do
-                ;; LSP oficial (`@KOF@ lsp`) via eglot. Nenhum parser aqui.
+                ;; Keyword-based highlight; diagnostics/completion/rename come from the
+                ;; official LSP (`@KOF@ lsp`) via eglot. No parser here.
                 ;;; Code:
                 (defvar kof-mode-syntax-table
                   (let ((table (make-syntax-table)))
@@ -160,7 +160,7 @@ public final class KofEditorContent {
     public static List<EditorFile> geany(DetectContext ctx) {
         return List.of(
             new EditorFile(".config/geany/filedefs/filetypes.kof", kof(ctx, """
-                # Kof — filetype Geany (build/run delegam à CLI; semântica: kof lsp)
+                # Kof — Geany filetype (build/run delegate to the CLI; semantics: kof lsp)
                 [settings]
                 comment_open=/*
                 comment_close=*/
@@ -199,13 +199,13 @@ public final class KofEditorContent {
         return List.of(
             new EditorFile(".config/JetBrains/kof/filetypes/Kof.xml", """
                 <?xml version="1.0" encoding="UTF-8"?>
-                <!-- Kof: file type (*.kf/*.kof) — delega semântica ao kof lsp -->
+                <!-- Kof: file type (*.kf/*.kof) — delegates semantics to kof lsp -->
                 <filetype name="Kof" implementationClass="com.intellij.openapi.fileTypes.impl.SimpleFileType"
                           fieldName="INSTANCE" language="Kof" extensions="kf;kof"
                           description="Kof language source file" />
                 """),
             new EditorFile(".config/JetBrains/kof/tools/Kof.xml", kof(ctx, """
-                <!-- Kof: External Tools — delegam à CLI oficial (@KOF@). Ver docs/editors/intellij.md p/ o LSP4IJ. -->
+                <!-- Kof: External Tools — delegate to the official CLI (@KOF@). See docs/editors/intellij.md for LSP4IJ. -->
                 <toolSet name="Kof">
                   <tool name="kof build" program="@KOF@" parameters="build $ProjectFileDir$ --target jvm" />
                   <tool name="kof run" program="@KOF@" parameters="run $FilePath$" />
@@ -216,11 +216,11 @@ public final class KofEditorContent {
                 </toolSet>
                 """)),
             new EditorFile(".config/JetBrains/kof/README.txt", kof(ctx, """
-                Kof for IntelliJ IDEA (sem plugin — issue #1 rastreia o plugin oficial).
+                Kof for IntelliJ IDEA (no plugin — issue #1 tracks the official plugin).
                 1. TextMate: Settings > Editor > TextMate Bundles > + > editor/kof.tmLanguage.json.
                 2. LSP: plugin LSP4IJ (Marketplace) > Server Mapping: command [@KOF@, lsp], extensions kf/kof.
-                3. External Tools: Settings > Tools > External Tools > importar .config/JetBrains/kof/tools/Kof.xml.
-                4. File type: Kof.xml registra *.kf/*.kof (plugin oficial dará highlight real).
+                3. External Tools: Settings > Tools > External Tools > import .config/JetBrains/kof/tools/Kof.xml.
+                4. File type: Kof.xml registers *.kf/*.kof (the official plugin will provide real highlighting).
                 """)));
     }
 

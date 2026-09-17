@@ -249,7 +249,7 @@ TypeTable:
 
 ### 6.1 Heap vs Stack
 - **Decision:** Objects are allocated on the heap via `kof_alloc`
-- **Reason:** Allows references, inheritance, future GC
+- **Reason:** Allows references, inheritance, GC mark-sweep (implemented 03/09, manual)
 - **Exception:** Local primitive values remain on the stack
 
 ### 6.2 UTF-8 vs UTF-16
@@ -295,7 +295,7 @@ TypeTable:
 > **Updated (0.2.6-beta, 31/08):** `spawn`/`await` in Native was
 > implemented (CONC001 closed — `pthread_create` + trampoline +
 > `pthread_join` + thread-safe allocator with futex). Automatic GC remains
-> out (mark-sweep pending; free-list `kof_free_head` reuses `mmap`,
+> out (mark-sweep implemented 03/09, manual; free-list `kof_free_head` reuses `mmap`,
 > auto-GC disabled after a hang).
 
 ## 8. NOT included in this ABI

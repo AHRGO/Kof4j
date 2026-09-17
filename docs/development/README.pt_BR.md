@@ -2,13 +2,13 @@
 
 # Development — backlog vivo (só trabalho em desenvolvimento)
 
-> **Base:** `0.4.0-beta` · branch `beta-0.4.0` · **atualizado:** 13/09/2026
-> **Suíte medida neste HEAD:** `1662` run (1479 kof-compiler + 31 kof-script
-> + 5 kof-c-compiler + 147 kof-cli), **0 falhas** (13 erros = só `node` ausente, ambientais — todos `*Js`), 157 skip (guardas de
-> toolchain/node; sem qemu os 84 cross são skipados) — com cross riscv/aarch
-> 42+42 sob qemu real (G-0/§142 somaram os
-> testes de header/OOM). Gate pós-§131/§163 medido 13/09 (`gate_final2.log`, BUILD
-> SUCCESS). **Nº autoritativo da suíte = a execução no host** (o gate
+> **Base:** `0.4.0-beta` · branch `beta-0.4.0` · **atualizado:** 16/09/2026
+> **Suíte medida neste HEAD:** `2218` run (1911 kof-compiler + 38 kof-script
+> + 7 kof-c-compiler + 262 kof-cli), **0 regressões / 0 erros / 0 falhas nesta corrida**, 192 skip (a única falha que a suíte já mostrou é o flake INTERMITENTE conhecido do §252 nativo `spawnWorkerThrowPropagatesThroughSelectAnyNative`, dona lane nativa `.18`/nat — não é regressão; re-medido 16/09 ~15:54 no tip `9572949f` a partir de um CLONE LIMPO; o flake ficou CALADO pela 3ª vez seguida — disparou 09:44, calou 11:38/15:09/15:54 → ~1/4) (sem
+> qemu no host da medição: os 84 cross são pulados, + os 5 DBs externos +
+> outros guardas de toolchain; `node` presente — todos os `*Js` verdes) —
+> os 262 kof-cli refletem `e5013152` (DepsTransitiveTest, +10; `2a60b426` reescreveu o guard, mesmos 10 @Test). 1911 compiler = 1899 + 3 (`78b733fa` NumericFormatterE2ETest) + 2 (`7b38d0d4` §253-face-A KofTimeE2ETest) + 3 (`7cd69a7b` SSE-JS KofWebJsE2ETest) + 1 (`4ea099b3` §261 window-bind KofJsBrowserE2ETest) + 3 (`92d11a03` G-6b NativeX86GcMarkScopeTest); +1 skip no KofDbE2ETest = o guard de sysroot do §255 (`06e77e94`). O número 2199/1902/252 foi uma contagem no meio do caminho (medida enquanto `555d2afe`/`e5013152` landavam); 16/09 ~15:54 é o nº autoritativo do clone limpo. A leitura de 16/09 ~01:45 deu 297 erros = o trap de stub ECJ velho do §257, limpo com `mvn -pl kof-runtime clean`. O número
+> anterior (1662/13-erros, 13/09) era de host sem node. **Nº autoritativo da suíte = a execução no host** (o gate
 > `mvn test ... -Dmaven.test.failure.ignore=true`; conferir por módulo com
 > `grep -rl FAILURE */target/surefire-reports/*.txt`), não esta linha — ela
 > apodrece a cada commit. Refold da concatenação do `NativeRiscvAsm` para
@@ -29,7 +29,8 @@
 **Fontes de verdade que NÃO estão aqui (não são backlog):** `docs/status.md`
 (o que funciona + gate da suíte), `docs/backend-parity.md` (matriz de
 paridade com gaps honestos), `docs/bugs-and-gaps/specification-gaps.md`
-(SG-001–020 — fila do maintainer COMPLETA 12/09, virou referência).
+(SG-001–022 — fila do maintainer COMPLETA, virou referência; SG-021/022 =
+pedidos sem decisão).
 
 ---
 
@@ -49,10 +50,16 @@ paridade com gaps honestos), `docs/bugs-and-gaps/specification-gaps.md`
 | 5 | ~~`plan-editor-integration.md`~~ → `docs/tooling/PLAN-EDITOR-INTEGRATION.md` | ✅ **CONCLUÍDO 14/09** — degraus 0–13 implementados e provados (`EditorIntegrationTest` 23/23; `kof editor` completo nos 7 editores; release gate §19 verde) | movido para `docs/tooling/` (regra dos 3 estados) | — |
 | 6 | ~~`plan-stdlib-expansion.md`~~ → `docs/stdlib/PLAN-STDLIB-EXPANSION.md` | ✅ **CONCLUÍDO 14/09** — S0–S13 implementados e validados nos 5 alvos; pendências de decisão consolidadas em `DECISIONS.md` §D-STDLIB | movido para `docs/stdlib/` (regra dos 3 estados) | — |
 | 7 | fila recém-aberta de `DECISIONS.md` (13/09): ~~`time.todayIso/formatDateIso/isToday/hoursBetween/parseDateIso/tzOffsetSeconds` (D-STDLIB)~~ **✅ EXECUTADA 13/09** (S7e-S7h, matriz stdtime3-6, suíte 1772/0/0; TIME003 = fila geral) · ~~`CmdNew` (D-APP I1)~~ **✅ FEITO 14/09** (`kof new --type mono\|backend\|frontend\|full-stack`, esqueletos compiláveis, APP003 honesto, `CmdNewTest` 8/8, matriz APP em `backend-parity.md`) · ~~`chacha20Encrypt/Decrypt` (D-SEC)~~ **✅ FEITO 14/09** · ~~`security.cookies`~~ **✅ FEITO 14/09** · ~~`app.security()` (C18)~~ **✅ FEITO 14/09** (middleware composto, ordem fixa, JVM; `KofWebE2ETest` 22/22 + `appSecurityPipelineE2E`; Native/JS `WEB006`; superconjunto unificado .18×.22) · ~~`--fat` (D-APP I3)~~ **✅ FEITO 14/09** (`kof build --fat` → `kof-app.jar` executável com classes+runtime+deps; `CmdBuildFatTest` 4/4, prova `java -jar`; não-JVM recusa honesto R6) · ~~blog E2E (D-SPRING F12)~~ **✅ FEITO 14/09** (`KofBlogE2ETest` verde; expôs+corrigiu 2 bugs JVM: `readRequest` contava body em chars vs `Content-Length` em bytes — travava conexão UTF-8 multibyte; CLOB cru do JDBC no read path) | `RATIFICADO` (decisão travada 13/09) | — | ~~OAuth resource-server (D-SEC camada 16)~~ **✅ FEITO 14/09** (`auth.resourceServer(jwksUrl,issuer,aud)` + `resourceServerVerify`; RS/ES via JWKS, sem confusão de algoritmo; integra com `auth.authenticated`/`app.security`; `KofOAuthResourceServerTest` 4/4; Native/JS `SECN007`) — **FILA §7 VAZIA**; cada linha = unidade-teste-commit |
+| 8 | `PLAN-UNIVERSAL-PLATFORM.md` | `EM CURSO` — **promovido de `future/` 17/09** (`DECISIONS.md` §D-UNIVERSAL, R12 sobreposto); arquitetura ativa | diretriz da mantenedora 17/09: promover e implementar | **Estágio 1 (consolidação SYSTEMS) + R1–R12** — estado vivo 17/09: **R1 ✅ FEITO** (`5f1422c6` gate+ledger+CI da fronteira); **1.5 ✅ export OTel landado** (`435b7013`, `exportSpans`→OTLP/JSON; Native `OBS003` honesto); 1.1 MEDIA = `MEDIA001/003` documentados na matriz, implementação atrás das facades HTTP da worktree compartilhada `.22`; 1.2 GC x86 = lane nat (§260 G-6(a) re-medido — o gate morde, precisa re-baseline com sign-off da mantenedora); 1.4 registry/kofdeps = decisão da mantenedora. Reivindicar em `DOING.md` antes do código |
 | — | registros vivos: `conformance-matrix.md`, `ecosystem-coverage.md`, `KOFUI-AUDIT.md`, `known-bugs.md` (em `docs/bugs-and-gaps/`); `roadmap.md` (aqui); `roadmap-audit.md`/`complexity-audit.md` (em `docs/audits/`) | `VIVA` | **não são backlog** — matriz/auditoria/fila que se atualizam junto com cada fechamento | atualizar célula/seção no MESMO commit que fecha o gap |
 
-**Regra R12 (AGENTS.md):** nada de `future/` (plataforma universal, RAII,
-package-compiler) abre antes de SYSTEMS fechar (paridade + GC + estabilidade).
+**Regra R12 (AGENTS.md):** nada de `future/` (RAII, package-compiler,
+bare-metal) abre antes de SYSTEMS fechar (paridade + GC + estabilidade).
+**Exceção, decisão da mantenedora 17/09** (`DECISIONS.md` §D-UNIVERSAL):
+`PLAN-UNIVERSAL-PLATFORM.md` foi **promovido a trabalho corrente** com o portão
+R12 **sobreposto** — seu ponto de entrada é o Estágio 1 (consolidação SYSTEMS)
++ R1–R12, então ele ataca justamente os itens SYSTEMS que esta regra manda
+fechar.
 
 ---
 
@@ -136,7 +143,7 @@ escalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 | ~~`PLATFORM-PLAN.md`~~ → `DECISIONS.md` §D-PLATFORM (morto) | F1–3/8/9 com código (`ProjectLocator`, `KofProjectConfig`, `Target.SCRIPT`, PKG006/007, conformance 11 testes) | F1 resolvido pelo manifesto; F4/F5→KOFUI-AUDIT/stdlib-web; F6 wasm/F7 android→tabela D-APP Q7/Q10; F9→conformance-matrix |
 | ~~`APPLICATION_MODEL.md`~~ → `DECISIONS.md` §D-APP (Q1–Q10 travados) | `application { onStart/onShutdown }` ✅ E2E 3 targets; I2 (full-stack) ✅ `FullStackE2ETest` | `CmdNew` (I1), I3 (`--fat`), System/distribuído — fila |
 | ~~`LEGACY_MIGRATION.md` + `DECOMPILER.md` + `TRANSLATOR.md`~~ → **`future/` (DESPRIORIZADO pela mantenedora 15/09)** — umbrella §4 IR/Confidence, §8 diff-testing; ~~+ `DIFFERENTIAL_TESTING.md` + `LEGACY_IR.md`~~ (FUNDIDAS no umbrella 13/09) | código fica no repo: `inspect/decompile/translate/compare/migrate` (`Main.java:25-29`) + `Confidence`/`Type.fromJvmSignature`; **NÃO é trabalho atual — promoção exige decisão explícita dela**; **contagem viva = `roadmap.md` §23 TIER 3–5** (não duplicar número aqui) | cobertura: switch/athrow opacos, `inspect --java` (R5 do audit), IR non-JVM |
-| ~~`IMPLEMENTATION_PLAN.md` / `ACTION_PLAN.md`~~ → `roadmap.md` §23 | **FUNDIDOS 13/09** (redundância ~85% entre si; status sobre-claimed vs código — ex.: `CodegenStep` ✅ inexistente, FFI Native era FFI001) | §23 é o plano único; tiers 6–12 = `future/` (R12) |
+| ~~`IMPLEMENTATION_PLAN.md` / `ACTION_PLAN.md`~~ → `roadmap.md` §23 | **FUNDIDOS 13/09** (redundância ~85% entre si; status sobre-claimed vs código — ex.: `CodegenStep` ✅ inexistente, FFI Native era FFI001) | §23 é o plano único; tiers 6–12 = `PLAN-UNIVERSAL-PLATFORM.md` (promovido 17/09, R12 sobreposto) |
 | ~~`PLANNING-FUTURE-AUDIT.md` / `planning-future-reconcile.md`~~ → `docs/audits/` | comparação branch `planning-future`×beta **encerrada 13/09** — nada de código aberto próprio mora nelas: R2 vive em `DECISIONS.md` §D-APP/§D-PLATFORM; R5 no cluster migração (`DECOMPILER.md`/`LEGACY_MIGRATION.md` §4 Fase C) | — (fora de `development/`) |
 | ~~`planning-finally-return.md`~~ → `docs/decisions/DD-01-finally-return.md` | FECHADO 13/09 (FinallyFrame IR + gates; bug 45 CORRIGIDO, suíte 1627/0) | — (fora de `development/`) |
 | ~~`planning-stdlib-time-design.md`~~ → `DECISIONS.md` §D-STDLIB | `addDays`/`diffDays` nos 5 alvos | ✅ RATIFICADO 13/09 — fila liberada |
@@ -158,16 +165,18 @@ escalar, §108, §138, MATH001, TIME002, **§145/§146/§147 (issue #101,
 | `roadmap.md` | §§8–11 ❌ (frontend same-project, monólito→micro) | longo prazo |
 | ~~`roadmap-audit.md`~~ → `docs/audits/roadmap-audit.md` | matriz 06/09 + fila P0→P5 (P0 FECHADO 09/09) | re-audit quando algo fecha |
 | ~~`KOFUI-AUDIT.md`~~ → `docs/bugs-and-gaps/` | UI001-Native (face R6: no-op silencioso) ABERTO | lane UI |
-| ~~`known-bugs.md`~~ → `docs/bugs-and-gaps/` | 8 abertos (triagem §2 acima; §81/§163/§127-JVM, §155, §94, §157-160 e §65 fechados/NÃO-REPRODUZ 13/09) | fila viva |
+| ~~`known-bugs.md`~~ → `docs/bugs-and-gaps/` | 32 abertos (a contagem viva e a triagem estão no §2 acima; §81/§163/§127-JVM, §155, §94, §157-160 e §65 fechados/NÃO-REPRODUZ 13/09) | fila viva |
 | ~~`refactoring/PLAN-SOLID-500.md`~~ → `docs/architecture/PLAN-SOLID-500.md` | ✅ **FEITO + MOVIDO 13/09** (F1–F9 todas fechadas — F3: NativeBackend 498 ≤500 medido, bloqueio da lane GC caducou/regra do dono-morto); ratchet `check_500-baseline.txt` (dívidas travadas — nº autoritativo = `wc -l` do arquivo) no CI | plano FECHADO (regra dos 3 estados) |
+| `PLAN-UNIVERSAL-PLATFORM.md` | **EM DESENVOLVIMENTO 17/09** — promovido de `future/` por decisão da mantenedora, que **sobrepõe o portão R12** (`DECISIONS.md` §D-UNIVERSAL); ponto de entrada = Estágio 1 (consolidação SYSTEMS) + R1–R12 | arquitetura dos Tiers 6–12; visão/design congelados, só as claims de estado são sincronizadas com o código |
 
 ### 4.3 `future/` — só plano, zero código (não é trabalho atual)
 
 | Arquivo | Gatilho p/ cair p/ cá |
 |---|---|
-| `PLAN-UNIVERSAL-PLATFORM.md` | decisão + SYSTEMS fechado (R12) |
+| `PLAN-MULTIPARADIGMA.md` (multiparadigma / pipelines funcionais + queries declarativas; 16/09, só design) | primeiro incremento funcional começa (SYSTEMS fechado, R12) |
 | `scoped-resources-plan.md` (RAII TIER 2.4) | bump com `using`/`resource_scope` decidido |
 | `PLAN-BAREMETAL-BOOT.md` (nativo → bare-metal/bootável; diretiva da mantenedora 15/09) | SYSTEMS fechado (R12) + primeira face (costura HAL) autorizada |
+| `DECOMPILER.md`, `TRANSLATOR.md`, `LEGACY_MIGRATION.md` (plataforma de migração legado) | **de volta p/ cá 15/09 — DESPRIORIZADO pela mantenedora**; promoção exige decisão explícita dela |
 
 *(DD-STDLIB-01 `planning-stdlib-array-returns.md` **saiu de `future/` 13/09** — decisão 6a ratificada, implementado e movido p/ `docs/stdlib/DD-STDLIB-01-array-returns.md`.)*
 
@@ -180,8 +189,8 @@ evidência em cada linha de §4.1; snapshot SG 08/09 → `docs/history/`)*
 
 | Saiu p/ | Doc | Prova |
 |---|---|---|
-| `docs/bugs-and-gaps/specification-gaps.md` | SG-001–020 + E1–E3 | fila do maintainer COMPLETA (resumo do próprio doc); snapshot antigo → `docs/history/specification-gaps-0.3.0-snapshot.md` |
-| `docs/stdlib/DATABASE_VISION.md` | níveis 0–4 | query DSL 01/09 (`KofOrmE2ETest` 22), MySQL prepared (`nativeMysqlPreparedBinary`), pooling ✅; DB001/ORM001 vivem na matriz de paridade |
+| `docs/bugs-and-gaps/specification-gaps.md` | SG-001–022 + E1–E3 | fila do maintainer COMPLETA (resumo do próprio doc); snapshot antigo → `docs/history/specification-gaps-0.3.0-snapshot.md` |
+| `docs/stdlib/DATABASE_VISION.md` | níveis 0–4 | query DSL 01/09 (`KofOrmE2ETest` 31; paridade JS 18/09), MySQL prepared (`nativeMysqlPreparedBinary`), pooling ✅; DB001/DB002/ORM001 (native) vivem na matriz de paridade |
 | `docs/audits/complexity-audit.md` | snapshot 02/09 | números pré-SOLID-500; gate vivo = `scripts/check_500.sh` (ratchet) |
 | `docs/history/roadmap-gap-2026-09-03.md` | gap report datado | pendências vivem em roadmap-audit/known-bugs |
 | `docs/decisions/` | `planning-switch-expr`, `planning-mutability` | SYN001, DD-02/SEM037/SEM038 aplicados |

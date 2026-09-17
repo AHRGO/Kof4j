@@ -38,7 +38,7 @@ app.use {
 }
 ```
 
-## Suporte por target (0.3.22-beta)
+## Suporte por target (0.4.0-beta)
 
 | Função | JVM | Native | JS |
 |--------|-----|--------|----|
@@ -51,4 +51,4 @@ app.use {
 | constantTimeEquals | ✅ | ✅ | ✅ |
 | auth web (rateLimit/sessions/apiKeys) | ✅ | ✅ | ✅ |
 
-Referência: docs/stdlib/security.md (0.3.22-beta), learn/36-security.md.
+Referência: docs/stdlib/security.md (0.4.0-beta), learn/36-security.md.

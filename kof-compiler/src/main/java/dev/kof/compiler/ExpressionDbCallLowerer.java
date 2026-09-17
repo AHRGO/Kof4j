@@ -38,7 +38,12 @@ public final class ExpressionDbCallLowerer {
             TypeEmitter.boxPrimitive(ops, argTypes.get(i));
         }
         if (KofDb.isQuery(mc.methodName())) {
-            if (typed && !mc.typeArguments().isEmpty()) {
+            // DB002 (18/09): no JS o className NAO vai na wire — a ponte host
+            // nao tem Class.forName p/ classes JS (Target.JS nao emite
+            // bytecode). O guest baixa as rows JSON strings do untyped e faz
+            // o bind no MESMO helper do json.decode<List<T>> (JsRuntimeOps,
+            // __kof_decode_<T>); retType List<T> continua carregando o tipo.
+            if (typed && !mc.typeArguments().isEmpty() && driver.target != Target.JS) {
                 ops.add(new KofLoadLiteral(BuiltinTypes.STRING, mc.typeArguments().get(0)));
             } else {
                 ops.add(new KofLoadLiteral(Type.UnknownType.UNKNOWN, null));

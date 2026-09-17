@@ -6,21 +6,21 @@
 > of the 3 states: nothing completed stays in development/). Levels 0–4 implemented and
 > proven: Level 3 (typed Query DSL `User.query(db){...}` → `db.query<T>`) ✅
 > 01/09 (`KofOrmE2ETest` 22); binary prepared MySQL ✅ 03/09
-> (`KofDbE2ETest.nativeMysqlPreparedBinary`); connection pool ✅. DB001/ORM001 in
-> riscv/aarch/JS are honest R6 gaps tracked in `docs/backend-parity.md`,
+> (`KofDbE2ETest.nativeMysqlPreparedBinary`). Connection pooling is PLANNED (no pool today — each `connect` opens its own connection, §Limitations below). DB001/ORM001 in
+> (DB001 closed: riscv/aarch 15/09 + JS 16/09); only `ORM001` remains an honest R6 gap tracked in `docs/backend-parity.md`,
 > not a pending item of this vision.
 
 **Last updated:** September 12, 2026
-**Version:** 0.2.6-beta
-**Status:** Levels 0-2 and 4 implemented (`kof.db` + `kof.orm`, 0.2.6-beta):
+**Version:** 0.4.0-beta
+**Status:** Levels 0-2 and 4 implemented (`kof.db` + `kof.orm`, 0.4.0-beta):
 `entity` (schema in the language), `orm.create/save/saveAll/find/all/where/
 where-op/delete/deleteAll/count/count-filtrado/page/migrate` (JDBC on the JVM:
 H2, MySQL, MariaDB, PostgreSQL, SQLite; record mappings; versioned
 migrations) + **MongoDB**; native SQLite via `libsqlite3.so.0` directly
 (real E2E roundtrip); native MySQL/MariaDB via wire protocol in progress
 (auth scramble SHA-1 `kof_db_mysql_scramble` + `lenenc` + parse `user:pass@`
-done; full handshake/query/prepared pending); `VERSION` 0.2.6-beta;
-build 810 tests.
+done; full handshake/query/prepared pending); `VERSION` 0.4.0-beta;
+build 2218 tests.
 
 ---
 
@@ -217,7 +217,7 @@ db.close(db)
   `user:pass@` in the DSN `mysql://[user[:pass]@]host[:port][/db]`) — in
   progress: full handshake, query and prepared statements pending;
   no E2E test against a real server yet.
-- **JS:** `DB001` (clear diagnostic at compile-time).
+- **JS:** untyped (16/09, bridge on the GraalJS host); typed `query<T>` = `DB002` CLOSED 18/09 (guest-side bind via `__kof_decode_<T>`).
 - Tests: `KofDbE2ETest` (9) + `KofOrmE2ETest` (16, includes MariaDB/PostgreSQL/
   MongoDB with conditional skip + native SQLite). The native link includes the MySQL
   lib only when the program uses it (literal DSN detected at
@@ -274,7 +274,10 @@ main() {
 - **MongoDB:** `save/find/all/where/delete/count` over the official driver via
   compatible reflection (`Bson`/`Class`, without `ClientSession`); E2E test with
   a real container (conditional skip; Mongo service in CI).
-- **Native/JS:** report `ORM001` (gap documented at compile-time).
+- **Native:** reports `ORM001` (gap documented at compile-time). **JS:** CLOSED
+  18/09 — `kof.orm` runs on the GraalJS host via `KofJsOrmBridge` (same SQL as
+  `JvmOrmRuntime`), typed records bound guest-side (`__kof_decode_<T>`); byte-parity
+  E2E in `KofOrmE2ETest` (`js*` cases).
 - Tests: `KofOrmE2ETest` (16; entity, CRUD, `where` operators, `migrate`,
   `unique`, non-numeric PK, MongoDB E2E, `ORM001`/`ORM002`).
 
@@ -316,7 +319,7 @@ config {
 
 ### Connection Pool
 
-The runtime can manage the connection pool automatically. The programmer does not need to configure it.
+Planned — not implemented. Today each `db.connect` opens its own physical connection; a managed pool (reuse, sizing, timeouts) is a documented residual of this vision, not current behavior.
 
 ---
 

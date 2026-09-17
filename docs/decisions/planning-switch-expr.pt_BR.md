@@ -30,7 +30,7 @@ Antes da mudança, o que o compilador **já** faz (importante para o escopo):
 - **Exaustividade de enum já é erro** (`SEM031`): switch sobre enum sem
   `default` e sem cobrir todas as constantes não compila.
 - **Pattern matching já existe** na forma statement: `case String s:` e
-  `case Point(var x, var y):` (`Parser.parseSwitchStatement`).
+  `case Point(var x, var y):` (`StatementParser.parseSwitchStatement`).
 - **Precedente de expressão já existe:** `if` já é expressão (`IfExpr`,
   `var s = if (c) "a" else "b"`).
 

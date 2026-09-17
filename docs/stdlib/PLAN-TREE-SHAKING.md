@@ -34,7 +34,7 @@ The x86_64 "hello" binary contains, verified by `strings`: `kof_jwt_*`,
 (HTTP server), `kof_mq_*`, `kof_channel_*`, `kof_cache_*`, DB, URI,
 math-double, random, uuid, observability — **none of this is reachable from the
 program**. It is exactly the scenario the maintainer's briefing wants to
-eliminate, and the risk table of `PLAN-UNIVERSAL-PLATFORM.md:1307` already
+eliminate, and the risk table of `docs/development/PLAN-UNIVERSAL-PLATFORM.md:1318` already
 anticipates it: *"Bloated stdlib → capability/link by usage"*.
 
 The 11/09 numbers in the cross E2E (riscv 34/0, aarch 34/0) hold for

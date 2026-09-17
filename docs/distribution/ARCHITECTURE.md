@@ -2,7 +2,7 @@
 
 # Kof Distribution Architecture
 
-**Version:** 0.2.6-beta (08/30/2026)
+**Version:** 0.4.0-beta (09/16/2026)
 
 Kof is not just a compiler — it is a distributable platform. Starting with
 0.2.x-beta, the project treats installation as an official part of the product:
@@ -52,7 +52,7 @@ Full matrix in [PACKAGING.md](PACKAGING.md).
 
 Kof's JVM backend needs a JVM to run compiled programs.
 Instead of depending on the user's environment, the official package **ships a
-compatible OpenJDK** (Eclipse Temurin 21, aligned with the Tooling API Level).
+compatible OpenJDK** (Eclipse Temurin 25; the tooling API level stays 21 — D-BASELINE).
 
 Decisions:
 
@@ -77,9 +77,10 @@ The tooling distributed by Kof assumes the **Java 21 API** as its baseline.
 
 - APIs used by the tooling are compatible with Java 21.
 - Kof does not require Java earlier than 21 for its tooling.
-- The official package carries its own JVM (Temurin 21).
-- Later OpenJDK versions (e.g.: 25) may be used internally
-  when appropriate, **without** making that version a mandatory requirement.
+- The official package carries its own JVM (Temurin 25).
+- The repo toolchain requires JDK 25 (D-BASELINE, 14/09): building the repo and
+  running the CLI are JDK 25. The tooling **API level** stays 21
+  (`KofVersion.TOOLING_API`) and Kof programs still run on JVM 21+.
 
 This decision is documented in [docs/tooling/README.md](../tooling/README.md)
 and is reported by `kof info` (`Tooling API: 21`).
@@ -170,7 +171,7 @@ sha256sum -c SHA256SUMS
 After installing:
 
 ```bash
-kof version      # kof 0.2.6-beta (the version of your release)
+kof version      # kof 0.4.0-beta (the version of your release)
 kof info         # full environment (embedded JVM shows up with "(embedded)")
 kof run hello.kf
 ```

@@ -144,8 +144,8 @@ public final class CompilerPipeline {
         if (!driver.externalClasspath.knows("android/app/Activity")) {
             if (driver.currentDiagnostics != null) {
                 driver.currentDiagnostics.warning("", 0, 0, 0,
-                        "driver.target android sem android.jar no ExternalClasspath: "
-                                + "a host Activity não foi incluída no jar",
+                        "driver.target android without android.jar in ExternalClasspath: "
+                                + "the host Activity was not included in the jar",
                         "AND004");
             }
             return unit;
@@ -259,8 +259,8 @@ public final class CompilerPipeline {
             // KofScript não compila — interpreta (interpret()). Emitir com
             // este target seria fallback silencioso (R6): diagnóstico claro.
             diagnostics.error(driver.currentSourceName, 0, 0, 0,
-                    "target 'script' não emite artefatos; use kof run --target script"
-                            + " (interpretação direta da IR) ou outro target",
+                    "target 'script' emits no artifacts; use kof run --target script"
+                            + " (direct IR interpretation) or another target",
                     "COMP003");
             return;
         }
@@ -279,7 +279,8 @@ public final class CompilerPipeline {
         Backend backend = CompilerPipeline.selectBackend(driver, target);
         backend.emit(irModule, outputDir, driver.debugInfoEnabled);
         if (target == Target.ANDROID) {
-            new AndroidProjectWriter().write(outputDir, irModule);
+            new AndroidProjectWriter(driver.androidMinSdk, driver.androidTargetSdk)
+                    .write(outputDir, irModule);
         }
     }
 
@@ -304,6 +305,7 @@ public final class CompilerPipeline {
             unit = CompilerPipeline.appendAndroidHostIfNeeded(driver, unit);
         }
         driver.semanticAnalyzer = new SemanticAnalyzer();
+        driver.semanticAnalyzer.setTarget(driver.target);
         driver.semanticAnalyzer.setExternalTypes(driver.externalClasspath);
         driver.semanticAnalyzer.setDeclarationPackageLookup(d -> driver.declarationPackages.get(d));
         driver.semanticAnalyzer.analyze(unit, diagnostics);
@@ -400,8 +402,8 @@ public final class CompilerPipeline {
             if (!declared.isEmpty() && !declared.equals(derivedPkg)) {
                 diagnostics.error(sources.get(i).toString(), 0, 0, 0,
                         "package '" + declared
-                                + "' não corresponde ao diretório ('" + derivedPkg
-                                + "') — um diretório é um pacote",
+                                + "' does not match the directory ('" + derivedPkg
+                                + "') — a directory is a package",
                         "PKG004");
                 return null;
             }

@@ -7,7 +7,7 @@ construção com exemplos mínimos verificáveis. As **regras formais** estão e
 [grammar.md](grammar.md); os **tokens** em [lexical-structure.md](lexical-structure.md);
 a **semântica** nos documentos de domínio. Não repete — referencia.
 
-> Todo exemplo aqui **compila** no `kof-compiler` 0.3.0-beta (verificado por
+> Todo exemplo aqui **compila** no `kof-compiler` 0.4.0-beta (verificado por
 > probe/suíte). Exemplos que *parecem* válidos mas não compila estão listados
 > em [lexical-structure.md](lexical-structure.md) §5.3 e
 > [specification-gaps.md](../bugs-and-gaps/specification-gaps.md).
@@ -26,10 +26,10 @@ main() {
 
 `kof
 var x = 10              // inferido int, mutável
-val y = 20              // "imutável" (não-garantido — SG-010)
+val y = 20              // imutável (reatribuição → SEM037)
 String nome = "Mel"     // type-first
 var idade: Int = 30     // anotado
-String? opcional = null // nullable
+String? opcional = find(key) // nullable — null via API (literal `= null` é SEM048)
 var arr: Int[] = new Int[3]
 `
 
@@ -178,6 +178,20 @@ main() {
 @JsonFormat(using = MyMapper.class)
 record Dato(Int x)
 `
+
+## FFI com C — `extern` (JVM, 1-arg)
+
+`kof
+extern "/lib/x86_64-linux-gnu/libm.so.6" cos(Double x): Double
+main() { println(cos(0.0)) }            // JVM: 1.0
+`
+
+A gramática aceita qualquer assinatura, mas a **whitelist** da JVM prende
+1-arg apenas: `f(Int): Int`, `f(String): Int`, `f(Double): Double`. O resto →
+`FFI001` em tempo de compilação; o target JS → `FFI002`; Native → `FFI001`
+até o §61. O caminho da lib é resolvido em **runtime** (símbolo ausente =
+exceção `kof_ffi_*`). O alargamento é a fatia R3
+(`docs/development/PLAN-UNIVERSAL-PLATFORM.md`, #431).
 
 ## Testes e lifecycle
 

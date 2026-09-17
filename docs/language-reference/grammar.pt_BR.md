@@ -51,11 +51,12 @@ top-level-declaration =
     | annotation-list , function-declaration
     | test-declaration
     | application-declaration
+    | extern-declaration
     | type-declaration
     | function-declaration ;
 `
 
-**Somente** declarações de tipo e de função podem aparecer no topo. `val`/`var`
+**Somente** declarações de tipo, de função, blocos `test`/`application` e `extern` podem aparecer no topo. `val`/`var`
 no topo → `PARSE007` (*probe*). Não há `let` (SG-001).
 
 > **Resolução da pergunta "o parser produz diretamente a AST?":** **não.** O
@@ -76,15 +77,15 @@ type-declaration =
 
 modifiers = { "public" | "private" | "protected" | "static" | "final"
             | "abstract" | "transient" | "volatile" | "synchronized"
-            | "native" | "default" | "override" } ;                 (* `Parser.parseModifiers` *)
+            | "native" | "default" | "override" } ;                 (* `TypeDeclarations.parseModifiers` *)
 
 class-declaration = modifiers , "class" , identifier , [ type-parameters ] ,
                     [ "extends" , type-ref ] , [ implements-clause ] ,
-                    ( class-body | record-header , class-body ) ;   (* `Parser.parseTypeDeclaration (class)` *)
+                    ( class-body | record-header , class-body ) ;   (* `TypeDeclarations.parseClassDeclaration` *)
 `
 
 > `class X(...)` **com parênteses** é parseado como **record** (corpo via
-> `parseRecordBody`, Parser.parseRecordBody) — não como classe com primary
+> `parseRecordBody`, TypeDeclarations.parseRecordDeclaration) — não como classe com primary
 > constructor. É o comportamento documentado em `AGENTS.md`.
 
 `ebnf
@@ -94,7 +95,7 @@ class-member = annotation-list , modifiers , ( constructor-declaration
 
 interface-declaration = modifiers , "interface" , identifier ,
                         [ "extends" , type-ref , { "," , type-ref } ] ,
-                        "{" , { class-member } , "}" ;              (* `Parser.parseTypeDeclaration (class-body)` *)
+                        "{" , { class-member } , "}" ;              (* `TypeDeclarations.parseInterfaceDeclaration` *)
 `
 
 **Interfaces não aceitam type-parameters** (`interface F<T>` → `PARSE007`,
@@ -102,15 +103,15 @@ interface-declaration = modifiers , "interface" , identifier ,
 
 `ebnf
 record-declaration = modifiers , "record" , identifier , [ type-parameters ] ,
-                     [ "extends" , type-ref ] , [ implements-clause ] ,
-                     record-header , [ record-body ] ;              (* `Parser.parseTypeDeclaration (record)` *)
+                     [ "extends" , type-ref ] , record-header ,
+                     [ implements-clause ] , [ record-body ] ;      (* `TypeDeclarations.parseRecordDeclaration` *)
 record-header      = "(" , [ record-component , { "," , record-component } ] , ")" ;
 record-component   = annotation-list , modifiers , type-ref , identifier ,
                      [ "=" , expression ] ;                         (* `ClassMemberParser.parseField` *)
 record-body        = "{" , { class-member } , "}" ;
 
 enum-declaration = modifiers , "enum" , identifier ,
-                   "{" , [ identifier , { "," , identifier } ] , "}" ;  (* `Parser.parseTypeDeclaration (enum)` *)
+                   "{" , [ identifier , { "," , identifier } ] , "}" ;  (* `TypeDeclarations.parseEnumDeclaration` *)
 `
 
 **Enums são apenas constantes** — sem corpo, sem métodos, sem construtores, sem
@@ -119,7 +120,7 @@ valor de um enum **é** o nome (`String`) — ver [classes.md](classes.md).
 
 `ebnf
 entity-declaration = modifiers , "entity" , identifier ,
-                     "{" , { entity-field } , "}" ;                 (* `Parser.parseEntity` *)
+                     "{" , { entity-field } , "}" ;                 (* `TypeDeclarations.parseEntityDeclaration` *)
 entity-field       = identifier , ":" , type-ref , { "generated" | "unique" } ;
 `
 
@@ -147,6 +148,13 @@ parameter      = annotation-list , modifiers ,
                  [ "=" , expression ] ;                              (* `ClassMemberParser.parseField` *)
 throws-clause  = "throw" , type-ref , { "," , type-ref } ;           (* `TypeParser.parseThrows` *)
 type-parameters = "<" , identifier , { "," , identifier } , ">" ;    (* `TypeParser.parseTypeParameters` *)
+
+extern-declaration = "extern" , [ string-literal ] , identifier ,
+                     [ type-parameters ] , "(" , [ parameter-list ] , ")" ,
+                     [ ":" , type-ref ] , [ ";" ] ;                  (* `Parser.parseExternDeclaration` *)
+(* sem corpo: o binding é por target no runtime (whitelist JVM 1-arg;
+   FFI001 JVM-arity / FFI002 JS). A gramática ACEITA qualquer aridade;
+   CompilerPipeline.isExternBound rejeita além da whitelist em tempo de compilação. *)
 `
 
 As **três formas de retorno** são válidas e equivalentes:
@@ -158,8 +166,11 @@ c() { … }             // sem tipo → void (default)
 `
 
 **Não existe keyword de declaração de função** (SG-001 resolvido 06/09):
-`fn`/`fun`/`func` como prefixo são rejeitados com `PARSE085`. Como *nome* de
-função continuam identificadores válidos. Parâmetros aceitam **default values**
+`fn`/`fun`/`func` como prefixo são rejeitados com `PARSE085`. Em **qualquer
+posição de nome** (função, variável, parâmetro, método, campo, classe, record,
+enum) também são rejeitados com `PARSE085` — o `ParseContext.expectId` emite o
+diagnóstico canônico (#330, medido 17/09). Nunca são identificadores válidos.
+Parâmetros aceitam **default values**
 (`parameter = expression`), que geram overloads sintéticos por aridade no
 lowering.
 
@@ -177,7 +188,7 @@ primitive-type = "bool" | "byte" | "short" | "int" | "long"
                | "float" | "double" | "char" | "string" ;           (* `TypeParser (primitivos)` *)
 qualified-name = identifier , { "." , identifier } ;
 generic-args   = "<" , type-ref , { "," , type-ref } , ">" ;        (* `TypeParser (generic args)` *)
-function-type  = "(" , [ type-ref , { "," , type-ref } ] , ")" , "->" , type-ref ;  (* `TypeParser.parseFunctionType` *)
+function-type  = "(" , [ type-ref , { "," , type-ref } ] , ")" , "->" , type-ref ;  (* `TypeParser.parseFunctionTypeRef` *)
 `
 
 O parser captura o tipo como **string bruta** (`parseTypeRef` devolve
@@ -257,9 +268,8 @@ Maior precedência no topo. **Todos os binários são left-associativos**
 
 ### 5.2 Short-circuit
 
-`&&` e `||` são avaliados com short-circuit por labels em **JVM e Native**;
-no **target JS o short-circuit é desligado** (`ExpressionLowerer.java:147-148`)
-— **Target-specific** (SG-006).
+`&&` e `||` são avaliados com short-circuit em **todos os targets** — JVM/Native
+por labels, JS pelos operadores nativos (SG-006 ✅ CORRIGIDO 09/09).
 
 ### 5.3 Operadores que NÃO existem (SG-002, verificado por probe)
 
@@ -300,12 +310,12 @@ expr-stmt   = expression , [ ";" ] ;
 
 `ebnf
 switch-stmt = "switch" , "(" , expression , ")" , "{" , { case-stmt } ,
-              [ default-stmt ] , "}" ;                              (* `StatementParser.parseSwitch` *)
+              [ default-stmt ] , "}" ;                              (* `StatementParser.parseSwitchStatement` *)
 case-stmt   = "case" , ( pattern | expression ) , ":" , { statement } ;
 default-stmt = "default" , ":" , { statement } ;
 
 switch-expression = "switch" , "(" , expression , ")" , "{" , { case-expr } ,
-                    [ default-expr ] , "}" ;                        (* `ExpressionParser.parseSwitchExpr` *)
+                    [ default-expr ] , "}" ;                        (* `ExpressionParser.parseSwitchExpression` *)
 case-expr   = "case" , ( pattern | expression ) , "->" , expression ;
 default-expr = "default" , "->" , expression ;
 

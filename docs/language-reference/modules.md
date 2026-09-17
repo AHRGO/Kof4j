@@ -121,6 +121,20 @@ Each area has its own document in `docs/stdlib*.md` (not duplicated here). The
 - **JVM**: Java types are accessible by qualified name (`java.util.Date`)
   when on the classpath (`ExternalClasspath.resolveMethod`, `:1535-1549`).
   **Target-specific.**
+- **C FFI (`extern "<lib>" f(T): R`)** — direct binding to native libraries
+  (JVM, `java.lang.foreign`). **Measured surface 17/09 (0.4.0-beta)**: exactly
+  three JVM-bound signatures (whitelist in `CompilerPipeline.isExternBound` +
+  `JvmFfiRuntime` helpers `kof_ffi_i`/`kof_ffi_si`/`kof_ffi_dd`):
+  `f(Int): Int`, `f(String): Int`, `f(Double): Double` — single argument only.
+  Anything else (arity ≠ 1, `String` return, 0-arg) fails at compile time with
+  `FFI001` (JVM whitelist) or `FFI002` (JS: "FFI not available on the JS target");
+  Native emits `FFI001` (`<target>` not supported yet) — never a silent stub (R6).
+  A missing lib/symbol fails at **runtime** with a `kof_ffi_*` exception naming
+  `lib::symbol` (stack trace, not a surgical message). Widening (multi-arg,
+  void, String return, `char*`) is the R3 first slice in
+  `docs/development/PLAN-UNIVERSAL-PLATFORM.md` (use-case #431); `extern "c"`
+  on Native depends on §61.
+
 - **Native/JS**: there is no interop with host types the same way. **Unspecified.**
 - **Annotations** (`@Name`, `@JsonFormat`) are interop metadata emitted in the
   JVM bytecode. **Target-specific** (only JVM preserves them).

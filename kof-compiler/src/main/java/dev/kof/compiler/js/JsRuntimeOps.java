@@ -39,7 +39,8 @@ boolean isRuntimeOp(KofCall kc) {
                 || name.startsWith("kof_enum_")
                 || name.startsWith("kof_config_")
                 || name.startsWith("kof_cache_")
-                || name.startsWith("kof_web_") || name.startsWith("kof_db_") || name.startsWith("kof_http_")
+                || name.startsWith("kof_web_") || name.startsWith("kof_db_")
+                || name.startsWith("kof_orm_") || name.startsWith("kof_http_")
                 || name.equals("kof_spawn") || name.equals("kof_spawn_result") || name.equals("kof_await")
                 || name.equals("kof_poll") || name.equals("kof_done")
                 || name.equals("kof_cancel") || name.equals("kof_cancelled")
@@ -283,14 +284,11 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
             stack.add(call);
             return;
         }
-        if (name.equals("kof_web_status") && args.size() == 2) {
-            stack.add(args.get(1));
-            return;
-        }
-        if (name.equals("kof_web_header_set") && args.size() == 2) {
-            stack.add(args.get(1));
-            return;
-        }
+        // §265 (JS): nao colapsar status()/headerSet() no 2º arg — havia aqui
+        // um ramo `status -> args.get(1)` / `headerSet -> args.get(1)` que
+        // descartava a chamada inteira (side-effect perdido) e SOMBRAVA o ramo
+        // correto mais abaixo (kofWebStatus/kofWebHeaderSet). Removido; cai no
+        // dispatch real.
         if (name.startsWith("kof_web_")) {
             // JS target: WEB001 REAL IMPLEMENTATION via GraalJS HttpServer
             // Uses Java.type('com.sun.net.8') + Value-based handler invoke
@@ -304,6 +302,12 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
             if (name.equals("kof_web_route")) {
                 p.lc.registerRuntime("kofWebRoute");
                 JsIr.JsExpression call = new JsIr.JsCall(new JsIr.JsIdentifier("kofWebRoute"), args);
+                throw new StatementEnd(call);
+            }
+            // WEB001 SSE (16/09): rota SSE no host GraalJS (handler-scoped).
+            if (name.equals("kof_web_sse_route")) {
+                p.lc.registerRuntime("kofWebSseRoute");
+                JsIr.JsExpression call = new JsIr.JsCall(new JsIr.JsIdentifier("kofWebSseRoute"), args);
                 throw new StatementEnd(call);
             }
             if (name.equals("kof_web_listen")) {
@@ -358,6 +362,13 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
             if (name.equals("kof_web_header_set") && args.size() == 2) {
                 p.lc.registerRuntime("kofWebHeaderSet");
                 stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofWebHeaderSet"), args));
+                return;
+            }
+            // WEB001 SSE (16/09): sse(text) dentro do handler de app.sse —
+            // escreve na conexão corrente (kofWebSseConn, handler-scoped).
+            if (name.equals("kof_web_sse_send") && args.size() == 1) {
+                p.lc.registerRuntime("kofWebSseSend");
+                stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofWebSseSend"), args));
                 return;
             }
             // fallback: R6 — o gap é EXPLICITO (kofWebStub lança WEB001), nunca undefined
@@ -415,7 +426,8 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
             return;
         }
         String fn = JsTypeMapper.runtimeJsName(name);
-        if (name.startsWith("kof_io_") || name.equals("kof_read_line")
+        if (name.startsWith("kof_io_") || name.startsWith("kof_db_") || name.startsWith("kof_orm_")
+                || name.equals("kof_read_line")
                 || name.equals("kof_read_file") || name.equals("kof_write_file")) {
             p.lc.registerIoRuntime(fn);
         } else {
@@ -427,6 +439,51 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
         }
         callArgs.addAll(args);
         JsIr.JsExpression call = new JsIr.JsCall(new JsIr.JsIdentifier(fn), callArgs);
+        if (name.startsWith("kof_db_query") && kc.returnType() instanceof Type.ClassType dbList
+                && BuiltinTypes.isList(dbList) && !dbList.typeArguments().isEmpty()
+                && dbList.typeArguments().get(0) instanceof Type.ClassType elem
+                && p.lc.classMethodNames.containsKey(elem.internalName())) {
+            // DB002 (18/09): bind tipado no GUEST. A wire é untyped (className
+            // null — ExpressionDbCallLowerer), entao a ponte devolve rows JSON
+            // strings; o MESMO helper `__kof_decode_<T>` do json.decode<List<T>>
+            // (célula 82-101 acima) faz o parse+bind por linha. Paridade com a
+            // JVM, onde db.query<T> e json.decode compartilham kof_json_bind.
+            String jsName = JsTypeMapper.jsClassName(elem.internalName());
+            p.lc.decodeHelpers.add(jsName);
+            call = new JsIr.JsCall(new JsIr.JsMember(call, "map"),
+                    List.of(new JsIr.JsArrow(List.of("o"), new JsIr.JsCall(
+                            new JsIr.JsIdentifier("__kof_decode_" + jsName),
+                            List.of(new JsIr.JsIdentifier("o"))))));
+        }
+        if (name.startsWith("kof_orm_")) {
+            // ORM001 (18/09): kof.orm no JS. A ponte host devolve rows/record
+            // como JSON strings (ou null p/ find ausente); o MESMO
+            // `__kof_decode_<T>` do json.decode/db.query faz o bind, dando
+            // paridade byte-a-byte com JvmOrmRuntime. List<T> (all/where/
+            // where_op/page) binda por linha; record único (find/save) passa por
+            // kofOrmSingle p/ preservar null de find sem re-executar a chamada.
+            if (kc.returnType() instanceof Type.ClassType ort) {
+                if (BuiltinTypes.isList(ort) && !ort.typeArguments().isEmpty()
+                        && ort.typeArguments().get(0) instanceof Type.ClassType elem
+                        && p.lc.classMethodNames.containsKey(elem.internalName())) {
+                    String jsName = JsTypeMapper.jsClassName(elem.internalName());
+                    p.lc.decodeHelpers.add(jsName);
+                    call = new JsIr.JsCall(new JsIr.JsMember(call, "map"),
+                            List.of(new JsIr.JsArrow(List.of("o"), new JsIr.JsCall(
+                                    new JsIr.JsIdentifier("__kof_decode_" + jsName),
+                                    List.of(new JsIr.JsIdentifier("o"))))));
+                } else if (!BuiltinTypes.isList(ort) && !BuiltinTypes.isString(ort)
+                        && p.lc.classMethodNames.containsKey(ort.internalName())) {
+                    String jsName = JsTypeMapper.jsClassName(ort.internalName());
+                    p.lc.decodeHelpers.add(jsName);
+                    p.lc.registerIoRuntime("kofOrmSingle");
+                    call = new JsIr.JsCall(new JsIr.JsIdentifier("kofOrmSingle"), List.of(call,
+                            new JsIr.JsArrow(List.of("o"), new JsIr.JsCall(
+                                    new JsIr.JsIdentifier("__kof_decode_" + jsName),
+                                    List.of(new JsIr.JsIdentifier("o"))))));
+                }
+            }
+        }
         if (name.equals("kof_await") || name.equals("kof_await_timeout")
                 || name.equals("kof_select_any")) {
             call = new JsIr.JsAwait(call);

@@ -5,16 +5,16 @@
 Fatos sobre a CLI oficial do Kof. Use para responder perguntas sobre
 comandos, tooling e editor support.
 
-**Version:** 0.4.0-beta (Sep 2026) — 810 tests
+**Version:** 0.4.0-beta (Sep 2026) — 2218 testes
 
-## Comandos oficiais (18)
+## Comandos oficiais (26)
 
 | Comando | Comportamento |
 |---------|---------------|
-| `kof build <dir> [--target jvm\|native\|native.risc\|native.arm\|js\|android] [--output <dir>] [--release] [--apk]` | Compila |
+| `kof build <dir\|file.kf> [--target jvm\|native\|native.risc\|native.arm\|js\|android] [--output <dir>] [--release] [--apk]` | Compila |
 | `kof run <file.kf\|dir> [--target jvm\|native\|native.risc\|native.arm\|js\|android] [args...]` | Compila e executa |
 | `kof serve <file.kf> [--port <port>] [--host <host>]` | Web server HTTP básico. `--port`/`--host` valem só no modo legacy (`handle`); app kof-native (`app.listen`) define a própria porta e a CLI avisa (#35.3) |
-| `kof check <file.kf\|dir>` | Type-check sem emitir código |
+| `kof check <file.kf\|dir> [--target <t>]` | Type-check sem emitir código (gaps por alvo) |
 | `kof test <file.kf\|dir> [--target jvm\|native\|js]` | Suíte estruturada `test "nome" { }`: PASS/FAIL por teste; arquivos sem testes rodam inteiros (PASS = exit 0) |
 | `kof script <file.ks> [--target jvm\|native\|js] [--watch] [--inspect] [args...]` | KofScript: JIT com top-level `let` → KofScriptGlobals, repl, cache 64 LRU |
 | `kof repl` | Alias para `kof script` interativo |
@@ -25,12 +25,21 @@ comandos, tooling e editor support.
 | `kof info [--json]` | Relatório do ambiente (inclui native.risc/arm, kofc) |
 | `kof lsp` | Language Server (stdio, LSP 3.x) — hover/completion + .ks preprocess |
 | `kof editor <list\|detect\|status\|setup\|install\|uninstall\|update>` | Integração de editores (EDI001): detecta VS Code/Vim/Neovim/IntelliJ/Geany/Nano/Emacs e instala a integração oficial (grammar + `kof lsp`), com consentimento. `install <editor>` escreve só no HOME; `uninstall` remove só o que o Kof escreveu. Docs: `docs/editors/` |
-| `kof version` | Versão da plataforma (0.3.22-beta) |
+| `kof version` | Versão da plataforma (0.4.0-beta) |
 | `kof bench [...]` | Benchmark harness com baselines |
 | `kof debug <file.kf>` | DAP MVP no JVM |
+| `kof profile <file.kf> [--target ...]` | Execução + métricas (CPU, RSS, GC) |
+| `kof inspect <file.kf> [--json]` | Estatísticas de IR: ops antes/depois da otimização |
+| `kof decompile <file.class> [--output <file.kf>]` | Esqueleto estrutural Kof de um `.class` |
+| `kof translate <file.java> [--output <file.kf>]` | Subset Java → código Kof |
+| `kof compare <legacy.class\|jar> <file.kf> [--json]` | Teste diferencial legado vs Kof |
+| `kof migrate <file.class\|java> [--output <file.kf>] [--json]` | Migração + relatório rastreável |
+| `kof new <name>` | Esqueletos de projeto por tipo |
+| `kof deps <init\|add\|remove\|list\|resolve>` | Gerenciador de pacotes (`kofdeps`, Maven Central) |
+| `kof install <dir>` | Instala este build como distribuição (launcher + `kof.jar`) |
 
 `kof fmt` (parser real, idempotente) e `kof config gen` são implementados
-(0.3.22-beta). Não existe comando `kof doctor` — o diagnóstico oficial é
+(0.4.0-beta). Não existe comando `kof doctor` — o diagnóstico oficial é
 `kof info`.
 
 ## KofScript
@@ -52,9 +61,10 @@ kof c app.c
 
 - O baseline de API Java do tooling é 21.
 - O Kof não exige Java anterior a 21 para seu tooling.
-- Versões posteriores (ex.: 25, Virtual Threads) podem ser usadas
-  internamente sem virar requisito.
-- O pacote oficial carrega sua própria JVM (Temurin 21).
+- O toolchain do repo exige JDK 25 (D-BASELINE, 14/09): compilar o repo e
+  rodar a CLI são JDK 25. O **API level** do tooling segue 21
+  (`KofVersion.TOOLING_API`); programas Kof seguem JVM 21+.
+- O pacote oficial carrega sua própria JVM (Temurin 25).
 
 ## Editor support
 
@@ -79,7 +89,7 @@ kof c app.c
 
 ## `kof info`
 
-Informa: versão do Kof (0.3.22-beta), versão do compiler/runtime/stdlib, tooling API level, target/arquitetura, SO, JVM embutida, versão da
+Informa: versão do Kof (0.4.0-beta), versão do compiler/runtime/stdlib, tooling API level, target/arquitetura, SO, JVM embutida, versão da
 JVM, targets disponíveis (jvm, native, native.risc, native.arm, js, kofc) e localização da instalação.
 Legível por humanos; `--json` para formato estruturado.
 

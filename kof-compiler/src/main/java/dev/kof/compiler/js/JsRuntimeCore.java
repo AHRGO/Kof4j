@@ -219,6 +219,7 @@ public final class JsRuntimeCore {
                 const root = document.getElementById("kof-root");
                 if (!root) return "";
                 const html = "<!DOCTYPE html>\\n<html>\\n<head>\\n<meta charset=\\"utf-8\\">\\n"
+                        + "<meta name=\\"viewport\\" content=\\"width=device-width, initial-scale=1, viewport-fit=cover\\">\\n"
                         + "<title>" + kofEscapeHtml(document.title || "Kof") + "</title>\\n"
                         + "</head>\\n<body>\\n" + kofSerialize(root) + "\\n</body>\\n</html>\\n";
                 globalThis.kof__uiRootHtml = html;
@@ -247,6 +248,17 @@ public final class JsRuntimeCore {
                     return a.equals(b) ? true : false;
                 }
                 return false;
+            }
+
+            // §262(b): igualdade de record null-safe p/ `==`/`!=` no JS (Objects.equals).
+            // Devolve NÚMERO 1/0 (a dobra JS do `!=` é `(x === 0)`, que só funciona
+            // com número). Guarda os DOIS lados: o `equals` sintético do record NÃO
+            // guarda o ARG (this._x === other._x → TypeError se other null).
+            export function kofRecordEq(a, b) {
+                if (a === b) return 1;
+                if (a === null || a === undefined || b === null || b === undefined) return 0;
+                if (typeof a.equals === "function") return a.equals(b) ? 1 : 0;
+                return 0;
             }
 
             // §111: split com a regra Java (não JS): remove vazios TRAILING,

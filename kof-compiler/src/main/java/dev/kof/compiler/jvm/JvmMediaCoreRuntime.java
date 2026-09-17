@@ -94,26 +94,26 @@ public final class JvmMediaCoreRuntime {
                     try {
                         java.nio.file.Path p = kof_media_resolve(path);
                         if (!java.nio.file.Files.isRegularFile(p)) {
-                            throw new RuntimeException("arquivo não encontrado: " + path);
+                            throw new RuntimeException("file not found: " + path);
                         }
                         java.awt.image.BufferedImage img =
                                 javax.imageio.ImageIO.read(p.toFile());
                         if (img == null) {
                             throw new RuntimeException(
-                                    "formato de imagem não suportado: " + path);
+                                    "unsupported image format: " + path);
                         }
                         int id = KOF_MEDIA_SEQ.incrementAndGet();
                         KOF_MEDIA_IMAGES.put(id, new KofImageFile(img,
                                 kof_media_format(p.getFileName().toString()), path));
                         return id;
                     } catch (java.io.IOException e) {
-                        throw new RuntimeException("Image.open falhou: " + e.getMessage(), e);
+                        throw new RuntimeException("Image.open failed: " + e.getMessage(), e);
                     }
                 }
 
                 private static KofImageFile kof_media_image(int id) {
                     KofImageFile f = KOF_MEDIA_IMAGES.get(id);
-                    if (f == null) throw new IllegalStateException("imagem inválida: " + id);
+                    if (f == null) throw new IllegalStateException("invalid image: " + id);
                     return f;
                 }
 
@@ -144,11 +144,11 @@ public final class JvmMediaCoreRuntime {
                                 kof_media_image(id).image, fmt, p.toFile());
                         if (!ok) {
                             throw new RuntimeException(
-                                    "sem writer para o formato '" + fmt + "'");
+                                    "no writer for format '" + fmt + "'");
                         }
                         return 1;
                     } catch (java.io.IOException e) {
-                        throw new RuntimeException("Image.save falhou: " + e.getMessage(), e);
+                        throw new RuntimeException("Image.save failed: " + e.getMessage(), e);
                     }
                 }
 
@@ -160,12 +160,12 @@ public final class JvmMediaCoreRuntime {
                         java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
                         if (!javax.imageio.ImageIO.write(f.image, f.format, bos)) {
                             throw new RuntimeException(
-                                    "sem writer para o formato '" + f.format + "'");
+                                    "no writer for format '" + f.format + "'");
                         }
                         return "data:image/" + f.format + ";base64,"
                                 + java.util.Base64.getEncoder().encodeToString(bos.toByteArray());
                     } catch (java.io.IOException e) {
-                        throw new RuntimeException("Image.dataUri falhou: " + e.getMessage(), e);
+                        throw new RuntimeException("Image.dataUri failed: " + e.getMessage(), e);
                     }
                 }
 
@@ -178,14 +178,14 @@ public final class JvmMediaCoreRuntime {
                         java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
                         if (!javax.imageio.ImageIO.write(kof_media_image(id).image, fmt, bos)) {
                             throw new RuntimeException(
-                                    "sem writer para o formato '" + fmt + "'");
+                                    "no writer for format '" + fmt + "'");
                         }
                         byte[] b = bos.toByteArray();
                         int[] out = new int[b.length];
                         for (int i = 0; i < b.length; i++) out[i] = b[i];
                         return out;
                     } catch (java.io.IOException e) {
-                        throw new RuntimeException("Image.bytes falhou: " + e.getMessage(), e);
+                        throw new RuntimeException("Image.bytes failed: " + e.getMessage(), e);
                     }
                 }
 
@@ -203,7 +203,7 @@ public final class JvmMediaCoreRuntime {
                     try {
                         java.nio.file.Path p = kof_media_resolve(path);
                         if (!java.nio.file.Files.isRegularFile(p)) {
-                            throw new RuntimeException("arquivo não encontrado: " + path);
+                            throw new RuntimeException("file not found: " + path);
                         }
                         byte[] data = java.nio.file.Files.readAllBytes(p);
                         int id = KOF_MEDIA_SEQ.incrementAndGet();
@@ -212,7 +212,7 @@ public final class JvmMediaCoreRuntime {
                                 path, kof_media_mp4_duration_ms(data)));
                         return id;
                     } catch (java.io.IOException e) {
-                        throw new RuntimeException("Video.open falhou: " + e.getMessage(), e);
+                        throw new RuntimeException("Video.open failed: " + e.getMessage(), e);
                     }
                 }
 
@@ -227,7 +227,7 @@ public final class JvmMediaCoreRuntime {
 
                 private static KofVideoFile kof_media_video(int id) {
                     KofVideoFile v = KOF_MEDIA_VIDEOS.get(id);
-                    if (v == null) throw new IllegalStateException("vídeo inválido: " + id);
+                    if (v == null) throw new IllegalStateException("invalid video: " + id);
                     return v;
                 }
 
@@ -325,7 +325,7 @@ public final class JvmMediaCoreRuntime {
                         java.nio.file.Path p = kof_media_resolve(path);
                         return kof_media_audio_store(kof_media_read_wav(p));
                     } catch (java.io.IOException e) {
-                        throw new RuntimeException("Audio.openWav falhou: " + e.getMessage(), e);
+                        throw new RuntimeException("Audio.openWav failed: " + e.getMessage(), e);
                     }
                 }
 
@@ -346,7 +346,7 @@ public final class JvmMediaCoreRuntime {
                         java.nio.file.Files.write(p, kof_media_write_wav(kof_media_audio(id)));
                         return 1;
                     } catch (java.io.IOException e) {
-                        throw new RuntimeException("Audio.saveWav falhou: " + e.getMessage(), e);
+                        throw new RuntimeException("Audio.saveWav failed: " + e.getMessage(), e);
                     }
                 }
 
@@ -372,7 +372,7 @@ public final class JvmMediaCoreRuntime {
 
                 private static KofAudioData kof_media_audio(int id) {
                     KofAudioData a = KOF_MEDIA_AUDIO.get(id);
-                    if (a == null) throw new IllegalStateException("áudio inválido: " + id);
+                    if (a == null) throw new IllegalStateException("invalid audio: " + id);
                     return a;
                 }
 
@@ -392,7 +392,7 @@ public final class JvmMediaCoreRuntime {
                     if (all.length < 12
                             || all[0] != 'R' || all[1] != 'I' || all[2] != 'F' || all[3] != 'F'
                             || all[8] != 'W' || all[9] != 'A' || all[10] != 'V' || all[11] != 'E') {
-                        throw new RuntimeException("não é um WAV RIFF: " + p);
+                        throw new RuntimeException("not a WAV RIFF: " + p);
                     }
                     int channels = 0, sampleRate = 0, bits = 0;
                     byte[] data = null;
@@ -409,7 +409,7 @@ public final class JvmMediaCoreRuntime {
                             bits = kof_media_le16(all, body + 14);
                             if (audioFormat != 1) {
                                 throw new RuntimeException(
-                                        "WAV não suportado: codec " + audioFormat + " (precisa de PCM 1)");
+                                        "unsupported WAV: codec " + audioFormat + " (needs PCM 1)");
                             }
                         } else if ("data".equals(cid)) {
                             data = new byte[size];
@@ -419,7 +419,7 @@ public final class JvmMediaCoreRuntime {
                     }
                     if (data == null || sampleRate <= 0 || bits != 16) {
                         throw new RuntimeException(
-                                "WAV não suportado: precisa de PCM 16-bit (bits=" + bits + ")");
+                                "unsupported WAV: needs PCM 16-bit (bits=" + bits + ")");
                     }
                     return new KofAudioData(data, sampleRate, channels);
                 }

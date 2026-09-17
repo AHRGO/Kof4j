@@ -26,16 +26,17 @@ because they exist in other languages. Code like that **does not compile** or
 | If-expr `if (c) a else b` | ✅ Implemented |
 | `json.encode` / `json.decode<T>` | ✅ Implemented (3 targets; JSN001/002/003 closed 31/08 — objects/records/arrays, FP XMM in Native) |
 | `throw "msg"` / `try/catch/finally` | ✅ Implemented (JVM + Native unwinding) |
-| `String?` / `Int?` null safety + `if (x != null)` narrowing | ✅ Implemented (since 0.2.6-beta, NullableType + isAssignable) |
+| `String?` / `Int?` null safety + `if (x != null)` narrowing | ✅ Implemented (since 0.2.6-beta, NullableType + isAssignable; `= null` literal rejected SEM048 since 10/09). ⚠️ nullable of `Int?` **folds `null`→`0` silently** (open bug #259/D-NULL-INTENT, §125) — the "✅" is the String/class path; a null **record** `T?` vs `null` also threw NPE (§262), fixed 17/09 |
 | Pattern matching `switch (x) { case String s: ... }` + `instanceof`/`as` | ✅ Implemented |
 | Pattern record destructuring `case Point(x, y):` | ✅ Implemented (Parser PatternExpr fieldVars, since 0.2.6-beta) |
 | Switch as expression `var r = switch (x) { case A -> b; default -> c }` | ✅ Implemented (SYN001, 03/09 — 3 targets + riscv64/aarch64; `default` required or enum exhaustiveness, otherwise `SEM032`) |
-| `spawn` / `await` with `Handle<T>` and unboxing | ✅ 3 targets (JVM virtual threads; Native pthread — CONC001 closed 31/08; JS sequential — CONC003 partial) |
+| `spawn` / `await` with `Handle<T>` and unboxing | ✅ 3 targets (JVM virtual threads; Native pthread — CONC001 closed 31/08; JS event-loop — CONC003 closed 03/09) |
 | Primary constructor `class X(...)` / `record` | ✅ Implemented (record-style since 0.0.5) |
 | `Thread` / `Executor` (platform APIs) | ❌ Unavailable — never use (`spawn` is the intent) |
 | Generic `Option<T>` | ❌ Planned — use `String?` for nullability |
 | `Int.MAX_VALUE` / `Long.MIN_VALUE` / `Int.SIZE` / `Int.<campo>` | ❌ Unavailable (bug 99, 10/09) — primitive types **have no static fields/constants**. `SEM050`: rejected in the typer (it was accepted silently and generated `NoClassDefFoundError "?"`/SIGSEGV, and `var x = Int.MAX_VALUE` **crashed the compiler**). Use the **literal** (`2147483647`, `9223372036854775807`, `-2147483648`) or `as`. (`String.valueOf(42)`/`String.format(...)` are the opposite path: **methods** with parentheses, implemented — the exemption applies only to *type* position, `x: Int`/`x as Int`, not to *field access*.) |
 | `l.remove(elemento)` by VALUE (Java `List.remove(Object)`) | ❌ Unavailable — List `remove/get/set` take an **Int index** and `remove` returns the element (learn/12). By value use `contains(x)` / a loop with `get(i)`. `SEM055` rejects non-Int in the index (bug 122: it was accepted → JVM VerifyError, Native pointer-as-index) |
+| `l.add(i, v)` (Java positional **insert**) | ❌ Unavailable — List `add`/`push`/`append` take exactly **one** element and append it; there is **no positional insert** (learn/12). `SEM072` rejects the 2-arg form in the shared typer (#336: it was accepted → JVM VerifyError, JS/Script silent wrong-append). To place a value at an index, `set(i, v)` replaces an existing element |
 | `listOf("a").add(5)` / `setOf("a").add(5)` / `mapOf("k",1).put(5,"v")` (HETEROGENEOUS collection) | ❌ Unavailable — Kof collections are **HOMOGENEOUS** (bug 126, maintainer's decision 11/09): after the type PINS (by the `listOf("a")` literal or by the first add/put), writing a type ≠ is rejected at compile-time with `SEM056`. It is not only Native that breaks (String tag scan over raw Int → SIGSEGV): on the JVM a heterogeneous `List.add` already gives a **VerifyError** on load and a heterogeneous-value `Map.put` gives a **ClassCastException** on get. The rejection is universal (a type error is an error on every target). **What is NOT rejected:** query-side (`get(k)`/`contains(x)` with a type ≠ → safe miss: null/false, never crash); numeric widening (`Int` in `List<Long>`); the **first** add/put in an `Unknown` container (it pins, does not pollute); and `Unknown`/nullable from a function (SG-008). Use collections of the same type — if you need "different types", model **records/unions**, not a `List<Object>` |
 | `for user in users` (without var) | ❌ Unavailable |
 | Array literals `{1, 2, 3}` / `[1,2,3]` | ❌ Unavailable — use `new Int[n]` + `listOf` |
@@ -47,7 +48,7 @@ because they exist in other languages. Code like that **does not compile** or
 | `String.valueOf(x)` builtin static receiver | ✅ Implemented (01/09) |
 | `Set<T>` as a declared type (field/return/param) | ✅ Implemented (02/09 — JVM descriptor `kof.Set` → `java/util/HashSet`) |
 | Return/method with a generic type in a class (`List<String> foo()`) | ✅ Implemented (02/09 — parser parse-then-decide) |
-| Prefixed nullable form `String? s = null` and return `String? f()` | ✅ Implemented (02/09 — statements, functions and classes) |
+| Prefixed nullable form `String? s` (type before name) and return `String? f()` | ✅ Implemented (02/09 — statements, functions and classes). NOTE: initializing with `= null` is SEM048 since 10/09 — null reaches `T?` only via API |
 | `Map.get` returning `V?` for reference values | ✅ Implemented (02/09 — absence = null, narrowing) |
 
 ## Bad example (still does not compile)
@@ -61,6 +62,11 @@ var maybe = Option.of(x)
 
 // DOES NOT COMPILE — for without var
 for (user in users) { }
+
+// DOES NOT COMPILE — sealed/permits are NOT keywords (SG-002 removed them
+// from the lexer 12/09). `sealed` parses as a stray IDENTIFIER → PARSE010.
+// Use `record` + `enum` + `interface` (the Kotlin sealed-class habit fails here).
+sealed class Resultado permits Sucesso, Erro { }
 ```
 
 ## Good example — what exists today
@@ -72,11 +78,11 @@ var adultos = users.filter((u: User) -> u.age >= 18)
 var soma = nums.reduce((a: Int, b: Int) -> a + b, 0)
 
 // Null safety String?
-String? maybe = null
+String? maybe = mapOf("k", "x").get("k")   // null via API (no `= null` — SEM048)
 if (maybe != null) {
     println(maybe.length)
 }
-var s: String = maybe   // SEM014 error — not assignable without a check
+var s: String = maybe   // SEM021 error — not assignable without a check
 
 // Pattern matching + record destructuring
 switch (obj) {
@@ -133,3 +139,47 @@ When the feature does not exist: use the real alternative OR mark `WORKAROUND`.
 > token boundaries. For quotes in a test-expected string, prefer **avoiding the
 > quote** in the assert (e.g.: test `&amp;quot;` → `&quot;` instead of embedding `"`/
 > `'` in the expected literal).
+
+## "Kof is not Java/Kotlin/C#/JS" — an issue asking to become another language is NOT a bug
+
+**Rule (ABSOLUTE, maintainer 18/09 — `AGENTS.md` §8, `DECISIONS.md`
+D-NOT-JAVA).** Kof has its own unique syntax. When a request (issue/PR) asks
+for a construct that only exists because it is **translated** Java, Kotlin,
+C# or JavaScript, the compiler's rejection is **correct and expected** — the
+issue is **not-valid**: answer once with the Kof idiom that replaces it and
+close it. Never implement the foreign feature; never "fix the diagnostic" of a
+correct rejection. It is only a real bug if Kof *promises* the construct in
+this corpus/docs and the compiler *disagrees with its own docs*.
+
+| ❌ Foreign (Java/Kotlin/C#/JS) | ✅ Kof idiom that replaces it |
+|---|---|
+| `StringBuilder` | `+` / `+=` (concat is already efficient) |
+| top-level `val`/`var`/`let` | inside a function, or a `class` field |
+| `fun name()` / `val` keyword | `String name() { }` (type before the name) |
+| `v is Car` (Kotlin type-check) | `if (v instanceof Car) { var c = v as Car … }` or `case Car c:` in `switch` |
+| `"""triple quotes"""` | normal `"…"` strings (no raw/block literal). Rejected with `LEX008` (#364: it used to fold to an **empty** string and compile silently) |
+| `Pair(a, b)` / `Triple` | a `record` with named fields |
+| `xs.any { it > 3 }` / `all`/`none`/`count { }` / `it` | `xs.filter((x: Int) -> x > 3)` then check `.size()`; the lambda param is **always explicit** |
+| `mutableListOf()` / `setOf(...)` variadic is fine | `listOf(...)` (Kof lists are already mutable) |
+| `object` (Kotlin singleton) | a `class` with fields + constructor, or top-level functions |
+| `a ?: b` (Elvis), `x?.y` (safe call), `x!!` | `if (x != null) …` (nullability by narrowing) |
+| `0..n` / `1 until n` ranges | `for (var i = 0; i < n; i++) { … }` |
+| `f(p = v)` named args | positional args in declaration order |
+| `class Box(size: Int) { body }` primary+body | `record Box(Int size)` (no body) **or** a `class` with explicit `constructor(Int size)` |
+| `catch (e: Exception)` typed catch | `catch (String e)` (Kof exceptions **are** Strings; `throw "msg"`) |
+| `open` / `override` | plain methods — Kof dispatches by signature, no modifiers |
+| `let` / `const` / `async fn` | `var`/`val`; `spawn`/`await` |
+| `Map.Entry` destructured `for ((k, v) in map)` | `map.keys()` then `map.get(k)` |
+| `s[0]` indexing a `String` | `s.charAt(0)` |
+| `"x${n}"` string interpolation (Kotlin/GString) | `"x" + n` — `${…}` inside a Kof string is **literal text** (no diagnostic, by contract — `lexical-structure.md` §4.1, probe) |
+| `class Foo: A, B` (Kotlin interface list via `:`) | `class Foo implements A, B { }` |
+| `val name: String` property in an `interface` | a method accessor: `interface I { String name() }` |
+| `n.abs()` / `n.equals(o)` / `n.toChar()` (methods on a **primitive**) | `math.abs(n)`, `a == b`, `n as Char` — primitives only have `toString()` and the `toInt()`/`toLong()`/`toFloat()`/`toDouble()` conversions. Rejected with `SEM074` (#362 ✅ FIXED 18/09: the unlisted call used to pass `check` and die at class load — `ClassFormatError`, empty Methodref owner) |
+| `l.sort()` / `l.indexOf(x)` on a `List` (Java API) | Kof `List` API is `add/get/set/remove/contains/size/isEmpty/clear/map/filter/reduce`; find position with a `for` + `get(i)`; order by sorting outside the list (interop) — no `sort`/`indexOf` promise |
+| `m.containsValue(v)` / `m.getOrDefault(k, d)` on a `Map` (Java API) | `m.values()` + `contains`, or `var v = m.get(k); if (v == null) …` — Kof `Map` API is `put/get/remove/containsKey/contains/size/clear/isEmpty/keys/values` |
+| `this(args)` constructor self-delegation (Java/C#) | Kof promises **`super(args)`** only (base class, first statement — `learn/07`); share init via a helper method both constructors call (measured working) |
+
+> Cross-check: if the reproducer would compile in **Kotlin/Java** because it is
+> *translated*, it is this rule — reject it. The bug family is only about code
+> that **is** valid Kof and the compiler mishandles (e.g. #403 `log` field
+> hijack, #313 unqualified `throw Exception`, #336 `l.add(i,v)`).

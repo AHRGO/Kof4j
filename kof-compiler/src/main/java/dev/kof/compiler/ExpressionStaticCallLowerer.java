@@ -109,6 +109,24 @@ if (mc.receiver() == null && KofWeb.isContextFunction(mc.methodName())) {
             }
             return localIdx;
         }
+        // 16/09: o mesmo vazamento existia no JS — context-fns sem runtime
+        // baixavam para kofWebStub (return 0 SILENCIOSO, R6). Gap em tempo de
+        // compilação, código por função. SSE (kof_web_sse_send) ganhou runtime
+        // handler-scoped no host JS (16/09) e saiu da lista; restam wsSend/
+        // wsMessage (WEB004) e stats (WEB001).
+        if (driver.target == Target.JS
+                && !KofWeb.contextJsSupported(webCtx.function())) {
+            String code = KofWeb.gapCode(webCtx.function());
+            if (driver.currentDiagnostics != null) {
+                var pos = mc.position();
+                driver.currentDiagnostics.error(pos != null ? pos.file() : "",
+                        pos != null ? pos.line() : 0, pos != null ? pos.column() : 0,
+                        0, "web context '" + mc.methodName() + "()': not available on the "
+                                + driver.target + " driver.target yet (" + code + ")",
+                        code);
+            }
+            return localIdx;
+        }
         for (ExpressionNode arg : mc.arguments()) {
             localIdx = ExpressionLowerer.emitExpression(driver, arg, ops, owner, localIdx, locals);
         }
@@ -180,10 +198,10 @@ if ("listOf".equals(mc.methodName()) && mc.receiver() == null) {
             var pos = mc.position();
             driver.currentDiagnostics.error(pos != null ? pos.file() : "",
                     pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0,
-                    "listOf: elemento " + CollectionWrites.typeNameFor(argType)
-                            + " não casa com o tipo da lista ("
+                    "listOf: element " + CollectionWrites.typeNameFor(argType)
+                            + " does not match the list element type ("
                             + CollectionWrites.typeNameFor(elemType)
-                            + ") — coleções Kof são homogêneas", "SEM056");
+                            + ") — Kof collections are homogeneous", "SEM056");
             return localIdx;
         }
         ops.add(new KofDup());
@@ -383,10 +401,10 @@ if ("mapOf".equals(mc.methodName()) && mc.receiver() == null) {
             var pos = mc.position();
             driver.currentDiagnostics.error(pos != null ? pos.file() : "",
                     pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0,
-                    "mapOf: valor " + CollectionWrites.typeNameFor(vType)
-                            + " não casa com o tipo do mapa ("
+                    "mapOf: value " + CollectionWrites.typeNameFor(vType)
+                            + " does not match the map type ("
                             + CollectionWrites.typeNameFor(valueType)
-                            + ") — coleções Kof são homogêneas", "SEM056");
+                            + ") — Kof collections are homogeneous", "SEM056");
             return localIdx;
         }
         ops.add(new KofDup());

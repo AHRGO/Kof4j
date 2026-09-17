@@ -321,7 +321,7 @@ public final class MemberResolver {
     static void checkSwitchExprExhaustiveness(SemanticAnalyzer sa, SwitchExpr se, Type subjectType) {
         if (isBooleanType(subjectType)) {
             if (!isBooleanExhaustive(se.cases())) {
-                sa.reportError(se, "switch expressão sobre Boolean não cobre todos os valores (true e false)", "SEM032");
+                sa.reportError(se, "switch expression on Boolean does not cover all values (true and false)", "SEM032");
             }
             return;
         }
@@ -334,12 +334,12 @@ public final class MemberResolver {
             List<String> constants = enumConstantsOf(sa.unit(), sct.name());
             List<String> missing = constants.stream().filter(c -> !covered.contains(c)).toList();
             if (!missing.isEmpty()) {
-                sa.reportError(se, "switch expressão sobre '" + sct.name()
-                        + "' não cobre: " + String.join(", ", missing)
-                        + " (adicione default ou os casos faltantes)", "SEM032");
+                sa.reportError(se, "switch expression on '" + sct.name()
+                        + "' does not cover: " + String.join(", ", missing)
+                        + " (add a default or the missing cases)", "SEM032");
             }
         } else {
-            sa.reportError(se, "switch expressão exige 'default' (ou exaustividade de enum)", "SEM032");
+            sa.reportError(se, "switch expression requires 'default' (or enum exhaustiveness)", "SEM032");
         }
     }
 

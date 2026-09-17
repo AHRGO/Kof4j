@@ -94,15 +94,14 @@ class WrapperStaticCallsE2ETest {
     // #233 face: Double/Float isNaN/isInfinite (the branch that motivated the
     // code) plus the parse* statics that also flow through the same dispatch.
     //
-    // JVM only: the JS backend does NOT lower wrapper statics
-    // (`Double.isNaN`/`Int.parseInt` → `ReferenceError: java_lang_Double is
-    // not defined`). That gap is PRE-EXISTING (reproduced at 59359935, before
-    // the regression) and lives in the JS emitter, not in this dispatch —
-    // catalogued as §235. Claiming JS parity here would be a false green.
+    // JVM + JS: the JS backend NOW lowers wrapper statics (`Double.isNaN`,
+    // `Int.parseInt`, …) to runtime helpers (§235, fixed 16/09 by lane
+    // development 192.168.100.18 — before it threw `ReferenceError:
+    // java_lang_Double is not defined`). `parse*` reuse the `kof_string_to_*`
+    // helpers (github #51/§81); `parseBoolean` is `"true".equals(ignoreCase)`.
     @Test
     void wrapperIsAndParseStatics(@TempDir Path tempDir) throws IOException {
-        Path src = tempDir.resolve("wrap-is-parse.kf");
-        Files.writeString(src, """
+        runBoth("""
                 main() {
                     var d: Double = 0.0 / 0.0
                     println(Double.isNaN(d))
@@ -112,10 +111,29 @@ class WrapperStaticCallsE2ETest {
                     println(Double.parseDouble("3.5") + 0.5)
                     println(Bool.parseBoolean("true"))
                 }
-                """);
-        Path out = tempDir.resolve("wrap-is-parse-jvm");
-        CompilationResult r = driver.compile(src, out, Target.JVM);
-        assertTrue(r.success(), "JVM compile failed: " + r.diagnostics().getDiagnostics());
-        assertEquals("true\nfalse\n43\n200\n4.0\ntrue", runJvm(out));
+                """, "true\nfalse\n43\n200\n4.0\ntrue", tempDir, "wrap-is-parse");
+    }
+
+    // §264 (JS): Double/Float print no contrato do JDK — inteiro com ponto
+    // ("4.0"), científico com E ("1.0E7"), -0.0, e round-trip curto. Antes
+    // o JS imprimia `String(v)` cru: "4", "10000000" (silencioso, R6).
+    @Test
+    void doubleFloatJdkPrintFormat(@TempDir Path tempDir) throws IOException {
+        runBoth("""
+                main() {
+                    var d: Double = 4.0
+                    var f: Float = 6.0
+                    println(d)
+                    println(f)
+                    println("v=" + d)
+                    println(String.valueOf(d))
+                    println(d.toString())
+                    println(Double.toString(d))
+                    println(10000000.0)
+                    println(0.00001)
+                    println(-0.0)
+                }
+                """, "4.0\n6.0\nv=4.0\n4.0\n4.0\n4.0\n1.0E7\n1.0E-5\n-0.0",
+                tempDir, "wrap-numfmt");
     }
 }

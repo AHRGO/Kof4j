@@ -24,6 +24,15 @@ final class Fmt {
             System.err.println("usage: kof fmt <file.kf|dir> [-w]");
             return 1;
         }
+        // R6: fmt não repassa args ao programa (diferente de run/serve) — uma
+        // flag desconhecida seria ignorada em silêncio (o usuário acharia que
+        // teve efeito). Aceita só -w.
+        for (int i = 1; i < args.length; i++) {
+            if (args[i].startsWith("-") && !"-w".equals(args[i])) {
+                System.err.println("fmt: unknown flag: " + args[i] + " (accepts: -w)");
+                return 1;
+            }
+        }
         boolean write = Arrays.asList(args).contains("-w");
         Path src = Path.of(args[1]);
         if (!Files.exists(src)) { System.err.println("not found: " + src); return 1; }
@@ -52,7 +61,7 @@ final class Fmt {
                 System.err.println("fmt " + f + ": " + e.getMessage());
             }
         }
-        if (write) System.out.println("fmt: " + changed + " arquivo(s) reformatado(s)");
+        if (write) System.out.println("fmt: " + changed + " file(s) reformatted");
         return 0;
     }
 

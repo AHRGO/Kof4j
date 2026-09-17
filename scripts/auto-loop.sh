@@ -49,7 +49,7 @@ if [ -z "$OPENCODE" ]; then
     [ -n "$OPENCODE" ] || OPENCODE="$HOME/.opencode/bin/opencode"
 fi
 
-DEFAULT_PROMPT="analize os documentos, verifique os gaps, identifique o que falta em nossos planos, trace um todo de implementação e continue o desenvolvimento"
+DEFAULT_PROMPT="analize os documentos, verifique os gaps, identifique o que falta em nossos planos em docs/development, trace um todo de implementação e continue o desenvolvimento"
 
 last_session() {
     "$OPENCODE" session list -n 1 --format json \

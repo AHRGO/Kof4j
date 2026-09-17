@@ -2,22 +2,26 @@
 
 # Strategic Plan — Kof as a Universal Platform
 
-**Type:** long-term vision / future architecture (NOT an implementation order)
+**Type:** long-term architecture — **UNDER DEVELOPMENT** since 17/09/2026
+(promoted from `future/` by maintainer decision; the R12 gate is **overridden**
+— see `DECISIONS.md` §D-UNIVERSAL)
 **Date:** September 2, 2026
 **Base:** real state 0.2.6-beta — own frontend (lexer, parser, AST, symbol
 table, semantic, type checking), backend-agnostic Kof IR, 7 targets
 (jvm stable, native x86_64 stable, native.risc/native.arm toolchain+qemu,
-js alpha GraalJS, kofc native-only, android Phase 1), stdlib as **compile-time
+js alpha GraalJS, kofc native-only, android Phases 1–4), stdlib as **compile-time
 dispatch tables** with diagnosed gaps, real FFI (SQLite `.so`
-direct, FFM Vulkan compute, Java + GraalJS interop), `mvn test` 810.
+direct, FFM Vulkan compute, Java + GraalJS interop), `mvn test` 2411
+(17/09/2026 — see `AGENTS.md` §"Verification loop" for the live count).
 
-> **Rule of this document:** this is a strategic planning exercise
-> and future architecture. It does NOT alter, interrupt, reorganize or replace the
-> work in progress. It implements nothing, creates no demonstration code,
-> does not change the current roadmap, does not move files, does not introduce dependencies, does not
-> refactor, does not open a new front. The current state of Kof remains 100% intact.
-> Everything below that requires a deep change in the core is recorded as a
-> **future architectural dependency**, never as an action.
+> **Rule of this document:** this is a strategic architecture for the
+> platform. Promoted from `future/` to `development/` on 17/09/2026 **by
+> maintainer decision** (see `DECISIONS.md` §D-UNIVERSAL), which **overrides
+> the R12 gate** ("SYSTEMS closes before any Tier 6+"). It is now **current
+> work**: the entry point is Stage 1 (SYSTEMS consolidation, §10 Estágio 1) and
+> the executable recommendations R1–R12 (§15), with each unit gated like any
+> other change (Q0–Q7). The frozen core semantics and the currently-stable
+> behavior remain 100% intact; every change lands additive and per target.
 
 References (unchanged): `docs/development/roadmap.md` (vision), `docs/philosophy.md`
 (intent), `docs/architecture/architecture.md` (multi-target ADR),
@@ -1122,7 +1126,7 @@ of errors as `kof check`).
 
 | Tool | State | What it would need for the universal platform |
 |------|--------|---------------------------------------------|
-| **CLI** | 18 commands (build/run/serve/check/test/script/repl/c/fmt/config/bench/profile/inspect/debug/info/lsp/install/version) | + **`kof infra plan/apply/destroy`** (infra orchestration — *tooling*, not language); + **`kof workflow run`** (run pipelines/jobs); + **`kof deploy`** (build + package + publish — on top of the existing packager). *All consume the frontend.* |
+| **CLI** | 26 commands (build/run/serve/check/test/script/repl/c/fmt/config/bench/profile/inspect/decompile/translate/compare/migrate/debug/info/lsp/install/deps/editor/init/new/version) | + **`kof infra plan/apply/destroy`** (infra orchestration — *tooling*, not language); + **`kof workflow run`** (run pipelines/jobs); + **`kof deploy`** (build + package + publish — on top of the existing packager). *All consume the frontend.* |
 | **LSP** | minimal (hover/completion + diagnostics) | + **domain-sensitive** completion/diagnostics (`infra`, `entity`, `df` feature); go-to-definition in official packages; semantic tokens by domain. *Same frontend → no parallel parser.* |
 | **Package manager** | planned (`kof init`, `kofdeps`, registry) | **mandatory** for layers 4/5 (official packages + ecosystem): resolution, versioning, **capability/link by use**, audit. It is what lets the platform grow without bloating the core. (Architectural dependency, §13.) |
 | **Debugger** | JVM MVP (DAP + JDWP) | + Native (DWARF) + JS (source maps) — phases 4-7; **pipeline/job debugging** (see a job's state at execution). |
@@ -1503,7 +1507,19 @@ interrupting** present development. Each item: what, why, cost, and
 what **not** to do. (No item below is an action — they are future architectural
 dependencies and guardrails.)
 
-## R1 — Lock the core/platform boundary (the first and most important)
+> **Note 17/09 (D-UNIVERSAL — this line is superseded for the CURRENT queue):**
+> the promotion in `DECISIONS.md` §D-UNIVERSAL made R1–R12 the entry point of
+> current work. Each R now tracks its real state below; the original text is
+> kept as history (dated-record convention).
+
+## R1 — Lock the core/platform boundary (the first and most important) — ✅ DONE 17/09 (`5f1422c6`)
+
+> **State 17/09:** the §3.4 order is now an invariant rule AND mechanically
+> enforced: `scripts/check_stdlib_boundary.sh` + ledger `scripts/stdlib_boundary.txt`
+> (31 namespaces; unknown namespace or heavy domain fails the build; `--selftest`
+> proves the gate bites) wired in CI after `check_500.sh`, and cited in
+> `AGENTS.md`/`.pt_BR.md` platform invariant 1. Proof: scan rc=0 at tip,
+> CI run `5f1422c6` "Build + Tests" SUCCESS with the Gate R1 step.
 - **What:** adopt the §3.4 decision order as an **invariant rule**
   (core → base stdlib → platform → official packages → interop).
 - **Why:** it is the anti-god-language mechanism; without it, every domain "wants"
@@ -1528,6 +1544,18 @@ dependencies and guardrails.)
 - **Cost:** **low in the core** (it is lowering + runtime, not semantics).
 - **Not to do:** do not turn FFI into "pointers in the core" — the boundary is
   safe; the non-GC zone stays outside.
+- **First slice (opened by #431, 17/09 — raylib is the motivating case; tracked
+  on the issue):** the current surface is fixed-shape JVM helpers
+  (`JvmFfiRuntime`: `i`/`si`/`dd`) gated by `CompilerPipeline.isExternBound`.
+  Concrete increments, in order, each with `FfiE2ETest`-pattern proof and
+  additive (previously `FFI001`-rejected signatures, never a change to what
+  compiles today): (1) **arity** — `ii`/`iii`/`id`-style helpers + lowering
+  dispatch; (2) **`void` returns**; (3) **String return** (`allocateUtf8String`
+  copy — same JDK 21/22 branch the `si` helper uses); (4) `const char*` params
+  **mixed with numerics** (the `InitWindow(Int,Int,String):void` case);
+  (5) native side waits on §61 (raw `_start` without libc TLS init — proven
+  direct-link path recorded there). Structs stay R3-proper (signature-level
+  ABI design), not a slice of this increment.
 
 ## R4 — Formalize compile-time codegen (already exists implicitly)
 - **What:** make explicit the layer that today generates `KofRuntime`, synthesizes the
@@ -1591,16 +1619,22 @@ dependencies and guardrails.)
 - **Do not:** do not expose offensive primitives without context; no "Kali in
   Kof".
 
-## R12 — Do not interrupt the present (meta-rule)
-- **What:** no item of this plan is an **action** on the current state. The current
-  state (0.2.6-beta, 810 tests, 7 targets) remains **100% intact**. The
-  **C/D** items above are **future architectural dependencies**, to be
+## R12 — Do not interrupt the present (meta-rule) — **OVERRIDDEN 17/09/2026**
+- **What (original):** no item of this plan is an **action** on the current
+  state. The **C/D** items above are **future architectural dependencies**, to be
   resumed by the current roadmap (`roadmap.md` §23 — single consolidated plan)
   **after** the current consolidation (P0-P5) — never as a parallel front now.
 - **Why:** the statement is explicit: preserve the work in progress.
 - **Cost:** zero.
 - **Do not:** do not open `infra`/`data`/`sci` before the SYSTEMS stage
   (parity gap, GC, package manager) is closed.
+- **⚠️ Overridden (maintainer decision 17/09/2026, `DECISIONS.md`
+  §D-UNIVERSAL):** this plan was **promoted to current work** with the R12 gate
+  **overridden** — the front opens with SYSTEMS still in progress. The
+  entry point is Stage 1 (SYSTEMS consolidation) + R1–R12; Tier 6+ keeps its
+  order. The **core semantics stay frozen** and every change is additive —
+  "overridden" relaxes the scheduling gate, never the quality/freeze rules.
+  For every **other** `future/` plan, R12 remains the default.
 
 ---
 

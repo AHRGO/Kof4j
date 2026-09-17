@@ -121,7 +121,11 @@ public class Lexer {
             } else if (c == '/' && pos + 1 < source.length() && source.charAt(pos + 1) == '*') {
                 skipBlockComment();
             } else if (c == '"') {
-                readString();
+                if (pos + 2 < source.length() && source.charAt(pos + 1) == '"' && source.charAt(pos + 2) == '"') {
+                    skipTripleQuoted();
+                } else {
+                    readString();
+                }
             } else if (c == '\'') {
                 readChar();
             } else if (Character.isDigit(c)) {
@@ -179,6 +183,35 @@ public class Lexer {
             advance();
         }
         diagnostics.error(file, line, column, 0, "Unterminated block comment", "LEX001");
+    }
+
+    private void skipTripleQuoted() {
+        // Kof has no raw/multiline string literal (lexical-structure §4.1).
+        // #364: `"""..."""` used to fold to an EMPTY string silently — R6
+        // violation. Reject with LEX008 and skip the block so one diagnostic
+        // lands, not a cascade from every character inside it.
+        int startLine = line;
+        int startCol = column;
+        advance();
+        advance();
+        advance();
+        while (pos < source.length()) {
+            if (source.charAt(pos) == '"' && pos + 2 < source.length()
+                    && source.charAt(pos + 1) == '"' && source.charAt(pos + 2) == '"') {
+                advance();
+                advance();
+                advance();
+                break;
+            }
+            if (source.charAt(pos) == '\n') {
+                line++;
+                column = 1;
+            }
+            advance();
+        }
+        diagnostics.error(file, startLine, startCol, 1,
+                "Kof has no triple-quoted (raw/multiline) string literal: use \"...\" with \\n (no interpolation either — concatenate with +)",
+                "LEX008");
     }
 
     private void readString() {

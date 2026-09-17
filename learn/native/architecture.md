@@ -87,7 +87,7 @@ Kof Source (.kf)
 ## Where NativeBackend plugs in
 
 ```
-CompilerDriver.compile(sourceFile, outputDir, target)
+CompilerDriver.compileSources(sources, outputDir, target, moduleRoot)
   │
   ├─── target == JVM ──→ lowerToIR() → JvmBackend.emit()
   │
@@ -96,7 +96,7 @@ CompilerDriver.compile(sourceFile, outputDir, target)
 
 ### Changes implemented in CompilerDriver
 
-1. **`target` parameter** in the `compile()` method
+1. **`target` parameter** in the compile entry point (`compileSources`)
 2. **`Backend` interface** for decoupling
 3. **Target-based selection** — `new JvmBackend()` or `new NativeBackend()`
 4. **Separate helpers** — `toDescriptor()`, `toInternalName()`, `computeAccess()` stay in the backends

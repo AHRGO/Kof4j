@@ -16,12 +16,12 @@ final class TranslateNew {
         // Nome qualificado `new java.util.ArrayList<...>()`: o translator
         // ignora imports e não resolve FQN. Mapear coleções Java →
         // stdlib Kof (`ArrayList`→`listOf`/`List`, `HashMap`→`Map`) é
-        // decisão de design (regra 6) → revisão manual (R6), nunca parse
+        // decisão de design (regra 6) → manual review (R6), nunca parse
         // error confuso nem Kof inválido.
         if (p.at(".")) {
             throw new TranslateException(
-                    "tipo qualificado (`new pacote.Classe(...)`) não é resolvido pelo "
-                    + "translator (imports ignorados) — revisão manual");
+                    "qualified type (`new pkg.Class(...)`) is not resolved by the "
+                    + "translator (imports are ignored) — manual review");
         }
         // `new Box<Integer>(...)` — Kof infere o tipo na chamada
         // (`Box(5)`); os argumentos de tipo Java são descartados.
@@ -40,11 +40,11 @@ final class TranslateNew {
             // `new int[3]` saía `new Int[]]` (PARSE041 no Kof gerado).
             p.next(); // [
             if (p.at("]")) {
-                // `new int[]{...}` — array initializer sem equivalente
-                // direto em Kof (revisão manual, R6).
+                // `new int[]{...}` — array initializer no equivalent
+                // direct in Kof (manual review, R6).
                 throw new TranslateException(
-                        "array initializer `new T[]{...}` não tem equivalente direto em Kof "
-                        + "(use `new Int[n]` + atribuições) — revisão manual");
+                        "array initializer `new T[]{...}` has no direct equivalent in Kof "
+                        + "(use `new Int[n]` + assignments) — manual review");
             }
             String size = ctx.parseExpr();
             p.expect("]");
@@ -55,10 +55,10 @@ final class TranslateNew {
             // Classe anônima Java (`new Runnable() { ... }`) — Kof não
             // tem classes anônimas (só lambdas p/ interface funcional).
             // Converter exige inferir a interface funcional — decisão de
-            // design (regra 6) → revisão manual (R6).
+            // design (regra 6) → manual review (R6).
             throw new TranslateException(
-                    "classe anônima (`new X() { ... }`) não tem equivalente direto em Kof "
-                    + "(use lambda p/ interface funcional) — revisão manual");
+                    "anonymous class (`new X() { ... }`) has no direct equivalent in Kof "
+                    + "(use a lambda for a functional interface) — manual review");
         }
         if (typeName.equals("RuntimeException") || typeName.equals("IllegalStateException")
                 || typeName.equals("IllegalArgumentException") || typeName.equals("Exception")) {

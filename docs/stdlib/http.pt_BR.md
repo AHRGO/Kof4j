@@ -3,10 +3,12 @@
 # Web Architecture — `kof serve`
 
 **Data:** 2 de setembro de 2026
+**Re-synced:** 17 de setembro de 2026 (0.4.0-beta)
+
 > **Atualizado (0.2.6-beta):** `kof serve` com handlers top-level + stack web nativa `web.app()` (Fase 1 Spring independence) — rotas com lambda trailing, path params, query, headers, body, middleware, JSON tipado, status/headers customizados e servidor HTTP gerado no runtime; `kof.http` client `http.get/post/put/delete/patch/options/status` + `timeout/retry/circuit` funciona em **JVM + JS** (JS via `Java HttpClient` interop no `KofJsRunner`; retry/circuit em paridade JVM+JS, 30/08) — Native `HTTP002`; TLS `listenSecure` JVM. Ver [docs/stdlib/stdlib-web.md](stdlib-web.md) e `docs/status.md` (contagem corrente da suíte).
 
-**Status:** Implementado (Fase H) — 0.2.6-beta `VERSION` 0.2.6-beta
-**Versão:** 0.2.6-beta
+**Status:** Implementado (Fase H) — `VERSION` 0.4.0-beta
+**Versão:** 0.4.0-beta
 
 ---
 
@@ -318,9 +320,9 @@ app.get("/hello") { return "Hello TLS" }
 app.listenSecure(8443) // JVM: gera self-signed via keytool (SAN=IP:127.0.0.1,DNS:localhost), SSLServerSocket
 ```
 
-- **Server:** `app.listenSecure(port)` — `KofWeb.java:84` `kof_web_listen_secure` → `JvmRuntime.java:370` `SSLServerSocket` + `keytool -genkeypair` (JKS, `SAN=IP:127.0.0.1,DNS:localhost`); Native/JS reportam `WEB002`.
-- **Client:** `kof.http.get("https://...")` — `JvmWebRuntime.java:238` `KOF_HTTP_CLIENT_INSECURE` (`SSLContext` trust-all + `SSLParameters` sem `endpointIdentification`, `HttpClient` com `sslContext` insecure) — necessário para self-signed em testes.
-- **Teste:** `KofWebTlsTest.java:12` 5 testes (hello, headers, `http` over TLS, gaps Native/JS `WEB002`/`WEB001`).
+- **Server:** `app.listenSecure(port)` — `KofWeb.java:142` `kof_web_listen_secure` → `JvmRuntimeWebServer.java:50` `SSLServerSocketFactory` + `keytool -genkeypair` (JKS, `SAN=IP:127.0.0.1,DNS:localhost`); Native/JS reportam `WEB002`.
+- **Client:** `kof.http.get("https://...")` — `JvmWebHttpRuntime.java:112` `KOF_HTTP_CLIENT_INSECURE` (`SSLContext` trust-all + `SSLParameters` sem `endpointIdentification`, `HttpClient` com `sslContext` insecure) — necessário para self-signed em testes.
+- **Teste:** `KofWebTlsTest.java:12` 5 testes (hello, headers, `http` over TLS, gaps Native/JS `WEB002`).
 
 ---
 
@@ -337,10 +339,10 @@ http.circuit(0)       // desliga o circuito e zera o estado de falhas
 ```
 
 - **`timeout(s)`** — aplica `Duration.ofSeconds(s)` a cada request
-  (`JvmWebRuntime.kof_http_timeout_set`). Default: 15 s.
+  (`JvmWebHttpRuntime.kof_http_timeout_set`). Default: 15 s.
 - **`retry(n)`** — `n` tentativas extras; repete a request quando lança
   exceção (connexão recusada, timeout) **ou** quando o status HTTP é `>= 500`
-  (`JvmWebRuntime.kof_http_retry_set`). Default: 0. `retry(0)` desliga.
+  (`JvmWebHttpRuntime.kof_http_retry_set`). Default: 0. `retry(0)` desliga.
 - **`circuit(trips)`** — abre o circuito após `trips` falhas consecutivas
   (exceção ou HTTP `>= 500`); enquanto aberto, as requests falham na hora
   (fail-fast) com `IOException("kof.http circuit open (fail fast): <url>")`
@@ -349,7 +351,7 @@ http.circuit(0)       // desliga o circuito e zera o estado de falhas
 
 A paridade JVM+JS é exercida por `KofHttpResilienceE2ETest` (3/3): retry
 recupera num endpoint flaky (2×500 → 200), circuito abre após falha e
-fail-fast, e `circuit(0)` recupera. Native reporta `HTTP002`.
+fail-fast, e `circuit(0)` recupera. O Native aceita `timeout`/`retry`/`circuit` como **no-ops silenciosos** — o ramo do diagnóstico `HTTP002` está morto hoje (`KofHttp.supportedOn` sempre devolve `true`; §259).
 
 ---
 

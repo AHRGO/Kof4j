@@ -25,87 +25,6 @@ public final class SemExpressionTyper {
         return scope.resolve(name) != null;
     }
 
-    /**
-     * SG-005: escopo com os narrowings de nullability de `cond` aplicados
-     * (lado direito de `&&`: `s != null && s.length` vê `s: T`). Mirror do
-     * collectNarrowing do StatementAnalyzer, nível expressão — só `x != null`
-     * e conjunção; `||` não narrow.
-     */
-    static SymbolTable narrowedScope(SemanticAnalyzer sa, ExpressionNode cond, SymbolTable scope) {
-        if (scope == null) return scope;
-        java.util.List<SymbolTable.LocalVariableSymbol> narrow = new java.util.ArrayList<>();
-        collectCondNarrowing(cond, scope, narrow);
-        if (narrow.isEmpty()) return scope;
-        SymbolTable child = scope.enterScope();
-        for (SymbolTable.LocalVariableSymbol s : narrow) child.define(s);
-        return child;
-    }
-
-    private static void collectCondNarrowing(ExpressionNode cond, SymbolTable scope,
-            java.util.List<SymbolTable.LocalVariableSymbol> out) {
-        if (!(cond instanceof BinaryExpr be)) return;
-        String op = be.operator();
-        if ("&&".equals(op)) {
-            collectCondNarrowing(be.left(), scope, out);
-            collectCondNarrowing(be.right(), scope, out);
-            return;
-        }
-        if ("||".equals(op)) return;
-        if (!(be.right() instanceof LiteralExpr rl && rl.kind() == ConcreteLiteralKind.NULL)) return;
-        if (!(be.left() instanceof IdentifierExpr id)) return;
-        if (!"!=".equals(be.operator())) return;
-        SymbolTable.Symbol sym = scope.resolve(id.name());
-        if (sym != null && sym.type() instanceof Type.NullableType nt) {
-            out.add(new SymbolTable.LocalVariableSymbol(id.name(), nt.inner(), 0));
-        }
-    }
-
-    /**
-     * Define no escopo do case as variáveis de um pattern:
-     * {@code case T v} → {@code v:T}; {@code case T(var x, var y)} → campos por
-     * índice (record) ou por nome. Espelha a lógica do {@code SwitchStmt}.
-     */
-    private static void bindPatternVars(SemanticAnalyzer sa, PatternExpr pe, SymbolTable scope) {
-        Type patType = MemberResolver.resolveType(sa, pe.typeName(), scope);
-        if (patType == null) patType = Type.UnknownType.UNKNOWN;
-        if (pe.varName() != null) {
-            scope.define(new SymbolTable.LocalVariableSymbol(pe.varName(), patType, 0));
-            return;
-        }
-        if (pe.fieldVars().isEmpty()) return;
-        String simple = patType instanceof Type.ClassType ct ? ct.name() : pe.typeName();
-        SymbolTable.ClassSymbol cls = sa.getClass(simple);
-        java.util.List<String> fieldNames = pe.fieldVars();
-        for (int i = 0; i < fieldNames.size(); i++) {
-            String fv = fieldNames.get(i);
-            Type fieldType = Type.UnknownType.UNKNOWN;
-            if (cls != null) {
-                var members = cls.members();
-                java.util.List<SymbolTable.Symbol> fields = new java.util.ArrayList<>();
-                for (var e : members.localSymbols().values()) {
-                    if (e instanceof SymbolTable.FieldSymbol) fields.add(e);
-                }
-                if (fields.size() == fieldNames.size() && i < fields.size()) {
-                    fieldType = fields.get(i).type();
-                } else {
-                    SymbolTable.Symbol sym = members.resolve(fv);
-                    if (sym != null) fieldType = sym.type();
-                    else {
-                        for (AstNode d : sa.unit().declarations()) {
-                            if (d instanceof RecordDeclarationNode rec && rec.name().equals(simple)) {
-                                if (i < rec.components().size()) {
-                                    fieldType = MemberResolver.resolveType(sa, rec.components().get(i).type(), scope);
-                                }
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-            scope.define(new SymbolTable.LocalVariableSymbol(fv, fieldType, 0));
-        }
-    }
-
     private static Type inferTypeInternal(SemanticAnalyzer sa, ExpressionNode expr, SymbolTable scope) {
         return switch (expr) {
             case PatternExpr pe -> {
@@ -196,7 +115,7 @@ public final class SemExpressionTyper {
                 // pelo ExpressionStmt, que não chega aqui).
                 if (sa.diagnostics() != null) {
                     sa.diagnostics().error("", 0, 0, 0,
-                            "atribuição é um statement, não uma expressão (use '=' em linha própria)",
+                            "assignment is a statement, not an expression (use '=' on its own line)",
                             "SEM027");
                 }
                 Type valueType = inferType(sa, ae.value(), scope);
@@ -250,7 +169,7 @@ public final class SemExpressionTyper {
                 // (o lado só é avaliado se o esquerdo passou; short-circuit).
                 if ("&&".equals(bin.operator())) {
                     Type leftT = inferType(sa, bin.left(), scope);
-                    SymbolTable rightScope = narrowedScope(sa, bin.left(), scope);
+                    SymbolTable rightScope = SemNarrowing.narrowedScope(sa, bin.left(), scope);
                     Type rightT = inferType(sa, bin.right(), rightScope);
                     yield TypeChecker.inferBinaryResultType(sa.diagnostics(), "&&", leftT, rightT);
                 }
@@ -312,6 +231,8 @@ public final class SemExpressionTyper {
                                 "cannot instantiate abstract class '" + ne.typeName() + "'",
                                 "SEM041");
                     }
+                    // #340 (SEM071): interface não é instanciável — `new I()`.
+                    ClassShapeChecks.checkInstantiable(sa, ne.typeName());
                     // Inferencia dos argumentos: o efeito colateral importa
                     // (cache expressionTypes + diagnostics de SEM nas exprs), a
                     // resolucao do construtor e por aridade (constructorFor
@@ -324,6 +245,19 @@ public final class SemExpressionTyper {
                             SymbolTable.constructorFor(cs.members(), ne.arguments().size());
                     if (ctor3 != null) {
                         sa.putResolvedConstructor(ne, ctor3);
+                        // #323: a RESOLUCAO era so por aridade; o tipo dos
+                        // argumentos nunca era conferido contra a assinatura
+                        // do construtor. Sem isto, `new A("x")` num ctor
+                        // `(Int)` compila e a chamada inventa <init>(String)V
+                        // → VerifyError no load (R6/Q7: nunca silencioso).
+                        // Overload-aware: irmao de mesma aridade que casa
+                        // (isAssignable) passa — mesmo predicado do emit.
+                        List<Type> argTypes3 = new ArrayList<>();
+                        for (ExpressionNode arg : ne.arguments()) {
+                            argTypes3.add(inferType(sa, arg, scope));
+                        }
+                        TypeChecker.checkCtorArgTypes(sa, cs.members(), ne.typeName(),
+                                argTypes3);
                     } else if (sa.diagnostics() != null) {
                         SymbolTable.Symbol anyInit = cs.members().resolve("<init>");
                         if (anyInit instanceof SymbolTable.ConstructorSymbol c) {
@@ -394,9 +328,9 @@ public final class SemExpressionTyper {
                         && MemberResolver.isBuiltinTypeName(rid.name())
                         && sa.diagnostics() != null) {
                     sa.diagnostics().error("", 0, 0, 0,
-                            "'" + rid.name() + "' é um tipo primitivo, não tem campo "
-                                    + "estático '" + fa.fieldName() + "' (use o literal, "
-                                    + "ex.: 2147483647 p/ Int; sem Int.MAX_VALUE em Kof)",
+                            "'" + rid.name() + "' is a primitive type, it has no static field "
+                                    + "'" + fa.fieldName() + "' (use the literal, "
+                                    + "e.g. 2147483647 for Int; there is no Int.MAX_VALUE in Kof)",
                             "SEM050");
                     yield Type.UnknownType.UNKNOWN;
                 }
@@ -427,6 +361,14 @@ public final class SemExpressionTyper {
                 if (recvType instanceof Type.ClassType ct) {
                     SymbolTable.Symbol field = MemberResolver.resolveFieldInHierarchy(sa, ct.name(), fa.fieldName());
                     if (field != null) {
+                        // #331/#327 (espelha SEM046 dos metodos): acesso a
+                        // campo private/protected de fora da declarante
+                        // compila e o load estourava IllegalAccessError em
+                        // silencio (R6/Q7). so com `this.x`/x nu (owner ==
+                        // caller) e dentro da declarante/subclasse passa.
+                        if (field instanceof SymbolTable.FieldSymbol fs) {
+                            MemberCallTyper.checkFieldAccess(sa, fs, ct.name());
+                        }
                         yield CompilerTypes.substituteTypeVariableIn(field.type(), recvType, sa.unit());
                     }
                     if (sa.isExternal(ct)) {
@@ -476,7 +418,7 @@ public final class SemExpressionTyper {
                     var pos = aa.position();
                     sa.diagnostics().error(pos != null ? pos.file() : "",
                             pos != null ? pos.line() : 0, pos != null ? pos.column() : 0, 0,
-                            "`[]` só pega em array em Kof; para esta coleção use "
+                            "`[]` only indexes arrays in Kof; for this collection use "
                                     + collectionIndexHint(recvType),
                             "SEM054");
                 }
@@ -543,7 +485,7 @@ public final class SemExpressionTyper {
                 for (SwitchExprCase sc : se.cases()) {
                     SymbolTable caseScope = scope.enterScope();
                     if (sc.value() instanceof PatternExpr pe) {
-                        bindPatternVars(sa, pe, caseScope);
+                        SemNarrowing.bindPatternVars(sa, pe, caseScope);
                         // SG-014: guarda analisada com a var do pattern bound
                         if (pe.guard() != null) {
                             inferType(sa, pe.guard(), caseScope);

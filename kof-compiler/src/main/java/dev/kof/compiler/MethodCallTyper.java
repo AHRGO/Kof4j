@@ -425,16 +425,13 @@ if (mc.receiver() != null) {
         for (FunctionDeclarationNode fn : tloFns) {
             if (!fn.typeParameters().isEmpty()) continue;
             List<Type> pt = new ArrayList<>();
-            // §231 (gap catalogado): seenDefault nao alimenta o requiredArity
-            // do Candidate ainda — overload top-level com default + call curto
-            // da SEM014 em vez de selecionar o candidato com default. Nao deletar
-            // aqui: o wire e a feature.
-            boolean seenDefault = false;
-            for (var p : fn.parameters()) {
-                pt.add(CompilerTypes.toType(p.type(), driver.currentUnit));
-                if (p.defaultExpression() != null) seenDefault = true;
-            }
-            tloCands.add(new TopLevelOverload.Candidate(fn, pt, pt.size()));
+            for (var p : fn.parameters()) pt.add(CompilerTypes.toType(p.type(), driver.currentUnit));
+            // §231: requiredArity = índice do 1º default (espelho dos wrappers de
+            // lowerFunctionDefaults) — antes era pt.size(), o que fazia o pick
+            // NUNCA escolher o candidato com default numa chamada curta (a
+            // chamada caía em SEM013/SEM014). Frontend único com o lowering e o
+            // BuiltinCallTyper: mesma seleção nos 3 sítios.
+            tloCands.add(new TopLevelOverload.Candidate(fn, pt, TopLevelOverload.requiredArityOf(fn)));
         }
         TopLevelOverload.Status[] st = new TopLevelOverload.Status[1];
         int sel = TopLevelOverload.pick(tloCands, tloArgTypes, st);

@@ -139,7 +139,7 @@ class Dog extends Animal {
 - Override is implicit (same method name).
 - Dispatch is virtual on both targets.
 
-## Generics Box<T> (0.3.22-beta)
+## Generics Box<T> (0.4.0-beta)
 
 ```kof
 class Box<T>(T value) {

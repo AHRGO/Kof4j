@@ -2,7 +2,7 @@
 
 # Kof Language Reference
 
-**Specification version:** 0.3.0-beta · **Extracted from:** `kof-compiler` (branch `beta-0.3.0`, 06/09/2026)
+**Specification version:** 0.4.0-beta · **Extracted from:** `kof-compiler` (initial extraction branch `beta-0.3.0`, 06/09/2026; current branch `beta-0.4.0`)
 
 This is the **Kof language reference**. It describes *what a valid Kof program
 is* and *what that program means* — regardless of how the current compiler
@@ -82,6 +82,8 @@ a *target limitation* or *target-dependent behavior* (see
 | [classes.md](classes.md) | Classes, records, enums, interfaces, entities, inheritance, visibility. |
 | [modules.md](modules.md) | Packages, imports, name resolution, compilation unit. |
 | [semantics.md](semantics.md) | Execution model, evaluation order, scope, lifetime, errors. |
+| [concurrency.md](concurrency.md) | Concurrency model: `spawn`/`await`, virtual threads (JVM), async/await (JS), pthread (Native). |
+| [concurrency-memory-model.md](concurrency-memory-model.md) | Happens-before edges and memory-visibility guarantees (SG-020). |
 | [specification-status.md](specification-status.md) | Classification of each feature (Stable/Experimental/…). |
 
 The **compiler implementation** (pipeline, IR, optimizations, backends) has
@@ -100,7 +102,7 @@ that make sense for the current state of Kof (beta):
 
 | Label | Meaning |
 |---|---|
-| **Stable** | Behavior defined by the language, frozen (rule of   0.2.6-beta). Does not change without a version bump + migration. |
+| **Stable** | Behavior defined by the language, frozen (rule of frozen semantics 0.2.6-beta). Does not change without a version bump + migration. |
 | **Experimental** | Implemented and testable, but subject to change. Not frozen. |
 | **Implementation-defined** | The language does not fix the result; the current compiler decides. Another Kof compiler may legitimately diverge. |
 | **Target-specific** | The observable behavior depends on the target (JVM/Native/JS). Documented as a difference, not hidden. |
@@ -143,9 +145,11 @@ A definition of conformance would be:
 > program the meaning that the specification defines.
 
 Today this **cannot be rigorously defined** because parts of the language
-are **Unspecified** or **Implementation-defined** (inheritance subtyping is not
-checked in the type checker; `bool→numeric` coercion passes analysis but has no
-emission; `val` does not prevent reassignment; generics without variance/bounds).
+are still **Unspecified** or **Implementation-defined** (`private`/`protected`
+on fields; `bool→numeric` coercion is implementation-defined; generics without
+variance/bounds; `Map`/`Set` iteration order). Several former blockers are now
+**resolved** — inheritance subtyping (`SEM021`), `val` reassignment (`SEM037`),
+interface coverage (`SEM043`), abstract instantiation (`SEM041`).
 The "Conformance" section of [specification-status.md](specification-status.md)
 lists exactly what still prevents a rigorous definition. There is, for now,
 no formal *conformance suite* — but the E2E tests per target are the embryo of

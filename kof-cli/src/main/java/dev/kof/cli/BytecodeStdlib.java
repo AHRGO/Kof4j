@@ -30,8 +30,25 @@ final class BytecodeStdlib {
         if (args.isEmpty() && ("length".equals(name) || "size".equals(name) || "isEmpty".equals(name))) {
             return receiver + "." + name;
         }
+        // #362 (SEM074): unbox de wrapper do JDK = identidade em Kof — não
+        // existem valores boxed (checkcast+intValue do javac vira só o valor;
+        // `x.intValue()` num primitivo é exatamente o que a classe rejeita).
+        if (args.isEmpty() && UNBOX.containsKey(ownerInternal)
+                && UNBOX.get(ownerInternal).equals(name)) {
+            return receiver;
+        }
         return null;
     }
+
+    private static final java.util.Map<String, String> UNBOX = java.util.Map.of(
+            "java/lang/Integer", "intValue",
+            "java/lang/Long", "longValue",
+            "java/lang/Double", "doubleValue",
+            "java/lang/Float", "floatValue",
+            "java/lang/Boolean", "booleanValue",
+            "java/lang/Character", "charValue",
+            "java/lang/Short", "shortValue",
+            "java/lang/Byte", "byteValue");
 
     /** Chamada estática → idiom Kof ({@code Integer.parseInt -> .toInt},
      *  {@code Math.abs -> math.abs} com o guard de descriptor). null = não mapeia. */

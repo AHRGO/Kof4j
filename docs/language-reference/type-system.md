@@ -140,19 +140,30 @@ For `+ - * / %` with two numerics: `double` dominates, else `float`, else
   x`) with `x` an identifier of type `T?` → in the **then-branch**, `x` now has
   type `T` (`StatementAnalyzer`, `IfStmt` narrowing). There is **no** narrowing by `&&`,
   `||`, ternary, or `if (x == null)` in the else.
-- **Deref of `T?` without narrowing is NOT an error**: `var s: String? = "x"; s.length`
-  **compiles** (*probe*) — the lowering unwraps the receiver
-  (`ExpressionTyper.java:143`). Null safety is **advisory**, not guaranteed
-  by the compiler (SG-005).
+- **Deref of `T?` without narrowing IS an error** (SG-005 fixed 10/09,
+  `9436da12`): `var s: String? = "x"; s.length` → `error: receiver is nullable
+  (T?); narrow first` [**SEM049**] (*measured 16/09, jar of tip `803eeef4*`).
+  The old "advisory, not guaranteed" behavior is gone — narrowing (`if (x != null)`)
+  is mandatory.
 - **Comparison with null**: primitive `== null` → **constant** (`false`/`true`,
-  `ExpressionLowerer.java:256-268`); reference `== null` → `if_acmp`.
-  `Int? == Int?` compares value (*probe*: `5 == 5` → true). **`Int? == null`
-  fails at runtime** (unboxing a null `Integer` throws NPE — the
-  "JavaFX launcher" error is the runtime wrapper for an unhandled exception; *probe*).
-  `String? == null` → `true` correctly (*probe*). Comparing a nullable
-  primitive with `null` is a **runtime bug** (SG-008), not a language rule.
+  `ExpressionLowerer.java:256-268`); reference `== null` → `if_acmp` (class/
+  String narrow correctly — *measured 16/09*). **Record** used to be the
+  exception (`==`/`!=` lowered to `.equals()` with no null-guard → null
+  `Point?` **NPEd**); fixed 17/09 — `§262` (face (a) `07a51565` literal
+  `null` → reference compare; face (b) both-null-safe content equality via
+  the `Objects.equals` desugar / JS `kofRecordEq`). `Int? == Int?`
+  compares value (*probe*: `5 == 5` → true). **`Int? == null` does NOT throw
+  — it folds silently**: a null `Int?` (map miss) compares `== null` as
+  **false** (`if (n == null)` printed `not-null`, *measured 16/09, jar of tip*)
+  because the nullable-primitive storage is the inner (`null`→`0` at the
+  boundary). That silence is the open bug **D-NULL-INTENT / #259** (§125
+  measures the fold) — NOT a language rule; the boxed contract keeps failing
+  its other faces (§241 reverted to the honest gap). `String? == null` →
+  `true` correctly (*measured 16/09*).
 - **Sources of `T?`**: `Map.get(k)` for a reference value, `readLine()`,
-  `readFile()`, `T?` literals.
+  `readFile()`, a function declared `T?` that `return null`s. There is **no
+  `T? = null` literal** — the null-literal is rejected since 10/09 (SG-008 →
+  **SEM048**, *measured*: `null cannot be assigned [SEM048]`).
 
 ---
 
@@ -182,33 +193,33 @@ module classes; **ambiguous import → does not guess** (type preserved).
 
 ---
 
-## 7. Subtyping — the biggest gap (SG-009)
+## 7. Subtyping (SG-009 — ✅ FIXED 10/09)
 
-`isAssignable` accepts **`ClassType → ClassType` always** (final case of `TypeChecker.isAssignable`). There is no
-check that `to` is a supertype of `from`. Consequences:
+`isAssignable` performs **nominal subtyping** for reference→reference of domain
+classes: it walks `superClass`/`interfaces` via BFS. An **unrelated** class is a
+**compile error** (`SEM021`, *probe*: `class A`/`class B` with `A a = B()`).
+Same for `implements` coverage (`SEM043`), abstract instantiation (`SEM041`) and
+collection element type (`SEM056`) — all enforced at compile time:
 
-- `B extends A; A a = b` works (*probe*) — but by coincidence (the lowering's
-  `checkcast` saves the emit), not by a subtyping rule.
-- **`A a = b_from_another_class` (unrelated) also passes the type
-  check.** Safety is **delegated to the target's `checkcast`/runtime**, not to the
-  type checker.
-- `implements I` does **not** require covering all methods: `class C implements I {}`
-  with `I` having an abstract `f()` **compiles** (*probe*) — it only fails if the method is
-  called (runtime `AbstractMethodError`).
-- `abstract class A; new A()` **compiles** and fails at runtime with
-  `InstantiationError` (*probe*) — it is not a type error.
+- `B extends A; A a = b` — valid (real subtype).
+- `A a = b_from_another_class` (unrelated) → `SEM021` at compile time.
+- `class C implements I {}` with an abstract `f()` → `SEM043`; an `abstract
+  class` may defer, the obligation is transitive to the concrete subclass
+  (`#322`). `default` methods count as satisfied.
+- `abstract class A; new A()`/`A()` → `SEM041` at compile time.
+- `l.add("x")` on a `List<Int>` → `SEM056`.
 
-**Real guarantee of the type checker:** calling a function/method **that does not exist on a known type** is an error (`SEM015`/`SEM025`); argument/constructor arity is
+**Guarantee of the type checker:** a function/method **that does not exist on a
+known type** is an error (`SEM015`/`SEM025`); argument/constructor arity is
 checked (`SEM013`/`SEM023`); an incompatible return type is an error (`SEM010`);
 `throw` only accepts `String` (`SEM026`); assignment respects `isAssignable`
-(`SEM012`/`SEM021`); redeclaration in the same scope is an error (`SEM024`); switch-
-expression requires default/exhaustiveness (`SEM032`); exhaustive enum in switch
-(`SEM031`).
+(`SEM012`/`SEM021`); redeclaration in the same scope is an error (`SEM024`);
+switch-expression requires default/exhaustiveness (`SEM032`); exhaustive enum in
+switch (`SEM031`).
 
-**Not guaranteed:** correct subtyping; element type in `list.add`/`map.put`
-(`l.add("x")` on a `List<Int>` **is not an error** — §8); interface
-coverage; instantiability of abstract; `bool→numeric` coercion (works by
-1/0 representation, but is implementation-defined — §3.1).
+**Not a guarantee:** `bool→numeric` coercion works by 1/0 representation but is
+implementation-defined (§3.1); check the §`not checked` items (`private`/
+`protected` **fields**, SG-013).
 
 ---
 
@@ -238,7 +249,7 @@ coverage; instantiability of abstract; `bool→numeric` coercion (works by
 
 - **Auto-box** from primitive to reference slot at emit (`Integer`, `Long`,
   …; `JvmBackend.java:77-101`).
-- **Unbox** in `list.get(i)` according to elemType (`JvmBackend.java:913-946`):
+- **Unbox** in `list.get(i)` according to elemType (`JvmOpCollections.java:95-112`):
   `listOf(1,2).get(0) + 1` → `2` (*probe*).
 - **Erasure box** (primitive behind type-var/Object): `kof_box`/`kof_unbox`.
 - **Mutable capture** of a closure uses a synthetic `Box<N>` class (see
@@ -335,11 +346,26 @@ the lambda's return (*probe*: map/filter/reduce correct).
 | `SEM038` | write to a record component | `StatementAnalyzer` (DD-02) |
 | `SEM041` | instantiation of an `abstract` class (`new A()` and `A()`) | `SemExpressionTyper`/`BuiltinCallTyper` (SG-017) |
 | `SEM042` | nested type (class inside class) | `ClassMemberParser.parseClassMember` (SG-016) |
-| `SEM043` | `implements` without covering the interface method / wrong arity | `SemanticAnalyzer.checkInterfaceImplementation` (SG-015) |
+| `SEM043` | `implements` without covering the interface method / wrong arity | `ImplementationChecker.checkInterfaceImplementation` (SG-015) |
 | `SEM044` | `main()` with a declared return type (`Int main()`) | `SemanticAnalyzer.analyzeFunction` (SG-018) |
 | `SEM045` | `throw X` clause with unknown type | `SemanticAnalyzer.checkThrowsClause` (SG-019) |
-| `SEM046` | `private`/`protected` access outside what is allowed | `MemberCallTyper.checkMemberAccess` (SG-013) |
-| `ARITH001` | division/remainder by a **constant** zero | ExpressionLowerer:198 |
+| `SEM046` | `private`/`protected` access (method or field) outside what is allowed | `MemberCallTyper.checkMemberAccess`/`checkFieldAccess` (SG-013) |
+| `SEM017` | no `super`/delegating constructor with that arity in the base class | `ExpressionBareCallLowerer.lower` (deferred to lowering) |
+| `SEM059` | overriding method's return type not compatible with the overridden one | `ImplementationChecker.checkOverrideReturnCompatibility` (#326) |
+| `SEM060` | calling an instance method via the class name without a receiver (`Calc.add(1)`) | `ExpressionMethodCallLowerer.lower` (#258) |
+| `SEM061` | same JVM descriptor redeclared (overload needs a different parameter/return type) | `SymbolTableBuilder.checkMethodRedeclaration` |
+| `SEM064` | `interface J extends Base` where `Base` is a class (interfaces may only extend interfaces) | `SemanticAnalyzer.analyzeInterface` (#321) |
+| `SEM065` | write to a `final` field outside its class constructor | `MemberCallTyper.checkFinalFieldWrite` (#331/#327; era SEM063, renumerado 17/09 — colidiu com §193) |
+| `SEM066` | collection accessor (`get`/`put`/`size`...) called on a String receiver (raw `db.query` row) | `StringReceiverGuards` (§193) |
+| `SEM067` | `catch` type is a Kof primitive (primitives are not throwable) | `CatchTypeCheck.check` (#332/#328) |
+| `SEM068` | `catch` type is a user class that is not a `Throwable` subclass | `CatchTypeCheck.check` (#332/#328) |
+| `SEM069` | `final abstract class X` (contradictory modifiers — no possible instance nor subclass) | `ClassShapeChecks.checkClassDeclaration` (#341) |
+| `SEM070` | `class D extends F` where `F` is declared `final` | `ClassShapeChecks.checkClassDeclaration` (#339) |
+| `SEM071` | instantiation of an `interface` (`new I()` and `I()`) | `ClassShapeChecks.checkInstantiable` (#340) |
+| `SEM072` | wrong-arity `add`/`push`/`append` on a List — e.g. `l.add(i, v)` (there is no positional insert; use `set(i, v)`) | `MemberCallTyper` (#336, all 4 targets) |
+| `SEM073` | wrong-arity `reduce` on a List — seedless `reduce((a,b)->…)` (Kof's reduce always takes the lambda AND a seed, either order; the seedless form died in ASM `Frame.merge`) | `MemberCallTyper` (#361, all 4 targets) |
+| `SEM074` | instance method on a primitive — e.g. `n.abs()`, `n.equals(o)`, `n.toChar()` (primitives have only `toString()` and the `toInt()`/`toLong()`/`toFloat()`/`toDouble()` conversions; comparison is `a == b`, math is top-level functions like `math.abs(x)`; the unlisted call used to compile and die at class load) | `SemMethodCallTyper` (#362, all 4 targets) |
+| `ARITH001` | division/remainder by a **constant** zero | `ExpressionBinaryLowerer` (constant-zero guard) |
 
 Division by a **non-constant** zero (`7 / z` with `z=0`) → **runtime**
 error (`ArithmeticException` on the JVM; *probe*), not compile-time.

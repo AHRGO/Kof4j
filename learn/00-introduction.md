@@ -45,7 +45,7 @@ This means you can write the same Kof code and compile it to:
 - **KofJS** — ES Modules (ECMAScript 2022+) executed in the embedded
   JS engine (without Node); `kof.ui` renders in a native webview or browser.
   See [chapter 37](37-kofjs.md).
-- **KofScript** — direct execution with `kof script` / `kof repl`, top-level `let`/`const` become persistent `KofScriptGlobals`, `--watch` re-executes on save
+- **KofScript** — direct execution with `kof script` / `kof repl`, top-level `var`/`val` become persistent `KofScriptGlobals` (no `let`/`const` — JS sugar removed 06/09), `--watch` re-executes on save
 - **KofC** — `kof c <file.c>` compiles a subset of C (`int` globals, `void` funcs, `if`/`while`/`*(int*)`/`&`) straight to a native-only x86-64 ELF
 
 > **Target separation:** the `Target` enum now distinguishes `JVM | NATIVE | NATIVE_RISCV64 | NATIVE_AARCH64 | JS | ANDROID`; `parseTarget` accepts `native.risc`/`native.riscv64` and `native.arm`/`native.aarch64`.

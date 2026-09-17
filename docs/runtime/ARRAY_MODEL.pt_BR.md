@@ -117,7 +117,7 @@ createArray(): Int[] {
 | Campo | Offset | Tamanho | Descrição |
 |-------|--------|---------|-----------|
 | type_id | 0 | 4 bytes | Sempre 2 para Array |
-| flags | 4 | 4 bytes | Reservado para GC futuro |
+| flags | 4 | 4 bytes | Reservado (o mark-sweep rastreia o prefixo do bloco do allocator) |
 | length | 8 | 4 bytes | Número de elementos |
 | elem_size | 12 | 4 bytes | Tamanho de cada elemento em bytes |
 | elements | 16 | variável | Dados contíguos |
@@ -228,7 +228,7 @@ kof_null_error() disponível para detecção.
 | Parser.java | Parsing de `new Type[size]` + `expr[expr]` |
 | SemanticAnalyzer.java | Type checking de arrays |
 | CompilerDriver.java | Lowering para `KofNewArray`/`KofArrayLoad`/`KofArrayStore`/`KofArrayLength` |
-| IRNodes.java | `KofNewArray`/`KofArrayLoad`/`KofArrayStore`/`KofArrayLength` |
+| `KofNewArray.java`/`KofArrayLoad.java`/`KofArrayStore.java`/`KofArrayLength.java` | ops de array (um record por op) |
 | NativeRuntime.java | 4 funções de runtime para arrays |
 | NativeBackend.java | Lowering das operações de array |
 | JvmBackend.java | `NEWARRAY`/`IALOAD`/`IASTORE`/`ARRAYLENGTH` |

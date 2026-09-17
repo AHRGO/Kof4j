@@ -14,7 +14,7 @@ comparison with `==`/`!=`, and a direct method API.
 ```kof
 var s = "Hello World"
 s.length                    // 11 (property; s.length() is also accepted)
-s.charAt(1)                 // 'e' as a numeric value (101)
+s.charAt(1)                 // 'e' (a Char; prints as the character, `101` via `as Int`)
 s.substring(6)              // "World"
 s.substring(0, 5)           // "Hello"
 s.contains("World")
@@ -111,14 +111,14 @@ For strings with accents/emoji the values diverge (`"Olá".length` = 4 on Native
 `docs/backend-parity.md`): use `length` for raw size; do not assume character
 count when the target matters.
 
-## Null safety (0.3.22-beta)
+## Null safety (0.4.0-beta)
 
 ```kof
-String? s = null
+String? s = mapOf("k", "abc").get("k")   // null reaches T? via API (= null literal is SEM048)
 if (s != null) {
     println(s.length)   // narrowing OK — property AND methods (s.substring(...))
 }
-// s.length without a check → error SEM014
+// s.length without a check → error SEM049 (SG-005 fixed 10/09)
 ```
 
 > **02/09:** narrowing of `String?` on the JVM fixed — before, `s.length`/`s.substring(...)`
@@ -133,4 +133,4 @@ if (s != null) {
 
 ## Related anti-patterns
 
-- `sentinel-values.md` — use `String?` instead of `""` for "not found" (0.3.22-beta)
+- `sentinel-values.md` — use `String?` instead of `""` for "not found" (0.4.0-beta)

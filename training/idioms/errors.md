@@ -29,7 +29,7 @@ try {
 
 - Normal control flow — use `if`.
 - Simple validation — `if` + return.
-- Absence as a value (not an error) — use `String?` + `if (x != null)` (0.3.22-beta) instead of a sentinel. Generic `Option<T>` is still planned.
+- Absence as a value (not an error) — use `String?` + `if (x != null)` (0.4.0-beta) instead of a sentinel. Generic `Option<T>` is still planned.
 
 ## BAD — sentinel
 

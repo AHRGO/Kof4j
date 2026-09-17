@@ -119,10 +119,10 @@ generic-type = qualified-name , "<" , type-ref , { "," , type-ref } , ">" ;
 
 `List<List<Int>>`, `Map<String, List<Int>>`. Aninhamento por contagem de
 profundidade com split de `>>`/`>>>`. **Não há** wildcard `? extends T` /
-`? super T` na linguagem: `List<? extends Int>` *compila* (o `?` é lido como
-sufixo nullable e `extends`/`Int` viram lixo no nome) mas **quebra em
-runtime** com `NoClassDefFoundError: ?extendsInt` (*probe*) — **Unspecified /
-não suportado** (SG-007).
+`? super T` na linguagem: `List<? extends Int>` é **rejeitado com `PARSE086`**
+("Wildcard types are not supported; use a concrete type or a nullable `T?`") no
+`TypeParser.parseTypeRef` — SG-007 ✅ CORRIGIDO 06/09 (antes compilava e quebrava
+em runtime com `NoClassDefFoundError`).
 
 ---
 

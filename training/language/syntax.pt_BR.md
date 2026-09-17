@@ -14,7 +14,7 @@ package com.example
 ### Import (fix 0.2.6-beta: file-specific)
 
 ```kof
-import a.b.C          // arquivo a/b/C.kf — fix 27/08 CompilerDriver expandKofImports
+import a.b.C          // arquivo a/b/C.kf — fix 27/08 CompilerImports expandKofImports
 import a.b.*          // diretório a/b
 import kof.http
 ```
@@ -76,28 +76,29 @@ interface Speaker {
 var x = 10
 val y = 20
 String name = "Mel"
-String? maybe = null        // nullable
+String? maybe = find(key)   // nullable (null via API — literal `= null` é SEM048)
 Box<Int> b = Box(42)        // generics com primitivo
 ```
 
-### Nullable (0.3.22-beta)
+### Nullable (0.4.0-beta)
 
 ```kof
-String? s = null
+String? s = mapOf("k", "x").get("k")   // null chega ao T? via API (sem `= null` — SEM048 desde 10/09)
 if (s != null) {
-    println(s.length)   // narrowing
+    println(s.length)   // narrowing — SOMENTE dentro do then-branch
+    String t = s        // OK aqui (estreitado para String)
 }
-String t = s            // erro SEM014 se sem check
+String t2 = s           // erro SEM021 — não atribuível fora do check
 ```
 
-### KofScript top-level let (0.3.22-beta)
+### KofScript top-level let (0.4.0-beta)
 ```kof
 let x = 5
 const y: Int = 10
 // → KofScriptGlobals static fields + rewriting
 ```
 
-### Pattern matching (0.3.22-beta)
+### Pattern matching (0.4.0-beta)
 
 ```kof
 switch (obj) {
@@ -118,14 +119,14 @@ if (p instanceof Point) {
 ### Spawn / Await
 
 ```kof
-spawn expr();            // fire-and-forget (JVM virtual thread / Native pthread / JS sequencial)
+spawn expr();            // fire-and-forget (JVM virtual thread / Native pthread / JS microtask)
 val r = spawn expr();    // Handle<T> typed handle
 val v = await r;         // blocks; T (primitives unboxed)
 ```
 
-3 targets: JVM virtual threads, Native pthread (CONC001 fechado 31/08), JS sequencial (CONC003 parcial). Android: AND001.
+3 targets: JVM virtual threads, Native pthread (CONC001 fechado 31/08), JS event-loop (CONC003 fechado 03/09). Android: AND001.
 
-### kof.http (0.3.22-beta)
+### kof.http (0.4.0-beta)
 
 ```kof
 var html = http.get("https://example.com")

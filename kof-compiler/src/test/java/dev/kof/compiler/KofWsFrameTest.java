@@ -69,14 +69,15 @@ class KofWsFrameTest {
         if (len == 126) headerLen = 4;
         else if (len == 127) headerLen = 10;
         else headerLen = 2;
-        // CodeQL: out.length == serverFrame.length + 4; i < serverFrame.length - headerLen
-        // max index = headerLen + 4 + (serverFrame.length - headerLen - 1) = serverFrame.length + 3
-        // out.length = serverFrame.length + 4, so max valid index = serverFrame.length + 3 ✓
-        byte[] out = new byte[serverFrame.length + 4];
+        // Single source of truth for the payload size: keeps loop bound, array
+        // size and index expressions provably consistent for static analysis
+        // (headerLen + payloadLen == serverFrame.length).
+        int payloadLen = serverFrame.length - headerLen;
+        byte[] out = new byte[headerLen + 4 + payloadLen];
         System.arraycopy(serverFrame, 0, out, 0, headerLen);
         out[1] = (byte) (serverFrame[1] | 0x80);
         System.arraycopy(MASK, 0, out, headerLen, 4);
-        for (int i = 0; i < serverFrame.length - headerLen; i++) {
+        for (int i = 0; i < payloadLen; i++) {
             out[headerLen + 4 + i] = (byte) (serverFrame[headerLen + i] ^ MASK[i % 4]);
         }
         return out;

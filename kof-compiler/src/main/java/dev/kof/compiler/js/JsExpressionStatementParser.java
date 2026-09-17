@@ -159,7 +159,19 @@ final class JsExpressionStatementParser {
                 JsIr.JsExpression right = parser.pop(stack);
                 JsIr.JsExpression left = parser.pop(stack);
                 JsIr.JsExpression condition = JsComparisons.comparisonExpr(cj.comparison(), left, right, cj.operandType());
-                JsIr.JsExpression ifExpr = parser.p.flow.tryParseIfExpr(ctx, pos, cj, condition);
+                // §267: um `if` de STATEMENT (marcado no lowering via
+                // KofStatementIf e registrado em ctx.statementIfLabels pelo
+                // dispatcher) NAO pode dobrar em if-expressao: quando os ramos
+                // sao atribuicoes, a ternaria engole o statement seguinte e o
+                // `let` dele sobe p/ antes da ternaria -> leitura obsoleta
+                // (valor errado silencioso). O dispatcher de EXPRESSAO
+                // (consumeExpressionOp) nunca ve o marcador, entao as
+                // if-expressoes reais continuam dobrando. `remove(...)` retorna
+                // true na PRIMEIRA visita, depois some (LabelId monotonico nao
+                // re-aparece).
+                JsIr.JsExpression ifExpr = ctx.statementIfLabels.remove(cj.trueLabel())
+                        ? null
+                        : parser.p.flow.tryParseIfExpr(ctx, pos, cj, condition);
                 if (ifExpr != null) {
                     stack.add(ifExpr);
                     continue;

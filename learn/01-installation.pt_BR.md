@@ -81,7 +81,7 @@ Para valer sempre: **Variáveis de Ambiente → PATH → Novo** →
 ## Passo 3 — Conferir
 
 ```bash
-kof version        # ex.: kof 0.3.22-beta
+kof version        # ex.: kof 0.4.0-beta
 kof info           # ambiente completo (JVM embutida, targets, instalação)
 ```
 
@@ -133,10 +133,10 @@ A cadeia `intenção → Kof → IR → backend → runtime` é a mesma para tod
 | Comando | Descrição |
 |---------|-----------|
 | `kof run <f.kf> [--target ...] [args]` | compila e executa |
-| `kof build <dir> [--target ...]` | compila para o target |
+| `kof build <dir|file.kf> [--target ...]` | compila para o target |
 | `kof serve <f.kf>` | sobe app web (`web.app()`) |
 | `kof test <f.kf\|dir>` | roda testes |
-| `kof check <f.kf\|dir>` | type-check sem emitir |
+| `kof check <f.kf\|dir> [--target <t>]` | type-check sem emitir (gaps por alvo) |
 | `kof script <f.kf>` / `kof repl` | execução direta / REPL |
 | `kof fmt <f.kf>` | formata |
 | `kof info` / `kof version` | ambiente / versão |

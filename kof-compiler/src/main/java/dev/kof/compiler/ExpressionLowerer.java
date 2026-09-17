@@ -30,7 +30,14 @@ public final class ExpressionLowerer {
                 yield localIdx;
             }
             case IdentifierExpr ie -> {
-                if (driver.loweringMain && "args".equals(ie.name())) {
+                if (driver.loweringMain && "args".equals(ie.name())
+                        && driver.findLocalVar(ie.name(), locals) == null) {
+                    // #397: the implicit main-args intercept applies ONLY when
+                    // the user did not declare `args` in main (a declared local
+                    // wins — same §179 declared-beats-builtin-alias precedent as
+                    // the field-vs-namespace guard #403; the SEM pass already
+                    // resolves locals first, and the divergence here loaded
+                    // slot 0 String[] over the user's local → silent garbage).
                     if (driver.mainArgsListField) {
                         // args: List<String> — the converted list lives in
                         // slot 1 (set by the main prologue)
@@ -286,8 +293,8 @@ public final class ExpressionLowerer {
                          var p = aa.position();
                          driver.currentDiagnostics.error(p != null ? p.file() : "",
                                  p != null ? p.line() : 0, p != null ? p.column() : 0, 0,
-                                 "Set não suporta indexação [i]; use contains(x) para "
-                                         + "pertencimento ou keys() para iterar",
+                                 "Set does not support indexing [i]; use contains(x) for "
+                                         + "membership or keys() to iterate",
                                  "SEM025");
                      }
                      yield localIdx;
@@ -429,7 +436,7 @@ public final class ExpressionLowerer {
                             driver.currentDiagnostics.error(fa.position() != null ? fa.position().file() : "",
                                     fa.position() != null ? fa.position().line() : 0,
                                     fa.position() != null ? fa.position().column() : 0, 0,
-                                    "enum '" + ct.name() + "' não tem constante '" + fa.fieldName() + "'",
+                                    "enum '" + ct.name() + "' has no constant '" + fa.fieldName() + "'",
                                     "SEM030");
                         }
                         yield localIdx;

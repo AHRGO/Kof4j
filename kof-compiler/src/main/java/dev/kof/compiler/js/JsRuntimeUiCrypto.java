@@ -354,28 +354,62 @@ public final class JsRuntimeUiCrypto {
             }
 
             const __kofObsSpans = new Map();
+            const __kofObsCompleted = [];
+            const __kofObsExportMax = 256;
             let __kofObsActiveTrace = null;
 
             export function kofObservabilitySpanStart(name) {
                 const id = kofObservabilityTraceId() + kofObservabilitySpanId();
-                __kofObsSpans.set(id, Date.now() * 1000);
+                __kofObsSpans.set(id, { name: name == null ? "" : String(name), startMicros: Date.now() * 1000 });
                 return id;
             }
 
             export function kofObservabilitySpanEnd(handle) {
-                const start = __kofObsSpans.get(handle);
-                if (start === undefined) return "{}";
+                const span = __kofObsSpans.get(handle);
+                if (span === undefined) return "{}";
                 __kofObsSpans.delete(handle);
                 const end = Date.now() * 1000;
                 const trace = __kofObsActiveTrace || kofObservabilityTraceId();
+                const spanId = handle.substring(32);
+                __kofObsCompleted.push({
+                    traceId: trace,
+                    spanId: spanId,
+                    name: span.name,
+                    startMicros: span.startMicros,
+                    endMicros: end
+                });
+                while (__kofObsCompleted.length > __kofObsExportMax) __kofObsCompleted.shift();
                 return JSON.stringify({
                     traceId: trace,
-                    spanId: handle.substring(32),
+                    spanId: spanId,
                     parentSpanId: "",
-                    name: "span",
-                    startMicros: start,
+                    name: span.name,
+                    startMicros: span.startMicros,
                     endMicros: end,
-                    durationMicros: end - start
+                    durationMicros: end - span.startMicros
+                });
+            }
+
+            export function kofObservabilityExportSpans() {
+                const spans = __kofObsCompleted.map(s => ({
+                    traceId: s.traceId,
+                    spanId: s.spanId,
+                    parentSpanId: "",
+                    name: s.name,
+                    kind: 1,
+                    startTimeUnixNano: String(s.startMicros * 1000),
+                    endTimeUnixNano: String(s.endMicros * 1000)
+                }));
+                return JSON.stringify({
+                    resourceSpans: [{
+                        resource: {
+                            attributes: [{ key: "service.name", value: { stringValue: "kof" } }]
+                        },
+                        scopeSpans: [{
+                            scope: { name: "kof.observability" },
+                            spans: spans
+                        }]
+                    }]
                 });
             }
 

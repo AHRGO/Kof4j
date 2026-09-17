@@ -1299,6 +1299,7 @@ class DecompileTest {
         runJavac(javaFile, dir);
         String kof = Decompile.decompile(dir.resolve("Cs.class"));
         assertTrue(kof.contains("as Int"), "checkcast Integer → `as Int`:\n" + kof);
+        assertFalse(kof.contains("intValue"), "#362: unbox do wrapper = identidade — nunca emitir `x.intValue()` (SEM074):\n" + kof);
         Path out = dir.resolve("Cs.kf");
         Files.writeString(out, kof);
         CompilationResult result = new CompilerDriver().compile(out, dir.resolve("out"), Target.JVM);
@@ -1835,8 +1836,8 @@ class DecompileTest {
         Path out = dir.resolve("gen");
         Decompile.decompileTree(root, out);
         String kof = Files.readString(out.resolve("NamedR.kf"));
-        assertTrue(kof.contains("record NamedR implements Named(String name)"),
-                "interface top do MESMO pacote resolve (probe R7: Kof quer 'implements' ANTES dos componentes):\n" + kof);
+        assertTrue(kof.contains("record NamedR(String name) implements Named"),
+                "interface top do MESMO pacote resolve (#325: forma Kof canonical = comps ANTES do implementsntes):\n" + kof);
         assertFalse(kof.contains("body not recovered"), "sem stub:\n" + kof);
         CompilationResult r = new CompilerDriver().compileSources(
                 List.of(out.resolve("NamedR.kf").toAbsolutePath().normalize(),
@@ -1860,8 +1861,8 @@ class DecompileTest {
         Path out = dir.resolve("gen");
         Decompile.decompileTree(root, out);
         String kof = Files.readString(out.resolve("b/CrossR.kf"));
-        assertTrue(kof.contains("record CrossR implements Iface(String name)"),
-                "cross-package com import:\n" + kof);
+        assertTrue(kof.contains("record CrossR(String name) implements Iface"),
+                "cross-package com import (#325 forma canonical):\n" + kof);
         assertTrue(kof.contains("import a.Iface"), "import emitido:\n" + kof);
         assertFalse(kof.contains("body not recovered"), "sem stub:\n" + kof);
         CompilationResult r = new CompilerDriver().compileSources(
@@ -1901,8 +1902,8 @@ class DecompileTest {
         Path out = dir.resolve("gen");
         Decompile.decompileTree(root, out);
         String numr = Files.readString(out.resolve("NumR.kf"));
-        assertTrue(numr.contains("record NumR implements Box$Expr(Int v)"),
-                "interna do MESMO pacote: frontend aceita nome com `$` como top (probe 13/09):\n" + numr);
+        assertTrue(numr.contains("record NumR(Int v) implements Box$Expr"),
+                "interna do MESMO pacote: frontend aceita nome com `$` como top (#325 forma canonical):\n" + numr);
         assertFalse(numr.contains("body not recovered"), "sem stub:\n" + numr);
         CompilationResult r = new CompilerDriver().compileSources(
                 List.of(out.resolve("NumR.kf").toAbsolutePath().normalize(),

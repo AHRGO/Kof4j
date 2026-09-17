@@ -113,8 +113,8 @@ public final class StatementLowerer {
                             driver.currentDiagnostics.error(vds.position() != null ? vds.position().file() : "",
                                     vds.position() != null ? vds.position().line() : 0,
                                     vds.position() != null ? vds.position().column() : 0, 0,
-                                    "a atribuição a '" + vds.name() + "' recebeu um valor void — a"
-                                            + " chamada não retorna valor",
+                                    "assignment to '" + vds.name() + "' received a void value — the"
+                                            + " call does not return a value",
                                     "SEM033");
                         }
                         yield localIdx;
@@ -192,6 +192,7 @@ public final class StatementLowerer {
                 LabelId elseLabel = LabelId.create();
                 LabelId endLabel = LabelId.create();
                 LabelId thenLabel = LabelId.create();
+                ops.add(new KofStatementIf(thenLabel)); // §267
                 if (ifStmt.condition() instanceof BinaryExpr bin && driver.isComparisonShortcut(bin, locals)) {
                     localIdx = driver.emitComparisonShortcut(bin, ops, owner, localIdx, locals);
                     ops.add(new KofConditionalJump(driver.mapComparison(bin.operator()), driver.comparisonOperandType(bin, locals), thenLabel, elseLabel));
@@ -278,6 +279,7 @@ public final class StatementLowerer {
                 localIdx = driver.emitStatement(fs.body(), ops, owner, localIdx, locals, returnType);
                 driver.breakLabels.pop();
                 driver.continueLabels.pop();
+                ops.add(new KofContinueLabel(continueLabel, startLabel)); // §266
                 ops.add(new KofLabel(continueLabel));
                 if (fs.update() != null) {
                     if (fs.update() instanceof UnaryExpr ue
@@ -362,6 +364,7 @@ public final class StatementLowerer {
                 localIdx = driver.emitStatement(fis.body(), ops, owner, localIdx, locals, returnType);
                 driver.breakLabels.pop();
                 driver.continueLabels.pop();
+                ops.add(new KofContinueLabel(continueLabel, startLabel)); // §266
                 ops.add(new KofLabel(continueLabel));
                 ops.add(new KofLoadLocal(Type.PrimitiveType.INT, idxIdx));
                 ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 1));

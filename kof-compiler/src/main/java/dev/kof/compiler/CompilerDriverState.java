@@ -25,6 +25,11 @@ IRModule currentModule;
 
     protected boolean debugInfoEnabled = true;
 
+    /** kof-android Fase 4: minSdk/targetSdk do APK (defaults 24/34). */
+    protected int androidMinSdk = 24;
+
+    protected int androidTargetSdk = 34;
+
     protected java.util.function.BiConsumer<IRModule, IRModule> irObserver;
 
     protected IRObserver irStatsObserver;
@@ -336,6 +341,17 @@ IRModule currentModule;
     /** Enable or disable debug metadata emission (line tables, source names). */
     public CompilerDriver setDebugInfoEnabled(boolean enabled) {
         this.debugInfoEnabled = enabled;
+        return (CompilerDriver) this;
+    }
+
+    /**
+     * kof-android Fase 4: sobrescreve minSdk/targetSdk do APK gerado
+     * (`--min-sdk`/`--target-sdk`). Defaults 24/34 — nenhuma mudança de
+     * contrato, só parametrização do empacotamento.
+     */
+    public CompilerDriver setAndroidSdk(int minSdk, int targetSdk) {
+        this.androidMinSdk = minSdk;
+        this.androidTargetSdk = targetSdk;
         return (CompilerDriver) this;
     }
 

@@ -5,7 +5,7 @@
 Official installation guide from the artifacts published on **GitHub
 Releases**. Follow the step-by-step for **your system** and you are done.
 
-> **Current version:** 0.2.6-beta (08/30/2026). This guide **does not depend on the
+> **Current version:** 0.4.0-beta (see `VERSION` at the repo root). This guide **does not depend on the
 > version**: the commands work on any release, current or future.
 > You do not need to know which version it is to install.
 
@@ -154,7 +154,7 @@ kof version
 Expected output (the number is that of your release):
 
 ```
-kof 0.2.6-beta
+kof 0.4.0-beta
 ```
 
 Full environment report:
@@ -166,13 +166,13 @@ kof info
 Expected output (summary):
 
 ```
-Kof 0.2.6-beta
+Kof 0.4.0-beta
 Release channel: beta
 Tooling API: 21
 OS: linux
 Arch: x86_64
 Target: linux-x86_64
-JVM: Eclipse Adoptium 21.x (embedded)
+JVM: Eclipse Adoptium 25.x (embedded)
 Compiler: 0.2.6
 Runtime: 0.2.6
 Stdlib: 0.2.6
@@ -197,7 +197,7 @@ kof-<version>-<system>/
 │   └── kof-webview    # kof.ui shell (when available)
 ├── lib/
 │   └── kof.jar        # compiler + runtime + stdlib + GraalJS
-├── jdk/               # embedded OpenJDK 21 (official release)
+├── jdk/               # embedded OpenJDK 25 (official release)
 ├── editor/            # grammar + editor support
 ├── tooling/           # reusable language definitions
 ├── docs/              # embedded documentation
@@ -210,7 +210,7 @@ Main commands already available (details in
 | Command | What it does |
 |---------|-----------|
 | `kof run app.kf` | compiles and runs (JVM by default) |
-| `kof build <dir> [--target ...]` | compiles to jvm / native / js / android |
+| `kof build <dir|file.kf> [--target ...]` | compiles to jvm / native / native.risc / native.arm / js / android |
 | `kof serve app.kf` | starts a `web.app()` app |
 | `kof test <dir>` | runs the test suite |
 | `kof check <dir>` | type-check without emitting code |
@@ -248,7 +248,7 @@ The layout is stable between releases — there is no "migrate" step.
 
 Only for those who want to contribute or test `main`:
 
-**Prerequisites:** JDK 21+ (Temurin) and Maven 3.9+. For the `native`
+**Prerequisites:** JDK 25 (Temurin) and Maven 3.9+. For the `native`
 target: binutils (`as`/`ld`).
 
 ```bash

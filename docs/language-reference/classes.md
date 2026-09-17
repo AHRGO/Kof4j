@@ -2,7 +2,7 @@
 
 # Classes, Records, Enums, Interfaces, Entities
 
-**Status:** Stable (except where labeled) · **Evidence:** Parser.parseTypeDeclaration, `SymbolTableBuilder`/`SemanticAnalyzer` (defineMembers), `SymbolTable.java`
+**Status:** Stable (except where labeled) · **Evidence:** TypeDeclarations.parseTypeDeclaration, `SymbolTableBuilder`/`SemanticAnalyzer` (defineMembers), `SymbolTable.java`
 
 ---
 
@@ -42,7 +42,7 @@ u.age = 27                  // direct field — mutable
 ### 1.1 `class X(...)` is a record, not a class
 
 `class User(String name, Int age) { }` **is not** a class with a primary
-constructor — the parser routes to `parseRecordBody` (Parser.parseRecordBody)
+constructor — the parser routes to `parseRecordBody` (TypeDeclarations.parseRecordDeclaration)
 and produces a **record** (immutable, accessors `u.name()`). Writing
 `u.name = "x"` **does not** work. For immutable data, the canonical form is
 `record`. **Stable** (documented in `AGENTS.md`, verified).
@@ -67,7 +67,8 @@ implements-clause = "implements" , type-ref , { "," , type-ref }
   (real virtual dispatch at runtime: `A a = B(); a.f()` → 2, *probe*).
 - **`override` modifier** is accepted but **not validated** (there is no check
   that the method exists in the super).
-- **Subtyping is not checked in the type checker** (SG-009) — see
+- **Subtyping is checked** (nominal, SG-009 ✅ FIXED 10/09): an unrelated class
+  in a typed declaration/assignment → `SEM021` — see
   [type-system.md](type-system.md) §7.
 
 ---
@@ -80,11 +81,17 @@ implements-clause = "implements" , type-ref , { "," , type-ref }
 | `private` | visible only in the class |
 | `protected` | visible in the package/subclass (JVM semantics) |
 
-- **`private` is NOT checked at compile-time**: accessing `p.x` from outside →
-  `IllegalAccessError` at **runtime** (*probe*). Visibility is emitted as a
-  JVM flag; the Kof compiler does not enforce it. **Implementation-defined**
-  (SG-013).
-- No modifier → `public` (`accessFlagsFor:3388`).
+- **`private`/`protected` are checked at compile-time for METHODS and FIELDS**
+  (`SEM046`, SG-013): calling `c.f()` or reading/writing `c.x` from outside a
+  private member (or outside the hierarchy for `protected`) is a compile error;
+  from inside it is fine. `this.x`/bare `x` in the declaring class passes
+  (owner == caller). Fields were closed 17/09 (#331/#327) — the `FieldSymbol`
+  used to lose the modifiers.
+- **`final` field write is checked** (`SEM065`): assigning a `final` field
+  outside the declaring class's constructor is a compile error (JVMS 4.4,
+  `putfield` restriction); the synthetic `<clinit>` initializer still passes.
+  `FieldAccessControlTest` 7/7.
+- No modifier → `public` (`SymbolTableBuilder` derives the flags from the declaration modifiers — private/protected/static/final).
 - `static` field/method: access by class name (`S.k`, `S.k()` — *probe*).
 
 ---
@@ -93,8 +100,8 @@ implements-clause = "implements" , type-ref , { "," , type-ref }
 
 `ebnf
 record-declaration = modifiers , "record" , identifier , [ type-parameters ] ,
-                     [ "extends" , type-ref ] , [ implements-clause ] ,
-                     record-header , [ record-body ]
+                     [ "extends" , type-ref ] , record-header ,
+                     [ implements-clause ] , [ record-body ]
 record-header = "(" , [ record-component , { "," , record-component } ] , ")"
 record-component = [ modifiers ] , type-ref , identifier , [ "=" , expression ]
 `
@@ -117,6 +124,9 @@ println(p)              // JVM: Point[x=10, y=20]
   works (*probe*).
 - **Generic record**: `record Box<T>(T v)` works (*probe*).
 - **Default in a component**: `record C(Int x = 0)` generates overloads by arity.
+- **Record implementing interfaces**: canonical Kof order is components first —
+  `record Point(Int x, Int y) implements Describable { }`; the Java order
+  (`implements` before the component list) is also accepted (#325).
 
 ---
 
@@ -197,9 +207,13 @@ class C implements I { Int f() { return 1 } }
 - **`default Int f() { … }`** → a method with a body in an interface works
   (*probe*).
 - **Does not accept type-parameters** (`interface F<T>` → `PARSE007`, *probe*).
-- **There is no check for complete implementation**: `class C implements I {}` without
-  `f()` **compiles** (*probe*) — it fails only at runtime if `f()` is called
-  (`AbstractMethodError`). **Unspecified** (SG-015).
+- **Complete implementation is checked at compile time** (`SEM043`, *probe*):
+  `class C implements I {}` without `f()` is a **compile error**, not a runtime
+  `AbstractMethodError`. An **`abstract class` may defer** the interface methods
+  (`abstract class A implements I {}` compiles); the obligation is **transitive**
+  to the concrete subclass — `class C extends A {}` without `f()` fails with
+  `SEM043` naming the class + method + "inherited via". `default` methods with a
+  body count as satisfied (#213). SG-015 resolved.
 - **There is no** trait, nor interface with state (fields), nor companion object.
 
 ---
@@ -221,7 +235,7 @@ entity User {
 }
 `
 
-- **It is a generated record + schema for `kof.orm`** (`AstNodes.java:147-158`).
+- **It is a generated record + schema for `kof.orm`** (`EntityDeclarationNode.java` / `KofOrm.java`).
 - Constraints `generated`/`unique` are schema metadata (compile-time, without
   reflection).
 - Enables the **Query DSL**: `User.query(db) { where age > 18; … }`.
@@ -231,9 +245,10 @@ entity User {
 
 ## 9. Nested classes
 
-`class A { class B { } }` — the parser accepts `type-declaration` as a member
-(`parseClassMember:740-742`). **The naming/scoping semantics of nesting
-is Unspecified** (SG-016) — there is no dedicated test that fixes `A.B` vs `B`.
+`class A { class B { } }` is a **parse error** (`SEM042`, *probe*): nested
+types do not exist in Kof — `ClassMemberParser.parseClassMember` rejects a
+`type-declaration` used as a member with "declare at top level"; the same branch
+covers nested interface/record/entity. Proof: `nestedClassGivesCleanDiagnostic` + `topLevelClassStaysGreen` (SG-016 resolved).
 
 ---
 
@@ -241,8 +256,8 @@ is Unspecified** (SG-016) — there is no dedicated test that fixes `A.B` vs `B`
 
 | Missing | Note |
 |---|---|
-| `sealed`/`permits` | lexer keywords, not parsed (SG-002) |
-| `abstract class` non-instantiable at compile-time | `new A()` compiles, fails at runtime (SG-017) |
+| `sealed`/`permits` | not keywords — removed from the lexer (SG-002, 12/09): `sealed class S {}` → `PARSE010`; feature postponed (roadmap §2.5) |
+| ~~`abstract class` non-instantiable at compile-time~~ **exists** | `new A()`/`A()` on an abstract class → `SEM041` (*probe*, SG-017 resolved) |
 | `companion object` | does not exist |
 | `object` (singleton) | there is no `object` keyword |
 | `data class` | use `record` |

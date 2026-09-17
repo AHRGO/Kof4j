@@ -407,7 +407,7 @@ public final class JvmRuntimeCallDescriptors {
             // ── kof.observability (G5) ────────────────────────────────
             case "kof_observability_health", "kof_observability_request_id", "kof_observability_correlation_id",
                     "kof_observability_trace_id", "kof_observability_span_id",
-                    "kof_observability_metrics" -> "()Ljava/lang/String;";
+                    "kof_observability_metrics", "kof_observability_export_spans" -> "()Ljava/lang/String;";
             case "kof_observability_readiness", "kof_observability_liveness" -> "()Z";
             case "kof_observability_counter" -> "(Ljava/lang/String;)I";
             case "kof_observability_increment" -> "(Ljava/lang/String;I)I";

@@ -70,7 +70,7 @@ Backend **alpha**. KofJS gera ES Modules rodados na GraalJS embutida do Kof
 | Webview nativo `bin/kof-webview` (WebKitGTK embutido) | ✅ Linux |
 | `kof run --target=js` (GraalJS embarcado) | ✅ |
 | `kof build --target=js` + `index.html` (deploy estático) | ✅ |
-| `kof.db` | ❌ (DB001) |
+| `kof.db` | ✅ não-tipado (16/09, ponte no host GraalJS); `query<T>` tipado = `DB002` |
 | io de arquivos no browser | ~ (io real só no runner embarcado; browser cai em erro claro) |
 
 ## Aplicação de exemplo: contador
