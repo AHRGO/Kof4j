@@ -130,7 +130,7 @@ class KofHttpNativeTimeoutE2ETest {
     @Test
     void nativeRequestStillSucceedsWithTimeoutSet(@TempDir Path tempDir) throws Exception {
         int port = startGood();
-        int bh = startBlackhole();
+        startBlackhole();
         // bom servidor responde antes do deadline -> nao deve throwar
         String out = runNative(tempDir, """
                 main() {
