@@ -14,6 +14,14 @@ final class ExpressionBuiltinInstanceCalls {
 
     private ExpressionBuiltinInstanceCalls() {}
 
+    /** Diagnóstico de gap honesto (R6) numa chamada kof.web. */
+    private static void webGap(CompilerDriver driver, MethodCallExpr mc, String msg, String code) {
+        if (driver.currentDiagnostics == null) return;
+        SourcePosition p = mc.position();
+        driver.currentDiagnostics.error(p != null ? p.file() : "",
+                p != null ? p.line() : 0, p != null ? p.column() : 0, 0, msg, code);
+    }
+
     /**
      * Lowering de métodos em instância de enum (name, toString, ordinal, compareTo).
      * Retorna >= 0 se o método foi consumido, ou -1 se não é método de enum tratado aqui.
@@ -61,6 +69,16 @@ final class ExpressionBuiltinInstanceCalls {
         for (ExpressionNode arg : mc.arguments()) webArgTypes.add(ExpressionTyper.inferExprType(driver, arg, locals));
         KofWeb.WebCall webCall = KofWeb.instanceMethod(mc.methodName(), webArgTypes);
         if (webCall != null) {
+            // AND002: no Android o servidor embutido não tem realização
+            // (app móvel não escuta porta) — diagnóstico honesto em compile
+            // time (R6), nunca código de servidor que não roda.
+            if (driver.target == Target.ANDROID) {
+                webGap(driver, mc,
+                        "web: embedded server not available on Android — a mobile app "
+                                + "does not listen on a port; use interop (AND002)",
+                        "AND002");
+                return localIdx;
+            }
             boolean nativeWebT1 = (driver.target == Target.NATIVE
                     || driver.target == Target.NATIVE_RISCV64
                     || driver.target == Target.NATIVE_AARCH64)

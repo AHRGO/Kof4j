@@ -234,12 +234,18 @@ Prova: `AndroidInteropE2ETest.androidResponsiveViewportAndWebViewWideViewport`.
   Prova: `AndroidInteropE2ETest.androidSdkOverrideThreadsToManifestPomAndReadme`
   + `CmdBuildAndroidSdkTest`.
 
+### CI
+
+`.github/workflows/android.yml` (manual `workflow_dispatch`) tem dois jobs:
+`interop` (roda `AndroidInteropE2ETest` contra o SDK) e `emulator-smoke` (builda
+o CLI, gera o projeto, `mvn verify` monta o APK e então instala/abre com
+`android-emulator-runner`). Não está ligado a rodar a cada push.
+
 ### Pendente (Fases 5+, sem dono ainda)
 
 - saída `--aab` (App Bundle p/ Play) — precisa de `bundletool`, gap honesto hoje;
-- override declarativo do ícone por metadado (hoje: default vetorial do Kof);
-- CI: `build → assembleDebug` com smoke test de emulador (o workflow existe,
-  o passo do emulador está pendente).
+- override declarativo do ícone por metadado — **decisão pendente** (o mecanismo
+  `kof.toml [app] icon` vs flag `--icon` não está fechado).
 
 ## Restrições e gaps (diagnosticados em compile-time)
 
@@ -249,7 +255,7 @@ alvos; o alvo que não consegue realizá-la diz isso na hora, com código.**
 | Código | Situação | Motivo |
 |--------|----------|--------|
 | ~~`AND001`~~ | ~~`spawn { ... }`~~ | ✅ **fechado 31/08**: ART não tem virtual threads (Java 21), mas o runtime cai em **platform threads** quando `Thread.startVirtualThread` não existe — `spawn`/`await`/`cancel`/`cancelled`/`selectAny`/`awaitTimeout`/`channel`/`scheduler` compilam e rodam (bytecode: `CompletableFuture` + `new Thread` + `LinkedBlockingQueue`; KofJS do WebView: sequencial). `KofConcurrency2Test`/`AndroidInteropE2ETest` |
-| `AND002` | `kof.web` (servidor embutido) | app mobile não escuta porta; usar interop |
+| `AND002` | `web.app()` / `kof.web` (servidor embutido) | ✅ **imposto em compile-time (17/09)**: app mobile não escuta porta — o alvo recusa com `AND002` e aponta o interop, nunca emite código de servidor que não roda (R6) |
 | `AND003` | reflexão dinâmica sobre classes Kof | desugaring/R8 pode remover símbolos |
 | `AND004` | android.jar ausente no ExternalClasspath | host Activity não incluída (warning) |
 | `SAM001` | aridade da lambda ≠ método SAM | interface externa exige N args |

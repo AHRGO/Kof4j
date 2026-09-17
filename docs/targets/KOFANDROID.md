@@ -235,12 +235,19 @@ Proof: `AndroidInteropE2ETest.androidResponsiveViewportAndWebViewWideViewport`.
   Proof: `AndroidInteropE2ETest.androidSdkOverrideThreadsToManifestPomAndReadme`
   + `CmdBuildAndroidSdkTest`.
 
+### CI
+
+`.github/workflows/android.yml` (manual `workflow_dispatch`) has two jobs:
+`interop` (runs `AndroidInteropE2ETest` against the SDK) and `emulator-smoke`
+(builds the CLI, generates the project, `mvn verify` assembles the APK, then
+installs and launches it with `android-emulator-runner`). It is not wired to
+run on every push.
+
 ### Pending (Phases 5+, no owner yet)
 
 - `--aab` output (App Bundle for Play) — needs `bundletool`, honest gap today;
-- declarative icon override by metadata (today: vectorial Kof default);
-- CI: `build → assembleDebug` with an emulator smoke test (workflow exists,
-  emulator step pending).
+- declarative icon override by metadata — **decision-pending** (the mechanism
+  `kof.toml [app] icon` vs `--icon` flag is not locked).
 
 ## Restrictions and gaps (diagnosed at compile-time)
 
@@ -250,7 +257,7 @@ targets; the target that cannot realize it says so right away, with a code.**
 | Code | Situation | Reason |
 |--------|----------|--------|
 | ~~`AND001`~~ | ~~`spawn { ... }`~~ | ✅ **closed 31/08**: ART has no virtual threads (Java 21), but the runtime falls back to **platform threads** when `Thread.startVirtualThread` does not exist — `spawn`/`await`/`cancel`/`cancelled`/`selectAny`/`awaitTimeout`/`channel`/`scheduler` compile and run (bytecode: `CompletableFuture` + `new Thread` + `LinkedBlockingQueue`; WebView's KofJS: sequential). `KofConcurrency2Test`/`AndroidInteropE2ETest` |
-| `AND002` | `kof.web` (embedded server) | mobile app does not listen on a port; use interop |
+| `AND002` | `web.app()` / `kof.web` (embedded server) | ✅ **enforced at compile-time (17/09)**: a mobile app does not listen on a port — the target refuses with `AND002` and points to interop, never emits server code that cannot run (R6) |
 | `AND003` | dynamic reflection on Kof classes | desugaring/R8 may remove symbols |
 | `AND004` | android.jar missing from ExternalClasspath | host Activity not included (warning) |
 | `SAM001` | lambda arity ≠ SAM method | external interface requires N args |

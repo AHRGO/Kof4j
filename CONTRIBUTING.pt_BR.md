@@ -170,7 +170,7 @@ O projeto está em 0.4.0-beta (2218 testes), funcional:
 - Auto-collect do Native sob exaustão (mark-sweep está implementado mas manual — §260)
 - MySQL/MariaDB nativo completo (handshake/query/prepared)
 - Android Fase 5+ (Fases 1-4 feitas: Maven/APK, label/permissões/--apk/--keystore,
-  WebView responsivo, --min-sdk/--target-sdk; pendente: --aab, metadado de ícone, CI de emulador)
+  WebView responsivo, --min-sdk/--target-sdk; pendente: --aab, metadado de ícone)
 - Módulos multi-arquivo (semântica unificada residual)
 
 **Planejado:**

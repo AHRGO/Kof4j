@@ -491,6 +491,30 @@ class AndroidInteropE2ETest {
     }
 
     @Test
+    void androidWebServerIsHonestGapAnd002(@TempDir Path tempDir) throws IOException {
+        // KOFANDROID.md lista AND002 como gap documentado, mas o lowering
+        // deixava kof.web passar no Android (código de servidor que não roda
+        // num app móvel). Agora o alvo recusa em compile-time (R6).
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            main() {
+                var app = web.app()
+                app.get("/", (req) -> "ok")
+                app.listen(8080)
+                println("server up")
+            }
+            """);
+        CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.ANDROID);
+        assertFalse(result.success(), "kof.web no Android deve falhar com AND002");
+        assertTrue(result.diagnostics().getDiagnostics().stream()
+                        .anyMatch(d -> "AND002".equals(d.code())),
+                "diagnóstico AND002 esperado: " + result.diagnostics().getDiagnostics());
+        assertTrue(result.diagnostics().getDiagnostics().stream()
+                        .anyMatch(d -> d.message().contains("interop")),
+                "mensagem deve apontar o interop: " + result.diagnostics().getDiagnostics());
+    }
+
+    @Test
     void androidReadmePlaceholdersResolve(@TempDir Path tempDir) throws IOException {
         // CodeQL #357 (unused-format-argument): o README.txt usava %1$s %2$s %4$s
         // %5$s mas passava 5 args (um APP_PACKAGE duplicado, %3$s nunca lido).

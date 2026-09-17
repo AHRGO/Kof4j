@@ -398,10 +398,18 @@ if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.na
 } else if (mc.receiver() instanceof IdentifierExpr rid && !driver.isLocalVarName(rid.name(), locals)
             && KofWeb.isWebNamespace(rid.name())) {
     if ("app".equals(mc.methodName()) && mc.arguments().isEmpty()) {
+        // AND002 (docs/targets/KOFANDROID.md): app móvel não escuta porta —
+        // o servidor embutido (web.app) não tem realização no Android; o
+        // alvo diz na hora (R6), nunca silencia.
+        if (driver.target == Target.ANDROID) {
+            gapError(driver, mc, "web.app: embedded server not available on Android — "
+                    + "a mobile app does not listen on a port; use interop (AND002)", "AND002");
+            return localIdx;
+        }
         // WEB001-T1 JS (13/09): web.app() liberado — o runtime JS tem server
         // real (JsRuntimeUiWeb: kofWebAppNew/Route/Listen via GraalJS
         // HttpServer); o gap real era o frontend bloquear o JS aqui.
-        if (driver.target != Target.JVM && driver.target != Target.ANDROID
+        if (driver.target != Target.JVM
                 && driver.target != Target.NATIVE
                 && driver.target != Target.NATIVE_RISCV64
                 && driver.target != Target.NATIVE_AARCH64
