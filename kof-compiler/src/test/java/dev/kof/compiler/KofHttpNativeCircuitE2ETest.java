@@ -42,6 +42,21 @@ class KofHttpNativeCircuitE2ETest {
         if (pool != null) pool.shutdownNow();
     }
 
+    private int startFlaky500() throws IOException {
+        good = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        pool = Executors.newFixedThreadPool(2);
+        good.setExecutor(pool);
+        good.createContext("/boom", ex -> {
+            okHits.incrementAndGet();
+            byte[] body = "boom".getBytes(StandardCharsets.UTF_8);
+            ex.sendResponseHeaders(500, body.length);
+            ex.getResponseBody().write(body);
+            ex.close();
+        });
+        good.start();
+        return good.getAddress().getPort();
+    }
+
     private int startGood() throws IOException {
         good = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         pool = Executors.newFixedThreadPool(2);
@@ -124,5 +139,37 @@ class KofHttpNativeCircuitE2ETest {
         assertTrue(out.contains("recover=ok"), "circuit(0) must recover, got: " + out);
         assertEquals(1, okHits.get(),
                 "/ok must be hit EXACTLY once (recovery) — fail-fast must not connect; got hits=" + okHits);
+    }
+
+    @Test
+    void nativeCircuitOpensOnPersistent5xxAndFailsFast(@TempDir Path tempDir) throws Exception {
+        // paridade JVM (JvmWebHttpRuntime.kof_http_request): status >= 500 tambem
+        // registra falha no circuito. Caçado no self-check Q4 de 17/09: o RED do
+        // circuit só exercitou falha de CONEXAO — o ramo 5xx pulava record_fail.
+        int port = startFlaky500();
+        String out = runNative(tempDir, """
+                main() {
+                    http.retry(0)
+                    http.circuit(1)
+                    try {
+                        println(http.get("http://127.0.0.1:%d/boom"))
+                        println("e5=nothrow")
+                    } catch (String e) {
+                        println("e5=" + e)
+                    }
+                    try {
+                        println(http.get("http://127.0.0.1:%d/boom"))
+                        println("open=nothrow")
+                    } catch (String e) {
+                        println("open=" + e)
+                    }
+                    http.circuit(0)
+                }
+                """.formatted(port, port));
+        assertTrue(out.contains("e5=HTTP 500 from"), "first 5xx must throw, got: " + out);
+        assertTrue(out.contains("open=kof.http circuit open"),
+                "5xx must OPEN the circuit (JVM parity) — 2nd call fail-fast, got: " + out);
+        assertEquals(1, okHits.get(),
+                "persistent-500 endpoint hit EXACTLY once (2nd = fail-fast, no connect); got=" + okHits);
     }
 }

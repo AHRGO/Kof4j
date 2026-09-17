@@ -9323,7 +9323,14 @@ behavior-preserving (`RawRowCollectionAccessE2ETest` + `SemanticResolutionTest`
   PROVA: `KofHttpNativeCircuitE2ETest` 1/1 (Q0 RED: 2a request conectava =
   circuito nunca abria; GREEN: fail=caught, open=kof.http circuit open (fail
   fast), recover=ok, e okHits==1 EXATO — fail-fast nao toca o servidor).
-  Vizinhos 15/15 (timeout 3, retry 3, E2E 8). SUITE 1969/3F/0E: §181×2 +
+  Vizinhos 15/15 (timeout 3, retry 3, E2E 8).
+- **AUTO-CACHO Q4 (17/09, mesmo turno):** o RED do circuit exercitou SO falha
+  de CONEXAO; o ramo `status>=500` do retry (fatia 2) nao chamava
+  `record_fail` — divergencia do JVM (`JvmWebHttpRuntime:184` registra no 5xx
+  tambem). Fix: `.Lhr_rtry_cl` agora chama `record_fail`; RED dedicado
+  (`nativeCircuitOpensOnPersistent5xxAndFailsFast`: sem fix, circuito NAO abre
+  e a 2a request CONECTA / endpoint 500 batido 2x; com fix, fail-fast e o
+  endpoint batido 1x exato). Regra 5 (paridade cross-target) + Q4. SUITE 1969/3F/0E: §181×2 +
   KofConcurrency2Test.crossNativeConcurrencyHelpersRun (aarch64 `poll(b)`=0 vs
   golden 1 — MESMA classe do §256 CONC001/riscv (lane .18); divergencia
   agora no aarch; esta unidade nao toca codigo de concorrencia — nada

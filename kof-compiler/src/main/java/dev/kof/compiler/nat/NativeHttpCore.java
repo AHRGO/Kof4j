@@ -334,6 +334,7 @@ public final class NativeHttpCore {
                 movq %rax, .Lhttp_last_err(%rip)
                 movl %r15d, %edi
                 call kof_net_close
+                call kof_http_circuit_record_fail   # paridade JVM: 5xx tambem registra falha (Q4-me) (Q4-me)
                 jmp .Lhr_rtry_chk
             .Lhr_body:
                 call kof_http_circuit_record_success  # §259 fatia 3 (JVM: record_success p/ <500)
