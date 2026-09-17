@@ -23,6 +23,12 @@ public final class ExpressionBinaryLowerer {
                 && ("int".equals(pt.name()) || "Int".equals(pt.name()));
     }
 
+    /** §262(b): `Point?` (Nullable(record)) É record p/ o caminho de conteúdo. */
+    static boolean isRecordLike(Type t, CompilerDriver driver) {
+        Type u = t instanceof Type.NullableType nt ? nt.inner() : t;
+        return CompilerTypes.isRecordType(u, driver.currentUnit, driver.semanticAnalyzer);
+    }
+
     /** §167: bitwise inteiro `& | ^` (o `&&`/`||` lógico já saiu antes). */
     private static boolean isBitwiseOp(String op) {
         return "&".equals(op) || "|".equals(op) || "^".equals(op);
@@ -326,53 +332,14 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
         accType = Type.PrimitiveType.BOOL;
     } else if (("==".equals(be.operator()) || "!=".equals(be.operator()))
             && !driver.isNullLiteral(be.left()) && !driver.isNullLiteral(be.right())
-            && (CompilerTypes.isRecordType(accType, driver.currentUnit, driver.semanticAnalyzer) || CompilerTypes.isRecordType(rightType, driver.currentUnit, driver.semanticAnalyzer))) {
-        // §262: `record == null` / `!= null` NÃO é igualdade de conteúdo —
-        // é comparação de REFERÊNCIA (if_acmp), nunca `receiver.equals(null)`
-        // (que dava NPE com o receiver nulo). O guard de literal null cai no
-        // ramo de referência abaixo. `record == record` segue conteúdo (bug 11).
-        // bug 11: `==` em records é igualdade de CONTEÚDO →
-        // left.equals(right) (o record gera equals no JVM e no
-        // JS). Antes emitia referência (if_acmpeq) → false.
-        // §262 face (b): `nullableRecord == nullableRecord` (sem literal `null`)
-        // caía direto em `receiver.equals(arg)` → NPE/TypeError/SIGSEGV quando o
-        // receiver era null no runtime (ex.: miss de map). O lowering é COMPARTILHADO
-        // pelos 4 alvos (um único KofCall INSTANCE "equals"), então o guard vai AQUI
-        // e conserta JVM+JS+SCRIPT+NATIVE de uma vez (regra 5). Semântica =
-        // Objects.equals: L null → (R null); L nao-null → L.equals(R). Nao-eq =
-        // negacao. Emite no padrao de if-expressao (KofConditionalJump+KofLabel),
-        // ja provado nos 4 backends (ao contrario do short-circuit && que e gated
-        // !=JS). So o RECEIVER nulo quebrava; `record.equals(null)` e seguro (false).
-        Type recordType = CompilerTypes.isRecordType(accType, driver.currentUnit, driver.semanticAnalyzer) ? accType : rightType;
-        Type objT = new Type.ClassType("java.lang", "Object", List.of());
-        LabelId eqPath = LabelId.create();
-        LabelId nullPath = LabelId.create();
-        LabelId resLabel = LabelId.create();
-        int lSlot = localIdx;
-        int rSlot = localIdx + 1;
-        locals.add(new IRLocalVariable(lSlot, "__kofrecL", recordType));
-        locals.add(new IRLocalVariable(rSlot, "__kofrecR", recordType));
-        ops.add(new KofStoreLocal(recordType, lSlot));
-        localIdx = ExpressionLowerer.emitExpression(driver, be.right(), ops, owner, localIdx + 2, locals);
-        ops.add(new KofStoreLocal(recordType, rSlot));
-        ops.add(new KofLoadLocal(recordType, lSlot));
-        ops.add(KofLoadLiteral.ofNull());
-        ops.add(new KofConditionalJump(KofComparison.NE, objT, eqPath, nullPath));
-        ops.add(new KofLabel(eqPath));
-        ops.add(new KofLoadLocal(recordType, lSlot));
-        ops.add(new KofLoadLocal(recordType, rSlot));
-        ops.add(new KofCall(recordType, "equals", List.of(objT),
-                Type.PrimitiveType.BOOL, KofCallKind.INSTANCE));
-        ops.add(new KofJump(resLabel));
-        ops.add(new KofLabel(nullPath));
-        ops.add(new KofLoadLocal(recordType, rSlot));
-        ops.add(KofLoadLiteral.ofNull());
-        ops.add(new KofBinary(KofBinaryOp.EQ, objT));
-        ops.add(new KofLabel(resLabel));
-        // os slots temporarios ficam no locals[] (nome __-prefixado nao colide
-        // com identificador de usuario); o localIdx retornado ja avanca depois
-        // deles — nao remover da lista (o emit do right pode ter acrescentado
-        // slots proprios depois dos nossos; remover o rabo pegaria os errados).
+            && (isRecordLike(accType, driver) || isRecordLike(rightType, driver))) {
+        // §262 / bug 11: `record == record` é igualdade de CONTEÚDO, null-safe
+        // (Objects.equals). Desugaring em RecordEqualityLowerer (JS = chamada
+        // p/ helper kofRecordEq; JVM/Script/Native = ternária com jumps). O
+        // `record == null` literal NAO cai aqui — é comparação de referência
+        // (ramo abaixo). Aqui só se aplica o `!=` UMA vez, p/ todos os targets.
+        localIdx = RecordEqualityLowerer.emit(driver, be, ops, owner, localIdx, locals,
+                accType, rightType);
         if ("!=".equals(be.operator())) {
             ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, 0));
             ops.add(new KofBinary(KofBinaryOp.EQ, Type.PrimitiveType.INT));

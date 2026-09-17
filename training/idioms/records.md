@@ -170,9 +170,11 @@ if (maybe != null) {
 > comparison (`if_acmp`), never a `.equals()` call — fixed 17/09 (`07a51565`,
 > bug `§262` face (a)).
 >
-> ⚠️ Still open (`§262` face (b)): comparing **two** nullable records with
-> `==` when one is `null` (e.g. `miss == hit`) NPEs on the JVM — null-safe
-> content equality is cross-target work. Narrow first (`if (a != null && b != null)`).
+> ✅ `==` between **two** nullable records is also safe (fixed 17/09,
+> `§262` face (b)): `miss == hit` where one is `null` yields the
+> `Objects.equals` result (`false` if only one is `null`, `true` if both are,
+> content equality otherwise) on all four targets — no NPE, no narrowing
+> needed. (`RecordNullableNullEqE2ETest` locks JVM=JS=SCRIPT=Native.)
 
 ## Related anti-patterns
 

@@ -147,9 +147,11 @@ For `+ - * / %` with two numerics: `double` dominates, else `float`, else
   is mandatory.
 - **Comparison with null**: primitive `== null` → **constant** (`false`/`true`,
   `ExpressionLowerer.java:256-268`); reference `== null` → `if_acmp` (class/
-  String narrow correctly — *measured 16/09*). **Record is the exception**:
-  `==`/`!=` on a record lowers to `.equals()` with no null-guard, so a null
-  `Point?` compared to `null` **NPEs** (bug §262, open). `Int? == Int?`
+  String narrow correctly — *measured 16/09*). **Record** used to be the
+  exception (`==`/`!=` lowered to `.equals()` with no null-guard → null
+  `Point?` **NPEd**); fixed 17/09 — `§262` (face (a) `07a51565` literal
+  `null` → reference compare; face (b) both-null-safe content equality via
+  the `Objects.equals` desugar / JS `kofRecordEq`). `Int? == Int?`
   compares value (*probe*: `5 == 5` → true). **`Int? == null` does NOT throw
   — it folds silently**: a null `Int?` (map miss) compares `== null` as
   **false** (`if (n == null)` printed `not-null`, *measured 16/09, jar of tip*)

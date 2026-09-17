@@ -250,6 +250,17 @@ public final class JsRuntimeCore {
                 return false;
             }
 
+            // §262(b): igualdade de record null-safe p/ `==`/`!=` no JS (Objects.equals).
+            // Devolve NÚMERO 1/0 (a dobra JS do `!=` é `(x === 0)`, que só funciona
+            // com número). Guarda os DOIS lados: o `equals` sintético do record NÃO
+            // guarda o ARG (this._x === other._x → TypeError se other null).
+            export function kofRecordEq(a, b) {
+                if (a === b) return 1;
+                if (a === null || a === undefined || b === null || b === undefined) return 0;
+                if (typeof a.equals === "function") return a.equals(b) ? 1 : 0;
+                return 0;
+            }
+
             // §111: split com a regra Java (não JS): remove vazios TRAILING,
             // exceto input "" → [""]. JS nativo preserva trailing ("a,"→["a",""]).
             export function kofSplit(s, sep) {

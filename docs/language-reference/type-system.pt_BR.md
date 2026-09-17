@@ -147,9 +147,12 @@ Para `+ - * / %` com dois numéricos: `double` domina, senão `float`, senão
   (`if (x != null)`) é obrigatório.
 - **Comparação com null**: primitivo `== null` → **constante** (`false`/`true`,
   `ExpressionLowerer.java:256-268`); referência `== null` → `if_acmp` (class/
-  String fazem narrowing corretamente — *medido 16/09*). **Record é a exceção**:
-  `==`/`!=` num record baixa para `.equals()` sem guarda de null, então um
-  `Point?` null comparado com `null` dá **NPE** (bug §262, aberto).
+  String fazem narrowing corretamente — *medido 16/09*). **Record** era a
+  exceção (`==`/`!=` num record baixava para `.equals()` sem guarda de null →
+  um `Point?` null comparado com `null` dava **NPE**); consertado 17/09 —
+  `§262` (face (a) `07a51565` literal `null` → comparação de referência;
+  face (b) igualdade de conteúdo null-safe via desugar `Objects.equals` /
+  helper JS `kofRecordEq`).
   `Int? == Int?` compara valor (*probe*: `5 == 5` → true). **`Int? == null`
   NÃO lança — dobra silencioso**: um `Int?` null (map miss) compara
   `== null` como **false** (`if (n == null)` imprimiu `not-null`, *medido

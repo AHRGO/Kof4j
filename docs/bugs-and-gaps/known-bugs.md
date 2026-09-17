@@ -18,7 +18,7 @@
 > | **§259 ✅ CLOSED 17/09 (lane native/compiler `.17` — fatias 1-4: timeout x86 `021cefad` / retry x86 `3f6814ec` / circuit x86 `d11eceac`+`6abd3341` / riscv+aarch port `f7b096c5`)** | Native `http.timeout`/`http.retry`/`http.circuit` were **pure silent no-ops** (R6/rule 5 — the user believed the knobs were active on every target). Now wired in native asm: nonblock+poll+SO_ERROR connect with SO_RCVTIMEO/SNDTIMEO on the socket, retry loop, and a connection-failure circuit breaker (5xx also records a fail, JVM parity). Proven on x86 (`KofHttpNative{Timeout,Retry,Circuit}E2ETest`) and cross riscv64+aarch64 under qemu (`KofHttpNativeResilienceCrossTest`, byte-identical messages). See the section body for the full fatia log.
 > | **§268 🟡 PARTIAL 18/09 (throwables face ✅ CLOSED by lane compiler `.22`, #313 commit; broader extends face OPEN, same lane's queue)** | `throw new Exception(...)`/`extends <JDK-throwable>` emitted a RAW name (`new Exception` / super `RuntimeException`) → `NoClassDefFoundError` at load while the exception table qualified (two resolver paths). Fixed at the root: `CompilerTypes.toType` + `SymbolTableBuilder` now map the `JAVA_LANG_THROWABLES` set to `java.lang.*` (module homonym wins; proof `ThrowQualifiedTest` 4/4). Broader scope RE-PROBED and still raw: `extends Thread`/`Object` (java.lang non-throwable), `extends IOException` (java.io, no import), `extends Zebra` (undefined — silent) — general fix queued (SEM072 + `Object`→`java/lang/Object`). |
 > | **§263 🔴 OPEN 16/09 (found by lane docs/development `.22`; fix = compiler lane)*** | Parser accepts an ANY identifier before an annotated declaration and silently DISCARDS it (R6): `let x: Int = 5` prints `5`, `Klaxon x: Int = 5` too, `Banana q: String = "z"` → `z` — the error disappears with the annotation. Root: `parseVarDecl` falls through to `parseTypeRef` for any IDENT (`StatementParser:413-415`) and the `: Tipo` on :417-421 silently replaces the "type"; `async f(): Int` passes check too. Without annotation it fails correctly (SEM011 — `let x = 5`/`const y = 10` → dead sugar, `183cb048`). **The truth about the `let/const`-sugar cluster:** partial removal (the `let x = 5`/`const y = 10` case in the `jsSugarIsRejected` test is green because of the missing annotation, not because the sugar exists). Related: the corpus claims in `training/reference/{targets,compiler}` ("`let`/`const` → KofScriptGlobals") — false for the unannotated case, fixed separately (cluster I-D).
-> | **§262 ✅ FIXED 17/09 (face (a) `== null`/`!= null` FIXED `07a51565` by lane bugs-and-gaps `.15`; face (b) `nullableRecord == nullableRecord` FIXED 17/09 by compiler/nat lane `.17` — 4 targets)** | Record `T?` vs `null`: `== null`/`!= null` **NPEs on the JVM** (`Cannot invoke Point.equals(Object) because maybe is null`) — record `==` lowers to `.equals()` with NO null-guard on the receiver (`CompilerComparisons:28,337-342`, bug 188); class/String nullable narrow fine (`if_acmp`/`Objects.equals`). Face (a) fixed by excluding the `null` literal from the record content-equality branch (now `if_acmp`); face (b) fixed by the null-guard in the SHARED record `==` lowering (`L==null ? (R==null) : L.equals(R)`, if-expr IR pattern) — JVM+JS+SCRIPT+NATIVE repaired at once (rule 5); proof `RecordNullableEqContentE2ETest` 6/6. |
+> | **§262 ✅ FIXED 17-18/09 (face (a) `== null`/`!= null` FIXED `07a51565` by lane bugs-and-gaps `.15`; face (b) `nullableRecord == nullableRecord` FIXED in TWO STEPS: receiver-guard landed first `ab284b91` (lane `.17`) — but measured INCOMPLETE (3 holes); completed 18/09 by development lane `.18` (null-safe arg + Nullable-record gate + JS numeric `!=`) — 4 targets, 21/21)** | Record `T?` vs `null`: `== null`/`!= null` **NPEs on the JVM** (`Cannot invoke Point.equals(Object) because maybe is null`) — record `==` lowers to `.equals()` with NO null-guard on the receiver (`CompilerComparisons:28,337-342`, bug 188); class/String nullable narrow fine (`if_acmp`/`Objects.equals`). Face (a) fixed by excluding the `null` literal from the record content-equality branch (now `if_acmp`); face (b) fixed by the null-guard in the SHARED record `==` lowering (`L==null ? (R==null) : L.equals(R)`, if-expr IR pattern) — JVM+JS+SCRIPT+NATIVE repaired at once (rule 5); proof `RecordNullableEqContentE2ETest` 6/6. |
 > | **§260 🟡 PARTIAL 16/09 (lane native/compiler `.17`; cause-1 G-6b CLOSED by `92d11a03`, cause-2/G-6(a) + trigger still OPEN)** | Native x86 auto-collect was unsound for TWO reasons (gdb-probed same day): (1) mark scanned only the current frame → main's live Strings invisible → freed (SIGSEGV) — **FIXED 16/09 (G-6b: `_start` records `kof_main_stack_bottom`, mark scans the whole thread stack; `NativeX86GcMarkScopeTest` 3/3)**; (2) live temporaries in caller-saved regs at the `kof_alloc` call-site (`%rdi`) — invisible to any stack scan → needs G-6(a) (spill-per-live-ref / stack-map), the trigger is OFF again. riscv never hit (1) (value-stack = machine stack). |
 > | **§261 ✅ FIXED 16/09 (lane development `.18`)** | KofJS `window.bind`: Components and raw DOM widgets drew handle ids from TWO separate counters (`kofUiSeq` vs `kofNodeSeq`, both from 0); `kofUiWindowBind` resolves components FIRST → a Component created before a raw widget stole the widget's id and the widget rendered nothing (orphan in `__kofNodes`). Found via kof-ui-widgets (Slider+ReconfigButton in real Chrome). Fix = one shared counter (`kofNodeSeq`). Proof: `KofJsBrowserE2ETest.componentAndRawWidgetIdsNeverCollide` (RED pre-fix, measured) + lib `scripts/browser-drag.mjs`.
 > | **§264 ✅ FIXED 16/09 (lane development `.18`)** | KofJS printed `Double`/`Float` with the raw `Number.toString` — `4` not `4.0`, `10000000` not `1.0E7`, `0` not `-0.0` — in **every** display path (println/print/concat/`String.valueOf`/`.toString()`); silent rule-5 divergence vs JVM/Native. The old §44/§180 records called it "expected on JS" and 5 conformance cells excluded `js` to stay green. Fix = new runtime slice `num-fmt`/`kofNumFmt` (JDK contract: shortest round-trip + `E`-threshold + Float own precision) routed from the JS emitter + type-passthrough in the shared lowerers. Proof: `WrapperStaticCallsE2ETest.doubleFloatJdkPrintFormat` + 5 cells flipped to 4-target parity (value-by-value vs JVM oracle on node v18). Boxed-collection print (`List<Double>`→`[4,2.5]`) stays §104b-ii (native lane), NOT fixed here.
@@ -9779,7 +9779,7 @@ behavior-preserving (`RawRowCollectionAccessE2ETest` + `SemanticResolutionTest`
   side (Slider/ReconfigButton + docs) is the companion commit in
   `kof-ui-widgets`.
 
-### §262 — Record `T?` vs `null`: `== null`/`!= null` NPEs on the JVM (record `==` lowers to `.equals()` with no null-guard on the receiver); class/String nullable narrow fine — ✅ face (a) FIXED 17/09 (`07a51565`); 🟡 face (b) OPEN
+### §262 — Record `T?` vs `null`: `== null`/`!= null` NPEs on the JVM (record `==` lowers to `.equals()` with no null-guard on the receiver); class/String nullable narrow fine — ✅ face (a) FIXED 17/09 (`07a51565`); ✅ face (b) FIXED in two steps: receiver-guard `ab284b91` (`.17`, measured 8/11) + completion 18/09 (`.18`, 21/21)
 
 - **Found 16/09 ~15:40 by lane docs/development `192.168.100.22`**, while
   fixing the null-contrato corpus cluster: the `training/idioms/records.md`
@@ -9839,12 +9839,47 @@ behavior-preserving (`RawRowCollectionAccessE2ETest` + `SemanticResolutionTest`
   **shared by the 4 targets**, so the null-guard goes there and repairs
   JVM+JS+SCRIPT+NATIVE at once (rule 5 — no divergence by construction).
   Semantics = `Objects.equals`: `L == null ? (R == null) : L.equals(R)`
-  (only the RECEIVER null crashed; `record.equals(null)` is safely `false`).
-  Emitted as the proven if-expression IR pattern
-  (`KofConditionalJump`+`KofLabel`+`KofJump`+temp slots `__kofrecL/R`) —
-  the same shape `IfExpr` lowers to, which all 4 backends fold (NOT the
-  `&&` short-circuit, which is gated `!= Target.JS`). Content equality
+  (emitted as the proven if-expression IR pattern
+  `KofConditionalJump`+`KofLabel`+`KofJump`+temp slots `__kofrecL/R` — the
+  same shape `IfExpr` lowers to, which all 4 backends fold; NOT the `&&`
+  short-circuit, which is gated `!= Target.JS`). Content equality
   (bug 11/188, `record == record` non-null) is unchanged: still `L.equals(R)`.
+  **⚠️ The first fix's premise — "only the RECEIVER null crashed;
+  `record.equals(null)` is safely `false`" — held ONLY on the JVM** (the
+  generated `equals` guards the arg with `instanceof` there). **Measured
+  18/09 (rule 8 completion), the receiver-only guard left 3 holes across the
+  4 targets:**
+  1. **NULL ARG crashes JS/NATIVE:** `hit == miss` (receiver non-null, arg
+     null) → JS `TypeError: Cannot read property '_x' of null`, Native
+     SIGSEGV (exit 139) — the record `equals` reads `other._x` with NO arg
+     guard on those targets;
+  2. **FUNCTION-DERIVED twin falls to the reference path:** a `Point?` that
+     comes from a function call (not `map.get`) has type
+     `NullableType(Point)`; `isRecordType(NullableType(Point))` is false →
+     the gate never triggered and `mk(true) == mk(true)` printed `false`
+     where the contract is `true` (silent divergence JVM vs SCRIPT);
+  3. **`!=` on the NULL PATH is always `false` on JS:** the null path
+     compared `R == null` with `KofBinary EQ` on Object (a JS BOOLEAN), and
+     the `!=` fold is `(x === 0)` — number-only — so `miss != hit` printed
+     `false` (the §186/UIW052 boolean-vs-number class, hit inside the fold).
+  **Completion (development lane `.18`, 18/09):** the guard became FULL
+  `Objects.equals` on both operands, shared by 4 targets, extracted to
+  `RecordEqualityLowerer` (113 lines, ratchet §140; `ExpressionBinaryLowerer`
+  back under 500). JVM/Script/Native: the nested-ternary jump desugar
+  (each branch yields numeric 0/1; each `KofConditionalJump` gets its OWN
+  convergence label — sharing one underflows the JS expression stack,
+  measured). JS cannot fold a conditional jump INSIDE an if/while
+  CONDITION region at all (temp-local `let`s escape the loop body →
+  `ReferenceError`, measured inside `while`) — so for JS the lowering emits
+  a single opaque call `kofRecordEq(a, b) → 1/0` (new export in
+  `JsRuntimeCore`, mirroring `kofValEq`), the same route `&&`/`||` take for
+  the same reconstructor reason. `CompilerComparisons.isComparisonShortcut`
+  now unwraps `NullableType(record)` (hole 2's root). `!=` is applied ONCE
+  by the caller for every target. The first fix's `RecordNullableEqContentE2ETest`
+  is kept and passes unchanged against the completion (its battery simply
+  omitted the null-arg order, function-derived and `!=`-on-null-path cases).
+  **Measured with both test files against the completion: 10/10 (first fix)
+  + 11/11 (completion battery) = 21/21 green.**
 - **Proof:** `RecordNullableEqContentE2ETest` 10/10 (miss-vs-hit `false`,
   both-null `true`+`!= false`, content-still-works) × JVM/SCRIPT/JS/NATIVE — nullPath branch + native content both proven cross-target.
   Face (a) `RecordNullableNullEqE2ETest` 6/6 keeps passing; neighbors green:
@@ -9867,11 +9902,16 @@ behavior-preserving (`RawRowCollectionAccessE2ETest` + `SemanticResolutionTest`
 - **Handed off (17/09) to the compiler lane:** face (b) needs the native
   toolchain to prove all 4 targets (host lacks qemu), so it is not fixed in
   this lane — the compiler lane owns it with the full dossier below.
-- **Status:** ✅ FIXED 17/09 (full) — face (a) FIXED (`07a51565`, lane
-  bugs-and-gaps `192.168.100.15`); face (b) FIXED (17/09, compiler/nat lane
-  `192.168.100.17`, `RecordNullableEqContentE2ETest` 6/6 × 4 targets — the
-  handoff's "host lacks qemu" no longer applies; the fix is the shared-lowering
-  guard above). Corpus:
+- **Status:** ✅ FIXED — face (a) FIXED (`07a51565`, lane bugs-and-gaps
+  `192.168.100.15`); face (b) fixed in TWO LANDED STEPS: (1) receiver-guard
+  `ab284b91` (17/09, compiler/nat lane `192.168.100.17`,
+  `RecordNullableEqContentE2ETest` × 4 targets — the handoff's "host lacks
+  qemu" no longer applies; x86-64 runs via `gcc`); (2) completion 18/09
+  (development lane `192.168.100.18`) for the 3 holes measured against step
+  1 (null-arg JS/Native crash, Nullable-record gate twin, JS numeric `!=`) —
+  `RecordNullableNullEqE2ETest` 11/11 × 4 targets (map-miss, both-null,
+  content, if-condition, WHILE-condition = JS reconstructor stressor, chained
+  `!=`), first-fix test kept green (21/21 together). Corpus:
   `training/idioms/records.md` null-safety cell updated (the `!= null`
   narrowing on a missing key is now safe). Related: §D-NULL-INTENT (boxed
   nullable contract), bug 188 (record `==` content), §241

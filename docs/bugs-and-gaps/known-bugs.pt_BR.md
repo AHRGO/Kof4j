@@ -17,7 +17,7 @@
 > | **§258 🟡 PARCIAL 16/09 (lane `.18`/SSE dona dos consertos; #773/#774/#777 FECHADOS, #775/#776/#780 ABERTOS)** | Gate CodeQL (3 abertos): **#780** `java/uncaught-number-format-exception` `KofWebJsE2ETest:307` (= o conserto do §258/#777 landou INSUFICIENTE: o guard `(?i)[0-9a-f]+` aceita token de >8 dígitos hex → `Integer.parseInt(...,16)` lança NFE sem catch — *medido 16/09*: `"fffffffff"`.matches + NFE "under radix 16"; dono = lane `.18`/SSE, conserto: guard de comprimento/faixa ou catch; ver seção); **#773** `java/comparison-with-wider-type` `KofJsRunner.listValues` — ✅ CORRIGIDO 16/09 pela `.18` (bound check `n > Integer.MAX_VALUE` → `RuntimeException` claro, precedente `d6eaae0c`; loop int/int, sem truncamento silencioso). **#774** `java/relative-path-command` `DepsTransitiveTest` — ✅ CORRIGIDO por `2a60b426` (`.17`). **#777** `java/uncaught-number-format-exception` `KofWebJsE2ETest:302` — ✅ CORRIGIDO 16/09 pela lane SSE (`.18`): o helper de-chunk do teste valida o token hex antes do `parseInt`, sem NFE solta; 6/6. **AINDA ABERTOS (outras donas):** #775 `java/relative-path-command` `NumericFormatterE2ETest:35` (dona `.22`, `78b733fa`) + #776 `java/unused-parameter` `KofHttp.supportedOn:57` (= o guard morto do §259, dona `.15`/`.17` — resolve quando o §259 ligar). |
 > | **§259 🔴 ABERTO 16/09 (lane native/compiler `.17`/`.18`)** | `http.timeout`/`http.retry`/`http.circuit` no Native compilam OK mas são **puros no-ops silenciosos** (`NativeHttpCore.java:369-380` = `ret` puro; riscv/aarch `NativeRiscvHttpCore.java:317-324`); `KofHttp.supportedOn` devolve `true` para todo target, então o usuário acredita que retry/circuit estão ativos (R6/regra 5). Os docs citavam um **`HTTP003` fantasma** ("não silencioso: debug syserr") que nenhum módulo emite; `HTTP002` existe só como literal e seu ramo é morto (ver seção) — nenhum gap code HTTP é emitido hoje. Achado + docs corrigidos pela lane bugs-and-gaps `.15`; catalogado, direção do conserto = emitir um código de gap real em compile-time no `NATIVE*` (precedente do split WEB) ou implementar em asm. |
 > | **§263 🔴 ABERTO 16/09 (achado pela lane docs/development `.22`; conserto = lane compiler)** | O parser aceita QUALQUER identificador antes de uma declaração anotada e o DESCARTA em silêncio (R6): `let x: Int = 5` imprime `5`, `Klaxon x: Int = 5` idem, `Banana q: String = "z"` → `z` — o erro DESAPARECE com a anotação. Raiz: `parseVarDecl` cai em `parseTypeRef` para qualquer IDENT (`StatementParser:413-415`) e o `: Tipo` de :417-421 SUBSTITUI o "tipo" em silêncio; `async f(): Int` passa no check. Sem anotação falha certo (`let x = 5`/`const y = 10` → sugar morto, `183cb048`). **A verdade do cluster let/const-sugar:** remoção PARCIAL (o caso `let x = 5` do teste `jsSugarIsRejected` é verde por falta de anotação, não porque o sugar exista). Relacionado: células `training/reference/{targets,compiler}` corrigidas à parte (cluster I-D).
-> | **§262 🟡 PARCIAL 17/09 (face (a) `== null`/`!= null` ✅ FEITA 17/09 `07a51565` pela lane bugs-and-gaps `.15`; face (b) `nullableRecord == nullableRecord` ABERTA)** | Record `T?` vs `null`: `== null`/`!= null` dá **NPE no JVM** (`Cannot invoke Point.equals(Object) because maybe is null`) — o `==` de record baixa para `.equals()` SEM guarda de null no receptor (`CompilerComparisons:28,337-342`, bug 188); nullable de class/String faz narrowing bem (`if_acmp`/`Objects.equals`). Face (a) consertada excluindo o literal `null` do ramo de igualdade de conteúdo de record (agora `if_acmp`); face (b) precisa de guarda de null/`Objects.equals` no caminho record-`==` (cross-target). |
+> | **§262 ✅ FEITO 17-18/09 (face (a) `== null`/`!= null` `07a51565` pela lane bugs-and-gaps `.15`; face (b) `nullableRecord == nullableRecord` FEITA EM DOIS PASSOS: guarda-do-receptor landou primeiro `ab284b91` (lane `.17`) — medida INCOMPLETA (3 furos); completada 18/09 pela lane development `.18` (arg null-safe + gate Nullable-record + `!=` numérico no JS) — 4 alvos, 21/21)**| Record `T?` vs `null`: `== null`/`!= null` dá **NPE no JVM** (`Cannot invoke Point.equals(Object) because maybe is null`) — o `==` de record baixa para `.equals()` SEM guarda de null no receptor (`CompilerComparisons:28,337-342`, bug 188); nullable de class/String faz narrowing bem (`if_acmp`/`Objects.equals`). Face (a) consertada excluindo o literal `null` do ramo de igualdade de conteúdo de record (agora `if_acmp`); face (b) FEITA 17/09 pela lane `.18` com `Objects.equals` desugar nos 4 alvos (`RecordEqualityLowerer` + helper JS `kofRecordEq`; native x86_64 provado por `gcc`) — `RecordNullableNullEqE2ETest` 11/11. |
 > | **§260 🟡 PARCIAL 16/09 (lane native/compiler `.17`; causa-1 G-6b FECHADA por `92d11a03`, causa-2/G-6(a) + gatilho AINDA ABERTOS)** | O auto-collect x86 era insound por DUAS razões (apurado a gdb no mesmo dia): (1) o mark varria só o frame corrente → Strings vivas do main invisíveis → liberadas (SIGSEGV) — **CORRIGIDO 16/09 (G-6b: o `_start` grava `kof_main_stack_bottom`, o mark varre a pilha inteira da thread; `NativeX86GcMarkScopeTest` 3/3)**; (2) temporários vivos em registradores caller-saved no call-site do `kof_alloc` (`%rdi`) — invisíveis a qualquer varredura de pilha → exige G-6(a) (spill-per-live-ref / stack-map), o gatilho está OFF de novo. riscv nunca sofreu (1) (value-stack = pilha de máquina). |
 > | **§261 ✅ CORRIGIDO 16/09 (lane development `.18`)** | `window.bind` no KofJS: Components e widgets DOM crus tiravam ids de handle de DOIS contadores SEPARADOS (`kofUiSeq` vs `kofNodeSeq`, ambos do 0); `kofUiWindowBind` resolve componentes PRIMEIRO → um Component criado antes de um widget cru roubava o id do widget e o widget não renderizava nada (órfão em `__kofNodes`). Achado via kof-ui-widgets (Slider+ReconfigButton no Chrome real). Conserto = um contador único compartilhado (`kofNodeSeq`). Prova: `KofJsBrowserE2ETest.componentAndRawWidgetIdsNeverCollide` (VERMELHO pré-fix, medido) + `scripts/browser-drag.mjs` da lib.
 > | **§264 ✅ CORRIGIDO 16/09 (lane development `.18`)** | O KofJS imprimia `Double`/`Float` com o `Number.toString` cru — `4` em vez de `4.0`, `10000000` em vez de `1.0E7`, `0` em vez de `-0.0` — em **todo** caminho de display (println/print/concat/`String.valueOf`/`.toString()`); divergência silenciosa da regra 5 vs JVM/Native. Os registros antigos do §44/§180 chamavam isso de "esperado no JS" e 5 células de conformidade excluíam o `js` para ficarem verdes. Conserto = nova fatia de runtime `num-fmt`/`kofNumFmt` (contrato JDK: round-trip curto + limiar `E` + precisão própria de Float) roteada pelo emissor JS + passthrough de tipo nos lowerers compartilhados. Prova: `WrapperStaticCallsE2ETest.doubleFloatJdkPrintFormat` + 5 células viradas para paridade de 4 alvos (valor por valor contra o oracle JVM no node v18). O print de coleção boxed (`List<Double>`→`[4,2.5]`) continua sendo §104b-ii (lane nativa), NÃO corrigido aqui.
@@ -9324,7 +9324,7 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
   bloco de runtime (slice registry), então os dois hosts ficam consertados
   juntos por construção; o lado da lib (Slider/ReconfigButton + docs) é o
   commit companheiro em `kof-ui-widgets`.
-### §262 — Record `T?` vs `null`: `== null`/`!= null` dá NPE no JVM (o `==` de record baixa para `.equals()` sem guarda de null no receptor); nullable de class/String faz narrowing normal — ✅ face (a) FIXED 17/09 (`07a51565`); 🟡 face (b) OPEN
+### §262 — Record `T?` vs `null`: `== null`/`!= null` dá NPE no JVM (o `==` de record baixa para `.equals()` sem guarda de null no receptor); nullable de class/String faz narrowing normal — ✅ face (a) FIXED 17/09 (`07a51565`); ✅ face (b) FEITA EM DOIS PASSOS: guarda-do-receptor `ab284b91` (`.17`, medida 8/11) + complementação 18/09 (`.18`, 21/21)
 
 - **Encontrado 16/09 ~15:40 pela lane docs/development `192.168.100.22`**, ao
   corrigir o cluster null-contrato do corpus: a célula "Null safety with
@@ -9370,16 +9370,59 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
   `== null`/`!= null`, HIT, map miss, conteúdo `record==record`, SCRIPT e JS.
   Vizinhança verde: `NullSafetyE2ETest` 12/12, `CoreRegressionE2ETest`
   102/102, `BackendParityTest` 19/19 (0 regressão).
-- **🟡 Face (b) ABERTA — `nullableRecord == nullableRecord` (sem literal)
-  ainda dá NPE:** `var miss: Point? = mapOf("k", Point(7,8)).get("z")` +
-  `var hit: Point? = mapOf("k", Point(7,8)).get("k")` + `println(miss == hit)`
-  → mesmo `Cannot invoke "Point.equals(Object)" because "miss" is null`. O
-  caminho de igualdade de conteúdo é tomado com receptor null. Esperado:
-  igualdade de conteúdo null-safe (`Objects.equals` — o interpretador já faz
-  via `objectEquals`). Conserto = guardar o receptor null no caminho
-  record-`==` (ou rotear por `Objects.equals`); **cross-target**
-  (JS/Native/SCRIPT precisam concordar), não medido nesta sessão nos alvos
-  cross.
+- **🟡 Face (b) — ✅ FEITA EM DOIS PASSOS (17/09 `ab284b91`, lane compiler/nat
+  `.17`; complementada 18/09, lane development `.18`):** `nullableRecord ==
+  nullableRecord` (sem literal) dava NPE porque o caminho de igualdade de
+  conteúdo era tomado com receptor null. A `.17` landou primeiro com guarda
+  SÓ DO RECEPTOR (`L==null ? (R==null) : L.equals(R)`); ao medir 18/09 (regra
+  8) a bateria da `.18` mostrou **3 furos** naquele fix: (1) **arg nulo quebra
+  JS/Native** — `hit == miss` (receptor não-nulo, arg nulo) → JS
+  `TypeError: Cannot read property '_x' of null` / Native SIGSEGV, porque o
+  `equals` gerado do record NÃO guarda o arg no JS/Native (a premissa
+  "`record.equals(null)` é seguro (false)" só vale no JVM, onde o `equals`
+  gerado tem `instanceof`); o teste da `.17` nunca exerceu essa ordem;
+  (2) **gêmeo vindo de FUNÇÃO** — `Point?` retornado por função tem tipo
+  `NullableType(Point)`, e `isRecordType` rejeita → gate não dispara →
+  `mk(true) == mk(true)` imprimia `false` silencioso no JVM; (3) **`!=` na
+  null-path é sempre `false` no JS** — o ramo null comparava com `KofBinary
+  EQ` de Object (bool JS), e a dobra do `!=` é `(x === 0)` só-número (classe
+  §186/UIW052); o teste da `.17` só exercitava `!=` com ambos não-nulos.
+  A complementação (`.18`) fecha os 3; o `RecordNullableEqContentE2ETest`
+  da `.17` foi MANTIDO e passa verde contra ela (10/10). **Repro (medido nos 4 alvos ANTES do
+  conserto):** JVM `Cannot invoke "Point.equals(Object)" because "miss" is
+  null`; JS `TypeError: Cannot read property 'equals' of null`; SCRIPT
+  vermelho; **Native x86_64 SIGSEGV (exit 139)** — provado NESTA máquina com
+  `gcc` (o `KofIntOverflowNativeTest` roda assim: assemble+link e
+  `ProcessBuilder` no binário; qemu só é preciso p/ as portas cruzadas
+  riscv/aarch64, NÃO p/ o x86_64 — então o "não dá p/ provar Native aqui" que
+  motivou o repasse estava ERRADO p/ o x86). Um **gêmeo** também foi achado:
+  `var a = mk(true); var b = mk(true)` (ambos `Point?` vindos de função que
+  retorna `Point?`) caía no caminho de REFERÊNCIA `if_acmp` (os dois operandos
+  inferidos `NullableType(Point)`, que `isRecordType` não aceitava), e
+  imprimia `false` onde conteúdo diz `true`.
+- **Conserto (face b, complementação `.18`):** desugar null-safe COMPLETO estilo `Objects.equals` no lowering (subsume a guarda-do-receptor da `.17`)
+  compartilhado, extraído p/ `RecordEqualityLowerer` (ratchet §140 / precedente
+  do JsTryParser do §266; `ExpressionBinaryLowerer` voltou p/ 419).
+  `(tL != null) ? ((tR != null) ? tL.equals(tR) : 0) : ((tL == tR) ? 1 : 0)`
+  — ternária NESTED onde **todo ramo produz inteiro 0/1** (nunca bool JS),
+  porque a dobra JS do `==` é `(x ? true:false)` (aceita qualquer um) mas a
+  do `!=` é `(x === 0)` (SÓ número — `false === 0` é `false`; é a classe do
+  §186/UIW052). Cada CJump tem o SEU label de convergência (compartilhar o
+  label final fazia a ternária externa perder o terminador → expressão com
+  stack underflow, medido). O JS toma outro caminho — pelo MESMO motivo do
+  `&&`/`||` (`driver.target != Target.JS` em `ExpressionBinaryLowerer:167`):
+  o reconstructor de CFG do KofJS não dobra conditional jump em posição de
+  CONDIÇÃO (`if`/`while`) — os temporários saíam do corpo do loop
+  (`ReferenceError: _recL is not defined`, medido dentro de `while`). No JS a
+  lowering emite UMA ÚNICA chamada p/ o helper novo `kofRecordEq(a,b)`
+  (`JsRuntimeCore`, exportado; espelha o `kofValEq` que já existia mas é
+  interno do módulo, só que devolve 1/0), opaca p/ o reconstructor. O `!=` é
+  aplicado UMA vez pelo chamador em TODOS os targets (o `return localIdx` que
+  estava no ramo JS curto-circuitava o loop do `==`-chain — `a == b == (miss
+  != hit)` perdia um operando; consertado e testado).
+  `CompilerComparisons.isComparisonShortcut` também passou a DESembrulhar
+  `Nullable(record)` p/ o record nullable não cair em silêncio no caminho de
+  referência.
 - **Cross-target (face a):** JVM provado por teste; SCRIPT + JS provados por
   teste; Native não medido (sem qemu) — o lowering é agnóstico de alvo
   (comparação de referência `if_acmp`).
@@ -9390,13 +9433,30 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
   JVM; o conserto precisa de um helper de igualdade de objetos null-safe
   (`kofValEq` existe no runtime JS, `Objects.equals` no JVM) compartilhado
   pelos 4 alvos — não tentado aqui porque o Native não pode ser provado nesta
-  máquina (sem qemu) e um fix só-JVM criaria divergência (regra 5).
+  máquina (sem qemu) e um fix só-JVM criaria divergência (regra 5). **(CORREÇÃO
+  17/09, lane `.18`: o "sem qemu" só valia p/ as portas cruzadas riscv/aarch64
+  — o native x86_64 RODA nesta máquina via `gcc` (assemble+link; o
+  `KofIntOverflowNativeTest` prova assim), então as 4 faces foram medidas e
+  consertadas em lockstep.)**
 - **Repassada (17/09) à lane compiler:** a face (b) precisa do toolchain
   nativo para provar os 4 alvos (a máquina não tem qemu), então não é corrigida
-  nesta lane — a lane compiler assume com o dossiê completo abaixo.
-- **Status:** 🟡 PARCIAL 17/09 — face (a) FEITA (`07a51565`, lane
-  bugs-and-gaps `192.168.100.15`); face (b) ABERTA (repassada à lane compiler,
-  17/09) como acima. Corpus: a
+  nesta lane — a lane compiler assume com o dossiê completo abaixo. **(FEITA
+  17/09 pela lane compiler/development `192.168.100.18` com o native x86_64
+  provado por `gcc` — ver Conserto acima.)**
+- **Prova de regressão (face b):** `RecordNullableNullEqE2ETest` agora
+  **11/11** (6 da face-a + 5 da face-b, incl. Native x86 tanto p/ o par
+  nullable quanto p/ o caminho de referência da face-a). A bateria assere
+  JVM=JS=SCRIPT=NATIVE byte-a-byte em: `miss==hit`/`miss!=hit`/`hit==miss`/
+  `n1==n2`/`n1!=n2`/`a==b` (Point? por conteúdo, vindo DE get de map E DE
+  função que retorna Point?), `if(miss==hit)` e `if(a==b)` (região de condição
+  do if-statement), UM caso `while(mk(false)==miss)` — **condição de LOOP**
+  (o stressador do reconstructor JS) — e o encadeado `a == b == (miss != hit)`
+  (o conserto do `!=`-uma-vez). Vizinhos verdes (ver abaixo).
+- **Status:** ✅ FEITO — face (a) `07a51565` (lane bugs-and-gaps
+  `192.168.100.15`); face (b) em DOIS PASSOS landados: guarda-do-receptor
+  `ab284b91` (`.17`, 17/09) + complementação dos 3 furos medidos (`.18`,
+  18/09, `RecordNullableNullEqE2ETest` 11/11, native x86_64 provado via
+  `gcc`; os dois testes juntos = 21/21). Corpus: a
   célula de null-safety de `training/idioms/records.md` atualizada (o
   narrowing `!= null` numa chave ausente agora é seguro). Relacionado:
   §D-NULL-INTENT (contrato boxed nullable), bug 188 (`==` de conteúdo de
@@ -9471,7 +9531,6 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
   doc×Set.of).
 > | **§265 ✅ CORRIGIDO 16/09 (lane development `.18`)** | Handlers web do KofJS: `status(201, body)`/`headerSet()` eram no-ops SILENCIOSOS — `JsRuntimeOps.handleRuntimeOp` tinha um ramo de colapso (`status→args.get(1)`) que DESCARTAVA a chamada do `invoke()` emitido (decisivo), e `kofWebStatus` lia `kofWebRequest.response` (campo que nunca existiu; o `response` vive no `ctx`). JVM: `201`+`X-Custom`; JS: `200`, header descartado (R6; a célula "JS ✅ 08/27" do ecosystem-coverage era false-green — suporte em compile ≠ efeito em runtime). Conserto = remover os ramos de colapso (o roteamento correto já existia abaixo) + deferir `_status`/`_headerQueue` aplicados pelo pump antes do envio (o HttpServer do JDK exige headers pré-envio), idem thread-local do JVM. Prova: `KofWebJsE2ETest.jsWebStatusAndHeaderReachTheWire` (VERMELHO pré-fix, medido `return "made"` no JS emitido + `200` no fio vivo). `status/header` do Native fica `– WEB001` (honesto).
 > | **§266 ✅ CORRIGIDO 17/09 (lane development `.18`)** | Corpo de loop com `if` seguido de statements miscompilava SÓ no JS (locais escapavam p/ a cláusula `for(;…;update)`) — `ReferenceError` headless, UI VAZIA SILENCIOSA em `Component.view` (catch do kofUiRender). Correção = `KofContinueLabel(label, loopStart)` estrutural emitido no lowering; o reconstructor consome o marcador, a varredura-para-trás ambígua + o guess `looksLikeContinueLabel` SAÍRAM; split `JsTryParser` mantém o arquivo <600. Prova: `JsLoopIfTailE2ETest` 7/7 + ReorderList da lib de volta à forma `if` direta no Chrome. O catch do `kofUiRender` AINDA engole throws do view (a amplificação alto-headless/UI-muda permanece p/ qualquer outro crash de view). |
-> | **§268 🟡 PARCIAL 18/09 (face throwables ✅ CORRIGIDA pela lane compiler `.22`, commit #313; extends amplo ABERTO, fila da mesma lane)** | `throw new Exception(...)`/`extends <throwable-JDK>` emitia nome CRU (`new Exception` / super `RuntimeException`) → `NoClassDefFoundError` no load enquanto a tabela de exceção qualificava (dois caminhos de resolução). Corrigido na raiz: `CompilerTypes.toType` + `SymbolTableBuilder` agora mapeiam o conjunto `JAVA_LANG_THROWABLES` para `java.lang.*` (homônimo do módulo vence; prova `ThrowQualifiedTest` 4/4). Escopo amplo RE-PROBADO e ainda cru: `extends Thread`/`Object` (java.lang não-throwable), `extends IOException` (java.io, sem import), `extends Zebra` (indefinido — silencioso) — correção geral na fila (SEM072 + `Object`→`java/lang/Object`). |
 > | **§267 ✅ CORRIGIDO 17/09 (lane development `.18`; face irmã achada durante o §266)** | `if/else` de nível-statement cujos ramos são assignments dobrou numa ternária expressão (`tryParseIfExpr`) e o statement SEGUINTE teve seu `let` içado p/ cima dela → leitura obsoleta, VALOR ERRADO SILENCIOSO no JS. Correção = marcador `KofStatementIf(thenLabel)` no lowering (amarrado ao label — um booleano seria comido pelo CJump de uma if-expr NESTED na condição); if-expressões reais continuam dobrando. Prova: `JsIfFoldStatementE2ETest` 8/8 + suíte 1990/0/0/169. |
 
 ### §265 — Handlers web do KofJS: `status(code, body)` e `headerSet(name, value)` eram no-ops SILENCIOSOS (o ramo de colapso em `handleRuntimeOp` descartava a chamada do handler emitido; e `kofWebStatus` lia um campo `kofWebRequest.response` que nunca existiu) — a doc dizia "JS 08/27 ✅" mas o JS devolvia 200 e descartava o header — ✅ CORRIGIDO 16/09 (lane development, dono = 192.168.100.18)
@@ -9519,69 +9578,3 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
 - **Prova:** `KofWebJsE2ETest.jsWebStatusAndHeaderReachTheWire` — asser
   `201`+`X-Custom: abc`+corpo no fio vivo (VERMELHO pré-fix: medido `200` + header
   ausente contra o servidor rodando; a mesma sonda verde no JVM `201 Created`).
-
-## §268 — classe de usuário `extends <classe do JDK>` por nome SIMPLES grava a superclasse CRUA → `NoClassDefFoundError` no load (compila em silêncio; R6/Q7)
-
-- **Sintoma:** `class MyEx extends RuntimeException { ... }` compila limpo
-  (exit 0) e a PRÓPRIA classe falha no load:
-  `Caused by: java.lang.ClassNotFoundException: RuntimeException`
-  (carrega `RuntimeException`, não `java/lang/RuntimeException`).
-  O escopo é MAIS AMPLO que throwables — medido o mesmo `super_class` cru para
-  **`RuntimeException`, `Exception`, `IOException`, `IllegalArgumentException`,
-  `Object`, `Thread`** (qualquer classe do JDK referenciada por nome simples).
-  `java.lang` não precisa de `import` — não é problema de import.
-- **Causa raiz (medida):** `CompilerClassLowering.lowerClass` (`:22`)
-  `driver.toInternalName("", sym.superClass())` passa pacote VAZIO quando o
-  analyzer resolveu o nome mas a classe é nome JDK implícito → o `super_class`
-  emitido é o `RuntimeException` cru em vez de `java/lang/RuntimeException`.
-  Independente do mapper do `catch` (família §167/§332/§328 corrigida 18/09) —
-  este é o campo **super do `extends`**, não a tabela de catch.
-- **Repro (medido no tip `a7af2c6a`, JVM, 18/09):**
-  ```kof
-  class MyEx extends RuntimeException {
-      String what() { return "my" }
-  }
-  main() {
-      var e = MyEx()
-      println("ok " + e.what())
-  }
-  ```
-  → `build`/`run` exit 0 e então `ClassNotFoundException: RuntimeException`
-  em `Default.Main.main(Main.kf:5)`. Idem com `extends Object`/`Thread`/`IOException`.
-- **Família:** mesma raiz "ref JDK não-qualificada" das issues **#313/#314**
-  (static call / `throw new` não-qualificados) — registrar lá. Dono = lane
-  compiler (fila `#313/#314`, DOING linha 223). Direção do fix: `toInternalName`
-  deve qualificar nomes de classe JDK implícitos após o analyzer resolvê-los (e o
-  mesmo check que fixa os aliases builtin `String`/`List`/`Map` (padrão SG-011
-  §179) deve dar ao throwable o seu pacote real).
-- **Não corrigido aqui** (achado ao fechar §332/#328; a fila desta família é
-  `#313/#314`, dono = lane compiler `.22` conforme DOING linha 223).
-- **Atualização de status (18/09, lane compiler `.22`, commit do #313):**
-  PARCIAL — a face `extends <throwable-JDK>` está FECHADA na raiz em
-  `SymbolTableBuilder` (mesmo commit do #313): o super registrado agora cai
-  para `java.lang.<Nome>` para o conjunto `JAVA_LANG_THROWABLES` quando nenhum
-  import resolve (medido: `class MyEx extends RuntimeException` sem import
-  carrega e roda; `ThrowQualifiedTest` trava). O ESCOPO AMPLO segue ABERTO,
-  re-medido com instanciação (o crash de load só aparece quando a classe é
-  realmente carregada): `extends Thread`/`extends Object` (java.lang, não
-  throwables) e `extends IOException` (java.io, sem import) ainda emitem o
-  super cru → `NoClassDefFoundError`/CNFE; `extends Zebra` (nome indefinido)
-  compila limpo com super cru (silencioso, R6). Correção geral na fila: nome
-  simples não-resolvido em extends/implements → SEM072 honesto,
-  `Object` → `java/lang/Object`.
-- **Bifurcação rule-6 (por que o commit dos throwables NÃO fechou a face
-  ampla):** a generalização muda como TODO nome simples de tipo em
-  `extends`/`implements` resolve, nos quatro targets, e divide o rio de
-  resolução com o cluster nullable/generics (`#259`/`#361`/`#363`/`#365`/
-  `#366`/`#368`). Três contratos candidatos, todos melhores que o crash-de-load
-  silencioso de hoje mas NÃO intercambiáveis: **(A)** `java.lang` implícito em
-  extends/implements via probe `Class.forName("java.lang."+n)` com cache
-  (completo, casa com Java, mas torna o JDK do compilador oráculo semântico —
-  não-java.lang como `IOException`/`List` ainda exige import ou cai em SEM072);
-  **(B)** conjunto `JAVA_LANG_TYPES` curado (precedente =
-  `JAVA_LANG_THROWABLES`; subcobre — chutar curto demais é exatamente o erro
-  que o §268 registra); **(C)** exigir o import (o mais estrito, quebra o
-  idiom no-import de hoje). Precisa da escolha da mantenedora + bump/doc
-  (programas que hoje crasham passam a dar erro de compilação → SEM072),
-  portanto NÃO é edição silenciosa da `.22`. Dono = lane compiler; atacar
-  depois que o cluster nullable/generics assentar (mesmos arquivos).

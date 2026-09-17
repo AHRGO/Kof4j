@@ -124,6 +124,15 @@ void handleCall(MethodCtx ctx, List<Object> stack,
             p.rt.handleRuntimeOp(ctx, stack, preambleExprs, kc, receiver, args);
             return;
         }
+        if ("kofRecordEq".equals(kc.methodName()) && kc.parameterTypes().size() == 2) {
+            // §262(b): igualdade de record null-safe partilhada (Objects.equals
+            // semantics) baixada p/ helper do runtime — o desugar com jumps da
+            // lane não dobra em posição de condição no reconstructor JS (o
+            // mesmo motivo do `&&`/`||` p/ target != JS, ExpressionBinaryLowerer:167).
+            ctx.lc.registerRuntime("kofRecordEq");
+            stack.add(new JsIr.JsCall(new JsIr.JsIdentifier("kofRecordEq"), args));
+            return;
+        }
         if (isStringOp(kc)) {
             handleStringOp(ctx, stack, preambleExprs, kc, receiver, args);
             return;
