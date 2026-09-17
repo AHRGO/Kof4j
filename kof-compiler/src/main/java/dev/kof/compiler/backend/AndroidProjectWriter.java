@@ -163,15 +163,37 @@ public final class AndroidProjectWriter {
                 """);
     }
 
-    /** index.html gerado pelo JsBackend: garante kof-platform.js antes do módulo. */
+    /**
+     * Ajustes do index.html para o alvo Android: garante a ponte kof_platform
+     * e o {@code <meta viewport>} de responsividade (o WebView honra
+     * width=device-width por causa de setUseWideViewPort no host). Cobre
+     * também index.html customizado do usuário (defensivo: só injeta o que
+     * falta, nunca duplica).
+     */
     private void patchIndexForPlatform(Path assetsDir) throws IOException {
         Path html = assetsDir.resolve("index.html");
         if (!Files.exists(html)) return;
         String content = Files.readString(html);
-        if (content.contains("kof-platform.js")) return;
-        content = content.replace("<script type=\"module\"",
-                "<script src=\"kof-platform.js\"></script>\n    <script type=\"module\"");
-        Files.writeString(html, content);
+        String patched = content;
+        if (!patched.contains("name=\"viewport\"")) {
+            patched = injectMeta(patched,
+                    "<meta name=\"viewport\" content=\"width=device-width,"
+                            + " initial-scale=1, viewport-fit=cover\">");
+        }
+        if (!patched.contains("kof-platform.js")) {
+            patched = patched.replace("<script type=\"module\"",
+                    "<script src=\"kof-platform.js\"></script>\n    <script type=\"module\"");
+        }
+        if (!patched.equals(content)) Files.writeString(html, patched);
+    }
+
+    /** Injeta uma meta no <head>, ancorando no charset ou em </head>. */
+    private static String injectMeta(String html, String meta) {
+        if (html.contains("<meta charset=\"utf-8\">")) {
+            return html.replace("<meta charset=\"utf-8\">",
+                    "<meta charset=\"utf-8\">\n    " + meta);
+        }
+        return html.replace("</head>", "    " + meta + "\n</head>");
     }
 
     /** Empacota todos os .class sob classesDir no jar (d8 consome direto). */

@@ -2,12 +2,15 @@
 
 # KofAndroid — Kof's Android target
 
-> **Status: Phases 1 and 2 implemented (31/08).** `kof build --target android` generates the
+> **Status: Phases 1, 2 and 3 implemented (Phase 3 = responsiveness, 17/09).**
+> `kof build --target android` generates the
 > Maven project + APK pipeline with the host Activity written IN KOF
 > (`dev/kof/android-host.kf`) — zero Java, zero Kotlin, zero Gradle in the
 > generated project; dependencies resolved by Kof (ExternalClasspath).
 > Phase 2: label/permissions derived from the program, standalone `--apk`
 > (aapt2/d8/apksigner straight from the CLI) and release signing `--keystore`.
+> Phase 3: the WebView renders at the device width (`<meta viewport>` +
+> `setUseWideViewPort`) with a narrow-screen CSS block — see below.
 > The compiler base this requires is functional: external class inheritance,
 > `super(...)`/`super.method()` with correct INVOKESPECIAL, chained calls on
 > external receivers, external constructors and fields, annotations emitted in
@@ -198,6 +201,37 @@ vectorial (`res/drawable/ic_launcher_kof.xml`) — no generated binary.
   debug keystore generated the first time;
 - icon: Kof's vectorial default (`res/drawable/ic_launcher_kof.xml`);
   declarative override by metadata remains planned (no generated binary).
+
+- icon: Kof's vectorial default (`res/drawable/ic_launcher_kof.xml`);
+  declarative override by metadata remains planned (no generated binary).
+
+### Phase 3 — implemented (17/09): responsiveness
+
+The WebView host now renders the UI at the **device width** instead of the
+desktop 980px layout viewport:
+
+- ✅ **`<meta viewport>` in the generated `index.html`** — `width=device-width,
+  initial-scale=1, viewport-fit=cover` (`JsArtifactWriter.writeHtmlEntry`);
+  `AndroidProjectWriter.patchIndexForPlatform` injects it defensively into a
+  custom `index.html` too;
+- ✅ **host enables the wide viewport** — `setUseWideViewPort(true)` +
+  `setLoadWithOverviewMode(true)` in `dev/kof/android-host.kf`; without both
+  the WebView **ignores** the meta tag and the UI shows up zoomed out;
+- ✅ **narrow-screen CSS** — a `@media (max-width: 600px)` block wraps
+  `.kof-row` and shrinks the titlebar/root padding, so the same
+  `Window`/`Column`/`Row` intent adapts with no change in the `.kf` code;
+- `kofUiSerializeHtml` (HTML-export path) emits the same viewport meta.
+
+Proof: `AndroidInteropE2ETest.androidResponsiveViewportAndWebViewWideViewport`.
+
+### Pending (Phases 4+, no owner yet)
+
+- `--aab` output (App Bundle for Play) — needs `bundletool`, honest gap today;
+- `--min-sdk`/`--target-sdk` CLI override (doc §"Lifecycle" promises an
+  explicit flag, not a magic file) — defaults are fixed at 24/34;
+- declarative icon override by metadata (today: vectorial Kof default);
+- CI: `build → assembleDebug` with an emulator smoke test (workflow exists,
+  emulator step pending).
 
 ## Restrictions and gaps (diagnosed at compile-time)
 

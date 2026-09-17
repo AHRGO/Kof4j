@@ -78,6 +78,7 @@ public class JsArtifactWriter {
                 <html lang="en">
                 <head>
                   <meta charset="utf-8">
+                  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
                   <title>__TITLE__ — Kof</title>
                   <style>
                     :root {
@@ -141,6 +142,16 @@ public class JsArtifactWriter {
                     #kof-status {
                       background: var(--panel); border-top: 1px solid var(--border);
                       color: var(--dim); font-size: 11px; padding: 4px 14px;
+                    }
+                    /* Responsivo (Android/WebView estreito): as Row quebram em
+                       vez de estourar; paddings/fonte encolhem no aparelho. */
+                    @media (max-width: 600px) {
+                      #kof-titlebar { padding: 6px 10px; }
+                      #kof-root { padding: 10px 12px; }
+                      .kof-window { padding: 12px; }
+                      .kof-row { flex-wrap: wrap; }
+                      .kof-label, .kof-button, .kof-input,
+                      .kof-textarea, .kof-select { font-size: 14px; }
                     }
                   </style>
                 </head>

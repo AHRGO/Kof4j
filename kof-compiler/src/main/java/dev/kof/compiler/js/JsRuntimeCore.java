@@ -219,6 +219,7 @@ public final class JsRuntimeCore {
                 const root = document.getElementById("kof-root");
                 if (!root) return "";
                 const html = "<!DOCTYPE html>\\n<html>\\n<head>\\n<meta charset=\\"utf-8\\">\\n"
+                        + "<meta name=\\"viewport\\" content=\\"width=device-width, initial-scale=1, viewport-fit=cover\\">\\n"
                         + "<title>" + kofEscapeHtml(document.title || "Kof") + "</title>\\n"
                         + "</head>\\n<body>\\n" + kofSerialize(root) + "\\n</body>\\n</html>\\n";
                 globalThis.kof__uiRootHtml = html;

@@ -168,7 +168,8 @@ The project is at 0.4.0-beta, functional:
 
 **In development:**
 - Full native MySQL/MariaDB (wire protocol: SHA-1 auth done)
-- Android Phase 2+ (today Phase 1: Maven project + APK, host Activity in Kof)
+- Android Phase 4+ (Phases 1-3 done: Maven project + APK with host Activity in Kof,
+  label/permissions/standalone --apk/release --keystore, responsive WebView)
 - Multi-file modules (residual unified semantics)
 - GC auto-collect on exhaustion (mark-sweep landed 09/03; auto-collect needs
   safe-points/root-map — `§260`); native scheduler CLOSED 08/31 (`SCHED001`)

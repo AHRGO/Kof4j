@@ -385,6 +385,72 @@ class AndroidInteropE2ETest {
     }
 
     @Test
+    void androidResponsiveViewportAndWebViewWideViewport(@TempDir Path tempDir) throws IOException {
+        // Responsividade do alvo Android: o index.html gerado precisa do
+        // <meta viewport> (width=device-width) e o host Activity precisa ligar
+        // setUseWideViewPort/setLoadWithOverviewMode — sem os dois o WebView
+        // usa o viewport de 980px do desktop e a UI aparece encolhida.
+        Path source = tempDir.resolve("Main.kf");
+        Files.writeString(source, """
+            main() {
+                var w = Window("Responsivo")
+                var row = Row()
+                row.bind(Label("a"))
+                row.bind(Label("b"))
+                w.bind(row)
+                w.show()
+            }
+            """);
+
+        Path sdkJar = tempDir.resolve("fake-sdk.jar");
+        try (InputStream in = AndroidInteropE2ETest.class.getResourceAsStream("/android/fake-sdk.jar")) {
+            assertNotNull(in, "fake-sdk.jar deve estar em src/test/resources/android/");
+            Files.copy(in, sdkJar);
+        }
+
+        CompilerDriver cpDriver = new CompilerDriver();
+        cpDriver.setExternalClasspath(List.of(sdkJar));
+        CompilationResult result = cpDriver.compile(source, tempDir.resolve("proj"), Target.ANDROID);
+        assertTrue(result.success(), "Compilation should succeed: " + result.diagnostics().getDiagnostics());
+
+        Path html = tempDir.resolve("proj").resolve("src/main/assets/kof/index.html");
+        String content = Files.readString(html);
+        assertTrue(content.contains("name=\"viewport\""),
+                "index.html deve declarar <meta name=viewport>:\n" + content);
+        assertTrue(content.contains("width=device-width"),
+                "viewport deve ser width=device-width:\n" + content);
+
+        // o host EM KOF chama os setters de WebSettings que ativam o viewport
+        byte[] hostClass;
+        try (var zip = new java.util.zip.ZipFile(
+                tempDir.resolve("proj").resolve("libs/kof-app.jar").toFile())) {
+            ZipEntry entry = zip.getEntry("MainActivity.class");
+            assertNotNull(entry, "MainActivity.class no jar");
+            try (InputStream in = zip.getInputStream(entry)) {
+                hostClass = in.readAllBytes();
+            }
+        }
+        List<String> calls = new ArrayList<>();
+        new ClassReader(hostClass).accept(new ClassVisitor(Opcodes.ASM9) {
+            @Override
+            public org.objectweb.asm.MethodVisitor visitMethod(int access, String name, String desc,
+                                                               String signature, String[] exceptions) {
+                return new org.objectweb.asm.MethodVisitor(Opcodes.ASM9) {
+                    @Override
+                    public void visitMethodInsn(int opcode, String owner, String mName,
+                                                String mDesc, boolean isInterface) {
+                        calls.add(owner + "." + mName);
+                    }
+                };
+            }
+        }, 0);
+        assertTrue(calls.contains("android/webkit/WebSettings.setUseWideViewPort"),
+                "host deve ligar setUseWideViewPort: " + calls);
+        assertTrue(calls.contains("android/webkit/WebSettings.setLoadWithOverviewMode"),
+                "host deve ligar setLoadWithOverviewMode: " + calls);
+    }
+
+    @Test
     void androidReadmePlaceholdersResolve(@TempDir Path tempDir) throws IOException {
         // CodeQL #357 (unused-format-argument): o README.txt usava %1$s %2$s %4$s
         // %5$s mas passava 5 args (um APP_PACKAGE duplicado, %3$s nunca lido).
