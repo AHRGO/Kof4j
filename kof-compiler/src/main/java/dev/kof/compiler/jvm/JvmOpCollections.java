@@ -26,7 +26,7 @@ public final class JvmOpCollections {
                 || kc.methodName().startsWith("kof_mv64_")) {
             ctx.usesVk = true;
         }
-        if (kc.methodName().startsWith("kof_ffi_")) {
+        if (kc.methodName().startsWith("kof_ffi")) {
             ctx.usesExtern = true;
         }
         mv.visitMethodInsn(INVOKESTATIC, "dev/kof/runtime/KofRuntime", kc.methodName(),
@@ -70,6 +70,10 @@ public final class JvmOpCollections {
                 // do runtime → VerifyError "Bad return type". CHECKCAST só no
                 // reduce: valor String real passa, valor errado morre alto.
                 mv.visitTypeInsn(CHECKCAST, JvmTypeMapper.toInternalName(rt.packageName(), rt.name()));
+            } else if (kc.methodName().startsWith("kof_ffi") && isPrimitiveType(kc.returnType())) {
+                emitUnboxIfPrimitive(mv, kc.returnType());
+            } else if (kc.methodName().startsWith("kof_ffi") && BuiltinTypes.isString(kc.returnType())) {
+                mv.visitTypeInsn(CHECKCAST, "java/lang/String");
             }
         }
     }

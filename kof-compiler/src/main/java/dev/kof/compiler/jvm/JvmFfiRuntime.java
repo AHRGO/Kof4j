@@ -50,7 +50,7 @@ final class JvmFfiRuntime {
                                 java.lang.foreign.FunctionDescriptor.of(
                                         java.lang.foreign.ValueLayout.JAVA_INT,
                                         java.lang.foreign.ValueLayout.ADDRESS));
-                        java.lang.foreign.MemorySegment seg = arena.%s(a);
+                        java.lang.foreign.MemorySegment seg = arena.%1$s(a);
                         return (int) handle.invoke(seg);
                     } catch (Throwable t) {
                         throw new RuntimeException("kof_ffi_si: " + lib + "::" + name + " failed: "
@@ -75,6 +75,56 @@ final class JvmFfiRuntime {
                         throw new RuntimeException("kof_ffi_dd: " + lib + "::" + name + " failed: "
                                 + t.getMessage(), t);
                     }
+                }
+
+                public static Object kof_ffi(String lib, String name, String sig, Object[] args) {
+                    java.lang.foreign.Arena arena = java.lang.foreign.Arena.ofConfined();
+                    try {
+                        java.lang.foreign.SymbolLookup lookup = lib.isEmpty()
+                                ? java.lang.foreign.SymbolLookup.loaderLookup()
+                                : java.lang.foreign.SymbolLookup.libraryLookup(lib, arena);
+                        java.lang.foreign.Linker linker = java.lang.foreign.Linker.nativeLinker();
+                        char ret = sig.charAt(0);
+                        java.lang.foreign.MemoryLayout[] pl =
+                                new java.lang.foreign.MemoryLayout[args.length];
+                        Object[] real = new Object[args.length];
+                        for (int i = 0; i < args.length; i++) {
+                            char c = sig.charAt(i + 1);
+                            pl[i] = kof_ffi_layout(c);
+                            real[i] = (c == 'S') ? arena.%1$s((String) args[i]) : args[i];
+                        }
+                        java.lang.foreign.FunctionDescriptor fd =
+                                java.lang.foreign.FunctionDescriptor.of(kof_ffi_layout(ret), pl);
+                        java.lang.invoke.MethodHandle handle = linker.downcallHandle(
+                                lookup.find(name).orElseThrow(), fd);
+                        handle = handle.asSpreader(Object[].class, args.length);
+                        Object r = handle.invoke(real);
+                        if (ret == 'S') {
+                            java.lang.foreign.MemorySegment seg = (java.lang.foreign.MemorySegment) r;
+                            if (seg == null || seg.address() == 0L) {
+                                return null;
+                            }
+                            return seg.reinterpret(Long.MAX_VALUE).getString(0L);
+                        }
+                        return r;
+                    } catch (Throwable t) {
+                        throw new RuntimeException("kof_ffi: " + lib + "::" + name + " (" + sig + ") failed: "
+                                + t.getMessage(), t);
+                    } finally {
+                        arena.close();
+                    }
+                }
+
+                static java.lang.foreign.ValueLayout kof_ffi_layout(char c) {
+                    return switch (c) {
+                        case 'i' -> java.lang.foreign.ValueLayout.JAVA_INT;
+                        case 'j' -> java.lang.foreign.ValueLayout.JAVA_LONG;
+                        case 'f' -> java.lang.foreign.ValueLayout.JAVA_FLOAT;
+                        case 'd' -> java.lang.foreign.ValueLayout.JAVA_DOUBLE;
+                        case 'b' -> java.lang.foreign.ValueLayout.JAVA_BOOLEAN;
+                        case 'S' -> java.lang.foreign.ValueLayout.ADDRESS;
+                        default -> throw new IllegalArgumentException("bad ffi layout char: " + c);
+                    };
                 }
 
     """;

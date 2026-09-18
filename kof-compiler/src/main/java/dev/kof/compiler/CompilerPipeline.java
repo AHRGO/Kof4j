@@ -445,12 +445,12 @@ public final class CompilerPipeline {
 
     // ── FFI (TIER 2.1.4) — binding suportado por target ──
     static boolean isExternBound(CompilerDriver driver, ExternalFunctionNode ext) {
-        if (ext.parameters().size() != 1) return false;
-        String p = ext.parameters().get(0).type();
-        String r = ext.returnType();
         if (driver.target == Target.JVM) {
-            return (isIntType(r) && (isIntType(p) || isStringType(p)))
-                    || (isDoubleType(r) && isDoubleType(p));
+            if (ffiReturnChar(ext.returnType()) == null) return false;
+            for (var param : ext.parameters()) {
+                if (ffiParamChar(param.type()) == null) return false;
+            }
+            return true;
         }
         // NATIVE: dlopen/dlsym segfaulta no binário nativo (glibc exige TLS
         // que o _start cru não inicializa) — bug registrado (known-bugs);
@@ -468,6 +468,44 @@ public final class CompilerPipeline {
 
     static boolean isDoubleType(String t) {
         return "double".equals(t) || "Double".equals(t);
+    }
+
+    // FFI (R3, generalizado): descrição compacta da assinatura → layout FFM.
+    // chars: i=Int j=Long f=Float d=Double b=Boolean S=String(char*).
+    static Character ffiParamChar(String t) {
+        if (isIntType(t)) return 'i';
+        if (isStringType(t)) return 'S';
+        if (isDoubleType(t)) return 'd';
+        if (isLongFFI(t)) return 'j';
+        if (isFloatFFI(t)) return 'f';
+        if (isBoolFFI(t)) return 'b';
+        return null;
+    }
+
+    static Character ffiReturnChar(String t) {
+        return ffiParamChar(t);
+    }
+
+    static String ffiSignature(ExternalFunctionNode ext) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(ffiReturnChar(ext.returnType()));
+        for (var p : ext.parameters()) sb.append(ffiParamChar(p.type()));
+        return sb.toString();
+    }
+
+    static Type ffiReturnType(String r) {
+        if (isDoubleType(r)) return Type.PrimitiveType.DOUBLE;
+        if (isLongFFI(r)) return Type.PrimitiveType.LONG;
+        if (isFloatFFI(r)) return Type.PrimitiveType.FLOAT;
+        if (isBoolFFI(r)) return Type.PrimitiveType.BOOL;
+        if (isStringType(r)) return BuiltinTypes.STRING;
+        return Type.PrimitiveType.INT;
+    }
+
+    static boolean isLongFFI(String t) { return "long".equals(t) || "Long".equals(t); }
+    static boolean isFloatFFI(String t) { return "float".equals(t) || "Float".equals(t); }
+    static boolean isBoolFFI(String t) {
+        return "bool".equals(t) || "boolean".equals(t) || "Boolean".equals(t);
     }
 
 }

@@ -121,6 +121,40 @@ class FfiE2ETest {
         assertEquals("5", output, "abs(-5) must return 5 via libc");
     }
 
+    @Test
+    void ffiPowTwoDoubleArgsJVM(@TempDir Path dir) throws IOException {
+        Path src = dir.resolve("ffi.kf");
+        Files.writeString(src, """
+                extern "libm.so.6" pow(Double x, Double y): Double
+
+                main() {
+                    println(pow(2.0, 10.0))
+                }
+                """);
+        Path out = dir.resolve("out");
+        CompilationResult result = driver.compile(src, out, Target.JVM);
+        assertTrue(result.success(), "2-arg double extern must compile: "
+                + result.diagnostics().getDiagnostics());
+        assertEquals("1024.0", runJvm(out), "pow(2.0,10.0) via libm (multi-arity)");
+    }
+
+    @Test
+    void ffiStrstrTwoStringsToStringJVM(@TempDir Path dir) throws IOException {
+        Path src = dir.resolve("ffi.kf");
+        Files.writeString(src, """
+                extern "libc.so.6" strstr(String hay, String needle): String
+
+                main() {
+                    println(strstr("hello world", "wor"))
+                }
+                """);
+        Path out = dir.resolve("out");
+        CompilationResult result = driver.compile(src, out, Target.JVM);
+        assertTrue(result.success(), "String-return extern must compile on JVM: "
+                + result.diagnostics().getDiagnostics());
+        assertEquals("world", runJvm(out), "strstr char*→String with 2 String args");
+    }
+
     private String runJava(Path outDir) throws IOException {
         return runJvm(outDir);
     }
