@@ -231,14 +231,14 @@ final class CmdBuild {
             driver.setAndroidSdk(androidMin, androidTarget);
         }
         // dependências externas (android.jar etc.) geridas pelo Kof via
-        // ExternalClasspath — separadas por ':' ou ';'
+        // ExternalClasspath — separadas pelo separador de classpath da plataforma
+        // (#441: no Windows o ':' faz parte da unidade `C:\`, splitar por ':'
+        // quebrava entradas em fragmentos como "C" → CP002 falso).
         List<Path> externalEntries = new ArrayList<>();
-        if (classpath != null && !classpath.isBlank()) {
-            for (String part : classpath.split("[:;]")) {
-                if (!part.isBlank()) externalEntries.add(Path.of(part));
-            }
-            driver.setExternalClasspath(externalEntries);
+        for (String part : splitClasspathEntries(classpath)) {
+            externalEntries.add(Path.of(part));
         }
+        if (!externalEntries.isEmpty()) driver.setExternalClasspath(externalEntries);
         // kofdeps: dependências Maven resolvidas no cache ~/.kof/deps
         if (useDeps) {
             try {
@@ -522,4 +522,26 @@ final class CmdBuild {
         int code = proc.waitFor();
         if (code != 0) throw new IOException("exit " + code + ": " + cmd.get(0));
     }
+
+    /**
+     * #441: divide um {@code --classpath} em entradas. Usa o separador real da
+     * plataforma ({@link java.io.File#pathSeparatorChar}): {@code ';'} no
+     * Windows (nunca parte um {@code C:\...} no dois-pontos), {@code ':'} fora
+     * dele. No Unix mantém a tolerância histórica a {@code ';'} também (zero
+     * regressão para quem já passava os dois). Visível p/ teste com separador
+     * injetado (o host do teste é Linux; a semântica Windows é a que se prova).
+     */
+    static java.util.List<String> splitClasspathEntries(String classpath) {
+        return splitClasspathEntries(classpath, java.io.File.pathSeparatorChar);
+    }
+
+    static java.util.List<String> splitClasspathEntries(String classpath, char separator) {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        if (classpath == null || classpath.isBlank()) return out;
+        for (String part : classpath.split(separator == ':' ? "[:;]" : String.valueOf(separator))) {
+            if (!part.isBlank()) out.add(part);
+        }
+        return out;
+    }
+
 }
