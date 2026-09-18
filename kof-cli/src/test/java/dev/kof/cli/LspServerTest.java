@@ -3,6 +3,9 @@ package dev.kof.cli;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import org.junit.jupiter.api.io.TempDir;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -369,6 +372,60 @@ class LspServerTest {
         Object provider = caps.get("codeActionProvider");
         assertInstanceOf(Map.class, provider, "codeActionProvider com opções");
         assertEquals(List.of("source"), ((Map<String, Object>) provider).get("codeActionKinds"));
+    }
+
+
+    /** X10 fatia 4: definição em OUTRO arquivo do projeto (packages). */
+    @Test
+    void definitionJumpsAcrossProjectFiles(@TempDir Path dir) throws Exception {
+        String lib = "Int helper(Int x) { return x * 2 }\n";
+        String app = "main() { println(helper(21)) }\n";
+        Files.writeString(dir.resolve("lib.kf"), lib);
+        Path appFile = dir.resolve("app.kf");
+        Files.writeString(appFile, app);
+        String appUri = appFile.toAbsolutePath().toUri().toString();
+        String didOpen = "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + appUri + "\",\"text\":\"" + Json.escape(app) + "\"}}}";
+        // coluna de "helper" na linha 0: "main() { println(" = 18 chars? localizar real
+        int col = app.indexOf("helper") + 2;
+        String req = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/definition\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + appUri + "\"},"
+                + "\"position\":{\"line\":0,\"character\":" + col + "}}}";
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        new LspServer(new ByteArrayInputStream(all(frame(didOpen), frame(req))), out).run();
+        Map<String, Object> resp = byId(messages(out.toString(StandardCharsets.UTF_8)), 1);
+        @SuppressWarnings("unchecked")
+        List<Object> locs = (List<Object>) resp.get("result");
+        assertNotNull(locs, "esperava Location cross-file");
+        assertEquals(1, locs.size());
+        Map<?, ?> loc = (Map<?, ?>) locs.get(0);
+        String libUri = dir.resolve("lib.kf").toAbsolutePath().toUri().toString();
+        assertEquals(libUri, loc.get("uri"), "deve cair em lib.kf");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> range = (Map<String, Object>) loc.get("range");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> start = (Map<String, Object>) range.get("start");
+        assertEquals(0L, ((Number) start.get("line")).longValue(), "helper declarado na linha 0");
+    }
+
+    /** Nome inexistente no projeto: null honesto (nunca chute). */
+    @Test
+    void definitionUnknownNameIsNull(@TempDir Path dir) throws Exception {
+        Path f = dir.resolve("a.kf");
+        String app = "main() { println(naoExiste(1)) }\n";
+        Files.writeString(f, app);
+        String uriA = f.toAbsolutePath().toUri().toString();
+        String didOpen = "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + uriA + "\",\"text\":\"" + Json.escape(app) + "\"}}}";
+        int col = app.indexOf("naoExiste") + 3;
+        String req = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/definition\",\"params\":{"
+                + "\"textDocument\":{\"uri\":\"" + uriA + "\"},"
+                + "\"position\":{\"line\":0,\"character\":" + col + "}}}";
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        new LspServer(new ByteArrayInputStream(all(frame(didOpen), frame(req))), out).run();
+        Map<String, Object> resp = byId(messages(out.toString(StandardCharsets.UTF_8)), 1);
+        assertTrue(resp.containsKey("result"));
+        assertNull(resp.get("result"));
     }
 
     @SuppressWarnings("unchecked")

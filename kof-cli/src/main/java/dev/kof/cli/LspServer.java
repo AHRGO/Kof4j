@@ -365,11 +365,58 @@ final class LspServer {
         int off = offsetOf(text, line, ch);
         String word = wordAt(text, off);
         int[] decl = LspSymbols.declarationRange(text, word);
-        if (decl == null) { respond(id, null); return; }
+        if (decl == null) {
+            // X10 fatia 4: go-to-definition em packages — se o nome não é
+            // declarado no buffer, procura nos .kf irmãos do projeto (mesma
+            // convenção LspSymbols; sem parser paralelo; primeiro hit).
+            Map<String, Object> other = crossFileDefinition(uri, word);
+            respond(id, other == null ? null : List.of(other));
+            return;
+        }
         Map<String, Object> loc = new LinkedHashMap<>();
         loc.put("uri", uri);
         loc.put("range", rangeOf(text, decl[0], decl[1]));
         respond(id, List.of(loc));
+    }
+
+    /** Definição do nome em outro arquivo .kf da árvore do projeto (X10 f4). */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> crossFileDefinition(String fromUri, String word) {
+        if (word.isEmpty()) return null;
+        java.nio.file.Path self = toPath(fromUri);
+        if (self == null || self.getParent() == null) return null;
+        try (var stream = java.nio.file.Files.walk(self.getParent(), 6)) {
+            var files = stream.filter(p -> p.getFileName().toString().endsWith(".kf"))
+                    .filter(p -> !p.toAbsolutePath().equals(self.toAbsolutePath()))
+                    .sorted().toList();
+            for (java.nio.file.Path f : files) {
+                String txt;
+                try {
+                    txt = java.nio.file.Files.readString(f, StandardCharsets.UTF_8);
+                } catch (Exception e) {
+                    continue;
+                }
+                int[] decl = LspSymbols.declarationRange(txt, word);
+                if (decl != null) {
+                    Map<String, Object> loc = new LinkedHashMap<>();
+                    loc.put("uri", f.toAbsolutePath().toUri().toString());
+                    loc.put("range", rangeOf(txt, decl[0], decl[1]));
+                    return loc;
+                }
+            }
+        } catch (Exception e) {
+            return null;
+        }
+        return null;
+    }
+
+    private static java.nio.file.Path toPath(String uri) {
+        try {
+            if (uri == null || !uri.startsWith("file:")) return null;
+            return java.nio.file.Path.of(java.net.URI.create(uri));
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     @SuppressWarnings("unchecked")
