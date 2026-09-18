@@ -61,19 +61,24 @@ From `KofProcess.java` + `ExpressionProcessCallLowerer.java` (read, not inferred
 | target | `process.run` | `process.spawn` | `process.exit` | source of truth |
 |--------|:---:|:---:|:---:|-----------------|
 | **JVM** | ✅ | ✅ | ✅ (`System.exit`) | `KofProcess.RESULT/HANDLE`, ProcessBuilder |
-| **JS** | ✅ (`kof_platform.processRun`, node host) | ✅ per lowerer comment — *confirm in 2.2.0* | ✅ (sentinel) | `js/JsRuntimeIo.java`, `JsRuntimeOps.java` |
-| **Native** | ❌ `PROC001` (compile-time) | ❌ `PROC001` (compile-time) | ✅ (syscall) | `ExpressionProcessCallLowerer` lines 19–31, 50–60 |
+| **JS** | ✅ (`kof_platform.processRun`, node host) | ❌ `PROC001` — JS binds no `kof_process_spawn`/*handle* op (measured `ReferenceError`; gated honest 18/09) | ✅ (sentinel) | `js/JsRuntimeOps.java` `isRuntimeOp` lists run/exit only |
+| **Native** | ❌ `PROC001` (compile-time) | ❌ `PROC001` (compile-time) | ✅ (syscall) | `ExpressionProcessCallLowerer` spawn/run `PROC001` gates |
 
-Consequence for `kof.shell`: on JVM/JS it can be real sugar from day one; on **Native it is
-inherited `PROC001`** until `process.run` lands there (a separate native-lane item, **not**
-this plan's scope). `shell` must not paper over that — it reports the same honest gap.
+Consequence for `kof.shell`: `run`/`exit` are real on JVM+JS from day one; but **`spawn` is
+JVM-only** — an inherited `PROC001` on **both Native and JS** until the platform lands a
+live-pipe binding there (a separate item, **not** this plan's scope). `shell` must not paper
+over that — it reports the same honest gap. *(Corrected 18/09: an earlier draft trusted the
+`ExpressionProcessCallLowerer` comment "JVM/JS support it"; measuring the JS backend shows it
+emits a raw `kof_process_spawn(...)` call with no binding, and the fix gates JS spawn to an
+honest `PROC001` — see `DomainGapCodesTest.processSpawnOnJsIsProc001`.)*
 
 ## 5. Step queue (the executable todo this doc exists to produce)
 Owner is `—` until the maintainer assigns it; default proposed owner = **development lane**.
 
-- **2.2.0 [recon — 0 code]** — confirm the JS `spawn` binding and enumerate exactly which
-  `process` calls each target reaches today; produce the parity table above as a test-backed
-  note. *Proof:* recon commit, no shipped surface.
+- **2.2.0 [recon — 0 code]** *(JS-`spawn` portion DONE 18/09: it was unbound → now gated
+  `PROC001`)* — enumerate exactly which `process` calls each target reaches today and produce
+  the parity table above as a test-backed note. *Proof:* `DomainGapCodesTest` `processSpawn*`
+  pins + recon commit; no shipped surface.
 - **2.2.1 [design sign-off — ⛔ rule 6]** — maintainer approves the **function form** (§2) or
   redirects. **Gate on the whole front.** No further slices until this lands.
 - **2.2.2 [MVP — JVM, one target]** — `run` + `pipeline` + `cmd` + `cwd`/`env` + `ok()`,

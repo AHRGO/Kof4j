@@ -60,20 +60,24 @@ De `KofProcess.java` + `ExpressionProcessCallLowerer.java` (lido, não inferido)
 | alvo | `process.run` | `process.spawn` | `process.exit` | fonte da verdade |
 |--------|:---:|:---:|:---:|-----------------|
 | **JVM** | ✅ | ✅ | ✅ (`System.exit`) | `KofProcess.RESULT/HANDLE`, ProcessBuilder |
-| **JS** | ✅ (`kof_platform.processRun`, host node) | ✅ segundo comentário do lowerer — *confirmar em 2.2.0* | ✅ (sentinela) | `js/JsRuntimeIo.java`, `JsRuntimeOps.java` |
-| **Native** | ❌ `PROC001` (tempo de compilação) | ❌ `PROC001` (tempo de compilação) | ✅ (syscall) | `ExpressionProcessCallLowerer` linhas 19–31, 50–60 |
+| **JS** | ✅ (`kof_platform.processRun`, host node) | ❌ `PROC001` — o JS não liga nenhum `kof_process_spawn`/*handle* (`ReferenceError` medido; gate honesto 18/09) | ✅ (sentinela) | `js/JsRuntimeOps.java`, `isRuntimeOp` só lista run/exit |
+| **Native** | ❌ `PROC001` (tempo de compilação) | ❌ `PROC001` (tempo de compilação) | ✅ (syscall) | gates `PROC001` de spawn/run em `ExpressionProcessCallLowerer` |
 
-Consequência para `kof.shell`: em JVM/JS pode ser açúcar real desde o primeiro dia; em
-**Native é o `PROC001` herdado** até que `process.run` chegue lá (item separado da lane
-nativa, **fora** do escopo deste plano). `shell` não pode disfarçar isso — reporta o mesmo
-gap honesto.
+Consequência para `kof.shell`: `run`/`exit` são reais em JVM+JS desde o primeiro dia; mas
+**`spawn` é só JVM** — um `PROC001` herdado no **Native e no JS** até a plataforma landar uma
+ligação de pipes vivos lá (item separado, **fora** do escopo deste plano). `shell` não pode
+disfarçar isso — reporta o mesmo gap honesto. *(Corrigido 18/09: um rascunho anterior confiou no
+comentário do `ExpressionProcessCallLowerer` "JVM/JS support it"; medir o backend JS mostra que ele
+emite uma chamada crua `kof_process_spawn(...)` sem ligação, e o fix porta o spawn do JS para um
+`PROC001` honesto — ver `DomainGapCodesTest.processSpawnOnJsIsProc001`.)*
 
 ## 5. Fila de passos (o todo executável que este doc existe para produzir)
 Dono é `—` até a mantenedora atribuir; dono padrão proposto = **lane de desenvolvimento**.
 
-- **2.2.0 [recon — 0 código]** — confirmar a ligação de `spawn` no JS e enumerar exatamente
-  quais chamadas de `process` cada alvo alcança hoje; produzir a tabela de paridade acima como
-  nota ancorada em teste. *Prova:* commit de recon, nenhuma superfície entregue.
+- **2.2.0 [recon — 0 código]** *(a parte JS-`spawn` FEITA 18/09: estava sem ligação → agora em
+  gate `PROC001`)* — enumerar exatamente quais chamadas de `process` cada alvo alcança hoje e
+  produzir a tabela de paridade acima como nota ancorada em teste. *Prova:* pins
+  `processSpawn*` do `DomainGapCodesTest` + commit de recon; nenhuma superfície entregue.
 - **2.2.1 [aprovação de design — ⛔ regra 6]** — a mantenedora aprova a **forma de função** (§2)
   ou redireciona. **Portão de toda a frente.** Nenhum slice adiante sem isso fechar.
 - **2.2.2 [MVP — JVM, um alvo]** — `run` + `pipeline` + `cmd` + `cwd`/`env` + `ok()`,
