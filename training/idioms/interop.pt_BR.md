@@ -42,4 +42,4 @@ extern "/lib/x86_64-linux-gnu/libc.so.6" getenv(String n): String // ok — "mel
 
 `docs/language-reference/syntax.md` (§FFI com C), `grammar.md`
 (`extern-declaration`), `modules.md` §6; gaps `FFI001`/`FFI002`;
-R3 landado: JVM escalar arbitrario (aridade/void/retorno String, 18/09) + paridade JS host (3.6.F2/F3 ✅ 18/09); restantes: struct/D6, callbacks, variadics (⛔ mantenedora), Native §61.
+R3 landado: JVM escalar arbitrario (aridade/void/retorno String, 18/09) + paridade JS host (3.6.F2/F3 ✅ 18/09) + design de callbacks com mecanismo host-PROVADO (3.4-C1, `JvmFfiCallbackTest`, gate ainda CLOSED); restantes: opaque handles (3.3), callbacks C2→surface (3.4), variadics (3.5, ⛔ decisao de surface), ABI struct/array (D6 ⛔), Native §61.

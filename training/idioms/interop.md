@@ -41,4 +41,4 @@ extern "/lib/x86_64-linux-gnu/libc.so.6" getenv(String n): String // ok — Stri
 
 `docs/language-reference/syntax.md` (§FFI to C), `grammar.md`
 (`extern-declaration`), `modules.md` §6; gaps `FFI001`/`FFI002`;
-R3 landed: JVM arbitrary scalar (arity/void/String-return, 18/09) + JS host parity (3.6.F2/F3 ✅ 18/09); remaining: struct/D6, callbacks, variadics (⛔ maintainer), Native §61.
+R3 landed: JVM arbitrary scalar (arity/void/String-return, 18/09) + JS host parity (3.6.F2/F3 ✅ 18/09) + callbacks design with host-level mechanism PROVEN (3.4-C1, `JvmFfiCallbackTest`, gate still CLOSED); remaining: opaque handles (3.3), callbacks C2→surface (3.4), variadics (3.5, ⛔ surface decision), struct/array ABI (D6 ⛔), Native §61.
