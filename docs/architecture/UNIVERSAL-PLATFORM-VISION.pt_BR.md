@@ -6,7 +6,7 @@
 (promovido de `future/` por decisão da mantenedora; o portão R12 está
 **sobreposto** — ver `DECISIONS.md` §D-UNIVERSAL)
 **Data:** 2 de setembro de 2026
-**Base:** estado real 0.2.6-beta — frontend próprio (lexer, parser, AST, symbol
+**Base:** estado real **0.4.0-beta** (17/09/2026) — frontend próprio (lexer, parser, AST, symbol
 table, semantic, type checking), Kof IR backend-agnóstica, 7 targets
 (jvm estável, native x86_64 estável, native.risc/native.arm toolchain+qemu,
 js alpha GraalJS, kofc native-only, android Fases 1–4), stdlib como **tabelas de
@@ -215,7 +215,7 @@ plataforma de virar um "tudo-faz" opaco: o que falta é sempre visível.
 | **Core** (linguagem) | Sintaxe, tipos, controle, abstrações, concorrência, IO mínimo | classes, records, generics, `spawn`/`await`, `try/catch`, `for-in` | (quase nada novo — ver §16) |
 | **Stdlib base** (sempre ligada, pequena) | `kof.core`, `kof.collections`, `kof.io`, `kof.time`, `kof.json` | idem | idem (estável) |
 | **Plataforma** (namespaces, o "Kof Platform") | `web`, `http`, `db`, `orm`, `security`, `config`, `log`, `observability`, `concurrent`, `cache`, `mq`, `validation`, `process`, `ui`, `test` | idem | + `infra`, `cloud`, `shell`, `ssh`, `data`/`dataframe`, `sci`/`math`, `bio` |
-| **Pacotes oficiais** (opcionais, gerenciados) | Domínios pesados/focados | (nenhum ainda — `kofdeps` planejado) | `kof-infra-aws`, `kof-dataframe-parquet`, `kof-ml`, `kof-crypto-advanced`, `kof-bio`, `kof-hpc` |
+| **Pacotes oficiais** (opcionais, gerenciados) | Domínios pesados/focados | (nenhum ainda — `kofdeps` MVP landado; registry pendente ⛔) | `kof-infra-aws`, `kof-dataframe-parquet`, `kof-ml`, `kof-crypto-advanced`, `kof-bio`, `kof-hpc` |
 | **Ecossistema** (comunidade) | Terceiros via registry | (planejado) | qualquer domínio |
 | **Externo / interop** (NÃO é Kof) | JVM libs, `.so` C/C++/Rust, Python/R, REST/gRPC, CLIs, nuvens, bancos | Java interop, SQLite `.so`, FFM Vulkan, GraalJS, JDBC drivers, MongoDB driver | BLAS/LAPACK, CUDA, Arrow, Terraform/cloud APIs, NGS tools, HPC libs |
 
@@ -242,7 +242,7 @@ Análise individual. Cada entrada declara: o que é, **o que o Kof já tem**, o
 que falta, o veredito declarativo-vs-imperativo (quando aplicável), o
 mecanismo recomendado, a estratégia de interop, e **o que NÃO fazer**.
 
-> Convenção de estado usada em todas as seções (detalhada em §15.2):
+> Convenção de estado usada em todas as seções (detalhada em §14.2):
 > **A** já suportado · **B** suportado com pequenas extensões · **C** requer
 > evolução arquitetural · **D** requer pesquisa · **E** provavelmente não vale
 > a pena (ou é non-goal).
@@ -527,7 +527,7 @@ orquestrada*, não como "Kof é um framework de ataque". (Reflete a postura do
  implementação auditada** (JCA/JCE no JVM, `liboqs`/`Relic`/`libsodium` no
  Native, `SubtleCrypto` no JS), nunca algoritmo próprio.
  
- ### A. Estado atual (auditoria real — 0.2.6-beta, `KofSecurity.java`)
+ ### A. Estado na auditoria (0.2.6-beta, 02/09, `KofSecurity.java`)
  
  6 namespaces de intenção, compilados pelo mesmo padrão de dispatch de
  `kof.io`/`kof.web` (`KofSecurity.staticMethod` → `kof_sec_*` → 3 runtimes):
@@ -886,7 +886,7 @@ variantes, pipelines genômicos, automação de laboratório.
 - **Pipelines genômicos** — **B/C**: exatamente o modelo de
   automação/pipeline (§4.3/§4.5): jobs tipados + `spawn`/`channel` +
   checkpoints. Kof brilha aqui (pipelines complexos, tipados, testáveis).
-- **HPC** — via §4.9 (FFI + orquestração distribuída).
+- **HPC** — via §4.11 (FFI + orquestração distribuída).
 - **Lab automation** — **B**: orquestração de equipamentos via `kof.http`
   (REST) + `kof.process` (CLI/serial por FFI).
 
@@ -960,8 +960,9 @@ acontece em camadas com garantias diferentes.**
 (Expandido em §13; aqui o resumo operacional da stdlib.)
 1. **Modularização da stdlib** — namespaces independentes, sem dependência
    inversa (regra vigente: módulo baixo nunca depende de alto).
-2. **Pacotes oficiais** — camada 4 com package manager (`kofdeps`/registry
-   planejado), versionados, opcionais.
+2. **Pacotes oficiais** — camada 4 com package manager (`kofdeps` MVP
+   landado: resolução transitiva + lock; registry pendente ⛔), versionados,
+   opcionais.
 3. **Capability-based APIs / optional modules** — ligar *apenas o que o
    programa usa* (padrão já usado: SQLite/MySQL `.so` linkado só quando o DSN
    literal aparece em compile-time). Generalizar esse mecanismo para todos os
@@ -1132,13 +1133,13 @@ de erros do `kof check`).
 |------|--------|---------------------------------------------|
 | **CLI** | 26 comandos (build/run/serve/check/test/script/repl/c/fmt/config/bench/profile/inspect/decompile/translate/compare/migrate/debug/info/lsp/install/deps/editor/init/new/version) | + **`kof infra plan/apply/destroy`** (orquestração de infra — *tooling*, não linguagem); + **`kof workflow run`** (executar pipelines/jobs); + **`kof deploy`** (build + package + publicar — sobre o packager existente). *Todos consomem o frontend.* |
 | **LSP** | mínimo (hover/completion + diagnostics) | + completion/diagnostics **sensíveis ao domínio** (recurso `infra`, `entity`, `df`); go-to-definition em pacotes oficiais; semantic tokens por domínio. *Mesmo frontend → sem parser paralelo.* |
-| **Package manager** | planejado (`kof init`, `kofdeps`, registry) | **obrigatório** para as camadas 4/5 (pacotes oficiais + ecossistema): resolução, versionamento, **capability/link por uso**, audit. É o que permite a plataforma crescer sem inchar o core. (Dependência arquitetural, §13.) |
+| **Package manager** | MVP landado (`kof deps` + resolução transitiva + lock; registry pendente ⛔) | **obrigatório** para as camadas 4/5 (pacotes oficiais + ecossistema): resolução, versionamento, **capability/link por uso**, audit. É o que permite a plataforma crescer sem inchar o core. (Dependência arquitetural, §13.) |
 | **Debugger** | MVP JVM (DAP + JDWP) | + Native (DWARF) + JS (source maps) — fases 4-7; **debug de pipelines/jobs** (ver estado de um job a execução). |
 | **Profiler** | `kof bench`/`kof profile` (harness + baseline) | + **profiling de pipeline** (tempo por estágio de job); + **perf de HPC/FFI** (onde o tempo vai: Kof vs lib nativa). |
 | **Formatter** | ✅ `kof fmt` (parser real) | estável; estender para as novas construções de intenção (`infra`, `entity`). |
 | **Testing** | `kof.test` + golden + `kof bench` | + **property-based testing** (ciência: invariante numérica); + **golden diff** já cobre paridade multi-target; + **testes de recon** (infra: plan idempotente). |
 | **Deployment** | `scripts/package.sh` + release CI (2 jobs × 3 plataformas) | + **deploy multi-alvo** (mesma fonte → JVM/Native/JS, já existe por `--target`); + artefato de *infra* (o plano como artifact versionado). |
-| **Observability do tooling** | `kof.observability` (health/metrics/request IDs) | + **tracing/OpenTelemetry** (já `PLANNED`) — para rastrear pipelines de ponta a ponta. |
+| **Observability do tooling** | `kof.observability` (health/metrics/request IDs) | + **tracing/OpenTelemetry** (spans + export landados; Native `OBS003` gap honesto) — para rastrear pipelines de ponta a ponta. |
 
 **Princípio:** o tooling é a **superfície de controle** da plataforma
 universal. Como reusa o frontend, cada domínio novo (infra, data, sci) ganha
@@ -1252,7 +1253,7 @@ classifica.
 
 ## 14.1 O que o Kof JÁ possui que naturalmente permite essa evolução
 
-| O que já existe (estado real 0.2.6-beta) | Como habilita a visão universal |
+| O que já existe (estado em 0.2.6-beta, 02/09) | Como habilita a visão universal |
 |------------------------------------------|---------------------------------|
 | **Frontend único + Kof IR backend-agnóstica + backends plugáveis** | O substrato: nova capacidade = nova tabela + runtime, **não** novo target/compilador |
 | **Stdlib como tabelas de dispatch em compile-time + gaps diagnosticados** | O *mecanismo* pelo qual cada domínio (infra/data/sci/bio) entra sem tocar no core; "nunca silencioso" |
@@ -1310,7 +1311,7 @@ vale a pena (ou non-goal).
 | GC mark-sweep (Native) | **C** | free-list existe; mark-sweep pendente (necessário p/ pipelines longos) |
 | Event-loop / async real (Native) | **D** | hoje pthread; event-loop = pesquisa (CONC003 é o caso JS) |
 | Codegen de compile-time (stubs gRPC, DDL, infra) | **C** | já existe implicitamente (KofRuntime, runner de teste, DDL de `entity`); **formalizar** |
-| Package manager / registry / capabilities | **C** | `kofdeps`/registry planejado; capability/link por uso já tem semente (DSN) |
+| Package manager / registry / capabilities | **C** | `kofdeps` MVP landado (transitivo + lock); registry pendente ⛔; capability/link por uso já tem semente (DSN) |
 | Scoped resources (RAII leve, sem ownership) | **B/C** | hoje GC + `try/finally`; scope leve para FFI/GPU/arquivos |
 | Reflection de interop | **C** | restrita a interop (ML/ciência); não fundação |
 | Variance / sealed (type system) | **B/C** | útil para coleções científicas/domínios; médio custo |
