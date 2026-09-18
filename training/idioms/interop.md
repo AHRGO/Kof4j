@@ -28,14 +28,15 @@ extern "/lib/x86_64-linux-gnu/libc.so.6" getenv(String n): String // ok — Stri
 // JS runner  -> SAME scalar ABI via KofJsFfiBridge (F2/F3 ✅ 18/09; FfiE2ETest 16/16); browser -> honest runtime error (R7, no host); non-scalar -> FFI002
 // Native     -> FFI001 until §61 (libc not initialized)
 
-// (c) CALLBACKS (C2 ✅ 18/09 — JVM gate OPEN): a Kof function handed to C as a
+// (c) CALLBACKS (C2 ✅ + JS parity C3.2/C3.3 ✅, 18/09): a Kof function handed to C as a
 // function pointer. Function-typed parameter + lambda at the call site;
 // PRIMITIVE callback ABI only (synchronous, non-escaping):
 extern "libcallback.so" kof_cb_add(Int a, Int b, (Int, Int) -> Int cb): Int
 // call site — the lambda becomes the C function pointer (Linker.upcallStub):
 kof_cb_add(20, 22, (x: Int, y: Int) -> x + y)   // 42 measured
 kof_cb_mixed(3, 2.5, (i: Int, d: Double) -> i * d)  // mixed scalar ABI ok
-// JS callback -> FFI002 (parity = slice C3); String/struct/pointer-in-callback
+// JS (host runner) binds callbacks too (C3.2 ✅ 18/09, byte-for-byte JVM~JS;
+// browser = honest runtime degrade R7); String/struct/pointer-in-callback
 // and callback-as-return -> FFI001 (JVM) — never a silent stub.
 ```
 
