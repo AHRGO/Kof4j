@@ -9078,6 +9078,7 @@ behavior-preserving (`RawRowCollectionAccessE2ETest` + `SemanticResolutionTest`
  - **Face B — ✅ FIXED 18/09 (lane `.17`, compiler/nat):** the shadow-handle workaround (`var id = ""; id = time.interval(10, () -> { … id … })`) SIGSEGV'd (exit 139) on native x86. **Root cause (measured, gdb): x86-64 stack misalignment** — the assignment lowering kept the receiver (a captured-mutable `CapturedVarBox` field OR an instance-field receiver) on the **machine stack** during the RHS evaluation; an odd push crossing the RHS's `call`s makes every call land with `rsp≡8 (mod 16)`, and the libc's SSE (`movaps` in `pthread_create`) SIGSEGVs in the callee (glibc is the victim, the stack is the bug). **Fix (IR, the shared root of both faces):** `ExpressionAssignmentLowerer` (box-captured path + instance-field path, `=` and compound) and `CapturedVarBox.emit` now spill the receiver/value/`cur` into **frame slots** before loading the store's final pair — no machine-stack push crosses the RHS call; the evaluation order (receiver before RHS) is preserved, backward-compatible across the 4 backends. **SEM092 kept** (the self-referencing *declaration* form stays gated by design — the shadow-handle workaround is now the safe path on every target). **Proof (Q1, same commit):** `KofTimeE2ETest.capturedBoxAssignAcrossCallRunsNativeX86` (JVM/JS/NATIVE/SCRIPT — the exact shape that RED'd 139) + `instanceFieldAssignAcrossCallRunsNativeX86` (second face, also RED'd 139) + `capturedBoxAssignAcrossCallRunsCrossArchQemu` (riscv green; aarch with `time.cancel(id)` — see §266); native matrix t1/t3/t4/t5/w1f/mix 8/8 green; neighbors (lambda/field/assignment/record) green. **Collateral find:** §266 (aarch64 scheduler without cancel never terminates under qemu — pre-existing, orthogonal to face B).
 
 
+
 ### §257 — `static final String` runtime text with CONSTANT VALUE (renumbered from §253 after the 15/09 collision with the `time.interval` §253 of lane `.18`) = javac inlining → false red with incremental build
 
 - **Symptom (measured 15/09, lane `192.168.100.17`):** `KofValidationTest.validationBrJs`
@@ -9243,6 +9244,8 @@ behavior-preserving (`RawRowCollectionAccessE2ETest` + `SemanticResolutionTest`
   `20495e48` rode together. Related: §129 (cross-thread spawn handler), §257
   (same session, DIFFERENT root cause), §252 (fixed 18/09 — real x86 bug, not
   this flake).
+
+- **Status:** ✅ CLOSED 18/09 — face (a) by `dd2c7fcb` (cross gaps table), face (b) — riscv64/aarch64 `poll(b)=0` after `selectAny` — by `ff87a09c` (lane nat `.17`/temmcode; goldens NASCERAM sem HB); top table line 16 was already ✅ (the body section had NOT been annotated — this is the missing body line, drift class of §254). Re-measured by lane docs `.15` on tip `3a593734`: `KofConcurrency2Test` 43 run / 0 failures / 0 errors / 3 skips (documented env guards), BUILD SUCCESS.
 
 ### §258 — CodeQL #773 `java/comparison-with-wider-type` on `KofJsRunner.listValues` (DB001 slice A, lane `.18`) blocks EVERY push: the pre-push gate is repo-wide
 

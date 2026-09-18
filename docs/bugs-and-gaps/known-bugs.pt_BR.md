@@ -9004,6 +9004,7 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
 - **Issue:** **#273** (aberta 15/09 por esta lane com o repro byte-idêntico + evidência).
 - **Ponteiro:** lane development `.18` / `nat` (dona de `RuntimeConcurrency.java`, `RuntimeGc.emitPanic`, `NativeMethodEmitter` do `d540957b`). Dono = **lane nativa** — catalogado aqui, NÃO tocado por esta lane.
 - **Estado:** 🔴 ABERTO — catalogado 15/09 pela lane bugs-and-gaps `192.168.100.15`. Relacionado: **§129 [OTP]** (o fix que introduziu este teste/área — o bug-alvo dele está corrigido; isto é um residual intermitente). Não coberto pela exclusão do §205.
+- **Status:** ✅ CORRIGIDO 18/09 — flake nativo com causa-raiz e fix pela lane compiler/nat `.17` (temmcode, `20495e48`: `kof_select_any` cacheava size). Re-medido pela lane docs `.15` no tip `3a593734`: `KofConcurrency2Test` 43/0F/0E/3-skip, BUILD SUCCESS. Espelho da linha de Status da seção EN (✅ FIXED 18/09).
 
 ### §253 — Callback de `time.interval`/`scheduler.every` não pode se auto-referenciar pela var do handle: SEM011 em todo alvo; ler o handle capturado dentro do job = SIGSEGV no native x86
 
@@ -9024,6 +9025,7 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
 - **Reivindicação:** a face B pertence à lane nativa `.17` (este registro é a reivindicação + causa raiz; o conserto de codegen é a próxima unidade desta lane — linha ⚡ do DOING.md).
 - **Ponteiro:** face A → lane compiler `.22` (escopo da var do inicializador em lambdas); face B → lane development `.18`/`nat` (`RuntimeConcurrency`/`SCHED001`, `kofTimeInterval` no JS). Repros no relatório (`r1`/`s1`/`e1`/`e5`/`e6`/`e2`/`winclose`/`core3`, 10–20 linhas cada).
 - **Estado:** 🟢 **Tanto a face A (16/09, lane `.18`) quanto a face B (18/09, lane `.17`, compiler/nat) CORRIGIDAS.** A face B (SIGSEGV x86 do workaround `var id = ""; id = time.interval(10, () -> { … id … })`) foi **consertada na RAIZ comum**: o lowering de atribuição (`ExpressionAssignmentLowerer`, caminho box-capturado + caminho campo-de-instância, `=` e composto) e `CapturedVarBox.emit` agora derramam receiver/valor/`cur` em SLOTS DE FRAME antes de carregar o par final do store — nenhum push de pilha de máquina cruza os calls do RHS; a ordem de avaliação (receiver antes do RHS) é preservada, retro-compatível nos 4 backends (regra 2). **SEM092 MANTIDO** (a forma de DECLARAÇÃO self-ref continua gated por design — a forma workaround agora é a via segura em todos os alvos). Prova (Q1, mesmo commit): `KofTimeE2ETest.capturedBoxAssignAcrossCallRunsNativeX86` (JVM/JS/NATIVE/SCRIPT — a forma exata que RED'ava 139) + `instanceFieldAssignAcrossCallRunsNativeX86` (segunda face do mesmo mecanismo: `h.s = time.interval(…)` receiver de campo na pilha, também RED'ava 139) + `capturedBoxAssignAcrossCallRunsCrossArchQemu` (riscv verde; aarch com `time.cancel(id)` — ver §266); matriz nativa t1/t3/t4/t5/w1f/mix 8/8 verde; vizinhos (lambda/campo/atribuição/record) verdes. **Descoberta colateral: §266** (scheduler aarch64 sem `cancel` não termina sob qemu — pré-existente, ortogonal à face B: o caso SEM captura — `id` plain local, sem box — também pendura). O fix da face A (16/09, lane `.18`) landou as 4 costuras juntas (nunca commitar (a) sozinha — sem (d) vira leitura stale silenciosa): (a) `StatementAnalyzer` pré-define o nome da decl como UNKNOWN quando o inicializador contém lambda que o lê (self-capture); (b) NOVO gate compile-time **SEM092** em todo alvo `NATIVE*` (erro em compile-time, nunca crash silencioso, R6); (c) `CompilerCaptureScanner` caso VarDeclStmt marca o self-name como capturado-mutável (força o box); (d) `CapturedVarBox.emit` guarda o box no slot ANTES de avaliar o inicializador. Prova: `KofTimeE2ETest.selfReferencingIntervalHandleCancelsItself` (jvm+js+script rodam, cancel real observado) + `selfReferencingIntervalHandleIsNativeGateSem092` (3 nativos, SEM092 asserido). O workaround (handle-sombra) agora funciona em TODOS os alvos nativos.
+
 
 ### §257 — texto de runtime `static final String` com CONSTANT VALUE (renumerado de §253 após a colisão de 15/09 com o §253 `time.interval` da lane `.18`) = inlining do javac → falso vermelho em build incremental
 
@@ -9086,6 +9088,8 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
   §252 `20495e48` pegou carona. Relacionado: §129 (handler cross-thread de
   spawn), §257 (mesma sessão, raiz DIFERENTE), §252 (✅ FIXED 18/09 — bug x86
   real, não este flake).
+
+- **Status:** ✅ FECHADO 18/09 — face (a) por `dd2c7fcb` (tabela de gaps cross), face (b) — riscv64/aarch64 `poll(b)=0` após `selectAny` — por `ff87a09c` (lane nat `.17`/temmcode; dourados NASCERAM sem HB); a linha 16 da tabela do topo já estava ✅ — faltava o corpo (classe de drift do §254). Re-medido pela lane docs `.15` no tip `3a593734`: `KofConcurrency2Test` 43 executados / 0 falhas / 0 erros / 3 skips (guardas de ambiente documentadas), BUILD SUCCESS.
 
 ### §258 — CodeQL #773 `java/comparison-with-wider-type` em `KofJsRunner.listValues` (DB001 fatia A, lane `.18`) bloqueia TODO push: o pre-push gate é repo-wide
 
@@ -9272,6 +9276,8 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
   WEB002/WEB004/WEB003 (o precedente de split de gap-code por função que este
   deveria seguir).
 
+
+- **Estado:** ✅ FECHADO 17/09 — lane native/compiler `.17`, fatias 1-4: timeout x86 `021cefad` / retry x86 `3f6814ec` / circuit x86 `d11eceac`+`6abd3341` / porta riscv+aarch `f7b096c5`; espelho da linha de Status EN da seção (o corpo PT estava congelado no estado de nascer, 16/09). Prova EN citada: `KofHttpNative{Timeout,Retry,Circuit}E2ETest` + `KofHttpNativeResilienceCrossTest` byte-identical sob qemu.
 
 ### §260 — Native x86: auto-collect `kof_gc_collect_now` no gatilho de free-list exausta é INSOUND por temporário em registrador (medição 16/09 — a frente 2 real exige stack-map, não o trigger)
 
