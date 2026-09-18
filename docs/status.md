@@ -506,7 +506,7 @@ main() {
   camera (MEDIA002), mic without hardware (MEDIA003), Native/JS parity
   (MEDIA001 — ART without javax.imageio; Android app runs in the KofJS
   WebView).
-- See: `KofMediaE2ETest` (12 tests: byte-by-byte binary serving,
+- See: `KofMediaE2ETest` (16 tests: byte-by-byte binary serving,
   content-type, blocked traversal, 404, real dimensions, PNG→JPEG
   conversion, WAV info/copy, mic without hardware, MP4 metadata, Range
   206/416/200).
@@ -587,7 +587,7 @@ main() { /* ignored by kof test */ }
 | JvmE2ETest | 31 | real execution of JVM bytecode |
 | KofSecurityTest | 28 | kof.security: passwords, crypto, JWT, secrets, adversarial |
 | OptimizerTest | 22 | IR optimization passes |
-| KofOrmE2ETest | 31 | kof.orm: entity, CRUD, where (+ORM003 typed column validation, P3-10), **Query DSL `User.query(db){ where; orderBy; limit }` (level 3, ORM001)**, migrate, unique, MongoDB (3 conditional skips) |
+| KofOrmE2ETest | 32 | kof.orm: entity, CRUD, where (+ORM003 typed column validation, P3-10), **Query DSL `User.query(db){ where; orderBy; limit }` (level 3, ORM001)**, migrate, unique, MongoDB (3 conditional skips) |
 | KofConcurrency2Test | 33 | spawn stmt/expr, selectAny, cancel/cancelled, done/poll, awaitTimeout, channel (+`Channel<T>` as a function parameter, 3 targets) |
 | IoE2ETest | 16 | kof.io multiplatform (+ honest `readText`/`size` contracts 02/09) |
 
@@ -606,7 +606,7 @@ main() { /* ignored by kof test */ }
 | ExceptionsE2ETest | 9 | try/catch/finally JVM + Native |
 | KofDbE2ETest | 24 | kof.db: JDBC, query<T>, transaction, rollback, native SQLite, Native transaction (commit+rollback), **DB001 no JS (bridge GraalJS 16/09: roundtrip js + transaction commit/rollback/nested byte-parity with the JVM)**, **DB002 closed on JS (18/09: typed `query<T>` guest-side bind via `__kof_decode_<T>`, byte-parity with the JVM)**, **cross SQLite roundtrip riscv64+aarch64 (qemu) 15/09** |
 | KofHttpServerTest | 8 | serve engine (real sockets) |
-| KofMediaE2ETest | 15 | kof.media + serveDir: Image/Audio/WAV/Video(MP4), Range 206/416, binary content (not base64) |
+| KofMediaE2ETest | 16 | kof.media + serveDir: Image/Audio/WAV/Video(MP4), Range 206/416, binary content (not base64) |
 | NativeConfigE2ETest | 8 | kof.config Native (asm): precedence, typed, comments |
 | SpawnE2ETest | 10 | spawn (JVM/Native pthread/JS seq) + implicit join + **lambda w/ capture** + **println before spawn** + **`spawn→await→spawn`** (stack alignment in `pthread_create`) |
 | IdiomaticE2ETest | 7 | consolidated idioms (chaining, primary ctor) |
@@ -801,7 +801,7 @@ Docs: `debugger-architecture.md`, `debugging.md`, `debug-adapter.md`,
 - `kof.validation` (13 predicates, 3 targets); `kof.observability` (health/metrics/request IDs, 3 targets); `kof.ui` widgets with KofJS render
 - `kof.process` execution of external processes; `process.spawn` live stdin/stdout (F10, JVM/JS)
 - **Concurrency**: `spawn`/`await` JVM (virtual threads) + **Native (pthread — CONC001 closed 31/08)** + **Android (platform threads — AND001 closed 31/08, ART without virtual threads → fallback)** + JS event-loop (CONC003 closed 03/09); non-blocking `done`/`poll`; cooperative `cancel`/`cancelled` (JVM + Native by TID); `selectAny` (JVM + Native + JS); `awaitTimeout(r, ms)` — value within the deadline, catchable exception on timeout (JVM + Native + JS `kofAwaitTimeout` deadline poll); `channel<T>()` with `send`/`receive` (JVM LinkedBlockingQueue + Native FIFO futex + JS array); `scheduler.every/cancel` (JVM `ScheduledExecutor` + JS `setInterval` + **Native SCHED001**: thread per job with `usleep` ms→us trampoline + `active` futex flag); `at(cron)` is a real 5-field UTC cron on JVM/JS (Native `CRON001`; §274) — `KofConcurrency2Test` 15/15, `SpawnE2ETest` 5/5
-- **`kof.media` (31/08)** — multimedia file management without literal base64: `Image.open/save/saveAs/dataUri` (javax.imageio, PNG/JPEG/GIF/BMP), `Audio.openWav/saveWav` (WAV RIFF PCM 16-bit), `Mic.record` (javax.sound.sampled), `Video.open` (MP4/MOV container metadata + streaming); `web` `app.serveDir(prefix, dir)` serves a FILE from disk with the correct content-type + **Range requests (206/416)** for seekable video + path-traversal protection; app root via `-Dkof.root` (CLI `run`/`serve`). Gaps: video frames (no external lib), camera (MEDIA002), no mic hardware (MEDIA003), Native/JS parity (MEDIA001) — `KofMediaE2ETest` 12/12
+- **`kof.media` (31/08)** — multimedia file management without literal base64: `Image.open/save/saveAs/dataUri` (javax.imageio, PNG/JPEG/GIF/BMP), `Audio.openWav/saveWav` (WAV RIFF PCM 16-bit), `Mic.record` (javax.sound.sampled), `Video.open` (MP4/MOV container metadata + streaming); `web` `app.serveDir(prefix, dir)` serves a FILE from disk with the correct content-type + **Range requests (206/416)** for seekable video + path-traversal protection; app root via `-Dkof.root` (CLI `run`/`serve`). Gaps: video frames (no external lib), camera (MEDIA002), no mic hardware (MEDIA003), Native/JS parity (MEDIA001) — `KofMediaE2ETest` 16/16
 - **KofAndroid Phase 2 (31/08)** — standalone `--apk` (aapt2/d8/zipalign/apksigner straight from the CLI) + release signing `--keystore/--storepass/--keypass/--alias` + label/permissions derived from the program (`detectAppLabel`/`@Permissions`)
 - enum on the 3 targets + exhaustive switch (SEM031); Map/Set on the 3 targets (COL001 closed)
 - IR optimizer always active; pattern matching (switch with types + destructuring, 3 targets); basic null safety (`String?`, 3 targets); higher-order on collections (map/filter/reduce, 3 targets); multi-file modules (`import a.b.C`)

@@ -283,7 +283,7 @@ main() {
 
 O **nível 3 (Query DSL tipada)** `User.query(db) { where age > 18; orderBy
 name; limit 10 }` foi implementado em 01/09: o compilador baixa o bloco para
-`db.query<T>` (SQL preparada em compile-time, valores como binds) — `KofOrmE2ETest` 22.
+`db.query<T>` (SQL preparada em compile-time, valores como binds) — `KofOrmE2ETest` 32.
 
 ---
 

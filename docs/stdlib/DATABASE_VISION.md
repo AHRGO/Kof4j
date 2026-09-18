@@ -283,7 +283,7 @@ main() {
 
 **Level 3 (typed Query DSL)** `User.query(db) { where age > 18; orderBy
 name; limit 10 }` was implemented on 01/09: the compiler lowers the block to
-`db.query<T>` (SQL prepared at compile-time, values as binds) — `KofOrmE2ETest` 22.
+`db.query<T>` (SQL prepared at compile-time, values as binds) — `KofOrmE2ETest` 32.
 
 ---
 
