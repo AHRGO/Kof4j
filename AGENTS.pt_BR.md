@@ -264,6 +264,13 @@ conceitual nem decide arquitetura/rumo. Consequências práticas para o agente:
    ou a suíte vermelha (fora dos erros ambientais documentados) está violando
    o portão: conserta na mesma unidade ou reverte. `git bisect`-hostil é o
    pior legado que um agente pode deixar.
+9. **Trabalhe na árvore real do repo, na branch ativa — NUNCA num clone/worktree em `/tmp`.**
+   Esta máquina perde energia com frequência ("cai a luz"); tudo em `/tmp` evapora e o
+   trabalho/commits em andamento se perdem. Edite direto no working tree de `/home/mel/Kof4j`
+   na branch ativa (`beta-0.4.0`, salvo ordem contrária da mantenedora), **faça commit local**
+   pra o trabalho persistir em disco na hora, e só então fetch/rebase/push. Não crie worktree
+   de scratch em `/tmp` pro trabalho real. (Regra explícita da mantenedora em 18/09 depois que
+   um worktree em `/tmp` com um fix já verificado foi apagado por queda de energia.)
 7. **Identidade do git e worker de agente (12/09, atualizado 16/09 diretriz da mantenedora).**
    O GitHub App `kof-agent-worker` (App ID `4960796`, configurado via `scripts/gh-as-agent.sh`
    e `~/.config/kof/agent-app.env`) é a identidade dedicada para issues, PRs e commits

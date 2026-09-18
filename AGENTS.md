@@ -264,6 +264,13 @@ conceptual engineering nor decide architecture/direction. Practical consequences
    or the suite red (outside the documented environmental errors) is violating
    the gate: fix it in the same unit or revert. `git bisect`-hostile is the
    worst legacy an agent can leave.
+9. **Work in the real repo tree on the active branch — NEVER a `/tmp` clone/worktree.**
+   This host loses power frequently ("cai a luz"); everything under `/tmp` evaporates and
+   in-flight work/commits get lost. Edit directly in the working tree of `/home/mel/Kof4j`
+   on the active branch (`beta-0.4.0` unless the maintainer says otherwise), **commit locally**
+   so the work persists on disk immediately, and only then fetch/rebase/push. Do not create
+   `/tmp` scratch worktrees to do the actual work. (Made an explicit rule by the maintainer
+   09/18 after a `/tmp` worktree holding a verified fix was wiped by a power loss.)
 7. **Git identity & agent worker (09/12, updated 09/16 maintainer directive).**
    The GitHub App `kof-agent-worker` (App ID `4960796`, configured via `scripts/gh-as-agent.sh`
    and `~/.config/kof/agent-app.env`) is the dedicated identity for issues, PRs, and commits
