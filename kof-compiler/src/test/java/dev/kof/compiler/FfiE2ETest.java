@@ -173,6 +173,27 @@ class FfiE2ETest {
         assertEquals("world", runJvm(out), "strstr char*→String with 2 String args");
     }
 
+    @Test
+    void ffiLongReturnAndParamJVM(@TempDir Path dir) throws IOException {
+        // R3 escalar 'j' (Long) ponta-a-ponta: o Long é PRODUZIDO por atol(String)
+        // (evita depender de literal long no Kof) e CONSUMIDO por labs(Long).
+        // Prova layout JAVA_LONG + boxing/unboxing Long no caminho downcall genérico.
+        Path src = dir.resolve("ffi-long.kf");
+        Files.writeString(src, """
+                extern "libc.so.6" atol(String s): Long
+                extern "libc.so.6" labs(Long x): Long
+
+                main() {
+                    println(labs(atol("-9")))
+                }
+                """);
+        Path out = dir.resolve("out");
+        CompilationResult result = driver.compile(src, out, Target.JVM);
+        assertTrue(result.success(), "Long return+param extern must bind on JVM (R3 'j'): "
+                + result.diagnostics().getDiagnostics());
+        assertEquals("9", runJvm(out), "labs(atol(\"-9\")) via libc (Long in/out)");
+    }
+
     private String runJava(Path outDir) throws IOException {
         return runJvm(outDir);
     }

@@ -125,17 +125,26 @@ define as assinaturas. **Experimental** como superfície (muda entre versões).
   nativas (JVM, `java.lang.foreign`). **Superfície medida 18/09 (0.4.0-beta)**: a
   JVM casa **qualquer assinatura composta pelo conjunto escalar** `{Int, Long,
   Float, Double, Boolean, String}` em **todas as posições de parâmetro (aridade
-  arbitrária, ≥0)** e qualquer um deles como **retorno**; um retorno `String` lê
-  de volta o `char*` nativo (`MemorySegment.getString`). Um único helper de
+  arbitrária, ≥0)** e qualquer um deles como **retorno**, além de **retorno `void`**
+  (via `kof_ffi_void`, resultado descartado como statement); um retorno `String` lê
+  de volta o `char*` nativo (`MemorySegment.getString`). **Profundidade da prova:**
+  `Int`/`Long`/`Double`/`String`/`void` são exercitados ponta-a-ponta contra
+  libc/libm (`FfiE2ETest`, incl. `Long` provado via `atol`→`labs` já que o Kof não
+  tem literal `long`); `Float`/`Boolean` mapeiam para o layout FFM + `Type` Kof
+  corretos no MESMO caminho genérico de downcall, travado por `FfiSignatureTest`
+  (a libc não oferece um call site `float`/`_Bool` limpo e determinístico alcançável
+  a partir do fonte Kof). Um único helper de
   runtime `kof_ffi(lib, name, sig, Object[])` (downcall FFM; `sig` codifica o
   layout) substituiu o trio `kof_ffi_i`/`_si`/`_dd`; gate
   `CompilerPipeline.isExternBound`. Ainda NÃO bound — `FFI001` honesto em
-  compilação, nunca stub silencioso (R6): retorno `void`, e ABI de
-  struct/array/pointer (design D6, ⛔ mantenedora). JS emite `FFI002` ("FFI not
+  compilação, nunca stub silencioso (R6): ABI de struct/array/pointer (design D6,
+  ⛔ mantenedora), callbacks/upcalls (3.4), variadics (3.5, ⛔) e handles
+  opacos/out-buffers (3.3, ⛔). JS emite `FFI002` ("FFI not
   available on the JS target"); o Native emite `FFI001` (`<target>` not supported
-  yet). Retornos `void` usam `kof_ffi_void`. Lib/símbolo ausente falha em **runtime** com exceção `kof_ffi` nomeando
+  yet). Lib/símbolo ausente falha em **runtime** com exceção `kof_ffi` nomeando
   `lib::symbol` (stack trace, não mensagem cirúrgica). Fatias R3 restantes
-  (void, structs/D6, paridade JS/Native) em
+  (structs/D6, callbacks/upcalls, paridade JS/Native)
+  em
   `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (use-case #431);
   `extern "c"` no Native depende do §61.
 

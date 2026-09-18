@@ -126,8 +126,13 @@ Each area has its own document in `docs/stdlib*.md` (not duplicated here). The
   binds **any signature composed of the scalar set** `{Int, Long, Float, Double,
   Boolean, String}` in **every parameter position (arbitrary arity, ≥0)** and any
   of those as the **return**, plus **`void` return** (via `kof_ffi_void`, result
-  discarded as a statement); a `String` return reads back the native `char*`
-  (`MemorySegment.getString`). One runtime helper `kof_ffi(lib, name, sig,
+   discarded as a statement); a `String` return reads back the native `char*`
+   (`MemorySegment.getString`). **Proof depth:** `Int`/`Long`/`Double`/`String`/`void`
+   are exercised end-to-end against libc/libm (`FfiE2ETest`, incl. `Long` proved
+   `atol`→`labs` since Kof has no `long` literal); `Float`/`Boolean` map to the correct
+   FFM layout + Kof `Type` on the same generic downcall path, locked by
+   `FfiSignatureTest` (libc offers no clean, deterministic `float`/`_Bool` call site
+   reachable from Kof source). One runtime helper `kof_ffi(lib, name, sig,
   Object[])` (FFM downcall; `sig` encodes the layout) replaced the old
   `kof_ffi_i`/`_si`/`_dd` trio; gate `CompilerPipeline.isExternBound`. Still NOT
   bound — honest `FFI001` at compile time, never a silent stub (R6): struct/array/pointer
@@ -136,8 +141,9 @@ Each area has its own document in `docs/stdlib*.md` (not duplicated here). The
   `FFI002` ("FFI not available on the JS target"); Native emits `FFI001`
   (`<target>` not supported yet). A missing lib/symbol fails at **runtime** with
   a `kof_ffi` exception naming `lib::symbol` (stack trace, not a surgical
-  message). Remaining R3 slices (void, structs/D6, JS/Native parity) in
-  `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (use-case #431);
+   message). Remaining R3 slices (structs/D6, callbacks/upcalls, JS/Native parity)
+   in
+   `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (use-case #431);
   `extern "c"` on Native depends on §61.
 
 - **Native/JS**: there is no interop with host types the same way. **Unspecified.**

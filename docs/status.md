@@ -12,8 +12,13 @@
 > `char*`. One FFM downcall `kof_ffi(lib, name, sig, Object[])` replaces the old
 > `kof_ffi_i`/`_si`/`_dd` helpers; the lowering packs args into an `Object[]`
 > (`KofNewArray`, boxing primitives) and the JVM emitter unboxes/checks the boxed
-> return (`emitKofRuntimeCall`). `FfiE2ETest` +3 (`pow` 2.0^10 → `1024.0`,
-> `strstr("hello world","wor")` → `world`; `srand(Int)` default `void` via
+> return (`emitKofRuntimeCall`). `FfiE2ETest` 8→9 (adds `atol(String):Long` →
+> `labs(Long):Long` → `9`, proving the `Long` layout end-to-end — Kof has no `long`
+> literal so the `Long` value is produced by `atol`) + new `FfiSignatureTest` 4/4
+> locking the full scalar → FFM-layout → `Type` mapping incl. `Float`/`Boolean`,
+> whose generic downcall path is already exercised by the Int/Long/Double/String/void
+> e2es (`pow` 2.0^10 → `1024.0`, `strstr("hello world","wor")` → `world`;
+> `srand(Int)` default `void` via
 > `kof_ffi_void`). Parity not yet reached: struct/pointer (D6), callbacks/upcalls,
 > variadics and opaque handles stay `FFI001`; JS `FFI002` / Native `FFI001` (§61)
 > remain honest per-target gaps (R7). Full decomposition in §R3-slices of the
