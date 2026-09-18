@@ -105,6 +105,64 @@ class ComponentCoreE2ETest {
     }
 
     @Test
+    void componentSubscriptionDiesWithComponent(@TempDir Path tempDir) throws IOException {
+        // D-UI-AUTOUNSUB (A): a subscribe executed during the component's own
+        // lifecycle (here: the view render) is bound to it; removing the
+        // component must stop delivery WITHOUT any manual unsubscribe.
+        String program = """
+            main() {
+                var store = Store(10)
+                var app = Component(0)
+                app.view((s: Int) -> {
+                    store.subscribe((v: Int) -> println("sub=" + v))
+                    return Label("x")
+                })
+                var win = Window("App")
+                win.bind(app)
+                win.show()
+                println("shown")
+            }
+            """;
+        String probe = """
+            import { kofUiComponentRemove, kofUiStoreSet } from './kof-runtime.mjs';
+            kofUiStoreSet(1, 20);
+            kofUiComponentRemove(1);
+            kofUiStoreSet(1, 30);
+            console.log("after");
+            """;
+        String out = runJsProbe(tempDir, "autosub", program, probe);
+        assertEquals("sub=10\nshown\nsub=20\nafter",
+                out, "the component subscription must die with the component (no sub=30)");
+    }
+
+    @Test
+    void appScopedSubscriptionStaysManual(@TempDir Path tempDir) throws IOException {
+        // (A) boundary: outside a component lifecycle the subscription is NOT
+        // bound to anyone — removing every component must not touch it.
+        String program = """
+            main() {
+                var store = Store(1)
+                store.subscribe((v: Int) -> println("app=" + v))
+                var app = Component(0)
+                app.view((s: Int) -> { return Label("x") })
+                var win = Window("A")
+                win.bind(app)
+                win.show()
+                println("shown")
+            }
+            """;
+        String probe = """
+            import { kofUiComponentRemove, kofUiStoreSet } from './kof-runtime.mjs';
+            kofUiComponentRemove(1);
+            kofUiStoreSet(1, 2);
+            console.log("after");
+            """;
+        String out = runJsProbe(tempDir, "manualsub", program, probe);
+        assertEquals("app=1\nshown\napp=2\nafter",
+                out, "an app-scope subscription must survive component removal (manual semantics)");
+    }
+
+    @Test
     void stableRootKindReusesNodeAndHandle(@TempDir Path tempDir) throws IOException {
         // D-UI-DIFF (B) core claim: when the view keeps the same root kind,
         // the OLD DOM node and the OLD handle survive a state write (the

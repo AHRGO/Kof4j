@@ -15,6 +15,10 @@ public final class JsRuntimeUiComponents {
             let kofNodeSeq = 0;
             let kofUiFlushing = false;
             const kofUiDirty = [];
+            // D-UI-AUTOUNSUB (A): the component whose lifecycle is executing
+            // right now (view render / onMount / effect). Store.subscribe
+            // consults it to bind the subscription to the component.
+            let kofUiCurrentComponent = null;
             const KOF_UI_EV = {
                 click: "click", dblclick: "dblclick", mousedown: "mousedown",
                 mouseup: "mouseup", mousemove: "mousemove", mouseenter: "mouseenter",
@@ -227,12 +231,16 @@ public final class JsRuntimeUiComponents {
                 // with the current state, then swap the fresh DOM in place.
                 // (handle diffing is a Phase-9 optimization)
                 let rootId = 0;
+                const prevCtx = kofUiCurrentComponent;
+                kofUiCurrentComponent = c;
                 try {
                     const v = kofUiRunFn(c.view);
                     rootId = v ? v(c.state) : 0;
                 } catch (e) {
                     kofUiReportError("view render threw for component " + (c && c.name), e);
                     rootId = 0;
+                } finally {
+                    kofUiCurrentComponent = prevCtx;
                 }
                 if (c.el) {
                     const oldEl = window.__kofNodes && window.__kofNodes[c.root];
@@ -335,13 +343,34 @@ public final class JsRuntimeUiComponents {
 
             function kofUiRunEffect(n, f) {
                 let result;
+                const prevCtx = kofUiCurrentComponent;
+                kofUiCurrentComponent = n;
                 try {
                     result = f();
                 } catch (e) {
                     kofUiReportError("effect threw", e);
                     result = null;
+                } finally {
+                    kofUiCurrentComponent = prevCtx;
                 }
                 n.effects.push(result);
+            }
+
+            function kofUiDropAutoSubs(n) {
+                // (A): subscriptions made in this component's lifecycle die with
+                // it. Manual (outside-component) subscriptions are untouched —
+                // they never landed in _autoSubs. Removal is idempotent: an
+                // entry already unsubscribed by hand is simply not found.
+                const subs = n._autoSubs;
+                if (!subs || subs.length === 0) return;
+                for (const rec of subs) {
+                    const st = kofUiStores.get(rec.store);
+                    if (!st) continue;
+                    for (let i = 0; i < st.subs.length; i++) {
+                        if (st.subs[i].raw === rec.raw) { st.subs.splice(i, 1); break; }
+                    }
+                }
+                n._autoSubs = [];
             }
 
             export function kofUiComponentMount(c) {
@@ -352,7 +381,10 @@ public final class JsRuntimeUiComponents {
                 if (n.view) kofUiRender(n);
                 const om = kofUiRunFn(n.onMountFn);
                 if (om) {
+                    const prevCtx = kofUiCurrentComponent;
+                    kofUiCurrentComponent = n;
                     try { om(); } catch (e) { kofUiReportError("onMount threw", e); }
+                    finally { kofUiCurrentComponent = prevCtx; }
                 }
                 for (const f of n.effectFns) kofUiRunEffect(n, f);
             }
@@ -381,6 +413,7 @@ public final class JsRuntimeUiComponents {
                 n.effects.length = 0;
                 n.effectFns.length = 0;
                 n.disposed = true;
+                kofUiDropAutoSubs(n);
             }
 
             export function kofUiComponentBind(c, child) {
@@ -414,6 +447,7 @@ public final class JsRuntimeUiComponents {
                     kofUiRemoveSubtreeComponents(c);
                 } else {
                     n.disposed = true;
+                    kofUiDropAutoSubs(n);
                     kofUiDetachDom(c);
                     kofUiComponents.delete(c);
                 }
