@@ -336,7 +336,7 @@ Incremental R3 slices toward "total FFI parity" (maintainer directive 18/09).
 | 3.1 | JVM: general scalar ABI — arbitrary arity, {Int,Long,Float,Double,Boolean,String} in and out, String reads back char* | ✅ 18/09 (.18) | dev .18 | — |
 | 3.2 | JVM: void return (kof_ffi_void, V descriptor; result discarded as statement) | ✅ 18/09 (.18) | .18 | — |
 | 3.3 | JVM: opaque handles / out-buffers (void*, T*, Array<Byte> as buffer) — pointer-to-opaque / byte-buffer type, NOT the full D6 struct ABI | ⛔ surface decision | maintainer | design |
-| 3.4 | JVM: callbacks / upcalls (Linker.upcallStub) — a Kof function handed to C as a function pointer | 🟡 **C1+C2 ✅ (JVM binda)** · C3 JS open | .18 | closure semantics + GC rooting (R12/1.2); synchronous/non-escaping only, primitive callback ABI; see §R3-3.4 |
+| 3.4 | JVM: callbacks / upcalls (Linker.upcallStub) — a Kof function handed to C as a function pointer | 🟡 **C1+C2 ✅ (JVM binda) · C3.1 ✅ (JS pin)** · C3.2/3.3 open | .18 | closure semantics + GC rooting (R12/1.2); synchronous/non-escaping only, primitive callback ABI; see §R3-3.4 |
 | 3.5 | JVM: variadics (printf, execlp) — how to represent `...` in a Kof signature | ⛔ surface decision | maintainer | design |
 | 3.6 | JS: parity via host bridge (the GraalJS/node runner IS a JVM with java.lang.foreign on the host) — browser stays an honest runtime degrade (R7: no host `kof_platform.ffi`) | ✅ 18/09 (.18) | .18 | 3.1/3.2 ABI |
 | 3.6.F1 | Host FFM bridge `KofJsFfiBridge` + `KofJsFfiBridgeTest` (8/8) — same downcall as `kof_ffi`, proven at host level; compiler gate left CLOSED (zero backend risk) | ✅ 18/09 (.18) | .18 | — |
@@ -410,9 +410,11 @@ separate future slice. What the gate *does* catch at **compile time** (R6, hones
 or callback-as-return.
 
 **Per-target posture.** **JVM**: binds (FFM upcall on the host, same as downcall).
-**JS**: parity *is* achievable — the GraalJS/node runner is a JVM, so `KofJsFfiBridge`
-gets the identical upcall path; a browser has no host → honest runtime degrade (R7).
-**Native**: §61 (3.7).
+**JS**: parity *is* achievable and **measured** — the GraalJS/node runner is a JVM, so
+`KofJsFfiBridge` gets the identical upcall path; the re-entrant scenario (JS → host
+`ProxyExecutable` → native downcall → `Linker.upcallStub` → back into `Value.execute`)
+works on the same thread (C3.1 pin: `42`/`42L`/loop `46`); a browser has no host →
+honest runtime degrade (R7). **Native**: §61 (3.7).
 
 **Slices (mirror 3.6's F1→F3 discipline).** **C1** = host-level mechanism pin
 (`JvmFfiCallbackTest`: upcallStub + `.asType` closure bridge + `Arena` rooting +
@@ -421,9 +423,14 @@ backend risk. **C2** = `FfiSignature` callback token + `JvmFfiRuntime.kof_ffi`
 cursor parse + `Linker.upcallStub`/`.asType` bridge + `isExternBound` JVM branch
 → opens the JVM callback gate, proven by `JvmFfiCallbackE2ETest` (a real `.kf`
 computes `42/42/6.0/7.5` across Int/Long/Double/mixed callback ABIs; JS callback
-stays `FFI002`; a non-bindable String-in-callback stays `FFI001`). **C3** = JS
-callback parity (`KofJsFfiBridge` upcall + GraalJS re-entrancy) + browser degrade.
-Status: **C1+C2 landed 18/09 (the JVM binds primitive callbacks)**, C3 open.
+stays `FFI002`; a non-bindable String-in-callback stays `FFI001`). **C3** = JS callback
+parity, split like F1→F3: **C3.1** = host-level re-entrancy pin (`KofJsFfiCallbackBridgeTest`
+— JS→native→upcall→`Value.execute` re-entrant, Int `42`/Long `42L`/loop `46`; gate still
+closed) ✅; **C3.2** = add the upcall path to `KofJsFfiBridge` + marshal a callback
+`Value` in the `KofJsRunner` `ProxyExecutable` + open the JS branch of `isExternBound`
+for bindable callbacks; **C3.3** = byte-for-byte JVM↔JS callback parity E2E + browser
+honest degrade (R7). Status: **C1+C2 landed 18/09 (JVM binds primitive callbacks)** and
+**C3.1 measured/landed** (JS re-entrancy proven); **C3.2/C3.3 open**.
 
 ---
 
