@@ -202,22 +202,88 @@ class KofRngTest {
         runJs(tmp, CONTRACT_SRC);
     }
 
-    /** R6/R7: fatia 1 = JVM+JS; NATIVE/cross são gap honesto RNG001 (compile). */
+    /**
+     * R6/R7: fatia 2 = JVM+JS+NATIVE x86_64. Cross riscv64/aarch64 e ANDROID
+     * continuam gap honesto RNG001 no compile (port riscv = fatia 3 c/ qemu;
+     * android exige medição real da face DEX).
+     */
     @Test
-    void nativeIsHonestGap(@TempDir Path tmp) throws Exception {
+    void crossAndAndroidStayHonestGap(@TempDir Path tmp) throws Exception {
         Path file = tmp.resolve("Main-" + System.nanoTime() + ".kf");
         Files.writeString(file, "main() { rng.seed(42) println(rng.int(10)) }");
-        for (Target t : new Target[]{Target.NATIVE, Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+        for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64,
+                Target.ANDROID}) {
             Path outDir = tmp.resolve("out-" + t + "-" + System.nanoTime());
             CompilationResult r = driver.compile(file, outDir, t);
-            assertFalse(r.success(), t + " deve falhar em compile (fatia 1 = JVM+JS)");
+            assertFalse(r.success(), t + " deve falhar em compile (gap honesto)");
             assertTrue(r.diagnostics().getDiagnostics().stream()
                             .anyMatch(d -> "RNG001".equals(d.code())),
                     t + " esperava RNG001, veio " + r.diagnostics().getDiagnostics());
         }
     }
 
+    /**
+     * Q3 cross-target (fatia 2): o MESMO programa exercitando seed/int/bool/
+     * double/string produz stdout BYTE-A-BYTE igual no JVM e no NATIVE — a
+     * paridade asm não é declarada, é executada (toolchain as/ld presente).
+     */
+    private static final String FULL_FACE_SRC = """
+        main() {
+            rng.seed(42)
+            println(rng.int(1000))
+            println(rng.int(1000))
+            println(rng.int(1000))
+            println(rng.boolean())
+            println(rng.boolean())
+            println(rng.double())
+            println(rng.double())
+            println(rng.string(8, "abcxyz"))
+            println(rng.string(1, "q"))
+            println(rng.int(0))
+            println(rng.int(-5))
+            println(rng.string(0, "abc"))
+            rng.seed(42)
+            println(rng.int(1000))
+            println("OK")
+        }
+        """;
+
+    @Test
+    void jvmNativeParityFullFace(@TempDir Path tmp) throws Exception {
+        String jvm = runJvm(tmp, FULL_FACE_SRC);
+        String nat = runNative(tmp, FULL_FACE_SRC);
+        assertEquals(jvm, nat, "rng face completa: JVM e NATIVE devem ser byte-idênticos");
+    }
+
+    /** Oracle direto no NATIVE (a mesma referência Java da fatia 1). */
+    @Test
+    void nativeMatchesOracle(@TempDir Path tmp) throws Exception {
+        assertEquals(expectedRefOutput(), runNative(tmp, REF_SRC),
+                "NATIVE rng sequence must match the in-test reference");
+    }
+
+    /** Contrato de forma/ranges também no NATIVE (500 iterações + bordas). */
+    @Test
+    void contractNative(@TempDir Path tmp) throws Exception {
+        runNative(tmp, CONTRACT_SRC);
+    }
+
     // ── harness (padrão KofRandomTest) ──
+
+    private String runNative(Path tempDir, String source) throws Exception {
+        Path file = tempDir.resolve("Main-" + System.nanoTime() + ".kf");
+        Files.writeString(file, source);
+        Path outDir = tempDir.resolve("out-" + System.nanoTime());
+        CompilationResult result = driver.compile(file, outDir, Target.NATIVE);
+        assertTrue(result.success(), "Native compile failed: " + result.diagnostics().getDiagnostics());
+        Path bin = outDir.resolve("Default/Main");
+        Process p = new ProcessBuilder(bin.toString()).redirectErrorStream(true).start();
+        String output = new String(p.getInputStream().readAllBytes(),
+                java.nio.charset.StandardCharsets.UTF_8).replace("\r\n", "\n").trim();
+        int ec = p.waitFor();
+        assertEquals(0, ec, "Native exit code, output: " + output);
+        return output;
+    }
 
     private String runJvm(Path tempDir, String source) throws Exception {
         Path file = tempDir.resolve("Main-" + System.nanoTime() + ".kf");

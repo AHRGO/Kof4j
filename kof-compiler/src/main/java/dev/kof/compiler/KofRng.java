@@ -54,9 +54,13 @@ public final class KofRng {
         };
     }
 
-    /** Fatia 1 (R7): JVM + JS agora; NATIVE/ANDROID = RNG001 (gap honesto). */
+    /**
+     * Fatia 2 (R7): JVM + JS + NATIVE x86_64 (RuntimeRng — mesmos bits por
+     * construção); cross riscv64/aarch64 e ANDROID = RNG001 (gap honesto —
+     * port riscv com qemu na fatia 3; android precisa de medição real).
+     */
     static boolean supportedOn(@SuppressWarnings("unused") String function, Target target) {
-        return target == Target.JVM || target == Target.JS;
+        return target == Target.JVM || target == Target.JS || target == Target.NATIVE;
     }
 
     static String gapCode(@SuppressWarnings("unused") String function) {
