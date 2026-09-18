@@ -349,6 +349,7 @@ completo com cada sistema, checksum e solução de problemas) e
 
 ```bash
 kof build <dir> [--target jvm|native|native.risc|native.arm|js|android] [--output <dir>] [--release]
+kof deploy <dir> [--target jvm|native|js|android] [--output <dir>] [--name <n>] [--version <v>]
 kof run <file.kf> [--target jvm|native|native.risc|native.arm|js] [args...]
 kof serve <file.kf> [--port <port>] [--host <host>]
 kof check <file.kf|dir> [--json]

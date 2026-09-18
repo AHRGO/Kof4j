@@ -23,6 +23,7 @@ The CLI is the central tool of the Kof platform.
 | `kof serve <file.kf>` | HTTP web server (native `web.app()` + legacy `handle()` API) |
 | `kof check <file.kf\|dir> [--target <t>] [--json]` | Type-check without emitting code (target-aware gaps, e.g. `AND002` on android) |
 | `kof test <file.kf\|dir> [--target jvm|native|js]` | Structured suite `test "nome" { assert(...) }` on the 3 targets + whole programs by exit code |
+| `kof deploy <dir|file.kf> [--target jvm|native|js|android] [--output <dir>] [--name <n>] [--version <v>]` | Packages a self-contained release: artifact (fat jar / ELF 0755 / `Default.mjs` + runtime closure / signed APK) + `RELEASE.md` + `SHA256SUMS` + `.tar.gz`; cross riscv64/aarch64 and `--publish` refuse honestly with `DEP001` |
 | `kof bench [paths...] [--target ...] [--iterations N] [--baseline <file>] [--threshold <ratio>] [--json] [--fail-on-regression]` | Benchmark harness (compile, run, validate, metrics, baseline) |
 | `kof profile <file.kf> [--target ...]` | Execution + metrics (CPU, RSS, GC) |
 | `kof inspect <file.kf> [--json]` | IR statistics: ops before/after optimization |
@@ -117,6 +118,29 @@ kof config gen src/           # generates a kof.config template from the config.
 - `kof profile <file.kf>` — execution + metrics (CPU, RSS, GC).
 - `kof inspect <file.kf> [--json]` — IR statistics: ops before/after
   optimization.
+
+## `kof deploy` (X9, 18/09)
+
+Packages a **releasable artifact** from the build pipeline — the unit you ship
+is the `.tar.gz` next to the `deploy/` dir, and it is never faked:
+
+```bash
+kof deploy ./app --target jvm             # fat jar + RELEASE.md + SHA256SUMS
+kof deploy ./app --target native          # x86-64 ELF (mode 0755 in the tar)
+kof deploy ./app --target js --name api   # Default.mjs + its runtime closure (runs with bare `node`)
+kof deploy ./app --target android         # signed APK (reuses the build --apk pipeline)
+# -> deploy/api-<version>.tar.gz          # + sha256 printed on stdout
+```
+
+Every release is **self-contained**: the JS face ships the entry together with
+the `./kof-runtime*.mjs` modules it imports (§298), so the `node <name>.mjs`
+printed in `RELEASE.md` works from a clean directory. `--publish <registry>` is
+**refused honestly with `DEP001`** until the maintainer decides the release
+registry (plan decision **D2**); same for the cross archs (riscv64/aarch64) —
+slices following in `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md`
+(X9). Android refuses `DEP001` only when ANDROID_HOME/build-tools are missing
+(honest environment guard, never a fake APK). No exit 0 without a real
+artifact, ever (R6).
 
 ## `kof lsp`
 

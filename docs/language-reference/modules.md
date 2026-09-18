@@ -114,8 +114,9 @@ rng
 Plus the **builtin namespace** `rng` — a seedable deterministic PRNG for
 property-based testing (`rng.seed(Int)`, `rng.int(Int)`, `rng.boolean()`,
 `rng.double()`, `rng.string(Int, String)`; `KofRng`/`KofStd`, no `kof.*` class,
-no import). Same seed ⇒ same sequence on every backend; JVM+JS today,
-NATIVE/ANDROID rejected with `RNG001` (R6). See `learn/39-stdlib.md` §rng and
+no import). Same seed ⇒ same sequence on every backend; JVM+JS+NATIVE
+(x86_64) today — cross riscv64/aarch64 and ANDROID rejected with `RNG001`
+(R6, X8 slice 3 pending). See `learn/39-stdlib.md` §rng and
 `training/idioms/stdlib.md` §rng.
 
 Each area has its own document in `docs/stdlib*.md` (not duplicated here). The
