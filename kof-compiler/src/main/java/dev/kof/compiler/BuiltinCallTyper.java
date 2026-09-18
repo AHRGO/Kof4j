@@ -273,7 +273,7 @@ public final class BuiltinCallTyper {
                 // (SEM015) — ex.: `(s) -> s(1)` com param sem tipo.
                 if (sa.diagnostics() != null) {
                     String extra = (localSym.type() instanceof Type.UnknownType)
-                            ? " (sem tipo — declare o tipo do parâmetro da lambda)"
+                            ? " (untyped — declare the type of the lambda parameter)"
                             : "";
                     sa.diagnostics().error("", 0, 0, 0,
                             "variable '" + mc.methodName() + "' is not a function"
