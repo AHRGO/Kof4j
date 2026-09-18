@@ -290,7 +290,7 @@ the same development experience.
 | X6 | Interop reflection (restricted to interop) | ⛔ | **maintainer** | VISION §7 "C" — ML/science schema discovery; a core change (rule 6); never a foundation |
 | X7 | Debugger Native DWARF + JS source maps | 🟡 | tooling lane | VISION §9; `roadmap.md` §19.5 phases 4–7 — JS source map V3 landed 01/09 (`KofJsSourceMapTest`); Native DWARF pending |
 | X8 | Property-based testing | 🟡 | docs→platform lane (192.168.100.15) | slice 1 ✅ 18/09: `rng` namespace (seedable xorshift128+splitmix32) on JVM+JS — `KofRngTest` 8/8 incl. JVM==JS byte parity + honest `RNG001` on NATIVE/ANDROID (`a71f761c`,`1ff54c6e`); slice 2 = native asm; slice 3 = `kof.test` property runner |
-| X9 | `kof deploy` (build + package + publish) | 🟡 | tooling/docs lane (192.168.100.15) | slice 1 ✅ 18/09: `kof deploy --target jvm` = fat jar (D-APP.5) + RELEASE.md + SHA256SUMS + tar.gz (`CmdDeployTest` 4/4, module 317/317; `154ea1a4`); `--publish`/registry = ⛔ D2; NATIVE/JS/ANDROID = `DEP001` honest |
+| X9 | `kof deploy` (build + package + publish) | 🟡 | tooling/docs lane (192.168.100.15) | slices 1–2 ✅ 18/09: JVM (fat jar, D-APP.5) + NATIVE (ELF 0755) + JS (Default.mjs) — release = artifact + RELEASE.md + SHA256SUMS + tar.gz (`CmdDeployTest` 7/7, module 320/320; `154ea1a4`, `bfdd452a`); ANDROID/cross = `DEP001` honest; `--publish`/registry = ⛔ D2 |
 | X10 | Domain-sensitive LSP (completion + go-to-definition in packages) | 🔵 | tooling lane | VISION §9 — same frontend, no parallel parser |
 
 ---
