@@ -7,7 +7,7 @@
 > provados: Nível 3 (Query DSL tipada `User.query(db){...}` → `db.query<T>`) ✅
 > 01/09 (`KofOrmE2ETest` 22); MySQL prepared binário ✅ 03/09
 > (`KofDbE2ETest.nativeMysqlPreparedBinary`). Connection pooling é PLANNED (nenhuma pool hoje — cada `connect` abre sua própria conexão, §Limitações abaixo). DB001/ORM001 em
-> (DB001 fechado: riscv/aarch 15/09 + JS 16/09); só `ORM001` permanece um gap honesto R6 tracked em `docs/backend-parity.md`,
+> (DB001 fechado: riscv/aarch 15/09 + JS 16/09; ORM001 fechado no JS 18/09); só `ORM001` no **Native** permanece um gap honesto R6 tracked em `docs/backend-parity.md`,
 > não pendência desta visão.
 
 **Última atualização:** 12 de setembro de 2026
