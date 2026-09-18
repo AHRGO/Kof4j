@@ -33,7 +33,8 @@ public final class JvmRuntimeReturnDescriptors {
             case "kof_io_file_exists", "kof_io_file_is_file", "kof_io_file_is_dir",
                     "kof_io_write_text", "kof_io_append_text", "kof_io_write_bytes", "kof_io_append_bytes",
                     "kof_io_delete", "kof_io_dir_create", "kof_io_dir_create_dirs", "kof_io_dir_delete",
-                    "kof_io_path_is_absolute" -> "I";
+                    "kof_io_path_is_absolute",
+                    "kof_io_file_copy_to", "kof_io_file_move_to", "kof_io_file_is_symlink" -> "I";
             case "kof_io_read_text", "kof_io_file_name", "kof_io_path_parent", "kof_io_path_file_name",
                     "kof_io_path_extension", "kof_io_path_normalize", "kof_io_path_resolve",
                     "kof_io_path_to_absolute" -> "Ljava/lang/String;";
@@ -42,7 +43,7 @@ public final class JvmRuntimeReturnDescriptors {
             case "kof_args_list" -> "Ljava/util/ArrayList;";
             case "kof_io_read_bytes" -> "[I";
             case "kof_io_read_range", "kof_io_read_range_path" -> "[I";
-            case "kof_io_file_size" -> "J";
+            case "kof_io_file_size", "kof_io_file_modified_time" -> "J";
             case "kof_io_dir_list" -> "Ljava/util/ArrayList;";
             case "kof_web_app_new", "kof_web_param", "kof_web_query", "kof_web_header",
                     "kof_web_body", "kof_web_method", "kof_web_path",

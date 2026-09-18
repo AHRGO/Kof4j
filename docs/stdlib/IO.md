@@ -38,10 +38,20 @@ On Windows the separator is `\`; Kof code never concatenates separators.
 | `size()` | Long; throws an exception if the file does not exist (02/09 — no `-1` sentinel) |
 | `delete()` | Bool (file or empty directory) |
 | `name()` / `path()` | String |
+| `copyTo(destination)` | Bool — **JVM only** (18/09). Copies bytes + basic attributes. No-overwrite by default (returns `false`, does not touch either file, if `destination` already exists); does not create the parent directory of `destination` implicitly — the caller must ensure it exists |
+| `moveTo(destination)` | Bool — **JVM only** (18/09). Filesystem-primitive rename/move, no-overwrite by default (same contract as `copyTo`). Not a safe transaction: callers that need a hash-verified move should keep doing copy → verify → delete, same as before this method existed |
+| `modifiedTime()` | Long — **JVM only** (18/09). Last-modified time in epoch milliseconds; throws an exception if the file does not exist (same contract as `size()`, no sentinel) |
+| `isSymlink()` | Bool — **JVM only** (18/09). `true` when the path itself is a symbolic link (the link is never followed implicitly by this check) |
 
 Static forms: `File.exists(p)`, `File.readText(p)`,
 `File.writeText(p, s)`, `File.appendText(p, s)`, `File.delete(p)`,
 `File.size(p)`, `File.name(p)`.
+
+`copyTo`/`moveTo`/`modifiedTime`/`isSymlink` have no static form yet and no
+Native backend (`RuntimeIo2` has no case for them yet) — using them when
+targeting Native is a known gap, not a silent no-op; it has not been
+exercised as part of this change (JVM-only) and its exact failure mode on
+Native has not been characterized yet.
 
 ## Directory
 

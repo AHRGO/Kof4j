@@ -58,6 +58,9 @@ public final class JvmRuntimeCallDescriptors {
                     "kof_io_path_extension", "kof_io_path_normalize", "kof_io_path_to_absolute"
                     -> "(Ljava/lang/String;)Ljava/lang/String;";
             case "kof_io_path_resolve" -> "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;";
+            case "kof_io_file_copy_to", "kof_io_file_move_to" -> "(Ljava/lang/String;Ljava/lang/String;)I";
+            case "kof_io_file_modified_time" -> "(Ljava/lang/String;)J";
+            case "kof_io_file_is_symlink" -> "(Ljava/lang/String;)I";
             case "kof_process_run" -> "(Ljava/lang/String;Ljava/util/List;)Ldev/kof/runtime/KofRuntime$ProcessResult;";
             case "kof_process_exit" -> "(I)V";
             case "kof_process_spawn" -> "(Ljava/lang/String;Ljava/util/List;)Ljava/lang/Long;";
