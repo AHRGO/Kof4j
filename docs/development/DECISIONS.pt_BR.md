@@ -1452,11 +1452,11 @@ CoreRegression 102 + CompilerDriver 256 verdes.
 
 ---
 
-## D-UI-DIFF — Fase 9 (atualização parcial / reuso de nó): questão de contrato, BLOQUEADA na mantenedora (regra 6)
+## D-UI-DIFF — Fase 9 (atualização parcial / reuso de nó): **DECIDIDA (B) — reuso da raiz por tipo**
 
-**Data:** 2026-09-18
+**Data:** 2026-09-18 · **Data da decisão:** 2026-09-18 (mantenedora, enquete multi-escolha na sessão)
 
-**Estado:** `BLOQUEADA` — precisa de decisão da mantenedora; não é edição de agente.
+**Estado:** `DECIDIDA` — opção **(B) reuso da raiz por tipo**. Fila aberta em `DOING.pt_BR.md` (dono .17, lane kof-ui).
 
 **Contexto:** a Fase 9 de `architecture.md` quer "atualização parcial":
 reusar o nó DOM quando o view re-renderiza o mesmo widget na mesma posição.
@@ -1487,8 +1487,72 @@ menor unidade coesa que conserta a dor visível (perda de focus no caso
 comum de widget único na raiz) sem camada VDOM. A decisão (qual opção + o
 contrato de continuidade de handle) é da mantenedora.
 
+**Decisão (mantenedora, 18/09) — o contrato de identidade de (B):** quando
+o render anterior e o próximo de um component `view` produzem o **mesmo
+tipo de raiz**, o nó DOM ANTIGO é mantido e as propriedades de valor são
+copiadas do nó fresco para ele; o handle raiz antigo **continua vivo**
+(continuidade de identidade — este é o chamada de aliasing que a opção B
+exige). Tipo de raiz diferente → rebuild + prune exatamente como hoje
+(§295). Sem camada VDOM, sem chaveamento, sem diff posicional de filhos
+nesta fatia. Prova esperada: o probe mostra o MESMO handle entre state
+writes quando o tipo é estável; elemento com focus sobrevive ao write;
+troca de tipo ainda poda (sem regressão do §295).
+
 **Relacionado:** §295 (prune), §296 (unsubscribe), linhas da Fase 9 na
-audit, D-UI-APPSTATE (postura do unsub manual).
+audit, D-UI-APPSTATE (postura do unsub manual — agora substituída por
+D-UI-AUTOUNSUB), D-UI-CANCELLED.
+
+---
+
+## D-UI-AUTOUNSUB — inscrições do Store têm escopo automático por component: **DECIDIDA (A)**
+
+**Data:** 2026-09-18 (mantenedora, enquete multi-escolha na sessão)
+
+**Estado:** `DECIDIDA` — opção **(A) escopo automático por component**.
+
+**Contexto:** desde o §296 `unsubscribe(h)` é primitivo real, mas a limpeza
+é manual — um component que `subscribe` no mount vaza o callback (e o
+closure capturado) depois que o component é podado (o registry do §295 sabe
+exatamente quando). O D-UI-APPSTATE registrava "limpeza continua manual"
+como postura ANTERIOR à decisão.
+
+**Decisão:** um `subscribe` feito **enquanto um component é o alvo de
+render corrente** fica vinculado àquele component; quando o component sai
+da árvore (poda de subárvore, §295), o runtime dá unsubscribe
+automaticamente. Inscrições fora de contexto de component (escopo de
+aplicação — ex.: um observador de `AppState` criado no `main`) mantêm
+semântica manual — o primitivo do §296 continua valendo para elas.
+Backward compatível: nada que compila hoje muda de comportamento, exceto
+inscrições vazadas que morrem com o component.
+
+**Relacionado:** §295 (registry de subárvore), §296 (unsubscribe),
+D-UI-APPSTATE (postura substituída), D-UI-DIFF (mesmo encanamento de
+ciclo de vida).
+
+---
+
+## D-UI-CANCELLED — `cancelled()` em ações async de UI: **DECIDIDA (A) — escopo do component de origem**
+
+**Data:** 2026-09-18 (mantenedora, enquete multi-escolha na sessão)
+
+**Estado:** `DECIDIDA` — opção **(A) true quando o component de origem saiu
+da árvore**.
+
+**Contexto:** `cancelled()` dentro de callbacks async de ação UI hoje é
+conservador (quase sempre `false`) — uma resposta `spawn`/`http` tardia pode
+escrever numa subárvore DOM que o §295 já podou. A opção B (por versão de
+estado) foi rejeitada por agressiva demais (mata updates legítimos, mudança
+de contrato pesada); a C (handles manuais) foi rejeitada por cerimônia.
+
+**Decisão:** a ação lembra a instância de component em que foi criada;
+`cancelled()` retorna `true` quando o nó daquele instância não está mais na
+árvore viva (o mesmo registry do §295). Callbacks async devem guardar o
+toque de DOM com `cancelled()` — quando true, a resposta é descartada.
+Efeitos colaterais não-DOM são responsabilidade do programador (inalterado).
+
+**Relacionado:** §295, D-UI-AUTOUNSUB (mesmo substrato de ciclo de vida),
+Fase 8 (`view`/ações), D-BACKEND-SEMANTICS (`spawn`/`await` congelados —
+isto é observabilidade de UI, não mudança de contrato de concorrência).
 
 ---
 

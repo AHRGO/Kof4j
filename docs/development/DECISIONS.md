@@ -1419,11 +1419,11 @@ CoreRegression 102 + CompilerDriver 256 green.
 
 ---
 
-## D-UI-DIFF — Fase 9 (partial update / node reuse): contract question, BLOCKED on the maintainer (rule 6)
+## D-UI-DIFF — Fase 9 (partial update / node reuse): **DECIDED (B) — root-kind reuse**
 
-**Date:** 2026-09-18
+**Date:** 2026-09-18 · **Decision date:** 2026-09-18 (maintainer, multi-choice poll in session)
 
-**State:** `BLOCKED` — needs a maintainer decision; not an agent edit.
+**State:** `DECIDED` — option **(B) root-kind reuse patch**. Queue open in `DOING.md` (owner .17, lane kof-ui).
 
 **Context:** `architecture.md` Phase 9 wants "partial update": reuse the DOM
 node when the view re-renders the same widget at the same position. Today
@@ -1452,8 +1452,72 @@ smallest cohesive unit that fixes the user-visible pain (focus loss on the
 common single-root-widget case) without a VDOM layer. The decision (which
 option + the handle-continuity contract) is the maintainer's.
 
+**Decision (maintainer, 18/09) — the identity contract of (B):** when the
+previous and next render of a `view`-component produce the **same root
+kind**, the OLD DOM node is kept and the value-bearing properties are copied
+from the fresh node onto it; the old root handle **stays live** (identity
+continuity — this is the aliasing call option B requires). Different root
+kind → rebuild + prune exactly as today (§295). No VDOM layer, no keying,
+no positional diff of children in this slice. Proof expected: probe shows
+the same handle across state writes when kind is stable; focus-bearing
+element survives the write; kind change still prunes (no regression of
+§295).
+
 **Related:** §295 (prune), §296 (unsubscribe), Fase 9 audit lines,
-D-UI-APPSTATE (manual-unsub stance).
+D-UI-APPSTATE (manual-unsub stance — now superseded by D-UI-AUTOUNSUB),
+D-UI-CANCELLED.
+
+---
+
+## D-UI-AUTOUNSUB — Store subscriptions are component-scoped automatically: **DECIDED (A)**
+
+**Date:** 2026-09-18 (maintainer, multi-choice poll in session)
+
+**State:** `DECIDED` — option **(A) automatic per-component scope**.
+
+**Context:** since §296 `unsubscribe(h)` is a real primitive, but cleanup
+is manual — a component that `subscribe`s on mount leaks the callback (and
+its captured closure) after the component is pruned (§295's registry knows
+exactly when). D-UI-APPSTATE recorded "cleanup stays manual" as the
+*pre-decision* stance.
+
+**Decision:** a `subscribe` performed **while a component is the current
+render target** is bound to that component; when the component leaves the
+tree (subtree prune, §295), the runtime unsubscribes it automatically.
+Subscribes **outside** a component context (application-scoped, e.g. an
+`AppState` observer created in `main`) keep manual semantics — the primitive
+from §296 continues to work for them. Backward compatible: nothing that
+compiles today changes behavior except leaked subscriptions dying with
+their component.
+
+**Related:** §295 (subtree registry), §296 (unsubscribe), D-UI-APPSTATE
+(stance superseded), D-UI-DIFF (same lifecycle plumbing).
+
+---
+
+## D-UI-CANCELLED — `cancelled()` in async UI actions: **DECIDED (A) — origin-component scope**
+
+**Date:** 2026-09-18 (maintainer, multi-choice poll in session)
+
+**State:** `DECIDED` — option **(A) true when the originating component
+left the tree**.
+
+**Context:** `cancelled()` inside an async action callback currently is
+conservative (almost always `false`) — a late `spawn`/`http` response can
+still write into a DOM subtree that §295 already pruned. Option B
+(state-version based) was rejected as over-aggressive (kills legitimate
+updates, heavy contract change); option C (manual handles) rejected as
+ceremony.
+
+**Decision:** the action remembers the component instance it was created
+in; `cancelled()` returns `true` once that instance's node is no longer in
+the live tree (same registry as §295). Async callbacks should guard the DOM
+touch with `cancelled()` — when true, the response is dropped. Non-DOM side
+effects are the programmer's business (unchanged).
+
+**Related:** §295, D-UI-AUTOUNSUB (same lifecycle substrate), Fase 8
+(`view`/actions), D-BACKEND-SEMANTICS (`spawn`/`await` frozen — this is UI
+observability, not a concurrency contract change).
 
 ---
 
