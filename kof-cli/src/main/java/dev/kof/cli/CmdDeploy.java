@@ -29,10 +29,13 @@ import java.util.List;
  * compilador, timestamp UTC, main class) + {@code SHA256SUMS} (integridade) +
  * {@code .tar.gz} (artefato de distribuição único).
  *
+ * <p>Fatia 2 (18/09): faces NATIVE x86_64 (binário ELF, mode 0755 no tar) e
+ * JS ({@code Default.mjs}) empacotadas com a MESMA estrutura de release.
+ *
  * <p>O que a fatia NÃO faz (honesto, R6/R7): {@code --publish} (registry
  * remoto) exige decisão D2/mantenedora — a flag recusa com {@code DEP001}.
- * NATIVE/JS/ANDROID recusam com {@code DEP001} nesta fatia (fatias seguintes
- * do plano). Nunca um fake-publish, nunca exit 0 sem artefato.
+ * ANDROID e os cross riscv64/aarch64 recusam com {@code DEP001} (faces
+ * seguintes do plano). Nunca um fake-publish, nunca exit 0 sem artefato.
  */
 final class CmdDeploy {
 
@@ -112,12 +115,14 @@ final class CmdDeploy {
                 return;
             }
         }
-        // X9 fatia 1: só JVM empacota (native/js já são artefato único;
-        // android é APK — fatia futura decide a face). Honestidade cedo (R6).
-        if (target != Target.JVM) {
+        // X9 fatia 2: JVM (fat jar), NATIVE x86_64 (binário ELF) e JS
+        // (Default.mjs) empacotam. ANDROID (APK) e cross riscv64/aarch64
+        // (sysroot) recusam honesto (R6) — faces seguintes do plano.
+        if (target == Target.ANDROID || target == Target.NATIVE_RISCV64
+                || target == Target.NATIVE_AARCH64) {
             System.err.println("deploy: target " + TargetMatrix.name(target)
-                    + " is not packaged by this slice yet (DEP001) —"
-                    + " slice 1 packages --target jvm (fat jar)");
+                    + " is not packaged yet (DEP001) —"
+                    + " slices so far: --target jvm|native|js");
             System.exit(1);
             return;
         }
@@ -143,15 +148,16 @@ final class CmdDeploy {
             return;
         }
         try {
-            deploy(src, out, safeName, version);
+            deploy(src, out, safeName, version, target);
         } catch (IOException e) {
             System.err.println("deploy: failed: " + e.getMessage());
             System.exit(1);
         }
     }
 
-    private static void deploy(Path src, Path out, String name, String version) throws IOException {
-        // 1) compila o módulo JVM (mesma convenção Go-like do build)
+    private static void deploy(Path src, Path out, String name, String version,
+                               Target target) throws IOException {
+        // 1) compila o módulo (mesma convenção Go-like do build)
         KofCliSupport.Layout layout = KofCliSupport.detectLayout(src);
         Path backendDir = layout.backendDir();
         String app001 = KofCliSupport.app001(Target.JVM, layout.fullStack());
@@ -165,32 +171,65 @@ final class CmdDeploy {
         files.sort(java.util.Comparator.comparing(p -> p.getFileName().toString()));
         Path classes = out.resolve("deploy-classes");
         CompilerDriver driver = new CompilerDriver();
-        CompilationResult module = driver.compileSources(files, classes, Target.JVM,
+        CompilationResult module = driver.compileSources(files, classes, target,
                 backendDir.toAbsolutePath().normalize());
         for (var d : module.diagnostics().getDiagnostics()) System.out.println(d.format());
         if (!module.success()) System.exit(1);
 
-        // 2) fat jar executável (D-APP.5 — reusa o empacotador do build)
-        Path jar = CmdBuild.buildFatJar(classes, List.of());
+        // 2) artefato único da face: fat jar (JVM, D-APP.5), ELF (native),
+        // Default.mjs (JS)
+        Path built;
+        String ext;
+        int tarMode;
+        switch (target) {
+            case JVM -> {
+                built = CmdBuild.buildFatJar(classes, List.of());
+                ext = ".jar";
+                tarMode = 0644;
+            }
+            case NATIVE -> {
+                built = classes.resolve("Default").resolve("Main");
+                if (!Files.isRegularFile(built)) {
+                    throw new IOException("native binary not found: " + built);
+                }
+                ext = "";
+                tarMode = 0755;
+            }
+            case JS -> {
+                built = findJsEntry(classes);
+                ext = ".mjs";
+                tarMode = 0644;
+            }
+            default -> throw new IOException("unreachable: " + target);
+        }
 
         // 3) diretório da release
         Path releaseDir = out.resolve("deploy").resolve(name + "-" + version);
         Files.createDirectories(releaseDir);
-        String artifact = name + "-" + version + ".jar";
+        String artifact = name + "-" + version + ext;
         Path jarDst = releaseDir.resolve(artifact);
-        Files.copy(jar, jarDst, StandardCopyOption.REPLACE_EXISTING);
+        Files.copy(built, jarDst, StandardCopyOption.REPLACE_EXISTING);
 
         // 4) RELEASE.md (metadados legíveis) + SHA256SUMS (integridade)
         String timestamp = DateTimeFormatter.ISO_INSTANT.format(Instant.now().atOffset(ZoneOffset.UTC));
-        String mainClass = KofCliSupport.findMainClass(classes);
+        String runCmd;
+        if (target == Target.JVM) {
+            runCmd = "java -jar " + artifact;
+        } else if (target == Target.NATIVE) {
+            runCmd = "./" + artifact;
+        } else {
+            runCmd = "node " + artifact;
+        }
+        String mainLine = target == Target.JVM
+                ? "- main class: " + KofCliSupport.findMainClass(classes) + "\n" : "";
         Files.writeString(releaseDir.resolve("RELEASE.md"),
                 "# Release " + name + " " + version + "\n\n"
                         + "- artifact: " + artifact + "\n"
-                        + "- target: " + TargetMatrix.name(Target.JVM) + "\n"
-                        + "- main class: " + mainClass + "\n"
+                        + "- target: " + TargetMatrix.name(target) + "\n"
+                        + mainLine
                         + "- compiler: " + KofVersion.version() + "\n"
                         + "- built at (UTC): " + timestamp + "\n"
-                        + "- run: java -jar " + artifact + "\n",
+                        + "- run: " + runCmd + "\n",
                 StandardCharsets.UTF_8);
         String sha256 = sha256Hex(jarDst);
         Files.writeString(releaseDir.resolve("SHA256SUMS"),
@@ -200,11 +239,21 @@ final class CmdDeploy {
         List<Path> releaseFiles = new ArrayList<>(List.of(
                 jarDst.getFileName(), Path.of("RELEASE.md"), Path.of("SHA256SUMS")));
         Path tgz = out.resolve("deploy").resolve(name + "-" + version + ".tar.gz");
-        writeTarGz(tgz, releaseDir, releaseFiles);
+        writeTarGz(tgz, releaseDir, releaseFiles, tarMode);
 
         System.out.println("deploy → " + releaseDir);
         System.out.println("artifact → " + tgz
                 + " (sha256 " + sha256.substring(0, 12) + "…)");
+    }
+
+    private static Path findJsEntry(Path dir) throws IOException {
+        Path direct = dir.resolve("Default.mjs");
+        if (Files.isRegularFile(direct)) return direct;
+        try (var s = Files.walk(dir)) {
+            var opt = s.filter(p -> p.getFileName().toString().equals("Default.mjs")).findFirst();
+            if (opt.isPresent()) return opt.get();
+        }
+        throw new IOException("no Default.mjs found in " + dir);
     }
 
     static String sha256Hex(Path file) throws IOException {
@@ -224,12 +273,16 @@ final class CmdDeploy {
     }
 
     /** Tar ustar mínimo (arquivos regulares) + gzip — sem dependência externa. */
-    static void writeTarGz(Path tgz, Path root, List<Path> relativeFiles) throws IOException {
+    static void writeTarGz(Path tgz, Path root, List<Path> relativeFiles,
+                           int artifactMode) throws IOException {
         try (var fos = Files.newOutputStream(tgz);
              var gzos = new java.util.zip.GZIPOutputStream(fos)) {
             for (Path rel : relativeFiles) {
                 Path abs = root.resolve(rel);
                 byte[] data = Files.readAllBytes(abs);
+                // 1º entry = artefato da face (JVM 0644, native 0755, JS 0644);
+                // RELEASE.md/SHA256SUMS sempre 0644.
+                int mode = rel.equals(relativeFiles.get(0)) ? artifactMode : 0644;
                 byte[] header = new byte[512];
                 byte[] nameBytes = (rel.toString().replace('\\', '/') + "\0")
                         .getBytes(StandardCharsets.UTF_8);
@@ -237,7 +290,7 @@ final class CmdDeploy {
                     throw new IOException("tar entry name too long: " + rel);
                 }
                 System.arraycopy(nameBytes, 0, header, 0, nameBytes.length);
-                writeOctal(header, 100, 0644, 8);   // mode
+                writeOctal(header, 100, mode, 8);   // mode
                 writeOctal(header, 108, 0, 8);      // uid
                 writeOctal(header, 116, 0, 8);      // gid
                 writeOctal(header, 124, data.length, 12); // size

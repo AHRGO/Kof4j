@@ -106,8 +106,8 @@ class CmdDeployTest {
     @Test
     void nonJvmTargetIsHonestGap(@TempDir Path dir) throws Exception {
         Path src = writeApp(dir, "main() { println(\"x\") }\n");
-        CliResult r = run(dir, "deploy", src.toString(), "--target", "native");
-        assertEquals(1, r.exit(), "native deploy deve recusar (DEP001): " + r.out());
+        CliResult r = run(dir, "deploy", src.toString(), "--target", "android");
+        assertEquals(1, r.exit(), "android deploy deve recusar (DEP001): " + r.out());
         assertTrue(r.out().contains("DEP001"), "esperava DEP001, saída: " + r.out());
     }
 
@@ -119,6 +119,72 @@ class CmdDeployTest {
         assertEquals(1, r.exit(), "publish falso proibido (R6): " + r.out());
         assertTrue(r.out().contains("DEP001"), "--publish deve recusar com DEP001: " + r.out());
         assertTrue(r.out().contains("D2"), "mensagem deve citar a decisão D2: " + r.out());
+    }
+
+    /** X9 fatia 2: face NATIVE — o ELF empacotado RODA e sai mode 0755 no tar. */
+    @Test
+    void nativeFaceRunsAndMarksExecutable(@TempDir Path dir) throws Exception {
+        Path src = writeApp(dir, "main() { println(\"native ok\") }\n");
+        CliResult r = run(dir, "deploy", src.toString(), "--target", "native",
+                "--output", "dist", "--name", "edge", "--version", "2.0.0");
+        assertEquals(0, r.exit(), "deploy native, saída:\n" + r.out());
+
+        Path bin = dir.resolve("dist/deploy/edge-2.0.0/edge-2.0.0");
+        assertTrue(Files.isRegularFile(bin), "binário ausente:\n" + r.out());
+
+        // prova real: o artefato empacotado RODA
+        Process run = new ProcessBuilder(bin.toString())
+                .directory(dir.toFile()).redirectErrorStream(true).start();
+        String runOut = new String(run.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        assertTrue(run.waitFor(60, TimeUnit.SECONDS), "timeout:\n" + runOut);
+        assertEquals(0, run.exitValue(), "exit:\n" + runOut);
+        assertEquals("native ok", runOut.trim(), "saída do binário empacotado");
+
+        // checksum confere
+        String sums = Files.readString(dir.resolve("dist/deploy/edge-2.0.0/SHA256SUMS"),
+                StandardCharsets.UTF_8);
+        assertEquals(CmdDeploy.sha256Hex(bin) + "  edge-2.0.0", sums.trim(),
+                "SHA256SUMS diverge do ELF");
+
+        // tar: artefato com mode 0755 no header
+        try (GZIPInputStream in = new GZIPInputStream(
+                Files.newInputStream(dir.resolve("dist/deploy/edge-2.0.0.tar.gz")))) {
+            byte[] header = new byte[512];
+            assertEquals(512, in.readNBytes(header, 0, 512));
+            int mode = tarMode(header);
+            assertTrue((mode & 0111) != 0, "artefato native deve ser executável: "
+                    + Integer.toOctalString(mode));
+        }
+    }
+
+    /** X9 fatia 2: face JS — o Default.mjs entra no pacote com checksum. */
+    @Test
+    void jsFacePackagesEntry(@TempDir Path dir) throws Exception {
+        Path src = writeApp(dir, "main() { println(\"js ok\") }\n");
+        CliResult r = run(dir, "deploy", src.toString(), "--target", "js",
+                "--output", "dist", "--name", "webapp", "--version", "0.9.0");
+        assertEquals(0, r.exit(), "deploy js, saída:\n" + r.out());
+
+        Path mjs = dir.resolve("dist/deploy/webapp-0.9.0/webapp-0.9.0.mjs");
+        assertTrue(Files.isRegularFile(mjs), ".mjs ausente:\n" + r.out());
+        String sums = Files.readString(dir.resolve("dist/deploy/webapp-0.9.0/SHA256SUMS"),
+                StandardCharsets.UTF_8);
+        assertEquals(CmdDeploy.sha256Hex(mjs) + "  webapp-0.9.0.mjs", sums.trim());
+        String release = Files.readString(dir.resolve("dist/deploy/webapp-0.9.0/RELEASE.md"),
+                StandardCharsets.UTF_8);
+        assertTrue(release.contains("node webapp-0.9.0.mjs"), release);
+        assertTrue(release.contains("js"), release);
+    }
+
+    /** X9 fatia 2: ANDROID/cross continuam DEP001 honesto. */
+    @Test
+    void androidAndCrossStayHonestGaps(@TempDir Path dir) throws Exception {
+        Path src = writeApp(dir, "main() { println(\"x\") }\n");
+        for (String t : new String[]{"android", "native.risc", "native.arm"}) {
+            CliResult r = run(dir, "deploy", src.toString(), "--target", t);
+            assertEquals(1, r.exit(), t + " deve recusar (DEP001): " + r.out());
+            assertTrue(r.out().contains("DEP001"), t + " esperava DEP001: " + r.out());
+        }
     }
 
     @Test
@@ -159,6 +225,16 @@ class CmdDeployTest {
             if (n <= 0) break;
             toSkip -= n;
         }
+    }
+
+    private static int tarMode(byte[] header) {
+        int mode = 0;
+        for (int i = 100; i < 108 && header[i] != 0; i++) {
+            char c = (char) header[i];
+            if (c == ' ') continue;
+            mode = mode * 8 + (c - '0');
+        }
+        return mode;
     }
 
     private static boolean isZeroBlock(byte[] block) {
