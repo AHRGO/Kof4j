@@ -10,6 +10,12 @@ import static org.junit.jupiter.api.Assertions.*;
  * documented compile-time gap code — never a silent stub nor a link break.
  * Each case pins a row of {@code docs/bugs-and-gaps/backend-parity.md}
  * (Documented Gaps). Measured on the CLI 17/09; this keeps the matrix honest.
+ *
+ * The web-gate cases pin the code the corpus promises for each feature
+ * (TLS {@code WEB002}, SSE {@code WEB003}, WebSocket {@code WEB004},
+ * security middleware {@code WEB006}) — the {@code app.serveDir} /
+ * {@code WEB005} drift of §275 happened exactly because the catch-all
+ * emitted {@code WEB001} while only the docs knew {@code WEB005}.
  */
 class DomainGapCodesTest {
     private final CompilerDriver driver = new CompilerDriver();
@@ -56,6 +62,64 @@ class DomainGapCodesTest {
         assertGap(tmp, Target.NATIVE, "OBS003", """
             main() {
                 println(observability.exportSpans())
+            }
+            """);
+    }
+
+    @Test
+    void webTlsOnNonJvmIsWeb002(@TempDir Path tmp) throws Exception {
+        assertGap(tmp, Target.JS, "WEB002", """
+            main() {
+                val app = web.app()
+                app.listenSecure(8443)
+            }
+            """);
+        assertGap(tmp, Target.NATIVE, "WEB002", """
+            main() {
+                val app = web.app()
+                app.listenSecure(8443)
+            }
+            """);
+    }
+
+    @Test
+    void webSseOnNativeIsWeb003(@TempDir Path tmp) throws Exception {
+        assertGap(tmp, Target.NATIVE, "WEB003", """
+            main() {
+                val app = web.app()
+                app.sse("/events") { return "x" }
+            }
+            """);
+    }
+
+    @Test
+    void webWsOnNonJvmIsWeb004(@TempDir Path tmp) throws Exception {
+        assertGap(tmp, Target.JS, "WEB004", """
+            main() {
+                val app = web.app()
+                app.ws("/chat") { return "x" }
+            }
+            """);
+        assertGap(tmp, Target.NATIVE, "WEB004", """
+            main() {
+                val app = web.app()
+                app.ws("/chat") { return "x" }
+            }
+            """);
+    }
+
+    @Test
+    void webSecurityMiddlewareOnNonJvmIsWeb006(@TempDir Path tmp) throws Exception {
+        assertGap(tmp, Target.JS, "WEB006", """
+            main() {
+                val app = web.app()
+                app.security()
+            }
+            """);
+        assertGap(tmp, Target.NATIVE, "WEB006", """
+            main() {
+                val app = web.app()
+                app.security()
             }
             """);
     }
