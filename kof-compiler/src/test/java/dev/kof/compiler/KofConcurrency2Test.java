@@ -834,6 +834,42 @@ class KofConcurrency2Test {
                 """, "sel=boom\nok=true");
     }
 
+    @Test
+    void selectAnyWaitPathSurvivesUsleepNative(@TempDir Path tmp) throws Exception {
+        // §252 (raiz): select_any cacheava size em -8(%rsp); o `call usleep`
+        // empilhava o endereço de retorno NA MESMA SLOT e o re-scan relia a
+        // slot -> varria idx 0,1,2 além do fim da lista -> pânico falso.
+        // AMBOS os handles lenta (>1ms) força o caminho de espera; o scan
+        // pós-usleep deve parar no fim da lista (2) e continuar esperando.
+        runNative(tmp, """
+                Object lenta() { time.sleep(2); throw "boom" }
+                Int rapida() { time.sleep(30); return 7 }
+                main() {
+                    val a = spawn lenta()
+                    val b = spawn rapida()
+                    var ok = true
+                    try { selectAny(a, b); ok = false } catch (String e) { println("sel=" + e) }
+                    println("ok=" + ok)
+                }
+                """, "sel=boom\nok=true");
+    }
+
+    @Test
+    void selectAnyWaitPathReturnsValueAfterUsleepNative(@TempDir Path tmp) throws Exception {
+        // mesmo caminho de espera (2 lentos), mas o primeiro pronto entrega
+        // VALOR: o re-scan pós-usleep não pode varrer pós-fim nem perder o
+        // handle concluído.
+        runNative(tmp, """
+                Int lenta1() { time.sleep(2); return 11 }
+                Int lenta2() { time.sleep(30); return 22 }
+                main() {
+                    val a = spawn lenta1()
+                    val b = spawn lenta2()
+                    println("sel=" + selectAny(a, b))
+                }
+                """, "sel=11");
+    }
+
     private String runNative(Path tempDir, String source, String expected) throws java.io.IOException {
         Path file = tempDir.resolve("Main-" + System.nanoTime() + ".kf");
         Files.writeString(file, source);
