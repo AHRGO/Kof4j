@@ -918,10 +918,10 @@ domain (`INFRA00x`/`DATA00x`/`SCI00x`/`BIO00x`/`SECPQ`) + parity matrix;
 | # | Item | REAL measured state |
 |---|------|--------------------|
 | 2.1.1–2.1.3 | `extern` syntax + type-check + gaps `FFI001`/`FFI002` (never silent drop) | ✅ `Parser.java:192` (PARSE090), `ExternalFunctionNode`, `FfiE2ETest` |
-| 2.1.4 | **JVM** binding (FFM `java.lang.foreign`) | ✅ real `abs`/`atoi`(String→Int)/`sqrt`(Double→Double) via FFM |
+| 2.1.4 | **JVM** binding (FFM `java.lang.foreign`) | ✅ **generalized 18/09 (`.18`, R3):** any scalar signature, arbitrary arity, `void`/`String` returns — measured `fmod`→1.5, `ldexp`→12.0, `strncmp`→-1, `puts(void)`, `getenv`→String (`syntax.md`) |
 | 2.1.5 | **Native** binding (`dlsym`) | ❌ **honest gap `FFI001`** — `dlopen` segfaults in the raw binary (no glibc init); it is NOT "✅ real" |
-| 2.1.6 | struct/array marshalling | 🟡 String↔Int, Double↔Double (JVM); complete struct/array pending |
-| 2.1.7 | JS: gap `FFI002` | ✅ |
+| 2.1.6 | struct/array marshalling | 🟡 all SCALAR shapes bind (JVM+JS-host since 18/09); struct/array/pointer still honest `FFI001` (design D6 ⛔ maintainer) |
+| 2.1.7 | JS: gap `FFI002` | ✅ honest gap + **scalar parity CLOSED 18/09 (`d3598c2d`, slices 3.6.F1–F3):** host runner binds via `KofJsFfiBridge`, `FfiE2ETest` 16/16 byte-for-byte JVM↔JS; browser = runtime R7; non-scalar keeps `FFI002` |
 | 2.2.1 | Inventory of implicit codegen (4 points: runtime `.source()`, `desugarTests`, `desugarApplication`, entity→record+schema) | ✅ the 4 exist (`CompilerPipeline:295-296`) |
 | 2.2.2 | **Formal `CodegenStep` hook** | ❌ **does NOT exist at HEAD** — `d1c56bad` added it, the pipeline went back to calling the `desugar*` directly; the old "✅" was an over-claim from the `planning-future` branch |
 | 2.2.3 | Migrate DDL/runner to the formal hook | ❌ blocked by 2.2.2 |

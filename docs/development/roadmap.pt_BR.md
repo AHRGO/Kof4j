@@ -920,10 +920,10 @@ tiers `stable`/`experimental` (`docs/backend-parity.md`).
 | # | Item | Estado REAL medido |
 |---|------|--------------------|
 | 2.1.1–2.1.3 | Sintaxe `extern` + type-check + gaps `FFI001`/`FFI002` (nunca drop silencioso) | ✅ `Parser.java:192` (PARSE090), `ExternalFunctionNode`, `FfiE2ETest` |
-| 2.1.4 | Binding **JVM** (FFM `java.lang.foreign`) | ✅ `abs`/`atoi`(String→Int)/`sqrt`(Double→Double) reais via FFM |
+| 2.1.4 | Binding **JVM** (FFM `java.lang.foreign`) | ✅ **generalizado 18/09 (`.18`, R3):** qualquer assinatura escalar, aridade livre, retornos `void`/`String` — medidos `fmod`→1.5, `ldexp`→12.0, `strncmp`→-1, `puts(void)`, `getenv`→String (`syntax.md`) |
 | 2.1.5 | Binding **Native** (`dlsym`) | ❌ **gap honesto `FFI001`** — `dlopen` segfaulta no binário cru (sem init glibc); NÃO é "✅ real" |
-| 2.1.6 | Marshalling struct/array | 🟡 String↔Int, Double↔Double (JVM); struct/array completo pendente |
-| 2.1.7 | JS: gap `FFI002` | ✅ |
+| 2.1.6 | Marshalling struct/array | 🟡 todas as formas ESCALARES ligam (JVM+host JS desde 18/09); struct/array/ponteiro seguem `FFI001` honesto (design D6 ⛔ mantenedora) |
+| 2.1.7 | JS: gap `FFI002` | ✅ gap honesto + **paridade escalar FECHADA 18/09 (`d3598c2d`, fatias 3.6.F1–F3):** runner host liga via `KofJsFfiBridge`, `FfiE2ETest` 16/16 byte-for-byte JVM↔JS; browser = runtime R7; nao-escalar mantem `FFI002` |
 | 2.2.1 | Inventário do codegen implícito (4 pontos: runtime `.source()`, `desugarTests`, `desugarApplication`, entity→record+schema) | ✅ os 4 existem (`CompilerPipeline:295-296`) |
 | 2.2.2 | **Hook formal `CodegenStep`** | ❌ **NÃO existe no HEAD** — `d1c56bad` adicionou, a pipeline voltou a chamar os `desugar*` direto; o "✅" antigo era sobre-claim da branch `planning-future` |
 | 2.2.3 | Migrar DDL/runner p/ o hook formal | ❌ bloqueado por 2.2.2 |
