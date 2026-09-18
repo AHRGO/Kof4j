@@ -140,16 +140,24 @@ Each area has its own document in `docs/stdlib*.md` (not duplicated here). The
    `extern`→`kofFfi`→`kof_platform.ffi` on the GraalJS/node runner — `FfiE2ETest`
    asserts byte-for-byte JVM↔JS equality (abs/atoi/sqrt/pow/`atol`→`labs` Long/strstr/
    srand void); a browser has no `kof_platform.ffi` host so an extern call throws an
-   honest **runtime** error (R7, the same degrade as `kof.io`), and a **non-scalar**
-   signature (array/struct/pointer) still emits `FFI002` at compile time. Still NOT
-   bound — honest `FFI001` at compile time on JVM/Native, never a silent stub (R6): struct/array/pointer
-   ABI (design D6, ⛔ maintainer), callbacks/upcalls (3.4), variadics (3.5, ⛔) and
-   opaque handles/out-buffers (3.3, ⛔). Native emits `FFI001`
-   (`<target>` not supported yet, §61). A missing lib/symbol fails at **runtime** with
-   a `kof_ffi` exception naming `lib::symbol` (stack trace, not a surgical
-    message). Remaining R3 slices (structs/D6, callbacks/upcalls, variadics, handles,
-    Native parity; **JS scalar parity closed**)
-   in
+    honest **runtime** error (R7, the same degrade as `kof.io`), and a **non-scalar**
+    signature (array/struct/pointer) still emits `FFI002` at compile time.
+    **Callbacks/upcalls (slice 3.4, 18/09)**: an `extern` with a **function-typed
+    parameter** binds on the **JVM** — the Kof function value becomes a real C function
+    pointer via `Linker.upcallStub` (`JvmFfiCallbackE2ETest` runs `(x,y)->x+y` through
+    C callbacks across Int/Long/Double/mixed ABIs → `42/42/6.0/7.5`); the contract is
+    **synchronous/non-escaping** (the stub is scoped to the call's arena) and the
+    callback ABI is **primitive-only** — a `String`/struct/pointer inside a callback, or
+    callback-as-return, stays an honest `FFI001`. The **JS** target still emits `FFI002`
+    for a callback (parity = slice 3.4-C3). Still NOT
+    bound — honest `FFI001` at compile time on JVM/Native, never a silent stub (R6): struct/array/pointer
+    ABI (design D6, ⛔ maintainer), variadics (3.5, ⛔) and
+    opaque handles/out-buffers (3.3, ⛔). Native emits `FFI001`
+    (`<target>` not supported yet, §61). A missing lib/symbol fails at **runtime** with
+    a `kof_ffi` exception naming `lib::symbol` (stack trace, not a surgical
+     message). Remaining R3 slices (structs/D6, variadics, handles, Native parity, **JS
+     callback parity 3.4-C3**; **JVM scalar+callback and JS scalar parity closed**)
+    in
    `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (use-case #431);
   `extern "c"` on Native depends on §61.
 

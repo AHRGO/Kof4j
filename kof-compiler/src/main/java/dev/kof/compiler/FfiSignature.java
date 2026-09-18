@@ -33,7 +33,15 @@ final class FfiSignature {
     static String signature(ExternalFunctionNode ext) {
         StringBuilder sb = new StringBuilder();
         sb.append(returnChar(ext.returnType()));
-        for (var p : ext.parameters()) sb.append(paramChar(p.type()));
+        for (var p : ext.parameters()) {
+            Character c = paramChar(p.type());
+            if (c != null) {
+                sb.append(c);
+            } else {
+                // callback (R3, 3.4): token aninhado "(<retchar><paramchars>)"
+                sb.append('(').append(callbackDescriptor(p.type())).append(')');
+            }
+        }
         return sb.toString();
     }
 
@@ -51,5 +59,72 @@ final class FfiSignature {
     static boolean isFloatFFI(String t) { return "float".equals(t) || "Float".equals(t); }
     static boolean isBoolFFI(String t) {
         return "bool".equals(t) || "boolean".equals(t) || "Boolean".equals(t);
+    }
+
+    // ---- callbacks / upcalls (R3, fatia 3.4): token C(<ret><params>) ----------------
+    // Só primitivos nos parâmetros do callback (String/void/pointer ficam fora do
+    // conjunto bindável → o gate mantém FFI001/FFI002 honestos, R6); retorno pode ser
+    // primitivo ou void. Ex.: "(Int, Int) -> Int" -> descritor "iii".
+
+    static Character cbParamChar(String t) {
+        Character c = paramChar(t);
+        if (c == null || c.charValue() == 'S' || c.charValue() == 'v') return null;
+        return c;
+    }
+
+    static Character cbReturnChar(String t) {
+        if (isVoidFFI(t)) return 'v';
+        Character c = paramChar(t);
+        if (c == null || c.charValue() == 'S') return null;
+        return c;
+    }
+
+    static boolean isFunctionType(String t) {
+        return t != null && t.startsWith("(") && t.contains(" -> ");
+    }
+
+    /** Descritor de callback ("r" + chars dos params) ou null se não for bindável. */
+    static String callbackDescriptor(String t) {
+        if (!isFunctionType(t)) return null;
+        int close = matchParen(t, 0);
+        if (close < 0) return null;
+        String rest = t.substring(close + 1).trim();
+        if (!rest.startsWith("->")) return null;
+        Character rc = cbReturnChar(rest.substring(2).trim());
+        if (rc == null) return null;
+        StringBuilder sb = new StringBuilder();
+        sb.append(rc.charValue());
+        String paramsStr = t.substring(1, close).trim();
+        if (!paramsStr.isEmpty()) {
+            for (String p : splitTopLevel(paramsStr)) {
+                Character pc = cbParamChar(p.trim());
+                if (pc == null) return null;
+                sb.append(pc.charValue());
+            }
+        }
+        return sb.toString();
+    }
+
+    private static int matchParen(String s, int open) {
+        int depth = 0;
+        for (int i = open; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == '(') depth++;
+            else if (c == ')') { depth--; if (depth == 0) return i; }
+        }
+        return -1;
+    }
+
+    private static java.util.List<String> splitTopLevel(String s) {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        int depth = 0, start = 0;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == '(' || c == '<') depth++;
+            else if (c == ')' || c == '>') depth--;
+            else if (c == ',' && depth == 0) { out.add(s.substring(start, i)); start = i + 1; }
+        }
+        out.add(s.substring(start));
+        return out;
     }
 }

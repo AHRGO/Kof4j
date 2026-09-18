@@ -88,10 +88,28 @@ final class JvmFfiRuntime {
                         java.lang.foreign.MemoryLayout[] pl =
                                 new java.lang.foreign.MemoryLayout[args.length];
                         Object[] real = new Object[args.length];
+                        int cur = 1;
                         for (int i = 0; i < args.length; i++) {
-                            char c = sig.charAt(i + 1);
-                            pl[i] = kof_ffi_layout(c);
-                            real[i] = (c == 'S') ? arena.%1$s((String) args[i]) : args[i];
+                            char c = sig.charAt(cur);
+                            if (c == '(') {
+                                int j = cur + 1;
+                                int depth = 1;
+                                StringBuilder inner = new StringBuilder();
+                                while (depth > 0) {
+                                    char x = sig.charAt(j);
+                                    if (x == '(') { depth++; inner.append(x); }
+                                    else if (x == ')') { depth--; if (depth > 0) inner.append(x); }
+                                    else inner.append(x);
+                                    j++;
+                                }
+                                cur = j;
+                                pl[i] = java.lang.foreign.ValueLayout.ADDRESS;
+                                real[i] = kof_ffi_upcall(linker, arena, args[i], inner.toString());
+                            } else {
+                                cur++;
+                                pl[i] = kof_ffi_layout(c);
+                                real[i] = (c == 'S') ? arena.%1$s((String) args[i]) : args[i];
+                            }
                         }
                         java.lang.foreign.FunctionDescriptor fd = (ret == 'v')
                                 ? java.lang.foreign.FunctionDescriptor.ofVoid(pl)
@@ -130,6 +148,60 @@ final class JvmFfiRuntime {
                         case 'b' -> java.lang.foreign.ValueLayout.JAVA_BOOLEAN;
                         case 'S' -> java.lang.foreign.ValueLayout.ADDRESS;
                         default -> throw new IllegalArgumentException("bad ffi layout char: " + c);
+                    };
+                }
+
+                // Callback/upcall (R3, 3.4): um valor de função Kof (objeto que
+                // implementa a interface sintética `invoke(...)`) vira ponteiro de
+                // função C. A interface do Kof é ESPECIALIZADA (ex. int invoke(int,int)),
+                // então o `unreflect` já dá um MethodHandle de carrier unboxed; o
+                // `.asType(mt)` é o bridge (no-op quando o tipo bate). O stub vive na
+                // arena da chamada → só callback SÍNCRONO/não-escapante (medido em C1).
+                static java.lang.foreign.MemorySegment kof_ffi_upcall(
+                        java.lang.foreign.Linker linker, java.lang.foreign.Arena arena,
+                        Object closure, String inner) throws Throwable {
+                    char rb = inner.charAt(0);
+                    int arity = inner.length() - 1;
+                    java.lang.foreign.MemoryLayout[] il =
+                            new java.lang.foreign.MemoryLayout[arity];
+                    Class<?>[] cs = new Class<?>[arity];
+                    for (int k = 0; k < arity; k++) {
+                        char c = inner.charAt(k + 1);
+                        il[k] = kof_ffi_layout(c);
+                        cs[k] = kof_ffi_carrier(c);
+                    }
+                    java.lang.invoke.MethodType mt =
+                            java.lang.invoke.MethodType.methodType(kof_ffi_carrier(rb), cs);
+                    java.lang.reflect.Method m = null;
+                    for (java.lang.reflect.Method cand : closure.getClass().getMethods()) {
+                        if (cand.getName().equals("invoke")
+                                && cand.getParameterCount() == arity) {
+                            m = cand;
+                            break;
+                        }
+                    }
+                    if (m == null) {
+                        throw new RuntimeException("kof_ffi: callback "
+                                + closure.getClass().getName()
+                                + " has no arity-" + arity + " invoke()");
+                    }
+                    java.lang.invoke.MethodHandle mh = java.lang.invoke.MethodHandles.lookup()
+                            .unreflect(m).bindTo(closure).asType(mt);
+                    java.lang.foreign.FunctionDescriptor fd = (rb == 'v')
+                            ? java.lang.foreign.FunctionDescriptor.ofVoid(il)
+                            : java.lang.foreign.FunctionDescriptor.of(kof_ffi_layout(rb), il);
+                    return linker.upcallStub(mh, fd, arena);
+                }
+
+                static Class<?> kof_ffi_carrier(char c) {
+                    return switch (c) {
+                        case 'i' -> int.class;
+                        case 'j' -> long.class;
+                        case 'f' -> float.class;
+                        case 'd' -> double.class;
+                        case 'b' -> boolean.class;
+                        case 'v' -> void.class;
+                        default -> throw new IllegalArgumentException("bad ffi carrier char: " + c);
                     };
                 }
 

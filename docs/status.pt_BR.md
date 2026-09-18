@@ -25,10 +25,16 @@
 > `FfiE2ETest` soma 7 casos `assertJvmJsParity` provando igualdade byte-a-byte JVM↔JS
 > (doubles `3.0`/`1024.0`, `Long` via `atol`→`labs`, `char*`→String, `void`); o browser
 > não tem host → degrade honesto em runtime (R7), e assinaturas não-escalares seguem
-> `FFI002`. Paridade ainda não alcançada: struct/pointer (D6),
-> callbacks/upcalls, variadics e handles opacos seguem `FFI001`;
-> Native `FFI001` (§61) permanece gap honesto por target (R7). Decomposição
-> completa em §R3-fatias do plano universal.
+> `FFI002`. **Callbacks bindam na JVM (fatia 3.4-C2, mesmo dia):** um `extern` com
+> parâmetro de tipo-função baixa para `kof_ffi` (token aninhado `(<ret><params>)`) e o
+> runtime monta um ponteiro de função C via `Linker.upcallStub` sobre o valor de função
+> Kof — `JvmFfiCallbackE2ETest` computa `42/42/6.0/7.5` em ABIs de callback
+> Int/Long/Double/mistas; contrato síncrono/não-escapante, ABI só primitiva; paridade JS
+> de callback = fatia 3.4-C3 (`FFI002`). Paridade ainda não alcançada: struct/pointer (D6),
+> variadics e handles opacos seguem `FFI001`;
+> Native `FFI001` (§61) e a paridade JS de callback permanecem gaps honestos por target
+> (R7). Decomposição
+> completa em §R3-fatias / §R3-3.4 do plano universal.
 >
 > **18/09 — §132 FECHADO (#83-JS) — o KofJS roda o supervisor OTP com paridade
 > (dono = 192.168.100.18, lane development).** O `time.sleep` agora é um **ponto de
