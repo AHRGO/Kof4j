@@ -10517,7 +10517,7 @@ The corpus (`backend-parity.md` media row + `stdlib-web.md` ×3 + `KofCliSupport
 
 **Proof:** `LambdaFieldCaptureTest` 4/4 — verbatim EXECUTES `15` (Q0: without the fix 3/4 RED on the run asserts), mixed field+mutated-local keeps the pre-existing by-reference local semantics (measured golden `102`, not the guessed `13` — r1), wide `Long` + `String` fields through the sentinel print `v=10000000005`; CLI measured `15` on **all four targets** (jvm/script/js/native). Coordination note: this repo is shared by several agents and `git stash` is per-repository — a lane popped a foreign `stash@{0}` mid-unit (entry kept, work preserved, lesson recorded): tag stashes (`stash push -m <lane>`) and never blind-pop.
 
-## §285 — unannotated `listOf`/`setOf` with related subtypes inferred the element type from the FIRST argument (`checkcast Dog` on every get) → `ClassCastException` on any other element — ✅ FIXED 19/09 (lane compiler `.22`, #360)
+## §285 — unannotated `listOf`/`setOf` with related subtypes inferred the element type from the FIRST argument (`checkcast Dog` on every get) → `ClassCastException` on any other element — ✅ FIXED 18/09 (lane compiler `.22`, #360)
 
 **Symptom (measured pre-fix, tip jar):** `var animals = listOf(new Dog(), new Cat())` printed `woof` then `ClassCastException: class Cat cannot be cast to class Dog`; bytecode: `checkcast Dog` before both `invokevirtual sound`. The same first-wins ran through `setOf`.
 
@@ -10529,7 +10529,7 @@ The corpus (`backend-parity.md` media row + `stdlib-web.md` ×3 + `KofCliSupport
 
 ## §286 — `KofConcurrency2Test.cancelDoesNotLeakAcrossWorkersNative` goes RED under host load (sleep-based native timing test; family of §256 poll(b) load flake) — 🔴 OPEN (owner = nat lane)
 
-**Observed (19/09 ~04:3x UTC, lane compiler `.22`, full-suite run on tip WITH #360 fix `f6e4793c`):** 1/2154 failure = `cancel do worker k não pode marcar o worker k+1 (§117)` — `VAZOU` printed instead of `sem-vazamento`, **Time elapsed 126.9 s** (a 75× distortion of the normal ~1.7 s: 20 rounds of `sleep(15)`+`sleep(5)` cannot take 127 s otherwise).
+**Observed (18/09 ~04:3x UTC, lane compiler `.22`, full-suite run on tip WITH #360 fix `f6e4793c`):** 1/2154 failure = `cancel do worker k não pode marcar o worker k+1 (§117)` — `VAZOU` printed instead of `sem-vazamento`, **Time elapsed 126.9 s** (a 75× distortion of the normal ~1.7 s: 20 rounds of `sleep(15)`+`sleep(5)` cannot take 127 s otherwise).
 
 **Not attributable to the running lane (measured both sides):** isolated re-run on the SAME tip with fix: GREEN 1.756 s; isolated run with the three #360 files reverted to pre-fix tip: GREEN 2.044 s. The test has no collections and no inference surface; the RED correlates with concurrent host load (multi-agent native builds on this box) — the same shape as the §256 `poll(b)` load flake and the (now fixed) §252 usleep-slot family.
 
