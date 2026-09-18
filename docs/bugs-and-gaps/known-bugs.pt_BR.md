@@ -9961,7 +9961,7 @@ O corpus (`backend-parity.md` linha de mídia + `stdlib-web.md` ×3 + mensagem A
 
 ### §279 — KofJS: um `if` sobre **primitivo nulável** cuja condição o otimizador dobra deixa o marcador `KofStatementIf` do §267 órfão → `COMP002 unexpected op in expression statement` (ICE) — 🟡 ABERTO (achado 18/09 na triagem da ISSUE-LANE `.22`, re-medido pela lane bugs-and-gaps `.15`; dono do fix = lane KofJS `.18` — regressão do marcador do §267)
 
-- **Sintoma (medido 18/09 no tip `a35067b9`, build fresco do `kof-compiler`):** a compilação para JS de um `if` cuja condição é um null-check de **primitivo nulável** aborta com erro interno do compilador em vez de compilar:
+- **Sintoma (medido 18/09 no tip `a35067b9`; re-medido ~08:00 UTC no tip `c4dbefff` apos o trio §281/§285 — os DOIS verbatim inalterados, segue ABERTO):** a compilação para JS de um `if` cuja condição é um null-check de **primitivo nulável** aborta com erro interno do compilador em vez de compilar:
   - null-check de `Int?`/`Boolean?` numa **cadeia else-if** → `Internal compiler error: KofJS: unexpected op in expression statement: KofStatementIf[branchTrueLabel=LabelId[id=5]]` (**COMP002**).
   - null-check de `Int?`/`Boolean?` num `if` **sem else** que é o **último statement de uma função void** (return implícito) → `... KofReturnVoid[]` (**COMP002**).
 - **Reprodução mínima (verbatim, medido):**
