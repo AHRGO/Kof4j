@@ -1,0 +1,168 @@
+package dev.kof.cli;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.concurrent.TimeUnit;
+import java.util.zip.GZIPInputStream;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+/**
+ * X9 fatia 1 ({@code kof deploy --target jvm}): a release empacotada é REAL —
+ * o jar roda ({@code java -jar}), o SHA256SUMS confere com o artefato, o
+ * RELEASE.md carrega os metadados e o .tar.gz é um tar ustar+gzip legível.
+ * Recusas honestas (R6/R7): target não-JVM e --publish (registry = decisão
+ * D2) saem com exit 1 + DEP001; flag desconhecida nunca é ignorada.
+ */
+class CmdDeployTest {
+
+    private static Process startCli(Path workDir, String... cliArgs) throws IOException {
+        java.util.List<String> cmd = new java.util.ArrayList<>();
+        cmd.add(Path.of(System.getProperty("java.home"), "bin", "java").toString());
+        cmd.add("-cp");
+        cmd.add(System.getProperty("java.class.path"));
+        cmd.add("dev.kof.cli.Main");
+        cmd.addAll(java.util.List.of(cliArgs));
+        ProcessBuilder pb = new ProcessBuilder(cmd);
+        pb.directory(workDir.toFile());
+        pb.redirectErrorStream(true);
+        return pb.start();
+    }
+
+    private static Path writeApp(Path dir, String body) throws IOException {
+        Path src = dir.resolve("src");
+        Files.createDirectories(src);
+        Files.writeString(src.resolve("Main.kf"), body);
+        return src;
+    }
+
+    private record CliResult(int exit, String out) {}
+
+    private static CliResult run(Path workDir, String... cliArgs) throws Exception {
+        Process p = startCli(workDir, cliArgs);
+        String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        p.waitFor(180, TimeUnit.SECONDS);
+        return new CliResult(p.exitValue(), out);
+    }
+
+    @Test
+    void jvmReleaseIsPackagedAndConsistent(@TempDir Path dir) throws Exception {
+        Path src = writeApp(dir, "main() { println(\"deploy ok\") }\n");
+        CliResult r = run(dir, "deploy", src.toString(), "--target", "jvm",
+                "--output", "dist", "--name", "servico", "--version", "1.2.3");
+        assertEquals(0, r.exit(), "deploy exit, output:\n" + r.out());
+
+        Path releaseDir = dir.resolve("dist/deploy/servico-1.2.3");
+        assertTrue(Files.isDirectory(releaseDir), r.out());
+        Path jar = releaseDir.resolve("servico-1.2.3.jar");
+        assertTrue(Files.isRegularFile(jar), "jar ausente:\n" + r.out());
+
+        // prova real: o artefato empacotado RODA
+        Process run = new ProcessBuilder(
+                Path.of(System.getProperty("java.home"), "bin", "java").toString(),
+                "-jar", jar.toString())
+                .directory(dir.toFile()).redirectErrorStream(true).start();
+        String runOut = new String(run.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        assertTrue(run.waitFor(60, TimeUnit.SECONDS), "java -jar timeout:\n" + runOut);
+        assertEquals(0, run.exitValue(), "java -jar exit:\n" + runOut);
+        assertEquals("deploy ok", runOut.trim(), "saída do app empacotado");
+
+        // checksum confere com o artefato
+        String sums = Files.readString(releaseDir.resolve("SHA256SUMS"), StandardCharsets.UTF_8);
+        String expected = CmdDeploy.sha256Hex(jar) + "  servico-1.2.3.jar";
+        assertEquals(expected, sums.trim(), "SHA256SUMS diverge do artefato");
+
+        // RELEASE.md com os metadados
+        String release = Files.readString(releaseDir.resolve("RELEASE.md"), StandardCharsets.UTF_8);
+        assertTrue(release.contains("servico-1.2.3.jar"), release);
+        assertTrue(release.contains("jvm"), release);
+        assertTrue(release.contains("Default.Main"), release);
+        assertTrue(release.contains("java -jar servico-1.2.3.jar"), release);
+
+        // tar.gz: ustar legível, primeiro entry = jar, 3 entries no total
+        Path tgz = dir.resolve("dist/deploy/servico-1.2.3.tar.gz");
+        assertTrue(Files.size(tgz) > 512, "tar vazio");
+        try (GZIPInputStream in = new GZIPInputStream(Files.newInputStream(tgz))) {
+            TarEntry e1 = tarEntry(in);
+            assertEquals("servico-1.2.3.jar", e1.name(), "1º entry");
+            skipTarPayload(in, e1.size());
+            TarEntry rel = tarEntry(in);
+            assertEquals("RELEASE.md", rel.name(), "2º entry");
+            skipTarPayload(in, rel.size());
+            TarEntry sumsEntry = tarEntry(in);
+            assertEquals("SHA256SUMS", sumsEntry.name(), "3º entry");
+            skipTarPayload(in, sumsEntry.size());
+            byte[] eof = new byte[512];
+            assertEquals(512, in.readNBytes(eof, 0, 512));
+            assertTrue(isZeroBlock(eof), "bloco final do tar deve ser zero");
+        }
+    }
+
+    @Test
+    void nonJvmTargetIsHonestGap(@TempDir Path dir) throws Exception {
+        Path src = writeApp(dir, "main() { println(\"x\") }\n");
+        CliResult r = run(dir, "deploy", src.toString(), "--target", "native");
+        assertEquals(1, r.exit(), "native deploy deve recusar (DEP001): " + r.out());
+        assertTrue(r.out().contains("DEP001"), "esperava DEP001, saída: " + r.out());
+    }
+
+    @Test
+    void publishIsHonestGapD2(@TempDir Path dir) throws Exception {
+        Path src = writeApp(dir, "main() { println(\"x\") }\n");
+        CliResult r = run(dir, "deploy", src.toString(), "--target", "jvm",
+                "--publish", "example.registry");
+        assertEquals(1, r.exit(), "publish falso proibido (R6): " + r.out());
+        assertTrue(r.out().contains("DEP001"), "--publish deve recusar com DEP001: " + r.out());
+        assertTrue(r.out().contains("D2"), "mensagem deve citar a decisão D2: " + r.out());
+    }
+
+    @Test
+    void unknownFlagNeverSilent(@TempDir Path dir) throws Exception {
+        Path src = writeApp(dir, "main() { println(\"x\") }\n");
+        CliResult r = run(dir, "deploy", src.toString(), "--target", "jvm", "--fat");
+        assertEquals(1, r.exit(), "flag estranha deve recusar (R6): " + r.out());
+        assertTrue(r.out().contains("unknown or incomplete flag"), r.out());
+    }
+
+    // ── tar helpers ──
+
+    private record TarEntry(String name, long size) {}
+
+    /** Lê o header (nome ustar + size octal); o chamador decide pular o payload. */
+    private static TarEntry tarEntry(GZIPInputStream in) throws IOException {
+        byte[] header = new byte[512];
+        assertEquals(512, in.readNBytes(header, 0, 512), "tar header truncado");
+        String magic = new String(header, 257, 6, StandardCharsets.US_ASCII);
+        assertTrue(magic.startsWith("ustar"), "magic ustar ausente");
+        int end = 0;
+        while (end < 100 && header[end] != 0) end++;
+        String name = new String(header, 0, end, StandardCharsets.UTF_8);
+        long size = 0;
+        for (int i = 124; i < 136 && header[i] != 0; i++) {
+            char c = (char) header[i];
+            if (c == ' ') continue;
+            size = size * 8 + (c - '0');
+        }
+        return new TarEntry(name, size);
+    }
+
+    /** Pula payload + padding (512-aligned) do entry cujo header já foi consumido. */
+    private static void skipTarPayload(GZIPInputStream in, long size) throws IOException {
+        long toSkip = (size + 511) / 512 * 512;
+        while (toSkip > 0) {
+            long n = in.skip(toSkip);
+            if (n <= 0) break;
+            toSkip -= n;
+        }
+    }
+
+    private static boolean isZeroBlock(byte[] block) {
+        for (byte b : block) if (b != 0) return false;
+        return true;
+    }
+}
