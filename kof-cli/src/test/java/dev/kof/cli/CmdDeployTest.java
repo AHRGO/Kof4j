@@ -104,13 +104,11 @@ class CmdDeployTest {
         }
     }
 
-    @Test
-    void nonJvmTargetIsHonestGap(@TempDir Path dir) throws Exception {
-        Path src = writeApp(dir, "main() { println(\"x\") }\n");
-        CliResult r = run(dir, "deploy", src.toString(), "--target", "android");
-        assertEquals(1, r.exit(), "android deploy deve recusar (DEP001): " + r.out());
-        assertTrue(r.out().contains("DEP001"), "esperava DEP001, saída: " + r.out());
-    }
+    // nonJvmTargetIsHonestGap REMOVIDO (18/09): caso obsoleto apos a face
+    // ANDROID da X9 fatia 3 + §299 — "--target android" nao e mais um gap
+    // universal: com SDK empacota APK (androidWithSdkPackagesApk, verificado
+    // no CI ubuntu), sem SDK recusa honesto (androidWithoutSdkIsHonestFailure).
+    // Assertar DEP001 com ANDROID_HOME do runner = conflito com o e2e.
 
     @Test
     void publishIsHonestGapD2(@TempDir Path dir) throws Exception {
