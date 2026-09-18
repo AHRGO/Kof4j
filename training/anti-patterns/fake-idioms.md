@@ -177,7 +177,7 @@ this corpus/docs and the compiler *disagrees with its own docs*.
 | `n.abs()` / `n.equals(o)` / `n.toChar()` (methods on a **primitive**) | `math.abs(n)`, `a == b`, `n as Char` — primitives only have `toString()` and the `toInt()`/`toLong()`/`toFloat()`/`toDouble()` conversions. Rejected with `SEM074` (#362 ✅ FIXED 18/09: the unlisted call used to pass `check` and die at class load — `ClassFormatError`, empty Methodref owner) |
 | `::twice` / bare named-function reference (`val f = twice`, `listOf(twice)`) | lambda wrapper: `val f = (x: Int) -> twice(x)`; `listOf((x: Int) -> twice(x))` — measured 18/09: bare ref = SEM011, wrapper = `42` |
 | `l.sort()` / `l.indexOf(x)` on a `List` (Java API) | Kof `List` API is `add/get/set/remove/contains/size/isEmpty/clear/map/filter/reduce`; find position with a `for` + `get(i)`; order by sorting outside the list (interop) — no `sort`/`indexOf` promise |
-| `m.containsValue(v)` / `m.getOrDefault(k, d)` on a `Map` (Java API) | `m.values()` + `contains`, or `var v = m.get(k); if (v == null) …` — Kof `Map` API is `put/get/remove/containsKey/contains/size/clear/isEmpty/keys/values` |
+| `m.containsValue(v)` on a `Map` (Java API) | `m.values()` + `contains` — Kof `Map` API is `put/get/remove/containsKey/size/keys/values` (**`getOrDefault(k, d)` was fake until 0.4.0 and became REAL on 18/09 (`62bd455e`) — use it**)
 | `this(args)` constructor self-delegation (Java/C#) | Kof promises **`super(args)`** only (base class, first statement — `learn/07`); share init via a helper method both constructors call (measured working) |
 
 > Cross-check: if the reproducer would compile in **Kotlin/Java** because it is
