@@ -312,6 +312,14 @@ Golden rule: **never two agents on the same gap or on the same giant file**
 (`NativeRuntime.java`, `CompilerDriver.java`) at the same time. If it's
 unavoidable, coordinate in the chat first.
 
+**§NNN numbers are shared claims too.** Before creating a new section in
+`known-bugs.md` (or any ledger that uses `§NNN`), `git fetch` and take the next
+free number from the **remote tip**
+(`git show origin/<branch>:docs/bugs-and-gaps/known-bugs.md | grep -oE '^#{2,3} §[0-9]+' | tail -3`) —
+numbers picked "in flight" (local write → push → rebase) already forced a
+parallel lane to renumber twice (§281/§282, 18/09). If someone claimed it first,
+renumber on your own side BEFORE pushing: always cheap, unlike the collision.
+
 **Mandatory synchronization (pull before, push after):** before **every
 commit** — `git fetch` + `git pull --rebase` (with a dirty working tree, use
 `git stash push` before and `git stash pop` after, or `--autostash`) and

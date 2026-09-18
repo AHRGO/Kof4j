@@ -311,6 +311,14 @@ Regra de ouro: **nunca dois agentes no mesmo gap ou no mesmo arquivo gigante**
 (`NativeRuntime.java`, `CompilerDriver.java`) ao mesmo tempo. Se for
 inevitável, combine no chat antes.
 
+**Números §NNN também são claims compartilhados.** Antes de criar uma seção nova
+em `known-bugs.md` (ou qualquer ledger que use `§NNN`), `git fetch` e pegue o
+próximo número livre a partir do **tip remoto**
+(`git show origin/<branch>:docs/bugs-and-gaps/known-bugs.md | grep -oE '^#{2,3} §[0-9]+' | tail -3`) —
+números escolhidos "em voo" (escrever local → push → rebase) já forçaram uma lane
+paralela a renumerar duas vezes (§281/§282, 18/09). Se alguém pegou primeiro,
+renumere do SEU lado ANTES do push: sempre barato, ao contrário da colisão.
+
 **Sincronização obrigatória (pull antes, push depois):** antes de **todo
 commit** — `git fetch` + `git pull --rebase` (com working tree sujo, use
 `git stash push` antes e `git stash pop` depois, ou `--autostash`) e
