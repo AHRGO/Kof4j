@@ -10298,3 +10298,23 @@ behavior-preserving (`RawRowCollectionAccessE2ETest` + `SemanticResolutionTest`
   compiles. Q0: stashing `ExpressionBinaryLowerer` turns the verbatim RED
   (load crash); CLI measurement after the fix: JVM/Script/JS/Native all
   print `false`.
+
+### §274 — `scheduler.at(cron, fn)` IGNORED the cron expression on every target (ran every 60s) — ✅ FIXED 17/09 (lane bugs-and-gaps `.15`, authorized by the maintainer; JVM/JS real, Native honest compile-time gap)
+
+`at(cron)` was a documented gap (`CRON001`) that was **worse than documented**: the expression was not just unsupported, it was **silently discarded**. JVM `kof_scheduler_at` was `return kof_time_interval(60000, fn)` (`jvm/JvmTimeRuntime.java`); JS `kofSchedulerAt(cron, fn)` was `return kofSchedulerEvery(60000, fn)` (`js/JsRuntimeUiLayout.java`); Native x86/riscv aliased straight to `kof_scheduler_every` with `60000` hard-coded (`runtime/RuntimeScheduler.java`, `nat/NativeRiscvAsmMapset1.java`). A user writing `scheduler.at("0 3 * * *", job)` got a job firing every minute, forever — R6 violation, never a diagnostic.
+
+**Fix (JVM + JS):** a real 5-field cron parser (`min hour dom month dow`) evaluated in **UTC** (deterministic, cross-target parity, matches the stdlib UTC convention). Supports `*`, `a`, `a-b`, `a-b/s`, `*/s`, comma lists; DOW `0`/`7` = Sunday; when DOM **and** DOW are both restricted the classic **OR** rule applies; invalid cron raises loudly (`IllegalArgumentException` on JVM / `Error` on JS) instead of a silent fallback. JVM keeps a `ConcurrentHashMap` job model, sleeps in ≤1s chunks so `scheduler.cancel(id)` stays responsive, and recomputes the next delay after each run; JS stores the parsed fields in the existing cooperative `kofTimeJobs` queue and recalculates `next` per pump. A public `kof_cron_next_delay_ms(String, long)` (JVM) / exported `kofCronNextDelayMs(cron, now)` (JS) is the shared deterministic oracle.
+
+**Fix (Native):** `KofScheduler.supportedOn(function, target)` now refuses `kof_scheduler_at` on `Target.isNative()` at **compile time** with `CRON001` (honest gap, R6/R7) — the dead asm aliases are annotated and left only so the link does not break. Precedent: `security.cookieSet` (`SECN006`, JVM/JS-only).
+
+**Proof:** `KofTimeE2ETest` +4 (`cronNextDelayJvmMatchesTable`, `cronNextDelayJsMatchesJvmTable` — the same 11-row UTC table anchored at `2024-01-01T00:00:00Z`, plus 5 invalid crons asserted to throw on both targets; `schedulerAtNativeIsHonestGapCron001` — x86 + riscv64 + aarch64 all report `CRON001`; `schedulerAtInvalidCronFailsLoudlyJvm` — the process dies with a `cron` message and never reaches the following statement). `KofTimeE2ETest` 39 run / 0 fail / 7 skip.
+
+### §275 — `app.serveDir` on Native/JS emitted `WEB001` while the docs promised `WEB005` (phantom code; the documented gap was NEVER produced) — ✅ FIXED 17/09 (lane bugs-and-gaps `.15`, Stage 1 SYSTEMS / 1.1 parity gaps)
+
+The corpus (`backend-parity.md` media row + `stdlib-web.md` ×3 + `KofCliSupport.java` APP001 message, EN+PT) documents that `app.serveDir` on non-JVM targets is a compile-time gap with code **`WEB005`**. Measured 17/09 with the CLI: `--target js` and `--target native` both reported **`WEB001`** (`web: not available on the … driver.target yet (WEB001)`) — the documented code was never emitted by any module.
+
+**Root cause:** `serveDir` is an instance method of the app (`KofWeb.instanceMethod` → `kof_web_serve_dir`) and is gated in the web catch-all of `ExpressionBuiltinInstanceCalls.lowerWeb`, whose `default` branch hard-codes `WEB001`; `KofWeb.gapCode` had no `kof_web_serve_dir` case. The only `WEB005` mapping lived in `KofMedia.gapCode`, reachable only through the dead `KofMedia.appServeDir` static (zero callers) — so the intended code was orphaned in a second, unused table (the same class of drift as the `HTTP003`/`UUID002` phantoms of the 16/09 sweep).
+
+**Fix:** `kof_web_serve_dir` → `WEB005` in `KofWeb.gapCode` + a `WEB005` message case in `ExpressionBuiltinInstanceCalls.lowerWeb`; the dead `KofMedia.appServeDir` and its duplicate mapping were removed (single source of truth). `serveDir` stays JVM-only (honest R6/R7) — only the emitted code changed to honor the documented contract.
+
+**Proof:** `KofMediaE2ETest.serveDirOnNonJvmEmitsWeb005NotWeb001` — JS + `NATIVE` + `NATIVE_RISCV64` + `NATIVE_AARCH64` all report `WEB005` and NOT `WEB001`, plus the JVM control compiles (no gap leaked). CLI re-measured after the fix: `web serveDir: not available on the JS driver.target yet (WEB005)`. RED before the fix was measured on the CLI (`WEB001`).

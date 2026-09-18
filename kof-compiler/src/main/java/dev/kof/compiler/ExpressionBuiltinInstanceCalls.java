@@ -104,6 +104,8 @@ final class ExpressionBuiltinInstanceCalls {
                             + " driver.target yet (WEB003)";
                     case "WEB004" -> "web WebSocket: not available on the " + driver.target
                             + " driver.target yet (WEB004)";
+                    case "WEB005" -> "web serveDir: not available on the " + driver.target
+                            + " driver.target yet (WEB005)";
                     case "WEB006" -> "web security middleware: not available on the "
                             + driver.target + " driver.target yet (WEB006)";
                     default -> "web: not available on the " + driver.target

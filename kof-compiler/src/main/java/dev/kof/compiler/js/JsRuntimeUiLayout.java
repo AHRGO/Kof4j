@@ -513,7 +513,9 @@ public final class JsRuntimeUiLayout {
                 return kofTimeInterval(ms, fn);
             }
             export function kofSchedulerAt(cron, fn) {
-                return kofSchedulerEvery(60000, fn);
+                // CRON001: cron real (5 campos, UTC) — a fila cooperativa do
+                // kofTimeJobs recalcula o próximo disparo a cada execução.
+                return kofTimeScheduleCron(cron, fn);
             }
             export function kofSchedulerCancel(id) { kofTimeCancel(id); }
 

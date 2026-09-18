@@ -457,6 +457,36 @@ class KofMediaE2ETest {
         assertFalse(r.contains("Content-Range:"), "200 completo não tem Content-Range");
     }
 
+    // Q0 regression (17/09): docs (backend-parity + stdlib-web, EN+PT) promise
+    // WEB005 for `app.serveDir` on non-JVM targets, but the web gate's
+    // catch-all emitted WEB001 — the documented code was NEVER produced
+    // (phantom WEB005; the only mapping lived in the dead `KofMedia.appServeDir`).
+    // The fix wires `kof_web_serve_dir` → WEB005 in `KofWeb.gapCode`.
+    @Test
+    void serveDirOnNonJvmEmitsWeb005NotWeb001(@TempDir Path tmp) throws IOException {
+        Path source = tmp.resolve("Serve.kf");
+        Files.writeString(source, """
+                main() {
+                    var app = web.app()
+                    app.serveDir("/img", "assets")
+                    app.listen(8080)
+                }
+                """);
+        for (Target t : new Target[]{Target.JS, Target.NATIVE,
+                Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
+            CompilationResult r = driver.compile(source, tmp.resolve("serve-" + t), t);
+            assertFalse(r.success(), t + " serveDir deve ser gap honesto (JVM-only)");
+            String diags = r.diagnostics().getDiagnostics().toString();
+            assertTrue(diags.contains("WEB005"),
+                    t + " deve reportar WEB005 (contrato das docs): " + diags);
+            assertFalse(diags.contains("WEB001"),
+                    t + " WEB001 seria o catch-all errado: " + diags);
+        }
+        // Controle: no JVM o serveDir é real (não é gap) — o gate não vaza.
+        CompilationResult jvm = driver.compile(source, tmp.resolve("serve-jvm"), Target.JVM);
+        assertTrue(jvm.success(), "JVM serveDir deve compilar: " + jvm.diagnostics().getDiagnostics());
+    }
+
     @Test
     void micWithoutHardwareGivesClearGap() throws IOException {
         String kofSource = """

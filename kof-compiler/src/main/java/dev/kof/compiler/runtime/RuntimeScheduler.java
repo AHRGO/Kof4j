@@ -207,7 +207,10 @@ public final class RuntimeScheduler {
             .globl kof_scheduler_at
             .type kof_scheduler_at, @function
             kof_scheduler_at:
-                # rdi = cron (ignorado no MVP), rsi = task -> roda a cada 60s
+                # CRON001 (17/09): inalcançável a partir de Kof — o front-end
+                # recusa `scheduler.at` no Native em compile-time (sem parser
+                # cron em asm). Mantido só para o link não quebrar; não é um
+                # caminho suportado (o stub de 60s ignorava a expressão).
                 movq %rsi, %rax
                 movl $60000, %edi
                 movq %rax, %rsi
