@@ -39,36 +39,36 @@ class CmdBuildApkToolchainTest {
         touchExec(btRoot.resolve("36.0.0").resolve("aapt2"));
         touchExec(btRoot.resolve("36.0.0").resolve("d8"));
 
-        assertEquals("35.0.0", CmdBuild.pickBuildTools(home).getFileName().toString(),
+        assertEquals("35.0.0", ApkToolchain.pickBuildTools(home).getFileName().toString(),
                 "maior versao COMPLETA vence (9 < 34 lexicamente, 36 incompleta)");
     }
 
     @Test
     void pickBuildToolsSemNadaUsavelRetornaNull(@TempDir Path home) throws Exception {
-        assertNull(CmdBuild.pickBuildTools(home));
+        assertNull(ApkToolchain.pickBuildTools(home));
         touchExec(home.resolve("build-tools/20.0.0/aapt2"));
-        assertNull(CmdBuild.pickBuildTools(home), "ferramentas faltando = null honesto");
+        assertNull(ApkToolchain.pickBuildTools(home), "ferramentas faltando = null honesto");
     }
 
     @Test
     void compareToolVersionsNumericNaoLexico() {
-        assertTrue(CmdBuild.compareToolVersions("34.0.0", "9.0.0") > 0, "34 > 9 (nao '3'<'9')");
-        assertTrue(CmdBuild.compareToolVersions("34.0.2", "34.0.0") > 0);
-        assertEquals(0, CmdBuild.compareToolVersions("35.0.0", "35.0.0"));
+        assertTrue(ApkToolchain.compareToolVersions("34.0.0", "9.0.0") > 0, "34 > 9 (nao '3'<'9')");
+        assertTrue(ApkToolchain.compareToolVersions("34.0.2", "34.0.0") > 0);
+        assertEquals(0, ApkToolchain.compareToolVersions("35.0.0", "35.0.0"));
     }
 
     @Test
     void java21GateRefusesOldD8ForMajor65(@TempDir Path home) throws Exception {
         Path jar = home.resolve("kof-app.jar");
         writeJarWithClassMajor(jar, 65);
-        assertEquals(65, CmdBuild.classMajorOf(jar), "major lido do header (bytes 6-7)");
+        assertEquals(65, ApkToolchain.classMajorOf(jar), "major lido do header (bytes 6-7)");
         Path bt34 = home.resolve("build-tools/34.0.0");
         Files.createDirectories(bt34);
-        assertFalse(CmdBuild.buildToolsSupportsJava21(bt34), "34.x nao le major 65");
-        assertFalse(CmdBuild.buildToolsSupportsJava21(home.resolve("build-tools/9.0.0")));
-        assertTrue(CmdBuild.buildToolsSupportsJava21(home.resolve("build-tools/35.0.0")));
+        assertFalse(ApkToolchain.buildToolsSupportsJava21(bt34), "34.x nao le major 65");
+        assertFalse(ApkToolchain.buildToolsSupportsJava21(home.resolve("build-tools/9.0.0")));
+        assertTrue(ApkToolchain.buildToolsSupportsJava21(home.resolve("build-tools/35.0.0")));
         writeJarWithClassMajor(jar, 61);
-        assertEquals(61, CmdBuild.classMajorOf(jar));
+        assertEquals(61, ApkToolchain.classMajorOf(jar));
     }
 
     private static void writeJarWithClassMajor(Path jar, int major) throws IOException {

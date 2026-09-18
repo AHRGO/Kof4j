@@ -228,8 +228,8 @@ class CmdDeployTest {
         String androidHome = System.getenv("ANDROID_HOME");
         Assumptions.assumeTrue(androidHome != null && !androidHome.isBlank(),
                 "ANDROID_HOME ausente — face android do deploy é validada no host com SDK");
-        Path bt = CmdBuild.pickBuildTools(Path.of(androidHome));
-        Assumptions.assumeTrue(bt != null && CmdBuild.buildToolsSupportsJava21(bt),
+        Path bt = ApkToolchain.pickBuildTools(Path.of(androidHome));
+        Assumptions.assumeTrue(bt != null && ApkToolchain.buildToolsSupportsJava21(bt),
                 "android e2e exige build-tools >= 35 (d8 le class major 65); pin 34 falhava no dex"
                         + " — skip honesto, a recusa com diagnostico e coberta por CmdBuildApkToolchainTest");
         Path src = writeApp(dir, "main() { println(\"x\") }\n");

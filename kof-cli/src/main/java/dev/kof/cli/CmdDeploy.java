@@ -205,7 +205,7 @@ final class CmdDeploy {
             case ANDROID -> {
                 // pipeline --apk do build (gera o projeto Android dentro de
                 // classes/ e assina com debug.keystore ou --keystore do build).
-                boolean ok = CmdBuild.runApkPipeline(classes,
+                boolean ok = ApkToolchain.runApkPipeline(classes,
                         AndroidProjectWriter.DEFAULT_MIN_SDK,
                         AndroidProjectWriter.DEFAULT_TARGET_SDK, null, null, null, null);
                 if (!ok) {

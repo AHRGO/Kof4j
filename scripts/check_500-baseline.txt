@@ -1,5 +1,4 @@
 547	kof-cli/src/main/java/dev/kof/cli/BytecodeStatements.java
-525	kof-cli/src/main/java/dev/kof/cli/CmdBuild.java
 511	kof-cli/src/main/java/dev/kof/cli/LspServer.java
 506	kof-cli/src/main/java/dev/kof/cli/TranslateExpr.java
 501	kof-cli/src/main/java/dev/kof/cli/Translate.java
