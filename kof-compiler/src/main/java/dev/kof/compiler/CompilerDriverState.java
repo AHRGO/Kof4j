@@ -158,6 +158,17 @@ IRModule currentModule;
     final java.util.IdentityHashMap<LambdaExpr, Boolean> lambdaNeedsOuter =
             new java.util.IdentityHashMap<>();
 
+    // §277: estes dois caches keyed por AST/assinatura vivem junto de
+    // `syntheticClasses` — sem clear no reset, a 2a compilacao num driver
+    // compartilhado achava o cache POPULADO e pulava o add() do IRClass
+    // sintetizado (a interface de funcao com o metodo `invoke`); o backend
+    // entao nao emitia o trampolim/vtable `kof_FunctionN_..._invoke` e o
+    // link nativo morria com `undefined reference` (medido: JVM->NATIVE e
+    // JS->NATIVE de `((Int) -> Int, (Int) -> Int) -> Int`).
+    /** Cache de interfaces sintéticas de função (uma por assinatura). */
+    final java.util.Map<String, Type.ClassType> functionInterfaces = new java.util.HashMap<>();
+    final java.util.IdentityHashMap<LambdaExpr, String> lambdaClassNames = new java.util.IdentityHashMap<>();
+
     /** Dono do método sendo lowered agora (para capturar this de lambda). */
     String currentLoweringOwner;
 
@@ -439,6 +450,8 @@ IRModule currentModule;
      */
     void resetForCompilation() {
         syntheticClasses.clear();
+        functionInterfaces.clear();
+        lambdaClassNames.clear();
         entitySchemas.clear();
         externSignatures.clear();
         pendingSuperBridges.clear();

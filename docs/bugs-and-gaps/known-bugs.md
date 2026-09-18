@@ -10349,4 +10349,40 @@ The corpus (`backend-parity.md` media row + `stdlib-web.md` ×3 + `KofCliSupport
   (the construct compiles clean again); with the guard → 4/4. CLI:
   `Main.kf:3:37: error: static method cannot reference instance field
   'value' ... [SEM075]`. Row SEM075 in type-system EN+PT.
->>>>>>> 246897ce (fix(compiler): #345 — campo de instância nu em metodo static agora e SEM075 (antes: compila limpo e VerifyError no load por aload_0 sem this))
+
+
+
+## §277 — synthetic lambda-interface helpers VANISH on ANY second compile with a SHARED `CompilerDriver` (`undefined reference to kof_Function1_int_int_invoke` at link) — ✅ FIXED 18/09 (found and fixed by the #389 unit, lane compiler `.22`)
+
+- **Discovered while proving #389** (`NestedFnTypeArityTest`): the same
+  program with a nested function-type parameter
+  (`val apply2: ((Int) -> Int, (Int) -> Int) -> Int = ...`) compiled
+  **NATIVE-only** on a fresh driver links and runs (`nm` shows
+  `T kof_Function1_int_int_invoke`), but compiling **any second target on
+  the same driver instance** (measured with JS-first AND with JVM-first)
+  fails at `ld`: `undefined reference to kof_Function1_int_int_invoke`
+  (twice — the two bare calls `a(1)`/`b(2)` inside the lambda body, the
+  `KofCallKind.INTERFACE` branch of `ExpressionInstanceCallLowerer`:198).
+- **Root (confirmed):** the per-compile reset `resetForCompilation()`
+  clears `syntheticClasses` — but the two caches that feed it,
+  `functionInterfaces` (signature→ClassType) and `lambdaClassNames`
+  (LambdaExpr→name), lived on `CompilerDriver` and were NEVER cleared. On
+  the second compile, `lambdaInterfaceType` hit the warm cache and skipped
+  `syntheticClasses.add(ifaceClass)`; the synthetic IRClass (whose native
+  emission produces the `kof_FunctionN_..._invoke` trampoline + vtable)
+  was absent from the module while the call site still referenced it. The
+  flat case survived because its call site is in `main` with the class
+  already in hand; the nested one is reached only through the shared
+  interface from inside the synthesized lambda body.
+- **Fix (same commit as #389):** moved both fields into
+  `CompilerDriverState` and cleared them in `resetForCompilation()` right
+  beside `syntheticClasses` — cache and class list now live and die
+  together. Additive: one-compile-per-process (every real CLI invocation)
+  behaves identically; what changes is that a reused driver no longer
+  mislinks.
+- **Proof:** `NestedFnTypeArityTest.nestedParamsCompileOnEveryArtifactTarget`
+  compiles the nested program JVM→NATIVE→JS on ONE shared driver (the
+  exact leak repro) — 5/5 green with the fix; the probe (pre-fix):
+  `js success=true / native success=false` with the undefined reference;
+  post-fix both `true`. Single-compile native still links and runs
+  (`nm`: `T kof_Function1_int_int_invoke`; binary prints `7`/`14`).

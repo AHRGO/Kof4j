@@ -9845,4 +9845,40 @@ O corpus (`backend-parity.md` linha de mídia + `stdlib-web.md` ×3 + mensagem A
   compila limpo de novo); com a guarda → 4/4. CLI: `Main.kf:3:37: error:
   static method cannot reference instance field 'value' ... [SEM075]`.
   Linha SEM075 no type-system EN+PT.
->>>>>>> 246897ce (fix(compiler): #345 — campo de instância nu em metodo static agora e SEM075 (antes: compila limpo e VerifyError no load por aload_0 sem this))
+
+
+
+## §277 — os helpers de interface-lambda sintética DESAPARECEM em QUALQUER segunda compilação com `CompilerDriver` COMPARTILHADO (`undefined reference to kof_Function1_int_int_invoke` no link) — ✅ CORRIGIDO 18/09 (achado e corrigido pela unidade #389, lane compiler `.22`)
+
+- **Descoberto ao provar #389** (`NestedFnTypeArityTest`): o mesmo programa
+  com parâmetro de função-aninhada (`val apply2: ((Int) -> Int, (Int) ->
+  Int) -> Int = ...`) compilado **só NATIVE** num driver novo linka e roda
+  (`nm` mostra `T kof_Function1_int_int_invoke`), mas compilar **qualquer
+  segundo target no MESMO driver** (medido com JS primeiro E com JVM
+  primeiro) falha no `ld`: `undefined reference to
+  kof_Function1_int_int_invoke` (2× — as duas chamadas nuas `a(1)`/`b(2)`
+  dentro do corpo da lambda, o ramo `KofCallKind.INTERFACE` de
+  `ExpressionInstanceCallLowerer`:198).
+- **Raiz (confirmada):** o reset por compilação `resetForCompilation()`
+  limpa `syntheticClasses` — mas os dois caches que o alimentam,
+  `functionInterfaces` (assinatura→ClassType) e `lambdaClassNames`
+  (LambdaExpr→nome), viviam em `CompilerDriver` e NUNCA eram limpos. Na
+  segunda compilação, `lambdaInterfaceType` achava o cache quente e
+  pulava o `syntheticClasses.add(ifaceClass)`; o IRClass sintético (cujo
+  emit nativo produz o trampolim + vtable `kof_FunctionN_..._invoke`)
+  ficava ausente do módulo enquanto o call site o referenciava. O caso
+  flat escapava porque o call site está em `main` com a classe já em mão;
+  o aninhado só é alcançado via interface compartilhada de dentro do
+  corpo da lambda sintetizada.
+- **Conserto (mesmo commit do #389):** os dois campos foram movidos para
+  `CompilerDriverState` e limpos em `resetForCompilation()` ao lado de
+  `syntheticClasses` — cache e lista de classes agora vivem e morrem
+  juntos. Aditivo: uma compilação por processo (todo uso real do CLI)
+  permanece idêntica; o que muda é que um driver reutilizado não linka
+  mais errado.
+- **Prova:** `NestedFnTypeArityTest.nestedParamsCompileOnEveryArtifactTarget`
+  compila o programa aninhado JVM→NATIVE→JS num ÚNICO driver compartilhado
+  (o repro exato do leak) — 5/5 verde com o fix; o probe (pré-fix):
+  `js success=true / native success=false` com a referência indefinida;
+  pós-fix ambos `true`. Native de compilação única continua linkando e
+  rodando (`nm`: `T kof_Function1_int_int_invoke`; binário imprime `7`/`14`).

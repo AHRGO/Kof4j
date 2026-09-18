@@ -200,9 +200,10 @@ public final class MemberResolver {
         String t = declType.trim();
         if (t.isEmpty() || "var".equals(t) || "val".equals(t) || "void".equals(t)) return false;
         if (t.contains(" -> ")) {
-            int rp = t.indexOf(')');
+            int canonArrow = Type.fnTypeArrow(t);
+            int rp = canonArrow >= 0 ? canonArrow - 1 : t.indexOf(')');
             String ps = t.startsWith("(") && rp > 0 ? t.substring(1, rp) : "";
-            String ret = t.substring(t.indexOf(" -> ") + 4).trim();
+            String ret = t.substring((canonArrow >= 0 ? canonArrow : t.indexOf(" -> ")) + 4).trim();
             if (!ps.isEmpty()) {
                 for (String p : splitTopLevelTypes(ps)) {
                     if (declaredTypeUnresolved(sa, p, typeParams)) return true;
