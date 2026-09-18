@@ -5,12 +5,12 @@
 **Status:** Plan (future architecture) — **zero code**, no scheduled step
 **Type:** future architecture / dependency record (NOT an implementation order)
 **Date:** September 15, 2026
-**Source:** `../PLAN-UNIVERSAL-PLATFORM.md` §8.2 (Native: "deploy/edge/systems") ·
+**Source:** `../../architecture/UNIVERSAL-PLATFORM-VISION.md` §8.2 (Native: "deploy/edge/systems") ·
 `PLAN-TREE-SHAKING.md` §T3 (embedded/MCU route) · `docs/development/native-multiarch.md`
 · maintainer directive (15/09): *"all native code must also talk directly to
 barebones — bootable code for microcontrollers, legacy and UEFI with Kof"*.
 
-> **Rule of this document** (same as `../PLAN-UNIVERSAL-PLATFORM.md`): it is a
+> **Rule of this document** (same as `../../architecture/UNIVERSAL-PLATFORM-VISION.md`): it is a
 > strategic/architecture record. It implements nothing, opens no front, changes no
 > roadmap, moves no file, adds no dependency. The current state of Kof remains
 > 100% intact. Anything here requiring a deep core change is recorded as a
@@ -64,7 +64,7 @@ These are facts from the code, not estimates:
 5. **Codegen exists only for 64-bit targets.** `Target.NATIVE` (x86_64),
    `NATIVE_RISCV64`, `NATIVE_AARCH64` (`Target.java`). MCUs are predominantly
    **32-bit** (ARM Cortex-M Thumb-2, riscv32) — a codegen gap, classified **C** by
-   `../PLAN-UNIVERSAL-PLATFORM.md` §8.2(e) ("RISC/ARM codegen").
+   `../../architecture/UNIVERSAL-PLATFORM-VISION.md` §8.2(e) ("RISC/ARM codegen").
 6. **The GC mechanism is frozen (rule 6).** `PLAN-TREE-SHAKING.md` §7 states T1b
    touching the GC root-scan "touches the GC mechanism (frozen)". The HAL seam
    below must therefore **not** go through the GC.
@@ -103,7 +103,7 @@ acceptance criterion that makes this a safe enabling refactor rather than a
 rewrite.
 
 **Naming/decision needed (maintainer, rule 6):** the directive "no per-domain
-target" (`../PLAN-UNIVERSAL-PLATFORM.md` §16) is **not** violated if this is a
+target" (`../../architecture/UNIVERSAL-PLATFORM-VISION.md` §16) is **not** violated if this is a
 **profile of Native** (`native --profile freestanding|uefi|bios|mcu`) rather than
 four new `Target` enum values — analogous to how `native.risc`/`native.arm` are
 arch variants, not new languages. This document takes **no** position; it records

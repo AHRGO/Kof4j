@@ -149,6 +149,26 @@ var b: Box<Int> = Box(42)
 println(b.get())   // erasure + substituteTypeVariable — Native OK
 ```
 
+## Sobrecarga de Métodos (0.4.0-beta, §131)
+
+```kof
+class Calc {
+    Int add(Int a, Int b) { return a + b }
+    Int add(Int a, Int b, Int c) { return a + b + c }
+    String add(String a, String b) { return a + b }
+}
+var c = Calc()
+c.add(1, 2)          // 3
+c.add(1, 2, 3)       // 6
+c.add("ko", "f")     // "kof"
+```
+
+Métodos de mesmo nome com assinaturas diferentes (aridade ou tipos de
+parâmetro) coexistem na classe, resolvidos pelo typer nos 4 backends.
+Duplicata exata → SEM047; ambiguidade → SEM057; só o tipo de retorno
+NÃO distingue — regras completas em `functions.pt_BR.md` (valem
+igualmente para métodos).
+
 ## Anti-patterns relacionados
 
 - Utility class de métodos estáticos → funções top-level (`functions.md`)

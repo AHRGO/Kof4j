@@ -10,7 +10,7 @@ public final class JsRuntimeUiWeb {
     // `static final` literal embute a string no .class do Slices, e o rebuild
     // incremental não recompila dependentes quando só a fonte-mestre muda —
     // o slice quebrado antigo sobrevive no gerador. getstatic lê o valor vivo.
-    static final String UI_WEB_RUNTIME = uiWebRuntime() + JsRuntimeCron.cronRuntime();
+    static final String UI_WEB_RUNTIME = uiWebRuntime() + JsRuntimeTime.timeRuntime() + JsRuntimeCron.cronRuntime();
 
     private static String uiWebRuntime() {
         return """
@@ -535,53 +535,6 @@ public final class JsRuntimeUiWeb {
                 const b = kofTimeParseIso(iso2);
                 if (!a || !b) return 0;
                 return kofTimeEpochDay(b.y, b.m, b.d) - kofTimeEpochDay(a.y, a.m, a.d);
-            }
-
-            export function kofTimeSleep(ms) {
-                const end = Date.now() + ms;
-                // bombeia a fila cooperativa de timers durante o wait (GraalJS
-                // single-thread: sem isso, time.interval nunca dispara)
-                while (Date.now() < end) {
-                    kofTimePump();
-                }
-                kofTimePump();
-            }
-
-            // ── Cooperative timers (TIME001 fechado): GraalJS não tem
-            // event loop nativo nem setInterval, então os jobs vivem numa
-            // fila bombeada por kofTimeSleep (que já bloqueia). Em browser/
-            // Node, onde setInterval existe, os timers disparam assíncronos.
-            const kofTimeJobs = new Map();
-            const kofTimeSeq = { value: 0 };
-            function kofTimeRunJob(fn) {
-                if (typeof fn.invoke === 'function') fn.invoke();
-                else if (typeof fn === 'function') fn();
-            }
-            export function kofTimeInterval(ms, fn) {
-                if (typeof setInterval === 'function') {
-                    return "n" + String(setInterval(() => kofTimeRunJob(fn), ms));
-                }
-                const id = "c" + (++kofTimeSeq.value);
-                kofTimeJobs.set(id, { ms: ms, run: () => kofTimeRunJob(fn), next: Date.now() + ms });
-                return id;
-            }
-            function kofTimePump() {
-                const now = Date.now();
-                for (const [id, job] of kofTimeJobs) {
-                    if (now >= job.next) {
-                        job.next = now + (job.cron ? kofCronNextDelayMs(job.cron, now) : job.ms);
-                        job.run();
-                    }
-                }
-            }
-
-            export function kofTimeCancel(id) {
-                const key = String(id);
-                if (key.charAt(0) === "n") {
-                    if (typeof clearInterval === 'function') clearInterval(Number(key.substring(1)));
-                    return;
-                }
-                kofTimeJobs.delete(key);
             }
 
             """;

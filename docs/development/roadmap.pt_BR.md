@@ -255,8 +255,12 @@ Estado 13/09: concorrência real **JVM** (virtual threads) + **Native**
 async/await/Promise reais) + **supervisão OTP** (`kof.supervisor`: 1ª fatia
 11/09 núcleo JVM+Script, **S2-JVM 13/09** `startAll`/`lacoUnico` — ver
 `planning-otp-supervision.md`; **Native x86 ✅ 15/09** — §129 fechado via
-DECISIONS §2 opção B, então `kof.supervisor` roda no Native x86; riscv/aarch=OTP001,
-JS=OTP002 §132 gates honestos). O SIGSEGV anterior de `spawn→await→spawn` (pilha
+DECISIONS §2 opção B, então `kof.supervisor` roda no Native x86; riscv/aarch=OTP001
+(gate honesto da era §132). **JS ✅ 18/09 — §132 resolvido:** `time.sleep` virou um
+ponto de await async cooperativo (o compilador colore async o método que o alcança,
+`kofTimeSleep` devolve Promise, a bomba do host `KofJsRunner` a drena), então um worker
+spawnado de dentro de outra task dispara e `OTP002` foi levantado — `kof.supervisor`
+agora roda em JS com paridade. O SIGSEGV anterior de `spawn→await→spawn` (pilha
 desalinhada no site do `pthread_create`) foi corrigido 01/09 com `andq $-16` em
 `kof_spawn_handle_new`. Um defeito latente relacionado apareceu e foi corrigido
 15/09 na mesma unidade do §129: `kof_await` não limpava o TID do handle após o
@@ -847,7 +851,7 @@ Visão de longo prazo — Kof como plataforma universal (uma linguagem para
 aplicações **e** sistemas, infraestrutura, automação, dados, segurança e
 ciência) **sem** destruir a simplicidade da linguagem.
 
-- Documento central: `docs/development/PLAN-UNIVERSAL-PLATFORM.md`
+- Documento central: `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md`
   (arquitetura — **EM DESENVOLVIMENTO** desde 17/09/2026; promovido de
   `future/` por decisão da mantenedora, `DECISIONS.md` §D-UNIVERSAL)
 - Estágios por capacidade/maturidade: `FOUNDATION ✅` → `SYSTEMS` (em
@@ -916,10 +920,10 @@ tiers `stable`/`experimental` (`docs/backend-parity.md`).
 | # | Item | Estado REAL medido |
 |---|------|--------------------|
 | 2.1.1–2.1.3 | Sintaxe `extern` + type-check + gaps `FFI001`/`FFI002` (nunca drop silencioso) | ✅ `Parser.java:192` (PARSE090), `ExternalFunctionNode`, `FfiE2ETest` |
-| 2.1.4 | Binding **JVM** (FFM `java.lang.foreign`) | ✅ `abs`/`atoi`(String→Int)/`sqrt`(Double→Double) reais via FFM |
+| 2.1.4 | Binding **JVM** (FFM `java.lang.foreign`) | ✅ **generalizado 18/09 (`.18`, R3):** qualquer assinatura escalar, aridade livre, retornos `void`/`String` — medidos `fmod`→1.5, `ldexp`→12.0, `strncmp`→-1, `puts(void)`, `getenv`→String (`syntax.md`) |
 | 2.1.5 | Binding **Native** (`dlsym`) | ❌ **gap honesto `FFI001`** — `dlopen` segfaulta no binário cru (sem init glibc); NÃO é "✅ real" |
-| 2.1.6 | Marshalling struct/array | 🟡 String↔Int, Double↔Double (JVM); struct/array completo pendente |
-| 2.1.7 | JS: gap `FFI002` | ✅ |
+| 2.1.6 | Marshalling struct/array | 🟡 todas as formas ESCALARES ligam (JVM+host JS desde 18/09); struct/array/ponteiro seguem `FFI001` honesto (design D6 ⛔ mantenedora) |
+| 2.1.7 | JS: gap `FFI002` | ✅ gap honesto + **paridade escalar FECHADA 18/09 (`d3598c2d`, fatias 3.6.F1–F3):** runner host liga via `KofJsFfiBridge`, `FfiE2ETest` 16/16 byte-for-byte JVM↔JS; browser = runtime R7; nao-escalar mantem `FFI002` |
 | 2.2.1 | Inventário do codegen implícito (4 pontos: runtime `.source()`, `desugarTests`, `desugarApplication`, entity→record+schema) | ✅ os 4 existem (`CompilerPipeline:295-296`) |
 | 2.2.2 | **Hook formal `CodegenStep`** | ❌ **NÃO existe no HEAD** — `d1c56bad` adicionou, a pipeline voltou a chamar os `desugar*` direto; o "✅" antigo era sobre-claim da branch `planning-future` |
 | 2.2.3 | Migrar DDL/runner p/ o hook formal | ❌ bloqueado por 2.2.2 |
@@ -942,12 +946,16 @@ REVOGADA). Lane: **compiler** (contrato nos 4 backends — não a lane docs).
 | 2.6.3 | **N3** — `== null` em NÃO-nullable: legal, constant-foldable, NUNCA diagnóstico | a intenção é a própria comparação; regra 2 (retrocompat): código existente que compara continua compilando | N1 |
 | 2.6.4 | **N4** — auditar as faces restantes de null silencioso | map-miss `0` (SG-008), campo não-inicializado `0`, unbox-de-null `0` — cada um ganha decisão ou diagnóstico honesto (R6) | N1–N3 |
 
+**Estado da fila (18/09):** PR **#438** (fork externo, `fix/278-d-null-intent-atomic`) ataca o **2.6.1/N1** (JVM+Script+JS) sob a "Scope protection" do §D-NULL-INTENT — nao-draft, aguardando revisao da mantenedora (CI `Build + Tests` **FALHOU no head `7dc08ccb`** (3× `ConformanceMatrixTest` + `mapSetNative`) e esta **VERDE no head `eaa22b57`** — a autora corrigiu os 3 gaps residuais, excluiu o Native do caminho `.equals()` e sincronizou as celulas da matriz; merge ainda aguarda revisao da mantenedora — N2/Native e I4/i1 permanecem fora de escopo)); lanes nao devem abrir frente N1 paralela (regra 6 / um contrato, um PR). O PR tambem declara `Map.get/put/remove` em chave ausente (I7) — engolindo a face parqueada `#376`/`#409` carimbada pela mantenedora 18/09 — NAO abra frente N4 separada para essas celulas enquanto #438 estiver em revisao.
+
 #### 2.7 — Value records / tipos de valor de primeira classe (fila de `D-VALUE-RECORD`, 16/09)
 
 **Decidido pela mantenedora 16/09** (registro: `DECISIONS.md` §D-VALUE-RECORD;
 origem issue #275). Aditivo, retrocompatível. **Apenas planejado — não é
 trabalho atual** (R12: frentes novas não abrem antes de o estágio SYSTEMS
 fechar; lanes não devem atacar sem nova autorização).
+
+**Plano de design:** [`future/value-records-plan.pt_BR.md`](future/value-records-plan.pt_BR.md) (zero código).
 
 | # | Etapa | Escopo (uma linha) | Depende de |
 |---|-------|--------------------|------------|
@@ -973,7 +981,7 @@ histórico técnico detalhado vive em `future/LEGACY_MIGRATION.md` +
 `future/DECOMPILER.md` (§7) — **não duplicar aqui**; esta tabela só dá a
 ordem. **DESPRIORIZADO 15/09 (mantenedora): TIER 3–5 não é trabalho atual.**
 
-### TIER 6–12 — Plataforma universal (arquitetura **EM DESENVOLVIMENTO** 17/09 — R12 sobreposto; regidos por `docs/development/PLAN-UNIVERSAL-PLATFORM.md`)
+### TIER 6–12 — Plataforma universal (arquitetura **EM DESENVOLVIMENTO** 17/09 — R12 sobreposto; regidos por `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md`)
 
 | Tier | Estágio | Escopo (uma linha) |
 |------|---------|--------------------|

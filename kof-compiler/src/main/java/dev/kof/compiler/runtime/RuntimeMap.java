@@ -141,6 +141,29 @@ public final class RuntimeMap {
                 popq %rbx
                 ret
 
+            # kof_map_get_or_default(rdi=map, rsi=key, rdx=def) -> val | def
+            .globl kof_map_get_or_default
+            .type kof_map_get_or_default, @function
+            kof_map_get_or_default:
+                pushq %rbx
+                pushq %r12
+                movq %rdi, %rbx
+                movq %rdx, %r12             # def
+                call kof_map_find
+                cmpq $-1, %rax
+                je .LKMGD_miss
+                movq 32(%rbx), %rdx
+                movslq %eax, %rcx
+                movq (%rdx,%rcx,8), %rax
+                popq %r12
+                popq %rbx
+                ret
+            .LKMGD_miss:
+                movq %r12, %rax
+                popq %r12
+                popq %rbx
+                ret
+
             # kof_map_remove(rdi=map, rsi=key) -> val removido | 0
             .globl kof_map_remove
             .type kof_map_remove, @function

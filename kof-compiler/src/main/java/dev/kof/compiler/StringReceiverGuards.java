@@ -42,7 +42,7 @@ final class StringReceiverGuards {
     /** §193: nomes de acessor de coleção/mapa chamados numa String (a linha
      *  crua do db.query é JSON String) → SEM066 em vez de runtime quebrado. */
     private static final java.util.Set<String> COLLECTION_ACCESSORS_ON_STRING = java.util.Set.of(
-            "get", "put", "remove", "size", "keys", "values", "containsKey", "entries");
+            "get", "put", "getOrDefault", "remove", "size", "keys", "values", "containsKey", "entries");
 
     /** Nome canônico da função `strings.*` p/ o nome de método errado (SEM052). */
     private static String padHint(String methodName) {

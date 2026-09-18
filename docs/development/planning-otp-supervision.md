@@ -2,7 +2,7 @@
 
 # planning-otp-supervision.md — OTP-style worker supervision (`one_for_one`) — IN DEVELOPMENT
 
-**Owner:** CONC lane · **Status:** 1st slice implemented 11/09 (core on JVM+Script; **S2-JVM ✅ 13/09** and **S2-Native x86 ✅ 15/09** — §129 closed via DECISIONS §2 option B; riscv/aarch=OTP001, JS=OTP002 §132 — honest gates). Maintainer's authorization (issue #83, 11/09): implement the smallest functional core with tests.
+**Owner:** CONC lane · **Status:** 1st slice implemented 11/09 (core on JVM+Script; **S2-JVM ✅ 13/09** and **S2-Native x86 ✅ 15/09** — §129 closed via DECISIONS §2 option B; riscv/aarch=OTP001; **JS ✅ 18/09** (§132 resolved, `OTP002` lifted) — honest gates). Maintainer's authorization (issue #83, 11/09): implement the smallest functional core with tests.
 **Created:** 10/09 · **Amended:** 11/09 · **Issue:** #83 (ViniciusKoiti)
 
 > **11/09 amendments** (verified in the `beta-0.4.0` code, marked
@@ -301,9 +301,10 @@ regime cost, not a correctness cost.
 > coverage holds as declared for a different reason.** riscv/aarch remain
 > PARTIAL because of `OTP001`: the supervisor loop observes failure via
 > `try { await } catch`, and on cross a `throw` in a worker still longjmps
-> the global handler chain (the §129 TLS fix is x86-only). JS remains
-> `OTP002` (§132). The "one worker per supervisor" limit stays until the
-> TLS port closes on the Native lane (rule 6: it is that lane's front).
+> the global handler chain (the §129 TLS fix is x86-only). JS is **resolved
+> 18/09** (§132 closed — `OTP002` lifted; the supervisor runs on JS to parity). The
+> "one worker per supervisor" limit stays until the TLS port closes on the **riscv/aarch**
+> Native lane (rule 6: it is that lane's front).
 
 ### DD-OTP-10 — Injectable clock
 
@@ -422,15 +423,16 @@ lane; small and isolated. It does not block OTP (which uses its own flag).
 - **Impediments that had to be resolved/workaround:** §130 fixed
   (false SEM024 in a re-analyzed method body — it blocked the fluent builder);
   §131 worked around (overload by arity broken → single 3-arg `child`).
-- **Honest parity:** JVM + Script + **Native x86** run the core; riscv/aarch
-  block at compile-time (`OTP001`) and JS (`OTP002`) due to §132 — NEVER a binary
+- **Honest parity:** JVM + Script + **Native x86** + **JS** run the core; riscv/aarch
+  block at compile-time (`OTP001`) — NEVER a binary
   that hangs (rule 6). **S2-JVM of the plan IMPLEMENTED 13/09** (`020be966`,
   option 1a): `Supervisor.startAll()` + single selectAny loop with an identity
   wrapper (id/reason); S2 JVM+interpreter gates; `KofSupervisorE2ETest` 8/8, gate
   1620/0. **S2-Native x86 ✅ IMPLEMENTED 15/09** (§129 closed, DECISIONS §2
-  option B; `supervisorNativeParityX86`/`supervisorNativeS2ParityX86`). OTP002-JS
-  (§132) and riscv/aarch remain. The document stays in `docs/development/` until
-  those faces close.
+  option B; `supervisorNativeParityX86`/`supervisorNativeS2ParityX86`). **S2-JS ✅
+  IMPLEMENTED 18/09** (§132 closed — cooperative async `time.sleep`; `OTP002` lifted;
+  `supervisorJsParity`/`supervisorJsS2Parity`). riscv/aarch remain. The document stays
+  in `docs/development/` until that last face closes.
 
 ## Update 12/09 — REAL state of the S2 impediments (doc-vs-reality)
 
@@ -445,7 +447,12 @@ lane; small and isolated. It does not block OTP (which uses its own flag).
   `kof_exc_chain` + per-worker handler frame in `kof_spawn_trampoline`; the worker
   publishes the cause on the handle and `await`/`selectAny` rethrow it — x86_64;
   riscv/aarch stay `OTP001`, raw `clone` without TLS) — S2-Native x86 unblocked.
-  **§132 event-loop JS 🔴 remains OPEN** (S2-JS impediment) — bugs/UI lane, rule 6.
+  **§132 event-loop JS ✅ FIXED 18/09 (#83-JS)** — `time.sleep` is now an await-point
+  (cooperative async sleep: compiler colors the reaching method async, `kofTimeSleep`
+  returns a Promise, the `KofJsRunner` host pump drives it), so a worker spawned inside
+  another task runs while the poller sleeps — S2-JS unblocked, `OTP002` lifted,
+  `supervisorJsParity` green. (Had been mis-listed under bugs/UI; it landed on the
+  KofJS/dev lane.)
 - **Design hole that the §128 fix does NOT close (measured, not
   memory):** the JVM `selectAny` (`JvmRuntimeCore.kof_select_any` →
   `CompletableFuture.anyOf().get()`) returns the **value** of the first ready

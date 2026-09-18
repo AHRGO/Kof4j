@@ -2,9 +2,57 @@
 
 # Kof Project Status
 
-**Last updated:** September 15, 2026
+**Last updated:** September 18, 2026
 **Version:** 0.4.0-beta (pom `revision`)
 
+> **18/09 — R3 FFI (JVM) generalized — `extern` binds the full scalar ABI
+> (owner = 192.168.100.18, development lane).** `CompilerPipeline.isExternBound`
+> now accepts **any arity** over {Int, Long, Float, Double, Boolean, String} in
+> every position and return, with a `String` result read back from the native
+> `char*`. One FFM downcall `kof_ffi(lib, name, sig, Object[])` replaces the old
+> `kof_ffi_i`/`_si`/`_dd` helpers; the lowering packs args into an `Object[]`
+> (`KofNewArray`, boxing primitives) and the JVM emitter unboxes/checks the boxed
+> return (`emitKofRuntimeCall`). `FfiE2ETest` 8→9 (adds `atol(String):Long` →
+> `labs(Long):Long` → `9`, proving the `Long` layout end-to-end — Kof has no `long`
+> literal so the `Long` value is produced by `atol`) + new `FfiSignatureTest` 4/4
+> locking the full scalar → FFM-layout → `Type` mapping incl. `Float`/`Boolean`,
+> whose generic downcall path is already exercised by the Int/Long/Double/String/void
+> e2es (`pow` 2.0^10 → `1024.0`, `strstr("hello world","wor")` → `world`;
+> `srand(Int)` default `void` via
+> `kof_ffi_void`). **JS parity CLOSED (slice 3.6, same day):** the same scalar ABI
+> now binds on the JS target through a host FFM bridge `KofJsFfiBridge` (`extern`→
+> `kofFfi`→`kof_platform.ffi` `ProxyExecutable` on the GraalJS/node runner); `FfiE2ETest`
+> adds 7 `assertJvmJsParity` cases proving byte-for-byte JVM↔JS equality (doubles
+> `3.0`/`1024.0`, `Long` via `atol`→`labs`, `char*`→String, `void`); a browser has no
+> host → honest runtime degrade (R7), and non-scalar signatures still `FFI002`. **Callbacks
+> bind on the JVM *and* the JS host runner (slice 3.4, C1→C3, same day):** an `extern` with a
+> function-typed parameter
+> lowers to `kof_ffi` (nested `(<ret><params>)` token) and the runtime builds a C function
+> pointer via `Linker.upcallStub` over the Kof function value — `JvmFfiCallbackE2ETest`
+> computes `42/42/6.0/7.5` across Int/Long/Double/mixed callback ABIs, byte-for-byte JVM↔JS
+> (`jvmAndJsCallbacksMatchByteForByte`); on JS the function value is a `Lambda…` **object**, so
+> the runner bridge calls `fn.getMember("invoke").execute(...)`; synchronous/non-
+> escaping contract, primitive-only ABI.
+> Parity not yet reached: struct/pointer (D6),
+> variadics and opaque handles stay `FFI001`; Native `FFI001` (§61) remains an honest
+> per-target gap (R7). Full decomposition in §R3-slices / §R3-3.4 of the
+> universal plan.
+>
+> **18/09 — §132 CLOSED (#83-JS) — KofJS runs the OTP supervisor to parity
+> (owner = 192.168.100.18, development lane).** `time.sleep` is now an **await-point**
+> on the JS backend: the compiler colors a method that reaches `kof_time_sleep` async
+> via the existing `computeAsyncColoring` fixpoint (the one that already governed
+> `await`) and emits `await kof_time_sleep(ms)`; `kofTimeSleep` returns a Promise
+> (node/browser: real `setTimeout`; embedded GraalJS: a sleeper queue drained by the
+> `KofJsRunner` host pump, which is the minimal event loop a single JS thread cannot be
+> on its own). Because the host can sleep AND advance microtasks, sibling/child spawned
+> tasks now run while a task sleeps — the `while(!done(h)){ time.sleep(10) }` idiom
+> makes progress and the supervisor worker fires. `OTP002` is lifted (JS `kof.supervisor`
+> no longer refused at compile-time); `KofSupervisorE2ETest#supervisorJsParity` runs
+> `APP` → `restarts=2 escaladas=2 fabrica=3 parou vivos=0`. Real clock preserved
+> (`time.now()`/`Date.now()` unchanged) — `KofTimeE2ETest` stays honest. riscv/aarch
+> remain `OTP001` (§129 cross-thread unwinding, nat lane). Proof: `AsyncSleepJsE2ETest`
+> 3/3 + full reactor green.
 > **15/09 — §129 CLOSED (DECISIONS §2 option B) — Native x86 unwinds per thread
 > (owner = 192.168.100.18, development lane).** The `kof_exc_chain` is now **TLS
 > per-thread** (`.section .tbss,"awT",@nobits` + `%fs:kof_exc_chain@tpoff`) instead

@@ -58,6 +58,7 @@ boolean isRuntimeOp(KofCall kc) {
                 || name.equals("kof_read_file") || name.equals("kof_write_file")
                 || name.equals("kof_process_run") || name.equals("kof_process_exit")
                 || name.equals("kof_args")
+                || name.equals("kof_ffi") || name.equals("kof_ffi_void")
                 || name.equals("kof_box") || name.equals("kof_unbox");
     }
 
@@ -428,6 +429,7 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
         }
         String fn = JsTypeMapper.runtimeJsName(name);
         if (name.startsWith("kof_io_") || name.startsWith("kof_db_") || name.startsWith("kof_orm_")
+                || name.equals("kof_ffi") || name.equals("kof_ffi_void")
                 || name.equals("kof_read_line")
                 || name.equals("kof_read_file") || name.equals("kof_write_file")) {
             p.lc.registerIoRuntime(fn);
@@ -486,7 +488,8 @@ void handleRuntimeOp(MethodCtx ctx, List<Object> stack,
             }
         }
         if (name.equals("kof_await") || name.equals("kof_await_timeout")
-                || name.equals("kof_select_any")) {
+                || name.equals("kof_select_any")
+                || name.equals("kof_time_sleep")) { // §132/#83-JS cooperative sleep
             call = new JsIr.JsAwait(call);
         }
         if (name.equals("kof_poll") && kc.returnType() instanceof Type.PrimitiveType) {

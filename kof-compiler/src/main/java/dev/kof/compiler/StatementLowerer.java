@@ -21,17 +21,8 @@ public final class StatementLowerer {
                 // "finally roda no caminho normal, no capturado e na propagação").
                 if (!driver.finallyFrames.isEmpty()) {
                     CompilerDriverState.FinallyFrame f = driver.finallyFrames.peek();
-                    if (ret.value() != null && !CompilerComparisons.isNullablePrimNullReturn(ret, returnType)) {
-                        ExpressionNode rv = CompilerComparisons.foldNullablePrimBranches(ret.value(), returnType);
-                        localIdx = ExpressionLowerer.emitExpression(driver, rv, ops, owner, localIdx, locals);
-                        Type rvType = ExpressionTyper.inferExprType(driver, rv, locals);
-                        driver.emitWideningIfNeeded(ops, rvType, returnType);
-                        // Issue #169: retorno de primitivo de função tipo Object
-                        if (driver.erasesToReference(returnType)
-                                && TypeMetrics.isPrimitiveType(rvType)
-                                && !ExpressionTyper.boxesOwnBranches(driver, rv, locals)) {
-                            driver.emitErasureBox(ops, rvType);
-                        }
+                    if (ret.value() != null) {
+                        localIdx = ReturnValueLowerer.emitCoerced(driver, ret, returnType, ops, owner, localIdx, locals);
                         ops.add(new KofStoreLocal(returnType, f.slotValor()));
                     } else if (!Type.isVoid(returnType)) {
                         ops.add(CompilerTypes.defaultValueOp(returnType));
@@ -40,20 +31,8 @@ public final class StatementLowerer {
                     ops.add(new KofJump(f.returnFinallyLabel()));
                     yield localIdx;
                 }
-                if (ret.value() != null && !CompilerComparisons.isNullablePrimNullReturn(ret, returnType)) {
-                    // §125(A) extensão: ramo null de if/switch em retorno
-                    // Nullable(primitivo) colapsa p/ o default (evita o join
-                    // heterogêneo que boxia e quebra o ireturn).
-                    ExpressionNode rv = CompilerComparisons.foldNullablePrimBranches(ret.value(), returnType);
-                    localIdx = ExpressionLowerer.emitExpression(driver, rv, ops, owner, localIdx, locals);
-                    Type rvType = ExpressionTyper.inferExprType(driver, rv, locals);
-                    driver.emitWideningIfNeeded(ops, rvType, returnType);
-                    // Issue #169: retorno de primitivo de função tipo Object
-                    if (driver.erasesToReference(returnType)
-                            && TypeMetrics.isPrimitiveType(rvType)
-                            && !ExpressionTyper.boxesOwnBranches(driver, rv, locals)) {
-                        driver.emitErasureBox(ops, rvType);
-                    }
+                if (ret.value() != null) {
+                    localIdx = ReturnValueLowerer.emitCoerced(driver, ret, returnType, ops, owner, localIdx, locals);
                     ops.add(new KofReturn(returnType));
                 } else if (Type.isVoid(returnType)) {
                     ops.add(new KofReturnVoid());
@@ -92,15 +71,25 @@ public final class StatementLowerer {
                 // declarado kof.ui/kof.media saía ClassType("", "Label") e o
                 // store local virava `astore` sobre handle `int` (VerifyError).
                 Type varType = CompilerTypes.toType(vds.type(), driver.currentUnit, driver.semanticAnalyzer);
-                // §125(A) extensão: `Int? v = if (c) x else null` — slot
-                // explícito Nullable(primitivo) nunca guarda null (storage é o
-                // inner), então o ramo null colapsa p/ default do primitivo.
-                // `var`/`val` inferido INTocado (§68a: alargar slot = decisão
-                // de contrato).
-                ExpressionNode vdInit = CompilerComparisons.foldNullablePrimBranches(vds.initializer(), varType);
-                // nullable é constraint de compile-time: o storage é o inner
-                // (a referência já pode ser null na JVM/Native/JS)
-                if (varType instanceof Type.NullableType nt) {
+                // D-NULL-INTENT (#278): o fold §125-ext (`Int? v = if (c) x
+                // else null` -> ramo null vira default) só continua vivo no
+                // Native (fase 2, DECISIONS.md — representação antiga
+                // preservada lá). JVM/Script/JS deixam o ramo null real; o
+                // join heterogêneo (#57/§70) já boxa o ramo primitivo.
+                ExpressionNode vdInit = driver.target.isNative()
+                        ? CompilerComparisons.foldNullablePrimBranches(vds.initializer(), varType)
+                        : vds.initializer();
+                // nullable de REFERÊNCIA é constraint de compile-time: o
+                // storage é o inner (a referência já é nullable por si só).
+                // Nullable(primitivo) é DIFERENTE desde o #278: o storage
+                // PRECISA continuar Nullable (boxed — Commit B já ensina
+                // storeVarOpcode/loadVarOpcode/isDoubleWidth a despachar
+                // ASTORE/ALOAD/1-slot para ele) — desembrulhar aqui devolvia
+                // ao slot bruto e perdia a distinção null/default. Native
+                // mantém o unwrap antigo (fase 2, mesma representação de
+                // sempre).
+                if (varType instanceof Type.NullableType nt
+                        && !(nt.inner() instanceof Type.PrimitiveType && !driver.target.isNative())) {
                     varType = nt.inner();
                 }
                 if (driver.mutatedCapturedNames.contains(vds.name())) {
@@ -439,7 +428,7 @@ public final class StatementLowerer {
                     ops.add(new KofNewObject(taskTypeN, capTypesN));
                     ops.add(new KofDup());
                     for (IRLocalVariable cap : capN) {
-                        ops.add(new KofLoadLocal(cap.type(), cap.index()));
+                        CompilerCaptures.pushCapture(driver, ops, cap);
                     }
                     ops.add(new KofCall(taskTypeN, "<init>", capTypesN,
                             Type.PrimitiveType.VOID, KofCallKind.CONSTRUCTOR));
@@ -467,7 +456,7 @@ public final class StatementLowerer {
                 ops.add(new KofNewObject(taskType, captureTypes));
                 ops.add(new KofDup());
                 for (IRLocalVariable cap : captures) {
-                    ops.add(new KofLoadLocal(cap.type(), cap.index()));
+                    CompilerCaptures.pushCapture(driver, ops, cap);
                 }
                 ops.add(new KofCall(taskType, "<init>", captureTypes,
                         Type.PrimitiveType.VOID, KofCallKind.CONSTRUCTOR));

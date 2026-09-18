@@ -24,12 +24,13 @@ documento de arquitetura/visão **sem código implementado** (ou com código que
 |-----|------|---------------------------|
 | `PLAN-MULTIPARADIGMA.md` | multiparadigma / pipelines funcionais e queries declarativas (`users.filter{...}.map{...}`), diagnóstico no HEAD 16/09 | **design puro, zero código no doc** (§8 não lista nenhum arquivo alterado); promovido só quando o primeiro incremento funcional landar (SYSTEMS fechado, R12) |
 | `scoped-resources-plan.md` | RAII leve (TIER 2.4, `using`/`resource_scope`) | design puro — zero ocorrências de `resource_scope`/`kof_resource`/`using` no lexer/parser/runtime; gated por bump |
+| `value-records-plan.md` | value records / tipos-valor first-class (TIER 2.7, `value record`) — aceito 16/09 (issue #275, `DECISIONS.md` §D-VALUE-RECORD) | **zero código** — a feature não existe no lexer/parser/backends; só design, barrado pelo R12 + autorização explícita para abrir a frente |
 | `PLAN-BAREMETAL-BOOT.md` | **nativo → bare-metal/bootável** (costura HAL B-0…B-5: freestanding, UEFI, BIOS legado, MCU) — diretiva da mantenedora 15/09 | **zero código** — o runtime está fixado a syscalls Linux, o x86 precisa de `-lc`/`-dynamic-linker`, codegen de 32 bits ausente; classificado por `PLAN-TREE-SHAKING.md` §T3 ("embedded real = backend RTOS/bare-metal em si") — vai p/ `docs/` quando B-1 produzir um ELF sem dinâmica |
 | `DECOMPILER.md` + `TRANSLATOR.md` + `LEGACY_MIGRATION.md` | plataforma de migração legado (decompiler/translator/IR/diff-testing) | **DESPRIORIZADO pela mantenedora 15/09 — de volta desde `docs/development/`.** O código fica em kof-cli (`DecompileTest` 67/67, `TranslateTest` 61/61); a FILA está pausada: promoção exige decisão explícita dela |
 | ~~`planning-stdlib-array-returns.md`~~ → `docs/stdlib/DD-STDLIB-01-array-returns.md` | DD-STDLIB-01 | **FECHADO 13/09** — decisão 6a + implementação (`randomBytesHex`->String; choice=idiom), movido p/ docs/ |
 
-> **`PLAN-UNIVERSAL-PLATFORM.md` saiu de `future/` em 17/09/2026** — promovido
-> para `docs/development/PLAN-UNIVERSAL-PLATFORM.md` como **trabalho corrente**
+> **`IMPLEMENTATION-UNIVERSAL-PLATFORM.md` saiu de `future/` em 17/09/2026** — promovido
+> para `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` como **trabalho corrente**
 > por decisão da mantenedora, que **sobrepõe o portão R12** (ver `DECISIONS.md`
 > §D-UNIVERSAL). A visão/design não muda; o ponto de entrada é o Estágio 1
 > (consolidação SYSTEMS) e as recomendações executáveis R1–R12.

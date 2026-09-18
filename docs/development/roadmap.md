@@ -255,8 +255,12 @@ State 13/09: real concurrency **JVM** (virtual threads) + **Native**
 async/await/Promise) + **OTP supervision** (`kof.supervisor`: 1st slice
 11/09 JVM+Script core, **S2-JVM 13/09** `startAll`/`lacoUnico` — see
 `planning-otp-supervision.md`; **Native x86 ✅ 15/09** — §129 closed via DECISIONS
-§2 option B, so `kof.supervisor` runs on Native x86; riscv/aarch=OTP001, JS=OTP002
-§132 honest gates). The earlier `spawn→await→spawn` SIGSEGV (misaligned stack at
+§2 option B, so `kof.supervisor` runs on Native x86; riscv/aarch=OTP001 (honest
+§132-era gate). **JS ✅ 18/09 — §132 resolved:** `time.sleep` became a cooperative
+async await-point (compiler colors the reaching method async, `kofTimeSleep` returns a
+Promise, `KofJsRunner` host pump drives it), so a spawned worker fires from inside
+another task and `OTP002` was lifted — `kof.supervisor` now runs on JS to parity. The
+earlier `spawn→await→spawn` SIGSEGV (misaligned stack at
 the `pthread_create` call site) was fixed 01/09 by `andq $-16` in
 `kof_spawn_handle_new`. A related latent defect surfaced and was fixed 15/09 in the
 same §129 unit: `kof_await` did not clear the handle's TID after joining, so the
@@ -846,7 +850,7 @@ Long-term vision — Kof as a universal platform (one language for
 applications **and** systems, infrastructure, automation, data, security and
 science) **without** destroying the language's simplicity.
 
-- Central document: `docs/development/PLAN-UNIVERSAL-PLATFORM.md`
+- Central document: `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md`
   (architecture — **UNDER DEVELOPMENT** since 17/09/2026; promoted from
   `future/` by maintainer decision, `DECISIONS.md` §D-UNIVERSAL)
 - Stages by capability/maturity: `FOUNDATION ✅` → `SYSTEMS` (in
@@ -914,10 +918,10 @@ domain (`INFRA00x`/`DATA00x`/`SCI00x`/`BIO00x`/`SECPQ`) + parity matrix;
 | # | Item | REAL measured state |
 |---|------|--------------------|
 | 2.1.1–2.1.3 | `extern` syntax + type-check + gaps `FFI001`/`FFI002` (never silent drop) | ✅ `Parser.java:192` (PARSE090), `ExternalFunctionNode`, `FfiE2ETest` |
-| 2.1.4 | **JVM** binding (FFM `java.lang.foreign`) | ✅ real `abs`/`atoi`(String→Int)/`sqrt`(Double→Double) via FFM |
+| 2.1.4 | **JVM** binding (FFM `java.lang.foreign`) | ✅ **generalized 18/09 (`.18`, R3):** any scalar signature, arbitrary arity, `void`/`String` returns — measured `fmod`→1.5, `ldexp`→12.0, `strncmp`→-1, `puts(void)`, `getenv`→String (`syntax.md`) |
 | 2.1.5 | **Native** binding (`dlsym`) | ❌ **honest gap `FFI001`** — `dlopen` segfaults in the raw binary (no glibc init); it is NOT "✅ real" |
-| 2.1.6 | struct/array marshalling | 🟡 String↔Int, Double↔Double (JVM); complete struct/array pending |
-| 2.1.7 | JS: gap `FFI002` | ✅ |
+| 2.1.6 | struct/array marshalling | 🟡 all SCALAR shapes bind (JVM+JS-host since 18/09); struct/array/pointer still honest `FFI001` (design D6 ⛔ maintainer) |
+| 2.1.7 | JS: gap `FFI002` | ✅ honest gap + **scalar parity CLOSED 18/09 (`d3598c2d`, slices 3.6.F1–F3):** host runner binds via `KofJsFfiBridge`, `FfiE2ETest` 16/16 byte-for-byte JVM↔JS; browser = runtime R7; non-scalar keeps `FFI002` |
 | 2.2.1 | Inventory of implicit codegen (4 points: runtime `.source()`, `desugarTests`, `desugarApplication`, entity→record+schema) | ✅ the 4 exist (`CompilerPipeline:295-296`) |
 | 2.2.2 | **Formal `CodegenStep` hook** | ❌ **does NOT exist at HEAD** — `d1c56bad` added it, the pipeline went back to calling the `desugar*` directly; the old "✅" was an over-claim from the `planning-future` branch |
 | 2.2.3 | Migrate DDL/runner to the formal hook | ❌ blocked by 2.2.2 |
@@ -941,12 +945,16 @@ Lane: **compiler** (contract on the 4 backends — not the docs lane).
 | 2.6.3 | **N3** — `== null` on a NON-nullable: legal, constant-foldable, NEVER a diagnostic | intent reads the comparison itself; rule 2 (backward compat): existing code that compares keeps compiling | N1 |
 | 2.6.4 | **N4** — audit the remaining silent-null faces | map-miss `0` (SG-008), uninitialized field `0`, unbox-of-null `0` — each gets a decision or an honest diagnostic (R6) | N1–N3 |
 
+**Queue status (18/09):** PR **#438** (external fork, `fix/278-d-null-intent-atomic`) attacks **2.6.1/N1** (JVM+Script+JS) under §D-NULL-INTENT "Scope protection" — NOT draft, pending maintainer review; lanes must not open a parallel N1 front (rule 6 / one contract, one PR; CI `Build + Tests` **FAILED at head `7dc08ccb`** (3× `ConformanceMatrixTest` + `mapSetNative`) and is **SUCCESS at head `eaa22b57`** — the author fixed the 3 residual gaps, excluded Native from the `.equals()` path and synced the matrix cells; merge still awaits maintainer review — N2/Native and I4/i1 remain out of scope)). It also declares `Map.get/put/remove` on absent keys (I7) — subsuming the parked `#376`/`#409` map-absent face stamped by the maintainer 18/09 — do NOT open a separate N4 front for those cells while #438 is under review.
+
 #### 2.7 — Value records / first-class value types (queue of `D-VALUE-RECORD`, 16/09)
 
 **Decided by the maintainer 16/09** (record: `DECISIONS.md` §D-VALUE-RECORD;
 origin issue #275). Additive, backward compatible. **Planned only — not
 current work** (R12: new fronts do not open before the SYSTEMS stage closes;
 lanes must not attack without new authorization).
+
+**Design plan:** [`future/value-records-plan.md`](future/value-records-plan.md) (zero code).
 
 | # | Step | Scope (one line) | Depends on |
 |---|------|------------------|------------|
@@ -971,7 +979,7 @@ detailed technical history lives in `future/LEGACY_MIGRATION.md` +
 `future/DECOMPILER.md` (§7) — **do not duplicate here**; this table only gives
 the order. **DEPRIORITIZED 15/09 (maintainer): TIER 3–5 is not current work.**
 
-### TIER 6–12 — Universal platform (architecture **UNDER DEVELOPMENT** 17/09 — R12 overridden; governed by `docs/development/PLAN-UNIVERSAL-PLATFORM.md`)
+### TIER 6–12 — Universal platform (architecture **UNDER DEVELOPMENT** 17/09 — R12 overridden; governed by `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md`)
 
 | Tier | Stage | Scope (one line) |
 |------|---------|--------------------|

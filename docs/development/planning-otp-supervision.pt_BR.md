@@ -2,7 +2,7 @@
 
 # planning-otp-supervision.md — supervisão de workers estilo OTP (`one_for_one`) — EM DESENVOLVIMENTO
 
-**Dono:** lane CONC · **Status:** 1ª fatia implementada 11/09 (núcleo em JVM+Script; **S2-JVM ✅ 13/09** e **S2-Native x86 ✅ 15/09** — §129 fechado via DECISIONS §2 opção B; riscv/aarch=OTP001, JS=OTP002 §132 — gates honestos). Autorização da mantenedora (issue #83, 11/09): implementar o menor núcleo funcional com testes.
+**Dono:** lane CONC · **Status:** 1ª fatia implementada 11/09 (núcleo em JVM+Script; **S2-JVM ✅ 13/09** e **S2-Native x86 ✅ 15/09** — §129 fechado via DECISIONS §2 opção B; riscv/aarch=OTP001; **JS ✅ 18/09** (§132 resolvido, `OTP002` levantado) — gates honestos). Autorização da mantenedora (issue #83, 11/09): implementar o menor núcleo funcional com testes.
 **Criado:** 10/09 · **Emendado:** 11/09 · **Issue:** #83 (ViniciusKoiti)
 
 > **Emendas de 11/09** (verificadas no código da `beta-0.4.0`, marcadas
@@ -303,9 +303,9 @@ custo de regime, não de correção.
 > cobertura segue como declarada por outro motivo.** riscv/aarch permanecem
 > PARTIAL por causa do `OTP001`: o laço do supervisor observa falha via
 > `try { await } catch`, e no cross um `throw` em worker ainda longjmpa a
-> cadeia global de handlers (o fix TLS do §129 é só x86). JS segue `OTP002`
-> (§132). O limite "um worker por supervisor" permanece até o port do TLS
-> fechar na lane Native (regra 6: a frente é dela).
+> cadeia global de handlers (o fix TLS do §129 é só x86). JS está **resolvido 18/09** (§132 fechado — `OTP002` levantado; o
+> supervisor roda em JS com paridade). O limite "um worker por supervisor" permanece
+> até o port do TLS fechar no **riscv/aarch** (lane Native; regra 6: a frente é dela).
 
 ### DD-OTP-10 — Relógio injetável
 
@@ -424,15 +424,16 @@ Native; pequeno e isolado. Não bloqueia OTP (que usa flag própria).
 - **Impeditivos que tiveram que ser resolvidos/contornados:** §130 corrigido
   (SEM024 falso em corpo de método re-analisado — travava o builder fluente);
   §131 contornado (sobrecarga por aridade quebrada → `child` de 3 args único).
-- **Paridade honesta:** JVM + Script + **Native x86** rodam o núcleo; riscv/aarch
-  bloqueiam no compile-time (`OTP001`) e JS (`OTP002`) por §132 — NUNCA binário
+- **Paridade honesta:** JVM + Script + **Native x86** + **JS** rodam o núcleo; riscv/aarch
+  bloqueiam no compile-time (`OTP001`) — NUNCA binário
   que trava (regra 6). **S2-JVM do plano IMPLEMENTADO 13/09** (`020be966`, opção
   1a): `Supervisor.startAll()` + laço selectAny único com wrapper de identidade
   (id/motivo); gates S2 JVM+interpretador; `KofSupervisorE2ETest` 8/8, gate
   1620/0. **S2-Native x86 ✅ IMPLEMENTADO 15/09** (§129 fechado, DECISIONS §2
-  opção B; `supervisorNativeParityX86`/`supervisorNativeS2ParityX86`). Restam
-  OTP002-JS (§132) e riscv/aarch. O documento fica em `docs/development/` até
-  essas faces fecharem.
+  opção B; `supervisorNativeParityX86`/`supervisorNativeS2ParityX86`). **S2-JS ✅
+  IMPLEMENTADO 18/09** (§132 fechado — `time.sleep` async cooperativo; `OTP002`
+  levantado; `supervisorJsParity`/`supervisorJsS2Parity`). Resta riscv/aarch. O
+  documento fica em `docs/development/` até essa última face fechar.
 
 ## Atualização 12/09 — estado REAL dos impeditivos do S2 (doc-vs-realidade)
 
@@ -447,7 +448,12 @@ Native; pequeno e isolado. Não bloqueia OTP (que usa flag própria).
   TLS por thread + frame de handler por worker no `kof_spawn_trampoline`; o worker
   publica a causa no handle e `await`/`selectAny` a relançam — x86_64; riscv/aarch
   seguem `OTP001`, clone cru sem TLS) — S2-Native x86 destravado.
-  **§132 event-loop JS 🔴 segue ABERTO** (impeditivo do S2-JS) — lane de bugs/UI, regra 6.
+  **§132 event-loop JS ✅ CORRIGIDO 18/09 (#83-JS)** — `time.sleep` agora é ponto de
+  await (sleep cooperativo async: o compilador colore async o método que o alcança,
+  `kofTimeSleep` devolve Promise, a bomba do host `KofJsRunner` a drena), então um worker
+  spawnado de dentro de outra task roda enquanto o poller dorme — S2-JS desbloqueado,
+  `OTP002` levantado, `supervisorJsParity` verde. (Estava mal-atribuído à lane de bugs/UI;
+  caiu na lane KofJS/dev.)
 - **Buraco de design que a correção do §128 NÃO fecha (medido, não
   memória):** o `selectAny` JVM (`JvmRuntimeCore.kof_select_any` →
   `CompletableFuture.anyOf().get()`) devolve o **valor** do primeiro handle

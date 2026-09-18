@@ -291,7 +291,7 @@ class ComponentCoreE2ETest {
 
     @Test
     void rerenderPrunesPreviousSubtreeFromRegistry(@TempDir Path tempDir) throws IOException {
-        // §278 (found during the Phase 9 survey, docs/ui/architecture.md):
+        // §295 (found during the Phase 9 survey, docs/ui/architecture.md):
         // kofUiRender detached only the previous ROOT element from the DOM.
         // The view builder creates a fresh widget (and handle) on every
         // render, so every state change leaked the whole previous subtree
@@ -323,7 +323,7 @@ class ComponentCoreE2ETest {
 
     @Test
     void rerenderReleasesDiscardedButtonActions(@TempDir Path tempDir) throws IOException {
-        // §278 second face: the action table (window.__kofActions) is keyed by
+        // §295 second face: the action table (window.__kofActions) is keyed by
         // the same handle; a discarded Button with an action kept its closure
         // reachable forever. kofUiRemoveSubtree now deletes the entry for
         // every pruned node (kofUiButtonRemove already did it on the
@@ -551,7 +551,7 @@ class ComponentCoreE2ETest {
 
     @Test
     void storeUnsubscribeStopsDelivery(@TempDir Path tempDir) throws IOException {
-        // §279: JS unsubscribe was a SILENT NO-OP — subscribe stored the
+        // §296: JS unsubscribe was a SILENT NO-OP — subscribe stored the
         // wrapper (fn.invoke.bind) but unsubscribe searched the RAW handle,
         // so indexOf never matched and the subscriber kept being notified.
         // Same identity contract as mq's unsubscribeStopsDelivery (JS now;
@@ -577,7 +577,7 @@ class ComponentCoreE2ETest {
         // JS: current value on subscribe (n=1) + set(2); after unsubscribe
         // set(3) must NOT fire; the second unsubscribe is a no-op.
         assertEquals("n=1,n=2,", runJs(tempDir, "store-unsub", program),
-                "unsubscribe must stop delivery (§279)");
+                "unsubscribe must stop delivery (§296)");
     }
 
     @Test

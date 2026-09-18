@@ -149,6 +149,25 @@ var b: Box<Int> = Box(42)
 println(b.get())   // erasure + substituteTypeVariable — Native OK
 ```
 
+## Method Overloading (0.4.0-beta, §131)
+
+```kof
+class Calc {
+    Int add(Int a, Int b) { return a + b }
+    Int add(Int a, Int b, Int c) { return a + b + c }
+    String add(String a, String b) { return a + b }
+}
+var c = Calc()
+c.add(1, 2)          // 3
+c.add(1, 2, 3)       // 6
+c.add("ko", "f")     // "kof"
+```
+
+Same-name methods with different signatures (arity or parameter types) coexist
+in the class, resolved by the typer on all 4 backends. Exact duplicate → SEM047;
+ambiguity → SEM057; return type alone does NOT distinguish — full rules in
+`functions.md` (they apply equally to methods).
+
 ## Related anti-patterns
 
 - Utility class of static methods → top-level functions (`functions.md`)

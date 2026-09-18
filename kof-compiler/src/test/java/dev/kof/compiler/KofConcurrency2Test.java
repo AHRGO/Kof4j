@@ -1104,8 +1104,11 @@ class KofConcurrency2Test {
         // este teste era o GATE NEGATIVO (compile-time CONC001 em cada helper);
         // agora o MESMO programa compila e executa sob qemu nas duas arches
         // com a ordem determinística: selectAny devolve 1 (a termina), done
-        // true, poll devolve 1 (b terminou no selectAny scan), cancel marca,
+        // true, poll devolve 1 APÓS `await b` (HB real), cancel marca,
         // cancelled()==false no main, awaitTimeout devolve o valor (prazo).
+        // §256(b): o golden antigo NÃO tinha HB com o worker b (poll logo
+        // após selectAny era 6/15 flake — ver SG-020/§4.4); `await b` antes
+        // do poll fecha a janela por construção.
         for (Target t : new Target[]{Target.NATIVE_RISCV64, Target.NATIVE_AARCH64}) {
             String arch = t.nativeArch();
             Assumptions.assumeTrue(NativeRiscv64E2ETest.hasToolchain(arch), "cross toolchain " + arch + " ausente — pulando");
@@ -1117,6 +1120,7 @@ class KofConcurrency2Test {
                         val b = spawn trabalho()
                         println(selectAny(a, b))
                         println(done(a))
+                        await b
                         println(poll(b))
                         cancel(a)
                         println(cancelled())

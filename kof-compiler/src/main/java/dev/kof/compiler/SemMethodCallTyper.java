@@ -120,7 +120,16 @@ public final class SemMethodCallTyper {
                     // ausência é null comparável, nunca NPE por unbox
                     return new Type.NullableType(valueType);
                 }
-                if ("put".equals(mc.methodName()) || "remove".equals(mc.methodName())) return valueType;
+                // D-NULL-INTENT/I7: mesma razão do `get` acima — Java Map
+                // contract (valor anterior/removido OU null quando ausente).
+                // Este é o typer consultado no EMIT (ExpressionTyper.
+                // inferExprType) — divergir do CollectionCallLowerer (que já
+                // declara o KofCall como V?) reproduzia o mesmo bug do #278:
+                // a chamada devolve boxed de verdade mas o consumidor (ex.
+                // `==`) achava que era primitivo cru → VerifyError.
+                if ("put".equals(mc.methodName()) || "remove".equals(mc.methodName()))
+                    return new Type.NullableType(valueType);
+                if ("getOrDefault".equals(mc.methodName())) return valueType;
                 if ("size".equals(mc.methodName()) || "length".equals(mc.methodName())
                         || "count".equals(mc.methodName())) return Type.PrimitiveType.INT;
                 if ("contains".equals(mc.methodName()) || "containsKey".equals(mc.methodName())

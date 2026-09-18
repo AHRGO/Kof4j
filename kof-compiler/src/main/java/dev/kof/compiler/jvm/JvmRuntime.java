@@ -57,6 +57,8 @@ public static boolean hasRuntimeFn(String methodName) {
                 || methodName.equals("kof_ffi_i")
                 || methodName.equals("kof_ffi_si")
                 || methodName.equals("kof_ffi_dd")
+                || methodName.equals("kof_ffi")
+                || methodName.equals("kof_ffi_void")
                 || methodName.equals("kof_now")
                 || methodName.equals("kof_read_line")
                 || methodName.equals("kof_read_file")

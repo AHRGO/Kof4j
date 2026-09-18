@@ -61,3 +61,172 @@ Editor
 
 Nunca mostrar assembly como experiência primária — o mapeamento
 `assembly → linha Kof` é interno.
+
+## 5. Validando o target Native a partir de um host Windows
+
+O backend Native x86-64 não é apenas uma transformação de código em
+memória: ele invoca um toolchain externo para montar e linkar o binário
+gerado.
+
+No código atual, `NativeAssembler` utiliza `as` e `ld` e, no caminho Linux
+dinâmico, referencia o loader ELF e bibliotecas do sistema, incluindo
+`libc` e `libm`.
+
+Por isso, uma execução em Windows puro pode não conseguir validar o mesmo
+caminho Native exercitado em Linux. Uma mensagem como:
+
+```text
+as not available: ...
+```
+
+ou:
+
+```text
+ld not available: ...
+```
+
+indica primeiro que o processo não encontrou a ferramenta externa
+necessária. Não trate essa condição, isoladamente, como prova de
+regressão do compilador Kof.
+
+### 5.1 Antes de executar a suíte
+
+Confira a versão Java exigida pelo projeto no `pom.xml`:
+
+```xml
+<maven.compiler.release>...</maven.compiler.release>
+```
+
+Use no WSL um JDK compatível com esse valor. Não copie uma versão fixa
+deste documento: o `pom.xml` é a fonte de verdade.
+
+Confirme também o toolchain Linux:
+
+```bash
+java -version
+command -v as
+command -v ld
+as --version
+ld --version
+```
+
+Quando o teste depender do caminho ELF dinâmico x86-64, também vale
+conferir o ambiente esperado pelo linker, por exemplo:
+
+```bash
+test -e /lib64/ld-linux-x86-64.so.2 && echo "dynamic linker: ok"
+```
+
+A presença exata de ferramentas e bibliotecas depende da distribuição
+WSL. Não assuma que toda distro já contém `as`, `ld`, `gcc` ou o JDK
+necessário: verifique antes.
+
+### 5.2 Executando a partir do Windows
+
+Para comandos simples, `wsl.exe` pode executar comandos por meio do shell
+configurado. Para o fluxo do Kof, no qual frequentemente já usamos
+explicitamente `bash -lc` para configurar `JAVA_HOME`, `PATH` e depois
+executar Maven, prefira o modo `--exec`/`-e`:
+
+```powershell
+wsl -d Ubuntu-24.04 -e bash -lc 'export JAVA_HOME=...; export PATH="$JAVA_HOME/bin:$PATH"; mvn ...'
+```
+
+Evite construir esse tipo de script aninhado como:
+
+```powershell
+wsl -d Ubuntu-24.04 -- bash -lc 'export JAVA_HOME=...; export PATH="$JAVA_HOME/bin:$PATH"; mvn ...'
+```
+
+quando a intenção é que o `bash -lc` fornecido seja a única camada
+responsável pela interpretação das variáveis e metacaracteres do script.
+
+#### Por que o Kof recomenda `-e` nesse caso?
+
+Esse comportamento foi investigado no projeto oficial do WSL em
+[microsoft/WSL#41598](https://github.com/microsoft/WSL/issues/41598) e
+discutido na PR
+[microsoft/WSL#41599](https://github.com/microsoft/WSL/pull/41599).
+
+O projeto WSL decidiu manter o comportamento atual e classificou a
+questão como `bydesign`. A equipe considera `--` o separador que encerra
+a interpretação de opções do `wsl.exe`, enquanto o tipo de shell da
+execução é controlado pelas opções próprias de shell/execução.
+
+Portanto, esta orientação do Kof **não descreve um bug do WSL**. É uma
+escolha operacional para tornar scripts de build aninhados previsíveis:
+se já estamos fornecendo `bash -lc`, `-e` evita depender da interpretação
+anterior do shell padrão.
+
+Em termos práticos:
+
+```text
+wsl.exe -e bash -lc '<script>'
+        │
+        └── executar explicitamente bash com os argumentos fornecidos
+```
+
+é preferível, para nossos scripts de build, a depender de:
+
+```text
+wsl.exe <command line>
+        │
+        └── shell padrão interpreta a command line
+                │
+                └── bash -lc interpreta o script interno
+```
+
+quando o texto contém `$VAR`, aspas, `;` e outras construções destinadas
+ao shell interno.
+
+### 5.3 Git Bash/MSYS
+
+Se `wsl.exe` estiver sendo chamado a partir de Git Bash/MSYS, lembre que o
+próprio MSYS pode converter argumentos que se parecem com paths Unix antes
+de chamar um executável Windows nativo.
+
+Se essa conversão interferir com paths `/mnt/...`, execute a chamada a
+partir de PowerShell/cmd ou desabilite a conversão de path para essa
+invocação conforme o ambiente utilizado.
+
+Não trate problemas de conversão MSYS e problemas de parsing do shell WSL
+como a mesma causa: são camadas diferentes.
+
+### 5.4 Onde gerar e executar os binários Native
+
+Prefira gerar e executar artefatos Native dentro do filesystem Linux da
+distro durante a validação. Isso evita misturar a semântica de permissões
+do filesystem Linux com mounts Windows em `/mnt/...`.
+
+Se um binário criado em um mount Windows não puder ser executado, valide
+permissões e o tipo de mount antes de concluir que o Kof gerou um
+executável inválido.
+
+### 5.5 Ordem de diagnóstico
+
+Quando um teste Native falhar em um host Windows, diagnostique nesta
+ordem:
+
+```text
+1. O JDK corresponde ao maven.compiler.release atual?
+        ↓
+2. WSL/distro está disponível?
+        ↓
+3. as e ld existem dentro da distro?
+        ↓
+4. loader/bibliotecas exigidos pelo caminho testado existem?
+        ↓
+5. o comando está sendo executado com a camada de shell esperada?
+        ↓
+6. o teste isolado Native falha?
+        ↓
+7. o mesmo caso falha na suíte/gate de conformidade?
+        ↓
+8. só então tratar como possível regressão do compilador
+```
+
+A regra é simples:
+
+> ausência do toolchain não prova defeito no código gerado; uma regressão
+> deve continuar reproduzível depois que o ambiente necessário ao target
+> estiver disponível.

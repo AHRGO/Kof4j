@@ -2,7 +2,7 @@
 
 # Idiomas — Interop (tipos JVM e FFI C)
 
-**Status:** parcial (whitelist) · **Introduzido:** 0.3.x (TIER 2.1) · **Atualizado:** 17/09
+**Status:** parcial (whitelist) · **Introduzido:** 0.3.x (TIER 2.1) · **Atualizado:** 18/09 (R3 JVM generalizado — ABI escalar + void + retorno String; **callbacks C2 — gate da JVM ABERTO**; ver `IMPLEMENTATION-UNIVERSAL-PLATFORM.pt_BR.md` 3.6/3.4) · **Atualizado:** 17/09
 
 ## O que é
 
@@ -17,26 +17,42 @@ Duas superfícies, uma regra: a plataforma já existe — não a reconstrua.
 var now = java.time.Instant.now()
 println(now.toString())
 
-// (b) FFI C — a whitelist prende 1-arg SOMENTE (JvmFfiRuntime):
+// (b) FFI C — o JVM liga QUALQUER assinatura ESCALAR (R3 generalizado 18/09):
 extern "/lib/x86_64-linux-gnu/libm.so.6" cos(Double x): Double   // ok
 extern "/lib/x86_64-linux-gnu/libc.so.6" atoi(String s): Int    // ok (String->Int)
-// f(Int): Int ok. Todo o resto é diagnóstico em tempo de compilação:
-extern "/lib/x86_64-linux-gnu/libc.so.6" strcmp2(String a, String b): Int
-//  -> FFI001 (multi-arg; a gramática parseia, a whitelist rejeita)
-// target JS  -> FFI002 (FFI não disponível no target JS)
+extern "/lib/x86_64-linux-gnu/libm.so.6" fmod(Double a, Double b): Double  // ok — 1.5 medido
+extern "/lib/x86_64-linux-gnu/libm.so.6" ldexp(Double x, Int e): Double    // ok — 12.0 medido (misto)
+extern "/lib/x86_64-linux-gnu/libc.so.6" puts(String s): void     // ok — void liga
+extern "/lib/x86_64-linux-gnu/libc.so.6" getenv(String n): String // ok — "mel" medido
+// O NOME da funcao Kof e o simbolo C (sem alias) — kof_fmod falhou no lookup, fmod funciona.
+// Tipos nao-escalares (objetos, genericos) -> FFI001 em tempo de compilacao:
+// runner JS  -> MESMA ABI escalar via KofJsFfiBridge (F2/F3 ✅ 18/09; FfiE2ETest 16/16); browser -> erro honesto de runtime (R7, sem host); nao-escalar -> FFI002
 // Native     -> FFI001 até o §61 (libc não inicializada)
+
+// (c) CALLBACKS (C2 ✅ JVM + paridade JS C3 ✅, 18/09): uma função Kof entregue
+// ao C como ponteiro de função. Parâmetro tipo-função + lambda no call site;
+// só ABI de callback PRIMITIVA (síncrono, não-escapante):
+extern "libcallback.so" kof_cb_add(Int a, Int b, (Int, Int) -> Int cb): Int
+// call site — a lambda vira o ponteiro de função C (Linker.upcallStub):
+kof_cb_add(20, 22, (x: Int, y: Int) -> x + y)   // 42 medido
+kof_cb_mixed(3, 2.5, (i: Int, d: Double) -> i * d)  // ABI escalar mista ok
+// callback JS no host runner -> MESMA ABI primitiva (C3 ✅ 18/09,
+// jvmAndJsCallbacksMatchByteForByte 42/42/6.0/7.5); browser -> degrade honesto
+// em runtime (R7, sem host); String/struct/ponteiro-no-callback e
+// callback-como-retorno -> FFI001/FFI002 — nunca um stub silencioso.
 ```
 
 ## RUIM → BOM
 
 | ❌ RUIM | ✅ BOM | Por quê |
 |---|---|---|
-| `extern ... drawText(String t, Int x, Int y): void` | hoje: uma bridge C 1-arg compilada por você (`int kof_draw(char*...)` atrás de um símbolo preso), ou interop JVM para binding existente | multi-arg = `FFI001`; o alargamento é a fatia R3 (`PLAN-UNIVERSAL-PLATFORM.md`, issue #431) — NÃO emita bytecode na mão para furar o compilador |
+| ligar um simbolo sob outro nome Kof (`kof_fmod`) | o NOME e o simbolo C (sem alias, medido 18/09) — ligar `fmod`, envolver numa fn Kof para nome amigavel | multi-arg/`void`/retorno `String` ja ligam desde R3 18/09 — NAO emita bytecode na mao para furar o compilador |
 | assumir que o caminho da lib é checado em compile | trate lib/símbolo ausente como falha `kof_ffi_*` de **runtime** | o caminho resolve em runtime (`SymbolLookup`), não em compile |
-| reimplementar sin/cos/strcmp em Kof | prenda a lib do sistema (formas 1-arg) | complexidade é da plataforma (regra de ferro 2) |
+| guardar o ponteiro do callback para chamar DEPOIS (atexit/signal/async) | mantenha callbacks síncronos e não-escapantes | escapantes exigem política de vida/GC-rooting (R12) — ficam `FFI001`, nunca stub pendurado |
+| reimplementar sin/cos/strcmp em Kof | prenda a lib do sistema (qualquer forma escalar desde 18/09) | complexidade é da plataforma (regra de ferro 2) |
 
 ## Veja também
 
 `docs/language-reference/syntax.md` (§FFI com C), `grammar.md`
 (`extern-declaration`), `modules.md` §6; gaps `FFI001`/`FFI002`;
-fila: primeira fatia R3 (aridade → void → retorno String → `char*`).
+R3 landado: JVM escalar arbitrario (aridade/void/retorno String, 18/09) + paridade JS host (3.6.F2/F3 ✅ 18/09) + **callbacks ligam na JVM E no host runner JS, paridade byte-for-byte (C2 ✅ + C3.2/C3.3 ✅ 18/09, `JvmFfiCallbackE2ETest` incl. `jvmAndJsCallbacksMatchByteForByte`)**; restantes: opaque handles (3.3), variadics (3.5, ⛔ decisao de surface), ABI struct/array (D6 ⛔), Native §61.

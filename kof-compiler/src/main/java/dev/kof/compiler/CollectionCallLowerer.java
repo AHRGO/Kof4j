@@ -231,6 +231,7 @@ public final class CollectionCallLowerer {
         String mapFn = switch (mc.methodName()) {
             case "put" -> "kof_map_put";
             case "get" -> "kof_map_get";
+            case "getOrDefault" -> "kof_map_get_or_default";
             case "remove" -> "kof_map_remove";
             case "containsKey", "contains" -> "kof_map_contains";
             case "size", "length", "count" -> "kof_map_size";
@@ -244,7 +245,7 @@ public final class CollectionCallLowerer {
             driver.currentDiagnostics.error(mc.position() != null ? mc.position().file() : "",
                     mc.position() != null ? mc.position().line() : 0,
                     mc.position() != null ? mc.position().column() : 0, 0,
-                    "Cannot resolve method '" + mc.methodName() + "' on type 'Map' (valid: put/get/remove/containsKey/contains/size/clear/isEmpty/keys/values)",
+                    "Cannot resolve method '" + mc.methodName() + "' on type 'Map' (valid: put/get/getOrDefault/remove/containsKey/contains/size/clear/isEmpty/keys/values)",
                     "SEM025");
             return localIdx;
         }
@@ -289,12 +290,14 @@ public final class CollectionCallLowerer {
             // Chave errada = scan tag=1 sobre Int cru → SIGSEGV no Native
             // (A2/H4); valor errado = ClassCastException no JVM no get/unbox.
             // Rejeição cobre os dois lados (decisão "put heterogêneo").
-            if ("kof_map_put".equals(mapFn) && driver.currentDiagnostics != null) {
+            if (("kof_map_put".equals(mapFn) || "kof_map_get_or_default".equals(mapFn))
+                    && driver.currentDiagnostics != null) {
                 String badSlot = null; Type badType = null, slotType = null;
+                int valIdx = 1;
                 if (argTypes.size() >= 1 && CollectionWrites.pollutesPinned(keyType, argTypes.get(0))) {
                     badSlot = "chave"; badType = argTypes.get(0); slotType = keyType;
-                } else if (argTypes.size() >= 2 && CollectionWrites.pollutesPinned(valueType, argTypes.get(1))) {
-                    badSlot = "valor"; badType = argTypes.get(1); slotType = valueType;
+                } else if (argTypes.size() > valIdx && CollectionWrites.pollutesPinned(valueType, argTypes.get(valIdx))) {
+                    badSlot = "valor"; badType = argTypes.get(valIdx); slotType = valueType;
                 }
                 if (badSlot != null) {
                     var pos = mc.position();
@@ -309,7 +312,15 @@ public final class CollectionCallLowerer {
                 }
             }
             Type retType = switch (mapFn) {
-                case "kof_map_put", "kof_map_remove" -> valueType;
+                // D-NULL-INTENT/I7 (#278): put/remove devolvem V? de
+                // verdade — mesma razão do get logo abaixo (Java Map
+                // contract: valor anterior/removido OU null quando
+                // ausente). Sem isto, o KofCall ficava com o tipo ERRADO
+                // embutido mesmo com os typers (SemMethodCallTyper etc.)
+                // já corrigidos — o backend JS (`?? default`) e o JVM
+                // (Type.isVoid guard) consultam ESTE campo, não o typer.
+                case "kof_map_put", "kof_map_remove" -> new Type.NullableType(valueType);
+                case "kof_map_get_or_default" -> valueType;
                 // get() devolve V? (SG-008/bug 87): ausência é null comparável
                 // (`x == null`), nunca NPE por unbox. O unbox acontece no
                 // USE (aritmética), guiado pelo tipo do slot.

@@ -18,14 +18,14 @@ class CompilerDriverTest {
     void externProducesHonestGapNotSilentDrop(@TempDir Path tempDir) throws IOException {
         Path source = tempDir.resolve("ffi.kf");
         Files.writeString(source, """
-                extern add(Int a, Int b): Int
+                extern sum(Int[] xs): Int
 
                 main() {
                     println("hi")
                 }
                 """);
         CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.JVM);
-        assertFalse(result.success(), "extern must not silently drop: compilation should fail with gap");
+        assertFalse(result.success(), "unsupported-signature extern must not silently drop: compilation should fail with gap");
         String diags = result.diagnostics().getDiagnostics().toString();
         assertTrue(diags.contains("FFI001"), "expected FFI001 gap, got: " + diags);
     }
@@ -42,7 +42,8 @@ class CompilerDriverTest {
                 """);
         CompilationResult result = driver.compile(source, tempDir.resolve("out"), Target.JVM);
         String diags = result.diagnostics().getDiagnostics().toString();
-        assertTrue(diags.contains("FFI001"), "extern recognized (gap), not a parse error: " + diags);
+        assertTrue(result.success(), "String→String extern is now bound on JVM (R3 generalization): " + diags);
+        assertFalse(diags.contains("FFI001"), "bound extern must not emit FFI001: " + diags);
         assertFalse(diags.contains("PARSE"), "extern must not be a parse error: " + diags);
     }
 

@@ -102,7 +102,7 @@ Target-specific · Unspecified · Planned**.
 | Ambiguous import (does not guess) | Stable | `CompilerTypes:102` |
 | PKG002 (1 main) | Stable | probe |
 | JVM interop (Java types) | **Target-specific** | `AndroidInteropE2ETest` |
-| C FFI (`extern "<lib>"`) | **Partial** — JVM whitelist 1-arg: `Int→Int`, `String→Int`, `Double→Double`; multi-arg/`String`-return = `FFI001`; JS = `FFI002`; Native = `FFI001` (R6, never silent) | measured 17/09 (`modules.md` §6); widening = fatia R3 (`PLAN-UNIVERSAL-PLATFORM.md`, #431) |
+| C FFI (`extern "<lib>"`) | **Partial** — JVM any scalar signature, free arity, `void`/`String` returns (18/09, `.18`); non-scalar = `FFI001`; JS host runner = SAME scalar ABI (3.6.F2/F3 ✅ 18/09, `FfiE2ETest` 16/16 JVM↔JS byte-for-byte), non-scalar = `FFI002`, browser = runtime R7; Native = `FFI001` §61 (R6, never silent) | measured 18/09 (`modules.md` §6; fmod/ldexp/strncmp/puts/getenv verbatims in `syntax.md`) (`IMPLEMENTATION-UNIVERSAL-PLATFORM.md`, #431) |
 
 ### Concurrency
 | Feature | Status | Test evidence |

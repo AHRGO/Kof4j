@@ -29,6 +29,29 @@ public final class ExpressionBinaryLowerer {
         return CompilerTypes.isRecordType(u, driver.currentUnit, driver.semanticAnalyzer);
     }
 
+    /**
+     * D-NULL-INTENT (I6): {@code Nullable(primitivo)} GENUÍNO — física de
+     * referência boxed agora, então precisa do MESMO caminho null-safe de
+     * conteúdo que record usa (I6: igualdade lifted, nunca identidade do
+     * wrapper — cache do {@code Integer} faria dois {@code 10000} distintos
+     * darem {@code false} num {@code if_acmp} cru).
+     */
+    private static boolean isNullablePrimLike(Type t) {
+        return t instanceof Type.NullableType nt && nt.inner() instanceof Type.PrimitiveType pt
+                && !Type.isVoid(pt);
+    }
+
+    /**
+     * D-NULL-INTENT (I6, caso misto): {@code Nullable(primitivo)} genuíno OU
+     * primitivo CRU (bare, não-nullable) — cobre {@code m.get("a") == 1}
+     * (esquerda boxed, direita literal cru). O lado bare nunca é null, então
+     * o dance null-safe do {@link RecordEqualityLowerer} continua correto
+     * (equivale a comparar por valor sem nunca dar falso-negativo/NPE).
+     */
+    private static boolean isNullablePrimOrBarePrim(Type t) {
+        return isNullablePrimLike(t) || (t instanceof Type.PrimitiveType pt && !Type.isVoid(pt));
+    }
+
     /** §167: bitwise inteiro `& | ^` (o `&&`/`||` lógico já saiu antes). */
     private static boolean isBitwiseOp(String op) {
         return "&".equals(op) || "|".equals(op) || "^".equals(op);
@@ -56,7 +79,17 @@ public final class ExpressionBinaryLowerer {
                     List.of(Type.PrimitiveType.CHAR), BuiltinTypes.STRING, KofCallKind.STATIC));
             return;
         }
-        boolean stringified = !Type.isString(type) && TypeMetrics.isPrimitiveType(type);
+        // D-NULL-INTENT (#278): `TypeMetrics.isPrimitiveType` desembrulha
+        // Nullable — casava tanto o primitivo CRU (precisa de boxPrimitive
+        // antes do valueOf) quanto um `Int?`/`Bool?` GENUÍNO (Commit B: já
+        // chega boxed/aconst_null da chamada/local/map). Reboxar este
+        // segundo caso chama Integer.valueOf(int) sobre uma REFERÊNCIA
+        // (VerifyError JVM; NPE silenciosa no interpretador — achado em
+        // `"a" + ni()` com `Int? ni() { return null }`). Native mantém o
+        // desembrulho antigo (fase 2 do rollout, representação inalterada).
+        boolean stringified = !Type.isString(type) && (driver.target.isNative()
+                ? TypeMetrics.isPrimitiveType(type)
+                : type instanceof Type.PrimitiveType pt3 && !Type.isVoid(pt3));
         if (driver.target == Target.JS
                 && TypeMetrics.isFloatingPoint(
                         type instanceof Type.NullableType ntp ? ntp.inner() : type)) {
@@ -211,10 +244,51 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
         case "+", "-", "*", "/", "%" -> true;
         default -> false;
     };
+    // D-NULL-INTENT: bare primitivo NÃO-nullable dos dois lados — um
+    // Nullable(primitivo) GENUÍNO (accType/rightType instanceof
+    // NullableType) tem de cair no caminho null-safe mais abaixo
+    // (RecordEqualityLowerer/`.equals()`, I6), nunca num if_icmp* cru
+    // sobre a referência boxed (VerifyError) — TypeMetrics.isNumeric
+    // desempacota Nullable, então não serve de guarda aqui sozinho.
+    // Native é EXCEÇÃO (fase 2 da fila D-NULL-INTENT, DECISIONS.md — não
+    // tocado): a representação de Nullable(primitivo) lá continua CRUA
+    // (não boxed), então o desempacote antigo (TypeMetrics.isNumeric) é
+    // seguro e necessário — `.equals()`/`java_lang_Integer_equals` não
+    // existe no runtime nativo (achado na CI real, linker `undefined
+    // reference`, ausente no Windows local sem `as`/`ld`).
+    // D-NULL-INTENT: relacionais (<,<=,>,>=) sobre Nullable(primitivo) NÃO
+    // têm caminho `.equals()` (Comparable não faz parte do I6) — precisam
+    // desempacotar e comparar por VALOR primitivo cru, então SÃO elegíveis
+    // aqui mesmo com um lado Nullable (o bloco abaixo já desempacota
+    // accType/rightType antes do DCMPG/etc. — achado ao medir
+    // ConformanceMatrixTest.conformanceCoreArithmetic, `d > 1.0` com `d`
+    // vindo de Map.get: sem isto, caía no isRefOperand → if_acmp* contra um
+    // double CRU não-boxado do lado direito → VerifyError). `==`/`!=`
+    // continuam EXCLUÍDOS daqui mesmo com Nullable — ficam com o caminho
+    // `.equals()` do I6 abaixo (nunca identidade de wrapper).
+    boolean isRelationalOp = switch (be.operator()) {
+        case "<", "<=", ">", ">=" -> true;
+        default -> false;
+    };
     boolean isNumericComparison = TypeMetrics.isComparisonOp(be.operator())
-            && TypeMetrics.isNumeric(accType) && TypeMetrics.isNumeric(rightType);
+            && ((accType instanceof Type.PrimitiveType && TypeMetrics.isNumeric(accType)
+                    && rightType instanceof Type.PrimitiveType && TypeMetrics.isNumeric(rightType))
+                || (driver.target.isNative() && TypeMetrics.isNumeric(accType) && TypeMetrics.isNumeric(rightType))
+                || (isRelationalOp && isNullablePrimOrBarePrim(accType) && isNullablePrimOrBarePrim(rightType)
+                    && TypeMetrics.isNumeric(accType) && TypeMetrics.isNumeric(rightType)));
     if ((isArithmetic || isNumericComparison)
             && TypeMetrics.isNumeric(accType) && TypeMetrics.isNumeric(rightType)) {
+        // D-NULL-INTENT: aritmética exige o valor PRESENTE — um
+        // Nullable(primitivo) GENUÍNO chega FISICAMENTE boxed agora
+        // (return/local/Map do #278); sem desempacotar, IADD/etc. sobre a
+        // referência é VerifyError (achado ao medir
+        // KofInterpreterParityTest.printNullablePrimitiveNull, caso
+        // `ni() + 1`). `null + 1` continua indefinido (NPE em runtime,
+        // como Java) — narrowing explícito é responsabilidade do programa.
+        if (accType instanceof Type.NullableType accNt) {
+            driver.emitErasureUnbox(ops, accNt.inner());
+            accType = accNt.inner();
+        }
         // OBS-009: divisão (ou resto) por zero constante é
         // detectada em compile-time — o compilador conhece a
         // intenção; o usuário não vê o ArithmeticException do
@@ -240,6 +314,10 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
         }
         driver.emitWideningIfNeeded(ops, accType, commonType);
         localIdx = ExpressionLowerer.emitExpression(driver, be.right(), ops, owner, localIdx, locals);
+        if (rightType instanceof Type.NullableType rightNt) {
+            driver.emitErasureUnbox(ops, rightNt.inner());
+            rightType = rightNt.inner();
+        }
         driver.emitWideningIfNeeded(ops, rightType, commonType);
         ops.add(new KofBinary(TypeMetrics.mapArithmeticOp(be.operator()), commonType));
         accType = commonType;
@@ -316,10 +394,17 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
     } else if (("==".equals(be.operator()) || "!=".equals(be.operator()))
             && ((be.right() instanceof LiteralExpr rl
                     && rl.kind() == ConcreteLiteralKind.NULL
-                    && TypeMetrics.isPrimitiveType(accType))
+                    && accType instanceof Type.PrimitiveType apt && !Type.isVoid(apt))
                 || (be.left() instanceof LiteralExpr ll
                     && ll.kind() == ConcreteLiteralKind.NULL
-                    && TypeMetrics.isPrimitiveType(rightType)))) {
+                    && rightType instanceof Type.PrimitiveType rpt && !Type.isVoid(rpt)))) {
+        // D-NULL-INTENT: só dispara p/ primitivo NÃO-nullable de verdade
+        // (`accType`/`rightType` bare PrimitiveType, sem desempacotar
+        // NullableType) — um Nullable(primitivo) GENUÍNO cai no ramo
+        // abaixo (referência se_acmp*, `NullablePrimitiveContractE2ETest`).
+        // Antes usava TypeMetrics.isPrimitiveType (que desempacota Nullable)
+        // e fold `Int? f() { return null }; f() == null` virava `false`
+        // sempre — supersede §125 opção A (DECISIONS.md 15/09).
         // primitivo nunca é null: == → false, != → true
         // (o lado não-nulo já está na pilha — descarta; 2 slots = POP2,
         //  SG-020/bug 79 — POP de Double/Long deixa o 2º slot e o
@@ -332,12 +417,32 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
         accType = Type.PrimitiveType.BOOL;
     } else if (("==".equals(be.operator()) || "!=".equals(be.operator()))
             && !driver.isNullLiteral(be.left()) && !driver.isNullLiteral(be.right())
-            && (isRecordLike(accType, driver) || isRecordLike(rightType, driver))) {
+            && (isRecordLike(accType, driver) || isRecordLike(rightType, driver)
+                || (!driver.target.isNative()
+                    && (isNullablePrimLike(accType) || isNullablePrimLike(rightType))
+                    && isNullablePrimOrBarePrim(accType) && isNullablePrimOrBarePrim(rightType)))) {
         // §262 / bug 11: `record == record` é igualdade de CONTEÚDO, null-safe
         // (Objects.equals). Desugaring em RecordEqualityLowerer (JS = chamada
         // p/ helper kofRecordEq; JVM/Script/Native = ternária com jumps). O
         // `record == null` literal NAO cai aqui — é comparação de referência
         // (ramo abaixo). Aqui só se aplica o `!=` UMA vez, p/ todos os targets.
+        // D-NULL-INTENT (I6): Nullable(primitivo) GENUÍNO — dos dois lados
+        // (ex. `a() == b()`) OU misto com primitivo CRU (ex. `m.get("a") ==
+        // 1`, o lado cru nunca é null) — entram no MESMO caminho:
+        // `.equals()` do wrapper (Integer/Long/...) já faz igualdade por
+        // VALOR null-safe, driver exato de I6. O lado bare precisa chegar
+        // BOXED no RecordEqualityLowerer (ele guarda os DOIS em temporários
+        // Object): a esquerda já emitida boxa AQUI (antes do dispatch); a
+        // direita boxa dentro do lowerer, logo após ser emitida.
+        // EXCETO Native (fase 2 da fila D-NULL-INTENT, DECISIONS.md — não
+        // tocado): `.equals()` de wrapper JDK não existe no runtime nativo
+        // (`java_lang_Integer_equals`/`java_lang_Boolean_equals` —
+        // `undefined reference` no linker, achado na CI real; ausente no
+        // Windows local sem `as`/`ld`). Record continua passando por aqui
+        // no Native (equals de classe usuário, já suportado antes do #278).
+        if (accType instanceof Type.PrimitiveType apt4 && !Type.isVoid(apt4)) {
+            TypeEmitter.boxPrimitive(ops, accType);
+        }
         localIdx = RecordEqualityLowerer.emit(driver, be, ops, owner, localIdx, locals,
                 accType, rightType);
         if ("!=".equals(be.operator())) {
@@ -385,8 +490,14 @@ for (int ci = chain.size() - 1; ci >= 0; ci--) {
         // com o primitivo boxado (SG-008/bug 87; espelha Objects.equals).
         // O box do lado primitivo acontece ANTES do emit do lado oposto
         // (boxa o valor no topo da pilha, na ordem certa).
+        // D-NULL-INTENT: só boxa se accType é primitivo CRU (bare
+        // PrimitiveType) — um accType já Nullable(primitivo) chega
+        // FISICAMENTE boxed (via return/local fix do #278); usar
+        // TypeMetrics.isPrimitiveType (que desempacota Nullable) boxava de
+        // novo um valor já-Integer → Integer.valueOf(I) com Integer na
+        // pilha (VerifyError).
         boolean boxLeftNow = ("==".equals(be.operator()) || "!=".equals(be.operator()))
-                && isMaybeNullType(rightType) && TypeMetrics.isPrimitiveType(accType);
+                && isMaybeNullType(rightType) && accType instanceof Type.PrimitiveType apt2 && !Type.isVoid(apt2);
         if (boxLeftNow) TypeEmitter.boxPrimitive(ops, accType);
         localIdx = ExpressionLowerer.emitExpression(driver, be.right(), ops, owner, localIdx, locals);
         Type operandType = accType;

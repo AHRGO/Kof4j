@@ -1227,7 +1227,7 @@ verde fora do flake pré-existente §252 e dos reds cross §181/§256;
 
 ---
 
-## D-UNIVERSAL — promoção do `PLAN-UNIVERSAL-PLATFORM` a trabalho corrente (R12 sobreposto)
+## D-UNIVERSAL — promoção do `IMPLEMENTATION-UNIVERSAL-PLATFORM` a trabalho corrente (R12 sobreposto)
 
 **Data:** 2026-09-17
 
@@ -1235,12 +1235,13 @@ verde fora do flake pré-existente §252 e dos reds cross §181/§256;
 
 **Origem:** diretriz da mantenedora no chat, 17/09/2026: "se acabaram os docs
 preciso que voce assuma a frente
-docs/development/future/PLAN-UNIVERSAL-PLATFORM.pt_BR.md" → respondido
-"Promover p/ development/ e implementar".
+docs/development/future/PLAN-UNIVERSAL-PLATFORM.pt_BR.md" (nome original;
+renomeado para `IMPLEMENTATION-UNIVERSAL-PLATFORM` na mesma promoção) →
+respondido "Promover p/ development/ e implementar".
 
 ### Contrato
 
-1. `PLAN-UNIVERSAL-PLATFORM.md` + `.pt_BR.md` **saem de `future/`** e passam a
+1. `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` + `.pt_BR.md` **saem de `future/`** e passam a
    ser trabalho corrente em `docs/development/`, estado **EM
    DESENVOLVIMENTO**.
 2. O portão de promoção de `docs/development/README.md` §4.3 ("decisão +
@@ -1277,7 +1278,11 @@ docs/development/future/PLAN-UNIVERSAL-PLATFORM.pt_BR.md" → respondido
 ### Implementação
 
 - Arquivos movidos: `docs/development/future/PLAN-UNIVERSAL-PLATFORM.md` →
-  `docs/development/PLAN-UNIVERSAL-PLATFORM.md` (e o par `.pt_BR.md`).
+  `docs/development/PLAN-UNIVERSAL-PLATFORM.md` (e o par `.pt_BR.md`; promoção de
+  17/09), depois **renomeados** para
+  `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` ao dividir em rastreador executável +
+  companion de visão
+  `docs/architecture/UNIVERSAL-PLATFORM-VISION.md`.
 - Fila: `roadmap.md` §23 TIER 6–12 agora aponta para o novo caminho e registra
   a sobreposição do R12; a primeira unidade executável sai do Estágio 1 /
   R1–R12.
@@ -1408,10 +1413,10 @@ reds cross §181/§256; `docs-lang.sh check` 0/0/0.
 **Contexto:** a `docs/ui/architecture.md` §2.6 define três escopos de
 estado. O local (`state`/`text`/`flag` no `Component`) e o `Store`
 compartilhado (get/set/subscribe/unsubscribe) já funcionavam; faltava o
-escopo **raiz da aplicação** (Fase 8). Ao ligá-lo, o §279 foi medido e
+escopo **raiz da aplicação** (Fase 8). Ao ligá-lo, o §296 foi medido e
 corrigido primeiro: o `Store.unsubscribe` do JS era no-op silencioso
 (identidade wrapper-vs-raw), então a perna "cleanup" do §2.6 não tinha
-primitivo funcional — ver `known-bugs.md` §279.
+primitivo funcional — ver `known-bugs.md` §296.
 
 **Decisão (contrato mínimo):**
 - `AppState(initial)` — um argumento, devolve o store do **escopo da
@@ -1426,7 +1431,7 @@ primitivo funcional — ver `known-bugs.md` §279.
   lugar em vez de prop-drilling de handle.
 - `storesLive()` conta o slot do app-state (probe de leak inalterado).
 - O cleanup de inscrições no unmount segue **manual** (`unsubscribe(h)` —
-  agora real pelo §279): atribuir inscrições automaticamente a components é
+  agora real pelo §296): atribuir inscrições automaticamente a components é
   contrato maior (qual component é o "current" durante um subscribe?) —
   regra 6, não decidido aqui.
 - JVM/Native mantêm os no-ops documentados do Store (UI é KofJS —
@@ -1443,7 +1448,7 @@ target (JS `10,10,x=10,x=42,,1`; JVM `0,0,"",1`; Native `0,0,"",0`);
 ComponentCore 24/24 + UiE2E 29 + browser 28 + Router 4 + style/tokens 17 +
 CoreRegression 102 + CompilerDriver 256 verdes.
 
-- Relacionado: D-UI-STYLE, D-UI-TOKENS, §279, D-BACKEND-SEMANTICS (no-op stores).
+- Relacionado: D-UI-STYLE, D-UI-TOKENS, §296, D-BACKEND-SEMANTICS (no-op stores).
 
 ---
 
@@ -1455,7 +1460,7 @@ CoreRegression 102 + CompilerDriver 256 verdes.
 
 **Contexto:** a Fase 9 de `architecture.md` quer "atualização parcial":
 reusar o nó DOM quando o view re-renderiza o mesmo widget na mesma posição.
-Hoje o re-render é rebuild+prune: o §278 tirou o vazamento, mas a identidade
+Hoje o re-render é rebuild+prune: o §295 tirou o vazamento, mas a identidade
 ainda é recriada — **medido 18/09 (host embarcado, probe scratch):** o
 handle do label-raiz de um `view (s) -> Label("v="+s)` é `3` após 1 state
 write e `7` após 5 (um handle novo por render; subárvore antiga podada,
@@ -1482,7 +1487,7 @@ menor unidade coesa que conserta a dor visível (perda de focus no caso
 comum de widget único na raiz) sem camada VDOM. A decisão (qual opção + o
 contrato de continuidade de handle) é da mantenedora.
 
-**Relacionado:** §278 (prune), §279 (unsubscribe), linhas da Fase 9 na
+**Relacionado:** §295 (prune), §296 (unsubscribe), linhas da Fase 9 na
 audit, D-UI-APPSTATE (postura do unsub manual).
 
 ---

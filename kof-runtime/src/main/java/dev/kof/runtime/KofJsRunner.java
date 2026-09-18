@@ -76,7 +76,7 @@ public final class KofJsRunner {
                     .mimeType("application/javascript+module")
                     .build();
             context.eval(source);
-            drainActiveTasks(context);
+            KofJsAsyncPump.drainActiveTasks(context);
             if (openWindow) {
                 Value uiRoot = context.getBindings("js").getMember("kof__uiRootHtml");
                 if (uiRoot != null && uiRoot.isString()) {
@@ -143,7 +143,7 @@ public final class KofJsRunner {
                     .mimeType("application/javascript+module")
                     .build();
             context.eval(source);
-            drainActiveTasks(context);
+            KofJsAsyncPump.drainActiveTasks(context);
             Value html = context.getBindings("js").getMember("kof__uiRootHtml");
             return html.isString() && !html.asString().isEmpty() ? html.asString() : null;
         } catch (Exception e) {
@@ -156,14 +156,7 @@ public final class KofJsRunner {
      * GraalJS pode não drenar a fila após um único eval; sem isso spawn/async
      * terminam antes do programa sair.
      */
-    private static void drainActiveTasks(Context context) {
-        Value active = context.getBindings("js").getMember("kofActiveTasks");
-        while (active != null && active.isNumber() && active.asInt() > 0) {
-            context.eval(Source.newBuilder("js", "void 0;", "kof-pump.js").buildLiteral());
-            active = context.getBindings("js").getMember("kofActiveTasks");
-        }
-    }
-
+    // async-sleep host pump moved to KofJsAsyncPump (§132/#83-JS)
     /**
      * Exposes the kof_platform object: IO and console primitives implemented
      * in Java. The generated JavaScript never reaches for Node/browser APIs.
@@ -402,6 +395,18 @@ public final class KofJsRunner {
             } catch (Exception e) {
                 return null;
             }
+        });
+        // R3 fatia 3.6 (JS FFI parity) + 3.4-C3 (callbacks): extern no target JS baixa
+        // para kofFfi/kofFfiVoid -> kof_platform.ffi/ffi_void -> este bridge host, que
+        // delega o marshalling (args escalares + stubs de callback via Linker.upcallStub)
+        // para KofJsFfiMarshal -> KofJsFfiBridge (java.lang.foreign, mesmo downcall do
+        // target JVM). Browser: sem host, o kof_platform Proxy lança erro honesto (R7).
+        platform.put("ffi", (ProxyExecutable) args -> KofJsFfiMarshal.ffi(
+                args[0].asString(), args[1].asString(), args[2].asString(), args[3]));
+        platform.put("ffi_void", (ProxyExecutable) args -> {
+            KofJsFfiMarshal.ffiVoid(
+                    args[0].asString(), args[1].asString(), args[2].asString(), args[3]);
+            return null;
         });
         bindings.putMember("kof_platform", ProxyObject.fromMap(platform));
     }

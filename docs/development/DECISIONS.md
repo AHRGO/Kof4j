@@ -1381,10 +1381,10 @@ flake and §181/§256 cross reds; `docs-lang.sh check` 0/0/0.
 **Context:** `docs/ui/architecture.md` §2.6 defines three state scopes. The
 local one (`state`/`text`/`flag` on `Component`) and the shared `Store`
 (get/set/subscribe/unsubscribe) already worked; the **application root** was
-the missing scope (Fase 8). While wiring it, §279 was measured and fixed
+the missing scope (Fase 8). While wiring it, §296 was measured and fixed
 first: JS `Store.unsubscribe` was a silent no-op (wrapper-vs-raw identity),
 so the "cleanup" leg of §2.6 had no working primitive — see `known-bugs.md`
-§279.
+§296.
 
 **Decision (minimal contract):**
 - `AppState(initial)` — one argument, returns the **app-scoped store**: a
@@ -1398,7 +1398,7 @@ so the "cleanup" leg of §2.6 had no working primitive — see `known-bugs.md`
   of prop-drilling a handle.
 - `storesLive()` counts the app-state slot (leak probe unchanged).
 - Subscription cleanup on unmount stays **manual** (`unsubscribe(h)` — now
-  real per §279): auto-attributing subscriptions to components is a bigger
+  real per §296): auto-attributing subscriptions to components is a bigger
   contract (which component is "current" during a subscribe?) — rule 6, not
   decided here.
 - JVM/Native keep the documented Store no-ops (UI is KofJS — backend-parity);
@@ -1415,7 +1415,7 @@ target (JS `10,10,x=10,x=42,,1`; JVM `0,0,"",1`; Native `0,0,"",0`);
 ComponentCore 24/24 + UiE2E 29 + browser 28 + Router 4 + style/tokens 17 +
 CoreRegression 102 + CompilerDriver 256 green.
 
-- Related: D-UI-STYLE, D-UI-TOKENS, §279, D-BACKEND-SEMANTICS (no-op stores).
+- Related: D-UI-STYLE, D-UI-TOKENS, §296, D-BACKEND-SEMANTICS (no-op stores).
 
 ---
 
@@ -1427,7 +1427,7 @@ CoreRegression 102 + CompilerDriver 256 green.
 
 **Context:** `architecture.md` Phase 9 wants "partial update": reuse the DOM
 node when the view re-renders the same widget at the same position. Today
-re-render is rebuild+prune: §278 removed the leak, but identity is still
+re-render is rebuild+prune: §295 removed the leak, but identity is still
 re-created — **measured 18/09 (embedded host, scratch probe):** a
 `view (s) -> Label("v="+s)` component's root label handle is `3` after 1
 state write and `7` after 5 (one fresh handle per render; old subtree
@@ -1452,12 +1452,12 @@ smallest cohesive unit that fixes the user-visible pain (focus loss on the
 common single-root-widget case) without a VDOM layer. The decision (which
 option + the handle-continuity contract) is the maintainer's.
 
-**Related:** §278 (prune), §279 (unsubscribe), Fase 9 audit lines,
+**Related:** §295 (prune), §296 (unsubscribe), Fase 9 audit lines,
 D-UI-APPSTATE (manual-unsub stance).
 
 ---
 
-## D-UNIVERSAL — promotion of `PLAN-UNIVERSAL-PLATFORM` to current work (R12 overridden)
+## D-UNIVERSAL — promotion of `IMPLEMENTATION-UNIVERSAL-PLATFORM` to current work (R12 overridden)
 
 **Date:** 2026-09-17
 
@@ -1465,12 +1465,13 @@ D-UI-APPSTATE (manual-unsub stance).
 
 **Origin:** maintainer directive in chat, 17/09/2026: "se acabaram os docs
 preciso que voce assuma a frente
-docs/development/future/PLAN-UNIVERSAL-PLATFORM.pt_BR.md" → answered "Promover
-p/ development/ e implementar".
+docs/development/future/PLAN-UNIVERSAL-PLATFORM.pt_BR.md" (original name;
+renamed to `IMPLEMENTATION-UNIVERSAL-PLATFORM` in the same promotion) → answered
+"Promover p/ development/ e implementar".
 
 ### Contract
 
-1. `PLAN-UNIVERSAL-PLATFORM.md` + `.pt_BR.md` **leave `future/`** and become
+1. `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` + `.pt_BR.md` **leave `future/`** and become
    current work in `docs/development/`, status **UNDER DEVELOPMENT**.
 2. The promotion gate of `docs/development/README.md` §4.3 ("decision +
    SYSTEMS closed (R12)") is **overridden by this decision**: the maintainer
@@ -1505,7 +1506,11 @@ p/ development/ e implementar".
 ### Implementation
 
 - Files moved: `docs/development/future/PLAN-UNIVERSAL-PLATFORM.md` →
-  `docs/development/PLAN-UNIVERSAL-PLATFORM.md` (and the `.pt_BR.md` pair).
+  `docs/development/PLAN-UNIVERSAL-PLATFORM.md` (and the `.pt_BR.md` pair;
+  promotion of 17/09), then **renamed** to
+  `IMPLEMENTATION-UNIVERSAL-PLATFORM.md` when split into the executable
+  tracker + the vision companion
+  `docs/architecture/UNIVERSAL-PLATFORM-VISION.md`.
 - Queue: `roadmap.md` §23 TIER 6–12 now points at the new path and records the
   R12 override; the first executable unit is chosen from Stage 1 / R1–R12.
 - Tracking: `DOING.md` + `DOING.pt_BR.md`.

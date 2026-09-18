@@ -5,7 +5,7 @@
 Este é o guia **obrigatório** para qualquer agente de IA (ou humano) que
 escreva código Kof neste repositório. Leia antes de gerar qualquer `.kf`.
 
-**Versão:** 0.4.0-beta · Última atualização: 13/09/2026 (modo autônomo + condição de ESTABILIDADE com recusa de re-disparo + **Portão de qualidade: nenhum bug sobe**; branch ativa = `beta-0.4.0`)
+**Versão:** 0.4.0-beta · Última atualização: 18/09/2026 (modo autônomo + condição de ESTABILIDADE com recusa de re-disparo + **Portão de qualidade: nenhum bug sobe** + regra 8 **Kof não é Java** como ABSOLUTA (18/09) + gate de máquina da fronteira stdlib R1 (17/09) + regra de claim compartilhada §NNN para ledgers multi-agente (18/09); branch ativa = `beta-0.4.0`)
 
 > **PRIORIDADE Nº 1: QUALIDADE.** Antes de qualquer feature, leia o
 > **Portão de qualidade — "nenhum bug sobe"** (§ abaixo), **universal para
@@ -310,6 +310,14 @@ feature/gap, leia `DOING.md`:**
 Regra de ouro: **nunca dois agentes no mesmo gap ou no mesmo arquivo gigante**
 (`NativeRuntime.java`, `CompilerDriver.java`) ao mesmo tempo. Se for
 inevitável, combine no chat antes.
+
+**Números §NNN também são claims compartilhados.** Antes de criar uma seção nova
+em `known-bugs.md` (ou qualquer ledger que use `§NNN`), `git fetch` e pegue o
+próximo número livre a partir do **tip remoto**
+(`git show origin/<branch>:docs/bugs-and-gaps/known-bugs.md | grep -oE '^#{2,3} §[0-9]+' | tail -3`) —
+números escolhidos "em voo" (escrever local → push → rebase) já forçaram uma lane
+paralela a renumerar duas vezes (§281/§282, 18/09). Se alguém pegou primeiro,
+renumere do SEU lado ANTES do push: sempre barato, ao contrário da colisão.
 
 **Sincronização obrigatória (pull antes, push depois):** antes de **todo
 commit** — `git fetch` + `git pull --rebase` (com working tree sujo, use
@@ -742,7 +750,7 @@ pronta.
 > completa) provam. **Nenhum agente pode quebrar comportamento que já funciona.**
 
 1. **Zero regressão.** Nenhum commit pode fazer um teste existente passar a
-   falhar. A suíte completa (`mvn test`, hoje **2411** nos 4 módulos — ver
+   falhar. A suíte completa (`mvn test`, hoje **2507** nos 4 módulos — ver
    §"Loop de verificação" para o comando com o flag de failure.ignore) é **gate de merge** —
    mudança que não mantém tudo verde não entra. Exceção única: mudança de
    contrato **deliberada**, com bump de versão + docs atualizados + migração.
@@ -770,7 +778,7 @@ pronta.
 
 ---
 
-## Invariantes da plataforma (plano universal — `docs/development/PLAN-UNIVERSAL-PLATFORM.md`)
+## Invariantes da plataforma (plano universal — `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md`)
 
 Estas regras **sempre** se aplicam, mesmo quando não há código de domínio novo
 em jogo. São o mecanismo anti-"god language":
@@ -1088,6 +1096,17 @@ mvn test -o -pl kof-compiler,kof-script,kof-c-compiler,kof-cli -am \
 grep -rl "FAILURE" */target/surefire-reports/*.txt
 ```
 
+> **Hosts Windows / validação Native:** o backend Native x86-64 invoca
+> ferramentas externas reais de assembler/linker (`as`/`ld`) e dependências de
+> runtime ELF do Linux. Um resultado `ToolchainMissing` / `as not available` /
+> `ld not available` é falha de pré-condição do ambiente, não por si prova de
+> regressão do Kof. Ao validar Native a partir do Windows, rode o gate
+> relevante em ambiente Linux/WSL com a toolchain disponível. Para scripts de
+> build aninhados que usam explicitamente `bash -lc`, prefira `wsl.exe -e`/
+> `--exec`; isto é orientação de scripting do Kof para interpretação previsível
+> de argumentos, não uma alegação de bug do WSL. Veja
+> `docs/debugging/debugging-native.pt_BR.md`.
+
 ### Checklist de pré-push (Q0–Q7 — responda antes de `git push`, em QUALQUER branch)
 
 0. O bug foi **consertado na causa raiz** (não mascarado) e o teste que prova
@@ -1108,9 +1127,15 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > ele, o Maven é fail-fast por módulo: qualquer falha em **kof-compiler aborta
 > o reactor** e **kof-script, kof-c-compiler e kof-cli nunca rodam** — você
 > acha que validou tudo mas só viu o primeiro módulo. O total real com o flag
-> é **2411 testes** (compiler 2058 + script 38 + kof-c 7 + cli 308, medição
-> 17/09 ~15:49 no tip `f276e966` — cresce com cada commit): **0 regressões / 0 erros** (a única falha que a
-> suíte já mostrou é o flake intermitente do §252 nativo — calado de novo (5ª corrida quieta seguida), último disparo 16/09 09:44)
+> é **2507 testes** (compiler 2154 + script 38 + kof-c 7 + cli 308, medição
+> 18/09 ~05:20 no tip `c56c74a7` — cresce com cada commit): **0 regressões / 0 erros**
+> (ATUALIZAÇÃO 18/09: o trio histórico de nativos vermelhos está FECHADO no código — §252
+> corrigido `20495e48` (o ret-addr do usleep clobberava a slot de tamanho cacheada; size
+> agora em `%r14` callee-saved), resíduo §181 cross corrigido `c56c74a7` (o `NEG` cross
+> rodava `neg` inteiro no bit pattern de float — -inf virava NaN; XOR do bit de sinal),
+> face (b) do §256 corrigida `3a593734` (golden sem HB — `await b` + acquire
+> `fence r,rw`/`dmb ish` nos consumidores cross). Primeira suíte kof-compiler sem
+> vermelho desde que o resíduo foi aberto em 14/09.)
 > (node agora presente
 > no host da medição — o antigo "13 erros = node ausente" não se aplica mais). O §149 JS (`KofRandomTest.randomStringJs`/`randomShapeJs`,
 > regressão do fix §147 no `JsIfThrowElse`) foi **CORRIGIDO 13/09** — a raiz era
@@ -1131,13 +1156,18 @@ grep -rl "FAILURE" */target/surefire-reports/*.txt
 > (2×42, `NativeRiscv64/Aarch64E2ETest`) são **skipados** pelo guard
 > (`4408eb6`) + os outros guards de toolchain/BD externo + o guard de sysroot do §255 (`06e77e94`) → `2411/0/196-skip` (o flake §252 disparou 16/09 09:44, depois calou às 11:38, 15:09, 15:54 e 17/09 15:49 — ~1/4 das corridas completas)
 > (MEDIDO 17/09 ~15:49, run limpo no tip `f276e966`). Com qemu, **tudo executa** — os 84 cross rodam
-> verdes e o total fica `2411` com a contagem de skip caindo para o
-> resíduo externo de BD/ambiente `node`. Estado correto HOJE (17/09 ~15:49, run limpo no tip `f276e966`):
-> **0 regressões / 0 erros** (2411 = 2058+38+7+308, 196 skip) — a corrida completa das 09:44 teve o flake INTERMITENTE
+> verdes e o total fica igual com a contagem de skip caindo para o
+> resíduo externo de BD/ambiente `node`. Estado correto HOJE (18/09 ~05:20, run no tip `c56c74a7`,
+> qemu riscv64+aarch64 PRESENTE): **2507 = 2154+38+7+308, 0F / 0E / 11 skip** — o flake
+> §252, o resíduo cross §181 e o flake de poll §256(b) estão TODOS fechados no
+> código; os skips restantes são o gate opcional de asm e as guardas de toolchain.
+> **0 regressões / 0 erros** (2411 na época = 2058+38+7+308, 196 skip) — a corrida completa das 09:44 teve o flake INTERMITENTE
 > conhecido do §252 nativo (`spawnWorkerThrowPropagatesThroughSelectAnyNative`, dona lane
 > nativa `.18`/nat; às 11:38, 15:09 e 15:54 ele ficou calado — frequência ~1/4, ver §252), que
-> deve ser lido como um vermelho de TESTE, não regressão. O que importa continua
-> sendo nenhum FAILURE fora do flake do §252 e das guardas documentadas.
+> deve ser lido como um vermelho de TESTE, não regressão. **HISTÓRICO (superado 18/09):**
+> o §252 foi depois provado NÃO ser race — ver `known-bugs.md §252` (raiz +
+> fix `20495e48`). O que importa continua sendo nenhum FAILURE fora das guardas
+> documentadas.
 
 Para validar um snippet isolado (ex.: confirmar se um idiom compila),
 use o harness do projeto ou crie um teste E2E mínimo no pacote da área.
@@ -1176,7 +1206,7 @@ use o harness do projeto ou crie um teste E2E mínimo no pacote da área.
 | `docs/bugs-and-gaps/specification-gaps.md`, `docs/bugs-and-gaps/known-bugs.md` | Gaps de spec (SG-00x — fila do maintainer completa, virou referência) + bugs abertos |
 | `docs/development/native-multiarch.md`, `docs/stdlib/DATABASE_VISION.md`, `docs/audits/complexity-audit.md` | Native multiarch (NATIVE002) + DB vision (realizada → stdlib) + audit ≤500 (snapshot → architecture) |
 | `docs/development/DECISIONS.md` | **Decisões da mantenedora** (time/segurança/app-model/Spring — pasta `decision-pending/` extinta 13/09) |
-| `docs/development/roadmap.md` §23 | **Plano de implementação consolidado** (Tiers 0–12) — único plano ordenado; migração A–H ✅, universal **EM DESENVOLVIMENTO** 17/09 (`PLAN-UNIVERSAL-PLATFORM.md`, R12 sobreposto — §D-UNIVERSAL) |
+| `docs/development/roadmap.md` §23 | **Plano de implementação consolidado** (Tiers 0–12) — único plano ordenado; migração A–H ✅, universal **EM DESENVOLVIMENTO** 17/09 (`IMPLEMENTATION-UNIVERSAL-PLATFORM.md`, R12 sobreposto — §D-UNIVERSAL) |
 
 ---
 

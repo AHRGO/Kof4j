@@ -52,8 +52,13 @@ public final class CollectionMethodTyper {
             // null comparável (`x == null`), nunca NPE por unbox
             return new Type.NullableType(valueType);
         }
-        if ("remove".equals(mn)) return valueType;
-        if ("put".equals(mn)) return valueType;
+        // D-NULL-INTENT/I7: `remove`/`put` devolvem V? — Java Map contract
+        // (valor anterior/removido OU null quando ausente), mesma razão do
+        // `get` acima (SG-008/bug 87). Antes tipava V (não-nullable) e
+        // fold null→default no ausente contradizia o contrato.
+        if ("remove".equals(mn)) return new Type.NullableType(valueType);
+        if ("put".equals(mn)) return new Type.NullableType(valueType);
+        if ("getOrDefault".equals(mn)) return valueType;
         if ("size".equals(mn) || "length".equals(mn) || "count".equals(mn)) return Type.PrimitiveType.INT;
         if ("containsKey".equals(mn) || "contains".equals(mn) || "isEmpty".equals(mn)) return Type.PrimitiveType.BOOL;
         if ("clear".equals(mn)) return Type.PrimitiveType.VOID;

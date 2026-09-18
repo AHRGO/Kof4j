@@ -189,7 +189,7 @@ state change but pruned only the previous **root** element from the DOM,
 leaving the whole discarded subtree in `window.__kofNodes` (and its Button
 actions in `window.__kofActions`) — unbounded silent growth. Fixed by
 calling the existing `kofUiRemoveSubtree` (DOM + registry) on root change
-plus the `__kofActions` cleanup; see `known-bugs.md` **§278**. Proof:
+plus the `__kofActions` cleanup; see `known-bugs.md` **§295**. Proof:
 `ComponentCoreE2ETest.rerenderPrunesPreviousSubtreeFromRegistry` +
 `rerenderReleasesDiscardedButtonActions` (both RED pre-fix). Phase 9 still
 lacks node reuse/diffing (the "partial update" half) — this unit closes
@@ -211,7 +211,7 @@ namespaces (the semantic theme-to-widget application remains manual).
 
 ### Phase 8 (Application state) — DONE (18/09)
 
-`architecture.md` §2.6 closed by two units. §279 (bug): KofJS
+`architecture.md` §2.6 closed by two units. §296 (bug): KofJS
 `Store.unsubscribe` was a silent no-op — subscribe stored the
 `fn.invoke.bind(fn)` wrapper, unsubscribe searched the raw handle, so
 unsubscribed callbacks kept receiving every `set()` forever; subs are now

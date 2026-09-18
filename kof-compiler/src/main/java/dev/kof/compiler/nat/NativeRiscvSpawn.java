@@ -169,7 +169,10 @@ public final class NativeRiscvSpawn {
             kof_await:
                 beqz a0, .Lkw_null
                 lw   t0, 4(a0)              # done?
-                bnez t0, .Lkw_val
+                beqz t0, .Lkw_futex
+                fence r, rw                 # §256: acquire no caminho rapido
+                j    .Lkw_val
+            .Lkw_futex:
                 addi sp, sp, -16
                 sd   s0, 8(sp)
                 sd   ra, 0(sp)

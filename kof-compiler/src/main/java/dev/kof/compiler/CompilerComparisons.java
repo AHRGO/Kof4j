@@ -40,8 +40,25 @@ public final class CompilerComparisons {
             boolean leftNull = bin.left() instanceof LiteralExpr ll2 && ll2.kind() == ConcreteLiteralKind.NULL;
             boolean rightNull = bin.right() instanceof LiteralExpr rl2 && rl2.kind() == ConcreteLiteralKind.NULL;
             if ((leftNull && TypeMetrics.isPrimitiveType(right)) || (rightNull && TypeMetrics.isPrimitiveType(left))) return false;
+            // D-NULL-INTENT (I6): Nullable(primitivo) GENUÍNO (nenhum lado
+            // literal null) — mesma exclusão do record acima. O shortcut
+            // (if_icmp*/if_acmp* cru) faria unwrap incorreto (VerifyError,
+            // valor na pilha é a referência boxed) ou compararia por
+            // IDENTIDADE de wrapper (cache do Integer, I6). Desativa e deixa
+            // o caminho de VALOR (ExpressionBinaryLowerer/RecordEqualityLowerer,
+            // `.equals()` null-safe) assumir — o chamador (assert/if/while)
+            // então salta sobre o BOOL resultante.
+            boolean leftNullablePrim = isNullablePrim(left);
+            boolean rightNullablePrim = isNullablePrim(right);
+            if (!leftNull && !rightNull && (leftNullablePrim || rightNullablePrim)) return false;
         }
         return true;
+    }
+
+    /** D-NULL-INTENT: {@code Nullable(primitivo)} de verdade (física boxed). */
+    private static boolean isNullablePrim(Type t) {
+        return t instanceof Type.NullableType nt && nt.inner() instanceof Type.PrimitiveType pt
+                && !Type.isVoid(pt);
     }
 
     /**
@@ -290,7 +307,7 @@ public final class CompilerComparisons {
             if (mc.receiver() != null && BuiltinTypes.isMap(ExpressionTyper.inferExprType(driver, mc.receiver(), locals))) {
                 return switch (mc.methodName()) {
                     case "get", "remove", "put", "size", "length", "count",
-                            "contains", "containsKey", "isEmpty", "keys", "values" -> true;
+                            "contains", "containsKey", "isEmpty", "keys", "values", "getOrDefault" -> true;
                     default -> false;
                 };
             }

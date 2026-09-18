@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# R1 boundary gate (PLAN-UNIVERSAL-PLATFORM §15 R1 / D-UNIVERSAL):
+# R1 boundary gate (IMPLEMENTATION-UNIVERSAL-PLATFORM §15 R1 / D-UNIVERSAL):
 # "core -> base stdlib -> platform -> official packages -> interop" as a
 # machine-checked invariant. Two checks, one ledger file:
 #   scripts/stdlib_boundary.txt   lines: "<namespace> <layer> [note...]"

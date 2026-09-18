@@ -159,7 +159,7 @@ public final class JsRuntimeUiEvents {
                 if (!st) return;
                 const f = kofUiRunFn(fn);
                 if (!f) return;
-                // §279: keep the RAW handle as the unsubscribe key — the
+                // §296: keep the RAW handle as the unsubscribe key — the
                 // wrapper (fn.invoke.bind) is a new object every call, so
                 // indexOf(fn) on wrappers could never match.
                 st.subs.push({ raw: fn, f: f });

@@ -122,18 +122,47 @@ Each area has its own document in `docs/stdlib*.md` (not duplicated here). The
   when on the classpath (`ExternalClasspath.resolveMethod`, `:1535-1549`).
   **Target-specific.**
 - **C FFI (`extern "<lib>" f(T): R`)** — direct binding to native libraries
-  (JVM, `java.lang.foreign`). **Measured surface 17/09 (0.4.0-beta)**: exactly
-  three JVM-bound signatures (whitelist in `CompilerPipeline.isExternBound` +
-  `JvmFfiRuntime` helpers `kof_ffi_i`/`kof_ffi_si`/`kof_ffi_dd`):
-  `f(Int): Int`, `f(String): Int`, `f(Double): Double` — single argument only.
-  Anything else (arity ≠ 1, `String` return, 0-arg) fails at compile time with
-  `FFI001` (JVM whitelist) or `FFI002` (JS: "FFI not available on the JS target");
-  Native emits `FFI001` (`<target>` not supported yet) — never a silent stub (R6).
-  A missing lib/symbol fails at **runtime** with a `kof_ffi_*` exception naming
-  `lib::symbol` (stack trace, not a surgical message). Widening (multi-arg,
-  void, String return, `char*`) is the R3 first slice in
-  `docs/development/PLAN-UNIVERSAL-PLATFORM.md` (use-case #431); `extern "c"`
-  on Native depends on §61.
+  (JVM, `java.lang.foreign`). **Measured surface 18/09 (0.4.0-beta)**: the JVM
+  binds **any signature composed of the scalar set** `{Int, Long, Float, Double,
+  Boolean, String}` in **every parameter position (arbitrary arity, ≥0)** and any
+  of those as the **return**, plus **`void` return** (via `kof_ffi_void`, result
+   discarded as a statement); a `String` return reads back the native `char*`
+   (`MemorySegment.getString`). **Proof depth:** `Int`/`Long`/`Double`/`String`/`void`
+   are exercised end-to-end against libc/libm (`FfiE2ETest`, incl. `Long` proved
+   `atol`→`labs` since Kof has no `long` literal); `Float`/`Boolean` map to the correct
+   FFM layout + Kof `Type` on the same generic downcall path, locked by
+   `FfiSignatureTest` (libc offers no clean, deterministic `float`/`_Bool` call site
+   reachable from Kof source). One runtime helper `kof_ffi(lib, name, sig,
+   Object[])` (FFM downcall; `sig` encodes the layout) replaced the old
+   `kof_ffi_i`/`_si`/`_dd` trio; gate `CompilerPipeline.isExternBound`. **JS parity
+   (slice 3.6, 18/09)**: the SAME scalar ABI binds on the JS target through a host FFM
+   bridge `KofJsFfiBridge` (identical downcall to `kof_ffi`) reached via
+   `extern`→`kofFfi`→`kof_platform.ffi` on the GraalJS/node runner — `FfiE2ETest`
+   asserts byte-for-byte JVM↔JS equality (abs/atoi/sqrt/pow/`atol`→`labs` Long/strstr/
+   srand void); a browser has no `kof_platform.ffi` host so an extern call throws an
+    honest **runtime** error (R7, the same degrade as `kof.io`), and a **non-scalar**
+    signature (array/struct/pointer) still emits `FFI002` at compile time.
+     **Callbacks/upcalls (slice 3.4, 18/09)**: an `extern` with a **function-typed
+     parameter** binds on the **JVM and the JS host runner** — the Kof function value
+     becomes a real C function pointer via `Linker.upcallStub` (`JvmFfiCallbackE2ETest`
+     runs `(x,y)->x+y` through C callbacks across Int/Long/Double/mixed ABIs →
+     `42/42/6.0/7.5`, byte-for-byte JVM↔JS via `jvmAndJsCallbacksMatchByteForByte`); the
+     contract is **synchronous/non-escaping** (the stub is scoped to the call's arena) and
+     the callback ABI is **primitive-only** — a `String`/struct/pointer inside a callback, or
+     callback-as-return, stays an honest `FFI001`/`FFI002`. On JS the compiled function value
+     is a `Lambda…` **object** (not a native arrow), so the runner bridge calls
+     `fn.getMember("invoke").execute(...)`. A browser has no host → honest runtime degrade
+     (R7). Still NOT
+     bound — honest `FFI001` at compile time on JVM/Native, never a silent stub (R6): struct/array/pointer
+     ABI (design D6, ⛔ maintainer), variadics (3.5, ⛔) and
+     opaque handles/out-buffers (3.3, ⛔). Native emits `FFI001`
+     (`<target>` not supported yet, §61). A missing lib/symbol fails at **runtime** with
+     a `kof_ffi` exception naming `lib::symbol` (stack trace, not a surgical
+      message). Remaining R3 slices (structs/D6, variadics, handles, Native parity; **JVM
+      and JS scalar+callback parity closed**)
+    in
+   `docs/development/IMPLEMENTATION-UNIVERSAL-PLATFORM.md` (use-case #431);
+  `extern "c"` on Native depends on §61.
 
 - **Native/JS**: there is no interop with host types the same way. **Unspecified.**
 - **Annotations** (`@Name`, `@JsonFormat`) are interop metadata emitted in the

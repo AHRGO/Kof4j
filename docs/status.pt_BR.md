@@ -2,9 +2,56 @@
 
 # Status do Projeto Kof
 
-**Última atualização:** 15 de setembro de 2026
+**Última atualização:** 18 de setembro de 2026
 **Versão:** 0.4.0-beta (pom `revision`)
 
+> **18/09 — R3 FFI (JVM) generalizada — `extern` casa a ABI escalar completa
+> (dono = 192.168.100.18, lane development).** `CompilerPipeline.isExternBound`
+> agora aceita **qualquer aridade** sobre {Int, Long, Float, Double, Boolean,
+> String} em toda posição e no retorno, com resultado `String` lido de volta do
+> `char*` nativo. Um único downcall FFM `kof_ffi(lib, name, sig, Object[])`
+> substitui os helpers `kof_ffi_i`/`_si`/`_dd`; o lowering empacota os args num
+> `Object[]` (`KofNewArray`, boxando primitivos) e o emissor JVM desboxa/confere
+> o retorno boxado (`emitKofRuntimeCall`). `FfiE2ETest` 8→9 (soma
+> `atol(String):Long` → `labs(Long):Long` → `9`, provando o layout `Long` ponta a
+> ponta — o Kof não tem literal `long`, então o `Long` vem do `atol`) + novo
+> `FfiSignatureTest` 4/4 travando o mapeamento escalar → layout FFM → `Type`
+> completo incl. `Float`/`Boolean`, cujo caminho genérico de downcall já é exercido
+> pelos e2es de Int/Long/Double/String/void (`pow` 2.0^10 →
+> `1024.0`, `strstr("hello world","wor")` → `world`; `srand(Int)` default `void`
+> via `kof_ffi_void`). **Paridade JS FECHADA (fatia 3.6, mesmo dia):** a mesma ABI
+> escalar agora binda no target JS por um bridge FFM no host `KofJsFfiBridge`
+> (`extern`→`kofFfi`→`ProxyExecutable` `kof_platform.ffi` no runner GraalJS/node);
+> `FfiE2ETest` soma 7 casos `assertJvmJsParity` provando igualdade byte-a-byte JVM↔JS
+> (doubles `3.0`/`1024.0`, `Long` via `atol`→`labs`, `char*`→String, `void`); o browser
+> não tem host → degrade honesto em runtime (R7), e assinaturas não-escalares seguem
+> `FFI002`. **Callbacks bindam na JVM *e* no host runner JS (fatia 3.4, C1→C3, mesmo dia):** um `extern` com
+> parâmetro de tipo-função baixa para `kof_ffi` (token aninhado `(<ret><params>)`) e o
+> runtime monta um ponteiro de função C via `Linker.upcallStub` sobre o valor de função
+> Kof — `JvmFfiCallbackE2ETest` computa `42/42/6.0/7.5` em ABIs de callback
+> Int/Long/Double/mistas, byte-a-byte JVM↔JS (`jvmAndJsCallbacksMatchByteForByte`); no JS o
+> valor de função é um **objeto** `Lambda…`, então a ponte do runner chama
+> `fn.getMember("invoke").execute(...)`; contrato síncrono/não-escapante, ABI só primitiva. Paridade ainda não alcançada: struct/pointer (D6),
+> variadics e handles opacos seguem `FFI001`;
+> Native `FFI001` (§61) permanece gap honesto por target
+> (R7). Decomposição
+> completa em §R3-fatias / §R3-3.4 do plano universal.
+>
+> **18/09 — §132 FECHADO (#83-JS) — o KofJS roda o supervisor OTP com paridade
+> (dono = 192.168.100.18, lane development).** O `time.sleep` agora é um **ponto de
+> await** no backend JS: o compilador colore como async o método que alcança
+> `kof_time_sleep` via o fixpoint `computeAsyncColoring` já existente (o mesmo que já
+> regia `await`) e emite `await kof_time_sleep(ms)`; `kofTimeSleep` devolve uma Promise
+> (node/browser: `setTimeout` real; GraalJS embutido: fila de sleepers drenada pela bomba
+> do host `KofJsRunner`, que é o event-loop mínimo que uma única thread JS não consegue
+> ser sozinha). Como o host consegue dormir E avançar microtasks, as tasks spawnadas
+> irmãs/filhas agora rodam enquanto uma task dorme — o idiom `while(!done(h)){ time.sleep(10) }`
+> progride e o worker do supervisor dispara. `OTP002` é levantado (o `kof.supervisor` em JS
+> não é mais recusado no compile-time); `KofSupervisorE2ETest#supervisorJsParity` roda
+> `APP` → `restarts=2 escaladas=2 fabrica=3 parou vivos=0`. Relógio real preservado
+> (`time.now()`/`Date.now()` inalterados) — `KofTimeE2ETest` continua honesto. riscv/aarch
+> permanecem `OTP001` (unwinding entre threads §129, lane nat). Prova: `AsyncSleepJsE2ETest`
+> 3/3 + reator verde.
 > **15/09 — §129 FECHADO (DECISIONS §2 opção B) — o Native x86 desenrola por
 > thread (dono = 192.168.100.18, lane development).** O `kof_exc_chain` agora é
 > **TLS por thread** (`.section .tbss,"awT",@nobits` + `%fs:kof_exc_chain@tpoff`)

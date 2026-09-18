@@ -187,6 +187,13 @@ public final class JsRuntimeUiLayout {
                 return v === undefined ? null : v;
             }
 
+            export function kofMapGetOrDefault(map, key, def) {
+                const k = kofMapKeyIdx(map, key);
+                if (k === undefined) return def;
+                const v = map.get(k);
+                return v === undefined ? def : v;
+            }
+
             export function kofMapRemove(map, key) {
                 const k = kofMapKeyIdx(map, key);
                 if (k === undefined) return null;

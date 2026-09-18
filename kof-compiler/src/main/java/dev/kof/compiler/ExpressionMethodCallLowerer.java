@@ -55,31 +55,33 @@ if (handledStatic >= 0) return handledStatic;
 if (mc.receiver() == null && driver.externSignatures.containsKey(mc.methodName())) {
     ExternalFunctionNode ext = driver.externSignatures.get(mc.methodName());
     if (CompilerPipeline.isExternBound(driver, ext)) {
-        // FFI (TIER 2.1.4): empilha lib, nome e o argumento, chama kof_ffi_*.
-        String p = ext.parameters().get(0).type();
-        String helper;
-        Type argType;
-        Type retType;
-        if (CompilerPipeline.isDoubleType(p)) {
-            helper = "kof_ffi_dd";
-            argType = Type.PrimitiveType.DOUBLE;
-            retType = Type.PrimitiveType.DOUBLE;
-        } else if (CompilerPipeline.isStringType(p)) {
-            helper = "kof_ffi_si";
-            argType = BuiltinTypes.STRING;
-            retType = Type.PrimitiveType.INT;
-        } else {
-            helper = "kof_ffi_i";
-            argType = Type.PrimitiveType.INT;
-            retType = Type.PrimitiveType.INT;
-        }
+        // FFI (R3, generalizado): kof_ffi(lib, nome, sig, Object[] args).
+        Type object = new Type.ClassType("java.lang", "Object", List.of());
+        Type objectArray = new Type.ArrayType(object);
         ops.add(new KofLoadLiteral(BuiltinTypes.STRING,
                 ext.library() != null ? ext.library() : ""));
         ops.add(new KofLoadLiteral(BuiltinTypes.STRING, ext.name()));
-        localIdx = ExpressionLowerer.emitExpression(driver, mc.arguments().get(0), ops, owner, localIdx, locals);
-        ops.add(new KofCall(new Type.ClassType("kof", "ffi", List.of()), helper,
-                List.of(BuiltinTypes.STRING, BuiltinTypes.STRING, argType),
-                retType, KofCallKind.FUNCTION));
+        ops.add(new KofLoadLiteral(BuiltinTypes.STRING,
+                FfiSignature.signature(ext)));
+        int n = mc.arguments().size();
+        ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, n));
+        ops.add(new KofNewArray(object));
+        for (int i = 0; i < n; i++) {
+            ops.add(new KofDup());
+            ops.add(new KofLoadLiteral(Type.PrimitiveType.INT, i));
+            ExpressionNode arg = mc.arguments().get(i);
+            localIdx = ExpressionLowerer.emitExpression(driver, arg, ops, owner, localIdx, locals);
+            Type argType = ExpressionTyper.inferExprType(driver, arg, locals);
+            if (argType instanceof Type.PrimitiveType) {
+                TypeEmitter.boxPrimitive(ops, argType);
+            }
+            ops.add(new KofArrayStore(object));
+        }
+        String ffiHelper = FfiSignature.isVoidFFI(ext.returnType())
+                ? "kof_ffi_void" : "kof_ffi";
+        ops.add(new KofCall(new Type.ClassType("kof", "ffi", List.of()), ffiHelper,
+                List.of(BuiltinTypes.STRING, BuiltinTypes.STRING, BuiltinTypes.STRING, objectArray),
+                FfiSignature.returnType(ext.returnType()), KofCallKind.FUNCTION));
         return localIdx;
     }
 }

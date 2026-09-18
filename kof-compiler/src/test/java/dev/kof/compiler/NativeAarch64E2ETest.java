@@ -1027,6 +1027,31 @@ main() {
         assertEquals("2\n1", output);
     }
 
+    /** §181 cross (18/09): espelho do riscv — NEG em Double/Float era `neg`
+     *  inteiro no bit pattern (-inf virava NaN; `(-inf) as Int` imprimia 0).
+     *  Fix = XOR do bit de sinal no emissor cross comum. Golden = oracle JVM. */
+    @Test
+    void aarch64NegativeFloatDoubleRuns(@TempDir Path tempDir) throws IOException {
+        assumeToolchain();
+        String out = runAarch64(tempDir, """
+            main() {
+                var d = 2.5
+                var f = 1.5f
+                println(-d)
+                println(-f)
+                var z = 0.0
+                println(-z)
+                println((0.0 - z) as Int)
+                var inf = 1.0 / 0.0
+                println((-inf) as Int)
+                println((-f) as Int)
+                var g = -2.5
+                println(g)
+            }
+            """);
+        assertEquals("-2.5\n-1.5\n-0.0\n0\n-2147483648\n-1\n-2.5", out);
+    }
+
     /** §181 (13/09): cast Double/Float as Int/Long SATURANTE no aarch64 sob
      *  qemu (aarch herda o emissor cross riscv + tradutor). Golden = oracle
      *  JVM (mesmo vetor da célula `castrange`). */
