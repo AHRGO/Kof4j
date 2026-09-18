@@ -112,6 +112,8 @@ public final class NativeRiscvAsmRtB48 {
                 lw   t0, 0(a0)
                 li   t1, 2
                 bne  t0, t1, .Lkof_done_zero
+                fence r, rw                 # §256: acquire — pareia o release
+                                            # do trampoline antes de ler done
                 lbu  a0, 4(a0)
                 ret
             .Lkof_done_zero:
@@ -125,6 +127,8 @@ public final class NativeRiscvAsmRtB48 {
                 lw   t0, 0(a0)
                 li   t1, 2
                 bne  t0, t1, .Lkof_poll_zero
+                fence r, rw                 # §256: acquire antes da leitura de
+                                            # done/result (par release-publish)
                 lbu  t0, 4(a0)
                 beqz t0, .Lkof_poll_zero
                 ld   a0, 8(a0)
@@ -207,6 +211,9 @@ public final class NativeRiscvAsmRtB48 {
                 bne  t0, t1, .Lksa_next
                 lbu  t0, 4(a0)
                 beqz t0, .Lksa_next
+                fence r, rw                 # §256: acquire — o mfence x86 tem
+                                            # par cross; sem isto TCF pode
+                                            # atrasar a visao de done/result
                 mv   s3, a0
                 ld   a0, 48(s3)             # §129: exc (hoje sempre 0 no cross)
                 beqz a0, .Lksa_val
