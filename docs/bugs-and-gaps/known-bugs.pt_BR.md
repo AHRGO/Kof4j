@@ -10117,4 +10117,14 @@ Compila limpo. Roda: `NoSuchMethodError: 'java.lang.Object java.lang.Object.valu
 
 **Por que NAO corrigido aqui (regra 6).** As duas resolucoes honestas mudam semantica congelada: (a) rejeitar `z != null` em primitivo → quebra compatibilidade (fraca mas real) de todo programa que hoje sobrevive; (b) fazer `Map.get` primitivo retornar `V?` → a experiencia revertida de 07/09 (analise do §39) mostra que explode `==`/unboxing ate Nullable-de-primitivos landar atomicamente — que e exatamente o PR #438 (N1 atomico JVM/Script/JS, CI verde em `eaa22b57`, aguardando revisao da mantenedora). O fix correto e o #438 landar + este repro como um dos testes de aceitacao dele; um `if` solto no typer mascararia (Q0 proibido).
 
-**Status.** 🟡 ABERTO 18/09 — catalogado com medicoes; dono = quem landar #438/D-NULL-INTENT. Relacionados: #386 (origem do achado), #376/#278 (face anotada), §39 (irmao consumidor, corrigido), §293 (shadowing de window JS, corrigido nesta sessao).
+**Re-procedimento (2a, 18/09 ~13:20 — pós-merge do `#438` `250f6207`, jars frescos no tip):** o crash MUDOU DE LUGAR, não morreu. Caso 1 (chave ausente, repro original) agora roda limpo: `9` ✅ — o caminho D-NULL-INTENT de `T?` via API segura. Caso 2 (chave PRESENTE):
+
+```kof
+var m: Map<String, Int> = mapOf("a", 1)
+var a = m.get("a")
+println(if (a != null) a else -1)   // java.lang.NoSuchMethodError: Object.valueOf(Integer)
+```
+
+compila limpo e morre na MESMA família `Object.valueOf(...)`, agora no use-site do narrowing (medido `P.kf:4`, stack verbatim). NÃO é só Int — a face presente+null-check quebra para TODO tipo primitivo de valor: `Long`/`Double`/`Boolean` morrem identicamente (`NoSuchMethodError Object.valueOf(java.lang.Long/Double/Boolean)`, `T.kf:4`); `Float` morre um passo ANTES (`ClassCastException: class java.lang.Double cannot be cast` em `T.kf:3` — o mapa em si armazena um Double, um segundo bug distinto que merece nota); apenas valores de referência (`String`) sobrevivem ao null-check (`k` ✅). `println(a)` puro no mesmo mapa Int imprime `1` ✅ (sem null-check → sem a chamada falsa). Face script: os 4 casos (ausente/presente × Int/String) imprimem `9/1/v/none` ✅. Ou seja, o #438 consertou a face AUSENTE e a face PRESENTE×primitivo (todas as primitivas) continua quebrada — mesma família de boxing/erasure de §270/§271/§280 (o typer emite `boxed → Object.valueOf(boxed)` no consumidor do `!= null` em vez de usar o valor já-boxed). Aceite para o fechamento: presente+null-check × {Int,Long,Double,Boolean,String} × {JVM,JS} verde, a matriz de 4 casos do script verde, o repro ausente original continua verde; o bug de armazenamento Float é adjacente (nota para `.22`, possivelmente §NNN próprio quando atacado).
+
+**Status.** 🟡 ABERTO 18/09 (re-medido pós-#438 — crash MUDOU DE LUGAR, não morreu; ver re-procedimento 2a; dono permanece `.22` cluster erasure/boxing, NÃO o #438 — que landou e consertou a face ausente).

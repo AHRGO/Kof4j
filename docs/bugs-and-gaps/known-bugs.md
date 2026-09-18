@@ -10640,4 +10640,14 @@ Compiles clean. Runs: `Exception in thread "main" java.lang.NoSuchMethodError: '
 
 **Why NOT fixed here (rule 6).** Both honest resolutions change frozen semantics: (a) reject `z != null` on a primitive → breaks any program that today survives (weak but real compat); (b) make primitive `Map.get` return `V?` → the reverted 07/09 experiment (§39 analysis) shows it explodes `==`/unboxing until Nullable-primitives land atomically — which is exactly PR #438 (JVM/Script/JS atomic N1, CI green at `eaa22b57`, pending maintainer review). The correct fix is #438 landing + this repro as one of its acceptance tests; a lone `if` in the typer would mask (Q0 forbidden).
 
-**Status.** 🟡 OPEN 18/09 — catalogued with measurements; owner = whoever lands #438/D-NULL-INTENT. Related: #386 (finding origin), #376/#278 (annotated-face), §39 (sibling consumer, fixed), §293 (JS window shadowing, fixed in this same session).
+**Re-procedure (2a, 18/09 ~13:20 — post `#438` merge `250f6207`, fresh jars on tip):** the crash MOVED, it did not die. Case 1 (absent key, original repro) now runs clean: `9` ✅ — the D-NULL-INTENT `T?`-via-API path holds. Case 2 (PRESENT key):
+
+```kof
+var m: Map<String, Int> = mapOf("a", 1)
+var a = m.get("a")
+println(if (a != null) a else -1)   // java.lang.NoSuchMethodError: Object.valueOf(Integer)
+```
+
+compiles clean and dies at the SAME `Object.valueOf(...)` family, now at the narrowing use-site (measured `P.kf:4`, stack verbatim). NOT Int-only — the present+null-check face breaks for EVERY primitive value type: `Long`/`Double`/`Boolean` die identically (`NoSuchMethodError Object.valueOf(java.lang.Long/Double/Boolean)`, `T.kf:4`); `Float` dies one step EARLIER (`ClassCastException: class java.lang.Double cannot be cast` at `T.kf:3` — the map itself stores a Double, a distinct second bug worth noting); only reference values (`String`) survive the null-check (`k` ✅). Plain `println(a)` on the same Int map prints `1` ✅ (no null-check → no bogus call). Script face: all 4 cases (absent/present × Int/String) print `9/1/v/none` ✅. So #438 fixed the ABSENT face and the PRESENT×primitive face (all primitives) is still broken — same boxing/erasure family as §270/§271/§280 (the typer emits `boxed → Object.valueOf(boxed)` at the `!= null` consumer instead of using the already-boxed value). Acceptance for the close: present+null-check × {Int,Long,Double,Boolean,String} × {JVM,JS} green, the 4-case script matrix green, original absent repro still green; the Float storage bug is adjacent (note for `.22`, possibly its own §NNN when attacked).
+
+**Status.** 🟡 OPEN 18/09 (re-measured post-#438 — crash MOVED, not dead; see re-procedure 2a; remains owner = `.22` erasure/boxing cluster, NOT #438 — that landed and fixed the absent-face).
