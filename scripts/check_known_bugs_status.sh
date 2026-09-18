@@ -66,6 +66,9 @@ if [[ "${1:-}" == "--selftest" ]]; then
 **Face (b)** — 🟡 OPEN (lane nat): pending.
 ## §903 — no status token
 just prose here
+## §904 — warning-face sample
+- **✅ FIXED 16/09 (JS face):** done here.
+- **⚠️ NATIVE face REMAINS OPEN (different lane):** not silently fixed.
 EOF
   OUT="$(classify "$FIX/t.md")"
   rm -rf "$FIX"
@@ -74,6 +77,7 @@ EOF
   echo "$OUT" | grep -qx "901 live"        || { echo "SELFTEST FAIL: 901"; exit 2; }
   echo "$OUT" | grep -qx "902 live" || { echo "SELFTEST FAIL: 902"; exit 2; }
   echo "$OUT" | grep -qx "903 unknown"     || { echo "SELFTEST FAIL: 903"; exit 2; }
+  echo "$OUT" | grep -qx "904 live"       || { echo "SELFTEST FAIL: 904"; exit 2; }
   echo "SELFTEST OK"
   exit 0
 fi
