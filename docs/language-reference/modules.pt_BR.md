@@ -150,8 +150,8 @@ define as assinaturas. **Experimental** como superfície (muda entre versões).
     `(x,y)->x+y` através de callbacks C em ABIs Int/Long/Double/mistas → `42/42/6.0/7.5`,
     byte-a-byte JVM↔JS em `jvmAndJsCallbacksMatchByteForByte`);
     o contrato é **síncrono/não-escapante** (o stub vive na arena da chamada) e a ABI do
-    callback é **só primitiva** — um `String`/struct/pointer dentro do callback, ou
-    callback-como-retorno, segue `FFI001`/`FFI002` honesto. No JS o valor de função compilado
+    callback cobre **primitivos + argumentos `String`** (3.4-C3.4, `b120945c`: um `char*` entregue pelo C e lido como `String` Kof na fronteira do upcall, JVM↔JS byte-for-byte) — um argumento struct/ponteiro dentro do callback, ou
+    retorno `String`/callback-como-retorno, segue `FFI001`/`FFI002` honesto. No JS o valor de função compilado
     é um **objeto** `Lambda…` (não uma arrow nativa), então a ponte do runner chama
     `fn.getMember("invoke").execute(...)`. Browser sem host → degrade honesto (R7). Ainda NÃO bound — `FFI001` honesto em
     compilação (JVM/Native), nunca stub silencioso (R6): ABI de struct/array/pointer (design D6,

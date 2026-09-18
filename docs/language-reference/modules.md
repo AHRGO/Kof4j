@@ -148,8 +148,8 @@ Each area has its own document in `docs/stdlib*.md` (not duplicated here). The
      runs `(x,y)->x+y` through C callbacks across Int/Long/Double/mixed ABIs →
      `42/42/6.0/7.5`, byte-for-byte JVM↔JS via `jvmAndJsCallbacksMatchByteForByte`); the
      contract is **synchronous/non-escaping** (the stub is scoped to the call's arena) and
-     the callback ABI is **primitive-only** — a `String`/struct/pointer inside a callback, or
-     callback-as-return, stays an honest `FFI001`/`FFI002`. On JS the compiled function value
+     the callback ABI covers **primitives + `String` arguments** (3.4-C3.4, `b120945c`: a `char*` handed by C is read into a Kof `String` at the upcall boundary, JVM↔JS byte-for-byte) — a struct/pointer argument inside a callback, or
+     a `String`/callback return, stays an honest `FFI001`/`FFI002`. On JS the compiled function value
      is a `Lambda…` **object** (not a native arrow), so the runner bridge calls
      `fn.getMember("invoke").execute(...)`. A browser has no host → honest runtime degrade
      (R7). Still NOT
