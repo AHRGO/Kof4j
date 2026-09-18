@@ -21,6 +21,7 @@
 > | **§270 🟡 OPEN 17/09 (docs lane; the real-reject fix = rule-6 fork for the maintainer, additive faces #400/#390 for the compiler lane)** | Unchecked generic assignment: `List<Int>` → `List<String>` passes the check (only the RAW type is compared) and dies with a CCE at runtime (#401 verbatim, measured on the tip). One substitution root, two faces — see §270. |
 > | **§273 ✅ FIXED 18/09 (lane UI/style, owner = 192.168.100.17)** | KofJS re-render leaked the whole previous view subtree into `window.__kofNodes` on every `state` write: `kofUiRender` detached only the old ROOT element from the DOM while the widget constructors keep allocating new handles — unbounded silent registry growth (invisible in the page). Second face: discarded `Button` actions stayed in `window.__kofActions` forever. Fix = call the existing `kofUiRemoveSubtree` (DOM + registry prune) on root change + delete the matching `__kofActions` entry. Measured pre-fix 1 node after mount / 6 after 5 re-renders; post-fix stays 1. Proof: `ComponentCoreE2ETest.rerenderPrunesPreviousSubtreeFromRegistry` + `rerenderReleasesDiscardedButtonActions` (both RED pre-fix), 21/21 suite. |
 > | **§274 ✅ FIXED 18/09 (lane UI/style, owner = 192.168.100.17)** | KofJS `Store.unsubscribe` silent no-op: `kofUiStoreSubscribe` pushed the WRAPPER (`fn.invoke.bind(fn)`, a new object per call) but `unsubscribe` searched the RAW handle with `indexOf` → never matched → unsubscribed subscribers kept receiving every `set()` forever. Fix: subs stored as `{raw,f}` pairs; unsubscribe matches `raw` identity, removes one occurrence. Proof: `ComponentCoreE2ETest.storeUnsubscribeStopsDelivery` (RED pre-fix `n=1,n=2,n=3,`, measured), suite 22/22. |
+> | **§275 🟡 OPEN 18/09 (found by kofscript lane, owner = 192.168.100.17)** | Bare `List`/`Set`/`Map` as a FIELD declared type parses `ClassType("",name)` (pin bypassed by `sa.getClass` builtin registration) → compiled `.kf` dies `NoSuchFieldError`, `.ks` dies `InaccessibleObjectException` reflection leak — silent runtime break, R6. Workaround: element-typed `List<T>` (corpus idiom; `ScriptGlobalTypes` now infers it for un-annotated script globals). Root fix = compiler-core unit (pin-guard semantics, all backends). |
 > | **§263 ✅ FIXED 17/09 — var-decl face (PARSE095), by compiler/nat lane `.17`; 🔴 function-position face OPEN (re-measured 17/09; rule 6 — maintainer)** | Parser accepted ANY identifier before an *annotated* declaration and silently discarded it (R6): `let x: Int = 5` / `Klaxon x: Int = 5` / `Banana q: String = "z"` printed the value — the `: Tipo` in `parseVarDecl` (~417-421) overwrote the consumed prefix with no diagnostic. Fixed by the cataloguer's declared direction: on the type-first path a mismatching prefix → **PARSE095** (identity `Int x: Int` tolerated — nothing discarded); parser-level, all 4 targets inherit; proof `ParserGarbageTypePrefixE2ETest` 9/9 (JVM+JS). Without annotation it already failed honestly (SEM011 — `let x = 5`/`const y = 10` dead sugar, `183cb048`). Remaining face: `async foo(): Int` (function position) STILL compiles — different fall-through, river shared with the nullable/generics cluster; left honest per rule 6. Related: the corpus claims in `training/reference/{targets,compiler}` (“let/const are rejected”) were only half true.
 > | **§262 ✅ FIXED 17-18/09 (face (a) `== null`/`!= null` FIXED `07a51565` by lane bugs-and-gaps `.15`; face (b) `nullableRecord == nullableRecord` FIXED in TWO STEPS: receiver-guard landed first `ab284b91` (lane `.17`) — but measured INCOMPLETE (3 holes); completed 18/09 by development lane `.18` (null-safe arg + Nullable-record gate + JS numeric `!=`) — 4 targets, 21/21)** | Record `T?` vs `null`: `== null`/`!= null` **NPEs on the JVM** (`Cannot invoke Point.equals(Object) because maybe is null`) — record `==` lowers to `.equals()` with NO null-guard on the receiver (`CompilerComparisons:28,337-342`, bug 188); class/String nullable narrow fine (`if_acmp`/`Objects.equals`). Face (a) fixed by excluding the `null` literal from the record content-equality branch (now `if_acmp`); face (b) step 1 (`ab284b91`) guarded only the RECEIVER (`L==null ? (R==null) : L.equals(R)`) — measured INCOMPLETE: null ARG still crashes JS/Native, a function-derived `Point?` fell to the reference path, and JS `!=` on the null-path was always-false; step 2 (`.18`) made the guard full `Objects.equals` on BOTH operands + unwrapped `Nullable(record)` in the gate + routed JS through a numeric `kofRecordEq` helper (rule-5 parity by construction, 4 targets). Proof: `RecordNullableEqContentE2ETest` 10/10 + `RecordNullableNullEqE2ETest` 11/11 = 21/21. |
 > | **§260 🟡 PARTIAL 16/09 (lane native/compiler `.17`; cause-1 G-6b CLOSED by `92d11a03`, cause-2/G-6(a) + trigger still OPEN)** | Native x86 auto-collect was unsound for TWO reasons (gdb-probed same day): (1) mark scanned only the current frame → main's live Strings invisible → freed (SIGSEGV) — **FIXED 16/09 (G-6b: `_start` records `kof_main_stack_bottom`, mark scans the whole thread stack; `NativeX86GcMarkScopeTest` 3/3)**; (2) live temporaries in caller-saved regs at the `kof_alloc` call-site (`%rdi`) — invisible to any stack scan → needs G-6(a) (spill-per-live-ref / stack-map), the trigger is OFF again. riscv never hit (1) (value-stack = machine stack). |
@@ -10337,3 +10338,37 @@ behavior-preserving (`RawRowCollectionAccessE2ETest` + `SemanticResolutionTest`
 - **Scope:** JS-only (the Store observable lives in the KofJS runtime; JVM
   no-op documented, Native no-op). No API change, no contract change — the
   fix only makes the existing `unsubscribe` do what it always claimed.
+
+## §275 — Bare `List`/`Set`/`Map` in a FIELD declared type parses as `ClassType("", name)` — the class silently breaks at runtime (R6): 🟡 OPEN 18/09 (found by the kofscript lane, owner = 192.168.100.17)
+
+- **Symptom (measured 18/09, two paths, zero script involvement for the
+  first):** (1) compiled `.kf`: `class Box { static List items = listOf(1, 2,
+  3) }` + `main() { println(Box.items.size) }` → runtime
+  `java.lang.NoSuchFieldError: Class Box does not have member field
+  'List items'` — the class file emits a field whose descriptor and the
+  access site disagree (`CompilerTypes.toType` pins `List`→`BuiltinTypes.LIST`
+  only under `allowBuiltinPins`, and the field path reaches the
+  `new Type.ClassType("", typeName, List.of())` branch); (2) KofScript
+  `var items: List = listOf(1,2,3)` + `println(items.size)` → interpreter
+  falls to `KofInterpreterMembers.loadField` reflection → `InaccessibleObjectException: Unable to make field private int java.util.ArrayList.size
+  accessible`. Either way a program that LOOKS legal (bare collection type
+  also parses fine for LOCALS — `R-local-bare-List` probe was green) dies
+  only at runtime, with no diagnostic: R6 violation.
+- **Root cause (narrowed, not fixed):** the pin guard `allowBuiltinPins` is
+  computed from `unitDeclaresType || sa.getClass(name)`; for the simple names
+  `List`/`Set`/`Map` the symbol table already registers BUILTINS, so
+  `userDeclares` evaluates true and the pin is skipped on the field path
+  (`resolveWithTypeParams` → `toType(name, unit, sa)`), while the local-var
+  path reaches the pin. A `List<Int>` (with type args) is unaffected (the
+  name never equals the pin string — it goes through `Type.of` and comes out
+  `ClassType("kof","List",...)` correctly, proven by `W-top-size`/`Y-top-forin`).
+- **Workaround (documented, idiomatic):** always write the element type —
+  `List<T>`/`Set<T>`/`Map<K,V>` — which is already the corpus form
+  (`training/idioms/collections.md`). The kofscript wrapper now infers
+  element-typed globals for un-annotated `var`s (`ScriptGlobalTypes`, 18/09),
+  so `.ks` users hitting this must have written the bare type explicitly.
+- **Not fixed here because:** the correct root fix touches the pin guard
+  semantics shared by all 4 backends (typer contract — rule 6 territory
+  needs the full compiler suite to land safely). Minimal repros above are
+  deterministic; fix = compiler-core unit with `Type.of`/`toType` parity
+  matrix (locals × fields × params × records) + this test.

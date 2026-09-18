@@ -21,6 +21,7 @@
 > | **§270 🟡 ABERTO 17/09 (lane docs; conserto = fork regra-6 p/ mantenedora, faces aditivas #400/#390 p/ lane compiler)** | Atribuicao generica nao verificada: `List<Int>` → `List<String>` passa no `check` (so o tipo RAW comparado) e morre com CCE no runtime (#401 verbatim medido no tip). Uma raiz de substituicao, duas faces — ver §270. |
 > | **§273 ✅ CORRIGIDO 18/09 (lane UI/style, dono = 192.168.100.17)** | O re-render do KofJS vazava a subárvore anterior inteira para `window.__kofNodes` a cada escrita de `state`: `kofUiRender` soltava do DOM só o elemento RAIZ antigo, enquanto os construtores de widget seguem alocando handles novos — crescimento silencioso e ilimitado do registro (invisível na página). Segunda face: ações de `Button` descartados ficavam para sempre em `window.__kofActions`. Fix = chamar o `kofUiRemoveSubtree` existente (poda de DOM + registro) na troca de raiz + apagar a entrada correspondente de `__kofActions`. Medido pré-fix 1 nó após mount / 6 após 5 re-renders; pós-fix fica 1. Prova: `ComponentCoreE2ETest.rerenderPrunesPreviousSubtreeFromRegistry` + `rerenderReleasesDiscardedButtonActions` (ambos VERMELHOS pré-fix), suíte 21/21. |
 > | **§274 ✅ CORRIGIDO 18/09 (lane UI/style, dono = 192.168.100.17)** | `Store.unsubscribe` do KofJS era no-op silencioso: `kofUiStoreSubscribe` guardava o WRAPPER (`fn.invoke.bind(fn)`, objeto novo por chamada) mas o `unsubscribe` buscava o handle RAW com `indexOf` → nunca casava → inscritos desinscritos seguiam recebendo todo `set()` para sempre. Conserto: subs guardadas como pares `{raw,f}`; unsubscribe casa `raw` por identidade e remove uma ocorrência. Prova: `ComponentCoreE2ETest.storeUnsubscribeStopsDelivery` (VERMELHO pré-fix `n=1,n=2,n=3,`, medido), suíte 22/22. |
+> | **§275 🟡 ABERTO 18/09 (achado pela lane kofscript, dono = 192.168.100.17)** | `List`/`Set`/`Map` crus como tipo declarado de CAMPO viram `ClassType("",nome)` (pin pulado pelo registro builtin na `sa.getClass`) → `.kf` compilado morre `NoSuchFieldError`, `.ks` morre vazamento reflection `InaccessibleObjectException` — quebra silenciosa em runtime, R6. Workaround: `List<T>` element-typed (idioma do corpus; `ScriptGlobalTypes` agora o infere p/ globais sem anotação no script). Fix de causa = unidade compiler-core (semântica do guard de pin, todos os backends). |
 > | **§263 ✅ CORRIGIDO 17/09 — face var-decl (PARSE095), pela lane compiler/nat `.17`; 🔴 face de posição de função ABERTA (re-medida 17/09; regra 6 — mantenedora)** | O parser aceitava QUALQUER identificador antes de uma declaração *anotada* e o descartava em silêncio (R6): `let x: Int = 5` / `Klaxon x: Int = 5` / `Banana q: String = "z"` imprimiam o valor — o `: Tipo` no `parseVarDecl` sobrescrevia o prefixo consumido sem diagnóstico. Consertado pela direção catalogada: no caminho type-first, prefixo divergente → **PARSE095** (identidade `Int x: Int` tolerada — nada descartado); nível parser, os 4 alvos herdam; prova `ParserGarbageTypePrefixE2ETest` 9/9 (JVM+JS). Sem anotação já falhava honesto (SEM011 — `let x = 5`/`const y = 10` sugar morto, `183cb048`). Face restante: `async foo(): Int` (posição de função) AINDA compila — fall-through diferente, rio compartilhado com o cluster nullable/generics; deixada honesta por regra 6. Relacionado: as alegações do corpus em `training/reference/{targets,compiler}` (“let/const são rejeitados”) eram só metade verdade.
 > | **§262 ✅ FEITO 17-18/09 (face (a) `== null`/`!= null` `07a51565` pela lane bugs-and-gaps `.15`; face (b) `nullableRecord == nullableRecord` FEITA EM DOIS PASSOS: guarda-do-receptor landou primeiro `ab284b91` (lane `.17`) — medida INCOMPLETA (3 furos); completada 18/09 pela lane development `.18` (arg null-safe + gate Nullable-record + `!=` numérico no JS) — 4 alvos, 21/21)**| Record `T?` vs `null`: `== null`/`!= null` dá **NPE no JVM** (`Cannot invoke Point.equals(Object) because maybe is null`) — o `==` de record baixa para `.equals()` SEM guarda de null no receptor (`CompilerComparisons:28,337-342`, bug 188); nullable de class/String faz narrowing bem (`if_acmp`/`Objects.equals`). Face (a) consertada excluindo o literal `null` do ramo de igualdade de conteúdo de record (agora `if_acmp`); face (b) passo 1 (`ab284b91`, `.17`) guardava SÓ o RECEPTOR (`L==null ? (R==null) : L.equals(R)`) — medida INCOMPLETA: o ARG nulo ainda quebrava JS/Native, um `Point?` vindo de função caía no caminho de referência, e o `!=` no JS na null-path era sempre-false; passo 2 (`.18`) tornou a guarda `Objects.equals` COMPLETO nos DOIS operandos + desembrulhou `Nullable(record)` no gate + roteou o JS p/ helper numérico `kofRecordEq` (paridade regra 5 construída, 4 alvos; native x86_64 provado por `gcc`). Prova: `RecordNullableEqContentE2ETest` 10/10 + `RecordNullableNullEqE2ETest` 11/11 = 21/21. |
 > | **§260 🟡 PARCIAL 16/09 (lane native/compiler `.17`; causa-1 G-6b FECHADA por `92d11a03`, causa-2/G-6(a) + gatilho AINDA ABERTOS)** | O auto-collect x86 era insound por DUAS razões (apurado a gdb no mesmo dia): (1) o mark varria só o frame corrente → Strings vivas do main invisíveis → liberadas (SIGSEGV) — **CORRIGIDO 16/09 (G-6b: o `_start` grava `kof_main_stack_bottom`, o mark varre a pilha inteira da thread; `NativeX86GcMarkScopeTest` 3/3)**; (2) temporários vivos em registradores caller-saved no call-site do `kof_alloc` (`%rdi`) — invisíveis a qualquer varredura de pilha → exige G-6(a) (spill-per-live-ref / stack-map), o gatilho está OFF de novo. riscv nunca sofreu (1) (value-stack = pilha de máquina). |
@@ -9834,3 +9835,42 @@ foram extraídos p/ `StringReceiverGuards.check`; o host volta a 478 e o helper 
 - **Escopo:** só JS (o observable do Store vive no runtime KofJS; JVM no-op
   documentado, Native no-op). Nenhuma mudança de API nem de contrato — o fix só
   faz o `unsubscribe` existente cumprir o que sempre prometeu.
+
+## §275 — `List`/`Set`/`Map` crus no tipo declarado de um CAMPO viram `ClassType("", nome)` — a quebra silenciosa da classe em runtime (R6): 🟡 ABERTO 18/09 (achado pela lane kofscript, dono = 192.168.100.17)
+
+- **Sintoma (medido 18/09, dois caminhos; o primeiro não envolve script):**
+  (1) `.kf` compilado: `class Box { static List items = listOf(1, 2, 3) }` +
+  `main() { println(Box.items.size) }` → runtime
+  `java.lang.NoSuchFieldError: Class Box does not have member field
+  'List items'` — o class file emite o campo com descritor diferente do
+  acesso (`CompilerTypes.toType` só pinna `List`→`BuiltinTypes.LIST` com
+  `allowBuiltinPins`, e o caminho de campo cai no ramo
+  `new Type.ClassType("", typeName, List.of())`); (2) KofScript
+  `var items: List = listOf(1,2,3)` + `println(items.size)` → o
+  interpretador cai no reflection de `KofInterpreterMembers.loadField` →
+  `InaccessibleObjectException: Unable to make field private int
+  java.util.ArrayList.size accessible`. Nos dois casos um programa que
+  PARECE legal (o tipo de coleção cru também parseia bem para LOCAIS — o
+  probe `R-local-bare-List` foi verde) morre só em runtime, sem
+  diagnóstico: violação R6.
+- **Causa-raiz (estreitada, não consertada):** o guard do pin
+  `allowBuiltinPins` é calculado por `unitDeclaresType || sa.getClass(name)`;
+  para os nomes simples `List`/`Set`/`Map` a symbol table já registra os
+  BUILTINS, então `userDeclares` dá true e o pin é pulado no caminho de
+  campo (`resolveWithTypeParams` → `toType(nome, unit, sa)`), enquanto o
+  caminho de variável local chega no pin. `List<Int>` (com argumentos de
+  tipo) não é afetado (o nome nunca é igual à string do pin — passa por
+  `Type.of` e sai `ClassType("kof","List",...)` correto, provado por
+  `W-top-size`/`Y-top-forin`).
+- **Workaround (documentado, idiomático):** escreva sempre o tipo de
+  elemento — `List<T>`/`Set<T>`/`Map<K,V>` — que já é a forma do corpus
+  (`training/idioms/collections.md`). O wrapper kofscript agora infere
+  globais element-typed para `var` sem anotação (`ScriptGlobalTypes`,
+  18/09), então quem bater aqui num `.ks` escreveu o tipo cru
+  explicitamente.
+- **Não consertado aqui porque:** a correção de causa-raiz correta toca a
+  semântica do guard de pin compartilhada pelos 4 backends (contrato de
+  typer — território rule 6 que precisa da suíte completa do compiler para
+  pousar com segurança). As reproduções acima são determinísticas; fix =
+  unidade compiler-core com matriz de paridade `Type.of`/`toType` (locais ×
+  campos × parâmetros × records) + este teste.
