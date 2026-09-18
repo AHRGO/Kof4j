@@ -2,7 +2,7 @@
 
 # Idiomas — Interop (tipos JVM e FFI C)
 
-**Status:** parcial (whitelist) · **Introduzido:** 0.3.x (TIER 2.1) · **Atualizado:** 18/09 (R3 JVM generalizado — ABI escalar + void + retorno String; ver `IMPLEMENTATION-UNIVERSAL-PLATFORM.pt_BR.md` 3.6) · **Atualizado:** 17/09
+**Status:** parcial (whitelist) · **Introduzido:** 0.3.x (TIER 2.1) · **Atualizado:** 18/09 (R3 JVM generalizado — ABI escalar + void + retorno String; **callbacks C2 — gate da JVM ABERTO**; ver `IMPLEMENTATION-UNIVERSAL-PLATFORM.pt_BR.md` 3.6/3.4) · **Atualizado:** 17/09
 
 ## O que é
 
@@ -28,6 +28,16 @@ extern "/lib/x86_64-linux-gnu/libc.so.6" getenv(String n): String // ok — "mel
 // Tipos nao-escalares (objetos, genericos) -> FFI001 em tempo de compilacao:
 // runner JS  -> MESMA ABI escalar via KofJsFfiBridge (F2/F3 ✅ 18/09; FfiE2ETest 16/16); browser -> erro honesto de runtime (R7, sem host); nao-escalar -> FFI002
 // Native     -> FFI001 até o §61 (libc não inicializada)
+
+// (c) CALLBACKS (C2 ✅ 18/09 — gate da JVM ABERTO): uma função Kof entregue
+// ao C como ponteiro de função. Parâmetro tipo-função + lambda no call site;
+// só ABI de callback PRIMITIVA (síncrono, não-escapante):
+extern "libcallback.so" kof_cb_add(Int a, Int b, (Int, Int) -> Int cb): Int
+// call site — a lambda vira o ponteiro de função C (Linker.upcallStub):
+kof_cb_add(20, 22, (x: Int, y: Int) -> x + y)   // 42 medido
+kof_cb_mixed(3, 2.5, (i: Int, d: Double) -> i * d)  // ABI escalar mista ok
+// callback JS -> FFI002 (paridade = fatia C3); String/struct/ponteiro-no-callback
+// e callback-como-retorno -> FFI001 (JVM) — nunca stub silencioso.
 ```
 
 ## RUIM → BOM
@@ -36,10 +46,11 @@ extern "/lib/x86_64-linux-gnu/libc.so.6" getenv(String n): String // ok — "mel
 |---|---|---|
 | ligar um simbolo sob outro nome Kof (`kof_fmod`) | o NOME e o simbolo C (sem alias, medido 18/09) — ligar `fmod`, envolver numa fn Kof para nome amigavel | multi-arg/`void`/retorno `String` ja ligam desde R3 18/09 — NAO emita bytecode na mao para furar o compilador |
 | assumir que o caminho da lib é checado em compile | trate lib/símbolo ausente como falha `kof_ffi_*` de **runtime** | o caminho resolve em runtime (`SymbolLookup`), não em compile |
+| guardar o ponteiro do callback para chamar DEPOIS (atexit/signal/async) | mantenha callbacks síncronos e não-escapantes | escapantes exigem política de vida/GC-rooting (R12) — ficam `FFI001`, nunca stub pendurado |
 | reimplementar sin/cos/strcmp em Kof | prenda a lib do sistema (qualquer forma escalar desde 18/09) | complexidade é da plataforma (regra de ferro 2) |
 
 ## Veja também
 
 `docs/language-reference/syntax.md` (§FFI com C), `grammar.md`
 (`extern-declaration`), `modules.md` §6; gaps `FFI001`/`FFI002`;
-R3 landado: JVM escalar arbitrario (aridade/void/retorno String, 18/09) + paridade JS host (3.6.F2/F3 ✅ 18/09) + design de callbacks com mecanismo host-PROVADO (3.4-C1, `JvmFfiCallbackTest`, gate ainda CLOSED); restantes: opaque handles (3.3), callbacks C2→surface (3.4), variadics (3.5, ⛔ decisao de surface), ABI struct/array (D6 ⛔), Native §61.
+R3 landado: JVM escalar arbitrario (aridade/void/retorno String, 18/09) + paridade JS host (3.6.F2/F3 ✅ 18/09) + **callbacks ligam na JVM (C2 ✅ 18/09, `JvmFfiCallbackE2ETest`; JS pinado host-level, C3.1)**; restantes: paridade de callback JS (C3), opaque handles (3.3), variadics (3.5, ⛔ decisao de surface), ABI struct/array (D6 ⛔), Native §61.
