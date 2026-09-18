@@ -10319,6 +10319,10 @@ The corpus (`backend-parity.md` media row + `stdlib-web.md` ×3 + `KofCliSupport
 
 **Proof:** `KofMediaE2ETest.serveDirOnNonJvmEmitsWeb005NotWeb001` — JS + `NATIVE` + `NATIVE_RISCV64` + `NATIVE_AARCH64` all report `WEB005` and NOT `WEB001`, plus the JVM control compiles (no gap leaked). CLI re-measured after the fix: `web serveDir: not available on the JS driver.target yet (WEB005)`. RED before the fix was measured on the CLI (`WEB001`).
 
+**Guard (machine, 18/09):** the R6 rule ("every gap code has a parity row") was convention-only, and this drift proved convention is not enough — maintainer landed `DomainGapCodesTest.everyPinnedGapIsDocumentedInTheParityMatrix` (`19a740f2`), a self-derived ledger (regex over its own `assertGap` calls) that fails the build if any pinned gap code lacks a `backend-parity.md` row. Re-measured green on tip (11/11, 18/09). A new pin without a doc row now turns RED — the §275/HTTP003/UUID002 class of phantom-code drift is machine-guarded.
+
+
+
 
 ## §276 — `static` method referencing an instance field bare compiled clean and died at LOAD with `VerifyError` (`aload_0` loads the `String[] args`/reference slot as `this` — "Bad local variable type") — ✅ FIXED 18/09 (lane compiler `.22`, #345)
 

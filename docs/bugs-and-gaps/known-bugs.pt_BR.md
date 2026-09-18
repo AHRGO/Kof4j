@@ -9815,6 +9815,10 @@ O corpus (`backend-parity.md` linha de mídia + `stdlib-web.md` ×3 + mensagem A
 
 **Prova:** `KofMediaE2ETest.serveDirOnNonJvmEmitsWeb005NotWeb001` — JS + `NATIVE` + `NATIVE_RISCV64` + `NATIVE_AARCH64` reportam `WEB005` e NÃO `WEB001`, mais o controle JVM compilando (nenhum gap vaza). CLI re-medida pós-fix: `web serveDir: not available on the JS driver.target yet (WEB005)`. O RED antes do fix foi medido na CLI (`WEB001`).
 
+**Guarda (máquina, 18/09):** a regra R6 ("todo código de gap tem linha na paridade") era só convenção, e este drift provou que convenção não basta — a mantenedora landou `DomainGapCodesTest.everyPinnedGapIsDocumentedInTheParityMatrix` (`19a740f2`), um ledger auto-derivado (regex sobre os próprios `assertGap`) que falha o build se algum código pinado não tiver linha em `backend-parity.md`. Re-medido verde no tip (11/11, 18/09). Um pin novo sem linha na doc agora fica RED — a classe de drift phantom-code do §275/HTTP003/UUID002 está sob guarda de máquina.
+
+
+
 
 ## §276 — método `static` referenciando campo de instância nu compilava limpo e morria no LOAD com `VerifyError` (`aload_0` carrega o slot 0 — os `args`/referência — como `this`: "Bad local variable type") — ✅ CORRIGIDA 18/09 (lane compiler `.22`, #345)
 
