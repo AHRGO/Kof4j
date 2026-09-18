@@ -140,6 +140,45 @@ public final class JvmRuntimeIo {
                     return pp == null ? path.replace('\\\\', '/') : s(pp);
                 }
 
+                // G-ORG-002: copy/move seguros + metadados básicos (JVM apenas).
+                // copyTo/moveTo NÃO sobrescrevem o destino por padrão: Files.copy/
+                // Files.move sem REPLACE_EXISTING lançam se o destino já existir,
+                // e a exceção vira "false" — mesmo contrato dos demais métodos
+                // deste arquivo (nunca sobrescrita silenciosa). Também não criam o
+                // diretório pai implicitamente: quem chama garante o destino.
+                public static int kof_io_file_copy_to(String source, String destination) {
+                    try {
+                        java.nio.file.Files.copy(p(source), p(destination),
+                                java.nio.file.StandardCopyOption.COPY_ATTRIBUTES);
+                        return 1;
+                    } catch (java.io.IOException e) {
+                        return 0;
+                    }
+                }
+
+                public static int kof_io_file_move_to(String source, String destination) {
+                    try {
+                        java.nio.file.Files.move(p(source), p(destination));
+                        return 1;
+                    } catch (java.io.IOException e) {
+                        return 0;
+                    }
+                }
+
+                public static long kof_io_file_modified_time(String path) {
+                    try {
+                        return java.nio.file.Files.getLastModifiedTime(p(path)).toMillis();
+                    } catch (java.io.IOException e) {
+                        // mesmo contrato de kof_io_file_size: erro é exceção
+                        // recuperável (catch (String e)), nunca sentinela.
+                        throw new RuntimeException("file not found: " + path);
+                    }
+                }
+
+                public static int kof_io_file_is_symlink(String path) {
+                    return java.nio.file.Files.isSymbolicLink(p(path)) ? 1 : 0;
+                }
+
                 public static String kof_io_path_resolve(String base, String child) {
                     return s(p(base).resolve(child));
                 }
